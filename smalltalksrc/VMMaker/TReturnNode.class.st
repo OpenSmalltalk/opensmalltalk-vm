@@ -19,6 +19,13 @@ TReturnNode >> bindVariablesIn: aDictionary [
 	expression := expression bindVariablesIn: aDictionary.
 ]
 
+{ #category : #'as yet unclassified' }
+TReturnNode >> copyTree [
+
+	^self class new
+		setExpression: expression copyTree
+]
+
 { #category : #'C code generation' }
 TReturnNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 
@@ -40,16 +47,16 @@ TReturnNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 	].
 ]
 
-{ #category : #testing }
-TReturnNode >> endsWithReturn [
-
-	^true
-]
-
 { #category : #accessing }
 TReturnNode >> expression [
 
 	^expression
+]
+
+{ #category : #'as yet unclassified' }
+TReturnNode >> inlineMethodsUsing: aDictionary [
+
+	expression := expression inlineMethodsUsing: aDictionary.
 ]
 
 { #category : #testing }
@@ -63,25 +70,6 @@ TReturnNode >> nodesDo: aBlock [
 
 	expression nodesDo: aBlock.
 	aBlock value: self.
-]
-
-{ #category : #enumerating }
-TReturnNode >> nodesDo: aBlock unless: cautionaryBlock [
-
-	(cautionaryBlock value: self) ifTrue: [^self].
-	expression nodesDo: aBlock unless: cautionaryBlock.
-	aBlock value: self.
-]
-
-{ #category : #copying }
-TReturnNode >> postCopy [
-
-	expression := expression copy
-]
-
-{ #category : #'C code generation' }
-TReturnNode >> prependCCodeOn: aStream level: level generator: aCCodeGenerator [ 
-	aStream nextPutAll: 'return '
 ]
 
 { #category : #printing }

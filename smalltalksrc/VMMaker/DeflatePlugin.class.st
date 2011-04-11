@@ -274,9 +274,9 @@ DeflatePlugin >> loadDeflateStreamFrom: rcvr [
 		(interpreterProxy slotSizeOf: rcvr) >= 15]) ifFalse:[^false].
 	oop := interpreterProxy fetchPointer: 0 ofObject: rcvr.
 	(interpreterProxy isIntegerObject: oop)
-		ifTrue:[^false].
+		ifTrue:[^interpreterProxy primitiveFail].
 	(interpreterProxy isBytes: oop)
-		ifFalse:[^false].
+		ifFalse:[^interpreterProxy primitiveFail].
 	zipCollection := interpreterProxy firstIndexableField: oop.
 	zipCollectionSize := interpreterProxy byteSizeOf: oop.
 
@@ -405,7 +405,7 @@ DeflatePlugin >> primitiveDeflateUpdateHashTable [
 	"Primitive. Update the hash tables after data has been moved by delta."
 	| delta table tableSize tablePtr entry |
 	<export: true>
-	<var: #tablePtr type:'int *'>
+	<var: #tablePtr type: 'int *'>
 	interpreterProxy methodArgumentCount = 2
 		ifFalse:[^interpreterProxy primitiveFail].
 	delta := interpreterProxy stackIntegerValue: 0.
@@ -428,8 +428,8 @@ DeflatePlugin >> primitiveUpdateAdler32 [
 	"Primitive. Update a 32bit CRC value."
 	| collection stopIndex startIndex length bytePtr s1 adler32 s2 b |
 	<export: true>
-	<var: #adler32 type:'unsigned int '>
-	<var: #bytePtr type:'unsigned char *'>
+	<var: #adler32 type: 'unsigned int '>
+	<var: #bytePtr type: 'unsigned char *'>
 	interpreterProxy methodArgumentCount = 4
 		ifFalse:[^interpreterProxy primitiveFail].
 	collection := interpreterProxy stackObjectValue: 0.
@@ -461,9 +461,9 @@ DeflatePlugin >> primitiveUpdateGZipCrc32 [
 	"Primitive. Update a 32bit CRC value."
 	| collection stopIndex startIndex crc length bytePtr |
 	<export: true>
-	<var: #crc type:'unsigned int '>
-	<var: #bytePtr type:'unsigned char *'>
-	<var: #crcTable type:'unsigned int *'>
+	<var: #crc type: 'unsigned int '>
+	<var: #bytePtr type: 'unsigned char *'>
+	<var: #crcTable type: 'unsigned int *'>
 	interpreterProxy methodArgumentCount = 4
 		ifFalse:[^interpreterProxy primitiveFail].
 	collection := interpreterProxy stackObjectValue: 0.
@@ -538,12 +538,12 @@ DeflatePlugin >> sendBlock: literalStream with: distanceStream with: litTree wit
 		zipBitBuf, zipBitPos.
 	"
 	| oop litPos litLimit litArray distArray lit dist sum llBitLengths llCodes distBitLengths distCodes code extra litBlCount distBlCount |
-	<var: #litArray type:'unsigned char *'>
-	<var: #distArray type:'unsigned int *'>
-	<var: #llBitLengths type:'unsigned int *'>
-	<var: #llCodes type:'unsigned int *'>
-	<var: #distBitLengths type:'unsigned int *'>
-	<var: #distCodes type:'unsigned int *'>
+	<var: #litArray type: 'unsigned char *'>
+	<var: #distArray type: 'unsigned int *'>
+	<var: #llBitLengths type: 'unsigned int *'>
+	<var: #llCodes type: 'unsigned int *'>
+	<var: #distBitLengths type: 'unsigned int *'>
+	<var: #distCodes type: 'unsigned int *'>
 	oop := interpreterProxy fetchPointer: 0 ofObject: literalStream.
 	litPos := interpreterProxy fetchInteger: 1 ofObject: literalStream.
 	litLimit := interpreterProxy fetchInteger: 2 ofObject: literalStream.

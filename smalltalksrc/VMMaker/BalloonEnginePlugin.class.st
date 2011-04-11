@@ -129,8 +129,8 @@ BalloonEnginePlugin >> allocateBezierStackEntry [
 { #category : #allocation }
 BalloonEnginePlugin >> allocateBitmapFill: cmSize colormap: cmBits [
 	| fill fillSize cm |
-	<var:#cm type:'int *'>
-	<var:#cmBits type:'int *'>
+	<var: #cm type: 'int *'>
+	<var: #cmBits type: 'int *'>
 	fillSize := GBMBaseSize + cmSize.
 	(self allocateObjEntry: fillSize) ifFalse:[^0].
 	fill := objUsed.
@@ -151,8 +151,8 @@ BalloonEnginePlugin >> allocateBitmapFill: cmSize colormap: cmBits [
 { #category : #allocation }
 BalloonEnginePlugin >> allocateGradientFill: ramp rampWidth: rampWidth isRadial: isRadial [
 	| fill fillSize rampPtr |
-	<var:#ramp type:'int *'>
-	<var:#rampPtr type:'int *'>
+	<var: #ramp type: 'int *'>
+	<var: #rampPtr type: 'int *'>
 	fillSize := GGBaseSize + rampWidth.
 	(self allocateObjEntry: fillSize) ifFalse:[^0].
 	fill := objUsed.
@@ -477,7 +477,7 @@ BalloonEnginePlugin >> checkCompressedFillIndexList: fillList max: maxIndex segm
 	"Check the fill indexes in the run-length encoded fillList"
 	| length runLength runValue nFills fillPtr |
 	<inline: false>
-	<var: #fillPtr type:'int *'>
+	<var: #fillPtr type: 'int *'>
 	length := interpreterProxy slotSizeOf: fillList.
 	fillPtr := interpreterProxy firstIndexableField: fillList.
 	nFills := 0.
@@ -495,7 +495,7 @@ BalloonEnginePlugin >> checkCompressedFills: indexList [
 	"Check if the indexList (containing fill handles) is okay."
 	| fillPtr length fillIndex |
 	<inline: false>
-	<var: #fillPtr type:'int *'>
+	<var: #fillPtr type: 'int *'>
 	"First check if the oops have the right format"
 	(interpreterProxy isWords: indexList) ifFalse:[^false].
 
@@ -515,7 +515,7 @@ BalloonEnginePlugin >> checkCompressedLineWidths: lineWidthList segments: nSegme
 	"Check the run-length encoded lineWidthList matches nSegments"
 	| length runLength nItems ptr |
 	<inline: false>
-	<var: #ptr type:'int *'>
+	<var: #ptr type: 'int *'>
 	length := interpreterProxy slotSizeOf: lineWidthList.
 	ptr := interpreterProxy firstIndexableField: lineWidthList.
 	nItems := 0.
@@ -613,9 +613,9 @@ BalloonEnginePlugin >> checkedAddLineToGET: line [
 { #category : #private }
 BalloonEnginePlugin >> circleCosTable [
 	| theTable |
-	<returnTypeC:'double *'>
+	<returnTypeC: 'double *'>
 	<inline: false>
-	<var:#theTable declareC:'static double theTable[33] =
+	<var: #theTable declareC: 'static double theTable[33] =
 		{1.0, 0.98078528040323, 0.923879532511287, 0.831469612302545,
 		0.7071067811865475, 0.555570233019602, 0.38268343236509, 0.1950903220161286,
 		0.0, -0.1950903220161283, -0.3826834323650896, -0.555570233019602,
@@ -631,9 +631,9 @@ BalloonEnginePlugin >> circleCosTable [
 { #category : #private }
 BalloonEnginePlugin >> circleSinTable [
 	| theTable |
-	<returnTypeC:'double *'>
+	<returnTypeC: 'double *'>
 	<inline: false>
-	<var:#theTable declareC:'static double theTable[33] =
+	<var: #theTable declareC: 'static double theTable[33] =
 		{0.0, 0.1950903220161282, 0.3826834323650897, 0.555570233019602,
 		0.707106781186547, 0.831469612302545, 0.923879532511287, 0.98078528040323,
 		1.0, 0.98078528040323, 0.923879532511287, 0.831469612302545,
@@ -659,7 +659,7 @@ BalloonEnginePlugin >> clampValue: value max: maxValue [
 
 { #category : #'accessing bitmaps' }
 BalloonEnginePlugin >> colormapOf: bmFill [
-	<returnTypeC:'int *'>
+	<returnTypeC: 'int *'>
 	^objBuffer + bmFill + GBColormapOffset
 ]
 
@@ -672,7 +672,7 @@ BalloonEnginePlugin >> computeBezier: index splitAt: param [
 	| startX startY viaX viaY endX endY newIndex 
 	leftViaX  leftViaY rightViaX rightViaY sharedX sharedY |
 	<inline: false>
-	<var: #param type:'double '>
+	<var: #param type: 'double '>
 	leftViaX := startX := self bzStartX: index.
 	leftViaY := startY := self bzStartY: index.
 	rightViaX := viaX := self bzViaX: index.
@@ -778,7 +778,7 @@ BalloonEnginePlugin >> fillBitmapSpan [
 BalloonEnginePlugin >> fillBitmapSpan: bmFill from: leftX to: rightX at: yValue [
 	| x x1 dsX ds dtX dt deltaX deltaY bits xp yp bmWidth bmHeight fillValue tileFlag |
 	<inline: false>
-	<var: #bits type:'int *'>
+	<var: #bits type: 'int *'>
 	self aaLevelGet = 1
 		ifFalse:[^self fillBitmapSpanAA: bmFill from: leftX to: rightX at: yValue].
 
@@ -820,7 +820,7 @@ BalloonEnginePlugin >> fillBitmapSpan: bmFill from: leftX to: rightX at: yValue 
 BalloonEnginePlugin >> fillBitmapSpanAA: bmFill from: leftX to: rightX at: yValue [
 	| x dsX ds dtX dt deltaX deltaY bits xp yp bmWidth bmHeight fillValue baseShift cMask cShift idx aaLevel firstPixel lastPixel tileFlag |
 	<inline: false>
-	<var: #bits type:'int *'>
+	<var: #bits type: 'int *'>
 	bits := self loadBitsFrom: bmFill.
 	bits == nil ifTrue:[^nil].
 	bmWidth := self bitmapWidthOf: bmFill.
@@ -942,7 +942,7 @@ BalloonEnginePlugin >> fillLinearGradient: fill from: leftX to: rightX at: yValu
 	"Draw a linear gradient fill."
 	| x0 x1 ramp rampSize dsX ds x rampIndex |
 	<inline: false>
-	<var: #ramp type:'int *'>
+	<var: #ramp type: 'int *'>
 	ramp := self gradientRampOf: fill.
 	rampSize := self gradientRampLengthOf: fill.
 
@@ -986,7 +986,7 @@ BalloonEnginePlugin >> fillLinearGradientAA: fill ramp: ramp ds: deltaS dsX: dsX
 	| colorMask colorShift baseShift rampIndex ds rampSize x idx rampValue 
 	 aaLevel firstPixel lastPixel |
 	<inline: false>
-	<var: #ramp type:'int *'>
+	<var: #ramp type: 'int *'>
 
 	aaLevel := self aaLevelGet.
 	baseShift := self aaShiftGet.
@@ -1134,8 +1134,8 @@ BalloonEnginePlugin >> fillRadialDecreasingAA: fill ramp: ramp deltaST: deltaST 
 	| ds dt rampIndex rampValue length2 x nextLength x1
 	aaLevel colorMask colorShift baseShift index firstPixel lastPixel |
 	<inline: false>
-	<var: #ramp type:'int *'>
-	<var: #deltaST type:' int *'>
+	<var: #ramp type: 'int *'>
+	<var: #deltaST type: ' int *'>
 
 	ds := (self cCoerce: deltaST to:'int*') at: 0.
 	dt := (self cCoerce: deltaST to:'int*') at: 1.
@@ -1241,8 +1241,8 @@ BalloonEnginePlugin >> fillRadialGradient: fill from: leftX to: rightX at: yValu
 	"Draw a radial gradient fill."
 	| x x1 ramp rampSize dsX ds dtX dt length2 deltaX deltaY deltaST |
 	<inline: false>
-	<var: #ramp type:'int *'>
-	<var: #deltaST type:'int *'>
+	<var: #ramp type: 'int *'>
+	<var: #deltaST type: 'int *'>
 
 	ramp := self gradientRampOf: fill.
 	rampSize := self gradientRampLengthOf: fill.
@@ -1335,8 +1335,8 @@ BalloonEnginePlugin >> fillRadialIncreasingAA: fill ramp: ramp deltaST: deltaST 
 	| ds dt rampIndex rampValue length2 x nextLength rampSize lastLength 
 	aaLevel colorMask colorShift baseShift index firstPixel lastPixel |
 	<inline: false>
-	<var: #ramp type:'int *'>
-	<var: #deltaST type:' int *'>
+	<var: #ramp type: 'int *'>
+	<var: #deltaST type: ' int *'>
 
 	ds := (self cCoerce: deltaST to:'int*') at: 0.
 	dt := (self cCoerce: deltaST to:'int*') at: 1.
@@ -1444,7 +1444,7 @@ BalloonEnginePlugin >> gradientRampLengthOf: fill put: value [
 
 { #category : #'accessing gradients' }
 BalloonEnginePlugin >> gradientRampOf: fill [
-	<returnTypeC:'int *'>
+	<returnTypeC: 'int *'>
 
 	^objBuffer + fill +  GFRampOffset
 ]
@@ -1578,9 +1578,9 @@ BalloonEnginePlugin >> loadAndSubdivideBezierFrom: point1 via: point2 to: point3
 	If wideFlag is set then make sure the curve is monoton in X."
 	| bz1 bz2 index2 index1 |
 	<inline: false>
-	<var: #point1 type:'int *'>
-	<var: #point2 type:'int *'>
-	<var: #point3 type:'int *'>
+	<var: #point1 type: 'int *'>
+	<var: #point2 type: 'int *'>
+	<var: #point3 type: 'int *'>
 	bz1 := self allocateBezierStackEntry.	
 	engineStopped ifTrue:[^0].
 	"Load point1/point2/point3 on the top of the stack"
@@ -1704,10 +1704,10 @@ BalloonEnginePlugin >> loadBezier: bezier segment: index leftFill: leftFillIndex
 BalloonEnginePlugin >> loadBitmapFill: formOop colormap: cmOop tile: tileFlag from: point1 along: point2 normal: point3 xIndex: xIndex [
 	"Load the bitmap fill."
 	| bmFill cmSize cmBits bmBits bmBitsSize bmWidth bmHeight bmDepth ppw bmRaster |
-	<var: #cmBits type:'int *'>
-	<var: #point1 type:'int *'>
-	<var: #point2 type:'int *'>
-	<var: #point3 type:'int *'>
+	<var: #cmBits type: 'int *'>
+	<var: #point1 type: 'int *'>
+	<var: #point2 type: 'int *'>
+	<var: #point3 type: 'int *'>
 
 	cmOop == interpreterProxy nilObject ifTrue:[
 		cmSize := 0.
@@ -1761,7 +1761,7 @@ BalloonEnginePlugin >> loadBitmapFill: formOop colormap: cmOop tile: tileFlag fr
 BalloonEnginePlugin >> loadBitsFrom: bmFill [
 	"Note: Assumes that the contents of formArray has been checked before"
 	| xIndex formOop bitsOop bitsLen |
-	<returnTypeC:'int *'>
+	<returnTypeC: 'int *'>
 	xIndex := self objectIndexOf: bmFill.
 	xIndex > (interpreterProxy slotSizeOf: formArray) ifTrue:[^nil].
 	formOop := interpreterProxy fetchPointer: xIndex ofObject: formArray.
@@ -1842,12 +1842,12 @@ BalloonEnginePlugin >> loadCompressedShape: points segments: nSegments leftFills
 	leftValue rightValue widthValue lineFillValue |
 
 	<inline: false>
-	<var: #points type:'int *'>
-	<var: #leftFills type:'int *'>
-	<var: #rightFills type:'int *'>
-	<var: #lineWidths type:'int *'>
-	<var: #lineFills type:'int *'>
-	<var: #fillIndexList type:'int *'>
+	<var: #points type: 'int *'>
+	<var: #leftFills type: 'int *'>
+	<var: #rightFills type: 'int *'>
+	<var: #lineWidths type: 'int *'>
+	<var: #lineFills type: 'int *'>
+	<var: #fillIndexList type: 'int *'>
 
 	nSegments = 0 ifTrue:[^0].
 
@@ -1898,9 +1898,9 @@ BalloonEnginePlugin >> loadCompressedShape: points segments: nSegments leftFills
 BalloonEnginePlugin >> loadFillOrientation: fill from: point1 along: point2 normal: point3 width: fillWidth height: fillHeight [
 	"Transform the points"
 	| dirX dirY nrmX nrmY dsLength2 dsX dsY dtLength2 dtX dtY |
-	<var: #point1 type:'int *'>
-	<var: #point2 type:'int *'>
-	<var: #point3 type:'int *'>
+	<var: #point1 type: 'int *'>
+	<var: #point2 type: 'int *'>
+	<var: #point3 type: 'int *'>
 
 	point2 at: 0 put: (point2 at: 0) + (point1 at: 0).
 	point2 at: 1 put: (point2 at: 1) + (point1 at: 1).
@@ -1939,9 +1939,9 @@ BalloonEnginePlugin >> loadGradientFill: rampOop from: point1 along: point2 norm
 	"Load the gradient fill as defined by the color ramp."
 	| rampWidth fill |
 	<inline: false>
-	<var: #point1 type:'int *'>
-	<var: #point2 type:'int *'>
-	<var: #point3 type:'int *'>
+	<var: #point1 type: 'int *'>
+	<var: #point2 type: 'int *'>
+	<var: #point3 type: 'int *'>
 	(interpreterProxy fetchClassOf: rampOop) = interpreterProxy classBitmap
 		ifFalse:[^interpreterProxy primitiveFail].
 	rampWidth := interpreterProxy slotSizeOf: rampOop.
@@ -1958,10 +1958,10 @@ BalloonEnginePlugin >> loadGradientFill: rampOop from: point1 along: point2 norm
 BalloonEnginePlugin >> loadLine: line from: point1 to: point2 offset: yOffset leftFill: leftFill rightFill: rightFill [
 	"Load the line defined by point1 and point2."
 	| p1 p2 yDir |
-	<var: #point1 type:'int *'>
-	<var: #point2 type:'int *'>
-	<var: #p1 type:'int *'>
-	<var: #p2 type:'int *'>
+	<var: #point1 type: 'int *'>
+	<var: #point2 type: 'int *'>
+	<var: #p1 type: 'int *'>
+	<var: #p2 type: 'int *'>
 
 	(point1 at: 1) <= (point2 at: 1) 
 		ifTrue:[	p1 := point1.
@@ -2036,14 +2036,14 @@ BalloonEnginePlugin >> loadPointIntAt: index from: intArray [
 { #category : #private }
 BalloonEnginePlugin >> loadPointShortAt: index from: shortArray [
 	"Load the short value from the given index in shortArray"
-	<returnTypeC:'short'>
+	<returnTypeC: 'short'>
 	^(self cCoerce: shortArray to: 'short *') at: index
 ]
 
 { #category : #'shapes-polygons' }
 BalloonEnginePlugin >> loadPolygon: points nPoints: nPoints fill: fillIndex lineWidth: lineWidth lineFill: lineFill pointsShort: isShort [
 	| x0 y0 x1 y1 |
-	<var:#points type:'int *'>
+	<var: #points type: 'int *'>
 	isShort ifTrue:[
 		x0 := self loadPointShortAt: 0 from: points.
 		y0 := self loadPointShortAt: 1 from: points.
@@ -2094,7 +2094,7 @@ BalloonEnginePlugin >> loadRectangle: lineWidth lineFill: lineFill leftFill: lef
 { #category : #'shapes-polygons' }
 BalloonEnginePlugin >> loadShape: points nSegments: nSegments fill: fillIndex lineWidth: lineWidth lineFill: lineFill  pointsShort: pointsShort [
 	<inline: false>
-	<var:#points type:'int *'>
+	<var: #points type: 'int *'>
 	1 to: nSegments do:[:i|
 		self loadCompressedSegment: i-1
 			from: points
@@ -2142,8 +2142,8 @@ BalloonEnginePlugin >> loadWideBezier: lineWidth lineFill: lineFill leftFill: le
 BalloonEnginePlugin >> loadWideLine: lineWidth from: p1 to: p2 lineFill: lineFill leftFill: leftFill rightFill: rightFill [
 	"Load a (possibly wide) line defined by the points p1 and p2"
 	| line offset |
-	<var: #p1 type:'int *'>
-	<var: #p2 type:'int *'>
+	<var: #p1 type: 'int *'>
+	<var: #p2 type: 'int *'>
 	(lineWidth = 0 or:[lineFill = 0])
 		ifTrue:[	line := self allocateLine.
 				offset := 0]
@@ -2180,28 +2180,27 @@ BalloonEnginePlugin >> offsetFromWidth: lineWidth [
 
 { #category : #primitives }
 BalloonEnginePlugin >> primitiveAddBezier [
-	| failureCode leftFill rightFill viaOop endOop startOop nSegments |
+	| leftFill rightFill viaOop endOop startOop nSegments |
 	<export: true>
 	<inline: false>
 
 	"Fail if we have the wrong number of arguments"
 	interpreterProxy methodArgumentCount = 5 
-		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+		ifFalse:[^interpreterProxy primitiveFail].
 
 	rightFill := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
 	leftFill := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 1).
 	viaOop := interpreterProxy stackObjectValue: 2.
 	endOop := interpreterProxy stackObjectValue: 3.
 	startOop := interpreterProxy stackObjectValue: 4.
-	interpreterProxy failed ifTrue:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	interpreterProxy failed ifTrue:[^nil].
 
-	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 5)
-						requiredState: GEStateUnlocked) = 0
-		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
+	(self quickLoadEngineFrom: (interpreterProxy stackObjectValue: 5) requiredState: GEStateUnlocked)
+		ifFalse:[^interpreterProxy primitiveFail].
 
 	"Make sure the fills are okay"
 	((self isFillOkay: leftFill) and:[self isFillOkay: rightFill])
-		ifFalse:[^interpreterProxy primitiveFailFor: GEFWrongFill].
+			ifFalse:[^interpreterProxy primitiveFail].
 
 	"Do a quick check if the fillIndices are equal - if so, just ignore it"
 	leftFill = rightFill & false ifTrue:[
@@ -2212,7 +2211,7 @@ BalloonEnginePlugin >> primitiveAddBezier [
 	self loadPoint: self point1Get from: startOop.
 	self loadPoint: self point2Get from: viaOop.
 	self loadPoint: self point3Get from: endOop.
-	interpreterProxy failed ifTrue:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	interpreterProxy failed ifTrue:[^0].
 
 	self transformPoints: 3.
 
@@ -2230,34 +2229,33 @@ BalloonEnginePlugin >> primitiveAddBezier [
 	engineStopped ifTrue:[
 		"Make sure the stack is okay"
 		self wbStackClear.
-		^interpreterProxy primitiveFailFor: GEFEngineStopped].
+		^interpreterProxy primitiveFail].
 
-	interpreterProxy failed
-		ifTrue:[^interpreterProxy primitiveFailFor: GEFEntityLoadFailed].
-	self storeEngineStateInto: engine.
-	interpreterProxy pop: 5. "Leave rcvr on stack"
+	interpreterProxy failed ifFalse:[
+		self storeEngineStateInto: engine.
+		interpreterProxy pop: 5. "Leave rcvr on stack"
+	].
 ]
 
 { #category : #primitives }
 BalloonEnginePlugin >> primitiveAddBezierShape [
-	| failureCode points lineFill lineWidth fillIndex length isArray segSize nSegments |
+	| points lineFill lineWidth fillIndex length isArray segSize nSegments |
 	<export: true>
 	<inline: false>
 
 	"Fail if we have the wrong number of arguments"
 	interpreterProxy methodArgumentCount = 5 
-		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+		ifFalse:[^interpreterProxy primitiveFail].
 
 	lineFill := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
 	lineWidth := interpreterProxy stackIntegerValue: 1.
 	fillIndex := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 2).
 	nSegments := interpreterProxy stackIntegerValue: 3.
 	points := interpreterProxy stackObjectValue: 4.
-	interpreterProxy failed ifTrue:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	interpreterProxy failed ifTrue:[^nil].
 
-	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 5)
-						requiredState: GEStateUnlocked) = 0
-		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
+	(self quickLoadEngineFrom: (interpreterProxy stackObjectValue: 5) requiredState: GEStateUnlocked)
+		ifFalse:[^interpreterProxy primitiveFail].
 
 	"First, do a check if the points look okay"
 	length := interpreterProxy slotSizeOf: points.
@@ -2265,12 +2263,12 @@ BalloonEnginePlugin >> primitiveAddBezierShape [
 		isArray := false.
 		"Either PointArray or ShortPointArray"
 		(length = (nSegments * 3) or:[length = (nSegments * 6)])
-			ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+			ifFalse:[^interpreterProxy primitiveFail].
 	] ifFalse:["Must be Array of points"
 		(interpreterProxy isArray: points)
-			ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+			ifFalse:[^interpreterProxy primitiveFail].
 		length = (nSegments * 3)
-			ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+			ifFalse:[^interpreterProxy primitiveFail].
 		isArray := true.
 	].
 
@@ -2283,16 +2281,16 @@ BalloonEnginePlugin >> primitiveAddBezierShape [
 		ifTrue:[segSize := GLBaseSize]
 		ifFalse:[segSize := GLWideSize].
 	(self needAvailableSpace: segSize * nSegments)
-		ifFalse:[^interpreterProxy primitiveFailFor: GEFWorkTooBig].
+		ifFalse:[^interpreterProxy primitiveFail].
 
 	"Check the fills"
 	((self isFillOkay: lineFill) and:[self isFillOkay: fillIndex])
-		ifFalse:[^interpreterProxy primitiveFailFor: GEFWrongFill]. 
+		ifFalse:[^interpreterProxy primitiveFail]. 
 
 	"Transform colors"
 	lineFill := self transformColor: lineFill.
 	fillIndex := self transformColor: fillIndex.
-	engineStopped ifTrue:[^interpreterProxy primitiveFailFor: GEFEngineStopped].
+	engineStopped ifTrue:[^interpreterProxy primitiveFail].
 
 	"Check if have anything at all to do"
 	((lineFill = 0 or:[lineWidth = 0]) and:[fillIndex = 0])
@@ -2312,71 +2310,72 @@ BalloonEnginePlugin >> primitiveAddBezierShape [
 			fill: fillIndex lineWidth: lineWidth lineFill: lineFill 
 			pointsShort: (nSegments * 3 = length)].
 
-	engineStopped ifTrue:[^interpreterProxy primitiveFailFor: GEFEngineStopped].
+	engineStopped ifTrue:[^interpreterProxy primitiveFail].
 
-	interpreterProxy failed
-		ifTrue:[^interpreterProxy primitiveFailFor: GEFEntityLoadFailed].
-	self needsFlushPut: 1.
-	self storeEngineStateInto: engine.
-	interpreterProxy pop: 5. "Leave rcvr on stack"
+	interpreterProxy failed ifFalse:[
+		self needsFlushPut: 1.
+		self storeEngineStateInto: engine.
+		interpreterProxy pop: 5. "Leave rcvr on stack"
+	].
 ]
 
 { #category : #primitives }
 BalloonEnginePlugin >> primitiveAddBitmapFill [
 
-	| failureCode nrmOop dirOop originOop tileFlag fill xIndex cmOop formOop |
+	| nrmOop dirOop originOop tileFlag fill xIndex cmOop formOop |
 	<export: true>
 	<inline: false>
 
 	"Fail if we have the wrong number of arguments"
 	interpreterProxy methodArgumentCount = 7 
-		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+		ifFalse:[^interpreterProxy primitiveFail].
 
 	xIndex := interpreterProxy stackIntegerValue: 0.
-	xIndex <= 0 ifTrue:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	xIndex <= 0 ifTrue:[^interpreterProxy primitiveFail].
 	nrmOop := interpreterProxy stackObjectValue: 1.
 	dirOop := interpreterProxy stackObjectValue: 2.
 	originOop := interpreterProxy stackObjectValue: 3.
 	tileFlag := interpreterProxy booleanValueOf: (interpreterProxy stackValue: 4).
+	tileFlag ifTrue:[tileFlag := 1] ifFalse:[tileFlag := 0].
 	cmOop := interpreterProxy stackObjectValue: 5.
 	formOop := interpreterProxy stackObjectValue: 6.
-	interpreterProxy failed ifTrue:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	interpreterProxy failed ifTrue:[^nil].
 
-	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 7)
-						requiredState: GEStateUnlocked) = 0
-		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
+	(self quickLoadEngineFrom: (interpreterProxy stackObjectValue: 7) requiredState: GEStateUnlocked)
+		ifFalse:[^interpreterProxy primitiveFail].
 
 	self loadPoint: self point1Get from: originOop.
 	self loadPoint: self point2Get from: dirOop.
 	self loadPoint: self point3Get from: nrmOop.
-	interpreterProxy failed ifTrue:[^interpreterProxy primitiveFailFor: GEFBadPoint].
+	interpreterProxy failed ifTrue:[^0].
 
 	fill := self loadBitmapFill: formOop 
 				colormap: cmOop
-				tile: (tileFlag ifTrue:[1] ifFalse:[0])
+				tile: tileFlag
 				from: self point1Get 
 				along: self point2Get 
 				normal: self point3Get 
 				xIndex: xIndex-1.
 	engineStopped ifTrue:[
 		"Make sure the stack is okay"
-		^interpreterProxy primitiveFailFor: GEFEngineStopped].
+		^interpreterProxy primitiveFail].
 
-	interpreterProxy failed
-		ifTrue:[^interpreterProxy primitiveFailFor: GEFEntityLoadFailed].
-	self storeEngineStateInto: engine.
-	interpreterProxy pop: 8 thenPush: (interpreterProxy positive32BitIntegerFor: fill)
+	interpreterProxy failed ifFalse:[
+		self storeEngineStateInto: engine.
+		interpreterProxy pop: 8.
+		interpreterProxy push: (interpreterProxy positive32BitIntegerFor: fill).
+	].
 ]
 
 { #category : #primitives }
 BalloonEnginePlugin >> primitiveAddCompressedShape [
-	| failureCode fillIndexList lineFills lineWidths rightFills leftFills nSegments points pointsShort |
+	| fillIndexList lineFills lineWidths rightFills leftFills nSegments points pointsShort |
 	<export: true>
 	<inline: false>
 
 	"Fail if we have the wrong number of arguments"
 	interpreterProxy methodArgumentCount = 7 
-		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+		ifFalse:[^interpreterProxy primitiveFail].
 
 	fillIndexList := interpreterProxy stackObjectValue: 0.
 	lineFills := interpreterProxy stackObjectValue: 1.
@@ -2385,11 +2384,10 @@ BalloonEnginePlugin >> primitiveAddCompressedShape [
 	leftFills := interpreterProxy stackObjectValue: 4.
 	nSegments := interpreterProxy stackIntegerValue: 5.
 	points := interpreterProxy stackObjectValue: 6.
-	interpreterProxy failed ifTrue:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	interpreterProxy failed ifTrue:[^nil].
 
-	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 7)
-						requiredState: GEStateUnlocked) = 0
-		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
+	(self quickLoadEngineFrom: (interpreterProxy stackObjectValue: 7) requiredState: GEStateUnlocked)
+		ifFalse:[^interpreterProxy primitiveFail].
 
 	"First, do a check if the compressed shape is okay"
 	(self checkCompressedShape: points 
@@ -2398,7 +2396,7 @@ BalloonEnginePlugin >> primitiveAddCompressedShape [
 			rightFills: rightFills 
 			lineWidths: lineWidths 
 			lineFills: lineFills 
-			fillIndexList: fillIndexList) ifFalse:[^interpreterProxy primitiveFailFor: GEFEntityCheckFailed].
+			fillIndexList: fillIndexList) ifFalse:[^interpreterProxy primitiveFail].
 
 	"Now check that we have some hope to have enough free space.
 	Do this by assuming nSegments boundaries of maximum size,
@@ -2406,7 +2404,7 @@ BalloonEnginePlugin >> primitiveAddCompressedShape [
 	will be line segments"
 
 	(self needAvailableSpace: (GBBaseSize max: GLBaseSize) * nSegments)
-		ifFalse:[^interpreterProxy primitiveFailFor: GEFWorkTooBig].
+		ifFalse:[^interpreterProxy primitiveFail].
 
 	"Check if the points are short"
 	pointsShort := (interpreterProxy slotSizeOf: points) = (nSegments * 3).
@@ -2421,40 +2419,40 @@ BalloonEnginePlugin >> primitiveAddCompressedShape [
 			fillIndexList: (interpreterProxy firstIndexableField: fillIndexList)
 			pointShort: pointsShort.
 
-	engineStopped ifTrue:[^interpreterProxy primitiveFailFor: GEFEngineStopped].
+	engineStopped ifTrue:[^interpreterProxy primitiveFail].
 
-	interpreterProxy failed ifTrue:[^interpreterProxy primitiveFailFor: GEFEntityLoadFailed].
-	self needsFlushPut: 1.
-	self storeEngineStateInto: engine.
-	interpreterProxy pop: 7. "Leave rcvr on stack"
+	interpreterProxy failed ifFalse:[
+		self needsFlushPut: 1.
+		self storeEngineStateInto: engine.
+		interpreterProxy pop: 7. "Leave rcvr on stack"
+	].
 ]
 
 { #category : #primitives }
 BalloonEnginePlugin >> primitiveAddGradientFill [
 
-	| failureCode isRadial nrmOop dirOop originOop rampOop fill |
+	| isRadial nrmOop dirOop originOop rampOop fill |
 	<export: true>
 	<inline: false>
 
 	"Fail if we have the wrong number of arguments"
 	interpreterProxy methodArgumentCount = 5 
-		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+		ifFalse:[^interpreterProxy primitiveFail].
 
 	isRadial := interpreterProxy booleanValueOf: (interpreterProxy stackValue: 0).
 	nrmOop := interpreterProxy stackValue: 1.
 	dirOop := interpreterProxy stackValue: 2.
 	originOop := interpreterProxy stackValue: 3.
 	rampOop := interpreterProxy stackValue: 4.
-	interpreterProxy failed ifTrue:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	interpreterProxy failed ifTrue:[^nil].
 
-	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 5)
-						requiredState: GEStateUnlocked) = 0
-		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
+	(self quickLoadEngineFrom: (interpreterProxy stackObjectValue: 5) requiredState: GEStateUnlocked)
+		ifFalse:[^interpreterProxy primitiveFail].
 
 	self loadPoint: self point1Get from: originOop.
 	self loadPoint: self point2Get from: dirOop.
 	self loadPoint: self point3Get from: nrmOop.
-	interpreterProxy failed ifTrue:[^interpreterProxy primitiveFailFor: GEFBadPoint].
+	interpreterProxy failed ifTrue:[^0].
 
 	fill := self loadGradientFill: rampOop 
 				from: self point1Get 
@@ -2463,42 +2461,42 @@ BalloonEnginePlugin >> primitiveAddGradientFill [
 				isRadial: isRadial.
 	engineStopped ifTrue:[
 		"Make sure the stack is okay"
-		^interpreterProxy primitiveFailFor: GEFEngineStopped].
+		^interpreterProxy primitiveFail].
 
-	interpreterProxy failed
-		ifTrue: [^interpreterProxy primitiveFailFor: GEFEntityLoadFailed].
-	self storeEngineStateInto: engine.
-	interpreterProxy pop: 6 thenPush: (interpreterProxy positive32BitIntegerFor: fill)
+	interpreterProxy failed ifFalse:[
+		self storeEngineStateInto: engine.
+		interpreterProxy pop: 6.
+		interpreterProxy push: (interpreterProxy positive32BitIntegerFor: fill).
+	].
 ]
 
 { #category : #primitives }
 BalloonEnginePlugin >> primitiveAddLine [
-	| failureCode leftFill rightFill endOop startOop |
+	| leftFill rightFill endOop startOop |
 	<export: true>
 	<inline: false>
 
 	"Fail if we have the wrong number of arguments"
 	interpreterProxy methodArgumentCount = 4 
-		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+		ifFalse:[^interpreterProxy primitiveFail].
 
 	rightFill := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
 	leftFill := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 1).
 	endOop := interpreterProxy stackObjectValue: 2.
 	startOop := interpreterProxy stackObjectValue: 3.
-	interpreterProxy failed ifTrue:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	interpreterProxy failed ifTrue:[^nil].
 
-	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 4)
-			requiredState: GEStateUnlocked) = 0
-		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
+	(self quickLoadEngineFrom: (interpreterProxy stackObjectValue: 4) requiredState: GEStateUnlocked)
+		ifFalse:[^interpreterProxy primitiveFail].
 
 	"Make sure the fills are okay"
 	((self isFillOkay: leftFill) and:[self isFillOkay: rightFill])
-			ifFalse:[^interpreterProxy primitiveFailFor: GEFWrongFill].
+			ifFalse:[^interpreterProxy primitiveFail].
 
 	"Load the points"
 	self loadPoint: self point1Get from: startOop.
 	self loadPoint: self point2Get from: endOop.
-	interpreterProxy failed ifTrue:[^interpreterProxy primitiveFailFor: GEFBadPoint].
+	interpreterProxy failed ifTrue:[^0].
 
 	"Transform points"
 	self transformPoints: 2.
@@ -2506,47 +2504,47 @@ BalloonEnginePlugin >> primitiveAddLine [
 	"Transform colors"
 	leftFill := self transformColor: leftFill.
 	rightFill := self transformColor: rightFill.
-	engineStopped ifTrue:[^interpreterProxy primitiveFailFor: GEFEngineStopped].
+	engineStopped ifTrue:[^interpreterProxy primitiveFail].
 
 	"Load line"
 	self loadWideLine: 0 from: self point1Get to: self point2Get 
 		lineFill: 0 leftFill: leftFill rightFill: rightFill.
-	engineStopped ifTrue:[^interpreterProxy primitiveFailFor: GEFEngineStopped].
+	engineStopped ifTrue:[^interpreterProxy primitiveFail].
 
-	interpreterProxy failed ifTrue:[^interpreterProxy primitiveFailFor: GEFEntityLoadFailed].
-	self storeEngineStateInto: engine.
-	interpreterProxy pop: 4. "Leave rcvr on stack"
+	interpreterProxy failed ifFalse:[
+		self storeEngineStateInto: engine.
+		interpreterProxy pop: 4. "Leave rcvr on stack"
+	].
 ]
 
 { #category : #primitives }
 BalloonEnginePlugin >> primitiveAddOval [
-	| failureCode fillIndex borderWidth borderIndex endOop startOop |
+	| fillIndex borderWidth borderIndex endOop startOop |
 	<export: true>
 	<inline: false>
 
 	"Fail if we have the wrong number of arguments"
 	interpreterProxy methodArgumentCount = 5 
-		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+		ifFalse:[^interpreterProxy primitiveFail].
 
 	borderIndex := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
 	borderWidth := interpreterProxy stackIntegerValue: 1.
 	fillIndex := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 2).
 	endOop := interpreterProxy stackObjectValue: 3.
 	startOop := interpreterProxy stackObjectValue: 4.
-	interpreterProxy failed ifTrue:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	interpreterProxy failed ifTrue:[^nil].
 
-	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 5)
-					requiredState: GEStateUnlocked) = 0
-		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
+	(self quickLoadEngineFrom: (interpreterProxy stackObjectValue: 5) requiredState: GEStateUnlocked)
+		ifFalse:[^interpreterProxy primitiveFail].
 
 	"Make sure the fills are okay"
 	((self isFillOkay: borderIndex) and:[self isFillOkay: fillIndex])
-			ifFalse:[^interpreterProxy primitiveFailFor: GEFWrongFill].
+			ifFalse:[^interpreterProxy primitiveFail].
 
 	"Transform colors"
 	fillIndex := self transformColor: fillIndex.
 	borderIndex := self transformColor: borderIndex.
-	engineStopped ifTrue:[^interpreterProxy primitiveFailFor: GEFEngineStopped].
+	engineStopped ifTrue:[^interpreterProxy primitiveFail].
 
 	"Check if we have anything at all to do"
 	(fillIndex = 0 and:[borderIndex = 0 or:[borderWidth <= 0]]) ifTrue:[
@@ -2555,7 +2553,7 @@ BalloonEnginePlugin >> primitiveAddOval [
 
 	"Make sure we have some space"
 	(self needAvailableSpace: (16 * GBBaseSize)) 
-		ifFalse:[^interpreterProxy primitiveFailFor: GEFWorkTooBig].
+		ifFalse:[^interpreterProxy primitiveFail].
 
 	"Check if we need a border"
 	(borderWidth > 0 and:[borderIndex ~= 0]) 
@@ -2566,42 +2564,41 @@ BalloonEnginePlugin >> primitiveAddOval [
 	"Load the rectangle points"
 	self loadPoint: self point1Get from: startOop.
 	self loadPoint: self point2Get from: endOop.
-	interpreterProxy failed ifTrue:[^interpreterProxy primitiveFailFor: GEFBadPoint].
+	interpreterProxy failed ifTrue:[^0].
 
 	self loadOval: borderWidth lineFill: borderIndex 
 		leftFill: 0 rightFill: fillIndex.
 
 	engineStopped ifTrue:[
 		self wbStackClear.
-		^interpreterProxy primitiveFailFor: GEFEngineStopped.
+		^interpreterProxy primitiveFail.
 	].
-	interpreterProxy failed
-		ifTrue:[^interpreterProxy primitiveFailFor: GEFEntityLoadFailed].
-	self needsFlushPut: 1.
-	self storeEngineStateInto: engine.
-	interpreterProxy pop: 5. "Leave rcvr on stack"
+	interpreterProxy failed ifFalse:[
+		self needsFlushPut: 1.
+		self storeEngineStateInto: engine.
+		interpreterProxy pop: 5. "Leave rcvr on stack"
+	].
 ]
 
 { #category : #primitives }
 BalloonEnginePlugin >> primitiveAddPolygon [
-	| failureCode points lineFill lineWidth fillIndex nPoints length isArray segSize |
+	| points lineFill lineWidth fillIndex nPoints length isArray segSize |
 	<export: true>
 	<inline: false>
 
 	"Fail if we have the wrong number of arguments"
 	interpreterProxy methodArgumentCount = 5 
-		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+		ifFalse:[^interpreterProxy primitiveFail].
 
 	lineFill := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
 	lineWidth := interpreterProxy stackIntegerValue: 1.
 	fillIndex := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 2).
 	nPoints := interpreterProxy stackIntegerValue: 3.
 	points := interpreterProxy stackObjectValue: 4.
-	interpreterProxy failed ifTrue:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	interpreterProxy failed ifTrue:[^nil].
 
-	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 5)
-						requiredState: GEStateUnlocked) = 0
-		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
+	(self quickLoadEngineFrom: (interpreterProxy stackObjectValue: 5) requiredState: GEStateUnlocked)
+		ifFalse:[^interpreterProxy primitiveFail].
 
 	"First, do a check if the points look okay"
 	length := interpreterProxy slotSizeOf: points.
@@ -2609,12 +2606,12 @@ BalloonEnginePlugin >> primitiveAddPolygon [
 		isArray := false.
 		"Either PointArray or ShortPointArray"
 		(length = nPoints or:[nPoints * 2 = length])
-			ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+			ifFalse:[^interpreterProxy primitiveFail].
 	] ifFalse:["Must be Array of points"
 		(interpreterProxy isArray: points)
-			ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+			ifFalse:[^interpreterProxy primitiveFail].
 		length = nPoints
-			ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+			ifFalse:[^interpreterProxy primitiveFail].
 		isArray := true.
 	].
 
@@ -2631,12 +2628,12 @@ BalloonEnginePlugin >> primitiveAddPolygon [
 
 	"Check the fills"
 	((self isFillOkay: lineFill) and:[self isFillOkay: fillIndex])
-		ifFalse:[^interpreterProxy primitiveFailFor: GEFWrongFill]. 
+		ifFalse:[^interpreterProxy primitiveFail]. 
 
 	"Transform colors"
 	lineFill := self transformColor: lineFill.
 	fillIndex := self transformColor: fillIndex.
-	engineStopped ifTrue:[^interpreterProxy primitiveFailFor: GEFEngineStopped].
+	engineStopped ifTrue:[^interpreterProxy primitiveFail].
 
 	"Check if have anything at all to do"
 	((lineFill = 0 or:[lineWidth = 0]) and:[fillIndex = 0])
@@ -2654,44 +2651,43 @@ BalloonEnginePlugin >> primitiveAddPolygon [
 			fill: fillIndex lineWidth: lineWidth lineFill: lineFill 
 			pointsShort: (nPoints = length)].
 
-	engineStopped ifTrue:[^interpreterProxy primitiveFailFor: GEFEngineStopped].
+	engineStopped ifTrue:[^interpreterProxy primitiveFail].
 
-	interpreterProxy failed ifTrue:
-		[^interpreterProxy primitiveFailFor: GEFEntityLoadFailed].
-	self needsFlushPut: 1.
-	self storeEngineStateInto: engine.
-	interpreterProxy pop: 5. "Leave rcvr on stack"
+	interpreterProxy failed ifFalse:[
+		self needsFlushPut: 1.
+		self storeEngineStateInto: engine.
+		interpreterProxy pop: 5. "Leave rcvr on stack"
+	].
 ]
 
 { #category : #primitives }
 BalloonEnginePlugin >> primitiveAddRect [
-	| failureCode fillIndex borderWidth borderIndex endOop startOop |
+	| fillIndex borderWidth borderIndex endOop startOop |
 	<export: true>
 	<inline: false>
 
 	"Fail if we have the wrong number of arguments"
 	interpreterProxy methodArgumentCount = 5 
-		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+		ifFalse:[^interpreterProxy primitiveFail].
 
 	borderIndex := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
 	borderWidth := interpreterProxy stackIntegerValue: 1.
 	fillIndex := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 2).
 	endOop := interpreterProxy stackObjectValue: 3.
 	startOop := interpreterProxy stackObjectValue: 4.
-	interpreterProxy failed ifTrue:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	interpreterProxy failed ifTrue:[^nil].
 
-	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 5)
-						requiredState: GEStateUnlocked) = 0
-		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
+	(self quickLoadEngineFrom: (interpreterProxy stackObjectValue: 5) requiredState: GEStateUnlocked)
+		ifFalse:[^interpreterProxy primitiveFail].
 
 	"Make sure the fills are okay"
 	((self isFillOkay: borderIndex) and:[self isFillOkay: fillIndex])
-		ifFalse:[^interpreterProxy primitiveFailFor: GEFWrongFill].
+			ifFalse:[^interpreterProxy primitiveFail].
 
 	"Transform colors"
 	borderIndex := self transformColor: borderIndex.
 	fillIndex := self transformColor: fillIndex.
-	engineStopped ifTrue:[^interpreterProxy primitiveFailFor: GEFEngineStopped].
+	engineStopped ifTrue:[^interpreterProxy primitiveFail].
 
 	"Check if we have anything at all to do"
 	(fillIndex = 0 and:[borderIndex = 0 or:[borderWidth = 0]]) ifTrue:[
@@ -2700,7 +2696,7 @@ BalloonEnginePlugin >> primitiveAddRect [
 
 	"Make sure we have some space"
 	(self needAvailableSpace: (4 * GLBaseSize)) 
-		ifFalse:[^interpreterProxy primitiveFailFor: GEFWorkTooBig].
+		ifFalse:[^interpreterProxy primitiveFail].
 
 	"Check if we need a border"
 	(borderWidth > 0 and:[borderIndex ~= 0]) 
@@ -2710,7 +2706,7 @@ BalloonEnginePlugin >> primitiveAddRect [
 	"Load the rectangle"
 	self loadPoint: self point1Get from: startOop.
 	self loadPoint: self point3Get from: endOop.
-	interpreterProxy failed ifTrue:[^interpreterProxy primitiveFailFor: GEFBadPoint].
+	interpreterProxy failed ifTrue:[^nil].
 	self point2Get at: 0 put: (self point3Get at: 0).
 	self point2Get at: 1 put: (self point1Get at: 1).
 	self point4Get at: 0 put: (self point1Get at: 0).
@@ -2720,31 +2716,33 @@ BalloonEnginePlugin >> primitiveAddRect [
 
 	self loadRectangle: borderWidth lineFill: borderIndex leftFill: 0 rightFill: fillIndex.
 
-	interpreterProxy failed ifTrue:
-		[^interpreterProxy primitiveFailFor: GEFEntityLoadFailed].
-	self needsFlushPut: 1.
-	self storeEngineStateInto: engine.
-	interpreterProxy pop: 5. "Leave rcvr on stack"
+	interpreterProxy failed ifFalse:[
+		self needsFlushPut: 1.
+		self storeEngineStateInto: engine.
+		interpreterProxy pop: 5. "Leave rcvr on stack"
+	].
 ]
 
 { #category : #primitives }
 BalloonEnginePlugin >> primitiveGetBezierStats [
-	| failureCode statOop stats |
+	| statOop stats |
 	<export: true>
 	<inline: false>
-	<var: #stats type:'int *'>
+	<var: #stats type: 'int *'>
 
 	interpreterProxy methodArgumentCount = 1
-		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
-
-	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 1)) = 0
-		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
+		ifFalse:[^interpreterProxy primitiveFail].
 
 	statOop := interpreterProxy stackObjectValue: 0.
-	(interpreterProxy failed not
-	and: [(interpreterProxy isWords: statOop)
-	and: [(interpreterProxy slotSizeOf: statOop) >= 4]])
-		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	engine := interpreterProxy stackObjectValue: 1.
+	interpreterProxy failed ifTrue:[^nil].
+	(self quickLoadEngineFrom: engine)
+		ifFalse:[^interpreterProxy primitiveFail].
+
+	(interpreterProxy isWords: statOop)
+		ifFalse:[^interpreterProxy primitiveFail].
+	(interpreterProxy slotSizeOf: statOop) < 4
+		ifTrue:[^interpreterProxy primitiveFail].
 	stats := interpreterProxy firstIndexableField: statOop.
 	stats at: 0 put: (stats at: 0) + (workBuffer at: GWBezierMonotonSubdivisions).
 	stats at: 1 put: (stats at: 1) + (workBuffer at: GWBezierHeightSubdivisions).
@@ -2757,9 +2755,9 @@ BalloonEnginePlugin >> primitiveGetBezierStats [
 { #category : #private }
 BalloonEnginePlugin >> rShiftTable [
 	| theTable |
-	<returnTypeC:'int *'>
+	<returnTypeC: 'int *'>
 	<inline: false>
-	<var:#theTable declareC:'static int theTable[17] =
+	<var: #theTable declareC: 'static int theTable[17] =
 		{0, 5, 4, 0, 3, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 1}'>
 	^theTable
 ]
@@ -2830,7 +2828,7 @@ BalloonEnginePlugin >> stepToFirstBezierIn: bezier at: yValue [
 	fwX1 fwX2 fwY1 fwY2 
 	fwDx fwDDx fwDy fwDDy |
 	<inline: false>
-	<var: #updateData type:'int *'>
+	<var: #updateData type: 'int *'>
 
 
 	"Do a quick check if there is anything at all to do"

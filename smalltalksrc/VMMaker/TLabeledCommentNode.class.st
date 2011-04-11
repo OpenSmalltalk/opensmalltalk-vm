@@ -2,25 +2,20 @@ Class {
 	#name : #TLabeledCommentNode,
 	#superclass : #TParseNode,
 	#instVars : [
-		'label',
-		'asmLabel'
+		'label'
 	],
 	#category : #'VMMaker-Translation to C'
 }
 
-{ #category : #accessing }
-TLabeledCommentNode >> asmLabel [
+{ #category : #'as yet unclassified' }
+TLabeledCommentNode >> copyTree [
 
-	^asmLabel
+	^self class new
+		setLabel: label
+		comment: comment
 ]
 
-{ #category : #accessing }
-TLabeledCommentNode >> asmLabel: labelString [
-
-	asmLabel := labelString
-]
-
-{ #category : #'C code generation' }
+{ #category : #'as yet unclassified' }
 TLabeledCommentNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 	"Emit a C comment with optional label."
 
@@ -28,9 +23,6 @@ TLabeledCommentNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 	aStream nextPutAll: '/* '.
 	aStream nextPutAll: comment.
 	aStream nextPutAll: ' */'.
-	asmLabel notNil ifTrue:
-		[aStream crtab: level.
-		 aCodeGen outputAsmLabel: asmLabel on: aStream]
 ]
 
 { #category : #testing }

@@ -7,16 +7,14 @@ Class {
 	#category : #'VMMaker-Building'
 }
 
-{ #category : #initialize }
-Win32VMMaker >> createCodeGenerator [
-	"Set up a CCodeGenerator for this VMMaker - On Windows we use the gcc 2.95.x compiler
-	 which does better without the global struct."
-	^CCodeGeneratorGlobalStructure new initialize;
-		globalStructDefined: true;
-		structDefDefine: '0';
-		"structDefDefine: 'defined(PPC) || defined(_POWER) || defined(__powerpc__) || defined(__ppc__)';"
-		logger: logger;
-		yourself
+{ #category : #'target directories' }
+Win32VMMaker >> deleteUnwantedExternalPluginDirectories [
+	"Don't."
+]
+
+{ #category : #'target directories' }
+Win32VMMaker >> deleteUnwantedInternalPluginDirectories [
+	"Don't."
 ]
 
 { #category : #'target directories' }
@@ -39,8 +37,13 @@ Win32VMMaker >> internalPluginsDirectory [
 	^fd"
 ]
 
+{ #category : #'copying files' }
+Win32VMMaker >> processAssortedFiles [
+	"Do nothing."
+]
+
 { #category : #'generate sources' }
-Win32VMMaker >> validatePlugin: plName in: listOfPlugins [
+Win32VMMaker >> validatePlugin:	plName in: listOfPlugins [
 	"The normal file release process bundles all files in the plugin directory, so don't bother users telling them 'there are no cross platform files for xyz' if there is are platform specific files present."
 	| plugin |
 	plName isString
@@ -52,6 +55,10 @@ Win32VMMaker >> validatePlugin: plName in: listOfPlugins [
 				ifTrue: [plugin := plName]].
 	plugin ifNil: [^ self couldNotFindPluginClass: plName].
 
+	"Make sure we have any and all platform and file support for this plugin"
+
+	(plugin isSuitablePluginForPlatform: self platformName) ifFalse:[^self notSuitablePlugin: plugin forPlatform: self platformName].
+		
 	"Is there a cross-platform or platform files directory of the same name as this plugin?"
 	plugin requiresPlatformFiles
 		ifTrue: [(self platformPluginsDirectory directoryExists: plugin moduleName)

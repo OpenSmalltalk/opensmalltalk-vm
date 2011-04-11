@@ -51,7 +51,8 @@ Class {
 		'interpreterClassMorph',
 		'platformPathMorph',
 		'platformNameMorph',
-		'generatedPathMorph'
+		'generatedPathMorph',
+		'configFileName'
 	],
 	#category : #'VMMaker-Building'
 }
@@ -59,9 +60,18 @@ Class {
 { #category : #'instance creation' }
 VMMakerTool class >> initialize [
 
-	 (TheWorldMenu respondsTo: #registerOpenCommand:)
+	Smalltalk at: #TheWorldMenu ifPresent: [ :class |
+		class class methodDict at: #registerOpenCommand: ifPresent: [ :method |
+			(method sendsSelector: #deprecated:) 
+				ifFalse: [ class registerOpenCommand: (Array with: 'VMMaker' with: (Array with: self with: #openInWorld)) ] ] ]
+]
 
-         ifTrue: [TheWorldMenu registerOpenCommand: {'VMMaker'. {self. #openInWorld}. 'The VM making tool'}].
+{ #category : #'world menu' }
+VMMakerTool class >> menuCommandOn: aBuilder [ 
+	<worldMenu> 
+	(aBuilder item: #'VMMaker')
+		parent: #Tools;
+		action:[self openInWorld]
 ]
 
 { #category : #'instance creation' }
@@ -74,8 +84,10 @@ VMMakerTool class >> openInWorld [
 
 { #category : #unloading }
 VMMakerTool class >> unload [
-
-	TheWorldMenu unregisterOpenCommandWithReceiver: self
+	Smalltalk at: #TheWorldMenu ifPresent: [ :class |
+		class class methodDict at: #unregisterOpenCommandWithReceiver: ifPresent: [ :method |
+			(method sendsSelector: #deprecated:) 
+				ifFalse: [ class unregisterOpenCommandWithReceiver: self ] ] ]
 ]
 
 { #category : #'drag and drop' }
@@ -109,12 +121,6 @@ VMMakerTool >> addSecondButtonRowToWindow: sysWin startingAt: initialVerticalOff
 			 actionSelector: #generateExternal;
 			 hResizing: #spaceFill;
 			 setBalloonText: 'Generate the sources for all external plugins').
-	box addMorphBack: ((AlignmentMorph inARow: {StringMorph new contents: '64 bit VM?'. UpdatingThreePhaseButtonMorph checkBox target: self;
-				 actionSelector: #toggle64BitVM;
-				 getSelector: #isFor64BitVM}) layoutInset: 3;
-			 cellInset: 5;
-			 color: Color blue veryMuchLighter;
-			 setBalloonText: 'Set to build a 64 bit VM or a 32bit VM' yourself).
 	sysWin
 		addMorph: box
 		fullFrame: (LayoutFrame
@@ -150,6 +156,11 @@ VMMakerTool >> addTopButtonRowToWindow: sysWin [
 			 actionSelector: #saveConfig;
 			 hResizing: #spaceFill;
 			 setBalloonText: 'Save the current configuration').
+	box addMorphBack: (SimpleButtonMorph new target: self;
+			 label: 'Rescan';
+			 actionSelector: #rescanPlugins;
+			 hResizing: #spaceFill;
+			 setBalloonText: 'Rescan image, adding any new plugins and removing those no longer available in the image').
 	sysWin
 		addMorph: box
 		fullFrame: (LayoutFrame
@@ -166,8 +177,7 @@ VMMakerTool >> availableListMenu: aMenu [
 			('make all internal'						makeAllPluginsInternal)
 			('make all available'					makeAllPluginsAvailable)
 			-
-			('browse plugin' 						browseSelectedAvailablePlugin)
-			('refresh list' 							refreshAvailablePluginsList)).
+			('browse plugin' 						browseSelectedAvailablePlugin)).
 	^ aMenu
 ]
 
@@ -214,9 +224,11 @@ VMMakerTool >> browseSelectedInternalPlugin [
 
 { #category : #'window construction' }
 VMMakerTool >> buildCenterRows [
-	| rows color1 color2 |
+	| rows color1 color2 labelWidth longestLabel |
 	color1 := Color blue veryMuchLighter.
 	color2 := Color green veryMuchLighter.
+	longestLabel := 'Path to platforms code:'.	"calculate labelWidth for acceptable results on varous images"
+	labelWidth := (TextMorph new contents: longestLabel translated asText allBold) width *1.13.
 	rows := Morph new color: Color transparent;
 				 layoutPolicy: TableLayout new;
 				 vResizing: #spaceFill;
@@ -230,6 +242,7 @@ VMMakerTool >> buildCenterRows [
 	rows
 		addMorphBack: ((self
 				entryRowWithLabel: 'Interpreter class name:'
+				labelWidth: labelWidth
 				balloonText: 'The name of the Interpreter class'
 				getFieldText: #interpreterClassName
 				setFieldText: #interpreterClassName:
@@ -242,6 +255,7 @@ VMMakerTool >> buildCenterRows [
 	rows
 		addMorphBack: ((self
 				entryRowWithLabel: 'Path to platforms code:'
+				labelWidth: labelWidth
 				balloonText: 'The directory where the platform source tree is found; can be edited in text field to the right. Default of {working directory}/src is strongly recommended'
 				getFieldText: #platformsPathText
 				setFieldText: #platformsPathText:
@@ -254,6 +268,7 @@ VMMakerTool >> buildCenterRows [
 	rows
 		addMorphBack: ((self
 				entryRowWithLabel: 'Platform name:'
+				labelWidth: labelWidth
 				balloonText: 'The platform name (as returned by Smalltalk platformName - unix, Mac OS, RISCOS, win32 etc); can be edited (in text field to the right) to cross generate'
 				getFieldText: #platformNameText
 				setFieldText: #platformNameText:
@@ -265,7 +280,8 @@ VMMakerTool >> buildCenterRows [
 
 	rows
 		addMorphBack: ((self
-				entryRowWithLabel: 'Path to generated sources'
+				entryRowWithLabel: 'Path to generated sources:'
+				labelWidth: labelWidth
 				balloonText: 'The directory where the built sources will be placed; can be edited in text field to the right. The default is strongly recommended; makefile alterations may be needed if you use a different path.'
 				getFieldText: #sourcePathText
 				setFieldText: #sourcePathText:
@@ -391,6 +407,15 @@ VMMakerTool >> cleanoutSrcDir [
 	vmMaker deleteEntireGeneratedTree
 ]
 
+{ #category : #configurations }
+VMMakerTool >> configFileName [
+	"Answer the full path to the most recently loaded configuration file, or a default if
+	no configuration file was previously loaded."
+
+	^ configFileName
+		ifNil: [configFileName := FileDirectory default pathName , FileDirectory slash , 'vmmaker.config']
+]
+
 { #category : #'list access' }
 VMMakerTool >> currentAvailableModuleIndex [
 	allPluginsSelection ifNil:[^0].
@@ -441,9 +466,8 @@ VMMakerTool >> dragTransferTypeForMorph: dragSource [
 ]
 
 { #category : #'window construction' }
-VMMakerTool >> entryRowWithLabel: label balloonText: balloonText getFieldText: getTextSelector setFieldText: setTextSelector buttonLabel: buttonLabel buttonAction: buttonAction buttonBalloonText: buttonBalloonText [ 
-	| row lWidth |
-	lWidth := TextStyle defaultFont pixelSize * 11.
+VMMakerTool >> entryRowWithLabel: label labelWidth: lWidth balloonText: balloonText getFieldText: getTextSelector setFieldText: setTextSelector buttonLabel: buttonLabel buttonAction: buttonAction buttonBalloonText: buttonBalloonText [ 
+	| row tm |
 	row := Morph new color: Color transparent;
 				 hResizing: #spaceFill;
 				 vResizing: #spaceFill;
@@ -458,7 +482,7 @@ VMMakerTool >> entryRowWithLabel: label balloonText: balloonText getFieldText: g
 				fractions: (0 @ 0 corner: 0 @ 1)
 				offsets: (3 @ 3 corner: lWidth @ -3)).
 	row
-		addMorph: ((PluggableTextMorph
+		addMorph: ((tm := PluggableTextMorph
 				on: self
 				text: getTextSelector
 				accept: setTextSelector) hideVScrollBarIndefinitely: true;
@@ -466,6 +490,8 @@ VMMakerTool >> entryRowWithLabel: label balloonText: balloonText getFieldText: g
 		fullFrame: (LayoutFrame
 				fractions: (0 @ 0 corner: 1 @ 1)
 				offsets: (lWidth + 10 @ 0 corner: (lWidth / 1.8 + 10) negated @ 0)).
+	"Make the background a solid color so that eventual bleed from the labels doesn't make the entire input field unreadable. Happens when the bold font is significantly wider than the non-bold font or when the spacing of the font doesn't match the guess above"
+	tm color: (Color gray: 0.9).
 	buttonAction
 		ifNotNil: [row
 				addMorph: (SimpleButtonMorph new target: self;
@@ -513,7 +539,7 @@ VMMakerTool >> externalModules [
 { #category : #'path access' }
 VMMakerTool >> findPlatformsPath [
 	| dir |
-	dir := FileList2 modalFolderSelector.
+	dir := self selectDirectory.
 	dir ifNil: [^nil].
 	self platformsPathText: dir pathName
 ]
@@ -575,25 +601,25 @@ VMMakerTool >> generateExternal [
 { #category : #'generate sources' }
 VMMakerTool >> generateSelectedExternalPlugin [
 
-	| pluginName |
-	pluginName := self externalModules at: self currentExternalModuleIndex ifAbsent: [^self].
-	self checkOK ifTrue:
-		[[(Smalltalk classNamed: pluginName) touch.
-		  vmMaker generateExternalPlugin: pluginName; logDateAndTime]
-			on: VMMakerException
-			do: [:ex| self inform: ex messageText]]
+	| plugin |
+	plugin := self externalModules at: self currentExternalModuleIndex ifAbsent: [^self].
+	self checkOK
+		ifTrue: [[vmMaker generateExternalPlugin: plugin]
+		on: VMMakerException
+		do: [:ex| self inform: ex messageText]]
+
 ]
 
 { #category : #'generate sources' }
 VMMakerTool >> generateSelectedInternalPlugin [
 
-	| pluginName |
-	pluginName := self internalModules at: self currentInternalModuleIndex ifAbsent: [^self].
-	self checkOK ifTrue:
-		[[(Smalltalk classNamed: pluginName) touch.
-		  vmMaker generateInternalPlugin: pluginName]
-			on: VMMakerException
-			do: [:ex| self inform: ex messageText]]
+	| plugin |
+	plugin := self internalModules at: self currentInternalModuleIndex ifAbsent: [^self].
+	self checkOK
+		ifTrue: [[vmMaker generateInternalPlugin: plugin]
+		on: VMMakerException
+		do: [:ex| self inform: ex messageText]]
+
 ]
 
 { #category : #menus }
@@ -601,6 +627,12 @@ VMMakerTool >> helpText [
 	(StringHolder new contents: self class comment)
 		openLabel: 'VMMakerTool help'
 
+]
+
+{ #category : #'generate sources' }
+VMMakerTool >> inform: aProblemString [
+"log the problem in the transcript window"
+	logger show: aProblemString; cr
 ]
 
 { #category : #initialisation }
@@ -669,15 +701,17 @@ VMMakerTool >> interpreterClassName: aText [
 
 	[vmMaker interpreterClassName: aText asString] 
 		on: VMMakerException 
-		do: [:ex| self inform:'problem with this class name; does this class exist?'. 
+		do: [:ex| self inform:ex messageText. 
 			^false].
 	^true
 ]
 
-{ #category : #'generate sources' }
+{ #category : #deprecated }
 VMMakerTool >> isFor64BitVM [
-"do I build a 64bit VM or not?"
-	^vmMaker isFor64BitVM
+	"This selector may be used by obsolete instances of VMMakerTool. The
+	64-bit setting of VMMaker is no longer functionally relevant, but this method
+	is retained to prevent problems with existing VMMakerTool instances that
+	may exist in some images."
 ]
 
 { #category : #'list access' }
@@ -696,16 +730,25 @@ VMMakerTool >> listMorphs [
 
 { #category : #configurations }
 VMMakerTool >> loadConfig [
-	| fileResult file |
-	fileResult := (StandardFileMenu oldFileMenu: FileDirectory default withPattern: '*.config')
-				startUpWithCaption: 'Select VMMaker configuration...'.
-	fileResult
-		ifNotNil: [file := fileResult directory fullNameFor: fileResult name.
+
+	((Smalltalk hasClassNamed: #UIManager)
+			ifTrue: [ "Newer images use UIManager"
+				(Smalltalk at: #UIManager) default
+						chooseFileMatching: #('config' )
+						label: 'Select VMMaker configuration...']
+			ifFalse: [ "UIManager not present, use original StandardFileMenu implementation "
+				(((Smalltalk at: #StandardFileMenu)
+						oldFileMenu: FileDirectory default
+						withPattern: '*.config')
+						startUpWithCaption: 'Select VMMaker configuration...')
+					ifNotNilDo: [ :fileResult | fileResult directory fullNameFor: fileResult name]])
+		ifNotNilDo: [ :file |
 			[vmMaker := VMMaker forConfigurationFile: file.
 			vmMaker logger: logger.
 			vmMaker platformDirectory]
 				on: Error
 				do: [self inform: 'Possible problem with path settings or platform name?'].
+			configFileName := file. "set default config file name to the most recently loaded file"
 			self updateAllViews]
 ]
 
@@ -775,21 +818,20 @@ VMMakerTool >> platformNameText [
 VMMakerTool >> platformNameText: aText [ 
 	"set the platform name - this will almost certainly mean replacing the  
 	vmMaker with one suited to the platform so we do it anyway."
-	| prevVMMaker newVMMaker |
+	| prevVMMaker |
 	prevVMMaker := vmMaker.
 	"make a new vmmaker and ensure I depend on it correctly"
-	newVMMaker := VMMaker forPlatform: aText string.
-	newVMMaker logger: logger.
-	"configure the new vmmaker to match the old one"
-	[newVMMaker loadConfiguration: prevVMMaker configurationInfo.
-	 newVMMaker platformDirectory]
-		on: VMMakerException
-		do: [self inform: 'Possible problem with path settings or platform name? Check path, permissions or spellings'.
-			^false].
-	newVMMaker addDependent: self.
+	vmMaker := VMMaker forPlatform: aText string.
+	vmMaker logger: logger.
+	vmMaker addDependent: self.
 	prevVMMaker removeDependent: self.
-	vmMaker := newVMMaker.
-	^true
+	"configure the new vmmaker to match the old one"
+	[vmMaker loadConfiguration: prevVMMaker configurationInfo.
+	vmMaker platformDirectory]
+		on: VMMakerException
+		do: [:ex| self inform: ex messageText.
+			^ false].
+	^ true
 ]
 
 { #category : #menus }
@@ -797,34 +839,24 @@ VMMakerTool >> platformsListMenu [
 	"create a menu of all known platforms"
 
 	| choice platnames |
-	platnames := vmMaker platformRootDirectory directoryNames reject:
-					[:dirName|
-					dirName first = $. ".svn .git et al"
-					or: [dirName ='CVS']].
-	choice := (PopUpMenu labelArray: platnames lines: #()) startUp.
-	choice ~= 0 ifTrue:
-		[self platformNameText: (platnames at: choice) asText]
+	platnames := vmMaker platformRootDirectory directoryNames 
+				copyWithoutAll: #('Cross' 'CVS' '.svn').
+	choice := (PopUpMenu labelArray: platnames
+				lines: #()) startUp.
+	choice = 0 ifTrue: [^self].
+	self platformNameText: (platnames at: choice) asText
 ]
 
 { #category : #'path access' }
 VMMakerTool >> platformsPathText [
 	"return a Text for the path to the platform sources"
-	^(vmMaker platformRootDirectoryName ifNil: ['']),
-	  ([vmMaker platformRootDirectory. ''] 
-		on: VMMakerException 
-		do:[:ex| ex return: '<path not valid>']) asText
+	[^vmMaker platformRootDirectory fullName asText] on: VMMakerException do:[^'Problem with directory name for platform code: enter correct path or consult help text' asText]
 ]
 
 { #category : #'path access' }
 VMMakerTool >> platformsPathText: aText [
 	"set the path to the platform sources"
-	[^vmMaker platformRootDirectoryName: aText asString] on: VMMakerException do:[:ex| self inform:'problem with this directory name; check the path settings, permissions or spelling?'. ex return: false]
-]
-
-{ #category : #menus }
-VMMakerTool >> refreshAvailablePluginsList [
-	vmMaker recomputeProvidedPlugins.
-	self changed: #availableModules
+	[^vmMaker platformRootDirectoryName: aText asString] on: VMMakerException do:[:ex| self inform:'Problem with this directory name; check the path settings, permissions or spelling?'. ex return: false]
 ]
 
 { #category : #menus }
@@ -833,35 +865,64 @@ VMMakerTool >> release [
 	super release.
 ]
 
-{ #category : #configurations }
-VMMakerTool >> saveConfig [
+{ #category : #menus }
+VMMakerTool >> rescanPlugins [
 
-	"write info about the current configuration to a file."
-	| fileResult file |
-	fileResult := (StandardFileMenu newFileMenu: FileDirectory default withPattern: '*.config')
-		startUpWithCaption: 'Save VMMaker configuration...'.
-	fileResult ifNotNil: [
-		('*.config' match: fileResult name)
-			ifFalse: [fileResult name: (fileResult name, '.config')].
-		file := fileResult directory fullNameFor: fileResult name.
-		vmMaker saveConfigurationTo: file].
 
+	vmMaker reinitializePluginsLists
 ]
 
-{ #category : #'generate sources' }
-VMMakerTool >> set64BitVM: boolean [
-"do I build a 64bit VM or not?"
-	boolean ifTrue:[vmMaker for64BitVM] ifFalse:[vmMaker for32BitVM].
-	self changed: #sourcePathText
+{ #category : #configurations }
+VMMakerTool >> saveConfig [
+	"write info about the current configuration to a file."
+
+	((Smalltalk hasClassNamed: #UIManager)
+		ifTrue: [ "Newer images use UIManager"
+			((Smalltalk at: #UIManager) default
+					request: 'Save VMMaker configuration...'
+					initialAnswer: self configFileName)
+				ifNotNilDo: [:f | | file path |
+					('*.config' match: f)
+						ifTrue: [file := f]
+						ifFalse: [file := f , '.config'].
+					"If path is not valid, the image has probably been moved to a new location or
+					to a different platform. Assume this is the case, and change the path to the
+					current default."
+					path := file copyUpToLast: FileDirectory pathNameDelimiter.
+					(FileDirectory default directoryExists: path)
+						ifTrue: [file]
+						ifFalse: [file copyReplaceAll: path with: FileDirectory default pathName]]]
+		ifFalse: [ "UIManager not present, use original StandardFileMenu implementation"
+			(((Smalltalk at: #StandardFileMenu)
+						newFileMenu: FileDirectory default
+						withPattern: '*.config')
+						startUpWithCaption: 'Save VMMaker configuration...')
+				ifNotNilDo: [ :fileResult |
+					('*.config' match: fileResult name)
+						ifFalse: [fileResult name: fileResult name , '.config'].
+								fileResult directory fullNameFor: fileResult name]])
+		ifNotNilDo: [ :file |
+			vmMaker saveConfigurationTo: file.
+			configFileName := file]
+]
+
+{ #category : #'path access' }
+VMMakerTool >> selectDirectory [
+	"Newer images should use UIManager, but UIManager is not available on
+	older images. Provide backward compatibility."
+
+	(Smalltalk hasClassNamed: #UIManager)
+		ifTrue: [^(Smalltalk at: #UIManager) default perform: #chooseDirectory]
+		ifFalse: [^(Smalltalk at: #FileList2) perform: #modalFolderSelector].
+	self error: 'directory selector dialog not available'
 ]
 
 { #category : #'path access' }
 VMMakerTool >> sourcePathText [
 	"return a Text for the path to the generated sources"
-	^(vmMaker sourceDirectoryName ifNil: ['']),
-	  ([vmMaker sourceDirectory. ''] 
+	^[vmMaker sourceDirectory fullName asText] 
 		on: VMMakerException 
-		do:[:ex| ex return: '<path not valid>']) asText
+		do:[:ex| ex return:'<path not valid>'].
 ]
 
 { #category : #'path access' }
@@ -870,9 +931,12 @@ VMMakerTool >> sourcePathText: aText [
 	^vmMaker sourceDirectoryName: aText asString
 ]
 
-{ #category : #settings }
+{ #category : #deprecated }
 VMMakerTool >> toggle64BitVM [
-	self set64BitVM: self isFor64BitVM not
+	"This selector may be used by obsolete instances of VMMakerTool. The
+	64-bit setting of VMMaker is no longer functionally relevant, but this method
+	is retained to prevent problems with existing VMMakerTool instances that
+	may exist in some images."
 ]
 
 { #category : #initialisation }
@@ -883,14 +947,12 @@ VMMakerTool >> update: anObject [
 
 { #category : #initialisation }
 VMMakerTool >> updateAllViews [
-	self changed: #interpreterClassName;
-		changed: #platformsPathText;
-		changed: #platformsPathText;
-		changed: #platformNameText;
-		changed: #sourcePathText;
-		changed: #availableModules;
-		changed: #internalModules;
-		changed: #externalModules
+	self changed: #platformsPathText;
+				 changed: #platformNameText;
+				 changed: #sourcePathText;
+				 changed: #availableModules;
+				 changed: #internalModules;
+				 changed: #externalModules
 ]
 
 { #category : #'drag and drop' }
