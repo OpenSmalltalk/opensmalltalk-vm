@@ -115,7 +115,7 @@ MacOSConfig >> configurePlugin: aPlugin with: generator [
 		" set output directory for dynamic library to Resources subdir in .app bundle location "
 		generator 
 			set: 'CMAKE_LIBRARY_OUTPUT_DIRECTORY' 
-			toString: '../',self executableName,'.app/Contents/Resources'.
+			toString: (self outputDir , '/', self executableName,'.app/Contents/Resources')
 		].
 	^ super configurePlugin: aPlugin with: generator
 
