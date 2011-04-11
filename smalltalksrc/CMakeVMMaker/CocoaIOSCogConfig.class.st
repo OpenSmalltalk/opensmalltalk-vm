@@ -70,7 +70,7 @@ CocoaIOSCogConfig >> defaultInternalPlugins [
 		BMPReadWriterPlugin 
 		BalloonEnginePlugin 
 		BitBltSimulation 
-		"ClipboardExtendedPlugin" 
+		"ClipboardExtendedPlugin"
 		DSAPlugin 
 		DeflatePlugin 
 		DropPlugin 
@@ -83,7 +83,7 @@ CocoaIOSCogConfig >> defaultInternalPlugins [
 		JPEGReaderPlugin 
 		KlattSynthesizerPlugin 
 		LargeIntegersPlugin 
-		MacMenubarPlugin 
+		"MacMenubarPlugin" "This plugin is not yet ported"
 		Matrix2x3Plugin 
 		MiscPrimitivePlugin 
 		RePlugin 
