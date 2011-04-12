@@ -159,6 +159,13 @@ MacOSConfig >> fixLineEndsOf: string [
 	^ string copyReplaceAll: String cr with: String lf
 ]
 
+{ #category : #accessing }
+MacOSConfig >> outputDir [
+
+	"the directory where built binaries will be stored"
+	^ self buildDir containingDirectory fullName , '/results'
+]
+
 { #category : #'source generation' }
 MacOSConfig >> prepareForGeneration [
 
