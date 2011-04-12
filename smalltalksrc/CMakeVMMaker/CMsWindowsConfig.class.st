@@ -246,8 +246,8 @@ CMsWindowsConfig >> msysPathFor: aPath [
 CMsWindowsConfig >> outputDir [
 
 	"the directory where built binaries will be stored"
+	^ outputDir ifNil: [ outputDir := (self msysPathFor: (self buildDir fullName , '/', self outputDirName )) ]
 	
-	^ self msysPathFor: (self buildDir fullName , '/results')
 ]
 
 { #category : #'as yet unclassified' }
