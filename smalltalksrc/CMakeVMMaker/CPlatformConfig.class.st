@@ -33,6 +33,7 @@ Class {
 		'buildDir',
 		'srcDir',
 		'platformsDir',
+		'outputDir',
 		'internalPlugins',
 		'externalPlugins',
 		'pluginsDir',
@@ -57,7 +58,7 @@ CPlatformConfig class >> generateWithSources [
 { #category : #directories }
 CPlatformConfig >> buildDir [
 	
-	^ buildDir ifNil: [ buildDir := (self topDir / 'build') assureExistence ].
+	^ buildDir ifNil: [ buildDir := (self topDir / self buildDirName) assureExistence ].
 
 ]
 
@@ -66,6 +67,12 @@ CPlatformConfig >> buildDir: anObject [
 	"Set the value of buildDir"
 
 	buildDir := self dirFrom: anObject
+]
+
+{ #category : #directories }
+CPlatformConfig >> buildDirName [
+	^ 'build'
+
 ]
 
 { #category : #accessing }
@@ -576,6 +583,18 @@ CPlatformConfig >> linkFlags [
 	^''
 ]
 
+{ #category : #accessing }
+CPlatformConfig >> outputDir: anObject [
+	"Set the value of outputDir"
+
+	outputDir := anObject
+]
+
+{ #category : #accessing }
+CPlatformConfig >> outputDirName [
+	^ 'results'
+]
+
 { #category : #'source files' }
 CPlatformConfig >> platformSources [
 	^#()
@@ -585,7 +604,7 @@ CPlatformConfig >> platformSources [
 CPlatformConfig >> platformsDir [ 
 	"Answer the value of srcDir"
 
-	^ platformsDir ifNil: [ platformsDir := (self topDir / 'platforms') fullName ]
+	^ platformsDir ifNil: [ platformsDir := (self topDir / self platformsDirName) fullName ]
 	
 ]
 
@@ -594,6 +613,11 @@ CPlatformConfig >> platformsDir: anObject [
 	"Set the value of platformsDir"
 
 	platformsDir := anObject
+]
+
+{ #category : #accessing }
+CPlatformConfig >> platformsDirName [
+	^ 'platforms'
 ]
 
 { #category : #accessing }
@@ -688,7 +712,7 @@ CPlatformConfig >> setupDirectories: gen [
 CPlatformConfig >> srcDir [
 	"Answer the value of srcDir"
 
-	^ srcDir ifNil: [ srcDir := (self topDir / 'src') assureExistence fullName ]
+	^ srcDir ifNil: [ srcDir := (self topDir / self srcDirName) assureExistence fullName ]
 ]
 
 { #category : #accessing }
@@ -697,6 +721,11 @@ CPlatformConfig >> srcDir: aStringOrDir [
 
 	srcDir :=  aStringOrDir.
 	
+]
+
+{ #category : #accessing }
+CPlatformConfig >> srcDirName [
+	^ 'src'
 ]
 
 { #category : #'source files' }

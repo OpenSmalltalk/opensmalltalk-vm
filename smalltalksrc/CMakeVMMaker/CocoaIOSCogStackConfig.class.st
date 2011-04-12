@@ -50,5 +50,10 @@ CocoaIOSCogStackConfig >> prepareForGeneration [
 CocoaIOSCogStackConfig >> srcDir [ 
 	"Answer the value of srcDir"
 
-	^ srcDir ifNil: [ srcDir := (self topDir / 'stacksrc') fullName ]
+	^ srcDir ifNil: [ srcDir := (self topDir / self srcDirName) fullName ]
+]
+
+{ #category : #accessing }
+CocoaIOSCogStackConfig >> srcDirName [
+	^ 'stacksrc'
 ]
