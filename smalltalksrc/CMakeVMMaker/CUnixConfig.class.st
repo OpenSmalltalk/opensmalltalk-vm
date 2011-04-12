@@ -250,7 +250,8 @@ CUnixConfig >> linkFlags [
 CUnixConfig >> outputDir [
 
 	"the directory where built binaries will be stored"
-	^ self buildDir containingDirectory fullName , '/results'
+	^ outputDir ifNil: [ outputDir := (self buildDir containingDirectory fullName , '/', self outputDirName) ]
+	
 ]
 
 { #category : #'as yet unclassified' }

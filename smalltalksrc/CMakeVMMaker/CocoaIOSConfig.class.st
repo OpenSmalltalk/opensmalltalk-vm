@@ -249,7 +249,7 @@ CocoaIOSConfig >> extraPluginSettings: maker [
 	
 	maker 
 		setTargetProperty: 'COMPILE_FLAGS' 
-		to: '"-include \"', (self topDir / 'build' / self prefixHeaderFileName) fullName, '\""'.  
+		to: '"-include \"', (self buildDir / self prefixHeaderFileName) fullName, '\""'.  
 
 	maker isExternal ifTrue: [
 		"copy result to results dir "
@@ -273,7 +273,7 @@ CocoaIOSConfig >> extraSources [
 CocoaIOSConfig >> extraVMSettings: maker [
 	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'.
 
-	maker set: 'resourceDir' to: '${topDir}/macbuild/resources/ProjectBuilder'.
+	maker set: 'resourceDir' to: self resourcesDir, '/ProjectBuilder'.
 	maker set: 'resources' to: 
 		'"${resourceDir}/Squeak VM.r"
 		"${resourceDir}/Squeak.icns"

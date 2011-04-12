@@ -1,6 +1,9 @@
 Class {
 	#name : #MacOSConfig,
 	#superclass : #CPlatformConfig,
+	#instVars : [
+		'resourcesDir'
+	],
 	#category : #'CMakeVMMaker-MacOS'
 }
 
@@ -154,6 +157,26 @@ MacOSConfig >> configureSocketPlugin: maker [
 
 ]
 
+{ #category : #accessing }
+MacOSConfig >> defaultDirectoriesFromGitDir: gitRepository [
+	"Set the default values for all necessary directories taking into account the Git repostiory. An example to use this method is:
+	MTCocoaIOSCogJitDebugConfig new
+	defaultDirectoriesFromGitDir: '/Users/mariano/Pharo/vm/git/cogVM/blessed';
+	generateSources; 
+	generate.
+	"
+	| gitRepositoryString |
+	gitRepositoryString :=  gitRepository, '/'.
+	self srcDir: gitRepositoryString, self srcDirName.
+    	self platformsDir: gitRepositoryString, self platformsDirName.
+    	self buildDir: gitRepositoryString, self buildDirName.
+	self resourcesDir: gitRepositoryString, self resourcesDirName.
+	self outputDir: gitRepositoryString, self outputDirName.
+	
+	
+	
+]
+
 { #category : #utils }
 MacOSConfig >> fixLineEndsOf: string [
 	^ string copyReplaceAll: String cr with: String lf
@@ -163,7 +186,8 @@ MacOSConfig >> fixLineEndsOf: string [
 MacOSConfig >> outputDir [
 
 	"the directory where built binaries will be stored"
-	^ self buildDir containingDirectory fullName , '/results'
+	^ outputDir ifNil: [ outputDir := (self buildDir containingDirectory fullName , '/', self outputDirName) ]
+	
 ]
 
 { #category : #'source generation' }
@@ -173,4 +197,24 @@ MacOSConfig >> prepareForGeneration [
 	CrLfFileStream defaultToLF.
 
 
+]
+
+{ #category : #accessing }
+MacOSConfig >> resourcesDir [ 
+	"Answer the value of resourcesDir"
+
+	^ resourcesDir ifNil: [ resourcesDir := (self topDir / 'macbuild/resources') fullName ]
+	
+]
+
+{ #category : #accessing }
+MacOSConfig >> resourcesDir: anObject [
+	"Set the value of platformsDir"
+
+	resourcesDir := anObject
+]
+
+{ #category : #accessing }
+MacOSConfig >> resourcesDirName [
+	^ 'macbuild/resources'
 ]

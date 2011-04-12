@@ -58,5 +58,5 @@ CocoaIOSCogJitConfig >> prepareForGeneration [
 CocoaIOSCogJitConfig >> srcDir [ 
 	"Answer the value of srcDir"
 
-	^ srcDir ifNil: [ srcDir := (self topDir / 'src') fullName ]
+	^ srcDir ifNil: [ srcDir := (self topDir / self srcDirName) fullName ]
 ]
