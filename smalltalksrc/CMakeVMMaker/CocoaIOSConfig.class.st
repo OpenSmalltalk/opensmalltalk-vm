@@ -135,6 +135,13 @@ CocoaIOSConfig >> configureHostWindowPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
+CocoaIOSConfig >> configureIA32ABIPlugin: maker [
+
+	maker addCrossSources: #( 'ia32abicc.c' "'ppc32abicc.c'")
+
+]
+
+{ #category : #'plugin extra rules' }
 CocoaIOSConfig >> configureJoystickTabletPlugin: maker [ 
 	"extra rules for JoystickTabletPlugin"
 	
