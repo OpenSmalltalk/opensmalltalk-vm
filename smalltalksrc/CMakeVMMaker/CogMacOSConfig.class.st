@@ -85,13 +85,13 @@ CogMacOSConfig >> compilerFlags [
 { #category : #'compiler flags' }
 CogMacOSConfig >> compilerFlagsDebug [
 
-	^ self commonCompilerFlags , ' -O0 -Wmissing-prototypes -Wmissing-braces -Wparentheses -Wunused-function -Wunused-label -Wunused-parameter -Wunused-variable -Wunused-value -Wsign-compare -DDEBUG -DDEBUGVM=1 -DEXTERNALPRIMSDEBUG=1 -gdwarf-2 '
+	^ self commonCompilerFlags , ' -O0 -Wmissing-prototypes -Wmissing-braces -Wparentheses -Wunused-function -Wunused-label -Wunused-parameter -Wunused-variable -Wunused-value -Wsign-compare -DDEBUG=1 -DDEBUGVM=1 -DEXTERNALPRIMSDEBUG=1 -gdwarf-2 '
 ]
 
 { #category : #'compiler flags' }
 CogMacOSConfig >> compilerFlagsRelease [
 " -mdynamic-no-pic "
-	^ self commonCompilerFlags , ' -gdwarf-2 -O3 -funroll-loops -ftree-vectorize -msse3 -DDEBUGVM=0 -DNDEBUG=1 -Wunused-value -Wuninitialized -falign-functions=16 -fno-gcse -mtune=prescott -march=pentium-m -mfpmath=sse -finline-functions -Wall -DUSE_INLINE_MEMORY_ACCESSORS'
+	^ self commonCompilerFlags , ' -gdwarf-2 -O3 -funroll-loops -ftree-vectorize -msse3 -DDEBUGVM=0 -DNDEBUG=0 -Wunused-value -Wuninitialized -falign-functions=16 -fno-gcse -mtune=prescott -march=pentium-m -mfpmath=sse -finline-functions -Wall -DUSE_INLINE_MEMORY_ACCESSORS'
 ]
 
 { #category : #'plugin extra rules' }
