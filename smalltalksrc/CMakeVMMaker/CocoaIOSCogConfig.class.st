@@ -56,6 +56,7 @@ CocoaIOSCogConfig >> crossSources [
 CocoaIOSCogConfig >> defaultExternalPlugins [ 
 	^(Array with: self ffiPluginName),
 		#(
+		IA32ABIPlugin
 		UUIDPlugin
 		FloatMathPlugin
 		AsynchFilePlugin
