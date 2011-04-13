@@ -27,7 +27,7 @@ CogMsWindowsConfig >> compilerFlags [
 CogMsWindowsConfig >> compilerFlagsRelease [
 	"Define NDEBUG for production to exclude asserts "
 	^ ' -O2 -march=pentium4 -momit-leaf-frame-pointer -maccumulate-outgoing-args -funroll-loops ',
-	'-DNDEBUG -DDEBUGVM=0'
+	'-DNDEBUG=0 -DDEBUGVM=0'
 ]
 
 { #category : #'source files' }
