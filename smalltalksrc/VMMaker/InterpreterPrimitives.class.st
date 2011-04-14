@@ -2124,6 +2124,16 @@ InterpreterPrimitives >> primitiveMillisecondClock [
 
 ]
 
+{ #category : #'system control primitives' }
+InterpreterPrimitives >> primitiveMillisecondClockMask [
+	"Provide access to the millisecond clock mask to support calculation
+	of durations based on the millisecond clock value."
+
+	<export: true>
+	self pop: 1 thenPush: (self integerObjectOf: MillisecondClockMask)
+
+]
+
 { #category : #'arithmetic integer primitives' }
 InterpreterPrimitives >> primitiveMod [
 	| mod |
