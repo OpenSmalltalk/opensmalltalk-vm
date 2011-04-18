@@ -14,8 +14,7 @@ Class {
 	#instVars : [
 		'wordSize',
 		'requiresClosureSupport',
-		'requiresPlatformByteOrder',
-		'requiresCogSupport'
+		'requiresNativeFloatWordOrder'
 	],
 	#classVars : [
 		'BaseVersionMask',
@@ -346,7 +345,7 @@ ImageFormat >> asInteger [
 		ifTrue: [6502]
 		ifFalse: [68000].
 	self requiresClosureSupport ifTrue: [val := val + 2].
-	self requiresPlatformByteOrder ifTrue: [val := val + 1].
+	self requiresNativeFloatWordOrder ifTrue: [val := val + 1].
 	^val
 
 ]
@@ -393,7 +392,7 @@ ImageFormat >> fromInteger: anInteger [
 			ifFalse: [self error: 'invalid format number ', anInteger printString]].
 	capabilitiesBits := anInteger bitAnd: CapabilitiesBitsMask.
 	(capabilitiesBits bitAt: PlatformByteOrderBit) = 1
-		ifTrue: [requiresPlatformByteOrder := true.
+		ifTrue: [requiresNativeFloatWordOrder := true.
 			requiresClosureSupport
 				ifFalse: [self error: 'Images requiring platform byte order also require closure support (Cog)'].
 			capabilitiesBits := capabilitiesBits bitAt: PlatformByteOrderBit put: 0].
@@ -407,7 +406,7 @@ ImageFormat >> fromInteger: anInteger [
 { #category : #'initialize-release' }
 ImageFormat >> initialize [
 	requiresClosureSupport := false.
-	requiresPlatformByteOrder := false
+	requiresNativeFloatWordOrder := false
 ]
 
 { #category : #testing }
@@ -440,8 +439,9 @@ ImageFormat >> printDescriptionOn: stream [
 			nextPutAll: '-bit image with '.
 		self requiresClosureSupport ifFalse: [stream nextPutAll: 'no '].
 		stream nextPutAll: 'closure support and '.
-		self requiresPlatformByteOrder ifFalse: [stream nextPutAll: 'no '].
-		stream nextPutAll: 'Cog byte reversal'.
+		self requiresNativeFloatWordOrder
+			ifTrue: [stream nextPutAll: 'float words stored in native platform order']
+			ifFalse: [stream nextPutAll: 'no native platform float word order requirement'].
 		stream nextPutAll: ' (';
 			nextPutAll: self asInteger asString;
 			nextPut: $).
@@ -464,9 +464,9 @@ ImageFormat >> requiresClosureSupport [
 ]
 
 { #category : #testing }
-ImageFormat >> requiresPlatformByteOrder [
+ImageFormat >> requiresNativeFloatWordOrder [
 	"True if this image requires a Cog VM (stack VM possibly including a Cog jitter)"
-	^requiresPlatformByteOrder
+	^requiresNativeFloatWordOrder
 ]
 
 { #category : #'initialize-release' }
@@ -486,16 +486,21 @@ ImageFormat >> setCogSupportRequirement: aBoolean [
 	not require this support, although the virtual machine is free to provide it."
 
 	aBoolean ifTrue: [requiresClosureSupport := true]. "required in all Cog images"
-	self setPlatformByteOrderRequirement: aBoolean
+	self setNativeFloatWordOrderRequirement: aBoolean
 
 ]
 
 { #category : #'initialize-release' }
-ImageFormat >> setPlatformByteOrderRequirement: aBoolean [
-	"If true, certain object are implemented in native platform byte order.
+ImageFormat >> setNativeFloatWordOrderRequirement: aBoolean [
+	"If true, certain objects are implemented in native platform word order. On
+	a little endian platform, access to the two words of a 64 bit float object is
+	more efficient if the words are stored in native word order. On a big endian
+	platform, platform word order is the same as object memory word order and
+	this setting has no effect.
+	
 	The StackInterpreter and Cog make use of this for performance reasons."
 
-	requiresPlatformByteOrder := aBoolean
+	requiresNativeFloatWordOrder := aBoolean
 
 ]
 
