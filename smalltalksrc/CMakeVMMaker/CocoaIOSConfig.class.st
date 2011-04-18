@@ -50,6 +50,11 @@ CocoaIOSConfig >> NSMainNibFile [
 	^'MainMenu'
 ]
 
+{ #category : #'bundle strings' }
+CocoaIOSConfig >> SqueakDebug [
+	^0
+]
+
 { #category : #accessing }
 CocoaIOSConfig >> commonCompilerFlags [
 	"Common compiler flags"
@@ -131,13 +136,6 @@ CocoaIOSConfig >> configureHostWindowPlugin: maker [
 	maker 
 		addSources: #('sqMacHostWindow.c' ) 
 		prefixed: '${platformsDir}/iOS/vm/iPhone/plugins/HostWindowPlugin/'
-
-]
-
-{ #category : #'plugin extra rules' }
-CocoaIOSConfig >> configureIA32ABIPlugin: maker [
-
-	maker addCrossSources: #( 'ia32abicc.c' "'ppc32abicc.c'")
 
 ]
 
@@ -387,8 +385,9 @@ CocoaIOSConfig >> plistFile [
 	CFBundleVersion
 	CFBundleIconFile
 	CFBundleIdentifier
-	NSMainNibFile) do: [:key |
-		plist := plist copyReplaceAll: '@' , key , '@' with: (self perform: key)
+	NSMainNibFile
+	SqueakDebug) do: [:key |
+		plist := plist copyReplaceAll: '@' , key , '@' with: (self perform: key) asString
 	].
 
 	^ self fixLineEndsOf: plist
@@ -798,7 +797,7 @@ CocoaIOSConfig >> plistTemplate [
 	<key>SqueakBrowserMouseOptionButton3</key>
 	<integer>2</integer>
 	<key>SqueakDebug</key>
-	<integer>0</integer>
+	<integer>@SqueakDebug@</integer>
 	<key>SqueakExplicitWindowOpenNeeded</key>
 	<false/>
 	<key>SqueakImageName</key>
