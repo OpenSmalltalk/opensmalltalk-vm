@@ -61,7 +61,7 @@ ImageFormatTest >> testFormat6502 [
 	self assert: (ImageFormat fromInteger: 6502) asInteger = 6502.
 	self assert: ImageFormat default wordSize = 4.
 	self deny: ImageFormat default requiresClosureSupport.
-	self deny: ImageFormat default requiresPlatformByteOrder.
+	self deny: ImageFormat default requiresNativeFloatWordOrder.
 	self assert: ImageFormat default is32Bit.
 	self deny: ImageFormat default is64Bit.
 	self assert: (ImageFormat fromInteger: 6502) asInteger = 6502
@@ -78,7 +78,7 @@ ImageFormatTest >> testFormat6504 [
 	self assert: (ImageFormat fromInteger: 6504) asInteger = 6504.
 	self assert: defaultWithClosures wordSize = 4.
 	self assert: defaultWithClosures requiresClosureSupport.
-	self deny: defaultWithClosures requiresPlatformByteOrder.
+	self deny: defaultWithClosures requiresNativeFloatWordOrder.
 	self assert: defaultWithClosures is32Bit.
 	self deny: defaultWithClosures is64Bit.
 	self assert: (ImageFormat fromInteger: 6504) asInteger = 6504
@@ -97,7 +97,7 @@ ImageFormatTest >> testFormat6505 [
 	self assert: (ImageFormat fromInteger: 6505) asInteger = 6505.
 	self assert: cog32 wordSize = 4.
 	self assert: cog32 requiresClosureSupport.
-	self assert: cog32 requiresPlatformByteOrder.
+	self assert: cog32 requiresNativeFloatWordOrder.
 	self assert: cog32 is32Bit.
 	self deny: cog32 is64Bit.
 	self assert: (ImageFormat fromInteger: 6505) asInteger = 6505
@@ -113,7 +113,7 @@ ImageFormatTest >> testFormat68000 [
 	self assert: (ImageFormat fromInteger: 68000) asInteger = 68000.
 	self assert: closures64 wordSize = 8.
 	self deny: closures64 requiresClosureSupport.
-	self deny: closures64 requiresPlatformByteOrder.
+	self deny: closures64 requiresNativeFloatWordOrder.
 	self deny: closures64 is32Bit.
 	self assert: closures64 is64Bit.
 	self assert: (ImageFormat fromInteger: 68000) asInteger = 68000
@@ -130,7 +130,7 @@ ImageFormatTest >> testFormat68002 [
 	self assert: (ImageFormat fromInteger: 68002) asInteger = 68002.
 	self assert: closures64 wordSize = 8.
 	self assert: closures64 requiresClosureSupport.
-	self deny: closures64 requiresPlatformByteOrder.
+	self deny: closures64 requiresNativeFloatWordOrder.
 	self deny: closures64 is32Bit.
 	self assert: closures64 is64Bit.
 	self assert: (ImageFormat fromInteger: 68002) asInteger = 68002
@@ -146,7 +146,7 @@ ImageFormatTest >> testFormat68003 [
 	self assert: (ImageFormat fromInteger: 68003) asInteger = 68003.
 	self assert: cog64 wordSize = 8.
 	self assert: cog64 requiresClosureSupport.
-	self assert: cog64 requiresPlatformByteOrder.
+	self assert: cog64 requiresNativeFloatWordOrder.
 	self deny: cog64 is32Bit.
 	self assert: cog64 is64Bit.
 	self assert: (ImageFormat fromInteger: 68003) asInteger = 68003
@@ -222,35 +222,35 @@ ImageFormatTest >> testRequiresClosureSupport [
 ]
 
 { #category : #testing }
-ImageFormatTest >> testRequiresPlatformByteOrder [
+ImageFormatTest >> testRequiresNativeFloatWordOrder [
 	"Required for Cog and StackInterpreter"
 
 	| v |
 	v := ImageFormat wordSize: 4.
-	self deny: v requiresPlatformByteOrder.
+	self deny: v requiresNativeFloatWordOrder.
 	v setCogSupportRequirement: false.
 	self assert: v asInteger = 6502.
-	self deny: v requiresPlatformByteOrder.
+	self deny: v requiresNativeFloatWordOrder.
 	v setCogSupportRequirement: true.
 	self assert: v asInteger = 6505.
-	self assert: v requiresPlatformByteOrder.
+	self assert: v requiresNativeFloatWordOrder.
 
 	v := ImageFormat wordSize: 8.
-	self deny: v requiresPlatformByteOrder.
+	self deny: v requiresNativeFloatWordOrder.
 	v setCogSupportRequirement: false.
 	self assert: v asInteger = 68000.
-	self deny: v requiresPlatformByteOrder.
+	self deny: v requiresNativeFloatWordOrder.
 	v setCogSupportRequirement: true.
 	self assert: v asInteger = 68003.
-	self assert: v requiresPlatformByteOrder.
+	self assert: v requiresNativeFloatWordOrder.
 	
-	self deny: (ImageFormat wordSize: 4 cog: false) requiresPlatformByteOrder.
+	self deny: (ImageFormat wordSize: 4 cog: false) requiresNativeFloatWordOrder.
 	self deny: (ImageFormat wordSize: 4 cog: false) requiresClosureSupport.
-	self deny: (ImageFormat wordSize: 8 cog: false) requiresPlatformByteOrder.
+	self deny: (ImageFormat wordSize: 8 cog: false) requiresNativeFloatWordOrder.
 	self deny: (ImageFormat wordSize: 8 cog: false) requiresClosureSupport.
-	self assert: (ImageFormat wordSize: 4 cog: true) requiresPlatformByteOrder.
+	self assert: (ImageFormat wordSize: 4 cog: true) requiresNativeFloatWordOrder.
 	self assert: (ImageFormat wordSize: 4 cog: true) requiresClosureSupport.
-	self assert: (ImageFormat wordSize: 8 cog: true) requiresPlatformByteOrder.
+	self assert: (ImageFormat wordSize: 8 cog: true) requiresNativeFloatWordOrder.
 	self assert: (ImageFormat wordSize: 8 cog: true) requiresClosureSupport.
 
 ]
