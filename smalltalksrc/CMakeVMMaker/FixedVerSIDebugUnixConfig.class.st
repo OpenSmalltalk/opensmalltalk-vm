@@ -12,7 +12,7 @@ Class {
 { #category : #'as yet unclassified' }
 FixedVerSIDebugUnixConfig >> compilerFlagsDebug [
 
-	^ '-g3 -O1 -msse2 -save-temps -D_GNU_SOURCE -DDEBUG=1 -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=1'
+	^ '-g3 -O0 -msse2 -save-temps -D_GNU_SOURCE -DDEBUG=1 -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=1'
 
 
 ]
