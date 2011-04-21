@@ -85,7 +85,7 @@ CogMacOSConfig >> compilerFlags [
 { #category : #'compiler flags' }
 CogMacOSConfig >> compilerFlagsDebug [
 
-	^ self commonCompilerFlags , ' -O0 -Wmissing-prototypes -Wmissing-braces -Wparentheses -Wunused-function -Wunused-label -Wunused-parameter -Wunused-variable -Wunused-value -Wsign-compare -DDEBUG=1 -DDEBUGVM=1 -DEXTERNALPRIMSDEBUG=1 -gdwarf-2 '
+	^ self commonCompilerFlags , '-g3 -O0 -Wmissing-prototypes -Wmissing-braces -Wparentheses -Wunused-function -Wunused-label -Wunused-parameter -Wunused-variable -Wunused-value -Wsign-compare -DDEBUG=1 -DDEBUGVM=1 -DEXTERNALPRIMSDEBUG=1 -gdwarf-2 '
 ]
 
 { #category : #'compiler flags' }
