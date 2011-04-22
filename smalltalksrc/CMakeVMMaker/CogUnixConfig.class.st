@@ -51,7 +51,7 @@ CogUnixConfig >> compilerFlagsDebug [
 { #category : #'compiler flags' }
 CogUnixConfig >> compilerFlagsRelease [
 
-	^ '-g -O2 -msse2 -D_GNU_SOURCE -DNDEBUG=0 -DITIMER_HEARTBEAT=1 
+	^ '-g0 -O2 -msse2 -D_GNU_SOURCE -DNDEBUG=0 -DITIMER_HEARTBEAT=1 
 	-DNO_VM_PROFILE=1 -DDEBUGVM=0'
 
 
