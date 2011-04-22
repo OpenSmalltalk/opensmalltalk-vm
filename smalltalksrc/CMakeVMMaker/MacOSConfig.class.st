@@ -1,3 +1,8 @@
+"
+MacOSConfig is an abstract class for all Mac Carbon configurations. It is intended to share code between different concrete implementations. 
+
+It is using a Carbon framework , which eventually will be replaced by Cocoa. (see CocoaIOSConfig and its subclasses).
+"
 Class {
 	#name : #MacOSConfig,
 	#superclass : #CPlatformConfig,

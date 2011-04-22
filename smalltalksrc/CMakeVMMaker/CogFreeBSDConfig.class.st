@@ -1,3 +1,6 @@
+"
+CogFreeBSDConfig is the base and concrete configuration for building Cog VM on FreeBSD platform(s).
+"
 Class {
 	#name : #CogFreeBSDConfig,
 	#superclass : #CogUnixConfig,

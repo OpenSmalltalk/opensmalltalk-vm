@@ -1,7 +1,5 @@
 "
-StackInterpreterMsWindowsConfig generateWithSources.
-
-Configuration for building Stack-based VM on Win32 platform.
+StackInterpreterMsWindowsConfig is a configuration for building StackVM on Win32 platform.
 "
 Class {
 	#name : #StackInterpreterMsWindowsConfig,
