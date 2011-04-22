@@ -42,6 +42,11 @@ MacOSConfig >> configureB3DAcceleratorPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
+MacOSConfig >> configureClipboardExtendedPlugin: maker [
+	
+]
+
+{ #category : #'plugin extra rules' }
 MacOSConfig >> configureCroquetPlugin: maker [ 
 	"extra rules for CroquetPlugin"
 

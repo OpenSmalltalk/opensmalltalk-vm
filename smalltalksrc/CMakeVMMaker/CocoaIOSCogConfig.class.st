@@ -79,7 +79,7 @@ CocoaIOSCogConfig >> defaultInternalPlugins [
 		BMPReadWriterPlugin 
 		BalloonEnginePlugin 
 		BitBltSimulation 
-		"ClipboardExtendedPlugin"
+		ClipboardExtendedPlugin
 		DSAPlugin 
 		DeflatePlugin 
 		DropPlugin 
