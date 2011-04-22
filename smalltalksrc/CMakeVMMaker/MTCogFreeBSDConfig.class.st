@@ -1,3 +1,6 @@
+"
+MTCogFreeBSDConfig is a concrete class which generates a thread-aware VM and threaded FFI CogVM for FreeBSD. This VM is normally known as CogMTVM.
+"
 Class {
 	#name : #MTCogFreeBSDConfig,
 	#superclass : #CogFreeBSDConfig,

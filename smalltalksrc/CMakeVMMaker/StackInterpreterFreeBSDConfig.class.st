@@ -1,3 +1,6 @@
+"
+StackInterpreterFreeBSDConfig is a concrete class which generates a StackVM for FreeBSD.
+"
 Class {
 	#name : #StackInterpreterFreeBSDConfig,
 	#superclass : #CogFreeBSDConfig,

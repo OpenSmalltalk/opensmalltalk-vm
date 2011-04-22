@@ -1,3 +1,6 @@
+"
+CocoaIOSCogJitConfig is a concrete class which generates a CogVM for Mac using the Cocoa library
+"
 Class {
 	#name : #CocoaIOSCogJitConfig,
 	#superclass : #CocoaIOSCogConfig,

@@ -1,4 +1,6 @@
 "
+StackInterpreterUnixConfig is a concrete class which generates a StackVM for Unix.
+
 Usage: 
 StackInterpreterUnixConfig generateWithSources
 "
