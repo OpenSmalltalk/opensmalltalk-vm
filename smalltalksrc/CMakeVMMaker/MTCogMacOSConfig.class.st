@@ -1,5 +1,5 @@
 "
-MTCogMacOSConfig generateWithSources
+MTCogMacOSConfig is a concrete class which generates a thread-aware VM and threaded FFI CogVM for Mac using the Carbon library. This VM is normally known as CogMTVM.
 "
 Class {
 	#name : #MTCogMacOSConfig,
