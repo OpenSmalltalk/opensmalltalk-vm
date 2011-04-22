@@ -1,3 +1,6 @@
+"
+CocoaIOSCogStackConfig is a concrete class which generates a StackVM for Mac using the Cocoa library
+"
 Class {
 	#name : #CocoaIOSCogStackConfig,
 	#superclass : #CocoaIOSCogConfig,

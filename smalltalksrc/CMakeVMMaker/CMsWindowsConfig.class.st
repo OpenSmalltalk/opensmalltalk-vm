@@ -1,5 +1,5 @@
 "
-This is a root configuration for building VMs on MS-Windows platform.
+This is an abstract class and it is the root configuration for building all types of Cog VMs on MS-Windows platform.
 
 
 What you need to get started:

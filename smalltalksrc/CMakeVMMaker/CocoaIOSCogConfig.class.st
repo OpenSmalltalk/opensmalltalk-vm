@@ -1,3 +1,6 @@
+"
+CocoaIOSCogConfig is an abstract class for all Mac Cocoa Cog VMs family. That is, for all CogVMS (StackVM, CogVM, CogMTVM, etc). 
+"
 Class {
 	#name : #CocoaIOSCogConfig,
 	#superclass : #CocoaIOSConfig,

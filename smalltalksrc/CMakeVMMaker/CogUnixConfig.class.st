@@ -1,5 +1,5 @@
 "
-Base configuration for building Cog VM on Unix platform(s).
+Base and concrete configuration for building Cog VM on Unix platform(s).
 
 Usage: 
 CogUnixConfig generateWithSources

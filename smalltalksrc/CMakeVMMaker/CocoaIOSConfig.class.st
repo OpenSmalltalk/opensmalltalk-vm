@@ -1,3 +1,6 @@
+"
+This is an abstract class for all Mac Cocoa configurations. It is intended to share code between different concrete implementations. 
+"
 Class {
 	#name : #CocoaIOSConfig,
 	#superclass : #MacOSConfig,

@@ -1,5 +1,5 @@
 "
-This config for building Thread-aware VM and threaded FFI
+MTCocoaIOSCogJitConfig is a concrete class which generates a thread-aware VM and threaded FFI CogVM for Mac using the Cocoa library. This VM is normally known as CogMTVM.
 "
 Class {
 	#name : #MTCocoaIOSCogJitConfig,
