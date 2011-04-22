@@ -126,11 +126,9 @@ CocoaIOSConfig >> configureB3DAcceleratorPlugin: maker [
 
 { #category : #'plugin extra rules' }
 CocoaIOSConfig >> configureClipboardExtendedPlugin: maker [
-	maker includeDirectories: '${platformsDir}/iOS/plugins/ClipboardExtended'.
-	maker 
-		addSources: #('sqMacExtendedClipboard.m' ) 
-		prefixed: '${platformsDir}/iOS/plugins/ClipboardExtended/'
-
+	
+	maker addPlatformSources: #('sqMacExtendedClipboard.m' ) 
+	
 ]
 
 { #category : #'plugin extra rules' }
