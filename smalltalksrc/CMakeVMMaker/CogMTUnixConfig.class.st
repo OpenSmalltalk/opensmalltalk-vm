@@ -1,14 +1,17 @@
 "
-MTCogUnixConfig is a concrete class which generates a thread-aware VM and threaded FFI CogVM for Unix. This VM is normally known as CogMTVM.
+This is a concrete class which generates a thread-aware VM and threaded FFI CogVM for Unix. This VM is normally known as CogMTVM.
+
+Fore more information, check the class comments of all the superclasses.
+
 "
 Class {
-	#name : #MTCogUnixConfig,
+	#name : #CogMTUnixConfig,
 	#superclass : #CogUnixConfig,
-	#category : #'CMakeVMMaker-Unix-Cog'
+	#category : #'CMakeVMMaker-Unix'
 }
 
 { #category : #'compiler flags' }
-MTCogUnixConfig >> commonCompilerFlags [
+CogMTUnixConfig >> commonCompilerFlags [
 
 	"Common compiler flags
 	
@@ -23,13 +26,13 @@ MTCogUnixConfig >> commonCompilerFlags [
 ]
 
 { #category : #'plugin extra rules' }
-MTCogUnixConfig >> configureReentrantIA32FFIPlugin: maker [
+CogMTUnixConfig >> configureReentrantIA32FFIPlugin: maker [
 	self error: 'use ThreadedIA32FFIPlugin instead'
 
 ]
 
 { #category : #sources }
-MTCogUnixConfig >> coreSources [
+CogMTUnixConfig >> coreSources [
 	"files to include from src/vm dir"
 	
 	^ #(
@@ -39,7 +42,7 @@ MTCogUnixConfig >> coreSources [
 ]
 
 { #category : #plugins }
-MTCogUnixConfig >> defaultExternalPlugins [
+CogMTUnixConfig >> defaultExternalPlugins [
 
 	^ #(
 		B3DAcceleratorPlugin
@@ -50,11 +53,11 @@ MTCogUnixConfig >> defaultExternalPlugins [
 ]
 
 { #category : #accessing }
-MTCogUnixConfig >> executableName [
+CogMTUnixConfig >> executableName [
 	^ 'CogMTVM'
 ]
 
 { #category : #'source generation' }
-MTCogUnixConfig >> interpreterClass [
+CogMTUnixConfig >> interpreterClass [
 	^ CoInterpreterMT
 ]

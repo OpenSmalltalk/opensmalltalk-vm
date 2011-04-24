@@ -1,37 +1,40 @@
 "
-CocoaIOSCogConfig is an abstract class for all Mac Cocoa Cog VMs family. That is, for all CogVMS (StackVM, CogVM, CogMTVM, etc). 
+This is an abstract class for all Mac Cocoa Cog VMs family. That is, for all CogVMS (StackVM, CogVM, CogMTVM, etc). 
+
+Fore more information, check the class comments of all the superclasses.
+
 "
 Class {
-	#name : #CocoaIOSCogConfig,
+	#name : #CogFamilyCocoaIOSConfig,
 	#superclass : #CocoaIOSConfig,
 	#category : #'CMakeVMMaker-IOS'
 }
 
 { #category : #'bundle strings' }
-CocoaIOSCogConfig >> CFBundleIconFile [
+CogFamilyCocoaIOSConfig >> CFBundleIconFile [
 
 	"An application icon"
 	^ 'Cog.icns'
 ]
 
 { #category : #'bundle strings' }
-CocoaIOSCogConfig >> CFBundleVersion [
+CogFamilyCocoaIOSConfig >> CFBundleVersion [
 	"An application version"
 	^ '6.0-pre'
 ]
 
 { #category : #settings }
-CocoaIOSCogConfig >> compilerFlagsDebug [
+CogFamilyCocoaIOSConfig >> compilerFlagsDebug [
 	^#('-g3' '-O0' '-fvisibility=hidden' '-funroll-loops' '-fasm-blocks' '-finline-functions' '-mfpmath=sse' '-fomit-frame-pointer' '-march=pentium-m' '-mtune=prescott' '-falign-functions=16' '-fno-gcse' '-fno-cse-follow-jumps' '-std=gnu99' '-DBUILD_FOR_OSX' '-DUSE_INLINE_MEMORY_ACCESSORS' '-DLSB_FIRST' '-DUSE_INLINE_MEMORY_ACCESSORS' '-DHAVE_SYS_TIME_H' '-DHAVE_NANOSLEEP' '-DNDEBUG=1' '-DDEBUGVM=1' '-DCOGMTVM=0' '-DUSE_GLOBAL_STRUCT=0' '-DBASE_HEADER_SIZE=4')
 ]
 
 { #category : #settings }
-CocoaIOSCogConfig >> compilerFlagsRelease [ 
+CogFamilyCocoaIOSConfig >> compilerFlagsRelease [ 
 	^#('-g0' '-Os' '-fvisibility=hidden' '-funroll-loops' '-fasm-blocks' '-finline-functions' '-mfpmath=sse' '-fomit-frame-pointer' '-march=pentium-m' '-mtune=prescott' '-falign-functions=16' '-fno-gcse' '-fno-cse-follow-jumps' '-std=gnu99' '-DBUILD_FOR_OSX' '-DUSE_INLINE_MEMORY_ACCESSORS' '-DLSB_FIRST' '-DUSE_INLINE_MEMORY_ACCESSORS' '-DHAVE_SYS_TIME_H' '-DHAVE_NANOSLEEP' '-DNDEBUG=0' '-DDEBUGVM=0' '-DCOGMTVM=0' '-DUSE_GLOBAL_STRUCT=0' '-DBASE_HEADER_SIZE=4')
 ]
 
 { #category : #'plugin extra rules' }
-CocoaIOSCogConfig >> configureFFIPlugin: maker [
+CogFamilyCocoaIOSConfig >> configureFFIPlugin: maker [
 	"extra rules for FFIPlugin"
 
 	
@@ -42,13 +45,13 @@ CocoaIOSCogConfig >> configureFFIPlugin: maker [
 ]
 
 { #category : #plugins }
-CocoaIOSCogConfig >> configureHostWindowPlugin: maker [
+CogFamilyCocoaIOSConfig >> configureHostWindowPlugin: maker [
 	super configureHostWindowPlugin: maker.
 	maker includeDirectories: '${platformsDir}/Cross/plugins/HostWindowPlugin'.
 ]
 
 { #category : #'source files' }
-CocoaIOSCogConfig >> crossSources [ 
+CogFamilyCocoaIOSConfig >> crossSources [ 
 	^super crossSources, #(
 	'sqExternalSemaphores.c'
 	'sqHeapMap.c'
@@ -56,7 +59,7 @@ CocoaIOSCogConfig >> crossSources [
 ]
 
 { #category : #plugins }
-CocoaIOSCogConfig >> defaultExternalPlugins [ 
+CogFamilyCocoaIOSConfig >> defaultExternalPlugins [ 
 	^(Array with: self ffiPluginName),
 		#(
 		IA32ABIPlugin
@@ -73,7 +76,7 @@ CocoaIOSCogConfig >> defaultExternalPlugins [
 ]
 
 { #category : #plugins }
-CocoaIOSCogConfig >> defaultInternalPlugins [
+CogFamilyCocoaIOSConfig >> defaultInternalPlugins [
 	^ #(
 		ADPCMCodecPlugin
 		BMPReadWriterPlugin 
@@ -107,7 +110,7 @@ CocoaIOSCogConfig >> defaultInternalPlugins [
 ]
 
 { #category : #'source files' }
-CocoaIOSCogConfig >> extraSources [
+CogFamilyCocoaIOSConfig >> extraSources [
 	" mac VM using some unix sources "
 	
 	^super extraSources,'
@@ -118,12 +121,12 @@ CocoaIOSCogConfig >> extraSources [
 ]
 
 { #category : #plugins }
-CocoaIOSCogConfig >> ffiPluginName [ 
+CogFamilyCocoaIOSConfig >> ffiPluginName [ 
 	^#FFIPlugin 
 ]
 
 { #category : #'source files' }
-CocoaIOSCogConfig >> platformSources [
+CogFamilyCocoaIOSConfig >> platformSources [
 	"files added from platform/iOS/vm dir "
 	^ #(
 		'Common/main.m'
@@ -177,7 +180,7 @@ CocoaIOSCogConfig >> platformSources [
 ]
 
 { #category : #settings }
-CocoaIOSCogConfig >> setExtraTargetProperties: maker [
+CogFamilyCocoaIOSConfig >> setExtraTargetProperties: maker [
 	| plist |
 
 	maker addFrameworks: self frameworks.
@@ -216,7 +219,7 @@ CocoaIOSCogConfig >> setExtraTargetProperties: maker [
 ]
 
 { #category : #'source files' }
-CocoaIOSCogConfig >> standardIncludes [
+CogFamilyCocoaIOSConfig >> standardIncludes [
 	^#(
 	'${srcDir}/vm'
 	'${platformsDir}/iOS/vm/OSX'

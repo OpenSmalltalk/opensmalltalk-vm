@@ -1,14 +1,17 @@
 "
-MTCogMacOSConfig is a concrete class which generates a thread-aware VM and threaded FFI CogVM for Mac using the Carbon library. This VM is normally known as CogMTVM.
+This is a concrete class which generates a thread-aware VM and threaded FFI CogVM for Mac using the Carbon library. This VM is normally known as CogMTVM.
+
+Fore more information, check the class comments of all the superclasses.
+
 "
 Class {
-	#name : #MTCogMacOSConfig,
+	#name : #CogMTMacOSConfig,
 	#superclass : #CogMacOSConfig,
 	#category : #'CMakeVMMaker-MacOS'
 }
 
 { #category : #'compiler flags' }
-MTCogMacOSConfig >> commonCompilerFlags [
+CogMTMacOSConfig >> commonCompilerFlags [
 
 	"Common compiler flags"
 	
@@ -17,13 +20,13 @@ MTCogMacOSConfig >> commonCompilerFlags [
 ]
 
 { #category : #'plugin extra rules' }
-MTCogMacOSConfig >> configureReentrantIA32FFIPlugin: maker [
+CogMTMacOSConfig >> configureReentrantIA32FFIPlugin: maker [
 	self error: 'use ThreadedIA32FFIPlugin instead'
 
 ]
 
 { #category : #'source files' }
-MTCogMacOSConfig >> coreSources [
+CogMTMacOSConfig >> coreSources [
 	"files to include from src/vm dir"
 	
 	^ #(
@@ -33,7 +36,7 @@ MTCogMacOSConfig >> coreSources [
 ]
 
 { #category : #plugins }
-MTCogMacOSConfig >> defaultExternalPlugins [
+CogMTMacOSConfig >> defaultExternalPlugins [
 
 	^ #(
 		BochsIA32Plugin
@@ -47,11 +50,11 @@ MTCogMacOSConfig >> defaultExternalPlugins [
 ]
 
 { #category : #accessing }
-MTCogMacOSConfig >> executableName [
+CogMTMacOSConfig >> executableName [
 	^ 'CogMTVM'
 ]
 
 { #category : #'source generation' }
-MTCogMacOSConfig >> interpreterClass [
+CogMTMacOSConfig >> interpreterClass [
 	^ CoInterpreterMT
 ]

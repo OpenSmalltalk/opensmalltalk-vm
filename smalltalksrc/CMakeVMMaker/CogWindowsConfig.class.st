@@ -3,35 +3,39 @@ This is a concrete configuration for building a CogVM on Win32 platform.
 
 Built artifacts are placed in ${build}/results dir.
 Note, that executable contains debug info. Stript it (using strip command) before packaging for distribution.
+
+
+Fore more information, check the class comments of all the superclasses.
+
 "
 Class {
-	#name : #CogMsWindowsConfig,
-	#superclass : #CMsWindowsConfig,
+	#name : #CogWindowsConfig,
+	#superclass : #CogFamilyWindowsConfig,
 	#category : #'CMakeVMMaker-Windows'
 }
 
 { #category : #'source generation' }
-CogMsWindowsConfig >> cogitClass [
+CogWindowsConfig >> cogitClass [
 	"answer a class for machine code generation or nil"
 	
 	^ StackToRegisterMappingCogit 
 ]
 
 { #category : #'compiler flags' }
-CogMsWindowsConfig >> compilerFlags [
+CogWindowsConfig >> compilerFlags [
 	"depends on config ..."
 	^ self commonCompilerFlags, ' ' ,self compilerFlagsRelease
 ]
 
 { #category : #'compiler flags' }
-CogMsWindowsConfig >> compilerFlagsRelease [
+CogWindowsConfig >> compilerFlagsRelease [
 	"Define NDEBUG for production to exclude asserts "
 	^ ' -O2 -march=pentium4 -momit-leaf-frame-pointer -maccumulate-outgoing-args -funroll-loops ',
 	'-DNDEBUG=0 -DDEBUGVM=0'
 ]
 
 { #category : #'source files' }
-CogMsWindowsConfig >> coreSources [
+CogWindowsConfig >> coreSources [
 	"files to include from src/vm dir"
 	
 	^ #(
@@ -41,7 +45,7 @@ CogMsWindowsConfig >> coreSources [
 ]
 
 { #category : #plugins }
-CogMsWindowsConfig >> defaultExternalPlugins [
+CogWindowsConfig >> defaultExternalPlugins [
 
 	^ #(
 		ReentrantIA32FFIPlugin "SqueakFFIPrims"
@@ -51,7 +55,7 @@ CogMsWindowsConfig >> defaultExternalPlugins [
 ]
 
 { #category : #plugins }
-CogMsWindowsConfig >> defaultInternalPlugins [
+CogWindowsConfig >> defaultInternalPlugins [
 
 	^ #(
 	
@@ -95,12 +99,12 @@ UUIDPlugin
 ]
 
 { #category : #accessing }
-CogMsWindowsConfig >> executableName [
+CogWindowsConfig >> executableName [
 	^ 'CogVM'
 ]
 
 { #category : #accessing }
-CogMsWindowsConfig >> externalLibraries [
+CogWindowsConfig >> externalLibraries [
 	
 	^ #( 
 		ddraw dinput opengl32 wsock32 comdlg32 ole32 winmm
@@ -109,7 +113,7 @@ CogMsWindowsConfig >> externalLibraries [
 ]
 
 { #category : #plugins }
-CogMsWindowsConfig >> extraPluginSettings: maker [
+CogWindowsConfig >> extraPluginSettings: maker [
 
 
 	maker isExternal ifTrue: [
@@ -121,14 +125,14 @@ CogMsWindowsConfig >> extraPluginSettings: maker [
 ]
 
 { #category : #'source files' }
-CogMsWindowsConfig >> extraSources [
+CogWindowsConfig >> extraSources [
 
 	^ 
 	'${resources}'
 ]
 
 { #category : #settings }
-CogMsWindowsConfig >> extraVMSettings: maker [
+CogWindowsConfig >> extraVMSettings: maker [
 
 	| res |
 	
@@ -149,17 +153,17 @@ CogMsWindowsConfig >> extraVMSettings: maker [
 ]
 
 { #category : #resources }
-CogMsWindowsConfig >> iconFileName [
+CogWindowsConfig >> iconFileName [
 	^ 'Cog.ico'
 ]
 
 { #category : #'source generation' }
-CogMsWindowsConfig >> interpreterClass [
+CogWindowsConfig >> interpreterClass [
 	^ CoInterpreter
 ]
 
 { #category : #'source files' }
-CogMsWindowsConfig >> platformSources [
+CogWindowsConfig >> platformSources [
 	"files added from platform/win32/vm dir "
 	^ #(
 		'sqWin32Alloc.c'
@@ -185,7 +189,7 @@ CogMsWindowsConfig >> platformSources [
 ]
 
 { #category : #'source generation' }
-CogMsWindowsConfig >> prepareForGeneration [
+CogWindowsConfig >> prepareForGeneration [
 
 	CrLfFileStream defaultToLF. "For strange reason it works like that"
 
@@ -193,14 +197,14 @@ CogMsWindowsConfig >> prepareForGeneration [
 ]
 
 { #category : #resources }
-CogMsWindowsConfig >> resourceFile [
+CogWindowsConfig >> resourceFile [
 
 	^ self resourceFileTemplate
 		copyReplaceAll: '@ICON@' with: self iconFileName
 ]
 
 { #category : #resources }
-CogMsWindowsConfig >> resourceFileTemplate [
+CogWindowsConfig >> resourceFileTemplate [
 
 	^ '
 #ifdef _WIN32
@@ -212,7 +216,7 @@ CogMsWindowsConfig >> resourceFileTemplate [
 ]
 
 { #category : #utils }
-CogMsWindowsConfig >> setExtraTargetProperties: maker [
+CogWindowsConfig >> setExtraTargetProperties: maker [
 
 	maker addExternalLibraries: self externalLibraries.
 	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir.

@@ -1,14 +1,17 @@
 "
-MTCogFreeBSDConfig is a concrete class which generates a thread-aware VM and threaded FFI CogVM for FreeBSD. This VM is normally known as CogMTVM.
+This is a concrete class which generates a thread-aware VM and threaded FFI CogVM for FreeBSD. This VM is normally known as CogMTVM.
+
+Fore more information, check the class comments of all the superclasses.
+
 "
 Class {
-	#name : #MTCogFreeBSDConfig,
+	#name : #CogMTFreeBSDConfig,
 	#superclass : #CogFreeBSDConfig,
-	#category : #'CMakeVMMaker-FreeBSD-Cog'
+	#category : #'CMakeVMMaker-FreeBSD'
 }
 
 { #category : #'compiler flags' }
-MTCogFreeBSDConfig >> commonCompilerFlags [
+CogMTFreeBSDConfig >> commonCompilerFlags [
 
 	"Common compiler flags
 	
@@ -23,13 +26,13 @@ MTCogFreeBSDConfig >> commonCompilerFlags [
 ]
 
 { #category : #'plugin extra rules' }
-MTCogFreeBSDConfig >> configureReentrantIA32FFIPlugin: maker [
+CogMTFreeBSDConfig >> configureReentrantIA32FFIPlugin: maker [
 	self error: 'use ThreadedIA32FFIPlugin instead'
 
 ]
 
 { #category : #sources }
-MTCogFreeBSDConfig >> coreSources [
+CogMTFreeBSDConfig >> coreSources [
 	"files to include from src/vm dir"
 	
 	^ #(
@@ -39,7 +42,7 @@ MTCogFreeBSDConfig >> coreSources [
 ]
 
 { #category : #plugins }
-MTCogFreeBSDConfig >> defaultExternalPlugins [
+CogMTFreeBSDConfig >> defaultExternalPlugins [
 
 	^ #(
 		B3DAcceleratorPlugin
@@ -50,11 +53,11 @@ MTCogFreeBSDConfig >> defaultExternalPlugins [
 ]
 
 { #category : #accessing }
-MTCogFreeBSDConfig >> executableName [
+CogMTFreeBSDConfig >> executableName [
 	^ 'CogMTVM'
 ]
 
 { #category : #'source generation' }
-MTCogFreeBSDConfig >> interpreterClass [
+CogMTFreeBSDConfig >> interpreterClass [
 	^ CoInterpreterMT
 ]
