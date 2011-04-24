@@ -40,15 +40,18 @@ Note, to run cmake under msys shell, you have to explicitly specify the msys mak
 
 cmake . -G""MSYS Makefiles""
 
+
+Fore more information, check the class comments of all the superclasses.
+
 "
 Class {
-	#name : #CMsWindowsConfig,
+	#name : #CogFamilyWindowsConfig,
 	#superclass : #CPlatformConfig,
 	#category : #'CMakeVMMaker-Windows'
 }
 
 { #category : #'compiler flags' }
-CMsWindowsConfig >> commonCompilerFlags [
+CogFamilyWindowsConfig >> commonCompilerFlags [
 	^ '-march=pentium4 -mwindows -D_MT -msse2 -ggdb2 -mthreads -mno-cygwin -mwin32 -mno-rtd -mms-bitfields -mno-accumulate-outgoing-args ', self winVer ,
 
 	' -DWIN32 -DWIN32_FILE_SUPPORT -DNO_ISNAN -DNO_SERVICE -DNO_STD_FILE_SUPPORT ',
@@ -56,7 +59,7 @@ CMsWindowsConfig >> commonCompilerFlags [
 ]
 
 { #category : #'plugin extra rules' }
-CMsWindowsConfig >> configureAsynchFilePlugin:  maker [ 
+CogFamilyWindowsConfig >> configureAsynchFilePlugin:  maker [ 
 	"extra rules for AsynchFilePlugin "
 
 	super configureAsynchFilePlugin:  maker.
@@ -68,7 +71,7 @@ CMsWindowsConfig >> configureAsynchFilePlugin:  maker [
 ]
 
 { #category : #'plugin extra rules' }
-CMsWindowsConfig >> configureB3DAcceleratorPlugin:  maker [ 
+CogFamilyWindowsConfig >> configureB3DAcceleratorPlugin:  maker [ 
 	"extra rules for B3DAcceleratorPlugin "
 
 	super configureB3DAcceleratorPlugin:  maker.
@@ -80,7 +83,7 @@ CMsWindowsConfig >> configureB3DAcceleratorPlugin:  maker [
 ]
 
 { #category : #'plugin extra rules' }
-CMsWindowsConfig >> configureCroquetPlugin:  maker [ 
+CogFamilyWindowsConfig >> configureCroquetPlugin:  maker [ 
 	"extra rules for CroquetPlugin "
 
 	super configureCroquetPlugin:  maker.
@@ -92,7 +95,7 @@ CMsWindowsConfig >> configureCroquetPlugin:  maker [
 ]
 
 { #category : #'plugin extra rules' }
-CMsWindowsConfig >> configureDropPlugin:  maker [ 
+CogFamilyWindowsConfig >> configureDropPlugin:  maker [ 
 	"extra rules for DropPlugin "
 
 	super configureDropPlugin:  maker.
@@ -104,7 +107,7 @@ CMsWindowsConfig >> configureDropPlugin:  maker [
 ]
 
 { #category : #'plugin extra rules' }
-CMsWindowsConfig >> configureFilePlugin: maker [ 
+CogFamilyWindowsConfig >> configureFilePlugin: maker [ 
 	
 	super configureFilePlugin: maker.
 	
@@ -116,7 +119,7 @@ CMsWindowsConfig >> configureFilePlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-CMsWindowsConfig >> configureHostWindowPlugin:    maker [ 
+CogFamilyWindowsConfig >> configureHostWindowPlugin:    maker [ 
 	"extra rules for HostWindowPlugin "
 
 	super configureHostWindowPlugin:  maker.
@@ -128,7 +131,7 @@ CMsWindowsConfig >> configureHostWindowPlugin:    maker [
 ]
 
 { #category : #'plugin extra rules' }
-CMsWindowsConfig >> configureJoystickTabletPlugin:  maker [ 
+CogFamilyWindowsConfig >> configureJoystickTabletPlugin:  maker [ 
 	
 	super configureJoystickTabletPlugin:  maker.
 	
@@ -140,7 +143,7 @@ CMsWindowsConfig >> configureJoystickTabletPlugin:  maker [
 ]
 
 { #category : #'plugin extra rules' }
-CMsWindowsConfig >> configureLocalePlugin:   maker [ 
+CogFamilyWindowsConfig >> configureLocalePlugin:   maker [ 
 	"extra rules for LocalePlugin "
 
 	super configureLocalePlugin:  maker.
@@ -152,7 +155,7 @@ CMsWindowsConfig >> configureLocalePlugin:   maker [
 ]
 
 { #category : #'plugin extra rules' }
-CMsWindowsConfig >> configureMIDIPlugin:  maker [ 
+CogFamilyWindowsConfig >> configureMIDIPlugin:  maker [ 
 	"extra rules for MIDIPlugin "
 
 	super configureMIDIPlugin:  maker.
@@ -164,7 +167,7 @@ CMsWindowsConfig >> configureMIDIPlugin:  maker [
 ]
 
 { #category : #'plugin extra rules' }
-CMsWindowsConfig >> configureMpeg3Plugin:  maker [ 
+CogFamilyWindowsConfig >> configureMpeg3Plugin:  maker [ 
 	"extra rules for Mpeg3Plugin "
 
 	super configureMpeg3Plugin:  maker.
@@ -175,7 +178,7 @@ CMsWindowsConfig >> configureMpeg3Plugin:  maker [
 ]
 
 { #category : #'plugin extra rules' }
-CMsWindowsConfig >> configureSecurityPlugin: maker [ 
+CogFamilyWindowsConfig >> configureSecurityPlugin: maker [ 
 	"extra rules for SecurityPlugin"
 
 	super configureSecurityPlugin: maker.
@@ -187,7 +190,7 @@ CMsWindowsConfig >> configureSecurityPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-CMsWindowsConfig >> configureSerialPlugin:     maker [ 
+CogFamilyWindowsConfig >> configureSerialPlugin:     maker [ 
 	"extra rules for SerialPlugin "
 
 	super configureSerialPlugin:  maker.
@@ -199,7 +202,7 @@ CMsWindowsConfig >> configureSerialPlugin:     maker [
 ]
 
 { #category : #'plugin extra rules' }
-CMsWindowsConfig >> configureSocketPlugin:  maker [ 
+CogFamilyWindowsConfig >> configureSocketPlugin:  maker [ 
 	"extra rules for SocketPlugin "
 
 	super configureSocketPlugin:  maker.
@@ -211,7 +214,7 @@ CMsWindowsConfig >> configureSocketPlugin:  maker [
 ]
 
 { #category : #'plugin extra rules' }
-CMsWindowsConfig >> configureUUIDPlugin: maker [ 
+CogFamilyWindowsConfig >> configureUUIDPlugin: maker [ 
 	"extra rules for UUIDPlugin"
 	
 	maker addPlatformSources:
@@ -222,17 +225,17 @@ CMsWindowsConfig >> configureUUIDPlugin: maker [
 ]
 
 { #category : #'as yet unclassified' }
-CMsWindowsConfig >> executableType [
+CogFamilyWindowsConfig >> executableType [
 	^ 'WIN32'
 ]
 
 { #category : #'as yet unclassified' }
-CMsWindowsConfig >> fixLineEndsOf: string [
+CogFamilyWindowsConfig >> fixLineEndsOf: string [
 	^ string copyReplaceAll: String cr with: String crlf
 ]
 
 { #category : #'as yet unclassified' }
-CMsWindowsConfig >> msysPathFor: aPath [
+CogFamilyWindowsConfig >> msysPathFor: aPath [
 	| path |
 	
 	path := aPath.
@@ -243,7 +246,7 @@ CMsWindowsConfig >> msysPathFor: aPath [
 ]
 
 { #category : #directories }
-CMsWindowsConfig >> outputDir [
+CogFamilyWindowsConfig >> outputDir [
 
 	"the directory where built binaries will be stored"
 	^ outputDir ifNil: [ outputDir := (self msysPathFor: (self buildDir fullName , '/', self outputDirName )) ]
@@ -251,12 +254,12 @@ CMsWindowsConfig >> outputDir [
 ]
 
 { #category : #'as yet unclassified' }
-CMsWindowsConfig >> platformName [
+CogFamilyWindowsConfig >> platformName [
 	^ 'win32'
 ]
 
 { #category : #'as yet unclassified' }
-CMsWindowsConfig >> setupDirectories: gen [
+CogFamilyWindowsConfig >> setupDirectories: gen [
 	"we have to override that, because we need to convert windoze paths to msys ones"
 	
 	| dirsInclude |
@@ -281,7 +284,7 @@ CMsWindowsConfig >> setupDirectories: gen [
 ]
 
 { #category : #'as yet unclassified' }
-CMsWindowsConfig >> winVer [
+CogFamilyWindowsConfig >> winVer [
 	"Set minimum version to WindowsXP (see /cygwin/usr/include//w32api/w32api.h)"
 	
 	^ '-D_WIN32_WINNT=0x0501 -DWINVER=0x0501'

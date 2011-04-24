@@ -183,7 +183,7 @@ CMakeGenScripts class >> generateStackMacOS [
 	" generate sources for Stack Interpreter of Mac OS"
 	self generateStackSources.
 		
-	StackInterpreterMacOSConfig generate.
+	StackMacOSConfig generate.
 
 	
 ]

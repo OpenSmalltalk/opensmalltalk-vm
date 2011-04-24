@@ -1,17 +1,21 @@
 "
-StackInterpreterUnixConfig is a concrete class which generates a StackVM for Unix.
+This is a concrete class which generates a StackVM for Unix.
 
 Usage: 
 StackInterpreterUnixConfig generateWithSources
+
+
+Fore more information, check the class comments of all the superclasses.
+
 "
 Class {
-	#name : #StackInterpreterUnixConfig,
+	#name : #StackUnixConfig,
 	#superclass : #CogUnixConfig,
-	#category : #'CMakeVMMaker-Unix-Cog'
+	#category : #'CMakeVMMaker-Unix'
 }
 
 { #category : #'as yet unclassified' }
-StackInterpreterUnixConfig >> coreSources [
+StackUnixConfig >> coreSources [
 	"files to include from src/vm dir"
 	
 	^ #(
@@ -20,12 +24,12 @@ StackInterpreterUnixConfig >> coreSources [
 ]
 
 { #category : #'source generation' }
-StackInterpreterUnixConfig >> interpreterClass [
+StackUnixConfig >> interpreterClass [
 	^ StackInterpreter
 ]
 
 { #category : #'source generation' }
-StackInterpreterUnixConfig >> prepareForGeneration [
+StackUnixConfig >> prepareForGeneration [
 
 	"force using LF on Macs"
 	CrLfFileStream defaultToLF.

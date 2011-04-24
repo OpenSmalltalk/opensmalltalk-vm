@@ -2,15 +2,17 @@
 This is done specifically to track down the instability issues of Cog VM on UNIX
 
 
+Fore more information, check the class comments of all the superclasses.
+
 "
 Class {
-	#name : #FixedVerSIDebugUnixConfig,
-	#superclass : #StackInterpreterDebugUnixConfig,
-	#category : #'CMakeVMMaker-Unix-Cog'
+	#name : #StackUnixDebugFixedVerSIConfig,
+	#superclass : #StackUnixDebugConfig,
+	#category : #'CMakeVMMaker-Unix'
 }
 
 { #category : #'as yet unclassified' }
-FixedVerSIDebugUnixConfig >> compilerFlagsDebug [
+StackUnixDebugFixedVerSIConfig >> compilerFlagsDebug [
 
 	^ '-g3 -O0 -msse2 -save-temps -D_GNU_SOURCE -DDEBUG=1 -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=1'
 
@@ -18,7 +20,7 @@ FixedVerSIDebugUnixConfig >> compilerFlagsDebug [
 ]
 
 { #category : #'as yet unclassified' }
-FixedVerSIDebugUnixConfig >> extraVMSettings: maker [
+StackUnixDebugFixedVerSIConfig >> extraVMSettings: maker [
 	| versionC |
 	self generateConfigH.
 	
