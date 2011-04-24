@@ -1,25 +1,29 @@
 "
-MTCogMsWindowsConfig is a concrete class which generates a thread-aware VM and threaded FFI CogVM for Win32. This VM is normally known as CogMTVM.
+This is a concrete class which generates a thread-aware VM and threaded FFI CogVM for Win32. This VM is normally known as CogMTVM.
+
+
+Fore more information, check the class comments of all the superclasses.
+
 "
 Class {
-	#name : #MTCogMsWindowsConfig,
-	#superclass : #CogMsWindowsConfig,
+	#name : #CogMTWindowsConfig,
+	#superclass : #CogWindowsConfig,
 	#category : #'CMakeVMMaker-Windows'
 }
 
 { #category : #'compiler flags' }
-MTCogMsWindowsConfig >> compilerFlags [
+CogMTWindowsConfig >> compilerFlags [
 	^ super compilerFlags, ' -DCOGMTVM=1'
 ]
 
 { #category : #'plugin extra rules' }
-MTCogMsWindowsConfig >> configureReentrantIA32FFIPlugin: maker [
+CogMTWindowsConfig >> configureReentrantIA32FFIPlugin: maker [
 	self error: 'use ThreadedIA32FFIPlugin instead'
 
 ]
 
 { #category : #'source files' }
-MTCogMsWindowsConfig >> coreSources [
+CogMTWindowsConfig >> coreSources [
 	"files to include from src/vm dir"
 	
 	^ #(
@@ -29,7 +33,7 @@ MTCogMsWindowsConfig >> coreSources [
 ]
 
 { #category : #plugins }
-MTCogMsWindowsConfig >> defaultExternalPlugins [
+CogMTWindowsConfig >> defaultExternalPlugins [
 
 	^ #(
 		ThreadedIA32FFIPlugin "SqueakFFIPrims"
@@ -39,12 +43,12 @@ MTCogMsWindowsConfig >> defaultExternalPlugins [
 ]
 
 { #category : #accessing }
-MTCogMsWindowsConfig >> executableName [
+CogMTWindowsConfig >> executableName [
 	^ 'CogMTVM'
 ]
 
 { #category : #'source generation' }
-MTCogMsWindowsConfig >> interpreterClass [
+CogMTWindowsConfig >> interpreterClass [
 	"answer an interpreter class for VM source code generation"
 	^ CoInterpreterMT
 ]

@@ -1,10 +1,14 @@
 "
 A slightly modified configuration, which avoids linking with openGL libraries.
+
+
+Fore more information, check the class comments of all the superclasses.
+
 "
 Class {
 	#name : #CogUnixNoGLConfig,
 	#superclass : #CogUnixConfig,
-	#category : #'CMakeVMMaker-Unix-Cog'
+	#category : #'CMakeVMMaker-Unix'
 }
 
 { #category : #'as yet unclassified' }

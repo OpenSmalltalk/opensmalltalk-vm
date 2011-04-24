@@ -1,46 +1,49 @@
 "
-CocoaIOSCogStackConfig is a concrete class which generates a StackVM for Mac using the Cocoa library
+This is a concrete class which generates a StackVM for Mac using the Cocoa library
+
+Fore more information, check the class comments of all the superclasses.
+
 "
 Class {
-	#name : #CocoaIOSCogStackConfig,
-	#superclass : #CocoaIOSCogConfig,
+	#name : #StackCocoaIOSConfig,
+	#superclass : #CogFamilyCocoaIOSConfig,
 	#category : #'CMakeVMMaker-IOS'
 }
 
 { #category : #settings }
-CocoaIOSCogStackConfig >> compilerFlagsRelease [ 
+StackCocoaIOSConfig >> compilerFlagsRelease [ 
 	^super compilerFlagsRelease, #('-DSTACKVM')
 ]
 
 { #category : #'source files' }
-CocoaIOSCogStackConfig >> coreSources [ 
+StackCocoaIOSConfig >> coreSources [ 
 	^ #(
 		'gcc3x-interp.c'
 		)
 ]
 
 { #category : #accessing }
-CocoaIOSCogStackConfig >> executableName [
+StackCocoaIOSConfig >> executableName [
 	^ 'StackVM'
 ]
 
 { #category : #plugins }
-CocoaIOSCogStackConfig >> ffiPluginName [ 
+StackCocoaIOSConfig >> ffiPluginName [ 
 	^#ReentrantIA32FFIPlugin
 ]
 
 { #category : #'source generation' }
-CocoaIOSCogStackConfig >> interpreterClass [
+StackCocoaIOSConfig >> interpreterClass [
 	^ StackInterpreter
 ]
 
 { #category : #accessing }
-CocoaIOSCogStackConfig >> pluginsDir [ 
-	^'${topDir}/stacksrc/plugins'
+StackCocoaIOSConfig >> pluginsDir [ 
+	^'${srcDir}/plugins'
 ]
 
 { #category : #'source generation' }
-CocoaIOSCogStackConfig >> prepareForGeneration [
+StackCocoaIOSConfig >> prepareForGeneration [
 
 	"force using LF on Macs"
 	CrLfFileStream defaultToLF.
@@ -50,13 +53,8 @@ CocoaIOSCogStackConfig >> prepareForGeneration [
 ]
 
 { #category : #accessing }
-CocoaIOSCogStackConfig >> srcDir [ 
+StackCocoaIOSConfig >> srcDir [ 
 	"Answer the value of srcDir"
 
 	^ srcDir ifNil: [ srcDir := (self topDir / self srcDirName) fullName ]
-]
-
-{ #category : #accessing }
-CocoaIOSCogStackConfig >> srcDirName [
-	^ 'stacksrc'
 ]

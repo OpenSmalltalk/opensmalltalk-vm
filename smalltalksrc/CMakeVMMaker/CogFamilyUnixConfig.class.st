@@ -1,4 +1,6 @@
 "
+This is an abstract class for all Cog VMs for Unix. 
+
 For ALSA sound driver you need to install a 
 
  - libasound2
@@ -10,16 +12,17 @@ For UUID you might also need:
  packages  
 
 
+Fore more information, check the class comments of all the superclasses.
 
 "
 Class {
-	#name : #CUnixConfig,
+	#name : #CogFamilyUnixConfig,
 	#superclass : #CPlatformConfig,
 	#category : #'CMakeVMMaker-Unix'
 }
 
 { #category : #utils }
-CUnixConfig >> addDriver: name sources: aSources generator: cmakeGen [
+CogFamilyUnixConfig >> addDriver: name sources: aSources generator: cmakeGen [
 
 	| cfg srcs |
 	
@@ -51,7 +54,7 @@ CUnixConfig >> addDriver: name sources: aSources generator: cmakeGen [
 ]
 
 { #category : #utils }
-CUnixConfig >> addVMDrivers: maker [
+CogFamilyUnixConfig >> addVMDrivers: maker [
 
 	 self 
 		addDriver: 'vm-display-null' 
@@ -83,12 +86,12 @@ vm-display-null
 ]
 
 { #category : #'compiler flags' }
-CUnixConfig >> compilerFlags [
+CogFamilyUnixConfig >> compilerFlags [
 	^ self subclassResponsibility
 ]
 
 { #category : #'as yet unclassified' }
-CUnixConfig >> configureAsynchFilePlugin: maker [
+CogFamilyUnixConfig >> configureAsynchFilePlugin: maker [
 
 	maker addPlatformSources:
 	#( 
@@ -99,7 +102,7 @@ CUnixConfig >> configureAsynchFilePlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-CUnixConfig >> configureB3DAcceleratorPlugin: maker [
+CogFamilyUnixConfig >> configureB3DAcceleratorPlugin: maker [
 	"extra rules for B3DAcceleratorPlugin"
 	
 	super configureB3DAcceleratorPlugin: maker.
@@ -111,7 +114,7 @@ CUnixConfig >> configureB3DAcceleratorPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-CUnixConfig >> configureDropPlugin: maker [
+CogFamilyUnixConfig >> configureDropPlugin: maker [
 	"extra rules for DropPlugin"
 	super configureDropPlugin: maker.  
 	maker includeDirectories: '${crossDir}/plugins/FilePlugin'. 
@@ -120,7 +123,7 @@ CUnixConfig >> configureDropPlugin: maker [
 ]
 
 { #category : #'as yet unclassified' }
-CUnixConfig >> configureFileCopyPlugin: maker [
+CogFamilyUnixConfig >> configureFileCopyPlugin: maker [
 	"extra rules for DropPlugin"
 
 	maker addPlatformSources: #( 'sqUnixFileCopyPlugin')
@@ -128,7 +131,7 @@ CUnixConfig >> configureFileCopyPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-CUnixConfig >> configureFilePlugin: maker [
+CogFamilyUnixConfig >> configureFilePlugin: maker [
 	"extra rules for FilePlugin"
 
 	super configureFilePlugin: maker.  
@@ -137,7 +140,7 @@ CUnixConfig >> configureFilePlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-CUnixConfig >> configureJoystickTabletPlugin: maker [ 
+CogFamilyUnixConfig >> configureJoystickTabletPlugin: maker [ 
 	"extra rules for JoystickTabletPlugin"
 	
 	super configureJoystickTabletPlugin: maker.  
@@ -147,7 +150,7 @@ CUnixConfig >> configureJoystickTabletPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-CUnixConfig >> configureMIDIPlugin: maker [ 
+CogFamilyUnixConfig >> configureMIDIPlugin: maker [ 
 	"extra rules for MIDIPlugin"
 
 	super configureMIDIPlugin: maker.  
@@ -158,7 +161,7 @@ CUnixConfig >> configureMIDIPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-CUnixConfig >> configureSecurityPlugin: maker [ 
+CogFamilyUnixConfig >> configureSecurityPlugin: maker [ 
 	"extra rules for MIDIPlugin"
 
 	super configureSecurityPlugin: maker.
@@ -167,28 +170,28 @@ CUnixConfig >> configureSecurityPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-CUnixConfig >> configureSerialPlugin: maker [ 
+CogFamilyUnixConfig >> configureSerialPlugin: maker [ 
 	"extra rules for SerialPlugin"
 	
 	maker addPlatformSources: #( 'sqUnixSerial')
 ]
 
 { #category : #'plugin extra rules' }
-CUnixConfig >> configureSocketPlugin: maker [ 
+CogFamilyUnixConfig >> configureSocketPlugin: maker [ 
 	"extra rules for SocketPlugin"
 	
 	maker addPlatformSources: #( 'sqUnixSocket')
 ]
 
 { #category : #'plugin extra rules' }
-CUnixConfig >> configureSoundPlugin: maker [ 
+CogFamilyUnixConfig >> configureSoundPlugin: maker [ 
 	"extra rules for SoundPlugin"
 	
 	maker addPlatformSources: #( 'sqUnixSound')
 ]
 
 { #category : #'plugin extra rules' }
-CUnixConfig >> configureUUIDPlugin: maker [ 
+CogFamilyUnixConfig >> configureUUIDPlugin: maker [ 
 	"extra rules for UUIDPlugin"
 
 	super configureUUIDPlugin: maker.    
@@ -203,7 +206,7 @@ CUnixConfig >> configureUUIDPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-CUnixConfig >> extraPluginSettings: maker [
+CogFamilyUnixConfig >> extraPluginSettings: maker [
 
 	maker isExternal ifTrue: [
 		"copy result to results dir "
@@ -214,7 +217,7 @@ CUnixConfig >> extraPluginSettings: maker [
 ]
 
 { #category : #'as yet unclassified' }
-CUnixConfig >> extraVMSettings: maker [
+CogFamilyUnixConfig >> extraVMSettings: maker [
 	| versionC |
 	self generateConfigH.
 	
@@ -232,22 +235,22 @@ CUnixConfig >> extraVMSettings: maker [
 ]
 
 { #category : #utils }
-CUnixConfig >> fixLineEndsOf: string [
+CogFamilyUnixConfig >> fixLineEndsOf: string [
 	^ string copyReplaceAll: String cr with: String lf
 ]
 
 { #category : #accessing }
-CUnixConfig >> frameworks [
+CogFamilyUnixConfig >> frameworks [
 	^ #()
 ]
 
 { #category : #utils }
-CUnixConfig >> linkFlags [
+CogFamilyUnixConfig >> linkFlags [
 	 ^ '-lSM -lICE -ldl -lGL -lpthread -lm -lnsl -lX11'
 ]
 
 { #category : #directories }
-CUnixConfig >> outputDir [
+CogFamilyUnixConfig >> outputDir [
 
 	"the directory where built binaries will be stored"
 	^ outputDir ifNil: [ outputDir := (self buildDir containingDirectory fullName , '/', self outputDirName) ]
@@ -255,12 +258,12 @@ CUnixConfig >> outputDir [
 ]
 
 { #category : #'as yet unclassified' }
-CUnixConfig >> platformName [
+CogFamilyUnixConfig >> platformName [
 	^ 'unix'
 ]
 
 { #category : #utils }
-CUnixConfig >> setExtraTargetProperties: maker [
+CogFamilyUnixConfig >> setExtraTargetProperties: maker [
 
 
 	maker addExternalLibraries: 

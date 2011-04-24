@@ -1,14 +1,17 @@
 "
-StackInterpreterFreeBSDConfig is a concrete class which generates a StackVM for FreeBSD.
+This is a concrete class which generates a StackVM for FreeBSD.
+
+Fore more information, check the class comments of all the superclasses.
+
 "
 Class {
-	#name : #StackInterpreterFreeBSDConfig,
+	#name : #StackFreeBSDConfig,
 	#superclass : #CogFreeBSDConfig,
-	#category : #'CMakeVMMaker-FreeBSD-Cog'
+	#category : #'CMakeVMMaker-FreeBSD'
 }
 
 { #category : #'as yet unclassified' }
-StackInterpreterFreeBSDConfig >> coreSources [
+StackFreeBSDConfig >> coreSources [
 	"files to include from src/vm dir"
 	
 	^ #(
@@ -17,12 +20,12 @@ StackInterpreterFreeBSDConfig >> coreSources [
 ]
 
 { #category : #'source generation' }
-StackInterpreterFreeBSDConfig >> interpreterClass [
+StackFreeBSDConfig >> interpreterClass [
 	^ StackInterpreter
 ]
 
 { #category : #'source generation' }
-StackInterpreterFreeBSDConfig >> prepareForGeneration [
+StackFreeBSDConfig >> prepareForGeneration [
 
 	"force using LF on Macs"
 	CrLfFileStream defaultToLF.
