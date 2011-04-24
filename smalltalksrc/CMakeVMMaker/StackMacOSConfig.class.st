@@ -1,19 +1,20 @@
 "
-StackInterpreterMacOSConfig is a concrete class which generates a StackVM for Mac using the Carbon library.
+This is a concrete class which generates a StackVM for Mac using the Carbon library.
 
 This configuration generates sources/build files for building Stack-based interpreter on Mac OS X.
 It is using a Carbon framework , which will be replaced by Cocoa soon. (see CocoaIOSConfig and its subclasses).
 
+Fore more information, check the class comments of all the superclasses.
 
 "
 Class {
-	#name : #StackInterpreterMacOSConfig,
+	#name : #StackMacOSConfig,
 	#superclass : #CogMacOSConfig,
 	#category : #'CMakeVMMaker-MacOS'
 }
 
 { #category : #'source files' }
-StackInterpreterMacOSConfig >> coreSources [
+StackMacOSConfig >> coreSources [
 	"files to include from src/vm dir"
 	
 	^ #(
@@ -22,17 +23,17 @@ StackInterpreterMacOSConfig >> coreSources [
 ]
 
 { #category : #accessing }
-StackInterpreterMacOSConfig >> executableName [
+StackMacOSConfig >> executableName [
 	^ 'StackVM'
 ]
 
 { #category : #'source generation' }
-StackInterpreterMacOSConfig >> interpreterClass [
+StackMacOSConfig >> interpreterClass [
 	^ StackInterpreter
 ]
 
 { #category : #'source generation' }
-StackInterpreterMacOSConfig >> prepareForGeneration [
+StackMacOSConfig >> prepareForGeneration [
 
 	"force using LF on Macs"
 	CrLfFileStream defaultToLF.

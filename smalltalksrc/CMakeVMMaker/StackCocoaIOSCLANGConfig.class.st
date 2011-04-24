@@ -1,14 +1,17 @@
 "
 Experimental configuration for compiling using clang compiler
+
+Fore more information, check the class comments of all the superclasses.
+
 "
 Class {
-	#name : #CLANGCocoaIOSCogStackConfig,
-	#superclass : #CocoaIOSCogStackConfig,
+	#name : #StackCocoaIOSCLANGConfig,
+	#superclass : #StackCocoaIOSConfig,
 	#category : #'CMakeVMMaker-IOS'
 }
 
 { #category : #'as yet unclassified' }
-CLANGCocoaIOSCogStackConfig >> coreSources [ 
+StackCocoaIOSCLANGConfig >> coreSources [ 
 " can't use GCC stuff "
 	^ #(
 		'interp.c'
@@ -16,7 +19,7 @@ CLANGCocoaIOSCogStackConfig >> coreSources [
 ]
 
 { #category : #'as yet unclassified' }
-CLANGCocoaIOSCogStackConfig >> setExtraTargetProperties: maker [
+StackCocoaIOSCLANGConfig >> setExtraTargetProperties: maker [
 
 
 	maker set: 'CMAKE_C_COMPILER' to: 'clang'.

@@ -1,15 +1,19 @@
 "
-Base and concrete configuration for building Cog VM on Unix platform(s).
+Base and concrete configuration for building a CogVM on Unix platform(s).
 
 Usage: 
 CogUnixConfig generateWithSources
 or
 CogUnixConfig generate   ""if VMMaker sources already there""
+
+
+Fore more information, check the class comments of all the superclasses.
+
 "
 Class {
 	#name : #CogUnixConfig,
-	#superclass : #CUnixConfig,
-	#category : #'CMakeVMMaker-Unix-Cog'
+	#superclass : #CogFamilyUnixConfig,
+	#category : #'CMakeVMMaker-Unix'
 }
 
 { #category : #'source generation' }
