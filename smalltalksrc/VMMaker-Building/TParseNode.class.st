@@ -10,23 +10,20 @@ Class {
 	#category : #'VMMaker-Translation to C'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #utilities }
 TParseNode >> allCalls [
 	"Answer a collection of selectors for the messages sent in this parse tree."
 
 	| calls |
 	calls := Set new: 100.
-	self nodesDo: [ :node |
-		node isSend ifTrue: [ calls add: node selector ].
-	].
+	self nodesDo:
+		[ :node |
+		node isSend ifTrue:
+			[((calls add: node selector) = #asSymbol
+			  and: [node receiver isConstant
+			  and: [node receiver value isSymbol]]) ifTrue:
+				[calls add: node receiver value]]].
 	^calls
-]
-
-{ #category : #converting }
-TParseNode >> asExpression [
-	"Sender expects to use this node as a simple expression rather than as as statement"
-
-	^self
 ]
 
 { #category : #transformations }
@@ -49,11 +46,6 @@ TParseNode >> comment: aComment [
 	comment := aComment 
 ]
 
-{ #category : #'as yet unclassified' }
-TParseNode >> copyTree [
-	self subclassResponsibility.
-]
-
 { #category : #'C code generation' }
 TParseNode >> emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen [
 	^self emitCCodeOn: aStream level: level generator: aCodeGen
@@ -67,6 +59,13 @@ TParseNode >> emitCCodeAsExpressionOn: aStream level: level generator: aCodeGen 
 { #category : #'C code generation' }
 TParseNode >> emitCCodeOn: aStream level: lev generator: gen [
 	self subclassResponsibility.
+]
+
+{ #category : #'C code generation' }
+TParseNode >> emitCCodeOn: aStream prependToEnd: aNodeOrNil level: lev generator: gen [
+	aNodeOrNil ifNotNil:
+		[aNodeOrNil prependCCodeOn: aStream level: lev generator: gen].
+	self emitCCodeOn: aStream level: lev generator: gen
 ]
 
 { #category : #'C code generation' }
@@ -87,18 +86,18 @@ TParseNode >> emitCCommentOn: aStream level: level [
 ]
 
 { #category : #testing }
+TParseNode >> endsWithReturn [
+
+	^false
+]
+
+{ #category : #testing }
 TParseNode >> hasExplicitReturn [
 
 	self nodesDo: [ :node |
 		node isReturn ifTrue: [ ^true ].
 	].
 	^false
-]
-
-{ #category : #'as yet unclassified' }
-TParseNode >> inlineMethodsUsing: aDictionary [
-
-	self
 ]
 
 { #category : #testing }
@@ -126,13 +125,6 @@ TParseNode >> isComment [
 
 { #category : #testing }
 TParseNode >> isConstant [
-
-	^false
-]
-
-{ #category : #'as yet unclassified' }
-TParseNode >> isDirective [
-	"Preprocessor directive, e.g. a cpp macro"
 
 	^false
 ]
@@ -190,13 +182,6 @@ TParseNode >> isStmtList [
 ]
 
 { #category : #testing }
-TParseNode >> isStructTarget: aCodeGen [
-	"Answer if the recever evaluates to a struct pointer
-	 and hence can be dereferenced using ->"
-	^false
-]
-
-{ #category : #testing }
 TParseNode >> isSwitch [
 	^false
 ]
@@ -234,10 +219,11 @@ TParseNode >> nodesDo: aBlock [
 	aBlock value: self.
 ]
 
-{ #category : #'as yet unclassified' }
-TParseNode >> nodesVarCheckDo: aBlock [
+{ #category : #enumerating }
+TParseNode >> nodesDo: aBlock unless: cautionaryBlock [
 
-	aBlock value: self.
+	(cautionaryBlock value: self) ifTrue: [^self].
+	aBlock value: self
 ]
 
 { #category : #printing }
@@ -265,9 +251,10 @@ TParseNode >> replaceNodesIn: aDictionary [
 	^aDictionary at: self ifAbsent: [self]
 ]
 
-{ #category : #'as yet unclassified' }
-TParseNode >> requiresCLineTerminator [
-
-	^ self isComment not
-
+{ #category : #testing }
+TParseNode >> structTargetKind: aCodeGen [
+	"Answer if the recever evaluates to a struct or struct pointer
+	 and hence can be dereferenced using . or ->.  Answer any of
+	 #struct #pointer or nil"
+	^nil
 ]

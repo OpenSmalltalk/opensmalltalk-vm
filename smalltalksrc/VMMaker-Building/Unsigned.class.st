@@ -11,14 +11,20 @@ Class {
 
 { #category : #'plugin generation' }
 Unsigned class >> ccg: cg generateCoerceToOopFrom: aNode on: aStream [
-
-	cg generateCoerceToUnsignedObjectFrom: aNode on: aStream
+	"N.B.  The is used both for generation and simulation so answer the result (for interpretation)"
+	^cg generateCoerceToUnsignedObjectFrom: aNode on: aStream
 ]
 
 { #category : #'plugin generation' }
 Unsigned class >> ccg: cg generateCoerceToValueFrom: aNode on: aStream [
+	"N.B.  The could be used both for generation and simulation so answer the result (for interpretation)"
+	^cg generateCoerceToUnsignedValueFrom: aNode on: aStream
+]
 
-	cg generateCoerceToUnsignedValueFrom: aNode on: aStream
+{ #category : #'plugin generation' }
+Unsigned class >> ccg: cg prolog: aBlock expr: aString index: anInteger [
+
+	^cg ccgLoad: aBlock expr: aString asUnsignedValueFrom: anInteger
 ]
 
 { #category : #'plugin generation' }
@@ -33,14 +39,8 @@ Unsigned class >> ccgCanConvertFrom: anObject [
 	^true
 ]
 
-{ #category : #'as yet unclassified' }
-Unsigned >> ccg: cg prolog: aBlock expr: aString index: anInteger [
+{ #category : #'plugin generation' }
+Unsigned class >> ccgDeclareCForVar: aSymbolOrString [
 
-	^cg ccgLoad: aBlock expr: aString asUnsignedValueFrom: anInteger
-]
-
-{ #category : #'as yet unclassified' }
-Unsigned >> ccgDeclareCForVar: aSymbolOrString [
-
-	^'unsigned int ', aSymbolOrString
+	^'unsigned long ', aSymbolOrString
 ]

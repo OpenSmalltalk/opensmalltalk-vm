@@ -6,14 +6,13 @@ Class {
 	#name : #InterpreterProxy,
 	#superclass : #Object,
 	#instVars : [
-		'successFlag',
+		'primFailCode',
 		'remapBuffer',
 		'stack',
 		'method',
 		'argumentCount',
 		'bb',
-		'thisSessionID',
-		'primFailCode'
+		'thisSessionID'
 	],
 	#category : #'VMMaker-InterpreterSimulation'
 }
@@ -75,17 +74,6 @@ InterpreterProxy >> byteSizeOf: oop [
 	^oop class isBytes
 		ifTrue:[(self slotSizeOf: oop)]
 		ifFalse:[(self slotSizeOf: oop) * 4]
-]
-
-{ #category : #other }
-InterpreterProxy >> byteSwapped: w [
-	"Return the given integer with its bytes in the reverse order."
-
-	^ ((w bitShift: -24) bitAnd: 16rFF) +
-	  ((w bitShift: -8) bitAnd: 16rFF00) +
-	  ((w bitShift: 8) bitAnd: 16rFF0000) +
-	  ((w bitShift: 24) bitAnd: 16rFF000000)
-
 ]
 
 { #category : #'special objects' }
@@ -182,7 +170,7 @@ InterpreterProxy >> classSmallInteger [
 
 { #category : #'special classes' }
 InterpreterProxy >> classString [
-	^String
+	^ByteString
 ]
 
 { #category : #'FFI support' }
@@ -212,7 +200,8 @@ InterpreterProxy >> displayObject [
 
 { #category : #other }
 InterpreterProxy >> failed [
-	^successFlag not
+
+	^primFailCode ~= 0
 ]
 
 { #category : #'special objects' }
@@ -281,14 +270,24 @@ InterpreterProxy >> fetchPointer: index ofObject: oop [
 
 { #category : #'object access' }
 InterpreterProxy >> firstFixedField: oop [
-	<returnTypeC: 'void *'>
+	<returnTypeC:'void *'>
 	^CObjectAccessor on: oop
 ]
 
 { #category : #'object access' }
 InterpreterProxy >> firstIndexableField: oop [
-	<returnTypeC: 'void *'>
+	<returnTypeC:'void *'>
 	^CArrayAccessor on: oop
+]
+
+{ #category : #'stack access' }
+InterpreterProxy >> floatArg: offset [
+	"Like #stackFloatValue: but access method arguments left-to-right"
+	| oop |
+	<returnTypeC: 'double'>
+	oop := self methodArg: offset.
+	(self isFloatObject: oop) ifFalse: [self primitiveFail. ^0.0].
+	^oop
 ]
 
 { #category : #converting }
@@ -300,7 +299,7 @@ InterpreterProxy >> floatObjectOf: aFloat [
 
 { #category : #converting }
 InterpreterProxy >> floatValueOf: oop [
-	<returnTypeC: 'double'>
+	<returnTypeC:'double'>
 	oop class == Float
 		ifTrue:[^oop]
 		ifFalse:[self primitiveFail. ^0.0].
@@ -346,9 +345,14 @@ InterpreterProxy >> incrementalGC [
 
 { #category : #initialize }
 InterpreterProxy >> initialize [
-	successFlag := true.
+	primFailCode := 0.
 	remapBuffer := OrderedCollection new.
 	stack := OrderedCollection new.
+]
+
+{ #category : #'object access' }
+InterpreterProxy >> instanceSizeOf: classObj [
+	^classObj instSize
 ]
 
 { #category : #'instance creation' }
@@ -356,6 +360,15 @@ InterpreterProxy >> instantiateClass: classPointer indexableSize: size [
 	^size = 0 
 		ifTrue:[classPointer basicNew]
 		ifFalse:[classPointer basicNew: size]
+]
+
+{ #category : #'stack access' }
+InterpreterProxy >> integerArg: offset [
+	"Like #stackIntegerValue: but access method arguments left-to-right"
+	| oop |
+	oop := self methodArg: offset.
+	(self isIntegerObject: oop) ifFalse: [self primitiveFail. ^0].
+	^oop
 ]
 
 { #category : #converting }
@@ -368,16 +381,6 @@ InterpreterProxy >> integerObjectOf: value [
 InterpreterProxy >> integerValueOf: oop [
 	oop class == SmallInteger ifFalse:[self error:'Not a SmallInteger'].
 	^oop
-]
-
-{ #category : #'object access' }
-InterpreterProxy >> internalIsImutable: oop [
-	^oop isImmutable
-]
-
-{ #category : #'object access' }
-InterpreterProxy >> internalIsMutable: oop [
-	^oop isImmutable not
 ]
 
 { #category : #converting }
@@ -414,7 +417,7 @@ InterpreterProxy >> ioMicroMSecs [
 InterpreterProxy >> is: oop KindOf: aString [
 	"InterpreterProxy new is: 42 KindOf: 'Number'"
 	| theClass |
-	<var: #aString type: 'char *'>
+	<var: #aString type:'char *'>
 	theClass := Smalltalk at: aString asSymbol ifAbsent:[nil].
 	^theClass isNil
 		ifTrue:[false]
@@ -422,10 +425,16 @@ InterpreterProxy >> is: oop KindOf: aString [
 ]
 
 { #category : #testing }
+InterpreterProxy >> is: oop KindOfClass: aClass [
+	"InterpreterProxy new is: 42 KindOfClass: Number"
+	^oop isKindOf: aClass
+]
+
+{ #category : #testing }
 InterpreterProxy >> is: oop MemberOf: aString [
 	"InterpreterProxy new is: 42 MemberOf:'SmallInteger'"
 	| theClass |
-	<var: #aString type: 'char *'>
+	<var: #aString type:'char *'>
 	theClass := Smalltalk at: aString asSymbol ifAbsent:[nil].
 	^theClass isNil
 		ifTrue:[false]
@@ -535,6 +544,13 @@ InterpreterProxy >> makePointwithxValue: xValue yValue: yValue [
 	^xValue@yValue
 ]
 
+{ #category : #'stack access' }
+InterpreterProxy >> methodArg: offset [
+	"Like #stackValue: but access method arguments left-to-right"
+	offset > argumentCount + 1 ifTrue:[^self primitiveFail].
+	^self stackValue: argumentCount - offset
+]
+
 { #category : #'object access' }
 InterpreterProxy >> methodArgumentCount [
 	^argumentCount
@@ -545,9 +561,25 @@ InterpreterProxy >> methodPrimitiveIndex [
 	^method primitive
 ]
 
+{ #category : #'stack access' }
+InterpreterProxy >> methodReturnValue: oop [
+	"Sets the return value for a method"
+	self pop: argumentCount+1 thenPush: oop.
+	^0
+]
+
 { #category : #'special objects' }
 InterpreterProxy >> nilObject [
 	^nil
+]
+
+{ #category : #'stack access' }
+InterpreterProxy >> objectArg: offset [
+	"Like #stackObjectValue: but access method arguments left-to-right"
+	| oop |
+	oop := self methodArg: offset.
+	(self isIntegerObject: oop) ifTrue: [self primitiveFail. ^ nil].
+	^oop
 ]
 
 { #category : #'object access' }
@@ -604,17 +636,36 @@ InterpreterProxy >> positive64BitValueOf: oop [
 		ifFalse:[^oop]
 ]
 
+{ #category : #converting }
+InterpreterProxy >> positiveMachineIntegerValueOf: oop [
+	oop isInteger ifFalse:[self error: 'Not an integer object'].
+	^oop < 0 
+		ifTrue: [self primitiveFail. 0]
+		ifFalse: [oop]
+]
+
+{ #category : #'special objects' }
+InterpreterProxy >> primitiveErrorTable [
+	^Smalltalk primitiveErrorTable
+]
+
 { #category : #other }
 InterpreterProxy >> primitiveFail [
-	(self confirm:'A primitive is failing -- Stop simulation?') ifTrue:[self halt].
-	successFlag := false.
+	"Set general (unspecified) primitive failure."
+	self primitiveFailFor: 1
 ]
 
 { #category : #other }
 InterpreterProxy >> primitiveFailFor: reasonCode [
-	"Set specific primitive failure."
+	"Set specific primitive failure.
+	 N.B. primitiveFailFor: PrimNoErr is expected to clear the primFailCode."
 	(self confirm:'A primitive is failing -- Stop simulation?') ifTrue:[self halt].
-	primFailCode := reasonCode
+	^primFailCode := reasonCode
+]
+
+{ #category : #other }
+InterpreterProxy >> primitiveFailureCode [
+	^primFailCode
 ]
 
 { #category : #'object access' }
@@ -656,6 +707,26 @@ InterpreterProxy >> pushRemappableOop: oop [
 	remapBuffer addLast: oop
 ]
 
+{ #category : #'callback support' }
+InterpreterProxy >> reestablishContextPriorToCallback: callbackContext [
+	"callbackContext is an activation of invokeCallback:stack:registers:jmpbuf:.  Its sender
+	is the interpreter's state prior to the callback.  Reestablish that state."
+	self notYetImplemented
+]
+
+{ #category : #'callback support' }
+InterpreterProxy >> sendInvokeCallback: thunkPtr Stack: stackPtr Registers: regsPtr Jmpbuf: jmpBufPtr [
+	"Send the 4 argument callback message invokeCallback:stack:registers:jmpbuf:
+	 to Alien class with the supplied args.  The arguments are raw C addresses
+	 and are converted to integer objects on the way."
+	self notYetImplemented
+]
+
+{ #category : #other }
+InterpreterProxy >> setInterruptCheckChain: aFunction [
+	self error: 'not yet implemented in Smalltalk'
+]
+
 { #category : #other }
 InterpreterProxy >> showDisplayBits: aForm Left: l Top: t Right: r Bottom: b [
 	aForm == Display ifTrue:[
@@ -687,6 +758,12 @@ InterpreterProxy >> signed64BitIntegerFor: integerValue [
 
 { #category : #converting }
 InterpreterProxy >> signed64BitValueOf: oop [
+	oop isInteger ifFalse:[self error:'Not an integer object'].
+	^oop
+]
+
+{ #category : #converting }
+InterpreterProxy >> signedMachineIntegerValueOf: oop [
 	oop isInteger ifFalse:[self error:'Not an integer object'].
 	^oop
 ]
@@ -748,6 +825,16 @@ InterpreterProxy >> stackObjectValue: offset [
 ]
 
 { #category : #'stack access' }
+InterpreterProxy >> stackPositiveMachineIntegerValue: offset [
+	^self positiveMachineIntegerValueOf: (self stackValue: offset)
+]
+
+{ #category : #'stack access' }
+InterpreterProxy >> stackSignedMachineIntegerValue: offset [
+	^self signedMachineIntegerValueOf: (self stackValue: offset)
+]
+
+{ #category : #'stack access' }
 InterpreterProxy >> stackValue: offset [
 	^stack at: stack size - offset.
 ]
@@ -766,15 +853,24 @@ InterpreterProxy >> storePointer: index ofObject: oop withValue: valuePointer [
 
 { #category : #other }
 InterpreterProxy >> success: aBoolean [
-	successFlag not ifTrue:[^self].
-	successFlag := successFlag and:[aBoolean].
-	successFlag not ifTrue:[
-		(self confirm:'A primitive is failing -- Stop simulation?') ifTrue:[self halt]].
+	aBoolean ifTrue: [^self].
+	primFailCode = 0 ifTrue: [self primitiveFailFor: 1]
 ]
 
 { #category : #other }
 InterpreterProxy >> superclassOf: classPointer [
 	^classPointer superclass
+]
+
+{ #category : #other }
+InterpreterProxy >> tenuringIncrementalGC [
+	Smalltalk forceTenuring; garbageCollectMost
+]
+
+{ #category : #'instance creation' }
+InterpreterProxy >> topRemappableOop [
+	"Returns the top of the remappable oop. Useful when writing loops."
+	^remapBuffer last
 ]
 
 { #category : #'special objects' }

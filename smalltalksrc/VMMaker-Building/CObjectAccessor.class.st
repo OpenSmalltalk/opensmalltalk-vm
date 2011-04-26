@@ -68,8 +68,8 @@ CObjectAccessor >> asPluggableAccessor [
 { #category : #converting }
 CObjectAccessor >> asPluggableAccessor: accessorArray [
 	^((CPluggableAccessor on: object) += offset)
-		readBlock: accessorArray first
-		writeBlock: accessorArray last
+		atBlock: accessorArray first
+		atPutBlock: accessorArray last
 ]
 
 { #category : #accessing }
@@ -99,6 +99,12 @@ CObjectAccessor >> getObject [
 CObjectAccessor >> isCObjectAccessor [
 
 	^ true
+]
+
+{ #category : #'initialize-release' }
+CObjectAccessor >> memory: anObject offset: baseIndex [
+	object := anObject.
+	offset := baseIndex
 ]
 
 { #category : #accessing }

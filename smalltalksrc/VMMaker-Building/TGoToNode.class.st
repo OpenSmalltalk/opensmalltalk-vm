@@ -7,12 +7,6 @@ Class {
 	#category : #'VMMaker-Translation to C'
 }
 
-{ #category : #'as yet unclassified' }
-TGoToNode >> copyTree [
-
-	^self class new setLabel: label
-]
-
 { #category : #'C code generation' }
 TGoToNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 	"Emit a C goto statement."
