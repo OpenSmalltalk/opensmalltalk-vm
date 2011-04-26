@@ -23,6 +23,11 @@ UUIDPlugin class >> requiresPlatformFiles [
 	^true
 ]
 
+{ #category : #simulation }
+UUIDPlugin class >> simulatorClass [
+	^SmartSyntaxPluginSimulator
+]
+
 { #category : #initialize }
 UUIDPlugin >> initialiseModule [
 	<export: true>
@@ -34,19 +39,20 @@ UUIDPlugin >> primitiveMakeUUID [
 	| oop location |
 	<export: true>
 	<var: #location type: 'char*'>
-	interpreterProxy methodArgumentCount = 0
-		ifFalse:[^interpreterProxy primitiveFail].
 	oop := interpreterProxy stackObjectValue: 0.
-	interpreterProxy failed ifTrue:[^nil].
-	(interpreterProxy isBytes: oop) 
-		ifFalse:[^interpreterProxy primitiveFail].
-	(interpreterProxy byteSizeOf: oop) = 16
-		ifFalse:[^interpreterProxy primitiveFail].
+	(interpreterProxy failed
+	or: [interpreterProxy methodArgumentCount ~= 0
+	or: [(interpreterProxy isBytes: oop) not
+	or: [(interpreterProxy byteSizeOf: oop) ~= 16]]]) ifTrue:
+		[^interpreterProxy primitiveFail].
 	location := interpreterProxy firstIndexableField: oop.
-
-	^self cCode: 'MakeUUID(location)' 
-		inSmalltalk: [location. interpreterProxy primitiveFail].
-
+	self cCode: [self MakeUUID: location]
+		inSmalltalk:
+			[| uuid |
+			uuid := UUID new.
+			1 to: 16 do:
+				[:i| location at: i - 1 put: (uuid at: i)]].
+	^oop
 ]
 
 { #category : #initialize }

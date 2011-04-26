@@ -1,0 +1,27 @@
+"
+I am a place to hang various pieces of translation support.
+"
+Class {
+	#name : #CogClass,
+	#superclass : #VMClass,
+	#category : #'VMMaker-JIT'
+}
+
+{ #category : #'translation support' }
+CogClass >> cCoerceSimple: value to: cTypeString [
+	"Type coercion for translation and simulation.
+	 For simulation answer a suitable surrogate for the struct types"
+	^cTypeString caseOf:
+	   {	[#'unsigned long']						->	[value].
+		[#sqInt]									->	[value].
+		[#'AbstractInstruction *']					->	[value].
+		[#'BytecodeFixup *']						->	[value].
+		[#'CogMethod *']						->	[value].
+		[#'char *']								->	[value].
+		[#'sqInt *']								->	[value].
+		[#'void *']								->	[value].
+		[#'void (*)()']							->	[value].
+		[#'void (*)(void)']						->	[value].
+		[#'unsigned long (*)(void)']				->	[value].
+		[#'void (*)(unsigned long,unsigned long)']	->	[value] }
+]

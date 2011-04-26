@@ -4,11 +4,11 @@ Class {
 	#category : #'VMMaker-InterpreterSimulation'
 }
 
-{ #category : #initialization }
-InterpreterSimulatorLSB64 >> initialize [
+{ #category : #'as yet unclassified' }
+InterpreterSimulatorLSB64 >> bytesPerWord [
+	"overridden for 64-bit images..."
 
-	bytesPerWord := 8.
-	super initialize
+	^ 8
 ]
 
 { #category : #'memory access' }

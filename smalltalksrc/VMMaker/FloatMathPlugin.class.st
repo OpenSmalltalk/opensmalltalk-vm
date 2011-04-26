@@ -16,6 +16,11 @@ FloatMathPlugin class >> requiresCrossPlatformFiles [
 	^true
 ]
 
+{ #category : #simulation }
+FloatMathPlugin class >> simulatorClass [
+	^FloatMathPluginSimulator
+]
+
 { #category : #'float primitives' }
 FloatMathPlugin >> primitiveArcCos [
 	"Computes acos(receiver)"

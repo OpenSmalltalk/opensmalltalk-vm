@@ -66,7 +66,7 @@ FilePlugin class >> requiresPlatformFiles [
 	^true
 ]
 
-{ #category : #'instance creation' }
+{ #category : #simulation }
 FilePlugin class >> simulatorClass [
 	^FilePluginSimulator
 ]
@@ -146,8 +146,8 @@ FilePlugin >> makeDirEntryName: entryName size: entryNameSize
 
 	| modDateOop createDateOop nameString results stringPtr fileSizeOop |
 	<var: 'entryName' type: 'char *'>
-	<var: 'stringPtr' type: 'char *'>
-	<var: 'fileSize' type: 'squeakFileOffsetType '>
+	<var: 'stringPtr' type:'char *'>
+	<var: 'fileSize' type:'squeakFileOffsetType '>
 
 	"allocate storage for results, remapping newly allocated
 	 oops in case GC happens during allocation"
@@ -256,6 +256,65 @@ FilePlugin >> primitiveDirectoryDelimitor [
 	interpreterProxy
 		pop: 1
 		thenPush: (interpreterProxy fetchPointer: ascii ofObject: (interpreterProxy characterTable))
+]
+
+{ #category : #'directory primitives' }
+FilePlugin >> primitiveDirectoryEntry [
+
+	"Two arguments - directory path, and simple file name;
+ 	 returns an array (see primitiveDirectoryLookup) describing the file or directory,
+ 	 or nil if it does not exist.  
+	 Primitive fails if the outer path does not identify a readable directory.
+	 (This is a lookup-by-name variant of primitiveDirectoryLookup.)"
+
+	| requestedName pathName pathNameIndex pathNameSize status entryName entryNameSize createDate modifiedDate dirFlag fileSize okToList reqNameIndex reqNameSize |
+	<var: 'entryName' declareC: 'char entryName[256]'>
+	<var: 'pathNameIndex' type: 'char *'>
+	<var: 'reqNameIndex' type: 'char *'>
+	<var: 'fileSize' type: 'squeakFileOffsetType'>
+	<export: true>
+
+	requestedName := interpreterProxy stackValue: 0.
+	pathName := interpreterProxy stackValue: 1.
+	(interpreterProxy isBytes: pathName)
+		ifFalse: [^interpreterProxy primitiveFail].
+
+	"Outbound string parameters"
+	pathNameIndex := interpreterProxy firstIndexableField: pathName.
+	pathNameSize := interpreterProxy byteSizeOf: pathName.
+
+	reqNameIndex := interpreterProxy firstIndexableField: requestedName.
+	reqNameSize := interpreterProxy byteSizeOf: requestedName.
+
+	"If the security plugin can be loaded, use it to check for permission. 
+	If not, assume it's ok"
+	sCLPfn ~= 0
+		ifTrue: [okToList := self cCode: '((sqInt (*)(char *, sqInt))sCLPfn)(pathNameIndex, pathNameSize)']
+		ifFalse: [okToList := true].
+	okToList
+		ifTrue: [status := self cCode: 'dir_EntryLookup(pathNameIndex, pathNameSize, reqNameIndex, reqNameSize,
+													  entryName, &entryNameSize, &createDate,
+													  &modifiedDate, &dirFlag, &fileSize)']
+		ifFalse: [status := DirNoMoreEntries].
+
+	interpreterProxy failed
+		ifTrue: [^nil].
+	status = DirNoMoreEntries
+		ifTrue: ["no entry; return nil"
+			interpreterProxy pop: 3 "pop pathName, index, rcvr"
+				thenPush: interpreterProxy nilObject.
+			^nil].
+	status = DirBadPath
+		ifTrue: [^interpreterProxy primitiveFail]."bad path"
+
+	interpreterProxy pop: 3	"pop pathName, fName, rcvr" 
+		thenPush: (self
+				makeDirEntryName: entryName
+				size: entryNameSize
+				createDate: createDate
+				modDate: modifiedDate
+				isDir: dirFlag
+				fileSize: fileSize)
 ]
 
 { #category : #'directory primitives' }
@@ -383,10 +442,9 @@ FilePlugin >> primitiveDirectorySetMacTypeAndCreator [
 FilePlugin >> primitiveDisableFileAccess [
 	<export: true>
 	"If the security plugin can be loaded, use it to turn off file access
-	If not, assume it's ok"
-	sDFAfn ~= 0
-		ifTrue: [self cCode: ' ((sqInt (*)(void))sDFAfn)()'].
-
+	 If not, assume it's ok"
+	sDFAfn ~= 0 ifTrue:
+		[self cCode: '((sqInt (*)(void))sDFAfn)()']
 ]
 
 { #category : #'file primitives' }
@@ -481,40 +539,45 @@ FilePlugin >> primitiveFileOpen [
 
 { #category : #'file primitives' }
 FilePlugin >> primitiveFileRead [
-
-	| count startIndex array file byteSize arrayIndex bytesRead |
-	<var: 'file' type: 'SQFile *'>
-	<var: 'arrayIndex' type: 'char *'>
-	<var: 'count' type: 'size_t'>
-	<var: 'startIndex' type: 'size_t'>
-	<var: 'byteSize' type: 'size_t'>
 	<export: true>
+	| retryCount count startIndex array file elementSize bytesRead |
+	<var: 'file' type: #'SQFile *'>
+	<var: 'count' type: #'size_t'>
+	<var: 'startIndex' type: #'size_t'>
+	<var: 'elementSize' type: #'size_t'>
 
+	retryCount	:= 0.
 	count		:= interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
 	startIndex	:= interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 1).
-	array		:= interpreterProxy stackValue: 2.
-	file			:= self fileValueOf: (interpreterProxy stackValue: 3).
+ 
+	[array		:= interpreterProxy stackValue: 2.
+	 file			:= self fileValueOf: (interpreterProxy stackValue: 3).
 
-	"buffer can be any indexable words or bytes object except CompiledMethod"
-	(interpreterProxy isWordsOrBytes: array) 
-		ifFalse: [^interpreterProxy primitiveFail].
+	 (interpreterProxy failed
+	 "buffer can be any indexable words or bytes object except CompiledMethod"
+	 or: [(interpreterProxy isWordsOrBytes: array) not]) ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 
-	(interpreterProxy isWords: array)
-		ifTrue: [byteSize := 4]
-		ifFalse: [byteSize := 1].
-	((startIndex >= 1) and:
-		[(startIndex + count - 1) <= (interpreterProxy slotSizeOf: array)])
-			ifFalse: [^interpreterProxy primitiveFail].
+	 elementSize := (interpreterProxy isWords: array) ifTrue: [4] ifFalse: [1].
+	 (startIndex >= 1
+	  and: [(startIndex + count - 1) <= (interpreterProxy slotSizeOf: array)]) ifFalse:
+		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 
-	arrayIndex := interpreterProxy firstIndexableField: array.
-	"Note: adjust startIndex for zero-origin indexing"
-	bytesRead := self
-		sqFile: file Read: (count * byteSize)
-		Into: arrayIndex
-		At: ((startIndex - 1) * byteSize).
-	interpreterProxy failed ifFalse: [
-		interpreterProxy pop: 5 "pop rcvr, file, array, startIndex, count"
-			thenPush:(interpreterProxy integerObjectOf: bytesRead // byteSize).  "push # of elements read"].
+	 "Note: adjust startIndex for zero-origin indexing"
+	 bytesRead := self
+					sqFile: file
+					Read: count * elementSize
+					Into: (self cCoerce: (interpreterProxy firstIndexableField: array) to: #'char *')
+					At: (startIndex - 1) * elementSize.
+	 interpreterProxy primitiveFailureCode = PrimErrObjectMayMove
+	 and: [(retryCount := retryCount + 1) <= 2] "Two objects, the file and the array can move"] whileTrue:
+		[interpreterProxy
+			tenuringIncrementalGC;
+			primitiveFailFor: PrimNoErr].
+	interpreterProxy failed ifFalse:
+		[interpreterProxy
+			pop: 5 "pop rcvr, file, array, startIndex, count"
+			thenPush:(interpreterProxy integerObjectOf: bytesRead // elementSize)  "push # of elements read"]
 ]
 
 { #category : #'file primitives' }
@@ -588,27 +651,29 @@ FilePlugin >> primitiveFileStdioHandles [
 	<var: 'fileRecords' declareC: 'SQFile fileRecords[3]'>
 	sHFAfn ~= 0 ifTrue:
 		[(self cCode: ' ((sqInt (*)(void))sHFAfn)()' inSmalltalk: [true]) ifFalse:
-			[^interpreterProxy primitiveFail]].
+			[^interpreterProxy primitiveFailFor: PrimErrUnsupported]].
 	validMask := self sqFileStdioHandlesInto: (self addressOf: fileRecords).
 	validMask = 0 ifTrue:
-		[^interpreterProxy primitiveFail].
+		[^interpreterProxy primitiveFailFor: PrimErrUnsupported].
 	result := interpreterProxy instantiateClass: interpreterProxy classArray indexableSize: 3.
 	result = nil ifTrue:
-		[^interpreterProxy primitiveFail].
+		[^interpreterProxy primitiveFailFor: PrimErrNoMemory].
 	interpreterProxy pushRemappableOop: result.
 	0 to: 2 do:
-		[:index| | r |
+		[:index|
 		(validMask bitAnd: (1 << index)) ~= 0 ifTrue:
 			[result := interpreterProxy instantiateClass: interpreterProxy classByteArray indexableSize: self fileRecordSize.
 			 result = nil ifTrue:
 				[interpreterProxy popRemappableOop.
-				^interpreterProxy primitiveFail].
-			r := interpreterProxy popRemappableOop.
-			interpreterProxy storePointer: index ofObject: r withValue: result.
-			interpreterProxy pushRemappableOop: r.
-			self mem: (interpreterProxy firstIndexableField: result)
+				^interpreterProxy primitiveFailFor: PrimErrNoMemory].
+			 interpreterProxy storePointer: index ofObject: interpreterProxy topRemappableOop withValue: result.
+			 self mem: (interpreterProxy firstIndexableField: result)
 				cp: (self addressOf: (fileRecords at: index))
 				y: self fileRecordSize]].
+	 "In the threaded VM ensure the handles are old, so that sqFileReadIntoAt is unaffected
+	  by incremental GCs.  See platforms/Cross/plugins/FilePlugin/sqFilePluginBasicPrims.c."
+	self cppIf: (self cCode: 'COGMTVM' inSmalltalk: [interpreterProxy isThreadedVM])
+		ifTrue: [interpreterProxy fullGC].
 	result := interpreterProxy popRemappableOop.
 	interpreterProxy pop: 1 thenPush: result
 ]

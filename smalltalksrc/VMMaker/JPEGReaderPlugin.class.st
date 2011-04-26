@@ -340,9 +340,9 @@ JPEGReaderPlugin >> getBits: requestedBits [
 { #category : #decoding }
 JPEGReaderPlugin >> idctBlockInt: anArray qt: qt [
 	| ws anACTerm dcval z2 z3 z1 t2 t3 t0 t1 t10 t13 t11 t12 z4 z5 v |
-	<var: #anArray type: 'int *'>
-	<var: #qt type: 'int *'>
-	<var: #ws declareC: 'int ws[64]'>
+	<var: #anArray type:'int *'>
+	<var: #qt type:'int *'>
+	<var: #ws declareC:'int ws[64]'>
 	self cCode:'' inSmalltalk:[ws := CArrayAccessor on: (IntegerArray new: 64)].
 	"Pass 1: process columns from anArray, store into work array"
 	0 to: DCTSize-1 do:[:i |
@@ -465,7 +465,7 @@ JPEGReaderPlugin >> idctBlockInt: anArray qt: qt [
 JPEGReaderPlugin >> jpegDecodeValueFrom: table size: tableSize [
 	"Decode the next value in the receiver using the given huffman table."
 	| bits bitsNeeded tableIndex value index |
-	<var: #table type: 'int *'>
+	<var: #table type:'int *'>
 	bitsNeeded := (table at: 0) >> 24.	"Initial bits needed"
 	bitsNeeded > MaxBits ifTrue:[^-1].
 	tableIndex := 2.							"First real table"

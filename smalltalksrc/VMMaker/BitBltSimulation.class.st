@@ -811,7 +811,7 @@ BitBltSimulation >> alphaSourceBlendBits8 [
 	| srcIndex dstIndex sourceWord srcAlpha destWord deltaX deltaY 
 	srcY dstY dstMask srcShift adjust mappingTable mapperFlags |
 	<inline: false>
-	<var: #mappingTable type: 'unsigned int *'>
+	<var: #mappingTable type:'unsigned int *'>
 	mappingTable := self default8To32Table.
 	mapperFlags := cmFlags bitAnd: ColorMapNewStyle bitInvert32.
 	deltaY := bbH + 1. "So we can pre-decrement"
@@ -1369,8 +1369,8 @@ BitBltSimulation >> default8To32Table [
 		s nextPutAll:'};'.
 	]."
 	| theTable |
-	<returnTypeC: 'unsigned int *'>
-	<var: #theTable declareC: 'static unsigned int theTable[256] = { 
+	<returnTypeC:'unsigned int *'>
+	<var: #theTable declareC:'static unsigned int theTable[256] = { 
 0x0, 0xFF000001, 0xFFFFFFFF, 0xFF808080, 0xFFFF0000, 0xFF00FF00, 0xFF0000FF, 0xFF00FFFF, 
 0xFFFFFF00, 0xFFFF00FF, 0xFF202020, 0xFF404040, 0xFF606060, 0xFF9F9F9F, 0xFFBFBFBF, 0xFFDFDFDF, 
 0xFF080808, 0xFF101010, 0xFF181818, 0xFF282828, 0xFF303030, 0xFF383838, 0xFF484848, 0xFF505050, 
@@ -1603,7 +1603,7 @@ BitBltSimulation >> expensiveDither32To16: srcWord threshold: ditherValue [
 BitBltSimulation >> fetchIntOrFloat: fieldIndex ofObject: objectPointer [
 	"Return the integer value of the given field of the given object. If the field contains a Float, truncate it and return its integral part. Fail if the given field does not contain a small integer or Float, or if the truncated Float is out of the range of small integers."
 	| fieldOop floatValue |
-	<var: #floatValue type: 'double '>
+	<var: #floatValue type:'double '>
 	fieldOop := interpreterProxy fetchPointer: fieldIndex ofObject: objectPointer.
 	(interpreterProxy isIntegerObject: fieldOop)
 		ifTrue:[^interpreterProxy integerValueOf: fieldOop].
@@ -1617,7 +1617,7 @@ BitBltSimulation >> fetchIntOrFloat: fieldIndex ofObject: objectPointer [
 BitBltSimulation >> fetchIntOrFloat: fieldIndex ofObject: objectPointer ifNil: defaultValue [
 	"Return the integer value of the given field of the given object. If the field contains a Float, truncate it and return its integral part. Fail if the given field does not contain a small integer or Float, or if the truncated Float is out of the range of small integers."
 	| fieldOop floatValue |
-	<var: #floatValue type: 'double '>
+	<var: #floatValue type:'double '>
 	fieldOop := interpreterProxy fetchPointer: fieldIndex ofObject: objectPointer.
 	(interpreterProxy isIntegerObject: fieldOop)
 		ifTrue:[^interpreterProxy integerValueOf: fieldOop].
@@ -1722,8 +1722,8 @@ BitBltSimulation >> initialiseModule [
 { #category : #'interpreter interface' }
 BitBltSimulation >> isIdentityMap: shifts with: masks [
 	"Return true if shiftTable/maskTable define an identity mapping."
-	<var: #shifts type: 'int *'>
-	<var: #masks type: 'unsigned int *'>
+	<var: #shifts type:'int *'>
+	<var: #masks type:'unsigned int *'>
 	(shifts == nil or:[masks == nil]) ifTrue:[^true].
 	((shifts at: RedIndex) = 0 
 		and:[(shifts at: GreenIndex) = 0
@@ -1894,6 +1894,8 @@ BitBltSimulation >> loadColorMap [
 		cmSize := interpreterProxy slotSizeOf: cmOop.
 		cmLookupTable := interpreterProxy firstIndexableField: cmOop.
 		oldStyle := true.
+		self cCode: '' inSmalltalk:
+			[self assert: cmLookupTable unitSize = 4].
 	] ifFalse: [
 		"A new-style color map (fully qualified)"
 		((interpreterProxy isPointers: cmOop) 
@@ -1909,6 +1911,10 @@ BitBltSimulation >> loadColorMap [
 					cmSize := (interpreterProxy slotSizeOf: oop).
 					cmLookupTable := interpreterProxy firstIndexableField: oop].
 		cmFlags := cmFlags bitOr: ColorMapNewStyle.
+		self cCode: '' inSmalltalk:
+			[self assert: cmShiftTable unitSize = 4.
+			 self assert: cmMaskTable unitSize = 4.
+			 self assert: cmLookupTable unitSize = 4].
 	].
 	(cmSize bitAnd: cmSize - 1) = 0 ifFalse:[^false].
 	cmMask := cmSize - 1.
@@ -1930,7 +1936,7 @@ BitBltSimulation >> loadColorMap [
 
 { #category : #'interpreter interface' }
 BitBltSimulation >> loadColorMapShiftOrMaskFrom: mapOop [
-	<returnTypeC: 'void *'>
+	<returnTypeC:'void *'>
 	mapOop = interpreterProxy nilObject ifTrue:[^nil].
 	(interpreterProxy isIntegerObject: mapOop) 
 		ifTrue:[interpreterProxy primitiveFail. ^nil].
@@ -2015,7 +2021,7 @@ BitBltSimulation >> lockSurfaces [
 	"
 	| sourceHandle destHandle l r t b fn |
 	<inline: true>
-	<var: #fn declareC: 'sqInt (*fn)(sqInt, sqInt*, sqInt, sqInt, sqInt, sqInt)'>
+	<var: #fn declareC:'sqInt (*fn)(sqInt, sqInt*, sqInt, sqInt, sqInt, sqInt)'>
 	hasSurfaceLock := false.
 	destBits = 0 ifTrue:["Blitting *to* OS surface"
 		lockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^nil]].
@@ -2293,7 +2299,7 @@ BitBltSimulation >> pickSourcePixels: nPixels flags: mapperFlags srcMask: srcMas
 		"a little optimization for (pretty crucial) blits using indexed lookups only"
 		[	"grab, colormap and mix in pixel"
 			sourcePix := sourceWord >> srcShift bitAnd: srcMask.
-			destPix := self tableLookup: cmLookupTable at: (sourcePix bitAnd: cmMask).
+			destPix := cmLookupTable at: (sourcePix bitAnd: cmMask).
 			destWord := destWord bitOr: (destPix bitAnd: dstMask) << dstShift.
 			"adjust dest pix index"
 			dstShift := dstShift + dstShiftInc.
@@ -2465,7 +2471,7 @@ BitBltSimulation >> primitiveDisplayString [
 	left := destX.
 	sourcePtr := interpreterProxy firstIndexableField: sourceString.
 	startIndex to: stopIndex do:[:charIndex|
-		ascii := self byteAtPointer: sourcePtr + charIndex - 1.
+		ascii := interpreterProxy byteAtPointer: sourcePtr + charIndex - 1.
 		glyphIndex := interpreterProxy fetchInteger: ascii ofObject: glyphMap.
 		(glyphIndex < 0 or:[glyphIndex > maxGlyph]) 
 			ifTrue:[^interpreterProxy primitiveFail].
@@ -2754,7 +2760,7 @@ BitBltSimulation >> rgbMul: sourceWord with: destinationWord [
 "	| scanner |
 	Display repaintMorphicDisplay.
 	scanner := DisplayScanner quickPrintOn: Display.
-	MessageTally time: [0 to: 760 by: 4 do:  [:y |scanner drawString: 'qwrepoiuasfd=)(/&()=#!°lkjzxv.,mn124+09857907QROIYTOAFDJZXNBNB,M-.,Mqwrepoiuasfd=)(/&()=#!°lkjzxv.,mn124+09857907QROIYTOAFDJZXNBNB,M-.,M1234124356785678' at: 0@y]]. "
+	MessageTally time: [0 to: 760 by: 4 do:  [:y |scanner drawString: 'qwrepoiuasfd=)(/&()=#!lkjzxv.,mn124+09857907QROIYTOAFDJZXNBNB,M-.,Mqwrepoiuasfd=)(/&()=#!lkjzxv.,mn124+09857907QROIYTOAFDJZXNBNB,M-.,M1234124356785678' at: 0@y]]. "
 ]
 
 { #category : #'combination rules' }
@@ -2799,8 +2805,8 @@ BitBltSimulation >> setupColorMasks [
 BitBltSimulation >> setupColorMasksFrom: srcBits to: targetBits [
 	"Setup color masks for converting an incoming RGB pixel value from srcBits to targetBits."
 	| mask shifts masks deltaBits |
-	<var: #shifts declareC: 'static int shifts[4] = {0, 0, 0, 0}'>
-	<var: #masks declareC: 'static unsigned int masks[4] = {0, 0, 0, 0}'>
+	<var: #shifts declareC:'static int shifts[4] = {0, 0, 0, 0}'>
+	<var: #masks declareC:'static unsigned int masks[4] = {0, 0, 0, 0}'>
 	self cCode:'' inSmalltalk:[
 		shifts := CArrayAccessor on: (IntegerArray new: 4).
 		masks := CArrayAccessor on: (WordArray new: 4).
@@ -2896,14 +2902,6 @@ BitBltSimulation >> subWord: sourceWord with: destinationWord [
 	^sourceWord - destinationWord
 ]
 
-{ #category : #'memory access' }
-BitBltSimulation >> tableLookup: table at: index [
-	"Note: Nasty coercion only necessary for the non-inlined version of this method in C. Duh? Oh well, here's the full story. The code below will definitely be inlined so everything that calls this method is fine. But... the translator doesn't quite prune this method so it generates a C function that tries to attempt an array access on an int - and most compilers don't like this. If you don't know what I'm talking about try to remove the C coercion and you'll see what happens when you try to compile a new VM..."
-	<var: #table type: 'unsigned int *'>
-	^table at: index
-
-]
-
 { #category : #'combination rules' }
 BitBltSimulation >> tallyIntoMap: sourceWord with: destinationWord [
 	"Tally pixels into the color map.  Those tallied are exactly those
@@ -2982,7 +2980,7 @@ BitBltSimulation >> unlockSurfaces [
 	"Unlock the bits of any OS surfaces."
 	"See the comment in lockSurfaces. Similar rules apply. That is, the area provided in ioUnlockSurface can be used to determine the dirty region after drawing. If a source is unlocked, then the area will be (0,0,0,0) to indicate that no portion is dirty."
 	| sourceHandle destHandle destLocked fn |
-	<var: #fn declareC: 'sqInt (*fn)(sqInt, sqInt, sqInt, sqInt, sqInt)'>
+	<var: #fn declareC:'sqInt (*fn)(sqInt, sqInt, sqInt, sqInt, sqInt)'>
 	hasSurfaceLock ifTrue:[
 		unlockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^nil]].
 		fn := self cCoerce: unlockSurfaceFn to: 'sqInt (*)(sqInt, sqInt, sqInt, sqInt, sqInt)'.
