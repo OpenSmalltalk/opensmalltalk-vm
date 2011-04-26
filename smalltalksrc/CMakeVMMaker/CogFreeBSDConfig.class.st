@@ -85,14 +85,14 @@ CogFreeBSDConfig >> compilerFlags [
 { #category : #'as yet unclassified' }
 CogFreeBSDConfig >> compilerFlagsDebug [
 
-	^ '-g3 -O0 -msse2  -DDEBUG=1 -DITIMER_HEARTBEAT=1 
+	^ '-g3 -O0 -msse2 -DITIMER_HEARTBEAT=1 
 	-DNO_VM_PROFILE=1 -DDEBUGVM=1 -DNOEXECINFO'
 ]
 
 { #category : #'as yet unclassified' }
 CogFreeBSDConfig >> compilerFlagsRelease [
 
-	^ '-g0 -O2 -msse2  -DNDEBUG=0 -DITIMER_HEARTBEAT=1 
+	^ '-g0 -O2 -msse2  -DNDEBUG -DITIMER_HEARTBEAT=1 
 	-DNO_VM_PROFILE=1 -DDEBUGVM=0 -DNOEXECINFO'
 
 ]
