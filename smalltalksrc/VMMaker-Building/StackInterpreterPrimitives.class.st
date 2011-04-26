@@ -39,13 +39,7 @@ StackInterpreterPrimitives >> cloneContext: aContext [
 					objectMemory
 						storePointerUnchecked: i + CtxtTempFrameStart
 						ofObject: cloned
-						withValue: (self fetchPointer: i ofObject: aContext)]].
-			sp + CtxtTempFrameStart + 1 to: (objectMemory lengthOf: aContext) - 1 do:
-				[:i|
-				objectMemory
-					storePointerUnchecked: i
-					ofObject: cloned
-					withValue: objectMemory nilObject]].
+						withValue: (self fetchPointer: i + CtxtTempFrameStart ofObject: aContext)]]].
 	^cloned
 ]
 
