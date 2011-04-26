@@ -1036,7 +1036,7 @@ CocoaIOSConfig >> setExtraTargetProperties: maker [
 		addXCodeProperty: 'ICC_OPT_PREFETCH_INSERTION' value: 'YES';
 		addXCodeProperty: 'ICC_OPT_PROVIDE_FRAME_PTR' value: 'NO';
 		addXCodeProperty: 'ICC_OPT_USE_ARCH_IA32' value: 'SSE41';
-		addXCodeProperty: 'PER_ARCH_CFLAGS_i386' value: '-finline-functions -mfpmath=sse -fomit-frame-pointer -march=pentium-m -mtune=prescott -falign-functions=16  -fno-gcse -fno-cse-follow-jumps  -DLSB_FIRST -DUSE_INLINE_MEMORY_ACCESSORS';
+		addXCodeProperty: 'PER_ARCH_CFLAGS_i386' value: '-finline-functions -mfpmath=sse -march=pentium-m -mtune=prescott -falign-functions=16  -fno-gcse -fno-cse-follow-jumps  -DLSB_FIRST -DUSE_INLINE_MEMORY_ACCESSORS';
 		addXCodeProperty: 'PER_ARCH_CFLAGS_ppc' value: '-fast -mtune=7450 -mcpu=7450 -D_BSD_SOCKLEN_T_=int'
 ]
 
