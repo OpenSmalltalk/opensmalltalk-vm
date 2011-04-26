@@ -19,3 +19,15 @@ BlockNode >> asTranslatorNodeIn: aTMethod [
 		statements: statementList;
 		 comment: comment
 ]
+
+{ #category : #'*VMMaker-C translation' }
+BlockNode >> isPotentialCCaseLabel [
+	| stmt |
+	^statements size = 1
+	  and: [(stmt := statements first) isVariableNode
+		or: [stmt isConstantNumber
+		or: [stmt isMessageNode
+			and: [stmt selector key = #asSymbol
+			and: [stmt receiver isLiteral
+			and: [stmt receiver literalValue isSymbol]]]]]]
+]

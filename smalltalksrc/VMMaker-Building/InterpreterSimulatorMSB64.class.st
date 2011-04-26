@@ -12,11 +12,11 @@ InterpreterSimulatorMSB64 >> byteSwapped: w [
 	  ((super byteSwapped: (w bitAnd: 16rFFFFFFFF)) bitShift: 32)
 ]
 
-{ #category : #initialization }
-InterpreterSimulatorMSB64 >> initialize [
+{ #category : #'as yet unclassified' }
+InterpreterSimulatorMSB64 >> bytesPerWord [
+	"overridden for 64-bit images..."
 
-	bytesPerWord := 8.
-	super initialize
+	^ 8
 ]
 
 { #category : #'memory access' }

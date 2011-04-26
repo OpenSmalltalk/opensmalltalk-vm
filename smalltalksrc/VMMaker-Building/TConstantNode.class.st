@@ -7,13 +7,6 @@ Class {
 	#category : #'VMMaker-Translation to C'
 }
 
-{ #category : #'as yet unclassified' }
-TConstantNode >> copyTree [
-
-	^self class new
-		setValue: value
-]
-
 { #category : #'C code generation' }
 TConstantNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 	"Emit a C literal."
