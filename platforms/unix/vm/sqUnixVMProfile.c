@@ -184,12 +184,16 @@ static pctype *vm_bins;
 static void
 histogramSIGPROFhandler(int sig, siginfo_t *info, ucontext_t *uap)
 {
-#if __APPLE__ && __MACH__ && __i386__
+#if __DARWIN_UNIX03 && __APPLE__ && __MACH__ && __i386__
+	pctype pc = uap->uc_mcontext->__ss.__eip;
+#elif __APPLE__ && __MACH__ && __i386__
 	pctype pc = uap->uc_mcontext->ss.eip;
 #elif __APPLE__ && __MACH__ && __ppc__
 	pctype pc = uap->uc_mcontext->ss.srr0;
 #elif __linux__ && __i386__
 	pctype pc = uap->uc_mcontext.gregs[REG_EIP];
+#elif __FreeBSD__ && __i386__
+	pctype pc = uap->uc_mcontext.mc_eip;
 #else
 # error need to implement extracting pc from a ucontext_t on this system
 #endif
@@ -302,6 +306,8 @@ pcbufferSIGPROFhandler(int sig, siginfo_t *info, ucontext_t *uap)
 	pctype pc = uap->uc_mcontext->ss.srr0;
 #elif __linux__ && __i386__
 	pctype pc = uap->uc_mcontext.gregs[REG_EIP];
+#elif __FreeBSD__ && __i386__
+	pctype pc = uap->uc_mcontext.mc_eip;
 #else
 # error need to implement extracting pc from a ucontext_t on this system
 #endif
