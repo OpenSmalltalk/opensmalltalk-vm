@@ -14,15 +14,8 @@ Class {
 }
 
 { #category : #'int arithmetic' }
-CArray >> * n [
-
-	^ self ptrAddress * n
-]
-
-{ #category : #'int arithmetic' }
 CArray >> + n [
-
-	^ self ptrAddress + n
+	^self shallowCopy += (n * unitSize)
 ]
 
 { #category : #'pointer arithmetic' }
@@ -33,32 +26,13 @@ CArray >> += increment [
 
 { #category : #'int arithmetic' }
 CArray >> - n [
-
-	^ self ptrAddress - n
+	^self shallowCopy -= (n * unitSize)
 ]
 
 { #category : #'pointer arithmetic' }
 CArray >> -= decrement [
 
 	ptrOffset := ptrOffset - decrement
-]
-
-{ #category : #'int arithmetic' }
-CArray >> // n [
-
-	^ self ptrAddress // n
-]
-
-{ #category : #'int arithmetic' }
-CArray >> << n [
-
-	^ self ptrAddress bitShift: n
-]
-
-{ #category : #'int arithmetic' }
-CArray >> >> n [
-
-	^ self ptrAddress bitShift: 0 - n
 ]
 
 { #category : #converting }
@@ -82,50 +56,34 @@ CArray >> asInteger [
 
 { #category : #accessing }
 CArray >> at: offset [
-
-	ptrOffset = 0 ifFalse: [self error: 'only expect base address to receive at: message'].
-	unitSize = 1 ifTrue: [^ interpreter byteAt: arrayBaseAddress + offset].
-	unitSize = 4 ifTrue: [^ interpreter long32At: arrayBaseAddress + (offset * 4)].
+	| ptrAddress |
+	ptrAddress := self ptrAddress.
+	unitSize = 1 ifTrue: [^ interpreter byteAt: ptrAddress + offset].
+	unitSize = 2 ifTrue: [^ interpreter shortAt: ptrAddress + (offset * 2)].
+	unitSize = 4 ifTrue: [^ interpreter long32At: ptrAddress + (offset * 4)].
 	self halt: 'Can''t handle unitSize ', unitSize printString
-
 ]
 
 { #category : #accessing }
 CArray >> at: offset put: val [
-
-	ptrOffset = 0 ifFalse: [self error: 'only expect base address to receive at:put: message'].
-	unitSize = 1 ifTrue: [^ interpreter byteAt: arrayBaseAddress + offset put: val].
-	unitSize = 4 ifTrue: [^ interpreter long32At: arrayBaseAddress + (offset * 4) put: val].
+	| ptrAddress |
+	ptrAddress := self ptrAddress.
+	unitSize = 1 ifTrue: [^ interpreter byteAt: ptrAddress + offset put: val].
+	unitSize = 2 ifTrue: [^ interpreter byteAt: ptrAddress + (offset * 2) put: val].
+	unitSize = 4 ifTrue: [^ interpreter long32At: ptrAddress + (offset * 4) put: val].
 	self halt: 'Can''t handle unitSize ', unitSize printString
-
-]
-
-{ #category : #'int arithmetic' }
-CArray >> bitAnd: n [
-
-	^ self ptrAddress bitAnd: n
-]
-
-{ #category : #'int arithmetic' }
-CArray >> bitOr: n [
-
-	^ self ptrAddress bitOr: n
-]
-
-{ #category : #'int arithmetic' }
-CArray >> bitShift: n [
-
-	^ self ptrAddress bitShift: n
 ]
 
 { #category : #converting }
 CArray >> coerceTo: cTypeString sim: interpreterSimulator [
 
-	cTypeString = 'int' ifTrue: [^ self ptrAddress].
-	cTypeString = 'float *' ifTrue: [^ self asCArrayAccessor asFloatAccessor].
-	cTypeString = 'int *' ifTrue: [^ self asCArrayAccessor asIntAccessor].
-	cTypeString = 'unsigned' ifTrue: [^ self ptrAddress].
-	^ self
+	^cTypeString caseOf: {
+		['int']		-> [self ptrAddress].
+		['float *']	-> [self asCArrayAccessor asFloatAccessor].
+		['int *']		-> [self asCArrayAccessor asIntAccessor].
+		['unsigned']	-> [self ptrAddress].
+		['sqInt']		-> [self ptrAddress].
+		['usqInt']	-> [self ptrAddress] }
 ]
 
 { #category : #converting }
@@ -168,4 +126,9 @@ CArray >> interpreter: interpreterSimulator address: arrayAddress unitSize: numB
 CArray >> ptrAddress [
 
 	^ arrayBaseAddress + ptrOffset
+]
+
+{ #category : #accessing }
+CArray >> unitSize [
+	^unitSize
 ]

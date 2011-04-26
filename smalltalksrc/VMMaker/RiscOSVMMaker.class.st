@@ -10,7 +10,10 @@ Class {
 { #category : #initialize }
 RiscOSVMMaker >> createCodeGenerator [
 "set up a CCodeGenerator for this VMMaker - RiscOS uses the global struct and no local def of the structure because of the global register trickery"
-	^CCodeGeneratorGlobalStructure new initialize; globalStructDefined: false
+	^CCodeGeneratorGlobalStructure new initialize;
+		globalStructDefined: false;
+		logger: logger;
+		yourself
 ]
 
 { #category : #'generate sources' }
@@ -62,18 +65,10 @@ RiscOSVMMaker >> interpreterExportsFilePath [
 	^(self coreVMDirectory directoryNamed: 'h') fullNameFor: 'sqNamedPrims'
 ]
 
-{ #category : #'generate sources' }
-RiscOSVMMaker >> interpreterFilePath [
-	"return the full path for the interpreter file"
-	"RiscOS keeps the interp file in a 'c' subdirectory of coreVMDirectory"
-	self coreVMDirectory assureExistenceOfPath: 'c'.
-	^(self coreVMDirectory directoryNamed: 'c') fullNameFor: self interpreterFilename
-]
-
 { #category : #'target directories' }
 RiscOSVMMaker >> interpreterFilename [
 	"what is the filename for the core interpreter. Default is interp.c"
-	^'interp'
+	^super interpreterFilename copyWithoutAll: '.c'
 ]
 
 { #category : #'generate sources' }
@@ -89,9 +84,9 @@ RiscOSVMMaker >> needsToRegenerateInterpreterFile [
 "check the timestamp for the relevant classes and then the timestamp for the interp.c file if it already exists. Return true if the file needs regenerating, false if not"
 
 	| tStamp fstat |
-	tStamp := {self interpreterClass. ObjectMemory}
-				inject: 0
-				into: [:tS :cl | tS max: cl timeStamp].
+	tStamp := (self interpreterClass withAllSuperclasses copyUpTo: ObjectMemory superclass),
+				self interpreterClass ancilliaryClasses
+					inject: 0 into: [:tS :cl| tS max: cl timeStamp].
 
 	"don't translate if the file is newer than my timeStamp"
 	"RiscOS keeps the interp file in a 'c' subdirectory of coreVMDirectory"
@@ -139,6 +134,14 @@ RiscOSVMMaker >> processFilesForInternalPlugin: plugin [
 			fd deleteFileNamed: fn]].
 	super processFilesForInternalPlugin: plugin
 
+]
+
+{ #category : #'generate sources' }
+RiscOSVMMaker >> sourceFilePathFor: class [
+	"return the full path for the interpreter file"
+	"RiscOS keeps the interp file in a 'c' subdirectory of coreVMDirectory"
+	self coreVMDirectory assureExistenceOfPath: 'c'.
+	^(self coreVMDirectory directoryNamed: 'c') fullNameFor: class sourceFileName
 ]
 
 { #category : #exports }

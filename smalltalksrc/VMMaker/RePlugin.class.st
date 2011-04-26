@@ -162,7 +162,7 @@ RePlugin >> allocateStringAndSetRcvrErrorStrFromCStr: aCStrBuffer [
 { #category : #'rcvr linkage' }
 RePlugin >> loadRcvrFromStackAt: stackInteger [
 
-	<inline: true>
+	<inline:true>
 	rcvr := interpreterProxy stackObjectValue: stackInteger.
 
 ]
@@ -244,8 +244,8 @@ Apply the regular expression (stored in <pcrePtr> and <extratr>, generated from 
 
 	| searchObject searchBuffer length  result matchSpacePtr matchSpaceSize |
 	<export: true>
-	<var: #searchBuffer type: 'char *'>
-	<var: #matchSpacePtr type: 'int *'>
+	<var:#searchBuffer	type: 'char *'>
+	<var:#matchSpacePtr	type: 'int *'>
 	
 	"Load Parameters"
 	searchObject := interpreterProxy stackObjectValue: 0.	
@@ -283,8 +283,8 @@ Apply the regular expression (stored in <pcrePtr> and <extratr>, generated from 
 
 	| searchObject searchBuffer length  result matchSpacePtr matchSpaceSize fromInteger toInteger |
 	<export: true>
-	<var: #searchBuffer type: 'char *'>
-	<var: #matchSpacePtr type: 'int *'>
+	<var:#searchBuffer	type: 'char *'>
+	<var:#matchSpacePtr	type: 'int *'>
 	
 	"Load Parameters"
 	toInteger := interpreterProxy stackIntegerValue: 0.
@@ -344,7 +344,7 @@ Return the number of subpatterns captured by the compiled pattern."
 { #category : #'rcvr linkage' }
 RePlugin >> rcvrCompileFlags [
 
-	<inline: true>
+	<inline:true>
 	^interpreterProxy fetchInteger: 1 ofObject: rcvr.
 
 ]
@@ -375,7 +375,7 @@ RePlugin >> rcvrExtraPtr [
 	<inline: true>
 	extraObj := interpreterProxy fetchPointer: 3 ofObject: rcvr.
 	(extraObj = (interpreterProxy nilObject))
-		ifTrue: [^ self cCode: ' NULL'].
+		ifTrue: [^ self cCode: '(int) NULL'].
 	^self 
 		cCoerce:(interpreterProxy arrayValueOf: extraObj)
 		to: 'int'.
@@ -449,7 +449,7 @@ RePlugin >> rcvrPatternStrPtr [
 RePlugin >> rePluginFree: aPointer [
 	"Free a block of fixed memory allocated with rePluginMalloc.  Instrumented version of C free() to facilitate leak analysis from Smalltalk.   OS-specific variations on malloc/free, such as with MacOS, are handled by adding a C macro to the header file redefining malloc/free -- see the class comment"
 
-	<inline: false>
+	<inline: true>
 	<var: #aPointer type: 'void * '>
 	<returnTypeC: 'void'>
 
@@ -463,7 +463,7 @@ RePlugin >> rePluginMalloc: anInteger [
 	"Allocate a block of fixed memory using C calls to malloc().  Instrumented to facilitate leak analysis from Smalltalk.  Set global lastAlloc to anInteger.  OS-specific variations on malloc/free, such as with MacOS, are handled by adding a C macro to the header file redefining malloc/free -- see the class comment"
 
 	| aPointer |
-	<inline: false>
+	<inline: true>
 	<var: #anInteger type: 'size_t '>
 	<var: #aPointer type: 'void *'>
 	<returnTypeC: 'void *'>

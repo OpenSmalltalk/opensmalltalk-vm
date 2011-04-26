@@ -55,7 +55,7 @@ CroquetPlugin >> primitiveARC4Transform [
 	bufSize := interpreterProxy byteSizeOf: bufOop.
 	(startIndex > 0 and:[startIndex <= bufSize])
 		ifFalse:[^interpreterProxy primitiveFail].
-	(stopIndex > startIndex and:[stopIndex <= bufSize])
+	(stopIndex >= startIndex and:[stopIndex <= bufSize])
 		ifFalse:[^interpreterProxy primitiveFail].
 	m := interpreterProxy firstIndexableField: mOop.
 	buffer := interpreterProxy firstIndexableField: bufOop.
@@ -79,7 +79,182 @@ CroquetPlugin >> primitiveARC4Transform [
 	interpreterProxy storePointer: 0 ofObject: ptOop withValue: xOop.
 	interpreterProxy storePointer: 1 ofObject: ptOop withValue: yOop.
 	interpreterProxy pop: interpreterProxy methodArgumentCount + 1.
-	interpreterProxy push: ptOop.
+	^interpreterProxy push: ptOop.
+
+]
+
+{ #category : #transforms }
+CroquetPlugin >> primitiveAdj3 [
+	"Computes the adjoint of the Matrix4x4 receiver,
+	placing the results the the Matrix4x4 argument,
+	"
+	| 	
+		argc 
+		srcOop src 
+		dstOop dst
+		m11 m12 m13 m21 m22 m23 m31 m32 m33 
+		c11 c12 c13 c21 c22 c23 c31 c32 c33 
+		  
+	|
+	<export: true>
+	<inline: true>
+	<var: #c11 declareC: 'const int c11 = 0'>
+	<var: #c12 declareC: 'const int c12 = 1'>
+	<var: #c13 declareC: 'const int c13 = 2'>
+	<var: #c14 declareC: 'const int c14 = 3'>
+	<var: #c21 declareC: 'const int c21 = 4'>
+	<var: #c22 declareC: 'const int c22 = 5'>
+	<var: #c23 declareC: 'const int c23 = 6'>
+	<var: #c24 declareC: 'const int c24 = 7'>
+	<var: #c31 declareC: 'const int c31 = 8'>
+	<var: #c32 declareC: 'const int c32 = 9'>
+	<var: #c33 declareC: 'const int c33 = 10'>
+	<var: #c34 declareC: 'const int c34 = 11'>
+	<var: #src type: 'float *'>
+	<var: #dst type: 'float *'>
+	<var: #m11 type:  'double'>
+	<var: #m12 type:  'double'>
+	<var: #m13 type:  'double'>
+	<var: #m21 type:  'double'>
+	<var: #m22 type:  'double'>
+	<var: #m23 type:  'double'>
+	<var: #m31 type:  'double'>
+	<var: #m32 type:  'double'>
+	<var: #m33 type:  'double'>
+
+	"then we need the following no-op to make Smalltalk shut up about vars not being initted."
+	self cCode: '' inSmalltalk: [ 
+		c11 := 0. 
+		c12 := 1.
+		c13 := 2.
+		"c14 := 3."
+		c21 := 4.
+		c22 := 5.
+		c23 := 6.
+		"c24 := 7."
+		c31 := 8.
+		c32 := 9.
+		c33 := 10.
+		"c34 := 11."
+	].
+
+	"NOTE: the bottom row of a OpenGL-ordered matrix is always 0 0 0 1, 
+	so we don't need consts here for those elements."
+
+	"do the dance to get our receiver and argument"
+	argc := interpreterProxy methodArgumentCount.
+	argc = 1
+		ifFalse:[^interpreterProxy primitiveFail].
+
+	"stackArgvObject is something I added to Interpreter, but since it's not in there yet,
+	this won't compile - use it when it's there.  Yes, it would be nice if Smalltalk had #ifdefs..."
+	self flag: #stackArgv.
+"
+	srcOop := interpreterProxy stackArgvObject: 0.	
+	src := interpreterProxy firstIndexableField: srcOop.
+
+	dstOop := interpreterProxy stackArgvObject: 1.
+	dst := interpreterProxy firstIndexableField: dstOop.
+"
+	srcOop := interpreterProxy stackObjectValue: argc.	
+	src := interpreterProxy firstIndexableField: srcOop.
+
+	dstOop := interpreterProxy stackObjectValue: (argc - 1).
+	dst := interpreterProxy firstIndexableField: dstOop.
+
+
+	"read in the source matrix 3x3, which contains the encoded rotation and scale factors"
+	m11 := src at: c11.
+	m12 := src at: c12.
+	m13 := src at: c13.
+	m21 := src at: c21.
+	m22 := src at: c22.
+	m23 := src at: c23.
+	m31 := src at: c31.
+	m32 := src at: c32.
+	m33 := src at: c33.
+
+	"do the actual work"
+
+	"compute our cofactors and transpose.  adj = transpose of cofactors"
+	dst at: c11 put:  ((m22 * m33) - (m23 *  m32)) .
+	dst at: c21 put: (0.0 - ((m21 * m33) - (m23 * m31))).
+	dst at: c31 put: ((m21 * m32) - (m22 * m31)).
+
+	dst at: c12 put: (0.0 - ((m12 * m33) - (m13 * m32))).
+	dst at: c22 put: ((m11 * m33) - (m13 * m31)).
+	dst at: c32 put: (0.0 - ((m11 * m32) - (m12 * m31))).
+
+	dst at: c13 put: ((m12 * m23) - (m13 * m22)).
+	dst at: c23 put: (0.0 - ((m11 * m23) - (m13 * m21))).
+	dst at: c33 put: ((m11 * m22) - (m12 * m21)).
+	
+	interpreterProxy pop: argc + 1.
+	^interpreterProxy push: dstOop.
+
+]
+
+{ #category : #transforms }
+CroquetPlugin >> primitiveDet3 [
+	"Computes the determinant of the upper 3x3 of a Matrix4x4"
+	| argc  srcOop src det m11 m12 m13 m21 m22 m23 m31 m32 m33 |
+	<export: true>
+	<inline: true>
+	<var: #src type: 'float *'>
+	<var: #m11 type:  'double'>
+	<var: #m12 type:  'double'>
+	<var: #m13 type:  'double'>
+	<var: #m21 type:  'double'>
+	<var: #m22 type:  'double'>
+	<var: #m23 type:  'double'>
+	<var: #m31 type:  'double'>
+	<var: #m32 type:  'double'>
+	<var: #m33 type:  'double'>
+	<var: #det type: 'double'>
+
+	argc := interpreterProxy methodArgumentCount.
+	argc = 0
+		ifFalse:[^interpreterProxy primitiveFail].
+
+
+	"
+		Load element vars using C version of Matrix4x4 storage, as 0-based, 1-dimensional array:
+			0 1 2 3
+			4 5 6 7
+			8 9 10 11
+	"
+
+	"stackArgvObject is something I added to Interpreter, but since it's not in there yet,
+	this won't compile - use it when it's there.  Yes, it would be nice if Smalltalk had #ifdefs..."
+	self flag: #stackArgv.
+"
+	srcOop := interpreterProxy stackArgvObject: 0.	
+	src := interpreterProxy firstIndexableField: srcOop.
+"
+	srcOop := interpreterProxy stackObjectValue: argc.	
+	src := interpreterProxy firstIndexableField: srcOop.
+
+
+	m11 := src at: 0.
+	m12 := src at: 1.
+	m13 := src at: 2.
+	m21 := src at: 4.
+	m22 := src at: 5.
+	m23 := src at: 6.
+	m31 := src at: 8.
+	m32 := src at: 9.
+	m33 := src at: 10.
+
+
+	"do the actual work"
+	det := 
+		( m11 * ((m22 * m33) - (m23 * m32))) +
+			(m12 * ((m23 * m31) - (m21 * m33))) +
+				(m13 * ((m21 * m32) - (m22 * m31))).
+
+	
+	interpreterProxy pop: argc + 1.
+	^interpreterProxy pushFloat: det.
 
 ]
 
@@ -100,7 +275,7 @@ CroquetPlugin >> primitiveGatherEntropy [
 	okay := self cCode: 'ioGatherEntropy(bufPtr, bufSize)' inSmalltalk:[bufPtr. bufSize. false].
 	okay ifFalse:[^interpreterProxy primitiveFail].
 	interpreterProxy pop: interpreterProxy methodArgumentCount + 1.
-	interpreterProxy pushBool: true.
+	^interpreterProxy pushBool: true.
 ]
 
 { #category : #transforms }
@@ -108,14 +283,14 @@ CroquetPlugin >> primitiveInplaceHouseHolderInvert [
 	"Primitive. Perform an inplace house holder matrix inversion"
 	| rcvr d x sigma beta sum s m |
 	<export: true>
-	<var: #rcvr declareC: 'float *rcvr'>
-	<var: #m declareC: 'double m[4][4]'>
-	<var: #x declareC: 'double x[4][4] = { {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1} }'>
-	<var: #d declareC: 'double d[4][4]'>
-	<var: #sigma declareC: 'double sigma'>
-	<var: #beta declareC: 'double beta'>
-	<var: #sum declareC: 'double sum'>
-	<var: #s declareC: 'double s'>
+	<var: #rcvr declareC:'float *rcvr'>
+	<var: #m declareC:'double m[4][4]'>
+	<var: #x declareC:'double x[4][4] = { {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1} }'>
+	<var: #d declareC:'double d[4][4]'>
+	<var: #sigma declareC:'double sigma'>
+	<var: #beta declareC:'double beta'>
+	<var: #sum declareC:'double sum'>
+	<var: #s declareC:'double s'>
 
 	self cCode:'' inSmalltalk:[
 		m := CArrayAccessor on: 
@@ -168,6 +343,153 @@ CroquetPlugin >> primitiveInplaceHouseHolderInvert [
 	0 to: 3 do:[:i| 0 to: 3 do:[:j|
 		rcvr at: i*4+j put: (self cCoerce: ((x at: i) at: j) to:'float')]].
 	"Return receiver"
+	^nil
+]
+
+{ #category : #transforms }
+CroquetPlugin >> primitiveInverseByAdjoint [
+	"Computes the inverse of the Matrix4x4 receiver, using the 'classical adjoint' method,
+	placing the results the the Matrix4x4 argument,
+	"
+	| 	
+		srcOop src 
+		dstOop dst
+		det 
+		m11 m12 m13 m21 m22 m23 m31 m32 m33 
+		c11 c12 c13 c14 c21 c22 c23 c24 c31 c32 c33 c34 
+		x y z  
+	argc |
+	<export: true>
+	<inline: true>
+	<var: #c11 declareC: 'const int c11 = 0'>
+	<var: #c12 declareC: 'const int c12 = 1'>
+	<var: #c13 declareC: 'const int c13 = 2'>
+	<var: #c14 declareC: 'const int c14 = 3'>
+	<var: #c21 declareC: 'const int c21 = 4'>
+	<var: #c22 declareC: 'const int c22 = 5'>
+	<var: #c23 declareC: 'const int c23 = 6'>
+	<var: #c24 declareC: 'const int c24 = 7'>
+	<var: #c31 declareC: 'const int c31 = 8'>
+	<var: #c32 declareC: 'const int c32 = 9'>
+	<var: #c33 declareC: 'const int c33 = 10'>
+	<var: #c34 declareC: 'const int c34 = 11'>
+	<var: #src type: 'float *'>
+	<var: #dst type: 'float *'>
+	<var: #m11 type:  'double'>
+	<var: #m12 type:  'double'>
+	<var: #m13 type:  'double'>
+	<var: #m21 type:  'double'>
+	<var: #m22 type:  'double'>
+	<var: #m23 type:  'double'>
+	<var: #m31 type:  'double'>
+	<var: #m32 type:  'double'>
+	<var: #m33 type:  'double'>
+	<var: #x type: 'double'>
+	<var: #y type: 'double'>
+	<var: #z type: 'double'>
+	<var: #det type: 'double'>
+
+	"then we need the following no-op to make Smalltalk shut up about vars not being initted."
+	self cCode: '' inSmalltalk: [ 
+		c11 := 0. 
+		c12 := 1.
+		c13 := 2.
+		c14 := 3.
+		c21 := 4.
+		c22 := 5.
+		c23 := 6.
+		c24 := 7.
+		c31 := 8.
+		c32 := 9.
+		c33 := 10.
+		c34 := 11.
+	].
+
+	"NOTE: the bottom row of a OpenGL-ordered matrix is always 0 0 0 1, 
+	so we don't need consts here for those elements."
+
+	"do the dance to get our receiver and argument"
+	argc := interpreterProxy methodArgumentCount.
+	argc = 1
+		ifFalse:[^interpreterProxy primitiveFail].
+
+	"stackArgvObject is something I added to Interpreter, but since it's not in there yet,
+	this won't compile - use it when it's there.  Yes, it would be nice if Smalltalk had #ifdefs..."
+	self flag: #stackArgv.
+"
+	srcOop := interpreterProxy stackArgvObject: 0.	
+	src := interpreterProxy firstIndexableField: srcOop.
+
+	dstOop := interpreterProxy stackArgvObject: 1.
+	dst := interpreterProxy firstIndexableField: dstOop.
+"
+	srcOop := interpreterProxy stackObjectValue: argc.	
+	src := interpreterProxy firstIndexableField: srcOop.
+
+	dstOop := interpreterProxy stackObjectValue: (argc - 1).
+	dst := interpreterProxy firstIndexableField: dstOop.
+
+
+	"read in the source matrix 3x3, which contains the encoded rotation and scale factors"
+	m11 := src at: c11.
+	m12 := src at: c12.
+	m13 := src at: c13.
+	m21 := src at: c21.
+	m22 := src at: c22.
+	m23 := src at: c23.
+	m31 := src at: c31.
+	m32 := src at: c32.
+	m33 := src at: c33.
+
+	"read in the source translation vector"
+	x := src at: c14.
+	y := src at: c24.
+	z := src at: c34.
+
+	"do the actual work"
+
+	"first, compute the determinant of the upper 3x3 of the source"
+	det := 
+		( m11 * ((m22 * m33) - (m23 * m32))) +
+			(m12 * ((m23 * m31) - (m21 * m33))) +
+				(m13 * ((m21 * m32) - (m22 * m31))).
+
+	"Compute the classical adjunct of the source, and divide by the source determinant
+	storing in the destination.  adjoint = transpose of cofactors, so we'll transpose as we store."
+
+	det := 1 / det.		"let's make div by det a multiply"
+	dst at: c11 put:  ((m22 * m33) - (m23 *  m32)) * det .
+	dst at: c21 put: (0.0 - ((m21 * m33) - (m23 * m31))) * det.
+	dst at: c31 put: ((m21 * m32) - (m22 * m31)) * det.
+
+	dst at: c12 put: (0.0 - ((m12 * m33) - (m13 * m32))) * det.
+	dst at: c22 put: ((m11 * m33) - (m13 * m31)) * det.
+	dst at: c32 put: (0.0 - ((m11 * m32) - (m12 * m31))) * det.
+
+	dst at: c13 put: ((m12 * m23) - (m13 * m22)) * det.
+	dst at: c23 put: (0.0 - ((m11 * m23) - (m13 * m21))) * det.
+	dst at: c33 put: ((m11 * m22) - (m12 * m21)) * det.
+	
+	"finally, apply the inversed rotation transform to our translation"
+	
+	"read in the source matrix 3x3"
+	m11 := dst at: c11.
+	m12 := dst at: c12.
+	m13 := dst at: c13.
+	m21 := dst at: c21.
+	m22 := dst at: c22.
+	m23 := dst at: c23.
+	m31 := dst at: c31.
+	m32 := dst at: c32.
+	m33 := dst at: c33.
+
+	dst at: c14 put: 0.0 - ((x * m11) + (y * m12) + (z * m13)).
+	dst at: c24 put: 0.0 - ((x * m21) + (y * m22) + (z * m23)).
+	dst at: c34 put: 0.0 - ((x * m31) + (y * m32) + (z * m33)).
+
+	interpreterProxy pop: argc + 1.
+	^interpreterProxy push: dstOop.
+
 ]
 
 { #category : #cryptography }
@@ -196,21 +518,21 @@ CroquetPlugin >> primitiveMD5Transform [
 		^interpreterProxy primitiveFail].
 	"Pop args; return buffer"
 	interpreterProxy pop: interpreterProxy methodArgumentCount+1.
-	interpreterProxy push: bufOop.
+	^interpreterProxy push: bufOop.
 ]
 
 { #category : #transforms }
 CroquetPlugin >> primitiveOrthoNormInverseMatrix [
 	| srcOop dstOop src dst x y z rx ry rz |
 	<export: true>
-	<var: #src declareC: 'float *src'>
-	<var: #dst declareC: 'float *dst'>
-	<var: #x declareC: 'double x'>
-	<var: #y declareC: 'double y'>
-	<var: #z declareC: 'double z'>
-	<var: #rx declareC: 'double rx'>
-	<var: #ry declareC: 'double ry'>
-	<var: #rz declareC: 'double rz'>
+	<var: #src declareC:'float *src'>
+	<var: #dst declareC:'float *dst'>
+	<var: #x declareC:'double x'>
+	<var: #y declareC:'double y'>
+	<var: #z declareC:'double z'>
+	<var: #rx declareC:'double rx'>
+	<var: #ry declareC:'double ry'>
+	<var: #rz declareC:'double rz'>
 
 	interpreterProxy methodArgumentCount = 0
 		ifFalse:[^interpreterProxy primitiveFail].
@@ -242,7 +564,7 @@ CroquetPlugin >> primitiveOrthoNormInverseMatrix [
 	dst at: 11 put: (self cCoerce: 0.0-rz to: 'float').
 
 	interpreterProxy pop: 1.
-	interpreterProxy push: dstOop.
+	^interpreterProxy push: dstOop.
 
 ]
 
@@ -250,14 +572,14 @@ CroquetPlugin >> primitiveOrthoNormInverseMatrix [
 CroquetPlugin >> primitiveTransformDirection [
 	| x y z rx ry rz matrix vertex v3Oop |
 	<export: true>
-	<var: #vertex declareC: 'float *vertex'>
-	<var: #matrix declareC: 'float *matrix'>
-	<var: #x declareC: 'double x'>
-	<var: #y declareC: 'double y'>
-	<var: #z declareC: 'double z'>
-	<var: #rx declareC: 'double rx'>
-	<var: #ry declareC: 'double ry'>
-	<var: #rz declareC: 'double rz'>
+	<var: #vertex declareC:'float *vertex'>
+	<var: #matrix declareC:'float *matrix'>
+	<var: #x declareC:'double x'>
+	<var: #y declareC:'double y'>
+	<var: #z declareC:'double z'>
+	<var: #rx declareC:'double rx'>
+	<var: #ry declareC:'double ry'>
+	<var: #rz declareC:'double rz'>
 
 	interpreterProxy methodArgumentCount = 1
 		ifFalse:[^interpreterProxy primitiveFail].
@@ -285,7 +607,7 @@ CroquetPlugin >> primitiveTransformDirection [
 	vertex at: 2 put: (self cCoerce: rz to: 'float').
 
 	interpreterProxy pop: 2.
-	interpreterProxy push: v3Oop.
+	^interpreterProxy push: v3Oop.
 
 ]
 
@@ -295,9 +617,9 @@ CroquetPlugin >> primitiveTransformMatrixWithInto [
 	| m1 m2 m3 |
 	<export: true>
 	<inline: false>
-	<var: #m1 declareC: 'float *m1'>
-	<var: #m2 declareC: 'float *m2'>
-	<var: #m3 declareC: 'float *m3'>
+	<var: #m1 declareC:'float *m1'>
+	<var: #m2 declareC:'float *m2'>
+	<var: #m3 declareC:'float *m3'>
 
 	m3 := self stackMatrix: 0.
 	m2 := self stackMatrix: 1.
@@ -306,22 +628,22 @@ CroquetPlugin >> primitiveTransformMatrixWithInto [
 		ifTrue:[^interpreterProxy primitiveFail].
 	m2 == m3 ifTrue:[^interpreterProxy primitiveFail].
 	self transformMatrix: m1 with: m2 into: m3.
-	interpreterProxy pop: 3. "Leave rcvr on stack"
+	^interpreterProxy pop: 3. "Leave rcvr on stack"
 ]
 
 { #category : #transforms }
 CroquetPlugin >> primitiveTransformVector3 [
 	| x y z rx ry rz rw matrix vertex v3Oop |
 	<export: true>
-	<var: #vertex declareC: 'float *vertex'>
-	<var: #matrix declareC: 'float *matrix'>
-	<var: #x declareC: 'double x'>
-	<var: #y declareC: 'double y'>
-	<var: #z declareC: 'double z'>
-	<var: #rx declareC: 'double rx'>
-	<var: #ry declareC: 'double ry'>
-	<var: #rz declareC: 'double rz'>
-	<var: #rw declareC: 'double rw'>
+	<var: #vertex declareC:'float *vertex'>
+	<var: #matrix declareC:'float *matrix'>
+	<var: #x declareC:'double x'>
+	<var: #y declareC:'double y'>
+	<var: #z declareC:'double z'>
+	<var: #rx declareC:'double rx'>
+	<var: #ry declareC:'double ry'>
+	<var: #rz declareC:'double rz'>
+	<var: #rw declareC:'double rw'>
 
 	interpreterProxy methodArgumentCount = 1
 		ifFalse:[^interpreterProxy primitiveFail].
@@ -358,7 +680,7 @@ CroquetPlugin >> primitiveTransformVector3 [
 		vertex at: 2 put: (self cCoerce: rz*rw to: 'float').
 	].
 	interpreterProxy pop: 2.
-	interpreterProxy push: v3Oop.
+	^interpreterProxy push: v3Oop.
 
 ]
 
@@ -366,8 +688,8 @@ CroquetPlugin >> primitiveTransformVector3 [
 CroquetPlugin >> primitiveTransposeMatrix [
 	| srcOop dstOop src dst |
 	<export: true>
-	<var: #src declareC: 'float *src'>
-	<var: #dst declareC: 'float *dst'>
+	<var: #src declareC:'float *src'>
+	<var: #dst declareC:'float *dst'>
 
 	interpreterProxy methodArgumentCount = 0
 		ifFalse:[^interpreterProxy primitiveFail].
@@ -402,7 +724,7 @@ CroquetPlugin >> primitiveTransposeMatrix [
 	"dst at: 15 put: (src at: 15)."
 
 	interpreterProxy pop: 1.
-	interpreterProxy push: dstOop.
+	^interpreterProxy push: dstOop.
 
 ]
 
@@ -411,11 +733,11 @@ CroquetPlugin >> primitiveTriBoxIntersects [
 	"Primitive. Answer whether an AABB intersects with a given triangle"
 	| minCorner maxCorner v0 v1 v2 result |
 	<export: true>
-	<var: #minCorner type: 'float*'>
-	<var: #maxCorner type: 'float*'>
-	<var: #v0 type: 'float*'>
-	<var: #v1 type: 'float*'>
-	<var: #v2 type: 'float*'>
+	<var: #minCorner type: #'float *'>
+	<var: #maxCorner type: #'float *'>
+	<var: #v0 type: #'float *'>
+	<var: #v1 type: #'float *'>
+	<var: #v2 type: #'float *'>
 
 	interpreterProxy methodArgumentCount = 5
 		ifFalse:[^interpreterProxy primitiveFail].
@@ -430,7 +752,7 @@ CroquetPlugin >> primitiveTriBoxIntersects [
 	result < 0 ifTrue:[^interpreterProxy primitiveFail].
 
 	interpreterProxy pop: 6. "args+rcvr"
-	interpreterProxy pushBool: result.
+	^interpreterProxy pushBool: result.
 ]
 
 { #category : #transforms }
@@ -439,7 +761,7 @@ CroquetPlugin >> stackMatrix: index [
 	Return a pointer to the matrix data if successful, nil otherwise."
 	| oop |
 	<inline: false>
-	<returnTypeC: 'void*'>
+	<returnTypeC:'void*'>
 	oop := interpreterProxy stackObjectValue: index.
 	oop = nil ifTrue:[^nil].
 	((interpreterProxy isWords: oop) and:[(interpreterProxy slotSizeOf: oop) = 16])
@@ -453,7 +775,7 @@ CroquetPlugin >> stackVector3: index [
 	Return a pointer to the float data if successful, nil otherwise."
 	| oop |
 	<inline: false>
-	<returnTypeC: 'void*'>
+	<returnTypeC:'void*'>
 	oop := interpreterProxy stackObjectValue: index.
 	oop = nil ifTrue:[^nil].
 	((interpreterProxy isWords: oop) and:[(interpreterProxy slotSizeOf: oop) = 3])
@@ -466,16 +788,17 @@ CroquetPlugin >> transformMatrix: src with: arg into: dst [
 	"Transform src with arg into dst.
 	It is allowed that src == dst but not arg == dst"
 	| m1 m2 m3 c1 c2 c3 c4 |
-	<var: #src declareC: 'float *src'>
-	<var: #arg declareC: 'float *arg'>
-	<var: #dst declareC: 'float *dst'>
-	<var: #m1 declareC: 'float *m1'>
-	<var: #m2 declareC: 'float *m2'>
-	<var: #m3 declareC: 'float *m3'>
-	<var: #c1 declareC: 'float c1'>
-	<var: #c2 declareC: 'float c2'>
-	<var: #c3 declareC: 'float c3'>
-	<var: #c4 declareC: 'float c4'>
+	<var: #src declareC:'float *src'>
+	<var: #arg declareC:'float *arg'>
+	<var: #dst declareC:'float *dst'>
+	<var: #m1 declareC:'float *m1'>
+	<var: #m2 declareC:'float *m2'>
+	<var: #m3 declareC:'float *m3'>
+
+	<var: #c1 declareC:'double c1'>
+	<var: #c2 declareC:'double c2'>
+	<var: #c3 declareC:'double c3'>
+	<var: #c4 declareC:'double c4'>
 
 	m1 := self cCoerce: src to:'float *'.
 	m2 := self cCoerce: arg to: 'float *'.
@@ -484,17 +807,17 @@ CroquetPlugin >> transformMatrix: src with: arg into: dst [
 	0 to: 3 do:[:i|
 
 		"Compute next row"
-		c1 := ((m1 at: 0) * (m2 at: 0)) + ((m1 at: 1) * (m2 at: 4)) +
-				((m1 at: 2) * (m2 at: 8)) + ((m1 at: 3) * (m2 at: 12)).
+		c1 := ((m1 at: 0) asFloat * (m2 at: 0) asFloat) + ((m1 at: 1) asFloat * (m2 at: 4) asFloat) +
+			((m1 at: 2) asFloat * (m2 at: 8) asFloat) + ((m1 at: 3) asFloat * (m2 at: 12) asFloat).
 
-		c2 := ((m1 at: 0) * (m2 at: 1)) + ((m1 at: 1) * (m2 at: 5)) +
-				((m1 at: 2) * (m2 at: 9)) + ((m1 at: 3) * (m2 at: 13)).
+		c2 := ((m1 at: 0) asFloat * (m2 at: 1) asFloat) + ((m1 at: 1) asFloat * (m2 at: 5) asFloat) +
+			((m1 at: 2) asFloat * (m2 at: 9) asFloat) + ((m1 at: 3) asFloat * (m2 at: 13) asFloat).
 
-		c3 := ((m1 at: 0) * (m2 at: 2)) + ((m1 at: 1) * (m2 at: 6)) +
-				((m1 at: 2) * (m2 at: 10)) + ((m1 at: 3) * (m2 at: 14)).
+		c3 := ((m1 at: 0) asFloat * (m2 at: 2) asFloat) + ((m1 at: 1) asFloat * (m2 at: 6) asFloat) +
+			((m1 at: 2) asFloat * (m2 at: 10) asFloat) + ((m1 at: 3) asFloat * (m2 at: 14) asFloat).
 
-		c4 := ((m1 at: 0) * (m2 at: 3)) + ((m1 at: 1) * (m2 at: 7)) +
-				((m1 at: 2) * (m2 at: 11)) + ((m1 at: 3) * (m2 at: 15)).
+		c4 := ((m1 at: 0) asFloat * (m2 at: 3) asFloat) + ((m1 at: 1) asFloat * (m2 at: 7) asFloat) +
+			((m1 at: 2) asFloat * (m2 at: 11) asFloat) + ((m1 at: 3) asFloat * (m2 at: 15) asFloat).
 
 		"Store result"
 		m3 at: 0 put: c1.
@@ -506,5 +829,7 @@ CroquetPlugin >> transformMatrix: src with: arg into: dst [
 		m1 := m1 + 4.
 		m3 := m3 + 4.
 	].
+
+	^nil
 
 ]

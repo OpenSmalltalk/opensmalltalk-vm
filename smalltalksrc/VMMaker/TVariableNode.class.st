@@ -7,29 +7,23 @@ Class {
 	#category : #'VMMaker-Translation to C'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #transformations }
 TVariableNode >> bindVariableUsesIn: aDictionary [
 
-	^ (aDictionary at: name ifAbsent: [^ self]) copyTree
+	^ (aDictionary at: name ifAbsent: [^ self]) copy
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #transformations }
 TVariableNode >> bindVariablesIn: aDictionary [ 
-	^ (aDictionary at: name ifAbsent: [^ self]) copyTree
+	^ (aDictionary at: name ifAbsent: [^ self]) copy
 ]
 
-{ #category : #'as yet unclassified' }
-TVariableNode >> copyTree [
-
-	^self class new setName: name
-]
-
-{ #category : #'as yet unclassified' }
+{ #category : #'C code generation' }
 TVariableNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 
-	name = 'nil'
-		ifTrue: [ aStream nextPutAll: (aCodeGen cLiteralFor: nil) ]
-		ifFalse: [ aStream nextPutAll: (aCodeGen returnPrefixFromVariable: name) ].
+	aStream nextPutAll: (name = 'nil'
+						ifTrue: [ aCodeGen cLiteralFor: nil ]
+						ifFalse: [ aCodeGen returnPrefixFromVariable: name ])
 ]
 
 { #category : #testing }
@@ -39,22 +33,15 @@ TVariableNode >> isLeaf [
 ]
 
 { #category : #testing }
-TVariableNode >> isStructTarget: aCodeGen [
-	"Answer if the recever is a struct pointer
-	 and hence can be dereferenced using ->"
-	^aCodeGen isPointerToStructVariableName: name
-]
-
-{ #category : #testing }
 TVariableNode >> isVariable [
 
 	^true
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TVariableNode >> name [
 
-	^name
+	^name asString
 ]
 
 { #category : #accessing }
@@ -73,4 +60,12 @@ TVariableNode >> printOn: aStream level: level [
 TVariableNode >> setName: aString [
 
 	name := aString.
+]
+
+{ #category : #testing }
+TVariableNode >> structTargetKind: aCodeGen [
+	"Answer if the recever evaluates to a struct or struct pointer
+	 and hence can be dereferenced using . or ->.  Answer any of
+	 #struct #pointer or nil"
+	^aCodeGen structTargetKindForVariableName: name
 ]
