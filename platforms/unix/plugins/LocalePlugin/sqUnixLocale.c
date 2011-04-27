@@ -608,11 +608,21 @@ sqInt sqLocCurrencyNotation(void)
   return localeConv->p_cs_precedes;
 }
 
+/* For Cog do *not* copy the trailing null sicne the VM checks for attempts to
+ * overwrite the end of an object, and copying the trailing null into a string
+ * does precisely this.
+ */
+#define safestrcpy(str,source) do { \
+	char *src = (source); \
+	int len = strlen(src); \
+	strncpy(str,src,len); \
+} while (0)
+
 /* Store the currency symbol into the given string.
  */
 void sqLocGetCurrencySymbolInto(char *str)
 {
-  strcpy(str, localeConv->currency_symbol);
+  safestrcpy(str, localeConv->currency_symbol);
 }
 
 sqInt	sqLocCurrencySymbolSize(void)
@@ -637,7 +647,7 @@ sqInt sqLocMeasurementMetric(void)
  */
 void sqLocGetDigitGroupingSymbolInto(char *str)
 {
-  strcpy(str, localeConv->thousands_sep);
+  safestrcpy(str, localeConv->thousands_sep);
 }
 
 
@@ -645,7 +655,7 @@ void sqLocGetDigitGroupingSymbolInto(char *str)
  */
 void sqLocGetDecimalSymbolInto(char *str)
 {
-  strcpy(str, localeConv->decimal_point);
+  safestrcpy(str, localeConv->decimal_point);
 }
 
 
@@ -698,7 +708,7 @@ sqInt sqLocLongDateFormatSize(void)
 */
 void sqLocGetLongDateFormatInto(char *str)
 {
-  strcpy(str, nl_langinfo(D_FMT));
+  safestrcpy(str, nl_langinfo(D_FMT));
 }
 
 /* Answer the number of characters in the short date format.
@@ -712,7 +722,7 @@ sqInt sqLocShortDateFormatSize(void)
  */
 void sqLocGetShortDateFormatInto(char *str)
 {
-  strcpy(str, nl_langinfo(D_FMT));
+  safestrcpy(str, nl_langinfo(D_FMT));
 }
 
 /* Answer the number of characters in the time format.
@@ -726,7 +736,7 @@ sqInt sqLocTimeFormatSize(void)
  */
 void sqLocGetTimeFormatInto(char *str)
 {
-  strcpy(str, nl_langinfo(T_FMT));
+  safestrcpy(str, nl_langinfo(T_FMT));
 }
 
 
@@ -741,11 +751,11 @@ sqInt sqLocInitialize(void)
 
 void sqLocGetCountryInto(char * str)
 {
-  strcpy(str, getCountry());
+  safestrcpy(str, getCountry());
 }
 
 void sqLocGetLanguageInto(char * str)
 {
-  strcpy(str, getLanguage());
+  safestrcpy(str, getLanguage());
 }
 
