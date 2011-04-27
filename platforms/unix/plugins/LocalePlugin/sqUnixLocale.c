@@ -608,7 +608,7 @@ sqInt sqLocCurrencyNotation(void)
   return localeConv->p_cs_precedes;
 }
 
-/* For Cog do *not* copy the trailing null sicne the VM checks for attempts to
+/* For Cog do *not* copy the trailing null since the VM checks for attempts to
  * overwrite the end of an object, and copying the trailing null into a string
  * does precisely this.
  */
