@@ -1,3 +1,8 @@
+2011-04-28  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* plugins/LocalePlugin/sqUnixLocale.c: Do not copy trailing NUL
+	from C to Squeak strings.
+
 2011-03-31  Ian Piumarta  <piumarta@freebsd.piumarta.com>
 
 	* vm/sqUnixExternalPrims.c: Resolve symbols eagerly on FreeBSD.

@@ -27,7 +27,7 @@
 
 /* Author: Ian.Piumarta@inria.fr
  * 
- * Last edited: 2008-11-10 13:25:18 by piumarta on ubuntu.piumarta.com
+ * Last edited: 2011-04-28 10:11:02 by piumarta on 192.168.1.11
  */
 
 #include "sq.h"
@@ -60,6 +60,12 @@
 
 static const char *localeString= 0;
 static struct lconv *localeConv= 0;
+
+
+static void safestrcpy(char *dst, const char *src)
+{
+  memcpy(dst, src, strlen(src));
+}
 
 
 /*** SUNDRY STUPIDITY ***/
@@ -612,7 +618,7 @@ sqInt sqLocCurrencyNotation(void)
  */
 void sqLocGetCurrencySymbolInto(char *str)
 {
-  strcpy(str, localeConv->currency_symbol);
+  safestrcpy(str, localeConv->currency_symbol);
 }
 
 sqInt	sqLocCurrencySymbolSize(void)
@@ -637,7 +643,7 @@ sqInt sqLocMeasurementMetric(void)
  */
 void sqLocGetDigitGroupingSymbolInto(char *str)
 {
-  strcpy(str, localeConv->thousands_sep);
+  safestrcpy(str, localeConv->thousands_sep);
 }
 
 
@@ -645,7 +651,7 @@ void sqLocGetDigitGroupingSymbolInto(char *str)
  */
 void sqLocGetDecimalSymbolInto(char *str)
 {
-  strcpy(str, localeConv->decimal_point);
+  safestrcpy(str, localeConv->decimal_point);
 }
 
 
@@ -698,7 +704,7 @@ sqInt sqLocLongDateFormatSize(void)
 */
 void sqLocGetLongDateFormatInto(char *str)
 {
-  strcpy(str, nl_langinfo(D_FMT));
+  safestrcpy(str, nl_langinfo(D_FMT));
 }
 
 /* Answer the number of characters in the short date format.
@@ -712,7 +718,7 @@ sqInt sqLocShortDateFormatSize(void)
  */
 void sqLocGetShortDateFormatInto(char *str)
 {
-  strcpy(str, nl_langinfo(D_FMT));
+  safestrcpy(str, nl_langinfo(D_FMT));
 }
 
 /* Answer the number of characters in the time format.
@@ -726,7 +732,7 @@ sqInt sqLocTimeFormatSize(void)
  */
 void sqLocGetTimeFormatInto(char *str)
 {
-  strcpy(str, nl_langinfo(T_FMT));
+  safestrcpy(str, nl_langinfo(T_FMT));
 }
 
 
@@ -741,11 +747,11 @@ sqInt sqLocInitialize(void)
 
 void sqLocGetCountryInto(char * str)
 {
-  strcpy(str, getCountry());
+  safestrcpy(str, getCountry());
 }
 
 void sqLocGetLanguageInto(char * str)
 {
-  strcpy(str, getLanguage());
+  safestrcpy(str, getLanguage());
 }
 
