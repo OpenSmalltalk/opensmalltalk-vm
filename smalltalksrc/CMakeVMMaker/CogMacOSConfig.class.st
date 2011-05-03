@@ -269,7 +269,7 @@ CogMacOSConfig >> extraVMSettings: maker [
 	"Cog currently runs only in 32 bit mode" 
 	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'.
 
-	maker set: 'resourceDir' to: self resourcesDir, '/ProjectBuilder'.
+	maker set: 'resourceDir' toString: self resourcesDir, '/ProjectBuilder'.
 	maker set: 'resources' to: 
 		'"${resourceDir}/Squeak VM.r"
 		"${resourceDir}/Cog.icns"
