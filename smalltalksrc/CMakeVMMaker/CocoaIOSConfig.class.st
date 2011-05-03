@@ -282,7 +282,7 @@ CocoaIOSConfig >> extraSources [
 CocoaIOSConfig >> extraVMSettings: maker [
 	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'.
 
-	maker set: 'resourceDir' to: self resourcesDir, '/ProjectBuilder'.
+	maker set: 'resourceDir' toString: self resourcesDir, '/ProjectBuilder'.
 	maker set: 'resources' to: 
 		'"${resourceDir}/Squeak VM.r"
 		"${resourceDir}/Squeak.icns"
