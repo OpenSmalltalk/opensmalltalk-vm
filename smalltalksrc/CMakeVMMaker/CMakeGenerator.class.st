@@ -209,3 +209,19 @@ CMakeGenerator >> setTargetProperty: propertyString toAll: aCollection [
 				do: [ :each | stream nextPutAll: each ]
 				separatedBy: [ stream nextPut: $, ] ])
 ]
+
+{ #category : #'cmake commands' }
+CMakeGenerator >> setTargetProperty: propertyString toString: aString [
+	self 
+		cmd: 'set_target_properties'
+		params: (String streamContents: [ :stream |
+			stream 
+				nextPutAll: self moduleName;
+				nextPutAll: ' PROPERTIES ';
+				nextPutAll: propertyString;
+				space;
+				nextPut: $";  
+				nextPutAll: (aString copyReplaceAll: '"' with: '\"');
+				nextPut: $"
+				 ])
+]
