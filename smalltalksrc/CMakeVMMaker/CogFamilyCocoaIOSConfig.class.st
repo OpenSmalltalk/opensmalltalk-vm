@@ -216,6 +216,7 @@ CogFamilyCocoaIOSConfig >> setExtraTargetProperties: maker [
 		params: self executableName, ' PROPERTIES COMPILE_FLAGS "-include \"', (self buildDir / self prefixHeaderFileName) fullName, '\""'. 
 	
 	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir.
+	maker set: 'RUNTIME_OUTPUT_DIRECTORY' toString: self outputDir.
 ]
 
 { #category : #'source files' }
