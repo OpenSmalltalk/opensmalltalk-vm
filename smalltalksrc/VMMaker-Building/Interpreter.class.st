@@ -6209,6 +6209,19 @@ Interpreter >> primitiveHighResClock [
 ]
 
 { #category : #'other primitives' }
+Interpreter >> primitiveImageFormatVersion [
+	"Answer an integer identifying the type of image. The image version number may
+	identify the format of the image (e.g. 32 or 64-bit word size) or specific requirements
+	of the image (e.g. block closure support required).
+	
+	This is a named (not numbered) primitive in the null module (ie the VM)"
+
+	<export: true>
+	self pop: 1 thenPush: (self positive32BitIntegerFor: self imageFormatVersion)
+
+]
+
+{ #category : #'other primitives' }
 Interpreter >> primitiveImageName [
 	"When called with a single string argument, record the string as the current image file name. When called with zero arguments, return a string containing the current image file name."
 
@@ -6785,6 +6798,16 @@ Interpreter >> primitiveMillisecondClock [
 	"Return the value of the millisecond clock as an integer. Note that the millisecond clock wraps around periodically. On some platforms it can wrap daily. The range is limited to SmallInteger maxVal / 2 to allow delays of up to that length without overflowing a SmallInteger."
 
 	self pop: 1 thenPush: (self integerObjectOf: (self ioMSecs bitAnd: MillisecondClockMask)).
+
+]
+
+{ #category : #'system control primitives' }
+Interpreter >> primitiveMillisecondClockMask [
+	"Provide access to the millisecond clock mask to support calculation
+	of durations based on the millisecond clock value."
+
+	<export: true>
+	self pop: 1 thenPush: (self integerObjectOf: MillisecondClockMask)
 
 ]
 

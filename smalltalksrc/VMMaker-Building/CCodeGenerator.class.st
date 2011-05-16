@@ -1805,6 +1805,17 @@ CCodeGenerator >> generateRaisedTo: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
+CCodeGenerator >> generateRepeat: msgNode on: aStream indent: level [
+	"Generate while(1) { stmtList } "
+
+	aStream nextPutAll: 'while(1) {'; cr.
+	msgNode receiver emitCCodeOn: aStream level: level + 1 generator: self.
+	level timesRepeat: [ aStream tab ].
+	aStream nextPutAll: '}'
+
+]
+
+{ #category : #'C translation' }
 CCodeGenerator >> generateSequentialAnd: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
@@ -2183,6 +2194,7 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#whileFalse		#generateDoWhileFalse:on:indent:
 	#to:do:			#generateToDo:on:indent:
 	#to:by:do:		#generateToByDo:on:indent:
+	#repeat 		#generateRepeat:on:indent:
 
 	#ifTrue:			#generateIfTrue:on:indent:
 	#ifFalse:		#generateIfFalse:on:indent:
