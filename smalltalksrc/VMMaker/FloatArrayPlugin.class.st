@@ -59,8 +59,8 @@ FloatArrayPlugin >> primitiveAt [
 
 	| index rcvr floatValue floatPtr |
 	<export: true>
-	<var: #floatValue type:'double '>
-	<var: #floatPtr type:'float *'>
+	<var: #floatValue type: 'double '>
+	<var: #floatPtr type: 'float *'>
 	index := interpreterProxy stackIntegerValue: 0.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
@@ -79,7 +79,7 @@ FloatArrayPlugin >> primitiveAtPut [
 	| value floatValue index rcvr floatPtr |
 	<export: true>
 	<var: #floatValue type: 'double '>
-	<var: #floatPtr type:'float *'>
+	<var: #floatPtr type: 'float *'>
 	value := interpreterProxy stackValue: 0.
 	(interpreterProxy isIntegerObject: value)
 		ifTrue:[floatValue := (interpreterProxy integerValueOf: value) asFloat]
@@ -178,8 +178,8 @@ FloatArrayPlugin >> primitiveEqual [
 
 	| rcvr arg rcvrPtr argPtr length |
 	<export: true>
-	<var: #rcvrPtr type:'float *'>
-	<var: #argPtr type:'float *'>
+	<var: #rcvrPtr type: 'float *'>
+	<var: #argPtr type: 'float *'>
 	arg := interpreterProxy stackObjectValue: 0.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
@@ -203,7 +203,7 @@ FloatArrayPlugin >> primitiveHashArray [
 
 	| rcvr rcvrPtr length result |
 	<export: true>
-	<var: #rcvrPtr type:'int *'>
+	<var: #rcvrPtr type: 'int *'>
 	rcvr := interpreterProxy stackObjectValue: 0.
 	interpreterProxy failed ifTrue:[^nil].
 	interpreterProxy success: (interpreterProxy isWords: rcvr).
