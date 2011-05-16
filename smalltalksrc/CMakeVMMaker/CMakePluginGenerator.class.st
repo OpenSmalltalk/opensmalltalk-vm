@@ -74,10 +74,7 @@ CMakePluginGenerator >> generate [
 		project: name;
 		"include directories generated for build"
 		include: '../directories.cmake'.
-	
-	self set: 'CMAKE_CONFIGURATION_TYPES' to: 'Release'.
-
-
+		
 	self message: (internal ifTrue: [ 'Adding internal plugin: '] ifFalse: ['Adding external plugin: '])  , name.
 
 	self 
