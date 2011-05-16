@@ -84,8 +84,9 @@ CMakeVMGenerator >> generate [
 	self include: 'directories.cmake'.
 		
 	self message: '${CMAKE_MODULE_PATH}'.
-	self set: 'CMAKE_CONFIGURATION_TYPES' to: 'Release'.
-
+	self set: 'CMAKE_CONFIGURATION_TYPES' to: 'Debug Release'.
+	self message: '${CMAKE_CONFIGURATION_TYPES}'.
+	
 	config preferredIncludes 
 		do: [ :each | self includeDirectories: each ].
 	self includeDirectories: self includeDirs.	
