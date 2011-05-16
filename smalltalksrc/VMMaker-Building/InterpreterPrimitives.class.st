@@ -842,6 +842,86 @@ InterpreterPrimitives >> primitiveConstantFill [
 			self pop: 1]
 ]
 
+{ #category : #'indexing primitives' }
+InterpreterPrimitives >> primitiveContextAt [
+	| index value aContext spouseFP hdr fmt totalLength fixedFields stSize |
+	<var: #spouseFP type: #'char *'>
+	index := self stackTop.
+	(objectMemory isIntegerObject: index) ifFalse:
+		[^self primitiveFail].
+	index := objectMemory integerValueOf: index.
+	aContext := self stackValue: 1.
+	"Duplicating much of stObject:at:put: here allows stObject:at:put: to omit tests for contexts."
+	hdr := objectMemory baseHeader: aContext.
+	(objectMemory isContextHeader: hdr) ifFalse: "might be an instance of a subclass"
+		[value := self stObject: aContext at: index.
+		 ^self pop: 2 thenPush: value].
+	self externalWriteBackHeadFramePointers.
+	(self isStillMarriedContext: aContext) ifFalse:
+		[fmt := objectMemory formatOfHeader: hdr.
+		 totalLength := objectMemory lengthOf: aContext baseHeader: hdr format: fmt.
+		 fixedFields := objectMemory fixedFieldsOf: aContext format: fmt length: totalLength.
+		 stSize := self stackPointerForMaybeMarriedContext: aContext.
+		 (index between: 1 and: stSize) ifFalse:
+			[^self primitiveFail].			
+		value := self subscript: aContext with: (index + fixedFields) format: fmt.
+		^self pop: 2 thenPush: value].
+	spouseFP := self frameOfMarriedContext: aContext.
+	(index between: 1 and: (self stackPointerIndexForFrame: spouseFP)) ifFalse:
+		[^self primitiveFail].
+	value := self temporary: index - 1 in: spouseFP.
+	self pop: 2 thenPush: value
+]
+
+{ #category : #'indexing primitives' }
+InterpreterPrimitives >> primitiveContextAtPut [
+	| index value aContext spouseFP hdr fmt totalLength fixedFields stSize |
+	<var: #spouseFP type: #'char *'>
+	value := self stackTop.
+	index := self stackValue: 1.
+	aContext := self stackValue: 2.
+	(objectMemory isIntegerObject: index) ifFalse:
+		[^self primitiveFail].
+	"Duplicating much of stObject:at:put: here allows stObject:at:put: to omit tests for contexts."
+	hdr := objectMemory baseHeader: aContext.
+	index := objectMemory integerValueOf: index.
+	(objectMemory isContextHeader: hdr) ifFalse: "might be an instance of a subclass"
+		[self stObject: aContext at: index put: value.
+		 ^self pop: 3 thenPush: value].
+	self externalWriteBackHeadFramePointers.
+	(self isStillMarriedContext: aContext) ifFalse:
+		[fmt := objectMemory formatOfHeader: hdr.
+		 totalLength := objectMemory lengthOf: aContext baseHeader: hdr format: fmt.
+		 fixedFields := objectMemory fixedFieldsOf: aContext format: fmt length: totalLength.
+		 stSize := self stackPointerForMaybeMarriedContext: aContext.
+		 (index between: 1 and: stSize) ifFalse:
+			[^self primitiveFail].			
+		self subscript: aContext with: (index + fixedFields) storing: value format: fmt.
+		^self pop: 3 thenPush: value].
+	spouseFP := self frameOfMarriedContext: aContext.
+	(index between: 1 and: (self stackPointerIndexForFrame: spouseFP)) ifFalse:
+		[^self primitiveFail].
+	self temporary: index - 1 in: spouseFP put: value.
+	^self pop: 3 thenPush: value
+]
+
+{ #category : #'indexing primitives' }
+InterpreterPrimitives >> primitiveContextSize [
+	| rcvr sz hdr fmt totalLength fixedFields |
+	rcvr := self stackTop.
+	hdr := objectMemory baseHeader: rcvr.
+	fmt := objectMemory formatOfHeader: hdr.
+	totalLength := objectMemory lengthOf: rcvr baseHeader: hdr format: fmt.
+	fixedFields := objectMemory fixedFieldsOf: rcvr format: fmt length: totalLength.
+	(objectMemory isContextHeader: hdr)
+		ifTrue:
+			[self externalWriteBackHeadFramePointers.
+			sz := self stackPointerForMaybeMarriedContext: rcvr]
+		ifFalse: [sz := totalLength - fixedFields].
+	self successful ifTrue:
+		[self pop: 1 thenPush: (objectMemory integerObjectOf: sz)]
+]
+
 { #category : #'process primitives' }
 InterpreterPrimitives >> primitiveControlVMProfiling [
 	"Primitive. Start or stop the VM profiler.  The first argument is a boolean
@@ -875,19 +955,15 @@ InterpreterPrimitives >> primitiveCopyObject [
 		Fail if receiver and argument have different lengths (for indexable objects).
 	"
 	| rcvr arg length |
-	self methodArgumentCount = 1 ifFalse:
-		[^self primitiveFail].
+	self methodArgumentCount = 1 ifFalse:[^self primitiveFail].
 	arg := self stackObjectValue: 0.
 	rcvr := self stackObjectValue: 1.
 
 	self failed ifTrue:[^nil].
-	(objectMemory isPointers: rcvr) ifFalse:
-		[^self primitiveFail].
-	(objectMemory fetchClassOfNonInt: rcvr) = (objectMemory fetchClassOfNonInt: arg) ifFalse:
-		[^self primitiveFail].
+	(objectMemory isPointers: rcvr) ifFalse:[^self primitiveFail].
+	(objectMemory fetchClassOf: rcvr) = (objectMemory fetchClassOf: arg) ifFalse:[^self primitiveFail].
 	length := objectMemory lengthOf: rcvr.
-	length = (objectMemory lengthOf: arg) ifFalse:
-		[^self primitiveFail].
+	length = (objectMemory lengthOf: arg) ifFalse:[^self primitiveFail].
 	
 	"Now copy the elements"
 	0 to: length-1 do:[:i|
@@ -1588,6 +1664,19 @@ InterpreterPrimitives >> primitiveIdentityHash [
 ]
 
 { #category : #'other primitives' }
+InterpreterPrimitives >> primitiveImageFormatVersion [
+	"Answer an integer identifying the type of image. The image version number may
+	identify the format of the image (e.g. 32 or 64-bit word size) or specific requirements
+	of the image (e.g. block closure support required).
+	
+	This is a named (not numbered) primitive in the null module (ie the VM)"
+
+	<export: true>
+	self pop: 1 thenPush: (self positive32BitIntegerFor: self imageFormatVersion)
+
+]
+
+{ #category : #'other primitives' }
 InterpreterPrimitives >> primitiveImageName [
 	"When called with a single string argument, record the string as the current image file name. When called with zero arguments, return a string containing the current image file name."
 
@@ -2045,6 +2134,16 @@ InterpreterPrimitives >> primitiveMillisecondClock [
 	"Return the value of the millisecond clock as an integer. Note that the millisecond clock wraps around periodically. On some platforms it can wrap daily. The range is limited to SmallInteger maxVal / 2 to allow delays of up to that length without overflowing a SmallInteger."
 
 	self pop: 1 thenPush: (objectMemory integerObjectOf: (self ioMSecs bitAnd: MillisecondClockMask)).
+
+]
+
+{ #category : #'system control primitives' }
+InterpreterPrimitives >> primitiveMillisecondClockMask [
+	"Provide access to the millisecond clock mask to support calculation
+	of durations based on the millisecond clock value."
+
+	<export: true>
+	self pop: 1 thenPush: (self integerObjectOf: MillisecondClockMask)
 
 ]
 

@@ -59,9 +59,11 @@ Class {
 { #category : #'instance creation' }
 VMMakerTool class >> initialize [
 
-	 (TheWorldMenu respondsTo: #registerOpenCommand:)
-
-         ifTrue: [TheWorldMenu registerOpenCommand: {'VMMaker'. {self. #openInWorld}. 'The VM making tool'}].
+	Smalltalk at: #TheWorldMenu ifPresent: [ :class |
+		class class methodDict at: #registerOpenCommand: ifPresent: [ :method |
+			(method sendsSelector: #deprecated:) 
+				ifFalse: [ class registerOpenCommand: (Array with: 'VMMaker' with: (Array with: self with: #openInWorld)) ] ] ]
+	
 ]
 
 { #category : #'instance creation' }

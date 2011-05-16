@@ -193,18 +193,16 @@ LargeIntegersPlugin >> bytes: aBytesOop Rshift: anInteger bytes: b lookfirst: a 
 	"Shift right 8*b+anInteger bits, 0<=n<8.         
 	Discard all digits beyond a, and all zeroes at or below a."
 	"Does not normalize."
-	| n x f m digit i oldLen newLen newBytes |
-	n := 0 - anInteger.
+	| x f digit i oldLen newLen newBytes |
 	x := 0.
-	f := n + 8.
+	f := 8 - anInteger.
 	i := a.
-	m := 255 bitShift: 0 - f.
 	digit := self digitOfBytes: aBytesOop at: i.
-	[((digit bitShift: n)
+	[((digit >> anInteger)
 		bitOr: x)
 		= 0 and: [i ~= 1]]
 		whileTrue: 
-			[x := digit bitShift: f.
+			[x := digit << f.
 			"Can't exceed 8 bits"
 			i := i - 1.
 			digit := self digitOfBytes: aBytesOop at: i].
@@ -220,8 +218,7 @@ LargeIntegersPlugin >> bytes: aBytesOop Rshift: anInteger bytes: b lookfirst: a 
 	"
 	self
 		cCoreBytesRshiftCount: i
-		n: n
-		m: m
+		n: anInteger
 		f: f
 		bytes: b
 		from: (interpreterProxy firstIndexableField: aBytesOop)
@@ -337,7 +334,7 @@ LargeIntegersPlugin >> cBytesHighBit: pByte len: len [
 { #category : #'C core' }
 LargeIntegersPlugin >> cBytesLshift: shiftCount from: pFrom len: lenFrom to: pTo len: lenTo [ 
 	"C indexed!"
-	| byteShift bitShift carry rShift mask limit digit lastIx |
+	| byteShift bitShift carry limit digit lastIx |
 	<returnTypeC: 'int'>
 	<var: #pTo type: 'unsigned char * '>
 	<var: #pFrom type: 'unsigned char * '>
@@ -351,9 +348,10 @@ LargeIntegersPlugin >> cBytesLshift: shiftCount from: pFrom len: lenFrom to: pTo
 			to: lenTo - 1
 			with: pFrom
 			startingAt: 0].
+		
+	"This implementation use at most 15 bits of carry.
+	bitAnd: 255 is only for simulator, useless in C"
 	carry := 0.
-	rShift := bitShift - 8.
-	mask := 255 bitShift: 0 - bitShift.
 	limit := byteShift - 1.
 	0 to: limit do: [:i | pTo at: i put: 0].
 	limit := lenTo - byteShift - 2.
@@ -361,18 +359,15 @@ LargeIntegersPlugin >> cBytesLshift: shiftCount from: pFrom len: lenFrom to: pTo
 	0 to: limit do: 
 		[:i | 
 		digit := pFrom at: i.
-		pTo at: i + byteShift put: (((digit bitAnd: mask)
-				bitShift: bitShift)
-				bitOr: carry).
-		carry := digit bitShift: rShift].
+		carry := (carry >> 8) bitOr: (digit << bitShift).
+		pTo at: i + byteShift put: (carry bitAnd: 255)].
 	lastIx := limit + 1.
 	lastIx > (lenFrom - 1)
 		ifTrue: [digit := 0]
 		ifFalse: [digit := pFrom at: lastIx].
-	pTo at: lastIx + byteShift put: (((digit bitAnd: mask)
-			bitShift: bitShift)
-			bitOr: carry).
-	carry := digit bitShift: rShift.
+	carry := (carry >> 8) bitOr: (digit << bitShift).
+	pTo at: lastIx + byteShift put: (carry "bitAnd: 255").
+	carry := carry >> 8.
 	self sqAssert: carry = 0
 ]
 
@@ -398,28 +393,33 @@ LargeIntegersPlugin >> cCopyIntVal: val toBytes: bytes [
 ]
 
 { #category : #'C core' }
-LargeIntegersPlugin >> cCoreBytesRshiftCount: count n: n m: m f: f bytes: b from: pFrom len: fromLen to: pTo len: toLen [ 
+LargeIntegersPlugin >> cCoreBytesRshiftCount: count n: n f: f bytes: b from: pFrom len: fromLen to: pTo len: toLen [ 
 	| x digit |
 	<var: #pTo type: 'unsigned char * '>
 	<var: #pFrom type: 'unsigned char * '>
 	self sqAssert: b < fromLen.
-	x := (pFrom at: b)
-				bitShift: n.
+	n = 0 ifTrue: ["Fast version for byte-aligned shifts"
+		"C indexed!"
+		^self
+			cBytesReplace: pTo
+			from: 0
+			to: toLen - 1
+			with: pFrom
+			startingAt: b].
+		
+	"This implementation use at most 16 bits of x"
+	x := (pFrom at: b) << f.
 	self sqAssert: count - 1 < fromLen.
 	b + 1 to: count - 1 do: 
 		[:j | 
 		digit := pFrom at: j.
-		pTo at: j - b - 1 put: (((digit bitAnd: m)
-				bitShift: f)
-				bitOr: x).
-		"Avoid values > 8 bits"
-		x := digit bitShift: n].
+		x := (x >> 8) bitOr: (digit << f).
+		pTo at: j - b - 1 put: (x bitAnd: 255)].
 	count = fromLen
 				ifTrue: [digit := 0]
 				ifFalse: [digit := pFrom at: count].
-	pTo at: count - b - 1 put: (((digit bitAnd: m)
-			bitShift: f)
-			bitOr: x)
+	x := (x >> 8) bitOr: (digit << f).
+	pTo at: count - b - 1 put: (x "bitAnd: 255")
 ]
 
 { #category : #'C core' }
@@ -678,6 +678,51 @@ LargeIntegersPlugin >> cHighBit: uint [
 	^ bitNo + shifted
 ]
 
+{ #category : #'C core' }
+LargeIntegersPlugin >> cdigitMontgomery: pBytesFirst
+				len: firstLen
+				times: pBytesSecond
+				len: secondLen
+				modulo: pBytesThird
+				len: thirdLen
+				mInvModB: mInv
+				into: pBytesRes [
+				
+	| u limit1 limit2 limit3 accum |
+	<var: #pBytesFirst type: 'unsigned char * '>
+	<var: #pBytesSecond type: 'unsigned char * '>
+	<var: #pBytesThird type: 'unsigned char * '>
+	<var: #pBytesRes type: 'unsigned char * '>
+	limit1 := firstLen - 1.
+	limit2 := secondLen - 1.
+	limit3 := thirdLen - 1.
+	0 to: limit1 do: 
+		[:i | 
+		accum := (pBytesRes at: 0) + ((pBytesFirst at: i)*(pBytesSecond at: 0)).
+		u := accum * mInv bitAnd: 255.
+		accum :=  accum + (u * (pBytesThird at: 0)).
+		1 to: limit2 do: [:k |
+			accum := (accum >> 8) + (pBytesRes at: k) + ((pBytesFirst at: i)*(pBytesSecond at: k)) + (u * (pBytesThird at: k)).
+			pBytesRes at: k-1 put: (accum bitAnd: 255)].
+		secondLen to: limit3 do: [:k |
+			accum := (accum >> 8) + (pBytesRes at: k) + (u * (pBytesThird at: k)).
+			pBytesRes at: k-1 put: (accum bitAnd: 255)].
+		accum := accum >> 8.
+		pBytesRes at: limit3 put: (accum bitAnd: 255)].
+	firstLen to: limit3 do: 
+		[:i | 
+		accum := (pBytesRes at: 0).
+		u := accum * mInv bitAnd: 255.
+		accum := accum + (u * (pBytesThird at: 0)).
+		1 to: limit3 do: [:k |
+			accum := (accum >> 8) + (pBytesRes at: k) + (u * (pBytesThird at: k)).
+			pBytesRes at: k-1 put: (accum bitAnd: 255)].
+		accum := accum >> 8.
+		pBytesRes at: limit3 put: (accum bitAnd: 255)].
+	(self cDigitCompare: pBytesThird with: pBytesRes len: thirdLen) = 1 ifFalse: [
+		self cDigitSub: pBytesThird len: thirdLen with: pBytesRes len: thirdLen into: pBytesRes].
+]
+
 { #category : #'oop util' }
 LargeIntegersPlugin >> createLargeFromSmallInteger: anOop [ 
 	"anOop has to be a SmallInteger!"
@@ -864,6 +909,31 @@ LargeIntegersPlugin >> digitLength: oop [
 	(interpreterProxy isIntegerObject: oop)
 		ifTrue: [^ self cDigitLengthOfCSI: (interpreterProxy integerValueOf: oop)]
 		ifFalse: [^ self byteSizeOfBytes: oop]
+]
+
+{ #category : #'oop functions' }
+LargeIntegersPlugin >> digitMontgomery: firstLarge times: secondLarge modulo: thirdLarge mInvModB: mInv [
+
+	| firstLen secondLen thirdLen prod |
+	<var: #over type: 'unsigned char  '>
+	firstLen := self byteSizeOfBytes: firstLarge.
+	secondLen := self byteSizeOfBytes: secondLarge.
+	thirdLen := self byteSizeOfBytes: thirdLarge.
+
+	firstLen <= thirdLen ifFalse: [^self error: 'firstLarge must be less than thirdLarge'].
+	secondLen <= thirdLen ifFalse: [^self error: 'secondLarge must be less than thirdLarge'].
+	(mInv >= 0 and: [mInv <= 255]) ifFalse: [^self error: 'mInvMod256 must be between 0 and 255'].
+	self remapOop: #(firstLarge secondLarge thirdLarge) in: [prod := interpreterProxy instantiateClass: interpreterProxy classLargePositiveInteger indexableSize: thirdLen].
+	self
+				cdigitMontgomery: (interpreterProxy firstIndexableField: firstLarge)
+				len: firstLen
+				times: (interpreterProxy firstIndexableField: secondLarge)
+				len: secondLen
+				modulo: (interpreterProxy firstIndexableField: thirdLarge)
+				len: thirdLen
+				mInvModB: mInv
+				into: (interpreterProxy firstIndexableField: prod).
+	^self normalizePositive: prod
 ]
 
 { #category : #'oop functions' }
@@ -1556,6 +1626,29 @@ LargeIntegersPlugin >> primGetModuleName [
 	strPtr := interpreterProxy firstIndexableField: strOop.
 	0 to: strLen - 1 do: [:i | strPtr at: i put: (self getModuleName at: i)].
 	^ strOop
+]
+
+{ #category : #'Integer primitives' }
+LargeIntegersPlugin >> primMontgomeryTimes: secondOperandInteger modulo: thirdModuloInteger mInvModB: smallInverseInteger [
+	| firstLarge secondLarge firstInteger thirdLarge |
+	self debugCode: [self msg: 'montgomeryTimes: secondOperandInteger modulo: thirdModuloInteger mInvModB: smallInverseInteger'].
+	firstInteger := self
+				primitive: 'primMontgomeryTimesModulo'
+				parameters: #(Integer Integer SmallInteger )
+				receiver: #Integer.
+	(interpreterProxy isIntegerObject: firstInteger)
+		ifTrue: ["convert it to a not normalized LargeInteger"
+			self remapOop: #(secondOperandInteger thirdModuloInteger) in: [firstLarge := self createLargeFromSmallInteger: firstInteger]]
+		ifFalse: [firstLarge := firstInteger].
+	(interpreterProxy isIntegerObject: secondOperandInteger)
+		ifTrue: ["convert it to a not normalized LargeInteger"
+			self remapOop: #(firstLarge thirdModuloInteger) in: [secondLarge := self createLargeFromSmallInteger: secondOperandInteger]]
+		ifFalse: [secondLarge := secondOperandInteger].
+	(interpreterProxy isIntegerObject: thirdModuloInteger)
+		ifTrue: ["convert it to a not normalized LargeInteger"
+			self remapOop: #(firstLarge secondLarge) in: [thirdLarge := self createLargeFromSmallInteger: thirdModuloInteger]]
+		ifFalse: [thirdLarge := thirdModuloInteger].
+	^ self digitMontgomery: firstLarge times: secondLarge modulo: thirdLarge mInvModB: smallInverseInteger
 ]
 
 { #category : #'development primitives' }

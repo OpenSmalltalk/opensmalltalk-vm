@@ -34,7 +34,7 @@ FFTPlugin class >> declareCVarsIn: cg [
 { #category : #private }
 FFTPlugin >> checkedFloatPtrOf: oop [
 	"Return the first indexable word of oop which is assumed to be variableWordSubclass"
-	<returnTypeC:'float *'>
+	<returnTypeC: 'float *'>
 	interpreterProxy success: (interpreterProxy isWords: oop).
 	interpreterProxy failed ifTrue:[^0].
 	^self cCoerce: (interpreterProxy firstIndexableField: oop) to:'float *'
@@ -43,7 +43,7 @@ FFTPlugin >> checkedFloatPtrOf: oop [
 { #category : #private }
 FFTPlugin >> checkedWordPtrOf: oop [
 	"Return the first indexable word of oop which is assumed to be variableWordSubclass"
-	<returnTypeC:'unsigned int *'>
+	<returnTypeC: 'unsigned int *'>
 	interpreterProxy success: (interpreterProxy isWords: oop).
 	^self cCoerce: (interpreterProxy firstIndexableField: oop) to: 'unsigned int *'
 ]
@@ -167,10 +167,10 @@ FFTPlugin >> transformData: forward [
 { #category : #transforming }
 FFTPlugin >> transformForward: forward [
 	| lev lev1 ip theta realU imagU realT imagT i fftSize2 fftSize4 fftScale ii |
-	<var: #realU type:'float '>
-	<var: #realT type:'float '>
-	<var: #imagU type:'float '>
-	<var: #imagT type:'float '>
+	<var: #realU type: 'float '>
+	<var: #realT type: 'float '>
+	<var: #imagU type: 'float '>
+	<var: #imagT type: 'float '>
 	fftSize2 := fftSize // 2.
 	fftSize4 := fftSize // 4.
 	1 to: nu do:

@@ -146,8 +146,8 @@ FilePlugin >> makeDirEntryName: entryName size: entryNameSize
 
 	| modDateOop createDateOop nameString results stringPtr fileSizeOop |
 	<var: 'entryName' type: 'char *'>
-	<var: 'stringPtr' type:'char *'>
-	<var: 'fileSize' type:'squeakFileOffsetType '>
+	<var: 'stringPtr' type: 'char *'>
+	<var: 'fileSize' type: 'squeakFileOffsetType '>
 
 	"allocate storage for results, remapping newly allocated
 	 oops in case GC happens during allocation"

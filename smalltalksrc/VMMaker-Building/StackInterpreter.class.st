@@ -1069,16 +1069,6 @@ invalidCompactClassError(char *s) { /* Print a compact class index error message
 '
 ]
 
-{ #category : #translation }
-StackInterpreter class >> prepareToBeAddedToCodeGenerator: aCodeGen [
-	"Override to delete InterpreterPrimitives methods we override."
-	aCodeGen removeVariable: 'cogit'.
-	self selectors do:
-		[:sel|
-		 (superclass whichClassIncludesSelector: sel) ifNotNil:
-			[aCodeGen removeMethodForSelector: sel]]
-]
-
 { #category : #constants }
 StackInterpreter class >> primitiveTable [
 

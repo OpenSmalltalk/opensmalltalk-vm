@@ -811,7 +811,7 @@ BitBltSimulation >> alphaSourceBlendBits8 [
 	| srcIndex dstIndex sourceWord srcAlpha destWord deltaX deltaY 
 	srcY dstY dstMask srcShift adjust mappingTable mapperFlags |
 	<inline: false>
-	<var: #mappingTable type:'unsigned int *'>
+	<var: #mappingTable type: 'unsigned int *'>
 	mappingTable := self default8To32Table.
 	mapperFlags := cmFlags bitAnd: ColorMapNewStyle bitInvert32.
 	deltaY := bbH + 1. "So we can pre-decrement"
@@ -1369,8 +1369,8 @@ BitBltSimulation >> default8To32Table [
 		s nextPutAll:'};'.
 	]."
 	| theTable |
-	<returnTypeC:'unsigned int *'>
-	<var: #theTable declareC:'static unsigned int theTable[256] = { 
+	<returnTypeC: 'unsigned int *'>
+	<var: #theTable declareC: 'static unsigned int theTable[256] = { 
 0x0, 0xFF000001, 0xFFFFFFFF, 0xFF808080, 0xFFFF0000, 0xFF00FF00, 0xFF0000FF, 0xFF00FFFF, 
 0xFFFFFF00, 0xFFFF00FF, 0xFF202020, 0xFF404040, 0xFF606060, 0xFF9F9F9F, 0xFFBFBFBF, 0xFFDFDFDF, 
 0xFF080808, 0xFF101010, 0xFF181818, 0xFF282828, 0xFF303030, 0xFF383838, 0xFF484848, 0xFF505050, 
@@ -1603,7 +1603,7 @@ BitBltSimulation >> expensiveDither32To16: srcWord threshold: ditherValue [
 BitBltSimulation >> fetchIntOrFloat: fieldIndex ofObject: objectPointer [
 	"Return the integer value of the given field of the given object. If the field contains a Float, truncate it and return its integral part. Fail if the given field does not contain a small integer or Float, or if the truncated Float is out of the range of small integers."
 	| fieldOop floatValue |
-	<var: #floatValue type:'double '>
+	<var: #floatValue type: 'double '>
 	fieldOop := interpreterProxy fetchPointer: fieldIndex ofObject: objectPointer.
 	(interpreterProxy isIntegerObject: fieldOop)
 		ifTrue:[^interpreterProxy integerValueOf: fieldOop].
@@ -1617,7 +1617,7 @@ BitBltSimulation >> fetchIntOrFloat: fieldIndex ofObject: objectPointer [
 BitBltSimulation >> fetchIntOrFloat: fieldIndex ofObject: objectPointer ifNil: defaultValue [
 	"Return the integer value of the given field of the given object. If the field contains a Float, truncate it and return its integral part. Fail if the given field does not contain a small integer or Float, or if the truncated Float is out of the range of small integers."
 	| fieldOop floatValue |
-	<var: #floatValue type:'double '>
+	<var: #floatValue type: 'double '>
 	fieldOop := interpreterProxy fetchPointer: fieldIndex ofObject: objectPointer.
 	(interpreterProxy isIntegerObject: fieldOop)
 		ifTrue:[^interpreterProxy integerValueOf: fieldOop].
@@ -1722,8 +1722,8 @@ BitBltSimulation >> initialiseModule [
 { #category : #'interpreter interface' }
 BitBltSimulation >> isIdentityMap: shifts with: masks [
 	"Return true if shiftTable/maskTable define an identity mapping."
-	<var: #shifts type:'int *'>
-	<var: #masks type:'unsigned int *'>
+	<var: #shifts type: 'int *'>
+	<var: #masks type: 'unsigned int *'>
 	(shifts == nil or:[masks == nil]) ifTrue:[^true].
 	((shifts at: RedIndex) = 0 
 		and:[(shifts at: GreenIndex) = 0
@@ -1936,7 +1936,7 @@ BitBltSimulation >> loadColorMap [
 
 { #category : #'interpreter interface' }
 BitBltSimulation >> loadColorMapShiftOrMaskFrom: mapOop [
-	<returnTypeC:'void *'>
+	<returnTypeC: 'void *'>
 	mapOop = interpreterProxy nilObject ifTrue:[^nil].
 	(interpreterProxy isIntegerObject: mapOop) 
 		ifTrue:[interpreterProxy primitiveFail. ^nil].
@@ -2021,7 +2021,7 @@ BitBltSimulation >> lockSurfaces [
 	"
 	| sourceHandle destHandle l r t b fn |
 	<inline: true>
-	<var: #fn declareC:'sqInt (*fn)(sqInt, sqInt*, sqInt, sqInt, sqInt, sqInt)'>
+	<var: #fn declareC: 'sqInt (*fn)(sqInt, sqInt*, sqInt, sqInt, sqInt, sqInt)'>
 	hasSurfaceLock := false.
 	destBits = 0 ifTrue:["Blitting *to* OS surface"
 		lockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^nil]].
@@ -2805,8 +2805,8 @@ BitBltSimulation >> setupColorMasks [
 BitBltSimulation >> setupColorMasksFrom: srcBits to: targetBits [
 	"Setup color masks for converting an incoming RGB pixel value from srcBits to targetBits."
 	| mask shifts masks deltaBits |
-	<var: #shifts declareC:'static int shifts[4] = {0, 0, 0, 0}'>
-	<var: #masks declareC:'static unsigned int masks[4] = {0, 0, 0, 0}'>
+	<var: #shifts declareC: 'static int shifts[4] = {0, 0, 0, 0}'>
+	<var: #masks declareC: 'static unsigned int masks[4] = {0, 0, 0, 0}'>
 	self cCode:'' inSmalltalk:[
 		shifts := CArrayAccessor on: (IntegerArray new: 4).
 		masks := CArrayAccessor on: (WordArray new: 4).
@@ -2980,7 +2980,7 @@ BitBltSimulation >> unlockSurfaces [
 	"Unlock the bits of any OS surfaces."
 	"See the comment in lockSurfaces. Similar rules apply. That is, the area provided in ioUnlockSurface can be used to determine the dirty region after drawing. If a source is unlocked, then the area will be (0,0,0,0) to indicate that no portion is dirty."
 	| sourceHandle destHandle destLocked fn |
-	<var: #fn declareC:'sqInt (*fn)(sqInt, sqInt, sqInt, sqInt, sqInt)'>
+	<var: #fn declareC: 'sqInt (*fn)(sqInt, sqInt, sqInt, sqInt, sqInt)'>
 	hasSurfaceLock ifTrue:[
 		unlockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^nil]].
 		fn := self cCoerce: unlockSurfaceFn to: 'sqInt (*)(sqInt, sqInt, sqInt, sqInt, sqInt)'.
