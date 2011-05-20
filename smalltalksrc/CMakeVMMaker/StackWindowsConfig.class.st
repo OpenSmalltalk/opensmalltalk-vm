@@ -33,7 +33,7 @@ StackWindowsConfig >> interpreterClass [
 
 { #category : #'source generation' }
 StackWindowsConfig >> prepareForGeneration [
-
+	
 	CrLfFileStream defaultToLF. "For strange reason it works like that"
 	
 	^ self prepareForStackVMGeneration
