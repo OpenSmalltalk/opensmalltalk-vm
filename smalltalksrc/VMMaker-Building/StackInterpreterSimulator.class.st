@@ -284,9 +284,10 @@ StackInterpreterSimulator >> createActualMessageTo: class [
 
 { #category : #UI }
 StackInterpreterSimulator >> desiredDisplayExtent [
-	^savedWindowSize
+	^(savedWindowSize
 		ifNil: [640@480]
-		ifNotNil: [savedWindowSize >> 16 @ (savedWindowSize bitAnd: 16rFFFF)]
+		ifNotNil: [savedWindowSize >> 16 @ (savedWindowSize bitAnd: 16rFFFF)])
+			min: Display extent * 2 // 3
 ]
 
 { #category : #initialization }

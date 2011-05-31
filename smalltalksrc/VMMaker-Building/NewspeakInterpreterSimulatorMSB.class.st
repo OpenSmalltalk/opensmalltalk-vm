@@ -1,0 +1,106 @@
+Class {
+	#name : #NewspeakInterpreterSimulatorMSB,
+	#superclass : #NewspeakInterpreterSimulator,
+	#category : #'VMMaker-InterpreterSimulation'
+}
+
+{ #category : #'memory access' }
+NewspeakInterpreterSimulatorMSB >> byteAt: byteAddress [
+	| lowBits bpwMinus1 |
+	bpwMinus1 := BytesPerWord-1.
+	lowBits := byteAddress bitAnd: bpwMinus1.
+	^ ((self longAt: byteAddress - lowBits)
+		bitShift: (lowBits - bpwMinus1) * 8)
+		bitAnd: 16rFF
+]
+
+{ #category : #'memory access' }
+NewspeakInterpreterSimulatorMSB >> byteAt: byteAddress put: byte [
+	| longWord shift lowBits bpwMinus1 longAddress |
+	bpwMinus1 := BytesPerWord-1.
+	lowBits := byteAddress bitAnd: bpwMinus1.
+	longAddress := byteAddress - lowBits.
+	longWord := self longAt: longAddress.
+	shift := (bpwMinus1 - lowBits) * 8.
+	longWord := longWord
+				- (longWord bitAnd: (16rFF bitShift: shift))
+				+ (byte bitShift: shift).
+	self longAt: longAddress put: longWord.
+	^byte
+]
+
+{ #category : #'debug support' }
+NewspeakInterpreterSimulatorMSB >> charsOfLong: long [
+	^ (BytesPerWord to: 1 by: -1) collect:
+		[:i | ((long digitAt: i) between: 14 and: 126)
+					ifTrue: [(long digitAt: i) asCharacter]
+					ifFalse: [$?]]
+]
+
+{ #category : #'memory access' }
+NewspeakInterpreterSimulatorMSB >> halfWordHighInLong32: long32 [
+	"Used by Balloon"
+
+	^ long32 bitShift: -16
+]
+
+{ #category : #'memory access' }
+NewspeakInterpreterSimulatorMSB >> halfWordLowInLong32: long32 [
+	"Used by Balloon"
+
+	^ long32 bitAnd: 16rFFFF
+]
+
+{ #category : #initialization }
+NewspeakInterpreterSimulatorMSB >> nextLongFrom: aStream [ 
+	"Read a 32- or 64-bit quantity from the given (binary) stream."
+
+	^ aStream nextNumber: BytesPerWord
+]
+
+{ #category : #'image save/restore' }
+NewspeakInterpreterSimulatorMSB >> putLong: n toFile: f [
+	"Append the given 4-byte long word to the given file in my byte order. (Bytes will be swapped, if necessary, when the image is read on a different platform.) Set successFlag to false if the write fails."
+
+	f
+		nextPut: (n bitShift: -24);
+		nextPut: ((n bitAnd: 16rFF0000) bitShift: -16);
+		nextPut: ((n bitAnd: 16rFF00) bitShift: -8);
+		nextPut: (n bitAnd: 16rFF).
+
+	self success: true
+]
+
+{ #category : #'memory access' }
+NewspeakInterpreterSimulatorMSB >> shortAt: byteAddress [
+    "Return the half-word at byteAddress which must be even."
+	| lowBits bpwMinus2 |
+	bpwMinus2 := BytesPerWord-2.
+	lowBits := byteAddress bitAnd: bpwMinus2.
+	^ ((self longAt: byteAddress - lowBits)
+		bitShift: (lowBits - bpwMinus2) * 8)
+		bitAnd: 16rFFFF
+
+]
+
+{ #category : #'memory access' }
+NewspeakInterpreterSimulatorMSB >> shortAt: byteAddress put: a16BitValue [
+    "Return the half-word at byteAddress which must be even."
+	| longWord shift lowBits bpwMinus2 longAddress |
+	bpwMinus2 := BytesPerWord-2.
+	lowBits := byteAddress bitAnd: bpwMinus2.
+	longAddress := byteAddress - lowBits.
+	longWord := self longAt: longAddress.
+	shift := (bpwMinus2 - lowBits) * 8.
+	longWord := longWord
+				- (longWord bitAnd: (16rFFFF bitShift: shift))
+				+ (a16BitValue bitShift: shift).
+	self longAt: longAddress put: longWord
+
+]
+
+{ #category : #'memory access' }
+NewspeakInterpreterSimulatorMSB >> vmEndianness [
+	"return 0 for little endian, 1 for big endian"
+	^1
+]

@@ -34,3 +34,11 @@ Float class >> ccgDeclareCForVar: aSymbolOrString [
 
 	^'double ', aSymbolOrString
 ]
+
+{ #category : #'*VMMaker-instance creation' }
+Float class >> fromIEEE64BitWord: anInteger [
+	^(self basicNew: 2)
+		basicAt: 1 put: (anInteger bitShift: -32);
+		basicAt: 2 put: (anInteger bitAnd: 16rFFFFFFFF);
+		yourself
+]

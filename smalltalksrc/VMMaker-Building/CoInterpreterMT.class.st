@@ -63,6 +63,7 @@ CoInterpreterMT class >> declareCVarsIn: aCCodeGenerator [
 CoInterpreterMT class >> initializeMiscConstants [
 
 	super initializeMiscConstants.
+	COGMTVM := true.
 
 	ReturnToThreadSchedulingLoop := 2. "setjmp/longjmp code."
 

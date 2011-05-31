@@ -33,6 +33,11 @@ InterpreterStackPage class >> alignedByteSize [
 	^0
 ]
 
+{ #category : #translation }
+InterpreterStackPage class >> alignedByteSizeForClient: aVMClass [
+	^self alignedByteSize
+]
+
 { #category : #'class initialization' }
 InterpreterStackPage class >> initialize [
 	"InterpreterStackPage initialize"

@@ -105,7 +105,8 @@ InterpreterPrimitives >> cStringOrNullFor: oop [
 { #category : #'primitive support' }
 InterpreterPrimitives >> failed [
 	<api>
-	^primFailCode ~= 0
+	"In C, non-zero is true, so avoid computation by simply answering primFailCode in the C version."
+	^self cCode: [primFailCode] inSmalltalk: [primFailCode ~= 0]
 ]
 
 { #category : #'primitive support' }
@@ -842,86 +843,6 @@ InterpreterPrimitives >> primitiveConstantFill [
 			self pop: 1]
 ]
 
-{ #category : #'indexing primitives' }
-InterpreterPrimitives >> primitiveContextAt [
-	| index value aContext spouseFP hdr fmt totalLength fixedFields stSize |
-	<var: #spouseFP type: #'char *'>
-	index := self stackTop.
-	(objectMemory isIntegerObject: index) ifFalse:
-		[^self primitiveFail].
-	index := objectMemory integerValueOf: index.
-	aContext := self stackValue: 1.
-	"Duplicating much of stObject:at:put: here allows stObject:at:put: to omit tests for contexts."
-	hdr := objectMemory baseHeader: aContext.
-	(objectMemory isContextHeader: hdr) ifFalse: "might be an instance of a subclass"
-		[value := self stObject: aContext at: index.
-		 ^self pop: 2 thenPush: value].
-	self externalWriteBackHeadFramePointers.
-	(self isStillMarriedContext: aContext) ifFalse:
-		[fmt := objectMemory formatOfHeader: hdr.
-		 totalLength := objectMemory lengthOf: aContext baseHeader: hdr format: fmt.
-		 fixedFields := objectMemory fixedFieldsOf: aContext format: fmt length: totalLength.
-		 stSize := self stackPointerForMaybeMarriedContext: aContext.
-		 (index between: 1 and: stSize) ifFalse:
-			[^self primitiveFail].			
-		value := self subscript: aContext with: (index + fixedFields) format: fmt.
-		^self pop: 2 thenPush: value].
-	spouseFP := self frameOfMarriedContext: aContext.
-	(index between: 1 and: (self stackPointerIndexForFrame: spouseFP)) ifFalse:
-		[^self primitiveFail].
-	value := self temporary: index - 1 in: spouseFP.
-	self pop: 2 thenPush: value
-]
-
-{ #category : #'indexing primitives' }
-InterpreterPrimitives >> primitiveContextAtPut [
-	| index value aContext spouseFP hdr fmt totalLength fixedFields stSize |
-	<var: #spouseFP type: #'char *'>
-	value := self stackTop.
-	index := self stackValue: 1.
-	aContext := self stackValue: 2.
-	(objectMemory isIntegerObject: index) ifFalse:
-		[^self primitiveFail].
-	"Duplicating much of stObject:at:put: here allows stObject:at:put: to omit tests for contexts."
-	hdr := objectMemory baseHeader: aContext.
-	index := objectMemory integerValueOf: index.
-	(objectMemory isContextHeader: hdr) ifFalse: "might be an instance of a subclass"
-		[self stObject: aContext at: index put: value.
-		 ^self pop: 3 thenPush: value].
-	self externalWriteBackHeadFramePointers.
-	(self isStillMarriedContext: aContext) ifFalse:
-		[fmt := objectMemory formatOfHeader: hdr.
-		 totalLength := objectMemory lengthOf: aContext baseHeader: hdr format: fmt.
-		 fixedFields := objectMemory fixedFieldsOf: aContext format: fmt length: totalLength.
-		 stSize := self stackPointerForMaybeMarriedContext: aContext.
-		 (index between: 1 and: stSize) ifFalse:
-			[^self primitiveFail].			
-		self subscript: aContext with: (index + fixedFields) storing: value format: fmt.
-		^self pop: 3 thenPush: value].
-	spouseFP := self frameOfMarriedContext: aContext.
-	(index between: 1 and: (self stackPointerIndexForFrame: spouseFP)) ifFalse:
-		[^self primitiveFail].
-	self temporary: index - 1 in: spouseFP put: value.
-	^self pop: 3 thenPush: value
-]
-
-{ #category : #'indexing primitives' }
-InterpreterPrimitives >> primitiveContextSize [
-	| rcvr sz hdr fmt totalLength fixedFields |
-	rcvr := self stackTop.
-	hdr := objectMemory baseHeader: rcvr.
-	fmt := objectMemory formatOfHeader: hdr.
-	totalLength := objectMemory lengthOf: rcvr baseHeader: hdr format: fmt.
-	fixedFields := objectMemory fixedFieldsOf: rcvr format: fmt length: totalLength.
-	(objectMemory isContextHeader: hdr)
-		ifTrue:
-			[self externalWriteBackHeadFramePointers.
-			sz := self stackPointerForMaybeMarriedContext: rcvr]
-		ifFalse: [sz := totalLength - fixedFields].
-	self successful ifTrue:
-		[self pop: 1 thenPush: (objectMemory integerObjectOf: sz)]
-]
-
 { #category : #'process primitives' }
 InterpreterPrimitives >> primitiveControlVMProfiling [
 	"Primitive. Start or stop the VM profiler.  The first argument is a boolean
@@ -955,15 +876,19 @@ InterpreterPrimitives >> primitiveCopyObject [
 		Fail if receiver and argument have different lengths (for indexable objects).
 	"
 	| rcvr arg length |
-	self methodArgumentCount = 1 ifFalse:[^self primitiveFail].
+	self methodArgumentCount = 1 ifFalse:
+		[^self primitiveFail].
 	arg := self stackObjectValue: 0.
 	rcvr := self stackObjectValue: 1.
 
 	self failed ifTrue:[^nil].
-	(objectMemory isPointers: rcvr) ifFalse:[^self primitiveFail].
-	(objectMemory fetchClassOf: rcvr) = (objectMemory fetchClassOf: arg) ifFalse:[^self primitiveFail].
+	(objectMemory isPointers: rcvr) ifFalse:
+		[^self primitiveFail].
+	(objectMemory fetchClassOfNonInt: rcvr) = (objectMemory fetchClassOfNonInt: arg) ifFalse:
+		[^self primitiveFail].
 	length := objectMemory lengthOf: rcvr.
-	length = (objectMemory lengthOf: arg) ifFalse:[^self primitiveFail].
+	length = (objectMemory lengthOf: arg) ifFalse:
+		[^self primitiveFail].
 	
 	"Now copy the elements"
 	0 to: length-1 do:[:i|
@@ -1517,40 +1442,32 @@ InterpreterPrimitives >> primitiveGetLogDirectory [
 { #category : #'I/O primitives' }
 InterpreterPrimitives >> primitiveGetNextEvent [
 	"Primitive. Return the next input event from the VM event queue."
-	| evtBuf arg value eventTypeIs |
+	| evtBuf arg value |
 	<var: #evtBuf declareC:'int evtBuf[8] = { 0, 0, 0, 0, 0, 0, 0, 0 }'>
 	self cCode:'' inSmalltalk:[evtBuf := CArrayAccessor on: (IntegerArray new: 8)].
 	arg := self stackTop.
-	((objectMemory isArray: arg) and:[(objectMemory slotSizeOf: arg) = 8]) ifFalse:
-		[^self primitiveFail].
+	((objectMemory isArray: arg) and:[(objectMemory slotSizeOf: arg) = 8])  ifFalse:[^self primitiveFail].
 
 	self ioGetNextEvent: (self cCoerce: evtBuf to: 'sqInputEvent*').
 	self successful ifFalse:[^nil].
 
 	"Event type"
-	eventTypeIs := evtBuf at: 0.
 	self storeInteger: 0 ofObject: arg withValue: (evtBuf at: 0).
 	self successful ifFalse:[^nil].
 
-	"Event is Complex, assume evtBuf is populated correctly and return"
-	eventTypeIs = 6
-		ifTrue: 
-			[1 to: 7 do: [:i |
-				value := evtBuf at: i.
-				objectMemory storePointer: i ofObject: arg withValue: value]]
-		ifFalse: "Event time stamp"
-			[self storeInteger: 1 ofObject: arg withValue: ((evtBuf at: 1) bitAnd: MillisecondClockMask).
-			self successful ifFalse:[^nil].
+	"Event time stamp"
+	self storeInteger: 1 ofObject: arg withValue: ((evtBuf at: 1) bitAnd: MillisecondClockMask).
+	self successful ifFalse:[^nil].
 
-			"Event arguments; Use stackTop since positive32BitIntegerFor: allocation may cause GC"
-			2 to: 7 do:[:i|
-				value := evtBuf at: i.
-				(objectMemory isIntegerValue: value)
-					ifTrue:[self storeInteger: i ofObject: self stackTop withValue: value]
-					ifFalse:
-						[value := self positive32BitIntegerFor: value.
-						self successful ifFalse: [^nil].
-						objectMemory storePointer: i ofObject: self stackTop withValue: value]]].
+	"Event arguments"
+	2 to: 7 do:[:i|
+		value := evtBuf at: i.
+		(objectMemory isIntegerValue: value)
+			ifTrue:[self storeInteger: i ofObject: arg withValue: value]
+			ifFalse:[value := self positive32BitIntegerFor: value.
+				objectMemory storePointer: i ofObject: arg withValue: value]].
+
+	self successful ifFalse:[^nil].
 	self pop: 1
 ]
 
@@ -1661,19 +1578,6 @@ InterpreterPrimitives >> primitiveIdentityHash [
 	(objectMemory isIntegerObject: thisReceiver)
 		ifTrue: [self primitiveFail]
 		ifFalse: [self pop:1 thenPushInteger: (objectMemory hashBitsOf: thisReceiver)]
-]
-
-{ #category : #'other primitives' }
-InterpreterPrimitives >> primitiveImageFormatVersion [
-	"Answer an integer identifying the type of image. The image version number may
-	identify the format of the image (e.g. 32 or 64-bit word size) or specific requirements
-	of the image (e.g. block closure support required).
-	
-	This is a named (not numbered) primitive in the null module (ie the VM)"
-
-	<export: true>
-	self pop: 1 thenPush: (self positive32BitIntegerFor: self imageFormatVersion)
-
 ]
 
 { #category : #'other primitives' }
@@ -3475,6 +3379,18 @@ InterpreterPrimitives >> primitiveYield [
 ]
 
 { #category : #'primitive support' }
+InterpreterPrimitives >> signalNoResume: aSemaphore [
+	"Signal the given semaphore from within the interpreter.  Used to serialize callbacks."
+	| empty |
+	<api>
+	<inline: false>
+	empty := self isEmptyList: aSemaphore. 
+	empty ifFalse:
+		[self putToSleep: (self removeFirstLinkOfList: aSemaphore) yieldingIf: true].
+	^empty
+]
+
+{ #category : #'primitive support' }
 InterpreterPrimitives >> signed32BitValueOf: oop [
 	"Convert the given object into an integer value.
 	The object may be either a positive SmallInteger or a four-byte LargeInteger."
@@ -3680,13 +3596,13 @@ InterpreterPrimitives >> success: successBoolean [
 	 is greater than one then its value indicates the reason for failure."
 
 	"Use returnTypeC: #sqInt because that's the way it is defined in sq.h.
-	 Use no explicit return so that Slang doesn't fail an inlin ingtype-check when
+	 Use no explicit return so that Slang doesn't fail an inlining type-check when
 	 a primitive with return type void uses ^self success: false to exit."
 	<returnTypeC: #sqInt>
 	<inline: true>
 	successBoolean ifFalse:
 		["Don't overwrite an error code that has already been set."
-		 primFailCode == 0 ifTrue:
+		 self successful ifTrue:
 			[primFailCode := 1]]
 ]
 
@@ -3696,5 +3612,7 @@ InterpreterPrimitives >> successful [
 	 primFailCode is non-zero a primitive has failed.  If primFailCode
 	 is greater than one then its value indicates the reason for failure."
 	<inline: true>
-	^primFailCode == 0
+	
+	"In C, non-zero is true, so avoid computation by using not the C version."
+	^self cCode: [primFailCode not] inSmalltalk: [primFailCode = 0]
 ]

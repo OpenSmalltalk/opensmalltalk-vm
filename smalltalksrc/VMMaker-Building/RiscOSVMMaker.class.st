@@ -38,7 +38,7 @@ with all the exported names in the list. We also need a '/o' directory for the o
 	"If we get an error to do with opening the .dsc file, we need to raise an application error to suit"
 	[(fd directoryExists: 'dsc') ifFalse:[fd createDirectory: 'dsc'].
 	dfd := fd directoryNamed: 'dsc'.
-	f := CrLfFileStream forceNewFileNamed: (dfd fullNameFor: aPlugin moduleName)] on: FileStreamException do:[^self couldNotOpenFile: (dfd fullNameFor: aPlugin moduleName)].
+	f := VMMaker forceNewFileNamed: (dfd fullNameFor: aPlugin moduleName)] on: FileStreamException do:[^self couldNotOpenFile: (dfd fullNameFor: aPlugin moduleName)].
 
 	f nextPutAll: 'id:SqueakSO
 main_version:100

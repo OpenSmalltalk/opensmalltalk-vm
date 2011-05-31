@@ -48,7 +48,7 @@ NewsqueakIA32ABIPlugin class >> initialize [
 	BytesPerOop := BytesPerWord
 ]
 
-{ #category : #accessing }
+{ #category : #translation }
 NewsqueakIA32ABIPlugin class >> moduleName [
 	^'IA32ABI'
 ]
@@ -190,7 +190,7 @@ NewsqueakIA32ABIPlugin >> primAlienReplace [
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 
 	count := stop - start + 1.
-	self cCode: 'memcpy((void *)dest,(void *)src,count)'
+	self cCode: 'memmove((void *)dest,(void *)src,count)'
 		inSmalltalk:
 			[count := count + src + dest. "squash unused var compiler warnings"
 			 self error: 'not implemented'].
@@ -260,11 +260,19 @@ NewsqueakIA32ABIPlugin >> primCallOutDoubleReturn [
 	| errCode mac result |
 	<export: true>
 	mac := interpreterProxy methodArgumentCount.
-	self cCode: 'errCode = callIA32DoubleReturn(interpreterProxy->getStackPointer() - mac + 2, /* arg vec */
-													mac - 1	/* nargs */,
-													mac	/* funcOffset*/,
-													mac - 1	/* resultOffset */)'
-		inSmalltalk: [errCode := PrimErrUnsupported].
+	self cppIf: [STACKVM]
+		ifTrue: "In the STACKVM stacks grow down"
+			[self cCode: 'errCode = callIA32DoubleReturn(interpreterProxy->getStackPointer() + mac - 2, /* arg vec */
+															1 - mac	/* nargs */,
+															mac	/* funcOffset*/,
+															mac - 1	/* resultOffset */)'
+				inSmalltalk: [errCode := PrimErrUnsupported]]
+		ifFalse:
+			[self cCode: 'errCode = callIA32DoubleReturn(interpreterProxy->getStackPointer() - mac + 2, /* arg vec */
+															mac - 1	/* nargs */,
+															mac	/* funcOffset*/,
+															mac - 1	/* resultOffset */)'
+				inSmalltalk: [errCode := PrimErrUnsupported]].
 	errCode ~= 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: errCode].
 	result := interpreterProxy stackValue: mac - 1.
@@ -281,11 +289,19 @@ NewsqueakIA32ABIPlugin >> primCallOutFloatReturn [
 	| errCode mac result |
 	<export: true>
 	mac := interpreterProxy methodArgumentCount.
-	self cCode: 'errCode = callIA32FloatReturn(interpreterProxy->getStackPointer() - mac + 2, /* arg vec */
-												mac - 1	/* nargs */,
-												mac	/* funcOffset*/,
-												mac - 1	/* resultOffset */)'
-		inSmalltalk: [errCode := PrimErrUnsupported].
+	self cppIf: [STACKVM]
+		ifTrue: "In the STACKVM stacks grow down"
+			[self cCode: 'errCode = callIA32FloatReturn(interpreterProxy->getStackPointer() + mac - 2, /* arg vec */
+															1 - mac	/* nargs */,
+															mac	/* funcOffset*/,
+															mac - 1	/* resultOffset */)'
+				inSmalltalk: [errCode := PrimErrUnsupported]]
+		ifFalse:
+			[self cCode: 'errCode = callIA32FloatReturn(interpreterProxy->getStackPointer() - mac + 2, /* arg vec */
+															mac - 1	/* nargs */,
+															mac	/* funcOffset*/,
+															mac - 1	/* resultOffset */)'
+				inSmalltalk: [errCode := PrimErrUnsupported]].
 	errCode ~= 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: errCode].
 	result := interpreterProxy stackValue: mac - 1.
@@ -302,11 +318,19 @@ NewsqueakIA32ABIPlugin >> primCallOutIntegralReturn [
 	| errCode mac result |
 	<export: true>
 	mac := interpreterProxy methodArgumentCount.
-	self cCode: 'errCode = callIA32IntegralReturn(interpreterProxy->getStackPointer() - mac + 2, /* arg vec */
-													mac - 1	/* nargs */,
-													mac	/* funcOffset*/,
-													mac - 1	/* resultOffset */)'
-		inSmalltalk: [errCode := PrimErrUnsupported].
+	self cppIf: [STACKVM]
+		ifTrue: "In the STACKVM stacks grow down"
+			[self cCode: 'errCode = callIA32IntegralReturn(interpreterProxy->getStackPointer() + mac - 2, /* arg vec */
+															1 - mac	/* nargs */,
+															mac	/* funcOffset*/,
+															mac - 1	/* resultOffset */)'
+				inSmalltalk: [errCode := PrimErrUnsupported]]
+		ifFalse:
+			[self cCode: 'errCode = callIA32IntegralReturn(interpreterProxy->getStackPointer() - mac + 2, /* arg vec */
+															mac - 1	/* nargs */,
+															mac	/* funcOffset*/,
+															mac - 1	/* resultOffset */)'
+				inSmalltalk: [errCode := PrimErrUnsupported]].
 	errCode ~= 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: errCode].
 	result := interpreterProxy stackValue: mac - 1.
@@ -382,6 +406,12 @@ NewsqueakIA32ABIPlugin >> primDoubleAtPut [
 	interpreterProxy pop: 3 thenPush: valueOop
 ]
 
+{ #category : #'primitives-Windows-VM-specific' }
+NewsqueakIA32ABIPlugin >> primDrainOSEventQueue [
+	<export: true>
+	self ioDrainEventQueue
+]
+
 { #category : #'primitives-accessing' }
 NewsqueakIA32ABIPlugin >> primFloatAt [
 	"Answer the 32-bit float starting at the given byte offset (little endian)."
@@ -450,20 +480,17 @@ NewsqueakIA32ABIPlugin >> primFree [
 
 { #category : #'primitives-Windows-VM-specific' }
 NewsqueakIA32ABIPlugin >> primInIOProcessEventsFlagAddress [
-	"Answer the address of the Windows-VM-specific int inIoProcessEvents flag.
-	 See platforms/win32/vm/sqWin32Window.c
-	 and platforms/Cross/plugins/IA32ABI/ia32abicc.c."
+	"Answer the address of the int inIOProcessEvents flag.  This can be used to
+	 disable invocation of ioProcessEvents and is for backward-compatibility.
+	 Please use the core VM primitiveEventProcessingControl in new code."
 	| address |
 	<export: true>
-	address := 0.
-	self cCode: '
-#if defined(WIN32)
-	{ extern int inIoProcessEvents; address = (sqInt)&inIoProcessEvents; }
-#endif
-0' "Do not change this!! It is needed; look at IA32ABI.c".
-	address = 0 ifTrue:
-		[^interpreterProxy primitiveFailFor: PrimErrInappropriate].
-	interpreterProxy pop: 1 thenPush: (interpreterProxy positive32BitIntegerFor: address)
+	self
+		cCode: '{ extern int inIOProcessEvents; address = (sqInt)&inIOProcessEvents; }'
+		inSmalltalk: [address := 0].
+	interpreterProxy
+		pop: 1
+		thenPush: (interpreterProxy positive32BitIntegerFor: address)
 ]
 
 { #category : #'primitives-library loading' }
@@ -562,15 +589,25 @@ NewsqueakIA32ABIPlugin >> primReturnFromContextThrough [
 			<primitive: 'primReturnFromContextThrough' error: errorCode module: 'IA32ABI'>"
 	<export: true>
 	<legacy>
-	| vmCallbackContext vmCallbackReturnValue |
+	| mac vmCallbackContext vmCallbackReturnValue isMostRecent |
 	<var: #vmCallbackContext type: #'VMCallbackContext *'>
 	<var: #vmCallbackReturnValue type: #'VMCallbackReturnValue *'>
-	vmCallbackReturnValue := self cCoerceSimple: (self startOfData: (interpreterProxy stackValue: 2))
-								to: #'VMCallbackReturnValue *'.
 	vmCallbackContext := self cCoerceSimple: (interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0))
 								to: #'VMCallbackContext *'.
 	(interpreterProxy failed or: [vmCallbackContext = 0]) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+
+	(mac := interpreterProxy methodArgumentCount) = 3 ifTrue:
+		[isMostRecent := vmCallbackContext = self getMostRecentCallbackContext.
+		isMostRecent ifFalse:
+			[interpreterProxy pop: interpreterProxy methodArgumentCount + 1 thenPush: interpreterProxy trueObject.
+			^nil].
+		(interpreterProxy fetchClassOf: (interpreterProxy stackValue: 2)) == interpreterProxy classSemaphore
+			ifFalse: [^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+		[interpreterProxy signalNoResume: (interpreterProxy stackValue: 2)] whileFalse].
+	vmCallbackReturnValue := self cCoerceSimple: (self startOfData: (interpreterProxy stackValue: mac))
+									to: #'VMCallbackReturnValue *'..
+
 	(interpreterProxy reestablishContextPriorToCallback: (interpreterProxy stackValue: 1)) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	self cCode: "C needs a typedef for structs to be assigned, but that implies a struct class for just one assignment."
