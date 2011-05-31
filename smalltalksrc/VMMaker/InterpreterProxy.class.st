@@ -270,13 +270,13 @@ InterpreterProxy >> fetchPointer: index ofObject: oop [
 
 { #category : #'object access' }
 InterpreterProxy >> firstFixedField: oop [
-	<returnTypeC: 'void *'>
+	<returnTypeC:'void *'>
 	^CObjectAccessor on: oop
 ]
 
 { #category : #'object access' }
 InterpreterProxy >> firstIndexableField: oop [
-	<returnTypeC: 'void *'>
+	<returnTypeC:'void *'>
 	^CArrayAccessor on: oop
 ]
 
@@ -299,7 +299,7 @@ InterpreterProxy >> floatObjectOf: aFloat [
 
 { #category : #converting }
 InterpreterProxy >> floatValueOf: oop [
-	<returnTypeC: 'double'>
+	<returnTypeC:'double'>
 	oop class == Float
 		ifTrue:[^oop]
 		ifFalse:[self primitiveFail. ^0.0].
@@ -417,7 +417,7 @@ InterpreterProxy >> ioMicroMSecs [
 InterpreterProxy >> is: oop KindOf: aString [
 	"InterpreterProxy new is: 42 KindOf: 'Number'"
 	| theClass |
-	<var: #aString type: 'char *'>
+	<var: #aString type:'char *'>
 	theClass := Smalltalk at: aString asSymbol ifAbsent:[nil].
 	^theClass isNil
 		ifTrue:[false]
@@ -434,7 +434,7 @@ InterpreterProxy >> is: oop KindOfClass: aClass [
 InterpreterProxy >> is: oop MemberOf: aString [
 	"InterpreterProxy new is: 42 MemberOf:'SmallInteger'"
 	| theClass |
-	<var: #aString type: 'char *'>
+	<var: #aString type:'char *'>
 	theClass := Smalltalk at: aString asSymbol ifAbsent:[nil].
 	^theClass isNil
 		ifTrue:[false]
@@ -506,7 +506,7 @@ InterpreterProxy >> isWordsOrBytes: oop [
 
 { #category : #'object access' }
 InterpreterProxy >> literal: offset ofMethod: methodPointer [
-	^methodPointer literals at: offset+1
+	^methodPointer literalAt: offset+1
 ]
 
 { #category : #'object access' }

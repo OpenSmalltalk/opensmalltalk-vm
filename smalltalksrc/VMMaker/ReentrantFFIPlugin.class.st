@@ -51,7 +51,7 @@ ReentrantFFIPlugin class >> maxNumArgs [
 	^MaxNumArgs
 ]
 
-{ #category : #accessing }
+{ #category : #translation }
 ReentrantFFIPlugin class >> moduleName [
 	"IMPORTANT: IF YOU CHANGE THE NAME OF THIS PLUGIN YOU MUST CHANGE
 		Interpreter>>primitiveCalloutToFFI

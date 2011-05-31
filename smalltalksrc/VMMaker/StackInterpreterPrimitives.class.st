@@ -4,41 +4,65 @@ Class {
 	#category : #'VMMaker-Interpreter'
 }
 
-{ #category : #'plugin primitives' }
-StackInterpreterPrimitives >> primLoadModule [
-	"Attempt to load a module of the given name.  The primitive will have a signature
-	 of the form:
-		<Anywhere>  primLoadModule: moduleName <String> ^<Integer>
-			<primitive: 'primLoadModule' error: errorCode module: ''>
-			
-	Answers true if module loaded successfully, fails otherwise.
-	
-	We're trying to retrieve setInterpreter() function pointer from module,
-	by making a call to ioLoadExternalFunctionOfLengthFromModuleOfLength() function.
-	A setInterpreter() function should be exported by all valid plugins, so if we succeed with 
-	getting pointer to it, it means that module is loaded successfully"
-	
-	| moduleName fnPtr fnName |
-	
-	<export: true>
-	<var: #fnName declareC: 'char * fnName = "setInterpreter"'>
-	<var: #fnPtr declareC: 'void * fnPtr = 0'>
-	
-	moduleName := self stackValue: 0.
-	(objectMemory isBytes: moduleName)
-		ifFalse: [^ self primitiveFailFor: PrimErrBadArgument].
-	fnPtr := self
-		ioLoadExternalFunction: (self oopForPointer: fnName) 
-		OfLength: 14 "  'setInterpreter' size "
-		FromModule: (self cCoerce: (objectMemory firstIndexableField: moduleName) to: 'sqInt')
-		OfLength: (objectMemory byteSizeOf: moduleName).
-		
-	fnPtr = 0 ifTrue:
-		[^self primitiveFailFor: PrimErrNotFound].
-	self pop: 2 thenPush: true
-	
+{ #category : #'primitive support' }
+StackInterpreterPrimitives >> cloneContext: aContext [ 
+	| cloned spouseFP sp |
+	<var: #spouseFP type: #'char *'>
+	cloned := objectMemory clone: aContext.
+	cloned ~= 0 ifTrue:
+		[0 to: StackPointerIndex do:
+			[:i|
+			objectMemory
+				storePointerUnchecked: i
+				ofObject: cloned
+				withValue: (self externalInstVar: i ofContext: aContext)].
+		MethodIndex to: ReceiverIndex do:
+			[:i|
+			objectMemory
+				storePointerUnchecked: i
+				ofObject: cloned
+				withValue: (self fetchPointer: i ofObject: aContext)].
+		(self isStillMarriedContext: aContext)
+			ifTrue:
+				[spouseFP := self frameOfMarriedContext: aContext.
+				 sp := (self stackPointerIndexForFrame: spouseFP) - 1.
+				 0 to: sp do:
+					[:i|
+					objectMemory
+						storePointerUnchecked: i + CtxtTempFrameStart
+						ofObject: cloned
+						withValue: (self temporary: i in: spouseFP)]]
+			ifFalse:
+				[sp := (self fetchStackPointerOf: aContext) - 1.
+				 0 to: sp do:
+					[:i|
+					objectMemory
+						storePointerUnchecked: i + CtxtTempFrameStart
+						ofObject: cloned
+						withValue: (self fetchPointer: i + CtxtTempFrameStart ofObject: aContext)]]].
+	^cloned
+]
 
+{ #category : #'object access primitives' }
+StackInterpreterPrimitives >> primitiveClone [
+	"Return a shallow copy of the receiver.
+	 Special-case non-single contexts (because of context-to-stack mapping).
+	 Can't fail for contexts cuz of image context instantiation code (sigh)."
 
+	| receiver newCopy |
+	receiver := self stackTop.
+	(objectMemory isIntegerObject: receiver)
+		ifTrue:
+			[newCopy := receiver]
+		ifFalse:
+			[(self isContextNonInt: receiver)
+				ifTrue:
+					[newCopy := self cloneContext: receiver]
+				ifFalse:
+					[newCopy := objectMemory clone: receiver].
+			newCopy = 0 ifTrue:
+				[^self primitiveFailFor: PrimErrNoMemory]].
+	self pop: 1 thenPush: newCopy
 ]
 
 { #category : #'control primitives' }
@@ -55,6 +79,86 @@ StackInterpreterPrimitives >> primitiveClosureCopyWithCopiedValues [
 					instructionPointer: instructionPointer + 2 - (method+BaseHeaderSize)
 					copiedValues: self stackTop.
 	self pop: 3 thenPush: newClosure
+]
+
+{ #category : #'indexing primitives' }
+StackInterpreterPrimitives >> primitiveContextAt [
+	| index value aContext spouseFP hdr fmt totalLength fixedFields stSize |
+	<var: #spouseFP type: #'char *'>
+	index := self stackTop.
+	(objectMemory isIntegerObject: index) ifFalse:
+		[^self primitiveFail].
+	index := objectMemory integerValueOf: index.
+	aContext := self stackValue: 1.
+	"Duplicating much of stObject:at:put: here allows stObject:at:put: to omit tests for contexts."
+	hdr := objectMemory baseHeader: aContext.
+	(objectMemory isContextHeader: hdr) ifFalse: "might be an instance of a subclass"
+		[value := self stObject: aContext at: index.
+		 ^self pop: 2 thenPush: value].
+	self externalWriteBackHeadFramePointers.
+	(self isStillMarriedContext: aContext) ifFalse:
+		[fmt := objectMemory formatOfHeader: hdr.
+		 totalLength := objectMemory lengthOf: aContext baseHeader: hdr format: fmt.
+		 fixedFields := objectMemory fixedFieldsOf: aContext format: fmt length: totalLength.
+		 stSize := self stackPointerForMaybeMarriedContext: aContext.
+		 (index between: 1 and: stSize) ifFalse:
+			[^self primitiveFail].			
+		value := self subscript: aContext with: (index + fixedFields) format: fmt.
+		^self pop: 2 thenPush: value].
+	spouseFP := self frameOfMarriedContext: aContext.
+	(index between: 1 and: (self stackPointerIndexForFrame: spouseFP)) ifFalse:
+		[^self primitiveFail].
+	value := self temporary: index - 1 in: spouseFP.
+	self pop: 2 thenPush: value
+]
+
+{ #category : #'indexing primitives' }
+StackInterpreterPrimitives >> primitiveContextAtPut [
+	| index value aContext spouseFP hdr fmt totalLength fixedFields stSize |
+	<var: #spouseFP type: #'char *'>
+	value := self stackTop.
+	index := self stackValue: 1.
+	aContext := self stackValue: 2.
+	(objectMemory isIntegerObject: index) ifFalse:
+		[^self primitiveFail].
+	"Duplicating much of stObject:at:put: here allows stObject:at:put: to omit tests for contexts."
+	hdr := objectMemory baseHeader: aContext.
+	index := objectMemory integerValueOf: index.
+	(objectMemory isContextHeader: hdr) ifFalse: "might be an instance of a subclass"
+		[self stObject: aContext at: index put: value.
+		 ^self pop: 3 thenPush: value].
+	self externalWriteBackHeadFramePointers.
+	(self isStillMarriedContext: aContext) ifFalse:
+		[fmt := objectMemory formatOfHeader: hdr.
+		 totalLength := objectMemory lengthOf: aContext baseHeader: hdr format: fmt.
+		 fixedFields := objectMemory fixedFieldsOf: aContext format: fmt length: totalLength.
+		 stSize := self stackPointerForMaybeMarriedContext: aContext.
+		 (index between: 1 and: stSize) ifFalse:
+			[^self primitiveFail].			
+		self subscript: aContext with: (index + fixedFields) storing: value format: fmt.
+		^self pop: 3 thenPush: value].
+	spouseFP := self frameOfMarriedContext: aContext.
+	(index between: 1 and: (self stackPointerIndexForFrame: spouseFP)) ifFalse:
+		[^self primitiveFail].
+	self temporary: index - 1 in: spouseFP put: value.
+	^self pop: 3 thenPush: value
+]
+
+{ #category : #'indexing primitives' }
+StackInterpreterPrimitives >> primitiveContextSize [
+	| rcvr sz hdr fmt totalLength fixedFields |
+	rcvr := self stackTop.
+	hdr := objectMemory baseHeader: rcvr.
+	fmt := objectMemory formatOfHeader: hdr.
+	totalLength := objectMemory lengthOf: rcvr baseHeader: hdr format: fmt.
+	fixedFields := objectMemory fixedFieldsOf: rcvr format: fmt length: totalLength.
+	(objectMemory isContextHeader: hdr)
+		ifTrue:
+			[self externalWriteBackHeadFramePointers.
+			sz := self stackPointerForMaybeMarriedContext: rcvr]
+		ifFalse: [sz := totalLength - fixedFields].
+	self successful ifTrue:
+		[self pop: 1 thenPush: (objectMemory integerObjectOf: sz)]
 ]
 
 { #category : #'indexing primitives' }
@@ -79,6 +183,41 @@ StackInterpreterPrimitives >> primitiveContextXray [
 	self pop: 1 thenPush: (objectMemory integerObjectOf: flags)
 ]
 
+{ #category : #'object access primitives' }
+StackInterpreterPrimitives >> primitiveCopyObject [
+	"Primitive. Copy the state of the receiver from the argument. 
+		Fail if receiver and argument are of a different class.
+		Fail if the receiver or argument are non-pointer objects.
+		Fail if the receiver or argument are contexts (because of context-to-stack mapping).
+		Fail if receiver and argument have different lengths (for indexable objects).
+	"
+	| rcvr arg length |
+	self methodArgumentCount = 1 ifFalse:
+		[^self primitiveFail].
+	arg := self stackObjectValue: 0.
+	rcvr := self stackObjectValue: 1.
+
+	self failed ifTrue:[^nil].
+	(objectMemory isPointers: rcvr) ifFalse:
+		[^self primitiveFail].
+	((self isContextNonInt: rcvr)
+	 or: [self isContextNonInt: arg]) ifTrue:
+		[^self primitiveFail].
+	(objectMemory fetchClassOfNonInt: rcvr) = (objectMemory fetchClassOfNonInt: arg) ifFalse:
+		[^self primitiveFail].
+	length := objectMemory lengthOf: rcvr.
+	length = (objectMemory lengthOf: arg) ifFalse:
+		[^self primitiveFail].
+	
+	"Now copy the elements"
+	0 to: length-1 do:[:i|
+		objectMemory storePointer: i ofObject: rcvr withValue: (objectMemory fetchPointer: i ofObject: arg)].
+
+	"Note: The above could be faster for young receivers but I don't think it'll matter"
+	self pop: 1. "pop arg; answer receiver"
+
+]
+
 { #category : #'I/O primitives' }
 StackInterpreterPrimitives >> primitiveDeferDisplayUpdates [
 	"Set or clear the flag that controls whether modifications of 
@@ -93,15 +232,6 @@ StackInterpreterPrimitives >> primitiveDeferDisplayUpdates [
 				ifFalse: [self primitiveFail]].
 	self successful
 		ifTrue: [self pop: 1]
-]
-
-{ #category : #'plugin primitives' }
-StackInterpreterPrimitives >> primitiveDisableModuleLoading [
-	"Primitive. Disable a new module loading mechanism for the rest of current session.
-	Any subsequent attempts to load either external or internal module(s) will fail"
-	<export: true>
-
-	self ioDisableModuleLoading.
 ]
 
 { #category : #'plugin primitives' }
@@ -393,7 +523,8 @@ StackInterpreterPrimitives >> primitiveFlushCacheByMethod [
 	primIdx := self primitiveIndexOf: oldMethod.
 	primIdx = PrimitiveExternalCallIndex ifTrue:
 		["It's primitiveExternalCall"
-		self flushExternalPrimitiveOf: oldMethod]
+		self flushExternalPrimitiveOf: oldMethod].
+	self flushAtCache
 ]
 
 { #category : #'system control primitives' }

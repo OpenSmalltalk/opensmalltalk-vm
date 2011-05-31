@@ -15,14 +15,14 @@ Class {
 	#category : #'VMMaker-Plugins'
 }
 
-{ #category : #'plugin translation' }
+{ #category : #translation }
 DSAPlugin class >> declareCVarsIn: cg [
 	cg var: #dsaRemainder type: #'unsigned char*'.
 	cg var: #dsaDivisor type:  #'unsigned char*'.
 	cg var: #dsaQuotient type: #'unsigned char*'
 ]
 
-{ #category : #'plugin translation' }
+{ #category : #translation }
 DSAPlugin class >> moduleName [
 	"Time millisecondsToRun: [
 		DSAPlugin translateDoInlining: true]"

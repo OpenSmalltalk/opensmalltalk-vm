@@ -280,7 +280,7 @@ SmartSyntaxPluginCodeGenerator >> ccgValBlock: valString [
 			nextPutAll: valString;
 			nextPutAll: ': (interpreterProxy stackValue: ';
 			nextPutAll: index asString;
-			nextPutAll: '))']] 
+			nextPutAll: '))']] fixTemps
 ]
 
 { #category : #linking }

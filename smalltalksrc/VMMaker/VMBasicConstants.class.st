@@ -37,6 +37,8 @@ Class {
 		'Bytes7to4Mask',
 		'BytesPerOop',
 		'BytesPerWord',
+		'COGMTVM',
+		'COGVM',
 		'DisownVMLockOutFullGC',
 		'DoAssertionChecks',
 		'DoExpensiveAssertionChecks',
@@ -56,6 +58,7 @@ Class {
 		'PrimErrObjectMayMove',
 		'PrimErrUnsupported',
 		'PrimNoErr',
+		'STACKVM',
 		'ShiftForWord',
 		'VMBIGENDIAN'
 	],
