@@ -17,6 +17,15 @@
  * various definitions of the sendBreakpointreceiver macro for break-pointing at
  * specific sends.
  */
+#if STACKVM
+# define warnSendBreak() do { \
+		suppressHeartbeatFlag = 1; \
+		warning("send breakpoint (heartbeat suppressed)"); \
+	} while (0)
+#else
+# define warnSendBreak() warning("send breakpoint")
+#endif
+
 #if PRODUCTION /* default for no send breakpoint. */
 # define sendBreakpointreceiver(sel, len, rcvr) 0
 
@@ -36,22 +45,18 @@
 # define sendBreakpointreceiver(sel, len, rcvr) do { \
 	if ((len) == breakSelectorLength \
 	 && !strncmp((char *)(sel), breakSelector, breakSelectorLength)) { \
-		suppressHeartbeatFlag = 1; \
-		warning("send breakpoint (heartbeat suppressed)"); \
+		warnSendBreak(); \
 		if (0) sendTrace = 1; \
 	} \
-	if (sendTrace) { \
+	if (sendTrace) \
 		printf("%.*s\n", len, (char *)(sel)); \
-		if (0 && !checkHeapIntegrity()) error("object leak"); \
-	} \
 } while (0)
 
 #elif 0 /* breakpoint with byteCount. */
 # define sendBreakpointreceiver(sel, len, rcvr) do { \
 	if ((len) == breakSelectorLength \
 	 && !strncmp((char *)(sel), breakSelector, breakSelectorLength)) { \
-		suppressHeartbeatFlag = 1; \
-		warning("send breakpoint (heartbeat suppressed)"); \
+		warnSendBreak(); \
 		if (0) sendTrace = 1; \
 	} \
 	if (sendTrace) \
@@ -63,15 +68,22 @@
  * various definitions of the bytecodeDispatchDebugHook macro for
  * debugging code at the bytecode dispatch switch.
  */
+#if STACKVM
+# define ValidInstructionPointerCheck() \
+	validInstructionPointerinMethodframePointer((usqInt)localIP, GIV(method), localFP)
+#else
+# define ValidInstructionPointerCheck() \
+	validInstructionPointerinMethod((usqInt)localIP, GIV(method))
+#endif
+
 #if PRODUCTION
 # define bytecodeDispatchDebugHook() 0
 
-#elif 1 /* check for valid instruction pointer */
+#elif 0 /* check for valid instruction pointer */
 # define bytecodeDispatchDebugHook() do { \
-	if (!validInstructionPointerinMethodframePointer((usqInt)localIP, GIV(method), localFP)) \
+	if (!ValidInstructionPointerCheck()) \
 		warning("invalidInstructionPointerinMethod"); \
   } while (0)
-
 #elif 0 /* check for valid stack-related pointers */
 # define DEBUG_DISABLE_HEARTBEAT 1
 # define bytecodeDispatchDebugHook() do { \
@@ -104,18 +116,24 @@
 # define bytecodeDispatchDebugHook() do { \
 	if (++GIV(byteCount) == 175779UL) \
 		warning("break byteCount reached\n"); \
-	if (!validInstructionPointerinMethodframePointer((usqInt)localIP, GIV(method), localFP)) \
+	if (!ValidInstructionPointerCheck()) \
 		warning("invalidInstructionPointerinMethod"); \
   } while (0)
 
 #elif 0 /* maintain byteCount & check for valid instruction pointer */
-# define bytecodeDispatchDebugHook() do { \
-	printf("%ld: %x %d\n", ++GIV(byteCount), localIP-GIV(method)-3, currentBytecode); \
-	if (!validInstructionPointerinMethodframePointer((usqInt)localIP, GIV(method), localFP)) \
+#define bytecodeDispatchDebugHook() do { \
+	printf("%ld: %d %x(%d)\n", ++GIV(byteCount), localIP-GIV(method)-3, currentBytecode, currentBytecode); \
+	if (!ValidInstructionPointerCheck()) \
 		warning("invalidInstructionPointerinMethod"); \
-	if (sendTrace) printCallStack(); \
+	if (sendTrace > 1) printContext(GIV(activeContext)); \
   } while (0)
-
+#elif 0 /* maintain byteCount & check for valid instruction pointer */
+#define bytecodeDispatchDebugHook() do { \
+	printf("%ld: %d %x(%d)\n", ++GIV(byteCount), localIP-GIV(method)-3, currentBytecode, currentBytecode); \
+	if (!ValidInstructionPointerCheck()) \
+		warning("invalidInstructionPointerinMethod"); \
+	if (sendTrace > 1) printCallStack(); \
+  } while (0)
 #elif 0 /* print current frame & instruction pointer on every bytecode. */
 # define bytecodeDispatchDebugHook() do { \
 	printFrameWithSP(localFP,localSP); \
@@ -129,4 +147,8 @@
 		printf("%d %x\n", localIP - GIV(method) - 3, currentBytecode); \
 	} \
   } while (0)
+#elif 0
+# define bytecodeDispatchDebugHook() printContextWithSP(activeContext,localSP)
+#else
+# define bytecodeDispatchDebugHook() 0
 #endif

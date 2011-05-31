@@ -173,8 +173,10 @@ sqInt ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionName
 sqInt isInMemory(sqInt address);
 sqInt classAlien(void); /* Alien FFI */
 sqInt classUnsafeAlien(void); /* Alien FFI */
+sqInt getStackPointer(void);  /* Newsqueak FFI */
 void *startOfAlienData(sqInt);
 usqInt sizeOfAlienData(sqInt);
+sqInt signalNoResume(sqInt);
 sqInt getStackPointer(void);  /* Alien FFI */
 sqInt sendInvokeCallbackStackRegistersJmpbuf(sqInt thunkPtrAsInt, sqInt stackPtrAsInt, sqInt regsPtrAsInt, sqInt jmpBufPtrAsInt); /* Alien FFI */
 sqInt reestablishContextPriorToCallback(sqInt callbackContext); /* Alien FFI */
@@ -186,8 +188,15 @@ void *ioLoadFunctionFrom(char *fnName, char *modName);
 
 
 /* Proxy declarations for v1.8 */
+#if NewspeakVM
+static sqInt
+callbackEnter(sqInt *callbackID) { return 0; }
+static sqInt
+callbackLeave(sqInt *callbackID) { return 0; }
+#else
 sqInt callbackEnter(sqInt *callbackID);
 sqInt callbackLeave(sqInt  callbackID);
+#endif
 sqInt addGCRoot(sqInt *varLoc);
 sqInt removeGCRoot(sqInt *varLoc);
 
@@ -420,7 +429,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->sendInvokeCallbackStackRegistersJmpbuf = sendInvokeCallbackStackRegistersJmpbuf;
 	VM->reestablishContextPriorToCallback = reestablishContextPriorToCallback;
 # if ALIEN_FFI
-	VM->getStackPointer     = 0;
+	VM->getStackPointer     = (sqInt *(*)(void))getStackPointer;
 # endif
 # if IMMUTABILITY
 	VM->internalIsImmutable = internalIsImmutable;
@@ -465,6 +474,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->cStringOrNullFor = cStringOrNullFor;
 	VM->startOfAlienData = startOfAlienData;
 	VM->sizeOfAlienData = sizeOfAlienData;
+	VM->signalNoResume = signalNoResume;
 #endif
 
 	return VM;

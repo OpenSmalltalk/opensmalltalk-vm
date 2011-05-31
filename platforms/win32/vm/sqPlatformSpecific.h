@@ -84,7 +84,7 @@ extern int isCFramePointerInUse(void);
 #endif
 
 /* Thread support for thread-safe signalSemaphoreWithIndex and/or the COGMTVM */
-#if STACKVM
+#if STACKVM || NewspeakVM
 # define sqLowLevelYield() Sleep(0)
 /* these are used both in the STACKVM & the COGMTVM */
 # define sqOSThread void *
@@ -102,10 +102,12 @@ extern const unsigned long tltiIndex;
 #  define ioTransferTimeslice() Sleep(0)
 #  define ioMilliSleep(ms) Sleep(ms)
 # endif /* COGMTVM */
-#endif /* STACKVM */
+#endif /* STACKVM || NewspeakVM */
 
 #if defined(__GNUC__)
-# define VM_LABEL(foo) asm("\n.globl L" #foo "\nL" #foo ":")
+# if !defined(VM_LABEL)
+#	define VM_LABEL(foo) asm("\n.globl L" #foo "\nL" #foo ":")
+# endif
 #endif
 #if !defined(VM_LABEL) || COGVM
 # undef VM_LABEL

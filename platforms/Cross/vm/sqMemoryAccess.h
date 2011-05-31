@@ -133,9 +133,26 @@
 #define long32At	intAt
 #define long32Atput	intAtput
 
-/* platform-dependent float conversion macros */
-/* Note: Second argument must be a variable name, not an expression! */
-#if defined(DOUBLE_WORD_ALIGNMENT)
+/* platform-dependent float conversion macros.
+ * Note: Second argument must be a variable name, not an expression!
+ * Pre-Cog systems stored floats in Mac PowerPC big-endian format.
+ * BigEndianFloats selects this behaviour for backwards-compatibility.
+ * RISC systems typically insist on double-word alignment of double-words, but
+ * the heap is only word-aligned.  DOUBLE_WORD_ALIGNMENT selects word access.
+ */
+#if BigEndianFloats && !VMBIGENDIAN
+/* this is to allow strict aliasing assumption in the optimizer */
+typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _swapper;
+/* word-based copy with swapping for non-PowerPC order */
+# define storeFloatAtPointerfrom(intPointerToFloat, doubleVar) do { \
+		*((int *)(intPointerToFloat) + 0) = ((_swapper *)(&doubleVar))->i[1]; \
+		*((int *)(intPointerToFloat) + 1) = ((_swapper *)(&doubleVar))->i[0]; \
+	} while (0)
+# define fetchFloatAtPointerinto(intPointerToFloat, doubleVar) do { \
+		((_swapper *)(&doubleVar))->i[1] = *((int *)(intPointerToFloat) + 0); \
+		((_swapper *)(&doubleVar))->i[0] = *((int *)(intPointerToFloat) + 1); \
+	} while (0)
+# elif defined(DOUBLE_WORD_ALIGNMENT)
 /* this is to allow strict aliasing assumption in the optimizer */
 typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _aligner;
 /* word-based copy for machines with alignment restrictions */
@@ -147,11 +164,11 @@ typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _aligner;
 	((_aligner *)(&doubleVar))->i[0] = *((int *)(intPointerToFloat) + 0); \
 	((_aligner *)(&doubleVar))->i[1] = *((int *)(intPointerToFloat) + 1); \
   } while (0)
-#else /* !DOUBLE_WORD_ALIGNMENT */
+#else /* !(BigEndianFloats && !VMBIGENDIAN) && !DOUBLE_WORD_ALIGNMENT */
 /* for machines that allow doubles to be on any word boundary */
 # define storeFloatAtPointerfrom(i, doubleVar) (*((double *) (i)) = (doubleVar))
 # define fetchFloatAtPointerinto(i, doubleVar) ((doubleVar) = *((double *) (i)))
-#endif
+#endif /* !(BigEndianFloats && !VMBIGENDIAN) && !DOUBLE_WORD_ALIGNMENT */
 
 #define storeFloatAtfrom(i, doubleVar)	storeFloatAtPointerfrom(pointerForOop(i), doubleVar)
 #define fetchFloatAtinto(i, doubleVar)	fetchFloatAtPointerinto(pointerForOop(i), doubleVar)
@@ -161,13 +178,10 @@ typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _aligner;
 #define fetchSingleFloatAtinto(i, floatVar)	fetchSingleFloatAtPointerinto(pointerForOop(i), floatVar)
 
 
-/* This doesn't belong here, but neither do 'self flag: ...'s belong in the image. */
-
-#ifdef _MSC_VER
-static void flag(char *ignored) {}
-#else 
-static inline void flag(char *ignored) {}
-#endif
+/* This doesn't belong here, but neither do 'self flag: ...'s belong in the
+   image. We use a macro, not an inline function; we need no trace of flag.
+ */
+#define flag(foo) 0
 
 /* heap debugging facilities in sqHeapMap.c */
 extern void clearHeapMap(void);

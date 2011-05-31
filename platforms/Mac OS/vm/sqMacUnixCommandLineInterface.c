@@ -152,16 +152,22 @@ static int parseArgument(int argc, char **argv)
   if      (!strcmp(argv[0], "-help"))		{ 
 	usage();
 	return 1; }
-  else if (!strncmp(argv[0], "-psn_", 5)) { 
-	return 1; }
-  else if (!strcmp(argv[0], "-headless")) { 
-	gSqueakHeadless = true; return 1; }
-  else if (!strcmp(argv[0], "-headfull")) { 
-	gSqueakHeadless = false; return 1; }
+  else if (!strncmp(argv[0], "-psn_", 5)) { return 1; }
+  else if (!strcmp(argv[0], "-headless")) { gSqueakHeadless = true; return 1; }
+  else if (!strcmp(argv[0], "-headfull")) { gSqueakHeadless = false; return 1; }
+#if STACKVM && !COGVM || NewspeakVM
+  else if (!strcmp(argv[0], "-sendtrace")) { extern sqInt sendTrace; sendTrace = 1; return 1; }
+#endif
   else if (argc > 1) {
 	  if (!strcmp(argv[0], "-memory"))	{ 
 		gMaxHeapSize = strtobkm(argv[1]);	 
 		return 2; }
+#if STACKVM || NewspeakVM
+      else if (!strcmp(argv[0], "-breaksel")) { 
+		extern void setBreakSelector(char *);
+		setBreakSelector(argv[1]);
+		return 2; }
+#endif
 #if STACKVM
       else if (!strcmp(argv[0], "-eden")) { 
 		extern sqInt desiredEdenBytes;
@@ -174,10 +180,6 @@ static int parseArgument(int argc, char **argv)
       else if (!strcmp(argv[0], "-stackpages")) { 
 		extern sqInt desiredNumStackPages;
 		desiredNumStackPages = atoi(argv[1]);	 
-		return 2; }
-      else if (!strcmp(argv[0], "-breaksel")) { 
-		extern void setBreakSelector(char *);
-		setBreakSelector(argv[1]);
 		return 2; }
       else if (!strcmp(argv[0], "-noheartbeat")) { 
 		extern sqInt suppressHeartbeatFlag;
@@ -258,10 +260,13 @@ static void printUsage(void)
   printf("\nCommon <option>s:\n");
   printf("  -help                 print this help message, then exit\n");
   printf("  -memory <size>[mk]    use fixed heap size (added to image size)\n");
+#if STACKVM || NewspeakVM
+  printf("  -breaksel selector    set breakpoint on send of selector\n");
+#endif
 #if STACKVM
   printf("  -eden <size>[mk]      set eden memory to bytes\n");
+  printf("  -leakcheck num        check for leaks in the heap\n");
   printf("  -stackpages num       use n stack pages\n");
-  printf("  -breaksel selector    set breakpoint on send of selector\n");
 #endif
 #if COGVM
   printf("  -codesize <size>[mk]  set machine code memory to bytes\n");

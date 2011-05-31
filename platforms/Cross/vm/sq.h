@@ -212,15 +212,9 @@ sqInt ioShowDisplay(sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth,
 sqInt ioHasDisplayDepth(sqInt depth);
 sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag);
 
-#if STACKVM
+#if STACKVM || NewspeakVM
 /* thread subsystem support for e.g. sqExternalSemaphores.c */
 void ioInitThreads();
-
-/* Event polling via periodic heartbeat thread. */
-void  ioInitHeartbeat(void);
-int   ioHeartbeatMilliseconds(void);
-void  ioSetHeartbeatMilliseconds(int);
-unsigned long ioHeartbeatFrequency(int);
 
 /* Management of the external semaphore table (max size set at startup) */
 #if !defined(INITIAL_EXT_SEM_TABLE_SIZE)
@@ -240,7 +234,16 @@ int  ioOSThreadsEqual(sqOSThread,sqOSThread);
 extern sqOSThread ioVMThread;
 # define getVMOSThread() ioVMThread
 # endif
+#endif /* STACKVM || NewspeakVM */
+
+#if STACKVM
+/* Event polling via periodic heartbeat thread. */
+void  ioInitHeartbeat(void);
+int   ioHeartbeatMilliseconds(void);
+void  ioSetHeartbeatMilliseconds(int);
+unsigned long ioHeartbeatFrequency(int);
 #endif /* STACKVM */
+
 #if COGMTVM
 #define THRLOGSZ 256
 extern int thrlogidx;

@@ -3,8 +3,6 @@
  *
  * Support for Call-outs and Call-backs from the Plugin.
  *  Written by Eliot Miranda 11/07.
- *  Copyright 2007 Cadence Design Systems. All rights reserved.
- *
  */
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
@@ -27,6 +25,7 @@ void *getbaz() { return baz; }
 # include <sys/mman.h> /* for mprotect */
 #endif
 
+#include <string.h> /* for memcpy et al */
 #include <setjmp.h>
 #include <stdio.h> /* for fprintf(stderr,...) */
 
@@ -69,7 +68,7 @@ struct VirtualMachine* interpreterProxy;
 # define setsp(ignored) 0
 #endif
 
-#define moduloPOT(m,v) ((v)+(m)-1 & ~((m)-1))
+#define moduloPOT(m,v) (((v)+(m)-1) & ~((m)-1))
 #define alignModuloPOT(m,v) ((void *)moduloPOT(m,(unsigned long)(v)))
 
 #define objIsAlien(anOop) (interpreterProxy->includesBehaviorThatOf(interpreterProxy->fetchClassOf(anOop), interpreterProxy->classAlien()))
@@ -127,6 +126,27 @@ callIA32DoubleReturn(SIGNATURE) { double (*f)(), r;
 #include "dabusiness.h"
 }
 
+/* Queueing order for callback returns.  To ensure that callback returns occur
+ * in LIFO order we provide mostRecentCallbackContext which is tested by the return
+ * primitive primReturnFromContextThrough.  In a threaded VM this will have to
+ * be thread-specific (as yet unimplemented).
+ */
+#if COGMTVM
+# error as yet unimplemented
+/* Test if need and allocate a thread-local variable index in
+ * allocateExecutablePage (low frequency operation).  Keep a per-thread
+ * mostRecentCallbackContext.
+ */
+#else
+static VMCallbackContext *mostRecentCallbackContext = 0;
+
+VMCallbackContext *
+getMostRecentCallbackContext() { return mostRecentCallbackContext; }
+
+# define getRMCC(t) mostRecentCallbackContext
+# define setRMCC(t) (mostRecentCallbackContext = (void *)(t))
+#endif
+
 /*
  * Entry-point for call-back thunks.  Args are thunk address and stack pointer,
  * where the stack pointer is pointing one word below the return address of the
@@ -155,6 +175,7 @@ long
 thunkEntry(void *thunkp, long *stackp)
 {
 	VMCallbackContext vmcc;
+	VMCallbackContext *previousCallbackContext;
 	int flags, returnType;
 
 	if ((flags = interpreterProxy->ownVM(0)) < 0) {
@@ -163,15 +184,19 @@ thunkEntry(void *thunkp, long *stackp)
 	}
 
 	if (!(returnType = setjmp(vmcc.trampoline))) {
+		previousCallbackContext = getRMCC();
+		setRMCC(&vmcc);
 		vmcc.thunkp = thunkp;
 		vmcc.stackp = stackp + 2; /* skip address of retpc & retpc (thunk) */
 		vmcc.intregargsp = 0;
 		vmcc.floatregargsp = 0;
 		interpreterProxy->sendInvokeCallbackContext(&vmcc);
 		fprintf(stderr,"Warning; callback failed to invoke\n");
+		setRMCC(previousCallbackContext);
 		interpreterProxy->disownVM(flags);
 		return -1;
 	}
+	setRMCC(previousCallbackContext);
 	interpreterProxy->disownVM(flags);
 
 	switch (returnType) {

@@ -234,15 +234,13 @@ int ioSetFullScreen(int fullScreen) {
 		if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 0;	
         giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
         if (giLocker != 0) {
-            sqInt *foo;
-            foo = malloc(sizeof(sqInt)*4);
+            sqInt foo[4];
             foo[0] = 1;
             foo[1] = (sqInt) ioSetFullScreenActual;
             foo[2] = fullScreen;
             foo[3] = 0;
             ((sqInt (*) (void *)) giLocker)(foo);
             return_value = interpreterProxy->positive32BitIntegerFor(foo[3]);
-            free(foo);
         }
         return return_value;
 }
@@ -368,14 +366,12 @@ void sqShowWindow(int windowIndex) {
 		if (gSqueakHeadless && browserActiveAndDrawingContextOkAndNOTInFullScreenMode()) return;
         giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
         if (giLocker != 0) {
-            sqInt *foo;
-            foo = malloc(sizeof(sqInt)*4);
+            sqInt foo[4];
             foo[0] = 1;
             foo[1] = (sqInt) sqShowWindowActual;
             foo[2] = windowIndex;
             foo[3] = 0;
             ((sqInt (*) (void *)) giLocker)(foo);
-            free(foo);
         }
 }
 

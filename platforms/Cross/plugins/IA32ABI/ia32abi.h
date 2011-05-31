@@ -1,10 +1,10 @@
 /*
  *  platforms/Cross/plugins/IA32ABI/ia32abi.h
  *
- *  Written by Eliot Miranda 11/07.
- *  Copyright 2007 Cadence Design Systems. All rights reserved.
+ *  Written by Eliot Miranda 11/2007.
+ *	Updated 5/2011 to cope with Cog stack direction.
  *
- * Call foreign functons returning results in either %eax, %edx (Integral)
+ * Call foreign functions returning results in either %eax, %edx (Integral)
  * or %f0 (Float, Double).  
  *
  * The primitive will have signatures of the form
@@ -20,10 +20,13 @@
  *	functionAddress <Alien> primFFICallResult: result <Alien>
  *	  with: firstArg <Alien> ... with: lastArg <Alien>
  *		<primitive: 'primCallOutXXX' module: 'IA32ABI'>
+ *
+ * N.B. In Cog Stack and Cogit VMs numArgs is negative to access args from
+ * the downward-growing stack.
  */
 
 #define SIGNATURE	sqInt *argVector/* call args on stack or in array */, \
-					int numArgs,	/* arg count of function to call   */ \
+					int numArgs,	/* arg count of function to call (*) */ \
 					int funcOffset, /* stack offset of func Alien   */ \
 					int resultOffset/* stack offset of result Alien */
 
@@ -32,6 +35,7 @@ extern sqInt callIA32FloatReturn   (SIGNATURE);
 extern sqInt callIA32DoubleReturn  (SIGNATURE);
 extern long  thunkEntry            (void *thunkp, long *stackp);
 extern void *allocateExecutablePage(long *pagesize);
+extern VMCallbackContext *getMostRecentCallbackContext(void);
 
 /* Use the most minimal setjmp/longjmp pair available; no signal handling
  * wanted or necessary.

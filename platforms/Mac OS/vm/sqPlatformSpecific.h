@@ -131,7 +131,7 @@ extern int isCFramePointerInUse(void);
 #define warnPrintf printf
 
 /* Thread support for thread-safe signalSemaphoreWithIndex and/or the COGMTVM */
-#if STACKVM
+#if STACKVM || NewspeakVM
 # define sqLowLevelYield() sched_yield()
 # include <pthread.h>
 # define sqOSThread pthread_t
@@ -157,7 +157,7 @@ extern const pthread_key_t tltiIndex;
 #  define ioTransferTimeslice() sched_yield()
 #  define ioMilliSleep(ms) usleep((ms) * 1000)
 # endif /* COGMTVM */
-#endif /* STACKVM */
+#endif /* STACKVM || NewspeakVM */
 
 #ifdef BROWSERPLUGIN
 # undef insufficientMemorySpecifiedError
@@ -179,7 +179,9 @@ extern const pthread_key_t tltiIndex;
 #ifdef __GNUC__
 # undef EXPORT
 # define EXPORT(returnType) __attribute__((visibility("default"))) returnType
-# define VM_LABEL(foo) asm("\n.globl L" #foo "\nL" #foo ":")
+# if !defined(VM_LABEL)
+#	define VM_LABEL(foo) asm("\n.globl L" #foo "\nL" #foo ":")
+# endif
 #endif
 
 #if !defined(VM_LABEL) || COGVM

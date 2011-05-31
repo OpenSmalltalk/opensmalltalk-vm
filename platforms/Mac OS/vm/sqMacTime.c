@@ -55,14 +55,46 @@ extern void ioInitTime(void);
 	ioInitTime();
 }
 #else /* STACKVM */
+static TMTask    gTMTask;
+static unsigned int	lowResMSecs= 0;
 
-void SetUpTimers(void)
+#define LOW_RES_TICK_MSECS 16
+#define HIGH_RES_TICK_MSECS 2
+#define COUNTER_LIMIT LOW_RES_TICK_MSECS/HIGH_RES_TICK_MSECS
+
+static pascal void
+MyTimerProc(QElemPtr time)
+{
+    lowResMSecs = ioMicroMSecs();
+    PrimeTime((QElemPtr)time, LOW_RES_TICK_MSECS);
+    return;
+}
+
+void
+SetUpTimers(void)
 {
   /* set up the micro/millisecond clock */
     gettimeofday(&startUpTime, 0);
+    
+    gTMTask.tmAddr = NewTimerUPP((TimerProcPtr) MyTimerProc);
+    gTMTask.tmCount = 0;
+    gTMTask.tmWakeUp = 0;
+    gTMTask.tmReserved = 0;    
+     
+    InsXTime((QElemPtr)(&gTMTask.qLink));
+    PrimeTime((QElemPtr)&gTMTask.qLink,LOW_RES_TICK_MSECS);
 }
 
-int ioMicroMSecs(void)
+#if 1
+int
+ioLowResMSecs(void) { return lowResMSecs; }
+#else
+int
+ioLowResMSecs(void) { return ioMicroMSecs(); }
+#endif
+
+int
+ioMicroMSecs(void)
 {
   struct timeval now;
   gettimeofday(&now, 0);
@@ -74,7 +106,8 @@ int ioMicroMSecs(void)
   return (now.tv_usec / 1000 + now.tv_sec * 1000);
 }
 
-int ioSeconds(void) {
+int
+ioSeconds(void) {
     time_t unixTime;
 
     unixTime = time(0);
@@ -112,6 +145,34 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
 int ioMSecs() {
     return ioMicroMSecs();
 }
+
+#define SecondsFrom1901To1970      2177452800ULL
+#define MicrosecondsFrom1901To1970 2177452800000000ULL
+
+#define MicrosecondsPerSecond 1000000ULL
+#define MillisecondsPerSecond 1000ULL
+
+#define MicrosecondsPerMillisecond 1000ULL
+/* Compute the current VM time basis, the number of microseconds from 1901. */
+
+static unsigned long long
+currentUTCMicroseconds()
+{
+	struct timeval utcNow;
+
+	gettimeofday(&utcNow,0);
+	return ((utcNow.tv_sec * MicrosecondsPerSecond) + utcNow.tv_usec)
+			+ MicrosecondsFrom1901To1970;
+}
+
+usqLong
+ioUTCMicroseconds() { return currentUTCMicroseconds(); }
+
+/* This is an expensive interface for use by profiling code that wants the time
+ * now rather than as of the last heartbeat.
+ */
+usqLong
+ioUTCMicrosecondsNow() { return currentUTCMicroseconds(); }
 #endif /* STACKVM */
 
 time_t convertToSqueakTime(time_t unixTime)

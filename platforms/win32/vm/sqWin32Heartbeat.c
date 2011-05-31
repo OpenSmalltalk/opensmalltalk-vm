@@ -401,7 +401,7 @@ ioSetHeartbeatMilliseconds(int ms)
 		if(timeGetDevCaps(&tCaps,sizeof(tCaps)) != 0)
 			return;
 		dwTimerPeriod = max(tCaps.wPeriodMin,beatMilliseconds);
-		if(timeBeginPeriod(dwTimerPeriod) != 0)
+		if (timeBeginPeriod(dwTimerPeriod) != 0)
 			return;
 		timerID = timeSetEvent(	dwTimerPeriod,
 								0,

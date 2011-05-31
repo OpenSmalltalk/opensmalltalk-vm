@@ -163,7 +163,15 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 	printf("C stack backtrace:\n");
 	fflush(stdout); /* backtrace_symbols_fd uses unbuffered i/o */
 	depth = backtrace(addrs, BACKTRACE_DEPTH);
+# if 0 /* Mac OS's backtrace_symbols_fd prints NULL byte droppings each line */
 	backtrace_symbols_fd(addrs, depth, fileno(stdout));
+# else
+	{ int i; char **strings;
+	  strings = backtrace_symbols(addrs, depth);
+	  for (i = 0; i < depth; i++)
+		printf("%s\n", strings[i]);
+	}
+# endif
 #endif
 
 	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
@@ -211,8 +219,10 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 	}
 	else
 		printf("\nCan't dump Smalltalk stack(s). Not in VM thread\n");
+#if STACKVM
 	printf("\nMost recent primitives\n");
 	dumpPrimTraceLog();
+#endif
 	fflush(stdout);
 }
 
@@ -361,15 +371,6 @@ main(int argc, char **argv, char **envp)
 	fetchPrefrences();
 
 	SetVMPathFromApplicationDirectory();
-
-	{
-		// Change working directory, this works under os-x, previous logic worked pre os-x 10.4
-
-		char target[4097],temp[4097];
-		getVMPathWithEncoding(target,gCurrentVMEncoding);
-		sqFilenameFromStringOpen(temp,(sqInt) target, strlen(target));
-		chdir(temp);
-	}
 
 	/* install apple event handlers and wait for open event */
 	InstallAppleEventHandlers();

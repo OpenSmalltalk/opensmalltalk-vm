@@ -796,6 +796,7 @@ dumpStackIfInMainThread(FILE *optionalFile)
 		fprintf(optionalFile,"\nCan't dump Smalltalk stack. Not in VM thread\n");
 }
 
+#if STACKVM
 static void
 dumpPrimTrace(FILE *optionalFile)
 {
@@ -814,6 +815,9 @@ dumpPrimTrace(FILE *optionalFile)
 		printf("\n");
 	}
 }
+#else
+# define dumpPrimTrace(f) 0
+#endif
 
 void
 printCommonCrashDumpInfo(FILE *f) {
@@ -1145,12 +1149,17 @@ int findEmbeddedImage(void) { return 0; }
 /****************************************************************************/
 /*                        sqMain                                            */
 /****************************************************************************/
+#if STACKVM && !COGVM || NewspeakVM
+extern sqInt sendTrace;
+#endif
+#if STACKVM || NewspeakVM
+extern sqInt checkForLeaks;
+extern void setBreakSelector(char *);
+#endif /* STACKVM || NewspeakVM */
 #if STACKVM
 extern sqInt desiredNumStackPages;
 extern sqInt desiredEdenBytes;
 extern sqInt suppressHeartbeatFlag;
-extern sqInt checkForLeaks;
-extern void setBreakSelector(char *);
 #endif /* STACKVM */
 #if COGVM
 extern sqInt desiredCogCodeSize;
@@ -1167,12 +1176,17 @@ static vmArg args[] = {
   { ARG_FLAG, &fHeadlessImage, "-headless" },       /* do we run headless? */
   { ARG_STRING, &logName, "-log:" },                /* VM log file */
   { ARG_UINT, &dwMemorySize, "-memory:" },          /* megabyte of memory to use */
+#if STACKVM && !COGVM || NewspeakVM
+  { ARG_FLAG, &sendTrace, "-sendtrace"},
+#endif
+#if STACKVM || NewspeakVM
+  { ARG_STRING_FUNC, setBreakSelector, "-breaksel:"}, /* break-point selector string */
+#endif /* STACKVM || NewspeakVM */
 #if STACKVM
+  { ARG_UINT, &checkForLeaks, "-leakcheck:"}, /* leak check on GC */
   { ARG_UINT, &desiredEdenBytes, "-eden:" },        /* bytes of eden to use */
   { ARG_UINT, &desiredNumStackPages, "-stackpages:"}, /* n stack pages to use */
-  { ARG_UINT, &checkForLeaks, "-leakcheck:"}, /* leak check on GC */
   { ARG_FLAG, &suppressHeartbeatFlag, "-noheartbeat"}, /* no heartbeat for dbg */
-  { ARG_STRING_FUNC, setBreakSelector, "-breaksel:"}, /* break-point selector string */
 #endif /* STACKVM */
 #if COGVM
   { ARG_UINT, &desiredCogCodeSize, "-codesize:"}, /* machine code memory to use */

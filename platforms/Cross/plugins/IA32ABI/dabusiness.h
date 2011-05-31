@@ -2,10 +2,12 @@
  *  dabusiness.h
  *
  *  Written by Eliot Miranda 11/07.
- *  Copyright 2007 Cadence Design Systems. All rights reserved.
+ *	Updated 5/2011 to cope with Cog stack direction.
  *
  * Body of the various callIA32XXXReturn functions.
  * Call a foreign function according to IA32-ish ABI rules.
+ * N.B. In Cog Stack and Cogit VMs numArgs is negative to access args from
+ * the downward-growing stack.
  */
 	long i, size;
 	sqInt funcAlien, resultMaybeAlien;
@@ -14,6 +16,17 @@
 	char *argstart;
 #endif
 
+#if STACKVM /* Need to access args downwards from first arg */
+  if (numArgs < 0)
+	for (i = size = 0; --i > numArgs;) {
+		sqInt arg = argVector[i];
+		if (objIsAlien(arg) && sizeField(arg))
+			size += moduloPOT(sizeof(long),abs(sizeField(arg)));
+		else /* assume an integer or pointer.  check below. */
+			size += sizeof(long);
+	}
+  else
+#endif /* STACKVM */
 	for (i = numArgs, size = 0; --i >= 0;) {
 		sqInt arg = argVector[i];
 		if (objIsAlien(arg) && sizeField(arg))
@@ -42,6 +55,44 @@
 # endif
 #endif
 
+#if STACKVM /* Need to access args downwards from first arg */
+  if (numArgs < 0)
+	for (i = size = 0; --i > numArgs;) {
+		sqInt arg = argVector[i];
+		if (isSmallInt(arg)) {
+			*(long *)argvec = intVal(arg);
+			argvec += sizeof(long);
+		}
+		else if (objIsAlien(arg)) {
+			long  argByteSize;
+
+			if (!(size = sizeField(arg)))
+				size = argByteSize = sizeof(void *);
+			else
+				argByteSize = abs(size);
+			memcpy(argvec, startOfDataWithSize(arg,size), argByteSize);
+			argvec += moduloPOT(sizeof(long), argByteSize);
+		}
+		else if (objIsUnsafeAlien(arg)) {
+			sqInt bitsObj = interpreterProxy->fetchPointerofObject(0,arg);
+			void *v = interpreterProxy->firstIndexableField(bitsObj);
+			*(void **)argvec = v;
+			argvec += sizeof(long);
+		}
+		else {
+			long v = interpreterProxy->signed32BitValueOf(arg);
+			if (interpreterProxy->failed()) {
+				interpreterProxy->primitiveFailFor(0);
+				v = interpreterProxy->positive32BitValueOf(arg);
+				if (interpreterProxy->failed())
+					return PrimErrBadArgument;
+			}
+			*(long *)argvec = v;
+			argvec += sizeof(long);
+		}
+	}
+  else
+#endif /* STACKVM */
 	for (i = 0; i < numArgs; i++) {
 		sqInt arg = argVector[i];
 		if (isSmallInt(arg)) {
@@ -66,8 +117,12 @@
 		}
 		else {
 			long v = interpreterProxy->signed32BitValueOf(arg);
-			if (interpreterProxy->failed())
-				return PrimErrBadArgument;
+			if (interpreterProxy->failed()) {
+				interpreterProxy->primitiveFailFor(0);
+				v = interpreterProxy->positive32BitValueOf(arg);
+				if (interpreterProxy->failed())
+					return PrimErrBadArgument;
+			}
 			*(long *)argvec = v;
 			argvec += sizeof(long);
 		}
@@ -87,7 +142,7 @@
 			size = sizeof(void *);
 		memcpy(startOfDataWithSize(resultMaybeAlien,size),
 				&r,
-				min(abs(size), sizeof(r)));
+				min((unsigned)abs(size), sizeof(r)));
 	}
 
 	return PrimNoErr;

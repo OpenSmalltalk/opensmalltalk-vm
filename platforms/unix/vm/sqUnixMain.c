@@ -576,8 +576,10 @@ static void emergencyDump(int quit)
   dataSize= preSnapshot();
   writeImageFile(dataSize);
 
+#if STACKVM
   printf("\nMost recent primitives\n");
   dumpPrimTraceLog();
+#endif
   fprintf(stderr, "\n");
   printCallStack();
   fprintf(stderr, "\nTo recover valuable content from this image:\n");
@@ -809,8 +811,10 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 	}
 	else
 		printf("\nCan't dump Smalltalk stack(s). Not in VM thread\n");
+#if STACKVM
 	printf("\nMost recent primitives\n");
 	dumpPrimTraceLog();
+#endif
 	fflush(stdout);
 }
 
@@ -1261,6 +1265,15 @@ static int vm_parseArgument(int argc, char **argv)
       else if (!strcmp(argv[0], "-plugins"))	{ squeakPlugins= strdup(argv[1]);	 return 2; }
       else if (!strcmp(argv[0], "-encoding"))	{ setEncoding(&sqTextEncoding, argv[1]); return 2; }
       else if (!strcmp(argv[0], "-pathenc"))	{ setEncoding(&uxPathEncoding, argv[1]); return 2; }
+#if STACKVM && !COGVM || NewspeakVM
+	  else if (!strcmp(argv[0], "-sendtrace")) { extern sqInt sendTrace; sendTrace = 1; return 1; }
+#endif
+#if STACKVM || NewspeakVM
+      else if (!strcmp(argv[0], "-breaksel")) { 
+		extern void setBreakSelector(char *);
+		setBreakSelector(argv[1]);
+		return 2; }
+#endif
 #if STACKVM
       else if (!strcmp(argv[0], "-eden")) {
 		extern sqInt desiredEdenBytes;
@@ -1273,10 +1286,6 @@ static int vm_parseArgument(int argc, char **argv)
       else if (!strcmp(argv[0], "-stackpages")) {
 		extern sqInt desiredNumStackPages;
 		desiredNumStackPages = atoi(argv[1]);
-		return 2; }
-      else if (!strcmp(argv[0], "-breaksel")) { 
-		extern void setBreakSelector(char *);
-		setBreakSelector(argv[1]);
 		return 2; }
       else if (!strcmp(argv[0], "-noheartbeat")) { 
 		extern sqInt suppressHeartbeatFlag;
@@ -1347,8 +1356,12 @@ static void vm_printUsage(void)
   printf("  -help                 print this help message, then exit\n");
   printf("  -memory <size>[mk]    use fixed heap size (added to image size)\n");
   printf("  -mmap <size>[mk]      limit dynamic heap size (default: %dm)\n", DefaultMmapSize);
+#if STACKVM || NewspeakVM
+  printf("  -breaksel selector    set breakpoint on send of selector\n");
+#endif
 #if STACKVM
   printf("  -eden <size>[mk]      use given eden size\n");
+  printf("  -leakcheck num        check for leaks in the heap\n");
   printf("  -stackpages <num>     use given number of stack pages\n");
 #endif
   printf("  -noevents             disable event-driven input support\n");

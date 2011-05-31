@@ -286,7 +286,9 @@ void SetAllPreferences() {
 }
 
 void CreatePrefsMenu(void) {
+#if STACKVM
 extern sqInt recordPrimTraceFunc();
+#endif
   HMENU hMenu,pMenu;
 
   vmPrefsMenu = pMenu = CreatePopupMenu();
@@ -363,9 +365,11 @@ extern sqInt recordPrimTraceFunc();
 	       TEXT("Dump call stack"));
     AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_PRINTALLSTACKS,
 	       TEXT("Dump all processes"));
+#if STACKVM
     if (recordPrimTraceFunc())
       AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_DUMPPRIMLOG,
 	       TEXT("Dump recent primitives"));
+#endif
     AppendMenu(pMenu, MF_STRING | MF_POPUP, (int)hMenu,
 	       TEXT("Debug Options"));
   }
@@ -455,11 +459,13 @@ void HandlePrefsMenu(int cmd) {
     printf("Printing all processes:\n");
     printAllStacks();
     break;
+#if STACKVM
   case ID_DUMPPRIMLOG: { extern void dumpPrimTraceLog(void);
     printf("Printing recent primitives:\n");
     dumpPrimTraceLog();
     break;
   }
+#endif
   case ID_PRIORITYBOOST:
     fPriorityBoost = !fPriorityBoost;
     SetPriorityBoost();

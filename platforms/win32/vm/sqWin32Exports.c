@@ -1,8 +1,11 @@
 #include <stdio.h>
+#include "interp.h"
 
+#if !NewspeakVM
 int win32JoystickDebugInfo(void);
 int win32JoystickDebugPrintRawValues(void);
 int win32JoystickDebugPrintAlternativeValues(void);
+#endif
 int win32DebugPrintSocketState(void);
 int primitivePluginBrowserReady(void);
 int primitivePluginRequestURLStream(void);
@@ -18,9 +21,11 @@ extern void* preMessageHook;
 extern int fUseOpenGL;
 
 void *os_exports[][3] = {
+#if !NewspeakVM
   {"","win32JoystickDebugInfo", win32JoystickDebugInfo},
   {"","win32JoystickDebugPrintRawValues", win32JoystickDebugPrintRawValues},
   {"","win32JoystickDebugPrintAlternativeValues", win32JoystickDebugPrintAlternativeValues},
+#endif
   {"","win32DebugPrintSocketState", win32DebugPrintSocketState},
   {"","primitivePluginBrowserReady", primitivePluginBrowserReady},
   {"","primitivePluginRequestURLStream", primitivePluginRequestURLStream},

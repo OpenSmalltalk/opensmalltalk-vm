@@ -311,6 +311,7 @@ typedef struct VirtualMachine {
   char  *(*cStringOrNullFor)(sqInt);
   void  *(*startOfAlienData)(sqInt);
   usqInt (*sizeOfAlienData)(sqInt);
+  sqInt  (*signalNoResume)(sqInt);
 #endif
 } VirtualMachine;
 

@@ -1539,6 +1539,9 @@ int ioProcessEvents(void)
 
   if(fRunService && !fWindows95) return 1;
 
+#if NewspeakVM
+	return ioDrainEventQueue();
+#else
   /* WinCE doesn't retrieve WM_PAINTs from the queue with PeekMessage,
      so we won't get anything painted unless we use GetMessage() if there
      is a dirty rect. */
@@ -1566,7 +1569,72 @@ int ioProcessEvents(void)
   }
   lastMessage = NULL;
   return 1;
+#endif
 }
+
+#if NewspeakVM
+sqInt
+ioDrainEventQueue(void)
+{ static MSG msg;
+  POINT mousePt;
+
+  /*
+   * Callback support; ensure ioProcessEvents is non-reentrant to prevent
+   * callbacks being delivered during other earlier callbacks.
+   */
+
+  if(fRunService && !fWindows95) return 1;
+
+  /* WinCE doesn't retrieve WM_PAINTs from the queue with PeekMessage,
+     so we won't get anything painted unless we use GetMessage() if there
+     is a dirty rect. */
+  lastMessage = &msg;
+  while(PeekMessage(&msg,NULL,0,0,PM_NOREMOVE))
+    {
+      GetMessage(&msg,NULL,0,0);
+#ifndef NO_PLUGIN_SUPPORT
+      if(msg.hwnd == NULL) {
+	pluginHandleEvent(&msg);
+      } else
+#endif
+	if(msg.hwnd != stWindow) {
+	  /* Messages not sent to Squeak window */
+	  if(msg.hwnd != consoleWindow && GetParent(msg.hwnd) == stWindow) {
+	    /* This message has been sent to a plugin window */
+	    /* Selectively pass up certain events to the parent's level */
+	    switch (msg.message) {
+	      case WM_LBUTTONDOWN:
+	      case WM_LBUTTONUP:
+	      case WM_MBUTTONDOWN:
+	      case WM_MBUTTONUP:
+	      case WM_RBUTTONDOWN:
+	      case WM_RBUTTONUP:
+	      case WM_MOUSEMOVE:
+		mousePt.x = LOWORD(msg.lParam);
+		mousePt.y = HIWORD(msg.lParam);
+		MapWindowPoints(msg.hwnd, stWindow, &mousePt, 1);
+		PostMessage(stWindow, msg.message, msg.wParam, MAKELONG(mousePt.x,mousePt.y));
+	    }
+	  }
+	}
+      TranslateMessage(&msg);
+      DispatchMessage(&msg);
+    }
+
+#ifndef NO_DIRECTINPUT
+  /* any buffered mouse input which hasn't been processed is obsolete */
+  DumpBufferedMouseTrail();
+#endif
+
+  /* If we're running in a browser check if the browser's still there */
+  if(fBrowserMode && browserWindow) {
+    if(!IsWindow(browserWindow)) ioExit();
+  }
+  lastMessage = NULL;
+  return 1;
+}
+#endif /* NewspeakVM */
+
 
 /* returns the size of the Squeak window */
 int ioScreenSize(void)
@@ -3106,12 +3174,14 @@ int printUsage(int level)
                    TEXT("\n\t-headless \t\t(force Squeak to run headless)")
                    TEXT("\n\t-log: LogFile \t\t(use LogFile for VM messages)")
                    TEXT("\n\t-memory: megaByte \t(set memory to megaByte MB)")
+#if STACKVM || NewspeakVM
+                   TEXT("\n\t-breaksel: string \t(set breakSelector to sel for debug)")
+#endif /* STACKVM || NewspeakVM */
 #if STACKVM
+                   TEXT("\n\t-leakcheck: n \t(leak check on GC (1=full,2=incr,3=both))")
                    TEXT("\n\t-eden: bytes \t(set eden memory size to bytes)")
                    TEXT("\n\t-stackpages: n \t(use n stack pages)")
-                   TEXT("\n\t-leakcheck: n \t(leak check on GC (1=full,2=incr,3=both))")
                    TEXT("\n\t-noheartbeat \t(no heartbeat for debug)")
-                   TEXT("\n\t-breaksel: string \t(set breakSelector to sel for debug)")
 #endif /* STACKVM */
 #if COGVM
                    TEXT("\n\t-codesize: bytes \t(set machine-code memory size to bytes)")
