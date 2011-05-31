@@ -219,7 +219,7 @@ Mpeg3Plugin >> primitiveMPEG3EndOfVideo: fileHandle stream: aNumber [
 	| file result |
 
 	"int mpeg3_end_of_video(mpeg3_t *file, int stream)"
-	<var: #file type: 'mpeg3_t * '>
+	<var: #file type: 'mpeg3_t *'>
 	self primitive: 'primitiveMPEG3EndOfVideo'
 		parameters: #(Oop SmallInteger).
 
@@ -318,7 +318,7 @@ Mpeg3Plugin >> primitiveMPEG3GetTime: fileHandle [
 	| file result |
 
 	"double mpeg3_get_time(mpeg3_t *file)"
-	<var: #result type: 'double '>
+	<var: # result type: 'double '>
 	<var: #file type: 'mpeg3_t * '>
 	self primitive: 'primitiveMPEG3GetTime'
 		parameters: #(Oop).
@@ -476,9 +476,6 @@ Mpeg3Plugin >> primitiveMPEG3ReadAudio: fileHandle shortArray: anArray channel: 
 { #category : #primitives }
 Mpeg3Plugin >> primitiveMPEG3ReadFrame: fileHandle buffer: aBuffer bufferOffset: aBufferOffset x: xNumber y: yNumber w: width h: height ow: outWidth oh: outHeight colorModel: model stream: aNumber bytesPerRow: aByteNumber [ 
 	| file result outputRowsPtr bufferBaseAddr |
-	<var: #file declareC: 'mpeg3_t * file'>
-	<var: #bufferBaseAddr declareC: 'unsigned char *bufferBaseAddr'>
-	<var: #outputRowsPtr declareC: 'unsigned char  ** outputRowsPtr'>
 
 	"int mpeg3_read_frame(mpeg3_t *file, 
 		unsigned char **output_rows, 
@@ -493,6 +490,9 @@ Mpeg3Plugin >> primitiveMPEG3ReadFrame: fileHandle buffer: aBuffer bufferOffset:
 
 	self primitive: 'primitiveMPEG3ReadFrameBufferOffset'
 		parameters: #(Oop WordArray  SmallInteger SmallInteger  SmallInteger  SmallInteger  SmallInteger  SmallInteger  SmallInteger  SmallInteger  SmallInteger SmallInteger).
+	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #bufferBaseAddr declareC: 'unsigned char *bufferBaseAddr'.
+	self var: #outputRowsPtr declareC: 'unsigned char  ** outputRowsPtr'.
 
 	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^0].
@@ -514,9 +514,6 @@ Mpeg3Plugin >> primitiveMPEG3ReadFrame: fileHandle buffer: aBuffer bufferOffset:
 { #category : #primitives }
 Mpeg3Plugin >> primitiveMPEG3ReadFrame: fileHandle buffer: aBuffer x: xNumber y: yNumber w: width h: height ow: outWidth oh: outHeight colorModel: model stream: aNumber bytesPerRow: aByteNumber [ 
 	| file result outputRowsPtr bufferBaseAddr |
-	<var: #file type: 'mpeg3_t * '>
-	<var: #bufferBaseAddr type: 'unsigned char *'>
-	<var: #outputRowsPtr type: 'unsigned char  ** '>
 
 	"int mpeg3_read_frame(mpeg3_t *file, 
 		unsigned char **output_rows, 
@@ -531,6 +528,9 @@ Mpeg3Plugin >> primitiveMPEG3ReadFrame: fileHandle buffer: aBuffer x: xNumber y:
 
 	self primitive: 'primitiveMPEG3ReadFrame'
 		parameters: #(Oop WordArray  SmallInteger  SmallInteger  SmallInteger  SmallInteger  SmallInteger  SmallInteger  SmallInteger  SmallInteger SmallInteger).
+	self var: #file type: 'mpeg3_t * '.
+	self var: #bufferBaseAddr type: 'unsigned char *'.
+	self var: #outputRowsPtr type: 'unsigned char  ** '.
 
 	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^0].
@@ -664,7 +664,7 @@ Mpeg3Plugin >> primitiveMPEG3TellPercentage: fileHandle [
 	| file result |
 
 	"double mpeg3_tell_percentage(mpeg3_t *file)"
-	<var: #result type: 'double '>
+	<var: # result type: 'double '>
 	<var: #file type: 'mpeg3_t * '>
 	self primitive: 'primitiveMPEG3TellPercentage'
 		parameters: #(Oop).

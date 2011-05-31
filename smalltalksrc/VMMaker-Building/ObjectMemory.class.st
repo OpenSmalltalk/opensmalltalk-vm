@@ -95,6 +95,7 @@ Class {
 	],
 	#classVars : [
 		'AllButHashBits',
+		'AllButImmutabilityBit',
 		'AllButMarkBit',
 		'AllButMarkBitAndTypeMask',
 		'AllButRootBit',
@@ -117,6 +118,7 @@ Class {
 		'WordMask'
 	],
 	#pools : [
+		'VMBasicConstants',
 		'VMObjectIndices',
 		'VMSqueakV3BytecodeConstants',
 		'VMSqueakV3ObjectRepresentationConstants'
@@ -153,7 +155,9 @@ ObjectMemory class >> declareCAsOop: arrayOfVariableNames in: aCCodeGenerator [
 
 { #category : #translation }
 ObjectMemory class >> declareCVarsIn: aCCodeGenerator [
-	aCCodeGenerator removeConstant: #VMBIGENDIAN.  "Leave this to the various sqConfig.h files to define."
+	#(	COGVM COGMTVM STACKVM "Leave these to the various interp.h's to define"
+		VMBIGENDIAN ) "Leave this to the various sqConfig.h files to define."
+		do: [:const| aCCodeGenerator removeConstant: const].  
 	aCCodeGenerator
 		var: #memory
 		declareC: 'static usqInt memory'.
@@ -301,6 +305,9 @@ BytesPerWord = 8 ifTrue:
 	AllButRootBit := WordMask - RootBit.
 
 	AllButMarkBitAndTypeMask := AllButTypeMask - MarkBit.
+
+	ImmutabilityBit := 1 bitShift: BytesPerWord*8 - 3.  "Next-to-Next-To-Top bit"
+	AllButImmutabilityBit := WordMask - ImmutabilityBit
 ]
 
 { #category : #initialization }
@@ -492,7 +499,7 @@ Here are the states an object may be in, followed by what to do next in brackets
 { #category : #finalization }
 ObjectMemory >> aFinalizationComment [
 	"This finalization scheme assumes to have weak classes in which the fields are not traced during the mark phase of a GC. This means, if an object is referenced only by any instances of weak classes it can be collected. In turn, we need to find out if an object referenced by a weak class is actually being collected because we have to invalidate the weak object pointer and to signal that the object has gone.
-	How do we know that an object referenced by a weak class is being collected? Well,  this is based on two observations. First, objects will not change their relative locations in memory, meaning that if object A is created BEFORE object B it will always have a physical memory address which is LESS than B. Secondly, GC always works from a given starting address (youngStart during incremental GC; startOfMemory during fullGC) up to end of memory. If we can somehow garantuee that the weak reference is created after the object it points to we can easily implement the following simple scheme:
+	How do we know that an object referenced by a weak class is being collected? Well,  this is based on two observations. First, objects will not change their relative locations in memory, meaning that if object A is created BEFORE object B it will always have a physical memory address which is LESS than B. Secondly, GC always works from a given starting address (youngStart during incremental GC; startOfMemory during fullGC) up to end of memory. If we can somehow guarantee that the weak reference is created after the object it points to we can easily implement the following simple scheme:
 	1) Mark phase
 		Do not trace the fields of any instances of weak classes.
 	2) Sweep phase:
@@ -501,7 +508,7 @@ ObjectMemory >> aFinalizationComment [
 			If the object is marked as free than we know that this weak reference's object is gone.
 			Signal that it is gone.
 
-	There is, however, one small problem with this approach. We cannot always garantuee that WeakReferences point backwards such as in the following piece of code:
+	There is, however, one small problem with this approach. We cannot always guarantee that WeakReferences point backwards such as in the following piece of code:
 		| o1 o2 w1 w2 |
 		o1 := Object new.
 		w1 := WeakReference on: o1.
@@ -517,7 +524,7 @@ The become: operation makes w1 point to o2 and because o2 has been created AFTER
 			* backwards: check if the object header is marked free
 			* forwards: check if the object has been marked in markPhase.
 
-	Note that a number of finalizations will only be executed during a fullGC. So, if you must garantuee that some object has been finalized you definitely need to do a fullGC.
+	Note that a number of finalizations will only be executed during a fullGC. So, if you must guarantee that some object has been finalized you definitely need to do a fullGC.
 
 ar 3/20/98 17:20"
 
@@ -545,6 +552,35 @@ ObjectMemory >> addGCRoot: varLoc [
 	extraRootCount >= ExtraRootSize ifTrue:[^false]. "out of space"
 	extraRoots at: (extraRootCount := extraRootCount+1) put: varLoc.
 	^true
+]
+
+{ #category : #'debug support' }
+ObjectMemory >> addressCouldBeObj: address [
+	<api>
+	"Answer if address appears to be that of an object, which implies it is
+	 safe to fetch the class and size. For code disassembly and assertions."
+	^(address bitAnd: 3) = 0
+	  and: [address asUnsignedInteger >= self startOfMemory
+	  and: [address asUnsignedInteger < freeBlock
+	  and: [(self headerType: address) ~= HeaderTypeGC]]]
+]
+
+{ #category : #'debug support' }
+ObjectMemory >> addressCouldBeObjWhileForwarding: address [
+	"Answer if address appears to be that of an object, which implies it is
+	 safe to fetch the class and size. For code disassembly and assertions."
+	^(address bitAnd: 3) = 0
+	  and: [address asUnsignedInteger >= self startOfMemory
+	  and: [address asUnsignedInteger < freeBlock]]
+]
+
+{ #category : #'debug support' }
+ObjectMemory >> addressCouldBeOop: address [
+	<api>
+	"Answer if address appears to be that of either a SmallInteger or an object.
+	 For code disassembly and assertions."
+	^(self isIntegerObject: address)
+	   or: [self addressCouldBeObj: address]
 ]
 
 { #category : #initialization }
@@ -700,6 +736,12 @@ ObjectMemory >> allocateChunk: byteSize [
 ObjectMemory >> baseHeader: oop [
 
 	^ self longAt: oop
+]
+
+{ #category : #'header access' }
+ObjectMemory >> baseHeader: oop put: aWord [
+
+	^ self longAt: oop put: aWord
 ]
 
 { #category : #'garbage collection' }
@@ -1292,7 +1334,7 @@ ObjectMemory >> clearLeakMapAndMapAccessibleObjects [
 	| oop |
 	<inline: false>
 	self clearHeapMap.
-	oop := self firstAccessibleObject.
+	oop := self firstObject.
 	[oop = nil] whileFalse:
 		[self heapMapAtWord: (self pointerForOop: oop) Put: 1.
 		 oop := self accessibleObjectAfter: oop]
@@ -1388,6 +1430,20 @@ ObjectMemory >> compactIndexOfClass: aClassOop [
 ]
 
 { #category : #become }
+ObjectMemory >> containOnlyMutableOops: array1 and: array2 [ 
+	"Return true if neither array contains an immutable.
+	 You may not be allowed to become: immutables."
+	| fieldOffset |
+	fieldOffset := self lastPointerOf: array1.
+	"same size as array2"
+	[fieldOffset >= BaseHeaderSize] whileTrue:
+		[(self internalIsImmutable: (self longAt: array1 + fieldOffset)) ifTrue: [^ false].
+		 (self internalIsImmutable: (self longAt: array2 + fieldOffset)) ifTrue: [^ false].
+		 fieldOffset := fieldOffset - BytesPerWord].
+	^ true
+]
+
+{ #category : #become }
 ObjectMemory >> containOnlyOops: array [
 	"Return true if the array contains a small integer. You 
 	  can't become: SmallIntegers!"
@@ -1471,6 +1527,30 @@ ObjectMemory >> enterIntoClassTable: aBehavior [
 	 Alas 0 is a valid identityhash in the Squeak V3 objrep so primitiveBehaviorHash may
 	 ask to enter into the table a class with a 0 id hash.  SImply ignore the request."
 	^0
+]
+
+{ #category : #'gc -- compaction' }
+ObjectMemory >> existImmutableReferencesToForwardedInRangeFrom: memStart to: memEnd [
+	"Answer if any immutable objects refer to any forwarded objects so that the become: primitives can fail if a become would update a reference from an immutable object."
+
+	| oop |
+	1 to: rootTableCount do:
+		[:i | 
+		oop := rootTable at: i.
+		(oop < memStart or: [oop >= memEnd]) ifTrue:
+			["Note: must not remap the fields of any object twice!"
+			"remap this oop only if not in the memory range 
+			covered below"
+			(self objectIsImmutableAndReferencesForwarded: oop) ifTrue:
+				[^true]]].
+
+	oop := self oopFromChunk: memStart.
+	[oop < memEnd] whileTrue:
+		[(self isFreeObject: oop) ifFalse:
+			[(self objectIsImmutableAndReferencesForwarded: oop) ifTrue:
+				[^true]].
+		oop := self objectAfterWhileForwarding: oop].
+	^false
 ]
 
 { #category : #'oop/chunk conversion' }
@@ -1560,12 +1640,11 @@ ObjectMemory >> finalizeReference: oop [
 	semaphore. "
 	"Do *not* inline this in sweepPhase - it is quite an unlikely 
 	case to run into a weak reference"
-	| weakOop oopGone chunk firstField lastField nonWeakCnt |
+	| weakOop oopGone chunk firstField lastField |
 	<inline: false>
 	<var: #oop type: 'usqInt'>
 	<var: #weakOop type: 'usqInt'>
-	nonWeakCnt := self nonWeakFieldsOf: oop.
-	firstField := BaseHeaderSize + (nonWeakCnt << ShiftForWord).
+	firstField := BaseHeaderSize + ((self nonWeakFieldsOf: oop) << ShiftForWord).
 	lastField := self lastPointerOf: oop.
 	firstField to: lastField by: BytesPerWord do: [:i | 
 			weakOop := self longAt: oop + i.
@@ -1584,9 +1663,7 @@ ObjectMemory >> finalizeReference: oop [
 						ifFalse: [oopGone := (self isMarked: weakOop) not].
 					oopGone ifTrue: ["Store nil in the pointer and signal the  interpreter"
 							self longAt: oop + i put: nilObj.
-							nonWeakCnt >= 2 ifTrue: [ self weakFinalizerCheck: oop ].
 							self signalFinalization: oop]]]
-
 ]
 
 { #category : #'object enumeration' }
@@ -1594,10 +1671,11 @@ ObjectMemory >> firstAccessibleObject [
 	"Return the first accessible object in the heap."
 	| obj |
 	obj := self firstObject.
-	[self oop: obj isLessThan: endOfMemory]
-		whileTrue: [(self isFreeObject: obj) ifFalse: [^ obj].
-			obj := self objectAfter: obj].
-	self error: 'heap is empty'
+	[self oop: obj isLessThan: endOfMemory] whileTrue:
+		[(self isFreeObject: obj) ifFalse: [^obj].
+		 obj := self objectAfter: obj].
+	self error: 'heap is empty'.
+	^nil
 ]
 
 { #category : #'object format' }
@@ -2150,10 +2228,9 @@ ObjectMemory >> initForwardBlock: fwdBlock mapping: oop to: newOop withBackPtr: 
 	| originalHeader originalHeaderType |
 	<inline: true>
 	<asmLabel: false>
-	self assert: fwdBlock ~= nil.
-	self assert: (self addressCouldBeObj: newOop).
 	originalHeader := self longAt: oop.
-	self assert: (originalHeader bitAnd: MarkBit) = 0.
+	self assert: fwdBlock ~= nil. "ran out of forwarding blocks in become"
+	self assert: (originalHeader bitAnd: MarkBit) = 0. "'object already has a forwarding table entry"
 	originalHeaderType := originalHeader bitAnd: TypeMask.
 	self longAt: fwdBlock put: newOop.
 	self longAt: fwdBlock + BytesPerWord put: originalHeader.
@@ -2527,16 +2604,31 @@ ObjectMemory >> isCompiledMethod: oop [
 { #category : #contexts }
 ObjectMemory >> isContextHeader: aHeader [
 	<inline: true>
-	"c.f. {BlockContext. MethodContext. PseudoContext} collect: [:class| class -> (Smalltalk compactClassesArray indexOf: class)]"
+	"c.f. {BlockContext. MethodContext. PseudoContext} collect: [:class| class -> class indexIfCompact]"
 	^ ((aHeader >> 12) bitAnd: 16r1F) = 13			"BlockContext"
-		or: [((aHeader >> 12) bitAnd: 16r1F) = 14	"MethodContext"
-		or: [((aHeader >> 12) bitAnd: 16r1F) = 4]]	"PseudoContext"
+		or: [((aHeader >> 12) bitAnd: 16r1F) = 14]	"MethodContext"
 ]
 
 { #category : #'header access' }
 ObjectMemory >> isFreeObject: oop [
 
 	^ (self headerType: oop) = HeaderTypeFree
+]
+
+{ #category : #'gc -- compaction' }
+ObjectMemory >> isImmutableWhileForwarding: oop [ 
+	"The given object may have its header word in a forwarding block. Find  
+	the value of the isImmutable flag in the object in spite of this obstacle. "
+	| header fwdBlock |
+	<inline: true>
+	header := self longAt: oop.
+	(header bitAnd: MarkBit) ~= 0 ifTrue:
+		["oop is forwarded; get its real header from its forwarding table entry"
+		fwdBlock := (header bitAnd: AllButMarkBitAndTypeMask) << 1.
+		DoAssertionChecks ifTrue:
+			[self fwdBlockValidate: fwdBlock].
+		header := self longAt: fwdBlock + BytesPerWord].
+	^(header bitAnd: ImmutabilityBit) ~= 0
 ]
 
 { #category : #'plugin support' }
@@ -2565,6 +2657,13 @@ ObjectMemory >> isMarked: oop [
 	<api>
 	"Answer if oop's mark bit is set"
 	^((self longAt: oop) bitAnd: MarkBit) ~= 0
+]
+
+{ #category : #contexts }
+ObjectMemory >> isMethodContextHeader: aHeader [
+	<inline: true>
+	"c.f. {BlockContext. MethodContext. PseudoContext} collect: [:class| class -> class indexIfCompact]"
+	^(self compactClassIndexOfHeader: aHeader) == ClassMethodContextCompactIndex
 ]
 
 { #category : #'interpreter access' }
@@ -2927,7 +3026,6 @@ ObjectMemory >> mapPointersInObjectsFrom: memStart to: memEnd [
 	"Use the forwarding table to update the pointers of all non-free objects in the given range of memory. Also remap pointers in root objects which may contains pointers into the given memory range, and don't forget to flush the method cache based on the range"
 	| oop |
 	<inline: false>
-	self compilerMapHookFrom: memStart to: memEnd.
 	"update interpreter variables"
 	self mapInterpreterOops.
 	1 to: extraRootCount do:[:i |
@@ -3106,6 +3204,7 @@ ObjectMemory >> objectAfter: oop [
 	given object or free chunk in memory. Return endOfMemory 
 	when enumeration is complete."
 	| sz |
+	<api>
 	<inline: true>
 	<asmLabel: false>
 	DoAssertionChecks
@@ -3139,6 +3238,61 @@ ObjectMemory >> objectAfterWhileForwarding: oop [
 		ifFalse: [ sz := realHeader bitAnd: SizeMask ].
 
 	^ self oopFromChunk: (oop + sz)
+]
+
+{ #category : #'object enumeration' }
+ObjectMemory >> objectBefore: address [ 
+	"Return the object or start of free space immediately preceeding the given
+	 address, object or free chunk in memory. If none, return 0.  This is for debugging only."
+	| obj nextObj sz |
+	<api>
+	obj := self oopFromChunk: ((self oop: address isGreaterThan: youngStart)
+								ifTrue: [youngStart]
+								ifFalse: [self startOfMemory]).
+	[self oop: obj isLessThan: address] whileTrue:
+		[(self isFreeObject: obj)
+			ifTrue: [sz := self sizeOfFree: obj]
+			ifFalse: [sz := self sizeBitsOf: obj].
+		 nextObj := self oopFromChunk: obj + sz.
+		 (self oop: nextObj isGreaterThanOrEqualTo: address) ifTrue:
+			[^obj].
+		 obj := nextObj].
+	^0
+]
+
+{ #category : #'object enumeration' }
+ObjectMemory >> objectExactlyBefore: oop [ 
+	"Return the object or start of free space immediately preceeding the given
+	 object or free chunk in memory. If none, return 0.  This is for debugging only."
+	| obj nextObj sz |
+	<api>
+	obj := self oopFromChunk: ((self oop: oop isGreaterThan: youngStart)
+								ifTrue: [youngStart]
+								ifFalse: [self startOfMemory]).
+	[self oop: obj isLessThan: obj] whileTrue:
+		[(self isFreeObject: obj)
+			ifTrue: [sz := self sizeOfFree: obj]
+			ifFalse: [sz := self sizeBitsOf: obj].
+		 nextObj := self oopFromChunk: obj + sz.
+		 nextObj = oop ifTrue:
+			[^obj].
+		 obj := nextObj].
+	^0
+]
+
+{ #category : #'gc -- compaction' }
+ObjectMemory >> objectIsImmutableAndReferencesForwarded: oop [ 
+	"Answer if an object is immutable and references a forwarded object.  Used to fail become for immutable referents of becomees."
+	"Note: The given oop may be forwarded itself, which means that its real header is in its forwarding table entry."
+	| fieldOffset fieldOop |
+	<inline: true>
+	(self isImmutableWhileForwarding: oop) ifTrue:
+		[fieldOffset := self lastPointerWhileForwarding: oop.
+		[fieldOffset >= BaseHeaderSize] whileTrue:
+			[fieldOop := self longAt: oop + fieldOffset.
+			(self isObjectForwarded: fieldOop) ifTrue: [^true].
+			 fieldOffset := fieldOffset - BytesPerWord]].
+	^false
 ]
 
 { #category : #simulation }
@@ -3824,6 +3978,16 @@ ObjectMemory >> slotSizeOf: oop [
 	^self lengthOf: oop
 ]
 
+{ #category : #'cog jit support' }
+ObjectMemory >> specialObjectsOop [
+	^specialObjectsOop
+]
+
+{ #category : #'cog jit support' }
+ObjectMemory >> specialObjectsOop: anObject [
+	specialObjectsOop := anObject
+]
+
 { #category : #'interpreter access' }
 ObjectMemory >> splObj: index [
 	<api>
@@ -4061,7 +4225,7 @@ In case of either success or failure, the headers must be restored.  In the even
 	thus leaving our segment unmarked in their shadow."
 	savedYoungStart := youngStart.
 	youngStart := self startOfMemory.  "process all of memory"
-	self markAndTraceInterpreterOops: false.	"and special objects array"
+	self markAndTraceInterpreterOops.	"and special objects array"
 	youngStart := savedYoungStart.
 	
 	"Finally unmark the rootArray and all root objects."

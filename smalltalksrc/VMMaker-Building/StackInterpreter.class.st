@@ -111,7 +111,6 @@ Class {
 		'DirBadPath',
 		'DirEntryFound',
 		'DirNoMoreEntries',
-		'DoBalanceChecks',
 		'DumpStackOnLowSpace',
 		'FailImbalancedPrimitives',
 		'HeaderFlagBitPosition',
@@ -539,7 +538,9 @@ StackInterpreter class >> initializeMethodIndices [
 { #category : #initialization }
 StackInterpreter class >> initializeMiscConstants [
 
-	DoBalanceChecks := false. "generate stack balance checks"
+	super initializeMiscConstants.
+	STACKVM := true.
+
 	DumpStackOnLowSpace := 0.
 	PrimitiveExternalCallIndex := 117. "Primitive index for #primitiveExternalCall"
 	MillisecondClockMask := 16r1FFFFFFF.
@@ -943,7 +944,8 @@ StackInterpreter class >> mustBeGlobal: var [
 	   or: [#('interpreterProxy' 'interpreterVersion' 'inIOProcessEvents'
 			'deferDisplayUpdates' 'extraVMMemory' 'showSurfaceFn'
 			'desiredNumStackPages' 'desiredEdenBytes'
-			'breakSelector' 'breakSelectorLength' 'suppressHeartbeatFlag') includes: var]
+			'breakSelector' 'breakSelectorLength' 'sendTrace'
+			'suppressHeartbeatFlag') includes: var]
 ]
 
 { #category : #translation }
@@ -1054,19 +1056,17 @@ invalidCompactClassError(char *s) { /* Print a compact class index error message
 	printf("\nClass %s does not have the required compact class index\n", s);
 	exit(-1);
 }
-
-
-/*
- * Define sigsetjmp and siglongjmp to be the most minimal setjmp/longjmp available on the platform.
- */
-#if WIN32
-# define sigsetjmp(jb,ssmf) setjmp(jb)
-# define siglongjmp(jb,v) longjmp(jb,v)
-#else
-# define sigsetjmp(jb,ssmf) _setjmp(jb)
-# define siglongjmp(jb,v) _longjmp(jb,v)
-#endif
 '
+]
+
+{ #category : #translation }
+StackInterpreter class >> prepareToBeAddedToCodeGenerator: aCodeGen [
+	"Override to delete InterpreterPrimitives methods we override."
+	aCodeGen removeVariable: 'cogit'.
+	self selectors do:
+		[:sel|
+		 (superclass whichClassIncludesSelector: sel) ifNotNil:
+			[aCodeGen removeMethodForSelector: sel]]
 ]
 
 { #category : #constants }
@@ -1115,7 +1115,7 @@ StackInterpreter class >> requiredMethodNames [
 		highBit:
 		interpret
 		loadInitialContext
-		objectBefore: objectExactlyBefore: oopFromChunk:
+		oopFromChunk:
 		primitiveFail primitiveFailFor: primitiveFlushExternalPrimitives printAllStacks printCallStack printContext:
 			printExternalHeadFrame printFramesInPage: printFrame: printHeadFrame printMemory printOop:
 				printStackPages printStackPageList printStackPagesInUse printStackPageListInUse
@@ -1588,30 +1588,31 @@ StackInterpreter >> booleanCheatFalse [
 		[offset := self fetchByte.
 		^self jump: offset].
 
-	"not followed by a jumpIfFalse; undo instruction fetch and push boolean result"
-	localIP := localIP - 1.
-	self fetchNextBytecode.
+	"not followed by a jumpIfFalse; (un)do instruction fetch and push boolean result"
+	currentBytecode := bytecode.
 	self internalPush: objectMemory falseObject
 ]
 
 { #category : #utilities }
 StackInterpreter >> booleanCheatTrue [
 	"cheat the interpreter out of the pleasure of handling the next bytecode IFF it is a jump-on-boolean. Which it is, often enough when the current bytecode is something like bytecodePrimEqual"
-	| bytecode |
+	| bytecode offset |
 	<sharedCodeNamed: 'booleanCheatTrue' inCase: 178>
 
 	bytecode := self fetchByte.  "assume next bytecode is jumpIfFalse (99%)"
 	self internalPop: 2.
-	(bytecode < 160 and: [bytecode > 151]) ifTrue:  "short jumpIfFalse"
-		[^self fetchNextBytecode].
+	(bytecode < 173 and: [bytecode > 151]) ifTrue:
+		[bytecode < 160 ifTrue: "short jumpIfFalse 152 - 159"
+			[^self fetchNextBytecode].
+		bytecode = 172 ifTrue: "long jumpIfFalse"
+			[self fetchByte.
+			^self fetchNextBytecode].
+		bytecode > 167 ifTrue: "long jumpIfTrue 168 - 171"
+			[offset := bytecode - 168 << 8 + self fetchByte.
+			^self jump: offset]].
 
-	bytecode = 172 ifTrue: "long jumpIfFalse"
-		[self fetchByte.
-		^self fetchNextBytecode].
-
-	"not followed by a jumpIfFalse; undo instruction fetch and push boolean result"
-	localIP := localIP - 1.
-	self fetchNextBytecode.
+	"not followed by a jumpIfFalse; (un)do instruction fetch and push boolean result"
+	currentBytecode := bytecode.
 	self internalPush: objectMemory trueObject
 ]
 
@@ -4526,6 +4527,13 @@ StackInterpreter >> getShortFromFile: aFile swap: swapFlag [
 		ifFalse: [w]
 ]
 
+{ #category : #'primitive support' }
+StackInterpreter >> getStackPointer [
+	"For Alien FFI"
+	<api>
+	^stackPointer
+]
+
 { #category : #'plugin support' }
 StackInterpreter >> getThisSessionID [
 	"return the global session ID value"
@@ -5254,7 +5262,7 @@ StackInterpreter >> is: oop KindOfClass: aClass [
 	| oopClass |
 	oopClass := objectMemory fetchClassOf: oop.
 	[oopClass = objectMemory nilObject] whileFalse:
-		[oopClass == aClass ifTrue: [^true].
+		[oopClass = aClass ifTrue: [^true].
 		 oopClass := self superclassOf: oopClass].
 	^false
 ]
@@ -6803,7 +6811,7 @@ StackInterpreter >> primitiveFloatDivide: rcvrOop byArg: argOop [
 		[self pop: 2 thenPushFloat: rcvr / arg]
 ]
 
-{ #category : #'arithmetic float primitives' }
+{ #category : #'comparison float primitives' }
 StackInterpreter >> primitiveFloatEqual: rcvrOop toArg: argOop [
 	| rcvr arg |
 	<var: #rcvr type: #double>
@@ -6814,7 +6822,7 @@ StackInterpreter >> primitiveFloatEqual: rcvrOop toArg: argOop [
 	^rcvr = arg
 ]
 
-{ #category : #'arithmetic float primitives' }
+{ #category : #'comparison float primitives' }
 StackInterpreter >> primitiveFloatGreater: rcvrOop thanArg: argOop [
 	| rcvr arg |
 	<var: #rcvr type: #double>
@@ -6836,7 +6844,7 @@ StackInterpreter >> primitiveFloatGreaterOrEqual: rcvrOop toArg: argOop [
 	^rcvr >= arg
 ]
 
-{ #category : #'arithmetic float primitives' }
+{ #category : #'comparison float primitives' }
 StackInterpreter >> primitiveFloatLess: rcvrOop thanArg: argOop [
 	| rcvr arg |
 	<var: #rcvr type: #double>
@@ -7066,6 +7074,32 @@ StackInterpreter >> printCallStackFP: theFP [
 ]
 
 { #category : #'debug printing' }
+StackInterpreter >> printCallStackOf: aContextOrProcess [
+	<api>
+	| context |
+	<inline: false>
+	<var: #theFP type: #'char *'>
+	((self isContext: aContextOrProcess) not
+	and: [(objectMemory lengthOf: aContextOrProcess) > MyListIndex
+	and: [self isContext: (objectMemory
+									fetchPointer: SuspendedContextIndex
+									ofObject: aContextOrProcess)]]) ifTrue:
+		[^self printCallStackOf: (objectMemory
+									fetchPointer: SuspendedContextIndex
+									ofObject: aContextOrProcess)].
+	context := aContextOrProcess.
+	[context = objectMemory nilObject] whileFalse:
+		[(self isMarriedOrWidowedContext: context)
+			ifTrue:
+				[(self checkIsStillMarriedContext: context currentFP: framePointer) ifFalse:
+					[self shortPrintContext: context.
+					 ^nil].
+				 context := self shortReversePrintFrameAndCallers: (self frameOfMarriedContext: context)]
+			ifFalse:
+				[context := self printContextCallStackOf: context]]
+]
+
+{ #category : #'debug printing' }
 StackInterpreter >> printCallStackOf: aContext currentFP: currFP [
 	| ctxt theFP thePage |
 	<inline: false>
@@ -7091,24 +7125,6 @@ StackInterpreter >> printCallStackOf: aContext currentFP: currFP [
 						 ctxt := self frameCallerContext: theFP]
 					ifFalse: [self print: 'widowed caller frame '; print: theFP; cr.
 							^nil]]]
-]
-
-{ #category : #'debug printing' }
-StackInterpreter >> printCallStackOfContext: aContext [
-	<api>
-	| context |
-	<inline: false>
-	<var: #theFP type: #'char *'>
-	context := aContext.
-	[context = objectMemory nilObject] whileFalse:
-		[(self isMarriedOrWidowedContext: context)
-			ifTrue:
-				[(self checkIsStillMarriedContext: context currentFP: framePointer) ifFalse:
-					[self shortPrintContext: context.
-					 ^nil].
-				 context := self shortReversePrintFrameAndCallers: (self frameOfMarriedContext: context)]
-			ifFalse:
-				[context := self printContextCallStackOf: context]]
 ]
 
 { #category : #'debug printing' }
@@ -8033,12 +8049,7 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 		[self insufficientMemorySpecifiedError].
 
 	"allocate a contiguous block of memory for the Squeak heap"
-	objectMemory memory: (self
-								allocateMemory: heapSize
-								minimum: minimumMemory
-								imageFile: f
-								headerSize: headerSize).
-		
+	objectMemory memory: (self cCode: 'sqAllocateMemory(minimumMemory, heapSize)').
 	objectMemory memory = nil ifTrue: [self insufficientMemoryAvailableError].
 
 	memStart := objectMemory startOfMemory.

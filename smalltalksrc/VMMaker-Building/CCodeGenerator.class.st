@@ -355,39 +355,36 @@ CCodeGenerator >> cLiteralFor: anObject name: smalltalkName [
 
 { #category : #'error notification' }
 CCodeGenerator >> checkClassForNameConflicts: aClass [
-	"Verify that the given class does not have constant, variable, or method names that conflict with those of previously added classes. Raise an error if a conflict is found, otherwise just return."
+	"Verify that the given class does not have constant, variable, or method names that conflict with
+	 those of previously added classes. Raise an error if a conflict is found, otherwise just return."
 
-	"check for constant name collisions"
-	aClass classPool associationsDo: [ :assoc |
-		(constants includesKey: assoc key asString) ifTrue: [
-			self error: 'Constant was defined in a previously added class: ', assoc key.
-		].
-	].
-	"ikp..."
-	(aClass sharedPools reject: [:pool| pools includes: pool]) do: [:pool |
-		pool bindingsDo: [ :assoc |
-			(constants includesKey: assoc key asString) ifTrue: [
-				self error: 'Constant was defined in a previously added class: ', assoc key.
-			].
-		].
-	].
+	"check for constant name collisions in class pools"
+	aClass classPool associationsDo:
+		[:assoc |
+		(constants includesKey: assoc key asString) ifTrue:
+			[self error: 'Constant ', assoc key, ' was defined in a previously added class']].
+
+	"and in shared pools"
+	(aClass sharedPools reject: [:pool| pools includes: pool]) do:
+		[:pool |
+		pool bindingsDo:
+			[:assoc |
+			(constants includesKey: assoc key asString) ifTrue:
+				[self error: 'Constant ', assoc key, ' was defined in a previously added class']]].
 
 	"check for instance variable name collisions"
-	(aClass inheritsFrom: VMStructType) ifFalse: [
-		aClass instVarNames do: [ :varName |
-			(variables includes: varName) ifTrue: [
-				self error: 'Instance variable was defined in a previously added class: ', varName.
-			]
-		].
-	].
+	(aClass inheritsFrom: VMStructType) ifFalse:
+		[aClass instVarNames do:
+			[:varName |
+			(variables includes: varName) ifTrue:
+				[self error: 'Instance variable ', varName, ' was defined in a previously added class']]].
 
 	"check for method name collisions"
-	aClass selectors do: [ :sel |
+	aClass selectors do:
+		[:sel |
 		((methods includesKey: sel)
-		and: [((aClass compiledMethodAt: sel) pragmaAt: #doNotGenerate) isNil]) ifTrue: [
-			self error: 'Method was defined in a previously added class: ', sel.
-		].
-	].
+		and: [((aClass compiledMethodAt: sel) pragmaAt: #doNotGenerate) isNil]) ifTrue:
+			[self error: 'Method ', sel, ' was defined in a previously added class.']]
 ]
 
 { #category : #utilities }
@@ -2579,7 +2576,7 @@ CCodeGenerator >> prepareMethods [
 					ensureCr;
 					nextPutAll: 'Local variable name ', var, ' in ';
 					nextPutAll: m selector;
-					nextPutAll: 'may mask method when inlining: ' , var]].
+					nextPutAll: ' may mask method when inlining: ' , var]].
 		m bindClassVariablesIn: constants.
 		m prepareMethodIn: self]
 ]
@@ -2959,7 +2956,7 @@ CCodeGenerator >> storeCodeOnFile: fileName doInlining: inlineFlag doAssertions:
 	"Store C code for this code base on the given file."
 
 	| stream |
-	stream := CrLfFileStream forceNewFileNamed: fileName.
+	stream := VMMaker forceNewFileNamed: fileName.
 	stream ifNil: [Error signal: 'Could not open C code file: ', fileName].
 	self emitCCodeOn: stream doInlining: inlineFlag doAssertions: assertionFlag.
 	stream close
@@ -2970,7 +2967,7 @@ CCodeGenerator >> storeHeaderOnFile: fileName bytesPerWord: bytesPerWord [
 	"Store C header code for this interpreter on the given file."
 
 	| aStream |
-	aStream := CrLfFileStream forceNewFileNamed: fileName.
+	aStream := VMMaker forceNewFileNamed: fileName.
 	aStream ifNil: [Error signal: 'Could not open C header file: ', fileName].
 	aStream
 		nextPutAll: '/* ';
@@ -2988,7 +2985,7 @@ CCodeGenerator >> storeHeaderOnFile: fileName contents: contents [
 	 aBlock with the stream to generate its contents."
 
 	| aStream |
-	aStream := CrLfFileStream forceNewFileNamed: fileName.
+	aStream := VMMaker forceNewFileNamed: fileName.
 	aStream ifNil: [Error signal: 'Could not open C header file: ', fileName].
 	[(contents beginsWith: '/* Automatic') ifFalse:
 		[aStream nextPutAll: (self fileHeaderVersionStampForSourceClass: nil); cr].

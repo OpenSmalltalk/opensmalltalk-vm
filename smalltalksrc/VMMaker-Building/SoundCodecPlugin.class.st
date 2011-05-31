@@ -13,7 +13,7 @@ SoundCodecPlugin class >> hasHeaderFile [
 	^true
 ]
 
-{ #category : #accessing }
+{ #category : #translation }
 SoundCodecPlugin class >> moduleName [
 
 	^ 'SoundCodecPrims' "Needs to be the name used for module specification..."

@@ -94,7 +94,7 @@ InterpreterPlugin class >> moduleExtension [
 	^ self isCPP ifTrue: ['.cpp'] ifFalse: ['.c']
 ]
 
-{ #category : #accessing }
+{ #category : #translation }
 InterpreterPlugin class >> moduleName [
 	"Answer the receiver's module name that is used for the plugin's C code."
 
@@ -169,7 +169,7 @@ InterpreterPlugin class >> storeString: s onFileNamed: fileName [
 	"Store the given string in a file of the given name."
 
 	| f |
-	f := CrLfFileStream forceNewFileNamed: fileName.
+	f := VMMaker forceNewFileNamed: fileName.
 	f nextPutAll: s.
 	f close.
 ]

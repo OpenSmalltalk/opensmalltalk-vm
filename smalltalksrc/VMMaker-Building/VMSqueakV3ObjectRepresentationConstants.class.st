@@ -24,6 +24,7 @@ Class {
 		'HashMaskUnshifted',
 		'HeaderTypeShort',
 		'HeaderTypeSizeAndClass',
+		'ImmutabilityBit',
 		'LongSizeMask',
 		'MarkBit',
 		'RootBit',

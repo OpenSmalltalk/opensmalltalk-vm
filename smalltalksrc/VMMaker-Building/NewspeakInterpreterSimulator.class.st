@@ -3,17 +3,16 @@ This class defines basic memory access and primitive simulation so that the Inte
 
 To see the thing actually run, you could (after backing up this image and changes), execute
 
-	(InterpreterSimulator new openOn: Smalltalk imageName) test
+	(NewspeakInterpreterSimulator new openOn: Smalltalk imageName) test
 
-and be patient both to wait for things to happen, and to accept various things that may go wrong depending on how large or unusual your image may be.  We usually do this with a small and simple benchmark image. You will probably have more luck using InterpreteSimulatorLSB or InterpreterSimulatorMSB as befits your machine.
+and be patient both to wait for things to happen, and to accept various things that may go wrong depending on how large or unusual your image may be.  We usually do this with a small and simple benchmark image. You will probably have more luck using InterpreteSimulatorLSB or NewspeakInterpreterSimulatorMSB as befits your machine.
 "
 Class {
-	#name : #InterpreterSimulator,
-	#superclass : #Interpreter,
+	#name : #NewspeakInterpreterSimulator,
+	#superclass : #NewspeakInterpreter,
 	#instVars : [
 		'byteCount',
 		'sendCount',
-		'breakSelector',
 		'traceOn',
 		'myBitBlt',
 		'displayForm',
@@ -24,22 +23,26 @@ Class {
 		'quitBlock',
 		'transcript',
 		'displayView',
-		'printSends'
+		'printSends',
+		'printBytecodeAtEachStep',
+		'atEachStepBlock',
+		'printContextAtEachStep',
+		'breakCount'
 	],
 	#category : #'VMMaker-InterpreterSimulation'
 }
 
 { #category : #'instance creation' }
-InterpreterSimulator class >> new [
-	^ self == InterpreterSimulator
+NewspeakInterpreterSimulator class >> new [
+	^ self == NewspeakInterpreterSimulator
 		ifTrue: [SmalltalkImage current endianness == #big
-				ifTrue: [InterpreterSimulatorMSB new]
-				ifFalse: [InterpreterSimulatorLSB new]]
+				ifTrue: [NewspeakInterpreterSimulatorMSB new]
+				ifFalse: [NewspeakInterpreterSimulatorLSB new]]
 		ifFalse: [super new]
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> allObjectsDo: objBlock [
+NewspeakInterpreterSimulator >> allObjectsDo: objBlock [
 
 	| oop |
 	oop := self firstObject.
@@ -51,7 +54,7 @@ InterpreterSimulator >> allObjectsDo: objBlock [
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> allObjectsSelect: objBlock [
+NewspeakInterpreterSimulator >> allObjectsSelect: objBlock [
 	"self allObjectsSelect: [:oop | (self baseHeader: oop) = 1234]"
 
 	| oop selected |
@@ -65,7 +68,7 @@ InterpreterSimulator >> allObjectsSelect: objBlock [
 ]
 
 { #category : #'debugging traps' }
-InterpreterSimulator >> allocate: byteSize headerSize: hdrSize h1: baseHeader h2: classOop h3: extendedSize doFill: doFill format: format [
+NewspeakInterpreterSimulator >> allocate: byteSize headerSize: hdrSize h1: baseHeader h2: classOop h3: extendedSize doFill: doFill format: format [
 
 	| newObj |
 	newObj := super allocate: byteSize headerSize: hdrSize h1: baseHeader h2: classOop h3: extendedSize doFill: doFill format: format.
@@ -74,28 +77,36 @@ InterpreterSimulator >> allocate: byteSize headerSize: hdrSize h1: baseHeader h2
 	^ newObj
 ]
 
+{ #category : #'as yet unclassified' }
+NewspeakInterpreterSimulator >> assertValidExecutionPointers [
+	| spidx |
+	self assert: (self validInstructionPointer: localIP inMethod: method).
+	spidx := self stackPointerIndexFor: localSP context: activeContext.
+	self assert: (spidx >= -1 and: [spidx < (self lengthOf: activeContext)])
+]
+
 { #category : #'interpreter shell' }
-InterpreterSimulator >> browserPluginInitialiseIfNeeded [
+NewspeakInterpreterSimulator >> browserPluginInitialiseIfNeeded [
 "do nothing - its a macro in C code to support Mac browser plugin strangeness"
 ]
 
 { #category : #'interpreter shell' }
-InterpreterSimulator >> browserPluginReturnIfNeeded [
+NewspeakInterpreterSimulator >> browserPluginReturnIfNeeded [
 "do nothing - its a macro in C code to support Mac browser plugin strangeness"
 ]
 
 { #category : #'memory access' }
-InterpreterSimulator >> byteAt: byteAddress [
+NewspeakInterpreterSimulator >> byteAt: byteAddress [
 	^self subclassResponsibility
 ]
 
 { #category : #'memory access' }
-InterpreterSimulator >> byteAt: byteAddress put: byte [
+NewspeakInterpreterSimulator >> byteAt: byteAddress put: byte [
 	^self subclassResponsibility
 ]
 
 { #category : #'memory access' }
-InterpreterSimulator >> byteAtPointer: pointer [
+NewspeakInterpreterSimulator >> byteAtPointer: pointer [
 	"This gets implemented by Macros in C, where its types will also be checked.
 	pointer is a raw address, and byte is an 8-bit quantity."
 
@@ -103,7 +114,7 @@ InterpreterSimulator >> byteAtPointer: pointer [
 ]
 
 { #category : #'memory access' }
-InterpreterSimulator >> byteAtPointer: pointer put: byteValue [
+NewspeakInterpreterSimulator >> byteAtPointer: pointer put: byteValue [
 	"This gets implemented by Macros in C, where its types will also be checked.
 	pointer is a raw address, and byteValue is an 8-bit quantity."
 
@@ -111,7 +122,7 @@ InterpreterSimulator >> byteAtPointer: pointer put: byteValue [
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> byteCount [
+NewspeakInterpreterSimulator >> byteCount [
 	"So you can call this from temp debug statements in, eg, Interpreter, such as
 	self byteCount = 12661 ifTrue: [self halt].
 	"
@@ -120,12 +131,12 @@ InterpreterSimulator >> byteCount [
 ]
 
 { #category : #UI }
-InterpreterSimulator >> byteCountText [
+NewspeakInterpreterSimulator >> byteCountText [
 	^ byteCount printString asText
 ]
 
 { #category : #'memory access' }
-InterpreterSimulator >> cCoerce: value to: cTypeString [
+NewspeakInterpreterSimulator >> cCoerce: value to: cTypeString [
 	"Type coercion for translation only; just return the value when running in Smalltalk."
 
 	^value == nil
@@ -133,20 +144,27 @@ InterpreterSimulator >> cCoerce: value to: cTypeString [
 		ifFalse: [value coerceTo: cTypeString sim: self]
 ]
 
+{ #category : #'translation support' }
+NewspeakInterpreterSimulator >> cCoerceSimple: value to: cTypeString [
+	"Type coercion for translation only; just return the value when running in Smalltalk."
+
+	^value
+]
+
 { #category : #'plugin support' }
-InterpreterSimulator >> callExternalPrimitive: mapIndex [
+NewspeakInterpreterSimulator >> callExternalPrimitive: mapIndex [
 	| entry |
 	entry := (mappedPluginEntries at: mapIndex).
 	^(entry at: 1) perform: (entry at: 2).
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> charsOfLong: long [
+NewspeakInterpreterSimulator >> charsOfLong: long [
 	^self subclassResponsibility
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> checkForInterrupts [
+NewspeakInterpreterSimulator >> checkForInterrupts [
 	"Prevent interrupts so that traces are consistent during detailed debugging"
 
 	"self halt."
@@ -157,7 +175,7 @@ InterpreterSimulator >> checkForInterrupts [
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> classAndSelectorOfMethod: meth forReceiver: rcvr [
+NewspeakInterpreterSimulator >> classAndSelectorOfMethod: meth forReceiver: rcvr [
 	| mClass dict length methodArray |
 	mClass := self fetchClassOf: rcvr.
 	[dict := self fetchPointer: MethodDictionaryIndex ofObject: mClass.
@@ -178,7 +196,7 @@ InterpreterSimulator >> classAndSelectorOfMethod: meth forReceiver: rcvr [
 ]
 
 { #category : #'plugin support' }
-InterpreterSimulator >> classNameOf: aClass Is: className [
+NewspeakInterpreterSimulator >> classNameOf: aClass Is: className [
 	"Check if aClass' name is className"
 	| name |
 	(self lengthOf: aClass) <= 6 ifTrue:[^false]. "Not a class but maybe behavior" 
@@ -189,7 +207,7 @@ InterpreterSimulator >> classNameOf: aClass Is: className [
 ]
 
 { #category : #'I/O primitives' }
-InterpreterSimulator >> clipboardRead: sz Into: actualAddress At: zeroBaseIndex [
+NewspeakInterpreterSimulator >> clipboardRead: sz Into: actualAddress At: zeroBaseIndex [
 	| str |
 	str := Clipboard clipboardText.
 	1 to: sz do:
@@ -197,62 +215,64 @@ InterpreterSimulator >> clipboardRead: sz Into: actualAddress At: zeroBaseIndex 
 ]
 
 { #category : #'I/O primitives' }
-InterpreterSimulator >> clipboardSize [
+NewspeakInterpreterSimulator >> clipboardSize [
 
 	^ Clipboard clipboardText size
 ]
 
 { #category : #'I/O primitives' }
-InterpreterSimulator >> clipboardWrite: sz From: actualDataAddress At: ignored [
+NewspeakInterpreterSimulator >> clipboardWrite: sz From: actualDataAddress At: ignored [
 
 	Clipboard clipboardText: (self stringOf: actualDataAddress - BaseHeaderSize)
 ]
 
 { #category : #initialization }
-InterpreterSimulator >> close [  "close any files that ST may have opened"
+NewspeakInterpreterSimulator >> close [  "close any files that ST may have opened"
 	filesOpen do: [:f | f close]
 ]
 
 { #category : #'debugging traps' }
-InterpreterSimulator >> commonSend [
-	| i |
+NewspeakInterpreterSimulator >> commonSend [
 	printSends ifTrue:
 		[self print: byteCount; space; printStringOf: messageSelector; cr].
-	(i := breakSelector basicSize) = (self lengthOf: messageSelector) ifTrue:
-		[[i > 0] whileTrue:
-			[(self fetchByte: i - 1 ofObject: messageSelector) = (breakSelector at: i) asInteger
-				ifTrue: [(i := i - 1) = 0 ifTrue: [self halt: 'Send of ', breakSelector]]
-				ifFalse: [i := 0]]].
 	^super commonSend
 ]
 
 { #category : #initialization }
-InterpreterSimulator >> convertToArray [
+NewspeakInterpreterSimulator >> convertToArray [
 	"I dont believe it -- this *just works*"
 	
 	memory := memory as: Array
 ]
 
 { #category : #'I/O primitives support' }
-InterpreterSimulator >> copyBits [
+NewspeakInterpreterSimulator >> copyBits [
 
 	^ myBitBlt copyBits
 ]
 
 { #category : #'debug printing' }
-InterpreterSimulator >> cr [
+NewspeakInterpreterSimulator >> cr [
 
 	traceOn ifTrue: [ transcript cr; endEntry ].
 ]
 
+{ #category : #UI }
+NewspeakInterpreterSimulator >> desiredDisplayExtent [
+	^(savedWindowSize
+		ifNil: [640@480]
+		ifNotNil: [savedWindowSize >> 16 @ (savedWindowSize bitAnd: 16rFFFF)])
+			min: Display extent * 2 // 3
+]
+
 { #category : #'interpreter shell' }
-InterpreterSimulator >> dispatchFunctionPointer: selector [
+NewspeakInterpreterSimulator >> dispatchFunctionPointer: selector [
 "handle the primitive direct dispatch macro in simulation"
 	^self perform: selector
 ]
 
 { #category : #'interpreter shell' }
-InterpreterSimulator >> dispatchOn: anInteger in: selectorArray [
+NewspeakInterpreterSimulator >> dispatchOn: anInteger in: selectorArray [
 	"Simulate a case statement via selector table lookup.
 	The given integer must be between 0 and selectorArray size-1, inclusive.
 	For speed, no range test is done, since it is done by the at: operation.
@@ -262,19 +282,19 @@ InterpreterSimulator >> dispatchOn: anInteger in: selectorArray [
 ]
 
 { #category : #'I/O primitives support' }
-InterpreterSimulator >> displayLocation [
+NewspeakInterpreterSimulator >> displayLocation [
 
 	^ Display extent - displayForm extent - (10@10)
 ]
 
 { #category : #'I/O primitives support' }
-InterpreterSimulator >> drawLoopX: xDelta Y: yDelta [
+NewspeakInterpreterSimulator >> drawLoopX: xDelta Y: yDelta [
 
 	^ myBitBlt drawLoopX: xDelta Y: yDelta
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> dumpHeader: hdr [
+NewspeakInterpreterSimulator >> dumpHeader: hdr [
 	| cc |
 	^ String streamContents: [:strm |
 		cc := (hdr bitAnd: CompactClassMask) >> 12.
@@ -289,7 +309,7 @@ InterpreterSimulator >> dumpHeader: hdr [
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> dumpMethodHeader: hdr [
+NewspeakInterpreterSimulator >> dumpMethodHeader: hdr [
 	^ String streamContents:
 		[:strm |
 		strm nextPutAll: '<nArgs=', ((hdr >> 25) bitAnd: 16r1F) printString , '>'.
@@ -300,14 +320,25 @@ InterpreterSimulator >> dumpMethodHeader: hdr [
 		]
 ]
 
+{ #category : #testing }
+NewspeakInterpreterSimulator >> ensureDebugAtEachStepBlock [
+	atEachStepBlock := [printContextAtEachStep ifTrue:
+							[self printContext: activeContext WithSP: localSP].
+						 printBytecodeAtEachStep ifTrue:
+							[self printCurrentBytecodeOn: transcript.
+							 transcript cr; flush].
+						 byteCount = breakCount ifTrue:
+							["printContextAtEachStep :=" printBytecodeAtEachStep := true]]
+]
+
 { #category : #'interpreter shell' }
-InterpreterSimulator >> fetchByte [
+NewspeakInterpreterSimulator >> fetchByte [
 
 	^ self byteAt: (localIP := localIP + 1).
 ]
 
 { #category : #'float primitives' }
-InterpreterSimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
+NewspeakInterpreterSimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
 
 	aFloat at: 1 put: (self long32At: floatBitsAddress).
 	aFloat at: 2 put: (self long32At: floatBitsAddress+4).
@@ -315,16 +346,14 @@ InterpreterSimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
 ]
 
 { #category : #'file primitives' }
-InterpreterSimulator >> fileValueOf: integerPointer [
+NewspeakInterpreterSimulator >> fileValueOf: integerPointer [
 	"Convert the (integer) fileID to the actual fileStream it uses"
 	self success: (self isIntegerObject: integerPointer).
-	successFlag
-		ifTrue: [^ filesOpen at: (self integerValueOf: integerPointer)]
-		ifFalse: [^ nil]
+	^self successful ifTrue: [filesOpen at: (self integerValueOf: integerPointer)]
 ]
 
 { #category : #testing }
-InterpreterSimulator >> findNewMethodInClass: class [
+NewspeakInterpreterSimulator >> findNewMethodInClass: class [
 "
 	| cName |
 	traceOn ifTrue:
@@ -353,7 +382,7 @@ InterpreterSimulator >> findNewMethodInClass: class [
 ]
 
 { #category : #'memory access' }
-InterpreterSimulator >> firstIndexableField: oop [
+NewspeakInterpreterSimulator >> firstIndexableField: oop [
 	"NOTE: overridden from ObjectMemory to add coercion to CArray, so please duplicate any changes"
 	| hdr fmt totalLength fixedFields |
 	<returnTypeC: #'void *'>
@@ -374,63 +403,65 @@ InterpreterSimulator >> firstIndexableField: oop [
 ]
 
 { #category : #'plugin support' }
-InterpreterSimulator >> flushExternalPrimitives [
+NewspeakInterpreterSimulator >> flushExternalPrimitives [
 	mappedPluginEntries := #().
 	super flushExternalPrimitives.
 ]
 
 { #category : #'I/O primitives' }
-InterpreterSimulator >> fullDisplay [
+NewspeakInterpreterSimulator >> fullDisplay [
 	| t |
 	displayForm == nil ifTrue: [^ self].
-	t := successFlag.  successFlag := true.
+	t := primFailCode.  primFailCode := 0.
 	self displayBitsOf: (self splObj: TheDisplay) Left: 0 Top: 0 Right: displayForm width Bottom: displayForm height.
-	successFlag := t
+	primFailCode := t
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> fullDisplayUpdate [
+NewspeakInterpreterSimulator >> fullDisplayUpdate [
 	"Preserve successFlag when call asynchronously from Simulator"
 	| s |
-	s := successFlag.
-	successFlag := true.
+	s := primFailCode.
+	primFailCode := true.
 	super fullDisplayUpdate.
-	successFlag := s
+	primFailCode := s
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> fullGC [
+NewspeakInterpreterSimulator >> fullGC [
 	transcript cr; show:'<Running full GC ...'.
 	super fullGC.
 	transcript show: ' done>'.
 ]
 
 { #category : #'interpreter shell' }
-InterpreterSimulator >> functionPointerFor: primIndex inClass: lookupClass [
-	"Override Interpreter to handle the external primitives caching.  See also 	internalExecuteNewMethod."
+NewspeakInterpreterSimulator >> functionPointerFor: primIndex inClass: lookupClass [
+	"Override Interpreter to handle the external primitives caching.  See also
+	 internalExecuteNewMethod."
 
 	^(primIndex between: 1 and: MaxPrimitiveIndex)
 		ifTrue: [primitiveTable at: primIndex + 1]
+		ifFalse: [0]
 ]
 
 { #category : #'memory access' }
-InterpreterSimulator >> halfWordHighInLong32: long32 [
+NewspeakInterpreterSimulator >> halfWordHighInLong32: long32 [
 	^self subclassResponsibility
 ]
 
 { #category : #'memory access' }
-InterpreterSimulator >> halfWordLowInLong32: long32 [
+NewspeakInterpreterSimulator >> halfWordLowInLong32: long32 [
 	^self subclassResponsibility
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> headerStart: oop [
+NewspeakInterpreterSimulator >> headerStart: oop [
 
 	^ (self extraHeaderBytes: oop) negated
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> hexDump100: oop [
+NewspeakInterpreterSimulator >> hexDump100: oop [
 	| byteSize val |
 	^ String streamContents:
 		[:strm |
@@ -446,7 +477,7 @@ InterpreterSimulator >> hexDump100: oop [
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> hexDump: oop [
+NewspeakInterpreterSimulator >> hexDump: oop [
 	| byteSize val |
 	(self isIntegerObject: oop) ifTrue: [^ self shortPrint: oop].
 	^ String streamContents:
@@ -462,16 +493,27 @@ InterpreterSimulator >> hexDump: oop [
 				ifFalse: [strm nextPutAll: (self charsOfLong: val)]]]
 ]
 
+{ #category : #'interpreter shell' }
+NewspeakInterpreterSimulator >> incrementByteCount [
+	(byteCount := byteCount + 1) = breakCount ifTrue:
+		[self doOrDefer: [self changed: #byteCountText].
+		 self halt].
+	byteCount \\ 1000 = 0 ifTrue:
+		[self doOrDefer: [self changed: #byteCountText].
+		 self forceInterruptCheck.
+		 byteCount \\ 10000 = 0 ifTrue: [self fullDisplayUpdate]]
+]
+
 { #category : #'debug support' }
-InterpreterSimulator >> incrementalGC [
+NewspeakInterpreterSimulator >> incrementalGC [
 	transcript cr; nextPutAll: 'incrementalGC ('; print: byteCount; nextPut: $); flush.
 	^super incrementalGC
 ]
 
 { #category : #initialization }
-InterpreterSimulator >> initialize [
+NewspeakInterpreterSimulator >> initialize [
 
-	"Initialize the InterpreterSimulator when running the interpreter inside
+	"Initialize the NewspeakInterpreterSimulator when running the interpreter inside
 	Smalltalk. The primary responsibility of this method is to allocate
 	Smalltalk Arrays for variables that will be declared as statically-allocated
 	global arrays in the translated code."
@@ -479,7 +521,8 @@ InterpreterSimulator >> initialize [
 	"initialize class variables"
 	ObjectMemory initBytesPerWord: self bytesPerWord.
 	ObjectMemory initialize.
-	Interpreter initialize.
+	NewspeakInterpreter initialize.
+	super initialize.
 
 	"Note: we must initialize ConstMinusOne differently for simulation,
 		due to the fact that the simulator works only with +ve 32-bit values"
@@ -492,20 +535,17 @@ InterpreterSimulator >> initialize [
 	weakRoots := Array new: RootTableSize + RemapBufferSize + 100.
 	remapBuffer := Array new: RemapBufferSize.
 	gcSemaphoreIndex := 0.
-	semaphoresUseBufferA := true.
-	semaphoresToSignalA := Array new: SemaphoresToSignalSize.
-	semaphoresToSignalB := Array new: SemaphoresToSignalSize.
 	externalPrimitiveTable := CArrayAccessor on: (Array new: MaxExternalPrimitiveTableSize).
 	primitiveTable := self class primitiveTable.
 	pluginList := #().
 	mappedPluginEntries := #().
 
-	"initialize InterpreterSimulator variables used for debugging"
+	"initialize NewspeakInterpreterSimulator variables used for debugging"
 	byteCount := 0.
 	sendCount := 0.
 	quitBlock := [^ self].
 	traceOn := true.
-	printSends := "printReturns := printBytecodeAtEachStep :=" false.
+	printSends := "printReturns := " printBytecodeAtEachStep := printContextAtEachStep := false.
 	myBitBlt := BitBltSimulator new setInterpreter: self.
 	filesOpen := OrderedCollection new.
 	headerTypeBytes := CArrayAccessor on: HeaderTypeExtraBytes.
@@ -515,31 +555,31 @@ InterpreterSimulator >> initialize [
 ]
 
 { #category : #'interpreter shell' }
-InterpreterSimulator >> insufficientMemoryAvailableError [
+NewspeakInterpreterSimulator >> insufficientMemoryAvailableError [
 	self error: 'Failed to allocate memory for the heap'
 ]
 
 { #category : #'interpreter shell' }
-InterpreterSimulator >> insufficientMemorySpecifiedError [
+NewspeakInterpreterSimulator >> insufficientMemorySpecifiedError [
 	self error: 'Insufficient memory for this image'
 ]
 
 { #category : #'memory access' }
-InterpreterSimulator >> integerAt: byteAddress [
+NewspeakInterpreterSimulator >> integerAt: byteAddress [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 
 	^memory integerAt: (byteAddress // 4) + 1
 ]
 
 { #category : #'memory access' }
-InterpreterSimulator >> integerAt: byteAddress put: a32BitValue [
+NewspeakInterpreterSimulator >> integerAt: byteAddress put: a32BitValue [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 
 	^memory integerAt: (byteAddress // 4) + 1 put: a32BitValue
 ]
 
 { #category : #'memory access' }
-InterpreterSimulator >> integerObjectOf: value [
+NewspeakInterpreterSimulator >> integerObjectOf: value [
 	"The simulator works with strictly positive bit patterns"
 	value < 0
 		ifTrue: [^ ((16r80000000 + value) << 1) + 1]
@@ -547,60 +587,50 @@ InterpreterSimulator >> integerObjectOf: value [
 ]
 
 { #category : #'interpreter shell' }
-InterpreterSimulator >> internalExecuteNewMethod [
-"Override the Interpreter version to trap cached external prims.
-These have a 'prim index' of 1000 + the externalPrimitiveTableIndex normally used"
-	primitiveIndex < 1000 ifTrue:[^super internalExecuteNewMethod].
-	self externalizeIPandSP.
-	self callExternalPrimitive: (externalPrimitiveTable at: primitiveIndex - 1001).
-	self internalizeIPandSP
-]
-
-{ #category : #'interpreter shell' }
-InterpreterSimulator >> interpreter [
+NewspeakInterpreterSimulator >> interpreter [
 	^self
 ]
 
 { #category : #'interpreter shell' }
-InterpreterSimulator >> invalidCompactClassError: name [
+NewspeakInterpreterSimulator >> invalidCompactClassError: name [
 	self error: 'Class ', name, ' does not have the required compact class index'
 ]
 
 { #category : #security }
-InterpreterSimulator >> ioCanRenameImage [
+NewspeakInterpreterSimulator >> ioCanRenameImage [
 	^true
 ]
 
 { #category : #security }
-InterpreterSimulator >> ioCanWriteImage [
+NewspeakInterpreterSimulator >> ioCanWriteImage [
 	^true
 ]
 
 { #category : #testing }
-InterpreterSimulator >> ioExit [
+NewspeakInterpreterSimulator >> ioExit [
 
 	quitBlock value  "Cause return from #test"
 ]
 
 { #category : #'other primitives' }
-InterpreterSimulator >> ioForceDisplayUpdate [
+NewspeakInterpreterSimulator >> ioForceDisplayUpdate [
 	"no-op"
 ]
 
 { #category : #'I/O primitives' }
-InterpreterSimulator >> ioGetNextEvent: evtBuf [
+NewspeakInterpreterSimulator >> ioGetNextEvent: evtBuf [
 
 	self primitiveFail.
 
 ]
 
 { #category : #'I/O primitives' }
-InterpreterSimulator >> ioHasDisplayDepth: depth [
+NewspeakInterpreterSimulator >> ioHasDisplayDepth: depth [
 	^Display supportsDisplayDepth: depth
 ]
 
 { #category : #'plugin support' }
-InterpreterSimulator >> ioLoadExternalFunction: functionName OfLength: functionLength FromModule: moduleName OfLength: moduleLength [
+NewspeakInterpreterSimulator >> ioLoadExternalFunction: functionName OfLength: functionLength FromModule: moduleName OfLength: moduleLength [
 	"Load and return the requested function from a module"
 	| pluginString functionString |
 	pluginString := String new: moduleLength.
@@ -612,7 +642,7 @@ InterpreterSimulator >> ioLoadExternalFunction: functionName OfLength: functionL
 ]
 
 { #category : #'plugin support' }
-InterpreterSimulator >> ioLoadFunction: functionString From: pluginString [
+NewspeakInterpreterSimulator >> ioLoadFunction: functionString From: pluginString [
 	"Load and return the requested function from a module"
 	| plugin fnSymbol |
 	fnSymbol := functionString asSymbol.
@@ -638,7 +668,7 @@ InterpreterSimulator >> ioLoadFunction: functionString From: pluginString [
 ]
 
 { #category : #'I/O primitives support' }
-InterpreterSimulator >> ioMSecs [
+NewspeakInterpreterSimulator >> ioMSecs [
 	"Return the value of the millisecond clock."
 	"NOT.  Actually, we want something a lot slower and, for exact debugging,
 	something more repeatable than real time.  IO have an idea: use the byteCount..."
@@ -649,7 +679,7 @@ InterpreterSimulator >> ioMSecs [
 ]
 
 { #category : #'I/O primitives support' }
-InterpreterSimulator >> ioMicroMSecs [
+NewspeakInterpreterSimulator >> ioMicroMSecs [
 	"Answer the value of the high-resolution millisecond clock."
 
 	^ Time millisecondClockValue
@@ -657,41 +687,56 @@ InterpreterSimulator >> ioMicroMSecs [
 ]
 
 { #category : #'I/O primitives' }
-InterpreterSimulator >> ioProcessEvents [
+NewspeakInterpreterSimulator >> ioProcessEvents [
 ]
 
 { #category : #'I/O primitives' }
-InterpreterSimulator >> ioScreenDepth [
+NewspeakInterpreterSimulator >> ioScreenDepth [
 	^DisplayScreen actualScreenDepth.
 ]
 
 { #category : #'I/O primitives support' }
-InterpreterSimulator >> ioScreenSize [
+NewspeakInterpreterSimulator >> ioScreenSize [
 	"Return the screen extent packed into 32 bits."
 
 	^ (displayForm width << 16) + displayForm height
 ]
 
 { #category : #'I/O primitives support' }
-InterpreterSimulator >> ioSeconds [
+NewspeakInterpreterSimulator >> ioSeconds [
 	"Return the value of the second clock."
 
 	^ Time primSecondsClock
 ]
 
 { #category : #'I/O primitives' }
-InterpreterSimulator >> ioSetInputSemaphore: index [
+NewspeakInterpreterSimulator >> ioSetInputSemaphore: index [
 
 	self primitiveFail
 ]
 
 { #category : #'interpreter shell' }
-InterpreterSimulator >> isIntegerValue: valueWord [ 
+NewspeakInterpreterSimulator >> isIntegerValue: valueWord [ 
 	^ valueWord >= 16r-40000000 and: [valueWord <= 16r3FFFFFFF]
 ]
 
+{ #category : #'primitive support' }
+NewspeakInterpreterSimulator >> isPrimitiveFunctionPointerAnIndex [
+	"We save slots in the method cache by using the primitiveFunctionPointer
+	 to hold either a function pointer or the index of a quick primitive. Since
+	 quick primitive indices are small they can't be confused with function
+	 addresses.  But since we use 1001 and up for external primitives that
+	 would be functions in the C VM but are indices under simulation we treat
+	 values above 1000 as if they were pointers (actually indices into the
+	 externalPrimitiveTable)"
+
+	^primitiveFunctionPointer isInteger
+	  and: [primitiveFunctionPointer ~= 0
+	  and: [primitiveFunctionPointer <= MaxQuickPrimitiveIndex]]
+]
+
 { #category : #'plugin support' }
-InterpreterSimulator >> loadNewPlugin: pluginString [
+NewspeakInterpreterSimulator >> loadNewPlugin: pluginString [
 	| plugin plugins simulatorClasses |
 	transcript cr; show: 'Looking for module ', pluginString.
 	"but *why*??"
@@ -716,7 +761,7 @@ InterpreterSimulator >> loadNewPlugin: pluginString [
 ]
 
 { #category : #testing }
-InterpreterSimulator >> logOfBytesVerify: nBytes fromFileNamed: fileName fromStart: loggingStart [
+NewspeakInterpreterSimulator >> logOfBytesVerify: nBytes fromFileNamed: fileName fromStart: loggingStart [
 	"Verify a questionable interpreter against a successful run"
 	"self logOfBytesVerify: 10000 fromFileNamed: 'clone32Bytecodes.log' "
 	
@@ -756,7 +801,7 @@ byteCount = 14590 ifTrue: [self halt]].
 ]
 
 { #category : #testing }
-InterpreterSimulator >> logOfBytesWrite: nBytes toFileNamed: fileName fromStart: loggingStart [
+NewspeakInterpreterSimulator >> logOfBytesWrite: nBytes toFileNamed: fileName fromStart: loggingStart [
 	"Write a log file for testing a flaky interpreter on the same image"
 	"self logOfBytesWrite: 10000 toFileNamed: 'clone32Bytecodes.log' "
 	
@@ -778,7 +823,7 @@ InterpreterSimulator >> logOfBytesWrite: nBytes toFileNamed: fileName fromStart:
 ]
 
 { #category : #testing }
-InterpreterSimulator >> logOfSendsVerify: nSends fromFileNamed: fileName fromStart: loggingStart [
+NewspeakInterpreterSimulator >> logOfSendsVerify: nSends fromFileNamed: fileName fromStart: loggingStart [
 	"Write a log file for testing a flaky interpreter on the same image"
 	"self logOfSendsWrite: 10000 toFileNamed: 'clone32Messages.log' "
 	
@@ -824,7 +869,7 @@ transcript cr; print: byteCount; nextPutAll: ': ' , (activeContext hex); space;
 ]
 
 { #category : #testing }
-InterpreterSimulator >> logOfSendsWrite: nSends toFileNamed: fileName fromStart: loggingStart [
+NewspeakInterpreterSimulator >> logOfSendsWrite: nSends toFileNamed: fileName fromStart: loggingStart [
 	"Write a log file for testing a flaky interpreter on the same image"
 	"self logOfSendsWrite: 10000 toFileNamed: 'clone32Messages.log' "
 	
@@ -851,35 +896,35 @@ InterpreterSimulator >> logOfSendsWrite: nSends toFileNamed: fileName fromStart:
 ]
 
 { #category : #'memory access' }
-InterpreterSimulator >> long32At: byteAddress [
+NewspeakInterpreterSimulator >> long32At: byteAddress [
 	"Return the 32-bit word at byteAddress which must be 0 mod 4."
 
 	^ self longAt: byteAddress
 ]
 
 { #category : #'memory access' }
-InterpreterSimulator >> long32At: byteAddress put: a32BitValue [
+NewspeakInterpreterSimulator >> long32At: byteAddress put: a32BitValue [
 	"Store the 32-bit value at byteAddress which must be 0 mod 4."
 
 	^ self longAt: byteAddress put: a32BitValue
 ]
 
 { #category : #'memory access' }
-InterpreterSimulator >> longAt: byteAddress [
+NewspeakInterpreterSimulator >> longAt: byteAddress [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 
 	^memory at: (byteAddress // 4) + 1
 ]
 
 { #category : #'memory access' }
-InterpreterSimulator >> longAt: byteAddress put: a32BitValue [
+NewspeakInterpreterSimulator >> longAt: byteAddress put: a32BitValue [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 
 	^memory at: (byteAddress // 4) + 1 put: a32BitValue
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> longPrint: oop [
+NewspeakInterpreterSimulator >> longPrint: oop [
 	| lastPtr val lastLong hdrType prevVal |
 	(self isIntegerObject: oop) ifTrue: [^ self shortPrint: oop].
 	^ String streamContents:
@@ -931,7 +976,7 @@ InterpreterSimulator >> longPrint: oop [
 ]
 
 { #category : #'file primitives' }
-InterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize
+NewspeakInterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize
 	createDate: createDate modDate: modifiedDate
 	isDir: dirFlag fileSize: fileSize [
 
@@ -969,7 +1014,7 @@ InterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> nameOfClass: classOop [
+NewspeakInterpreterSimulator >> nameOfClass: classOop [
 	(self sizeBitsOf: classOop) = (Metaclass instSize +1*BytesPerWord) ifTrue:
 		[^ (self nameOfClass:
 				(self fetchPointer: 5 "thisClass" ofObject: classOop)) , ' class'].
@@ -977,20 +1022,20 @@ InterpreterSimulator >> nameOfClass: classOop [
 ]
 
 { #category : #initialization }
-InterpreterSimulator >> nextLongFrom: aStream [
+NewspeakInterpreterSimulator >> nextLongFrom: aStream [
 	"Read a 32-bit quantity from the given (binary) stream."
 	^self subclassResponsibility
 ]
 
 { #category : #initialization }
-InterpreterSimulator >> nextLongFrom: aStream swap: swapFlag [
+NewspeakInterpreterSimulator >> nextLongFrom: aStream swap: swapFlag [
 	swapFlag 
 		ifTrue: [^ self byteSwapped: (self nextLongFrom: aStream)]
 		ifFalse: [^ self nextLongFrom: aStream]
 ]
 
 { #category : #'debugging traps' }
-InterpreterSimulator >> normalSend [
+NewspeakInterpreterSimulator >> normalSend [
 	"Catch errors before we start the whole morphic error process"
 
 	"(byteCount > 4000000 and: [(self stringOf: messageSelector) = 'sorts:before:'])
@@ -999,7 +1044,7 @@ InterpreterSimulator >> normalSend [
 ]
 
 { #category : #testing }
-InterpreterSimulator >> objectBefore: addr [
+NewspeakInterpreterSimulator >> objectBefore: addr [
 	| oop prev |
 	oop := self firstObject.
 	[oop < endOfMemory] whileTrue:
@@ -1010,37 +1055,62 @@ InterpreterSimulator >> objectBefore: addr [
 ]
 
 { #category : #UI }
-InterpreterSimulator >> openAsMorph [
+NewspeakInterpreterSimulator >> openAsMorph [
+	"Open a morphic view on this simulation."
+	| window localImageName |
+	localImageName := FileDirectory default localNameFor: imageName.
+	window := (SystemWindow labelled: 'Simulation of ', localImageName) model: self.
+
+	window addMorph: (displayView := ImageMorph new image: displayForm)
+		frame: (0@0 corner: 1@0.8).
+
+	transcript := TranscriptStream on: (String new: 10000).
+	window addMorph: (PluggableTextMorph
+							on: transcript text: nil accept: nil
+							readSelection: nil menu: #codePaneMenu:shifted:)
+			frame: (0@0.8 corner: 0.7@1).
+
+	window addMorph: (PluggableTextMorph on: self
+						text: #byteCountText accept: nil
+						readSelection: nil menu: #utilitiesMenu:) hideScrollBarsIndefinitely
+			frame: (0.7@0.8 corner: 1@1).
+
+	window openInWorldExtent: (self desiredDisplayExtent
+								+ (2 * window borderWidth)
+								+ (0@window labelHeight)
+								* (1@(1/0.8))) rounded
+]
+
+{ #category : #UI }
+NewspeakInterpreterSimulator >> openAsMorphNoTranscript [
 	"Open a morphic view on this simulation."
 	| window localImageName |
 	localImageName := FileDirectory default localNameFor: imageName.
 	window := (SystemWindow labelled: 'Simulation of ' , localImageName) model: self.
 
 	window addMorph: (displayView := ImageMorph new image: displayForm)
-		frame: (0@0 corner: 1@0.8).
-
-	transcript := TranscriptStream on: (String new: 10000).
-	window addMorph: (PluggableTextMorph on: transcript text: nil accept: nil
-			readSelection: nil menu: #codePaneMenu:shifted:)
-		frame: (0@0.8 corner: 0.7@1).
+		frame: (0@0 corner: 1@0.95).
 
 	window addMorph: (PluggableTextMorph on: self
 						text: #byteCountText accept: nil) hideScrollBarsIndefinitely
-		frame: (0.7@0.8 corner: 1@1).
+		frame: (0@0.95 corner: 1@1).
 
-	window openInWorld
+	window openInWorldExtent: (self desiredDisplayExtent
+								+ (2 * window borderWidth)
+								+ (0@window labelHeight)
+								* (1@(1/0.95))) rounded
 ]
 
 { #category : #initialization }
-InterpreterSimulator >> openOn: fileName [
-	"(InterpreterSimulator new openOn: 'clonex.image') test"
+NewspeakInterpreterSimulator >> openOn: fileName [
+	"(NewspeakInterpreterSimulator new openOn: 'clonex.image') test"
 
 	self openOn: fileName extraMemory: 2500000.
 ]
 
 { #category : #initialization }
-InterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
-	"InterpreterSimulator new openOn: 'clone.im' extraMemory: 100000"
+NewspeakInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
+	"NewspeakInterpreterSimulator new openOn: 'clone.im' extraMemory: 100000"
 
 	| f version headerSize count oldBaseAddr bytesToShift swapBytes |
 	"open image file and read the header"
@@ -1088,12 +1158,12 @@ InterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 ]
 
 { #category : #'other primitives' }
-InterpreterSimulator >> primBitmapcompresstoByteArray [
+NewspeakInterpreterSimulator >> primBitmapcompresstoByteArray [
 	^ self primitiveFail
 ]
 
 { #category : #'other primitives' }
-InterpreterSimulator >> primBitmapdecompressfromByteArrayat [
+NewspeakInterpreterSimulator >> primBitmapdecompressfromByteArrayat [
 	| indexInt index baOop bmOop baSize bmSize ba bm |
 	indexInt := self stackTop.
 	(self isIntegerValue: indexInt) ifFalse: [^ self primitiveFail].
@@ -1117,38 +1187,38 @@ InterpreterSimulator >> primBitmapdecompressfromByteArrayat [
 ]
 
 { #category : #'other primitives' }
-InterpreterSimulator >> primStringcomparewithcollated [
+NewspeakInterpreterSimulator >> primStringcomparewithcollated [
 	^ self primitiveFail
 ]
 
 { #category : #'other primitives' }
-InterpreterSimulator >> primStringfindSubstringinstartingAtmatchTable [
+NewspeakInterpreterSimulator >> primStringfindSubstringinstartingAtmatchTable [
 	^self primitiveFail
 ]
 
 { #category : #'other primitives' }
-InterpreterSimulator >> primStringindexOfAsciiinStringstartingAt [
+NewspeakInterpreterSimulator >> primStringindexOfAsciiinStringstartingAt [
 	^ self primitiveFail
 ]
 
 { #category : #'other primitives' }
-InterpreterSimulator >> primStringtranslatefromtotable [
+NewspeakInterpreterSimulator >> primStringtranslatefromtotable [
 	^ self primitiveFail
 ]
 
 { #category : #'I/O primitives' }
-InterpreterSimulator >> primitiveBeDisplay [
+NewspeakInterpreterSimulator >> primitiveBeDisplay [
 	"Extended to create a scratch Form for use by showDisplayBits."
 
 	| rcvr destWidth destHeight destDepth |
 	rcvr := self stackTop.
 	self success: ((self isPointers: rcvr) and: [(self lengthOf: rcvr) >= 4]).
-	successFlag ifTrue: [
+	self successful ifTrue: [
 		destWidth := self fetchInteger: 1 ofObject: rcvr.
 		destHeight := self fetchInteger: 2 ofObject: rcvr.
 		destDepth := self fetchInteger: 3 ofObject: rcvr.
 	].
-	successFlag ifTrue: [
+	self successful ifTrue: [
 		"create a scratch form the same size as Smalltalk displayObj"
 		displayForm := Form extent: destWidth @ destHeight
 							depth: destDepth.
@@ -1158,18 +1228,18 @@ InterpreterSimulator >> primitiveBeDisplay [
 ]
 
 { #category : #'other primitives' }
-InterpreterSimulator >> primitiveBeep [
+NewspeakInterpreterSimulator >> primitiveBeep [
 
 	Beeper beep.
 ]
 
 { #category : #'file primitives' }
-InterpreterSimulator >> primitiveDirectoryEntry [
+NewspeakInterpreterSimulator >> primitiveDirectoryEntry [
 	| name pathName array result |
 	name := self stringOf: self stackTop.
 	pathName := self stringOf: (self stackValue: 1).
 	
-	successFlag ifFalse:
+	self successful ifFalse:
 		[^self primitiveFail].
 
 	array := FileDirectory default primLookupEntryIn: pathName name: name.
@@ -1188,12 +1258,12 @@ InterpreterSimulator >> primitiveDirectoryEntry [
 ]
 
 { #category : #'file primitives' }
-InterpreterSimulator >> primitiveDirectoryLookup [
+NewspeakInterpreterSimulator >> primitiveDirectoryLookup [
 	| index pathName array result |
 	index := self stackIntegerValue: 0.
 	pathName := (self stringOf: (self stackValue: 1)).
 	
-	successFlag ifFalse: [
+	self successful ifFalse: [
 		^self primitiveFail.
 	].
 
@@ -1217,24 +1287,24 @@ InterpreterSimulator >> primitiveDirectoryLookup [
 ]
 
 { #category : #'file primitives' }
-InterpreterSimulator >> primitiveFileDelete [ 
+NewspeakInterpreterSimulator >> primitiveFileDelete [ 
 
 	| namePointer |
 	namePointer := self stackTop.
 	self success: (self isBytes: namePointer).
 	self success: (StandardFileStream isAFileNamed: (self stringOf: namePointer)).
-	successFlag ifTrue: [FileDirectory deleteFilePath: (self stringOf: namePointer)].
-	successFlag ifTrue: [self pop: 1].  "pop fileName; leave rcvr on stack"
+	self successful ifTrue: [FileDirectory deleteFilePath: (self stringOf: namePointer)].
+	self successful ifTrue: [self pop: 1].  "pop fileName; leave rcvr on stack"
 
 ]
 
 { #category : #'file primitives' }
-InterpreterSimulator >> primitiveFileOpen [
+NewspeakInterpreterSimulator >> primitiveFileOpen [
 	| namePointer writeFlag fileName f |
 	writeFlag := self booleanValueOf: self stackTop.
 	namePointer := self stackValue: 1.
 	self success: (self isBytes: namePointer).
-	successFlag ifTrue:
+	self successful ifTrue:
 		[fileName := self stringOf: namePointer.
 		filesOpen addLast: (writeFlag
 			ifTrue: [f := FileStream fileNamed: fileName.
@@ -1247,7 +1317,7 @@ InterpreterSimulator >> primitiveFileOpen [
 ]
 
 { #category : #'file primitives' }
-InterpreterSimulator >> primitiveFileRename [
+NewspeakInterpreterSimulator >> primitiveFileRename [
 
 	| oldNamePointer newNamePointer f |
 	oldNamePointer := self stackTop.
@@ -1256,23 +1326,23 @@ InterpreterSimulator >> primitiveFileRename [
 	self success: (self isBytes: newNamePointer).
 	self success: (StandardFileStream isAFileNamed: (self stringOf: oldNamePointer)).
 	self success: (StandardFileStream isAFileNamed: (self stringOf: newNamePointer)) not.
-	successFlag ifTrue: [
+	self successful ifTrue: [
 		f := FileStream oldFileNamed: (self stringOf: oldNamePointer).
 		f rename: (self stringOf: newNamePointer).
 		f close.
 	].
-	successFlag ifTrue: [
+	self successful ifTrue: [
 		self pop: 2.  "oldName, newName; leave rcvr on stack"
 	].
 ]
 
 { #category : #'other primitives' }
-InterpreterSimulator >> primitiveGetAttribute [
+NewspeakInterpreterSimulator >> primitiveGetAttribute [
 	"Fetch the system attribute with the given integer ID. The result is a string, which will be empty if the attribute is not defined."
 
 	| attr s attribute |
 	attr := self stackIntegerValue: 0.
-	successFlag ifTrue: [
+	self successful ifTrue: [
 		attribute := Smalltalk getSystemAttribute: attr.
 		attribute ifNil: [ ^self primitiveFail ].
 		s := self instantiateClass: (self splObj: ClassString) indexableSize: attribute size.
@@ -1284,7 +1354,7 @@ InterpreterSimulator >> primitiveGetAttribute [
 ]
 
 { #category : #'file primitives' }
-InterpreterSimulator >> primitiveImageName [
+NewspeakInterpreterSimulator >> primitiveImageName [
 	"Note: For now, this only implements getting, not setting, the image file name."
 	| result imageNameSize |
 	self pop: 1.
@@ -1298,7 +1368,7 @@ InterpreterSimulator >> primitiveImageName [
 ]
 
 { #category : #'I/O primitives' }
-InterpreterSimulator >> primitiveKbdNext [
+NewspeakInterpreterSimulator >> primitiveKbdNext [
 
 	self pop: 1.
 	Sensor keyboardPressed
@@ -1307,7 +1377,7 @@ InterpreterSimulator >> primitiveKbdNext [
 ]
 
 { #category : #'I/O primitives' }
-InterpreterSimulator >> primitiveKbdPeek [
+NewspeakInterpreterSimulator >> primitiveKbdPeek [
 
 	self pop: 1.
 	Sensor keyboardPressed
@@ -1316,7 +1386,7 @@ InterpreterSimulator >> primitiveKbdPeek [
 ]
 
 { #category : #'I/O primitives' }
-InterpreterSimulator >> primitiveMouseButtons [
+NewspeakInterpreterSimulator >> primitiveMouseButtons [
 	| buttons |
 	self pop: 1.
 	buttons := Sensor primMouseButtons.
@@ -1324,7 +1394,7 @@ InterpreterSimulator >> primitiveMouseButtons [
 ]
 
 { #category : #'I/O primitives' }
-InterpreterSimulator >> primitiveMousePoint [
+NewspeakInterpreterSimulator >> primitiveMousePoint [
 
 	| relPt |
 	self pop: 1.
@@ -1335,14 +1405,14 @@ InterpreterSimulator >> primitiveMousePoint [
 ]
 
 { #category : #'I/O primitives support' }
-InterpreterSimulator >> primitiveRelinquishProcessor [
+NewspeakInterpreterSimulator >> primitiveRelinquishProcessor [
 	"No-op in simulator"
 
 	^ self pop: 1
 ]
 
 { #category : #'debugging traps' }
-InterpreterSimulator >> primitiveResume [
+NewspeakInterpreterSimulator >> primitiveResume [
 	"Catch errors before we start the whole morphic error process"
 
 	byteCount > 1000000 ifTrue: [self halt].  "Ignore early process activity"
@@ -1350,14 +1420,14 @@ InterpreterSimulator >> primitiveResume [
 ]
 
 { #category : #'I/O primitives' }
-InterpreterSimulator >> primitiveScreenSize [  "Dummied for now"
+NewspeakInterpreterSimulator >> primitiveScreenSize [  "Dummied for now"
 
 	self pop: 1.
 	self push: (self makePointwithxValue: 640 yValue: 480).
 ]
 
 { #category : #'debugging traps' }
-InterpreterSimulator >> primitiveSuspend [
+NewspeakInterpreterSimulator >> primitiveSuspend [
 	"Catch errors before we start the whole morphic error process"
 
 	byteCount > 1000000 ifTrue: [self halt].  "Ignore early process activity"
@@ -1365,19 +1435,19 @@ InterpreterSimulator >> primitiveSuspend [
 ]
 
 { #category : #'debug printing' }
-InterpreterSimulator >> print: s [
+NewspeakInterpreterSimulator >> print: s [
 
 	traceOn ifTrue: [ transcript show: s ]
 ]
 
 { #category : #'debug printing' }
-InterpreterSimulator >> printChar: aByte [
+NewspeakInterpreterSimulator >> printChar: aByte [
 
 	traceOn ifTrue: [ transcript nextPut: aByte asCharacter ].
 ]
 
 { #category : #'debug printing' }
-InterpreterSimulator >> printCurrentBytecodeOn: aStream [
+NewspeakInterpreterSimulator >> printCurrentBytecodeOn: aStream [
 	| code |
 	code := currentBytecode radix: 16.
 	aStream print: localIP - method - 3;
@@ -1392,7 +1462,7 @@ InterpreterSimulator >> printCurrentBytecodeOn: aStream [
 ]
 
 { #category : #'debug printing' }
-InterpreterSimulator >> printHex: anInteger [
+NewspeakInterpreterSimulator >> printHex: anInteger [
 
 	traceOn ifTrue:
 		[| it16 |
@@ -1403,18 +1473,18 @@ InterpreterSimulator >> printHex: anInteger [
 ]
 
 { #category : #'debug printing' }
-InterpreterSimulator >> printNum: anInteger [
+NewspeakInterpreterSimulator >> printNum: anInteger [
 
 	traceOn ifTrue: [ transcript show: anInteger printString ].
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> printStack [
+NewspeakInterpreterSimulator >> printStack [
 	^ self printStack: false
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> printStack: includeTemps [
+NewspeakInterpreterSimulator >> printStack: includeTemps [
 	| ctxt |
 	ctxt := activeContext.
 	^ String streamContents:
@@ -1427,7 +1497,7 @@ InterpreterSimulator >> printStack: includeTemps [
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> printStackFrame: ctxt onStream: strm [
+NewspeakInterpreterSimulator >> printStackFrame: ctxt onStream: strm [
 	| classAndSel home |
 	home := (self fetchClassOf: ctxt) = (self splObj: ClassBlockContext)
 		ifTrue: [self fetchPointer: HomeIndex ofObject: ctxt]
@@ -1443,7 +1513,7 @@ InterpreterSimulator >> printStackFrame: ctxt onStream: strm [
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> printStackTemps: ctxt onStream: strm [
+NewspeakInterpreterSimulator >> printStackTemps: ctxt onStream: strm [
 	| home cMethod nArgs nTemps oop |
 	home := (self fetchClassOf: ctxt) = (self splObj: ClassBlockContext)
 		ifTrue: [self fetchPointer: HomeIndex ofObject: ctxt]
@@ -1472,17 +1542,17 @@ InterpreterSimulator >> printStackTemps: ctxt onStream: strm [
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> printStackWithTemps [
+NewspeakInterpreterSimulator >> printStackWithTemps [
 	^ self printStack: true
 ]
 
 { #category : #'debug printing' }
-InterpreterSimulator >> printStringForCurrentBytecode [
+NewspeakInterpreterSimulator >> printStringForCurrentBytecode [
 	^String streamContents: [:str| self printCurrentBytecodeOn: str]
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> printTop: n [
+NewspeakInterpreterSimulator >> printTop: n [
 	"Print important fields of the top n contexts"
 	| ctxt classAndSel home top ip sp |
 	ctxt := activeContext.
@@ -1518,8 +1588,8 @@ InterpreterSimulator >> printTop: n [
 ]
 
 { #category : #testing }
-InterpreterSimulator >> profile: nBytecodes [
-	"(InterpreterSimulator new openOn: 'clonex.image') profile: 60000"
+NewspeakInterpreterSimulator >> profile: nBytecodes [
+	"(NewspeakInterpreterSimulator new openOn: 'clonex.image') profile: 60000"
 	transcript clear.
 	byteCount := 0.
 	MessageTally spyOn: [self runForNBytes: nBytecodes].
@@ -1527,16 +1597,26 @@ InterpreterSimulator >> profile: nBytecodes [
 ]
 
 { #category : #testing }
-InterpreterSimulator >> profileSends: nBytecodes [
-	"(InterpreterSimulator new openOn: 'clonex.image') profileSends: 5000"
+NewspeakInterpreterSimulator >> profileSends: nBytecodes [
+	"(NewspeakInterpreterSimulator new openOn: 'clonex.image') profileSends: 5000"
 	MessageTally tallySendsTo: self
 		inBlock: [self runForNBytes: nBytecodes]
 		showTree: true.
 	self close
 ]
 
+{ #category : #UI }
+NewspeakInterpreterSimulator >> promptHex: string [
+	| s |
+	s := UIManager default request: string, ' (hex)'.
+	^s notEmpty ifTrue:
+		[(s size > 3 and: [s third = $r]) ifTrue:
+			[s := s allButFirst: 3].
+		Integer readFrom: s readStream base: 16]
+]
+
 { #category : #'bytecode routines' }
-InterpreterSimulator >> pushLiteralConstantBytecode [
+NewspeakInterpreterSimulator >> pushLiteralConstantBytecode [
 
 	"Interpreter version has fetchNextBytecode out of order"
 	self pushLiteralConstant: (currentBytecode bitAnd: 16r1F).
@@ -1545,7 +1625,7 @@ InterpreterSimulator >> pushLiteralConstantBytecode [
 ]
 
 { #category : #'bytecode routines' }
-InterpreterSimulator >> pushLiteralVariableBytecode [
+NewspeakInterpreterSimulator >> pushLiteralVariableBytecode [
 
 	"Interpreter version has fetchNextBytecode out of order"
 	self pushLiteralVariable: (currentBytecode bitAnd: 16r1F).
@@ -1554,7 +1634,7 @@ InterpreterSimulator >> pushLiteralVariableBytecode [
 ]
 
 { #category : #'bytecode routines' }
-InterpreterSimulator >> pushReceiverVariableBytecode [
+NewspeakInterpreterSimulator >> pushReceiverVariableBytecode [
 
 	"Interpreter version has fetchNextBytecode out of order"
 	self pushReceiverVariable: (currentBytecode bitAnd: 16rF).
@@ -1563,7 +1643,7 @@ InterpreterSimulator >> pushReceiverVariableBytecode [
 ]
 
 { #category : #'bytecode routines' }
-InterpreterSimulator >> pushTemporaryVariableBytecode [
+NewspeakInterpreterSimulator >> pushTemporaryVariableBytecode [
 
 	"Interpreter version has fetchNextBytecode out of order"
 	self pushTemporaryVariable: (currentBytecode bitAnd: 16rF).
@@ -1572,7 +1652,7 @@ InterpreterSimulator >> pushTemporaryVariableBytecode [
 ]
 
 { #category : #initialization }
-InterpreterSimulator >> reverseBytesFrom: begin to: end [
+NewspeakInterpreterSimulator >> reverseBytesFrom: begin to: end [
 	"Byte-swap the given range of memory (not inclusive!)."
 	| wordAddr |
 	wordAddr := begin.
@@ -1580,7 +1660,28 @@ InterpreterSimulator >> reverseBytesFrom: begin to: end [
 ]
 
 { #category : #testing }
-InterpreterSimulator >> runAtEachStep: aBlock [
+NewspeakInterpreterSimulator >> run [
+	"Just run"
+	quitBlock := [([transcript dependents anyOne outermostMorphThat: [:m| m isSystemWindow]]
+					on: Error
+					do: [:ex| nil])
+						ifNotNil: [:window| (UIManager default confirm: 'close?') ifTrue: [window delete]].
+				  ^self].
+	self loadInitialContext.
+	self internalizeIPandSP.
+	self fetchNextBytecode.
+	[true] whileTrue:
+		[self assertValidExecutionPointers.
+		 atEachStepBlock value. "N.B. may be nil"
+		 self dispatchOn: currentBytecode in: BytecodeTable.
+		 self incrementByteCount].
+	localIP := localIP - 1.
+	"undo the pre-increment of IP before returning"
+	self externalizeIPandSP
+]
+
+{ #category : #testing }
+NewspeakInterpreterSimulator >> runAtEachStep: aBlock [
 	self internalizeIPandSP.
 	self fetchNextBytecode.
 	[true] whileTrue:
@@ -1593,7 +1694,7 @@ InterpreterSimulator >> runAtEachStep: aBlock [
 ]
 
 { #category : #testing }
-InterpreterSimulator >> runAtEachStep: aBlock breakCount: breakCount [
+NewspeakInterpreterSimulator >> runAtEachStep: aBlock breakCount: breakCount [
 	self internalizeIPandSP.
 	self fetchNextBytecode.
 	[true] whileTrue:
@@ -1607,7 +1708,7 @@ InterpreterSimulator >> runAtEachStep: aBlock breakCount: breakCount [
 ]
 
 { #category : #testing }
-InterpreterSimulator >> runForNBytes: nBytecodes [ 
+NewspeakInterpreterSimulator >> runForNBytes: nBytecodes [ 
 	"Do nByteCodes more bytecode dispatches.
 	Keep byteCount up to date.
 	This can be run repeatedly."
@@ -1624,7 +1725,7 @@ InterpreterSimulator >> runForNBytes: nBytecodes [
 ]
 
 { #category : #testing }
-InterpreterSimulator >> runUntilDivergenceFromTrace: aSequence [
+NewspeakInterpreterSimulator >> runUntilDivergenceFromTrace: aSequence [
 	self internalizeIPandSP.
 	self fetchNextBytecode.
 	[true] whileTrue:
@@ -1638,7 +1739,7 @@ InterpreterSimulator >> runUntilDivergenceFromTrace: aSequence [
 ]
 
 { #category : #testing }
-InterpreterSimulator >> runWithBreakCount: breakCount [
+NewspeakInterpreterSimulator >> runWithBreakCount: breakCount [
 	self internalizeIPandSP.
 	self fetchNextBytecode.
 	[true] whileTrue:
@@ -1650,19 +1751,36 @@ InterpreterSimulator >> runWithBreakCount: breakCount [
 	self externalizeIPandSP
 ]
 
+{ #category : #'debugging traps' }
+NewspeakInterpreterSimulator >> sendBreak: selectorString point: selectorLength receiver: receiverOrNil [
+	"self shortPrintFrameAndCallers: localFP"
+	| i |
+	breakSelectorLength = selectorLength ifTrue:
+		[i := breakSelectorLength.
+		 [i > 0] whileTrue:
+			[(self byteAt: selectorString + i - 1) = (breakSelector at: i) asInteger
+				ifTrue: [(i := i - 1) = 0 ifTrue:
+							[self halt: 'Send of '
+									, breakSelector,
+									(receiverOrNil
+										ifNotNil: [' to ', (self shortPrint: receiverOrNil)]
+										ifNil: [''])]]
+				ifFalse: [i := 0]]]
+]
+
 { #category : #'memory access' }
-InterpreterSimulator >> shortAt: byteAddress [
+NewspeakInterpreterSimulator >> shortAt: byteAddress [
     "Return the half-word at byteAddress which must be even."
 	^self subclassResponsibility
 ]
 
 { #category : #'memory access' }
-InterpreterSimulator >> shortAt: byteAddress put: a16BitValue [
+NewspeakInterpreterSimulator >> shortAt: byteAddress put: a16BitValue [
 	^ self subclassResponsibility
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> shortPrint: oop [
+NewspeakInterpreterSimulator >> shortPrint: oop [
 	| name classOop |
 	(self isIntegerObject: oop) ifTrue: [^ '=' , (self integerValueOf: oop) printString , 
 		' (' , (self integerValueOf: oop) hex , ')'].
@@ -1680,18 +1798,18 @@ InterpreterSimulator >> shortPrint: oop [
 	name = 'UndefinedObject' ifTrue: [^ 'nil'].
 	name = 'False' ifTrue: [^ 'false'].
 	name = 'True' ifTrue: [^ 'true'].
-	name = 'Float' ifTrue: [successFlag := true. ^ '=' , (self floatValueOf: oop) printString].
+	name = 'Float' ifTrue: [^ '=' , (self dbgFloatValueOf: oop) printString].
 	name = 'Association' ifTrue: [^ '(' ,
 				(self shortPrint: (self longAt: oop + BaseHeaderSize)) ,
 				' -> ' ,
 				(self longAt: oop + BaseHeaderSize + BytesPerWord) hex8 , ')'].
-	('AEIOU' includes: name first)
-		ifTrue: [^ 'an ' , name]
-		ifFalse: [^ 'a ' , name]
+	^('AEIOU' includes: name first)
+		ifTrue: ['an ' , name]
+		ifFalse: ['a ' , name]
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> shortPrintRelative: oop [
+NewspeakInterpreterSimulator >> shortPrintRelative: oop [
 	| name classOop |
 	(self isIntegerObject: oop) ifTrue:
 		[^'=' , (self integerValueOf: oop) printString , 
@@ -1728,7 +1846,7 @@ InterpreterSimulator >> shortPrintRelative: oop [
 ]
 
 { #category : #'I/O primitives' }
-InterpreterSimulator >> showDisplayBits: destBits w: w h: h d: d left: left right: right top: top bottom: bottom [
+NewspeakInterpreterSimulator >> showDisplayBits: destBits w: w h: h d: d left: left right: right top: top bottom: bottom [
 	| raster pixPerWord simDisp realDisp rect |
 	pixPerWord := 32 // d.
 	raster := displayForm width + (pixPerWord - 1) // pixPerWord.
@@ -1752,13 +1870,13 @@ InterpreterSimulator >> showDisplayBits: destBits w: w h: h d: d left: left righ
 ]
 
 { #category : #'debug printing' }
-InterpreterSimulator >> space [
+NewspeakInterpreterSimulator >> space [
 
 	traceOn ifTrue: [ transcript space ]
 ]
 
 { #category : #'file primitives' }
-InterpreterSimulator >> sqFile: file Read: count Into: byteArrayIndex At: startIndex [
+NewspeakInterpreterSimulator >> sqFile: file Read: count Into: byteArrayIndex At: startIndex [
 
 	startIndex to: (startIndex + count - 1) do: [ :i |
 		file atEnd ifTrue: [ ^ i - startIndex ].
@@ -1768,19 +1886,19 @@ InterpreterSimulator >> sqFile: file Read: count Into: byteArrayIndex At: startI
 ]
 
 { #category : #'file primitives' }
-InterpreterSimulator >> sqFile: file SetPosition: newPosition [
+NewspeakInterpreterSimulator >> sqFile: file SetPosition: newPosition [
 
 	file position: newPosition.
 ]
 
 { #category : #'file primitives' }
-InterpreterSimulator >> sqFile: file Truncate: truncatePosition [
+NewspeakInterpreterSimulator >> sqFile: file Truncate: truncatePosition [
 
 	file truncate: truncatePosition.
 ]
 
 { #category : #'file primitives' }
-InterpreterSimulator >> sqFile: file Write: count From: byteArrayIndex At: startIndex [
+NewspeakInterpreterSimulator >> sqFile: file Write: count From: byteArrayIndex At: startIndex [
 
 	startIndex to: (startIndex + count - 1) do: [ :i |
 		file nextPut: (self byteAt: byteArrayIndex + i).
@@ -1789,43 +1907,43 @@ InterpreterSimulator >> sqFile: file Write: count From: byteArrayIndex At: start
 ]
 
 { #category : #'file primitives' }
-InterpreterSimulator >> sqFileAtEnd: file [
+NewspeakInterpreterSimulator >> sqFileAtEnd: file [
 
 	^ file atEnd
 ]
 
 { #category : #'file primitives' }
-InterpreterSimulator >> sqFileClose: file [
+NewspeakInterpreterSimulator >> sqFileClose: file [
 
 	file close.
 ]
 
 { #category : #'file primitives' }
-InterpreterSimulator >> sqFileFlush: file [
+NewspeakInterpreterSimulator >> sqFileFlush: file [
 
 	^ file flush
 ]
 
 { #category : #'file primitives' }
-InterpreterSimulator >> sqFileGetPosition: file [
+NewspeakInterpreterSimulator >> sqFileGetPosition: file [
 
 	^ file position
 ]
 
 { #category : #'file primitives' }
-InterpreterSimulator >> sqFileSize: file [
+NewspeakInterpreterSimulator >> sqFileSize: file [
 
 	^ file size
 ]
 
 { #category : #'plugin support' }
-InterpreterSimulator >> sqGetInterpreterProxy [
+NewspeakInterpreterSimulator >> sqGetInterpreterProxy [
 	"I am basically my own proxy..."
 	^self
 ]
 
 { #category : #'memory access' }
-InterpreterSimulator >> sqGrowMemory: oldLimit By: delta [
+NewspeakInterpreterSimulator >> sqGrowMemory: oldLimit By: delta [
 
 	transcript show: 'grow memory from ', oldLimit printString, ' by ', delta printString; cr.
 	memory := memory , (memory class new: delta // 4).
@@ -1833,19 +1951,19 @@ InterpreterSimulator >> sqGrowMemory: oldLimit By: delta [
 ]
 
 { #category : #'memory access' }
-InterpreterSimulator >> sqMemoryExtraBytesLeft: includingSwap [
+NewspeakInterpreterSimulator >> sqMemoryExtraBytesLeft: includingSwap [
 	^0
 ]
 
 { #category : #'memory access' }
-InterpreterSimulator >> sqShrinkMemory: oldLimit By: delta [
+NewspeakInterpreterSimulator >> sqShrinkMemory: oldLimit By: delta [
 	transcript show: 'shrink memory from ', oldLimit printString, ' by ', delta printString, ' remember it doesn''t actually shrink in simulation'; cr.
 
 	^ oldLimit
 ]
 
 { #category : #testing }
-InterpreterSimulator >> stackDepth [
+NewspeakInterpreterSimulator >> stackDepth [
 	| ctxt n |
 	ctxt := activeContext.
 	n := 0.
@@ -1855,14 +1973,14 @@ InterpreterSimulator >> stackDepth [
 ]
 
 { #category : #initialization }
-InterpreterSimulator >> startOfMemory [
+NewspeakInterpreterSimulator >> startOfMemory [
 	"Return the start of object memory."
 
 	^ 0
 ]
 
 { #category : #testing }
-InterpreterSimulator >> stats [
+NewspeakInterpreterSimulator >> stats [
 	| oop fieldAddr fieldOop last stats v d |
 	stats := Bag new.
 	oop := self firstObject.
@@ -1897,7 +2015,7 @@ InterpreterSimulator >> stats [
 ]
 
 { #category : #'bytecode routines' }
-InterpreterSimulator >> storeAndPopReceiverVariableBytecode [
+NewspeakInterpreterSimulator >> storeAndPopReceiverVariableBytecode [
 	"Note: This code uses storePointerUnchecked:ofObject:withValue: and does the store check explicitely in order to help the translator produce better code."
 
 	"Interpreter version has fetchNextBytecode out of order"
@@ -1916,7 +2034,7 @@ InterpreterSimulator >> storeAndPopReceiverVariableBytecode [
 ]
 
 { #category : #'bytecode routines' }
-InterpreterSimulator >> storeAndPopTemporaryVariableBytecode [
+NewspeakInterpreterSimulator >> storeAndPopTemporaryVariableBytecode [
 
 	"Interpreter version has fetchNextBytecode out of order"
 	self storePointerUnchecked: (currentBytecode bitAnd: 7) + TempFrameStart
@@ -1928,15 +2046,27 @@ InterpreterSimulator >> storeAndPopTemporaryVariableBytecode [
 ]
 
 { #category : #'float primitives' }
-InterpreterSimulator >> storeFloatAt: floatBitsAddress from: aFloat [
+NewspeakInterpreterSimulator >> storeFloatAt: floatBitsAddress from: aFloat [
 
 	self long32At: floatBitsAddress put: (aFloat at: 1).
 	self long32At: floatBitsAddress+4 put: (aFloat at: 2).
 
 ]
 
+{ #category : #'debug printing' }
+NewspeakInterpreterSimulator >> str: aString n: bString cmp: n [
+	"implementation of strncmp(3)"
+	bString isInteger ifFalse:
+		[^(aString first: n) ~= (bString first: n)].
+	1 to: n do:
+		[:i| | v |
+		v := (aString at: i) asInteger - (self byteAt: bString + i - 1).
+		v ~= 0 ifTrue: [^v]].
+	^0
+]
+
 { #category : #'debug support' }
-InterpreterSimulator >> stringOf: oop [
+NewspeakInterpreterSimulator >> stringOf: oop [
 	| size long nLongs chars |
 	^ String streamContents:
 		[:strm |
@@ -1951,7 +2081,7 @@ InterpreterSimulator >> stringOf: oop [
 ]
 
 { #category : #'debug printing' }
-InterpreterSimulator >> symbolic: byte at: ip inMethod: meth [
+NewspeakInterpreterSimulator >> symbolic: byte at: ip inMethod: meth [
 	"Print a bytecode in simple symbolic form"
 
 	| type offset |
@@ -1987,7 +2117,7 @@ InterpreterSimulator >> symbolic: byte at: ip inMethod: meth [
 ]
 
 { #category : #'debug printing' }
-InterpreterSimulator >> symbolicExtensions: offset at: ip inMethod: meth [
+NewspeakInterpreterSimulator >> symbolicExtensions: offset at: ip inMethod: meth [
 	| type offset2 byte2 byte3 byte4 |
 	offset <=6 ifTrue: 
 		["Extended op codes 128-134"
@@ -2050,13 +2180,13 @@ InterpreterSimulator >> symbolicExtensions: offset at: ip inMethod: meth [
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> tenuringIncrementalGC [
+NewspeakInterpreterSimulator >> tenuringIncrementalGC [
 	transcript cr; nextPutAll: 'tenuringIncrementalGC ('; print: byteCount; nextPut: $); flush.
 	^super tenuringIncrementalGC
 ]
 
 { #category : #testing }
-InterpreterSimulator >> test [
+NewspeakInterpreterSimulator >> test [
 	transcript clear.
 	byteCount := 0.
 	quitBlock := [^ self].
@@ -2071,8 +2201,7 @@ InterpreterSimulator >> test [
 ]
 
 { #category : #testing }
-InterpreterSimulator >> test1 [
-	| breakCount printBytecodeAtEachStep |
+NewspeakInterpreterSimulator >> test1 [
 	transcript clear.
 	byteCount := 0.
 	breakCount := -1.
@@ -2098,7 +2227,7 @@ InterpreterSimulator >> test1 [
 ]
 
 { #category : #testing }
-InterpreterSimulator >> testBecome [
+NewspeakInterpreterSimulator >> testBecome [
 	"Become some young things.  AA testBecome    "
 	| array list1 list2 p1 p2 p3 p4 |
 	array := self splObj: ClassArray.
@@ -2127,13 +2256,63 @@ InterpreterSimulator >> testBecome [
 	(self fetchPointer: 1 ofObject: list2) = p2 ifFalse: [self halt].
 ]
 
+{ #category : #UI }
+NewspeakInterpreterSimulator >> toggleTranscript [
+	| transcriptPane |
+	transcript ifNil: [transcript := Transcript. ^self].
+	displayView ifNil: [^self changed: #flash].
+	transcriptPane := (displayView outermostMorphThat: [:m| m isSystemWindow])
+							submorphThat: [:m| m model isStream]
+							ifNone: [^self changed: #flash].
+	transcript := transcript = Transcript
+					ifTrue: [transcriptPane model]
+					ifFalse: [Transcript]
+]
+
 { #category : #'interpreter shell' }
-InterpreterSimulator >> unableToReadImageError [
+NewspeakInterpreterSimulator >> unableToReadImageError [
 	self error:  'Read failed or premature end of image file'
 ]
 
+{ #category : #UI }
+NewspeakInterpreterSimulator >> utilitiesMenu: aMenuMorph [
+	aMenuMorph
+		add: 'toggle transcript' action: #toggleTranscript;
+		addLine;
+		add: 'print active context' action: [self printContext: activeContext WithSP: localSP];
+		add: 'print int head frame' action: #printHeadFrame;
+		add: 'print call stack' action: #printCallStack;
+		add: 'print oop...' action: [(self promptHex: 'print oop') ifNotNil: [:oop| self printOop: oop]];
+		addLine;
+		add: 'inspect interpreter' action: #inspect;
+		addLine;
+		add: 'set break count...' action: #setBreakCount;
+		add: (printSends
+				ifTrue: ['no print sends']
+				ifFalse: ['print sends'])
+			action: [self ensureDebugAtEachStepBlock.
+					printSends := printSends not];
+		"currently printReturns does nothing"
+		"add: (printReturns
+				ifTrue: ['no print returns']
+				ifFalse: ['print returns'])
+			action: [self ensureDebugAtEachStepBlock.
+					printReturns := printReturns not];"
+		add: (printBytecodeAtEachStep
+				ifTrue: ['no print bytecode each bytecode']
+				ifFalse: ['print bytecode each bytecode'])
+			action: [self ensureDebugAtEachStepBlock.
+					printBytecodeAtEachStep := printBytecodeAtEachStep not];
+		add: (printContextAtEachStep
+				ifTrue: ['no print context each bytecode']
+				ifFalse: ['print context each bytecode'])
+			action: [self ensureDebugAtEachStepBlock.
+					printContextAtEachStep := printBytecodeAtEachStep not].
+	^aMenuMorph
+]
+
 { #category : #testing }
-InterpreterSimulator >> validOop: oop [
+NewspeakInterpreterSimulator >> validOop: oop [
 	" Return true if oop appears to be valid "
 	(oop bitAnd: 1) = 1 ifTrue: [^ true].  "Integer"
 	(oop bitAnd: 3) = 0 ifFalse: [^ false].  "Uneven address"
@@ -2145,12 +2324,12 @@ InterpreterSimulator >> validOop: oop [
 ]
 
 { #category : #testing }
-InterpreterSimulator >> validateActiveContext [
+NewspeakInterpreterSimulator >> validateActiveContext [
 	self validateOopsIn: activeContext.	"debug -- test if messed up"
 ]
 
 { #category : #testing }
-InterpreterSimulator >> validateOopsIn: object [
+NewspeakInterpreterSimulator >> validateOopsIn: object [
 	| fieldPtr limit former header | 
 	"for each oop in me see if it is legal"
 	fieldPtr := object + BaseHeaderSize.	"first field"
@@ -2167,7 +2346,7 @@ InterpreterSimulator >> validateOopsIn: object [
 ]
 
 { #category : #'file primitives' }
-InterpreterSimulator >> vmPathGet: stringBase Length: stringSize [
+NewspeakInterpreterSimulator >> vmPathGet: stringBase Length: stringSize [
 	| pathName stringOop |
 	pathName := Smalltalk vmPath.
 	stringOop := stringBase - BaseHeaderSize. "Due to C call in Interp"
@@ -2178,23 +2357,23 @@ InterpreterSimulator >> vmPathGet: stringBase Length: stringSize [
 ]
 
 { #category : #'file primitives' }
-InterpreterSimulator >> vmPathSize [
+NewspeakInterpreterSimulator >> vmPathSize [
 	^ Smalltalk vmPath size
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> warning: aString [
+NewspeakInterpreterSimulator >> warning: aString [
 	Transcript cr; nextPutAll: aString; flush
 ]
 
 { #category : #'I/O primitives support' }
-InterpreterSimulator >> warpBits [
+NewspeakInterpreterSimulator >> warpBits [
 
 	^ myBitBlt warpBits
 ]
 
 { #category : #'image save/restore' }
-InterpreterSimulator >> writeImageFileIO: numberOfBytesToWrite [
+NewspeakInterpreterSimulator >> writeImageFileIO: numberOfBytesToWrite [
 	"Actually emit the first numberOfBytesToWrite object memory bytes onto the snapshot."
 
 	| headerSize file |

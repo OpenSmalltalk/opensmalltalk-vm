@@ -7,13 +7,13 @@ Class {
 	#category : #'VMMaker-Plugins'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #translation }
 CroquetPlugin class >> hasHeaderFile [
 	"If there is a single intrinsic header file to be associated with the plugin, here is where you want to flag"
 	^true
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #translation }
 CroquetPlugin class >> requiresCrossPlatformFiles [
 	"default is ok for most, any plugin needing platform specific files must say so"
 	^true
@@ -761,7 +761,7 @@ CroquetPlugin >> stackMatrix: index [
 	Return a pointer to the matrix data if successful, nil otherwise."
 	| oop |
 	<inline: false>
-	<returnTypeC: 'void*'>
+	<returnTypeC:'void*'>
 	oop := interpreterProxy stackObjectValue: index.
 	oop = nil ifTrue:[^nil].
 	((interpreterProxy isWords: oop) and:[(interpreterProxy slotSizeOf: oop) = 16])
@@ -775,7 +775,7 @@ CroquetPlugin >> stackVector3: index [
 	Return a pointer to the float data if successful, nil otherwise."
 	| oop |
 	<inline: false>
-	<returnTypeC: 'void*'>
+	<returnTypeC:'void*'>
 	oop := interpreterProxy stackObjectValue: index.
 	oop = nil ifTrue:[^nil].
 	((interpreterProxy isWords: oop) and:[(interpreterProxy slotSizeOf: oop) = 3])

@@ -271,7 +271,8 @@ CoInterpreter class >> initializeFrameIndices [
 { #category : #initialization }
 CoInterpreter class >> initializeMiscConstants [
 
-	super initializeMiscConstants.
+	super initializeMiscConstants..
+	COGVM := true.
 
 	MinBackwardJumpCountForCompile := 10.
 
@@ -399,6 +400,23 @@ CoInterpreter class >> preGenerationHook: aCCodeGenerator [
 	"Override to undo the hiding of primitiveClosureValueNoContextSwitch"
 	super preGenerationHook: aCCodeGenerator.
 	(aCCodeGenerator methodNamed: #primitiveClosureValueNoContextSwitch) static: false
+]
+
+{ #category : #translation }
+CoInterpreter class >> preambleCCode [
+	^super 	preambleCCode,
+'
+/*
+ * Define sigsetjmp and siglongjmp to be the most minimal setjmp/longjmp available on the platform.
+ */
+#if WIN32
+# define sigsetjmp(jb,ssmf) setjmp(jb)
+# define siglongjmp(jb,v) longjmp(jb,v)
+#else
+# define sigsetjmp(jb,ssmf) _setjmp(jb)
+# define siglongjmp(jb,v) _longjmp(jb,v)
+#endif
+'
 ]
 
 { #category : #translation }

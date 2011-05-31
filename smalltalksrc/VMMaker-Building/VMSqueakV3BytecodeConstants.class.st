@@ -9,7 +9,6 @@ Class {
 	#superclass : #VMBasicConstants,
 	#classVars : [
 		'CtxtTempFrameStart',
-		'InvokeObjectAsMethodPrimitiveIndex',
 		'LargeContextBit',
 		'LargeContextSize',
 		'SmallContextSize'
