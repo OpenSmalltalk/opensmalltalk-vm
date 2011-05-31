@@ -88,6 +88,14 @@ VMClass class >> implicitReturnTypeFor: aSelector [
 	^#sqInt
 ]
 
+{ #category : #initialization }
+VMClass class >> initializeMiscConstants [
+	"Falsify the `what type of VM is this?' flags that are defined in the various interp.h files.
+	Subclass implementations need to include a super initializeMiscConstants."
+
+	STACKVM := COGVM := COGMTVM := false
+]
+
 { #category : #translation }
 VMClass class >> isAccessor: aSelector [
 	"Answer if aSelector is simply an accessor method for one of our fields.
@@ -244,6 +252,11 @@ VMClass >> addressOf: anObject [
 	^anObject
 ]
 
+{ #category : #'translation support' }
+VMClass >> asmLabel: aBoolean [
+	"For translation only; noop when running in Smalltalk."
+]
+
 { #category : #'debug support' }
 VMClass >> asserta: aBooleanExpression [
 	<doNotGenerate>
@@ -256,6 +269,29 @@ VMClass >> asserta: aBooleanExpression [
 { #category : #accessing }
 VMClass >> bytesPerOop [
 	^BytesPerOop
+]
+
+{ #category : #'translation support' }
+VMClass >> cCode: codeString [
+	"Support for Smalltalk-to-C translation.
+	 For translation only; noop when running in Smalltalk.
+	 The argument is output literally when generating C code."
+]
+
+{ #category : #'translation support' }
+VMClass >> cCode: codeStringOrBlock inSmalltalk: aBlock [
+	"Support for Smalltalk-to-C translation. The first argument is output when generating C code.
+	  But if this code is being simulated in Smalltalk, answer the result of evaluating the given block.
+	  If the first argument is a string it is output literally, and if it is a block it is translated.
+	  N.B.  If the first argument is a block then replacement happens at TMethod creation time so the use
+	  of cCode:inSmalltalk: with a block first argument does not prevent inlining and is hence preferred."
+
+	^aBlock value
+]
+
+{ #category : #'translation support' }
+VMClass >> cPreprocessorDirective: codeString [
+	"For translation only; noop when running in Smalltalk."
 ]
 
 { #category : #'translation support' }
@@ -412,6 +448,11 @@ VMClass >> safe: signedInteger mod: positiveModulus [
 	^(remainder := signedInteger \\ positiveModulus) < 0
 		ifTrue: [remainder + positiveModulus]
 		ifFalse: [remainder]
+]
+
+{ #category : #'translation support' }
+VMClass >> sharedCodeNamed: label inCase: caseNumber [
+	"For translation only; noop when running in Smalltalk."
 ]
 
 { #category : #'translation support' }

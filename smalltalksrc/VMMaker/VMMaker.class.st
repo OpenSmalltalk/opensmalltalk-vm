@@ -138,6 +138,17 @@ VMMaker class >> forPlatform: platformName [
 ]
 
 { #category : #utilities }
+VMMaker class >> forceNewFileNamed: aFilename [
+	"Always output files in unix lf format.
+		A single format is friendlier to e.g. external version control systems.
+		The Microsoft and old MacOS classic C compilers all accept lf format files."
+
+	^(MultiByteFileStream forceNewFileNamed: aFilename)
+		lineEndConvention: #lf;
+		yourself
+]
+
+{ #category : #utilities }
 VMMaker class >> generate: interpreterClass and: cogitClass to: srcDirName platformDir: platDirName excluding: exclusions [
 	"Generate the VM to the given target directory. Exclude plugins in pluginList.
 	 Example:
@@ -179,6 +190,21 @@ VMMaker class >> generate: interpreterClass to: srcDirName platformDir: platDirN
 	(self makerFor: interpreterClass and: nil to: srcDirName platformDir: platDirName excluding: exclusions) generateEntire
 ]
 
+{ #category : #utilities }
+VMMaker class >> generate: interpreterClass to: srcDirName platformDir: platDirName including: inclusions [
+	"Generate the VM to the given target directory. Exclude plugins in pluginList.
+	 Example:
+		(VMMaker
+			generate: NewspeakInterpreter
+			to: (FileDirectory default pathFromURI: 'cogvm/newspeaksrc')
+			platformDir: (FileDirectory default pathFromURI: 'cogvm/platforms')
+			including:#(	AsynchFilePlugin FloatArrayPlugin RePlugin B2DPlugin FloatMathPlugin SecurityPlugin
+						BMPReadWriterPlugin IA32ABI SocketPlugin BitBltPlugin JPEGReadWriter2Plugin SurfacePlugin
+						DSAPrims JPEGReaderPlugin UUIDPlugin DropPlugin LargeIntegers UnixOSProcessPlugin
+						FileCopyPlugin Matrix2x3Plugin Win32OSProcessPlugin FilePlugin MiscPrimitivePlugin ZipPlugin))."
+	(self makerFor: interpreterClass and: nil to: srcDirName platformDir: platDirName including: inclusions) generateEntire
+]
+
 { #category : #'version testing' }
 VMMaker class >> headerNotice [
 "return a string to be put at the front of generated code files"
@@ -214,6 +240,28 @@ VMMaker class >> machinesDirName [
 ]
 
 { #category : #utilities }
+VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil to: srcDirName platformDir: platDirName [
+	"Initialize a VMMaker to generate the VM to the given target directory. Include plugins in pluginList.
+	Example:
+		(VMMaker
+			generate: NewspeakInterpreter
+			to: (FileDirectory default pathFromURI: 'cogvm/newspeaksrc')
+			platformDir: (FileDirectory default pathFromURI: 'cogvm/platforms')
+			including:#(	AsynchFilePlugin FloatArrayPlugin RePlugin B2DPlugin FloatMathPlugin SecurityPlugin
+						BMPReadWriterPlugin IA32ABI SocketPlugin BitBltPlugin JPEGReadWriter2Plugin SurfacePlugin
+						DSAPrims JPEGReaderPlugin UUIDPlugin DropPlugin LargeIntegers UnixOSProcessPlugin
+						FileCopyPlugin Matrix2x3Plugin Win32OSProcessPlugin FilePlugin MiscPrimitivePlugin ZipPlugin))"
+	| maker |
+	maker := self forPlatform: 'Cross'.
+	maker sourceDirectoryName: srcDirName.
+	maker platformRootDirectoryName: platDirName.
+	maker interpreterClass: interpreterClass.
+	cogitClassOrNil ifNotNil: [maker cogitClass: cogitClassOrNil].
+	^maker
+
+]
+
+{ #category : #utilities }
 VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil to: srcDirName platformDir: platDirName excluding: exclusions [
 	"Initialize a VMMaker to generate the VM to the given target directory. Exclude plugins in pluginList.
 	Example:
@@ -231,13 +279,28 @@ VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil to: srcDirName 
 			generateInterpreterFile.
 	"
 	| maker |
-	maker := self forPlatform: 'Cross'.
-	maker sourceDirectoryName: srcDirName.
-	maker platformRootDirectoryName: platDirName.
-	maker interpreterClass: interpreterClass.
-	cogitClassOrNil ifNotNil: [maker cogitClass: cogitClassOrNil].
+	maker := self makerFor: interpreterClass and: cogitClassOrNil to: srcDirName platformDir: platDirName.
 	maker externalModules addAll: 
 		(maker availablePlugins reject:[:plugin| exclusions includes: plugin]).
+	^maker
+
+]
+
+{ #category : #utilities }
+VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil to: srcDirName platformDir: platDirName including: inclusions [
+	"Initialize a VMMaker to generate the VM to the given target directory. Include plugins in pluginList.
+	Example:
+		(VMMaker
+			generate: NewspeakInterpreter
+			to: (FileDirectory default pathFromURI: 'cogvm/newspeaksrc')
+			platformDir: (FileDirectory default pathFromURI: 'cogvm/platforms')
+			including:#(	AsynchFilePlugin FloatArrayPlugin RePlugin B2DPlugin FloatMathPlugin SecurityPlugin
+						BMPReadWriterPlugin IA32ABI SocketPlugin BitBltPlugin JPEGReadWriter2Plugin SurfacePlugin
+						DSAPrims JPEGReaderPlugin UUIDPlugin DropPlugin LargeIntegers UnixOSProcessPlugin
+						FileCopyPlugin Matrix2x3Plugin Win32OSProcessPlugin FilePlugin MiscPrimitivePlugin ZipPlugin))"
+	| maker |
+	maker := self makerFor: interpreterClass and: cogitClassOrNil to: srcDirName platformDir: platDirName.
+	maker externalModules addAll: inclusions.
 	^maker
 
 ]
@@ -262,7 +325,7 @@ VMMaker class >> versionString [
 
 	"VMMaker versionString"
 
-	^'3.8b5-64.2'
+	^'4.4.21'
 ]
 
 { #category : #'plugin lists' }
@@ -660,7 +723,7 @@ VMMaker >> generateExportsFile [
 		s cr; nextPutAll:'};'; cr].
 	filePath := self interpreterExportsFilePath.
 	(cg needToGenerateHeader: (FileDirectory baseNameFor: filePath) file: filePath contents: contents) ifTrue:
-		[[fileStream := CrLfFileStream forceNewFileNamed: filePath] 
+		[[fileStream := VMMaker forceNewFileNamed: filePath] 
 			on: FileDoesNotExistException 
 			do:[^self couldNotOpenFile: filePath].
 		 fileStream nextPutAll: contents; close]
@@ -1277,7 +1340,8 @@ VMMaker >> saveConfigurationTo: aFile [
 	| stream |
 	stream := CrForSpaceWriteStream on: String new.
 	self configurationInfo storeOn: stream.
-	(CrLfFileStream newFileNamed: aFile)
+	(MultiByteFileStream newFileNamed: aFile)
+		lineEndConvention: #lf;
 		nextPutAll: stream contents;
 		close
 ]
@@ -1339,7 +1403,7 @@ VMMaker >> storeExternalPluginList [
 		s cr].
 	filePath := self makefileDirectory fullNameFor: self externalPluginListName.
 	(CCodeGenerator basicNew needToGenerateHeader: filePath file: filePath contents: contents) ifTrue:
-		[[fileStream := CrLfFileStream forceNewFileNamed: filePath] 
+		[[fileStream := VMMaker forceNewFileNamed: filePath] 
 			on: FileDoesNotExistException 
 			do:[^self couldNotOpenFile: filePath].
 		 fileStream nextPutAll: contents; close]
@@ -1358,7 +1422,7 @@ VMMaker >> storeInternalPluginList [
 		s cr].
 	filePath := self makefileDirectory fullNameFor: self internalPluginListName.
 	(CCodeGenerator basicNew needToGenerateHeader: filePath file: filePath contents: contents) ifTrue:
-		[[fileStream := CrLfFileStream forceNewFileNamed: filePath] 
+		[[fileStream := VMMaker forceNewFileNamed: filePath] 
 			on: FileDoesNotExistException 
 			do:[^self couldNotOpenFile: filePath].
 		 fileStream nextPutAll: contents; close]

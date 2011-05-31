@@ -65,7 +65,7 @@ Gnuifier >> gnuify [
 		[directory deleteFileNamed: 'gcc3x-', interpreterFilename].
 	self
 		gnuifyFrom: (directory oldFileNamed: interpreterFilename)
-		to: 			(CrLfFileStream forceNewFileNamed: (directory fullNameFor: 'gcc3x-', interpreterFilename))
+		to: 			(VMMaker forceNewFileNamed: (directory fullNameFor: 'gcc3x-', interpreterFilename))
 	
 
 ]

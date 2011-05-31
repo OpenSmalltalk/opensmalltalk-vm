@@ -54,35 +54,10 @@ Object >> asValue: aClass [
 ]
 
 { #category : #'*VMMaker-translation support' }
-Object >> asmLabel: aBoolean [
-	"For translation only; noop when running in Smalltalk."
-]
-
-{ #category : #'*VMMaker-translation support' }
-Object >> cCode: codeString [
-	"For translation only; noop when running in Smalltalk."
-]
-
-{ #category : #'*VMMaker-translation support' }
-Object >> cCode: codeStringOrBlock inSmalltalk: aBlock [
-	"Support for Smalltalk-to-C translation. The first argument is output when generating C code.
-	 But if this code is being simulated in Smalltalk, answer the result of evaluating the given block.
-	 If the first argument is a string it is output literally, and if it is a block it is translated."
-
-	^aBlock value
-
-]
-
-{ #category : #'*VMMaker-translation support' }
 Object >> cCoerce: value to: cType [
 	"Type coercion for translation only; just return the value when running in Smalltalk."
 
 	^ value
-]
-
-{ #category : #'*VMMaker-translation support' }
-Object >> cPreprocessorDirective: codeString [
-	"For translation only; noop when running in Smalltalk."
 ]
 
 { #category : #'*VMMaker-plugin generation' }
@@ -158,11 +133,6 @@ Object >> remapOop: oopOrList in: aBlock [
 
 { #category : #'*VMMaker-translation support' }
 Object >> returnTypeC: typeString [
-	"For translation only; noop when running in Smalltalk."
-]
-
-{ #category : #'*VMMaker-translation support' }
-Object >> sharedCodeNamed: label inCase: caseNumber [
 	"For translation only; noop when running in Smalltalk."
 ]
 

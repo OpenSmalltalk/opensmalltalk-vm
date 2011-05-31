@@ -55,8 +55,7 @@ SecurityPlugin >> primitiveCanWriteImage [
 { #category : #primitives }
 SecurityPlugin >> primitiveDisableImageWrite [
 	<export: true>
-	self cCode:'ioDisableImageWrite()'.
-
+	self cCode: 'ioDisableImageWrite()'
 ]
 
 { #category : #primitives }

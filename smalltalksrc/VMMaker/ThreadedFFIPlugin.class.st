@@ -54,7 +54,7 @@ ThreadedFFIPlugin class >> maxNumArgs [
 	^MaxNumArgs
 ]
 
-{ #category : #accessing }
+{ #category : #translation }
 ThreadedFFIPlugin class >> moduleName [
 	"IMPORTANT: IF YOU CHANGE THE NAME OF THIS PLUGIN YOU MUST CHANGE
 		Interpreter>>primitiveCalloutToFFI

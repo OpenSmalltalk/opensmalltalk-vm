@@ -34,7 +34,7 @@ FFIPlugin class >> hasHeaderFile [
 	^true
 ]
 
-{ #category : #accessing }
+{ #category : #translation }
 FFIPlugin class >> moduleName [ "FFIPlugin translate"
 	"IMPORTANT: IF YOU CHANGE THE NAME OF THIS PLUGIN YOU MUST CHANGE
 		Interpreter>>primitiveCalloutToFFI

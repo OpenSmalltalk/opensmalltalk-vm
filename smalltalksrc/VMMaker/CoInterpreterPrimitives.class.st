@@ -159,7 +159,8 @@ CoInterpreterPrimitives >> primitiveFlushCacheByMethod [
 			["It's primitiveExternalCall"
 			self flushExternalPrimitiveOf: oldMethod].
 		 (self methodHasCogMethod: oldMethod) ifTrue:
-			[cogit unlinkSendsTo: (self cogMethodOf: oldMethod)]]
+			[cogit unlinkSendsTo: (self cogMethodOf: oldMethod)]].
+	self flushAtCache
 ]
 
 { #category : #'system control primitives' }
