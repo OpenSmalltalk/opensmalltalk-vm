@@ -2159,19 +2159,31 @@ NewspeakInterpreter >> checkForInterrupts [
 		ifTrue: ["millisecond clock wrapped so correct the nextPollTick"
 			nextPollTick := nextPollTick - MillisecondClockMask - 1].
 
-	"inIOProcessEvents prevents reentrancy into ioProcessEvents
-	 and allows disabling ioProcessEvents e.g. for native GUIs."
-	(now >= nextPollTick
-	and: [inIOProcessEvents = 0]) ifTrue:
-		[inIOProcessEvents := inIOProcessEvents + 1.
-		 self ioProcessEvents. "sets interruptPending if interrupt key pressed; may callback"
-		 inIOProcessEvents > 0 ifTrue:
-			[inIOProcessEvents := inIOProcessEvents - 1].
-		nextPollTick := now + 200
-		"msecs to wait before next call to ioProcessEvents.  
-		Note that strictly speaking we might need to update  
-		'now' at this point since ioProcessEvents could take a  
-		very long time on some platforms"].
+	"inIOProcessEvents prevents reentrancy into ioProcessEvents and allows disabling
+	 ioProcessEvents e.g. for native GUIs.  We would like to manage that here but can't
+	 since the platform code may choose to call ioProcessEvents itself in various places."
+	false
+		ifTrue:
+			[(now >= nextPollTick
+			  and: [inIOProcessEvents = 0]) ifTrue:
+				[inIOProcessEvents := inIOProcessEvents + 1.
+				 self ioProcessEvents. "sets interruptPending if interrupt key pressed; may callback"
+				 inIOProcessEvents > 0 ifTrue:
+					[inIOProcessEvents := inIOProcessEvents - 1].
+				nextPollTick := now + 200
+				"msecs to wait before next call to ioProcessEvents.  
+				Note that strictly speaking we might need to update  
+				'now' at this point since ioProcessEvents could take a  
+				very long time on some platforms"]]
+		ifFalse:
+			[now >= nextPollTick ifTrue:
+				[self ioProcessEvents.
+				 "sets interruptPending if interrupt key pressed"
+				 nextPollTick := now + 200
+				 "msecs to wait before next call to ioProcessEvents.  
+				 Note that strictly speaking we might need to update  
+				 'now' at this point since ioProcessEvents could take a  
+				 very long time on some platforms"]].
 	interruptPending
 		ifTrue: [interruptPending := false.
 			"reset interrupt flag"
@@ -2202,7 +2214,7 @@ NewspeakInterpreter >> checkForInterrupts [
 	"signal all semaphores in semaphoresToSignal"
 	self signalExternalSemaphores.
 
-	"update the tracking value (unless e.g. updated in a callback via inIOProcessEvents)."
+	"update the tracking value (unless e.g. updated in a callback via ioProcessEvents)."
 	lastTick = thisLastTick ifTrue:
 		[lastTick := now]
 ]
