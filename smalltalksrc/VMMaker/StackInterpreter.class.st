@@ -2347,19 +2347,31 @@ StackInterpreter >> checkForEventsMayContextSwitch: mayContextSwitch [
 		  and: [self synchronousSignal: sema]) ifTrue:
 			[switched := true]].
 
-	"inIOProcessEvents prevents reentrancy into ioProcessEvents
-	 and allows disabling ioProcessEvents e.g. for native GUIs."
-	((now := self ioUTCMicroseconds) >= nextPollUsecs
-	 and: [inIOProcessEvents = 0]) ifTrue:
-		[statIOProcessEvents := statIOProcessEvents + 1.
-		 inIOProcessEvents := inIOProcessEvents + 1.
-		 self ioProcessEvents. "sets interruptPending if interrupt key pressed; may callback"
-		 inIOProcessEvents > 0 ifTrue:
-			[inIOProcessEvents := inIOProcessEvents - 1].
-		 nextPollUsecs := now + 20000
-		 "msecs to wait before next call to ioProcessEvents.  Note that strictly
-		  speaking we might need to update 'now' at this point since
-		  ioProcessEvents could take a very long time on some platforms"].
+	"inIOProcessEvents prevents reentrancy into ioProcessEvents and allows disabling
+	 ioProcessEvents e.g. for native GUIs.  We would like to manage that here but can't
+	 since the platform code may choose to call ioProcessEvents itself in various places."
+	false
+		ifTrue:
+			[((now := self ioUTCMicroseconds) >= nextPollUsecs
+			 and: [inIOProcessEvents = 0]) ifTrue:
+				[statIOProcessEvents := statIOProcessEvents + 1.
+				 inIOProcessEvents := inIOProcessEvents + 1.
+				 self ioProcessEvents. "sets interruptPending if interrupt key pressed; may callback"
+				 inIOProcessEvents > 0 ifTrue:
+					[inIOProcessEvents := inIOProcessEvents - 1].
+				 nextPollUsecs := now + 20000
+				 "msecs to wait before next call to ioProcessEvents.  Note that strictly
+				  speaking we might need to update 'now' at this point since
+				  ioProcessEvents could take a very long time on some platforms"]]
+		ifFalse:
+			[(now := self ioUTCMicroseconds) >= nextPollUsecs ifTrue:
+				[statIOProcessEvents := statIOProcessEvents + 1.
+				 self ioProcessEvents. "sets interruptPending if interrupt key pressed; may callback"
+				 nextPollUsecs := now + 20000
+				 "msecs to wait before next call to ioProcessEvents.  Note that strictly
+				  speaking we might need to update 'now' at this point since
+				  ioProcessEvents could take a very long time on some platforms"]].
+
 	interruptPending ifTrue:
 		[interruptPending := false.
 		 "reset interrupt flag"
