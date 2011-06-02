@@ -24,7 +24,6 @@ MacMenubarPlugin \
 Matrix2x3Plugin \
 MIDIPlugin \
 MiscPrimitivePlugin \
-QVMProfileMacSupportPlugin \
 RePlugin \
 SecurityPlugin \
 SerialPlugin \
@@ -34,4 +33,5 @@ SoundGenerationPlugin \
 SoundPlugin \
 StarSqueakPlugin \
 SurfacePlugin \
-UUIDPlugin
+UUIDPlugin \
+VMProfileMacSupportPlugin \

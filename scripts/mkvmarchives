@@ -1,6 +1,8 @@
 #!/bin/sh
+test -d Cog.app || mkdir Cog.app
 rm -rf Cog.app/* Cog.app.tgz
 (cd macbuild/Fast.app>/dev/null;tar cf - *)|(cd Cog.app;tar xvf -)
+test -d cogwin || mkdir cogwin
 rm -rf cogwin/* cogwin.zip
 ln cygwinbuild/build/vm/{Croquet.exe,Croquet.ini,Croquet.map} cogwin
 ln cygwinbuild/build/vm/*.dll cogwin
