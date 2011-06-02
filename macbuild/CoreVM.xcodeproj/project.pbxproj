@@ -10,7 +10,7 @@
 		733AC8DB0FEAAC4F007C6206 /* version.c in Sources */ = {isa = PBXBuildFile; fileRef = 733AC8DA0FEAAC4F007C6206 /* version.c */; };
 		733B2C37106AB74B004652BE /* sqExternalSemaphores.c in Sources */ = {isa = PBXBuildFile; fileRef = 733B2C36106AB74B004652BE /* sqExternalSemaphores.c */; };
 		7351A09B100963670035A878 /* sqUnixThreads.c in Sources */ = {isa = PBXBuildFile; fileRef = 7351A09A100963670035A878 /* sqUnixThreads.c */; };
-		735B4CA30E8069B7008FA2CA /* QVMProfileMacSupportPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 735B4CA20E8069B7008FA2CA /* QVMProfileMacSupportPlugin.c */; };
+		735B4CA30E8069B7008FA2CA /* VMProfileMacSupportPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */; };
 		738FB1EA0EE4CF94004BEE42 /* ia32abicc.c in Sources */ = {isa = PBXBuildFile; fileRef = 738FB1E90EE4CF94004BEE42 /* ia32abicc.c */; };
 		738FB1ED0EE4D092004BEE42 /* IA32ABI.c in Sources */ = {isa = PBXBuildFile; fileRef = 738FB1EC0EE4D092004BEE42 /* IA32ABI.c */; };
 		739C6ED6112DCBB00049B7D3 /* sqTicker.c in Sources */ = {isa = PBXBuildFile; fileRef = 739C6ED5112DCBB00049B7D3 /* sqTicker.c */; };
@@ -283,7 +283,7 @@
 		733AC8DA0FEAAC4F007C6206 /* version.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = version.c; sourceTree = "<group>"; };
 		733B2C36106AB74B004652BE /* sqExternalSemaphores.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqExternalSemaphores.c; sourceTree = "<group>"; };
 		7351A09A100963670035A878 /* sqUnixThreads.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqUnixThreads.c; path = vm/sqUnixThreads.c; sourceTree = "<group>"; };
-		735B4CA20E8069B7008FA2CA /* QVMProfileMacSupportPlugin.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = QVMProfileMacSupportPlugin.c; sourceTree = "<group>"; };
+		735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = VMProfileMacSupportPlugin.c; sourceTree = "<group>"; };
 		738FB1E90EE4CF94004BEE42 /* ia32abicc.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = ia32abicc.c; path = IA32ABI/ia32abicc.c; sourceTree = "<group>"; };
 		738FB1EC0EE4D092004BEE42 /* IA32ABI.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = IA32ABI.c; path = IA32ABI/IA32ABI.c; sourceTree = "<group>"; };
 		739C6ED5112DCBB00049B7D3 /* sqTicker.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqTicker.c; sourceTree = "<group>"; };
@@ -601,13 +601,13 @@
 			name = vm;
 			sourceTree = "<group>";
 		};
-		735B4CA10E80689B008FA2CA /* QVMProfileMacSupportPlugin */ = {
+		735B4CA10E80689B008FA2CA /* VMProfileMacSupportPlugin */ = {
 			isa = PBXGroup;
 			children = (
-				735B4CA20E8069B7008FA2CA /* QVMProfileMacSupportPlugin.c */,
+				735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */,
 			);
-			name = QVMProfileMacSupportPlugin;
-			path = plugins/QVMProfileMacSupportPlugin;
+			name = VMProfileMacSupportPlugin;
+			path = plugins/VMProfileMacSupportPlugin;
 			sourceTree = "<group>";
 		};
 		7384271E11010B920070B80D /* plugins */ = {
@@ -639,7 +639,7 @@
 				A277291B0CE7A8D300ABAFCA /* Matrix2x3Plugin */,
 				A277291D0CE7A8D300ABAFCA /* MIDIPlugin */,
 				A277291F0CE7A8D300ABAFCA /* MiscPrimitivePlugin */,
-				735B4CA10E80689B008FA2CA /* QVMProfileMacSupportPlugin */,
+				735B4CA10E80689B008FA2CA /* VMProfileMacSupportPlugin */,
 				A27729210CE7A8D300ABAFCA /* RePlugin */,
 				A27729230CE7A8D300ABAFCA /* SecurityPlugin */,
 				A27729250CE7A8D300ABAFCA /* SerialPlugin */,
@@ -1946,7 +1946,7 @@
 				A2835CFF0E07A13300308978 /* sqHeapMap.c in Sources */,
 				73B96E490E47D7A10079C51B /* sqUnixHeartbeat.c in Sources */,
 				73B54C530E55EFED00FE780C /* sqUnixVMProfile.c in Sources */,
-				735B4CA30E8069B7008FA2CA /* QVMProfileMacSupportPlugin.c in Sources */,
+				735B4CA30E8069B7008FA2CA /* VMProfileMacSupportPlugin.c in Sources */,
 				A21AB9C70E99661000A432CA /* sqMacNSPluginUILogic2.c in Sources */,
 				A21AB9CB0E99682000A432CA /* NSCursorWrappers.m in Sources */,
 				738FB1EA0EE4CF94004BEE42 /* ia32abicc.c in Sources */,

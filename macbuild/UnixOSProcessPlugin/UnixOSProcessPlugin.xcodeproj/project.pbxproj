@@ -136,7 +136,14 @@
 			isa = PBXProject;
 			buildConfigurationList = 4FADC23708B4156C00ABE55E /* Build configuration list for PBXProject "UnixOSProcessPlugin" */;
 			compatibilityVersion = "Xcode 2.4";
+			developmentRegion = English;
 			hasScannedForEncodings = 1;
+			knownRegions = (
+				English,
+				Japanese,
+				French,
+				German,
+			);
 			mainGroup = 089C166AFE841209C02AAC07 /* UnixOSProcessPlugin */;
 			projectDirPath = "";
 			projectRoot = "";

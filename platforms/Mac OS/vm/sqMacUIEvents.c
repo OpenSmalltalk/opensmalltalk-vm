@@ -174,10 +174,18 @@ void HandleMenu(int mSelect);
 void HandleMouseDown(EventRecord *theEvent);
 int ioProcessEvents(void) {
 	/* This is a noop when running as a plugin; the browser handles events. */
+#ifndef BROWSERPLUGIN
 	static unsigned long   nextPollTick = 0, nextPowerCheck=0, disableIdleTickLimit=0;
 	unsigned long   clockTime;
+	extern sqInt inIOProcessEvents;
 
-#ifndef BROWSERPLUGIN
+	/* inIOProcessEvents controls ioProcessEvents.  If negative then
+	 * ioProcessEvents is disabled.  If >= 0 inIOProcessEvents is incremented
+	 * to avoid reentrancy (i.e. for native GUIs).
+	 */
+	if (inIOProcessEvents) return;
+	inIOProcessEvents += 1;
+
     clockTime = ioLowResMSecs();
 	if (abs(nextPollTick - clockTime) >= 16) {
 		/* time to process events! */
@@ -194,14 +202,16 @@ int ioProcessEvents(void) {
                 disableIdleTickLimit = clockTime;
             }
                 
-#if !defined(MINIMALVM)
+# if !defined(MINIMALVM)
             if (abs(nextPowerCheck - clockTime) >= 500) {
                  UpdateSystemActivity(UsrActivity);
                  nextPowerCheck = clockTime;
             }
-#endif
+# endif
         }        
 	}
+	if (inIOProcessEvents > 0)
+		inIOProcessEvents -= 1;
 #endif
 	return 0;
 }

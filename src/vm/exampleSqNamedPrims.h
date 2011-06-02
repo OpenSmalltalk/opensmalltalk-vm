@@ -1,5 +1,5 @@
 /* This is an automatically generated table of all builtin modules in the VM
-   CoInterpreter VMMaker-oscog.9
+   CoInterpreterPrimitives VMMaker.oscog-eem.69
  */
 
 extern sqExport vm_exports[];

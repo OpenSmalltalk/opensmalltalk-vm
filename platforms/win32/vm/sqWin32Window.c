@@ -1533,42 +1533,68 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds)
   return microSeconds;
 }
 
-int ioProcessEvents(void)
-{ static MSG msg;
-  POINT mousePt;
+int
+ioProcessEvents(void)
+{	static MSG msg;
+	POINT mousePt;
+	int result;
+	extern sqInt inIOProcessEvents;
 
-  if(fRunService && !fWindows95) return 1;
+	if (fRunService && !fWindows95) return 1;
 
 #if NewspeakVM
-	return ioDrainEventQueue();
+	/* inIOProcessEvents controls ioProcessEvents.  If negative then
+	 * ioProcessEvents is disabled.  If >= 0 inIOProcessEvents is incremented
+	 * to avoid reentrancy (i.e. for native GUIs).
+	 */
+	if (inIOProcessEvents) return;
+	inIOProcessEvents += 1;
+
+	result = ioDrainEventQueue();
+
+	if (inIOProcessEvents > 0)
+		inIOProcessEvents -= 1;
+
+	return result;
 #else
+	/* inIOProcessEvents controls ioProcessEvents.  If negative then
+	 * ioProcessEvents is disabled.  If >= 0 inIOProcessEvents is incremented
+	 * to avoid reentrancy (i.e. for native GUIs).
+	 */
+	if (inIOProcessEvents) return;
+	inIOProcessEvents += 1;
+
   /* WinCE doesn't retrieve WM_PAINTs from the queue with PeekMessage,
      so we won't get anything painted unless we use GetMessage() if there
      is a dirty rect. */
-  lastMessage = &msg;
-  while(PeekMessage(&msg,NULL,0,0,PM_NOREMOVE))
-    {
-      GetMessage(&msg,NULL,0,0);
-#ifndef NO_PLUGIN_SUPPORT
-      if(msg.hwnd == NULL) {
-	pluginHandleEvent(&msg);
-      }
-#endif
-      TranslateMessage(&msg);
-      DispatchMessage(&msg);
+	lastMessage = &msg;
+	while(PeekMessage(&msg,NULL,0,0,PM_NOREMOVE)) {
+		GetMessage(&msg,NULL,0,0);
+# ifndef NO_PLUGIN_SUPPORT
+		if (msg.hwnd == NULL)
+			pluginHandleEvent(&msg);
+# endif
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
     }
 
-#ifndef NO_DIRECTINPUT
-  /* any buffered mouse input which hasn't been processed is obsolete */
-  DumpBufferedMouseTrail();
-#endif
+# ifndef NO_DIRECTINPUT
+	/* any buffered mouse input which hasn't been processed is obsolete */
+	DumpBufferedMouseTrail();
+# endif
 
-  /* If we're running in a browser check if the browser's still there */
-  if(fBrowserMode && browserWindow) {
-    if(!IsWindow(browserWindow)) ioExit();
-  }
-  lastMessage = NULL;
-  return 1;
+	/* If we're running in a browser check if the browser's still there */
+	if (fBrowserMode
+	 && browserWindow
+	 && !IsWindow(browserWindow))
+		ioExit();
+
+	lastMessage = NULL;
+
+	if (inIOProcessEvents > 0)
+		inIOProcessEvents -= 1;
+
+	return 1;
 #endif
 }
 
@@ -1577,11 +1603,6 @@ sqInt
 ioDrainEventQueue(void)
 { static MSG msg;
   POINT mousePt;
-
-  /*
-   * Callback support; ensure ioProcessEvents is non-reentrant to prevent
-   * callbacks being delivered during other earlier callbacks.
-   */
 
   if(fRunService && !fWindows95) return 1;
 

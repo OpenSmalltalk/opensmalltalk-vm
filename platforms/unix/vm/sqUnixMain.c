@@ -596,14 +596,28 @@ static void emergencyDump(int quit)
 
 sqInt ioProcessEvents(void)
 {
+	sqInt result;
+	extern sqInt inIOProcessEvents;
+
 #if defined(IMAGE_DUMP)
-  if (dumpImageFile)
-    {
-      emergencyDump(0);
-      dumpImageFile= 0;
-    }
+	if (dumpImageFile) {
+		emergencyDump(0);
+		dumpImageFile= 0;
+	}
 #endif
-  return dpy->ioProcessEvents();
+	/* inIOProcessEvents controls ioProcessEvents.  If negative then
+	 * ioProcessEvents is disabled.  If >= 0 inIOProcessEvents is incremented
+	 * to avoid reentrancy (i.e. for native GUIs).
+	 */
+	if (inIOProcessEvents) return;
+	inIOProcessEvents += 1;
+
+	result = dpy->ioProcessEvents();
+
+	if (inIOProcessEvents > 0)
+		inIOProcessEvents -= 1;
+
+	return result;
 }
 
 sqInt ioScreenDepth(void)		 { return dpy->ioScreenDepth(); }

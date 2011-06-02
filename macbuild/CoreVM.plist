@@ -368,11 +368,11 @@
 	<key>CFBundleExecutable</key>
 	<string>Croquet</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Croquet Cog 4.0.0 http://www.teleplace.com</string>
+	<string>Croquet Cog 4.0.0 http://www.squeak.com</string>
 	<key>CFBundleIconFile</key>
 	<string>Croquet.icns</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.teleplace.Teleplace</string>
+	<string>com.squeak.Cog</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>

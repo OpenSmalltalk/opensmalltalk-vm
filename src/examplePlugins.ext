@@ -43,4 +43,9 @@ SoundGenerationPlugin \
 SoundPlugin \
 StarSqueakPlugin \
 SurfacePlugin \
-UUIDPlugin
+SqueakFFIPrims \
+SqueakFFIPrims \
+SqueakFFIPrims \
+SqueakFFIPrims \
+UUIDPlugin \
+VMProfileMacSupportPlugin

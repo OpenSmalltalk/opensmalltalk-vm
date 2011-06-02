@@ -1305,8 +1305,21 @@ static void doPendingFlush(void) {
 
 int ioProcessEvents(void) {
 
+	extern sqInt inIOProcessEvents;
+
+	/* inIOProcessEvents controls ioProcessEvents.  If negative then
+	 * ioProcessEvents is disabled.  If >= 0 inIOProcessEvents is incremented
+	 * to avoid reentrancy (i.e. for native GUIs).
+	 */
+	if (inIOProcessEvents) return;
+	inIOProcessEvents += 1;
+
 	aioPoll(0);		
 	doPendingFlush();
+
+	if (inIOProcessEvents > 0)
+		inIOProcessEvents -= 1;
+
     if (gQuitNowRightNow) {
         ioExit();  //This might not return, might call exittoshell
         QuitApplicationEventLoop();
