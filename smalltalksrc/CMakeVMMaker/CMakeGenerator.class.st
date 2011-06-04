@@ -25,9 +25,12 @@ CMakeGenerator >> addExternalLibraries: libs [
 { #category : #'cmake commands' }
 CMakeGenerator >> addExternalLibrary: aLibrary [ 
 
-	self cmd: 'target_link_libraries' 
-		params: self moduleName , ' ' , aLibrary.
+	self cmd: 'list'
+		params: 'APPEND LINKLIBS ' , aLibrary .
 		
+"	self cmd: 'target_link_libraries' 
+		params: self moduleName , ' ' , aLibrary.
+"	
 
 ]
 
