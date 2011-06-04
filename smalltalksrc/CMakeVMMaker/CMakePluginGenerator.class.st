@@ -24,6 +24,16 @@ CMakePluginGenerator >> addCrossSources: sources [
 ]
 
 { #category : #'as yet unclassified' }
+CMakePluginGenerator >> addExternalLibrary: aLibrary [ 
+
+	self isInternal ifTrue: [
+		vmGen addExternalLibrary: aLibrary  
+		]
+	ifFalse: [ super addExternalLibrary: aLibrary ]
+
+]
+
+{ #category : #'as yet unclassified' }
 CMakePluginGenerator >> addPlatformSources: sources [
 
 	^ self addSources: sources prefixed: '${pluginPlatform}/'
@@ -113,6 +123,11 @@ CMakePluginGenerator >> generate [
 	].
 
 	vmGen config extraPluginSettings: self.
+	
+	self isExternal ifTrue: [
+		self cmd: 'target_link_libraries'
+			params: self moduleName , ' ${LINKLIBS}'.
+		].
 	
 	" see senders of #linkFlags "
 	self 
