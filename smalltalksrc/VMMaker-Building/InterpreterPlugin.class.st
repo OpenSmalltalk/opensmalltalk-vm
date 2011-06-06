@@ -157,6 +157,14 @@ InterpreterPlugin class >> shouldBeTranslated [
 	^true
 ]
 
+{ #category : #translation }
+InterpreterPlugin class >> shouldBeTranslatedFor: platformName [
+	"Is this class intended to be translated as a plugin, perhaps specific to a platform?
+	 Most subclasses should answer true, but some such as simulation-only versions
+	 should answer false for various reasons."
+	^self shouldBeTranslated
+]
+
 { #category : #simulation }
 InterpreterPlugin class >> simulatorClass [
 	"For running from Smalltalk - answer a class that can be used to simulate the receiver, or nil if you want the primitives in this module to always fail, causing simulation to fall through to the Smalltalk code.  By default every non-TestInterpreterPlugin can simulate itself."

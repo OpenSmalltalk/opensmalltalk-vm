@@ -940,7 +940,8 @@ VMMaker >> internalPluginsDo: aBlock [
 { #category : #'generate sources' }
 VMMaker >> interpreterClass [
 
-	^(Smalltalk classNamed: interpreterClassName) translationClass
+	^(Smalltalk classNamed: interpreterClassName) ifNotNil:
+		[:interpreterClass| interpreterClass translationClass]
 ]
 
 { #category : #'generate sources' }
@@ -1305,7 +1306,7 @@ VMMaker >> processFilesForInternalPlugin: plugin [
 VMMaker >> providedPlugins [
 	"generate the list by asking the InterpreterPlugins"
 	^ ((InterpreterPlugin allSubclasses
-		select: [:cl | cl shouldBeTranslated])
+		select: [:cl | cl shouldBeTranslatedFor: platformName])
 		collect: [:cl | cl name]) asSortedCollection
 ]
 

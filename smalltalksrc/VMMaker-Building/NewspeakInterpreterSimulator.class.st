@@ -539,6 +539,8 @@ NewspeakInterpreterSimulator >> initialize [
 	primitiveTable := self class primitiveTable.
 	pluginList := #().
 	mappedPluginEntries := #().
+	primTraceLog := CArrayAccessor on: (Array new: 256 withAll: 0).
+	sendTraceLog := CArrayAccessor on: (Array new: 256 withAll: 0).
 
 	"initialize NewspeakInterpreterSimulator variables used for debugging"
 	byteCount := 0.

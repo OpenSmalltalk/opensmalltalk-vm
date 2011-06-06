@@ -3881,7 +3881,8 @@ Interpreter >> justActivateNewMethod [
 
 	activeContext := newContext.
 	(self oop: newContext isLessThan: youngStart) ifTrue:
-		[self beRootIfOld: newContext]
+		[self beRootIfOld: newContext].
+	self fetchContextRegisters: activeContext
 ]
 
 { #category : #'compiled methods' }
@@ -9223,7 +9224,6 @@ Interpreter >> sendInvokeCallback: thunkPtr Stack: stackPtr Registers: regsPtr J
 	self longAt: where + (2 << ShiftForWord) put: self popRemappableOop.
 	self longAt: where + (3 << ShiftForWord) put: self popRemappableOop.
 	self longAt: where + (4 << ShiftForWord) put: self popRemappableOop.
-	self fetchContextRegisters: activeContext.
 	self interpret.
 	"not reached"
 	^true

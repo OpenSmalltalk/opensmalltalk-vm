@@ -67,7 +67,11 @@ Class {
 		'classNameIndex',
 		'statPendingFinalizationSignals',
 		'breakSelector',
-		'breakSelectorLength'
+		'breakSelectorLength',
+		'primTraceLog',
+		'primTraceLogIndex',
+		'sendTraceLog',
+		'sendTraceLogIndex'
 	],
 	#classVars : [
 		'AtCacheEntries',
@@ -101,7 +105,10 @@ Class {
 		'MixinNameIndex',
 		'PrimitiveExternalCallIndex',
 		'PrimitiveTable',
-		'TempFrameStart'
+		'RecordPrimTrace',
+		'RecordSendTrace',
+		'TempFrameStart',
+		'TraceLogSize'
 	],
 	#pools : [
 		'VMBasicConstants',
@@ -165,9 +172,16 @@ NewspeakInterpreter class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator var: #localIP type: #'char*'.
 	aCCodeGenerator var: #localSP type: #'char*'.
 	aCCodeGenerator var: #showSurfaceFn type: #'void*'.
+	"Newspeak as of mid 2011 derives SystemScope systemName from the interpreterVersion (via system attribute 1004)
+	 by copying up to but not including the last space, provided the string ends with a digit.  So spaces must be eliminated
+	 from the Monitcello version string, and we can't surround it with square brackets.."
+	(aCCodeGenerator shortMonticelloDescriptionForClass: self) last isDigit ifFalse:
+		[self error: 'Newspeak expects interpreterVersion ends with a digit'].
 	aCCodeGenerator
 		var: #interpreterVersion
-		declareC: 'const char *interpreterVersion = "Newspeak Virtual Machine [', (aCCodeGenerator shortMonticelloDescriptionForClass: self), ']"'.
+		declareC: 'const char *interpreterVersion = "Newspeak Virtual Machine ',
+						((aCCodeGenerator shortMonticelloDescriptionForClass: self) copyReplaceAll: ' ' with: '_'),
+						'"'.
 	aCCodeGenerator
 		var: #externalPrimitiveTable
 		declareC: 'void *externalPrimitiveTable[', (MaxExternalPrimitiveTableSize + 1) printString, ']'.
@@ -181,7 +195,11 @@ NewspeakInterpreter class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
 		var: #breakSelector type: #'char *';
 		var: #breakSelectorLength
-		declareC: 'sqInt breakSelectorLength = -1'
+		declareC: 'sqInt breakSelectorLength = -1';
+		var: #primTraceLogIndex type: #'unsigned char';
+		var: #primTraceLog declareC: 'sqInt primTraceLog[256]';
+		var: #sendTraceLogIndex type: #'unsigned char';
+		var: #sendTraceLog declareC: 'sqInt sendTraceLog[256]'
 
 ]
 
@@ -456,7 +474,10 @@ NewspeakInterpreter class >> initializeMiscConstants [
 	"Note: The external primitive table should actually be dynamically sized but for the sake of inferior platforms (e.g., Mac :-) who cannot allocate memory in any reasonable way, we keep it static (and cross our fingers...)"
 	MaxExternalPrimitiveTableSize := 1024. "entries"
 
-	FailImbalancedPrimitives ifNil: [FailImbalancedPrimitives := false]
+	FailImbalancedPrimitives ifNil: [FailImbalancedPrimitives := false].
+	RecordPrimTrace := false.
+	RecordSendTrace := false.
+	TraceLogSize := 256
 ]
 
 { #category : #initialization }
@@ -2450,6 +2471,7 @@ NewspeakInterpreter >> commonSend [
 	the receiver and arguments have been pushed onto the stack,"
 	"Note: This method is inlined into the interpreter dispatch loop."
 	<sharedCodeNamed: 'commonSend' inCase: 131>
+	self fastLogSend: messageSelector.
 	self sendBreak: messageSelector + BaseHeaderSize
 		point: (self lengthOf: messageSelector)
 		receiver: (self internalStackValue: argumentCount).
@@ -2810,6 +2832,38 @@ NewspeakInterpreter >> dummyReferToProxy [
 	interpreterProxy := interpreterProxy
 ]
 
+{ #category : #'debug support' }
+NewspeakInterpreter >> dumpPrimTraceLog [
+	"The prim trace log is a circular buffer of entries. If there is
+	 an entry at primTraceLogIndex \\ PrimTraceLogSize it has entries.
+	 If there is something at primTraceLogIndex it has wrapped."
+
+	<api>
+	<inline: false>
+	(primTraceLog at: (self safe: primTraceLogIndex - 1 mod: TraceLogSize)) = 0 ifTrue: [^nil].
+	(primTraceLog at: primTraceLogIndex) ~= 0 ifTrue:
+		[primTraceLogIndex to: TraceLogSize - 1 do:
+			[:i | self safePrintStringOf: (primTraceLog at: i); cr]].
+	0 to: primTraceLogIndex - 1 do:
+		[:i | self safePrintStringOf: (primTraceLog at: i); cr]
+]
+
+{ #category : #'debug support' }
+NewspeakInterpreter >> dumpSendTraceLog [
+	"The send trace log is a circular buffer of entries. If there is
+	 an entry at sendTraceLogIndex \\ PrimTraceLogSize it has entries.
+	 If there is something at sendTraceLogIndex it has wrapped."
+
+	<api>
+	<inline: false>
+	(sendTraceLog at: (self safe: sendTraceLogIndex - 1 mod: TraceLogSize)) = 0 ifTrue: [^nil].
+	(sendTraceLog at: sendTraceLogIndex) ~= 0 ifTrue:
+		[sendTraceLogIndex to: TraceLogSize - 1 do:
+			[:i | self safePrintStringOf: (sendTraceLog at: i); cr]].
+	0 to: sendTraceLogIndex - 1 do:
+		[:i | self safePrintStringOf: (sendTraceLog at: i); cr]
+]
+
 { #category : #'stack bytecodes' }
 NewspeakInterpreter >> duplicateTopBytecode [
 
@@ -3060,6 +3114,26 @@ NewspeakInterpreter >> failed [
 	<api>
 	"In C, non-zero is true, so avoid computation by simply answering primFailCode in the C version."
 	^self cCode: [primFailCode] inSmalltalk: [primFailCode ~= 0]
+]
+
+{ #category : #'debug support' }
+NewspeakInterpreter >> fastLogPrim: aSelector [
+	"Fast tracing of named primitives.  primTraceLogIndex is a byte variable.
+	 primTraceLog has 256 entries.  In C the + 1 below is hence implicitly modulo 256."
+	<inline: true>
+	RecordPrimTrace ifTrue:
+		[primTraceLog at: primTraceLogIndex put: aSelector.
+		 self primTraceLogIndex: primTraceLogIndex + 1]
+]
+
+{ #category : #'debug support' }
+NewspeakInterpreter >> fastLogSend: aSelector [
+	"Fast tracing of sends.  sendTraceLogIndex is a byte variable.
+	 sendTraceLog has 256 entries.  In C the + 1 below is hence implicitly modulo 256."
+	<inline: true>
+	RecordSendTrace ifTrue:
+		[sendTraceLog at: sendTraceLogIndex put: aSelector.
+		 self sendTraceLogIndex: sendTraceLogIndex + 1]
 ]
 
 { #category : #utilities }
@@ -4298,7 +4372,9 @@ NewspeakInterpreter >> justActivateNewMethod [
 	reclaimableContextCount := reclaimableContextCount + 1.
 
 	activeContext := newContext.
- 
+	(self oop: newContext isLessThan: youngStart) ifTrue:
+		[self beRootIfOld: newContext].
+	self fetchContextRegisters: activeContext
 ]
 
 { #category : #'debug printing' }
@@ -4460,6 +4536,7 @@ NewspeakInterpreter >> lookupMethodInClass: class [
 			self createActualMessageTo: class.
 			currentClass := self popRemappableOop.
 			messageSelector := self splObj: SelectorCannotInterpret.
+			self fastLogSend: messageSelector.
 			self sendBreak: messageSelector + BaseHeaderSize
 				point: (self lengthOf: messageSelector)
 				receiver: nil.
@@ -4477,6 +4554,11 @@ NewspeakInterpreter >> lookupMethodInClass: class [
 	self createActualMessageTo: class.
 	rclass := self popRemappableOop.
 	messageSelector := self splObj: SelectorDoesNotUnderstand.
+	RecordSendTrace ifTrue:
+		[self fastLogSend: messageSelector].
+	self sendBreak: messageSelector + BaseHeaderSize
+		point: (self lengthOf: messageSelector)
+		receiver: nil.
 	^ self lookupMethodInClass: rclass
 ]
 
@@ -4569,7 +4651,35 @@ NewspeakInterpreter >> mapInterpreterOops [
 	1 to: remapBufferCount do: [:i | 
 			oop := remapBuffer at: i.
 			(self isIntegerObject: oop)
-				ifFalse: [remapBuffer at: i put: (self remap: oop)]]
+				ifFalse: [remapBuffer at: i put: (self remap: oop)]].
+	self mapTraceLogs
+]
+
+{ #category : #'debug support' }
+NewspeakInterpreter >> mapTraceLogs [
+	"The prim and send trace logs are circular buffers of selectors. If there is
+	 an entry at primTraceLogIndex - 1 \\ PrimTraceBufferSize it has entries.
+	 If there is something at primTraceLogIndex it has wrapped."
+	<inline: false>
+	| limit |
+	limit := self safe: primTraceLogIndex - 1 mod: TraceLogSize.
+	(primTraceLog at: limit) = 0 ifTrue: [^nil].
+	(primTraceLog at: primTraceLogIndex) ~= 0 ifTrue:
+		[limit := TraceLogSize - 1].
+	0 to: limit do:
+		[:i| | selector |
+		selector := primTraceLog at: i.
+		(self isIntegerObject: selector) ifFalse:
+			[primTraceLog at: i put: (self remap: selector)]].
+	limit := self safe: sendTraceLogIndex - 1 mod: TraceLogSize.
+	(sendTraceLog at: limit) = 0 ifTrue: [^nil].
+	(sendTraceLog at: sendTraceLogIndex) ~= 0 ifTrue:
+		[limit := TraceLogSize - 1].
+	0 to: limit do:
+		[:i| | selector |
+		selector := sendTraceLog at: i.
+		(self isIntegerObject: selector) ifFalse:
+			[sendTraceLog at: i put: (self remap: selector)]]
 ]
 
 { #category : #'object memory support' }
@@ -4585,7 +4695,37 @@ NewspeakInterpreter >> markAndTraceInterpreterOops [
 	1 to: remapBufferCount do:
 		[:i | 
 		oop := remapBuffer at: i.
-		(self isIntegerObject: oop) ifFalse: [self markAndTrace: oop]]
+		(self isIntegerObject: oop) ifFalse: [self markAndTrace: oop]].
+	self markAndTraceTraceLogs
+]
+
+{ #category : #'debug support' }
+NewspeakInterpreter >> markAndTraceTraceLogs [
+	"The prim and send trace logs are circular buffers of selectors. If there is
+	 an entry at primTraceLogIndex - 1 \\ PrimTraceBufferSize it has entries.
+	 If there is something at primTraceLogIndex it has wrapped."
+	<inline: false>
+	| limit |
+	RecordPrimTrace ifTrue:
+		[limit := self safe: primTraceLogIndex - 1 mod: TraceLogSize.
+		(primTraceLog at: limit) ~= 0 ifTrue:
+			[(primTraceLog at: primTraceLogIndex) ~= 0 ifTrue:
+				[limit := TraceLogSize - 1].
+			0 to: limit do:
+				[:i| | selector |
+				selector := primTraceLog at: i.
+				(self isIntegerObject: selector) ifFalse:
+					[self markAndTrace: selector]]]].
+	RecordSendTrace ifTrue:
+		[limit := self safe: sendTraceLogIndex - 1 mod: TraceLogSize.
+		(sendTraceLog at: limit) ~= 0 ifTrue:
+			[(sendTraceLog at: sendTraceLogIndex) ~= 0 ifTrue:
+				[limit := TraceLogSize - 1].
+			0 to: limit do:
+				[:i| | selector |
+				selector := sendTraceLog at: i.
+				(self isIntegerObject: selector) ifFalse:
+					[self markAndTrace: selector]]]]
 ]
 
 { #category : #'plugin primitive support' }
@@ -5078,6 +5218,13 @@ NewspeakInterpreter >> postGCAction [
 NewspeakInterpreter >> preGCAction: fullGCFlag [
 
 	self storeContextRegisters: activeContext
+]
+
+{ #category : #'debug support' }
+NewspeakInterpreter >> primTraceLogIndex: aValue [
+	<cmacro: '(aValue) (GIV(primTraceLogIndex) = (aValue))'>
+	"N.B. primTraceLogIndex is 8-bits"
+	^primTraceLogIndex := aValue bitAnd: 16rFF
 ]
 
 { #category : #'arithmetic primitives' }
@@ -7564,12 +7711,12 @@ NewspeakInterpreter >> primitivePerformAt: lookupClass [
 
 	"Copy the arguments to the stack, and execute"
 	index := 1.
-	[index <= arraySize]
-		whileTrue:
+	[index <= arraySize] whileTrue:
 		[self push: (self fetchPointer: index - 1 ofObject: argumentArray).
 		index := index + 1].
 	argumentCount := arraySize.
 
+	self fastLogSend: messageSelector.
 	self sendBreak: messageSelector + BaseHeaderSize
 		point: (self lengthOf: messageSelector)
 		receiver: receiver.
@@ -9850,7 +9997,6 @@ NewspeakInterpreter >> sendInvokeCallback: thunkPtr Stack: stackPtr Registers: r
 	self longAt: where + (2 << ShiftForWord) put: self popRemappableOop.
 	self longAt: where + (3 << ShiftForWord) put: self popRemappableOop.
 	self longAt: where + (4 << ShiftForWord) put: self popRemappableOop.
-	self fetchContextRegisters: activeContext.
 	self interpret.
 	"not reached"
 	^true
@@ -9866,6 +10012,7 @@ NewspeakInterpreter >> sendInvokeCallbackContext: vmCallbackContext [
 	 The arguments are raw C addresses and are converted to integer objects on the way."
 	<export: true>
 	<var: #vmCallbackContext type: #'VMCallbackContext *'>
+	| relativeSP |
 	receiver := self splObj: ClassAlien.
 	lkupClass := self fetchClassOfNonInt: receiver.
 	messageSelector := self splObj: SelectorInvokeCallback.
@@ -9876,6 +10023,7 @@ NewspeakInterpreter >> sendInvokeCallbackContext: vmCallbackContext [
 		[^false].
 	self storeContextRegisters: activeContext.
 	self justActivateNewMethod.
+	relativeSP := stackPointer - activeContext.
 	stackPointer := activeContext + BaseHeaderSize + (ReceiverIndex * BytesPerWord).
 	self cppIf: [BytesPerWord = 8]
 		ifTrue:
@@ -9890,7 +10038,8 @@ NewspeakInterpreter >> sendInvokeCallbackContext: vmCallbackContext [
 				 self push: (self positive32BitIntegerFor: vmCallbackContext stackp asUnsignedInteger).
 				 self push: (self positive32BitIntegerFor: vmCallbackContext intregargsp asUnsignedInteger)].
 			 self push: (self positive32BitIntegerFor: vmCallbackContext asUnsignedInteger)].
-	self fetchContextRegisters: activeContext.
+	stackPointer := activeContext + relativeSP.
+	self assert: (self validInstructionPointer: instructionPointer inMethod: method).
 	self interpret.
 	"not reached"
 	^true
@@ -9936,6 +10085,13 @@ NewspeakInterpreter >> sendLiteralSelectorBytecode [
 	messageSelector := self literal: (currentBytecode bitAnd: 16rF).
 	argumentCount := ((currentBytecode >> 4) bitAnd: 3) - 1.
 	self normalSend
+]
+
+{ #category : #'debug support' }
+NewspeakInterpreter >> sendTraceLogIndex: aValue [
+	<cmacro: '(aValue) (GIV(sendTraceLogIndex) = (aValue))'>
+	"N.B. sendTraceLogIndex is 8-bits"
+	^sendTraceLogIndex := aValue bitAnd: 16rFF
 ]
 
 { #category : #contexts }
@@ -10322,6 +10478,7 @@ NewspeakInterpreter >> slowPrimitiveResponse [
 		[savedContext := activeContext.
 		 nArgs := argumentCount.
 		 deltaIfSuccess := stackPointer - (argumentCount * BytesPerOop) - activeContext].
+	self fastLogPrim: messageSelector.
 	self initPrimCall.
 	self dispatchFunctionPointer: primitiveFunctionPointer.
 	(FailImbalancedPrimitives
@@ -10856,8 +11013,8 @@ NewspeakInterpreter >> unknownBytecode [
 
 { #category : #'debug support' }
 NewspeakInterpreter >> validInstructionPointer: anInstrPointer inMethod: aMethod [
-	^anInstrPointer >= (aMethod + (self lastPointerOf: aMethod) + BytesPerWord - 1)
-	  and: [anInstrPointer < (aMethod + (self byteLengthOf: aMethod) + BaseHeaderSize)]
+	^anInstrPointer >= (aMethod + (self lastPointerOf: aMethod) + 1)
+	  and: [anInstrPointer < (aMethod + (self byteLengthOf: aMethod))]
 ]
 
 { #category : #'process primitive support' }

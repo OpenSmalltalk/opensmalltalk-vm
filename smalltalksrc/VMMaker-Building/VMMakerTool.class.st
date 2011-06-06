@@ -576,7 +576,12 @@ VMMakerTool >> generateExternal [
 VMMakerTool >> generateSelectedExternalPlugin [
 
 	| pluginName |
-	pluginName := self externalModules at: self currentExternalModuleIndex ifAbsent: [^self].
+	pluginName := self externalModules
+						at: self currentExternalModuleIndex
+						ifAbsent: [^self inform: 'no such plugin'].
+	vmMaker interpreterClass
+		ifNil: [^self inform: 'please set an interpreter class']
+		ifNotNil: [:interpreterClass| interpreterClass initialize].
 	self checkOK ifTrue:
 		[[(Smalltalk classNamed: pluginName) touch.
 		  vmMaker generateExternalPlugin: pluginName; logDateAndTime]
@@ -588,7 +593,12 @@ VMMakerTool >> generateSelectedExternalPlugin [
 VMMakerTool >> generateSelectedInternalPlugin [
 
 	| pluginName |
-	pluginName := self internalModules at: self currentInternalModuleIndex ifAbsent: [^self].
+	pluginName := self internalModules
+						at: self currentExternalModuleIndex
+						ifAbsent: [^self inform: 'no such plugin'].
+	vmMaker interpreterClass
+		ifNil: [^self inform: 'please set an interpreter class']
+		ifNotNil: [:interpreterClass| interpreterClass initialize].
 	self checkOK ifTrue:
 		[[(Smalltalk classNamed: pluginName) touch.
 		  vmMaker generateInternalPlugin: pluginName]
