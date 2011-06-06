@@ -196,8 +196,13 @@ void LoadPreferences()
 
   /* get the window class name from the ini file */
   GetPrivateProfileString(U_GLOBAL, TEXT("WindowClassName"), 
-			  TEXT("SqueakWindowClass"), windowClassName, 
-			  MAX_PATH, squeakIniName);
+#if NewspeakVM
+				TEXT(VM_NAME"WindowClass"),
+#else
+				TEXT("SqueakWindowClass"),
+#endif
+				windowClassName, 
+				MAX_PATH, squeakIniName);
   fRunSingleApp =
     GetPrivateProfileInt(U_GLOBAL, TEXT("RunSingleApp"),
 			 fRunSingleApp, squeakIniName);

@@ -10,6 +10,7 @@ CONFIGURATION=product
 
 # The name of the VM to build
 VM:=Croquet
+VM_NAME?=$(VM)
 
 # Is this a Croquet VM (defaults to OGL instead of D3D)?
 CROQUET:=-DCROQUET
@@ -127,7 +128,7 @@ CFLAGS:= $(INCLUDEPATH) -msse2 -ggdb2 -mwindows -mthreads -mno-cygwin -mwin32 \
 	-mno-rtd -mms-bitfields -mno-accumulate-outgoing-args $(OFLAGS) $(NOBUILTIN)
 DEFS:=	-DDEBUGVM=$(DEBUGVM) $(WINVER) -DWIN32 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
 		-DNO_SERVICE -DNO_STD_FILE_SUPPORT \
-		$(NDEBUG) -DLSB_FIRST -DVM_NAME=\"$(VM)\" -DX86 $(XDEFS) $(CROQUET)
+		$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' -DX86 $(XDEFS) $(CROQUET)
 XDEFS:=	-DSQUEAK_BUILTIN_PLUGIN
 INCLUDES:= -I. -I$(VMDIR) -I$(WIN32DIR) -I$(CROSSDIR) -I$(DXDIR) $(XINC)
 
