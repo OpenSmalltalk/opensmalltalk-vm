@@ -6269,14 +6269,12 @@ NewspeakInterpreter >> primitiveExecuteMethodArgsArray [
 	argCnt := self argumentCountOf: methodArgument.
 	argCnt = (self fetchWordLengthOf: argumentArray) ifFalse:
 		[^self primitiveFailFor: PrimErrBadNumArgs].
-	argumentCount > 3 ifTrue:
-		[^self primitiveFailFor: PrimErrUnsupported].
-	argumentCount = 3 "SqueakObjectPrimitives class >> receiver:withArguments:apply:"
-		ifTrue:
-			[self stackValue: 3 put: (self stackValue: 2). "replace actual receiver with desired receiver"
-			 self pop: 3]
-		ifFalse:
-			[self pop: 2].
+	argumentCount > 2 ifTrue: "SqueakObjectPrimitives class >> receiver:withArguments:apply: VMMirror>>ifFail:object:with:executeMethod:"
+		[argumentCount > 4 ifTrue:
+			[^self primitiveFailFor: PrimErrUnsupported].
+		self stackValue: argumentCount put: (self stackValue: 2)]. "replace actual receiver with desired receiver"
+	"and push the actual arguments"
+	self pop: argumentCount.
 	0 to: argCnt - 1 do:
 		[:i|
 		self push: (self fetchPointer: i ofObject: argumentArray)].
