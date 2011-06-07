@@ -6257,9 +6257,10 @@ NewspeakInterpreter >> primitiveExecuteMethod [
 
 { #category : #'control primitives' }
 NewspeakInterpreter >> primitiveExecuteMethodArgsArray [
-	"receiver, argsArray, then method are on top of stack.  Execute method against receiver and args.
-	 Set primitiveFunctionPointer because no cache lookup has been done for the method, and
-	 hence primitiveFunctionPointer is stale."
+	"receiver, argsArray, then method are on top of stack.  Execute method against
+	 receiver and args.  Allow for up to two extra arguments (e.g. for mirror primitives).
+	 Set primitiveFunctionPointer because no cache lookup has been done for the
+	 method, and hence primitiveFunctionPointer is stale."
 	| methodArgument argCnt argumentArray primitiveIndex |
 	methodArgument := self stackTop.
 	argumentArray := self stackValue: 1.
@@ -6269,7 +6270,9 @@ NewspeakInterpreter >> primitiveExecuteMethodArgsArray [
 	argCnt := self argumentCountOf: methodArgument.
 	argCnt = (self fetchWordLengthOf: argumentArray) ifFalse:
 		[^self primitiveFailFor: PrimErrBadNumArgs].
-	argumentCount > 2 ifTrue: "SqueakObjectPrimitives class >> receiver:withArguments:apply: VMMirror>>ifFail:object:with:executeMethod:"
+	argumentCount > 2 ifTrue: "CompiledMethod class>>receiver:withArguments:executeMethod:
+								SqueakObjectPrimitives class >> receiver:withArguments:apply:
+								VMMirror>>ifFail:object:with:executeMethod: et al"
 		[argumentCount > 4 ifTrue:
 			[^self primitiveFailFor: PrimErrUnsupported].
 		self stackValue: argumentCount put: (self stackValue: 2)]. "replace actual receiver with desired receiver"
