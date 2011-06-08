@@ -12,6 +12,7 @@ DSAPrims \
 ZipPlugin \
 DropPlugin \
 FFTPlugin \
+FT2Plugin \
 FileCopyPlugin \
 FilePlugin \
 FloatArrayPlugin \
@@ -31,7 +32,6 @@ MacMenubarPlugin \
 Matrix2x3Plugin \
 MiscPrimitivePlugin \
 Mpeg3Plugin \
-QVMProfileMacSupportPlugin \
 QuicktimePlugin \
 RePlugin \
 SqueakFFIPrims \
@@ -42,10 +42,7 @@ SoundCodecPrims \
 SoundGenerationPlugin \
 SoundPlugin \
 StarSqueakPlugin \
-SurfacePlugin \
-SqueakFFIPrims \
-SqueakFFIPrims \
-SqueakFFIPrims \
-SqueakFFIPrims \
 UUIDPlugin \
-VMProfileMacSupportPlugin
+UnixOSProcessPlugin \
+VMProfileMacSupportPlugin \
+Win32OSProcessPlugin
