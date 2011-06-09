@@ -13,6 +13,9 @@ typedef struct glRenderer {
   HWND  hWnd;
   HGLRC context;
   HDC   hDC;
+
+  void APIENTRY (*glDrawRangeElements) (GLenum, GLuint, GLuint, GLsizei, GLenum, const GLvoid*);
+
 } glRenderer;
 
 #define GL_RENDERER_DEFINED 1
