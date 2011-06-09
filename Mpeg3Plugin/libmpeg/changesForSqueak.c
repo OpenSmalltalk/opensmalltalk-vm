@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: changesForSqueak.c,v 1.7 2003/02/08 18:23:30 johnmci Exp $
+*   RCSID:   $Id$
 *
 *   NOTES: See change log below.
 *	12/27/2001 JMM added support to build as a OS-X Bundle, a bit werid because its a mixture of unix and mac OS
@@ -189,7 +189,7 @@ int mpeg3demux_create_title_for_Squeak(mpeg3_demuxer_t *demuxer, int timecode_se
 {
 	int result = 0, done = 0, counter_start, counter;
 	mpeg3_t *file = (mpeg3_t *) demuxer->file;
-	long next_byte, prev_byte;
+	long next_byte=0, prev_byte=0;
 	double next_time, prev_time, absolute_time;
 	long i;
 	mpeg3_title_t *title;

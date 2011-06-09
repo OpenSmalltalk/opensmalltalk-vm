@@ -258,7 +258,7 @@ int mpeg3audio_seek(mpeg3audio_t *audio, long position)
 	mpeg3_t *file = (mpeg3_t *) audio->file;
 	mpeg3_atrack_t *track = (mpeg3_atrack_t *) audio->track;
 	long frame_number;
-	long byte_position;
+	long byte_position = 0;
 	double time_position;
 
 /* Sample seek wasn't requested */

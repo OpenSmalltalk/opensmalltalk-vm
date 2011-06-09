@@ -159,7 +159,7 @@ int mpeg3video_getintrablock(mpeg3_slice_t *slice,
 		int comp, 
 		int dc_dct_pred[])
 {
-	int val, i, j, sign;
+	int val, i, j=0, sign;
 	unsigned int code;
 	mpeg3_DCTtab_t *tab = 0;
 	short *bp = slice->block[comp];
@@ -275,7 +275,7 @@ int mpeg3video_getinterblock(mpeg3_slice_t *slice,
 		mpeg3video_t *video, 
 		int comp)
 {
-	int val, i, j, sign;
+	int val, i, j=0, sign;
 	unsigned int code;
 	mpeg3_DCTtab_t *tab; 
 	short *bp = slice->block[comp];
@@ -374,7 +374,7 @@ int mpeg3video_getmpg2intrablock(mpeg3_slice_t *slice,
 		int comp, 
 		int dc_dct_pred[])
 {
-	int val, i, j, sign, nc;
+	int val, i, j=0, sign, nc;
 	unsigned int code;
 	mpeg3_DCTtab_t *tab;
 	short *bp;
@@ -502,7 +502,7 @@ int mpeg3video_getmpg2interblock(mpeg3_slice_t *slice,
 		mpeg3video_t *video, 
 		int comp)
 {
-	int val, i, j, sign, nc;
+	int val, i, j=0, sign, nc;
 	unsigned int code;
 	mpeg3_DCTtab_t *tab;
 	short *bp;

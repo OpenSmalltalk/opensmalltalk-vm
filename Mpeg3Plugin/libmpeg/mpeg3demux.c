@@ -711,15 +711,15 @@ int mpeg3_read_program(mpeg3_demuxer_t *demuxer)
 	demuxer->raw_size = demuxer->packet_size;
 	demuxer->raw_offset = 0;
 	demuxer->data_size = 0;
-
+	
 /* Search backward for it. */
 	header = mpeg3io_read_int32(title->fs);
 	result = mpeg3io_eof(title->fs);
 
 	if(!result) result = mpeg3io_seek_relative(title->fs, -4);
 
-// Search backwards for header
-	while(header != MPEG3_PACK_START_CODE && !result && count < demuxer->packet_size)
+	// Search backwards for header
+	while(header != MPEG3_PACK_START_CODE && !result && count < (demuxer->packet_size))
 	{
 		result = mpeg3io_seek_relative(title->fs, -1);
 		if(!result)
@@ -731,21 +731,21 @@ int mpeg3_read_program(mpeg3_demuxer_t *demuxer)
 		count++;
 	}
 
-	if(result)
-	{
+	if ((header != MPEG3_PACK_START_CODE) || (result) ) {
 // couldn't find MPEG3_PACK_START_CODE
 		return 1;
 	}
-
+	
 	result = mpeg3io_read_data(demuxer->raw_data, demuxer->packet_size, title->fs);
-
 	if(result)
 	{
 		perror("mpeg3_read_program");
 		return 1;
 	}
+	// fprintf(stderr, "Got data %ld\n", title->fs->current_byte);
 
 	header = mpeg3packet_read_int32(demuxer);
+
 	while(demuxer->raw_offset + 4 < demuxer->raw_size && !result)
 	{
 		if(header == MPEG3_PACK_START_CODE)
@@ -887,8 +887,11 @@ int mpeg3_read_next_packet(mpeg3_demuxer_t *demuxer)
 /* Read packets until the output buffer is full */
 	if(!result)
 	{
+		long p1;	// BGF added this protection against infinite-looping here.
 		do
 		{
+			p1 = title->fs->current_byte;
+			
 			result = mpeg3_advance_timecode(demuxer, 0);
 
 			if(!result)
@@ -910,8 +913,15 @@ int mpeg3_read_next_packet(mpeg3_demuxer_t *demuxer)
 					result = mpeg3io_read_data(demuxer->data_buffer, demuxer->packet_size, title->fs);
 					if(!result) demuxer->data_size = demuxer->packet_size;
 				}
+				
+				// We can spin out on attempts to read the last packet over and over.
+				if (p1 >= title->fs->current_byte) {
+					result = -1;
+					title->fs->current_byte = title->fs->total_bytes;	// So EOF checks start to fire.
+					fprintf(stderr, "Stopping demux-stream to prevent spin.");
+				}
 			}
-		}while(!result && demuxer->data_size == 0 && (demuxer->do_audio || demuxer->do_video));
+		} while (!result && demuxer->data_size == 0 && (demuxer->do_audio || demuxer->do_video));
 	}
 
 	return result;
@@ -1046,7 +1056,7 @@ mpeg3demux_timecode_t* mpeg3_append_timecode(mpeg3_demuxer_t *demuxer,
 		int dont_store)
 {
 	mpeg3demux_timecode_t *new_table;
-	mpeg3demux_timecode_t *new_timecode, *old_timecode;
+	mpeg3demux_timecode_t *new_timecode = NULL, *old_timecode = NULL;
 	long i;
 
 	if(!title->timecode_table || 
@@ -1381,7 +1391,7 @@ int mpeg3demux_create_title(mpeg3_demuxer_t *demuxer, int timecode_search, FILE 
 {
 	int result = 0, done = 0, counter_start, counter;
 	mpeg3_t *file = (mpeg3_t *) demuxer->file;
-	long next_byte, prev_byte;
+	long next_byte=0, prev_byte=0;
 	double next_time, prev_time, absolute_time;
 	long i;
 	mpeg3_title_t *title;
