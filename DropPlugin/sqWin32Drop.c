@@ -547,7 +547,7 @@ STDMETHODIMP DropTarget_Drop(DropTarget *dt,
     if(WriteDIB(tmpName, hDib)) {
       numDropFiles = 1;
       dropFiles = calloc(1, sizeof(void*));
-      dropFiles[0] = strdup(tmpName);
+      dropFiles[0] = _strdup(tmpName);
     }
     if(medium.pUnkForRelease == NULL) {
       GlobalFree(hDib);
@@ -584,7 +584,7 @@ STDMETHODIMP DropTarget_Drop(DropTarget *dt,
       if(WriteDIB(tmpName, hDib)) {
 	numDropFiles = 1;
 	dropFiles = calloc(1, sizeof(void*));
-	dropFiles[0] = strdup(tmpName);
+	dropFiles[0] = _strdup(tmpName);
       }
       DeleteObject(hDib);
     }
@@ -657,7 +657,7 @@ STDMETHODIMP DropTarget_Drop(DropTarget *dt,
     if(WriteDIB(tmpName, hDib)) {
       numDropFiles = 1;
       dropFiles = calloc(1, sizeof(void*));
-      dropFiles[0] = strdup(tmpName);
+      dropFiles[0] = _strdup(tmpName);
     }
     GlobalFree(hDib);
     if(medium.pUnkForRelease == NULL) {
