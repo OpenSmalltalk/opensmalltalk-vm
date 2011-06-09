@@ -30,6 +30,14 @@
 # endif
 #endif
 
+/* Windows Vista support 
+ * AUTHOR: Korakurider (kr)
+ * CHANGE NOTES:
+ *   1) new command line option "-lowRights" was introduced
+ *      to support IE7/protected mode.
+ */
+#define VISTA_SECURITY 1 /* IE7/Vista protected mode support */
+
 /*** Crash debug -- Imported from Virtual Machine ***/
 int getFullScreenFlag(void);
 int methodPrimitiveIndex(void);
@@ -61,6 +69,11 @@ static  char vmLogDirA[MAX_PATH];
 static WCHAR vmLogDirW[MAX_PATH];
 
 TCHAR *logName = TEXT("");             /* full path and name to log file */
+
+#ifdef VISTA_SECURITY 
+BOOL fLowRights = 0;  /* started as low integiry process, 
+			need to use alternate untrustedUserDirectory */
+#endif /* VISTA_SECURITY */
 
 /* Service stuff */
 TCHAR  serviceName[MAX_PATH+1];   /* The name of the NT service */
@@ -1176,6 +1189,10 @@ static vmArg args[] = {
   { ARG_FLAG, &fHeadlessImage, "-headless" },       /* do we run headless? */
   { ARG_STRING, &logName, "-log:" },                /* VM log file */
   { ARG_UINT, &dwMemorySize, "-memory:" },          /* megabyte of memory to use */
+#ifdef  VISTA_SECURITY /* IE7/Vista protected mode support */
+  { ARG_FLAG, &fLowRights, "-lowRights" }, /* started with low rights, 
+					use alternate untrustedUserDirectory */
+#endif /* VISTA_SECURITY */
 #if STACKVM && !COGVM || NewspeakVM
   { ARG_FLAG, &sendTrace, "-sendtrace"},
 #endif
