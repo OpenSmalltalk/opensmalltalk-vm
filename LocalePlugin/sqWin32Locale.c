@@ -122,17 +122,23 @@ sqInt	sqLocGetVMOffsetToUTC(void) {
 }
 
 sqInt	sqLocGetTimezoneOffset(void) {
-	TIME_ZONE_INFORMATION timeZoneInformation;
-	GetTimeZoneInformation(&timeZoneInformation);
-	return -(timeZoneInformation.Bias+timeZoneInformation.DaylightBias);
+  DWORD tzid;
+  TIME_ZONE_INFORMATION timeZoneInformation;
+  tzid = GetTimeZoneInformation(&timeZoneInformation);
+
+  if(tzid == 1) /* TIME_ZONE_ID_STANDARD */
+    return -(timeZoneInformation.Bias+timeZoneInformation.StandardBias);
+
+  if(tzid == 2) /* TIME_ZONE_ID_DAYLIGHT */
+    return -(timeZoneInformation.Bias+timeZoneInformation.DaylightBias);
+
+  return -timeZoneInformation.Bias;
 }
 
 /* return true if DST is in use, false otherwise */
 sqInt	sqLocDaylightSavings(void) {
-	TIME_ZONE_INFORMATION timeZoneInformation;
-	GetTimeZoneInformation(&timeZoneInformation);
-	if(timeZoneInformation.DaylightBias == 0) return 0;
-	return 1;
+  TIME_ZONE_INFORMATION timeZoneInformation;
+  return GetTimeZoneInformation(&timeZoneInformation) == 2;
 }
 
 static char longDateFormat[] = "dddd dd mmmm yy";
