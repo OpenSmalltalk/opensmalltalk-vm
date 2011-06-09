@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqOpenGLRenderer.c,v 1.10 2004/08/31 21:13:51 bertf Exp $
+*   RCSID:   $Id$
 *
 *   NOTES: 
 *
@@ -87,19 +87,19 @@ int glAllocateTexture(int handle, int w, int h, int d) /* return handle or -1 on
 	struct glRenderer *renderer = glRendererFromHandle(handle);
 
 	if(!renderer || !glMakeCurrentRenderer(renderer)) {
-		DPRINTF(4, (fp, "ERROR: Invalid renderer specified\n"));
+		DPRINTF3D(4, (fp, "ERROR: Invalid renderer specified\n"));
 		return 0;
 	}
 
 	if(w & (w-1)) return -1; /* not power of two */
 	if(h & (h-1)) return -1; /* not power of two */
 
-	DPRINTF(5, (fp, "### Allocating new texture (w = %d, h = %d, d = %d)\n", w, h, d));
+	DPRINTF3D(5, (fp, "### Allocating new texture (w = %d, h = %d, d = %d)\n", w, h, d));
 
 	errMsg = "glGenTextures() failed";
 	glGenTextures(1, &texture);
 	if((glErr = glGetError()) != GL_NO_ERROR) goto FAILED;
-	DPRINTF(5, (fp, "Allocated texture id = %d\n", texture));
+	DPRINTF3D(5, (fp, "Allocated texture id = %d\n", texture));
 	errMsg = "glBindTexture() failed";
 	glBindTexture(GL_TEXTURE_2D, texture);
 	if((glErr = glGetError()) != GL_NO_ERROR) goto FAILED;
@@ -125,10 +125,10 @@ int glAllocateTexture(int handle, int w, int h, int d) /* return handle or -1 on
 				 GL_UNSIGNED_BYTE, /* type */
 				 NULL /* image data - if NULL contents is unspecified */);
 	if((glErr = glGetError()) != GL_NO_ERROR) goto FAILED;
-	DPRINTF(5, (fp,"\tid = %d\n", texture));
+	DPRINTF3D(5, (fp,"\tid = %d\n", texture));
 	return texture;
 FAILED:
-	DPRINTF(1, (fp, "ERROR (glAllocateTexture): %s -- %s\n", errMsg, glErrString()));
+	DPRINTF3D(1, (fp, "ERROR (glAllocateTexture): %s -- %s\n", errMsg, glErrString()));
 	glDeleteTextures(1, &texture);
 	return -1;
 }
@@ -138,14 +138,14 @@ int glDestroyTexture(int rendererHandle, int handle) /* return true on success, 
 	struct glRenderer *renderer = glRendererFromHandle(rendererHandle);
 
 	if(!renderer || !glMakeCurrentRenderer(renderer)) {
-		DPRINTF(4, (fp, "ERROR: Invalid renderer specified\n"));
+		DPRINTF3D(4, (fp, "ERROR: Invalid renderer specified\n"));
 		return 0;
 	}
 
 	if(!glIsTexture(handle)) {
 		return 0;
 	}
-	DPRINTF(5, (fp, "### Destroying texture (id = %d)\n", handle));
+	DPRINTF3D(5, (fp, "### Destroying texture (id = %d)\n", handle));
 	glDeleteTextures(1, (GLuint*) &handle);
 	ERROR_CHECK;
 	return 1;
@@ -199,7 +199,7 @@ int glUploadTexture(int rendererHandle, int handle, int w, int h, int d, void* b
 	struct glRenderer *renderer = glRendererFromHandle(rendererHandle);
 
 	if(!renderer || !glMakeCurrentRenderer(renderer)) {
-		DPRINTF(4, (fp, "ERROR: Invalid renderer specified\n"));
+		DPRINTF3D(4, (fp, "ERROR: Invalid renderer specified\n"));
 		return 0;
 	}
 
@@ -208,7 +208,7 @@ int glUploadTexture(int rendererHandle, int handle, int w, int h, int d, void* b
 	if(!glIsTexture(handle)) {
 		return 0;
 	}
-	DPRINTF(5, (fp, "### Uploading texture (w = %d, h = %d, d = %d, id = %d)\n", w, h, d, handle));
+	DPRINTF3D(5, (fp, "### Uploading texture (w = %d, h = %d, d = %d, id = %d)\n", w, h, d, handle));
 	glBindTexture(GL_TEXTURE_2D, handle);
 	ERROR_CHECK;
 	for(y = 0; y < h; y++) {
@@ -231,14 +231,14 @@ int glCompositeTexture(int rendererHandle, int handle, int x, int y, int w, int 
 	struct glRenderer *renderer = glRendererFromHandle(rendererHandle);
 
 	if(!renderer || !glMakeCurrentRenderer(renderer)) {
-		DPRINTF(4, (fp, "ERROR: Invalid renderer specified\n"));
+		DPRINTF3D(4, (fp, "ERROR: Invalid renderer specified\n"));
 		return 0;
 	}
 	if(!glIsTexture(handle)) {
 		return 0;
 	}
 	ERROR_CHECK;
-	DPRINTF(7, (fp, "glCompositeTexture(%d, %d, %d, %d)\n", x, y, w, h));
+	DPRINTF3D(7, (fp, "glCompositeTexture(%d, %d, %d, %d)\n", x, y, w, h));
 	{
 		/* setup a transformation so that we're dealing with pixel x/y coordinate systems */
 		glPushMatrix();
@@ -289,7 +289,7 @@ int glCompositeTexture(int rendererHandle, int handle, int x, int y, int w, int 
 		ERROR_CHECK;
 		x -= renderer->bufferRect[0];
 		y -= renderer->bufferRect[1];
-		DPRINTF(7, (fp, "glRecti(%d, %d, %d, %d)\n", x, y, w, h));
+		DPRINTF3D(7, (fp, "glRecti(%d, %d, %d, %d)\n", x, y, w, h));
 		glBegin(GL_QUADS);
 			glTexCoord2d(0.0, 0.0);
 			glVertex2i(x, y);
@@ -326,15 +326,15 @@ int glSetViewport(int handle, int x, int y, int w, int h) /* return true on succ
 	struct glRenderer *renderer = glRendererFromHandle(handle);
 	if(!renderer || !glMakeCurrentRenderer(renderer)) return 0;
 
-	DPRINTF(5, (fp, "### New Viewport\n"));
-	DPRINTF(5, (fp, "\tx: %d\n\ty: %d\n\tw: %d\n\th: %d\n", x, y, w, h));
+	DPRINTF3D(5, (fp, "### New Viewport\n"));
+	DPRINTF3D(5, (fp, "\tx: %d\n\ty: %d\n\tw: %d\n\th: %d\n", x, y, w, h));
 	renderer->viewport[0] = x;
 	renderer->viewport[1] = y;
 	renderer->viewport[2] = w;
 	renderer->viewport[3] = h;
 	x -= renderer->bufferRect[0];
 	y -= renderer->bufferRect[1];
-	DPRINTF(5, (fp, "\tx: %d\n\ty: %d\n\tw: %d\n\th: %d\n", x, y, w, h));
+	DPRINTF3D(5, (fp, "\tx: %d\n\ty: %d\n\tw: %d\n\th: %d\n", x, y, w, h));
 	glViewport(x, renderer->bufferRect[3] - (y+h), w, h);
 	ERROR_CHECK;
 
@@ -345,7 +345,7 @@ int glClearDepthBuffer(int handle) /* return true on success, false on error */
 {
 	struct glRenderer *renderer = glRendererFromHandle(handle);
 	if(!renderer || !glMakeCurrentRenderer(renderer)) return 0;
-	DPRINTF(5, (fp, "### Clearing depth buffer\n"));
+	DPRINTF3D(5, (fp, "### Clearing depth buffer\n"));
 	glClear(GL_DEPTH_BUFFER_BIT);
 	ERROR_CHECK;
 	return 1;
@@ -355,7 +355,7 @@ int glClearViewport(int handle, unsigned int rgba, unsigned int pv) /* return tr
 {
 	struct glRenderer *renderer = glRendererFromHandle(handle);
 	if(!renderer || !glMakeCurrentRenderer(renderer)) return 0;
-	DPRINTF(5, (fp, "### Clearing viewport buffer\n"));
+	DPRINTF3D(5, (fp, "### Clearing viewport buffer\n"));
 	glClearColor(
 				((rgba >> 16) & 255) / 255.0, 
 				((rgba >>  8) & 255) / 255.0, 
@@ -370,7 +370,7 @@ int glFinishRenderer(int handle) /* return true on success, false on error */
 {
 	struct glRenderer *renderer = glRendererFromHandle(handle);
 	if(!renderer || !glMakeCurrentRenderer(renderer)) return 0;
-	DPRINTF(5, (fp, "### Finishing renderer\n"));
+	DPRINTF3D(5, (fp, "### Finishing renderer\n"));
 	glFinish();
 	ERROR_CHECK;
 	return 1;
@@ -380,7 +380,7 @@ int glFlushRenderer(int handle) /* return true on success, false on error */
 {
 	struct glRenderer *renderer = glRendererFromHandle(handle);
 	if(!renderer || !glMakeCurrentRenderer(renderer)) return 0;
-	DPRINTF(5, (fp, "### Flushing renderer\n"));
+	DPRINTF3D(5, (fp, "### Flushing renderer\n"));
 	glFlush();
 	ERROR_CHECK;
 	return 1;
@@ -390,7 +390,7 @@ int glSwapRendererBuffers(int handle) /* return true on success, false on error 
 {
 	struct glRenderer *renderer = glRendererFromHandle(handle);
 	if(!renderer || !glMakeCurrentRenderer(renderer)) return 0;
-	DPRINTF(5, (fp, "### Swapping renderer buffers\n"));
+	DPRINTF3D(5, (fp, "### Swapping renderer buffers\n"));
 	glSwapBuffers(renderer);
 	ERROR_CHECK;
 	return 1;
@@ -404,7 +404,7 @@ int glSetTransform(int handle, float *modelViewMatrix, float *projectionMatrix) 
 	struct glRenderer *renderer = glRendererFromHandle(handle);
 	if(!renderer || !glMakeCurrentRenderer(renderer)) return 0;
 
-	DPRINTF(5, (fp, "### Installing new transformations\n"));
+	DPRINTF3D(5, (fp, "### Installing new transformations\n"));
 	glMatrixMode(GL_PROJECTION);
 	ERROR_CHECK;
 	glLoadIdentity();
@@ -438,18 +438,18 @@ int glDisableLights(int handle) {
 	struct glRenderer *renderer = glRendererFromHandle(handle);
 
 	if(!renderer || !glMakeCurrentRenderer(renderer)) {
-		DPRINTF(4, (fp, "ERROR: Invalid renderer specified\n"));
+		DPRINTF3D(4, (fp, "ERROR: Invalid renderer specified\n"));
 		return 0;
 	}
 
-	DPRINTF(5, (fp, "### Disabling all lights\n"));
+	DPRINTF3D(5, (fp, "### Disabling all lights\n"));
 	glGetIntegerv(GL_MAX_LIGHTS, &max);
 	ERROR_CHECK;
 	for(i = 0; i < max; i++) {
 		glDisable(GL_LIGHT0+i);
 		ERROR_CHECK;
 		if( (glErr = glGetError()) != GL_NO_ERROR) 
-			DPRINTF(1, (fp,"ERROR (glDisableLights): glDisable(GL_LIGHT%d) failed -- %s\n", i, glErrString()));
+			DPRINTF3D(1, (fp,"ERROR (glDisableLights): glDisable(GL_LIGHT%d) failed -- %s\n", i, glErrString()));
 	}
 	return 1;
 }
@@ -459,22 +459,22 @@ int glLoadMaterial(int handle, B3DPrimitiveMaterial *mat)
 	struct glRenderer *renderer = glRendererFromHandle(handle);
 
 	if(!renderer || !glMakeCurrentRenderer(renderer)) {
-		DPRINTF(4, (fp, "ERROR: Invalid renderer specified\n"));
+		DPRINTF3D(4, (fp, "ERROR: Invalid renderer specified\n"));
 		return 0;
 	}
 
-	DPRINTF(5, (fp, "### New Material\n"));
+	DPRINTF3D(5, (fp, "### New Material\n"));
 	if(!mat) {
-		DPRINTF(5, (fp, "\tOFF (material == nil)\n"));
+		DPRINTF3D(5, (fp, "\tOFF (material == nil)\n"));
 		glDisable(GL_LIGHTING);
 		ERROR_CHECK;
 		return 1;
 	}
-	DPRINTF(5, (fp, "\tambient  : %g, %g, %g, %g\n",mat->ambient[0], mat->ambient[1], mat->ambient[2], mat->ambient[3]));
-	DPRINTF(5, (fp, "\tdiffuse  : %g, %g, %g, %g\n",mat->diffuse[0], mat->diffuse[1], mat->diffuse[2], mat->diffuse[3]));
-	DPRINTF(5, (fp, "\tspecular : %g, %g, %g, %g\n",mat->specular[0], mat->specular[1], mat->specular[2], mat->specular[3]));
-	DPRINTF(5, (fp, "\temission : %g, %g, %g, %g\n",mat->emission[0], mat->emission[1], mat->emission[2], mat->emission[3]));
-	DPRINTF(5, (fp, "\tshininess: %g\n", mat->shininess));
+	DPRINTF3D(5, (fp, "\tambient  : %g, %g, %g, %g\n",mat->ambient[0], mat->ambient[1], mat->ambient[2], mat->ambient[3]));
+	DPRINTF3D(5, (fp, "\tdiffuse  : %g, %g, %g, %g\n",mat->diffuse[0], mat->diffuse[1], mat->diffuse[2], mat->diffuse[3]));
+	DPRINTF3D(5, (fp, "\tspecular : %g, %g, %g, %g\n",mat->specular[0], mat->specular[1], mat->specular[2], mat->specular[3]));
+	DPRINTF3D(5, (fp, "\temission : %g, %g, %g, %g\n",mat->emission[0], mat->emission[1], mat->emission[2], mat->emission[3]));
+	DPRINTF3D(5, (fp, "\tshininess: %g\n", mat->shininess));
 	glEnable(GL_LIGHTING);
 	ERROR_CHECK;
 	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, mat->ambient);
@@ -497,67 +497,67 @@ int glLoadLight(int handle, int idx, B3DPrimitiveLight *light)
 	struct glRenderer *renderer = glRendererFromHandle(handle);
 
 	if(!renderer || !glMakeCurrentRenderer(renderer)) {
-		DPRINTF(4, (fp, "ERROR: Invalid renderer specified\n"));
+		DPRINTF3D(4, (fp, "ERROR: Invalid renderer specified\n"));
 		return 0;
 	}
 
-	DPRINTF(5, (fp, "### New Light (%d)\n", idx));
+	DPRINTF3D(5, (fp, "### New Light (%d)\n", idx));
 
 	if(!light) {
-		DPRINTF(5, (fp, "\tDISABLED\n"));
+		DPRINTF3D(5, (fp, "\tDISABLED\n"));
 		glDisable(index);
 		ERROR_CHECK;
 		return 1;
 	}
 	glEnable(index);
 	ERROR_CHECK;
-	DPRINTF(5, (fp, "\tambient       : %g, %g, %g, %g\n",light->ambient[0], light->ambient[1], light->ambient[2], light->ambient[3]));
-	DPRINTF(5, (fp, "\tdiffuse       : %g, %g, %g, %g\n",light->diffuse[0], light->diffuse[1], light->diffuse[2], light->diffuse[3]));
-	DPRINTF(5, (fp, "\tspecular      : %g, %g, %g, %g\n",light->specular[0], light->specular[1], light->specular[2], light->specular[3]));
-	DPRINTF(5, (fp, "\tposition      : %g, %g, %g\n",light->position[0], light->position[1], light->position[2]));
-	DPRINTF(5, (fp, "\tdirection     : %g, %g, %g\n",light->direction[0], light->direction[1], light->direction[2]));
-	DPRINTF(5, (fp, "\tattenuation   : %g, %g, %g\n",light->attenuation[0], light->attenuation[1], light->attenuation[2]));
-	DPRINTF(5, (fp, "\tflags [%d]:", light->flags));
-	if(light->flags & B3D_LIGHT_AMBIENT) DPRINTF(5,(fp," B3D_LIGHT_AMBIENT"));
-	if(light->flags & B3D_LIGHT_DIFFUSE) DPRINTF(5,(fp," B3D_LIGHT_DIFFUSE"));
-	if(light->flags & B3D_LIGHT_SPECULAR) DPRINTF(5,(fp," B3D_LIGHT_SPECULAR"));
-	if(light->flags & B3D_LIGHT_POSITIONAL) DPRINTF(5,(fp," B3D_LIGHT_POSITIONAL"));
-	if(light->flags & B3D_LIGHT_DIRECTIONAL) DPRINTF(5,(fp," B3D_LIGHT_DIRECTIONAL"));
-	if(light->flags & B3D_LIGHT_ATTENUATED) DPRINTF(5,(fp," B3D_LIGHT_ATTENUATED"));
-	if(light->flags & B3D_LIGHT_HAS_SPOT) DPRINTF(5,(fp," B3D_LIGHT_HAS_SPOT"));
-	DPRINTF(5, (fp, "\n"));
-	DPRINTF(5, (fp, "\tspot exponent : %g\n", light->spotExponent));
+	DPRINTF3D(5, (fp, "\tambient       : %g, %g, %g, %g\n",light->ambient[0], light->ambient[1], light->ambient[2], light->ambient[3]));
+	DPRINTF3D(5, (fp, "\tdiffuse       : %g, %g, %g, %g\n",light->diffuse[0], light->diffuse[1], light->diffuse[2], light->diffuse[3]));
+	DPRINTF3D(5, (fp, "\tspecular      : %g, %g, %g, %g\n",light->specular[0], light->specular[1], light->specular[2], light->specular[3]));
+	DPRINTF3D(5, (fp, "\tposition      : %g, %g, %g\n",light->position[0], light->position[1], light->position[2]));
+	DPRINTF3D(5, (fp, "\tdirection     : %g, %g, %g\n",light->direction[0], light->direction[1], light->direction[2]));
+	DPRINTF3D(5, (fp, "\tattenuation   : %g, %g, %g\n",light->attenuation[0], light->attenuation[1], light->attenuation[2]));
+	DPRINTF3D(5, (fp, "\tflags [%d]:", light->flags));
+	if(light->flags & B3D_LIGHT_AMBIENT) DPRINTF3D(5,(fp," B3D_LIGHT_AMBIENT"));
+	if(light->flags & B3D_LIGHT_DIFFUSE) DPRINTF3D(5,(fp," B3D_LIGHT_DIFFUSE"));
+	if(light->flags & B3D_LIGHT_SPECULAR) DPRINTF3D(5,(fp," B3D_LIGHT_SPECULAR"));
+	if(light->flags & B3D_LIGHT_POSITIONAL) DPRINTF3D(5,(fp," B3D_LIGHT_POSITIONAL"));
+	if(light->flags & B3D_LIGHT_DIRECTIONAL) DPRINTF3D(5,(fp," B3D_LIGHT_DIRECTIONAL"));
+	if(light->flags & B3D_LIGHT_ATTENUATED) DPRINTF3D(5,(fp," B3D_LIGHT_ATTENUATED"));
+	if(light->flags & B3D_LIGHT_HAS_SPOT) DPRINTF3D(5,(fp," B3D_LIGHT_HAS_SPOT"));
+	DPRINTF3D(5, (fp, "\n"));
+	DPRINTF3D(5, (fp, "\tspot exponent : %g\n", light->spotExponent));
 
-	DPRINTF(5, (fp, "### Installing Light (%d)\n", idx));
+	DPRINTF3D(5, (fp, "### Installing Light (%d)\n", idx));
 	if(light->flags & B3D_LIGHT_AMBIENT) {
-		DPRINTF(5, (fp, "\tambient  : %g, %g, %g, %g\n",light->ambient[0], light->ambient[1], light->ambient[2], light->ambient[3]));
+		DPRINTF3D(5, (fp, "\tambient  : %g, %g, %g, %g\n",light->ambient[0], light->ambient[1], light->ambient[2], light->ambient[3]));
 		glLightfv(index, GL_AMBIENT, light->ambient);
 	} else {
-		DPRINTF(5, (fp, "\tambient  : OFF (0, 0, 0, 1)\n"));
+		DPRINTF3D(5, (fp, "\tambient  : OFF (0, 0, 0, 1)\n"));
 		glLightfv(index, GL_AMBIENT, blackLight);
 	}
 	ERROR_CHECK;
 
 	if(light->flags & B3D_LIGHT_DIFFUSE) {
-		DPRINTF(5, (fp, "\tdiffuse  : %g, %g, %g, %g\n",light->diffuse[0], light->diffuse[1], light->diffuse[2], light->diffuse[3]));
+		DPRINTF3D(5, (fp, "\tdiffuse  : %g, %g, %g, %g\n",light->diffuse[0], light->diffuse[1], light->diffuse[2], light->diffuse[3]));
 		glLightfv(index, GL_DIFFUSE, light->diffuse);
 	} else {
-		DPRINTF(5, (fp, "\tdiffuse  : OFF (0, 0, 0, 1)\n"));
+		DPRINTF3D(5, (fp, "\tdiffuse  : OFF (0, 0, 0, 1)\n"));
 		glLightfv(index, GL_DIFFUSE, blackLight);
 	}
 	ERROR_CHECK;
 
 	if(light->flags & B3D_LIGHT_SPECULAR) {
-		DPRINTF(5, (fp, "\tspecular : %g, %g, %g, %g\n",light->specular[0], light->specular[1], light->specular[2], light->specular[3]));
+		DPRINTF3D(5, (fp, "\tspecular : %g, %g, %g, %g\n",light->specular[0], light->specular[1], light->specular[2], light->specular[3]));
 		glLightfv(index, GL_SPECULAR, light->specular);
 	} else {
-		DPRINTF(5, (fp, "\tspecular : OFF (0, 0, 0, 1)\n"));
+		DPRINTF3D(5, (fp, "\tspecular : OFF (0, 0, 0, 1)\n"));
 		glLightfv(index, GL_SPECULAR, blackLight);
 	}
 	ERROR_CHECK;
 
 	if(light->flags & B3D_LIGHT_POSITIONAL) {
-		DPRINTF(5, (fp, "\tposition : %g, %g, %g\n",light->position[0], light->position[1], light->position[2]));
+		DPRINTF3D(5, (fp, "\tposition : %g, %g, %g\n",light->position[0], light->position[1], light->position[2]));
 		pos[0] = light->position[0];
 		pos[1] = light->position[1];
 		pos[2] = light->position[2];
@@ -569,7 +569,7 @@ int glLoadLight(int handle, int idx, B3DPrimitiveLight *light)
 		glPopMatrix();
 	} else {
 		if(light->flags & B3D_LIGHT_DIRECTIONAL) {
-			DPRINTF(5, (fp, "\tdirection: %g, %g, %g\n",light->direction[0], light->direction[1], light->direction[2]));
+			DPRINTF3D(5, (fp, "\tdirection: %g, %g, %g\n",light->direction[0], light->direction[1], light->direction[2]));
 			pos[0] = light->direction[0];
 			pos[1] = light->direction[1];
 			pos[2] = light->direction[2];
@@ -584,7 +584,7 @@ int glLoadLight(int handle, int idx, B3DPrimitiveLight *light)
 	ERROR_CHECK;
 
 	if(light->flags & B3D_LIGHT_ATTENUATED) {
-		DPRINTF(5, (fp, "\tattenuation: %g, %g, %g\n",light->attenuation[0], light->attenuation[1], light->attenuation[2]));
+		DPRINTF3D(5, (fp, "\tattenuation: %g, %g, %g\n",light->attenuation[0], light->attenuation[1], light->attenuation[2]));
 		glLightf(index, GL_CONSTANT_ATTENUATION,  light->attenuation[0]);
 		ERROR_CHECK;
 		glLightf(index, GL_LINEAR_ATTENUATION,    light->attenuation[1]);
@@ -592,7 +592,7 @@ int glLoadLight(int handle, int idx, B3DPrimitiveLight *light)
 		glLightf(index, GL_QUADRATIC_ATTENUATION, light->attenuation[2]);
 		ERROR_CHECK;
 	} else {
-		DPRINTF(5, (fp, "\tattenuation: OFF (1, 0, 0)\n"));
+		DPRINTF3D(5, (fp, "\tattenuation: OFF (1, 0, 0)\n"));
 		glLightf(index, GL_CONSTANT_ATTENUATION,  1.0);
 		ERROR_CHECK;
 		glLightf(index, GL_LINEAR_ATTENUATION,    0.0);
@@ -602,9 +602,9 @@ int glLoadLight(int handle, int idx, B3DPrimitiveLight *light)
 	}
 
 	if(light->flags & B3D_LIGHT_HAS_SPOT) {
-		DPRINTF(5, (fp, "\tspot exponent : %g\n", light->spotExponent));
-		DPRINTF(5, (fp, "\tspot cutoff   : ???\n"));
-		DPRINTF(5, (fp, "\tspot direction: %g, %g, %g\n",light->direction[0], light->direction[1], light->direction[2]));
+		DPRINTF3D(5, (fp, "\tspot exponent : %g\n", light->spotExponent));
+		DPRINTF3D(5, (fp, "\tspot cutoff   : ???\n"));
+		DPRINTF3D(5, (fp, "\tspot direction: %g, %g, %g\n",light->direction[0], light->direction[1], light->direction[2]));
 		glLightf(index, GL_SPOT_EXPONENT, light->spotExponent);
 		ERROR_CHECK;
 		glLightf(index, GL_SPOT_CUTOFF, light->spotExponent);
@@ -780,21 +780,21 @@ int glSetIntProperty(int handle, int prop, int value)
 
 static void glRenderVertex(B3DPrimitiveVertex *vtx, int flags)
 {
-	DPRINTF(10, (fp, "["));
+	DPRINTF3D(10, (fp, "["));
 	if(flags & 1) {
 		unsigned int vv = vtx->pixelValue32;
-		DPRINTF(10, (fp, "C(%d, %d, %d, %d)",(vv >> 16) & 255, (vv >> 8) & 255, vv & 255, vv >> 24));
+		DPRINTF3D(10, (fp, "C(%d, %d, %d, %d)",(vv >> 16) & 255, (vv >> 8) & 255, vv & 255, vv >> 24));
 		glColor4ub( (vv >> 16) & 255, (vv >> 8) & 255, vv & 255, vv >> 24 );
 	}
 	if(flags & 2) {
-		DPRINTF(10, (fp, "N(%g, %g, %g)", vtx->normal[0], vtx->normal[1], vtx->normal[2]));
+		DPRINTF3D(10, (fp, "N(%g, %g, %g)", vtx->normal[0], vtx->normal[1], vtx->normal[2]));
 		glNormal3fv(vtx->normal);
 	}
 	if(flags & 4) {
-		DPRINTF(10, (fp, "T(%g, %g)", vtx->texCoord[0], vtx->texCoord[1]));
+		DPRINTF3D(10, (fp, "T(%g, %g)", vtx->texCoord[0], vtx->texCoord[1]));
 		glTexCoord2fv(vtx->texCoord);
 	}
-	DPRINTF(10, (fp, "V(%g, %g, %g)]\n", vtx->position[0], vtx->position[1], vtx->position[2]));
+	DPRINTF3D(10, (fp, "V(%g, %g, %g)]\n", vtx->position[0], vtx->position[1], vtx->position[2]));
 	glVertex3fv(vtx->position);
 }
 #endif
@@ -814,24 +814,24 @@ int glRenderVertexBuffer(int handle, int primType, int flags, int texHandle, flo
 	struct glRenderer *renderer = glRendererFromHandle(handle);
 
 	if(!renderer || !glMakeCurrentRenderer(renderer)) {
-		DPRINTF(4, (fp, "ERROR: Invalid renderer specified\n"));
+		DPRINTF3D(4, (fp, "ERROR: Invalid renderer specified\n"));
 		return 0;
 	}
 
-	DPRINTF(5, (fp,"### Primitive : %d\n", primType));
-	DPRINTF(5, (fp,"\ttexHandle   : %d\n", texHandle));
-	DPRINTF(5, (fp,"\tcolor flags :"));
-	if(flags & B3D_VB_TRACK_AMBIENT) DPRINTF(5,(fp," B3D_VB_TRACK_AMBIENT"));
-	if(flags & B3D_VB_TRACK_DIFFUSE) DPRINTF(5,(fp," B3D_VB_TRACK_DIFFUSE"));
-	if(flags & B3D_VB_TRACK_SPECULAR) DPRINTF(5,(fp," B3D_VB_TRACK_SPECULAR"));
-	if(flags & B3D_VB_TRACK_EMISSION) DPRINTF(5,(fp," B3D_VB_TRACK_EMISSION"));
-	DPRINTF(5, (fp,"\n\tlight flags :"));
-	if(flags & B3D_VB_LOCAL_VIEWER) DPRINTF(5,(fp," B3D_VB_LOCAL_VIEWER"));
-	if(flags & B3D_VB_TWO_SIDED) DPRINTF(5,(fp," B3D_VB_TWO_SIDED"));
-	DPRINTF(5, (fp,"\n\tvertex flags:"));
-	if(flags & B3D_VB_HAS_NORMALS) DPRINTF(5,(fp," B3D_VB_HAS_NORMALS"));
-	if(flags & B3D_VB_HAS_TEXTURES) DPRINTF(5,(fp," B3D_VB_HAS_TEXTURES"));
-	DPRINTF(5, (fp, "\n"));
+	DPRINTF3D(5, (fp,"### Primitive : %d\n", primType));
+	DPRINTF3D(5, (fp,"\ttexHandle   : %d\n", texHandle));
+	DPRINTF3D(5, (fp,"\tcolor flags :"));
+	if(flags & B3D_VB_TRACK_AMBIENT) DPRINTF3D(5,(fp," B3D_VB_TRACK_AMBIENT"));
+	if(flags & B3D_VB_TRACK_DIFFUSE) DPRINTF3D(5,(fp," B3D_VB_TRACK_DIFFUSE"));
+	if(flags & B3D_VB_TRACK_SPECULAR) DPRINTF3D(5,(fp," B3D_VB_TRACK_SPECULAR"));
+	if(flags & B3D_VB_TRACK_EMISSION) DPRINTF3D(5,(fp," B3D_VB_TRACK_EMISSION"));
+	DPRINTF3D(5, (fp,"\n\tlight flags :"));
+	if(flags & B3D_VB_LOCAL_VIEWER) DPRINTF3D(5,(fp," B3D_VB_LOCAL_VIEWER"));
+	if(flags & B3D_VB_TWO_SIDED) DPRINTF3D(5,(fp," B3D_VB_TWO_SIDED"));
+	DPRINTF3D(5, (fp,"\n\tvertex flags:"));
+	if(flags & B3D_VB_HAS_NORMALS) DPRINTF3D(5,(fp," B3D_VB_HAS_NORMALS"));
+	if(flags & B3D_VB_HAS_TEXTURES) DPRINTF3D(5,(fp," B3D_VB_HAS_TEXTURES"));
+	DPRINTF3D(5, (fp, "\n"));
 
 	/* process VB flags */
 	tracking = 0;
@@ -940,7 +940,7 @@ int glRenderVertexBuffer(int handle, int primType, int flags, int texHandle, flo
 			for(i = 0; i < nFaces; i++) {
 				B3DInputFace *face = facePtr + (2*i);
 				if(face[0] && face[1]) {
-					DPRINTF(10, (fp,"\n"));
+					DPRINTF3D(10, (fp,"\n"));
 					glRenderVertex(vtxPointer + face[0] - 1, vtxFlags);
 					glRenderVertex(vtxPointer + face[1] - 1, vtxFlags);
 				}
@@ -957,7 +957,7 @@ int glRenderVertexBuffer(int handle, int primType, int flags, int texHandle, flo
 			for(i = 0; i < nFaces; i++) {
 				B3DInputFace *face = facePtr + (3*i);
 				if(face[0] && face[1] && face[2]) {
-					DPRINTF(10, (fp,"\n"));
+					DPRINTF3D(10, (fp,"\n"));
 					glRenderVertex(vtxPointer + face[0] - 1, vtxFlags);
 					glRenderVertex(vtxPointer + face[1] - 1, vtxFlags);
 					glRenderVertex(vtxPointer + face[2] - 1, vtxFlags);
@@ -975,7 +975,7 @@ int glRenderVertexBuffer(int handle, int primType, int flags, int texHandle, flo
 			for(i = 0; i < nFaces; i++) {
 				B3DInputFace *face = facePtr + (4*i);
 				if(face[0] && face[1] && face[2] && face[3]) {
-					DPRINTF(10, (fp,"\n"));
+					DPRINTF3D(10, (fp,"\n"));
 					glRenderVertex(vtxPointer + face[0] - 1, vtxFlags);
 					glRenderVertex(vtxPointer + face[1] - 1, vtxFlags);
 					glRenderVertex(vtxPointer + face[2] - 1, vtxFlags);
@@ -987,7 +987,7 @@ int glRenderVertexBuffer(int handle, int primType, int flags, int texHandle, flo
 			break;
 	}
 	ERROR_CHECK;
-	DPRINTF(5, (fp,"\n"));
+	DPRINTF3D(5, (fp,"\n"));
 	glDisable(GL_COLOR_MATERIAL);
 	ERROR_CHECK;
 #ifdef GL_VERSION_1_1
@@ -1002,5 +1002,66 @@ int glRenderVertexBuffer(int handle, int primType, int flags, int texHandle, flo
 #endif /* GL_VERSION_1_1 */
 	return 1;
 }
+
+
+/*****************************************************************************/
+/*****************************************************************************/
+int b3dLoadClientState(int handle, float *vtxData, int vtxSize, float *colorData, int colorSize, float *normalData, int normalSize, float *txData, int txSize) {
+  glRenderer *renderer = glRendererFromHandle(handle);
+  if(!renderer || !glMakeCurrentRenderer(renderer)) {
+    DPRINTF3D(0, (fp, "ERROR: Invalid renderer specified: %d\n", handle));
+    return 0;
+  }
+
+  if(colorData) glColorPointer(colorSize, GL_FLOAT, colorSize*4, colorData);
+  else glDisableClientState(GL_COLOR_ARRAY);
+  if(normalData) glNormalPointer(GL_FLOAT, normalSize*4, normalData);
+  else glDisableClientState(GL_NORMAL_ARRAY);
+  if(txData) glTexCoordPointer(txSize, GL_FLOAT, txSize*4, txData);
+  else glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+  glVertexPointer(vtxSize, GL_FLOAT, vtxSize*4, vtxData);
+  return 1;
+}
+
+int b3dDrawRangeElements(int handle, int mode, int minIdx, int maxIdx, int nFaces, unsigned int *facePtr) {
+  glRenderer *renderer = glRendererFromHandle(handle);
+  if(!renderer || !glMakeCurrentRenderer(renderer)) return 0;
+
+#ifdef WIN32
+  if(!renderer->glDrawRangeElements) {
+    void *fn;
+    fn = wglGetProcAddress("glDrawRangeElements");
+    if(!fn) {
+      DPRINTF3D(1, (fp, "ERROR: Cannot find glDrawRangeElements\n"));
+      fn = wglGetProcAddress("glDrawRangeElementsEXT");
+      if(!fn) {
+	DPRINTF3D(1, (fp, "ERROR: Cannot find glDrawRangeElementsEXT\n"));
+	return 0;
+      }
+    }
+    renderer->glDrawRangeElements = fn;
+  }
+  (*(renderer->glDrawRangeElements))
+    (mode, minIdx, maxIdx, nFaces, GL_UNSIGNED_INT, facePtr);
+#else
+  glDrawRangeElements(mode, minIdx, maxIdx, nFaces, GL_UNSIGNED_INT, facePtr);
+#endif
+  return 1;
+}
+
+int b3dDrawElements(int handle, int mode, int nFaces, unsigned int *facePtr) {
+  glRenderer *renderer = glRendererFromHandle(handle);
+  if(!renderer || !glMakeCurrentRenderer(renderer)) return 0;
+  glDrawElements(mode, nFaces, GL_UNSIGNED_INT, facePtr);
+  return 1;
+}
+
+int b3dDrawArrays(int handle, int mode, int minIdx, int maxIdx) {
+  glRenderer *renderer = glRendererFromHandle(handle);
+  if(!renderer || !glMakeCurrentRenderer(renderer)) return 0;
+  glDrawArrays(mode, minIdx, maxIdx);
+  return 1;
+}
+
 
 #endif /* defined B3DX_GL */
