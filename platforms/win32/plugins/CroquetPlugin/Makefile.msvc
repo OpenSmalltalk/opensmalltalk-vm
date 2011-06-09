@@ -1,5 +1,0 @@
-include ../../Makefile.plugin
-
-# MSVC v6 is missing fabsf
-
-CFLAGS:=$(CFLAGS) /Dfabsf=fabs
