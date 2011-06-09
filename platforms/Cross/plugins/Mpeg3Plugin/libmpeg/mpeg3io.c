@@ -105,20 +105,26 @@ long mpeg3io_get_total_bytes(mpeg3_fs_t *fs)
 		return fs->total_bytes;
 	}
 
+	if (! fs->fd) {	// bgf error protection for win
+		return 0;
+	}
+
 	fseek(fs->fd, 0, SEEK_END);
 	fs->total_bytes = ftell(fs->fd) - fs->id3v2_offset;
 	fseek(fs->fd, fs->id3v2_offset, SEEK_SET);
+
 	return fs->total_bytes;
 }
 
 int mpeg3io_get_id3v2_size(mpeg3_fs_t *fs)
 {
   unsigned long synchsafe_size = 0;
-  
+
   if (fs->mpeg_is_in_buffer) {
 	fs->mpeg_is_in_buffer_file_position = 6;
   } else {
-  fseek(fs->fd, 6, SEEK_SET);
+	if (! fs->fd) return 0;
+	fseek(fs->fd, 6, SEEK_SET);
   }
 
   synchsafe_size = mpeg3io_read_int32(fs);
@@ -138,8 +144,7 @@ int mpeg3io_open_file(mpeg3_fs_t *fs)
 		perror("mpeg3io_open_file");
 		return 1;
 	}
-			setvbuf(fs->fd,0, _IOFBF, 64*1024);  //JMM Feb 26th, 2006 for CD reader performance
-
+	setvbuf(fs->fd,0, _IOFBF, 64*1024);  //JMM Feb 26th, 2006 for CD reader performance
 	}
 
 	bits = mpeg3io_read_int32(fs);
@@ -151,14 +156,15 @@ int mpeg3io_open_file(mpeg3_fs_t *fs)
 	    fs->id3v2_offset = 0;
 	  }
 
-	mpeg3io_seek(fs, 0);
-
 	fs->total_bytes = mpeg3io_get_total_bytes(fs);
 	
 	if(!fs->total_bytes)
 	{
-		if (!fs->mpeg_is_in_buffer)
-		fclose(fs->fd);
+		if (!fs->mpeg_is_in_buffer) {
+			if (fs->fd) fclose(fs->fd);
+		}
+		fprintf(stderr, "MP2 - empty file %s\n", fs->path);
+		fs->fd = NULL;
 		return 1;
 	}
 	fs->current_byte = 0;
@@ -174,6 +180,7 @@ int mpeg3io_close_file(mpeg3_fs_t *fs)
 			memoryFree(fs->mpeg_is_in_buffer);
 		fs->mpeg_is_in_buffer = 0; 
 	}
+	/* fprintf (stderr, "MP2 closing %s\n", fs->path); */
 	fs->fd = 0;
 	return 0;
 }
@@ -193,7 +200,7 @@ int mpeg3io_read_data(unsigned char *buffer, long bytes, mpeg3_fs_t *fs)
 		fs->mpeg_is_in_buffer_file_position += normalizedBytes;
 		result = !normalizedBytes;
 	} else {
-	result = !fread(buffer, 1, bytes, fs->fd);
+		result = (fs->fd != NULL) && !fread(buffer, 1, bytes, fs->fd);
 	}
 	fs->current_byte += bytes;
 	return (result && bytes);
@@ -244,16 +251,28 @@ int mpeg3io_seek(mpeg3_fs_t *fs, long byte)
 		fs->mpeg_is_in_buffer_file_position = target;
 		return 0;
 	}
-	return fseek(fs->fd, byte + fs->id3v2_offset, SEEK_SET);
+	// For Squeak-Teleplace, where we only deal in static mpeg files.
+	// No seek beyond the EOF.  Partly to protect against win32 seek woes.
+	if (byte < 0) {
+		return -1;
+	} else if (fs->total_bytes && (byte > fs->total_bytes)) {
+		/* fprintf(stderr, "libmpeg3 seek out of range %ld vs %ld\n", byte, fs->total_bytes); */
+		return -1;
+	} else {
+		if (fs->fd) {
+			return fseek(fs->fd, (byte + fs->id3v2_offset), SEEK_SET);
+		}
+		fprintf(stderr, "MP2: seek no fd\n");
+		return -1;
+	}
 }
 
 int mpeg3io_seek_relative(mpeg3_fs_t *fs, long bytes)
 {
+	long old_current_byte = fs->current_byte;
 	fs->current_byte += bytes;
 	if (fs->mpeg_is_in_buffer) {
-		int target;
-		
-		target = fs->current_byte + fs->id3v2_offset;
+		long target = fs->current_byte + fs->id3v2_offset;
 		if (target > fs->mpeg_buffer_size)
 			return -1;
 		if (target < 0) {
@@ -261,7 +280,19 @@ int mpeg3io_seek_relative(mpeg3_fs_t *fs, long bytes)
 		fs->mpeg_is_in_buffer_file_position = target;
 		return 0;
 	}
-	return fseek(fs->fd, fs->current_byte + fs->id3v2_offset, SEEK_SET);
+	if (fs->current_byte < 0) {
+		return -1;
+	} else if (fs->total_bytes && (fs->current_byte > fs->total_bytes)) {
+		/*  For Squeak-Teleplace, where we only deal in static mpeg files. */
+		/*  No seek beyond the EOF.  Partly to protect against win32 seek woes. */
+		return -1;
+	}
+
+	if (fs->fd) {
+		return fseek(fs->fd, fs->current_byte + fs->id3v2_offset, SEEK_SET);
+	} 
+	fprintf(stderr, "MP2: rel seek no fd\n");
+	return -1;
 }
 
 int mpeg3io_scanf (mpeg3_fs_t *fs,char *format, void * string1, void * string2) {
@@ -270,7 +301,10 @@ int mpeg3io_scanf (mpeg3_fs_t *fs,char *format, void * string1, void * string2) 
 		return_value = sscanf(fs->mpeg_is_in_buffer+fs->mpeg_is_in_buffer_file_position,format, string1, string2);
 		return return_value;
 	}
-	
+	if (! fs->fd) {
+		fprintf(stderr, "MP2 scan3 - no file\n");
+		return -1;
+	}
 	return_value = fscanf(fs->fd,format, string1, string2);
 	return return_value;
 }
@@ -282,7 +316,10 @@ int mpeg3io_scanf5 (mpeg3_fs_t *fs,char *format, void * string1, void * string2,
 		return_value = sscanf(fs->mpeg_is_in_buffer+fs->mpeg_is_in_buffer_file_position,format, string1, string2, string3, string4, string5);
 		return return_value;
 	}
-
+	if (! fs->fd) {
+		fprintf(stderr, "MP2 scan5 - no file\n");
+		return -1;
+	}
 	return_value = fscanf(fs->fd,format, string1, string2, string3, string4, string5);
 	return return_value;
 }
@@ -292,7 +329,7 @@ int mpeg3io_end_of_file(mpeg3_fs_t *fs ) {
 		return fs->mpeg_is_in_buffer_file_position == fs->mpeg_buffer_size;
 	}
 	
-	return feof(fs->fd);
+	return ( ! fs->fd ) || feof(fs->fd);
 }
 
 inline int mpeg3io_fgetc(mpeg3_fs_t *fs) {
@@ -306,6 +343,6 @@ inline int mpeg3io_fgetc(mpeg3_fs_t *fs) {
 		value = (unsigned int) fs->mpeg_is_in_buffer[fs->mpeg_is_in_buffer_file_position-1];
 		return value;
 	}
-	return fgetc(fs->fd);
+	return (fs->fd ? fgetc(fs->fd) : 0);
 }
 

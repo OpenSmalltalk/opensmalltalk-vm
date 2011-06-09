@@ -82,7 +82,7 @@ int mpeg3video_get_macroblock_address(mpeg3_slice_t *slice)
 
 static inline int mpeg3video_getsp_imb_type(mpeg3_slice_t *slice)
 {
-	mpeg3_slice_buffer_t *slice_buffer = slice_buffer;
+	mpeg3_slice_buffer_t *slice_buffer = slice->slice_buffer;
   	unsigned int code = mpeg3slice_showbits(slice_buffer, 4);
 	if(!code)
 	{
