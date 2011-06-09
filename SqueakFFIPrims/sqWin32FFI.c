@@ -6,11 +6,12 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   andreasr@wdi.disney.com
-*   RCSID:   $Id: sqWin32FFI.c,v 1.2 2002/06/01 11:44:39 andreasraab Exp $
+*   RCSID:   $Id$
 *
 *   NOTES:
 *
 *****************************************************************************/
+#include <windows.h>
 #include "sq.h"
 #include "sqFFI.h"
 
@@ -43,6 +44,7 @@ static void*    structReturnValue;
 
 #define ARG_CHECK() if(ffiArgIndex >= FFI_MAX_ARGS) return primitiveFail();
 #define ARG_PUSH(value) { ARG_CHECK(); ffiArgs[ffiArgIndex++] = value; }
+
 
 /*****************************************************************************/
 /*****************************************************************************/
@@ -321,45 +323,45 @@ int ffiCallAddress(int fn)
 	}
 #endif
 #ifdef __GNUC__
-	asm("
-	  movl %%ebp, _oldBP
-	  movl %%esp, _oldSP
-		pushl %%ebx;
-		pushl %%ecx;
-		pushl %%edx;
-		pushl %%edi;
-		pushl %%esi;
-		pushl %%ebp;
+	asm(
+	  "movl %%ebp, _oldBP\n\t"
+	  "movl %%esp, _oldSP\n\t"
+		"pushl %%ebx\n\t"
+		"pushl %%ecx\n\t"
+		"pushl %%edx\n\t"
+		"pushl %%edi\n\t"
+		"pushl %%esi\n\t"
+		"pushl %%ebp\n\t"
 		/* mark the frame */
-		movl %%esp, %%ebp
+		"movl %%esp, %%ebp\n\t"
 		/* alloca() ffiStackIndex size bytes */
-		movl _ffiArgIndex, %%ecx;
-		shll $2, %%ecx;
-		subl %%ecx, %%esp
+		"movl _ffiArgIndex, %%ecx\n\t"
+		"shll $2, %%ecx\n\t"
+		"subl %%ecx, %%esp\n\t"
 		/* copy stack */
-		movl %%esp, %%edi;
-		leal _ffiArgs, %%esi;
-		shrl $2, %%ecx;
-		cld;
-		rep movsl;
+		"movl %%esp, %%edi\n\t"
+		"leal _ffiArgs, %%esi\n\t"
+		"shrl $2, %%ecx\n\t"
+		"cld\n\t"
+		"rep movsl\n\t"
 		/* go calling */
-		call *%%ebx
+		"call *%%ebx\n\t"
 		/* restore frame */
-		movl %%ebp, %%esp
+		"movl %%ebp, %%esp\n\t"
 		/* store the return values */
-		movl %%eax, _intReturnValue
-		movl %%edx, _intReturnValue2
-		fstpl _floatReturnValue
+		"movl %%eax, _intReturnValue\n\t"
+		"movl %%edx, _intReturnValue2\n\t"
+		"fstpl _floatReturnValue\n\t"
 		/* restore register values */
-		popl %%ebp
-		popl %%esi
-		popl %%edi
-		popl %%edx
-		popl %%ecx
-		popl %%ebx
-movl %%ebp, _newBP
-movl %%esp, _newSP
-		": /* no outputs */ : "ebx" (fn) : "eax" /* clobbered registers */);
+		"popl %%ebp\n\t"
+		"popl %%esi\n\t"
+		"popl %%edi\n\t"
+		"popl %%edx\n\t"
+		"popl %%ecx\n\t"
+		"popl %%ebx\n\t"
+"movl %%ebp, _newBP\n\t"
+"movl %%esp, _newSP\n\t"
+		: /* no outputs */ : "ebx" (fn) : "eax" /* clobbered registers */);
 		/* done */
 #endif
 #if 0
@@ -391,118 +393,3 @@ int ffiCallAddressOfWithReturnType(int fn, int callType, int typeSpec)
 	return ffiCallAddress(fn);
 }
 
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
-/************ Test functions for the foreign function interface **************/
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
-#ifndef NO_FFI_TEST
-typedef struct ffiTestPoint2 {
-	int x;
-	int y;
-} ffiTestPoint2;
-
-typedef struct ffiTestPoint4 {
-	int x;
-	int y;
-	int z;
-	int w;
-} ffiTestPoint4;
-
-#pragma export on
-EXPORT(char) ffiTestChars(char c1, char c2, char c3, char c4);
-EXPORT(short) ffiTestShorts(short c1, short c2, short c3, short c4);
-EXPORT(int) ffiTestInts(int c1, int c2, int c3, int c4);
-EXPORT(float) ffiTestFloats(float f1, float f2);
-EXPORT(double) ffiTestDoubles(double d1, double d2);
-EXPORT(char *) ffiPrintString(char *string);
-EXPORT(ffiTestPoint2) ffiTestStruct64(ffiTestPoint2 pt1, ffiTestPoint2 pt2);
-EXPORT(ffiTestPoint4) ffiTestStructBig(ffiTestPoint4 pt1, ffiTestPoint4 pt2);
-EXPORT(ffiTestPoint4*) ffiTestPointers(ffiTestPoint4 *pt1, ffiTestPoint4 *pt2);
-EXPORT(LONGLONG) ffiTestLongLong(LONGLONG i1, LONGLONG i2);
-#pragma export off
-
-
-/* test passing characters */
-EXPORT(char) ffiTestChars(char c1, char c2, char c3, char c4) {
-	printf("4 characters came in as\nc1 = %c (%x)\nc2 = %c (%x)\nc3 = %c (%x)\nc4 = %c (%x)\n", c1, c1, c2, c2, c3, c3, c4, c4);
-	return c1+c2;
-}
-
-/* test passing shorts */
-EXPORT(short) ffiTestShorts(short c1, short c2, short c3, short c4) {
-	printf("4 shorts came in as\ns1 = %d (%x)\ns2 = %d (%x)\ns3 = %d (%x)\ns4 = %d (%x)\n", c1, c1, c2, c2, c3, c3, c4, c4);
-	return c1+c2;
-}
-
-/* test passing ints */
-EXPORT(int) ffiTestInts(int c1, int c2, int c3, int c4) {
-	printf("4 ints came in as\ni1 = %d (%x)\ni2 = %d (%x)\ni3 = %d (%x)\ni4 = %d (%x)\n", c1, c1, c2, c2, c3, c3, c4, c4);
-	return c1+c2;
-}
-
-/* test passing and returning floats */
-EXPORT(float) ffiTestFloats(float f1, float f2) {
-	printf("The two floats are %f and %f\n", f1, f2);
-	return (float) (f1 + f2);
-}
-
-/* test passing and returning doubles */
-EXPORT(double) ffiTestDoubles(double d1, double d2) {
-	printf("The two floats are %f and %f\n", (float)d1, (float)d2);
-	return d1+d2;
-}
-
-/* test passing and returning strings */
-EXPORT(char*) ffiPrintString(char *string) {
-	printf("%s\n", string);
-	return string;
-}
-
-/* test passing and returning 64bit structures */
-EXPORT(ffiTestPoint2) ffiTestStruct64(ffiTestPoint2 pt1, ffiTestPoint2 pt2) {
-	ffiTestPoint2 result;
-	printf("pt1.x = %d\npt1.y = %d\npt2.x = %d\npt2.y = %d\n",
-			pt1.x, pt1.y, pt2.x, pt2.y);
-	result.x = pt1.x + pt2.x;
-	result.y = pt1.y + pt2.y;
-	return result;
-}
-
-/* test passing and returning large structures */
-EXPORT(ffiTestPoint4) ffiTestStructBig(ffiTestPoint4 pt1, ffiTestPoint4 pt2) {
-	ffiTestPoint4 result;
-	printf("pt1.x = %d\npt1.y = %d\npt1.z = %d\npt1.w = %d\n",
-			pt1.x, pt1.y, pt1.z, pt1.w);
-	printf("pt2.x = %d\npt2.y = %d\npt2.z = %d\npt2.w = %d\n",
-			pt2.x, pt2.y, pt2.z, pt2.w);
-	result.x = pt1.x + pt2.x;
-	result.y = pt1.y + pt2.y;
-	result.z = pt1.z + pt2.z;
-	result.w = pt1.w + pt2.w;
-	return result;
-}
-
-/* test passing and returning pointers */
-EXPORT(ffiTestPoint4*) ffiTestPointers(ffiTestPoint4 *pt1, ffiTestPoint4 *pt2) {
-	ffiTestPoint4 *result;
-	printf("pt1.x = %d\npt1.y = %d\npt1.z = %d\npt1.w = %d\n",
-			pt1->x, pt1->y, pt1->z, pt1->w);
-	printf("pt2.x = %d\npt2.y = %d\npt2.z = %d\npt2.w = %d\n",
-			pt2->x, pt2->y, pt2->z, pt2->w);
-	result = (ffiTestPoint4*) malloc(sizeof(ffiTestPoint4));
-	result->x = pt1->x + pt2->x;
-	result->y = pt1->y + pt2->y;
-	result->z = pt1->z + pt2->z;
-	result->w = pt1->w + pt2->w;
-	return result;
-}
-
-/* test passing and returning longlongs */
-EXPORT(LONGLONG) ffiTestLongLong(LONGLONG i1, LONGLONG i2) {
-	return i1 + i2;
-}
-
-#endif /* NO_FFI_TEST */
