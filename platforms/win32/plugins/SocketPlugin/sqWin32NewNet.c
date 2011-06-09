@@ -45,7 +45,7 @@ typedef unsigned long ULONG_PTR;
 #ifndef NDEBUG
 #define DBG(s,c) debugCheckWatcherThreads(PSP(s),c)
 #else
-#define DBG(s)
+#define DBG(s,c)
 #endif
 
 /*** Socket Type Constants ***/
@@ -1464,9 +1464,9 @@ void sqSocketCreateRawProtoTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(Soc
 
   /* initial peer := wildcard */
   ZeroMemory(&pss->peer, sizeof(pss->peer));
-  pss->peer.sin_family= AF_INET;
-  pss->peer.sin_port= htons((short)0);;
-  pss->peer.sin_addr.s_addr= INADDR_ANY;
+  pss->peer.sin.sin_family= AF_INET;
+  pss->peer.sin.sin_port= htons((short)0);;
+  pss->peer.sin.sin_addr.s_addr= INADDR_ANY;
 
   /* fill the SQSocket */
   s->sessionID = thisNetSession;
