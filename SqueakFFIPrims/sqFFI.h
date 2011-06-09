@@ -129,6 +129,10 @@ int ffiStoreStructure(int address, int structSize);
 /* return the float value from a previous call */
 double ffiReturnFloatValue(void);
 
+/* Set the log file name for logging call-outs */
+int ffiLogFileNameOfLength(void *nameIndex, int nameLength);
+int ffiLogCallOfLength(void *nameIndex, int nameLength);
+
 /* The following are for creating, manipulating, and detroying "manual surfaces".
    These are surfaces that are managed by Squeak code, which has manual control
    over the memory location where the image data is stored (the pointer used may 
