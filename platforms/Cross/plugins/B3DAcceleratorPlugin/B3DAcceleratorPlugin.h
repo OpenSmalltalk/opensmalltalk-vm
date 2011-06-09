@@ -1,4 +1,12 @@
 /* Header file for 3D accelerator plugin */
+#ifdef WIN32
+# include <windows.h>
+#endif
+#if defined(TARGET_API_MAC_CARBON)
+#include <OpenGL/gl.h>
+#else
+#include <GL/gl.h>
+#endif
 
 /* Vertex buffer flags */
 #define B3D_VB_TRACK_AMBIENT 1
@@ -61,13 +69,18 @@ typedef struct B3DPrimitiveLight {
    B3D_SOFTWARE_RENDERER: Enable use of software renderers
    B3D_HARDWARE_RENDERER: Enable use of hardware renderers
    B3D_STENCIL_BUFFER:    Request stencil buffer
+   B3D_ANTIALIASING:      Request antialiasing in the renderer.
+   B3D_STEREO:            Request stereo visual from the renderer
+   B3D_SYNCVBL:           Request VBL sync
    More flags may be added - if they are not supported by the platform
    code the creation primitive should fail.
 */
 #define B3D_SOFTWARE_RENDERER 0x0001
 #define B3D_HARDWARE_RENDERER 0x0002
 #define B3D_STENCIL_BUFFER    0x0004
-
+#define B3D_ANTIALIASING      0x0008
+#define B3D_STEREO            0x0010
+#define B3D_SYNCVBL           0x0020
 
 /* Win32 defaults to DUAL D3D/GL interface everyone else to OpenGL */
 #if defined(WIN32)
@@ -210,6 +223,11 @@ int b3dxGetIntPropertyOS(int handle, int prop);
 int b3dxSetIntPropertyOS(int handle, int prop, int value);
 int b3dxSetVerboseLevel(int level);
 int b3dxSetFog(int handle, int fogType, double density, double rangeStart, double rangeEnd, int rgba);
+
+/* Qwaq primitives */
+int b3dDrawArrays(int handle, int mode, int minIdx, int maxIdx);
+int b3dDrawElements(int handle, int mode, int nFaces, unsigned int *facePtr);
+int b3dDrawRangeElements(int handle, int mode, int minIdx, int maxIdx, int nFaces, unsigned int *facePtr);
 
 #if defined(B3DX_DUAL)
 extern int glMode;
