@@ -35,7 +35,7 @@ LIBOBJ= $(PLGOBJ) $(MP3OBJ) $(AUDOBJ) $(VIDOBJ)
 OBJDIR= .
 
 makelib: $(LIBOBJ)
-	-$(RM) $(LIB)
+	-$(RM) $(LIB).lib
 	ar rc $(LIB).lib $(LIBOBJ)
 	$(RM) $(LIBOBJ)
 
