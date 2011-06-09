@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32MIDI.c,v 1.2 2002/05/04 23:20:28 andreasraab Exp $
+*   RCSID:   $Id$
 *
 *   NOTES:
 *     1) For MIDI output the MIDI mapper is reported as first device
@@ -22,7 +22,7 @@
 #ifndef NO_MIDI
 
 #ifndef NO_RCSID
-  static char RCSID[] = "$Id: sqWin32MIDI.c,v 1.2 2002/05/04 23:20:28 andreasraab Exp $";
+  static char RCSID[] = "$Id$";
 #endif
 
 /*** MIDI Parameters (used with sqMIDIParameter function) ***/
@@ -242,9 +242,9 @@ static MIDIHDR *midiHeaderList = NULL;
 
 
 #ifndef NDEBUG
-#define dprintf warnPrintf
+#define DBGPRINTF warnPrintf
 #else
-#define dprintf
+#define DBGPRINTF
 #endif
 
 
@@ -649,10 +649,10 @@ static sqMidiPort *AllocatePort(int outFlag)
       port->outBufferMutex = CreateMutex(NULL, 0, NULL);
       port->schedulerThread = 
         CreateThread(NULL,                    /* No security descriptor */
-                     0,                       /* default stack size     */
+                     128*1024,                /* max stack size     */
                      (LPTHREAD_START_ROUTINE) &midiScheduler, /* what to do */
                      port,                    /* parameter for thread   */
-                     CREATE_SUSPENDED,        /* creation parameter -- create suspended */
+                     CREATE_SUSPENDED | STACK_SIZE_PARAM_IS_A_RESERVATION,
                      &id);                    /* return value for thread id */
       if(!port->schedulerThread)
         printLastError(TEXT("CreateThread() failed"));
@@ -777,7 +777,7 @@ int sqMIDIOpenPort(int portNum, int readSemaIndex, int interfaceClockRate) {
       midiPorts[portNum] = port;
       MoveMemory(port->name, caps.szPname, MAXPNAMELEN * sizeof(TCHAR));
       port->name[MAXPNAMELEN] = 0;
-      dprintf(TEXT("Opening output interface %s\n"), caps.szPname);
+      DBGPRINTF(TEXT("Opening output interface %s\n"), caps.szPname);
       err = midiOutOpen(&handle, portNum-1, 0, 0, 0);
       if(err)
         { /* fail if we can't open a particular output device */
@@ -806,7 +806,7 @@ int sqMIDIOpenPort(int portNum, int readSemaIndex, int interfaceClockRate) {
       midiPorts[portNum] = port;
       MoveMemory(port->name, caps.szPname, MAXPNAMELEN * sizeof(TCHAR));
       port->name[MAXPNAMELEN] = 0;
-      dprintf(TEXT("Opening input interface %s\n"), caps.szPname);
+      DBGPRINTF(TEXT("Opening input interface %s\n"), caps.szPname);
       err = midiInOpen(&handle, portNum - midiOutNumDevices,
                        (DWORD)midiInCallback, (DWORD)port, CALLBACK_FUNCTION);
       if(err)
@@ -1117,10 +1117,10 @@ int midiInit(void)
   midiInputEvent = CreateEvent(NULL, 1, 0, NULL);
   midiInputThread =
         CreateThread(NULL,                    /* No security descriptor */
-                     0,                       /* default stack size     */
+                     128*1024,                /* max stack size     */
                      (LPTHREAD_START_ROUTINE) &midiNotifyThread, /* what to do */
                      NULL,                    /* parameter for thread   */
-                     0,                       /* creation parameter -- create running */
+                     STACK_SIZE_PARAM_IS_A_RESERVATION,  /* create running */
                      &id);                    /* return value for thread id */
   return midiInputEvent && midiInputThread;
 }
