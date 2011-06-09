@@ -8,6 +8,7 @@
 *   EMAIL:   
 *   RCSID:   $Id$
 *
+*	2009-05-15 EEM add stdio flag; reorder SQFile to make it more compact
 *	2005-03-26 IKP fix unaligned accesses to file member
 *	2004-06-10 IKP 64-bit cleanliness
 *	01/22/2002 JMM change off_t to squeakOffsetFileType
@@ -18,11 +19,13 @@
 
 /* squeak file record; see sqFilePrims.c for details */
 typedef struct {
-	int			 sessionID;	/* ikp: must be first */
-	void			*file;
-	int			 writable;
-	squeakFileOffsetType	 fileSize;
-	int			 lastOp;	/* 0 = uncommitted, 1 = read, 2 = write */
+  int			 sessionID;	/* ikp: must be first */
+  void			*file;
+  squeakFileOffsetType	 fileSize;	/* 64-bits we hope. */
+  char			 writable;
+  char			 lastOp; /* 0 = uncommitted, 1 = read, 2 = write */
+  char			 lastChar;
+  char			 isStdioStream;
 } SQFile;
 
 /* file i/o */
@@ -43,6 +46,7 @@ size_t  sqFileWriteFromAt(SQFile *f, size_t count, char* byteArrayIndex, size_t 
 sqInt   sqFileFlush(SQFile *f);
 sqInt   sqFileTruncate(SQFile *f,squeakFileOffsetType offset);
 sqInt   sqFileThisSession(void);
+sqInt   sqFileStdioHandlesInto(SQFile files[3]);
 
 /* directories */
 
