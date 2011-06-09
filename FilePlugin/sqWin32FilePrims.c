@@ -41,9 +41,13 @@ extern struct VirtualMachine *interpreterProxy;
     The file pointer of such files is meaningless.
     
     typedef struct {
-      File	*file;
-      int		sessionID;
-      int		writable;
+	  int			 sessionID;	(* ikp: must be first *)
+	  void			*file;
+	  squeakFileOffsetType	 fileSize;	(* 64-bits we hope. *)
+	  char			 writable;
+	  char			 lastOp; (* 0 = uncommitted, 1 = read, 2 = write *)
+	  char			 lastChar;
+	  char			 isStdioStream;
     } SQFile;
 
 ***/
@@ -169,7 +173,7 @@ sqInt sqFileOpen(SQFile *f, char* fileNameIndex, sqInt fileNameSize, sqInt write
   } else {
     win32FileOffset ofs;
     f->sessionID = thisSession;
-    FILE_HANDLE(f) = h;
+    f->file = (HANDLE)h;
     AddHandleToTable(win32Files, h);
     /* compute and cache file size */
     ofs.offset = 0;
@@ -178,6 +182,41 @@ sqInt sqFileOpen(SQFile *f, char* fileNameIndex, sqInt fileNameSize, sqInt write
     f->writable = writeFlag ? true : false;
   }
   return 1;
+}
+
+/*
+ * Fill-in files with handles for stdin, stdout and seterr as available and
+ * answer a bit-mask of the availability, 1 corresponding to stdin, 2 to stdout
+ * and 4 to stderr, with 0 on error or unavailablity.
+ */
+sqInt
+sqFileStdioHandlesInto(SQFile files[3])
+{
+	files[0].sessionID = thisSession;
+	files[0].file = GetStdHandle(STD_INPUT_HANDLE);
+	files[0].fileSize = 0;
+	files[0].writable = false;
+	files[0].lastOp = 0; /* unused on win32 */
+	files[0].isStdioStream = 1;
+	AddHandleToTable(win32Files, files[0].file);
+
+	files[1].sessionID = thisSession;
+	files[1].file = GetStdHandle(STD_OUTPUT_HANDLE);
+	files[1].fileSize = 0;
+	files[1].writable = true;
+	files[1].lastOp = 0; /* unused on win32 */
+	files[1].isStdioStream = 1;
+	AddHandleToTable(win32Files, files[1].file);
+
+	files[2].sessionID = thisSession;
+	files[2].file = GetStdHandle(STD_ERROR_HANDLE);
+	files[2].fileSize = 0;
+	files[2].writable = true;
+	files[2].lastOp = 0; /* unused on win32 */
+	files[2].isStdioStream = 1;
+	AddHandleToTable(win32Files, files[2].file);
+
+	return 7;
 }
 
 size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {
@@ -256,7 +295,7 @@ sqInt sqFileValid(SQFile *f) {
   if(NULL == f) return false;
   if(f->sessionID != thisSession) return false;
   if(!IsHandleInTable(win32Files, FILE_HANDLE(f))) {
-    printf("WARNING: Manifactured file handle detected!\n");
+    printf("WARNING: Manufactured file handle detected!\n");
     return false;
   }
   return true;
