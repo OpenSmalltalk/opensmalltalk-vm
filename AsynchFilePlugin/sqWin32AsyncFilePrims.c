@@ -255,10 +255,10 @@ int asyncFileOpen(AsyncFile *f, int fileNamePtr, int fileNameSize,
   state->hEvent = CreateEvent(NULL, 0, 0, NULL);
   state->hThread =
     CreateThread(NULL,                    /* No security descriptor */
-		 0,                       /* default stack size     */
+		 128*1024,                /* max stack size     */
 		 (LPTHREAD_START_ROUTINE) &sqAsyncFileThread, /* what to do */
 		 (LPVOID) state,       /* parameter for thread   */
-		 CREATE_SUSPENDED,        /* create suspended */
+		 CREATE_SUSPENDED | STACK_SIZE_PARAM_IS_A_RESERVATION,
 		 &id);                    /* return value for thread id */
   if(!state->hThread) {
     printLastError(TEXT("CreateThread() failed"));
