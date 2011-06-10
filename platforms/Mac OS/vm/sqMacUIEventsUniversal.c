@@ -1,6 +1,6 @@
 /****************************************************************************
 *   PROJECT: Mac event interface.
-*   FILE:    sqMacUIEvents.c
+*   FILE:    sqMacUIEventsUniversal.c
 *   CONTENT: 
 *
 *   AUTHOR:  John Maloney, John McIntosh, and others.

@@ -120,8 +120,7 @@ int ioPositionOfWindowSetxy(wIndexType windowIndex, int x, int y)
 
 	giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
 	if (giLocker != 0) {
-		sqInt *foo;
-		foo = malloc(sizeof(sqInt)*7);
+		sqInt foo[7];
 		foo[0] = 4;
 		foo[1] = (sqInt) MoveWindow;
 		foo[2] = (sqInt) windowHandleFromIndex(windowIndex);
@@ -131,7 +130,6 @@ int ioPositionOfWindowSetxy(wIndexType windowIndex, int x, int y)
 		foo[6] = 0;
 		((sqInt (*) (void *)) giLocker)(foo);
 		return_value = interpreterProxy->positive32BitIntegerFor(foo[6]);
-		free(foo);
 	}
 	return ioPositionOfWindow(windowIndex);
 }
@@ -159,8 +157,7 @@ int ioSizeOfWindowSetxy(wIndexType windowIndex, int x, int y)
 		return -1;
 	giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
 	if (giLocker != 0) {
-		sqInt *foo;
-		foo = malloc(sizeof(sqInt)*7);
+		sqInt foo[7];
 		foo[0] = 4;
 		foo[1] = (sqInt) SizeWindow;
 		foo[2] = (sqInt) windowHandleFromIndex(windowIndex);
@@ -170,7 +167,6 @@ int ioSizeOfWindowSetxy(wIndexType windowIndex, int x, int y)
 		foo[6] = 0;
 		((sqInt (*) (void *)) giLocker)(foo);
 		return_value = interpreterProxy->positive32BitIntegerFor(foo[6]);
-		free(foo);
 	}
 	setWindowTrackingRgn(windowIndex);
 	return ioSizeOfWindow(windowIndex);

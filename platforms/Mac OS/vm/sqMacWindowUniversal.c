@@ -1,16 +1,16 @@
 /****************************************************************************
 *   PROJECT: Mac window, memory, keyboard interface.
 *   FILE:    sqMacWindow.c
-*   CONTENT: 
+*   CONTENT:
 *
 *   AUTHOR:  John Maloney, John McIntosh, and others.
-*   ADDRESS: 
+*   ADDRESS:
 *   EMAIL:   johnmci@smalltalkconsulting.com
 *   RCSID:  $Id: sqMacWindow.c 1296 2006-02-02 07:50:50Z johnmci $
 *
-*   NOTES: 
+*   NOTES:
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
-*  Feb 26th, 2002, JMM - use carbon get dominate device 
+*  Feb 26th, 2002, JMM - use carbon get dominate device
 *  Apr  17th, 2002, JMM Use accessors for VM variables.
 *  May 5th, 2002, JMM cleanup for building as NS plugin
  3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x
@@ -22,7 +22,7 @@
  3.8.6b3 Jan 25th, 2005 JMM Change locking of pixels (less often)
  3.8.8b3 Jul 15th, 2005 JMM Add window(s) flush logic every 1/60 second for os-x
  3.8.8b6 Jul 19th, 2005 JMM tuning of the window flush
- 3.8.8b15	Sept 12th, 2005, JMM set full screen only if not in full screen. 
+ 3.8.8b15	Sept 12th, 2005, JMM set full screen only if not in full screen.
  3.8.10B5  Feb 3rd, 2006 JMM complete rewrite carbon only for universal
  3.8.11b1 Mar 4th, 2006 JMM refactor, cleanup and add headless support
  3.8.13b4 Oct 16th, 2006 JMM headless
@@ -74,7 +74,7 @@ PixMapHandle	stPixMap = nil;
 static void SetColorEntry(int index, int red, int green, int blue);
 
 WindowPtr getSTWindow(void) {
-	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return NULL;	
+	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return NULL;
     return  windowHandleFromIndex(1);
 }
 
@@ -90,7 +90,7 @@ sqInt ioGetWindowWidth(void) {
   r.left = r.right = r.top = r.bottom = 0;
   if (GetWindowBounds( win, kWindowStructureRgn, &r) != 0) {
 	return -1;
-  } 
+  }
   return (r.right - r.left);
 }
 
@@ -103,7 +103,7 @@ sqInt ioGetWindowHeight(void) {
   r.left = r.right = r.top = r.bottom = 0;
   if (GetWindowBounds( win, kWindowStructureRgn, &r) != 0) {
 	return -1;
-  } 
+  }
   return (r.bottom - r.top);
 }
 
@@ -114,8 +114,8 @@ void* ioGetWindowHandle(void)
 
 sqInt ioSetWindowWidthHeight(sqInt w, sqInt h) {
   Rect workArea;
-  Rect newBounds; 
-  Rect oldBounds; 
+  Rect newBounds;
+  Rect oldBounds;
   int width, height, maxWidth, maxHeight;
   WindowPtr win;
   GDHandle device;
@@ -127,7 +127,7 @@ sqInt ioSetWindowWidthHeight(sqInt w, sqInt h) {
   device = getThatDominateGDevice (win);
   if (! device) return 0;
 
-  windowDescriptorBlock *windowBlock = windowBlockFromIndex(1);	
+  windowDescriptorBlock *windowBlock = windowBlockFromIndex(1);
   if (! windowBlock) return 0;
 
   if (GetAvailableWindowPositioningBounds (device, &workArea) != 0) return 0;
@@ -148,7 +148,7 @@ sqInt ioSetWindowWidthHeight(sqInt w, sqInt h) {
 
   result = GetWindowBounds (win, kWindowStructureRgn, &oldBounds);
   if (result != 0) return 0;
-     
+
   /* Do we need to move the window to fit onscreen? */
   if ((oldBounds.top >= workArea.top) && (oldBounds.left >= workArea.left) &&
       (oldBounds.left + width < workArea.right) && (oldBounds.top + height <= workArea.bottom)) {
@@ -166,8 +166,8 @@ sqInt ioSetWindowWidthHeight(sqInt w, sqInt h) {
 	   ((oldBounds.right - oldBounds.left) == (newBounds.right - newBounds.left)) &&
        ((oldBounds.bottom - oldBounds.top) == (newBounds.bottom - newBounds.top)) ) {
 	return 1;
-  } 
- 
+  }
+
   /** And awayyyyyy we go **/
   giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
   if (giLocker != 0) {
@@ -183,7 +183,7 @@ sqInt ioSetWindowWidthHeight(sqInt w, sqInt h) {
     w =  portRect.right -  portRect.left;
     h =  portRect.bottom - portRect.top;
     windowBlock->width = w;
-    windowBlock->height = h; 
+    windowBlock->height = h;
   }
 
   if (result != 0) return 0;	 /* Failed */
@@ -231,7 +231,7 @@ static int ioSetFullScreenActual(int fullScreen);
 int ioSetFullScreen(int fullScreen) {
         void *  giLocker;
 		int return_value=0;
-		if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 0;	
+		if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 0;
         giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
         if (giLocker != 0) {
             sqInt foo[4];
@@ -249,13 +249,13 @@ static int ioSetFullScreenActual(int fullScreen) {
     Rect                screen, workArea;
     int                 width, height, maxWidth, maxHeight;
     int                 oldWidth, oldHeight;
-    static Rect			rememberOldLocation = {0,0,0,0};		
+    static Rect			rememberOldLocation = {0,0,0,0};
     GDHandle            dominantGDevice;
 	windowDescriptorBlock *	targetWindowBlock  = windowBlockFromIndex(1);
 	extern Boolean gSqueakBrowserWasHeadlessButMadeFullScreen;
 	extern Boolean gSqueakBrowserSubProcess;
-	
-	
+
+
 	if (browserActiveAndDrawingContextOk()) {
 		if (!gSqueakBrowserWasHeadlessButMadeFullScreen) {
 			gSqueakBrowserWasHeadlessButMadeFullScreen = true;
@@ -267,10 +267,10 @@ static int ioSetFullScreenActual(int fullScreen) {
 			QDEndCGContext(GetWindowPort(targetWindowBlock->handle),&targetWindowBlock->context);
 		targetWindowBlock->context = NULL;
 	}
-	
+
 	if ((targetWindowBlock == NULL) || (fullScreen && getFullScreenFlag() && !targetWindowBlock->isInvisible))
 		return 0;
-	
+
 	dominantGDevice = getThatDominateGDevice(targetWindowBlock->handle);
     if (dominantGDevice == null) {
         success(false);
@@ -278,9 +278,9 @@ static int ioSetFullScreenActual(int fullScreen) {
     }
     GetAvailableWindowPositioningBounds (dominantGDevice, &workArea);
     screen = (**dominantGDevice).gdRect;
-	
+
     if (fullScreen) {
-		
+
 		GetWindowBounds(targetWindowBlock->handle, kWindowContentRgn, &rememberOldLocation);
 		if (targetWindowBlock->isInvisible) {
 			/* I.e. we're going straight to fullscreen */
@@ -289,7 +289,7 @@ static int ioSetFullScreenActual(int fullScreen) {
 			rememberOldLocation.bottom = (rememberOldLocation.bottom >= workArea.bottom-8) ? workArea.bottom-8 : rememberOldLocation.bottom;
 			rememberOldLocation.right = (rememberOldLocation.right >= workArea.right-8) ? workArea.right-8 : rememberOldLocation.right;
 		}
-		
+
 		if (gSqueakBrowserSubProcess) {
 			ProcessSerialNumber psn = { 0, kCurrentProcess };
 			ProcessInfoRec info;
@@ -304,10 +304,10 @@ static int ioSetFullScreenActual(int fullScreen) {
 		height = (screen.bottom - screen.top);
 		SetWindowBounds (targetWindowBlock->handle, kWindowContentRgn, &screen);
 		setFullScreenFlag(true);
-		
+
 	} else {
 		MenuBarRestore();
-		
+
 		if (gSqueakBrowserWasHeadlessButMadeFullScreen) {
 			HideWindow(targetWindowBlock->handle);
 			{
@@ -316,41 +316,41 @@ static int ioSetFullScreenActual(int fullScreen) {
 				OSStatus err;
 				parent = getppid();
 				if (parent != 1) {
-					err = GetProcessForPID(parent,&psn); 
-					if(err == 0) 
+					err = GetProcessForPID(parent,&psn);
+					if(err == 0)
 						SetFrontProcess(&psn);
 				}
 			}
 		}
-		
-		
+
+
 		if (EmptyRect(&rememberOldLocation)) {
 			Rect newBounds;
-			
+
 			/* get old window size */
 			width  = (unsigned) getSavedWindowSize() >> 16;
 			height = getSavedWindowSize() & 0xFFFF;
-			
+
 			/* minimum size is 1 x 1 */
 			width  = (width  > 0) ? width : 64;
 			height = (height > 0) ? height : 64;
-			
+
 			workArea.top = workArea.top + 20; 	/* Cheat a bit, for my win title bar's space,
 			 since we have to set bounds via ContentRgn */
-			
+
 			/* maximum size is working area less a bit of slop so the result
 			 remains 'within' the screen' */
 			maxWidth  = workArea.right - workArea.left;
 			maxHeight = workArea.bottom - workArea.top;
-			
+
 			width  = (width <= (maxWidth-4)) ? width : maxWidth-4;
 			height = (height <= (maxHeight-24)) ? height : maxHeight-24;	 /* Cheat a bit for the window title bar */
-			
+
 			newBounds.left = workArea.left + ((maxWidth - width) / 2);
 			newBounds.top = workArea.top + ((maxHeight - height) / 2);
 			newBounds.right = newBounds.left + width;
 			newBounds.bottom = newBounds.top + height;
-			
+
 			SetWindowBounds (targetWindowBlock->handle, kWindowContentRgn, &newBounds);
 		} else {
 			SetWindowBounds (targetWindowBlock->handle, kWindowContentRgn, &rememberOldLocation);
@@ -362,7 +362,7 @@ static int ioSetFullScreenActual(int fullScreen) {
 
 void sqShowWindow(int windowIndex) {
         void *  giLocker;
-		
+
 		if (gSqueakHeadless && browserActiveAndDrawingContextOkAndNOTInFullScreenMode()) return;
         giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
         if (giLocker != 0) {
@@ -385,7 +385,7 @@ static void sqShowWindowActual(int windowIndex){
 int ioShowDisplay(
 	sqInt dispBitsIndex, int width, int height, int depth,
 	int affectedL, int affectedR, int affectedT, int affectedB) {
-	
+
 	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 1;
 	ioShowDisplayOnWindow( (unsigned char*)  dispBitsIndex,  width,  height,  depth, affectedL,  affectedR,  affectedT,  affectedB, 1);
 	return 1;
@@ -416,13 +416,13 @@ int ioShowDisplayOnWindow(
 	extern CGContextRef SharedBrowserBitMapContextRef;
 	extern SqueakSharedMemoryBlock *SharedMemoryBlock;
 	extern int SharedBrowserBitMapLength;
-	
+
 	int 		pitch;
 	CGImageRef image;
 	CGRect		clip;
-	windowDescriptorBlock *targetWindowBlock = windowBlockFromIndex(windowIndex);	
+	windowDescriptorBlock *targetWindowBlock = windowBlockFromIndex(windowIndex);
 	CGDataProviderRef provider;
-	
+
 	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 1;
 
 	if (colorspace == NULL) {
@@ -432,7 +432,7 @@ int ioShowDisplayOnWindow(
 			// Create a colorspace with the systems profile
 			colorspace = CGColorSpaceCreateWithPlatformColorSpace(sysprof);
 			CMCloseProfile(sysprof);
-		} else 
+		} else
 			colorspace = CGColorSpaceCreateDeviceRGB();
 	}
 
@@ -444,12 +444,12 @@ int ioShowDisplayOnWindow(
 		targetWindowBlock = windowBlockFromIndex(windowIndex);
 	}
 
-		
+
 	if (affectedL < 0) affectedL = 0;
 	if (affectedT < 0) affectedT = 0;
 	if (affectedR > width) affectedR = width;
 	if (affectedB > height) affectedB = height;
-	
+
 	if ((targetWindowBlock->handle == nil) || ((affectedR - affectedL) <= 0) || ((affectedB - affectedT) <= 0)){
             return 0;
 	}
@@ -460,14 +460,14 @@ int ioShowDisplayOnWindow(
 	} else {
 		pitch = bytesPerLine(width, depth);
 	}
-			
+
 	provider = CGDataProviderCreateDirectAccess((void*)dispBitsIndex
-				+ pitch*affectedT 
-				+ affectedL*(depth==32 ? 4 : 2),  
-				pitch * (affectedB-affectedT)-affectedL*(depth==32 ? 4 : 2), 
+				+ pitch*affectedT
+				+ affectedL*(depth==32 ? 4 : 2),
+				pitch * (affectedB-affectedT)-affectedL*(depth==32 ? 4 : 2),
 				&gProviderCallbacks);
 	image = CGImageCreate( affectedR-affectedL, affectedB-affectedT, depth==32 ? 8 : 5 /* bitsPerComponent */,
-				depth /* bitsPerPixel */, 
+				depth /* bitsPerPixel */,
 #ifdef __BIG_ENDIAN__
 				pitch, colorspace, kCGImageAlphaNoneSkipFirst, provider, NULL, 0, kCGRenderingIntentDefault);
 #else
@@ -486,38 +486,38 @@ int ioShowDisplayOnWindow(
 				QDEndCGContext(GetWindowPort(targetWindowBlock->handle),&targetWindowBlock->context);
 				//CGContextRelease(targetWindowBlock->context);
 			}
-			//CreateCGContextForPort(GetWindowPort(targetWindowBlock->handle),&targetWindowBlock->context); 
-			QDBeginCGContext(GetWindowPort(targetWindowBlock->handle),&targetWindowBlock->context); 
+			//CreateCGContextForPort(GetWindowPort(targetWindowBlock->handle),&targetWindowBlock->context);
+			QDBeginCGContext(GetWindowPort(targetWindowBlock->handle),&targetWindowBlock->context);
 			targetWindowBlock->sync = false;
-			
+
 			targetWindowBlock->width = width;
-			targetWindowBlock->height = height; 
+			targetWindowBlock->height = height;
 			DPRINTF((stderr,"targetWindow index %i, width %i height %i\n",windowIndex,width,height));
 	}
 
-	
+
 	if (targetWindowBlock->sync) {
 			CGRect	clip2;
 			Rect	portRect;
 			int		w,h;
-			
+
 			GetPortBounds(GetWindowPort(windowHandleFromIndex(windowIndex)),&portRect);
             w =  portRect.right -  portRect.left;
             h =  portRect.bottom - portRect.top;
 			clip2 = CGRectMake(0,0, w, h);
 			CGContextClipToRect(targetWindowBlock->context, clip2);
 	}
-		
+
 	/* Draw the image to the Core Graphics context */
 	if (provider && image) {
-		
+
 		if (browserActiveAndDrawingContextOkAndNOTInFullScreenMode() ) {
 			static pthread_mutex_t SleepLock;
 			static pthread_cond_t SleepLockCondition;
-			struct timespec tspec;	
+			struct timespec tspec;
 			static bool mutexTimerStartNeeded = true;
 			int err,counter = 0;
-					
+
 			if (mutexTimerStartNeeded) {
 				mutexTimerStartNeeded = false;
 				pthread_mutex_init(&SleepLock, NULL);
@@ -525,15 +525,15 @@ int ioShowDisplayOnWindow(
 			}
 
 			while (SharedMemoryBlock->written && counter++ < 100) {
-				
+
 				tspec.tv_sec=  10 / 1000;
 				tspec.tv_nsec= (10 % 1000)*1000000;
-		
+
 				err = pthread_mutex_lock(&SleepLock);
-				err = pthread_cond_timedwait_relative_np(&SleepLockCondition,&SleepLock,&tspec);	
+				err = pthread_cond_timedwait_relative_np(&SleepLockCondition,&SleepLock,&tspec);
 				err = pthread_mutex_unlock(&SleepLock);
 			}
-			
+
 			CGContextDrawImage(SharedBrowserBitMapContextRef, clip, image);
 			CGContextFlush(SharedBrowserBitMapContextRef);
 			SharedMemoryBlock->top = affectedT;
@@ -542,7 +542,7 @@ int ioShowDisplayOnWindow(
 			SharedMemoryBlock->right = affectedR;
 			SharedMemoryBlock->written = 1;
 			msync(SharedMemoryBlock,SharedBrowserBitMapLength,MS_SYNC);
-			
+
 	} else
 			if (targetWindowBlock->context)
 		CGContextDrawImage(targetWindowBlock->context, clip, image);
@@ -551,15 +551,15 @@ int ioShowDisplayOnWindow(
 	CGImageRelease(image);
 	CGDataProviderRelease(provider);
 
-	if (browserActiveAndDrawingContextOkAndNOTInFullScreenMode()) 
+	if (browserActiveAndDrawingContextOkAndNOTInFullScreenMode())
 		return 1;
-		
-	{ 
+
+	{
 			extern Boolean gSqueakUIFlushUseHighPercisionClock;
 			extern	long	gSqueakUIFlushPrimaryDeferNMilliseconds;
-			
+
 			int now = (gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs()) - targetWindowBlock->rememberTicker;
- 
+
 		if (((now >= gSqueakUIFlushPrimaryDeferNMilliseconds) || (now < 0))) {
 			CGContextFlush(targetWindowBlock->context);
 			targetWindowBlock->dirty = 0;
@@ -569,46 +569,46 @@ int ioShowDisplayOnWindow(
 				CGContextSynchronize(targetWindowBlock->context);
 			targetWindowBlock->dirty = 1;
 		}
-	} 	
-	
+	}
+
 	return 1;
 }
 
 
 static void * copy124BitsTheHardWay(unsigned int* dispBitsIndex, int width, int height, int depth, int desiredDepth,
 	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex, int *pitch) {
-	
+
 	static GWorldPtr offscreenGWorld = nil;
 	QDErr error;
 	static 		RgnHandle maskRect = nil;
 	static Rect	dstRect = { 0, 0, 0, 0 };
 	static Rect	srcRect = { 0, 0, 0, 0 };
 	static int	rememberWidth=0,rememberHeight=0,rememberDepth=0,lastWindowIndex=0;
-	
+
 	if (maskRect == nil)
-		maskRect = NewRgn();            
- 		
+		maskRect = NewRgn();
+
 	(*stPixMap)->baseAddr = (void *) dispBitsIndex;
-        
+
 	if (!((lastWindowIndex == windowIndex) && (rememberHeight == height) && (rememberWidth == width) && (rememberDepth == depth))) {
 			lastWindowIndex = windowIndex;
             rememberWidth  = srcRect.right = dstRect.right = width;
             rememberHeight = srcRect.bottom = dstRect.bottom = height;
 			if (offscreenGWorld != nil)
 				DisposeGWorld(offscreenGWorld);
-			
+
 #ifdef __BIG_ENDIAN__
 			error	= NewGWorld (&offscreenGWorld,desiredDepth,&dstRect,0,0,keepLocal);
 #else
 			error	= NewGWorld (&offscreenGWorld,desiredDepth,&dstRect,0,0,keepLocal | kNativeEndianPixMap);
-#endif		
+#endif
 			LockPixels(GetGWorldPixMap(offscreenGWorld));
-			
+
             /* Note: top three bits of rowBytes indicate this is a PixMap, not a BitMap */
             (*stPixMap)->rowBytes = (((((width * depth) + 31) / 32) * 4) & 0x1FFF) | 0x8000;
             (*stPixMap)->bounds = srcRect;
             rememberDepth = (*stPixMap)->pixelSize = depth;
-    
+
             if (depth<=8) { /*Duane Maxwell <dmaxwell@exobox.com> fix cmpSize Sept 18,2000 */
                 (*stPixMap)->cmpSize = depth;
                 (*stPixMap)->cmpCount = 1;
@@ -620,7 +620,7 @@ static void * copy124BitsTheHardWay(unsigned int* dispBitsIndex, int width, int 
                 (*stPixMap)->cmpCount = 3;
             }
         }
-        
+
 	/* create a mask region so that only the affected rectangle is copied */
 	SetRectRgn(maskRect, affectedL, affectedT, affectedR, affectedB);
 	CopyBits((BitMap *) *stPixMap,(BitMap *)*GetGWorldPixMap(offscreenGWorld), &srcRect, &dstRect, srcCopy, maskRect);
@@ -716,7 +716,7 @@ static void SetColorEntry(int index, int red, int green, int blue) {
 
 void FreePixmap(void) {
 	extern Boolean gSqueakBrowserWasHeadlessButMadeFullScreen;
-	
+
 	if (gSqueakHeadless && !gSqueakBrowserWasHeadlessButMadeFullScreen) return;
 	if (stPixMap != nil) {
 		DisposePixMap(stPixMap);
@@ -737,18 +737,18 @@ int makeMainWindow(void) {
 	windowDescriptorBlock *windowBlock;
 	extern UInt32 gSqueakWindowType,gSqueakWindowAttributes;
 	extern Boolean gSqueakWindowHasTitle;
-		
+
 	/* get old window size */
 	width  = (unsigned) getSavedWindowSize() >> 16;
 	height = getSavedWindowSize() & 0xFFFF;
-	
+
 	window = SetUpWindow(44, 8, 44+height, 8+width,gSqueakWindowType,gSqueakWindowAttributes);
 	windowBlock = AddWindowBlock();
 	windowBlock-> handle = (wHandleType) window;
 	windowBlock->isInvisible = !MacIsWindowVisible(window);
 
 	ioLoadFunctionFrom(NULL, "DropPlugin");
-    
+
 	if (gSqueakWindowHasTitle) {
 		getShortImageNameWithEncoding(shortImageName,gCurrentVMEncoding);
 		SetWindowTitle(1,shortImageName);
@@ -756,7 +756,7 @@ int makeMainWindow(void) {
 
 	ioSetFullScreenActual(getFullScreenFlag());
 	SetUpCarbonEventForWindowIndex(1);
-	QDBeginCGContext(GetWindowPort(windowBlock->handle),&windowBlock->context);    
+	QDBeginCGContext(GetWindowPort(windowBlock->handle),&windowBlock->context);
 
 	Rect portRect;
 	int	w,h;
@@ -766,7 +766,7 @@ int makeMainWindow(void) {
 	h =  portRect.bottom - portRect.top;
 	setSavedWindowSize((w << 16) |(h & 0xFFFF));
 	windowBlock->width = w;
-	windowBlock->height = h; 
+	windowBlock->height = h;
 
 	//SetupSurface(1);
 	return (int) window;
@@ -822,12 +822,12 @@ int ioHasDisplayDepth(int depth) {
 
 int ioScreenDepth(void) {
     GDHandle mainDevice;
-    
+
 	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 32;
 	mainDevice = getThatDominateGDevice(getSTWindow());
-    if (mainDevice == null) 
+    if (mainDevice == null)
         return 8;
-    
+
     return (*(*mainDevice)->gdPMap)->pixelSize;
 }
 
@@ -835,13 +835,13 @@ int ioScreenSize(void) {
 	int w, h;
     Rect portRect;
     extern Boolean gSqueakExplicitWindowOpenNeeded;
-	
+
 	if (gSqueakHeadless && !browserActiveAndDrawingContextOk())
 		return getSavedWindowSize();
 
 	if (browserActiveAndDrawingContextOkAndNOTInFullScreenMode())
 		return browserGetWindowSize();
-	
+
 	w  = (unsigned) getSavedWindowSize() >> 16;
 	h= getSavedWindowSize() & 0xFFFF;
 
@@ -854,7 +854,7 @@ int ioScreenSize(void) {
             w =  portRect.right -  portRect.left;
             h =  portRect.bottom - portRect.top;
 	}
-	
+
 	return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
 }
 
@@ -878,10 +878,10 @@ int ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, int offset
 	*/
 	int i;
 	extern Boolean biggerCursorActive;
-	
+
 	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 0;
 	biggerCursorActive = false;
-	
+
 	if (cursorMaskIndex == nil) {
 		for (i = 0; i < 16; i++) {
 			macCursor.data[i] = CFSwapInt16BigToHost((short)(checkedLongAt(cursorBitsIndex + (4 * i)) >> 16)) & 0xFFFF;
@@ -965,72 +965,8 @@ Boolean FindBestMatch (			VideoRequestRecPtr requestRecPtr,
 								unsigned long horizontal,
 								unsigned long vertical);
 
-int ioSetDisplayModeOLD(int width, int height, int depth, int fullscreenFlag);
-
-int ioSetDisplayModeOLD(int width, int height, int depth, int fullscreenFlag) {
-	/* Set the window to the given width, height, and color depth. Put the window
-	   into the full screen mode specified by fullscreenFlag. */
-	
-
-    GDHandle		dominantGDevice;
-	Handle			displayState;
-	UInt32			depthMode=depth;
-	long			value = 0,displayMgrPresent;
-	DMDisplayModeListIteratorUPP	myModeIteratorProc = nil;	
-	DisplayIDType	theDisplayID;				
-	DMListIndexType	theDisplayModeCount;		
-	DMListType		theDisplayModeList;			
-	VideoRequestRec	request;
-	
-	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 0;
-	
-	Gestalt(gestaltDisplayMgrAttr,&value);
-	displayMgrPresent=value&(1<<gestaltDisplayMgrPresent);
-    if (!displayMgrPresent) {
-    	success(false);
-    	return 0;
-    }
-
-	dominantGDevice = getThatDominateGDevice(getSTWindow());
-        if (dominantGDevice == null) {
-            success(false);
-            return 0;
-        }
-	request.screenDevice  = dominantGDevice;
-	request.reqBitDepth = depth;
-	request.reqHorizontal = width;
-	request.reqVertical = height;
-	request.requestFlags = 1<<kAbsoluteRequestBit;
-	request.displayMode = 0;
-	myModeIteratorProc = NewDMDisplayModeListIteratorUPP(ModeListIterator);	// for DM2.0 searches
-
-	if  (dominantGDevice && myModeIteratorProc) {
-		if( noErr == DMGetDisplayIDByGDevice( dominantGDevice, &theDisplayID, false ) ) {
-			theDisplayModeCount = 0;
-			if (noErr == DMNewDisplayModeList(theDisplayID, 0, 0, &theDisplayModeCount, &theDisplayModeList) ) {
-				GetRequestTheDM2Way (&request, dominantGDevice, myModeIteratorProc, theDisplayModeCount, &theDisplayModeList);
-				DMDisposeList(theDisplayModeList);	
-			} else {
-			}
-		}
-	}
-	
-	if (myModeIteratorProc)
-		DisposeDMDisplayModeListIteratorUPP(myModeIteratorProc);
-	if (request.displayMode == 0)  {
-    	success(false);
-    	return 0;
-    }
-	DMBeginConfigureDisplays(&displayState);
-	DMSetDisplayMode(dominantGDevice,request.displayMode,&depthMode,null,displayState);
-	DMEndConfigureDisplays(displayState);
-	ioSetFullScreen(fullscreenFlag);
-	
-    return 1;
-}
-
 /*#	MacOSª Sample Code
-#	
+#
 #	Written by: Eric Anderson
 #	 email: eric3@apple.com
 #
@@ -1042,7 +978,7 @@ int ioSetDisplayModeOLD(int width, int height, int depth, int fullscreenFlag) {
 #	multisync displays on built-in, NuBus, and PCI based video. Display Manager 1.0
 #	is built into the Systems included with the first PowerMacs up through System 7.5.
 #	Display Manager 2.0 is included with the release of the new PCI based PowerMacs,
-#	and will be included in post 7.5 System Software releases. 
+#	and will be included in post 7.5 System Software releases.
 */
 
 pascal void ModeListIterator(void *userData, DMListIndexType itemIndex, DMDisplayModeListEntryPtr displaymodeInfo)
@@ -1052,10 +988,10 @@ pascal void ModeListIterator(void *userData, DMListIndexType itemIndex, DMDispla
 	unsigned long			iCount;
 	ListIteratorDataRec		*myIterateData		= (ListIteratorDataRec*) userData;
 	DepthInfo				*myDepthInfo;
-	
+
 	// set user data in a round about way
 	myIterateData->displayModeTimingInfo		= *displaymodeInfo->displayModeTimingInfo;
-	
+
 	// now get the DMDepthInfo info into memory we own
 	depthCount = displaymodeInfo->displayModeDepthBlockInfo->depthBlockCount;
 	myDepthInfo = (DepthInfo*)NewPtrClear(depthCount * sizeof(DepthInfo));
@@ -1067,9 +1003,9 @@ pascal void ModeListIterator(void *userData, DMListIndexType itemIndex, DMDispla
 	// and fill out all the entries
 	if (depthCount) for (iCount=0; iCount < depthCount; iCount++)
 	{
-		myDepthInfo[iCount].depthSwitchInfo = 
+		myDepthInfo[iCount].depthSwitchInfo =
 			*displaymodeInfo->displayModeDepthBlockInfo->depthVPBlock[iCount].depthSwitchInfo;
-		myDepthInfo[iCount].depthVPBlock = 
+		myDepthInfo[iCount].depthVPBlock =
 			*displaymodeInfo->displayModeDepthBlockInfo->depthVPBlock[iCount].depthVPBlock;
 	}
 }
@@ -1089,12 +1025,12 @@ void GetRequestTheDM2Way (	VideoRequestRecPtr requestRecPtr,
 	for (jCount=0; jCount<theDisplayModeCount; jCount++)		// get info on all the resolution timings
 	{
 		DMGetIndexedDisplayModeFromList(*theDisplayModeList, jCount, 0, myModeIteratorProc, &searchData);
-		
+
 		// for all the depths for this resolution timing (mode)...
 		if (searchData.depthBlockCount) for (kCount = 0; kCount < searchData.depthBlockCount; kCount++)
 		{
 			// only if the mode is valid and is safe or we override it with the kAllValidModesBit request flag
-			if	(	searchData.displayModeTimingInfo.csTimingFlags & 1<<kModeValid && 
+			if	(	searchData.displayModeTimingInfo.csTimingFlags & 1<<kModeValid &&
 					(	searchData.displayModeTimingInfo.csTimingFlags & 1<<kModeSafe ||
 						requestRecPtr->requestFlags & 1<<kAllValidModesBit
 					)
@@ -1109,7 +1045,7 @@ void GetRequestTheDM2Way (	VideoRequestRecPtr requestRecPtr,
 					requestRecPtr->availBitDepth = searchData.depthBlocks[kCount].depthVPBlock.vpPixelSize;
 					requestRecPtr->availHorizontal = searchData.depthBlocks[kCount].depthVPBlock.vpBounds.right;
 					requestRecPtr->availVertical = searchData.depthBlocks[kCount].depthVPBlock.vpBounds.bottom;
-					
+
 					// now set the important info for DM to set the display
 					requestRecPtr->depthMode = searchData.depthBlocks[kCount].depthSwitchInfo.csMode;
 					requestRecPtr->displayMode = searchData.depthBlocks[kCount].depthSwitchInfo.csData;
@@ -1117,12 +1053,12 @@ void GetRequestTheDM2Way (	VideoRequestRecPtr requestRecPtr,
 					if (searchData.displayModeTimingInfo.csTimingFlags & 1<<kModeSafe)
 						requestRecPtr->availFlags = 0;							// mode safe
 					else requestRecPtr->availFlags = 1<<kModeValidNotSafeBit;	// mode valid but not safe, requires user validation of mode switch
-	
+
 				}
 			}
 
 		}
-	
+
 		if (searchData.depthBlocks)
 		{
 			DisposePtr ((Ptr)searchData.depthBlocks);	// toss for this timing mode of this gdevice
@@ -1142,19 +1078,19 @@ Boolean FindBestMatch (VideoRequestRecPtr requestRecPtr, short bitDepth, unsigne
 			&&
 			(	(horizontal >= requestRecPtr->reqHorizontal &&
 				vertical >= requestRecPtr->reqVertical)
-				||														
-				!(requestRecPtr->requestFlags & 1<<kMaximizeResBit)	
+				||
+				!(requestRecPtr->requestFlags & 1<<kMaximizeResBit)
 			)
 			&&
-			(	bitDepth <= requestRecPtr->reqBitDepth ||	
-				!(requestRecPtr->requestFlags & 1<<kShallowDepthBit)		
+			(	bitDepth <= requestRecPtr->reqBitDepth ||
+				!(requestRecPtr->requestFlags & 1<<kShallowDepthBit)
 			)
 			&&
-			(	(horizontal == requestRecPtr->reqHorizontal &&	
+			(	(horizontal == requestRecPtr->reqHorizontal &&
 				vertical == requestRecPtr->reqVertical &&
 				bitDepth == requestRecPtr->reqBitDepth)
 				||
-				!(requestRecPtr->requestFlags & 1<<kAbsoluteRequestBit)	
+				!(requestRecPtr->requestFlags & 1<<kAbsoluteRequestBit)
 			)
 		)
 		{
@@ -1167,7 +1103,7 @@ Boolean FindBestMatch (VideoRequestRecPtr requestRecPtr, short bitDepth, unsigne
 		//		((depth is greater avail and depth is less/equal req) or kShallowDepth not set) and
 		//		(avail depth less reqested and new greater avail)
 		//		(request match or kAbsoluteRequest not set)
-		if	(	(	requestRecPtr->requestFlags & 1<<kBitDepthPriorityBit && 
+		if	(	(	requestRecPtr->requestFlags & 1<<kBitDepthPriorityBit &&
 					requestRecPtr->availBitDepth != requestRecPtr->reqBitDepth
 				)
 				&&
@@ -1175,18 +1111,18 @@ Boolean FindBestMatch (VideoRequestRecPtr requestRecPtr, short bitDepth, unsigne
 						bitDepth <= requestRecPtr->reqBitDepth
 					)
 					||
-					!(requestRecPtr->requestFlags & 1<<kShallowDepthBit)	
+					!(requestRecPtr->requestFlags & 1<<kShallowDepthBit)
 				)
 				&&
 				(	requestRecPtr->availBitDepth < requestRecPtr->reqBitDepth &&
-					bitDepth > requestRecPtr->availBitDepth	
+					bitDepth > requestRecPtr->availBitDepth
 				)
 				&&
-				(	(horizontal == requestRecPtr->reqHorizontal &&	
+				(	(horizontal == requestRecPtr->reqHorizontal &&
 					vertical == requestRecPtr->reqVertical &&
 					bitDepth == requestRecPtr->reqBitDepth)
 					||
-					!(requestRecPtr->requestFlags & 1<<kAbsoluteRequestBit)	
+					!(requestRecPtr->requestFlags & 1<<kAbsoluteRequestBit)
 				)
 			)
 		{
@@ -1203,7 +1139,7 @@ Boolean FindBestMatch (VideoRequestRecPtr requestRecPtr, short bitDepth, unsigne
 				)
 			{
 				// now we have a smaller or equal delta
-				//	if (h or v greater/equal to request or kMaximizeRes not set) 
+				//	if (h or v greater/equal to request or kMaximizeRes not set)
 				if (	(horizontal >= requestRecPtr->reqHorizontal &&
 						vertical >= requestRecPtr->reqVertical)
 						||
@@ -1214,12 +1150,12 @@ Boolean FindBestMatch (VideoRequestRecPtr requestRecPtr, short bitDepth, unsigne
 					//		(depth is less/equal or kShallowDepth not set) and
 					//		([h or v not equal] or [avail depth less reqested and new greater avail] or depth equal avail) and
 					//		(request match or kAbsoluteRequest not set)
-					if	(	(	requestRecPtr->availBitDepth == bitDepth ||			
+					if	(	(	requestRecPtr->availBitDepth == bitDepth ||
 								!(requestRecPtr->requestFlags & 1<<kBitDepthPriorityBit)
 							)
 							&&
-							(	bitDepth <= requestRecPtr->reqBitDepth ||	
-								!(requestRecPtr->requestFlags & 1<<kShallowDepthBit)		
+							(	bitDepth <= requestRecPtr->reqBitDepth ||
+								!(requestRecPtr->requestFlags & 1<<kShallowDepthBit)
 							)
 							&&
 							(	(requestRecPtr->availHorizontal != horizontal ||
@@ -1231,11 +1167,11 @@ Boolean FindBestMatch (VideoRequestRecPtr requestRecPtr, short bitDepth, unsigne
 								(bitDepth == requestRecPtr->reqBitDepth)
 							)
 							&&
-							(	(horizontal == requestRecPtr->reqHorizontal &&	
+							(	(horizontal == requestRecPtr->reqHorizontal &&
 								vertical == requestRecPtr->reqVertical &&
 								bitDepth == requestRecPtr->reqBitDepth)
 								||
-								!(requestRecPtr->requestFlags & 1<<kAbsoluteRequestBit)	
+								!(requestRecPtr->requestFlags & 1<<kAbsoluteRequestBit)
 							)
 						)
 					{
@@ -1248,7 +1184,7 @@ Boolean FindBestMatch (VideoRequestRecPtr requestRecPtr, short bitDepth, unsigne
 	}
 	return (false);
 }
-  
+
 int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 	/* Set the window to the given width, height, and color depth. Put the window
 	   into the full screen mode specified by fullscreenFlag. */
@@ -1258,21 +1194,21 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
     CFDictionaryRef mode;
 	CGDisplayErr err;
 	boolean_t exactMatch;
-	
+
 	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 0;
 
 	if (QDGetCGDirectDisplayID == NULL)
 		return ioSetDisplayMode( width,  height,  depth,  fullscreenFlag);
-		
+
 	dominantGDevice = getThatDominateGDevice(getSTWindow());
        if (dominantGDevice == null) {
             success(false);
             return 0;
         }
-		
-		
+
+
 	mainDominateWindow = QDGetCGDirectDisplayID(dominantGDevice);
-	
+
 	mode = CGDisplayBestModeForParameters(mainDominateWindow, depth,  width, height,  &exactMatch);
 	err = CGDisplaySwitchToMode(mainDominateWindow, mode);
 	if ( err != CGDisplayNoErr ) {
@@ -1280,15 +1216,15 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 	}
 
 	ioSetFullScreen(fullscreenFlag);
-	
+
     return 1;
 }
 
 GDHandle	getThatDominateGDevice(WindowPtr window) {
 	GDHandle		dominantGDevice=NULL;
-	
+
 	if (!window) return NULL;
-	
-	GetWindowGreatestAreaDevice((WindowRef) window,kWindowContentRgn,&dominantGDevice,NULL); 	
+
+	GetWindowGreatestAreaDevice((WindowRef) window,kWindowContentRgn,&dominantGDevice,NULL);
 	return dominantGDevice;
 }
