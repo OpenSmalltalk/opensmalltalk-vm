@@ -263,9 +263,10 @@ static int ioSetFullScreenActual(int fullScreen) {
 			AdjustMenus();
 		}
 		sqShowWindowActual(1);
-		if (targetWindowBlock->context)  //Set context to NULL, if screen is same size as fullscreen we wouldn't get new context
+		if (targetWindowBlock->context) {  //Set context to NULL, if screen is same size as fullscreen we wouldn't get new context
 			QDEndCGContext(GetWindowPort(targetWindowBlock->handle),&targetWindowBlock->context);
-		targetWindowBlock->context = NULL;
+			targetWindowBlock->context = NULL;
+		}
 	}
 
 	if ((targetWindowBlock == NULL) || (fullScreen && getFullScreenFlag() && !targetWindowBlock->isInvisible))
@@ -729,8 +730,40 @@ void FreePixmap(void) {
 	}
 }
 
+static void
+displayReconfigurationCallback(	CGDirectDisplayID display,
+								CGDisplayChangeSummaryFlags flags,
+								void *userInfo)
+{
+	if (flags & (kCGDisplayRemoveFlag | kCGDisplayDisabledFlag)) {
+		Rect dispRect;
+		CGPoint centre;
+		CGDirectDisplayID displays[4];
+		uint32_t nDisplays;
+		/* Use CGGetDisplaysWithPoint with the centre of the Smalltalk window.
+		 * If we get none back we need to move to the main monitor.  If so,
+		 * ioSetFullScreenActual does most of the work.  All we need to do in
+		 * addition is force a screen update and currently I have no idea. eem.
+		 */
+		GetWindowBounds(getSTWindow(), kWindowContentRgn, &dispRect);
+		centre.x = (dispRect.left + dispRect.right) / 2;
+		centre.y = (dispRect.top + dispRect.bottom) / 2;
+		CGGetDisplaysWithPoint(centre, 4, displays, &nDisplays);
+		if (!nDisplays) {
+			windowDescriptorBlock *squeakWB  = windowBlockFromIndex(1);
+			ioSetFullScreenActual(getFullScreenFlag());
+#if 0
+			neither CGContextSynchronize(squeakWB->context)
+			nor		CGContextFlush(squeakWB->context) appear to work.
+			if (!squeakWB->isInvisible)
+				CGContextSynchronize(squeakWB->context);
+		}
+#endif
+	}
+}
 
-int makeMainWindow(void) {
+int
+makeMainWindow(void) {
 	WindowPtr window;
 	char	shortImageName[256];
 	int width,height;
@@ -754,6 +787,7 @@ int makeMainWindow(void) {
 		SetWindowTitle(1,shortImageName);
 	}
 
+	CGDisplayRegisterReconfigurationCallback(displayReconfigurationCallback, 0);
 	ioSetFullScreenActual(getFullScreenFlag());
 	SetUpCarbonEventForWindowIndex(1);
 	QDBeginCGContext(GetWindowPort(windowBlock->handle),&windowBlock->context);
@@ -772,7 +806,8 @@ int makeMainWindow(void) {
 	return (int) window;
 }
 
-WindowPtr SetUpWindow(int t,int l,int b, int r, UInt32 windowType, UInt32 windowAttributes) {
+WindowPtr
+SetUpWindow(int t,int l,int b, int r, UInt32 windowType, UInt32 windowAttributes) {
 	Rect windowBounds;
 	OSStatus err;
 	WindowPtr   createdWindow;
@@ -1220,7 +1255,8 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
     return 1;
 }
 
-GDHandle	getThatDominateGDevice(WindowPtr window) {
+GDHandle
+getThatDominateGDevice(WindowPtr window) {
 	GDHandle		dominantGDevice=NULL;
 
 	if (!window) return NULL;
