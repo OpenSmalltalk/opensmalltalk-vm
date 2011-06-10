@@ -757,8 +757,8 @@ displayReconfigurationCallback(	CGDirectDisplayID display,
 			nor		CGContextFlush(squeakWB->context) appear to work.
 			if (!squeakWB->isInvisible)
 				CGContextSynchronize(squeakWB->context);
-		}
 #endif
+		}
 	}
 }
 
