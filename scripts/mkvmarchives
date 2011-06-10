@@ -1,16 +1,79 @@
 #!/bin/sh
-test -d Cog.app || mkdir Cog.app
-rm -rf Cog.app/* Cog.app.tgz
-(cd macbuild/Fast.app>/dev/null;tar cf - *)|(cd Cog.app;tar xvf -)
-test -d cogwin || mkdir cogwin
-rm -rf cogwin/* cogwin.zip
-ln cygwinbuild/build/vm/{Croquet.exe,Croquet.ini,Croquet.map} cogwin
-ln cygwinbuild/build/vm/*.dll cogwin
-tar czf Cog.app.tgz Cog.app
-zip -vr cogwin.zip cogwin
-rm -rf coglinux.tgz
-COPYFILE_DISABLE=1 tar czf coglinux.tgz coglinux
-for vm in Cog.app/Contents/MacOS/Croquet cogwin/Croquet.exe coglinux/lib/squeak/3.9-7/squeak
+IFS="	
+"
+if [ $# = 0 ]; then
+CL=1
+CM=1
+CW=1
+NL=1
+NM=1
+NW=1
+else
+CL=
+CM=
+CW=
+NL=
+NM=
+NW=
+	while [ -n "$1" ]; do
+		case $1 in
+		-cl)	CL=1;;
+		-cm)	CM=1;;
+		-cw)	CW=1;;
+		-nl)	NL=1;;
+		-nm)	NM=1;;
+		-nw)	NW=1;;
+		-l)		CL=1;NL=1;;
+		-m)		CM=1;NM=1;;
+		-w)		CW=1;NW=1;;
+		-?|-h)  echo usage: $0 [-l -m -w -cl -cm -cw -nl -nm -nw]; exit 0
+		esac
+		shift
+	done
+fi
+EXES=
+if [ -n "$CL" ]; then
+	rm -rf coglinux.tgz
+	COPYFILE_DISABLE=1 tar czf coglinux.tgz coglinux
+	EXES=coglinux/lib/squeak/3.9-7/squeak
+fi
+if [ -n "$CM" ]; then
+	test -d Cog.app || mkdir Cog.app
+	rm -rf Cog.app/* Cog.app.tgz
+	(cd macbuild/Fast.app>/dev/null;tar cf - *)|(cd Cog.app;tar xvf -)
+	tar czf Cog.app.tgz Cog.app
+	EXES="$EXES	Cog.app/Contents/MacOS/Croquet"
+fi
+if [ -n "$CW" ]; then
+	test -d cogwin || mkdir cogwin
+	rm -rf cogwin/* cogwin.zip
+	ln cygwinbuild/build/vm/{Croquet.exe,Croquet.ini,Croquet.map} cogwin
+	ln cygwinbuild/build/vm/*.dll cogwin
+	zip -vr cogwin.zip cogwin
+	EXES="$EXES	cogwin/Croquet.exe"
+fi
+if [ -n "$NL" ]; then
+	rm -rf nsvmlinux.tgz
+	COPYFILE_DISABLE=1 tar czf nsvmlinux.tgz nsvmlinux
+	EXES=nsvmlinux/lib/squeak/3.9-7/squeak
+fi
+if [ -n "$NM" ]; then
+	test -d Newspeak\ Virtual\ Machine.app || mkdir Newspeak\ Virtual\ Machine.app
+	rm -rf Newspeak\ Virtual\ Machine.app/* Newspeak\ Virtual\ Machine.app.tgz
+	(cd nsbuild/macbuild/Fast.app>/dev/null;tar cf - *)|(cd Newspeak\ Virtual\ Machine.app;tar xvf -)
+	tar czf Newspeak\ Virtual\ Machine.app.tgz Newspeak\ Virtual\ Machine.app
+	EXES="$EXES	Newspeak Virtual Machine.app/Contents/MacOS/Newspeak Virtual Machine"
+fi
+if [ -n "$NW" ]; then
+	test -d nsvmwin || mkdir nsvmwin
+	rm -rf nsvmwin/* nsvmwin.zip
+	ln nsbuild/cygwinbuild/build/vm/{nsvm.exe,nsvm.map} nsvmwin
+	ln nsbuild/cygwinbuild/build/vm/*.dll nsvmwin
+	tar czf Newspeak\ Virtual\ Machine.app.tgz Newspeak\ Virtual\ Machine.app
+	zip -vr nsvmwin.zip nsvmwin
+	EXES="$EXES	nsvmwin/nsvm.exe"
+fi
+for vm in $EXES
 do
 	echo
 	echo checking $vm version

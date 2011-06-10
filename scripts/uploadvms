@@ -1,6 +1,28 @@
 #!/bin/sh
+IFS="	
+"
+if [ $# = 0 ]; then
+ARCHIVES="Cog.app.tgz	coglinux.tgz	cogwin.zip	Newspeak Virtual Machine.app.tgz	nsvmwin.zip"
+else
+ARCHIVES=
+	while [ -n "$1" ]; do
+		case $1 in
+		-cl)	ARCHIVES="$ARCHIVES	coglinux.tgz";;
+		-cm)	ARCHIVES="$ARCHIVES	Cog.app.tgz";;
+		-cw)	ARCHIVES="$ARCHIVES	cogwin.zip";;
+		-nl)	ARCHIVES="$ARCHIVES	nsvmlinux.tgz";;
+		-nm)	ARCHIVES="$ARCHIVES	Newspeak Virtual Machine.app.tgz";;
+		-nw)	ARCHIVES="$ARCHIVES	nsvmwin.zip";;
+		-l)		ARCHIVES="$ARCHIVES	coglinux.tgz	nsvmlinux.tgz";;
+		-m)		ARCHIVES="$ARCHIVES	Cog.app.tgz	Newspeak Virtual Machine.app.tgz";;
+		-w)		ARCHIVES="$ARCHIVES	cogwin.tgz	nsvmwin.tgz";;
+		-?|-h)  echo usage: $0 [-l -m -w -cl -cm -cw -nl -nm -nw]; exit 0
+		esac
+		shift
+	done
+fi
 VER="`svnversion | sed 's/^.*://'`"
 echo $VER
 test -f README.$VER || vi README.$VER
 ssh -x eliotmiranda@bugsy.dreamhost.com mkdir mirandabanda.org/files/Cog/VM/VM.r$VER
-scp README.$VER Cog.app.tgz coglinux.tgz cogwin.zip Newspeak\ Virtual\ Machine.app.tgz nsvmwin.zip eliotmiranda@bugsy.dreamhost.com:mirandabanda.org/files/Cog/VM/VM.r$VER
+scp README.$VER $ARCHIVES eliotmiranda@bugsy.dreamhost.com:mirandabanda.org/files/Cog/VM/VM.r$VER
