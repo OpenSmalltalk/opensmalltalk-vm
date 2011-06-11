@@ -38,3 +38,4 @@ int getUIToLock(sqInt *);
 void SetUpCarbonEvent();
 void SetUpCarbonEventForWindowIndex(int index);
 void RunApplicationEventLoopWithSqueak(void);
+void   postFullScreenUpdate(void);

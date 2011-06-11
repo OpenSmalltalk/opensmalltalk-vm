@@ -75,7 +75,7 @@ pthread_mutex_t gEventQueueLock;
 #define EventTypeFullScreenUpdate 98
 #define EventTypePostEventProcessing 99
 static void doPostMessageHook(EventRef event);
-static void postFullScreenUpdate(void);
+void postFullScreenUpdate(void);
 void signalAnyInterestedParties(void);
 static sqKeyboardEvent *enterKeystroke (long type, long cc, long pc, UniChar utf32Char, long m);
 
@@ -445,7 +445,7 @@ static void   doPostMessageHook(EventRef event) {
     }
 }
 
-static void   postFullScreenUpdate() {
+void   postFullScreenUpdate() {
     sqInputEvent *evt;
     
     pthread_mutex_lock(&gEventQueueLock);

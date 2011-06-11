@@ -43,7 +43,7 @@
 #include "sqMacUIConstants.h"
 #include "sqMacWindow.h"
 #include "sqMacFileLogic.h"
-#include "sqmacUIEvents.h"
+#include "sqMacUIEvents.h"
 #include "sqMacUIMenuBar.h"
 #include "sqMacEncoding.h"
 #include "sqMacHostWindow.h"
@@ -752,14 +752,9 @@ displayReconfigurationCallback(	CGDirectDisplayID display,
 		if (!nDisplays) {
 			windowDescriptorBlock *squeakWB  = windowBlockFromIndex(1);
 			ioSetFullScreenActual(getFullScreenFlag());
-#if 0
-			neither CGContextSynchronize(squeakWB->context)
-			nor		CGContextFlush(squeakWB->context) appear to work.
-			if (!squeakWB->isInvisible)
-				CGContextSynchronize(squeakWB->context);
-#endif
 		}
 	}
+	postFullScreenUpdate();
 }
 
 int
