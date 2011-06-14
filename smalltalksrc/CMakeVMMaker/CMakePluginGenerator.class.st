@@ -97,8 +97,8 @@ CMakePluginGenerator >> generate [
 		set: #pluginPlatform to: '${targetPlatform}/plugins/', name.
 		
 	
-	internal ifTrue: [
-		self puts: 'add_definitions(-DSQUEAK_BUILTIN_PLUGIN)'].
+	internal 
+		ifTrue: [ self puts: 'add_definitions(-DSQUEAK_BUILTIN_PLUGIN)'].
 	
 	self addSources: { name , '.c' } prefixed: '${pluginSrc}/'.
 
