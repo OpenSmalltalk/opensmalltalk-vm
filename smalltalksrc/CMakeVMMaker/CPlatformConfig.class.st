@@ -154,6 +154,7 @@ CPlatformConfig >> configureFFIPlugin: maker [
 CPlatformConfig >> configureFT2Plugin: maker [ 
 	"extra rules for FT2Plugin"
 
+
 ]
 
 { #category : #'plugin extra rules' }

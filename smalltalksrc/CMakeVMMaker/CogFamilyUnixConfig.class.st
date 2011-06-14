@@ -122,6 +122,18 @@ CogFamilyUnixConfig >> configureDropPlugin: maker [
 
 ]
 
+{ #category : #'plugin extra rules' }
+CogFamilyUnixConfig >> configureFT2Plugin: maker [ 
+	"extra rules for FT2Plugin" 
+	
+	maker addExternalLibraries: #('freetype' ).
+	
+	"
+	ft2build.h. says: 
+	<prefix>/include/freetype2' must be in your current inclusion path "
+	maker includeDirectories:  '/usr/include/freetype2'
+]
+
 { #category : #'as yet unclassified' }
 CogFamilyUnixConfig >> configureFileCopyPlugin: maker [
 	"extra rules for DropPlugin"
