@@ -50,6 +50,12 @@ CogFamilyCocoaIOSConfig >> configureHostWindowPlugin: maker [
 	maker includeDirectories: '${platformsDir}/Cross/plugins/HostWindowPlugin'.
 ]
 
+{ #category : #plugins }
+CogFamilyCocoaIOSConfig >> configureUnixOSProcessPlugin: maker [
+	super configureHostWindowPlugin: maker.
+	maker includeDirectories: '${platformsDir}/Cross/plugins/SocketPlugin'.
+]
+
 { #category : #'source files' }
 CogFamilyCocoaIOSConfig >> crossSources [ 
 	^super crossSources, #(
@@ -72,7 +78,8 @@ CogFamilyCocoaIOSConfig >> defaultExternalPlugins [
 		JoystickTabletPlugin
 		MIDIPlugin
 		B3DAcceleratorPlugin
-		LocalePlugin)
+		LocalePlugin
+		UnixOSProcessPlugin)
 ]
 
 { #category : #plugins }
