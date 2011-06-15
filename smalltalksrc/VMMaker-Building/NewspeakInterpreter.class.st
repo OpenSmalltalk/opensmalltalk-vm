@@ -983,6 +983,16 @@ invalidCompactClassError(char *s) { /* Print a compact class index error message
 '
 ]
 
+{ #category : #translation }
+NewspeakInterpreter class >> prepareToBeAddedToCodeGenerator: aCodeGen [
+	"Override to avoid repeating ObjectMemory's preparations
+	 and to delete ObjectMemory methods we override."
+	self selectors do:
+		[:sel|
+		 (superclass whichClassIncludesSelector: sel) ifNotNil:
+			[aCodeGen removeMethodForSelector: sel]]
+]
+
 { #category : #constants }
 NewspeakInterpreter class >> primitiveTable [
 
@@ -2119,6 +2129,59 @@ NewspeakInterpreter >> caller [
 { #category : #'debug support' }
 NewspeakInterpreter >> capturePendingFinalizationSignals [
 	statPendingFinalizationSignals := pendingFinalizationSignals
+]
+
+{ #category : #'object access primitives' }
+NewspeakInterpreter >> changeClassOf: rcvr to: argClass [
+	"Attempt to change the class of the receiver into the class of the the argument given that the
+	 format of the receiver matches the format of the argument. If successful answer 0, otherwise
+	 answer an error code indicating the reason for failure.  Fail if receiver or argument are
+	 SmallIntegers, or the receiver is an instance of a compact class and the argument isn't, or when
+	 the format of the receiver is different from the format of the argument's class, or when the
+	 arguments class is fixed and the receiver's size differs from the size that an instance of the
+	 argument's class should have."
+	| classHdr sizeHiBits byteSize argFormat rcvrFormat rcvrHdr ccIndex |
+	"Check what the format of the class says"
+	classHdr := self formatOfClass: argClass. "Low 2 bits are 0"
+
+	"Compute the size of instances of the class (used for fixed field classes only)"
+	sizeHiBits := (classHdr bitAnd: 16r60000) >> 9.
+	classHdr := classHdr bitAnd: 16r1FFFF.
+	byteSize := (classHdr bitAnd: SizeMask) + sizeHiBits. "size in bytes -- low 2 bits are 0"
+
+	"Check the receiver's format against that of the class"
+	argFormat := self formatOfHeader: classHdr.
+	rcvrHdr := self baseHeader: rcvr.
+	rcvrFormat := self formatOfHeader: rcvrHdr.
+	rcvrFormat > 8 ifTrue:
+		[rcvrFormat := rcvrFormat bitAnd: 12].
+	argFormat = rcvrFormat ifFalse:
+		[^PrimErrInappropriate]. "no way"
+
+	"For fixed field classes, the sizes must match.
+	Note: byteSize-4 because base header is included in class size."
+	argFormat < 2 ifTrue:
+		[(byteSize - BaseHeaderSize) = (self byteSizeOf: rcvr) ifFalse:
+			[^PrimErrBadReceiver]].
+
+	(self headerTypeOfHeader: rcvrHdr) = HeaderTypeShort
+		ifTrue: "Compact classes. Check if the arg's class is compact and exchange ccIndex"
+			[ccIndex := classHdr bitAnd: CompactClassMask.
+			ccIndex = 0 ifTrue:
+				[^PrimErrInappropriate]. "class is not compact"
+			(rcvrHdr bitAnd: ImmutabilityBit) ~= 0 ifTrue:
+				[^PrimErrNoModification].
+			self longAt: rcvr put:
+				(((self longAt: rcvr) bitAnd: CompactClassMask bitInvert32) bitOr: ccIndex)]
+		ifFalse:
+			[(rcvrHdr bitAnd: ImmutabilityBit) ~= 0 ifTrue:
+				[^PrimErrNoModification].
+			"Exchange the class pointer, which could make rcvr a root for argClass"
+			self longAt: rcvr-BaseHeaderSize put: (argClass bitOr: (self headerType: rcvr)).
+			(rcvr < youngStart) ifTrue: [self possibleRootStoreInto: rcvr value: argClass]].
+
+	"ok"
+	^0
 ]
 
 { #category : #'indexing primitive support' }
@@ -5777,16 +5840,16 @@ NewspeakInterpreter >> primitiveChangeClass [
 	"Primitive. Change the class of the receiver into the class of the argument given that
 	 the format of the receiver matches the format of the argument's class. Fail if receiver
 	 or argument are SmallIntegers, or the receiver is an instance of a compact class and
-	 the argument isn't, or when the argument's class is compact and the receiver isn't, or
-	 when the format of the receiver is different from the format of the argument's class,
-	 or when the arguments class is fixed and the receiver's size differs from the size that
-	 an instance of the argument's class should have."
-	| arg rcvr err |
+	 the argument isn't, or when the format of the receiver is different from the format of
+	 the argument's class, or when the arguments class is fixed and the receiver's size
+	 differs from the size that an instance of the argument's class should have."
+	| arg rcvr argClass err |
 	arg := self stackObjectValue: 0.
 	rcvr := self stackObjectValue: 1.
 	self successful ifFalse:[^nil].
+	argClass := self fetchClassOfNonInt: arg.
 
-	err := self changeClassOf: rcvr toThatOf: arg.
+	err := self changeClassOf: rcvr to: argClass.
 	err = 0
 		ifTrue: ["Flush at cache because rcvr's class has changed."
 				self flushAtCache.

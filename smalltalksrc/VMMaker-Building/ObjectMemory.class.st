@@ -1991,7 +1991,13 @@ ObjectMemory >> hashBitsOf: oop [
 { #category : #'header access' }
 ObjectMemory >> headerType: oop [
 
-	^ (self longAt: oop) bitAnd: TypeMask
+	^(self baseHeader: oop) bitAnd: TypeMask
+]
+
+{ #category : #'header access' }
+ObjectMemory >> headerTypeOfHeader: header [
+
+	^header bitAnd: TypeMask
 ]
 
 { #category : #'gc -- compaction' }
