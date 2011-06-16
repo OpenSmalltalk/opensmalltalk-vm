@@ -3146,10 +3146,7 @@ CCodeGenerator >> vmHeaderContentsWithBytesPerWord: bytesPerWord [
 
 	^ByteString streamContents:
 		[:tempStream|
-		vmClass writeVMHeaderTo: tempStream bytesPerWord: bytesPerWord.
-		vmClass ancilliaryClasses do:
-			[:ac|
-			ac writeVMHeaderTo: tempStream bytesPerWord: bytesPerWord]]
+		vmClass writeVMHeaderTo: tempStream bytesPerWord: bytesPerWord]
 ]
 
 { #category : #utilities }
