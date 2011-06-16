@@ -1187,6 +1187,20 @@ StackInterpreter class >> vmCallbackHeader [
 		s cr]
 ]
 
+{ #category : #'api version' }
+StackInterpreter class >> vmProxyMajorVersion [
+	"Define the  VM_PROXY_MAJOR version for this VM as used to
+	 define the api in platforms/Cross/vm/sqVirtualMachine.[ch]"
+	^1
+]
+
+{ #category : #'api version' }
+StackInterpreter class >> vmProxyMinorVersion [
+	"Define the  VM_PROXY_MINOR version for this VM as used to
+	 define the api in platforms/Cross/vm/sqVirtualMachine.[ch]"
+	^12
+]
+
 { #category : #translation }
 StackInterpreter class >> wantsLabels [
 	"Only label the VM, not plugins (internal or external).  This to cut down the scope
@@ -1198,15 +1212,8 @@ StackInterpreter class >> wantsLabels [
 
 { #category : #translation }
 StackInterpreter class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord [
-	aStream
-		nextPutAll: '#define STACKVM 1'; cr;
-		nextPutAll: '#define SQ_VI_BYTES_PER_WORD '; print: bytesPerWord; cr;
-		cr.
-	((VMBasicConstants classPool associations select: [:a| a key beginsWith: 'PrimErr'])
-		asSortedCollection: [:a1 :a2| a1 value <= a2 value])
-		do: [:a|
-			aStream nextPutAll: '#define '; nextPutAll: a key; space; print: a value; cr].
-	aStream cr
+	super writeVMHeaderTo: aStream bytesPerWord: bytesPerWord.
+	aStream nextPutAll: '#define STACKVM 1'; cr; cr
 ]
 
 { #category : #'control primitives' }

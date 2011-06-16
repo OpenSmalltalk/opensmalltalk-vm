@@ -468,6 +468,7 @@ NewspeakInterpreter class >> initializeMethodIndices [
 NewspeakInterpreter class >> initializeMiscConstants [
 
 	super initializeMiscConstants.
+	IMMUTABILITY := NewspeakVM := true.
 
 	PrimitiveExternalCallIndex := 117. "Primitive index for #primitiveExternalCall"
 	MillisecondClockMask := 16r1FFFFFFF.
@@ -1083,6 +1084,20 @@ NewspeakInterpreter class >> vmCallbackHeader [
 		s cr]
 ]
 
+{ #category : #'api version' }
+NewspeakInterpreter class >> vmProxyMajorVersion [
+	"Define the  VM_PROXY_MAJOR version for this VM as used to
+	 define the api in platforms/Cross/vm/sqVirtualMachine.[ch]"
+	^1
+]
+
+{ #category : #'api version' }
+NewspeakInterpreter class >> vmProxyMinorVersion [
+	"Define the  VM_PROXY_MINOR version for this VM as used to
+	 define the api in platforms/Cross/vm/sqVirtualMachine.[ch]"
+	^12
+]
+
 { #category : #translation }
 NewspeakInterpreter class >> wantsLabels [
 	"Only label the VM, not plugins (internal or external).  This to cut down the scope
@@ -1094,18 +1109,13 @@ NewspeakInterpreter class >> wantsLabels [
 
 { #category : #translation }
 NewspeakInterpreter class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord [
+	super writeVMHeaderTo: aStream bytesPerWord: bytesPerWord.
 	aStream
 		nextPutAll: '#define NewspeakVM 1'; cr;
 		nextPutAll: '#define ALIEN_FFI 1'; cr;
 		nextPutAll: '#define IMMUTABILITY 1'; cr;
 		nextPutAll: '#define BigEndianFloats 1'; cr;
-		nextPutAll: '#define SQ_VI_BYTES_PER_WORD '; print: bytesPerWord; cr;
-		cr.
-	((VMBasicConstants classPool associations select: [:a| a key beginsWith: 'PrimErr'])
-		asSortedCollection: [:a1 :a2| a1 value <= a2 value])
-		do: [:a|
-			aStream nextPutAll: '#define '; nextPutAll: a key; space; print: a value; cr].
-	aStream cr
+		cr
 ]
 
 { #category : #'control primitives' }
