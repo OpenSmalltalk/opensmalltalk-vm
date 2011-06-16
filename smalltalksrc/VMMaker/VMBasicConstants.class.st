@@ -42,6 +42,8 @@ Class {
 		'DisownVMLockOutFullGC',
 		'DoAssertionChecks',
 		'DoExpensiveAssertionChecks',
+		'IMMUTABILITY',
+		'NewspeakVM',
 		'PrimErrBadArgument',
 		'PrimErrBadIndex',
 		'PrimErrBadMethod',

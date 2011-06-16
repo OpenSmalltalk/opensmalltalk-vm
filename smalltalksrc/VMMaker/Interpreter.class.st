@@ -1010,6 +1010,20 @@ Interpreter class >> table: anArray from: specArray [
 					contiguous := contiguous + ((spec at: 2) - (spec at: 1)) + 1]]
 ]
 
+{ #category : #'api version' }
+Interpreter class >> vmProxyMajorVersion [
+	"Define the  VM_PROXY_MAJOR version for this VM as used to
+	 define the api in platforms/Cross/vm/sqVirtualMachine.[ch]"
+	^1
+]
+
+{ #category : #'api version' }
+Interpreter class >> vmProxyMinorVersion [
+	"Define the  VM_PROXY_MINOR version for this VM as used to
+	 define the api in platforms/Cross/vm/sqVirtualMachine.[ch]"
+	^8
+]
+
 { #category : #translation }
 Interpreter class >> wantsLabels [
 	"Only label the VM, not plugins (internal or external).  This to cut down the scope
@@ -1021,10 +1035,9 @@ Interpreter class >> wantsLabels [
 
 { #category : #translation }
 Interpreter class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord [
-	aStream
-		nextPutAll: '#define SQ_VI_BYTES_PER_WORD ';
-		print: bytesPerWord;
-		cr
+	"Currently the Interpreter adds nothing to interp.h above and beyond VMClass's default.
+	 But the code in trunk's CCodeGenerator>>emitDefineBytesPerWordOn: is a candidate."
+	super writeVMHeaderTo: aStream bytesPerWord: bytesPerWord
 ]
 
 { #category : #'control primitives' }
