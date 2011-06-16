@@ -65,6 +65,13 @@ VMClass class >> emitExportPragma [
 	^false
 ]
 
+{ #category : #'api version' }
+VMClass class >> emitInterpreterProxyVersionOn: aStream [ 
+	aStream
+		nextPutAll: '#define VM_PROXY_MAJOR '; print: self vmProxyMajorVersion; cr;
+		nextPutAll: '#define VM_PROXY_MINOR '; print: self vmProxyMinorVersion; cr; cr
+]
+
 { #category : #translation }
 VMClass class >> exportAPISelectors [
 	^self exportAPISelectorsFor: self
@@ -93,7 +100,8 @@ VMClass class >> initializeMiscConstants [
 	"Falsify the `what type of VM is this?' flags that are defined in the various interp.h files.
 	Subclass implementations need to include a super initializeMiscConstants."
 
-	STACKVM := COGVM := COGMTVM := false
+	STACKVM := COGVM := COGMTVM := false.
+	IMMUTABILITY := NewspeakVM := false
 ]
 
 { #category : #translation }
@@ -241,8 +249,20 @@ VMClass class >> typeForSelf [
 ]
 
 { #category : #translation }
-VMClass class >> writeVMHeaderTo: tempStream bytesPerWord: bytesPerWord [
-	"No op hook allowing ancialliary classes to write whatever they deem fit to interp.h"
+VMClass class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord [
+	"Generate the contents of interp.h on aStream.  Specific Interpreter subclasses
+	 override to add more stuff."
+	aStream
+		nextPutAll: '#define VM_PROXY_MAJOR '; print: self vmProxyMajorVersion; cr;
+		nextPutAll: '#define VM_PROXY_MINOR '; print: self vmProxyMinorVersion; cr;
+		cr;
+		nextPutAll: '#define SQ_VI_BYTES_PER_WORD '; print: bytesPerWord; cr;
+		cr.
+	((VMBasicConstants classPool associations select: [:a| a key beginsWith: 'PrimErr'])
+		asSortedCollection: [:a1 :a2| a1 value <= a2 value])
+		do: [:a|
+			aStream nextPutAll: '#define '; nextPutAll: a key; space; print: a value; cr].
+	aStream cr
 ]
 
 { #category : #'translation support' }

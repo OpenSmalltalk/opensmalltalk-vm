@@ -456,12 +456,12 @@ CoInterpreter class >> specialValueForConstant: constantName default: defaultVal
 
 { #category : #translation }
 CoInterpreter class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord [
+	super writeVMHeaderTo: aStream bytesPerWord: bytesPerWord.
 	aStream
 		nextPutAll: '#define COGVM 1'; cr;
 		nextPutAll: '#if !defined(COGMTVM)'; cr;
 		nextPutAll: '#	define COGMTVM '; nextPut: (self isThreadedVM ifTrue: [$1] ifFalse: [$0]); cr;
-		nextPutAll: '#endif'; cr.
-	super writeVMHeaderTo: aStream bytesPerWord: bytesPerWord
+		nextPutAll: '#endif'; cr; cr
 ]
 
 { #category : #'message sending' }
