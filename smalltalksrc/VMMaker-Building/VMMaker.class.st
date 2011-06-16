@@ -343,10 +343,9 @@ VMMaker class >> sourceDirName [
 
 { #category : #'version testing' }
 VMMaker class >> versionString [
-
 	"VMMaker versionString"
 
-	^'4.4.21'
+	^'4.6.0 (Cog)'
 ]
 
 { #category : #'plugin lists' }
