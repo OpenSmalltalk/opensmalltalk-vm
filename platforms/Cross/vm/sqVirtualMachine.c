@@ -3,7 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <setjmp.h>
+
 #include "sqVirtualMachine.h"
+
 
 /*** Function prototypes ***/
 
@@ -20,9 +23,6 @@ sqInt  stackObjectValue(sqInt offset);
 sqInt  stackValue(sqInt offset);
 
 /*** variables ***/
-
-extern sqInt (*compilerHooks[])();
-extern sqInt setCompilerInitialized(sqInt flagValue);
 
 /* InterpreterProxy methodsFor: 'object access' */
 sqInt  argumentCountOf(sqInt methodPointer);
@@ -72,9 +72,18 @@ sqInt isWeak(sqInt oop);
 sqInt isWords(sqInt oop);
 sqInt isWordsOrBytes(sqInt oop);
 sqInt includesBehaviorThatOf(sqInt aClass, sqInt aSuperClass);
+#if VM_PROXY_MINOR > 10
+sqInt isKindOfClass(sqInt oop, sqInt aClass);
+sqInt primitiveErrorTable(void);
+sqInt primitiveFailureCode(void);
+sqInt instanceSizeOf(sqInt aClass);
+sqInt tenuringIncrementalGC(void);
+#endif
 sqInt isArray(sqInt oop);
+#if IMMUTABILITY
 sqInt internalIsMutable(sqInt oop);
 sqInt internalIsImmutable(sqInt oop);
+#endif
 
 /* InterpreterProxy methodsFor: 'converting' */
 sqInt  booleanValueOf(sqInt obj);
@@ -91,6 +100,10 @@ sqInt  positive64BitIntegerFor(sqLong integerValue);
 sqLong positive64BitValueOf(sqInt oop);
 sqInt  signed64BitIntegerFor(sqLong integerValue);
 sqLong signed64BitValueOf(sqInt oop);
+long  signedMachineIntegerValueOf(sqInt);
+long  stackSignedMachineIntegerValue(sqInt);
+unsigned long  positiveMachineIntegerValueOf(sqInt);
+unsigned long  stackPositiveMachineIntegerValue(sqInt);
 
 /* InterpreterProxy methodsFor: 'special objects' */
 sqInt characterTable(void);
@@ -136,10 +149,12 @@ sqInt signalSemaphoreWithIndex(sqInt semaIndex);
 sqInt success(sqInt aBoolean);
 sqInt superclassOf(sqInt classPointer);
 sqInt ioMicroMSecs(void);
+usqLong ioUTCMicroseconds(void);
 sqInt forceInterruptCheck(void);
 sqInt getThisSessionID(void);
 sqInt ioFilenamefromStringofLengthresolveAliases(char* aCharBuffer, char* filenameIndex, sqInt filenameLength, sqInt resolveFlag);
-sqInt  vmEndianness(void);	
+sqInt vmEndianness(void);	
+sqInt getInterruptPending(void);
 
 /* InterpreterProxy methodsFor: 'BitBlt support' */
 sqInt loadBitBltFrom(sqInt bbOop);
@@ -147,28 +162,52 @@ sqInt copyBits(void);
 sqInt copyBitsFromtoat(sqInt leftX, sqInt rightX, sqInt yValue);
 
 /* InterpreterProxy methodsFor: 'FFI support' */
-sqInt classExternalAddress(void); /* Old Squeak FFI */
+sqInt classExternalAddress(void);
 sqInt classExternalData(void);
 sqInt classExternalFunction(void);
 sqInt classExternalLibrary(void);
 sqInt classExternalStructure(void);
-sqInt classAlien(void); /* Newsqueak FFI */
-sqInt classUnsafeAlien(void); /* Newsqueak FFI */
-sqInt getStackPointer(void);  /* Newsqueak FFI */
-sqInt sendInvokeCallbackStackRegistersJmpbuf(sqInt thunkPtrAsInt, sqInt stackPtrAsInt, sqInt regsPtrAsInt, sqInt jmpBufPtrAsInt); /* Newsqueak FFI */
-sqInt reestablishContextPriorToCallback(sqInt callbackContext); /* Newsqueak FFI */
 sqInt ioLoadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength);
 sqInt ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength, sqInt moduleHandle);
 sqInt isInMemory(sqInt address);
+sqInt classAlien(void); /* Alien FFI */
+sqInt classUnsafeAlien(void); /* Alien FFI */
+sqInt getStackPointer(void);  /* Newsqueak FFI */
+void *startOfAlienData(sqInt);
+usqInt sizeOfAlienData(sqInt);
+sqInt signalNoResume(sqInt);
+#if VM_PROXY_MINOR > 8
+sqInt getStackPointer(void);  /* Alien FFI */
+sqInt sendInvokeCallbackStackRegistersJmpbuf(sqInt thunkPtrAsInt, sqInt stackPtrAsInt, sqInt regsPtrAsInt, sqInt jmpBufPtrAsInt); /* Alien FFI */
+sqInt reestablishContextPriorToCallback(sqInt callbackContext); /* Alien FFI */
+sqInt sendInvokeCallbackContext(vmccp);
+sqInt returnAsThroughCallbackContext(int, vmccp, sqInt);
+#endif /* VM_PROXY_MINOR > 8 */
+char *cStringOrNullFor(sqInt);
 
 void *ioLoadFunctionFrom(char *fnName, char *modName);
 
 
 /* Proxy declarations for v1.8 */
+#if NewspeakVM
+static sqInt
+callbackEnter(sqInt *callbackID) { return 0; }
+static sqInt
+callbackLeave(sqInt *callbackID) { return 0; }
+#else
 sqInt callbackEnter(sqInt *callbackID);
 sqInt callbackLeave(sqInt  callbackID);
+#endif
 sqInt addGCRoot(sqInt *varLoc);
 sqInt removeGCRoot(sqInt *varLoc);
+
+/* Proxy declarations for v1.10 */
+sqInt methodArg(sqInt index);
+sqInt objectArg(sqInt index);
+sqInt integerArg(sqInt index);
+double floatArg(sqInt index);
+sqInt methodReturnValue(sqInt oop);
+sqInt topRemappableOop(void);
 
 struct VirtualMachine *VM = NULL;
 
@@ -180,10 +219,35 @@ static sqInt minorVersion(void) {
 	return VM_PROXY_MINOR;
 }
 
-static CompilerHook *compilerHookVector(void) {
-  return compilerHooks;
+#if !IMMUTABILITY
+static sqInt isNonIntegerObject(sqInt objectPointer)
+{
+	return !isIntegerObject(objectPointer);
 }
+#endif
 
+#if STACKVM
+void (*setInterruptCheckChain(void (*aFunction)(void)))();
+#else
+void (*setInterruptCheckChain(void (*aFunction)(void)))() { return 0; }
+#endif
+
+#if COGMTVM
+sqInt disownVM(sqInt flags);
+sqInt ownVM(sqInt threadIdAndFlags);
+#else
+sqInt disownVM(sqInt flags) { return 1; }
+sqInt ownVM(sqInt threadIdAndFlags)
+{
+	extern sqInt amInVMThread(void);
+	return amInVMThread() ? 0 : -1;
+}
+#endif
+extern sqInt isYoung(sqInt);
+
+/* High-priority and synchronous ticker function support. */
+void addHighPriorityTickee(void (*ticker)(void), unsigned periodms);
+void addSynchronousTickee(void (*ticker)(void), unsigned periodms, unsigned roundms);
 
 struct VirtualMachine* sqGetInterpreterProxy(void)
 {
@@ -204,7 +268,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->stackIntegerValue = stackIntegerValue;
 	VM->stackObjectValue = stackObjectValue;
 	VM->stackValue = stackValue;
-	
+
 	/* InterpreterProxy methodsFor: 'object access' */
 	VM->argumentCountOf = argumentCountOf;
 	VM->arrayValueOf = arrayValueOf;
@@ -230,7 +294,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->stSizeOf = stSizeOf;
 	VM->storeIntegerofObjectwithValue = storeIntegerofObjectwithValue;
 	VM->storePointerofObjectwithValue = storePointerofObjectwithValue;
-	
+
 	/* InterpreterProxy methodsFor: 'testing' */
 	VM->isKindOf = isKindOf;
 	VM->isMemberOf = isMemberOf;
@@ -272,7 +336,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->classSemaphore = classSemaphore;
 	VM->classSmallInteger = classSmallInteger;
 	VM->classString = classString;
-	
+
 	/* InterpreterProxy methodsFor: 'instance creation' */
 	VM->clone = clone;
 	VM->instantiateClassindexableSize = instantiateClassindexableSize;
@@ -293,8 +357,8 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->success = success;
 	VM->superclassOf = superclassOf;
 
-	VM->compilerHookVector= compilerHookVector;
-	VM->setCompilerInitialized= setCompilerInitialized;
+	VM->compilerHookVector= 0;
+	VM->setCompilerInitialized= 0;
 
 #if VM_PROXY_MINOR > 1
 
@@ -340,36 +404,157 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 #endif
 
 #if VM_PROXY_MINOR > 5
-
 	VM->isArray = isArray;
 	VM->forceInterruptCheck = forceInterruptCheck;
-
 #endif
 
 #if VM_PROXY_MINOR > 6
-
 	VM->fetchLong32ofObject = fetchLong32ofObject;
 	VM->getThisSessionID = getThisSessionID;
 	VM->ioFilenamefromStringofLengthresolveAliases = ioFilenamefromStringofLengthresolveAliases;
 	VM->vmEndianness = vmEndianness;
-
 #endif
 
 #if VM_PROXY_MINOR > 7
-
-	VM->internalIsImmutable = internalIsImmutable;
-	VM->internalIsMutable   = internalIsMutable;
-	VM->primitiveFailFor    = primitiveFailFor;
-	VM->classAlien          = classAlien;
-	VM->getStackPointer     = (sqInt *(*)(void))getStackPointer;
-	VM->sendInvokeCallbackStackRegistersJmpbuf = sendInvokeCallbackStackRegistersJmpbuf;
-	VM->reestablishContextPriorToCallback = reestablishContextPriorToCallback;
-	VM->classUnsafeAlien    = classUnsafeAlien;
 	VM->callbackEnter = callbackEnter;
 	VM->callbackLeave = callbackLeave;
 	VM->addGCRoot = addGCRoot;
 	VM->removeGCRoot = removeGCRoot;
-
 #endif
+
+#if VM_PROXY_MINOR > 8
+	VM->primitiveFailFor    = primitiveFailFor;
+	VM->setInterruptCheckChain = setInterruptCheckChain;
+	VM->classAlien          = classAlien;
+	VM->classUnsafeAlien    = classUnsafeAlien;
+	VM->sendInvokeCallbackStackRegistersJmpbuf = sendInvokeCallbackStackRegistersJmpbuf;
+	VM->reestablishContextPriorToCallback = reestablishContextPriorToCallback;
+	VM->getStackPointer     = (sqInt *(*)(void))getStackPointer;
+# if IMMUTABILITY
+	VM->internalIsImmutable = internalIsImmutable;
+	VM->internalIsMutable   = internalIsMutable;
+# else
+	VM->internalIsImmutable = isIntegerObject;
+	VM->internalIsMutable   = isNonIntegerObject;
+# endif
+#endif
+
+#if VM_PROXY_MINOR > 9
+	VM->methodArg = methodArg;
+	VM->objectArg = objectArg;
+	VM->integerArg = integerArg;
+	VM->floatArg = floatArg;
+	VM->methodReturnValue = methodReturnValue;
+	VM->topRemappableOop = topRemappableOop;
+#endif
+
+#if VM_PROXY_MINOR > 10
+	VM->disownVM = disownVM;
+	VM->ownVM = ownVM;
+	VM->addHighPriorityTickee = addHighPriorityTickee;
+	VM->addSynchronousTickee = addSynchronousTickee;
+	VM->utcMicroseconds = ioUTCMicroseconds;
+	VM->tenuringIncrementalGC = tenuringIncrementalGC;
+	VM->isYoung = isYoung;
+	VM->isKindOfClass = isKindOfClass;
+	VM->primitiveErrorTable = primitiveErrorTable;
+	VM->primitiveFailureCode = primitiveFailureCode;
+	VM->instanceSizeOf = instanceSizeOf;
+#endif
+
+#if VM_PROXY_MINOR > 11
+	VM->sendInvokeCallbackContext = sendInvokeCallbackContext;
+	VM->returnAsThroughCallbackContext = returnAsThroughCallbackContext;
+	VM->signedMachineIntegerValueOf = signedMachineIntegerValueOf;
+	VM->stackSignedMachineIntegerValue = stackSignedMachineIntegerValue;
+	VM->positiveMachineIntegerValueOf = positiveMachineIntegerValueOf;
+	VM->stackPositiveMachineIntegerValue = stackPositiveMachineIntegerValue;
+	VM->getInterruptPending = getInterruptPending;
+	VM->cStringOrNullFor = cStringOrNullFor;
+	VM->startOfAlienData = startOfAlienData;
+	VM->sizeOfAlienData = sizeOfAlienData;
+	VM->signalNoResume = signalNoResume;
+#endif
+
 	return VM;
+}
+
+
+/* This lives here for now but belongs somewhere else.
+ * platforms/Cross/vm/sqStuff.c??
+ */
+#define STDOUT_STACK_SZ 5
+static int stdoutStackIdx = -1;
+static FILE stdoutStack[STDOUT_STACK_SZ];
+
+/* N.B. As of cygwin 1.5.25 fopen("crash.dmp","a") DOES NOT WORK!  crash.dmp
+ * contains garbled output as if the file pointer gets set to the start of the
+ * file, not the end.  So we synthesize our own append mode.
+ */
+#if __MINGW32__
+# include <io.h>
+static FILE *
+fopen_for_append(char *filename)
+{
+	FILE *f = !access(filename, F_OK) /* access is bass ackwards */
+		? fopen(filename,"r+")
+		: fopen(filename,"w+");
+	if (f)
+		fseek(f,0,SEEK_END);
+	return f;
+}
+#elif defined(WIN32)
+# define fopen_for_append(filename) fopen(filename,"a+t")
+#else
+# define fopen_for_append(filename) fopen(filename,"a+")
+#endif
+
+void
+pushOutputFile(char *filenameOrStdioIndex)
+{
+#ifndef STDOUT_FILENO
+# define STDOUT_FILENO 1
+# define STDERR_FILENO 2
+#endif
+
+	FILE *output;
+
+	if (stdoutStackIdx + 2 >= STDOUT_STACK_SZ) {
+		fprintf(stderr,"output file stack is full.\n");
+		return;
+	}
+	switch ((unsigned)filenameOrStdioIndex) {
+	case STDOUT_FILENO: output = stdout; break;
+	case STDERR_FILENO: output = stderr; break;
+	default:
+		if (!(output = fopen_for_append(filenameOrStdioIndex))) {
+			fprintf(stderr,
+					"could not open \"%s\" for writing.\n",
+					filenameOrStdioIndex);
+			return;
+		}
+	}
+	stdoutStack[++stdoutStackIdx] = *stdout;
+	*stdout = *output;
+}
+
+void
+popOutputFile()
+{
+	if (stdoutStackIdx < 0) {
+		fprintf(stderr,"output file stack is empty.\n");
+		return;
+	}
+	fflush(stdout);
+	if (fileno(stdout) > STDERR_FILENO) {
+		/* as of Feb 2011 with fclose@@GLIBC_2.1 under e.g. CentOS 5.3, fclose
+		 * hangs in _IO_un_link_internal.  This hack avoids that.
+		 */
+#if __linux__
+		close(fileno(stdout));
+#else
+		fclose(stdout);
+#endif
+	}
+	*stdout = stdoutStack[stdoutStackIdx--];
 }

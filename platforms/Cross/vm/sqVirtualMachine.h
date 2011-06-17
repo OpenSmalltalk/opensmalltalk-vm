@@ -1,21 +1,26 @@
 #ifndef _SqueakVM_H
 #define _SqueakVM_H
 
+/* We expect interp.h to define VM_PROXY_MAJOR & VM_PROXY_MINOR appropriately
+ * for the VM generated with it.
+ */
+#include "interp.h"
+
+#ifndef VM_PROXY_MAJOR
 /* Increment the following number if you change the order of
    functions listed or if you remove functions */
-#define VM_PROXY_MAJOR 1
+# define VM_PROXY_MAJOR 1
+#endif
 
-/* Note: You can define a different VM_PROXY_MINOR if the plugin
-   should work with older VMs. */
 #ifndef VM_PROXY_MINOR
 /* Increment the following number if you add functions at the end */
-#define VM_PROXY_MINOR 8
+# define VM_PROXY_MINOR 12
 #endif
 
 #include "sqMemoryAccess.h"
 
-#if VM_PROXY_MINOR > 7
-# define PrimErrNoErr 0
+#if VM_PROXY_MINOR > 8
+# define PrimNoErr 0
 # define PrimErrGenericFailure 1
 # define PrimErrBadReceiver 2
 # define PrimErrBadArgument 3
@@ -27,6 +32,12 @@
 # define PrimErrNoMemory 9
 # define PrimErrNoCMemory 10
 # define PrimErrNotFound 11
+# define PrimErrBadMethod 12
+# define PrimErrNamedInternal 13
+# define PrimErrObjectMayMove 14
+
+/* VMCallbackContext opaque type avoids all including setjmp.h & vmCallback.h */
+typedef struct _VMCallbackContext *vmccp;
 #endif
 
 typedef sqInt (*CompilerHook)();
@@ -199,8 +210,10 @@ typedef struct VirtualMachine {
 #  if !defined(sqLong)
 #   if _MSC_VER
 #     define sqLong __int64
+#     define usqLong unsigned __int64
 #   else
 #     define sqLong long long
+#     define usqLong unsigned long long
 #   endif
 #  endif
 
@@ -219,52 +232,92 @@ typedef struct VirtualMachine {
 #if VM_PROXY_MINOR > 6
 	sqInt  (*fetchLong32ofObject)(sqInt fieldFieldIndex, sqInt oop);
 	sqInt  (*getThisSessionID)(void);
-	sqInt  (*ioFilenamefromStringofLengthresolveAliases)(char* aCharBuffer, char* filenameIndex, sqInt filenameLength, sqInt resolveFlag);
+	sqInt	  (*ioFilenamefromStringofLengthresolveAliases)(char* aCharBuffer, char* filenameIndex, sqInt filenameLength, sqInt resolveFlag);
 	sqInt  (*vmEndianness)(void);	
 #endif
 
 #if VM_PROXY_MINOR > 7
-	sqInt  (*internalIsImmutable)(sqInt oop);
-	sqInt  (*internalIsMutable)(sqInt oop);
-	sqInt  (*primitiveFailFor)(sqInt code);
-	sqInt  (*classAlien)(void);
-	sqInt *(*getStackPointer)(void);
-	sqInt  (*sendInvokeCallbackStackRegistersJmpbuf)(sqInt thunkPtrAsInt, sqInt stackPtrAsInt, sqInt regsPtrAsInt, sqInt jmpBufPtrAsInt);
-	sqInt  (*reestablishContextPriorToCallback)(sqInt callbackContext);
-	sqInt  (*classUnsafeAlien)(void);
-	/* New methods for proxy version 1.8 */
-	
-	/* callbackEnter: Re-enter the interpreter loop for a callback.
-	Arguments:
-	callbackID: Pointer to a location receiving the callback ID
-	used in callbackLeave
-	Returns: True if successful, false otherwise */
-	sqInt (*callbackEnter)(sqInt *callbackID);
-	
-	/* callbackLeave: Leave the interpreter from a previous callback
-	Arguments:
-	callbackID: The ID of the callback received from callbackEnter()
-	Returns: True if succcessful, false otherwise. */
-	sqInt (*callbackLeave)(sqInt  callbackID);
-	
-	/* addGCRoot: Add a variable location to the garbage collector.
-	The contents of the variable location will be updated accordingly.
-	Arguments:
-	varLoc: Pointer to the variable location
-	Returns: True if successful, false otherwise. */
-	sqInt (*addGCRoot)(sqInt *varLoc);
-	
-	/* removeGCRoot: Remove a variable location from the garbage collector.
-	Arguments:
-	varLoc: Pointer to the variable location
-	Returns: True if successful, false otherwise.
-	*/
-	sqInt (*removeGCRoot)(sqInt *varLoc);
+  /* New methods for proxy version 1.8 */
+
+  /* callbackEnter: Re-enter the interpreter loop for a callback.
+     Arguments:
+       callbackID: Pointer to a location receiving the callback ID
+                   used in callbackLeave
+     Returns: True if successful, false otherwise */
+  sqInt (*callbackEnter)(sqInt *callbackID);
+
+  /* callbackLeave: Leave the interpreter from a previous callback
+     Arguments:
+       callbackID: The ID of the callback received from callbackEnter()
+     Returns: True if succcessful, false otherwise. */
+  sqInt (*callbackLeave)(sqInt  callbackID);
+
+  /* addGCRoot: Add a variable location to the garbage collector.
+     The contents of the variable location will be updated accordingly.
+     Arguments:
+       varLoc: Pointer to the variable location
+     Returns: True if successful, false otherwise. */
+  sqInt (*addGCRoot)(sqInt *varLoc);
+
+  /* removeGCRoot: Remove a variable location from the garbage collector.
+     Arguments:
+       varLoc: Pointer to the variable location
+     Returns: True if successful, false otherwise.
+  */
+  sqInt (*removeGCRoot)(sqInt *varLoc);
 #endif
 
 #if VM_PROXY_MINOR > 8
+	/* See interp.h and above for standard error codes. */
+	sqInt  (*primitiveFailFor)(sqInt code);
+	void (*(*setInterruptCheckChain)(void (*aFunction)(void)))();
+	sqInt  (*classAlien)(void);
+	sqInt  (*classUnsafeAlien)(void);
+	sqInt  (*sendInvokeCallbackStackRegistersJmpbuf)(sqInt thunkPtrAsInt, sqInt stackPtrAsInt, sqInt regsPtrAsInt, sqInt jmpBufPtrAsInt);
+	sqInt  (*reestablishContextPriorToCallback)(sqInt callbackContext);
+	sqInt *(*getStackPointer)(void);
+	sqInt  (*internalIsImmutable)(sqInt oop);
+	sqInt  (*internalIsMutable)(sqInt oop);
 #endif
 
+#if VM_PROXY_MINOR > 9
+  sqInt  (*methodArg)  (sqInt index);
+  sqInt  (*objectArg)  (sqInt index);
+  sqInt  (*integerArg) (sqInt index);
+  double (*floatArg)   (sqInt index);
+  sqInt  (*methodReturnValue) (sqInt oop);
+  sqInt  (*topRemappableOop)  (void);
+#endif
+
+#if VM_PROXY_MINOR > 10
+# define DisownVMLockOutFullGC 1
+  sqInt	(*disownVM)(sqInt flags);
+  sqInt	(*ownVM)   (sqInt threadIdAndFlags);
+  void  (*addHighPriorityTickee)(void (*ticker)(void), unsigned periodms);
+  void  (*addSynchronousTickee)(void (*ticker)(void), unsigned periodms, unsigned roundms);
+  usqLong (*utcMicroseconds)(void);
+  sqInt (*tenuringIncrementalGC)(void);
+  sqInt (*isYoung) (sqInt anOop);
+  sqInt (*isKindOfClass)(sqInt oop, sqInt aClass);
+  sqInt (*primitiveErrorTable)(void);
+  sqInt (*primitiveFailureCode)(void);
+  sqInt (*instanceSizeOf)(sqInt aClass);
+#endif
+
+#if VM_PROXY_MINOR > 11
+/* VMCallbackContext opaque type avoids all including setjmp.h & vmCallback.h */
+  sqInt (*sendInvokeCallbackContext)(vmccp);
+  sqInt (*returnAsThroughCallbackContext)(int, vmccp, sqInt);
+  long  (*signedMachineIntegerValueOf)(sqInt);
+  long  (*stackSignedMachineIntegerValue)(sqInt);
+  unsigned long  (*positiveMachineIntegerValueOf)(sqInt);
+  unsigned long  (*stackPositiveMachineIntegerValue)(sqInt);
+  sqInt	 (*getInterruptPending)(void);
+  char  *(*cStringOrNullFor)(sqInt);
+  void  *(*startOfAlienData)(sqInt);
+  usqInt (*sizeOfAlienData)(sqInt);
+  sqInt  (*signalNoResume)(sqInt);
+#endif
 } VirtualMachine;
 
 #endif /* _SqueakVM_H */

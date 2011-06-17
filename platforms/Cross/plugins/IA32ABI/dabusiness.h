@@ -45,10 +45,11 @@
 	argstart = argvec;
 #else
 	argvec = alloca(moduloPOT(sizeof(long),size));
-# if defined(__MINGW32__) && (__GNUC__ >= 3)
+# if (defined(__MINGW32__) && (__GNUC__ >= 3)) || defined(__linux__)
 	/*
 	 * cygwin & MinGW's gcc 3.4.x's alloca is a library routine that answers
 	 * %esp + 4, so the outgoing stack is offset by one word if uncorrected.
+	 * Apparently the same can be said for 4.x linux implementations.
 	 * Grab the actual stack pointer to correct.
 	 */
 	argvec = getsp();
