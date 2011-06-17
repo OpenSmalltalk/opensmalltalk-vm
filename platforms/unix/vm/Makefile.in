@@ -41,10 +41,17 @@
 [make_plg]
 
 TARGET		= vm$a
-OBJS		= $(INTERP)$o cogit$o sqNamedPrims$o sqVirtualMachine$o sqHeapMap$o\
+COBJS		= $(INTERP)$o cogit$o sqNamedPrims$o sqVirtualMachine$o sqHeapMap$o\
 			sqExternalSemaphores$o sqTicker$o aio$o debug$o osExports$o \
 			sqUnixExternalPrims$o sqUnixMemory$o sqUnixCharConv$o sqUnixMain$o \
 			sqUnixVMProfile$o sqUnixHeartbeat$o sqUnixThreads$o
+
+IOBJS		= $(INTERP)$o sqNamedPrims$o sqVirtualMachine$o sqHeapMap$o\
+			sqExternalSemaphores$o sqTicker$o aio$o debug$o osExports$o \
+			sqUnixExternalPrims$o sqUnixMemory$o sqUnixCharConv$o sqUnixMain$o \
+			sqUnixVMProfile$o sqUnixThreads$o
+
+OBJS		= [COBJS_OR_IOBJS] # see mkmf
 
 XINCLUDES	= [includes] \
 		  -I$(topdir)/platforms/Cross/plugins/FilePlugin \

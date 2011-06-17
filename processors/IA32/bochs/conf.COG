@@ -3,6 +3,10 @@
 # this sets up the compile for Cog.  Disable as much inessential stuff
 # as possible leaving only the cpu/fpu & memory interface
 
+# build using
+# $ ./conf.COG
+# $ ./makeem
+
 set echo
 # CFLAGS="-pipe -O3 -fomit-frame-pointer -finline-functions -falign-loops=16 -falign-jumps=16 -falign-functions=16 -falign-labels=16 -falign-loops-max-skip=15 -falign-jumps-max-skip=15 -fprefetch-loop-arrays $CFLAGS"
 CFLAGS="-m32 $CFLAGS"

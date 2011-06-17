@@ -145,7 +145,11 @@ mkmf() {
     sed -f ${name}.sub < ${makefile_in} > makefile.sub
     makefile_in="makefile.sub"
   fi
-  sed "s%\[make_inc\]%%g
+if [ "$cogit" = "no" ]; then
+  sed "s/\[COBJS_OR_IOBJS\]/\$(IOBJS)/" <${makefile_in}
+else
+  sed "s/\[COBJS_OR_IOBJS\]/\$(COBJS)/" <${makefile_in}
+fi | sed "s%\[make_inc\]%%g
 s%\[target\]%${name}"'$a'"%g
 s%\[targets\]%${targets}%g
 s%\[includes\]%${includes}%g
@@ -157,7 +161,7 @@ s%\[make_prg\]%%g
 s%\[make_plg\]%%g
 s%\[plibs\]%${plibs}%g
 /\[make_targets\]/r ${make_targets}
-s%\[make_targets\]%%g" < ${makefile_in} > ${name}/Makefile
+s%\[make_targets\]%%g" > ${name}/Makefile
   /bin/rm -f ${make_targets} makefile.in makefile.sub
 }
 

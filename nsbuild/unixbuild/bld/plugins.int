@@ -22,5 +22,4 @@ SecurityPlugin \
 SocketPlugin \
 SurfacePlugin \
 UUIDPlugin \
-UnixOSProcessPlugin \
-VMProfileMacSupportPlugin
+UnixOSProcessPlugin

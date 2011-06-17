@@ -173,7 +173,7 @@ static void initTimers(void)
 #      else
 	sa.sa_flags= 0;	/* assume we already have BSD behaviour */
 #      endif
-#      if defined(__linux__) && !defined(__ia64) &7 !defined(__alpha__)
+#      if defined(__linux__) && !defined(__ia64) && !defined(__alpha__)
 	sa.sa_restorer= 0;
 #      endif
 	sigaction(SIGALRM, &sa, 0);
@@ -198,23 +198,6 @@ sqInt ioLowResMSecs(void)
 sqInt ioMSecs(void)
 {
   struct timeval now;
-  unsigned int nowMSecs;
-
-#if 1 /* HAVE_HIGHRES_COUNTER */
-
-  /* if we have a cheap, high-res counter use that to limit
-     the frequency of calls to gettimeofday to something reasonable. */
-  static unsigned int baseMSecs = 0;      /* msecs when we took base tick */
-  static sqLong baseTicks = 0;/* base tick for adjustment */
-  static sqLong tickDelta = 0;/* ticks / msec */
-  static sqLong nextTick = 0; /* next tick to check gettimeofday */
-
-  sqLong thisTick = ioHighResClock();
-
-  if(thisTick < nextTick) return lowResMSecs;
-
-#endif
-
   gettimeofday(&now, 0);
   if ((now.tv_usec-= startUpTime.tv_usec) < 0)
     {
@@ -222,32 +205,7 @@ sqInt ioMSecs(void)
       now.tv_sec-= 1;
     }
   now.tv_sec-= startUpTime.tv_sec;
-  nowMSecs = (now.tv_usec / 1000 + now.tv_sec * 1000);
-
-#if 1 /* HAVE_HIGHRES_COUNTER */
-  {
-    unsigned int msecsDelta;
-    /* Adjust our rdtsc rate every 10...100 msecs as needed.
-       This also covers msecs clock-wraparound. */
-    msecsDelta = nowMSecs - baseMSecs;
-    if(msecsDelta < 0 || msecsDelta > 100) {
-      /* Either we've hit a clock-wraparound or we are being
-	 sampled in intervals larger than 100msecs.
-	 Don't try any fancy adjustments */
-      baseMSecs = nowMSecs;
-      baseTicks = thisTick;
-      nextTick = 0;
-      tickDelta = 0;
-    } else if(msecsDelta >= 10) {
-      /* limit the rate of adjustments to 10msecs */
-      baseMSecs = nowMSecs;
-      tickDelta = (thisTick - baseTicks) / msecsDelta;
-      nextTick = baseTicks = thisTick;
-    }
-    nextTick += tickDelta;
-  }
-#endif
-  return lowResMSecs= nowMSecs;
+  return lowResMSecs= (now.tv_usec / 1000 + now.tv_sec * 1000);
 }
 
 sqInt ioMicroMSecs(void)
@@ -263,6 +221,34 @@ sqInt ioSeconds(void)
 {
   return convertToSqueakTime(time(0));
 }
+
+#define SecondsFrom1901To1970      2177452800ULL
+#define MicrosecondsFrom1901To1970 2177452800000000ULL
+
+#define MicrosecondsPerSecond 1000000ULL
+#define MillisecondsPerSecond 1000ULL
+
+#define MicrosecondsPerMillisecond 1000ULL
+/* Compute the current VM time basis, the number of microseconds from 1901. */
+
+static unsigned long long
+currentUTCMicroseconds()
+{
+	struct timeval utcNow;
+
+	gettimeofday(&utcNow,0);
+	return ((utcNow.tv_sec * MicrosecondsPerSecond) + utcNow.tv_usec)
+			+ MicrosecondsFrom1901To1970;
+}
+
+usqLong
+ioUTCMicroseconds() { return currentUTCMicroseconds(); }
+
+/* This is an expensive interface for use by profiling code that wants the time
+ * now rather than as of the last heartbeat.
+ */
+usqLong
+ioUTCMicrosecondsNow() { return currentUTCMicroseconds(); }
 #endif /* STACKVM */
 
 time_t convertToSqueakTime(time_t unixTime)
@@ -619,6 +605,8 @@ sqInt ioProcessEvents(void)
 
 	return result;
 }
+
+void	ioDrainEventQueue() {}
 
 sqInt ioScreenDepth(void)		 { return dpy->ioScreenDepth(); }
 sqInt ioScreenSize(void)		 { return dpy->ioScreenSize(); }

@@ -1,12 +1,17 @@
 #ifndef _SqueakVM_H
 #define _SqueakVM_H
 
+/* We expect interp.h to define VM_PROXY_MAJOR & VM_PROXY_MINOR appropriately
+ * for the VM generated with it.
+ */
+#include "interp.h"
+
+#ifndef VM_PROXY_MAJOR
 /* Increment the following number if you change the order of
    functions listed or if you remove functions */
-#define VM_PROXY_MAJOR 1
+# define VM_PROXY_MAJOR 1
+#endif
 
-/* Note: You can define a different VM_PROXY_MINOR if the plugin
-   should work with older VMs. */
 #ifndef VM_PROXY_MINOR
 /* Increment the following number if you add functions at the end */
 # define VM_PROXY_MINOR 12

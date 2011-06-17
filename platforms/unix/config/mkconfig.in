@@ -27,6 +27,7 @@ int_dirs="@vmmdir@/plugins ${platforms}/Cross/plugins ${plg_conf}"
 ext_dirs="@vmmdir@/plugins ${platforms}/Cross/plugins ${plg_conf}"
 
 cat > config.sh <<EOF
+cogit="@cogit@"
 srcdir="@vmmdir@"
 blddir="@blddir@"
 topdir="@topdir@"

@@ -5,7 +5,6 @@
 #include <time.h>
 #include <setjmp.h>
 
-#include "vmCallback.h"
 #include "sqVirtualMachine.h"
 
 
@@ -177,11 +176,13 @@ sqInt getStackPointer(void);  /* Newsqueak FFI */
 void *startOfAlienData(sqInt);
 usqInt sizeOfAlienData(sqInt);
 sqInt signalNoResume(sqInt);
+#if VM_PROXY_MINOR > 8
 sqInt getStackPointer(void);  /* Alien FFI */
 sqInt sendInvokeCallbackStackRegistersJmpbuf(sqInt thunkPtrAsInt, sqInt stackPtrAsInt, sqInt regsPtrAsInt, sqInt jmpBufPtrAsInt); /* Alien FFI */
 sqInt reestablishContextPriorToCallback(sqInt callbackContext); /* Alien FFI */
-sqInt sendInvokeCallbackContext(VMCallbackContext *);
-sqInt returnAsThroughCallbackContext(int, VMCallbackContext *, sqInt);
+sqInt sendInvokeCallbackContext(vmccp);
+sqInt returnAsThroughCallbackContext(int, vmccp, sqInt);
+#endif /* VM_PROXY_MINOR > 8 */
 char *cStringOrNullFor(sqInt);
 
 void *ioLoadFunctionFrom(char *fnName, char *modName);
@@ -428,9 +429,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->classUnsafeAlien    = classUnsafeAlien;
 	VM->sendInvokeCallbackStackRegistersJmpbuf = sendInvokeCallbackStackRegistersJmpbuf;
 	VM->reestablishContextPriorToCallback = reestablishContextPriorToCallback;
-# if ALIEN_FFI
 	VM->getStackPointer     = (sqInt *(*)(void))getStackPointer;
-# endif
 # if IMMUTABILITY
 	VM->internalIsImmutable = internalIsImmutable;
 	VM->internalIsMutable   = internalIsMutable;

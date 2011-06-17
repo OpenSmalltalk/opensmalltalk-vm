@@ -43,12 +43,19 @@ AC_DEFUN([AC_CHECK_VMM_DIR],[
   vmmcheck dir  -d ${vmmdir}
   vmmcheck dir  -d ${vmmdir}/plugins
   vmmcheck dir  -d ${vmmdir}/vm
-  vmmcheck file -f ${vmmdir}/vm/cogit.c
-  vmmcheck file -f ${vmmdir}/vm/cogit.h
-  vmmcheck file -f ${vmmdir}/vm/cogmethod.h
-  vmmcheck file -f ${vmmdir}/vm/cointerp.c
-  vmmcheck file -f ${vmmdir}/vm/cointerp.h
-  vmmcheck file -f ${vmmdir}/vm/gcc3x-cointerp.c
+  vmmcheck file -f ${vmmdir}/vm/interp.h
+  vmmcheck file -f ${vmmdir}/vm/vmCallback.h
+  if test "$cogit" = yes ; then
+	  vmmcheck file -f ${vmmdir}/vm/cogit.c
+	  vmmcheck file -f ${vmmdir}/vm/cogit.h
+	  vmmcheck file -f ${vmmdir}/vm/cogmethod.h
+	  vmmcheck file -f ${vmmdir}/vm/cointerp.c
+	  vmmcheck file -f ${vmmdir}/vm/cointerp.h
+	  vmmcheck file -f ${vmmdir}/vm/gcc3x-cointerp.c
+  else
+	  vmmcheck file -f ${vmmdir}/vm/interp.c
+	  vmmcheck file -f ${vmmdir}/vm/gcc3x-interp.c
+  fi
   AC_MSG_RESULT(okay)])
 
 
@@ -137,10 +144,10 @@ else
 fi])
 
 AC_DEFUN([AC_GNU_INTERP],
-[INTERP="cointerp"
+[if test "$cogit" = yes ; then INTERP="cointerp"; else INTERP="interp"; fi
 AC_SUBST(INTERP)
 AC_PROG_AWK
-AC_MSG_CHECKING(whether we can compile gcc3x-cointerp.c)
+AC_MSG_CHECKING(whether we can compile gcc3x-$INTERP)
 if test "$GCC" = "yes"; then
   INTERP="gcc3x-$INTERP"; AC_MSG_RESULT(yes)
 else

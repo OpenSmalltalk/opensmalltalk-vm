@@ -60,6 +60,20 @@ AC_ARG_WITH(vmmcfg,
 [ vmmcfg="${with-vmmcfg}"],
 [ vmmcfg="${blddir}"])
 
+# Compiling a Cogit VM or not?  If so, need a cogit$o, cointerp, etc.
+
+AC_ARG_ENABLE(cogit,
+[  --enable-cogit            compile a cogit VM [default=yes]],
+cogit="no", cogit="yes")
+AC_SUBST(cogit)
+
+#AC_ARG_ENABLE(jit,
+#[  --enable-jit            enable J4 support [default=no]],
+#JIT="yes", JIT="no")
+#
+#test $JIT = "yes" && J_CFLAGS="-DJ_ENABLED"
+#AC_SUBST(J_CFLAGS)
+
 # Check the generated src dir looks sane
 
 AC_CHECK_VMM_DIR
@@ -241,13 +255,6 @@ AC_CHECK_FUNCS(snprintf __snprintf,[break])
 
 AC_FUNC_MMAP
 AC_FUNC_ALLOCA
-
-#AC_ARG_ENABLE(jit,
-#[  --enable-jit            enable J4 support [default=no]],
-#JIT="yes", JIT="no")
-#
-#test $JIT = "yes" && J_CFLAGS="-DJ_ENABLED"
-#AC_SUBST(J_CFLAGS)
 
 # Checks for platform characteristics.
 
