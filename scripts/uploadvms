@@ -2,7 +2,7 @@
 IFS="	
 "
 if [ $# = 0 ]; then
-ARCHIVES="Cog.app.tgz	coglinux.tgz	cogwin.zip	Newspeak Virtual Machine.app.tgz	nsvmwin.zip"
+ARCHIVES="Cog.app.tgz	coglinux.tgz	cogwin.zip	Newspeak Virtual Machine.app.tgz	nsvmlinux.tgz	nsvmwin.zip"
 else
 ARCHIVES=
 	while [ -n "$1" ]; do
