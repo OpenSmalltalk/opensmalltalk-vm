@@ -55,7 +55,7 @@ fi
 if [ -n "$NL" ]; then
 	rm -rf nsvmlinux.tgz
 	COPYFILE_DISABLE=1 tar czf nsvmlinux.tgz nsvmlinux
-	EXES=nsvmlinux/lib/squeak/3.9-7/squeak
+	EXES="$EXES nsvmlinux/lib/squeak/3.9-7/squeak"
 fi
 if [ -n "$NM" ]; then
 	test -d Newspeak\ Virtual\ Machine.app || mkdir Newspeak\ Virtual\ Machine.app
