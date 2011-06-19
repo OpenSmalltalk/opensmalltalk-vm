@@ -62,6 +62,8 @@ struct VirtualMachine* interpreterProxy;
 #endif
 #if __APPLE__ && __MACH__ && __i386__
 # define STACK_ALIGN_BYTES 16
+#elif __linux__ && __i386__
+# define STACK_ALIGN_BYTES 16
 #endif
 
 #if !defined(setsp)
