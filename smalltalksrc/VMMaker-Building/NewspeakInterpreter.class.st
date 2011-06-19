@@ -540,9 +540,11 @@ NewspeakInterpreter class >> initializePrimitiveTable [
 
 		"LargeInteger Primitives (20-39)"
 		"32-bit logic is aliased to Integer prims above"
-		(20 39 primitiveFail)
+		(20 37 primitiveFail)
 
-		"Float Primitives (40-59)"
+		"Float Primitives (38-59)"
+		(38 primitiveAt) "for compatibility with Cog's primitiveFloatAt"
+		(39 primitiveAtPut) "for compatibility with Cog's primitiveFloatAtPut"
 		(40 primitiveAsFloat)
 		(41 primitiveFloatAdd)
 		(42 primitiveFloatSubtract)
@@ -640,7 +642,7 @@ NewspeakInterpreter class >> initializePrimitiveTable [
 		(120 primitiveCalloutToFFI)
 		(121 primitiveImageName)
 		(122 primitiveNoop)					"Blue Book: primitiveImageVolume"
-		(123 primitiveValueUninterruptably)	"@@@: Remove this when all VMs have support"
+		(123 primitiveFail)	"was primitiveValueUninterruptably"
 		(124 primitiveLowSpaceSemaphore)
 		(125 primitiveSignalAtBytesLeft)
 
@@ -793,12 +795,10 @@ NewspeakInterpreter class >> initializePrimitiveTable [
 		(547 primitiveFail)
 
 		"Pen Tablet Primitives - NO LONGER INDEXED"
-		(548 primitiveFail)
-		(549 primitiveFail)
+		(548 549 primitiveFail)
 
 		"Sound Codec Primitives - NO LONGER INDEXED"
-		(550 553 primitiveFail)
-		(554 569 primitiveFail)
+		(550 569 primitiveFail)
 
 		"External primitive support primitives"
 		(570 primitiveFlushExternalPrimitives)
@@ -1319,6 +1319,27 @@ NewspeakInterpreter >> allAccessibleObjectsOkay [
 		self okayFields: oop.
 		oop := self accessibleObjectAfter: oop.
 	].
+]
+
+{ #category : #'as yet unclassified' }
+NewspeakInterpreter >> allocateMemory: heapSize minimum: minimumMemory imageFile: fileStream headerSize: headerSize [
+
+	"Translate to C function call with (case sensitive) camelCase. The purpose of this
+	method is to document the translation.
+	The default implementation is sqAllocateMemory(minimumMemory, heapSize). This may
+	be redefined to make use of the image file and header size parameters for efficient
+	implementation with mmap().
+	See CCodeGenerator>>writeDefaultMacrosOn: which specifies a default implementation."
+
+	self inline: true.
+	self returnTypeC: 'char *'.
+	self var: #fileStream type: 'sqImageFile'.
+	^ self
+		allocateMemory: heapSize
+		Minimum: minimumMemory
+		ImageFile: fileStream
+		HeaderSize: headerSize
+
 ]
 
 { #category : #contexts }
@@ -8884,13 +8905,6 @@ NewspeakInterpreter >> primitiveValue [
 ]
 
 { #category : #'control primitives' }
-NewspeakInterpreter >> primitiveValueUninterruptably [
-	"The only purpose of this primitive is to indicate that the new EH mechanisms are supported."
-	<inline: false>
-	^self primitiveValue
-]
-
-{ #category : #'control primitives' }
 NewspeakInterpreter >> primitiveValueWithArgs [
 	| argumentArray blockContext blockArgumentCount arrayArgumentCount initialIP |
 	argumentArray := self popStack.
@@ -9754,7 +9768,11 @@ NewspeakInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt
 		self insufficientMemorySpecifiedError].
 
 	"allocate a contiguous block of memory for the Squeak heap"
-	memory := self cCode: '(usqInt)sqAllocateMemory(minimumMemory, heapSize)'.
+	memory := self
+					allocateMemory: heapSize
+					minimum: minimumMemory
+					imageFile: f
+					headerSize: headerSize.
 	memory = nil ifTrue: [self insufficientMemoryAvailableError].
 
 	memStart := self startOfMemory.
