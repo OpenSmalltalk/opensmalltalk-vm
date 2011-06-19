@@ -153,7 +153,8 @@ static void sigalrm(int signum)
   forceInterruptCheck();
 }
 
-static void initTimers(void)
+void
+ioInitTime(void)
 {
   /* set up the micro/millisecond clock */
   gettimeofday(&startUpTime, 0);
@@ -1382,7 +1383,7 @@ static void vm_printUsage(void)
 #endif
 #if 1
   printf("Deprecated:\n");
-# if !(STACKVM || COGVM)
+# if !STACKVM
   printf("  -jit                  enable the dynamic compiler (if available)\n");
 # endif
   printf("  -notimer              disable interval timer for low-res clock \n");
@@ -1688,12 +1689,8 @@ int main(int argc, char **argv, char **envp)
   printf("documentName: %s\n", documentName);
 #endif
 
-#if STACKVM || COGVM
   ioInitTime();
   ioInitThreads();
-#else
-  initTimers();
-#endif
   aioInit();
   dpy->winInit();
   imgInit();
@@ -1702,7 +1699,7 @@ int main(int argc, char **argv, char **envp)
    */
   dpy->winOpen(runAsSingleInstance ? squeakArgCnt : 0, squeakArgVec);
 
-#if defined(HAVE_LIBDL) && !(STACKVM || COGVM)
+#if defined(HAVE_LIBDL) && !STACKVM
   if (useJit)
     {
       /* first try to find an internal dynamic compiler... */
@@ -1725,7 +1722,7 @@ int main(int argc, char **argv, char **envp)
 	printf("could not find j_interpret\n");
       exit(1);
     }
-#endif /* defined(HAVE_LIBDL) && !(STACKVM || COGVM) */
+#endif /* defined(HAVE_LIBDL) && !STACKVM */
 
   if (installHandlers) {
 	struct sigaction sigusr1_handler_action, sigsegv_handler_action;

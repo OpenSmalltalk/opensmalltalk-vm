@@ -5,7 +5,12 @@
 #IFS=<tab><nl>
 IFS='	
 '
-for d in src/plugins/[A-Z]*
+if [ $# = 0 ]; then
+PD=src/plugins
+else
+PD=$1
+fi
+for d in $PD/[A-Z]*
 do
 	test -d "$d" || continue
 	find "$d" -name .svn -prune -o \( -type f -a -name '*.[ch]' \) -exec \
