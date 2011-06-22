@@ -22,6 +22,12 @@ NewCoObjectMemorySimulator >> allocateMemory: endianness [
 ]
 
 { #category : #'simulation only' }
+NewCoObjectMemorySimulator >> arrayValueOf: arrayOop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter arrayValueOf: arrayOop
+]
+
+{ #category : #'simulation only' }
 NewCoObjectMemorySimulator >> booleanValueOf: obj [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter booleanValueOf: obj
@@ -144,6 +150,12 @@ NewCoObjectMemorySimulator >> fullGC [
 		cr; nextPutAll:'<Running full GC ('; print: coInterpreter byteCount; nextPutAll: ')...'; flush.
 	super fullGC.
 	coInterpreter transcript show: ' done>'
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> getThisSessionID [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter getThisSessionID
 ]
 
 { #category : #'memory access' }
@@ -461,12 +473,6 @@ NewCoObjectMemorySimulator >> signalFinalization: oop [
 	^coInterpreter signalFinalization: oop
 ]
 
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> sqFileSize: file [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter sqFileSize: file
-]
-
 { #category : #'memory access' }
 NewCoObjectMemorySimulator >> sqGrowMemory: oldLimit By: delta [
 	| newMemory |
@@ -544,18 +550,6 @@ NewCoObjectMemorySimulator >> storePointerUnchecked: fieldIndex ofObject: oop wi
 	"Override to ensure acess is within the heap"
 	self assert: oop >= self startOfMemory.
 	^super storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer
-]
-
-{ #category : #'debug printing' }
-NewCoObjectMemorySimulator >> str: aString n: bString cmp: n [
-	"implementation of strncmp(3)"
-	bString isInteger ifFalse:
-		[^(aString first: n) ~= (bString first: n)].
-	1 to: n do:
-		[:i| | v |
-		v := (aString at: i) asInteger - (self byteAt: bString + i - 1).
-		v ~= 0 ifTrue: [^v]].
-	^0
 ]
 
 { #category : #'simulation only' }

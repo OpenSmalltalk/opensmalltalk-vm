@@ -545,17 +545,6 @@ Cogit class >> implicitReturnTypeFor: aSelector [
 ]
 
 { #category : #'class initialization' }
-Cogit class >> initialize [
-	Debug := false.
-	EagerInstructionDecoration isNil ifTrue:
-		[EagerInstructionDecoration := false]. "speeds up single stepping but could lose fidelity"
-	self initializeErrorCodes.
-	self initializeCogMethodConstants.
-	self initializeAnnotationConstants.
-	self initializeCompilationConstants
-]
-
-{ #category : #'class initialization' }
 Cogit class >> initializeAnnotationConstants [
 	"These form the method map for a cog method.  Each annotated instruction has a
 	 byte in the map, and each byte in the map has two parts.  In the least signficant
@@ -636,6 +625,31 @@ Cogit class >> initializeErrorCodes [
 	InsufficientCodeSpace := -1.
 	EncounteredUnknownBytecode := -2.
 	MaxNegativeErrorCode := EncounteredUnknownBytecode
+]
+
+{ #category : #'class initialization' }
+Cogit class >> initializeMiscConstantsWith: optionsDictionary [
+	Debug := optionsDictionary at: #Debug ifAbsent: [false].
+	(optionsDictionary includesKey: #EagerInstructionDecoration)
+		ifTrue:
+			[EagerInstructionDecoration := optionsDictionary at: #EagerInstructionDecoration]
+		ifFalse:
+			[EagerInstructionDecoration isNil ifTrue:
+				[EagerInstructionDecoration := false]]. "speeds up single stepping but could lose fidelity"
+
+	NewspeakVM := optionsDictionary at: #NewspeakVM ifAbsent: [false].
+	"N.B.  Not yet implemented!!"
+	IMMUTABILITY := optionsDictionary at: #IMMUTABILITY ifAbsent: [false]
+]
+
+{ #category : #'class initialization' }
+Cogit class >> initializeWithOptions: optionsDictionary [
+
+	self initializeMiscConstantsWith: optionsDictionary. "must preceed other initialization."
+	self initializeErrorCodes.
+	self initializeCogMethodConstants.
+	self initializeAnnotationConstants.
+	self initializeCompilationConstants
 ]
 
 { #category : #translation }
@@ -4723,8 +4737,7 @@ Cogit >> generateTrampolines [
 Cogit >> generateVMOwnerLockFunctions [
 	| startAddress |
 	<inline: false>
-	self cppIf: (self cCode: 'COGMTVM'
-					inSmalltalk: [coInterpreter isThreadedVM])
+	self cppIf: COGMTVM
 		ifTrue:
 			[self allocateOpcodes: backEnd numLowLevelLockOpcodes bytecodes: 0.
 			initialPC := 0.
