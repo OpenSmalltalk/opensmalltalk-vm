@@ -96,12 +96,18 @@ VMClass class >> implicitReturnTypeFor: aSelector [
 ]
 
 { #category : #initialization }
-VMClass class >> initializeMiscConstants [
+VMClass class >> initializeMiscConstantsWith: optionsDictionary [
 	"Falsify the `what type of VM is this?' flags that are defined in the various interp.h files.
-	Subclass implementations need to include a super initializeMiscConstants."
+	Subclass implementations need to include a super initializeMiscConstantsWith:."
 
 	STACKVM := COGVM := COGMTVM := false.
 	IMMUTABILITY := NewspeakVM := false
+]
+
+{ #category : #initialization }
+VMClass class >> initializeWithOptions: optionsDictionary [
+	"Initialize the receiver, typically initializing class variables. Initialize any class variables
+	 whose names occur in optionsDictionary with the corresponding values there-in."
 ]
 
 { #category : #translation }
@@ -270,6 +276,14 @@ VMClass >> addressOf: anObject [
 	<doNotGenerate>
 	"Translates into &anObject in C."
 	^anObject
+]
+
+{ #category : #'C library simulation' }
+VMClass >> asString: stringIndex size: stringSize [
+	"stringIndex is an address in the heap.  Create a String of the requested length
+	form the bytes in the heap starting at stringIndex."
+	<doNotGenerate>
+	^self st: (ByteString new: stringSize) rn: stringIndex cpy: stringSize
 ]
 
 { #category : #'translation support' }
@@ -508,6 +522,30 @@ VMClass >> sqLowLevelMFence [
 	"A no-op in the simulator"
 ]
 
+{ #category : #'C library simulation' }
+VMClass >> st: aString rn: bString cpy: n [
+	<doNotGenerate>
+	"implementation of strncpy(3)"
+	aString isString
+		ifTrue:
+			[1 to: n do:
+				[:i| | v |
+				v := bString isString
+						ifTrue: [bString at: i]
+						ifFalse: [Character value: (self byteAt: bString + i - 1)].
+				aString at: i put: v.
+				v asInteger = 0 ifTrue: [^aString]]]
+		ifFalse:
+			[1 to: n do:
+				[:i| | v |
+				v := bString isString
+						ifTrue: [(bString at: i) asInteger]
+						ifFalse: [self byteAt: bString + i - 1].
+				self byteAt: aString + i - 1 put: v.
+				v = 0 ifTrue: [^aString]]].
+	^aString
+]
+
 { #category : #'memory access' }
 VMClass >> storeFloatAtPointer: pointer from: aFloat [
 	"This gets implemented by Macros in C, where its types will also be checked.
@@ -524,4 +562,29 @@ VMClass >> storeSingleFloatAtPointer: pointer from: aFloat [
 	<doNotGenerate>
 
 	^self storeSingleFloatAt: pointer from: aFloat
+]
+
+{ #category : #'C library simulation' }
+VMClass >> str: aString n: bString cmp: n [
+	<doNotGenerate>
+	"implementation of strncmp(3)"
+	bString isString ifTrue:
+		[^(aString first: n) ~= (bString first: n)].
+	1 to: n do:
+		[:i| | v |
+		v := (aString at: i) asInteger - (self byteAt: bString + i - 1).
+		v ~= 0 ifTrue: [^v]].
+	^0
+]
+
+{ #category : #'C library simulation' }
+VMClass >> strlen: aCString [
+	"Simulate strlen(3)"
+	<doNotGenerate>
+	| len |
+	aCString isString ifTrue:
+		[^aCString size].
+	len := 0.
+	[(self byteAt: aCString + len) = 0 ifTrue: [^len].
+	len := len + 1] repeat
 ]

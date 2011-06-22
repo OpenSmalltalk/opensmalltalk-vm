@@ -19,7 +19,6 @@ Class {
 		'traceOn',
 		'myBitBlt',
 		'displayForm',
-		'filesOpen',
 		'imageName',
 		'pluginList',
 		'mappedPluginEntries',
@@ -447,7 +446,8 @@ CogVMSimulator >> clipboardWrite: sz From: actualDataAddress At: ignored [
 
 { #category : #initialization }
 CogVMSimulator >> close [  "close any files that ST may have opened"
-	filesOpen do: [:f | f close]
+	(self loadNewPlugin: 'FilePlugin') ifNotNil:
+		[:filePlugin| filePlugin close]
 ]
 
 { #category : #'simulation only' }
@@ -838,15 +838,6 @@ CogVMSimulator >> fetchPointer: fieldIndex ofObject: oop [
 	^objectMemory fetchPointer: fieldIndex ofObject: oop
 ]
 
-{ #category : #'file primitives' }
-CogVMSimulator >> fileValueOf: integerPointer [
-	"Convert the (integer) fileID to the actual fileStream it uses"
-	self success: (objectMemory isIntegerObject: integerPointer).
-	self successful
-		ifTrue: [^ filesOpen at: (objectMemory integerValueOf: integerPointer)]
-		ifFalse: [^ nil]
-]
-
 { #category : #testing }
 CogVMSimulator >> findNewMethodInClass: class [
 "
@@ -1167,7 +1158,6 @@ CogVMSimulator >> initialize [
 	traceOn := true.
 	printSends := printFrameAtEachStep := printBytecodeAtEachStep := false.
 	myBitBlt := BitBltSimulator new setInterpreter: self.
-	filesOpen := OrderedCollection new.
 	transcript := Transcript.
 	displayForm := 'Display has not yet been installed' asDisplayText form.
 	suppressHeartbeatFlag := deferSmash := deferredSmash := false.
@@ -2470,71 +2460,6 @@ CogVMSimulator >> primitiveExecuteMethodArgsArray [
 	^super primitiveExecuteMethodArgsArray
 ]
 
-{ #category : #'file primitives' }
-CogVMSimulator >> primitiveFileDelete [ 
-
-	| namePointer |
-	namePointer := self stackTop.
-	self success: (objectMemory isBytes: namePointer).
-	self success: (StandardFileStream isAFileNamed: (self stringOf: namePointer)).
-	self successful ifTrue: [FileDirectory deleteFilePath: (self stringOf: namePointer)].
-	self successful ifTrue: [self pop: 1].  "pop fileName; leave rcvr on stack"
-]
-
-{ #category : #'file primitives' }
-CogVMSimulator >> primitiveFileOpen [
-	| namePointer writeFlag fileName f |
-	writeFlag := self booleanValueOf: self stackTop.
-	namePointer := self stackValue: 1.
-	self success: (objectMemory isBytes: namePointer).
-	self successful ifTrue:
-		[fileName := self stringOf: namePointer.
-		filesOpen addLast: (writeFlag
-			ifTrue: [f := FileStream fileNamed: fileName.
-					f ifNil: [^ self primitiveFail] ifNotNil: [f binary]]
-			ifFalse: [(StandardFileStream isAFileNamed: fileName)
-				ifTrue: [f := (FileStream readOnlyFileNamed: fileName).
-						f ifNil:[^self primitiveFail] ifNotNil:[f binary]]
-				ifFalse: [^ self primitiveFail]]).
-		self pop: 3 thenPushInteger: filesOpen size]
-]
-
-{ #category : #'file primitives' }
-CogVMSimulator >> primitiveFileRename [
-
-	| oldNamePointer newNamePointer f |
-	oldNamePointer := self stackTop.
-	newNamePointer := self stackValue: 1.
-	self success: (objectMemory isBytes: oldNamePointer).
-	self success: (objectMemory isBytes: newNamePointer).
-	self success: (StandardFileStream isAFileNamed: (self stringOf: oldNamePointer)).
-	self success: (StandardFileStream isAFileNamed: (self stringOf: newNamePointer)) not.
-	self successful ifTrue: [
-		f := FileStream oldFileNamed: (self stringOf: oldNamePointer).
-		f rename: (self stringOf: newNamePointer).
-		f close.
-	].
-	self successful ifTrue: [
-		self pop: 2.  "oldName, newName; leave rcvr on stack"
-	]
-]
-
-{ #category : #'file primitives' }
-CogVMSimulator >> primitiveFileStdioHandles [
-	| result |
-	result := objectMemory instantiateClass: objectMemory classArray indexableSize: 3.
-	result = nil ifTrue:
-		[^self primitiveFailFor: PrimErrNoMemory].
-	Transcript clear.
-	filesOpen addLast: (FakeStdinStream for: self). "stdin"
-	objectMemory storePointerUnchecked: 0 ofObject: result withValue: (objectMemory integerObjectOf: filesOpen size).
-	filesOpen addLast: Transcript. "stdout"
-	objectMemory storePointerUnchecked: 1 ofObject: result withValue: (objectMemory integerObjectOf: filesOpen size).
-	filesOpen addLast: Transcript. "stderr"
-	objectMemory storePointerUnchecked: 2 ofObject: result withValue: (objectMemory integerObjectOf: filesOpen size).
-	self pop: 1 thenPush: result
-]
-
 { #category : #'other primitives' }
 CogVMSimulator >> primitiveGetAttribute [
 	"Fetch the system attribute with the given integer ID. The result is a string, which will be empty if the attribute is not defined."
@@ -3214,73 +3139,6 @@ CogVMSimulator >> space [
 	traceOn ifTrue: [ transcript space ]
 ]
 
-{ #category : #'file primitives' }
-CogVMSimulator >> sqFile: file Read: count Into: byteArrayIndex At: startIndex [
-
-	startIndex to: startIndex + count - 1 do:
-		[ :i |
-		file atEnd ifTrue: [^i - startIndex].
-		self byteAt: byteArrayIndex + i put: file next asInteger].
-	^count
-]
-
-{ #category : #'file primitives' }
-CogVMSimulator >> sqFile: file SetPosition: newPosition [
-
-	file position: newPosition.
-]
-
-{ #category : #'file primitives' }
-CogVMSimulator >> sqFile: file Truncate: truncatePosition [
-
-	file truncate: truncatePosition.
-]
-
-{ #category : #'file primitives' }
-CogVMSimulator >> sqFile: file Write: count From: byteArrayIndex At: startIndex [
-
-	file isBinary
-		ifTrue:
-			[startIndex to: startIndex + count - 1 do:
-				[ :i | file nextPut: (self byteAt: byteArrayIndex + i)]]
-		ifFalse:
-			[startIndex to: startIndex + count - 1 do:
-				[ :i | | byte |
-				byte := self byteAt: byteArrayIndex + i.
-				file nextPut: (Character value: (byte == 12 "lf" ifTrue: [15"cr"] ifFalse: [byte]))]].
-	^count
-]
-
-{ #category : #'file primitives' }
-CogVMSimulator >> sqFileAtEnd: file [
-
-	^ file atEnd
-]
-
-{ #category : #'file primitives' }
-CogVMSimulator >> sqFileClose: file [
-
-	file close.
-]
-
-{ #category : #'file primitives' }
-CogVMSimulator >> sqFileFlush: file [
-
-	^ file flush
-]
-
-{ #category : #'file primitives' }
-CogVMSimulator >> sqFileGetPosition: file [
-
-	^ file position
-]
-
-{ #category : #'file primitives' }
-CogVMSimulator >> sqFileSize: file [
-
-	^ file size
-]
-
 { #category : #'plugin support' }
 CogVMSimulator >> sqGetInterpreterProxy [
 	"I am basically my own proxy..."
@@ -3417,42 +3275,6 @@ CogVMSimulator >> strlen: aString [
 ]
 
 { #category : #'debug printing' }
-CogVMSimulator >> symbolic: byte at: ip inMethod: meth [
-	"Print a bytecode in simple symbolic form"
-
-	| type offset |
-	type := byte // 16.  
-	offset := byte \\ 16.  
-	type=0 ifTrue: [^ 'pushRcvr ' , offset printString].
-	type=1 ifTrue: [^ 'pushTemp ' , offset printString].
-	type=2 ifTrue: [^ 'pushLit ' , offset printString].
-	type=3 ifTrue: [^ 'pushLit ' , (offset+16) printString].
-	type=4 ifTrue: [^ 'pushLitVar ' , offset printString].
-	type=5 ifTrue: [^ 'pushLitVar ' , (offset+16) printString].
-	type=6 ifTrue: [offset<8
-					ifTrue: [^ 'storePopRcvr ' , offset printString]
-					ifFalse: [^ 'storePopTemp ' , (offset-8) printString]].
-	type=7 ifTrue: [offset=0 ifTrue: [^ 'pushRcvr'].
-				offset<8 ifTrue: [^ 'pushConst ' , ( #(true false nil -1 0 1 2) at: offset) printString].
-				offset=8 ifTrue: [^ 'returnSelf'].
-				offset<12 ifTrue: [^ 'returnConst ' , ( #(true false nil -1 0 1 2) at: offset-8) printString].
-				offset=12 ifTrue: [^ 'returnTop'].
-				offset=13 ifTrue: [^ 'blockReturnTop'].
-				offset>13 ifTrue: [^ 'unusedBytecode']].
-	type=8 ifTrue: [^ self symbolicExtensions: offset at: ip inMethod: meth].
-	type=9 ifTrue:  "short jumps"
-			[offset<8 ifTrue: [^ 'jump ' , (offset+1) printString].
-			^ 'jumpIfFalse ' , (offset-8+1) printString].
-	type=10 ifTrue:  "long jumps"
-			[offset<8 ifTrue: [^ 'extendedJump'].
-			offset<12 ifTrue: [^ 'extendedJumpIfTrue'].
-			true ifTrue: [^ 'extendedJumpIfFalse']].
-	type=11 ifTrue: [^ 'sendSpl ' , (Smalltalk specialSelectorAt: offset+1)].
-	type=12 ifTrue: [^ 'sendSpl ' , (Smalltalk specialSelectorAt: offset+17)].
-	type>12 ifTrue: [^ 'send ' , (self stringOf: (self literal: offset ofMethod: meth))]
-]
-
-{ #category : #'debug printing' }
 CogVMSimulator >> symbolicExtensions: offset at: ip inMethod: meth [
 	| type offset2 byte2 byte3 byte4 |
 	offset <=6 ifTrue: 
@@ -3513,66 +3335,6 @@ CogVMSimulator >> symbolicExtensions: offset at: ip inMethod: meth [
 	^'pushClosureCopyNumCopiedValues: ', (byte2 bitShift: -4) printString,
 		' numArgs: ', (byte2 bitAnd: 16rF) printString,
 		' blockSize: ', ((byte3 * 256) + byte4) printString
-]
-
-{ #category : #'debug printing' }
-CogVMSimulator >> symbolicMethod: aMethod [
-	self symbolicMethod: aMethod printAbsPC: false
-]
-
-{ #category : #'debug printing' }
-CogVMSimulator >> symbolicMethod: aMethod printAbsPC: printAbsPC [
-	| pc end latestContinuation prim stackDepth stackDepths |
-	transcript ensureCr.
-	(prim := self primitiveIndexOf: aMethod) > 0 ifTrue:
-		[transcript nextPutAll: '<primitive: '; print: prim; nextPut: $>.
-		(self isQuickPrimitiveIndex: prim) ifTrue:
-			[transcript nextPutAll: ' quick method'; cr; flush.
-			 ^self].
-		transcript cr].
-	stackDepth := self tempCountOf: aMethod.
-	stackDepths := [self debugStackPointersFor: aMethod]
-						on: Error
-						do: [:ex| nil].
-	pc := latestContinuation := self startPCOfMethod: aMethod.
-	end := objectMemory byteSizeOf: aMethod.
-	[pc <= end] whileTrue:
-		[| byte byte2 byte3 byte4 type offset jumpTarget |
-		 byte := objectMemory fetchByte: pc ofObject: aMethod.
-		 type := byte // 16.
-		 offset := byte \\ 16.  
-		 (type =7 and: [offset >= 8 and: [pc >= latestContinuation]]) ifTrue:"Return bytecodes (possible lastPC here)"
-			[end := pc].
-		 (type = 8 and: [offset = 15]) ifTrue: "closure creation; update latest continuation"
-			[byte3 := objectMemory fetchByte: pc + 2 ofObject: aMethod.
-			 byte4 := objectMemory fetchByte: pc + 3 ofObject: aMethod.
-			 jumpTarget := (byte3 * 256) + byte4 + pc + 4.
-			 jumpTarget > latestContinuation ifTrue: [latestContinuation := jumpTarget]].
-		 type=9 ifTrue: "Short jumps (need to update latest continuation"
-			[jumpTarget := (offset < 8 ifTrue: [offset] ifFalse: [offset - 8]) + pc + 2.
-			jumpTarget > latestContinuation ifTrue: [latestContinuation := jumpTarget]].
-		 type=10 ifTrue: "Long jumps (need to update latest continuation)"
-			[byte2 := objectMemory fetchByte: pc + 1 ofObject: aMethod.
-			 jumpTarget := (offset < 8 ifTrue: [offset - 4] ifFalse: [offset bitAnd: 3]) * 256 + byte2 + pc + 2.
-			 jumpTarget > latestContinuation ifTrue: [latestContinuation := jumpTarget]].
-
-		 printAbsPC ifTrue:
-			[(objectMemory firstIndexableField: aMethod) + pc printOn: transcript base: 16.
-			 transcript space].
-		 transcript print: pc + 1 ; space.
-		 byte printOn: transcript base: 16 length: 2 padded: false.
-		 transcript space; nextPutAll: (self symbolic: byte at: pc inMethod: aMethod).
-		 pc := type = 8 "extensions"
-					ifTrue: [pc + (#(2 2 2 2 3 2 2 1 1 1 2 1 3 3 3 4) at: byte \\ 16 + 1)]
-					ifFalse: [type = 10 "long jumps"
-								ifTrue: [pc + 2]
-								ifFalse: [pc + 1]].
-		 stackDepths notNil ifTrue:
-			[transcript tab; tab; nextPut: $(; print: stackDepth.
-			 (byte ~= 144 and: [pc <= end and: [stackDepth ~= (stackDepths at: pc)]]) ifTrue:
-				[transcript nextPutAll: '->'; print: (stackDepth := stackDepths at: pc)].
-			 transcript nextPut: $)].
-		 transcript cr; flush]
 ]
 
 { #category : #'simulation only' }

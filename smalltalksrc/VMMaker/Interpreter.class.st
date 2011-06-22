@@ -195,30 +195,6 @@ Interpreter class >> declareCVarsIn: aCCodeGenerator [
 ]
 
 { #category : #initialization }
-Interpreter class >> initialize [
-	"Interpreter initialize"
-
-	self initializeWithBytesToWord: 4.  "initialize ObjectMemory constants"
-	self initializeAssociationIndex.
-	self initializeBytecodeTable.
-	self initializeCaches.
-	self initializeCharacterIndex.
-	self initializeCharacterScannerIndices.
-	self initializeClassIndices.
-	self initializeCompilerHooks.
-	self initializeContextIndices.
-	self initializeDirectoryLookupResultCodes.
-	self initializeMessageIndices.
-	self initializeMethodIndices.
-	self initializeMiscConstants.
-	self initializePointIndices.
-	self initializePrimitiveTable.
-	self initializeSchedulerIndices.
-	self initializeSmallIntegers.
-	self initializeStreamIndices
-]
-
-{ #category : #initialization }
 Interpreter class >> initializeAssociationIndex [
 	ValueIndex := 1
 ]
@@ -448,11 +424,11 @@ Interpreter class >> initializeMethodIndices [
 ]
 
 { #category : #initialization }
-Interpreter class >> initializeMiscConstants [
+Interpreter class >> initializeMiscConstantsWith: optionsDictionary [
 
-	super initializeMiscConstants.
+	super initializeMiscConstantsWith: optionsDictionary.
 
-	DoBalanceChecks := false. "generate stack balance checks"
+	DoBalanceChecks := optionsDictionary at: #DoBalanceChecks ifAbsent: [false]. "generate stack balance checks"
 	SemaphoresToSignalSize := 500.
 	PrimitiveExternalCallIndex := 117. "Primitive index for #primitiveExternalCall"
 	MillisecondClockMask := 16r1FFFFFFF.
@@ -799,6 +775,30 @@ Interpreter class >> initializeStreamIndices [
 	StreamWriteLimitIndex := 3.
 ]
 
+{ #category : #initialization }
+Interpreter class >> initializeWithOptions: optionsDictionary [
+	"Interpreter initializeWithOptions: Dictionary new"
+
+	super initializeWithOptions: optionsDictionary.  "initialize ObjectMemory constants"
+	self initializeMiscConstants. "must preceed other initialization."
+	self initializeAssociationIndex.
+	self initializeBytecodeTable.
+	self initializeCaches.
+	self initializeCharacterIndex.
+	self initializeCharacterScannerIndices.
+	self initializeClassIndices.
+	self initializeCompilerHooks.
+	self initializeContextIndices.
+	self initializeDirectoryLookupResultCodes.
+	self initializeMessageIndices.
+	self initializeMethodIndices.
+	self initializePointIndices.
+	self initializePrimitiveTable.
+	self initializeSchedulerIndices.
+	self initializeSmallIntegers.
+	self initializeStreamIndices
+]
+
 { #category : #translation }
 Interpreter class >> isInterpreterClass [
 	^true
@@ -819,7 +819,9 @@ Interpreter class >> macroBenchmark [  "Interpreter macroBenchmark"
 	ObjectMemory initialize.
 	cg := CCodeGenerator new initialize.
 	Interpreter initialize.
-	ObjectMemory initializeWithBytesToWord: 4.
+	ObjectMemory initializeWithOptions: (Dictionary new
+											at: #BytesPerWord put: 4;
+											yourself).
 	cg addClass: Interpreter.
 	cg addClass: ObjectMemory.
 	Interpreter declareCVarsIn: cg.
@@ -1256,11 +1258,6 @@ Interpreter >> allocateOrRecycleContext: needsLarge [
 Interpreter >> areIntegers: oop1 and: oop2 [
 "Test oop1 and oop2 to make sure both are SmallIntegers."
 	^ ((oop1 bitAnd: oop2) bitAnd: 1) ~= 0
-]
-
-{ #category : #'message sending' }
-Interpreter >> argCount [
-	^ argumentCount
 ]
 
 { #category : #'compiled methods' }
@@ -5048,12 +5045,13 @@ Interpreter >> primitiveCalloutToFFI [
 { #category : #'object access primitives' }
 Interpreter >> primitiveChangeClass [
 	"Primitive. Change the class of the receiver into the class of the argument given that the format of the receiver matches the format of the argument's class. Fail if receiver or argument are SmallIntegers, or the receiver is an instance of a compact class and the argument isn't, or when the argument's class is compact and the receiver isn't, or when the format of the receiver is different from the format of the argument's class, or when the arguments class is fixed and the receiver's size differs from the size that an instance of the argument's class should have."
-	| arg rcvr err |
+	| arg rcvr argClass err |
 	arg := self stackObjectValue: 0.
 	rcvr := self stackObjectValue: 1.
 	self successful ifFalse:[^nil].
+	argClass := self fetchClassOfNonInt: arg.
 
-	err := self changeClassOf: rcvr toThatOf: arg.
+	err := self changeClassOf: rcvr to: argClass.
 	err = 0
 		ifTrue: ["Flush at cache because rcvr's class has changed."
 				self flushAtCache.

@@ -112,12 +112,15 @@ Class {
 		'DirEntryFound',
 		'DirNoMoreEntries',
 		'DumpStackOnLowSpace',
+		'EnclosingMixinIndex',
+		'EnclosingObjectIndex',
 		'FailImbalancedPrimitives',
 		'HeaderFlagBitPosition',
 		'MaxExternalPrimitiveTableSize',
 		'MaxJumpBuf',
 		'MaxPrimitiveIndex',
 		'MaxQuickPrimitiveIndex',
+		'MixinIndex',
 		'PrimitiveExternalCallIndex',
 		'PrimitiveTable'
 	],
@@ -258,30 +261,6 @@ StackInterpreter class >> implicitReturnTypeFor: aSelector [
 ]
 
 { #category : #initialization }
-StackInterpreter class >> initialize [
-	"StackInterpreter initialize"
-
-	NewObjectMemory initializeWithBytesToWord: 4.  "initialize ObjectMemory constants"
-	self initializeAssociationIndex.
-	self initializeBytecodeTable.
-	self initializeCaches.
-	self initializeCharacterIndex.
-	self initializeCharacterScannerIndices.
-	self initializeClassIndices.
-	self initializeContextIndices.
-	self initializeDirectoryLookupResultCodes.
-	self initializeFrameIndices.
-	self initializeMessageIndices.
-	self initializeMethodIndices.
-	self initializeMiscConstants.
-	self initializePointIndices.
-	self initializePrimitiveTable.
-	self initializeSchedulerIndices.
-	self initializeSmallIntegers.
-	self initializeStreamIndices
-]
-
-{ #category : #initialization }
 StackInterpreter class >> initializeAssociationIndex [
 	ValueIndex := 1
 ]
@@ -293,94 +272,97 @@ StackInterpreter class >> initializeBytecodeTable [
 
 	BytecodeTable := Array new: 256.
 	self table: BytecodeTable from:
-	#(
-		(  0  15 pushReceiverVariableBytecode)
-		( 16  31 pushTemporaryVariableBytecode)
-		( 32  63 pushLiteralConstantBytecode)
-		( 64  95 pushLiteralVariableBytecode)
-		( 96 103 storeAndPopReceiverVariableBytecode)
-		(104 111 storeAndPopTemporaryVariableBytecode)
-		(112 pushReceiverBytecode)
-		(113 pushConstantTrueBytecode)
-		(114 pushConstantFalseBytecode)
-		(115 pushConstantNilBytecode)
-		(116 pushConstantMinusOneBytecode)
-		(117 pushConstantZeroBytecode)
-		(118 pushConstantOneBytecode)
-		(119 pushConstantTwoBytecode)
-		(120 returnReceiver)
-		(121 returnTrue)
-		(122 returnFalse)
-		(123 returnNil)
-		(124 returnTopFromMethod)
-		(125 returnTopFromBlock)
+	{
+		#(  0  15 pushReceiverVariableBytecode).
+		#( 16  31 pushTemporaryVariableBytecode).
+		#( 32  63 pushLiteralConstantBytecode).
+		#( 64  95 pushLiteralVariableBytecode).
+		#( 96 103 storeAndPopReceiverVariableBytecode).
+		#(104 111 storeAndPopTemporaryVariableBytecode).
+		#(112 pushReceiverBytecode).
+		#(113 pushConstantTrueBytecode).
+		#(114 pushConstantFalseBytecode).
+		#(115 pushConstantNilBytecode).
+		#(116 pushConstantMinusOneBytecode).
+		#(117 pushConstantZeroBytecode).
+		#(118 pushConstantOneBytecode).
+		#(119 pushConstantTwoBytecode).
+		#(120 returnReceiver).
+		#(121 returnTrue).
+		#(122 returnFalse).
+		#(123 returnNil).
+		#(124 returnTopFromMethod).
+		#(125 returnTopFromBlock).
 
-		(126 127 unknownBytecode)
+		"Newspeak bytecodes"
+		{ 126. NewspeakVM ifTrue: [#dynamicSuperSendBytecode] ifFalse: [#unknownBytecode]}.
+		{ 127. NewspeakVM ifTrue: [#pushImplicitReceiverBytecode] ifFalse: [#unknownBytecode]}.
 
-		(128 extendedPushBytecode)
-		(129 extendedStoreBytecode)
-		(130 extendedStoreAndPopBytecode)
-		(131 singleExtendedSendBytecode)
-		(132 doubleExtendedDoAnythingBytecode)
-		(133 singleExtendedSuperBytecode)
-		(134 secondExtendedSendBytecode)
-		(135 popStackBytecode)
-		(136 duplicateTopBytecode)
+		#(128 extendedPushBytecode).
+		#(129 extendedStoreBytecode).
+		#(130 extendedStoreAndPopBytecode).
+		#(131 singleExtendedSendBytecode).
+		#(132 doubleExtendedDoAnythingBytecode).
+		#(133 singleExtendedSuperBytecode).
+		#(134 secondExtendedSendBytecode).
+		#(135 popStackBytecode).
+		#(136 duplicateTopBytecode).
 
-		(137 pushActiveContextBytecode)
-		(138 pushNewArrayBytecode)
-		(139 unknownBytecode)
-		(140 pushRemoteTempLongBytecode)
-		(141 storeRemoteTempLongBytecode)
-		(142 storeAndPopRemoteTempLongBytecode)
-		(143 pushClosureCopyCopiedValuesBytecode)
+		#(137 pushActiveContextBytecode).
+		"Closure & Newspeak bytecodes"
+		#(138 pushNewArrayBytecode).
+		{139. NewspeakVM ifTrue: [#pushExplicitOuterSendReceiverBytecode] ifFalse: [#unknownBytecode]}.
+		#(140 pushRemoteTempLongBytecode).
+		#(141 storeRemoteTempLongBytecode).
+		#(142 storeAndPopRemoteTempLongBytecode).
+		#(143 pushClosureCopyCopiedValuesBytecode).
 
-		(144 151 shortUnconditionalJump)
-		(152 159 shortConditionalJump)
-		(160 167 longUnconditionalJump)
-		(168 171 longJumpIfTrue)
-		(172 175 longJumpIfFalse)
+		#(144 151 shortUnconditionalJump).
+		#(152 159 shortConditionalJump).
+		#(160 167 longUnconditionalJump).
+		#(168 171 longJumpIfTrue).
+		#(172 175 longJumpIfFalse).
 
 		"176-191 were sendArithmeticSelectorBytecode"
-		(176 bytecodePrimAdd)
-		(177 bytecodePrimSubtract)
-		(178 bytecodePrimLessThan)
-		(179 bytecodePrimGreaterThan)
-		(180 bytecodePrimLessOrEqual)
-		(181 bytecodePrimGreaterOrEqual)
-		(182 bytecodePrimEqual)
-		(183 bytecodePrimNotEqual)
-		(184 bytecodePrimMultiply)
-		(185 bytecodePrimDivide)
-		(186 bytecodePrimMod)
-		(187 bytecodePrimMakePoint)
-		(188 bytecodePrimBitShift)
-		(189 bytecodePrimDiv)
-		(190 bytecodePrimBitAnd)
-		(191 bytecodePrimBitOr)	
+		#(176 bytecodePrimAdd).
+		#(177 bytecodePrimSubtract).
+		#(178 bytecodePrimLessThan).
+		#(179 bytecodePrimGreaterThan).
+		#(180 bytecodePrimLessOrEqual).
+		#(181 bytecodePrimGreaterOrEqual).
+		#(182 bytecodePrimEqual).
+		#(183 bytecodePrimNotEqual).
+		#(184 bytecodePrimMultiply).
+		#(185 bytecodePrimDivide).
+		#(186 bytecodePrimMod).
+		#(187 bytecodePrimMakePoint).
+		#(188 bytecodePrimBitShift).
+		#(189 bytecodePrimDiv).
+		#(190 bytecodePrimBitAnd).
+		#(191 bytecodePrimBitOr).	
 
 		"192-207 were sendCommonSelectorBytecode"
-		(192 bytecodePrimAt)
-		(193 bytecodePrimAtPut)
-		(194 bytecodePrimSize)
-		(195 bytecodePrimNext)
-		(196 bytecodePrimNextPut)
-		(197 bytecodePrimAtEnd)
-		(198 bytecodePrimEquivalent)
-		(199 bytecodePrimClass)
-		(200 bytecodePrimBlockCopy)
-		(201 bytecodePrimValue)
-		(202 bytecodePrimValueWithArg)
-		(203 bytecodePrimDo)
-		(204 bytecodePrimNew)
-		(205 bytecodePrimNewWithArg)
-		(206 bytecodePrimPointX)
-		(207 bytecodePrimPointY)
+		#(192 bytecodePrimAt).
+		#(193 bytecodePrimAtPut).
+		#(194 bytecodePrimSize).
+		#(195 bytecodePrimNext).
+		#(196 bytecodePrimNextPut).
+		#(197 bytecodePrimAtEnd).
+		#(198 bytecodePrimEquivalent).
+		#(199 bytecodePrimClass).
+		#(200 bytecodePrimBlockCopy).
+		#(201 bytecodePrimValue).
+		#(202 bytecodePrimValueWithArg).
+		#(203 bytecodePrimDo).
+		#(204 bytecodePrimNew).
+		#(205 bytecodePrimNewWithArg).
+		#(206 bytecodePrimPointX).
+		#(207 bytecodePrimPointY).
 
-		(208 223 sendLiteralSelector0ArgsBytecode)
-		(224 239 sendLiteralSelector1ArgBytecode)
-		(240 255 sendLiteralSelector2ArgsBytecode)
-	).
+		#(208 223 sendLiteralSelector0ArgsBytecode).
+		#(224 239 sendLiteralSelector1ArgBytecode).
+		#(240 255 sendLiteralSelector2ArgsBytecode).
+	}
 ]
 
 { #category : #initialization }
@@ -429,7 +411,16 @@ StackInterpreter class >> initializeClassIndices [
 	InstanceSpecificationIndex := 2.
 	"Fields of a message dictionary"
 	MethodArrayIndex := 1.
-	SelectorStart := 2
+	SelectorStart := 2.
+
+	"Newspeak extensions"
+	"Fields of a Mixin (also defined by Behavior)"
+	EnclosingMixinIndex := NewspeakVM ifTrue: [3].  "(Class instVarIndexFor: 'mixinSlot') - 1"
+	"Fields of a MixinApplication (also defined by Behavior)"
+	MixinIndex := NewspeakVM ifTrue: [3]. "(Class instVarIndexFor: 'mixinSlot') - 1"
+	EnclosingObjectIndex := NewspeakVM ifTrue: [4]. "(Class instVarIndexFor: 'enclosingObjectSlot') - 1"
+
+
 ]
 
 { #category : #initialization }
@@ -536,10 +527,13 @@ StackInterpreter class >> initializeMethodIndices [
 ]
 
 { #category : #initialization }
-StackInterpreter class >> initializeMiscConstants [
+StackInterpreter class >> initializeMiscConstantsWith: optionsDictionary [
 
-	super initializeMiscConstants.
+	super initializeMiscConstantsWith: optionsDictionary.
 	STACKVM := true.
+	NewspeakVM := optionsDictionary at: #NewspeakVM ifAbsent: [false].
+	"N.B.  Not yet implemented!!"
+	IMMUTABILITY := optionsDictionary at: #IMMUTABILITY ifAbsent: [false].
 
 	DumpStackOnLowSpace := 0.
 	PrimitiveExternalCallIndex := 117. "Primitive index for #primitiveExternalCall"
@@ -907,6 +901,30 @@ StackInterpreter class >> initializeStreamIndices [
 	StreamWriteLimitIndex := 3.
 ]
 
+{ #category : #initialization }
+StackInterpreter class >> initializeWithOptions: optionsDictionary [
+	"StackInterpreter initializeWithOptions: Dictionary new"
+
+	NewObjectMemory initializeWithOptions: optionsDictionary.  "initialize ObjectMemory constants"
+	self initializeMiscConstantsWith: optionsDictionary. "must preceed other initialization."
+	self initializeAssociationIndex.
+	self initializeBytecodeTable.
+	self initializeCaches.
+	self initializeCharacterIndex.
+	self initializeCharacterScannerIndices.
+	self initializeClassIndices.
+	self initializeContextIndices.
+	self initializeDirectoryLookupResultCodes.
+	self initializeFrameIndices.
+	self initializeMessageIndices.
+	self initializeMethodIndices.
+	self initializePointIndices.
+	self initializePrimitiveTable.
+	self initializeSchedulerIndices.
+	self initializeSmallIntegers.
+	self initializeStreamIndices
+]
+
 { #category : #translation }
 StackInterpreter class >> isInterpreterClass [
 	^true
@@ -927,6 +945,7 @@ StackInterpreter class >> macroBenchmark [  "StackInterpreter macroBenchmark"
 	([VMMaker
 			makerFor: StackInterpreter
 			and: nil
+			with: #()
 			to: (FileDirectory default pathFromURI: dir)
 			platformDir: 'none'
 			excluding:  (InterpreterPlugin withAllSubclasses collect: [:ea| ea name])]
@@ -1380,7 +1399,7 @@ StackInterpreter >> allAccessibleObjectsOkay [
 	].
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'image save/restore' }
 StackInterpreter >> allocateMemory: heapSize minimum: minimumMemory imageFile: fileStream headerSize: headerSize [
 
 	"Translate to C function call with (case sensitive) camelCase. The purpose of this
@@ -1426,15 +1445,15 @@ StackInterpreter >> argumentCountOfMethodHeader: header [
 
 { #category : #utilities }
 StackInterpreter >> arrayValueOf: arrayOop [
-	"Return the address of first indexable field of resulting array object, or fail if the instance variable does not contain an indexable bytes or words object."
+	"Return the address of first indexable field of resulting array object, or fail if
+	 the instance variable does not contain an indexable bytes or words object."
 	"Note: May be called by translated primitive code."
 
-	<returnTypeC: 'void *'>
-	((objectMemory isIntegerObject: arrayOop) not and:
-	 [objectMemory isWordsOrBytes: arrayOop])
-		ifTrue: [^ self cCode: '(void *)pointerForOop(arrayOop + BaseHeaderSize)'].
-	self primitiveFail.
-
+	<returnTypeC: #'void *'>
+	((objectMemory isNonIntegerObject: arrayOop)
+	 and: [objectMemory isWordsOrBytes: arrayOop]) ifTrue:
+		[^self cCoerceSimple: (self pointerForOop: arrayOop + BaseHeaderSize) to: #'void *'].
+	self primitiveFail
 ]
 
 { #category : #'indexing primitive support' }
@@ -3372,6 +3391,25 @@ StackInterpreter >> duplicateTopBytecode [
 
 ]
 
+{ #category : #'send bytecodes' }
+StackInterpreter >> dynamicSuperSendBytecode [
+"Send a message to self, starting lookup in the superclass of the method application of the currently executing method's mixin."
+"Assume: messageSelector and argumentCount have been set, and that the receiver and arguments have been pushed onto the stack," 
+"WE WANT THE RECEIVER PUSHED IMPLICITLY, BUT IT IS NOT - SO FAR"
+"Note: This method is inlined into the interpreter dispatch loop."
+	| rcvr mClassMixin mixinApplication |
+	<inline: true>
+	argumentCount := self fetchByte.
+	messageSelector := self literal: self fetchByte.
+	rcvr := self internalStackValue: argumentCount.
+	mClassMixin := self methodClassOf: method.
+	mixinApplication := self 
+		findApplicationOfTargetMixin: mClassMixin
+		startingAtBehavior: (self fetchClassOf: rcvr).
+	lkupClass := self superclassOf: mixinApplication.
+	self commonSend
+]
+
 { #category : #'debug printing' }
 StackInterpreter >> elementsPerPrintOopLine [
 	^5
@@ -3485,6 +3523,30 @@ StackInterpreter >> expandCases [
 	"For translation only; noop when running in Smalltalk.
 	 Must not be inlined otherwise the directive will disappear!"
 	<inline: false>
+]
+
+{ #category : #'newspeak bytecode support' }
+StackInterpreter >> explicitOuterReceiver: n withObject: anObject withMixin: mixin [ 
+	"This is used to implement the innards of the pushExplicitOuterReceiverBytecode,
+	 used for explicit outer sends in NS2/NS3.  "
+	| explicitReceiver mixinApplication  targetMixin  count |
+	
+	explicitReceiver := anObject.
+	targetMixin := mixin.
+	count := 0.
+	[count < n] whileTrue:
+		[count := count + 1.
+		(targetMixin = objectMemory nilObject or:[explicitReceiver = objectMemory nilObject]) ifTrue:
+			[^objectMemory nilObject].
+		mixinApplication := self
+								findApplicationOfTargetMixin: targetMixin
+								startingAtNonMetaClass: (self fetchClassOf: explicitReceiver).
+		mixinApplication = objectMemory nilObject ifTrue:
+			[^objectMemory nilObject]. "should never happen!"
+		explicitReceiver := objectMemory fetchPointer: EnclosingObjectIndex ofObject: mixinApplication.	
+		targetMixin := objectMemory fetchPointer: EnclosingMixinIndex ofObject: targetMixin].
+	
+	^explicitReceiver
 ]
 
 { #category : #'stack bytecodes' }
@@ -3836,6 +3898,41 @@ StackInterpreter >> fetchStackPointerOf: aContext [
 	(objectMemory isIntegerObject: sp) ifFalse: [^0].
 	self assert: ReceiverIndex + (objectMemory integerValueOf: sp) < (objectMemory lengthOf: aContext).
 	^objectMemory integerValueOf: sp
+]
+
+{ #category : #'newspeak bytecode support' }
+StackInterpreter >> findApplicationOfTargetMixin: targetMixin startingAtBehavior: aBehavior [
+	"This is used to implement the innards of the pushImplicitReceiverBytecode,
+	 used for outer sends in NS2/NS3.  Find the MixinApplcation of which aBehavior
+	 is a subclass that is an application of targetMixin.  This is an implementation derived from
+
+	<ContextPart> findApplicationOfTargetMixin: targetMixin startingAtBehavior: aBehavior
+	"
+	| mixinOrMixinApplication mixin |
+	mixinOrMixinApplication := aBehavior.
+	[mixinOrMixinApplication = objectMemory nilObject
+	 or: [mixinOrMixinApplication = targetMixin
+	 or: [(mixin := objectMemory fetchPointer: MixinIndex ofObject: mixinOrMixinApplication) == targetMixin
+	 or: [(objectMemory fetchClassOf: mixin) == targetMixin]]]] whileFalse:
+		[mixinOrMixinApplication := objectMemory fetchPointer: SuperclassIndex ofObject: mixinOrMixinApplication].
+	^mixinOrMixinApplication
+]
+
+{ #category : #'newspeak bytecode support' }
+StackInterpreter >> findApplicationOfTargetMixin: targetMixin startingAtNonMetaClass: aClass [
+	"This is used to implement the innards of the pushImplicitReceiverBytecode,
+	 used for outer sends in NS2/NS3.  Find the MixinApplcation of which aClass
+	 is a subclass that is an application of targetMixin.  This is an implementation derived from
+
+	<ContextPart> findApplicationOfTargetMixin: targetMixin startingAtNonMetaClass: aClass
+	"
+	| mixinOrMixinApplication |
+	mixinOrMixinApplication := aClass.
+	[mixinOrMixinApplication = objectMemory nilObject
+	 or: [mixinOrMixinApplication = targetMixin
+	 or: [(objectMemory fetchPointer: MixinIndex ofObject: mixinOrMixinApplication) = targetMixin]]] whileFalse:
+		[mixinOrMixinApplication := objectMemory fetchPointer: SuperclassIndex ofObject: mixinOrMixinApplication].
+	^mixinOrMixinApplication
 ]
 
 { #category : #'debug support' }
@@ -4738,6 +4835,38 @@ StackInterpreter >> imageFormatVersion [
 	"Return a magic constant that changes when the image format changes. Since the image reading code uses this to detect byte ordering, one must avoid version numbers that are invariant under byte reversal."
 
 	^BytesPerWord == 4 ifTrue: [6505] ifFalse: [68003]
+]
+
+{ #category : #'newspeak bytecode support' }
+StackInterpreter >> implicitReceiverForMixin: mixin implementing: selector [
+	"This is used to implement the innards of the pushImplicitReceiverBytecode,
+	 used for implicit receiver sends in NS2/NS3.  Find the nearest lexically-enclosing
+	 implementation of selector by searching up the static chain of anObject,
+	 starting at mixin's application.  This is an iterative implementation derived from
+
+	<ContextPart> implicitReceiverFor: obj <Object>
+					withMixin: mixin <Mixin>
+					implementing: selector <Symbol> ^<Object
+	 "
+	| receiver mixinApplication dictionary found |
+	messageSelector := selector. "messageSelector is an implicit parameter of lookupMethodInDictionary:"
+	receiver := self receiver.
+	mixinApplication := self
+							findApplicationOfTargetMixin: mixin
+							startingAtBehavior: (objectMemory fetchClassOf: receiver).
+	 mixinApplication = objectMemory nilObject ifTrue:
+		[^receiver].
+	 dictionary := objectMemory fetchPointer: MethodDictionaryIndex ofObject: mixinApplication.
+	 found := self lookupMethodInDictionary: dictionary.
+	 found ifFalse:
+		[| implicitReceiverOrNil theMixin |
+		 theMixin := objectMemory fetchPointer: MixinIndex ofObject: mixinApplication.
+		 implicitReceiverOrNil := self nextImplicitReceiverFor: (self fetchPointer: EnclosingObjectIndex
+																ofObject: mixinApplication)
+									withMixin: (self fetchPointer: EnclosingMixinIndex ofObject: theMixin).
+		 implicitReceiverOrNil ~= objectMemory nilObject ifTrue:
+			[^implicitReceiverOrNil]].
+	^receiver
 ]
 
 { #category : #'plugin primitive support' }
@@ -6452,6 +6581,37 @@ StackInterpreter >> newStackPage [
 	^lruOrFree
 ]
 
+{ #category : #'newspeak bytecode support' }
+StackInterpreter >> nextImplicitReceiverFor: anObject withMixin: mixin [
+	"This is used to implement the innards of the pushImplicitReceiverBytecode,
+	 used for implicit receiver sends in NS2/NS3.  Find the nearest lexically-enclosing
+	 implementation of selector by searching up the static chain of anObject,
+	 starting at mixin's application.  This is an iterative implementation derived from
+
+	<ContextPart> nextImplicitReceiverFor: obj <Object>
+					withMixin: mixin <Mixin>
+					implementing: selector <Symbol> ^<Object>"
+	| implicitReceiver mixinApplication theMixin targetMixin dictionary found |
+	implicitReceiver := anObject.
+	targetMixin := mixin.
+	[(targetMixin = objectMemory nilObject "or: [implicitReceiver = objectMemory nilObject]") ifTrue:
+		[^objectMemory nilObject].
+	mixinApplication := self findApplicationOfTargetMixin: targetMixin
+							startingAtNonMetaClass: (objectMemory fetchClassOf: implicitReceiver).
+	 mixinApplication = objectMemory nilObject ifTrue:
+		[^objectMemory nilObject].
+	 dictionary := objectMemory fetchPointer: MethodDictionaryIndex ofObject: mixinApplication.
+	 found := self lookupMethodInDictionary: dictionary.
+	 found]
+		whileFalse:
+			[implicitReceiver := objectMemory fetchPointer: EnclosingObjectIndex ofObject: mixinApplication.
+			 theMixin := objectMemory fetchPointer: MixinIndex ofObject: mixinApplication.
+			 theMixin = objectMemory nilObject ifTrue:
+				[^objectMemory nilObject].
+			 targetMixin := objectMemory fetchPointer: EnclosingMixinIndex ofObject: theMixin].
+	^implicitReceiver
+]
+
 { #category : #'object memory support' }
 StackInterpreter >> noMarkedContextsOnPage: thePage [
 	"Answer true if there are no marked contexts on thePage."
@@ -7800,10 +7960,42 @@ StackInterpreter >> pushConstantZeroBytecode [
 ]
 
 { #category : #'stack bytecodes' }
+StackInterpreter >> pushExplicitOuterSendReceiverBytecode [
+	"Find the appropriate implicit receiver for outer N"
+	| litIndex  n anIntOop |
+	<inline: true>
+	litIndex := self fetchByte.
+	anIntOop := self literal: litIndex.
+	n := (objectMemory isIntegerObject: anIntOop)
+			ifTrue: [objectMemory integerValueOf: anIntOop]
+			ifFalse: [0].
+	self fetchNextBytecode.
+	self internalPush:(self 
+						explicitOuterReceiver: n 
+						withObject: self receiver 
+						withMixin: (self methodClassOf: method))
+]
+
+{ #category : #'stack bytecodes' }
 StackInterpreter >> pushFloat: f [
 
 	<var: #f type: #double>
 	self push: (self floatObjectOf: f).
+]
+
+{ #category : #'stack bytecodes' }
+StackInterpreter >> pushImplicitReceiverBytecode [
+	"This bytecode is used to implement outer sends in NS2/NS3. The
+	 bytecode takes as an argument the literal offset of a selector. It
+	 effectively finds the nearest lexically-enclosing implementation of
+	 that selector by searching up the static chain of the receiver,
+	 starting at the current method."
+	| litIndex |
+	litIndex := self fetchByte.
+	self fetchNextBytecode.
+	self internalPush: (self
+							implicitReceiverForMixin: (self methodClassOf: method)
+							implementing: (self literal: litIndex))
 ]
 
 { #category : #'internal interpreter access' }
@@ -9291,6 +9483,14 @@ StackInterpreter >> stackValue: offset [
 	^stackPages longAt: stackPointer + (offset*BytesPerWord)
 ]
 
+{ #category : #'internal interpreter access' }
+StackInterpreter >> stackValue: offset put: oop [
+	"In the StackInterpreter stacks grow down."
+	^stackPages
+		longAt: stackPointer + (offset*BytesPerWord)
+		put: oop
+]
+
 { #category : #'stack bytecodes' }
 StackInterpreter >> storeAndPopReceiverVariableBytecode [
 	"Note: This code uses 
@@ -9490,6 +9690,114 @@ StackInterpreter >> superclassSend [
 	self commonSend
 ]
 
+{ #category : #'debug support' }
+StackInterpreter >> symbolic: byte at: ip inMethod: meth [
+	<doNotGenerate>
+	"Print a bytecode in simple symbolic form"
+
+	| type offset |
+	type := byte // 16.  
+	offset := byte \\ 16.  
+	type=0 ifTrue: [^ 'pushRcvr ' , offset printString].
+	type=1 ifTrue: [^ 'pushTemp ' , offset printString].
+	type=2 ifTrue: [^ 'pushLit ' , offset printString].
+	type=3 ifTrue: [^ 'pushLit ' , (offset+16) printString].
+	type=4 ifTrue: [^ 'pushLitVar ' , offset printString].
+	type=5 ifTrue: [^ 'pushLitVar ' , (offset+16) printString].
+	type=6 ifTrue: [offset<8
+					ifTrue: [^ 'storePopRcvr ' , offset printString]
+					ifFalse: [^ 'storePopTemp ' , (offset-8) printString]].
+	type=7 ifTrue: [offset=0 ifTrue: [^ 'pushRcvr'].
+				offset<8 ifTrue: [^ 'pushConst ' , ( #(true false nil -1 0 1 2) at: offset) printString].
+				offset=8 ifTrue: [^ 'returnSelf'].
+				offset<12 ifTrue: [^ 'returnConst ' , ( #(true false nil -1 0 1 2) at: offset-8) printString].
+				offset=12 ifTrue: [^ 'returnTop'].
+				offset=13 ifTrue: [^ 'blockReturnTop'].
+				self cppIf: NewspeakVM
+					ifTrue:
+						[offset=14 ifTrue: [^ 'sendToDynamicSuperclass'].
+						offset=15 ifTrue: [^ 'pushImplicitReceiver']]
+					ifFalse: [^ 'unusedBytecode']].
+	type=8 ifTrue: [^ self symbolicExtensions: offset at: ip inMethod: meth].
+	type=9 ifTrue:  "short jumps"
+			[offset<8 ifTrue: [^ 'jump ' , (offset+1) printString].
+			^ 'jumpIfFalse ' , (offset-8+1) printString].
+	type=10 ifTrue:  "long jumps"
+			[offset<8 ifTrue: [^ 'extendedJump'].
+			offset<12 ifTrue: [^ 'extendedJumpIfTrue'].
+			true ifTrue: [^ 'extendedJumpIfFalse']].
+	type=11 ifTrue: [^ 'sendSpl ' , (Smalltalk specialSelectorAt: offset+1)].
+	type=12 ifTrue: [^ 'sendSpl ' , (Smalltalk specialSelectorAt: offset+17)].
+	type>12 ifTrue: [^ 'send ' , (self stringOf: (self literal: offset ofMethod: meth))]
+]
+
+{ #category : #'debug support' }
+StackInterpreter >> symbolicMethod: aMethod [
+	<doNotGenerate>
+	self symbolicMethod: aMethod printAbsPC: false
+]
+
+{ #category : #'debug support' }
+StackInterpreter >> symbolicMethod: aMethod printAbsPC: printAbsPC [
+	<doNotGenerate>
+	| pc end latestContinuation prim stackDepth stackDepths |
+	self transcript ensureCr.
+	(prim := self primitiveIndexOf: aMethod) > 0 ifTrue:
+		[self transcript nextPutAll: '<primitive: '; print: prim; nextPut: $>.
+		(self isQuickPrimitiveIndex: prim) ifTrue:
+			[self transcript nextPutAll: ' quick method'; cr; flush.
+			 ^self].
+		self transcript cr].
+	stackDepth := self tempCountOf: aMethod.
+	stackDepths := [self debugStackPointersFor: aMethod]
+						on: Error
+						do: [:ex| nil].
+	pc := latestContinuation := self startPCOfMethod: aMethod.
+	end := objectMemory byteSizeOf: aMethod.
+	[pc <= end] whileTrue:
+		[| byte byte2 byte3 byte4 type offset jumpTarget |
+		 byte := objectMemory fetchByte: pc ofObject: aMethod.
+		 type := byte // 16.
+		 offset := byte \\ 16.  
+		 (type =7 and: [offset >= 8 and: [pc >= latestContinuation]]) ifTrue:"Return bytecodes (possible lastPC here)"
+			[end := pc].
+		 (type = 8 and: [offset = 15]) ifTrue: "closure creation; update latest continuation"
+			[byte3 := objectMemory fetchByte: pc + 2 ofObject: aMethod.
+			 byte4 := objectMemory fetchByte: pc + 3 ofObject: aMethod.
+			 jumpTarget := (byte3 * 256) + byte4 + pc + 4.
+			 jumpTarget > latestContinuation ifTrue: [latestContinuation := jumpTarget]].
+		 type=9 ifTrue: "Short jumps (need to update latest continuation"
+			[jumpTarget := (offset < 8 ifTrue: [offset] ifFalse: [offset - 8]) + pc + 2.
+			jumpTarget > latestContinuation ifTrue: [latestContinuation := jumpTarget]].
+		 type=10 ifTrue: "Long jumps (need to update latest continuation)"
+			[byte2 := objectMemory fetchByte: pc + 1 ofObject: aMethod.
+			 jumpTarget := (offset < 8 ifTrue: [offset - 4] ifFalse: [offset bitAnd: 3]) * 256 + byte2 + pc + 2.
+			 jumpTarget > latestContinuation ifTrue: [latestContinuation := jumpTarget]].
+
+		 printAbsPC ifTrue:
+			[(objectMemory firstIndexableField: aMethod) + pc printOn: self transcript base: 16.
+			 self transcript space].
+		 self transcript print: pc + 1 ; space.
+		 byte printOn: self transcript base: 16 length: 2 padded: false.
+		 self transcript space; nextPutAll: (self symbolic: byte at: pc inMethod: aMethod).
+		 pc := type = 8 "extensions"
+					ifTrue: [pc + (#(2 2 2 2 3 2 2 1 1 1 2 1 3 3 3 4) at: byte \\ 16 + 1)]
+					ifFalse: [type = 10 "long jumps"
+								ifTrue: [pc + 2]
+								ifFalse:
+									[self cppIf: NewspeakVM
+										ifTrue: [type = 7
+													ifTrue: [pc + (#(1 1 1 1 1 1 1 1 1 1 1 1 1 1 3 2) at: byte \\ 16 + 1)]
+													ifFalse: [pc + 1]]
+										ifFalse: [pc + 1]]].
+		 stackDepths notNil ifTrue:
+			[self transcript tab; tab; nextPut: $(; print: stackDepth.
+			 (byte ~= 144 and: [pc <= end and: [stackDepth ~= (stackDepths at: pc)]]) ifTrue:
+				[self transcript nextPutAll: '->'; print: (stackDepth := stackDepths at: pc)].
+			 self transcript nextPut: $)].
+		 self transcript cr; flush]
+]
+
 { #category : #'process primitive support' }
 StackInterpreter >> synchronousSignal: aSemaphore [ 
 	"Signal the given semaphore from within the interpreter.
@@ -9602,6 +9910,13 @@ StackInterpreter >> transferTo: newProc [
 StackInterpreter >> unPop: nItems [
 	"In the StackInterpreter stacks grow down."
 	stackPointer := stackPointer - (nItems*BytesPerWord)
+]
+
+{ #category : #'interpreter shell' }
+StackInterpreter >> undoFetchNextBytecode [
+	"Backup the ip when it has been incremented to fetch the next bytecode."
+
+	localIP := localIP - 1
 ]
 
 { #category : #'interpreter shell' }

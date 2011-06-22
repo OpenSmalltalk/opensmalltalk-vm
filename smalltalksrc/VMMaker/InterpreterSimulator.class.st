@@ -17,7 +17,6 @@ Class {
 		'traceOn',
 		'myBitBlt',
 		'displayForm',
-		'filesOpen',
 		'imageName',
 		'pluginList',
 		'mappedPluginEntries',
@@ -210,7 +209,8 @@ InterpreterSimulator >> clipboardWrite: sz From: actualDataAddress At: ignored [
 
 { #category : #initialization }
 InterpreterSimulator >> close [  "close any files that ST may have opened"
-	filesOpen do: [:f | f close]
+	(self loadNewPlugin: 'FilePlugin') ifNotNil:
+		[:filePlugin| filePlugin close]
 ]
 
 { #category : #'debugging traps' }
@@ -312,15 +312,6 @@ InterpreterSimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
 	aFloat at: 1 put: (self long32At: floatBitsAddress).
 	aFloat at: 2 put: (self long32At: floatBitsAddress+4).
 
-]
-
-{ #category : #'file primitives' }
-InterpreterSimulator >> fileValueOf: integerPointer [
-	"Convert the (integer) fileID to the actual fileStream it uses"
-	self success: (self isIntegerObject: integerPointer).
-	successFlag
-		ifTrue: [^ filesOpen at: (self integerValueOf: integerPointer)]
-		ifFalse: [^ nil]
 ]
 
 { #category : #testing }
@@ -507,7 +498,6 @@ InterpreterSimulator >> initialize [
 	traceOn := true.
 	printSends := "printReturns := printBytecodeAtEachStep :=" false.
 	myBitBlt := BitBltSimulator new setInterpreter: self.
-	filesOpen := OrderedCollection new.
 	headerTypeBytes := CArrayAccessor on: HeaderTypeExtraBytes.
 	transcript := Transcript.
 	displayForm := 'Display has not yet been installed' asDisplayText form.
@@ -1216,56 +1206,6 @@ InterpreterSimulator >> primitiveDirectoryLookup [
 
 ]
 
-{ #category : #'file primitives' }
-InterpreterSimulator >> primitiveFileDelete [ 
-
-	| namePointer |
-	namePointer := self stackTop.
-	self success: (self isBytes: namePointer).
-	self success: (StandardFileStream isAFileNamed: (self stringOf: namePointer)).
-	successFlag ifTrue: [FileDirectory deleteFilePath: (self stringOf: namePointer)].
-	successFlag ifTrue: [self pop: 1].  "pop fileName; leave rcvr on stack"
-
-]
-
-{ #category : #'file primitives' }
-InterpreterSimulator >> primitiveFileOpen [
-	| namePointer writeFlag fileName f |
-	writeFlag := self booleanValueOf: self stackTop.
-	namePointer := self stackValue: 1.
-	self success: (self isBytes: namePointer).
-	successFlag ifTrue:
-		[fileName := self stringOf: namePointer.
-		filesOpen addLast: (writeFlag
-			ifTrue: [f := FileStream fileNamed: fileName.
-					f ifNil: [^ self primitiveFail] ifNotNil: [f binary]]
-			ifFalse: [(StandardFileStream isAFileNamed: fileName)
-				ifTrue: [f := (FileStream readOnlyFileNamed: fileName).
-						f ifNil:[^self primitiveFail] ifNotNil:[f binary]]
-				ifFalse: [^ self primitiveFail]]).
-		self pop: 3 thenPushInteger: filesOpen size]
-]
-
-{ #category : #'file primitives' }
-InterpreterSimulator >> primitiveFileRename [
-
-	| oldNamePointer newNamePointer f |
-	oldNamePointer := self stackTop.
-	newNamePointer := self stackValue: 1.
-	self success: (self isBytes: oldNamePointer).
-	self success: (self isBytes: newNamePointer).
-	self success: (StandardFileStream isAFileNamed: (self stringOf: oldNamePointer)).
-	self success: (StandardFileStream isAFileNamed: (self stringOf: newNamePointer)) not.
-	successFlag ifTrue: [
-		f := FileStream oldFileNamed: (self stringOf: oldNamePointer).
-		f rename: (self stringOf: newNamePointer).
-		f close.
-	].
-	successFlag ifTrue: [
-		self pop: 2.  "oldName, newName; leave rcvr on stack"
-	].
-]
-
 { #category : #'other primitives' }
 InterpreterSimulator >> primitiveGetAttribute [
 	"Fetch the system attribute with the given integer ID. The result is a string, which will be empty if the attribute is not defined."
@@ -1755,67 +1695,6 @@ InterpreterSimulator >> showDisplayBits: destBits w: w h: h d: d left: left righ
 InterpreterSimulator >> space [
 
 	traceOn ifTrue: [ transcript space ]
-]
-
-{ #category : #'file primitives' }
-InterpreterSimulator >> sqFile: file Read: count Into: byteArrayIndex At: startIndex [
-
-	startIndex to: (startIndex + count - 1) do: [ :i |
-		file atEnd ifTrue: [ ^ i - startIndex ].
-		self byteAt: byteArrayIndex + i put: file next.
-	].
-	^ count
-]
-
-{ #category : #'file primitives' }
-InterpreterSimulator >> sqFile: file SetPosition: newPosition [
-
-	file position: newPosition.
-]
-
-{ #category : #'file primitives' }
-InterpreterSimulator >> sqFile: file Truncate: truncatePosition [
-
-	file truncate: truncatePosition.
-]
-
-{ #category : #'file primitives' }
-InterpreterSimulator >> sqFile: file Write: count From: byteArrayIndex At: startIndex [
-
-	startIndex to: (startIndex + count - 1) do: [ :i |
-		file nextPut: (self byteAt: byteArrayIndex + i).
-	].
-	^ count
-]
-
-{ #category : #'file primitives' }
-InterpreterSimulator >> sqFileAtEnd: file [
-
-	^ file atEnd
-]
-
-{ #category : #'file primitives' }
-InterpreterSimulator >> sqFileClose: file [
-
-	file close.
-]
-
-{ #category : #'file primitives' }
-InterpreterSimulator >> sqFileFlush: file [
-
-	^ file flush
-]
-
-{ #category : #'file primitives' }
-InterpreterSimulator >> sqFileGetPosition: file [
-
-	^ file position
-]
-
-{ #category : #'file primitives' }
-InterpreterSimulator >> sqFileSize: file [
-
-	^ file size
 ]
 
 { #category : #'plugin support' }

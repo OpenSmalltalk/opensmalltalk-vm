@@ -132,3 +132,8 @@ CArray >> ptrAddress [
 CArray >> unitSize [
 	^unitSize
 ]
+
+{ #category : #accessing }
+CArray >> unitSize: n [
+	unitSize := n
+]

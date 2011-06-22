@@ -136,12 +136,6 @@ NewObjectMemorySimulatorLSB >> shortAt: byteAddress put: a16BitValue [
 		]
 ]
 
-{ #category : #'simulation only' }
-NewObjectMemorySimulatorLSB >> sqFileSize: file [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter sqFileSize: file
-]
-
 { #category : #'float primitives' }
 NewObjectMemorySimulatorLSB >> storeFloatAt: floatBitsAddress from: aFloat [
 
