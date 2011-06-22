@@ -22,6 +22,12 @@ NewObjectMemorySimulator >> allocateMemory: endianness [
 ]
 
 { #category : #'simulation only' }
+NewObjectMemorySimulator >> arrayValueOf: arrayOop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter arrayValueOf: arrayOop
+]
+
+{ #category : #'simulation only' }
 NewObjectMemorySimulator >> booleanValueOf: obj [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter booleanValueOf: obj
@@ -77,6 +83,11 @@ NewObjectMemorySimulator >> checkedIntegerValueOf: intOop [
 { #category : #initialization }
 NewObjectMemorySimulator >> coInterpreter: aCoInterpreter [
 	coInterpreter := aCoInterpreter
+]
+
+{ #category : #printing }
+NewObjectMemorySimulator >> cr [
+	^coInterpreter cr
 ]
 
 { #category : #'simulation only' }
@@ -188,9 +199,20 @@ NewObjectMemorySimulator >> is: oop KindOf: classNameString [
 	^coInterpreter is: oop KindOf: classNameString
 ]
 
+{ #category : #'simulation only' }
+NewObjectMemorySimulator >> isFloatObject: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter isFloatObject: oop
+]
+
 { #category : #'interpreter shell' }
 NewObjectMemorySimulator >> isIntegerValue: valueWord [ 
 	^ valueWord >= 16r-40000000 and: [valueWord <= 16r3FFFFFFF]
+]
+
+{ #category : #'simulation only' }
+NewObjectMemorySimulator >> literalCountOf: anObj [
+	^coInterpreter literalCountOf: anObj
 ]
 
 { #category : #'memory access' }
@@ -335,9 +357,44 @@ NewObjectMemorySimulator >> primitiveFail [
 ]
 
 { #category : #'simulation only' }
+NewObjectMemorySimulator >> primitiveFailFor: reasonCode [
+	^coInterpreter primitiveFailFor: reasonCode
+]
+
+{ #category : #'simulation only' }
 NewObjectMemorySimulator >> primitiveFailureCode [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter primitiveFailureCode
+]
+
+{ #category : #printing }
+NewObjectMemorySimulator >> print: thing [ 
+	coInterpreter print: thing
+]
+
+{ #category : #printing }
+NewObjectMemorySimulator >> printChar: aCharacter [
+	coInterpreter printChar: aCharacter 
+]
+
+{ #category : #printing }
+NewObjectMemorySimulator >> printHex: n [
+	coInterpreter printHex: n 
+]
+
+{ #category : #printing }
+NewObjectMemorySimulator >> printHexPtr: address [
+	coInterpreter printHexPtr: address
+]
+
+{ #category : #printing }
+NewObjectMemorySimulator >> printNum: n [
+	coInterpreter printNum: n
+]
+
+{ #category : #printing }
+NewObjectMemorySimulator >> printOop: anOop [ 
+	coInterpreter printOop: anOop
 ]
 
 { #category : #'simulation only' }
@@ -393,12 +450,6 @@ NewObjectMemorySimulator >> showDisplayBits: aForm Left: l Top: t Right: r Botto
 NewObjectMemorySimulator >> signalFinalization: oop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter signalFinalization: oop
-]
-
-{ #category : #'simulation only' }
-NewObjectMemorySimulator >> sqFileSize: file [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter sqFileSize: file
 ]
 
 { #category : #'memory access' }
@@ -468,6 +519,12 @@ NewObjectMemorySimulator >> startOfMemory [
 ]
 
 { #category : #'simulation only' }
+NewObjectMemorySimulator >> storeInteger: fieldIndex ofObject: objectPointer withValue: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter storeInteger: fieldIndex ofObject: objectPointer withValue: integerValue
+]
+
+{ #category : #'simulation only' }
 NewObjectMemorySimulator >> stringOf: oop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter stringOf: oop
@@ -477,6 +534,11 @@ NewObjectMemorySimulator >> stringOf: oop [
 NewObjectMemorySimulator >> success: boolean [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter success: boolean
+]
+
+{ #category : #printing }
+NewObjectMemorySimulator >> tab [
+	coInterpreter tab
 ]
 
 { #category : #'debug support' }

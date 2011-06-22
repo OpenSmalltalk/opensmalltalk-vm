@@ -102,7 +102,7 @@ FilePlugin >> fileOpenName: nameIndex size: nameSize write: writeFlag secure: se
 FilePlugin >> fileRecordSize [
 	"Return the size of a Smalltalk file record in bytes."
 	<static: false>
-	^ self cCode: 'sizeof(SQFile)'.
+	^self sizeof: #SQFile
 ]
 
 { #category : #'file primitives' }
@@ -136,7 +136,7 @@ FilePlugin >> initialiseModule [
 	sCOFfn := interpreterProxy ioLoadFunction: 'secCanOpenFileOfSizeWritable' From: 'SecurityPlugin'.
 	sCRFfn := interpreterProxy ioLoadFunction: 'secCanRenameFileOfSize' From: 'SecurityPlugin'.
 	sHFAfn := interpreterProxy ioLoadFunction: 'secHasFileAccess' From: 'SecurityPlugin'.
-	^self cCode: 'sqFileInit()' inSmalltalk:[true]
+	^self cCode: [self sqFileInit] inSmalltalk: [true]
 ]
 
 { #category : #'directory primitives' }
@@ -652,6 +652,7 @@ FilePlugin >> primitiveFileStdioHandles [
 	sHFAfn ~= 0 ifTrue:
 		[(self cCode: ' ((sqInt (*)(void))sHFAfn)()' inSmalltalk: [true]) ifFalse:
 			[^interpreterProxy primitiveFailFor: PrimErrUnsupported]].
+	self cCode: '' inSmalltalk: [fileRecords := Array new: 3].
 	validMask := self sqFileStdioHandlesInto: (self addressOf: fileRecords).
 	validMask = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrUnsupported].
@@ -667,12 +668,18 @@ FilePlugin >> primitiveFileStdioHandles [
 				[interpreterProxy popRemappableOop.
 				^interpreterProxy primitiveFailFor: PrimErrNoMemory].
 			 interpreterProxy storePointer: index ofObject: interpreterProxy topRemappableOop withValue: result.
-			 self mem: (interpreterProxy firstIndexableField: result)
-				cp: (self addressOf: (fileRecords at: index))
-				y: self fileRecordSize]].
+			 self
+				cCode:
+					[self mem: (interpreterProxy firstIndexableField: result)
+						cp: (self addressOf: (fileRecords at: index))
+						y: self fileRecordSize]
+				inSmalltalk:
+					[(interpreterProxy firstIndexableField: result)
+						unitSize: BytesPerWord;
+						at: 0 put: (fileRecords at: index + 1)]]].
 	 "In the threaded VM ensure the handles are old, so that sqFileReadIntoAt is unaffected
 	  by incremental GCs.  See platforms/Cross/plugins/FilePlugin/sqFilePluginBasicPrims.c."
-	self cppIf: (self cCode: 'COGMTVM' inSmalltalk: [interpreterProxy isThreadedVM])
+	self cppIf: COGMTVM
 		ifTrue: [interpreterProxy fullGC].
 	result := interpreterProxy popRemappableOop.
 	interpreterProxy pop: 1 thenPush: result

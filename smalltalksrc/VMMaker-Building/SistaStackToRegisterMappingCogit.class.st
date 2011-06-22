@@ -41,7 +41,8 @@ SistaStackToRegisterMappingCogit class >> declareCVarsIn: aCodeGen [
 ]
 
 { #category : #'class initialization' }
-SistaStackToRegisterMappingCogit class >> initialize [
+SistaStackToRegisterMappingCogit class >> initializeWithOptions: optionsDictionary [
+
 	CounterBytes := 4.
 	MaxCounterValue := (1 << 16) - 1
 ]

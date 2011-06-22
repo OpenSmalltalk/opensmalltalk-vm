@@ -180,15 +180,6 @@ StackToRegisterMappingCogit class >> declareCVarsIn: aCodeGen [
 ]
 
 { #category : #'class initialization' }
-StackToRegisterMappingCogit class >> initialize [
-	MaxLiteralCountForCompile := 60.
-	NumTrampolines := 50.
-	self initializeBytecodeTableForClosureV3.
-	self initializePrimitiveTableForSqueakV3.
-	self initializeSimStackConstants
-]
-
-{ #category : #'class initialization' }
 StackToRegisterMappingCogit class >> initializeBytecodeTableForClosureV3 [
 	"StackToRegisterMappingCogit initializeBytecodeTableForClosureV3"
 
@@ -271,6 +262,12 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForClosureV3 [
 ]
 
 { #category : #'class initialization' }
+StackToRegisterMappingCogit class >> initializeMiscConstantsWith: optionsDictionary [
+	super initializeMiscConstantsWith: optionsDictionary.
+	NumTrampolines := 50
+]
+
+{ #category : #'class initialization' }
 StackToRegisterMappingCogit class >> initializeSimStackConstants [
 	"The simulation stack is used to delay code generation until operands are consumed by
 	 some operation, thereby avoiding pushing operands to the real stack and enabling
@@ -284,6 +281,15 @@ StackToRegisterMappingCogit class >> initializeSimStackConstants [
 	SSConstant := 2.
 	SSRegister := 3.
 	SSSpill := 4
+]
+
+{ #category : #'class initialization' }
+StackToRegisterMappingCogit class >> initializeWithOptions: optionsDictionary [
+
+	self initializeMiscConstantsWith: optionsDictionary. "must preceed other initialization."
+	self initializeBytecodeTableForClosureV3.
+	self initializePrimitiveTableForSqueakV3.
+	self initializeSimStackConstants
 ]
 
 { #category : #translation }

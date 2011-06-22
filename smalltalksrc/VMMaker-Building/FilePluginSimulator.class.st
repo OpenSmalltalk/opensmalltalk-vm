@@ -4,6 +4,9 @@ File plugin simulation for the VM simulator
 Class {
 	#name : #FilePluginSimulator,
 	#superclass : #FilePlugin,
+	#instVars : [
+		'openFiles'
+	],
 	#category : #'VMMaker-InterpreterSimulation'
 }
 
@@ -13,9 +16,50 @@ FilePluginSimulator class >> shouldBeTranslated [
 	^false
 ]
 
+{ #category : #'initialize-release' }
+FilePluginSimulator >> close [  "close any files that ST may have opened"
+	openFiles do: [:f | f close]
+]
+
+{ #category : #'file primitives' }
+FilePluginSimulator >> fileOpenName: nameIndex size: nameSize write: writeFlag secure: secureFlag [
+	"Open the named file, possibly checking security. Answer the file oop."
+	| path f index |
+	path := interpreterProxy interpreter asString: nameIndex size: nameSize.
+	f := writeFlag
+			ifTrue: [FileStream fileNamed: path]
+			ifFalse:
+				[(StandardFileStream isAFileNamed: path) ifTrue:
+					[FileStream readOnlyFileNamed: path]].
+	f ifNil: [^interpreterProxy primitiveFail].
+	f binary.
+	index := openFiles size + 1.
+	openFiles at: index put: f.
+	^interpreterProxy integerObjectOf: index
+]
+
 { #category : #simulation }
 FilePluginSimulator >> fileValueOf: objectPointer [
-	^interpreterProxy interpreter fileValueOf: objectPointer
+	| index |
+	index := (interpreterProxy isIntegerObject: objectPointer)
+				ifTrue: [interpreterProxy integerValueOf: objectPointer]
+				ifFalse:
+					[((interpreterProxy isBytes: objectPointer)
+					  and: [(interpreterProxy byteSizeOf: objectPointer) = BytesPerWord]) ifFalse:
+						[interpreterProxy primitiveFail.
+						 ^nil].
+					interpreterProxy longAt: objectPointer + BaseHeaderSize].
+	^openFiles at: index
+]
+
+{ #category : #'initialize-release' }
+FilePluginSimulator >> initialiseModule [
+	"See FilePluginSimulator>>sqFileStdioHandlesInto:"
+	(openFiles := Dictionary new)
+		at: 0 put: (FakeStdinStream for: interpreterProxy interpreter); "stdin"
+		at: 1 put: Transcript; "stdout"
+		at: 2 put: Transcript. "stderr"
+	^super initialiseModule
 ]
 
 { #category : #'file security' }
@@ -89,66 +133,111 @@ FilePluginSimulator >> primitiveDirectoryLookup [
 ]
 
 { #category : #simulation }
-FilePluginSimulator >> primitiveFileDelete [ 
-	^interpreterProxy interpreter primitiveFileDelete 
-]
-
-{ #category : #simulation }
-FilePluginSimulator >> primitiveFileOpen [
-	^interpreterProxy interpreter primitiveFileOpen
-]
-
-{ #category : #simulation }
 FilePluginSimulator >> primitiveFileRename [
 	^interpreterProxy primitiveFileRename
 ]
 
 { #category : #simulation }
-FilePluginSimulator >> primitiveFileStdioHandles [
-	^interpreterProxy interpreter primitiveFileStdioHandles
+FilePluginSimulator >> sizeof: objectSymbolOrClass [
+	"In the simulator file handles are just integer indices into openFiles and so need only be BytesPerWord big."
+	^objectSymbolOrClass == #SQFile
+		ifTrue: [BytesPerWord]
+		ifFalse: [super sizeof: objectSymbolOrClass]
 ]
 
 { #category : #simulation }
 FilePluginSimulator >> sqFile: file Read: count Into: byteArrayIndex At: startIndex [
-	^interpreterProxy interpreter sqFile: file Read: count Into: byteArrayIndex At: startIndex
+	| interpreter |
+	interpreter := interpreterProxy interpreter.
+	startIndex to: startIndex + count - 1 do:
+		[ :i |
+		file atEnd ifTrue: [^i - startIndex].
+		interpreter byteAt: byteArrayIndex + i put: file next asInteger].
+	^count
 ]
 
 { #category : #simulation }
 FilePluginSimulator >> sqFile: file SetPosition: newPosition [
-	^interpreterProxy interpreter sqFile: file SetPosition: newPosition
+	file position: newPosition
 ]
 
 { #category : #simulation }
 FilePluginSimulator >> sqFile: file Truncate: truncatePosition [
-	^interpreterProxy sqFile: file Truncate: truncatePosition
+	file truncate: truncatePosition
 ]
 
 { #category : #simulation }
 FilePluginSimulator >> sqFile: file Write: count From: byteArrayIndex At: startIndex [
-	^interpreterProxy interpreter sqFile: file Write: count From: byteArrayIndex At: startIndex
+	| interpreter |
+	interpreter := interpreterProxy interpreter.
+	file isBinary
+		ifTrue:
+			[startIndex to: startIndex + count - 1 do:
+				[ :i | file nextPut: (interpreter byteAt: byteArrayIndex + i)]]
+		ifFalse:
+			[startIndex to: startIndex + count - 1 do:
+				[ :i | | byte |
+				byte := interpreter byteAt: byteArrayIndex + i.
+				file nextPut: (Character value: (byte == 12 "lf" ifTrue: [15"cr"] ifFalse: [byte]))]].
+	^count
 ]
 
 { #category : #simulation }
 FilePluginSimulator >> sqFileAtEnd: file [
-	^interpreterProxy interpreter sqFileAtEnd: file
+	^file atEnd
 ]
 
 { #category : #simulation }
 FilePluginSimulator >> sqFileClose: file [
-	^interpreterProxy interpreter sqFileClose: file
+	file close
+]
+
+{ #category : #simulation }
+FilePluginSimulator >> sqFileDeleteName: nameIndex Size: nameSize [
+	| path |
+	path := interpreterProxy interpreter asString: nameIndex size: nameSize.
+	(StandardFileStream isAFileNamed: path) ifFalse:
+		[^interpreterProxy primitiveFail].
+	[FileDirectory deleteFilePath: path]
+		on: Error
+		do: [:ex| interpreterProxy primitiveFail]
 ]
 
 { #category : #simulation }
 FilePluginSimulator >> sqFileFlush: file [
-	^interpreterProxy interpreter sqFileFlush: file
+	^file flush
 ]
 
 { #category : #simulation }
 FilePluginSimulator >> sqFileGetPosition: file [
-	^interpreterProxy interpreter sqFileGetPosition: file
+	^file position
+]
+
+{ #category : #simulation }
+FilePluginSimulator >> sqFileRenameOld: oldNameIndex Size: oldNameSize New: newNameIndex Size: newNameSize [
+	| oldPath newPath |
+	oldPath := FileDirectory default fullNameFor: (interpreterProxy interpreter asString: oldNameIndex size: oldNameSize).
+	newPath := FileDirectory default fullNameFor: (interpreterProxy interpreter asString: newNameIndex size: newNameSize).
+	((StandardFileStream isAFileNamed: oldPath)
+	 and: [(StandardFileStream isAFileNamed: newPath) not]) ifFalse:
+		[^interpreterProxy primitiveFail].
+	[FileDirectory default primRename: oldPath to: newPath]
+		on: Error
+		do: [:ex| interpreterProxy primitiveFail]
 ]
 
 { #category : #simulation }
 FilePluginSimulator >> sqFileSize: file [
-	^interpreterProxy sqFileSize: file
+	^file size
+]
+
+{ #category : #simulation }
+FilePluginSimulator >> sqFileStdioHandlesInto: anArray [
+	Transcript clear.
+	"See FilePluginSimulator>>initialiseModule"
+	anArray
+		at: 1 put: 0;
+		at: 2 put: 1;
+		at: 3 put: 2.
+	^7
 ]
