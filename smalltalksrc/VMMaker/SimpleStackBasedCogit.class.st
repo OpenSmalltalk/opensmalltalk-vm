@@ -30,14 +30,6 @@ SimpleStackBasedCogit class >> declareCVarsIn: aCCodeGenerator [
 ]
 
 { #category : #'class initialization' }
-SimpleStackBasedCogit class >> initialize [
-	MaxLiteralCountForCompile := 60.
-	NumTrampolines := 38.
-	self initializeBytecodeTableForClosureV3.
-	self initializePrimitiveTableForSqueakV3
-]
-
-{ #category : #'class initialization' }
 SimpleStackBasedCogit class >> initializeBytecodeTableForClosureV3 [
 	"SimpleStackBasedCogit initializeBytecodeTableForClosureV3"
 
@@ -106,6 +98,13 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForClosureV3 [
 		(1 208 223 genSendLiteralSelector0ArgsBytecode mapped)
 		(1 224 239 genSendLiteralSelector1ArgBytecode mapped)
 		(1 240 255 genSendLiteralSelector2ArgsBytecode mapped))
+]
+
+{ #category : #'class initialization' }
+SimpleStackBasedCogit class >> initializeMiscConstantsWith: optionsDictionary [
+	super initializeMiscConstantsWith: optionsDictionary.
+	MaxLiteralCountForCompile := optionsDictionary at: #MaxLiteralCountForCompile ifAbsent: [60].
+	NumTrampolines := 38
 ]
 
 { #category : #'class initialization' }
@@ -286,6 +285,14 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueakV3 [
 
 		"(223 229 primitiveFail)"	"reserved for Cog primitives"
 	)
+]
+
+{ #category : #'class initialization' }
+SimpleStackBasedCogit class >> initializeWithOptions: optionsDictionary [
+
+	self initializeMiscConstantsWith: optionsDictionary. "must preceed other initialization."
+	self initializeBytecodeTableForClosureV3.
+	self initializePrimitiveTableForSqueakV3
 ]
 
 { #category : #translation }

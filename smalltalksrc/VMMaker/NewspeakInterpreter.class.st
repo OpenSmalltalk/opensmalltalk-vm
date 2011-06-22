@@ -214,30 +214,6 @@ NewspeakInterpreter class >> implicitReturnTypeFor: aSelector [
 ]
 
 { #category : #initialization }
-NewspeakInterpreter class >> initialize [
-	"NewspeakInterpreter initialize"
-
-	super initialize.  "initialize ObjectMemory constants"
-	self initializeAssociationIndex.
-	self initializeBytecodeTable.
-	self initializeCaches.
-	self initializeCharacterIndex.
-	self initializeCharacterScannerIndices.
-	self initializeClassIndices.
-	self initializeContextIndices.
-	self initializeDirectoryLookupResultCodes.
-	self initializeMessageIndices.
-	self initializeMethodIndices.
-	self initializeMiscConstants.
-	self initializePointIndices.
-	self initializePrimitiveTable.
-	self initializePrimitiveErrorCodes.
-	self initializeSchedulerIndices.
-	self initializeSmallIntegers.
-	self initializeStreamIndices
-]
-
-{ #category : #initialization }
 NewspeakInterpreter class >> initializeAssociationIndex [
 	ValueIndex := 1
 ]
@@ -465,10 +441,11 @@ NewspeakInterpreter class >> initializeMethodIndices [
 ]
 
 { #category : #initialization }
-NewspeakInterpreter class >> initializeMiscConstants [
+NewspeakInterpreter class >> initializeMiscConstantsWith: optionsDictionary [
 
-	super initializeMiscConstants.
-	IMMUTABILITY := NewspeakVM := true.
+	super initializeMiscConstantsWith: optionsDictionary.
+	NewspeakVM := true.
+	IMMUTABILITY := optionsDictionary at: #IMMUTABILITY ifAbsent: [true].
 
 	PrimitiveExternalCallIndex := 117. "Primitive index for #primitiveExternalCall"
 	MillisecondClockMask := 16r1FFFFFFF.
@@ -845,6 +822,30 @@ NewspeakInterpreter class >> initializeStreamIndices [
 	StreamIndexIndex := 1.
 	StreamReadLimitIndex := 2.
 	StreamWriteLimitIndex := 3.
+]
+
+{ #category : #initialization }
+NewspeakInterpreter class >> initializeWithOptions: optionsDictionary [
+	"NewspeakInterpreter initializeWithOptions: Dictionary new"
+
+	super initializeWithOptions: optionsDictionary.  "initialize ObjectMemory constants"
+	self initializeMiscConstantsWith: optionsDictionary. "must preceed other initialization."
+	self initializeAssociationIndex.
+	self initializeBytecodeTable.
+	self initializeCaches.
+	self initializeCharacterIndex.
+	self initializeCharacterScannerIndices.
+	self initializeClassIndices.
+	self initializeContextIndices.
+	self initializeDirectoryLookupResultCodes.
+	self initializeMessageIndices.
+	self initializeMethodIndices.
+	self initializePointIndices.
+	self initializePrimitiveTable.
+	self initializePrimitiveErrorCodes.
+	self initializeSchedulerIndices.
+	self initializeSmallIntegers.
+	self initializeStreamIndices
 ]
 
 { #category : #translation }
@@ -1373,11 +1374,6 @@ NewspeakInterpreter >> areIntegers: oop1 and: oop2 [
 	^ ((oop1 bitAnd: oop2) bitAnd: 1) ~= 0
 ]
 
-{ #category : #'message sending' }
-NewspeakInterpreter >> argCount [
-	^ argumentCount
-]
-
 { #category : #'compiled methods' }
 NewspeakInterpreter >> argumentCountOf: methodPointer [
 	^ ((self headerOf: methodPointer) >> 25) bitAnd: 16r0F
@@ -1404,15 +1400,15 @@ NewspeakInterpreter >> argumentCountOfMethodHeader: header [
 
 { #category : #utilities }
 NewspeakInterpreter >> arrayValueOf: arrayOop [
-	"Return the address of first indexable field of resulting array object, or fail if the instance variable does not contain an indexable bytes or words object."
+	"Return the address of first indexable field of resulting array object, or fail if
+	 the instance variable does not contain an indexable bytes or words object."
 	"Note: May be called by translated primitive code."
 
-	<returnTypeC: 'void *'>
-	((self isIntegerObject: arrayOop) not and:
-	 [self isWordsOrBytes: arrayOop])
-		ifTrue: [^ self cCode: '(void *)pointerForOop(arrayOop + BaseHeaderSize)'].
-	self primitiveFail.
-
+	<returnTypeC: #'void *'>
+	((self isNonIntegerObject: arrayOop)
+	 and: [self isWordsOrBytes: arrayOop]) ifTrue:
+		[^self cCoerceSimple: (self pointerForOop: arrayOop + BaseHeaderSize) to: #'void *'].
+	self primitiveFail
 ]
 
 { #category : #'indexing primitive support' }
@@ -2162,59 +2158,6 @@ NewspeakInterpreter >> capturePendingFinalizationSignals [
 	statPendingFinalizationSignals := pendingFinalizationSignals
 ]
 
-{ #category : #'object access primitives' }
-NewspeakInterpreter >> changeClassOf: rcvr to: argClass [
-	"Attempt to change the class of the receiver into the class of the the argument given that the
-	 format of the receiver matches the format of the argument. If successful answer 0, otherwise
-	 answer an error code indicating the reason for failure.  Fail if receiver or argument are
-	 SmallIntegers, or the receiver is an instance of a compact class and the argument isn't, or when
-	 the format of the receiver is different from the format of the argument's class, or when the
-	 arguments class is fixed and the receiver's size differs from the size that an instance of the
-	 argument's class should have."
-	| classHdr sizeHiBits byteSize argFormat rcvrFormat rcvrHdr ccIndex |
-	"Check what the format of the class says"
-	classHdr := self formatOfClass: argClass. "Low 2 bits are 0"
-
-	"Compute the size of instances of the class (used for fixed field classes only)"
-	sizeHiBits := (classHdr bitAnd: 16r60000) >> 9.
-	classHdr := classHdr bitAnd: 16r1FFFF.
-	byteSize := (classHdr bitAnd: SizeMask) + sizeHiBits. "size in bytes -- low 2 bits are 0"
-
-	"Check the receiver's format against that of the class"
-	argFormat := self formatOfHeader: classHdr.
-	rcvrHdr := self baseHeader: rcvr.
-	rcvrFormat := self formatOfHeader: rcvrHdr.
-	rcvrFormat > 8 ifTrue:
-		[rcvrFormat := rcvrFormat bitAnd: 12].
-	argFormat = rcvrFormat ifFalse:
-		[^PrimErrInappropriate]. "no way"
-
-	"For fixed field classes, the sizes must match.
-	Note: byteSize-4 because base header is included in class size."
-	argFormat < 2 ifTrue:
-		[(byteSize - BaseHeaderSize) = (self byteSizeOf: rcvr) ifFalse:
-			[^PrimErrBadReceiver]].
-
-	(self headerTypeOfHeader: rcvrHdr) = HeaderTypeShort
-		ifTrue: "Compact classes. Check if the arg's class is compact and exchange ccIndex"
-			[ccIndex := classHdr bitAnd: CompactClassMask.
-			ccIndex = 0 ifTrue:
-				[^PrimErrInappropriate]. "class is not compact"
-			(rcvrHdr bitAnd: ImmutabilityBit) ~= 0 ifTrue:
-				[^PrimErrNoModification].
-			self longAt: rcvr put:
-				(((self longAt: rcvr) bitAnd: CompactClassMask bitInvert32) bitOr: ccIndex)]
-		ifFalse:
-			[(rcvrHdr bitAnd: ImmutabilityBit) ~= 0 ifTrue:
-				[^PrimErrNoModification].
-			"Exchange the class pointer, which could make rcvr a root for argClass"
-			self longAt: rcvr-BaseHeaderSize put: (argClass bitOr: (self headerType: rcvr)).
-			(rcvr < youngStart) ifTrue: [self possibleRootStoreInto: rcvr value: argClass]].
-
-	"ok"
-	^0
-]
-
 { #category : #'indexing primitive support' }
 NewspeakInterpreter >> characterForAscii: ascii [  "Arg must lie in range 0-255!"
 	<inline: true>
@@ -2225,9 +2168,10 @@ NewspeakInterpreter >> characterForAscii: ascii [  "Arg must lie in range 0-255!
 NewspeakInterpreter >> checkAssumedCompactClasses [
 	"Check that the classes the VM assumes are compact have the right indices.
 	 As of 5/10/2011 Newspeak images have Squeak V9 compact classes.  If and
-	 when we bootstrap to Cog , Squeak V4 and closureswe can use the fuller set
+	 when we bootstrap to Cog , Squeak V4 and closures we can use the fuller set
 	 for faster large integer arithmetic, etc."
 	self checkCompactIndex: ClassArrayCompactIndex isClass: ClassArray named: 'Array'.
+	self checkCompactIndex: ClassLargePositiveIntegerCompactIndex isClass: ClassLargePositiveInteger named: 'LargePositiveInteger'.
 	self checkCompactIndex: ClassFloatCompactIndex isClass: ClassFloat named: 'Float'.
 	self checkCompactIndex: ClassBlockContextCompactIndex isClass: ClassBlockContext named: 'BlockContext'.
 	self checkCompactIndex: ClassMethodContextCompactIndex isClass: ClassMethodContext named: 'MethodContext'
@@ -3004,88 +2948,6 @@ NewspeakInterpreter >> executeNewMethod [
 	self activateNewMethod.
 	"check for possible interrupts at each real send"
 	self quickCheckForInterrupts
-]
-
-{ #category : #'stack bytecodes' }
-NewspeakInterpreter >> experimentalBytecode [
-	"Note: This bytecode is not currently generated by the compiler."
-	"This range of six bytecodes can replace the pushTemporaryVariable[0..5] bytecode at the beginning of a sequence of either the form:
-		pushTemp
-		pushTemp | pushConstantOne | pushLiteralConstant
-		<=
-		longJumpIfFalse
-or the form:
-		pushTemp
-		pushTemp | pushConstantOne | pushLiteralConstant
-		+
-		popIntoTemp (optional)
-
-If two values pushed are not small integers, this bytecode acts like the pushTemp bytecode it replaces. However, if they are small integers, then the given arithmetic or comparison operation is performed. The result of that operation is either pushed onto the stack or, if one of the expected bytecodes follows it, then that bytecode is performed immediately. In such cases, the entire four instruction sequence is performed without doing any stack operations."
-
-	| arg1 byte2 byte3 byte4 arg1Val arg2Val result offset |
-	arg1 := self temporary: currentBytecode - 138.
-	byte2 := self byteAtPointer: localIP + 1.  "fetch ahead"
-	byte3 := self byteAtPointer: localIP + 2.  "fetch ahead"
-	byte4 := self byteAtPointer: localIP + 3.  "fetch ahead"
-
-	"check first arg"
-	(self isIntegerObject: arg1) ifTrue: [
-		arg1Val := self integerValueOf: arg1.
-	] ifFalse: [
-		self fetchNextBytecode.
-		^ self internalPush: arg1.  "abort; first arg is not an integer"
-	].
-
-	"get and check second arg"
-	byte2 < 32 ifTrue: [
-		arg2Val := self temporary: (byte2 bitAnd: 16rF).
-		(self isIntegerObject: arg2Val) ifTrue: [
-			arg2Val := self integerValueOf: arg2Val.
-		] ifFalse: [
-			self fetchNextBytecode.
-			^ self internalPush: arg1.  "abort; second arg is not an integer"
-		].
-	] ifFalse: [
-		byte2 > 64 ifTrue: [
-			arg2Val := 1.
-		] ifFalse: [
-			arg2Val := self literal: (byte2 bitAnd: 16r1F).
-			(self isIntegerObject: arg2Val) ifTrue: [
-				arg2Val := self integerValueOf: arg2Val.
-			] ifFalse: [
-				self fetchNextBytecode.
-				^ self internalPush: arg1.  "abort; second arg is not an integer"
-			].
-		].
-	].
-
-	byte3 < 178 ifTrue: [
-		"do addition, possibly followed by a storeAndPopTemp"
-		result := arg1Val + arg2Val.
-		(self isIntegerValue: result) ifTrue: [
-			((byte4 > 103) and: [byte4 < 112]) ifTrue: [
-				"next instruction is a storeAndPopTemp"
-				localIP := localIP + 3.
-				self storePointerUnchecked: (byte4 bitAnd: 7) + TempFrameStart
-					ofObject: localHomeContext
-					withValue: (self integerObjectOf: result).
-			] ifFalse: [
-				localIP := localIP + 2.
-				self internalPush: (self integerObjectOf: result).
-			].
-		] ifFalse: [
-			self fetchNextBytecode.
-			^ self internalPush: arg1.  "abort; result is not an integer"
-		].
-	] ifFalse: [
-		"do comparison operation, followed by a longJumpIfFalse"
-		offset := self byteAtPointer: localIP + 4.
-		arg1Val <= arg2Val
-			ifTrue: [localIP := localIP + 3 + 1]  "jump not taken; skip extra instruction byte"
-			ifFalse: [localIP := localIP + 3 + 1 + offset].
-			self fetchNextBytecode.
-	].
-
 ]
 
 { #category : #'stack bytecodes' }
@@ -6919,11 +6781,10 @@ NewspeakInterpreter >> primitiveGetImmutability [
 	rcvr := self stackValue: 0.
 	(self isIntegerObject: rcvr)
 		ifTrue:
-			[self pop: 1 thenPush: (self splObj: TrueObject)]
+			[self pop: argumentCount thenPush: (self splObj: TrueObject)]
 		ifFalse:
 			[hdr := self baseHeader: rcvr.
-			self pop: 1.
-			self pushBool: (hdr bitAnd: ImmutabilityBit) ~= 0]
+			self pop: argumentCount thenPushBool: (hdr bitAnd: ImmutabilityBit) ~= 0]
 ]
 
 { #category : #'I/O primitives' }
@@ -8204,8 +8065,7 @@ NewspeakInterpreter >> primitiveSetImmutability [
 		ifTrue: [hdr := hdr bitOr: ImmutabilityBit]
 		ifFalse: [hdr := hdr bitAnd: AllButImmutabilityBit].
 	self baseHeader: rcvr put: hdr.
-	self pop: 2.
-	self pushBool: wasImmutable ~= 0
+	self pop: argumentCount thenPushBool: wasImmutable ~= 0
 ]
 
 { #category : #'I/O primitives' }
@@ -11091,7 +10951,7 @@ NewspeakInterpreter >> unPop: nItems [
 
 { #category : #'interpreter shell' }
 NewspeakInterpreter >> undoFetchNextBytecode [
-	"Backup the ip when it has been incremeted to fetch the next bytecode."
+	"Backup the ip when it has been incremented to fetch the next bytecode."
 
 	localIP := localIP - 1
 ]

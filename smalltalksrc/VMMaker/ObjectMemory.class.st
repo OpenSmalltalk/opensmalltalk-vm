@@ -409,13 +409,15 @@ ObjectMemory class >> initializeSpecialObjectIndices [
 ]
 
 { #category : #initialization }
-ObjectMemory class >> initializeWithBytesToWord:  numberOfBytesInAWord [
-	"ObjectMemory initializeWithBytesToWord: Smalltalk wordSize"
+ObjectMemory class >> initializeWithOptions: optionsDictionary [
+	"ObjectMemory initializeWithOptions: Dictionary new"
 
-	self initBytesPerWord: numberOfBytesInAWord.
+	self initBytesPerWord: (optionsDictionary at: #BytesPerWord ifAbsent: [4])..
 
 	"Translation flags (booleans that control code generation via conditional translation):"
-	DoAssertionChecks := DoExpensiveAssertionChecks := false.  "generate assertion checks"
+	"generate assertion checks"
+	DoAssertionChecks := optionsDictionary at: #DoAssertionChecks ifAbsent: [false].
+	DoExpensiveAssertionChecks := optionsDictionary at: #DoExpensiveAssertionChecks ifAbsent: [false].
 
 	self initializeSpecialObjectIndices.
 	self initializeCompactClassIndices.
@@ -935,14 +937,14 @@ ObjectMemory >> bytesPerWord [
 
 { #category : #'interpreter access' }
 ObjectMemory >> changeClassOf: rcvr to: argClass [
-	"Attempt to change the class of the receiver into the class specified by the argument given that
-	 the format of the receiver matches the format of the argument. If successful answer 0, otherwise
+	"Attempt to change the class of the receiver into the class of the the argument given that the
+	 format of the receiver matches the format of the argument. If successful answer 0, otherwise
 	 answer an error code indicating the reason for failure.  Fail if receiver or argument are
 	 SmallIntegers, or the receiver is an instance of a compact class and the argument isn't, or when
-	 the argument's class is compact and the receiver isn't, or when the format of the receiver is
-	 different from the format of the argument's class, or when the arguments class is fixed and the
-	 receiver's size differs from the size that an instance of the argument's class should have."
-	| classHdr sizeHiBits byteSize argFormat rcvrFormat ccIndex |
+	 the format of the receiver is different from the format of the argument's class, or when the
+	 arguments class is fixed and the receiver's size differs from the size that an instance of the
+	 argument's class should have."
+	| classHdr sizeHiBits byteSize argFormat rcvrFormat rcvrHdr ccIndex |
 	"Check what the format of the class says"
 	classHdr := self formatOfClass: argClass. "Low 2 bits are 0"
 
@@ -953,7 +955,8 @@ ObjectMemory >> changeClassOf: rcvr to: argClass [
 
 	"Check the receiver's format against that of the class"
 	argFormat := self formatOfHeader: classHdr.
-	rcvrFormat := self formatOf: rcvr.
+	rcvrHdr := self baseHeader: rcvr.
+	rcvrFormat := self formatOfHeader: rcvrHdr.
 	"If the receiver is a byte object we need to clear the number of odd bytes from the format."
 	rcvrFormat > 8 ifTrue:
 		[rcvrFormat := rcvrFormat bitAnd: 16rC].
@@ -971,75 +974,24 @@ ObjectMemory >> changeClassOf: rcvr to: argClass [
 				[(byteSize - BaseHeaderSize) > (self byteSizeOf: rcvr) ifTrue:
 					[^PrimErrBadReceiver]]].
 
-	(self headerType: rcvr) = HeaderTypeShort
+	(self headerTypeOfHeader: rcvrHdr) = HeaderTypeShort
 		ifTrue: "Compact classes. Check if the arg's class is compact and exchange ccIndex"
 			[ccIndex := classHdr bitAnd: CompactClassMask.
-			ccIndex = 0 ifTrue:[^PrimErrInappropriate]. "class is not compact"
+			ccIndex = 0 ifTrue:
+				[^PrimErrInappropriate]. "class is not compact"
+			self cppIf: IMMUTABILITY
+				ifTrue: [(rcvrHdr bitAnd: ImmutabilityBit) ~= 0 ifTrue:
+							[^PrimErrNoModification]].
 			self longAt: rcvr put:
-				(((self longAt: rcvr) bitAnd: CompactClassMask bitInvert32)
-					bitOr: ccIndex)]
+				(((self longAt: rcvr) bitAnd: CompactClassMask bitInvert32) bitOr: ccIndex)]
 		ifFalse: "Exchange the class pointer, which could make rcvr a root for argClass"
-			[self longAt: rcvr-BaseHeaderSize put: (argClass bitOr: (self headerType: rcvr)).
-			(self oop: rcvr isLessThan: youngStart)
-				ifTrue: [self possibleRootStoreInto: rcvr value: argClass]].
-
-	^0
-]
-
-{ #category : #'interpreter access' }
-ObjectMemory >> changeClassOf: rcvr toThatOf: arg [
-	"Attempt to change the class of the receiver into the class of the the argument given that
-	 the format of the receiver matches the format of the argument. If successful answer 0, otherwise
-	 answer an error code indicating the reason for failure.  Fail if receiver or argument are
-	 SmallIntegers, or the receiver is an instance of a compact class and the argument isn't, or when
-	 the argument's class is compact and the receiver isn't, or when the format of the receiver is
-	 different from the format of the argument's class, or when the arguments class is fixed and the
-	 receiver's size differs from the size that an instance of the argument's class should have."
-	| argClass classHdr sizeHiBits byteSize argFormat rcvrFormat ccIndex |
-
-	"Get the class we want to convert the receiver into"
-	argClass := self fetchClassOf: arg.
-
-	"Check what the format of the class says"
-	classHdr := self formatOfClass: argClass. "Low 2 bits are 0"
-
-	"Compute the size of instances of the class (used for fixed field classes only)"
-	sizeHiBits := (classHdr bitAnd: 16r60000) >> 9.
-	classHdr := classHdr bitAnd: 16r1FFFF.
-	byteSize := (classHdr bitAnd: SizeMask) + sizeHiBits. "size in bytes -- low 2 bits are 0"
-
-	"Check the receiver's format against that of the class"
-	argFormat := self formatOfHeader: classHdr.
-	rcvrFormat := self formatOf: rcvr.
-	argFormat = rcvrFormat ifFalse:
-		[(rcvrFormat > 8 and: [argFormat > 8]) ifTrue:
-			[rcvrFormat := rcvrFormat bitAnd: 16rC.
-			 argFormat := argFormat bitAnd: 16rC].
-		argFormat = rcvrFormat ifFalse:
-			[^PrimErrInappropriate]]. "no way"
-
-	"For fixed field classes, the sizes must match.
-	Note: byteSize-4 because base header is included in class size."
-	argFormat < 2
-		ifTrue:
-			[(byteSize - BaseHeaderSize) ~= (self byteSizeOf: rcvr) ifTrue:
-				[^PrimErrBadReceiver]]
-		ifFalse:
-			[argFormat = 3 ifTrue: "For indexable plus fixed fields the receiver must be at least big enough."
-				[(byteSize - BaseHeaderSize) > (self byteSizeOf: rcvr) ifTrue:
-					[^PrimErrBadReceiver]]].
-
-	(self headerType: rcvr) = HeaderTypeShort
-		ifTrue: "Compact classes. Check if the arg's class is compact and exchange ccIndex"
-			[ccIndex := classHdr bitAnd: CompactClassMask.
-			ccIndex = 0 ifTrue: [^PrimErrInappropriate]. "class is not compact"
-			self longAt: rcvr put:
-				(((self longAt: rcvr) bitAnd: CompactClassMask bitInvert32)
-					bitOr: ccIndex)]
-		ifFalse: "Exchange the class pointer, which could make rcvr a root for argClass"
-			[self longAt: rcvr-BaseHeaderSize put: (argClass bitOr: (self headerType: rcvr)).
-			(rcvr < youngStart) ifTrue: [self possibleRootStoreInto: rcvr value: argClass]].
-
+			[self cppIf: IMMUTABILITY
+				ifTrue: [(rcvrHdr bitAnd: ImmutabilityBit) ~= 0 ifTrue:
+							[^PrimErrNoModification]].
+			self longAt: rcvr-BaseHeaderSize put: (argClass bitOr: (self headerType: rcvr)).
+			(self oop: rcvr isLessThan: youngStart) ifTrue:
+				[self possibleRootStoreInto: rcvr value: argClass]].
+	"ok"
 	^0
 ]
 

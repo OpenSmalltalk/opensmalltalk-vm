@@ -85,7 +85,8 @@ Class {
 		'logger',
 		'interpreterClassName',
 		'cogitClassName',
-		'is64BitVM'
+		'is64BitVM',
+		'optionsDictionary'
 	],
 	#classVars : [
 		'DirNames'
@@ -167,6 +168,7 @@ VMMaker class >> generate: interpreterClass and: cogitClass to: srcDirName platf
 	(self
 		makerFor: interpreterClass
 		and: cogitClass
+		with: #()
 		to: srcDirName
 		platformDir: platDirName
 		excluding: exclusions) generateEntire
@@ -185,9 +187,26 @@ VMMaker class >> generate: interpreterClass and: cogitClass to: srcDirName platf
 						BMPReadWriterPlugin IA32ABI SocketPlugin BitBltPlugin JPEGReadWriter2Plugin SurfacePlugin
 						DSAPrims JPEGReaderPlugin UUIDPlugin DropPlugin LargeIntegers UnixOSProcessPlugin
 						FileCopyPlugin Matrix2x3Plugin Win32OSProcessPlugin FilePlugin MiscPrimitivePlugin ZipPlugin))"
+	^self generate: interpreterClass and: cogitClass with: #() to: srcDirName platformDir: platDirName including: inclusions
+]
+
+{ #category : #utilities }
+VMMaker class >> generate: interpreterClass and: cogitClass with: optionsPairsArray to: srcDirName platformDir: platDirName including: inclusions [
+	"Generate the VM to the given target directory. Include only plugins in pluginList.
+	 Example:
+		(VMMaker
+			generate: CoInterpreter
+			and: SimpleStackBasedCogit
+			to: (FileDirectory default pathFromURI: '../src')
+			platformDir: (FileDirectory default pathFromURI: '../platforms')
+			including:#(	AsynchFilePlugin FloatArrayPlugin RePlugin B2DPlugin FloatMathPlugin SecurityPlugin
+						BMPReadWriterPlugin IA32ABI SocketPlugin BitBltPlugin JPEGReadWriter2Plugin SurfacePlugin
+						DSAPrims JPEGReaderPlugin UUIDPlugin DropPlugin LargeIntegers UnixOSProcessPlugin
+						FileCopyPlugin Matrix2x3Plugin Win32OSProcessPlugin FilePlugin MiscPrimitivePlugin ZipPlugin))"
 	(self
 		makerFor: interpreterClass
 		and: cogitClass
+		with: optionsPairsArray
 		to: srcDirName
 		platformDir: platDirName
 		including: inclusions) generateEntire
@@ -208,7 +227,13 @@ VMMaker class >> generate: interpreterClass to: srcDirName platformDir: platDirN
 				SlangTestPlugin TestOSAPlugin ThreadedFFIPlugin 
 				Win32OSProcessPlugin
 			))."
-	(self makerFor: interpreterClass and: nil to: srcDirName platformDir: platDirName excluding: exclusions) generateEntire
+	(self
+		makerFor: interpreterClass
+		and: nil
+		with: #()
+		to: srcDirName
+		platformDir: platDirName
+		excluding: exclusions) generateEntire
 ]
 
 { #category : #utilities }
@@ -223,7 +248,23 @@ VMMaker class >> generate: interpreterClass to: srcDirName platformDir: platDirN
 						BMPReadWriterPlugin IA32ABI SocketPlugin BitBltPlugin JPEGReadWriter2Plugin SurfacePlugin
 						DSAPrims JPEGReaderPlugin UUIDPlugin DropPlugin LargeIntegers UnixOSProcessPlugin
 						FileCopyPlugin Matrix2x3Plugin Win32OSProcessPlugin FilePlugin MiscPrimitivePlugin ZipPlugin))."
-	(self makerFor: interpreterClass and: nil to: srcDirName platformDir: platDirName including: inclusions) generateEntire
+	self generate: interpreterClass with: #() to: srcDirName platformDir: platDirName including: inclusions
+]
+
+{ #category : #utilities }
+VMMaker class >> generate: interpreterClass with: optionsPairsArray to: srcDirName platformDir: platDirName including: inclusions [
+	"Generate the VM to the given target directory. Include only plugins in pluginList.
+	 Example:
+		(VMMaker
+			generate: NewspeakInterpreter
+			to: (FileDirectory default pathFromURI: 'cogvm/newspeaksrc')
+			with: #(IMMUTABILITY true)
+			platformDir: (FileDirectory default pathFromURI: 'cogvm/platforms')
+			including:#(	AsynchFilePlugin FloatArrayPlugin RePlugin B2DPlugin FloatMathPlugin SecurityPlugin
+						BMPReadWriterPlugin IA32ABI SocketPlugin BitBltPlugin JPEGReadWriter2Plugin SurfacePlugin
+						DSAPrims JPEGReaderPlugin UUIDPlugin DropPlugin LargeIntegers UnixOSProcessPlugin
+						FileCopyPlugin Matrix2x3Plugin Win32OSProcessPlugin FilePlugin MiscPrimitivePlugin ZipPlugin))."
+	(self makerFor: interpreterClass and: nil with: optionsPairsArray to: srcDirName platformDir: platDirName including: inclusions) generateEntire
 ]
 
 { #category : #'version testing' }
@@ -283,7 +324,30 @@ VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil to: srcDirName 
 ]
 
 { #category : #utilities }
-VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil to: srcDirName platformDir: platDirName excluding: exclusions [
+VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil with: optionsPairsArray to: srcDirName platformDir: platDirName [
+	"Initialize a VMMaker to generate the VM to the given target directory. Include plugins in pluginList.
+	Example:
+		(VMMaker
+			generate: NewspeakInterpreter
+			to: (FileDirectory default pathFromURI: 'cogvm/newspeaksrc')
+			platformDir: (FileDirectory default pathFromURI: 'cogvm/platforms')
+			including:#(	AsynchFilePlugin FloatArrayPlugin RePlugin B2DPlugin FloatMathPlugin SecurityPlugin
+						BMPReadWriterPlugin IA32ABI SocketPlugin BitBltPlugin JPEGReadWriter2Plugin SurfacePlugin
+						DSAPrims JPEGReaderPlugin UUIDPlugin DropPlugin LargeIntegers UnixOSProcessPlugin
+						FileCopyPlugin Matrix2x3Plugin Win32OSProcessPlugin FilePlugin MiscPrimitivePlugin ZipPlugin))"
+	| maker |
+	maker := self forPlatform: 'Cross'.
+	maker sourceDirectoryName: srcDirName.
+	maker platformRootDirectoryName: platDirName.
+	maker interpreterClass: interpreterClass.
+	cogitClassOrNil ifNotNil: [maker cogitClass: cogitClassOrNil].
+	maker options: optionsPairsArray.
+	^maker
+
+]
+
+{ #category : #utilities }
+VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil with: optionsPairsArray to: srcDirName platformDir: platDirName excluding: exclusions [
 	"Initialize a VMMaker to generate the VM to the given target directory. Exclude plugins in pluginList.
 	Example:
 		(VMMaker
@@ -300,7 +364,7 @@ VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil to: srcDirName 
 			generateInterpreterFile.
 	"
 	| maker |
-	maker := self makerFor: interpreterClass and: cogitClassOrNil to: srcDirName platformDir: platDirName.
+	maker := self makerFor: interpreterClass and: cogitClassOrNil with: optionsPairsArray to: srcDirName platformDir: platDirName.
 	maker externalModules addAll: 
 		(maker availablePlugins reject:[:plugin| exclusions includes: plugin]).
 	^maker
@@ -308,7 +372,7 @@ VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil to: srcDirName 
 ]
 
 { #category : #utilities }
-VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil to: srcDirName platformDir: platDirName including: inclusions [
+VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil with: optionsPairsArray to: srcDirName platformDir: platDirName including: inclusions [
 	"Initialize a VMMaker to generate the VM to the given target directory. Include plugins in pluginList.
 	Example:
 		(VMMaker
@@ -320,7 +384,7 @@ VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil to: srcDirName 
 						DSAPrims JPEGReaderPlugin UUIDPlugin DropPlugin LargeIntegers UnixOSProcessPlugin
 						FileCopyPlugin Matrix2x3Plugin Win32OSProcessPlugin FilePlugin MiscPrimitivePlugin ZipPlugin))"
 	| maker |
-	maker := self makerFor: interpreterClass and: cogitClassOrNil to: srcDirName platformDir: platDirName.
+	maker := self makerFor: interpreterClass and: cogitClassOrNil with: optionsPairsArray to: srcDirName platformDir: platDirName.
 	maker externalModules addAll: inclusions.
 	^maker
 
@@ -382,7 +446,11 @@ VMMaker >> buildCodeGeneratorForCogit [
 		[cogitClass := cogitClass superclass].
 	cogitClasses addFirst: VMClass.
 	cogitClasses addAllLast: self cogitClass ancilliaryClasses.
-	cogitClasses, { self interpreterClass } do: [:cgc| cgc initialize].
+	cogitClasses, { self interpreterClass } do:
+		[:cgc|
+		(cgc respondsTo: #initializeWithOptions:)
+			ifTrue: [cgc initializeWithOptions: optionsDictionary]
+			ifFalse: [cgc initialize]].
 	cogitClasses do: [:cgc| cg addClass: cgc].
 	(cg structClassesForTranslationClasses: cogitClasses) do:
 		[:structClass| cg addStructClass: structClass].
@@ -421,8 +489,8 @@ VMMaker >> buildCodeGeneratorForInterpreter [
 
 	interpreterClasses do:
 		[:ic|
-		(ic class includesSelector: #initializeWithBytesToWord:)
-			ifTrue: [ic initializeWithBytesToWord: self bytesPerWord]
+		(ic respondsTo: #initializeWithOptions:)
+			ifTrue: [ic initializeWithOptions: optionsDictionary]
 			ifFalse: [ic initialize]].
 
 	interpreterClasses do: [:ic| cg addClass: ic].
@@ -858,6 +926,8 @@ VMMaker >> initialize [
 	platformName := self class machinesDirName.
 	is64BitVM := Smalltalk wordSize == 8.
 	interpreterClassName := Interpreter name.
+	optionsDictionary := Dictionary new.
+	optionsDictionary at: #BytesPerWord put: Smalltalk wordSize.
 	VMStructType voidStructTypeCache
 ]
 
@@ -1168,6 +1238,16 @@ VMMaker >> needsToRegenerateInterpreterFile [
 		[^self confirm: 'The interpreter classes have not been modified since\ the interpreter file was last generated.\Do you still want to regenerate their source file?' withCRs]].
 	^true
 
+]
+
+{ #category : #initialize }
+VMMaker >> options: anArrayOfPairs [
+	self assert: anArrayOfPairs size even.
+	1 to: anArrayOfPairs size by: 2 do:
+		[:i| | key |
+		key := anArrayOfPairs at: i.
+		self assert: key isSymbol.
+		optionsDictionary at: key put: (anArrayOfPairs at: i + 1)]
 ]
 
 { #category : #'target directories' }
