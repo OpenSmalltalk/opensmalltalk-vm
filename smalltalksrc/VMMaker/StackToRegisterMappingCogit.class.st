@@ -264,7 +264,9 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForClosureV3 [
 { #category : #'class initialization' }
 StackToRegisterMappingCogit class >> initializeMiscConstantsWith: optionsDictionary [
 	super initializeMiscConstantsWith: optionsDictionary.
-	NumTrampolines := 50
+	NumTrampolines := NewspeakVM
+							ifTrue: [58]
+							ifFalse: [50]
 ]
 
 { #category : #'class initialization' }
@@ -2577,6 +2579,26 @@ StackToRegisterMappingCogit >> generateSendTrampolines [
 					arg: 0
 					arg: ReceiverResultReg
 					arg: SendNumArgsReg).
+	self cppIf: NewspeakVM
+		ifTrue:
+			[0 to: NumSendTrampolines - 2 do:
+				[:numArgs|
+				dynamicSuperSendTrampolines
+					at: numArgs
+					put: (self genSendTrampolineFor: #ceDynamicSuperSend:to:numArgs: asSymbol
+							  numArgs: numArgs
+							  called: (self trampolineName: 'ceDynSuperSend' numArgs: numArgs)
+							  arg: ClassReg
+							  arg: ReceiverResultReg
+							  arg: numArgs)].
+			dynamicSuperSendTrampolines
+				at: NumSendTrampolines - 1
+				put: (self genSendTrampolineFor: #ceDynamicSuperSend:to:numArgs: asSymbol
+							numArgs: self numRegArgs + 1
+							called: (self trampolineName: 'ceDynSuperSend' numArgs: -1)
+							arg: ClassReg
+							arg: ReceiverResultReg
+							arg: SendNumArgsReg)].
 	0 to: NumSendTrampolines - 2 do:
 		[:numArgs|
 		superSendTrampolines

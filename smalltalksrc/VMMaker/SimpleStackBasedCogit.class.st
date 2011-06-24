@@ -111,7 +111,9 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForClosureV3 [
 SimpleStackBasedCogit class >> initializeMiscConstantsWith: optionsDictionary [
 	super initializeMiscConstantsWith: optionsDictionary.
 	MaxLiteralCountForCompile := optionsDictionary at: #MaxLiteralCountForCompile ifAbsent: [60].
-	NumTrampolines := 38
+	NumTrampolines := NewspeakVM
+							ifTrue: [46]
+							ifFalse: [38]
 ]
 
 { #category : #'class initialization' }
@@ -1783,6 +1785,34 @@ SimpleStackBasedCogit >> genPushConstantNilBytecode [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPushConstantTrueBytecode [
 	^self genPushLiteral: objectMemory trueObject
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genPushImplicitReceiverBytecode [
+	"Cached push implicit receiver implementation.  Caller looks like
+		mov selector, ClassReg
+				call cePushImplicitReceiver
+				br continue
+		Lclass	.word
+		Lmixin:	.word
+		continue:
+	 If class matches class of receiver then mixin contains either 0 or the implicit receiver.
+	 If 0, push the actual receiver."
+	| selector skip |
+	<inline: false>
+	<var: #skip type: #'AbstractInstruction *'>
+
+	selector := coInterpreter literal: byte1 ofMethod: methodObj.
+	(objectMemory isYoung: selector) ifTrue:
+		[hasYoungReferent := true].
+	self assert: needsFrame.
+	self MoveCw: selector R: ClassReg.
+	self CallNewspeakSend: cePushImplicitReceiverTrampoline.
+	skip := self Jump: 0.
+	self Fill32: 0.
+	self Fill32: 0.
+	skip jmpTarget: (self PushR: ReceiverResultReg).
+	^0
 ]
 
 { #category : #'bytecode generators' }

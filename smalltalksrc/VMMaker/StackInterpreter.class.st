@@ -3912,8 +3912,8 @@ StackInterpreter >> findApplicationOfTargetMixin: targetMixin startingAtBehavior
 	mixinOrMixinApplication := aBehavior.
 	[mixinOrMixinApplication = objectMemory nilObject
 	 or: [mixinOrMixinApplication = targetMixin
-	 or: [(mixin := objectMemory fetchPointer: MixinIndex ofObject: mixinOrMixinApplication) == targetMixin
-	 or: [(objectMemory fetchClassOf: mixin) == targetMixin]]]] whileFalse:
+	 or: [(mixin := objectMemory fetchPointer: MixinIndex ofObject: mixinOrMixinApplication) = targetMixin
+	 or: [(objectMemory fetchClassOfNonInt: mixin) = targetMixin]]]] whileFalse:
 		[mixinOrMixinApplication := objectMemory fetchPointer: SuperclassIndex ofObject: mixinOrMixinApplication].
 	^mixinOrMixinApplication
 ]
@@ -4846,11 +4846,12 @@ StackInterpreter >> implicitReceiverForMixin: mixin implementing: selector [
 
 	<ContextPart> implicitReceiverFor: obj <Object>
 					withMixin: mixin <Mixin>
-					implementing: selector <Symbol> ^<Object
-	 "
+					implementing: selector <Symbol> ^<Object>"
+	<api>
 	| receiver mixinApplication dictionary found |
 	messageSelector := selector. "messageSelector is an implicit parameter of lookupMethodInDictionary:"
-	receiver := self receiver.
+	"use frameReceiver: because this can also be used by the Cogit from a machine-code frame."
+	receiver := self frameReceiver: framePointer.
 	mixinApplication := self
 							findApplicationOfTargetMixin: mixin
 							startingAtBehavior: (objectMemory fetchClassOf: receiver).
@@ -9759,7 +9760,7 @@ StackInterpreter >> symbolicMethod: aMethod printAbsPC: printAbsPC [
 		 byte := objectMemory fetchByte: pc ofObject: aMethod.
 		 type := byte // 16.
 		 offset := byte \\ 16.  
-		 (type =7 and: [offset >= 8 and: [pc >= latestContinuation]]) ifTrue:"Return bytecodes (possible lastPC here)"
+		 (byte >= 120 and: [byte <= 125 and: [pc >= latestContinuation]]) ifTrue:"Return bytecodes (possible lastPC here)"
 			[end := pc].
 		 (type = 8 and: [offset = 15]) ifTrue: "closure creation; update latest continuation"
 			[byte3 := objectMemory fetchByte: pc + 2 ofObject: aMethod.

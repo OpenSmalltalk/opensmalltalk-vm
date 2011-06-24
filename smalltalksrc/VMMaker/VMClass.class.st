@@ -329,25 +329,28 @@ VMClass >> cPreprocessorDirective: codeString [
 ]
 
 { #category : #'translation support' }
-VMClass >> cppIf: conditionBlock ifTrue: trueExpressionOrBlock [
+VMClass >> cppIf: conditionBlockOrValue ifTrue: trueExpressionOrBlock [
 	"When translated, produces #if (condition) #else #endif CPP directives.
 	 Example usage:
 
-		self cppIf: [BytesPerWord = 8]
-			ifTrue: [self doSomethingFor64Bit]
-			ifFalse: [self doSomethingFor32Bit]"
-	self cppIf: conditionBlock ifTrue: trueExpressionOrBlock ifFalse: []
+		self cppIf: IMMUTABILITY
+			ifTrue: [(self internalIsImmutable: obj) ifTrue:
+						[^self primitiveFailFor: PrimErrNoModification]]"
+	^self cppIf: conditionBlockOrValue ifTrue: trueExpressionOrBlock ifFalse: []
 ]
 
 { #category : #'translation support' }
-VMClass >> cppIf: conditionBlock ifTrue: trueExpressionOrBlock ifFalse: falseExpressionOrBlockOrNil [
+VMClass >> cppIf: conditionBlockOrValue ifTrue: trueExpressionOrBlock ifFalse: falseExpressionOrBlockOrNil [
 	"When translated, produces #if (condition) #else #endif CPP directives.
 	 Example usage:
 
 		self cppIf: [BytesPerWord = 8]
 			ifTrue: [self doSomethingFor64Bit]
+			ifFalse: [self doSomethingFor32Bit]
+		self cppIf: BytesPerWord = 8
+			ifTrue: [self doSomethingFor64Bit]
 			ifFalse: [self doSomethingFor32Bit]"
-	(conditionBlock value
+	^(conditionBlockOrValue value
 		ifNil: [false]
 		ifNotNil: [:value|
 			value isInteger

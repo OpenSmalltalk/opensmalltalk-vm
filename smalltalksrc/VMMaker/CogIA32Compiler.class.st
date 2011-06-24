@@ -2489,6 +2489,11 @@ CogIA32Compiler >> jumpLongTargetBeforeFollowingAddress: mcpc [
 	^self callTargetFromReturnAddress: mcpc
 ]
 
+{ #category : #accessing }
+CogIA32Compiler >> jumpShortByteSize [
+	^2
+]
+
 { #category : #disassembly }
 CogIA32Compiler >> jumpTargetAt: pc [ 
 	| size byte offset |

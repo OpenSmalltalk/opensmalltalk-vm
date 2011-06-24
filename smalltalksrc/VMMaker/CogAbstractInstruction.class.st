@@ -463,6 +463,11 @@ CogAbstractInstruction >> jumpLongTargetBeforeFollowingAddress: mcpc [
 	^self subclassResponsibility
 ]
 
+{ #category : #accessing }
+CogAbstractInstruction >> jumpShortByteSize [
+	self subclassResponsibility
+]
+
 { #category : #'generate machine code' }
 CogAbstractInstruction >> labelOffset [
 	"To arrange that the block method field pushed in a block entry has
