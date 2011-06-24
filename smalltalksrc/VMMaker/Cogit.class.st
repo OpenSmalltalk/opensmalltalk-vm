@@ -205,6 +205,7 @@ Class {
 		'ceGetSP',
 		'sendTrampolines',
 		'superSendTrampolines',
+		'dynamicSuperSendTrampolines',
 		'firstSend',
 		'lastSend',
 		'realCEEnterCogCodePopReceiverReg',
@@ -233,6 +234,7 @@ Class {
 		'IsAbsPCReference',
 		'IsDisplacement',
 		'IsDisplacementX2N',
+		'IsNSSendCall',
 		'IsObjectReference',
 		'IsRelativeCall',
 		'IsSendCall',
@@ -463,9 +465,8 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 
 { #category : #translation }
 Cogit class >> doInlining [
-	"At least while getting this to compile we choose not to"
-	self flag: #revisit.
-	^false
+	"inline only those methods that are marked with <inline: true>"
+	^#asSpecified
 ]
 
 { #category : #translation }
@@ -588,7 +589,7 @@ Cogit class >> initializeAnnotationConstants [
 	HasBytecodePC := 5.
 	IsAbsPCReference := 4.
 	IsObjectReference := 3.
-	"code 2 is unused and is reserved for Newspeak implicit receiver sends"
+	IsNSSendCall := NewspeakVM ifTrue: [2].
 	IsDisplacementX2N := 1.
 	IsDisplacement := 0.
 	AnnotationShift := 5.
@@ -1004,6 +1005,12 @@ Cogit >> Call: callTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^self gen: Call operand: callTarget
+]
+
+{ #category : #'method map' }
+Cogit >> CallNewspeakSend: callTarget [
+	<returnTypeC: #'AbstractInstruction *'>
+	^self annotateNewspeakSend: (self Call: callTarget)
 ]
 
 { #category : #'method map' }
@@ -1861,6 +1868,14 @@ Cogit >> annotateCall: abstractInstruction [
 ]
 
 { #category : #'method map' }
+Cogit >> annotateNewspeakSend: abstractInstruction [
+	<var: #abstractInstruction type: #'AbstractInstruction *'>
+	<returnTypeC: #'AbstractInstruction *'>
+	<inline: true>
+	^self annotate: abstractInstruction with: IsNSSendCall
+]
+
+{ #category : #'method map' }
 Cogit >> annotateSend: abstractInstruction [
 	<var: #abstractInstruction type: #'AbstractInstruction *'>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -2328,7 +2343,7 @@ Cogit >> checkIfValidObjectRef: annotation pc: mcpc cogMethod: cogMethod [
 		 (objectRepresentation checkValidObjectReference: literal) ifFalse:
 			[self print: 'object ref leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
 			^1]].
-	annotation = IsSendCall ifTrue:
+	(self isSendAnnotation: annotation) ifTrue:
 		[| cacheTag |
 		 cacheTag := backEnd inlineCacheTagAt: mcpc asInteger.
 		 (objectRepresentation checkValidInlineCacheTag: cacheTag) ifFalse:
@@ -2350,7 +2365,7 @@ Cogit >> checkIfValidObjectRefAndTarget: annotation pc: mcpc cogMethod: cogMetho
 		 and: [coInterpreter isReallyYoungObject: literal]) ifTrue:
 			[(self asserta: (self cCoerceSimple: cogMethod to: #'CogMethod *') cmRefersToYoung) ifFalse:
 				[^2]]].
-	annotation = IsSendCall ifTrue:
+	(self isSendAnnotation: annotation) ifTrue:
 		[(self asserta: (self cCoerceSimple: cogMethod to: #'CogMethod *') cmType = CMMethod) ifFalse:
 			[^3].
 		 cacheTag := backEnd inlineCacheTagAt: mcpc asInteger.
@@ -4908,7 +4923,7 @@ Cogit >> incrementUsageOfTargetIfLinkedSend: annotation mcpc: mcpc ignored: supe
 	<var: #mcpc type: #'char *'>
 	| entryPoint offset targetMethod |
 	<var: #targetMethod type: #'CogMethod *'>
-	annotation = IsSendCall ifTrue:
+	(self isSendAnnotation: annotation) ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint > methodZoneBase ifTrue: "It's a linked send."
 			[offset := (entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
@@ -5090,6 +5105,13 @@ Cogit >> isCFramePointerInUse [
 	^true
 ]
 
+{ #category : #'method map' }
+Cogit >> isPCMappedAnnotation: annotation [
+	<inline: true>
+	^(self isSendAnnotation: annotation)
+	  or: [annotation = HasBytecodePC]
+]
+
 { #category : #disassembly }
 Cogit >> isPCWithinMethodZone: address [
 	<api>
@@ -5097,6 +5119,14 @@ Cogit >> isPCWithinMethodZone: address [
 	^address asUnsignedInteger
 		between: methodZoneBase
 		and: methodZone zoneLimit
+]
+
+{ #category : #'method map' }
+Cogit >> isSendAnnotation: annotation [
+	<inline: true>
+	^self cppIf: NewspeakVM
+		ifTrue: [annotation = IsSendCall or: [annotation = IsNSSendCall]]
+		ifFalse: [annotation = IsSendCall]
 ]
 
 { #category : #'jit - api' }
@@ -5303,7 +5333,7 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 				[| annotation nextBcpc |
 				annotation := mapByte >> AnnotationShift.
 				mcpc := mcpc + (mapByte bitAnd: DisplacementMask).
-				(annotation = HasBytecodePC or: [annotation = IsSendCall]) ifTrue:
+				(self isPCMappedAnnotation: annotation) ifTrue:
 					[[byte := objectMemory fetchByte: bcpc ofObject: aMethodObj.
 					  descriptor := self generatorAt: byte.
 					  isInBlock
@@ -5593,15 +5623,16 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMet
 	annotation = IsObjectReference ifTrue:
 		[literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
 		 objectRepresentation markAndTraceLiteral: literal].
-	annotation = IsSendCall ifTrue:
+	(self isSendAnnotation: annotation) ifTrue:
 		[cacheTag := backEnd inlineCacheTagAt: mcpc asInteger.
 		 cacheTagMarked := objectRepresentation cacheTagIsMarked: cacheTag.
 		 objectRepresentation markAndTraceLiteral: cacheTag.
 		 entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint > methodZoneBase ifTrue: "It's a linked send."
-			[(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
-				ifTrue: [offset := cmEntryOffset. sendTable := sendTrampolines]
-				ifFalse: [offset := cmNoCheckEntryOffset. sendTable := superSendTrampolines].
+			[self
+				offsetAndSendTableFor: entryPoint
+				annotation: annotation
+				into: [:off :table| offset := off. sendTable := table].
 			targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
 			(cacheTagMarked not
 			 or: [self markAndTraceOrFreeCogMethod: targetMethod firstVisit: targetMethod asUnsignedInteger > mcpc asUnsignedInteger]) ifTrue:
@@ -5659,7 +5690,7 @@ Cogit >> markYoungObjects: annotation pc: mcpc method: cogMethod [
 	annotation = IsObjectReference ifTrue:
 		[literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
 		 objectRepresentation markAndTraceLiteralIfYoung: literal].
-	annotation = IsSendCall ifTrue:
+	(self isSendAnnotation: annotation) ifTrue:
 		[cacheTag := backEnd inlineCacheTagAt: mcpc asInteger.
 		 objectRepresentation markAndTraceLiteralIfYoung: cacheTag].
 	^0 "keep scanning"
@@ -5865,6 +5896,24 @@ Cogit >> offset: aClass of: fieldSymbol [
 		{ [CogMethod] -> [cogMethodSurrogateClass offsetOf: fieldSymbol] }
 ]
 
+{ #category : #'in-line cacheing' }
+Cogit >> offsetAndSendTableFor: entryPoint annotation: annotation into: binaryBlock [
+	<inline: true>
+	self cppIf: NewspeakVM
+		ifTrue:
+			[(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
+				ifTrue: [binaryBlock value: cmEntryOffset value: sendTrampolines]
+				ifFalse: [binaryBlock
+							value: cmNoCheckEntryOffset
+							value: (annotation = IsNSSendCall
+										ifTrue: [dynamicSuperSendTrampolines]
+										ifFalse: [superSendTrampolines])]]
+		ifFalse:
+			[(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
+				ifTrue: [binaryBlock value: cmEntryOffset value: sendTrampolines]
+				ifFalse: [binaryBlock value: cmNoCheckEntryOffset value: superSendTrampolines]]
+]
+
 { #category : #'generate machine code' }
 Cogit >> outputInstructionsAt: startAddress [
 	"Store the generated machine code, answering the last address"
@@ -6008,7 +6057,7 @@ Cogit >> printMapEntry: annotation mcpc: mcpc args: tupleOfStreamCodeRangesAndMe
 			next: 20 - name size put: Character space;
 			nextPut: $(;
 			nextPutAll: (self findMapLocationForMcpc: mcpc inMethod: cogMethod) hex.
-		(annotation = IsSendCall or: [annotation = HasBytecodePC]) ifTrue:
+		(self isPCMappedAnnotation: annotation) ifTrue:
 			[aStream
 				nextPutAll: ', bc: ';
 				print: (self bytecodePCFor: mcpc startBcpc: codeRange startpc in: subMethod)].
@@ -6268,15 +6317,16 @@ Cogit >> relocateIfCallOrMethodReference: annotation mcpc: mcpc delta: delta [
 	| entryPoint offset sendTable targetMethod unlinkedRoutine |
 	<var: #sendTable type: #'sqInt *'>
 	<var: #targetMethod type: #'CogMethod *'>
-	annotation = IsSendCall ifTrue:
+	(self isSendAnnotation: annotation) ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint <= methodZoneBase ifTrue: "send is not linked; just relocate"
 			[backEnd relocateCallBeforeReturnPC: mcpc asInteger by: delta negated.
 			 ^0].
 		"It's a linked send; find which kind."
-		(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
-			ifTrue: [offset := cmEntryOffset. sendTable := sendTrampolines]
-			ifFalse: [offset := cmNoCheckEntryOffset. sendTable := superSendTrampolines].
+		self
+			offsetAndSendTableFor: entryPoint
+			annotation: annotation
+			into: [:off :table| offset := off. sendTable := table].
 		 targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
 		 targetMethod cmType = CMMethod ifTrue: "send target not freed; just relocate."
 			[backEnd
@@ -6333,7 +6383,7 @@ Cogit >> remapIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
 			 (hasYoungPtr ~= 0
 			  and: [objectMemory isYoung: mappedLiteral]) ifTrue:
 				[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]]].
-	annotation = IsSendCall ifTrue:
+	(self isSendAnnotation: annotation) ifTrue:
 		[| cacheTag mappedCacheTag |
 		 cacheTag := backEnd inlineCacheTagAt: mcpc asInteger.
 		 (objectRepresentation couldBeObject: cacheTag) ifTrue:
@@ -6922,7 +6972,7 @@ Cogit >> testMcToBcPcMappingForMethod: cogMethod [
 	subMethods := self subMethodsAsRangesFor: cogMethod.
 	self mapFor: cogMethod do:
 		[:annotation :mcpc| | subMethod bcpc mappedpc |
-		(annotation = HasBytecodePC or: [annotation = IsSendCall]) ifTrue:
+		(self isPCMappedAnnotation: annotation) ifTrue:
 			[subMethod := subMethods
 								detect: [:range| range includes: mcpc]
 								ifNone: ["a trailing call ceNonLocalReturnTrampoline's following
@@ -7048,12 +7098,13 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc ignored: superfluity [
 	| entryPoint targetMethod offset sendTable unlinkedRoutine |
 	<var: #targetMethod type: #'CogMethod *'>
 	<var: #sendTable type: #'sqInt *'>
-	annotation = IsSendCall ifTrue:
+	(self isSendAnnotation: annotation) ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint > methodZoneBase ifTrue: "It's a linked send."
-			[(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
-				ifTrue: [offset := cmEntryOffset. sendTable := sendTrampolines]
-				ifFalse: [offset := cmNoCheckEntryOffset. sendTable := superSendTrampolines].
+			[self
+				offsetAndSendTableFor: entryPoint
+				annotation: annotation
+				into: [:off :table| offset := off. sendTable := table].
 			targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
 			unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
 			backEnd
@@ -7069,12 +7120,13 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc of: theSelector [
 	| entryPoint targetMethod offset sendTable unlinkedRoutine |
 	<var: #targetMethod type: #'CogMethod *'>
 	<var: #sendTable type: #'sqInt *'>
-	annotation = IsSendCall ifTrue:
+	(self isSendAnnotation: annotation) ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint > methodZoneBase ifTrue: "It's a linked send."
-			[(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
-				ifTrue: [offset := cmEntryOffset. sendTable := sendTrampolines]
-				ifFalse: [offset := cmNoCheckEntryOffset. sendTable := superSendTrampolines].
+			[self
+				offsetAndSendTableFor: entryPoint
+				annotation: annotation
+				into: [:off :table| offset := off. sendTable := table].
 			targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
 			targetMethod selector = theSelector ifTrue:
 				[unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
@@ -7092,12 +7144,13 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc to: theCogMethod [
 	| entryPoint targetMethod offset sendTable unlinkedRoutine |
 	<var: #targetMethod type: #'CogMethod *'>
 	<var: #sendTable type: #'sqInt *'>
-	annotation = IsSendCall ifTrue:
+	(self isSendAnnotation: annotation) ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint > methodZoneBase ifTrue: "It's a linked send."
-			[(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
-				ifTrue: [offset := cmEntryOffset. sendTable := sendTrampolines]
-				ifFalse: [offset := cmNoCheckEntryOffset. sendTable := superSendTrampolines].
+			[self
+				offsetAndSendTableFor: entryPoint
+				annotation: annotation
+				into: [:off :table| offset := off. sendTable := table].
 			targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
 			targetMethod asInteger = theCogMethod ifTrue:
 				[unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
@@ -7115,12 +7168,13 @@ Cogit >> unlinkIfLinkedSendToFree: annotation pc: mcpc ignored: superfluity [
 	| entryPoint targetMethod offset sendTable unlinkedRoutine |
 	<var: #targetMethod type: #'CogMethod *'>
 	<var: #sendTable type: #'sqInt *'>
-	annotation = IsSendCall ifTrue:
+	(self isSendAnnotation: annotation) ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint > methodZoneBase ifTrue: "It's a linked send."
-			[(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
-				ifTrue: [offset := cmEntryOffset. sendTable := sendTrampolines]
-				ifFalse: [offset := cmNoCheckEntryOffset. sendTable := superSendTrampolines].
+			[self
+				offsetAndSendTableFor: entryPoint
+				annotation: annotation
+				into: [:off :table| offset := off. sendTable := table].
 			targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
 			targetMethod cmType = CMFree ifTrue:
 				[unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
