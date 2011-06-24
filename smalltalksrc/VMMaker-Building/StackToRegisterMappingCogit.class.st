@@ -2891,8 +2891,7 @@ StackToRegisterMappingCogit >> prevInstIsPCAnnotated [
 	annotationIndex > 0 ifFalse:
 		[^false].
 	annotation := self addressOf: (annotations at: annotationIndex - 1).
-	(annotation annotation = IsSendCall
-	or: [annotation annotation = HasBytecodePC]) ifFalse:
+	(self isPCMappedAnnotation: annotation annotation) ifFalse:
 		[^false].
 	prevIndex := opcodeIndex - 1.
 	[prevIndex <= 0 ifTrue: [^false].

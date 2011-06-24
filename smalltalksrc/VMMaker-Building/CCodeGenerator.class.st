@@ -413,13 +413,15 @@ CCodeGenerator >> codeString [
 ]
 
 { #category : #inlining }
-CCodeGenerator >> collectInlineList [
-	"Make a list of methods that should be inlined."
+CCodeGenerator >> collectInlineList: inlineFlagOrSymbol [
+	"Make a list of methods that should be inlined.  If inlineFlagOrSymbol == #asSpecified
+	 only inline methods marked with <inline: true>."
 	"Details: The method must not include any inline C, since the
 	 translator cannot currently map variable names in inlined C code.
 	 Methods to be inlined must be small or called from only one place."
 
 	| selectorsOfMethodsNotToInline callsOf |
+	self assert: (#(true false asSpecified) includes: inlineFlagOrSymbol).
 	selectorsOfMethodsNotToInline := Set new: methods size.
 	selectorsOfMethodsNotToInline addAll: macros keys.
 	methods do:
@@ -454,7 +456,7 @@ CCodeGenerator >> collectInlineList [
 							[:senderCount| callsOf at: sel put: senderCount + 1]].
 					 nodeCount := nodeCount + 1].
 				inlineIt := m extractInlineDirective].  "may be true, false, or #dontCare"
-		(hasUnrenamableCCode or: [inlineIt = false])
+		(hasUnrenamableCCode or: [inlineIt == false])
 			ifTrue: "don't inline if method has C code or contains negative inline directive"
 				[inlineIt == true ifTrue:
 					[logger
@@ -465,15 +467,18 @@ CCodeGenerator >> collectInlineList [
 						cr; flush].
 				selectorsOfMethodsNotToInline add: m selector]
 			ifFalse:
-				[((nodeCount < 40) or: [inlineIt = true]) ifTrue:
+				[(inlineFlagOrSymbol == #asSpecified
+					ifTrue: [inlineIt == true]
+					ifFalse: [nodeCount < 40 or: [inlineIt == true]]) ifTrue:
 				"inline if method has no C code and is either small or contains inline directive"
 					[inlineList add: m selector]]].
 
-	callsOf associationsDo:
-		[ :assoc |
-		(assoc value = 1
-		 and: [(selectorsOfMethodsNotToInline includes: assoc key) not]) ifTrue:
-			[inlineList add: assoc key]]
+	inlineFlagOrSymbol ~~ #asSpecified ifTrue:
+		[callsOf associationsDo:
+			[:assoc|
+			(assoc value = 1
+			 and: [(selectorsOfMethodsNotToInline includes: assoc key) not]) ifTrue:
+				[inlineList add: assoc key]]]
 ]
 
 { #category : #utilities }
@@ -517,12 +522,12 @@ CCodeGenerator >> declareVar: varName type: type [
 ]
 
 { #category : #inlining }
-CCodeGenerator >> doBasicInlining: inlineFlag [
+CCodeGenerator >> doBasicInlining: inlineFlagOrSymbol [
 	"Inline the bodies of all methods that are suitable for inlining.
 	This method does only the basic inlining suitable for both the core VM and plugins - no bytecode inlining etc"
 
 	| pass progress |
-	self collectInlineList.
+	self collectInlineList: inlineFlagOrSymbol.
 	pass := 0.
 	progress := true.
 	[progress] whileTrue: [
@@ -542,17 +547,23 @@ CCodeGenerator >> doBasicInlining: inlineFlag [
 ]
 
 { #category : #inlining }
-CCodeGenerator >> doInlining: inlineFlag [
+CCodeGenerator >> doInlining: inlineFlagOrSymbol [
 	"Inline the bodies of all methods that are suitable for inlining."
 	"Modified slightly for the core VM translator, since the first level of inlining for the interpret loop must be performed in order that the instruction implementations can easily discover their addresses. Remember to inline the bytecode routines as well"
 
 	| removed |
-	inlineFlag ifFalse: [
-		self inlineDispatchesInMethodNamed: #interpret localizingVars: #().	
-		self pruneUnreachableMethods.
-		^ self].
+	inlineFlagOrSymbol isSymbol ifTrue:
+		[self inlineDispatchesInMethodNamed: #interpret localizingVars: #().	
+		 self doBasicInlining: inlineFlagOrSymbol.
+		 self pruneUnreachableMethods.
+		 ^self].
 
-	self doBasicInlining: inlineFlag.
+	inlineFlagOrSymbol ifFalse:
+		[self inlineDispatchesInMethodNamed: #interpret localizingVars: #().	
+		self pruneUnreachableMethods.
+		^self].
+
+	self doBasicInlining: inlineFlagOrSymbol.
 
 	vmClass ifNil: [^self].
 
@@ -785,13 +796,13 @@ CCodeGenerator >> emitCMethods: methodList on: aStream [
 ]
 
 { #category : #'C code generator' }
-CCodeGenerator >> emitCTestBlock: aBlockNode on: aStream [
+CCodeGenerator >> emitCTestBlock: aBlockNode on: aStream indent: level [
 	"Emit C code for the given block node to be used as a loop test."
 
 	(aBlockNode statements size > 1
 			ifTrue: [aBlockNode]
 			ifFalse: [aBlockNode statements first])
-		emitCCodeAsExpressionOn: aStream level: 0 generator: self
+		emitCCodeAsExpressionOn: aStream level: level generator: self
 ]
 
 { #category : #'C code generator' }
@@ -1559,10 +1570,10 @@ CCodeGenerator >> generateInlineCPreprocessorDirective: msgNode on: aStream inde
 	aStream cr; nextPutAll: msgNode args first value
 ]
 
-{ #category : #'C code generator' }
-CCodeGenerator >> generateInlineCppIfElse: msgNode on: aStream indent: level [
+{ #category : #'C translation' }
+CCodeGenerator >> generateInlineCppIfElse: msgNode asArgument: asArgument on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
-	| expr |
+	| expr putStatement |
 	expr := String streamContents:
 				[:es|
 				msgNode args first
@@ -1574,18 +1585,46 @@ CCodeGenerator >> generateInlineCppIfElse: msgNode on: aStream indent: level [
 	aStream
 		ensureCr;
 		nextPut: $#; next: level * 2 put: Character space; nextPutAll: 'if '; nextPutAll: expr; cr.
-	msgNode args second emitCCodeOn: aStream level: level generator: self.
+
+	putStatement := asArgument
+		ifTrue: "emitCCodeAsArgumentOn: doesn't indent, the code needs indenting in this case, so post-process."
+			[[:node|
+			  aStream nextPutAll:
+				((String streamContents:
+						[:s|
+						s next: level + 1 put: Character tab.
+						node emitCCodeAsArgumentOn: s level: level generator: self])
+					copyReplaceAll: (String with: Character cr)
+					with: (String with: Character cr), (String new: level + 1 withAll: Character tab))]]
+		ifFalse:
+			[[:node| node emitCCodeOn: aStream level: level generator: self]].
+
+	putStatement value: msgNode args second.
 	expr := ' /* ', expr, ' */'.
 	msgNode args size >= 3 ifTrue:
 		[aStream
 			ensureCr;
 			nextPut: $#; next: level * 2 put: Character space; nextPutAll: 'else'; nextPutAll: expr;
 			cr.
-		msgNode args third emitCCodeOn: aStream level: level generator: self].
+		putStatement value: msgNode args third].
 	aStream
 		ensureCr;
 		nextPut: $#; next: level * 2 put: Character space; nextPutAll: 'endif'; nextPutAll: expr;
-		cr
+		cr.
+	asArgument ifTrue:
+		[aStream next: level + 1 put: Character tab]
+]
+
+{ #category : #'C translation' }
+CCodeGenerator >> generateInlineCppIfElse: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+	self generateInlineCppIfElse: msgNode asArgument: false on: aStream indent: level
+]
+
+{ #category : #'C translation' }
+CCodeGenerator >> generateInlineCppIfElseAsArgument: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+	self generateInlineCppIfElse: msgNode asArgument: true on: aStream indent: level
 ]
 
 { #category : #'C translation' }
@@ -1818,7 +1857,7 @@ CCodeGenerator >> generateSequentialAnd: msgNode on: aStream indent: level [
 
 	self emitCExpression: msgNode receiver on: aStream.
 	aStream crtab: level; nextPutAll: ' && ('.
-	self emitCTestBlock: msgNode args first on: aStream.
+	self emitCTestBlock: msgNode args first on: aStream indent: level.
 	aStream nextPut: $)
 ]
 
@@ -1831,7 +1870,7 @@ CCodeGenerator >> generateSequentialOr: msgNode on: aStream indent: level [
 
 	self emitCExpression: msgNode receiver on: aStream.
 	aStream crtab: level; nextPutAll: ' || ('.
-	self emitCTestBlock: msgNode args last on: aStream.
+	self emitCTestBlock: msgNode args last on: aStream indent: level.
 	aStream nextPutAll: ')'
 ]
 
@@ -2020,6 +2059,23 @@ CCodeGenerator >> generateTouch: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
+CCodeGenerator >> generateValue: aTSendNode on: aStream indent: level [
+	"Reduce [:formal ... :formalN| body ] value: actual ... value: actualN
+	 to body with formals substituted for by actuals."
+	| substitution substitutionDict |
+	self assert: aTSendNode receiver isStmtList.
+	self assert: aTSendNode receiver args size = aTSendNode args size.
+	substitution := aTSendNode receiver copy.
+	substitutionDict := Dictionary new: aTSendNode args size * 2.
+	aTSendNode receiver args with: aTSendNode args do:
+		[ :argName :exprNode |
+		substitutionDict at: argName put: exprNode].
+	substitution
+		bindVariablesIn: substitutionDict;
+		emitCCodeOn: aStream level: level generator: self
+]
+
+{ #category : #'C translation' }
 CCodeGenerator >> generateWhileFalse: msgNode on: aStream indent: level [
 	"Generate C code for a loop in one of the following formats, as appropriate:
 		while(!(cond)) { stmtList }
@@ -2038,7 +2094,7 @@ CCodeGenerator >> generateWhileFalseLoop: msgNode on: aStream indent: level [
 	"Generate while(!(cond)) {stmtList}."
 
 	aStream nextPutAll: 'while (!('.
-	self emitCTestBlock: msgNode receiver on: aStream.
+	self emitCTestBlock: msgNode receiver on: aStream indent: level.
 	aStream nextPutAll: ')) {'; cr.
 	msgNode args first isNilStmtListNode ifFalse:
 		[msgNode args first emitCCodeOn: aStream level: level + 1 generator: self].
@@ -2105,7 +2161,7 @@ CCodeGenerator >> generateWhileTrueLoop: msgNode on: aStream indent: level [
 	"Generate while(cond) {stmtList}."
 
 	aStream nextPutAll: 'while ('.
-	self emitCTestBlock: msgNode receiver on: aStream.
+	self emitCTestBlock: msgNode receiver on: aStream indent: level.
 	aStream nextPutAll: ') {'; cr.
 	msgNode args first isNilStmtListNode ifFalse:
 		[msgNode args first emitCCodeOn: aStream level: level + 1 generator: self].
@@ -2243,6 +2299,10 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#perform:with:with:with:with:		#generatePerform:on:indent:
 	#perform:with:with:with:with:with:	#generatePerform:on:indent:
 
+	#value								#generateValue:on:indent:
+	#value:								#generateValue:on:indent:
+	#value:value:						#generateValue:on:indent:
+
 	#shouldNotImplement				#generateSmalltalkMetaError:on:indent:
 	#shouldBeImplemented			#generateSmalltalkMetaError:on:indent:
 	).
@@ -2251,16 +2311,18 @@ CCodeGenerator >> initializeCTranslationDictionary [
 		translationDict at: (pairs at: i) put: (pairs at: i + 1)].
 
 	pairs := #(
-	#ifTrue:				#generateIfTrueAsArgument:on:indent:	
-	#ifFalse:			#generateIfFalseAsArgument:on:indent:
-	#ifTrue:ifFalse:		#generateIfTrueIfFalseAsArgument:on:indent:
-	#ifFalse:ifTrue:		#generateIfFalseIfTrueAsArgument:on:indent:
-	#ifNotNil:			#generateIfNotNilAsArgument:on:indent:	
-	#ifNil:				#generateIfNilAsArgument:on:indent:
-	#ifNotNil:ifNil:		#generateIfNotNilIfNilAsArgument:on:indent:
-	#ifNil:ifNotNil:		#generateIfNilIfNotNilAsArgument:on:indent:
-	#cCode:			#generateInlineCCodeAsArgument:on:indent:
-	#cCode:inSmalltalk:	#generateInlineCCodeAsArgument:on:indent:
+	#ifTrue:					#generateIfTrueAsArgument:on:indent:	
+	#ifFalse:				#generateIfFalseAsArgument:on:indent:
+	#ifTrue:ifFalse:			#generateIfTrueIfFalseAsArgument:on:indent:
+	#ifFalse:ifTrue:			#generateIfFalseIfTrueAsArgument:on:indent:
+	#ifNotNil:				#generateIfNotNilAsArgument:on:indent:	
+	#ifNil:					#generateIfNilAsArgument:on:indent:
+	#ifNotNil:ifNil:			#generateIfNotNilIfNilAsArgument:on:indent:
+	#ifNil:ifNotNil:			#generateIfNilIfNotNilAsArgument:on:indent:
+	#cCode:				#generateInlineCCodeAsArgument:on:indent:
+	#cCode:inSmalltalk:		#generateInlineCCodeAsArgument:on:indent:
+	#cppIf:ifTrue:ifFalse:	#generateInlineCppIfElseAsArgument:on:indent:
+	#cppIf:ifTrue:			#generateInlineCppIfElseAsArgument:on:indent:
 	).
 
 	asArgumentTranslationDict := Dictionary new: 8.

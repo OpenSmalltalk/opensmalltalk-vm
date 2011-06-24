@@ -914,7 +914,7 @@ TMethod >> inlineFunctionCall: aSendNode in: aCodeGen [
 	meth renameVarsForInliningInto: self except: doNotRename in: aCodeGen.
 	meth renameLabelsForInliningInto: self.
 	self addVarsDeclarationsAndLabelsOf: meth except: doNotRename.
-	substitutionDict := Dictionary new: 100.
+	substitutionDict := Dictionary new: meth args size * 2.
 	meth args with: argsForInlining do:
 		[ :argName :exprNode |
 		substitutionDict at: argName put: exprNode.
@@ -1120,6 +1120,10 @@ TMethod >> isSubstitutableNode: aNode intoMethod: targetMeth in: aCodeGen [
 		(#(self true false nil) includes: var) ifTrue: [ ^ true ].
 		(targetMeth maySubstituteGlobal: var in: aCodeGen) ifTrue: [ ^ true ].
 	].
+
+	"For now allow literal blocks to be substituted.  They better be accessed only
+	 with value[:value:*] messages though!"
+	aNode isStmtList ifTrue: [^true].
 
 	"scan expression tree; must contain only constants, builtin ops, and inlineable vars"
 	aNode nodesDo: [ :node |
