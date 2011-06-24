@@ -102,7 +102,7 @@ FilePlugin >> fileOpenName: nameIndex size: nameSize write: writeFlag secure: se
 FilePlugin >> fileRecordSize [
 	"Return the size of a Smalltalk file record in bytes."
 	<static: false>
-	^self sizeof: #SQFile
+	^self sizeof: #SQFile asSymbol
 ]
 
 { #category : #'file primitives' }
