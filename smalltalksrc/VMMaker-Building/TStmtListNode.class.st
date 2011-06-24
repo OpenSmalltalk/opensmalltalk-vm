@@ -65,7 +65,8 @@ TStmtListNode >> emitCCodeOn: aStream prependToEnd: aNodeOrNil level: level gene
 				[s emitCCodeOn: aStream level: level generator: aCodeGen].
 		((self endsWithCloseBracket: aStream)
 		 or: [s isComment
-		 or: [s isPreprocessorDirective]]) ifFalse:
+		 or: [s isPreprocessorDirective
+		 or: [s isSend and: [s isValueExpansion]]]]) ifFalse:
 			[aStream nextPut: $;].
 		aStream cr].
 

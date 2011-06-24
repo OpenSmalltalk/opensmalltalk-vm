@@ -644,7 +644,7 @@ SistaStackToRegisterMappingCogit >> mapFor: cogMethod bcpc: startbcpc performUnt
 				[| annotation nextBcpc |
 				annotation := mapByte >> AnnotationShift.
 				mcpc := mcpc + (mapByte bitAnd: DisplacementMask).
-				(annotation = HasBytecodePC or: [annotation = IsSendCall]) ifTrue:
+				(self isPCMappedAnnotation: annotation) ifTrue:
 					[[byte := objectMemory fetchByte: bcpc ofObject: aMethodObj.
 					  descriptor := self generatorAt: byte.
 					  isInBlock

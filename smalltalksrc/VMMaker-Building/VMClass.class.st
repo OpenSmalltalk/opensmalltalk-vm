@@ -150,7 +150,7 @@ VMClass class >> openCogMultiWindowBrowser [
 	#(	ObjectMemory NewObjectMemory NewCoObjectMemory
 		InterpreterPrimitives StackInterpreter StackInterpreterPrimitives CoInterpreter CoInterpreterPrimitives CoInterpreterMT
 		Cogit SimpleStackBasedCogit StackToRegisterMappingCogit
-		VMStructClass VMMaker CCodeGenerator TMethod)
+		VMStructType VMMaker CCodeGenerator TMethod)
 		do: [:className|
 			(Smalltalk classNamed: className) ifNotNil:
 				[:class| b selectCategoryForClass: class; selectClass: class]]
