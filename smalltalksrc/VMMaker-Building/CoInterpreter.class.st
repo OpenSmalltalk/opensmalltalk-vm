@@ -3736,6 +3736,12 @@ CoInterpreter >> lookupAddress: address [
 	^nil
 ]
 
+{ #category : #'cog jit support' }
+CoInterpreter >> mMethodClass [
+	<api>
+	^self methodClassOf: (self mframeHomeMethod: self framePointer) methodObject
+]
+
 { #category : #'frame access' }
 CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	"Marry aContext with the base frame of a new stack page.  Build the base

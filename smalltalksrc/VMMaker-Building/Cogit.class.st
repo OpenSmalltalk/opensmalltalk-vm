@@ -144,6 +144,9 @@ Class {
 		'entry',
 		'cmNoCheckEntryOffset',
 		'noCheckEntry',
+		'dynSuperEntry',
+		'dynSuperEntryAlignment',
+		'cmDynSuperEntryOffset',
 		'mnuCall',
 		'interpretCall',
 		'endCPICCase0',
@@ -196,6 +199,8 @@ Class {
 		'ceFetchContextInstVarTrampoline',
 		'ceStoreContextInstVarTrampoline',
 		'cePositive32BitIntegerTrampoline',
+		'cePushImplicitReceiverTrampoline',
+		'cePushExplicitReceiverTrampoline',
 		'ceCaptureCStackPointers',
 		'ceFlushICache',
 		'ceCheckFeaturesFunction',
@@ -375,6 +380,11 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		'printRegisters' 'printInstructions' 'clickConfirm' 'singleStep') do:
 			[:simulationVariableNotNeededForRealVM|
 			aCCodeGenerator removeVariable: simulationVariableNotNeededForRealVM].
+	NewspeakVM ifFalse:
+		[#(	'dynSuperEntry' 'dynSuperEntryAlignment' 'dynamicSuperSendTrampolines'
+			'cePushImplicitReceiver' 'cePushExplicitReceiver' 'cmDynSuperEntryOffset') do:
+				[:variableNotNeededInNormalVM|
+				aCCodeGenerator removeVariable: variableNotNeededInNormalVM]].
 	aCCodeGenerator
 		addHeaderFile:'<stddef.h>'; "for e.g. offsetof"
 		addHeaderFile:'"sqCogStackAlignment.h"';
@@ -431,6 +441,8 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 			declareC: 'sqInt sendTrampolines[NumSendTrampolines]';
 		var: #superSendTrampolines
 			declareC: 'sqInt superSendTrampolines[NumSendTrampolines]';
+		var: #superSendTrampolines
+			declareC: 'sqInt dynamicSuperSendTrampolines[NumSendTrampolines]';
 		var: #trampolineAddresses
 			declareC: 'static char *trampolineAddresses[NumTrampolines*2]';
 		var: #cePositive32BitIntegerTrampoline
@@ -2243,6 +2255,35 @@ Cogit >> cePositive32BitIntegerTrampoline [
 	^cePositive32BitIntegerTrampoline
 ]
 
+{ #category : #'in-line cacheing' }
+Cogit >> cePushImplicitReceiverFor: selector [
+	"Cached push implicit receiver implementation.  Caller looks like
+		mov selector, ClassReg
+				call cePushImplicitReceiver
+				br continue
+		Lclass	.word
+		Lmixin:	.word
+		continue:
+	 If class matches class of receiver then mixin contains either 0 or the implicit receiver.
+	 If 0, push the actual receiver."
+
+	| receiver retpc classpc mixinpc rcvrClass mixin |
+	receiver := coInterpreter mframeReceiver: coInterpreter framePointer.
+	retpc := coInterpreter stackTop.
+	classpc := retpc + backEnd jumpShortByteSize.
+	mixinpc := retpc + backEnd jumpShortByteSize + BytesPerOop.
+	rcvrClass := objectMemory fetchClassOf: receiver.
+	rcvrClass ~= (objectMemory longAt: classpc) ifTrue:
+		[mixin := coInterpreter
+					implicitReceiverForMixin: coInterpreter mMethodClass
+					implementing: selector.
+		 objectMemory longAt: classpc put: rcvrClass.
+		 objectMemory longAt: mixin put: (mixin = receiver ifTrue: [0] ifFalse: [mixin]).
+		 ^mixin].
+	mixin := self longAt: mixinpc.
+	^mixin = 0 ifTrue: [receiver] ifFalse: [mixin]
+]
+
 { #category : #accessing }
 Cogit >> ceReturnToInterpreterPC [
 	<api>
@@ -3202,6 +3243,14 @@ Cogit >> compileEntireMethod [
 
 { #category : #'compile abstract instructions' }
 Cogit >> compileEntry [
+	"The entry code to a method checks that the class of the current receiver matches
+	 that in the inline cache.  Other non-obvious elements are that its alignment must be
+	 different from the alignment of the noCheckEntry so that the method map machinery
+	 can distinguish normal and super sends (super sends bind to the noCheckEntry).
+	 In Newspeak we also need to distinguish dynSuperSends from normal and super
+	 and so bind a the preceeding nop (on x86 there happens to be one anyway)."
+	self cppIf: NewspeakVM
+		ifTrue: [dynSuperEntry := self Nop].
 	self AlignmentNops: (BytesPerWord max: 8).
 	entry := self Label.
 	objectRepresentation getInlineCacheClassTagFrom: ReceiverResultReg into: TempReg.
@@ -3354,14 +3403,25 @@ Cogit >> computeEntryOffsets [
 	self generateInstructionsAt: methodZoneBase + (self sizeof: CogMethod).
 	cmEntryOffset := entry address - methodZoneBase.
 	cmNoCheckEntryOffset := noCheckEntry address - methodZoneBase.
+	self cppIf: NewspeakVM
+		ifTrue: [cmDynSuperEntryOffset := dynSuperEntry address - methodZoneBase].
 	missOffset := sendMissCall address + sendMissCall machineCodeSize - methodZoneBase.
-	entryPointMask := 1.
-	[(cmEntryOffset bitAnd: entryPointMask) = (cmNoCheckEntryOffset bitAnd: entryPointMask)] whileTrue:
+	entryPointMask := BytesPerWord - 1.
+	[self cppIf: NewspeakVM
+		ifTrue: [(cmEntryOffset bitAnd: entryPointMask) = (cmNoCheckEntryOffset bitAnd: entryPointMask)
+				or: [(cmEntryOffset bitAnd: entryPointMask) = (cmDynSuperEntryOffset bitAnd: entryPointMask)
+				or: [(cmNoCheckEntryOffset bitAnd: entryPointMask) = (cmDynSuperEntryOffset bitAnd: entryPointMask)]]]
+		ifFalse: [(cmEntryOffset bitAnd: entryPointMask) = (cmNoCheckEntryOffset bitAnd: entryPointMask)]] whileTrue:
 		[entryPointMask := entryPointMask + entryPointMask + 1].
 	entryPointMask >= (methodZone roundUpLength: 1) ifTrue:
 		[self error: 'cannot differentiate checked and unchecked entry-points with current cog method alignment'].
 	checkedEntryAlignment := cmEntryOffset bitAnd: entryPointMask.
-	self assert: checkedEntryAlignment ~= (cmNoCheckEntryOffset bitAnd: entryPointMask)
+	self assert: checkedEntryAlignment ~= (cmNoCheckEntryOffset bitAnd: entryPointMask).
+	self cppIf: NewspeakVM
+		ifTrue:
+			[cmDynSuperEntryOffset := dynSuperEntry address - methodZoneBase.
+			self assert: (cmDynSuperEntryOffset bitAnd: entryPointMask) ~= (cmEntryOffset bitAnd: entryPointMask).
+			self assert: (cmDynSuperEntryOffset bitAnd: entryPointMask) ~= (cmNoCheckEntryOffset bitAnd: entryPointMask)]
 ]
 
 { #category : #'generate machine code' }
@@ -4581,6 +4641,28 @@ Cogit >> generateMissAbortTrampolines [
 ]
 
 { #category : #initialization }
+Cogit >> generateNewspeakRuntime [
+	cePushExplicitReceiverTrampoline := self genTrampolineFor: #cePushExplicitReceiverFor:At: asSymbol
+												called: 'cePushExplicitReceiverTrampoline'
+												arg: ClassReg
+												arg: SendNumArgsReg
+												result: ReceiverResultReg.
+	"Cached push implicit receiver implementation.  Caller looks like
+		mov selector, ClassReg
+				call cePushImplicitReceiver
+				br continue
+		Lclass	.word
+		Lmixin:	.word
+		continue:
+	 If class matches class of receiver then mixin contains either 0 or the implicit receiver.
+	 If 0, push the actual receiver."
+	cePushImplicitReceiverTrampoline := self genTrampolineFor: #cePushImplicitReceiverFor: asSymbol
+												called: 'cePushImplicitReceiverTrampoline'
+												arg: ClassReg
+												result: ReceiverResultReg
+]
+
+{ #category : #initialization }
 Cogit >> generateOpenPICPrototype [
 	"Generate the prototype ClosedPIC to determine how much space as full PIC takes.
 	 When we first allocate a closed PIC it only has one or two cases and we want to grow it.
@@ -4671,6 +4753,24 @@ Cogit >> generateSendTrampolines [
 					arg: 0
 					arg: ReceiverResultReg
 					arg: SendNumArgsReg).
+	self cppIf: NewspeakVM
+		ifTrue:
+			[0 to: NumSendTrampolines - 2 do:
+				[:numArgs|
+				dynamicSuperSendTrampolines
+					at: numArgs
+					put: (self genTrampolineFor: #ceDynamicSuperSend:to:numArgs: asSymbol
+							  called: (self trampolineName: 'ceDynSuperSend' numArgs: numArgs)
+							  arg: ClassReg
+							  arg: ReceiverResultReg
+							  arg: numArgs)].
+			dynamicSuperSendTrampolines
+				at: NumSendTrampolines - 1
+				put: (self genTrampolineFor: #ceDynamicSuperSend:to:numArgs: asSymbol
+							called: (self trampolineName: 'ceDynSuperSend' numArgs: -1)
+							arg: ClassReg
+							arg: ReceiverResultReg
+							arg: SendNumArgsReg)].
 	0 to: NumSendTrampolines - 2 do:
 		[:numArgs|
 		superSendTrampolines
@@ -4724,6 +4824,7 @@ Cogit >> generateTrampolines [
 	self generateSendTrampolines.
 	self generateMissAbortTrampolines.
 	self generateRunTimeTrampolines.
+	self cppIf: NewspeakVM ifTrue: 	[self generateNewspeakRuntime].
 	self generateEnilopmarts.
 	self generateTracingTrampolines.
 
@@ -5898,16 +5999,22 @@ Cogit >> offset: aClass of: fieldSymbol [
 
 { #category : #'in-line cacheing' }
 Cogit >> offsetAndSendTableFor: entryPoint annotation: annotation into: binaryBlock [
+	"Find the relevant sendTable for a linked-send to entryPoint.  Do this based on the
+	 alignment of entryPoint.  N.B.  For Newspeak sends we don't need to distinguish
+	 between cePushImplicitReceiver and the other sends since cePushImplicitReceiver
+	 will never appear to be linked, so only three cases here."
 	<inline: true>
 	self cppIf: NewspeakVM
 		ifTrue:
 			[(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
-				ifTrue: [binaryBlock value: cmEntryOffset value: sendTrampolines]
-				ifFalse: [binaryBlock
-							value: cmNoCheckEntryOffset
+				ifTrue: [binaryBlock
+							value: cmEntryOffset
 							value: (annotation = IsNSSendCall
 										ifTrue: [dynamicSuperSendTrampolines]
-										ifFalse: [superSendTrampolines])]]
+										ifFalse: [sendTrampolines])]
+				ifFalse: [binaryBlock
+							value: cmNoCheckEntryOffset
+							value: superSendTrampolines]]
 		ifFalse:
 			[(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
 				ifTrue: [binaryBlock value: cmEntryOffset value: sendTrampolines]
@@ -6595,6 +6702,8 @@ Cogit >> setInterpreter: aCoInterpreter [
 	(methodLabel := processor abstractInstructionCompilerClass new) cogit: self.
 	sendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
 	superSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
+	NewspeakVM ifTrue:
+		[dynamicSuperSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines)].
 	"debug metadata"
 	trampolineAddresses := CArrayAccessor on: (Array new: NumTrampolines * 2).
 	trampolineTableIndex := 0.
