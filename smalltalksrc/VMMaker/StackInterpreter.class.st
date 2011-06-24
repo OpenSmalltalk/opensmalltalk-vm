@@ -9780,15 +9780,22 @@ StackInterpreter >> symbolicMethod: aMethod printAbsPC: printAbsPC [
 		 self transcript print: pc + 1 ; space.
 		 byte printOn: self transcript base: 16 length: 2 padded: false.
 		 self transcript space; nextPutAll: (self symbolic: byte at: pc inMethod: aMethod).
-		 pc := type = 8 "extensions"
-					ifTrue: [pc + (#(2 2 2 2 3 2 2 1 1 1 2 1 3 3 3 4) at: byte \\ 16 + 1)]
-					ifFalse: [type = 10 "long jumps"
-								ifTrue: [pc + 2]
-								ifFalse:
-									[self cppIf: NewspeakVM
-										ifTrue: [type = 7
-													ifTrue: [pc + (#(1 1 1 1 1 1 1 1 1 1 1 1 1 1 3 2) at: byte \\ 16 + 1)]
-													ifFalse: [pc + 1]]
+		 pc := self cppIf: NewspeakVM
+					ifTrue:
+						[type = 8 "extensions"
+							ifTrue: [pc + (#(2 2 2 2 3 2 2 1 1 1 2 2 3 3 3 4) at: byte \\ 16 + 1)]
+							ifFalse:
+								[type = 10 "long jumps"
+									ifTrue: [pc + 2]
+									ifFalse:
+										[type = 7
+											ifTrue: [pc + (#(1 1 1 1 1 1 1 1 1 1 1 1 1 1 3 2) at: byte \\ 16 + 1)]
+											ifFalse: [pc + 1]]]]
+					ifFalse:
+						[type = 8 "extensions"
+							ifTrue: [pc + (#(2 2 2 2 3 2 2 1 1 1 2 1 3 3 3 4) at: byte \\ 16 + 1)]
+							ifFalse: [type = 10 "long jumps"
+										ifTrue: [pc + 2]
 										ifFalse: [pc + 1]]].
 		 stackDepths notNil ifTrue:
 			[self transcript tab; tab; nextPut: $(; print: stackDepth.

@@ -29,6 +29,12 @@ TDefineNode >> nameOrValue [
 	^name
 ]
 
+{ #category : #'C code generation' }
+TDefineNode >> printOn: aStream level: level [
+
+	aStream nextPutAll: name
+]
+
 { #category : #accessing }
 TDefineNode >> setName: aName value: aValue [
 	self name: aName.
