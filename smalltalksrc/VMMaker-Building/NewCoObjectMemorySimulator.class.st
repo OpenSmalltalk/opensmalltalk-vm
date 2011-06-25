@@ -13,14 +13,6 @@ NewCoObjectMemorySimulator class >> new [
 		ifFalse: [super new]
 ]
 
-{ #category : #'memory access' }
-NewCoObjectMemorySimulator >> allocateMemory: endianness [
-	memory := (endianness == #little
-					ifTrue: [LittleEndianBitmap]
-					ifFalse: [Bitmap]) new: memoryLimit // 4.
-	coInterpreter memory: memory
-]
-
 { #category : #'simulation only' }
 NewCoObjectMemorySimulator >> arrayValueOf: arrayOop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
@@ -246,7 +238,7 @@ NewCoObjectMemorySimulator >> long32At: byteAddress put: a32BitValue [
 { #category : #'memory access' }
 NewCoObjectMemorySimulator >> longAt: byteAddress [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
-
+	byteAddress \\ 4 ~= 0 ifTrue: [self error: 'unaligned access'].
 	^memory at: (byteAddress // 4) + 1
 ]
 
@@ -256,6 +248,7 @@ NewCoObjectMemorySimulator >> longAt: byteAddress put: a32BitValue [
 	and: [a32BitValue = 7]) ifTrue:
 		[self halt]."
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
+	byteAddress \\ 4 ~= 0 ifTrue: [self error: 'unaligned access'].
 	^memory at: (byteAddress // 4) + 1 put: a32BitValue
 ]
 
