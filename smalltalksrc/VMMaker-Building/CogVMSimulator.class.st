@@ -45,6 +45,13 @@ Class {
 }
 
 { #category : #'instance creation' }
+CogVMSimulator class >> chooseAndInitCogitClassWithOpts: opts [
+	((CoInterpreter classPool at: #CogitClass put: Cogit chooseCogitClass)
+		withAllSuperclasses copyUpThrough: Cogit) reverseDo:
+			[:cc| cc initializeWithOptions: opts]
+]
+
+{ #category : #'instance creation' }
 CogVMSimulator class >> new [
 	^self == CogVMSimulator
 		ifTrue: [SmalltalkImage current endianness == #big
@@ -147,28 +154,12 @@ CogVMSimulator >> browserPluginReturnIfNeeded [
 
 { #category : #'memory access' }
 CogVMSimulator >> byteAt: byteAddress [
-	^self subclassResponsibility
+	^objectMemory byteAt: byteAddress
 ]
 
 { #category : #'memory access' }
 CogVMSimulator >> byteAt: byteAddress put: byte [
-	^self subclassResponsibility
-]
-
-{ #category : #'memory access' }
-CogVMSimulator >> byteAtPointer: pointer [
-	"This gets implemented by Macros in C, where its types will also be checked.
-	pointer is a raw address, and byte is an 8-bit quantity."
-
-	^ self byteAt: pointer
-]
-
-{ #category : #'memory access' }
-CogVMSimulator >> byteAtPointer: pointer put: byteValue [
-	"This gets implemented by Macros in C, where its types will also be checked.
-	pointer is a raw address, and byteValue is an 8-bit quantity."
-
-	^ self byteAt: pointer  put: byteValue
+	^objectMemory byteAt: byteAddress put: byte
 ]
 
 { #category : #'debug support' }
@@ -819,16 +810,7 @@ CogVMSimulator >> externalInstVar: index ofContext: maybeMarriedContext put: anO
 
 { #category : #'interpreter shell' }
 CogVMSimulator >> fetchByte [
-
-	^ self byteAt: (localIP := localIP + 1).
-]
-
-{ #category : #'float primitives' }
-CogVMSimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
-
-	aFloat at: 1 put: (self long32At: floatBitsAddress).
-	aFloat at: 2 put: (self long32At: floatBitsAddress+4).
-
+	^objectMemory byteAt: (localIP := localIP + 1)
 ]
 
 { #category : #'interpreter access' }
@@ -1404,9 +1386,9 @@ CogVMSimulator >> ioLoadExternalFunction: functionName OfLength: functionLength 
 	"Load and return the requested function from a module"
 	| pluginString functionString |
 	pluginString := String new: moduleLength.
-	1 to: moduleLength do:[:i| pluginString byteAt: i put: (self byteAt: moduleName+i-1)].
+	1 to: moduleLength do:[:i| pluginString byteAt: i put: (objectMemory byteAt: moduleName+i-1)].
 	functionString := String new: functionLength.
-	1 to: functionLength do:[:i| functionString byteAt: i put: (self byteAt: functionName+i-1)].
+	1 to: functionLength do:[:i| functionString byteAt: i put: (objectMemory byteAt: functionName+i-1)].
 	functionString := functionString asSymbol.
 	^self ioLoadFunction: functionString From: pluginString
 ]
@@ -1829,33 +1811,17 @@ CogVMSimulator >> logSend: oop [
 { #category : #'memory access' }
 CogVMSimulator >> long32At: byteAddress [
 	"Return the 32-bit word at byteAddress which must be 0 mod 4."
-
-	^ self longAt: byteAddress
-]
-
-{ #category : #'memory access' }
-CogVMSimulator >> long32At: byteAddress put: a32BitValue [
-	"Store the 32-bit value at byteAddress which must be 0 mod 4."
-
-	^ self longAt: byteAddress put: a32BitValue
+	^objectMemory long32At: byteAddress
 ]
 
 { #category : #'memory access' }
 CogVMSimulator >> longAt: byteAddress [
-	"Note: Adjusted for Smalltalk's 1-based array indexing."
-
-	^objectMemory memory at: (byteAddress // 4) + 1
+	^objectMemory longAt: byteAddress
 ]
 
 { #category : #'memory access' }
 CogVMSimulator >> longAt: byteAddress put: a32BitValue [
-	"Note: Adjusted for Smalltalk's 1-based array indexing."
-	"self printFramesInPage: (stackPages stackPageFor: 16r1023C4)"
-	"(16r101BD0 = byteAddress
-	 and: [(self longAt: 16r101BD0) = 16r571D
-	 and: [a32BitValue ~= 16r571D]]) ifTrue: [self halt]."
-	
-	^objectMemory memory at: (byteAddress // 4) + 1 put: a32BitValue
+	^objectMemory longAt: byteAddress put: a32BitValue
 ]
 
 { #category : #'frame access' }
@@ -2941,12 +2907,12 @@ CogVMSimulator >> sendBreak: selectorString point: selectorLength receiver: rece
 	| i |
 	cogit printOnTrace ifTrue:
 		[0 to: selectorLength - 1 do:
-			[:si| transcript nextPut: (self byteAt: selectorString + si) asCharacter].
+			[:si| transcript nextPut: (objectMemory byteAt: selectorString + si) asCharacter].
 		transcript cr; flush].
 	breakSelectorLength = selectorLength ifTrue:
 		[i := breakSelectorLength.
 		 [i > 0] whileTrue:
-			[(self byteAt: selectorString + i - 1) = (breakSelector at: i) asInteger
+			[(objectMemory byteAt: selectorString + i - 1) = (breakSelector at: i) asInteger
 				ifTrue: [(i := i - 1) = 0 ifTrue:
 							[self changed: #byteCountText.
 							 self halt: 'Send of '
@@ -2995,17 +2961,6 @@ CogVMSimulator >> setOwnerIndexOfProcess: aProcess to: anIndex bind: bind [
 	^self perform: #setOwnerIndexOfProcess:to:bind:
 		withArguments: {aProcess. anIndex. bind}
 		inSuperclass: (cogThreadManager ifNil: [CoInterpreterPrimitives] ifNotNil: [CoInterpreterMT])
-]
-
-{ #category : #'memory access' }
-CogVMSimulator >> shortAt: byteAddress [
-    "Return the half-word at byteAddress which must be even."
-	^self subclassResponsibility
-]
-
-{ #category : #'memory access' }
-CogVMSimulator >> shortAt: byteAddress put: a16BitValue [
-	^ self subclassResponsibility
 ]
 
 { #category : #'debug support' }
@@ -3220,14 +3175,6 @@ CogVMSimulator >> storeAndPopTemporaryVariableBytecode [
 	self itemporary: (currentBytecode bitAnd: 7) in: localFP put: self internalStackTop.
 	self fetchNextBytecode.
 	self internalPop: 1
-]
-
-{ #category : #'float primitives' }
-CogVMSimulator >> storeFloatAt: floatBitsAddress from: aFloat [
-
-	self long32At: floatBitsAddress put: (aFloat at: 1).
-	self long32At: floatBitsAddress+4 put: (aFloat at: 2).
-
 ]
 
 { #category : #'interpreter access' }
@@ -3545,8 +3492,8 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'print all stacks' action: #printAllStacks;
 		addLine;
 		add: 'print registers' action: [cogit processor printRegistersOn: transcript];
-		add: 'disassemble method...' action: [(self promptHex: 'cog method') ifNotNil: [:cm| cogit disassembleMethodFor: cm]];
-		add: 'disassemble method at pc' action: [cogit disassembleMethodFor: cogit processor pc];
+		add: 'disassemble method/trampoline...' action: [(self promptHex: 'pc') ifNotNil: [:pc| cogit disassembleCodeAt: pc]];
+		add: 'disassemble method/trampoline at pc' action: [cogit disassembleCodeAt: cogit processor pc];
 		add: 'print oop...' action: [(self promptHex: 'print oop') ifNotNil: [:oop| self printOop: oop]];
 		addLine;
 		add: 'inspect object memory' target: objectMemory action: #inspect;

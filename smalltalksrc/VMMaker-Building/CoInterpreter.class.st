@@ -557,7 +557,7 @@ CoInterpreter >> activateCoggedNewMethod: inInterpreter [
 	 initial long store temp bytecode).  We don't need to check that newMethod
 	 actually has a primitive because the initial 129 only occurs if there is one."
 	primFailCode ~= 0 ifTrue:
-		[(self byteAtPointer: (self initialPCForHeader: methodHeader method: newMethod)) = 129 "long store temp" ifTrue:
+		[(objectMemory byteAtPointer: (self initialPCForHeader: methodHeader method: newMethod)) = 129 "long store temp" ifTrue:
 			[errorCode := self getErrorObjectFromPrimFailCode.
 			 self stackTopPut: errorCode "nil if primFailCode == 1, or primFailCode"].
 		 primFailCode := 0].
@@ -705,7 +705,7 @@ CoInterpreter >> activateNewMethod [
 	 initial long store temp bytecode).  We don't need to check that newMethod
 	 actually has a primitive because the initial 129 only occurs if there is one."
 	primFailCode ~= 0 ifTrue:
-		[(self byteAtPointer: instructionPointer + 1) = 129 "long store temp" ifTrue:
+		[(objectMemory byteAtPointer: instructionPointer + 1) = 129 "long store temp" ifTrue:
 			[errorCode := self getErrorObjectFromPrimFailCode.
 			 self stackTopPut: errorCode "nil if primFailCode == 1, or primFailCode"].
 		primFailCode := 0].
@@ -2118,7 +2118,7 @@ CoInterpreter >> compilationBreak: selectorOop point: selectorLength [
 	breakSelectorLength = selectorLength ifTrue:
 		[i := breakSelectorLength.
 		 [i > 0] whileTrue:
-			[(self byteAt: selectorOop + i + BaseHeaderSize - 1) = (breakSelector at: i) asInteger
+			[(objectMemory byteAt: selectorOop + i + BaseHeaderSize - 1) = (breakSelector at: i) asInteger
 				ifTrue: [(i := i - 1) = 0 ifTrue:
 							[self compilationBreakpointFor: selectorOop]]
 				ifFalse: [i := 0]]]
@@ -3075,7 +3075,7 @@ CoInterpreter >> getCurrentBytecode [
 
 	^((stackPages couldBeFramePointer: framePointer)
 	   and: [(self isMachineCodeFrame: framePointer) not])
-		ifTrue: [self byteAt: instructionPointer]
+		ifTrue: [objectMemory byteAt: instructionPointer]
 		ifFalse: [-1]
 ]
 
@@ -3404,7 +3404,7 @@ CoInterpreter >> internalActivateNewMethod [
 	 initial long store temp bytecode).  We don't need to check that newMethod
 	 actually has a primitive because the initial 129 only occurs if there is one."
 	primFailCode ~= 0 ifTrue:
-		[(self byteAtPointer: localIP + 1) = 129 "long store temp" ifTrue:
+		[(objectMemory byteAtPointer: localIP + 1) = 129 "long store temp" ifTrue:
 			[errorCode := self getErrorObjectFromPrimFailCode.
 			 self internalStackTopPut: errorCode "nil if primFailCode == 1, or primFailCode"].
 		primFailCode := 0].
@@ -3661,7 +3661,7 @@ CoInterpreter >> justActivateNewMethod [
 	 initial long store temp bytecode).  We don't need to check that newMethod
 	 actually has a primitive because the initial 129 only occurs if there is one."
 	primFailCode ~= 0 ifTrue:
-		[(self byteAtPointer: initialIP) = 129 "long store temp" ifTrue:
+		[(objectMemory byteAtPointer: initialIP) = 129 "long store temp" ifTrue:
 			[errorCode := self getErrorObjectFromPrimFailCode.
 			 self stackTopPut: errorCode "nil if primFailCode == 1, or primFailCode"].
 		primFailCode := 0].

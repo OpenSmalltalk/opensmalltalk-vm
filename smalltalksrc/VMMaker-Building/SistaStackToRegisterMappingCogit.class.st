@@ -211,7 +211,7 @@ SistaStackToRegisterMappingCogit >> fillInCounters: nCounters atEndAddress: endA
 	endAddress - (nCounters * CounterBytes)
 		to: endAddress - CounterBytes
 		do: [:address|
-			coInterpreter
+			objectMemory
 				long32At: address
 				put: (initialCounterValue << 16 + initialCounterValue)]
 ]
@@ -599,9 +599,9 @@ SistaStackToRegisterMappingCogit >> mapFor: cogMethod bcpc: startbcpc performUnt
 			 homeMethod := self cCoerceSimple: cogMethod to: #'CogMethod *'.
 			 self assert: startbcpc = (coInterpreter startPCOfMethodHeader: homeMethod methodHeader).
 			 map := self mapStartFor: homeMethod.
-			 self assert: ((coInterpreter byteAt: map) >> AnnotationShift = IsAbsPCReference
-						 or: [(coInterpreter byteAt: map) >> AnnotationShift = IsRelativeCall
-						 or: [(coInterpreter byteAt: map) >> AnnotationShift = IsDisplacementX2N]]).
+			 self assert: ((objectMemory byteAt: map) >> AnnotationShift = IsAbsPCReference
+						 or: [(objectMemory byteAt: map) >> AnnotationShift = IsRelativeCall
+						 or: [(objectMemory byteAt: map) >> AnnotationShift = IsDisplacementX2N]]).
 			 latestContinuation := startbcpc.
 			 aMethodObj := homeMethod methodObject.
 			 endbcpc := (objectMemory byteSizeOf: aMethodObj) - 1]
@@ -611,9 +611,9 @@ SistaStackToRegisterMappingCogit >> mapFor: cogMethod bcpc: startbcpc performUnt
 			 map := self findMapLocationForMcpc: cogMethod asUnsignedInteger + (self sizeof: CogBlockMethod)
 						inMethod: homeMethod.
 			 self assert: map ~= 0.
-			 self assert: ((coInterpreter byteAt: map) >> AnnotationShift = HasBytecodePC "fiducial"
-						 or: [(coInterpreter byteAt: map) >> AnnotationShift = IsDisplacementX2N]).
-			 [(coInterpreter byteAt: map) >> AnnotationShift ~= HasBytecodePC] whileTrue:
+			 self assert: ((objectMemory byteAt: map) >> AnnotationShift = HasBytecodePC "fiducial"
+						 or: [(objectMemory byteAt: map) >> AnnotationShift = IsDisplacementX2N]).
+			 [(objectMemory byteAt: map) >> AnnotationShift ~= HasBytecodePC] whileTrue:
 				[map := map - 1].
 			 map := map - 1. "skip fiducial; i.e. the map entry for the pc immediately following the method header."
 			 aMethodObj := homeMethod methodObject.
@@ -635,7 +635,7 @@ SistaStackToRegisterMappingCogit >> mapFor: cogMethod bcpc: startbcpc performUnt
 	result ~= 0 ifTrue:
 		[^result].
 	"Now skip up through the bytecode pc map entry for the stack check." 
-	[(coInterpreter byteAt: map) >> AnnotationShift ~= HasBytecodePC] whileTrue:
+	[(objectMemory byteAt: map) >> AnnotationShift ~= HasBytecodePC] whileTrue:
 		[map := map - 1].
 	map := map - 1.
 	[(mapByte := objectMemory byteAt: map) ~= MapEnd] whileTrue: "defensive; we exit on bcpc"

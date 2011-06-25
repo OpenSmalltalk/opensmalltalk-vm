@@ -614,12 +614,22 @@ Cogit class >> initializeAnnotationConstants [
 
 	MapEnd := 0.
 
-	AnnotationConstantNames := #(	IsDisplacement IsDisplacementX2N unused
-										IsObjectReference
-										IsAbsPCReference
-										HasBytecodePC
-										IsRelativeCall
-										IsSendCall)
+	AnnotationConstantNames := NewspeakVM
+									ifTrue:
+										[#(	IsDisplacement IsDisplacementX2N
+											IsNSSendCall
+											IsObjectReference
+											IsAbsPCReference
+											HasBytecodePC
+											IsRelativeCall
+											IsSendCall)]
+									ifFalse:
+										[#(	IsDisplacement IsDisplacementX2N unused
+											IsObjectReference
+											IsAbsPCReference
+											HasBytecodePC
+											IsRelativeCall
+											IsSendCall)]
 ]
 
 { #category : #'class initialization' }
@@ -2278,7 +2288,7 @@ Cogit >> cePushImplicitReceiverFor: selector [
 					implicitReceiverForMixin: coInterpreter mMethodClass
 					implementing: selector.
 		 objectMemory longAt: classpc put: rcvrClass.
-		 objectMemory longAt: mixin put: (mixin = receiver ifTrue: [0] ifFalse: [mixin]).
+		 objectMemory longAt: mixinpc put: (mixin = receiver ifTrue: [0] ifFalse: [mixin]).
 		 ^mixin].
 	mixin := self longAt: mixinpc.
 	^mixin = 0 ifTrue: [receiver] ifFalse: [mixin]
@@ -3460,6 +3470,14 @@ Cogit >> disassemble: targetmcpc from: startpc to: endpc arg: aStream [
 	(objectMemory integerObjectOf: startbcpc) printOn: aStream base: 16.
 	aStream cr; flush.
 	^0
+]
+
+{ #category : #disassembly }
+Cogit >> disassembleCodeAt: pc [
+	<doNotGenerate>
+	(pc between: (trampolineAddresses at: 1) and: methodZoneBase) ifTrue:
+		[^self disassembleTrampolineFor: pc].
+	self disassembleMethodFor: pc
 ]
 
 { #category : #disassembly }
