@@ -37,6 +37,11 @@ NewObjectMemorySimulatorMSB >> charsOfLong: long [
 					ifFalse: [$?]]
 ]
 
+{ #category : #'memory access' }
+NewObjectMemorySimulatorMSB >> endianness [
+	^#big
+]
+
 { #category : #'float primitives' }
 NewObjectMemorySimulatorMSB >> fetchFloatAt: floatBitsAddress into: aFloat [
 	aFloat at: 1 put: (self long32At: floatBitsAddress).

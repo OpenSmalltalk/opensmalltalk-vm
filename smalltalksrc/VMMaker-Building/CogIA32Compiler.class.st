@@ -2788,15 +2788,6 @@ CogIA32Compiler >> storeLiteral: literal beforeFollowingAddress: followingAddres
 		byteAt: followingAddress - 4 put: (literal            bitAnd: 16rFF)
 ]
 
-{ #category : #'inline cacheing' }
-CogIA32Compiler >> thirtyTwoBitValueAt: startAddress [
-	"Answer the 32 bit value at startAddress."
-	^  ((objectMemory byteAt: startAddress + 3) << 24)
-	+  ((objectMemory byteAt: startAddress + 2) << 16)
-	+  ((objectMemory byteAt: startAddress + 1) << 8)
-	+   (objectMemory byteAt: startAddress)
-]
-
 { #category : #disassembly }
 CogIA32Compiler >> twoByteInstructionSizeAt: pc [
 	| op |

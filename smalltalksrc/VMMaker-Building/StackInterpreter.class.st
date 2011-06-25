@@ -3405,7 +3405,7 @@ StackInterpreter >> dynamicSuperSendBytecode [
 	mClassMixin := self methodClassOf: method.
 	mixinApplication := self 
 		findApplicationOfTargetMixin: mClassMixin
-		startingAtBehavior: (self fetchClassOf: rcvr).
+		startingAtBehavior: (objectMemory fetchClassOf: rcvr).
 	lkupClass := self superclassOf: mixinApplication.
 	self commonSend
 ]
