@@ -2283,14 +2283,14 @@ Cogit >> cePushImplicitReceiverFor: selector [
 	classpc := retpc + backEnd jumpShortByteSize.
 	mixinpc := retpc + backEnd jumpShortByteSize + BytesPerOop.
 	rcvrClass := objectMemory fetchClassOf: receiver.
-	rcvrClass ~= (objectMemory longAt: classpc) ifTrue:
+	rcvrClass ~= (objectMemory unalignedLongAt: classpc) ifTrue:
 		[mixin := coInterpreter
 					implicitReceiverForMixin: coInterpreter mMethodClass
 					implementing: selector.
-		 objectMemory longAt: classpc put: rcvrClass.
-		 objectMemory longAt: mixinpc put: (mixin = receiver ifTrue: [0] ifFalse: [mixin]).
+		 objectMemory unalignedLongAt: classpc put: rcvrClass.
+		 objectMemory unalignedLongAt: mixinpc put: (mixin = receiver ifTrue: [0] ifFalse: [mixin]).
 		 ^mixin].
-	mixin := self longAt: mixinpc.
+	mixin := objectMemory unalignedLongAt: mixinpc.
 	^mixin = 0 ifTrue: [receiver] ifFalse: [mixin]
 ]
 
