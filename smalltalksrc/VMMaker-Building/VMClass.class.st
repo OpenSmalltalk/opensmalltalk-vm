@@ -370,15 +370,6 @@ VMClass >> doOrDefer: aBlock [
 ]
 
 { #category : #'memory access' }
-VMClass >> fetchFloatAtPointer: pointer into: aFloat [
-	"This gets implemented by Macros in C, where its types will also be checked.
-	 pointer is a raw address, and aFloat is a 64-bit double precision float."
-	<doNotGenerate>
-
-	^self fetchFloatAt: pointer into: aFloat
-]
-
-{ #category : #'memory access' }
 VMClass >> fetchSingleFloatAtPointer: pointer into: aFloat [
 	"This gets implemented by Macros in C, where its types will also be checked.
 	 pointer is a raw address, and aFloat is a 32-bit single precision float."
