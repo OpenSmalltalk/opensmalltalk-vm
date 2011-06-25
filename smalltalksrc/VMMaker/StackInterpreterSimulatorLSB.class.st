@@ -11,49 +11,12 @@ Class {
 	#category : #'VMMaker-InterpreterSimulation'
 }
 
-{ #category : #'memory access' }
-StackInterpreterSimulatorLSB >> byteAt: byteAddress [
-	| lowBits long |
-	lowBits := byteAddress bitAnd: 3.
-	long := self longAt: byteAddress - lowBits.
-	^(lowBits caseOf: {
-		[0] -> [ long ].
-		[1] -> [ long bitShift: -8  ].
-		[2] -> [ long bitShift: -16 ].
-		[3] -> [ long bitShift: -24 ]
-	}) bitAnd: 16rFF
-
-]
-
-{ #category : #'memory access' }
-StackInterpreterSimulatorLSB >> byteAt: byteAddress put: byte [
-	| lowBits long longAddress |
-	lowBits := byteAddress bitAnd: 3.
-	longAddress := byteAddress - lowBits.
-	long := self longAt: longAddress.
-	long := (lowBits caseOf: {
-		[0] -> [ (long bitAnd: 16rFFFFFF00) bitOr: byte ].
-		[1] -> [ (long bitAnd: 16rFFFF00FF) bitOr: (byte bitShift: 8) ].
-		[2] -> [ (long bitAnd: 16rFF00FFFF) bitOr: (byte bitShift: 16)  ].
-		[3] -> [ (long bitAnd: 16r00FFFFFF) bitOr: (byte bitShift: 24)  ]
-	}).
-
-	self longAt: longAddress put: long.
-	^byte
-]
-
 { #category : #'debug support' }
 StackInterpreterSimulatorLSB >> charsOfLong: long [
 	^ (1 to: 4) collect:
 		[:i | ((long digitAt: i) between: 14 and: 126)
 					ifTrue: [(long digitAt: i) asCharacter]
 					ifFalse: [$?]]
-]
-
-{ #category : #'float primitives' }
-StackInterpreterSimulatorLSB >> fetchFloatAt: floatBitsAddress into: aFloat [
-	aFloat at: 2 put: (self long32At: floatBitsAddress).
-	aFloat at: 1 put: (self long32At: floatBitsAddress+4)
 ]
 
 { #category : #'memory access' }
@@ -109,45 +72,6 @@ StackInterpreterSimulatorLSB >> putShort: n toFile: f [
 		remainingValue := remainingValue bitShift: -8].
 
 	self success: true
-]
-
-{ #category : #'memory access' }
-StackInterpreterSimulatorLSB >> shortAt: byteAddress [
-    "Return the half-word at byteAddress which must be even."
-	| lowBits long |
-	lowBits := byteAddress bitAnd: 2.
-	long := self longAt: byteAddress - lowBits.
-	^ lowBits = 2
-		ifTrue: [ long bitShift: -16 ]
-		ifFalse: [ long bitAnd: 16rFFFF ].
-
-]
-
-{ #category : #'memory access' }
-StackInterpreterSimulatorLSB >> shortAt: byteAddress put: a16BitValue [
-    "Return the half-word at byteAddress which must be even."
-	| lowBits long longAddress |
-	lowBits := byteAddress bitAnd: 2.
-	lowBits = 0
-		ifTrue:
-		[ "storing into LS word"
-		long := self longAt: byteAddress.
-		self longAt: byteAddress
-				put: ((long bitAnd: 16rFFFF0000) bitOr: a16BitValue)
-		]
-		ifFalse:
-		[longAddress := byteAddress - 2.
-		long := self longAt: longAddress.
-		self longAt: longAddress
-				put: ((long bitAnd: 16rFFFF) bitOr: (a16BitValue bitShift: 16))
-		]
-]
-
-{ #category : #'float primitives' }
-StackInterpreterSimulatorLSB >> storeFloatAt: floatBitsAddress from: aFloat [
-
-	self long32At: floatBitsAddress put: (aFloat at: 2).
-	self long32At: floatBitsAddress+4 put: (aFloat at: 1)
 ]
 
 { #category : #'memory access' }

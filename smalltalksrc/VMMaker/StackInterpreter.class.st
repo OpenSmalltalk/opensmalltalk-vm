@@ -3138,7 +3138,7 @@ StackInterpreter >> dbgFloatValueOf: oop [
 	((objectMemory isNonIntegerObject: oop)
 	and: [(objectMemory fetchClassOfNonInt: oop) = (objectMemory splObj: ClassFloat)]) ifTrue:
 		[self cCode: '' inSmalltalk: [result := Float new: 2].
-		 self fetchFloatAt: oop + BaseHeaderSize into: result.
+		 objectMemory fetchFloatAt: oop + BaseHeaderSize into: result.
 		 ^result].
 	^nil
 ]
@@ -3854,7 +3854,7 @@ StackInterpreter >> fetchArray: fieldIndex ofObject: objectPointer [
 StackInterpreter >> fetchByte [
 	"This method uses the preIncrement builtin function which has no Smalltalk equivalent. Thus, it must be overridden in the simulator."
 
-	^ self byteAtPointer: localIP preIncrement
+	^objectMemory byteAtPointer: localIP preIncrement
 ]
 
 { #category : #utilities }
@@ -4154,12 +4154,11 @@ StackInterpreter >> floatArg: index [
 	 evaluated if ClassArrayCompactIndex is non-zero."
 	self assertClassOf: oop is: (objectMemory splObj: ClassFloat)
 		compactClassIndex: ClassFloatCompactIndex.
-	self successful ifTrue:[
-		self cCode: '' inSmalltalk: [result := Float new: 2].
-		self fetchFloatAt: oop + BaseHeaderSize into: result.
-		^result
-	] ifFalse:[^0.0]
-
+	self successful ifTrue:
+		[self cCode: '' inSmalltalk: [result := Float new: 2].
+		objectMemory fetchFloatAt: oop + BaseHeaderSize into: result.
+		^result].
+	^0.0
 ]
 
 { #category : #'object format' }
@@ -4169,7 +4168,7 @@ StackInterpreter >> floatObjectOf: aFloat [
 	<var: #aFloat type: #double>
 	self flag: #Dan.
 	newFloatObj := objectMemory eeInstantiateSmallClass: (objectMemory splObj: ClassFloat) sizeInBytes: 8+BaseHeaderSize.
-	self storeFloatAt: newFloatObj + BaseHeaderSize from: aFloat.
+	objectMemory storeFloatAt: newFloatObj + BaseHeaderSize from: aFloat.
 	^ newFloatObj.
 
 ]
@@ -4190,11 +4189,11 @@ StackInterpreter >> floatValueOf: oop [
 	self assertClassOf: oop
 		is: (objectMemory splObj: ClassFloat)
 		compactClassIndex: ClassFloatCompactIndex.
-	self successful
-		ifTrue: [self cCode: '' inSmalltalk: [result := Float new: 2].
-				self fetchFloatAt: oop + BaseHeaderSize into: result.
-				^result]
-		ifFalse: [^0.0]
+	self successful ifTrue:
+		[self cCode: '' inSmalltalk: [result := Float new: 2].
+		objectMemory fetchFloatAt: oop + BaseHeaderSize into: result.
+		^result].
+	^0.0
 ]
 
 { #category : #'debug printing' }
@@ -4558,7 +4557,7 @@ StackInterpreter >> getCogVMFlags [
 StackInterpreter >> getCurrentBytecode [
 	"currentBytecode will be private to the main dispatch loop in the generated code. This method allows the currentBytecode to be retrieved from global variables."
 
-	^ self byteAt: instructionPointer
+	^objectMemory byteAt: instructionPointer
 ]
 
 { #category : #'internal interpreter access' }
@@ -5192,7 +5191,7 @@ StackInterpreter >> internalActivateNewMethod [
 	 in primFailCode by checking that newMethod actually has a primitive?"
 	primFailCode ~= 0 ifTrue:
 		[((self methodHeaderHasPrimitive: methodHeader)
-		   and: [(self byteAtPointer: localIP + 1) = 129 "long store temp"]) ifTrue:
+		   and: [(objectMemory byteAtPointer: localIP + 1) = 129 "long store temp"]) ifTrue:
 			[errorCode := self getErrorObjectFromPrimFailCode.
 			 self internalStackTopPut: errorCode "nil if primFailCode == 1, or primFailCode"].
 		primFailCode := 0].
@@ -5555,10 +5554,8 @@ StackInterpreter >> isWidowedContext: aOnceMarriedContext [
 
 { #category : #'jump bytecodes' }
 StackInterpreter >> jump: offset [
-
 	localIP := localIP + offset + 1.
-	currentBytecode := self byteAtPointer: localIP.
-
+	currentBytecode := objectMemory byteAtPointer: localIP
 ]
 
 { #category : #'jump bytecodes' }
@@ -5616,7 +5613,7 @@ StackInterpreter >> justActivateNewMethod [
 	 initial long store temp bytecode).  We don't need to check that newMethod
 	 actually has a primitive because the initial 129 only occurs if there is one."
 	primFailCode ~= 0 ifTrue:
-		[(self byteAtPointer: instructionPointer + 1) = 129 "long store temp" ifTrue:
+		[(objectMemory byteAtPointer: instructionPointer + 1) = 129 "long store temp" ifTrue:
 			[errorCode := self getErrorObjectFromPrimFailCode.
 			 self stackTopPut: errorCode "nil if primFailCode == 1, or primFailCode"].
 		primFailCode := 0].
@@ -5689,7 +5686,7 @@ StackInterpreter >> loadFloatOrIntFrom: floatOrInt [
 		compactClassIndex: ClassFloatCompactIndex.
 	self cCode: '' inSmalltalk: [result := Float new: 2].
 	self successful ifTrue:
-		[self fetchFloatAt: floatOrInt + BaseHeaderSize into: result].
+		[objectMemory fetchFloatAt: floatOrInt + BaseHeaderSize into: result].
 	^result
 ]
 
@@ -6832,7 +6829,7 @@ StackInterpreter >> popFloat [
 		compactClassIndex: ClassFloatCompactIndex.
 	self successful ifTrue:
 		[self cCode: '' inSmalltalk: [result := Float new: 2].
-		self fetchFloatAt: top + BaseHeaderSize into: result].
+		objectMemory fetchFloatAt: top + BaseHeaderSize into: result].
 	^ result
 ]
 
@@ -8563,8 +8560,8 @@ StackInterpreter >> reverseDisplayFrom: startIndex to: endIndex [
 	displayBits := displayBits + BaseHeaderSize.
 	displayBits + wordStartIndex to: displayBits + wordEndIndex by: 4 do:
 		[:ptr | | reversed  |
-		reversed := (self long32At: ptr) bitXor: 4294967295.
-		self longAt: ptr put: reversed].
+		reversed := (objectMemory long32At: ptr) bitXor: 4294967295.
+		objectMemory longAt: ptr put: reversed].
 	primFailCodeValue := primFailCode.
 	self initPrimCall.
 	self displayBitsOf: displayObj Left: 0 Top: 0 Right: (objectMemory integerValueOf: w) Bottom: 1.
@@ -9330,13 +9327,11 @@ StackInterpreter >> stackFloatValue: offset [
 	self assertClassOf: floatPointer
 		is: (objectMemory splObj: ClassFloat)
 		compactClassIndex: ClassFloatCompactIndex.
-	self successful
-		ifTrue:
-			[self cCode: '' inSmalltalk: [result := Float new: 2].
-			self fetchFloatAt: floatPointer + BaseHeaderSize into: result.
-			^result]
-		ifFalse:
-			[^0.0]
+	self successful ifTrue:
+		[self cCode: '' inSmalltalk: [result := Float new: 2].
+		objectMemory fetchFloatAt: floatPointer + BaseHeaderSize into: result.
+		^result].
+	^0.0
 ]
 
 { #category : #'internal interpreter access' }
