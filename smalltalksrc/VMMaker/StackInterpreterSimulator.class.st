@@ -122,28 +122,12 @@ StackInterpreterSimulator >> browserPluginReturnIfNeeded [
 
 { #category : #'memory access' }
 StackInterpreterSimulator >> byteAt: byteAddress [
-	^self subclassResponsibility
+	^objectMemory byteAt: byteAddress
 ]
 
 { #category : #'memory access' }
 StackInterpreterSimulator >> byteAt: byteAddress put: byte [
-	^self subclassResponsibility
-]
-
-{ #category : #'memory access' }
-StackInterpreterSimulator >> byteAtPointer: pointer [
-	"This gets implemented by Macros in C, where its types will also be checked.
-	pointer is a raw address, and byte is an 8-bit quantity."
-
-	^ self byteAt: pointer
-]
-
-{ #category : #'memory access' }
-StackInterpreterSimulator >> byteAtPointer: pointer put: byteValue [
-	"This gets implemented by Macros in C, where its types will also be checked.
-	pointer is a raw address, and byteValue is an 8-bit quantity."
-
-	^ self byteAt: pointer  put: byteValue
+	^objectMemory byteAt: byteAddress put: byte
 ]
 
 { #category : #'debug support' }
@@ -427,14 +411,6 @@ StackInterpreterSimulator >> externalWriteBackHeadFramePointers [
 StackInterpreterSimulator >> fetchByte [
 
 	^ self byteAt: (localIP := localIP + 1).
-]
-
-{ #category : #'float primitives' }
-StackInterpreterSimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
-
-	aFloat at: 1 put: (self long32At: floatBitsAddress).
-	aFloat at: 2 put: (self long32At: floatBitsAddress+4).
-
 ]
 
 { #category : #testing }
@@ -781,9 +757,9 @@ StackInterpreterSimulator >> ioLoadExternalFunction: functionName OfLength: func
 	"Load and return the requested function from a module"
 	| pluginString functionString |
 	pluginString := String new: moduleLength.
-	1 to: moduleLength do:[:i| pluginString byteAt: i put: (self byteAt: moduleName+i-1)].
+	1 to: moduleLength do:[:i| pluginString byteAt: i put: (objectMemory byteAt: moduleName+i-1)].
 	functionString := String new: functionLength.
-	1 to: functionLength do:[:i| functionString byteAt: i put: (self byteAt: functionName+i-1)].
+	1 to: functionLength do:[:i| functionString byteAt: i put: (objectMemory byteAt: functionName+i-1)].
 	functionString := functionString asSymbol.
 	^self ioLoadFunction: functionString From: pluginString
 ]
@@ -1097,31 +1073,13 @@ StackInterpreterSimulator >> logOfSendsWrite: nSends toFileNamed: fileName fromS
 ]
 
 { #category : #'memory access' }
-StackInterpreterSimulator >> long32At: byteAddress [
-	"Return the 32-bit word at byteAddress which must be 0 mod 4."
-
-	^ self longAt: byteAddress
-]
-
-{ #category : #'memory access' }
-StackInterpreterSimulator >> long32At: byteAddress put: a32BitValue [
-	"Store the 32-bit value at byteAddress which must be 0 mod 4."
-
-	^ self longAt: byteAddress put: a32BitValue
-]
-
-{ #category : #'memory access' }
 StackInterpreterSimulator >> longAt: byteAddress [
-	"Note: Adjusted for Smalltalk's 1-based array indexing."
-
-	^objectMemory memory at: (byteAddress // 4) + 1
+	^objectMemory longAt: byteAddress
 ]
 
 { #category : #'memory access' }
 StackInterpreterSimulator >> longAt: byteAddress put: a32BitValue [
-	"Note: Adjusted for Smalltalk's 1-based array indexing."
-
-	^objectMemory memory at: (byteAddress // 4) + 1 put: a32BitValue
+	^objectMemory longAt: byteAddress put: a32BitValue
 ]
 
 { #category : #'file primitives' }
@@ -1927,7 +1885,7 @@ StackInterpreterSimulator >> sendBreak: selectorString point: selectorLength rec
 	breakSelectorLength = selectorLength ifTrue:
 		[i := breakSelectorLength.
 		 [i > 0] whileTrue:
-			[(self byteAt: selectorString + i - 1) = (breakSelector at: i) asInteger
+			[(objectMemory byteAt: selectorString + i - 1) = (breakSelector at: i) asInteger
 				ifTrue: [(i := i - 1) = 0 ifTrue:
 							[self halt: 'Send of '
 									, breakSelector,
@@ -1935,17 +1893,6 @@ StackInterpreterSimulator >> sendBreak: selectorString point: selectorLength rec
 										ifNotNil: [' to ', (self shortPrint: receiverOrNil)]
 										ifNil: [''])]]
 				ifFalse: [i := 0]]]
-]
-
-{ #category : #'memory access' }
-StackInterpreterSimulator >> shortAt: byteAddress [
-    "Return the half-word at byteAddress which must be even."
-	^self subclassResponsibility
-]
-
-{ #category : #'memory access' }
-StackInterpreterSimulator >> shortAt: byteAddress put: a16BitValue [
-	^ self subclassResponsibility
 ]
 
 { #category : #'debug support' }
@@ -2118,14 +2065,6 @@ StackInterpreterSimulator >> storeAndPopTemporaryVariableBytecode [
 	self temporary: (currentBytecode bitAnd: 7) in: localFP put: self internalStackTop.
 	self fetchNextBytecode.
 	self internalPop: 1
-]
-
-{ #category : #'float primitives' }
-StackInterpreterSimulator >> storeFloatAt: floatBitsAddress from: aFloat [
-
-	self long32At: floatBitsAddress put: (aFloat at: 1).
-	self long32At: floatBitsAddress+4 put: (aFloat at: 2).
-
 ]
 
 { #category : #'debug support' }

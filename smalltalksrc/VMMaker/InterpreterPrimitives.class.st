@@ -824,24 +824,24 @@ InterpreterPrimitives >> primitiveConstantFill [
 	"Fill the receiver, which must be an indexable bytes or words 
 	objects, with the given integer value."
 	| fillValue rcvr rcvrIsBytes end i |
-	<var: #end type: 'usqInt'>
-	<var: #i type: 'usqInt'>
+	<var: #end type: #usqInt>
+	<var: #i type: #usqInt>
 	fillValue := self positive32BitValueOf: self stackTop.
 	rcvr := self stackValue: 1.
 	self success: (objectMemory isWordsOrBytes: rcvr).
 	rcvrIsBytes := objectMemory isBytes: rcvr.
 	rcvrIsBytes ifTrue: [self success: (fillValue >= 0 and: [fillValue <= 255])].
-	self successful
-		ifTrue: [end := rcvr + (objectMemory sizeBitsOf: rcvr).
-			i := rcvr + BaseHeaderSize.
-			rcvrIsBytes
-				ifTrue: [[i < end]
-						whileTrue: [self byteAt: i put: fillValue.
-							i := i + 1]]
-				ifFalse: [[i < end]
-						whileTrue: [self long32At: i put: fillValue.
-							i := i + 4]].
-			self pop: 1]
+	self successful ifTrue:
+		[end := rcvr + (objectMemory sizeBitsOf: rcvr).
+		i := rcvr + BaseHeaderSize.
+		rcvrIsBytes
+			ifTrue: [[i < end] whileTrue:
+						[objectMemory byteAt: i put: fillValue.
+						i := i + 1]]
+			ifFalse: [[i < end] whileTrue:
+						[objectMemory long32At: i put: fillValue.
+						i := i + 4]].
+		self pop: 1]
 ]
 
 { #category : #'process primitives' }
@@ -2813,7 +2813,7 @@ InterpreterPrimitives >> primitiveShortAt [
 	((index >= 1) and: [index <= sz]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
 	addr := rcvr + BaseHeaderSize + (2 * (index - 1)).
-	value := self shortAt: addr.
+	value := objectMemory shortAt: addr.
 	self pop: 2 thenPushInteger: value
 ]
 
@@ -2833,7 +2833,7 @@ InterpreterPrimitives >> primitiveShortAtPut [
 	(index >= 1 and: [index <= sz]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
 	addr := rcvr + BaseHeaderSize + (2 * (index - 1)).
-	self shortAt: addr put: value.
+	objectMemory shortAt: addr put: value.
 	self pop: 3 thenPush: (objectMemory integerObjectOf: value) "pop all; return value"
 ]
 
