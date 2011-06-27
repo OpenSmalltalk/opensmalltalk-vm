@@ -987,6 +987,24 @@ SimpleStackBasedCogit >> genDoubleFailIfZeroArgRcvr: rcvrReg arg: argReg [
 ]
 
 { #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genDynamicSuperSendBytecode [
+	| numArgs selector |
+	numArgs := byte1.
+	selector := coInterpreter literal: byte2 ofMethod: methodObj.
+	(objectMemory isYoung: selector) ifTrue:
+		[hasYoungReferent := true].
+	self assert: needsFrame.
+	self MoveMw: numArgs * BytesPerWord r: SPReg R: ReceiverResultReg.
+	numArgs > 2 ifTrue:
+		[self MoveCq: numArgs R: SendNumArgsReg].
+	self MoveCw: selector R: ClassReg.
+	self CallSend: (dynamicSuperSendTrampolines at: (numArgs min: NumSendTrampolines - 1)).
+	self flag: 'currently caller pushes result'.
+	self PushR: ReceiverResultReg.
+	^0
+]
+
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtendedSendBytecode [
 	"Can use any of the first 32 literals for the selector and pass up to 7 arguments."
 
@@ -1795,7 +1813,7 @@ SimpleStackBasedCogit >> genPushExplicitOuterSendReceiverBytecode [
 	self assert: (objectMemory isIntegerObject: levelOop).
 	self assert: needsFrame.
 	self MoveCq: (objectMemory integerValueOf: levelOop) R: ClassReg.
-	self CallRT: cePushExplicitReceiverTrampoline.
+	self CallRT: ceExplicitReceiverTrampoline.
 	self PushR: ReceiverResultReg.
 	^0
 ]
@@ -1819,7 +1837,7 @@ SimpleStackBasedCogit >> genPushImplicitReceiverBytecode [
 		[hasYoungReferent := true].
 	self assert: needsFrame.
 	self MoveCw: selector R: ClassReg.
-	self CallNewspeakSend: cePushImplicitReceiverTrampoline.
+	self CallNewspeakSend: ceImplicitReceiverTrampoline.
 	skip := self Jump: 0.
 	self Fill32: 0.
 	self Fill32: 0.

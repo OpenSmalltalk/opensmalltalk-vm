@@ -199,8 +199,8 @@ Class {
 		'ceFetchContextInstVarTrampoline',
 		'ceStoreContextInstVarTrampoline',
 		'cePositive32BitIntegerTrampoline',
-		'cePushImplicitReceiverTrampoline',
-		'cePushExplicitReceiverTrampoline',
+		'ceImplicitReceiverTrampoline',
+		'ceExplicitReceiverTrampoline',
 		'ceCaptureCStackPointers',
 		'ceFlushICache',
 		'ceCheckFeaturesFunction',
@@ -428,7 +428,7 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		var: #primInvokeLabel type: #'AbstractInstruction *'.
 	self declareC: #(abstractOpcodes stackCheckLabel
 					blockEntryLabel blockEntryNoContextSwitch
-					stackOverflowCall sendMissCall entry noCheckEntry
+					stackOverflowCall sendMissCall entry noCheckEntry dynSuperEntry
 					mnuCall interpretCall endCPICCase0 endCPICCase1)
 			as: #'AbstractInstruction *'
 				in: aCCodeGenerator.
@@ -698,7 +698,8 @@ Cogit class >> mustBeGlobal: var [
 		'ceEnterCogCodePopReceiverAndClassRegs' 'realCEEnterCogCodePopReceiverAndClassRegs'
 		'ceReturnToInterpreterTrampoline' 'ceCannotResumeTrampoline'
 		'cePositive32BitIntegerTrampoline' 'ceFlushICache' 'ceTryLockVMOwner' 'ceUnlockVMOwner'
-		'cmEntryOffset' 'cmNoCheckEntryOffset' 'blockNoContextSwitchOffset' 'breakPC'
+		'cmEntryOffset' 'cmNoCheckEntryOffset' 'cmDynSuperEntryOffset'
+		'blockNoContextSwitchOffset' 'breakPC'
 		'labelCounter' 'CFramePointer' 'CStackPointer' 'cFramePointerInUse' 'ceGetSP'
 		'traceLinkedSends' 'traceStores' 'debugPrimCallStackOffset')
 			includes: var
@@ -2259,14 +2260,8 @@ Cogit >> ceEnterCogCodePopReceiverReg [
 	self simulateEnilopmart: ceEnterCogCodePopReceiverReg numArgs: 1
 ]
 
-{ #category : #accessing }
-Cogit >> cePositive32BitIntegerTrampoline [
-	<cmacro: '() cePositive32BitIntegerTrampoline'>
-	^cePositive32BitIntegerTrampoline
-]
-
 { #category : #'in-line cacheing' }
-Cogit >> cePushImplicitReceiverFor: selector [
+Cogit >> ceImplicitReceiverFor: selector [
 	"Cached push implicit receiver implementation.  Caller looks like
 		mov selector, ClassReg
 				call cePushImplicitReceiver
@@ -2278,20 +2273,26 @@ Cogit >> cePushImplicitReceiverFor: selector [
 	 If 0, push the actual receiver."
 
 	| receiver retpc classpc mixinpc rcvrClass mixin |
-	receiver := coInterpreter mframeReceiver: coInterpreter framePointer.
+	receiver := coInterpreter mframeReceiverExport.
 	retpc := coInterpreter stackTop.
 	classpc := retpc + backEnd jumpShortByteSize.
 	mixinpc := retpc + backEnd jumpShortByteSize + BytesPerOop.
 	rcvrClass := objectMemory fetchClassOf: receiver.
-	rcvrClass ~= (objectMemory unalignedLongAt: classpc) ifTrue:
+	rcvrClass ~= (backEnd unalignedLongAt: classpc) ifTrue:
 		[mixin := coInterpreter
 					implicitReceiverForMixin: coInterpreter mMethodClass
 					implementing: selector.
-		 objectMemory unalignedLongAt: classpc put: rcvrClass.
-		 objectMemory unalignedLongAt: mixinpc put: (mixin = receiver ifTrue: [0] ifFalse: [mixin]).
+		 backEnd unalignedLongAt: classpc put: rcvrClass.
+		 backEnd unalignedLongAt: mixinpc put: (mixin = receiver ifTrue: [0] ifFalse: [mixin]).
 		 ^mixin].
-	mixin := objectMemory unalignedLongAt: mixinpc.
+	mixin := backEnd unalignedLongAt: mixinpc.
 	^mixin = 0 ifTrue: [receiver] ifFalse: [mixin]
+]
+
+{ #category : #accessing }
+Cogit >> cePositive32BitIntegerTrampoline [
+	<cmacro: '() cePositive32BitIntegerTrampoline'>
+	^cePositive32BitIntegerTrampoline
 ]
 
 { #category : #accessing }
@@ -4678,8 +4679,8 @@ Cogit >> generateMissAbortTrampolines [
 
 { #category : #initialization }
 Cogit >> generateNewspeakRuntime [
-	cePushExplicitReceiverTrampoline := self genTrampolineFor: #cePushExplicitReceiverAt: asSymbol
-												called: 'cePushExplicitReceiverTrampoline'
+	ceExplicitReceiverTrampoline := self genTrampolineFor: #ceExplicitReceiverAt: asSymbol
+												called: 'ceExplicitReceiverTrampoline'
 												arg: SendNumArgsReg
 												result: ReceiverResultReg.
 	"Cached push implicit receiver implementation.  Caller looks like
@@ -4691,8 +4692,8 @@ Cogit >> generateNewspeakRuntime [
 		continue:
 	 If class matches class of receiver then mixin contains either 0 or the implicit receiver.
 	 If 0, push the actual receiver."
-	cePushImplicitReceiverTrampoline := self genTrampolineFor: #cePushImplicitReceiverFor: asSymbol
-												called: 'cePushImplicitReceiverTrampoline'
+	ceImplicitReceiverTrampoline := self genTrampolineFor: #ceImplicitReceiverFor: asSymbol
+												called: 'ceImplicitReceiverTrampoline'
 												arg: ClassReg
 												result: ReceiverResultReg
 ]
@@ -5808,19 +5809,19 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSendOrPushImplicit: annotation pc: mcpc 
 		 cacheTag := backEnd inlineCacheTagAt: mcpc asInteger.
 		 cacheTagMarked := objectRepresentation cacheTagIsMarked: cacheTag.
 		 objectRepresentation markAndTraceLiteral: cacheTag.
-		 entryPoint = cePushImplicitReceiverTrampoline
+		 entryPoint = ceImplicitReceiverTrampoline
 			ifTrue:
 				[| classpc mixinpc class mixin |
 				 self assert: cacheTagMarked.  "cacheTag is selector"
 				 classpc := mcpc asInteger + backEnd jumpShortByteSize.
 				 mixinpc := mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop.
-				 class := objectMemory unalignedLongAt: classpc.
+				 class := backEnd unalignedLongAt: classpc.
 				 (objectRepresentation cacheTagIsMarked: class)
 					ifTrue:
-						[(mixin := objectMemory unalignedLongAt: mixinpc) ~= 0 ifTrue:
+						[(mixin := backEnd unalignedLongAt: mixinpc) ~= 0 ifTrue:
 							[objectRepresentation markAndTraceLiteral: mixin]]
 					ifFalse:
-						[objectMemory
+						[backEnd
 							unalignedLongAt: classpc put: 0;
 							unalignedLongAt: mixinpc put: 0.
 						 codeModified := true]]
@@ -6651,17 +6652,17 @@ Cogit >> remapNSIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
 			  and: [objectMemory isYoung: mappedCacheTag]) ifTrue:
 				[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]].
 		 entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
-		 entryPoint = cePushImplicitReceiverTrampoline ifTrue:
+		 entryPoint = ceImplicitReceiverTrampoline ifTrue:
 			[| pc oop mappedOop |
 			 pc := mcpc asInteger + backEnd jumpShortByteSize.
-			 (oop := objectMemory unalignedLongAt: pc) ~= 0 ifTrue:
+			 (oop := backEnd unalignedLongAt: pc) ~= 0 ifTrue:
 				[mappedOop := objectMemory remap: oop.
 				 mappedOop ~= oop ifTrue:
-					[objectMemory unalignedLongAt: pc put: mappedOop].
+					[backEnd unalignedLongAt: pc put: mappedOop].
 				 pc := mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop.
-				 (oop := objectMemory unalignedLongAt: pc) ~= 0 ifTrue:
+				 (oop := backEnd unalignedLongAt: pc) ~= 0 ifTrue:
 					[mappedOop ~= oop ifTrue:
-						[objectMemory unalignedLongAt: pc put: mappedOop]]]].
+						[backEnd unalignedLongAt: pc put: mappedOop]]]].
 		 hasYoungPtr ~= 0 ifTrue:
 			[| offset targetMethod |
 			 "Since the unlinking routines may rewrite the cacheTag to the send's selector, and
@@ -7392,9 +7393,9 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc of: theSelector [
 	(self isSendAnnotation: annotation) ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 self cppIf: NewspeakVM ifTrue:
-			[entryPoint = cePushImplicitReceiverTrampoline ifTrue:
+			[entryPoint = ceImplicitReceiverTrampoline ifTrue:
 				[(backEnd inlineCacheTagAt: mcpc asInteger) = theSelector ifTrue:
-				 	[objectMemory
+				 	[backEnd
 						unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize put: 0;
 						unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop put: 0]]].
 		 entryPoint > methodZoneBase ifTrue: "It's a linked send."
