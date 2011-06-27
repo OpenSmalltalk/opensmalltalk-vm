@@ -265,12 +265,15 @@ CCodeGenerator >> addStructMethodFor: aClass selector: selector [
 
 { #category : #utilities }
 CCodeGenerator >> builtin: sel [
-	"Answer true if the given selector is one of the builtin selectors."
+	"Answer true if the given selector is one of the builtin selectors, i.e.
+	 should be translated as a call of the function, not inlined or tramsformed."
 
 	^(#(error:
 		 byteAt: byteAt:put: byteAtPointer: byteAtPointer:put:
 		 intAt: intAt:put: intAtPointer: intAtPointer:put:
 		 longAt: longAt:put: longAtPointer: longAtPointer:put:
+		 unalignedLongAt: unalignedLongAt:put:
+				unalignedLongAtPointer: unalignedLongAtPointer:put:
 		 shortAt: shortAt:put: shortAtPointer: shortAtPointer:put:
 		 fetchFloatAt:into: storeFloatAt:from:
 				fetchFloatAtPointer:into: storeFloatAtPointer:from:

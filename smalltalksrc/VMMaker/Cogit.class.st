@@ -441,7 +441,7 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 			declareC: 'sqInt sendTrampolines[NumSendTrampolines]';
 		var: #superSendTrampolines
 			declareC: 'sqInt superSendTrampolines[NumSendTrampolines]';
-		var: #superSendTrampolines
+		var: #dynamicSuperSendTrampolines
 			declareC: 'sqInt dynamicSuperSendTrampolines[NumSendTrampolines]';
 		var: #trampolineAddresses
 			declareC: 'static char *trampolineAddresses[NumTrampolines*2]';
@@ -2305,15 +2305,15 @@ Cogit >> ceReturnToInterpreterPC [
 { #category : #'in-line cacheing' }
 Cogit >> ceSICMiss: receiver [
 	"An in-line cache check in a method has failed.  The failing entry check has jumped
-	 to the ceSendMiss abort call at the start of the method which has called this routine.
+	 to the ceMethodAbort abort call at the start of the method which has called this routine.
 	 If possible allocate a closed PIC for the current and existing classes.
 	 The stack looks like:
 			receiver
 			args
 			sender return address
-	  sp=>	ceSendMiss call return address
+	  sp=>	ceMethodAbort call return address
 	 So we can find the method that did the failing entry check at
-		ceSendMiss call return address - sicMissReturnOffset
+		ceMethodAbort call return address - missOffset
 	 and we can find the send site from the outer return address."
 	<api>
 	| pic innerReturn outerReturn entryPoint targetMethod newTargetMethodOrNil cacheTag extent result |
@@ -2326,8 +2326,19 @@ Cogit >> ceSICMiss: receiver [
 	self assert: (outerReturn between: methodZoneBase and: methodZone zoneLimit).
 	entryPoint := backEnd callTargetFromReturnAddress: outerReturn.
 
-	self assert: targetMethod asInteger + cmEntryOffset = entryPoint.
 	self assert: targetMethod selector ~= objectMemory nilObject.
+	self cppIf: NewspeakVM ifTrue:
+		[self assert: (targetMethod asInteger + cmEntryOffset = entryPoint
+					or: [targetMethod asInteger + cmDynSuperEntryOffset = entryPoint]).
+		 "Avoid the effort of implementing PICs for the relatively low dynamic frequency
+		  dynamic super send and simply rebind the send site."
+		 targetMethod asInteger + cmDynSuperEntryOffset = entryPoint ifTrue:
+			[coInterpreter popStack. "pop inner return"
+			^coInterpreter
+				ceDynamicSuperSend: targetMethod selector
+				to: (coInterpreter stackValue: targetMethod cmNumArgs)
+				numArgs: targetMethod cmNumArgs]].
+	self assert: targetMethod asInteger + cmEntryOffset = entryPoint.
 
 	newTargetMethodOrNil := self lookupAndCog: targetMethod selector for: receiver.
 	"We assume lookupAndCog:for: will *not* reclaim the method zone"
@@ -3602,6 +3613,13 @@ Cogit >> doesNotUnderstand: aMessage [
 	^super doesNotUnderstand: aMessage
 ]
 
+{ #category : #accessing }
+Cogit >> dynSuperEntryOffset [
+	<api>
+	<cmacro: '() cmDynSuperEntryOffset'>
+	^cmDynSuperEntryOffset
+]
+
 { #category : #'compile abstract instructions' }
 Cogit >> ensureFixupAt: targetIndex [
 	"Make sure there's a flagged fixup at the targetIndex (pc relative to first pc) in fixups.
@@ -4660,9 +4678,8 @@ Cogit >> generateMissAbortTrampolines [
 
 { #category : #initialization }
 Cogit >> generateNewspeakRuntime [
-	cePushExplicitReceiverTrampoline := self genTrampolineFor: #cePushExplicitReceiverFor:At: asSymbol
+	cePushExplicitReceiverTrampoline := self genTrampolineFor: #cePushExplicitReceiverAt: asSymbol
 												called: 'cePushExplicitReceiverTrampoline'
-												arg: ClassReg
 												arg: SendNumArgsReg
 												result: ReceiverResultReg.
 	"Cached push implicit receiver implementation.  Caller looks like
@@ -5296,22 +5313,27 @@ Cogit >> latestContinuationPCFor: descriptor at: pc byte0: opcodeByte in: aMetho
 ]
 
 { #category : #'in-line cacheing' }
-Cogit >> linkSendAt: callSiteReturnAddress in: sendingMethod to: targetMethod checked: checked receiver: receiver [
+Cogit >> linkSendAt: callSiteReturnAddress in: sendingMethod to: targetMethod offset: entryOffset receiver: receiver [
 	<api>
 	<var: #sendingMethod type: #'CogMethod *'>
 	<var: #targetMethod type: #'CogMethod *'>
 	| inlineCacheTag address extent |
+	self cppIf: NewspeakVM
+		ifTrue: [self assert: (entryOffset = cmEntryOffset
+							or: [entryOffset = cmNoCheckEntryOffset
+							or: [entryOffset = cmDynSuperEntryOffset]])]
+		ifFalse: [self assert: (entryOffset = cmEntryOffset
+							or: [entryOffset = cmNoCheckEntryOffset])].
 	self assert: (callSiteReturnAddress between: methodZoneBase and: methodZone zoneLimit).
-	inlineCacheTag := checked
-						ifTrue: [objectRepresentation inlineCacheTagForInstance: receiver]
-						ifFalse: [targetMethod selector "i.e. no change"].
+	inlineCacheTag := entryOffset = cmNoCheckEntryOffset
+						ifTrue: [targetMethod selector "i.e. no change"]
+						ifFalse: [objectRepresentation inlineCacheTagForInstance: receiver].
 	(sendingMethod cmRefersToYoung not
 	 and: [(objectRepresentation inlineCacheTagIsYoung: inlineCacheTag)]) ifTrue:
 		[self assert: (methodZone occurrencesInYoungReferrers: sendingMethod) = 0.
 		 sendingMethod cmRefersToYoung: true.
 		 methodZone addToYoungReferrers: sendingMethod].
-	address := targetMethod asInteger
-				+ (checked ifTrue: [cmEntryOffset] ifFalse: [cmNoCheckEntryOffset]).
+	address := targetMethod asInteger + entryOffset.
 	extent := backEnd
 				rewriteInlineCacheAt: callSiteReturnAddress
 				tag: inlineCacheTag
@@ -5562,7 +5584,9 @@ Cogit >> mapObjectReferencesInMachineCodeForFullGC [
 						[self assert: cogMethod objectHeader = objectMemory nullHeaderForMachineCodeMethod.
 						 cogMethod methodObject: (objectRepresentation remapOop: cogMethod methodObject)].
 					 self mapFor: cogMethod
-						 performUntil: #remapIfObjectRef:pc:hasYoung: asSymbol
+						 performUntil: (self cppIf: NewspeakVM
+											ifTrue: [#remapNSIfObjectRef:pc:hasYoung: asSymbol]
+											ifFalse: [#remapIfObjectRef:pc:hasYoung: asSymbol])
 						 arg: 0.
 					 (cogMethod cmRefersToYoung
 					  and: [objectRepresentation allYoungObjectsAgeInFullGC]) ifTrue:
@@ -5599,7 +5623,9 @@ Cogit >> mapObjectReferencesInMachineCodeForIncrementalGC [
 						 (objectMemory isYoung: cogMethod methodObject) ifTrue:
 							[hasYoungObj := true]].
 					 self mapFor: cogMethod
-						 performUntil: #remapIfObjectRef:pc:hasYoung: asSymbol
+						 performUntil: (self cppIf: NewspeakVM
+											ifTrue: [#remapNSIfObjectRef:pc:hasYoung: asSymbol]
+											ifFalse: [#remapIfObjectRef:pc:hasYoung: asSymbol])
 						 arg: (self cCode: [(self addressOf: hasYoungObj) asInteger]
 								inSmalltalk: [CPluggableAccessor new
 												setObject: nil;
@@ -5768,6 +5794,58 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMet
 ]
 
 { #category : #'garbage collection' }
+Cogit >> markLiteralsAndUnlinkIfUnmarkedSendOrPushImplicit: annotation pc: mcpc method: cogMethod [
+	"Mark and trace literals.  Unlink sends that have unmarked cache tags or targets."
+	<var: #mcpc type: #'char *'>
+	| literal cacheTag cacheTagMarked entryPoint targetMethod offset sendTable unlinkedRoutine |
+	<var: #targetMethod type: #'CogMethod *'>
+	<var: #sendTable type: #'sqInt *'>
+	annotation = IsObjectReference ifTrue:
+		[literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
+		 objectRepresentation markAndTraceLiteral: literal].
+	(self isSendAnnotation: annotation) ifTrue:
+		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
+		 cacheTag := backEnd inlineCacheTagAt: mcpc asInteger.
+		 cacheTagMarked := objectRepresentation cacheTagIsMarked: cacheTag.
+		 objectRepresentation markAndTraceLiteral: cacheTag.
+		 entryPoint = cePushImplicitReceiverTrampoline
+			ifTrue:
+				[| classpc mixinpc class mixin |
+				 self assert: cacheTagMarked.  "cacheTag is selector"
+				 classpc := mcpc asInteger + backEnd jumpShortByteSize.
+				 mixinpc := mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop.
+				 class := objectMemory unalignedLongAt: classpc.
+				 (objectRepresentation cacheTagIsMarked: class)
+					ifTrue:
+						[(mixin := objectMemory unalignedLongAt: mixinpc) ~= 0 ifTrue:
+							[objectRepresentation markAndTraceLiteral: mixin]]
+					ifFalse:
+						[objectMemory
+							unalignedLongAt: classpc put: 0;
+							unalignedLongAt: mixinpc put: 0.
+						 codeModified := true]]
+			ifFalse:
+				[entryPoint > methodZoneBase ifTrue: "It's a linked send."
+					[self
+						offsetAndSendTableFor: entryPoint
+						annotation: annotation
+						into: [:off :table| offset := off. sendTable := table].
+					targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
+					(cacheTagMarked not
+					 or: [self markAndTraceOrFreeCogMethod: targetMethod firstVisit: targetMethod asUnsignedInteger > mcpc asUnsignedInteger]) ifTrue:
+						["Either the cacheTag is unmarked (e.g. new class) or the target
+						  has been freed (because it is unmarked) so unlink the send."
+						 unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
+						 backEnd
+							rewriteInlineCacheAt: mcpc asInteger
+							tag: targetMethod selector
+							target: unlinkedRoutine.
+						 codeModified := true.
+						 objectRepresentation markAndTraceLiteral: targetMethod selector]]]].
+	^0 "keep scanning"
+]
+
+{ #category : #'garbage collection' }
 Cogit >> markLiteralsAndUnlinkUnmarkedSendsIn: cogMethod [
 	"Unlink sends that have unmarked classes in inline caches or freed/freeable targets.
 	 Nil-out inline caches linked to open PICs.
@@ -5780,7 +5858,9 @@ Cogit >> markLiteralsAndUnlinkUnmarkedSendsIn: cogMethod [
 	self assert: (objectMemory isMarked: cogMethod methodObject).
 	objectRepresentation markAndTraceLiteral: cogMethod selector.
 	self mapFor: cogMethod
-		 performUntil: #markLiteralsAndUnlinkIfUnmarkedSend:pc:method: asSymbol
+		 performUntil: (self cppIf: NewspeakVM
+						ifTrue: [#markLiteralsAndUnlinkIfUnmarkedSendOrPushImplicit:pc:method: asSymbol]
+						ifFalse: [#markLiteralsAndUnlinkIfUnmarkedSend:pc:method: asSymbol])
 		 arg: cogMethod asInteger
 ]
 
@@ -6025,14 +6105,23 @@ Cogit >> offsetAndSendTableFor: entryPoint annotation: annotation into: binaryBl
 	self cppIf: NewspeakVM
 		ifTrue:
 			[(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
-				ifTrue: [binaryBlock
+				ifTrue:
+					[self assert: annotation = IsSendCall.
+					 binaryBlock
 							value: cmEntryOffset
-							value: (annotation = IsNSSendCall
-										ifTrue: [dynamicSuperSendTrampolines]
-										ifFalse: [sendTrampolines])]
-				ifFalse: [binaryBlock
-							value: cmNoCheckEntryOffset
-							value: superSendTrampolines]]
+							value: sendTrampolines]
+				ifFalse:
+					[(entryPoint bitAnd: entryPointMask) = dynSuperEntryAlignment
+						ifTrue:
+							[self assert: annotation = IsNSSendCall.
+							 binaryBlock
+								value: cmDynSuperEntryOffset
+								value: dynamicSuperSendTrampolines]
+						ifFalse:
+							[self assert: annotation = IsSendCall.
+							 binaryBlock
+								value: cmNoCheckEntryOffset
+								value: superSendTrampolines]]]
 		ifFalse:
 			[(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
 				ifTrue: [binaryBlock value: cmEntryOffset value: sendTrampolines]
@@ -6525,6 +6614,59 @@ Cogit >> remapIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
 			  since they don't have the cogMethod to hand and can't add it to youngReferrers,
 			  the method must remain in youngReferrers if the targetMethod's selector is young."
 			 entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
+			 entryPoint > methodZoneBase ifTrue: "It's a linked send."
+				[offset := (entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
+							ifTrue: [cmEntryOffset]
+							ifFalse: [cmNoCheckEntryOffset].
+				targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
+				(objectMemory isYoung: targetMethod selector) ifTrue:
+					[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]]]].
+	^0 "keep scanning"
+]
+
+{ #category : #'garbage collection' }
+Cogit >> remapNSIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
+	<var: #mcpc type: #'char *'>
+	<var: #targetMethod type: #'CogMethod *'>
+	annotation = IsObjectReference ifTrue:
+		[| literal mappedLiteral |
+		 literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
+		 (objectRepresentation couldBeObject: literal) ifTrue:
+			[mappedLiteral := objectMemory remap: literal.
+			 literal ~= mappedLiteral ifTrue:
+				[backEnd storeLiteral: mappedLiteral beforeFollowingAddress: mcpc asInteger.
+				 codeModified := true].
+			 (hasYoungPtr ~= 0
+			  and: [objectMemory isYoung: mappedLiteral]) ifTrue:
+				[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]]].
+	(self isSendAnnotation: annotation) ifTrue:
+		[| cacheTag mappedCacheTag entryPoint |
+		 cacheTag := backEnd inlineCacheTagAt: mcpc asInteger.
+		 (objectRepresentation couldBeObject: cacheTag) ifTrue:
+			[mappedCacheTag := objectMemory remap: cacheTag.
+			 cacheTag ~= mappedCacheTag ifTrue:
+				[backEnd rewriteInlineCacheTag: mappedCacheTag at: mcpc asInteger.
+				 codeModified := true].
+			 (hasYoungPtr ~= 0
+			  and: [objectMemory isYoung: mappedCacheTag]) ifTrue:
+				[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]].
+		 entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
+		 entryPoint = cePushImplicitReceiverTrampoline ifTrue:
+			[| pc oop mappedOop |
+			 pc := mcpc asInteger + backEnd jumpShortByteSize.
+			 (oop := objectMemory unalignedLongAt: pc) ~= 0 ifTrue:
+				[mappedOop := objectMemory remap: oop.
+				 mappedOop ~= oop ifTrue:
+					[objectMemory unalignedLongAt: pc put: mappedOop].
+				 pc := mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop.
+				 (oop := objectMemory unalignedLongAt: pc) ~= 0 ifTrue:
+					[mappedOop ~= oop ifTrue:
+						[objectMemory unalignedLongAt: pc put: mappedOop]]]].
+		 hasYoungPtr ~= 0 ifTrue:
+			[| offset targetMethod |
+			 "Since the unlinking routines may rewrite the cacheTag to the send's selector, and
+			  since they don't have the cogMethod to hand and can't add it to youngReferrers,
+			  the method must remain in youngReferrers if the targetMethod's selector is young."
 			 entryPoint > methodZoneBase ifTrue: "It's a linked send."
 				[offset := (entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
 							ifTrue: [cmEntryOffset]
@@ -7249,6 +7391,12 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc of: theSelector [
 	<var: #sendTable type: #'sqInt *'>
 	(self isSendAnnotation: annotation) ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
+		 self cppIf: NewspeakVM ifTrue:
+			[entryPoint = cePushImplicitReceiverTrampoline ifTrue:
+				[(backEnd inlineCacheTagAt: mcpc asInteger) = theSelector ifTrue:
+				 	[objectMemory
+						unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize put: 0;
+						unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop put: 0]]].
 		 entryPoint > methodZoneBase ifTrue: "It's a linked send."
 			[self
 				offsetAndSendTableFor: entryPoint
