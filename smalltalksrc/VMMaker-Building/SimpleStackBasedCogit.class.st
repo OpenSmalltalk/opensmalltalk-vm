@@ -1788,6 +1788,19 @@ SimpleStackBasedCogit >> genPushConstantTrueBytecode [
 ]
 
 { #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genPushExplicitOuterSendReceiverBytecode [
+	"Uncached push explicit outer send receiver"
+	| levelOop |
+	levelOop := coInterpreter literal: byte1 ofMethod: methodObj.
+	self assert: (objectMemory isIntegerObject: levelOop).
+	self assert: needsFrame.
+	self MoveCq: (objectMemory integerValueOf: levelOop) R: ClassReg.
+	self CallRT: cePushExplicitReceiverTrampoline.
+	self PushR: ReceiverResultReg.
+	^0
+]
+
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPushImplicitReceiverBytecode [
 	"Cached push implicit receiver implementation.  Caller looks like
 		mov selector, ClassReg
@@ -1799,7 +1812,6 @@ SimpleStackBasedCogit >> genPushImplicitReceiverBytecode [
 	 If class matches class of receiver then mixin contains either 0 or the implicit receiver.
 	 If 0, push the actual receiver."
 	| selector skip |
-	<inline: false>
 	<var: #skip type: #'AbstractInstruction *'>
 
 	selector := coInterpreter literal: byte1 ofMethod: methodObj.
