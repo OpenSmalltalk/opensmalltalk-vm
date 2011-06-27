@@ -687,6 +687,16 @@ CogAbstractInstruction >> symbolicOn: aStream [
 	aStream nextPut: $)
 ]
 
+{ #category : #'memory access' }
+CogAbstractInstruction >> unalignedLongAt: byteAddress [
+	^self subclassResponsibility
+]
+
+{ #category : #'memory access' }
+CogAbstractInstruction >> unalignedLongAt: byteAddress put: aWord [
+	^self subclassResponsibility
+]
+
 { #category : #'generate machine code' }
 CogAbstractInstruction >> updateLabel: labelInstruction [
 	"Update an instruction that depends on a label outside of
