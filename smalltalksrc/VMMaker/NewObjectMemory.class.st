@@ -2101,7 +2101,7 @@ In case of either success or failure, the headers must be restored.  In the even
 NewObjectMemory >> sufficientSpaceAfterGC: minFree [ 
 	"Return true if there is enough free space after doing a garbage collection. If not, signal that space is low."
 	<inline: false>
-
+	| oldLimit |
 	self incrementalGC. "try to recover some space"
 
 	(self oop: freeStart + minFree isLessThanOrEqualTo: reserveStart) ifTrue:
@@ -2113,12 +2113,16 @@ NewObjectMemory >> sufficientSpaceAfterGC: minFree [
 	self fullGC. "try harder"
 	"for stability, require more free space after doing an expensive full GC"
 	(self oop: freeStart + minFree + 15000 isLessThan: reserveStart) ifTrue:
-		[^ true].
+		[^true].
 
 	"still not enough; attempt to grow object memory"
-	self growObjectMemory: minFree - self freeSize + growHeadroom.
 
-	^self oop: freeStart + minFree + 15000 isLessThan: reserveStart
+	[oldLimit := memoryLimit.
+	 self growObjectMemory: minFree + 15000 + growHeadroom.
+	 self oop: freeStart + minFree + 15000 isLessThan: reserveStart]
+		whileFalse: "If the memoryLimit doesn't change then presumably the platform can't grow anymore." 
+			[oldLimit = memoryLimit ifTrue: [^false]].
+	^true
 ]
 
 { #category : #allocation }
