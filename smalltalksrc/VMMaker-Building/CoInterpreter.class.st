@@ -1393,6 +1393,15 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 	"NOTREACHED"
 ]
 
+{ #category : #'stack bytecodes' }
+CoInterpreter >> ceExplicitReceiverAt: level [
+	<api>
+	^self 
+		explicitOuterReceiver: level
+		withObject: (self mframeReceiver: framePointer)
+		withMixin: self mMethodClass
+]
+
 { #category : #trampolines }
 CoInterpreter >> ceInterpretMethodFromPIC: aMethodObj receiver: rcvr [
 	<api>
@@ -1574,14 +1583,6 @@ CoInterpreter >> cePushActiveContext [
 	self assert: (self frameHasContext: framePointer) not.
 	"Do *not* include the return pc in the stack contents; hence + BytesPerWord"
 	^self marryFrame: framePointer SP: stackPointer + BytesPerWord
-]
-
-{ #category : #'stack bytecodes' }
-CoInterpreter >> cePushExplicitReceiverAt: level [
-	^self 
-		explicitOuterReceiver: level
-		withObject: self receiver 
-		withMixin: self mMethodClass
 ]
 
 { #category : #trampolines }
@@ -3818,7 +3819,7 @@ CoInterpreter >> lookupAddress: address [
 { #category : #'cog jit support' }
 CoInterpreter >> mMethodClass [
 	<api>
-	^self methodClassOf: (self mframeHomeMethod: self framePointer) methodObject
+	^self methodClassOf: (self mframeHomeMethod: framePointer) methodObject
 ]
 
 { #category : #'frame access' }
@@ -4456,6 +4457,12 @@ CoInterpreter >> mframeReceiver: theFP [
 	<inline: true>
 	<var: #theFP type: #'char *'>
 	^stackPages longAt: theFP + FoxMFReceiver
+]
+
+{ #category : #'frame access' }
+CoInterpreter >> mframeReceiverExport [
+	<api>
+	^stackPages longAt: framePointer + FoxMFReceiver
 ]
 
 { #category : #'frame access' }
