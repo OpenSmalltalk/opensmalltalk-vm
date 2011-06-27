@@ -2796,6 +2796,18 @@ CogIA32Compiler >> twoByteInstructionSizeAt: pc [
 		{	[16r80]	->	[6 "long conditional jumps"] }
 ]
 
+{ #category : #'memory access' }
+CogIA32Compiler >> unalignedLongAt: byteAddress [
+	<cmacro: '(inst,byteAddress) longAt(byteAddress)'>
+	^objectMemory longAt: byteAddress
+]
+
+{ #category : #'memory access' }
+CogIA32Compiler >> unalignedLongAt: byteAddress put: aWord [
+	<cmacro: '(inst,byteAddress,aWord) longAtput(byteAddress,aWord)'>
+	^objectMemory longAt: byteAddress put: aWord
+]
+
 { #category : #accessing }
 CogIA32Compiler >> unsignedShortAt: byteAddress [
 	^(objectMemory byteAt: byteAddress) + ((objectMemory byteAt: byteAddress + 1) bitShift: 8)
