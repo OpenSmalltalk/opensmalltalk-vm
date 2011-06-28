@@ -24,6 +24,13 @@ TAssignmentNode >> bindVariablesIn: aDictionary [
 ]
 
 { #category : #'C code generation' }
+TAssignmentNode >> emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen [
+	aStream nextPut: $(.
+	self emitCCodeOn: aStream level: level generator: aCodeGen.
+	aStream nextPut: $)
+]
+
+{ #category : #'C code generation' }
 TAssignmentNode >> emitCCodeAsExpressionOn: aStream level: level generator: aCodeGen [
 	aStream nextPut: $(.
 	self emitCCodeOn: aStream level: level generator: aCodeGen.

@@ -143,10 +143,20 @@ CCodeGenerator >> addMethodFor: aClass selector: selector [
 	method := aClass compiledMethodAt: selector.
 	(method pragmaAt: #doNotGenerate) ifNotNil:
 		[^nil].
-	(method pragmaAt: #cogit:) ifNotNil:
-		[:pragma|
-		VMClass getVMMaker cogitClassName ~= (pragma argumentAt: 1) ifTrue:
-			[^nil]].
+	"process optional methods by interpreting the argument to the option: pragma as either
+	 a Cogit class name or a class variable name or a variable name in VMBasicConstants."
+	(method pragmaAt: #option:) ifNotNil:
+		[:pragma| | key |
+		key := pragma argumentAt: 1.
+		((Cogit withAllSubclasses anySatisfy: [:c| c name = key])
+		and: [VMClass getVMMaker cogitClassName ~= key]) ifTrue:
+			[^nil].
+		(aClass bindingOf: key) ifNotNil:
+			[:binding|
+			binding value ifFalse: [^nil]].
+		(VMBasicConstants bindingOf: key) ifNotNil:
+			[:binding|
+			binding value ifFalse: [^nil]]].
 	tmethod := self addMethod: (self compileToTMethodSelector: selector in: aClass).
 	"If the method has a macro then add the macro.  But keep the method
 	 for analysis purposes (e.g. its variable accesses)."

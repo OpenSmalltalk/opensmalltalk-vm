@@ -1293,7 +1293,7 @@ CoInterpreter >> ceContext: maybeMarriedContext instVar: slotIndex value: anOop 
 { #category : #'cog jit support' }
 CoInterpreter >> ceCounterTripped: condition [
 	<api>
-	<cogit: #SistaStackToRegisterMappingCogit>
+	<option: #SistaStackToRegisterMappingCogit>
 	"Send e.g. thisContext conditionalBranchCounterTrippedAt: bcpc boolean: boolean."
 	| context counterTrippedSelector |
 	counterTrippedSelector := objectMemory maybeSplObj: SelectorCounterTripped.
@@ -1339,6 +1339,7 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 	Continue execution via either executeMethod or interpretMethodFromMachineCode:
 	depending on whether the target method is cogged or not."
 	<api>
+	<option: #NewspeakVM>
 	| class canLinkCacheTag errSelIdx cogMethod mClassMixin mixinApplication |
 	<inline: false>
 	<var: #cogMethod type: #'CogMethod *'>
