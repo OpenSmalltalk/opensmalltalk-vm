@@ -387,7 +387,7 @@ CoInterpreterPrimitives >> primitiveSignal [
 { #category : #'method introspection primitives' }
 CoInterpreterPrimitives >> primitiveSistaMethodPICAndCounterData [
 	<export: true>
-	<cogit: #SistaStackToRegisterMappingCogit>
+	<option: #SistaStackToRegisterMappingCogit>
 	| methodReceiver data |
 	argumentCount ~= 0 ifTrue:
 		[self primitiveFailFor: PrimErrBadNumArgs].
