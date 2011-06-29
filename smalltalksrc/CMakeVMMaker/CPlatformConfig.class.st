@@ -132,7 +132,7 @@ CPlatformConfig >> configureBochsIA32Plugin: maker [
 { #category : #'plugin extra rules' }
 CPlatformConfig >> configureCroquetPlugin: maker [ 
 	"extra rules for CroquetPlugin"
-	maker addCrossSources: #('tribox.c').
+	maker addCrossSources: #('TriBoxStub.c').
 ]
 
 { #category : #'plugin extra rules' }
