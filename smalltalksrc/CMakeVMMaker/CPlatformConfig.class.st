@@ -551,9 +551,12 @@ CPlatformConfig >> generateSources [
 		maker := self prepareVMMaker.
 	
 		maker interpreterClass: self interpreterClass.
-		self cogitClass ifNotNil: [:cg | maker cogitClass: cg ].
-
-	
+		self cogitClass ifNotNil: [:cg | 
+			maker cogitClass: cg.
+			"this is ugly, before VMMaker will be fixed to initialize stuff properly"
+			cg initializeWithOptions: (maker instVarNamed: 'optionsDictionary')
+		].
+		
 		maker generateEntire
 
 	] on: ProvideAnswerNotification do: [:ex | ex resume: true ]]
