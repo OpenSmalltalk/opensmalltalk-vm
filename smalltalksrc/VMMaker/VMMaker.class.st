@@ -748,13 +748,13 @@ VMMaker >> generateCogitFile [
 
 	| cg cogitClass |
 	self interpreterClass needsCogit ifFalse: [^nil].
-	self needsToRegenerateCogitFile ifFalse: [^nil].
 	cg := [self buildCodeGeneratorForCogit]
 			on: Notification
 			do: [:ex|
 				ex tag == #getVMMaker
 					ifTrue: [ex resume: self]
 					ifFalse: [ex pass]].
+	self needsToRegenerateCogitFile ifFalse: [^nil].
 	cogitClass := self cogitClass.
 	cg removeUnneededBuiltins.
 	cg vmClass preGenerationHook: cg.
@@ -878,13 +878,13 @@ VMMaker >> generateInterpreterFile [
 	"Translate the Smalltalk description of the virtual machine into C.  If 'self doInlining' is true, small method bodies are inlined to reduce procedure call overhead.  On the PPC, this results in a factor of three speedup with only 30% increase in code size.  Subclasses can use specialised versions of CCodeGenerator and interpreterClass."
 
 	| cg vmHeaderContents |
-	self needsToRegenerateInterpreterFile ifFalse: [^nil].
 	cg := [self buildCodeGeneratorForInterpreter]
 			on: Notification
 			do: [:ex|
 				ex tag == #getVMMaker
 					ifTrue: [ex resume: self]
 					ifFalse: [ex pass]].
+	self needsToRegenerateInterpreterFile ifFalse: [^nil].
 	cg removeUnneededBuiltins.
 	self interpreterClass preGenerationHook: cg.
 

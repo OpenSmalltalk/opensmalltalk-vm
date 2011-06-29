@@ -1232,6 +1232,12 @@ StackInterpreter class >> wantsLabels [
 { #category : #translation }
 StackInterpreter class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord [
 	super writeVMHeaderTo: aStream bytesPerWord: bytesPerWord.
+	NewspeakVM ifTrue:
+		[aStream nextPutAll: '#define NewspeakVM 1'; cr].
+	IMMUTABILITY ifTrue:
+		[aStream nextPutAll: '#define IMMUTABILITY 1'; cr].
+	NewspeakVM | IMMUTABILITY ifTrue:
+		[aStream cr].
 	aStream nextPutAll: '#define STACKVM 1'; cr; cr
 ]
 
@@ -8979,6 +8985,8 @@ StackInterpreter >> shortReversePrintFrameAndCallers: aFramePointer [
 	<var: #aFramePointer type: #'char *'>
 	<var: #theFP type: #'char *'>
 	<var: #callerFP type: #'char *'>
+	aFramePointer = 0 ifTrue:
+		[^objectMemory nilObject].
 	theFP := aFramePointer.
 	[self shortPrintFrame: theFP.
 	 callerFP := self frameCallerFP: theFP.
