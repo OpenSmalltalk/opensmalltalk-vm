@@ -382,7 +382,7 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 			aCCodeGenerator removeVariable: simulationVariableNotNeededForRealVM].
 	NewspeakVM ifFalse:
 		[#(	'dynSuperEntry' 'dynSuperEntryAlignment' 'dynamicSuperSendTrampolines'
-			'cePushImplicitReceiver' 'cePushExplicitReceiver' 'cmDynSuperEntryOffset') do:
+			'ceImplicitReceiver' 'ceExplicitReceiver' 'cmDynSuperEntryOffset') do:
 				[:variableNotNeededInNormalVM|
 				aCCodeGenerator removeVariable: variableNotNeededInNormalVM]].
 	aCCodeGenerator
