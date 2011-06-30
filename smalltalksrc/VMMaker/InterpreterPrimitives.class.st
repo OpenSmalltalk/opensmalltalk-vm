@@ -119,6 +119,21 @@ InterpreterPrimitives >> initPrimCall [
 ]
 
 { #category : #'primitive support' }
+InterpreterPrimitives >> isDirectAlien: oop [
+	^(self sizeFieldOfAlien: oop) > 0
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> isIndirectAlien: oop [
+	^(self sizeFieldOfAlien: oop) < 0
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> isPointerAlien: oop [
+	^(self sizeFieldOfAlien: oop) = 0
+]
+
+{ #category : #'primitive support' }
 InterpreterPrimitives >> positive32BitValueOf: oop [
 	"Convert the given object into an integer value.
 	The object may be either a positive SmallInteger or a four-byte LargePositiveInteger."
@@ -3584,7 +3599,7 @@ InterpreterPrimitives >> startOfAlienData: oop [
 	(self is: oop KindOfClass: (objectMemory splObj: ClassAlien)) ifFalse:
 		[self primitiveFailFor: PrimErrBadArgument.
 		 ^0].
-	^self cCoerceSimple: ((self sizeFieldOfAlien: oop) > 0
+	^self cCoerceSimple: ((self isDirectAlien: oop)
 						 	ifTrue: [oop + BaseHeaderSize + BytesPerOop]
 							ifFalse: [self longAt: oop + BaseHeaderSize + BytesPerOop])
 			to: #'void *'
