@@ -31,6 +31,7 @@ TStmtListNode >> emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen
 
 	| statementWasComment |
 	statementWasComment := false.
+	aStream nextPut: $(. "N.B.  Comma binds weakest of all C operators."
 	statements
 		do:
 			[:s |
@@ -39,7 +40,8 @@ TStmtListNode >> emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen
 			statementWasComment := s isComment]
 		separatedBy:
 			[((self endsWithCloseBracket: aStream)
-			  or: [statementWasComment]) ifFalse: [aStream nextPut: $,]]
+			  or: [statementWasComment]) ifFalse: [aStream nextPut: $,]].
+	aStream nextPut: $)
 ]
 
 { #category : #'C code generation' }

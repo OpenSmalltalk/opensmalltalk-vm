@@ -7608,7 +7608,18 @@ StackInterpreter >> printOop: oop [
 		[self print: ' nbytes '; printNum: (objectMemory byteSizeOf: oop)].
 	self cr.
 	(fmt > 4 and: [fmt < 12]) ifTrue:
-		[(objectMemory isWords: oop) ifTrue:
+		["This will answer false if splObj: ClassAlien is nilObject"
+		 (self is: oop KindOfClass: (objectMemory splObj: ClassAlien)) ifTrue:
+			[self print: ' datasize '; printNum: (self sizeOfAlienData: oop).
+			self print: ((self isIndirectAlien: oop)
+							ifTrue: [' indirect @ ']
+							ifFalse:
+								[(self isPointerAlien: oop)
+									ifTrue: [' pointer @ ']
+									ifFalse: [' direct @ ']]).
+			 self printHex: (self startOfAlienData: oop); cr.
+			 ^nil].
+		 (objectMemory isWords: oop) ifTrue:
 			[lastIndex := 64 min: ((objectMemory byteSizeOf: oop) / BytesPerWord).
 			 lastIndex > 0 ifTrue:
 				[1 to: lastIndex do:
