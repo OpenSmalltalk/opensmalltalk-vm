@@ -155,7 +155,7 @@ static int parseArgument(int argc, char **argv)
   else if (!strncmp(argv[0], "-psn_", 5)) { return 1; }
   else if (!strcmp(argv[0], "-headless")) { gSqueakHeadless = true; return 1; }
   else if (!strcmp(argv[0], "-headfull")) { gSqueakHeadless = false; return 1; }
-#if STACKVM && !COGVM || NewspeakVM
+#if (STACKVM || NewspeakVM) && !COGVM
   else if (!strcmp(argv[0], "-sendtrace")) { extern sqInt sendTrace; sendTrace = 1; return 1; }
 #endif
   else if (argc > 1) {

@@ -67,8 +67,6 @@
 		73BEE4CB137A1895009EA37A /* FloatArrayPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 73BEE4CA137A1895009EA37A /* FloatArrayPlugin.c */; };
 		73BEE4CE137A191B009EA37A /* FloatMathPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BEE4CD137A191B009EA37A /* FloatMathPlugin.h */; };
 		73BEE4D2137A19A3009EA37A /* sqaio.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BEE4CF137A19A3009EA37A /* sqaio.h */; };
-		73BEE4D3137A19A3009EA37A /* sqGnu.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BEE4D0137A19A3009EA37A /* sqGnu.h */; };
-		73BEE4D4137A19A3009EA37A /* sqPlatformSpecific.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BEE4D1137A19A3009EA37A /* sqPlatformSpecific.h */; };
 		73DCBD131378A59F000E8F88 /* sqMacHostWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 73DCBD121378A59F000E8F88 /* sqMacHostWindow.h */; };
 		73DCBD161378A687000E8F88 /* HostWindowPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = 73DCBD151378A687000E8F88 /* HostWindowPlugin.h */; };
 		73E7120F137A1DD7002EDF89 /* FileCopyPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = 73E7120E137A1DD7002EDF89 /* FileCopyPlugin.h */; };
@@ -328,8 +326,6 @@
 		73BEE4CA137A1895009EA37A /* FloatArrayPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = FloatArrayPlugin.c; path = plugins/FloatArrayPlugin/FloatArrayPlugin.c; sourceTree = "<group>"; };
 		73BEE4CD137A191B009EA37A /* FloatMathPlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FloatMathPlugin.h; path = FloatMathPlugin/FloatMathPlugin.h; sourceTree = "<group>"; };
 		73BEE4CF137A19A3009EA37A /* sqaio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqaio.h; path = vm/sqaio.h; sourceTree = "<group>"; };
-		73BEE4D0137A19A3009EA37A /* sqGnu.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqGnu.h; path = vm/sqGnu.h; sourceTree = "<group>"; };
-		73BEE4D1137A19A3009EA37A /* sqPlatformSpecific.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqPlatformSpecific.h; path = vm/sqPlatformSpecific.h; sourceTree = "<group>"; };
 		73DCBD121378A59F000E8F88 /* sqMacHostWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqMacHostWindow.h; path = HostWindowPlugin/sqMacHostWindow.h; sourceTree = "<group>"; };
 		73DCBD151378A687000E8F88 /* HostWindowPlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = HostWindowPlugin.h; path = HostWindowPlugin/HostWindowPlugin.h; sourceTree = "<group>"; };
 		73E7120E137A1DD7002EDF89 /* FileCopyPlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FileCopyPlugin.h; path = FileCopyPlugin/FileCopyPlugin.h; sourceTree = "<group>"; };
@@ -567,8 +563,6 @@
 			isa = PBXGroup;
 			children = (
 				73BEE4CF137A19A3009EA37A /* sqaio.h */,
-				73BEE4D0137A19A3009EA37A /* sqGnu.h */,
-				73BEE4D1137A19A3009EA37A /* sqPlatformSpecific.h */,
 				7351A09A100963670035A878 /* sqUnixThreads.c */,
 				73B54C520E55EFED00FE780C /* sqUnixVMProfile.c */,
 			);
@@ -1431,8 +1425,6 @@
 				734815401379F53100FD8ABB /* sqMacNSPluginUILogic2.h in Headers */,
 				73BEE4CE137A191B009EA37A /* FloatMathPlugin.h in Headers */,
 				73BEE4D2137A19A3009EA37A /* sqaio.h in Headers */,
-				73BEE4D3137A19A3009EA37A /* sqGnu.h in Headers */,
-				73BEE4D4137A19A3009EA37A /* sqPlatformSpecific.h in Headers */,
 				7339708E137A1CE2001B0C43 /* fdlibm.h in Headers */,
 				73E7120F137A1DD7002EDF89 /* FileCopyPlugin.h in Headers */,
 				736BD0DA137B39A9001E6189 /* vmCallback.h in Headers */,

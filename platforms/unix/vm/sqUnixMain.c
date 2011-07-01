@@ -1268,7 +1268,7 @@ static int vm_parseArgument(int argc, char **argv)
       else if (!strcmp(argv[0], "-plugins"))	{ squeakPlugins= strdup(argv[1]);	 return 2; }
       else if (!strcmp(argv[0], "-encoding"))	{ setEncoding(&sqTextEncoding, argv[1]); return 2; }
       else if (!strcmp(argv[0], "-pathenc"))	{ setEncoding(&uxPathEncoding, argv[1]); return 2; }
-#if STACKVM && !COGVM || NewspeakVM
+#if (STACKVM || NewspeakVM) && !COGVM
 	  else if (!strcmp(argv[0], "-sendtrace")) { extern sqInt sendTrace; sendTrace = 1; return 1; }
 #endif
 #if STACKVM || NewspeakVM

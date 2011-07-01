@@ -1162,7 +1162,7 @@ int findEmbeddedImage(void) { return 0; }
 /****************************************************************************/
 /*                        sqMain                                            */
 /****************************************************************************/
-#if STACKVM && !COGVM || NewspeakVM
+#if (STACKVM || NewspeakVM) && !COGVM
 extern sqInt sendTrace;
 #endif
 #if STACKVM || NewspeakVM
@@ -1193,7 +1193,7 @@ static vmArg args[] = {
   { ARG_FLAG, &fLowRights, "-lowRights" }, /* started with low rights, 
 					use alternate untrustedUserDirectory */
 #endif /* VISTA_SECURITY */
-#if STACKVM && !COGVM || NewspeakVM
+#if (STACKVM || NewspeakVM) && !COGVM
   { ARG_FLAG, &sendTrace, "-sendtrace"},
 #endif
 #if STACKVM || NewspeakVM
