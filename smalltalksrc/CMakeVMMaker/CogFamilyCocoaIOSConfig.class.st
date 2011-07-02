@@ -66,9 +66,8 @@ CogFamilyCocoaIOSConfig >> crossSources [
 
 { #category : #plugins }
 CogFamilyCocoaIOSConfig >> defaultExternalPlugins [ 
-	^(Array with: self ffiPluginName),
+	^(self versionExternalPlugins),
 		#(
-		IA32ABIPlugin
 		UUIDPlugin
 		FloatMathPlugin
 		AsynchFilePlugin
@@ -125,11 +124,6 @@ CogFamilyCocoaIOSConfig >> extraSources [
 	${platformsDir}/unix/vm/sqUnixHeartbeat.c 
 	${platformsDir}/unix/vm/sqUnixVMProfile.c 
 	${platformsDir}/unix/vm/sqUnixThreads.c '
-]
-
-{ #category : #plugins }
-CogFamilyCocoaIOSConfig >> ffiPluginName [ 
-	^#FFIPlugin 
 ]
 
 { #category : #'source files' }
@@ -242,4 +236,12 @@ CogFamilyCocoaIOSConfig >> standardIncludes [
 	'${crossDir}/plugins/FilePlugin'
 	)	
 
+]
+
+{ #category : #plugins }
+CogFamilyCocoaIOSConfig >> versionExternalPlugins [ 
+	"Cog Version Specific Plugins. Some times you can't use same plugins in a version (for instance, CogMT uses a diferent FFI, and you can't build IA32ABIPlugin in MT for now)"
+	^Array 
+		with: #FFIPlugin
+		with: #IA32ABIPlugin
 ]

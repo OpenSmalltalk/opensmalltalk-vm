@@ -35,13 +35,14 @@ CogMTCocoaIOSConfig >> executableName [
 	^ 'CogMTVM'
 ]
 
-{ #category : #plugins }
-CogMTCocoaIOSConfig >> ffiPluginName [ 
-	^#ThreadedIA32FFIPlugin
-]
-
 { #category : #'source generation' }
 CogMTCocoaIOSConfig >> interpreterClass [
 	"answer an interpreter class for VM source code generation"
 	^ CoInterpreterMT
+]
+
+{ #category : #plugins }
+CogMTCocoaIOSConfig >> versionExternalPlugins [ 
+	^Array 
+		with: #ThreadedIA32FFIPlugin
 ]

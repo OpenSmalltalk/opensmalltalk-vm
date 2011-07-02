@@ -35,11 +35,6 @@ CogCocoaIOSConfig >> executableName [
 	^ 'CogVM'
 ]
 
-{ #category : #plugins }
-CogCocoaIOSConfig >> ffiPluginName [ 
-	^#ReentrantIA32FFIPlugin
-]
-
 { #category : #'source generation' }
 CogCocoaIOSConfig >> interpreterClass [
 	^ CoInterpreter
@@ -65,4 +60,11 @@ CogCocoaIOSConfig >> srcDir [
 	"Answer the value of srcDir"
 
 	^ srcDir ifNil: [ srcDir := (self topDir / self srcDirName) fullName ]
+]
+
+{ #category : #plugins }
+CogCocoaIOSConfig >> versionExternalPlugins [ 
+	^Array 
+		with: #ReentrantIA32FFIPlugin
+		with: #IA32ABIPlugin
 ]
