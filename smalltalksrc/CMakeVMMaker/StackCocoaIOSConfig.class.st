@@ -27,11 +27,6 @@ StackCocoaIOSConfig >> executableName [
 	^ 'StackVM'
 ]
 
-{ #category : #plugins }
-StackCocoaIOSConfig >> ffiPluginName [ 
-	^#ReentrantIA32FFIPlugin
-]
-
 { #category : #'source generation' }
 StackCocoaIOSConfig >> interpreterClass [
 	^ StackInterpreter
@@ -57,4 +52,11 @@ StackCocoaIOSConfig >> srcDir [
 	"Answer the value of srcDir"
 
 	^ srcDir ifNil: [ srcDir := (self topDir / self srcDirName) fullName ]
+]
+
+{ #category : #plugins }
+StackCocoaIOSConfig >> versionExternalPlugins [ 
+	^Array 
+		with: #ReentrantIA32FFIPlugin
+		with: #IA32ABIPlugin
 ]
