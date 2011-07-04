@@ -176,10 +176,8 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		addHeaderFile:'"vmCallback.h"';
 		addHeaderFile:'"sqMemoryFence.h"';
 		addHeaderFile:'"dispdbg.h"'.
-	aCCodeGenerator
-		var: #interpreterVersion
-		declareC: 'const char *interpreterVersion = "Croquet Closure Stack VM [',
-					(aCCodeGenerator shortMonticelloDescriptionForClass: self),']"'.
+	self declareInterpreterVersionIn: aCCodeGenerator
+		defaultName: 'Stack'.
 	aCCodeGenerator
 		var: #interpreterProxy  type: #'struct VirtualMachine*'.
 	aCCodeGenerator
@@ -1075,6 +1073,17 @@ invalidCompactClassError(char *s) { /* Print a compact class index error message
 	printf("\nClass %s does not have the required compact class index\n", s);
 	exit(-1);
 }
+
+/*
+ * Define sigsetjmp and siglongjmp to be the most minimal setjmp/longjmp available on the platform.
+ */
+#if WIN32
+# define sigsetjmp(jb,ssmf) setjmp(jb)
+# define siglongjmp(jb,v) longjmp(jb,v)
+#else
+# define sigsetjmp(jb,ssmf) _setjmp(jb)
+# define siglongjmp(jb,v) _longjmp(jb,v)
+#endif
 '
 ]
 
@@ -4843,7 +4852,7 @@ StackInterpreter >> imageFormatVersion [
 ]
 
 { #category : #'newspeak bytecode support' }
-StackInterpreter >> implicitReceiverForMixin: mixin implementing: selector [
+StackInterpreter >> implicitReceiverFor: receiver mixin: mixin implementing: selector [
 	"This is used to implement the innards of the pushImplicitReceiverBytecode,
 	 used for implicit receiver sends in NS2/NS3.  Find the nearest lexically-enclosing
 	 implementation of selector by searching up the static chain of anObject,
@@ -4853,10 +4862,8 @@ StackInterpreter >> implicitReceiverForMixin: mixin implementing: selector [
 					withMixin: mixin <Mixin>
 					implementing: selector <Symbol> ^<Object>"
 	<api>
-	| receiver mixinApplication dictionary found |
+	| mixinApplication dictionary found |
 	messageSelector := selector. "messageSelector is an implicit parameter of lookupMethodInDictionary:"
-	"use frameReceiver: because this can also be used by the Cogit from a machine-code frame."
-	receiver := self frameReceiver: framePointer.
 	mixinApplication := self
 							findApplicationOfTargetMixin: mixin
 							startingAtBehavior: (objectMemory fetchClassOf: receiver).
@@ -8009,8 +8016,9 @@ StackInterpreter >> pushImplicitReceiverBytecode [
 	litIndex := self fetchByte.
 	self fetchNextBytecode.
 	self internalPush: (self
-							implicitReceiverForMixin: (self methodClassOf: method)
-							implementing: (self literal: litIndex))
+						implicitReceiverFor: self receiver
+						mixin: (self methodClassOf: method)
+						implementing: (self literal: litIndex))
 ]
 
 { #category : #'internal interpreter access' }

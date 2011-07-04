@@ -51,10 +51,8 @@ CoInterpreterMT class >> declareCVarsIn: aCCodeGenerator [
 
 	aCCodeGenerator
 		addHeaderFile:'"sqAtomicOps.h"'. "For THRLOG"
-	aCCodeGenerator
-		var: #interpreterVersion
-		declareC: 'const char *interpreterVersion = "Croquet Closure Cog MT VM [',
-					(aCCodeGenerator shortMonticelloDescriptionForClass: self),']"'.
+	self declareInterpreterVersionIn: aCCodeGenerator
+		defaultName: 'Cog MT'.
 	aCCodeGenerator
 		var: #disowningVMThread type: #'CogVMThread *'
 ]

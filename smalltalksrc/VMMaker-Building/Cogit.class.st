@@ -2055,6 +2055,13 @@ Cogit >> breakMethod [
 	^breakMethod
 ]
 
+{ #category : #debugging }
+Cogit >> breakOnImplicitReceiver [
+	<api>
+	<cmacro: '() (traceLinkedSends & 16)'>
+	^(traceLinkedSends bitAnd: 16) ~= 0
+]
+
 { #category : #'simulation only' }
 Cogit >> breakPC [
 	<doNotGenerate>
@@ -2262,15 +2269,15 @@ Cogit >> ceEnterCogCodePopReceiverReg [
 
 { #category : #'in-line cacheing' }
 Cogit >> ceImplicitReceiverFor: selector [
-	"Cached push implicit receiver implementation.  Caller looks like
+	"Cached implicit receiver implementation.  Caller looks like
 		mov selector, ClassReg
-				call cePushImplicitReceiver
+				call ceImplicitReceiver
 				br continue
 		Lclass	.word
 		Lmixin:	.word
 		continue:
 	 If class matches class of receiver then mixin contains either 0 or the implicit receiver.
-	 If 0, push the actual receiver."
+	 If mixin is 0, answer the actual receiver, otherwise mixin."
 
 	| receiver retpc classpc mixinpc rcvrClass mixin |
 	receiver := coInterpreter mframeReceiverExport.
@@ -2280,11 +2287,16 @@ Cogit >> ceImplicitReceiverFor: selector [
 	rcvrClass := objectMemory fetchClassOf: receiver.
 	rcvrClass ~= (backEnd unalignedLongAt: classpc) ifTrue:
 		[mixin := coInterpreter
-					implicitReceiverForMixin: coInterpreter mMethodClass
+					implicitReceiverFor: receiver
+					mixin: coInterpreter mMethodClass
 					implementing: selector.
 		 backEnd unalignedLongAt: classpc put: rcvrClass.
 		 backEnd unalignedLongAt: mixinpc put: (mixin = receiver ifTrue: [0] ifFalse: [mixin]).
 		 ^mixin].
+	self breakOnImplicitReceiver ifTrue:
+		[self sendBreak: selector + BaseHeaderSize
+			point: (objectMemory lengthOf: selector)
+			receiver: nil].
 	mixin := backEnd unalignedLongAt: mixinpc.
 	^mixin = 0 ifTrue: [receiver] ifFalse: [mixin]
 ]
@@ -2334,8 +2346,7 @@ Cogit >> ceSICMiss: receiver [
 		 "Avoid the effort of implementing PICs for the relatively low dynamic frequency
 		  dynamic super send and simply rebind the send site."
 		 targetMethod asInteger + cmDynSuperEntryOffset = entryPoint ifTrue:
-			[coInterpreter popStack. "pop inner return"
-			^coInterpreter
+			[^coInterpreter
 				ceDynamicSuperSend: targetMethod selector
 				to: (coInterpreter stackValue: targetMethod cmNumArgs)
 				numArgs: targetMethod cmNumArgs]].
