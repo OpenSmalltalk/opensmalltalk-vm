@@ -116,11 +116,8 @@ CoInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		addHeaderFile:'"cogmethod.h"';
 		addHeaderFile: (threaded ifTrue: ['"cointerpmt.h"'] ifFalse: ['"cointerp.h"']);
 		addHeaderFile:'"cogit.h"'.
-	aCCodeGenerator
-		var: #interpreterVersion
-		declareC: 'const char *interpreterVersion = "Croquet Closure Cog ',
-					(threaded ifTrue: ['MT '] ifFalse: ['']), 'VM [',
-					(aCCodeGenerator shortMonticelloDescriptionForClass: self),']"'.
+	self declareInterpreterVersionIn: aCCodeGenerator
+		defaultName: (threaded ifTrue: ['Cog MT'] ifFalse: ['Cog']).
 	aCCodeGenerator
 		var: #heapBase
 		declareC: 'static usqInt heapBase';
@@ -454,23 +451,6 @@ CoInterpreter class >> preGenerationHook: aCCodeGenerator [
 	"Override to undo the hiding of primitiveClosureValueNoContextSwitch"
 	super preGenerationHook: aCCodeGenerator.
 	(aCCodeGenerator methodNamed: #primitiveClosureValueNoContextSwitch) static: false
-]
-
-{ #category : #translation }
-CoInterpreter class >> preambleCCode [
-	^super 	preambleCCode,
-'
-/*
- * Define sigsetjmp and siglongjmp to be the most minimal setjmp/longjmp available on the platform.
- */
-#if WIN32
-# define sigsetjmp(jb,ssmf) setjmp(jb)
-# define siglongjmp(jb,v) longjmp(jb,v)
-#else
-# define sigsetjmp(jb,ssmf) _setjmp(jb)
-# define siglongjmp(jb,v) _longjmp(jb,v)
-#endif
-'
 ]
 
 { #category : #translation }
@@ -3316,6 +3296,24 @@ CoInterpreter >> iframeSavedIP: theFP put: savedIP [
 	<var: #theFP type: #'char *'>
 	self assert: (self isMachineCodeFrame: theFP) not.
 	stackPages longAt: theFP + FoxIFSavedIP put: savedIP
+]
+
+{ #category : #'newspeak bytecode support' }
+CoInterpreter >> implicitReceiverFor: receiver mixin: mixin implementing: selector [
+	"This is used to implement the innards of the pushImplicitReceiverBytecode,
+	 used for implicit receiver sends in NS2/NS3.  Find the nearest lexically-enclosing
+	 implementation of selector by searching up the static chain of anObject,
+	 starting at mixin's application.  This is an iterative implementation derived from
+
+	<ContextPart> implicitReceiverFor: obj <Object>
+					withMixin: mixin <Mixin>
+					implementing: selector <Symbol> ^<Object>"
+
+	self breakOnImplicitReceiver ifTrue:
+		[self sendBreak: selector + BaseHeaderSize
+			point: (objectMemory lengthOf: selector)
+			receiver: nil].
+	^super implicitReceiverFor: receiver mixin: mixin implementing: selector
 ]
 
 { #category : #initialization }

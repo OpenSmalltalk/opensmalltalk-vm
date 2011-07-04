@@ -7615,6 +7615,9 @@ NewspeakInterpreter >> primitivePerform [
 		ofObject: activeContext.
 	self pop: 1.
 	lookupClass := self fetchClassOf: newReceiver.
+	self sendBreak: messageSelector + BaseHeaderSize
+		point: (self lengthOf: messageSelector)
+		receiver: newReceiver.
 	self findNewMethodInClass: lookupClass.
 
 	"Only test CompiledMethods for argument count - other objects will have to take their chances"

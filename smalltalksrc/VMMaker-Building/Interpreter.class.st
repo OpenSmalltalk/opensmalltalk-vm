@@ -138,10 +138,8 @@ Interpreter class >> bytecodeTable [
 { #category : #translation }
 Interpreter class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator addHeaderFile:'<setjmp.h>'.
-	aCCodeGenerator
-		var: #interpreterVersion
-		declareC: 'const char *interpreterVersion = "Croquet Closure Context VM [',
-					(aCCodeGenerator shortMonticelloDescriptionForClass: self),']"'.
+	self declareInterpreterVersionIn: aCCodeGenerator
+		defaultName: 'Context'.
 	aCCodeGenerator 
 		var: #interpreterProxy 
 		type: #'struct VirtualMachine*'.
