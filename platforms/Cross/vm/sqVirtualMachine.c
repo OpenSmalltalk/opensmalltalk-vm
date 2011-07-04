@@ -232,6 +232,7 @@ void (*setInterruptCheckChain(void (*aFunction)(void)))();
 void (*setInterruptCheckChain(void (*aFunction)(void)))() { return 0; }
 #endif
 
+#if VM_PROXY_MINOR > 10
 #if COGMTVM
 sqInt disownVM(sqInt flags);
 sqInt ownVM(sqInt threadIdAndFlags);
@@ -242,6 +243,7 @@ sqInt ownVM(sqInt threadIdAndFlags)
 	extern sqInt amInVMThread(void);
 	return amInVMThread() ? 0 : -1;
 }
+#endif
 #endif
 extern sqInt isYoung(sqInt);
 
