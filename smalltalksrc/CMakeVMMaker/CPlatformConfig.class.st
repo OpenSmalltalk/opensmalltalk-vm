@@ -179,7 +179,7 @@ CPlatformConfig >> configureFloatMathPlugin: maker [
 	
 	"according to http://www.netlib.org/fdlibm/readme
 	it should be compiled with no optimizations"
-	maker addDefinitions: '-O0 -mno-fused-madd'.
+	maker addDefinitions: '-O0'.
 	
 	" compile with -D__LITTLE_ENDIAN
 		This macro is set automatically in fdlibm.h when compiled ith -m32 but
