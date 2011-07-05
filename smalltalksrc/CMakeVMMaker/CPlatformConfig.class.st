@@ -758,7 +758,8 @@ CPlatformConfig >> setupDirectories: gen [
 			set: #platformName toString: self platformName;
 			set: #targetPlatform to: '${platformsDir}/${platformName}';
 			set: #crossDir toString: '${platformsDir}/Cross';
-			set: #platformVMDir toString: '${targetPlatform}/vm'.
+			set: #platformVMDir toString: '${targetPlatform}/vm';
+			set: #outputDir toString: self outputDir.
 	].
 
 	self write: dirsInclude toFile: 'directories.cmake'
