@@ -69,6 +69,27 @@ MacOSConfig >> configureFFIPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
+MacOSConfig >> configureFT2Plugin: maker [
+	"extra rules for Freetype plugin.
+	a custom rule to build freetype library"
+
+
+	maker cmd: 'add_custom_command' params: 'OUTPUT "${buildDir}/FT2Plugin/libfreetype.a" 
+		COMMAND "${topDir}/macbuild/FT2Plugin/makeFreetype.sh" "${buildDir}/FT2Plugin/libfreetype.a"
+		COMMENT "Building freetype library"
+	'.
+
+	maker addExternalLibrary: '${buildDir}/FT2Plugin/libfreetype.a'.
+
+	maker addSource: '${buildDir}/FT2Plugin/libfreetype.a'.
+	
+	
+	"the freetype sources are located in {build}/FT2Plugin/freetype2/include "
+	maker includeDirectories: '${buildDir}/FT2Plugin/freetype2/include'
+
+]
+
+{ #category : #'plugin extra rules' }
 MacOSConfig >> configureInternetConfigPlugin: maker [
 	"extra rules for InternetConfigPlugin"
 	
@@ -132,7 +153,7 @@ MacOSConfig >> configurePlugin: aPlugin with: generator [
 		" set output directory for dynamic library to Resources subdir in .app bundle location "
 		generator 
 			set: 'CMAKE_LIBRARY_OUTPUT_DIRECTORY' 
-			toString: (self outputDir , '/', self executableName,'.app/Contents/Resources')
+			toString: ('${outputDir}/', self executableName, '.app/Contents/Resources')
 		].
 	^ super configurePlugin: aPlugin with: generator
 

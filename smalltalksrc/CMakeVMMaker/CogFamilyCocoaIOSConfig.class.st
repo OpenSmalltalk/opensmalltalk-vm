@@ -78,7 +78,8 @@ CogFamilyCocoaIOSConfig >> defaultExternalPlugins [
 		MIDIPlugin
 		B3DAcceleratorPlugin
 		LocalePlugin
-		UnixOSProcessPlugin)
+		UnixOSProcessPlugin
+		FT2Plugin)
 ]
 
 { #category : #plugins }

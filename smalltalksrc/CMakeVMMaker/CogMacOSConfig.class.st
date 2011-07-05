@@ -186,6 +186,7 @@ CogMacOSConfig >> defaultExternalPlugins [
 		FloatArrayPlugin
 		FloatMathPlugin
 		Mpeg3Plugin
+		FT2Plugin
 		"UnixOSProcessPlugin ?? "
 		)
 ]
@@ -889,7 +890,7 @@ CogMacOSConfig >> setExtraTargetProperties: maker [
 
 	maker cmd: 'set_source_files_properties' params: '${resources} PROPERTIES MACOSX_PACKAGE_LOCATION Resources'.
 	
-	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir.
+	maker set: 'EXECUTABLE_OUTPUT_PATH' to: '${outputDir}'.
 ]
 
 { #category : #'source files' }
