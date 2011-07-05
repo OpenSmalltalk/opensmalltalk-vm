@@ -172,12 +172,12 @@ sqInt ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionName
 sqInt isInMemory(sqInt address);
 sqInt classAlien(void); /* Alien FFI */
 sqInt classUnsafeAlien(void); /* Alien FFI */
-sqInt getStackPointer(void);  /* Newsqueak FFI */
+sqInt *getStackPointer(void);  /* Newsqueak FFI */
 void *startOfAlienData(sqInt);
 usqInt sizeOfAlienData(sqInt);
 sqInt signalNoResume(sqInt);
 #if VM_PROXY_MINOR > 8
-sqInt getStackPointer(void);  /* Alien FFI */
+sqInt *getStackPointer(void);  /* Alien FFI */
 sqInt sendInvokeCallbackStackRegistersJmpbuf(sqInt thunkPtrAsInt, sqInt stackPtrAsInt, sqInt regsPtrAsInt, sqInt jmpBufPtrAsInt); /* Alien FFI */
 sqInt reestablishContextPriorToCallback(sqInt callbackContext); /* Alien FFI */
 sqInt sendInvokeCallbackContext(vmccp);
@@ -193,7 +193,7 @@ void *ioLoadFunctionFrom(char *fnName, char *modName);
 static sqInt
 callbackEnter(sqInt *callbackID) { return 0; }
 static sqInt
-callbackLeave(sqInt *callbackID) { return 0; }
+callbackLeave(sqInt callbackID) { return 0; }
 #else
 sqInt callbackEnter(sqInt *callbackID);
 sqInt callbackLeave(sqInt  callbackID);
@@ -232,17 +232,19 @@ extern void (*setInterruptCheckChain(void (*aFunction)(void)))();
 void (*setInterruptCheckChain(void (*aFunction)(void)))() { return 0; }
 #endif
 
-#if COGMTVM
+#if VM_PROXY_MINOR > 10
+# if COGMTVM
 sqInt disownVM(sqInt flags);
 sqInt ownVM(sqInt threadIdAndFlags);
-#else
+# else
 sqInt disownVM(sqInt flags) { return 1; }
 sqInt ownVM(sqInt threadIdAndFlags)
 {
 	extern sqInt amInVMThread(void);
 	return amInVMThread() ? 0 : -1;
 }
-#endif
+# endif
+#endif /* VM_PROXY_MINOR > 10 */
 extern sqInt isYoung(sqInt);
 
 /* High-priority and synchronous ticker function support. */
