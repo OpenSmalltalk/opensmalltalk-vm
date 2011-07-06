@@ -30,6 +30,50 @@ VMClass class >> apiExportHeaderName [
 	^nil
 ]
 
+{ #category : #utilities }
+VMClass class >> browseSymbolRefsMissingAsSymbolSendLocalToPackage: aPackageName [
+	"Slang will bite you hard if you write e.g.
+		self sizeof: #mytype
+	because it will translate this as
+		sizeof(''mytype'').
+	Instead you must write
+		self sizeof: #mytype asSymbol
+	because it will translate this as
+		sizeof(mytype).
+	This is a really easy slip to make (and arguably a horrible bug in Slang, but backward-compatibility etc, bitch, moan.
+	So here's a scanner to find any offending occurrences.  Forgive the deluge of false positives.
+
+	VMClass browseSymbolRefsMissingAsSymbolSendLocalToPackage: #VMMaker.
+	VMClass browseSymbolRefsMissingAsSymbolSendLocalToPackage: #VMConstruction.
+	VMClass browseSymbolRefsMissingAsSymbolSendLocalToPackage: #'Qwaq-Plugins'.
+	VMClass browseSymbolRefsMissingAsSymbolSendLocalToPackage: #'Cog-ProcessorPlugins'.
+	VMClass browseSymbolRefsMissingAsSymbolSendLocalToPackage: #'SqueakSSL-Plugin'.
+	VMClass browseSymbolRefsMissingAsSymbolSendLocalToPackage: #'Freetype-Plugin'"
+
+	SystemNavigation new
+		browseAllSelect:
+			[:m| | is bad prevLit |
+			m methodClass isMeta not
+			and: [(m pragmaAt: #doNotGenerate) isNil
+			and: [is := InstructionStream on: m.
+				bad := false.
+				[is atEnd] whileFalse:
+					[[is interpretNextInstructionFor: nil]
+						on: MessageNotUnderstood
+						do: [:ex| | s args |
+							s := ex message selector.
+							args := ex message arguments.
+							prevLit ifNotNil:
+								[(s = #send:super:numArgs:
+								  and: [#(asSymbol cCoerceSimple:to: cCoerce:to: flag: primitive:parameters:receiver:)
+											includes: args first]) ifFalse:
+									[bad := true]].
+							prevLit := (s == #pushConstant: and: [args first isSymbol]) ifTrue:
+										[args first]]].
+				bad]]]
+		localToPackage: aPackageName
+]
+
 { #category : #translation }
 VMClass class >> coreInterpreterClass [
 	"While the interpreterClass/vmClass for translation may be
