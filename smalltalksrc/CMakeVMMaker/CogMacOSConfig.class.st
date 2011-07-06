@@ -186,7 +186,6 @@ CogMacOSConfig >> defaultExternalPlugins [
 		FloatArrayPlugin
 		FloatMathPlugin
 		Mpeg3Plugin
-		FT2Plugin
 		"UnixOSProcessPlugin ?? "
 		)
 ]
