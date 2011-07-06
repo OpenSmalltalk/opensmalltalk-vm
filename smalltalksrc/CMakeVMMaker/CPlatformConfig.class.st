@@ -76,6 +76,42 @@ CPlatformConfig class >> generateWithSources [
 
 ]
 
+{ #category : #plugins }
+CPlatformConfig >> addExternalPlugin: aPluginName [
+
+	| plugins |
+	plugins := self externalPlugins.
+	(self internalPlugins includes: aPluginName) ifTrue: [
+		self error: 'Cannot add plugin ', aPluginName , ' as external, because it is already included as internal one'
+		].
+	(plugins includes: aPluginName) ifFalse: [ externalPlugins := externalPlugins copyWith: aPluginName ]
+]
+
+{ #category : #plugins }
+CPlatformConfig >> addExternalPlugins: aPluginNames [
+
+	aPluginNames do: [:each | self addExternalPlugin: each ]
+]
+
+{ #category : #plugins }
+CPlatformConfig >> addInternalPlugin: aPluginName [
+
+	| plugins |
+	plugins := self internalPlugins.
+
+	(self externalPlugins includes: aPluginName) ifTrue: [
+		self error: 'Cannot add plugin ', aPluginName , ' as internal, because it is already included as external one'
+		].
+	
+	(plugins includes: aPluginName) ifFalse: [ internalPlugins := internalPlugins copyWith: aPluginName ]
+]
+
+{ #category : #plugins }
+CPlatformConfig >> addInternalPlugins: aPluginNames [
+
+	aPluginNames do: [:each | self addInternalPlugin: each ]
+]
+
 { #category : #directories }
 CPlatformConfig >> buildDir [
 	
