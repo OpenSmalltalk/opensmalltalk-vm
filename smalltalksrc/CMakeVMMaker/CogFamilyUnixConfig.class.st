@@ -218,12 +218,22 @@ CogFamilyUnixConfig >> configureUUIDPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
+CogFamilyUnixConfig >> configureUnixOSProcessPlugin: maker [ 
+	"extra rules for UnixOSProcessPlugin"
+
+	maker includeDirectories: '${crossDir}/plugins/FilePlugin'.
+	maker includeDirectories: '${crossDir}/plugins/SocketPlugin'.
+	
+	maker addDefinitions: '-DSQAIO_H=\"sqaio.h\"'
+
+]
+
+{ #category : #'plugin extra rules' }
 CogFamilyUnixConfig >> extraPluginSettings: maker [
 
 	maker isExternal ifTrue: [
-		"copy result to results dir "
-		maker set: 'LIBRARY_OUTPUT_PATH' toString: self outputDir
-
+		"copy lib to results dir "
+		maker set: 'LIBRARY_OUTPUT_PATH' to: '${outputDir}' 
 	].
 
 ]
