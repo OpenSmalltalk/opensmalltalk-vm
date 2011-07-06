@@ -285,7 +285,7 @@ CogUnixConfig >> executableName [
 { #category : #'plugin extra rules' }
 CogUnixConfig >> extraPluginSettings: maker [
 	super extraPluginSettings: maker.  
-	maker puts: 'list(APPEND linkFlags "-m32")'
+	maker set: #linkFlags toString: '${linkFlags} -m32'
 
 ]
 
