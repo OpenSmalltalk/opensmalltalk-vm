@@ -192,6 +192,14 @@ MacOSConfig >> configureSocketPlugin: maker [
 
 ]
 
+{ #category : #'plugin extra rules' }
+MacOSConfig >> configureUnixOSProcessPlugin: maker [ 
+	"extra rules for UnixOSProcessPlugin"
+
+	maker includeDirectories: '${crossDir}/plugins/FilePlugin'.
+
+]
+
 { #category : #accessing }
 MacOSConfig >> defaultDirectoriesFromGitDir: gitRepository [
 	"Set the default values for all necessary directories taking into account the Git repostiory. An example to use this method is:
