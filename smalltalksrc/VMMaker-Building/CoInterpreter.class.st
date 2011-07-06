@@ -1385,6 +1385,7 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 { #category : #'stack bytecodes' }
 CoInterpreter >> ceExplicitReceiverAt: level [
 	<api>
+	<option: #NewspeakVM>
 	^self 
 		explicitOuterReceiver: level
 		withObject: (self mframeReceiver: framePointer)
@@ -3327,6 +3328,8 @@ CoInterpreter >> implicitReceiverFor: receiver mixin: mixin implementing: select
 					withMixin: mixin <Mixin>
 					implementing: selector <Symbol> ^<Object>"
 
+	<api>
+	<option: #NewspeakVM>
 	self breakOnImplicitReceiver ifTrue:
 		[self sendBreak: selector + BaseHeaderSize
 			point: (objectMemory lengthOf: selector)
