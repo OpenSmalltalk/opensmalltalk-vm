@@ -16,6 +16,7 @@ Class {
 		'scopeStack',
 		'methods',
 		'macros',
+		'apiMethods',
 		'currentMethod',
 		'headerFiles',
 		'globalVariableUsage',
@@ -271,6 +272,11 @@ CCodeGenerator >> addStructMethodFor: aClass selector: selector [
 		[:tmethod|
 		tmethod transformToStructClassMethodFor: self.
 		tmethod]
+]
+
+{ #category : #accessing }
+CCodeGenerator >> apiMethods: aDictionary [
+	apiMethods := aDictionary
 ]
 
 { #category : #utilities }
@@ -2949,10 +2955,19 @@ CCodeGenerator >> returnPrefixFromVariable: aName [
 	^aName
 ]
 
+{ #category : #accessing }
+CCodeGenerator >> selectAPIMethods [
+	^methods select: [:m| m isAPIMethod]
+]
+
 { #category : #'C code generator' }
 CCodeGenerator >> selectorReturnsPointerToStruct: selector [ "<Symbol>"
 	| tMethod |
-	^(tMethod := methods at: selector ifAbsent: []) notNil
+	^(tMethod := methods
+					at: selector
+					ifAbsent:
+						[apiMethods ifNotNil:
+							[apiMethods at: selector ifAbsent: []]]) notNil
 	  and: [VMStructType isTypePointerToStruct: tMethod returnType]
 ]
 

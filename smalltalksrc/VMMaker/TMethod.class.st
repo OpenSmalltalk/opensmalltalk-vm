@@ -1058,6 +1058,13 @@ TMethod >> instVarPutExprFor: varName offset: instIndex [
 ]
 
 { #category : #testing }
+TMethod >> isAPIMethod [
+	^properties notNil
+	  and: [(properties includesKey: #api)
+			or: [properties includesKey: #api:]]
+]
+
+{ #category : #testing }
 TMethod >> isAssertion [
 	^(selector beginsWith: 'assert') or: [selector beginsWith: 'verify']
 ]
