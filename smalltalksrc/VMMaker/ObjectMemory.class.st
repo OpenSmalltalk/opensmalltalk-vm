@@ -2565,6 +2565,7 @@ ObjectMemory >> isClassOfNonImm: oop equalTo: classOop compactClassIndex: compac
 { #category : #'interpreter access' }
 ObjectMemory >> isCompiledMethod: oop [
     "Answer whether the argument object is of compiled method format"
+	<api>
     ^(self formatOf: oop) >= 12
 ]
 

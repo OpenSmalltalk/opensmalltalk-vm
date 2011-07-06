@@ -6440,9 +6440,23 @@ StackInterpreter >> methodArgumentCount [
 ]
 
 { #category : #'compiled methods' }
+StackInterpreter >> methodClassAssociationOf: methodPointer [
+	<api>
+	^self literal: (self literalCountOf: methodPointer) - 1 ofMethod: methodPointer
+]
+
+{ #category : #'compiled methods' }
 StackInterpreter >> methodClassOf: methodPointer [
 
-	^ objectMemory fetchPointer: ValueIndex ofObject: (self literal: (self literalCountOf: methodPointer) - 1 ofMethod: methodPointer)
+	^self cppIf: NewspeakVM
+		ifTrue:
+			[ | literal |
+			literal := self literal: (self literalCountOf: methodPointer) - 1 ofMethod: methodPointer.
+			literal = objectMemory nilObject
+				ifTrue: [literal]
+				ifFalse: [self fetchPointer: ValueIndex ofObject: literal]]
+		ifFalse:
+			[objectMemory fetchPointer: ValueIndex ofObject: (self literal: (self literalCountOf: methodPointer) - 1 ofMethod: methodPointer)]
 ]
 
 { #category : #'compiled methods' }

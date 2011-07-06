@@ -435,7 +435,14 @@ VMMaker >> availablePlugins [
 VMMaker >> buildCodeGeneratorForCogit [
 	"Answer the code generator for translating the cogit."
 
-	| cg cogitClass cogitClasses |
+	^self buildCodeGeneratorForCogit: true
+]
+
+{ #category : #'generate sources' }
+VMMaker >> buildCodeGeneratorForCogit: getAPIMethods [
+	"Answer the code generator for translating the cogit."
+
+	| cg cogitClass cogitClasses apicg |
 	cg := self createCogitCodeGenerator.
 
 	cg vmClass: (cogitClass := self cogitClass).
@@ -455,6 +462,10 @@ VMMaker >> buildCodeGeneratorForCogit [
 	(cg structClassesForTranslationClasses: cogitClasses) do:
 		[:structClass| cg addStructClass: structClass].
 
+	getAPIMethods ifTrue:
+		[apicg := self buildCodeGeneratorForInterpreter: false.
+		 cg apiMethods: apicg selectAPIMethods].
+
 	^cg
 ]
 
@@ -462,7 +473,14 @@ VMMaker >> buildCodeGeneratorForCogit [
 VMMaker >> buildCodeGeneratorForInterpreter [
 	"Answer the code generator for translating the interpreter."
 
-	| cg interpreterClass interpreterClasses structClasses |
+	^self buildCodeGeneratorForInterpreter: true
+]
+
+{ #category : #'generate sources' }
+VMMaker >> buildCodeGeneratorForInterpreter: getAPIMethods [
+	"Answer the code generator for translating the interpreter."
+
+	| cg interpreterClass interpreterClasses structClasses apicg |
 	interpreterClasses := OrderedCollection new.
 
 	(cg := self createCodeGenerator) vmClass: (interpreterClass := self interpreterClass).
@@ -494,6 +512,12 @@ VMMaker >> buildCodeGeneratorForInterpreter [
 			ifFalse: [ic initialize]].
 
 	interpreterClasses do: [:ic| cg addClass: ic].
+
+	(getAPIMethods
+	and: [self interpreterClass needsCogit]) ifTrue:
+		[apicg := self buildCodeGeneratorForCogit: false.
+		 cg apiMethods: apicg selectAPIMethods].
+
 	^cg
 ]
 
