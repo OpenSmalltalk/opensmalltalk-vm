@@ -4702,8 +4702,11 @@ NewspeakInterpreter >> methodArgumentCount [
 
 { #category : #'compiled methods' }
 NewspeakInterpreter >> methodClassOf: methodPointer [
-
-	^ self fetchPointer: ValueIndex ofObject: (self literal: (self literalCountOf: methodPointer) - 1 ofMethod: methodPointer)
+	| literal |
+	literal := self literal: (self literalCountOf: methodPointer) - 1 ofMethod: methodPointer.
+	^literal = nilObj
+		ifTrue: [literal]
+		ifFalse: [self fetchPointer: ValueIndex ofObject: literal]
 ]
 
 { #category : #'plugin primitive support' }

@@ -13,7 +13,8 @@ Class {
 		'methodBytesFreedSinceLastCompaction',
 		'coInterpreter',
 		'objectRepresentation',
-		'cogit'
+		'cogit',
+		'objectMemory'
 	],
 	#pools : [
 		'CogMethodConstants',
@@ -142,7 +143,13 @@ CogMethodZone >> compactCompiledCode: objectHeaderValue [
 			 dest objectHeader: objectHeaderValue.
 			 dest cmType = CMMethod
 				ifTrue:
-					[coInterpreter rawHeaderOf: dest methodObject put: dest]
+					["For non-Newspeak there should ne a one-to-one mapping metween bytecoded and
+					  cog methods. For Newspeak not necessarily, but only for anonymous accessors."
+					 self assert: ((coInterpreter rawHeaderOf: dest methodObject) asInteger = source asInteger
+								or: [(coInterpreter methodClassAssociationOf: dest methodObject) = objectMemory nilObject]).
+					"Only update the original method's header if it is referring to this CogMethod."
+					 (coInterpreter rawHeaderOf: dest methodObject) asInteger = source asInteger ifTrue:
+						[coInterpreter rawHeaderOf: dest methodObject put: dest]]
 				ifFalse:
 					[dest cmType = CMOpenPIC ifTrue:
 						[dest nextOpenPIC: openPICList asUnsignedInteger.
@@ -165,9 +172,15 @@ CogMethodZone >> freeMethod: cogMethod [
 	self assert: cogMethod cmType ~= CMFree.
 	self assert: (cogit cogMethodDoesntLookKosher: cogMethod) = 0.
 	cogMethod cmType = CMMethod ifTrue:
-		[coInterpreter
-			rawHeaderOf: cogMethod methodObject
-			put: (coInterpreter pointerForOop: cogMethod methodHeader).
+		["For non-Newspeak there should ne a one-to-one mapping metween bytecoded and
+		  cog methods. For Newspeak not necessarily, but only for anonymous accessors."
+		 self assert: ((coInterpreter rawHeaderOf: cogMethod methodObject) asInteger = cogMethod asInteger
+					or: [(coInterpreter methodClassAssociationOf: cogMethod methodObject) = objectMemory nilObject]).
+		"Only reset the original method's header if it is referring to this CogMethod."
+		 (coInterpreter rawHeaderOf: cogMethod methodObject) asInteger = cogMethod asInteger ifTrue:
+			[coInterpreter
+				rawHeaderOf: cogMethod methodObject
+				put: (coInterpreter pointerForOop: cogMethod methodHeader)].
 		 cogMethod cmRefersToYoung: false].
 	cogMethod cmType = CMOpenPIC ifTrue:
 		[self removeFromOpenPICList: cogMethod.
@@ -531,18 +544,12 @@ CogMethodZone >> roundUpLength: numBytes [
 ]
 
 { #category : #initialization }
-CogMethodZone >> setInterpreter: aCoInterpreter objectRepresentation: anObjectRepresentation [
-	<doNotGenerate>
-	coInterpreter := aCoInterpreter.
-	objectRepresentation := anObjectRepresentation
-]
-
-{ #category : #initialization }
 CogMethodZone >> setInterpreter: aCoInterpreter objectRepresentation: anObjectRepresentation cogit: aCogit [
 	<doNotGenerate>
 	coInterpreter := aCoInterpreter.
 	objectRepresentation := anObjectRepresentation.
-	cogit := aCogit
+	cogit := aCogit.
+	objectMemory := aCoInterpreter objectMemory
 ]
 
 { #category : #'young referers' }
