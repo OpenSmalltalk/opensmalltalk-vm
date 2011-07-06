@@ -371,6 +371,23 @@ Cogit class >> cog: aCompiledMethod selector: aSelector [
 			ex pass]
 ]
 
+{ #category : #documentation }
+Cogit class >> cogToBytecodeMethodMapping [
+	"When first written the VM maintained a one-to-one mapping between bytecoded methods and cog methods.
+	The map is implemented with a direct reference form the methodObject field of a CogMethod to the bytecoded
+	method and by setting the header word of the bytecoded method to the CogMethod.  Newspeak forced a change
+	in this since Newspeak shares anonymous (nil methodClassAssociation) accessors (setters and getters) amongst
+	classes and mixins throughout the system (i.e. these accessors are in dictionaries under selector keys that don't
+	match the accessor methods' selectors).  But the inline cacheing relinking/un;linking machinery depends on
+	CogMethods having the correct selector, since to unlink/relink the selector is fetched from the inline cache's
+	target method.  So the VM has been modified to not insist on a one-to-one mapping.  Instead, when a bytecoded
+	method is to be used with a different selector it is attached to the new CogMethod.
+
+	This choice means that CogMethods do refer to a valid bytecoded method, but the bytecoded method might
+	not necessarily refer back to a CogMethod referring to it.  So when CogMethods are freed care must be taken
+	to reset the bytecoded method's header if it is referring to the freed CogMethod."
+]
+
 { #category : #translation }
 Cogit class >> declareCVarsIn: aCCodeGenerator [
 	#(	'coInterpreter' 'objectMemory' 'methodZone' 'objectRepresentation'
@@ -2348,7 +2365,7 @@ Cogit >> ceSICMiss: receiver [
 		 targetMethod asInteger + cmDynSuperEntryOffset = entryPoint ifTrue:
 			[^coInterpreter
 				ceDynamicSuperSend: targetMethod selector
-				to: (coInterpreter stackValue: targetMethod cmNumArgs)
+				to: receiver
 				numArgs: targetMethod cmNumArgs]].
 	self assert: targetMethod asInteger + cmEntryOffset = entryPoint.
 
@@ -2691,7 +2708,8 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 	<returnTypeC: #'CogMethod *'>
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
-	self assert: (coInterpreter methodHasCogMethod: aMethodObj) not.
+	self assert: ((coInterpreter methodHasCogMethod: aMethodObj) not
+				or: [(coInterpreter methodClassAssociationOf: aMethodObj) = objectMemory nilObject]).
 	methodObj := aMethodObj.
 	"coInterpreter stringOf: aSelectorOop"
 	coInterpreter
@@ -3453,6 +3471,7 @@ Cogit >> computeEntryOffsets [
 	self cppIf: NewspeakVM
 		ifTrue:
 			[cmDynSuperEntryOffset := dynSuperEntry address - methodZoneBase.
+			 dynSuperEntryAlignment := cmDynSuperEntryOffset bitAnd: entryPointMask.
 			self assert: (cmDynSuperEntryOffset bitAnd: entryPointMask) ~= (cmEntryOffset bitAnd: entryPointMask).
 			self assert: (cmDynSuperEntryOffset bitAnd: entryPointMask) ~= (cmNoCheckEntryOffset bitAnd: entryPointMask)]
 ]
@@ -3735,14 +3754,23 @@ Cogit >> fillInCPICHeader: pic size: size numArgs: numArgs numCases: numCases se
 Cogit >> fillInMethodHeader: method size: size selector: selector [
 	<returnTypeC: #'CogMethod *'>
 	<var: #method type: #'CogMethod *'>
-	| methodHeader |
+	<var: #originalMethod type: #'CogMethod *'>
+	| methodHeader originalMethod |
 	method cmType: CMMethod.
-	methodHeader := coInterpreter rawHeaderOf: methodObj.
 	method objectHeader: objectMemory nullHeaderForMachineCodeMethod.
 	method blockSize: size.
 	method methodObject: methodObj.
+	methodHeader := coInterpreter rawHeaderOf: methodObj.
+	"If the method has already been cogged (e.g. Newspeak accessors) then
+	 leave the original method attached to its cog method, but get the right header."
+	(coInterpreter isCogMethodReference: methodHeader)
+		ifTrue:
+			[originalMethod := self cCoerceSimple: methodHeader to: #'CogMethod *'.
+			self assert: originalMethod blockSize = size.
+			methodHeader := originalMethod methodHeader]
+		ifFalse:
+			[coInterpreter rawHeaderOf: methodObj put: method].
 	method methodHeader: methodHeader.
-	coInterpreter rawHeaderOf: methodObj put: method.
 	method selector: selector.
 	method cmNumArgs: (coInterpreter argumentCountOfMethodHeader: methodHeader).
 	(method cmRefersToYoung: hasYoungReferent) ifTrue:
@@ -5074,9 +5102,10 @@ Cogit >> incrementUsageOfTargetIfLinkedSend: annotation mcpc: mcpc ignored: supe
 	(self isSendAnnotation: annotation) ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint > methodZoneBase ifTrue: "It's a linked send."
-			[offset := (entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
-						ifTrue: [cmEntryOffset]
-						ifFalse: [cmNoCheckEntryOffset].
+			[self
+				offsetAndSendTableFor: entryPoint
+				annotation: annotation
+				into: [:off :table| offset := off].
 			targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
 			targetMethod cmUsageCount < (CMMaxUsageCount // 2) ifTrue:
 				[targetMethod cmUsageCount: targetMethod cmUsageCount + 1]]].
@@ -5827,6 +5856,7 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSendOrPushImplicit: annotation pc: mcpc 
 				 classpc := mcpc asInteger + backEnd jumpShortByteSize.
 				 mixinpc := mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop.
 				 class := backEnd unalignedLongAt: classpc.
+				 self assert: (class = 0 or: [objectMemory addressCouldBeObj: class]).
 				 (objectRepresentation cacheTagIsMarked: class)
 					ifTrue:
 						[(mixin := backEnd unalignedLongAt: mixinpc) ~= 0 ifTrue:
@@ -6350,6 +6380,11 @@ Cogit >> printMethodHeader: cogMethod on: aStream [
 			 cogMethod stackCheckOffset > 0 ifTrue:
 				[aStream nextPut: $/.
 				 cogMethod asInteger + cogMethod stackCheckOffset printOn: aStream base: 16].
+			cogMethod cmType ~= CMBlock ifTrue:
+				[aStream
+					crtab;
+					nextPutAll: 'cmRefersToYoung: ';
+					nextPutAll: (cogMethod cmRefersToYoung ifTrue: ['yes'] ifFalse: ['no'])].
 			cogMethod cmType = CMMethod ifTrue:
 				[([cogMethod numCounters] on: MessageNotUnderstood do: [:ex| nil]) ifNotNil:
 					[:nc| aStream crtab; nextPutAll: 'numCounters: '; print: nc]]].
@@ -6672,7 +6707,8 @@ Cogit >> remapNSIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
 					[backEnd unalignedLongAt: pc put: mappedOop].
 				 pc := mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop.
 				 (oop := backEnd unalignedLongAt: pc) ~= 0 ifTrue:
-					[mappedOop ~= oop ifTrue:
+					[mappedOop := objectMemory remap: oop.
+					 mappedOop ~= oop ifTrue:
 						[backEnd unalignedLongAt: pc put: mappedOop]]]].
 		 hasYoungPtr ~= 0 ifTrue:
 			[| offset targetMethod |

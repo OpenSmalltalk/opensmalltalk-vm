@@ -524,7 +524,7 @@ SimpleStackBasedCogit >> compileFrameBuild [
 	self CmpR: TempReg R: SPReg. "N.B. FLAGS := SPReg - TempReg"
 	"If we can't context switch for this method, use a slightly
 	 slower overflow check that clears SendNumArgsReg."
-	(coInterpreter canContextSwitchIfActivating: (coInterpreter rawHeaderOf: methodObj))
+	(coInterpreter canContextSwitchIfActivating: (coInterpreter headerOf: methodObj))
 		ifTrue:
 			[self JumpBelow: stackOverflowCall.
 			 stackCheckLabel := self Label]
@@ -998,7 +998,7 @@ SimpleStackBasedCogit >> genDynamicSuperSendBytecode [
 	numArgs > 2 ifTrue:
 		[self MoveCq: numArgs R: SendNumArgsReg].
 	self MoveCw: selector R: ClassReg.
-	self CallSend: (dynamicSuperSendTrampolines at: (numArgs min: NumSendTrampolines - 1)).
+	self CallNewspeakSend: (dynamicSuperSendTrampolines at: (numArgs min: NumSendTrampolines - 1)).
 	self flag: 'currently caller pushes result'.
 	self PushR: ReceiverResultReg.
 	^0

@@ -1320,9 +1320,10 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 	depending on whether the target method is cogged or not."
 	<api>
 	<option: #NewspeakVM>
-	| class canLinkCacheTag errSelIdx cogMethod mClassMixin mixinApplication |
+	| class canLinkCacheTag errSelIdx cogMethod newCogMethod mClassMixin mixinApplication |
 	<inline: false>
 	<var: #cogMethod type: #'CogMethod *'>
+	<var: #newCogMethod type: #'CogMethod *'>
 	"self printExternalHeadFrame"
 	"self printStringOf: selector"
 	cogit assertCStackWellAligned.
@@ -1352,13 +1353,20 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: lkupClass mayLink: false.
 				"NOTREACHED"
 				self assert: false]].
-	"Method found and has a cog method.  Attempt to link to it.  The receiver's class may be young.
-	 If the Cogit can't store young classes in inline caches we can link to an open PIC instead."
+	"Method found and has a cog method.  Attempt to link to it."
 	(self maybeMethodHasCogMethod: newMethod) ifTrue:
 		[cogMethod := self cogMethodOf: newMethod.
 		 cogMethod selector = objectMemory nilObject ifTrue:
 			[cogit setSelectorOf: cogMethod to: selector].
-		 canLinkCacheTag ifTrue:
+		 "Deal with anonymous accessors, e.g. in Newspeak.  The cogMethod may not have the correct
+		  selector.  If not, try and compile a new method with the correct selector."
+		 cogMethod selector ~= selector ifTrue:
+			[self assert: (self methodClassAssociationOf: newMethod) = objectMemory nilObject.
+			 newCogMethod := cogit cog: newMethod selector: selector.
+			 newCogMethod ifNotNil:
+				[cogMethod := newCogMethod]].
+		 (cogMethod selector = selector
+		 and: [canLinkCacheTag]) ifTrue:
 			[cogit
 				linkSendAt: (stackPages longAt: stackPointer)
 				in: (self mframeHomeMethod: framePointer)
@@ -1602,9 +1610,10 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 	Continue execution via either executeMethod or interpretMethodFromMachineCode:
 	depending on whether the target method is cogged or not."
 	<api>
-	| class canLinkCacheTag errSelIdx cogMethod |
+	| class canLinkCacheTag errSelIdx cogMethod newCogMethod |
 	<inline: false>
 	<var: #cogMethod type: #'CogMethod *'>
+	<var: #newCogMethod type: #'CogMethod *'>
 	"self printExternalHeadFrame"
 	"self printStringOf: selector"
 	cogit assertCStackWellAligned.
@@ -1637,7 +1646,15 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 		[cogMethod := self cogMethodOf: newMethod.
 		 cogMethod selector = objectMemory nilObject ifTrue:
 			[cogit setSelectorOf: cogMethod to: selector].
-		 canLinkCacheTag
+		 "Deal with anonymous accessors, e.g. in Newspeak.  The cogMethod may not have the correct
+		  selector.  If not, try and compile a new method with the correct selector."
+		 cogMethod selector ~= selector ifTrue:
+			[self assert: (self methodClassAssociationOf: newMethod) = objectMemory nilObject.
+			 newCogMethod := cogit cog: newMethod selector: selector.
+			 newCogMethod ifNotNil:
+				[cogMethod := newCogMethod]].
+		 (cogMethod selector = selector
+		  and: [canLinkCacheTag])
 			ifTrue:
 				[cogit
 					linkSendAt: (stackPages longAt: stackPointer)
@@ -3197,6 +3214,7 @@ CoInterpreter >> handleMNU: selectorIndex InMachineCodeTo: rcvr classForMessage:
 
 { #category : #'compiled methods' }
 CoInterpreter >> headerOf: methodPointer [
+	<api>
 	| methodHeader |
 	methodHeader := self rawHeaderOf: methodPointer.
 	^(self isCogMethodReference: methodHeader)
@@ -3639,6 +3657,7 @@ CoInterpreter >> isCogCompiledCodeCompactionCalledFor [
 
 { #category : #'compiled methods' }
 CoInterpreter >> isCogMethodReference: methodHeader [
+	<api>
 	self assert: ((objectMemory isIntegerObject: methodHeader)
 				or: [methodHeader asUnsignedInteger < objectMemory startOfMemory
 					and: [methodHeader asUnsignedInteger >= cogit minCogMethodAddress]]).
@@ -5150,8 +5169,10 @@ CoInterpreter >> rawHeaderOf: methodPointer [
 { #category : #'compiled methods' }
 CoInterpreter >> rawHeaderOf: methodOop put: cogMethod [
 	<api>
-	<var: #cogMethod type: #'void *'> 
-	objectMemory storePointerUnchecked: HeaderIndex
+	<var: #cogMethod type: #'void *'>
+	self assert: (objectMemory isCompiledMethod: methodOop).
+	objectMemory
+		storePointerUnchecked: HeaderIndex
 		ofObject: methodOop
 		withValue: cogMethod asInteger
 ]
@@ -5947,7 +5968,7 @@ CoInterpreter >> validInstructionPointer: anInstrPointer inMethod: aMethod frame
 	<var: #anInstrPointer type: #usqInt>
 	<var: #aMethod type: #usqInt>
 	<var: #fp type: #'char *'>
-	| theInstrPointer header cogMethod |
+	| theInstrPointer cogMethod |
 	<var: #theInstrPointer type: #usqInt>
 	<var: #cogMethod type: #'CogMethod *'>
 	anInstrPointer = cogit ceCannotResumePC ifTrue:
@@ -5959,12 +5980,20 @@ CoInterpreter >> validInstructionPointer: anInstrPointer inMethod: aMethod frame
 			 theInstrPointer := self iframeSavedIP: fp]
 		ifFalse:
 			[theInstrPointer := anInstrPointer.
-			 header := self rawHeaderOf: aMethod.
-			 ((self isCogMethodReference: header)
-			   and: [theInstrPointer < objectMemory startOfMemory]) ifTrue:
-			 	[cogMethod := self cCoerceSimple: header to: #'CogMethod *'.
-			 	 ^theInstrPointer >= (header + (cogit sizeof: CogMethod))
-			 	 and: [theInstrPointer < (header + cogMethod blockSize)]]].
+			self cppIf: NewspeakVM
+				ifTrue:
+					[(self isMachineCodeFrame: fp) ifTrue:
+						[cogMethod := self mframeHomeMethod: fp.
+						 ^theInstrPointer >= (cogMethod asUnsignedInteger + (cogit sizeof: CogMethod))
+						   and: [theInstrPointer < (cogMethod asUnsignedInteger + cogMethod blockSize)]]]
+				ifFalse:
+					[| header |
+					 header := self rawHeaderOf: aMethod.
+					 ((self isCogMethodReference: header)
+					   and: [theInstrPointer < objectMemory startOfMemory]) ifTrue:
+					 	[cogMethod := self cCoerceSimple: header to: #'CogMethod *'.
+					 	 ^theInstrPointer >= (header + (cogit sizeof: CogMethod))
+					 	 and: [theInstrPointer < (header + cogMethod blockSize)]]]].
 	^theInstrPointer >= (aMethod + (objectMemory lastPointerOf: aMethod) + BytesPerWord - 1)
 	  and: [theInstrPointer < (aMethod + (objectMemory byteLengthOf: aMethod) + BaseHeaderSize)]
 ]
