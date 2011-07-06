@@ -4862,6 +4862,7 @@ StackInterpreter >> implicitReceiverFor: receiver mixin: mixin implementing: sel
 					withMixin: mixin <Mixin>
 					implementing: selector <Symbol> ^<Object>"
 	<api>
+	<option: #NewspeakVM>
 	| mixinApplication dictionary found |
 	messageSelector := selector. "messageSelector is an implicit parameter of lookupMethodInDictionary:"
 	mixinApplication := self
