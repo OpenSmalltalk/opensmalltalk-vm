@@ -118,7 +118,7 @@ CogWindowsConfig >> extraPluginSettings: maker [
 
 	maker isExternal ifTrue: [
 		"copy result to results dir "
-		maker set: 'LIBRARY_OUTPUT_PATH' toString: self outputDir.
+		maker set: 'LIBRARY_OUTPUT_PATH' toString: '${outputDir}'.
 		
 		maker cmd: 'set_target_properties' params:  maker moduleName , ' PROPERTIES PREFIX "" '
 	]
@@ -219,6 +219,6 @@ CogWindowsConfig >> resourceFileTemplate [
 CogWindowsConfig >> setExtraTargetProperties: maker [
 
 	maker addExternalLibraries: self externalLibraries.
-	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir.
+	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: '${outputDir}'.
 
 ]
