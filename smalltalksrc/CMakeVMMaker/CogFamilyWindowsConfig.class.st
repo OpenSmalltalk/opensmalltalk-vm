@@ -107,6 +107,17 @@ CogFamilyWindowsConfig >> configureDropPlugin:  maker [
 ]
 
 { #category : #'plugin extra rules' }
+CogFamilyWindowsConfig >> configureFT2Plugin: maker [ 
+	"extra rules for FT2Plugin"
+	
+	maker addExternalLibrary: '"${pluginPlatform}/freetype.a"'.
+"	maker includeDirectories: '${pluginPlatform}'.
+"
+
+
+]
+
+{ #category : #'plugin extra rules' }
 CogFamilyWindowsConfig >> configureFilePlugin: maker [ 
 	
 	super configureFilePlugin: maker.
@@ -221,6 +232,15 @@ CogFamilyWindowsConfig >> configureUUIDPlugin: maker [
 		#( 'sqWin32UUID.c')
 
 
+
+]
+
+{ #category : #'plugin extra rules' }
+CogFamilyWindowsConfig >> configureWin32OSProcessPlugin: maker [ 
+	"extra rules for Win32OSProcessPlugin"
+
+	maker includeDirectories: '${crossDir}/plugins/FilePlugin'.
+	maker includeDirectories: '${crossDir}/plugins/SocketPlugin'.
 
 ]
 
