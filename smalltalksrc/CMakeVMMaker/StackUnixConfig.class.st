@@ -14,13 +14,18 @@ Class {
 	#category : #'CMakeVMMaker-Unix'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #sources }
 StackUnixConfig >> coreSources [
 	"files to include from src/vm dir"
 	
 	^ #(
 		'gcc3x-interp.c'
 		)
+]
+
+{ #category : #accessing }
+StackUnixConfig >> executableName [
+	^ 'StackVM'
 ]
 
 { #category : #'source generation' }
