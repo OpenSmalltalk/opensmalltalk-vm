@@ -274,6 +274,7 @@ CogUnixConfig >> defaultInternalPlugins [
 		SoundPlugin 
 		StarSqueakPlugin 
 		SurfacePlugin	
+		LocalePlugin
 		)
 ]
 
