@@ -193,7 +193,7 @@ sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 {
 	DWORD previous;
 
-	if (VirtualProtect(startAddr,
+	if (!VirtualProtect(startAddr,
 						endAddr - startAddr + 1,
 						PAGE_EXECUTE_READWRITE,
 						&previous))
@@ -205,7 +205,7 @@ sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 {
 	DWORD previous;
 
-	if (VirtualProtect(startAddr,
+	if (!VirtualProtect(startAddr,
 						endAddr - startAddr + 1,
 						PAGE_READWRITE,
 						&previous))

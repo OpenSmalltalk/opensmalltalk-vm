@@ -133,7 +133,18 @@ static char* parseVMArgs(char *string, vmArg args[])
         return string; /* done */
 
       string += arglen;
-      if(*string) *(string++) = 0;
+	  /* can't just bash the string; if we have -breaksel:at:put: this would
+	   * truncate breaksel to t:put:.
+	   */
+      if (*string)
+		if (*string == ' ')
+			*(string++) = 0;
+		else {
+			char save = *string;
+			*string = 0;
+			vmOptions[numOptionsVM - 1] = strdup(vmOptions[numOptionsVM - 1]);
+			*string = save;
+		}
 
       while(*string && *string == ' ') string++; /* skip blanks */
 
