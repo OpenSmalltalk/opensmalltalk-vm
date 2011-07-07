@@ -80,7 +80,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForClosureV3 [
 		#(1 137 137 genPushActiveContextBytecode).
 		#(2 138 138 genPushNewArrayBytecode).
 		NewspeakVM
-			ifTrue: [#(1 139 139 genPushExplicitOuterSendReceiverBytecode mapped)]
+			ifTrue: [#(2 139 139 genPushExplicitOuterSendReceiverBytecode mapped)]
 			ifFalse: [#(1 139 139 unknownBytecode)].
 		#(3 140 140 genPushRemoteTempLongBytecode).
 		#(3 141 141 genStoreRemoteTempLongBytecode).
