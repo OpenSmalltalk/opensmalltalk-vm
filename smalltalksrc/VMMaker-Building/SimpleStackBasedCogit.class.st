@@ -1812,7 +1812,7 @@ SimpleStackBasedCogit >> genPushExplicitOuterSendReceiverBytecode [
 	levelOop := coInterpreter literal: byte1 ofMethod: methodObj.
 	self assert: (objectMemory isIntegerObject: levelOop).
 	self assert: needsFrame.
-	self MoveCq: (objectMemory integerValueOf: levelOop) R: ClassReg.
+	self MoveCq: (objectMemory integerValueOf: levelOop) R: SendNumArgsReg.
 	self CallRT: ceExplicitReceiverTrampoline.
 	self PushR: ReceiverResultReg.
 	^0
