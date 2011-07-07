@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h> /* _O_BINARY */
-#include <Float.h>
+#include <float.h>
 #include <ole2.h>
 #include "sq.h"
 #include "sqWin32Args.h"
