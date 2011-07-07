@@ -210,6 +210,16 @@ CogFamilyUnixConfig >> configureJoystickTabletPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
+CogFamilyUnixConfig >> configureLocalePlugin: maker [ 
+	"extra rules for LocalePlugin"
+
+	super configureLocalePlugin:  maker.
+	
+	maker addPlatformSources: #( 'sqUnixLocale.c')
+	
+]
+
+{ #category : #'plugin extra rules' }
 CogFamilyUnixConfig >> configureMIDIPlugin: maker [ 
 	"extra rules for MIDIPlugin"
 
