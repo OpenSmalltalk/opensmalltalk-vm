@@ -94,7 +94,7 @@ CMakePluginGenerator >> generate [
 		set: #pluginName toString: name;
 		set: #pluginSrc toString: '${srcPluginsDir}/', name;
 		set: #pluginCross toString: '${crossDir}/plugins/', name;
-		set: #pluginPlatform to: '${targetPlatform}/plugins/', name.
+		set: #pluginPlatform toString: '${targetPlatform}/plugins/', name.
 		
 	
 	internal 
