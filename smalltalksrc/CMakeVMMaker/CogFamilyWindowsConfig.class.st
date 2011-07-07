@@ -127,7 +127,7 @@ CogFamilyWindowsConfig >> configureFT2Plugin: maker [
 	maker addExternalLibrary:  '"${freetypeLib}"'.
 
 	"the freetype sources are located in {build}/FT2Plugin/freetype2/include "
-	maker includeDirectories: '${pluginsPlatform}/freetype2/include'
+	maker includeDirectories: '${freetypeLibDir}/freetype2/include'
 
 
 ]
