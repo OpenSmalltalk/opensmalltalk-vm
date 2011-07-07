@@ -256,8 +256,12 @@ endif
 $(OBJDIR):
 	@-mkdir $(BLDDIR)
 	mkdir $(OBJDIR)
+ifneq ($(INTERNAL_PLUGINS),)
 	mkdir $(addprefix $(BLDDIR)/, $(INTERNAL_PLUGINS))
+endif
+ifneq ($(EXTERNAL_PLUGINS),)
 	mkdir $(addprefix $(BLDDIR)/, $(EXTERNAL_PLUGINS))
+endif
 
 #############################################################################
 # The exports for named primitives from Squeak (required by VM)
