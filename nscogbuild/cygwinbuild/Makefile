@@ -113,7 +113,7 @@ NDEBUG:=-D'VM_LABEL(foo) 0'
 DEBUGVM=0
 else
 OFLAGS:= -D_MT -march=pentium4
-NDEBUG:=-DNODBGPRINT-1 -D'VM_LABEL(foo) 0' -D'bzero(p,s) __builtin_bzero((p),(s))'
+NDEBUG:=-DNODBGPRINT=1 -D'VM_LABEL(foo)=0' -D'bzero(p,s)=__builtin_bzero((p),(s))'
 DEBUGVM=1
 endif
 
