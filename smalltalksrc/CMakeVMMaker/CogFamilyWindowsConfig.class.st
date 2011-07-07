@@ -110,9 +110,24 @@ CogFamilyWindowsConfig >> configureDropPlugin:  maker [
 CogFamilyWindowsConfig >> configureFT2Plugin: maker [ 
 	"extra rules for FT2Plugin"
 	
-	maker addExternalLibrary: '"${pluginPlatform}/freetype.a"'.
-"	maker includeDirectories: '${pluginPlatform}'.
-"
+
+	"extra rules for Freetype plugin.
+	a custom rule to build freetype library"
+
+	maker set: #freetypeLibDir toString: '${buildDir}/FT2Plugin'.
+	maker set: #freetypeLib toString: '${freetypeLibDir}/libfreetype.dll.a'.
+
+
+	maker cmd: 'add_custom_command' params: 'OUTPUT ${freetypeLib} 
+		COMMAND "${pluginPlatform}/makeFreetype.dynamic.win32" "${freetypeLibDir}" "${outputDir}"
+		COMMENT "Building freetype library"
+	'.
+
+	maker addSource: '${freetypeLib}'.
+	maker addExternalLibrary:  '"${freetypeLib}"'.
+
+	"the freetype sources are located in {build}/FT2Plugin/freetype2/include "
+	maker includeDirectories: '${pluginsPlatform}/freetype2/include'
 
 
 ]
@@ -269,7 +284,8 @@ CogFamilyWindowsConfig >> msysPathFor: aPath [
 CogFamilyWindowsConfig >> outputDir [
 
 	"the directory where built binaries will be stored"
-	^ outputDir ifNil: [ outputDir := (self msysPathFor: (self buildDir fullName , '/', self outputDirName )) ]
+
+	^ outputDir ifNil: [ outputDir := self msysPathFor: (self buildDir containingDirectory fullName , '/', self outputDirName) ]
 	
 ]
 
@@ -297,7 +313,8 @@ CogFamilyWindowsConfig >> setupDirectories: gen [
 			set: #platformName toString: self platformName;
 			set: #targetPlatform to: '${platformsDir}/${platformName}';
 			set: #crossDir toString: '${platformsDir}/Cross';
-			set: #platformVMDir toString: '${targetPlatform}/vm'.
+			set: #platformVMDir toString: '${targetPlatform}/vm';
+			set: #outputDir toString: (self msysPathFor: self outputDir).
 	].
 
 	self write: dirsInclude toFile: 'directories.cmake'
