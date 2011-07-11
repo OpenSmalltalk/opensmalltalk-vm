@@ -79,7 +79,7 @@ OBJDIR:=    $(BASEDIR)/$(BUILD)/$(LIBNAME)
 VMDIR:=     $(BASEDIR)/$(BUILD)/vm
 PLUGINLIB:= $(VMDIR)/$(LIBNAME).lib
 PLUGINDLL:= $(VMDIR)/$(LIBNAME).dll
-LIBOBJ:= 	$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(LIBSRC)))		 
+LIBOBJ ?= 	$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(LIBSRC)))		 
 		
 		 
 VPATH:= $(MAKERDIR) $(WIN32DIR) $(CROSSDIR) $(OBJDIR)
