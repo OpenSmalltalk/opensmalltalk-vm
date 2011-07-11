@@ -3536,9 +3536,11 @@ CoInterpreter >> internalExecuteNewMethod [
 		  new process appropriately, returning only if we've found an interpreter frame."
 		 self externalizeIPandSP.
 		 succeeded := self slowPrimitiveResponse.
+		 instructionPointer = cogit ceReturnToInterpreterPC ifTrue:
+			[instructionPointer := self iframeSavedIP: framePointer].
 		 self internalizeIPandSP.
 		 succeeded ifTrue:
-			[self return: self popStack toExecutive: false.
+			[self return: self popStack toExecutive: true.
 			 self browserPluginReturnIfNeeded.
 			^nil]].
 	"if not primitive, or primitive failed, activate the method"
@@ -5496,9 +5498,20 @@ CoInterpreter >> scavengeThreshold [
 ]
 
 { #category : #'callback support' }
+CoInterpreter >> sendInvokeCallback: thunkPtr Stack: stackPtr Registers: regsPtr Jmpbuf: jmpBufPtr [
+	"Override to log and check stack alignment.  Since this is an implicit send we need to
+	 log it explicitly. The return side is done via a primitive so that gets logged normally."
+	cogit assertCStackWellAligned.
+	cogit recordPrimTrace ifTrue:
+		[self fastLogPrim: (self splObj: SelectorInvokeCallback)].
+	^super sendInvokeCallback: thunkPtr Stack: stackPtr Registers: regsPtr Jmpbuf: jmpBufPtr
+]
+
+{ #category : #'callback support' }
 CoInterpreter >> sendInvokeCallbackContext: vmCallbackContext [
-	"Override to log.  Since this is an implicit send we need to log it explicitly.
-	 The return side is done via a primitive so that gets logged normally."
+	"Override to log and check stack alignment.  Since this is an implicit send we need to
+	 log it explicitly. The return side is done via a primitive so that gets logged normally."
+	cogit assertCStackWellAligned.
 	cogit recordPrimTrace ifTrue:
 		[self fastLogPrim: (self splObj: SelectorInvokeCallback)].
 	^super sendInvokeCallbackContext: vmCallbackContext
