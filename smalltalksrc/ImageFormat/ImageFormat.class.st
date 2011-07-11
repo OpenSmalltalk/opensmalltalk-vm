@@ -120,8 +120,11 @@ ImageFormat class >> fromFile: imageFile [
 
 	| f |
 	f := (FileStream oldFileNamed: imageFile) ifNil: [FileStream readOnlyFileNamed: imageFile].
-	f ifNotNil: [f binary.
-		^self fromStream: f].
+	f ifNotNil: [ | imageFormat |
+		[f binary.
+		imageFormat := self fromStream: f]
+			ensure: [f close].
+		^imageFormat].
 	^self error: 'could not open ', imageFile
 
 ]
