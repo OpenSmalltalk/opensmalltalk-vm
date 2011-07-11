@@ -37,7 +37,6 @@ extern BOOL fLowRights;  /* started as low integrity process,
 /* file security */
 static int allowFileAccess = 1;  /* full access to files */
 static const TCHAR U_DOT[] = TEXT(".");
-static const TCHAR U_BACKSLASH[] = TEXT("\\");
 
 static int testDotDot(TCHAR *pathName, int index) {
   while(pathName[index]) {
