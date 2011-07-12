@@ -1,6 +1,8 @@
 #!/bin/sh
 IFS="	
 "
+NSB=nscogbuild
+#NSB=nsbuild
 if [ $# = 0 ]; then
 CL=1
 CM=1
@@ -60,15 +62,15 @@ fi
 if [ -n "$NM" ]; then
 	test -d Newspeak\ Virtual\ Machine.app || mkdir Newspeak\ Virtual\ Machine.app
 	rm -rf Newspeak\ Virtual\ Machine.app/* Newspeak\ Virtual\ Machine.app.tgz
-	(cd nsbuild/macbuild/Fast.app>/dev/null;tar cf - *)|(cd Newspeak\ Virtual\ Machine.app;tar xvf -)
+	(cd $NSB/macbuild/Fast.app>/dev/null;tar cf - *)|(cd Newspeak\ Virtual\ Machine.app;tar xvf -)
 	tar czf Newspeak\ Virtual\ Machine.app.tgz Newspeak\ Virtual\ Machine.app
 	EXES="$EXES	Newspeak Virtual Machine.app/Contents/MacOS/Newspeak Virtual Machine"
 fi
 if [ -n "$NW" ]; then
 	test -d nsvmwin || mkdir nsvmwin
 	rm -rf nsvmwin/* nsvmwin.zip
-	ln nsbuild/cygwinbuild/build/vm/{nsvm.exe,nsvm.map} nsvmwin
-	ln nsbuild/cygwinbuild/build/vm/*.dll nsvmwin
+	ln $NSB/cygwinbuild/build/vm/{nsvm.exe,nsvm.map} nsvmwin
+	ln $NSB/cygwinbuild/build/vm/*.dll nsvmwin
 	tar czf Newspeak\ Virtual\ Machine.app.tgz Newspeak\ Virtual\ Machine.app
 	zip -vr nsvmwin.zip nsvmwin
 	EXES="$EXES	nsvmwin/nsvm.exe"
