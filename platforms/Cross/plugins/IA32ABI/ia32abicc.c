@@ -30,6 +30,7 @@ void *getbaz() { return baz; }
 #include <stdio.h> /* for fprintf(stderr,...) */
 
 #include "vmCallback.h"
+#include "sqAssert.h"
 #include "sqMemoryAccess.h"
 #include "sqVirtualMachine.h"
 #include "ia32abi.h"
@@ -63,6 +64,12 @@ struct VirtualMachine* interpreterProxy;
 #if __APPLE__ && __MACH__ && __i386__
 # define STACK_ALIGN_BYTES 16
 #elif __linux__ && __i386__
+# define STACK_ALIGN_BYTES 16
+#elif defined(WIN32) && __SSE2__
+/* using sse2 instructions requires 16-byte stack alignment but on win32 there's
+ * no guarantee that libraries preserve alignment so compensate on callback.
+ */
+# define STACK_ALIGN_HACK
 # define STACK_ALIGN_BYTES 16
 #endif
 
@@ -165,7 +172,8 @@ getMostRecentCallbackContext() { return mostRecentCallbackContext; }
  * requirement on platforms using SSE2 such as Mac OS X, and harmless elsewhere.
  *
  * This function's roles are to use setjmp/longjmp to save the call point
- * and return to it, and to return any of the various values from the callback.
+ * and return to it, to correct C stack pointer alignment if necessary (see
+ * STACK_ALIGN_HACK), and to return any of the various values from the callback.
  *
  * Looking forward to support for x86-64, which typically has 6 register
  * arguments, the function would take 8 arguments, the 6 register args as
@@ -184,6 +192,23 @@ thunkEntry(void *thunkp, long *stackp)
 		fprintf(stderr,"Warning; callback failed to own the VM\n");
 		return -1;
 	}
+
+#if defined(STACK_ALIGN_HACK)
+  { void *sp = getsp();
+    int offset = (unsigned long)sp & (STACK_ALIGN_BYTES - 1);
+	if (offset) {
+#if _MSC_VER
+		_asm sub esp, dword ptr offset;
+#elif __GNUC__
+		asm("sub %0,%%esp" : : "m"(offset));
+#else
+# error need to subtract offset from esp
+#endif
+		sp = getsp();
+		assert(!((unsigned long)sp & (STACK_ALIGN_BYTES - 1)));
+	}
+  }
+#endif
 
 	if (!(returnType = setjmp(vmcc.trampoline))) {
 		previousCallbackContext = getRMCC();
