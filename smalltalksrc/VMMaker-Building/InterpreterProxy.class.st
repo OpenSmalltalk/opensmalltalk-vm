@@ -537,6 +537,11 @@ InterpreterProxy >> longAt: accessor put: value [
 	^accessor longAt: 0 put: value
 ]
 
+{ #category : #other }
+InterpreterProxy >> majorVersion [
+	self notYetImplemented
+]
+
 { #category : #'instance creation' }
 InterpreterProxy >> makePointwithxValue: xValue yValue: yValue [
 	(xValue class == SmallInteger and:[yValue class == SmallInteger]) 
@@ -566,6 +571,11 @@ InterpreterProxy >> methodReturnValue: oop [
 	"Sets the return value for a method"
 	self pop: argumentCount+1 thenPush: oop.
 	^0
+]
+
+{ #category : #other }
+InterpreterProxy >> minorVersion [
+	self notYetImplemented
 ]
 
 { #category : #'special objects' }
@@ -715,10 +725,29 @@ InterpreterProxy >> reestablishContextPriorToCallback: callbackContext [
 ]
 
 { #category : #'callback support' }
+InterpreterProxy >> returnAs: returnTypeOop ThroughCallback: vmCallbackContext Context: callbackMethodContext [
+	"callbackMethodContext is an activation of invokeCallback:[stack:registers:jmpbuf:].
+	 Its sender is the VM's state prior to the callback.  Reestablish that state (via longjmp),
+	 and mark callbackMethodContext as dead."
+	self notYetImplemented
+]
+
+{ #category : #'callback support' }
 InterpreterProxy >> sendInvokeCallback: thunkPtr Stack: stackPtr Registers: regsPtr Jmpbuf: jmpBufPtr [
 	"Send the 4 argument callback message invokeCallback:stack:registers:jmpbuf:
 	 to Alien class with the supplied args.  The arguments are raw C addresses
 	 and are converted to integer objects on the way."
+	self notYetImplemented
+]
+
+{ #category : #'callback support' }
+InterpreterProxy >> sendInvokeCallbackContext: vmCallbackContext [
+	"Send the calllback message to Alien class with the supplied arg(s).  Use either the
+	 1 arg invokeCallbackContext: or the 4 arg invokeCallback:stack:registers:jmpbuf:
+	 message, depending on what selector is installed in the specialObjectsArray.
+	 Note that if invoking the legacy invokeCallback:stack:registers:jmpbuf: we pass the
+	 vmCallbackContext as the jmpbuf argument (see reestablishContextPriorToCallback:).
+	 The arguments are raw C addresses and are converted to integer objects on the way."
 	self notYetImplemented
 ]
 

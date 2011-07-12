@@ -469,6 +469,20 @@ VMClass >> longAtPointer: pointer put: longValue [
 	^self longAt: pointer put: longValue
 ]
 
+{ #category : #'simulation support' }
+VMClass >> majorVersion [
+	"This is implemented in sqVirtualMachine.c, so this form is for simulation only."
+	<doNotGenerate>
+	^self class vmProxyMajorVersion
+]
+
+{ #category : #'simulation support' }
+VMClass >> minorVersion [
+	"This is implemented in sqVirtualMachine.c, so this form is for simulation only."
+	<doNotGenerate>
+	^self class vmProxyMinorVersion
+]
+
 { #category : #'oop comparison' }
 VMClass >> oop: anOop isGreaterThan: otherOop [
 	"Compare two oop values, treating them as object memory locations.

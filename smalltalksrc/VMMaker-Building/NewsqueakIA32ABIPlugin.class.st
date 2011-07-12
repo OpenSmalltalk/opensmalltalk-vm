@@ -54,6 +54,11 @@ NewsqueakIA32ABIPlugin class >> moduleName [
 ]
 
 { #category : #translation }
+NewsqueakIA32ABIPlugin class >> prepareToBeAddedToCodeGenerator: aCodeGen [
+	aCodeGen removeMethodForSelector: #setInterpreter:
+]
+
+{ #category : #translation }
 NewsqueakIA32ABIPlugin class >> shouldGenerateTypedefFor: aStructClass [
 	"Hack to work-around mutliple definitions.  Sometimes a type has been defined in an include."
 	^aStructClass ~~ VMCallbackContext
@@ -603,15 +608,17 @@ NewsqueakIA32ABIPlugin >> primReturnFromContextThrough [
 		[interpreterProxy signalNoResume: (interpreterProxy stackValue: 2)] whileFalse].
 	vmCallbackReturnValue := self cCoerceSimple: (self startOfData: (interpreterProxy stackValue: mac))
 									to: #'VMCallbackReturnValue *'..
-
-	(interpreterProxy reestablishContextPriorToCallback: (interpreterProxy stackValue: 1)) ifFalse:
-		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	self cCode: "C needs a typedef for structs to be assigned, but that implies a struct class for just one assignment."
 		[self mem: (self addressOf: vmCallbackContext rvs)
 			cp: (self addressOf: vmCallbackReturnValue crvrvs)
 			y: (self sizeof: vmCallbackContext rvs)]
 		inSmalltalk: [vmCallbackContext rvs: vmCallbackReturnValue crvrvs].
-	self long: vmCallbackContext trampoline jmp: vmCallbackReturnValue type + 1
+	(interpreterProxy
+		returnAs: (interpreterProxy integerObjectOf: vmCallbackReturnValue type + 1)
+		ThroughCallback: vmCallbackContext
+		Context: (interpreterProxy stackValue: 1)) ifFalse:
+			[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	"NOTREACHED"
 ]
 
 { #category : #'primitives-accessing' }
@@ -1158,6 +1165,18 @@ NewsqueakIA32ABIPlugin >> primVarArgsCallOutIntegralReturn [
 		[^interpreterProxy primitiveFailFor: errCode].
 	result := interpreterProxy stackValue: 1.
 	interpreterProxy pop: mac + 1 thenPush: result
+]
+
+{ #category : #initialize }
+NewsqueakIA32ABIPlugin >> setInterpreter: anInterpreter [ 
+	"Note: This is coded so that is can be run from Squeak."
+	| ok |
+	<export: true>
+	<var: #anInterpreter type: #'struct VirtualMachine*'>
+	interpreterProxy := anInterpreter.
+	ok := interpreterProxy majorVersion = 1
+			and: [interpreterProxy minorVersion >= 12].
+	^ok
 ]
 
 { #category : #'private-support' }
