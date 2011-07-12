@@ -7712,7 +7712,9 @@ StackInterpreter >> printOopShortInner: oop [
 	(self isFloatObject: oop) ifTrue:
 		[self printFloat: (self dbgFloatValueOf: oop).
 		 ^nil].
-	classOop := objectMemory fetchClassOf: oop.
+	classOop := objectMemory fetchClassOfNonInt: oop.
+	(objectMemory addressCouldBeObj: classOop) ifFalse:
+		[self print: 'a ??'. ^nil].
 	(objectMemory sizeBitsOf: classOop) = metaclassSizeBytes ifTrue:
 		[self printNameOfClass: oop count: 5.
 		 ^nil].
@@ -8351,6 +8353,9 @@ StackInterpreter >> reestablishContextPriorToCallback: callbackContext [
 	calloutContext := self externalInstVar: SenderIndex ofContext: callbackContext.
 	(self isLiveContext: calloutContext) ifFalse:
 		[^false].
+	"We're about to leave this stack page; must save the current frame's instructionPointer."
+	self push: instructionPointer.
+	self externalWriteBackHeadFramePointers.
 	"Mark callbackContext as dead; the common case is that it is the current frame.
 	 We go the extra mile for the debugger."
 	(self isSingleContext: callbackContext)
@@ -8484,6 +8489,9 @@ StackInterpreter >> returnAs: returnTypeOop ThroughCallback: vmCallbackContext C
 	calloutMethodContext := self externalInstVar: SenderIndex ofContext: callbackMethodContext.
 	(self isLiveContext: calloutMethodContext) ifFalse:
 		[^false].
+	"We're about to leave this stack page; must save the current frame's instructionPointer."
+	self push: instructionPointer.
+	self externalWriteBackHeadFramePointers.
 	"Mark callbackMethodContext as dead; the common case is that it is the current frame.
 	 We go the extra mile for the debugger."
 	(self isSingleContext: callbackMethodContext)
