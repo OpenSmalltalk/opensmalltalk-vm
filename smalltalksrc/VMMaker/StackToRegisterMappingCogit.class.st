@@ -2742,7 +2742,7 @@ StackToRegisterMappingCogit >> initSimStackForFramelessMethod: startpc [
 		isReceiverResultRegLive: true;
 		ssEntry: (self addressOf: simSelf).
 	self assert: (methodOrBlockNumTemps = methodOrBlockNumArgs
-				or: [coInterpreter isQuick: primitiveIndex]).
+				or: [coInterpreter isQuickPrimitiveIndex: primitiveIndex]).
 	self assert: self numRegArgs <= 2.
 	(methodOrBlockNumArgs between: 1 and: self numRegArgs)
 		ifTrue:
