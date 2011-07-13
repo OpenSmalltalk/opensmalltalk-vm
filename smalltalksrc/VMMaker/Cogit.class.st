@@ -399,7 +399,7 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 			aCCodeGenerator removeVariable: simulationVariableNotNeededForRealVM].
 	NewspeakVM ifFalse:
 		[#(	'dynSuperEntry' 'dynSuperEntryAlignment' 'dynamicSuperSendTrampolines'
-			'ceImplicitReceiver' 'ceExplicitReceiver' 'cmDynSuperEntryOffset') do:
+			'ceImplicitReceiverTrampoline' 'ceExplicitReceiverTrampoline' 'cmDynSuperEntryOffset') do:
 				[:variableNotNeededInNormalVM|
 				aCCodeGenerator removeVariable: variableNotNeededInNormalVM]].
 	aCCodeGenerator
@@ -4721,6 +4721,7 @@ Cogit >> generateMissAbortTrampolines [
 
 { #category : #initialization }
 Cogit >> generateNewspeakRuntime [
+	<option: #NewspeakVM>
 	ceExplicitReceiverTrampoline := self genTrampolineFor: #ceExplicitReceiverAt: asSymbol
 												called: 'ceExplicitReceiverTrampoline'
 												arg: SendNumArgsReg
@@ -5839,6 +5840,7 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMet
 
 { #category : #'garbage collection' }
 Cogit >> markLiteralsAndUnlinkIfUnmarkedSendOrPushImplicit: annotation pc: mcpc method: cogMethod [
+	<option: #NewspeakVM>
 	"Mark and trace literals.  Unlink sends that have unmarked cache tags or targets."
 	<var: #mcpc type: #'char *'>
 	| literal cacheTag cacheTagMarked entryPoint targetMethod offset sendTable unlinkedRoutine |
@@ -6676,6 +6678,7 @@ Cogit >> remapIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
 
 { #category : #'garbage collection' }
 Cogit >> remapNSIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
+	<option: #NewspeakVM>
 	<var: #mcpc type: #'char *'>
 	<var: #targetMethod type: #'CogMethod *'>
 	annotation = IsObjectReference ifTrue:
