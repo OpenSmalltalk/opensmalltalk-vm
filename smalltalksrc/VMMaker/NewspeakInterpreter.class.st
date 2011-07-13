@@ -9983,7 +9983,7 @@ NewspeakInterpreter >> sendInvokeCallbackContext: vmCallbackContext [
 	self justActivateNewMethod.
 	relativeSP := stackPointer - activeContext.
 	stackPointer := activeContext + BaseHeaderSize + (ReceiverIndex * BytesPerWord).
-	self cppIf: [BytesPerWord = 8]
+	self cppIf: BytesPerWord = 8
 		ifTrue:
 			[(self argumentCountOf: newMethod) = 4 ifTrue:
 				[self push: (self positive64BitIntegerFor: vmCallbackContext thunkp asUnsignedInteger).

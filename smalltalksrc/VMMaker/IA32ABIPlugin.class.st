@@ -289,7 +289,7 @@ IA32ABIPlugin >> primCallOutFloatReturn [
 	| errCode mac result |
 	<export: true>
 	mac := interpreterProxy methodArgumentCount.
-	self cppIf: [STACKVM]
+	self cppIf: STACKVM
 		ifTrue: "In the STACKVM stacks grow down"
 			[self cCode: 'errCode = callIA32FloatReturn(interpreterProxy->getStackPointer() + mac - 2, /* arg vec */
 														1 - mac	/* nargs */,
@@ -318,7 +318,7 @@ IA32ABIPlugin >> primCallOutIntegralReturn [
 	| errCode mac result |
 	<export: true>
 	mac := interpreterProxy methodArgumentCount.
-	self cppIf: [STACKVM]
+	self cppIf: STACKVM
 		ifTrue: "In the STACKVM stacks grow down"
 			[self cCode: 'errCode = callIA32IntegralReturn(interpreterProxy->getStackPointer() + mac - 2, /* arg vec */
 															1 - mac	/* nargs */,
@@ -362,7 +362,7 @@ IA32ABIPlugin >> primDoubleAt [
 	"Answer the 64-bit double starting at the given byte offset (little endian)."
 	"<Alien> doubleAt: index <Integer> ^<Float>
 		<primitive: 'primDoubleAt' error: errorCode module: 'IA32ABI'>"
-	| byteOffset rcvr addr floatValue |
+	| byteOffset rcvr startAddr addr floatValue |
 	<export: true>
 	<var: #floatValue type:'double '>
 
@@ -372,7 +372,9 @@ IA32ABIPlugin >> primDoubleAt [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 8 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	addr := (self startOfData: rcvr) + byteOffset.
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
 	self cCode:'((long *)(&floatValue))[0] = ((long *)addr)[0]; ((long *)(&floatValue))[1] = ((long *)addr)[1]'
 		inSmalltalk: [floatValue := rcvr doubleAt: byteOffset].
 	interpreterProxy pop: 2.
@@ -384,7 +386,7 @@ IA32ABIPlugin >> primDoubleAtPut [
 	"Store a double into 64 bits starting at the given byte offset (little endian)."
 	"<Alien> doubleAt: index <Integer> put: value <Float | Integer> ^<Float | Integer>
 		<primitive: 'primDoubleAtPut' error: errorCode module: 'IA32ABI'>"
-	| byteOffset rcvr addr valueOop floatValue |
+	| byteOffset rcvr startAddr addr valueOop floatValue |
 	<export: true>
 	<var: #floatValue type: #double>
 
@@ -398,7 +400,9 @@ IA32ABIPlugin >> primDoubleAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 8 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	addr := (self startOfData: rcvr) + byteOffset.
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
 	self cCode:'((int*)addr)[0] = ((int*)(&floatValue))[0]'.
 	self cCode:'((int*)addr)[1] = ((int*)(&floatValue))[1]'.
 	interpreterProxy methodReturnValue: valueOop
@@ -409,7 +413,7 @@ IA32ABIPlugin >> primFloatAt [
 	"Answer the 32-bit float starting at the given byte offset (little endian)."
 	"<Alien> floatAt: index <Integer> ^<Float>
 		<primitive: 'primFloatAt' error: errorCode module: 'IA32ABI'>"
-	| byteOffset rcvr addr floatValue |
+	| byteOffset rcvr startAddr addr floatValue |
 	<export: true>
 	<var: #floatValue type: 'float '>
 
@@ -419,7 +423,9 @@ IA32ABIPlugin >> primFloatAt [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 4 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	addr := (self startOfData: rcvr) + byteOffset.
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
 	self cCode:'((long *)(&floatValue))[0] = ((long *)addr)[0]'
 		inSmalltalk: [floatValue := rcvr floatAt: byteOffset].
 	interpreterProxy pop: 2.
@@ -431,7 +437,7 @@ IA32ABIPlugin >> primFloatAtPut [
 	"Store a float into 32 bits starting at the given byte offset (little endian)."
 	"<Alien> floatAt: index <Integer> put: value <Float | Integer> ^<Float | Integer>
 		<primitive: 'primFloatAtPut' error: errorCode module: 'IA32ABI'>"
-	| byteOffset rcvr addr valueOop floatValue |
+	| byteOffset rcvr startAddr addr valueOop floatValue |
 	<export: true>
 	<var: #floatValue type: #float>
 
@@ -445,7 +451,9 @@ IA32ABIPlugin >> primFloatAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 4 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	addr := (self startOfData: rcvr) + byteOffset.
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
 	self cCode:'((long *)addr)[0] = ((long *)(&floatValue))[0]'.
 	interpreterProxy methodReturnValue: valueOop
 ]
@@ -611,7 +619,7 @@ IA32ABIPlugin >> primSignedByteAt [
 	"Answer the signed 8-bit integer starting at the given byte offset (little endian)."
 	"<Alien> unsignedByteAt: index <Integer> ^<Integer>
 		<primitive: 'primSignedByteAt' error: errorCode module: 'IA32ABI'>"
-	| byteOffset rcvr addr value valueOop |
+	| byteOffset rcvr startAddr addr value valueOop |
 	<export: true>
 	<var: #value type: 'signed char '>
 
@@ -621,7 +629,9 @@ IA32ABIPlugin >> primSignedByteAt [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 1 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	addr := (self startOfData: rcvr) + byteOffset.
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
 	value := self byteAt: addr.
 	valueOop := interpreterProxy signed32BitIntegerFor: value.
 	^interpreterProxy methodReturnValue: valueOop
@@ -632,7 +642,7 @@ IA32ABIPlugin >> primSignedByteAtPut [
 	"Store a signed integer into 8 bits starting at the given byte offset (little endian)."
 	"<Alien> signedByteAt: index <Integer> put: value <Integer> ^<Integer>
 		<primitive: 'primSignedByteAtPut' error: errorCode module: 'IA32ABI'>"
-	| byteOffset rcvr addr value valueOop |
+	| byteOffset rcvr startAddr addr value valueOop |
 	<export: true>
 
 	valueOop := interpreterProxy stackValue: 0.
@@ -645,7 +655,9 @@ IA32ABIPlugin >> primSignedByteAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 1 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	addr := (self startOfData: rcvr) + byteOffset.
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
 	self byteAt: addr put: value.
 	^interpreterProxy methodReturnValue: valueOop
 ]
@@ -655,7 +667,7 @@ IA32ABIPlugin >> primSignedLongAt [
 	"Answer the signed 32-bit integer starting at the given byte offset (little endian)."
 	"<Alien> signedLongAt: index <Integer> ^<Integer>
 		<primitive: 'primSignedLongAt' error: errorCode module: 'IA32ABI'>"
-	| byteOffset rcvr addr value valueOop |
+	| byteOffset rcvr startAddr addr value valueOop |
 	<export: true>
 
 	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
@@ -664,7 +676,9 @@ IA32ABIPlugin >> primSignedLongAt [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 4 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	addr := (self startOfData: rcvr) + byteOffset.
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
 	value := self longAt: addr.
 	valueOop := interpreterProxy signed32BitIntegerFor: value.
 	^interpreterProxy methodReturnValue: valueOop
@@ -675,7 +689,7 @@ IA32ABIPlugin >> primSignedLongAtPut [
 	"Store a signed integer into 32 bits starting at the given byte offset (little endian)."
 	"<Alien> signedLongAt: index <Integer> put: value <Integer> ^<Integer>
 		<primitive: 'primSignedLongAtPut' error: errorCode module: 'IA32ABI'>"
-	| byteOffset rcvr addr value valueOop |
+	| byteOffset rcvr startAddr addr value valueOop |
 	<export: true>
 
 	valueOop := interpreterProxy stackValue: 0.
@@ -686,7 +700,9 @@ IA32ABIPlugin >> primSignedLongAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 4 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	addr := (self startOfData: rcvr) + byteOffset.
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
 	self longAt: addr put: value.
 	^interpreterProxy methodReturnValue: valueOop
 ]
@@ -696,7 +712,7 @@ IA32ABIPlugin >> primSignedLongLongAt [
 	"Answer the signed 64-bit integer starting at the given byte offset (little endian)."
 	"<Alien> signedLongLongAt: index <Integer> ^<Integer>
 		<primitive: 'primSignedLongLongAt' error: errorCode module: 'IA32ABI'>"
-	| byteOffset rcvr addr valueOop signedlonglongvaluePtr signedlonglongvalue |
+	| byteOffset rcvr startAddr addr valueOop signedlonglongvaluePtr signedlonglongvalue |
 	<export: true>
 	<var: 'signedlonglongvalue' declareC: 'long long signedlonglongvalue'>
 	<var: 'signedlonglongvaluePtr' declareC: 'long long *signedlonglongvaluePtr'>
@@ -709,7 +725,9 @@ IA32ABIPlugin >> primSignedLongLongAt [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 8 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	addr := (self startOfData: rcvr) + byteOffset.
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
 	signedlonglongvaluePtr := self cCoerce: addr to: 'long long*'.
 	signedlonglongvalue := self cCode: '*signedlonglongvaluePtr'.
 	valueOop := interpreterProxy signed64BitIntegerFor: signedlonglongvalue.
@@ -721,7 +739,7 @@ IA32ABIPlugin >> primSignedLongLongAtPut [
 	"Store a signed integer into 64 bits starting at the given byte offset (little endian)."
 	"<Alien> signedLongLongAt: index <Integer> put: value <Integer> ^<Integer>
 		<primitive: 'primSignedLongLongAtPut' error: errorCode module: 'IA32ABI'>"
-	| byteOffset rcvr addr valueOop signedlonglongvalue signedlonglongvaluePtr |
+	| byteOffset rcvr startAddr addr valueOop signedlonglongvalue signedlonglongvaluePtr |
 	<export: true>
 	<var: 'signedlonglongvalue' declareC: 'long long signedlonglongvalue'>
 	<var: 'signedlonglongvaluePtr' declareC: 'long long *signedlonglongvaluePtr'>
@@ -737,7 +755,9 @@ IA32ABIPlugin >> primSignedLongLongAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 8 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	addr := (self startOfData: rcvr) + byteOffset.
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
 	signedlonglongvaluePtr := self cCoerce: addr to: 'long long*'.
 	self cCode: '*signedlonglongvaluePtr = signedlonglongvalue'.
 	^interpreterProxy methodReturnValue: valueOop
@@ -748,7 +768,7 @@ IA32ABIPlugin >> primSignedShortAt [
 	"Answer the signed 32-bit integer starting at the given byte offset (little endian)."
 	"<Alien> signedShortAt: index <Integer> ^<Integer>
 		<primitive: 'primSignedShortAt' error: errorCode module: 'IA32ABI'>"
-	| byteOffset rcvr addr value valueOop |
+	| byteOffset rcvr startAddr addr value valueOop |
 	<export: true>
 	<var: #value type: 'short '>
 
@@ -758,7 +778,9 @@ IA32ABIPlugin >> primSignedShortAt [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 2 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	addr := (self startOfData: rcvr) + byteOffset.
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
 	value := self shortAt: addr.
 	valueOop := interpreterProxy signed32BitIntegerFor: value.
 	^interpreterProxy methodReturnValue: valueOop
@@ -769,7 +791,7 @@ IA32ABIPlugin >> primSignedShortAtPut [
 	"Store a signed integer into 16 bits starting at the given byte offset (little endian)."
 	"<Alien> signedShortAt: index <Integer> put: value <Integer> ^<Integer>
 		<primitive: 'primSignedShortAtPut' error: errorCode module: 'IA32ABI'>"
-	| byteOffset rcvr addr value valueOop |
+	| byteOffset rcvr startAddr addr value valueOop |
 	<export: true>
 
 	valueOop := interpreterProxy stackValue: 0.
@@ -782,7 +804,9 @@ IA32ABIPlugin >> primSignedShortAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 2 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	addr := (self startOfData: rcvr) + byteOffset.
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
 	self shortAt: addr put: value.
 	^interpreterProxy methodReturnValue: valueOop
 ]
@@ -887,7 +911,7 @@ IA32ABIPlugin >> primUnsignedByteAt [
 	"Answer the unsigned 8-bit integer starting at the given byte offset (little endian)."
 	"<Alien> unsignedByteAt: index <Integer> ^<Integer>
 		<primitive: 'primUnsignedByteAt' error: errorCode module: 'IA32ABI'>"
-	| byteOffset rcvr addr value valueOop |
+	| byteOffset rcvr startAddr addr value valueOop |
 	<export: true>
 	<var: #value type: 'unsigned char '>
 
@@ -897,7 +921,9 @@ IA32ABIPlugin >> primUnsignedByteAt [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 1 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	addr := (self startOfData: rcvr) + byteOffset.
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
 	value := self byteAt: addr.
 	valueOop := interpreterProxy positive32BitIntegerFor: value.
 	^interpreterProxy methodReturnValue: valueOop
@@ -908,7 +934,7 @@ IA32ABIPlugin >> primUnsignedByteAtPut [
 	"Store an unsigned integer into 8 bits starting at the given byte offset (little endian)."
 	"<Alien> unsignedByteAt: index <Integer> put: value <Integer> ^<Integer>
 		<primitive: 'primUnsignedByteAtPut' error: errorCode module: 'IA32ABI'>"
-	| byteOffset rcvr addr value valueOop |
+	| byteOffset rcvr startAddr addr value valueOop |
 	<export: true>
 
 	valueOop := interpreterProxy stackValue: 0.
@@ -920,7 +946,9 @@ IA32ABIPlugin >> primUnsignedByteAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 1 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	addr := (self startOfData: rcvr) + byteOffset.
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
 	self byteAt: addr put: value.
 	^interpreterProxy methodReturnValue: valueOop
 ]
@@ -930,7 +958,7 @@ IA32ABIPlugin >> primUnsignedLongAt [
 	"Answer the unsigned 32-bit integer starting at the given byte offset (little endian)."
 	"<Alien> unsignedLongAt: index <Integer> ^<Integer>
 		<primitive: 'primUnsignedLongAt' error: errorCode module: 'IA32ABI'>"
-	| byteOffset rcvr addr value valueOop |
+	| byteOffset rcvr startAddr addr value valueOop |
 	<export: true>
 
 	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
@@ -939,7 +967,9 @@ IA32ABIPlugin >> primUnsignedLongAt [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 4 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	addr := (self startOfData: rcvr) + byteOffset.
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
 	value := self longAt: addr.
 	valueOop := interpreterProxy positive32BitIntegerFor: value.
 	^interpreterProxy methodReturnValue: valueOop
@@ -950,7 +980,7 @@ IA32ABIPlugin >> primUnsignedLongAtPut [
 	"Store an unsigned integer into 32 bits starting at the given byte offset (little endian)."
 	"<Alien> unsignedLongAt: index <Integer> put: value <Integer> ^<Integer>
 		<primitive: 'primUnsignedLongAtPut' error: errorCode module: 'IA32ABI'>"
-	| byteOffset rcvr addr value valueOop |
+	| byteOffset rcvr startAddr addr value valueOop |
 	<export: true>
 
 	valueOop := interpreterProxy stackValue: 0.
@@ -961,7 +991,9 @@ IA32ABIPlugin >> primUnsignedLongAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 4 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	addr := (self startOfData: rcvr) + byteOffset.
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
 	self longAt: addr put: value.
 	^interpreterProxy methodReturnValue: valueOop
 ]
@@ -971,7 +1003,7 @@ IA32ABIPlugin >> primUnsignedLongLongAt [
 	"Answer the unsigned 64-bit integer starting at the given byte offset (little endian)."
 	"<Alien>unsignedLongLongAt: index <Integer> ^<Integer>
 		<primitive: 'primUnsignedLongLongAt' error: errorCode module: 'IA32ABI'>"
-	| byteOffset rcvr addr valueOop unsignedlonglongvaluePtr unsignedlonglongvalue |
+	| byteOffset rcvr startAddr addr valueOop unsignedlonglongvaluePtr unsignedlonglongvalue |
 	<export: true>
 	<var: 'unsignedlonglongvalue' declareC: 'unsigned long long unsignedlonglongvalue'>
 	<var: 'unsignedlonglongvaluePtr' declareC: 'unsigned long long *unsignedlonglongvaluePtr'>
@@ -984,7 +1016,9 @@ IA32ABIPlugin >> primUnsignedLongLongAt [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 8 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	addr := (self startOfData: rcvr) + byteOffset.
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
 	unsignedlonglongvaluePtr := self cCoerce: addr to: 'unsigned long long*'.
 	unsignedlonglongvalue := self cCode: '*unsignedlonglongvaluePtr'.
 	valueOop := interpreterProxy positive64BitIntegerFor: unsignedlonglongvalue.
@@ -996,7 +1030,7 @@ IA32ABIPlugin >> primUnsignedLongLongAtPut [
 	"Store a signed integer into 64 bits starting at the given byte offset (little endian)."
 	"<Alien> unsignedLongLongAt: index <Integer> put: value <Integer> ^<Integer>
 		<primitive: 'primUnSignedLongLongAtPut' error: errorCode module: 'IA32ABI'>"
-	| byteOffset rcvr addr valueOop unsignedlonglongvalue unsignedlonglongvaluePtr |
+	| byteOffset rcvr startAddr addr valueOop unsignedlonglongvalue unsignedlonglongvaluePtr |
 	<export: true>
 	<var: 'unsignedlonglongvalue' declareC: 'unsigned long long unsignedlonglongvalue'>
 	<var: 'unsignedlonglongvaluePtr' declareC: 'unsigned long long *unsignedlonglongvaluePtr'>
@@ -1013,7 +1047,9 @@ IA32ABIPlugin >> primUnsignedLongLongAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 8 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	addr := (self startOfData: rcvr) + byteOffset.
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
 	unsignedlonglongvaluePtr := self cCoerce: addr to: 'unsigned long long*'.
 	self cCode: '*unsignedlonglongvaluePtr = unsignedlonglongvalue'.
 	^interpreterProxy methodReturnValue: valueOop
@@ -1024,7 +1060,7 @@ IA32ABIPlugin >> primUnsignedShortAt [
 	"Answer the unsigned 16-bit integer starting at the given byte offset (little endian)."
 	"<Alien> unsignedShortAt: index <Integer> ^<Integer>
 		<primitive: 'primUnsignedShortAt' error: errorCode module: 'IA32ABI'>"
-	| byteOffset rcvr addr value valueOop |
+	| byteOffset rcvr startAddr addr value valueOop |
 	<export: true>
 	<var: #value type: 'unsigned short'>
 
@@ -1034,7 +1070,9 @@ IA32ABIPlugin >> primUnsignedShortAt [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 2 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	addr := (self startOfData: rcvr) + byteOffset.
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
 	value := self shortAt: addr.
 	valueOop := interpreterProxy positive32BitIntegerFor: value.
 	^interpreterProxy methodReturnValue: valueOop
@@ -1045,7 +1083,7 @@ IA32ABIPlugin >> primUnsignedShortAtPut [
 	"Store an unsigned integer into 16 bits starting at the given byte offset (little endian)."
 	"<Alien> unsignedShortAt: index <Integer> put: value <Integer> ^<Integer>
 		<primitive: 'primUnsignedShortAtPut' error: errorCode module: 'IA32ABI'>"
-	| byteOffset rcvr addr value valueOop |
+	| byteOffset rcvr startAddr addr value valueOop |
 	<export: true>
 
 	valueOop := interpreterProxy stackValue: 0.
@@ -1057,7 +1095,9 @@ IA32ABIPlugin >> primUnsignedShortAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 2 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	addr := (self startOfData: rcvr) + byteOffset.
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
 	self shortAt: addr put: value.
 	^interpreterProxy methodReturnValue: valueOop
 ]
