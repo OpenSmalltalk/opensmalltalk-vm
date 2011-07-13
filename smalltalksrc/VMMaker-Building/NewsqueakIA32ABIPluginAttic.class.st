@@ -83,7 +83,7 @@ NewsqueakIA32ABIPluginAttic >> primCallOutDoubleReturnAnywhere [
 	mac := interpreterProxy methodArgumentCount.
 	(self isAlien:  (interpreterProxy stackValue: mac - 2)) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	self cppIf: [STACKVM]
+	self cppIf: STACKVM
 		ifTrue: "In the STACKVM stacks grow down"
 			[self cCode: 'errCode = callIA32DoubleReturn(interpreterProxy->getStackPointer() + mac - 3, /* arg vec */
 															2 - mac	/* nargs */,
@@ -114,7 +114,7 @@ NewsqueakIA32ABIPluginAttic >> primCallOutFloatReturnAnywhere [
 	mac := interpreterProxy methodArgumentCount.
 	(self isAlien: (interpreterProxy stackValue: mac - 2)) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	self cppIf: [STACKVM]
+	self cppIf: STACKVM
 		ifTrue: "In the STACKVM stacks grow down"
 			[self cCode: 'errCode = callIA32FloatReturn(interpreterProxy->getStackPointer() + mac - 3, /* arg vec */
 															2 - mac	/* nargs */,
@@ -145,7 +145,7 @@ NewsqueakIA32ABIPluginAttic >> primCallOutIntegralReturnAnywhere [
 	mac := interpreterProxy methodArgumentCount.
 	(self isAlien:  (interpreterProxy stackValue: mac - 2)) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	self cppIf: [STACKVM]
+	self cppIf: STACKVM
 		ifTrue: "In the STACKVM stacks grow down"
 			[self cCode: 'errCode = callIA32IntegralReturn(interpreterProxy->getStackPointer() + mac - 3, /* arg vec */
 															2 - mac	/* nargs */,

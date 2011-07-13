@@ -2710,12 +2710,15 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 	<var: #cogMethod type: #'CogMethod *'>
 	self assert: ((coInterpreter methodHasCogMethod: aMethodObj) not
 				or: [(coInterpreter methodClassAssociationOf: aMethodObj) = objectMemory nilObject]).
-	methodObj := aMethodObj.
 	"coInterpreter stringOf: aSelectorOop"
 	coInterpreter
 		compilationBreak: aSelectorOop
 		point: (objectMemory lengthOf: aSelectorOop).
 	aMethodObj = breakMethod ifTrue: [self halt: 'Compilation of breakMethod'].
+	self cppIf: NewspeakVM
+		ifTrue: [cogMethod := methodZone findPreviouslyCompiledVersionOf: aMethodObj with: aSelectorOop.
+				cogMethod ifNotNil: [^cogMethod]].
+	methodObj := aMethodObj.
 	cogMethod := self compileCogMethod: aSelectorOop.
 	(cogMethod asInteger between: MaxNegativeErrorCode and: -1) ifTrue:
 		[cogMethod asInteger = InsufficientCodeSpace

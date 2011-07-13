@@ -914,7 +914,7 @@ ObjectMemory >> byteSwapped: w [
 	"Answer the given integer with its bytes in the reverse order."
 	<api>
 	<returnTypeC: #sqInt>
-	self cppIf: [BytesPerWord = 4]
+	self cppIf: BytesPerWord = 4
 		ifTrue:
 			[^ ((w bitShift: Byte3ShiftNegated) bitAnd: Byte0Mask)
 			 + ((w bitShift: Byte1ShiftNegated) bitAnd: Byte1Mask)
