@@ -1762,7 +1762,7 @@ SimpleStackBasedCogit >> genPrimitiveSubtract [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPushActiveContextBytecode [
 	self assert: needsFrame.
-	self CallRT: cePushActiveContextTrampoline.
+	self CallRT: ceActiveContextTrampoline.
 	self PushR: ReceiverResultReg.
 	^0
 ]
@@ -1836,7 +1836,7 @@ SimpleStackBasedCogit >> genPushImplicitReceiverBytecode [
 	(objectMemory isYoung: selector) ifTrue:
 		[hasYoungReferent := true].
 	self assert: needsFrame.
-	self MoveCw: selector R: ClassReg.
+	self MoveCw: selector R: SendNumArgsReg.
 	self CallNewspeakSend: ceImplicitReceiverTrampoline.
 	skip := self Jump: 0.
 	self Fill32: 0.

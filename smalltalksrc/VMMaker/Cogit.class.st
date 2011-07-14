@@ -195,7 +195,7 @@ Class {
 		'cePrimReturnEnterCogCode',
 		'cePrimReturnEnterCogCodeProfiling',
 		'ceNonLocalReturnTrampoline',
-		'cePushActiveContextTrampoline',
+		'ceActiveContextTrampoline',
 		'ceFetchContextInstVarTrampoline',
 		'ceStoreContextInstVarTrampoline',
 		'cePositive32BitIntegerTrampoline',
@@ -217,6 +217,8 @@ Class {
 		'realCEEnterCogCodePopReceiverAndClassRegs',
 		'trampolineTableIndex',
 		'trampolineAddresses',
+		'objectReferencesInRuntime',
+		'runtimeObjectRefIndex',
 		'cFramePointerInUse',
 		'debugPrimCallStackOffset',
 		'ceTryLockVMOwner',
@@ -248,6 +250,7 @@ Class {
 		'MaxNegativeErrorCode',
 		'MaxUnitDisplacement',
 		'MaxX2NDisplacement',
+		'NumObjRefsInRuntime',
 		'NumSendTrampolines',
 		'NumTrampolines',
 		'ProcessorClass'
@@ -462,6 +465,8 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 			declareC: 'sqInt dynamicSuperSendTrampolines[NumSendTrampolines]';
 		var: #trampolineAddresses
 			declareC: 'static char *trampolineAddresses[NumTrampolines*2]';
+		var: #objectReferencesInRuntime
+			declareC: 'static sqInt objectReferencesInRuntime[NumObjRefsInRuntime]';
 		var: #cePositive32BitIntegerTrampoline
 			declareC: 'static sqInt cePositive32BitIntegerTrampoline';
 		var: #labelCounter
@@ -679,7 +684,10 @@ Cogit class >> initializeMiscConstantsWith: optionsDictionary [
 
 	NewspeakVM := optionsDictionary at: #NewspeakVM ifAbsent: [false].
 	"N.B.  Not yet implemented!!"
-	IMMUTABILITY := optionsDictionary at: #IMMUTABILITY ifAbsent: [false]
+	IMMUTABILITY := optionsDictionary at: #IMMUTABILITY ifAbsent: [false].
+
+	"Currently only the ceImplicitReceiverTrampoline contains object references."
+	NumObjRefsInRuntime := 2
 ]
 
 { #category : #'class initialization' }
@@ -2318,6 +2326,33 @@ Cogit >> ceImplicitReceiverFor: selector [
 	^mixin = 0 ifTrue: [receiver] ifFalse: [mixin]
 ]
 
+{ #category : #'in-line cacheing' }
+Cogit >> ceImplicitReceiverFor: selector receiver: receiver class: rcvrClass [
+	"Cached implicit receiver implementation.  Caller looks like
+		mov selector, ClassReg
+				call ceImplicitReceiver
+				br continue
+		Lclass	.word
+		Lmixin:	.word
+		continue:
+	 The trampoline has already fetched the class and probed the cache and found
+	 that the cache missed.  Compute the implicit receiver for the receiver's class
+	 and reload the class."
+
+	| retpc classpc mixinpc mixin |
+	retpc := coInterpreter stackTop.
+	classpc := retpc + backEnd jumpShortByteSize.
+	mixinpc := retpc + backEnd jumpShortByteSize + BytesPerOop.
+	self assert: rcvrClass ~= (backEnd unalignedLongAt: classpc).
+	mixin := coInterpreter
+				implicitReceiverFor: receiver
+				mixin: coInterpreter mMethodClass
+				implementing: selector.
+	 backEnd unalignedLongAt: classpc put: rcvrClass.
+	 backEnd unalignedLongAt: mixinpc put: (mixin = receiver ifTrue: [0] ifFalse: [mixin]).
+	 ^mixin
+]
+
 { #category : #accessing }
 Cogit >> cePositive32BitIntegerTrampoline [
 	<cmacro: '() cePositive32BitIntegerTrampoline'>
@@ -3654,6 +3689,34 @@ Cogit >> dynSuperEntryOffset [
 	^cmDynSuperEntryOffset
 ]
 
+{ #category : #'simulation only' }
+Cogit >> endPCOf: aMethod [
+	| pc end latestContinuation descriptor prim distance targetPC byte |
+	pc := latestContinuation := coInterpreter startPCOfMethod: aMethod.
+	(prim := coInterpreter primitiveIndexOf: aMethod) > 0 ifTrue:
+		[(coInterpreter isQuickPrimitiveIndex: prim) ifTrue:
+			[^pc - 1]].
+	end := objectMemory byteSizeOf: aMethod.
+	[pc <= end] whileTrue:
+		[byte := objectMemory fetchByte: pc ofObject: aMethod.
+		descriptor := self generatorAt: byte.
+		(descriptor isReturn
+		 and: [pc >= latestContinuation]) ifTrue:
+			[end := pc].
+		descriptor isBranch ifTrue:
+			[distance := self spanFor: descriptor at: pc byte0: byte in: aMethod.
+			 targetPC := pc + descriptor numBytes + distance.
+			 descriptor isBackwardBranch ifFalse:
+				[latestContinuation := latestContinuation max: targetPC]].
+		descriptor isBlockCreation ifTrue:
+			[distance := self spanFor: descriptor at: pc byte0: byte in: aMethod.
+			 targetPC := pc + descriptor numBytes + distance.
+			 latestContinuation := latestContinuation max: targetPC.
+			 pc := pc + distance].
+		pc := pc + descriptor numBytes].
+	^end
+]
+
 { #category : #'compile abstract instructions' }
 Cogit >> ensureFixupAt: targetIndex [
 	"Make sure there's a flagged fixup at the targetIndex (pc relative to first pc) in fixups.
@@ -3988,6 +4051,31 @@ Cogit >> gen: opcode "<Integer>" operand: operandOne "<Integer|CogAbstractInstru
 ]
 
 { #category : #initialization }
+Cogit >> genActiveContextTrampoline [
+	"Short-circuit the interpreter call if a frame is already married."
+	| jumpSingle |
+	<var: #jumpSingle type: #'AbstractInstruction *'>
+	opcodeIndex := 0.
+	self MoveMw: FoxMethod r: FPReg R: TempReg.
+	self AndCq: MFMethodFlagHasContextFlag R: TempReg.
+	jumpSingle := self JumpZero: 0.
+	self MoveMw: FoxThisContext r: FPReg R: ReceiverResultReg.
+	self RetN: 0.
+	jumpSingle jmpTarget: self Label.
+	^self genTrampolineFor: #ceActiveContext asSymbol
+		called: 'ceActiveContextTrampoline'
+		callJumpBar: true
+		numArgs: 0
+		arg: nil
+		arg: nil
+		arg: nil
+		arg: nil
+		saveRegs: false
+		resultReg: ReceiverResultReg
+		appendOpcodes: true
+]
+
+{ #category : #initialization }
 Cogit >> genCheckForInterruptsTrampoline [
 	opcodeIndex := 0.
 	self PopR: TempReg. "instruction pointer"
@@ -4239,31 +4327,6 @@ Cogit >> genPICAbortTrampoline [
 ]
 
 { #category : #initialization }
-Cogit >> genPushActiveContextTrampoline [
-	"Short-circuit the trampoline if a frame is already married."
-	| jumpSingle |
-	<var: #jumpSingle type: #'AbstractInstruction *'>
-	opcodeIndex := 0.
-	self MoveMw: FoxMethod r: FPReg R: TempReg.
-	self AndCq: MFMethodFlagHasContextFlag R: TempReg.
-	jumpSingle := self JumpZero: 0.
-	self MoveMw: FoxThisContext r: FPReg R: ReceiverResultReg.
-	self RetN: 0.
-	jumpSingle jmpTarget: self Label.
-	^self genTrampolineFor: #cePushActiveContext asSymbol
-		called: 'cePushActiveContextTrampoline'
-		callJumpBar: true
-		numArgs: 0
-		arg: nil
-		arg: nil
-		arg: nil
-		arg: nil
-		saveRegs: false
-		resultReg: ReceiverResultReg
-		appendOpcodes: true
-]
-
-{ #category : #initialization }
 Cogit >> genSafeTrampolineFor: aRoutine called: aString arg: regOrConst0 [
 	"Generate a trampoline with one argument that will
 	 save and restore all registers around the call"
@@ -4493,6 +4556,7 @@ Cogit >> genTrampolineFor: aRoutine called: trampolineName callJumpBar: callJump
 		resultReg: resultRegOrNil.
 	self outputInstructionsForGeneratedRuntimeAt: startAddress.
 	self recordGeneratedRunTime: trampolineName address: startAddress.
+	self recordRunTimeObjectReferences.
 	^startAddress
 ]
 
@@ -4722,6 +4786,11 @@ Cogit >> generateMissAbortTrampolines [
 { #category : #initialization }
 Cogit >> generateNewspeakRuntime [
 	<option: #NewspeakVM>
+	| jumpMiss jumpItsTheReceiverStupid |
+	<var: #jumpMiss type: #'AbstractInstruction *'>
+	<var: #jumpItsTheReceiverStupid type: #'AbstractInstruction *'>
+	"Generate the non-send runtime support for Newspeak, explicit outer and implicit receiver.
+	 The dynamic frequency of explicit outer is so low we merely cann an interpreter routine."
 	ceExplicitReceiverTrampoline := self genTrampolineFor: #ceExplicitReceiverAt: asSymbol
 												called: 'ceExplicitReceiverTrampoline'
 												arg: SendNumArgsReg
@@ -4734,11 +4803,33 @@ Cogit >> generateNewspeakRuntime [
 		Lmixin:	.word
 		continue:
 	 If class matches class of receiver then mixin contains either 0 or the implicit receiver.
-	 If 0, push the actual receiver."
-	ceImplicitReceiverTrampoline := self genTrampolineFor: #ceImplicitReceiverFor: asSymbol
-												called: 'ceImplicitReceiverTrampoline'
-												arg: ClassReg
-												result: ReceiverResultReg
+	 If 0, answer the actual receiver, otherwise the mixin.
+	 Generate the class fetch and cache probe inline for speed. Smashes Arg0Reg and caller-saved regs."
+	opcodeIndex := 0.
+	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
+	objectRepresentation genGetClassObjectOf: ReceiverResultReg into: ClassReg scratchReg: TempReg.
+	self MoveMw: 0 r: SPReg R: TempReg.
+	self MoveMw: backEnd jumpShortByteSize r: TempReg R: Arg0Reg.
+	self CmpR: ClassReg R: Arg0Reg.
+	jumpMiss := self JumpNonZero: 0.
+	self MoveMw: backEnd jumpShortByteSize + BytesPerOop r: TempReg R: ClassReg.
+	self CmpCq: 0 R: ClassReg.
+	jumpItsTheReceiverStupid := self JumpZero: 0.
+	self MoveR: ClassReg R: ReceiverResultReg.
+	jumpItsTheReceiverStupid jmpTarget: (self RetN: 0).
+	jumpMiss jmpTarget: self Label.
+	ceImplicitReceiverTrampoline := self
+										genTrampolineFor: #ceImplicitReceiverFor:receiver:class: asSymbol
+										called: 'ceImplicitReceiverTrampoline'
+										callJumpBar: true
+										numArgs: 3
+										arg: SendNumArgsReg
+										arg: ReceiverResultReg
+										arg: ClassReg
+										arg: nil
+										saveRegs: false
+										resultReg: ReceiverResultReg
+										appendOpcodes: true
 ]
 
 { #category : #initialization }
@@ -4778,7 +4869,7 @@ Cogit >> generateRunTimeTrampolines [
 									called: 'ceClosureCopyTrampoline'
 									arg: SendNumArgsReg
 									result: ReceiverResultReg.
-	cePushActiveContextTrampoline := self genPushActiveContextTrampoline.
+	ceActiveContextTrampoline := self genActiveContextTrampoline.
 	ceNonLocalReturnTrampoline := self genNonLocalReturnTrampoline.
 	ceBaseFrameReturnTrampoline := self genTrampolineFor: #ceBaseFrameReturn: asSymbol
 										called: 'ceBaseFrameReturnTrampoline'
@@ -4896,10 +4987,10 @@ Cogit >> generateTrampolines [
 	 Read the class-side method trampolines for documentation on the various trampolines"
 	| methodZoneStart |
 	methodZoneStart := methodZoneBase.
-	self allocateOpcodes: 32 bytecodes: 0.
+	self allocateOpcodes: 40 bytecodes: 0.
 	initialPC := 0.
 	endPC := numAbstractOpcodes - 1.
-
+	hasYoungReferent := false.
 	self generateSendTrampolines.
 	self generateMissAbortTrampolines.
 	self generateRunTimeTrampolines.
@@ -5601,6 +5692,19 @@ Cogit >> mapObjectReferencesInClosedPIC: cPIC [
 	^false
 ]
 
+{ #category : #'garbage collection' }
+Cogit >> mapObjectReferencesInGeneratedRuntime [
+	"Update all references to objects in the generated runtime."
+	0 to: runtimeObjectRefIndex - 1 do:
+		[:i| | mcpc literal mappedLiteral |
+		 mcpc := objectReferencesInRuntime at: i.
+		 literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
+		 mappedLiteral := objectMemory remap: literal.
+		 mappedLiteral ~= literal ifTrue:
+			[backEnd storeLiteral: mappedLiteral beforeFollowingAddress: mcpc.
+			 codeModified := true]]
+]
+
 { #category : #'jit - api' }
 Cogit >> mapObjectReferencesInMachineCode: inFullGC [
 	<api>
@@ -5616,6 +5720,7 @@ Cogit >> mapObjectReferencesInMachineCodeForFullGC [
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
 	codeModified := false.
+	self mapObjectReferencesInGeneratedRuntime.
 	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
 	[cogMethod < methodZone limitZony] whileTrue:
 		[cogMethod cmType ~= CMFree ifTrue:
@@ -5639,7 +5744,7 @@ Cogit >> mapObjectReferencesInMachineCodeForFullGC [
 		cogMethod := methodZone methodAfter: cogMethod].
 	methodZone pruneYoungReferrers.
 	codeModified ifTrue: "After updating oops in inline caches we need to flush the icache."
-		[processor flushICacheFrom: methodZoneBase to: methodZone limitZony asInteger]
+		[processor flushICacheFrom: codeBase to: methodZone limitZony asInteger]
 ]
 
 { #category : #'garbage collection' }
@@ -5737,6 +5842,26 @@ Cogit >> markAndTraceMachineCodeForIncrementalGC [
 ]
 
 { #category : #'jit - api' }
+Cogit >> markAndTraceObjectReferencesInGeneratedRuntime [
+	"Mark and trace any object references in the generated run-time."
+	0 to: runtimeObjectRefIndex - 1 do:
+		[:i| | mcpc literal |
+		 mcpc := objectReferencesInRuntime at: i.
+		 literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
+		 objectRepresentation markAndTraceLiteral: literal]
+]
+
+{ #category : #'jit - api' }
+Cogit >> markAndTraceObjectReferencesInMachineCode [
+	"Mark and trace any object references in the generated run-time."
+	0 to: runtimeObjectRefIndex - 1 do:
+		[:i| | mcpc literal |
+		 mcpc := objectReferencesInRuntime at: i.
+		 literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
+		 objectRepresentation markAndTraceLiteral: literal]
+]
+
+{ #category : #'jit - api' }
 Cogit >> markAndTraceObjectsOrFreeMachineCode: inFullGC [
 	<api>
 	inFullGC
@@ -5793,6 +5918,7 @@ Cogit >> markAndTraceOrFreeMachineCodeForFullGC [
 	objectMemory leakCheckFullGC ifTrue:
 		[self assert: self allMachineCodeObjectReferencesValid].
 	codeModified := false.
+	self markAndTraceObjectReferencesInGeneratedRuntime.
 	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
 	[cogMethod < methodZone limitZony] whileTrue:
 		[self markAndTraceOrFreeCogMethod: cogMethod firstVisit: true.
@@ -6518,6 +6644,25 @@ Cogit >> recordRegisters [
 	"self recordInstruction: processor registerState"
 ]
 
+{ #category : #initialization }
+Cogit >> recordRunTimeObjectReferences [
+	| annotation |
+	<var: #annotation type: #'InstructionAnnotation *'>
+	0 to: annotationIndex - 1 do:
+		[:i|
+		annotation := self addressOf: (annotations at: i).
+		annotation annotation = IsObjectReference ifTrue:
+			[self assert: runtimeObjectRefIndex < NumObjRefsInRuntime.
+			 self assert: hasYoungReferent not.
+			 hasYoungReferent ifTrue:
+				[self error: 'attempt to generate run-time routine containing young object reference.  Cannot initialize Cogit run-time.'].
+			 objectReferencesInRuntime
+				at: runtimeObjectRefIndex
+				put: (annotation instruction address + annotation instruction machineCodeSize) asInteger.
+			 runtimeObjectRefIndex := runtimeObjectRefIndex + 1]].
+	annotationIndex := 0
+]
+
 { #category : #debugging }
 Cogit >> recordSendTrace [
 	<api>
@@ -6919,6 +7064,9 @@ Cogit >> setInterpreter: aCoInterpreter [
 	NewspeakVM ifTrue:
 		[dynamicSuperSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines)].
 	"debug metadata"
+	objectReferencesInRuntime := CArrayAccessor on: (Array new: NumObjRefsInRuntime).
+	runtimeObjectRefIndex := 0.
+	"debug metadata"
 	trampolineAddresses := CArrayAccessor on: (Array new: NumTrampolines * 2).
 	trampolineTableIndex := 0.
 
@@ -7248,7 +7396,7 @@ Cogit >> testBcToMcPcMappingForMethod: cogMethod [
 	aMethodObj := cogMethod methodObject.
 	subMethods := self subMethodsAsRangesFor: cogMethod.
 	currentSubMethod := subMethods first.
-	currentSubMethod endPC: (coInterpreter endPCOf: aMethodObj).
+	currentSubMethod endPC: (self endPCOf: aMethodObj).
 	self bcpcsAndDescriptorsFor: aMethodObj do:
 		[:bcpc :byte :desc| | subMethod |
 		(desc notNil and: [desc isBlockCreation]) ifTrue:

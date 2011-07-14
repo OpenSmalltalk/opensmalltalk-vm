@@ -14,7 +14,7 @@ VMCompiledMethodProxy >> at: index [
 { #category : #accessing }
 VMCompiledMethodProxy >> endPC [
 	"Answer the index of the last bytecode."
-	^(coInterpreter endPCOf: oop) + 1
+	^(coInterpreter cogit endPCOf: oop) + 1
 ]
 
 { #category : #literals }
