@@ -90,7 +90,7 @@ StackDepthFinder >> drop: n [
 	stackp := stackp - n
 ]
 
-{ #category : #private }
+{ #category : #decoding }
 StackDepthFinder >> interpretNextInstructionFor: client [
 	joins at: pc put: stackp.
 	^super interpretNextInstructionFor: client
