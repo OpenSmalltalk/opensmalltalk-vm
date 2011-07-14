@@ -1416,7 +1416,7 @@ NewObjectMemory >> lookupAddress: address [
 	"If address appears to be that of a Symbol or a few well-known objects (such as classes) answer it, otherwise answer nil.
 	 For code disassembly"
 	<doNotGenerate>
-	| fmt size string class classSize nameIndex thisClassIndex maybeThisClass |
+	| fmt size string class classSize maybeThisClass classNameIndex thisClassIndex |
 	(self addressCouldBeObj: address) ifFalse:
 		[^nil].
 	fmt := self formatOf: address.
@@ -1432,25 +1432,26 @@ NewObjectMemory >> lookupAddress: address [
 	 and: [(self headerType: class) ~= HeaderTypeShort]) ifFalse:
 		[^nil].
 	"address is either a class or a metaclass, or an instance of a class or invalid.  determine which."
-	((classSize := self lengthOf: class baseHeader: (self baseHeader: address) format: fmt) < ClassDescription instSize
+	classNameIndex := coInterpreter classNameIndex.
+	thisClassIndex := coInterpreter thisClassIndex.
+	((classSize := self lengthOf: class baseHeader: (self baseHeader: address) format: fmt) <= (classNameIndex max: thisClassIndex)
 	 or: [classSize > 255]) ifTrue:
 		[^nil].
-	nameIndex := (Class instVarIndexFor: 'name' ifAbsent: []) - 1.
-	thisClassIndex := (Metaclass instVarIndexFor: 'thisClass' ifAbsent: []) - 1.
 	"Address could be a class or a metaclass"
-	(fmt = 1 and: [size >= nameIndex]) ifTrue:
+	(fmt = 1 and: [size >= classNameIndex]) ifTrue:
 		["Is address a class? If so class's thisClass is address."
-		 (self lookupAddress: (self fetchPointer: nameIndex ofObject: address)) ifNotNil:
+		 (self lookupAddress: (self fetchPointer: classNameIndex ofObject: address)) ifNotNil:
 			[:maybeClassName|
 			(self fetchPointer: thisClassIndex ofObject: class) = address ifTrue:
 				[^maybeClassName allButFirst]].
 		"Is address a Metaclass?  If so class's name is Metaclass and address's thisClass holds the class name"
-		((self lookupAddress: (self fetchPointer: nameIndex ofObject: class)) = '#Metaclass'
-		 and: [size >= thisClassIndex]) ifTrue:
+		((self isBytes: (self fetchPointer: classNameIndex ofObject: class))
+		 and: [(self lookupAddress: (self fetchPointer: classNameIndex ofObject: class)) = '#Metaclass'
+		 and: [size >= thisClassIndex]]) ifTrue:
 			[maybeThisClass := self fetchPointer: thisClassIndex ofObject: address.
-			(self lookupAddress: (self fetchPointer: nameIndex ofObject: maybeThisClass)) ifNotNil:
+			(self lookupAddress: (self fetchPointer: classNameIndex ofObject: maybeThisClass)) ifNotNil:
 				[:maybeThisClassName| ^maybeThisClassName allButFirst, ' class']]].
-	^(self lookupAddress: (self fetchPointer: nameIndex ofObject: class)) ifNotNil:
+	^(self lookupAddress: (self fetchPointer: classNameIndex ofObject: class)) ifNotNil:
 		[:maybeClassName| 'a(n) ', maybeClassName allButFirst]
 ]
 

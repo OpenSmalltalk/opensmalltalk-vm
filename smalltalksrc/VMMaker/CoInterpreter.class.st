@@ -1113,6 +1113,16 @@ CoInterpreter >> ceActivateFailingPrimitiveMethod: aPrimitiveMethod [
 ]
 
 { #category : #trampolines }
+CoInterpreter >> ceActiveContext [
+	<api>
+	"Since the trampoline checks for marriage we should only be here for a single frame."
+	self assert: (self isMachineCodeFrame: framePointer).
+	self assert: (self frameHasContext: framePointer) not.
+	"Do *not* include the return pc in the stack contents; hence + BytesPerWord"
+	^self marryFrame: framePointer SP: stackPointer + BytesPerWord
+]
+
+{ #category : #trampolines }
 CoInterpreter >> ceBaseFrameReturn: returnValue [
 	"Return across a page boundary.  The context to return to (which may be married)
 	 is stored in the first word of the stack.  We get here when a return instruction jumps
@@ -1335,6 +1345,7 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 	mixinApplication := self 
 							findApplicationOfTargetMixin: mClassMixin
 							startingAtBehavior: (objectMemory fetchClassOf: rcvr).
+	self assert: (objectMemory lengthOf: mixinApplication) > (InstanceSpecificationIndex + 1).
 	lkupClass := self superclassOf: mixinApplication.
 	class := self fetchClassOf: rcvr.
 	canLinkCacheTag := (objectMemory isYoungObject: class) not or: [cogit canLinkToYoungClasses].
@@ -1563,16 +1574,6 @@ CoInterpreter >> cePositive32BitIntegerFor: anInteger [
 	<api>
 	<var: #anInteger type: #usqInt>
 	^self positive32BitIntegerFor: anInteger
-]
-
-{ #category : #trampolines }
-CoInterpreter >> cePushActiveContext [
-	<api>
-	"Since the trampoline checks for marriage we should only be here for a single frame."
-	self assert: (self isMachineCodeFrame: framePointer).
-	self assert: (self frameHasContext: framePointer) not.
-	"Do *not* include the return pc in the stack contents; hence + BytesPerWord"
-	^self marryFrame: framePointer SP: stackPointer + BytesPerWord
 ]
 
 { #category : #trampolines }
@@ -1957,6 +1958,12 @@ CoInterpreter >> checkStackIntegrity [
 					 ok := false].
 				 theSP := theSP + BytesPerWord]]].
 	^ok
+]
+
+{ #category : #simulation }
+CoInterpreter >> classNameIndex [
+	<doNotGenerate>
+	^classNameIndex
 ]
 
 { #category : #'process primitive support' }
@@ -3330,7 +3337,7 @@ CoInterpreter >> implicitReceiverFor: receiver mixin: mixin implementing: select
 
 	<api>
 	<option: #NewspeakVM>
-	self breakOnImplicitReceiver ifTrue:
+	cogit breakOnImplicitReceiver ifTrue:
 		[self sendBreak: selector + BaseHeaderSize
 			point: (objectMemory lengthOf: selector)
 			receiver: nil].
@@ -5874,6 +5881,12 @@ CoInterpreter >> temporaryLocation: offset in: theFP numArgs: numArgs [
 					ifTrue: [FoxMFReceiver - BytesPerWord]
 					ifFalse: [FoxIFReceiver - BytesPerWord])
 			+ ((numArgs - offset) * BytesPerWord)]
+]
+
+{ #category : #simulation }
+CoInterpreter >> thisClassIndex [
+	<doNotGenerate>
+	^thisClassIndex
 ]
 
 { #category : #simulation }
