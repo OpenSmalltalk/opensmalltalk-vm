@@ -190,75 +190,82 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForClosureV3 [
  have identical semantics.  We get away with not hardwiring the other special
  selectors either because in the Cointerpreter they are not inlined or because they
  are inlined only to instances of classes for which there will always be a method.'.
-	self generatorTableFrom: #(
-		(1    0   15 genPushReceiverVariableBytecode needsFrameNever: 1)
-		(1  16   31 genPushTemporaryVariableBytecode 1)
-		(1  32   63 genPushLiteralConstantBytecode needsFrameNever: 1)
-		(1  64   95 genPushLiteralVariableBytecode needsFrameNever: 1)
-		(1  96 103 genStoreAndPopReceiverVariableBytecode needsFrameNever: -1) "N.B. not frameless if immutability"
-		(1 104 111 genStoreAndPopTemporaryVariableBytecode)
-		(1 112 112 genPushReceiverBytecode needsFrameNever: 1)
-		(1 113 113 genPushConstantTrueBytecode needsFrameNever: 1)
-		(1 114 114 genPushConstantFalseBytecode needsFrameNever: 1)
-		(1 115 115 genPushConstantNilBytecode needsFrameNever: 1)
-		(1 116 119 genPushQuickIntegerConstantBytecode needsFrameNever: 1)
+	self generatorTableFrom: {
+		#(1    0   15 genPushReceiverVariableBytecode needsFrameNever: 1).
+		#(1  16   31 genPushTemporaryVariableBytecode 1).
+		#(1  32   63 genPushLiteralConstantBytecode needsFrameNever: 1).
+		#(1  64   95 genPushLiteralVariableBytecode needsFrameNever: 1).
+		#(1  96 103 genStoreAndPopReceiverVariableBytecode needsFrameNever: -1). "N.B. not frameless if immutability"
+		#(1 104 111 genStoreAndPopTemporaryVariableBytecode).
+		#(1 112 112 genPushReceiverBytecode needsFrameNever: 1).
+		#(1 113 113 genPushConstantTrueBytecode needsFrameNever: 1).
+		#(1 114 114 genPushConstantFalseBytecode needsFrameNever: 1).
+		#(1 115 115 genPushConstantNilBytecode needsFrameNever: 1).
+		#(1 116 119 genPushQuickIntegerConstantBytecode needsFrameNever: 1).
 		"method returns in blocks need a frame because of nonlocalReturn:through:"
-		(1 120 120 genReturnReceiver				return needsFrameIfInBlock: mappedInBlock 0)
-		(1 121 121 genReturnTrue					return needsFrameIfInBlock: mappedInBlock 0)
-		(1 122 122 genReturnFalse					return needsFrameIfInBlock: mappedInBlock 0)
-		(1 123 123 genReturnNil					return needsFrameIfInBlock: mappedInBlock 0)
-		(1 124 124 genReturnTopFromMethod		return needsFrameIfInBlock: mappedInBlock -1)
-		(1 125 125 genReturnTopFromBlock		needsFrameNever: return -1)
+		#(1 120 120 genReturnReceiver				return needsFrameIfInBlock: mappedInBlock 0).
+		#(1 121 121 genReturnTrue					return needsFrameIfInBlock: mappedInBlock 0).
+		#(1 122 122 genReturnFalse					return needsFrameIfInBlock: mappedInBlock 0).
+		#(1 123 123 genReturnNil					return needsFrameIfInBlock: mappedInBlock 0).
+		#(1 124 124 genReturnTopFromMethod		return needsFrameIfInBlock: mappedInBlock -1).
+		#(1 125 125 genReturnTopFromBlock		needsFrameNever: return -1).
 
-		(1 126 127 unknownBytecode)
+		NewspeakVM
+			ifTrue: [#(3 126 126 genDynamicSuperSendBytecode mapped)]
+			ifFalse: [#(1 126 126 unknownBytecode)].
+		NewspeakVM
+			ifTrue: [#(2 127 127 genPushImplicitReceiverBytecode mapped)]
+			ifFalse: [#(1 127 127 unknownBytecode)].
 
-		(2 128 128 extendedPushBytecode needsFrameNever: 1)
-		(2 129 129 extendedStoreBytecode)
-		(2 130 130 extendedStoreAndPopBytecode)
-		(2 131 131 genExtendedSendBytecode mapped)
-		(3 132 132 doubleExtendedDoAnythingBytecode mapped)
-		(2 133 133 genExtendedSuperBytecode mapped)
-		(2 134 134 genSecondExtendedSendBytecode mapped)
-		(1 135 135 genPopStackBytecode needsFrameNever: -1)
-		(1 136 136 duplicateTopBytecode needsFrameNever: 1)
+		#(2 128 128 extendedPushBytecode needsFrameNever: 1).
+		#(2 129 129 extendedStoreBytecode).
+		#(2 130 130 extendedStoreAndPopBytecode).
+		#(2 131 131 genExtendedSendBytecode mapped).
+		#(3 132 132 doubleExtendedDoAnythingBytecode mapped).
+		#(2 133 133 genExtendedSuperBytecode mapped).
+		#(2 134 134 genSecondExtendedSendBytecode mapped).
+		#(1 135 135 genPopStackBytecode needsFrameNever: -1).
+		#(1 136 136 duplicateTopBytecode needsFrameNever: 1).
 
-		(1 137 137 genPushActiveContextBytecode)
-		(2 138 138 genPushNewArrayBytecode)
-		(1 139 139 unknownBytecode)
-		(3 140 140 genPushRemoteTempLongBytecode)
-		(3 141 141 genStoreRemoteTempLongBytecode)
-		(3 142 142 genStoreAndPopRemoteTempLongBytecode)
-		(4 143 143 genPushClosureCopyCopiedValuesBytecode block blockCodeS:i:z:e:)
+		#(1 137 137 genPushActiveContextBytecode).
+		#(2 138 138 genPushNewArrayBytecode).
+		NewspeakVM
+			ifTrue: [#(2 139 139 genPushExplicitOuterSendReceiverBytecode mapped)]
+			ifFalse: [#(1 139 139 unknownBytecode)].
+		#(3 140 140 genPushRemoteTempLongBytecode).
+		#(3 141 141 genStoreRemoteTempLongBytecode).
+		#(3 142 142 genStoreAndPopRemoteTempLongBytecode).
+		#(4 143 143 genPushClosureCopyCopiedValuesBytecode block blockCodeS:i:z:e:).
 
-		(1 144 151 genShortUnconditionalJump		forward shortForwardBranchDistance:)
-		(1 152 159 genShortJumpIfFalse				forward false mapped "because of mustBeBoolean"
-														shortForwardBranchDistance:)
-		(2 160 163 genLongUnconditionalBackwardJump	backward mapped "because of interrupt check"
-														longBranchDist:ance:)
-		(2 164 167 genLongUnconditionalForwardJump	forward longBranchDist:ance:)
-		(2 168 171 genLongJumpIfTrue				forward true mapped "because of mustBeBoolean"
-														longForwardBranchDist:ance:)
-		(2 172 175 genLongJumpIfFalse				forward false mapped "because of mustBeBoolean"
-														longForwardBranchDist:ance:)
+		#(1 144 151 genShortUnconditionalJump		forward shortForwardBranchDistance:).
+		#(1 152 159 genShortJumpIfFalse				forward false mapped "because of mustBeBoolean"
+														shortForwardBranchDistance:).
+		#(2 160 163 genLongUnconditionalBackwardJump	backward mapped "because of interrupt check"
+														longBranchDist:ance:).
+		#(2 164 167 genLongUnconditionalForwardJump	forward longBranchDist:ance:).
+		#(2 168 171 genLongJumpIfTrue				forward true mapped "because of mustBeBoolean"
+														longForwardBranchDist:ance:).
+		#(2 172 175 genLongJumpIfFalse				forward false mapped "because of mustBeBoolean"
+														longForwardBranchDist:ance:).
 
-		(1 176 176 genSpecialSelectorArithmetic mapped AddRR)
-		(1 177 177 genSpecialSelectorArithmetic mapped SubRR)
-		(1 178 178 genSpecialSelectorComparison mapped JumpLess)
-		(1 179 179 genSpecialSelectorComparison mapped JumpGreater)
-		(1 180 180 genSpecialSelectorComparison mapped JumpLessOrEqual)
-		(1 181 181 genSpecialSelectorComparison mapped JumpGreaterOrEqual)
-		(1 182 182 genSpecialSelectorComparison mapped JumpZero)
-		(1 183 183 genSpecialSelectorComparison mapped JumpNonZero)
-		(1 184 189 genSpecialSelectorSend mapped)	 " #* #/ #\\ #@ #bitShift: //"
-		(1 190 190 genSpecialSelectorArithmetic mapped AndRR)
-		(1 191 191 genSpecialSelectorArithmetic mapped OrRR)
-		(1 192 197 genSpecialSelectorSend mapped) "#at: #at:put: #size #next #nextPut: #atEnd"
-		(1 198 198 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
-		(1 199 199 genSpecialSelectorClass needsFrameNever: notMapped 0) "not mapped because it is directly inlined (for now)"
-		(1 200 207 genSpecialSelectorSend mapped) "#blockCopy: #value #value: #do: #new #new: #x #y"
-		(1 208 223 genSendLiteralSelector0ArgsBytecode mapped)
-		(1 224 239 genSendLiteralSelector1ArgBytecode mapped)
-		(1 240 255 genSendLiteralSelector2ArgsBytecode mapped))
+		#(1 176 176 genSpecialSelectorArithmetic mapped AddRR).
+		#(1 177 177 genSpecialSelectorArithmetic mapped SubRR).
+		#(1 178 178 genSpecialSelectorComparison mapped JumpLess).
+		#(1 179 179 genSpecialSelectorComparison mapped JumpGreater).
+		#(1 180 180 genSpecialSelectorComparison mapped JumpLessOrEqual).
+		#(1 181 181 genSpecialSelectorComparison mapped JumpGreaterOrEqual).
+		#(1 182 182 genSpecialSelectorComparison mapped JumpZero).
+		#(1 183 183 genSpecialSelectorComparison mapped JumpNonZero).
+		#(1 184 189 genSpecialSelectorSend mapped).	 " #* #/ #\\ #@ #bitShift: //"
+		#(1 190 190 genSpecialSelectorArithmetic mapped AndRR).
+		#(1 191 191 genSpecialSelectorArithmetic mapped OrRR).
+		#(1 192 197 genSpecialSelectorSend mapped). "#at: #at:put: #size #next #nextPut: #atEnd"
+		#(1 198 198 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1). "not mapped because it is directly inlined (for now)"
+		#(1 199 199 genSpecialSelectorClass needsFrameNever: notMapped 0). "not mapped because it is directly inlined (for now)"
+		#(1 200 207 genSpecialSelectorSend mapped). "#blockCopy: #value #value: #do: #new #new: #x #y"
+		#(1 208 223 genSendLiteralSelector0ArgsBytecode mapped).
+		#(1 224 239 genSendLiteralSelector1ArgBytecode mapped).
+		#(1 240 255 genSendLiteralSelector2ArgsBytecode mapped)}
 ]
 
 { #category : #'class initialization' }
@@ -315,75 +322,82 @@ StackToRegisterMappingCogit class >> newInitializeBytecodeTableForClosureV3 [
  have identical semantics.  We get away with not hardwiring the other special
  selectors either because in the Cointerpreter they are not inlined or because they
  are inlined only to instances of classes for which there will always be a method.'.
-	self generatorTableFrom: #(
-		(1    0   15 genPushReceiverVariableBytecode needsFrameNever: 1)
-		(1  16   31 genPushTemporaryVariableBytecode needsFrameIfMod16GENumArgs: 1)
-		(1  32   63 genPushLiteralConstantBytecode needsFrameNever: 1)
-		(1  64   95 genPushLiteralVariableBytecode needsFrameNever: 1)
-		(1  96 103 genStoreAndPopReceiverVariableBytecode needsFrameNever: -1) "N.B. not frameless if immutability"
-		(1 104 111 genStoreAndPopTemporaryVariableBytecode)
-		(1 112 112 genPushReceiverBytecode needsFrameNever: 1)
-		(1 113 113 genPushConstantTrueBytecode needsFrameNever: 1)
-		(1 114 114 genPushConstantFalseBytecode needsFrameNever: 1)
-		(1 115 115 genPushConstantNilBytecode needsFrameNever: 1)
-		(1 116 119 genPushQuickIntegerConstantBytecode needsFrameNever: 1)
+	self generatorTableFrom: {
+		#(1    0   15 genPushReceiverVariableBytecode needsFrameNever: 1).
+		#(1  16   31 genPushTemporaryVariableBytecode needsFrameIfMod16GENumArgs: 1).
+		#(1  32   63 genPushLiteralConstantBytecode needsFrameNever: 1).
+		#(1  64   95 genPushLiteralVariableBytecode needsFrameNever: 1).
+		#(1  96 103 genStoreAndPopReceiverVariableBytecode needsFrameNever: -1). "N.B. not frameless if immutability"
+		#(1 104 111 genStoreAndPopTemporaryVariableBytecode).
+		#(1 112 112 genPushReceiverBytecode needsFrameNever: 1).
+		#(1 113 113 genPushConstantTrueBytecode needsFrameNever: 1).
+		#(1 114 114 genPushConstantFalseBytecode needsFrameNever: 1).
+		#(1 115 115 genPushConstantNilBytecode needsFrameNever: 1).
+		#(1 116 119 genPushQuickIntegerConstantBytecode needsFrameNever: 1).
 		"method returns in blocks need a frame because of nonlocalReturn:through:"
-		(1 120 120 genReturnReceiver				return needsFrameIfInBlock: mappedInBlock 0)
-		(1 121 121 genReturnTrue					return needsFrameIfInBlock: mappedInBlock 0)
-		(1 122 122 genReturnFalse					return needsFrameIfInBlock: mappedInBlock 0)
-		(1 123 123 genReturnNil					return needsFrameIfInBlock: mappedInBlock 0)
-		(1 124 124 genReturnTopFromMethod		return needsFrameIfInBlock: mappedInBlock -1)
-		(1 125 125 genReturnTopFromBlock		needsFrameNever: return -1)
+		#(1 120 120 genReturnReceiver				return needsFrameIfInBlock: mappedInBlock 0).
+		#(1 121 121 genReturnTrue					return needsFrameIfInBlock: mappedInBlock 0).
+		#(1 122 122 genReturnFalse					return needsFrameIfInBlock: mappedInBlock 0).
+		#(1 123 123 genReturnNil					return needsFrameIfInBlock: mappedInBlock 0).
+		#(1 124 124 genReturnTopFromMethod		return needsFrameIfInBlock: mappedInBlock -1).
+		#(1 125 125 genReturnTopFromBlock		needsFrameNever: return -1).
 
-		(1 126 127 unknownBytecode)
+		NewspeakVM
+			ifTrue: [#(3 126 126 genDynamicSuperSendBytecode mapped)]
+			ifFalse: [#(1 126 126 unknownBytecode)].
+		NewspeakVM
+			ifTrue: [#(2 127 127 genPushImplicitReceiverBytecode mapped)]
+			ifFalse: [#(1 127 127 unknownBytecode)].
 
-		(2 128 128 extendedPushBytecode needsFrameNever: 1)
-		(2 129 129 extendedStoreBytecode)
-		(2 130 130 extendedStoreAndPopBytecode)
-		(2 131 131 genExtendedSendBytecode mapped)
-		(3 132 132 doubleExtendedDoAnythingBytecode mapped)
-		(2 133 133 genExtendedSuperBytecode mapped)
-		(2 134 134 genSecondExtendedSendBytecode mapped)
-		(1 135 135 genPopStackBytecode needsFrameNever: -1)
-		(1 136 136 duplicateTopBytecode needsFrameNever: 1)
+		#(2 128 128 extendedPushBytecode needsFrameNever: 1).
+		#(2 129 129 extendedStoreBytecode).
+		#(2 130 130 extendedStoreAndPopBytecode).
+		#(2 131 131 genExtendedSendBytecode mapped).
+		#(3 132 132 doubleExtendedDoAnythingBytecode mapped).
+		#(2 133 133 genExtendedSuperBytecode mapped).
+		#(2 134 134 genSecondExtendedSendBytecode mapped).
+		#(1 135 135 genPopStackBytecode needsFrameNever: -1).
+		#(1 136 136 duplicateTopBytecode needsFrameNever: 1).
 
-		(1 137 137 genPushActiveContextBytecode)
-		(2 138 138 genPushNewArrayBytecode)
-		(1 139 139 unknownBytecode)
-		(3 140 140 genPushRemoteTempLongBytecode)
-		(3 141 141 genStoreRemoteTempLongBytecode)
-		(3 142 142 genStoreAndPopRemoteTempLongBytecode)
-		(4 143 143 genPushClosureCopyCopiedValuesBytecode block blockCodeS:i:z:e:)
+		#(1 137 137 genPushActiveContextBytecode).
+		#(2 138 138 genPushNewArrayBytecode).
+		NewspeakVM
+			ifTrue: [#(2 139 139 genPushExplicitOuterSendReceiverBytecode mapped)]
+			ifFalse: [#(1 139 139 unknownBytecode)].
+		#(3 140 140 genPushRemoteTempLongBytecode).
+		#(3 141 141 genStoreRemoteTempLongBytecode).
+		#(3 142 142 genStoreAndPopRemoteTempLongBytecode).
+		#(4 143 143 genPushClosureCopyCopiedValuesBytecode block blockCodeS:i:z:e:).
 
-		(1 144 151 genShortUnconditionalJump		forward shortForwardBranchDistance:)
-		(1 152 159 genShortJumpIfFalse				forward false mapped "because of mustBeBoolean"
-														shortForwardBranchDistance:)
-		(2 160 163 genLongUnconditionalBackwardJump	backward mapped "because of interrupt check"
-														longBranchDist:ance:)
-		(2 164 167 genLongUnconditionalForwardJump	forward longBranchDist:ance:)
-		(2 168 171 genLongJumpIfTrue				forward true mapped "because of mustBeBoolean"
-														longForwardBranchDist:ance:)
-		(2 172 175 genLongJumpIfFalse				forward false mapped "because of mustBeBoolean"
-														longForwardBranchDist:ance:)
+		#(1 144 151 genShortUnconditionalJump		forward shortForwardBranchDistance:).
+		#(1 152 159 genShortJumpIfFalse				forward false mapped "because of mustBeBoolean"
+														shortForwardBranchDistance:).
+		#(2 160 163 genLongUnconditionalBackwardJump	backward mapped "because of interrupt check"
+														longBranchDist:ance:).
+		#(2 164 167 genLongUnconditionalForwardJump	forward longBranchDist:ance:).
+		#(2 168 171 genLongJumpIfTrue				forward true mapped "because of mustBeBoolean"
+														longForwardBranchDist:ance:).
+		#(2 172 175 genLongJumpIfFalse				forward false mapped "because of mustBeBoolean"
+														longForwardBranchDist:ance:).
 
-		(1 176 176 genSpecialSelectorArithmetic mapped AddRR)
-		(1 177 177 genSpecialSelectorArithmetic mapped SubRR)
-		(1 178 178 genSpecialSelectorComparison mapped JumpLess)
-		(1 179 179 genSpecialSelectorComparison mapped JumpGreater)
-		(1 180 180 genSpecialSelectorComparison mapped JumpLessOrEqual)
-		(1 181 181 genSpecialSelectorComparison mapped JumpGreaterOrEqual)
-		(1 182 182 genSpecialSelectorComparison mapped JumpZero)
-		(1 183 183 genSpecialSelectorComparison mapped JumpNonZero)
-		(1 184 189 genSpecialSelectorSend mapped)	 " #* #/ #\\ #@ #bitShift: //"
-		(1 190 190 genSpecialSelectorArithmetic mapped AndRR)
-		(1 191 191 genSpecialSelectorArithmetic mapped OrRR)
-		(1 192 197 genSpecialSelectorSend mapped) "#at: #at:put: #size #next #nextPut: #atEnd"
-		(1 198 198 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
-		(1 199 199 genSpecialSelectorClass needsFrameNever: notMapped 0) "not mapped because it is directly inlined (for now)"
-		(1 200 207 genSpecialSelectorSend mapped) "#blockCopy: #value #value: #do: #new #new: #x #y"
-		(1 208 223 genSendLiteralSelector0ArgsBytecode mapped)
-		(1 224 239 genSendLiteralSelector1ArgBytecode mapped)
-		(1 240 255 genSendLiteralSelector2ArgsBytecode mapped))
+		#(1 176 176 genSpecialSelectorArithmetic mapped AddRR).
+		#(1 177 177 genSpecialSelectorArithmetic mapped SubRR).
+		#(1 178 178 genSpecialSelectorComparison mapped JumpLess).
+		#(1 179 179 genSpecialSelectorComparison mapped JumpGreater).
+		#(1 180 180 genSpecialSelectorComparison mapped JumpLessOrEqual).
+		#(1 181 181 genSpecialSelectorComparison mapped JumpGreaterOrEqual).
+		#(1 182 182 genSpecialSelectorComparison mapped JumpZero).
+		#(1 183 183 genSpecialSelectorComparison mapped JumpNonZero).
+		#(1 184 189 genSpecialSelectorSend mapped).	 " #* #/ #\\ #@ #bitShift: //"
+		#(1 190 190 genSpecialSelectorArithmetic mapped AndRR).
+		#(1 191 191 genSpecialSelectorArithmetic mapped OrRR).
+		#(1 192 197 genSpecialSelectorSend mapped). "#at: #at:put: #size #next #nextPut: #atEnd"
+		#(1 198 198 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1). "not mapped because it is directly inlined (for now)"
+		#(1 199 199 genSpecialSelectorClass needsFrameNever: notMapped 0). "not mapped because it is directly inlined (for now)"
+		#(1 200 207 genSpecialSelectorSend mapped). "#blockCopy: #value #value: #do: #new #new: #x #y"
+		#(1 208 223 genSendLiteralSelector0ArgsBytecode mapped).
+		#(1 224 239 genSendLiteralSelector1ArgBytecode mapped).
+		#(1 240 255 genSendLiteralSelector2ArgsBytecode mapped)}
 ]
 
 { #category : #translation }
@@ -1107,6 +1121,15 @@ StackToRegisterMappingCogit >> genDoubleComparison: jumpOpcodeGenerator invert: 
 	^0
 ]
 
+{ #category : #'bytecode generators' }
+StackToRegisterMappingCogit >> genDynamicSuperSendBytecode [
+	| numArgs selector |
+	numArgs := byte1.
+	selector := coInterpreter literal: byte2 ofMethod: methodObj.
+	self marshallSendArguments: numArgs.
+	^self genMarshalledSendDynamicSuper: selector numArgs: numArgs
+]
+
 { #category : #initialization }
 StackToRegisterMappingCogit >> genEnterPICEnilopmartNumArgs: numArgs [
 	"Generate special versions of the ceEnterCogCodePopReceiverAndClassRegs
@@ -1213,6 +1236,20 @@ StackToRegisterMappingCogit >> genMarshalledSend: selector numArgs: numArgs [
 		[self MoveCq: numArgs R: SendNumArgsReg].
 	self MoveCw: selector R: ClassReg.
 	self CallSend: (sendTrampolines at: (numArgs min: NumSendTrampolines - 1)).
+	optStatus isReceiverResultRegLive: false.
+	^self ssPushRegister: ReceiverResultReg
+]
+
+{ #category : #'bytecode generators' }
+StackToRegisterMappingCogit >> genMarshalledSendDynamicSuper: selector numArgs: numArgs [
+	<inline: false>
+	(objectMemory isYoung: selector) ifTrue:
+		[hasYoungReferent := true].
+	self assert: needsFrame.
+	numArgs > 2 ifTrue:
+		[self MoveCq: numArgs R: SendNumArgsReg].
+	self MoveCw: selector R: ClassReg.
+	self CallNewspeakSend: (dynamicSuperSendTrampolines at: (numArgs min: NumSendTrampolines - 1)).
 	optStatus isReceiverResultRegLive: false.
 	^self ssPushRegister: ReceiverResultReg
 ]
@@ -1719,7 +1756,7 @@ StackToRegisterMappingCogit >> genPushActiveContextBytecode [
 	self assert: needsFrame.
 	optStatus isReceiverResultRegLive: false.
 	self ssAllocateCallReg: ReceiverResultReg.
-	self CallRT: cePushActiveContextTrampoline.
+	self CallRT: ceActiveContextTrampoline.
 	^self ssPushRegister: ReceiverResultReg
 ]
 
@@ -1743,6 +1780,46 @@ StackToRegisterMappingCogit >> genPushClosureCopyCopiedValuesBytecode [
 	numCopied > 0 ifTrue:
 		[self AddCq: numCopied * BytesPerWord R: SPReg.
 		 self ssPop: numCopied].
+	^self ssPushRegister: ReceiverResultReg
+]
+
+{ #category : #'bytecode generators' }
+StackToRegisterMappingCogit >> genPushExplicitOuterSendReceiverBytecode [
+	"Uncached push explicit outer send receiver"
+	| levelOop |
+	levelOop := coInterpreter literal: byte1 ofMethod: methodObj.
+	self assert: (objectMemory isIntegerObject: levelOop).
+	optStatus isReceiverResultRegLive: false.
+	self ssAllocateCallReg: SendNumArgsReg.
+	self MoveCq: (objectMemory integerValueOf: levelOop) R: SendNumArgsReg.
+	self CallRT: ceExplicitReceiverTrampoline.
+	^self ssPushRegister: ReceiverResultReg
+]
+
+{ #category : #'bytecode generators' }
+StackToRegisterMappingCogit >> genPushImplicitReceiverBytecode [
+	"Cached push implicit receiver implementation.  Caller looks like
+		mov selector, ClassReg
+				call cePushImplicitReceiver
+				br continue
+		Lclass	.word
+		Lmixin:	.word
+		continue:
+	 If class matches class of receiver then mixin contains either 0 or the implicit receiver.
+	 If 0, push the actual receiver."
+	| selector skip |
+	<var: #skip type: #'AbstractInstruction *'>
+	self ssAllocateCallReg: SendNumArgsReg and: ReceiverResultReg and: ClassReg and: Arg0Reg.
+	selector := coInterpreter literal: byte1 ofMethod: methodObj.
+	(objectMemory isYoung: selector) ifTrue:
+		[hasYoungReferent := true].
+	self assert: needsFrame.
+	self MoveCw: selector R: SendNumArgsReg.
+	self CallNewspeakSend: ceImplicitReceiverTrampoline.
+	skip := self Jump: 0.
+	self Fill32: 0.
+	self Fill32: 0.
+	skip jmpTarget: self Label.
 	^self ssPushRegister: ReceiverResultReg
 ]
 
@@ -1961,6 +2038,31 @@ StackToRegisterMappingCogit >> genSend: selector numArgs: numArgs [
 StackToRegisterMappingCogit >> genSendSuper: selector numArgs: numArgs [
 	self marshallSendArguments: numArgs.
 	^self genMarshalledSendSuper: selector numArgs: numArgs
+]
+
+{ #category : #initialization }
+StackToRegisterMappingCogit >> genSendTrampolineFor: aRoutine numArgs: numArgs called: aString arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 [
+	"Generate a trampoline with four arguments.
+	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
+	<var: #aRoutine type: #'void *'>
+	<var: #aString type: #'char *'>
+	| startAddress |
+	<inline: false>
+	startAddress := methodZoneBase.
+	opcodeIndex := 0.
+	self genPushRegisterArgsForNumArgs: numArgs.
+	self genTrampolineFor: aRoutine
+		called: aString
+		callJumpBar: true
+		numArgs: 3
+		arg: regOrConst0
+		arg: regOrConst1
+		arg: regOrConst2
+		arg: nil
+		saveRegs: false
+		resultReg: nil
+		appendOpcodes: true.
+	^startAddress
 ]
 
 { #category : #initialization }
@@ -3090,6 +3192,25 @@ StackToRegisterMappingCogit >> ssAllocateCallReg: requiredReg1 and: requiredReg2
 	self ssAllocateRequiredRegMask: (callerSavedRegMask
 										bitOr: ((self registerMaskFor: requiredReg1)
 										bitOr: (self registerMaskFor: requiredReg2)))
+		upThrough: simStackPtr
+]
+
+{ #category : #'simulation stack' }
+StackToRegisterMappingCogit >> ssAllocateCallReg: requiredReg1 and: requiredReg2 and: requiredReg3 [
+	self ssAllocateRequiredRegMask: (callerSavedRegMask
+										bitOr: ((self registerMaskFor: requiredReg1)
+										bitOr: ((self registerMaskFor: requiredReg2)
+										bitOr: (self registerMaskFor: requiredReg3))))
+		upThrough: simStackPtr
+]
+
+{ #category : #'simulation stack' }
+StackToRegisterMappingCogit >> ssAllocateCallReg: requiredReg1 and: requiredReg2 and: requiredReg3 and: requiredReg4 [
+	self ssAllocateRequiredRegMask: (callerSavedRegMask
+										bitOr: ((self registerMaskFor: requiredReg1)
+										bitOr: ((self registerMaskFor: requiredReg2)
+										bitOr: ((self registerMaskFor: requiredReg3)
+										bitOr: (self registerMaskFor: requiredReg4)))))
 		upThrough: simStackPtr
 ]
 

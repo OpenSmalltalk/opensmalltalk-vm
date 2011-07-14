@@ -30,6 +30,8 @@ TStmtListNode >> bindVariablesIn: aDictionary [
 TStmtListNode >> emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen [
 
 	| statementWasComment |
+	statements size = 1 ifTrue:
+		[^statements first emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen].
 	statementWasComment := false.
 	aStream nextPut: $(. "N.B.  Comma binds weakest of all C operators."
 	statements
