@@ -547,7 +547,7 @@ SistaStackToRegisterMappingCogit >> handleWriteSimulationTrap: aProcessorSimulat
 	self assert: (address
 					between: end - (CounterBytes * counterMethodCache numCounters)
 					and: end).
-	coInterpreter longAt: address put: (processor perform: aProcessorSimulationTrap registerAccessor).
+	objectMemory longAt: address put: (processor perform: aProcessorSimulationTrap registerAccessor).
 	processor pc: aProcessorSimulationTrap nextpc
 ]
 
