@@ -2293,40 +2293,6 @@ Cogit >> ceEnterCogCodePopReceiverReg [
 ]
 
 { #category : #'in-line cacheing' }
-Cogit >> ceImplicitReceiverFor: selector [
-	"Cached implicit receiver implementation.  Caller looks like
-		mov selector, ClassReg
-				call ceImplicitReceiver
-				br continue
-		Lclass	.word
-		Lmixin:	.word
-		continue:
-	 If class matches class of receiver then mixin contains either 0 or the implicit receiver.
-	 If mixin is 0, answer the actual receiver, otherwise mixin."
-
-	| receiver retpc classpc mixinpc rcvrClass mixin |
-	receiver := coInterpreter mframeReceiverExport.
-	retpc := coInterpreter stackTop.
-	classpc := retpc + backEnd jumpShortByteSize.
-	mixinpc := retpc + backEnd jumpShortByteSize + BytesPerOop.
-	rcvrClass := objectMemory fetchClassOf: receiver.
-	rcvrClass ~= (backEnd unalignedLongAt: classpc) ifTrue:
-		[mixin := coInterpreter
-					implicitReceiverFor: receiver
-					mixin: coInterpreter mMethodClass
-					implementing: selector.
-		 backEnd unalignedLongAt: classpc put: rcvrClass.
-		 backEnd unalignedLongAt: mixinpc put: (mixin = receiver ifTrue: [0] ifFalse: [mixin]).
-		 ^mixin].
-	self breakOnImplicitReceiver ifTrue:
-		[self sendBreak: selector + BaseHeaderSize
-			point: (objectMemory lengthOf: selector)
-			receiver: nil].
-	mixin := backEnd unalignedLongAt: mixinpc.
-	^mixin = 0 ifTrue: [receiver] ifFalse: [mixin]
-]
-
-{ #category : #'in-line cacheing' }
 Cogit >> ceImplicitReceiverFor: selector receiver: receiver class: rcvrClass [
 	"Cached implicit receiver implementation.  Caller looks like
 		mov selector, ClassReg
@@ -2337,9 +2303,11 @@ Cogit >> ceImplicitReceiverFor: selector receiver: receiver class: rcvrClass [
 		continue:
 	 The trampoline has already fetched the class and probed the cache and found
 	 that the cache missed.  Compute the implicit receiver for the receiver's class
-	 and reload the class."
+	 and reload the class.  If either the class or the mixin are young the method needs
+	 to be added to the youngReferrers list to ensure correct GC."
 
-	| retpc classpc mixinpc mixin |
+	| retpc classpc mixinpc mixin cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
 	retpc := coInterpreter stackTop.
 	classpc := retpc + backEnd jumpShortByteSize.
 	mixinpc := retpc + backEnd jumpShortByteSize + BytesPerOop.
@@ -2348,9 +2316,18 @@ Cogit >> ceImplicitReceiverFor: selector receiver: receiver class: rcvrClass [
 				implicitReceiverFor: receiver
 				mixin: coInterpreter mMethodClass
 				implementing: selector.
-	 backEnd unalignedLongAt: classpc put: rcvrClass.
-	 backEnd unalignedLongAt: mixinpc put: (mixin = receiver ifTrue: [0] ifFalse: [mixin]).
-	 ^mixin
+	cogMethod := coInterpreter mframeHomeMethodExport.
+	cogMethod cmRefersToYoung ifFalse:
+		[((objectMemory isYoung: rcvrClass)
+		  or: [mixin ~= receiver and: [objectMemory isYoung: mixin]]) ifTrue:
+			[methodZone roomOnYoungReferrersList ifFalse:
+				[coInterpreter callForCogCompiledCodeCompaction.
+				 ^mixin].
+			 cogMethod cmRefersToYoung: true.
+			 methodZone addToYoungReferrers: cogMethod]].
+	backEnd unalignedLongAt: classpc put: rcvrClass.
+	backEnd unalignedLongAt: mixinpc put: (mixin = receiver ifTrue: [0] ifFalse: [mixin]).
+	^mixin
 ]
 
 { #category : #accessing }
@@ -5056,7 +5033,7 @@ Cogit >> getCFramePointer [
 	<api>
 	<cmacro: '() CFramePointer'>
 	"and in the simulator we use..."
-	^coInterpreter longAt: coInterpreter inMemoryCFramePointerAddress
+	^objectMemory longAt: coInterpreter inMemoryCFramePointerAddress
 ]
 
 { #category : #accessing }
@@ -5064,7 +5041,7 @@ Cogit >> getCStackPointer [
 	<api>
 	<cmacro: '() CStackPointer'>
 	"and in the simulator we use..."
-	^coInterpreter longAt: coInterpreter inMemoryCStackPointerAddress
+	^objectMemory longAt: coInterpreter inMemoryCStackPointerAddress
 ]
 
 { #category : #'translation support' }
@@ -5756,7 +5733,7 @@ Cogit >> mapObjectReferencesInMachineCodeForIncrementalGC [
 	codeModified := false.
 	pointer := methodZone youngReferrers.
 	[pointer < methodZone zoneEnd] whileTrue:
-		[cogMethod := coInterpreter cCoerceSimple: (coInterpreter longAt: pointer) to: #'CogMethod *'.
+		[cogMethod := coInterpreter cCoerceSimple: (objectMemory longAt: pointer) to: #'CogMethod *'.
 		 cogMethod cmType = CMFree
 			ifTrue: [self assert: cogMethod cmRefersToYoung not]
 			ifFalse:
@@ -7016,7 +6993,7 @@ Cogit >> setCFramePointer: aFramePointer [
 	<api>
 	<cmacro: '(theFP) (CFramePointer = (void *)(theFP))'>
 	"and in the simulator we use..."
-	^coInterpreter
+	^objectMemory
 		longAt: coInterpreter inMemoryCFramePointerAddress
 		put: aFramePointer
 ]
@@ -7026,7 +7003,7 @@ Cogit >> setCStackPointer: aStackPointer [
 	<api>
 	<cmacro: '(theSP) (CStackPointer = (void *)(theSP))'>
 	"and in the simulator we use..."
-	^coInterpreter
+	^objectMemory
 		longAt: coInterpreter inMemoryCStackPointerAddress
 		put: aStackPointer
 ]
