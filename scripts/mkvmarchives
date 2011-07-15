@@ -39,10 +39,14 @@ if [ -n "$CL" ]; then
 	COPYFILE_DISABLE=1 tar czf coglinux.tgz coglinux
 	EXES=coglinux/lib/squeak/3.9-7/squeak
 fi
+REV=`grep 'SvnRawRevisionString.*Rev:' platforms/Cross/vm/sqSCCSVersion.h \
+	| sed 's/^.*Rev: \([0-9][0-9]*\) $";/\1/'
 if [ -n "$CM" ]; then
 	test -d Cog.app || mkdir Cog.app
 	rm -rf Cog.app/* Cog.app.tgz
 	(cd macbuild/Fast.app>/dev/null;tar cf - *)|(cd Cog.app;tar xvf -)
+	ex "+g/[ >][0-9][0-9]*\.[0-9][0-9]*\.0/s/0\([< ]\)/$REV\1/" +w +q Cog.app/Contents/Info.plist
+g/ [
 	tar czf Cog.app.tgz Cog.app
 	EXES="$EXES	Cog.app/Contents/MacOS/Croquet"
 fi
@@ -63,6 +67,7 @@ if [ -n "$NM" ]; then
 	test -d Newspeak\ Virtual\ Machine.app || mkdir Newspeak\ Virtual\ Machine.app
 	rm -rf Newspeak\ Virtual\ Machine.app/* Newspeak\ Virtual\ Machine.app.tgz
 	(cd $NSB/macbuild/Fast.app>/dev/null;tar cf - *)|(cd Newspeak\ Virtual\ Machine.app;tar xvf -)
+	ex "+g/[ >][0-9][0-9]*\.[0-9][0-9]*\.0/s/0\([< ]\)/$REV\1/" +w +q Newspeak\ Virtual\ Machine.app/Contents/Info.plist
 	tar czf Newspeak\ Virtual\ Machine.app.tgz Newspeak\ Virtual\ Machine.app
 	EXES="$EXES	Newspeak Virtual Machine.app/Contents/MacOS/Newspeak Virtual Machine"
 fi

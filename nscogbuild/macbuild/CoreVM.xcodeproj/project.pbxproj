@@ -57,6 +57,9 @@
 		737D7E2A13BAB68900347756 /* cogit.h in Headers */ = {isa = PBXBuildFile; fileRef = 737D7E2313BAB68900347756 /* cogit.h */; };
 		737D7E2B13BAB68900347756 /* vmCallback.h in Headers */ = {isa = PBXBuildFile; fileRef = 737D7E2413BAB68900347756 /* vmCallback.h */; };
 		737D7E2C13BAB68900347756 /* cogmethod.h in Headers */ = {isa = PBXBuildFile; fileRef = 737D7E2513BAB68900347756 /* cogmethod.h */; };
+		737F48B913D0DB5D0071BDEB /* sqCogStackAlignment.h in Headers */ = {isa = PBXBuildFile; fileRef = 737F48B613D0DB5D0071BDEB /* sqCogStackAlignment.h */; };
+		737F48BA13D0DB5D0071BDEB /* sqMemoryFence.h in Headers */ = {isa = PBXBuildFile; fileRef = 737F48B713D0DB5D0071BDEB /* sqMemoryFence.h */; };
+		737F48BB13D0DB5D0071BDEB /* sqSCCSVersion.h in Headers */ = {isa = PBXBuildFile; fileRef = 737F48B813D0DB5D0071BDEB /* sqSCCSVersion.h */; };
 		73804CA7137DEA0E00D96A60 /* osExports.c in Sources */ = {isa = PBXBuildFile; fileRef = 73804CA6137DEA0E00D96A60 /* osExports.c */; };
 		738563101378A00200EF6ED1 /* SoundPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = 7385630F1378A00200EF6ED1 /* SoundPlugin.h */; };
 		738FB1EA0EE4CF94004BEE42 /* ia32abicc.c in Sources */ = {isa = PBXBuildFile; fileRef = 738FB1E90EE4CF94004BEE42 /* ia32abicc.c */; };
@@ -320,6 +323,9 @@
 		737D7E2313BAB68900347756 /* cogit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cogit.h; path = ../../nscogsrc/vm/cogit.h; sourceTree = "<group>"; };
 		737D7E2413BAB68900347756 /* vmCallback.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = vmCallback.h; path = ../../nscogsrc/vm/vmCallback.h; sourceTree = "<group>"; };
 		737D7E2513BAB68900347756 /* cogmethod.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cogmethod.h; path = ../../nscogsrc/vm/cogmethod.h; sourceTree = "<group>"; };
+		737F48B613D0DB5D0071BDEB /* sqCogStackAlignment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqCogStackAlignment.h; sourceTree = "<group>"; };
+		737F48B713D0DB5D0071BDEB /* sqMemoryFence.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqMemoryFence.h; sourceTree = "<group>"; };
+		737F48B813D0DB5D0071BDEB /* sqSCCSVersion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqSCCSVersion.h; sourceTree = "<group>"; };
 		73804CA6137DEA0E00D96A60 /* osExports.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = osExports.c; sourceTree = "<group>"; };
 		7385630F1378A00200EF6ED1 /* SoundPlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SoundPlugin.h; sourceTree = "<group>"; };
 		738FB1E90EE4CF94004BEE42 /* ia32abicc.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = ia32abicc.c; path = IA32ABI/ia32abicc.c; sourceTree = "<group>"; };
@@ -1357,6 +1363,9 @@
 		F5F8AFDB02EB4E0A0100013C /* vm */ = {
 			isa = PBXGroup;
 			children = (
+				737F48B613D0DB5D0071BDEB /* sqCogStackAlignment.h */,
+				737F48B713D0DB5D0071BDEB /* sqMemoryFence.h */,
+				737F48B813D0DB5D0071BDEB /* sqSCCSVersion.h */,
 				A2C08F420EA3E0FD0036416C /* dispdbg.h */,
 				F5F8AFDC02EB4E0A0100013C /* sq.h */,
 				739C6ED8112DCBD10049B7D3 /* sqAssert.h */,
@@ -1444,6 +1453,9 @@
 				737D7E2A13BAB68900347756 /* cogit.h in Headers */,
 				737D7E2B13BAB68900347756 /* vmCallback.h in Headers */,
 				737D7E2C13BAB68900347756 /* cogmethod.h in Headers */,
+				737F48B913D0DB5D0071BDEB /* sqCogStackAlignment.h in Headers */,
+				737F48BA13D0DB5D0071BDEB /* sqMemoryFence.h in Headers */,
+				737F48BB13D0DB5D0071BDEB /* sqSCCSVersion.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

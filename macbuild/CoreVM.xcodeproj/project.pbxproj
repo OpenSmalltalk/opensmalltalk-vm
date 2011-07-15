@@ -11,6 +11,8 @@
 		733B2C37106AB74B004652BE /* sqExternalSemaphores.c in Sources */ = {isa = PBXBuildFile; fileRef = 733B2C36106AB74B004652BE /* sqExternalSemaphores.c */; };
 		7351A09B100963670035A878 /* sqUnixThreads.c in Sources */ = {isa = PBXBuildFile; fileRef = 7351A09A100963670035A878 /* sqUnixThreads.c */; };
 		735B4CA30E8069B7008FA2CA /* VMProfileMacSupportPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */; };
+		737888E713D0DE6500C5E1AD /* sqMemoryFence.h in Headers */ = {isa = PBXBuildFile; fileRef = 737888E513D0DE6500C5E1AD /* sqMemoryFence.h */; };
+		737888E813D0DE6500C5E1AD /* sqSCCSVersion.h in Headers */ = {isa = PBXBuildFile; fileRef = 737888E613D0DE6500C5E1AD /* sqSCCSVersion.h */; };
 		738FB1EA0EE4CF94004BEE42 /* ia32abicc.c in Sources */ = {isa = PBXBuildFile; fileRef = 738FB1E90EE4CF94004BEE42 /* ia32abicc.c */; };
 		738FB1ED0EE4D092004BEE42 /* IA32ABI.c in Sources */ = {isa = PBXBuildFile; fileRef = 738FB1EC0EE4D092004BEE42 /* IA32ABI.c */; };
 		739C6ED6112DCBB00049B7D3 /* sqTicker.c in Sources */ = {isa = PBXBuildFile; fileRef = 739C6ED5112DCBB00049B7D3 /* sqTicker.c */; };
@@ -284,6 +286,8 @@
 		733B2C36106AB74B004652BE /* sqExternalSemaphores.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqExternalSemaphores.c; sourceTree = "<group>"; };
 		7351A09A100963670035A878 /* sqUnixThreads.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqUnixThreads.c; path = vm/sqUnixThreads.c; sourceTree = "<group>"; };
 		735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = VMProfileMacSupportPlugin.c; sourceTree = "<group>"; };
+		737888E513D0DE6500C5E1AD /* sqMemoryFence.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqMemoryFence.h; sourceTree = "<group>"; };
+		737888E613D0DE6500C5E1AD /* sqSCCSVersion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqSCCSVersion.h; sourceTree = "<group>"; };
 		738FB1E90EE4CF94004BEE42 /* ia32abicc.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = ia32abicc.c; path = IA32ABI/ia32abicc.c; sourceTree = "<group>"; };
 		738FB1EC0EE4D092004BEE42 /* IA32ABI.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = IA32ABI.c; path = IA32ABI/IA32ABI.c; sourceTree = "<group>"; };
 		739C6ED5112DCBB00049B7D3 /* sqTicker.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqTicker.c; sourceTree = "<group>"; };
@@ -294,7 +298,7 @@
 		73BC1BB60F576864003412C5 /* cogit.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = cogit.c; sourceTree = "<group>"; };
 		73BC1BB70F576864003412C5 /* cogit.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = cogit.h; sourceTree = "<group>"; };
 		73BC1BB80F576864003412C5 /* cogmethod.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = cogmethod.h; sourceTree = "<group>"; };
-		73BC1BB90F576864003412C5 /* gcc3x-cointerp.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = gcc3x-cointerp.c; sourceTree = "<group>"; };
+		73BC1BB90F576864003412C5 /* gcc3x-cointerp.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = "gcc3x-cointerp.c"; sourceTree = "<group>"; };
 		73BC1BBA0F576864003412C5 /* cointerp.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = cointerp.h; sourceTree = "<group>"; };
 		73BC1BC60F57699F003412C5 /* sqCogStackAlignment.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqCogStackAlignment.h; sourceTree = "<group>"; };
 		94002C4209EB18EF003C4BF2 /* sqMemoryAccess.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqMemoryAccess.h; sourceTree = "<group>"; };
@@ -1611,6 +1615,8 @@
 				F5F8AFDC02EB4E0A0100013C /* sq.h */,
 				739C6ED8112DCBD10049B7D3 /* sqAssert.h */,
 				73BC1BC60F57699F003412C5 /* sqCogStackAlignment.h */,
+				737888E513D0DE6500C5E1AD /* sqMemoryFence.h */,
+				737888E613D0DE6500C5E1AD /* sqSCCSVersion.h */,
 				733B2C36106AB74B004652BE /* sqExternalSemaphores.c */,
 				739C6ED7112DCBD10049B7D3 /* sqAtomicOps.h */,
 				A2835CFE0E07A13300308978 /* sqHeapMap.c */,
@@ -1711,6 +1717,8 @@
 				A2F27E691087169800F905FB /* nsPoolManagement.h in Headers */,
 				739C6ED9112DCBD10049B7D3 /* sqAtomicOps.h in Headers */,
 				739C6EDA112DCBD10049B7D3 /* sqAssert.h in Headers */,
+				737888E713D0DE6500C5E1AD /* sqMemoryFence.h in Headers */,
+				737888E813D0DE6500C5E1AD /* sqSCCSVersion.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1750,7 +1758,14 @@
 			isa = PBXProject;
 			buildConfigurationList = 94D95B1D0923E6810034C6F0 /* Build configuration list for PBXProject "CoreVM" */;
 			compatibilityVersion = "Xcode 2.4";
+			developmentRegion = English;
 			hasScannedForEncodings = 1;
+			knownRegions = (
+				English,
+				Japanese,
+				French,
+				German,
+			);
 			mainGroup = 08773EB500C6A1C4C0A80109;
 			productRefGroup = 08773F3000C6A1C4C0A80109 /* Products */;
 			projectDirPath = "";

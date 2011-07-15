@@ -76,7 +76,11 @@
 	<key>CFBundleExecutable</key>
 	<string>Newspeak Virtual Machine</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Newspeak Virtual Machine 4.0.0 http://www. bracha.org</string>
+	<string>Newspeak Virtual Machine 4.0.0 http://newspeaklanguage.org</string>
+	<key>CFBundleShortVersionString</key>
+	<string>Newspeak Virtual Machine 4.0.0</string>
+	<key>CFBundleVersion</key>
+	<string>4.0.0</string>
 	<key>CFBundleIconFile</key>
 	<string>Newspeak Virtual Machine.icns</string>
 	<key>CFBundleIdentifier</key>
@@ -87,12 +91,8 @@
 	<string>Newspeak Virtual Machine</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
-	<key>CFBundleShortVersionString</key>
-	<string>Newspeak Virtual Machine 4.0.0</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
-	<key>CFBundleVersion</key>
-	<string>4.0.0</string>
 	<key>CGDisableCoalescedUpdates</key>
 	<true/>
 	<key>DTCompiler</key>

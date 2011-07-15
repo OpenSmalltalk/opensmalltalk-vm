@@ -37,6 +37,7 @@
 #include "sqMemoryAccess.h"
 #include "sqaio.h"
 #include "sqUnixCharConv.h"
+#include "sqSCCSVersion.h"
 #include "debug.h"
 
 #ifdef ioMSecs
@@ -423,7 +424,8 @@ sqInt ioDisablePowerManager(sqInt disableIfNonZero)
 # endif
 #endif
 
-static char *getAttribute(sqInt id)
+static char *
+getAttribute(sqInt id)
 {
   if (id < 0)	/* VM argument */
     {
@@ -467,6 +469,10 @@ static char *getAttribute(sqInt id)
       }
 # endif
 #endif
+
+	  case 1009: /* source tree version info */
+		return sourceVersionString();
+
       default:
 	if ((id - 2) < squeakArgCnt)
 	  return squeakArgVec[id - 2];
