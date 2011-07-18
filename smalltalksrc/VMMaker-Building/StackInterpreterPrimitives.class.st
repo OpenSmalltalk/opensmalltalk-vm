@@ -972,12 +972,14 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		62	compiled code compactions since startup (read-only; Cog only; otherwise nil)
 		63	total milliseconds in compiled code compactions since startup (read-only; Cog only; otherwise nil)
 		64	the number of methods that currently have jitted machine-code
-		
+		65 - 69 reserved for more Cog-related info
+		70	the vmProxyMajorVersion (the interpreterProxy VM_MAJOR_VERSION)
+		71	the vmProxyMinorVersion (the interpreterProxy VM_MINOR_VERSION)
 	Note: Thanks to Ian Piumarta for this primitive."
 
 	| mem paramsArraySize result arg index |
 	mem := objectMemory startOfMemory.
-	paramsArraySize := 64.
+	paramsArraySize := 71.
 	argumentCount = 0 ifTrue:
 		[result := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: paramsArraySize.
 		objectMemory storePointerUnchecked: 0	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory youngStart - mem).
@@ -1033,7 +1035,17 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		objectMemory storePointerUnchecked: 61	ofObject: result withValue: self getCodeCompactionCount.
 		objectMemory storePointerUnchecked: 62	ofObject: result withValue: self getCodeCompactionMSecs.
 		objectMemory storePointerUnchecked: 63	ofObject: result withValue: self getCogMethodCount.
-    
+		64 to: 68 do: "reserved for more Cog-related info"
+			[:i | objectMemory storePointerUnchecked: i ofObject: result withValue: objectMemory nilObject].
+		objectMemory
+			storePointerUnchecked: 69
+			ofObject: result
+			withValue: (self integerObjectOf: (self cCode: 'VM_PROXY_MAJOR' inSmalltalk: [self class vmProxyMajorVersion])).
+		objectMemory
+			storePointerUnchecked: 70
+			ofObject: result
+			withValue: (self integerObjectOf: (self cCode: 'VM_PROXY_MINOR' inSmalltalk: [self class vmProxyMinorVersion])).
+		self assert: paramsArraySize = 71.
 		self pop: 1 thenPush: result.
 		^nil].
 
@@ -1094,7 +1106,10 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		arg = 62	ifTrue: [result := self getCodeCompactionCount].
 		arg = 63	ifTrue: [result := self getCodeCompactionMSecs].
 		arg = 64	ifTrue: [result := self getCogMethodCount].
-		
+		(arg between: 65 and: 69) ifTrue: [result := objectMemory nilObject]. "reserved for more Cog-related info"
+		arg = 70 ifTrue: [result := self integerObjectOf: (self cCode: 'VM_PROXY_MAJOR' inSmalltalk: [self class vmProxyMajorVersion])].
+		arg = 71 ifTrue: [result := self integerObjectOf: (self cCode: 'VM_PROXY_MINOR' inSmalltalk: [self class vmProxyMinorVersion])].
+
 		self pop: 2 thenPush: result.
 		^nil].
 
