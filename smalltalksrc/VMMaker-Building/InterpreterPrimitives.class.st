@@ -1133,8 +1133,10 @@ InterpreterPrimitives >> primitiveFail [
 	"Use returnTypeC: #sqInt because that's the way it is defined in sq.h.
 	 Use no explicit return so that Slang doesn't fail an inlining type-check when
 	 a primitive with return type void uses ^self primitiveFail to exit."
+	<api>
 	<returnTypeC: #sqInt>
-	primFailCode == 0 ifTrue:
+	<inline: true>
+	self successful ifTrue:
 		[primFailCode := 1]
 ]
 
@@ -3446,10 +3448,11 @@ InterpreterPrimitives >> signed32BitValueOf: oop [
 	 we have to handle the most negative 32-bit value -2147483648 specially."
 	value < 0 ifTrue:
 		[self assert: (self sizeof: value) == 4.
-		 (negative
-		 and: [self
-				cCode: [value - 1 > 0]
-				inSmalltalk: [value = -16r80000000]]) ifTrue: "Don't fail for -2147483648 /-16r80000000"
+		 "Don't fail for -16r80000000/-2147483648
+		  Alas the simple (negative and: [value - 1 > 0]) fails with contemporary gcc and icc versions
+		  with optimization and sometimes without.  The shift works on all, touch wood."
+		 (negative and: [0 = (self cCode: [value << 1]
+									inSmalltalk: [value << 1 bitAnd: (1 << 32) - 1])]) ifTrue: 
 			[^value].
 		 ^self primitiveFail].
 	^negative
