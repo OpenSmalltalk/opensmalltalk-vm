@@ -494,7 +494,7 @@ CoInterpreter class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord [
 	aStream
 		nextPutAll: '#define COGVM 1'; cr;
 		nextPutAll: '#if !defined(COGMTVM)'; cr;
-		nextPutAll: '#	define COGMTVM '; nextPut: (self isThreadedVM ifTrue: [$1] ifFalse: [$0]); cr;
+		nextPutAll: '#	define COGMTVM 0'; cr;
 		nextPutAll: '#endif'; cr; cr
 ]
 
