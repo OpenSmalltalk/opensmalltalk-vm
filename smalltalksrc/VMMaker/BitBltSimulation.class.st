@@ -119,7 +119,11 @@ Class {
 		'cmMaskTable',
 		'cmLookupTable',
 		'cmBitsPerColor',
-		'dither8Lookup'
+		'dither8Lookup',
+		'componentAlphaModeColor',
+		'componentAlphaModeAlpha',
+		'ungammaLookupTable',
+		'gammaLookupTable'
 	],
 	#classVars : [
 		'AllOnes',
@@ -216,6 +220,11 @@ BitBltSimulation class >> declareCVarsIn: aCCodeGenerator [
 
 	aCCodeGenerator var: 'dither8Lookup'
 		declareC:' unsigned char dither8Lookup[4096]'.
+
+	aCCodeGenerator var:'ungammaLookupTable' 
+		type: 'unsigned char *'.
+	aCCodeGenerator var:'gammaLookupTable' 
+		type: 'unsigned char *'.
 
 	aCCodeGenerator var: 'querySurfaceFn' type: 'void *'.
 	aCCodeGenerator var: 'lockSurfaceFn' type: 'void *'.
@@ -323,6 +332,7 @@ BitBltSimulation class >> initializeRuleTable [
 		"38" pixSwap:with:
 		"39" pixClear:with:
 		"40" fixAlpha:with:
+		"41" rgbComponentAlpha:with:
 	).
 	OpTableSize := OpTable size + 1.  "0-origin indexing"
 
@@ -1038,9 +1048,40 @@ BitBltSimulation >> copyBitsFrom: startX to: stopX at: yValue [
 BitBltSimulation >> copyBitsLockedAndClipped [
 	"Perform the actual copyBits operation.
 	Assume: Surfaces have been locked and clipping was performed."
-	| done |
+	| done gammaLookupTableOop ungammaLookupTableOop |
 	<inline: true>
 	"Try a shortcut for stuff that should be run as quickly as possible"
+	
+	combinationRule = 41
+		ifTrue:["fetch the forecolor into componentAlphaModeColor."
+			componentAlphaModeAlpha := 255.
+			componentAlphaModeColor := 16777215.
+			gammaLookupTable := nil.
+			ungammaLookupTable := nil.
+			interpreterProxy methodArgumentCount >= 2
+				ifTrue:[
+					componentAlphaModeAlpha := interpreterProxy stackIntegerValue: (interpreterProxy methodArgumentCount - 2).
+					(interpreterProxy failed not)
+						ifFalse: [^ interpreterProxy primitiveFail].
+					componentAlphaModeColor := interpreterProxy stackIntegerValue: (interpreterProxy methodArgumentCount - 1).
+					(interpreterProxy failed not)
+						ifFalse: [^ interpreterProxy primitiveFail].
+					interpreterProxy methodArgumentCount = 4
+						ifTrue:[
+							gammaLookupTableOop := interpreterProxy stackObjectValue: 1.
+							(interpreterProxy isBytes: gammaLookupTableOop) 
+								ifTrue:[gammaLookupTable := interpreterProxy firstIndexableField: gammaLookupTableOop.].
+							ungammaLookupTableOop := interpreterProxy stackObjectValue: 0.
+							(interpreterProxy isBytes: ungammaLookupTableOop) 
+								ifTrue:[ungammaLookupTable := interpreterProxy firstIndexableField: ungammaLookupTableOop]]]
+				ifFalse:[
+					interpreterProxy methodArgumentCount = 1
+						ifTrue: [
+							componentAlphaModeColor := interpreterProxy stackIntegerValue: 0.
+							(interpreterProxy failed not)
+								ifFalse: [^ interpreterProxy primitiveFail]]
+						ifFalse:[^ interpreterProxy primitiveFail]]].	
+	
  	done := self tryCopyingBitsQuickly.
 	done ifTrue:[^nil].
 
@@ -1699,6 +1740,7 @@ BitBltSimulation >> initBBOpTable [
 	self cCode: 'opTable[38+1] = (void *)pixSwapwith'.
 	self cCode: 'opTable[39+1] = (void *)pixClearwith'.
 	self cCode: 'opTable[40+1] = (void *)fixAlphawith'.
+	self cCode: 'opTable[41+1] = (void *)rgbComponentAlphawith'.
 ]
 
 { #category : #'initialize-release' }
@@ -2235,6 +2277,34 @@ BitBltSimulation >> partitionedMul: word1 with: word2 nBits: nBits nPartitions: 
 ]
 
 { #category : #'combination rules' }
+BitBltSimulation >> partitionedRgbComponentAlpha: sourceWord dest: destWord nBits: nBits nPartitions: nParts [
+	| mask result p1 p2 v |
+	mask := maskTable at: nBits.  "partition mask starts at the right"
+	result := 0.
+	1 to: nParts do:
+		[:i |
+		p1 := (sourceWord bitAnd: mask) >> ((i - 1)*nBits).
+		p2 := (destWord bitAnd: mask) >> ((i - 1)*nBits).
+		nBits = 32
+			ifFalse:[
+				nBits = 16
+					ifTrue:[
+						p1 := (self rgbMap16To32: p1) bitOr: 16rFF000000.
+						p2 := (self rgbMap16To32: p2) bitOr: 16rFF000000]
+					ifFalse:[
+						p1 := (self rgbMap: p1 from: nBits to: 32) bitOr: 16rFF000000.
+						p2 := (self rgbMap: p2 from: nBits to: 32) bitOr: 16rFF000000.]].
+		v := self rgbComponentAlpha32: p1 with: p2.
+		nBits = 32
+			ifFalse:[
+				v := self rgbMap: v from: 32 to: nBits].
+		result := result bitOr: (v <<  ((i - 1)*nBits)). 
+		mask := mask << nBits  "slide left to next partition"].
+	^ result
+
+]
+
+{ #category : #'combination rules' }
 BitBltSimulation >> partitionedSub: word1 from: word2 nBits: nBits nPartitions: nParts [
 	"Subtract word1 from word2 as nParts partitions of nBits each.
 	This is useful for packed pixels, or packed colors"
@@ -2572,6 +2642,329 @@ BitBltSimulation >> rgbAdd: sourceWord with: destinationWord [
 		["Add RGBA components of the pixel separately"
 		^ self partitionedAdd: sourceWord to: destinationWord
 						nBits: 8 nPartitions: 4]
+]
+
+{ #category : #'combination rules' }
+BitBltSimulation >> rgbComponentAlpha16 [
+	"This version assumes 
+		combinationRule = 41
+		sourcePixSize = 32
+		destPixSize = 16
+		sourceForm ~= destForm.
+	"
+	<inline: false>  "This particular method should be optimized in itself"
+	
+	| srcIndex dstIndex sourceWord srcAlpha destWord deltaX deltaY 
+	srcY dstY dstMask srcShift ditherBase ditherIndex ditherThreshold |
+
+	deltaY := bbH + 1. "So we can pre-decrement"
+	srcY := sy.
+	dstY := dy.
+	srcShift := (dx bitAnd: 1) * 16.
+	destMSB ifTrue:[srcShift := 16 - srcShift].
+	mask1 := 16rFFFF << (16 - srcShift).
+	"This is the outer loop"
+	[(deltaY := deltaY - 1) ~= 0] whileTrue:[
+		srcIndex := sourceBits + (srcY * sourcePitch) + (sx * 4).
+		dstIndex := destBits + (dstY * destPitch) + (dx // 2 * 4).
+		ditherBase := (dstY bitAnd: 3) * 4.
+		ditherIndex := (sx bitAnd: 3) - 1. "For pre-increment"
+		deltaX := bbW + 1. "So we can pre-decrement"
+		dstMask := mask1.
+		dstMask = 16rFFFF ifTrue:[srcShift := 16] ifFalse:[srcShift := 0].
+
+		"This is the inner loop"
+		[(deltaX := deltaX - 1) ~= 0] whileTrue:[
+			ditherThreshold := ditherMatrix4x4 at: ditherBase + (ditherIndex := ditherIndex + 1 bitAnd: 3).
+			sourceWord := self srcLongAt: srcIndex.
+			srcAlpha := sourceWord bitAnd: 16rFFFFFF.
+				srcAlpha = 0 ifFalse:[ "0 < srcAlpha"
+					"If we have to mix colors then just copy a single word"
+					destWord := self dstLongAt: dstIndex.
+					destWord := destWord bitAnd: dstMask bitInvert32.
+					destWord := destWord >> srcShift.
+					"Expand from 16 to 32 bit by adding zero bits"
+					destWord := (((destWord bitAnd: 16r7C00) bitShift: 9) bitOr:
+									((destWord bitAnd: 16r3E0) bitShift: 6)) bitOr:
+								(((destWord bitAnd: 16r1F) bitShift: 3) bitOr:
+									16rFF000000).
+					"Mix colors"
+					sourceWord := self rgbComponentAlpha32: sourceWord with: destWord.
+					"And dither"
+					sourceWord := self dither32To16: sourceWord threshold: ditherThreshold.
+					sourceWord = 0 
+						ifTrue:[sourceWord := 1 << srcShift]
+						ifFalse:[sourceWord := sourceWord << srcShift].
+					"Store back"
+					self dstLongAt: dstIndex put: sourceWord mask: dstMask.
+				].
+			srcIndex := srcIndex + 4.
+			destMSB
+				ifTrue:[srcShift = 0 ifTrue:[dstIndex := dstIndex + 4]]
+				ifFalse:[srcShift = 0 ifFalse:[dstIndex := dstIndex + 4]].
+			srcShift := srcShift bitXor: 16. "Toggle between 0 and 16"
+			dstMask := dstMask bitInvert32. "Mask other half word"
+		].
+		srcY := srcY + 1.
+		dstY := dstY + 1.
+	].
+
+]
+
+{ #category : #'combination rules' }
+BitBltSimulation >> rgbComponentAlpha32 [
+	"This version assumes 
+		combinationRule = 41
+		sourcePixSize = destPixSize = 32
+		sourceForm ~= destForm.
+	Note: The inner loop has been optimized for dealing
+		with the special case of aR = aG = aB = 0 
+	"
+	| srcIndex dstIndex sourceWord srcAlpha destWord deltaX deltaY srcY dstY |
+
+	<inline: false> "This particular method should be optimized in itself"
+
+	"Give the compile a couple of hints"
+	<var: #sourceWord declareC:'register int sourceWord'>
+	<var: #deltaX declareC:'register int deltaX'>
+
+	"The following should be declared as pointers so the compiler will
+	notice that they're used for accessing memory locations 
+	(good to know on an Intel architecture) but then the increments
+	would be different between ST code and C code so must hope the
+	compiler notices what happens (MS Visual C does)"
+	<var: #srcIndex declareC:'register int srcIndex'>
+	<var: #dstIndex declareC:'register int dstIndex'>
+	
+	deltaY := bbH + 1. "So we can pre-decrement"
+	srcY := sy.
+	dstY := dy.
+
+	"This is the outer loop"
+	[(deltaY := deltaY - 1) ~= 0] whileTrue:[
+		srcIndex := sourceBits + (srcY * sourcePitch) + (sx * 4).
+		dstIndex := destBits + (dstY * destPitch) + (dx * 4).
+		deltaX := bbW + 1. "So we can pre-decrement"
+
+		"This is the inner loop"
+		[(deltaX := deltaX - 1) ~= 0] whileTrue:[
+			sourceWord := self srcLongAt: srcIndex.
+			srcAlpha := sourceWord bitAnd:16rFFFFFF.
+				srcAlpha = 0 ifTrue:[
+					srcIndex := srcIndex + 4.
+					dstIndex := dstIndex + 4.
+					"Now skip as many words as possible,"
+					[(deltaX := deltaX - 1) ~= 0 and:[
+						((sourceWord := self srcLongAt: srcIndex) bitAnd:16rFFFFFF) = 0]]
+						whileTrue:[
+							srcIndex := srcIndex + 4.
+							dstIndex := dstIndex + 4.
+						].
+					"Adjust deltaX"
+					deltaX := deltaX + 1.
+				] ifFalse:[ "0 < srcAlpha"
+					"If we have to mix colors then just copy a single word"
+					destWord := self dstLongAt: dstIndex.
+					destWord := self rgbComponentAlpha32: sourceWord with: destWord.
+					self dstLongAt: dstIndex put: destWord.
+					srcIndex := srcIndex + 4.
+					dstIndex := dstIndex + 4.
+				].
+		].
+		srcY := srcY + 1.
+		dstY := dstY + 1.
+	].
+]
+
+{ #category : #'combination rules' }
+BitBltSimulation >> rgbComponentAlpha32: sourceWord with: destinationWord [
+	"
+	componentAlphaModeColor is the color,
+	sourceWord contains an alpha value for each component of RGB
+	each of which is encoded as0 meaning 0.0 and 255 meaning 1.0 .
+	the rule is...
+	
+	color = componentAlphaModeColor.
+	colorAlpha = componentAlphaModeAlpha.
+	mask = sourceWord.
+	dst.A =  colorAlpha + (1 - colorAlpha) * dst.A
+      dst.R = color.R * mask.R * colorAlpha + (1 - (mask.R * colorAlpha)) * dst.R
+      dst.G = color.G * mask.G * colorAlpha + (1 - (mask.G* colorAlpha)) * dst.G
+      dst.B = color.B * mask.B * colorAlpha + (1 - (mask.B* colorAlpha)) * dst.B
+	"
+	<inline: false> "Do NOT inline this into optimized loops"
+	| alpha dstMask srcColor srcAlpha b g r a aB aG aR aA answer s d |
+		
+	alpha := sourceWord.
+	alpha = 0 ifTrue:[^destinationWord].
+	srcColor := componentAlphaModeColor.
+	srcAlpha := componentAlphaModeAlpha bitAnd: 255.
+	
+	aB := alpha bitAnd: 255.
+	alpha := alpha >> 8.
+	aG := alpha bitAnd: 255.
+	alpha := alpha >> 8.
+	aR := alpha bitAnd: 255.
+	alpha := alpha >> 8.
+	aA := alpha bitAnd: 255.	
+
+	srcAlpha = 255 
+		ifFalse:[
+			aA := aA * srcAlpha >> 8.
+			aR := aR * srcAlpha >> 8.
+			aG := aG * srcAlpha >> 8.
+			aB := aB * srcAlpha >> 8].
+			
+	dstMask := destinationWord.
+	d := dstMask bitAnd: 255.
+	s := srcColor bitAnd: 255.
+	ungammaLookupTable == nil
+		ifFalse:[
+			d := ungammaLookupTable at: d.
+			s := ungammaLookupTable at: s.].
+	b := (d * (255 - aB) >> 8) + (s * aB >> 8).
+	b > 255 ifTrue:[b := 255].
+	gammaLookupTable == nil
+		ifFalse:[	
+			b := gammaLookupTable at: b].
+	dstMask := dstMask >> 8.
+	srcColor := srcColor >> 8.
+	d := dstMask bitAnd: 255.
+	s := srcColor bitAnd: 255.
+	ungammaLookupTable == nil
+		ifFalse:[
+			d := ungammaLookupTable at: d.
+			s := ungammaLookupTable at: s.].
+	g := (d * (255 - aG) >> 8) + (s * aG >> 8).
+	g > 255 ifTrue:[g := 255].
+	gammaLookupTable == nil
+		ifFalse:[	
+			g := gammaLookupTable at: g].
+	dstMask := dstMask >> 8.
+	srcColor := srcColor >> 8.
+	d := dstMask bitAnd: 255.
+	s := srcColor bitAnd: 255.
+	ungammaLookupTable == nil
+		ifFalse:[
+			d := ungammaLookupTable at: d.
+			s := ungammaLookupTable at: s.].
+	r := (d * (255 - aR) >> 8) + (s * aR >> 8).
+	r > 255 ifTrue:[r := 255].
+	gammaLookupTable == nil
+		ifFalse:[	
+			r := gammaLookupTable at: r].
+	dstMask := dstMask >> 8.
+	srcColor := srcColor >> 8.
+	a := ((dstMask bitAnd: 255) * (255 - aA) >> 8) + aA. "no need to gamma correct alpha value ?"
+	a > 255 ifTrue:[a := 255].
+	answer := (((((a << 8) + r) << 8) + g) << 8) + b.
+	^answer	
+]
+
+{ #category : #'combination rules' }
+BitBltSimulation >> rgbComponentAlpha8 [
+	"This version assumes 
+		combinationRule = 41
+		sourcePixSize = 32
+		destPixSize = 8
+		sourceForm ~= destForm.
+	Note: This is not real blending since we don't have the source colors available.
+	"
+	
+	| srcIndex dstIndex sourceWord srcAlpha destWord deltaX deltaY 
+	srcY dstY dstMask srcShift adjust mappingTable mapperFlags |
+	
+	<inline: false>  "This particular method should be optimized in itself"
+	<var: #mappingTable declareC:'unsigned int *mappingTable'>
+	
+	mappingTable := self default8To32Table.
+	mapperFlags := cmFlags bitAnd: ColorMapNewStyle bitInvert32.
+	deltaY := bbH + 1. "So we can pre-decrement"
+	srcY := sy.
+	dstY := dy.
+	mask1 := ((dx bitAnd: 3) * 8).
+	destMSB ifTrue:[mask1 := 24 - mask1].
+	mask2 := AllOnes bitXor:(16rFF << mask1).
+	(dx bitAnd: 1) = 0 
+		ifTrue:[adjust := 0]
+		ifFalse:[adjust := 16r1F1F1F1F].
+	(dy bitAnd: 1) = 0
+		ifTrue:[adjust := adjust bitXor: 16r1F1F1F1F].
+	"This is the outer loop"
+	[(deltaY := deltaY - 1) ~= 0] whileTrue:[
+		adjust := adjust bitXor: 16r1F1F1F1F.
+		srcIndex := sourceBits + (srcY * sourcePitch) + (sx * 4).
+		dstIndex := destBits + (dstY * destPitch) + (dx // 4 * 4).
+		deltaX := bbW + 1. "So we can pre-decrement"
+		srcShift := mask1.
+		dstMask := mask2.
+
+		"This is the inner loop"
+		[(deltaX := deltaX - 1) ~= 0] whileTrue:[
+			sourceWord := ((self srcLongAt: srcIndex) bitAnd: (adjust bitInvert32)) + adjust.
+			srcAlpha := sourceWord bitAnd: 16rFFFFFF.
+			"set srcAlpha to the average of the 3 separate aR,Ag,AB values"
+			srcAlpha := ((srcAlpha >> 16) + (srcAlpha >> 8 bitAnd: 16rFF) + (srcAlpha bitAnd: 16rFF)) // 3.
+			srcAlpha > 31 ifTrue:["Everything below 31 is transparent"
+				srcAlpha > 224 
+					ifTrue: ["treat everything above 224 as opaque"
+						sourceWord := 16rFFFFFFFF].
+				destWord := self dstLongAt: dstIndex.
+				destWord := destWord bitAnd: dstMask bitInvert32.
+				destWord := destWord >> srcShift.
+				destWord := mappingTable at: destWord.
+				sourceWord := self rgbComponentAlpha32: sourceWord with: destWord.
+				sourceWord := self mapPixel: sourceWord flags: mapperFlags.
+				sourceWord := sourceWord << srcShift.
+				"Store back"
+				self dstLongAt: dstIndex put: sourceWord mask: dstMask.
+			].
+			srcIndex := srcIndex + 4.
+			destMSB ifTrue:[
+				srcShift = 0 
+					ifTrue:[dstIndex := dstIndex + 4.
+							srcShift := 24.
+							dstMask := 16r00FFFFFF]
+					ifFalse:[srcShift := srcShift - 8.
+							dstMask := (dstMask >> 8) bitOr: 16rFF000000].
+			] ifFalse:[
+				srcShift = 32
+					ifTrue:[dstIndex := dstIndex + 4.
+							srcShift := 0.
+							dstMask := 16rFFFFFF00]
+					ifFalse:[srcShift := srcShift + 8.
+							dstMask := dstMask << 8 bitOr: 255].
+			].
+			adjust := adjust bitXor: 16r1F1F1F1F.
+		].
+		srcY := srcY + 1.
+		dstY := dstY + 1.
+	].
+
+]
+
+{ #category : #'combination rules' }
+BitBltSimulation >> rgbComponentAlpha: sourceWord with: destinationWord [
+	"
+	componentAlphaModeColor is the color,
+	sourceWord contains an alpha value for each component of RGB
+	each of which is encoded as0 meaning 0.0 and 255 meaning 1.0 .
+	the rule is...
+	
+	color = componentAlphaModeColor.
+	colorAlpha = componentAlphaModeAlpha.
+	mask = sourceWord.
+	dst.A =  colorAlpha + (1 - colorAlpha) * dst.A
+      dst.R = color.R * mask.R * colorAlpha + (1 - (mask.R * colorAlpha)) * dst.R
+      dst.G = color.G * mask.G * colorAlpha + (1 - (mask.G* colorAlpha)) * dst.G
+      dst.B = color.B * mask.B * colorAlpha + (1 - (mask.B* colorAlpha)) * dst.B
+	"
+	<inline: false> "Do NOT inline this into optimized loops"
+	| alpha |
+		
+	alpha := sourceWord.
+	alpha = 0 ifTrue:[^destinationWord].
+	^self partitionedRgbComponentAlpha: sourceWord dest: destinationWord nBits: destDepth nPartitions: destPPW.
 ]
 
 { #category : #'combination rules' }
@@ -2952,12 +3345,41 @@ BitBltSimulation >> tryCopyingBitsQuickly [
 	<inline: true>
 	"We need a source."
 	noSource ifTrue:[^false].
-	"We handle only combinationRule 34"
-	(combinationRule = 34) ifFalse:[^false].
+	"We handle only combinationRule 34 and combinationRule 41"	
+	(combinationRule = 34 or:[combinationRule = 41]) ifFalse:[^false].
 	"We handle only sourceDepth 32"
 	(sourceDepth = 32) ifFalse:[^false].
 	"We don't handle overlaps"
 	(sourceForm = destForm) ifTrue:[^false].
+	
+	(combinationRule = 41)
+		ifTrue:[
+			destDepth = 32 
+				ifTrue:[
+					self rgbComponentAlpha32.
+					affectedL := dx.
+					affectedR := dx + bbW.
+					affectedT := dy.
+					affectedB := dy + bbH.
+					^true].
+			destDepth = 16 
+				ifTrue:[
+					self rgbComponentAlpha16.
+					affectedL := dx.
+					affectedR := dx + bbW.
+					affectedT := dy.
+					affectedB := dy + bbH.
+					^true].
+			destDepth = 8 
+				ifTrue:[
+					self rgbComponentAlpha8.
+					affectedL := dx.
+					affectedR := dx + bbW.
+					affectedT := dy.
+					affectedB := dy + bbH.
+					^true].
+			^false].
+	
 	"We need at least 8bit deep dest forms"
 	(destDepth < 8) ifTrue:[^false].
 	"If 8bit, then we want a color map"
