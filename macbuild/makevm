@@ -1,36 +1,38 @@
 #!/bin/bash
-# Build a "complete" Mac VM consisting of CoreVM + Plugins.
+# Build a "complete" Mac VM consisting of CoreVM/CoreMTVM + Plugins.
 # By default build the Deployment configuration into Croquet.app.
-# N.B. We choose not to build several plugins to save time and just copy them
-# from a suitable installation
-QVER=3.5.03
 IFS='	
 '
 BUILD_CONFIGURATION=Deployment
 NSD_BUILD_CONFIGURATION=Deployment
 XCD_BUILD_CONFIGURATION=Release
-DEST="Croquet.app"
+VMAPP=".app"
+DEST="Croquet"
+VMXCP=CoreVM
 KEEP=
 
-USAGE="usage: `basename $0` -[adskh?]"
+USAGE="usage: `basename $0` -[admskh?]"
 
-while getopts 'adskh?' opt $@; do
+while getopts 'admskh?' opt $@; do
 	case $opt in
 	a)		BUILD_CONFIGURATION=Assert
 			NSD_BUILD_CONFIGURATION=Development
 			XCD_BUILD_CONFIGURATION=Debug
-			DEST="Assert.app";;
+			DEST=Assert;;
 	d)		BUILD_CONFIGURATION=Development
 			NSD_BUILD_CONFIGURATION=Development
 			XCD_BUILD_CONFIGURATION=Debug
-			DEST="Debug.app";;
+			DEST=Debug;;
+	m)		VMAPP="MT.app";
+			VMXCP=CoreMTVM;;
 	s)		BUILD_CONFIGURATION=DeploymentSymbols
-			DEST="Fast.app";;
+			DEST=Fast;;
 	k)		KEEP=1;;
 	h|\?|*)	echo $USAGE
 			echo '	build the vm (defaults to a Deployment version)'
 			echo '  -a: compile Assert configuration in Assert.app for assert checks'
 			echo '  -d: compile Development configuration in Debug.app for debugging'
+			echo '  -m: compile the multi-threaded version of the target, e.g. FastMT.app instead of Fast.app'
 			echo '  -s: compile DeploymentSymbols configuration in Fast.app for partial debugging'
 			echo '  -k: keep (do not delete) the existing Croquet.app prior to the build'
 			echo '	-h: display this help'
@@ -38,6 +40,7 @@ while getopts 'adskh?' opt $@; do
 	esac
 done
 
+DEST="$DEST$VMAPP"
 if [ -z "$DEVELOPER_SDK_DIR" ]; then
 	DEVELOPER_SDK_DIR=/Developer/SDKs
 fi
@@ -51,10 +54,10 @@ fi
 
 test "$KEEP" = 1 || rm -rf "$DEST"/* "$DEST"/.??*
 
-# Build CoreVM using xcode
+# Build CoreVM/CoreMTVM using xcode
 echo
-echo CoreVM xcodebuild -project CoreVM.xcodeproj -configuration $BUILD_CONFIGURATION
-xcodebuild -project CoreVM.xcodeproj -configuration $BUILD_CONFIGURATION
+echo $VMXCP xcodebuild -project $VMXCP.xcodeproj -configuration $BUILD_CONFIGURATION
+xcodebuild -project $VMXCP.xcodeproj -configuration $BUILD_CONFIGURATION
 if [ -d "$DEST" ]; then
 	mv build/$BUILD_CONFIGURATION/Croquet.app/* "$DEST"
 else

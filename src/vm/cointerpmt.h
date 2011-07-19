@@ -61,6 +61,7 @@ sqInt compactClassTable(void);
 void compilationBreakpointFor(sqInt selectorOop);
 sqInt createClosureNumArgsnumCopiedstartpc(sqInt numArgs, sqInt numCopied, sqInt initialIP);
 char * cStringOrNullFor(sqInt oop);
+sqInt disownVM(sqInt flags);
 sqInt doSignalSemaphoreWithIndex(sqInt index);
 void dumpPrimTraceLog(void);
 void dumpTraceLog(void);
@@ -79,6 +80,7 @@ void (*functionPointerForCompiledMethodprimitiveIndex(sqInt methodObj, sqInt pri
 void (*functionPointerForinClass(sqInt primIdx,sqInt theClass))(void) ;
 usqLong getNextWakeupUsecs(void);
 sqInt getStackPointer(void);
+sqOSThread getVMOSThread(void);
 sqInt headerOf(sqInt methodPointer);
 void ifValidWriteBackStackPointersSaveTo(void *theCFP, void *theCSP, char **savedFPP, char **savedSPP);
 sqInt implicitReceiverFormixinimplementing(sqInt receiver, sqInt mixin, sqInt selector);
@@ -122,6 +124,7 @@ sqInt objectAfter(sqInt oop);
 sqInt objectBefore(sqInt address);
 sqInt objectExactlyBefore(sqInt oop);
 sqInt objectIsOld(sqInt anObject);
+sqInt ownVM(sqInt threadIndexAndFlags);
 sqInt popRemappableOop(void);
 sqInt popStack(void);
 sqInt primErrTable(void);
@@ -183,6 +186,7 @@ void tenuringIncrementalGC(void);
 sqInt topRemappableOop(void);
 sqInt trueObject(void);
 void updateStackZoneReferencesToCompiledCodePreCompaction(void);
+usqInt vmOwnerLockAddress(void);
 extern void warning(char *s);
 usqInt youngStartAddress(void);
 
@@ -195,6 +199,7 @@ sqInt deferDisplayUpdates;
 sqInt desiredCogCodeSize;
 sqInt desiredEdenBytes;
 sqInt desiredNumStackPages;
+sqInt disownCount;
 sqInt extraVMMemory;
 sqInt inIOProcessEvents;
 struct VirtualMachine* interpreterProxy;
@@ -203,6 +208,7 @@ sqInt minBackwardJumpCountForCompile ;
 volatile int sendTrace;
 void * showSurfaceFn;
 sqInt suppressHeartbeatFlag;
+sqInt willNotThreadWarnCount;
 
 
 /*** Macros ***/

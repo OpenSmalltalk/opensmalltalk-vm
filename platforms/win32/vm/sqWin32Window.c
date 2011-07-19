@@ -1557,7 +1557,7 @@ ioProcessEvents(void)
 	 * ioProcessEvents is disabled.  If >= 0 inIOProcessEvents is incremented
 	 * to avoid reentrancy (i.e. for native GUIs).
 	 */
-	if (inIOProcessEvents) return;
+	if (inIOProcessEvents) return -1;
 	inIOProcessEvents += 1;
 
 	result = ioDrainEventQueue();
@@ -1566,12 +1566,12 @@ ioProcessEvents(void)
 		inIOProcessEvents -= 1;
 
 	return result;
-#else
+#else /* NewspeakVM */
 	/* inIOProcessEvents controls ioProcessEvents.  If negative then
 	 * ioProcessEvents is disabled.  If >= 0 inIOProcessEvents is incremented
 	 * to avoid reentrancy (i.e. for native GUIs).
 	 */
-	if (inIOProcessEvents) return;
+	if (inIOProcessEvents) return -1;
 	inIOProcessEvents += 1;
 
   /* WinCE doesn't retrieve WM_PAINTs from the queue with PeekMessage,
@@ -1605,7 +1605,7 @@ ioProcessEvents(void)
 		inIOProcessEvents -= 1;
 
 	return 1;
-#endif
+#endif /* NewspeakVM */
 }
 
 #if NewspeakVM
@@ -1781,11 +1781,11 @@ int ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y) {
   /* We can leave the mask bits empty since we have an alpha channel below */
   bmi1->bmiHeader.biWidth = w;
   bmi1->bmiHeader.biHeight = -h;
-  hbmMask = CreateDIBSection(mDC, bmi1, DIB_RGB_COLORS, &maskBits, NULL, 0);
+  hbmMask = CreateDIBSection(mDC,bmi1,DIB_RGB_COLORS,(void **)&maskBits,0,0);
 
   bmi32->bmiHeader.biWidth = w;
   bmi32->bmiHeader.biHeight = -h;
-  hbmColor = CreateDIBSection(mDC, bmi32, DIB_RGB_COLORS, &dibBits, NULL, 0);
+  hbmColor = CreateDIBSection(mDC,bmi32,DIB_RGB_COLORS,(void **)&dibBits,0,0);
   memcpy(dibBits, srcBits, w*h*4);
 
   info.fIcon = 0;
