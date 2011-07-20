@@ -69,7 +69,7 @@ struct VirtualMachine* interpreterProxy;
 /* using sse2 instructions requires 16-byte stack alignment but on win32 there's
  * no guarantee that libraries preserve alignment so compensate on callback.
  */
-# define STACK_ALIGN_HACK
+# define STACK_ALIGN_HACK 1
 # define STACK_ALIGN_BYTES 16
 #endif
 
@@ -136,25 +136,18 @@ callIA32DoubleReturn(SIGNATURE) { double (*f)(), r;
 }
 
 /* Queueing order for callback returns.  To ensure that callback returns occur
- * in LIFO order we provide mostRecentCallbackContext which is tested by the return
- * primitive primReturnFromContextThrough.  In a threaded VM this will have to
- * be thread-specific (as yet unimplemented).
+ * in LIFO order we provide mostRecentCallbackContext which is tested by the
+ * return primitive primReturnFromContextThrough.  Note that in the threaded VM
+ * this does not have to be thread-specific or locked since it is within the
+ * bounds of the ownVM/disownVM pair.
  */
-#if COGMTVM
-# error as yet unimplemented
-/* Test if need and allocate a thread-local variable index in
- * allocateExecutablePage (low frequency operation).  Keep a per-thread
- * mostRecentCallbackContext.
- */
-#else
 static VMCallbackContext *mostRecentCallbackContext = 0;
 
 VMCallbackContext *
 getMostRecentCallbackContext() { return mostRecentCallbackContext; }
 
-# define getRMCC(t) mostRecentCallbackContext
-# define setRMCC(t) (mostRecentCallbackContext = (void *)(t))
-#endif
+#define getRMCC(t) mostRecentCallbackContext
+#define setRMCC(t) (mostRecentCallbackContext = (void *)(t))
 
 /*
  * Entry-point for call-back thunks.  Args are thunk address and stack pointer,
@@ -188,27 +181,27 @@ thunkEntry(void *thunkp, long *stackp)
 	VMCallbackContext *previousCallbackContext;
 	int flags, returnType;
 
-	if ((flags = interpreterProxy->ownVM(0)) < 0) {
-		fprintf(stderr,"Warning; callback failed to own the VM\n");
-		return -1;
-	}
-
-#if defined(STACK_ALIGN_HACK)
+#if STACK_ALIGN_HACK
   { void *sp = getsp();
     int offset = (unsigned long)sp & (STACK_ALIGN_BYTES - 1);
 	if (offset) {
-#if _MSC_VER
+# if _MSC_VER
 		_asm sub esp, dword ptr offset;
-#elif __GNUC__
+# elif __GNUC__
 		asm("sub %0,%%esp" : : "m"(offset));
-#else
-# error need to subtract offset from esp
-#endif
+# else
+#  error need to subtract offset from esp
+# endif
 		sp = getsp();
 		assert(!((unsigned long)sp & (STACK_ALIGN_BYTES - 1)));
 	}
   }
-#endif
+#endif /* STACK_ALIGN_HACK */
+
+	if ((flags = interpreterProxy->ownVM(0)) < 0) {
+		fprintf(stderr,"Warning; callback failed to own the VM\n");
+		return -1;
+	}
 
 	if (!(returnType = setjmp(vmcc.trampoline))) {
 		previousCallbackContext = getRMCC();
