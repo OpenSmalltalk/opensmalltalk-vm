@@ -393,6 +393,9 @@ Cogit class >> cogToBytecodeMethodMapping [
 
 { #category : #translation }
 Cogit class >> declareCVarsIn: aCCodeGenerator [
+	#(	COGVM COGMTVM STACKVM "Leave these to the various interp.h's to define"
+		VMBIGENDIAN ) "Leave this to the various sqConfig.h files to define."
+		do: [:const| aCCodeGenerator removeConstant: const].  
 	#(	'coInterpreter' 'objectMemory' 'methodZone' 'objectRepresentation'
 		'cogBlockMethodSurrogateClass' 'cogMethodSurrogateClass'
 		'threadManager' 'processor' 'lastNInstructions' 'simulatedAddresses'
