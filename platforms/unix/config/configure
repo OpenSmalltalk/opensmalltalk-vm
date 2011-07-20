@@ -23751,7 +23751,7 @@ else
   echo "$as_me:$LINENO: result: \"$ac_optflags\"" >&5
 echo "${ECHO_T}\"$ac_optflags\"" >&6
 fi
-if test "$cogit" = yes ; then INTERP="cointerp"; else INTERP="interp"; fi
+if test -z "$INTERP" ; then if test "$cogit" = yes ; then INTERP="cointerp"; else INTERP="interp"; fi; fi
 
 for ac_prog in gawk mawk nawk awk
 do

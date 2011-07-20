@@ -144,7 +144,7 @@ else
 fi])
 
 AC_DEFUN([AC_GNU_INTERP],
-[if test "$cogit" = yes ; then INTERP="cointerp"; else INTERP="interp"; fi
+[if test -z "$INTERP" ; then if test "$cogit" = yes ; then INTERP="cointerp"; else INTERP="interp"; fi; fi
 AC_SUBST(INTERP)
 AC_PROG_AWK
 AC_MSG_CHECKING(whether we can compile gcc3x-$INTERP)
