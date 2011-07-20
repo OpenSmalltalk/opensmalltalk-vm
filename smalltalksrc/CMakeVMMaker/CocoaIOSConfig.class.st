@@ -48,7 +48,7 @@ CocoaIOSConfig >> CFBundleShortVersionString [
 { #category : #'bundle strings' }
 CocoaIOSConfig >> CFBundleVersion [
 	"An application version"
-	^ '5.7.4'
+	^ '6.0'
 ]
 
 { #category : #'bundle strings' }
@@ -64,7 +64,7 @@ CocoaIOSConfig >> SqueakDebug [
 { #category : #accessing }
 CocoaIOSConfig >> commonCompilerFlags [
 	"Common compiler flags"
-	^#('-arch i386' "'-fnext-runtime'" '-mmacosx-version-min=10.5')
+	^#('-arch i386' "'-fnext-runtime'" '-mmacosx-version-min=10.4' '-DHAVE_UUID_GENERATE')
 ]
 
 { #category : #accessing }
@@ -177,6 +177,18 @@ CocoaIOSConfig >> configureMacMenubarPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
+CocoaIOSConfig >> configureObjectiveCPlugin: maker [ 
+	"extra rules for ObjectiveCPlugin"
+
+	maker addFrameworks: self frameworks.
+	maker includeDirectories: '${platformsDir}/iOS/plugins/SqueakObjectiveC'.
+	maker 
+		addSources: #('drawing.m' 'PDColoredProgressView.m' 'squeakProxy.m' 'squeakSUnitTester.m') 
+		prefixed: '${platformsDir}/iOS/plugins/SqueakObjectiveC/'
+	
+]
+
+{ #category : #'plugin extra rules' }
 CocoaIOSConfig >> configureSoundPlugin: maker [
 	super configureSoundPlugin: maker.
 	
@@ -187,6 +199,11 @@ CocoaIOSConfig >> configureSoundPlugin: maker [
 	maker 
 		addSources: #('sqSqueakOSXSoundCoreAudio.m' ) 
 		prefixed: '${platformsDir}/iOS/vm/OSX/plugins/SoundPlugin/'
+]
+
+{ #category : #'plugin extra rules' }
+CocoaIOSConfig >> configureTestOSAPlugin: maker [
+	
 ]
 
 { #category : #'plugin extra rules' }

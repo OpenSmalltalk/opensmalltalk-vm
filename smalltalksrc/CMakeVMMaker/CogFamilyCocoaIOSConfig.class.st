@@ -44,13 +44,20 @@ CogFamilyCocoaIOSConfig >> configureFFIPlugin: maker [
 	maker doNotGenerate: true.
 ]
 
-{ #category : #plugins }
+{ #category : #'plugin extra rules' }
 CogFamilyCocoaIOSConfig >> configureHostWindowPlugin: maker [
 	super configureHostWindowPlugin: maker.
 	maker includeDirectories: '${platformsDir}/Cross/plugins/HostWindowPlugin'.
 ]
 
-{ #category : #plugins }
+{ #category : #'plugin extra rules' }
+CogFamilyCocoaIOSConfig >> configureQuicktimePlugin: maker [
+	"extra rules for QuicktimePlugin"
+	
+	maker includeDirectories: '${platformsDir}/Cross/plugins/QuicktimePlugin'.
+]
+
+{ #category : #'plugin extra rules' }
 CogFamilyCocoaIOSConfig >> configureUnixOSProcessPlugin: maker [
 	super configureHostWindowPlugin: maker.
 	maker includeDirectories: '${platformsDir}/Cross/plugins/SocketPlugin'.
@@ -79,6 +86,9 @@ CogFamilyCocoaIOSConfig >> defaultExternalPlugins [
 		B3DAcceleratorPlugin
 		LocalePlugin
 		UnixOSProcessPlugin
+		"ObjectiveCPlugin"
+		QuicktimePlugin
+		"TestOSAPlugin"
 	)
 ]
 
