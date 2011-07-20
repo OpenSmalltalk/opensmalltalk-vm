@@ -7,6 +7,8 @@
 # Base definitions:
 # default configuration from product, assert & debug
 CONFIGURATION=product
+# default VM threading from multi, single
+THREADING=single
 
 # The name of the VM to build
 VM:=Croquet
@@ -22,12 +24,22 @@ ifndef BASEDIR
 BASEDIR:=.
 endif
 
-ifeq ("$(CONFIGURATION)","product")
-BUILD:=build
-else ifeq ("$(CONFIGURATION)","assert")
-BUILD:=buildast
+ifeq ("$(THREADING)","multi")
+	ifeq ("$(CONFIGURATION)","product")
+		BUILD:=buildmt
+	else ifeq ("$(CONFIGURATION)","assert")
+		BUILD:=buildmtast
+	else
+		BUILD:=buildmtdbg
+	endif
 else
-BUILD:=builddbg
+	ifeq ("$(CONFIGURATION)","product")
+		BUILD:=build
+	else ifeq ("$(CONFIGURATION)","assert")
+		BUILD:=buildast
+	else
+		BUILD:=builddbg
+	endif
 endif
 SRCDIR:= ../src
 BLDDIR:= $(BASEDIR)/$(BUILD)
@@ -43,7 +55,11 @@ WIN32UTILDIR:=$(PLATDIR)/win32/util
 
 CROSSSRC:= $(wildcard $(CROSSDIR)/*.c) $(wildcard $(CROSSDIR)/*.cpp)
 WIN32SRC:= $(wildcard $(WIN32DIR)/*.c) $(wildcard $(WIN32DIR)/*.cpp)
+ifeq ("$(THREADING)","multi")
+MAKERSRC:= $(MAKERDIR)/gcc3x-cointerpmt.c $(MAKERDIR)/cogit.c
+else
 MAKERSRC:= $(MAKERDIR)/gcc3x-cointerp.c $(MAKERDIR)/cogit.c
+endif
 VMSRC:= $(notdir $(MAKERSRC) $(WIN32SRC) $(CROSSSRC))
 
 VPATH:= $(MAKERDIR) $(WIN32DIR) $(CROSSDIR)
@@ -113,9 +129,17 @@ DEBUGVM=0
 else ifeq ("$(CONFIGURATION)","assert")
 OFLAGS:= -D_MT -O1 -march=pentium4 -fno-omit-frame-pointer
 DEBUGVM=0
+NDEBUG:=-DAllocationCheckFiller=0xADD4E55
 else
 OFLAGS:= -D_MT -march=pentium4
 DEBUGVM=1
+NDEBUG:=-DAllocationCheckFiller=0xADD4E55
+endif
+
+ifeq ("$(THREADING)","multi")
+COGDEFS:=-DCOGMTVM=1 -DDEBUGVM=$(DEBUGVM)
+else
+COGDEFS:=-DCOGMTVM=0 -DDEBUGVM=$(DEBUGVM)
 endif
 
 # Set minimum version to WindowsXP (see /cygwin/usr/include//w32api/w32api.h)
@@ -126,7 +150,7 @@ INCLUDEPATH:= -isystem/usr/include/mingw -I/usr/include/w32api
 NOBUILTIN:= -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
 CFLAGS:= $(INCLUDEPATH) -msse2 -ggdb2 -mwindows -mthreads -mno-cygwin -mwin32 \
 	-mno-rtd -mms-bitfields -mno-accumulate-outgoing-args $(OFLAGS) $(NOBUILTIN)
-DEFS:=	-DDEBUGVM=$(DEBUGVM) $(WINVER) -DWIN32 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
+DEFS:=	$(COGDEFS) $(WINVER) -DWIN32 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
 		-DNO_SERVICE -DNO_STD_FILE_SUPPORT \
 		$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' -DX86 $(XDEFS) $(CROQUET)
 XDEFS:=	-DSQUEAK_BUILTIN_PLUGIN
@@ -139,8 +163,8 @@ INCLUDES:= -I. -I$(VMDIR) -I$(WIN32DIR) -I$(CROSSDIR) -I$(DXDIR) $(XINC)
 #       The switch '-mwindows' gives us a GUI app instead of a console app.
 #
 LD:=	 gcc
-LDFLAGS:= -mno-cygwin -mwindows -Wl,--export-dynamic -L/usr/lib/mingw
-CONSOLELDFLAGS:= -mno-cygwin -mconsole -Wl,--export-dynamic -L/usr/lib/mingw
+LDFLAGS:= -mno-cygwin -mwindows -mthreads -Wl,--export-dynamic -L/usr/lib/mingw
+CONSOLELDFLAGS:= -mno-cygwin -mconsole -mthreads -Wl,--export-dynamic -L/usr/lib/mingw
 STDLIBS:= -lddraw -ldinput -lopengl32 -lwsock32 -lcomdlg32 -lole32 -lwinmm \
 	 -lversion -lwininet -luser32 -lgdi32 -lpsapi -lkernel32 -lcrtdll \
 	-ldsound -lsecur32
@@ -180,14 +204,23 @@ RCFLAGS:= --include-dir $(PLATDIR)/win32/misc -D_WIN32
 #
 default: print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) $(STRIPEXE) $(STRIPCONSOLEEXE)
 
+productmt:;
+	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=product THREADING=multi $(@,product=) default
+
 product:;
-	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=product $(@,product=) default
+	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=product THREADING=single $(@,product=) default
+
+assertmt:
+	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=assert THREADING=multi $(@,assert=) default
 
 assert:
-	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=assert $(@,assert=) default
+	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=assert THREADING=single $(@,assert=) default
+
+debugmt:
+	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=debug THREADING=multi $(@,debug=) default
 
 debug:
-	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=debug $(@,debug=) default
+	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=debug THREADING=single $(@,debug=) default
 
 # Do make init to allow make -n to function.
 init:	$(OBJDIR) eitheror.exe mkNamedPrims.exe
@@ -195,15 +228,22 @@ init:	$(OBJDIR) eitheror.exe mkNamedPrims.exe
 clean:
 	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe build
 
+cleanmt:
+	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe buildmt
+
 cleanast:
 	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe buildast
 
-cleandbg:
-	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe builddbg
+cleanmtast:
+	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe buildmtast
+
+cleanmtdbg:
+	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe buildmtdbg
 
 print-settings:
 	@echo ---------------- Makefile settings ------------------
 	@echo CONFIGURATION=$(CONFIGURATION)
+	@echo THREADING=$(THREADING)
 	@echo VPATH=$(VPATH)
 	@echo INCLUDES=$(INCLUDES)
 	@echo CFLAGS=$(CFLAGS)
@@ -284,7 +324,7 @@ $(OBJDIR)/%.lib:	FORCE
 	$(MAKE) $(MFLAGS) -C $(BLDDIR)/$(*F) BUILD=$(BUILD) \
 		-f../../$(shell ./eitheror.exe $(PLATDIR)/win32/plugins/$(*F)/Makefile Makefile.plugin) \
 		PLATDIR=../../$(PLATDIR) SRCDIR=../../$(SRCDIR) BASEDIR=../../$(BASEDIR) \
-		LIBNAME=$(*F) XDEFS=-DSQUEAK_BUILTIN_PLUGIN \
+		LIBNAME=$(*F) COGDEFS="$(COGDEFS)" XDEFS=-DSQUEAK_BUILTIN_PLUGIN \
 		../../$(OBJDIR)/$(*F).lib
 
 # External plugin.  Build as dll and copy to vm dir ($(OBJDIR)).
@@ -294,7 +334,7 @@ $(OBJDIR)/%.dll:	FORCE
 	$(MAKE) $(MFLAGS) -C $(BLDDIR)/$(*F) BUILD=$(BUILD) \
 		-f../../$(shell ./eitheror.exe $(PLATDIR)/win32/plugins/$(*F)/Makefile Makefile.plugin) \
 		PLATDIR=../../$(PLATDIR) SRCDIR=../../$(SRCDIR) BASEDIR=../../$(BASEDIR) \
-		LIBNAME=$(*F) ../../$(OBJDIR)/$(*F).dll
+		COGDEFS="$(COGDEFS)" LIBNAME=$(*F) ../../$(OBJDIR)/$(*F).dll
 
 FORCE:
 

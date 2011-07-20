@@ -42,26 +42,32 @@ How to build the Cog Croquet VM on Unix
 3b. For a full debug VM do
      ../../platforms/unix/config/configure --without-vm-display-fbdev --without-npsqueak CFLAGS="-g3 -msse2 -D_GNU_SOURCE -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=1" LIBS=-lpthread
 
+3c. For a multi-threaded VM open a shell and cd to the mtbld directory.  Then
+   execute
+     ../../platforms/unix/config/configure INTERP=cointerpmt --without-vm-display-fbdev --without-npsqueak CFLAGS="-g -O2 -msse2 -DNDEBUG -DCOGMTVM=1 -DDEBUGVM=0 -D_GNU_SOURCE -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1" LIBS=-lpthread
+     make squeakmt
+     make installmt prefix=WhereYouWantTheVmToGo
+
 N.B.  As of early 2010 the linux pthreads implementation doesn't appear to
 provide a way of setting priorities for the default thread scheduling policy
 SCHED_OTHER (unlike e.g. Mac OS X) and doesn't appear to allow changing the
 policy to one that does (e.g. SCHED_RR).  So for now we use the itimer
 scheme.  See platforms/unix/vm/sqUnixHeartbeat.c
 
-3c. If you want to get the Cog VM simulator working you'll need to build the
+3d. If you want to get the Cog VM simulator working you'll need to build the
 BochsIA32Plugin/BochsIA32Plugin.xcodeproj project and to build that you'll
 need to first build bochs.  First check-out the processor simulator source tree
 containing Bochs:
      svn co http://www.squeakvm.org/svn/squeak/branches/Cog/processors
-Then build using the following, which works on Mac OS and is hence likely to
-work on linux:
+Then build using the following, which works on Mac OS and is hence unlikely to
+work entirely on linux (no xcodebuild):
   $ cd ROOT/processors/IA32/bochs
   $ ./conf.COG
   $ ./makeem
   $ cd ROOT/macbuild/BochsIA32Plugin
   $ xcodebuild
 
-3d. If you're building the VM on a 64-bit OS, you'll need a compiler which can
+3e. If you're building the VM on a 64-bit OS, you'll need a compiler which can
 compile and link to 32-bit binaries. On most Linuxes the gcc-multilib package
 provides the 32-bit compiler and the ia32-libs provides the 32-bit libraries.
 You'll also have to add the -m32 switch to all gcc & g++ invocations.  The

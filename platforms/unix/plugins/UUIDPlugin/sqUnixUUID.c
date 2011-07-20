@@ -22,6 +22,8 @@ int MakeUUID(char *location)
   uuidgen(&uuid, 1);
 #elif defined(HAVE_UUID_GENERATE)
   uuid_generate(uuid);
+#else
+# error "you must define some way of generating a UUID."
 #endif
 
   memcpy((void *)location, (void *)&uuid, sizeof(uuid));
