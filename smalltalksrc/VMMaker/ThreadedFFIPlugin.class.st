@@ -216,7 +216,7 @@ ThreadedFFIPlugin >> ffiAddressOf: rcvr startingAt: byteOffset size: byteSize [
 	(byteOffset > 0) ifFalse:[^interpreterProxy primitiveFail].
 	rcvrClass := interpreterProxy fetchClassOf: rcvr.
 	rcvrSize := interpreterProxy byteSizeOf: rcvr.
-	rcvrClass == interpreterProxy classExternalAddress ifTrue:[
+	rcvrClass = interpreterProxy classExternalAddress ifTrue:[
 		(rcvrSize = 4) ifFalse:[^interpreterProxy primitiveFail].
 		addr := interpreterProxy fetchPointer: 0 ofObject: rcvr.
 		"don't you dare to read from object memory!"
@@ -291,7 +291,7 @@ ThreadedFFIPlugin >> ffiArgument: oop Spec: argSpec Class: argClass in: calloutS
 	oopClass := interpreterProxy fetchClassOf: oop. "Prefetch class (we'll need it)"
 	nilOop :=  interpreterProxy nilObject.
 	"Do the necessary type checks"
-	argClass == nilOop ifFalse:[
+	argClass = nilOop ifFalse:[
 		"Type check 1: 
 		Is the required class of the argument a subclass of ExternalStructure?"
 		(interpreterProxy includesBehavior: argClass 
@@ -299,7 +299,7 @@ ThreadedFFIPlugin >> ffiArgument: oop Spec: argSpec Class: argClass in: calloutS
 			ifFalse:[^FFIErrorWrongType]. "Nope. Fail."
 		"Type check 2:
 		Is the class of the argument a subclass of required class?"
-		((nilOop == oop) or:[interpreterProxy includesBehavior: oopClass ThatOf: argClass])
+		((nilOop = oop) or:[interpreterProxy includesBehavior: oopClass ThatOf: argClass])
 				ifFalse:[^FFIErrorCoercionFailed]. "Nope. Fail."
 		"Okay, we've passed the type check (so far)"
 	].
@@ -307,12 +307,12 @@ ThreadedFFIPlugin >> ffiArgument: oop Spec: argSpec Class: argClass in: calloutS
 	"Check if oopClass is a subclass of ExternalStructure.
 	If this is the case we'll work on it's handle and not the actual oop."
 	isStruct := false.
-	((interpreterProxy isIntegerObject: oop) or:[oop == nilOop]) ifFalse:[
+	((interpreterProxy isIntegerObject: oop) or:[oop = nilOop]) ifFalse:[
 		"#isPointers: will fail if oop is SmallInteger so don't even attempt to use it"
 		(interpreterProxy isPointers: oop) 
 			ifTrue:[isStruct := interpreterProxy includesBehavior: oopClass 
 								ThatOf: interpreterProxy classExternalStructure.
-					(argClass == nilOop or:[isStruct]) 
+					(argClass = nilOop or:[isStruct]) 
 						ifFalse:[^FFIErrorCoercionFailed]].
 		"note: the test for #isPointers: above should speed up execution since no pointer type ST objects are allowed in external calls and thus if #isPointers: is true then the arg must be ExternalStructure to work. If it isn't then the code fails anyways so speed isn't an issue"
 	].
@@ -348,7 +348,7 @@ ThreadedFFIPlugin >> ffiArgument: oop Spec: argSpec Class: argClass in: calloutS
 			ifTrue:[^FFIErrorIntAsPointer].
 
 		"but allow passing nil pointer for any pointer type"
-		oop == interpreterProxy nilObject ifTrue:[^self ffiPushPointer: nil in: calloutState].
+		oop = nilOop ifTrue:[^self ffiPushPointer: nil in: calloutState].
 
 		"argument is reference to either atomic or structure type"
 		(calloutState ffiArgHeader anyMask: FFIFlagAtomic) ifTrue:[
@@ -435,7 +435,7 @@ ThreadedFFIPlugin >> ffiAtomicStructByReference: oop Class: oopClass in: callout
 	| atomicType err valueOop |
 	<inline: true>
 	"must be external data to pass pointers to atomic type"
-	oopClass == interpreterProxy classExternalData 
+	oopClass = interpreterProxy classExternalData 
 		ifFalse:[^FFIErrorCoercionFailed].
 	atomicType := self atomicTypeOf: calloutState ffiArgHeader.
 	"no type checks for void pointers"
@@ -565,7 +565,7 @@ ThreadedFFIPlugin >> ffiCheckReturn: retSpec With: retClass in: calloutState [
 	"Make sure we can return an object of the given type"
 	<inline: true>
 	| ffiRetSpec |
-	retClass == interpreterProxy nilObject ifFalse:[
+	retClass = interpreterProxy nilObject ifFalse:[
 		(interpreterProxy includesBehavior: retClass 
 						ThatOf: interpreterProxy classExternalStructure)
 			ifFalse:[^FFIErrorBadReturn]].
@@ -576,7 +576,7 @@ ThreadedFFIPlugin >> ffiCheckReturn: retSpec With: retClass in: calloutState [
 	ffiRetSpec := self cCoerce: (interpreterProxy firstIndexableField: retSpec) to: #int.
 	calloutState ffiRetHeader: (interpreterProxy longAt: ffiRetSpec).
 	(self isAtomicType: calloutState ffiRetHeader) ifFalse:[
-		(retClass == interpreterProxy nilObject)
+		(retClass = interpreterProxy nilObject)
 			ifTrue:[^FFIErrorBadReturn]].
 	(calloutState ffiRetHeader bitAnd: (FFIFlagPointer bitOr: FFIFlagStructure)) = FFIFlagStructure ifTrue:
 		[calloutState structReturnSize: (calloutState ffiRetHeader bitAnd: FFIStructSizeMask)].
@@ -661,7 +661,7 @@ ThreadedFFIPlugin >> ffiFloatValueOf: oop [
 	| oopClass |
 	<returnTypeC:'double'>
 	oopClass := interpreterProxy fetchClassOf: oop.
-	oopClass == interpreterProxy classFloat
+	oopClass = interpreterProxy classFloat
 		ifTrue:[^interpreterProxy floatValueOf: oop].
 	"otherwise try the integer coercions and return its float value"
 	^(self ffiIntegerValueOf: oop) asFloat
@@ -681,15 +681,15 @@ ThreadedFFIPlugin >> ffiIntegerValueOf: oop [
 	| oopClass |
 	<inline: true>
 	(interpreterProxy isIntegerObject: oop) ifTrue:[^interpreterProxy integerValueOf: oop].
-	oop == interpreterProxy nilObject ifTrue:[^0]. "@@: should we really allow this????"
-	oop == interpreterProxy falseObject ifTrue:[^0].
-	oop == interpreterProxy trueObject ifTrue:[^1].
+	oop = interpreterProxy nilObject ifTrue:[^0]. "@@: should we really allow this????"
+	oop = interpreterProxy falseObject ifTrue:[^0].
+	oop = interpreterProxy trueObject ifTrue:[^1].
 	oopClass := interpreterProxy fetchClassOf: oop.
-	oopClass == interpreterProxy classFloat
+	oopClass = interpreterProxy classFloat
 		ifTrue:[^(interpreterProxy floatValueOf: oop) asInteger].
-	oopClass == interpreterProxy classCharacter
+	oopClass = interpreterProxy classCharacter
 		ifTrue:[^interpreterProxy fetchInteger: 0 ofObject: oop].
-	oopClass == interpreterProxy classLargePositiveInteger
+	oopClass = interpreterProxy classLargePositiveInteger
 		ifTrue:[^interpreterProxy positive32BitValueOf: oop].
 	^interpreterProxy signed32BitValueOf: oop "<- will fail if not integer"
 ]
@@ -836,14 +836,14 @@ ThreadedFFIPlugin >> ffiPushPointerContentsOf: oop in: calloutState [
 	| ptrClass ptrAddress |
 	<inline: false>
 	ptrClass := interpreterProxy fetchClassOf: oop.
-	ptrClass == interpreterProxy classExternalAddress ifTrue:[
+	ptrClass = interpreterProxy classExternalAddress ifTrue:[
 		ptrAddress := interpreterProxy fetchPointer: 0 ofObject: oop.
 		"Don't you dare to pass pointers into object memory"
 		(interpreterProxy isInMemory: ptrAddress) ifTrue:
 			[^FFIErrorInvalidPointer].
 		^self ffiPushPointer: ptrAddress in: calloutState].
 
-	ptrClass == interpreterProxy classByteArray ifTrue:
+	ptrClass = interpreterProxy classByteArray ifTrue:
 		["Since this involves passing the address of the first indexable field we need to fail
 		  the call if it is threaded and the object is young, since it may move during the call."
 		 self cppIf: COGMTVM ifTrue:
@@ -902,10 +902,10 @@ ThreadedFFIPlugin >> ffiPushSignedLongLongOop: oop in: calloutState [
 	Note: Coercions from float are *not* supported."
 	| value |
 	<var: #value type: #sqLong>
-	(oop == interpreterProxy nilObject
-	 or: [oop == interpreterProxy falseObject])
+	(oop = interpreterProxy nilObject
+	 or: [oop = interpreterProxy falseObject])
 		ifTrue:[value := 0] ifFalse:
-	[oop == interpreterProxy trueObject
+	[oop = interpreterProxy trueObject
 		ifTrue:[value := 1] ifFalse:
 	[value := interpreterProxy signed64BitValueOf: oop.
 	 interpreterProxy failed ifTrue:
@@ -963,19 +963,19 @@ ThreadedFFIPlugin >> ffiPushStructureContentsOf: oop in: calloutState [
 	| ptrClass ptrAddress |
 	<inline: true>
 	ptrClass := interpreterProxy fetchClassOf: oop.
-	ptrClass == interpreterProxy classExternalAddress ifTrue:["ExternalAddress is bytes"
-		ptrAddress :=interpreterProxy fetchPointer: 0 ofObject: oop.
+	ptrClass = interpreterProxy classExternalAddress ifTrue: "ExternalAddress is bytes"
+		[ptrAddress :=interpreterProxy fetchPointer: 0 ofObject: oop.
 		"There is no way we can make sure the structure is valid.
 		But we can at least check for attempts to pass pointers to ST memory."
-		(interpreterProxy isInMemory: ptrAddress)
-			ifTrue:[^FFIErrorInvalidPointer].
+		(interpreterProxy isInMemory: ptrAddress) ifTrue:
+			[^FFIErrorInvalidPointer].
 		^self ffiPushStructure:  (self cCoerceSimple: ptrAddress to: #'void *')
 			ofSize: (calloutState ffiArgHeader bitAnd: FFIStructSizeMask)
 			typeSpec: calloutState ffiArgSpec
 			ofLength: calloutState ffiArgSpecSize
 			in: calloutState].
-	ptrClass == interpreterProxy classByteArray ifTrue:[
-		"The following is a somewhat pessimistic test but I like being sure..."
+	ptrClass = interpreterProxy classByteArray ifTrue:
+		["The following is a somewhat pessimistic test but I like being sure..."
 		(interpreterProxy byteSizeOf: oop) = (calloutState ffiArgHeader bitAnd: FFIStructSizeMask)
 			ifFalse:[^FFIErrorStructSize].
 		ptrAddress := self cCoerceSimple: (interpreterProxy firstIndexableField: oop) to: #int.
@@ -992,11 +992,11 @@ ThreadedFFIPlugin >> ffiPushStructureContentsOf: oop in: calloutState [
 				ofLength: calloutState ffiArgSpecSize
 				in: calloutState].
 		"If FFIFlagPointer + FFIFlagStructure is set use ffiPushPointer on the contents"
-		(calloutState ffiArgHeader bitAnd: FFIStructSizeMask) = 4
-			ifFalse:[^FFIErrorStructSize].
+		(calloutState ffiArgHeader bitAnd: FFIStructSizeMask) = 4 ifFalse:
+			[^FFIErrorStructSize].
 		ptrAddress := interpreterProxy fetchPointer: 0 ofObject: oop.
-		(interpreterProxy isInMemory: ptrAddress)
-			ifTrue:[^FFIErrorInvalidPointer].
+		(interpreterProxy isInMemory: ptrAddress) ifTrue:
+			[^FFIErrorInvalidPointer].
 		^self ffiPushPointer: ptrAddress in: calloutState].
 	^FFIErrorBadArg
 ]
@@ -1035,10 +1035,10 @@ ThreadedFFIPlugin >> ffiPushUnsignedLongLongOop: oop in: calloutState [
 	Note: Coercions from float are *not* supported."
 	| value |
 	<var: #value type: #usqLong>
-	(oop == interpreterProxy nilObject
-	 or: [oop == interpreterProxy falseObject])
+	(oop = interpreterProxy nilObject
+	 or: [oop = interpreterProxy falseObject])
 		ifTrue:[value := 0] ifFalse:
-	[oop == interpreterProxy trueObject
+	[oop = interpreterProxy trueObject
 		ifTrue:[value := 1] ifFalse:
 	[value := interpreterProxy positive64BitValueOf: oop.
 	 interpreterProxy failed ifTrue:
@@ -1089,11 +1089,11 @@ ThreadedFFIPlugin >> ffiReturnPointer: retVal ofType: retType in: calloutState [
 	| retClass atomicType retOop oop ptr classOop |
 	<var: #ptr type: #'sqInt *'>
 	retClass := interpreterProxy fetchPointer: 1 ofObject: retType.
-	retClass == interpreterProxy nilObject ifTrue:[
-		"Create ExternalData upon return"
+	retClass = interpreterProxy nilObject ifTrue:
+		["Create ExternalData upon return"
 		atomicType := self atomicTypeOf: calloutState ffiRetHeader.
-		(atomicType >> 1) = (FFITypeSignedChar >> 1) ifTrue:["String return"
-			^self ffiReturnCStringFrom: (self cCoerceSimple: retVal to: #usqInt)].
+		(atomicType >> 1) = (FFITypeSignedChar >> 1) ifTrue: "String return"
+			[^self ffiReturnCStringFrom: (self cCoerceSimple: retVal to: #usqInt)].
 		"generate external data"
 		interpreterProxy pushRemappableOop: retType.
 		oop := interpreterProxy 
@@ -1109,13 +1109,12 @@ ThreadedFFIPlugin >> ffiReturnPointer: retVal ofType: retType in: calloutState [
 		interpreterProxy storePointer: 0 ofObject: retOop withValue: oop.
 		oop := interpreterProxy popRemappableOop. "return type"
 		interpreterProxy storePointer: 1 ofObject: retOop withValue: oop.
-		^interpreterProxy methodReturnValue: retOop.
-	].
+		^interpreterProxy methodReturnValue: retOop].
 	"non-atomic pointer return"
 	interpreterProxy pushRemappableOop: retClass. "preserve for gc"
-	(calloutState ffiRetHeader anyMask: FFIFlagStructure)
-		ifTrue:[classOop := interpreterProxy classByteArray]
-		ifFalse:[classOop := interpreterProxy classExternalAddress].
+	classOop := (calloutState ffiRetHeader anyMask: FFIFlagStructure)
+					ifTrue:[interpreterProxy classByteArray]
+					ifFalse:[interpreterProxy classExternalAddress].
 	oop := interpreterProxy 
 			instantiateClass: classOop
 			indexableSize: 4.
@@ -1152,13 +1151,11 @@ ThreadedFFIPlugin >> ffiReturnType: specOnStack [
 
 { #category : #'callout support' }
 ThreadedFFIPlugin >> ffiSupportsCallingConvention: aCallingConvention [
-	"Currently all target platforms (Mac OS X ppc or x86, linux x86, Win32) answer true
-	 for the two calling conventions, FFICallTypeCDecl FFICallTypeApi, so let's not waste
-	 time by testing for these.  The only issue is whether the FFICallTypeApi is callee pops
-	 or not (which itself is of little importance to an alloca-based implementation, but does
-	 save a few instructions if not).  Subclasses can still override if necessary."
+	"Check that the calling convention is valid.  This test also filters out attempts
+	 to do a threaded call in the non-threaded VM/plugin combinatioin."
 
-	^true "or: [aCallingConvention = FFICallTypeCDecl or: [callType == FFICallTypeApi]]"
+	<inline: true>
+	^aCallingConvention = FFICallTypeCDecl or: [aCallingConvention = FFICallTypeApi]
 ]
 
 { #category : #'callout support' }
@@ -1583,7 +1580,7 @@ ThreadedFFIPlugin >> primitiveLogCallsTo [
 	interpreterProxy methodArgumentCount = 1 
 		ifFalse:[^interpreterProxy primitiveFail].
 	logFile := interpreterProxy stackObjectValue: 0.
-	logFile == interpreterProxy nilObject ifTrue:[ "disable logging"
+	logFile = interpreterProxy nilObject ifTrue:[ "disable logging"
 		ok := self ffiLogFileName: nil OfLength: 0.
 		ok ifFalse:[^interpreterProxy primitiveFail].
 		ffiLogEnabled := false.
