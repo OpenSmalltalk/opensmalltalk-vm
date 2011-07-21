@@ -17,8 +17,9 @@ ThreadedIA32FFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: cal
 	<var: #floatRet type: #double>
 	<var: #intRet type: #usqLong>
 	<inline: true>
-	(calloutState callFlags anyMask: FFICallFlagThreaded) ifTrue:
-		[myThreadIndex := interpreterProxy disownVM: 0].
+	self cppIf: COGMTVM ifTrue:
+	[(calloutState callFlags anyMask: FFICallFlagThreaded) ifTrue:
+		[myThreadIndex := interpreterProxy disownVM: 0]].
 
 	self registerArgsSlop + self cStackAlignment > 0 ifTrue:
 		[self setsp: calloutState argVector].
@@ -34,8 +35,9 @@ ThreadedIA32FFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: cal
 	(self isCalleePopsConvention: calloutState callFlags) ifTrue:
 		[self setsp: calloutState argVector].
 
-	(calloutState callFlags anyMask: FFICallFlagThreaded) ifTrue:
-		[interpreterProxy ownVM: myThreadIndex].
+	self cppIf: COGMTVM ifTrue:
+	[(calloutState callFlags anyMask: FFICallFlagThreaded) ifTrue:
+		[interpreterProxy ownVM: myThreadIndex]].
 
 	"Note: Order is important here since FFIFlagPointer + FFIFlagStructure is used to represent
 	 'typedef void* VoidPointer' and VoidPointer must be returned as pointer *not* as struct."
