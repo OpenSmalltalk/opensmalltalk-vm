@@ -155,9 +155,6 @@ ObjectMemory class >> declareCAsOop: arrayOfVariableNames in: aCCodeGenerator [
 
 { #category : #translation }
 ObjectMemory class >> declareCVarsIn: aCCodeGenerator [
-	#(	COGVM COGMTVM STACKVM "Leave these to the various interp.h's to define"
-		VMBIGENDIAN ) "Leave this to the various sqConfig.h files to define."
-		do: [:const| aCCodeGenerator removeConstant: const].  
 	aCCodeGenerator
 		var: #memory
 		declareC: 'static usqInt memory'.
