@@ -9,6 +9,7 @@ XCD_BUILD_CONFIGURATION=Release
 VMAPP=".app"
 DEST="Croquet"
 VMXCP=CoreVM
+SFP=SqueakFFIPrims
 KEEP=
 
 USAGE="usage: `basename $0` -[admskh?]"
@@ -24,7 +25,8 @@ while getopts 'admskh?' opt $@; do
 			XCD_BUILD_CONFIGURATION=Debug
 			DEST=Debug;;
 	m)		VMAPP="MT.app";
-			VMXCP=CoreMTVM;;
+			VMXCP=CoreMTVM;
+			SFP=SqueakMTFFIPrims;;
 	s)		BUILD_CONFIGURATION=DeploymentSymbols
 			DEST=Fast;;
 	k)		KEEP=1;;
@@ -44,7 +46,7 @@ DEST="$DEST$VMAPP"
 if [ -z "$DEVELOPER_SDK_DIR" ]; then
 	DEVELOPER_SDK_DIR=/Developer/SDKs
 fi
-test -d "$DEVELOPER_SDK_DIR" || echo '$DEVELOPER_SDK_DIR' "$DEVELOPER_SDK_DIR" does not exist \(needed by SqueakFFIPrims project\)
+test -d "$DEVELOPER_SDK_DIR" || echo '$DEVELOPER_SDK_DIR' "$DEVELOPER_SDK_DIR" does not exist \(needed by $SFP project\)
 export DEVELOPER_SDK_DIR
 if [ ! -d "$DEVELOPER_SDK_DIR/MacOSX10.5.sdk" ]; then
 	if [ -d "$DEVELOPER_SDK_DIR/MacOSX10.4u.sdk" ]; then
@@ -93,10 +95,10 @@ cp -R Mpeg3Plugin/build/Release/Mpeg3Plugin.bundle mpeg3.app/Contents/Resources
 
 # Build the FFI plugin (New as of 27 March 2008)
 echo
-echo SqueakFFIPlugin xcodebuild -project SqueakFFIPrims/SqueakFFI.xcodeproj -configuration $NSD_BUILD_CONFIGURATION
-xcodebuild -project SqueakFFIPrims/SqueakFFI.xcodeproj -configuration $NSD_BUILD_CONFIGURATION
+echo SqueakFFIPlugin xcodebuild -project $SFP/SqueakFFI.xcodeproj -configuration $NSD_BUILD_CONFIGURATION
+xcodebuild -project $SFP/SqueakFFI.xcodeproj -configuration $NSD_BUILD_CONFIGURATION
 rm -rf "$DEST/Contents/Resources/SqueakFFIPrims.bundle"
-cp -R SqueakFFIPrims/build/$NSD_BUILD_CONFIGURATION/SqueakFFIPrims.bundle "$DEST/Contents/Resources"
+cp -R $SFP/build/$NSD_BUILD_CONFIGURATION/SqueakFFIPrims.bundle "$DEST/Contents/Resources"
 
 # Build the BochsIA32Plugin
 # N.B. To build the plugin you also have to build the Bochs libraries in
