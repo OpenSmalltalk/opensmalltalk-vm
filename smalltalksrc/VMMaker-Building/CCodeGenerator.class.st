@@ -699,6 +699,11 @@ CCodeGenerator >> emitCConstantsOn: aStream [
 		[:const|
 		(variableDeclarations anySatisfy: [:value| value includesSubString: const]) ifTrue:
 			[unused remove: const ifAbsent: []]].
+	"Don't generate any defines for the externally defined constants, STACKVM, COGVM, COGMTVM et al."
+	(VMClass class>>#initializeMiscConstantsWith:) literalsDo:
+		[:lit|
+		lit isVariableBinding ifTrue:
+			[unused add: lit key]].
 	constList := constants keys reject:[:any| unused includes: any].
 	aStream cr; nextPutAll: '/*** Constants ***/'; cr.
 	(self sortStrings: constList) do:
