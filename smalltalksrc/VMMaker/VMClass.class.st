@@ -163,9 +163,11 @@ VMClass class >> implicitReturnTypeFor: aSelector [
 
 { #category : #initialization }
 VMClass class >> initializeMiscConstantsWith: optionsDictionary [
-	"Falsify the `what type of VM is this?' flags that are defined in the various interp.h files.
-	Subclass implementations need to include a super initializeMiscConstantsWith:."
+	"Falsify the `what type of VM is this?' flags that are defined in the various interp.h files,
+	 or in the case of VMBIGENDIAN the various sqConfig.h files.
+	 Subclass implementations need to include a super initializeMiscConstantsWith:."
 
+	VMBIGENDIAN class. "Mention this for the benefit of CCodeGenerator>>emitCConstantsOn:"
 	STACKVM := COGVM := COGMTVM := false.
 	IMMUTABILITY := NewspeakVM := false
 ]
