@@ -1,5 +1,8 @@
 "
-This plugin provides access to foreign function interfaces on those platforms that provide such. For example Windows DLLs and unix .so's.  This version is designed to support reentrancy and threading, and so uses alloca to stack allocate all memory needed for a given callout.  Specific platforms are implemented by concrete subclasses.
+This plugin provides access to foreign function interfaces on those platforms that provide such. For example Windows DLLs and unix .so's.  This version is designed to support reentrancy and threading, and so uses alloca to stack allocate all memory needed for a given callout.  Specific platforms are implemented by concrete subclasses.  Threaded calls can only be provided within the context of the threaded VM; othewise calls must be blocking.  So code specific to threading is guarded with a
+	self cppIf: COGMTVM
+		ifTrue: [...]
+form to arrange that it is only compiled in the threaded VM context.
 "
 Class {
 	#name : #ThreadedFFIPlugin,
@@ -397,12 +400,13 @@ ThreadedFFIPlugin >> ffiAtomicArgByReference: oop Class: oopClass in: calloutSta
 		"Fall through to byte* test"
 		atomicType := FFITypeUnsignedByte].
 
-	"Since all the following pass the address of the first indexable field we need to fail
+	self cppIf: COGMTVM ifTrue:
+	["Since all the following pass the address of the first indexable field we need to fail
 	 the call if it is threaded and the object is young, since it may move during the call."
 	((calloutState callFlags anyMask: FFICallFlagThreaded)
 	and: [(isAlien not or: [self isDirectAlien: oop])
 	and: [interpreterProxy isYoung: oop]]) ifTrue:
-		[^PrimErrObjectMayMove negated].
+		[^PrimErrObjectMayMove negated]].
 
 	(atomicType = FFITypeVoid or:[(atomicType >> 1) = (FFITypeSignedByte >> 1)]) ifTrue:
 		"byte* -- see comment on string above"
@@ -467,14 +471,21 @@ ThreadedFFIPlugin >> ffiCall: externalFunction ArgArrayOrNil: argArrayOrNil NumA
 	and: [(interpreterProxy slotSizeOf: argTypeArray) = (nArgs + 1)]) ifFalse:
 		[^self ffiFail: FFIErrorBadArgs].
 	"check if the calling convention is supported"
-	(self ffiSupportsCallingConvention: (flags bitAnd: FFICallTypesMask)) ifFalse:
-		[^self ffiFail: FFIErrorCallType].
+	self cppIf: COGMTVM
+		ifTrue:
+			[(self ffiSupportsCallingConvention: (flags bitAnd: FFICallTypesMask)) ifFalse:
+				[^self ffiFail: FFIErrorCallType]]
+		ifFalse: "not masking causes threaded calls to fail, which is as they should if the plugin is not threaded."
+			[(self ffiSupportsCallingConvention: flags) ifFalse:
+				[^self ffiFail: FFIErrorCallType]].
 
 	address := self ffiLoadCalloutAddress: externalFunction.
 	interpreterProxy failed ifTrue:
 		[^0 "error code already set by ffiLoadCalloutAddress:"].
 	requiredStackSize := self externalFunctionHasStackSizeSlot
-							ifTrue: [interpreterProxy fetchInteger: ExternalFunctionStackSizeIndex ofObject: externalFunction]
+							ifTrue: [interpreterProxy
+										fetchInteger: ExternalFunctionStackSizeIndex
+										ofObject: externalFunction]
 							ifFalse: [-1].
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: (argArrayOrNil isNil
@@ -517,11 +528,12 @@ ThreadedFFIPlugin >> ffiCall: externalFunction ArgArrayOrNil: argArrayOrNil NumA
 		err := self ffiArgument: oop Spec: argSpec Class: argClass in: calloutState.
 		err ~= 0 ifTrue:
 			[self cleanupCalloutState: calloutState.
-			 err = PrimErrObjectMayMove negated ifTrue:
-				[^PrimErrObjectMayMove]. "N.B. Do not fail if object may move because caller will GC and retry."
+			 self cppIf: COGMTVM ifTrue:
+			 [err = PrimErrObjectMayMove negated ifTrue:
+				[^PrimErrObjectMayMove]]. "N.B. Do not fail if object may move because caller will GC and retry."
 			 ^self ffiFail: err]]. "coercion failed or out of stack space"
 	"Failures must be reported back from ffiArgument:Spec:Class:in:.
-	 Should not fail form here on in."
+	 Should not fail from here on in."
 	self assert: interpreterProxy failed not.
 	self ffiLogCallout: externalFunction.
 	(requiredStackSize < 0
@@ -834,18 +846,20 @@ ThreadedFFIPlugin >> ffiPushPointerContentsOf: oop in: calloutState [
 	ptrClass == interpreterProxy classByteArray ifTrue:
 		["Since this involves passing the address of the first indexable field we need to fail
 		  the call if it is threaded and the object is young, since it may move during the call."
-		 ((calloutState callFlags anyMask: FFICallFlagThreaded)
-		 and: [interpreterProxy isYoung: oop]) ifTrue:
-			[^PrimErrObjectMayMove negated].
+		 self cppIf: COGMTVM ifTrue:
+		 [((calloutState callFlags anyMask: FFICallFlagThreaded)
+		   and: [interpreterProxy isYoung: oop]) ifTrue:
+			[^PrimErrObjectMayMove negated]].
 
 		ptrAddress := self cCoerce: (interpreterProxy firstIndexableField: oop) to: #int.
 		^self ffiPushPointer: ptrAddress in: calloutState].
 
 	(interpreterProxy includesBehavior: ptrClass ThatOf: interpreterProxy classAlien) ifTrue:
-		[((calloutState callFlags anyMask: FFICallFlagThreaded)
-		 and: [(self isDirectAlien: oop)
-		 and: [interpreterProxy isYoung: oop]]) ifTrue:
-			[^PrimErrObjectMayMove negated].
+		[self cppIf: COGMTVM ifTrue:
+		 [((calloutState callFlags anyMask: FFICallFlagThreaded)
+		   and: [(self isDirectAlien: oop)
+		   and: [interpreterProxy isYoung: oop]]) ifTrue:
+			[^PrimErrObjectMayMove negated]].
 
 		ptrAddress := self startOfData: oop.
 		^self ffiPushPointer: ptrAddress in: calloutState].
@@ -968,9 +982,10 @@ ThreadedFFIPlugin >> ffiPushStructureContentsOf: oop in: calloutState [
 		(calloutState ffiArgHeader anyMask: FFIFlagPointer) ifFalse:[
 			"Since this involves passing the address of the first indexable field we need to fail
 			  the call if it is threaded and the object is young, since it may move during the call."
-			 ((calloutState callFlags anyMask: FFICallFlagThreaded)
+			self cppIf: COGMTVM ifTrue:
+			 [((calloutState callFlags anyMask: FFICallFlagThreaded)
 			 and: [interpreterProxy isYoung: oop]) ifTrue:
-				[^PrimErrObjectMayMove negated].
+				[^PrimErrObjectMayMove negated]].
 			^self ffiPushStructure: (self cCoerceSimple: ptrAddress to: #'void *') 
 				ofSize: (calloutState ffiArgHeader bitAnd: FFIStructSizeMask)
 				typeSpec: calloutState ffiArgSpec
@@ -1233,16 +1248,21 @@ ThreadedFFIPlugin >> primitiveCallout [
  
 	<returnTypeC: #void>
 	<export: true>
-	| meth externalFunction nArgs retryCount |
+	| meth externalFunction |
 	meth := interpreterProxy primitiveMethod.
 	(interpreterProxy literalCountOf: meth) > 0 ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadMethod].
 	externalFunction := interpreterProxy literal: 0 ofMethod: meth.
-	nArgs := interpreterProxy methodArgumentCount.
-	retryCount := 0.
-	[(self ffiCall: externalFunction ArgArrayOrNil: nil NumArgs: nArgs) = PrimErrObjectMayMove
-	 and: [(retryCount := retryCount + 1) <= nArgs]] whileTrue:
-		[interpreterProxy tenuringIncrementalGC].
+	self cppIf: COGMTVM
+		ifTrue:
+			[ | nArgs retryCount |
+			nArgs := interpreterProxy methodArgumentCount.
+			retryCount := 0.
+			[(self ffiCall: externalFunction ArgArrayOrNil: nil NumArgs: nArgs) = PrimErrObjectMayMove
+			 and: [(retryCount := retryCount + 1) <= nArgs]] whileTrue:
+				[interpreterProxy tenuringIncrementalGC]]
+		ifFalse:
+			[self ffiCall: externalFunction ArgArrayOrNil: nil NumArgs: interpreterProxy methodArgumentCount].
 	^0
 ]
 
@@ -1253,18 +1273,28 @@ ThreadedFFIPlugin >> primitiveCalloutWithArgs [
 
 	<returnTypeC: #void>
 	<export: true>
-	| externalFunction argArray nArgs retryCount |
+	| externalFunction argArray nArgs |
 	interpreterProxy methodArgumentCount = 1 ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
-	retryCount := 0.
-	[externalFunction := interpreterProxy stackValue: 1.
-	 argArray := interpreterProxy stackValue: 0.
-	 (interpreterProxy isArray: argArray) ifFalse:
-		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	 nArgs := interpreterProxy slotSizeOf: argArray.
-	 (self ffiCall: externalFunction ArgArrayOrNil: argArray NumArgs: nArgs) = PrimErrObjectMayMove
-	  and: [(retryCount := retryCount + 1) <= nArgs]] whileTrue:
-		[interpreterProxy tenuringIncrementalGC].
+	self cppIf: COGMTVM
+		ifTrue:
+			[| retryCount |
+			retryCount := 0.
+			[externalFunction := interpreterProxy stackValue: 1.
+			 argArray := interpreterProxy stackValue: 0.
+			 (interpreterProxy isArray: argArray) ifFalse:
+				[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+			 nArgs := interpreterProxy slotSizeOf: argArray.
+			 (self ffiCall: externalFunction ArgArrayOrNil: argArray NumArgs: nArgs) = PrimErrObjectMayMove
+			  and: [(retryCount := retryCount + 1) <= nArgs]] whileTrue:
+				[interpreterProxy tenuringIncrementalGC]]
+		ifFalse:
+			[externalFunction := interpreterProxy stackValue: 1.
+			argArray := interpreterProxy stackValue: 0.
+			(interpreterProxy isArray: argArray) ifFalse:
+				[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+			nArgs := interpreterProxy slotSizeOf: argArray.
+			self ffiCall: externalFunction ArgArrayOrNil: argArray NumArgs: nArgs].
 	^0
 ]
 
