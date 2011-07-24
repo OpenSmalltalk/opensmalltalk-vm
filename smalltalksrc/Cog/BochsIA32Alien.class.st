@@ -68,6 +68,11 @@ BochsIA32Alien class >> dataSize [
 	^19184
 ]
 
+{ #category : #debugger }
+BochsIA32Alien class >> defaultIntegerBaseInDebugger [
+	^16
+]
+
 { #category : #'class initialization' }
 BochsIA32Alien class >> initialize [
 	"BochsIA32Alien initialize"
@@ -524,29 +529,24 @@ BochsIA32Alien >> handleMovEbGbFailureAt: pc "<Integer>" in: memoryArray "<Bitma
 					accessor: (#(al cl dl bl ah ch dh bh) at: ((modrmByte >> 3 bitAnd: 7) + 1)))
 				signal]
 		ifFalse:
-			[self handleExecutionPrimitiveFailureAt: pc
-				in: memoryArray
-				readOnlyBelow: minimumWritableAddress]
+			[self reportPrimitiveFailure]
 ]
 
 { #category : #'error handling' }
 BochsIA32Alien >> handleMovEvGvFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
 	"Convert an execution primitive failure for a register write into a ProcessorSimulationTrap signal."
-	| modrmByte address |
-	^(((modrmByte := memoryArray byteAt: pc + 2) bitAnd: 16rC7) = 16r5 "ModRegInd & disp32"
-	    and: [(address := memoryArray unsignedLongAt: pc + 3 bigEndian: false) >= minimumWritableAddress])
+	| modrmByte |
+	^((modrmByte := memoryArray byteAt: pc + 2) bitAnd: 16rC7) = 16r5 "ModRegInd & disp32"
 		ifTrue:
 			[(ProcessorSimulationTrap
 					pc: pc
 					nextpc: pc + 6
-					address: address
+					address: (memoryArray unsignedLongAt: pc + 3 bigEndian: false)
 					type: #write
 					accessor: (#(eax ecx edx ebx esp ebp esi edi) at: ((modrmByte >> 3 bitAnd: 7) + 1)))
 				signal]
 		ifFalse:
-			[self handleExecutionPrimitiveFailureAt: pc
-				in: memoryArray
-				readOnlyBelow: minimumWritableAddress]
+			[self reportPrimitiveFailure]
 ]
 
 { #category : #'error handling' }
@@ -565,9 +565,7 @@ BochsIA32Alien >> handleMovGbEbFailureAt: pc "<Integer>" in: memoryArray "<Bitma
 					accessor: (#(al: cl: dl: bl: ah: ch: dh: bh:) at: ((modrmByte >> 3 bitAnd: 7) + 1)))
 				signal]
 		ifFalse:
-			[self handleExecutionPrimitiveFailureAt: pc
-				in: memoryArray
-				readOnlyBelow: minimumWritableAddress]
+			[self reportPrimitiveFailure]
 ]
 
 { #category : #'error handling' }
@@ -584,9 +582,7 @@ BochsIA32Alien >> handleMovGvEvFailureAt: pc "<Integer>" in: memoryArray "<Bitma
 					accessor: (#(eax: ecx: edx: ebx: esp: ebp: esi: edi:) at: ((modrmByte >> 3 bitAnd: 7) + 1)))
 				signal]
 		ifFalse:
-			[self handleExecutionPrimitiveFailureAt: pc
-				in: memoryArray
-				readOnlyBelow: minimumWritableAddress]
+			[self reportPrimitiveFailure]
 ]
 
 { #category : #'error handling' }
