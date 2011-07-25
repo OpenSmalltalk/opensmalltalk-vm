@@ -22,6 +22,8 @@
 		sqInt arg = argVector[i+1];
 		if (objIsAlien(arg) && sizeField(arg))
 			size += moduloPOT(sizeof(long),abs(sizeField(arg)));
+		else if (interpreterProxy->isFloatObject(arg))
+			size += sizeof(double);
 		else /* assume an integer or pointer.  check below. */
 			size += sizeof(long);
 	}
@@ -31,6 +33,8 @@
 		sqInt arg = argVector[i];
 		if (objIsAlien(arg) && sizeField(arg))
 			size += moduloPOT(sizeof(long),abs(sizeField(arg)));
+		else if (interpreterProxy->isFloatObject(arg))
+			size += sizeof(double);
 		else /* assume an integer or pointer.  check below. */
 			size += sizeof(long);
 	}
@@ -79,6 +83,11 @@
 			*(void **)argvec = v;
 			argvec += sizeof(long);
 		}
+		else if (interpreterProxy->isFloatObject(arg)) {
+			double d = interpreterProxy->floatValueOf(arg);
+			*(double *)argvec = d;
+			argvec += sizeof(double);
+		}
 		else {
 			long v = interpreterProxy->signed32BitValueOf(arg);
 			if (interpreterProxy->failed()) {
@@ -114,6 +123,11 @@
 			void *v = interpreterProxy->firstIndexableField(bitsObj);
 			*(void **)argvec = v;
 			argvec += sizeof(long);
+		}
+		else if (interpreterProxy->isFloatObject(arg)) {
+			double d = interpreterProxy->floatValueOf(arg);
+			*(double *)argvec = d;
+			argvec += sizeof(double);
 		}
 		else {
 			long v = interpreterProxy->signed32BitValueOf(arg);
