@@ -6833,11 +6833,17 @@ Cogit >> remapNSIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
 				[mappedOop := objectMemory remap: oop.
 				 mappedOop ~= oop ifTrue:
 					[backEnd unalignedLongAt: pc put: mappedOop].
+				 (hasYoungPtr ~= 0
+				  and: [objectMemory isYoung: mappedOop]) ifTrue:
+					[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true].
 				 pc := mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop.
 				 (oop := backEnd unalignedLongAt: pc) ~= 0 ifTrue:
 					[mappedOop := objectMemory remap: oop.
 					 mappedOop ~= oop ifTrue:
-						[backEnd unalignedLongAt: pc put: mappedOop]]]].
+						[backEnd unalignedLongAt: pc put: mappedOop].
+				 (hasYoungPtr ~= 0
+				  and: [objectMemory isYoung: mappedOop]) ifTrue:
+					[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]]]].
 		 hasYoungPtr ~= 0 ifTrue:
 			[| offset targetMethod |
 			 "Since the unlinking routines may rewrite the cacheTag to the send's selector, and
