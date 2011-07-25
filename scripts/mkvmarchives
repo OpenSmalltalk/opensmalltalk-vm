@@ -7,6 +7,9 @@ if [ $# = 0 ]; then
 CL=1
 CM=1
 CW=1
+CTL=1
+CTM=1
+CTW=1
 NL=1
 NM=1
 NW=1
@@ -14,33 +17,46 @@ else
 CL=
 CM=
 CW=
+CTL=
+CTM=
+CTW=
 NL=
 NM=
 NW=
 	while [ -n "$1" ]; do
 		case $1 in
+		-c)		CL=1;CM=1;CW=1;CTL=1;CTM=1;CTW=1;;
 		-cl)	CL=1;;
 		-cm)	CM=1;;
 		-cw)	CW=1;;
+		-ctl)	CTL=1;;
+		-ctm)	CTM=1;;
+		-ctw)	CTW=1;;
+		-n)		NL=1;NM=1;NW=1;;
 		-nl)	NL=1;;
 		-nm)	NM=1;;
 		-nw)	NW=1;;
-		-l)		CL=1;NL=1;;
-		-m)		CM=1;NM=1;;
-		-w)		CW=1;NW=1;;
-		-?|-h)  echo usage: $0 [-l -m -w -cl -cm -cw -nl -nm -nw]; exit 0
+		-l)		CL=1;CTL=1;NL=1;;
+		-m)		CM=1;CTM=1;NM=1;;
+		-w)		CW=1;CTW=1;NW=1;;
+		-?|-h)  echo usage: $0 [-c -n -l -m -w -c[lmw] -ct[lmw] -n[lmw]]; exit 0
 		esac
 		shift
 	done
 fi
 EXES=
+REV=`grep 'SvnRawRevisionString.*Rev:' platforms/Cross/vm/sqSCCSVersion.h \
+	| sed 's/^.*Rev: \([0-9][0-9]*\) $";/\1/'`
 if [ -n "$CL" ]; then
 	rm -rf coglinux.tgz
 	COPYFILE_DISABLE=1 tar czf coglinux.tgz coglinux
-	EXES=coglinux/lib/squeak/3.9-7/squeak
+	EXES="$EXES	coglinux/lib/squeak/3.9-7/squeak"
 fi
-REV=`grep 'SvnRawRevisionString.*Rev:' platforms/Cross/vm/sqSCCSVersion.h \
-	| sed 's/^.*Rev: \([0-9][0-9]*\) $";/\1/'`
+if [ -n "$CTL" ]; then
+	rm -rf cogmtlinux.tgz
+	COPYFILE_DISABLE=1 tar czf cogmtlinux.tgz cogmtlinux
+	EXES="$EXES	cogmtlinux/lib/squeak/3.9-7/squeak"
+fi
 if [ -n "$CM" ]; then
 	test -d Cog.app || mkdir Cog.app
 	rm -rf Cog.app/* Cog.app.tgz
@@ -50,6 +66,15 @@ g/ [
 	tar czf Cog.app.tgz Cog.app
 	EXES="$EXES	Cog.app/Contents/MacOS/Croquet"
 fi
+if [ -n "$CTM" ]; then
+	test -d CogMT.app || mkdir CogMT.app
+	rm -rf CogMT.app/* CogMT.app.tgz
+	(cd macbuild/FastMT.app>/dev/null;tar cf - *)|(cd CogMT.app;tar xvf -)
+	ex "+g/[ >][0-9][0-9]*\.[0-9][0-9]*\.0/s/0\([< ]\)/$REV\1/" +w +q CogMT.app/Contents/Info.plist
+g/ [
+	tar czf CogMT.app.tgz CogMT.app
+	EXES="$EXES	CogMT.app/Contents/MacOS/Croquet"
+fi
 if [ -n "$CW" ]; then
 	test -d cogwin || mkdir cogwin
 	rm -rf cogwin/* cogwin.zip
@@ -57,6 +82,14 @@ if [ -n "$CW" ]; then
 	ln cygwinbuild/build/vm/*.dll cogwin
 	zip -vr cogwin.zip cogwin
 	EXES="$EXES	cogwin/Croquet.exe"
+fi
+if [ -n "$CTW" ]; then
+	test -d cogmtwin || mkdir cogmtwin
+	rm -rf cogmtwin/* cogmtwin.zip
+	ln cygwinbuild/buildmt/vm/{Croquet.exe,Croquet.ini,Croquet.map} cogmtwin
+	ln cygwinbuild/buildmt/vm/*.dll cogmtwin
+	zip -vr cogmtwin.zip cogmtwin
+	EXES="$EXES	cogmtwin/Croquet.exe"
 fi
 if [ -n "$NL" ]; then
 	rm -rf nsvmlinux.tgz
@@ -88,4 +121,4 @@ do
 	strings - $vm | egrep '\$Rev: |Interp.*VMMaker|Cogit.*VMMaker| built on ' | sed 's/ uuid:.*//'
 	echo checking $vm for asserts
 	strings - $vm | grep "assert[^0-9]*[0-9][0-9][0-9]"
-done
+done 2>&1 | tee MVALOG

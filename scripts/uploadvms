@@ -7,12 +7,17 @@ else
 ARCHIVES=
 	while [ -n "$1" ]; do
 		case $1 in
+		-c)		ARCHIVES="$ARCHIVES	coglinux.tgz	Cog.app.tgz	cogwin.zip	cogmtlinux.tgz	CogMT.app.tgz	cogmtwin.zip";;
 		-cl)	ARCHIVES="$ARCHIVES	coglinux.tgz";;
 		-cm)	ARCHIVES="$ARCHIVES	Cog.app.tgz";;
 		-cw)	ARCHIVES="$ARCHIVES	cogwin.zip";;
+		-ctl)	ARCHIVES="$ARCHIVES	cogmtlinux.tgz";;
+		-ctm)	ARCHIVES="$ARCHIVES	CogMT.app.tgz";;
+		-ctw)	ARCHIVES="$ARCHIVES	cogmtwin.zip";;
 		-nl)	ARCHIVES="$ARCHIVES	nsvmlinux.tgz";;
 		-nm)	ARCHIVES="$ARCHIVES	Newspeak Virtual Machine.app.tgz";;
 		-nw)	ARCHIVES="$ARCHIVES	nsvmwin.zip";;
+		-n)		ARCHIVES="$ARCHIVES	nsvmlinux.tgz	Newspeak Virtual Machine.app.tgz	nsvmwin.zip";;
 		-l)		ARCHIVES="$ARCHIVES	coglinux.tgz	nsvmlinux.tgz";;
 		-m)		ARCHIVES="$ARCHIVES	Cog.app.tgz	Newspeak Virtual Machine.app.tgz";;
 		-w)		ARCHIVES="$ARCHIVES	cogwin.tgz	nsvmwin.tgz";;
