@@ -3449,8 +3449,8 @@ InterpreterPrimitives >> signed32BitValueOf: oop [
 	value < 0 ifTrue:
 		[self assert: (self sizeof: value) == 4.
 		 "Don't fail for -16r80000000/-2147483648
-		  Alas the simple (negative and: [value - 1 > 0]) fails with contemporary gcc and icc versions
-		  with optimization and sometimes without.  The shift works on all, touch wood."
+		  Alas the simple (negative and: [value - 1 > 0]) isn't adequate since in C the result of signed integer
+		  overflow is undefined and hence under optimization this may fail.  The shift, however, is well-defined."
 		 (negative and: [0 = (self cCode: [value << 1]
 									inSmalltalk: [value << 1 bitAnd: (1 << 32) - 1])]) ifTrue: 
 			[^value].
@@ -3503,8 +3503,8 @@ InterpreterPrimitives >> signed64BitValueOf: oop [
 			[self assert: (self sizeof: value) == 8.
 			 self assert: (self sizeof: value << 1) == 8].
 		"Don't fail for -9223372036854775808/-16r8000000000000000.
-		 Alas the simple (negative and: [value - 1 > 0]) fails with contemporary gcc and icc versions
-		 with optimization and sometimes without.  The shift works on all, touch wood."
+		 Alas the simple (negative and: [value - 1 > 0]) isn't adequate since in C the result of signed integer
+		  overflow is undefined and hence under optimization this may fail.  The shift, however, is well-defined."
 		 (negative and: [0 = (self cCode: [value << 1]
 									inSmalltalk: [value << 1 bitAnd: (1 << 64) - 1])]) ifTrue: 
 			[^value].
@@ -3563,8 +3563,8 @@ InterpreterPrimitives >> signedMachineIntegerValueOf: oop [
 				[value := value - (1 bitShift: bits)]].
 	value < 0 ifTrue:
 		["Don't fail for -16r80000000[00000000].
-		  Alas the simple (negative and: [value - 1 > 0]) fails with contemporary gcc and icc versions
-		  with optimization and sometimes without.  The shift works on all, touch wood."
+		  Alas the simple (negative and: [value - 1 > 0]) isn't adequate since in C the result of signed integer
+		  overflow is undefined and hence under optimization this may fail.  The shift, however, is well-defined."
 		 (negative and: [0 = (self cCode: [value << 1]
 									inSmalltalk: [value << 1 bitAnd: (1 << bits) - 1])]) ifTrue: 
 			[^value].
