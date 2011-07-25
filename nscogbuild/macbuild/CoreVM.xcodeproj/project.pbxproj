@@ -75,6 +75,7 @@
 		73BEE4CB137A1895009EA37A /* FloatArrayPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 73BEE4CA137A1895009EA37A /* FloatArrayPlugin.c */; };
 		73BEE4CE137A191B009EA37A /* FloatMathPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BEE4CD137A191B009EA37A /* FloatMathPlugin.h */; };
 		73BEE4D2137A19A3009EA37A /* sqaio.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BEE4CF137A19A3009EA37A /* sqaio.h */; };
+		73C91A9713DE251D00EFDE79 /* NewspeakDocuments.icns in Resources */ = {isa = PBXBuildFile; fileRef = 73C91A9613DE251D00EFDE79 /* NewspeakDocuments.icns */; };
 		73DCBD131378A59F000E8F88 /* sqMacHostWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 73DCBD121378A59F000E8F88 /* sqMacHostWindow.h */; };
 		73DCBD161378A687000E8F88 /* HostWindowPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = 73DCBD151378A687000E8F88 /* HostWindowPlugin.h */; };
 		73E7120F137A1DD7002EDF89 /* FileCopyPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = 73E7120E137A1DD7002EDF89 /* FileCopyPlugin.h */; };
@@ -121,14 +122,7 @@
 		941A3B6E09AA144000C9D25A /* sqUnixAsynchFile.h in Headers */ = {isa = PBXBuildFile; fileRef = 946DD81F098FFFB6006BBA1E /* sqUnixAsynchFile.h */; };
 		941A3B6F09AA144000C9D25A /* sqMacImageIO.h in Headers */ = {isa = PBXBuildFile; fileRef = 946DD91D099015C5006BBA1E /* sqMacImageIO.h */; };
 		941A3B7009AA144000C9D25A /* sqMacFileLogic.h in Headers */ = {isa = PBXBuildFile; fileRef = 948AE67B09942EF2006256FE /* sqMacFileLogic.h */; };
-		941A3B7209AA144000C9D25A /* Squeak.icns in Resources */ = {isa = PBXBuildFile; fileRef = 664A73DC0300584000A80109 /* Squeak.icns */; };
-		941A3B7309AA144000C9D25A /* SqueakChanges.icns in Resources */ = {isa = PBXBuildFile; fileRef = 664A73DD0300584000A80109 /* SqueakChanges.icns */; };
-		941A3B7409AA144000C9D25A /* SqueakImage.icns in Resources */ = {isa = PBXBuildFile; fileRef = 664A73DE0300584000A80109 /* SqueakImage.icns */; };
 		941A3B7509AA144000C9D25A /* SqueakPlugin.icns in Resources */ = {isa = PBXBuildFile; fileRef = 664A73DF0300584000A80109 /* SqueakPlugin.icns */; };
-		941A3B7609AA144000C9D25A /* SqueakScript.icns in Resources */ = {isa = PBXBuildFile; fileRef = 664A73E00300584000A80109 /* SqueakScript.icns */; };
-		941A3B7709AA144000C9D25A /* SqueakGeneric.icns in Resources */ = {isa = PBXBuildFile; fileRef = 94FC2ECE05498CA800A80109 /* SqueakGeneric.icns */; };
-		941A3B7809AA144000C9D25A /* SqueakProject.icns in Resources */ = {isa = PBXBuildFile; fileRef = 94FC2ECF05498CA800A80109 /* SqueakProject.icns */; };
-		941A3B7909AA144000C9D25A /* SqueakSources.icns in Resources */ = {isa = PBXBuildFile; fileRef = 94FC2ED005498CA800A80109 /* SqueakSources.icns */; };
 		941A3B9E09AA144000C9D25A /* sqMacUUID.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AE6A02EB4E0A0100013C /* sqMacUUID.c */; };
 		941A3BA109AA144000C9D25A /* sqMacMemory.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AEF602EB4E0A0100013C /* sqMacMemory.c */; };
 		941A3BA209AA144000C9D25A /* sqMacTime.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AEFA02EB4E0A0100013C /* sqMacTime.c */; };
@@ -267,11 +261,7 @@
 		087740A400C6A47FC0A80109 /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
 		087740A700C6A4EDC0A80109 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = /System/Library/Frameworks/OpenGL.framework; sourceTree = "<absolute>"; };
 		664A73DB0300584000A80109 /* Squeak VM.r */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.rez; name = "Squeak VM.r"; path = "resources/ProjectBuilder/Squeak VM.r"; sourceTree = "<group>"; };
-		664A73DC0300584000A80109 /* Squeak.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = Squeak.icns; path = resources/ProjectBuilder/Squeak.icns; sourceTree = "<group>"; };
-		664A73DD0300584000A80109 /* SqueakChanges.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakChanges.icns; path = resources/ProjectBuilder/SqueakChanges.icns; sourceTree = "<group>"; };
-		664A73DE0300584000A80109 /* SqueakImage.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakImage.icns; path = resources/ProjectBuilder/SqueakImage.icns; sourceTree = "<group>"; };
 		664A73DF0300584000A80109 /* SqueakPlugin.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakPlugin.icns; path = resources/ProjectBuilder/SqueakPlugin.icns; sourceTree = "<group>"; };
-		664A73E00300584000A80109 /* SqueakScript.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakScript.icns; path = resources/ProjectBuilder/SqueakScript.icns; sourceTree = "<group>"; };
 		66A8FED80300824600A80109 /* sqGnu.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqGnu.h; path = Developer/sqGnu.h; sourceTree = "<group>"; };
 		730DA7FD1379F4C9004985EC /* sqMacHostWindow.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sqMacHostWindow.c; path = HostWindowPlugin/sqMacHostWindow.c; sourceTree = "<group>"; };
 		7339705F137A1CE2001B0C43 /* acos.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = acos.c; path = FloatMathPlugin/acos.c; sourceTree = "<group>"; };
@@ -341,6 +331,7 @@
 		73BEE4CA137A1895009EA37A /* FloatArrayPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = FloatArrayPlugin.c; path = plugins/FloatArrayPlugin/FloatArrayPlugin.c; sourceTree = "<group>"; };
 		73BEE4CD137A191B009EA37A /* FloatMathPlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FloatMathPlugin.h; path = FloatMathPlugin/FloatMathPlugin.h; sourceTree = "<group>"; };
 		73BEE4CF137A19A3009EA37A /* sqaio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqaio.h; path = vm/sqaio.h; sourceTree = "<group>"; };
+		73C91A9613DE251D00EFDE79 /* NewspeakDocuments.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = NewspeakDocuments.icns; path = resources/ProjectBuilder/NewspeakDocuments.icns; sourceTree = "<group>"; };
 		73DCBD121378A59F000E8F88 /* sqMacHostWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqMacHostWindow.h; path = HostWindowPlugin/sqMacHostWindow.h; sourceTree = "<group>"; };
 		73DCBD151378A687000E8F88 /* HostWindowPlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = HostWindowPlugin.h; path = HostWindowPlugin/HostWindowPlugin.h; sourceTree = "<group>"; };
 		73E7120E137A1DD7002EDF89 /* FileCopyPlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FileCopyPlugin.h; path = FileCopyPlugin/FileCopyPlugin.h; sourceTree = "<group>"; };
@@ -380,9 +371,6 @@
 		94D854E7048EF27E00A80109 /* aio.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = aio.c; path = ../../platforms/unix/vm/aio.c; sourceTree = SOURCE_ROOT; };
 		94E4DA3909BBB9E90046E6F4 /* sqMacDragDrop.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacDragDrop.c; sourceTree = "<group>"; };
 		94E8D43909AF5D4100D45FB8 /* sqMacUnixExternalPrims.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacUnixExternalPrims.c; sourceTree = "<group>"; };
-		94FC2ECE05498CA800A80109 /* SqueakGeneric.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakGeneric.icns; path = resources/ProjectBuilder/SqueakGeneric.icns; sourceTree = "<group>"; };
-		94FC2ECF05498CA800A80109 /* SqueakProject.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakProject.icns; path = resources/ProjectBuilder/SqueakProject.icns; sourceTree = "<group>"; };
-		94FC2ED005498CA800A80109 /* SqueakSources.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakSources.icns; path = resources/ProjectBuilder/SqueakSources.icns; sourceTree = "<group>"; };
 		94FD7EC807B8491B002F2291 /* sqUnixSoundMacOSXJMM.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqUnixSoundMacOSXJMM.c; sourceTree = "<group>"; };
 		A21AB9CA0E99682000A432CA /* NSCursorWrappers.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NSCursorWrappers.m; sourceTree = "<group>"; };
 		A21ABB4E0E9968A800A432CA /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = /System/Library/Frameworks/AppKit.framework; sourceTree = "<absolute>"; };
@@ -552,16 +540,10 @@
 		08773F0500C6A1C4C0A80109 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				73C91A9613DE251D00EFDE79 /* NewspeakDocuments.icns */,
 				664A73DB0300584000A80109 /* Squeak VM.r */,
 				DAFA08930AA64625008DF459 /* Newspeak Virtual Machine.icns */,
-				664A73DC0300584000A80109 /* Squeak.icns */,
-				664A73DD0300584000A80109 /* SqueakChanges.icns */,
-				664A73DE0300584000A80109 /* SqueakImage.icns */,
 				664A73DF0300584000A80109 /* SqueakPlugin.icns */,
-				664A73E00300584000A80109 /* SqueakScript.icns */,
-				94FC2ECE05498CA800A80109 /* SqueakGeneric.icns */,
-				94FC2ECF05498CA800A80109 /* SqueakProject.icns */,
-				94FC2ED005498CA800A80109 /* SqueakSources.icns */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -1518,15 +1500,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				941A3B7209AA144000C9D25A /* Squeak.icns in Resources */,
-				941A3B7309AA144000C9D25A /* SqueakChanges.icns in Resources */,
-				941A3B7409AA144000C9D25A /* SqueakImage.icns in Resources */,
 				941A3B7509AA144000C9D25A /* SqueakPlugin.icns in Resources */,
-				941A3B7609AA144000C9D25A /* SqueakScript.icns in Resources */,
-				941A3B7709AA144000C9D25A /* SqueakGeneric.icns in Resources */,
-				941A3B7809AA144000C9D25A /* SqueakProject.icns in Resources */,
-				941A3B7909AA144000C9D25A /* SqueakSources.icns in Resources */,
 				DAFA08940AA64625008DF459 /* Newspeak Virtual Machine.icns in Resources */,
+				73C91A9713DE251D00EFDE79 /* NewspeakDocuments.icns in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

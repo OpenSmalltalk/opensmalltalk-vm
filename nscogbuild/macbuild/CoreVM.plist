@@ -73,6 +73,47 @@
 			<string>Editor</string>
 		</dict>
 	</array>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Newspeak Virtual Machine Image</string>
+			<key>UTTypeIconFile</key>
+			<string>NewspeakDocuments.icns</string>
+			<key>UTTypeIdentifier</key>
+			<string>org.newspeakplatform.image-data</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>image</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.text</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Newspeak Virtual Machine Changes</string>
+			<key>UTTypeIconFile</key>
+			<string>NewspeakDocuments.icns</string>
+			<key>UTTypeIdentifier</key>
+			<string>org.newspeakplatform.changes-data</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>changes</string>
+				</array>
+			</dict>
+		</dict>
+	</array>		
 	<key>CFBundleExecutable</key>
 	<string>Newspeak Virtual Machine</string>
 	<key>CFBundleGetInfoString</key>
@@ -92,7 +133,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleSignature</key>
-	<string>????</string>
+	<string>NSVM</string>
 	<key>CGDisableCoalescedUpdates</key>
 	<true/>
 	<key>DTCompiler</key>
