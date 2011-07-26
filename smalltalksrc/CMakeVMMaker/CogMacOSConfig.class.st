@@ -186,6 +186,7 @@ CogMacOSConfig >> defaultExternalPlugins [
 		FloatArrayPlugin
 		FloatMathPlugin
 		Mpeg3Plugin
+		QuicktimePlugin 
 		"UnixOSProcessPlugin ?? "
 		)
 ]
@@ -296,7 +297,6 @@ CogMacOSConfig >> frameworks [
 	CoreAudio
 	OpenGL
 	AGL
-	QuickTime
 	Foundation
 	SystemConfiguration
 	)
