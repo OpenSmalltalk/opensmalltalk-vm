@@ -54,17 +54,20 @@ TMethod >> addTypeForSelf [
 TMethod >> addVarsDeclarationsAndLabelsOf: methodToBeInlined except: doNotRename [
 	"Prepare to inline the body of the given method into the receiver by making the args and locals of the argument to the receiver be locals of the receiver. Record any type declarations for these variables. Record labels. Assumes that the variables have already be renamed to avoid name clashes."
 
-	methodToBeInlined args, methodToBeInlined locals do: [ :v |
+	methodToBeInlined args, methodToBeInlined locals do:
+		[ :v |
 		((doNotRename includes: v)
-		 or: [locals includes: v]) ifFalse: [ locals addLast: v ].
-	].
-	methodToBeInlined declarations keysAndValuesDo: [ :v :decl |
-		(doNotRename includes: v).
-		self declarationAt: v put: decl.
-	].
-	methodToBeInlined labels do: [ :label |
-		labels add: label.
-	].
+		 or: [locals includes: v]) ifFalse:
+			[locals addLast: v]].
+
+	methodToBeInlined declarations keysAndValuesDo:
+		[ :v :decl |
+		(doNotRename includes: v) ifFalse:
+			[self declarationAt: v put: decl]].
+
+	methodToBeInlined labels do:
+		[ :label |
+		labels add: label]
 ]
 
 { #category : #utilities }
@@ -905,7 +908,7 @@ TMethod >> inlineFunctionCall: aSendNode in: aCodeGen [
 	| sel meth doNotRename argsForInlining substitutionDict |
 	sel := aSendNode selector.
 	meth := (aCodeGen methodNamed: sel) copy.
-	doNotRename := Set new.
+	doNotRename := Set withAll: args.
 	argsForInlining := aSendNode argumentsForInliningCodeGenerator: aCodeGen.
 	meth args with: argsForInlining do:
 		[ :argName :exprNode |
@@ -1576,8 +1579,8 @@ TMethod >> removeUnusedTemps [
 	parseTree nodesDo: [ :node |
 		node isVariable ifTrue: [ refs add: node name asString ].
 		node isStmtList ifTrue: [refs addAll: node args]].
-	"add all the non-arg declarations (might be variables usedonly in cCode sections)"
-	refs addAll:((self declarations keys) reject: [:e | self args includes: e]).
+	"add all the non-arg declarations (might be variables used only in cCode sections)"
+	refs addAll: (declarations keys reject: [:e | self args includes: e]).
 	"reset the locals to be only those still referred to"
 	locals := locals select: [:e | refs includes: e].
 	^refs
