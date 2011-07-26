@@ -1,13 +1,17 @@
 #!/bin/sh
 IFS="	
 "
+CSARCS="Cog.app.tgz	coglinux.tgz	cogwin.zip"
+CMARCS="cogmtlinux.tgz	CogMT.app.tgz	cogmtwin.zip"
+NSARCS="Newspeak Virtual Machine.app.tgz	nsvmlinux.tgz	nsvmwin.zip"
+NMARCS="Newspeak Virtual MachineMT.app.tgz	nsvmmtlinux.tgz	nsvmmtwin.zip"
 if [ $# = 0 ]; then
-ARCHIVES="Cog.app.tgz	coglinux.tgz	cogwin.zip	Newspeak Virtual Machine.app.tgz	nsvmlinux.tgz	nsvmwin.zip"
+ARCHIVES="$CSARCS	$CMARCS		$NSARCS"
 else
 ARCHIVES=
 	while [ -n "$1" ]; do
 		case $1 in
-		-c)		ARCHIVES="$ARCHIVES	coglinux.tgz	Cog.app.tgz	cogwin.zip	cogmtlinux.tgz	CogMT.app.tgz	cogmtwin.zip";;
+		-c)		ARCHIVES="$ARCHIVES		$CSARCS		$CMARCS"
 		-cl)	ARCHIVES="$ARCHIVES	coglinux.tgz";;
 		-cm)	ARCHIVES="$ARCHIVES	Cog.app.tgz";;
 		-cw)	ARCHIVES="$ARCHIVES	cogwin.zip";;
@@ -17,7 +21,7 @@ ARCHIVES=
 		-nl)	ARCHIVES="$ARCHIVES	nsvmlinux.tgz";;
 		-nm)	ARCHIVES="$ARCHIVES	Newspeak Virtual Machine.app.tgz";;
 		-nw)	ARCHIVES="$ARCHIVES	nsvmwin.zip";;
-		-n)		ARCHIVES="$ARCHIVES	nsvmlinux.tgz	Newspeak Virtual Machine.app.tgz	nsvmwin.zip";;
+		-n)		ARCHIVES="$ARCHIVES		$NSARCS"
 		-l)		ARCHIVES="$ARCHIVES	coglinux.tgz	nsvmlinux.tgz";;
 		-m)		ARCHIVES="$ARCHIVES	Cog.app.tgz	Newspeak Virtual Machine.app.tgz";;
 		-w)		ARCHIVES="$ARCHIVES	cogwin.tgz	nsvmwin.tgz";;

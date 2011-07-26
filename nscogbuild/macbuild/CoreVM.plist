@@ -2,8 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>BuildMachineOSBuild</key>
-	<string>10J4138</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleDocumentTypes</key>
@@ -28,6 +26,13 @@
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>sources</string>
+				<string>ns0</string>
+				<string>ns1</string>
+				<string>ns2</string>
+				<string>ns3</string>
+				<string>ns4</string>
+				<string>ns5</string>
+				<string>ns6</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>Newspeak Virtual Machine.icns</string>
@@ -136,46 +141,10 @@
 	<string>NSVM</string>
 	<key>CGDisableCoalescedUpdates</key>
 	<true/>
-	<key>DTCompiler</key>
-	<string></string>
-	<key>DTPlatformBuild</key>
-	<string>10M2518</string>
-	<key>DTPlatformVersion</key>
-	<string>PG</string>
-	<key>DTSDKBuild</key>
-	<string>9L31a</string>
-	<key>DTSDKName</key>
-	<string>macosx10.5</string>
-	<key>DTXcode</key>
-	<string>0400</string>
-	<key>DTXcodeBuild</key>
-	<string>10M2518</string>
 	<key>LSBackgroundOnly</key>
 	<false/>
 	<key>LSMinimumSystemVersion</key>
 	<string>10.5.0</string>
-	<key>NSServices</key>
-	<array>
-		<dict>
-			<key>NSMenuItem</key>
-			<dict>
-				<key>default</key>
-				<string>Squeak DoIt</string>
-			</dict>
-			<key>NSMessage</key>
-			<string>doitandreturn</string>
-			<key>NSPortName</key>
-			<string>Squeak</string>
-			<key>NSReturnTypes</key>
-			<array>
-				<string>NSStringPboardType</string>
-			</array>
-			<key>NSSendTypes</key>
-			<array>
-				<string>NSStringPboardType</string>
-			</array>
-		</dict>
-	</array>
 	<key>SqueakBrowserMouseCmdButton1</key>
 	<integer>3</integer>
 	<key>SqueakBrowserMouseCmdButton2</key>
