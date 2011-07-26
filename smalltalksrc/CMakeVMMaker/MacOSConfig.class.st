@@ -143,6 +143,19 @@ MacOSConfig >> configurePlugin: aPlugin with: generator [
 ]
 
 { #category : #'plugin extra rules' }
+MacOSConfig >> configureQuicktimePlugin: maker [
+	
+	maker includeDirectories: '${pluginPlatform}'.
+	maker includeDirectories: '${crossDir}/plugins/SurfacePlugin'.
+	
+	" yes, this is not a typo , a file is named 'inteface' instead of 'interface' "
+
+	maker addPlatformSources: #( 'sqMacQuicktimeInteface.c' ).
+	
+	maker addFrameworks: #( 'QuickTime' ).
+]
+
+{ #category : #'plugin extra rules' }
 MacOSConfig >> configureSecurityPlugin: maker [ 
 	"extra rules for SecurityPlugin"
 
