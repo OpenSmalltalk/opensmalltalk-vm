@@ -152,7 +152,7 @@ MacOSConfig >> configureQuicktimePlugin: maker [
 
 	maker addPlatformSources: #( 'sqMacQuicktimeInteface.c' ).
 	
-	maker addFrameworks: #( 'QuickTime' ).
+	maker addFrameworks: #( 'Carbon' 'QuickTime' ).
 ]
 
 { #category : #'plugin extra rules' }
@@ -186,6 +186,12 @@ MacOSConfig >> configureSocketPlugin: maker [
 
 
 
+]
+
+{ #category : #'plugin extra rules' }
+MacOSConfig >> configureTestOSAPlugin: maker [
+		
+	maker addFrameworks: #( 'Carbon'  'ApplicationServices' ).
 ]
 
 { #category : #'plugin extra rules' }
