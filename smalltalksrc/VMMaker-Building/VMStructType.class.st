@@ -27,7 +27,9 @@ VMStructType class >> checkGenerateFieldAccessors: fieldSpecs bitPosition: first
 		(spec first ~= #unused
 		 and: [(surrogateClass whichClassIncludesSelector: spec first asSymbol)
 				ifNil: [true]
-				ifNotNil: [:implementingClass| implementingClass == surrogateClass]]) ifTrue:
+				ifNotNil: [:implementingClass|
+						self assert: (implementingClass inheritsFrom: Object).
+						implementingClass == surrogateClass]]) ifTrue:
 			[code := self getter: spec first
 						 bitPosition: bitPosition
 						 bitWidth: spec second
@@ -79,7 +81,7 @@ VMStructType class >> fieldAccessorsForBytesPerWord: bytesPerWord [
 	^fieldSpecs collect:
 		[:tuple|
 			[:ivn :typeTuple|
-			{ (ivn includesSubString: 'Unused') ifTrue: [#unused] ifFalse: [ivn].
+			{ ('*unused*' match: ivn) ifTrue: [#unused] ifFalse: [ivn].
 			  (typeTuple isArray and: ['unsigned' = typeTuple first])
 				ifTrue:
 					[Integer readFrom: (typeTuple last readStream skipTo: $:; skipSeparators)]

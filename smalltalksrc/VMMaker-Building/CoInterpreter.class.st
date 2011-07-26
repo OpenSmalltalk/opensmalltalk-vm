@@ -2980,6 +2980,7 @@ CoInterpreter >> frameCallerContext: theFP put: aValue [
 	 base frame's caller context. But in the Cog VM the first word on the
 	 stack holds the base frame's caller context, which is immediately
 	 above the stacked receiver."
+	<var: #theFP type: #'char *'>
 	self assert: (self isBaseFrame: theFP).
 	self assert: theFP + (self frameStackedReceiverOffset: theFP) + (2 * BytesPerWord) = (stackPages stackPageFor: theFP) baseAddress.
 	self assert: (stackPages longAt: theFP + (self frameStackedReceiverOffset: theFP) + BytesPerWord) = (self frameContext: theFP).
@@ -4439,6 +4440,7 @@ CoInterpreter >> methodWithHeaderShouldBeCogged: methodHeader [
 CoInterpreter >> mframeCogMethod: theFP [
 	"Answer the Cog method for a machine code frame.  This may be
 	 either a full CogMethod or merely a CogBlockMethod rump header."
+	<var: #theFP type: #'char *'>
 	<returnTypeC: #'CogBlockMethod *'>
 	^self cCoerceSimple: (self mframeMethod: theFP) to: #'CogBlockMethod *'
 ]
@@ -4457,6 +4459,7 @@ CoInterpreter >> mframeHomeMethod: theFP [
 	 In both cases we need to strip the isBlock and isContext flags from the method field."
 	<api>
 	<returnTypeC: #'CogMethod *'>
+	<var: #theFP type: #'char *'>
 	| methodField |
 	methodField := self frameMethodField: theFP.
 	(methodField bitAnd: MFMethodFlagIsBlockFlag) ~= 0 ifTrue:
@@ -4468,6 +4471,7 @@ CoInterpreter >> mframeHomeMethod: theFP [
 CoInterpreter >> mframeHomeMethodExport [
 	<api>
 	<option: #NewspeakVM>
+	<returnTypeC: #'CogMethod *'>
 	^self mframeHomeMethod: framePointer
 ]
 

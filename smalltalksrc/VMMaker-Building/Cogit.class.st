@@ -1749,7 +1749,7 @@ Cogit >> addCogMethodsToHeapMap [
 { #category : #testing }
 Cogit >> addressIsInFixups: address [
 	<var: #address type: #'void *'>
-	^self cCode: 'address >= &fixups[0] && address < &fixups[numAbstractOpcodes]'
+	^self cCode: 'address >= (void *)&fixups[0] && address < (void *)&fixups[numAbstractOpcodes]'
 		inSmalltalk: [fixups notNil
 					and: [(fixups object identityIndexOf: address) between: 1 and: numAbstractOpcodes]]
 ]
@@ -5964,16 +5964,20 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSendOrPushImplicit: annotation pc: mcpc 
 				 classpc := mcpc asInteger + backEnd jumpShortByteSize.
 				 mixinpc := mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop.
 				 class := backEnd unalignedLongAt: classpc.
-				 self assert: (class = 0 or: [objectMemory addressCouldBeObj: class]).
-				 (objectRepresentation cacheTagIsMarked: class)
+				 class ~= 0
 					ifTrue:
-						[(mixin := backEnd unalignedLongAt: mixinpc) ~= 0 ifTrue:
-							[objectRepresentation markAndTraceLiteral: mixin]]
+						[self assert: (objectMemory addressCouldBeObj: class).
+						 (objectRepresentation cacheTagIsMarked: class)
+							ifTrue:
+								[(mixin := backEnd unalignedLongAt: mixinpc) ~= 0 ifTrue:
+									[objectRepresentation markAndTraceLiteral: mixin]]
+							ifFalse:
+								[backEnd
+									unalignedLongAt: classpc put: 0;
+									unalignedLongAt: mixinpc put: 0.
+								 codeModified := true]]
 					ifFalse:
-						[backEnd
-							unalignedLongAt: classpc put: 0;
-							unalignedLongAt: mixinpc put: 0.
-						 codeModified := true]]
+						[self assert: (backEnd unalignedLongAt: mixinpc) = 0]]
 			ifFalse:
 				[entryPoint > methodZoneBase ifTrue: "It's a linked send."
 					[self
@@ -6032,6 +6036,28 @@ Cogit >> markMethodAndReferents: aCogMethod [
 ]
 
 { #category : #'garbage collection' }
+Cogit >> markNSYoungObjects: annotation pc: mcpc method: cogMethod [
+	<option: #NewspeakVM>
+	"Mark and trace young literals."
+	<var: #mcpc type: #'char *'>
+	| literal cacheTag entryPoint |
+	annotation = IsObjectReference ifTrue:
+		[literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
+		 objectRepresentation markAndTraceLiteralIfYoung: literal].
+	(self isSendAnnotation: annotation) ifTrue:
+		[cacheTag := backEnd inlineCacheTagAt: mcpc asInteger.
+		 objectRepresentation markAndTraceLiteralIfYoung: cacheTag.
+		 entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
+		 entryPoint = ceImplicitReceiverTrampoline ifTrue:
+			[| class mixin |
+			 (class := backEnd unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize) ~= 0 ifTrue:
+				[objectRepresentation markAndTraceLiteralIfYoung: class.
+				 mixin := backEnd unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop.
+				 objectRepresentation markAndTraceLiteralIfYoung: mixin]]].
+	^0 "keep scanning"
+]
+
+{ #category : #'garbage collection' }
 Cogit >> markYoungObjects: annotation pc: mcpc method: cogMethod [
 	"Mark and trace young literals."
 	<var: #mcpc type: #'char *'>
@@ -6058,7 +6084,9 @@ Cogit >> markYoungObjectsIn: cogMethod [
 	 and: [objectMemory isYoung: cogMethod methodObject]) ifTrue:
 		[objectMemory markAndTrace: cogMethod methodObject].
 	self mapFor: cogMethod
-		 performUntil: #markYoungObjects:pc:method: asSymbol
+		 performUntil: (self cppIf: NewspeakVM
+						ifTrue: [#markNSYoungObjects:pc:method: asSymbol]
+						ifFalse: [#markYoungObjects:pc:method: asSymbol])
 		 arg: cogMethod asInteger
 ]
 
