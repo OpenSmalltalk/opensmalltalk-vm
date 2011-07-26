@@ -1,0 +1,5 @@
+#!/bin/sh
+rm -rf build*/vm/nsvm*.exe
+make debug;make assert;make
+ls -rlt build*/vm/nsvm*.exe
+echo "don't forget to link in sources!!"

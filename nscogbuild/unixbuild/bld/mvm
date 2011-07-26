@@ -1,0 +1,2 @@
+#!/bin/sh
+../../../scripts/nukeversion;make install prefix=~/oscogvm/nsvmlinux

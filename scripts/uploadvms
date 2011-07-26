@@ -11,7 +11,7 @@ else
 ARCHIVES=
 	while [ -n "$1" ]; do
 		case $1 in
-		-c)		ARCHIVES="$ARCHIVES		$CSARCS		$CMARCS"
+		-c)		ARCHIVES="$ARCHIVES		$CSARCS		$CMARCS";;
 		-cl)	ARCHIVES="$ARCHIVES	coglinux.tgz";;
 		-cm)	ARCHIVES="$ARCHIVES	Cog.app.tgz";;
 		-cw)	ARCHIVES="$ARCHIVES	cogwin.zip";;
@@ -21,7 +21,7 @@ ARCHIVES=
 		-nl)	ARCHIVES="$ARCHIVES	nsvmlinux.tgz";;
 		-nm)	ARCHIVES="$ARCHIVES	Newspeak Virtual Machine.app.tgz";;
 		-nw)	ARCHIVES="$ARCHIVES	nsvmwin.zip";;
-		-n)		ARCHIVES="$ARCHIVES		$NSARCS"
+		-n)		ARCHIVES="$ARCHIVES		$NSARCS";;
 		-l)		ARCHIVES="$ARCHIVES	coglinux.tgz	nsvmlinux.tgz";;
 		-m)		ARCHIVES="$ARCHIVES	Cog.app.tgz	Newspeak Virtual Machine.app.tgz";;
 		-w)		ARCHIVES="$ARCHIVES	cogwin.tgz	nsvmwin.tgz";;
@@ -32,6 +32,17 @@ ARCHIVES=
 fi
 VER="`svnversion | sed 's/^.*://'`"
 echo $VER
-test -f README.$VER || vi README.$VER
+if [ ! -f README.$VER ]; then
+	cat <<END >README.$VER
+N.B. For Squeak/Pharo/Croquet please use the archives whose names begin with
+     Cog or cog.  The archives whose names begin with nsvm or Newspeak are
+     for Newspeak and are missing plugins required by Squeak/Pharo/Croquet.
+     VMs with "mt" or "MT" in the name are multi-threaded VMs which support
+     non-blocking FFI calls.
+
+END
+	svn log platforms/Cross/vm/sqSCCSVersion.h >>README.$VER
+	vi README.$VER
+fi
 ssh -x eliotmiranda@bugsy.dreamhost.com mkdir mirandabanda.org/files/Cog/VM/VM.r$VER
 scp README.$VER $ARCHIVES eliotmiranda@bugsy.dreamhost.com:mirandabanda.org/files/Cog/VM/VM.r$VER
