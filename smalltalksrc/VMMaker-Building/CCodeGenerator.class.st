@@ -2371,7 +2371,7 @@ CCodeGenerator >> inlineDispatchesInMethodNamed: selector localizingVars: varsLi
 		self checkDeleteVariable: varString.
 		variables remove: varString ifAbsent: [].
 		(variableDeclarations includesKey: varString) ifTrue: [
-			m declarations at: v asString put: (variableDeclarations at: varString).
+			m declarationAt: v asString put: (variableDeclarations at: varString).
 			variableDeclarations removeKey: varString.
 		].
 	]
@@ -2457,7 +2457,7 @@ CCodeGenerator >> localizeGlobalVariables [
 				elected add: (procedure locals add: key).
 				variableDeclarations at: key ifPresent:
 					[:v |
-					procedure declarations at: key put: v.
+					procedure declarationAt: key put: v.
 					variableDeclarations removeKey: key]]]].
 	elected do: [:ea| (variables includes: ea) ifTrue: [self checkDeleteVariable: ea]].
 	variables removeAllFoundIn: elected
