@@ -249,7 +249,9 @@ Class {
 		'MaxCompiledPrimitiveIndex',
 		'MaxNegativeErrorCode',
 		'MaxUnitDisplacement',
+		'MaxUnreportableError',
 		'MaxX2NDisplacement',
+		'NotFullyInitialized',
 		'NumObjRefsInRuntime',
 		'NumSendTrampolines',
 		'NumTrampolines',
@@ -667,8 +669,10 @@ Cogit class >> initializeCompilationConstants [
 
 { #category : #'class initialization' }
 Cogit class >> initializeErrorCodes [
-	InsufficientCodeSpace := -1.
-	EncounteredUnknownBytecode := -2.
+	NotFullyInitialized := -1.
+	InsufficientCodeSpace := -2.
+	MaxUnreportableError := InsufficientCodeSpace.
+	EncounteredUnknownBytecode := -3.
 	MaxNegativeErrorCode := EncounteredUnknownBytecode
 ]
 
@@ -2733,9 +2737,11 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 	methodObj := aMethodObj.
 	cogMethod := self compileCogMethod: aSelectorOop.
 	(cogMethod asInteger between: MaxNegativeErrorCode and: -1) ifTrue:
-		[cogMethod asInteger = InsufficientCodeSpace
-			ifTrue: [coInterpreter callForCogCompiledCodeCompaction]
-			ifFalse: "For now.  Probably better is to keep on interpreting and send some run-time error, e.g. cannotTranslate:"
+		[cogMethod asInteger >= MaxUnreportableError
+			ifTrue:
+				[cogMethod asInteger = InsufficientCodeSpace ifTrue:
+					[coInterpreter callForCogCompiledCodeCompaction]]
+			ifFalse:
 				[self reportError: (self cCoerceSimple: cogMethod to: #sqInt)].
 		 ^nil].
 	"self cCode: ''
