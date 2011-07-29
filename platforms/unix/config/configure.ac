@@ -32,7 +32,9 @@
 
 AC_INIT([config.h.in])
 
-AC_VM_VERSION(3,9,7, 3,9a,7024)
+SVNREV=`grep '\$Rev: ' ${srcdir}/../../../platforms/Cross/vm/sqSCCSVersion.h \
+		| sed 's/.*$Rev: \([[0-9]][[0-9]]*\).*/\1/'`
+AC_VM_VERSION(4,0,${SVNREV},4,2,0)
 
 topdir=`cd ${srcdir}/../../..; pwd`
 cfgdir=`cd ${srcdir}; pwd`

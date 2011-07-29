@@ -63,7 +63,7 @@ plugins : config.sh $(PLUGINS_LA)
 # nuke everything but plugins.int & plugins.ext
 
 reallyclean:
-	for f in *; do case "$$f" in plugins.[ie][nx]t) ;; *) rm -rf $$f; esac; done
+	for f in *; do case "$$f" in plugins.[ie][nx]t|mvm) ;; *) rm -rf $$f; esac; done
 
 # npsqueak
 

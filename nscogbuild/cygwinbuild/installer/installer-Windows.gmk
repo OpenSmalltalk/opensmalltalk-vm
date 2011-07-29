@@ -13,7 +13,7 @@ WIN_SDK_VER := v7.0
 WIN_SDK := /cygdrive/c/Program\ Files/Microsoft\ SDKs/Windows/$(WIN_SDK_VER)/
 MSIVAL2_DIR := /cygdrive/c/Program\ Files/MsiVal2/
 
-MSI_NAME := $(INSTALLER_BASE_NAME).msi
+MSI_NAME := $(INSTALLER_BASE_NAME)-$(VERSION).msi
 .DEFAULT_GOAL := $(MSI_NAME)
 all: $(MSI_NAME)
 
