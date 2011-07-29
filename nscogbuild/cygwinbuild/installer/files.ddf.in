@@ -1,0 +1,13 @@
+.Set Cabinet=ON
+.Set CabinetNameTemplate=files.cab
+.Set Compress=ON
+.Set CompressionType=LZX
+.Set DiskDirectoryTemplate=
+.Set MaxDiskSize=0
+.Set RptFileName=nul
+.Set InfFileName=nul
+.Set UniqueFiles=ON
+; For unknown reasons, it is important that the files come in this exact order
+@@VM_EXECUTABLE@@
+@@VM_EXECUTABLE_MAP@@
+%SourcesDir%\@@SOURCEFILENAME1@@ @@SOURCEFILENAME1@@
