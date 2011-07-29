@@ -123,7 +123,8 @@ CocoaIOSConfig >> compilerFlagsRelease [
 CocoaIOSConfig >> configureB3DAcceleratorPlugin: maker [
 	"extra rules for B3DAcceleratorPlugin"
 	
-	super configureB3DAcceleratorPlugin: maker.  
+	super configureB3DAcceleratorPlugin: maker. 
+	maker addFrameworks: self frameworks.	 
 	maker addPlatformSources: #( 'sqMacOpenGL.c' 'sqMacOpenGLInfo.c')
 ]
 
@@ -200,11 +201,6 @@ CocoaIOSConfig >> configureSoundPlugin: maker [
 	maker 
 		addSources: #('sqSqueakOSXSoundCoreAudio.m' ) 
 		prefixed: '${platformsDir}/iOS/vm/OSX/plugins/SoundPlugin/'
-]
-
-{ #category : #'plugin extra rules' }
-CocoaIOSConfig >> configureTestOSAPlugin: maker [
-	
 ]
 
 { #category : #'plugin extra rules' }
@@ -327,7 +323,8 @@ CocoaIOSConfig >> frameworks [
 	SystemConfiguration
 	ApplicationServices
 	QuartzCore
-	OpenGL)
+	OpenGL
+	AGL)
 ]
 
 { #category : #testing }
