@@ -22,22 +22,44 @@
 #include "sqMacEncoding.h"
 
 
+/* On Newspeak we want to answer the Resources directory for vmPathGetLength/
+ * primitiveVMPath/primVMPath since this allows us to put the sources file
+ * in the Resources directory.
+ */
+#if NewspeakVM
+static void
+getVMResourcesDirectory(char *path)
+{
+extern char **argVec;
+
+	ux2sqPath(argVec[0], strlen(argVec[0]), path, VMPATH_SIZE,1);	
+	strcpy(strstr(path,"MacOS/"),"Resources");
+}
+#endif /* NewspeakVM */
 
 /*** VM Home Directory Path ***/
 
 int vmPathSize(void) {
-        char path[VMPATH_SIZE + 1];
-        
-        getVMPathWithEncoding(path,gCurrentVMEncoding);
+	char path[VMPATH_SIZE + 1];
+
+#if NewspeakVM
+	getVMResourcesDirectory(path);
+#else
+	getVMPathWithEncoding(path,gCurrentVMEncoding);
+#endif
 	return strlen(path);
 }
 
 int vmPathGetLength(sqInt sqVMPathIndex, int length) {
 	char *stVMPath = (char *) sqVMPathIndex;
 	int count, i;
-        char path[VMPATH_SIZE + 1];
+	char path[VMPATH_SIZE + 1];
 
-        getVMPathWithEncoding(path,gCurrentVMEncoding);
+#if NewspeakVM
+	getVMResourcesDirectory(path);
+#else
+	getVMPathWithEncoding(path,gCurrentVMEncoding);
+#endif
 	count = strlen(path);
 	count = (length < count) ? length : count;
 

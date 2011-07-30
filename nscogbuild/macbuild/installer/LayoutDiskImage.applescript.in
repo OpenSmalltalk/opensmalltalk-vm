@@ -16,7 +16,6 @@ tell application "Finder"
 		end tell
 		set position of item "Applications" to {370, 91}
 		set position of item "@@VM_LOCALIZED_NAME@@.app" to {130, 91}
-		set position of item "@@SOURCEFILENAME1@@" to {130, 266}
 		eject
 	end tell
 end tell

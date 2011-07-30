@@ -1,4 +1,4 @@
-VM_DMG := $(VM_LOCALIZED_NAME_ESC).dmg
+VM_DMG := $(VM_LOCALIZED_NAME_ESC)-$(VERSION).dmg
 
 $(VM_DMG): $(VM_BUNDLE) $(INSTALLER_BACKGROUND).png LayoutDiskImage.applescript $(INSTALLER_ICON).icns
 	-hdiutil eject '/Volumes/$(PRODUCT_NAME)'
@@ -9,7 +9,6 @@ $(VM_DMG): $(VM_BUNDLE) $(INSTALLER_BACKGROUND).png LayoutDiskImage.applescript 
 	cp -p '$(INSTALLER_BACKGROUND).png' '/Volumes/$(PRODUCT_NAME)/.background'
 	ln -s /Applications '/Volumes/$(PRODUCT_NAME)/.'
 	ditto $(VM_BUNDLE) '/Volumes/$(PRODUCT_NAME)/$(VM_LOCALIZED_NAME).app'
-	ditto $(SOURCEFILENAME1) '/Volumes/$(PRODUCT_NAME)/$(SOURCEFILENAME1)'
 	bless --folder '/Volumes/$(PRODUCT_NAME)' --openfolder '/Volumes/$(PRODUCT_NAME)'
 	cp '$(INSTALLER_ICON).icns' '/Volumes/$(PRODUCT_NAME)/.VolumeIcon.icns'
 	/Developer/Tools/SetFile -a C '/Volumes/$(PRODUCT_NAME)'
