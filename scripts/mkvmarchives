@@ -90,9 +90,13 @@ if [ -n "$CTW" ]; then
 	EXES="$EXES	cogmtwin/Croquet.exe"
 fi
 if [ -n "$NL" ]; then
+	LIBDIR=nsvmlinux/lib/squeak/[0-9.-]*
+	test -f nsvmlinux/squeak && mv nsvmlinux/squeak nsvmlinux/nsvm
+	test -f nsvmlinux/bin/squeak && mv nsvmlinux/bin/squeak nsvmlinux/bin/nsvm
+	test -f $LIBDIR/squeak && mv $LIBDIR/squeak $LIBDIR/nsvm
 	rm -rf nsvmlinux.tgz
 	COPYFILE_DISABLE=1 tar czf nsvmlinux.tgz nsvmlinux
-	EXES="$EXES	nsvmlinux/lib/squeak/[0-9.-]*/squeak"
+	EXES="$EXES	$LIBDIR/nsvm"
 fi
 if [ -n "$NM" ]; then
 	test -d Newspeak\ Virtual\ Machine.app || mkdir Newspeak\ Virtual\ Machine.app
