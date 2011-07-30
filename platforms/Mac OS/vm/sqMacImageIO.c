@@ -33,7 +33,7 @@ getVMResourcesDirectory(char *path)
 extern char **argVec;
 
 	ux2sqPath(argVec[0], strlen(argVec[0]), path, VMPATH_SIZE,1);	
-	strcpy(strstr(path,"MacOS/"),"Resources");
+	strcpy(strstr(path,"MacOS/"),"Resources/");
 }
 #endif /* NewspeakVM */
 
