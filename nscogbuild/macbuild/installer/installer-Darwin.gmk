@@ -22,4 +22,4 @@ LayoutDiskImage.applescript: LayoutDiskImage.applescript.in branding.gmk brandin
 	sed $(SED_RULES) < $< > $@
 
 clean::
-	-rm -rf $(VM_DMG) $(VM_DMG).sparseimage LayoutDiskImage.applescript *.app
+	-rm -rf *.dmg *.sparseimage LayoutDiskImage.applescript *.app

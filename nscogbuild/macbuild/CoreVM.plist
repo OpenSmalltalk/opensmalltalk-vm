@@ -227,5 +227,7 @@
 	<true/>
 	<key>SqueakWindowType</key>
 	<integer>6</integer>
+	<key>SqueakVMPathAnswersResources</key>
+	<true/>
 </dict>
 </plist>

@@ -113,20 +113,31 @@ extern pthread_mutex_t gEventQueueLock,gSleepLock;
 extern pthread_cond_t  gSleepLockCondition;
 
 OSErr			gSqueakFileLastError; 
-Boolean			gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,gSqueakFloatingWindowGetsFocus=false,gSqueakUIFlushUseHighPercisionClock=false,gSqueakPluginsBuiltInOrLocalOnly=false,gSqueakHeadless=false,gSqueakQuitOnQuitAppleEvent=false,gSqueakExplicitWindowOpenNeeded=false;
-Boolean			gSqueakHasQuitWithoutSaving = true;
+Boolean			gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,
+				gSqueakHasQuitWithoutSaving = true,
+				gSqueakFloatingWindowGetsFocus=false,
+				gSqueakUIFlushUseHighPercisionClock=false,
+				gSqueakPluginsBuiltInOrLocalOnly=false,
+				gSqueakHeadless=false,
+				gSqueakQuitOnQuitAppleEvent=false,
+				gSqueakExplicitWindowOpenNeeded=false,
+				gSqueakVMPathAnswersResources=false;
 long			gSqueakMouseMappings[4][4] = {{0},{0}};
 long			gSqueakBrowserMouseMappings[4][4] = {{0},{0}};
 usqInt          gMaxHeapSize=512*1024*1024;
 UInt32			gSqueakWindowType=zoomDocProc,gSqueakWindowAttributes=0;
-long			gSqueakUIFlushPrimaryDeferNMilliseconds=20,gSqueakUIFlushSecondaryCleanupDelayMilliseconds=20,gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds=16,gSqueakDebug=0;
+long			gSqueakUIFlushPrimaryDeferNMilliseconds=20,
+				gSqueakUIFlushSecondaryCleanupDelayMilliseconds=20,
+				gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds=16,
+				gSqueakDebug=0;
 char            gSqueakImageName[PATH_MAX] = "Squeak.image";
 char            gSqueakUntrustedDirectoryName[PATH_MAX] = "/foobar/tooBar/forSqueak/bogus/";
 char            gSqueakTrustedDirectoryName[PATH_MAX] = "/foobar/tooBar/forSqueak/bogus/";
 CFStringRef		gSqueakImageNameStringRef;
 int				gSqueakBrowserPipes[]= {-1, -1}; 
-Boolean			gSqueakBrowserSubProcess = false,gSqueakBrowserWasHeadlessButMadeFullScreen=false;
-Boolean			gSqueakBrowserExitRequested = false;
+Boolean			gSqueakBrowserSubProcess = false,
+				gSqueakBrowserWasHeadlessButMadeFullScreen=false,
+				gSqueakBrowserExitRequested = false;
 
 void cocoInterfaceForTilda(CFStringRef aStringRef, char *buffer,int max_size);
 /*** Main ***/
@@ -672,13 +683,26 @@ static void
 fetchPrefrences() {
     CFBundleRef  myBundle;
     CFDictionaryRef myDictionary;
-    CFNumberRef SqueakWindowType,SqueakMaxHeapSizeType,SqueakUIFlushPrimaryDeferNMilliseconds,SqueakUIFlushSecondaryCleanupDelayMilliseconds,SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds,SqueakDebug;
-    CFBooleanRef SqueakWindowHasTitleType,SqueakFloatingWindowGetsFocusType,SqueakUIFlushUseHighPercisionClock,SqueakPluginsBuiltInOrLocalOnly,SqueakQuitOnQuitAppleEvent,SqueakExplicitWindowOpenNeeded;
+    CFNumberRef SqueakWindowType,
+				SqueakMaxHeapSizeType,
+				SqueakUIFlushPrimaryDeferNMilliseconds,
+				SqueakUIFlushSecondaryCleanupDelayMilliseconds,
+				SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds,
+				SqueakDebug;
+    CFBooleanRef SqueakWindowHasTitleType,
+				SqueakFloatingWindowGetsFocusType,
+				SqueakUIFlushUseHighPercisionClock,
+				SqueakPluginsBuiltInOrLocalOnly,
+				SqueakQuitOnQuitAppleEvent,
+				SqueakExplicitWindowOpenNeeded,
+				SqueakVMPathAnswersResources;
     CFBooleanRef SqueakHasQuitWithoutSaving;
 	CFNumberRef SqueakMouseMappings[4][4] = {{0},{0}};
 	CFNumberRef SqueakBrowserMouseMappings[4][4] = {{0},{0}};
     CFDataRef 	SqueakWindowAttributeType;    
-    CFStringRef    SqueakVMEncodingType, SqueakUnTrustedDirectoryTypeRef, SqueakTrustedDirectoryTypeRef;
+    CFStringRef	SqueakVMEncodingType,
+				SqueakUnTrustedDirectoryTypeRef,
+				SqueakTrustedDirectoryTypeRef;
 
     char        encoding[256];
     long		i,j;
@@ -692,6 +716,7 @@ fetchPrefrences() {
     SqueakWindowAttributeType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakWindowAttribute"));
     SqueakWindowHasTitleType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakWindowHasTitle"));
     SqueakFloatingWindowGetsFocusType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakFloatingWindowGetsFocus"));
+    SqueakVMPathAnswersResources = CFDictionaryGetValue(myDictionary, CFSTR("SqueakVMPathAnswersResources"));
     SqueakMaxHeapSizeType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMaxHeapSize"));
     SqueakVMEncodingType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakEncodingType"));
     SqueakUnTrustedDirectoryTypeRef  = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUnTrustedDirectory"));
@@ -802,6 +827,11 @@ fetchPrefrences() {
         gSqueakFloatingWindowGetsFocus = CFBooleanGetValue(SqueakFloatingWindowGetsFocusType);
     else
         gSqueakFloatingWindowGetsFocus = false;
+
+    if (SqueakVMPathAnswersResources) 
+        gSqueakVMPathAnswersResources = CFBooleanGetValue(SqueakVMPathAnswersResources);
+    else
+        gSqueakVMPathAnswersResources = false;
 
     if (SqueakWindowHasTitleType) 
         gSqueakWindowHasTitle = CFBooleanGetValue(SqueakWindowHasTitleType);
