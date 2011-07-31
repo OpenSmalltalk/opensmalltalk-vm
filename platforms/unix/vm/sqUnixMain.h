@@ -5,6 +5,7 @@ extern char   imageName[];
 extern char   shortImageName[];
 extern int    inputEventSemaIndex;
 extern char   vmPath[];
+extern char  *exeName;
 extern char **argVec;
 
 extern int    fullScreenFlag;

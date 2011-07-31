@@ -38,6 +38,7 @@
 #include "sqaio.h"
 #include "sqUnixCharConv.h"
 #include "sqSCCSVersion.h"
+#include "sqUnixMain.h"
 #include "debug.h"
 
 #ifdef ioMSecs
@@ -84,6 +85,7 @@
        char   imageName[MAXPATHLEN+1];		/* full path to image */
 static char   vmName[MAXPATHLEN+1];		/* full path to vm */
        char   vmPath[MAXPATHLEN+1];		/* full path to image directory */
+       char  *exeName;					/* short vm name, e.g. "squeak" */
 
        int    argCnt=		0;	/* global copies for access from plugins */
        char **argVec=		0;
@@ -289,12 +291,19 @@ static void pathCopyAbs(char *target, const char *src, size_t targetSize)
 }
 
 
-static void recordFullPathForVmName(const char *localVmName)
+static void
+recordPathsForVMName(const char *localVmName)
 {
 #if defined(__linux__)
   char	 name[MAXPATHLEN+1];
   int    len;
+#endif
 
+	exeName = strrchr(localVmName,'/')
+				? strrchr(localVmName,'/') + 1
+				: (char *)localVmName;
+
+#if defined(__linux__)
   if ((len= readlink("/proc/self/exe", name, sizeof(name))) > 0)
     {
       struct stat st;
@@ -576,7 +585,7 @@ static void emergencyDump(int quit)
   fprintf(stderr, "\n");
   printCallStack();
   fprintf(stderr, "\nTo recover valuable content from this image:\n");
-  fprintf(stderr, "    squeak %s\n", imageName);
+  fprintf(stderr, "    %s %s\n", exeName, imageName);
   fprintf(stderr, "and then evaluate\n");
   fprintf(stderr, "    Smalltalk processStartUpList: true\n");
   fprintf(stderr, "in a workspace.  DESTROY the dumped image after recovering content!");
@@ -1104,19 +1113,19 @@ static void loadModules(void)
       if (!*md->addr)
 	if ((*md->addr= queryModule(md->type, md->name)))
 #	 if defined(DEBUG_MODULES)
-	  fprintf(stderr, "squeak: %s driver defaulting to vm-%s-%s\n", md->type, md->type, md->name)
+	  fprintf(stderr, "%s: %s driver defaulting to vm-%s-%s\n", exeName, md->type, md->type, md->name)
 #	 endif
 	    ;
   }
 
   if (!displayModule)
     {
-      fprintf(stderr, "squeak: could not find any display driver\n");
+      fprintf(stderr, "%s: could not find any display driver\n", exeName);
       abort();
     }
   if (!soundModule)
     {
-      fprintf(stderr, "squeak: could not find any sound driver\n");
+      fprintf(stderr, "%s: could not find any sound driver\n", exeName);
       abort();
     }
 
@@ -1173,10 +1182,19 @@ static void vm_parseEnvironment(void)
 
   if (documentName)
     strcpy(shortImageName, documentName);
-  else if ((ev= getenv("SQUEAK_IMAGE")))
+#if NewspeakVM
+# define IMAGE_ENV_NAME "NEWSPEAK_IMAGE"
+# define IMAGE_DIALECT_NAME "Newspeak"
+# define DEFAULT_IMAGE_NAME "newspeak.image"
+#else
+# define IMAGE_ENV_NAME "SQUEAK_IMAGE"
+# define IMAGE_DIALECT_NAME "Squeak"
+# define DEFAULT_IMAGE_NAME "squeak.image"
+#endif
+  else if ((ev= getenv(IMAGE_ENV_NAME)))
     strcpy(shortImageName, ev);
   else
-    strcpy(shortImageName, "squeak.image");
+    strcpy(shortImageName, DEFAULT_IMAGE_NAME);
 
   if ((ev= getenv("SQUEAK_MEMORY")))	extraMemory= strtobkm(ev);
   if ((ev= getenv("SQUEAK_MMAP")))	useMmap= strtobkm(ev);
@@ -1406,8 +1424,8 @@ static void vm_printUsage(void)
 static void vm_printUsageNotes(void)
 {
   printf("  If `-memory' is not specified then the heap will grow dynamically.\n");
-  printf("  <argument>s are ignored, but are processed by the Squeak image.\n");
-  printf("  The first <argument> normally names a Squeak `script' to execute.\n");
+  printf("  <argument>s are ignored, but are processed by the " IMAGE_DIALECT_NAME " image.\n");
+  printf("  The first <argument> normally names a " IMAGE_DIALECT_NAME " `script' to execute.\n");
   printf("  Precede <arguments> by `--' to use default image.\n");
 }
 
@@ -1448,7 +1466,7 @@ static void usage(void)
       printf("  -spy                  enable the system spy\n");
     }
   printf("\nNotes:\n");
-  printf("  <imageName> defaults to `squeak.image'.\n");
+  printf("  <imageName> defaults to `" DEFAULT_IMAGE_NAME "'.\n");
   modulesDo(m)
     m->printUsageNotes();
   printf("\nAvailable drivers:\n");
@@ -1466,7 +1484,7 @@ char *getVersionInfo(int verbose)
   info[0]= '\0';
 
   if (verbose)
-    sprintf(info+strlen(info), "Squeak VM version: ");
+    sprintf(info+strlen(info), IMAGE_DIALECT_NAME " VM version: ");
   sprintf(info+strlen(info), "%s #%d", VM_VERSION, vm_serial);
 #if defined(USE_XSHM)
   sprintf(info+strlen(info), " XShm");
@@ -1540,21 +1558,22 @@ static void parseArguments(int argc, char **argv)
 /*** main ***/
 
 
-static void imageNotFound(char *imageName)
+static void
+imageNotFound(char *imageName)
 {
   /* image file is not found */
   fprintf(stderr,
-	  "Could not open the Squeak image file `%s'.\n"
+	  "Could not open the " IMAGE_DIALECT_NAME " image file `%s'.\n"
 	  "\n"
-	  "There are three ways to open a Squeak image file.  You can:\n"
+	  "There are three ways to open a " IMAGE_DIALECT_NAME " image file.  You can:\n"
 	  "  1. Put copies of the default image and changes files in this directory.\n"
 	  "  2. Put the name of the image file on the command line when you\n"
-	  "     run squeak (use the `-help' option for more information).\n"
-	  "  3. Set the environment variable SQUEAK_IMAGE to the name of the image\n"
+	  "     run %s (use the `-help' option for more information).\n"
+	  "  3. Set the environment variable " IMAGE_ENV_NAME " to the name of the image\n"
 	  "     that you want to use by default.\n"
 	  "\n"
-	  "For more information, type: `man squeak' (without the quote characters).\n",
-	  imageName);
+	  "For more information, type: `man %s' (without the quote characters).\n",
+	  imageName, exeName, exeName);
   exit(1);
 }
 
@@ -1664,7 +1683,7 @@ int main(int argc, char **argv, char **envp)
   tzset();	/* should _not_ be necessary! */
 #endif
 
-  recordFullPathForVmName(argv[0]); /* full vm path */
+  recordPathsForVMName(argv[0]); /* full vm path */
   squeakPlugins= vmPath;		/* default plugin location is VM directory */
 
 #if !DEBUG

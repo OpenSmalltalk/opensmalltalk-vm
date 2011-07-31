@@ -244,7 +244,7 @@ static void *tryLoading(char *dirName, char *moduleName)
 	    else
 	      {
 #	       if DEBUG
-		printf("squeak: loaded plugin `%s'\n", libName);
+		printf("%s: loaded plugin `%s'\n", exeName, libName);
 #	       endif
 		return handle;
 	      }
@@ -386,7 +386,7 @@ void *ioLoadModule(char *pluginName)
   }
 
 #if DEBUG
-  fprintf(stderr, "squeak: could not load plugin `%s'\n", pluginName);
+  fprintf(stderr, "%s: could not load plugin `%s'\n", exeName, pluginName);
 #endif
   return 0;
 }
