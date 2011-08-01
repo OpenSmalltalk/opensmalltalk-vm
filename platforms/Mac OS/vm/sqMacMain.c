@@ -130,7 +130,7 @@ long			gSqueakUIFlushPrimaryDeferNMilliseconds=20,
 				gSqueakUIFlushSecondaryCleanupDelayMilliseconds=20,
 				gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds=16,
 				gSqueakDebug=0;
-char            gSqueakImageName[PATH_MAX] = "Squeak.image";
+char            gSqueakImageName[PATH_MAX] = DEFAULT_IMAGE_NAME;
 char            gSqueakUntrustedDirectoryName[PATH_MAX] = "/foobar/tooBar/forSqueak/bogus/";
 char            gSqueakTrustedDirectoryName[PATH_MAX] = "/foobar/tooBar/forSqueak/bogus/";
 CFStringRef		gSqueakImageNameStringRef;

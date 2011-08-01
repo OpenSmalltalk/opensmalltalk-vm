@@ -6,6 +6,8 @@ Contents:
 	- How to build the Cog Croquet VM on Unix
 	- Testing an external plugin has completely linked
 	- Compiling in 32-bit mode on a 64-bit linux
+	- Testing an external plugin has completely linked
+	- N.B. Please read: Optimization level and gcc version
 
 
 Checking out sources
@@ -99,3 +101,13 @@ This is usually because it contans undefined symbols.  To find undefined
 symbols, remake the plugin, capturing the link step and then supply
 	-Wl,--warn-unresolved-symbols -Wl,--no-allow-shlib-undefined
 when manually repeating the link command
+
+
+Optimization level and gcc version
+----------------------------------
+There appear to be issues with 3.4.x gcc version on RedHat.  In particular
+compiling the Newspeak VM with either of
+	gcc version 3.4.6 20060404 (Red Hat 3.4.6-3)
+	gcc version 3.4.6 20060404 (Red Hat 3.4.6-10)
+using -O2 results in a VM that segfaults early in startup.  For these compilers
+it is probably wise to use -O1, even though -O3 seems to work.

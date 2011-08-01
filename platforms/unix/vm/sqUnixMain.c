@@ -1182,15 +1182,6 @@ static void vm_parseEnvironment(void)
 
   if (documentName)
     strcpy(shortImageName, documentName);
-#if NewspeakVM
-# define IMAGE_ENV_NAME "NEWSPEAK_IMAGE"
-# define IMAGE_DIALECT_NAME "Newspeak"
-# define DEFAULT_IMAGE_NAME "newspeak.image"
-#else
-# define IMAGE_ENV_NAME "SQUEAK_IMAGE"
-# define IMAGE_DIALECT_NAME "Squeak"
-# define DEFAULT_IMAGE_NAME "squeak.image"
-#endif
   else if ((ev= getenv(IMAGE_ENV_NAME)))
     strcpy(shortImageName, ev);
   else

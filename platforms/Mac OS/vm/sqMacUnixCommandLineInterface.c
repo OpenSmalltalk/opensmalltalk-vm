@@ -250,7 +250,7 @@ static void usage(void)
   printf("       %s [<option>...] -- [<argument>...]\n", argVec[0]);
   printUsage();
   printf("\nNotes:\n");
-  printf("  <imageName> defaults to `Squeak.image'.\n");
+  printf("  <imageName> defaults to `" DEFAULT_IMAGE_NAME "'.\n");
   printUsageNotes();
   exit(1);
 }
@@ -282,8 +282,8 @@ static void printUsage(void)
 static void printUsageNotes(void)
 {
   printf("  If `-memory' is not specified then the heap will grow dynamically.\n");
-  printf("  <argument>s are ignored, but are processed by the Squeak image.\n");
-  printf("  The first <argument> normally names a Squeak `script' to execute.\n");
+  printf("  <argument>s are ignored, but are processed by the " IMAGE_DIALECT_NAME " image.\n");
+  printf("  The first <argument> normally names a " IMAGE_DIALECT_NAME " `script' to execute.\n");
   printf("  Precede <arguments> by `--' to use default image.\n");
 }
 
@@ -311,10 +311,12 @@ static int strtobkm(const char *str)
 
 static void parseEnvironment(void)
 {
-  char *ev= 0;
+	char *ev;
 
-  if ((ev= getenv("SQUEAK_IMAGE")))		
-	resolveWhatTheImageNameIs(ev);
-  if ((ev= getenv("SQUEAK_MEMORY")))	gMaxHeapSize= strtobkm(ev);
-  if ((ev= getenv("SQUEAK_PATHENC")))	setEncodingType(ev);
+	if ((ev= getenv(IMAGE_ENV_NAME)))		
+		resolveWhatTheImageNameIs(ev);
+	if ((ev= getenv("SQUEAK_MEMORY")))
+		gMaxHeapSize= strtobkm(ev);
+	if ((ev= getenv("SQUEAK_PATHENC")))
+		setEncodingType(ev);
 }

@@ -23,6 +23,18 @@
 #define false	0
 #define null	0  /* using "null" because nil is predefined in Think C */
 
+#if !defined(IMAGE_DIALECT_NAME)
+# if NewspeakVM
+#	define IMAGE_DIALECT_NAME "Newspeak"
+#	define DEFAULT_IMAGE_NAME "newspeak.image"
+#	define IMAGE_ENV_NAME "NEWSPEAK_IMAGE"
+# else
+#	define IMAGE_DIALECT_NAME "Squeak"
+#	define DEFAULT_IMAGE_NAME "squeak.image"
+#	define IMAGE_ENV_NAME "SQUEAK_IMAGE"
+# endif
+#endif
+
 /* Pluggable primitives macros. */
 
 /* Note: All pluggable primitives are defined as
