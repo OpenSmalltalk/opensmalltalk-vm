@@ -298,6 +298,7 @@ CogMacOSConfig >> frameworks [
 	CoreAudio
 	OpenGL
 	AGL
+	QuickTime
 	Foundation
 	SystemConfiguration
 	)
