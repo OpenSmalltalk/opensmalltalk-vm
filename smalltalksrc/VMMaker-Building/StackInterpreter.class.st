@@ -6948,7 +6948,12 @@ StackInterpreter >> positive64BitIntegerFor: integerValue [
 ]
 
 { #category : #'object memory support' }
-StackInterpreter >> postGCAction: fullGCFlag [
+StackInterpreter >> postBecomeAction [
+	"This is a noop in the StackInterpreter"
+]
+
+{ #category : #'object memory support' }
+StackInterpreter >> postGCAction [
 	"Shrink free memory and signal the gc semaphore"
 	| freeSizeNow |
 
@@ -6959,6 +6964,13 @@ StackInterpreter >> postGCAction: fullGCFlag [
 		 objectMemory shrinkObjectMemory: freeSizeNow - objectMemory growHeadroom].
 
 	self signalSemaphoreWithIndex: gcSemaphoreIndex
+]
+
+{ #category : #'object memory support' }
+StackInterpreter >> preBecomeAction [
+	"Need to write back the frame pointers unless all pages are free (as in snapshot)"
+	stackPage ~= 0 ifTrue:
+		[self externalWriteBackHeadFramePointers]
 ]
 
 { #category : #'object memory support' }
