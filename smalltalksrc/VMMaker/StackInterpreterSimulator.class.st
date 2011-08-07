@@ -1288,9 +1288,9 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 ]
 
 { #category : #'debugging traps' }
-StackInterpreterSimulator >> preGCAction: aBoolean [
+StackInterpreterSimulator >> preGCAction: gcMode [
 	"self halt."
-	^super preGCAction: aBoolean
+	^super preGCAction: gcMode
 ]
 
 { #category : #'other primitives' }

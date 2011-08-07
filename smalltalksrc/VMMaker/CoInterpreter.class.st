@@ -7,7 +7,7 @@ Class {
 	#instVars : [
 		'cogit',
 		'cogMethodZone',
-		'inFullGC',
+		'gcMode',
 		'cogCodeSize',
 		'desiredCogCodeSize',
 		'heapBase',
@@ -280,6 +280,10 @@ CoInterpreter class >> initializeMiscConstantsWith: optionsDictionary [
 	PrimCallCollectsProfileSamples := 8.
 
 	ReturnToInterpreter := 1. "setjmp/longjmp code."
+
+	GCModeFull := 1.
+	GCModeIncr := 2.
+	GCModeBecome := 3.
 
 	PrimTraceLogSize := 256. "Room for 256 selectors.  Must be 256 because we use a byte to hold the index"
 	TraceBufferSize := 256 * 3. "Room for 256 events"
@@ -3227,7 +3231,9 @@ CoInterpreter >> headerOf: methodPointer [
 	| methodHeader |
 	methodHeader := self rawHeaderOf: methodPointer.
 	^(self isCogMethodReference: methodHeader)
-		ifTrue: [(self cCoerceSimple: methodHeader to: #'CogMethod *') methodHeader]
+		ifTrue:
+			[self assert: (self cCoerceSimple: methodHeader to: #'CogMethod *') objectHeader = objectMemory nullHeaderForMachineCodeMethod.
+			(self cCoerceSimple: methodHeader to: #'CogMethod *') methodHeader]
 		ifFalse: [methodHeader]
 ]
 
@@ -3692,9 +3698,9 @@ CoInterpreter >> isQuickPrimitiveIndex: anInteger [
 { #category : #'cog jit support' }
 CoInterpreter >> isReallyYoungObject: obj [
 	<api>
-	"For machien code assertion checking.  Answer true iif not in a fulGC and obj is young."
-	^inFullGC not
-	   and: [self oop: obj isGreaterThanOrEqualTo: objectMemory youngStart]
+	"For machine code assertion checking.  Answer true if not in a fullGC and obj is young."
+	^gcMode ~= GCModeFull
+	  and: [self oop: obj isGreaterThanOrEqualTo: objectMemory youngStart]
 ]
 
 { #category : #simulation }
@@ -4008,7 +4014,7 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 { #category : #'object memory support' }
 CoInterpreter >> mapMachineCode [
 	"Update all references to objects in machine code."
-	cogit mapObjectReferencesInMachineCode: inFullGC
+	cogit mapObjectReferencesInMachineCode: gcMode
 ]
 
 { #category : #'debug support' }
@@ -4716,7 +4722,17 @@ CoInterpreter >> objectIsOld: anObject [
 ]
 
 { #category : #'object memory support' }
-CoInterpreter >> postGCAction: fullGCFlag [
+CoInterpreter >> postBecomeAction [
+	"Clear the gcMode var and let the Cogit do its post GC checks."
+	cogit cogitPostGCAction: gcMode.
+
+	lastCoggableInterpretedBlockMethod := lastUncoggableInterpretedBlockMethod := nil.
+
+	gcMode := 0
+]
+
+{ #category : #'object memory support' }
+CoInterpreter >> postGCAction [
 	"Shrink free memory, signal the gc semaphore and let the Cogit do its post GC thang"
 	| freeSizeNow |
 
@@ -4726,27 +4742,33 @@ CoInterpreter >> postGCAction: fullGCFlag [
 		["Attempt to shrink memory after successfully reclaiming lots of memory"
 		 objectMemory shrinkObjectMemory: freeSizeNow - objectMemory growHeadroom].
 
-	cogit cogitPostGCAction.
+	cogit cogitPostGCAction: gcMode.
 
 	self signalSemaphoreWithIndex: gcSemaphoreIndex.
 
 	lastCoggableInterpretedBlockMethod := lastUncoggableInterpretedBlockMethod := nil.
 
-	inFullGC := false
+	gcMode := 0
 ]
 
 { #category : #'object memory support' }
-CoInterpreter >> preGCAction: fullGCFlag [
-	"Need to write back the frame pointers unless all pages are free (as in snapshot).
-	 Need to set inFullGC flag (to avoid passing the flag through a lot of the updating code)"
-	stackPage ~= 0 ifTrue:
-		[self externalWriteBackHeadFramePointers].
+CoInterpreter >> preBecomeAction [
+	"Need to set gcMode var (to avoid passing the flag through a lot of the updating code)"
+	super preBecomeAction.
+	gcMode := GCModeBecome
+]
 
-	inFullGC := fullGCFlag.
+{ #category : #'object memory support' }
+CoInterpreter >> preGCAction: gcModeArg [
+	"Need to write back the frame pointers unless all pages are free (as in snapshot).
+	 Need to set gcMode var (to avoid passing the flag through a lot of the updating code)"
+	super preGCAction: gcModeArg.
+
+	gcMode := gcModeArg.
 
 	cogit recordEventTrace ifTrue:
 		[| traceType |
-		traceType := fullGCFlag ifTrue: [TraceFullGC] ifFalse: [TraceIncrementalGC].
+		traceType := gcModeArg == GCModeFull ifTrue: [TraceFullGC] ifFalse: [TraceIncrementalGC].
 		self recordTrace: traceType thing: traceType source: 0]
 ]
 
@@ -5185,14 +5207,13 @@ CoInterpreter >> rawHeaderOf: methodPointer [
 ]
 
 { #category : #'compiled methods' }
-CoInterpreter >> rawHeaderOf: methodOop put: cogMethod [
+CoInterpreter >> rawHeaderOf: methodOop put: cogMethodOrMethodHeader [
 	<api>
-	<var: #cogMethod type: #'void *'>
 	self assert: (objectMemory isCompiledMethod: methodOop).
 	objectMemory
 		storePointerUnchecked: HeaderIndex
 		ofObject: methodOop
-		withValue: cogMethod asInteger
+		withValue: cogMethodOrMethodHeader
 ]
 
 { #category : #'image save/restore' }
