@@ -605,6 +605,8 @@ CCodeGenerator >> emitBuiltinConstructAsArgumentFor: msgNode on: aStream level: 
 	"If the given selector is in the translation dictionary, translate it into a target code construct and return true. Otherwise, do nothing and return false."
 
 	| action |
+	(self messageReceiverIsInterpreterProxy: msgNode) ifTrue:
+		[^false].
 	action := asArgumentTranslationDict
 				at: msgNode selector
 				ifAbsent: [translationDict at: msgNode selector ifAbsent: [ ^false ]].
@@ -617,6 +619,8 @@ CCodeGenerator >> emitBuiltinConstructFor: msgNode on: aStream level: level [
 	"If the given selector is in the translation dictionary, translate it into a target code construct and return true. Otherwise, do nothing and return false."
 
 	| action |
+	(self messageReceiverIsInterpreterProxy: msgNode) ifTrue:
+		[^false].
 	action := translationDict at: msgNode selector ifAbsent: [ ^false ].
 	self perform: action with: msgNode with: aStream with: level.
 	^true
@@ -1284,11 +1288,13 @@ CCodeGenerator >> generateIfFalse: msgNode on: aStream indent: level [
 
 	(self nilOrBooleanConstantReceiverOf: msgNode)
 		ifNil:
-			[aStream nextPutAll: 'if (!('.
+			[aStream nextPutAll: 'if (!'.
+			msgNode receiver isLeaf ifFalse: [aStream nextPut: $(]. "grrrrr"
 			msgNode receiver emitCCodeAsExpressionOn: aStream level: level + 1 generator: self.
-			aStream nextPutAll: ')) {'; cr.
+			msgNode receiver isLeaf ifFalse: [aStream nextPut: $)]. "grrrrr"
+			aStream nextPutAll: ') {'; cr.
 			msgNode args last emitCCodeOn: aStream level: level + 1 generator: self.
-			level timesRepeat: [aStream tab].
+			aStream tab: level.
 			aStream nextPut: $}]
 		ifNotNil:
 			[:const |
@@ -2478,6 +2484,13 @@ CCodeGenerator >> mayInline: sel [
 	"Answer true if the method with the given selector may be inlined."
 
 	^sel ~~ #assert: and: [inlineList includes: sel]
+]
+
+{ #category : #utilities }
+CCodeGenerator >> messageReceiverIsInterpreterProxy: sendNode [
+	^self isGeneratingPluginCode
+	  and: [sendNode receiver isVariable
+	  and: ['interpreterProxy' = sendNode receiver name]]
 ]
 
 { #category : #utilities }

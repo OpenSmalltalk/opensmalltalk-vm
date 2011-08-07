@@ -1316,20 +1316,21 @@ ObjectMemory >> clearRootsTable [
 ]
 
 { #category : #allocation }
-ObjectMemory >> clone: oop [
+ObjectMemory >> clone: obj [
 	"Return a shallow copy of the given object. May cause GC"
 	"Assume: Oop is a real object, not a small integer."
 
 	| extraHdrBytes bytes newChunk remappedOop fromIndex toIndex lastFrom newOop header hash |
 	<inline: false>
-	<var: #lastFrom type: 'usqInt'>
-	<var: #fromIndex type: 'usqInt'>
-	extraHdrBytes := self extraHeaderBytes: oop.
-	bytes := self sizeBitsOf: oop.
+	<var: #lastFrom type: #usqInt>
+	<var: #fromIndex type: #usqInt>
+	self assert: (self isNonIntegerObject: obj).
+	extraHdrBytes := self extraHeaderBytes: obj.
+	bytes := self sizeBitsOf: obj.
 	bytes := bytes + extraHdrBytes.
 
-	"allocate space for the copy, remapping oop in case of a GC"
-	self pushRemappableOop: oop.
+	"allocate space for the copy, remapping obj in case of a GC"
+	self pushRemappableOop: obj.
 	"check it is safe to allocate this much memory. Return 0 if not"
 	(self sufficientSpaceToAllocate: 2500 + bytes) ifFalse:[^0].
 	newChunk := self allocateChunk: bytes.
@@ -1339,8 +1340,8 @@ ObjectMemory >> clone: oop [
 	toIndex := newChunk - BytesPerWord.  "loop below uses pre-increment"
 	fromIndex := (remappedOop - extraHdrBytes) - BytesPerWord.
 	lastFrom := fromIndex + bytes.
-	[fromIndex < lastFrom] whileTrue: [
-		self longAt: (toIndex := toIndex + BytesPerWord) put: (self longAt: (fromIndex := fromIndex + BytesPerWord))].
+	[fromIndex < lastFrom] whileTrue:
+		[self longAt: (toIndex := toIndex + BytesPerWord) put: (self longAt: (fromIndex := fromIndex + BytesPerWord))].
 	newOop := newChunk + extraHdrBytes.  "convert from chunk to oop"
 
 	"fix base header: compute new hash and clear Mark and Root bits"
@@ -1797,7 +1798,7 @@ ObjectMemory >> fullGC [
 		[self reverseDisplayFrom: 0 to: 7.
 		 self clearLeakMapAndMapAccessibleObjects.
 		 self checkHeapIntegrity].
-	self preGCAction: true.
+	self preGCAction: GCModeFull.
 	gcStartUsecs := self ioUTCMicrosecondsNow.
 	statSweepCount := statMarkCount := statMkFwdCount := statCompMoveCount := 0.
 	self clearRootsTable.
@@ -1818,8 +1819,7 @@ ObjectMemory >> fullGC [
 	DoAssertionChecks ifTrue:
 		[self clearLeakMapAndMapAccessibleObjects.
 		 self checkHeapIntegrity.
-		 self reverseDisplayFrom: 0 to: 7].
-
+		 self reverseDisplayFrom: 0 to: 7]
 ]
 
 { #category : #'gc -- compaction' }
@@ -2119,7 +2119,7 @@ ObjectMemory >> incrementalGC [
 		 self checkInterpreterIntegrity.
 		 self validate].
 
-	self preGCAction: false.
+	self preGCAction: GCModeIncr.
 	"incremental GC and compaction"
 
 	gcStartUsecs := self ioUTCMicrosecondsNow.
@@ -2564,6 +2564,12 @@ ObjectMemory >> isCompiledMethod: oop [
     "Answer whether the argument object is of compiled method format"
 	<api>
     ^(self formatOf: oop) >= 12
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> isCompiledMethodHeader: objHeader [
+    "Answer whether the argument header has compiled method format"
+    ^(self formatOfHeader: objHeader) >= 12
 ]
 
 { #category : #contexts }

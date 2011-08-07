@@ -294,10 +294,12 @@ NewObjectMemory >> become: array1 with: array2 twoWay: twoWayFlag copyHash: copy
 	(self allYoung: array1 and: array2)
 		ifTrue: [start := youngStart"sweep only the young objects plus the roots"]
 		ifFalse: [start := self startOfMemory"sweep all objects"].
+	coInterpreter preBecomeAction.
 	self mapPointersInObjectsFrom: start to: endOfMemory.
 	twoWayFlag
 		ifTrue: [self restoreHeadersAfterBecoming: array1 with: array2]
 		ifFalse: [self restoreHeadersAfterForwardBecome: copyHashFlag].
+	coInterpreter postBecomeAction.
 
 	self initializeMemoryFirstFree: freeStart. "re-initialize memory used for forwarding table"
 	self leakCheckBecome ifTrue:
@@ -349,6 +351,16 @@ NewObjectMemory >> clearLeakMapAndMapAccessibleObjects [
 				[self heapMapAtWord: (self pointerForOop: obj) Put: 1.
 				 sz := self sizeBitsOf: obj].
 		 obj := self oopFromChunk: obj + sz]
+]
+
+{ #category : #allocation }
+NewObjectMemory >> clone: oop [
+	"Return a shallow copy of the given object. May cause GC"
+	"Assume: Oop is a real object, not a small integer.
+	 Override to assert it's not a married context"
+	self assert: ((coInterpreter isContext: oop) not
+				or: [(coInterpreter isMarriedOrWidowedContext: oop) not]). 
+	^super clone: oop
 ]
 
 { #category : #'cog jit support' }
@@ -736,7 +748,7 @@ NewObjectMemory >> fullGC [
 		 ^self].
 	self initializeFreeBlocksPreSweep.
 	self runLeakCheckerForFullGC: true.
-	self preGCAction: true.
+	self preGCAction: GCModeFull.
 	gcStartUsecs := self ioUTCMicrosecondsNow.
 	statSweepCount := statMarkCount := statMkFwdCount := statCompMoveCount := 0.
 	self clearRootsTable.
@@ -753,7 +765,7 @@ NewObjectMemory >> fullGC [
 	self capturePendingFinalizationSignals.
 
 	youngStart := freeStart.  "reset the young object boundary"
-	self postGCAction: true.
+	self postGCAction.
 	self runLeakCheckerForFullGC: true
 ]
 
@@ -960,7 +972,7 @@ NewObjectMemory >> incrementalGC [
 	self initializeFreeBlocksPreSweep.
 	self runLeakCheckerForFullGC: false.
 
-	self preGCAction: false.
+	self preGCAction: GCModeIncr.
 	"incremental GC and compaction"
 
 	gcStartUsecs := self ioUTCMicrosecondsNow.
@@ -1000,7 +1012,7 @@ NewObjectMemory >> incrementalGC [
 			[self biasToGrow.
 			 weDidGrow := true].
 		youngStart := freeStart].
-	self postGCAction: false.
+	self postGCAction.
 	
 	self runLeakCheckerForFullGC: false.
 	weDidGrow ifTrue:
@@ -1179,6 +1191,7 @@ NewObjectMemory >> isPlatformFloatOrderVersion: imageVersion [
 
 { #category : #'memory access' }
 NewObjectMemory >> isYoungObject: obj [
+	<api>
 	"Answer if obj is young. Assume obj is non-immediate."
 	^self oop: obj isGreaterThanOrEqualTo: youngStart
 ]
@@ -1188,7 +1201,7 @@ NewObjectMemory >> lastPointerOf: oop [
 	"Return the byte offset of the last pointer field of the given object.  
 	 Can be used even when the type bits are not correct.
 	 Works with CompiledMethods, as well as ordinary objects."
-	| fmt header contextSize |
+	| fmt header contextSize numLiterals |
 	<inline: true>
 	<asmLabel: false>
 	header := self baseHeader: oop.
@@ -1203,7 +1216,8 @@ NewObjectMemory >> lastPointerOf: oop [
 	fmt < 12 ifTrue: [^0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes"
-	^(coInterpreter literalCountOf: oop) * BytesPerWord + BaseHeaderSize
+	numLiterals := coInterpreter literalCountOf: oop.
+	^numLiterals * BytesPerWord + BaseHeaderSize
 ]
 
 { #category : #'object enumeration' }
@@ -1214,7 +1228,7 @@ NewObjectMemory >> lastPointerOf: oop recordWeakRoot: recordWeakRoot [ "<Boolean
 	 This is a version of lastPointerOf: for markAndTrace:.
 	 Already overridden to trace stack pages for the StackInterpreter.
 	 Override to ask coInterpreter to determine literalCount of methods."
-	| fmt sz header contextSize |
+	| fmt sz header contextSize numLiterals |
 	<inline: true>
 	<asmLabel: false>
 	header := self baseHeader: oop.
@@ -1241,14 +1255,15 @@ NewObjectMemory >> lastPointerOf: oop recordWeakRoot: recordWeakRoot [ "<Boolean
 	fmt < 12 ifTrue: [^0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes"
-	^(coInterpreter literalCountOf: oop) * BytesPerWord + BaseHeaderSize
+	numLiterals := coInterpreter literalCountOf: oop.
+	^numLiterals * BytesPerWord + BaseHeaderSize
 ]
 
 { #category : #'gc -- compaction' }
 NewObjectMemory >> lastPointerWhileForwarding: oop [ 
 	"The given object may have its header word in a forwarding block. Find  
 	 the offset of the last pointer in the object in spite of this obstacle."
-	| header fmt size contextSize |
+	| header fmt size contextSize numLiterals |
 	<inline: true>
 	header := self headerWhileForwardingOf: oop.
 	fmt := self formatOfHeader: header.
@@ -1265,9 +1280,10 @@ NewObjectMemory >> lastPointerWhileForwarding: oop [
 					ifFalse: [header bitAnd: SizeMask].
 		 ^size - BaseHeaderSize].
 	fmt < 12 ifTrue: [^0]. "no pointers"
-
 	"CompiledMethod: contains both pointers and bytes"
-	^(coInterpreter literalCountOf: oop) * BytesPerWord + BaseHeaderSize
+	self assert: (header bitAnd: MarkBit) = 0.
+	numLiterals := coInterpreter literalCountOf: oop.
+	^numLiterals * BytesPerWord + BaseHeaderSize
 ]
 
 { #category : #'debug support' }

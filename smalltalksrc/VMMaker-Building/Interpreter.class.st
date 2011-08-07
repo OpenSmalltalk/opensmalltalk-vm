@@ -4586,10 +4586,10 @@ Interpreter >> postGCAction [
 ]
 
 { #category : #'object memory support' }
-Interpreter >> preGCAction: fullGCFlag [
+Interpreter >> preGCAction: gcMode [
 
 	compilerInitialized
-		ifTrue: [self compilerPreGC: fullGCFlag]
+		ifTrue: [self compilerPreGC: gcMode = GCModeFull]
 		ifFalse: [self storeContextRegisters: activeContext].
 ]
 

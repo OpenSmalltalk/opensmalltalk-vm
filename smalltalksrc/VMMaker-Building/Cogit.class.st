@@ -2890,6 +2890,8 @@ Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethodOrNil tag: caseNTag [
 Cogit >> cogMethodDoesntLookKosher: cogMethod [
 	"Check that the header fields onf a non-free method are consistent with
 	 the type. Answer 0 if it is ok, otherwise answer a code for the error."
+	<api>
+	<inline: false>
 	<var: #cogMethod type: #'CogMethod *'>
 	((cogMethod blockSize bitAnd: BytesPerWord - 1) ~= 0
 	 or: [cogMethod blockSize < (self sizeof: CogMethod)
@@ -3055,8 +3057,11 @@ Cogit >> cogit [
 ]
 
 { #category : #'jit - api' }
-Cogit >> cogitPostGCAction [
+Cogit >> cogitPostGCAction: gcMode [
 	<api>
+	(gcMode = GCModeFull
+	 and: [objectRepresentation allYoungObjectsAgeInFullGC]) ifTrue:
+		[methodZone voidYoungReferrersPostTenureAll].
 	"Post-GC update every full method's objectHeader to whatever it needs to be"
 	self assert: self allMethodsHaveCorrectHeader.
 	self assert: methodZone kosherYoungReferrers
@@ -3080,6 +3085,7 @@ Cogit >> compactCogCompiledCode [
 	coInterpreter updateStackZoneReferencesToCompiledCodePreCompaction.
 	self relocateMethodsPreCompaction.
 	methodZone compactCompiledCode: objectMemory nullHeaderForMachineCodeMethod.
+	self assert: self allMethodsHaveCorrectHeader.
 	self assert: methodZone kosherYoungReferrers.
 	processor flushICacheFrom: methodZoneBase to: methodZone zoneLimit
 ]
@@ -3818,7 +3824,7 @@ Cogit >> fillInMethodHeader: method size: size selector: selector [
 			self assert: originalMethod blockSize = size.
 			methodHeader := originalMethod methodHeader]
 		ifFalse:
-			[coInterpreter rawHeaderOf: methodObj put: method].
+			[coInterpreter rawHeaderOf: methodObj put: method asInteger].
 	method methodHeader: methodHeader.
 	method selector: selector.
 	method cmNumArgs: (coInterpreter argumentCountOfMethodHeader: methodHeader).
@@ -5662,17 +5668,21 @@ Cogit >> mapFor: cogMethod performUntil: functionSymbol arg: arg [
 
 { #category : #'garbage collection' }
 Cogit >> mapObjectReferencesInClosedPIC: cPIC [
+	"Remap all object references in the closed PIC.  Answer if any references are young.
+	Set codeModified if any modifications are made."
 	<var: #cPIC type: #'CogMethod *'>
-	| pc |
+	| pc refersToYoung |
 	pc := cPIC asInteger + firstCPICCaseOffset.
-	self updateMaybeObjRefAt: pc - backEnd jumpLongByteSize.
+	refersToYoung := self updateMaybeObjRefAt: pc - backEnd jumpLongByteSize.
 	pc := pc + cPICCaseSize.
 	2 to: cPIC cPICNumCases do:
 		[:i|
-		self updateMaybeObjRefAt: pc - backEnd jumpLongConditionalByteSize - backEnd loadLiteralByteSize.
-		self updateMaybeObjRefAt: pc - backEnd jumpLongConditionalByteSize.
+		(self updateMaybeObjRefAt: pc - backEnd jumpLongConditionalByteSize - backEnd loadLiteralByteSize) ifTrue:
+			[refersToYoung := true].
+		(self updateMaybeObjRefAt: pc - backEnd jumpLongConditionalByteSize) ifTrue:
+			[refersToYoung := true].
 		pc := pc + cPICCaseSize].
-	^false
+	^refersToYoung
 ]
 
 { #category : #'garbage collection' }
@@ -5689,17 +5699,77 @@ Cogit >> mapObjectReferencesInGeneratedRuntime [
 ]
 
 { #category : #'jit - api' }
-Cogit >> mapObjectReferencesInMachineCode: inFullGC [
+Cogit >> mapObjectReferencesInMachineCode: gcMode [
 	<api>
 	"Update all references to objects in machine code."
-	inFullGC
-		ifTrue: [self mapObjectReferencesInMachineCodeForFullGC]
-		ifFalse: [self mapObjectReferencesInMachineCodeForIncrementalGC]
+	gcMode caseOf: {
+		[GCModeIncr]		-> [self mapObjectReferencesInMachineCodeForIncrementalGC].
+		[GCModeFull]		-> [self mapObjectReferencesInMachineCodeForFullGC].
+		[GCModeBecome]	-> [self mapObjectReferencesInMachineCodeForBecome] }
+]
+
+{ #category : #'garbage collection' }
+Cogit >> mapObjectReferencesInMachineCodeForBecome [
+	"Update all references to objects in machine code for a become.
+	 Unlike incrementalGC or fullGC a method that does not refer to young
+	 may refer to young as a result of the become operation."
+	| cogMethod hasYoungObj hasYoungObjPtr freedPIC |
+	<var: #cogMethod type: #'CogMethod *'>
+	hasYoungObj := false.
+	hasYoungObjPtr := self cCode: [(self addressOf: hasYoungObj) asInteger]
+							inSmalltalk: [CPluggableAccessor new
+											setObject: nil;
+											atBlock: [:obj :idx| hasYoungObj]
+											atPutBlock: [:obj :idx :val| hasYoungObj := val]].
+	codeModified := freedPIC := false.
+	self mapObjectReferencesInGeneratedRuntime.
+	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
+	[cogMethod < methodZone limitZony] whileTrue:
+		[self assert: hasYoungObj not.
+		 cogMethod cmType ~= CMFree ifTrue:
+			[self assert: (self cogMethodDoesntLookKosher: cogMethod) = 0.
+			 cogMethod selector: (objectRepresentation remapOop: cogMethod selector)..
+			 cogMethod cmType = CMClosedPIC
+				ifTrue:
+					[((objectMemory isYoung: cogMethod selector)
+					   or: [self mapObjectReferencesInClosedPIC: cogMethod]) ifTrue:
+						[freedPIC := true.
+						 methodZone freeMethod: cogMethod]]
+				ifFalse:
+					[(objectMemory isYoung: cogMethod selector) ifTrue:
+						[hasYoungObj := true].
+					 cogMethod cmType = CMMethod ifTrue:
+						[self assert: cogMethod objectHeader = objectMemory nullHeaderForMachineCodeMethod.
+						 cogMethod methodObject: (objectRepresentation remapOop: cogMethod methodObject).
+						 self assert: (coInterpreter rawHeaderOf: cogMethod methodObject) = cogMethod asInteger.
+						 (objectMemory isYoung: cogMethod methodObject) ifTrue:
+							[hasYoungObj := true]].
+					 self mapFor: cogMethod
+						 performUntil: (self cppIf: NewspeakVM
+											ifTrue: [#remapNSIfObjectRef:pc:hasYoung: asSymbol]
+											ifFalse: [#remapIfObjectRef:pc:hasYoung: asSymbol])
+						 arg: hasYoungObjPtr.
+					 hasYoungObj
+						ifTrue:
+							[cogMethod cmRefersToYoung ifFalse:
+								[cogMethod cmRefersToYoung: true.
+								 methodZone addToYoungReferrers: cogMethod].
+							hasYoungObj := false]
+						ifFalse: [cogMethod cmRefersToYoung: false]]].
+		cogMethod := methodZone methodAfter: cogMethod].
+	methodZone pruneYoungReferrers.
+	freedPIC ifTrue:
+		[self unlinkSendsToFree.
+		 codeModified := true].
+	codeModified ifTrue: "After updating oops in inline caches we need to flush the icache."
+		[processor flushICacheFrom: codeBase to: methodZone limitZony asInteger]
 ]
 
 { #category : #'garbage collection' }
 Cogit >> mapObjectReferencesInMachineCodeForFullGC [
-	"Update all references to objects in machine code for a full gc."
+	"Update all references to objects in machine code for a full gc.  Since
+	 the current (New)ObjectMemory GC makes everything old in a full GC
+	 a method not referring to young will not refer to young afterwards"
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
 	codeModified := false.
@@ -5711,7 +5781,8 @@ Cogit >> mapObjectReferencesInMachineCodeForFullGC [
 			 cogMethod selector: (objectRepresentation remapOop: cogMethod selector).
 			 cogMethod cmType = CMClosedPIC
 				ifTrue:
-					[self mapObjectReferencesInClosedPIC: cogMethod]
+					[self assert: cogMethod cmRefersToYoung not.
+					 self mapObjectReferencesInClosedPIC: cogMethod]
 				ifFalse:
 					[cogMethod cmType = CMMethod ifTrue:
 						[self assert: cogMethod objectHeader = objectMemory nullHeaderForMachineCodeMethod.
@@ -5732,14 +5803,23 @@ Cogit >> mapObjectReferencesInMachineCodeForFullGC [
 
 { #category : #'garbage collection' }
 Cogit >> mapObjectReferencesInMachineCodeForIncrementalGC [
-	"Update all references to objects in machine code for an incremental gc."
-	| pointer cogMethod hasYoungObj |
+	"Update all references to objects in machine code for an incremental gc.
+	 Avoid scanning all code by using the youngReferrers list.  In an incremental
+	 GC a method referring to young may no longer refer to young, but a method
+	 not referring to young cannot and will not refer to young afterwards."
+	| pointer cogMethod hasYoungObj hasYoungObjPtr |
 	<var: #cogMethod type: #'CogMethod *'>
 	hasYoungObj := false.
+	hasYoungObjPtr := self cCode: [(self addressOf: hasYoungObj) asInteger]
+							inSmalltalk: [CPluggableAccessor new
+											setObject: nil;
+											atBlock: [:obj :idx| hasYoungObj]
+											atPutBlock: [:obj :idx :val| hasYoungObj := val]].
 	codeModified := false.
 	pointer := methodZone youngReferrers.
 	[pointer < methodZone zoneEnd] whileTrue:
-		[cogMethod := coInterpreter cCoerceSimple: (objectMemory longAt: pointer) to: #'CogMethod *'.
+		[self assert: hasYoungObj not.
+		 cogMethod := coInterpreter cCoerceSimple: (objectMemory longAt: pointer) to: #'CogMethod *'.
 		 cogMethod cmType = CMFree
 			ifTrue: [self assert: cogMethod cmRefersToYoung not]
 			ifFalse:
@@ -5759,11 +5839,7 @@ Cogit >> mapObjectReferencesInMachineCodeForIncrementalGC [
 						 performUntil: (self cppIf: NewspeakVM
 											ifTrue: [#remapNSIfObjectRef:pc:hasYoung: asSymbol]
 											ifFalse: [#remapIfObjectRef:pc:hasYoung: asSymbol])
-						 arg: (self cCode: [(self addressOf: hasYoungObj) asInteger]
-								inSmalltalk: [CPluggableAccessor new
-												setObject: nil;
-												atBlock: [:obj :idx| hasYoungObj]
-												atPutBlock: [:obj :idx :val| hasYoungObj := val]]).
+						 arg: hasYoungObjPtr.
 					 hasYoungObj
 						ifTrue: [hasYoungObj := false]
 						ifFalse: [cogMethod cmRefersToYoung: false]]].
@@ -7774,14 +7850,17 @@ Cogit >> unlockVMOwner [
 { #category : #'garbage collection' }
 Cogit >> updateMaybeObjRefAt: mcpc [
 	"Update a potential object reference form a closed PIC.
-	 This may be an object reference, an inline cache tag or null."
+	 This may be an object reference, an inline cache tag or null.
+	 Answer if the updated literal is young."
 	| object subject |
 	object := backEnd literalBeforeFollowingAddress: mcpc.
-	(objectRepresentation couldBeObject: object) ifTrue:
-		[subject := objectRepresentation remapOop: object.
-		 object ~= subject ifTrue:
-			[backEnd storeLiteral: subject beforeFollowingAddress: mcpc.
-			 codeModified := true]]
+	(objectRepresentation couldBeObject: object) ifFalse:
+		[^false].
+	subject := objectRepresentation remapOop: object.
+	object ~= subject ifTrue:
+		[backEnd storeLiteral: subject beforeFollowingAddress: mcpc.
+		 codeModified := true].
+	^objectMemory isYoungObject: subject
 ]
 
 { #category : #'jit - api' }

@@ -149,7 +149,7 @@ CogMethodZone >> compactCompiledCode: objectHeaderValue [
 								or: [(coInterpreter methodClassAssociationOf: dest methodObject) = objectMemory nilObject]).
 					"Only update the original method's header if it is referring to this CogMethod."
 					 (coInterpreter rawHeaderOf: dest methodObject) asInteger = source asInteger ifTrue:
-						[coInterpreter rawHeaderOf: dest methodObject put: dest]]
+						[coInterpreter rawHeaderOf: dest methodObject put: dest asInteger]]
 				ifFalse:
 					[dest cmType = CMOpenPIC ifTrue:
 						[dest nextOpenPIC: openPICList asUnsignedInteger.
@@ -197,7 +197,7 @@ CogMethodZone >> freeMethod: cogMethod [
 		 (coInterpreter rawHeaderOf: cogMethod methodObject) asInteger = cogMethod asInteger ifTrue:
 			[coInterpreter
 				rawHeaderOf: cogMethod methodObject
-				put: (coInterpreter pointerForOop: cogMethod methodHeader)].
+				put: cogMethod methodHeader].
 		 cogMethod cmRefersToYoung: false].
 	cogMethod cmType = CMOpenPIC ifTrue:
 		[self removeFromOpenPICList: cogMethod.
@@ -437,7 +437,20 @@ CogMethodZone >> printCogMethodsOfType: cmType [
 		 cogMethod := self methodAfter: cogMethod]
 ]
 
-{ #category : #accessing }
+{ #category : #printing }
+CogMethodZone >> printCogMethodsWithMethod: methodOop [
+	<api>
+	| cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	cogMethod := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
+	[cogMethod < self limitZony] whileTrue:
+		[(cogMethod cmType ~= CMFree
+		  and: [cogMethod methodObject = methodOop]) ifTrue:
+			[coInterpreter printCogMethod: cogMethod].
+		 cogMethod := self methodAfter: cogMethod]
+]
+
+{ #category : #printing }
 CogMethodZone >> printCogMethodsWithSelector: selectorOop [
 	<api>
 	| cogMethod |
@@ -567,6 +580,22 @@ CogMethodZone >> setInterpreter: aCoInterpreter objectRepresentation: anObjectRe
 	objectRepresentation := anObjectRepresentation.
 	cogit := aCogit.
 	objectMemory := aCoInterpreter objectMemory
+]
+
+{ #category : #'jit - api' }
+CogMethodZone >> voidYoungReferrersPostTenureAll [
+	<var: #cogMethod type: #'CogMethod *'>
+	| pointer cogMethod |
+	<var: #pointer type: #usqInt>
+	<var: #cogMethod type: #'CogMethod *'>
+	self assert: youngReferrers <= limitAddress.
+	pointer := youngReferrers.
+	[pointer < limitAddress] whileTrue:
+		[cogMethod := coInterpreter cCoerceSimple: (objectMemory longAt: pointer) to: #'CogMethod *'.
+		 cogMethod cmType ~= CMFree ifTrue:
+			[cogMethod cmRefersToYoung: false].
+		 pointer := pointer + BytesPerWord].
+	youngReferrers := limitAddress
 ]
 
 { #category : #'young referers' }

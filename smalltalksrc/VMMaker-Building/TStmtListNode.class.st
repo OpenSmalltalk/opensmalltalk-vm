@@ -38,11 +38,12 @@ TStmtListNode >> emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen
 		do:
 			[:s |
 			s emitCCommentOn: aStream level: level.
-			s emitCCodeAsArgumentOn: aStream level: 0 generator: aCodeGen.
+			s emitCCodeAsArgumentOn: aStream level: level + 1 generator: aCodeGen.
 			statementWasComment := s isComment]
 		separatedBy:
 			[((self endsWithCloseBracket: aStream)
-			  or: [statementWasComment]) ifFalse: [aStream nextPut: $,]].
+			  or: [statementWasComment]) ifFalse: [aStream nextPut: $,].
+			aStream crtab: level].
 	aStream nextPut: $)
 ]
 
