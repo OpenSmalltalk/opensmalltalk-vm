@@ -81,11 +81,8 @@ TSendNode >> emitCCodeAsFunctionCallOn: aStream level: level generator: aCodeGen
 	"Translate this message send into a C function call"
 	"Special case for pluggable modules. Replace messages to interpreterProxy
 	 by interpreterProxy->message(..) if the message is not builtin"
-	(aCodeGen isGeneratingPluginCode
-	 and: [receiver isVariable
-	 and: ['interpreterProxy' = receiver name
-	 and: [self isBuiltinOperator not]]]) ifTrue:
-		[aStream nextPutAll:'interpreterProxy->'].
+	(aCodeGen messageReceiverIsInterpreterProxy: self) ifTrue:
+		[aStream nextPutAll: 'interpreterProxy->'].
 	"Translate this message send into a C function call."
 	aStream nextPutAll: (aCodeGen cFunctionNameFor: selector); nextPut: $(.
 	"Only include the receiver as the first argument in certain cases.
@@ -98,8 +95,8 @@ TSendNode >> emitCCodeAsFunctionCallOn: aStream level: level generator: aCodeGen
 		[receiver emitCCodeOn: aStream level: level generator: aCodeGen.
 		arguments isEmpty ifFalse:
 			[aStream nextPutAll: ', ']].
-	arguments do:
-		[ :arg| arg emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen]
+	arguments
+		do: [ :arg| arg emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen]
 		separatedBy: [aStream nextPut: $,; space].
 	aStream nextPut: $)
 ]

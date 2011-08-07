@@ -19,6 +19,31 @@ CoInterpreterPrimitives >> picDataFor: cogMethod [
 	^data
 ]
 
+{ #category : #'object access primitives' }
+CoInterpreterPrimitives >> primitiveClone [
+	"Return a shallow copy of the receiver.
+	 Special-case non-single contexts (because of context-to-stack mapping).
+	 Can't fail for contexts cuz of image context instantiation code (sigh).
+	 Special case CompiledMerhods since the copy mustn't refer to CogMethod
+	 if receiver has been cogged."
+
+	| receiver newCopy objHeader |
+	receiver := self stackTop.
+	(objectMemory isIntegerObject: receiver)
+		ifTrue: [newCopy := receiver]
+		ifFalse:
+			[objHeader := objectMemory  baseHeader: receiver.
+			(self isContextHeader: objHeader)
+				ifTrue: [newCopy := self cloneContext: receiver]
+				ifFalse: [newCopy := objectMemory clone: receiver].
+			newCopy = 0 ifTrue:
+				[^self primitiveFailFor: PrimErrNoMemory].
+			(self isCompiledMethodHeader: objHeader) ifTrue:
+				["use stackTop since GC may have moved receiver"
+				 self rawHeaderOf: newCopy put: (self headerOf: self stackTop)]].
+	self pop: 1 thenPush: newCopy
+]
+
 { #category : #'control primitives' }
 CoInterpreterPrimitives >> primitiveClosureCopyWithCopiedValues [
 	"This is optional old obsolete stuff tedious to implement in Cog because of

@@ -51,6 +51,16 @@ NewCoObjectMemory >> clearLeakMapAndMapAccessibleObjects [
 	cogit addCogMethodsToHeapMap
 ]
 
+{ #category : #allocation }
+NewCoObjectMemory >> clone: obj [
+	"Return a shallow copy of the given object. May cause GC"
+	"Assume: Oop is a real object, not a small integer.
+	 Override to assert it's not a cogged method"
+	self assert: ((self isOopCompiledMethod: obj) not
+				or: [(coInterpreter methodHasCogMethod: obj) not]). 
+	^super clone: obj
+]
+
 { #category : #accessing }
 NewCoObjectMemory >> cogit [
 	<doNotGenerate>
@@ -121,105 +131,6 @@ NewCoObjectMemory >> growObjectMemory: delta [
 		[self setMemoryLimit: limit - 24. "remove a tad for safety"
 		 self initializeMemoryFirstFree: freeStart.
 		 coInterpreter sqMakeMemoryNotExecutableFrom: self startOfMemory To: memoryLimit]
-]
-
-{ #category : #'object enumeration' }
-NewCoObjectMemory >> lastPointerOf: oop [ 
-	"Return the byte offset of the last pointer field of the given object.  
-	 Can be used even when the type bits are not correct.
-	 Works with CompiledMethods, as well as ordinary objects.
-	 Override to handle hidden pointer to CogMethod in a CompiledMethod header field."
-	| fmt methodHeader header contextSize |
-	<inline: true>
-	<asmLabel: false>
-	header := self baseHeader: oop.
-	fmt := self formatOfHeader: header.
-	fmt <= 4 ifTrue:
-		[(fmt = 3
-		  and: [self isContextHeader: header]) ifTrue:
-			["contexts end at the stack pointer"
-			contextSize := coInterpreter fetchStackPointerOf: oop.
-			^CtxtTempFrameStart + contextSize * BytesPerWord].
-		^(self sizeBitsOfSafe: oop) - BaseHeaderSize  "all pointers"].
-	fmt < 12 ifTrue: [^0]. "no pointers"
-
-	"CompiledMethod: contains both pointers and bytes; may have an associated CogMethod"
-	methodHeader := self longAt: oop + BaseHeaderSize.
-	(coInterpreter isCogMethodReference: methodHeader) ifTrue:
-		[self assert: (coInterpreter cCoerceSimple: methodHeader to: #'CogMethod *') cmType = CMMethod.
-		 methodHeader := (coInterpreter cCoerceSimple: methodHeader to: #'CogMethod *') methodHeader].
-	^(coInterpreter literalCountOfHeader:methodHeader) * BytesPerWord + BaseHeaderSize
-]
-
-{ #category : #'object enumeration' }
-NewCoObjectMemory >> lastPointerOf: oop recordWeakRoot: recordWeakRoot [ "<Boolean>"
-	"Return the byte offset of the last pointer field of the given object.  
-	 Works with CompiledMethods, as well as ordinary objects. 
-	 Can be used even when the type bits are not correct.
-	 This is a version of lastPointerOf: for markAndTrace:.
-	 Already overridden to trace stack pages for the StackInterpreter.
-	 Override to handle hidden pointer to CogMethod in a
-	 CompiledMethod header field."
-	| fmt sz header contextSize methodHeader |
-	<inline: true>
-	<asmLabel: false>
-	header := self baseHeader: oop.
-	fmt := self formatOfHeader: header.
-	fmt <= 4 ifTrue:
-		[fmt >= 3 ifTrue:
-			[fmt = 4 ifTrue:
-				[recordWeakRoot ifTrue:
-					["And remember as weak root"
-					 weakRootCount := weakRootCount + 1.
-					 self assert: weakRootCount <= WeakRootTableSize.
-					 weakRoots at: weakRootCount put: oop].
-				"Do not trace the object's indexed fields if it's a weak class"
-				^(self nonWeakFieldsOf: oop) << ShiftForWord].
-			"So fmt is 3"
-			(self isContextHeader: header) ifTrue:
-				[coInterpreter setTraceFlagOnContextsFramesPageIfNeeded: oop.
-				 "contexts end at the stack pointer avoiding having to init fields beyond it"
-				 contextSize := coInterpreter fetchStackPointerOf: oop.
-				 self assert: ReceiverIndex + contextSize < (self lengthOf: oop baseHeader: header format: fmt).
-				 ^CtxtTempFrameStart + contextSize * BytesPerWord]].
-		 sz := self sizeBitsOfSafe: oop.
-		 ^sz - BaseHeaderSize  "all pointers" ].
-	fmt < 12 ifTrue: [^0]. "no pointers"
-
-	"CompiledMethod: contains both pointers and bytes; may have an associated CogMethod"
-	methodHeader := self longAt: oop + BaseHeaderSize.
-	(coInterpreter isCogMethodReference: methodHeader) ifTrue:
-		[self assert: (coInterpreter cCoerceSimple: methodHeader to: #'CogMethod *') cmType = CMMethod.
-		 methodHeader := (coInterpreter cCoerceSimple: methodHeader to: #'CogMethod *') methodHeader].
-	^(coInterpreter literalCountOfHeader: methodHeader) * BytesPerWord + BaseHeaderSize
-]
-
-{ #category : #'gc -- compaction' }
-NewCoObjectMemory >> lastPointerWhileForwarding: oop [ 
-	"The given object may have its header word in a forwarding block. Find  
-	 the offset of the last pointer in the object in spite of this obstacle."
-	| header fmt size methodHeader contextSize |
-	<inline: true>
-	header := self headerWhileForwardingOf: oop.
-	fmt := self formatOfHeader: header.
-	fmt <= 4 ifTrue:
-		[(fmt = 3
-		  and: [self isContextHeader: header]) ifTrue:
-			["contexts end at the stack pointer"
-			 contextSize := coInterpreter nacFetchStackPointerOf: oop.
-			 self assert: ReceiverIndex + contextSize < (self lengthOf: oop baseHeader: header format: fmt).
-			 ^CtxtTempFrameStart + contextSize * BytesPerWord].
-		 "do sizeBitsOf: using the header we obtained"
-		 size := (header bitAnd: TypeMask) = HeaderTypeSizeAndClass
-					ifTrue: [(self sizeHeader: oop) bitAnd: AllButTypeMask]
-					ifFalse: [header bitAnd: SizeMask].
-		 ^size - BaseHeaderSize].
-	fmt < 12 ifTrue: [^0]. "no pointers"
-	methodHeader := self longAt: oop + BaseHeaderSize.
-	(coInterpreter isCogMethodReference: methodHeader) ifTrue:
-		[self assert: (coInterpreter cCoerceSimple: methodHeader to: #'CogMethod *') cmType = CMMethod.
-		 methodHeader := (coInterpreter cCoerceSimple: methodHeader to: #'CogMethod *') methodHeader].
-	^(coInterpreter literalCountOfHeader: methodHeader) * BytesPerWord + BaseHeaderSize
 ]
 
 { #category : #'gc -- compaction' }
