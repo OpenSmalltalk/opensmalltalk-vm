@@ -120,7 +120,7 @@ InterpreterPlugin class >> pluginClassesUpTo: aPluginClass [
 	| theClass classes |
 
 	classes := OrderedCollection new.
-	theClass := aPluginClass.
+	theClass := self.
 	[theClass == Object
 	 or: [theClass == InterpreterSimulationObject
 	 or: [theClass == VMClass]]] whileFalse:
