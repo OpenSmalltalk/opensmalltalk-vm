@@ -2490,7 +2490,8 @@ CCodeGenerator >> mayInline: sel [
 CCodeGenerator >> messageReceiverIsInterpreterProxy: sendNode [
 	^self isGeneratingPluginCode
 	  and: [sendNode receiver isVariable
-	  and: ['interpreterProxy' = sendNode receiver name]]
+	  and: ['interpreterProxy' = sendNode receiver name
+	  and: [(self builtin: sendNode selector) not]]]
 ]
 
 { #category : #utilities }
