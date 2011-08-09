@@ -57,6 +57,6 @@ StackCocoaIOSConfig >> srcDir [
 { #category : #plugins }
 StackCocoaIOSConfig >> versionExternalPlugins [ 
 	^Array 
-		with: #ReentrantIA32FFIPlugin
+		with: #ThreadedIA32FFIPlugin
 		with: #IA32ABIPlugin
 ]
