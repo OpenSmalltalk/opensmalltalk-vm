@@ -231,7 +231,7 @@ CogUnixConfig >> coreSources [
 CogUnixConfig >> defaultExternalPlugins [
 	^ #(
 		B3DAcceleratorPlugin
-		ReentrantIA32FFIPlugin "SqueakFFIPrims"
+		ThreadedIA32FFIPlugin "SqueakFFIPrims"
 		"UUIDPlugin"
 		"UnixOSProcessPlugin ?? "	
 	)
