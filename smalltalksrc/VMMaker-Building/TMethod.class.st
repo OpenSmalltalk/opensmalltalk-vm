@@ -1865,7 +1865,7 @@ TMethod >> static: aBoolean [
 ]
 
 { #category : #inlining }
-TMethod >> superExpansionNodeFor: aSelector isReturned: isReturned [
+TMethod >> superExpansionNodeFor: aSelector args: argumentNodes isReturned: isReturned [
 	"Answer the expansion of a super send.  Merge the super expansion's
 	 locals, properties and comment into this method's properties."
 	(definingClass superclass lookupSelector: aSelector)
@@ -1873,6 +1873,12 @@ TMethod >> superExpansionNodeFor: aSelector isReturned: isReturned [
 		ifNotNil:
 			[:superMethod| | superTMethod commonVars varMap |
 			superTMethod := superMethod methodNode asTranslationMethodOfClass: self class.
+			((argumentNodes allSatisfy: [:parseNode| parseNode isVariableNode])
+			and: [(argumentNodes asOrderedCollection collect: [:parseNode| parseNode key]) = superTMethod args]) ifFalse:
+				[self error: definingClass name, '>>',selector, ' args ~= ',
+							superTMethod definingClass name, '>>', aSelector,
+							(String with: $. with: Character cr),
+							'For super expansions to be translated correctly each argument must be a variable with the same name as the corresponding argument in the super method.'].
 			self mergePropertiesOfSuperMethod: superTMethod.
 			(commonVars := superTMethod allLocals intersection: self allLocals) notEmpty ifTrue:
 				[varMap := Dictionary new.
