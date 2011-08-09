@@ -182,7 +182,7 @@ CogMacOSConfig >> defaultExternalPlugins [
 	^ #(
 		BochsIA32Plugin
 		CroquetPlugin
-		ReentrantIA32FFIPlugin "SqueakFFIPrims"
+		ThreadedIA32FFIPlugin "SqueakFFIPrims"
 		FloatArrayPlugin
 		FloatMathPlugin
 		Mpeg3Plugin
