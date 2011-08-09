@@ -21,8 +21,9 @@ MessageNode >> asTranslatorNodeIn: aTMethod [
 					[isReturned := true]]).
 		^aTMethod
 			superExpansionNodeFor: selector key
+			args: arguments
 			isReturned: isReturned].
-	sel := (selector isSymbol) ifTrue: [selector] ifFalse: [selector key].
+	sel := selector isSymbol ifTrue: [selector] ifFalse: [selector key].
 	(sel = #cCode:inSmalltalk: "extracting here rather than in translation allows inlining in the block."
 	and: [arguments first isBlockNode]) ifTrue:
 		[| block |
@@ -40,7 +41,7 @@ MessageNode >> asTranslatorNodeIn: aTMethod [
 	(sel = #ifFalse: and: [arguments size = 2 and: [(arguments at: 2) notNil]])
 		ifTrue: ["Restore argument block that got moved by transformIfFalse:"
 				args at: 1 put: ((arguments at: 2) asTranslatorNodeIn: aTMethod)].
-	^ TSendNode new
+	^TSendNode new
 		setSelector: sel
 		receiver: rcvrOrNil
 		arguments: args
