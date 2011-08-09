@@ -354,13 +354,13 @@ NewObjectMemory >> clearLeakMapAndMapAccessibleObjects [
 ]
 
 { #category : #allocation }
-NewObjectMemory >> clone: oop [
+NewObjectMemory >> clone: obj [
 	"Return a shallow copy of the given object. May cause GC"
 	"Assume: Oop is a real object, not a small integer.
 	 Override to assert it's not a married context"
-	self assert: ((coInterpreter isContext: oop) not
-				or: [(coInterpreter isMarriedOrWidowedContext: oop) not]). 
-	^super clone: oop
+	self assert: ((coInterpreter isContext: obj) not
+				or: [(coInterpreter isMarriedOrWidowedContext: obj) not]). 
+	^super clone: obj
 ]
 
 { #category : #'cog jit support' }
