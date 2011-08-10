@@ -428,22 +428,6 @@ CPlatformConfig >> configureSoundCodecPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-CPlatformConfig >> configureSoundGenerationPlugin: maker [ 
-	"extra rules for SoundPlugin"
-
-	maker doNotGenerate: true. 
-	" The sources in platforms/Cross/plugins/SoundGenerationPlugin/sqOldSoundPrims.c 
-	are out of date and need to be fixed before it can be built 
-	
-	
-	maker 
-		addCrossSources: #('sqOldSoundPrims.c') 
-
-	"
-
-]
-
-{ #category : #'plugin extra rules' }
 CPlatformConfig >> configureSoundPlugin: maker [ 
 	"extra rules for SoundPlugin"
 
@@ -612,6 +596,20 @@ CPlatformConfig >> generateSources [
 	
 	
 
+]
+
+{ #category : #'source generation' }
+CPlatformConfig >> generateStackSources [
+	" generate sources for Stack Interpreter"
+
+	StackInterpreter initialize.
+	
+	VMMaker
+		generate: StackInterpreter
+		to: self srcDir fullName
+		platformDir: self platformsDir fullName
+		excluding: #(BrokenPlugin IA32ABIPluginSimulator SlangTestPlugin TestOSAPlugin
+			FFIPlugin ReentrantARMFFIPlugin ReentrantFFIPlugin ReentrantPPCBEFFIPlugin).
 ]
 
 { #category : #'source generation' }

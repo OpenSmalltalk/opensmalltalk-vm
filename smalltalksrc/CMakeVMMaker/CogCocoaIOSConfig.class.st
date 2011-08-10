@@ -65,6 +65,6 @@ CogCocoaIOSConfig >> srcDir [
 { #category : #plugins }
 CogCocoaIOSConfig >> versionExternalPlugins [ 
 	^Array 
-		with: #ThreadedIA32FFIPlugin
+		with: #ReentrantIA32FFIPlugin
 		with: #IA32ABIPlugin
 ]
