@@ -182,12 +182,10 @@ CogMacOSConfig >> defaultExternalPlugins [
 	^ #(
 		BochsIA32Plugin
 		CroquetPlugin
-		ThreadedIA32FFIPlugin "SqueakFFIPrims"
+		ReentrantIA32FFIPlugin "SqueakFFIPrims"
 		FloatArrayPlugin
 		FloatMathPlugin
 		Mpeg3Plugin
-		QuicktimePlugin
-"		TestOSAPlugin  - not works"
 		"UnixOSProcessPlugin ?? "
 		)
 ]
@@ -302,6 +300,12 @@ CogMacOSConfig >> frameworks [
 	Foundation
 	SystemConfiguration
 	)
+]
+
+{ #category : #'source files' }
+CogMacOSConfig >> generateSourceFiles [
+
+	^ CMakeGenScripts generateCogSources: self
 ]
 
 { #category : #'source generation' }
