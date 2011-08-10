@@ -30,7 +30,7 @@ CogWindowsConfig >> compilerFlags [
 { #category : #'compiler flags' }
 CogWindowsConfig >> compilerFlagsRelease [
 	"Define NDEBUG for production to exclude asserts "
-	^ ' -O2 -march=pentium4 -momit-leaf-frame-pointer -maccumulate-outgoing-args -funroll-loops ',
+	^ '-g0 -O2 -march=pentium4 -momit-leaf-frame-pointer -maccumulate-outgoing-args -funroll-loops ',
 	'-DNDEBUG -DDEBUGVM=0'
 ]
 
@@ -48,7 +48,7 @@ CogWindowsConfig >> coreSources [
 CogWindowsConfig >> defaultExternalPlugins [
 
 	^ #(
-		ThreadedIA32FFIPlugin "SqueakFFIPrims"
+		ReentrantIA32FFIPlugin "SqueakFFIPrims"
 	
 		"Win32OSProcessPlugin"
 	)
