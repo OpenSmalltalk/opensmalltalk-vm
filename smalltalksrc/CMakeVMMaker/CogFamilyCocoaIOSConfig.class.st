@@ -88,7 +88,7 @@ CogFamilyCocoaIOSConfig >> defaultExternalPlugins [
 		UnixOSProcessPlugin
 		ObjectiveCPlugin
 		QuicktimePlugin
-		"TestOSAPlugin"
+		TestOSAPlugin
 	)
 ]
 
