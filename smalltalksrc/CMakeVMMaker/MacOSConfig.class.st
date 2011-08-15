@@ -143,6 +143,19 @@ MacOSConfig >> configurePlugin: aPlugin with: generator [
 ]
 
 { #category : #'plugin extra rules' }
+MacOSConfig >> configureQuicktimePlugin: maker [
+	
+	maker includeDirectories: '${pluginPlatform}'.
+	maker includeDirectories: '${crossDir}/plugins/SurfacePlugin'.
+	
+	" yes, this is not a typo , a file is named 'inteface' instead of 'interface' "
+
+	maker addPlatformSources: #( 'sqMacQuicktimeInteface.c' ).
+	
+	maker addFrameworks: #( 'Carbon' 'QuickTime' ).
+]
+
+{ #category : #'plugin extra rules' }
 MacOSConfig >> configureSecurityPlugin: maker [ 
 	"extra rules for SecurityPlugin"
 
@@ -173,6 +186,28 @@ MacOSConfig >> configureSocketPlugin: maker [
 
 
 
+]
+
+{ #category : #'plugin extra rules' }
+MacOSConfig >> configureSoundGenerationPlugin: maker [ 
+	"extra rules for SoundPlugin"
+
+	maker doNotGenerate: true. 
+	" The sources in platforms/Cross/plugins/SoundGenerationPlugin/sqOldSoundPrims.c 
+	are out of date and need to be fixed before it can be built 
+	
+	
+	maker 
+		addCrossSources: #('sqOldSoundPrims.c') 
+
+	"
+
+]
+
+{ #category : #'plugin extra rules' }
+MacOSConfig >> configureTestOSAPlugin: maker [
+		
+	maker addFrameworks: #( 'Carbon'  'ApplicationServices' ).
 ]
 
 { #category : #'plugin extra rules' }
