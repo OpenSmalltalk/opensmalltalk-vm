@@ -48,7 +48,7 @@ CogWindowsConfig >> coreSources [
 CogWindowsConfig >> defaultExternalPlugins [
 
 	^ #(
-		ReentrantIA32FFIPlugin "SqueakFFIPrims"
+		ThreadedIA32FFIPlugin "SqueakFFIPrims"
 	
 		"Win32OSProcessPlugin"
 	)
