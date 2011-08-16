@@ -8,7 +8,7 @@ Class {
 StackInterpreterPrimitives >> cloneContext: aContext [ 
 	| cloned spouseFP sp |
 	<var: #spouseFP type: #'char *'>
-	cloned := objectMemory clone: aContext.
+	cloned := objectMemory eeInstantiateMethodContextByteSize: (objectMemory byteSizeOf: aContext).
 	cloned ~= 0 ifTrue:
 		[0 to: StackPointerIndex do:
 			[:i|

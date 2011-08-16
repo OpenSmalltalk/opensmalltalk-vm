@@ -1365,7 +1365,7 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 				selector: selector]
 		ifFalse:
 			[(errSelIdx := self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:
-				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: lkupClass mayLink: false.
+				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: lkupClass.
 				"NOTREACHED"
 				self assert: false]].
 	"Method found and has a cog method.  Attempt to link to it."
@@ -1442,16 +1442,33 @@ CoInterpreter >> ceInterpretMethodFromPIC: aMethodObj receiver: rcvr [
 { #category : #trampolines }
 CoInterpreter >> ceMNUFromPICMNUMethod: aMethodObj receiver: rcvr [
 	<api>
-	| cPIC |
+	| cPIC primitiveIndex |
 	<var: #cPIC type: #'CogMethod *'>
 	self assert: ((objectMemory isIntegerObject: rcvr) or: [objectMemory addressCouldBeObj: rcvr]).
+	self assert: (aMethodObj = 0
+				or: [(objectMemory addressCouldBeObj: aMethodObj)
+					and: [objectMemory isOopCompiledMethod: aMethodObj]]).
 	cPIC := self cCoerceSimple: self popStack - cogit mnuOffset to: #'CogMethod *'.
 	self assert: cPIC cmType = CMClosedPIC.
 	argumentCount := cPIC cmNumArgs.
 	messageSelector := cPIC selector.
+	aMethodObj ~= 0 ifTrue:
+		[instructionPointer := self popStack.
+		self createActualMessageTo: (objectMemory fetchClassOf: rcvr).
+		(self maybeMethodHasCogMethod: aMethodObj) ifTrue:
+			[self push: instructionPointer.
+			 self executeCogMethodFromUnlinkedSend: (self cogMethodOf: aMethodObj)
+				 withReceiver: rcvr.
+			 "NOTREACHED"
+			 self assert: false].
+		newMethod := aMethodObj.
+		primitiveIndex := self primitiveIndexOf: aMethodObj.
+		primitiveFunctionPointer := self functionPointerFor: primitiveIndex inClass: objectMemory nilObject.
+		^self interpretMethodFromMachineCode].
 	lkupClass := objectMemory fetchClassOf: rcvr.
-	self handleMNU: SelectorDoesNotUnderstand InMachineCodeTo: rcvr classForMessage: lkupClass mayLink: false.
+	self handleMNU: SelectorDoesNotUnderstand InMachineCodeTo: rcvr classForMessage: lkupClass.
 	"NOTREACHED"
+	self assert: false
 ]
 
 { #category : #trampolines }
@@ -1643,7 +1660,21 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 				selector: selector]
 		ifFalse:
 			[(errSelIdx := self lookupMethodNoMNUEtcInClass: class) ~= 0 ifTrue:
-				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: class mayLink: canLinkCacheTag.
+				[(canLinkCacheTag
+				  and: [errSelIdx = SelectorDoesNotUnderstand
+				  and: [(cogMethod := cogit cogMNUPICSelector: messageSelector
+											methodOperand: (self mnuMethodOrNilFor: rcvr)
+											numArgs: argumentCount) asUnsignedInteger
+						> cogit minCogMethodAddress]]) ifTrue:
+						[cogit
+							linkSendAt: (stackPages longAt: stackPointer)
+							in: (self mframeHomeMethod: framePointer)
+							to: cogMethod
+							offset: (superNormalBar = 0
+									ifTrue: [cogit entryOffset]
+									ifFalse: [cogit noCheckEntryOffset])
+							receiver: rcvr].
+				self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: class.
 				"NOTREACHED"
 				self assert: false]].
 	"Method found and has a cog method.  Attempt to link to it.  The receiver's class may be young.
@@ -1714,7 +1745,7 @@ CoInterpreter >> ceSendAbort: selector to: rcvr numArgs: numArgs [
 				selector: selector]
 		ifFalse:
 			[(errSelIdx := self lookupMethodNoMNUEtcInClass: class) ~= 0 ifTrue:
-				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: class mayLink: false.
+				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: class.
 				"NOTREACHED"
 				self assert: false]].
 	instructionPointer := self popStack.
@@ -1751,7 +1782,7 @@ CoInterpreter >> ceSendFromInLineCacheMiss: oPIC [
 				selector: oPIC selector]
 		ifFalse:
 			[(errSelIdx := self lookupMethodNoMNUEtcInClass: class) ~= 0 ifTrue:
-				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: class mayLink: false.
+				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: class.
 				"NOTREACHED"
 				self assert: false]].
 	instructionPointer := self popStack.
@@ -2915,17 +2946,11 @@ CoInterpreter >> flushExternalPrimitiveOf: methodObj [
 	"methodObj is a CompiledMethod containing an external primitive.
 	 Flush the function address and session ID of the CM.  Override
 	 to also flush the machine code call if one exists."
-	| lit |
-	(self literalCountOf: methodObj) > 0 ifFalse:
-		[^nil]. "Something's broken"
-	lit := self literal: 0 ofMethod: methodObj.
-	((objectMemory isArray: lit) and:[(objectMemory lengthOf: lit) = 4]) ifFalse:
-		[^nil]. "Something's broken"
-	"ConstZero is a known SmallInt so no root check needed"
-	objectMemory storePointerUnchecked: 2 ofObject: lit withValue: ConstZero.
-	objectMemory storePointerUnchecked: 3 ofObject: lit withValue: ConstZero.
+	<api>
+	super flushExternalPrimitiveOf: methodObj.
 	(self methodHasCogMethod: methodObj) ifTrue:
-		[cogit rewritePrimInvocationIn: (self cogMethodOf: methodObj)
+		[cogit
+			rewritePrimInvocationIn: (self cogMethodOf: methodObj)
 			to: #primitiveExternalCall asSymbol]
 ]
 
@@ -3189,13 +3214,11 @@ CoInterpreter >> getImageHeaderFlags [
 ]
 
 { #category : #'message sending' }
-CoInterpreter >> handleMNU: selectorIndex InMachineCodeTo: rcvr classForMessage: classForMessage mayLink: mayLinkBoolean [
-	"A message send from either an open PIC or an unlinked send has not
-	 been understood.  Load newMethod with the MNU method.  If linking
-	 is allowed and the target MNU method is in the cache then create a
-	 closed PIC with an mnu-entry and link the send to it.  messageSelector,
-	 argumentCount and lkupClass have already been set by the caller."
+CoInterpreter >> handleMNU: selectorIndex InMachineCodeTo: rcvr classForMessage: classForMessage [
+	"A message send from either an open PIC or an unlinked send has
+	 not been understood.  Execute the relevant resulting MNU method."
 	| errSelIdx classForThisMessage |
+	<var: #cogMethod type: #'CogMethod *'>
 	self assert: ((objectMemory isIntegerObject: rcvr) or: [objectMemory addressCouldBeObj: rcvr]).
 	instructionPointer := self popStack.
 	self createActualMessageTo: classForMessage.
@@ -3208,15 +3231,12 @@ CoInterpreter >> handleMNU: selectorIndex InMachineCodeTo: rcvr classForMessage:
 		ifFalse:
 			[errSelIdx := self lookupMethodNoMNUEtcInClass: (classForThisMessage := lkupClass).
 			 errSelIdx ~= 0 ifTrue:
-				[errSelIdx = SelectorDoesNotUnderstand ifTrue:
+				[selectorIndex = SelectorDoesNotUnderstand ifTrue:
 					[self error: 'Recursive not understood error encountered'].
 				 self push: instructionPointer.
-				 ^self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: classForThisMessage mayLink: false]].
+				 ^self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: classForThisMessage]].
 	(self maybeMethodHasCogMethod: newMethod) ifTrue:
-		[mayLinkBoolean ifTrue:
-			[self flag: 'implement creating an MNU PIC sometime'.
-			 false ifTrue: [self shouldBeImplemented]].
-		 self push: instructionPointer.
+		[self push: instructionPointer.
 		 self executeCogMethodFromUnlinkedSend: (self cogMethodOf: newMethod)
 			 withReceiver: rcvr.
 		 "NOTREACHED"
@@ -3831,14 +3851,14 @@ CoInterpreter >> lookup: selector receiver: rcvr [
 	<api>
 	"Lookup selector in rcvr, without doing MNU processing, and answer either a
 	 method or nil if the message was not understood.  Used to populate closed PICs."
-	| class |
+	| class erridx |
 	"self printFrame: stackPage headFP WithSP: stackPage headSP"
 	"self printStringOf: selector"
 	class := objectMemory fetchClassOf: rcvr.
 	(self lookupInMethodCacheSel: selector class: class) ifFalse:
 		[messageSelector := selector.
-		 (self lookupMethodNoMNUEtcInClass: class) ~= 0 ifTrue:
-			[^nil]].
+		 (erridx := self lookupMethodNoMNUEtcInClass: class) ~= 0 ifTrue:
+			[^erridx]].
 	^newMethod
 ]
 
@@ -4505,6 +4525,29 @@ CoInterpreter >> mframeReceiver: theFP [
 	<inline: true>
 	<var: #theFP type: #'char *'>
 	^stackPages longAt: theFP + FoxMFReceiver
+]
+
+{ #category : #'message sending' }
+CoInterpreter >> mnuMethodOrNilFor: rcvr [
+	"Lookup the doesNotUnderstand: selector in the class of the argument rcvr.
+	 Answer either the matching method (cogged if appropriate), or nil, if not found."
+	| currentClass mnuSelector dictionary mnuMethod methodHeader |
+
+	currentClass := objectMemory fetchClassOf: rcvr.
+	mnuSelector := objectMemory splObj: SelectorDoesNotUnderstand.
+	[currentClass ~= objectMemory nilObject] whileTrue:
+		[dictionary := objectMemory fetchPointer: MethodDictionaryIndex ofObject: currentClass.
+		 dictionary = objectMemory nilObject ifTrue:
+			[^nil].
+		 mnuMethod := self lookupMethodFor: mnuSelector InDictionary: dictionary.
+		 mnuMethod notNil ifTrue:
+			[methodHeader := self rawHeaderOf: mnuMethod.
+			 ((self isCogMethodReference: methodHeader) not
+			  and: [self methodWithHeaderShouldBeCogged: methodHeader]) ifTrue:
+				[cogit cog: mnuMethod selector: mnuSelector].
+			^mnuMethod].
+		currentClass := self superclassOf: currentClass].
+	^nil
 ]
 
 { #category : #'frame access' }

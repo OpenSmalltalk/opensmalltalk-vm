@@ -26,7 +26,7 @@ Class {
 		'cmNumArgs',
 		'cmType',
 		'cmRefersToYoung',
-		'cmIsUnlinked',
+		'cpicHasMNUCase',
 		'cmUsageCount',
 		'stackCheckOffset'
 	],
@@ -73,7 +73,7 @@ CogBlockMethod class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 	self allInstVarNames do:
 		[:ivn|
 		"Notionally objectHeader is in a union with homeOffset and startpc but
-		 we don't have any convenient supprt for unions.  So hack, hack, hack, hack."
+		 we don't have any convenient support for unions.  So hack, hack, hack, hack."
 		((self == CogBlockMethod
 			ifTrue: [#('objectHeader')]
 			ifFalse: [#('homeOffset' 'startpc' 'padToWord')]) includes: ivn) ifFalse:
@@ -83,7 +83,7 @@ CogBlockMethod class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 								['cmNumArgs']			-> [#(unsigned ' : 8')]. "SqueakV3 needs only 5 bits"
 								['cmType']				-> [#(unsigned ' : 3')].
 								['cmRefersToYoung']	-> [#(unsigned #Boolean ' : 1')].
-								['cmIsUnlinked']			-> [#(unsigned #Boolean ' : 1')].
+								['cpicHasMNUCase']	-> [#(unsigned #Boolean ' : 1')].
 								['cmUsageCount']		-> [#(unsigned ' : 3')]. "see CMMaxUsageCount in initialize"
 								['stackCheckOffset']	-> [#(unsigned ' : 16')]. "a.k.a. cPICNumCases"
 								['blockSize']			-> [#'unsigned short'].
@@ -125,20 +125,6 @@ CogBlockMethod >> cPICNumCases: anObject [
 CogBlockMethod >> cmHomeMethod [
 	<returnTypeC: #'CogMethod *'>
 	^self cCoerceSimple: self asUnsignedInteger - self homeOffset to: #'CogMethod *'
-]
-
-{ #category : #accessing }
-CogBlockMethod >> cmIsUnlinked [
-	"Answer the value of cmIsUnlinked"
-
-	^cmIsUnlinked
-]
-
-{ #category : #accessing }
-CogBlockMethod >> cmIsUnlinked: anObject [
-	"Set the value of cmIsUnlinked"
-
-	^cmIsUnlinked := anObject
 ]
 
 { #category : #accessing }
@@ -195,6 +181,20 @@ CogBlockMethod >> cmUsageCount: anInteger [
 	"Set the value of cmUsageCount"
 
 	^cmUsageCount := anInteger
+]
+
+{ #category : #accessing }
+CogBlockMethod >> cpicHasMNUCase [
+	"Answer the value of cpicHasMNUCase"
+
+	^cpicHasMNUCase
+]
+
+{ #category : #accessing }
+CogBlockMethod >> cpicHasMNUCase: anObject [
+	"Set the value of cpicHasMNUCase"
+
+	^cpicHasMNUCase := anObject
 ]
 
 { #category : #accessing }

@@ -81,6 +81,19 @@ CogBlockMethodSurrogate64 >> cmUsageCount: aValue [
 ]
 
 { #category : #accessing }
+CogBlockMethodSurrogate64 >> cpicHasMNUCase [
+	^(((memory unsignedByteAt: address + 10) bitShift: -4) bitAnd: 16r1) ~= 0
+]
+
+{ #category : #accessing }
+CogBlockMethodSurrogate64 >> cpicHasMNUCase: aValue [
+	memory
+		unsignedByteAt: address + 10
+		put: (((memory unsignedByteAt: address + 10) bitAnd: 16rEF) + ((aValue ifTrue: [1] ifFalse: [0]) bitShift: 4)).
+	^aValue
+]
+
+{ #category : #accessing }
 CogBlockMethodSurrogate64 >> homeOffset [
 	^memory unsignedShortAt: address + 1
 ]
