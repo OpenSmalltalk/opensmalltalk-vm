@@ -261,6 +261,7 @@ Class {
 		'CogMethodConstants',
 		'CogRTLOpcodes',
 		'VMBasicConstants',
+		'VMObjectIndices',
 		'VMStackFrameOffsets'
 	],
 	#classInstVars : [
@@ -1295,8 +1296,7 @@ Cogit >> JumpLessOrEqual: jumpTarget [
 Cogit >> JumpLong: jumpTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	<var: #jumpTarget type: #'void *'>
-	^self gen: JumpLong operand: jumpTarget asInteger
+	^self gen: JumpLong operand: jumpTarget
 ]
 
 { #category : #'abstract instructions' }
@@ -1375,7 +1375,7 @@ Cogit >> JumpRT: callTarget [
 	"Big assumption here that calls and jumps look the same as regards their displacement.
 	 This works on x86 and I think on ARM."
 	<returnTypeC: #'AbstractInstruction *'>
-	^self annotateCall: (self JumpLong: (self cCoerceSimple: callTarget to: #'void *'))
+	^self annotateCall: (self JumpLong: callTarget)
 ]
 
 { #category : #'abstract instructions' }
@@ -2219,20 +2219,27 @@ Cogit >> ceCPICMiss: cPIC receiver: receiver [
 	  sp=>	sender return address"
 	<var: #cPIC type: #'CogMethod *'>
 	<api>
-	| outerReturn newTargetMethodOrNil cacheTag result |
+	| outerReturn newTargetMethodOrNil errorSelectorOrNil cacheTag result |
 	self cCode: ''
 		inSmalltalk:
 			[cPIC isInteger ifTrue:
 				[^self ceCPICMiss: (self cogMethodSurrogateAt: cPIC) receiver: receiver]].
 	outerReturn := coInterpreter stackTop.
-	newTargetMethodOrNil := self lookupAndCog: cPIC selector for: receiver.
+	cPIC cPICNumCases < numPICCases ifTrue:
+		[self lookup: cPIC selector
+			for: receiver
+			methodAndErrorSelectorInto:
+				[:method :errsel|
+				newTargetMethodOrNil := method.
+				errorSelectorOrNil := errsel]].
 	"We assume lookupAndCog:for: will *not* reclaim the method zone"
 	self assert: outerReturn = coInterpreter stackTop.
 	cacheTag := objectRepresentation inlineCacheTagForInstance: receiver.
 	(cPIC cPICNumCases >= numPICCases
+	 or: [(errorSelectorOrNil notNil and: [errorSelectorOrNil ~= SelectorDoesNotUnderstand])
 	 or: [(objectRepresentation inlineCacheTagIsYoung: cacheTag)
-	 or: [newTargetMethodOrNil notNil
-		 and: [objectMemory isYoung: newTargetMethodOrNil]]]) ifTrue:
+	 or: [newTargetMethodOrNil isNil
+	 or: [objectMemory isYoung: newTargetMethodOrNil]]]]) ifTrue:
 		[result := self patchToOpenPICFor: cPIC selector
 					numArgs: cPIC cmNumArgs
 					receiver: receiver.
@@ -2241,8 +2248,9 @@ Cogit >> ceCPICMiss: cPIC receiver: receiver [
 	"Now extend the PIC with the new case."
 	self cogExtendPIC: cPIC
 		CaseNMethod: newTargetMethodOrNil
-		tag: cacheTag.
-	"Jump back into the pic at its entry in case this is an MNU (newTargetMethodOrNil is nil)"
+		tag: cacheTag
+		isMNUCase: errorSelectorOrNil = SelectorDoesNotUnderstand.
+	"Jump back into the pic at its entry in case this is an MNU."
 	coInterpreter
 		executeCogMethodFromLinkedSend: cPIC
 		withReceiver: receiver
@@ -2362,7 +2370,7 @@ Cogit >> ceSICMiss: receiver [
 		ceMethodAbort call return address - missOffset
 	 and we can find the send site from the outer return address."
 	<api>
-	| pic innerReturn outerReturn entryPoint targetMethod newTargetMethodOrNil cacheTag extent result |
+	| pic innerReturn outerReturn entryPoint targetMethod newTargetMethodOrNil errorSelectorOrNil cacheTag extent result |
 	<var: #pic type: #'CogMethod *'>
 	<var: #targetMethod type: #'CogMethod *'>
 	"Whether we can relink to a PIC or not we need to pop off the inner return and identify the target method."
@@ -2385,13 +2393,19 @@ Cogit >> ceSICMiss: receiver [
 				numArgs: targetMethod cmNumArgs]].
 	self assert: targetMethod asInteger + cmEntryOffset = entryPoint.
 
-	newTargetMethodOrNil := self lookupAndCog: targetMethod selector for: receiver.
+	self lookup: targetMethod selector
+		for: receiver
+		methodAndErrorSelectorInto:
+			[:method :errsel|
+			newTargetMethodOrNil := method.
+			errorSelectorOrNil := errsel].
 	"We assume lookupAndCog:for: will *not* reclaim the method zone"
 	self assert: outerReturn = coInterpreter stackTop.
 	cacheTag := objectRepresentation inlineCacheTagForInstance: receiver.
-	((objectRepresentation inlineCacheTagIsYoung: cacheTag)
-	  or: [newTargetMethodOrNil notNil
-		 and: [objectMemory isYoung: newTargetMethodOrNil]]) ifTrue:
+	((errorSelectorOrNil notNil and: [errorSelectorOrNil ~= SelectorDoesNotUnderstand])
+	 or: [(objectRepresentation inlineCacheTagIsYoung: cacheTag)
+	 or: [newTargetMethodOrNil isNil
+	 or: [objectMemory isYoung: newTargetMethodOrNil]]]) ifTrue:
 		[result := self patchToOpenPICFor: targetMethod selector
 					numArgs: targetMethod cmNumArgs
 					receiver: receiver.
@@ -2405,10 +2419,13 @@ Cogit >> ceSICMiss: receiver [
 					numArgs: targetMethod cmNumArgs
 					Case0Method: targetMethod
 					Case1Method: newTargetMethodOrNil
-					tag: cacheTag.
-		 (pic asInteger between: MaxNegativeErrorCode and: -1) ifTrue:
-			["For some reason the PIC couldn't be generated, most likely a lack of code memory.
-			  Continue as if this is an unlinked send."
+					tag: cacheTag
+					isMNUCase: errorSelectorOrNil = SelectorDoesNotUnderstand.
+		 (errorSelectorOrNil notNil
+		  or: [pic asInteger between: MaxNegativeErrorCode and: -1]) ifTrue:
+			["If for some reason the PIC couldn't be generated, most likely a lack of code memory.
+			  Continue as if this is an unlinked send.  If this is an error case continue as if this is an
+			  unlinked send to invoke the appropriate error behavior (MNU, cannot interpret et al)."
 			 pic asInteger = InsufficientCodeSpace ifTrue:
 				[coInterpreter callForCogCompiledCodeCompaction].
 			^coInterpreter ceSendFromInLineCacheMiss: targetMethod]].
@@ -2848,7 +2865,11 @@ Cogit >> cogCodeConstituents [
 ]
 
 { #category : #'in-line cacheing' }
-Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethodOrNil tag: caseNTag [
+Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethod tag: caseNTag isMNUCase: isMNUCase [
+	"Extend the cPIC with the supplied case.  If caseNMethod is cogged dispatch direct to
+	 its unchecked entry-point.  If caseNMethod is not cogged, jump to the fast interpreter
+	 dispatch, and if isMNUCase then dispatch to fast MNU invocation and mark the cPIC as
+	 having the MNU case for cache flushing."
  	<var: #cPIC type: #'CogMethod *'>
 	| operand target address size end |
 	"stack allocate the various collections so that they
@@ -2858,24 +2879,26 @@ Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethodOrNil tag: caseNTag [
 		point: (objectMemory lengthOf: cPIC selector).
 	self allocateOpcodes: 5 bytecodes: 0.
 	self assert: (objectRepresentation inlineCacheTagIsYoung: caseNTag) not.
-	(caseNMethodOrNil ~= nil
-	 and: [coInterpreter methodHasCogMethod: caseNMethodOrNil])
+	"Caller patches to open pic if caseNMethod is young."
+	self assert: (caseNMethod notNil and: [(objectMemory isYoung: caseNMethod) not]).
+	(isMNUCase not
+	 and: [coInterpreter methodHasCogMethod: caseNMethod])
 		ifTrue:
 			[operand := 0.
-			 target :=  (coInterpreter cogMethodOf: caseNMethodOrNil) asInteger + cmNoCheckEntryOffset]
+			 target :=  (coInterpreter cogMethodOf: caseNMethod) asInteger + cmNoCheckEntryOffset]
 		ifFalse:
-			["Caller patches to open pic if caseNMethodOrNil is young."
-			 self assert: (caseNMethodOrNil isNil or: [(objectMemory isYoung: caseNMethodOrNil) not]).
-			 operand := caseNMethodOrNil.
+			[isMNUCase ifTrue:
+				[cPIC cpicHasMNUCase: true].
+			 operand := caseNMethod.
 			 target := cPIC asInteger
-					+ (caseNMethodOrNil isNil
+					+ (isMNUCase
 						ifTrue: [self sizeof: CogMethod]
 						ifFalse: [self interpretOffset - backEnd callInstructionByteSize])].
 	self CmpCw: caseNTag R: TempReg.
 	self MoveCw: operand R: SendNumArgsReg.
 	self JumpLongZero: (self cCoerceSimple: target to: #'void *').
 	self MoveCw: cPIC asInteger R: ClassReg.
-	self JumpLong: (self cCoerceSimple: (self cPICMissTrampolineFor: cPIC cmNumArgs) to: #'void *').
+	self JumpLong: (self cPICMissTrampolineFor: cPIC cmNumArgs).
 
 	self computeMaximumSizes.
 	address := self addressOfEndOfCase: cPIC cPICNumCases - 1 inCPIC: cPIC.
@@ -2884,6 +2907,46 @@ Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethodOrNil tag: caseNTag [
 	processor flushICacheFrom: address to: cPIC asInteger + closedPICSize.
 	cPIC cPICNumCases: cPIC cPICNumCases + 1.
 	^0
+]
+
+{ #category : #'in-line cacheing' }
+Cogit >> cogMNUPICSelector: selector methodOperand: methodOperand numArgs: numArgs [
+	<api>
+	"Attempt to create a one-case PIC for an MNU.
+	 The tag for the case is at the send site and so doesn't need to be generated."
+	<returnTypeC: #'CogMethod *'>
+	| startAddress headerSize size end |
+	coInterpreter
+		compilationBreak: selector
+		point: (objectMemory lengthOf: selector).
+	endCPICCase0 isNil ifTrue:
+		[^NotFullyInitialized].
+	startAddress := methodZone allocate: closedPICSize.
+	startAddress = 0 ifTrue:
+		[^self cCoerceSimple: InsufficientCodeSpace to: #'CogMethod *'].
+	methodLabel
+		address: startAddress;
+		dependent: nil.
+	"stack allocate the various collections so that they
+	 are effectively garbage collected on return."
+	self allocateOpcodes: numPICCases * 7 bytecodes: 0.
+	self compileMNUCPIC: (self cCoerceSimple: startAddress to: #'CogMethod *')
+		methodOperand: methodOperand
+		numArgs: numArgs.
+	self computeMaximumSizes.
+	headerSize := self sizeof: CogMethod.
+	size := self generateInstructionsAt: startAddress + headerSize.
+	end := self outputInstructionsAt: startAddress + headerSize.
+	"The missOffset is th same as the interpretOffset."
+	self assert: missOffset = (interpretCall address + interpretCall machineCodeSize - startAddress).
+	self assert: startAddress + cmEntryOffset = entry address.
+	^self
+		fillInCPICHeader: (self cCoerceSimple: startAddress to: #'CogMethod *')
+		size: closedPICSize
+		numArgs: numArgs
+		numCases: 1
+		hasMNUCase: true
+		selector: selector 
 ]
 
 { #category : #debugging }
@@ -3005,13 +3068,13 @@ Cogit >> cogOpenPICSelector: selector numArgs: numArgs [
 ]
 
 { #category : #'in-line cacheing' }
-Cogit >> cogPICSelector: selector numArgs: numArgs Case0Method: case0CogMethod Case1Method: case1MethodOrNil tag: case1Tag [
-	"Attempt to create a two-case PIC for case0CogMethod and  case1MethodOrNil,case1Tag.
+Cogit >> cogPICSelector: selector numArgs: numArgs Case0Method: case0CogMethod Case1Method: case1MethodOrNil tag: case1Tag isMNUCase: isMNUCase [
+	"Attempt to create a two-case PIC for case0CogMethod and  case1Method,case1Tag.
 	 The tag for case0CogMethod is at the send site and so doesn't need to be generated.
-	 case1MethodOrNil may be any of
+	 case1Method may be any of
 		- a Cog method; link to its unchecked entry-point
 		- a CompiledMethod; link to ceInterpretMethodFromPIC:
-		- nil; link to ceMNUFromPICMNUMethod:receiver:"
+		- a CompiledMethod; link to ceMNUFromPICMNUMethod:receiver:"
 	<var: #case0CogMethod type: #'CogMethod *'>
 	<returnTypeC: #'CogMethod *'>
 	| startAddress headerSize size end |
@@ -3031,6 +3094,7 @@ Cogit >> cogPICSelector: selector numArgs: numArgs Case0Method: case0CogMethod C
 		Case0: case0CogMethod
 		Case1Method: case1MethodOrNil
 		tag: case1Tag
+		isMNUCase: isMNUCase
 		numArgs: numArgs.
 	self computeMaximumSizes.
 	headerSize := self sizeof: CogMethod.
@@ -3046,6 +3110,7 @@ Cogit >> cogPICSelector: selector numArgs: numArgs Case0Method: case0CogMethod C
 		size: closedPICSize
 		numArgs: numArgs
 		numCases: 2
+		hasMNUCase: isMNUCase
 		selector: selector 
 ]
 
@@ -3196,10 +3261,10 @@ Cogit >> compileBlockFramelessEntry: blockStart [
 ]
 
 { #category : #'in-line cacheing' }
-Cogit >> compileCPIC: cPIC Case0: case0CogMethod Case1Method: case1MethodOrNil tag: case1Tag numArgs: numArgs [
-	"Compile the code for a two-case PIC for case0CogMethod and  case1MethodOrNil,case1Tag.
+Cogit >> compileCPIC: cPIC Case0: case0CogMethod Case1Method: case1Method tag: case1Tag isMNUCase: isMNUCase numArgs: numArgs [
+	"Compile the code for a two-case PIC for case0CogMethod and  case1Method,case1Tag.
 	 The tag for case0CogMethod is at the send site and so doesn't need to be generated.
-	 case1MethodOrNil may be any of
+	 case1Method may be any of
 		- a Cog method; jump to its unchecked entry-point
 		- a CompiledMethod; jump to the ceInterpretFromPIC trampoline
 		- nil; call ceMNUFromPIC"
@@ -3208,27 +3273,27 @@ Cogit >> compileCPIC: cPIC Case0: case0CogMethod Case1Method: case1MethodOrNil t
 	<var: #case0CogMethod type: #'CogMethod *'>
 	<var: #targetEntry type: #'void *'>
 	<var: #jumpNext type: #'AbstractInstruction *'>
-	self compilePICProlog: case0CogMethod cmNumArgs.
+	self assert: case1Method notNil.
+	self compilePICProlog: numArgs.
 	self assert: (objectRepresentation inlineCacheTagIsYoung: case1Tag) not.
-	(case1MethodOrNil ~= nil
-	 and: [coInterpreter methodHasCogMethod: case1MethodOrNil])
+	(isMNUCase not
+	 and: [coInterpreter methodHasCogMethod: case1Method])
 		ifTrue:
 			[operand := 0.
-			 targetEntry := self cCoerceSimple: (coInterpreter cogMethodOf: case1MethodOrNil) asInteger + cmNoCheckEntryOffset
+			 targetEntry := self cCoerceSimple: (coInterpreter cogMethodOf: case1Method) asInteger + cmNoCheckEntryOffset
 								to: #'void *']
 		ifFalse:
-			[self assert: (case1MethodOrNil isNil or: [(objectMemory isYoung: case1MethodOrNil) not]).
-			 operand := case1MethodOrNil.
-			 targetEntry := case1MethodOrNil isNil ifTrue: [mnuCall] ifFalse: [interpretCall]].
+			[self assert: (case1Method isNil or: [(objectMemory isYoung: case1Method) not]).
+			 operand := case1Method.
+			 targetEntry := case1Method isNil ifTrue: [mnuCall] ifFalse: [interpretCall]].
 
 	jumpNext := self compileCPICEntry.
 	self MoveCw: 0 R: SendNumArgsReg.
-	self JumpLong: (self cCoerceSimple: case0CogMethod asInteger + cmNoCheckEntryOffset
-						to: #'void *').
+	self JumpLong: case0CogMethod asInteger + cmNoCheckEntryOffset.
 	endCPICCase0 := self CmpCw: case1Tag R: TempReg.
 	jumpNext jmpTarget: endCPICCase0.
 	self MoveCw: operand R: SendNumArgsReg.
-	self JumpLongZero: targetEntry.
+	self JumpLongZero: (isMNUCase ifTrue: [mnuCall] ifFalse: [targetEntry]).
 	endCPICCase1 := self MoveCw: cPIC asInteger R: ClassReg.
 	self JumpLong: (self cCoerceSimple: (self cPICMissTrampolineFor: numArgs) to: #'void *').
 	^0
@@ -3254,13 +3319,13 @@ Cogit >> compileClosedPICPrototype [
 	numArgs := 0.
 	self compilePICProlog: numArgs.
 	jumpNext := self compileCPICEntry.
-	self MoveCw: 16r5EAF00D R: ClassReg.
-	self JumpLong: (self cCoerceSimple: 16r5EEDCA5E to: #'void *').
+	self MoveCw: 16r5EAF00D R: SendNumArgsReg.
+	self JumpLong: 16r5EEDCA5E.
 	jumpNext jmpTarget: (endCPICCase0 := self Label).
 	1 to: numPICCases - 1 do:
 		[:h|
 		self CmpCw: 16rBABE1F15+h R: TempReg.
-		self MoveCw: 16rBADA550 + h R: ClassReg.
+		self MoveCw: 16rBADA550 + h R: SendNumArgsReg.
 		self JumpLongZero: (self cCoerceSimple: 16rBEDCA5E0 + h to: #'void *').
 		h = 1 ifTrue:
 			[endCPICCase1 := self Label]].
@@ -3342,6 +3407,23 @@ Cogit >> compileEntry [
 { #category : #'compile abstract instructions' }
 Cogit >> compileFrameBuild [
 	self subclassResponsibility
+]
+
+{ #category : #'in-line cacheing' }
+Cogit >> compileMNUCPIC: cPIC methodOperand: methodOperand numArgs: numArgs [
+	"Compile the code for a one-case MNU PIC that calls ceMNUFromPIC for case0Tag
+	 The tag for case0 is at the send site and so doesn't need to be generated."
+	<var: #cPIC type: #'CogMethod *'>
+	| jumpNext |
+	<var: #jumpNext type: #'AbstractInstruction *'>
+	self compilePICProlog: numArgs.
+	jumpNext := self compileCPICEntry.
+	self MoveCw: methodOperand R: SendNumArgsReg.
+	self JumpLong: mnuCall asInteger.
+	jumpNext jmpTarget: (self MoveCw: cPIC asInteger R: ClassReg).
+	self JumpLong: (self cPICMissTrampolineFor: numArgs).
+	^0
+
 ]
 
 { #category : #'compile abstract instructions' }
@@ -3780,7 +3862,7 @@ Cogit >> fillInBlockHeadersAt: startAddress [
 ]
 
 { #category : #'generate machine code' }
-Cogit >> fillInCPICHeader: pic size: size numArgs: numArgs numCases: numCases selector: selector [
+Cogit >> fillInCPICHeader: pic size: size numArgs: numArgs numCases: numCases hasMNUCase: hasMNUCase selector: selector [
 	<returnTypeC: #'CogMethod *'>
 	<var: #pic type: #'CogMethod *'>
 	self assert: (objectMemory isYoung: selector) not.
@@ -3793,7 +3875,7 @@ Cogit >> fillInCPICHeader: pic size: size numArgs: numArgs numCases: numCases se
 	pic cmNumArgs: numArgs.
 	pic cmRefersToYoung: false.
 	pic cmUsageCount: self initialClosedPICUsageCount.
-	pic cmIsUnlinked: false.
+	pic cpicHasMNUCase: hasMNUCase.
 	pic cPICNumCases: numCases.
 	pic blockEntryOffset: 0.
 	self assert: pic cmType = CMClosedPIC.
@@ -3831,7 +3913,7 @@ Cogit >> fillInMethodHeader: method size: size selector: selector [
 	(method cmRefersToYoung: hasYoungReferent) ifTrue:
 		[methodZone addToYoungReferrers: method].
 	method cmUsageCount: self initialMethodUsageCount.
-	method cmIsUnlinked: false.
+	method cpicHasMNUCase: false.
 	method blockEntryOffset: (blockEntryLabel notNil
 								ifTrue: [blockEntryLabel address - method asInteger]
 								ifFalse: [0]).
@@ -3858,7 +3940,7 @@ Cogit >> fillInOPICHeader: pic size: size numArgs: numArgs selector: selector [
 	(pic cmRefersToYoung: (objectMemory isYoung: selector)) ifTrue:
 		[methodZone addToYoungReferrers: pic].
 	pic cmUsageCount: self initialOpenPICUsageCount.
-	pic cmIsUnlinked: false.
+	pic cpicHasMNUCase: false.
 	pic cPICNumCases: 0.
 	pic blockEntryOffset: 0.
 	self assert: pic cmType = CMOpenPIC.
@@ -4785,11 +4867,11 @@ Cogit >> generateNewspeakRuntime [
 												arg: SendNumArgsReg
 												result: ReceiverResultReg.
 	"Cached push implicit receiver implementation.  Caller looks like
-		mov selector, ClassReg
-				call cePushImplicitReceiver
+				mov selector, ClassReg
+				call ceImplicitReceiver
 				br continue
-		Lclass	.word
-		Lmixin:	.word
+		Lclass:	.word
+		Lmixin::	.word
 		continue:
 	 If class matches class of receiver then mixin contains either 0 or the implicit receiver.
 	 If 0, answer the actual receiver, otherwise the mixin.
@@ -5468,6 +5550,39 @@ Cogit >> linkSendAt: callSiteReturnAddress in: sendingMethod to: targetMethod of
 		to: callSiteReturnAddress - 1
 ]
 
+{ #category : #'in-line cacheing' }
+Cogit >> lookup: selector for: receiver methodAndErrorSelectorInto: binaryBlock [
+	"Lookup selector in the class of receiver.  If found, evaluate binaryBlock with
+	 the method, cogged if appopriate..  If not found, due to MNU, lookup the DNU
+	 selector and evaluate binaryBlock with the MNU method, cogged if appopriate..
+	 If not found due to cannot interpret, evaluate binaryBlock with the error selector
+	 and a nil method."
+	| methodOrSelectorIndex |
+	<inline: true>
+	methodOrSelectorIndex := coInterpreter
+									lookup: selector
+									receiver: receiver.
+	methodOrSelectorIndex asUnsignedInteger > objectMemory startOfMemory ifTrue:
+		[self assert: (objectMemory isOopCompiledMethod: methodOrSelectorIndex).
+		 ((coInterpreter methodHasCogMethod: methodOrSelectorIndex) not
+		  and: [coInterpreter methodShouldBeCogged: methodOrSelectorIndex]) ifTrue:
+			["We assume cog:selector: will *not* reclaim the method zone"
+			 self cog: methodOrSelectorIndex selector: selector].
+		^binaryBlock value: methodOrSelectorIndex value: 0].
+	methodOrSelectorIndex = SelectorDoesNotUnderstand ifTrue:
+		[methodOrSelectorIndex := coInterpreter
+										lookup: (objectMemory splObj: SelectorDoesNotUnderstand)
+										receiver: receiver.
+		 methodOrSelectorIndex asUnsignedInteger > objectMemory startOfMemory ifTrue:
+			[self assert: (objectMemory isOopCompiledMethod: methodOrSelectorIndex).
+			 ((coInterpreter methodHasCogMethod: methodOrSelectorIndex) not
+			  and: [coInterpreter methodShouldBeCogged: methodOrSelectorIndex]) ifTrue:
+				["We assume cog:selector: will *not* reclaim the method zone"
+				 self cog: methodOrSelectorIndex selector: selector].
+			^binaryBlock value: methodOrSelectorIndex value: SelectorDoesNotUnderstand]].
+	^binaryBlock value: methodOrSelectorIndex value: nil
+]
+
 { #category : #disassembly }
 Cogit >> lookupAddress: address [
 	<doNotGenerate>
@@ -5491,24 +5606,6 @@ Cogit >> lookupAddress: address [
 	(simulatedVariableGetters includesKey: address) ifTrue:
 		[^self labelForSimulationAccessor: (simulatedVariableGetters at: address)].
 	^coInterpreter lookupAddress: address
-]
-
-{ #category : #'in-line cacheing' }
-Cogit >> lookupAndCog: selector for: receiver [
-	"Lookup selector in the class of receiver.  If not found answer nil.
-	 If not a method (objectAsMethod) answer nil.  Otherwise try to
-	 compile it to machine code if appropriate.  Answer the method."
-	| newTargetMethodOrNil |
-	<inline: false>
-	newTargetMethodOrNil := coInterpreter lookup: selector receiver: receiver.
-	(newTargetMethodOrNil notNil
-	 and: [objectMemory isOopCompiledMethod: newTargetMethodOrNil]) ifFalse:
-		[^nil].
-	 ((coInterpreter methodHasCogMethod: newTargetMethodOrNil) not
-	 and: [coInterpreter methodShouldBeCogged: newTargetMethodOrNil]) ifTrue:
-		["We assume cog:selector: will *not* reclaim the method zone"
-		 self cog: newTargetMethodOrNil selector: selector].
-	^newTargetMethodOrNil
 ]
 
 { #category : #disassembly }
@@ -6359,8 +6456,8 @@ Cogit >> offset: aClass of: fieldSymbol [
 Cogit >> offsetAndSendTableFor: entryPoint annotation: annotation into: binaryBlock [
 	"Find the relevant sendTable for a linked-send to entryPoint.  Do this based on the
 	 alignment of entryPoint.  N.B.  For Newspeak sends we don't need to distinguish
-	 between cePushImplicitReceiver and the other sends since cePushImplicitReceiver
-	 will never appear to be linked, so only three cases here."
+	 between ceImplicitReceiver and the other sends since ceImplicitReceiver will
+	 never appear to be linked, so only three cases here."
 	<inline: true>
 	self cppIf: NewspeakVM
 		ifTrue:
@@ -7757,7 +7854,7 @@ Cogit >> unlinkIfLinkedSendToFree: annotation pc: mcpc ignored: superfluity [
 ]
 
 { #category : #'jit - api' }
-Cogit >> unlinkSendsOf: selector [
+Cogit >> unlinkSendsOf: selector isMNUSelector: isMNUSelector [
 	<api>
 	"Unlink all sends in cog methods."
 	| cogMethod |
@@ -7781,7 +7878,8 @@ Cogit >> unlinkSendsOf: selector [
 					 arg: selector]
 			ifFalse:
 				[(cogMethod cmType ~= CMFree
-				  and: [cogMethod selector = selector]) ifTrue:
+				  and: [(isMNUSelector and: [cogMethod cpicHasMNUCase])
+					or: [cogMethod selector = selector]]) ifTrue:
 					[methodZone freeMethod: cogMethod]].
 		cogMethod := methodZone methodAfter: cogMethod].
 	codeModified ifTrue: "After possibly updating inline caches we need to flush the icache."
@@ -7789,12 +7887,19 @@ Cogit >> unlinkSendsOf: selector [
 ]
 
 { #category : #'jit - api' }
-Cogit >> unlinkSendsTo: targetMethod [
+Cogit >> unlinkSendsTo: targetMethodObject [
 	<api>
-	"Unlink all sends in cog methods to a particular target method."
-	<var: #targetMethod type: #'CogMethod *'>
-	| cogMethod freedPIC |
+	"Unlink all sends in cog methods to a particular target method.
+	 If targetMethodObject isn't actually a method (perhaps being
+	 used via invokeAsMethod) then flush all sends since anything
+	 could be affected."
+	| cogMethod targetMethod freedPIC |
 	<var: #cogMethod type: #'CogMethod *'>
+	<var: #targetMethod type: #'CogMethod *'>
+	((objectMemory isOopCompiledMethod: targetMethodObject)
+	and: [coInterpreter methodHasCogMethod: targetMethodObject]) ifFalse:
+		[^self].
+	targetMethod := coInterpreter cogMethodOf: targetMethodObject.
 	methodZoneBase isNil ifTrue: [^self].
 	codeModified := freedPIC := false.
 	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.

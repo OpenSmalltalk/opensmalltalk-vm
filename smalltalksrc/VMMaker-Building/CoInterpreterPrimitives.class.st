@@ -32,13 +32,13 @@ CoInterpreterPrimitives >> primitiveClone [
 	(objectMemory isIntegerObject: receiver)
 		ifTrue: [newCopy := receiver]
 		ifFalse:
-			[objHeader := objectMemory  baseHeader: receiver.
-			(self isContextHeader: objHeader)
+			[objHeader := objectMemory baseHeader: receiver.
+			(objectMemory isContextHeader: objHeader)
 				ifTrue: [newCopy := self cloneContext: receiver]
 				ifFalse: [newCopy := objectMemory clone: receiver].
 			newCopy = 0 ifTrue:
 				[^self primitiveFailFor: PrimErrNoMemory].
-			(self isCompiledMethodHeader: objHeader) ifTrue:
+			(objectMemory isCompiledMethodHeader: objHeader) ifTrue:
 				["use stackTop since GC may have moved receiver"
 				 self rawHeaderOf: newCopy put: (self headerOf: self stackTop)]].
 	self pop: 1 thenPush: newCopy
@@ -170,22 +170,8 @@ CoInterpreterPrimitives >> primitiveFlushCacheByMethod [
 	"The receiver is a compiledMethod.  Clear all entries in the method lookup cache that
 	 refer to this method, presumably because it has been redefined, overridden or removed.
 	 Override to flush appropriate machine code caches also."
-	| probe oldMethod primIdx |
-	oldMethod := self stackTop.
-	probe := 0.
-	1 to: MethodCacheEntries do:
-		[:i |
-		(methodCache at: probe + MethodCacheMethod) = oldMethod ifTrue:
-			[methodCache at: probe + MethodCacheSelector put: 0].
-		probe := probe + MethodCacheEntrySize].
-	(objectMemory isOopCompiledMethod: oldMethod) ifTrue:
-		[primIdx := self primitiveIndexOf: oldMethod.
-		 primIdx = PrimitiveExternalCallIndex ifTrue:
-			["It's primitiveExternalCall"
-			self flushExternalPrimitiveOf: oldMethod].
-		 (self methodHasCogMethod: oldMethod) ifTrue:
-			[cogit unlinkSendsTo: (self cogMethodOf: oldMethod)]].
-	self flushAtCache
+	super primitiveFlushCacheByMethod.
+	cogit unlinkSendsTo: self stackTop
 ]
 
 { #category : #'system control primitives' }
@@ -203,7 +189,9 @@ CoInterpreterPrimitives >> primitiveFlushCacheBySelector [
 	(selector = (self specialSelector: 16) "at:"
 	 or: [selector = (self specialSelector: 17) "at:put:"]) ifTrue:
 		[self flushAtCache].
-	cogit unlinkSendsOf: selector
+	cogit
+		unlinkSendsOf: selector
+		isMNUSelector: (selector = (objectMemory splObj: SelectorDoesNotUnderstand))
 ]
 
 { #category : #'trampoline support' }

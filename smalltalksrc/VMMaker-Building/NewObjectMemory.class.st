@@ -671,7 +671,7 @@ NewObjectMemory >> findString: aCString [
 				[((self isBytesNonInt: obj)
 				  and: [(self lengthOf: obj) = cssz
 				  and: [(self str: aCString n: (self pointerForOop: obj + BaseHeaderSize) cmp: cssz) = 0]]) ifTrue:
-					[self printHex: obj; cr].
+					[coInterpreter printHex: obj; space; printOopShort: obj; cr].
 				 sz := self sizeBitsOf: obj].
 		 obj := self oopFromChunk: obj + sz]
 ]
