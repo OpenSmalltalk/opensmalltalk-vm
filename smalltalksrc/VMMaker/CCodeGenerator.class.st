@@ -327,17 +327,20 @@ CCodeGenerator >> cLiteralFor: anObject [
 			[anObject isInteger ifTrue:
 				[^(anObject < 16r7FFFFFFF)
 					ifTrue: [anObject printString]
-					ifFalse: [anObject printString , ObjectMemory unsignedIntegerSuffix "ikp"]].
-			anObject isFloat ifTrue: [^anObject printString]]
+					ifFalse: [anObject printString , ObjectMemory unsignedIntegerSuffix]].
+			anObject isFloat ifTrue:
+				[^anObject printString]]
 		ifFalse:
 			[anObject isString ifTrue:
 				[^'"', anObject, '"'].
 			anObject == nil ifTrue: [^ 'null' ].
-			anObject == true ifTrue: [^ '1' ].			"ikp"
-			anObject == false ifTrue: [^ '0' ].			"ikp"
-			anObject isCharacter ifTrue:[^anObject asString printString]]. "ar"
-	self error:								"ikp"
-		'Warning: A Smalltalk literal could not be translated into a C constant: ', anObject printString.
+			anObject == true ifTrue: [^ '1' ].
+			anObject == false ifTrue: [^ '0' ].
+			anObject isCharacter ifTrue:
+				[^anObject == $'
+					ifTrue: ['''\'''''] "i.e. '\''"
+					ifFalse: [anObject asString printString]]].
+	self error: 'Warning: A Smalltalk literal could not be translated into a C constant: ', anObject printString.
 	^'"XXX UNTRANSLATABLE CONSTANT XXX"'
 ]
 

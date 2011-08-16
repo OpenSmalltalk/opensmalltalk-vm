@@ -4224,17 +4224,17 @@ StackInterpreter >> flushAtCache [
 ]
 
 { #category : #'plugin primitive support' }
-StackInterpreter >> flushExternalPrimitiveOf: methodPtr [
-	"methodPtr is a CompiledMethod containing an external primitive. Flush the function address and session ID of the CM"
+StackInterpreter >> flushExternalPrimitiveOf: methodObj [
+	"methodObj is a CompiledMethod containing an external primitive. Flush the function address and session ID of the CM"
 	| lit |
-	(self literalCountOf: methodPtr) > 0 ifFalse:[^nil]. "Something's broken"
-	lit := self literal: 0 ofMethod: methodPtr.
-	((objectMemory isArray: lit) and:[(objectMemory lengthOf: lit) = 4])
-		ifFalse:[^nil]. "Something's broken"
+	(self literalCountOf: methodObj) > 0 ifFalse:
+		[^nil]. "Something's broken"
+	lit := self literal: 0 ofMethod: methodObj.
+	((objectMemory isArray: lit) and:[(objectMemory lengthOf: lit) = 4]) ifFalse:
+		[^nil]. "Something's broken"
 	"ConstZero is a known SmallInt so no root check needed"
 	objectMemory storePointerUnchecked: 2 ofObject: lit withValue: ConstZero.
-	objectMemory storePointerUnchecked: 3 ofObject: lit withValue: ConstZero.
-
+	objectMemory storePointerUnchecked: 3 ofObject: lit withValue: ConstZero
 ]
 
 { #category : #'plugin primitive support' }
@@ -5785,6 +5785,40 @@ StackInterpreter >> lookupInMethodCacheSel: selector class: class [
 
 	^ false
 
+]
+
+{ #category : #'message sending' }
+StackInterpreter >> lookupMethodFor: selector InDictionary: dictionary [
+	"Lookup the argument selector in aDictionary and answer either the
+	 method or nil, if not found.
+	This method lookup tolerates integers as Dictionary keys to support
+	 execution of images in which Symbols have been compacted out."
+	| length index mask wrapAround nextSelector methodArray |
+	<inline: true>
+	<asmLabel: false>
+	length := objectMemory fetchWordLengthOf: dictionary.
+	mask := length - SelectorStart - 1.
+	index := SelectorStart + (mask bitAnd: ((objectMemory isIntegerObject: selector)
+												ifTrue: [objectMemory integerValueOf: selector]
+												ifFalse: [objectMemory hashBitsOf: selector])).
+
+	"It is assumed that there are some nils in this dictionary, and search will 
+	 stop when one is encountered. However, if there are no nils, then wrapAround 
+	 will be detected the second time the loop gets to the end of the table."
+	wrapAround := false.
+	[true] whileTrue:
+		[nextSelector := objectMemory fetchPointer: index ofObject: dictionary.
+		 nextSelector = objectMemory nilObject ifTrue:
+			[^nil].
+		 nextSelector = selector ifTrue:
+			[methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: dictionary.
+			 ^objectMemory fetchPointer: index - SelectorStart ofObject: methodArray].
+		 index := index + 1.
+		 index = length ifTrue:
+			[wrapAround ifTrue: [^nil].
+			 wrapAround := true.
+			 index := SelectorStart]].
+	^nil "for Slang"
 ]
 
 { #category : #'message sending' }
@@ -7512,8 +7546,9 @@ StackInterpreter >> printFrameOop: name at: address [
 	1 to: 12 - (self strlen: name) do: [:i| self printChar: $ ].
 	self print: name;
 		print: ': ';
-		printHex: it.
-	self tab;
+		printHex: it;
+		tab;
+		printChar: $=;
 		printOopShort: it;
 		cr
 ]
@@ -7532,8 +7567,9 @@ StackInterpreter >> printFrameOop: name index: idx at: address [
 	self print: name;
 		printNum: idx;
 		print: ': ';
-		printHex: it.
-	self tab;
+		printHex: it;
+		tab;
+		printChar: $=;
 		printOopShort: it;
 		cr
 ]
@@ -7593,6 +7629,28 @@ StackInterpreter >> printHexPtr: p [
 	<inline: true>
 	<var: #p type: #'void *'>
 	self printHex: (self oopForPointer: p)
+]
+
+{ #category : #'debug printing' }
+StackInterpreter >> printMethodDictionary: dictionary [
+	<api>
+	| selector methodArray |
+	methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: dictionary.
+	SelectorStart to: (objectMemory fetchWordLengthOf: dictionary) - 1 do:
+		[:index |
+		 selector := objectMemory fetchPointer: index ofObject: dictionary.
+		 selector ~= objectMemory nilObject ifTrue:
+			[self
+				printOopShort: selector;
+				print: ' => ';
+				printOopShort: (objectMemory fetchPointer: index - SelectorStart ofObject: methodArray);
+				cr]]
+]
+
+{ #category : #'debug printing' }
+StackInterpreter >> printMethodDictionaryOf: behavior [
+	<api>
+	self printMethodDictionary: (objectMemory fetchPointer: MethodDictionaryIndex ofObject: behavior)
 ]
 
 { #category : #'debug printing' }
@@ -7708,7 +7766,6 @@ StackInterpreter >> printOopShortInner: oop [
 	| classOop name nameLen |
 	<var: #name type: #'char *'>
 	<inline: true>
-	self printChar: $=.
 	(objectMemory isIntegerObject: oop) ifTrue:
 		[self printNum: (objectMemory integerValueOf: oop);
 			printChar: $(;
@@ -7738,7 +7795,7 @@ StackInterpreter >> printOopShortInner: oop [
 	name := self nameOfClass: classOop.
 	nameLen = 10 ifTrue:
 		[(self str: name n: 'ByteString' cmp: 10) not "strncmp is weird" ifTrue:
-			[self printChar: $"; printStringOf: oop; printChar: $".
+			[self printChar: $'; printStringOf: oop; printChar: $'.
 			 ^nil].
 		 (self str: name n: 'ByteSymbol' cmp: 10) not "strncmp is weird" ifTrue:
 			[self printChar: $#; printStringOf: oop.
