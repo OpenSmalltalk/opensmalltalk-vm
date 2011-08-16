@@ -277,6 +277,12 @@ CogVMSimulator >> ceContext: aOnceMarriedContext instVar: slotIndex value: anOop
 	^super ceContext: aOnceMarriedContext instVar: slotIndex value: anOop
 ]
 
+{ #category : #trampolines }
+CogVMSimulator >> ceMNUFromPICMNUMethod: aMethodObj receiver: rcvr [
+	self halt.
+	^super ceMNUFromPICMNUMethod: aMethodObj receiver: rcvr
+]
+
 { #category : #'debug support' }
 CogVMSimulator >> ceNonLocalReturn: returnValue [
 	"self halt."
@@ -948,10 +954,10 @@ CogVMSimulator >> halfWordLowInLong32: long32 [
 ]
 
 { #category : #'message sending' }
-CogVMSimulator >> handleMNU: selectorIndex InMachineCodeTo: rcvr classForMessage: classForMessage mayLink: mayLinkBoolean [
+CogVMSimulator >> handleMNU: selectorIndex InMachineCodeTo: rcvr classForMessage: classForMessage [
 	selectorIndex = SelectorCannotInterpret ifTrue:
 		[self halt].
-	^super handleMNU: selectorIndex InMachineCodeTo: rcvr classForMessage: classForMessage mayLink: mayLinkBoolean
+	^super handleMNU: selectorIndex InMachineCodeTo: rcvr classForMessage: classForMessage
 ]
 
 { #category : #'debug support' }
