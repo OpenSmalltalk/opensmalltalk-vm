@@ -61,7 +61,7 @@ if [ -n "$CM" ]; then
 	test -d Cog.app || mkdir Cog.app
 	rm -rf Cog.app/* Cog.app.tgz
 	(cd macbuild/Fast.app>/dev/null;tar cf - *)|(cd Cog.app;tar xvf -)
-	ex "+g/[ >][0-9][0-9]*\.[0-9][0-9]*\.0/s/0\([< ]\)/$REV\1/" +w +q Cog.app/Contents/Info.plist
+	ex "+g/<.--version-->/s/0\([< ]\)/$REV\1/" +w +q Cog.app/Contents/Info.plist
 	tar czf Cog.app.tgz Cog.app
 	EXES="$EXES	Cog.app/Contents/MacOS/Croquet"
 fi
@@ -69,7 +69,7 @@ if [ -n "$CTM" ]; then
 	test -d CogMT.app || mkdir CogMT.app
 	rm -rf CogMT.app/* CogMT.app.tgz
 	(cd macbuild/FastMT.app>/dev/null;tar cf - *)|(cd CogMT.app;tar xvf -)
-	ex "+g/[ >][0-9][0-9]*\.[0-9][0-9]*\.0/s/0\([< ]\)/$REV\1/" +w +q CogMT.app/Contents/Info.plist
+	ex "+g/<.--version-->/s/0\([< ]\)/$REV\1/" +w +q CogMT.app/Contents/Info.plist
 	tar czf CogMT.app.tgz CogMT.app
 	EXES="$EXES	CogMT.app/Contents/MacOS/Croquet"
 fi
@@ -110,7 +110,7 @@ if [ -n "$NM" ]; then
 	test -d Newspeak\ Virtual\ Machine.app || mkdir Newspeak\ Virtual\ Machine.app
 	rm -rf Newspeak\ Virtual\ Machine.app/* Newspeak\ Virtual\ Machine.app.tgz
 	(cd $NSB/macbuild/Fast.app>/dev/null;tar cf - *)|(cd Newspeak\ Virtual\ Machine.app;tar xvf -)
-	ex "+g/[ >][0-9][0-9]*\.[0-9][0-9]*\.0/s/0\([< ]\)/$REV\1/" +w +q Newspeak\ Virtual\ Machine.app/Contents/Info.plist
+	ex "+g/<.--version-->/s/0\([< ]\)/$REV\1/" +w +q Newspeak\ Virtual\ Machine.app/Contents/Info.plist
 	tar czf Newspeak\ Virtual\ Machine.app.tgz Newspeak\ Virtual\ Machine.app
 	EXES="$EXES	Newspeak Virtual Machine.app/Contents/MacOS/Newspeak Virtual Machine"
 fi

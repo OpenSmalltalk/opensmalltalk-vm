@@ -34,7 +34,6 @@ MiscPrimitivePlugin \
 Mpeg3Plugin \
 QuicktimePlugin \
 RePlugin \
-SqueakFFIPrims \
 SecurityPlugin \
 SerialPlugin \
 SocketPlugin \
@@ -42,6 +41,7 @@ SoundCodecPrims \
 SoundGenerationPlugin \
 SoundPlugin \
 StarSqueakPlugin \
+SqueakFFIPrims \
 UUIDPlugin \
 UnixOSProcessPlugin \
 VMProfileMacSupportPlugin \
