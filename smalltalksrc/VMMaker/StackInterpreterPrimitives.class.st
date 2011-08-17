@@ -49,17 +49,17 @@ StackInterpreterPrimitives >> primitiveClone [
 	 Special-case non-single contexts (because of context-to-stack mapping).
 	 Can't fail for contexts cuz of image context instantiation code (sigh)."
 
-	| receiver newCopy |
-	receiver := self stackTop.
-	(objectMemory isIntegerObject: receiver)
+	| rcvr newCopy |
+	rcvr := self stackTop.
+	(objectMemory isIntegerObject: rcvr)
 		ifTrue:
-			[newCopy := receiver]
+			[newCopy := rcvr]
 		ifFalse:
-			[(self isContextNonInt: receiver)
+			[(self isContextNonInt: rcvr)
 				ifTrue:
-					[newCopy := self cloneContext: receiver]
+					[newCopy := self cloneContext: rcvr]
 				ifFalse:
-					[newCopy := objectMemory clone: receiver].
+					[newCopy := objectMemory clone: rcvr].
 			newCopy = 0 ifTrue:
 				[^self primitiveFailFor: PrimErrNoMemory]].
 	self pop: 1 thenPush: newCopy

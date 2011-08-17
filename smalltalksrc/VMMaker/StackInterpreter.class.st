@@ -5734,6 +5734,48 @@ StackInterpreter >> longJumpIfTrue [
 	self jumplfTrueBy: ((currentBytecode bitAnd: 3) * 256) + self fetchByte.
 ]
 
+{ #category : #'debug printing' }
+StackInterpreter >> longPrintOop: oop [
+	<api>
+	| fmt lastIndex startIP bytecodesPerLine |
+	((objectMemory isIntegerObject: oop)
+	 or: [(oop between: objectMemory startOfMemory and: objectMemory freeStart) not
+	 or: [(oop bitAnd: (BytesPerWord - 1)) ~= 0
+	 or: [(objectMemory isFreeObject: oop)
+	 or: [(fmt := objectMemory formatOf: oop) between: 5 and: 11]]]]) ifTrue:
+		[^self printOop: oop].
+	self printHex: oop;
+		print: ': a(n) ';
+		printNameOfClass: (objectMemory fetchClassOfNonInt: oop) count: 5.
+	fmt > 4 ifTrue:
+		[self print: ' nbytes '; printNum: (objectMemory byteSizeOf: oop)].
+	self cr.
+	lastIndex := 64 min: (startIP := (objectMemory lastPointerOf: oop) / BytesPerWord).
+	lastIndex > 0 ifTrue:
+		[1 to: lastIndex do:
+			[:index| | fieldOop |
+			fieldOop := objectMemory fetchPointer: index - 1 ofObject: oop.
+			self space; printHex: fieldOop; space; printOopShort: fieldOop; cr]].
+	(objectMemory isCompiledMethod: oop)
+		ifFalse:
+			[startIP > 64 ifTrue: [self print: '...'; cr]]
+		ifTrue:
+			[startIP := startIP * BytesPerWord + 1.
+			 lastIndex := objectMemory lengthOf: oop.
+			 lastIndex - startIP > 100 ifTrue:
+				[lastIndex := startIP + 100].
+			 bytecodesPerLine := 8.
+			 startIP to: lastIndex do:
+				[:index| | byte |
+				byte := objectMemory fetchByte: index - 1 ofObject: oop.
+				self cCode: 'printf(" %02x/%-3d", byte,byte)'
+					inSmalltalk: [self space; print: (byte radix: 16); printChar: $/; printNum: byte].
+				((index - startIP + 1) \\ bytecodesPerLine) = 0 ifTrue:
+					[self cr]].
+			((lastIndex - startIP + 1) \\ bytecodesPerLine) = 0 ifFalse:
+				[self cr]]
+]
+
 { #category : #'jump bytecodes' }
 StackInterpreter >> longUnconditionalJump [
 	| offset |
@@ -7634,16 +7676,22 @@ StackInterpreter >> printHexPtr: p [
 { #category : #'debug printing' }
 StackInterpreter >> printMethodDictionary: dictionary [
 	<api>
-	| selector methodArray |
+	| methodArray |
 	methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: dictionary.
 	SelectorStart to: (objectMemory fetchWordLengthOf: dictionary) - 1 do:
-		[:index |
+		[:index | | selector meth |
 		 selector := objectMemory fetchPointer: index ofObject: dictionary.
 		 selector ~= objectMemory nilObject ifTrue:
-			[self
+			[meth := objectMemory fetchPointer: index - SelectorStart ofObject: methodArray.
+			 self
 				printOopShort: selector;
 				print: ' => ';
-				printOopShort: (objectMemory fetchPointer: index - SelectorStart ofObject: methodArray);
+				printOopShort: meth;
+				print: ' (';
+				printHex: selector;
+				print: ' => ';
+				printHex: meth;
+				putchar: $);
 				cr]]
 ]
 

@@ -1052,7 +1052,7 @@ ObjectMemory >> checkHeapIntegrity [
 					[fieldOop := (self classHeader: obj) bitAnd: AllButTypeMask.
 					 ((self isIntegerObject: fieldOop)
 					   or: [(self heapMapAtWord: (self pointerForOop: fieldOop)) = 0]) ifTrue:
-						[self print: 'object leak in '; printHex: obj; print: ' class '; printHex: fieldOop; cr.
+						[self print: 'object leak in '; printHex: obj; print: ' class = '; printHex: fieldOop; cr.
 						 ok := false]].
 				 fmt := self formatOfHeader: hdr.
 				 (fmt <= 4 "pointers" or: [fmt >= 12 "compiled method"]) ifTrue:
@@ -1070,7 +1070,7 @@ ObjectMemory >> checkHeapIntegrity [
 									 ok := false]
 								ifFalse:
 									[(self heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
-										[self print: 'object leak in '; printHex: obj; print: ' @ '; printNum: fi; cr.
+										[self print: 'object leak in '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; cr.
 										 ok := false]]]]].
 				 sz := self sizeBitsOf: obj].
 		 obj := self oopFromChunk: obj + sz].
