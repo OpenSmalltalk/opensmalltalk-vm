@@ -2502,9 +2502,10 @@ Cogit >> checkIfValidObjectRefAndTarget: annotation pc: mcpc cogMethod: cogMetho
 		entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		entryPoint > methodZoneBase ifTrue:
 			["It's a linked send; find which kind."
-			offset := (entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
-						ifTrue: [cmEntryOffset]
-						ifFalse: [cmNoCheckEntryOffset].
+			 self
+				offsetAndSendTableFor: entryPoint
+				annotation: annotation
+				into: [:off :table| offset := off].
 			 targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
 			 (self asserta: (targetMethod cmType = CMMethod
 						   or: [targetMethod cmType = CMClosedPIC
@@ -2742,7 +2743,7 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
 	self assert: ((coInterpreter methodHasCogMethod: aMethodObj) not
-				or: [(coInterpreter methodClassAssociationOf: aMethodObj) = objectMemory nilObject]).
+				or: [(coInterpreter noAssertMethodClassAssociationOf: aMethodObj) = objectMemory nilObject]).
 	"coInterpreter stringOf: aSelectorOop"
 	coInterpreter
 		compilationBreak: aSelectorOop
@@ -2750,7 +2751,12 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 	aMethodObj = breakMethod ifTrue: [self halt: 'Compilation of breakMethod'].
 	self cppIf: NewspeakVM
 		ifTrue: [cogMethod := methodZone findPreviouslyCompiledVersionOf: aMethodObj with: aSelectorOop.
-				cogMethod ifNotNil: [^cogMethod]].
+				cogMethod ifNotNil:
+					[(coInterpreter methodHasCogMethod: aMethodObj) not ifTrue:
+						[self assert: (coInterpreter rawHeaderOf: aMethodObj) = cogMethod methodHeader.
+						 cogMethod methodObject: aMethodObj.
+						 coInterpreter rawHeaderOf: aMethodObj put: cogMethod asInteger].
+					^cogMethod]].
 	methodObj := aMethodObj.
 	cogMethod := self compileCogMethod: aSelectorOop.
 	(cogMethod asInteger between: MaxNegativeErrorCode and: -1) ifTrue:
@@ -3665,7 +3671,9 @@ Cogit >> disassembleMethod: surrogateOrAddress on: aStream [
 		at: cogMethod asInteger + cmEntryOffset put: 'entry'.
 	
 	cogMethod cmType = CMMethod ifTrue:
-		[mapEntries at: cogMethod asInteger + cmNoCheckEntryOffset put: 'noCheckEntry'].
+		[mapEntries at: cogMethod asInteger + cmNoCheckEntryOffset put: 'noCheckEntry'.
+		self cppIf: NewspeakVM
+			ifTrue: [mapEntries at: cogMethod asInteger + dynSuperEntryAlignment put: 'dynSuperEntry']].
 
 	cogMethod cmType = CMClosedPIC ifTrue:
 		[mapEntries at: cogMethod asInteger + firstCPICCaseOffset put: 'ClosedPICCase0'.
@@ -6373,6 +6381,13 @@ Cogit >> nextBytecodePCFor: descriptor at: pc byte0: opcodeByte in: aMethodObj [
 		+ (descriptor isBlockCreation
 			ifTrue: [self spanFor: descriptor at: pc byte0: opcodeByte in: aMethodObj]
 			ifFalse: [0])
+]
+
+{ #category : #debugging }
+Cogit >> noAssertMethodClassAssociationOf: methodPointer [
+	^coInterpreter
+		literal: (coInterpreter literalCountOfHeader: (coInterpreter noAssertHeaderOf: methodPointer)) - 1
+		ofMethod: methodPointer
 ]
 
 { #category : #accessing }

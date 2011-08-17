@@ -594,6 +594,7 @@ CogObjectRepresentationForSqueakV3 >> getInlineCacheClassTagFrom: sourceReg into
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> hasValidHeaderPostGC: cogMethod [
 	<var: #cogMethod type: #'CogMethod *'>
+	<inline: true>
 	^cogMethod objectHeader = objectMemory nullHeaderForMachineCodeMethod
 ]
 

@@ -27,19 +27,19 @@ CoInterpreterPrimitives >> primitiveClone [
 	 Special case CompiledMerhods since the copy mustn't refer to CogMethod
 	 if receiver has been cogged."
 
-	| receiver newCopy objHeader |
-	receiver := self stackTop.
-	(objectMemory isIntegerObject: receiver)
-		ifTrue: [newCopy := receiver]
+	| rcvr newCopy objHeader |
+	rcvr := self stackTop.
+	(objectMemory isIntegerObject: rcvr)
+		ifTrue: [newCopy := rcvr]
 		ifFalse:
-			[objHeader := objectMemory baseHeader: receiver.
+			[objHeader := objectMemory baseHeader: rcvr.
 			(objectMemory isContextHeader: objHeader)
-				ifTrue: [newCopy := self cloneContext: receiver]
-				ifFalse: [newCopy := objectMemory clone: receiver].
+				ifTrue: [newCopy := self cloneContext: rcvr]
+				ifFalse: [newCopy := objectMemory clone: rcvr].
 			newCopy = 0 ifTrue:
 				[^self primitiveFailFor: PrimErrNoMemory].
 			(objectMemory isCompiledMethodHeader: objHeader) ifTrue:
-				["use stackTop since GC may have moved receiver"
+				["use stackTop since GC may have moved rcvr"
 				 self rawHeaderOf: newCopy put: (self headerOf: self stackTop)]].
 	self pop: 1 thenPush: newCopy
 ]

@@ -4712,6 +4712,16 @@ CoInterpreter >> nextProfileTickLow [
 	^nextProfileTick bitAnd: 16rFFFFFFFF
 ]
 
+{ #category : #'compiled methods' }
+CoInterpreter >> noAssertHeaderOf: methodPointer [
+	<api>
+	| methodHeader |
+	methodHeader := self rawHeaderOf: methodPointer.
+	^(self isCogMethodReference: methodHeader)
+		ifTrue: [(self cCoerceSimple: methodHeader to: #'CogMethod *') methodHeader]
+		ifFalse: [methodHeader]
+]
+
 { #category : #'indexing primitive support' }
 CoInterpreter >> noAtCacheCommonAt: stringy [
 	"This code is called if the receiver responds primitively to at:.
