@@ -146,7 +146,7 @@ CogMethodZone >> compactCompiledCode: objectHeaderValue [
 					["For non-Newspeak there should ne a one-to-one mapping metween bytecoded and
 					  cog methods. For Newspeak not necessarily, but only for anonymous accessors."
 					 self assert: ((coInterpreter rawHeaderOf: dest methodObject) asInteger = source asInteger
-								or: [(coInterpreter methodClassAssociationOf: dest methodObject) = objectMemory nilObject]).
+								or: [(coInterpreter noAssertMethodClassAssociationOf: dest methodObject) = objectMemory nilObject]).
 					"Only update the original method's header if it is referring to this CogMethod."
 					 (coInterpreter rawHeaderOf: dest methodObject) asInteger = source asInteger ifTrue:
 						[coInterpreter rawHeaderOf: dest methodObject put: dest asInteger]]
@@ -192,7 +192,7 @@ CogMethodZone >> freeMethod: cogMethod [
 		["For non-Newspeak there should ne a one-to-one mapping metween bytecoded and
 		  cog methods. For Newspeak not necessarily, but only for anonymous accessors."
 		 self assert: ((coInterpreter rawHeaderOf: cogMethod methodObject) asInteger = cogMethod asInteger
-					or: [(coInterpreter methodClassAssociationOf: cogMethod methodObject) = objectMemory nilObject]).
+					or: [(cogit noAssertMethodClassAssociationOf: cogMethod methodObject) = objectMemory nilObject]).
 		"Only reset the original method's header if it is referring to this CogMethod."
 		 (coInterpreter rawHeaderOf: cogMethod methodObject) asInteger = cogMethod asInteger ifTrue:
 			[coInterpreter

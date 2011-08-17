@@ -663,13 +663,9 @@ CoInterpreterMT >> isUnboundThreadId: threadId [
 
 { #category : #initialization }
 CoInterpreterMT >> loadInitialContext [
-	| activeProc activeContext |
-	objectMemory leakCheckFullGC ifTrue:
-		[objectMemory clearLeakMapAndMapAccessibleObjects.
-		 self assert: objectMemory checkHeapIntegrity].
+	| activeProc |
+	super loadInitialContext.
 	activeProc := self activeProcess.
-	activeContext := objectMemory fetchPointer: SuspendedContextIndex ofObject: activeProc.
-	self marryContextInNewStackPageAndInitializeInterpreterRegisters: activeContext.
 	self assert: (self ownerIndexOfProcess: activeProc) = 0.
 	activeProcessAffined := (self ownerIndexOfProcess: activeProc) ~= 0
 ]
