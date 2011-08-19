@@ -1267,8 +1267,13 @@ SimpleStackBasedCogit >> genPrimitiveAsFloat [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveAt [
+	| r |
 	self MoveMw: BytesPerWord r: SPReg R: Arg0Reg.
-	^objectRepresentation genInnerPrimitiveAt: BytesPerWord * 2
+	(r := objectRepresentation genInnerPrimitiveAt: BytesPerWord * 2) < 0 ifTrue:
+		[^r].
+	^self compileInterpreterPrimitive: (coInterpreter
+											functionPointerForCompiledMethod: methodObj
+											primitiveIndex: primitiveIndex)
 ]
 
 { #category : #'primitive generators' }
@@ -1728,13 +1733,23 @@ SimpleStackBasedCogit >> genPrimitiveQuo [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveSize [
-	^objectRepresentation genInnerPrimitiveSize: BytesPerWord
+	| r |
+	(r := objectRepresentation genInnerPrimitiveSize: BytesPerWord) < 0 ifTrue:
+		[^r].
+	^self compileInterpreterPrimitive: (coInterpreter
+											functionPointerForCompiledMethod: methodObj
+											primitiveIndex: primitiveIndex)
 ]
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveStringAt [
+	| r |
 	self MoveMw: BytesPerWord r: SPReg R: Arg0Reg.
-	^objectRepresentation genInnerPrimitiveStringAt: BytesPerWord * 2
+	(r := objectRepresentation genInnerPrimitiveStringAt: BytesPerWord * 2) < 0 ifTrue:
+		[^r].
+	^self compileInterpreterPrimitive: (coInterpreter
+											functionPointerForCompiledMethod: methodObj
+											primitiveIndex: primitiveIndex)
 ]
 
 { #category : #'primitive generators' }

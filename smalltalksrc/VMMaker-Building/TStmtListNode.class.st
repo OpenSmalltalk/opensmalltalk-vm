@@ -48,6 +48,11 @@ TStmtListNode >> emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen
 ]
 
 { #category : #'C code generation' }
+TStmtListNode >> emitCCodeAsExpressionOn: aStream level: level generator: aCodeGen [
+	^self emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen
+]
+
+{ #category : #'C code generation' }
 TStmtListNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 
 	self emitCCodeOn: aStream prependToEnd: nil level: level generator: aCodeGen

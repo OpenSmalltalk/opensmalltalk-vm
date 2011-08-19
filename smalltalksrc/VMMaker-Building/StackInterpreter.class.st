@@ -1702,7 +1702,8 @@ StackInterpreter >> bytecodePrimAt [
 			[result := self commonVariable: rcvr at: (objectMemory integerValueOf: index) cacheIndex: atIx.
 			 self successful ifTrue:
 				[self fetchNextBytecode.
-				^self internalPop: 2 thenPush: result]]].
+				^self internalPop: 2 thenPush: result].
+			 self initPrimCall]].
 
 	messageSelector := self specialSelector: 16.
 	argumentCount := 1.
@@ -1732,7 +1733,8 @@ StackInterpreter >> bytecodePrimAtPut [
 			[self commonVariable: rcvr at: (objectMemory integerValueOf: index) put: value cacheIndex: atIx.
 			 self successful ifTrue:
 				[self fetchNextBytecode.
-				 ^self internalPop: 3 thenPush: value]]].
+				 ^self internalPop: 3 thenPush: value].
+			 self initPrimCall]].
 
 	messageSelector := self specialSelector: 17.
 	argumentCount := 2.
@@ -2749,8 +2751,11 @@ StackInterpreter >> commonAt: stringy [
 		["OK -- look in the at-cache"
 		atIx := rcvr bitAnd: AtCacheMask.  "Index into atCache = 4N, for N = 0 ... 7"
 		(atCache at: atIx+AtCacheOop) = rcvr ifFalse:
-			["Rcvr not in cache.  Install it..."
-			self install: rcvr inAtCache: atCache at: atIx string: stringy].
+			["Rcvr not in cache.  Attempt to install it..."
+			(self install: rcvr inAtCache: atCache at: atIx string: stringy) ifFalse:
+				[self assert: (objectMemory isContextNonInt: rcvr).
+				self initPrimCall.
+				^self primitiveContextAt]].
 		self successful ifTrue:
 			[result := self commonVariable: rcvr at: index cacheIndex: atIx].
 		self successful ifTrue:
@@ -2790,8 +2795,11 @@ StackInterpreter >> commonAtPut: stringy [
 		["OK -- look in the at-cache"
 		atIx := (rcvr bitAnd: AtCacheMask) + AtPutBase.  "Index into atPutCache"
 		(atCache at: atIx+AtCacheOop) = rcvr ifFalse:
-			["Rcvr not in cache.  Install it..."
-			self install: rcvr inAtCache: atCache at: atIx string: stringy].
+			["Rcvr not in cache.  Attempt to install it..."
+			(self install: rcvr inAtCache: atCache at: atIx string: stringy) ifFalse:
+				[self assert: (objectMemory isContextNonInt: rcvr).
+				self initPrimCall.
+				^self primitiveContextAtPut]].
 		self successful ifTrue:
 			[self commonVariable: rcvr at: index put: value cacheIndex: atIx].
 		self successful ifTrue:
@@ -2966,7 +2974,8 @@ StackInterpreter >> commonVariable: rcvr at: index cacheIndex: atIx [
 	ifTrue:
 		[fmt := atCache at: atIx+AtCacheFmt.
 		fmt <= 4 ifTrue:
-			[fixedFields := atCache at: atIx+AtCacheFixedFields.
+			[self assert: (objectMemory isContextNonInt: rcvr) not.
+			 fixedFields := atCache at: atIx+AtCacheFixedFields.
 			^ objectMemory fetchPointer: index + fixedFields - 1 ofObject: rcvr].
 		fmt < 8 ifTrue:  "Bitmap"
 			[result := objectMemory fetchLong32: index - 1 ofObject: rcvr.
@@ -2992,7 +3001,8 @@ StackInterpreter >> commonVariable: rcvr at: index put: value cacheIndex: atIx [
 	ifTrue:
 		[fmt := atCache at: atIx+AtCacheFmt.
 		fmt <= 4 ifTrue:
-			[fixedFields := atCache at: atIx+AtCacheFixedFields.
+			[self assert: (objectMemory isContextNonInt: rcvr) not.
+			 fixedFields := atCache at: atIx+AtCacheFixedFields.
 			^ objectMemory storePointer: index + fixedFields - 1 ofObject: rcvr withValue: value].
 		fmt < 8 ifTrue:  "Bitmap"
 			[valToPut := self positive32BitValueOf: value.
@@ -5128,8 +5138,8 @@ StackInterpreter >> instVar: index ofContext: aMarriedContext put: anOop [
 
 { #category : #'indexing primitive support' }
 StackInterpreter >> install: rcvr inAtCache: cache at: atIx string: stringy [
-	"Install the oop of this object in the given cache (at or atPut), along with
-	its size, format and fixedSize"
+	"Attempt to install the oop of this object in the given cache (at or atPut),
+	 along with its size, format and fixedSize. Answer if this was successful."
 	| hdr fmt totalLength fixedFields |
 	<var: #cache type: 'sqInt *'>
 
@@ -5137,7 +5147,8 @@ StackInterpreter >> install: rcvr inAtCache: cache at: atIx string: stringy [
 	fmt := objectMemory formatOfHeader: hdr.
 	(fmt = 3 and: [objectMemory isContextHeader: hdr]) ifTrue:
 		["Contexts must not be put in the atCache, since their size is not constant"
-		^ self primitiveFail].
+		self primitiveFailFor: PrimErrBadReceiver.
+		^false].
 	totalLength := objectMemory lengthOf: rcvr baseHeader: hdr format: fmt.
 	fixedFields := objectMemory fixedFieldsOf: rcvr format: fmt length: totalLength.
 
@@ -5146,7 +5157,8 @@ StackInterpreter >> install: rcvr inAtCache: cache at: atIx string: stringy [
 										ifTrue: [fmt + 16]  "special flag for strings"
 										ifFalse: [fmt]).
 	cache at: atIx+AtCacheFixedFields put: fixedFields.
-	cache at: atIx+AtCacheSize put: totalLength - fixedFields
+	cache at: atIx+AtCacheSize put: totalLength - fixedFields.
+	^true
 ]
 
 { #category : #'plugin primitive support' }
@@ -6712,6 +6724,13 @@ StackInterpreter >> nextImplicitReceiverFor: anObject withMixin: mixin [
 				[^objectMemory nilObject].
 			 targetMixin := objectMemory fetchPointer: EnclosingMixinIndex ofObject: theMixin].
 	^implicitReceiver
+]
+
+{ #category : #'internal interpreter access' }
+StackInterpreter >> noInlineTemporary: offset in: theFP put: valueOop [
+	<var: #theFP type: #'char *'>
+	<inline: false>
+	self temporary: offset in: theFP put: valueOop
 ]
 
 { #category : #'object memory support' }
@@ -9439,8 +9458,14 @@ StackInterpreter >> stObject: array at: index [
 	fmt := objectMemory formatOfHeader: hdr.
 	totalLength := objectMemory lengthOf: array baseHeader: hdr format: fmt.
 	fixedFields := objectMemory fixedFieldsOf: array format: fmt length: totalLength.
-	fmt = 3 ifTrue: [self assert: (objectMemory isContextHeader: hdr) not].
-	stSize := totalLength - fixedFields.
+	(fmt = 3 and: [self isContextHeader: hdr])
+		ifTrue:
+			[stSize := self fetchStackPointerOf: array.
+			((self oop: index isGreaterThanOrEqualTo: 1)
+			 and: [(self oop: index isLessThanOrEqualTo: stSize)
+			 and: [self isStillMarriedContext: array]]) ifTrue:
+				[^self noInlineTemporary: index - 1 in: (self frameOfMarriedContext: array)]]
+		ifFalse: [stSize := totalLength - fixedFields].
 	((self oop: index isGreaterThanOrEqualTo: 1)
 	 and: [self oop: index isLessThanOrEqualTo: stSize])
 		ifTrue: [^self subscript: array with: (index + fixedFields) format: fmt]
@@ -9456,8 +9481,15 @@ StackInterpreter >> stObject: array at: index put: value [
 	fmt := objectMemory formatOfHeader: hdr.
 	totalLength := objectMemory lengthOf: array baseHeader: hdr format: fmt.
 	fixedFields := objectMemory fixedFieldsOf: array format: fmt length: totalLength.
-	fmt = 3 ifTrue: [self assert: (objectMemory isContextHeader: hdr) not].
-	stSize := totalLength - fixedFields.
+	(fmt = 3 and: [self isContextHeader: hdr])
+		ifTrue:
+			[stSize := self fetchStackPointerOf: array.
+			((self oop: index isGreaterThanOrEqualTo: 1)
+			 and: [(self oop: index isLessThanOrEqualTo: stSize)
+			 and: [self isStillMarriedContext: array]]) ifTrue:
+				[self noInlineTemporary: index - 1 in: (self frameOfMarriedContext: array) put: value.
+				 ^self]]
+		ifFalse: [stSize := totalLength - fixedFields].
 	((self oop: index isGreaterThanOrEqualTo: 1)
 	 and: [self oop: index isLessThanOrEqualTo: stSize])
 		ifTrue: [self subscript: array with: (index + fixedFields) storing: value format: fmt]

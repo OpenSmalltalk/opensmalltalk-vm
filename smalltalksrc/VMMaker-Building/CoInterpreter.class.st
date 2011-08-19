@@ -159,17 +159,13 @@ CoInterpreter class >> exportAPISelectors [
 			into: [:set :class| set addAll: (self exportAPISelectorsFor: class); yourself])
 	 	addAll: #(	argumentCountOfMethodHeader:
 					canContextSwitchIfActivating:
-					classFieldOffset
 					classHeader:
-					compactClassFieldLSB
-					compactClassFieldWidth
 					compactClassIndexOf:
 					fetchByte:ofObject:
 					functionPointerFor:inClass:
 					isNonIntegerObject:
 					lastPointerOf:
 					literal:ofMethod:
-					objectAfter: 
 					popStack
 					primitiveClosureValueNoContextSwitch
 					specialSelector:
@@ -952,10 +948,12 @@ CoInterpreter >> bytecodePrimAt [
 						ifFalse:
 							[argumentCount := 1.
 							 ^self commonSend]]].
-		 result := self commonVariable: rcvr at: (objectMemory integerValueOf: index) cacheIndex: atIx.
+		 self successful ifTrue:
+			[result := self commonVariable: rcvr at: (objectMemory integerValueOf: index) cacheIndex: atIx].
 		 self successful ifTrue:
 			[self fetchNextBytecode.
-			 ^self internalPop: 2 thenPush: result]].
+			 ^self internalPop: 2 thenPush: result].
+		 self initPrimCall].
 
 	messageSelector := self specialSelector: 16.
 	argumentCount := 1.
@@ -991,10 +989,12 @@ CoInterpreter >> bytecodePrimAtPut [
 						ifFalse:
 							[argumentCount := 2.
 							 ^self commonSend]]].
-		 self commonVariable: rcvr at: (objectMemory integerValueOf: index) put: value cacheIndex: atIx.
+		 self successful ifTrue:
+			[self commonVariable: rcvr at: (objectMemory integerValueOf: index) put: value cacheIndex: atIx].
 		 self successful ifTrue:
 			[self fetchNextBytecode.
-			 ^self internalPop: 3 thenPush: value]].
+			 ^self internalPop: 3 thenPush: value].
+		 self initPrimCall].
 
 	messageSelector := self specialSelector: 17.
 	argumentCount := 2.
@@ -4768,6 +4768,13 @@ CoInterpreter >> noAtCacheCommonAtPut: stringy [
 		[^ self pop: argumentCount+1 thenPush: value]
 ]
 
+{ #category : #'internal interpreter access' }
+CoInterpreter >> noInlineTemporary: offset in: theFP [
+	<var: #theFP type: #'char *'>
+	<inline: false>
+	^self temporary: offset in: theFP
+]
+
 { #category : #'cog jit support' }
 CoInterpreter >> objectIsOld: anObject [
 	<api>
@@ -5940,9 +5947,7 @@ CoInterpreter >> temporary: offset in: theFP [
 
 { #category : #'internal interpreter access' }
 CoInterpreter >> temporary: offset in: theFP put: valueOop [
-	self cCode: ''
-		inSmalltalk:
-			[self assert: thisContext sender sender sender method selector == #primitiveContextAtPut].
+	<inline: true>
 	(self isMachineCodeFrame: theFP)
 		ifTrue: [self mtemporary: offset in: theFP put: valueOop]
 		ifFalse: [self itemporary: offset in: theFP put: valueOop]
