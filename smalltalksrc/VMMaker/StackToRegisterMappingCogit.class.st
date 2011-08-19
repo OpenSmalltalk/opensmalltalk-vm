@@ -1389,8 +1389,13 @@ StackToRegisterMappingCogit >> genPrimitiveAsFloat [
 
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveAt [
+	| r |
 	self assert: self numRegArgs >= 1.
-	^objectRepresentation genInnerPrimitiveAt: 0
+	(r := objectRepresentation genInnerPrimitiveAt: 0) < 0 ifTrue:
+		[^r].
+	^self compileInterpreterPrimitive: (coInterpreter
+											functionPointerForCompiledMethod: methodObj
+											primitiveIndex: primitiveIndex)
 ]
 
 { #category : #'primitive generators' }
@@ -1725,13 +1730,23 @@ StackToRegisterMappingCogit >> genPrimitiveQuo [
 
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveSize [
-	^objectRepresentation genInnerPrimitiveSize: 0
+	| r |
+	(r := objectRepresentation genInnerPrimitiveSize: 0) < 0 ifTrue:
+		[^r].
+	^self compileInterpreterPrimitive: (coInterpreter
+											functionPointerForCompiledMethod: methodObj
+											primitiveIndex: primitiveIndex)
 ]
 
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveStringAt [
+	| r |
 	self assert: self numRegArgs >= 1.
-	^objectRepresentation genInnerPrimitiveStringAt: 0
+	(r := objectRepresentation genInnerPrimitiveStringAt: 0) < 0 ifTrue:
+		[^r].
+	^self compileInterpreterPrimitive: (coInterpreter
+											functionPointerForCompiledMethod: methodObj
+											primitiveIndex: primitiveIndex)
 ]
 
 { #category : #'primitive generators' }

@@ -5846,7 +5846,9 @@ Cogit >> mapObjectReferencesInMachineCodeForBecome [
 					 cogMethod cmType = CMMethod ifTrue:
 						[self assert: cogMethod objectHeader = objectMemory nullHeaderForMachineCodeMethod.
 						 cogMethod methodObject: (objectRepresentation remapOop: cogMethod methodObject).
-						 self assert: (coInterpreter rawHeaderOf: cogMethod methodObject) = cogMethod asInteger.
+						 self assert: ((coInterpreter rawHeaderOf: cogMethod methodObject) = cogMethod asInteger
+									or: [(coInterpreter noAssertMethodClassAssociationOf: cogMethod methodObject)
+											= objectMemory nilObject]).
 						 (objectMemory isYoung: cogMethod methodObject) ifTrue:
 							[hasYoungObj := true]].
 					 self mapFor: cogMethod

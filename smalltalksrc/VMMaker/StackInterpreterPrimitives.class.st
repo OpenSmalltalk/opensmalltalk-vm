@@ -83,18 +83,21 @@ StackInterpreterPrimitives >> primitiveClosureCopyWithCopiedValues [
 
 { #category : #'indexing primitives' }
 StackInterpreterPrimitives >> primitiveContextAt [
+	"Special version of primitiveAt for accessing contexts.
+	 Written to be varargs for use from mirror primitives."
 	| index value aContext spouseFP hdr fmt totalLength fixedFields stSize |
+	<inline: false>
 	<var: #spouseFP type: #'char *'>
 	index := self stackTop.
 	(objectMemory isIntegerObject: index) ifFalse:
-		[^self primitiveFail].
+		[^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
 	aContext := self stackValue: 1.
 	"Duplicating much of stObject:at:put: here allows stObject:at:put: to omit tests for contexts."
 	hdr := objectMemory baseHeader: aContext.
 	(objectMemory isContextHeader: hdr) ifFalse: "might be an instance of a subclass"
 		[value := self stObject: aContext at: index.
-		 ^self pop: 2 thenPush: value].
+		 ^self pop: argumentCount thenPush: value].
 	self externalWriteBackHeadFramePointers.
 	(self isStillMarriedContext: aContext) ifFalse:
 		[fmt := objectMemory formatOfHeader: hdr.
@@ -102,31 +105,34 @@ StackInterpreterPrimitives >> primitiveContextAt [
 		 fixedFields := objectMemory fixedFieldsOf: aContext format: fmt length: totalLength.
 		 stSize := self stackPointerForMaybeMarriedContext: aContext.
 		 (index between: 1 and: stSize) ifFalse:
-			[^self primitiveFail].			
+			[^self primitiveFailFor: PrimErrBadIndex].			
 		value := self subscript: aContext with: (index + fixedFields) format: fmt.
-		^self pop: 2 thenPush: value].
+		^self pop: argumentCount + 1 thenPush: value].
 	spouseFP := self frameOfMarriedContext: aContext.
 	(index between: 1 and: (self stackPointerIndexForFrame: spouseFP)) ifFalse:
-		[^self primitiveFail].
+		[^self primitiveFailFor: PrimErrBadIndex].
 	value := self temporary: index - 1 in: spouseFP.
-	self pop: 2 thenPush: value
+	self pop: argumentCount + 1 thenPush: value
 ]
 
 { #category : #'indexing primitives' }
 StackInterpreterPrimitives >> primitiveContextAtPut [
+	"Special version of primitiveAtPut for accessing contexts.
+	 Written to be varargs for use from mirror primitives."
 	| index value aContext spouseFP hdr fmt totalLength fixedFields stSize |
+	<inline: false>
 	<var: #spouseFP type: #'char *'>
 	value := self stackTop.
 	index := self stackValue: 1.
 	aContext := self stackValue: 2.
 	(objectMemory isIntegerObject: index) ifFalse:
-		[^self primitiveFail].
+		[^self primitiveFailFor: PrimErrBadArgument].
 	"Duplicating much of stObject:at:put: here allows stObject:at:put: to omit tests for contexts."
 	hdr := objectMemory baseHeader: aContext.
 	index := objectMemory integerValueOf: index.
 	(objectMemory isContextHeader: hdr) ifFalse: "might be an instance of a subclass"
 		[self stObject: aContext at: index put: value.
-		 ^self pop: 3 thenPush: value].
+		 ^self pop: argumentCount + 1 thenPush: value].
 	self externalWriteBackHeadFramePointers.
 	(self isStillMarriedContext: aContext) ifFalse:
 		[fmt := objectMemory formatOfHeader: hdr.
@@ -134,19 +140,22 @@ StackInterpreterPrimitives >> primitiveContextAtPut [
 		 fixedFields := objectMemory fixedFieldsOf: aContext format: fmt length: totalLength.
 		 stSize := self stackPointerForMaybeMarriedContext: aContext.
 		 (index between: 1 and: stSize) ifFalse:
-			[^self primitiveFail].			
+			[^self primitiveFailFor: PrimErrBadIndex].			
 		self subscript: aContext with: (index + fixedFields) storing: value format: fmt.
-		^self pop: 3 thenPush: value].
+		^self pop: argumentCount + 1 thenPush: value].
 	spouseFP := self frameOfMarriedContext: aContext.
 	(index between: 1 and: (self stackPointerIndexForFrame: spouseFP)) ifFalse:
-		[^self primitiveFail].
+		[^self primitiveFailFor: PrimErrBadIndex].
 	self temporary: index - 1 in: spouseFP put: value.
-	^self pop: 3 thenPush: value
+	^self pop: argumentCount + 1 thenPush: value
 ]
 
 { #category : #'indexing primitives' }
 StackInterpreterPrimitives >> primitiveContextSize [
+	"Special version of primitiveSize for accessing contexts.
+	 Written to be varargs for use from mirror primitives."
 	| rcvr sz hdr fmt totalLength fixedFields |
+	<inline: false>
 	rcvr := self stackTop.
 	hdr := objectMemory baseHeader: rcvr.
 	fmt := objectMemory formatOfHeader: hdr.
@@ -157,8 +166,7 @@ StackInterpreterPrimitives >> primitiveContextSize [
 			[self externalWriteBackHeadFramePointers.
 			sz := self stackPointerForMaybeMarriedContext: rcvr]
 		ifFalse: [sz := totalLength - fixedFields].
-	self successful ifTrue:
-		[self pop: 1 thenPush: (objectMemory integerObjectOf: sz)]
+	self pop: argumentCount + 1 thenPush: (objectMemory integerObjectOf: sz)
 ]
 
 { #category : #'indexing primitives' }
