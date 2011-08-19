@@ -1,0 +1,7 @@
+#!/bin/sh
+SVNREV="`svnversion | sed 's/^.*://'`"
+echo $SVNREV
+export SVNREV
+rm nsvmlinux/lib/nsvm/{npsqueakregister,npsqueakrun}
+ln ~/Squeak/SqueakV41.sources nsvmlinux/lib/nsvm/*
+tar cvzf nsvmlinux-`date +%g.%U.$SVNREV`.tgz nsvmlinux

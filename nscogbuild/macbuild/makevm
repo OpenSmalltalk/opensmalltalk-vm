@@ -70,3 +70,5 @@ fi
 
 # Clean out any .svn directories (result of copying) in the VM
 find "$DEST" -name .svn -exec rm -rf {} \;
+#link source file into resources directory
+ln SqueakV41.sources "$DEST/Contents/Resources"
