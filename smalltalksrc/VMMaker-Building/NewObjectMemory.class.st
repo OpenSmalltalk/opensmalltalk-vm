@@ -327,6 +327,8 @@ NewObjectMemory >> checkForLeaks [
 
 { #category : #'cog jit support' }
 NewObjectMemory >> classFieldOffset [
+	<api>
+	<cmacro: '() (0 - BaseHeaderSize)'>
 	^0 - BaseHeaderSize
 ]
 
@@ -365,11 +367,15 @@ NewObjectMemory >> clone: obj [
 
 { #category : #'cog jit support' }
 NewObjectMemory >> compactClassFieldLSB [
+	<api>
+	<cmacro: '() 12'>
 	^12
 ]
 
 { #category : #'cog jit support' }
 NewObjectMemory >> compactClassFieldWidth [
+	<api>
+	<cmacro: '() 5'>
 	^5
 ]
 
@@ -1167,6 +1173,20 @@ NewObjectMemory >> initializeObjectMemory: bytesToShift [
 	gcBiasToGrowGCLimit := 0.
 	extraRootCount := 0.
 
+]
+
+{ #category : #'cog jit support' }
+NewObjectMemory >> instFormatFieldLSB [
+	<api>
+	<cmacro: '() 8'>
+	^8
+]
+
+{ #category : #'cog jit support' }
+NewObjectMemory >> instFormatFieldWidth [
+	<api>
+	<cmacro: '() 4'>
+	^4
 ]
 
 { #category : #accessing }

@@ -238,9 +238,3 @@ CogBlockMethod >> startpc: anObject [
 
 	^startpc := anObject
 ]
-
-{ #category : #accessing }
-CogBlockMethod >> typeEtAlWord [
-	<cmacro: '(cm) (((long *)(cm))[1])'>
-	self halt
-]

@@ -65,6 +65,13 @@ CogObjectRepresentationForSqueakV3 >> classForInlineCacheTag: inlineCacheTag [
 	^objectMemory compactClassAt: inlineCacheTag >> ShiftForWord
 ]
 
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> compactClassFieldMask [
+	"This is the mask for the field when shifted into the least significant bits"
+	<inline: true>
+	^(1 << objectMemory compactClassFieldWidth) - 1
+]
+
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> couldBeObject: oop [
 	^(objectMemory isNonIntegerObject: oop)
@@ -135,7 +142,7 @@ CogObjectRepresentationForSqueakV3 >> genGetClassFormatOfNonInt: instReg into: d
 	cogit MoveMw: 0 r: instReg R: destReg.
 	"Form the byte index of the compact class field"
 	cogit LogicalShiftRightCq: (objectMemory compactClassFieldLSB - ShiftForWord) R: destReg.
-	cogit AndCq: ((1 << objectMemory compactClassFieldWidth) - 1) << ShiftForWord R: destReg.
+	cogit AndCq: self compactClassFieldMask << ShiftForWord R: destReg.
 	jumpCompact := cogit JumpNonZero: 0.
 	cogit MoveMw: objectMemory classFieldOffset r: instReg R: scratchReg.
 	"The use of signedIntFromLong is a hack to get round short addressing mode computations.
@@ -171,7 +178,7 @@ CogObjectRepresentationForSqueakV3 >> genGetClassObjectOf: instReg into: destReg
 	cogit MoveMw: 0 r: instReg R: scratchReg.
 	"Form the byte index of the compact class field"
 	cogit LogicalShiftRightCq: (objectMemory compactClassFieldLSB - ShiftForWord) R: scratchReg.
-	cogit AndCq: ((1 << objectMemory compactClassFieldWidth) - 1) << ShiftForWord R: scratchReg.
+	cogit AndCq: self compactClassFieldMask << ShiftForWord R: scratchReg.
 	jumpCompact := cogit JumpNonZero: 0.
 	cogit MoveMw: objectMemory classFieldOffset r: instReg R: destReg.
 	cogit AndCq: AllButTypeMask signedIntFromLong R: destReg.
@@ -197,7 +204,7 @@ CogObjectRepresentationForSqueakV3 >> genGetCompactClassIndexNonIntOf: instReg i
 	cogit MoveMw: 0 r: instReg R: destReg.
 	"Form the byte index of the compact class field"
 	cogit LogicalShiftRightCq: objectMemory compactClassFieldLSB R: destReg.
-	cogit AndCq: (1 << objectMemory compactClassFieldWidth) - 1 R: destReg.
+	cogit AndCq: self compactClassFieldMask R: destReg.
 	^0
 ]
 
@@ -237,17 +244,20 @@ CogObjectRepresentationForSqueakV3 >> genGetHashFieldNonIntOf: instReg asSmallIn
 ]
 
 { #category : #'primitive generators' }
-CogObjectRepresentationForSqueakV3 >> genGetSizeOf: sourceReg into: destReg formatReg: formatReg scratchReg: scratchReg [
+CogObjectRepresentationForSqueakV3 >> genGetSizeOf: sourceReg into: destReg formatReg: formatReg scratchReg: scratchReg abortJumpsInto: aBinaryBlock [
 	"Get the size of the non-immediate object in sourceReg into destReg using formatReg
-	 and scratchReg as temps.  None of these registers can overlap.  Answer the jump
-	 taken if the object in sourceReg is not indexable. Hack: If the object hs a pointer
-	 format other than 2 leave the number of fixed fields in formatReg.  Used by
-	 primitiveSize, primitiveAt, primitiveAtPut, primitiveStringAt & primitiveStringAtPut"
+	 and scratchReg as temps.  None of these registers can overlap.  Supply the jumps
+	 taken if the object in sourceReg is not indexable, or if the object in sourceReg is a
+	 context.. Hack: If the object has a pointer format other than 2 leave the number of
+	 fixed fields in formatReg.  Used by primitiveSize, primitiveAt, and primitiveAtPut"
 	<returnTypeC: #'AbstractInstruction *'>
-	| jumpNotIndexable jumpShortHeader jumpSkip jumpFmtLe4 jumpFmtIs2 jmpFmtGe8 jumpGotByteSize jumpGotWordSize |
+	| jumpNotIndexable jumpIsContext jumpShortHeader jumpSkip
+	  jumpFmtLe4 jumpFmtIs2 jmpFmtGe8 jumpGotByteSize jumpGotWordSize |
+	<inline: true>
 	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
 	"and one wonders why Squeak V1 through V3 are slow..."
 	<var: #jumpNotIndexable type: #'AbstractInstruction *'>
+	<var: #jumpIsContext type: #'AbstractInstruction *'>
 	<var: #jumpShortHeader type: #'AbstractInstruction *'>
 	<var: #jumpSkip type: #'AbstractInstruction *'>
 	<var: #jumpFmtLe4 type: #'AbstractInstruction *'>
@@ -256,12 +266,18 @@ CogObjectRepresentationForSqueakV3 >> genGetSizeOf: sourceReg into: destReg form
 	<var: #jumpGotByteSize type: #'AbstractInstruction *'>
 	<var: #jumpGotWordSize type: #'AbstractInstruction *'>
 	cogit
-		MoveMw: 0 r: sourceReg R: formatReg; "self baseHeader: receiver"
+		MoveMw: 0 r: sourceReg R: formatReg;				"destReg := self baseHeader: receiver"
 		MoveR: formatReg R: destReg;
-		LogicalShiftRightCq: 8 R: formatReg;
-		AndCq: 16rF R: formatReg;				"self formatOfHeader: destReg"
+		LogicalShiftRightCq: objectMemory instFormatFieldLSB R: formatReg;
+		AndCq: self instFormatFieldMask R: formatReg;		"formatReg := self formatOfHeader: destReg"
 		CmpCq: 2 R: formatReg.
 	jumpNotIndexable := cogit JumpLess: 0.
+	cogit
+		MoveR: destReg R: scratchReg;
+		LogicalShiftRightCq: objectMemory compactClassFieldLSB R: scratchReg;
+		AndCq: self compactClassFieldMask R: scratchReg;	"scratchReg := self compactClassIndexOfHeader: destReg"
+		CmpCq: ClassMethodContextCompactIndex R: scratchReg.
+	jumpIsContext := cogit JumpZero: 0.
 	cogit
 		MoveR: destReg R: scratchReg;
 		AndCq: TypeMask R: scratchReg;
@@ -295,16 +311,17 @@ CogObjectRepresentationForSqueakV3 >> genGetSizeOf: sourceReg into: destReg form
 	(jumpGotWordSize jmpTarget:
 	(jumpGotByteSize jmpTarget:
 		cogit Label)).
-	^jumpNotIndexable
+	aBinaryBlock value: jumpNotIndexable value: jumpIsContext
 ]
 
 { #category : #'primitive generators' }
 CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
-	| jumpSI jumpNotSI jumpNotIndexable jumpBounds jumpFmtGt4 jumpFmtEq2 jumpFmtLt8 jumpLarge |
+	| jumpSI jumpNotSI jumpNotIndexable jumpIsContext jumpBounds jumpFmtGt4 jumpFmtEq2 jumpFmtLt8 jumpLarge |
 	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
 	<var: #jumpSI type: #'AbstractInstruction *'>
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpNotIndexable type: #'AbstractInstruction *'>
+	<var: #jumpIsContext type: #'AbstractInstruction *'>
 	<var: #jumpBounds type: #'AbstractInstruction *'>
 	<var: #jumpFmtGt4 type: #'AbstractInstruction *'>
 	<var: #jumpFmtEq2 type: #'AbstractInstruction *'>
@@ -315,11 +332,12 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
 	cogit MoveR: Arg0Reg R: TempReg.
 	cogit MoveR: Arg0Reg R: Arg1Reg.
 	jumpNotSI := self genJumpNotSmallIntegerInScratchReg: TempReg.
-	jumpNotIndexable := self
-							genGetSizeOf: ReceiverResultReg
-							into: ClassReg
-							formatReg: SendNumArgsReg
-							scratchReg: TempReg.
+	self
+		genGetSizeOf: ReceiverResultReg
+		into: ClassReg
+		formatReg: SendNumArgsReg
+		scratchReg: TempReg
+		abortJumpsInto: [:jnx :jic| jumpNotIndexable := jnx. jumpIsContext := jic].
 	self genConvertSmallIntegerToIntegerInScratchReg: Arg1Reg.
 	cogit SubCq: 1 R: Arg1Reg.
 	cogit CmpR: ClassReg R: Arg1Reg.
@@ -332,9 +350,9 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
 	 should still be faster than the interpreter and we hope this object
 	 representation's days are numbered."
 	cogit
-		MoveMw: 0 r: ReceiverResultReg R: ClassReg; "self baseHeader: receiver"
-		LogicalShiftRightCq: 8 R: ClassReg;
-		AndCq: 16rF R: ClassReg;				"self formatOfHeader: ClassReg"
+		MoveMw: 0 r: ReceiverResultReg R: ClassReg;	"self baseHeader: receiver"
+		LogicalShiftRightCq: objectMemory instFormatFieldLSB R: ClassReg;
+		AndCq: self instFormatFieldMask R: ClassReg;	"self formatOfHeader: ClassReg"
 		CmpCq: 4 R: ClassReg.
 	jumpFmtGt4 := cogit JumpGreater: 0.
 	cogit CmpCq: 2 R: ClassReg.	"Common case, e.g. Array, has format = 2"
@@ -369,29 +387,32 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
 	jumpSI jmpTarget:
 	(jumpNotSI jmpTarget:
 	(jumpNotIndexable jmpTarget:
+	(jumpIsContext jmpTarget:
 	(jumpBounds jmpTarget:
-		cogit Label))).
+		cogit Label)))).
 	^0
 ]
 
 { #category : #'primitive generators' }
 CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveSize: retNoffset [
-	| jumpNotSI jumpNotIndexable |
+	| jumpNotSI jumpNotIndexable jumpIsContext |
 	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpNotIndexable type: #'AbstractInstruction *'>
+	<var: #jumpIsContext type: #'AbstractInstruction *'>
 	cogit MoveR: ReceiverResultReg R: TempReg.
 	jumpNotSI := self genJumpSmallIntegerInScratchReg: TempReg.
-	jumpNotIndexable := self
-							genGetSizeOf: ReceiverResultReg
-							into: ClassReg
-							formatReg: SendNumArgsReg
-							scratchReg: TempReg.
+	self
+		genGetSizeOf: ReceiverResultReg
+		into: ClassReg
+		formatReg: SendNumArgsReg
+		scratchReg: TempReg
+		abortJumpsInto: [:jnx :jic| jumpNotIndexable := jnx. jumpIsContext := jic].
 	self genConvertIntegerToSmallIntegerInScratchReg: ClassReg.
 	cogit MoveR: ClassReg R: ReceiverResultReg.
 	self flag: 'currently caller pushes result'.
 	cogit RetN: retNoffset.
-	jumpNotSI jmpTarget: (jumpNotIndexable jmpTarget: cogit Label).
+	jumpNotSI jmpTarget: (jumpNotIndexable jmpTarget: (jumpIsContext jmpTarget: cogit Label)).
 	^0
 ]
 
@@ -411,12 +432,12 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveStringAt: retNOffset [
 	cogit MoveR: Arg0Reg R: Arg1Reg.
 	jumpNotSI := self genJumpNotSmallIntegerInScratchReg: TempReg.
 	cogit
-		MoveMw: 0 r: ReceiverResultReg R: TempReg; "self baseHeader: receiver"
+		MoveMw: 0 r: ReceiverResultReg R: TempReg;	"self baseHeader: receiver"
 		MoveR: TempReg R: ClassReg;					"copy header word; we'll need it later"
-		LogicalShiftRightCq: 8 R: TempReg;
-		AndCq: 16rF R: TempReg;						"self formatOfHeader: destReg"
+		LogicalShiftRightCq: objectMemory instFormatFieldLSB R: TempReg;
+		AndCq: self instFormatFieldMask R: TempReg;	"self formatOfHeader: destReg"
 		MoveR: TempReg R: SendNumArgsReg;
-		AndCq: 3 R: SendNumArgsReg;				"get odd bytes from format (if it turns out to be bytes)"
+		AndCq: 3 R: SendNumArgsReg;					"get odd bytes from format (if it turns out to be bytes)"
 		SubR: SendNumArgsReg R: TempReg;
 		CmpCq: 8 R: TempReg.							"check format is 8"
 	jumpNotByteIndexable := cogit JumpNonZero: 0.
@@ -580,7 +601,7 @@ CogObjectRepresentationForSqueakV3 >> getInlineCacheClassTagFrom: sourceReg into
 	cogit MoveMw: 0 r: sourceReg R: destReg.
 	"Form the byte index of the compact class field"
 	cogit LogicalShiftRightCq: (objectMemory compactClassFieldLSB - ShiftForWord) R: destReg.
-	cogit AndCq: ((1 << objectMemory compactClassFieldWidth) - 1) << ShiftForWord R: destReg.
+	cogit AndCq: self compactClassFieldMask << ShiftForWord R: destReg.
 	jumpCompact := cogit JumpNonZero: 0.
 	cogit MoveMw: objectMemory classFieldOffset r: sourceReg R: destReg.
 	"The use of signedIntFromLong is a hack to get round short addressing mode computations.
@@ -612,6 +633,13 @@ CogObjectRepresentationForSqueakV3 >> inlineCacheTagForInstance: oop [
 { #category : #'in-line cacheing' }
 CogObjectRepresentationForSqueakV3 >> inlineCacheTagIsYoung: cacheTag [
 	^objectMemory isYoung: cacheTag
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> instFormatFieldMask [
+	"This is the mask for the field when shifted into the least significant bits"
+	<inline: true>
+	^(1 << objectMemory instFormatFieldWidth) - 1
 ]
 
 { #category : #'object representation' }

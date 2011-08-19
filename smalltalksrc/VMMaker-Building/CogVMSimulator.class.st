@@ -176,12 +176,6 @@ CogVMSimulator >> byteCountText [
 	^(String streamContents: [:s| s print: byteCount; nextPut: $/; print: sendCount]) asText
 ]
 
-{ #category : #'debugging traps' }
-CogVMSimulator >> bytecodePrimAt [
-	super bytecodePrimAt.
-	self successful ifFalse: [self halt]
-]
-
 { #category : #'memory access' }
 CogVMSimulator >> cCoerce: value to: cTypeString [
 	"Type coercion for translation only; just return the value when running in Smalltalk."

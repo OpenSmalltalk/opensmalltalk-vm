@@ -128,8 +128,3 @@ CogBlockMethodSurrogate32 >> startpc: aValue [
 		unsignedShortAt: address + 3
 		put: aValue
 ]
-
-{ #category : #accessing }
-CogBlockMethodSurrogate32 >> typeEtAlWord [
-	^memory unsignedLongAt: address + 5
-]
