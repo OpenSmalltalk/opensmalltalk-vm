@@ -4,25 +4,13 @@ Extension { #name : #VMMaker }
 VMMaker classSide >> cCodeGenerator: aClass inCache: cache inlined: doInlining [
 	"Answer a C code generator, or a string explaining why a code generator is not available"
 
-	| cg classes c translateableClasses |
+	| cg |
 	[cg := cache
 		at: aClass name asSymbol
 		ifAbsentPut:
 			[ObjectMemory initialize.
 			ObjectMemory initializeConstants.
-			translateableClasses := ObjectMemory withAllSubclasses.
-			MemoryAccess isEnabled ifTrue: [translateableClasses add: MemoryAccess].
-			(translateableClasses  includes: aClass)
-				ifTrue:
-					[cg := self default createCodeGenerator.
-					classes := OrderedCollection new.
-					c := aClass.
-					[c == Object] whileFalse:
-						[classes add: c.
-						c := c superclass].
-					classes do: [:cls | cg addClass: cls]]
-				ifFalse: 
-					[cg := aClass buildCodeGeneratorUpTo: aClass].
+			cg := aClass buildCodeGenerator.
 			cg prepareMethodsInlined: doInlining doAssertions: true.
 			cg]]
 		on: Error
