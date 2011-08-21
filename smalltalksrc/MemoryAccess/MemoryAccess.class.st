@@ -65,73 +65,11 @@ MemoryAccess replaces the traditional external definitions in sqMemoryAccess.h:
 Class {
 	#name : #MemoryAccess,
 	#superclass : #Object,
+	#classVars : [
+		'Enabled'
+	],
 	#category : #MemoryAccess
 }
-
-{ #category : #translation }
-MemoryAccess class >> asCString [
-	"Answer the translated C source for this class."
-
-	"Interpreter asCString"
-	"ObjectMemory asCString"
-
-	| vmm cg stream |
-	(Smalltalk hasClassNamed: 'VMMaker')
-		ifTrue: [vmm := Smalltalk at: #VMMaker]
-		ifFalse: [^ self notify: 'VMMaker not in this image'].
-	cg := vmm codeGenerator: #cCode forClass: self.
-	stream := ReadWriteStream on: ''.
-	cg emitCCodeOn: stream doAssertions: true.
-	cg emitExportsOn: stream.
-	^ stream contents
-
-]
-
-{ #category : #translation }
-MemoryAccess class >> asCString: aSelector [
-	"Answer the translated C source for a method."
-
-	"Interpreter asCString: #bytecodePrimBlockCopy"
-	"ObjectMemory asCString: #lastPointerOf:"
-
-	| vmm cg method stream |
-	(Smalltalk hasClassNamed: 'VMMaker')
-		ifTrue: [vmm := Smalltalk at: #VMMaker]
-		ifFalse: [^ self notify: 'VMMaker not in this image'].
-	cg := vmm codeGenerator: #cCode forClass: self.
-	cg isString ifTrue:
-		[^ '/* Simulator subclasses with method overrides should not be translated. */',
-			String cr, '/* ', cg, ' */'].
-	method := cg methodNamed: aSelector.
-	method ifNil: [^ self methodNotTranslatedMessage: aSelector].
-	stream := ReadWriteStream on: ''.
-	method emitCCodeOn: stream generator: cg.
-	^ stream contents
-
-]
-
-{ #category : #translation }
-MemoryAccess class >> asInlinedCString: aSelector [
-	"Answer the translated Inlined C source for a method."
-
-	"Interpreter asCString: #bytecodePrimBlockCopy"
-	"ObjectMemory asCString: #lastPointerOf:"
-
-	| vmm cg method stream |
-	(Smalltalk hasClassNamed: 'VMMaker')
-		ifTrue: [vmm := Smalltalk at: #VMMaker]
-		ifFalse: [^ self notify: 'VMMaker not in this image'].
-	cg := vmm codeGenerator: #inlinedCCode forClass: self.
-	cg isString ifTrue:
-		[^ '/* Simulator subclasses with method overrides should not be translated. */',
-			String cr, '/* ', cg, ' */'].
-	method := cg methodNamed: aSelector.
-	method ifNil: [^ self methodNotTranslatedMessage: aSelector].
-	stream := ReadWriteStream on: ''.
-	method emitCCodeOn: stream generator: cg.
-	^ stream contents
-
-]
 
 { #category : #translation }
 MemoryAccess class >> declareCVarsIn: aCCodeGenerator [
@@ -141,31 +79,15 @@ MemoryAccess class >> declareCVarsIn: aCCodeGenerator [
 
 { #category : #'enable - disable' }
 MemoryAccess class >> disable [
-	"Use sqMemoryAccess.h macros or inline functions to provide low level object memory to machine memory mapping. This is the normal setting for most VM builders."
+	"Use sqMemoryAccess.h macros or inline functions to provide low level object
+	memory to machine memory mapping. This is the normal setting for most
+	VM builders."
 
 	"MemoryAccess disable"
 
-	| copyOfInterpreterPlugin copyOfObjectMemory |
-	copyOfInterpreterPlugin := InterpreterPlugin copy.
-	copyOfObjectMemory := ObjectMemory copy.
-
-	InterpreterPlugin superclass: Object.
-	Object addSubclass: InterpreterPlugin.
-	MemoryAccess removeSubclass: InterpreterPlugin.
-
-	ObjectMemory superclass: Object.
-	Object addSubclass: ObjectMemory.
-	MemoryAccess removeSubclass: ObjectMemory.
-
-	SystemChangeNotifier uniqueInstance
-		classDefinitionChangedFrom: copyOfInterpreterPlugin
-		to: InterpreterPlugin.
-	SystemChangeNotifier uniqueInstance
-		classDefinitionChangedFrom: copyOfObjectMemory
-		to: ObjectMemory.
-
-	^ ObjectMemory superclass
-
+	(VMMaker respondsTo: #clearCodeGeneratorCache)
+		ifTrue: [VMMaker clearCodeGeneratorCache]. "SlangBrowser"
+	Enabled := false
 ]
 
 { #category : #'enable - disable' }
@@ -178,44 +100,20 @@ MemoryAccess class >> enable [
 
 	"MemoryAccess enable"
 
-	| copyOfInterpreterPlugin copyOfObjectMemory |
-	copyOfInterpreterPlugin := InterpreterPlugin copy.
-	copyOfObjectMemory := ObjectMemory copy.
-
-	InterpreterPlugin superclass: MemoryAccess.
-	MemoryAccess addSubclass: InterpreterPlugin.
-	Object removeSubclass: InterpreterPlugin.
-
-	ObjectMemory superclass: MemoryAccess.
-	MemoryAccess addSubclass: ObjectMemory.
-	Object removeSubclass: ObjectMemory.
-
-	SystemChangeNotifier uniqueInstance
-		classDefinitionChangedFrom: copyOfInterpreterPlugin
-		to: InterpreterPlugin.
-	SystemChangeNotifier uniqueInstance
-		classDefinitionChangedFrom: copyOfObjectMemory
-		to: ObjectMemory.
-
-	^ ObjectMemory superclass
-
+	(VMMaker respondsTo: #clearCodeGeneratorCache)
+		ifTrue: [VMMaker clearCodeGeneratorCache]. "SlangBrowser"
+	Enabled := true
 ]
 
 { #category : #'enable - disable' }
 MemoryAccess class >> isEnabled [
-	"Answer true if MemoryAccess is the superclass of ObjectMemory, in which
-	case its methods will be translated as replacements for the traditional C
+	"Answer true if MemoryAccess should be translated to C, in which case
+	its methods will be translated as replacements for the traditional C
 	preprocessor macros in sqMemoryAccess.h."
 
 	"MemoryAccess isEnabled"
 
-	^ ObjectMemory superclass == self
-]
-
-{ #category : #translation }
-MemoryAccess class >> requiredMethodNames [
-	"return the list of method names that should be retained for export or other support reasons"
-	^ #(oopForPointer: pointerForOop: oopAt:)
+	^ Enabled == true
 ]
 
 { #category : #'object memory access' }
