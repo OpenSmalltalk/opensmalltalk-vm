@@ -43,6 +43,25 @@ Object class >> asCString: aSelector [
 ]
 
 { #category : #'*SlangBrowser-VMMaker-Translation to C' }
+Object class >> asInlinedCString [
+	"Answer the translated C source for this class."
+
+	"Interpreter asInlinedCString"
+	"ObjectMemory asInlinedCString"
+	"FilePlugin asInlinedCString"
+
+	| vmm cg stream |
+	(Smalltalk hasClassNamed: 'VMMaker')
+		ifTrue: [vmm := Smalltalk at: #VMMaker]
+		ifFalse: [^ self notify: 'VMMaker not in this image'].
+	cg := vmm codeGenerator: #inlinedCCode forClass: self.
+	stream := ReadWriteStream on: ''.
+	cg emitCCodeOn: stream doAssertions: true.
+	^ stream contents
+
+]
+
+{ #category : #'*SlangBrowser-VMMaker-Translation to C' }
 Object class >> asInlinedCString: aSelector [
 	"Answer the translated Inlined C source for a method."
 
@@ -58,7 +77,7 @@ Object class >> asInlinedCString: aSelector [
 		[^ '/* ', self name, ' can not be translated. */',
 			String cr, '/* ', cg, ' */'].
 	method := cg methodNamed: aSelector.
-	method ifNil: [^ self methodNotTranslatedMessage: aSelector].
+	method ifNil: [^ ObjectMemory methodNotTranslatedMessage: aSelector].
 	stream := ReadWriteStream on: ''.
 	method emitCCodeOn: stream generator: cg.
 	^ stream contents
