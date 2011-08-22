@@ -1307,7 +1307,6 @@ Cogit >> JumpLong: jumpTarget [
 Cogit >> JumpLongNonZero: jumpTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	<var: #jumpTarget type: #'void *'>
 	^self gen: JumpLongNonZero operand: jumpTarget asInteger
 ]
 
@@ -1315,7 +1314,6 @@ Cogit >> JumpLongNonZero: jumpTarget [
 Cogit >> JumpLongZero: jumpTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	<var: #jumpTarget type: #'void *'>
 	^self gen: JumpLongZero operand: jumpTarget asInteger
 ]
 
@@ -2913,7 +2911,7 @@ Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethod tag: caseNTag isMNUCase: is
 						ifFalse: [self interpretOffset - backEnd callInstructionByteSize])].
 	self CmpCw: caseNTag R: TempReg.
 	self MoveCw: operand R: SendNumArgsReg.
-	self JumpLongZero: (self cCoerceSimple: target to: #'void *').
+	self JumpLongZero: target.
 	self MoveCw: cPIC asInteger R: ClassReg.
 	self JumpLong: (self cPICMissTrampolineFor: cPIC cmNumArgs).
 
@@ -2937,7 +2935,7 @@ Cogit >> cogMNUPICSelector: selector methodOperand: methodOperand numArgs: numAr
 		compilationBreak: selector
 		point: (objectMemory lengthOf: selector).
 	endCPICCase0 isNil ifTrue:
-		[^NotFullyInitialized].
+		[^self cCoerceSimple: NotFullyInitialized to: #'CogMethod *'].
 	startAddress := methodZone allocate: closedPICSize.
 	startAddress = 0 ifTrue:
 		[^self cCoerceSimple: InsufficientCodeSpace to: #'CogMethod *'].
@@ -2954,7 +2952,7 @@ Cogit >> cogMNUPICSelector: selector methodOperand: methodOperand numArgs: numAr
 	headerSize := self sizeof: CogMethod.
 	size := self generateInstructionsAt: startAddress + headerSize.
 	end := self outputInstructionsAt: startAddress + headerSize.
-	"The missOffset is th same as the interpretOffset."
+	"The missOffset is the same as the interpretOffset."
 	self assert: missOffset = (interpretCall address + interpretCall machineCodeSize - startAddress).
 	self assert: startAddress + cmEntryOffset = entry address.
 	^self
@@ -3311,9 +3309,9 @@ Cogit >> compileCPIC: cPIC Case0: case0CogMethod Case1Method: case1Method tag: c
 	endCPICCase0 := self CmpCw: case1Tag R: TempReg.
 	jumpNext jmpTarget: endCPICCase0.
 	self MoveCw: operand R: SendNumArgsReg.
-	self JumpLongZero: (isMNUCase ifTrue: [mnuCall] ifFalse: [targetEntry]).
+	self JumpLongZero: (isMNUCase ifTrue: [mnuCall] ifFalse: [targetEntry]) asInteger.
 	endCPICCase1 := self MoveCw: cPIC asInteger R: ClassReg.
-	self JumpLong: (self cCoerceSimple: (self cPICMissTrampolineFor: numArgs) to: #'void *').
+	self JumpLong: (self cPICMissTrampolineFor: numArgs).
 	^0
 
 ]
@@ -3344,11 +3342,11 @@ Cogit >> compileClosedPICPrototype [
 		[:h|
 		self CmpCw: 16rBABE1F15+h R: TempReg.
 		self MoveCw: 16rBADA550 + h R: SendNumArgsReg.
-		self JumpLongZero: (self cCoerceSimple: 16rBEDCA5E0 + h to: #'void *').
+		self JumpLongZero: 16rBEDCA5E0.
 		h = 1 ifTrue:
 			[endCPICCase1 := self Label]].
 	self MoveCw: 16rAB5CE55 R: ClassReg.
-	self JumpLong: (self cCoerceSimple: (self cPICMissTrampolineFor: numArgs) to: #'void *').
+	self JumpLong: (self cPICMissTrampolineFor: numArgs).
 	^0
 ]
 
