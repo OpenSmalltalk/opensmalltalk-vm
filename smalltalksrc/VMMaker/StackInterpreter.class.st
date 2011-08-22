@@ -4671,6 +4671,7 @@ StackInterpreter >> getShortFromFile: aFile swap: swapFlag [
 StackInterpreter >> getStackPointer [
 	"For Alien FFI"
 	<api>
+	<returnTypeC: #'sqInt *'>
 	^stackPointer
 ]
 
