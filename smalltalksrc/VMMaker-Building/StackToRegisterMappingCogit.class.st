@@ -674,6 +674,7 @@ StackToRegisterMappingCogit >> compileAbstractInstructionsFrom: start through: e
 		 fixup targetInstruction: (self abstractInstructionAt: nextOpcodeIndex)].
 	 bytecodePointer := self nextBytecodePCFor: descriptor at: bytecodePointer byte0: byte0 in: methodObj.
 	 result = 0 and: [bytecodePointer <= end]] whileTrue.
+	self checkEnoughOpcodes.
 	^result
 ]
 

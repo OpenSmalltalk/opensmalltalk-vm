@@ -215,6 +215,11 @@ CurrentImageCoInterpreterFacade >> functionPointerForCompiledMethod: methodOop p
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> headerOf: methodPointer [
+	^objectMemory integerObjectOf: (self objectForOop: methodPointer) header
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> inMemoryCFramePointerAddress [
 	^self addressForLabel: #CFramePointer
 ]
@@ -248,6 +253,16 @@ CurrentImageCoInterpreterFacade >> initializeObjectMap [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> instFormatFieldLSB [
+	^objectMemory instFormatFieldLSB
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> instFormatFieldWidth [
+	^objectMemory instFormatFieldWidth
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> instructionPointerAddress [
 	^self addressForLabel: #instructionPointer
 ]
@@ -265,6 +280,11 @@ CurrentImageCoInterpreterFacade >> integerValueOf: anInteger [
 { #category : #'cog jit support' }
 CurrentImageCoInterpreterFacade >> isCogCompiledCodeCompactionCalledFor [
 	^true
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> isCogMethodReference: methodHeader [
+	^coInterpreter isCogMethodReference: methodHeader
 ]
 
 { #category : #accessing }
@@ -434,6 +454,16 @@ CurrentImageCoInterpreterFacade >> primErrTable [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> primFailCodeAddress [
 	^self addressForLabel: #primFailCode
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> primTraceLogAddress [
+	^self addressForLabel: #primTraceLog
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> primTraceLogIndexAddress [
+	^coInterpreter primTraceLogIndexAddress
 ]
 
 { #category : #accessing }
