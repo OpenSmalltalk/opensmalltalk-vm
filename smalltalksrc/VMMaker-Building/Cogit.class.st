@@ -359,7 +359,11 @@ Cogit class >> chooseCogitClass [
 
 { #category : #'in-image compilation' }
 Cogit class >> cog: aCompiledMethod selector: aSelector [
-	"StackToRegisterMappingCogit cog: (Integer >> #benchFib) selector: #benchFib"
+	"COGMTVM := false. StackToRegisterMappingCogit cog: (Integer >> #benchFib) selector: #benchFib"
+	"| tuple |
+	 COGMTVM := false.
+	 tuple := StackToRegisterMappingCogit cog: (Object >> #at:) selector: #at:.
+	 tuple second disassembleMethod: tuple last"
 	| coInterpreter |
 	self initialize.
 	coInterpreter := CurrentImageCoInterpreterFacade new cogit: self new; yourself.
@@ -2458,6 +2462,13 @@ Cogit >> checkAssertsEnabledInCogit [
 	self assert: assertsAreEnabledInCogit
 ]
 
+{ #category : #debugging }
+Cogit >> checkEnoughOpcodes [
+	<inline: true>
+	opcodeIndex > numAbstractOpcodes ifTrue:
+		[self error: 'Cog JIT internal error. Too many abstract opcodes.  Num opcodes heuristic is too optimistic.']
+]
+
 { #category : #'garbage collection' }
 Cogit >> checkIfValidObjectRef: annotation pc: mcpc cogMethod: cogMethod [
 	<var: #mcpc type: #'char *'>
@@ -3199,6 +3210,7 @@ Cogit >> compileAbstractInstructionsFrom: start through: end [
 		 fixup targetInstruction: (self abstractInstructionAt: nextOpcodeIndex)].
 	 bytecodePointer := self nextBytecodePCFor: descriptor at: bytecodePointer byte0: byte0 in: methodObj.
 	 result = 0 and: [bytecodePointer <= end]] whileTrue.
+	self checkEnoughOpcodes.
 	^result
 ]
 
