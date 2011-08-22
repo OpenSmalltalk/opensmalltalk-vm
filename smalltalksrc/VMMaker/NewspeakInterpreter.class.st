@@ -3541,6 +3541,7 @@ NewspeakInterpreter >> getSavedWindowSize [
 NewspeakInterpreter >> getStackPointer [
 	"For Newsqueak FFI"
 	<export: true>
+	<returnTypeC: #'sqInt *'>
 	^stackPointer
 ]
 
