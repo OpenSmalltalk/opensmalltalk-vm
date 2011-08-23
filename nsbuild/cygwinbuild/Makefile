@@ -218,7 +218,7 @@ print-objects:
 	@echo -----------------------------------------------------
 
 eitheror.exe: $(WIN32UTILDIR)/eitheror.c
-	$(CC) -o $@ -O1 -mno-cygwin $<
+	$(CC) -o $@ -O1 -mconsole -mno-cygwin $<
 
 mkNamedPrims.exe: $(WIN32UTILDIR)/mkNamedPrims.c
 	$(CC) -o $@ -mconsole -mno-cygwin $<

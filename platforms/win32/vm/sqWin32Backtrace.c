@@ -61,7 +61,7 @@ backtrace(void **retpcs, int nrpcs)
 		mov EAX, EBP
 		mov [__fp], EAX
 	}
-#elif defined(__MINGW32__)
+#elif defined(__GNUC__)
 	asm volatile ("movl %%ebp, %0" : "=r"(__fp) : );
 #else
 # error "don't know how to derive ebp"
@@ -81,7 +81,7 @@ backtrace_from_fp(void *startfp, void **retpcs, int nrpcs)
 		mov EAX, FS:[18h]
 		mov [tib], EAX
 	}
-#elif defined(__MINGW32__)
+#elif defined(__GNUC__)
 	asm volatile ("movl %%fs:0x18, %0" : "=r" (tib) : );
 #else
 # error "don't know how to derive tib"

@@ -58,7 +58,7 @@ CYGWIN_NT-5.1 mcstalkerxp 1.5.24(0.156/4/2) 2007-01-31 10:57 i686 Cygwin
 	supports it this VM will be able to read and write to stdin and stdout.
 
 
-3a. If you want to get the Cog VM simulator working you'll need to build the
+3b. If you want to get the Cog VM simulator working you'll need to build the
 BochsIA32Plugin/BochsIA32Plugin.xcodeproj project and to build that you'll
 need to first build bochs.  WARNING: No one has tried to build the plugin on
 Win32.  You are on your own but your efforts will be warmly welcomed.

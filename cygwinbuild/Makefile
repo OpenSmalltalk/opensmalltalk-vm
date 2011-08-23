@@ -259,7 +259,7 @@ print-objects:
 	@echo -----------------------------------------------------
 
 eitheror.exe: $(WIN32UTILDIR)/eitheror.c
-	$(CC) -o $@ -O1 -mno-cygwin $<
+	$(CC) -o $@ -O1 -mconsole -mno-cygwin $<
 
 mkNamedPrims.exe: $(WIN32UTILDIR)/mkNamedPrims.c
 	$(CC) -o $@ -mconsole -mno-cygwin $<
@@ -367,9 +367,3 @@ sqNamedPrims.h: plugins.int mkNamedPrims.exe
 	./mkNamedPrims.exe $(INTERNAL_PLUGINS) > sqNamedPrims.h
 
 $(OBJDIR)/sqNamedPrims.o:	sqNamedPrims.c sqNamedPrims.h
-
-Squeak.res: $(BASEDIR)/Squeak.rc
-	$(RC) $(RCFLAGS) -i $< -o $(OBJDIR)/$@
-
-Croquet.res: $(BASEDIR)/Croquet.rc
-	$(RC) $(RCFLAGS) -i $< -o $(OBJDIR)/$@

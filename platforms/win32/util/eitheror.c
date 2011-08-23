@@ -10,6 +10,8 @@
 #ifdef _MSC_VER
 # define F_OK 00
 # define access _access
+#else
+# include <unistd.h>
 #endif
 
 int
