@@ -85,7 +85,6 @@ CogFamilyCocoaIOSConfig >> defaultExternalPlugins [
 		MIDIPlugin
 		B3DAcceleratorPlugin
 		LocalePlugin
-		UnixOSProcessPlugin
 		ObjectiveCPlugin
 		QuicktimePlugin
 		TestOSAPlugin
@@ -123,6 +122,7 @@ CogFamilyCocoaIOSConfig >> defaultInternalPlugins [
 		SoundPlugin
 		StarSqueakPlugin 
 		SurfacePlugin 
+		UnixOSProcessPlugin
 		)
 ]
 
