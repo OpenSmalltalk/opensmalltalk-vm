@@ -70,7 +70,6 @@ ThreadedFFIPlugin class >> preambleCCode [
 	"For a source of builtin defines grep for builtin_define in a gcc release config directory."
 	^'
 #include "sqAssert.h" /* for assert */
-#undef halt /* sqAssert.h provides a halt used in the interpreter */
 
 #ifdef _MSC_VER
 # define alloca _alloca

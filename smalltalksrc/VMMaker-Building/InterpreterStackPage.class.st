@@ -34,7 +34,7 @@ InterpreterStackPage class >> alignedByteSize [
 ]
 
 { #category : #translation }
-InterpreterStackPage class >> alignedByteSizeForClient: aVMClass [
+InterpreterStackPage class >> alignedByteSizeOf: anObject forClient: aVMClass [
 	^self alignedByteSize
 ]
 

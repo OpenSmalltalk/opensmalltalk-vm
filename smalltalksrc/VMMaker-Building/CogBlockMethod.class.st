@@ -43,7 +43,7 @@ CogBlockMethod class >> alignedByteSize [
 ]
 
 { #category : #accessing }
-CogBlockMethod class >> alignedByteSizeForClient: aVMClass [
+CogBlockMethod class >> alignedByteSizeOf: anObject forClient: aVMClass [
 	^aVMClass cogit cogBlockMethodSurrogateClass alignedByteSize
 ]
 
