@@ -28,5 +28,3 @@ extern void warning(char *);
 # define assertf(msg)  (warning(#msg " " __stringifyNum(__LINE__)),0)
 # define PRODUCTION 0
 #endif
-
-#define halt() warning("halt")
