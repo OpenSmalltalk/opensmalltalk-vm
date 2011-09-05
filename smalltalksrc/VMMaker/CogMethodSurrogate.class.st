@@ -10,7 +10,7 @@ Class {
 }
 
 { #category : #accessing }
-CogMethodSurrogate class >> alignedByteSizeForClient: aVMClass [
+CogMethodSurrogate class >> alignedByteSizeOf: anObject forClient: aVMClass [
 	^self alignedByteSize
 ]
 

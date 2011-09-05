@@ -11,6 +11,12 @@ Class {
 	#category : #'VMMaker-InterpreterSimulation'
 }
 
+{ #category : #accessing }
+CObjectAccessor class >> alignedByteSizeOf: aCObjectAccessor forClient: aVMClass [
+	"Hack; this only works if the object is actually bytes."
+	^aCObjectAccessor object size
+]
+
 { #category : #'instance creation' }
 CObjectAccessor class >> on: anObject [
 	^self new setObject: anObject
