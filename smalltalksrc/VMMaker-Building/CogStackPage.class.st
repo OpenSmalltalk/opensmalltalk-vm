@@ -10,7 +10,7 @@ CogStackPage class >> alignedByteSize [
 ]
 
 { #category : #translation }
-CogStackPage class >> alignedByteSizeForClient: aVMClass [
+CogStackPage class >> alignedByteSizeOf: anObject forClient: aVMClass [
 	^self surrogateClass alignedByteSize
 ]
 

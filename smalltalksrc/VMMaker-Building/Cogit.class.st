@@ -5164,7 +5164,7 @@ Cogit >> halt [
 
 { #category : #'translation support' }
 Cogit >> halt: aString [
-	<cmacro: '(msg) error("halt: " msg)'>
+	<cmacro: '(msg) warning("halt: " msg)'>
 	Halt new signal: aString
 ]
 
