@@ -589,7 +589,9 @@ VMClass >> sizeof: objectSymbolOrClass [
 			1 1 1) at: index].
 	^(objectSymbolOrClass isBehavior
 		ifTrue: [objectSymbolOrClass]
-		ifFalse: [objectSymbolOrClass class]) alignedByteSizeForClient: self
+		ifFalse: [objectSymbolOrClass class])
+			alignedByteSizeOf: objectSymbolOrClass
+			forClient: self
 ]
 
 { #category : #'simulation support' }

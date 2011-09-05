@@ -4768,13 +4768,6 @@ CoInterpreter >> noAtCacheCommonAtPut: stringy [
 		[^ self pop: argumentCount+1 thenPush: value]
 ]
 
-{ #category : #'internal interpreter access' }
-CoInterpreter >> noInlineTemporary: offset in: theFP [
-	<var: #theFP type: #'char *'>
-	<inline: false>
-	^self temporary: offset in: theFP
-]
-
 { #category : #'cog jit support' }
 CoInterpreter >> objectIsOld: anObject [
 	<api>

@@ -6728,6 +6728,13 @@ StackInterpreter >> nextImplicitReceiverFor: anObject withMixin: mixin [
 ]
 
 { #category : #'internal interpreter access' }
+StackInterpreter >> noInlineTemporary: offset in: theFP [
+	<var: #theFP type: #'char *'>
+	<inline: false>
+	^self temporary: offset in: theFP
+]
+
+{ #category : #'internal interpreter access' }
 StackInterpreter >> noInlineTemporary: offset in: theFP put: valueOop [
 	<var: #theFP type: #'char *'>
 	<inline: false>

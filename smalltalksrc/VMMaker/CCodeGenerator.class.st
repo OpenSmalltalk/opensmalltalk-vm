@@ -283,17 +283,7 @@ CCodeGenerator >> apiMethods: aDictionary [
 CCodeGenerator >> builtin: sel [
 	"Answer true if the given selector is one of the builtin selectors."
 
-	^(#(error:
-		 byteAt: byteAt:put: byteAtPointer: byteAtPointer:put:
-		 intAt: intAt:put: intAtPointer: intAtPointer:put:
-		 longAt: longAt:put: longAtPointer: longAtPointer:put:
-		 shortAt: shortAt:put: shortAtPointer: shortAtPointer:put:
-		 fetchFloatAt:into: storeFloatAt:from:
-				fetchFloatAtPointer:into: storeFloatAtPointer:from:
-		 fetchSingleFloatAt:into: storeSingleFloatAt:from:
-				fetchSingleFloatAtPointer:into: storeSingleFloatAtPointer:from:)
-			includes: sel)
-	  or: [translationDict includesKey: sel]
+	^(self kernel: sel) or: [translationDict includesKey: sel]
 ]
 
 { #category : #utilities }
@@ -2445,6 +2435,22 @@ CCodeGenerator >> isVoidPointer: aCType [ "<String>"
 ]
 
 { #category : #utilities }
+CCodeGenerator >> kernel: sel [
+	"Answer true if the given selector is one of the kernel selectors that are implemented as macros."
+
+	^(#(error:
+		 byteAt: byteAt:put: byteAtPointer: byteAtPointer:put:
+		 intAt: intAt:put: intAtPointer: intAtPointer:put:
+		 longAt: longAt:put: longAtPointer: longAtPointer:put:
+		 shortAt: shortAt:put: shortAtPointer: shortAtPointer:put:
+		 fetchFloatAt:into: storeFloatAt:from:
+				fetchFloatAtPointer:into: storeFloatAtPointer:from:
+		 fetchSingleFloatAt:into: storeSingleFloatAt:from:
+				fetchSingleFloatAtPointer:into: storeSingleFloatAtPointer:from:)
+			includes: sel)
+]
+
+{ #category : #utilities }
 CCodeGenerator >> localizeGlobalVariables [
 	| candidates elected |
 
@@ -2494,7 +2500,7 @@ CCodeGenerator >> messageReceiverIsInterpreterProxy: sendNode [
 	^self isGeneratingPluginCode
 	  and: [sendNode receiver isVariable
 	  and: ['interpreterProxy' = sendNode receiver name
-	  and: [(self builtin: sendNode selector) not]]]
+	  and: [(self kernel: sendNode selector) not]]]
 ]
 
 { #category : #utilities }

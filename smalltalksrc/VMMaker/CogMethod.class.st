@@ -39,7 +39,7 @@ Class {
 }
 
 { #category : #accessing }
-CogMethod class >> alignedByteSizeForClient: aVMClass [
+CogMethod class >> alignedByteSizeOf: anObject forClient: aVMClass [
 	^aVMClass cogit cogMethodSurrogateClass alignedByteSize
 ]
 
