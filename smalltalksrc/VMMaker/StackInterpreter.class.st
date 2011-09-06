@@ -1598,7 +1598,7 @@ StackInterpreter >> bereaveAllMarriedContexts [
 	oop := objectMemory firstObject.
 	[oop < objectMemory freeStart] whileTrue:
 		[((objectMemory isFreeObject: oop) not
-		   and: [(self isContextNonInt: oop)
+		   and: [(objectMemory isContextNonInt: oop)
 		   and: [self isMarriedOrWidowedContext: oop]]) ifTrue:
 			[self markContextAsDead: oop].
 		 oop := objectMemory objectAfter: oop]
@@ -4672,7 +4672,7 @@ StackInterpreter >> getStackPointer [
 	"For Alien FFI"
 	<api>
 	<returnTypeC: #'sqInt *'>
-	^stackPointer
+	^self cCoerceSimple: stackPointer to: #'sqInt *'
 ]
 
 { #category : #'plugin support' }
@@ -5051,13 +5051,6 @@ StackInterpreter >> initializeInterpreter: bytesToShift [
 	statProcessSwitch := 0.
 	statIOProcessEvents := 0.
 	statStackPageDivorce := 0
-]
-
-{ #category : #'object format' }
-StackInterpreter >> instSpecOfClass: classPointer [
-	"This is the same as the field stored in every object header"
-
-	^(objectMemory formatOfClass: classPointer) >> 8 bitAnd: 16rF
 ]
 
 { #category : #'frame access' }
@@ -5468,12 +5461,6 @@ StackInterpreter >> isCog [
 StackInterpreter >> isContext: oop [
 	<inline: true>
 	^(objectMemory isNonIntegerObject: oop) and: [objectMemory isContextHeader: (objectMemory baseHeader: oop)]
-]
-
-{ #category : #'internal interpreter access' }
-StackInterpreter >> isContextNonInt: oop [
-	<inline: true>
-	^objectMemory isContextHeader: (objectMemory baseHeader: oop)
 ]
 
 { #category : #'process primitive support' }
@@ -7784,7 +7771,7 @@ StackInterpreter >> printOop: oop [
 								[(self isPointerAlien: oop)
 									ifTrue: [' pointer @ ']
 									ifFalse: [' direct @ ']]).
-			 self printHex: (self startOfAlienData: oop); cr.
+			 self printHex: (self startOfAlienData: oop) asUnsignedInteger; cr.
 			 ^nil].
 		 (objectMemory isWords: oop) ifTrue:
 			[lastIndex := 64 min: ((objectMemory byteSizeOf: oop) / BytesPerWord).
@@ -8230,7 +8217,7 @@ StackInterpreter >> pushMaybeContextReceiverVariable: fieldIndex [
 	<inline: true>
 	rcvr := self receiver.
 	(fieldIndex < MethodIndex
-	and: [self isContextNonInt: rcvr])
+	and: [objectMemory isContextNonInt: rcvr])
 		ifTrue:
 			[self internalPush: (self instVar: fieldIndex ofContext: rcvr)]
 		ifFalse:
@@ -9466,7 +9453,7 @@ StackInterpreter >> stObject: array at: index [
 	fmt := objectMemory formatOfHeader: hdr.
 	totalLength := objectMemory lengthOf: array baseHeader: hdr format: fmt.
 	fixedFields := objectMemory fixedFieldsOf: array format: fmt length: totalLength.
-	(fmt = 3 and: [self isContextHeader: hdr])
+	(fmt = 3 and: [objectMemory isContextHeader: hdr])
 		ifTrue:
 			[stSize := self fetchStackPointerOf: array.
 			((self oop: index isGreaterThanOrEqualTo: 1)
@@ -9489,7 +9476,8 @@ StackInterpreter >> stObject: array at: index put: value [
 	fmt := objectMemory formatOfHeader: hdr.
 	totalLength := objectMemory lengthOf: array baseHeader: hdr format: fmt.
 	fixedFields := objectMemory fixedFieldsOf: array format: fmt length: totalLength.
-	(fmt = 3 and: [self isContextHeader: hdr])
+	(fmt = 3
+	 and: [objectMemory isContextHeader: hdr])
 		ifTrue:
 			[stSize := self fetchStackPointerOf: array.
 			((self oop: index isGreaterThanOrEqualTo: 1)
@@ -9743,7 +9731,7 @@ StackInterpreter >> storeMaybeContextReceiverVariable: fieldIndex withValue: anO
 	| rcvr |
 	rcvr := self receiver.
 	(fieldIndex <= ReceiverIndex
-	and: [(self isContextNonInt: rcvr)
+	and: [(objectMemory isContextNonInt: rcvr)
 	and: [self isMarriedOrWidowedContext: rcvr]])
 		ifTrue:
 			[self instVar: fieldIndex ofContext: rcvr put: anObject]
@@ -9854,24 +9842,6 @@ StackInterpreter >> subscript: array with: index storing: oopToStore format: fmt
 								storeByte: index - 1
 								ofObject: array
 								withValue: valueToStore]]]
-]
-
-{ #category : #'object access primitives' }
-StackInterpreter >> sufficientSpaceToInstantiate: classOop indexableSize: size [ 
-	"Return the number of bytes required to allocate an instance of the given class with the given number of indexable fields."
-	"Details: For speed, over-estimate space needed for fixed fields or literals; the low space threshold is a blurry line."
-	| format atomSize|
-	<inline: true>
-	format := self instSpecOfClass: classOop.
-
-	"fail if attempting to call new: on non-indexable class"
-	((self cCoerce: size to: 'usqInt ') > 0 and: [format < 2])
-		ifTrue: [^ false].
-
-	format < 8
-		ifTrue: ["indexable fields are words or pointers" atomSize := BytesPerWord]
-		ifFalse: ["indexable fields are bytes" atomSize := 1].
-	^objectMemory sufficientSpaceToAllocate: 2500 + (size * atomSize)
 ]
 
 { #category : #'message sending' }
