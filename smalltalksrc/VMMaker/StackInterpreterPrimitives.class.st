@@ -55,7 +55,7 @@ StackInterpreterPrimitives >> primitiveClone [
 		ifTrue:
 			[newCopy := rcvr]
 		ifFalse:
-			[(self isContextNonInt: rcvr)
+			[(objectMemory isContextNonInt: rcvr)
 				ifTrue:
 					[newCopy := self cloneContext: rcvr]
 				ifFalse:
@@ -208,8 +208,8 @@ StackInterpreterPrimitives >> primitiveCopyObject [
 	self failed ifTrue:[^nil].
 	(objectMemory isPointers: rcvr) ifFalse:
 		[^self primitiveFail].
-	((self isContextNonInt: rcvr)
-	 or: [self isContextNonInt: arg]) ifTrue:
+	((objectMemory isContextNonInt: rcvr)
+	 or: [objectMemory isContextNonInt: arg]) ifTrue:
 		[^self primitiveFail].
 	(objectMemory fetchClassOfNonInt: rcvr) = (objectMemory fetchClassOfNonInt: arg) ifFalse:
 		[^self primitiveFail].
@@ -218,11 +218,12 @@ StackInterpreterPrimitives >> primitiveCopyObject [
 		[^self primitiveFail].
 	
 	"Now copy the elements"
-	0 to: length-1 do:[:i|
+	0 to: length-1 do:
+		[:i|
 		objectMemory storePointer: i ofObject: rcvr withValue: (objectMemory fetchPointer: i ofObject: arg)].
 
 	"Note: The above could be faster for young receivers but I don't think it'll matter"
-	self pop: 1. "pop arg; answer receiver"
+	self pop: 1 "pop arg; answer receiver"
 
 ]
 

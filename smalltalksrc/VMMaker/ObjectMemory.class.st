@@ -107,6 +107,7 @@ Class {
 		'HeaderTypeExtraBytes',
 		'HeaderTypeFree',
 		'HeaderTypeGC',
+		'LongSizeNumBits',
 		'NilContext',
 		'RemapBufferSize',
 		'RootTableRedZone',
@@ -293,6 +294,7 @@ BytesPerWord = 8 ifTrue:
 	"Note SizeMask + Size4Bit gives the mask needed for size fits of format word in classes.
 		This is used in instantiateClass:indexableSize: "
 	LongSizeMask := WordMask - 16rFF + SizeMask.
+	LongSizeNumBits := 30. "30 bits of size info in long size filed."
 	CompactClassMask := 16r1F000.
 
 	"masks for root and mark bits"
@@ -2314,6 +2316,13 @@ ObjectMemory >> initializeObjectMemory: bytesToShift [
 	gcStartUsecs := 0
 ]
 
+{ #category : #'object format' }
+ObjectMemory >> instSpecOfClass: classPointer [
+	"This is the same as the field stored in every object header"
+
+	^self formatOfHeader: (self formatOfClass: classPointer)
+]
+
 { #category : #'object enumeration' }
 ObjectMemory >> instanceAfter: objectPointer [ 
 	"Support for instance enumeration. Return the next instance 
@@ -2367,7 +2376,7 @@ ObjectMemory >> instantiateClass: classPointer indexableSize: size [
 	"Note this byteSize comes from the format word of the class which is pre-shifted
 		to 4 bytes per field.  Need another shift for 8 bytes per word..."
 	byteSize := byteSize << (ShiftForWord-2).
-	format := classFormat >> 8 bitAnd: 15.
+	format := self formatOfHeader: classFormat.
 	self flag: #sizeLowBits.
 	format < 8
 		ifTrue:
@@ -2578,6 +2587,12 @@ ObjectMemory >> isContextHeader: aHeader [
 	"c.f. {BlockContext. MethodContext. PseudoContext} collect: [:class| class -> class indexIfCompact]"
 	^ ((aHeader >> 12) bitAnd: 16r1F) = 13			"BlockContext"
 		or: [((aHeader >> 12) bitAnd: 16r1F) = 14]	"MethodContext"
+]
+
+{ #category : #contexts }
+ObjectMemory >> isContextNonInt: oop [
+	<inline: true>
+	^self isContextHeader: (self baseHeader: oop)
 ]
 
 { #category : #'header access' }
@@ -3854,7 +3869,7 @@ ObjectMemory >> shorten: obj toIndexableSize: nSlots [
 	(self isPointers: obj) ifFalse:
 		[^obj].
 	hdr := self baseHeader: obj.
-	fmt := (hdr >> 8) bitAnd: 16rF.
+	fmt := self formatOfHeader: hdr.
 	totalLength := self lengthOf: obj baseHeader: hdr format: fmt.
 	fixedFields := self fixedFieldsOf: obj format: fmt length: totalLength.
 	desiredLength := fixedFields + nSlots.
@@ -4388,6 +4403,33 @@ ObjectMemory >> sufficientSpaceToAllocate: bytes [
 	(self oop: (self sizeOfFree: freeBlock) isGreaterThanOrEqualTo: minFree)
 		ifTrue: [^true]
 		ifFalse: [^self sufficientSpaceAfterGC: minFree].
+]
+
+{ #category : #allocation }
+ObjectMemory >> sufficientSpaceToInstantiate: classOop indexableSize: size [ 
+	"Return the number of bytes required to allocate an instance of the given class with the given number of indexable fields."
+	"Details: For speed, over-estimate space needed for fixed fields or literals; the low space threshold is a blurry line."
+	<var: #size type: #usqInt>
+	| format allocSize |
+	<inline: true>
+	(format := self instSpecOfClass: classOop) < 8
+		ifTrue:
+			["indexable fields are words or pointers"
+			size ~= 0 ifTrue:
+				["fail if attempting to call new: on non-indexable class"
+				 format < 2 ifTrue:
+					[^false].
+				 "fail if attempting to allocate over 2 Gb, since this overflows 32-bit arithmetic"
+				 size >> (LongSizeNumBits - BytesPerWord) > 0 ifTrue:
+					[^false]].
+			allocSize := size * BytesPerWord]
+		ifFalse:
+			["indexable fields are bytes"
+			 "fail if attempting to allocate over 2 Gb, since this overflows 32-bit arithmetic"
+			 size >> LongSizeNumBits > 0 ifTrue:
+				[^false].
+			allocSize := size].
+	^self sufficientSpaceToAllocate: 2500 + allocSize
 ]
 
 { #category : #'gc -- mark and sweep' }
