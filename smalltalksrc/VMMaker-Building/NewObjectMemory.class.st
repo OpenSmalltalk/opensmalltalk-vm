@@ -513,7 +513,7 @@ NewObjectMemory >> eeInstantiateAndInitializeClass: classPointer indexableSize: 
 	"Note this byteSize comes from the format word of the class which is pre-shifted
 		to 4 bytes per field.  Need another shift for 8 bytes per word..."
 	byteSize := byteSize << (ShiftForWord-2).
-	format := classFormat >> 8 bitAnd: 15.
+	format := self formatOfHeader: classFormat.
 	self flag: #sizeLowBits.
 	format < 8
 		ifTrue:
@@ -576,7 +576,7 @@ NewObjectMemory >> eeInstantiateClass: classPointer indexableSize: size [
 	"Note this byteSize comes from the format word of the class which is pre-shifted
 		to 4 bytes per field.  Need another shift for 8 bytes per word..."
 	byteSize := byteSize << (ShiftForWord-2).
-	format := classFormat >> 8 bitAnd: 15.
+	format := self formatOfHeader: classFormat.
 	self flag: #sizeLowBits.
 	format < 8
 		ifTrue:
