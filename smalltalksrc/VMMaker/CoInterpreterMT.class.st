@@ -1338,6 +1338,8 @@ CoInterpreterMT >> threadSwitchIfNecessary: newProc from: sourceCode [
 			 objectMemory storePointer: SuspendedContextIndex ofObject: newProc withValue: activeContext].
 		 vmThread := cogThreadManager vmThreadAt: newProcThreadId.
 		 vmThread priority: (self quickFetchInteger: PriorityIndex ofObject: newProc).
+		 vmThread state = CTMUnavailable ifTrue:
+				[vmThread state: CTMWantingOwnership].
 		 self returnToSchedulingLoopAndReleaseVMOrWakeThread: vmThread source: CSSwitchIfNeccessary].
 	(self quickFetchInteger: PriorityIndex ofObject: newProc) < maxWaitingPriority ifTrue:
 		[checkThreadActivation := true.

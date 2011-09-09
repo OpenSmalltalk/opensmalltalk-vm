@@ -478,6 +478,13 @@ VMClass >> majorVersion [
 	^self class vmProxyMajorVersion
 ]
 
+{ #category : #'C library simulation' }
+VMClass >> mem: aString cp: bString y: n [
+	<doNotGenerate>
+	"implementation of memcpy(3)"
+	^self st: aString rn: bString cpy: n
+]
+
 { #category : #'simulation support' }
 VMClass >> minorVersion [
 	"This is implemented in sqVirtualMachine.c, so this form is for simulation only."

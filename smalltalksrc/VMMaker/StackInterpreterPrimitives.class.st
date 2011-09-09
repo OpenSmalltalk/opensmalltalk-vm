@@ -249,7 +249,7 @@ StackInterpreterPrimitives >> primitiveDoNamedPrimitiveWithArgs [
 	 e.g. ContextPart>>tryNamedPrimitiveIn: aCompiledMethod for: aReceiver withArgs: arguments"
 	| argumentArray arraySize methodArg methodHeader
 	  moduleName functionName moduleLength functionLength
-	  spec addr primRcvr ctxtRcvr |
+	  spec addr primRcvr ctxtRcvr isArray |
 	<var: #addr declareC: 'void (*addr)()'>
 	argumentArray := self stackTop.
 	(objectMemory isArray: argumentArray) ifFalse:
@@ -268,10 +268,11 @@ StackInterpreterPrimitives >> primitiveDoNamedPrimitiveWithArgs [
 
 	(self literalCountOfHeader: methodHeader) > 2 ifFalse:
 		[^self primitiveFailFor: -3]. "invalid methodArg state"
-	(self assertClassOf: (spec := objectMemory fetchPointer: 1 "first literal" ofObject: methodArg)
-		is: (objectMemory splObj: ClassArray) 
-		compactClassIndex: ClassArrayCompactIndex).
-	(self successful
+	isArray := objectMemory
+					is: (spec := objectMemory fetchPointer: 1 "first literal" ofObject: methodArg)
+					instanceOf: (objectMemory splObj: ClassArray) 
+					compactClassIndex: ClassArrayCompactIndex.
+	(isArray
 	and: [(objectMemory lengthOf: spec) = 4
 	and: [(self primitiveIndexOfMethodHeader: methodHeader) = 117]]) ifFalse:
 		[^self primitiveFailFor: -3]. "invalid methodArg state"

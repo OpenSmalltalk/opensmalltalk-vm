@@ -730,22 +730,27 @@ CogThreadManager >> willingVMThread [
 	 states (other than the current owner if the VM is owned), or nil if none.
 	 Preferentially answer threads wanting ownership."
 	<returnTypeC: #'CogVMThread *'>
-	| vmThreadA vmThreadB |
+	| thread threadWantingVM threadWilling |
 	<inline: false>
-	<var: #vmThreadA type: #'CogVMThread *'>
-	<var: #vmThreadB type: #'CogVMThread *'>
+	<var: #thread type: #'CogVMThread *'>
+	<var: #threadWantingVM type: #'CogVMThread *'>
+	<var: #threadWilling type: #'CogVMThread *'>
+	threadWantingVM := threadWilling := nil.
 	1 to: numThreads do:
 		[:i|
-		 vmThreadA := threads at: i.
-		 vmThreadA state =  CTMWantingOwnership ifTrue:
-			[^vmThreadA].
-		 (i ~= vmOwner
-		  and: [vmThreadA state = CTMAssignableOrInVM]) ifTrue:
-			[i + 1 to: numThreads do:
-				[:j|
-				vmThreadB := threads at: i.
-				 vmThreadB state =  CTMWantingOwnership ifTrue:
-					[^vmThreadB]].
-			^vmThreadA]].
+		 i ~= vmOwner ifTrue:
+			[thread := threads at: i.
+			 thread state =  CTMWantingOwnership ifTrue:
+				[(threadWantingVM isNil
+				  or: [threadWantingVM priority < thread priority]) ifTrue:
+					[threadWantingVM := thread]].
+			 thread state =  CTMAssignableOrInVM ifTrue:
+				[(threadWilling isNil
+				  or: [threadWilling priority < thread priority]) ifTrue:
+					[threadWilling := thread]]]].
+	threadWantingVM ifNotNil:
+		[^threadWantingVM].
+	threadWilling ifNotNil:
+		[^threadWilling].
 	^nil
 ]

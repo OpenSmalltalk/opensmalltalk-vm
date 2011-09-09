@@ -59,8 +59,8 @@ GeniePlugin class >> versionString [
 GeniePlugin >> cSquaredDistanceFrom: aPoint to: bPoint [
 	"arguments are pointer to ints paired as x,y coordinates of points"
 	| aPointX aPointY bPointX bPointY xDiff yDiff |
-	self var: #aPoint type: 'int *  '.
-	self var: #bPoint type: 'int *  '.
+	<var: #aPoint type: #'int *'>
+	<var: #bPoint type: #'int *'>
 	aPointX := aPoint at: 0.
 	aPointY := aPoint at: 1.
 	bPointX := bPoint at: 0.
@@ -92,17 +92,17 @@ GeniePlugin >> minorNO [
 { #category : #computation }
 GeniePlugin >> primSameClassAbsoluteStrokeDistanceMyPoints: myPointsOop otherPoints: otherPointsOop myVectors: myVectorsOop otherVectors: otherVectorsOop mySquaredLengths: mySquaredLengthsOop otherSquaredLengths: otherSquaredLengthsOop myAngles: myAnglesOop otherAngles: otherAnglesOop maxSizeAndReferenceFlag: maxSizeAndRefFlag rowBase: rowBaseOop rowInsertRemove: rowInsertRemoveOop rowInsertRemoveCount: rowInsertRemoveCountOop [
 	| base insertRemove jLimiT substBase insert remove subst removeBase insertBase insertRemoveCount additionalMultiInsertRemoveCost myPoints otherPoints myVectors otherVectors rowInsertRemoveCount mySquaredLengths otherSquaredLengths myAngles otherAngles rowBase rowInsertRemove otherPointsSize myVectorsSize otherVectorsSize otherSquaredLengthsSize rowBaseSize maxDist maxSize forReference jM1 iM1 iM1T2 jM1T2 |
-	self var: #myPoints type: 'int *  '.
-	self var: #otherPoints type: 'int *  '.
-	self var: #myVectors type: 'int *  '.
-	self var: #otherVectors type: 'int *  '.
-	self var: #mySquaredLengths type: 'int *  '.
-	self var: #otherSquaredLengths type: 'int *  '.
-	self var: #myAngles type: 'int *  '.
-	self var: #otherAngles type: 'int *  '.
-	self var: #rowBase type: 'int *  '.
-	self var: #rowInsertRemove type: 'int *  '.
-	self var: #rowInsertRemoveCount type: 'int *  '.
+	<var: #myPoints type: #'int *'>
+	<var: #otherPoints type: #'int *'>
+	<var: #myVectors type: #'int *'>
+	<var: #otherVectors type: #'int *'>
+	<var: #mySquaredLengths type: #'int *'>
+	<var: #otherSquaredLengths type: #'int *'>
+	<var: #myAngles type: #'int *'>
+	<var: #otherAngles type: #'int *'>
+	<var: #rowBase type: #'int *'>
+	<var: #rowInsertRemove type: #'int *'>
+	<var: #rowInsertRemoveCount type: #'int *'>
 	self
 		primitive: 'primSameClassAbsoluteStrokeDistanceMyPoints_otherPoints_myVectors_otherVectors_mySquaredLengths_otherSquaredLengths_myAngles_otherAngles_maxSizeAndReferenceFlag_rowBase_rowInsertRemove_rowInsertRemoveCount'
 		parameters: #(#Oop #Oop #Oop #Oop #Oop #Oop #Oop #Oop #SmallInteger #Oop #Oop #Oop)
