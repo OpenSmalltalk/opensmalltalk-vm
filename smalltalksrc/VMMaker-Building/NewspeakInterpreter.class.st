@@ -1332,15 +1332,14 @@ NewspeakInterpreter >> allocateMemory: heapSize minimum: minimumMemory imageFile
 	implementation with mmap().
 	See CCodeGenerator>>writeDefaultMacrosOn: which specifies a default implementation."
 
-	self inline: true.
-	self returnTypeC: 'char *'.
-	self var: #fileStream type: 'sqImageFile'.
+	<inline: true>
+	<returnTypeC: #'char *'>
+	<var: #fileStream type: #sqImageFile>
 	^ self
 		allocateMemory: heapSize
 		Minimum: minimumMemory
 		ImageFile: fileStream
 		HeaderSize: headerSize
-
 ]
 
 { #category : #contexts }
@@ -1439,17 +1438,6 @@ NewspeakInterpreter >> assertClassOf: oop is: classOop [
 
 	self success: cl = classOop.
 
-]
-
-{ #category : #utilities }
-NewspeakInterpreter >> assertClassOf: oop is: classOop compactClassIndex: compactClassIndex [
-	"Succeed if the oop is an instance of the given class. Fail if the object is an integer.
-	 If the class has a (non-zero) compactClassIndex use that to speed up the check.
-	 N.B. Inlining should result in classOop not being accessed if compactClassIndex
-	 is non-zero."
-
-	<inline: true>
-	self success: (self is: oop instanceOf: classOop compactClassIndex: compactClassIndex)
 ]
 
 { #category : #become }
@@ -3314,21 +3302,11 @@ NewspeakInterpreter >> findSelectorOfMethod: meth forReceiver: rcvr [
 { #category : #'plugin primitive support' }
 NewspeakInterpreter >> floatArg: index [
 	"Like #stackFloatValue: but access method arguments left-to-right"
-	| result oop |
+	| oop |
 	<returnTypeC: #double>
-	<var: #result type: #double>
 	oop := self methodArg: index.
 	oop = 0 ifTrue:[^0.0]. "methodArg: failed"
-	"N.B.  Because Slang always inlines isClassOfNonImm:equalTo:compactClassIndex:
-	 (because isClassOfNonImm:equalTo:compactClassIndex: has an inline: pragma) the
-	 phrase (self splObj: ClassArray) is expanded in-place and is _not_ evaluated if
-	 ClassArrayCompactIndex is non-zero."
-	(self isClassOfNonImm: oop equalTo: (self splObj: ClassFloat) compactClassIndex: ClassFloatCompactIndex) ifTrue:
-		[self cCode: '' inSmalltalk: [result := Float new: 2].
-		 self fetchFloatAt: oop + BaseHeaderSize into: result.
-		 ^result].
-	self primitiveFail.
-	^0.0
+	^self floatValueOf: oop
 ]
 
 { #category : #'object format' }
@@ -3344,26 +3322,26 @@ NewspeakInterpreter >> floatObjectOf: aFloat [
 
 { #category : #utilities }
 NewspeakInterpreter >> floatValueOf: oop [
-	"Fetch the instance variable at the given index of the given object. Return the
-	 C double precision floating point value of that object, or fail if it is not a Float."
+	"Fetch the instance variable at the given index of the given object.  Answer the C
+	 double precision floating point value of that instance variable, or fail if it is not a Float."
 
-	| result |
+	| isFloat result |
 	<returnTypeC: #double>
 	<var: #result type: #double>
-	self flag: #Dan.  "None of the float stuff has been converted for 64 bits"
-	"N.B.  Because Slang always inlines assertClassOf:is:compactClassIndex:
-	 (because assertClassOf:is:compactClassIndex: has an inline: pragma) the
-	 phrase (self splObj: ClassArray) is expanded in-place and is _not_
-	 evaluated if ClassArrayCompactIndex is non-zero."
-	(self is: oop
-		instanceOf: (self splObj: ClassFloat)
-		compactClassIndex: ClassFloatCompactIndex)
-		ifTrue: [self cCode: '' inSmalltalk: [result := Float new: 2].
-				self fetchFloatAt: oop + BaseHeaderSize into: result.
-				^result]
-		ifFalse:
-			[self primitiveFail.
-			^0.0]
+	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
+	 (because is:instanceOf:compactClassIndex: has an inline: pragma) the
+	 phrase (self splObj: ClassArray) is expanded in-place and is _not_ evaluated if
+	 ClassArrayCompactIndex is non-zero."
+	isFloat := self
+				is: oop
+				instanceOf: (self splObj: ClassFloat)
+				compactClassIndex: ClassFloatCompactIndex.
+	isFloat ifTrue:
+		[self cCode: '' inSmalltalk: [result := Float new: 2].
+		 self fetchFloatAt: oop + BaseHeaderSize into: result.
+		 ^result].
+	self primitiveFail.
+	^0.0
 ]
 
 { #category : #'debug printing' }
@@ -3730,7 +3708,7 @@ NewspeakInterpreter >> initializeExtraClassInstVarIndices [
 		oop := self fetchPointer: i ofObject: classArrayObj.
 		((self isBytes: oop)
 		and: [(self lengthOf: oop) = 5
-		and: [(self str: #Array n: (self firstFixedField: oop) cmp: 5) = 0]]) ifTrue:
+		and: [(self str: 'Array' n: (self firstFixedField: oop) cmp: 5) = 0]]) ifTrue:
 			[classNameIndex := i]]
 ]
 
@@ -4381,24 +4359,16 @@ NewspeakInterpreter >> loadBitBltFrom: bb [
 { #category : #utilities }
 NewspeakInterpreter >> loadFloatOrIntFrom: floatOrInt [
 	"If floatOrInt is an integer, then convert it to a C double float and return it.
-	If it is a Float, then load its value and return it.
-	Otherwise fail -- ie return with primErrorCode non-zero."
+	 If it is a Float, then load its value and return it.
+	 Otherwise fail -- ie return with primErrorCode non-zero."
 
-	| result |
 	<inline: true>
 	<asmLabel: false>
 	<returnTypeC: #double>
-	<var: #result type: #double>
 
 	(self isIntegerObject: floatOrInt) ifTrue:
 		[^(self integerValueOf: floatOrInt) asFloat].
-	self assertClassOf: floatOrInt
-		is: (self splObj: ClassFloat)
-		compactClassIndex: ClassFloatCompactIndex.
-	self cCode: '' inSmalltalk: [result := Float new: 2].
-	self successful ifTrue:
-		[self fetchFloatAt: floatOrInt + BaseHeaderSize into: result].
-	^result
+	^self floatValueOf: floatOrInt
 ]
 
 { #category : #initialization }
@@ -4983,17 +4953,8 @@ NewspeakInterpreter >> pop: nItems thenPushInteger: integerVal [
 
 { #category : #'stack bytecodes' }
 NewspeakInterpreter >> popFloat [
-	"Note: May be called by translated primitive code."
-
-	| top result |
-	<returnTypeC: 'double'>
-	<var: #result type: 'double '>
-	top := self popStack.
-	self assertClassOf: top is: (self splObj: ClassFloat).
-	self successful ifTrue:
-		[self cCode: '' inSmalltalk: [result := Float new: 2].
-		self fetchFloatAt: top + BaseHeaderSize into: result].
-	^ result
+	<returnTypeC: #double>
+	^self floatValueOf: self popStack
 ]
 
 { #category : #'internal interpreter access' }
@@ -10605,16 +10566,8 @@ NewspeakInterpreter >> stSizeOf: oop [
 
 { #category : #'internal interpreter access' }
 NewspeakInterpreter >> stackFloatValue: offset [
-	"Note: May be called by translated primitive code."
-	| result floatPointer |
-	<returnTypeC: 'double'>
-	<var: #result type: 'double '>
-	floatPointer := self longAt: stackPointer - (offset*BytesPerWord).
-	(self fetchClassOf: floatPointer) = (self splObj: ClassFloat) 
-		ifFalse:[self primitiveFail. ^0.0].
-	self cCode: '' inSmalltalk: [result := Float new: 2].
-	self fetchFloatAt: floatPointer + BaseHeaderSize into: result.
-	^ result
+	<returnTypeC: #double>
+	^self floatValueOf: (self longAt: stackPointer - (offset*BytesPerWord))
 ]
 
 { #category : #'internal interpreter access' }

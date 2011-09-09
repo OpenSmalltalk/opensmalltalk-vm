@@ -44,3 +44,13 @@ CogObjectHeader class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 							['objSize']		->	[#'unsigned char'] }
 						otherwise: [#(#unsigned #Boolean ' : 1')])]
 ]
+
+{ #category : #accessing }
+CogObjectHeader >> isForwarded [
+	^self classIndex = 0
+]
+
+{ #category : #accessing }
+CogObjectHeader >> setIsForwarded [
+	self classIndex: 0
+]

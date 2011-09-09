@@ -488,11 +488,11 @@ Mpeg3Plugin >> primitiveMPEG3ReadFrame: fileHandle buffer: aBuffer bufferOffset:
 		int color_model,
 		int stream)"
 
+	<var: #file declareC: 'mpeg3_t * file'>
+	<var: #bufferBaseAddr declareC: 'unsigned char *bufferBaseAddr'>
+	<var: #outputRowsPtr declareC: 'unsigned char  ** outputRowsPtr'>
 	self primitive: 'primitiveMPEG3ReadFrameBufferOffset'
 		parameters: #(Oop WordArray  SmallInteger SmallInteger  SmallInteger  SmallInteger  SmallInteger  SmallInteger  SmallInteger  SmallInteger  SmallInteger SmallInteger).
-	self var: #file declareC: 'mpeg3_t * file'.
-	self var: #bufferBaseAddr declareC: 'unsigned char *bufferBaseAddr'.
-	self var: #outputRowsPtr declareC: 'unsigned char  ** outputRowsPtr'.
 
 	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^0].
@@ -526,11 +526,11 @@ Mpeg3Plugin >> primitiveMPEG3ReadFrame: fileHandle buffer: aBuffer x: xNumber y:
 		int color_model,
 		int stream)"
 
+	<var: #file type: 'mpeg3_t * '>
+	<var: #bufferBaseAddr type: 'unsigned char *'>
+	<var: #outputRowsPtr type: 'unsigned char  ** '>
 	self primitive: 'primitiveMPEG3ReadFrame'
 		parameters: #(Oop WordArray  SmallInteger  SmallInteger  SmallInteger  SmallInteger  SmallInteger  SmallInteger  SmallInteger  SmallInteger SmallInteger).
-	self var: #file type: 'mpeg3_t * '.
-	self var: #bufferBaseAddr type: 'unsigned char *'.
-	self var: #outputRowsPtr type: 'unsigned char  ** '.
 
 	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^0].

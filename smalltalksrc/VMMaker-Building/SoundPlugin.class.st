@@ -56,11 +56,11 @@ SoundPlugin >> primitiveSoundGetRecordingSampleRate [
 { #category : #primitives }
 SoundPlugin >> primitiveSoundGetVolume [
 	"Set the sound input recording level."
-	| left right results | 
+	| left right results |
+	<var: #left type: #double>
+	<var: #right type: #double>
 	self primitive: 'primitiveSoundGetVolume'
 		parameters: #( ).
-	self var: #left type: 'double '.
-	self var: #right type: 'double '.
 	left := 0.
 	right := 0.
 	self cCode: 'snd_Volume((double *) &left,(double *) &right)'.
@@ -123,7 +123,7 @@ SoundPlugin >> primitiveSoundPlaySilence [
 SoundPlugin >> primitiveSoundRecordSamplesInto: buf startingAt: startWordIndex [ 
 	"Record a buffer's worth of 16-bit sound samples."
 	| bufSizeInBytes samplesRecorded bufPtr byteOffset bufLen |
-	self var: #bufPtr type: 'char*'.
+	<var: #bufPtr type: #'char*'>
 	self primitive: 'primitiveSoundRecordSamples'
 		parameters: #(WordArray SmallInteger ).
 

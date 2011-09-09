@@ -1424,9 +1424,9 @@ StackInterpreter >> allocateMemory: heapSize minimum: minimumMemory imageFile: f
 	implementation with mmap().
 	See CCodeGenerator>>writeDefaultMacrosOn: which specifies a default implementation."
 
-	self inline: true.
-	self returnTypeC: 'char *'.
-	self var: #fileStream type: 'sqImageFile'.
+	<inline: true>
+	<returnTypeC: #'char *'>
+	<var: #fileStream type: #sqImageFile>
 	^ self
 		allocateMemory: heapSize
 		Minimum: minimumMemory
@@ -1488,17 +1488,6 @@ StackInterpreter >> assertClassOf: oop is: classOop [
 	<inline: true>
 	<asmLabel: false>
 	self success: (objectMemory isClassOfNonImm: oop equalTo: classOop)
-]
-
-{ #category : #utilities }
-StackInterpreter >> assertClassOf: oop is: classOop compactClassIndex: compactClassIndex [
-	"Succeed if the oop is an instance of the given class. Fail if the object is an integer.
-	 If the class has a (non-zero) compactClassIndex use that to speed up the check.
-	 N.B. Inlining should result in classOop not being accessed if compactClassIndex
-	 is non-zero."
-
-	<inline: true>
-	self success: (objectMemory is: oop instanceOf: classOop compactClassIndex: compactClassIndex)
 ]
 
 { #category : #'debug support' }
@@ -4168,22 +4157,11 @@ StackInterpreter >> findUnwindThroughContext: homeContext [
 { #category : #'plugin primitive support' }
 StackInterpreter >> floatArg: index [
 	"Like #stackFloatValue: but access method arguments left-to-right"
-	| result oop |
+	| oop |
 	<returnTypeC: #double>
-	<var: #result type: #double>
 	oop := self methodArg: index.
 	oop = 0 ifTrue:[^0.0]. "methodArg: failed"
-	"N.B.  Because Slang always inlines assertClassOf:is:compactClassIndex:
-	 (because assertClassOf:is:compactClassIndex: has an inline: pragma) the
-	 phrase (self splObj: ClassArray) is expanded in-place and is _not_
-	 evaluated if ClassArrayCompactIndex is non-zero."
-	self assertClassOf: oop is: (objectMemory splObj: ClassFloat)
-		compactClassIndex: ClassFloatCompactIndex.
-	self successful ifTrue:
-		[self cCode: '' inSmalltalk: [result := Float new: 2].
-		objectMemory fetchFloatAt: oop + BaseHeaderSize into: result.
-		^result].
-	^0.0
+	^self floatValueOf: oop
 ]
 
 { #category : #'object format' }
@@ -4203,21 +4181,22 @@ StackInterpreter >> floatValueOf: oop [
 	"Fetch the instance variable at the given index of the given object. Return the C double precision floating point value of that instance variable, or fail if it is not a Float."
 	"Note: May be called by translated primitive code."
 
-	| result |
+	| isFloat result |
 	<returnTypeC: #double>
 	<var: #result type: #double>
-	self flag: #Dan.  "None of the float stuff has been converted for 64 bits"
-	"N.B.  Because Slang always inlines assertClassOf:is:compactClassIndex:
-	 (because assertClassOf:is:compactClassIndex: has an inline: pragma) the
-	 phrase (self splObj: ClassArray) is expanded in-place and is _not_
-	 evaluated if ClassArrayCompactIndex is non-zero."
-	self assertClassOf: oop
-		is: (objectMemory splObj: ClassFloat)
-		compactClassIndex: ClassFloatCompactIndex.
-	self successful ifTrue:
+	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
+	 (because is:instanceOf:compactClassIndex: has an inline: pragma) the
+	 phrase (self splObj: ClassArray) is expanded in-place and is _not_ evaluated if
+	 ClassArrayCompactIndex is non-zero."
+	isFloat := objectMemory
+				is: oop
+				instanceOf: (objectMemory splObj: ClassFloat)
+				compactClassIndex: ClassFloatCompactIndex.
+	isFloat ifTrue:
 		[self cCode: '' inSmalltalk: [result := Float new: 2].
-		objectMemory fetchFloatAt: oop + BaseHeaderSize into: result.
-		^result].
+		 objectMemory fetchFloatAt: oop + BaseHeaderSize into: result.
+		 ^result].
+	self primitiveFail.
 	^0.0
 ]
 
@@ -5000,7 +4979,7 @@ StackInterpreter >> initializeExtraClassInstVarIndices [
 		oop := objectMemory fetchPointer: i - 1 ofObject: classArrayObj.
 		((objectMemory isBytes: oop)
 		and: [(objectMemory lengthOf: oop) = 5
-		and: [(self str: #Array n: (objectMemory firstFixedField: oop) cmp: 5) = 0]]) ifTrue:
+		and: [(self str: 'Array' n: (objectMemory firstFixedField: oop) cmp: 5) = 0]]) ifTrue:
 			[classNameIndex := i - 1]]
 ]
 
@@ -5477,13 +5456,6 @@ StackInterpreter >> isFloatObject: oop [
 			ifFalse: [(objectMemory fetchClassOfNonInt: oop) = objectMemory classFloat]]
 ]
 
-{ #category : #'internal interpreter access' }
-StackInterpreter >> isFloatObjectNonInt: oop floatClass: floatClass [
-	^ClassFloatCompactIndex ~= 0
-		ifTrue: [(objectMemory compactClassIndexOf: oop) = ClassFloatCompactIndex]
-		ifFalse: [(objectMemory fetchClassOfNonInt: oop) = floatClass]
-]
-
 { #category : #'object format' }
 StackInterpreter >> isIndexable: oop [
 	^(objectMemory formatOf: oop) >= 2
@@ -5684,24 +5656,16 @@ StackInterpreter >> loadBitBltFrom: bb [
 { #category : #utilities }
 StackInterpreter >> loadFloatOrIntFrom: floatOrInt [
 	"If floatOrInt is an integer, then convert it to a C double float and return it.
-	If it is a Float, then load its value and return it.
-	Otherwise fail -- ie return with primErrorCode non-zero."
+	 If it is a Float, then load its value and return it.
+	 Otherwise fail -- ie return with primErrorCode non-zero."
 
-	| result |
 	<inline: true>
 	<asmLabel: false>
 	<returnTypeC: #double>
-	<var: #result type: #double>
 
 	(objectMemory isIntegerObject: floatOrInt) ifTrue:
 		[^(objectMemory integerValueOf: floatOrInt) asFloat].
-	self assertClassOf: floatOrInt
-		is: (objectMemory splObj: ClassFloat)
-		compactClassIndex: ClassFloatCompactIndex.
-	self cCode: '' inSmalltalk: [result := Float new: 2].
-	self successful ifTrue:
-		[objectMemory fetchFloatAt: floatOrInt + BaseHeaderSize into: result].
-	^result
+	^self floatValueOf: floatOrInt
 ]
 
 { #category : #initialization }
@@ -6932,23 +6896,8 @@ StackInterpreter >> pop: nItems thenPushInteger: integerVal [
 
 { #category : #'stack bytecodes' }
 StackInterpreter >> popFloat [
-	"Note: May be called by translated primitive code."
-
-	| top result |
 	<returnTypeC: #double>
-	<var: #result type: #double>
-	top := self popStack.
-	"N.B.  Because Slang always inlines assertClassOf:is:compactClassIndex:
-	 (because assertClassOf:is:compactClassIndex: has an inline: pragma) the
-	 phrase (self splObj: ClassArray) is expanded in-place and is _not_
-	 evaluated if ClassArrayCompactIndex is non-zero."
-	self assertClassOf: top
-		is: (objectMemory splObj: ClassFloat)
-		compactClassIndex: ClassFloatCompactIndex.
-	self successful ifTrue:
-		[self cCode: '' inSmalltalk: [result := Float new: 2].
-		objectMemory fetchFloatAt: top + BaseHeaderSize into: result].
-	^ result
+	^self floatValueOf: self popStack
 ]
 
 { #category : #'internal interpreter access' }
@@ -9510,23 +9459,8 @@ StackInterpreter >> stSizeOf: oop [
 { #category : #'internal interpreter access' }
 StackInterpreter >> stackFloatValue: offset [
 	"In the StackInterpreter stacks grow down."
-	| result floatPointer |
 	<returnTypeC: #double>
-	<var: #result type: #double>
-	floatPointer := stackPages longAt: stackPointer + (offset*BytesPerWord).
-
-	"N.B.  Because Slang always inlines assertClassOf:is:compactClassIndex:
-	 (because assertClassOf:is:compactClassIndex: has an inline: pragma) the
-	 phrase (self splObj: ClassArray) is expanded in-place and is _not_
-	 evaluated if ClassArrayCompactIndex is non-zero."
-	self assertClassOf: floatPointer
-		is: (objectMemory splObj: ClassFloat)
-		compactClassIndex: ClassFloatCompactIndex.
-	self successful ifTrue:
-		[self cCode: '' inSmalltalk: [result := Float new: 2].
-		objectMemory fetchFloatAt: floatPointer + BaseHeaderSize into: result.
-		^result].
-	^0.0
+	^self floatValueOf: (stackPages longAt: stackPointer + (offset*BytesPerWord))
 ]
 
 { #category : #'internal interpreter access' }
