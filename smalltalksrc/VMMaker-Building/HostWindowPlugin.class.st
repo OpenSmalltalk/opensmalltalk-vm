@@ -118,7 +118,7 @@ left: left right: right top: top bottom: bottom [
 details and the rectangle bounds. Fail if the windowIndex is invalid or the
 platform routine returns false to indicate failure"
 	|ok|
-	self var: #dispBits type: 'unsigned char * '.
+	<var: #dispBits type: #'unsigned char *'>
 	self primitive: 'primitiveShowHostWindowRect'
 		parameters: #(SmallInteger WordArray SmallInteger SmallInteger SmallInteger
 SmallInteger SmallInteger SmallInteger SmallInteger).

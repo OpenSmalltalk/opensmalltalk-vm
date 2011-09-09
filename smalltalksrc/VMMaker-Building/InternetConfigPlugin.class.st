@@ -29,12 +29,12 @@ InternetConfigPlugin >> initialiseModule [
 InternetConfigPlugin >> primitiveGetMacintoshFileTypeAndCreatorFrom: aFileName [
 	| oop ptr keyLength creator |
 
+	<var: #aFile declareC: 'char aFile[256]'>
+	<var: #creator declareC: 'char creator[8]'>
+	<var: #ptr type: 'char *'>
 	self primitive: 'primitiveGetMacintoshFileTypeAndCreatorFrom'
 		parameters: #(String).
-	self var: #aFile declareC: 'char aFile[256]'.
-	self var: #creator declareC: 'char creator[8]'.
-	self var: #ptr type: 'char *'.
-	
+
 	keyLength := interpreterProxy byteSizeOf: aFileName cPtrAsOop.
 	self sqInternetGetMacintoshFileTypeAndCreatorFrom: aFileName keySize: keyLength into: creator.
 	oop := interpreterProxy instantiateClass: interpreterProxy classString indexableSize: 8.
@@ -49,10 +49,10 @@ InternetConfigPlugin >> primitiveGetMacintoshFileTypeAndCreatorFrom: aFileName [
 InternetConfigPlugin >> primitiveGetStringKeyedBy: aKey [
 	| oop ptr size aString keyLength |
 
+	<var: #aString declareC: 'char aString[1025]'>
+	<var: #ptr type: 'char *'>
 	self primitive: 'primitiveGetStringKeyedBy'
 		parameters: #(String).
-	self var: #aString declareC: 'char aString[1025]'.
-	self var: #ptr type: 'char *'.
 	
 	keyLength := interpreterProxy byteSizeOf: aKey cPtrAsOop.
 	size := self sqInternetConfigurationGetStringKeyedBy: aKey keySize: keyLength into: aString.
