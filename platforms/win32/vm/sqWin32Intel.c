@@ -916,7 +916,9 @@ error(char *msg) {
     MessageBox(stWindow,crashInfo,TEXT("Fatal VM error"),
                  MB_OK | MB_APPLMODAL | MB_ICONSTOP);
 
+#if !NewspeakVM
   SetCurrentDirectoryW(vmLogDirW);
+#endif
   /* print the above information */
   f = fopen_for_append("crash.dmp");
   if(f){  
@@ -1002,7 +1004,9 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
     MessageBox(stWindow,crashInfo,TEXT("Fatal VM error"),
                  MB_OK | MB_APPLMODAL | MB_ICONSTOP);
 
+#if !NewspeakVM
   SetCurrentDirectoryW(vmLogDirW);
+#endif
   /* print the above information */
   f = fopen_for_append("crash.dmp");
   if(f){  
@@ -1399,6 +1403,8 @@ int sqMain(char *lpCmdLine, int nCmdShow)
   __try {
 # endif
 #endif /* !NO_FIRST_LEVEL_EXCEPTION_HANDLER */
+
+#if !NewspeakVM
     /* set the CWD to the image location */
     if(*imageName) {
       char path[MAX_PATH+1], *ptr;
@@ -1409,6 +1415,7 @@ int sqMain(char *lpCmdLine, int nCmdShow)
 	SetCurrentDirectory(path);
       }
     }
+#endif /* !NewspeakVM */
 
     /* display the splash screen */
     ShowSplashScreen();
