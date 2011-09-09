@@ -3075,21 +3075,26 @@ Interpreter >> floatObjectOf: aFloat [
 
 { #category : #utilities }
 Interpreter >> floatValueOf: oop [
-	"Fetch the instance variable at the given index of the given object. Return the C double precision floating point value of that instance variable, or fail if it is not a Float."
-	"Note: May be called by translated primitive code."
+	"Fetch the instance variable at the given index of the given object.  Answer the C
+	 double precision floating point value of that instance variable, or fail if it is not a Float."
 
-	"DO _NOT_ USE THIS IN DEBUG PRINTING!  assertClassOf:is: sets successFlag."
-
-	| result |
-	self flag: #Dan.  "None of the float stuff has been converted for 64 bits"
-	self returnTypeC: 'double'.
-	self var: #result type: 'double '.
-	self assertClassOf: oop is: (self splObj: ClassFloat).
-	successFlag
-		ifTrue: [self cCode: '' inSmalltalk: [result := Float new: 2].
-				self fetchFloatAt: oop + BaseHeaderSize into: result]
-		ifFalse: [result := 0.0].
-	^ result
+	| isFloat result |
+	<returnTypeC: #double>
+	<var: #result type: #double>
+	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
+	 (because is:instanceOf:compactClassIndex: has an inline: pragma) the
+	 phrase (self splObj: ClassArray) is expanded in-place and is _not_ evaluated if
+	 ClassArrayCompactIndex is non-zero."
+	isFloat := self
+				is: oop
+				instanceOf: (self splObj: ClassFloat)
+				compactClassIndex: ClassFloatCompactIndex.
+	isFloat ifTrue:
+		[self cCode: '' inSmalltalk: [result := Float new: 2].
+		 self fetchFloatAt: oop + BaseHeaderSize into: result.
+		 ^result].
+	self primitiveFail.
+	^0.0
 ]
 
 { #category : #'plugin primitive support' }
@@ -3926,22 +3931,16 @@ Interpreter >> loadBitBltFrom: bb [
 { #category : #utilities }
 Interpreter >> loadFloatOrIntFrom: floatOrInt [
 	"If floatOrInt is an integer, then convert it to a C double float and return it.
-	If it is a Float, then load its value and return it.
-	Otherwise fail -- ie return with successFlag set to false."
+	 If it is a Float, then load its value and return it.
+	 Otherwise fail -- ie return with primErrorCode non-zero."
 
-	| result |
 	<inline: true>
 	<asmLabel: false>
-	<returnTypeC: 'double'>
-	<var: #result type: 'double '>
+	<returnTypeC: #double>
 
 	(self isIntegerObject: floatOrInt) ifTrue:
 		[^(self integerValueOf: floatOrInt) asFloat].
-	(self fetchClassOfNonInt: floatOrInt) = (self splObj: ClassFloat) ifTrue:
-		[self cCode: '' inSmalltalk: [result := Float new: 2].
-		 self fetchFloatAt: floatOrInt + BaseHeaderSize into: result.
-		 ^result].
-	successFlag := false
+	^self floatValueOf: floatOrInt
 ]
 
 { #category : #initialization }
@@ -4412,17 +4411,8 @@ Interpreter >> pop: nItems thenPushInteger: integerVal [
 
 { #category : #'stack bytecodes' }
 Interpreter >> popFloat [
-	"Note: May be called by translated primitive code."
-
-	| top result |
-	<returnTypeC: 'double'>
-	<var: #result type: 'double '>
-	top := self popStack.
-	self assertClassOf: top is: (self splObj: ClassFloat).
-	successFlag ifTrue:
-		[self cCode: '' inSmalltalk: [result := Float new: 2].
-		self fetchFloatAt: top + BaseHeaderSize into: result].
-	^ result
+	<returnTypeC: #double>
+	^self floatValueOf: self popStack
 ]
 
 { #category : #contexts }
@@ -9702,16 +9692,8 @@ Interpreter >> stSizeOf: oop [
 
 { #category : #contexts }
 Interpreter >> stackFloatValue: offset [
-	"Note: May be called by translated primitive code."
-	| result floatPointer |
-	<returnTypeC: 'double'>
-	<var: #result type: 'double '>
-	floatPointer := self longAt: stackPointer - (offset*BytesPerWord).
-	(self fetchClassOf: floatPointer) = (self splObj: ClassFloat) 
-		ifFalse:[self primitiveFail. ^0.0].
-	self cCode: '' inSmalltalk: [result := Float new: 2].
-	self fetchFloatAt: floatPointer + BaseHeaderSize into: result.
-	^ result
+	<returnTypeC: #double>
+	^self floatValueOf: (self longAt: stackPointer - (offset*BytesPerWord))
 ]
 
 { #category : #contexts }

@@ -304,11 +304,11 @@ GetIndMenuItemWithCommandID(menuHandle, kHICommandHide, 1,
 { #category : #'system primitives' }
 MacMenubarPlugin >> primitiveGetItemCmd: menuHandleOop item: anInteger [
 	| menuHandle aCharacter |
+	<var: 'menuHandle' type: 'MenuHandle'>
+	<var: #aCharacter type: 'CharParameter '>
+	<var: #ptr type: 'char *'>
 	self primitive: 'primitiveGetItemCmd'
 		parameters: #(Oop SmallInteger).
-	self var: 'menuHandle' type: 'MenuHandle'.
-	self var: #aCharacter type: 'CharParameter '.
-	self var: #ptr type: 'char *'.
 	
 	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
@@ -338,11 +338,11 @@ MacMenubarPlugin >> primitiveGetItemIcon: menuHandleOop item: anInteger [
 { #category : #'system primitives' }
 MacMenubarPlugin >> primitiveGetItemMark: menuHandleOop item: anInteger [
 	| menuHandle aCharacter |
+	<var: 'menuHandle' type: 'MenuHandle'>
+	<var: #aCharacter type: 'CharParameter '>
+	<var: #ptr type: 'char *'>
 	self primitive: 'primitiveGetItemMark'
 		parameters: #(Oop SmallInteger).
-	self var: 'menuHandle' type: 'MenuHandle'.
-	self var: #aCharacter type: 'CharParameter '.
-	self var: #ptr type: 'char *'.
 	
 	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
@@ -489,11 +489,11 @@ MacMenubarPlugin >> primitiveGetMenuItemModifiers: menuHandleOop item: anInteger
 { #category : #'system primitives' }
 MacMenubarPlugin >> primitiveGetMenuItemText: menuHandleOop item: anInteger [
 	| menuHandle size oop ptr aString |
+	<var: 'menuHandle' type: 'MenuHandle'>
+	<var: #aString type: 'Str255 '>
+	<var: #ptr type: 'char *'>
 	self primitive: 'primitiveGetMenuItemText'
 		parameters: #(Oop SmallInteger).
-	self var: 'menuHandle' type: 'MenuHandle'.
-	self var: #aString type: 'Str255 '.
-	self var: #ptr type: 'char *'.
 	
 	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
@@ -526,11 +526,11 @@ MacMenubarPlugin >> primitiveGetMenuItemTextEncoding: menuHandleOop item: anInte
 { #category : #'system primitives' }
 MacMenubarPlugin >> primitiveGetMenuTitle: menuHandleOop [
 	| menuHandle size oop ptr aString |
+	<var: 'menuHandle' type: 'MenuHandle'>
+	<var: #aString type: 'Str255 '>
+	<var: #ptr type: 'char *'>
 	self primitive: 'primitiveGetMenuTitle'
 		parameters: #(Oop).
-	self var: 'menuHandle' type: 'MenuHandle'.
-	self var: #aString type: 'Str255 '.
-	self var: #ptr type: 'char *'.
 	
 	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
@@ -686,10 +686,10 @@ MacMenubarPlugin >> primitiveNewMenu: menuID menuTitle: menuTitle [
 { #category : #'system primitives' }
 MacMenubarPlugin >> primitiveSetItemCmd: menuHandleOop item: anInteger cmdChar: anIntegerCmdChar [
 	| menuHandle aCharacter |
+	<var: 'menuHandle' type: 'MenuHandle'>
+	<var: #aCharacter type: 'CharParameter '>
 	self primitive: 'primitiveSetItemCmd'
 		parameters: #(Oop SmallInteger SmallInteger).
-	self var: 'menuHandle' type: 'MenuHandle'.
-	self var: #aCharacter type: 'CharParameter '.
 	
 	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
@@ -718,10 +718,10 @@ MacMenubarPlugin >> primitiveSetItemIcon: menuHandleOop item: anInteger iconInde
 { #category : #'system primitives' }
 MacMenubarPlugin >> primitiveSetItemMark: menuHandleOop item: anInteger markChar: aMarkChar [
 	| menuHandle aCharacter |
+	<var: 'menuHandle' type: 'MenuHandle'>
+	<var: #aCharacter type: 'CharParameter '>
 	self primitive: 'primitiveSetItemMark'
 		parameters: #(Oop SmallInteger SmallInteger).
-	self var: 'menuHandle' type: 'MenuHandle'.
-	self var: #aCharacter type: 'CharParameter '.
 	
 	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].

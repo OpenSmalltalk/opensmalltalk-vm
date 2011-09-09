@@ -1358,11 +1358,12 @@ ObjectMemory >> clone: obj [
 
 { #category : #'interpreter access' }
 ObjectMemory >> compactClassAt: ccIndex [
-	"Index must be between 1 and compactClassArray size. (A zero compact class index in the base header indicate that the class is in the class header word.)"
+	"Index must be between 1 and compactClassArray size.  A zero compact class
+	 index in the base header indicate that the class is in the class header word."
 	<api>
-	| classArray |
-	classArray := self fetchPointer: CompactClasses ofObject: self specialObjectsOop.
-	^self fetchPointer: (ccIndex - 1) ofObject: classArray
+	| classesArray |
+	classesArray := self fetchPointer: CompactClasses ofObject: self specialObjectsOop.
+	^self fetchPointer: ccIndex - 1 ofObject: classesArray
 ]
 
 { #category : #'header access' }
