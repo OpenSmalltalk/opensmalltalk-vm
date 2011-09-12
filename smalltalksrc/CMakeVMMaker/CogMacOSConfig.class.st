@@ -862,10 +862,6 @@ CogMacOSConfig >> plistTemplate [
 
 { #category : #'source generation' }
 CogMacOSConfig >> prepareForGeneration [
-
-	"force using LF on Macs"
-	CrLfFileStream defaultToLF.
-
 	^ self prepareForCogGeneration
 
 ]

@@ -342,10 +342,6 @@ CogUnixConfig >> preferredIncludes [
 
 { #category : #'source generation' }
 CogUnixConfig >> prepareForGeneration [
-
-	"force using LF on Macs"
-	CrLfFileStream defaultToLF.
-
 	^ self prepareForCogGeneration
 
 ]
