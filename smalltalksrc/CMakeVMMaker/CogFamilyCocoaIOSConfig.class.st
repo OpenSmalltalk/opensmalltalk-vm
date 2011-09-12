@@ -24,11 +24,6 @@ CogFamilyCocoaIOSConfig >> CFBundleVersion [
 ]
 
 { #category : #settings }
-CogFamilyCocoaIOSConfig >> commonCompilerFlags [ 
-	^super commonCompilerFlags, (Array with: '-DBYTES_PER_WORD=4')
-]
-
-{ #category : #settings }
 CogFamilyCocoaIOSConfig >> compilerFlagsDebug [
 	^#('-g3' '-O0' '-fvisibility=hidden' '-funroll-loops' '-fasm-blocks' '-finline-functions' '-mfpmath=sse' '-march=pentium-m' '-mtune=prescott' '-falign-functions=16' '-fno-gcse' '-fno-cse-follow-jumps' '-std=gnu99' '-DBUILD_FOR_OSX' '-DUSE_INLINE_MEMORY_ACCESSORS' '-DLSB_FIRST' '-DUSE_INLINE_MEMORY_ACCESSORS' '-DHAVE_SYS_TIME_H' '-DHAVE_NANOSLEEP' '-DDEBUGVM=1' '-DCOGMTVM=0' '-DUSE_GLOBAL_STRUCT=0' '-DBASE_HEADER_SIZE=4')
 ]
