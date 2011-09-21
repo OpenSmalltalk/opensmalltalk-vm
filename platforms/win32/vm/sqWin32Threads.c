@@ -248,17 +248,25 @@ ioInitThreads()
 static sqInt
 indirect(long p)
 {
+	if ((p & 2))
+		error("crashInThisOrAnotherThread");
 	return p > 99
 		? indirect(p - 100), indirect(p - 50) /* evade tail recursion opt */
 		: *(sqInt *)p;
 }
 
-
+/* bit 0 = thread to crash in; 1 => this thread
+ * bit 1 = crash method; 0 => indirect through null pointer; 1 => call exit
+ */
 sqInt
-crashInThisOrAnotherThread(sqInt inThisThread)
+crashInThisOrAnotherThread(sqInt flags)
 {
-	if (inThisThread)
-		return indirect(0);
+	if ((flags & 1)) {
+		if (!(flags & 2))
+			return indirect(flags & ~1);
+		error("crashInThisOrAnotherThread");
+		return 0;
+	}
 	else {
 		CreateThread(0, /* no security */
 					 0, /* default stack size */

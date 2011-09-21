@@ -1,7 +1,8 @@
 #!/bin/sh
-SVNREV="`svnversion | sed 's/^.*://'`"
-echo $SVNREV
-export SVNREV
+REV=`grep 'SvnRawRevisionString.*Rev:' platforms/Cross/vm/sqSCCSVersion.h \
+	| sed 's/^.*Rev: \([0-9][0-9]*\) $";/\1/'`
+echo $REV
+export REV
 rm nsvmlinux/lib/nsvm/{npsqueakregister,npsqueakrun}
 ln ~/Squeak/SqueakV41.sources nsvmlinux/lib/nsvm/*
-tar cvzf nsvmlinux-`date +%g.%U.$SVNREV`.tgz nsvmlinux
+tar cvzf nsvmlinux-`date +%g.%U.$REV`.tgz nsvmlinux
