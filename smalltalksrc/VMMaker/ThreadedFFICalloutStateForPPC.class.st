@@ -19,8 +19,8 @@ ThreadedFFICalloutStateForPPC class >> instVarNamesAndTypesForTranslationDo: aBi
 		aBinaryBlock
 			value: ivn
 			value: (ivn caseOf: {
-						['integerRegisters']	-> [{#sqInt. '[', ReentrantPPCBEFFIPlugin numRegArgs printString, ']'}].
-						['floatRegisters']		-> [{#double. '[', ReentrantPPCBEFFIPlugin numRegArgs printString, ']'}] }
+						['integerRegisters']	-> [{#sqInt. '[', ThreadedPPCBEFFIPlugin numRegArgs printString, ']'}].
+						['floatRegisters']		-> [{#double. '[', ThreadedPPCBEFFIPlugin numRegArgs printString, ']'}] }
 					otherwise:
 						[#sqInt])]
 ]

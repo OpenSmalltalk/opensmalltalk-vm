@@ -103,6 +103,7 @@ Class {
 		'methodZone',
 		'methodZoneBase',
 		'codeBase',
+		'minValidCallAddress',
 		'lastNInstructions',
 		'simulatedAddresses',
 		'simulatedTrampolines',
@@ -485,6 +486,7 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
 		declareVar: #CFramePointer type: #'void *';
 		declareVar: #CStackPointer type: #'void *';
+		declareVar: #minValidCallAddress type: #'unsigned long';
 		declareVar: #debugPrimCallStackOffset type: #'unsigned long'.
 	aCCodeGenerator
 		var: #generatorTable
@@ -3499,6 +3501,7 @@ Cogit >> compilePrimitive [
 							primitiveIndex: primitiveIndex) isNil "no primitive"
 	or: [primitiveRoutine = (coInterpreter functionPointerFor: 0 inClass: nil) "routine = primitiveFail"]) ifTrue:
 		[^self genFastPrimFail].
+	minValidCallAddress := minValidCallAddress min: primitiveRoutine asUnsignedInteger.
 	^self compileInterpreterPrimitive: primitiveRoutine
 ]
 
@@ -5349,6 +5352,7 @@ Cogit >> initializeCodeZoneFrom: startAddress upTo: endAddress [
 	codeBase := methodZoneBase := (self
 											cCode: [startAddress]
 											inSmalltalk: [startAddress + guardPageSize]).
+	minValidCallAddress := codeBase min: coInterpreter interpretAddress.
 	self initializeBackend.
 	self maybeGenerateCheckFeatures.
 	self maybeGenerateICacheFlush.
@@ -6359,6 +6363,12 @@ Cogit >> mcPCFor: bcpc startBcpc: startbcpc in: cogMethod [
 Cogit >> methodZone [
 	<doNotGenerate>
 	^methodZone
+]
+
+{ #category : #accessing }
+Cogit >> minCallAddress [
+	<cmacro: '() minValidCallAddress'>
+	^minValidCallAddress
 ]
 
 { #category : #debugging }

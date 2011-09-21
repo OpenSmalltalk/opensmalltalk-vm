@@ -2574,7 +2574,7 @@ CogIA32Compiler >> numLowLevelLockOpcodes [
 CogIA32Compiler >> relocateCallBeforeReturnPC: retpc by: delta [
 	| distance |
 	delta ~= 0 ifTrue:
-		[distance :=     ((objectMemory byteAt: retpc - 1) << 24)
+		[distance :=    ((objectMemory byteAt: retpc - 1) << 24)
 					+  ((objectMemory byteAt: retpc - 2) << 16)
 					+  ((objectMemory byteAt: retpc - 3) << 8)
 					+   (objectMemory byteAt: retpc - 4).
@@ -2583,7 +2583,11 @@ CogIA32Compiler >> relocateCallBeforeReturnPC: retpc by: delta [
 			byteAt: retpc - 1 put: (distance >> 24 bitAnd: 16rFF);
 			byteAt: retpc - 2 put: (distance >> 16 bitAnd: 16rFF);
 			byteAt: retpc - 3 put: (distance >>   8 bitAnd: 16rFF);
-			byteAt: retpc - 4 put: (distance            bitAnd: 16rFF)]
+			byteAt: retpc - 4 put: (distance            bitAnd: 16rFF).
+		false
+			ifTrue: [self assert: (self callTargetFromReturnAddress: retpc) >= cogit minCallAddress]
+			ifFalse: [(self callTargetFromReturnAddress: retpc) >= cogit minCallAddress ifFalse:
+						[self error: 'relocating call to invalid address']]]
 ]
 
 { #category : #'inline cacheing' }
@@ -2601,15 +2605,21 @@ CogIA32Compiler >> rewriteCallAt: callSiteReturnAddress target: callTargetAddres
 	"Rewrite a call instruction to call a different target.  This variant is used to link PICs
 	 in ceSendMiss et al, and to rewrite cached primitive calls.   Answer the extent of
 	 the code change which is used to compute the range of the icache to flush."
+	<var: #callSiteReturnAddress type: #usqInt>
 	| callDistance |
 	"self cCode: ''
 		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 10 to: callSiteReturnAddress - 1]."
+	false
+		ifTrue: [self assert: callTargetAddress >= cogit minCallAddress]
+		ifFalse: [callTargetAddress >= cogit minCallAddress ifFalse:
+					[self error: 'linking callsite to invalid address']].
 	callDistance := (callTargetAddress - callSiteReturnAddress) signedIntToLong.
 	objectMemory
 		byteAt: callSiteReturnAddress - 1 put: (callDistance >> 24 bitAnd: 16rFF);
 		byteAt: callSiteReturnAddress - 2 put: (callDistance >> 16 bitAnd: 16rFF);
 		byteAt: callSiteReturnAddress - 3 put: (callDistance >>   8 bitAnd: 16rFF);
 		byteAt: callSiteReturnAddress - 4 put: (callDistance            bitAnd: 16rFF).
+	self assert: (self callTargetFromReturnAddress: callSiteReturnAddress) = callTargetAddress.
 	"self cCode: ''
 		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 10 to: callSiteReturnAddress - 1]."
 	^5
@@ -2620,9 +2630,14 @@ CogIA32Compiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag tar
 	"Rewrite an inline cache to call a different target for a new tag.  This variant is used
 	 to link unlinked sends in ceSend:to:numArgs: et al.  Answer the extent of the code
 	 change which is used to compute the range of the icache to flush."
+	<var: #callSiteReturnAddress type: #usqInt>
 	| callDistance |
-	self cCode: ''
-		inSmalltalk: [false ifTrue: [cogit disassembleFrom: callSiteReturnAddress - 10 to: callSiteReturnAddress - 1]].
+	"self cCode: ''
+		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 10 to: callSiteReturnAddress - 1]."
+	false
+		ifTrue: [self assert: callTargetAddress >= cogit minCallAddress]
+		ifFalse: [callTargetAddress >= cogit minCallAddress ifFalse:
+					[self error: 'linking callsite to invalid address']].
 	callDistance := (callTargetAddress - callSiteReturnAddress) signedIntToLong.
 	objectMemory
 		byteAt: callSiteReturnAddress - 1 put: (callDistance >> 24 bitAnd: 16rFF);
@@ -2633,8 +2648,9 @@ CogIA32Compiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag tar
 		byteAt: callSiteReturnAddress - 7 put: (cacheTag >> 16 bitAnd: 16rFF);
 		byteAt: callSiteReturnAddress - 8 put: (cacheTag >>   8 bitAnd: 16rFF);
 		byteAt: callSiteReturnAddress - 9 put: (cacheTag            bitAnd: 16rFF).
-	self cCode: ''
-		inSmalltalk: [false ifTrue: [cogit disassembleFrom: callSiteReturnAddress - 10 to: callSiteReturnAddress - 1]].
+	self assert: (self callTargetFromReturnAddress: callSiteReturnAddress) = callTargetAddress.
+	"self cCode: ''
+		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 10 to: callSiteReturnAddress - 1]."
 	^10
 ]
 

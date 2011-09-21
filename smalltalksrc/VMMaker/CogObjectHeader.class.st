@@ -4,17 +4,14 @@ Class {
 	#instVars : [
 		'classIndex',
 		'unused0',
-		'format',
-		'isWeak',
-		'isEphemeron',
-		'isPointers',
 		'isPinned',
+		'isImmutable',
+		'format',
 		'isMarked',
 		'isGrey',
 		'isRemembered',
-		'isImmutable',
 		'objHash',
-		'objSize'
+		'slotSize'
 	],
 	#category : #'VMMaker-MemoryManager'
 }
@@ -31,17 +28,18 @@ CogObjectHeader class >> initialize [
 { #category : #translation }
 CogObjectHeader class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in a BytecodeDescriptor struct."
+	"self typedef"
 
 	self instVarNames do:
 		[:ivn|
 		aBinaryBlock
 			value: ivn
 			value: (ivn caseOf: {
-							['classIndex']	->	[#'unsigned short']. "for speed; can extend to 20 bits by absorbing unused0"
-							['unused0']		->	[#(unsigned ' : 4')].
-							['format']		->	[#(unsigned ' : 4')].
+							['classIndex']	->	[#'unsigned short']. "for speed; can extend to 22 bits by absorbing unused0"
+							['unused0']		->	[#(unsigned ' : 6')].
+							['format']		->	[#(unsigned ' : 5')].
 							['objHash']		->	[#(unsigned ' : 24')].
-							['objSize']		->	[#'unsigned char'] }
+							['slotSize']		->	[#'unsigned char'] }
 						otherwise: [#(#unsigned #Boolean ' : 1')])]
 ]
 

@@ -168,7 +168,7 @@ StackToRegisterMappingCogit class >> declareCVarsIn: aCodeGen [
 		var: #realCEEnterCogCodePopReceiverArg1Arg0Regs
 			declareC: 'void (*realCEEnterCogCodePopReceiverArg1Arg0Regs)(void)';
 		var: 'simStack'
-			declareC: 'CogSimStackEntry simStack[256]';
+			declareC: 'CogSimStackEntry simStack[', ((CoInterpreter bindingOf: #LargeContextSize) value * 5 / 4 // BytesPerWord) asString, ']';
 		var: 'simSelf'
 			type: #CogSimStackEntry;
 		var: #optStatus
