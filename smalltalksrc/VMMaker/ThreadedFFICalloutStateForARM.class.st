@@ -18,7 +18,7 @@ ThreadedFFICalloutStateForARM class >> instVarNamesAndTypesForTranslationDo: aBi
 		aBinaryBlock
 			value: ivn
 			value: (ivn caseOf: {
-						['integerRegisters']	-> [{#sqInt. '[', ReentrantARMFFIPlugin numRegArgs printString, ']'}] }
+						['integerRegisters']	-> [{#sqInt. '[', ThreadedARMFFIPlugin numRegArgs printString, ']'}] }
 					otherwise:
 						[#sqInt])]
 ]
