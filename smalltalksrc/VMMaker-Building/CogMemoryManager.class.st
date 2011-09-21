@@ -13,11 +13,34 @@ behaviorHash is a special version of identityHash that must be implemented in th
 
 - efficient scavenging.  The current Squeak GC uses a slow pointer-reversal collector that writes every field in live objects three times in each collection, twice in the pointer-reversing heap traversal to mark live objects and once to update the pointer to its new location.  A scavenger writes every field of live data twice in each collection, once as it does a block copy of the object when copying to to space, once as it traverses the live pointers in the to space objects.  Of course the block copy is a relatively cheap write.
 
-- lazy become.  The JIT's use of inline cacheing provides a cheap way of avoiding scanning the heap as part of a become (which is the simple approach to implementing become in a system with direct pointers).  A becomeForward: on a (set of) non-zero-sized object(s) turns the object into a ""corpse"" or ""forwarding object"" whose first word is replaced by a pointer to the target of the becomeForward:.  The corpse's class index is set to one that identifies corpses and, because it is a hidden class index, will always fail an inline cache test.  The inline cache failure code is then responsible for following the forwarding pointer chain (these are Iliffe vectors :) ) and resolving to the actual target.  We have yet to determine exactly how this is done (e.g. change the receiver register and/or stack contents and retry the send, perhaps scanning the current activation).  See below on how we deal with becomes on objects with named inst vars.  Note that we probably don't have to worry about zero-sized objects.  These are unlikely to be passed through the FFI (there is nothing to pass :) ) and so will rarely be becommed.  If they do, they can become slowly.
+- lazy become.  The JIT's use of inline cacheing provides a cheap way of avoiding scanning the heap as part of a become (which is the simple approach to implementing become in a system with direct pointers).  A becomeForward: on a (set of) non-zero-sized object(s) turns the object into a ""corpse"" or ""forwarding object"" whose first (non-header) word/slot is replaced by a pointer to the target of the becomeForward:.  The corpse's class index is set to one that identifies corpses and, because it is a hidden class index, will always fail an inline cache test.  The inline cache failure code is then responsible for following the forwarding pointer chain (these are Iliffe vectors :) ) and resolving to the actual target.  We have yet to determine exactly how this is done (e.g. change the receiver register and/or stack contents and retry the send, perhaps scanning the current activation).  See below on how we deal with becomes on objects with named inst vars.  Note that we probably don't have to worry about zero-sized objects.  These are unlikely to be passed through the FFI (there is nothing to pass :) ) and so will rarely be becommed.  If they do, they can become slowly.  Alternatively we can insist that objects are at least 16 bytes in size (see a8-byte alignment below) so that there will always be space for a forwarding pointer.  Since none of the immediate classes can have non-immediate instances and since we allocate the immediate classes indices corresponding to their tag pattern (SmallInteger = 1, Character = 3, SmallFloat = 4?) we can use all the class indices from 0 to 7 for special uses, 0 = forqard, and e.g. 1 = header-sized filler.
 
-- pinning.  To support a robust and easy-to-use FFI the memory manager must support temporary pinning where individual objects can be prevented from being moved by the GC for as long as required, either by being one of an in-progress FFI call's arguments, or by having pinning asserted by a primitive (allowing objects to be passed to external code that retains a reference to the object after returning).  Pinning probably implies a per-object ""is-pinned"" bit in the object header.  Pinning will be done via lazy become; i..e an object in new space will be becommed into a pinned object in old space.  We will only support pinning in old space..
+- pinning.  To support a robust and easy-to-use FFI the memory manager must support temporary pinning where individual objects can be prevented from being moved by the GC for as long as required, either by being one of an in-progress FFI call's arguments, or by having pinning asserted by a primitive (allowing objects to be passed to external code that retains a reference to the object after returning).  Pinning probably implies a per-object ""is-pinned"" bit in the object header.  Pinning will be done via lazy become; i..e an object in new space will be becommed into a pinned object in old space.  We will only support pinning in old space.
 
 - efficient old space collection.  An incremental collector (a la Dijkstra's three colour algorithm) collects old space, e.g. via an amount of tracing being hung off scavenges and/or old space allocations at an adaptive rate that keeps full garbage collections to a minimum.  (see free space/free list below)
+
+- 8-byte alignment.  It is advantageous for the FFI, for floating-point access, for object movement and for 32/64-bit compatibility to keep object sizes in units of 8 bytes.  For the FFI, 8-byte alignment means passing objects to code that expects that requirement (such as modern x86 numeric processing instructions).  This implies that
+	- the starts of all spaces are aligned on 8-byte boundaries
+	- object allocation rounds up the requested size to a multiple of 8 bytes
+	- the overflow size field is also 8 bytes
+We shall probably keep the minimum object size at 16 bytes so that there is always room for a forwarding pointer.  But this implies that we will need to implement an 8-byte filler to fill holes between objects > 16 bytes whose length mod 16 bytes is 8 bytes and following pinned objects.  We can do this using a special class index, e.g. 1, so that the method that answers the size of an object looks like, e.g.
+	chunkSizeOf: oop
+		<var: #oop type: #'object *'>
+		^object classIndex = 1
+			ifTrue: [BaseHeaderSize]
+			ifFalse: [BaseHeaderSize
+				  + (object slotSize = OverflowSlotSize
+						ifTrue: [OverflowSizeBytes]
+						ifFalse: [0])
+				  + (object slotSize * BytesPerSlot)]
+
+	chunkStartOf: oop
+		<var: #oop type: #'object *'>
+		^(self cCoerceSimple: oop to: #'char *')
+			- ((object classIndex = 1
+			    or: [object slotSize ~= OverflowSlotSize])
+					ifTrue: [0]
+					ifFalse: [OverflowSizeBytes])
 
 For the moment we do not tackle the issue of heap growth and shrinkage with the ability to allocate and deallocate heap segments via memory-mapping.  This technique allows space to be released back to the OS by unmapping empty segments.  We may revisit this but it is not a key requirement for the first implementation.
 
@@ -46,10 +69,14 @@ The incremental collector does not detect already marked objects all of whose re
 
 Lazy become.
 
-As described earlier the basic idea behind lazy become is to use corpses (forwarding objects) that are followed lazily during GC and inline cache miss.  However, a lazy scheme cannot be used on objects with named inst vars without adding checking to all inst var accesses, which we judge too expensive.  Instead, when becomming objects with named inst vars, we scan all activations in the stack zone, eagerly becomming these references, and we check for corpses when faulting in a context into the stack zone.  Essentially, the invariant is that there are no refereces to corpses from the receiver slots of stack activations.  A detail is whether we allow or forbid pinning of closure indirection vectors, or scan the entire stack of each activation.  Using a special class index pun for indirection vectors is a cheap way of preventing their becomming/pinning etc.  Although ""don't do that"" (don't attempt to pin/become indirection vectors) is also an accetabe response.
+As described earlier the basic idea behind lazy become is to use corpses (forwarding objects) that are followed lazily during GC and inline cache miss.  However, a lazy scheme cannot be used on objects with named inst vars without adding checking to all inst var accesses, which we judge too expensive.  Instead, when becomming objects with named inst vars, we scan all activations in the stack zone, eagerly becomming these references, and we check for corpses when faulting in a context into the stack zone.  Essentially, the invariant is that there are no refereces to corpses from the receiver slots of stack activations.  A detail is whether we allow or forbid pinning of closure indirection vectors, or scan the entire stack of each activation.  Using a special class index pun for indirection vectors is a cheap way of preventing their becomming/pinning etc.  Although ""don't do that"" (don't attempt to pin/become indirection vectors) is also an acceptable response.
 
 
 Issues:
+How do we avoid the Size4Bit for 64-bits?  The format word encodes the number of odd bytes, but currently has only 4 bits and hence only supports odd bytes of 0 - 3.  We need odd bytes of 0 - 7.  But I don't like the separate Size4Bit.  Best to change the VI code and have a 5 bit format?  We loose one bit but save two bits (isEphemeron and isWeak (or three, if isPointers)) for a net gain of one (or two)
+
+Further, keep Squeak's format idea or go for separate bits?  For 64-bits we need a 5 bit format field.  This contrasts with isPointers, isWeak, isEphemeron, 3 odd size bits (or byte size)..  format field is quite economical.
+
 Are class indices in inline caches strong references to classes or weak references?
 If strong then they must be scanned during GC and the methodZone must be flushed on fullGC to reclaim all classes (this looks to be a bug in the V3 Cogit).
 If weak then when the class table loses references, PICs containing freed classes must be freed and then sends to freed PICs or containing freed clases must be unlinked.
