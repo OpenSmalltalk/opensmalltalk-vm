@@ -2585,8 +2585,8 @@ CogIA32Compiler >> relocateCallBeforeReturnPC: retpc by: delta [
 			byteAt: retpc - 3 put: (distance >>   8 bitAnd: 16rFF);
 			byteAt: retpc - 4 put: (distance            bitAnd: 16rFF).
 		false
-			ifTrue: [self assert: (self callTargetFromReturnAddress: retpc) >= cogit minCallAddress]
-			ifFalse: [(self callTargetFromReturnAddress: retpc) >= cogit minCallAddress ifFalse:
+			ifTrue: [self assert: (self callTargetFromReturnAddress: retpc) signedIntToLong >= cogit minCallAddress]
+			ifFalse: [(self callTargetFromReturnAddress: retpc) signedIntToLong >= cogit minCallAddress ifFalse:
 						[self error: 'relocating call to invalid address']]]
 ]
 
@@ -2619,7 +2619,7 @@ CogIA32Compiler >> rewriteCallAt: callSiteReturnAddress target: callTargetAddres
 		byteAt: callSiteReturnAddress - 2 put: (callDistance >> 16 bitAnd: 16rFF);
 		byteAt: callSiteReturnAddress - 3 put: (callDistance >>   8 bitAnd: 16rFF);
 		byteAt: callSiteReturnAddress - 4 put: (callDistance            bitAnd: 16rFF).
-	self assert: (self callTargetFromReturnAddress: callSiteReturnAddress) = callTargetAddress.
+	self assert: (self callTargetFromReturnAddress: callSiteReturnAddress) signedIntToLong = callTargetAddress.
 	"self cCode: ''
 		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 10 to: callSiteReturnAddress - 1]."
 	^5
@@ -2648,7 +2648,7 @@ CogIA32Compiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag tar
 		byteAt: callSiteReturnAddress - 7 put: (cacheTag >> 16 bitAnd: 16rFF);
 		byteAt: callSiteReturnAddress - 8 put: (cacheTag >>   8 bitAnd: 16rFF);
 		byteAt: callSiteReturnAddress - 9 put: (cacheTag            bitAnd: 16rFF).
-	self assert: (self callTargetFromReturnAddress: callSiteReturnAddress) = callTargetAddress.
+	self assert: (self callTargetFromReturnAddress: callSiteReturnAddress) signedIntToLong = callTargetAddress.
 	"self cCode: ''
 		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 10 to: callSiteReturnAddress - 1]."
 	^10
