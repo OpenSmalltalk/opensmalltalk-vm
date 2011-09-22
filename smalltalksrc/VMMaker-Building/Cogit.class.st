@@ -4694,10 +4694,11 @@ Cogit >> generateClosedPICPrototype [
 	self compileClosedPICPrototype.
 	self computeMaximumSizes.
 	headerSize := self sizeof: CogMethod.
-	closedPICSize := methodZone roundUpLength: headerSize + (self generateInstructionsAt: methodZoneBase + headerSize).
+	closedPICSize := headerSize + (self generateInstructionsAt: methodZoneBase + headerSize).
 	firstCPICCaseOffset := endCPICCase0 address - methodZoneBase.
 	cPICCaseSize := endCPICCase1 address - endCPICCase0 address.
-	cPICEndSize := closedPICSize - (numPICCases - 1 * cPICCaseSize + firstCPICCaseOffset)
+	cPICEndSize := closedPICSize - (numPICCases - 1 * cPICCaseSize + firstCPICCaseOffset).
+	closedPICSize := methodZone roundUpLength: closedPICSize
 	"self cCode: ''
 		inSmalltalk:
 			[| end |
