@@ -2936,11 +2936,11 @@ Cogit >> cogMNUPICSelector: selector methodOperand: methodOperand numArgs: numAr
 	coInterpreter
 		compilationBreak: selector
 		point: (objectMemory lengthOf: selector).
-	endCPICCase0 isNil ifTrue:
-		[^self cCoerceSimple: NotFullyInitialized to: #'CogMethod *'].
+	self assert: endCPICCase0 notNil.
 	startAddress := methodZone allocate: closedPICSize.
 	startAddress = 0 ifTrue:
-		[^self cCoerceSimple: InsufficientCodeSpace to: #'CogMethod *'].
+		[coInterpreter callForCogCompiledCodeCompaction.
+		 ^0].
 	methodLabel
 		address: startAddress;
 		dependent: nil.
