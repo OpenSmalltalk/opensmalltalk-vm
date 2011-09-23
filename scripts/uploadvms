@@ -25,7 +25,7 @@ ARCHIVES=
 		-l)		ARCHIVES="$ARCHIVES	coglinux.tgz	nsvmlinux.tgz";;
 		-m)		ARCHIVES="$ARCHIVES	Cog.app.tgz	Newspeak Virtual Machine.app.tgz";;
 		-w)		ARCHIVES="$ARCHIVES	cogwin.tgz	nsvmwin.tgz";;
-		-?|-h)  echo usage: $0 [-l -m -w -cl -cm -cw -nl -nm -nw]; exit 0
+		-?|-h)  echo usage: $0 [-l -m -w -cl -cm -cw -ctl -ctm -ctw -nl -nm -nw]; exit 0
 		esac
 		shift
 	done
