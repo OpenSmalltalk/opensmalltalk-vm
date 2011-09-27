@@ -8924,7 +8924,7 @@ NewspeakInterpreter >> printContext: aContext [
 	sender := self fetchPointer: SenderIndex ofObject: aContext.
 	ip := self fetchPointer: InstructionPointerIndex ofObject: aContext.
 	self print: 'sender   '; shortPrintOop: sender.
-	self print: 'ip       '; printNum: ip; print: ' ('; printNum: (self integerValueOf: ip); printHex: (self integerValueOf: ip); printChar: $); cr.
+	self print: 'ip       '; printNum: ip; print: ' ('; printNum: (self integerValueOf: ip); space; printHex: (self integerValueOf: ip); printChar: $); cr.
 	sp := self fetchPointer: StackPointerIndex ofObject: aContext.
 	self print: 'sp       '; printNum: sp; print: ' ('; printNum: (self integerValueOf: sp); printChar: $); cr.
 	(self isMethodContext: aContext)
@@ -8955,7 +8955,7 @@ NewspeakInterpreter >> printContext: aContext WithSP: theSP [
 	ip := self fetchPointer: InstructionPointerIndex ofObject: aContext.
 	sp := self integerObjectOf: (self stackPointerIndexFor: theSP context: aContext) - ReceiverIndex.
 	self print: 'sender   '; shortPrintOop: sender.
-	self print: 'ip       '; printNum: ip; print: ' ('; printNum: (self integerValueOf: ip); printHex: (self integerValueOf: ip); printChar: $); cr.
+	self print: 'ip       '; printNum: ip; print: ' ('; printNum: (self integerValueOf: ip); space; printHex: (self integerValueOf: ip); printChar: $); cr.
 	self print: 'sp       '; printNum: sp; print: ' ('; printNum: (self integerValueOf: sp); printChar: $); cr.
 	(self isMethodContext: aContext)
 		ifTrue:
