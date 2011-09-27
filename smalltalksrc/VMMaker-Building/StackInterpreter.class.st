@@ -7408,7 +7408,7 @@ StackInterpreter >> printContext: aContext [
 				printHexPtr: (self withoutSmallIntegerTags: ip); printChar: $); cr]
 		ifFalse:
 			[self print: 'sender   '; shortPrintOop: sender.
-			 self print: 'ip       '; printNum: ip; print: ' ('; printNum: (objectMemory integerValueOf: ip); printHex: (objectMemory integerValueOf: ip); printChar: $); cr].
+			 self print: 'ip       '; printNum: ip; print: ' ('; printNum: (objectMemory integerValueOf: ip); space; printHex: (objectMemory integerValueOf: ip); printChar: $); cr].
 	sp := objectMemory fetchPointer: StackPointerIndex ofObject: aContext.
 	sp := sp min: (objectMemory lengthOf: aContext) - ReceiverIndex.
 	self print: 'sp       '; printNum: sp; print: ' ('; printNum: (objectMemory integerValueOf: sp); printChar: $); cr.
