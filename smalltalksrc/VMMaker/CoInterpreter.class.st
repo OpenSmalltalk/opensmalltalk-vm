@@ -3633,7 +3633,7 @@ CoInterpreter >> interpretAddress [
 	 we just answer something not low."
 	<api>
 	<returnTypeC: #usqInt>
-	^self cCode: [(self addressOf: #interpret) asUnsignedInteger]
+	^self cCode: [(self addressOf: #interpret asSymbol) asUnsignedInteger]
 		inSmalltalk: [heapBase]
 ]
 
@@ -4900,7 +4900,7 @@ CoInterpreter >> primitiveFailAddress [
 	 we just answer something not low."
 	<api>
 	<returnTypeC: #usqInt>
-	^self cCode: [(self addressOf: #primitiveFail) asUnsignedInteger]
+	^self cCode: [(self addressOf: #primitiveFail asSymbol) asUnsignedInteger]
 		inSmalltalk: [heapBase]
 ]
 
