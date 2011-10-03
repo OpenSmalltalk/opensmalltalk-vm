@@ -2606,6 +2606,7 @@ CogIA32Compiler >> rewriteCallAt: callSiteReturnAddress target: callTargetAddres
 	 in ceSendMiss et al, and to rewrite cached primitive calls.   Answer the extent of
 	 the code change which is used to compute the range of the icache to flush."
 	<var: #callSiteReturnAddress type: #usqInt>
+	<var: #callTargetAddress type: #usqInt>
 	| callDistance |
 	"self cCode: ''
 		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 10 to: callSiteReturnAddress - 1]."
@@ -2631,6 +2632,7 @@ CogIA32Compiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag tar
 	 to link unlinked sends in ceSend:to:numArgs: et al.  Answer the extent of the code
 	 change which is used to compute the range of the icache to flush."
 	<var: #callSiteReturnAddress type: #usqInt>
+	<var: #callTargetAddress type: #usqInt>
 	| callDistance |
 	"self cCode: ''
 		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 10 to: callSiteReturnAddress - 1]."
