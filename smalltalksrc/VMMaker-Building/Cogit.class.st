@@ -5353,7 +5353,8 @@ Cogit >> initializeCodeZoneFrom: startAddress upTo: endAddress [
 	codeBase := methodZoneBase := (self
 											cCode: [startAddress]
 											inSmalltalk: [startAddress + guardPageSize]).
-	minValidCallAddress := codeBase min: coInterpreter interpretAddress.
+	minValidCallAddress := (codeBase min: coInterpreter interpretAddress)
+								min: coInterpreter primitiveFailAddress.
 	self initializeBackend.
 	self maybeGenerateCheckFeatures.
 	self maybeGenerateICacheFlush.
