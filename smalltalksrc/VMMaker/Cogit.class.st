@@ -5576,11 +5576,10 @@ Cogit >> linkSendAt: callSiteReturnAddress in: sendingMethod to: targetMethod of
 
 { #category : #'in-line cacheing' }
 Cogit >> lookup: selector for: receiver methodAndErrorSelectorInto: binaryBlock [
-	"Lookup selector in the class of receiver.  If found, evaluate binaryBlock with
-	 the method, cogged if appropriate..  If not found, due to MNU, lookup the DNU
-	 selector and evaluate binaryBlock with the MNU method, cogged if appropriate..
-	 If not found due to cannot interpret, evaluate binaryBlock with the error selector
-	 and a nil method."
+	"Lookup selector in the class of receiver.  If found, evaluate binaryBlock with the
+	 method, cogged if appropriate..  If not found, due to MNU, lookup the DNU selector
+	 and evaluate binaryBlock with the MNU method, cogged if appropriate..  If not found
+	 due to cannot interpret, evaluate binaryBlock with a nil method and the error selector."
 	| methodOrSelectorIndex |
 	<inline: true>
 	methodOrSelectorIndex := coInterpreter
@@ -5604,8 +5603,9 @@ Cogit >> lookup: selector for: receiver methodAndErrorSelectorInto: binaryBlock 
 			  and: [coInterpreter methodShouldBeCogged: methodOrSelectorIndex]) ifTrue:
 				["We assume cog:selector: will *not* reclaim the method zone"
 				 self cog: methodOrSelectorIndex selector: selector].
-			^binaryBlock value: methodOrSelectorIndex value: SelectorDoesNotUnderstand]].
-	^binaryBlock value: methodOrSelectorIndex value: nil
+			^binaryBlock value: methodOrSelectorIndex value: SelectorDoesNotUnderstand].
+		^binaryBlock value: nil value: SelectorDoesNotUnderstand].
+	^binaryBlock value: nil value: methodOrSelectorIndex
 ]
 
 { #category : #disassembly }
