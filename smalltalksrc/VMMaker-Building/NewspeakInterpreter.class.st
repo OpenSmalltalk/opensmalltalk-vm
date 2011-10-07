@@ -1919,9 +1919,10 @@ NewspeakInterpreter >> bytecodePrimMultiply [
 		ifTrue: [rcvr := self integerValueOf: rcvr.
 				arg := self integerValueOf: arg.
 				result := rcvr * arg.
-				((arg = 0 or: [(result // arg) = rcvr]) and: [self isIntegerValue: result])
-					ifTrue: [self internalPop: 2 thenPush: (self integerObjectOf: result).
-							^ self fetchNextBytecode "success"]]
+				(arg = 0
+				 or: [(result // arg) = rcvr and: [self isIntegerValue: result]]) ifTrue:
+					[self internalPop: 2 thenPush: (self integerObjectOf: result).
+					 ^self fetchNextBytecode "success"]]
 		ifFalse: [self initPrimCall.
 				self externalizeIPandSP.
 				self primitiveFloatMultiply: rcvr byArg: arg.
