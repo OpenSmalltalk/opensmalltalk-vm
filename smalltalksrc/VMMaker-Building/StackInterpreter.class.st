@@ -1977,9 +1977,10 @@ StackInterpreter >> bytecodePrimMultiply [
 		ifTrue: [rcvr := objectMemory integerValueOf: rcvr.
 				arg := objectMemory integerValueOf: arg.
 				result := rcvr * arg.
-				((arg = 0 or: [(result // arg) = rcvr]) and: [objectMemory isIntegerValue: result])
-					ifTrue: [self internalPop: 2 thenPush: (objectMemory integerObjectOf: result).
-							^ self fetchNextBytecode "success"]]
+				(arg = 0
+				 or: [(result // arg) = rcvr and: [objectMemory isIntegerValue: result]]) ifTrue:
+					[self internalPop: 2 thenPush: (objectMemory integerObjectOf: result).
+					 ^self fetchNextBytecode "success"]]
 		ifFalse: [self initPrimCall.
 				self externalizeIPandSP.
 				self primitiveFloatMultiply: rcvr byArg: arg.
