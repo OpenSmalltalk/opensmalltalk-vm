@@ -181,6 +181,9 @@ static int parseArgument(int argc, char **argv)
 		extern sqInt desiredNumStackPages;
 		desiredNumStackPages = atoi(argv[1]);	 
 		return 2; }
+      else if (!strcmp(argv[0], "-numextsems")) { 
+		ioSetMaxExtSemTableSize(atoi(argv[1]));
+		return 2; }
       else if (!strcmp(argv[0], "-noheartbeat")) { 
 		extern sqInt suppressHeartbeatFlag;
 		suppressHeartbeatFlag = 1;

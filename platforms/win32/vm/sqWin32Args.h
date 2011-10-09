@@ -13,13 +13,14 @@ extern char *(imageOptions[MAX_OPTIONS]);
 /* this goes separately so that we can insert the "hidden" name */
 extern char imageName[];
 
-#define ARG_NONE   0
-#define ARG_FLAG   1
-#define ARG_STRING 2
-#define ARG_INT    3
-#define ARG_UINT   4
+#define ARG_NONE        0
+#define ARG_FLAG        1
+#define ARG_STRING      2
+#define ARG_INT         3
+#define ARG_UINT        4
 #define ARG_STRING_FUNC 5
-#define ARG_NULL 6
+#define ARG_INT_FUNC    6
+#define ARG_NULL 7
 
 typedef struct vmArg{
   int   type;

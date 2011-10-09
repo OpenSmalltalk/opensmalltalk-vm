@@ -166,18 +166,15 @@
 # define IP_REG __asm__("$16")
 # define SP_REG __asm__("$17")
 # define CB_REG __asm__("$18")
-#endif
-#if defined(__sparc__)
+#elif defined(__sparc__)
 # define IP_REG __asm__("%l0")
 # define SP_REG __asm__("%l1")
 # define CB_REG __asm__("%l2")
-#endif
-#if defined(__alpha__)
+#elif defined(__alpha__)
 # define IP_REG __asm__("$9")
 # define SP_REG __asm__("$10")
 # define CB_REG __asm__("$11")
-#endif
-#if defined(__i386__)
+#elif defined(__i386__)
 # define IP_REG __asm__("%esi")
 # define SP_REG __asm__("%edi")
 # if (__GNUC__ > 2) || ((__GNUC__ == 2) && (__GNUC_MINOR__ >= 95))
@@ -185,20 +182,17 @@
 # else
 #   define CB_REG /* avoid undue register pressure */
 # endif
-#endif
-#if defined(__powerpc__) || defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined(__ppc__)
+#elif defined(__powerpc__) || defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined(__ppc__)
 # define GP_REG __asm__("24")
 # define JP_REG __asm__("25")
 # define IP_REG __asm__("26")
 # define SP_REG __asm__("27")
 # define CB_REG __asm__("28")
-#endif
-#if defined(__hppa__)
+#elif defined(__hppa__)
 # define IP_REG __asm__("%r18")
 # define SP_REG __asm__("%r17")
 # define CB_REG __asm__("%r16")
-#endif
-#if defined(__mc68000__)
+#elif defined(__mc68000__)
 # define IP_REG __asm__("a5")
 # define SP_REG __asm__("a4")
 # define CB_REG __asm__("d7")
@@ -218,9 +212,6 @@
 #endif
 #if !defined(GP_REG)
 # define GP_REG
-#endif
-#if !defined(FOO_REG)
-# define FOO_REG /* nada */
 #endif
 #if !defined(FP_REG)
 # define FP_REG /* nada */

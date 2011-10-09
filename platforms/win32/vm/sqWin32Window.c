@@ -3218,6 +3218,7 @@ int printUsage(int level)
                    TEXT("\n\t-leakcheck: n \t(leak check on GC (1=full,2=incr,3=both))")
                    TEXT("\n\t-eden: bytes \t(set eden memory size to bytes)")
                    TEXT("\n\t-stackpages: n \t(use n stack pages)")
+                   TEXT("\n\t-numextsems: n \t(allow up to n external semaphores)")
                    TEXT("\n\t-noheartbeat \t(no heartbeat for debug)")
 #endif /* STACKVM */
 #if COGVM

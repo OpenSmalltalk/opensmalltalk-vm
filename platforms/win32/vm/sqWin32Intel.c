@@ -1202,6 +1202,7 @@ static vmArg args[] = {
 #endif
 #if STACKVM || NewspeakVM
   { ARG_STRING_FUNC, setBreakSelector, "-breaksel:"}, /* break-point selector string */
+  { ARG_INT_FUNC, ioSetMaxExtSemTableSize, "-numextsems:"}, /* set num external semaphores */
 #endif /* STACKVM || NewspeakVM */
 #if STACKVM
   { ARG_UINT, &checkForLeaks, "-leakcheck:"}, /* leak check on GC */

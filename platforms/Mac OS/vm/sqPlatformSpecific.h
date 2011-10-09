@@ -110,6 +110,16 @@ void CopyPascalStringToC(ConstStr255Param src, char* dst);
 void CopyCStringToPascal(const char* src, Str255 dst);
 #endif
 
+/* Macro for inlined functions.
+	As of 1.7, clang elides the original, even though global.
+	gcc & icc don't elide the original
+*/
+#if defined(__clang__)
+# define inline_and_export /* nada */
+#else
+# define inline_and_export inline
+#endif
+
 /* undef the memory routines for our logic */
 #undef sqGrowMemoryBy
 #undef sqShrinkMemoryBy

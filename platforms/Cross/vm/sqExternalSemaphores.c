@@ -98,12 +98,15 @@ void
 ioSetMaxExtSemTableSize(int n)
 {
 #if COGMTVM
-  if (getVMOSThread()) /* initialization is a little different in MT. Hack around for now */
+  /* initialization is a little different in MT. Hack around assert for now */
+  if (getVMOSThread())
 #endif
-	assert(ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread()));
+	if (numSignalRequests)
+		assert(ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread()));
 	if (numSignalRequests < n) {
 		extern sqInt highBit(sqInt);
-		int sz = 1 << highBit(n);
+		int sz = 1 << highBit(n-1);
+		assert(sz >= n);
 		signalRequests = realloc(signalRequests, sz * sizeof(SignalRequest));
 		memset(signalRequests + numSignalRequests,
 				0,

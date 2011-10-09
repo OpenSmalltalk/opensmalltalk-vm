@@ -144,17 +144,17 @@ int plugInTimeToReturn(void) {
     return false;
 }
 
-Boolean inline browserActiveAndDrawingContextOk() {
+Boolean inline_and_export browserActiveAndDrawingContextOk() {
 	return gSqueakBrowserSubProcess && SharedBrowserBitMapContextRef;
 }
 
-Boolean inline browserActiveAndDrawingContextOkAndInFullScreenMode() {
+Boolean inline_and_export browserActiveAndDrawingContextOkAndInFullScreenMode() {
 	extern Boolean gSqueakBrowserWasHeadlessButMadeFullScreen;
 	extern sqInt getFullScreenFlag(void);
 	return browserActiveAndDrawingContextOk() && gSqueakBrowserWasHeadlessButMadeFullScreen && getFullScreenFlag();
 }
 
-Boolean inline browserActiveAndDrawingContextOkAndNOTInFullScreenMode() {
+Boolean inline_and_export browserActiveAndDrawingContextOkAndNOTInFullScreenMode() {
 	extern sqInt getFullScreenFlag(void);
 	return browserActiveAndDrawingContextOk() && !getFullScreenFlag();
 }

@@ -163,46 +163,48 @@
         currentBytecode.  Wins big on register-deficient architectures --
         especially Intel.
   */
-#if defined(__mips__)
+#if defined(__clang__)
+/* clang can't compile specific register assignments */
+#elif defined(__mips__)
 # define IP_REG asm("$16")
 # define SP_REG asm("$17")
 # define CB_REG asm("$18")
-#endif
-#if defined(__sparc__)
+#elif defined(__sparc__)
 # define IP_REG asm("%l0")
 # define SP_REG asm("%l1")
 # define CB_REG asm("%l2")
-#endif
-#if defined(__alpha__)
+#elif defined(__alpha__)
 # define IP_REG asm("$9")
 # define SP_REG asm("$10")
 # define CB_REG asm("$11")
-#endif
-#if defined(__i386__)
+#elif defined(__i386__)
 # define IP_REG asm("%esi")
 # define SP_REG asm("%edi")
 # define CB_REG asm("%ebx")
-#endif
-#if defined(__powerpc__) || defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined(__ppc__)
+#elif defined(__powerpc__) || defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined(__ppc__)
 # define FOO_REG asm("13")
 # define JP_REG asm("14")
 # define IP_REG asm("15")
 # define SP_REG asm("16")
 # define CB_REG asm("17")
-#endif
-#if defined(__hppa__)
+#elif defined(__hppa__)
 # define IP_REG asm("%r18")
 # define SP_REG asm("%r17")
 # define CB_REG asm("%r16")
-#endif
-#if defined(__mc68000__)
+#elif defined(__mc68000__)
 # define IP_REG asm("a5")
 # define SP_REG asm("a4")
 # define CB_REG asm("d7")
 #endif
 
-#if !defined(FOO_REG)
-# define FOO_REG /* nada */
+#if !defined(CB_REG)
+# define CB_REG /* nada */
+#endif
+#if !defined(IP_REG)
+# define IP_REG /* nada */
+#endif
+#if !defined(SP_REG)
+# define SP_REG /* nada */
 #endif
 #if !defined(FP_REG)
 # define FP_REG /* nada */

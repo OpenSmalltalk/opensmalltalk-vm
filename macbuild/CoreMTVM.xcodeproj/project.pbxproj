@@ -258,17 +258,6 @@
 		DAFA08940AA64625008DF459 /* Croquet.icns in Resources */ = {isa = PBXBuildFile; fileRef = DAFA08930AA64625008DF459 /* Croquet.icns */; };
 /* End PBXBuildFile section */
 
-/* Begin PBXBuildRule section */
-		A23738BF107FC08B00AB4620 /* PBXBuildRule */ = {
-			isa = PBXBuildRule;
-			compilerSpec = com.apple.compilers.gcc.4_2;
-			fileType = sourcecode.c;
-			isEditable = 1;
-			outputFiles = (
-			);
-		};
-/* End PBXBuildRule section */
-
 /* Begin PBXFileReference section */
 		0192233A00CCBFCBC0A80109 /* AGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AGL.framework; path = /System/Library/Frameworks/AGL.framework; sourceTree = "<absolute>"; };
 		05DD6BB000CCC66FC0A80109 /* QuickTime.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickTime.framework; path = /System/Library/Frameworks/QuickTime.framework; sourceTree = "<absolute>"; };
@@ -1736,9 +1725,6 @@
 				941A3BFA09AA144000C9D25A /* Frameworks */,
 				941A3C0409AA144000C9D25A /* Rez */,
 			);
-			buildRules = (
-				A23738BF107FC08B00AB4620 /* PBXBuildRule */,
-			);
 			comments = "
 
 
@@ -2233,7 +2219,7 @@
 					SQUEAK_BUILTIN_PLUGIN,
 					TARGET_API_MAC_CARBON,
 				);
-				GCC_VERSION = com.apple.compilers.gcc.4_2;
+				GCC_VERSION = 4.2;
 				HEADER_SEARCH_PATHS = (
 					/Developer/Headers/FlatCarbon,
 					$SRCROOT,

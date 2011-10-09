@@ -166,6 +166,14 @@ static char* parseVMArgs(char *string, vmArg args[])
           break;
 		}
 
+        case ARG_INT_FUNC: {
+		  int dummy;
+          vmOptions[numOptionsVM++] = string;
+          string = parseSignedArg(string, &dummy);
+          ((void (*)(int))(arg->value))(dummy);
+          if(!string) return NULL;
+          break;
+		}
         case ARG_INT:
           vmOptions[numOptionsVM++] = string;
           *(char**) arg->value = string;

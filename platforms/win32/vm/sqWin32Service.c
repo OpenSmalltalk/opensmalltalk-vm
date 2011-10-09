@@ -77,8 +77,8 @@ TCHAR *printCommandLine(int printFor95)
       lstrcat(buffer,TEXT(" "));
     }
 #if STACKVM
-  { extern sqInt desiredNumStackPages;
-    extern sqInt desiredEdenBytes;
+ { extern sqInt desiredNumStackPages;
+   extern sqInt desiredEdenBytes;
    if (desiredEdenBytes) {
       lstrcat(buffer,TEXT("-eden: "));
 # ifdef UNICODE
@@ -97,6 +97,7 @@ TCHAR *printCommandLine(int printFor95)
 # endif
       lstrcat(buffer,TEXT(" "));
    }
+ }
 #endif /* STACKVM */
   if(*logName) /* need -log: "logName" */
     {

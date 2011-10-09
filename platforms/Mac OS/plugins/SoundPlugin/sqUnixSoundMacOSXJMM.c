@@ -91,9 +91,10 @@ sqInt		noSoundMixer = 0;
 
 #if (DEBUG)
 
- void dumpFormat(AudioStreamBasicDescription *fmt); // atend
+void dumpFormat(AudioStreamBasicDescription *fmt); // atend
 
- void dprintf(const char *fmt, ...)
+void
+dprintf(const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
@@ -102,17 +103,16 @@ sqInt		noSoundMixer = 0;
 }
 
 #else // !DEBUG
- void dumpFormat(AudioStreamBasicDescription *fmt);
- inline void dumpFormat(AudioStreamBasicDescription *fmt) {
+inline_and_export void
+dumpFormat(AudioStreamBasicDescription *fmt) {
  #pragma unused(fmt)
  }
  #define  dprintf(ARGS, ...)
  // inline void dprintf(const char *fmt, ...) {}
 
 #endif // !DEBUG
- void eprintf(const char *fmt, ...);
- 
- void eprintf(const char *fmt, ...)
+void
+eprintf(const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
@@ -120,17 +120,17 @@ sqInt		noSoundMixer = 0;
   va_end(ap);
 }
 
-sqInt min(sqInt i, sqInt j);
-sqInt max(sqInt i, sqInt j);
-
-inline sqInt min(sqInt i, sqInt j) { return (i < j) ? i : j; }
-inline sqInt max(sqInt i, sqInt j) { return (i > j) ? i : j; }
+/* N.B. static qualifier is important for clang which won't inline these two
+ * functions otherwise.
+ */
+static inline sqInt min(sqInt i, sqInt j) { return (i < j) ? i : j; }
+static inline sqInt max(sqInt i, sqInt j) { return (i > j) ? i : j; }
 
 // Apple error codes are really (rather contrived) 4-byte chars with
 // (almost) meaningful content.
 // 
- char *str4(UInt32 chars);
- char *str4(UInt32 chars)
+char *
+str4(UInt32 chars)
 {
   static char str[5];
   *(sqInt *)&str= chars;
@@ -138,9 +138,8 @@ inline sqInt max(sqInt i, sqInt j) { return (i > j) ? i : j; }
   return str;
 }
 
-sqInt checkError(OSStatus err, char *op, char *param);
-
- inline sqInt checkError(OSStatus err, char *op, char *param)
+inline_and_export sqInt
+checkError(OSStatus err, char *op, char *param)
 {
   if (kAudioHardwareNoError != noErr)
     {
@@ -168,9 +167,8 @@ typedef struct
 
 // allocate a new, empty buffer
 // 
-Buffer *Buffer_new(sqInt size);
-
-Buffer *Buffer_new(sqInt size)
+Buffer *
+Buffer_new(sqInt size)
 {
   Buffer *b= (Buffer *)malloc(sizeof(Buffer));
   if (!b)
@@ -189,9 +187,8 @@ Buffer *Buffer_new(sqInt size)
 
 // deallocate a buffer
 // 
-void Buffer_delete(Buffer *b);
-
-void Buffer_delete(Buffer *b)
+void
+Buffer_delete(Buffer *b)
 {
   assert(b && b->data);
   free(b->data);
@@ -201,28 +198,19 @@ void Buffer_delete(Buffer *b)
 
 // answer how many bytes are available for reading
 // 
-inline sqInt Buffer_avail(Buffer *b);
-
-inline sqInt Buffer_avail(Buffer *b)
-{
-  return b->avail;
-}
+inline_and_export sqInt
+Buffer_avail(Buffer *b) { return b->avail; }
 
 // answer how many bytes can be written
 // 
-inline sqInt Buffer_free(Buffer *b);
-
-inline sqInt Buffer_free(Buffer *b)
-{
-  return b->size - Buffer_avail(b);
-}
+inline_and_export sqInt
+Buffer_free(Buffer *b) { return b->size - Buffer_avail(b); }
 
 // set outputs to address and size of zero (empty), one (contiguous) or two
 // (wrapped, fragmented) populated regions in the buffer
 // 
-inline sqInt Buffer_getOutputPointers(Buffer *b, char **p1, sqInt *n1, char **p2, sqInt *n2);
-
-inline sqInt Buffer_getOutputPointers(Buffer *b, char **p1, sqInt *n1, char **p2, sqInt *n2)
+inline_and_export sqInt
+Buffer_getOutputPointers(Buffer *b, char **p1, sqInt *n1, char **p2, sqInt *n2)
 {
   sqInt optr=     b->optr;
   sqInt avail=    Buffer_avail(b);
@@ -250,9 +238,8 @@ inline sqInt Buffer_getOutputPointers(Buffer *b, char **p1, sqInt *n1, char **p2
 // set the output to the current read position and answer the amount of
 // data at that location
 // 
-inline sqInt Buffer_getOutputPointer(Buffer *b, char **ptr);
-
-inline sqInt Buffer_getOutputPointer(Buffer *b, char **ptr)
+inline sqInt
+Buffer_getOutputPointer(Buffer *b, char **ptr)
 {
   sqInt optr=     b->optr;
   sqInt avail=    Buffer_avail(b);
@@ -266,9 +253,8 @@ inline sqInt Buffer_getOutputPointer(Buffer *b, char **ptr)
 // set the output to the current write location and answer the number of
 // bytes that can be written to that location
 // 
-inline sqInt Buffer_getInputPointer(Buffer *b, char **ptr);
-
-inline sqInt Buffer_getInputPointer(Buffer *b, char **ptr)
+inline sqInt
+Buffer_getInputPointer(Buffer *b, char **ptr)
 {
   sqInt iptr=     b->iptr;
   sqInt nfree=    Buffer_free(b);
@@ -281,9 +267,8 @@ inline sqInt Buffer_getInputPointer(Buffer *b, char **ptr)
 
 // increment the output pointer over a contiguous section of buffer
 // 
-inline void Buffer_advanceOutputPointer(Buffer *b, sqInt size);
-
-inline void Buffer_advanceOutputPointer(Buffer *b, sqInt size)
+inline_and_export void
+Buffer_advanceOutputPointer(Buffer *b, sqInt size)
 {
   sqInt optr=  b->optr;
   sqInt avail= b->avail;
@@ -298,9 +283,8 @@ inline void Buffer_advanceOutputPointer(Buffer *b, sqInt size)
 
 // advance the input pointer over a contiguous section of buffer
 // 
-inline void Buffer_advanceInputPointer(Buffer *b, sqInt size);
-
-inline void Buffer_advanceInputPointer(Buffer *b, sqInt size)
+inline void
+Buffer_advanceInputPointer(Buffer *b, sqInt size)
 {
   sqInt iptr= b->iptr;
   sqInt nfree= Buffer_free(b);
@@ -316,9 +300,8 @@ inline void Buffer_advanceInputPointer(Buffer *b, sqInt size)
 // clear the given number of bytes at the input position and advance the
 // input pointer past them
 // 
-inline void Buffer_prefill(Buffer *b, sqInt bytes);
-
-inline void Buffer_prefill(Buffer *b, sqInt bytes)
+inline void
+Buffer_prefill(Buffer *b, sqInt bytes)
 {
   char *ptr;
   sqInt   size= Buffer_getInputPointer(b, &ptr);
@@ -330,9 +313,8 @@ inline void Buffer_prefill(Buffer *b, sqInt bytes)
 // write at most nbytes from buf into the buffer, wrapping in the middle if
 // necessary.  answer the actual number of bytes written.
 // 
-inline sqInt Buffer_write(Buffer *b, char *buf, sqInt nbytes);
-
-inline sqInt Buffer_write(Buffer *b, char *buf, sqInt nbytes)
+inline_and_export sqInt
+Buffer_write(Buffer *b, char *buf, sqInt nbytes)
 {
   sqInt iptr= b->iptr;
   sqInt bytesToCopy= min(nbytes, Buffer_free(b));
@@ -358,9 +340,8 @@ inline sqInt Buffer_write(Buffer *b, char *buf, sqInt nbytes)
   return bytesCopied;
 }
 
-inline sqInt Buffer_writeRecheck(Buffer *b, char *buf, sqInt nbytes);
-
-inline sqInt Buffer_writeRecheck(Buffer *b, char *buf, sqInt nbytes)
+inline_and_export sqInt
+Buffer_writeRecheck(Buffer *b, char *buf, sqInt nbytes)
 {
   sqInt iptr= b->iptr;
   sqInt bytesToCopy= min(nbytes, Buffer_free(b));
@@ -392,9 +373,8 @@ inline sqInt Buffer_writeRecheck(Buffer *b, char *buf, sqInt nbytes)
 // read at most nbytes from the buffer into buf, wrapping in the middle if
 // necessary.  answer the actual number of bytes read.
 // 
-inline sqInt Buffer_read(Buffer *b, char *buf, sqInt nbytes);
-
-inline sqInt Buffer_read(Buffer *b, char *buf, sqInt nbytes)
+inline sqInt
+Buffer_read(Buffer *b, char *buf, sqInt nbytes)
 {
   sqInt optr= b->optr;
   sqInt bytesToCopy= min(nbytes, Buffer_avail(b));
@@ -1100,7 +1080,8 @@ sqInt Stream_stop(Stream *s)
 
 #if (DEBUG)
 
- void dumpFormat(AudioStreamBasicDescription *fmt)
+void
+dumpFormat(AudioStreamBasicDescription *fmt)
 {
   UInt32 flags= fmt->mFormatFlags;
 
