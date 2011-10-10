@@ -25,6 +25,14 @@ WINDRES := /usr/bin/windres
 icon.o:	../nsvm.rc
 	$(WINDRES) --include-dir=.. --define _WIN32 -l 0 -i $< -o $@
 
+$(VM_EXECUTABLE): ../build/vm/$(VM_EXECUTABLE)
+	rm -f $@
+	cp $< $@
+
+$(VM_EXECUTABLE_MAP):	../build/vm/$(VM_EXECUTABLE_MAP)
+	rm -f $@
+	cp $< $@
+
 echovars:
 	@echo '$$(VERSION)='$(VERSION)
 	@echo '$$(VM_ICON)='$(VM_ICON)

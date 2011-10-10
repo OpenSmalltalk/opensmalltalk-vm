@@ -25,12 +25,22 @@ ARCHIVES=
 		-l)		ARCHIVES="$ARCHIVES	coglinux.tgz	nsvmlinux.tgz";;
 		-m)		ARCHIVES="$ARCHIVES	Cog.app.tgz	Newspeak Virtual Machine.app.tgz";;
 		-w)		ARCHIVES="$ARCHIVES	cogwin.tgz	nsvmwin.tgz";;
-		-?|-h)  echo usage: $0 [-l -m -w -cl -cm -cw -ctl -ctm -ctw -nl -nm -nw]; exit 0
+		-?|-h)  echo usage: $0 [-l -m -w -cl -cm -cw -ctl -ctm -ctw -nl -nm -nw]; exit 0;;
+		*)	break
 		esac
 		shift
 	done
 fi
 VER="`svnversion | sed 's/^.*://'`"
+case $VER in
+*M)	echo -n "source tree is modified, are you sure you want to continue? "
+	read a
+	case $a in
+	y|Y)	;;
+	*)		exit 1
+	esac
+	VER="`svnversion | sed 's/^.*://' | sed 's/M//'`";;
+esac
 echo $VER
 if [ ! -f README.$VER ]; then
 	cat <<END >README.$VER
@@ -45,4 +55,4 @@ END
 	vi README.$VER
 fi
 ssh -x eliotmiranda@bugsy.dreamhost.com mkdir mirandabanda.org/files/Cog/VM/VM.r$VER
-scp README.$VER $ARCHIVES eliotmiranda@bugsy.dreamhost.com:mirandabanda.org/files/Cog/VM/VM.r$VER
+scp README.$VER $ARCHIVES "$@" eliotmiranda@bugsy.dreamhost.com:mirandabanda.org/files/Cog/VM/VM.r$VER

@@ -101,6 +101,7 @@ if [ -n "$NL" ]; then
 	test -d nsvmlinux/lib/squeak && mv nsvmlinux/lib/squeak nsvmlinux/lib/nsvm
 	LIBDIR="`echo nsvmlinux/lib/nsvm/[0-9.-]*`"
 	test -f $LIBDIR/squeak && mv $LIBDIR/squeak $LIBDIR/nsvm
+	rm -f nsvmlinux/lib/nsvm/npsqueak* $LIBDIR/npsqueak.so
 
 	rm -rf nsvmlinux.tgz
 	COPYFILE_DISABLE=1 tar czf nsvmlinux.tgz nsvmlinux
