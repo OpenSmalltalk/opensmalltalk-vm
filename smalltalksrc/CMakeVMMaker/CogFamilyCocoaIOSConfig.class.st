@@ -88,7 +88,7 @@ CogFamilyCocoaIOSConfig >> defaultExternalPlugins [
 		ObjectiveCPlugin
 		QuicktimePlugin
 		TestOSAPlugin
-		UnixOSProcessPlugin
+		"UnixOSProcessPlugin"
 	)
 ]
 
@@ -123,7 +123,7 @@ CogFamilyCocoaIOSConfig >> defaultInternalPlugins [
 		SoundPlugin
 		StarSqueakPlugin 
 		SurfacePlugin 
-		"UnixOSProcessPlugin"
+		UnixOSProcessPlugin
 		)
 ]
 
