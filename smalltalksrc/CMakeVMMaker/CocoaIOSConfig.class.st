@@ -290,7 +290,9 @@ CocoaIOSConfig >> extraPluginSettings: maker [
 { #category : #'source files' }
 CocoaIOSConfig >> extraSources [
 	^'${buildDir}/', self prefixHeaderFileName, '
- ${resources}'
+ ${resources} ', 
+	'${buildDir}/', self prefixHeaderFileName, '
+ ${resourcesLocaleEnglish}'
 ]
 
 { #category : #settings }
@@ -308,8 +310,11 @@ CocoaIOSConfig >> extraVMSettings: maker [
 		"${resourceDir}/SqueakScript.icns"
 		"${resourceDir}/SqueakGeneric.icns"
 		"${resourceDir}/SqueakProject.icns"
-		"${resourceDir}/SqueakSources.icns"
-		"${resourceDir}/MainMenu.nib"'
+		"${resourceDir}/SqueakSources.icns"'.
+		
+	maker set: 'resourcesLocaleEnglish' to: 
+	     '"${resourceDir}/English.lproj/InfoPlist.strings"
+		"${resourceDir}/English.lproj/MainMenu.nib"'
 
 ]
 
