@@ -88,6 +88,7 @@ CogFamilyCocoaIOSConfig >> defaultExternalPlugins [
 		ObjectiveCPlugin
 		QuicktimePlugin
 		TestOSAPlugin
+		UnixOSProcessPlugin
 	)
 ]
 
@@ -122,7 +123,7 @@ CogFamilyCocoaIOSConfig >> defaultInternalPlugins [
 		SoundPlugin
 		StarSqueakPlugin 
 		SurfacePlugin 
-		UnixOSProcessPlugin
+		"UnixOSProcessPlugin"
 		)
 ]
 
@@ -211,6 +212,15 @@ CogFamilyCocoaIOSConfig >> setExtraTargetProperties: maker [
 	maker 
 		cmd: 'set_source_files_properties' 
 		params: '${resources} PROPERTIES MACOSX_PACKAGE_LOCATION Resources'.
+
+	maker 
+		cmd: 'set_source_files_properties' 
+		params: '${resourcesLocaleEnglish} PROPERTIES MACOSX_PACKAGE_LOCATION Resources/English.lproj'.
+
+
+	maker 
+		cmd: 'set_source_files_properties' 
+		params: '${ENGLISH_RESOURCES} PROPERTIES MACOSX_PACKAGE_LOCATION Resources/English.lproj'.
 			
 	(maker buildDir forceNewFileNamed: self prefixHeaderFileName) 
 		nextPutAll: self precompiledHeaders;
