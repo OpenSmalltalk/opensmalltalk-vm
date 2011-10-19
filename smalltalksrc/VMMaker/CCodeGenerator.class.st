@@ -701,6 +701,7 @@ CCodeGenerator >> emitCConstantsOn: aStream [
 		[:lit|
 		lit isVariableBinding ifTrue:
 			[unused add: lit key]].
+	unused remove: #BytesPerWord ifAbsent: []. "force inclusion of BytesPerWord declaration"
 	constList := constants keys reject:[:any| unused includes: any].
 	aStream cr; nextPutAll: '/*** Constants ***/'; cr.
 	(self sortStrings: constList) do:
@@ -1057,6 +1058,14 @@ CCodeGenerator >> generateAtPut: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
+CCodeGenerator >> generateBaseHeaderSize: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	aStream nextPutAll: 'BaseHeaderSize'
+
+]
+
+{ #category : #'C translation' }
 CCodeGenerator >> generateBetweenAnd: msgNode on: aStream indent: level [
 	"Generate the C code for the between:and: message onto the given stream."
 
@@ -1150,6 +1159,13 @@ CCodeGenerator >> generateBitXor: msgNode on: aStream indent: level [
 	self emitCExpression: msgNode receiver on: aStream.
 	aStream nextPutAll: ' ^ '.
 	self emitCExpression: msgNode args first on: aStream.
+]
+
+{ #category : #'C translation' }
+CCodeGenerator >> generateBytesPerWord: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	aStream nextPutAll: 'BytesPerWord'
 ]
 
 { #category : #'C translation' }
@@ -2221,6 +2237,7 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	"Initialize the dictionary mapping message names to actions for C code generation."
 
 	| pairs |
+	
 	translationDict := Dictionary new: 200.
 	pairs := #(
 	#&				#generateAnd:on:indent:
@@ -2310,6 +2327,9 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#raisedTo:					#generateRaisedTo:on:indent:
 	#touch:						#generateTouch:on:indent:
 
+	#bytesPerWord 			#generateBytesPerWord:on:indent:
+	#baseHeaderSize			#generateBaseHeaderSize:on:indent:
+	
 	#sharedCodeNamed:inCase:		#generateSharedCodeDirective:on:indent:
 
 	#perform:							#generatePerform:on:indent:

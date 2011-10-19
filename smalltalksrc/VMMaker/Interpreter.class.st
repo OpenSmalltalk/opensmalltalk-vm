@@ -634,7 +634,7 @@ Interpreter class >> initializePrimitiveTable [
 		(166 primitiveIntegerAtPut)
 		(167 primitiveYield)
 		(168 primitiveCopyObject)
-		(169 primitiveFail)
+		(169 primitiveNotIdentical)
 
 		"Sound Primitives (170-199) - NO LONGER INDEXED"
 		(170 185 primitiveFail)
@@ -6941,6 +6941,16 @@ Interpreter >> primitiveNotEqualLargeIntegers [
 		self pushBool: integerRcvr ~= integerArg
 	].
 
+]
+
+{ #category : #'object access primitives' }
+Interpreter >> primitiveNotIdentical [
+	"is the receiver/first argument not the same object as the (last) argument?.
+	 pop argumentCount because this can be used as a mirror primitive."
+	| thisObject otherObject |
+	otherObject := self stackValue: 1.
+	thisObject := self stackTop.
+	self pop: argumentCount + 1 thenPushBool: thisObject ~= otherObject
 ]
 
 { #category : #'object access primitives' }

@@ -248,6 +248,7 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueakV3 [
 		"Squeak Miscellaneous Primitives (128-149); We won't compile any of these"
 
 		"File Primitives (150-169) - NO LONGER INDEXED; We won't compile any of these"
+		(169 genPrimitiveNotEquivalent 1)
 
 		"Sound Primitives (170-199) - NO LONGER INDEXED; We won't compile any of these"
 
@@ -1526,9 +1527,8 @@ SimpleStackBasedCogit >> genPrimitiveEquivalent [
 		objRef: objectMemory trueObject.
 	self flag: 'currently caller pushes result'.
 	self RetN: BytesPerWord * 2.
-	jumpFalse jmpTarget: (self
-						annotate: (self MoveCw: objectMemory falseObject R: ReceiverResultReg)
-						objRef: objectMemory falseObject).
+	jumpFalse jmpTarget: (self annotate: (self MoveCw: objectMemory falseObject R: ReceiverResultReg)
+								objRef: objectMemory falseObject).
 	self RetN: BytesPerWord * 2.
 	^0
 ]
@@ -1700,6 +1700,27 @@ SimpleStackBasedCogit >> genPrimitiveMultiply [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveNotEqual [
 	^self genSmallIntegerComparison: JumpNonZero
+]
+
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> genPrimitiveNotEquivalent [
+	"Stack looks like
+		receiver (also in ResultReceiverReg)
+		arg
+		return address"
+	| jumpFalse |
+	<var: #jumpFalse type: #'AbstractInstruction *'>
+	self MoveMw: BytesPerWord r: SPReg R: TempReg.
+	self CmpR: TempReg R: ReceiverResultReg.
+	jumpFalse := self JumpZero: 0.
+	self annotate: (self MoveCw: objectMemory trueObject R: ReceiverResultReg)
+		objRef: objectMemory trueObject.
+	self flag: 'currently caller pushes result'.
+	self RetN: BytesPerWord * 2.
+	jumpFalse jmpTarget: (self annotate: (self MoveCw: objectMemory falseObject R: ReceiverResultReg)
+								objRef: objectMemory falseObject).
+	self RetN: BytesPerWord * 2.
+	^0
 ]
 
 { #category : #'primitive generators' }

@@ -2871,10 +2871,6 @@ CogVMSimulator >> runWithBreakCount: theBreakCount [
 CogVMSimulator >> sendBreak: selectorString point: selectorLength receiver: receiverOrNil [
 	"self shortPrintFrameAndCallers: localFP"
 	| i |
-	cogit printOnTrace ifTrue:
-		[0 to: selectorLength - 1 do:
-			[:si| transcript nextPut: (objectMemory byteAt: selectorString + si) asCharacter].
-		transcript cr; flush].
 	breakSelectorLength = selectorLength ifTrue:
 		[i := breakSelectorLength.
 		 [i > 0] whileTrue:

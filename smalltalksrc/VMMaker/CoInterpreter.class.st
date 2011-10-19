@@ -1834,16 +1834,16 @@ CoInterpreter >> ceStackOverflow: contextSwitchIfNotNil [
 CoInterpreter >> ceTraceBlockActivation [
 	<api>
 	<var: #cogMethod type: #'CogMethod *'>
-	cogit recordSendTrace ifTrue:
+	cogit recordBlockTrace ifTrue:
 		[self recordTrace: TraceBlockActivation
 			thing: (self mframeHomeMethod: framePointer) methodObject
-			source: TraceIsFromMachineCode].
-	cogit printOnTrace ifTrue:
-		[self printActivationNameFor: (self mframeHomeMethod: framePointer) methodObject
-			receiver: (self frameReceiver: framePointer)
-			isBlock: true
-			firstTemporary: nil.
-		 self cr]
+			source: TraceIsFromMachineCode.
+		 cogit printOnTrace ifTrue:
+			[self printActivationNameFor: (self mframeHomeMethod: framePointer) methodObject
+				receiver: (self frameReceiver: framePointer)
+				isBlock: true
+				firstTemporary: nil.
+			 self cr]]
 ]
 
 { #category : #'debug support' }
@@ -1853,8 +1853,10 @@ CoInterpreter >> ceTraceLinkedSend: theReceiver [
 	<var: #cogMethod type: #'CogMethod *'>
 	cogMethod := self cCoerceSimple: (self stackTop - cogit traceLinkedSendOffset)
 						to: #'CogMethod *'.
-	cogit recordSendTrace ifTrue:
-		[self recordTrace: (objectMemory fetchClassOf: theReceiver) thing: cogMethod selector source: TraceIsFromMachineCode].
+	"cogit recordSendTrace ifTrue: is implicit; wouldn't compile the call otherwise."
+	self recordTrace: (objectMemory fetchClassOf: theReceiver)
+		thing: cogMethod selector
+		source: TraceIsFromMachineCode.
 	cogit printOnTrace ifTrue:
 		[self printActivationNameFor: cogMethod methodObject
 			receiver: theReceiver
@@ -2219,7 +2221,9 @@ CoInterpreter >> commonSend [
 		point: (objectMemory lengthOf: messageSelector)
 		receiver: (self internalStackValue: argumentCount).
 	cogit recordSendTrace ifTrue:
-		[self recordTrace: lkupClass thing: messageSelector source: TraceIsFromInterpreter].
+		[self recordTrace: lkupClass thing: messageSelector source: TraceIsFromInterpreter.
+		cogit printOnTrace ifTrue:
+			[self printActivationNameForSelector: messageSelector startClass: lkupClass; cr]].
 	self internalFindNewMethod.
 	self internalExecuteNewMethod.
 	self fetchNextBytecode
@@ -5189,6 +5193,12 @@ CoInterpreter >> printLogEntryAt: i [
 	source > TraceIsFromInterpreter ifTrue:
 		[self space; print: (traceSources at: source)].
 	self cr
+]
+
+{ #category : #'debug printing' }
+CoInterpreter >> printSends [
+	<inline: true>
+	^cogit printOnTrace
 ]
 
 { #category : #'stack bytecodes' }
