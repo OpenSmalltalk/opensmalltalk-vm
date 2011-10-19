@@ -744,7 +744,7 @@ StackInterpreter class >> initializePrimitiveTable [
 		(166 primitiveIntegerAtPut)
 		(167 primitiveYield)
 		(168 primitiveCopyObject)
-		(169 primitiveFail)
+		(169 primitiveNotIdentical)
 
 		"Sound Primitives (170-199) - NO LONGER INDEXED"
 		(170 174 primitiveFail)
@@ -2948,6 +2948,8 @@ StackInterpreter >> commonSend [
 	self sendBreak: messageSelector + BaseHeaderSize
 		point: (objectMemory lengthOf: messageSelector)
 		receiver: (self internalStackValue: argumentCount).
+	self printSends ifTrue:
+		[self printActivationNameForSelector: messageSelector startClass: lkupClass; cr].
 	self internalFindNewMethod.
 	self internalExecuteNewMethod.
 	self fetchNextBytecode
@@ -3951,6 +3953,25 @@ StackInterpreter >> findApplicationOfTargetMixin: targetMixin startingAtNonMetaC
 ]
 
 { #category : #'debug support' }
+StackInterpreter >> findClassForSelector: aSelector lookupClass: startClass do: unaryBlock [
+	"Search startClass' class hierarchy looking for aSelector and if found, evaluate unaryBlock
+	 with the class where the selector is found.  Otherwise evaluate unaryBlock with nil."
+	| currClass classDict classDictSize i |
+	currClass := startClass.
+	[classDict := objectMemory fetchPointer: MethodDictionaryIndex ofObject: currClass.
+	 classDictSize := objectMemory fetchWordLengthOf: classDict.
+	 i := SelectorStart.
+	 [i < classDictSize] whileTrue:
+		[aSelector = (objectMemory fetchPointer: i ofObject: classDict) ifTrue:
+			[^unaryBlock value: currClass].
+			i := i + 1].
+	 currClass := self superclassOf: currClass.
+	 currClass = objectMemory nilObject] whileFalse.
+	^unaryBlock value: nil    "selector not found in superclass chain"
+		
+]
+
+{ #category : #'debug support' }
 StackInterpreter >> findClassOfMethod: meth forReceiver: rcvr [
 
 	| currClass classDict classDictSize methodArray i |
@@ -4119,6 +4140,30 @@ StackInterpreter >> findSPOrNilOf: theFP on: thePage startingFrom: startFrame [
 		[theFP = aFrame ifTrue:
 			[^theSP]].
 	^nil
+]
+
+{ #category : #'debug support' }
+StackInterpreter >> findSelectorAndClassForMethod: meth lookupClass: startClass do: binaryBlock [
+	"Search startClass' class hierarchy searching for method and if found, evaluate aBinaryBlock
+	 with the selector and class where the method is found.  Otherwise evaluate aBinaryBlock
+	 with doesNotUnderstand: and nil."
+	| currClass classDict classDictSize methodArray i |
+	currClass := startClass.
+	[classDict := objectMemory fetchPointer: MethodDictionaryIndex ofObject: currClass.
+	 classDictSize := objectMemory fetchWordLengthOf: classDict.
+	 methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: classDict.
+	 i := 0.
+	 [i <= (classDictSize - SelectorStart)] whileTrue:
+		[meth = (objectMemory fetchPointer: i ofObject: methodArray) ifTrue:
+			[^binaryBlock
+				value: (objectMemory fetchPointer: i + SelectorStart ofObject: classDict)
+				value: currClass].
+			i := i + 1].
+	 currClass := self superclassOf: currClass.
+	 currClass = objectMemory nilObject] whileFalse.
+	^binaryBlock    "method not found in superclass chain"
+		value: (objectMemory splObj: SelectorDoesNotUnderstand)
+		value: nil
 ]
 
 { #category : #'debug support' }
@@ -7209,6 +7254,8 @@ StackInterpreter >> primitiveObject: actualReceiver perform: selector withArgume
 	self sendBreak: messageSelector + BaseHeaderSize
 		point: (objectMemory lengthOf: messageSelector)
 		receiver: actualReceiver.
+	self printSends ifTrue:
+		[self printActivationNameForSelector: messageSelector startClass: lookupClass; cr].
 	self findNewMethodInClass: lookupClass.
 
 	"Only test CompiledMethods for argument count - any other objects playacting as CMs will have to take their chances"
@@ -7274,6 +7321,74 @@ StackInterpreter >> printActivationNameFor: aMethod receiver: anObject isBlock: 
 		methodSel := objectMemory fetchPointer: MessageSelectorIndex ofObject: maybeMessage.
 		self print: ' '.
 		self printStringOf: methodSel]
+]
+
+{ #category : #'debug printing' }
+StackInterpreter >> printActivationNameForMethod: aMethod startClass: startClass isBlock: isBlock firstTemporary: maybeMessage [
+	| methClass methodSel |
+	<inline: false>
+	isBlock ifTrue:
+		[self print: '[] in '].
+	self findSelectorAndClassForMethod: aMethod
+		lookupClass: startClass
+		do: [:sel :class|
+			methodSel := sel.
+			methClass := class].
+	((self addressCouldBeOop: startClass) and: [methClass notNil])
+		ifTrue:
+			[startClass = methClass
+				ifTrue: [self printNameOfClass: methClass count: 5]
+				ifFalse:
+					[self printNameOfClass: startClass count: 5.
+					 self printChar: $(.
+					 self printNameOfClass: methClass count: 5.
+					 self printChar: $)]]
+		ifFalse: [self print: 'INVALID CLASS'].
+	self printChar: $>.
+	(objectMemory addressCouldBeOop: methodSel)
+		ifTrue:
+			[(objectMemory isBytes: methodSel)
+				ifTrue: [self printStringOf: methodSel]
+				ifFalse: [self printOopShort: methodSel]]
+		ifFalse: [self print: 'INVALID SELECTOR'].
+	(methodSel = (objectMemory splObj: SelectorDoesNotUnderstand)
+	and: [(objectMemory addressCouldBeObj: maybeMessage)
+	and: [(objectMemory fetchClassOfNonInt: maybeMessage) = (objectMemory splObj: ClassMessage)]]) ifTrue:
+		["print arg message selector"
+		methodSel := objectMemory fetchPointer: MessageSelectorIndex ofObject: maybeMessage.
+		self print: ' '.
+		self printStringOf: methodSel]
+]
+
+{ #category : #'debug printing' }
+StackInterpreter >> printActivationNameForSelector: aSelector startClass: startClass [
+	| methClass |
+	<inline: false>
+	(objectMemory addressCouldBeObj: startClass)
+		ifTrue:
+			[self findClassForSelector: aSelector
+				lookupClass: startClass
+				do: [:class| methClass := class].
+			(methClass isNil or: [startClass = methClass])
+				ifTrue:
+					[self printNameOfClass: methClass count: 5..
+					 self printChar: $>.
+					 methClass ifNil:
+						[self printStringOf: (objectMemory splObj: SelectorDoesNotUnderstand).
+						 self print: ' ']]
+				ifFalse:
+					[self printNameOfClass: startClass count: 5.
+					 self printChar: $(.
+					 self printNameOfClass: methClass count: 5.
+					 self printChar: $).
+					 self printChar: $>]]
+		ifFalse: [self print: 'INVALID CLASS'].
+	(objectMemory addressCouldBeOop: aSelector)
+		ifTrue:
+			[(objectMemory isBytes: aSelector)
+				ifTrue: [self printStringOf: aSelector]
+				ifFalse: [self printOopShort: aSelector]]
+		ifFalse: [self print: 'INVALID SELECTOR']
 ]
 
 { #category : #'debug printing' }
@@ -7849,6 +7964,11 @@ StackInterpreter >> printProcsOnList: procList [
 		 proc = firstProc ifTrue:
 			[self warning: 'circular process list!!'.
 			 ^nil]]
+]
+
+{ #category : #'debug printing' }
+StackInterpreter >> printSends [
+	^false
 ]
 
 { #category : #'debug printing' }
@@ -9405,7 +9525,7 @@ StackInterpreter >> stObject: array at: index [
 	fixedFields := objectMemory fixedFieldsOf: array format: fmt length: totalLength.
 	(fmt = 3 and: [objectMemory isContextHeader: hdr])
 		ifTrue:
-			[stSize := self fetchStackPointerOf: array.
+			[stSize := self stackPointerForMaybeMarriedContext: array.
 			((self oop: index isGreaterThanOrEqualTo: 1)
 			 and: [(self oop: index isLessThanOrEqualTo: stSize)
 			 and: [self isStillMarriedContext: array]]) ifTrue:
@@ -9429,7 +9549,7 @@ StackInterpreter >> stObject: array at: index put: value [
 	(fmt = 3
 	 and: [objectMemory isContextHeader: hdr])
 		ifTrue:
-			[stSize := self fetchStackPointerOf: array.
+			[stSize := self stackPointerForMaybeMarriedContext: array.
 			((self oop: index isGreaterThanOrEqualTo: 1)
 			 and: [(self oop: index isLessThanOrEqualTo: stSize)
 			 and: [self isStillMarriedContext: array]]) ifTrue:
