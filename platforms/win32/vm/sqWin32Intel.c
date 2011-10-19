@@ -1212,7 +1212,7 @@ static vmArg args[] = {
 #endif /* STACKVM */
 #if COGVM
   { ARG_UINT, &desiredCogCodeSize, "-codesize:"}, /* machine code memory to use */
-  { ARG_FLAG, &traceLinkedSends, "-sendtrace" },  /* trace sends in log */
+  { ARG_UINT, &traceLinkedSends, "-sendtrace:" },  /* trace sends in log */
   { ARG_INT, &traceLinkedSends, "-trace:" },  /* trace sends in log */
   { ARG_FLAG, &traceStores, "-tracestores" },     /* assert-check stores */
   { ARG_UINT, &debugPrimCallStackOffset, "-dpcso:"}, /* debug prim call stack offset */
