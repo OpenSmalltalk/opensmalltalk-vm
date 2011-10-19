@@ -1,5 +1,10 @@
 #!/bin/sh
+# Run the VM, setting SQUEAK_PLUGINS if unset to the VM's containing directory
+# if unset, and ensuring LD_LIBRARY_PATH includes the VM's containing directory.
 BIN=`/usr/bin/dirname $0`/@expanded_relative_imgdir@
+if [ "${SQUEAK_PLUGINS-unset}" = unset ]; then
+	export SQUEAK_PLUGINS="$BIN"
+fi
 # At least on linux LD_LIBRARY_PATH's components must be absolute path names
 case "$BIN" in
 /*) PLUGINS="$BIN";;
