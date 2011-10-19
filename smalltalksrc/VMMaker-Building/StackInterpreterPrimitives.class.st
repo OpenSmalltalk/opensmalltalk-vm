@@ -103,7 +103,7 @@ StackInterpreterPrimitives >> primitiveContextAt [
 		[fmt := objectMemory formatOfHeader: hdr.
 		 totalLength := objectMemory lengthOf: aContext baseHeader: hdr format: fmt.
 		 fixedFields := objectMemory fixedFieldsOf: aContext format: fmt length: totalLength.
-		 stSize := self stackPointerForMaybeMarriedContext: aContext.
+		 stSize := self fetchStackPointerOf: aContext.
 		 (index between: 1 and: stSize) ifFalse:
 			[^self primitiveFailFor: PrimErrBadIndex].			
 		value := self subscript: aContext with: (index + fixedFields) format: fmt.
@@ -138,7 +138,7 @@ StackInterpreterPrimitives >> primitiveContextAtPut [
 		[fmt := objectMemory formatOfHeader: hdr.
 		 totalLength := objectMemory lengthOf: aContext baseHeader: hdr format: fmt.
 		 fixedFields := objectMemory fixedFieldsOf: aContext format: fmt length: totalLength.
-		 stSize := self stackPointerForMaybeMarriedContext: aContext.
+		 stSize := self fetchStackPointerOf: aContext.
 		 (index between: 1 and: stSize) ifFalse:
 			[^self primitiveFailFor: PrimErrBadIndex].			
 		self subscript: aContext with: (index + fixedFields) storing: value format: fmt.
@@ -634,6 +634,8 @@ StackInterpreterPrimitives >> primitivePerform [
 	self sendBreak: messageSelector + BaseHeaderSize
 		point: (objectMemory lengthOf: messageSelector)
 		receiver: newReceiver.
+	self printSends ifTrue:
+		[self printActivationNameForSelector: messageSelector startClass: lookupClass; cr].
 	self findNewMethodInClass: lookupClass.
 
 	"Only test CompiledMethods for argument count - other objects will have to take their chances"

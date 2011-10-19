@@ -51,16 +51,6 @@ NewCoObjectMemory >> clearLeakMapAndMapAccessibleObjects [
 	cogit addCogMethodsToHeapMap
 ]
 
-{ #category : #allocation }
-NewCoObjectMemory >> clone: obj [
-	"Return a shallow copy of the given object. May cause GC"
-	"Assume: Oop is a real object, not a small integer.
-	 Override to assert it's not a cogged method"
-	self assert: ((self isOopCompiledMethod: obj) not
-				or: [(coInterpreter methodHasCogMethod: obj) not]). 
-	^super clone: obj
-]
-
 { #category : #accessing }
 NewCoObjectMemory >> cogit [
 	<doNotGenerate>
