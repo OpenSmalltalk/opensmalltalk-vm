@@ -480,7 +480,7 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		var: #labelCounter
 			declareC: 'static int labelCounter';
 		var: #traceLinkedSends
-			declareC: 'int traceLinkedSends = 2 /* prim trace log on by default */';
+			declareC: 'int traceLinkedSends = 8 /* prim trace log on by default */';
 		var: #cStackAlignment
 			declareC: 'const int cStackAlignment = STACK_ALIGN_BYTES'.
 	aCCodeGenerator
@@ -2091,8 +2091,8 @@ Cogit >> breakMethod [
 { #category : #debugging }
 Cogit >> breakOnImplicitReceiver [
 	<api>
-	<cmacro: '() (traceLinkedSends & 16)'>
-	^(traceLinkedSends bitAnd: 16) ~= 0
+	<cmacro: '() (traceLinkedSends & 32)'>
+	^(traceLinkedSends bitAnd: 32) ~= 0
 ]
 
 { #category : #'simulation only' }
@@ -3262,7 +3262,7 @@ Cogit >> compileBlockEntry: blockStart [
 	needsFrame
 		ifTrue:
 			[self compileBlockFrameBuild: blockStart.
-			 self recordSendTrace ifTrue:
+			 self recordBlockTrace ifTrue:
 				[self CallRT: ceTraceBlockActivationTrampoline]]
 		ifFalse:
 			[self compileBlockFramelessEntry: blockStart]
@@ -6755,8 +6755,8 @@ Cogit >> printNum: n [
 { #category : #debugging }
 Cogit >> printOnTrace [
 	<api>
-	<cmacro: '() (traceLinkedSends & 8)'>
-	^(traceLinkedSends bitAnd: 8) ~= 0
+	<cmacro: '() (traceLinkedSends & 1)'>
+	^(traceLinkedSends bitAnd: 1) ~= 0
 ]
 
 { #category : #'method map' }
@@ -6814,10 +6814,17 @@ Cogit >> processorHasMultiply: ignoredPrimIndex [
 ]
 
 { #category : #debugging }
-Cogit >> recordEventTrace [
+Cogit >> recordBlockTrace [
 	<api>
 	<cmacro: '() (traceLinkedSends & 4)'>
 	^(traceLinkedSends bitAnd: 4) ~= 0
+]
+
+{ #category : #debugging }
+Cogit >> recordEventTrace [
+	<api>
+	<cmacro: '() (traceLinkedSends & 16)'>
+	^(traceLinkedSends bitAnd: 16) ~= 0
 ]
 
 { #category : #initialization }
@@ -6850,8 +6857,8 @@ Cogit >> recordLastInstruction [
 { #category : #debugging }
 Cogit >> recordPrimTrace [
 	<api>
-	<cmacro: '() (traceLinkedSends & 2)'>
-	^(traceLinkedSends bitAnd: 2) ~= 0
+	<cmacro: '() (traceLinkedSends & 8)'>
+	^(traceLinkedSends bitAnd: 8) ~= 0
 ]
 
 { #category : #debugging }
@@ -6890,8 +6897,8 @@ Cogit >> recordRunTimeObjectReferences [
 { #category : #debugging }
 Cogit >> recordSendTrace [
 	<api>
-	<cmacro: '() (traceLinkedSends & 1)'>
-	^(traceLinkedSends bitAnd: 1) ~= 0
+	<cmacro: '() (traceLinkedSends & 2)'>
+	^(traceLinkedSends bitAnd: 2) ~= 0
 ]
 
 { #category : #disassembly }
@@ -7226,10 +7233,12 @@ Cogit >> sendTrace [
 Cogit >> sendTrace: aBooleanOrInteger [
 	<doNotGenerate>
 	"traceLinkedSends is a set of flags.
-	 1 => trace sends & block activations
-	 2 => trace interpreter primitives
-	 4 => trace events (context switches, GCs, etc)
-	 8 => print trace"
+	 1 => print trace (if somethign below is selected)
+	 2 => trace sends
+	 4 => trace block activations
+	 8 => trace interpreter primitives
+	 16 => trace events (context switches, GCs, etc)
+	 32 => send breakpoint on implicit receiver (Newspeak VM only)"
 	traceLinkedSends := aBooleanOrInteger isInteger
 							ifTrue: [aBooleanOrInteger]
 							ifFalse: [aBooleanOrInteger ifTrue: [1] ifFalse: [0]]
@@ -7283,7 +7292,7 @@ Cogit >> setInterpreter: aCoInterpreter [
 	simulatedVariableGetters := Dictionary new.
 	simulatedVariableSetters := Dictionary new.
 	traceStores := 0.
-	traceLinkedSends := 2. "record prim trace on by default (see Cogit class>>decareCVarsIn:)"
+	traceLinkedSends := 8. "record prim trace on by default (see Cogit class>>decareCVarsIn:)"
 	debugPrimCallStackOffset := 0.
 	singleStep := printRegisters := printInstructions := clickConfirm := false.
 	breakBlock ifNil: [self breakPC: breakPC].
