@@ -256,7 +256,8 @@ Class {
 		'NumObjRefsInRuntime',
 		'NumSendTrampolines',
 		'NumTrampolines',
-		'ProcessorClass'
+		'ProcessorClass',
+		'YoungSelectorInPIC'
 	],
 	#pools : [
 		'CogMethodConstants',
@@ -676,10 +677,12 @@ Cogit class >> initializeCompilationConstants [
 
 { #category : #'class initialization' }
 Cogit class >> initializeErrorCodes [
+	self flag: 'these should be positive quantities and the check for error code should be a comparison against minCogMethodAddress/methodZoneBase'.
 	NotFullyInitialized := -1.
 	InsufficientCodeSpace := -2.
-	MaxUnreportableError := InsufficientCodeSpace.
-	EncounteredUnknownBytecode := -3.
+	YoungSelectorInPIC := -3.
+	MaxUnreportableError := YoungSelectorInPIC.
+	EncounteredUnknownBytecode := -4.
 	MaxNegativeErrorCode := EncounteredUnknownBytecode
 ]
 
@@ -2933,6 +2936,8 @@ Cogit >> cogMNUPICSelector: selector methodOperand: methodOperand numArgs: numAr
 	 The tag for the case is at the send site and so doesn't need to be generated."
 	<returnTypeC: #'CogMethod *'>
 	| startAddress headerSize size end |
+	(objectMemory isYoung: selector) ifTrue:
+		[^0].
 	coInterpreter
 		compilationBreak: selector
 		point: (objectMemory lengthOf: selector).
@@ -3095,6 +3100,8 @@ Cogit >> cogPICSelector: selector numArgs: numArgs Case0Method: case0CogMethod C
 	<var: #case0CogMethod type: #'CogMethod *'>
 	<returnTypeC: #'CogMethod *'>
 	| startAddress headerSize size end |
+	(objectMemory isYoung: selector) ifTrue:
+		[^self cCoerceSimple: YoungSelectorInPIC to: #'CogMethod *'].
 	coInterpreter
 		compilationBreak: selector
 		point: (objectMemory lengthOf: selector).
