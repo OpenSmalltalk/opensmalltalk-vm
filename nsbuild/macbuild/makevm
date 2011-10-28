@@ -58,6 +58,8 @@ else
 	mv build/$BUILD_CONFIGURATION/Newspeak\ Virtual\ Machine.app "$DEST"
 fi
 
+../../scripts/versionInfoPlist ../../platforms CoreVM.plist "$DEST/Contents/Info.plist"
+
 if false; then
 # Build the BochsIA32Plugin
 # N.B. To build the plugin you also have to build the Bochs libraries in
