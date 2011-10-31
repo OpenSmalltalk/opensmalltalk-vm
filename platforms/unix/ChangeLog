@@ -1,3 +1,8 @@
+2011-10-30  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* plugins/B3DAcceleratorPlugin/sqUnixOpenGL.c: Rename DPRINTF ->
+	DPRINTF3D for consistency.
+
 2011-04-28  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* plugins/LocalePlugin/sqUnixLocale.c: Do not copy trailing NUL
