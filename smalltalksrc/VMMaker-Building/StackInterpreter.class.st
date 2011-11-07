@@ -2978,7 +2978,9 @@ StackInterpreter >> commonVariable: rcvr at: index cacheIndex: atIx [
 			ifFalse: "ByteArray"
 			[^ objectMemory integerObjectOf: (objectMemory fetchByte: index - 1 ofObject: rcvr)]].
 
-	^self primitiveFailFor: PrimErrBadIndex
+	^self primitiveFailFor: ((objectMemory formatOf: rcvr) <= 1
+								ifTrue: [PrimErrBadReceiver]
+								ifFalse: [PrimErrBadIndex])
 ]
 
 { #category : #'indexing primitive support' }
@@ -3009,7 +3011,9 @@ StackInterpreter >> commonVariable: rcvr at: index put: value cacheIndex: atIx [
 			((valToPut >= 0) and: [valToPut <= 255]) ifFalse: [^ self primitiveFail].
 			^ objectMemory storeByte: index - 1 ofObject: rcvr withValue: valToPut]].
 
-	^self primitiveFailFor: PrimErrBadIndex
+	^self primitiveFailFor: ((objectMemory formatOf: rcvr) <= 1
+								ifTrue: [PrimErrBadReceiver]
+								ifFalse: [PrimErrBadIndex])
 ]
 
 { #category : #'arithmetic primitive support' }
@@ -9532,9 +9536,10 @@ StackInterpreter >> stObject: array at: index [
 				[^self noInlineTemporary: index - 1 in: (self frameOfMarriedContext: array)]]
 		ifFalse: [stSize := totalLength - fixedFields].
 	((self oop: index isGreaterThanOrEqualTo: 1)
-	 and: [self oop: index isLessThanOrEqualTo: stSize])
-		ifTrue: [^self subscript: array with: (index + fixedFields) format: fmt]
-		ifFalse: [self primitiveFailFor: PrimErrBadIndex.  ^ 0]
+	 and: [self oop: index isLessThanOrEqualTo: stSize]) ifTrue:
+		[^self subscript: array with: (index + fixedFields) format: fmt].
+	self primitiveFailFor: (fmt <= 1 ifTrue: [PrimErrBadReceiver] ifFalse: [PrimErrBadIndex]).
+	^0
 ]
 
 { #category : #'indexing primitive support' }
@@ -9559,7 +9564,7 @@ StackInterpreter >> stObject: array at: index put: value [
 	((self oop: index isGreaterThanOrEqualTo: 1)
 	 and: [self oop: index isLessThanOrEqualTo: stSize])
 		ifTrue: [self subscript: array with: (index + fixedFields) storing: value format: fmt]
-		ifFalse: [self primitiveFailFor: PrimErrBadIndex]
+		ifFalse: [self primitiveFailFor: (fmt <= 1 ifTrue: [PrimErrBadReceiver] ifFalse: [PrimErrBadIndex])]
 ]
 
 { #category : #'indexing primitive support' }

@@ -2530,7 +2530,9 @@ NewspeakInterpreter >> commonVariable: rcvr at: index cacheIndex: atIx [
 			ifFalse: "ByteArray"
 				[^ self integerObjectOf: (self fetchByte: index - 1 ofObject: rcvr)]].
 
-	self primitiveFailFor: PrimErrBadIndex
+	self primitiveFailFor: ((self formatOf: rcvr) <= 1
+								ifTrue: [PrimErrBadReceiver]
+								ifFalse: [PrimErrBadIndex])
 ]
 
 { #category : #'indexing primitive support' }
@@ -2564,7 +2566,9 @@ NewspeakInterpreter >> commonVariable: rcvr at: index put: value cacheIndex: atI
 			^ self storeByte: index - 1 ofObject: rcvr withValue: valToPut].
 		^self primitiveFailFor: PrimErrInappropriate].
 
-	self primitiveFailFor: PrimErrBadIndex
+	^self primitiveFailFor: ((self formatOf: rcvr) <= 1
+								ifTrue: [PrimErrBadReceiver]
+								ifFalse: [PrimErrBadIndex])
 ]
 
 { #category : #'array and stream primitive support' }
@@ -10529,16 +10533,17 @@ NewspeakInterpreter >> stObject: array at: index [
 	| hdr fmt totalLength fixedFields stSize |
 	<inline: false>
 	hdr := self baseHeader: array.
-	fmt := (hdr >> 8) bitAnd: 16rF.
+	fmt := self formatOfHeader: hdr.
 	totalLength := self lengthOf: array baseHeader: hdr format: fmt.
 	fixedFields := self fixedFieldsOf: array format: fmt length: totalLength.
 	(fmt = 3 and: [self isContextHeader: hdr])
 		ifTrue: [stSize := self fetchStackPointerOf: array]
 		ifFalse: [stSize := totalLength - fixedFields].
-	((self cCoerce: index to: 'usqInt ') >= 1
-		and: [(self cCoerce: index to: 'usqInt ') <= (self cCoerce: stSize to: 'usqInt ')])
-		ifTrue: [^ self subscript: array with: (index + fixedFields) format: fmt]
-		ifFalse: [self primitiveFailFor: PrimErrBadIndex.  ^ 0].
+	((self oop: index isGreaterThanOrEqualTo: 1)
+	 and: [self oop: index isLessThanOrEqualTo: stSize]) ifTrue:
+		[^self subscript: array with: (index + fixedFields) format: fmt].
+	self primitiveFailFor: (fmt <= 1 ifTrue: [PrimErrBadReceiver] ifFalse: [PrimErrBadIndex]).
+	^0
 ]
 
 { #category : #'indexing primitive support' }
@@ -10547,16 +10552,16 @@ NewspeakInterpreter >> stObject: array at: index put: value [
 	| hdr fmt totalLength fixedFields stSize |
 	<inline: false>
 	hdr := self baseHeader: array.
-	fmt := (hdr >> 8) bitAnd: 16rF.
+	fmt := self formatOfHeader: hdr.
 	totalLength := self lengthOf: array baseHeader: hdr format: fmt.
 	fixedFields := self fixedFieldsOf: array format: fmt length: totalLength.
 	(fmt = 3 and: [self isContextHeader: hdr])
 		ifTrue: [stSize := self fetchStackPointerOf: array]
 		ifFalse: [stSize := totalLength - fixedFields].
-	((self cCoerce: index to: 'usqInt ') >= 1
-		and: [(self cCoerce: index to: 'usqInt ') <= (self cCoerce: stSize to: 'usqInt ')])
+	((self oop: index isGreaterThanOrEqualTo: 1)
+	 and: [self oop: index isLessThanOrEqualTo: stSize])
 		ifTrue: [self subscript: array with: (index + fixedFields) storing: value format: fmt]
-		ifFalse: [self primitiveFailFor: PrimErrBadIndex]
+		ifFalse: [self primitiveFailFor: (fmt <= 1 ifTrue: [PrimErrBadReceiver] ifFalse: [PrimErrBadIndex])]
 ]
 
 { #category : #'indexing primitive support' }
