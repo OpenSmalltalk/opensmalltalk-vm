@@ -88,11 +88,11 @@ fi
 if [ -n "$NL" ]; then
 	if [ -f nsvmlinux/squeak ]; then
 		mv nsvmlinux/squeak nsvmlinux/nsvm
-		ex "+g/squeak/s/squeak/nsvm/g" +w +q nsvmlinux/nsvm
+		ex -u NONE "+g/squeak/s/squeak/nsvm/g" +w +q nsvmlinux/nsvm
 	fi
 	if [ -f nsvmlinux/bin/squeak ]; then
 		mv nsvmlinux/bin/squeak nsvmlinux/bin/nsvm
-		ex "+g/squeak/s/squeak/nsvm/g" +w +q nsvmlinux/bin/nsvm
+		ex -u NONE "+g/squeak/s/squeak/nsvm/g" +w +q nsvmlinux/bin/nsvm
 	fi
 	test -d nsvmlinux/lib/squeak && mv nsvmlinux/lib/squeak nsvmlinux/lib/nsvm
 	LIBDIR="`echo nsvmlinux/lib/nsvm/[0-9.-]*`"

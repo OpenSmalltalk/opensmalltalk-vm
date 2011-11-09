@@ -16,5 +16,5 @@ for p in `grep -e --version-- "$2" \
 		| sed 's/^[	 ]*\(.*\)<!--version-->/\1/' \
 		| sed 's./.\\\\/.g'` # double up for ex command below
 do
-	ex "+g/$p/s/0\([< ]\)/$REV\1/" +w +q "$3"
+	ex -u NONE "+g/$p/s/0\([< ]\)/$REV\1/" +w +q "$3"
 done
