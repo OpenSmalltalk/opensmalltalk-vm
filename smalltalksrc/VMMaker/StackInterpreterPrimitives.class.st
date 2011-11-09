@@ -97,7 +97,8 @@ StackInterpreterPrimitives >> primitiveContextAt [
 	hdr := objectMemory baseHeader: aContext.
 	(objectMemory isContextHeader: hdr) ifFalse: "might be an instance of a subclass"
 		[value := self stObject: aContext at: index.
-		 ^self pop: argumentCount thenPush: value].
+		 ^self successful ifTrue:
+			[self pop: argumentCount + 1 thenPush: value]].
 	self externalWriteBackHeadFramePointers.
 	(self isStillMarriedContext: aContext) ifFalse:
 		[fmt := objectMemory formatOfHeader: hdr.
@@ -132,7 +133,8 @@ StackInterpreterPrimitives >> primitiveContextAtPut [
 	index := objectMemory integerValueOf: index.
 	(objectMemory isContextHeader: hdr) ifFalse: "might be an instance of a subclass"
 		[self stObject: aContext at: index put: value.
-		 ^self pop: argumentCount + 1 thenPush: value].
+		 ^self successful ifTrue:
+			[self pop: argumentCount + 1 thenPush: value]].
 	self externalWriteBackHeadFramePointers.
 	(self isStillMarriedContext: aContext) ifFalse:
 		[fmt := objectMemory formatOfHeader: hdr.
