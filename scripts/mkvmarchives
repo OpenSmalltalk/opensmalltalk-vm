@@ -45,6 +45,10 @@ NW=
 	done
 fi
 EXES=
+REV=`grep 'SvnRawRevisionString.*Rev:' platforms/Cross/vm/sqSCCSVersion.h \
+	| sed 's/^.*Rev: \([0-9][0-9]*\) $";/\1/'`
+echo SVNREV=$REV
+export REV
 if [ -n "$CL" ]; then
 	rm -rf coglinux.tgz
 	COPYFILE_DISABLE=1 tar czf coglinux.tgz coglinux
@@ -98,9 +102,10 @@ if [ -n "$NL" ]; then
 	LIBDIR="`echo nsvmlinux/lib/nsvm/[0-9.-]*`"
 	test -f $LIBDIR/squeak && mv $LIBDIR/squeak $LIBDIR/nsvm
 	rm -f nsvmlinux/lib/nsvm/npsqueak* $LIBDIR/npsqueak.so
+	ln ~/Squeak/SqueakV41.sources $LIBDIR
 
-	rm -rf nsvmlinux.tgz
-	COPYFILE_DISABLE=1 tar czf nsvmlinux.tgz nsvmlinux
+	rm -rf nsvmlinux.tgz nsvmlinux-`date +%g.%U.$REV`.tgz
+	COPYFILE_DISABLE=1 tar czf nsvmlinux-`date +%g.%U.$REV`.tgz nsvmlinux
 	EXES="$EXES	$LIBDIR/nsvm"
 fi
 if [ -n "$NM" ]; then
