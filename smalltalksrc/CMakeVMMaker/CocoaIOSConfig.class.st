@@ -91,7 +91,7 @@ CocoaIOSConfig >> compilerFlagsRelease [
 	"'-mdynamic-no-pic'" 
 	"'-fwritable-strings'" 
 	'-Os' 
-	'-fvisibility=hidden' 
+	'-fvisibility=hidden'
 	'-funroll-loops' 
 	"'-fno-asm'" 
 	'-fasm-blocks' 
