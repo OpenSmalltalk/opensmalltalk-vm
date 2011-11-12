@@ -30,10 +30,10 @@ main()
 #define stoffsetof(type,field) (offsetof(type,field)+1)
 #define print(r,n,lh) \
 printf("!BochsIA32Alien methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
-	"%s\r\t^self unsignedLongLongAt: %d! !\r", m,d,y,h,i, lower(#r), \
+	"%s\r\t^self unsignedLongLongAt: %ld! !\r", m,d,y,h,i, lower(#r), \
 	stoffsetof(BX_CPU_C,xmm[n]._u64[lh]));\
 printf("!BochsIA32Alien methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
-	"%s: anUnsignedInteger\r\t^self unsignedLongLongAt: %d put: anUnsignedInteger! !\r", m,d,y,h,i, lower(#r), \
+	"%s: anUnsignedInteger\r\t^self unsignedLongLongAt: %ld put: anUnsignedInteger! !\r", m,d,y,h,i, lower(#r), \
 	stoffsetof(BX_CPU_C,xmm[n]._u64[lh]));\
 
 	time_t nowsecs = time(0);

@@ -1,11 +1,11 @@
 #!/bin/sh
 
-# this sets up the compile for Cog.  Disable as much inessential stuff
+# this sets up the compile for Cog on linux.  Disable as much inessential stuff
 # as possible leaving only the cpu/fpu & memory interface
 
-# build using
+# build cpu/libcpu.a disasm/libdisasm.a fpu/libfpu.a using
 # $ ./conf.COG
-# $ ./makeem
+# $ ../bochs/makeem
 
 set echo
 # CFLAGS="-pipe -O3 -fomit-frame-pointer -finline-functions -falign-loops=16 -falign-jumps=16 -falign-functions=16 -falign-labels=16 -falign-loops-max-skip=15 -falign-jumps-max-skip=15 -fprefetch-loop-arrays $CFLAGS"
@@ -22,7 +22,8 @@ export CPPFLAGS
 export CXXFLAGS
 export LDFLAGS
 
-./configure --enable-Cog \
+../bochs/configure \
+	--enable-Cog \
 	--enable-cpu-level=6 \
 	--enable-sse=2 \
 	--enable-assert-checks \

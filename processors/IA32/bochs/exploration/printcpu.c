@@ -28,19 +28,13 @@ int
 main()
 {
 #define stoffsetof(type,field) (offsetof(type,field)+1)
-#if 0
-#define print(r,n) printf(#r "@%d\n", offsetof(BX_CPU_C,gen_reg[n].dword.erx))
-
-	printf("EAX@%d\n",offsetof(BX_CPU_C, gen_reg[0].dword.erx));
-
-#else
 #define print(r,n) \
 printf("!BochsIA32Alien methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
-	"%s\r\t^self unsignedLongAt: %d! !\r", m,d,y,h,i, lower(#r), \
+	"%s\r\t^self unsignedLongAt: %ld! !\r", m,d,y,h,i, lower(#r), \
 	stoffsetof(BX_CPU_C,gen_reg[n].dword.erx));\
 printf("!BochsIA32Alien methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
-	"%s: anUnsignedInteger\r\t^self unsignedLongAt: %d put: anUnsignedInteger! !\r", m,d,y,h,i, lower(#r), \
-	stoffsetof(BX_CPU_C,gen_reg[n].dword.erx));\
+	"%s: anUnsignedInteger\r\t^self unsignedLongAt: %ld put: anUnsignedInteger! !\r", m,d,y,h,i, lower(#r), \
+	stoffsetof(BX_CPU_C,gen_reg[n].dword.erx))
 
 	time_t nowsecs = time(0);
 	struct tm now = *localtime(&nowsecs);
@@ -52,12 +46,11 @@ printf("!BochsIA32Alien methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r
 
 	printf("\"Hello world!!\"!\r");
 	printf("!BochsIA32Alien class methodsFor: 'instance creation' stamp: 'eem %d/%d/%d %d:%02d'!\r"
-	"dataSize\r\t^%d! !\r", m,d,y,h,i, sizeof(BX_CPU_C));
+	"dataSize\r\t^%ld! !\r", m,d,y,h,i, sizeof(BX_CPU_C));
 
 	printf("!BochsIA32Alien methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"
-	"eflags\r\t^self unsignedLongAt: %d! !\r", m,d,y,h,i,
-	stoffsetof(BX_CPU_C,eflags));
-#endif
+			"eflags\r\t^self unsignedLongAt: %ld! !\r", m,d,y,h,i,
+			stoffsetof(BX_CPU_C,eflags));
 
 	print(EAX,BX_32BIT_REG_EAX);
 	print(EBX,BX_32BIT_REG_EBX);

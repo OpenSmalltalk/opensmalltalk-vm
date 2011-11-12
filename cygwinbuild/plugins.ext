@@ -1,5 +1,6 @@
 # List of external plugins.
 EXTERNAL_PLUGINS = \
+BochsIA32Plugin \
 SqueakFFIPrims \
 Win32OSProcessPlugin
 
