@@ -861,7 +861,11 @@ public: // for now...
   Bit32u smbase;
 
 #if BX_CPU_LEVEL >= 5
+# if COG	// msr moved further down to make the member offsets as platform
+  int unused_filler1[5];	//		(don't break existing code)
+# else		// independent as possible since MSC sizes msr differently to mac.
   bx_regs_msr_t msr;
+# endif
 #endif
 
 #if BX_SUPPORT_FPU || BX_SUPPORT_MMX
@@ -905,8 +909,12 @@ public: // for now...
   volatile bx_bool smi_pending;
   volatile bx_bool nmi_pending;
 
+#if COG	// jmp_buf_env moved further down to make the member offsets as platform
+  int unused_filler2[18];	//		(don't break existing code)
+# else	// independent as possible since Windows and Mac jmp_buf sizes differ.
   // for exceptions
   jmp_buf jmp_buf_env;
+#endif
   Bit8u curr_exception;
 
   bx_segment_reg_t save_cs;
@@ -942,6 +950,18 @@ public: // for now...
   Bit8u stop_reason;
 #endif
   Bit8u trace;
+
+#if BX_CPU_LEVEL >= 5
+# if COG
+	// msr moved to here to make the member offsets as platform independent as
+	// possible since MSC sizes msr differently to mac.  stop_reason above is
+	// the last field that BochsIA32Alien accesses.
+  bx_regs_msr_t msr;
+# endif
+#endif
+#if COG	// jmp_buf_env moved here to make the member offsets as platform
+  jmp_buf jmp_buf_env;
+#endif	// independent as possible since Windows and Mac jmp_buf sizes differ.
 
   // for paging
   struct {

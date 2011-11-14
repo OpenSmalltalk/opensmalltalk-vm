@@ -256,6 +256,9 @@ int float64_is_signaling_nan(float64);
 | Software IEC/IEEE floating-point types.
 *----------------------------------------------------------------------------*/
 
+#if COG /* gcc on Mac packs this into 12 bytes. */
+# pragma pack(push,4)
+#endif
 #ifdef BX_BIG_ENDIAN
 struct floatx80 {	// leave alignment to compiler
     Bit16u exp;
@@ -266,6 +269,9 @@ struct floatx80 {
     Bit64u fraction;
     Bit16u exp;
 };
+#endif
+#if COG
+# pragma pack(pop)
 #endif
 
 /*----------------------------------------------------------------------------

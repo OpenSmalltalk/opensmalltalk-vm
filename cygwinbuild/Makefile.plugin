@@ -63,7 +63,8 @@ DEFS:=	$(WINVER) -DWIN32 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
 #############################################################################
 # DLL settings
 #
-# Note: DLLTOOL/DLLWRAP does the work for everything related to plugins
+# Note: By default DLLTOOL/DLLWRAP do the work for everything related to plugins
+# but if LINK_WITH_GCC we use gcc and if LINK_WITH_GPP we use g++.
 #
 DLLTOOL:=	dlltool
 DLLWRAP:=	dllwrap -mno-cygwin
@@ -123,6 +124,23 @@ $(PLUGINDLL): $(VMDIR) $(OBJDIR) $(LIBOBJ)
 		--output-lib $(LIBNAME).lib \
 		$(DLLTOOLEXTRAS) \
 		$(LIBOBJ)
+ifneq ($(LINK_WITH_GCC),)
+	gcc -shared \
+		-mno-cygwin \
+		-def $(LIBNAME).def \
+		-o   $(VMDIR)/$(LIBNAME).dll \
+		--entry _DllMain@12 \
+		$(GCCLINKEXTRAS) \
+		$(LIBOBJ) $(EXTRALIBS)
+else ifneq ($(LINK_WITH_GPP),)
+	g++ -shared \
+		-mno-cygwin \
+		-def $(LIBNAME).def \
+		-o   $(VMDIR)/$(LIBNAME).dll \
+		--entry _DllMain@12 \
+		$(GPPLINKEXTRAS) \
+		$(LIBOBJ) $(EXTRALIBS)
+else
 	$(DLLWRAP) -mwindows \
 		-def $(LIBNAME).def \
 		-o   $(VMDIR)/$(LIBNAME).dll \
@@ -130,6 +148,7 @@ $(PLUGINDLL): $(VMDIR) $(OBJDIR) $(LIBOBJ)
 		$(DLLWRAPEXTRAS) \
 		$(LIBNAME).exp \
 		$(LIBOBJ) $(EXTRALIBS)
+endif
 	$(OPTSTRIP) --strip-all $(VMDIR)/$(LIBNAME).dll
 	-$(RM) $(LIBNAME).lib
 
