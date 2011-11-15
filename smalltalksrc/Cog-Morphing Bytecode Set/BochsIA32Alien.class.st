@@ -65,7 +65,7 @@ Class {
 
 { #category : #'instance creation' }
 BochsIA32Alien class >> dataSize [
-	^19184
+	^18096
 ]
 
 { #category : #debugger }
