@@ -66,7 +66,7 @@ NewsqueakIA32ABIPlugin class >> shouldGenerateTypedefFor: aStructClass [
 
 { #category : #'simulation only' }
 NewsqueakIA32ABIPlugin class >> simulatorClass [
-	^NewsqueakIA32ABIPluginSimulator
+	^NewspeakVM ifTrue: [NewsqueakIA32ABIPluginSimulator]
 ]
 
 { #category : #'private-support' }

@@ -277,6 +277,11 @@ CurrentImageCoInterpreterFacade >> integerValueOf: anInteger [
 	^objectMemory integerValueOf: anInteger
 ]
 
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> interpretAddress [
+	^self addressForLabel: #interpret
+]
+
 { #category : #'cog jit support' }
 CurrentImageCoInterpreterFacade >> isCogCompiledCodeCompactionCalledFor [
 	^true
@@ -464,6 +469,11 @@ CurrentImageCoInterpreterFacade >> primTraceLogAddress [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> primTraceLogIndexAddress [
 	^coInterpreter primTraceLogIndexAddress
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> primitiveFailAddress [
+	^self addressForLabel: #primitiveFail
 ]
 
 { #category : #accessing }

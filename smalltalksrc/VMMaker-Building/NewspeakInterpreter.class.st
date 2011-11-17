@@ -10105,7 +10105,7 @@ NewspeakInterpreter >> shortPrintContext: aContext [
 { #category : #'debug printing' }
 NewspeakInterpreter >> shortPrintOop: oop [
 	<inline: false>
-	self printNum: oop.
+	self printHex: oop.
 	(self isIntegerObject: oop) ifTrue:
 		[^self cCode: 'printf("=%ld\n", integerValueOf(oop))' inSmalltalk: [self print: (self shortPrint: oop); cr]].
 	(oop between: self startOfMemory and: freeBlock) ifFalse:

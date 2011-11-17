@@ -1556,11 +1556,6 @@ StackInterpreterSimulator >> print: it [
 ]
 
 { #category : #'debug printing' }
-StackInterpreterSimulator >> printCallStackOf: aContext [
-	self printCallStackOf: aContext currentFP: localFP
-]
-
-{ #category : #'debug printing' }
 StackInterpreterSimulator >> printChar: aByte [
 
 	traceOn ifTrue: [ transcript nextPut: aByte asCharacter ].

@@ -2538,11 +2538,6 @@ CogVMSimulator >> print: it [
 ]
 
 { #category : #'debug printing' }
-CogVMSimulator >> printCallStackOf: aContext [
-	self printCallStackOf: aContext currentFP: localFP
-]
-
-{ #category : #'debug printing' }
 CogVMSimulator >> printChar: aByte [
 
 	traceOn ifTrue: [ transcript nextPut: aByte asCharacter ].
