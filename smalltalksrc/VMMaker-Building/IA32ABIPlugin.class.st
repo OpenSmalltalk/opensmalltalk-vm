@@ -66,7 +66,7 @@ IA32ABIPlugin class >> shouldGenerateTypedefFor: aStructClass [
 
 { #category : #'simulation only' }
 IA32ABIPlugin class >> simulatorClass [
-	^IA32ABIPluginSimulator
+	^NewspeakVM ifFalse: [IA32ABIPluginSimulator]
 ]
 
 { #category : #'private-support' }

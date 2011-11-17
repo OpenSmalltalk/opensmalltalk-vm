@@ -2757,7 +2757,7 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
 	self assert: ((coInterpreter methodHasCogMethod: aMethodObj) not
-				or: [(coInterpreter noAssertMethodClassAssociationOf: aMethodObj) = objectMemory nilObject]).
+				or: [(self noAssertMethodClassAssociationOf: aMethodObj) = objectMemory nilObject]).
 	"coInterpreter stringOf: aSelectorOop"
 	coInterpreter
 		compilationBreak: aSelectorOop
@@ -5871,7 +5871,7 @@ Cogit >> mapObjectReferencesInMachineCodeForBecome [
 						[self assert: cogMethod objectHeader = objectMemory nullHeaderForMachineCodeMethod.
 						 cogMethod methodObject: (objectRepresentation remapOop: cogMethod methodObject).
 						 self assert: ((coInterpreter rawHeaderOf: cogMethod methodObject) = cogMethod asInteger
-									or: [(coInterpreter noAssertMethodClassAssociationOf: cogMethod methodObject)
+									or: [(self noAssertMethodClassAssociationOf: cogMethod methodObject)
 											= objectMemory nilObject]).
 						 (objectMemory isYoung: cogMethod methodObject) ifTrue:
 							[hasYoungObj := true]].
