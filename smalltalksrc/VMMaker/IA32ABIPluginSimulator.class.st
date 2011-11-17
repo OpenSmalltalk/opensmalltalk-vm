@@ -17,3 +17,13 @@ IA32ABIPluginSimulator >> index: byteIndex length: length inRange: rcvr [
 	dataSize := self sizeField: rcvr.
 	^dataSize = 0 or: [byteIndex > 0 and: [byteIndex + length <= dataSize abs]]
 ]
+
+{ #category : #'memory access' }
+IA32ABIPluginSimulator >> longAt: byteAddress [
+	^interpreterProxy longAt: byteAddress
+]
+
+{ #category : #'memory access' }
+IA32ABIPluginSimulator >> longAt: byteAddress put: a32BitValue [
+	^interpreterProxy longAt: byteAddress put: a32BitValue
+]

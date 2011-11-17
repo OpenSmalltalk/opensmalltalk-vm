@@ -1,6 +1,6 @@
 Class {
 	#name : #NewsqueakIA32ABIPluginSimulator,
-	#superclass : #IA32ABIPlugin,
+	#superclass : #NewsqueakIA32ABIPlugin,
 	#category : #'VMMaker-Plugins-Alien'
 }
 
@@ -16,4 +16,14 @@ NewsqueakIA32ABIPluginSimulator >> index: byteIndex length: length inRange: rcvr
 	<inline: true>
 	dataSize := self sizeField: rcvr.
 	^dataSize = 0 or: [byteIndex > 0 and: [byteIndex + length <= dataSize abs]]
+]
+
+{ #category : #'memory access' }
+NewsqueakIA32ABIPluginSimulator >> longAt: byteAddress [
+	^interpreterProxy longAt: byteAddress
+]
+
+{ #category : #'memory access' }
+NewsqueakIA32ABIPluginSimulator >> longAt: byteAddress put: a32BitValue [
+	^interpreterProxy longAt: byteAddress put: a32BitValue
 ]
