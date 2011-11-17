@@ -14,6 +14,18 @@ NewCoObjectMemorySimulator class >> new [
 ]
 
 { #category : #'simulation only' }
+NewCoObjectMemorySimulator class >> vmProxyMajorVersion [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^CoInterpreter vmProxyMajorVersion
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator class >> vmProxyMinorVersion [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^CoInterpreter vmProxyMinorVersion
+]
+
+{ #category : #'simulation only' }
 NewCoObjectMemorySimulator >> arrayValueOf: arrayOop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter arrayValueOf: arrayOop
@@ -176,6 +188,12 @@ NewCoObjectMemorySimulator >> integerObjectOf: value [
 ]
 
 { #category : #'simulation only' }
+NewCoObjectMemorySimulator >> internalIsImmutable: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter internalIsImmutable: oop
+]
+
+{ #category : #'simulation only' }
 NewCoObjectMemorySimulator >> interpreterAllocationReserveBytes [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter interpreterAllocationReserveBytes
@@ -280,6 +298,12 @@ NewCoObjectMemorySimulator >> markAndTraceOrFreeMachineCode: fullGCFlag [
 NewCoObjectMemorySimulator >> methodArgumentCount [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter methodArgumentCount
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> methodReturnValue: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter methodReturnValue: oop
 ]
 
 { #category : #'image save/restore' }
@@ -464,6 +488,18 @@ NewCoObjectMemorySimulator >> showDisplayBits: aForm Left: l Top: t Right: r Bot
 NewCoObjectMemorySimulator >> signalFinalization: oop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter signalFinalization: oop
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> signed32BitIntegerFor: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter signed32BitIntegerFor: integerValue
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> signed32BitValueOf: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter signed32BitValueOf: oop
 ]
 
 { #category : #'memory access' }

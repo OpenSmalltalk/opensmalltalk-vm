@@ -1305,6 +1305,7 @@ StackInterpreter >> activateNewMethod [
 { #category : #'process primitive support' }
 StackInterpreter >> activeProcess [
 	"Answer the current activeProcess."
+	<api> "useful for VM debugging"
 	^objectMemory fetchPointer: ActiveProcessIndex ofObject: self schedulerPointer
 ]
 
@@ -5308,6 +5309,14 @@ StackInterpreter >> internalFindUnwindThroughContext: homeContext [
 	^self findUnwindThroughContext: homeContext
 ]
 
+{ #category : #'object format' }
+StackInterpreter >> internalIsImmutable: oop [
+	<option: #NewspeakVM>
+	<inline: true>
+	<export: true>
+	^((objectMemory baseHeader: oop) bitAnd: ImmutabilityBit) ~= 0
+]
+
 { #category : #'return bytecodes' }
 StackInterpreter >> internalMustBeBoolean [
 	<inline: true>
@@ -5776,14 +5785,16 @@ StackInterpreter >> longPrintOop: oop [
 		ifTrue:
 			[startIP := startIP * BytesPerWord + 1.
 			 lastIndex := objectMemory lengthOf: oop.
-			 lastIndex - startIP > 100 ifTrue:
-				[lastIndex := startIP + 100].
+			 lastIndex - startIP > 104 ifTrue:
+				[lastIndex := startIP + 103].
 			 bytecodesPerLine := 8.
 			 startIP to: lastIndex do:
 				[:index| | byte |
 				byte := objectMemory fetchByte: index - 1 ofObject: oop.
 				self cCode: 'printf(" %02x/%-3d", byte,byte)'
 					inSmalltalk: [self space; print: (byte radix: 16); printChar: $/; printNum: byte].
+				(index = lastIndex and: [(objectMemory lengthOf: oop) > index]) ifTrue:
+					[self print: '...'].
 				((index - startIP + 1) \\ bytecodesPerLine) = 0 ifTrue:
 					[self cr]].
 			((lastIndex - startIP + 1) \\ bytecodesPerLine) = 0 ifFalse:
@@ -7528,7 +7539,10 @@ StackInterpreter >> printContext: aContext [
 				printHexPtr: (self withoutSmallIntegerTags: ip); printChar: $); cr]
 		ifFalse:
 			[self print: 'sender   '; shortPrintOop: sender.
-			 self print: 'ip       '; printNum: ip; print: ' ('; printNum: (objectMemory integerValueOf: ip); space; printHex: (objectMemory integerValueOf: ip); printChar: $); cr].
+			 self print: 'ip       '.
+			 ip = objectMemory nilObject
+				ifTrue: [self shortPrintOop: ip]
+				ifFalse: [self printNum: ip; print: ' ('; printNum: (objectMemory integerValueOf: ip); space; printHex: (objectMemory integerValueOf: ip); printChar: $); cr]].
 	sp := objectMemory fetchPointer: StackPointerIndex ofObject: aContext.
 	sp := sp min: (objectMemory lengthOf: aContext) - ReceiverIndex.
 	self print: 'sp       '; printNum: sp; print: ' ('; printNum: (objectMemory integerValueOf: sp); printChar: $); cr.
@@ -9147,18 +9161,23 @@ StackInterpreter >> shortConditionalJump [
 
 { #category : #'debug printing' }
 StackInterpreter >> shortPrintContext: aContext [
-	| home |
+	| home theFP |
 	<inline: false>
+	<var: #theFP type: #'char *'>
 	(self isContext: aContext) ifFalse:
 		[self printHex: aContext; print: ' is not a context'; cr.
 		^nil].
 	home := self findHomeForContext: aContext.
-	self printNum: aContext.
+	self printHex: aContext.
 	(self isMarriedOrWidowedContext: aContext)
-		ifTrue: [((self checkIsStillMarriedContext: aContext currentFP: framePointer)
-				and: [self isMachineCodeFrame: (self frameOfMarriedContext: aContext)])
-					ifTrue: [self print: ' m ']
-					ifFalse: [self print: ' i ']]
+		ifTrue: [(self checkIsStillMarriedContext: aContext currentFP: framePointer)
+					ifTrue:
+						[(self isMachineCodeFrame: (theFP := self frameOfMarriedContext: aContext))
+							ifTrue: [self print: ' M (']
+							ifFalse: [self print: ' I ('].
+						 self printHex: theFP; print: ') ']
+					ifFalse:
+						[self print: ' w ']]
 		ifFalse: [self print: ' s '].
 	self printActivationNameFor: (objectMemory fetchPointer: MethodIndex ofObject: home)
 		receiver: (objectMemory fetchPointer: ReceiverIndex ofObject: home)
@@ -9172,8 +9191,8 @@ StackInterpreter >> shortPrintFrame: theFP [
 	<inline: false>
 	<var: #theFP type: #'char *'>
 	| rcvr |
-	theFP = 0 ifTrue:
-		[self print: 'null fp'; cr.
+	(stackPages couldBeFramePointer: theFP) ifFalse:
+		[self print: 'invalid frame pointer'; cr.
 		 ^nil].
 	rcvr := self frameReceiver: theFP.
 	self printHexPtr: theFP.
@@ -9191,7 +9210,7 @@ StackInterpreter >> shortPrintFrame: theFP AndNCallers: n [
 	<api>
 	<inline: false>
 	<var: #theFP type: #'char *'>
-	(n > 0 and: [stackPages couldBeFramePointer: theFP]) ifTrue:
+	(n ~= 0 and: [stackPages couldBeFramePointer: theFP]) ifTrue:
 		[self shortPrintFrame: theFP.
 		 self shortPrintFrame: (self frameCallerFP: theFP) AndNCallers: n - 1]
 ]
