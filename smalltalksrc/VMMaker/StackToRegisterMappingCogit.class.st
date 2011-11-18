@@ -2615,8 +2615,7 @@ StackToRegisterMappingCogit >> genUpArrowReturn [
 			 self PopR: FPReg.
 			 self RetN: methodOrBlockNumArgs + 1 * BytesPerWord]
 		ifFalse:
-			[self ssPopSpillsFrom: methodOrBlockNumArgs - 1.
-			 self RetN: ((methodOrBlockNumArgs > self numRegArgs
+			[self RetN: ((methodOrBlockNumArgs > self numRegArgs
 						"A method with an interpreter prim will push its register args for the prim.  If the failure
 						 body is frameless the args must still be popped, see e.g. Behavior>>nextInstance."
 						or: [regArgsHaveBeenPushed])
@@ -3328,10 +3327,7 @@ StackToRegisterMappingCogit >> ssFlushTo: index [
 	simSpillBase <= index ifTrue:
 		[(simSpillBase max: 0) to: index do:
 			[:i|
-			self assert: (needsFrame
-						or: [((self simStackAt: i) type = SSBaseOffset
-							or: [(self simStackAt: i) type = SSRegister])
-							and: [self isValidFramelessRegister: (self simStackAt: i) register]]).
+			self assert: needsFrame.
 			(self simStackAt: i)
 				ensureSpilledAt: (self frameOffsetOfTemporary: i)
 				from: FPReg].
@@ -3340,10 +3336,10 @@ StackToRegisterMappingCogit >> ssFlushTo: index [
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssFlushUpThroughReceiverVariable: slotIndex [
-	"Any occurrences on the stack of the value being stored must
-	 be flushed, and hence any values colder than them stack."
+	"Any occurrences on the stack of the value being stored (which is the top of stack)
+	 must be flushed, and hence any values colder than them stack."
 	<var: #desc type: #'CogSimStackEntry *'>
-	simStackPtr to: (simSpillBase max: 0) by: -1 do:
+	simStackPtr - 1 to: (simSpillBase max: 0) by: -1 do:
 		[:index| | desc |
 		desc := self simStackAt: index.
 		(desc type = SSBaseOffset
@@ -3355,10 +3351,10 @@ StackToRegisterMappingCogit >> ssFlushUpThroughReceiverVariable: slotIndex [
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssFlushUpThroughTemporaryVariable: tempIndex [
-	"Any occurrences on the stack of the value being stored must
-	 be flushed, and hence any values colder than them stack."
+	"Any occurrences on the stack of the value being stored (which is the top of stack)
+	 must be flushed, and hence any values colder than them stack."
 	<var: #desc type: #'CogSimStackEntry *'>
-	simStackPtr to: simSpillBase by: -1 do:
+	simStackPtr - 1 to: simSpillBase by: -1 do:
 		[:index| | desc |
 		desc := self simStackAt: index.
 		(desc type = SSBaseOffset
@@ -3373,15 +3369,6 @@ StackToRegisterMappingCogit >> ssPop: n [
 	self assert: (simStackPtr - n >= (methodOrBlockNumTemps - 1)
 				or: [needsFrame not and: [simStackPtr - n >= -1]]).
 	simStackPtr := simStackPtr - n
-]
-
-{ #category : #'simulation stack' }
-StackToRegisterMappingCogit >> ssPopSpillsFrom: index [
-	"Pop any spilled items on the sim stack from index, used to balance the stack on return."
-	index to: simStackPtr do:
-		[:i|
-		(self simStackAt: i) spilled ifTrue:
-			[self ssTop popToReg: TempReg]]
 ]
 
 { #category : #'simulation stack' }
