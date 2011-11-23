@@ -1,3 +1,7 @@
+2011-11-23  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm-display-X11/sqUnixX11.c: Rename DPRINTF -> DPRINTF3D.
+
 2011-10-30  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* plugins/B3DAcceleratorPlugin/sqUnixOpenGL.c: Rename DPRINTF ->

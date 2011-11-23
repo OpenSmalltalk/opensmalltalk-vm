@@ -5549,12 +5549,12 @@ static sqInt display_ioGLcreateRenderer(glRenderer *r, sqInt x, sqInt y, sqInt w
   _renderWindow(r)= 0;
   _renderContext(r)= 0;
 
-  DPRINTF(3, (fp, "---- Creating new renderer ----\r\r"));
+  DPRINTF3D(3, (fp, "---- Creating new renderer ----\r\r"));
 
   /* sanity checks */
   if (w < 0 || h < 0)
     {
-      DPRINTF(1, (fp, "Negative extent (%i@%i)!\r", w, h));
+      DPRINTF3D(1, (fp, "Negative extent (%i@%i)!\r", w, h));
       goto fail;
     }
   /* choose visual and create context */
@@ -5570,20 +5570,20 @@ static sqInt display_ioGLcreateRenderer(glRenderer *r, sqInt x, sqInt y, sqInt w
       }
     if (!visinfo)
       {
-	DPRINTF(1, (fp, "No OpenGL visual found!\r"));
+	DPRINTF3D(1, (fp, "No OpenGL visual found!\r"));
 	goto fail;
       }
-    DPRINTF(3, (fp, "\r#### Selected GLX visual ID 0x%lx ####\r", visinfo->visualid));
+    DPRINTF3D(3, (fp, "\r#### Selected GLX visual ID 0x%lx ####\r", visinfo->visualid));
     if (verboseLevel >= 3)
       printVisual(visinfo);
 
     /* create context */
     if (!(_renderContext(r)= glXCreateContext(stDisplay, visinfo, 0, GL_TRUE)))
       {
-	DPRINTF(1, (fp, "Creating GLX context failed!\r"));
+	DPRINTF3D(1, (fp, "Creating GLX context failed!\r"));
 	goto fail;
       }
-    DPRINTF(3, (fp, "\r#### Created GLX context ####\r"  ));
+    DPRINTF3D(3, (fp, "\r#### Created GLX context ####\r"  ));
 
     /* create window */
     {
@@ -5604,12 +5604,12 @@ static sqInt display_ioGLcreateRenderer(glRenderer *r, sqInt x, sqInt y, sqInt w
 						    visinfo->depth, InputOutput, visinfo->visual, 
 						    valuemask, &attributes)))
 	{
-	  DPRINTF(1, (fp, "Failed to create client window\r"));
+	  DPRINTF3D(1, (fp, "Failed to create client window\r"));
 	  goto fail;
 	}
       XMapWindow(stDisplay, renderWindow(r));
     }
-    DPRINTF(3, (fp, "\r#### Created window ####\r"  ));
+    DPRINTF3D(3, (fp, "\r#### Created window ####\r"  ));
     XFree(visinfo);
     visinfo= 0;
   }
@@ -5617,14 +5617,14 @@ static sqInt display_ioGLcreateRenderer(glRenderer *r, sqInt x, sqInt y, sqInt w
   /* Make the context current */
   if (!glXMakeCurrent(stDisplay, renderWindow(r), renderContext(r)))
     {
-      DPRINTF(1, (fp, "Failed to make context current\r"));
+      DPRINTF3D(1, (fp, "Failed to make context current\r"));
       goto fail;
     }
-  DPRINTF(3, (fp, "\r### Renderer created! ###\r"));
+  DPRINTF3D(3, (fp, "\r### Renderer created! ###\r"));
   return 1;
 
  fail:
-  DPRINTF(1, (fp, "OpenGL initialization failed\r"));
+  DPRINTF3D(1, (fp, "OpenGL initialization failed\r"));
   if (visinfo)
     XFree(visinfo);
   if (renderContext(r))
@@ -5654,7 +5654,7 @@ static sqInt display_ioGLmakeCurrentRenderer(glRenderer *r)
     {
       if (!glXMakeCurrent(stDisplay, renderWindow(r), renderContext(r)))
 	{
-	  DPRINTF(1, (fp, "Failed to make context current\r"));
+	  DPRINTF3D(1, (fp, "Failed to make context current\r"));
 	  return 0;
 	}
     }
@@ -5694,13 +5694,13 @@ static void printVisual(XVisualInfo* visinfo)
       glXGetConfig(stDisplay, visinfo, GLX_DEPTH_SIZE,    &depth);
 
       if (slow != GLX_SLOW_CONFIG)
-        { DPRINTF(3, (fp,"===> OpenGL visual\r")) }
+        { DPRINTF3D(3, (fp,"===> OpenGL visual\r")) }
       else
-        { DPRINTF(3, (fp,"---> slow OpenGL visual\r")) }
+        { DPRINTF3D(3, (fp,"---> slow OpenGL visual\r")) }
 
-      DPRINTF(3, (fp,"rgbaBits = %i+%i+%i+%i\r", red, green, blue, alpha));
-      DPRINTF(3, (fp,"stencilBits = %i\r", stencil));
-      DPRINTF(3, (fp,"depthBits = %i\r", depth));
+      DPRINTF3D(3, (fp,"rgbaBits = %i+%i+%i+%i\r", red, green, blue, alpha));
+      DPRINTF3D(3, (fp,"stencilBits = %i\r", stencil));
+      DPRINTF3D(3, (fp,"depthBits = %i\r", depth));
     }
   glGetError();	/* reset error flag */
 }
@@ -5714,7 +5714,7 @@ static void listVisuals(void)
 
   for (i= 0; i < nvisuals; i++)
     {
-      DPRINTF(3, (fp,"#### Checking pixel format (visual ID 0x%lx)\r", visinfo[i].visualid));
+      DPRINTF3D(3, (fp,"#### Checking pixel format (visual ID 0x%lx)\r", visinfo[i].visualid));
       printVisual(&visinfo[i]);
     }
   XFree(visinfo);
