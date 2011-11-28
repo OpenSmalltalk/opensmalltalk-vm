@@ -63,14 +63,14 @@ void resolveWhatTheImageNameIs(char *guess);
 char *unixArgcInterfaceGetParm(int n) {
 	int actual;
 	
-	if (n < 0) 
-		actual = -n;
-	else
+	if (n < 0) {
+		actual = -1 - n;
+		return actual < vmArgCnt ? vmArgVec[actual] : nil;
+	}
+	else {
 		actual = n - 2;
-		
-	if (actual < squeakArgCnt) 
-		return squeakArgVec[actual];
-	return nil;
+		return actual < squeakArgCnt ? squeakArgVec[actual] : nil;
+	}
 }
 
 void unixArgcInterface(int argc, char **argv, char **envp) {

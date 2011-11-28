@@ -210,7 +210,7 @@ void sqServiceInstall(void);
 /* The main() function used by NT services */
 int sqServiceMain(void);
 /* The generic main() function for starting squeak */
-int sqMain(char *lpCmdLine, int nCmdShow);
+int sqMain(int argc, char *argv[]);
 #endif
 
 /********************************************************/

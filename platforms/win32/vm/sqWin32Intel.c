@@ -19,7 +19,6 @@
 #include <float.h>
 #include <ole2.h>
 #include "sq.h"
-#include "sqWin32Args.h"
 #include "sqWin32Backtrace.h"
 #if COGVM
 # include "cogmethod.h"
@@ -52,11 +51,13 @@ LONG CALLBACK sqExceptionFilter(LPEXCEPTION_POINTERS exp);
 static void printCrashDebugInformation(LPEXCEPTION_POINTERS exp);
 
 /*** Variables -- command line */
-char *initialCmdLine;
-int  numOptionsVM = 0;
-char *(vmOptions[MAX_OPTIONS]);
-int  numOptionsImage = 0;
-char *(imageOptions[MAX_OPTIONS]);
+static char *initialCmdLine;
+static int  numOptionsVM = 0;
+static char **vmOptions;
+static int  numOptionsImage = 0;
+static char **imageOptions;
+static int clargc; /* the Unix-style command line, saved for GetImageOption */
+static char **clargv;
 
 /* console buffer */
 TCHAR consoleBuffer[4096];
@@ -1187,74 +1188,28 @@ extern sqInt maxLiteralCountForCompile;
 extern sqInt minBackwardJumpCountForCompile;
 #endif /* COGVM */
 
-static vmArg args[] = {
-  { ARG_NULL, 0, "--help" }, /* the name of a service */
-  { ARG_STRING, &installServiceName, "-service:" }, /* the name of a service */
-  { ARG_FLAG, &fHeadlessImage, "-headless" },       /* do we run headless? */
-  { ARG_STRING, &logName, "-log:" },                /* VM log file */
-  { ARG_UINT, &dwMemorySize, "-memory:" },          /* megabyte of memory to use */
-#ifdef  VISTA_SECURITY /* IE7/Vista protected mode support */
-  { ARG_FLAG, &fLowRights, "-lowRights" }, /* started with low rights, 
-					use alternate untrustedUserDirectory */
-#endif /* VISTA_SECURITY */
-#if (STACKVM || NewspeakVM) && !COGVM
-  { ARG_FLAG, &sendTrace, "-sendtrace"},
-#endif
-#if STACKVM || NewspeakVM
-  { ARG_STRING_FUNC, setBreakSelector, "-breaksel:"}, /* break-point selector string */
-  { ARG_INT_FUNC, ioSetMaxExtSemTableSize, "-numextsems:"}, /* set num external semaphores */
-#endif /* STACKVM || NewspeakVM */
-#if STACKVM
-  { ARG_UINT, &checkForLeaks, "-leakcheck:"}, /* leak check on GC */
-  { ARG_UINT, &desiredEdenBytes, "-eden:" },        /* bytes of eden to use */
-  { ARG_UINT, &desiredNumStackPages, "-stackpages:"}, /* n stack pages to use */
-  { ARG_FLAG, &suppressHeartbeatFlag, "-noheartbeat"}, /* no heartbeat for dbg */
-#endif /* STACKVM */
-#if COGVM
-  { ARG_UINT, &desiredCogCodeSize, "-codesize:"}, /* machine code memory to use */
-  { ARG_UINT, &traceLinkedSends, "-sendtrace:" },  /* trace sends in log */
-  { ARG_INT, &traceLinkedSends, "-trace:" },  /* trace sends in log */
-  { ARG_FLAG, &traceStores, "-tracestores" },     /* assert-check stores */
-  { ARG_UINT, &debugPrimCallStackOffset, "-dpcso:"}, /* debug prim call stack offset */
-  { ARG_UINT, &maxLiteralCountForCompile, "-cogmaxlits:"}, /* max # of literals for a method to be compiled to machine code */
-  { ARG_UINT, &minBackwardJumpCountForCompile, "-cogminjumps:"}, /* max # of literals for a method to be compiled to machine code */
-#endif /* COGVM */
-
-  /* NOTE: the following flags are "undocumented" */
-  { ARG_INT, &browserWindow, "-browserWindow:"},    /* The web browser window we run in */
-
-  /* service support on 95 */
-  { ARG_FLAG, &fRunService, "-service95" },           /* do we start as service? */
-  { ARG_FLAG, &fBroadcastService95, "-broadcast95" }, /* should we notify services of a user logon? */
-  { ARG_NONE, NULL, NULL }
-};
 
 /* sqMain: 
-   This is common entry point regardless of whether we're running
-   as a normal app or as a service. Note that a number of things
-   may have been set up before coming here. In particular,
-   * fRunService - to determine whether we're running as NT service
-   However, the command line must always contain all parameters necessary.
-   In other words, even though the logName may have been set before,
-   the command line has to include the -log: switch.
+	This is common entry point regardless of whether we're running as a normal
+	app or as a service. Note that a number of things may have been set up
+	before coming here. In particular,
+		* fRunService - to determine whether we're running as NT service
+	However, the command line must always contain all parameters necessary.
+	In other words, even though the logName may have been set before,
+	the command line has to include the -log switch.
 */
-int sqMain(char *lpCmdLine, int nCmdShow)
+static int parseArguments(int argc, char *argv[]);
+
+int
+sqMain(int argc, char *argv[])
 { 
   int virtualMemory;
-  WCHAR *cmdLineW;
-  char *cmdLineA;
   int sz;
 
   /* set default fpu control word */
   _control87(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
 
   LoadPreferences();
-
-  /* Fetch the command line */
-  cmdLineW = GetCommandLineW();
-  sz = WideCharToMultiByte(CP_UTF8, 0, cmdLineW, -1, NULL, 0, NULL, NULL);
-  cmdLineA = calloc(sz, sizeof(char));
-  WideCharToMultiByte(CP_UTF8, 0, cmdLineW, -1, cmdLineA, sz, NULL, NULL);
 
   /* If running as single app, find the previous instance */
   if(fRunSingleApp) {
@@ -1267,6 +1222,7 @@ int sqMain(char *lpCmdLine, int nCmdShow)
     }
 
     if(win) {
+	  WCHAR *cmdLineW = GetCommandLineW();
       /* An instance is running already. Inform it about the app. */
       int bytes = (wcslen(cmdLineW)+1) * sizeof(WCHAR);
       HANDLE h = GlobalAlloc(GMEM_MOVEABLE | GMEM_DDESHARE, bytes);
@@ -1287,7 +1243,7 @@ int sqMain(char *lpCmdLine, int nCmdShow)
   }
 
   /* parse command line args */
-  if(!parseArguments(cmdLineA, args))
+  if(!parseArguments(argc, argv))
     return printUsage(1);
 
   /* a quick check if we have any argument at all */
@@ -1458,10 +1414,9 @@ int sqMain(char *lpCmdLine, int nCmdShow)
 /****************************************************************************/
 /*                        WinMain                                           */
 /****************************************************************************/
-int WINAPI WinMain (HINSTANCE hInst,
-                    HINSTANCE hPrevInstance,
-                    LPSTR  lpCmdLine,
-                    int    nCmdShow)
+
+int WINAPI
+WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
   /* a few things which need to be done first */
   gatherSystemInfo();
@@ -1478,6 +1433,29 @@ int WINAPI WinMain (HINSTANCE hInst,
     GetModuleFileNameW(hInst, vmNameW, MAX_PATH);
     WideCharToMultiByte(CP_UTF8, 0, vmNameW, -1, vmName, MAX_PATH, NULL, NULL);
   }
+	/* parse the command line into the unix-style argc, argv, converting to
+	 * UTF-8 on the way. */
+  { LPWSTR *argList = CommandLineToArgvW(GetCommandLineW(), &clargc);
+	int i;
+
+	clargv = calloc(clargc + 1, sizeof(char *));
+	vmOptions = calloc(clargc + 1, sizeof(char *));
+	imageOptions = calloc(clargc + 1, sizeof(char *));
+	if (!clargv || !vmOptions || !imageOptions) {
+		fprintf(stderr,"out of memory for command line?!\n");
+		return 1;
+	}
+	for (i = 0; i < clargc; i++) {
+    	int n = WideCharToMultiByte(CP_UTF8, 0, argList[i], -1, 0, 0, 0, 0);
+		if (!(clargv[i] = malloc(n))) {
+			fprintf(stderr,"out of memory for command line?!\n");
+			return 1;
+		}
+    	WideCharToMultiByte(CP_UTF8, 0, argList[i], -1, clargv[i], n, 0, 0);
+	}
+	LocalFree(argList);
+  }
+
   /* open all streams in binary mode */
   _fmode  = _O_BINARY;
 
@@ -1518,8 +1496,254 @@ int WINAPI WinMain (HINSTANCE hInst,
   }
 
   /* start the non-service version */
-  sqMain(lpCmdLine, nCmdShow);
+  sqMain(clargc, clargv);
   return 0;
+}
+
+static int
+strtobkm(const char *str)
+{
+	char *suffix;
+	int value = strtol(str, &suffix, 10);
+	switch (*suffix) {
+	case 'k': case 'K': value *= 1024; break;
+	case 'm': case 'M': value *= 1024*1024; break;
+	}
+	return value;
+}
+
+static int
+parseVMArgument(int argc, char *argv[])
+{
+	/* flags */
+	if      (!strcmp(argv[0], "-help"))		{ 
+		printUsage(1);
+		return 1; }
+	else if (!strcmp(argv[0], "-headless")) { fHeadlessImage = true; return 1; }
+	else if (!strcmp(argv[0], "-headfull")) { fHeadlessImage = false; return 1;}
+#ifdef  VISTA_SECURITY /* IE7/Vista protected mode support */
+	/* started with low rights, use alternate untrustedUserDirectory */
+	else if (!strcmp(argv[0], "-lowRights")) { fLowRights = true; return 1; }
+#endif /* VISTA_SECURITY */
+#if (STACKVM || NewspeakVM) && !COGVM
+	else if (!strcmp(argv[0], "-sendtrace"))
+		{ extern sqInt sendTrace; sendTrace = 1; return 1; }
+#endif
+
+	/* parameters */
+	else if (argc > 1 && !strcmp(argv[0], "-service")) {
+		installServiceName = argv[1];
+		return 2;
+	}
+	else if (!strncmp(argv[0], "-service:", 9)) {
+		installServiceName = argv[0] + 9;
+		return 1;
+	}
+	else if (argc > 1 && !strcmp(argv[0], "-log")) {
+		logName = argv[1];
+		return 2;
+	}
+	else if (!strncmp(argv[0], "-log:", 5)) {
+		logName = argv[0] + 5;
+		return 1;
+	}
+	else if (argc > 1 && !strcmp(argv[0], "-memory")) {
+		dwMemorySize = strtobkm(argv[1]);
+		return 2;
+	}
+	else if (!strncmp(argv[0], "-memory:", 8)) {
+		dwMemorySize = strtobkm(argv[0] + 8);
+		return 1;
+	}
+#if STACKVM || NewspeakVM
+	else if (argc > 1 && !strcmp(argv[0], "-breaksel")) { 
+		extern void setBreakSelector(char *);
+		setBreakSelector(argv[1]);
+		return 2; }
+	else if (!strncmp(argv[0], "-breaksel:", 10)) { 
+		extern void setBreakSelector(char *);
+		setBreakSelector(argv[0] + 10);
+		return 1; }
+	else if (argc > 1 && !strcmp(argv[0], "-numextsems")) { 
+		ioSetMaxExtSemTableSize(atoi(argv[1]));
+		return 2; }
+	else if (!strncmp(argv[0], "-numextsems:", 12)) { 
+		ioSetMaxExtSemTableSize(atoi(argv[1]+12));
+		return 1; }
+#endif /* STACKVM || NewspeakVM */
+#if STACKVM
+	else if (argc > 1 && !strcmp(argv[0], "-eden")) { 
+		extern sqInt desiredEdenBytes;
+		desiredEdenBytes = strtobkm(argv[1]);	 
+		return 2; }
+	else if (!strncmp(argv[0], "-eden:", 6)) { 
+		extern sqInt desiredEdenBytes;
+		desiredEdenBytes = strtobkm(argv[0]+6);	 
+		return 2; }
+	else if (argc > 1 && !strcmp(argv[0], "-leakcheck")) { 
+		extern sqInt checkForLeaks;
+		checkForLeaks = atoi(argv[1]);	 
+		return 2; }
+	else if (!strncmp(argv[0], "-leakcheck:", 11)) { 
+		extern sqInt checkForLeaks;
+		checkForLeaks = atoi(argv[0]+11);	 
+		return 2; }
+	else if (argc > 1 && !strcmp(argv[0], "-stackpages")) { 
+		extern sqInt desiredNumStackPages;
+		desiredNumStackPages = atoi(argv[1]);	 
+		return 2; }
+	else if (!strncmp(argv[0], "-stackpages:", 12)) { 
+		extern sqInt desiredNumStackPages;
+		desiredNumStackPages = atoi(argv[0]+12);	 
+		return 2; }
+	else if (!strcmp(argv[0], "-noheartbeat")) { 
+		extern sqInt suppressHeartbeatFlag;
+		suppressHeartbeatFlag = 1;
+		return 1; }
+#endif /* STACKVM */
+#if COGVM
+	else if (!strcmp(argv[0], "-codesize")) { 
+		extern sqInt desiredCogCodeSize;
+		desiredCogCodeSize = strtobkm(argv[1]);	 
+		return 2; }
+# define TLSLEN (sizeof("-sendtrace")-1)
+	else if (!strncmp(argv[0], "-sendtrace", TLSLEN)) { 
+		extern int traceLinkedSends;
+		char *equalsPos = strchr(argv[0],'=');
+
+		if (!equalsPos) {
+			traceLinkedSends = 1;
+			return 1;
+		}
+		if (equalsPos - argv[0] != TLSLEN
+		  || (equalsPos[1] != '-' && !isdigit(equalsPos[1])))
+			return 0;
+
+		traceLinkedSends = atoi(equalsPos + 1);
+		return 1; }
+	else if (!strcmp(argv[0], "-tracestores")) { 
+		extern sqInt traceStores;
+		traceStores = 1;
+		return 1; }
+	else if (!strcmp(argv[0], "-dpcso")) { 
+		extern unsigned long debugPrimCallStackOffset;
+		debugPrimCallStackOffset = (unsigned long)strtobkm(argv[1]);	 
+		return 2; }
+	else if (argc > 1 && !strcmp(argv[0], "-cogmaxlits")) { 
+		extern sqInt maxLiteralCountForCompile;
+		maxLiteralCountForCompile = strtobkm(argv[1]);	 
+		return 2; }
+	else if (!strncmp(argv[0], "-cogmaxlits:", 12)) { 
+		extern sqInt maxLiteralCountForCompile;
+		maxLiteralCountForCompile = strtobkm(argv[0]+12);	 
+		return 2; }
+	else if (argc > 1 && !strcmp(argv[0], "-cogminjumps")) { 
+		extern sqInt minBackwardJumpCountForCompile;
+		minBackwardJumpCountForCompile = strtobkm(argv[1]);	 
+		return 2; }
+	else if (!strncmp(argv[0], "-cogminjumps:",13)) { 
+		extern sqInt minBackwardJumpCountForCompile;
+		minBackwardJumpCountForCompile = strtobkm(argv[0]+13);	 
+		return 2; }
+#endif /* COGVM */
+
+  /* NOTE: the following flags are "undocumented" */
+	else if (argc > 1 && !strcmp(argv[0], "-browserWindow")) {
+		browserWindow = (HWND)atoi(argv[1]);
+		return 2; }
+	else if (!strncmp(argv[0], "-browserWindow:", 15)) {
+		browserWindow = (HWND)atoi(argv[0]+15);
+		return 1; }
+
+	/* service support on 95 */
+	else if (!strcmp(argv[0], "-service95")) { fRunService = true; return 1; }
+	else if (!strcmp(argv[0], "-broadcast95")) { fBroadcastService95 = true; return 1; }
+
+	return 0;	/* option not recognised */
+}
+
+/* parse all arguments meaningful to the VM; answer index of last VM arg + 1 */
+static int
+parseVMArgs(int argc, char *argv[])
+{ int n, i = 0, j;
+
+	while (++i < argc && *argv[i] == '-' && strcmp(argv[i],"--")) {
+        if ((n = parseVMArgument(argc - i, argv + i))) {
+			for (j = 0; j < n; j++)
+				vmOptions[numOptionsVM++] = argv[i+j];
+		}
+		else {
+          fprintf(stderr,"Unknown option encountered!\n");
+          return i;
+		}
+	}
+	return i;
+}
+
+static int
+IsImage(char *name)
+{ 
+	int magic;
+	int byteSwapped(int);
+	sqImageFile fp;
+
+	fp = sqImageFileOpen(name,"rb");
+	if(!fp) return 0; /* not an image */
+	if(sqImageFileRead(&magic, 1, sizeof(magic), fp) != sizeof(magic)) {
+		sqImageFileClose(fp);
+		return 0;
+	}
+	if(readableFormat(magic) || readableFormat(byteSwapped(magic))) {
+		sqImageFileClose(fp);
+		return true;
+	}
+
+	/* no luck at beginning of file, seek to 512 and try again */
+	sqImageFileSeek( fp, 512);
+	if(sqImageFileRead(&magic, 1, sizeof(magic), fp) != sizeof(magic)) {
+		sqImageFileClose(fp);
+		return 0;
+	}
+	sqImageFileClose(fp);
+	return readableFormat(magic) || readableFormat(byteSwapped(magic));
+}
+
+/* parse all arguments starting with the image name */
+static int
+parseGenericArgs(int argc, char *argv[])
+{	int i;
+
+	if (argc < 1)
+		return 0;
+
+	if (*imageName == 0) { /* only try to use image name if none is provided */
+		if (*argv[0] && IsImage(argv[0])) {
+			strcpy(imageName, argv[0]);
+			/* if provided, the image is a vm argument. */
+			vmOptions[numOptionsVM++] = argv[0];
+		}
+	}
+	else /* provide image name as second argument if implicitly specified */
+		imageOptions[numOptionsImage++] = imageName;
+
+	imageOptions[numOptionsImage++] = argv[0];
+	for (i = 1; i < argc; i++)
+		imageOptions[numOptionsImage++] = argv[i];
+
+  return 1;
+}
+
+static int
+parseArguments(int argc, char *argv[])
+{
+	int nvmargs;
+
+	/* argv[0] = executable name */
+	vmOptions[numOptionsVM++] = argv[0];
+	/* parse VM options */
+	nvmargs = parseVMArgs(argc, argv);
+	/* parse image and generic args */
+	return parseGenericArgs(argc - nvmargs, argv + nvmargs);
 }
 
 #if COGVM
