@@ -2764,7 +2764,7 @@ char * GetAttributeString(int id) {
     return GetImageOption(id-1);
   /* id < 0 : return options of the VM (e.g. given *before* the image name) */
   if(id < 0)
-    return GetVMOption(0-id-1);
+    return GetVMOption(-id);
   /* special attributes */
   switch(id) {
     case 1001: /* Primary OS type */

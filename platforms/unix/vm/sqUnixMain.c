@@ -438,8 +438,8 @@ GetAttributeString(sqInt id)
 {
   if (id < 0)	/* VM argument */
     {
-      if (-id  <= vmArgCnt)
-	return vmArgVec[-id - 1];
+      if (-id  < vmArgCnt)
+	return vmArgVec[-id];
     }
   else
     switch (id)

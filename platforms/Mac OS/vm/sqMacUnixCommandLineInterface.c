@@ -64,7 +64,7 @@ char *unixArgcInterfaceGetParm(int n) {
 	int actual;
 	
 	if (n < 0) {
-		actual = -1 - n;
+		actual = -n;
 		return actual < vmArgCnt ? vmArgVec[actual] : nil;
 	}
 	else {

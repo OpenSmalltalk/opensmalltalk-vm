@@ -1671,6 +1671,7 @@ parseVMArgs(int argc, char *argv[])
         if ((n = parseVMArgument(argc - i, argv + i))) {
 			for (j = 0; j < n; j++)
 				vmOptions[numOptionsVM++] = argv[i+j];
+			i += n - 1;
 		}
 		else {
           fprintf(stderr,"Unknown option encountered!\n");
