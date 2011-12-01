@@ -77,6 +77,7 @@ if [ -n "$CW" ]; then
 	test -d cogwin || mkdir cogwin
 	rm -rf cogwin/* cogwin.zip
 	ln cygwinbuild/build/vm/{Croquet.exe,Croquet.ini,Croquet.map} cogwin
+	ln cygwinbuild/build/vm/{CroquetConsole.exe,CroquetConsole.ini,CroquetConsole.map} cogwin
 	ln cygwinbuild/build/vm/*.dll cogwin
 	zip -vr cogwin.zip cogwin
 	EXES="$EXES	cogwin/Croquet.exe"
@@ -85,6 +86,7 @@ if [ -n "$CTW" ]; then
 	test -d cogmtwin || mkdir cogmtwin
 	rm -rf cogmtwin/* cogmtwin.zip
 	ln cygwinbuild/buildmt/vm/{Croquet.exe,Croquet.ini,Croquet.map} cogmtwin
+	ln cygwinbuild/buildmt/vm/{CroquetConsole.exe,CroquetConsole.ini,CroquetConsole.map} cogmtwin
 	ln cygwinbuild/buildmt/vm/*.dll cogmtwin
 	zip -vr cogmtwin.zip cogmtwin
 	EXES="$EXES	cogmtwin/Croquet.exe"
