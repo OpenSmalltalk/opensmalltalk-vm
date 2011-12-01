@@ -80,7 +80,11 @@ sqInt sqFileThisSession(void) {
 sqInt sqFileAtEnd(SQFile *f) {
   win32FileOffset ofs;
   /* Return true if the file's read/write head is at the end of the file. */
-  if (!sqFileValid(f)) FAIL();
+  if (!sqFileValid(f))
+    FAIL();
+  /* If a stdio handle then assume not at end. */
+  if (f->isStdioStream)
+    return 0;
   ofs.offset = 0;
   ofs.dwLow = SetFilePointer(FILE_HANDLE(f), 0, &ofs.dwHigh, FILE_CURRENT);
   return ofs.offset >= sqFileSize(f);
@@ -89,8 +93,10 @@ sqInt sqFileAtEnd(SQFile *f) {
 sqInt sqFileClose(SQFile *f) {
   /* Close the given file. */
 
-  if (!sqFileValid(f)) FAIL();
-  if(!CloseHandle(FILE_HANDLE(f))) FAIL();
+  if (!sqFileValid(f))
+    FAIL();
+  if(!CloseHandle(FILE_HANDLE(f)))
+    FAIL();
   RemoveHandleFromTable(win32Files, FILE_HANDLE(f));
   f->file = NULL;
   f->sessionID = 0;
@@ -103,18 +109,22 @@ sqInt sqFileDeleteNameSize(char* fileNameIndex, sqInt fileNameSize) {
   int sz;
   /* convert the file name into a null-terminated C string */
   sz = MultiByteToWideChar(CP_UTF8, 0, fileNameIndex, fileNameSize, NULL, 0);
-  if(sz > MAX_PATH) FAIL();
+  if(sz > MAX_PATH)
+    FAIL();
   MultiByteToWideChar(CP_UTF8, 0, fileNameIndex, fileNameSize, win32Path, sz);
   win32Path[sz] = 0;
-  if(hasCaseSensitiveDuplicate(win32Path)) FAIL();
-  if(!DeleteFileW(win32Path)) FAIL();
+  if(hasCaseSensitiveDuplicate(win32Path))
+    FAIL();
+  if(!DeleteFileW(win32Path))
+    FAIL();
   return 1;
 }
 
 squeakFileOffsetType sqFileGetPosition(SQFile *f) {
   win32FileOffset ofs;
   /* Return the current position of the file's read/write head. */
-  if (!sqFileValid(f)) FAIL();
+  if (!sqFileValid(f))
+    FAIL();
   ofs.offset = 0;
   ofs.dwLow = SetFilePointer(FILE_HANDLE(f), 0, &ofs.dwHigh, FILE_CURRENT);
   return ofs.offset;
@@ -152,7 +162,8 @@ sqInt sqFileOpen(SQFile *f, char* fileNameIndex, sqInt fileNameSize, sqInt write
 
   /* convert the file name into a null-terminated C string */
   sz = MultiByteToWideChar(CP_UTF8, 0, fileNameIndex, fileNameSize, NULL, 0);
-  if(sz > MAX_PATH) FAIL();
+  if(sz > MAX_PATH)
+    FAIL();
   MultiByteToWideChar(CP_UTF8, 0, fileNameIndex, fileNameSize, win32Path, sz);
   win32Path[sz] = 0;
 
@@ -192,12 +203,14 @@ sqInt sqFileOpen(SQFile *f, char* fileNameIndex, sqInt fileNameSize, sqInt write
 sqInt
 sqFileStdioHandlesInto(SQFile files[3])
 {
+	DWORD mode;
+
 	files[0].sessionID = thisSession;
 	files[0].file = GetStdHandle(STD_INPUT_HANDLE);
 	files[0].fileSize = 0;
 	files[0].writable = false;
 	files[0].lastOp = 0; /* unused on win32 */
-	files[0].isStdioStream = 1;
+	files[0].isStdioStream = GetConsoleMode(files[0].file, &mode) != 0;
 	AddHandleToTable(win32Files, files[0].file);
 
 	files[1].sessionID = thisSession;
@@ -205,7 +218,7 @@ sqFileStdioHandlesInto(SQFile files[3])
 	files[1].fileSize = 0;
 	files[1].writable = true;
 	files[1].lastOp = 0; /* unused on win32 */
-	files[1].isStdioStream = 1;
+	files[1].isStdioStream = GetConsoleMode(files[1].file, &mode) != 0;
 	AddHandleToTable(win32Files, files[1].file);
 
 	files[2].sessionID = thisSession;
@@ -213,7 +226,7 @@ sqFileStdioHandlesInto(SQFile files[3])
 	files[2].fileSize = 0;
 	files[2].writable = true;
 	files[2].lastOp = 0; /* unused on win32 */
-	files[2].isStdioStream = 1;
+	files[2].isStdioStream = GetConsoleMode(files[2].file, &mode) != 0;
 	AddHandleToTable(win32Files, files[2].file);
 
 	return 7;
@@ -228,8 +241,14 @@ size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t st
   */
   DWORD dwReallyRead;
 
-  if (!sqFileValid(f)) FAIL();
-  ReadFile(FILE_HANDLE(f), (LPVOID) (byteArrayIndex+startIndex), count, &dwReallyRead, NULL);
+  if (!sqFileValid(f))
+    FAIL();
+  if (f->isStdioStream)
+    ReadConsole(FILE_HANDLE(f), (LPVOID) (byteArrayIndex+startIndex), count,
+                &dwReallyRead, NULL);
+  else
+    ReadFile(FILE_HANDLE(f), (LPVOID) (byteArrayIndex+startIndex), count,
+             &dwReallyRead, NULL);
   return (int)dwReallyRead;
 }
 
@@ -241,18 +260,22 @@ sqInt sqFileRenameOldSizeNewSize(char* oldNameIndex, sqInt oldNameSize, char* ne
 
   /* convert the file name into a null-terminated C string */
   sz = MultiByteToWideChar(CP_UTF8, 0, oldNameIndex, oldNameSize, NULL,0);
-  if(sz > MAX_PATH) FAIL();
+  if(sz > MAX_PATH)
+    FAIL();
   MultiByteToWideChar(CP_UTF8, 0, oldNameIndex, oldNameSize, oldPath, sz);
   oldPath[sz] = 0;
 
   /* convert the file name into a null-terminated C string */
   sz = MultiByteToWideChar(CP_UTF8, 0, newNameIndex, newNameSize, NULL,0);
-  if(sz > MAX_PATH) FAIL();
+  if(sz > MAX_PATH)
+    FAIL();
   MultiByteToWideChar(CP_UTF8, 0, newNameIndex, newNameSize, newPath, sz);
   newPath[sz] = 0;
 
-  if(hasCaseSensitiveDuplicate(oldPath)) FAIL();
-  if(!MoveFileW(oldPath, newPath)) FAIL();
+  if(hasCaseSensitiveDuplicate(oldPath))
+    FAIL();
+  if(!MoveFileW(oldPath, newPath))
+    FAIL();
   return 1;
 }
 
@@ -261,7 +284,8 @@ sqInt sqFileSetPosition(SQFile *f, squeakFileOffsetType position)
   win32FileOffset ofs;
   ofs.offset = position;
   /* Set the file's read/write head to the given position. */
-  if (!sqFileValid(f)) FAIL();
+  if (!sqFileValid(f))
+    FAIL();
   SetFilePointer(FILE_HANDLE(f), ofs.dwLow, &ofs.dwHigh, FILE_BEGIN);
   return 1;
 }
@@ -269,14 +293,16 @@ sqInt sqFileSetPosition(SQFile *f, squeakFileOffsetType position)
 squeakFileOffsetType sqFileSize(SQFile *f) {
   /* Return the length of the given file. */
   win32FileOffset ofs;
-  if (!sqFileValid(f)) FAIL();
+  if (!sqFileValid(f))
+    FAIL();
   ofs.offset = 0;
   ofs.dwLow = GetFileSize(FILE_HANDLE(f), &ofs.dwHigh);
   return ofs.offset;
 }
 
 sqInt sqFileFlush(SQFile *f) {
-  if (!sqFileValid(f)) FAIL();
+  if (!sqFileValid(f))
+    FAIL();
   /* note: ignores the return value in case of read-only access */
   FlushFileBuffers(FILE_HANDLE(f));
   return 1;
@@ -285,7 +311,8 @@ sqInt sqFileFlush(SQFile *f) {
 sqInt sqFileTruncate(SQFile *f, squeakFileOffsetType offset) {
   win32FileOffset ofs;
   ofs.offset = offset;
-  if (!sqFileValid(f)) FAIL();
+  if (!sqFileValid(f))
+    FAIL();
   SetFilePointer(FILE_HANDLE(f), ofs.dwLow, &ofs.dwHigh, FILE_BEGIN);
   if(!SetEndOfFile(FILE_HANDLE(f))) return 0;
   return 1;
@@ -308,11 +335,16 @@ size_t sqFileWriteFromAt(SQFile *f, size_t count, char* byteArrayIndex, size_t s
   */
   DWORD dwReallyWritten;
   win32FileOffset ofs;
-  if (!(sqFileValid(f) && f->writable)) FAIL();
+  if (!(sqFileValid(f) && f->writable))
+    FAIL();
 
-  WriteFile(FILE_HANDLE(f), (LPVOID) (byteArrayIndex + startIndex), count, &dwReallyWritten, NULL);
+  if (f->isStdioStream)
+    WriteConsole(FILE_HANDLE(f), (LPVOID) (byteArrayIndex + startIndex), count, &dwReallyWritten, NULL);
+  else
+    WriteFile(FILE_HANDLE(f), (LPVOID) (byteArrayIndex + startIndex), count, &dwReallyWritten, NULL);
   
-  if ((int)dwReallyWritten != count) FAIL();
+  if ((int)dwReallyWritten != count)
+    FAIL();
   return (int) dwReallyWritten;
 }
 
@@ -342,7 +374,8 @@ sqImageFile sqImageFileOpen(char *fileName, char *mode)
     }
   /* convert the file name into a null-terminated C string */
   sz = MultiByteToWideChar(CP_UTF8, 0, fileName, -1, NULL,0);
-  if(sz > MAX_PATH) FAIL();
+  if(sz > MAX_PATH)
+    FAIL();
   MultiByteToWideChar(CP_UTF8, 0, fileName, -1, win32Path, sz);
   win32Path[sz] = 0;
 
