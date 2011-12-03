@@ -230,8 +230,8 @@ CogFamilyCocoaIOSConfig >> setExtraTargetProperties: maker [
 	maker 
 		addXCodeProperty: 'PER_ARCH_CFLAGS_i386' value: '-DLSB_FIRST -mfpmath=sse -finline-functions  -fno-cse-follow-jumps -fno-gcse -mtune=prescott -march=pentium-m -falign-functions=16'.
 		
-	maker 
-		addXCodeProperty: 'GCC_VERSION' value: '4.2'.
+	"maker 
+		addXCodeProperty: 'GCC_VERSION' value: '4.3'."
 
 	maker 
 		cmd: 'set_target_properties' 

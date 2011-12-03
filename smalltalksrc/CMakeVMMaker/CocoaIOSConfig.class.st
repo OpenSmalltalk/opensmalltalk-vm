@@ -7,6 +7,9 @@ Fore more information, check the class comments of all the superclasses.
 Class {
 	#name : #CocoaIOSConfig,
 	#superclass : #MacOSConfig,
+	#instVars : [
+		'generateForRelease'
+	],
 	#category : #'CMakeVMMaker-IOS'
 }
 
@@ -58,7 +61,14 @@ CocoaIOSConfig >> NSMainNibFile [
 
 { #category : #'bundle strings' }
 CocoaIOSConfig >> SqueakDebug [
-	^0
+	^self isGenerateForRelease 
+		ifTrue: [ 0 ]
+		ifFalse: [ 1 ]
+]
+
+{ #category : #settings }
+CocoaIOSConfig >> architecture [ 
+	^'i386'
 ]
 
 { #category : #accessing }
@@ -71,7 +81,7 @@ CocoaIOSConfig >> commonCompilerFlags [
 CocoaIOSConfig >> compilerFlags [ 
 	| releaseFlags |
 	
-	releaseFlags := self isRelease 
+	releaseFlags := self isGenerateForRelease 
 		ifTrue: [ self compilerFlagsRelease ]
 		ifFalse: [ self compilerFlagsDebug ].
 		
@@ -281,7 +291,7 @@ CocoaIOSConfig >> extraPluginSettings: maker [
 		maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir.
 		maker puts: 'list(APPEND linkFlags "-undefined dynamic_lookup")' ].
 	
-	maker addXCodeProperty: 'GCC_VERSION' value: '4.2'.
+	"maker addXCodeProperty: 'GCC_VERSION' value: '4.3'."
 	maker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/' , self executableName , '_Prefix.pch'.
 	
 
@@ -297,20 +307,20 @@ CocoaIOSConfig >> extraSources [
 
 { #category : #settings }
 CocoaIOSConfig >> extraVMSettings: maker [
-	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'.
+	maker set: 'CMAKE_OSX_ARCHITECTURES' to: self architecture.
 
 	maker set: 'resourceDir' toString: self resourcesDir, '/ProjectBuilder'.
-	maker set: 'resources' to: 
-		'"${resourceDir}/Squeak VM.r"
-		"${resourceDir}/Squeak.icns"
-		"${resourceDir}/Cog.icns"
-		"${resourceDir}/SqueakChanges.icns"
-		"${resourceDir}/SqueakImage.icns"
-		"${resourceDir}/SqueakPlugin.icns"
-		"${resourceDir}/SqueakScript.icns"
-		"${resourceDir}/SqueakGeneric.icns"
-		"${resourceDir}/SqueakProject.icns"
-		"${resourceDir}/SqueakSources.icns"'.
+	maker 
+		set: 'resources' 
+		to: (String streamContents: [ :stream | 
+			self  resources
+				do: [ :each | 
+					stream 
+						nextPut: $";
+						nextPutAll: '${resourceDir}/';
+						nextPutAll: each;
+						nextPut: $"]
+				separatedBy: [ stream space ] ]).
 		
 	maker set: 'resourcesLocaleEnglish' to: 
 	     '"${resourceDir}/English.lproj/InfoPlist.strings"
@@ -332,9 +342,25 @@ CocoaIOSConfig >> frameworks [
 	AGL)
 ]
 
+{ #category : #accessing }
+CocoaIOSConfig >> generateForDebug [
+	generateForRelease := false
+]
+
+{ #category : #accessing }
+CocoaIOSConfig >> generateForRelease [
+	generateForRelease := true
+]
+
+{ #category : #initialization }
+CocoaIOSConfig >> initialize [ 
+	super initialize.
+	self generateForRelease
+]
+
 { #category : #testing }
-CocoaIOSConfig >> isRelease [ 
-	^true
+CocoaIOSConfig >> isGenerateForRelease [ 
+	^generateForRelease
 ]
 
 { #category : #accessing }
@@ -995,9 +1021,24 @@ CocoaIOSConfig >> precompiledHeaders [
 //
 
 #ifdef __OBJC__
-	#import <Cocoa/Cocoa.h>
+	', 
+	(String streamContents: [ :stream | 
+		self precompiledImports 
+			do: [ :each | 
+				stream 
+					nextPutAll: '#import ';
+					nextPut: $<;
+					nextPutAll: each; 
+					nextPut: $> ]
+			separatedBy: [ 
+				stream cr ] ]),  '
 #endif
 '
+]
+
+{ #category : #settings }
+CocoaIOSConfig >> precompiledImports [ 
+	^#('Cocoa/Cocoa.h')
 ]
 
 { #category : #'source files' }
@@ -1012,6 +1053,21 @@ CocoaIOSConfig >> preferredIncludes [
 { #category : #accessing }
 CocoaIOSConfig >> prefixHeaderFileName [ 
 	^self executableName, '_Prefix.pch'
+]
+
+{ #category : #settings }
+CocoaIOSConfig >> resources [ 
+	^#('Squeak VM.r'
+	'Cog.icns'
+	'Squeak.icns'
+	'SqueakChanges.icns'
+	'SqueakPlugin.icns'
+	'SqueakScript.icns'
+	'SqueakGeneric.icns'
+	'SqueakProject.icns'
+	'SqueakSources.icns')
+
+
 ]
 
 { #category : #settings }
