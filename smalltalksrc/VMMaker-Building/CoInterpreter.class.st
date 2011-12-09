@@ -3853,6 +3853,7 @@ CoInterpreter >> longUnconditionalJump [
 					[(self methodWithHeaderShouldBeCogged: (self headerOf: method))
 						ifTrue:
 							[self externalizeFPandSP.
+							 self resetBackwardJumpVariables. "only to force variables to be global"
 							 self attemptToSwitchToMachineCode: (self oopForPointer: localIP) - offset - method - BaseHeaderSize - 1]
 						ifFalse: "don't ask if one should compile a second time..."
 							[backwardJumpCount := 1 bitShift: BytesPerWord * 8 - 2]]]
@@ -5428,6 +5429,16 @@ CoInterpreter >> recordTrace: classOrInteger thing: selector source: source [
 	traceLog at: traceLogIndex + 1 put: selector.
 	traceLog at: traceLogIndex + 2 put: source.
 	traceLogIndex := traceLogIndex + 3 \\ TraceBufferSize
+]
+
+{ #category : #'jump bytecodes' }
+CoInterpreter >> resetBackwardJumpVariables [
+	"Reference these variables from outside interpret to avoid them being localised to interpret.
+	 Oh the hacks we commit for Slang..."
+	<cmacro: '() /* nada */'>
+	<inline: #false>
+	lastBackwardJumpMethod := lastBackwardJumpMethod.
+	backwardJumpCount := backwardJumpCount
 ]
 
 { #category : #'callback support' }

@@ -1942,7 +1942,7 @@ TMethod >> tryToInlineMethodsIn: aCodeGen [
 	"Expand any (complete) inline methods called by this method. Set the complete bit when all inlining has been done. Return true if something was inlined."
 
 	| stmtLists didSomething newStatements sendsToInline |
-	(properties includesKey: #cmacro:) ifTrue:
+	self definedAsMacro ifTrue:
 		[complete := true.
 		 ^false].
 	didSomething := false.
