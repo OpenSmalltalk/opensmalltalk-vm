@@ -235,6 +235,7 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 	printf("\nMost recent primitives\n");
 	dumpPrimTraceLog();
 #endif
+	printf("\n\t(%s)\n", msg);
 	fflush(stdout);
 }
 

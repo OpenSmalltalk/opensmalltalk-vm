@@ -1709,13 +1709,81 @@ IsImage(char *name)
 	return readableFormat(magic) || readableFormat(byteSwapped(magic));
 }
 
+/*
+ * Answer exe's SUBSYSTEM type.  From http://support.microsoft.com/kb/90493.
+ */
+static int
+SubsystemType()
+{
+    HANDLE hImage;
+    DWORD  bytes;
+    ULONG  ntSignature;
+
+    IMAGE_DOS_HEADER      image_dos_header;
+    IMAGE_OPTIONAL_HEADER image_optional_header;
+
+    /* Open the reference file. */ 
+    hImage = CreateFile(vmName,
+                        GENERIC_READ,
+                        FILE_SHARE_READ,
+                        NULL,
+                        OPEN_EXISTING,
+                        FILE_ATTRIBUTE_NORMAL,
+                        NULL);
+
+    if (INVALID_HANDLE_VALUE == hImage)
+		return -1;
+
+    /* Read the MS-DOS image header. */ 
+    if (!ReadFile(hImage, &image_dos_header, sizeof(IMAGE_DOS_HEADER), &bytes, 0)
+	 || bytes != sizeof(IMAGE_DOS_HEADER))
+		return -2;
+
+    if (image_dos_header.e_magic != IMAGE_DOS_SIGNATURE)
+		return -3;
+
+    /* Get actual COFF header. */ 
+    if (SetFilePointer(	hImage,
+						image_dos_header.e_lfanew,
+						0,
+						FILE_BEGIN) == 0xFFFFFFFF)
+		return -4;
+
+    if (!ReadFile(hImage, &ntSignature, sizeof(ULONG), &bytes, 0)
+	 || bytes != sizeof(ULONG))
+		return -5;
+
+    if (IMAGE_NT_SIGNATURE != ntSignature)
+		return -6;
+
+    if (SetFilePointer(	hImage,
+						IMAGE_SIZEOF_FILE_HEADER,
+						0,
+						FILE_CURRENT) == 0xFFFFFFFF)
+		return -7;
+
+    /* Read optional header. */ 
+    if (!ReadFile(hImage, &image_optional_header, IMAGE_SIZEOF_NT_OPTIONAL_HEADER, &bytes, 0)
+	 || bytes != IMAGE_SIZEOF_NT_OPTIONAL_HEADER)
+		return -8;
+
+	CloseHandle(hImage);
+    return image_optional_header.Subsystem;
+}
+
 /* parse all arguments starting with the image name */
 static int
 parseGenericArgs(int argc, char *argv[])
 {	int i;
 
 	if (argc < 1)
-		return 0;
+		switch (SubsystemType()) {
+		case IMAGE_SUBSYSTEM_WINDOWS_GUI:
+		case IMAGE_SUBSYSTEM_WINDOWS_CE_GUI:
+			return 1; /* ok not to have an image since user can choose one. */
+		default:
+			return 0;
+		}
 
 	if (*imageName == 0) { /* only try to use image name if none is provided */
 		if (*argv[0] && IsImage(argv[0])) {
