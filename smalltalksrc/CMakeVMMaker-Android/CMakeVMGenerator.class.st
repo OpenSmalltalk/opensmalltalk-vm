@@ -223,6 +223,12 @@ CMakeVMGenerator >> saveFile [
 	
 ]
 
+{ #category : #'as yet unclassified' }
+CMakeVMGenerator >> setupMacros: gen [
+	self config cMakeMacros
+		ifNotNil: [ :macros | gen puts: macros ]
+]
+
 { #category : #accessing }
 CMakeVMGenerator >> sources [
 
