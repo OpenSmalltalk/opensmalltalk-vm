@@ -26,6 +26,10 @@ StackFreeBSDConfig >> interpreterClass [
 
 { #category : #'source generation' }
 StackFreeBSDConfig >> prepareForGeneration [
+
+	"force using LF on Macs"
+	CrLfFileStream defaultToLF.
+
 	^ self prepareForStackVMGeneration
 
 ]
