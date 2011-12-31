@@ -39,6 +39,10 @@ StackCocoaIOSConfig >> pluginsDir [
 
 { #category : #'source generation' }
 StackCocoaIOSConfig >> prepareForGeneration [
+
+	"force using LF on Macs"
+	CrLfFileStream defaultToLF.
+
 	^ self prepareForStackVMGeneration
 
 ]
