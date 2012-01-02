@@ -47,10 +47,6 @@ CogCocoaIOSConfig >> pluginsDir [
 
 { #category : #'source generation' }
 CogCocoaIOSConfig >> prepareForGeneration [
-
-	"force using LF on Macs"
-	CrLfFileStream defaultToLF.
-
 	^ self prepareForCogGeneration
 
 ]
