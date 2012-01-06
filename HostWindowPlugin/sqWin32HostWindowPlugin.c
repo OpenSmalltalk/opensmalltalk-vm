@@ -402,7 +402,7 @@ sqInt ioSetTitleOfWindow(sqInt windowIndex, char * newTitle, sqInt sizeOfTitle) 
   strncpy(titleString, newTitle, sizeOfTitle);
   titleString[sizeOfTitle] = 0;
   MultiByteToWideChar(CP_UTF8, 0, titleString, -1, wideTitle, 1024);
-  if(SetWindowTextW(stWindow, wideTitle) == 0) return -1;
+  if(SetWindowTextW(hwnd, wideTitle) == 0) return -1;
   return sizeOfTitle;
 }
 
