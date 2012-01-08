@@ -2,9 +2,9 @@
 #define _SqueakVM_H
 
 /* We expect interp.h to define VM_PROXY_MAJOR & VM_PROXY_MINOR appropriately
- * for the VM generated with it.
- */
-#include "interp.h"
+   for the VM generated with it.
+   sqMemoryAccess.h includes config.h followed by interp.h */
+#include "sqMemoryAccess.h"
 
 #ifndef VM_PROXY_MAJOR
 /* Increment the following number if you change the order of
@@ -16,8 +16,6 @@
 /* Increment the following number if you add functions at the end */
 # define VM_PROXY_MINOR 12
 #endif
-
-#include "sqMemoryAccess.h"
 
 #if VM_PROXY_MINOR > 8
 # define PrimNoErr 0
