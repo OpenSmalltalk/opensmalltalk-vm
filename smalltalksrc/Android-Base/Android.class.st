@@ -44,10 +44,24 @@ Android class >> createShortcutFor: aPath withLabel: aString andIcon: aForm [
 		iconBits: (aForm bits asByteArray).
 ]
 
+{ #category : #'system settings' }
+Android class >> editingSettingsOn: aBuilder [
+	<systemsettings>
+	(aBuilder group: #Android)
+		description: 'Android-specific VM settings' translated.
+]
+
 { #category : #'system primitives' }
 Android class >> getClipboardString [
 	"get a string from Android clipboard"
 	<primitive: 'primGetClipboardString' module: 'AndroidPlugin'>
+	self primitiveFailed.
+]
+
+{ #category : #'system primitives' }
+Android class >> getVMTimerInterval [
+	"get VM idle timer interval"
+	<primitive: 'primGetVMTimerInterval' module: 'AndroidPlugin'>
 	self primitiveFailed.
 ]
 
@@ -73,8 +87,37 @@ Android class >> setSpeechRate: aFloat [
 ]
 
 { #category : #'system primitives' }
+Android class >> setVMTimerInterval: anInteger [
+	"set VM idle timer interval"
+	<primitive: 'primSetVMTimerInterval' module: 'AndroidPlugin'>
+	self primitiveFailed.
+]
+
+{ #category : #'system primitives' }
 Android class >> speak: aString [
 	"speak the given string via TTS"
 	<primitive: 'primSpeak' module: 'AndroidPlugin'>
 	self primitiveFailed.
+]
+
+{ #category : #'system settings' }
+Android class >> vmTimerInterval [
+	^Android getVMTimerInterval.
+]
+
+{ #category : #'system settings' }
+Android class >> vmTimerInterval: anInteger [
+	"this message sets VM idle timer interval to the given number of milliseconds"
+	"set to larger values if battery life is of concern"
+	Android setVMTimerInterval: anInteger.
+]
+
+{ #category : #'system settings' }
+Android class >> vmTimerIntervalOn: aBuilder [
+	<systemsettings>
+	(aBuilder setting: #vmTimerInterval)
+		label: 'Android VM Idle Timer Interval (ms)' translated;
+		parent: #Android;
+		target: Android;
+		description: 'Sets the Android VM idle timer interval in milliseconds: longer interval -> longer battery life' translated.
 ]
