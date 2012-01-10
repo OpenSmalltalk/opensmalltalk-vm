@@ -270,11 +270,7 @@ MacOSConfig >> outputDir [
 
 { #category : #'source generation' }
 MacOSConfig >> prepareForGeneration [
-
-	"force using LF on Macs"
-	CrLfFileStream defaultToLF.
-
-
+	
 ]
 
 { #category : #accessing }
