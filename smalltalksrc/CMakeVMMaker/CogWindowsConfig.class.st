@@ -190,9 +190,6 @@ CogWindowsConfig >> platformSources [
 
 { #category : #'source generation' }
 CogWindowsConfig >> prepareForGeneration [
-
-	CrLfFileStream defaultToLF. "For strange reason it works like that"
-
 	^ self prepareForCogGeneration
 ]
 
