@@ -35,6 +35,7 @@ StackUnixConfig >> interpreterClass [
 
 { #category : #'source generation' }
 StackUnixConfig >> prepareForGeneration [
+
 	^ self prepareForStackVMGeneration
 
 ]
