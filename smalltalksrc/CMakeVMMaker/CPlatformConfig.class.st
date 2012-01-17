@@ -132,11 +132,6 @@ CPlatformConfig >> buildDirName [
 
 ]
 
-{ #category : #accessing }
-CPlatformConfig >> cMakeMacros [
-	^nil	
-]
-
 { #category : #'source generation' }
 CPlatformConfig >> cogitClass [
 	"answer a class for machine code generation or nil"
@@ -617,20 +612,6 @@ CPlatformConfig >> generateSources [
 	
 	
 
-]
-
-{ #category : #'source generation' }
-CPlatformConfig >> generateStackSources [
-	" generate sources for Stack Interpreter"
-
-	StackInterpreter initialize.
-	
-	VMMaker
-		generate: StackInterpreter
-		to: self srcDir fullName
-		platformDir: self platformsDir fullName
-		excluding: #(BrokenPlugin IA32ABIPluginSimulator SlangTestPlugin TestOSAPlugin
-			FFIPlugin ReentrantARMFFIPlugin ReentrantFFIPlugin ReentrantPPCBEFFIPlugin).
 ]
 
 { #category : #'source generation' }

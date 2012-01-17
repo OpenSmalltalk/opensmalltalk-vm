@@ -34,6 +34,7 @@ StackMacOSConfig >> interpreterClass [
 
 { #category : #'source generation' }
 StackMacOSConfig >> prepareForGeneration [
+
 	^ self prepareForStackVMGeneration
 
 ]

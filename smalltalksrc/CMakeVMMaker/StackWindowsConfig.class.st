@@ -33,5 +33,6 @@ StackWindowsConfig >> interpreterClass [
 
 { #category : #'source generation' }
 StackWindowsConfig >> prepareForGeneration [
+
 	^ self prepareForStackVMGeneration
 ]

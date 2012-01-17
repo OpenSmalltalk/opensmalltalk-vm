@@ -342,6 +342,7 @@ CogUnixConfig >> preferredIncludes [
 
 { #category : #'source generation' }
 CogUnixConfig >> prepareForGeneration [
+
 	^ self prepareForCogGeneration
 
 ]

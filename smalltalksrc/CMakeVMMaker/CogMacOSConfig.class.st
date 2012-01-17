@@ -304,12 +304,6 @@ CogMacOSConfig >> frameworks [
 	)
 ]
 
-{ #category : #'source files' }
-CogMacOSConfig >> generateSourceFiles [
-
-	^ CMakeGenScripts generateCogSources: self
-]
-
 { #category : #'source generation' }
 CogMacOSConfig >> interpreterClass [
 	^ CoInterpreter
@@ -868,6 +862,7 @@ CogMacOSConfig >> plistTemplate [
 
 { #category : #'source generation' }
 CogMacOSConfig >> prepareForGeneration [
+
 	^ self prepareForCogGeneration
 
 ]
