@@ -13,10 +13,13 @@ esac
 # On some old linuxes there is a /lib/tls thread-local-storage version of the C
 # library which the VM may use and if so should take precedence over /lib libc.
 case `/usr/bin/ldd "$BIN/squeak" | /bin/fgrep /libc. | sed 's/^.*=> //'` in
-/lib/tls/libc*)	SVMLLP="/lib/tls:/lib:/usr/lib/tls:/usr/lib";;
-/lib/libc*)		SVMLLP="/lib:/usr/lib";;
-*)				echo "can't infer base LD_LIBRARY_PATH. Aborting." 1>&2;
-				exit 1
+/lib/libc*)					SVMLLP="/lib:/usr/lib";;
+/lib32/libc*)				SVMLLP="/lib32:/usr/lib32";;
+/lib64/libc*)				SVMLLP="/lib64:/usr/lib64";;
+/lib/tls/libc*)				SVMLLP="/lib/tls:/lib:/usr/lib/tls:/usr/lib";;
+/lib/i386-linux-gnu/libc*)	SVMLLP="/lib/i386-linux-gnu:/usr/lib/i386-linux-gnu";;
+*)	echo "can't infer base LD_LIBRARY_PATH. Aborting." 1>&2;
+	exit 1
 esac
 # prepending is less flexible but safer because it ensures we find the plugins
 # in the same directory as the VM.  We must include at least /lib and /usr/lib
