@@ -1,5 +1,11 @@
 #!/bin/sh
-test -f config.h || ../../platforms/unix/config/configure INTERP=cointerpmt --without-vm-display-fbdev --without-npsqueak CFLAGS="-g -O2 -msse2 -DNDEBUG -DCOGMTVM=1 -DDEBUGVM=0 -D_GNU_SOURCE -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1" LIBS=-lpthread
+# Some gcc versions create a broken VM using -O2
+case `gcc -v 2>&1 | grep version | sed 's/gcc version *//'` in
+3.4.*)	OPT=-O1;;
+*)		OPT=-O2;;
+esac
+
+test -f config.h || ../../platforms/unix/config/configure INTERP=cointerpmt --without-vm-display-fbdev --without-npsqueak CFLAGS="-g $OPT -msse2 -DNDEBUG -DCOGMTVM=1 -DDEBUGVM=0 -D_GNU_SOURCE -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1" LIBS=-lpthread
 ../../scripts/nukeversion
 rm -rf ../../cogmtlinux
 make install prefix=`readlink -f \`pwd\`/../../cogmtlinux`

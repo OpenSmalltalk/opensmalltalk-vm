@@ -1,5 +1,11 @@
 #!/bin/sh
-test -f config.h || ../../../platforms/unix/config/configure --with-src=nscogsrc CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DDEBUGVM=0" LIBS="-lpthread -luuid"
+# Some gcc versions create a broken VM using -O2
+case `gcc -v 2>&1 | grep version | sed 's/gcc version *//'` in
+3.4.*)	OPT=-O1;;
+*)		OPT=-O2;;
+esac
+
+test -f config.h || ../../../platforms/unix/config/configure --with-src=nscogsrc CFLAGS="-g $OPT -msse2 -D_GNU_SOURCE -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DDEBUGVM=0" LIBS="-lpthread -luuid"
 ../../../scripts/nukeversion
 rm -rf ../../../nsvmlinux
 # would prefer make install prefix=`readlink -f \`pwd\`/../../../nsvmlinux`
