@@ -73,6 +73,11 @@ CogAbstractInstruction class >> requiredMethodNames [
 		or: [((self compiledMethodAt: s) pragmaAt: #doNotGenerate) notNil]]
 ]
 
+{ #category : #verification }
+CogAbstractInstruction class >> specificOpcodes [
+	^self subclassResponsibility
+]
+
 { #category : #translation }
 CogAbstractInstruction class >> structTypeName [
 	^self name allButFirst: 3 "Drop initial Cog"
@@ -83,6 +88,47 @@ CogAbstractInstruction class >> typeForSelf [
 	"Answer the type to give self if appropriate, or nil if not.
 	 In C all subclasses are mapped to the AbstractInstruction type."
 	^#'AbstractInstruction *'
+]
+
+{ #category : #verification }
+CogAbstractInstruction class >> unimplementedOpcodes [
+	"Check computeMaximumSize and dispatchConcretize for unimplemented opcodes."
+	"self subclasses collect: [:compiler| {compiler. compiler unimplementedOpcodes}]"
+	| opcodes cmsLiterals dcLiterals |
+	opcodes := CogRTLOpcodes opcodes, self specificOpcodes.
+	cmsLiterals := (self >> #computeMaximumSize) literals
+						select: [:l| l isVariableBinding]
+						thenCollect: [:l| l key].
+	dcLiterals := (self >> #dispatchConcretize) literals
+						select: [:l| l isVariableBinding]
+						thenCollect: [:l| l key].
+	^Dictionary new
+		at: #computeMaximumSize put: (opcodes reject: [:opcode| cmsLiterals includes: opcode]);
+		at: #dispatchConcretize put: (opcodes reject: [:opcode| dcLiterals includes: opcode]);
+		yourself
+]
+
+{ #category : #verification }
+CogAbstractInstruction class >> usedUnimplementedOpcodes [
+	"Check for uses of unimplemented opcodes"
+	"self subclasses collect: [:compiler| {compiler. compiler usedUnimplementedOpcodes}]"
+	| genericUnimplementedOpcodeBindings specificUnimplementedOpcodeBindings |
+	genericUnimplementedOpcodeBindings := Set new.
+	specificUnimplementedOpcodeBindings := Set new.
+	self unimplementedOpcodes do:
+		[:arrayOfOpcodes|
+		arrayOfOpcodes do:
+			[:opcode|
+			(self bindingOf: opcode)
+				ifNotNil: [:b| specificUnimplementedOpcodeBindings add: b]
+				ifNil: [genericUnimplementedOpcodeBindings add: (CogRTLOpcodes bindingOf: opcode)]]].
+	^ { (SystemNavigation new allCallsOn: genericUnimplementedOpcodeBindings localToPackage: #VMMaker)
+			inject: Set new
+			into:  [:them :methodRef| "These should be in Cogit's abstract instructions category"
+				them
+					addAll: (SystemNavigation new allCallsOn: methodRef method selector localToPackage: #VMMaker);
+					yourself].
+		SystemNavigation new allCallsOn: specificUnimplementedOpcodeBindings localToPackage: #VMMaker }
 ]
 
 { #category : #comparing }
