@@ -142,6 +142,13 @@ CogIA32Compiler class >> prepareToBeAddedToCodeGenerator: aCodeGen [
 			[aCodeGen removeMethodForSelector: sel]].
 ]
 
+{ #category : #verification }
+CogIA32Compiler class >> specificOpcodes [
+	"Answer the processor-specific opcodes for this class.
+	 They're all in an Array literal in the initialize method."
+	^(self class >> #initialize) literals detect: [:l| l isArray and: [l includes: #LOCK]]
+]
+
 { #category : #accessing }
 CogIA32Compiler >> cResultRegister [
 	"Answer the abstract register for the C result register.
@@ -276,7 +283,13 @@ CogIA32Compiler >> computeMaximumSize [
 		[AddCwR]		-> [^maxSize := (self concreteRegister: (operands at: 1)) = EAX
 														ifTrue: [5]
 														ifFalse: [6]].
+		[AndCwR]		-> [^maxSize := (self concreteRegister: (operands at: 1)) = EAX
+														ifTrue: [5]
+														ifFalse: [6]].
 		[CmpCwR]		-> [^maxSize := (self concreteRegister: (operands at: 1)) = EAX
+														ifTrue: [5]
+														ifFalse: [6]].
+		[OrCwR]		-> [^maxSize := (self concreteRegister: (operands at: 1)) = EAX
 														ifTrue: [5]
 														ifFalse: [6]].
 		[SubCwR]		-> [^maxSize := (self concreteRegister: (operands at: 1)) = EAX
@@ -321,6 +334,7 @@ CogIA32Compiler >> computeMaximumSize [
 		[MoveCqR]		-> [^maxSize := (operands at: 0) = 0 ifTrue: [2] ifFalse: [5]].
 		[MoveCwR]		-> [^maxSize := 5].
 		[MoveRR]		-> [^maxSize := 2].
+		[MoveRdRd]		-> [^maxSize := 4].
 		[MoveAwR]		-> [^maxSize := (self concreteRegister: (operands at: 1)) = EAX
 											ifTrue: [5]
 											ifFalse: [6]].
@@ -561,6 +575,31 @@ CogIA32Compiler >> concretizeAndCqR [
 		at: 3 put: (mask >> 8 bitAnd: 16rFF);
 		at: 4 put: (mask >> 16 bitAnd: 16rFF);
 		at: 5 put: (mask >> 24 bitAnd: 16rFF).
+	 ^machineCodeSize := 6
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeAndCwR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| value reg |
+	value := operands at: 0.
+	reg := self concreteRegister: (operands at: 1).
+	reg = EAX ifTrue:
+		[machineCode
+			at: 0 put: 16r25;
+			at: 1 put: (value bitAnd: 16rFF);
+			at: 2 put: (value >> 8 bitAnd: 16rFF);
+			at: 3 put: (value >> 16 bitAnd: 16rFF);
+			at: 4 put: (value >> 24 bitAnd: 16rFF).
+		 ^machineCodeSize := 5].
+	machineCode
+		at: 0 put: 16r83;
+		at: 1 put: (self mod: ModReg RM: reg RO: 4);
+		at: 2 put: (value bitAnd: 16rFF);
+		at: 3 put: (value >> 8 bitAnd: 16rFF);
+		at: 4 put: (value >> 16 bitAnd: 16rFF);
+		at: 5 put: (value >> 24 bitAnd: 16rFF).
 	 ^machineCodeSize := 6
 ]
 
@@ -1704,6 +1743,31 @@ CogIA32Compiler >> concretizeOrCqR [
 ]
 
 { #category : #'generate machine code' }
+CogIA32Compiler >> concretizeOrCwR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| value reg |
+	value := operands at: 0.
+	reg := self concreteRegister: (operands at: 1).
+	reg = EAX ifTrue:
+		[machineCode
+			at: 0 put: 16r0D;
+			at: 1 put: (value bitAnd: 16rFF);
+			at: 2 put: (value >> 8 bitAnd: 16rFF);
+			at: 3 put: (value >> 16 bitAnd: 16rFF);
+			at: 4 put: (value >> 24 bitAnd: 16rFF).
+		 ^machineCodeSize := 5].
+	machineCode
+		at: 0 put: 16r83;
+		at: 1 put: (self mod: ModReg RM: reg RO: 1);
+		at: 2 put: (value bitAnd: 16rFF);
+		at: 3 put: (value >> 8 bitAnd: 16rFF);
+		at: 4 put: (value >> 16 bitAnd: 16rFF);
+		at: 5 put: (value >> 24 bitAnd: 16rFF).
+	 ^machineCodeSize := 6
+]
+
+{ #category : #'generate machine code' }
 CogIA32Compiler >> concretizeOrRR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -2061,6 +2125,7 @@ CogIA32Compiler >> dispatchConcretize [
 		[AddRR]						-> [^self concretizeAddRR].
 		[AddRdRd]					-> [^self concretizeSEE2OpRdRd: 16r58].
 		[AndCqR]					-> [^self concretizeAndCqR].
+		[AndCwR]					-> [^self concretizeAndCwR].
 		[AndRR]						-> [^self concretizeAndRR].
 		[CmpCqR]					-> [^self concretizeCmpCqR].
 		[CmpCwR]					-> [^self concretizeCmpCwR].
@@ -2069,6 +2134,7 @@ CogIA32Compiler >> dispatchConcretize [
 		[DivRdRd]					-> [^self concretizeSEE2OpRdRd: 16r5E].
 		[MulRdRd]					-> [^self concretizeSEE2OpRdRd: 16r59].
 		[OrCqR]						-> [^self concretizeOrCqR].
+		[OrCwR]					-> [^self concretizeOrCwR].
 		[OrRR]						-> [^self concretizeOrRR].
 		[SubCqR]					-> [^self concretizeSubCqR].
 		[SubCwR]					-> [^self concretizeSubCwR].
