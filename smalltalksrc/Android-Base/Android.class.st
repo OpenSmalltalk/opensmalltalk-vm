@@ -59,6 +59,13 @@ Android class >> getClipboardString [
 ]
 
 { #category : #'system primitives' }
+Android class >> getSDCardRoot [
+	"get a string from Android clipboard"
+	<primitive: 'primGetSDCardRoot' module: 'AndroidPlugin'>
+	self primitiveFailed.
+]
+
+{ #category : #'system primitives' }
 Android class >> getVMTimerInterval [
 	"get VM idle timer interval"
 	<primitive: 'primGetVMTimerInterval' module: 'AndroidPlugin'>
