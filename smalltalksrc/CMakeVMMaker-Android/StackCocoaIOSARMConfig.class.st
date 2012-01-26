@@ -203,6 +203,8 @@ StackCocoaIOSARMConfig >> plistTemplate [
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>BuildMachineOSBuild</key>
+	<string>10J869</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
@@ -229,6 +231,22 @@ StackCocoaIOSARMConfig >> plistTemplate [
 	</array>
 	<key>CFBundleVersion</key>
 	<string>1.1.7</string>
+	<key>DTCompiler</key>
+	<string>4.2</string>
+	<key>DTPlatformBuild</key>
+	<string>8H7</string>
+	<key>DTPlatformName</key>
+	<string>iphoneos</string>
+	<key>DTPlatformVersion</key>
+	<string>4.3</string>
+	<key>DTSDKBuild</key>
+	<string>8H7</string>
+	<key>DTSDKName</key>
+	<string>iphoneos4.3</string>
+	<key>DTXcode</key>
+	<string>0402</string>
+	<key>DTXcodeBuild</key>
+	<string>4A2002a</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>MinimumOSVersion</key>
@@ -240,7 +258,7 @@ StackCocoaIOSARMConfig >> plistTemplate [
 		<integer>1</integer>
 	</array>
 	<key>UIPrerenderedIcon</key>
-	<false/>
+	<true/>
 	<key>UIStatusBarHidden</key>
 	<true/>
 </dict>
@@ -351,11 +369,11 @@ StackCocoaIOSARMConfig >> setResourceProperties: maker [
 
 	maker 
 		cmd: 'set_source_files_properties' 
-		params: '${resources} PROPERTIES MACOSX_PACKAGE_LOCATION Resources'.
+		params: '${resources} PROPERTIES MACOSX_PACKAGE_LOCATION .'.
 
 	maker 
 		cmd: 'set_source_files_properties' 
-		params: '${resourcesLocaleEnglish} PROPERTIES MACOSX_PACKAGE_LOCATION Resources'.
+		params: '${resourcesLocaleEnglish} PROPERTIES MACOSX_PACKAGE_LOCATION .'.
 
 
 ]
