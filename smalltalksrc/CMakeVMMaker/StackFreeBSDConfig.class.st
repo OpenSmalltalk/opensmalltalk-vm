@@ -26,7 +26,6 @@ StackFreeBSDConfig >> interpreterClass [
 
 { #category : #'source generation' }
 StackFreeBSDConfig >> prepareForGeneration [
-
 	^ self prepareForStackVMGeneration
 
 ]

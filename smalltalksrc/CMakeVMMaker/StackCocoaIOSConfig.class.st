@@ -39,7 +39,6 @@ StackCocoaIOSConfig >> pluginsDir [
 
 { #category : #'source generation' }
 StackCocoaIOSConfig >> prepareForGeneration [
-
 	^ self prepareForStackVMGeneration
 
 ]

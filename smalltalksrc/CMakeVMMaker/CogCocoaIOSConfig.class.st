@@ -47,7 +47,6 @@ CogCocoaIOSConfig >> pluginsDir [
 
 { #category : #'source generation' }
 CogCocoaIOSConfig >> prepareForGeneration [
-
 	^ self prepareForCogGeneration
 
 ]
