@@ -190,7 +190,6 @@ CogWindowsConfig >> platformSources [
 
 { #category : #'source generation' }
 CogWindowsConfig >> prepareForGeneration [
-
 	^ self prepareForCogGeneration
 ]
 

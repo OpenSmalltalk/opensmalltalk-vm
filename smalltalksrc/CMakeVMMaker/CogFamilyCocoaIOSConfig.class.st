@@ -88,6 +88,7 @@ CogFamilyCocoaIOSConfig >> defaultExternalPlugins [
 		ObjectiveCPlugin
 		QuicktimePlugin
 		TestOSAPlugin
+		"UnixOSProcessPlugin"
 	)
 ]
 
@@ -208,10 +209,6 @@ CogFamilyCocoaIOSConfig >> setExtraTargetProperties: maker [
 		addProperty: 'MACOSX_BUNDLE_INFO_PLIST' 
 		value: '${buildDir}/Info.plist'.  
 
-	maker 
-		cmd: 'set_source_files_properties' 
-		params: '${resources} PROPERTIES MACOSX_PACKAGE_LOCATION Resources'.
-			
 	(maker buildDir forceNewFileNamed: self prefixHeaderFileName) 
 		nextPutAll: self precompiledHeaders;
 		close.
@@ -220,8 +217,8 @@ CogFamilyCocoaIOSConfig >> setExtraTargetProperties: maker [
 	maker 
 		addXCodeProperty: 'PER_ARCH_CFLAGS_i386' value: '-DLSB_FIRST -mfpmath=sse -finline-functions  -fno-cse-follow-jumps -fno-gcse -mtune=prescott -march=pentium-m -falign-functions=16'.
 		
-	maker 
-		addXCodeProperty: 'GCC_VERSION' value: '4.2'.
+	"maker 
+		addXCodeProperty: 'GCC_VERSION' value: '4.3'."
 
 	maker 
 		cmd: 'set_target_properties' 
@@ -229,6 +226,37 @@ CogFamilyCocoaIOSConfig >> setExtraTargetProperties: maker [
 	
 	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir.
 	maker set: 'RUNTIME_OUTPUT_DIRECTORY' toString: self outputDir.
+]
+
+{ #category : #settings }
+CogFamilyCocoaIOSConfig >> setResourceProperties: maker [
+	maker set: 'resourceDir' toString: self resourcesDir, '/ProjectBuilder'.
+
+	maker 
+		set: 'resources' 
+		to: (String streamContents: [ :stream | 
+			self  resources
+				do: [ :each | 
+					stream 
+						nextPut: $";
+						nextPutAll: '${resourceDir}/';
+						nextPutAll: each;
+						nextPut: $"]
+				separatedBy: [ stream space ] ]).
+		
+	maker 
+		set: 'resourcesLocaleEnglish' 
+		to: '"${resourceDir}/English.lproj/InfoPlist.strings" "${resourceDir}/English.lproj/MainMenu.nib"'.
+
+	maker 
+		cmd: 'set_source_files_properties' 
+		params: '${resources} PROPERTIES MACOSX_PACKAGE_LOCATION Resources'.
+
+	maker 
+		cmd: 'set_source_files_properties' 
+		params: '${resourcesLocaleEnglish} PROPERTIES MACOSX_PACKAGE_LOCATION Resources/English.lproj'.
+
+
 ]
 
 { #category : #'source files' }
