@@ -149,8 +149,8 @@ CocoaIOSConfig >> configureClipboardExtendedPlugin: maker [
 CocoaIOSConfig >> configureHostWindowPlugin: maker [
 	super configureHostWindowPlugin: maker.
 	maker 
-		addSources: #('sqMacHostWindow.c' ) 
-		prefixed: '${platformsDir}/iOS/vm/iPhone/plugins/HostWindowPlugin/'
+		addSources: #('sqMacHostWindow.m' ) 
+		prefixed: '${platformsDir}/iOS/vm/OSX/plugins/HostWindowPlugin/'
 
 ]
 

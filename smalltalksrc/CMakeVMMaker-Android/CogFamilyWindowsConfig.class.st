@@ -285,10 +285,9 @@ CogFamilyWindowsConfig >> msysPathFor: aPath [
 { #category : #directories }
 CogFamilyWindowsConfig >> outputDir [
 
-	"the directory where built binaries will be stored.
-	DO NOT CHANGE THIS FOR WINDOWS. It is not clear why but if we put for windows the same target directory as the rest of the platforms (/results), there is a link problems. The only way it works is to put it in /build/results. Only change this if you are use it can build"
+	"the directory where built binaries will be stored"
 
-	^ outputDir ifNil: [ outputDir := (self msysPathFor: (self buildDir fullName , '/', self outputDirName )) ]
+	^ outputDir ifNil: [ outputDir := self msysPathFor: (self buildDir containingDirectory fullName , '/', self outputDirName) ]
 	
 ]
 
