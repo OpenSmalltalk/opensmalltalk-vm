@@ -1,16 +1,16 @@
 Class {
-	#name : #StackCocoaIOSARMConfig,
+	#name : #StackIPhoneConfig,
 	#superclass : #StackCocoaIOSConfig,
 	#category : #'CMakeVMMaker-IOS'
 }
 
 { #category : #accessing }
-StackCocoaIOSARMConfig >> architecture [ 
+StackIPhoneConfig >> architecture [ 
 	^'armv6'
 ]
 
 { #category : #settings }
-StackCocoaIOSARMConfig >> commonCompilerFlags [
+StackIPhoneConfig >> commonCompilerFlags [
 	"Common compiler flags"
 	^{
 	"'-miphoneos-version-min=4.3'. "
@@ -39,22 +39,39 @@ StackCocoaIOSARMConfig >> commonCompilerFlags [
 ]
 
 { #category : #settings }
-StackCocoaIOSARMConfig >> compilerFlagsDebug [
+StackIPhoneConfig >> compilerFlagsDebug [
 	^#('-g3' '-O0' "'-fasm-blocks'" "'-mfpmath=sse'" "'-march=pentium-m'" "'-mtune=prescott'" '-fno-cse-follow-jumps' '-DDEBUGVM=1')
 ]
 
 { #category : #settings }
-StackCocoaIOSARMConfig >> compilerFlagsRelease [ 
+StackIPhoneConfig >> compilerFlagsRelease [ 
 	^#('-g0' '-Os' "'-fasm-blocks'" '-finline-functions' "'-mfpmath=sse'" '-fomit-frame-pointer' "'-march=pentium-m'" "'-mtune=prescott'" '-DNDEBUG' '-DDEBUGVM=0')
 ]
 
+{ #category : #'plugin extra rules' }
+StackIPhoneConfig >> configureHostWindowPlugin: maker [
+	maker includeDirectories: '${platformsDir}/Cross/plugins/HostWindowPlugin'.	
+	maker 
+		addSources: #('sqMacHostWindow.m' ) 
+		prefixed: '${platformsDir}/iOS/vm/iPhone/plugins/HostWindowPlugin/'
+
+]
+
+{ #category : #'plugin extra rules' }
+StackIPhoneConfig >> configureTouchPlugin: maker [
+	maker 
+		addSources: #('sqTouch.m' ) 
+		prefixed: '${platformsDir}/iOS/vm/iPhone/plugins/TouchPlugin/'
+
+]
+
 { #category : #settings }
-StackCocoaIOSARMConfig >> defaultExternalPlugins [ 
+StackIPhoneConfig >> defaultExternalPlugins [ 
 	^#()
 ]
 
 { #category : #settings }
-StackCocoaIOSARMConfig >> defaultInternalPlugins [
+StackIPhoneConfig >> defaultInternalPlugins [
 	^ #(
 		ADPCMCodecPlugin
 		BMPReadWriterPlugin 
@@ -80,16 +97,17 @@ StackCocoaIOSARMConfig >> defaultInternalPlugins [
 		SoundPlugin
 		SurfacePlugin
 		UUIDPlugin
-		"IOSPlugin")
+		ObjectiveCPlugin 
+		TouchPlugin)
 ]
 
 { #category : #accessing }
-StackCocoaIOSARMConfig >> executableName [
+StackIPhoneConfig >> executableName [
 	^ 'iStackVM'
 ]
 
 { #category : #'plugin extra rules' }
-StackCocoaIOSARMConfig >> extraPluginSettings: maker [	
+StackIPhoneConfig >> extraPluginSettings: maker [	
 	self architecture
 		ifNotNil: [ :arch | maker set: 'CMAKE_OSX_ARCHITECTURES' toString: arch ].
 		
@@ -112,7 +130,7 @@ StackCocoaIOSARMConfig >> extraPluginSettings: maker [
 ]
 
 { #category : #'source files' }
-StackCocoaIOSARMConfig >> extraSources [
+StackIPhoneConfig >> extraSources [
 	" mac VM using some unix sources "
 	
 	^'${buildDir}/', self prefixHeaderFileName, ' 
@@ -125,7 +143,7 @@ ${platformsDir}/unix/vm/sqUnixThreads.c
 ]
 
 { #category : #accessing }
-StackCocoaIOSARMConfig >> frameworks [
+StackIPhoneConfig >> frameworks [
 	^ #(
 	CoreAudio
 	CoreGraphics
@@ -139,7 +157,7 @@ StackCocoaIOSARMConfig >> frameworks [
 ]
 
 { #category : #settings }
-StackCocoaIOSARMConfig >> imageResources [ 
+StackIPhoneConfig >> imageResources [ 
 	^#(
 	'iPhone.image'
 	'iPhone.changes'
@@ -147,7 +165,7 @@ StackCocoaIOSARMConfig >> imageResources [
 ]
 
 { #category : #'source files' }
-StackCocoaIOSARMConfig >> platformSources [
+StackIPhoneConfig >> platformSources [
 	"files added from platform/iOS/vm dir "
 	^ #(
 		'Common/main.m'
@@ -197,14 +215,12 @@ StackCocoaIOSARMConfig >> platformSources [
 ]
 
 { #category : #'bundle strings' }
-StackCocoaIOSARMConfig >> plistTemplate [ 
+StackIPhoneConfig >> plistTemplate [ 
 	self flag: #todo. "CFBundleDisplayName is using @CFBundleExecutable@ that's probably wrong"
 	^'<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>BuildMachineOSBuild</key>
-	<string>10J869</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
@@ -231,22 +247,6 @@ StackCocoaIOSARMConfig >> plistTemplate [
 	</array>
 	<key>CFBundleVersion</key>
 	<string>1.1.7</string>
-	<key>DTCompiler</key>
-	<string>4.2</string>
-	<key>DTPlatformBuild</key>
-	<string>8H7</string>
-	<key>DTPlatformName</key>
-	<string>iphoneos</string>
-	<key>DTPlatformVersion</key>
-	<string>4.3</string>
-	<key>DTSDKBuild</key>
-	<string>8H7</string>
-	<key>DTSDKName</key>
-	<string>iphoneos4.3</string>
-	<key>DTXcode</key>
-	<string>0402</string>
-	<key>DTXcodeBuild</key>
-	<string>4A2002a</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>MinimumOSVersion</key>
@@ -258,7 +258,7 @@ StackCocoaIOSARMConfig >> plistTemplate [
 		<integer>1</integer>
 	</array>
 	<key>UIPrerenderedIcon</key>
-	<true/>
+	<false/>
 	<key>UIStatusBarHidden</key>
 	<true/>
 </dict>
@@ -267,24 +267,24 @@ StackCocoaIOSARMConfig >> plistTemplate [
 ]
 
 { #category : #settings }
-StackCocoaIOSARMConfig >> precompiledImports [ 
+StackIPhoneConfig >> precompiledImports [ 
 	^#(
 	'Foundation/Foundation.h' 
 	'UIKit/UIKit.h')
 ]
 
 { #category : #settings }
-StackCocoaIOSARMConfig >> resources [ 
+StackIPhoneConfig >> resources [ 
 	^#('Cog.icns'), self imageResources
 ]
 
 { #category : #accessing }
-StackCocoaIOSARMConfig >> sdkVersion [ 
+StackIPhoneConfig >> sdkVersion [ 
 	^'5.0'
 ]
 
 { #category : #settings }
-StackCocoaIOSARMConfig >> setCommonProperties: maker [ 
+StackIPhoneConfig >> setCommonProperties: maker [ 
 	maker set: 'CMAKE_CROSSCOMPILING' to: 'TRUE'.
 	maker set: 'CMAKE_SYSTEM_NAME' to: 'Darwin'.
 	maker set: 'CMAKE_SYSTEM_PROCESSOR' to: 'arm'.
@@ -314,7 +314,7 @@ StackCocoaIOSARMConfig >> setCommonProperties: maker [
 ]
 
 { #category : #settings }
-StackCocoaIOSARMConfig >> setExtraTargetProperties: maker [
+StackIPhoneConfig >> setExtraTargetProperties: maker [
 	"super setExtraTargetProperties: maker."
 
 	| precompiledHeaders plist |
@@ -348,7 +348,7 @@ StackCocoaIOSARMConfig >> setExtraTargetProperties: maker [
 ]
 
 { #category : #settings }
-StackCocoaIOSARMConfig >> setResourceProperties: maker [
+StackIPhoneConfig >> setResourceProperties: maker [
 	maker set: 'resourceDir' toString: self resourcesDir, '/ProjectBuilder'.
 
 	maker 
@@ -369,17 +369,17 @@ StackCocoaIOSARMConfig >> setResourceProperties: maker [
 
 	maker 
 		cmd: 'set_source_files_properties' 
-		params: '${resources} PROPERTIES MACOSX_PACKAGE_LOCATION .'.
+		params: '${resources} PROPERTIES MACOSX_PACKAGE_LOCATION Resources'.
 
 	maker 
 		cmd: 'set_source_files_properties' 
-		params: '${resourcesLocaleEnglish} PROPERTIES MACOSX_PACKAGE_LOCATION .'.
+		params: '${resourcesLocaleEnglish} PROPERTIES MACOSX_PACKAGE_LOCATION Resources'.
 
 
 ]
 
 { #category : #'source files' }
-StackCocoaIOSARMConfig >> standardIncludes [
+StackIPhoneConfig >> standardIncludes [
 	^#(
 	'${srcDir}/vm'
 	'${platformsDir}/iOS/vm/iPhone'
