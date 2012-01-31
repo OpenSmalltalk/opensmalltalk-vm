@@ -224,6 +224,15 @@ StackEvtAndroidConfig >> configureJoystickTabletPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
+StackEvtAndroidConfig >> configureLocalePlugin: maker [
+	"extra rules for LocalePlugin"
+
+	super configureLocalePlugin: maker.  
+	
+	maker addPlatformSources: #( 'sqAndroidLocale.c')
+]
+
+{ #category : #'plugin extra rules' }
 StackEvtAndroidConfig >> configureSecurityPlugin: maker [ 
 	"extra rules for MIDIPlugin"
 
@@ -282,6 +291,7 @@ StackEvtAndroidConfig >> defaultInternalPlugins [
 		JPEGReaderPlugin 
 		LargeIntegersPlugin "LargeIntegers"
 		Matrix2x3Plugin 
+		LocalePlugin
 		RePlugin 	
 		SecurityPlugin 
 		JPEGReadWriter2Plugin 
