@@ -464,6 +464,13 @@ ThreadedFFIPlugin >> ffiCall: externalFunction ArgArrayOrNil: argArrayOrNil NumA
 	flags := interpreterProxy fetchInteger: ExternalFunctionFlagsIndex ofObject: externalFunction.
 	interpreterProxy failed ifTrue:
 		[^self ffiFail: FFIErrorBadArgs].
+
+	"This must come early for compatibility with the old FFIPlugin.  Image-level code
+	 may assume the function pointer is loaded eagerly.  Thanks to Nicolas Cellier."
+	address := self ffiLoadCalloutAddress: externalFunction.
+	interpreterProxy failed ifTrue:
+		[^0 "error code already set by ffiLoadCalloutAddress:"].
+	
 	argTypeArray := interpreterProxy fetchPointer: ExternalFunctionArgTypesIndex ofObject: externalFunction.
 	"must be array of arg types"
 	((interpreterProxy isArray: argTypeArray)
@@ -477,10 +484,7 @@ ThreadedFFIPlugin >> ffiCall: externalFunction ArgArrayOrNil: argArrayOrNil NumA
 		ifFalse: "not masking causes threaded calls to fail, which is as they should if the plugin is not threaded."
 			[(self ffiSupportsCallingConvention: flags) ifFalse:
 				[^self ffiFail: FFIErrorCallType]].
-
-	address := self ffiLoadCalloutAddress: externalFunction.
-	interpreterProxy failed ifTrue:
-		[^0 "error code already set by ffiLoadCalloutAddress:"].
+		
 	requiredStackSize := self externalFunctionHasStackSizeSlot
 							ifTrue: [interpreterProxy
 										fetchInteger: ExternalFunctionStackSizeIndex
