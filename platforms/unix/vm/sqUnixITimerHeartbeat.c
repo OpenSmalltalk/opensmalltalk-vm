@@ -1,5 +1,5 @@
 /****************************************************************************
-*   PROJECT: Unix (pthread) heartbeat logic for Stack/Cog VM
+*   PROJECT: Unix (setitimer) heartbeat logic for Stack/Cog VM *without* ticker
 *   FILE:    sqUnixHeartbeat.c
 *   CONTENT: 
 *
@@ -15,19 +15,11 @@
 *
 *****************************************************************************/
 
-#if ITIMER_HEARTBEAT
-# if VM_TICKER
-#   include "sqUnixITimerTickerHeartbeat.c"
-# else
-#   include "sqUnixITimerHeartbeat.c"
-# endif
-#else /* ITIMER_HEARTBEAT */
-
 #include "sq.h"
 #include "sqAssert.h"
 #include "sqMemoryFence.h"
 #include <errno.h>
-#include <pthread.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/time.h>
 
@@ -315,93 +307,120 @@ heartbeat()
 	}
 	else
 		heartbeats += 1;
-	checkHighPriorityTickees(utcMicrosecondClock);
 	forceInterruptCheckFromHeartbeat();
 
 	errno = saved_errno;
 }
 
-typedef enum { dead, condemned, nascent, quiescent, active } machine_state;
-
-static int					stateMachinePolicy;
-static struct sched_param	stateMachinePriority;
-
-static volatile machine_state beatState = nascent;
-
 #if !defined(DEFAULT_BEAT_MS)
 # define DEFAULT_BEAT_MS 2
 #endif
 static int beatMilliseconds = DEFAULT_BEAT_MS;
-static struct timespec beatperiod = { 0, DEFAULT_BEAT_MS * 1000 * 1000 };
 
-static void *
-beatStateMachine(void *careLess)
+/* Use ITIMER_REAL/SIGALRM because the VM can enter a sleep in the OS via
+ * e.g. ioRelinquishProcessorForMicroseconds in which the OS will assume the
+ * process is not running and not deliver the signals.
+ */
+#if 0
+# define THE_ITIMER ITIMER_PROF
+# define ITIMER_SIGNAL SIGPROF
+#elif 0
+# define THE_ITIMER ITIMER_VIRTUAL
+# define ITIMER_SIGNAL SIGVTALRM
+#else
+# define THE_ITIMER ITIMER_REAL
+# define ITIMER_SIGNAL SIGALRM
+#endif
+
+#if !defined(SA_NODEFER)
+static int handling_heartbeat = 0;
+#endif
+
+static void
+heartbeat_handler(int sig, struct siginfo *sig_info, void *context)
 {
-	int er;
-	if ((er = pthread_setschedparam(pthread_self(),
-									stateMachinePolicy,
-									&stateMachinePriority))) {
-		/* linux pthreads as of 2009 does not support setting the priority of
-		 * threads other than with real-time scheduling policies.  But such
-		 * policies are only available to processes with superuser privileges.
-		 */
-		errno = er;
-		perror("pthread_setschedparam failed; consider using ITIMER_HEARTBEAT");
-		exit(errno);
-	}
-	beatState = active;
-	while (beatState != condemned) {
-# define MINSLEEPNS 2000 /* don't bother sleeping for short times */
-		struct timespec naptime = beatperiod;
+#if !defined(SA_NODEFER)
+  {	int zeroAndPreviousHandlingHeartbeat = 0;
+    sqCompareAndSwap(handling_heartbeat,zeroAndPreviousHandlingHeartbeat,1);
+	if (zeroAndPreviousHandlingHeartbeat)
+		return;
+  }
 
-		while (nanosleep(&naptime, &naptime) == -1
-			&& naptime.tv_sec >= 0 /* oversleeps can return tv_sec < 0 */
-			&& (naptime.tv_sec > 0 || naptime.tv_nsec > MINSLEEPNS)) /*repeat*/
-			if (errno != EINTR) {
-				perror("nanosleep");
-				exit(1);
-			}
-		heartbeat();
+	handling_heartbeat = 1;
+#endif
+
+	heartbeat();
+
+#if 0
+	if (heartbeats % 250 == 0) {
+		printf(".");
+		fflush(stdout);
 	}
-	beatState = dead;
-	return 0;
+#endif
+#if !defined(SA_NODEFER)
+	handling_heartbeat = 0;
+#endif
 }
+
+#define NEED_SIGALTSTACK 1 /* for safety; some time need to turn off and test */
+#if NEED_SIGALTSTACK
+/* If the ticker is run from the heartbeat signal handler one needs to use an
+ * alternative stack to avoid overflowing the VM's stack pages.  Keep
+ * the structure around for reference during debugging.
+ */
+#define SIGNAL_STACK_SIZE (1024 * sizeof(void *) * 16)
+static stack_t signal_stack;
+#endif /* NEED_SIGALTSTACK */
 
 void
 ioInitHeartbeat()
 {
+extern sqInt suppressHeartbeatFlag;
 	int er;
-	struct timespec halfAMo;
-	pthread_t careLess;
+	struct sigaction heartbeat_handler_action;
+	struct itimerval pulse;
 
-	if ((er = pthread_getschedparam(pthread_self(),
-									&stateMachinePolicy,
-									&stateMachinePriority))) {
-		errno = er;
-		perror("pthread_getschedparam failed");
-		exit(errno);
+	if (suppressHeartbeatFlag) return;
+
+#if NEED_SIGALTSTACK
+	signal_stack.ss_flags = 0;
+	signal_stack.ss_size = SIGNAL_STACK_SIZE;
+	if (!(signal_stack.ss_sp = malloc(signal_stack.ss_size))) {
+		perror("ioInitHeartbeat malloc");
+		exit(1);
 	}
-	++stateMachinePriority.sched_priority;
-	halfAMo.tv_sec  = 0;
-	halfAMo.tv_nsec = 1000 * 100;
-	if ((er= pthread_create(&careLess,
-							(const pthread_attr_t *)0,
-							beatStateMachine,
-							0))) {
-		errno = er;
-		perror("beat thread creation failed");
-		exit(errno);
+	if (sigaltstack(&signal_stack, 0) < 0) {
+		perror("ioInitHeartbeat sigaltstack");
+		exit(1);
 	}
-	while (beatState == nascent)
-		nanosleep(&halfAMo, 0);
+#endif /* NEED_SIGALTSTACK */
+
+	heartbeat_handler_action.sa_sigaction = heartbeat_handler;
+	/* N.B. We _do not_ include SA_NODEFER to specifically prevent reentrancy
+	 * during the heartbeat.  We *must* include SA_RESTART to avoid breaking
+	 * lots of external code (e.g. the mysql odbc connect).
+	 */
+	heartbeat_handler_action.sa_flags = SA_RESTART | SA_ONSTACK;
+	sigemptyset(&heartbeat_handler_action.sa_mask);
+	if (sigaction(ITIMER_SIGNAL, &heartbeat_handler_action, 0)) {
+		perror("ioInitHeartbeat sigaction");
+		exit(1);
+	}
+
+	pulse.it_interval.tv_sec = beatMilliseconds / 1000;
+	pulse.it_interval.tv_usec = (beatMilliseconds % 1000) * 1000;
+	pulse.it_value = pulse.it_interval;
+	if (setitimer(THE_ITIMER, &pulse, &pulse)) {
+		perror("ioInitHeartbeat setitimer");
+		exit(1);
+	}
 }
 
 void
 ioSetHeartbeatMilliseconds(int ms)
 {
 	beatMilliseconds = ms;
-	beatperiod.tv_sec = beatMilliseconds / 1000;
-	beatperiod.tv_nsec = (beatMilliseconds % 1000) * 1000 * 1000;
+	ioInitHeartbeat();
 }
 
 int
@@ -423,4 +442,3 @@ ioHeartbeatFrequency(int resetStats)
 	}
 	return frequency;
 }
-#endif /* ITIMER_HEARTBEAT */

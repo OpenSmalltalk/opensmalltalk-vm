@@ -2,7 +2,7 @@
  * 
  * Author: Ian.Piumarta@INRIA.Fr
  * 
- * Last edited: 2003-10-31 11:42:56 by piumarta on emilia.inria.fr
+ * Last edited: 31 Jan 2012 12:57:17 CET Michael J. Zeder
  */
 
 /* The framebuffer display driver was donated to the Squeak community by:
@@ -110,7 +110,11 @@ static int ms_ps2_send(_self, unsigned char *command, int len)
   for (i= 0;  i < len;  ++i)
     {
     resend:
-      write(self->fd, command + i, 1);
+      if (1 != write(self->fd, command + i, 1))
+	{
+	  fprintf(stderr, "%s: could not write command to ps2\n", self->msName);
+	  return 0;
+	}
       DPRINTF(">%02x\n", command[i]);
       if (1 != ms_read(self, buf, 1, 1, PS2_SEND_DELAY))
 	{
@@ -120,7 +124,7 @@ static int ms_ps2_send(_self, unsigned char *command, int len)
       switch (buf[0])
 	{
 	case PS2_OK:
-	case PS2_SELFTEST_OK:	/* /dev/input/mice emulation is broken */
+	case PS2_SELFTEST_OK:	 /* /dev/input/mice emulation is broken */
 	  break;
 	case PS2_ERROR:
 	  fprintf(stderr, "%s: error response in send\n", self->msName);
@@ -138,10 +142,14 @@ static int ms_ps2_send(_self, unsigned char *command, int len)
 
 
 static void ms_ps2_disable(_self)
-{
+{ 
   unsigned char command[]= { PS2_DISABLE };
   DPRINTF("%s: disable\n", self->msName);
-  write(self->fd, command, 1);
+  if (1 != write(self->fd, command, 1))
+    {
+	fprintf(stderr, "%s: could not write command to ps2\n", self->msName);
+	return;
+    }
   DPRINTF(">%02x\n", command[0]);
   while (1 == ms_read(self, command, 1, 1, PS2_DISABLE_DELAY))
     if (PS2_OK == command[0])

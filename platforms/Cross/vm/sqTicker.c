@@ -28,6 +28,24 @@
  *   DEALINGS IN THE SOFTWARE.
  */
 
+#if !VM_TICKER
+/* stubs for (unsupported) high-priority ticker support */
+# include "sq.h"
+
+void
+addSynchronousTickee(void (*tickee)(void), unsigned periodms, unsigned roundms)
+{ error("ticker unsupported in this VM"); }
+
+void
+addHighPriorityTickee(void (*tickee)(void), unsigned periodms)
+{ error("ticker unsupported in this VM"); }
+
+void
+checkHighPriorityTickees(usqLong utcMicrosecondClock) {}
+
+void
+ioSynchronousCheckForEvents() {}
+#else /* VM_TICKER */
 /* High-priority and synchronous tickee function support.
  *
  * Tickers provide the ability to register a tickee function that will be
@@ -249,3 +267,4 @@ checkHighPriorityTickees(usqLong utcMicrosecondClock)
 	unblockVMThreadAfterYieldToHighPriorityTickerThread();
 #endif
 }
+#endif /* VM_TICKER */

@@ -1,6 +1,8 @@
 /****************************************************************************
-*   PROJECT: Unix (pthread) heartbeat logic for Stack/Cog VM
-*   FILE:    sqUnixHeartbeat.c
+*   PROJECT: Unix (setitimer) heartbeat logic for Stack/Cog VM with ticker
+*            implemented using hack for linux systems that don't support
+*            thread priorities.
+*   FILE:    sqUnixITimerTickerHeartbeat.c
 *   CONTENT: 
 *
 *   AUTHOR:  Eliot Miranda
@@ -15,18 +17,11 @@
 *
 *****************************************************************************/
 
-#if ITIMER_HEARTBEAT
-# if VM_TICKER
-#   include "sqUnixITimerTickerHeartbeat.c"
-# else
-#   include "sqUnixITimerHeartbeat.c"
-# endif
-#else /* ITIMER_HEARTBEAT */
-
 #include "sq.h"
 #include "sqAssert.h"
 #include "sqMemoryFence.h"
 #include <errno.h>
+#include <signal.h>
 #include <pthread.h>
 #include <sys/types.h>
 #include <sys/time.h>
@@ -315,93 +310,283 @@ heartbeat()
 	}
 	else
 		heartbeats += 1;
-	checkHighPriorityTickees(utcMicrosecondClock);
+
+	/* While we use SA_RESTART to ensure system calls are restarted, this is
+	 * not universally effective.  In particular, connect calls can abort if
+	 * a system call is made in the signal handler, i.e. the pthread_kill in
+	 * prodHighPriorityThread.  So we avoid this if possible by not prodding
+	 * the high-priority thread unless there are high-priority tickees as
+	 * indicated by numAsyncTickees > 0.
+	 */
+	if (numAsyncTickees > 0) {
+		void prodHighPriorityThread(void);
+		prodHighPriorityThread();
+	}
 	forceInterruptCheckFromHeartbeat();
 
 	errno = saved_errno;
 }
 
-typedef enum { dead, condemned, nascent, quiescent, active } machine_state;
+/* Hack for linux server to avoid the thread priority issue, i.e. that
+ * linux doesn't provide priorities for SCHED_OTHER and won't let a non-
+ * superuser process set the scheduling policy to anything else).
+ *
+ * Solution is to drive heartbeat from an interval timer instead of a high-
+ * priority thread blocking in a sleep.  We use ITIMER_REAL/SIGALRM (see
+ * below).  setitimer(2) claims max itimer resolution on 2.6.13 is 4
+ * milliseconds, but on 2.6.18-128.el5 one can see periods of 1.2ms.
+ *
+ * The high-priority tickees cannot be run from the interrupt-driven heartbeat
+ * and must be run from a separate thread to avoid numerous sources of deadlock
+ * (e.g. the lock in malloc).  But since the thread has the same priority as the
+ * VM thread we arrange that the VM yields to the high-priority ticker when it's
+ * running.  This is co-ordinated in sqTicker.c by ioSynchronousCheckForEvents
+ * (the synchronous ticker) yielding if requested by checkHighPriorityTickees.
+ * To perform the yield, these functions use yieldToHighPriorityTickerThread and
+ * unblockVMThreadAfterYieldToHighPriorityTickerThread to do the dirty work.
+ *
+ * The itimer signal handler ensures it is running on the VM thread and
+ * then invokes a signal handler on the high-priority thread (see
+ * prodHighPriorityThread).  This signal breaks the high-priority thread
+ * out of its nanosleep and it calls checkHighPriorityTickees.
+ */
+#define TICKER_SIGNAL SIGUSR2 /* SIGURSR1 dumps the stack */
+static pthread_t tickerThread;
 
-static int					stateMachinePolicy;
-static struct sched_param	stateMachinePriority;
+void
+prodHighPriorityThread()
+{
+	/* invoke the tickerThread's signal handler */
+	pthread_kill(tickerThread, TICKER_SIGNAL);
+}
 
-static volatile machine_state beatState = nascent;
+static void
+high_performance_tick_handler(int sig, struct siginfo *sig_info, void *context)
+{
+static int tickCheckInProgress;
+
+	if (tickCheckInProgress) return;
+
+	tickCheckInProgress = 1;
+	checkHighPriorityTickees(ioUTCMicroseconds());
+	tickCheckInProgress = 0;
+}
+
+static volatile int tickerSlumbering = 0;
+
+/* This exists only for prodHighPriorityThread to have a thread to signal. */
+static void *
+tickerSleepCycle(void *ignored)
+{
+	struct timespec naptime;
+
+	tickerSlumbering = 1;
+
+	while (1) {
+		naptime.tv_sec = 3600 * 24 * 365; /* ~ 1 year */
+		naptime.tv_nsec = 0;
+		(void)nanosleep(&naptime, 0);
+	}
+	return 0;
+}
+
+/* We require the error check because we're lazy in preventing multiple
+ * attempts at locking yield_mutex in yieldToHighPriorityTickerThread.
+ */
+#if defined(PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP)
+# define THE_MUTEX_INITIALIZER PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
+#elif defined(PTHREAD_ERRORCHECK_MUTEX_INITIALIZER)
+# define THE_MUTEX_INITIALIZER PTHREAD_ERRORCHECK_MUTEX_INITIALIZER
+#else
+# define THE_MUTEX_INITIALIZER PTHREAD_MUTEX_INITIALIZER
+#endif
+static pthread_mutex_t yield_sync = THE_MUTEX_INITIALIZER;
+static pthread_mutex_t yield_mutex = THE_MUTEX_INITIALIZER;
+static pthread_cond_t yield_cond = PTHREAD_COND_INITIALIZER;
+
+/* Private to sqTicker.c ioSynchronousCheckForEvents */
+void
+yieldToHighPriorityTickerThread()
+{
+	int err;
+
+	if ((err = pthread_mutex_lock(&yield_mutex))) {
+		if (err != EDEADLK)
+			fprintf(stderr,"pthread_mutex_lock yield_mutex %s\n", strerror(err));
+	}
+	/* If lock fails then unblockVMThreadAfterYieldToHighPriorityTickerThread
+	 * has locked and we should not block.
+	 */
+	if ((err = pthread_mutex_lock(&yield_sync))) {
+		if (err != EDEADLK)
+			fprintf(stderr,"pthread_mutex_lock yield_sync %s\n", strerror(err));
+	}
+	else if ((err = pthread_cond_wait(&yield_cond, &yield_mutex)))
+		fprintf(stderr,"pthread_cond_wait %s\n", strerror(err));
+}
+
+/* Private to sqTicker.c checkHighPriorityTickees */
+void
+unblockVMThreadAfterYieldToHighPriorityTickerThread()
+{
+	/* If yield_sync is already locked the VM thread is very likely blocking in
+	 * yieldToHighPriorityTickerThread and so yield_cond should be signalled.
+	 */
+	if (pthread_mutex_trylock(&yield_sync) == 0) /* success */
+		pthread_mutex_unlock(&yield_sync);
+	else
+		pthread_cond_signal(&yield_cond);
+}
+
 
 #if !defined(DEFAULT_BEAT_MS)
 # define DEFAULT_BEAT_MS 2
 #endif
 static int beatMilliseconds = DEFAULT_BEAT_MS;
-static struct timespec beatperiod = { 0, DEFAULT_BEAT_MS * 1000 * 1000 };
 
-static void *
-beatStateMachine(void *careLess)
+/* Use ITIMER_REAL/SIGALRM because the VM can enter a sleep in the OS via
+ * e.g. ioRelinquishProcessorForMicroseconds in which the OS will assume the
+ * process is not running and not deliver the signals.
+ */
+#if 0
+# define THE_ITIMER ITIMER_PROF
+# define ITIMER_SIGNAL SIGPROF
+#elif 0
+# define THE_ITIMER ITIMER_VIRTUAL
+# define ITIMER_SIGNAL SIGVTALRM
+#else
+# define THE_ITIMER ITIMER_REAL
+# define ITIMER_SIGNAL SIGALRM
+#endif
+
+/* With ticker support it may be that a ticker function invoked heartbeat takes
+ * so long that another timer interrupt occurs before heartbeat has finished.
+ * The absence of SA_NODEFER in heartbeat_handler_action.sa_flags prevents
+ * reentrancy, if available.
+ *
+ * With lots of threads it may be that the kernel delivers the signal on some
+ * other thread.
+ */
+#if !defined(SA_NODEFER)
+static int handling_heartbeat = 0;
+#endif
+
+static void
+heartbeat_handler(int sig, struct siginfo *sig_info, void *context)
 {
-	int er;
-	if ((er = pthread_setschedparam(pthread_self(),
-									stateMachinePolicy,
-									&stateMachinePriority))) {
-		/* linux pthreads as of 2009 does not support setting the priority of
-		 * threads other than with real-time scheduling policies.  But such
-		 * policies are only available to processes with superuser privileges.
-		 */
-		errno = er;
-		perror("pthread_setschedparam failed; consider using ITIMER_HEARTBEAT");
-		exit(errno);
+	if (!ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
+		pthread_kill(getVMOSThread(),sig);
+		return;
 	}
-	beatState = active;
-	while (beatState != condemned) {
-# define MINSLEEPNS 2000 /* don't bother sleeping for short times */
-		struct timespec naptime = beatperiod;
 
-		while (nanosleep(&naptime, &naptime) == -1
-			&& naptime.tv_sec >= 0 /* oversleeps can return tv_sec < 0 */
-			&& (naptime.tv_sec > 0 || naptime.tv_nsec > MINSLEEPNS)) /*repeat*/
-			if (errno != EINTR) {
-				perror("nanosleep");
-				exit(1);
-			}
-		heartbeat();
+#if !defined(SA_NODEFER)
+  {	int zeroAndPreviousHandlingHeartbeat = 0;
+    sqCompareAndSwap(handling_heartbeat,zeroAndPreviousHandlingHeartbeat,1);
+	if (zeroAndPreviousHandlingHeartbeat)
+		return;
+  }
+
+	handling_heartbeat = 1;
+#endif
+
+	heartbeat();
+
+#if 0
+	if (heartbeats % 250 == 0) {
+		printf(".");
+		fflush(stdout);
 	}
-	beatState = dead;
-	return 0;
+#endif
+#if !defined(SA_NODEFER)
+	handling_heartbeat = 0;
+#endif
 }
+
+#define NEED_SIGALTSTACK 1 /* for safety; some time need to turn off and test */
+#if NEED_SIGALTSTACK
+/* If the ticker is run from the heartbeat signal handler one needs to use an
+ * alternative stack to avoid overflowing the VM's stack pages.  Keep
+ * the structure around for reference during debugging.
+ */
+#define SIGNAL_STACK_SIZE (1024 * sizeof(void *) * 16)
+static stack_t signal_stack;
+#endif /* NEED_SIGALTSTACK */
 
 void
 ioInitHeartbeat()
 {
+extern sqInt suppressHeartbeatFlag;
 	int er;
 	struct timespec halfAMo;
-	pthread_t careLess;
+	struct sigaction heartbeat_handler_action, ticker_handler_action;
+	struct itimerval pulse;
 
-	if ((er = pthread_getschedparam(pthread_self(),
-									&stateMachinePolicy,
-									&stateMachinePriority))) {
-		errno = er;
-		perror("pthread_getschedparam failed");
-		exit(errno);
+	if (suppressHeartbeatFlag) return;
+
+#if NEED_SIGALTSTACK
+	signal_stack.ss_flags = 0;
+	signal_stack.ss_size = SIGNAL_STACK_SIZE;
+	if (!(signal_stack.ss_sp = malloc(signal_stack.ss_size))) {
+		perror("ioInitHeartbeat malloc");
+		exit(1);
 	}
-	++stateMachinePriority.sched_priority;
+	if (sigaltstack(&signal_stack, 0) < 0) {
+		perror("ioInitHeartbeat sigaltstack");
+		exit(1);
+	}
+#endif /* NEED_SIGALTSTACK */
+
 	halfAMo.tv_sec  = 0;
 	halfAMo.tv_nsec = 1000 * 100;
-	if ((er= pthread_create(&careLess,
+	if ((er= pthread_create(&tickerThread,
 							(const pthread_attr_t *)0,
-							beatStateMachine,
+							tickerSleepCycle,
 							0))) {
 		errno = er;
 		perror("beat thread creation failed");
 		exit(errno);
 	}
-	while (beatState == nascent)
+	while (!tickerSlumbering)
 		nanosleep(&halfAMo, 0);
+
+	ticker_handler_action.sa_sigaction = high_performance_tick_handler;
+	/* N.B. We _do not_ include SA_NODEFER to specifically prevent reentrancy
+	 * during the heartbeat. We /must/ include SA_RESTART to avoid issues with
+     * e.g. ODBC connections.
+	 */
+	ticker_handler_action.sa_flags = SA_RESTART | SA_ONSTACK;
+	sigemptyset(&ticker_handler_action.sa_mask);
+	if (sigaction(TICKER_SIGNAL, &ticker_handler_action, 0)) {
+		perror("ioInitHeartbeat sigaction");
+		exit(1);
+	}
+
+	heartbeat_handler_action.sa_sigaction = heartbeat_handler;
+	/* N.B. We _do not_ include SA_NODEFER to specifically prevent reentrancy
+	 * during the heartbeat.  We *must* include SA_RESTART to avoid breaking
+	 * lots of external code (e.g. the mysql odbc connect).
+	 */
+	heartbeat_handler_action.sa_flags = SA_RESTART | SA_ONSTACK;
+	sigemptyset(&heartbeat_handler_action.sa_mask);
+	if (sigaction(ITIMER_SIGNAL, &heartbeat_handler_action, 0)) {
+		perror("ioInitHeartbeat sigaction");
+		exit(1);
+	}
+
+	pulse.it_interval.tv_sec = beatMilliseconds / 1000;
+	pulse.it_interval.tv_usec = (beatMilliseconds % 1000) * 1000;
+	pulse.it_value = pulse.it_interval;
+	if (setitimer(THE_ITIMER, &pulse, &pulse)) {
+		perror("ioInitHeartbeat setitimer");
+		exit(1);
+	}
 }
 
 void
 ioSetHeartbeatMilliseconds(int ms)
 {
 	beatMilliseconds = ms;
-	beatperiod.tv_sec = beatMilliseconds / 1000;
-	beatperiod.tv_nsec = (beatMilliseconds % 1000) * 1000 * 1000;
+	ioInitHeartbeat();
 }
 
 int
@@ -423,4 +608,3 @@ ioHeartbeatFrequency(int resetStats)
 	}
 	return frequency;
 }
-#endif /* ITIMER_HEARTBEAT */

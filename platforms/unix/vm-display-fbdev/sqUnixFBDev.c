@@ -34,6 +34,10 @@
  *   DEALINGS IN THE SOFTWARE.
  */
 
+/*
+ *   last update: 31 Jan 2012 13:38:32 CET; Michael J. Zeder
+ */
+
 
 #include "config.h"
 #include "sq.h"
@@ -321,7 +325,7 @@ static void display_winInit(void)
 }
 
 
-static void display_winOpen(void)
+static void display_winOpen(int argc, char *dropFiles[])
 {
   openDisplay();
 }
@@ -404,7 +408,7 @@ static void  display_clipboardWriteWithType(char *data, size_t ndata, char *type
 
 static sqInt display_dndOutStart(char *types, int ntypes)	{ return 0; }
 static void  display_dndOutSend(char *bytes, int nbytes)	{ return  ; }
-static void  display_dndLaunchFile(char *fileName)	{ return ; }
+/* UNUSED static void  display_dndLaunchFile(char *fileName)	{ return ; }  */
 static sqInt display_dndOutAcceptedType(char * buf, int nbuf)	{ return 0; }
 static sqInt display_dndReceived(char *fileName)	{ return 0; }
 
@@ -464,6 +468,19 @@ static int display_hostWindowSetPosition(int windowIndex, int x, int y)         
 static int display_hostWindowSetTitle(int windowIndex, char *newTitle, int sizeOfTitle)     { return -1; }
 static int display_hostWindowCloseAll(void)                                                 { return 0; }
 #endif
+
+
+
+// new stubs for the CogVM
+sqInt display_ioSetCursorPositionXY(sqInt x, sqInt y) { return 0; }
+int display_ioPositionOfScreenWorkArea (int windowIndex) { return -1; }
+int display_ioSizeOfScreenWorkArea (int windowIndex) { return -1; }
+void *display_ioGetWindowHandle() { return 0; }
+int display_ioPositionOfNativeDisplay(void *windowHandle) { return -1; }
+int display_ioSizeOfNativeDisplay(void *windowHandle) { return -1; }
+int display_ioPositionOfNativeWindow(void *windowHandle) { return -1; }
+int display_ioSizeOfNativeWindow(void *windowHandle) { return -1; }
+
 
 
 //----------------------------------------------------------------
