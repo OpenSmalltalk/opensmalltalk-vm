@@ -28390,7 +28390,7 @@ fi
 #[  --without-vm-sound-null      disable null vm sound support [default=enabled]],
 #  [with_vm_sound_null="$withval"],
 #  [with_vm_sound_null="yes"])
-#if test "$with_vm_sound_null"="no"; then
+#if test "$with_vm_sound_null" = "no"; then
 #	AC_PLUGIN_DISABLE_PLUGIN(vm-sound-null);
 #fi
 
@@ -28402,7 +28402,7 @@ if test "${with_vm_sound_OSS+set}" = set; then
 else
   with_vm_sound_OSS="yes"
 fi;
-if test "$with_vm_sound_OSS"="no"; then
+if test "$with_vm_sound_OSS" = "no"; then
 
   echo "$as_me:$LINENO: result: ******** disabling vm-sound-OSS" >&5
 echo "${ECHO_T}******** disabling vm-sound-OSS" >&6
@@ -28415,9 +28415,9 @@ if test "${with_vm_display_fbdev+set}" = set; then
   withval="$with_vm_display_fbdev"
   with_vm_display_fbdev="$withval"
 else
-  with_display_fbdev="yes"
+  with_vm_display_fbdev="yes"
 fi;
-if test "$with_display_fbdev"="no"; then
+if test "$with_vm_display_fbdev" = "no"; then
 
   echo "$as_me:$LINENO: result: ******** disabling vm-display-fbdev" >&5
 echo "${ECHO_T}******** disabling vm-display-fbdev" >&6

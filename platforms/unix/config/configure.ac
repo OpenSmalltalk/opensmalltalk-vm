@@ -356,7 +356,7 @@ sinclude(acplugins.m4)
 #[  --without-vm-sound-null      disable null vm sound support [default=enabled]],
 #  [with_vm_sound_null="$withval"],
 #  [with_vm_sound_null="yes"])
-#if test "$with_vm_sound_null"="no"; then
+#if test "$with_vm_sound_null" = "no"; then
 #	AC_PLUGIN_DISABLE_PLUGIN(vm-sound-null);
 #fi
 
@@ -364,15 +364,15 @@ AC_ARG_WITH(vm-sound-OSS,
 [  --without-vm-sound-OSS      disable OSS vm sound support [default=enabled]],
   [with_vm_sound_OSS="$withval"],
   [with_vm_sound_OSS="yes"])
-if test "$with_vm_sound_OSS"="no"; then
+if test "$with_vm_sound_OSS" = "no"; then
 	AC_PLUGIN_DISABLE_PLUGIN(vm-sound-OSS);
 fi
 
 AC_ARG_WITH(vm-display-fbdev,
 [  --without-vm-display-fbdev      disable frame buffer vm display support [default=enabled]],
   [with_vm_display_fbdev="$withval"],
-  [with_display_fbdev="yes"])
-if test "$with_display_fbdev"="no"; then
+  [with_vm_display_fbdev="yes"])
+if test "$with_vm_display_fbdev" = "no"; then
 	AC_PLUGIN_DISABLE_PLUGIN(vm-display-fbdev);
 fi
 
