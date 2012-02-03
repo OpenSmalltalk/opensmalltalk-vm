@@ -152,6 +152,11 @@ static int parseArgument(int argc, char **argv)
   if      (!strcmp(argv[0], "-help"))		{ 
 	usage();
 	return 1; }
+  else if (!strcmp(argv[0], "-version")) {
+	extern char *getVersionInfo(int verbose);
+	printf("%s\n", getVersionInfo(0));
+	exit(0);
+  }
   else if (!strncmp(argv[0], "-psn_", 5)) { return 1; }
   else if (!strcmp(argv[0], "-headless")) { gSqueakHeadless = true; return 1; }
   else if (!strcmp(argv[0], "-headfull")) { gSqueakHeadless = false; return 1; }
@@ -280,6 +285,7 @@ static void printUsage(void)
 #endif
   printf("  -pathenc <enc>        set encoding for pathnames (default: macintosh)\n");
   printf("  -headless             run in headless (no window) mode (default: false)\n");
+  printf("  -version              print version information, then exit\n");
 }
 
 static void printUsageNotes(void)

@@ -152,6 +152,7 @@ sqInt printCallStack(void);
 extern void dumpPrimTraceLog(void);
 extern BOOL NSApplicationLoad(void);
 static void fetchPrefrences(void);
+char *getVersionInfo(int verbose);
 
 
 /*** errors ***/
@@ -170,6 +171,7 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 	static sqInt printingStack = false;
 
 	printf("\n%s%s%s\n\n", msg, date ? " " : "", date ? date : "");
+	printf("%s\n\n", getVersionInfo(1));
 
 #if !defined(NOEXECINFO)
 	printf("C stack backtrace:\n");
@@ -262,13 +264,12 @@ getCrashDumpFilenameInto(char *buf)
 }
 
 static void
-sigusr1(int sig, siginfo_t *info, ucontext_t *uap)
+sigusr1(int sig, siginfo_t *info, void *uap)
 {
 	int saved_errno = errno;
 	time_t now = time(NULL);
 	char ctimebuf[32];
 	char crashdump[IMAGE_NAME_SIZE+1];
-	unsigned long pc;
 
 	if (!ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
 		pthread_kill(getVMOSThread(),sig);
@@ -287,7 +288,7 @@ sigusr1(int sig, siginfo_t *info, ucontext_t *uap)
 }
 
 static void
-sigsegv(int sig, siginfo_t *info, ucontext_t *uap)
+sigsegv(int sig, siginfo_t *info, void *uap)
 {
 	time_t now = time(NULL);
 	char ctimebuf[32];
@@ -907,6 +908,44 @@ void cocoInterfaceForTilda(CFStringRef aStringRef, char *buffer,int max_size) {
 
 }
 
+char *
+getVersionInfo(int verbose)
+{
+#if STACKVM
+  extern char *__interpBuildInfo;
+# define INTERP_BUILD __interpBuildInfo
+# if COGVM
+  extern char *__cogitBuildInfo;
+# endif
+#else
+# define INTERP_BUILD interpreterVersion
+#endif
+  extern char vmBuildString[];
+  CFStringRef versionString;
+  char *info= (char *)malloc(4096);
+  info[0]= '\0';
+
+  if (verbose)
+    sprintf(info+strlen(info), IMAGE_DIALECT_NAME " VM version: ");
+  sprintf(info+strlen(info), "%s ", VM_VERSION);
+  if ((versionString = CFBundleGetValueForInfoDictionaryKey(
+						CFBundleGetMainBundle(),
+						CFSTR("CFBundleVersion"))))
+    CFStringGetCString(versionString, info+strlen(info), 4095-strlen(info), gCurrentVMEncoding);
+  sprintf(info+strlen(info), " %s\n", vmBuildString);
+  if (verbose)
+    sprintf(info+strlen(info), "Built from: ");
+  sprintf(info+strlen(info), "%s\n", INTERP_BUILD);
+#if COGVM
+  if (verbose)
+    sprintf(info+strlen(info), "With: ");
+  sprintf(info+strlen(info), "%s\n", GetAttributeString(1008)); /* __cogitBuildInfo */
+#endif
+  if (verbose)
+    sprintf(info+strlen(info), "Revision: ");
+  sprintf(info+strlen(info), "%s\n", sourceVersionString());
+  return info;
+}
 #if COGVM
 /*
  * Support code for Cog.

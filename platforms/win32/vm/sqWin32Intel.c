@@ -20,6 +20,7 @@
 #include <ole2.h>
 #include "sq.h"
 #include "sqWin32Backtrace.h"
+#include "sqSCCSVersion.h"
 #if COGVM
 # include "cogmethod.h"
 # if COGMTVM
@@ -854,6 +855,7 @@ extern char *__cogitBuildInfo;
     fprintf(f,"Cogit Build: %s\n", __cogitBuildInfo);
 # endif
 #endif
+    fprintf(f,"Source Version: %s\n", sourceVersionString());
     fflush(f);
     fprintf(f,"\n"
 	    "Current byte code: %d\n"

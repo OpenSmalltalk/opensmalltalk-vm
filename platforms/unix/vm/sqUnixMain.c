@@ -137,6 +137,7 @@ struct SqDisplay *dpy= 0;
 struct SqSound   *snd= 0;
 
 extern void dumpPrimTraceLog(void);
+char *getVersionInfo(int verbose);
 
 
 /*
@@ -779,6 +780,7 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 	static sqInt printingStack = false;
 
 	printf("\n%s%s%s\n\n", msg, date ? " " : "", date ? date : "");
+	printf("%s\n\n", getVersionInfo(1));
 
 #if !defined(NOEXECINFO)
 	printf("C stack backtrace:\n");
@@ -860,7 +862,7 @@ getCrashDumpFilenameInto(char *buf)
 }
 
 static void
-sigusr1(int sig, siginfo_t *info, ucontext_t *uap)
+sigusr1(int sig, siginfo_t *info, void *uap)
 {
 	int saved_errno = errno;
 	time_t now = time(NULL);
@@ -885,7 +887,7 @@ sigusr1(int sig, siginfo_t *info, ucontext_t *uap)
 }
 
 static void
-sigsegv(int sig, siginfo_t *info, ucontext_t *uap)
+sigsegv(int sig, siginfo_t *info, void *uap)
 {
 	time_t now = time(NULL);
 	char ctimebuf[32];
@@ -1405,7 +1407,7 @@ static void vm_printUsage(void)
 # if !STACKVM
   printf("  -jit                  enable the dynamic compiler (if available)\n");
 # endif
-  printf("  -notimer              disable interval timer for low-res clock \n");
+  printf("  -notimer              disable interval timer for low-res clock\n");
   printf("  -display <dpy>        quivalent to '-vm-display-X11 -display <dpy>'\n");
   printf("  -headless             quivalent to '-vm-display-X11 -headless'\n");
   printf("  -nodisplay            quivalent to '-vm-display-null'\n");
@@ -1473,6 +1475,15 @@ static void usage(void)
 
 char *getVersionInfo(int verbose)
 {
+#if STACKVM
+  extern char *__interpBuildInfo;
+# define INTERP_BUILD __interpBuildInfo
+# if COGVM
+  extern char *__cogitBuildInfo;
+# endif
+#else
+# define INTERP_BUILD interpreterVersion
+#endif
   extern int   vm_serial;
   extern char *vm_date, *cc_version, *ux_version;
   char *info= (char *)malloc(4096);
@@ -1487,7 +1498,15 @@ char *getVersionInfo(int verbose)
   sprintf(info+strlen(info), " %s %s\n", vm_date, cc_version);
   if (verbose)
     sprintf(info+strlen(info), "Built from: ");
-  sprintf(info+strlen(info), "%s\n", interpreterVersion);
+  sprintf(info+strlen(info), "%s\n", INTERP_BUILD);
+#if COGVM
+  if (verbose)
+    sprintf(info+strlen(info), "With: ");
+  sprintf(info+strlen(info), "%s\n", GetAttributeString(1008)); /* __cogitBuildInfo */
+#endif
+  if (verbose)
+    sprintf(info+strlen(info), "Revision: ");
+  sprintf(info+strlen(info), "%s\n", sourceVersionString());
   if (verbose)
     sprintf(info+strlen(info), "Build host: ");
   sprintf(info+strlen(info), "%s\n", ux_version);

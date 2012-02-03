@@ -250,7 +250,7 @@ EXPORT(int) primitivePluginRequestFileHandle(void)
 #endif
     fileHandle = instantiateClassindexableSize(classByteArray(), fileRecordSize());
     fBrowserMode = false;
-    sqFileOpen(fileValueOf(fileHandle),(int)req->localName, strlen(req->localName), 0);
+    sqFileOpen(fileValueOf(fileHandle),req->localName,strlen(req->localName),0);
     fBrowserMode = true;
     if(failed()) return 0;
   }
