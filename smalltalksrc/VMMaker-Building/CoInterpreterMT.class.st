@@ -444,7 +444,7 @@ CoInterpreterMT >> disownVM: flags [
 		[self recordTrace: TraceDisownVM thing: (objectMemory integerObjectOf: flags) source: 0].
 	processHasThreadId ifFalse:
 		[willNotThreadWarnCount < 10 ifTrue:
-			[self print: 'warning: Process doesn''t have threadId; VM will not thread'; cr.
+			[self print: 'warning: VM parameter 48 indicates Process doesn''t have threadId; VM will not thread'; cr.
 			 willNotThreadWarnCount := willNotThreadWarnCount + 1]].
 	vmThread := cogThreadManager currentVMThread.
 	(flags anyMask: VMAlreadyOwnedHenceDoNotDisown) ifTrue:
