@@ -2459,6 +2459,17 @@ CogVMSimulator >> primitiveMousePoint [
 				self push: (self makePointwithxValue: relPt x yValue: relPt y)]
 ]
 
+{ #category : #'object access primitives' }
+CogVMSimulator >> primitiveObjectAtPut [
+	| newValue |
+	newValue := self stackValue: 0.
+	((self stackValue: 1) = ConstOne
+	 and: [(objectMemory isIntegerObject: newValue) not
+		   or: [(objectMemory integerValueOf: newValue) < 0]]) ifTrue:
+		[self halt].
+	^super primitiveObjectAtPut
+]
+
 { #category : #'debugging traps' }
 CogVMSimulator >> primitiveObjectPointsTo [
 	"self halt."
