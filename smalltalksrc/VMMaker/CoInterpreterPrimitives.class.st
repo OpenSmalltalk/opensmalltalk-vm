@@ -285,12 +285,14 @@ CoInterpreterPrimitives >> primitiveObjectAt [
 
 { #category : #'object access primitives' }
 CoInterpreterPrimitives >> primitiveObjectAtPut [
-"Defined for CompiledMethods only"
+	"Store a literal into a CompiledMethod at the given index. Defined for CompiledMethods only."
 	| thisReceiver rawHeader realHeader index newValue |
 	newValue := self stackValue: 0.
-	index := self stackIntegerValue: 1.
-	self successful ifFalse:
+	index := self stackValue: 1.
+	((objectMemory isNonIntegerObject: index)
+	 or: [index = ConstOne and: [(objectMemory isNonIntegerObject: newValue)]]) ifTrue:
 		[^self primitiveFailFor: PrimErrBadArgument].
+	index := objectMemory integerValueOf: index.
 	thisReceiver := self stackValue: 2.
 	rawHeader := self rawHeaderOf: thisReceiver.
 	realHeader := (self isCogMethodReference: rawHeader)
