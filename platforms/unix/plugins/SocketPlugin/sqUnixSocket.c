@@ -1243,6 +1243,9 @@ static socketOption socketOptions[]= {
 #endif
   { "TCP_MAXSEG",			SOL_TCP,	TCP_MAXSEG },
   { "TCP_NODELAY",			SOL_TCP,	TCP_NODELAY },
+#ifdef TCP_CORK
+  { "TCP_CORK",		        SOL_TCP,	TCP_CORK },
+#endif
 #ifdef SO_REUSEPORT
   { "SO_REUSEPORT",			SOL_SOCKET,	SO_REUSEPORT },
 #endif

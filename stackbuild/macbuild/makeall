@@ -1,0 +1,8 @@
+date
+echo - Debug
+mymakevm -d >LOGD 2>&1;grep "BUILD.*ED" LOGD
+echo - Assert
+mymakevm -a >LOGA 2>&1;grep "BUILD.*ED" LOGA
+echo - Fast
+mymakevm -s >LOGS 2>&1;grep "BUILD.*ED" LOGS
+date

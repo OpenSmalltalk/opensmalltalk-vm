@@ -22,6 +22,7 @@ SecurityPlugin \
 SocketPlugin \
 SoundPlugin \
 SurfacePlugin \
+SqueakFFIPrims \
 UUIDPlugin \
 UnixOSProcessPlugin \
 VMProfileMacSupportPlugin \

@@ -2410,6 +2410,9 @@ int sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue(SocketPtr s,cha
 static SInt32	lookupOptionName(EPInfo *epi, Boolean trueIfGet, char *aString, UInt32 value, SInt32 *result) {
 	if (strcmp("TCP_MAXSEG",aString)==0) 				{return SetFourByteOption(epi,trueIfGet,INET_TCP,TCP_MAXSEG,value,result);};
 	if (strcmp("TCP_NODELAY",aString)==0) 				{return SetFourByteOption(epi,trueIfGet,INET_TCP,TCP_NODELAY,value,result);};
+#ifdef TCP_NOPUSH
+	if (strcmp("TCP_NOPUSH",aString)==0) 				{return SetFourByteOption(epi,trueIfGet,INET_TCP,TCP_NOPUSH,value,result);};
+#endif
 	if (strcmp("TCP_ABORT_THRESHOLD",aString)==0) 		{return SetFourByteOption(epi,trueIfGet,INET_TCP,TCP_ABORT_THRESHOLD,value,result);};
 	if (strcmp("TCP_CONN_NOTIFY_THRESHOLD",aString)==0) {return SetFourByteOption(epi,trueIfGet,INET_TCP,TCP_CONN_NOTIFY_THRESHOLD,value,result);};
 	if (strcmp("TCP_CONN_ABORT_THRESHOLD",aString)==0) 	{return SetFourByteOption(epi,trueIfGet,INET_TCP,TCP_CONN_ABORT_THRESHOLD,value,result);};
