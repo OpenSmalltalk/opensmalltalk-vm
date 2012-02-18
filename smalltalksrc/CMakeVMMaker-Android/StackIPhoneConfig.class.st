@@ -84,7 +84,7 @@ StackIPhoneConfig >> configureHostWindowPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-StackIPhoneConfig >> configureTouchPlugin: maker [
+StackIPhoneConfig >> configureIOSPlugin: maker [
 	maker 
 		addSources: #('sqTouch.m' ) 
 		prefixed: '${platformsDir}/iOS/vm/iPhone/plugins/TouchPlugin/'
@@ -124,7 +124,7 @@ StackIPhoneConfig >> defaultInternalPlugins [
 		SurfacePlugin
 		UUIDPlugin
 		ObjectiveCPlugin 
-		TouchPlugin)
+		#IOSPlugin)
 ]
 
 { #category : #accessing }
