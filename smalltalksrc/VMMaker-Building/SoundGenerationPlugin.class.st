@@ -34,33 +34,3 @@ NB sqOldSoundsPrims IS NOT FULLY INTEGRATED - it still isn't included in the exp
 	^cg exportedPrimitiveNames asArray
 
 ]
-
-{ #category : #'obsolete primitives' }
-SoundGenerationPlugin >> primitiveFMSoundMix [
-	<export: true>
-	^self primFMSoundmixSampleCountintostartingAtpan
-]
-
-{ #category : #'obsolete primitives' }
-SoundGenerationPlugin >> primitiveOldSampledSoundMix [
-	<export: true>
-	^self oldprimSampledSoundmixSampleCountintostartingAtleftVolrightVol
-]
-
-{ #category : #'obsolete primitives' }
-SoundGenerationPlugin >> primitivePluckedSoundMix [
-	<export: true>
-	^self primPluckedSoundmixSampleCountintostartingAtpan
-]
-
-{ #category : #'obsolete primitives' }
-SoundGenerationPlugin >> primitiveSampledSoundMix [
-	<export: true>
-	^self primSampledSoundmixSampleCountintostartingAtpan
-]
-
-{ #category : #'obsolete primitives' }
-SoundGenerationPlugin >> primitiveWaveTableSoundMix [
-	<export: true>
-	^self primWaveTableSoundmixSampleCountintostartingAtpan
-]
