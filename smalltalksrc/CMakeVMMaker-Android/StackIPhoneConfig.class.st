@@ -5,8 +5,33 @@ Class {
 }
 
 { #category : #accessing }
+StackIPhoneConfig class >> deviceIPad [ 
+	^'2'
+]
+
+{ #category : #accessing }
+StackIPhoneConfig class >> deviceIPhone [ 
+	^'1'
+]
+
+{ #category : #'bundle strings' }
+StackIPhoneConfig >> CFBundleIconFile [ 
+	^'Cog.png'
+]
+
+{ #category : #'bundle strings' }
+StackIPhoneConfig >> UIDeviceFamily [
+	^self targetedDeviceFamily
+]
+
+{ #category : #accessing }
 StackIPhoneConfig >> architecture [ 
 	^'armv6'
+]
+
+{ #category : #accessing }
+StackIPhoneConfig >> codeSignIdentity [ 
+	^'iPhone Developer'
 ]
 
 { #category : #settings }
@@ -23,6 +48,7 @@ StackIPhoneConfig >> commonCompilerFlags [
 	'-fvisibility=hidden'.
 	'-funroll-loops'.
 	'-finline-functions'.
+	'-mno-thumb'.
 	'-DSTACKVM=1'.
 	'-DCOGMTVM=0'. 
 	'-DUSE_GLOBAL_STRUCT=0'. 
@@ -34,7 +60,7 @@ StackIPhoneConfig >> commonCompilerFlags [
 	'-DLSB_FIRST'.
 	'-DHAVE_NANOSLEEP'.
 	"'-DXXXUSE_INLINE_MEMORY_ACCESSORS'."
-	'-DISQUEAK_IMAGE=iPhone'.
+	'-DISQUEAK_IMAGE=', self imageName.
 	'-DISQUEAK_SOURCES=PharoV10'}
 ]
 
@@ -45,7 +71,7 @@ StackIPhoneConfig >> compilerFlagsDebug [
 
 { #category : #settings }
 StackIPhoneConfig >> compilerFlagsRelease [ 
-	^#('-g0' '-Os' "'-fasm-blocks'" '-finline-functions' "'-mfpmath=sse'" '-fomit-frame-pointer' "'-march=pentium-m'" "'-mtune=prescott'" '-DNDEBUG' '-DDEBUGVM=0')
+	^#('-g0' '-O3' "'-fasm-blocks'" '-finline-functions' "'-mfpmath=sse'" '-fomit-frame-pointer' "'-march=pentium-m'" "'-mtune=prescott'" '-DNDEBUG' '-DDEBUGVM=0')
 ]
 
 { #category : #'plugin extra rules' }
@@ -99,6 +125,11 @@ StackIPhoneConfig >> defaultInternalPlugins [
 		UUIDPlugin
 		ObjectiveCPlugin 
 		TouchPlugin)
+]
+
+{ #category : #accessing }
+StackIPhoneConfig >> deploymentTargetVersion [ 
+	^'4.0'
 ]
 
 { #category : #accessing }
@@ -156,10 +187,14 @@ StackIPhoneConfig >> frameworks [
 	SystemConfiguration)
 ]
 
+{ #category : #accessing }
+StackIPhoneConfig >> imageName [
+	^'iPhone'
+]
+
 { #category : #settings }
 StackIPhoneConfig >> imageResources [ 
 	^#(
-	'iPhone.image'
 	'iPhone.changes'
 	'PharoV10.sources')
 ]
@@ -215,6 +250,12 @@ StackIPhoneConfig >> platformSources [
 ]
 
 { #category : #'bundle strings' }
+StackIPhoneConfig >> plistKeys [ 
+	^super plistKeys 
+		copyWith: #UIDeviceFamily
+]
+
+{ #category : #'bundle strings' }
 StackIPhoneConfig >> plistTemplate [ 
 	self flag: #todo. "CFBundleDisplayName is using @CFBundleExecutable@ that's probably wrong"
 	^'<?xml version="1.0" encoding="UTF-8"?>
@@ -255,7 +296,7 @@ StackIPhoneConfig >> plistTemplate [
 	<string>MainWindow</string>
 	<key>UIDeviceFamily</key>
 	<array>
-		<integer>1</integer>
+		<integer>@UIDeviceFamily@</integer>
 	</array>
 	<key>UIPrerenderedIcon</key>
 	<false/>
@@ -275,7 +316,17 @@ StackIPhoneConfig >> precompiledImports [
 
 { #category : #settings }
 StackIPhoneConfig >> resources [ 
-	^#('Cog.icns'), self imageResources
+	^{
+	self CFBundleIconFile.
+	self imageName, '.image'}, 
+	self imageResources
+		
+]
+
+{ #category : #accessing }
+StackIPhoneConfig >> resourcesDir [ 
+	"Answer the value of resourcesDir"
+	^ resourcesDir ifNil: [ resourcesDir := (self topDir / 'iosbuild' / 'resources') fullName ]
 ]
 
 { #category : #accessing }
@@ -293,9 +344,7 @@ StackIPhoneConfig >> setCommonProperties: maker [
 	maker set: 'DEVROOT' toString: '/Developer/Platforms/iPhoneOS.platform/Developer'.
 	maker set: 'SDKROOT' toString: '${DEVROOT}/SDKs/iPhoneOS${SDKVER}.sdk'.
 
-	maker 
-		set: 'CMAKE_OSX_SYSROOT' 
-		to: 'iphoneos${SDKVER}'.
+	maker set: 'CMAKE_OSX_SYSROOT' to: 'iphoneos${SDKVER}'.
 		
 	maker set: 'CMAKE_C_COMPILER' to: '${DEVROOT}/usr/bin/llvm-gcc'.
 	maker set: 'CMAKE_CXX_COMPILER' to: '${DEVROOT}/usr/bin/llvm-g++'.
@@ -310,7 +359,6 @@ StackIPhoneConfig >> setCommonProperties: maker [
 	maker set: 'CMAKE_EXE_LINKER_FLAGS' toString: '-L${SDKROOT}/usr/lib -L${SDKROOT}/usr/lib/system'.
 
 	maker addFrameworks: self frameworks.
-
 ]
 
 { #category : #settings }
@@ -323,33 +371,32 @@ StackIPhoneConfig >> setExtraTargetProperties: maker [
 	(maker buildDir forceNewFileNamed: precompiledHeaders) 
 		nextPutAll: self precompiledHeaders;
 		close.
+	
 	maker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/', precompiledHeaders.
 	
 	self setCommonProperties: maker.
 
 	" generated and add Info.plist file "
 	plist := self plistFile.
-
 	(maker buildDir forceNewFileNamed: 'Info.plist') 
 		nextPutAll: plist; 
 		close.
 
-	maker 
-		addProperty: 'MACOSX_BUNDLE_INFO_PLIST' 
-		value: '${buildDir}/Info.plist'.  
-
+	maker addProperty: 'MACOSX_BUNDLE_INFO_PLIST' value: '${buildDir}/Info.plist'.  
 	maker 
 		cmd: 'set_target_properties' 
 		params: self executableName, ' PROPERTIES COMPILE_FLAGS "-include \"', (self buildDir / self prefixHeaderFileName) fullName, '\""'. 
+
+	maker set: 'CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY' toString: self codeSignIdentity.
+	maker set: 'CMAKE_XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY' toString: self targetedDeviceFamily.
+	maker set: 'CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET' to: self deploymentTargetVersion.
 	
 	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir.
-	maker set: 'RUNTIME_OUTPUT_DIRECTORY' toString: self outputDir.
-
 ]
 
 { #category : #settings }
 StackIPhoneConfig >> setResourceProperties: maker [
-	maker set: 'resourceDir' toString: self resourcesDir, '/ProjectBuilder'.
+	maker set: 'resourceDir' toString: self resourcesDir.
 
 	maker 
 		set: 'resources' 
@@ -365,7 +412,7 @@ StackIPhoneConfig >> setResourceProperties: maker [
 		
 	maker 
 		set: 'resourcesLocaleEnglish' 
-		toString: '${resourceDir}/iPhone-English.lproj/MainWindow.nib'.
+		toString: '${resourceDir}/English.lproj/MainWindow.nib'.
 
 	maker 
 		cmd: 'set_source_files_properties' 
@@ -374,7 +421,6 @@ StackIPhoneConfig >> setResourceProperties: maker [
 	maker 
 		cmd: 'set_source_files_properties' 
 		params: '${resourcesLocaleEnglish} PROPERTIES MACOSX_PACKAGE_LOCATION Resources'.
-
 
 ]
 
@@ -396,4 +442,9 @@ StackIPhoneConfig >> standardIncludes [
 	'${crossDir}/plugins/FilePlugin'
 	)	
 
+]
+
+{ #category : #accessing }
+StackIPhoneConfig >> targetedDeviceFamily [ 
+	^self class deviceIPad
 ]
