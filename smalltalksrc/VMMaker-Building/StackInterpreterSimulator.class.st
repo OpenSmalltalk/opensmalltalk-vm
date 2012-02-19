@@ -938,7 +938,7 @@ StackInterpreterSimulator >> logOfBytesVerify: nBytes fromFileNamed: fileName fr
 	"Verify a questionable interpreter against a successful run"
 	"self logOfBytesVerify: 10000 fromFileNamed: 'clone32Bytecodes.log' "
 	
-	| logFile rightByte prevCtxt |
+	| logFile rightWord prevCtxt |
 	logFile := (FileStream readOnlyFileNamed: fileName) binary.
 	transcript clear.
 	byteCount := 0.
@@ -964,10 +964,10 @@ transcript cr; print: byteCount; nextPutAll: ': ' , (activeContext hex); space;
 byteCount = 14590 ifTrue: [self halt]].
 "
 		loggingStart >= byteCount ifTrue:
-			[rightByte := logFile next.
-			 currentBytecode = rightByte ifFalse:
+			[rightWord := logFile nextWord.
+			 currentBytecode = rightWord ifFalse:
 				[self halt: 'halt at ', byteCount printString]].
-		self dispatchOn: currentBytecode in: BytecodeTable.
+		self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
 		self incrementByteCount].
 	self externalizeIPandSP.
 	logFile close.
@@ -990,8 +990,8 @@ StackInterpreterSimulator >> logOfBytesWrite: nBytes toFileNamed: fileName fromS
 	self fetchNextBytecode.
 	[byteCount < nBytes] whileTrue:
 		[byteCount >= loggingStart ifTrue:
-			[logFile nextPut: currentBytecode].
-		self dispatchOn: currentBytecode in: BytecodeTable.
+			[logFile nextWordPut: currentBytecode + bytecodeSetSelector].
+		self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
 		self incrementByteCount].
 	self externalizeIPandSP.
 	logFile close
@@ -1030,7 +1030,7 @@ transcript cr; print: byteCount; nextPutAll: ': ' , (localFP hex); space;
  print: (self stackPointerIndex - TempFrameStart + 1); endEntry.
 ].
 "
-		self dispatchOn: currentBytecode in: BytecodeTable.
+		self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
 		localFP = priorFrame ifFalse:
 			[sendCount := sendCount + 1.
 			 loggingStart >= sendCount ifTrue:
@@ -1061,7 +1061,7 @@ StackInterpreterSimulator >> logOfSendsWrite: nSends toFileNamed: fileName fromS
 	self internalizeIPandSP.
 	self fetchNextBytecode.
 	[sendCount < nSends] whileTrue:
-		[self dispatchOn: currentBytecode in: BytecodeTable.
+		[self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
 		localFP = priorFrame ifFalse:
 			[sendCount >= loggingStart ifTrue:
 				[sendCount := sendCount + 1.
@@ -1570,13 +1570,15 @@ StackInterpreterSimulator >> printCurrPageFrames [
 StackInterpreterSimulator >> printCurrentBytecodeOn: aStream [
 	| code |
 	code := currentBytecode radix: 16.
-	aStream print: localIP - method - 3;
-		tab;
+	aStream ensureCr; print: localIP - method - 3; tab.
+	bytecodeSetSelector > 0 ifTrue:
+		[aStream nextPutAll: 'ALT '].
+	aStream
 		nextPut: (code size < 2
 					ifTrue: [$0]
 					ifFalse: [code at: 1]);
 		nextPut: code last; space;
-		nextPutAll: (BytecodeTable at: currentBytecode + 1);
+		nextPutAll: (BytecodeTable at: currentBytecode + bytecodeSetSelector + 1);
 		space;
 		nextPut: $(; print: byteCount + 1; nextPut: $)
 ]
@@ -1791,7 +1793,7 @@ StackInterpreterSimulator >> run [
 	[true] whileTrue:
 		[self assertValidExecutionPointers.
 		 atEachStepBlock value. "N.B. may be nil"
-		 self dispatchOn: currentBytecode in: BytecodeTable.
+		 self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
 		 self incrementByteCount].
 	localIP := localIP - 1.
 	"undo the pre-increment of IP before returning"
@@ -1807,7 +1809,7 @@ StackInterpreterSimulator >> runAtEachStep: aBlock [
 	[true] whileTrue:
 		[self assertValidExecutionPointers.
 		 aBlock value: currentBytecode.
-		 self dispatchOn: currentBytecode in: BytecodeTable.
+		 self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
 		 self incrementByteCount].
 	localIP := localIP - 1.
 	"undo the pre-increment of IP before returning"
@@ -1823,7 +1825,7 @@ StackInterpreterSimulator >> runAtEachStep: aBlock breakCount: breakCount [
 	[true] whileTrue:
 		[self assertValidExecutionPointers.
 		 aBlock value: currentBytecode.
-		 self dispatchOn: currentBytecode in: BytecodeTable.
+		 self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
 		 self incrementByteCount.
 		 byteCount = breakCount ifTrue:
 			[self halt]].
@@ -1844,7 +1846,7 @@ StackInterpreterSimulator >> runForNBytes: nBytecodes [
 	self internalizeIPandSP.
 	self fetchNextBytecode.
 	[byteCount < endCount] whileTrue:
-		[self dispatchOn: currentBytecode in: BytecodeTable.
+		[self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
 		 self incrementByteCount].
 	localIP := localIP - 1.
 	"undo the pre-increment of IP before returning"
@@ -1866,7 +1868,7 @@ StackInterpreterSimulator >> runWithBreakCount: theBreakCount [
 	self fetchNextBytecode.
 	[true] whileTrue:
 		[self assertValidExecutionPointers.
-		 self dispatchOn: currentBytecode in: BytecodeTable.
+		 self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
 		 self incrementByteCount].
 	localIP := localIP - 1.
 	"undo the pre-increment of IP before returning"
@@ -2182,7 +2184,7 @@ StackInterpreterSimulator >> test [
 		 printBytecodeAtEachStep ifTrue:
 			[self printCurrentBytecodeOn: Transcript.
 			 Transcript cr; flush].
-		 self dispatchOn: currentBytecode in: BytecodeTable.
+		 self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
 		 self incrementByteCount.
 		 byteCount = breakCount ifTrue:
 			["printFrameAtEachStep :=" printBytecodeAtEachStep := true.
@@ -2217,7 +2219,7 @@ StackInterpreterSimulator >> test1 [
 			 self printCurrentBytecodeOn: Transcript.
 			 Transcript cr; flush].
 
-		 self dispatchOn: currentBytecode in: BytecodeTable.
+		 self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
 		 self incrementByteCount.
 		 byteCount = breakCount ifTrue:
 			["printFrameAtEachStep := true."
@@ -2275,7 +2277,7 @@ StackInterpreterSimulator >> testBreakCount: breakCount printSends: shouldPrintS
 		 printBytecodeAtEachStep ifTrue:
 			[self printCurrentBytecodeOn: Transcript.
 			 Transcript cr; flush].
-		 self dispatchOn: currentBytecode in: BytecodeTable.
+		 self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
 		 self incrementByteCount.
 		 byteCount = breakCount ifTrue:
 			["printFrameAtEachStep :=" printBytecodeAtEachStep := true.
