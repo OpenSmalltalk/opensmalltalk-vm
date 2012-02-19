@@ -5685,7 +5685,7 @@ CoInterpreter >> setImageHeaderFlagsFrom: headerFlags [
 { #category : #'internal interpreter access' }
 CoInterpreter >> setMethod: aMethodObj [
 	self assert: aMethodObj asUnsignedInteger >= objectMemory startOfMemory.
-	method := aMethodObj
+	super setMethod: aMethodObj
 ]
 
 { #category : #'debug printing' }
