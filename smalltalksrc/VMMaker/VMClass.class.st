@@ -169,7 +169,8 @@ VMClass class >> initializeMiscConstantsWith: optionsDictionary [
 
 	VMBIGENDIAN class. "Mention this for the benefit of CCodeGenerator>>emitCConstantsOn:"
 	STACKVM := COGVM := COGMTVM := false.
-	IMMUTABILITY := NewspeakVM := false
+	IMMUTABILITY := NewspeakVM := false.
+	MULTIPLEBYTECODESETS := false
 ]
 
 { #category : #initialization }
