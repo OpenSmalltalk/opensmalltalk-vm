@@ -2771,6 +2771,9 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 						 cogMethod methodObject: aMethodObj.
 						 coInterpreter rawHeaderOf: aMethodObj put: cogMethod asInteger].
 					^cogMethod]].
+	"The alternate bytecode set is for now always interpreted."
+	(coInterpreter methodUsesAlternateBytecodeSet: aMethodObj) ifTrue:
+		[^nil].
 	methodObj := aMethodObj.
 	cogMethod := self compileCogMethod: aSelectorOop.
 	(cogMethod asInteger between: MaxNegativeErrorCode and: -1) ifTrue:

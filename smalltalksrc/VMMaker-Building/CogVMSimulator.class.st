@@ -1270,7 +1270,7 @@ CogVMSimulator >> interpret [
 	[true] whileTrue:
 		[self assertValidExecutionPointers.
 		 atEachStepBlock value. "N.B. may be nil"
-		 self dispatchOn: currentBytecode in: BytecodeTable.
+		 self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
 		 self incrementByteCount].
 	localIP := localIP - 1.  "undo the pre-increment of IP before returning"
 	self externalizeIPandSP.
@@ -1631,7 +1631,7 @@ CogVMSimulator >> logOfBytesVerify: nBytes fromFileNamed: fileName fromStart: lo
 	"Verify a questionable interpreter against a successful run"
 	"self logOfBytesVerify: 10000 fromFileNamed: 'clone32Bytecodes.log' "
 	
-	| logFile rightByte prevCtxt |
+	| logFile rightWord prevCtxt |
 	logFile := (FileStream readOnlyFileNamed: fileName) binary.
 	transcript clear.
 	byteCount := 0.
@@ -1657,10 +1657,10 @@ transcript cr; print: byteCount; nextPutAll: ': ' , (activeContext hex); space;
 byteCount = 14590 ifTrue: [self halt]].
 "
 		loggingStart >= byteCount ifTrue:
-			[rightByte := logFile next.
-			 currentBytecode = rightByte ifFalse:
+			[rightWord := logFile nextWord.
+			 currentBytecode + bytecodeSetSelector = rightWord ifFalse:
 				[self halt: 'halt at ', byteCount printString]].
-		self dispatchOn: currentBytecode in: BytecodeTable.
+		self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
 		self incrementByteCount].
 	self externalizeIPandSP.
 	logFile close.
@@ -1683,8 +1683,8 @@ CogVMSimulator >> logOfBytesWrite: nBytes toFileNamed: fileName fromStart: loggi
 	self fetchNextBytecode.
 	[byteCount < nBytes] whileTrue:
 		[byteCount >= loggingStart ifTrue:
-			[logFile nextPut: currentBytecode].
-		self dispatchOn: currentBytecode in: BytecodeTable.
+			[logFile nextWordPut: currentBytecode + bytecodeSetSelector].
+		self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
 		self incrementByteCount].
 	self externalizeIPandSP.
 	logFile close
@@ -1723,7 +1723,7 @@ transcript cr; print: byteCount; nextPutAll: ': ' , (localFP hex); space;
  print: (self stackPointerIndex - TempFrameStart + 1); endEntry.
 ].
 "
-		self dispatchOn: currentBytecode in: BytecodeTable.
+		self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
 		localFP == priorFrame ifFalse:
 			[sendCount := sendCount + 1.
 			 loggingStart >= sendCount ifTrue:
@@ -1754,7 +1754,7 @@ CogVMSimulator >> logOfSendsWrite: nSends toFileNamed: fileName fromStart: loggi
 	self internalizeIPandSP.
 	self fetchNextBytecode.
 	[sendCount < nSends] whileTrue:
-		[self dispatchOn: currentBytecode in: BytecodeTable.
+		[self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
 		localFP == priorFrame ifFalse:
 			[sendCount >= loggingStart ifTrue:
 				[sendCount := sendCount + 1.
@@ -2563,15 +2563,15 @@ CogVMSimulator >> printCurrPageFrames [
 CogVMSimulator >> printCurrentBytecodeOn: aStream [
 	| code |
 	code := currentBytecode radix: 16.
+	aStream ensureCr; print: localIP - method - 3; tab.
+	bytecodeSetSelector > 0 ifTrue:
+		[aStream nextPutAll: 'ALT '].
 	aStream
-		ensureCr;
-		print: localIP - method - 3;
-		tab;
 		nextPut: (code size < 2
 					ifTrue: [$0]
 					ifFalse: [code at: 1]);
 		nextPut: code last; space;
-		nextPutAll: (BytecodeTable at: currentBytecode + 1);
+		nextPutAll: (BytecodeTable at: currentBytecode + bytecodeSetSelector + 1);
 		space;
 		nextPut: $(; print: byteCount + 1; nextPut: $)
 ]

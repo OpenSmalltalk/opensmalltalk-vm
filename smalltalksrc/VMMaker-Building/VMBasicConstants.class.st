@@ -46,6 +46,7 @@ Class {
 		'GCModeFull',
 		'GCModeIncr',
 		'IMMUTABILITY',
+		'MULTIPLEBYTECODESETS',
 		'NewspeakVM',
 		'PrimErrBadArgument',
 		'PrimErrBadIndex',

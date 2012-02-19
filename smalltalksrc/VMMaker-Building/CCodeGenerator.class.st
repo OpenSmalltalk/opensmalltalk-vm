@@ -98,13 +98,21 @@ CCodeGenerator >> addClass: aClass [
 { #category : #public }
 CCodeGenerator >> addClassVarsFor: aClass [
 	"Add the class variables for the given class to the code base as constants."
-	aClass classPool associationsDo: [:assoc | | val node |
-		val := assoc value.
-		node := (useSymbolicConstants and:[self isCLiteral: val])
-				ifTrue:[TDefineNode new setName: assoc key asString value: assoc value]
-				ifFalse:[TConstantNode new setValue: assoc value].
-		constants at: assoc key asString put: node].
+	aClass classPool associationsDo:
+		[:assoc | self addConstantForBinding: assoc]
+]
 
+{ #category : #public }
+CCodeGenerator >> addConstantForBinding: variableBinding [
+	"Add the pool variable to the code base as a constant."
+	| node val |
+	val := variableBinding value.
+	node := (useSymbolicConstants and: [self isCLiteral: val])
+				ifTrue:[TDefineNode new
+							setName: variableBinding key asString
+							value: variableBinding value]
+				ifFalse:[TConstantNode new setValue: variableBinding value].
+	constants at: variableBinding key asString put: node
 ]
 
 { #category : #public }
@@ -701,7 +709,9 @@ CCodeGenerator >> emitCConstantsOn: aStream [
 		[:lit|
 		lit isVariableBinding ifTrue:
 			[unused add: lit key]].
-	unused remove: #BytesPerWord ifAbsent: []. "force inclusion of BytesPerWord declaration"
+	 "force inclusion of BytesPerWord and MULTIPLEBYTECODESETS declarations."
+	#(BytesPerWord MULTIPLEBYTECODESETS) do:
+		[:key| unused remove: key ifAbsent: []].
 	constList := constants keys reject:[:any| unused includes: any].
 	aStream cr; nextPutAll: '/*** Constants ***/'; cr.
 	(self sortStrings: constList) do:
