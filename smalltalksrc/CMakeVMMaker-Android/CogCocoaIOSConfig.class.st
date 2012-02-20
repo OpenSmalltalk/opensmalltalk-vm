@@ -18,8 +18,8 @@ CogCocoaIOSConfig >> cogitClass [
 ]
 
 { #category : #settings }
-CogCocoaIOSConfig >> compilerFlagsRelease [ 
-	^super compilerFlagsRelease, #('-DCOGVM')
+CogCocoaIOSConfig >> commonCompilerFlags [
+	^super commonCompilerFlags, #('-DCOGVM')
 ]
 
 { #category : #'source files' }
