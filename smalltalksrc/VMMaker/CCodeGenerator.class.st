@@ -854,23 +854,27 @@ CCodeGenerator >> emitCVariablesOn: aStream [
 		[:var | | varString decl |
 		varString := var asString.
 		decl := variableDeclarations at: varString ifAbsent: ['sqInt ' , varString].
-		self isGeneratingPluginCode
+		decl first == $# "support cgen var: #bytecodeSetSelector declareC: '#define bytecodeSetSelector 0' hack"
 			ifTrue:
-				[varString = 'interpreterProxy'
-					ifTrue: ["quite special..."
-						aStream cr; nextPutAll: '#ifdef SQUEAK_BUILTIN_PLUGIN'.
-						aStream cr; nextPutAll: 'extern'.
-						aStream cr; nextPutAll: '#endif'; cr]
-					ifFalse: [(decl beginsWith: 'static') ifFalse:
-								[aStream nextPutAll: 'static ']]]
+				[aStream nextPutAll: decl; cr]
 			ifFalse:
-				[(vmClass mustBeGlobal: varString) ifFalse:
-					[(decl beginsWith: 'static') ifFalse:
-						[aStream nextPutAll: 'static ']]].
-		aStream
-			nextPutAll: decl;
-			nextPut: $;;
-			cr].
+				[self isGeneratingPluginCode
+					ifTrue:
+						[varString = 'interpreterProxy'
+							ifTrue: ["quite special..."
+								aStream cr; nextPutAll: '#ifdef SQUEAK_BUILTIN_PLUGIN'.
+								aStream cr; nextPutAll: 'extern'.
+								aStream cr; nextPutAll: '#endif'; cr]
+							ifFalse: [(decl beginsWith: 'static') ifFalse:
+										[aStream nextPutAll: 'static ']]]
+					ifFalse:
+						[(vmClass mustBeGlobal: varString) ifFalse:
+							[(decl beginsWith: 'static') ifFalse:
+								[aStream nextPutAll: 'static ']]].
+				aStream
+					nextPutAll: decl;
+					nextPut: $;;
+					cr]].
 	aStream cr
 ]
 
