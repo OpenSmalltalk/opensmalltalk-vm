@@ -71,7 +71,7 @@ CCodeGeneratorGlobalStructure >> emitCCodeOn: aStream doInlining: inlineFlag doA
 { #category : #'C code generator' }
 CCodeGeneratorGlobalStructure >> emitCVariablesOn: aStream [
 	"Store the global variable declarations on the given stream.
-	break logic into vars for structure and vars for non-structure"
+	 Break logic into vars for structure and vars for non-structure."
 	| structure nonstruct |
 
 	structure := WriteStream on: (String new: 32768).
@@ -85,25 +85,27 @@ CCodeGeneratorGlobalStructure >> emitCVariablesOn: aStream [
 		nextPutAll: '# define _iss static'; cr;
 		nextPutAll: '#endif'; cr.
 	self buildSortedVariablesCollection do:
-		[ :var | | varString inStruct target |
+		[ :var | | decl varString inStruct target |
 		target := (inStruct := self placeInStructure: (varString := var asString)) 
 					ifTrue: [structure]
 					ifFalse: [nonstruct].
-		self isGeneratingPluginCode
+		decl := variableDeclarations at: varString ifAbsent: ['sqInt ' , varString].
+		decl first == $# "support cgen var: #bytecodeSetSelector declareC: '#define bytecodeSetSelector 0' hack"
 			ifTrue:
-				[varString = 'interpreterProxy'
-					ifTrue: ["quite special..."
-						target cr; nextPutAll: '#ifdef SQUEAK_BUILTIN_PLUGIN'.
-						target cr; nextPutAll: 'extern'.
-						target cr; nextPutAll: '#endif'; cr]
-					ifFalse: [target nextPutAll: 'static ']]
+				[target nextPutAll: decl; cr]
 			ifFalse:
-				[(vmClass mustBeGlobal: varString) ifFalse:
-					[target nextPutAll: (inStruct ifTrue: ['_iss '] ifFalse: ['static '])]].
-		target
-			nextPutAll: (variableDeclarations at: varString ifAbsent: ['sqInt ' , varString]);
-			nextPut: $;;
-			cr].
+				[self isGeneratingPluginCode
+					ifTrue:
+						[varString = 'interpreterProxy'
+							ifTrue: ["quite special..."
+								target cr; nextPutAll: '#ifdef SQUEAK_BUILTIN_PLUGIN'.
+								target cr; nextPutAll: 'extern'.
+								target cr; nextPutAll: '#endif'; cr]
+							ifFalse: [target nextPutAll: 'static ']]
+					ifFalse:
+						[(vmClass mustBeGlobal: varString) ifFalse:
+							[target nextPutAll: (inStruct ifTrue: ['_iss '] ifFalse: ['static '])]].
+				target nextPutAll: decl; nextPut: $;; cr]].
 	structure
 		nextPutAll: '#undef _iss'; cr;
 		nextPutAll: '#if SQ_USE_GLOBAL_STRUCT'; cr;
