@@ -5263,7 +5263,9 @@ StackInterpreter >> initializeInterpreter: bytesToShift [
 	stackLimit := 0. "This is also the initialization flag for the stack system."
 	stackPage := overflowedPage := 0.
 	extraFramesToMoveOnOverflow := 0.
-	self setMethod: objectMemory nilObject.
+	method := objectMemory nilObject.
+	self cCode: [self cppIf: MULTIPLEBYTECODESETS ifTrue: [bytecodeSetSelector := 0]]
+		inSmalltalk: [bytecodeSetSelector := 0].
 	messageSelector := objectMemory nilObject.
 	newMethod := objectMemory nilObject.
 	lkupClass := objectMemory nilObject.
@@ -9323,11 +9325,11 @@ StackInterpreter >> setMethod: aMethodObj [
 	 used for other experiments."
 	<inline: true>
 	method := aMethodObj.
+	self assert: (objectMemory isOopCompiledMethod: method).
 	self cppIf: MULTIPLEBYTECODESETS
-		ifTrue:
-			[bytecodeSetSelector := (self methodUsesAlternateBytecodeSet: method)
-										ifTrue: [256]
-										ifFalse: [0]]
+		ifTrue: [bytecodeSetSelector := (self methodUsesAlternateBytecodeSet: method)
+											ifTrue: [256]
+											ifFalse: [0]]
 ]
 
 { #category : #'plugin primitive support' }
