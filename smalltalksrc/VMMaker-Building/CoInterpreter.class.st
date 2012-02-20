@@ -1823,7 +1823,7 @@ CoInterpreter >> ceStackOverflow: contextSwitchIfNotNil [
 	self assert: cesoRetAddr - cogit abortOffset = (self asCogHomeMethod: cogMethod) asInteger.
 	instructionPointer := cogMethod asInteger + cogMethod stackCheckOffset.
 	self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: false.
-	self setMethod: (newMethod := messageSelector := lkupClass := objectMemory nilObject).
+	method := newMethod := messageSelector := lkupClass := objectMemory nilObject.
 	switched := self handleStackOverflowOrEventAllowContextSwitch: contextSwitchIfNotNil ~= 0.
 	self returnToExecutive: false postContextSwitch: switched.
 	self error: 'should not be reached'
