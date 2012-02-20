@@ -66,12 +66,12 @@ StackIPhoneConfig >> commonCompilerFlags [
 
 { #category : #settings }
 StackIPhoneConfig >> compilerFlagsDebug [
-	^#('-g3' '-O0' "'-fasm-blocks'" "'-mfpmath=sse'" "'-march=pentium-m'" "'-mtune=prescott'" '-fno-cse-follow-jumps' '-DDEBUGVM=1')
+	^super compilerFlagsDebug "#('-g3' '-O0' '-fno-cse-follow-jumps' '-DDEBUGVM=1')"
 ]
 
 { #category : #settings }
 StackIPhoneConfig >> compilerFlagsRelease [ 
-	^#('-g0' '-O3' "'-fasm-blocks'" '-finline-functions' "'-mfpmath=sse'" '-fomit-frame-pointer' "'-march=pentium-m'" "'-mtune=prescott'" '-DNDEBUG' '-DDEBUGVM=0')
+	^super compilerFlagsRelease "#('-g0' '-O3' '-finline-functions'  '-fomit-frame-pointer' '-DNDEBUG' '-DDEBUGVM=0')"
 ]
 
 { #category : #'plugin extra rules' }
