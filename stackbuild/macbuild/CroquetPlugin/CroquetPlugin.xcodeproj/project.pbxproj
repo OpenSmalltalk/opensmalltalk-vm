@@ -28,13 +28,13 @@
 		08EA7FFBFE8413EDC02AAC07 /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
 		8D01CCD10486CAD60068D4B7 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		8D01CCD20486CAD60068D4B7 /* CroquetPlugin.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CroquetPlugin.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
-		A271C7DD0CEB874D0014AC5E /* interp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../src/vm/interp.h; sourceTree = SOURCE_ROOT; };
-		A271C7DE0CEB878E0014AC5E /* sqMemoryAccess.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqMemoryAccess.h; path = ../../platforms/Cross/vm/sqMemoryAccess.h; sourceTree = SOURCE_ROOT; };
-		A271C7DF0CEB878E0014AC5E /* sqVirtualMachine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqVirtualMachine.h; path = ../../platforms/Cross/vm/sqVirtualMachine.h; sourceTree = SOURCE_ROOT; };
-		A271C7E00CEB87BE0014AC5E /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = "../../platforms/Mac OS/vm/config.h"; sourceTree = SOURCE_ROOT; };
-		A271C7E10CEB87BE0014AC5E /* sqConfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqConfig.h; path = "../../platforms/Mac OS/vm/sqConfig.h"; sourceTree = SOURCE_ROOT; };
-		A271C7E20CEB87BE0014AC5E /* sqPlatformSpecific.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqPlatformSpecific.h; path = "../../platforms/Mac OS/vm/sqPlatformSpecific.h"; sourceTree = SOURCE_ROOT; };
-		A295BF4C11922528003C5973 /* CroquetPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = CroquetPlugin.c; path = ../../src/plugins/CroquetPlugin/CroquetPlugin.c; sourceTree = SOURCE_ROOT; };
+		A271C7DD0CEB874D0014AC5E /* interp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../../stacksrc/vm/interp.h; sourceTree = SOURCE_ROOT; };
+		A271C7DE0CEB878E0014AC5E /* sqMemoryAccess.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqMemoryAccess.h; path = ../../../platforms/Cross/vm/sqMemoryAccess.h; sourceTree = SOURCE_ROOT; };
+		A271C7DF0CEB878E0014AC5E /* sqVirtualMachine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqVirtualMachine.h; path = ../../../platforms/Cross/vm/sqVirtualMachine.h; sourceTree = SOURCE_ROOT; };
+		A271C7E00CEB87BE0014AC5E /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = "../../../platforms/Mac OS/vm/config.h"; sourceTree = SOURCE_ROOT; };
+		A271C7E10CEB87BE0014AC5E /* sqConfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqConfig.h; path = "../../../platforms/Mac OS/vm/sqConfig.h"; sourceTree = SOURCE_ROOT; };
+		A271C7E20CEB87BE0014AC5E /* sqPlatformSpecific.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqPlatformSpecific.h; path = "../../../platforms/Mac OS/vm/sqPlatformSpecific.h"; sourceTree = SOURCE_ROOT; };
+		A295BF4C11922528003C5973 /* CroquetPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = CroquetPlugin.c; path = ../../../src/plugins/CroquetPlugin/CroquetPlugin.c; sourceTree = SOURCE_ROOT; };
 		A295BF4F11922556003C5973 /* CroquetPlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CroquetPlugin.h; sourceTree = "<group>"; };
 		A295BF5311922556003C5973 /* md5.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = md5.h; sourceTree = "<group>"; };
 		A295BF5411922556003C5973 /* TriBoxStub.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = TriBoxStub.c; sourceTree = "<group>"; };
@@ -89,7 +89,7 @@
 				A295BF4C11922528003C5973 /* CroquetPlugin.c */,
 				A271C7E00CEB87BE0014AC5E /* config.h */,
 				A271C7E10CEB87BE0014AC5E /* sqConfig.h */,
-				A271C7E20CEB87BE0014AC5E /* sqPlatformSpecific.h */,
+				A271C7E20CEB87BE0014AC5E /* sq../PlatformSpecific.h */,
 				A271C7DE0CEB878E0014AC5E /* sqMemoryAccess.h */,
 				A271C7DF0CEB878E0014AC5E /* sqVirtualMachine.h */,
 				A271C7DD0CEB874D0014AC5E /* interp.h */,
@@ -113,7 +113,7 @@
 				A295BF5411922556003C5973 /* TriBoxStub.c */,
 			);
 			name = CroquetPlugin;
-			path = ../../platforms/Cross/plugins/CroquetPlugin;
+			path = ../../../platforms/Cross/plugins/CroquetPlugin;
 			sourceTree = SOURCE_ROOT;
 		};
 		A295BF7011922634003C5973 /* CroquetPlugin */ = {
@@ -123,7 +123,7 @@
 				A295BF7211922634003C5973 /* sqMacCroquet.h */,
 			);
 			name = CroquetPlugin;
-			path = "../../platforms/Mac OS/plugins/CroquetPlugin";
+			path = "../../../platforms/Mac OS/plugins/CroquetPlugin";
 			sourceTree = SOURCE_ROOT;
 		};
 /* End PBXGroup section */

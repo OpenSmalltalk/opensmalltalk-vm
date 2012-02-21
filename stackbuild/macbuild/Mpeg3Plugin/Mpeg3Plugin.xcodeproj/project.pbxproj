@@ -44,12 +44,12 @@
 /* Begin PBXFileReference section */
 		66DF6C8201D7DF7E00A80119 /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
 		949199E209818612000FC37A /* Mpeg3Plugin.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Mpeg3Plugin.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
-		A2181BBF10814E0B00B8FC7A /* sqVirtualMachine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqVirtualMachine.h; path = ../../platforms/Cross/vm/sqVirtualMachine.h; sourceTree = SOURCE_ROOT; };
-		A2181BC010814E0B00B8FC7A /* sqMemoryAccess.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqMemoryAccess.h; path = ../../platforms/Cross/vm/sqMemoryAccess.h; sourceTree = SOURCE_ROOT; };
-		A2181BC210814E4E00B8FC7A /* sqConfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqConfig.h; path = "../../platforms/Mac OS/vm/sqConfig.h"; sourceTree = SOURCE_ROOT; };
-		A2181BC310814E4E00B8FC7A /* sqPlatformSpecific.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqPlatformSpecific.h; path = "../../platforms/Mac OS/vm/sqPlatformSpecific.h"; sourceTree = SOURCE_ROOT; };
-		A2181BC410814E7000B8FC7A /* interp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../src/vm/interp.h; sourceTree = SOURCE_ROOT; };
-		A2181BC510814EA000B8FC7A /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = "../../platforms/Mac OS/vm/config.h"; sourceTree = SOURCE_ROOT; };
+		A2181BBF10814E0B00B8FC7A /* sqVirtualMachine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqVirtualMachine.h; path = ../../../platforms/Cross/vm/sqVirtualMachine.h; sourceTree = SOURCE_ROOT; };
+		A2181BC010814E0B00B8FC7A /* sqMemoryAccess.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqMemoryAccess.h; path = ../../../platforms/Cross/vm/sqMemoryAccess.h; sourceTree = SOURCE_ROOT; };
+		A2181BC210814E4E00B8FC7A /* sqConfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqConfig.h; path = "../../../platforms/Mac OS/vm/sqConfig.h"; sourceTree = SOURCE_ROOT; };
+		A2181BC310814E4E00B8FC7A /* sqPlatformSpecific.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqPlatformSpecific.h; path = "../../../platforms/Mac OS/vm/sqPlatformSpecific.h"; sourceTree = SOURCE_ROOT; };
+		A2181BC410814E7000B8FC7A /* interp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../../stacksrc/vm/interp.h; sourceTree = SOURCE_ROOT; };
+		A2181BC510814EA000B8FC7A /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = "../../../platforms/Mac OS/vm/config.h"; sourceTree = SOURCE_ROOT; };
 		A2181BC810814EC700B8FC7A /* ac3.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ac3.h; sourceTree = "<group>"; };
 		A2181BC910814EC700B8FC7A /* dct.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = dct.c; sourceTree = "<group>"; };
 		A2181BCA10814EC700B8FC7A /* header.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = header.c; sourceTree = "<group>"; };
@@ -102,10 +102,10 @@
 		A2181C0A10814EC700B8FC7A /* slice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = slice.h; sourceTree = "<group>"; };
 		A2181C0B10814EC700B8FC7A /* vlc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = vlc.c; sourceTree = "<group>"; };
 		A2181C0C10814EC700B8FC7A /* vlc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = vlc.h; sourceTree = "<group>"; };
-		A2181C401081506400B8FC7A /* sqMacFileBits.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sqMacFileBits.c; path = "../../platforms/Mac OS/plugins/Mpeg3Plugin/sqMacFileBits.c"; sourceTree = SOURCE_ROOT; };
-		A2181C411081506400B8FC7A /* sqMacFileBits.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqMacFileBits.h; path = "../../platforms/Mac OS/plugins/Mpeg3Plugin/sqMacFileBits.h"; sourceTree = SOURCE_ROOT; };
+		A2181C401081506400B8FC7A /* sqMacFileBits.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sqMacFileBits.c; path = "../../../platforms/Mac OS/plugins/Mpeg3Plugin/sqMacFileBits.c"; sourceTree = SOURCE_ROOT; };
+		A2181C411081506400B8FC7A /* sqMacFileBits.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqMacFileBits.h; path = "../../../platforms/Mac OS/plugins/Mpeg3Plugin/sqMacFileBits.h"; sourceTree = SOURCE_ROOT; };
 		A2181C45108150C800B8FC7A /* Mpeg3Plugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = Mpeg3Plugin.c; path = ../../src/plugins/Mpeg3Plugin/Mpeg3Plugin.c; sourceTree = SOURCE_ROOT; };
-		A2181C491081511C00B8FC7A /* Mpeg3Plugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Mpeg3Plugin.h; path = ../../platforms/Cross/plugins/Mpeg3Plugin/Mpeg3Plugin.h; sourceTree = SOURCE_ROOT; };
+		A2181C491081511C00B8FC7A /* Mpeg3Plugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Mpeg3Plugin.h; path = ../../../platforms/Cross/plugins/Mpeg3Plugin/Mpeg3Plugin.h; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -191,7 +191,7 @@
 				A2181BF610814EC700B8FC7A /* video */,
 			);
 			name = libmpeg;
-			path = ../../platforms/Cross/plugins/Mpeg3Plugin/libmpeg;
+			path = ../../../platforms/Cross/plugins/Mpeg3Plugin/libmpeg;
 			sourceTree = SOURCE_ROOT;
 		};
 		A2181BC710814EC700B8FC7A /* audio */ = {
@@ -342,7 +342,7 @@
 		946BCE010959347500803517 /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				HEADER_SEARCH_PATHS = "../../platforms/Cross/plugins/Mpeg3Plugin/libmpeg/**";
+				HEADER_SEARCH_PATHS = "../../../platforms/Cross/plugins/Mpeg3Plugin/libmpeg/**";
 				SDKROOT = "$(DEVELOPER_SDK_DIR)/MacOSX10.5.sdk";
 				USER_HEADER_SEARCH_PATHS = "";
 			};
@@ -386,7 +386,7 @@
 				PKGINFO_FILE_CONTENTS = BNDLFAST;
 				PREBINDING = NO;
 				PRODUCT_NAME = Mpeg3Plugin;
-				USER_HEADER_SEARCH_PATHS = "../../platforms/Cross/plugins/Mpeg3Plugin/libmpeg/**";
+				USER_HEADER_SEARCH_PATHS = "../../../platforms/Cross/plugins/Mpeg3Plugin/libmpeg/**";
 				WRAPPER_EXTENSION = bundle;
 				ZERO_LINK = YES;
 			};
@@ -413,7 +413,7 @@
 				);
 				PREBINDING = NO;
 				PRODUCT_NAME = Mpeg3Plugin;
-				USER_HEADER_SEARCH_PATHS = "../../platforms/Cross/plugins/Mpeg3Plugin/libmpeg/**";
+				USER_HEADER_SEARCH_PATHS = "../../../platforms/Cross/plugins/Mpeg3Plugin/libmpeg/**";
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Deployment;

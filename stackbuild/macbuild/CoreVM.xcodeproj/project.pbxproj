@@ -300,14 +300,14 @@
 		9426FF1409F489D200ECEDDC /* pcre.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = pcre.h; sourceTree = "<group>"; };
 		9426FF1509F489D200ECEDDC /* rePlugin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = rePlugin.h; sourceTree = "<group>"; };
 		9426FF1609F489D200ECEDDC /* study.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = study.c; sourceTree = "<group>"; };
-		944659E609BA835900BD3A71 /* sqUnixSerial.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqUnixSerial.c; path = ../../../../unix/plugins/SerialPlugin/sqUnixSerial.c; sourceTree = "<group>"; };
+		944659E609BA835900BD3A71 /* sqUnixSerial.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqUnixSerial.c; path = ../../../unix/plugins/SerialPlugin/sqUnixSerial.c; sourceTree = "<group>"; };
 		94465A2909BA85EA00BD3A71 /* sqMacSerialPort.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacSerialPort.c; sourceTree = "<group>"; };
 		944B5B5008F5C7A900611DF8 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
 		9454DFE603E1C93E00DA393B /* sqMacNSPlugin.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacNSPlugin.c; sourceTree = "<group>"; };
 		946DD776098FF9E3006BBA1E /* sqMacUnixFileInterface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqMacUnixFileInterface.h; sourceTree = "<group>"; };
 		946DD777098FF9E3006BBA1E /* sqMacUnixFileInterface.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqMacUnixFileInterface.c; sourceTree = "<group>"; };
-		946DD81E098FFFB6006BBA1E /* sqUnixAsynchFile.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqUnixAsynchFile.c; path = ../../../../unix/plugins/AsynchFilePlugin/sqUnixAsynchFile.c; sourceTree = "<group>"; };
-		946DD81F098FFFB6006BBA1E /* sqUnixAsynchFile.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqUnixAsynchFile.h; path = ../../../../unix/plugins/AsynchFilePlugin/sqUnixAsynchFile.h; sourceTree = "<group>"; };
+		946DD81E098FFFB6006BBA1E /* sqUnixAsynchFile.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqUnixAsynchFile.c; path = ../../../unix/plugins/AsynchFilePlugin/sqUnixAsynchFile.c; sourceTree = "<group>"; };
+		946DD81F098FFFB6006BBA1E /* sqUnixAsynchFile.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqUnixAsynchFile.h; path = ../../../unix/plugins/AsynchFilePlugin/sqUnixAsynchFile.h; sourceTree = "<group>"; };
 		946DD91C099015C5006BBA1E /* sqMacImageIO.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacImageIO.c; sourceTree = "<group>"; };
 		946DD91D099015C5006BBA1E /* sqMacImageIO.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqMacImageIO.h; sourceTree = "<group>"; };
 		946DDA6D09902C5B006BBA1E /* sqMacOpenGL.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacOpenGL.c; sourceTree = "<group>"; };
