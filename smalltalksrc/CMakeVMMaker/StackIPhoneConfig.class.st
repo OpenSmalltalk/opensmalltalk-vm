@@ -6,12 +6,17 @@ Class {
 
 { #category : #accessing }
 StackIPhoneConfig class >> deviceIPad [ 
-	^'2'
+	^#(2)
 ]
 
 { #category : #accessing }
 StackIPhoneConfig class >> deviceIPhone [ 
-	^'1'
+	^#(1)
+]
+
+{ #category : #accessing }
+StackIPhoneConfig class >> deviceUniversal [ 
+	^#(1 2)
 ]
 
 { #category : #'bundle strings' }
@@ -21,7 +26,7 @@ StackIPhoneConfig >> CFBundleIconFile [
 
 { #category : #'bundle strings' }
 StackIPhoneConfig >> UIDeviceFamily [
-	^self targetedDeviceFamily
+	^self targetedDeviceFamilyAsTemplateString
 ]
 
 { #category : #accessing }
@@ -64,16 +69,6 @@ StackIPhoneConfig >> commonCompilerFlags [
 	'-DISQUEAK_SOURCES=PharoV10'}
 ]
 
-{ #category : #settings }
-StackIPhoneConfig >> compilerFlagsDebug [
-	^super compilerFlagsDebug "#('-g3' '-O0' '-fno-cse-follow-jumps' '-DDEBUGVM=1')"
-]
-
-{ #category : #settings }
-StackIPhoneConfig >> compilerFlagsRelease [ 
-	^super compilerFlagsRelease "#('-g0' '-O3' '-finline-functions'  '-fomit-frame-pointer' '-DNDEBUG' '-DDEBUGVM=0')"
-]
-
 { #category : #'plugin extra rules' }
 StackIPhoneConfig >> configureHostWindowPlugin: maker [
 	maker includeDirectories: '${platformsDir}/Cross/plugins/HostWindowPlugin'.	
@@ -87,7 +82,7 @@ StackIPhoneConfig >> configureHostWindowPlugin: maker [
 StackIPhoneConfig >> configureIOSPlugin: maker [
 	maker 
 		addSources: #('sqTouch.m' ) 
-		prefixed: '${platformsDir}/iOS/vm/iPhone/plugins/TouchPlugin/'
+		prefixed: '${platformsDir}/iOS/vm/iPhone/plugins/IOSPlugin/'
 
 ]
 
@@ -296,7 +291,7 @@ StackIPhoneConfig >> plistTemplate [
 	<string>MainWindow</string>
 	<key>UIDeviceFamily</key>
 	<array>
-		<integer>@UIDeviceFamily@</integer>
+		@UIDeviceFamily@
 	</array>
 	<key>UIPrerenderedIcon</key>
 	<false/>
@@ -388,7 +383,7 @@ StackIPhoneConfig >> setExtraTargetProperties: maker [
 		params: self executableName, ' PROPERTIES COMPILE_FLAGS "-include \"', (self buildDir / self prefixHeaderFileName) fullName, '\""'. 
 
 	maker set: 'CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY' toString: self codeSignIdentity.
-	maker set: 'CMAKE_XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY' toString: self targetedDeviceFamily.
+	maker set: 'CMAKE_XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY' toString: self targetedDeviceFamilyAsString.
 	maker set: 'CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET' to: self deploymentTargetVersion.
 	
 	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir.
@@ -446,5 +441,24 @@ StackIPhoneConfig >> standardIncludes [
 
 { #category : #accessing }
 StackIPhoneConfig >> targetedDeviceFamily [ 
-	^self class deviceIPad
+	^self class deviceUniversal 
+]
+
+{ #category : #private }
+StackIPhoneConfig >> targetedDeviceFamilyAsString [ 
+	^String streamContents: [ :stream | 
+		self targetedDeviceFamily 
+			do: [ :each | stream nextPutAll: each asString ]
+			separatedBy: [ stream nextPut: $, ].
+		stream nextPut: Character space ]
+]
+
+{ #category : #private }
+StackIPhoneConfig >> targetedDeviceFamilyAsTemplateString [ 
+	^String streamContents: [ :stream | 
+		self targetedDeviceFamily do: [ :each | 
+			stream 
+				nextPutAll: '<integer>';
+				nextPutAll: each asString;
+				nextPutAll: '</integer>' ] ]
 ]
