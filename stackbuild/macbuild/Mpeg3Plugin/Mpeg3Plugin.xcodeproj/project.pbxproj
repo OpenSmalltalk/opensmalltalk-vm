@@ -104,7 +104,7 @@
 		A2181C0C10814EC700B8FC7A /* vlc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = vlc.h; sourceTree = "<group>"; };
 		A2181C401081506400B8FC7A /* sqMacFileBits.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sqMacFileBits.c; path = "../../../platforms/Mac OS/plugins/Mpeg3Plugin/sqMacFileBits.c"; sourceTree = SOURCE_ROOT; };
 		A2181C411081506400B8FC7A /* sqMacFileBits.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqMacFileBits.h; path = "../../../platforms/Mac OS/plugins/Mpeg3Plugin/sqMacFileBits.h"; sourceTree = SOURCE_ROOT; };
-		A2181C45108150C800B8FC7A /* Mpeg3Plugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = Mpeg3Plugin.c; path = ../../src/plugins/Mpeg3Plugin/Mpeg3Plugin.c; sourceTree = SOURCE_ROOT; };
+		A2181C45108150C800B8FC7A /* Mpeg3Plugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = Mpeg3Plugin.c; path = ../../../src/plugins/Mpeg3Plugin/Mpeg3Plugin.c; sourceTree = SOURCE_ROOT; };
 		A2181C491081511C00B8FC7A /* Mpeg3Plugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Mpeg3Plugin.h; path = ../../../platforms/Cross/plugins/Mpeg3Plugin/Mpeg3Plugin.h; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
