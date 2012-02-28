@@ -1805,6 +1805,7 @@ ObjectMemory >> fullGC [
 	gcStartUsecs := self ioUTCMicrosecondsNow.
 	statSweepCount := statMarkCount := statMkFwdCount := statCompMoveCount := 0.
 	self clearRootsTable.
+	self initWeakTableForIncrementalGC: false.
 	youngStart := self startOfMemory.  "process all of memory"
 	self markPhase.
 	"Sweep phase returns the number of survivors.
@@ -2126,11 +2127,10 @@ ObjectMemory >> incrementalGC [
 	"incremental GC and compaction"
 
 	gcStartUsecs := self ioUTCMicrosecondsNow.
-	weakRootCount := 0.
 	statSweepCount := statMarkCount := statMkFwdCount := statCompMoveCount := 0.
+	self initWeakTableForIncrementalGC: true.
 	self markPhase.
-	weakRootCount <= WeakRootTableSize ifFalse:
-		[self error: 'weakRoots table overflow'].
+	self assert: weakRootCount <= WeakRootTableSize.
 	1 to: weakRootCount do:[:i| self finalizeReference: (weakRoots at: i)].
 	survivorCount := self sweepPhase.
 	self incrementalCompaction.
@@ -2204,6 +2204,14 @@ ObjectMemory >> initForwardBlock: fwdBlock mapping: oop to: newOop withBackPtr: 
 	self longAt: fwdBlock + BytesPerWord put: originalHeader.
 	backFlag ifTrue: [self longAt: fwdBlock + (BytesPerWord*2) put: oop].
 	self longAt: oop put: (fwdBlock >> 1 bitOr: (MarkBit bitOr: originalHeaderType))
+]
+
+{ #category : #'gc -- mark and sweep' }
+ObjectMemory >> initWeakTableForIncrementalGC: trueIfIncrementalGC [
+	"The weakRoots table is only used for incrementalGC.
+	 Enable it by setting weakRootCount to 0.
+	 Disable it by making it negative."
+	weakRootCount := trueIfIncrementalGC ifTrue: [0] ifFalse: [-1]
 ]
 
 { #category : #'object enumeration' }
@@ -2790,10 +2798,10 @@ ObjectMemory >> lastPointerOf: oop recordWeakRoot: recordWeakRoot [ "<Boolean>"
 	fmt <= 4 ifTrue:
 		[fmt >= 3 ifTrue:
 			[fmt = 4 ifTrue:
-				[recordWeakRoot ifTrue:
+				[(recordWeakRoot and: [weakRootCount >= 0]) ifTrue:
 					["And remember as weak root"
-					 weakRootCount := weakRootCount + 1.
-					 self assert: weakRootCount <= WeakRootTableSize.
+					 (weakRootCount := weakRootCount + 1) <= WeakRootTableSize ifFalse:
+						[self error: 'weakRoots table overflow'].
 					 weakRoots at: weakRootCount put: oop].
 				"Do not trace the object's indexed fields if it's a weak class"
 				^(self nonWeakFieldsOf: oop) << ShiftForWord].
