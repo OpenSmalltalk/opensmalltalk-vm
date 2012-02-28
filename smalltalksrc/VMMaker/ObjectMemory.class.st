@@ -2129,7 +2129,8 @@ ObjectMemory >> incrementalGC [
 	weakRootCount := 0.
 	statSweepCount := statMarkCount := statMkFwdCount := statCompMoveCount := 0.
 	self markPhase.
-	self assert: weakRootCount <= WeakRootTableSize.
+	weakRootCount <= WeakRootTableSize ifFalse:
+		[self error: 'weakRoots table overflow'].
 	1 to: weakRootCount do:[:i| self finalizeReference: (weakRoots at: i)].
 	survivorCount := self sweepPhase.
 	self incrementalCompaction.
@@ -3555,6 +3556,8 @@ ObjectMemory >> pushRemappableOop: oop [
 	<api>
 	self assert: (self addressCouldBeOop: oop).
 	remapBuffer at: (remapBufferCount := remapBufferCount + 1) put: oop.
+	remapBufferCount <= RemapBufferSize ifFalse:
+		[self error: 'remapBuffer overflow'].
 ]
 
 { #category : #'gc -- compaction' }
@@ -3583,11 +3586,6 @@ ObjectMemory >> remapBuffer: aValue [
 ObjectMemory >> remapBufferCount [
 	<cmacro: '() GIV(remapBufferCount)'>
 	^remapBufferCount
-]
-
-{ #category : #accessing }
-ObjectMemory >> remapBufferCount: aValue [
-	^remapBufferCount := aValue
 ]
 
 { #category : #'gc -- compaction' }

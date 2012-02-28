@@ -4172,10 +4172,10 @@ CoInterpreter >> mapVMRegisters [
 	 during garbage collection or a become: operation."
 	"Assume: All traced variables contain valid oops."
 	| mapInstructionPointer |
-	mapInstructionPointer := instructionPointer > method.
-	mapInstructionPointer ifTrue:
+	"i.e. interpreter instructionPointer in method as opposed to machine code?"
+	(mapInstructionPointer := instructionPointer > method) ifTrue:
 		[instructionPointer := instructionPointer - method]. "*rel to method"
-	self setMethod: (objectMemory remap: method).
+	method := (objectMemory remap: method).
 	mapInstructionPointer ifTrue:
 		[instructionPointer := instructionPointer + method]. "*rel to method"
 	messageSelector := objectMemory remap: messageSelector.
