@@ -779,6 +779,7 @@ NewObjectMemory >> fullGC [
 	gcStartUsecs := self ioUTCMicrosecondsNow.
 	statSweepCount := statMarkCount := statMkFwdCount := statCompMoveCount := 0.
 	self clearRootsTable.
+	self initWeakTableForIncrementalGC: false.
 	youngStart := self startOfMemory.  "process all of memory"
 	self markPhase: true.
 	"Sweep phase returns the number of survivors.
@@ -1003,11 +1004,10 @@ NewObjectMemory >> incrementalGC [
 	"incremental GC and compaction"
 
 	gcStartUsecs := self ioUTCMicrosecondsNow.
-	weakRootCount := 0.
 	statSweepCount := statMarkCount := statMkFwdCount := statCompMoveCount := 0.
+	self initWeakTableForIncrementalGC: true.
 	self markPhase: false.
-	weakRootCount <= WeakRootTableSize ifFalse:
-		[self error: 'weakRoots table overflow'].
+	self assert: weakRootCount <= WeakRootTableSize.
 	1 to: weakRootCount do:
 		[:i| self finalizeReference: (weakRoots at: i)].
 	survivorCount := self sweepPhase.
@@ -1278,10 +1278,10 @@ NewObjectMemory >> lastPointerOf: oop recordWeakRoot: recordWeakRoot [ "<Boolean
 	fmt <= 4 ifTrue:
 		[fmt >= 3 ifTrue:
 			[fmt = 4 ifTrue:
-				[recordWeakRoot ifTrue:
+				[(recordWeakRoot and: [weakRootCount >= 0]) ifTrue:
 					["And remember as weak root"
-					 weakRootCount := weakRootCount + 1.
-					 self assert: weakRootCount <= WeakRootTableSize.
+					 (weakRootCount := weakRootCount + 1) <= WeakRootTableSize ifFalse:
+						[self error: 'weakRoots table overflow'].
 					 weakRoots at: weakRootCount put: oop].
 				"Do not trace the object's indexed fields if it's a weak class"
 				^(self nonWeakFieldsOf: oop) << ShiftForWord].
