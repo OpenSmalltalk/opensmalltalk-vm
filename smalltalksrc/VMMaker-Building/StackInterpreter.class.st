@@ -6414,7 +6414,7 @@ StackInterpreter >> mapVMRegisters [
 	during garbage collection or a become: operation."
 	"Assume: All traced variables contain valid oops."
 	instructionPointer := instructionPointer - method. "*rel to method"
-	self setMethod: (objectMemory remap: method).
+	method := (objectMemory remap: method).
 	instructionPointer := instructionPointer + method. "*rel to method"
 	(objectMemory isIntegerObject: messageSelector) ifFalse:
 		[messageSelector := objectMemory remap: messageSelector].

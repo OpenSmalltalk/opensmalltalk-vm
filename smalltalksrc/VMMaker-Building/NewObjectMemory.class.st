@@ -1006,7 +1006,8 @@ NewObjectMemory >> incrementalGC [
 	weakRootCount := 0.
 	statSweepCount := statMarkCount := statMkFwdCount := statCompMoveCount := 0.
 	self markPhase: false.
-	self assert: weakRootCount <= WeakRootTableSize.
+	weakRootCount <= WeakRootTableSize ifFalse:
+		[self error: 'weakRoots table overflow'].
 	1 to: weakRootCount do:
 		[:i| self finalizeReference: (weakRoots at: i)].
 	survivorCount := self sweepPhase.
