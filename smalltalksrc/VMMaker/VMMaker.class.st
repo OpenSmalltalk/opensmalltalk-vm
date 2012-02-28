@@ -267,6 +267,106 @@ VMMaker class >> generate: interpreterClass with: optionsPairsArray to: srcDirNa
 	(self makerFor: interpreterClass and: nil with: optionsPairsArray to: srcDirName platformDir: platDirName including: inclusions) generateEntire
 ]
 
+{ #category : #configurations }
+VMMaker class >> generateConfiguration [
+	"VMMaker generateConfiguration"
+	| selectors |
+	selectors := ((self class organization listAtCategoryNamed: (self class whichCategoryIncludesSelector: thisContext selector)) copyWithout: thisContext selector) sort.
+	(UIManager default
+			chooseFrom: (selectors collect:
+							[:sel| (sel piecesCutWhere: [:a :b| a isLowercase and: [b isUppercase]]) allButFirst
+									fold: [:a :b| a, ' ', b]])
+			values: selectors) ifNotNil:
+		[:choice|
+		self perform: choice]
+]
+
+{ #category : #configurations }
+VMMaker class >> generateNewspeakCogVM [
+	^VMMaker
+		generate: CoInterpreter
+		and: StackToRegisterMappingCogit"Cogit chooseCogitClass"
+		with: #(NewspeakVM true)
+		to: (FileDirectory default pathFromURI: 'oscogvm/nscogsrc')
+		platformDir: (FileDirectory default pathFromURI: '../Newspeak/newclosurevm/platforms')
+		including:#(	AsynchFilePlugin BMPReadWriterPlugin BalloonEnginePlugin BitBltSimulation DSAPlugin DropPlugin
+					FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin InflatePlugin JPEGReadWriter2Plugin
+					JPEGReaderPlugin LargeIntegersPlugin Matrix2x3Plugin MiscPrimitivePlugin NewsqueakIA32ABIPlugin
+					RePlugin SecurityPlugin SocketPlugin SoundPlugin SurfacePlugin ThreadedIA32FFIPlugin
+					UUIDPlugin UnixOSProcessPlugin VMProfileMacSupportPlugin Win32OSProcessPlugin)
+]
+
+{ #category : #configurations }
+VMMaker class >> generateNewspeakInterpreterVM [
+	^VMMaker
+		generate: NewspeakInterpreter
+		to: (FileDirectory default pathFromURI: 'oscogvm/nssrc')
+		platformDir: (FileDirectory default pathFromURI: '../Newspeak/newclosurevm/platforms')
+		including:#(	AsynchFilePlugin BMPReadWriterPlugin BalloonEnginePlugin BitBltSimulation DSAPlugin DropPlugin
+					FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin InflatePlugin JPEGReadWriter2Plugin
+					JPEGReaderPlugin LargeIntegersPlugin Matrix2x3Plugin MiscPrimitivePlugin NewsqueakIA32ABIPlugin
+					RePlugin SecurityPlugin SocketPlugin SoundPlugin SurfacePlugin UUIDPlugin UnixOSProcessPlugin
+					VMProfileMacSupportPlugin Win32OSProcessPlugin)
+]
+
+{ #category : #configurations }
+VMMaker class >> generateNewspeakStackVM [
+	^VMMaker
+		generate: StackInterpreter
+		with: #(NewspeakVM true)
+		to: (FileDirectory default pathFromURI: 'oscogvm/nsstacksrc')
+		platformDir: (FileDirectory default pathFromURI: '../Newspeak/newclosurevm/platforms')
+		including:#(	AsynchFilePlugin BMPReadWriterPlugin BalloonEnginePlugin BitBltSimulation DSAPlugin DropPlugin
+					FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin InflatePlugin JPEGReadWriter2Plugin
+					JPEGReaderPlugin LargeIntegersPlugin Matrix2x3Plugin MiscPrimitivePlugin NewsqueakIA32ABIPlugin
+					RePlugin SecurityPlugin SocketPlugin SoundPlugin SurfacePlugin UUIDPlugin UnixOSProcessPlugin
+					VMProfileMacSupportPlugin Win32OSProcessPlugin)
+]
+
+{ #category : #configurations }
+VMMaker class >> generateSqueakCogSistaVM [
+	^VMMaker
+		generate: (Smalltalk at: ([:choices| choices at: (UIManager default chooseFrom: choices) ifAbsent: [^self]]
+									value: #(CoInterpreter CoInterpreterMT)))
+		and: SistaStackToRegisterMappingCogit
+		to: (FileDirectory default pathFromURI: 'cogvm/sistasrc')
+		platformDir: (FileDirectory default pathFromURI: 'cogvm/platforms')
+		excluding:#(BrokenPlugin DShowVideoDecoderPlugin NewsqueakIA32ABIPlugin NewsqueakIA32ABIPluginAttic
+					CroquetPlugin HostWindowPlugin SoundPlugin
+					QuicktimePlugin QVideoCodecPlugin QwaqMediaPlugin SlangTestPlugin TestOSAPlugin
+					FFIPlugin ThreadedARMFFIPlugin ThreadedFFIPlugin ThreadedPPCBEFFIPlugin
+					ReentrantARMFFIPlugin ReentrantFFIPlugin ReentrantIA32FFIPlugin ReentrantPPCBEFFIPlugin)
+]
+
+{ #category : #configurations }
+VMMaker class >> generateSqueakCogVM [
+	^VMMaker
+		generate: (Smalltalk at: ([:choices| choices at: (UIManager default chooseFrom: choices) ifAbsent: [^self]]
+									value: #(CoInterpreter CoInterpreterMT)))
+		and: StackToRegisterMappingCogit
+		to: (FileDirectory default pathFromURI: 'oscogvm/src')
+		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
+		including:#(	ADPCMCodecPlugin AsynchFilePlugin BalloonEnginePlugin B3DAcceleratorPlugin
+					BMPReadWriterPlugin BitBltSimulation BochsIA32Plugin CroquetPlugin DSAPlugin
+					DeflatePlugin DropPlugin FT2Plugin FFTPlugin FileCopyPlugin FilePlugin FloatArrayPlugin
+					FloatMathPlugin GeniePlugin HostWindowPlugin IA32ABIPlugin InternetConfigPlugin
+					JPEGReadWriter2Plugin JPEGReaderPlugin JoystickTabletPlugin KlattSynthesizerPlugin
+					LargeIntegersPlugin LocalePlugin MIDIPlugin MacMenubarPlugin Matrix2x3Plugin
+					MiscPrimitivePlugin Mpeg3Plugin QuicktimePlugin RePlugin SecurityPlugin SerialPlugin
+					SocketPlugin SoundCodecPlugin SoundGenerationPlugin SoundPlugin ThreadedIA32FFIPlugin
+					StarSqueakPlugin UUIDPlugin UnixOSProcessPlugin Win32OSProcessPlugin VMProfileMacSupportPlugin)
+]
+
+{ #category : #configurations }
+VMMaker class >> generateSqueakStackVM [
+	"No primitives since we can use those for the Cog VM"
+	^VMMaker
+		generate: StackInterpreter
+		to: (FileDirectory default pathFromURI: 'oscogvm/stacksrc')
+		platformDir: (FileDirectory default pathFromURI: 'cogvm/platforms')
+		excluding: (InterpreterPlugin withAllSubclasses collect: [:ea| ea name])
+]
+
 { #category : #'version testing' }
 VMMaker class >> headerNotice [
 "return a string to be put at the front of generated code files"
