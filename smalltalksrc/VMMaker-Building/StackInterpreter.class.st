@@ -2795,6 +2795,36 @@ StackInterpreter >> checkLogIntegrity [
 	^true
 ]
 
+{ #category : #'debug support' }
+StackInterpreter >> checkOopHasOkayClass: oop [
+	"Attempt to verify that the given oop has a reasonable behavior. The class must be a valid, non-integer oop and must not be nilObj. It must be a pointers object with three or more fields. Finally, the instance specification field of the behavior must match that of the instance. If OK answer true.  If  not, print reason and answer false."
+
+	<api>
+	<var: #oop type: #usqInt>
+	| oopClass formatMask behaviorFormatBits oopFormatBits |
+	<var: #oopClass type: #usqInt>
+
+	(objectMemory checkOkayOop: oop) ifFalse:
+		[^false].
+	oopClass := self cCoerce: (objectMemory fetchClassOf: oop) to: #usqInt.
+
+	(objectMemory isIntegerObject: oopClass) ifTrue:
+		[self print: 'a SmallInteger is not a valid class or behavior'; cr. ^false].
+	(objectMemory okayOop: oopClass) ifFalse:
+		[self print: 'class oop is not ok'; cr. ^false].
+	((objectMemory isPointers: oopClass) and: [(objectMemory lengthOf: oopClass) >= 3]) ifFalse:
+		[self print: 'a class (behavior) must be a pointers object of size >= 3'; cr. ^false].
+	formatMask := (objectMemory isBytes: oop)
+						ifTrue: [16rC00]  "ignore extra bytes size bits"
+						ifFalse: [16rF00].
+
+	behaviorFormatBits := (objectMemory formatOfClass: oopClass) bitAnd: formatMask.
+	oopFormatBits := (objectMemory baseHeader: oop) bitAnd: formatMask.
+	behaviorFormatBits = oopFormatBits ifFalse:
+		[self print: 'object and its class (behavior) formats differ'; cr. ^false].
+	^true
+]
+
 { #category : #'process primitive support' }
 StackInterpreter >> checkProfileTick: aPrimitiveMethod [
 	"Check if the profile timer has expired and if so take a sample.
@@ -4236,9 +4266,13 @@ StackInterpreter >> findFrameAbove: theFP inPage: thePage [
 StackInterpreter >> findHomeForContext: aContext [
 	| closureOrNil |
 	<inline: false>
+	(self isContext: aContext) ifFalse:
+		[^nil].
 	closureOrNil := objectMemory fetchPointer: ClosureIndex ofObject: aContext.
 	closureOrNil = objectMemory nilObject ifTrue:
 		[^aContext].
+	(objectMemory fetchClassOf: closureOrNil) ~= (objectMemory splObj: ClassBlockClosure) ifTrue:
+		[^nil].
 	^self findHomeForContext: (objectMemory fetchPointer: ClosureOuterContextIndex ofObject: closureOrNil)
 ]
 
@@ -4730,28 +4764,27 @@ StackInterpreter >> frameStackedReceiver: theFP numArgs: numArgs [
 	 diagram in StackInterpreter class>>initializeFrameIndices."
 	<inline: true>
 	<var: #theFP type: #'char *'>
-	^stackPages longAt: theFP + FoxCallerSavedIP + BytesPerWord + (numArgs << ShiftForWord)
+	^stackPages longAt: theFP + (self frameStackedReceiverOffsetNumArgs: numArgs)
 ]
 
 { #category : #'frame access' }
 StackInterpreter >> frameStackedReceiverOffset: theFP [
-	"Answer the offset in bytes from the a frame pointer to its stacked receiver.
+	"Answer the offset in bytes from the the frame pointer to its stacked receiver.
 	 The receiver of a message send or the closure of a block activation is
 	 always on the stack above any arguments and the frame itself.  See the
 	 diagram in StackInterpreter class>>initializeFrameIndices."
 	<inline: true>
 	<var: #theFP type: #'char *'>
-	^FoxCallerSavedIP + BytesPerWord + ((self frameNumArgs: theFP) << ShiftForWord)
+	^self frameStackedReceiverOffsetNumArgs: (self frameNumArgs: theFP)
 ]
 
 { #category : #'frame access' }
-StackInterpreter >> frameStackedReceiverOffset: theFP numArgs: numArgs [
-	"Answer the offset in bytes from the a frame pointer to its stacked receiver.
-	 The receiver of a message send or the closure of a block activation is
-	 always on the stack above any arguments and the frame itself.  See the
-	 diagram in StackInterpreter class>>initializeFrameIndices."
+StackInterpreter >> frameStackedReceiverOffsetNumArgs: numArgs [
+	"Answer the offset in bytes from the a frame pointer to its stacked receiver,
+	 given the argument count.  The receiver of a message send or the closure of
+	 a block activation is always on the stack above any arguments and the frame
+	 itself.  See the diagram in StackInterpreter class>>initializeFrameIndices."
 	<inline: true>
-	<var: #theFP type: #'char *'>
 	^FoxCallerSavedIP + BytesPerWord + (numArgs << ShiftForWord)
 ]
 
@@ -7870,15 +7903,23 @@ StackInterpreter >> printFrame: theFP WithSP: theSP [
 
 { #category : #'debug printing' }
 StackInterpreter >> printFrameAndCallers: theFP SP: theSP [
+	self printFrameAndCallers: theFP SP: theSP short: false
+]
+
+{ #category : #'debug printing' }
+StackInterpreter >> printFrameAndCallers: theFP SP: theSP short: printShort [
 	<inline: false>
 	<var: #theFP type: #'char *'>
 	<var: #theSP type: #'char *'>
 	(stackPages couldBeFramePointer: theFP) ifFalse: [^nil].
 	(self isBaseFrame: theFP) ifFalse:
 		[self printFrameAndCallers: (self frameCallerFP: theFP)
-			SP: (self frameCallerSP: theFP)].
+			SP: (self frameCallerSP: theFP)
+			short: printShort].
 	self cr.
-	self printFrame: theFP WithSP: theSP
+	printShort
+		ifTrue: [self shortPrintFrame: theFP]
+		ifFalse: [self printFrame: theFP WithSP: theSP]
 ]
 
 { #category : #'debug printing' }
@@ -7965,9 +8006,10 @@ StackInterpreter >> printFrameThing: name at: address [
 
 { #category : #'debug printing' }
 StackInterpreter >> printFramesInPage: thePage [
+	<export: true> "use export: not api, so it won't be written to cointerp.h. cogit.c is unaware of StackPage"
 	<inline: false>
 	<var: #thePage type: #'StackPage *'>
-	self printFrameAndCallers: thePage headFP SP: thePage headSP
+	self printFrameAndCallers: thePage headFP SP: thePage headSP short: false
 ]
 
 { #category : #'debug printing' }
@@ -9398,13 +9440,12 @@ StackInterpreter >> shortConditionalJump [
 
 { #category : #'debug printing' }
 StackInterpreter >> shortPrintContext: aContext [
-	| home theFP |
+	| theFP |
 	<inline: false>
 	<var: #theFP type: #'char *'>
 	(self isContext: aContext) ifFalse:
 		[self printHex: aContext; print: ' is not a context'; cr.
 		^nil].
-	home := self findHomeForContext: aContext.
 	self printHex: aContext.
 	(self isMarriedOrWidowedContext: aContext)
 		ifTrue: [(self checkIsStillMarriedContext: aContext currentFP: framePointer)
@@ -9416,10 +9457,16 @@ StackInterpreter >> shortPrintContext: aContext [
 					ifFalse:
 						[self print: ' w ']]
 		ifFalse: [self print: ' s '].
-	self printActivationNameFor: (objectMemory fetchPointer: MethodIndex ofObject: home)
-		receiver: (objectMemory fetchPointer: ReceiverIndex ofObject: home)
+	(self findHomeForContext: aContext)
+		ifNil: [self print: ' BOGUS CONTEXT (can''t determine home)']
+		ifNotNil:
+			[:home|
+			self printActivationNameFor: (objectMemory fetchPointer: MethodIndex ofObject: aContext)
+		receiver: (home isNil
+					ifTrue: [objectMemory nilObject]
+					ifFalse: [objectMemory fetchPointer: ReceiverIndex ofObject: home])
 		isBlock: home ~= aContext
-		firstTemporary: (objectMemory fetchPointer: 0 + CtxtTempFrameStart ofObject: home).
+		firstTemporary: (objectMemory fetchPointer: 0 + CtxtTempFrameStart ofObject: home)].
 	self cr
 ]
 
@@ -9469,9 +9516,10 @@ StackInterpreter >> shortPrintFramesInCurrentPage [
 
 { #category : #'debug printing' }
 StackInterpreter >> shortPrintFramesInPage: thePage [
+	<export: true> "use export: not api, so it won't be written to cointerp.h. cogit.c is unaware of StackPage"
 	<inline: false>
 	<var: #thePage type: #'StackPage *'>
-	self shortPrintFrameAndCallers: thePage headFP
+	self printFrameAndCallers: thePage headFP SP: thePage headSP short: true
 ]
 
 { #category : #'debug printing' }

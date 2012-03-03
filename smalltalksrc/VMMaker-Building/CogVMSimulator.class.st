@@ -273,7 +273,7 @@ CogVMSimulator >> ceContext: aOnceMarriedContext instVar: slotIndex value: anOop
 
 { #category : #trampolines }
 CogVMSimulator >> ceMNUFromPICMNUMethod: aMethodObj receiver: rcvr [
-	self halt.
+	"self halt."
 	^super ceMNUFromPICMNUMethod: aMethodObj receiver: rcvr
 ]
 
@@ -2552,11 +2552,6 @@ CogVMSimulator >> print: it [
 CogVMSimulator >> printChar: aByte [
 
 	traceOn ifTrue: [ transcript nextPut: aByte asCharacter ].
-]
-
-{ #category : #'debug printing' }
-CogVMSimulator >> printCurrPageFrames [
-	self printFrameAndCallers: localFP SP: localSP
 ]
 
 { #category : #'debug printing' }
