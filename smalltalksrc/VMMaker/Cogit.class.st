@@ -2647,7 +2647,7 @@ Cogit >> closedPICRefersToUnmarkedObject: cPIC [
 			[^true].
 		object := backEnd literalBeforeFollowingAddress: pc - offsetToLiteral.
 		((objectRepresentation couldBeObject: object)
-		 and: [(coInterpreter isMarked: object) not]) ifTrue:
+		 and: [(objectMemory isMarked: object) not]) ifTrue:
 			[^true].
 		entryPoint := backEnd jumpLongTargetBeforeFollowingAddress: pc.
 		"Find target from jump.  Ignore jumps to the interpret and MNU calls within this PIC"
