@@ -1562,11 +1562,6 @@ StackInterpreterSimulator >> printChar: aByte [
 ]
 
 { #category : #'debug printing' }
-StackInterpreterSimulator >> printCurrPageFrames [
-	self printFrameAndCallers: localFP SP: localSP
-]
-
-{ #category : #'debug printing' }
 StackInterpreterSimulator >> printCurrentBytecodeOn: aStream [
 	| code |
 	code := currentBytecode radix: 16.

@@ -1351,7 +1351,7 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 							startingAtBehavior: (objectMemory fetchClassOf: rcvr).
 	self assert: (objectMemory lengthOf: mixinApplication) > (InstanceSpecificationIndex + 1).
 	lkupClass := self superclassOf: mixinApplication.
-	class := self fetchClassOf: rcvr.
+	class := objectMemory fetchClassOf: rcvr.
 	canLinkCacheTag := (objectMemory isYoungObject: class) not or: [cogit canLinkToYoungClasses].
 	"We set the messageSelector and lkupClass for executeMethod below since things
 	 like the at cache read messageSelector and lkupClass and so they cannot be left stale."

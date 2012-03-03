@@ -1123,6 +1123,68 @@ ObjectMemory >> checkHeapIntegrity [
 	^ok
 ]
 
+{ #category : #'debug support' }
+ObjectMemory >> checkOkayOop: oop [
+	"Verify that the given oop is legitimate. Check address, header, and size but not class.
+	 Answer true if OK.  Otherwise print reason and answer false."
+
+	<api>
+	<var: #oop type: #usqInt>
+	| sz type fmt unusedBit |
+
+	"address and size checks"
+	(self isIntegerObject: oop) ifTrue: [ ^true ].
+	(oop >= self startOfMemory and: [oop < endOfMemory])
+		ifFalse: [ self print: 'oop is not a valid address'; cr. ^false ].
+	((oop \\ BytesPerWord) = 0)
+		ifFalse: [ self print: 'oop is not a word-aligned address'; cr. ^false ].
+	sz := self sizeBitsOf: oop.
+	(oop + sz) < endOfMemory
+		ifFalse: [ self print: 'oop size would make it extend beyond the end of memory'; cr. ^false ].
+
+	"header type checks"
+	type := self headerType: oop.
+	type = HeaderTypeFree
+		ifTrue:  [ self print: 'oop is a free chunk, not an object'; cr. ^false ].
+	type = HeaderTypeShort ifTrue: [
+		(self compactClassIndexOf: oop) = 0
+			ifTrue:  [ self print: 'cannot have zero compact class field in a short header'; cr. ^false ].
+	].
+	type = HeaderTypeClass ifTrue: [
+		((oop >= BytesPerWord) and: [(self headerType: oop - BytesPerWord) = type])
+			ifFalse: [ self print: 'class header word has wrong type'; cr. ^false ].
+	].
+	type = HeaderTypeSizeAndClass ifTrue: [
+		((oop >= (BytesPerWord*2)) and:
+		 [(self headerType: oop - (BytesPerWord*2)) = type and:
+		 [(self headerType: oop - BytesPerWord) = type]])
+			ifFalse: [ self print: 'class header word has wrong type'; cr. ^false ].
+	].
+
+	"format check"
+	fmt := self formatOf: oop.
+	((fmt = 5) | (fmt = 7))
+		ifTrue:  [ self print: 'oop has an unknown format type'; cr. ^false ].
+
+	"mark and root bit checks"
+	unusedBit := 16r20000000.
+	BytesPerWord = 8
+		ifTrue:
+			[unusedBit := unusedBit << 16.
+			 unusedBit := unusedBit << 16].
+	((self longAt: oop) bitAnd: unusedBit) = 0
+		ifFalse: [ self print: 'unused header bit 30 is set; should be zero'; cr. ^false ].
+"xxx
+	((self longAt: oop) bitAnd: MarkBit) = 0
+		ifFalse: [ self print: 'mark bit should not be set except during GC' ].
+xxx"
+	(((self longAt: oop) bitAnd: RootBit) = 1 and:
+	 [oop >= youngStart])
+		ifTrue: [ self print: 'root bit is set in a young object'; cr. ^false ].
+	^true
+
+]
+
 { #category : #'memory access' }
 ObjectMemory >> checkOopIntegrity: obj named: name [
 	<inline: false>
@@ -3309,12 +3371,12 @@ ObjectMemory >> okayOop: signedOop [
 	"Verify that the given oop is legitimate. Check address, header, and size but not class."
 
 	| sz type fmt unusedBit oop |
-	<var: #oop type: 'usqInt'>
-	oop := self cCoerce: signedOop to: 'usqInt'.
+	<var: #oop type: #usqInt>
+	oop := self cCoerce: signedOop to: #usqInt.
 
 	"address and size checks"
 	(self isIntegerObject: oop) ifTrue: [ ^true ].
-	(oop < endOfMemory)
+	(oop >= self startOfMemory and: [oop < endOfMemory])
 		ifFalse: [ self error: 'oop is not a valid address'. ^false ].
 	((oop \\ BytesPerWord) = 0)
 		ifFalse: [ self error: 'oop is not a word-aligned address'. ^false ].
