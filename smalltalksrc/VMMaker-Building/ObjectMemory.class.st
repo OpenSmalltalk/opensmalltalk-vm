@@ -411,7 +411,8 @@ ObjectMemory class >> initializeSpecialObjectIndices [
 ObjectMemory class >> initializeWithOptions: optionsDictionary [
 	"ObjectMemory initializeWithOptions: Dictionary new"
 
-	self initBytesPerWord: (optionsDictionary at: #BytesPerWord ifAbsent: [4])..
+	self initBytesPerWord: (optionsDictionary at: #BytesPerWord ifAbsent: [4]).
+	BytesPerOop := optionsDictionary at: #BytesPerOop ifAbsent: [BytesPerWord].
 
 	"Translation flags (booleans that control code generation via conditional translation):"
 	"generate assertion checks"
@@ -3568,7 +3569,7 @@ ObjectMemory >> primitiveFailCodeAfterCleanup: outPointerArray [
 	^PrimErrGenericFailure
 ]
 
-{ #category : #'memory access' }
+{ #category : #'debug printing' }
 ObjectMemory >> printInstancesOf: aClassOop [
 	"Scan the heap printing the oops of any and all objects that are instances of aClassOop"
 	| oop |
@@ -3580,7 +3581,7 @@ ObjectMemory >> printInstancesOf: aClassOop [
 		 oop := self accessibleObjectAfter: oop]
 ]
 
-{ #category : #'memory access' }
+{ #category : #'debug printing' }
 ObjectMemory >> printMethodReferencesTo: anOop [
 	"Scan the heap printing the oops of any and all objects that refer to anOop"
 	| oop i |
@@ -3597,7 +3598,7 @@ ObjectMemory >> printMethodReferencesTo: anOop [
 		 oop := self accessibleObjectAfter: oop]
 ]
 
-{ #category : #'memory access' }
+{ #category : #'debug printing' }
 ObjectMemory >> printReferencesTo: anOop [
 	"Scan the heap printing the oops of any and all objects that refer to anOop"
 	| oop i |

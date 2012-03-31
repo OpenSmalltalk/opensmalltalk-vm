@@ -270,8 +270,15 @@ VMMaker class >> generate: interpreterClass with: optionsPairsArray to: srcDirNa
 { #category : #configurations }
 VMMaker class >> generateConfiguration [
 	"VMMaker generateConfiguration"
-	| selectors |
-	selectors := ((self class organization listAtCategoryNamed: (self class whichCategoryIncludesSelector: thisContext selector)) copyWithout: thisContext selector) sort.
+	| configCategoryName selectors |
+	configCategoryName := self class whichCategoryIncludesSelector: thisContext selector.
+	selectors := Set new.
+	self class organization categories do:
+		[:cat|
+		(cat endsWith: configCategoryName) ifTrue:
+			[selectors addAll: (self class organization listAtCategoryNamed: cat)]].
+	selectors remove: thisContext selector.
+	selectors := selectors asArray sort.
 	(UIManager default
 			chooseFrom: (selectors collect:
 							[:sel| (sel piecesCutWhere: [:a :b| a isLowercase and: [b isUppercase]]) allButFirst
