@@ -778,7 +778,7 @@ Interpreter class >> initializeWithOptions: optionsDictionary [
 	"Interpreter initializeWithOptions: Dictionary new"
 
 	super initializeWithOptions: optionsDictionary.  "initialize ObjectMemory constants"
-	self initializeMiscConstants. "must preceed other initialization."
+	self initializeMiscConstantsWith: optionsDictionary. "must preceed other initialization."
 	self initializeAssociationIndex.
 	self initializeBytecodeTable.
 	self initializeCaches.
