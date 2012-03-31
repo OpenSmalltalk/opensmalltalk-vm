@@ -918,14 +918,18 @@ CCodeGenerator >> emitGlobalCVariablesOn: aStream [
 		[:var | | varString decl |
 		varString := var asString.
 		decl := variableDeclarations at: varString ifAbsent: ['sqInt ' , varString].
-		((decl includesSubString: ' private ')
-		  or: [decl beginsWith: 'static']) ifFalse: "work-around hack to prevent localization of variables only referenced once."
-			[(decl includes: $=) ifTrue:
-				[decl := decl copyFrom: 1 to: (decl indexOf: $=) - 1].
-			aStream
-				nextPutAll: decl;
-				nextPut: $;;
-				cr]].
+		decl first == $# "support cgen var: #bytecodeSetSelector declareC: '#define bytecodeSetSelector 0' hack"
+			ifTrue:
+				[aStream nextPutAll: decl; cr]
+			ifFalse:
+				[((decl includesSubString: ' private ')
+				  or: [decl beginsWith: 'static']) ifFalse: "work-around hack to prevent localization of variables only referenced once."
+					[(decl includes: $=) ifTrue:
+						[decl := decl copyFrom: 1 to: (decl indexOf: $=) - 1].
+					aStream
+						nextPutAll: decl;
+						nextPut: $;;
+						cr]]].
 	aStream cr
 ]
 

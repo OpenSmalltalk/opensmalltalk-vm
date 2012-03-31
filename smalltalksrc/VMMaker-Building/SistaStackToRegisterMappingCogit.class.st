@@ -337,14 +337,14 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 
 { #category : #initialization }
 SistaStackToRegisterMappingCogit >> genMustBeBooleanTrampolineFor: boolean called: trampolineName [
-	"THis can be entered in one of two states, depending on SendNumArgsReg.
-	 If SendNumArgsReg is non-zero then this has been entered via the initial test of
-	 the counted in the jump executed count.  In this case TempReg contains the
-	 boolean to be tested and should not be offset, and ceCounterTripped should be
-	 invoked with the unoffset TempReg.
-	 If SendNumArgsReg is zero then this has been entered for must-be-boolean processing.
-	 TempReg has been offset by boolean and must be corrected and ceSendMustBeBoolean:
-	 invoked with the offset value."
+	"This can be entered in one of two states, depending on SendNumArgsReg. See
+	 e.g. genJumpIf:to:.  If SendNumArgsReg is non-zero then this has been entered via
+	 the initial test of the counter in the jump executed count (i.e. the counter has
+	 tripped).  In this case TempReg contains the boolean to be tested and should not
+	 be offset, and ceCounterTripped should be invoked with the unoffset TempReg.
+	 If SendNumArgsReg is zero then this has been entered for must-be-boolean
+	 processing. TempReg has been offset by boolean and must be corrected and
+	 ceSendMustBeBoolean: invoked with the corrected value."
 	<var: #trampolineName type: #'char *'>
 	| jumpMBB |
 	<var: #jumpMBB type: #'AbstractInstruction *'>

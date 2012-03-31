@@ -1531,6 +1531,34 @@ NewObjectMemory >> loadImageSegmentFrom: segmentWordArray outPointers: outPointe
 	^self oopFromChunk: segmentWordArray + BaseHeaderSize + BytesPerWord
 ]
 
+{ #category : #'debug printing' }
+NewObjectMemory >> longPrintReferencesTo: anOop [
+	"Scan the heap long printing the oops of any and all objects that refer to anOop"
+	| oop i prntObj |
+	<api>
+	prntObj := false.
+	oop := self firstAccessibleObject.
+	[oop = nil] whileFalse:
+		[((self isPointers: oop) or: [self isCompiledMethod: oop]) ifTrue:
+			[(self isCompiledMethod: oop)
+				ifTrue:
+					[i := (self literalCountOf: oop) - 1]
+				ifFalse:
+					[(self isContext: oop)
+						ifTrue: [i := CtxtTempFrameStart + (self fetchStackPointerOf: oop) - 1]
+						ifFalse: [i := (self lengthOf: oop) - 1]].
+			[i >= 0] whileTrue:
+				[anOop = (self fetchPointer: i ofObject: oop) ifTrue:
+					[self printHex: oop; print: ' @ '; printNum: i; cr.
+					 prntObj := true.
+					 i := 0].
+				 i := i - 1].
+			prntObj ifTrue:
+				[prntObj := false.
+				 coInterpreter longPrintOop: oop]].
+		 oop := self accessibleObjectAfter: oop]
+]
+
 { #category : #simulation }
 NewObjectMemory >> lookupAddress: address [
 	"If address appears to be that of a Symbol or a few well-known objects (such as classes) answer it, otherwise answer nil.
