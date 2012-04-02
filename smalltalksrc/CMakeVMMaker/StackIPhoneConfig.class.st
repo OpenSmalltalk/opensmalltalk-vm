@@ -44,7 +44,7 @@ StackIPhoneConfig >> commonCompilerFlags [
 	"Common compiler flags"
 	^{
 	"'-miphoneos-version-min=4.3'. "
-	'-isysroot /Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS', self sdkVersion, '.sdk'.
+	'-isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS', self sdkVersion, '.sdk'.
 	'-x objective-c'.
 	'-std=gnu99'.
 	'-falign-functions=16'.
@@ -83,6 +83,7 @@ StackIPhoneConfig >> configureIOSPlugin: maker [
 	maker 
 		addSources: #('sqTouch.m' ) 
 		prefixed: '${platformsDir}/iOS/vm/iPhone/plugins/IOSPlugin/'
+	 
 
 ]
 
@@ -100,7 +101,8 @@ StackIPhoneConfig >> defaultInternalPlugins [
 		BitBltSimulation 
 		DSAPlugin 
 		DeflatePlugin 
-		"DropPlugin" 
+		"DropPlugin"
+		LocalePlugin 
 		FFTPlugin 
 		FilePlugin 
 		FloatArrayPlugin 
@@ -112,7 +114,7 @@ StackIPhoneConfig >> defaultInternalPlugins [
 		MiscPrimitivePlugin 
 		"RePlugin" 
 		SecurityPlugin 
-		"SocketPlugin" 
+		"SocketPlugin"
 		SoundCodecPlugin 
 		SoundGenerationPlugin 
 		SoundPlugin
@@ -326,7 +328,7 @@ StackIPhoneConfig >> resourcesDir [
 
 { #category : #accessing }
 StackIPhoneConfig >> sdkVersion [ 
-	^'5.0'
+	^'5.1'
 ]
 
 { #category : #settings }
@@ -336,15 +338,13 @@ StackIPhoneConfig >> setCommonProperties: maker [
 	maker set: 'CMAKE_SYSTEM_PROCESSOR' to: 'arm'.
 
 	maker set: 'SDKVER' toString: self sdkVersion.
-	maker set: 'DEVROOT' toString: '/Developer/Platforms/iPhoneOS.platform/Developer'.
+	maker set: 'DEVROOT' toString: '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer'.
 	maker set: 'SDKROOT' toString: '${DEVROOT}/SDKs/iPhoneOS${SDKVER}.sdk'.
 
 	maker set: 'CMAKE_OSX_SYSROOT' to: 'iphoneos${SDKVER}'.
 		
 	maker set: 'CMAKE_C_COMPILER' to: '${DEVROOT}/usr/bin/llvm-gcc'.
 	maker set: 'CMAKE_CXX_COMPILER' to: '${DEVROOT}/usr/bin/llvm-g++'.
-	"maker set: 'CMAKE_C_COMPILER' to: 'gcc-4.2'.
-	maker set: 'CMAKE_CXX_COMPILER' to: 'g++-4.2'."
 		
 	maker set: 'CMAKE_FIND_ROOT_PATH' to: '"${SDKROOT}" "${DEVROOT}"'.
 	maker set: 'CMAKE_FIND_ROOT_PATH_MODE_PROGRAM' to: 'ONLY'.

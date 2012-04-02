@@ -171,11 +171,10 @@ CocoaIOSConfig >> configureJoystickTabletPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-CocoaIOSConfig >> configureLocalePlugin: maker [ 
-	"extra rules for LocalePlugin"
+CocoaIOSConfig >> configureLocalePlugin: maker [
+	maker addFrameworks: #('CoreFoundation').
+	maker addPlatformSources: #( 'sqIOSLocale.c' )	.
 
-	super configureLocalePlugin: maker.  
-	maker addPlatformSources: #( 'sqMacLocaleCarbon.c' )
 ]
 
 { #category : #'plugin extra rules' }
@@ -1065,7 +1064,7 @@ CocoaIOSConfig >> setExtraTargetProperties: maker [
 	| plist precompiledHeaders |
 
 	" generated and add Info.plist file "
-	plist := self plistFile.
+	plist := self plistFile.	
 
 	(maker buildDir forceNewFileNamed: 'Info.plist') 
 		nextPutAll: plist; 
@@ -1083,8 +1082,8 @@ CocoaIOSConfig >> setExtraTargetProperties: maker [
 	(maker buildDir forceNewFileNamed: precompiledHeaders) 
 		nextPutAll: self precompiledHeaders;
 		close.
-		
-	maker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/', precompiledHeaders.
+
+	maker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/', precompiledHeaders.	
 
 	"maker 
 		addXCodeProperty: 'GCC_ENABLE_SSE3_EXTENSIONS' value: 'YES';  
