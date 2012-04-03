@@ -148,7 +148,7 @@ sqInt sqFileAtEnd(SQFile *f) {
 	pentry(sqFileAtEnd);
 	if (f->isStdioStream)
 		return pexit(feof(getFile(f)));
-	return ftell(getFile(f)) == getSize(f);
+	return ftell(getFile(f)) >= getSize(f);
 }
 
 sqInt sqFileClose(SQFile *f) {
