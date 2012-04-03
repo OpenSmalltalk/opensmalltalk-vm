@@ -5843,8 +5843,10 @@ Cogit >> mapObjectReferencesInMachineCode: gcMode [
 { #category : #'garbage collection' }
 Cogit >> mapObjectReferencesInMachineCodeForBecome [
 	"Update all references to objects in machine code for a become.
-	 Unlike incrementalGC or fullGC a method that does not refer to young
-	 may refer to young as a result of the become operation."
+	 Unlike incrementalGC or fullGC a method that does not refer to young may
+	 refer to young as a result of the become operation.  Unlike incrementalGC
+	 or fullGC the reference from a Cog method to its methodObject *must not*
+	 change since the two are two halves of the same object."
 	| cogMethod hasYoungObj hasYoungObjPtr freedPIC |
 	<var: #cogMethod type: #'CogMethod *'>
 	hasYoungObj := false.
@@ -5872,7 +5874,6 @@ Cogit >> mapObjectReferencesInMachineCodeForBecome [
 						[hasYoungObj := true].
 					 cogMethod cmType = CMMethod ifTrue:
 						[self assert: cogMethod objectHeader = objectMemory nullHeaderForMachineCodeMethod.
-						 cogMethod methodObject: (objectRepresentation remapOop: cogMethod methodObject).
 						 self assert: ((coInterpreter rawHeaderOf: cogMethod methodObject) = cogMethod asInteger
 									or: [(self noAssertMethodClassAssociationOf: cogMethod methodObject)
 											= objectMemory nilObject]).
