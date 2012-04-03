@@ -10,14 +10,21 @@ case "$BIN" in
 /*) PLUGINS="$BIN";;
 *) PLUGINS="`pwd`/$BIN"
 esac
-# On some old linuxes there is a /lib/tls thread-local-storage version of the C
-# library which the VM may use and if so should take precedence over /lib libc.
+# On some linuxes there multiple versions of the C library.  If the image uses
+# libc (e.g. through the FFI) then it must use the same version that the VM uses
+# and so it should take precedence over /lib libc.  This is done by setting
+# LD_LIBRARY_PATH appropriately, based on ldd's idea of the libc use by the VM.
 case `/usr/bin/ldd "$BIN/squeak" | /bin/fgrep /libc. | sed 's/^.*=> //'` in
 /lib/libc*)					SVMLLP="/lib:/usr/lib";;
 /lib32/libc*)				SVMLLP="/lib32:/usr/lib32";;
 /lib64/libc*)				SVMLLP="/lib64:/usr/lib64";;
 /lib/tls/libc*)				SVMLLP="/lib/tls:/lib:/usr/lib/tls:/usr/lib";;
-/lib/i386-linux-gnu/libc*)	SVMLLP="/lib/i386-linux-gnu:/usr/lib/i386-linux-gnu";;
+/lib/i386-linux-gnu/libc*)	\
+	SVMLLP="/lib/i386-linux-gnu:/usr/lib/i386-linux-gnu";;
+/lib/tls/i686/cmov/libc*)	\
+	SVMLLP="/lib/tls/i686/cmov:/lib:/usr/lib/tls/i686/cmov:/usr/lib";;
+/lib/tls/i686/nosegneg/libc*)	\
+	SVMLLP="/lib/i686/nosegneg/tls:/lib:/usr/lib/i686/nosegneg/tls:/usr/lib";;
 *)	echo "can't infer base LD_LIBRARY_PATH. Aborting." 1>&2;
 	exit 1
 esac

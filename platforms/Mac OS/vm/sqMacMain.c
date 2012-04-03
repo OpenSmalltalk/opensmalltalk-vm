@@ -581,8 +581,10 @@ char * GetAttributeString(int id) {
             versionString = CFBundleGetValueForInfoDictionaryKey(mainBundle, CFSTR("CFBundleShortVersionString"));
             bzero(data,255);
             strcat(data,interpreterVersion);
-            strcat(data," ");
-            CFStringGetCString (versionString, data+strlen(data), 255-strlen(data), gCurrentVMEncoding);
+			if (versionString) {
+				strcat(data," ");
+				CFStringGetCString (versionString, data+strlen(data), 255-strlen(data), gCurrentVMEncoding);
+			}
             return data;            
         }
 
