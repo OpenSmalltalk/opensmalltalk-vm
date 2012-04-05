@@ -19,9 +19,13 @@ CMARCS="cogmtlinux.tgz	CogMT.app.tgz	cogmtwin.zip"
 NSARCS="Newspeak Virtual Machine-$TAG.dmg	nsvmlinux-$TAG.tgz	nsvm-$TAG.msi"
 NMARCS="Newspeak Virtual MachineMT-$TAG.dmg	nsvmmtlinux-$TAG.tgz	nsvmmt-$TAG.msi"
 if [ $# = 0 ]; then
-ARCHIVES="$CSARCS	$CMARCS		$NSARCS"
+	ARCHIVES="$CSARCS	$CMARCS		$NSARCS"
+	CheckDMG=1
+	CheckMSI=1
 else
-ARCHIVES=
+	ARCHIVES=
+	CheckDMG=
+	CheckMSI=
 	while [ -n "$1" ]; do
 		case $1 in
 		-r)		REV=$1;;
@@ -33,17 +37,39 @@ ARCHIVES=
 		-ctm)	ARCHIVES="$ARCHIVES	CogMT.app.tgz";;
 		-ctw)	ARCHIVES="$ARCHIVES	cogmtwin.zip";;
 		-nl)	ARCHIVES="$ARCHIVES	nsvmlinux-$TAG.tgz";;
-		-nm)	ARCHIVES="$ARCHIVES	Newspeak Virtual Machine-$TAG.dmg";;
-		-nw)	ARCHIVES="$ARCHIVES	nsvm-$TAG.msi";;
+		-nm)	ARCHIVES="$ARCHIVES	Newspeak Virtual Machine-$TAG.dmg"
+				CheckDMG=1;;
+		-nw)	ARCHIVES="$ARCHIVES	nsvm-$TAG.msi"
+				CheckMSI=1;;
 		-n)		ARCHIVES="$ARCHIVES		$NSARCS";;
 		-l)		ARCHIVES="$ARCHIVES	coglinux.tgz	cogmtlinux.tgz	nsvmlinux-$TAG.tgz";;
-		-m)		ARCHIVES="$ARCHIVES	Cog.app.tgz	CogMT.app.tgz	Newspeak Virtual Machine-$TAG.dmg";;
-		-w)		ARCHIVES="$ARCHIVES	cogwin.tgz	cogmtwin.zip	nsvm-$TAG.msi";;
+		-m)		ARCHIVES="$ARCHIVES	Cog.app.tgz	CogMT.app.tgz	Newspeak Virtual Machine-$TAG.dmg"
+				CheckDMG=1;;
+		-w)		ARCHIVES="$ARCHIVES	cogwin.tgz	cogmtwin.zip	nsvm-$TAG.msi"
+				CheckMSI=1;;
 		-?|-h)  echo usage: $0 [-l -m -w -cl -cm -cw -ctl -ctm -ctw -nl -nm -nw]; exit 0;;
 		*)	break
 		esac
 		shift
 	done
+fi
+if [ -n "$CheckDMG" -a ! -f "Newspeak Virtual Machine-$TAG.dmg" ]; then
+	NMID=nscogbuild/macbuild/installer
+	if [ -f "$NMID/Newspeak Virtual Machine-$TAG.dmg" ]; then
+		ln "$NMID/Newspeak Virtual Machine-$TAG.dmg" .
+	else
+		echo Newspeak Virtual Machine-$TAG.dmg is missing 1>&2
+		exit 1
+	fi
+fi
+if [ -n "$CheckMSI" -a ! -f nsvm-$TAG.msi ]; then
+	NWID=nscogbuild/cygwinbuild/installer
+	if [ -f "$NWID/nsvm-$TAG.msi" ]; then
+		ln "$NWID/nsvm-$TAG.msi" .
+	else
+		echo nsvm-$TAG.msi is missing 1>&2
+		exit 1
+	fi
 fi
 if [ ! -f README.$REV ]; then
 	cat <<END >README.$REV

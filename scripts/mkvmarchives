@@ -92,20 +92,6 @@ if [ -n "$CTW" ]; then
 	EXES="$EXES	cogmtwin/Croquet.exe"
 fi
 if [ -n "$NL" ]; then
-	if [ -f nsvmlinux/squeak ]; then
-		mv nsvmlinux/squeak nsvmlinux/nsvm
-		ex -u NONE "+g/squeak/s/squeak/nsvm/g" +w +q nsvmlinux/nsvm
-	fi
-	if [ -f nsvmlinux/bin/squeak ]; then
-		mv nsvmlinux/bin/squeak nsvmlinux/bin/nsvm
-		ex -u NONE "+g/squeak/s/squeak/nsvm/g" +w +q nsvmlinux/bin/nsvm
-	fi
-	test -d nsvmlinux/lib/squeak && mv nsvmlinux/lib/squeak nsvmlinux/lib/nsvm
-	LIBDIR="`echo nsvmlinux/lib/nsvm/[0-9.-]*`"
-	test -f $LIBDIR/squeak && mv $LIBDIR/squeak $LIBDIR/nsvm
-	rm -f nsvmlinux/lib/nsvm/npsqueak* $LIBDIR/npsqueak.so
-	ln ~/Squeak/SqueakV41.sources $LIBDIR
-
 	rm -rf nsvmlinux.tgz nsvmlinux-`date +%g.%U.$REV`.tgz
 	COPYFILE_DISABLE=1 tar czf nsvmlinux-`date +%g.%U.$REV`.tgz nsvmlinux
 	EXES="$EXES	$LIBDIR/nsvm"
@@ -122,7 +108,6 @@ if [ -n "$NW" ]; then
 	rm -rf nsvmwin/* nsvmwin.zip
 	ln $NSB/cygwinbuild/build/vm/{nsvm.exe,nsvm.map} nsvmwin
 	ln $NSB/cygwinbuild/build/vm/*.dll nsvmwin
-	tar czf Newspeak\ Virtual\ Machine.app.tgz Newspeak\ Virtual\ Machine.app
 	zip -vr nsvmwin.zip nsvmwin
 	EXES="$EXES	nsvmwin/nsvm.exe"
 fi
