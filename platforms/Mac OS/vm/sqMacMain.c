@@ -611,7 +611,7 @@ char * GetAttributeString(int id) {
 #endif
 
 	  if (id == 1009) /* source tree version info */
-		return sourceVersionString();
+		return sourceVersionString(' ');
 
 // 		return "Mac Carbon 3.8.18b4 29-May-08 >02DA4BFD-4050-4372-8DBB-9582DA7D0218<";
 // 		return "Mac Carbon 3.8.18b3 10-Apr-08 >DC0EAF5D-C46C-479D-B2A3-DBD4A2DF95A8<";
@@ -945,7 +945,7 @@ getVersionInfo(int verbose)
 #endif
   if (verbose)
     sprintf(info+strlen(info), "Revision: ");
-  sprintf(info+strlen(info), "%s\n", sourceVersionString());
+  sprintf(info+strlen(info), "%s\n", sourceVersionString('\n'));
   return info;
 }
 #if COGVM

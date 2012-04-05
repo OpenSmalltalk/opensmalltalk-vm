@@ -2793,7 +2793,7 @@ char * GetAttributeString(int id) {
 #endif
 
 	  case 1009: /* source tree version info */
-		return sourceVersionString();
+		return sourceVersionString(' ');
 
     /* Windows internals */
     case 10001: /* addl. hardware info */

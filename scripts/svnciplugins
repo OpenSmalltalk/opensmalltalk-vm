@@ -1,0 +1,6 @@
+#!/bin/sh
+# checkin script for subverison that serves to cause
+# platforms/Cross/plugins/sqPluginsSCCSVersion.h to be checked-in so that its version
+# info reflects that of the current check-in.
+svn propset checkindate "`date`" platforms/Cross/plugins/sqPluginsSCCSVersion.h
+svn ci platforms/Cross/plugins

@@ -481,7 +481,7 @@ GetAttributeString(sqInt id)
 #endif
 
 	  case 1009: /* source tree version info */
-		return sourceVersionString();
+		return sourceVersionString(' ');
 
       default:
 	if ((id - 2) < squeakArgCnt)
@@ -1506,7 +1506,7 @@ char *getVersionInfo(int verbose)
 #endif
   if (verbose)
     sprintf(info+strlen(info), "Revision: ");
-  sprintf(info+strlen(info), "%s\n", sourceVersionString());
+  sprintf(info+strlen(info), "%s\n", sourceVersionString('\n'));
   if (verbose)
     sprintf(info+strlen(info), "Build host: ");
   sprintf(info+strlen(info), "%s\n", ux_version);

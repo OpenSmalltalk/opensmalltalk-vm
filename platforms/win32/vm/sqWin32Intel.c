@@ -756,6 +756,58 @@ void gatherSystemInfo(void) {
   gdInfoString = _strdup(tmpString);
 }
 
+char *
+getVersionInfo(int verbose)
+{
+#if STACKVM
+  extern char *__interpBuildInfo;
+# define INTERP_BUILD __interpBuildInfo
+# if COGVM
+  extern char *__cogitBuildInfo;
+# endif
+#else
+# define INTERP_BUILD interpreterVersion
+#endif
+  char *info= (char *)malloc(4096);
+  info[0]= '\0';
+
+  sprintf(info+strlen(info), "%s\n", vmBuildString);
+  if (verbose)
+    sprintf(info+strlen(info), "Built from: ");
+  sprintf(info+strlen(info), "%s\n", INTERP_BUILD);
+#if COGVM
+  if (verbose)
+    sprintf(info+strlen(info), "With: ");
+  sprintf(info+strlen(info), "%s\n", GetAttributeString(1008)); /* __cogitBuildInfo */
+#endif
+  if (verbose)
+    sprintf(info+strlen(info), "Revision: ");
+  sprintf(info+strlen(info), "%s\n", sourceVersionString('\n'));
+  return info;
+}
+
+
+static void
+versionInfo(void)
+{
+#if 0
+	/* we could create a console but to version the non-consoel VM it is
+	 * sufficient to do e.g. Squeak.exe >foo; cat foo.  But feel free to
+	 * add the code if you have the energy ;)
+	 */
+	DWORD mode;
+	HANDLE stdouth = GetStdHandle(STD_OUTPUT_HANDLE);
+
+	if (GetConsoleMode(stdouth, &mode) != 0) {
+		char *vi = getVersionInfo(0);
+		WriteConsole(stdouth, vi, strlen(vi), 0, 0);
+	}
+	else
+#endif
+		printf("%s", getVersionInfo(0));
+	exit(0);
+}
+
 /****************************************************************************/
 /*                      Error handling                                      */
 /****************************************************************************/
@@ -855,7 +907,7 @@ extern char *__cogitBuildInfo;
     fprintf(f,"Cogit Build: %s\n", __cogitBuildInfo);
 # endif
 #endif
-    fprintf(f,"Source Version: %s\n", sourceVersionString());
+    fprintf(f,"Source Version: %s\n", sourceVersionString('\n'));
     fflush(f);
     fprintf(f,"\n"
 	    "Current byte code: %d\n"
@@ -1521,6 +1573,7 @@ parseVMArgument(int argc, char *argv[])
 	if      (!strcmp(argv[0], "-help"))		{ 
 		printUsage(1);
 		return 1; }
+	else if (!strcmp(argv[0], "-version"))	{ versionInfo();	return 1; }
 	else if (!strcmp(argv[0], "-headless")) { fHeadlessImage = true; return 1; }
 	else if (!strcmp(argv[0], "-headfull")) { fHeadlessImage = false; return 1;}
 #ifdef  VISTA_SECURITY /* IE7/Vista protected mode support */

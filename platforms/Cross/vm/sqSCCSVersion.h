@@ -21,6 +21,7 @@
 #define MERCURIAL 0
 #define GIT 0
 
+#include "../plugins/sqPluginsSCCSVersion.h"
 
 #if SUBVERSION
 static char SvnRawRevisionString[] = "$Rev$";
@@ -28,9 +29,6 @@ static char SvnRawRevisionString[] = "$Rev$";
 
 static char SvnRawRepositoryURL[] = "$URL$";
 # define URL_START (SvnRawRepositoryURL + 6)
-
-static long
-revisionAsLong() { return atol(REV_START); }
 
 static char *
 revisionAsString()
@@ -52,9 +50,6 @@ repositoryURL()
 # undef REV_START
 # undef URL_START
 #else /* SUBVERSION */
-static long
-revisionAsLong() { return -1; }
-
 static char *
 revisionAsString() { return "?"; }
 
@@ -64,12 +59,28 @@ repositoryURL() { return "unknown"; }
 
 static char *sourceVersion = 0;
 
-static char *sourceVersionString()
+static char *
+sourceVersionString(char separator)
 {
 	if (!sourceVersion) {
-		int len = strlen(revisionAsString()) + strlen(repositoryURL()) + 3;
+#if WIN32
+		char *fmt = "VM: r%s %s%cPlugins: r%s %s";
+		int len = strlen(fmt)
+				+ strlen(revisionAsString())
+				+ strlen(repositoryURL())
+				+ strlen(pluginsRevisionAsString())
+				+ strlen(pluginsRepositoryURL());
 		sourceVersion = malloc(len);
-		sprintf(sourceVersion,"r%s %s",revisionAsString(),repositoryURL());
+		sprintf(sourceVersion, fmt,
+				revisionAsString(), repositoryURL(),
+				separator,
+				pluginsRevisionAsString(), pluginsRepositoryURL());
+#else
+		asprintf(&sourceVersion, "VM: r%s %s Plugins: r%s %s",
+				revisionAsString(), repositoryURL(),
+				separator,
+				pluginsRevisionAsString(), pluginsRepositoryURL());
+#endif
 	}
 	return sourceVersion;
 }
