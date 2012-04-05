@@ -27,9 +27,9 @@ pluginsRevisionAsString()
 static char *
 pluginsRepositoryURL()
 {
-	char *maybe_platforms = strstr(URL_START, "/platforms");
-	if (maybe_platforms)
-		*maybe_platforms = 0;
+	char *maybe_sqplugins = strstr(URL_START, "/sqPlugins");
+	if (maybe_sqplugins)
+		*maybe_sqplugins = 0;
 	return URL_START;
 }
 # undef PLUGINS_REV_START
