@@ -54,7 +54,7 @@ Class {
 CogFamilyWindowsConfig >> commonCompilerFlags [
 	"omit -ggdb2 to prevent generating debug info"
 	
-	^ '-march=pentium4 -mwindows -D_MT -msse2 -mthreads -mno-cygwin -mwin32 -mno-rtd -mms-bitfields -mno-accumulate-outgoing-args ', self winVer ,
+	^ '-march=pentium4 -mwindows -D_MT -msse2 -mthreads -mwin32 -mno-rtd -mms-bitfields -mno-accumulate-outgoing-args ', self winVer ,
 
 	' -DWIN32 -DWIN32_FILE_SUPPORT -DNO_ISNAN -DNO_SERVICE -DNO_STD_FILE_SUPPORT ',
 	'-DLSB_FIRST -DVM_NAME="', self executableName,'" -DX86 '
