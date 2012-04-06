@@ -665,6 +665,17 @@ Cogit class >> initializeAnnotationConstants [
 ]
 
 { #category : #'class initialization' }
+Cogit class >> initializeBytecodeTable [
+	"SimpleStackBasedCogit initializeBytecodeTable"
+	"StackToRegisterMappingCogit initializeBytecodeTable"
+
+	NewspeakVM ifTrue:
+		[^self initializeBytecodeTableForNewspeakV3PlusClosures].
+
+	^self initializeBytecodeTableForSqueakV3PlusClosures
+]
+
+{ #category : #'class initialization' }
 Cogit class >> initializeCogMethodConstants [
 	CMOpenPIC := 1 + (CMClosedPIC := 1 + (CMBlock := 1 +(CMMethod := 1 + (CMFree := 1))))
 ]
@@ -705,13 +716,21 @@ Cogit class >> initializeMiscConstantsWith: optionsDictionary [
 ]
 
 { #category : #'class initialization' }
+Cogit class >> initializePrimitiveTable [
+	"Currently there is only one sequence of primitives."
+	self initializePrimitiveTableForSqueakV3
+]
+
+{ #category : #'class initialization' }
 Cogit class >> initializeWithOptions: optionsDictionary [
 
 	self initializeMiscConstantsWith: optionsDictionary. "must preceed other initialization."
 	self initializeErrorCodes.
 	self initializeCogMethodConstants.
 	self initializeAnnotationConstants.
-	self initializeCompilationConstants
+	self initializeCompilationConstants.
+	self initializeBytecodeTable.
+	self initializePrimitiveTable
 ]
 
 { #category : #translation }

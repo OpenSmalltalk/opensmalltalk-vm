@@ -46,9 +46,10 @@ Class {
 
 { #category : #'instance creation' }
 CogVMSimulator class >> chooseAndInitCogitClassWithOpts: opts [
-	((CoInterpreter classPool at: #CogitClass put: Cogit chooseCogitClass)
-		withAllSuperclasses copyUpThrough: Cogit) reverseDo:
-			[:cc| cc initializeWithOptions: opts]
+	(CoInterpreter classPool
+			at: #CogitClass
+			put: Cogit chooseCogitClass)
+		initializeWithOptions: opts
 ]
 
 { #category : #'instance creation' }
