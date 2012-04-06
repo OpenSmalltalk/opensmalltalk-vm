@@ -388,6 +388,12 @@ CurrentImageCoInterpreterFacade >> methodHasCogMethod: aCompiledMethod [
 	^false
 ]
 
+{ #category : #testing }
+CurrentImageCoInterpreterFacade >> methodUsesAlternateBytecodeSet: methodObjOop [
+	"A negative header selects the alternate bytecode set."
+	^(self objectForOop: methodObjOop) signFlag
+]
+
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> newMethodAddress [
 	^self addressForLabel: #newMethod
