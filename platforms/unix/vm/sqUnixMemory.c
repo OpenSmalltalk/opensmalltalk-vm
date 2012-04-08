@@ -297,7 +297,7 @@ sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 {
 	unsigned long firstPage = roundDownToPageBoundary(startAddr);
 	if (mprotect((void *)firstPage,
-				 roundUpToPageBoundary(endAddr - firstPage),
+				 endAddr - firstPage + 1,
 				 PROT_READ | PROT_WRITE | PROT_EXEC) < 0)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE | PROT_EXEC)");
 }
@@ -307,7 +307,7 @@ sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 {
 	unsigned long firstPage = roundDownToPageBoundary(startAddr);
 	if (mprotect((void *)firstPage,
-				 roundUpToPageBoundary(endAddr - firstPage),
+				 endAddr - firstPage + 1,
 				 PROT_READ | PROT_WRITE) < 0)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE)");
 }

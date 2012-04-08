@@ -102,7 +102,7 @@ sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 {
 	unsigned long firstPage = roundDownToPageBoundary(startAddr);
 	if (mprotect((void *)firstPage,
-				 roundUpToPageBoundary(endAddr - firstPage),
+				 endAddr - firstPage + 1,
 				 PROT_READ | PROT_WRITE | PROT_EXEC) < 0)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE | PROT_EXEC)");
 }
@@ -113,7 +113,7 @@ sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 	unsigned long firstPage = roundDownToPageBoundary(startAddr);
 	/* We get EACCESS on 10.6.3 when trying to disable exec perm; Why? */
 	if (mprotect((void *)firstPage,
-				 roundUpToPageBoundary(endAddr - firstPage),
+				 endAddr - firstPage + 1,
 				 PROT_READ | PROT_WRITE) < 0
 	 && errno != EACCES)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE)");

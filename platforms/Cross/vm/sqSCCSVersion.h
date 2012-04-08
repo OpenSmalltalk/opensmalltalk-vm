@@ -63,7 +63,7 @@ static char *
 sourceVersionString(char separator)
 {
 	if (!sourceVersion) {
-#if WIN32
+#if 1 /* a) mingw32 doesn't have asprintf and b) on Mac OS it segfaults. */
 		char *fmt = "VM: r%s %s%cPlugins: r%s %s";
 		int len = strlen(fmt)
 				+ strlen(revisionAsString())
