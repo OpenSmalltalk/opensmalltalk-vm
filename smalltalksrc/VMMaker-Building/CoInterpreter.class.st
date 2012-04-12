@@ -323,7 +323,9 @@ CoInterpreter class >> initializeMiscConstantsWith: optionsDictionary [
 CoInterpreter class >> initializePrimitiveTable [
 	super initializePrimitiveTable.
 	self assert: (PrimitiveTable at: 253 + 1) = #primitiveFail.
-	PrimitiveTable at: 253 + 1 put: #primitiveCollectCogCodeConstituents
+	PrimitiveTable at: 253 + 1 put: #primitiveCollectCogCodeConstituents.
+	self assert: (PrimitiveTable at: 215 + 1) = #primitiveFlushCacheByMethod.
+	PrimitiveTable at: 215 + 1 put: #primitiveVoidVMStateForMethod
 ]
 
 { #category : #initialization }
@@ -2410,6 +2412,69 @@ CoInterpreter >> deferStackLimitSmashAround: functionSymbol [
 		 self forceInterruptCheck]
 ]
 
+{ #category : #'frame access' }
+CoInterpreter >> divorceAMachineCodeFrameWithCogMethod: cogMethod in: aStackPage [
+	"Divorce at most one frame in the current page (since the divorce may cause the page to be split)
+	 and answer whether a frame was divorced."
+	<var: #cogMethod type: #'CogMethod *'>
+	<var: #aStackPage type: #'StackPage *'>
+	| theFP calleeFP theSP theContext |
+	<var: #aStackPage type: #'StackPage *'>
+	<var: #theFP type: #'char *'>
+	<var: #calleeFP type: #'char *'>
+	<var: #theSP type: #'char *'>
+
+	theFP := aStackPage headFP.
+	theSP := aStackPage headSP.
+	theSP := theSP + BytesPerWord. "theSP points at hottest item on frame's stack"
+
+	[((self isMachineCodeFrame: theFP)
+	  and: [cogMethod = (self mframeHomeMethod: theFP)]) ifTrue:
+		[theContext := self ensureFrameIsMarried: theFP SP: theSP.
+		 self externalDivorceFrame: theFP andContext: theContext.
+		 ^true].
+	 calleeFP := theFP.
+	 theFP := self frameCallerFP: theFP.
+	 theFP ~= 0] whileTrue:
+		["theSP points at stacked hottest item on frame's stack"
+		 theSP := self frameCallerSP: calleeFP].
+
+	^false
+]
+
+{ #category : #'frame access' }
+CoInterpreter >> divorceMachineCodeFramesWithMethod: methodObj [
+	| cogMethod divorcedSome |
+	<var: #cogMethod type: #'CogMethod *'>
+	cogMethod := self cogMethodOf: methodObj.
+	[stackPage ~= 0 ifTrue: "This is needed for the assert in externalDivorceFrame:andContext:"
+		[stackPages markStackPageMostRecentlyUsed: stackPage].
+	 "Slang can't currently cope with the lack of the variable here.
+	  Something to do with the preceeding statement.  Take it out
+	  and the code is good.  leave it in and we get do { ... } while(l1:)"
+	 divorcedSome := self divorceSomeMachineCodeFramesWithMethod: cogMethod.
+	 divorcedSome] whileTrue
+]
+
+{ #category : #'frame access' }
+CoInterpreter >> divorceSomeMachineCodeFramesWithMethod: cogMethod [
+	"Divorce at most one frame (since the divorce may cause the containing
+	 page to be split) and answer whether a frame was divorced."
+	<var: #cogMethod type: #'CogMethod *'>
+	| divorcedSome |
+	<var: #aPage type: #'StackPage *'>
+	divorcedSome := false.
+	0 to: numStackPages - 1 do:
+		[:i| | aPage |
+		aPage := stackPages stackPageAt: i.
+		(stackPages isFree: aPage) ifFalse:
+			["this to avoid assert in externalDivorceFrame:andContext:"
+			 self markStackPageMostRecentlyUsed: stackPage.
+			 (self divorceAMachineCodeFrameWithCogMethod: cogMethod in: aPage) ifTrue:
+				[divorcedSome := true]]].
+	^divorcedSome
+]
+
 { #category : #'debug support' }
 CoInterpreter >> dumpPrimTraceLog [
 	"The prim trace log is a circular buffer of entries. If there is
@@ -2496,6 +2561,37 @@ CoInterpreter >> ensureAllContextsHaveBytecodePCsOrAreBereaved [
 ]
 
 { #category : #'frame access' }
+CoInterpreter >> ensureAllContextsWithMethodHaveBytecodePCs: methodObj [
+	"Map all native pcs to bytecoded pcs in all contexts on methodObj.
+	 Used to implement primitiveVoidVMStateForMethod."
+	| oop |
+	oop := objectMemory firstObject.
+	[oop < objectMemory freeStart] whileTrue:
+		[((objectMemory isFreeObject: oop) not
+		  and: [(objectMemory isContextNonInt: oop)
+		  and: [(objectMemory fetchPointer: MethodIndex ofObject: oop) = methodObj]]) ifTrue:
+			[(self isMarriedOrWidowedContext: oop)
+				ifTrue:
+					[(self checkIsStillMarriedContext: oop currentFP: stackPage headFP) ifTrue:
+						[self assert: (self isMachineCodeFrame: (self frameOfMarriedContext: oop)) not]]
+				ifFalse:
+					[self ensureContextHasBytecodePC: oop]].
+		 oop := objectMemory objectAfter: oop]
+]
+
+{ #category : #'frame access' }
+CoInterpreter >> ensureContextHasBytecodePC: aContext [
+	"Make sure the context has a byetcode pc.  Can only be used on single contexts."
+	| pc |
+	self assert: (self isMarriedOrWidowedContext: aContext) not.
+	pc := objectMemory fetchPointer: InstructionPointerIndex ofObject: aContext.
+	((objectMemory isIntegerObject: pc)
+	 and: [(pc := objectMemory integerValueOf: pc) < 0]) ifTrue:
+		[pc := self mustMapMachineCodePC: pc context: aContext.
+		 objectMemory storePointerUnchecked: InstructionPointerIndex ofObject: aContext withValue: pc]
+]
+
+{ #category : #'frame access' }
 CoInterpreter >> ensureContextIsExecutionSafeAfterAssignToStackPointer: aContext [
 	"Safety to give the JIT lattitude in calling convention.  Conceptually, returning
 	 a value to a context involves pushing that value onto the stack.  This is used
@@ -2516,14 +2612,8 @@ CoInterpreter >> ensureContextIsExecutionSafeAfterAssignToStackPointer: aContext
 	 The solution is to fall back on the interpreter.  If the stack pointer is changed we
 	 also ensure the pc is a bytecode pc (+ive) which will cause makeBaseFrameFor:
 	 to create an interpreter frame if the context is executed again."
-	| pc |
 	<inline: false>
-	self assert: (self isMarriedOrWidowedContext: aContext) not.
-	pc := objectMemory fetchPointer: InstructionPointerIndex ofObject: aContext.
-	((objectMemory isIntegerObject: pc)
-	 and: [(pc := objectMemory integerValueOf: pc) < 0]) ifTrue:
-		[pc := self mustMapMachineCodePC: pc context: aContext.
-		 objectMemory storePointerUnchecked: InstructionPointerIndex ofObject: aContext withValue: pc]
+	self ensureContextHasBytecodePC: aContext
 ]
 
 { #category : #'frame access' }
@@ -6197,6 +6287,7 @@ CoInterpreter >> validStackPageBaseFrames [
 CoInterpreter >> voidVMStateForSnapshot [
 	"Make sure that all VM state that affects the heap contents is voided so that the heap is ready
 	 to be snapshotted. Answer the activeContext object that should be stored in the snapshot."
+	<inline: false>
 	| activeContext |
 	instructionPointer := 0. "in case of code compactions."
 	activeContext := self divorceAllFrames.

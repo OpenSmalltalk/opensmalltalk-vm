@@ -186,10 +186,11 @@ CogMethodZone >> findPreviouslyCompiledVersionOf: aMethodObj with: aSelectorOop 
 { #category : #compaction }
 CogMethodZone >> freeMethod: cogMethod [
 	<var: #cogMethod type: #'CogMethod *'>
+	<inline: false>
 	self assert: cogMethod cmType ~= CMFree.
 	self assert: (cogit cogMethodDoesntLookKosher: cogMethod) = 0.
 	cogMethod cmType = CMMethod ifTrue:
-		["For non-Newspeak there should ne a one-to-one mapping metween bytecoded and
+		["For non-Newspeak there should ne a one-to-one mapping between bytecoded and
 		  cog methods. For Newspeak not necessarily, but only for anonymous accessors."
 		 self assert: ((coInterpreter rawHeaderOf: cogMethod methodObject) asInteger = cogMethod asInteger
 					or: [(cogit noAssertMethodClassAssociationOf: cogMethod methodObject) = objectMemory nilObject]).
