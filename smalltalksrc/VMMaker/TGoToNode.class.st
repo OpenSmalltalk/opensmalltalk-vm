@@ -36,6 +36,5 @@ TGoToNode >> printOn: aStream level: level [
 
 { #category : #accessing }
 TGoToNode >> setLabel: aString [
-
-	label := aString.
+	label := aString
 ]

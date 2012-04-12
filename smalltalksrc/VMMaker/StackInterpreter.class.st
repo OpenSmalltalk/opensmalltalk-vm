@@ -268,6 +268,7 @@ StackInterpreter class >> implicitReturnTypeFor: aSelector [
 
 { #category : #initialization }
 StackInterpreter class >> initializeAssociationIndex [
+	KeyIndex := 0.
 	ValueIndex := 1
 ]
 
@@ -906,9 +907,10 @@ StackInterpreter class >> initializePrimitiveTable [
 		(212 primitiveContextSize)
 		(213 primitiveContextXray)
 		(214 primitiveVoidVMState)
-		(215 217 primitiveFail)	"reserved for Cog primitives"
+		(215 primitiveFlushCacheByMethod) "primitiveVoidVMStateForMethod in the CoInterpreter"
+		(216 217 primitiveFail)	"reserved for Cog primitives"
 		(218 primitiveDoNamedPrimitiveWithArgs)
-		(219 primitiveFail)	"reserved for Cog primitives"
+		(219 primitiveFail)		"reserved for Cog primitives"
 
 		(220 primitiveFail)		"reserved for Cog primitives"
 
@@ -3873,7 +3875,6 @@ StackInterpreter >> externalDivorceFrame: theFP andContext: ctxt [
 	<var: #callerFP type: #'char *'>
 	<var: #callerSP type: #'char *'>
 	"stackPage needs to have current head pointers to avoid confusion."
-	self assert: theFP ~= framePointer.
 	self assert: (stackPage = 0 or: [stackPage = stackPages mostRecentlyUsedPage]).
 	thePage := stackPages stackPageFor: theFP.
 	(onCurrent := thePage = stackPage) ifFalse:
@@ -5826,7 +5827,8 @@ StackInterpreter >> isWidowedContext: aOnceMarriedContext [
 	<var: #theFrame type: #'char *'>
 	<var: #thePage type: #'StackPage *'>
 	<var: #shouldBeFrameCallerField type: #'char *'>
-	self assert: (self isContext: aOnceMarriedContext).
+	self assert: ((self isContext: aOnceMarriedContext)
+				  and: [self isMarriedOrWidowedContext: aOnceMarriedContext]).
 	theFrame := self frameOfMarriedContext: aOnceMarriedContext.
 	thePage := stackPages stackPageFor: theFrame.
 	((stackPages isFree: thePage)
@@ -6687,6 +6689,7 @@ StackInterpreter >> marryContextInNewStackPageAndInitializeInterpreterRegisters:
 	"Establish aContext at the base of a new stackPage, make the stackPage the
 	 active one and set-up the interreter registers.  This is used to boot the system
 	 and bring it back after a snapshot."
+	<inline: false>
 	| newPage |
 	<var: #newPage type: #'StackPage *'>
 	self assert: stackPage = 0.
@@ -7792,7 +7795,7 @@ StackInterpreter >> printContext: aContext [
 		ifTrue:
 			[(self checkIsStillMarriedContext: aContext currentFP: framePointer)
 				ifTrue: [self print: 'married (assuming framePointer valid)'; cr]
-				ifFalse: [self print: 'widdowed (assuming framePointer valid)'; cr].
+				ifFalse: [self print: 'widowed (assuming framePointer valid)'; cr].
 			self print: 'sender   '; printNum: sender; print: ' (';
 				printHexPtr: (self withoutSmallIntegerTags: sender); printChar: $); cr.
 			 self print: 'ip       '; printNum: ip; print: ' (';
@@ -8218,7 +8221,15 @@ StackInterpreter >> printOopShortInner: oop [
 		[self printChar: $$; printChar: (objectMemory integerValueOf: (objectMemory fetchPointer: 0 ofObject: oop)).
 		 ^nil].
 	self cCode: [self prin: 'a(n) %.*s' t: nameLen f: name]
-		inSmalltalk: [self print: 'a(n) '; print: name]
+		inSmalltalk: [self print: 'a(n) '; print: name].
+	"Try to spot association-like things; they're all subclasses of LookupKey"
+	((objectMemory instanceSizeOf: classOop) = (ValueIndex + 1)
+	 and: [(self superclassOf: classOop) = (self superclassOf: (self fetchClassOfNonInt: (objectMemory splObj: SchedulerAssociation)))
+	 and: [self isBytes: (objectMemory fetchPointer: KeyIndex ofObject: oop)]]) ifTrue:
+		[self space;
+			printOopShort: (objectMemory fetchPointer: KeyIndex ofObject: oop);
+			print: ' -> ';
+			printHex: (objectMemory fetchPointer: ValueIndex ofObject: oop)]
 ]
 
 { #category : #'debug printing' }

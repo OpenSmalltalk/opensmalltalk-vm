@@ -7966,7 +7966,7 @@ Cogit >> unlinkSendsOf: selector isMNUSelector: isMNUSelector [
 ]
 
 { #category : #'jit - api' }
-Cogit >> unlinkSendsTo: targetMethodObject [
+Cogit >> unlinkSendsTo: targetMethodObject andFreeIf: freeIfTrue [
 	<api>
 	"Unlink all sends in cog methods to a particular target method.
 	 If targetMethodObject isn't actually a method (perhaps being
@@ -7994,6 +7994,7 @@ Cogit >> unlinkSendsTo: targetMethodObject [
 					[methodZone freeMethod: cogMethod.
 					 freedPIC := true]].
 		cogMethod := methodZone methodAfter: cogMethod].
+	freeIfTrue ifTrue: [self freeMethod: targetMethod].
 	freedPIC
 		ifTrue: [self unlinkSendsToFree]
 		ifFalse:

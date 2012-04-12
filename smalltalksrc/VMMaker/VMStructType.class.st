@@ -190,7 +190,7 @@ VMStructType class >> prepareToBeAddedToCodeGenerator: aCodeGen [
 		removeVariable: 'coInterpreter';
 		removeVariable: 'cogit';
 		removeVariable: 'objectMemory';
-		removeVariable: 'objectRepresentation'
+		removeVariable: 'objectRepresentation' ifAbsent: []
 ]
 
 { #category : #translation }
