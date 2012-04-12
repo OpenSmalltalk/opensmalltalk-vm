@@ -2140,7 +2140,7 @@ CCodeGenerator >> generateWhileFalse: msgNode on: aStream indent: level [
 		ifTrue: [^self generateWhileFalseLoop: msgNode on: aStream indent: level].
 	msgNode args first isNilStmtListNode
 		ifTrue: [^self generateDoWhileFalse: msgNode on: aStream indent: level].
-	^self generateWhileForeverBreakTrueLoop: msgNode on: aStream indent: level
+	^self generateWhileForeverBreakIf: true loop: msgNode on: aStream indent: level
 ]
 
 { #category : #'C translation' }
@@ -2157,43 +2157,27 @@ CCodeGenerator >> generateWhileFalseLoop: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-CCodeGenerator >> generateWhileForeverBreakFalseLoop: msgNode on: aStream indent: level [
-	"Generate while(1) {stmtListA; if(!(cond)) break; stmtListB}."
+CCodeGenerator >> generateWhileForeverBreakIf: breakBoolean loop: msgNode on: aStream indent: level [
+	"Generate either of
+		while(1) {stmtListA; if(cond) break; stmtListB}
+		while(1) {stmtListA; if(!(cond)) break; stmtListB}."
 
 	| stmts testStmt |
 	stmts := msgNode receiver statements asOrderedCollection.
 	testStmt := stmts removeLast.
 	msgNode receiver setStatements: stmts.
-	level - 1 timesRepeat: [ aStream tab ].
+	aStream tab: level - 1.
 	aStream nextPutAll: 'while (1) {'; cr.
 	msgNode receiver emitCCodeOn: aStream level: level + 1 generator: self.
-	(level + 1) timesRepeat: [ aStream tab ].
-	aStream nextPutAll: 'if (!('.
-	testStmt emitCCodeOn: aStream level: 0 generator: self.
-	aStream nextPutAll: ')) break;'; cr.
-	msgNode args first emitCCodeOn: aStream level: level + 1 generator: self.
-	level timesRepeat: [ aStream tab ].
-	aStream nextPutAll: '}'.
-]
-
-{ #category : #'C translation' }
-CCodeGenerator >> generateWhileForeverBreakTrueLoop: msgNode on: aStream indent: level [
-	"Generate while(1) {stmtListA; if(cond) break; stmtListB}."
-
-	| stmts testStmt |
-	stmts := msgNode receiver statements asOrderedCollection.
-	testStmt := stmts removeLast.
-	msgNode receiver setStatements: stmts.
-	level - 1 timesRepeat: [ aStream tab ].
-	aStream nextPutAll: 'while (1) {'; cr.
-	msgNode receiver emitCCodeOn: aStream level: level + 1 generator: self.
-	(level + 1) timesRepeat: [ aStream tab ].
+	aStream tab: level + 1.
 	aStream nextPutAll: 'if ('.
+	breakBoolean ifFalse: [aStream nextPut: $!; nextPut: $(].
 	testStmt emitCCodeOn: aStream level: 0 generator: self.
+	breakBoolean ifFalse: [aStream nextPut: $)].
 	aStream nextPutAll: ') break;'; cr.
 	msgNode args first emitCCodeOn: aStream level: level + 1 generator: self.
 	level timesRepeat: [ aStream tab ].
-	aStream nextPutAll: '}'.
+	aStream nextPut: $}
 ]
 
 { #category : #'C translation' }
@@ -2207,7 +2191,7 @@ CCodeGenerator >> generateWhileTrue: msgNode on: aStream indent: level [
 		ifTrue: [^self generateWhileTrueLoop: msgNode on: aStream indent: level].
 	msgNode args first isNilStmtListNode
 		ifTrue: [^self generateDoWhileTrue: msgNode on: aStream indent: level].
-	^self generateWhileForeverBreakFalseLoop: msgNode on: aStream indent: level
+	^self generateWhileForeverBreakIf: false loop: msgNode on: aStream indent: level
 ]
 
 { #category : #'C translation' }
@@ -2923,9 +2907,7 @@ CCodeGenerator >> removeUnneededBuiltins [
 { #category : #utilities }
 CCodeGenerator >> removeVariable: aName [
 	"Remove the given (instance) variable from the code base."
-	self checkDeleteVariable: aName.
-	variables
-		remove: aName
+	self removeVariable: aName
 		ifAbsent:
 			[(vmClass notNil
 			  and: [vmClass isNonArgumentImplicitReceiverVariableName: aName]) ifFalse:
@@ -2934,8 +2916,15 @@ CCodeGenerator >> removeVariable: aName [
 					show: 'warning, variable '
 						, aName
 						, ' doesn''t exist or has already been removed';
-						cr]].
-	variableDeclarations removeKey: aName ifAbsent: []
+						cr]]
+]
+
+{ #category : #utilities }
+CCodeGenerator >> removeVariable: aName ifAbsent: ifAbsentBlock [
+	"Remove the given (instance) variable from the code base."
+	self checkDeleteVariable: aName.
+	variableDeclarations removeKey: aName ifAbsent: [].
+	^variables remove: aName ifAbsent: ifAbsentBlock
 ]
 
 { #category : #utilities }

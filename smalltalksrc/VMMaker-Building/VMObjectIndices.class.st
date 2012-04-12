@@ -59,6 +59,7 @@ Class {
 		'HeaderIndex',
 		'InstanceSpecificationIndex',
 		'InstructionPointerIndex',
+		'KeyIndex',
 		'LastLinkIndex',
 		'LiteralStart',
 		'MessageArgumentsIndex',

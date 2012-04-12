@@ -171,7 +171,7 @@ CoInterpreterPrimitives >> primitiveFlushCacheByMethod [
 	 refer to this method, presumably because it has been redefined, overridden or removed.
 	 Override to flush appropriate machine code caches also."
 	super primitiveFlushCacheByMethod.
-	cogit unlinkSendsTo: self stackTop
+	cogit unlinkSendsTo: self stackTop andFreeIf: false
 ]
 
 { #category : #'system control primitives' }
@@ -236,6 +236,28 @@ CoInterpreterPrimitives >> primitiveLongRunningPrimitiveSemaphore [
 	self pop: 1.
 	flushState ifTrue:
 		[self siglong: reenterInterpreter jmp: ReturnToInterpreter]
+]
+
+{ #category : #'indexing primitives' }
+CoInterpreterPrimitives >> primitiveMethodXray [
+	"Lift the veil from a method and answer an integer describing the interior state
+	 of its machine code.
+	 Used for e.g. VM tests so they can verify they're testing what they think they're testing.
+	 0 implies a vanilla method.
+	 Bit 0 = method is currently compiled to machine code
+	 Bit 1 = is compiled frameless.
+	 Bit 2 = method refers to young object"
+	<export: true>
+	| flags cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	(self maybeMethodHasCogMethod: self stackTop)
+		ifTrue:
+			[cogMethod := self cogMethodOf: self stackTop.
+			 flags := cogMethod stackCheckOffset = 0 ifTrue: [3] ifFalse: [1].
+			 cogMethod cmRefersToYoung ifTrue:
+				[flags := flags + 4]]
+		ifFalse: [flags := 0].
+	self pop: 1 thenPush: (objectMemory integerObjectOf: flags)
 ]
 
 { #category : #'indexing primitives' }
@@ -652,6 +674,41 @@ CoInterpreterPrimitives >> primitiveVoidVMState [
 	self marryContextInNewStackPageAndInitializeInterpreterRegisters: activeContext.
 	self siglong: reenterInterpreter jmp: ReturnToInterpreter
 	"NOTREACHED"
+]
+
+{ #category : #'system control primitives' }
+CoInterpreterPrimitives >> primitiveVoidVMStateForMethod [
+	"The receiver is a compiledMethod.  Clear all VM state associated with the method,
+	 including any machine code, or machine code pcs in context objects."
+	<var: #theFrame type: #'char *'>
+	<var: #thePage type: #'StackPage *'>
+	super primitiveFlushCacheByMethod.
+	(self methodHasCogMethod: self stackTop) ifTrue:
+		[| activeContext methodObj theFrame thePage |
+		methodObj := self stackTop.
+		self push: instructionPointer.
+		self externalWriteBackHeadFramePointers.
+		activeContext := self ensureFrameIsMarried: framePointer SP: stackPointer.
+		self divorceMachineCodeFramesWithMethod: methodObj.
+		self ensureAllContextsWithMethodHaveBytecodePCs: methodObj.
+		cogit unlinkSendsTo: methodObj andFreeIf: true.
+		(self isStillMarriedContext: activeContext)
+			ifTrue:
+				[theFrame := self frameOfMarriedContext: activeContext.
+				 thePage := stackPages stackPageFor: theFrame.
+				 self assert: thePage headFP = theFrame.
+				 self setStackPageAndLimit: thePage.
+				 stackPointer := thePage headSP.
+				 framePointer := thePage headFP.
+				 instructionPointer := self popStack.
+				 self assert: methodObj = self stackTop]
+			ifFalse:
+				[stackPage := 0. "to avoid assert in marryContextInNewStackPageAndInitializeInterpreterRegisters:"
+				 self marryContextInNewStackPageAndInitializeInterpreterRegisters: activeContext.
+				 self popStack. "pop bogus machine-code instructionPointer"
+				 self assert: methodObj = self stackTop.
+				 self siglong: reenterInterpreter jmp: ReturnToInterpreter]]
+
 ]
 
 { #category : #'process primitives' }
