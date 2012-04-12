@@ -38,9 +38,6 @@ Class {
 		'extSemTabSize',
 		'debugStackDepthDictionary'
 	],
-	#classVars : [
-		'DebugStackPointers'
-	],
 	#category : #'VMMaker-JITSimulation'
 }
 
@@ -308,7 +305,9 @@ CogVMSimulator >> ceSendAbort: selector to: rcvr numArgs: numArgs [
 CogVMSimulator >> ceSendFromInLineCacheMiss: oPIC [
 	"Override to map the address into a CogMethodSurrogate"
 	| surrogate |
-	surrogate := cogit cogMethodSurrogateAt: oPIC.
+	surrogate := oPIC isInteger
+					ifTrue: [cogit cogMethodSurrogateAt: oPIC]
+					ifFalse: [oPIC].
 	self logSend: surrogate selector.
 	^super ceSendFromInLineCacheMiss: surrogate
 ]
