@@ -105,7 +105,8 @@ CMakePluginGenerator >> generate [
 	" default include directories for plugin "
 	self includeDirectories: '${pluginSrc} ${pluginCross} ${targetPlatform}/plugins/${pluginName}'.
 	
-	self addDefinitions: vmGen config compilerFlags.
+	"Not needed because there are already there (inherited from main configuration)"
+	"self addDefinitions: vmGen config compilerFlags."
 
 	" perform config's configureXYZ: message to apply per-plugin custom rules, if any "
 	
