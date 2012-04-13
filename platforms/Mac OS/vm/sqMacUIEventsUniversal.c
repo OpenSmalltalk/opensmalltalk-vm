@@ -469,7 +469,7 @@ static pascal OSStatus MyAppEventHandler (EventHandlerCallRef myHandlerChain,
 
     whatHappened = GetEventKind(event);
 
-	//fprintf(stderr,"\nAppEvent %i",whatHappened);
+	//fprintf(stderr,"\nAppEvent %i",whatHappened); fflush(stdout);
     switch (whatHappened)
     {
         case kEventAppActivated: {
@@ -558,7 +558,7 @@ static pascal OSStatus MyWindowEventHandler(EventHandlerCallRef myHandler,
         return result;
     GetEventParameter(event, kEventParamDirectObject, typeWindowRef, NULL,sizeof(window), NULL, &window);
     whatHappened = GetEventKind(event);
-	//fprintf(stderr,"\nWindowEvent %i %i %i",whatHappened,IsWindowActive(window),windowIndexFromHandle((int)window));
+	//fprintf(stderr,"\nWindowEvent %i %i %i",whatHappened,IsWindowActive(window),windowIndexFromHandle((int)window)); fflush(stdout);
 	if (windowIndexFromHandle(window) == 0) 
 		return result;
     switch (whatHappened)
@@ -652,7 +652,7 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
 	
 
 //	if (whatHappened != 5) 
-//		fprintf(stderr,"\nMouseEvent %i-%i ",whatHappened,windowActive);
+//		fprintf(stderr,"\nMouseEvent %i-%i ",whatHappened,windowActive); fflush(stdout);
 
 	if (!windowActive) {
 		if (whatHappened == kEventMouseDown)
@@ -766,7 +766,7 @@ static pascal OSStatus MyWindowEventKBHandler(EventHandlerCallRef myHandler,
             EventRef event, void* userData)
 {
 #pragma unused(myHandler,userData)
-    UInt32 whatHappened,keyCode;
+    UInt32 whatHappened,keyCode,keyChar;
 	SInt32 key;
     OSStatus result = eventNotHandledErr; /* report failure by default */
 	 
@@ -778,20 +778,22 @@ static pascal OSStatus MyWindowEventKBHandler(EventHandlerCallRef myHandler,
 		
     whatHappened = GetEventKind(event);
 	GetEventParameter (event, kEventParamKeyCode, typeUInt32,NULL, sizeof(typeUInt32), NULL, &keyCode);
-    switch (whatHappened)
-    {
+	/* See UCKeyTranslate in https://developer.apple.com/library/mac/#documentation/Carbon/reference/Unicode_Utilities_Ref/Reference/reference.html
+	 * for how to convert an event to one or more Unicode characters.
+	 */
+    switch (whatHappened) {
         case kEventRawKeyDown:
-			//fprintf(stdout,"\nrawkey down %i",ioMSecs());
+			//fprintf(stdout,"\nrawkey down %i",ioMSecs()); fflush(stdout);
 			addToKeyMap(keyCode, 0);	
             result = eventNotHandledErr;
             break;
         case kEventRawKeyRepeat:
-			//fprintf(stdout,"\nrawkey repeat %i",ioMSecs());
+			//fprintf(stdout,"\nrawkey repeat %i",ioMSecs()); fflush(stdout);
 			setRepeatInKeyMap(keyCode);
             result = eventNotHandledErr;
             break;
         case kEventRawKeyUp:
-			//fprintf(stdout,"\nrawkey up %i",ioMSecs());
+			//fprintf(stdout,"\nrawkey up %i",ioMSecs()); fflush(stdout);
 			key = findInKeyMap(keyCode);
 			if (key != -1) {
 				enterKeystroke ( EventTypeKeyboard,keyCode, EventKeyUp, 0, ModifierStateCarbon(event));
@@ -1458,7 +1460,7 @@ static sqKeyboardEvent *enterKeystroke (long type, long cc, long pc, UniChar utf
 	evt = (sqKeyboardEvent*) nextEventPut();
 
 	/* first the basics */
-	//fprintf(stdout,"\nKeyStroke time %i Type %i Value %i",ioMSecs(),pc,cc);
+	//fprintf(stdout,"\nKeyStroke time %i Type %i Value %i",ioMSecs(),pc,cc); fflush(stdout);
 	evt->type = type;
 	evt->timeStamp = ioMSecs() & MillisecondClockMask;
 	/* now the key code */
@@ -1495,7 +1497,7 @@ static sqKeyboardEvent *enterKeystroke (long type, long cc, long pc, UniChar utf
 
 static int addToKeyMap(int keyCode, int keyChar)
 {
-  //fprintf(stdout, "\nAddToKeyMap T %i c %i i %i",ioMSecs(),keyCode,keyMapSize);
+  // fprintf(stdout, "\nAddToKeyMap T %i code %i char %i i %i",ioMSecs(),keyCode,keyChar,keyMapSize); fflush(stdout);
   if (keyMapSize > KeyMapSize) { fprintf(stderr, "keymap overflow\n");  return -1; }
   keyMap[keyMapSize++]= (KeyMapping){ keyCode, keyChar, 0};
   return keyChar;
@@ -1532,7 +1534,7 @@ static int removeFromKeyMap(int keyCode)
 {
   int idx= indexInKeyMap(keyCode);
   int keyChar= -1;
-  //fprintf(stdout, "\nremoveFromKeyMap T %i c %i i %i",ioMSecs(),keyCode,keyMapSize-1);
+  //fprintf(stdout, "\nremoveFromKeyMap T %i c %i i %i",ioMSecs(),keyCode,keyMapSize-1); fflush(stdout);
   if (idx == -1) { //fprintf(stderr, "keymap underflow\n");  
 		return -1; }
   keyChar= keyMap[idx].keyChar;
