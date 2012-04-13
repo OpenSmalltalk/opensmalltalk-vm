@@ -385,7 +385,6 @@ StackIPhoneConfig >> setExtraTargetProperties: maker [
 	maker set: 'CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY' toString: self codeSignIdentity.
 	maker set: 'CMAKE_XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY' toString: self targetedDeviceFamilyAsString.
 	maker set: 'CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET' to: self deploymentTargetVersion.
-	
 	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir.
 ]
 
