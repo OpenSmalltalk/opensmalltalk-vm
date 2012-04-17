@@ -3212,21 +3212,22 @@ StackInterpreter >> commonVariable: rcvr at: index cacheIndex: atIx [
 	<inline: true>
 	stSize := atCache at: atIx+AtCacheSize.
 	((self oop: index isGreaterThanOrEqualTo: 1)
-		and: [self oop: index isLessThanOrEqualTo: stSize])
-	ifTrue:
+	 and: [self oop: index isLessThanOrEqualTo: stSize]) ifTrue:
 		[fmt := atCache at: atIx+AtCacheFmt.
-		fmt <= 4 ifTrue:
+		 fmt <= 4 ifTrue:
 			[self assert: (objectMemory isContextNonInt: rcvr) not.
 			 fixedFields := atCache at: atIx+AtCacheFixedFields.
-			^ objectMemory fetchPointer: index + fixedFields - 1 ofObject: rcvr].
-		fmt < 8 ifTrue:  "Bitmap"
+			 ^objectMemory fetchPointer: index + fixedFields - 1 ofObject: rcvr].
+		 fmt < 8 ifTrue:  "Bitmap"
 			[result := objectMemory fetchLong32: index - 1 ofObject: rcvr.
 			 ^self positive32BitIntegerFor: result].
-		fmt >= 16  "Note fmt >= 16 is an artificial flag for strings"
+		 fmt >= 16  "Note fmt >= 16 is an artificial flag for strings"
 			ifTrue: "String"
-			[^ self characterForAscii: (objectMemory fetchByte: index - 1 ofObject: rcvr)]
-			ifFalse: "ByteArray"
-			[^ objectMemory integerObjectOf: (objectMemory fetchByte: index - 1 ofObject: rcvr)]].
+				[^self characterForAscii: (objectMemory fetchByte: index - 1 ofObject: rcvr)]
+			ifFalse:
+				[(fmt < 12 "ByteArray"
+				  or: [index >= (self firstByteIndexOfMethod: rcvr) "CompiledMethod"]) ifTrue:
+					[^objectMemory integerObjectOf: (objectMemory fetchByte: index - 1 ofObject: rcvr)]]].
 
 	^self primitiveFailFor: ((objectMemory formatOf: rcvr) <= 1
 								ifTrue: [PrimErrBadReceiver]
@@ -3238,28 +3239,33 @@ StackInterpreter >> commonVariable: rcvr at: index put: value cacheIndex: atIx [
 	"This code assumes the receiver has been identified at location atIx in the atCache."
 	| stSize fmt fixedFields valToPut |
 	<inline: true>
-
 	stSize := atCache at: atIx+AtCacheSize.
 	((self oop: index isGreaterThanOrEqualTo: 1)
-		and: [self oop: index isLessThanOrEqualTo: stSize])
-	ifTrue:
+	  and: [self oop: index isLessThanOrEqualTo: stSize]) ifTrue:
 		[fmt := atCache at: atIx+AtCacheFmt.
 		fmt <= 4 ifTrue:
 			[self assert: (objectMemory isContextNonInt: rcvr) not.
 			 fixedFields := atCache at: atIx+AtCacheFixedFields.
-			^ objectMemory storePointer: index + fixedFields - 1 ofObject: rcvr withValue: value].
+			 ^objectMemory storePointer: index + fixedFields - 1 ofObject: rcvr withValue: value].
 		fmt < 8 ifTrue:  "Bitmap"
 			[valToPut := self positive32BitValueOf: value.
 			self successful ifTrue: [objectMemory storeLong32: index - 1 ofObject: rcvr withValue: valToPut].
-			^ nil].
+			^nil].
 		fmt >= 16  "Note fmt >= 16 is an artificial flag for strings"
-			ifTrue: [valToPut := self asciiOfCharacter: value.
-					self successful ifFalse: [^ nil]]
-			ifFalse: [valToPut := value].
+			ifTrue: [(objectMemory
+							is: value
+							instanceOf: (objectMemory splObj: ClassCharacter)
+							compactClassIndex: 0) ifFalse:
+						[^self primitiveFailFor: PrimErrBadArgument].
+					valToPut := objectMemory fetchPointer: CharacterValueIndex ofObject: value]
+			ifFalse:
+				[(fmt >= 12 and: [index < (self firstByteIndexOfMethod: rcvr)]) ifTrue: "CompiledMethod"
+					[^self primitiveFailFor: PrimErrBadIndex].
+				valToPut := value].
 		(objectMemory isIntegerObject: valToPut) ifTrue:
 			[valToPut := objectMemory integerValueOf: valToPut.
-			((valToPut >= 0) and: [valToPut <= 255]) ifFalse: [^ self primitiveFail].
-			^ objectMemory storeByte: index - 1 ofObject: rcvr withValue: valToPut]].
+			((valToPut >= 0) and: [valToPut <= 255]) ifFalse: [^self primitiveFailFor: PrimErrBadArgument].
+			^objectMemory storeByte: index - 1 ofObject: rcvr withValue: valToPut]].
 
 	^self primitiveFailFor: ((objectMemory formatOf: rcvr) <= 1
 								ifTrue: [PrimErrBadReceiver]
@@ -4455,6 +4461,13 @@ StackInterpreter >> findUnwindThroughContext: homeContext [
 		 (self primitiveIndexOf: theMethod) == 198 ifTrue:
 			[^homeContext]].
 	^ctxtOrNilOrZero
+]
+
+{ #category : #'compiled methods' }
+StackInterpreter >> firstByteIndexOfMethod: methodObj [
+	"Answer the one-relative index of the first bytecode in methodObj.
+	 Used for safer bounds-checking on methods."
+	^(self literalCountOf: methodObj) + LiteralStart * BytesPerWord + 1
 ]
 
 { #category : #'plugin primitive support' }
@@ -9860,7 +9873,7 @@ StackInterpreter >> stObject: array at: index [
 			 and: [self isStillMarriedContext: array]]) ifTrue:
 				[^self noInlineTemporary: index - 1 in: (self frameOfMarriedContext: array)]]
 		ifFalse: [stSize := totalLength - fixedFields].
-	((self oop: index isGreaterThanOrEqualTo: 1)
+	((self oop: index isGreaterThanOrEqualTo: (objectMemory firstValidIndexOfIndexableObject: array withFormat: fmt))
 	 and: [self oop: index isLessThanOrEqualTo: stSize]) ifTrue:
 		[^self subscript: array with: (index + fixedFields) format: fmt].
 	self primitiveFailFor: (fmt <= 1 ifTrue: [PrimErrBadReceiver] ifFalse: [PrimErrBadIndex]).
@@ -9886,7 +9899,7 @@ StackInterpreter >> stObject: array at: index put: value [
 				[self noInlineTemporary: index - 1 in: (self frameOfMarriedContext: array) put: value.
 				 ^self]]
 		ifFalse: [stSize := totalLength - fixedFields].
-	((self oop: index isGreaterThanOrEqualTo: 1)
+	((self oop: index isGreaterThanOrEqualTo: (objectMemory firstValidIndexOfIndexableObject: array withFormat: fmt))
 	 and: [self oop: index isLessThanOrEqualTo: stSize])
 		ifTrue: [self subscript: array with: (index + fixedFields) storing: value format: fmt]
 		ifFalse: [self primitiveFailFor: (fmt <= 1 ifTrue: [PrimErrBadReceiver] ifFalse: [PrimErrBadIndex])]
