@@ -1185,12 +1185,6 @@ CogVMSimulator >> instVar: index ofContext: aMarriedContext put: anOop [
 	^super instVar: index ofContext: aMarriedContext put: anOop
 ]
 
-{ #category : #'indexing primitive support' }
-CogVMSimulator >> install: rcvr inAtCache: cache at: atIx string: stringy [
-	(self is: rcvr KindOf: 'BooleanArray') ifTrue: [self halt].
-	^super install: rcvr inAtCache: cache at: atIx string: stringy
-]
-
 { #category : #'interpreter shell' }
 CogVMSimulator >> insufficientMemoryAvailableError [
 	self error: 'Failed to allocate memory for the heap'
