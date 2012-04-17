@@ -316,7 +316,7 @@ CogObjectRepresentationForSqueakV3 >> genGetSizeOf: sourceReg into: destReg form
 
 { #category : #'primitive generators' }
 CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
-	| jumpSI jumpNotSI jumpNotIndexable jumpIsContext jumpBounds jumpFmtGt4 jumpFmtEq2 jumpFmtLt8 jumpLarge |
+	| jumpSI jumpNotSI jumpNotIndexable jumpIsContext jumpBounds jumpFmtGt4 jumpFmtEq2 jumpFmtLt8 jumpFmtGt11 jumpLarge |
 	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
 	<var: #jumpSI type: #'AbstractInstruction *'>
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
@@ -326,6 +326,7 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
 	<var: #jumpFmtGt4 type: #'AbstractInstruction *'>
 	<var: #jumpFmtEq2 type: #'AbstractInstruction *'>
 	<var: #jumpFmtLt8 type: #'AbstractInstruction *'>
+	<var: #jumpFmtGt11 type: #'AbstractInstruction *'>
 	<var: #jumpLarge type: #'AbstractInstruction *'>
 	cogit MoveR: ReceiverResultReg R: TempReg.
 	jumpSI := self genJumpSmallIntegerInScratchReg: TempReg.
@@ -364,8 +365,12 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
 		MoveXwr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg;
 		RetN: retNoffset.
 	jumpFmtGt4 jmpTarget: cogit Label.
+	"Byte objects have formats 8 through 15, Compiled methods being 12 through 15;
+	 fail for CompiledMethod allowing the CoInterpeter to impose stricter bounds checks."
 	cogit CmpCq: 8 R: ClassReg.
 	jumpFmtLt8 := cogit JumpLess: 0.
+	cogit CmpCq: 11 R: ClassReg.
+	jumpFmtGt11 := cogit JumpGreater: 0.
 	cogit
 		AddCq: BaseHeaderSize R: Arg1Reg;
 		MoveXbr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg.
@@ -389,7 +394,8 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
 	(jumpNotIndexable jmpTarget:
 	(jumpIsContext jmpTarget:
 	(jumpBounds jmpTarget:
-		cogit Label)))).
+	(jumpFmtGt11 jmpTarget:
+		cogit Label))))).
 	^0
 ]
 

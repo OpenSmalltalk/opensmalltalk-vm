@@ -777,6 +777,17 @@ NewObjectMemory >> firstAccessibleObject [
 	^nil
 ]
 
+{ #category : #'indexing primitive support' }
+NewObjectMemory >> firstValidIndexOfIndexableObject: obj withFormat: fmt [
+	"Answer the one-relative index of the first valid index in an indexbale object
+	 with the given format.  This is 1 for all objects except compiled methods
+	 where the first index is beyond the last literal.
+	 Used for safer bounds-checking on methods."
+	^fmt >= 12
+		ifTrue: [coInterpreter firstByteIndexOfMethod: obj]
+		ifFalse: [1]
+]
+
 { #category : #'frame access' }
 NewObjectMemory >> formatOfMethodContext [
 	"Answer the class format word for MethodContext which is used to instantiate
