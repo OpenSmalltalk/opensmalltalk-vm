@@ -24,10 +24,16 @@ CogWindowsConfig >> cogitClass [
 { #category : #'compiler flags' }
 CogWindowsConfig >> compilerFlags [
 	"depends on config ..."
-	^ self commonCompilerFlags, ' ' ,self compilerFlagsRelease
+	^ self commonCompilerFlags, ' ' , self compilerFlagsRelease
 ]
 
-{ #category : #'compiler flags' }
+{ #category : #plugins }
+CogWindowsConfig >> compilerFlagsDebug [
+	"Define NDEBUG for production to exclude asserts "
+	^ '-g3 -O0 -march=pentium4 -momit-leaf-frame-pointer -maccumulate-outgoing-args -funroll-loops  -DDEBUGVM=1'
+]
+
+{ #category : #'as yet unclassified' }
 CogWindowsConfig >> compilerFlagsRelease [
 	"Define NDEBUG for production to exclude asserts "
 	^ '-g0 -O2 -march=pentium4 -momit-leaf-frame-pointer -maccumulate-outgoing-args -funroll-loops ',
@@ -94,7 +100,6 @@ SoundGenerationPlugin
 StarSqueakPlugin 
 SurfacePlugin 
 UUIDPlugin
-
 	)
 ]
 
