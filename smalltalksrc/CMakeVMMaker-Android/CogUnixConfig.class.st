@@ -234,6 +234,7 @@ CogUnixConfig >> defaultExternalPlugins [
 		ThreadedIA32FFIPlugin "SqueakFFIPrims"
 		"UUIDPlugin"
 		"UnixOSProcessPlugin ?? "	
+		InternetConfigPlugin
 	)
 ]
 

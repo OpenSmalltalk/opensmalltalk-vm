@@ -33,7 +33,7 @@ CogWindowsConfig >> compilerFlagsDebug [
 	^ '-g3 -O0 -march=pentium4 -momit-leaf-frame-pointer -maccumulate-outgoing-args -funroll-loops  -DDEBUGVM=1'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'compiler flags' }
 CogWindowsConfig >> compilerFlagsRelease [
 	"Define NDEBUG for production to exclude asserts "
 	^ '-g0 -O2 -march=pentium4 -momit-leaf-frame-pointer -maccumulate-outgoing-args -funroll-loops ',

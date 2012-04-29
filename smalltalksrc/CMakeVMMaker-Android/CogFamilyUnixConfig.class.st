@@ -206,6 +206,12 @@ CogFamilyUnixConfig >> configureFilePlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
+CogFamilyUnixConfig >> configureInternetConfigPlugin: maker [
+	super configureInternetConfigPlugin: maker.
+	maker addPlatformSources: #( 'sqUnixInternetConfiguration' )
+]
+
+{ #category : #'plugin extra rules' }
 CogFamilyUnixConfig >> configureJoystickTabletPlugin: maker [ 
 	"extra rules for JoystickTabletPlugin"
 	
