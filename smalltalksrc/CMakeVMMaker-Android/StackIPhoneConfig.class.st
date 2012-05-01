@@ -69,6 +69,11 @@ StackIPhoneConfig >> commonCompilerFlags [
 	'-DISQUEAK_SOURCES=PharoV10'}
 ]
 
+{ #category : #settings }
+StackIPhoneConfig >> compilerFlagsRelease [
+	^#('-g0' '-O2' '-fomit-frame-pointer' '-DNDEBUG' '-DDEBUGVM=0' '-DSTACKVM')
+]
+
 { #category : #'plugin extra rules' }
 StackIPhoneConfig >> configureHostWindowPlugin: maker [
 	maker includeDirectories: '${platformsDir}/Cross/plugins/HostWindowPlugin'.	
@@ -386,6 +391,9 @@ StackIPhoneConfig >> setExtraTargetProperties: maker [
 	maker set: 'CMAKE_XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY' toString: self targetedDeviceFamilyAsString.
 	maker set: 'CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET' to: self deploymentTargetVersion.
 	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir.
+	
+	maker puts: 'set_source_files_properties(${srcVMDir}/gcc3x-cointerp.c PROPERTIES COMPILE_FLAGS -O0)'
+
 ]
 
 { #category : #settings }
