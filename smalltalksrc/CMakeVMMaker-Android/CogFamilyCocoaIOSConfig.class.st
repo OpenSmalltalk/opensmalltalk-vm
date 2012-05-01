@@ -26,7 +26,25 @@ CogFamilyCocoaIOSConfig >> CFBundleVersion [
 { #category : #settings }
 CogFamilyCocoaIOSConfig >> commonCompilerFlags [
 	^super commonCompilerFlags, 
-		#('-funroll-loops' '-fasm-blocks' '-finline-functions' '-mfpmath=sse' '-march=pentium-m' '-mtune=prescott' '-falign-functions=16' '-fno-gcse' '-fno-cse-follow-jumps' '-std=gnu99' '-DBUILD_FOR_OSX' '-DUSE_INLINE_MEMORY_ACCESSORS' '-DLSB_FIRST' '-DHAVE_SYS_TIME_H' '-DHAVE_NANOSLEEP' '-DCOGMTVM=0' '-DUSE_GLOBAL_STRUCT=0' '-DBASE_HEADER_SIZE=4')
+		#(
+	'-funroll-loops' 
+	'-fasm-blocks' 
+	'-finline-functions' 
+	'-mfpmath=sse' 
+	'-march=pentium-m' 
+	'-mtune=prescott' 
+	'-falign-functions=16' 
+	'-fno-gcse' 
+	'-fno-cse-follow-jumps' 
+	'-std=gnu99' 
+	'-DBUILD_FOR_OSX' 
+	'-DUSE_INLINE_MEMORY_ACCESSORS=1' 
+	'-DLSB_FIRST' 
+	'-DHAVE_SYS_TIME_H' 
+	'-DHAVE_NANOSLEEP' 
+	'-DCOGMTVM=0' 
+	'-DUSE_GLOBAL_STRUCT=0' 
+	'-DBASE_HEADER_SIZE=4')
 ]
 
 { #category : #settings }
@@ -36,7 +54,7 @@ CogFamilyCocoaIOSConfig >> compilerFlagsDebug [
 
 { #category : #settings }
 CogFamilyCocoaIOSConfig >> compilerFlagsRelease [ 
-	^#('-g0' '-Os' '-fomit-frame-pointer' '-DNDEBUG' '-DDEBUGVM=0')
+	^#('-g0' '-O3' '-fomit-frame-pointer' '-DNDEBUG' '-DDEBUGVM=0')
 ]
 
 { #category : #'plugin extra rules' }
@@ -61,6 +79,17 @@ CogFamilyCocoaIOSConfig >> configureQuicktimePlugin: maker [
 	"extra rules for QuicktimePlugin"
 	
 	maker includeDirectories: '${platformsDir}/Cross/plugins/QuicktimePlugin'.
+]
+
+{ #category : #'plugin extra rules' }
+CogFamilyCocoaIOSConfig >> configureSqueakSSLPlugin: maker [
+	maker addPlatformSources: #('sqMacSSL.c').
+]
+
+{ #category : #'plugin extra rules' }
+CogFamilyCocoaIOSConfig >> configureUnixAioPlugin: maker [
+	maker includeDirectories: '${crossDir}/plugins/FilePlugin'.
+	maker includeDirectories: '${platformsDir}/Cross/plugins/SocketPlugin'.
 ]
 
 { #category : #'plugin extra rules' }
@@ -94,6 +123,7 @@ CogFamilyCocoaIOSConfig >> defaultExternalPlugins [
 		ObjectiveCPlugin
 		QuicktimePlugin
 		TestOSAPlugin
+		SqueakSSLPlugin
 		"UnixOSProcessPlugin"
 	)
 ]
@@ -129,6 +159,7 @@ CogFamilyCocoaIOSConfig >> defaultInternalPlugins [
 		SoundPlugin
 		StarSqueakPlugin 
 		SurfacePlugin 
+		UnixAioPlugin
 		UnixOSProcessPlugin
 		)
 ]
