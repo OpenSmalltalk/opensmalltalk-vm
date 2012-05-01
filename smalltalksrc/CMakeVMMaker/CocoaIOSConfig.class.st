@@ -74,7 +74,7 @@ CocoaIOSConfig >> architecture [
 { #category : #accessing }
 CocoaIOSConfig >> commonCompilerFlags [
 	"Common compiler flags"
-	^#('-arch i386' "'-fnext-runtime'" '-mmacosx-version-min=10.4' '-DHAVE_UUID_GENERATE')
+	^#('-arch i386' '-mmacosx-version-min=10.5' '-DHAVE_UUID_GENERATE')
 ]
 
 { #category : #accessing }
