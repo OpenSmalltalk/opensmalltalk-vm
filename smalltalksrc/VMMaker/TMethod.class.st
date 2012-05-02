@@ -816,7 +816,7 @@ TMethod >> hasUnrenamableCCode [
 { #category : #inlining }
 TMethod >> inlineCaseStatementBranchesIn: aCodeGen localizingVars: varsList [
 
-	| stmt sel meth newStatements maxTemp usedVars exitLabel v |
+	| stmt sel newStatements maxTemp usedVars exitLabel v |
 	maxTemp := 0.
 	parseTree nodesDo: [ :n |
 		n isCaseStmt ifTrue: [
@@ -824,32 +824,33 @@ TMethod >> inlineCaseStatementBranchesIn: aCodeGen localizingVars: varsList [
 				stmt := stmtNode statements first.
 				stmt isSend ifTrue: [
 					sel := stmt selector.
-					meth := aCodeGen methodNamed: sel.
-					(meth notNil
-					 and: [meth hasUnrenamableCCode
-						or: [meth args notEmpty]]) ifFalse: [
-						meth := meth copy.
-						meth hasReturn ifTrue: [
-							exitLabel := meth unusedLabelForInliningInto: self.
-							meth exitVar: nil label: exitLabel.
-							labels add: exitLabel.
-						] ifFalse: [ exitLabel := nil ].
+					(aCodeGen methodNamed: sel) ifNotNil:
+						[:meth|
+						(meth hasUnrenamableCCode
+						or: [meth args notEmpty]) ifFalse: [
+							meth := meth copy.
+							meth hasReturn ifTrue: [
+								exitLabel := meth unusedLabelForInliningInto: self.
+								meth exitVar: nil label: exitLabel.
+								labels add: exitLabel.
+							] ifFalse: [ exitLabel := nil ].
 
-						meth renameLabelsForInliningInto: self.
-						meth labels do: [ :label | labels add: label ].
-						newStatements := stmtNode statements asOrderedCollection.
-						newStatements removeFirst.
+							meth renameLabelsForInliningInto: self.
+							meth labels do: [ :label | labels add: label ].
+							newStatements := stmtNode statements asOrderedCollection.
+							newStatements removeFirst.
 
-						exitLabel ~= nil ifTrue: [
+							exitLabel ~= nil ifTrue: [
+								newStatements addFirst:
+									(TLabeledCommentNode new
+										setLabel: exitLabel comment: 'end case').
+							].
+
+							newStatements addFirst: meth asInlineNode.
 							newStatements addFirst:
-								(TLabeledCommentNode new
-									setLabel: exitLabel comment: 'end case').
+								(TLabeledCommentNode new setComment: meth selector).
+							stmtNode setStatements: newStatements.
 						].
-
-						newStatements addFirst: meth asInlineNode.
-						newStatements addFirst:
-							(TLabeledCommentNode new setComment: meth selector).
-						stmtNode setStatements: newStatements.
 					].
 				].
 			].
@@ -866,7 +867,6 @@ TMethod >> inlineCaseStatementBranchesIn: aCodeGen localizingVars: varsList [
 	varsList do: [ :var |
 		(usedVars includes: var) ifFalse: [ locals addFirst: var asString ].
 	].
-
 ]
 
 { #category : #inlining }

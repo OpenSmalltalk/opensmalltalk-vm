@@ -5051,6 +5051,12 @@ StackInterpreter >> handleStackOverflowOrEventAllowContextSwitch: mayContextSwit
 	^switched
 ]
 
+{ #category : #'internal interpreter access' }
+StackInterpreter >> headerIndicatesAlternateBytecodeSet: methodHeader [
+	"A negative header selects the alternate bytecode set."
+	^(objectMemory integerValueOf: methodHeader) < 0
+]
+
 { #category : #'compiled methods' }
 StackInterpreter >> headerOf: methodPointer [
 	^objectMemory fetchPointer: HeaderIndex ofObject: methodPointer
@@ -6859,7 +6865,7 @@ StackInterpreter >> methodUsesAlternateBytecodeSet: aMethodObj [
 	<api>
 	<inline: true>
 	"A negative header selects the alternate bytecode set."
-	^(objectMemory integerValueOf: (self headerOf: aMethodObj)) < 0
+	^self headerIndicatesAlternateBytecodeSet: (self headerOf: aMethodObj)
 ]
 
 { #category : #'frame access' }

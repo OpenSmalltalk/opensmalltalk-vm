@@ -609,6 +609,12 @@ NewCoObjectMemorySimulator >> tenuringIncrementalGC [
 	^super tenuringIncrementalGC
 ]
 
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> transcript [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter transcript
+]
+
 { #category : #testing }
 NewCoObjectMemorySimulator >> validOop: oop [
 	" Return true if oop appears to be valid "

@@ -227,7 +227,7 @@ JPEGReadWriter2Plugin >> primJPEGReadHeader: aJPEGDecompressStruct fromByteArray
 { #category : #primitives }
 JPEGReadWriter2Plugin >> primJPEGReadImage: aJPEGDecompressStruct fromByteArray: source onForm: form doDithering: ditherFlag errorMgr: aJPEGErrorMgr2Struct [
 
-	| pcinfo pjerr buffer rowStride formBits formDepth i j formPix ok rOff gOff bOff rOff2 gOff2 bOff2 formWidth formHeight pixPerWord formPitch formBitsSize sourceSize r1 r2 g1 g2 b1 b2 formBitsAsInt dmv1 dmv2 di dmi dmo |
+	| pcinfo pjerr buffer rowStride formBits formDepth i j formPix ok rOff gOff bOff rOff2 gOff2 bOff2 formWidth formHeight pixPerWord formPitch formBitsSize sourceSize r1 r2 g1 g2 b1 b2 formBitsOops dmv1 dmv2 di dmi dmo |
 	<export: true>
 	<var: #pcinfo type: 'j_decompress_ptr '>
 	<var: #pjerr type: 'error_ptr2 '>
@@ -248,8 +248,7 @@ JPEGReadWriter2Plugin >> primJPEGReadImage: aJPEGDecompressStruct fromByteArray:
 		rOff. gOff. bOff. rOff2. gOff2. bOff2. sourceSize.
 		r1. r2. g1.g2. b1. b2. dmv1. dmv2. di. dmi. dmo.
 
-	formBits :=self cCoerce: (interpreterProxy fetchPointer: 0 ofObject: form)  to: 'unsigned *'.
-	formBitsAsInt := interpreterProxy fetchPointer: 0 ofObject: form.
+	formBitsOops := interpreterProxy fetchPointer: 0 ofObject: form.
 	formDepth := interpreterProxy fetchInteger: 3 ofObject: form.
 
 	"Various parameter checks"
@@ -264,11 +263,12 @@ JPEGReadWriter2Plugin >> primJPEGReadImage: aJPEGDecompressStruct fromByteArray:
 	formHeight := (self cCode: '((j_decompress_ptr)aJPEGDecompressStruct)->image_height' inSmalltalk: [0]).
 	pixPerWord := 32 // formDepth.
 	formPitch := formWidth + (pixPerWord-1) // pixPerWord * 4.
-	formBitsSize := interpreterProxy byteSizeOf: formBitsAsInt.
+	formBitsSize := interpreterProxy byteSizeOf: formBitsOops.
 	interpreterProxy success: 
-		((interpreterProxy isWordsOrBytes: formBitsAsInt)
+		((interpreterProxy isWordsOrBytes: formBitsOops)
 			and: [formBitsSize = (formPitch * formHeight)]).
 	interpreterProxy failed ifTrue: [^ nil].
+	formBits := interpreterProxy firstIndexableField: formBitsOops.
 
 	self cCode: '
 		sourceSize = interpreterProxy->stSizeOf(interpreterProxy->stackValue(3));
@@ -319,7 +319,7 @@ JPEGReadWriter2Plugin >> primJPEGReadImage: aJPEGDecompressStruct fromByteArray:
 
 					switch (formDepth) {
 						case 32:
-							for(i = 0, j = 1; i < rowStride; i +=(pcinfo->out_color_components), j++) {
+							for(i = 0, j = 0; i < rowStride; i +=(pcinfo->out_color_components), j++) {
 								formPix = (255 << 24) | (buffer[0][i+rOff] << 16) | (buffer[0][i+gOff] << 8) | buffer[0][i+bOff];
 								if (formPix == 0) formPix = 1;
 								formBits [ ((pcinfo->output_scanline - 1) * (pcinfo->image_width)) + j ] = formPix;
@@ -327,7 +327,7 @@ JPEGReadWriter2Plugin >> primJPEGReadImage: aJPEGDecompressStruct fromByteArray:
 							break;
 
 						case 16:
-							for(i = 0, j = 1; i < rowStride; i +=(pcinfo->out_color_components*2), j++) {
+							for(i = 0, j = 0; i < rowStride; i +=(pcinfo->out_color_components*2), j++) {
 								r1 = buffer[0][i+rOff];
 								r2 = buffer[0][i+rOff2];
 								g1 = buffer[0][i+gOff];
@@ -381,7 +381,7 @@ JPEGReadWriter2Plugin >> primJPEGReadImage: aJPEGDecompressStruct fromByteArray:
 { #category : #primitives }
 JPEGReadWriter2Plugin >> primJPEGWriteImage: aJPEGCompressStruct onByteArray: destination form: form quality: quality progressiveJPEG: progressiveFlag errorMgr: aJPEGErrorMgr2Struct [
 
-	| pcinfo pjerr buffer rowStride formBits formWidth formHeight formDepth i j formPix destinationSize pixPerWord formPitch formBitsSize formBitsAsInt |
+	| pcinfo pjerr buffer rowStride formBits formWidth formHeight formDepth i j formPix destinationSize pixPerWord formPitch formBitsSize formBitsOops |
 	<export: true>
 	<var: #pcinfo type: 'j_compress_ptr '>
 	<var: #pjerr type: 'error_ptr2 '>
@@ -397,8 +397,7 @@ JPEGReadWriter2Plugin >> primJPEGWriteImage: aJPEGCompressStruct onByteArray: de
 	formWidth := nil. formHeight := nil. formDepth := nil. i := nil. j := nil. formPix := nil. destinationSize := nil.
 	pcinfo. pjerr. buffer. rowStride. formBits. formWidth. formHeight. formDepth. i. j. formPix. destinationSize.
 
-	formBits :=self cCoerce: (interpreterProxy fetchPointer: 0 ofObject: form)  to: 'unsigned *'.
-	formBitsAsInt := interpreterProxy fetchPointer: 0 ofObject: form.
+	formBitsOops := interpreterProxy fetchPointer: 0 ofObject: form.
 	formWidth := interpreterProxy fetchInteger: 1 ofObject: form.
 	formHeight := interpreterProxy fetchInteger: 2 ofObject: form.
 	formDepth := interpreterProxy fetchInteger: 3 ofObject: form.
@@ -413,12 +412,12 @@ JPEGReadWriter2Plugin >> primJPEGWriteImage: aJPEGCompressStruct onByteArray: de
 	' inSmalltalk: [].
 	pixPerWord := 32 // formDepth.
 	formPitch := formWidth + (pixPerWord-1) // pixPerWord * 4.
-	formBitsSize := interpreterProxy byteSizeOf: formBitsAsInt.
+	formBitsSize := interpreterProxy byteSizeOf: formBitsOops.
 	interpreterProxy success: 
-		((interpreterProxy isWordsOrBytes: formBitsAsInt)
+		((interpreterProxy isWordsOrBytes: formBitsOops)
 			and: [formBitsSize = (formPitch * formHeight)]).
 	interpreterProxy failed ifTrue: [^ nil].
-
+	formBits := interpreterProxy firstIndexableField: formBitsOops.
 	self cCode: '
 		destinationSize = interpreterProxy->stSizeOf(interpreterProxy->stackValue(4));
 		pcinfo = (j_compress_ptr)aJPEGCompressStruct;
@@ -453,7 +452,7 @@ JPEGReadWriter2Plugin >> primJPEGWriteImage: aJPEGCompressStruct onByteArray: de
 				while (pcinfo->next_scanline < pcinfo->image_height) {
 					switch (formDepth) {
 						case 32:
-							for(i = 0, j = 1; i < rowStride; i +=3, j++) {
+							for(i = 0, j = 0; i < rowStride; i +=3, j++) {
 								formPix = formBits [ ((pcinfo->next_scanline) * formWidth) + j ];
 								buffer[0][i] = (formPix >> 16) & 255;
 								buffer[0][i+1] = (formPix >> 8) & 255;
@@ -461,7 +460,7 @@ JPEGReadWriter2Plugin >> primJPEGWriteImage: aJPEGCompressStruct onByteArray: de
 							}
 							break;
 						case 16:
-							for(i = 0, j = 1; i < rowStride; i +=6, j++) {
+							for(i = 0, j = 0; i < rowStride; i +=6, j++) {
 								formPix = formBits [ ((pcinfo->next_scanline) * formWidth) / 2 + j ];
 								buffer[0][i] = (formPix >> 23) & 248;
 								buffer[0][i+1] = (formPix >> 18) & 248;
