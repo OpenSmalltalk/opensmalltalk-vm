@@ -677,7 +677,7 @@ CogVMSimulator >> ensureMultiThreadingOverridesAreUpToDate [
 			desiredSource ~= (thisClass sourceCodeAt: sel ifAbsent: ['']) asString ifTrue:
 				[((thisClass includesSelector: sel)
 				  and: [(thisClass compiledMethodAt: sel) messages includesAnyOf: #(halt halt:)])
-					ifTrue: [Transcript cr; nextPutAll: 'WARNING, because of halts, not generating '; nextPutAll: desiredSource; cr; flush]
+					ifTrue: [self transcript cr; nextPutAll: 'WARNING, because of halts, not generating '; nextPutAll: desiredSource; cr; flush]
 					ifFalse: [thisClass compile: desiredSource classified: #'multi-threading simulation switch']]].
 	"Make sure obsolete CoInterpreterMT switch methods are deleted."
 	((thisContext methodClass organization listAtCategoryNamed: #'multi-threading simulation switch') select:
