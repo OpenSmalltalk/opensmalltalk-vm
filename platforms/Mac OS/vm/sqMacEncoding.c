@@ -10,8 +10,8 @@
 #include "sq.h"
 
 #include "sqMacEncoding.h"
-#include "sqMacUIConstants.h" 
-#include "sqMacFileLogic.h"	
+#include "sqMacUIConstants.h"
+#include "sqMacFileLogic.h"
 
 
     CFStringEncoding gCurrentVMEncoding=kCFStringEncodingMacRoman;
@@ -28,8 +28,8 @@ void getVMPathWithEncoding(char *target,UInt32 encoding) {
     CFStringGetCString (vmPathString, target, VMPATH_SIZE, encoding);
 }
 
-void SetVMPathFromCFString(CFMutableStringRef strRef) {    
-    if (vmPathString != NULL)  
+void SetVMPathFromCFString(CFMutableStringRef strRef) {
+    if (vmPathString != NULL)
         CFRelease(vmPathString);
 	vmPathString = strRef;
 	CFRetain(vmPathString);
@@ -37,7 +37,7 @@ void SetVMPathFromCFString(CFMutableStringRef strRef) {
 
 Boolean VMPathIsEmpty() {
     char path[VMPATH_SIZE + 1];
-     if (vmPathString == NULL) 
+     if (vmPathString == NULL)
         return true;
     getVMPathWithEncoding(path,gCurrentVMEncoding);
     return (*path == 0x00);
@@ -51,13 +51,13 @@ char *getImageName(void) {
     getImageNameWithEncoding(imageName,gCurrentVMEncoding);
     return imageName;
 }
-    
+
 void SetImageNameViaCFString(CFStringRef string) {
     char *ignore;
-	// normalization because we get here from looking for file name in resource folder directly at startup time. 
+	// normalization because we get here from looking for file name in resource folder directly at startup time.
 	// HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements
 	CFMutableStringRef mutableStr= CFStringCreateMutableCopy(NULL, 0, string);
-	if (gCurrentVMEncoding == kCFStringEncodingUTF8) 
+	if (gCurrentVMEncoding == kCFStringEncodingUTF8)
 		CFStringNormalize(mutableStr, kCFStringNormalizationFormKC); // pre-combined
     CFRetain(mutableStr);
 	if (imageNameString != NULL)
@@ -68,7 +68,7 @@ void SetImageNameViaCFString(CFStringRef string) {
 
 void SetImageNameViaString(char *string,UInt32 encoding) {
 	CFStringRef path;
-	
+
 	if (imageNameString != NULL)
         CFRelease(imageNameString);
 	path = CFStringCreateWithCString(NULL, string, encoding);
@@ -78,7 +78,7 @@ void SetImageNameViaString(char *string,UInt32 encoding) {
 
 
 Boolean ImageNameIsEmpty() {
-    if (imageNameString == NULL) 
+    if (imageNameString == NULL)
         return true;
     return getImageName() == 0x00;
 }
@@ -112,15 +112,15 @@ void setEncodingType (char * string) {
       if (strcmp("iso-8859-1",string) == 0)
           gCurrentVMEncoding = kCFStringEncodingISOLatin1;
   }
-  
+
   char  *getEncodingType(UInt32 aType) {
-      if (aType == kCFStringEncodingMacRoman) 
+      if (aType == kCFStringEncodingMacRoman)
           return (char *)&"macintosh";
-      if (aType == kCFStringEncodingUTF8) 
+      if (aType == kCFStringEncodingUTF8)
           return (char *)&"UTF-8";
-      if (aType == kCFStringEncodingShiftJIS) 
+      if (aType == kCFStringEncodingShiftJIS)
           return (char *)&"ShiftJIS";
-      if (aType == kCFStringEncodingISOLatin1) 
+      if (aType == kCFStringEncodingISOLatin1)
           return (char *)&"Latin1";
       return (char *)&"macintosh";
   }

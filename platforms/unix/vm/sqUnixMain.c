@@ -85,6 +85,8 @@
        char   imageName[MAXPATHLEN+1];		/* full path to image */
 static char   vmName[MAXPATHLEN+1];		/* full path to vm */
        char   vmPath[MAXPATHLEN+1];		/* full path to image directory */
+static char   vmLogDirA[PATH_MAX+1];	/* where to write crash.dmp */
+
        char  *exeName;					/* short vm name, e.g. "squeak" */
 
        int    argCnt=		0;	/* global copies for access from plugins */
@@ -330,20 +332,31 @@ recordPathsForVMName(const char *localVmName)
   }
 }
 
-static void recordFullPathForImageName(const char *localImageName)
+static void
+recordFullPathForImageName(const char *localImageName)
 {
-  struct stat s;
-  /* get canonical path to image */
-  if ((stat(localImageName, &s) == -1) || (realpath(localImageName, imageName) == 0))
-    pathCopyAbs(imageName, localImageName, sizeof(imageName));
+	struct stat s;
+	/* get canonical path to image */
+	if ((stat(localImageName, &s) == -1)
+	 || (realpath(localImageName, imageName) == 0))
+		pathCopyAbs(imageName, localImageName, sizeof(imageName));
+
+	/* Set the directory into which to write the crash.dmp file. */
+	/* By default this is the image file's directory (strange but true). */
+#if CRASH_DUMP_IN_CWD
+	getcwd(vmLogDirA,PATH_MAX);
+#else
+	strcpy(vmLogDirA,imageName);
+	if (strrchr(vmLogDirA,'/'))
+		*strrchr(vmLogDirA,'/') = 0;
+	else
+		getcwd(vmLogDirA,PATH_MAX);
+#endif
 }
 
 /* vm access */
 
-sqInt imageNameSize(void)
-{
-  return strlen(imageName);
-}
+sqInt imageNameSize(void) { return strlen(imageName); }
 
 sqInt imageNameGetLength(sqInt sqImageNameIndex, sqInt length)
 {
@@ -379,19 +392,12 @@ sqInt imageNamePutLength(sqInt sqImageNameIndex, sqInt length)
 }
 
 
-char *getImageName(void)
-{
-  return imageName;
-}
+char *getImageName(void) { return imageName; }
 
 
 /*** VM Home Directory Path ***/
 
-
-sqInt vmPathSize(void)
-{
-  return strlen(vmPath);
-}
+sqInt vmPathSize(void) { return strlen(vmPath); }
 
 sqInt vmPathGetLength(sqInt sqVMPathIndex, sqInt length)
 {
@@ -850,15 +856,12 @@ error(char *msg)
 }
 #pragma auto_inline on
 
-/* construct /dir/for/image/crash.dmp if a / in imageName else crash.dmp */
 static void
 getCrashDumpFilenameInto(char *buf)
 {
-  char *slash;
-
-  strcpy(buf,imageName);
-  slash = strrchr(buf,'/');
-  strcpy(slash ? slash + 1 : buf, "crash.dmp");
+	strcpy(buf,vmLogDirA);
+	vmLogDirA[0] && strcat(buf, "/");
+	strcat(buf, "crash.dmp");
 }
 
 static void

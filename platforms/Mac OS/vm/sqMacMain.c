@@ -252,15 +252,14 @@ error(char *msg)
 }
 #pragma auto_inline on
 
-/* construct /dir/for/image/crash.dmp if a / in imageName else crash.dmp */
+static char vmLogDirA[PATH_MAX+1];
+
 static void
 getCrashDumpFilenameInto(char *buf)
 {
-  char *slash;
-
-  strcpy(buf,imageName);
-  slash = strrchr(buf,'/');
-  strcpy(slash ? slash + 1 : buf, "crash.dmp");
+	strcpy(buf,vmLogDirA);
+	vmLogDirA[0] && strcat(buf, "/");
+	strcat(buf, "crash.dmp");
 }
 
 static void
@@ -439,6 +438,18 @@ main(int argc, char **argv, char **envp)
 			}
 	}
 
+	/* Set the directory into which to write the crash.dmp file. */
+	/* By default this is the image file's directory (strange but true). */
+#if CRASH_DUMP_IN_CWD
+	getcwd(vmLogDirA,PATH_MAX);
+#else
+	strcpy(vmLogDirA,getImageName());
+	if (strrchr(vmLogDirA,'/'))
+		*strrchr(vmLogDirA,'/') = 0;
+	else
+		getcwd(vmLogDirA,PATH_MAX);
+#endif
+
 	/* read the image file and allocate memory for Squeak heap */
 	f = sqImageFileOpen(getImageName(), "rb");
     if (gSqueakHeadless && f == NULL) 
@@ -527,7 +538,16 @@ int ioFormPrint(int bitsAddr, int width, int height, int depth, double hScale, d
 
 /* Andreas' stubs */
 char* ioGetLogDirectory(void) { return ""; };
-sqInt ioSetLogDirectoryOfSize(void* lblIndex, sqInt sz){ return 1; }
+
+sqInt
+ioSetLogDirectoryOfSize(void *lblIndex, sqInt sz)
+{
+	if (sz >= PATH_MAX)
+		return 0;
+	strncpy(vmLogDirA, lblIndex, sz);
+	vmLogDirA[sz] = 0;
+	return 1;
+}
 
 
 char * GetAttributeString(int id) {

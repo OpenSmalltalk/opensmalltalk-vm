@@ -60,10 +60,9 @@
 
 enum { KeyMapSize= 32 };
 
-typedef struct
-{
+typedef struct {
   int keyCode;
-  int keyChar;
+  long keyChar;
   int keyRepeated;
 } KeyMapping;
 
@@ -79,8 +78,8 @@ void postFullScreenUpdate(void);
 void signalAnyInterestedParties(void);
 static sqKeyboardEvent *enterKeystroke (long type, long cc, long pc, UniChar utf32Char, long m);
 
-static int addToKeyMap(int keyCode, int keyChar);
-static int findInKeyMap(int keyCode);
+static int addToKeyMap(int keyCode, UniChar keyChar);
+static UniChar findInKeyMap(int keyCode);
 static int removeFromKeyMap(int keyCode);
 static int indexInKeyMap(int keyCode);
 static int findRepeatInKeyMap(int keyCode);
@@ -221,13 +220,11 @@ MouseModifierState(EventRecord *theEvent)
 sqInputEvent *
 nextEventPut(void)
 {
-	sqInputEvent *evt;
-	evt = eventBuffer + eventBufferPut;
+	sqInputEvent *evt = eventBuffer + eventBufferPut;
 	eventBufferPut = (eventBufferPut + 1) % MAX_EVENT_BUFFER;
-	if (eventBufferGet == eventBufferPut) {
+	if (eventBufferGet == eventBufferPut)
 		/* buffer overflow; drop the last event */
 		eventBufferGet = (eventBufferGet + 1) % MAX_EVENT_BUFFER;
-	}
 	return evt;
 }
 
@@ -789,13 +786,64 @@ MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
     return result;
 }
 
+
+static TISInputSourceRef currentKeyboard = (TISInputSourceRef)-1;
+static UCKeyboardLayout *currentKeyboardLayout;
+
+static UCKeyboardLayout *
+getKeyboardLayout()
+{
+	TISInputSourceRef kbdNow = TISCopyCurrentKeyboardInputSource();
+
+	if (currentKeyboard != kbdNow) {
+		KeyboardLayoutRef keyLayout;
+		SInt32  keyLayoutKind;
+		CFDataRef uchr = (CFDataRef)TISGetInputSourceProperty
+										(kbdNow,
+										 kTISPropertyUnicodeKeyLayoutData);
+		currentKeyboard = kbdNow;
+		currentKeyboardLayout = (const UCKeyboardLayout*)CFDataGetBytePtr(uchr);
+		KLGetCurrentKeyboardLayout(&keyLayout);
+		KLGetKeyboardLayoutProperty(keyLayout, kKLKind, (const void **)&keyLayoutKind);
+		//printf("\nKbd: %ld kind: %ld kKLKCHRKind %ld",
+		//		kbdNow, keyLayoutKind, kKLKCHRKind); fflush(stdout);
+	}
+	return currentKeyboardLayout;
+}
+
+static UniChar
+shiftedUnicodeForEvent(EventRef event, UInt32 keyCode)
+{
+#define MaxStringLength 4
+	UInt32 deadKeyState = 0;
+	UInt32 keyboardType;
+	UniCharCount actualStringLength = 0;
+	UniChar unicodeString[MaxStringLength];
+    OSStatus result;
+
+	GetEventParameter(event, kEventParamKeyboardType, typeUInt32, NULL,
+					  sizeof(keyboardType), NULL, &keyboardType);
+	result = UCKeyTranslate(getKeyboardLayout(),
+							keyCode, kUCKeyActionDown,
+							/* Only interested in the shift state, and
+							 * UCKeyTranslate uses old-style Carbon modifiers. */
+							ModifierStateCarbon(event) & 8
+								? 1 << (shiftKeyBit - 8)
+								: 0,
+							keyboardType, 0,
+							&deadKeyState,
+							MaxStringLength,
+							&actualStringLength, unicodeString);
+	return result == noErr ? unicodeString[0] : 0;
+}
+#undef MaxStringLength
+
 static pascal OSStatus
 MyWindowEventKBHandler(EventHandlerCallRef myHandler,
 						EventRef event, void* userData)
 {
 #pragma unused(myHandler,userData)
     UInt32 whatHappened,keyCode,keyChar;
-	SInt32 key;
     OSStatus result = eventNotHandledErr; /* report failure by default */
 
     if (!windowActive)
@@ -808,28 +856,32 @@ MyWindowEventKBHandler(EventHandlerCallRef myHandler,
 	GetEventParameter (event, kEventParamKeyCode, typeUInt32,NULL, sizeof(typeUInt32), NULL, &keyCode);
 	/* See UCKeyTranslate in https://developer.apple.com/library/mac/#documentation/Carbon/reference/Unicode_Utilities_Ref/Reference/reference.html
 	 * for how to convert an event to one or more Unicode characters. e.g.
-	 * http://www.cocoabuilder.com/archive/cocoa/184332-key-number-to-unicode-string.html
+	 * http://inquisitivecocoa.com/2009/04/05/key-code-translator/
 	 */
     switch (whatHappened) {
-        case kEventRawKeyDown:
-			//fprintf(stdout,"\nrawkey down %i",ioMSecs()); fflush(stdout);
+        case kEventRawKeyDown: {
+			//printf("\nrawkey down %i ",ioMSecs()); fflush(stdout);
+			//This will work, but this appears unused. */
+			//addToKeyMap(keyCode, shiftedUnicodeForEvent(event,keyCode));
 			addToKeyMap(keyCode, 0);
             result = eventNotHandledErr;
             break;
+		}
         case kEventRawKeyRepeat:
 			//fprintf(stdout,"\nrawkey repeat %i",ioMSecs()); fflush(stdout);
 			setRepeatInKeyMap(keyCode);
             result = eventNotHandledErr;
             break;
-        case kEventRawKeyUp:
+        case kEventRawKeyUp: {
+			UniChar key;
 			//fprintf(stdout,"\nrawkey up %i",ioMSecs()); fflush(stdout);
-			key = findInKeyMap(keyCode);
-			if (key != -1) {
-				enterKeystroke ( EventTypeKeyboard,keyCode, EventKeyUp, 0, ModifierStateCarbon(event));
-			}
+			if ((key = findInKeyMap(keyCode)) != -1)
+				enterKeystroke(EventTypeKeyboard, keyCode, EventKeyUp,
+								key, ModifierStateCarbon(event));
 			removeFromKeyMap(keyCode);
             result = eventNotHandledErr;
             break;
+		}
         case kEventRawKeyModifiersChanged:
             /* ok in this case we fake a mouse event to deal with the modifiers changing */
             if(inputSemaphoreIndex)
@@ -1151,10 +1203,14 @@ recordKeyboardEventCarbon(EventRef event)
     modifiedUniChar = *uniCharBufPtr;
     buttonState = modifierBits =ModifierStateCarbon(actualEvent); //Capture option states
     if (((modifierBits >> 3) & 0x9) == 0x9) {  /* command and shift */
-            if ((modifiedUniChar >= 97) && (modifiedUniChar <= 122)) {
-                    /* convert ascii code of command-shift-letter to upper case */
-                    modifiedUniChar = modifiedUniChar - 32;
-            }
+        if ((modifiedUniChar >= 97) && (modifiedUniChar <= 122)) {
+            /* convert ascii code of command-shift-letter to upper case */
+            modifiedUniChar = modifiedUniChar - 32;
+        }
+		else { /* map potential punctuation character to shifted key. */
+			if (!(modifiedUniChar = shiftedUnicodeForEvent(actualEvent,macKeyCode)))
+				modifiedUniChar = *uniCharBufPtr; /* undo on error */
+		}
     }
 
 	modifierBits = modifierBits >> 3;
@@ -1515,8 +1571,7 @@ RunApplicationEventLoopWithSqueak(void)
 static sqKeyboardEvent *
 enterKeystroke(long type, long cc, long pc, UniChar utf32Code, long m)
 {
-	sqKeyboardEvent 	*evt;
-	evt = (sqKeyboardEvent*) nextEventPut();
+	sqKeyboardEvent *evt = (sqKeyboardEvent*)nextEventPut();
 
 	/* first the basics */
 	//fprintf(stdout,"\nKeyStroke time %i Type %i Value %i",ioMSecs(),pc,cc); fflush(stdout);
@@ -1529,7 +1584,7 @@ enterKeystroke(long type, long cc, long pc, UniChar utf32Code, long m)
 	evt->modifiers = m;
 	evt->windowIndex = windowActive;
 	evt->utf32Code = 0;
-	if(pc == EventKeyChar) {
+	if (pc == EventKeyChar) {
 		evt->utf32Code = utf32Code;
 		if (!inputSemaphoreIndex) {
 			int  keystate;
@@ -1555,9 +1610,9 @@ enterKeystroke(long type, long cc, long pc, UniChar utf32Code, long m)
 
 
 static int
-addToKeyMap(int keyCode, int keyChar)
+addToKeyMap(int keyCode, UniChar keyChar)
 {
-  // fprintf(stdout, "\nAddToKeyMap T %i code %i char %i i %i",ioMSecs(),keyCode,keyChar,keyMapSize); fflush(stdout);
+  //fprintf(stdout, "\nAddToKeyMap T %i code %i char %i(%x,%c) i %i",ioMSecs(),keyCode,keyChar,keyChar,keyChar,keyMapSize); fflush(stdout);
   if (keyMapSize > KeyMapSize) { fprintf(stderr, "keymap overflow\n");  return -1; }
   keyMap[keyMapSize++]= (KeyMapping){ keyCode, keyChar, 0};
   return keyChar;
@@ -1573,7 +1628,7 @@ indexInKeyMap(int keyCode)
   return -1;
 }
 
-static int
+static UniChar
 findInKeyMap(int keyCode)
 {
   int idx= indexInKeyMap(keyCode);

@@ -37,7 +37,6 @@
 		A2181C3810814EC700B8FC7A /* seek.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181C0810814EC700B8FC7A /* seek.c */; };
 		A2181C3910814EC700B8FC7A /* slice.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181C0910814EC700B8FC7A /* slice.c */; };
 		A2181C3A10814EC700B8FC7A /* vlc.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181C0B10814EC700B8FC7A /* vlc.c */; };
-		A2181C421081506400B8FC7A /* sqMacFileBits.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181C401081506400B8FC7A /* sqMacFileBits.c */; };
 		A2181C46108150C800B8FC7A /* Mpeg3Plugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181C45108150C800B8FC7A /* Mpeg3Plugin.c */; };
 /* End PBXBuildFile section */
 
@@ -102,8 +101,6 @@
 		A2181C0A10814EC700B8FC7A /* slice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = slice.h; sourceTree = "<group>"; };
 		A2181C0B10814EC700B8FC7A /* vlc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = vlc.c; sourceTree = "<group>"; };
 		A2181C0C10814EC700B8FC7A /* vlc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = vlc.h; sourceTree = "<group>"; };
-		A2181C401081506400B8FC7A /* sqMacFileBits.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sqMacFileBits.c; path = "../../platforms/Mac OS/plugins/Mpeg3Plugin/sqMacFileBits.c"; sourceTree = SOURCE_ROOT; };
-		A2181C411081506400B8FC7A /* sqMacFileBits.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqMacFileBits.h; path = "../../platforms/Mac OS/plugins/Mpeg3Plugin/sqMacFileBits.h"; sourceTree = SOURCE_ROOT; };
 		A2181C45108150C800B8FC7A /* Mpeg3Plugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = Mpeg3Plugin.c; path = ../../src/plugins/Mpeg3Plugin/Mpeg3Plugin.c; sourceTree = SOURCE_ROOT; };
 		A2181C491081511C00B8FC7A /* Mpeg3Plugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Mpeg3Plugin.h; path = ../../platforms/Cross/plugins/Mpeg3Plugin/Mpeg3Plugin.h; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -135,8 +132,6 @@
 			children = (
 				A2181C491081511C00B8FC7A /* Mpeg3Plugin.h */,
 				A2181C45108150C800B8FC7A /* Mpeg3Plugin.c */,
-				A2181C401081506400B8FC7A /* sqMacFileBits.c */,
-				A2181C411081506400B8FC7A /* sqMacFileBits.h */,
 				A2181BC610814EC700B8FC7A /* libmpeg */,
 				A2181BC510814EA000B8FC7A /* config.h */,
 				A2181BC410814E7000B8FC7A /* interp.h */,
@@ -331,7 +326,6 @@
 				A2181C3810814EC700B8FC7A /* seek.c in Sources */,
 				A2181C3910814EC700B8FC7A /* slice.c in Sources */,
 				A2181C3A10814EC700B8FC7A /* vlc.c in Sources */,
-				A2181C421081506400B8FC7A /* sqMacFileBits.c in Sources */,
 				A2181C46108150C800B8FC7A /* Mpeg3Plugin.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

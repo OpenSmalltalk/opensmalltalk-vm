@@ -1302,7 +1302,7 @@ sqInt sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValue
 	  /* this is JUST PLAIN WRONG (I mean the design in the image rather
 	     than the implementation here, which is probably correct
 	     w.r.t. the broken design) */
-	  if (optionValueSize > sizeof(buf) - 1)
+	  if (optionValueSize > (int)sizeof(buf) - 1)
 	    goto barf;
 
 	  memset((void *)buf, 0, sizeof(buf));
@@ -1371,7 +1371,6 @@ sqInt sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue(SocketPtr s, 
 
 void sqSocketBindToPort(SocketPtr s, int addr, int port)
 {
-  int result;
   struct sockaddr_in inaddr;
   privateSocketStruct *pss= PSP(s);
 
@@ -1393,10 +1392,8 @@ void sqSocketBindToPort(SocketPtr s, int addr, int port)
 
 void sqSocketSetReusable(SocketPtr s)
 {
-  char optionValue[256];
   size_t bufSize;
   unsigned char buf[4];
-  int err;
 
   if (!socketValid(s)) return;
 
@@ -1406,7 +1403,6 @@ void sqSocketSetReusable(SocketPtr s)
     {
       PSP(s)->sockError= errno;
       interpreterProxy->success(false);
-      return;
     }
 }
 
@@ -1446,7 +1442,12 @@ sqInt sqResolverStatus(void)
 
 sqInt sqResolverAddrLookupResultSize(void)	{ return strlen(lastName); }
 sqInt sqResolverError(void)			{ return lastError; }
-sqInt sqResolverLocalAddress(void)		{ return nameToAddr(localHostName); }
+sqInt sqResolverLocalAddress(void)
+{	sqInt localaddr = nameToAddr(localHostName);
+	if (!localaddr)
+		localaddr = nameToAddr("localhost");
+	return localaddr;
+}
 sqInt sqResolverNameLookupResult(void)		{ return lastAddr; }
 
 void sqResolverAddrLookupResult(char *nameForAddress, sqInt nameSize)
