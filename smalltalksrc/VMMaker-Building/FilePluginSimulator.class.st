@@ -233,7 +233,7 @@ FilePluginSimulator >> sqFileSize: file [
 
 { #category : #simulation }
 FilePluginSimulator >> sqFileStdioHandlesInto: anArray [
-	Transcript clear.
+	interpreterProxy transcript clear.
 	"See FilePluginSimulator>>initialiseModule"
 	anArray
 		at: 1 put: 0;

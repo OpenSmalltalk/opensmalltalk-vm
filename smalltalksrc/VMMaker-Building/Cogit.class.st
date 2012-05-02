@@ -7417,7 +7417,7 @@ Cogit >> simulateCogCodeAt: address [ "<Integer>"
 			[processor printRegistersOn: coInterpreter transcript].
 		  self recordLastInstruction.
 		  printInstructions ifTrue:
-			[Transcript nextPutAll: lastNInstructions last; cr; flush].
+			[coInterpreter transcript nextPutAll: lastNInstructions last; cr; flush].
 		  (breakPC isInteger
 			ifTrue:
 				[processor pc = breakPC

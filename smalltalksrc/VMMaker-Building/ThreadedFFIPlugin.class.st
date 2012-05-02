@@ -121,6 +121,9 @@ ThreadedFFIPlugin class >> preambleCCode [
 # else
 #	define PLATFORM_API_USES_CALLEE_POPS_CONVENTION 0
 # endif
+#endif /* defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__) */
+
+#if !defined(ALLOCA_LIES_SO_USE_GETSP)
 # if defined(__MINGW32__) && (__GNUC__ >= 3)
     /*
      * cygwin -mno-cygwin (MinGW) gcc 3.4.x''s alloca is a library routine that answers
@@ -128,12 +131,10 @@ ThreadedFFIPlugin class >> preambleCCode [
      * Grab the actual stack pointer to correct.
      */
 #	define ALLOCA_LIES_SO_USE_GETSP 1
+# else
+#	define ALLOCA_LIES_SO_USE_GETSP 0
 # endif
-#endif /* defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__) */
-
-#if !defined(ALLOCA_LIES_SO_USE_GETSP)
-# define ALLOCA_LIES_SO_USE_GETSP 0
-#endif
+#endif /* !defined(ALLOCA_LIES_SO_USE_GETSP) */
 
 /* The dispatchOn:in:with:with: generates an unwanted call on error.  Just squash it. */
 #define error(foo) 0
