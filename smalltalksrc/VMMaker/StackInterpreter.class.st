@@ -6660,7 +6660,7 @@ StackInterpreter >> markContextAsDead: oop [
 
 { #category : #'frame access' }
 StackInterpreter >> marriedContext: spouseContext pointsTo: anOop stackDeltaForCurrentFrame: stackDeltaForCurrentFrame [
-	"This is a helper for primitiveObjectPointsTo so it *does not* check the frameContext field because that is an implicit self-reference not present in the stale ."
+	"This is a helper for primitiveObjectPointsTo so it *does not* check the frameContext field because that is an implicit self-reference not present in the state ."
 	| theFP thePage theSP rcvrOffset |
 	<inline: false>
 	<var: #theFP type: #'char *'>
