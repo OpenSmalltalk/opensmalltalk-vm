@@ -80,6 +80,13 @@ Android class >> inAndroid [
 ]
 
 { #category : #'system primitives' }
+Android class >> onScreenKbd: anInteger [
+	"show/hide the onscreen keyboard"
+	<primitive: 'primOnScreenKbd' module: 'AndroidPlugin'>
+	self primitiveFailed.
+]
+
+{ #category : #'system primitives' }
 Android class >> setPitch: aFloat [
 	"set TTS synthesized speech pitch"
 	<primitive: 'primSetPitch' module: 'AndroidPlugin'>
