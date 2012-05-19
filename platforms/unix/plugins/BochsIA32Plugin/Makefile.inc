@@ -7,4 +7,5 @@ XCPPFLAGS=	-m32 -DUSE_BOCHS_CONFIG_H=1 \
 XLDFLAGS=	-L$(topdir)/processors/IA32/linuxbochs/cpu \
 			-L$(topdir)/processors/IA32/linuxbochs/fpu \
 			-L$(topdir)/processors/IA32/linuxbochs/disasm \
-			-lcpu -lfpu -ldisasm
+			-lcpu -lfpu -ldisasm \
+			-lstdc++
