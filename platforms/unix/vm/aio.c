@@ -74,6 +74,11 @@
 #   endif
 # endif
 
+# if __sun__
+  # include <sys/sockio.h>
+  # define signal(a, b) sigset(a, b)
+# endif
+
 #else /* !HAVE_CONFIG_H -- assume lowest common demoninator */
 
 # include <stdio.h>

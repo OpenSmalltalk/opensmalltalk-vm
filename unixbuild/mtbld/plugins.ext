@@ -1,6 +1,7 @@
 # Automatically generated makefile include for external plugins
 EXTERNAL_PLUGINS = \
 B3DAcceleratorPlugin \
+BochsIA32Plugin \
 SqueakFFIPrims \
 LocalePlugin \
 UnixOSProcessPlugin \

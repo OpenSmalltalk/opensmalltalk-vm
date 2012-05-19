@@ -138,11 +138,21 @@ updateMicrosecondClock()
 void
 ioUpdateVMTimezone()
 {
+#ifdef HAVE_TM_GMTOFF
 	time_t utctt;
 	updateMicrosecondClock();
 	utctt = (get64(utcMicrosecondClock) - MicrosecondsFrom1901To1970)
 				/ MicrosecondsPerSecond;
 	vmGMTOffset = localtime(&utctt)->tm_gmtoff * MicrosecondsPerSecond;
+#else
+# ifdef HAVE_TIMEZONE
+  extern time_t timezone, altzone;
+  extern int daylight;
+  vmGMTOffset = -1 * (daylight ? altzone : timezone) * MicrosecondsPerSecond;
+# else
+#  error: cannot determine timezone correction
+# endif
+#endif
 }
 
 sqLong

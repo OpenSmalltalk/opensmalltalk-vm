@@ -47,3 +47,6 @@ export LDFLAGS
 # acpi == Advanced Configuration and Power Interface
 # pci == Peripheral Component Interconnect local bus
 # clgd54xx == Cirrus Logic GD54xx video card
+
+# avoid conflict with squeak unix build's config.h
+ln -s config.h bochsconfig.h
