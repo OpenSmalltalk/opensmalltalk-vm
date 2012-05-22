@@ -70,6 +70,11 @@ StackIPhoneConfig >> commonCompilerFlags [
 ]
 
 { #category : #settings }
+StackIPhoneConfig >> compilerFlagsDebug [
+	^#('-g3' '-O2' '-DDEBUGVM=1')
+]
+
+{ #category : #settings }
 StackIPhoneConfig >> compilerFlagsRelease [
 	^#('-g0' '-O2' '-fomit-frame-pointer' '-DNDEBUG' '-DDEBUGVM=0' '-DSTACKVM')
 ]
@@ -387,9 +392,17 @@ StackIPhoneConfig >> setExtraTargetProperties: maker [
 		cmd: 'set_target_properties' 
 		params: self executableName, ' PROPERTIES COMPILE_FLAGS "-include \"', (self buildDir / self prefixHeaderFileName) fullName, '\""'. 
 
-	maker set: 'CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY' toString: self codeSignIdentity.
-	maker set: 'CMAKE_XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY' toString: self targetedDeviceFamilyAsString.
-	maker set: 'CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET' to: self deploymentTargetVersion.
+	maker set: 'CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY' 
+		toString: self codeSignIdentity.
+	maker set: 'CMAKE_XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY' 
+		toString: self targetedDeviceFamilyAsString.
+	maker set: 'CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET' 
+		to: self deploymentTargetVersion.
+	maker set: 'CMAKE_XCODE_ATTRIBUTE_CONFIGURATION_BUILD_DIR' 
+		toString: '$(BUILD_DIR)/$(CONFIGURATION)'.
+	maker set: 'CMAKE_XCODE_ATTRIBUTE_CONFIGURATION_TEMP_DIR' 
+		toString: '$(BUILD_DIR)/$(CONFIGURATION)'.
+
 	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir.
 	
 	maker puts: 'set_source_files_properties(${srcVMDir}/gcc3x-cointerp.c PROPERTIES COMPILE_FLAGS -O0)'

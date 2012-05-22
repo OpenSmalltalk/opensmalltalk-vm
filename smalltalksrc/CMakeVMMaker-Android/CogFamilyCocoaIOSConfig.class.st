@@ -260,6 +260,9 @@ CogFamilyCocoaIOSConfig >> setExtraTargetProperties: maker [
 	maker 
 		cmd: 'set_target_properties' 
 		params: self executableName, ' PROPERTIES COMPILE_FLAGS "-include \"', (self buildDir / self prefixHeaderFileName) fullName, '\""'. 
+		
+	maker set: 'CMAKE_C_COMPILER' to: '/usr/bin/gcc-4.2'.
+	maker set: 'CMAKE_CXX_COMPILER' to: '/usr/bin/g++-4.2'.		
 	
 	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir.
 	maker set: 'RUNTIME_OUTPUT_DIRECTORY' toString: self outputDir.
