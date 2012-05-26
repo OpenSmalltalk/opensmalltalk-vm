@@ -99,7 +99,8 @@ StackIPhoneConfig >> configureIOSPlugin: maker [
 
 { #category : #'plugin extra rules' }
 StackIPhoneConfig >> configureSocketPlugin: maker [
-	
+	super configureSocketPlugin: maker.
+	maker includeDirectories: '${SDKROOT}/usr/include'.  "for tcp.h"
 ]
 
 { #category : #settings }
