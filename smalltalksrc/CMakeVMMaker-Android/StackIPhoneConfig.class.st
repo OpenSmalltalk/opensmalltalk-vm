@@ -54,6 +54,7 @@ StackIPhoneConfig >> commonCompilerFlags [
 	'-funroll-loops'.
 	'-finline-functions'.
 	'-mno-thumb'.
+	'-fwrapv'.
 	'-DSTACKVM=1'.
 	'-DCOGMTVM=0'. 
 	'-DUSE_GLOBAL_STRUCT=0'. 
@@ -64,19 +65,18 @@ StackIPhoneConfig >> commonCompilerFlags [
 	'-DHAVE_SYS_TIME_H'.
 	'-DLSB_FIRST'.
 	'-DHAVE_NANOSLEEP'.
-	"'-DXXXUSE_INLINE_MEMORY_ACCESSORS'."
 	'-DISQUEAK_IMAGE=', self imageName.
 	'-DISQUEAK_SOURCES=PharoV10'}
 ]
 
 { #category : #settings }
 StackIPhoneConfig >> compilerFlagsDebug [
-	^#('-g3' '-O2' '-DDEBUGVM=1')
+	^#('-g3' '-O0' '-DDEBUGVM=1')
 ]
 
 { #category : #settings }
 StackIPhoneConfig >> compilerFlagsRelease [
-	^#('-g0' '-O2' '-fomit-frame-pointer' '-DNDEBUG' '-DDEBUGVM=0' '-DSTACKVM')
+	^#('-g0' '-O3' '-fomit-frame-pointer' '-DNDEBUG' '-DDEBUGVM=0' '-DSTACKVM')
 ]
 
 { #category : #'plugin extra rules' }
@@ -95,6 +95,11 @@ StackIPhoneConfig >> configureIOSPlugin: maker [
 		prefixed: '${platformsDir}/iOS/vm/iPhone/plugins/IOSPlugin/'
 	 
 
+]
+
+{ #category : #'plugin extra rules' }
+StackIPhoneConfig >> configureSocketPlugin: maker [
+	
 ]
 
 { #category : #settings }
@@ -124,14 +129,14 @@ StackIPhoneConfig >> defaultInternalPlugins [
 		MiscPrimitivePlugin 
 		"RePlugin" 
 		SecurityPlugin 
-		"SocketPlugin"
+		SocketPlugin
 		SoundCodecPlugin 
 		SoundGenerationPlugin 
 		SoundPlugin
 		SurfacePlugin
 		UUIDPlugin
 		ObjectiveCPlugin 
-		#IOSPlugin)
+		IOSPlugin)
 ]
 
 { #category : #accessing }
@@ -187,6 +192,7 @@ StackIPhoneConfig >> frameworks [
 	CoreGraphics
 	CoreLocation
 	UIKit
+	CoreFoundation
 	Foundation
 	QuartzCore
 	OpenGLES
