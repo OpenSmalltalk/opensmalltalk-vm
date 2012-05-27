@@ -182,7 +182,8 @@ ${resources} ',
 '${buildDir}/', self prefixHeaderFileName, ' 
 ${resourcesLocaleEnglish} 
 ${platformsDir}/unix/vm/sqUnixHeartbeat.c  
-${platformsDir}/unix/vm/sqUnixThreads.c
+${platformsDir}/unix/vm/sqUnixThreads.c 
+${platformsDir}/unix/vm/aio.c
 '
 ]
 
@@ -258,7 +259,7 @@ StackIPhoneConfig >> platformSources [
 		'iPhone/Classes/sqSqueakIPhoneClipboardAPI.m'
 		'iPhone/macintoshextra.c'
 		'iPhone/osExports.c'
-		'iPhone/sqDummyaio.c'
+		"'iPhone/sqDummyaio.c'" "I'm using real aio.c from unix (and seems to work)"
 		'iPhone/sqMacV2Memory.c'
 		)
 ]
