@@ -5,17 +5,14 @@ VMMaker classSide >> cCodeGenerator: aClass inCache: cache inlined: doInlining [
 	"Answer a C code generator, or a string explaining why a code generator is not available"
 
 	| cg |
-	[cg := cache
+	cg := cache
 		at: aClass name asSymbol
 		ifAbsentPut:
 			[ObjectMemory initialize.
 			ObjectMemory initializeConstants.
-			cg := aClass buildCodeGenerator.
+			cg := aClass buildCodeGeneratorInlined: doInlining.
 			cg prepareMethodsInlined: doInlining doAssertions: true.
-			cg]]
-		on: Error
-		do: [:e | "Failure due to overridden class occurs in simulator subclasses"
-			^ cache at: aClass name asSymbol put: e messageText].
+			cg].
 	^ cg
 
 ]
