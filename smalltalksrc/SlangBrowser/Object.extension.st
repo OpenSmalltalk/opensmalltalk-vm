@@ -90,6 +90,16 @@ Object class >> declareCVarsIn: cg [
 ]
 
 { #category : #'*SlangBrowser-VMMaker-Translation to C' }
+Object class >> methodNotTranslatedMessage: aSelector [
+	"For browser support with VMMaker"
+
+	^ 	'/* No source has been generated for #', aSelector asString, ' */', String cr,
+		'/* Method may have been fully inlined, or is not exported and */' translated,
+		String cr, '/* has no senders. See senders of #' translated, aSelector asString, ' */'
+
+]
+
+{ #category : #'*SlangBrowser-VMMaker-Translation to C' }
 Object class >> requiredMethodNames [
 	"return the list of method names that should be retained for export or other support reasons"
 	^#()
