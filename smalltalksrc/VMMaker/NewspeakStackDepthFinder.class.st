@@ -92,7 +92,7 @@ NewspeakStackDepthFinder >> interpretNextNewspeakInstructionFor: client [
 	offset := byte \\ 16.  
 	pc := pc+1.
 	"We do an inline binary search on each of the possible 16 values of type:
-	The old, cleaner but slowe code is retained as a comment below"
+	The old, cleaner but slow code is retained as a comment below"
 	type < 8
 	ifTrue: [type < 4
 				ifTrue: [type < 2
