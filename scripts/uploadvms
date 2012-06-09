@@ -47,7 +47,7 @@ else
 				CheckDMG=1;;
 		-w)		ARCHIVES="$ARCHIVES	cogwin.tgz	cogmtwin.zip	nsvm-$TAG.msi"
 				CheckMSI=1;;
-		-?|-h)  echo usage: $0 [-l -m -w -cl -cm -cw -ctl -ctm -ctw -nl -nm -nw]; exit 0;;
+		-?|-h)  echo usage: $0 [-r REV -l -m -w -c -n -cl -cm -cw -ctl -ctm -ctw -nl -nm -nw]; exit 0;;
 		*)	break
 		esac
 		shift
