@@ -286,6 +286,7 @@ CocoaIOSConfig >> extraPluginSettings: maker [
 
 	maker isExternal ifTrue: [
 		"copy result to results dir "
+		
 		maker set: 'LIBRARY_OUTPUT_PATH' toString: self outputDir.
 		maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir.
 		maker puts: 'list(APPEND linkFlags "-undefined dynamic_lookup")' ].

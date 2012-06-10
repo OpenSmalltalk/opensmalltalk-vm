@@ -79,6 +79,8 @@ CMakePluginGenerator >> generate [
 	output := String new writeStream.
 
 	name := plugin moduleName.
+#(	vmGen config setGlobalOptions: self.
+	
 	self 
 		printHeader;
 		project: name;
@@ -86,7 +88,7 @@ CMakePluginGenerator >> generate [
 		include: '../directories.cmake'.
 	
 	self set: 'CMAKE_CONFIGURATION_TYPES' to: 'Release'.
-
+).
 
 	self message: (internal ifTrue: [ 'Adding internal plugin: '] ifFalse: ['Adding external plugin: '])  , name.
 
@@ -95,7 +97,9 @@ CMakePluginGenerator >> generate [
 		set: #pluginSrc toString: '${srcPluginsDir}/', name;
 		set: #pluginCross toString: '${crossDir}/plugins/', name;
 		set: #pluginPlatform toString: '${targetPlatform}/plugins/', name.
-		
+
+	"clear LINKLIBS variable"
+	self set: #LINKLIBS to: ''.		
 	
 	internal 
 		ifTrue: [ self puts: 'add_definitions(-DSQUEAK_BUILTIN_PLUGIN)'].
@@ -135,6 +139,13 @@ CMakePluginGenerator >> generate [
 		cmd: 'set_property' 
 		params: 'TARGET ', name, ' PROPERTY LINK_FLAGS "${linkFlags}"'.
 	
+	"set dependencies"
+	self puts: 'IF (${',self moduleName , '_dependencies})'.
+	
+	self cmd: 'add_dependencies'
+		params: name , ' ${', self moduleName , '_dependencies}'.
+	
+	self puts: 'ENDIF (${',self moduleName , '_dependencies})'.
 	self saveFile.
 ]
 
@@ -163,6 +174,11 @@ CMakePluginGenerator >> isInternal [
 { #category : #accessing }
 CMakePluginGenerator >> moduleName [ 
 	^plugin moduleName
+]
+
+{ #category : #accessing }
+CMakePluginGenerator >> plugin [
+	^ plugin
 ]
 
 { #category : #'as yet unclassified' }
