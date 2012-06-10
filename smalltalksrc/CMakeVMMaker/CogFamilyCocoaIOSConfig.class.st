@@ -261,11 +261,24 @@ CogFamilyCocoaIOSConfig >> setExtraTargetProperties: maker [
 		cmd: 'set_target_properties' 
 		params: self executableName, ' PROPERTIES COMPILE_FLAGS "-include \"', (self buildDir / self prefixHeaderFileName) fullName, '\""'. 
 		
-	maker set: 'CMAKE_C_COMPILER' to: '/usr/bin/gcc-4.2'.
+"	maker set: 'CMAKE_C_COMPILER' to: '/usr/bin/gcc-4.2'.
 	maker set: 'CMAKE_CXX_COMPILER' to: '/usr/bin/g++-4.2'.		
-	
+"
 	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir.
 	maker set: 'RUNTIME_OUTPUT_DIRECTORY' toString: self outputDir.
+]
+
+{ #category : #'as yet unclassified' }
+CogFamilyCocoaIOSConfig >> setGlobalOptions: maker [
+
+	"set any CMake global options, before declaring a project in cmake file"
+	
+	maker set: 'CMAKE_C_COMPILER' to: '/usr/bin/gcc-4.2'.
+	maker set: 'CMAKE_CXX_COMPILER' to: '/usr/bin/g++-4.2'.	
+	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'.
+	maker set: 'CMAKE_OSX_SYSROOT' to: '/'.
+	
+	"maker set: 'CMAKE_OSX_SYSROOT' to: '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.6.sdk/'"
 ]
 
 { #category : #settings }
