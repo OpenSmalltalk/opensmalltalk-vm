@@ -7,24 +7,16 @@ InterpreterPlugin classSide >> addExtraCMakeRules: maker [
 ]
 
 { #category : #'*CMakeVMMaker' }
+InterpreterPlugin classSide >> browseSettings [
+
+	^ CPlatformConfig browsePluginRules: self
+]
+
+{ #category : #'*CMakeVMMaker' }
 InterpreterPlugin classSide >> generateFor: aCMakeVMGenerator internal: aBoolean [ 
 
 	^ aCMakeVMGenerator 
 		generatePlugin: self 
 		internal: aBoolean
 		extraRules: nil
-]
-
-{ #category : #'*CMakeVMMaker' }
-InterpreterPlugin classSide >> supportedPlatforms: enum [
-" use:
-	^ enum unix
-or:
-	^ enum unix, enum osX
-	
-or 
-
-	^ enum unix i386, enum osX
-"
-	^ enum all
 ]
