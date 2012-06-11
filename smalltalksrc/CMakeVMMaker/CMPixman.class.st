@@ -77,7 +77,7 @@ add_dependencies("{1}" "{2}")
 
 { #category : #'package properties' }
 CMPixman >> dependencies [
-	^ #( 'pkg-config' )
+	^ #( 'pkg-config' 'libpng')
 ]
 
 { #category : #'package properties' }

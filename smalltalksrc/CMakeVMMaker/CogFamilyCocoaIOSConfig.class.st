@@ -278,7 +278,7 @@ CogFamilyCocoaIOSConfig >> setGlobalOptions: maker [
 	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'.
 	maker set: 'CMAKE_OSX_SYSROOT' to: '/'.
 	
-	"maker set: 'CMAKE_OSX_SYSROOT' to: '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.6.sdk/'"
+"	maker set: 'CMAKE_OSX_SYSROOT' to: '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.6.sdk'"
 ]
 
 { #category : #settings }
