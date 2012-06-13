@@ -15,7 +15,7 @@ How to build the Newspeak VM on Unix
      svn co http://www.squeakvm.org/svn/squeak/branches/Cog/src
      svn co http://www.squeakvm.org/svn/squeak/branches/Cog/nsbuild
 3. Open a shell, cd into the unixbuild/bld directory and execute
-     ../../../platforms/unix/config/configure --with-src=nssrc --disable-cogit CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -DNDEBUG -DNO_VM_PROFILE=1 -DDEBUGVM=0" LIBS=-lpthread
+     ../../../platforms/unix/config/configure --with-src=nssrc --disable-cogit CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DNO_VM_PROFILE=1 -DDEBUGVM=0" LIBS=-lpthread
      make install prefix=WhereYouWantTheVmToGo
 
 	N.B.  On Ubuntu *do not* supply "LIBS=-lpthread", i.e. use
@@ -25,10 +25,10 @@ How to build the Newspeak VM on Unix
 
 
 3a. For an assert-enabled VM do
-     ../../../platforms/unix/config/configure --without-vm-display-fbdev --without-npsqueak --with-src=nssrc --disable-cogit CFLAGS="-g -O1 -msse2 -D_GNU_SOURCE -DNO_VM_PROFILE=1 -DDEBUGVM=0" LIBS=-lpthread
+     ../../../platforms/unix/config/configure --without-vm-display-fbdev --without-npsqueak --with-src=nssrc --disable-cogit CFLAGS="-g -O1 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNO_VM_PROFILE=1 -DDEBUGVM=0" LIBS=-lpthread
 
 3b. For a full debug VM do
-     ../../../platforms/unix/config/configure --without-vm-display-fbdev --without-npsqueak --with-src=nssrc --disable-cogit CFLAGS="-g3 -msse2 -D_GNU_SOURCE -DNO_VM_PROFILE=1 -DDEBUGVM=1" LIBS=-lpthread
+     ../../../platforms/unix/config/configure --without-vm-display-fbdev --without-npsqueak --with-src=nssrc --disable-cogit CFLAGS="-g3 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNO_VM_PROFILE=1 -DDEBUGVM=1" LIBS=-lpthread
 
 3c. If you're building the VM on a 64-bit OS, you'll need a compiler which can
 compile and link to 32-bit binaries. On most Linuxes the gcc-multilib package
@@ -36,7 +36,7 @@ provides the 32-bit compiler and the ia32-libs provides the 32-bit libraries.
 You'll also have to add the -m32 switch to all gcc & g++ invocations.  The
 easiest way to do this is to add CC="gcc -m32" & CXX="g++ -m32" to the configure
 script:
-     ../../../platforms/unix/config/configure CC="gcc -m32" CXX="g++ -m32" --with-src=nssrc --disable-cogit CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -DNDEBUG -DNO_VM_PROFILE=1" LIBS=-lpthread
+     ../../../platforms/unix/config/configure CC="gcc -m32" CXX="g++ -m32" --with-src=nssrc --disable-cogit CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DNO_VM_PROFILE=1" LIBS=-lpthread
 To run a 32-bit VM on a 64-bit OS, you'll also need the 32-bit libraries
 provided by the ia32-libs package.
 

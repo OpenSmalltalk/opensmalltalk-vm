@@ -29,24 +29,24 @@ How to build the Cog Croquet VM on Unix
      svn co http://www.squeakvm.org/svn/squeak/branches/Cog/src
      svn co http://www.squeakvm.org/svn/squeak/branches/Cog/unixbuild
 3. Open a shell, cd into the unixbuild/bld directory and execute
-     ../../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS=-lpthread
+     ../../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS=-lpthread
      make install prefix=WhereYouWantTheVmToGo
 
 	N.B.  On Ubuntu *do not* supply "LIBS=-lpthread", i.e. use
-     ../../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0"
+     ../../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0"
 
 4. At the end of it you'll get a new VM in the path provided via -prefix
 
 
 3a. For an assert-enabled VM do
-     ../../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O1 -msse2 -D_GNU_SOURCE -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS=-lpthread
+     ../../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O1 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS=-lpthread
 
 3b. For a full debug VM do
-     ../../platforms/unix/config/configure --without-npsqueak CFLAGS="-g3 -msse2 -D_GNU_SOURCE -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=1" LIBS=-lpthread
+     ../../platforms/unix/config/configure --without-npsqueak CFLAGS="-g3 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=1" LIBS=-lpthread
 
 3c. For a multi-threaded VM open a shell and cd to the mtbld directory.  Then
    execute
-     ../../platforms/unix/config/configure INTERP=cointerpmt --without-npsqueak CFLAGS="-g -O2 -msse2 -DNDEBUG -DCOGMTVM=1 -DDEBUGVM=0 -D_GNU_SOURCE -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1" LIBS=-lpthread
+     ../../platforms/unix/config/configure INTERP=cointerpmt --without-npsqueak CFLAGS="-g -O2 -msse2 -DNDEBUG -DCOGMTVM=1 -DDEBUGVM=0 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1" LIBS=-lpthread
      make squeakmt
      make installmt prefix=WhereYouWantTheVmToGo
 
@@ -75,7 +75,7 @@ provides the 32-bit compiler and the ia32-libs provides the 32-bit libraries.
 You'll also have to add the -m32 switch to all gcc & g++ invocations.  The
 easiest way to do this is to add CC="gcc -m32" & CXX="g++ -m32" to the configure
 script:
-     ../../platforms/unix/config/configure CC="gcc -m32" CXX="g++ -m32" CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0" LIBS=-lpthread
+     ../../platforms/unix/config/configure CC="gcc -m32" CXX="g++ -m32" CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0" LIBS=-lpthread
 To run a 32-bit VM on a 64-bit OS, you'll also need the 32-bit libraries
 provided by the ia32-libs package.
 

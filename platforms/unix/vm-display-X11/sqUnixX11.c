@@ -4402,7 +4402,7 @@ static void initWindow(char *displayName)
 
     gcValues.function= GXcopy;
     gcValues.line_width= 0;
-    gcValues.subwindow_mode= ClipChildren; /* was IncludeInferiors */
+    gcValues.subwindow_mode= ClipByChildren; /* was IncludeInferiors */
     gcValues.clip_x_origin= 0;
     gcValues.clip_y_origin= 0;
     gcValues.clip_mask= None;
