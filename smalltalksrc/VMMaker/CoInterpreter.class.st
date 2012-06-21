@@ -236,17 +236,17 @@ CoInterpreter class >> initializeFrameIndices [
 	fxMFReceiver := -3.
 
 	"For debugging nil out values that differ in the StackInterpreter."
-	FrameSlots := nil.
+	FrameSlots := #undeclared asSymbol.
 	IFrameSlots := fxCallerSavedIP - fxIFReceiver + 1.
 	MFrameSlots := fxCallerSavedIP - fxMFReceiver + 1.
 
 	FoxCallerSavedIP := fxCallerSavedIP * BytesPerWord.
 	"In Cog a base frame's caller context is stored on the first word of the stack page."
-	FoxCallerContext := nil.
+	FoxCallerContext := #undeclared asSymbol.
 	FoxSavedFP := fxSavedFP * BytesPerWord.
 	FoxMethod := fxMethod * BytesPerWord.
 	FoxThisContext := fxThisContext * BytesPerWord.
-	FoxFrameFlags := nil.
+	FoxFrameFlags := #undeclared asSymbol.
 	FoxIFrameFlags := fxIFrameFlags * BytesPerWord.
 	FoxIFSavedIP := fxIFSavedIP * BytesPerWord.
 	FoxReceiver := #undeclared asSymbol.
@@ -4442,7 +4442,7 @@ CoInterpreter >> marryFrame: theFP SP: theSP [
 			 rcvr := self mframeReceiver: theFP.
 			 numStack := self stackPointerIndexForMFrame: theFP WithSP: theSP numArgs: numArgs]
 		ifFalse:
-			[stackPages byteAt: theFP + FoxIFrameFlags + 2 put: 1.
+			[self setIFrameHasContext: theFP.
 			 numArgs := self iframeNumArgs: theFP.
 			 byteSize := ((self headerOf: methodFieldOrObj) bitAnd: LargeContextBit) ~= 0
 							ifTrue: [LargeContextSize]
@@ -4453,7 +4453,7 @@ CoInterpreter >> marryFrame: theFP SP: theSP [
 			 rcvr := self iframeReceiver: theFP.
 			 numStack := self stackPointerIndexForIFrame: theFP WithSP: theSP numArgs: numArgs].
 	theContext := objectMemory eeInstantiateMethodContextByteSize: byteSize.
-	stackPages longAt: theFP + FoxThisContext put: theContext.
+	self setFrameContext: theFP to: theContext.
 	"Mark context as married by setting its sender to the frame pointer plus SmallInteger
 	 tags and the InstructionPointer to the saved fp (which ensures correct alignment
 	 w.r.t. the frame when we check for validity)"
@@ -5758,6 +5758,14 @@ CoInterpreter >> setCogVMFlags: flags [
 CoInterpreter >> setDesiredCogCodeSize: dccs [
 	<cmacro: '(dccs) (desiredCogCodeSize = (dccs))'>
 	desiredCogCodeSize := dccs
+]
+
+{ #category : #'frame access' }
+CoInterpreter >> setIFrameHasContext: theFP [
+	"See encodeFrameFieldHasContext:numArgs:"
+	<inline: true>
+	<var: #theFP type: #'char *'>
+	stackPages byteAt: theFP + FoxIFrameFlags + 2 put: 1
 ]
 
 { #category : #'image save/restore' }
