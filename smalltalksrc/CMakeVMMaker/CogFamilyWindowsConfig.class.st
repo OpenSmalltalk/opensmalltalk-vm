@@ -314,6 +314,7 @@ CogFamilyWindowsConfig >> setupDirectories: gen [
 		gen
 			set: #topDir toString: (self msysPathFor: self topDir fullName); 
 			set: #buildDir toString: (self buildDir ifNil: ['${topDir}/build'] ifNotNil:[ self msysPathFor: self buildDir fullName ]);
+			set: #thirdpartyDir toString: '${buildDir}/thirdparty';
 			set: #platformsDir toString: (self msysPathFor: self platformsDir);
 			set: #srcDir toString: (self msysPathFor: self srcDir);
 			set: #srcPluginsDir toString: (pluginsDir ifNil: [ '${srcDir}/plugins' ]);
@@ -325,7 +326,10 @@ CogFamilyWindowsConfig >> setupDirectories: gen [
 			set: #outputDir toString: (self msysPathFor: self outputDir).
 	].
 
-	self write: dirsInclude toFile: 'directories.cmake'
+	self write: dirsInclude toFile: 'directories.cmake'.
+	
+	gen include: 'directories.cmake'.
+	
 ]
 
 { #category : #'as yet unclassified' }
