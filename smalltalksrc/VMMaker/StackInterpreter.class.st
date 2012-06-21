@@ -5163,7 +5163,7 @@ StackInterpreter >> imageFormatVersion [
 ]
 
 { #category : #'newspeak bytecode support' }
-StackInterpreter >> implicitReceiverFor: receiver mixin: mixin implementing: selector [
+StackInterpreter >> implicitReceiverFor: rcvr mixin: mixin implementing: selector [
 	"This is used to implement the innards of the pushImplicitReceiverBytecode,
 	 used for implicit receiver sends in NS2/NS3.  Find the nearest lexically-enclosing
 	 implementation of selector by searching up the static chain of anObject,
@@ -5178,9 +5178,9 @@ StackInterpreter >> implicitReceiverFor: receiver mixin: mixin implementing: sel
 	messageSelector := selector. "messageSelector is an implicit parameter of lookupMethodInDictionary:"
 	mixinApplication := self
 							findApplicationOfTargetMixin: mixin
-							startingAtBehavior: (objectMemory fetchClassOf: receiver).
+							startingAtBehavior: (objectMemory fetchClassOf: rcvr).
 	 mixinApplication = objectMemory nilObject ifTrue:
-		[^receiver].
+		[^rcvr].
 	 dictionary := objectMemory fetchPointer: MethodDictionaryIndex ofObject: mixinApplication.
 	 found := self lookupMethodInDictionary: dictionary.
 	 found ifFalse:
@@ -5191,7 +5191,7 @@ StackInterpreter >> implicitReceiverFor: receiver mixin: mixin implementing: sel
 									withMixin: (self fetchPointer: EnclosingMixinIndex ofObject: theMixin).
 		 implicitReceiverOrNil ~= objectMemory nilObject ifTrue:
 			[^implicitReceiverOrNil]].
-	^receiver
+	^rcvr
 ]
 
 { #category : #'plugin primitive support' }
@@ -8243,7 +8243,7 @@ StackInterpreter >> printOopShortInner: oop [
 		inSmalltalk: [self print: 'a(n) '; print: name].
 	"Try to spot association-like things; they're all subclasses of LookupKey"
 	((objectMemory instanceSizeOf: classOop) = (ValueIndex + 1)
-	 and: [(self superclassOf: classOop) = (self superclassOf: (self fetchClassOfNonInt: (objectMemory splObj: SchedulerAssociation)))
+	 and: [(self superclassOf: classOop) = (self superclassOf: (objectMemory fetchClassOfNonInt: (objectMemory splObj: SchedulerAssociation)))
 	 and: [self isBytes: (objectMemory fetchPointer: KeyIndex ofObject: oop)]]) ifTrue:
 		[self space;
 			printOopShort: (objectMemory fetchPointer: KeyIndex ofObject: oop);
@@ -8731,7 +8731,7 @@ StackInterpreter >> putToSleep: aProcess yieldingIf: yieldImplicitly [
 	 adding to the back if yieldImplicitly or to the front if not yieldImplicitly."
 
 	| priority processLists processList |
-	self assert:  (framePointer - stackPointer) < LargeContextSize.
+	self assert: (framePointer - stackPointer) < LargeContextSize.
 	priority := self quickFetchInteger: PriorityIndex ofObject: aProcess.
 	(highestRunnableProcessPriority ~= 0
 	 and: [priority > highestRunnableProcessPriority]) ifTrue:
@@ -9763,7 +9763,6 @@ StackInterpreter >> snapshot: embedded [
 	"Need to convert all frames into contexts since the snapshot file only holds objects."
 	self push: instructionPointer.
 	activeContext := self voidVMStateForSnapshot.
-	objectMemory pushRemappableOop: activeContext.
 
 	"update state of active process"
 	activeProc := self activeProcess.
@@ -9771,6 +9770,8 @@ StackInterpreter >> snapshot: embedded [
 		storePointer: SuspendedContextIndex
 		ofObject: activeProc
 		withValue: activeContext.
+
+	objectMemory pushRemappableOop: activeContext.
 
 	"compact memory and compute the size of the memory actually in use"
 	objectMemory incrementalGC.
@@ -10670,19 +10671,24 @@ StackInterpreter >> wakeHighestPriority [
 	 highest priority runnable process.  If this variable is 0 then the
 	 VM does not know the highest priority and must search all lists.
 	 Note: It is a fatal VM error if there is no runnable process."
-	| schedLists p processList |
+	| schedLists p processList proc ctxt |
 	schedLists := objectMemory fetchPointer: ProcessListsIndex ofObject: self schedulerPointer.
 	p := highestRunnableProcessPriority = 0
 			ifTrue: [objectMemory fetchWordLengthOf: schedLists]
 			ifFalse: [highestRunnableProcessPriority].
-	p := p - 1.
-	"index of last indexable field"
-	[processList := objectMemory fetchPointer: p ofObject: schedLists.
-	 self isEmptyList: processList] whileTrue:
-		[(p := p - 1) < 0 ifTrue:
-			[self error: 'scheduler could not find a runnable process']].
-	highestRunnableProcessPriority := p + 1.
-	^self removeFirstLinkOfList: processList
+	[(p := p - 1) >= 0] whileTrue:
+		[processList := objectMemory fetchPointer: p ofObject: schedLists.
+	 	 [self isEmptyList: processList] whileFalse:
+			["Only answer processes with a runnable suspendedContext.
+			  Discard those that aren't; the VM would crash otherwise."
+			 proc := self removeFirstLinkOfList: processList.
+			 ctxt := objectMemory fetchPointer: SuspendedContextIndex ofObject: proc.
+			 (self isLiveContext: ctxt) ifTrue:
+				[highestRunnableProcessPriority := p + 1.
+				^proc].
+			 self warning: 'evicted zombie process from run queue']].
+	self error: 'scheduler could not find a runnable process'.
+	^nil
 ]
 
 { #category : #'frame access' }
