@@ -105,13 +105,14 @@ CMakeVMGenerator >> generate [
 	
 	self processThirdpartyLibraries.
 	
+		
+
+	self processPlugins:  intPlugins, extPlugins.
+
 	config setExtraTargetProperties: self.
 	
 	self cmd: 'target_link_libraries'
 		params: self moduleName , ' ${LINKLIBS}'.
-		
-
-	self processPlugins:  intPlugins, extPlugins.
 
 	config postBuildActions: self.
 	
