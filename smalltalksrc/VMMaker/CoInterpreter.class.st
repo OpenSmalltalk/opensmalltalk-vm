@@ -3446,7 +3446,7 @@ CoInterpreter >> iframeSavedIP: theFP put: savedIP [
 ]
 
 { #category : #'newspeak bytecode support' }
-CoInterpreter >> implicitReceiverFor: receiver mixin: mixin implementing: selector [
+CoInterpreter >> implicitReceiverFor: rcvr mixin: mixin implementing: selector [
 	"This is used to implement the innards of the pushImplicitReceiverBytecode,
 	 used for implicit receiver sends in NS2/NS3.  Find the nearest lexically-enclosing
 	 implementation of selector by searching up the static chain of anObject,
@@ -3462,7 +3462,7 @@ CoInterpreter >> implicitReceiverFor: receiver mixin: mixin implementing: select
 		[self sendBreak: selector + BaseHeaderSize
 			point: (objectMemory lengthOf: selector)
 			receiver: nil].
-	^super implicitReceiverFor: receiver mixin: mixin implementing: selector
+	^super implicitReceiverFor: rcvr mixin: mixin implementing: selector
 ]
 
 { #category : #initialization }
