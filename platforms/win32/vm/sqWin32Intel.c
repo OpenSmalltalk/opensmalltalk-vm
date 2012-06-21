@@ -786,6 +786,11 @@ getVersionInfo(int verbose)
   return info;
 }
 
+/* Calling exit(ec) apparently does NOT provide the correct exit code for the
+ * terminating process (MinGW bug?). So instead call the shutdown sequence via
+ * _cexit() and then terminate explicitly.
+ */
+#define exit(ec) do { _cexit(ec); ExitProcess(ec); } while (0)
 
 static void
 versionInfo(void)
@@ -1003,6 +1008,19 @@ error(char *msg) {
   /* dumpStackIfInMainThread(0); */
   exit(-1);
 }
+
+static int inCleanExit = 0; /* to suppress stack trace in Cleanup */
+
+int ioExit(void) { return ioExitWithErrorCode(0); }
+
+sqInt
+ioExitWithErrorCode(int ec)
+{
+	inCleanExit = 1;
+	exit(ec);
+	return ec;
+}
+
 #pragma auto_inline on
 
 static void
@@ -1126,9 +1144,7 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 void __cdecl Cleanup(void)
 { /* not all of these are essential, but they're polite... */
 
-extern int inCleanExit; /* from platforms/win32/vm/sqWin32Window.c */
-
-  if(!inCleanExit) {
+  if (!inCleanExit) {
     dumpStackIfInMainThread(0);
   }
   ioShutdownAllModules();

@@ -160,6 +160,10 @@ static int parseArgument(int argc, char **argv)
   else if (!strncmp(argv[0], "-psn_", 5)) { return 1; }
   else if (!strcmp(argv[0], "-headless")) { gSqueakHeadless = true; return 1; }
   else if (!strcmp(argv[0], "-headfull")) { gSqueakHeadless = false; return 1; }
+  else if (!strcmp(argv[0], "-blockonerror")) {
+	extern int blockOnError;
+	blockOnError = true;
+	return 1; }
 #if (STACKVM || NewspeakVM) && !COGVM
   else if (!strcmp(argv[0], "-sendtrace")) { extern sqInt sendTrace; sendTrace = 1; return 1; }
 #endif
@@ -275,17 +279,28 @@ static void printUsage(void)
   printf("  -eden <size>[mk]      set eden memory to bytes\n");
   printf("  -leakcheck num        check for leaks in the heap\n");
   printf("  -stackpages num       use n stack pages\n");
+  printf("  -sendtrace[=num]      enable send tracing (optionally to a specific value)\n");
+  printf("  -numextsems num       make the external semaphore table num in size\n");
+  printf("  -noheartbeat          disable the heartbeat for VM debugging. disables input\n");
+  printf("  -pollpip              output . on each poll for input\n");
 #endif
 #if COGVM
   printf("  -codesize <size>[mk]  set machine code memory to bytes\n");
-  printf("  -sendtrace[=num]      enable send tracing (optionally to a specific value)\n");
   printf("  -tracestores          enable store tracing (assert check stores)\n");
-  printf("  -cogmaxlits <n>       set max number of literals for methods compiled to machine code\n");
+  printf("  -cogmaxlits <n>       set max number of literals for methods to be compiled to machine code\n");
   printf("  -cogminjumps <n>      set min number of backward jumps for interpreted methods to be considered for compilation to machine code\n");
 #endif
-  printf("  -pathenc <enc>        set encoding for pathnames (default: macintosh)\n");
+#if STACKVM || NewspeakVM
+  printf("  -breaksel selector    call warning when sending or jitting selector\n");
+#endif
+  printf("  -pathenc <enc>        set encoding for pathnames (default: %s)\n",
+		getEncodingType(gCurrentVMEncoding));
+
   printf("  -headless             run in headless (no window) mode (default: false)\n");
+  printf("  -headfull             run in headful (window) mode (default: true)\n");
   printf("  -version              print version information, then exit\n");
+
+  printf("  -blockonerror         on error or segv block, not exit.  useful for attaching gdb\n");
 }
 
 static void printUsageNotes(void)

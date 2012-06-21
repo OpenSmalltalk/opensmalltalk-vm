@@ -852,6 +852,19 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 	fflush(stdout);
 }
 
+int blockOnError = 0; /* to allow attaching gdb on fatal error */
+
+static void
+block()
+{ struct timespec while_away_the_hours;
+
+	printf("blocking e.g. to allow attaching debugger\n");
+	while (1) {
+		while_away_the_hours.tv_sec = 3600;
+		nanosleep(&while_away_the_hours, 0);
+	}
+}
+
 /* Print an error message, possibly a stack trace, and exit. */
 /* Disable Intel compiler inlining of error which is used for breakpoints */
 #pragma auto_inline off
@@ -859,6 +872,7 @@ void
 error(char *msg)
 {
 	reportStackState(msg,0,0,0);
+	if (blockOnError) block();
 	abort();
 }
 #pragma auto_inline on
@@ -896,19 +910,31 @@ sigusr1(int sig, siginfo_t *info, void *uap)
 	errno = saved_errno;
 }
 
+static int inFault = 0;
+
 static void
 sigsegv(int sig, siginfo_t *info, void *uap)
 {
 	time_t now = time(NULL);
 	char ctimebuf[32];
 	char crashdump[IMAGE_NAME_SIZE+1];
+	char *fault = sig == SIGSEGV
+					? "Segmentation fault"
+					: (sig == SIGBUS
+						? "Bus error"
+						: (sig == SIGILL
+							? "Illegal instruction"
+							: "Unknown signal"));
 
-	getCrashDumpFilenameInto(crashdump);
-	ctime_r(&now,ctimebuf);
-	pushOutputFile(crashdump);
-	reportStackState("Segmentation fault", ctimebuf, 0, uap);
-	popOutputFile();
-	reportStackState("Segmentation fault", ctimebuf, 0, uap);
+	if (!inFault) {
+		getCrashDumpFilenameInto(crashdump);
+		ctime_r(&now,ctimebuf);
+		pushOutputFile(crashdump);
+		reportStackState(fault, ctimebuf, 0, uap);
+		popOutputFile();
+		reportStackState(fault, ctimebuf, 0, uap);
+	}
+	if (blockOnError) block();
 	abort();
 }
 
@@ -1277,6 +1303,7 @@ static int vm_parseArgument(int argc, char **argv)
   else if (!strcmp(argv[0], "-nomixer"))	{ noSoundMixer	= 1;	return 1; }
   else if (!strcmp(argv[0], "-notimer"))	{ useItimer	= 0;	return 1; }
   else if (!strcmp(argv[0], "-nohandlers"))	{ installHandlers= 0;	return 1; }
+  else if (!strcmp(argv[0], "-blockonerror")) { blockOnError = 1; return 1; }
 #if !STACKVM && !COGVM
   else if (!strncmp(argv[0],"-jit", 4))		{ useJit	= jitArgs(argv[0]+4);	return 1; }
   else if (!strcmp(argv[0], "-nojit"))		{ useJit	= 0;	return 1; }
@@ -1400,6 +1427,7 @@ static void vm_printUsage(void)
 #endif
   printf("  -noevents             disable event-driven input support\n");
   printf("  -nohandlers           disable sigsegv & sigusr1 handlers\n");
+  printf("  -pollpip              output . on each poll for input\n");
   printf("  -pathenc <enc>        set encoding for pathnames (default: UTF-8)\n");
   printf("  -plugins <path>       specify alternative plugin location (see manpage)\n");
   printf("  -textenc <enc>        set encoding for external text (default: UTF-8)\n");
@@ -1412,6 +1440,7 @@ static void vm_printUsage(void)
   printf("  -cogmaxlits <n>       set max number of literals for methods compiled to machine code\n");
   printf("  -cogminjumps <n>      set min number of backward jumps for interpreted methods to be considered for compilation to machine code\n");
 #endif
+  printf("  -blockonerror         on error or segv block, not exit.  useful for attaching gdb\n");
 #if 1
   printf("Deprecated:\n");
 # if !STACKVM
@@ -1781,6 +1810,8 @@ main(int argc, char **argv, char **envp)
 	sigsegv_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
 	sigemptyset(&sigsegv_handler_action.sa_mask);
     (void)sigaction(SIGSEGV, &sigsegv_handler_action, 0);
+    (void)sigaction(SIGBUS, &sigsegv_handler_action, 0);
+    (void)sigaction(SIGILL, &sigsegv_handler_action, 0);
 
 	sigusr1_handler_action.sa_sigaction = sigusr1;
 	sigusr1_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;

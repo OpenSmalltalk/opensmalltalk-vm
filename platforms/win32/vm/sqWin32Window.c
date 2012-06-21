@@ -1506,24 +1506,6 @@ int ioMousePoint(void)
 /****************************************************************************/
 /*              Misc support primitves                                      */
 /****************************************************************************/
-int inCleanExit = 0;
-
-int ioExit(void) { return ioExitWithErrorCode(0); }
-
-sqInt
-ioExitWithErrorCode(int ec)
-{
-  inCleanExit = 1;
-  /* Calling exit(ec) apparently does NOT provide the correct
-     exit code for the terminating process. So instead call
-     the shutdown sequence via _cexit() and then terminate
-     explicitly. */
-  _cexit(ec);
-  ExitProcess(ec);
-  /* avoid the warnings here */
-  return ec;
-}
-
 int ioBeep(void)
 {
   MessageBeep(0);
