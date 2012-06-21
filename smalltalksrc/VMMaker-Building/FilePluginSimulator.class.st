@@ -233,7 +233,9 @@ FilePluginSimulator >> sqFileSize: file [
 
 { #category : #simulation }
 FilePluginSimulator >> sqFileStdioHandlesInto: anArray [
-	interpreterProxy transcript clear.
+	(interpreterProxy transcript ~~ Transcript
+	 or: [UIManager default confirm: 'clear transcript?']) ifTrue:
+		[interpreterProxy transcript clear].
 	"See FilePluginSimulator>>initialiseModule"
 	anArray
 		at: 1 put: 0;
