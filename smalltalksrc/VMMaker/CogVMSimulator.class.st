@@ -2838,10 +2838,14 @@ CogVMSimulator >> rumpCStackSize [
 { #category : #testing }
 CogVMSimulator >> run [
 	"Just run"
-	quitBlock := [(displayView notNil
-				   and: [UIManager default confirm: 'close?']) ifTrue:
-					[(displayView outermostMorphThat: [:m| m isSystemWindow]) ifNotNil:
-						[:topWindow| topWindow delete]].
+	quitBlock := [| topWindow |
+				  
+				   (displayView notNil
+				   and: [topWindow := displayView outermostMorphThat:
+									[:m| m isSystemWindow and: [World submorphs includes: m]].
+						topWindow notNil
+				   and: [UIManager default confirm: 'close?']]) ifTrue:
+					[topWindow delete].
 				  ^self].
 	self initStackPages.
 	self loadInitialContext.

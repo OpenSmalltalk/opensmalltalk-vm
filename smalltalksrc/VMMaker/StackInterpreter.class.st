@@ -6783,8 +6783,8 @@ StackInterpreter >> marryFrame: theFP SP: theSP [
 			ofObject: theContext
 			withValue: objectMemory nilObject].
 
-	stackPages longAt: theFP + FoxThisContext put: theContext.
-	stackPages byteAt: theFP + FoxFrameFlags + 2 put: 1.
+	self setFrameContext: theFP to: theContext.
+	self setFrameHasContext: theFP.
 
 	self assert: (self frameHasContext: theFP).
 	self assert: (self frameOfMarriedContext: theContext) = theFP.
@@ -9331,6 +9331,21 @@ StackInterpreter >> setDesiredCogCodeSize: iCouldCareLess [
 	"This is a no-op in the StackVM"
 ]
 
+{ #category : #'frame access' }
+StackInterpreter >> setFrameContext: theFP to: aContext [
+	<inline: true>
+	<var: #theFP type: #'char *'>
+	stackPages longAt: theFP + FoxThisContext put: aContext
+]
+
+{ #category : #'frame access' }
+StackInterpreter >> setFrameHasContext: theFP [
+	"See encodeFrameFieldHasContext:numArgs:"
+	<inline: true>
+	<var: #theFP type: #'char *'>
+	stackPages byteAt: theFP + FoxFrameFlags + 2 put: 1
+]
+
 { #category : #'plugin primitive support' }
 StackInterpreter >> setFullScreenFlag: value [
 	fullScreenFlag := value
@@ -10672,6 +10687,7 @@ StackInterpreter >> wakeHighestPriority [
 	 VM does not know the highest priority and must search all lists.
 	 Note: It is a fatal VM error if there is no runnable process."
 	| schedLists p processList proc ctxt |
+	self externalWriteBackHeadFramePointers.
 	schedLists := objectMemory fetchPointer: ProcessListsIndex ofObject: self schedulerPointer.
 	p := highestRunnableProcessPriority = 0
 			ifTrue: [objectMemory fetchWordLengthOf: schedLists]
