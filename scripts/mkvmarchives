@@ -94,7 +94,7 @@ fi
 if [ -n "$NL" ]; then
 	rm -rf nsvmlinux.tgz nsvmlinux-`date +%g.%U.$REV`.tgz
 	COPYFILE_DISABLE=1 tar czf nsvmlinux-`date +%g.%U.$REV`.tgz nsvmlinux
-	EXES="$EXES	$LIBDIR/nsvm"
+	EXES="$EXES	nsvmlinux/lib/nsvm/4.0-$REV/nsvm"
 fi
 if [ -n "$NM" ]; then
 	test -d Newspeak\ Virtual\ Machine.app || mkdir Newspeak\ Virtual\ Machine.app
