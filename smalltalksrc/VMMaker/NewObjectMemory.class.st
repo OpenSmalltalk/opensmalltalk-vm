@@ -2291,7 +2291,7 @@ NewObjectMemory >> sufficientSpaceToAllocate: bytes [
 
 	| minFree |
 	<inline: true>
-	minFree := (lowSpaceThreshold + bytes + BaseHeaderSize + BytesPerWord - 1) bitAnd: (BytesPerWord - 1) bitInvert32.
+	minFree := (lowSpaceThreshold + bytes + BaseHeaderSize + BytesPerWord - 1) bitClear: BytesPerWord - 1.
 
 	"check for low-space"
 	(self oop: freeStart + minFree isLessThanOrEqualTo: reserveStart) ifTrue:

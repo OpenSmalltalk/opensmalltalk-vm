@@ -157,7 +157,7 @@ ThreadedIA32FFIPlugin >> ffiPushStructure: pointer ofSize: structSize typeSpec: 
 	<var: #calloutState type: #'CalloutState *'>
 	<inline: true>
 	| roundedSize |
-	roundedSize := structSize + 3 bitAnd: 3 bitInvert32.
+	roundedSize := structSize + 3 bitClear: 3.
 	calloutState currentArg + roundedSize > calloutState limit ifTrue:
 		[^FFIErrorCallFrameTooBig].
 	self mem: calloutState currentArg cp: pointer y: structSize.
