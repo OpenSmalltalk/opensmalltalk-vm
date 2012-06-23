@@ -170,8 +170,7 @@ CoInterpreter class >> exportAPISelectors [
 					primitiveClosureValueNoContextSwitch
 					specialSelector:
 					stackTop
-					tempCountOf:
-					tempCountOfMethodHeader:);
+					tempCountOf:);
 		yourself
 ]
 
@@ -3156,6 +3155,13 @@ CoInterpreter >> frameNumArgs: theFP [
 		ifFalse: [stackPages byteAt: theFP + FoxIFrameFlags + 1]
 ]
 
+{ #category : #trampolines }
+CoInterpreter >> frameNumTemps: theFP [
+	"For subclasses to redefine to implement different closure semantics."
+	<var: #theFP type: #'char *'>
+	^0
+]
+
 { #category : #'cog jit support' }
 CoInterpreter >> framePointer: theFP [
 	"Simulation only"
@@ -3604,7 +3610,7 @@ CoInterpreter >> internalActivateNewMethod [
 
 	methodHeader := self rawHeaderOf: newMethod.
 	self assert: (self isCogMethodReference: methodHeader) not.
-	numTemps := self tempCountOfMethodHeader: methodHeader.
+	numTemps := self temporaryCountOfMethodHeader: methodHeader.
 
 	rcvr := self internalStackValue: argumentCount. "could new rcvr be set at point of send?"
 
@@ -4400,15 +4406,18 @@ CoInterpreter >> markCogMethodsAndReferentsOnPage: thePage [
 ]
 
 { #category : #'frame access' }
-CoInterpreter >> marryFrame: theFP SP: theSP [
-	"Marry an unmarried frame.  This means creating a spouse context  initialized with
-	 a subset of the frame's state (state through the last argument) that references the
-	 frame. This is important enough for performance to be worth streamlining.
+CoInterpreter >> marryFrame: theFP SP: theSP copyTemps: copyTemps [
+	"Marry an unmarried frame.  This means creating a spouse context
+	 initialized with a subset of the frame's state that references the frame.
+	 For the default closure implementation we do not need to copy temps.
+	 Different closure implementations may require temps to be copied.
+
+	 This method is important enough for performance to be worth streamlining.
 
 	Override to set the ``has context'' flag appropriately for both machine code and interpreter frames
 	and to streamline the machine code/interpreter differences.."
-	| theContext methodFieldOrObj closureOrNil rcvr byteSize numArgs numStack |
-	<inline: false>
+	| theContext methodFieldOrObj closureOrNil rcvr byteSize numArgs numStack numTemps |
+	<inline: true>
 	<var: #theFP type: #'char *'>
 	<var: #theSP type: #'char *'>
 	<var: #cogMethod type: #'CogMethod *'>
@@ -4417,9 +4426,10 @@ CoInterpreter >> marryFrame: theFP SP: theSP [
 
 	"Decide how much of the stack to preserve in widowed contexts.  Preserving too much
 	 state will potentially hold onto garbage.  Holding onto too little may mean that a dead
-	 context isn't informative enough in a debugging situation.  We compromise, retaining
-	 only the arguments with no temporaries.  Note that we still set the stack pointer to its
-	 current value, but stack contents other than the arguments are nil."
+	 context isn't informative enough in a debugging situation.  If copyTemps is false (as it
+	 is in the default closure implementation) compromise, retaining only the arguments with
+	 no temporaries.  Note that we still set the stack pointer to its current value, but stack
+	 contents other than the arguments are nil."
 	methodFieldOrObj := self frameMethodField: theFP.
 	methodFieldOrObj asUnsignedInteger < objectMemory startOfMemory "inline (self isMachineCodeFrame: theFP)"
 		ifTrue:
@@ -4478,6 +4488,15 @@ CoInterpreter >> marryFrame: theFP SP: theSP [
 		objectMemory storePointerUnchecked: ReceiverIndex + i
 			ofObject: theContext
 			withValue: (self temporary: i - 1 in: theFP)].
+	copyTemps ifTrue:
+		[numTemps := self frameNumTemps: theFP.
+		 1 to: numTemps do:
+			[:i|
+			objectMemory storePointerUnchecked: ReceiverIndex + i + numArgs
+				ofObject: theContext
+				withValue: (self temporary: i - 1 in: theFP)].
+		 numArgs := numArgs + numTemps].
+
 	numArgs + 1 to: numStack do:
 		[:i|
 		objectMemory storePointerUnchecked: ReceiverIndex + i
@@ -5113,7 +5132,7 @@ CoInterpreter >> printFrame: theFP WithSP: theSP [
 			 theMethod := homeMethod asInteger.
 			 theMethodEnd := homeMethod asInteger + homeMethod blockSize.
 			 numArgs := cogMethod cmNumArgs.
-			 numTemps := self tempCountOfMethodHeader: homeMethod methodHeader]
+			 numTemps := self temporaryCountOfMethodHeader: homeMethod methodHeader]
 		ifFalse:
 			[theMethod := self frameMethodObject: theFP.
 			 theMethodEnd := theMethod + (objectMemory sizeBitsOfSafe: theMethod).
