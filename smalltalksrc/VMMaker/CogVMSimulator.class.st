@@ -3178,11 +3178,6 @@ CogVMSimulator >> stringOf: oop [
 ]
 
 { #category : #'debug printing' }
-CogVMSimulator >> strlen: aString [
-	^aString size
-]
-
-{ #category : #'debug printing' }
 CogVMSimulator >> symbolicExtensions: offset at: ip inMethod: meth [
 	| type offset2 byte2 byte3 byte4 |
 	offset <=6 ifTrue: 
