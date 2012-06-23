@@ -511,7 +511,7 @@ ThreadedFFIPlugin >> ffiCall: externalFunction ArgArrayOrNil: argArrayOrNil NumA
 	self allocaLiesSoUseGetsp ifTrue:
 		[allocation := self getsp].
 	self cStackAlignment ~= 0 ifTrue:
-		[allocation := self cCoerce: (allocation asUnsignedInteger bitAnd: (self cStackAlignment - 1) bitInvert32)
+		[allocation := self cCoerce: (allocation asUnsignedInteger bitClear: self cStackAlignment - 1)
 						to: #'char *'].
 	calloutState
 		argVector: allocation;

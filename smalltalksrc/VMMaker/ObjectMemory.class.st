@@ -996,12 +996,15 @@ ObjectMemory >> changeClassOf: rcvr to: argClass [
 			self cppIf: IMMUTABILITY
 				ifTrue: [(rcvrHdr bitAnd: ImmutabilityBit) ~= 0 ifTrue:
 							[^PrimErrNoModification]].
-			self longAt: rcvr put:
-				(((self longAt: rcvr) bitAnd: CompactClassMask bitInvert32) bitOr: ccIndex)]
+			self baseHeader: rcvr
+				put: (((self longAt: rcvr) bitClear: CompactClassMask) bitOr: ccIndex)]
 		ifFalse: "Exchange the class pointer, which could make rcvr a root for argClass"
 			[self cppIf: IMMUTABILITY
 				ifTrue: [(rcvrHdr bitAnd: ImmutabilityBit) ~= 0 ifTrue:
 							[^PrimErrNoModification]].
+			(self compactClassIndexOf: rcvr) ~= 0 ifTrue:
+				[self baseHeader: rcvr
+					put: ((self baseHeader: rcvr) bitClear: CompactClassMask)].			
 			self longAt: rcvr-BaseHeaderSize put: (argClass bitOr: (self headerType: rcvr)).
 			(self oop: rcvr isLessThan: youngStart) ifTrue:
 				[self possibleRootStoreInto: rcvr value: argClass]].
@@ -3920,7 +3923,7 @@ ObjectMemory >> setEndOfMemory: newEndOfMemory [
 { #category : #'header access' }
 ObjectMemory >> setHashBitsOf: oop to: hash [
 	self longAt: oop
-		put: (((self baseHeader: oop) bitAnd: HashBits bitInvert32)
+		put: (((self baseHeader: oop) bitClear: HashBits)
 				bitOr: (hash bitAnd: HashMaskUnshifted) << HashBitsOffset)
 ]
 
@@ -4472,7 +4475,7 @@ ObjectMemory >> sufficientSpaceToAllocate: bytes [
 
 	| minFree |
 	<inline: true>
-	minFree := (lowSpaceThreshold + bytes + BaseHeaderSize + BytesPerWord - 1) bitAnd: (BytesPerWord - 1) bitInvert32.
+	minFree := (lowSpaceThreshold + bytes + BaseHeaderSize + BytesPerWord - 1) bitClear: BytesPerWord - 1.
 
 	"check for low-space"
 	(self oop: (self sizeOfFree: freeBlock) isGreaterThanOrEqualTo: minFree)
