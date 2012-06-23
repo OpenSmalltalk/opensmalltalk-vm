@@ -587,11 +587,6 @@ NewCoObjectMemorySimulator >> stringOf: oop [
 	^coInterpreter stringOf: oop
 ]
 
-{ #category : #'debug printing' }
-NewCoObjectMemorySimulator >> strlen: aString [
-	^aString size
-]
-
 { #category : #'simulation only' }
 NewCoObjectMemorySimulator >> success: boolean [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
