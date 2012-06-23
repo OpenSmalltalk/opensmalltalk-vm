@@ -2066,11 +2066,6 @@ StackInterpreterSimulator >> stringOf: oop [
 							ifFalse: [chars])]]
 ]
 
-{ #category : #'debug printing' }
-StackInterpreterSimulator >> strlen: aString [
-	^aString size
-]
-
 { #category : #'debugging traps' }
 StackInterpreterSimulator >> success: successBoolean [
 	"successBoolean ifFalse:
