@@ -3310,7 +3310,7 @@ CoInterpreter >> getImageHeaderFlags [
 	+ (flagInterpretedMethods ifTrue: [8] ifFalse: [0])
 	+ (preemptionYields ifTrue: [0] ifFalse: [16])
 	+ (noThreadingOfGUIThread ifTrue: [32] ifFalse: [0])
-	+ (imageHeaderFlags bitAnd: 63 bitInvert32) "these are any flags we do not recognize"
+	+ (imageHeaderFlags bitClear: 63) "these are any flags we do not recognize"
 ]
 
 { #category : #'message sending' }

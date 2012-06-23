@@ -4908,8 +4908,8 @@ StackInterpreter >> getImageHeaderFlags [
 	"Answer the flags that are contained in the 7th long of the image header."
 	^fullScreenFlag "0 or 1"
 	+ (VMBIGENDIAN ifTrue: [0] ifFalse: [2]) "this is the imageFloatsLittleEndian flag"
-	+ (preemptionYields ifTrue: [0] ifFalse: [16])
-	+ (imageHeaderFlags bitAnd: 19 bitInvert32) "these are any flags we do not recognize"
+	+ (preemptionYields ifTrue: [0] ifFalse: [16r10])
+	+ (imageHeaderFlags bitClear: 16r13) "these are any flags we do not recognize"
 ]
 
 { #category : #'plugin primitive support' }
@@ -8130,7 +8130,7 @@ StackInterpreter >> printNum: n [
 
 { #category : #'debug printing' }
 StackInterpreter >> printOop: oop [
-	| cls fmt lastIndex startIP bytecodesPerLine column |
+	| cls fmt lastIndex startIP bytecodesPerLine |
 	<inline: false>
 	self printHex: oop.
 	(objectMemory isIntegerObject: oop) ifTrue:
@@ -8146,9 +8146,7 @@ StackInterpreter >> printOop: oop [
 	(objectMemory isFreeObject: oop) ifTrue:
 		[self print: ' free chunk of size '; printNum: (objectMemory sizeOfFree: oop); cr.
 		 ^nil].
-"
 	self print: ': a(n) '.
-"
 	self printNameOfClass: (cls := objectMemory fetchClassOfNonInt: oop) count: 5.
 	cls = (objectMemory splObj: ClassFloat) ifTrue:
 		[self cr; printFloat: (self dbgFloatValueOf: oop); cr.
@@ -8200,21 +8198,15 @@ StackInterpreter >> printOop: oop [
 			 lastIndex := objectMemory lengthOf: oop.
 			 lastIndex - startIP > 100 ifTrue:
 				[lastIndex := startIP + 100].
-			 bytecodesPerLine := 8.
-			 column := 1.
+			 bytecodesPerLine := 10.
 			 startIP to: lastIndex do:
 				[:index| | byte |
-				(column = 1) ifTrue:[
-					self cCode: 'printf("%08x: ", oop+index-1)'
-						inSmalltalk: [self print: (oop+index-1) hex; print: ': '].
-				].
 				byte := objectMemory fetchByte: index - 1 ofObject: oop.
 				self cCode: 'printf(" %02x/%-3d", byte,byte)'
 					inSmalltalk: [self space; print: (byte radix: 16); printChar: $/; printNum: byte].
-				column := column + 1.
-				(column > bytecodesPerLine) ifTrue:
-					[column := 1. self cr]].
-			(column = 1) ifFalse:
+				((index - startIP + 1) \\ bytecodesPerLine) = 0 ifTrue:
+					[self cr]].
+			((lastIndex - startIP + 1) \\ bytecodesPerLine) = 0 ifFalse:
 				[self cr]]
 ]
 
