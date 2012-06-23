@@ -1806,7 +1806,7 @@ Cogit >> addressSpaceMask [
 
 { #category : #'generate machine code' }
 Cogit >> alignUptoRoutineBoundary: anAddress [ 
-	^anAddress + 7 bitAnd: 7 bitInvert32
+	^anAddress + 7 bitClear: 7
 ]
 
 { #category : #'garbage collection' }
@@ -4867,7 +4867,7 @@ Cogit >> generateMapAt: addressOrNull start: startAddress [
 		 annotation := self addressOf: (annotations at: i).
 		 mcpc := annotation instruction address + annotation instruction machineCodeSize.
 		 [(delta := mcpc - location) > MaxUnitDisplacement] whileTrue:
-			[maxDelta := (delta min: MaxX2NDisplacement) bitAnd: DisplacementMask bitInvert32.
+			[maxDelta := (delta min: MaxX2NDisplacement) bitClear: DisplacementMask.
 			 self assert: maxDelta >> AnnotationShift <= DisplacementMask.
 			 addressOrNull ~= 0 ifTrue:
 				[objectMemory
