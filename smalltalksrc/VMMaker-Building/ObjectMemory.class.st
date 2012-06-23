@@ -441,6 +441,11 @@ ObjectMemory class >> initializeWithOptions: optionsDictionary [
 ]
 
 { #category : #translation }
+ObjectMemory class >> isNonArgumentImplicitReceiverVariableName: aString [
+	^#('self' 'interpreter' 'coInterpreter') includes: aString
+]
+
+{ #category : #translation }
 ObjectMemory class >> mustBeGlobal: var [
 	"Answer if a variable must be global and exported.  Used for inst vars that are accessed from VM support code."
 
@@ -3615,7 +3620,7 @@ ObjectMemory >> printReferencesTo: anOop [
 						ifFalse: [i := (self lengthOf: oop) - 1]].
 			[i >= 0] whileTrue:
 				[anOop = (self fetchPointer: i ofObject: oop) ifTrue:
-					[self printHex: oop; print: ' @ '; printNum: i; cr.
+					[self interpreter printHex: oop; print: ' @ '; printNum: i; space; printOopShort: oop; cr.
 					 i := 0].
 				 i := i - 1]].
 		 oop := self accessibleObjectAfter: oop]

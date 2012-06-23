@@ -8110,7 +8110,7 @@ StackInterpreter >> printNum: n [
 
 { #category : #'debug printing' }
 StackInterpreter >> printOop: oop [
-	| cls fmt lastIndex startIP bytecodesPerLine |
+	| cls fmt lastIndex startIP bytecodesPerLine column |
 	<inline: false>
 	self printHex: oop.
 	(objectMemory isIntegerObject: oop) ifTrue:
@@ -8126,7 +8126,9 @@ StackInterpreter >> printOop: oop [
 	(objectMemory isFreeObject: oop) ifTrue:
 		[self print: ' free chunk of size '; printNum: (objectMemory sizeOfFree: oop); cr.
 		 ^nil].
+"
 	self print: ': a(n) '.
+"
 	self printNameOfClass: (cls := objectMemory fetchClassOfNonInt: oop) count: 5.
 	cls = (objectMemory splObj: ClassFloat) ifTrue:
 		[self cr; printFloat: (self dbgFloatValueOf: oop); cr.
@@ -8178,15 +8180,21 @@ StackInterpreter >> printOop: oop [
 			 lastIndex := objectMemory lengthOf: oop.
 			 lastIndex - startIP > 100 ifTrue:
 				[lastIndex := startIP + 100].
-			 bytecodesPerLine := 10.
+			 bytecodesPerLine := 8.
+			 column := 1.
 			 startIP to: lastIndex do:
 				[:index| | byte |
+				(column = 1) ifTrue:[
+					self cCode: 'printf("%08x: ", oop+index-1)'
+						inSmalltalk: [self print: (oop+index-1) hex; print: ': '].
+				].
 				byte := objectMemory fetchByte: index - 1 ofObject: oop.
 				self cCode: 'printf(" %02x/%-3d", byte,byte)'
 					inSmalltalk: [self space; print: (byte radix: 16); printChar: $/; printNum: byte].
-				((index - startIP + 1) \\ bytecodesPerLine) = 0 ifTrue:
-					[self cr]].
-			((lastIndex - startIP + 1) \\ bytecodesPerLine) = 0 ifFalse:
+				column := column + 1.
+				(column > bytecodesPerLine) ifTrue:
+					[column := 1. self cr]].
+			(column = 1) ifFalse:
 				[self cr]]
 ]
 
