@@ -420,7 +420,7 @@ CoInterpreter class >> interpreterMachineCodeTransitions [
 
 { #category : #translation }
 CoInterpreter class >> isNonArgumentImplicitReceiverVariableName: aString [
-	^#('self' 'stackPages' 'cogit' 'coInterpreter' 'cogMethodZone' 'objectMemory') includes: aString
+	^#('self' 'stackPages' 'cogit' 'coInterpreter' 'cogMethodZone' 'objectMemory' 'interpreter') includes: aString
 ]
 
 { #category : #testing }
