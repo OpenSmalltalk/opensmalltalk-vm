@@ -137,13 +137,10 @@ CoInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		var: #traceLog
 		declareC: 'sqInt traceLog[TraceBufferSize /* ', TraceBufferSize printString, ' */]';
 		var: #traceSources
-		declareC: (String streamContents:
-					[:s|
-					s nextPutAll: 'static char *traceSources[] = {'; crtab: 2.
-					TraceSources object
-						do: [:string| s nextPut: $"; nextPutAll: string; nextPut: $"]
-						separatedBy: [ s crtab: 2; nextPut: $,].
-					s crtab; nextPut: $}; cr])
+		declareC: (aCCodeGenerator
+					staticArrayInitializerCalled: 'traceSources'
+					for: TraceSources
+					type: 'char *')
 ]
 
 { #category : #translation }

@@ -15,3 +15,8 @@ ByteArray class >> ccgDeclareCForVar: aSymbolOrString [
 
 	^'char *', aSymbolOrString
 ]
+
+{ #category : #'*VMMaker-coercing' }
+ByteArray >> coerceTo: cTypeString sim: interpreterSimulator [
+	^CLiteralArray on: self
+]

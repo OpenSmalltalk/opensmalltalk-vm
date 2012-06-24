@@ -151,6 +151,11 @@ TParseNode >> isLeaf [
 ]
 
 { #category : #testing }
+TParseNode >> isLiteralArrayDeclaration [
+	^false
+]
+
+{ #category : #testing }
 TParseNode >> isPreprocessorDirective [
 	^false
 ]
