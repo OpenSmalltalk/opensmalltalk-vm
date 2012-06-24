@@ -1752,43 +1752,6 @@ NewspeakInterpreterSimulator >> shortPrint: oop [
 		ifFalse: ['a ' , name]
 ]
 
-{ #category : #'debug support' }
-NewspeakInterpreterSimulator >> shortPrintRelative: oop [
-	| name classOop |
-	(self isIntegerObject: oop) ifTrue:
-		[^'=' , (self integerValueOf: oop) printString , 
-		' (' , (self integerValueOf: oop) hex , ')'].
-	(oop between: self startOfMemory and: freeBlock) ifFalse:
-		[^' is not on the heap'].
-	(oop bitAnd: (BytesPerWord - 1)) ~= 0 ifTrue:
-		[^' is misaligned'].
-	classOop := self fetchClassOf: oop.
-	(self sizeBitsOf: classOop) = metaclassSizeBytes ifTrue: [
-		^'class ' , (self nameOfClass: oop)].
-	name := self nameOfClass: classOop.
-	name size = 0 ifTrue: [name := '??'].
-	name = 'String' ifTrue: [^(self stringOf: oop) printString].
-	name = 'ByteString' ifTrue: [^(self stringOf: oop) printString].
-	name = 'Symbol' ifTrue: [^'#' , (self stringOf: oop)].
-	name = 'ByteSymbol' ifTrue: [^'#' , (self stringOf: oop)].
-	name = 'Character' ifTrue: [^'=' , (Character value: (self integerValueOf: 
-				(self fetchPointer: 0 ofObject: oop))) printString].
-	name = 'UndefinedObject' ifTrue: [^'nil'].
-	name = 'False' ifTrue: [^'false'].
-	name = 'True' ifTrue: [^'true'].
-	name = 'Float' ifTrue: [^'=' , (self dbgFloatValueOf: oop) printString].
-	name = 'Association' ifTrue:
-		[| valOop |
-		valOop := self longAt: oop + BaseHeaderSize + BytesPerWord.
-		^'(' ,
-			(self shortPrint: (self longAt: oop + BaseHeaderSize)) ,
-			' -> ' ,
-			((self isIntegerObject: valOop) ifTrue: [valOop] ifFalse: [valOop - self startOfMemory]) hex8 , ')'].
-	^(('AEIOU' includes: name first)
-		ifTrue: ['an ']
-		ifFalse: ['a ']) , name
-]
-
 { #category : #'I/O primitives' }
 NewspeakInterpreterSimulator >> showDisplayBits: destBits w: w h: h d: d left: left right: right top: top bottom: bottom [
 	| raster pixPerWord simDisp realDisp rect |

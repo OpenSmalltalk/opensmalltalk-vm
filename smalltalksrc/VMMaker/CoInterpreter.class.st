@@ -5429,7 +5429,7 @@ CoInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imag
 	<var: #dataSize type: 'size_t '>
 	<var: #imageOffset type: 'squeakFileOffsetType '>
 
-	metaclassSizeBytes := 6 * BytesPerWord.	"guess (Metaclass instSize * BPW)"
+	metaclassSizeBits := 6 * BytesPerWord.	"guess (Metaclass instSize * BPW)"
 	swapBytes := self checkImageVersionFrom: f startingAt: imageOffset.
 	headerStart := (self sqImageFilePosition: f) - BytesPerWord.  "record header start position"
 
