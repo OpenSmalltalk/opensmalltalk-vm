@@ -3085,6 +3085,29 @@ CCodeGenerator >> sortStrings: aStringOrSymbolCollection [
 	^aStringOrSymbolCollection asSortedCollection: [:a :b| a caseSensitiveLessOrEqual: b]
 ]
 
+{ #category : #utilities }
+CCodeGenerator >> staticArrayInitializerCalled: varName for: array type: cType [
+	"array is a literal array or a CArray on some array."
+	| sequence lastLine |
+	sequence := array isCollection ifTrue: [array] ifFalse: [array object].
+	lastLine := 0.
+	^String streamContents:
+		[:s|
+		s	nextPutAll: 'static ';
+			nextPutAll: cType;
+			space;
+			nextPutAll: varName;
+			nextPutAll: '[] = {'; crtab: 2.
+		sequence
+			do: [:element| s nextPutAll: (self cLiteralFor: element)]
+			separatedBy:
+				[s nextPut: $,.
+				 (s position - lastLine) > 76
+					ifTrue: [s crtab: 2. lastLine := s position]
+					ifFalse: [s space]].
+		s crtab; nextPut: $}; cr]
+]
+
 { #category : #public }
 CCodeGenerator >> storeAPIExportHeader: headerName OnFile: fullHeaderPath [
 	"Store C header code on the given file. Evaluate
