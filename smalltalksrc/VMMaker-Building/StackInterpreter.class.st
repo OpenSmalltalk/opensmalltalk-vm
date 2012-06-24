@@ -71,7 +71,7 @@ Class {
 		'desiredEdenBytes',
 		'classNameIndex',
 		'thisClassIndex',
-		'metaclassSizeBytes',
+		'metaclassSizeBits',
 		'interruptCheckChain',
 		'suppressHeartbeatFlag',
 		'breakSelector',
@@ -5282,13 +5282,13 @@ StackInterpreter >> initialPCForHeader: methodHeader method: theMethod [
 
 { #category : #initialization }
 StackInterpreter >> initializeExtraClassInstVarIndices [
-	"Initialize metaclassSizeBytes and thisClassIndex which are used in debug printing, and
+	"Initialize metaclassSizeBits and thisClassIndex which are used in debug printing, and
 	 classNameIndex which is used not only for debug printing but for is:KindOf: & is:MemberOf:
 	 via classNameOf:is: (evil but a reality we have to accept)."
 	| classArrayObj classArrayClass |
 	classArrayObj := objectMemory splObj: ClassArray.
 	classArrayClass := objectMemory fetchClassOfNonInt: classArrayObj.
-	metaclassSizeBytes := objectMemory sizeBitsOf: classArrayClass.	"determine actual (Metaclass instSize * 4)"
+	metaclassSizeBits := objectMemory sizeBitsOf: classArrayClass.	"determine actual (Metaclass instSize * 4)"
 	thisClassIndex := 5. "default"
 	InstanceSpecificationIndex + 1 to: (objectMemory lengthOf: classArrayClass) do:
 		[:i|
@@ -5942,7 +5942,7 @@ StackInterpreter >> justActivateNewMethod [
 { #category : #'debug printing' }
 StackInterpreter >> lengthOfNameOfClass: classOop [
 	<inline: false>
-	(objectMemory sizeBitsOf: classOop) = metaclassSizeBytes ifTrue:
+	(objectMemory sizeBitsOf: classOop) = metaclassSizeBits ifTrue:
 		[^self lengthOfNameOfClass: (objectMemory fetchPointer: thisClassIndex ofObject: classOop)].
 	^objectMemory lengthOf: (objectMemory fetchPointer: classNameIndex ofObject: classOop)
 ]
@@ -6988,7 +6988,7 @@ StackInterpreter >> nameOfClass: classOop [
 	 Use e.g. classIsMeta: to avoid being fooled."
 	<inline: false>
 	<returnTypeC: 'char *'>
-	(objectMemory sizeBitsOf: classOop) = metaclassSizeBytes ifTrue:
+	(objectMemory sizeBitsOf: classOop) = metaclassSizeBits ifTrue:
 		[^self nameOfClass: (objectMemory fetchPointer: thisClassIndex ofObject: classOop)].
 	^objectMemory firstFixedField: (objectMemory fetchPointer: classNameIndex ofObject: classOop)
 ]
@@ -8114,8 +8114,8 @@ StackInterpreter >> printNameOfClass: classOop count: cnt [
 	"Details: The count argument is used to avoid a possible infinite recursion if classOop is a corrupted object."
 	<inline: false>
 	(classOop = 0 or: [cnt <= 0]) ifTrue: [^self print: 'bad class'].
-	((objectMemory sizeBitsOf: classOop) = metaclassSizeBytes
-	  and: [metaclassSizeBytes > (thisClassIndex * BytesPerWord)])	"(Metaclass instSize * 4)"
+	((objectMemory sizeBitsOf: classOop) = metaclassSizeBits
+	  and: [metaclassSizeBits > (thisClassIndex * BytesPerWord)])	"(Metaclass instSize * 4)"
 		ifTrue: [self printNameOfClass: (objectMemory fetchPointer: thisClassIndex ofObject: classOop) count: cnt - 1.
 				self print: ' class']
 		ifFalse: [self printStringOf: (objectMemory fetchPointer: classNameIndex ofObject: classOop)]
@@ -8240,7 +8240,7 @@ StackInterpreter >> printOopShortInner: oop [
 	classOop := objectMemory fetchClassOfNonInt: oop.
 	(objectMemory addressCouldBeObj: classOop) ifFalse:
 		[self print: 'a ??'. ^nil].
-	(objectMemory sizeBitsOf: classOop) = metaclassSizeBytes ifTrue:
+	(objectMemory sizeBitsOf: classOop) = metaclassSizeBits ifTrue:
 		[self printNameOfClass: oop count: 5.
 		 ^nil].
 	oop = objectMemory nilObject ifTrue: [self print: 'nil'. ^nil].
@@ -8789,7 +8789,7 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 	<var: #dataSize type: 'size_t '>
 	<var: #imageOffset type: 'squeakFileOffsetType '>
 
-	metaclassSizeBytes := 6 * BytesPerWord.	"guess (Metaclass instSize * BPW)"
+	metaclassSizeBits := 6 * BytesPerWord.	"guess (Metaclass instSize * BPW)"
 	swapBytes := self checkImageVersionFrom: f startingAt: imageOffset.
 	headerStart := (self sqImageFilePosition: f) - BytesPerWord.  "record header start position"
 

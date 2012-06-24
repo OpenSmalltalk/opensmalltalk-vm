@@ -74,7 +74,7 @@ Class {
 		'profileMethod',
 		'profileSemaphore',
 		'nextProfileTick',
-		'metaclassSizeBytes',
+		'metaclassSizeBits',
 		'statIOProcessEvents',
 		'statCheckForEvents',
 		'statQuickCheckForEvents',
@@ -3341,7 +3341,7 @@ Interpreter >> initializeInterpreter: bytesToShift [
 	self initializeObjectMemory: bytesToShift.
 	self initCompilerHooks.
 	self checkAssumedCompactClasses.
-	metaclassSizeBytes := self sizeBitsOf: (self fetchClassOfNonInt: (self splObj: ClassArray)).	"determine actual (Metaclass instSize * 4)"
+	metaclassSizeBits := self sizeBitsOf: (self fetchClassOfNonInt: (self splObj: ClassArray)).	"determine actual (Metaclass instSize * 4)"
 	activeContext := nilObj.
 	theHomeContext := nilObj.
 	method := nilObj.
@@ -8555,8 +8555,8 @@ Interpreter >> printNameOfClass: classOop count: cnt [
 	"Details: The count argument is used to avoid a possible infinite recursion if classOop is a corrupted object."
 
 	cnt <= 0 ifTrue: [^self print: 'bad class'].
-	((self sizeBitsOf: classOop) = metaclassSizeBytes
-	  and: [metaclassSizeBytes >= (6 * BytesPerWord)])	"(Metaclass instSize * 4)"
+	((self sizeBitsOf: classOop) = metaclassSizeBits
+	  and: [metaclassSizeBits >= (6 * BytesPerWord)])	"(Metaclass instSize * 4)"
 		ifTrue: [self printNameOfClass: (self fetchPointer: 5 "thisClass" ofObject: classOop) count: cnt - 1.
 				self print: ' class']
 		ifFalse: [self printStringOf: (self fetchPointer: 6 "name" ofObject: classOop)]
@@ -8913,7 +8913,7 @@ Interpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imageO
 	<var: #dataSize type: 'size_t '>
 	<var: #imageOffset type: 'squeakFileOffsetType '>
 
-	metaclassSizeBytes := 6 * BytesPerWord.	"guess (Metaclass instSize * BPW)"
+	metaclassSizeBits := 6 * BytesPerWord.	"guess (Metaclass instSize * BPW)"
 	swapBytes := self checkImageVersionFrom: f startingAt: imageOffset.
 	headerStart := (self sqImageFilePosition: f) - BytesPerWord.  "record header start position"
 
