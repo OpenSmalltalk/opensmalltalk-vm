@@ -41,6 +41,8 @@ TAssignmentNode >> emitCCodeAsExpressionOn: aStream level: level generator: aCod
 TAssignmentNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 	expression isSwitch ifTrue:
 		[^expression emitCCodeOn: aStream addToEndOfCases: self level: level generator: aCodeGen].
+	expression isLiteralArrayDeclaration ifTrue:
+		[^self emitLiteralArrayDeclarationOn: aStream level: level generator: aCodeGen].
 	variable emitCCodeOn: aStream level: level generator: aCodeGen.
 	self isVariableUpdatingAssignment
 		ifTrue:
@@ -53,6 +55,24 @@ TAssignmentNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 		ifFalse:
 			[aStream space; nextPut: $=; space.
 			 expression emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen]
+]
+
+{ #category : #'C code generation' }
+TAssignmentNode >> emitLiteralArrayDeclarationOn: aStream level: level generator: aCCodeGen [
+	| type |
+	type := expression args last value.
+	self assert: type last = $*.
+	aStream
+		crtab: level;
+		nextPutAll: '{ ';
+		nextPutAll: (aCCodeGen staticArrayInitializerCalled: 'aLiteralArray' for: expression args first value type: type allButLast);
+		nextPut: $;;
+		crtab: level + 1;
+		nextPutAll: variable name;
+		nextPutAll: ' = aLiteralArray;';
+		crtab: level;
+		nextPut: $};
+		cr
 ]
 
 { #category : #accessing }

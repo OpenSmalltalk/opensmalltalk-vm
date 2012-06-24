@@ -136,6 +136,14 @@ TSendNode >> isBuiltinOperator: builtinFlag [
 ]
 
 { #category : #testing }
+TSendNode >> isLiteralArrayDeclaration [
+	^selector == #cCoerce:to:
+	  and: [arguments first isConstant
+	  and: [arguments first value isLiteral
+	  and: [arguments first value isCollection]]]
+]
+
+{ #category : #testing }
 TSendNode >> isNonNullCCode [
 	^(#(cCode: cCode:inSmalltalk:) includes: selector)
 	   and: [arguments first isConstant

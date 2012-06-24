@@ -332,6 +332,17 @@ StackInterpreterSimulator >> doSignalExternalSemaphores: minTableSize [
 	^switched
 ]
 
+{ #category : #'error handling' }
+StackInterpreterSimulator >> doesNotUnderstand: aMessage [
+	"If this is a doit and the objectMemory understands, pass it on."
+	(thisContext findContextSuchThat: [:ctxt| ctxt selector == #evaluate:in:to:notifying:ifFail:logged:]) ifNotNil:
+		[((objectMemory class whichClassIncludesSelector: aMessage selector) inheritsFrom: Object) ifTrue: "i.e. VMClass and below"
+			[Transcript nextPutAll: 'warning: redirecting to objectMemory'; cr; flush.
+			 aMessage lookupClass: nil.
+			^aMessage sentTo: objectMemory]].
+	^super doesNotUnderstand: aMessage
+]
+
 { #category : #'I/O primitives support' }
 StackInterpreterSimulator >> drawLoopX: xDelta Y: yDelta [
 
