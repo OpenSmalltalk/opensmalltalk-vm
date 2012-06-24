@@ -62,7 +62,7 @@ Class {
 		'externalPrimitiveTable',
 		'primitiveTable',
 		'globalSessionID',
-		'metaclassSizeBytes',
+		'metaclassSizeBits',
 		'thisClassIndex',
 		'classNameIndex',
 		'statPendingFinalizationSignals',
@@ -3695,7 +3695,7 @@ NewspeakInterpreter >> initialize [
 
 { #category : #initialization }
 NewspeakInterpreter >> initializeExtraClassInstVarIndices [
-	"Initialize metaclassSizeBytes and thisClassIndex which are used in debug printing, and
+	"Initialize metaclassSizeBits and thisClassIndex which are used in debug printing, and
 	 classNameIndex which is used not only for debug printing but for is:KindOf: & is:MemberOf:
 	 via classNameOf:is: (evil but a reality we have to accept)."
 	| classArrayObj classArrayClass |
@@ -3703,7 +3703,7 @@ NewspeakInterpreter >> initializeExtraClassInstVarIndices [
 	thisClassIndex := 5. "default"
 	classArrayObj := self splObj: ClassArray.
 	classArrayClass := self fetchClassOfNonInt: classArrayObj.
-	metaclassSizeBytes := self sizeBitsOf: classArrayClass.	"determine actual (Metaclass instSize * 4)"
+	metaclassSizeBits := self sizeBitsOf: classArrayClass.	"determine actual (Metaclass instSize * 4)"
 	InstanceSpecificationIndex + 1 to: (self lengthOf: classArrayClass) do:
 		[:i|
 		(self fetchPointer: i ofObject: classArrayClass) = classArrayObj ifTrue:
@@ -4320,7 +4320,7 @@ NewspeakInterpreter >> justActivateNewMethod [
 { #category : #'debug printing' }
 NewspeakInterpreter >> lengthOfNameOfClass: classOop [
 	<inline: false>
-	(self sizeBitsOf: classOop) = metaclassSizeBytes ifTrue:
+	(self sizeBitsOf: classOop) = metaclassSizeBits ifTrue:
 		[^self lengthOfNameOfClass: (self fetchPointer: thisClassIndex ofObject: classOop)].
 	^self lengthOf: (self fetchPointer: classNameIndex ofObject: classOop)
 ]
@@ -4730,7 +4730,7 @@ NewspeakInterpreter >> nameOfClass: classOop [
 	 Use e.g. classIsMeta: to avoid being fooled."
 	<inline: false>
 	<returnTypeC: 'char *'>
-	(self sizeBitsOf: classOop) = metaclassSizeBytes ifTrue:
+	(self sizeBitsOf: classOop) = metaclassSizeBits ifTrue:
 		[^self nameOfClass: (self fetchPointer: thisClassIndex ofObject: classOop)].
 	^self firstFixedField: (self fetchPointer: classNameIndex ofObject: classOop)
 ]
@@ -9035,8 +9035,8 @@ NewspeakInterpreter >> printNameOfClass: classOop count: cnt [
 	"Details: The count argument is used to avoid a possible infinite recursion if classOop is a corrupted object."
 	<inline: false>
 	(classOop = 0 or: [cnt <= 0]) ifTrue: [^self print: 'bad class'].
-	((self sizeBitsOf: classOop) = metaclassSizeBytes
-	  and: [metaclassSizeBytes > (thisClassIndex * BytesPerWord)])	"(Metaclass instSize * 4)"
+	((self sizeBitsOf: classOop) = metaclassSizeBits
+	  and: [metaclassSizeBits > (thisClassIndex * BytesPerWord)])	"(Metaclass instSize * 4)"
 		ifTrue: [self printNameOfClass: (self fetchPointer: thisClassIndex ofObject: classOop) count: cnt - 1.
 				self print: ' class']
 		ifFalse: [self printStringOf: (self fetchPointer: classNameIndex ofObject: classOop)]
@@ -9149,7 +9149,7 @@ NewspeakInterpreter >> printOopShortInner: oop [
 		[self printFloat: (self dbgFloatValueOf: oop).
 		 ^nil].
 	classOop := self fetchClassOf: oop.
-	(self sizeBitsOf: classOop) = metaclassSizeBytes ifTrue:
+	(self sizeBitsOf: classOop) = metaclassSizeBits ifTrue:
 		[self printNameOfClass: oop count: 5.
 		 ^nil].
 	oop = self nilObject ifTrue: [self print: 'nil'. ^nil].
@@ -9585,7 +9585,7 @@ NewspeakInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt
 	<var: #dataSize type: 'size_t '>
 	<var: #imageOffset type: 'squeakFileOffsetType '>
 
-	metaclassSizeBytes := 7 * BytesPerWord.	"guess (Metaclass instSize+1 * 4)"
+	metaclassSizeBits := 7 * BytesPerWord.	"guess (Metaclass instSize+1 * 4)"
 	swapBytes := self checkImageVersionFrom: f startingAt: imageOffset.
 	headerStart := (self sqImageFilePosition: f) - BytesPerWord.  "record header start position"
 
