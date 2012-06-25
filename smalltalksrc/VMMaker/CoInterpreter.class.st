@@ -827,6 +827,7 @@ CoInterpreter >> attemptToSwitchToMachineCode: bcpc [
 
 { #category : #'return bytecodes' }
 CoInterpreter >> baseFrameReturn [
+	<inline: true>
 	| contextToReturnTo retToContext theFP theSP thePage newPage frameAbove |
 	<var: #theFP type: #'char *'>
 	<var: #theSP type: #'char *'>
