@@ -37,3 +37,5 @@ Then build using
 
 4. At the end of this process you should have a brand new Croquet.app in the
    macbuild folder (or Fast.app Assert.app and Debug.app if you've used mvm).
+
+N.B. The plugin set is defined by plugins.ext and plugins.int in the build dir.

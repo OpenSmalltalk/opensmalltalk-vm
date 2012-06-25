@@ -1,4 +1,4 @@
-# Automatically generated makefile include for external plugins
+# Copied, perhaps edited, from ../../nssrc/examplePlugins.int
 INTERNAL_PLUGINS = \
 AsynchFilePlugin \
 BMPReadWriterPlugin \

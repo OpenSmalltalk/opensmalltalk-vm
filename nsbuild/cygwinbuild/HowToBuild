@@ -30,6 +30,8 @@ CYGWIN_NT-5.1 mcstalkerxp 1.5.24(0.156/4/2) 2007-01-31 10:57 i686 Cygwin
 4. At the end of this process you should have a brand new Croquet VM in the
    cygwinbuild/build/vm folder (make sure you copy Croquet.map along with it)
 
+N.B. The plugin set is defined by plugins.ext and plugins.int in the build dir.
+
 3a. The cygwin makefile supports building three VM configurations, product,
     assert and debug, building product by default.  To build a configuration
 	simply type make configuration, e.g.

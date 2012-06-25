@@ -1,4 +1,4 @@
-# Automatically generated makefile include for internal plugins
+# Copied, perhaps edited, from ../../src/examplePlugins.int
 INTERNAL_PLUGINS = \
 ADPCMCodecPlugin \
 AsynchFilePlugin \
