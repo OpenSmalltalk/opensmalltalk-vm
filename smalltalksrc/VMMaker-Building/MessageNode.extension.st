@@ -7,22 +7,12 @@ MessageNode >> asTranslatorNodeIn: aTMethod [
 	On top of this, numArgs is needed due to the (truly grody) use of
 	arguments as a place to store the extra expressions needed to generate
 	code for in-line to:by:do:, etc.  see below, where it is used."
-	| rcvrOrNil isReturned sel args |
+	| rcvrOrNil sel args |
 	rcvrOrNil := receiver ifNotNil: [receiver asTranslatorNodeIn: aTMethod].
 	(rcvrOrNil notNil
 	and: [rcvrOrNil isVariable
 	and: [rcvrOrNil name = 'super']]) ifTrue:
-		["hack, hack, hack.  should implement parent but that belongs in Compiler-ParseNodes not here"
-		isReturned := false.
-		aTMethod parseTree accept:
-			(ParseNodeEnumerator ofBlock:
-				[:node|
-				(node isReturn and: [node expr = self]) ifTrue:
-					[isReturned := true]]).
-		^aTMethod
-			superExpansionNodeFor: selector key
-			args: arguments
-			isReturned: isReturned].
+		[^aTMethod superExpansionNodeFor: selector key args: arguments].
 	sel := selector isSymbol ifTrue: [selector] ifFalse: [selector key].
 	(sel = #cCode:inSmalltalk: "extracting here rather than in translation allows inlining in the block."
 	and: [arguments first isBlockNode]) ifTrue:

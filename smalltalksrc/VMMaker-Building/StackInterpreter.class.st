@@ -1325,10 +1325,16 @@ StackInterpreter class >> primitiveTable [
 { #category : #initialization }
 StackInterpreter class >> primitiveTableString [
 	"StackInterpreter initializePrimitiveTable primitiveTableString"
+	^self primitiveTableStringFor: self primitiveTable
+]
+
+{ #category : #initialization }
+StackInterpreter class >> primitiveTableStringFor: table [
+	"StackInterpreter initializePrimitiveTable primitiveTableString"
 	^String streamContents:
 		[:s | 
 		s nextPut: ${.
-		self primitiveTable withIndexDo:
+		table withIndexDo:
 			[:primSpec :index |
 			s
 				crtab;

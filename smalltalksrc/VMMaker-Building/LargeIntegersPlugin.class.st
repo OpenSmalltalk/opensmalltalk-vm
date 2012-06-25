@@ -782,7 +782,7 @@ LargeIntegersPlugin >> digitAddLarge: firstInteger with: secondInteger [
 	over > 0
 		ifTrue: 
 			["sum := sum growby: 1."
-			interpreterProxy remapOop: sum in: [newSum := interpreterProxy instantiateClass: resClass indexableSize: longLen + 1].
+			self remapOop: sum in: [newSum := interpreterProxy instantiateClass: resClass indexableSize: longLen + 1].
 			self
 				cBytesCopyFrom: (interpreterProxy firstIndexableField: sum)
 				to: (interpreterProxy firstIndexableField: newSum)
