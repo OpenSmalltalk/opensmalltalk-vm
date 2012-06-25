@@ -1756,6 +1756,7 @@ StackInterpreter >> assertValidStackLimits [
 
 { #category : #'return bytecodes' }
 StackInterpreter >> baseFrameReturn [
+	<inline: true>
 	| contextToReturnTo isAContext theFP theSP thePage frameAbove |
 	<var: #theFP type: #'char *'>
 	<var: #theSP type: #'char *'>
@@ -4164,8 +4165,9 @@ StackInterpreter >> fetchInteger: fieldIndex ofObject: objectPointer [
 StackInterpreter >> fetchNextBytecode [
 	"This method fetches the next instruction (bytecode). Each bytecode method is responsible for fetching the next bytecode, preferably as early as possible to allow the memory system time to process the request before the next dispatch."
 
-	currentBytecode := self fetchByte.
-
+	self cppIf: MULTIPLEBYTECODESETS
+		ifTrue: [currentBytecode := self fetchByte + bytecodeSetSelector]
+		ifFalse: [currentBytecode := self fetchByte]
 ]
 
 { #category : #'internal interpreter access' }
@@ -5690,7 +5692,7 @@ StackInterpreter >> interpret [
 	self browserPluginInitialiseIfNeeded.
 	self internalizeIPandSP.
 	self fetchNextBytecode.
-	[true] whileTrue: [self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable].
+	[true] whileTrue: [self dispatchOn: currentBytecode in: BytecodeTable].
 	localIP := localIP - 1.  "undo the pre-increment of IP before returning"
 	self externalizeIPandSP.
 	^nil
