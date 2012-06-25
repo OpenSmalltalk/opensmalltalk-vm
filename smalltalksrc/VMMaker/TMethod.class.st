@@ -352,17 +352,13 @@ TMethod >> determineTypeFor: aTParseNode in: aCCodeGenerator [
 
 { #category : #transformations }
 TMethod >> elideAnyFinalReturn [
-	"For super exoansions we need to eliminate any final return to prevent premature exit.
+	"For super expansions we need to eliminate any final return to prevent premature exit.
 	 Anything meaningful in the returned expression must be retained."
 
 	| stmtList lastStmt |
 	stmtList := parseTree statements asOrderedCollection.
 	(lastStmt := stmtList last) isReturn ifTrue:
-		[lastStmt expression isLeaf
-			ifTrue:
-				[stmtList removeLast]
-			ifFalse:
-				[stmtList at: stmtList size put: lastStmt expression].
+		[stmtList at: stmtList size put: lastStmt expression.
 		parseTree setStatements: stmtList]
 ]
 
@@ -1847,7 +1843,7 @@ TMethod >> static: aBoolean [
 ]
 
 { #category : #inlining }
-TMethod >> superExpansionNodeFor: aSelector args: argumentNodes isReturned: isReturned [
+TMethod >> superExpansionNodeFor: aSelector args: argumentNodes [
 	"Answer the expansion of a super send.  Merge the super expansion's
 	 locals, properties and comment into this method's properties."
 	(definingClass superclass lookupSelector: aSelector)
@@ -1880,7 +1876,7 @@ TMethod >> superExpansionNodeFor: aSelector args: argumentNodes isReturned: isRe
 			superTMethod cascadeVariableNumber ifNotNil:
 				[:scvn|
 				cascadeVariableNumber := cascadeVariableNumber ifNil: [scvn] ifNotNil: [:cvn| cvn + scvn]].
-			isReturned ifFalse: [superTMethod elideAnyFinalReturn].
+			superTMethod elideAnyFinalReturn.
 			^superTMethod parseTree]
 ]
 
