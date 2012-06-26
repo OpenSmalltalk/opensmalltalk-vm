@@ -2311,19 +2311,13 @@ StackInterpreter >> bytecodePrimSize [
 
 	"Shortcut the mega-lookup for ByteString and Array, the two big consumers of cycles
 	 here. Both of these have compact class indices and neither has any added fields."
-      isString := objectMemory
-					is: rcvr
-					instanceOf: (objectMemory splObj: ClassString)
-					compactClassIndex: ClassByteStringCompactIndex.
+      isString := self isInstanceOfClassByteString: rcvr.
 	isString ifTrue:
 		[sz := objectMemory lengthOf: rcvr.
 		 self internalStackTopPut: (objectMemory integerObjectOf: sz).
 		^self fetchNextBytecode].
 
-      isArray := objectMemory
-					is: rcvr
-					instanceOf: (objectMemory splObj: ClassArray)
-					compactClassIndex: ClassArrayCompactIndex.
+      isArray := self isInstanceOfClassArray: rcvr.
 	isArray ifTrue:
 		[sz := objectMemory lengthOf: rcvr.
 		 self internalStackTopPut: (objectMemory integerObjectOf: sz).
@@ -3247,7 +3241,7 @@ StackInterpreter >> commonVariable: rcvr at: index cacheIndex: atIx [
 { #category : #'indexing primitive support' }
 StackInterpreter >> commonVariable: rcvr at: index put: value cacheIndex: atIx [
 	"This code assumes the receiver has been identified at location atIx in the atCache."
-	| stSize fmt fixedFields valToPut |
+	| stSize fmt fixedFields valToPut isCharacter |
 	<inline: true>
 	stSize := atCache at: atIx+AtCacheSize.
 	((self oop: index isGreaterThanOrEqualTo: 1)
@@ -3262,10 +3256,8 @@ StackInterpreter >> commonVariable: rcvr at: index put: value cacheIndex: atIx [
 			self successful ifTrue: [objectMemory storeLong32: index - 1 ofObject: rcvr withValue: valToPut].
 			^nil].
 		fmt >= 16  "Note fmt >= 16 is an artificial flag for strings"
-			ifTrue: [(objectMemory
-							is: value
-							instanceOf: (objectMemory splObj: ClassCharacter)
-							compactClassIndex: 0) ifFalse:
+			ifTrue: [isCharacter := self isInstanceOfClassCharacter: value.
+					isCharacter ifFalse:
 						[^self primitiveFailFor: PrimErrBadArgument].
 					valToPut := objectMemory fetchPointer: CharacterValueIndex ofObject: value]
 			ifFalse:
@@ -5801,6 +5793,42 @@ StackInterpreter >> isFloatObject: oop [
 { #category : #'object format' }
 StackInterpreter >> isIndexable: oop [
 	^(objectMemory formatOf: oop) >= 2
+]
+
+{ #category : #'primitive support' }
+StackInterpreter >> isInstanceOfClassArray: oop [
+	<inline: true>
+	^objectMemory
+		is: oop
+		instanceOf: (objectMemory splObj: ClassArray) 
+		compactClassIndex: ClassArrayCompactIndex
+]
+
+{ #category : #'primitive support' }
+StackInterpreter >> isInstanceOfClassByteString: oop [
+	<inline: true>
+	^objectMemory
+		is: oop
+		instanceOf: (objectMemory splObj: ClassString) 
+		compactClassIndex: ClassByteStringCompactIndex
+]
+
+{ #category : #'primitive support' }
+StackInterpreter >> isInstanceOfClassCharacter: oop [
+	<inline: true>
+	^objectMemory
+		is: oop
+		instanceOf: (objectMemory splObj: ClassCharacter) 
+		compactClassIndex: 0
+]
+
+{ #category : #'primitive support' }
+StackInterpreter >> isInstanceOfClassFloat: oop [
+	<inline: true>
+	^objectMemory
+		is: oop
+		instanceOf: (objectMemory splObj: ClassFloat) 
+		compactClassIndex: ClassFloatCompactIndex
 ]
 
 { #category : #'frame access' }
