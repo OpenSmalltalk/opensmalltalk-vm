@@ -978,7 +978,7 @@ byteCount = 14590 ifTrue: [self halt]].
 			[rightWord := logFile nextWord.
 			 currentBytecode = rightWord ifFalse:
 				[self halt: 'halt at ', byteCount printString]].
-		self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
+		self dispatchOn: currentBytecode in: BytecodeTable.
 		self incrementByteCount].
 	self externalizeIPandSP.
 	logFile close.
@@ -1001,8 +1001,8 @@ StackInterpreterSimulator >> logOfBytesWrite: nBytes toFileNamed: fileName fromS
 	self fetchNextBytecode.
 	[byteCount < nBytes] whileTrue:
 		[byteCount >= loggingStart ifTrue:
-			[logFile nextWordPut: currentBytecode + bytecodeSetSelector].
-		self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
+			[logFile nextWordPut: currentBytecode].
+		self dispatchOn: currentBytecode in: BytecodeTable.
 		self incrementByteCount].
 	self externalizeIPandSP.
 	logFile close
@@ -1041,7 +1041,7 @@ transcript cr; print: byteCount; nextPutAll: ': ' , (localFP hex); space;
  print: (self stackPointerIndex - TempFrameStart + 1); endEntry.
 ].
 "
-		self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
+		self dispatchOn: currentBytecode in: BytecodeTable.
 		localFP = priorFrame ifFalse:
 			[sendCount := sendCount + 1.
 			 loggingStart >= sendCount ifTrue:
@@ -1072,7 +1072,7 @@ StackInterpreterSimulator >> logOfSendsWrite: nSends toFileNamed: fileName fromS
 	self internalizeIPandSP.
 	self fetchNextBytecode.
 	[sendCount < nSends] whileTrue:
-		[self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
+		[self dispatchOn: currentBytecode in: BytecodeTable.
 		localFP = priorFrame ifFalse:
 			[sendCount >= loggingStart ifTrue:
 				[sendCount := sendCount + 1.
@@ -1576,7 +1576,7 @@ StackInterpreterSimulator >> printCurrentBytecodeOn: aStream [
 					ifTrue: [$0]
 					ifFalse: [code at: 1]);
 		nextPut: code last; space;
-		nextPutAll: (BytecodeTable at: currentBytecode + bytecodeSetSelector + 1);
+		nextPutAll: (BytecodeTable at: currentBytecode + 1);
 		space;
 		nextPut: $(; print: byteCount + 1; nextPut: $)
 ]
@@ -1779,10 +1779,14 @@ StackInterpreterSimulator >> rewriteMethodCacheEntryForExternalPrimitiveToFuncti
 { #category : #testing }
 StackInterpreterSimulator >> run [
 	"Just run"
-	quitBlock := [([transcript dependents anyOne outermostMorphThat: [:m| m isSystemWindow]]
-					on: Error
-					do: [:ex| nil])
-						ifNotNil: [:window| (UIManager default confirm: 'close?') ifTrue: [window delete]].
+	quitBlock := [| topWindow |
+				  
+				   (displayView notNil
+				   and: [topWindow := displayView outermostMorphThat:
+									[:m| m isSystemWindow and: [World submorphs includes: m]].
+						topWindow notNil
+				   and: [UIManager default confirm: 'close?']]) ifTrue:
+					[topWindow delete].
 				  ^self].
 	self initStackPages.
 	self loadInitialContext.
@@ -1791,7 +1795,7 @@ StackInterpreterSimulator >> run [
 	[true] whileTrue:
 		[self assertValidExecutionPointers.
 		 atEachStepBlock value. "N.B. may be nil"
-		 self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
+		 self dispatchOn: currentBytecode in: BytecodeTable.
 		 self incrementByteCount].
 	localIP := localIP - 1.
 	"undo the pre-increment of IP before returning"
@@ -1807,7 +1811,7 @@ StackInterpreterSimulator >> runAtEachStep: aBlock [
 	[true] whileTrue:
 		[self assertValidExecutionPointers.
 		 aBlock value: currentBytecode.
-		 self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
+		 self dispatchOn: currentBytecode in: BytecodeTable.
 		 self incrementByteCount].
 	localIP := localIP - 1.
 	"undo the pre-increment of IP before returning"
@@ -1823,7 +1827,7 @@ StackInterpreterSimulator >> runAtEachStep: aBlock breakCount: breakCount [
 	[true] whileTrue:
 		[self assertValidExecutionPointers.
 		 aBlock value: currentBytecode.
-		 self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
+		 self dispatchOn: currentBytecode in: BytecodeTable.
 		 self incrementByteCount.
 		 byteCount = breakCount ifTrue:
 			[self halt]].
@@ -1844,7 +1848,7 @@ StackInterpreterSimulator >> runForNBytes: nBytecodes [
 	self internalizeIPandSP.
 	self fetchNextBytecode.
 	[byteCount < endCount] whileTrue:
-		[self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
+		[self dispatchOn: currentBytecode in: BytecodeTable.
 		 self incrementByteCount].
 	localIP := localIP - 1.
 	"undo the pre-increment of IP before returning"
@@ -1854,10 +1858,14 @@ StackInterpreterSimulator >> runForNBytes: nBytecodes [
 { #category : #testing }
 StackInterpreterSimulator >> runWithBreakCount: theBreakCount [
 	"Just run, halting when byteCount is reached"
-	quitBlock := [(displayView notNil
-				   and: [UIManager default confirm: 'close?']) ifTrue:
-					[(displayView outermostMorphThat: [:m| m isSystemWindow]) ifNotNil:
-						[:topWindow| topWindow delete]].
+	quitBlock := [| topWindow |
+				  
+				   (displayView notNil
+				   and: [topWindow := displayView outermostMorphThat:
+									[:m| m isSystemWindow and: [World submorphs includes: m]].
+						topWindow notNil
+				   and: [UIManager default confirm: 'close?']]) ifTrue:
+					[topWindow delete].
 				  ^self].
 	breakCount := theBreakCount.
 	self initStackPages.
@@ -1866,7 +1874,7 @@ StackInterpreterSimulator >> runWithBreakCount: theBreakCount [
 	self fetchNextBytecode.
 	[true] whileTrue:
 		[self assertValidExecutionPointers.
-		 self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
+		 self dispatchOn: currentBytecode in: BytecodeTable.
 		 self incrementByteCount].
 	localIP := localIP - 1.
 	"undo the pre-increment of IP before returning"
@@ -2140,7 +2148,7 @@ StackInterpreterSimulator >> test [
 		 printBytecodeAtEachStep ifTrue:
 			[self printCurrentBytecodeOn: Transcript.
 			 Transcript cr; flush].
-		 self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
+		 self dispatchOn: currentBytecode in: BytecodeTable.
 		 self incrementByteCount.
 		 byteCount = breakCount ifTrue:
 			["printFrameAtEachStep :=" printBytecodeAtEachStep := true.
@@ -2175,7 +2183,7 @@ StackInterpreterSimulator >> test1 [
 			 self printCurrentBytecodeOn: Transcript.
 			 Transcript cr; flush].
 
-		 self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
+		 self dispatchOn: currentBytecode in: BytecodeTable.
 		 self incrementByteCount.
 		 byteCount = breakCount ifTrue:
 			["printFrameAtEachStep := true."
@@ -2233,7 +2241,7 @@ StackInterpreterSimulator >> testBreakCount: breakCount printSends: shouldPrintS
 		 printBytecodeAtEachStep ifTrue:
 			[self printCurrentBytecodeOn: Transcript.
 			 Transcript cr; flush].
-		 self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
+		 self dispatchOn: currentBytecode in: BytecodeTable.
 		 self incrementByteCount.
 		 byteCount = breakCount ifTrue:
 			["printFrameAtEachStep :=" printBytecodeAtEachStep := true.
