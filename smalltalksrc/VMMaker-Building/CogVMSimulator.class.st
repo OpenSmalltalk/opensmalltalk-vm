@@ -1667,9 +1667,9 @@ byteCount = 14590 ifTrue: [self halt]].
 "
 		loggingStart >= byteCount ifTrue:
 			[rightWord := logFile nextWord.
-			 currentBytecode + bytecodeSetSelector = rightWord ifFalse:
+			 currentBytecode = rightWord ifFalse:
 				[self halt: 'halt at ', byteCount printString]].
-		self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
+		self dispatchOn: currentBytecode in: BytecodeTable.
 		self incrementByteCount].
 	self externalizeIPandSP.
 	logFile close.
@@ -1692,8 +1692,8 @@ CogVMSimulator >> logOfBytesWrite: nBytes toFileNamed: fileName fromStart: loggi
 	self fetchNextBytecode.
 	[byteCount < nBytes] whileTrue:
 		[byteCount >= loggingStart ifTrue:
-			[logFile nextWordPut: currentBytecode + bytecodeSetSelector].
-		self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
+			[logFile nextWordPut: currentBytecode].
+		self dispatchOn: currentBytecode in: BytecodeTable.
 		self incrementByteCount].
 	self externalizeIPandSP.
 	logFile close
@@ -1732,8 +1732,8 @@ transcript cr; print: byteCount; nextPutAll: ': ' , (localFP hex); space;
  print: (self stackPointerIndex - TempFrameStart + 1); endEntry.
 ].
 "
-		self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
-		localFP == priorFrame ifFalse:
+		self dispatchOn: currentBytecode in: BytecodeTable.
+		localFP = priorFrame ifFalse:
 			[sendCount := sendCount + 1.
 			 loggingStart >= sendCount ifTrue:
 				[rightSelector := logFile nextLine.
@@ -1763,7 +1763,7 @@ CogVMSimulator >> logOfSendsWrite: nSends toFileNamed: fileName fromStart: loggi
 	self internalizeIPandSP.
 	self fetchNextBytecode.
 	[sendCount < nSends] whileTrue:
-		[self dispatchOn: currentBytecode + bytecodeSetSelector in: BytecodeTable.
+		[self dispatchOn: currentBytecode in: BytecodeTable.
 		localFP == priorFrame ifFalse:
 			[sendCount >= loggingStart ifTrue:
 				[sendCount := sendCount + 1.
@@ -2575,7 +2575,7 @@ CogVMSimulator >> printCurrentBytecodeOn: aStream [
 					ifTrue: [$0]
 					ifFalse: [code at: 1]);
 		nextPut: code last; space;
-		nextPutAll: (BytecodeTable at: currentBytecode + bytecodeSetSelector + 1);
+		nextPutAll: (BytecodeTable at: currentBytecode + 1);
 		space;
 		nextPut: $(; print: byteCount + 1; nextPut: $)
 ]
