@@ -2981,6 +2981,10 @@ CCodeGenerator >> reportShouldNotBeRemoved: removed varList: varList [
 	| varListAsStrings shouldNotBeRemoved |
 	varListAsStrings := varList collect: [ :sym | sym asString ].
 	shouldNotBeRemoved := Set new.
+	removed do:
+		[:m|
+		m isAPIMethod ifTrue:
+			[shouldNotBeRemoved add: m selector]].
 	methods do:
 		[:m|
 		(m selector = #interpret

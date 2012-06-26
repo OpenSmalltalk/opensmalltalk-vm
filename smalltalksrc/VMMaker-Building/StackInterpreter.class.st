@@ -10249,6 +10249,23 @@ StackInterpreter >> storeStackPointerValue: value inContext: aContext [
 		withValue: (objectMemory integerObjectOf: value)
 ]
 
+{ #category : #'primitive support' }
+StackInterpreter >> stringForCString: aCString [
+	"Answer a new String copied from a null-terminated C string,
+	 or nil if out of memory.
+	 Caution: This may invoke the garbage collector."
+	<api>
+	<var: 'aCString' type: 'const char *'>
+	| len newString |
+	len := self strlen: aCString.
+	newString := objectMemory instantiateClass: objectMemory classString indexableSize: len.
+	newString isNil ifFalse:
+		[self st: (self arrayValueOf: newString)
+			rn: aCString
+			cpy: len]. "(char *)strncpy()"
+	^newString
+]
+
 { #category : #'indexing primitive support' }
 StackInterpreter >> subscript: array with: index format: fmt [
 	"Note: This method assumes that the index is within bounds!"
