@@ -1756,6 +1756,8 @@ StackInterpreter >> assertValidStackLimits [
 
 { #category : #'return bytecodes' }
 StackInterpreter >> baseFrameReturn [
+	"Return from a baseFrame (the bottom frame in a stackPage).  The context to
+	 return to (which may be married) is stored in the saved instruction pointer slot."
 	<inline: true>
 	| contextToReturnTo isAContext theFP theSP thePage frameAbove |
 	<var: #theFP type: #'char *'>
@@ -3083,7 +3085,8 @@ StackInterpreter >> commonCallerReturn [
 
 { #category : #'return bytecodes' }
 StackInterpreter >> commonReturn [
-	"Note: Assumed to be inlined into the dispatch loop."
+	"Do an ^-return (return form method), perhaps checking for unwinds if this is a block activation.
+	 Note: Assumed to be inlined into the dispatch loop."
 
 	| closure home unwindContextOrNilOrZero frameToReturnTo contextToReturnTo theFP callerFP newPage |
 	<var: #frameToReturnTo type: #'char *'>
@@ -7986,8 +7989,8 @@ StackInterpreter >> printFrameFlagsForFP: theFP [
 	it ~= 0 ifTrue:
 		[self printChar: $=; printNum: it].
 	self print: '  numArgs: '; printNum: (self frameNumArgs: theFP);
-		print: '  hasContext: '; printNum: (self frameHasContext: theFP);
-		print: '  isBlock: '; printNum: (self frameIsBlockActivation: theFP);
+		print: ((self frameHasContext: theFP) ifTrue: [' hasContext'] ifFalse: [' noContext']);
+		print: ((self frameIsBlockActivation: theFP) ifTrue: [' isBlock'] ifFalse: [' notBlock']);
 		cr
 ]
 

@@ -64,8 +64,8 @@ TAssignmentNode >> emitLiteralArrayDeclarationOn: aStream level: level generator
 	self assert: type last = $*.
 	aStream
 		crtab: level;
-		nextPutAll: '{ ';
-		nextPutAll: (aCCodeGen staticArrayInitializerCalled: 'aLiteralArray' for: expression args first value type: type allButLast);
+		nextPutAll: '{ static ';
+		nextPutAll: (aCCodeGen arrayInitializerCalled: 'aLiteralArray' for: expression args first value type: type allButLast);
 		nextPut: $;;
 		crtab: level + 1;
 		nextPutAll: variable name;
