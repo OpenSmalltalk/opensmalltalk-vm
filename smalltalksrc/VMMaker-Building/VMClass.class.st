@@ -590,7 +590,9 @@ VMClass >> sizeof: objectSymbolOrClass [
 					#short #'unsigned short'
 					#char #'unsigned char' #'signed char')
 						indexOf: objectSymbolOrClass
-						ifAbsent: [self error: 'unrecognized C type name'].
+						ifAbsent:
+							[objectSymbolOrClass = #sqInt ifTrue: [^BytesPerOop].
+							 self error: 'unrecognized C type name'].
 		^#(8 8 8
 			4 4 4
 			2 2
