@@ -138,7 +138,7 @@ CoInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		declareC: 'sqInt traceLog[TraceBufferSize /* ', TraceBufferSize printString, ' */]';
 		var: #traceSources
 		declareC: (aCCodeGenerator
-					staticArrayInitializerCalled: 'traceSources'
+					arrayInitializerCalled: 'traceSources'
 					for: TraceSources
 					type: 'char *')
 ]
@@ -827,6 +827,8 @@ CoInterpreter >> attemptToSwitchToMachineCode: bcpc [
 
 { #category : #'return bytecodes' }
 CoInterpreter >> baseFrameReturn [
+	"Return from a baseFrame (the bottom frame in a stackPage).  The context to
+	 return to (which may be married) is stored in the first word of the stack."
 	<inline: true>
 	| contextToReturnTo retToContext theFP theSP thePage newPage frameAbove |
 	<var: #theFP type: #'char *'>
@@ -1598,6 +1600,9 @@ CoInterpreter >> cePositive32BitIntegerFor: anInteger [
 
 { #category : #trampolines }
 CoInterpreter >> ceReturnToInterpreter: anOop [
+	"Perform a return from a machine code frame to an interpreted frame.
+	 The machine code has executed a return instruction when the return address
+	 is set to ceReturnToInterpreterPC.  Return the result and switch to the interpreter."
 	<api>
 	self assert: ((objectMemory isIntegerObject: anOop) or: [objectMemory addressCouldBeObj: anOop]).
 	self flag: 'are you really sure setStackPageAndLimit: is needed?'.
@@ -2092,7 +2097,8 @@ CoInterpreter >> commonCallerReturn [
 
 { #category : #'return bytecodes' }
 CoInterpreter >> commonReturn [
-	"Note: Assumed to be inlined into the dispatch loop."
+	"Do an ^-return (return form method), perhaps checking for unwinds if this is a block activation.
+	 Note: Assumed to be inlined into the dispatch loop."
 
 	| closure home unwindContextOrNilOrZero frameToReturnTo contextToReturnTo theFP callerFP newPage |
 	<var: #frameToReturnTo type: #'char *'>
@@ -5217,8 +5223,8 @@ CoInterpreter >> printFrameFlagsForFP: theFP [
 	it ~= 0 ifTrue:
 		[self printChar: $=; printNum: it].
 	self print: '  numArgs: '; printNum: (self frameNumArgs: theFP);
-		print: '  hasContext: '; printNum: (self frameHasContext: theFP);
-		print: '  isBlock: '; printNum: (self frameIsBlockActivation: theFP);
+		print: ((self frameHasContext: theFP) ifTrue: [' hasContext'] ifFalse: [' noContext']);
+		print: ((self frameIsBlockActivation: theFP) ifTrue: [' isBlock'] ifFalse: [' notBlock']);
 		cr
 ]
 

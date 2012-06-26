@@ -288,6 +288,28 @@ CCodeGenerator >> apiMethods: aDictionary [
 ]
 
 { #category : #utilities }
+CCodeGenerator >> arrayInitializerCalled: varName for: array type: cType [
+	"array is a literal array or a CArray on some array."
+	| sequence lastLine |
+	sequence := array isCollection ifTrue: [array] ifFalse: [array object].
+	lastLine := 0.
+	^String streamContents:
+		[:s|
+		s	nextPutAll: cType;
+			space;
+			nextPutAll: varName;
+			nextPutAll: '[] = {'; crtab: 2.
+		sequence
+			do: [:element| s nextPutAll: (self cLiteralFor: element)]
+			separatedBy:
+				[s nextPut: $,.
+				 (s position - lastLine) > 76
+					ifTrue: [s crtab: 2. lastLine := s position]
+					ifFalse: [s space]].
+		s crtab; nextPut: $}; cr]
+]
+
+{ #category : #utilities }
 CCodeGenerator >> builtin: sel [
 	"Answer true if the given selector is one of the builtin selectors."
 
@@ -3083,29 +3105,6 @@ CCodeGenerator >> sortStrings: aStringOrSymbolCollection [
 	"We need to define this since different Squeak versions answer different results
 	 for asSortedCollection and if sort order changes, generated code changes too."
 	^aStringOrSymbolCollection asSortedCollection: [:a :b| a caseSensitiveLessOrEqual: b]
-]
-
-{ #category : #utilities }
-CCodeGenerator >> staticArrayInitializerCalled: varName for: array type: cType [
-	"array is a literal array or a CArray on some array."
-	| sequence lastLine |
-	sequence := array isCollection ifTrue: [array] ifFalse: [array object].
-	lastLine := 0.
-	^String streamContents:
-		[:s|
-		s	nextPutAll: 'static ';
-			nextPutAll: cType;
-			space;
-			nextPutAll: varName;
-			nextPutAll: '[] = {'; crtab: 2.
-		sequence
-			do: [:element| s nextPutAll: (self cLiteralFor: element)]
-			separatedBy:
-				[s nextPut: $,.
-				 (s position - lastLine) > 76
-					ifTrue: [s crtab: 2. lastLine := s position]
-					ifFalse: [s space]].
-		s crtab; nextPut: $}; cr]
 ]
 
 { #category : #public }
