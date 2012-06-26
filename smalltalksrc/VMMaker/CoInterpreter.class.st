@@ -6017,23 +6017,6 @@ CoInterpreter >> storeRemoteTemp: index inVectorAt: tempVectorIndex [
 	objectMemory storePointer: index ofObject: tempVector withValue: self internalStackTop
 ]
 
-{ #category : #'primitive support' }
-CoInterpreter >> stringForCString: aCString [
-	"Answer a new String copied from a null-terminated C string,
-	 or nil if out of memory.
-	 Caution: This may invoke the garbage collector."
-	<api>
-	<var: 'aCString' type: 'const char *'>
-	| len newString |
-	len := self strlen: aCString.
-	newString := objectMemory instantiateClass: objectMemory classString indexableSize: len.
-	newString isNil ifFalse:
-		[self st: (self arrayValueOf: newString)
-			rn: aCString
-			cpy: len]. "(char *)strncpy()"
-	^newString
-]
-
 { #category : #'process primitive support' }
 CoInterpreter >> synchronousSignal: aSemaphore [ 
 	"Signal the given semaphore from within the interpreter.
