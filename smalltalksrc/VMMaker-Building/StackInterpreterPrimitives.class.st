@@ -270,10 +270,8 @@ StackInterpreterPrimitives >> primitiveDoNamedPrimitiveWithArgs [
 
 	(self literalCountOfHeader: methodHeader) > 2 ifFalse:
 		[^self primitiveFailFor: -3]. "invalid methodArg state"
-	isArray := objectMemory
-					is: (spec := objectMemory fetchPointer: 1 "first literal" ofObject: methodArg)
-					instanceOf: (objectMemory splObj: ClassArray) 
-					compactClassIndex: ClassArrayCompactIndex.
+	spec := objectMemory fetchPointer: 1 "first literal" ofObject: methodArg.
+	isArray := self isInstanceOfClassArray: spec.
 	(isArray
 	and: [(objectMemory lengthOf: spec) = 4
 	and: [(self primitiveIndexOfMethodHeader: methodHeader) = 117]]) ifFalse:
