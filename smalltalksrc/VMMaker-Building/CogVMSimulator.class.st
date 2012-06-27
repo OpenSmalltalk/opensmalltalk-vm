@@ -3132,18 +3132,6 @@ CogVMSimulator >> storePointerUnchecked: fieldIndex ofObject: oop withValue: val
 	self shouldNotImplement
 ]
 
-{ #category : #'debug printing' }
-CogVMSimulator >> str: aString n: bString cmp: n [
-	"implementation of strncmp(3)"
-	bString isInteger ifFalse:
-		[^(aString first: n) ~= (bString first: n)].
-	1 to: n do:
-		[:i| | v |
-		v := (aString at: i) asInteger - (self byteAt: bString + i - 1).
-		v ~= 0 ifTrue: [^v]].
-	^0
-]
-
 { #category : #'debug support' }
 CogVMSimulator >> stringOf: oop [
 	| size long nLongs chars |
