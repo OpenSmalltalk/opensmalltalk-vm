@@ -4033,7 +4033,8 @@ StackInterpreter >> externalInstVar: index ofContext: maybeMarriedContext put: a
 
 { #category : #'primitive support' }
 StackInterpreter >> externalQuickPrimitiveResponse [
-	"Called under the assumption that primFunctionPtr has been preloaded"
+	"Invoke a quick primitive.
+	 Called under the assumption that primFunctionPtr has been preloaded"
 	
 	| localPrimIndex |
 	self assert: self isPrimitiveFunctionPointerAnIndex.
@@ -5629,7 +5630,8 @@ StackInterpreter >> internalPush: object [
 
 { #category : #'primitive support' }
 StackInterpreter >> internalQuickPrimitiveResponse [
-	"Called under the assumption that primFunctionPtr has been preloaded"
+	"Invoke a quick primitive.
+	 Called under the assumption that primFunctionPtr has been preloaded"
 	
 	| localPrimIndex |
 	self assert: self isPrimitiveFunctionPointerAnIndex.
@@ -5664,6 +5666,12 @@ StackInterpreter >> internalStackTopPut: aValue [
 StackInterpreter >> internalStackValue: offset [
 	"In the StackInterpreter stacks grow down."
 	^stackPages longAtPointer: localSP + (offset * BytesPerWord)
+]
+
+{ #category : #'internal interpreter access' }
+StackInterpreter >> internalStackValue: offset put: aValue [
+	"In the StackInterpreter stacks grow down."
+	^stackPages longAtPointer: localSP + (offset * BytesPerWord) put: aValue
 ]
 
 { #category : #utilities }
@@ -9801,7 +9809,8 @@ StackInterpreter >> sizeOfSTArrayFromCPrimitive: cPtr [
 
 { #category : #'primitive support' }
 StackInterpreter >> slowPrimitiveResponse [
-	"Called under the assumption that primFunctionPtr has been preloaded"
+	"Invoke a normal (non-quick) primitive.
+	 Called under the assumption that primFunctionPtr has been preloaded"
 	| nArgs savedFramePointer savedStackPointer |
 	<inline: true>
 	<asmLabel: false>

@@ -5855,7 +5855,8 @@ CoInterpreter >> sigset:aJumpBuf jmp: sigSaveMask [
 
 { #category : #'primitive support' }
 CoInterpreter >> slowPrimitiveResponse [
-	"Called under the assumption that primFunctionPtr has been preloaded"
+	"Invoke a normal (non-quick) primitive.
+	 Called under the assumption that primFunctionPtr has been preloaded"
 	| nArgs savedFramePointer savedStackPointer |
 	<inline: true>
 	<asmLabel: false>
