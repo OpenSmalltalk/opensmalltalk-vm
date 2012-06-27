@@ -6093,12 +6093,12 @@ StackInterpreter >> longPrintOop: oop [
 	fmt > 4 ifTrue:
 		[self print: ' nbytes '; printNum: (objectMemory byteSizeOf: oop)].
 	self cr.
-	lastIndex := 64 min: (startIP := (objectMemory lastPointerOf: oop) / BytesPerWord).
+	lastIndex := 256 min: (startIP := (objectMemory lastPointerOf: oop) / BytesPerWord).
 	lastIndex > 0 ifTrue:
 		[1 to: lastIndex do:
-			[:index| | fieldOop |
-			fieldOop := objectMemory fetchPointer: index - 1 ofObject: oop.
-			self space; printHex: fieldOop; space; printOopShort: fieldOop; cr]].
+			[:i| | fieldOop |
+			fieldOop := objectMemory fetchPointer: i - 1 ofObject: oop.
+			self space; printNum: i - 1; space; printHex: fieldOop; space; printOopShort: fieldOop; cr]].
 	(objectMemory isCompiledMethod: oop)
 		ifFalse:
 			[startIP > 64 ifTrue: [self print: '...'; cr]]
@@ -8311,7 +8311,7 @@ StackInterpreter >> printOopShortInner: oop [
 	"Try to spot association-like things; they're all subclasses of LookupKey"
 	((objectMemory instanceSizeOf: classOop) = (ValueIndex + 1)
 	 and: [(self superclassOf: classOop) = (self superclassOf: (objectMemory fetchClassOfNonInt: (objectMemory splObj: SchedulerAssociation)))
-	 and: [self isBytes: (objectMemory fetchPointer: KeyIndex ofObject: oop)]]) ifTrue:
+	 and: [objectMemory isBytes: (objectMemory fetchPointer: KeyIndex ofObject: oop)]]) ifTrue:
 		[self space;
 			printOopShort: (objectMemory fetchPointer: KeyIndex ofObject: oop);
 			print: ' -> ';
