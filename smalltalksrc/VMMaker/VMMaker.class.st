@@ -885,7 +885,9 @@ VMMaker >> generateCogitFile [
 			do: [:ex|
 				ex tag == #getVMMaker
 					ifTrue: [ex resume: self]
-					ifFalse: [ex pass]].
+					ifFalse: [(ex respondsTo: #rearmHandlerDuring:)
+								ifTrue: [ex rearmHandlerDuring: [ex pass]]
+								ifFalse: [ex pass]]].
 	self needsToRegenerateCogitFile ifFalse: [^nil].
 	cogitClass := self cogitClass.
 	cg removeUnneededBuiltins.
@@ -1015,7 +1017,9 @@ VMMaker >> generateInterpreterFile [
 			do: [:ex|
 				ex tag == #getVMMaker
 					ifTrue: [ex resume: self]
-					ifFalse: [ex pass]].
+					ifFalse: [(ex respondsTo: #rearmHandlerDuring:)
+								ifTrue: [ex rearmHandlerDuring: [ex pass]]
+								ifFalse: [ex pass]]].
 	self needsToRegenerateInterpreterFile ifFalse: [^nil].
 	cg removeUnneededBuiltins.
 	self interpreterClass preGenerationHook: cg.
