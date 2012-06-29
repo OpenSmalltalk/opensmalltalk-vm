@@ -298,15 +298,20 @@ CCodeGenerator >> arrayInitializerCalled: varName for: array type: cType [
 		s	nextPutAll: cType;
 			space;
 			nextPutAll: varName;
-			nextPutAll: '[] = {'; crtab: 2.
-		sequence
-			do: [:element| s nextPutAll: (self cLiteralFor: element)]
-			separatedBy:
-				[s nextPut: $,.
-				 (s position - lastLine) > 76
-					ifTrue: [s crtab: 2. lastLine := s position]
-					ifFalse: [s space]].
-		s crtab; nextPut: $}; cr]
+			nextPutAll: '[] = '.
+		sequence isString
+			ifTrue: [s nextPutAll: (self cLiteralFor: sequence)]
+			ifFalse:
+				[s nextPut: ${; crtab: 2.
+				sequence
+					do: [:element| s nextPutAll: (self cLiteralFor: element)]
+					separatedBy:
+						[s nextPut: $,.
+						 (s position - lastLine) > 76
+							ifTrue: [s crtab: 2. lastLine := s position]
+							ifFalse: [s space]].
+				s crtab; nextPut: $}].
+		s cr]
 ]
 
 { #category : #utilities }
@@ -352,7 +357,7 @@ CCodeGenerator >> cLiteralFor: anObject [
 				[^anObject printString]]
 		ifFalse:
 			[anObject isString ifTrue:
-				[^'"', anObject, '"'].
+				[^'"', (anObject copyReplaceAll: (String with: Character cr) with: '\n') , '"'].
 			anObject == nil ifTrue: [^ 'null' ].
 			anObject == true ifTrue: [^ '1' ].
 			anObject == false ifTrue: [^ '0' ].
@@ -383,7 +388,7 @@ CCodeGenerator >> cLiteralFor: anObject name: smalltalkName [
 	anObject isFloat ifTrue:
 		[^anObject printString].
 	anObject isString ifTrue:
-		[^'"', anObject, '"'].
+		[^'"', (anObject copyReplaceAll: (String with: Character cr) with: '\n') , '"'].
 	anObject == nil ifTrue: [^ 'null' ].
 	anObject == true ifTrue: [^ '1' ].			"ikp"
 	anObject == false ifTrue: [^ '0' ].			"ikp"
