@@ -438,7 +438,12 @@ CCodeGenerator >> checkForGlobalUsage: vars in: aTMethod [
 		(variables includes: var) ifTrue: "find the set of method names using this global var"
 			[(globalVariableUsage at: var ifAbsentPut: [Set new])
 				add: aTMethod selector]].
-	aTMethod referencesGlobalStructMakeZero
+	aTMethod referencesGlobalStructMakeZero.
+	(aTMethod locals select: [:l| self reservedWords includes: l]) do:
+		[:l| | em |
+		em := aTMethod definingClass name, '>>', aTMethod selector, ' has variable that is a C reserved word: ', l.
+		self error: em.
+		self logger cr; nextPutAll: em; cr; flush]
 ]
 
 { #category : #public }
@@ -3021,6 +3026,25 @@ CCodeGenerator >> reportShouldNotBeRemoved: removed varList: varList [
 					cr].
 		logger ensureCr; show: str.
 		self inform: str]
+]
+
+{ #category : #'C translation' }
+CCodeGenerator >> reservedWords [
+	^#(	'auto'
+		'break'
+		'case' 'char' 'const' 'continue'
+		'default' 'do' 'double'
+		'else' 'entry' 'enum' 'extern'
+		'float' 'for'
+		'goto'
+		'if' 'int'
+		'long'
+		'register' 'return'
+		'short' 'signed' 'sizeof' 'static' 'struct' 'switch'
+		'typedef'
+		'union' 'unsigned'
+		'void' 'volatile'
+		'while')
 ]
 
 { #category : #inlining }
