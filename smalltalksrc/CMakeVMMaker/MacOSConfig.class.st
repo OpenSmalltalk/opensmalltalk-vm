@@ -262,7 +262,7 @@ MacOSConfig >> externalModulesDir [
 		
 	"
 	
-	^ '${outputDir}/', self executableName, '.app/Contents/Plugins'
+	^ '${outputDir}/', self executableName, '.app/Contents/MacOS/Plugins'
 ]
 
 { #category : #utils }
@@ -342,7 +342,7 @@ MacOSConfig >> postBuildActions: gen [
 	
 	gen
 		set: #bundlePath toString: '${outputDir}/', self executableName, '.app';
-		set: #pluginsRelPath toString: '@executable_path/../Plugins'.
+		set: #pluginsRelPath toString: '@executable_path/Plugins'.
 
 	gen
 		puts: '
