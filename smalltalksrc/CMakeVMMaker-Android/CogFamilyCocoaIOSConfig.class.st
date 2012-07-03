@@ -38,7 +38,7 @@ CogFamilyCocoaIOSConfig >> commonCompilerFlags [
 	'-fno-cse-follow-jumps' 
 	'-std=gnu99' 
 	'-DBUILD_FOR_OSX' 
-	'-DUSE_INLINE_MEMORY_ACCESSORS=1' 
+	"'-DUSE_INLINE_MEMORY_ACCESSORS=1' "
 	'-DLSB_FIRST' 
 	'-DHAVE_SYS_TIME_H' 
 	'-DHAVE_NANOSLEEP' 
@@ -212,7 +212,8 @@ CogFamilyCocoaIOSConfig >> platformSources [
 		'OSX/sqSqueakOSXInfoPlistInterface.m'
 		'OSX/sqSqueakOSXApplication+imageReadWrite.m'
 		'OSX/sqSqueakOSXScreenAndWindow.m'
-		'OSX/sqSqueakOSXNSView.m'
+		'OSX/sqSqueakOSXCGView.m'
+		'OSX/sqSqueakOSXOpenGLView.m'
 		'OSX/SqViewClut.m'
 		'OSX/BitMapConversionLogicFromX11.c'
 		'OSX/SqViewBitmapConversion.m'
@@ -268,7 +269,7 @@ CogFamilyCocoaIOSConfig >> setExtraTargetProperties: maker [
 	maker set: 'RUNTIME_OUTPUT_DIRECTORY' toString: self outputDir.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #settings }
 CogFamilyCocoaIOSConfig >> setGlobalOptions: maker [
 
 	"set any CMake global options, before declaring a project in cmake file"

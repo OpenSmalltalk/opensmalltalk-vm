@@ -19,7 +19,7 @@ CogCocoaIOSConfig >> cogitClass [
 
 { #category : #settings }
 CogCocoaIOSConfig >> commonCompilerFlags [
-	^super commonCompilerFlags, #('-DCOGVM')
+	^super commonCompilerFlags, #('-DCOGVM' '-fwrapv')
 ]
 
 { #category : #'source files' }
