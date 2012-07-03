@@ -29,6 +29,11 @@ StackIPhoneConfig >> UIDeviceFamily [
 	^self targetedDeviceFamilyAsTemplateString
 ]
 
+{ #category : #'bundle strings' }
+StackIPhoneConfig >> UIFileSharingEnabled [
+	^false
+]
+
 { #category : #accessing }
 StackIPhoneConfig >> architecture [ 
 	^'armv6'
@@ -61,7 +66,7 @@ StackIPhoneConfig >> commonCompilerFlags [
 	'-DBASE_HEADER_SIZE=4'.
 	'-DTARGET_OS_IS_IPHONE'.
 	'-DHAVE_UUID_GENERATE'.
-	'-DUSE_INLINE_MEMORY_ACCESSORS'. 
+	"'-DUSE_INLINE_MEMORY_ACCESSORS'. "
 	'-DHAVE_SYS_TIME_H'.
 	'-DLSB_FIRST'.
 	'-DHAVE_NANOSLEEP'.
@@ -266,8 +271,7 @@ StackIPhoneConfig >> platformSources [
 
 { #category : #'bundle strings' }
 StackIPhoneConfig >> plistKeys [ 
-	^super plistKeys 
-		copyWith: #UIDeviceFamily
+	^super plistKeys, #(UIDeviceFamily UIFileSharingEnabled)
 ]
 
 { #category : #'bundle strings' }
@@ -317,6 +321,8 @@ StackIPhoneConfig >> plistTemplate [
 	<false/>
 	<key>UIStatusBarHidden</key>
 	<true/>
+	<key>UIFileSharingEnabled</key>
+	<@UIFileSharingEnabled@/>	
 </dict>
 </plist>
 '
