@@ -248,6 +248,17 @@ CogFamilyWindowsConfig >> configureSocketPlugin:  maker [
 ]
 
 { #category : #'plugin extra rules' }
+CogFamilyWindowsConfig >> configureSqueakSSLPlugin: maker [
+	maker addPlatformSources: #('sqWin32SSL.c').
+	
+	maker addExternalLibraries: 
+		#( 
+			'secur32'
+			'crypt32'
+		)
+]
+
+{ #category : #'plugin extra rules' }
 CogFamilyWindowsConfig >> configureUUIDPlugin: maker [ 
 	"extra rules for UUIDPlugin"
 	
