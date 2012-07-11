@@ -681,8 +681,10 @@ Cogit class >> initializeCogMethodConstants [
 ]
 
 { #category : #'class initialization' }
-Cogit class >> initializeCompilationConstants [
-	ProcessorClass := BochsIA32Alien.
+Cogit class >> initializeCompilationWithConstantsOptions: optionsDictionary [
+	ProcessorClass := (optionsDictionary at: #ISA ifAbsent: [#IA32]) caseOf: {
+							[#IA32] 	->	[BochsIA32Alien].
+							[#ARMV5]	->	[GdbARMAlien]. }.
 	NumSendTrampolines := 4
 ]
 
@@ -728,7 +730,7 @@ Cogit class >> initializeWithOptions: optionsDictionary [
 	self initializeErrorCodes.
 	self initializeCogMethodConstants.
 	self initializeAnnotationConstants.
-	self initializeCompilationConstants.
+	self initializeCompilationWithConstantsOptions: optionsDictionary.
 	self initializeBytecodeTable.
 	self initializePrimitiveTable
 ]
