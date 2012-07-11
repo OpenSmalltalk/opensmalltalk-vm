@@ -798,12 +798,6 @@ BochsIA32Alien >> printRegisterState: registerStateVector on: aStream [
 							[aStream tab]]]
 ]
 
-{ #category : #printing }
-BochsIA32Alien >> printRegistersOn: aStream [
-	self printRegisterState: self registerState on: aStream.
-	aStream flush
-]
-
 { #category : #execution }
 BochsIA32Alien >> pushWord: aValue in: aMemory [
 	| sp |
@@ -827,13 +821,6 @@ BochsIA32Alien >> registerState [
 { #category : #'accessing-abstract' }
 BochsIA32Alien >> registerStatePCIndex [
 	^9
-]
-
-{ #category : #'error handling' }
-BochsIA32Alien >> reportPrimitiveFailure [
-	| errorAndLog |
-	errorAndLog := self primitiveErrorAndLog.
-	self error: 'Error ', errorAndLog first printString, (errorAndLog last ifNil: [''] ifNotNil: [:log| ' ', log])
 ]
 
 { #category : #execution }
