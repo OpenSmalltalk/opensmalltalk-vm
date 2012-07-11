@@ -54,7 +54,7 @@ export LDFLAGS
 "
 Class {
 	#name : #BochsIA32Alien,
-	#superclass : #Alien,
+	#superclass : #CogProcessorAlien,
 	#type : #bytes,
 	#classVars : [
 		'OpcodeExceptionMap',
@@ -273,36 +273,6 @@ BochsIA32Alien >> disassembleFrom: startAddress to: endAddress in: memory for: a
 			valueWithArguments: (self
 									primitiveDisassembleAt: address
 									inMemory: memory)]
-]
-
-{ #category : #disassembly }
-BochsIA32Alien >> disassembleFrom: startAddress to: endAddress in: memory on: aStream [
-	| address |
-	address := startAddress.
-	[address < endAddress] whileTrue:
-		[[:size :string|
-		aStream nextPutAll: string; cr; flush.
-		address := address + size]
-			valueWithArguments: (self
-									primitiveDisassembleAt: address
-									inMemory: memory)]
-]
-
-{ #category : #disassembly }
-BochsIA32Alien >> disassembleInstructionAt: pc In: memory [
-	^(self primitiveDisassembleAt: pc inMemory: memory) last
-]
-
-{ #category : #disassembly }
-BochsIA32Alien >> disassembleInstructionAt: ip In: memory into: aBlock [
-	| lenAndDi |
-	lenAndDi := self primitiveDisassembleAt: ip inMemory: memory.
-	^aBlock value: lenAndDi last value: lenAndDi first
-]
-
-{ #category : #disassembly }
-BochsIA32Alien >> disassembleNextInstructionIn: memory [
-	^(self primitiveDisassembleAt: self eip inMemory: memory) last
 ]
 
 { #category : #disassembly }
@@ -885,32 +855,6 @@ BochsIA32Alien >> retpcIn: aMemory [
 	^aMemory unsignedLongAt: self ebp + 5 bigEndian: false
 ]
 
-{ #category : #execution }
-BochsIA32Alien >> runInMemory: aMemory [
-	| result |
-	result := self primitiveRunInMemory: aMemory minimumAddress: 0 readOnlyBelow: 0.
-	result ~~ self ifTrue:
-		[self error: 'eek!']
-]
-
-{ #category : #execution }
-BochsIA32Alien >> runInMemory: aMemory minimumAddress: minimumAddress readOnlyBelow: minimumWritableAddress [
-	| result |
-	result := self primitiveRunInMemory: aMemory
-				minimumAddress: minimumAddress
-				readOnlyBelow: minimumWritableAddress.
-	result ~~ self ifTrue:
-		[self error: 'eek!']
-]
-
-{ #category : #execution }
-BochsIA32Alien >> runInMemory: aMemory readExecuteOnlyBelow: minWriteMaxExecAddr [
-	| result |
-	result := self primitiveRunInMemory: aMemory minimumAddress: 0 readOnlyBelow: minWriteMaxExecAddr.
-	result ~~ self ifTrue:
-		[self error: 'eek!']
-]
-
 { #category : #accessing }
 BochsIA32Alien >> saveEip [
 	^self unsignedLongAt: 1533
@@ -994,32 +938,6 @@ BochsIA32Alien >> simulateReturnIn: aMemory [
 		[self esp: self esp + PostBuildStackDelta].
 	self ebp: (self popWordIn: aMemory).
 	self eip: (self popWordIn: aMemory)
-]
-
-{ #category : #execution }
-BochsIA32Alien >> singleStepIn: aMemory [
-	| result |
-	result := self primitiveSingleStepInMemory: aMemory minimumAddress: 0 readOnlyBelow: aMemory size.
-	result ~~ self ifTrue:
-		[self error: 'eek!']
-]
-
-{ #category : #execution }
-BochsIA32Alien >> singleStepIn: aMemory minimumAddress: minimumAddress readOnlyBelow: minimumWritableAddress [
-	| result |
-	result := self primitiveSingleStepInMemory: aMemory
-				minimumAddress: minimumAddress
-				readOnlyBelow: minimumWritableAddress.
-	result ~~ self ifTrue:
-		[self error: 'eek!']
-]
-
-{ #category : #execution }
-BochsIA32Alien >> singleStepIn: aMemory readExecuteOnlyBelow: minWriteMaxExecAddr [
-	| result |
-	result := self primitiveSingleStepInMemory: aMemory minimumAddress: 0 readOnlyBelow: minWriteMaxExecAddr.
-	result ~~ self ifTrue:
-		[self error: 'eek!']
 ]
 
 { #category : #'accessing-abstract' }
