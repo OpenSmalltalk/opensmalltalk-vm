@@ -58,23 +58,10 @@ Class {
 		'internalPlugins',
 		'externalPlugins',
 		'pluginsDir',
-		'externalLibs',
-		'thirdpartyLibs'
+		'externalLibs'
 	],
 	#category : #CMakeVMMaker
 }
-
-{ #category : #'as yet unclassified' }
-CPlatformConfig class >> browsePluginRules: aPlugin [
-	
-	| nm |
-	(nm := aPlugin) isSymbol ifFalse: [
-		nm := aPlugin name.
-		].
-	
-	SystemNavigation default browseAllImplementorsOf: ('configure' , nm, ':' ) asSymbol
-	
-]
 
 { #category : #'as yet unclassified' }
 CPlatformConfig class >> generate [
@@ -123,24 +110,6 @@ CPlatformConfig >> addInternalPlugin: aPluginName [
 CPlatformConfig >> addInternalPlugins: aPluginNames [
 
 	aPluginNames do: [:each | self addInternalPlugin: each ]
-]
-
-{ #category : #'thirdparty libs' }
-CPlatformConfig >> addThirdpartyLibrary: libName [
-	| libs lib |
-	
-	libs := self thirdpartyLibs.
-	
-	lib :=  libs detect: [:each | each canonicalName = libName] ifNone: [ nil ].
-	
-	lib ifNil: [
-		lib := (CMThirdpartyLibrary named: libName).
-		"add dependencies first, so thirpartyLibs collection will be naturally dependency sorted"
-		lib dependencies do: [:dep | self addThirdpartyLibrary: dep ].
-		libs add: lib.
-		].
-	
-	^ lib
 ]
 
 { #category : #directories }
@@ -769,12 +738,6 @@ CPlatformConfig >> pluginsDir: aStringOrDir [
 	
 ]
 
-{ #category : #utils }
-CPlatformConfig >> postBuildActions: maker [
-
-	" override to add custom rules after all targets is defined "
-]
-
 { #category : #'source files' }
 CPlatformConfig >> preferredIncludes [
 	^#()
@@ -831,13 +794,6 @@ CPlatformConfig >> setExtraTargetProperties: maker [
 
 ]
 
-{ #category : #utils }
-CPlatformConfig >> setGlobalOptions: maker [
-
-	"set any CMake global options, before declaring a project in cmake file"
-	
-]
-
 { #category : #directories }
 CPlatformConfig >> setupDirectories: gen [
 	| dirsInclude |
@@ -847,7 +803,6 @@ CPlatformConfig >> setupDirectories: gen [
 		gen
 			set: #topDir toString: (self topDir fullName); 
 			set: #buildDir toString: (self buildDir ifNil: ['${topDir}/build'] ifNotNil: [self buildDir fullName] );
-			set: #thirdpartyDir toString: '${buildDir}/thirdparty';
 			set: #platformsDir toString: self platformsDir;
 			set: #srcDir toString: self srcDir;
 			set: #srcPluginsDir toString: (pluginsDir ifNil: [ '${srcDir}/plugins' ]);
@@ -859,10 +814,7 @@ CPlatformConfig >> setupDirectories: gen [
 			set: #outputDir toString: self outputDir.
 	].
 
-	self write: dirsInclude toFile: 'directories.cmake'.
-	
-	gen include: 'directories.cmake'.
-
+	self write: dirsInclude toFile: 'directories.cmake'
 ]
 
 { #category : #accessing }
@@ -888,12 +840,6 @@ CPlatformConfig >> srcDirName [
 { #category : #'source files' }
 CPlatformConfig >> standardIncludes [ 
 	^#()
-]
-
-{ #category : #'thirdparty libs' }
-CPlatformConfig >> thirdpartyLibs [
-	^ thirdpartyLibs ifNil: [ thirdpartyLibs := OrderedCollection new ].
-
 ]
 
 { #category : #directories }
