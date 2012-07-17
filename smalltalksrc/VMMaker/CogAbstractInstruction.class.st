@@ -17,7 +17,8 @@ Class {
 		'bcpc'
 	],
 	#classVars : [
-		'MachineCodeSize'
+		'MachineCodeSize',
+		'NumberOfRegisters'
 	],
 	#pools : [
 		'CogRTLOpcodes'
@@ -333,6 +334,18 @@ CogAbstractInstruction >> dependent [
 { #category : #accessing }
 CogAbstractInstruction >> dependent: anInstruction [
 	^dependent := anInstruction
+]
+
+{ #category : #abi }
+CogAbstractInstruction >> genAlignCStackSavingRegisters: saveRegs numArgs: numArgs wordAlignment: alignment [ 
+	| wordsPushedModAlignment delta |
+	wordsPushedModAlignment := ((saveRegs ifTrue: [NumberOfRegisters] ifFalse: [0]) "number of registers saved by genSaveRegisters"
+								+ numArgs)
+								\\ alignment.
+	wordsPushedModAlignment ~= 0 ifTrue:
+		[delta := alignment - wordsPushedModAlignment.
+		 cogit SubCq: delta * 4 R: SPReg].
+	^0
 ]
 
 { #category : #'abstract instructions' }

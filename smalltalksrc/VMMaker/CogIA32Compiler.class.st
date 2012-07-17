@@ -130,7 +130,8 @@ CogIA32Compiler class >> initialize [
 			declare: classVarName from: Undeclared;
 			at: classVarName put: value + LastRTLCode - 1].
 
-	MachineCodeSize := 10 "e.g. lock movsd  0x400(%esp),%xmm4 => f0 f2 0f 10 a4 24 00 04 00 00"
+	MachineCodeSize := 10. "e.g. lock movsd  0x400(%esp),%xmm4 => f0 f2 0f 10 a4 24 00 04 00 00"
+	NumberOfRegisters := 6
 ]
 
 { #category : #translation }
@@ -2183,18 +2184,6 @@ CogIA32Compiler >> flushICacheFrom: startAddress "<Integer>" to: endAddress [ "<
 	 virtual addresses (e.g. a debugger using memory-mapping to access a debugee).
 	 Using the macro avoids an unnecessary call."
 	self halt: #ceFlushICache
-]
-
-{ #category : #abi }
-CogIA32Compiler >> genAlignCStackSavingRegisters: saveRegs numArgs: numArgs wordAlignment: alignment [ 
-	| wordsPushedModAlignment delta |
-	wordsPushedModAlignment := ((saveRegs ifTrue: [6] ifFalse: [0]) "number of registers saved by genSaveRegisters"
-								+ numArgs)
-								\\ alignment.
-	wordsPushedModAlignment ~= 0 ifTrue:
-		[delta := alignment - wordsPushedModAlignment.
-		 cogit SubCq: delta * 4 R: SPReg].
-	^0
 ]
 
 { #category : #'abstract instructions' }
