@@ -128,10 +128,7 @@ CogIA32Compiler class >> initialize [
 		[:classVarName :value|
 		self classPool
 			declare: classVarName from: Undeclared;
-			at: classVarName put: value + LastRTLCode - 1].
-
-	MachineCodeSize := 10. "e.g. lock movsd  0x400(%esp),%xmm4 => f0 f2 0f 10 a4 24 00 04 00 00"
-	NumberOfRegisters := 6
+			at: classVarName put: value + LastRTLCode - 1]
 ]
 
 { #category : #translation }
@@ -672,9 +669,8 @@ CogIA32Compiler >> concretizeArithmeticShiftRightRR [
 
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizeAt: actualAddress [
-	"Attempt to generate concrete machine code for the instruction at address.
-	 If possible, generate the relevant machine code, setting machineCodeSize,
-	 and answer the following address.  Otherwise answer -1."
+	"Generate concrete machine code for the instruction at actualAddress,
+	 setting machineCodeSize, and answer the following address."
 
 	address := actualAddress.
 	self dispatchConcretize.
@@ -2339,6 +2335,7 @@ CogIA32Compiler >> genRestoreRegsExcept: abstractReg [
 
 { #category : #abi }
 CogIA32Compiler >> genSaveRegisters [
+	"Save the general purpose registers for a trampoline call."
 	cogit
 		PushR: EDI;
 		PushR: ESI;
@@ -2590,6 +2587,13 @@ CogIA32Compiler >> loadLiteralByteSize [
 	^5
 ]
 
+{ #category : #'generate machine code' }
+CogIA32Compiler >> machineCodeBytes [
+	"Answer the maximum number of bytes of machine code generated for any abstract instruction.
+	 e.g. lock movsd  0x400(%esp),%xmm4 => f0 f2 0f 10 a4 24 00 04 00 00"
+	^10
+]
+
 { #category : #encoding }
 CogIA32Compiler >> mod: mod RM: regMode RO: regOpcode [
 	^mod << 6 + (regOpcode << 3) + regMode
@@ -2623,6 +2627,14 @@ CogIA32Compiler >> numLowLevelLockOpcodes [
 	 movl 0, $eax
 	 ret"
 	^14
+]
+
+{ #category : #abi }
+CogIA32Compiler >> numberOfSaveableRegisters [
+	"Answer the number of registers to be saved in a trampoline call that saves registers.
+	 See genSaveRegisters"
+	<cmacro: '() 6'>
+	^6
 ]
 
 { #category : #'inline cacheing' }
