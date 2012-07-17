@@ -234,7 +234,6 @@ CogUnixConfig >> defaultExternalPlugins [
 		ThreadedIA32FFIPlugin "SqueakFFIPrims"
 		"UUIDPlugin"
 		"UnixOSProcessPlugin ?? "	
-		InternetConfigPlugin
 	)
 ]
 
@@ -343,6 +342,10 @@ CogUnixConfig >> preferredIncludes [
 
 { #category : #'source generation' }
 CogUnixConfig >> prepareForGeneration [
+
+	"force using LF on Macs"
+	CrLfFileStream defaultToLF.
+
 	^ self prepareForCogGeneration
 
 ]

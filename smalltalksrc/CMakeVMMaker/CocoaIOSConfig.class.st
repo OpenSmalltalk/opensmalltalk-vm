@@ -7,9 +7,6 @@ Fore more information, check the class comments of all the superclasses.
 Class {
 	#name : #CocoaIOSConfig,
 	#superclass : #MacOSConfig,
-	#instVars : [
-		'generateForRelease'
-	],
 	#category : #'CMakeVMMaker-IOS'
 }
 
@@ -39,7 +36,7 @@ CocoaIOSConfig >> CFBundleIdentifier [
 { #category : #'bundle strings' }
 CocoaIOSConfig >> CFBundleName [
 	"An application name"
-	^ self executableName", ' (Cocoa) 32bits'"
+	^ self executableName, ' (Cocoa) 32bits'
 ]
 
 { #category : #'bundle strings' }
@@ -61,32 +58,25 @@ CocoaIOSConfig >> NSMainNibFile [
 
 { #category : #'bundle strings' }
 CocoaIOSConfig >> SqueakDebug [
-	^self isGenerateForRelease 
-		ifTrue: [ 0 ]
-		ifFalse: [ 1 ]
-]
-
-{ #category : #accessing }
-CocoaIOSConfig >> architecture [ 
-	^'i386'
+	^0
 ]
 
 { #category : #accessing }
 CocoaIOSConfig >> commonCompilerFlags [
 	"Common compiler flags"
-	^#('-arch i386' '-mmacosx-version-min=10.5' '-DHAVE_UUID_GENERATE')
+	^#('-arch i386' "'-fnext-runtime'" '-mmacosx-version-min=10.4' '-DHAVE_UUID_GENERATE')
 ]
 
 { #category : #accessing }
 CocoaIOSConfig >> compilerFlags [ 
 	| releaseFlags |
 	
-	releaseFlags := self isGenerateForRelease 
+	releaseFlags := self isRelease 
 		ifTrue: [ self compilerFlagsRelease ]
 		ifFalse: [ self compilerFlagsDebug ].
 		
 	^String streamContents: [ :stream |
-		(self commonCompilerFlags, releaseFlags) asSet
+		(self commonCompilerFlags, releaseFlags)
 			do: [ :each | stream nextPutAll: each ]
 			separatedBy: [ stream space ] ]
 ]
@@ -101,7 +91,7 @@ CocoaIOSConfig >> compilerFlagsRelease [
 	"'-mdynamic-no-pic'" 
 	"'-fwritable-strings'" 
 	'-Os' 
-	'-fvisibility=hidden'
+	'-fvisibility=hidden' 
 	'-funroll-loops' 
 	"'-fno-asm'" 
 	'-fasm-blocks' 
@@ -115,7 +105,7 @@ CocoaIOSConfig >> compilerFlagsRelease [
 	'-fno-cse-follow-jumps' 
 	'-std=gnu99' 
 	'-DBUILD_FOR_OSX' 
-	"'-DUSE_INLINE_MEMORY_ACCESSORS'" 
+	'-DUSE_INLINE_MEMORY_ACCESSORS' 
 	'-DLSB_FIRST' 
 	'-DUSE_INLINE_MEMORY_ACCESSORS' 
 	'-DHAVE_SYS_TIME_H' 
@@ -149,8 +139,8 @@ CocoaIOSConfig >> configureClipboardExtendedPlugin: maker [
 CocoaIOSConfig >> configureHostWindowPlugin: maker [
 	super configureHostWindowPlugin: maker.
 	maker 
-		addSources: #('sqMacHostWindow.m' ) 
-		prefixed: '${platformsDir}/iOS/vm/OSX/plugins/HostWindowPlugin/'
+		addSources: #('sqMacHostWindow.c' ) 
+		prefixed: '${platformsDir}/iOS/vm/iPhone/plugins/HostWindowPlugin/'
 
 ]
 
@@ -171,10 +161,11 @@ CocoaIOSConfig >> configureJoystickTabletPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-CocoaIOSConfig >> configureLocalePlugin: maker [
-	maker addFrameworks: #('CoreFoundation').
-	maker addPlatformSources: #( 'sqIOSLocale.c' )	.
+CocoaIOSConfig >> configureLocalePlugin: maker [ 
+	"extra rules for LocalePlugin"
 
+	super configureLocalePlugin: maker.  
+	maker addPlatformSources: #( 'sqMacLocaleCarbon.c' )
 ]
 
 { #category : #'plugin extra rules' }
@@ -286,12 +277,11 @@ CocoaIOSConfig >> extraPluginSettings: maker [
 
 	maker isExternal ifTrue: [
 		"copy result to results dir "
-		
 		maker set: 'LIBRARY_OUTPUT_PATH' toString: self outputDir.
 		maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir.
 		maker puts: 'list(APPEND linkFlags "-undefined dynamic_lookup")' ].
 	
-	"maker addXCodeProperty: 'GCC_VERSION' value: '4.3'."
+	maker addXCodeProperty: 'GCC_VERSION' value: '4.2'.
 	maker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/' , self executableName , '_Prefix.pch'.
 	
 
@@ -300,16 +290,26 @@ CocoaIOSConfig >> extraPluginSettings: maker [
 { #category : #'source files' }
 CocoaIOSConfig >> extraSources [
 	^'${buildDir}/', self prefixHeaderFileName, '
- ${resources} ', 
-	'${buildDir}/', self prefixHeaderFileName, '
- ${resourcesLocaleEnglish}'
+ ${resources}'
 ]
 
 { #category : #settings }
 CocoaIOSConfig >> extraVMSettings: maker [
-	self architecture
-		ifNotNil: [ :arch | maker set: 'CMAKE_OSX_ARCHITECTURES' toString: arch ].
-	self setResourceProperties: maker.
+	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'.
+
+	maker set: 'resourceDir' toString: self resourcesDir, '/ProjectBuilder'.
+	maker set: 'resources' to: 
+		'"${resourceDir}/Squeak VM.r"
+		"${resourceDir}/Squeak.icns"
+		"${resourceDir}/Cog.icns"
+		"${resourceDir}/SqueakChanges.icns"
+		"${resourceDir}/SqueakImage.icns"
+		"${resourceDir}/SqueakPlugin.icns"
+		"${resourceDir}/SqueakScript.icns"
+		"${resourceDir}/SqueakGeneric.icns"
+		"${resourceDir}/SqueakProject.icns"
+		"${resourceDir}/SqueakSources.icns"
+		"${resourceDir}/MainMenu.nib"'
 
 ]
 
@@ -327,25 +327,9 @@ CocoaIOSConfig >> frameworks [
 	AGL)
 ]
 
-{ #category : #accessing }
-CocoaIOSConfig >> generateForDebug [
-	generateForRelease := false
-]
-
-{ #category : #accessing }
-CocoaIOSConfig >> generateForRelease [
-	generateForRelease := true
-]
-
-{ #category : #initialization }
-CocoaIOSConfig >> initialize [ 
-	super initialize.
-	self generateForRelease
-]
-
 { #category : #testing }
-CocoaIOSConfig >> isGenerateForRelease [ 
-	^generateForRelease
+CocoaIOSConfig >> isRelease [ 
+	^true
 ]
 
 { #category : #accessing }
@@ -390,8 +374,7 @@ CocoaIOSConfig >> platformSources [
 		'OSX/sqSqueakOSXInfoPlistInterface.m'
 		'OSX/sqSqueakOSXApplication+imageReadWrite.m'
 		'OSX/sqSqueakOSXScreenAndWindow.m'
-		'OSX/sqSqueakOSXCGView.m'
-		'OSX/sqSqueakOSXOpenGLView.m'
+		'OSX/sqSqueakOSXNSView.m'
 		'OSX/SqViewClut.m'
 		'OSX/BitMapConversionLogicFromX11.c'
 		'OSX/SqViewBitmapConversion.m'
@@ -409,21 +392,12 @@ CocoaIOSConfig >> platformSources [
 
 { #category : #'bundle strings' }
 CocoaIOSConfig >> plistFile [
+
 	| plist |
 	
-	plist := self plistTemplate.	
-	self plistKeys
-		do: [:key | 
-			plist := plist 
-				copyReplaceAll: '@' , key , '@' 
-				with: (self perform: key) asString ].
-
-	^ self fixLineEndsOf: plist
-]
-
-{ #category : #'bundle strings' }
-CocoaIOSConfig >> plistKeys [ 
-	^#(
+	plist := self plistTemplate.
+	
+	#(
 	CFBundleExecutable
 	CFBundleGetInfoString
 	CFBundleName
@@ -432,7 +406,11 @@ CocoaIOSConfig >> plistKeys [
 	CFBundleIconFile
 	CFBundleIdentifier
 	NSMainNibFile
-	SqueakDebug)
+	SqueakDebug) do: [:key |
+		plist := plist copyReplaceAll: '@' , key , '@' with: (self perform: key) asString
+	].
+
+	^ self fixLineEndsOf: plist
 ]
 
 { #category : #'bundle strings' }
@@ -1012,24 +990,9 @@ CocoaIOSConfig >> precompiledHeaders [
 //
 
 #ifdef __OBJC__
-	', 
-	(String streamContents: [ :stream | 
-		self precompiledImports 
-			do: [ :each | 
-				stream 
-					nextPutAll: '#import ';
-					nextPut: $<;
-					nextPutAll: each; 
-					nextPut: $> ]
-			separatedBy: [ 
-				stream cr ] ]),  '
+	#import <Cocoa/Cocoa.h>
 #endif
 '
-]
-
-{ #category : #settings }
-CocoaIOSConfig >> precompiledImports [ 
-	^#('Cocoa/Cocoa.h')
 ]
 
 { #category : #'source files' }
@@ -1047,26 +1010,11 @@ CocoaIOSConfig >> prefixHeaderFileName [
 ]
 
 { #category : #settings }
-CocoaIOSConfig >> resources [ 
-	^#('Squeak VM.r'
-	'Cog.icns'
-	'Squeak.icns'
-	'SqueakChanges.icns'
-	'SqueakPlugin.icns'
-	'SqueakScript.icns'
-	'SqueakGeneric.icns'
-	'SqueakProject.icns'
-	'SqueakSources.icns')
-
-
-]
-
-{ #category : #settings }
 CocoaIOSConfig >> setExtraTargetProperties: maker [
 	| plist precompiledHeaders |
 
 	" generated and add Info.plist file "
-	plist := self plistFile.	
+	plist := self plistFile.
 
 	(maker buildDir forceNewFileNamed: 'Info.plist') 
 		nextPutAll: plist; 
@@ -1084,8 +1032,8 @@ CocoaIOSConfig >> setExtraTargetProperties: maker [
 	(maker buildDir forceNewFileNamed: precompiledHeaders) 
 		nextPutAll: self precompiledHeaders;
 		close.
-
-	maker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/', precompiledHeaders.	
+		
+	maker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/', precompiledHeaders.
 
 	"maker 
 		addXCodeProperty: 'GCC_ENABLE_SSE3_EXTENSIONS' value: 'YES';  
@@ -1104,7 +1052,7 @@ CocoaIOSConfig >> setExtraTargetProperties: maker [
 		addXCodeProperty: 'ICC_OPT_PREFETCH_INSERTION' value: 'YES';
 		addXCodeProperty: 'ICC_OPT_PROVIDE_FRAME_PTR' value: 'NO';
 		addXCodeProperty: 'ICC_OPT_USE_ARCH_IA32' value: 'SSE41';
-		addXCodeProperty: 'PER_ARCH_CFLAGS_i386' value: '-finline-functions -mfpmath=sse -march=pentium-m -mtune=prescott -falign-functions=16  -fno-gcse -fno-cse-follow-jumps  -DLSB_FIRST';
+		addXCodeProperty: 'PER_ARCH_CFLAGS_i386' value: '-finline-functions -mfpmath=sse -march=pentium-m -mtune=prescott -falign-functions=16  -fno-gcse -fno-cse-follow-jumps  -DLSB_FIRST -DUSE_INLINE_MEMORY_ACCESSORS';
 		addXCodeProperty: 'PER_ARCH_CFLAGS_ppc' value: '-fast -mtune=7450 -mcpu=7450 -D_BSD_SOCKLEN_T_=int'
 ]
 
