@@ -73,17 +73,15 @@ CMakeVMGenerator >> executableName [
 
 { #category : #'code generation' }
 CMakeVMGenerator >> generate [
-	| intPlugins extPlugins |
-			
+		
 	output := String new writeStream.
-	
-	config setGlobalOptions: self.
-	
+		
 	self 
 		printHeader;
 		project: config executableName.
 
 	config setupDirectories: self.
+	self include: 'directories.cmake'.
 		
 	self message: '${CMAKE_MODULE_PATH}'.
 	self set: 'CMAKE_CONFIGURATION_TYPES' to: 'Release'.
@@ -99,22 +97,14 @@ CMakeVMGenerator >> generate [
 	config extraVMSettings: self.
 	
 	self puts: 'add_executable(' , config executableName, ' ', config executableType, ' ' , self sources , ')'.
-	
-	intPlugins := self generatePluginConfigs: config internalPlugins internal: true.
-	extPlugins := self generatePluginConfigs: config externalPlugins internal: false.
-	
-	self processThirdpartyLibraries.
-	
 		
-
-	self processPlugins:  intPlugins, extPlugins.
-
+	self processInternalPlugins.	
 	config setExtraTargetProperties: self.
 	
 	self cmd: 'target_link_libraries'
 		params: self moduleName , ' ${LINKLIBS}'.
-
-	config postBuildActions: self.
+		
+	self processExternalPlugins.
 	
 	self saveFile.
 	
@@ -166,29 +156,6 @@ CMakeVMGenerator >> generatePlugin: aPlugin internal: aBoolean extraRules: aBloc
 		generate: aPlugin for: self internal: aBoolean extraRules: aBlock
 ]
 
-{ #category : #'processing plugins' }
-CMakeVMGenerator >> generatePluginConfigs: plugins internal: bool [
-	"Answers a collection of CMakePluginGenerator instances"
-	
-	^ plugins collect: [:each | | plugin |
-		plugin := Smalltalk at: each.
-		plugin generateFor: self internal: bool.
-	].
-	
-
-]
-
-{ #category : #'processing plugins' }
-CMakeVMGenerator >> generatePluginsSource: plugins internal: bool [
-
-	plugins do: [:each | | plugin gen |
-		plugin := Smalltalk at: each.
-		gen := plugin generateFor: self internal: bool.
-	].
-	
-
-]
-
 { #category : #'as yet unclassified' }
 CMakeVMGenerator >> includeDirs [
 
@@ -213,7 +180,7 @@ CMakeVMGenerator >> platformName [
 
 ]
 
-{ #category : #'processing plugins' }
+{ #category : #'as yet unclassified' }
 CMakeVMGenerator >> processExternalPlugins [
 
 	config externalPlugins do: [:each | | plugin gen |
@@ -227,7 +194,7 @@ CMakeVMGenerator >> processExternalPlugins [
 
 ]
 
-{ #category : #'processing plugins' }
+{ #category : #'as yet unclassified' }
 CMakeVMGenerator >> processInternalPlugins [
 
 	| libs |
@@ -246,60 +213,6 @@ CMakeVMGenerator >> processInternalPlugins [
 		(libs inject: '' into: [:res :ea | res, ' ' , ea ]) .
 
 	self generateExportsH: libs.
-
-]
-
-{ #category : #'processing plugins' }
-CMakeVMGenerator >> processInternalPlugins: pluginGenerators [
-
-	| libs |
-	libs := OrderedCollection new.
-
-	pluginGenerators do: [:gen |
-		gen doNotGenerate ifFalse: [
-			libs add:  gen plugin moduleName.
-			self addSubdirectory:  gen plugin moduleName.
-			 ].
-		].
-
-	self cmd: 'target_link_libraries' params:  config executableName , ' ' ,
-		(libs inject: '' into: [:res :ea | res, ' ' , ea ]) .
-
-	self generateExportsH: libs.
-
-]
-
-{ #category : #'processing plugins' }
-CMakeVMGenerator >> processPlugins: pluginGenerators [
-
-	| libs |
-	libs := OrderedCollection new.
-
-	pluginGenerators do: [:gen |
-		gen doNotGenerate ifFalse: [
-			gen isInternal ifTrue: [
-				libs add:  gen plugin moduleName ]
-			ifFalse: [
-				"make main module to depend on external plugin, just to make sure it is built before main module built"
-				self cmd: 'add_dependencies' params: config executableName, ' ' , gen plugin moduleName
-				].
-			self addSubdirectory:  gen plugin moduleName.
-			 ].
-		].
-
-	self cmd: 'target_link_libraries' params:  config executableName , ' ' ,
-		(libs inject: '' into: [:res :ea | res, ' ' , ea ]) .
-
-	self generateExportsH: libs.
-
-]
-
-{ #category : #'as yet unclassified' }
-CMakeVMGenerator >> processThirdpartyLibraries [
-
-	config thirdpartyLibs do: [:each |
-		each generateFor: self ]
-
 
 ]
 
@@ -348,16 +261,6 @@ CMakeVMGenerator >> targetPropertyAt: aPropName qput: aValue [
 	"set target's properties, put value in quotes"
 	
 	^ self targetPropertyAt: aPropName put: (aValue copyReplaceAll: '"' with: '\"').
-]
-
-{ #category : #'thirdparty libs' }
-CMakeVMGenerator >> thirdpartyDir [
-	^ self buildDir / self thirdpartyDirName
-]
-
-{ #category : #'thirdparty libs' }
-CMakeVMGenerator >> thirdpartyDirName [
-	^ 'thirdParty'
 ]
 
 { #category : #accessing }

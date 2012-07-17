@@ -11,11 +11,6 @@ For UUID you might also need:
 - uuid-dev
  packages  
 
-For SSL Plugins you need libssl & development headers:
-
-sudo apt-get install openssl
-sudo apt-get install libssl-dev
-
 
 Fore more information, check the class comments of all the superclasses.
 
@@ -206,12 +201,6 @@ CogFamilyUnixConfig >> configureFilePlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-CogFamilyUnixConfig >> configureInternetConfigPlugin: maker [
-	super configureInternetConfigPlugin: maker.
-	maker addPlatformSources: #( 'sqUnixInternetConfiguration' )
-]
-
-{ #category : #'plugin extra rules' }
 CogFamilyUnixConfig >> configureJoystickTabletPlugin: maker [ 
 	"extra rules for JoystickTabletPlugin"
 	
@@ -270,16 +259,6 @@ CogFamilyUnixConfig >> configureSoundPlugin: maker [
 	"extra rules for SoundPlugin"
 	
 	maker addPlatformSources: #( 'sqUnixSound')
-]
-
-{ #category : #'plugin extra rules' }
-CogFamilyUnixConfig >> configureSqueakSSLPlugin: maker [ 
-	"extra rules for SqueakSSLPlugin"
-	
-	maker addPlatformSources: #( 'sqUnixOpenSSL.c').
-	
-	maker addExternalLibraries: #('ssl' ).
-	
 ]
 
 { #category : #'plugin extra rules' }
