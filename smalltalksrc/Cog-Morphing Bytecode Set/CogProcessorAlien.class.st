@@ -45,6 +45,11 @@ CogProcessorAlien >> disassembleNextInstructionIn: memory [
 	^(self primitiveDisassembleAt: self pc inMemory: memory) last
 ]
 
+{ #category : #'accessing-abstract' }
+CogProcessorAlien >> endianness [
+	self subclassResponsibility
+]
+
 { #category : #opcodes }
 CogProcessorAlien >> nopOpcode [
 	self subclassResponsibility.
