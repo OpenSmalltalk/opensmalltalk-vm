@@ -20,6 +20,13 @@ GdbARMAlien class >> defaultIntegerBaseInDebugger [
 	^16
 ]
 
+{ #category : #'class initialization' }
+GdbARMAlien class >> initialize [
+	"GdbARMAlien initialize"
+	super initialize.
+	PostBuildStackDelta := 0.
+]
+
 { #category : #'instance creation' }
 GdbARMAlien class >> new [
 	^(self atAddress: self primitiveNewCPU) reset
@@ -30,6 +37,15 @@ GdbARMAlien class >> primitiveNewCPU [
 	"Answer the address of a new ARMulator C type ARMul_State instance."
 	<primitive: 'primitiveNewCPU' module: 'GdbARMPlugin'>
 	^self primitiveFailed
+]
+
+{ #category : #accessing }
+GdbARMAlien class >> setStackAlignmentDelta: 	stackAlignmentDelta [
+	"copy of BochsIA32Alien>>#setStackAlignmentDelta:, because I don't know yet what it's effect is."
+	self assert: stackAlignmentDelta isPowerOfTwo.
+	PostBuildStackDelta :=  stackAlignmentDelta > 8
+								ifTrue: [stackAlignmentDelta - 8]
+								ifFalse: [0]
 ]
 
 { #category : #'Cog API' }
@@ -64,6 +80,23 @@ GdbARMAlien >> eflags [
 			bitOr: self cflag << 3) 
 				bitOr: self vflag << 2)
 					bitOr: self ifflags
+]
+
+{ #category : #'accessing-abstract' }
+GdbARMAlien >> endianness [
+	^#little
+]
+
+{ #category : #'accessing-abstract' }
+GdbARMAlien >> fp [
+	"According to the use in SVr4"
+	^self r11
+]
+
+{ #category : #'accessing-abstract' }
+GdbARMAlien >> fp: aNumber [
+	"According to SVr4, the frame pointer is stored in r11"
+	^self r11: aNumber
 ]
 
 { #category : #'error handling' }
@@ -365,6 +398,13 @@ GdbARMAlien >> reset [
 GdbARMAlien >> retOpcode [
 	"the ret command does not generally exist. the most similar would be mov pc, lr"
 	^ self halt.
+]
+
+{ #category : #'accessing-abstract' }
+GdbARMAlien >> setFramePointer: framePointer stackPointer: stackPointer [
+	"Initialize the processor's frame and stack pointers"
+	self fp: framePointer.
+	self sp: stackPointer
 ]
 
 { #category : #accessing }
