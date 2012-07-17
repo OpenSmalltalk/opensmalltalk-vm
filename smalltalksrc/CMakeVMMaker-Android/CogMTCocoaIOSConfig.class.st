@@ -11,8 +11,13 @@ Class {
 }
 
 { #category : #settings }
-CogMTCocoaIOSConfig >> commonCompilerFlags [
-	^super commonCompilerFlags, #('-DCOGMTVM=1')
+CogMTCocoaIOSConfig >> compilerFlagsDebug [ 
+	^#('-g3' '-O0' '-msse3' "'-fvisibility=hidden'" '-funroll-loops' '-fasm-blocks' '-finline-functions' '-mfpmath=sse' '-march=pentium-m' '-falign-functions=16' '-fno-gcse' '-fno-cse-follow-jumps' '-std=gnu99' '-DBUILD_FOR_OSX' '-DUSE_INLINE_MEMORY_ACCESSORS' '-DLSB_FIRST' '-DHAVE_SYS_TIME_H' '-DHAVE_NANOSLEEP' '-DDEBUGVM=1' '-DCOGMTVM=1' '-DUSE_GLOBAL_STRUCT=0' '-DBASE_HEADER_SIZE=4' '-DCOGVM')
+]
+
+{ #category : #settings }
+CogMTCocoaIOSConfig >> compilerFlagsRelease [ 
+	^#('-g0' '-Os' '-msse3' "'-fvisibility=hidden'" '-funroll-loops' '-fasm-blocks' '-finline-functions' '-mfpmath=sse' '-fomit-frame-pointer' '-march=pentium-m' '-mtune=prescott' '-falign-functions=16' '-fno-gcse' '-fno-cse-follow-jumps' '-std=gnu99' '-DBUILD_FOR_OSX' '-DUSE_INLINE_MEMORY_ACCESSORS' '-DLSB_FIRST' '-DHAVE_SYS_TIME_H' '-DHAVE_NANOSLEEP' '-DNDEBUG' '-DDEBUGVM=0' '-DCOGMTVM=1' '-DUSE_GLOBAL_STRUCT=0' '-DBASE_HEADER_SIZE=4' '-DCOGVM')
 ]
 
 { #category : #'source files' }

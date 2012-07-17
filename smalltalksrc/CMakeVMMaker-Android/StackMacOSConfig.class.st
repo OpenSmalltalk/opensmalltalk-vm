@@ -34,6 +34,10 @@ StackMacOSConfig >> interpreterClass [
 
 { #category : #'source generation' }
 StackMacOSConfig >> prepareForGeneration [
+
+	"force using LF on Macs"
+	CrLfFileStream defaultToLF.
+
 	^ self prepareForStackVMGeneration
 
 ]
