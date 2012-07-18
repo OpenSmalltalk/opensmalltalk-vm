@@ -528,14 +528,6 @@ InterpreterSimulator >> integerAt: byteAddress put: a32BitValue [
 	^memory integerAt: (byteAddress // 4) + 1 put: a32BitValue
 ]
 
-{ #category : #'memory access' }
-InterpreterSimulator >> integerObjectOf: value [
-	"The simulator works with strictly positive bit patterns"
-	value < 0
-		ifTrue: [^ ((16r80000000 + value) << 1) + 1]
-		ifFalse: [^ (value << 1) + 1]
-]
-
 { #category : #'interpreter shell' }
 InterpreterSimulator >> internalExecuteNewMethod [
 "Override the Interpreter version to trap cached external prims.
@@ -673,11 +665,6 @@ InterpreterSimulator >> ioSeconds [
 InterpreterSimulator >> ioSetInputSemaphore: index [
 
 	self primitiveFail
-]
-
-{ #category : #'interpreter shell' }
-InterpreterSimulator >> isIntegerValue: valueWord [ 
-	^ valueWord >= 16r-40000000 and: [valueWord <= 16r3FFFFFFF]
 ]
 
 { #category : #'plugin support' }

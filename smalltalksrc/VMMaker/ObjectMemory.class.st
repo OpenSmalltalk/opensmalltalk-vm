@@ -2540,8 +2540,15 @@ ObjectMemory >> instantiateSmallClass: classPointer sizeInBytes: sizeInBytes [
 
 { #category : #'interpreter access' }
 ObjectMemory >> integerObjectOf: value [
+	"Convert the integer value, assumed to be in SmallInteger range, into a tagged SmallInteger object.
+	 In C, use a shift and an add to set the tag bit.
+	 In Smalltalk we have to work harder because thesimulator works with strictly positive bit patterns."
 
-	^(value << 1) + 1
+	^self
+		cCode: [(value << 1) + 1]
+		inSmalltalk: [value >= 0
+						ifTrue: [(value << 1) + 1]
+						ifFalse: [((16r80000000 + value) << 1) + 1]]
 ]
 
 { #category : #'interpreter access' }
@@ -2713,10 +2720,14 @@ ObjectMemory >> isIntegerObject: objectPointer [
 
 { #category : #'interpreter access' }
 ObjectMemory >> isIntegerValue: intValue [
-	"Return true if the given value can be represented as a Smalltalk integer value."
-	"Use a shift and XOR to set the sign bit if and only if the top two bits of the given value are the same, then test the sign bit. Note that the top two bits are equal for exactly those integers in the range that can be represented in 31-bits or 63-bits."
+	"Answer if the given value can be represented as a Smalltalk integer value.
+	 In C, use a shift and XOR to set the sign bit if and only if the top two bits of the given
+	 value are the same, then test the sign bit. Note that the top two bits are equal for
+	 exactly those integers in the range that can be represented in 31-bits or 63-bits."
 
-	^ (intValue bitXor: (intValue << 1)) >= 0
+	^self
+		cCode: [(intValue bitXor: (intValue << 1)) >= 0]
+		inSmalltalk: [intValue >= 16r-40000000 and: [intValue <= 16r3FFFFFFF]]
 ]
 
 { #category : #'header access' }

@@ -152,15 +152,6 @@ NewObjectMemorySimulator >> incrementalGC [
 	^super incrementalGC
 ]
 
-{ #category : #'memory access' }
-NewObjectMemorySimulator >> integerObjectOf: value [
-	"The simulator works with strictly positive bit patterns"
-	^((value < 0
-		ifTrue: [16r80000000 + value]
-		ifFalse: [value])
-			bitShift: 1) + 1
-]
-
 { #category : #'simulation only' }
 NewObjectMemorySimulator >> interpreterAllocationReserveBytes [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
@@ -195,11 +186,6 @@ NewObjectMemorySimulator >> is: oop KindOf: classNameString [
 NewObjectMemorySimulator >> isFloatObject: oop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter isFloatObject: oop
-]
-
-{ #category : #'interpreter shell' }
-NewObjectMemorySimulator >> isIntegerValue: valueWord [ 
-	^ valueWord >= 16r-40000000 and: [valueWord <= 16r3FFFFFFF]
 ]
 
 { #category : #'simulation only' }
