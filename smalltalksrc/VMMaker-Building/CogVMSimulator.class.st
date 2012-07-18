@@ -43,10 +43,11 @@ Class {
 
 { #category : #'instance creation' }
 CogVMSimulator class >> chooseAndInitCogitClassWithOpts: opts [
-	(CoInterpreter classPool
-			at: #CogitClass
-			put: Cogit chooseCogitClass)
-		initializeWithOptions: opts
+	| classOrSymbol |
+	classOrSymbol := opts at: #Cogit ifAbsent: [Cogit chooseCogitClass].
+	classOrSymbol isSymbol ifTrue:
+		[classOrSymbol := Smalltalk classNamed: classOrSymbol].
+	(CoInterpreter classPool at: #CogitClass put: (classOrSymbol)) initializeWithOptions: opts
 ]
 
 { #category : #'instance creation' }
@@ -1214,14 +1215,6 @@ CogVMSimulator >> insufficientMemorySpecifiedError [
 	self error: 'Insufficient memory for this image'
 ]
 
-{ #category : #'memory access' }
-CogVMSimulator >> integerObjectOf: value [
-	"The simulator works with strictly positive bit patterns"
-	value < 0
-		ifTrue: [^ ((16r80000000 + value) << 1) + 1]
-		ifFalse: [^ (value << 1) + 1]
-]
-
 { #category : #'debugging traps' }
 CogVMSimulator >> internalCannotReturn: resultOop [
 	self halt.
@@ -1544,11 +1537,6 @@ CogVMSimulator >> isBoundThreadId: threadId [
 	^self perform: #isBoundThreadId:
 		withArguments: {threadId}
 		inSuperclass: (cogThreadManager ifNil: [CoInterpreterPrimitives] ifNotNil: [CoInterpreterMT])
-]
-
-{ #category : #'interpreter shell' }
-CogVMSimulator >> isIntegerValue: valueWord [ 
-	^ valueWord >= 16r-40000000 and: [valueWord <= 16r3FFFFFFF]
 ]
 
 { #category : #'rump c stack' }

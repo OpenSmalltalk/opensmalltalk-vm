@@ -32,6 +32,10 @@ CogAbstractInstruction class >> instVarNamesAndTypesForTranslationDo: aBinaryBlo
 	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in an AbstractInstruction struct."
 	"CogIA32Compiler printTypedefOn: Transcript"
 	"CogARMCompiler printTypedefOn: Transcript"
+	| machineCodeBytes |
+	machineCodeBytes := self ==  CogAbstractInstruction
+								ifTrue: [0]
+								ifFalse: [Cogit cogCompilerClass basicNew machineCodeBytes].
 	self filteredInstVarNames do:
 		[:ivn|
 		ivn ~= 'bcpc' ifTrue:
@@ -39,7 +43,7 @@ CogAbstractInstruction class >> instVarNamesAndTypesForTranslationDo: aBinaryBlo
 				value: ivn
 				value: (ivn caseOf: {
 							['address']			-> ['unsigned long'].
-							['machineCode']	-> [{'unsigned char'. '[', self basicNew machineCodeBytes printString, ']'}].
+							['machineCode']	-> [{'unsigned char'. '[', machineCodeBytes printString, ']'}].
 							['operands']		-> [#('unsigned long' '[3]')].
 							['dependent']		-> ['struct _AbstractInstruction *']}
 						otherwise:
