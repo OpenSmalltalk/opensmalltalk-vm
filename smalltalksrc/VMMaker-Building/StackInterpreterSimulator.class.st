@@ -656,14 +656,6 @@ StackInterpreterSimulator >> integerAt: byteAddress put: a32BitValue [
 	^objectMemory memory integerAt: (byteAddress // 4) + 1 put: a32BitValue
 ]
 
-{ #category : #'memory access' }
-StackInterpreterSimulator >> integerObjectOf: value [
-	"The simulator works with strictly positive bit patterns"
-	value < 0
-		ifTrue: [^ ((16r80000000 + value) << 1) + 1]
-		ifFalse: [^ (value << 1) + 1]
-]
-
 { #category : #'debugging traps' }
 StackInterpreterSimulator >> internalCannotReturn: resultOop [
 	self halt.
@@ -881,11 +873,6 @@ StackInterpreterSimulator >> ioUTCMicroseconds [
 { #category : #'I/O primitives support' }
 StackInterpreterSimulator >> ioUTCMicrosecondsNow [
 	^self ioUTCMicroseconds
-]
-
-{ #category : #'interpreter shell' }
-StackInterpreterSimulator >> isIntegerValue: valueWord [ 
-	^ valueWord >= 16r-40000000 and: [valueWord <= 16r3FFFFFFF]
 ]
 
 { #category : #'primitive support' }
@@ -1120,16 +1107,6 @@ StackInterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize
 		ifFalse: [ objectMemory storePointerUnchecked: 3 ofObject: results withValue: objectMemory falseObject ].
 	objectMemory storePointerUnchecked: 4 ofObject: results withValue: (objectMemory integerObjectOf: fileSize).
 	^ results
-]
-
-{ #category : #'debugging traps' }
-StackInterpreterSimulator >> moveFramesIn: thePage through: frameAbove toPage: newPage [
-	"| thisPage |
-	(self checkIsStillMarriedContext: 22189568 currentFP: framePointer) ifTrue:
-		[thisPage := stackPages stackPageFor: (self frameOfMarriedContext: 22189568).
-		 (thePage == thisPage or: [newPage == thisPage]) ifTrue:
-			[self halt]]."
-	^super moveFramesIn: thePage through: frameAbove toPage: newPage
 ]
 
 { #category : #'debug support' }

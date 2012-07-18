@@ -1786,8 +1786,9 @@ TMethod >> statementsFor: sourceText varName: varName [
 TMethod >> statementsListsForInlining [
 	"Answer a collection of statement list nodes that are candidates for inlining.
 	 Currently, we cannot inline into the argument blocks of and: and or: messages.
-	 We do not want to inline code within cCode:inSmalltalk: blocks.
-	 We do not want to inline code within assert: sends"
+	 We do not want to inline code strings within cCode:inSmalltalk: blocks (those with a
+	 proper block for the cCode: argument are inlined in MessageNode>>asTranslatorNodeIn:).
+	 We do not want to inline code within assert: sends (because we want the assert to read nicely)."
 
 	| stmtLists |
 	stmtLists := OrderedCollection new: 10.
