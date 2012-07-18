@@ -134,6 +134,28 @@
 		warning("invalidInstructionPointerinMethod"); \
 	if (sendTrace > 1) printCallStack(); \
   } while (0)
+#elif MULTIPLEBYTECODESETS /* maintain byteCount & check for valid instruction pointer */
+# if defined(SQ_USE_GLOBAL_STRUCT) /* define only in interpreter */
+static FILE *bct = 0;
+void openBytecodeTraceFile(char *fn)
+{ if (!(bct = fopen(fn,"r"))) perror("fopen"); }
+void closeBytecodeTraceFile() { if (bct) { fclose(bct); bct = 0; } }
+# endif
+# define bytecodeDispatchDebugHook() do { char line[64], expected[64]; \
+	/* print byteCount pc byteCode(hex) stackPtr */ \
+	sprintf(expected, "%ld: %d %d(%x) %d %s\n", \
+			++GIV(byteCount), localIP-GIV(method)-3, currentBytecode, currentBytecode, \
+			(localFP-localSP)/sizeof(sqInt)-5, bytecodeNameTable[currentBytecode]); \
+	printf(expected); \
+	if (bct) { \
+		fgets(line, sizeof(line) - 1, bct); \
+		if (strcmp(line,expected)) \
+		warning("bytecode trace mismatch"); \
+	} \
+	if (0) printFrameWithSP(localFP,localSP); \
+	if (!ValidInstructionPointerCheck()) \
+		warning("invalidInstructionPointerinMethod"); \
+  } while (0)
 #elif 0 /* print current frame & instruction pointer on every bytecode. */
 # define bytecodeDispatchDebugHook() do { \
 	printFrameWithSP(localFP,localSP); \

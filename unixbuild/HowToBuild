@@ -63,13 +63,13 @@ BochsIA32Plugin/BochsIA32Plugin.xcodeproj project and to build that you'll
 need to first build bochs.  First check-out the processor simulator source tree
 containing Bochs:
      svn co http://www.squeakvm.org/svn/squeak/branches/Cog/processors
-Then build using the following, which works on Mac OS and is hence unlikely to
-work entirely on linux (no xcodebuild):
-  $ cd ROOT/processors/IA32/bochs
+Then build libraries linuxbochs/{cpu/libcpu.a,disasm/libdisasm.a,fpu/libfpu.a}
+  $ cd ROOT/processors/IA32/linuxbochs
   $ ./conf.COG
   $ ./makeem
-  $ cd ROOT/macbuild/BochsIA32Plugin
-  $ xcodebuild
+and build the plugin via
+  $ cd ROOT/unixbuild/bld/BochsIA32Plugin
+  $ make
 
 3e. If you're building the VM on a 64-bit OS, you'll need a compiler which can
 compile and link to 32-bit binaries. On most Linuxes the gcc-multilib package

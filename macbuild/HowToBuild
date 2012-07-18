@@ -28,10 +28,11 @@ BochsIA32Plugin/BochsIA32Plugin.xcodeproj project and to build that you'll
 need to first build bochs.  First check-out the processor simulator source tree
 containing Bochs:
      svn co http://www.squeakvm.org/svn/squeak/branches/Cog/processors
-Then build using
-  $ cd ROOT/processors/IA32/bochs
+Then build the libraries macbochs/{cpu/libcpu.a,disasm/libdisasm.a,fpu/libfpu.a}
+  $ cd ROOT/processors/IA32/macbochs
   $ ./conf.COG
   $ ./makeem
+Then build the plugin:
   $ cd ROOT/macbuild/BochsIA32Plugin
   $ xcodebuild
 
