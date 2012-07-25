@@ -186,6 +186,11 @@ AbstractInstructionTests >> generateInstructions [
 	^instructions
 ]
 
+{ #category : #running }
+AbstractInstructionTests >> numberOfStepsIn: machineCodeSize [
+	self subclassResponsibility
+]
+
 { #category : #accessing }
 AbstractInstructionTests >> objectMemory [
 	"hack for testing"
@@ -212,7 +217,7 @@ AbstractInstructionTests >> runAddCqR: assertPrintBar [
 	"self defaultTester runAddCqR: true"
 	"self defaultTester runAddCqR: false"
 	| memory |
-	memory := ByteArray new: 16.
+	memory := ByteArray new: 20.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
 		[:reg :rgetter :rsetter|
 		self pairs: (-2 to: 2)  do:
@@ -222,8 +227,9 @@ AbstractInstructionTests >> runAddCqR: assertPrintBar [
 			memory replaceFrom: 1 to: len with: inst machineCode object startingAt: 1.
 			self processor
 				reset;
-				perform: rsetter with: b signedIntToLong;
-				singleStepIn: memory.
+				perform: rsetter with: b signedIntToLong.
+			(self numberOfStepsIn: inst machineCodeSize) 
+				timesRepeat: [self processor singleStepIn: memory].
 			"self processor printRegistersOn: Transcript.
 			 Transcript show: (self processor disassembleInstructionAt: 0 In: memory); cr"
 			assertPrintBar
