@@ -161,7 +161,11 @@ CogRTLOpcodes class >> initialize [
 		RegisterOperand := 1. ConstantQuickOperand := 2. ConstantWordOperand := 3...
 	But not all combinations make sense and even fewer are used so we stick with the simple compound approach.
 
-	Note that there are no generic division instructions defined."
+	The assumption is that comparison and arithmetic instructions set condition codes and that move instrucions
+	leave the condition codes unaffected.  In particular LoadEffectiveAddressMwrR does not set condition codes
+	although it can be used to do arithmetic.
+
+	Note that there are no generic division instructions defined, but a processor may define some."
 
 	"CogRTLOpcodes initialize.
 	 CogAbstractInstruction allSubclasses do: [:sc| sc initialize]"
@@ -246,7 +250,7 @@ CogRTLOpcodes class >> initialize [
 
 						"Arithmetic; destination is always last operand except Cmp; CmpXR is SubRX with no update of result"
 						LoadEffectiveAddressMwrR "A variant of add"
-						NegateR
+						NegateR "2's complement negation"
 						ArithmeticShiftRightCqR ArithmeticShiftRightRR
 						LogicalShiftRightCqR LogicalShiftRightRR
 						LogicalShiftLeftCqR LogicalShiftLeftRR

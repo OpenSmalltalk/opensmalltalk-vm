@@ -2353,12 +2353,6 @@ CogIA32Compiler >> genSubstituteReturnAddress: retpc [
 	^cogit PushCw: retpc
 ]
 
-{ #category : #abi }
-CogIA32Compiler >> genWriteCResultIntoReg: abstractRegister [
-	(self concreteRegister: abstractRegister) ~= EAX ifTrue:
-		[cogit gen: MoveRR operand: EAX operand: abstractRegister]
-]
-
 { #category : #'feature detection' }
 CogIA32Compiler >> generateCheckFeatures [
 	cogit
