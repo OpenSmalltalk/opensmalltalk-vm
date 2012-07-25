@@ -31,11 +31,6 @@ CogIA32CompilerTests >> concreteCompilerClass [
 	^CogIA32CompilerForTests
 ]
 
-{ #category : #running }
-CogIA32CompilerTests >> numberOfStepsIn: aSize [
-	^1
-]
-
 { #category : #accessing }
 CogIA32CompilerTests >> processor [
 	processor ifNil:

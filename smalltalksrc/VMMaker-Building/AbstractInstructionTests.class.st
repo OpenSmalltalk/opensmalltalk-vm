@@ -186,11 +186,6 @@ AbstractInstructionTests >> generateInstructions [
 	^instructions
 ]
 
-{ #category : #running }
-AbstractInstructionTests >> numberOfStepsIn: machineCodeSize [
-	self subclassResponsibility
-]
-
 { #category : #accessing }
 AbstractInstructionTests >> objectMemory [
 	"hack for testing"
@@ -228,8 +223,10 @@ AbstractInstructionTests >> runAddCqR: assertPrintBar [
 			self processor
 				reset;
 				perform: rsetter with: b signedIntToLong.
-			(self numberOfStepsIn: inst machineCodeSize) 
-				timesRepeat: [self processor singleStepIn: memory].
+			[[processor pc < len] whileTrue:
+				[self processor singleStepIn: memory]]
+				on: Error
+				do: [:ex| ].
 			"self processor printRegistersOn: Transcript.
 			 Transcript show: (self processor disassembleInstructionAt: 0 In: memory); cr"
 			assertPrintBar

@@ -15,12 +15,6 @@ CogARMCompilerTests >> concreteCompilerClass [
 	^CogARMCompilerForTests
 ]
 
-{ #category : #running }
-CogARMCompilerTests >> numberOfStepsIn: aSize [
-
-	^ aSize // 4
-]
-
 { #category : #accessing }
 CogARMCompilerTests >> processor [
 	processor ifNil:
