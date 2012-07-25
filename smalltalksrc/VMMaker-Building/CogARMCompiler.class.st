@@ -2,8 +2,22 @@ Class {
 	#name : #CogARMCompiler,
 	#superclass : #CogAbstractInstruction,
 	#classVars : [
+		'AL',
+		'CC',
+		'CS',
+		'EQ',
+		'GE',
+		'GT',
+		'HI',
+		'LDMFD',
+		'LE',
 		'LR',
+		'LS',
+		'LT',
+		'MI',
+		'NE',
 		'PC',
+		'PL',
 		'R0',
 		'R1',
 		'R10',
@@ -17,17 +31,24 @@ Class {
 		'R7',
 		'R8',
 		'R9',
-		'SP'
+		'RISCTempReg',
+		'SP',
+		'STMFD',
+		'VC',
+		'VS'
 	],
 	#category : #'VMMaker-JIT'
 }
 
 { #category : #'class initialization' }
 CogARMCompiler class >> initialize [
-	super initialize.
 	
 	"Initialize various ARM instruction-related constants."
 	"CogARMCompiler initialize"
+	
+	| specificOpcodes refs conditionCodes |
+	super initialize.
+	self ~~ CogARMCompiler ifTrue: [^self].
 	
 	R0 := 0. R1 := 1.
 	R2 := 2. R3 := 3.
@@ -38,7 +59,39 @@ CogARMCompiler class >> initialize [
 	R12 := 12.
 	SP := 13.
 	LR := 14.
-	PC := 15
+	PC := 15.
+	
+	RISCTempReg := R3.
+	
+	"Condition Codes"
+	conditionCodes := #(EQ NE CS CC MI PL VS VC HI LS GE LT GT LE AL).
+	conditionCodes withIndexDo: [ :classVarName :value | 
+		self classPool
+			declare: classVarName from: Undeclared;
+			at: classVarName put: value - 1].
+	
+	"Specific instructions"
+	LastRTLCode isNil ifTrue:
+		[CogRTLOpcodes initialize].
+	specificOpcodes := #(LDMFD STMFD).
+	refs := (thisContext method literals select: [:l| l isVariableBinding and: [classPool includesKey: l key]]) collect:
+				[:ea| ea key].
+	(classPool keys reject: [:k| (specificOpcodes includes: k) or: [refs includes: k] or: [conditionCodes includes: k]]) do:
+		[:k|
+		Undeclared declare: k from: classPool].
+	specificOpcodes withIndexDo:
+		[:classVarName :value|
+		self classPool
+			declare: classVarName from: Undeclared;
+			at: classVarName put: value + LastRTLCode - 1]
+]
+
+{ #category : #encoding }
+CogARMCompiler >> c: c t: t o: o s: s [
+	"c : 4 bit, t: 3 bit, o: 4 bit, s: 1bit"
+	"the leftmost 12bit of (most) ARM instruction"
+	<inline: true>
+	^ c << 28 bitOr: ((t << 25) bitOr: ((o << 21) bitOr: (s << 20)))
 ]
 
 { #category : #'generate machine code' }
@@ -48,10 +101,27 @@ CogARMCompiler >> computeMaximumSize [
 		caseOf: {
 			[Label]				-> [^maxSize := 0].
 			[AlignmentNops]	-> [^maxSize := (operands at: 0) - 1].
+			[CmpCqR]			-> [^self rotateable8bitImmediate: (operands at: 0)
+										ifTrue: [:r :i| maxSize := 4]
+										ifFalse: [maxSize := 20]].
+			[CmpCwR]			-> [^maxSize := 20].
+			[MoveAwR]			-> [^maxSize := 16 "3 for loadAllButLSB"].
+			[MoveCqR]			-> [^self rotateable8bitImmediate: (operands at: 0)
+										ifTrue: [:r :i| maxSize := 4]
+										ifFalse: [maxSize := 16]].
+			[MoveCwR]			-> [^maxSize := 16].
 			[MoveRAw]			-> [^maxSize := 16 "3 for loadAllButLSB"].
 			[RetN]				-> [^(operands at: 0) = 0 
 										ifTrue: [maxSize := 4]
-										ifFalse: [maxSize := 8]]} 
+										ifFalse: [maxSize := 8]].
+			[JumpFPEqual]				-> [^maxSize := 8].
+			[JumpFPNotEqual]			-> [^maxSize := 8].
+			[JumpFPLess]				-> [^maxSize := 8].
+			[JumpFPGreaterOrEqual]	-> [^maxSize := 8].
+			[JumpFPGreater]			-> [^maxSize := 8].
+			[JumpFPLessOrEqual]		-> [^maxSize := 8].
+			[JumpFPOrdered]			-> [^maxSize := 8].
+			[JumpFPUnordered]			-> [^maxSize := 8].}
 		otherwise: [^maxSize := 4].
 	^4 "to keep C compiler quiet"
 
@@ -82,6 +152,18 @@ CogARMCompiler >> concreteRegister: registerIndex [
 			 registerIndex]
 ]
 
+{ #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeAlignmentNops [
+	<inline: true>
+	self assert: machineCodeSize \\ 4 = 0.
+	0 to: machineCodeSize - 1 by: 4 do:
+		[:p| objectMemory 
+			byteAt: p put: 16r01;
+			byteAt: p+1 put: 16r10;
+			byteAt: p+2 put: 16rA0;
+			byteAt: p+3 put: 16rE1]
+]
+
 { #category : #'generate machine code' }
 CogARMCompiler >> concretizeAt: actualAddress [
 	"Generate concrete machine code for the instruction at actualAddress,
@@ -95,6 +177,147 @@ CogARMCompiler >> concretizeAt: actualAddress [
 ]
 
 { #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeCall [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| offset |
+	self assert: (operands at: 0) ~= 0.
+	offset := ((operands at: 0) - (address + 8)) signedIntFromLong "signed-conversion for range assertion".
+	(self isQuick: offset)
+		ifTrue: [
+			self machineCodeAt: 0 put: (self t: 5 o: 8) + (offset >> 2 bitAnd: 16r00FFFFFF). "BL offset"
+			^machineCodeSize := 4]
+		ifFalse: [
+			self halt]
+	"We should push at least lr. The problem is, that any push added here is only executed after return, and therefore useless."
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeCmpCqR [
+	"Will get inlined into concretizeAt: switch."
+	"For 0, we can mov reg, #0"
+	<inline: true>
+	self 
+		rotateable8bitImmediate: (operands at: 0) 
+		ifTrue: [:rot :immediate | | reg |
+			reg := self concreteRegister: (operands at: 1).
+			self machineCodeAt: 0 put: ((self t: 1 o: 16rA s: 1) + reg << 12).
+			machineCode at: 0 put: immediate.
+			machineCode at: 1 put: rot.
+			^machineCodeSize := 4]
+		ifFalse: [^self concretizeCmpCwR].
+	
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeCmpCwR [
+	"Will get inlined into concretizeAt: switch."
+	"Load the word into the RISCTempReg, then cmp R, RISCTempReg"
+	<inline: true>
+	| constant cmpReg doubleTempReg |
+	constant := operands at: 0.
+	cmpReg := (self concreteRegister: (operands at: 1)).
+	doubleTempReg := (RISCTempReg << 4 bitOr: RISCTempReg) << 12.
+	"load the instructions into machineCode"
+	self 
+		machineCodeAt: 0   put: (16rE3A00C00 bitOr: RISCTempReg << 12); "MOV dest, #<byte3>, 12"
+		machineCodeAt: 4   put: (16rE3800800 bitOr: doubleTempReg); "ORR dest, dest, #<byte2>, 8"
+		machineCodeAt: 8   put: (16rE3800400 bitOr: doubleTempReg); "ORR dest, dest, #<byte1>, 4"
+		machineCodeAt: 12 put: (16rE3800000 bitOr: doubleTempReg). "ORR dest, dest, #<byte4>, 0"
+	"fill in the according bytes"
+	machineCode
+		at: 0 put: (constant >> 8   bitAnd: 16rFF);
+		at: 4 put: (constant >> 12 bitAnd: 16rFF);
+		at: 8 put: (constant >> 24 bitAnd: 16rFF);
+		at: 12 put: (constant bitAnd: 16rFF).
+	self machineCodeAt: 16 
+		put: ((self t: 0 o: 16rA s: 1) bitOr: (cmpReg << 16 bitOr: RISCTempReg)).
+	^machineCodeSize := 20.
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeConditionalJump: conditionCode [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| offset |
+	self assert: (operands at: 0) ~= 0.
+	offset := ((operands at: 0) - (address + 8)) signedIntFromLong "signed-conversion for range assertion".
+	self assert: offset <= 33554428 & (offset >= -33554432).
+	self machineCodeAt: 0 put: (self c: conditionCode t: 5 o: 0 s: 0) + (offset >> 2 bitAnd: 16r00FFFFFF). "B offset"
+	^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeFPConditionalJump: conditionCode [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| offset |
+	self assert: (operands at: 0) ~= 0.
+	offset := ((operands at: 0) - (address + 8)) signedIntFromLong "signed-conversion for range assertion".
+	self assert: offset <= 33554428 & (offset >= -33554432).
+	self machineCodeAt: 0 put: 16rEF1FA10. "FMSTAT: copy the FPSCR to CPSR"
+	self machineCodeAt: 4 put: (self c: conditionCode t: 5 o: 0 s: 0) + (offset >> 2 bitAnd: 16r00FFFFFF). "B offset"
+	^machineCodeSize := 8
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeMoveAwR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| srcAddr destReg loadSize |
+	srcAddr := operands at: 0.
+	destReg := self concreteRegister: (operands at: 1).
+	"load the address into R3"
+	loadSize := self loadAllButLSBWord: srcAddr.
+	machineCode 
+		at: loadSize + 3 put: 16rE5; "LDR srcReg, [R3, +LSB(addr)]"
+		at: loadSize + 2 put: (16r90 bitOr: RISCTempReg);
+		at: loadSize + 1 put: (destReg << 4);
+		at: loadSize put: (srcAddr bitAnd: 16rFF).
+	^machineCodeSize := loadSize + 4
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeMoveCqR [
+	"Will get inlined into concretizeAt: switch."
+	"For 0, we can mov reg, #0"
+	<inline: true>
+	self 
+		rotateable8bitImmediate: (operands at: 0) 
+		ifTrue: [:rot :immediate | | reg |
+			reg := self concreteRegister: (operands at: 1).
+			self machineCodeAt: 0 put: ((self t: 1 o: 16rD s: 0) + reg << 12).
+			machineCode at: 0 put: immediate.
+			machineCode at: 1 put: rot.
+			^machineCodeSize := 4]
+		ifFalse: [^self concretizeMoveCwR].
+	
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeMoveCwR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| constant destReg |
+	constant := operands at: 0.
+	destReg := (self concreteRegister: (operands at: 1)) << 12.
+	"load the instructions into machineCode"
+	self 
+		machineCodeAt: 0   put: (16rE3A00C00 bitOr: destReg); "MOV dest, #<byte1>, 12"
+		machineCodeAt: 4   put: (16rE3830800 bitOr: destReg); "ORR dest, dest, #<byte2>, 8"
+		machineCodeAt: 8   put: (16rE3830400 bitOr: destReg); "ORR dest, dest, #<byte3>, 4"
+		machineCodeAt: 12 put: (16rE3830000 bitOr: destReg). "ORR dest, dest, #<byte0>, 0"
+	"fill in the according bytes"
+	machineCode
+		at: 0 put: (constant >> 8   bitAnd: 16rFF);
+		at: 4 put: (constant >> 12 bitAnd: 16rFF);
+		at: 8 put: (constant >> 24 bitAnd: 16rFF);
+		at: 12 put: (constant bitAnd: 16rFF).
+		
+	^machineCodeSize := 16.
+]
+
+{ #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeMoveRAw [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -105,7 +328,7 @@ CogARMCompiler >> concretizeMoveRAw [
 	loadSize := self loadAllButLSBWord: destAddr.
 	machineCode 
 		at: loadSize + 3 put: 16rE5; "STR srcReg, [R3, +LSB(addr)]"
-		at: loadSize + 2 put: 16r83;
+		at: loadSize + 2 put: (16r80 bitOr: RISCTempReg);
 		at: loadSize + 1 put: (srcReg << 4);
 		at: loadSize put: (destAddr bitAnd: 16rFF).
 	^machineCodeSize := loadSize + 4
@@ -122,6 +345,17 @@ CogARMCompiler >> concretizeMoveRR [
 	machineCode
 		at: 1 put: (16rF0 bitAnd: destReg << 4);
 		at: 0 put: (16r0F bitAnd: srcReg).
+	^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizePushR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| srcReg |
+	srcReg := self concreteRegister: (operands at: 0).
+	
+	self machineCodeAt: 0 put: ((self t: 4 o: 9) + 16rD0000 bitOr: 1 << srcReg).
 	^machineCodeSize := 4
 ]
 
@@ -164,33 +398,33 @@ CogARMCompiler >> dispatchConcretize [
 		[Call]						-> [^self concretizeCall].
 		[JumpR]						-> [^self concretizeJumpR].
 		[JumpLong]					-> [^self concretizeJumpLong].
-		"[JumpLongZero]			-> [^self concretizeConditionalJumpLong: 16r??].
-		[JumpLongNonZero]		-> [^self concretizeConditionalJumpLong: 16r??]."
-		[Jump]						-> [^self concretizeJump].
-		"[JumpZero]				-> [^self concretizeConditionalJump: 16r??].
-		[JumpNonZero]				-> [^self concretizeConditionalJump: 16r??].
-		[JumpNegative]				-> [^self concretizeConditionalJump: 16r??].
-		[JumpNonNegative]			-> [^self concretizeConditionalJump: 16r??].
-		[JumpOverflow]				-> [^self concretizeConditionalJump: 16r??].
-		[JumpNoOverflow]			-> [^self concretizeConditionalJump: 16r??].
-		[JumpCarry]				-> [^self concretizeConditionalJump: 16r??].
-		[JumpNoCarry]				-> [^self concretizeConditionalJump: 16r??].
-		[JumpLess]					-> [^self concretizeConditionalJump: 16r??].
-		[JumpGreaterOrEqual]		-> [^self concretizeConditionalJump: 16r??].
-		[JumpGreater]				-> [^self concretizeConditionalJump: 16r??].
-		[JumpLessOrEqual]			-> [^self concretizeConditionalJump: 16r??].
-		[JumpBelow]				-> [^self concretizeConditionalJump: 16r??].
-		[JumpAboveOrEqual]		-> [^self concretizeConditionalJump: 16r??].
-		[JumpAbove]				-> [^self concretizeConditionalJump: 16r??].
-		[JumpBelowOrEqual]		-> [^self concretizeConditionalJump: 16r??].
-		[JumpFPEqual]				-> [^self concretizeConditionalJump: 16r??].
-		[JumpFPNotEqual]			-> [^self concretizeConditionalJump: 16r??].
-		[JumpFPLess]				-> [^self concretizeConditionalJump: 16r??].
-		[JumpFPGreaterOrEqual]	-> [^self concretizeConditionalJump: 16r??].
-		[JumpFPGreater]			-> [^self concretizeConditionalJump: 16r??].
-		[JumpFPLessOrEqual]		-> [^self concretizeConditionalJump: 16r??].
-		[JumpFPOrdered]			-> [^self concretizeConditionalJump: 16r??].
-		[JumpFPUnordered]			-> [^self concretizeConditionalJump: 16r??]."
+		"[JumpLongZero]			-> [^self concretizeConditionalJumpLong: EQ].
+		[JumpLongNonZero]		-> [^self concretizeConditionalJumpLong: NE]."
+		[Jump]						-> [^self concretizeConditionalJump: AL].
+		[JumpZero]					-> [^self concretizeConditionalJump: EQ].
+		[JumpNonZero]				-> [^self concretizeConditionalJump: NE].
+		[JumpNegative]				-> [^self concretizeConditionalJump: MI].
+		[JumpNonNegative]			-> [^self concretizeConditionalJump: PL].
+		[JumpOverflow]				-> [^self concretizeConditionalJump: VS].
+		[JumpNoOverflow]			-> [^self concretizeConditionalJump: VC].
+		[JumpCarry]				-> [^self concretizeConditionalJump: CS].
+		[JumpNoCarry]				-> [^self concretizeConditionalJump: CC].
+		[JumpLess]					-> [^self concretizeConditionalJump: LT].
+		[JumpGreaterOrEqual]		-> [^self concretizeConditionalJump: GE].
+		[JumpGreater]				-> [^self concretizeConditionalJump: GT].
+		[JumpLessOrEqual]			-> [^self concretizeConditionalJump: LE].
+		[JumpBelow]				-> [^self concretizeConditionalJump: CS]. "according to http://courses.engr.illinois.edu/ece390/books/labmanual/assembly.html"
+		[JumpAboveOrEqual]		-> [^self concretizeConditionalJump: CC]. " --""-- "
+		[JumpAbove]				-> [^self concretizeConditionalJump: HI].
+		[JumpBelowOrEqual]		-> [^self concretizeConditionalJump: LS].
+		[JumpFPEqual]				-> [^self concretizeFPConditionalJump: EQ].
+		[JumpFPNotEqual]			-> [^self concretizeFPConditionalJump: NE].
+		"[JumpFPLess]				-> [^self concretizeFPConditionalJump: LT].
+		[JumpFPGreaterOrEqual]	-> [^self concretizeFPConditionalJump: GE].
+		[JumpFPGreater]			-> [^self concretizeFPConditionalJump: GT].
+		[JumpFPLessOrEqual]		-> [^self concretizeFPConditionalJump: LE].
+		[JumpFPOrdered]			-> [^self concretizeFPConditionalJump: VC].
+		[JumpFPUnordered]			-> [^self concretizeFPConditionalJump: VS]."
 		[RetN]						-> [^self concretizeRetN].
 		"Arithmetic"
 		[AddCqR]					-> [^self concretizeAddCqR].
@@ -254,20 +488,37 @@ CogARMCompiler >> genGetLeafCallStackPointerFunction [
 ]
 
 { #category : #abi }
+CogARMCompiler >> genPassConst: constant asArgument: zeroRelativeArgIndex [
+	cogit
+		MoveCq: constant R: TempReg;
+		PushR: TempReg.
+	^0
+]
+
+{ #category : #abi }
+CogARMCompiler >> genPassReg: abstractRegister asArgument: zeroRelativeArgIndex [
+	cogit PushR: abstractRegister.
+	^0
+]
+
+{ #category : #abi }
 CogARMCompiler >> genSaveRegisters [
 	"Save the general purpose registers for a trampoline call."
-	"eliot => lars, this should probably save r0 through r12, since SP, LR and PC
-	have specific purposes and don't need to be saved.  Save r0 through r11 if r12
-	is being used as a frame pointer.  This can use the store multiple instruction STM,
-	for which you'll need to add a class var to CogARMCompiler, because it is specific
-	to ARM. HTH"
-	self shouldBeImplemented
+	"Save r0-r6, all of which are used for variables. Don't save sb(r9), sl(r10), fp(r11), sp or lr"
+	cogit
+		gen: STMFD operand: 16r7F
 ]
 
 { #category : #testing }
 CogARMCompiler >> isPCDependent [
 	"Answer if the receiver is a pc-dependent instruction."
-	^self isJump or: [opcode = AlignmentNops]
+	^self isJump or: [opcode = AlignmentNops] or: [opcode = Call]
+]
+
+{ #category : #testing }
+CogARMCompiler >> isQuick: operand [
+	<var: #operand type: #'unsigned long'>
+	^operand signedIntFromLong between: -33554432 and: 33554428
 ]
 
 { #category : #abi }
@@ -283,11 +534,11 @@ CogARMCompiler >> leafCallStackPointerDelta [
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> loadAllButLSBWord: aWord [
 	"This loads aWord into the inter-opcode temporary register. Because most ARM instruction enable using a (8-12bit) offset relative to a register, the LS Byte can be included in that instruction, saving one instruction."
-	"The temporary register within abstract opcodes is R3"
+	"The temporary register within abstract opcodes is RISCTempReg"
 	self 
-		machineCodeAt: 0   put: 16rE3A03C00; "mov R3, #<second lowest byte>, 12"
-		machineCodeAt: 4   put: 16rE3833800; "orr R3, R3, #<third lowest byte>, 8"
-		machineCodeAt: 8   put: 16rE3833400. "orr R3, R3, #<most significant byte>, 4"
+		machineCodeAt: 0   put: (16rE3A00C00 bitOr: RISCTempReg << 12); "MOV R3, #<byte1>, 12"
+		machineCodeAt: 4   put: 16rE3800800 + (RISCTempReg << 12) + (RISCTempReg << 16); "ORR R3, R3, #<byte2>, 8"
+		machineCodeAt: 8   put: 16rE3800800 + (RISCTempReg << 12) + (RISCTempReg << 16). "ORR R3, R3, #<byte3>, 4"
 	"fill in the bytes"
 	machineCode 
 		at: 0 put: (aWord >> 8   bitAnd: 16rFF);
@@ -299,6 +550,7 @@ CogARMCompiler >> loadAllButLSBWord: aWord [
 { #category : #accessing }
 CogARMCompiler >> machineCodeAt: anOffset put: aWord [
 	"add aWord to machineCode, with little endian"
+	<inline: true>
 	machineCode
 		at: anOffset + 3 put: (16rFF bitAnd: aWord >> 24);
 		at: anOffset + 2 put: (16rFF bitAnd: aWord >> 16);
@@ -309,12 +561,13 @@ CogARMCompiler >> machineCodeAt: anOffset put: aWord [
 { #category : #'generate machine code' }
 CogARMCompiler >> machineCodeBytes [
 	"Answer the maximum number of bytes of machine code generated for any abstract instruction.
-	 e.g. MoveRAw =>
+	 e.g. CmpCwR =>
 			mov R3, #<addressByte1>, 12
 			orr R3, R3, #<addressByte2>, 8
 			orr R3, R3, #<addressByte3>, 4
-			STR srcReg, [R3, + addressByte0]"
-	^16
+			orr R3, R3, #<addressByte4>, 0
+			cmp R?, R3"
+	^20
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -336,10 +589,81 @@ CogARMCompiler >> numberOfSaveableRegisters [
 	^13
 ]
 
+{ #category : #'generate machine code - concretize' }
+CogARMCompiler >> rotateable8bitImmediate: constant ifTrue: trueAlternativeBlock ifFalse: falseAlternativeBlock [
+	"For data processing operands, there is the immediate shifter_operand variant, 
+	where an 8 bit value is ring shifted _right_ by 2*i.
+	This is only suitable for quick constant(Cq), which don't change."
+	
+	(constant bitAnd: 16rFF) = constant ifTrue: [ ^trueAlternativeBlock value: 0 value: constant].
+	1 to: 15 do: [:i |
+		(constant bitAnd: 16rFF << (i<<1)) = constant 
+			ifTrue: [ ^trueAlternativeBlock value: 16 - i value: constant >> (i << 1)]].
+	^falseAlternativeBlock value
+]
+
+{ #category : #'generate machine code' }
+CogARMCompiler >> sizePCDependentInstructionAt: eventualAbsoluteAddress [
+	"Size a jump and set its address.  The target may be another instruction
+	 or an absolute address.  On entry the address inst var holds our virtual
+	 address. On exit address is set to eventualAbsoluteAddress, which is
+	 where this instruction will be output.  The span of a jump to a following
+	 instruction is therefore between that instruction's address and this
+	 instruction's address ((which are both still their virtual addresses), but the
+	 span of a jump to a preceeding instruction or to an absolute address is
+	 between that instruction's address (which by now is its eventual absolute
+	 address) or absolute address and eventualAbsoluteAddress."
+
+	| target maximumSpan |
+	<var: #abstractInstruction type: #'AbstractInstruction *'>
+	opcode = AlignmentNops ifTrue:
+		[| alignment |
+		 address := eventualAbsoluteAddress.
+		 alignment := operands at: 0.
+		 ^machineCodeSize := (eventualAbsoluteAddress + (alignment - 1) bitAnd: alignment negated)
+							   - eventualAbsoluteAddress].
+	self assert: (self isJump or: [opcode = Call]).
+	target := operands at: 0.
+	"maximumSpan calculation copied from CogIA32Compiler TODO: extract method?"
+	(self isAnInstruction: (cogit cCoerceSimple: target to: #'void *'))
+		ifTrue:
+			[| abstractInstruction |
+			abstractInstruction := cogit cCoerceSimple: target to: #'AbstractInstruction *'.
+			maximumSpan := abstractInstruction address
+							- (((cogit abstractInstruction: self follows: abstractInstruction)
+								ifTrue: [eventualAbsoluteAddress]
+								ifFalse: [address]) + 2)]
+		ifFalse:
+			[maximumSpan := target - (eventualAbsoluteAddress + 2)].
+	address := eventualAbsoluteAddress.
+	^machineCodeSize := (self isQuick: maximumSpan)
+									ifTrue: [4] "branch"
+									ifFalse: [20] "load address to register, mov"
+]
+
 { #category : #accessing }
 CogARMCompiler >> stackPageInterruptHeadroomBytes [
 	"Return a minimum amount of headroom for each stack page (in bytes).  In a
 	 JIT the stack has to have room for interrupt handlers which will run on the stack.
 	According to ARM architecture v5 reference manual chapter A2.6, the basic interrupt procedure does not push anything onto the stack. It uses SPSR_err and R14_err to preserve state. Afterwards, it calls an interrupt procedure. So leave some room."
 	^128 "32 words"
+]
+
+{ #category : #encoding }
+CogARMCompiler >> t: type o: flagsOrOpcode [
+	<inline: true>
+	^self c: AL t: type o: flagsOrOpcode s: 0
+]
+
+{ #category : #encoding }
+CogARMCompiler >> t: type o: flagsOrOpcode s: doUpdateStatusRegister [
+	<inline: true>
+	^self c: AL t: type o: flagsOrOpcode s: doUpdateStatusRegister
+]
+
+{ #category : #encoding }
+CogARMCompiler >> t: type o: flagsOrOpcode s: doUpdateStatusRegister rn:  sourceRegister rd: targetRegister [
+	<inline: true>
+	^(self c: AL t: type o: flagsOrOpcode s: doUpdateStatusRegister) 
+		bitOr: (sourceRegister << 16 bitOr: targetRegister << 12)
 ]
