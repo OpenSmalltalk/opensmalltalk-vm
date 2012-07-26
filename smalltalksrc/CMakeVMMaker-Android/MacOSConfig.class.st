@@ -72,20 +72,18 @@ MacOSConfig >> configureFFIPlugin: maker [
 MacOSConfig >> configureFT2Plugin: maker [
 	"extra rules for Freetype plugin.
 	a custom rule to build freetype library"
-
-
-	maker cmd: 'add_custom_command' params: 'OUTPUT "${buildDir}/FT2Plugin/libfreetype.a" 
-		COMMAND "${topDir}/macbuild/FT2Plugin/makeFreetype.sh" "${buildDir}/FT2Plugin/libfreetype.a"
-		COMMENT "Building freetype library"
-	'.
-
-	maker addExternalLibrary: '${buildDir}/FT2Plugin/libfreetype.a'.
-
-	maker addSource: '${buildDir}/FT2Plugin/libfreetype.a'.
+	| lib |
 	
-	
-	"the freetype sources are located in {build}/FT2Plugin/freetype2/include "
-	maker includeDirectories: '${buildDir}/FT2Plugin/freetype2/include'
+	maker isExternal ifFalse: [
+		self error: 'building internal FT2Plugin is not supported yet'  	
+	].
+
+	"add freetype library into loop"
+	lib := self addThirdpartyLibrary: 'freetype2'.
+
+	"link plugin with freetype lib"
+	maker addExternalLibrary: lib targetForLinking.
+	maker includeDirectories: lib includeDir.
 
 ]
 
@@ -153,7 +151,7 @@ MacOSConfig >> configurePlugin: aPlugin with: generator [
 		" set output directory for dynamic library to Resources subdir in .app bundle location "
 		generator 
 			set: 'CMAKE_LIBRARY_OUTPUT_DIRECTORY' 
-			toString: ('${outputDir}/', self executableName, '.app/Contents/Resources')
+			toString: '${externalModulesDir}'
 		].
 	^ super configurePlugin: aPlugin with: generator
 
@@ -255,6 +253,72 @@ MacOSConfig >> defaultDirectoriesFromGitDir: gitRepository [
 	
 ]
 
+{ #category : #accessing }
+MacOSConfig >> externalModulesDir [
+	"answer the location in VM bundle, where plugins and rest of dynamic libs will be copied,
+	by default, it is Framerowks subdir. i.e: 
+	
+		Cog.app/Contents/Frameworks
+		
+	"
+	
+	^ '${outputDir}/', self executableName, '.app/Contents/MacOS/Plugins'
+]
+
+{ #category : #utils }
+MacOSConfig >> fixLibsTemplate [
+
+^
+'include(GetPrerequisites)
+
+message("Fixing library references in: ${externalModulesDir}")
+
+FILE(GLOB libs  "${externalModulesDir}/*.dylib")
+
+set(all_imports "")
+
+foreach(lib ${libs})
+	get_filename_component(libName "${lib}" NAME)
+	list(APPEND libNames "${libName}")
+	
+	set(prereq "")
+	get_prerequisites(${lib} prereq 1 0 "${bundlePath}" "")
+
+
+	list(APPEND all_imports ${prereq})
+
+endforeach(lib)
+
+list(REMOVE_DUPLICATES all_imports)
+set(replacements "")
+message ( "Found imports: ${all_imports} " )
+
+foreach(import ${all_imports})
+	foreach(lib ${libNames})
+		set(match "^.*${lib}$")
+		if(import MATCHES ${match})
+			set(replacement "${pluginsRelPath}/${lib}")
+			message("Will replace: ${import} with: ${replacement}")
+			set(replacements ${replacements} "-change" "${import}" "${replacement}")
+		endif(import MATCHES ${match})
+	endforeach(lib)
+endforeach(import)
+
+foreach(lib ${libs})
+	get_filename_component(name ${lib} NAME)
+	set(fixedName "${pluginsRelPath}/${name}")
+	message("Fixing up: ${name}")
+
+ 	execute_process(COMMAND install_name_tool -id "${fixedName}" "${lib}" )
+
+ 	execute_process(COMMAND install_name_tool  ${replacements} ${lib} )
+
+endforeach(lib)
+'
+
+
+]
+
 { #category : #utils }
 MacOSConfig >> fixLineEndsOf: string [
 	^ string copyReplaceAll: String cr with: String lf
@@ -268,13 +332,35 @@ MacOSConfig >> outputDir [
 	
 ]
 
+{ #category : #utils }
+MacOSConfig >> postBuildActions: gen [
+
+	" override to add custom rules after all targets is defined "
+	
+	self write: self fixLibsTemplate toFile: 'fix_libs.cmake'.
+	
+	
+	gen
+		set: #bundlePath toString: '${outputDir}/', self executableName, '.app';
+		set: #pluginsRelPath toString: '@executable_path/Plugins'.
+
+	gen
+		puts: '
+		INSTALL(CODE "
+			set(externalModulesDir \"${externalModulesDir}\")
+			set(bundlePath \"${bundlePath}\")
+			set(pluginsRelPath \"${pluginsRelPath}\")
+			
+			include(fix_libs.cmake)
+		")'
+			
+"					FILE(GLOB_RECURSE bLibs /${externalModulesDir}/*.*)
+"
+]
+
 { #category : #'source generation' }
 MacOSConfig >> prepareForGeneration [
-
-	"force using LF on Macs"
-	CrLfFileStream defaultToLF.
-
-
+	
 ]
 
 { #category : #accessing }
@@ -295,4 +381,13 @@ MacOSConfig >> resourcesDir: anObject [
 { #category : #accessing }
 MacOSConfig >> resourcesDirName [
 	^ 'macbuild/resources'
+]
+
+{ #category : #'source generation' }
+MacOSConfig >> setupDirectories: gen [
+
+	super setupDirectories: gen.
+	
+	gen set: #externalModulesDir toString: self externalModulesDir.
+
 ]
