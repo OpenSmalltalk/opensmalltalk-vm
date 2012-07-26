@@ -24,7 +24,13 @@ CogWindowsConfig >> cogitClass [
 { #category : #'compiler flags' }
 CogWindowsConfig >> compilerFlags [
 	"depends on config ..."
-	^ self commonCompilerFlags, ' ' ,self compilerFlagsRelease
+	^ self commonCompilerFlags, ' ' , self compilerFlagsRelease
+]
+
+{ #category : #plugins }
+CogWindowsConfig >> compilerFlagsDebug [
+	"Define NDEBUG for production to exclude asserts "
+	^ '-g3 -O0 -march=pentium4 -momit-leaf-frame-pointer -maccumulate-outgoing-args -funroll-loops  -DDEBUGVM=1'
 ]
 
 { #category : #'compiler flags' }
@@ -94,7 +100,6 @@ SoundGenerationPlugin
 StarSqueakPlugin 
 SurfacePlugin 
 UUIDPlugin
-
 	)
 ]
 
@@ -190,9 +195,6 @@ CogWindowsConfig >> platformSources [
 
 { #category : #'source generation' }
 CogWindowsConfig >> prepareForGeneration [
-
-	CrLfFileStream defaultToLF. "For strange reason it works like that"
-
 	^ self prepareForCogGeneration
 ]
 
@@ -220,5 +222,8 @@ CogWindowsConfig >> setExtraTargetProperties: maker [
 
 	maker addExternalLibraries: self externalLibraries.
 	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: '${outputDir}'.
+
+"	maker puts: 'set_source_files_properties(${srcVMDir}/cogit.c PROPERTIES COMPILE_FLAGS -O1)'."
+	maker puts: 'set_source_files_properties(${srcVMDir}/gcc3x-cointerp.c PROPERTIES COMPILE_FLAGS -O1)'
 
 ]

@@ -17,6 +17,14 @@ CMakeGenerator >> addDefinitions: aString [
 ]
 
 { #category : #'cmake commands' }
+CMakeGenerator >> addDependency: aName [
+
+	self cmd: 'list'
+		params: 'APPEND ', self moduleName , '_dependencies ' , aName.
+
+]
+
+{ #category : #'cmake commands' }
 CMakeGenerator >> addExternalLibraries: libs [
 
 	libs do: [:each | self addExternalLibrary: each ]
@@ -138,6 +146,11 @@ CMakeGenerator >> includeDirectories: aString [
 ]
 
 { #category : #'cmake commands' }
+CMakeGenerator >> linkDirectories: aString [
+	^ self cmd: 'link_directories' params: aString
+]
+
+{ #category : #'cmake commands' }
 CMakeGenerator >> message: aString [
 	
 	self cmd: 'message' qparams: aString.
@@ -146,6 +159,17 @@ CMakeGenerator >> message: aString [
 { #category : #accessing }
 CMakeGenerator >> moduleName [
 	self subclassResponsibility
+]
+
+{ #category : #accessing }
+CMakeGenerator >> output [
+	^ output
+]
+
+{ #category : #accessing }
+CMakeGenerator >> output: aStream [
+
+	output := aStream
 ]
 
 { #category : #accessing }

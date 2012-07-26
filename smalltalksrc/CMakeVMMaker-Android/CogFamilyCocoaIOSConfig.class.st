@@ -24,13 +24,37 @@ CogFamilyCocoaIOSConfig >> CFBundleVersion [
 ]
 
 { #category : #settings }
+CogFamilyCocoaIOSConfig >> commonCompilerFlags [
+	^super commonCompilerFlags, 
+		#(
+	'-funroll-loops' 
+	'-fasm-blocks' 
+	'-finline-functions' 
+	'-mfpmath=sse' 
+	'-march=pentium-m' 
+	'-mtune=prescott' 
+	'-falign-functions=16' 
+	'-fno-gcse' 
+	'-fno-cse-follow-jumps' 
+	'-std=gnu99' 
+	'-DBUILD_FOR_OSX' 
+	"'-DUSE_INLINE_MEMORY_ACCESSORS=1' "
+	'-DLSB_FIRST' 
+	'-DHAVE_SYS_TIME_H' 
+	'-DHAVE_NANOSLEEP' 
+	'-DCOGMTVM=0' 
+	'-DUSE_GLOBAL_STRUCT=0' 
+	'-DBASE_HEADER_SIZE=4')
+]
+
+{ #category : #settings }
 CogFamilyCocoaIOSConfig >> compilerFlagsDebug [
-	^#('-g3' '-O0' '-fvisibility=hidden' '-funroll-loops' '-fasm-blocks' '-finline-functions' '-mfpmath=sse' '-march=pentium-m' '-mtune=prescott' '-falign-functions=16' '-fno-gcse' '-fno-cse-follow-jumps' '-std=gnu99' '-DBUILD_FOR_OSX' '-DUSE_INLINE_MEMORY_ACCESSORS' '-DLSB_FIRST' '-DUSE_INLINE_MEMORY_ACCESSORS' '-DHAVE_SYS_TIME_H' '-DHAVE_NANOSLEEP' '-DDEBUGVM=1' '-DCOGMTVM=0' '-DUSE_GLOBAL_STRUCT=0' '-DBASE_HEADER_SIZE=4')
+	^#('-g3' '-O1' '-DDEBUGVM=1')
 ]
 
 { #category : #settings }
 CogFamilyCocoaIOSConfig >> compilerFlagsRelease [ 
-	^#('-g0' '-Os' '-fvisibility=hidden' '-funroll-loops' '-fasm-blocks' '-finline-functions' '-mfpmath=sse' '-fomit-frame-pointer' '-march=pentium-m' '-mtune=prescott' '-falign-functions=16' '-fno-gcse' '-fno-cse-follow-jumps' '-std=gnu99' '-DBUILD_FOR_OSX' '-DUSE_INLINE_MEMORY_ACCESSORS' '-DLSB_FIRST' '-DUSE_INLINE_MEMORY_ACCESSORS' '-DHAVE_SYS_TIME_H' '-DHAVE_NANOSLEEP' '-DNDEBUG' '-DDEBUGVM=0' '-DCOGMTVM=0' '-DUSE_GLOBAL_STRUCT=0' '-DBASE_HEADER_SIZE=4')
+	^#('-g0' '-O3' '-fomit-frame-pointer' '-DNDEBUG' '-DDEBUGVM=0')
 ]
 
 { #category : #'plugin extra rules' }
@@ -55,6 +79,17 @@ CogFamilyCocoaIOSConfig >> configureQuicktimePlugin: maker [
 	"extra rules for QuicktimePlugin"
 	
 	maker includeDirectories: '${platformsDir}/Cross/plugins/QuicktimePlugin'.
+]
+
+{ #category : #'plugin extra rules' }
+CogFamilyCocoaIOSConfig >> configureSqueakSSLPlugin: maker [
+	maker addPlatformSources: #('sqMacSSL.c').
+]
+
+{ #category : #'plugin extra rules' }
+CogFamilyCocoaIOSConfig >> configureUnixAioPlugin: maker [
+	maker includeDirectories: '${crossDir}/plugins/FilePlugin'.
+	maker includeDirectories: '${platformsDir}/Cross/plugins/SocketPlugin'.
 ]
 
 { #category : #'plugin extra rules' }
@@ -88,6 +123,8 @@ CogFamilyCocoaIOSConfig >> defaultExternalPlugins [
 		ObjectiveCPlugin
 		QuicktimePlugin
 		TestOSAPlugin
+		SqueakSSLPlugin
+		"UnixOSProcessPlugin"
 	)
 ]
 
@@ -122,6 +159,7 @@ CogFamilyCocoaIOSConfig >> defaultInternalPlugins [
 		SoundPlugin
 		StarSqueakPlugin 
 		SurfacePlugin 
+		UnixAioPlugin
 		UnixOSProcessPlugin
 		)
 ]
@@ -174,7 +212,8 @@ CogFamilyCocoaIOSConfig >> platformSources [
 		'OSX/sqSqueakOSXInfoPlistInterface.m'
 		'OSX/sqSqueakOSXApplication+imageReadWrite.m'
 		'OSX/sqSqueakOSXScreenAndWindow.m'
-		'OSX/sqSqueakOSXNSView.m'
+		'OSX/sqSqueakOSXCGView.m'
+		'OSX/sqSqueakOSXOpenGLView.m'
 		'OSX/SqViewClut.m'
 		'OSX/BitMapConversionLogicFromX11.c'
 		'OSX/SqViewBitmapConversion.m'
@@ -208,10 +247,6 @@ CogFamilyCocoaIOSConfig >> setExtraTargetProperties: maker [
 		addProperty: 'MACOSX_BUNDLE_INFO_PLIST' 
 		value: '${buildDir}/Info.plist'.  
 
-	maker 
-		cmd: 'set_source_files_properties' 
-		params: '${resources} PROPERTIES MACOSX_PACKAGE_LOCATION Resources'.
-			
 	(maker buildDir forceNewFileNamed: self prefixHeaderFileName) 
 		nextPutAll: self precompiledHeaders;
 		close.
@@ -220,15 +255,62 @@ CogFamilyCocoaIOSConfig >> setExtraTargetProperties: maker [
 	maker 
 		addXCodeProperty: 'PER_ARCH_CFLAGS_i386' value: '-DLSB_FIRST -mfpmath=sse -finline-functions  -fno-cse-follow-jumps -fno-gcse -mtune=prescott -march=pentium-m -falign-functions=16'.
 		
-	maker 
-		addXCodeProperty: 'GCC_VERSION' value: '4.2'.
+	"maker 
+		addXCodeProperty: 'GCC_VERSION' value: '4.3'."
 
 	maker 
 		cmd: 'set_target_properties' 
 		params: self executableName, ' PROPERTIES COMPILE_FLAGS "-include \"', (self buildDir / self prefixHeaderFileName) fullName, '\""'. 
-	
+		
+"	maker set: 'CMAKE_C_COMPILER' to: '/usr/bin/gcc-4.2'.
+	maker set: 'CMAKE_CXX_COMPILER' to: '/usr/bin/g++-4.2'.		
+"
 	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir.
 	maker set: 'RUNTIME_OUTPUT_DIRECTORY' toString: self outputDir.
+]
+
+{ #category : #settings }
+CogFamilyCocoaIOSConfig >> setGlobalOptions: maker [
+
+	"set any CMake global options, before declaring a project in cmake file"
+	
+	maker set: 'CMAKE_C_COMPILER' to: '/usr/bin/gcc-4.2'.
+	maker set: 'CMAKE_CXX_COMPILER' to: '/usr/bin/g++-4.2'.	
+	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'.
+	maker set: 'CMAKE_OSX_SYSROOT' to: '/'.
+	
+"	maker set: 'CMAKE_OSX_SYSROOT' to: '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.6.sdk'"
+]
+
+{ #category : #settings }
+CogFamilyCocoaIOSConfig >> setResourceProperties: maker [
+	maker set: 'resourceDir' toString: self resourcesDir, '/ProjectBuilder'.
+
+	maker 
+		set: 'resources' 
+		to: (String streamContents: [ :stream | 
+			self  resources
+				do: [ :each | 
+					stream 
+						nextPut: $";
+						nextPutAll: '${resourceDir}/';
+						nextPutAll: each;
+						nextPut: $"]
+				separatedBy: [ stream space ] ]).
+		
+	maker 
+		set: 'resourcesLocaleEnglish' 
+		to: '"${resourceDir}/English.lproj/InfoPlist.strings" "${resourceDir}/English.lproj/MainMenu.nib"'.
+
+	maker 
+		cmd: 'set_source_files_properties' 
+		params: '${resources} PROPERTIES MACOSX_PACKAGE_LOCATION Resources'.
+
+	maker 
+		cmd: 'set_source_files_properties' 
+		params: '${resourcesLocaleEnglish} PROPERTIES MACOSX_PACKAGE_LOCATION Resources/English.lproj'.
+
+
 ]
 
 { #category : #'source files' }

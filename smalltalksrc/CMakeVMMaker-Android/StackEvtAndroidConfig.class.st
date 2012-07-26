@@ -168,141 +168,8 @@ StackEvtAndroidConfig >> configH [
 ]
 
 { #category : #'plugin extra rules' }
-StackEvtAndroidConfig >> configureFT2Plugin: maker [
-	"extra rules for Freetype plugin.
-	a custom rule to build freetype library"
-
-	maker addPlatformSources: #(  
-	'src/base/ftbbox.c'
-	'src/base/ftbitmap.c'
-	'src/base/ftfstype.c'
-	'src/base/ftglyph.c'
-	'src/base/ftlcdfil.c'
-	'src/base/ftstroke.c'
-	'src/base/fttype1.c'
-	'src/base/ftxf86.c'
-	'src/base/ftbase.c'
-	'src/base/ftsystem.c'
-	'src/base/ftinit.c'
-	'src/base/ftgasp.c'
-	'src/raster/raster.c'
-	'src/sfnt/sfnt.c'
-	'src/smooth/smooth.c'
-	'src/autofit/autofit.c'
-	'src/truetype/truetype.c'
-	'src/cff/cff.c'
-	'src/psnames/psnames.c'
-	'src/pshinter/pshinter.c'
-	).
-
-"
-	maker addPlatformSources: #(  
-                'src/psnames/pspic.c'
-                'src/psnames/psmodule.c'
-                'src/psnames/psnames.c'
-                'src/raster/raster.c'
-                'src/raster/ftraster.c'
-                'src/raster/rastpic.c'
-                'src/raster/ftrend1.c'
-                'src/base/ftfstype.c'
-                'src/base/ftbase.c'
-                'src/base/ftbitmap.c'
-                'src/base/fttype1.c'
-                'src/base/ftgloadr.c'
-                'src/base/ftxf86.c'
-                'src/base/ftgasp.c'
-                'src/base/ftobjs.c'
-                'src/base/basepic.c'
-                'src/base/ftsynth.c'
-                'src/base/ftbbox.c'
-                'src/base/ftsystem.c'
-                'src/base/ftrfork.c'
-                'src/base/ftpatent.c'
-                'src/base/ftoutln.c'
-                'src/base/ftsnames.c'
-                'src/base/ftutil.c'
-                'src/base/ftdbgmem.c'
-                'src/base/fttrigon.c'
-                'src/base/ftinit.c'
-                'src/base/ftapi.c'
-                'src/base/ftstroke.c'
-                'src/base/ftcalc.c'
-                'src/base/ftglyph.c'
-                'src/base/ftstream.c'
-                'src/base/ftlcdfil.c'
-                'src/base/ftdebug.c'
-                'src/base/ftpic.c'
-                'src/base/ftadvanc.c'
-                'src/base/ftmm.c'
-                'src/base/ftwinfnt.c'
-                'src/psaux/psaux.c'
-                'src/psaux/afmparse.c'
-                'src/psaux/psconv.c'
-                'src/psaux/t1cmap.c'
-                'src/psaux/psauxmod.c'
-                'src/psaux/psobjs.c'
-                'src/psaux/t1decode.c'
-                'src/truetype/ttinterp.c'
-                'src/truetype/ttgxvar.c'
-                'src/truetype/ttobjs.c'
-                'src/truetype/ttdriver.c'
-                'src/truetype/ttpload.c'
-                'src/truetype/ttgload.c'
-                'src/truetype/truetype.c'
-                'src/truetype/ttpic.c'
-                'src/sfnt/ttmtx.c'
-                'src/sfnt/ttpost.c'
-                'src/sfnt/ttsbit.c'
-                'src/sfnt/ttcmap.c'
-                'src/sfnt/ttkern.c'
-                'src/sfnt/ttbdf.c'
-                'src/sfnt/sfnt.c'
-                'src/sfnt/sfntpic.c'
-                'src/sfnt/ttsbit0.c'
-                'src/sfnt/ttload.c'
-                'src/sfnt/sfobjs.c'
-                'src/sfnt/sfdriver.c'
-                'src/smooth/ftsmooth.c'
-                'src/smooth/ftspic.c'
-                'src/smooth/ftgrays.c'
-                'src/smooth/smooth.c'
-                'src/pshinter/pshrec.c'
-                'src/pshinter/pshinter.c'
-                'src/pshinter/pshmod.c'
-                'src/pshinter/pshalgo.c'
-                'src/pshinter/pshglob.c'
-                'src/pshinter/pshpic.c'
-                'src/cff/cff.c'
-                'src/cff/cffpic.c'
-                'src/cff/cffload.c'
-                'src/cff/cffgload.c'
-                'src/cff/cffparse.c'
-                'src/cff/cffdrivr.c'
-                'src/cff/cffcmap.c'
-                'src/cff/cffobjs.c'
-                'src/autofit/afloader.c'
-                'src/autofit/afangles.c'
-                'src/autofit/afindic.c'
-                'src/autofit/aflatin2.c'
-                'src/autofit/aflatin.c'
-                'src/autofit/afwarp.c'
-                'src/autofit/afglobal.c'
-                'src/autofit/autofit.c'
-                'src/autofit/afpic.c'
-                'src/autofit/afmodule.c'
-                'src/autofit/afcjk.c'
-                'src/autofit/afdummy.c'
-                'src/autofit/afhints.c'	
-	).
-	
-"
-	maker includeDirectories: '-I$(pluginPlatform)/include'.
-
-]
-
-{ #category : #'plugin extra rules' }
 StackEvtAndroidConfig >> configureFileCopyPlugin: maker [
-	"extra rules for FileCopyPlugin"
+	"extra rules for DropPlugin"
 
 	maker addPlatformSources: #( 'sqAndroidFileCopyPlugin.c')
 
@@ -416,7 +283,6 @@ StackEvtAndroidConfig >> defaultInternalPlugins [
 		CroquetPlugin 
 		DSAPlugin "DSAPrims" 
 		FFTPlugin 
-		FT2Plugin "FreeType"
 		FileCopyPlugin 
 		FilePlugin 
 		FloatArrayPlugin 

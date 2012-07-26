@@ -18,8 +18,8 @@ CogCocoaIOSConfig >> cogitClass [
 ]
 
 { #category : #settings }
-CogCocoaIOSConfig >> compilerFlagsRelease [ 
-	^super compilerFlagsRelease, #('-DCOGVM')
+CogCocoaIOSConfig >> commonCompilerFlags [
+	^super commonCompilerFlags, #('-DCOGVM' '-fwrapv')
 ]
 
 { #category : #'source files' }
@@ -47,10 +47,6 @@ CogCocoaIOSConfig >> pluginsDir [
 
 { #category : #'source generation' }
 CogCocoaIOSConfig >> prepareForGeneration [
-
-	"force using LF on Macs"
-	CrLfFileStream defaultToLF.
-
 	^ self prepareForCogGeneration
 
 ]
