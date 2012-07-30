@@ -1,6 +1,6 @@
 /* sqUnixCustomWindow.c -- support for display via your custom window system.
  * 
- * Last edited: 2008-04-21 14:06:20 by piumarta on emilia
+ * Last edited: 2011-01-24 17:24:09 by piumarta on emilia.ipe.media.kyoto-u.ac.jp
  * 
  * This is a template for creating your own window drivers for Squeak:
  * 
@@ -246,12 +246,12 @@ static void display_printUsage(void)
 
 static void display_printUsageNotes(void)
 {
-  trace();
+  /* trace(); */
 }
 
 static void display_parseEnvironment(void)
 {
-  trace();
+  /* trace(); */
 }
 
 static int display_parseArgument(int argc, char **argv)
