@@ -1,0 +1,1 @@
+In order to build the Unicode plugin on Linux, you'll need a collection of Pango, Cairo, and glib header and library files. These can often be found in the GTK+ development package in the package repository for your version of Linux.
