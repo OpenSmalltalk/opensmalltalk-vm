@@ -1,16 +1,14 @@
 #include "config.h"
 
-#if defined(HAVE_UUID_UUID_H)
-# include <uuid/uuid.h>
-#endif
-
 #if defined(HAVE_SYS_UUID_H)
 # include <sys/types.h>
 # include <sys/uuid.h>
 #endif
 
-#if defined(HAVE_UUID_H)
-  #include <uuid.h>
+#if defined(HAVE_UUID_UUID_H)
+# include <uuid/uuid.h>
+#elif defined(HAVE_UUID_H)
+# include <uuid.h>
 #endif
 
 #include "sq.h"
