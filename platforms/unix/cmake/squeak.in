@@ -3,7 +3,7 @@
 # Launch squeakvm from the command line or a menu script, with a good
 # plugin path, text encodings and pulseaudio kludge
 # 
-# Last edited: 2010-05-13 14:15:38 by piumarta on emilia-2.local
+# Last edited: 2011-01-24 17:36:04 by piumarta on emilia.ipe.media.kyoto-u.ac.jp
 
 PATH=/usr/bin:/bin
 
@@ -33,30 +33,103 @@ prefix=`dirname  "${bindir}"`
 libdir="${prefix}/lib/squeak"
 plgdir="${libdir}/[version]"
 useoss="[useoss]"
-vm="squeakvm"
+ck="ckformat"
+squeakvm="squeakvm"
+squeakvm64="squeakvm64"
+cogvm="cogvm"
+cogvm64="cogvm64"
+vm=""
 plugins=""
 wrapper=""
+image=""
+format=""
+info=""
+jit=""
 
-for opt in $*; do
-    case ${opt} in
-	-vm-sound*)     useoss="false";;
-	-vm)            case "$2" in sound*) useoss="false"; esac;;
+# look for VM options affecting this script's behaviour
+
+options () {
+    while test "$#" -gt "0"; do
+	case $1 in
+	    -vm-sound*)     useoss="false";;
+	    -vm)            shift; case "$1" in sound*) useoss="false"; esac;;
+            -image-info)    info="true";;
+	    --)		    break;;
+	    *)		    if test -f "$1.image" -o -f "$1"; then image="$1"; fi;;
+	esac
+	shift
+    done
+}
+
+case "$1" in
+    -jit)	jit=$1; shift; squeakvm=""; squeakvm64="";;
+    -nojit)	jit=$1; shift; cogvm=""; cogvm64="";;
+esac
+
+options "$@"
+
+# try to find the image file format
+
+if   test -x "${plgdir}/${ck}"; then ck="${plgdir}/${ck}"
+elif test -x "${bindir}/${ck}"; then ck="${bindir}/${ck}"
+elif test -x "`which ${ck}`";	then ck="`which ${ck}`"
+fi
+
+if test   -z "${image}";	then image="${SQUEAK_IMAGE}"; fi
+if test   -z "${image}";	then image="squeak";	      fi
+if test   -f "${image}.image";	then image="${image}.image";  fi
+
+if test "${info}"; then
+    if test ! -x "${ck}"; then
+	echo "cannot find executable file: ${ck}" >&2
+	exit 1
+    fi
+    if test ! -f "${image}"; then
+	echo "cannot find image file: ${image}" >&2
+	exit 1
+    fi
+    exec "${ck}" "${image}"
+fi
+
+if test -x "${ck}" -a -f "${image}"; then
+    format=`"${ck}" "${image}"`
+    case "${format}" in
+	6502)	vms="${squeakvm}";;
+	6504)	vms="${cogvm} ${squeakvm}";;
+	6505)	vms="${cogvm}";;
+	68000)	vms="${squeakvm64}";;
+	68002)	vms="${squeakvm64}";;
+	68003)	vms="${squeakvm64}";;
+	*)	vms="${squeakvm}";;
     esac
-done
+fi
 
 # find the vm and set the plugin path
 
-if test -x "${plgdir}/${vm}"; then	# bin/squeak -> lib/squeak/x.y-z/squeakvm
-    vm="${plgdir}/${vm}"
-    plugins="${plgdir}"
-elif test -x "${bindir}/${vm}"; then	# bld/squeak -> bld/squeakvm
-    vm="${bindir}/${vm}"
-    plugins="${bindir}/%n"
-elif test -x `which ${vm}`; then
-    vm=`which ${vm}`
-    plugins=""
-else    
-    echo "cannot find ${vm}" >&2
+if test -z "${vms}"; then
+    echo "cannot find VM to run image '${image}' with option '${jit}'" >&2
+    exit 1
+fi
+
+for avm in ${vms}; do
+    echo CHECKING ${avm}
+    if test -x "${plgdir}/${avm}"; then	# bin/squeak -> lib/squeak/x.y-z/squeakvm
+	vm="${plgdir}/${avm}"
+	plugins="${plgdir}"
+	break;
+    elif test -x "${bindir}/${avm}"; then	# bld/squeak -> bld/squeakvm
+	vm="${bindir}/${avm}"
+	plugins="${bindir}/%n"
+	break;
+    elif test -x "`which ${avm}`"; then
+	vm="`which ${avm}`"
+	plugins=""
+	break;
+    fi
+done
+
+if test -z "${vm}"; then
+    echo "cannot find executable file: ${vms}" >&2
     exit 1
 fi
 

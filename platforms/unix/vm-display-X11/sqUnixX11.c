@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2010-05-11 16:58:09 by piumarta on emilia-2.local
+ * Last edited: 2012-06-27 05:07:55 by piumarta on ubuntu32-1204
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -3397,7 +3397,7 @@ void initWindow(char *displayName)
 
     gcValues.function= GXcopy;
     gcValues.line_width= 0;
-    gcValues.subwindow_mode= IncludeInferiors;
+    gcValues.subwindow_mode= ClipByChildren;
     gcValues.clip_x_origin= 0;
     gcValues.clip_y_origin= 0;
     gcValues.clip_mask= None;
