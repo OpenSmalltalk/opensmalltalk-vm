@@ -65,16 +65,23 @@ ADD_CUSTOM_TARGET (squeak
   COMMAND chmod +x ${bld}/squeak
 )
 
+INSTALL (PROGRAMS ${bld}/squeak DESTINATION bin)
+
 ADD_CUSTOM_TARGET (squeak.sh
   DEPENDS ${config}/squeak.sh.in
   COMMAND sh ${bld}/config ${config}/squeak.sh.in ${bld}/squeak.sh
   COMMAND chmod +x ${bld}/squeak.sh
 )
 
-ADD_DEPENDENCIES (squeakvm squeak squeak.sh)
-
-INSTALL (PROGRAMS ${bld}/squeak DESTINATION bin)
 INSTALL (PROGRAMS ${bld}/squeak.sh DESTINATION bin)
+
+ADD_EXECUTABLE (ckformat
+  ${config}/ckformat.c
+)
+
+INSTALL (PROGRAMS ${bld}/ckformat DESTINATION ${plgdir})
+
+ADD_DEPENDENCIES (squeakvm squeak squeak.sh ckformat)
 
 # manual page
 
