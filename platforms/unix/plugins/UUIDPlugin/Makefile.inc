@@ -1,1 +1,0 @@
-XLDFLAGS = $(LIB_UUID)
