@@ -1,0 +1,43 @@
+CameraPlugin, 17th May 2010 11:00:00
+
+- Rewrote for more general use (Squeak, Etoys, XO, etc)
+
+- Supports multiple simultaneously open cameras
+
+- Dependency on libv4l2 dropped but...
+
+- Code now attempts to open libv4l2 and uses it available
+
+- Additional pixel format conversions (if no libv4l2)
+
+- Redesigned so future version can do frame skipping without
+  incurring conversion delays on skipped frames. To support
+  this the Scratch API would need to change...
+
+	CameraGetFrame(int camNum, unsigned char* buf, int pixelCount)
+
+  to...
+
+	CameraGetFrame(int camNum, unsigned char* buf, int pixelCount, int skipFrameCount)
+
+- Why is frame skipping required? To support "snapshot" type 
+  use-cases such as the following and particularly when the
+  camera would be shut down between uses to preserve power:
+
+	- taking a picture at any ad hoc moment, 
+	- taking a picture at a specific/precise time,
+	- taking a picture at periodically, eg, time-lapse photgraphy
+
+  Webcams are generally designed for streaming and drivers
+  typically use various degrees of buffering to improve
+  performance. Buffering can mean that, eg, a five second
+  time-lapse captured image could actually be five, ten or
+  more seconds old. In one such test I needed to skip 20
+  frames to get the latest one! Some cameras/ drivers are
+  designed for this type of operation but "CameraPlugin"
+  is being specifically designed for maximum general use
+  across various hw platforms and many different types of
+  camera. 
+
+- More info: http://info.scratch.mit.edu/Linux_installer/Linux_Camera_Plug-in
+
