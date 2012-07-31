@@ -1,3 +1,34 @@
+2012-07-30  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* Version is 4.9.8-2562.
+
+2012-07-30  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* src: update to VMMaker 4.9.8.
+
+	* config, */Makefile.inc, */mkmf.subdirs: Obsolete autotools files
+	deleted.
+
+	* plugins/ScratchPlugin, plugins/UnicodePlugin,
+	plugins/WeDoPlugin: Added for better Scratch support.
+
+	* plugins/CameraPlugin: Updated to latest version.
+
+	* plugins/VideoForLinuxPlugin/config.cmake: Disable plugin if
+	videodev.h not found.
+
+	* plugins/UUIDPlugin/sqUnixUUID.c: Include first found of
+	uuid/uuid.h or uuid.h, but not both.
+
+	* plugins/UUIDPlugin/config.cmake: Disable plugin if no headers
+	found or no uuid generator function found.
+
+	* vm/build.cmake, cmake/ckformat.c: Include ckformat in build and
+	install.
+
+	* vm-display-custom/sqUnixCustomWindow.c (display_printUsageNotes)
+	(display_parseEnvironment): Suppress irrelevant noise during startup.
+
 2011-11-23  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm-display-X11/sqUnixX11.c: Rename DPRINTF -> DPRINTF3D.
