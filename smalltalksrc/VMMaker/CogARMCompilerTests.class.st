@@ -5,9 +5,21 @@ Class {
 }
 
 { #category : #running }
+CogARMCompilerTests >> assertCheckLongArithOpCodeSize: bytes [
+	self assert: bytes > 4
+]
+
+{ #category : #running }
 CogARMCompilerTests >> assertCheckQuickArithOpCodeSize: bytes [
 	"The problem is that there are negative value, which are not quick encodable in ARM"
-	self assert: bytes <= 20
+	self assert: bytes <= 4
+]
+
+{ #category : #'cogit compiler compatibility' }
+CogARMCompilerTests >> assertSaneJumpTarget: jumpTarget [
+	<var: #jumpTarget type: #'void *'>
+
+	self assert: (self addressIsInInstructions: jumpTarget)
 ]
 
 { #category : #accessing }
