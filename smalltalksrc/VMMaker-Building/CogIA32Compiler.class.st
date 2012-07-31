@@ -865,14 +865,9 @@ CogIA32Compiler >> concretizeConditionalJump: conditionCode [
 		Generating initial trampolines instructions may have no maxSize and be to absolute addresses.
 		Otherwise instructions must have a machineCodeSize which must be kept to."
 	<inline: true>
-	| jumpTarget offset |
+	| offset |
 	<var: #jumpTarget type: #'AbstractInstruction *'>
-	jumpTarget := cogit cCoerceSimple: (operands at: 0) to: #'AbstractInstruction *'.
-	cogit assertSaneJumpTarget: jumpTarget.
-	(self isAnInstruction: jumpTarget) ifTrue:
-		[jumpTarget := cogit cCoerceSimple: jumpTarget address to: #'AbstractInstruction *'].
-	self assert: jumpTarget ~= 0.
-	offset := jumpTarget signedIntFromLong - (address + 2) signedIntFromLong.
+	offset := self computeJumpTargetOffsetPlus: 2.
 	(machineCodeSize = 0 "size not determined because no sizeJump pass; generating initial trampolines"
 		ifTrue: [self isQuick: offset]
 		ifFalse: [machineCodeSize = 2]) ifTrue:
@@ -880,15 +875,7 @@ CogIA32Compiler >> concretizeConditionalJump: conditionCode [
 			at: 0 put: 16r70 + conditionCode;
 			at: 1 put: (offset bitAnd: 16rFF).
 		 ^machineCodeSize := 2].
-	offset := jumpTarget signedIntFromLong - (address + 6) signedIntFromLong.
-	machineCode
-		at: 0 put: 16r0F;
-		at: 1 put: 16r80 + conditionCode;
-		at: 2 put: (offset bitAnd: 16rFF);
-		at: 3 put: (offset >> 8 bitAnd: 16rFF);
-		at: 4 put: (offset >> 16 bitAnd: 16rFF);
-		at: 5 put: (offset >> 24 bitAnd: 16rFF).
-	^machineCodeSize := 6
+	^self concretizeConditionalJumpLong: conditionCode
 ]
 
 { #category : #'generate machine code' }
@@ -899,14 +886,8 @@ CogIA32Compiler >> concretizeConditionalJumpLong: conditionCode [
 		Generating initial trampolines instructions may have no maxSize and be to absolute addresses.
 		Otherwise instructions must have a machineCodeSize which must be kept to."
 	<inline: true>
-	| jumpTarget offset |
-	<var: #jumpTarget type: #'AbstractInstruction *'>
-	jumpTarget := cogit cCoerceSimple: (operands at: 0) to: #'AbstractInstruction *'.
-	cogit assertSaneJumpTarget: jumpTarget.
-	(self isAnInstruction: jumpTarget) ifTrue:
-		[jumpTarget := cogit cCoerceSimple: jumpTarget address to: #'AbstractInstruction *'].
-	self assert: jumpTarget ~= 0.
-	offset := jumpTarget signedIntFromLong - (address + 6) signedIntFromLong.
+	| offset |
+	offset := self computeJumpTargetOffsetPlus: 6.
 	machineCode
 		at: 0 put: 16r0F;
 		at: 1 put: 16r80 + conditionCode;
