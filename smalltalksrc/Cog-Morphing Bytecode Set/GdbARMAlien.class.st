@@ -53,6 +53,11 @@ GdbARMAlien >> abstractInstructionCompilerClass [
 	^CogARMCompiler
 ]
 
+{ #category : #'Cog API' }
+GdbARMAlien >> bitsInWord [
+	^32
+]
+
 { #category : #opcodes }
 GdbARMAlien >> branchAndLinkOpcodeWithOffset: aNumber [
 	
@@ -85,6 +90,11 @@ GdbARMAlien >> eflags [
 { #category : #'accessing-abstract' }
 GdbARMAlien >> endianness [
 	^#little
+]
+
+{ #category : #execution }
+GdbARMAlien >> flushICacheFrom: startAddress "<Integer>" to: endAddress [ "<Integer>"
+	self primitiveFlushICacheFrom: startAddress To: endAddress
 ]
 
 { #category : #'accessing-abstract' }
@@ -172,6 +182,13 @@ GdbARMAlien >> primitiveDisassembleAt: address inMemory: memoryArray [ "<Bitmap|
 GdbARMAlien >> primitiveErrorAndLog [
 	"Answer an array of the current error code and log contents"
 	<primitive: 'primitiveErrorAndLog' module: 'GdbARMPlugin'>
+	^self primitiveFailed
+]
+
+{ #category : #primitives }
+GdbARMAlien >> primitiveFlushICacheFrom: startAddress "<Integer>" To: endAddress [ "<Integer>"
+	"Flush the icache in the requested range"
+	<primitive: 'primitiveFlushICacheFromTo' module: 'GdbARMPlugin'>
 	^self primitiveFailed
 ]
 
@@ -386,7 +403,7 @@ GdbARMAlien >> r9: anUnsignedInteger [
 { #category : #'accessing-abstract' }
 GdbARMAlien >> registerState [
 	^{	self r0. self r1. self r2. self r3. self r4. self r5. self r6. self r7.
-		self r8. self r0. self r10. self r11. self r12. self sp. self lr. self pc. self eflags }
+		self r8. self r9. self r10. self r11. self r12. self sp. self lr. self pc. self eflags }
 ]
 
 { #category : #accessing }
