@@ -560,3 +560,42 @@ popOutputFile()
 	}
 	*stdout = stdoutStack[stdoutStackIdx--];
 }
+
+void
+printPhaseTime(int phase)
+{
+	static	int printTimes;
+	static	usqLong lastusecs;
+			usqLong nowusecs, usecs;
+
+	if (phase == 1) {
+		time_t nowt;
+		struct tm nowtm;
+		printTimes = 1;
+		nowt = time(0);
+		nowtm = *localtime(&nowt);
+		printf("started at %s", asctime(&nowtm));
+		lastusecs = ioUTCMicrosecondsNow();
+		return;
+	}
+
+	if (!printTimes) return;
+
+	nowusecs = ioUTCMicrosecondsNow();
+	usecs = nowusecs - lastusecs;
+	lastusecs = nowusecs;
+#define m 1000000ULL
+#define k 1000ULL
+#define ul(v) (unsigned long)(v)
+	if (phase == 2)
+		printf("loaded in %lu.%03lus\n", ul(usecs/m), ul((usecs % m + k/2)/k));
+	if (phase == 3) {
+		printTimes = 0; /* avoid repeated printing if error during exit */
+		if (usecs >= 1ULL<<32)
+			printf("ran for a long time\n");
+		else
+			printf("ran for %lu.%03lus\n", ul(usecs/m), ul((usecs % m + k/2)/k));
+	}
+#undef m
+#undef k
+}

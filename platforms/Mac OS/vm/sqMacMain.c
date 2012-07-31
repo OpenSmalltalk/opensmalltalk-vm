@@ -526,6 +526,8 @@ int ioExit(void) { return ioExitWithErrorCode(0); }
 sqInt
 ioExitWithErrorCode(int ec)
 {
+	extern void printPhaseTime(int);
+	printPhaseTime(3);
     UnloadScrap();
     ioShutdownAllModules();
 	if (!gSqueakHeadless || gSqueakBrowserWasHeadlessButMadeFullScreen) 

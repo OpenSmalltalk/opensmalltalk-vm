@@ -143,6 +143,7 @@ struct SqDisplay *dpy= 0;
 struct SqSound   *snd= 0;
 
 extern void dumpPrimTraceLog(void);
+extern void printPhaseTime(int);
 char *getVersionInfo(int verbose);
 
 
@@ -1304,6 +1305,9 @@ static int vm_parseArgument(int argc, char **argv)
   else if (!strcmp(argv[0], "-notimer"))	{ useItimer	= 0;	return 1; }
   else if (!strcmp(argv[0], "-nohandlers"))	{ installHandlers= 0;	return 1; }
   else if (!strcmp(argv[0], "-blockonerror")) { blockOnError = 1; return 1; }
+  else if (!strcmp(argv[0], "-timephases")) {
+	printPhaseTime(1);
+	return 1; }
 #if !STACKVM && !COGVM
   else if (!strncmp(argv[0],"-jit", 4))		{ useJit	= jitArgs(argv[0]+4);	return 1; }
   else if (!strcmp(argv[0], "-nojit"))		{ useJit	= 0;	return 1; }
@@ -1417,6 +1421,7 @@ static void vm_printUsage(void)
   printf("  -help                 print this help message, then exit\n");
   printf("  -memory <size>[mk]    use fixed heap size (added to image size)\n");
   printf("  -mmap <size>[mk]      limit dynamic heap size (default: %dm)\n", DefaultMmapSize);
+  printf("  -timephases           print start load and run times\n");
 #if STACKVM || NewspeakVM
   printf("  -breaksel selector    set breakpoint on send of selector\n");
 #endif
@@ -1825,8 +1830,10 @@ main(int argc, char **argv, char **envp)
 #endif
 
   /* run Squeak */
-  if (runInterpreter)
+  if (runInterpreter) {
+	printPhaseTime(2);
     interpret();
+  }
 
   /* we need these, even if not referenced from main executable */
   (void)sq2uxPath;
@@ -1841,6 +1848,7 @@ int ioExit(void) { return ioExitWithErrorCode(0); }
 sqInt
 ioExitWithErrorCode(int ec)
 {
+  printPhaseTime(3);
   dpy->winExit();
   exit(ec);
   return ec;

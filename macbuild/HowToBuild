@@ -31,7 +31,7 @@ containing Bochs:
 Then build the libraries macbochs/{cpu/libcpu.a,disasm/libdisasm.a,fpu/libfpu.a}
   $ cd ROOT/processors/IA32/macbochs
   $ ./conf.COG
-  $ ./makeem
+  $ ../bochs/makeem
 Then build the plugin:
   $ cd ROOT/macbuild/BochsIA32Plugin
   $ xcodebuild

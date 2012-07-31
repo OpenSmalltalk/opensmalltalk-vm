@@ -164,6 +164,10 @@ static int parseArgument(int argc, char **argv)
 	extern int blockOnError;
 	blockOnError = true;
 	return 1; }
+  else if (!strcmp(argv[0], "-timephases")) {
+	extern void printPhaseTime(int);
+	printPhaseTime(1);
+	return 1; }
 #if (STACKVM || NewspeakVM) && !COGVM
   else if (!strcmp(argv[0], "-sendtrace")) { extern sqInt sendTrace; sendTrace = 1; return 1; }
 #endif
@@ -272,6 +276,7 @@ static void printUsage(void)
   printf("\nCommon <option>s:\n");
   printf("  -help                 print this help message, then exit\n");
   printf("  -memory <size>[mk]    use fixed heap size (added to image size)\n");
+  printf("  -timephases           print start load and run times\n");
 #if STACKVM || NewspeakVM
   printf("  -breaksel selector    set breakpoint on send of selector\n");
 #endif

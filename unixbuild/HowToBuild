@@ -66,7 +66,7 @@ containing Bochs:
 Then build libraries linuxbochs/{cpu/libcpu.a,disasm/libdisasm.a,fpu/libfpu.a}
   $ cd ROOT/processors/IA32/linuxbochs
   $ ./conf.COG
-  $ ./makeem
+  $ ../bochs/makeem
 and build the plugin via
   $ cd ROOT/unixbuild/bld/BochsIA32Plugin
   $ make

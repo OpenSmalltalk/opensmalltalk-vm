@@ -3191,6 +3191,7 @@ int printUsage(int level)
                    TEXT("vmOptions:")
 		   /* TEXT("\n\t-service: ServiceName \t(install Squeak as NT service)") */
                    TEXT("\n\t-headless \t\t(force Squeak to run headless)")
+                   TEXT("\n\t-timephases (print start load and run times)")
                    TEXT("\n\t-log: LogFile \t\t(use LogFile for VM messages)")
                    TEXT("\n\t-memory: megaByte \t(set memory to megaByte MB)")
 #if STACKVM || NewspeakVM
@@ -3199,7 +3200,7 @@ int printUsage(int level)
 #if STACKVM
                    TEXT("\n\t-leakcheck: n \t(leak check on GC (1=full,2=incr,3=both))")
                    TEXT("\n\t-eden: bytes \t(set eden memory size to bytes)")
-                   TEXT("\n\t-stackpages: n \t(use n stack pages)")
+				   TEXT("\n\t-stackpages: n \t(use n stack pages)")
                    TEXT("\n\t-numextsems: n \t(allow up to n external semaphores)")
                    TEXT("\n\t-noheartbeat \t(no heartbeat for debug)")
 #endif /* STACKVM */

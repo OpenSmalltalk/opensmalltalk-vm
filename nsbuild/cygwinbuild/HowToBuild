@@ -69,7 +69,7 @@ First check-out the processor simulator source tree containing Bochs:
 Then build the libraries winbochs/{cpu/libcpu.a,disasm/libdisasm.a,fpu/libfpu.a}
   $ cd ROOT/processors/IA32/winbochs
   $ ./conf.COG
-  $ ./makeem
+  $ ../bochs/makeem
 and build the plugin either via make (for the entire VM) or just
   $ cd ROOT/nsbuild/cygwinbuild
   $ make build/vm/BochsIA32Plugin.dll

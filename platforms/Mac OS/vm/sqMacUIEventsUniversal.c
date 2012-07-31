@@ -1493,7 +1493,9 @@ EventLoopEventHandler(EventHandlerCallRef inHandlerCallRef,
 {
         // Run our event loop until quitNow is set.
 #pragma unused(inHandlerCallRef,inEvent,inUserData)
+	extern void printPhaseTime(int);
 	SetUpCarbonEvent();
+	printPhaseTime(2);
 	interpret(); //Note the application under carbon event mgr starts running here
 	return 0;
  }

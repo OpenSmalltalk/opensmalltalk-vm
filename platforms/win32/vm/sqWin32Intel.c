@@ -44,6 +44,7 @@ int methodPrimitiveIndex(void);
 int getCurrentBytecode(void);
 
 extern TCHAR squeakIniName[];
+extern void printPhaseTime(int);
 
 /* Import from sqWin32Alloc.c */
 LONG CALLBACK sqExceptionFilter(LPEXCEPTION_POINTERS exp);
@@ -1016,6 +1017,7 @@ int ioExit(void) { return ioExitWithErrorCode(0); }
 sqInt
 ioExitWithErrorCode(int ec)
 {
+	printPhaseTime(3);
 	inCleanExit = 1;
 	exit(ec);
 	return ec;
@@ -1467,6 +1469,7 @@ sqMain(int argc, char *argv[])
 
     /* run Squeak */
     ioInitSecurity();
+	printPhaseTime(2);
     interpret();
 #if !NO_FIRST_LEVEL_EXCEPTION_HANDLER
 # ifdef _MSC_VER
@@ -1588,10 +1591,15 @@ parseVMArgument(int argc, char *argv[])
 	/* flags */
 	if      (!strcmp(argv[0], "-help"))		{ 
 		printUsage(1);
-		return 1; }
+		return 1;
+	}
 	else if (!strcmp(argv[0], "-version"))	{ versionInfo();	return 1; }
 	else if (!strcmp(argv[0], "-headless")) { fHeadlessImage = true; return 1; }
 	else if (!strcmp(argv[0], "-headfull")) { fHeadlessImage = false; return 1;}
+	else if (!strcmp(argv[0], "-timephases")) {
+		printPhaseTime(1);
+		return 1;
+	}
 #ifdef  VISTA_SECURITY /* IE7/Vista protected mode support */
 	/* started with low rights, use alternate untrustedUserDirectory */
 	else if (!strcmp(argv[0], "-lowRights")) { fLowRights = true; return 1; }
