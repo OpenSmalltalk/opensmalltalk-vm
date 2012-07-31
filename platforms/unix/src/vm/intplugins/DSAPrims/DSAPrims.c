@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 27 June 2012 4:45:47 am 
-   by VMMaker 4.9.5
+/* Automatically generated from Squeak on 30 July 2012 4:52:38 pm 
+   by VMMaker 4.9.8
  */
 
 #include <math.h>
@@ -60,9 +60,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"DSAPrims 27 June 2012 (i)"
+	"DSAPrims 30 July 2012 (i)"
 #else
-	"DSAPrims 27 June 2012 (e)"
+	"DSAPrims 30 July 2012 (e)"
 #endif
 ;
 static sqInt remainderDigitCount;

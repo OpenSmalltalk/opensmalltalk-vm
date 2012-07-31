@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 27 June 2012 4:46 am 
-   by VMMaker 4.9.5
+/* Automatically generated from Squeak on 30 July 2012 4:52:58 pm 
+   by VMMaker 4.9.8
  */
 
 #include <math.h>
@@ -136,9 +136,9 @@ static DBusMessage* message;
 static DBusMessageIter messageIter[DBUS_MAXIMUM_TYPE_RECURSION_DEPTH];
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"DBusPlugin 27 June 2012 (i)"
+	"DBusPlugin 30 July 2012 (i)"
 #else
-	"DBusPlugin 27 June 2012 (e)"
+	"DBusPlugin 30 July 2012 (e)"
 #endif
 ;
 static DBusMessage* writeMessage;

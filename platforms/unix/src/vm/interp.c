@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 27 June 2012 4:45:39 am 
-   by VMMaker 4.9.5
+/* Automatically generated from Squeak on 30 July 2012 4:52:23 pm 
+   by VMMaker 4.9.8
  */
 #if 1
 # define SQ_USE_GLOBAL_STRUCT 1
@@ -9,6 +9,10 @@
 
 #include "sq.h"
 #include <setjmp.h>
+
+#ifndef assert
+ #include <assert.h>
+#endif
 
 #ifndef allocateMemoryMinimumImageFileHeaderSize
  /* Called by Interpreter>>allocateMemory:minimum:imageFile:headerSize: */
@@ -141,6 +145,7 @@ void defaultErrorProc(char *s) {
 #define GCTopMarker 3
 #define HashBits 536739840
 #define HashBitsOffset 17
+#define HashMaskUnshifted 4095
 #define HeaderIndex 0
 #define HeaderTypeClass 1
 #define HeaderTypeFree 2
@@ -151,7 +156,7 @@ void defaultErrorProc(char *s) {
 #define InitialIPIndex 4
 #define InstanceSpecificationIndex 2
 #define InstructionPointerIndex 1
-#define InterpreterSourceVersion "4.9.5"
+#define InterpreterSourceVersion "4.9.8"
 #define InvokeCallbackSelector 53
 #define LargeContextBit 262144
 #define LastLinkIndex 1
@@ -181,6 +186,7 @@ void defaultErrorProc(char *s) {
 #define NilContext 1
 #define NilObject 0
 #define PrimErrBadArgument 3
+#define PrimErrBadIndex 4
 #define PrimErrBadNumArgs 5
 #define PrimitiveExternalCallIndex 117
 #define PriorityIndex 2
@@ -455,6 +461,7 @@ sqInt primitiveAtPut(void);
 sqInt primitiveBeCursor(void);
 sqInt primitiveBeDisplay(void);
 sqInt primitiveBeep(void);
+sqInt primitiveBehaviorHash(void);
 sqInt primitiveBitAnd(void);
 #pragma export on
 EXPORT(sqInt) primitiveBitAndLargeIntegers(void);
@@ -516,6 +523,8 @@ sqInt primitiveFindHandlerContext(void);
 sqInt primitiveFindNextUnwindContext(void);
 sqInt primitiveFloatAdd(void);
 sqInt primitiveFloatAddtoArg(sqInt rcvrOop, sqInt argOop);
+sqInt primitiveFloatAt(void);
+sqInt primitiveFloatAtPut(void);
 sqInt primitiveFloatDivide(void);
 sqInt primitiveFloatDividebyArg(sqInt rcvrOop, sqInt argOop);
 sqInt primitiveFloatEqual(void);
@@ -595,6 +604,7 @@ sqInt primitiveLowSpaceSemaphore(void);
 sqInt primitiveMakePoint(void);
 sqInt primitiveMarkHandlerMethod(void);
 sqInt primitiveMarkUnwindMethod(void);
+sqInt primitiveMaxIdentityHash(void);
 sqInt primitiveMethod(void);
 #pragma export on
 EXPORT(sqInt) primitiveMicrosecondClock(void);
@@ -667,6 +677,7 @@ EXPORT(sqInt) primitiveSetGCBiasToGrow(void);
 EXPORT(sqInt) primitiveSetGCBiasToGrowGCLimit(void);
 EXPORT(sqInt) primitiveSetGCSemaphore(void);
 #pragma export off
+sqInt primitiveSetIdentityHash(void);
 sqInt primitiveSetInterruptKey(void);
 sqInt primitiveShortAt(void);
 sqInt primitiveShortAtPut(void);
@@ -947,8 +958,8 @@ void *primitiveTable[577] = {
 	/* 35*/ (void *)primitiveBitOrLargeIntegers,
 	/* 36*/ (void *)primitiveBitXorLargeIntegers,
 	/* 37*/ (void *)primitiveBitShiftLargeIntegers,
-	/* 38*/ (void *)primitiveFail,
-	/* 39*/ (void *)primitiveFail,
+	/* 38*/ (void *)primitiveFloatAt,
+	/* 39*/ (void *)primitiveFloatAtPut,
 	/* 40*/ (void *)primitiveAsFloat,
 	/* 41*/ (void *)primitiveFloatAdd,
 	/* 42*/ (void *)primitiveFloatSubtract,
@@ -1070,7 +1081,7 @@ void *primitiveTable[577] = {
 	/* 158*/ (void *)primitiveFail,
 	/* 159*/ (void *)primitiveFail,
 	/* 160*/ (void *)primitiveAdoptInstance,
-	/* 161*/ (void *)primitiveFail,
+	/* 161*/ (void *)primitiveSetIdentityHash,
 	/* 162*/ (void *)primitiveFail,
 	/* 163*/ (void *)primitiveFail,
 	/* 164*/ (void *)primitiveFail,
@@ -1084,8 +1095,8 @@ void *primitiveTable[577] = {
 	/* 172*/ (void *)primitiveFail,
 	/* 173*/ (void *)primitiveFail,
 	/* 174*/ (void *)primitiveFail,
-	/* 175*/ (void *)primitiveFail,
-	/* 176*/ (void *)primitiveFail,
+	/* 175*/ (void *)primitiveBehaviorHash,
+	/* 176*/ (void *)primitiveMaxIdentityHash,
 	/* 177*/ (void *)primitiveFail,
 	/* 178*/ (void *)primitiveFail,
 	/* 179*/ (void *)primitiveFail,
@@ -15648,6 +15659,22 @@ sqInt primitiveBeep(void) {
 	ioBeep();
 }
 
+sqInt primitiveBehaviorHash(void) {
+register struct foo * foo = &fum;
+    sqInt hashOrError;
+    sqInt sp;
+
+	assert(!(((longAt(foo->stackPointer)) & 1)));
+	hashOrError = (((usqInt) (longAt(longAt(foo->stackPointer)))) >> 17) & 4095;
+	if (hashOrError >= 0) {
+		/* begin pop:thenPushInteger: */
+		longAtput((sp = foo->stackPointer - ((1 - 1) * (BYTES_PER_WORD))), ((hashOrError << 1) | 1));
+		foo->stackPointer = sp;
+	} else {
+		foo->primFailCode = -hashOrError;
+	}
+}
+
 sqInt primitiveBitAnd(void) {
 register struct foo * foo = &fum;
     sqInt integerArgument;
@@ -17723,6 +17750,90 @@ l2:	/* end loadFloatOrIntFrom: */;
 		foo->stackPointer -= 2 * (BYTES_PER_WORD);
 		pushFloat(rcvr + arg);
 	}
+}
+
+
+/*	Provide platform-independent access to 32-bit words comprising
+	 a Float.  Map index 1 onto the most significant word and index 2
+	 onto the least significant word. */
+
+sqInt primitiveFloatAt(void) {
+register struct foo * foo = &fum;
+    sqInt index;
+    sqInt rcvr;
+    usqInt result;
+    sqInt sp;
+    sqInt sp1;
+    sqInt reasonCode;
+
+	/* begin initPrimCall */
+	foo->primFailCode = 0;
+	rcvr = longAt(foo->stackPointer - (1 * (BYTES_PER_WORD)));
+	index = longAt(foo->stackPointer);
+	if (index == ConstOne) {
+		result = positive32BitIntegerFor(long32At((rcvr + (BASE_HEADER_SIZE)) + (0 << 2)));
+		/* begin pop:thenPush: */
+		longAtput((sp = foo->stackPointer - ((2 - 1) * (BYTES_PER_WORD))), result);
+		foo->stackPointer = sp;
+		return null;
+	}
+	if (index == ConstTwo) {
+		result = positive32BitIntegerFor(long32At((rcvr + (BASE_HEADER_SIZE)) + (1 << 2)));
+		/* begin pop:thenPush: */
+		longAtput((sp1 = foo->stackPointer - ((2 - 1) * (BYTES_PER_WORD))), result);
+		foo->stackPointer = sp1;
+		return null;
+	}
+	/* begin primitiveFailFor: */
+	reasonCode = ((index & 1)
+		? PrimErrBadIndex
+		: PrimErrBadArgument);
+	foo->primFailCode = reasonCode;
+}
+
+
+/*	Provide platform-independent access to 32-bit words comprising
+	 a Float.  Map index 1 onto the most significant word and index 2
+	 onto the least significant word. */
+
+sqInt primitiveFloatAtPut(void) {
+register struct foo * foo = &fum;
+    sqInt index;
+    sqInt oopToStore;
+    sqInt rcvr;
+    sqInt valueToStore;
+    sqInt sp;
+    sqInt sp1;
+    sqInt reasonCode;
+
+	/* begin initPrimCall */
+	foo->primFailCode = 0;
+	oopToStore = longAt(foo->stackPointer);
+	valueToStore = positive32BitValueOf(oopToStore);
+	if (!(!foo->primFailCode)) {
+		return (foo->primFailCode = PrimErrBadArgument);
+	}
+	rcvr = longAt(foo->stackPointer - (2 * (BYTES_PER_WORD)));
+	index = longAt(foo->stackPointer - (1 * (BYTES_PER_WORD)));
+	if (index == ConstOne) {
+		long32Atput((rcvr + (BASE_HEADER_SIZE)) + (0 << 2), valueToStore);
+		/* begin pop:thenPush: */
+		longAtput((sp = foo->stackPointer - ((3 - 1) * (BYTES_PER_WORD))), oopToStore);
+		foo->stackPointer = sp;
+		return null;
+	}
+	if (index == ConstTwo) {
+		long32Atput((rcvr + (BASE_HEADER_SIZE)) + (1 << 2), valueToStore);
+		/* begin pop:thenPush: */
+		longAtput((sp1 = foo->stackPointer - ((3 - 1) * (BYTES_PER_WORD))), oopToStore);
+		foo->stackPointer = sp1;
+		return null;
+	}
+	/* begin primitiveFailFor: */
+	reasonCode = ((index & 1)
+		? PrimErrBadIndex
+		: PrimErrBadArgument);
+	foo->primFailCode = reasonCode;
 }
 
 sqInt primitiveFloatDivide(void) {
@@ -20383,6 +20494,15 @@ register struct foo * foo = &fum;
 	return null;
 }
 
+sqInt primitiveMaxIdentityHash(void) {
+register struct foo * foo = &fum;
+    sqInt sp;
+
+	/* begin pop:thenPushInteger: */
+	longAtput((sp = foo->stackPointer - ((1 - 1) * (BYTES_PER_WORD))), ((HashMaskUnshifted << 1) | 1));
+	foo->stackPointer = sp;
+}
+
 
 /*	Return the method an external primitive was defined in */
 
@@ -22240,7 +22360,8 @@ register struct foo * foo = &fum;
 }
 
 
-/*	put this process on the scheduler's lists thus allowing it to proceed next time there is a chance for processes of it's priority level */
+/*	Put this process on the scheduler's lists thus allowing it to proceed next
+	time there is a chance for processes of its priority level */
 
 sqInt primitiveResume(void) {
 register struct foo * foo = &fum;
@@ -23001,6 +23122,53 @@ l1:	/* end stackIntegerValue: */;
 		foo->gcSemaphoreIndex = index;
 		/* begin pop: */
 		foo->stackPointer -= foo->argumentCount * (BYTES_PER_WORD);
+	}
+}
+
+sqInt primitiveSetIdentityHash(void) {
+register struct foo * foo = &fum;
+    sqInt hash;
+    sqInt oldHash;
+    sqInt thisReceiver;
+    sqInt sp;
+    sqInt oop;
+    sqInt integerPointer;
+
+	/* begin stackIntegerValue: */
+	integerPointer = longAt(foo->stackPointer - (0 * (BYTES_PER_WORD)));
+	/* begin checkedIntegerValueOf: */
+	if ((integerPointer & 1)) {
+		hash = (integerPointer >> 1);
+		goto l2;
+	} else {
+		/* begin primitiveFail */
+		if (foo->primFailCode == 0) {
+			foo->primFailCode = 1;
+		}
+		hash = 0;
+		goto l2;
+	}
+	hash = null;
+l2:	/* end stackIntegerValue: */;
+	/* begin stackObjectValue: */
+	oop = longAt(foo->stackPointer - (1 * (BYTES_PER_WORD)));
+	if ((oop & 1)) {
+		/* begin primitiveFail */
+		if (foo->primFailCode == 0) {
+			foo->primFailCode = 1;
+		}
+		thisReceiver = null;
+		goto l1;
+	}
+	thisReceiver = oop;
+l1:	/* end stackObjectValue: */;
+	if (!foo->primFailCode) {
+		oldHash = (((usqInt) (longAt(thisReceiver))) >> 17) & 4095;
+		/* begin setHashBitsOf:to: */
+		longAtput(thisReceiver, ((((longAt(thisReceiver)) | HashBits) - HashBits)) | ((hash & HashMaskUnshifted) << HashBitsOffset));
+		/* begin pop:thenPushInteger: */
+		longAtput((sp = foo->stackPointer - (((foo->argumentCount + 1) - 1) * (BYTES_PER_WORD))), ((oldHash << 1) | 1));
+		foo->stackPointer = sp;
 	}
 }
 

@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 27 June 2012 4:45:44 am 
-   by VMMaker 4.9.5
+/* Automatically generated from Squeak on 30 July 2012 4:52:33 pm 
+   by VMMaker 4.9.8
  */
 
 #include <math.h>
@@ -414,9 +414,9 @@ struct VirtualMachine* interpreterProxy;
 static void * loadBBFn;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"B2DPlugin 27 June 2012 (i)"
+	"B2DPlugin 30 July 2012 (i)"
 #else
-	"B2DPlugin 27 June 2012 (e)"
+	"B2DPlugin 30 July 2012 (e)"
 #endif
 ;
 static int* objBuffer;

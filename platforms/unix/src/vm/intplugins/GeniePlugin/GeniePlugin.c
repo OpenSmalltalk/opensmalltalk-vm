@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 27 June 2012 4:45:50 am 
-   by VMMaker 4.9.5
+/* Automatically generated from Squeak on 30 July 2012 4:52:43 pm 
+   by VMMaker 4.9.8
  */
 
 #include <math.h>
@@ -54,9 +54,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"GeniePlugin v2.0 27 June 2012 (i)"
+	"GeniePlugin v2.0 30 July 2012 (i)"
 #else
-	"GeniePlugin v2.0 27 June 2012 (e)"
+	"GeniePlugin v2.0 30 July 2012 (e)"
 #endif
 ;
 

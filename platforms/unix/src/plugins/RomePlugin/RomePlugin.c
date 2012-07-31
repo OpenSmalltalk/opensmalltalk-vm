@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 27 June 2012 4:46:04 am 
-   by VMMaker 4.9.5
+/* Automatically generated from Squeak on 30 July 2012 4:53:03 pm 
+   by VMMaker 4.9.8
  */
 
 #include <math.h>
@@ -192,9 +192,9 @@ struct VirtualMachine* interpreterProxy;
 static sqInt maxSurfaceID;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"RomePlugin yo.39 27 June 2012 (i)"
+	"RomePlugin yo.39 30 July 2012 (i)"
 #else
-	"RomePlugin yo.39 27 June 2012 (e)"
+	"RomePlugin yo.39 30 July 2012 (e)"
 #endif
 ;
 static fn_ioRegisterSurface registerSurfaceFn;
