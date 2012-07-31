@@ -291,6 +291,19 @@ CogAbstractInstruction >> cogit: aCogit [
 ]
 
 { #category : #'generate machine code' }
+CogAbstractInstruction >> computeJumpTargetOffsetPlus: anInteger [
+	<inline: true> "Since it's an extraction from other methods."
+	| jumpTarget |
+	<var: #jumpTarget type: #'AbstractInstruction *'>
+	jumpTarget := cogit cCoerceSimple: (operands at: 0) to: #'AbstractInstruction *'.
+	cogit assertSaneJumpTarget: jumpTarget.
+	(self isAnInstruction: jumpTarget) ifTrue:
+		[jumpTarget := cogit cCoerceSimple: jumpTarget address to: #'AbstractInstruction *'].
+	self assert: jumpTarget ~= 0.
+	^jumpTarget signedIntFromLong - (address + anInteger) signedIntFromLong.
+]
+
+{ #category : #'generate machine code' }
 CogAbstractInstruction >> concretizeAt: actualAddress [
 	"Generate concrete machine code for the instruction at actualAddress,
 	 setting machineCodeSize, and answer the following address."
@@ -456,7 +469,7 @@ CogAbstractInstruction >> hasLinkRegister [
 { #category : #testing }
 CogAbstractInstruction >> hasPCDependentInstructions [
 	"Answer whether the concrete machine code contains pc-dependent
-	 instructions, such as the IA32/x86's short and lopng relative jumps
+	 instructions, such as the IA32/x86's short and long relative jumps
 	 and the EMT64/x86-64's pc-relative addressing mode.  Such
 	 instructions require an extra pass to generate them correctly."
 	^false
