@@ -115,27 +115,21 @@ CogFamilyWindowsConfig >> configureDropPlugin:  maker [
 ]
 
 { #category : #'plugin extra rules' }
-CogFamilyWindowsConfig >> configureFT2Plugin: maker [ 
-	"extra rules for FT2Plugin"
-	
-
+CogFamilyWindowsConfig >> configureFT2Plugin: maker [
 	"extra rules for Freetype plugin.
 	a custom rule to build freetype library"
+	| lib |
+	
+"	maker isExternal ifFalse: [
+		self error: 'building internal FT2Plugin is not supported yet'  	
+	].
+"
+	"add freetype library into loop"
+	lib := self addThirdpartyLibrary: 'freetype2'.
 
-	maker set: #freetypeLibDir toString: '${buildDir}/FT2Plugin'.
-	maker set: #freetypeLib toString: '${freetypeLibDir}/libfreetype.dll.a'.
-
-
-	maker cmd: 'add_custom_command' params: 'OUTPUT ${freetypeLib} 
-		COMMAND "${pluginPlatform}/makeFreetype.dynamic.win32" "${freetypeLibDir}" "${outputDir}"
-		COMMENT "Building freetype library"
-	'.
-
-	maker addSource: '${freetypeLib}'.
-	maker addExternalLibrary:  '"${freetypeLib}"'.
-
-	"the freetype sources are located in {build}/FT2Plugin/freetype2/include "
-	maker includeDirectories: '${freetypeLibDir}/freetype2/include'
+	"link plugin with freetype lib"
+	maker addExternalLibrary: lib targetForLinking.
+	maker includeDirectories: lib includeDir.
 
 
 ]
@@ -290,6 +284,13 @@ CogFamilyWindowsConfig >> executableType [
 ]
 
 { #category : #'as yet unclassified' }
+CogFamilyWindowsConfig >> externalModulesDir [
+	"answer the location in VM bundle, where plugins and rest of dynamic libs will be copied,
+	"
+	^ '${outputDir}'
+]
+
+{ #category : #'as yet unclassified' }
 CogFamilyWindowsConfig >> fixLineEndsOf: string [
 	^ string copyReplaceAll: String cr with: String crlf
 ]
@@ -322,10 +323,8 @@ CogFamilyWindowsConfig >> platformName [
 { #category : #'as yet unclassified' }
 CogFamilyWindowsConfig >> setupDirectories: gen [
 	"we have to override that, because we need to convert windoze paths to msys ones"
-	
 	| dirsInclude |
 	
-
 	" write the directories in separate include file"
 	dirsInclude := gen captureOutputDuring: [
 		gen
@@ -347,6 +346,8 @@ CogFamilyWindowsConfig >> setupDirectories: gen [
 	
 	gen include: 'directories.cmake'.
 	
+	gen set: #externalModulesDir toString: self externalModulesDir.
+
 ]
 
 { #category : #'as yet unclassified' }
