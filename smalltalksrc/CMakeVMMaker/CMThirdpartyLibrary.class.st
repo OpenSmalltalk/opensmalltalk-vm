@@ -14,7 +14,8 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'gen',
-		'vmGen'
+		'vmGen',
+		'configurationFlags'
 	],
 	#category : #'CMakeVMMaker-Libs'
 }
@@ -71,10 +72,30 @@ CMThirdpartyLibrary >> canonicalName [
 	^ self class canonicalName
 ]
 
+{ #category : #settings }
+CMThirdpartyLibrary >> configurationFlags [ 
+	^(configurationFlags 
+		ifNil: [ self defaultConfigurationFlags ])
+		reduce: [ :a :b | a, ' ', b]
+]
+
+{ #category : #settings }
+CMThirdpartyLibrary >> configurationFlags: aCollection [
+	configurationFlags := aCollection
+	
+]
+
 { #category : #'generating actions' }
 CMThirdpartyLibrary >> copyArtefacts [
 
 	self subclassResponsibility
+]
+
+{ #category : #settings }
+CMThirdpartyLibrary >> defaultConfigurationFlags [ 
+	^#(
+		'CFLAGS=''-arch i386''' 
+		'LDFLAGS=''-arch i386''')
 ]
 
 { #category : #'generating actions' }
