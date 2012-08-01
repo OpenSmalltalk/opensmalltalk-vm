@@ -134,7 +134,7 @@ CPlatformConfig >> addThirdpartyLibrary: libName [
 	lib :=  libs detect: [:each | each canonicalName = libName] ifNone: [ nil ].
 	
 	lib ifNil: [
-		lib := (CMThirdpartyLibrary named: libName).
+		lib := (CMThirdpartyLibrary named: libName config: self).
 		"add dependencies first, so thirpartyLibs collection will be naturally dependency sorted"
 		lib dependencies do: [:dep | self addThirdpartyLibrary: dep ].
 		libs add: lib.
@@ -728,6 +728,12 @@ CPlatformConfig >> outputDir: anObject [
 { #category : #accessing }
 CPlatformConfig >> outputDirName [
 	^ 'results'
+]
+
+{ #category : #accessing }
+CPlatformConfig >> platformName [
+	"override in subclass"
+	self subclassResponsibility 
 ]
 
 { #category : #'source files' }
