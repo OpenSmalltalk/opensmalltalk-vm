@@ -104,6 +104,73 @@ CogARMCompilerTests >> testAdd [
 ]
 
 { #category : #tests }
+CogARMCompilerTests >> testMoveCwR [
+	"self new testMoveCwR"
+	
+	| memory |
+	memory := ByteArray new: 16.
+	#(16rFF00FF00 16r00000012 16r12345678) do:
+		[:n| | inst len |
+		self concreteCompilerClass dataRegistersWithAccessorsDo: 
+			[ :r :rgetter :rset |
+			inst := self gen: MoveCwR operand: n operand: r.
+			len := inst concretizeAt: 0.
+			memory replaceFrom: 1 to: len with: inst machineCode object startingAt: 1.
+			self processor
+				reset.
+			[[processor pc < len] whileTrue:
+				[self processor singleStepIn: memory]]
+				on: Error
+				do: [:ex| ].
+			self concreteCompilerClass dataRegistersWithAccessorsDo:
+				[:ireg :getter :setter| | expected |
+				expected := getter == rgetter ifTrue: [ n ] ifFalse: [0].
+				self assert: (self processor perform: getter) = expected].
+			self assert: self processor pc = 16]]
+
+]
+
+{ #category : #tests }
+CogARMCompilerTests >> testPrefetchAw [
+	"self new testPrefetchAw"
+	
+	#(16rFF00FF00 16r00000012) do:
+		[:n| | inst len |
+		inst := self gen: PrefetchAw operand: n.
+		len := inst concretizeAt: 0.
+		self processor
+			disassembleInstructionAt: 12
+			In: inst machineCode object
+			into: [:str :sz| | plainJane herIntended |
+				"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
+				plainJane := self strip: str.
+				herIntended := 'pld	[r3', ((n bitAnd: 16rFF) = 0 ifTrue: [''] ifFalse: [', #', (n bitAnd: 16rFF) asString]) ,']'.
+				self assert: (plainJane match: herIntended).
+				self assert: len = 16]].
+
+]
+
+{ #category : #tests }
+CogARMCompilerTests >> testPushR [
+	"self new testPushR"
+	
+	self concreteCompilerClass registersWithNamesDo:
+		[:r :name | | inst len |
+		inst := self gen: PushR operand: r.
+		len := inst concretizeAt: 0.
+		self processor
+			disassembleInstructionAt: 0
+			In: inst machineCode object
+			into: [:str :sz| | plainJane herIntended |
+				"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
+				plainJane := self strip: str.
+				herIntended := 'push	{', name ,'}'.
+				self assert: (plainJane match: herIntended).
+				self assert: len = 4]].
+
+]
+
+{ #category : #tests }
 CogARMCompilerTests >> testRetN [
 	"self new testRetN"
 	
