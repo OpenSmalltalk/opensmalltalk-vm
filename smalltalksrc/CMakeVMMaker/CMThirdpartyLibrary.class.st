@@ -34,10 +34,22 @@ CMThirdpartyLibrary class >> canonicalName [
 ]
 
 { #category : #'as yet unclassified' }
-CMThirdpartyLibrary class >> named: aName [
+CMThirdpartyLibrary class >> named: aName config: aCPlatformConfig [
 
-	^ (self allSubclasses detect: [:cls | cls canonicalName = aName])
+	^ (self allSubclasses detect: [:cls | 
+		cls canonicalName = aName and: [ cls supports: aCPlatformConfig ] ])
 		new
+]
+
+{ #category : #'as yet unclassified' }
+CMThirdpartyLibrary class >> platformName [ 
+	^nil
+]
+
+{ #category : #testing }
+CMThirdpartyLibrary class >> supports: aConfig [
+	"default implementation"
+	^ self platformName = aConfig platformName 
 ]
 
 { #category : #'package properties' }
