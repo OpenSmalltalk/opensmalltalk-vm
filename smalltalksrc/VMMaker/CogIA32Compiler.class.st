@@ -2612,6 +2612,11 @@ CogIA32Compiler >> numberOfSaveableRegisters [
 	^6
 ]
 
+{ #category : #'generate machine code' }
+CogIA32Compiler >> padIfPossibleWithNopsFrom: startAddr to: endAddr [
+	^self nopsFrom: startAddr to: endAddr
+]
+
 { #category : #'inline cacheing' }
 CogIA32Compiler >> relocateCallBeforeReturnPC: retpc by: delta [
 	| distance |
