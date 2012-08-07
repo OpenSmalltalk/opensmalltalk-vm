@@ -690,7 +690,7 @@ Cogit class >> initializeCogMethodConstants [
 Cogit class >> initializeCompilationWithConstantsOptions: optionsDictionary [
 	ProcessorClass := (optionsDictionary at: #ISA ifAbsent: [#IA32]) caseOf: {
 							[#IA32] 	->	[BochsIA32Alien].
-							[#ARMV5]	->	[GdbARMAlien]. }.
+							[#ARMv5]	->	[GdbARMAlien]. }.
 	NumSendTrampolines := 4
 ]
 
@@ -1809,7 +1809,8 @@ Cogit >> addressOfEndOfCase: n inCPIC: cPIC [
 { #category : #accessing }
 Cogit >> addressSpaceMask [
 	<doNotGenerate>
-	^(1 << (8 * BytesPerWord)) - 1
+	"The first parenthesis generates a word of ones, -3 removes the two lowest bits because of ARM's requirement to have 4-aligned jumping addresses"
+	^((1 << (8 * BytesPerWord)) - 1) - 3
 ]
 
 { #category : #'generate machine code' }
@@ -4770,7 +4771,7 @@ Cogit >> generateCogMethod: selector [
 	self assert: startAddress + cmNoCheckEntryOffset = noCheckEntry address.
 	result := self outputInstructionsAt: startAddress + headerSize.
 	self assert: startAddress + headerSize + codeSize = result.
-	backEnd nopsFrom: result to: startAddress + totalSize - mapSize.
+	backEnd padIfPossibleWithNopsFrom: result to: startAddress + totalSize - mapSize.
 	self generateMapAt: startAddress + totalSize - 1 start: startAddress + cmNoCheckEntryOffset.
 	self fillInBlockHeadersAt: startAddress.
 	method := self fillInMethodHeader: (self cCoerceSimple: startAddress to: #'CogMethod *')

@@ -136,6 +136,21 @@ CogARMCompiler >> cResultRegister [
 	^self abstractRegisterForConcreteRegister: R0
 ]
 
+{ #category : #'inline cacheing' }
+CogARMCompiler >> callTargetFromReturnAddress: callSiteReturnAddress [
+	"Answer the address the call immediately preceeding callSiteReturnAddress will jump to."
+	| callDistance call |
+	call := self instructionBeforeAddress: callSiteReturnAddress.
+	(self isBranch: call)
+		ifTrue: [ callDistance := (call bitAnd: 16r00FFFFFF) << 2.
+			"The distance is a signed 24bit number. Therefore, the highest (26th) bit has to be expanded"
+			(callDistance bitAnd: 16r02000000) ~= 0 
+				ifTrue: [callDistance := callDistance bitOr: 16rFC000000]]
+		ifFalse: [ "A Long Jump. Extract the value saved to RISCTempReg from all the instructions before."
+			self notYetImplemented ].
+	^callSiteReturnAddress + 4 + callDistance signedIntFromLong
+]
+
 { #category : #accessing }
 CogARMCompiler >> callerSavedRegisterMask [
 	"registers r0-r3, the lowest four, +lr"
@@ -332,7 +347,7 @@ CogARMCompiler >> concretizeCall [
 			self machineCodeAt: 0 put: (self t: 5 o: 8) + (offset >> 2 bitAnd: 16r00FFFFFF). "BL offset"
 			^machineCodeSize := 4]
 		ifFalse: [
-			self halt]
+			self notYetImplemented]
 	"We should push at least lr. The problem is, that any push added here is only executed after return, and therefore useless."
 ]
 
@@ -398,7 +413,7 @@ CogARMCompiler >> concretizeConditionalJumpLong: conditionCode [
 	<inline: true>
 	| jumpTarget |
 	<var: #jumpTarget type: #'AbstractInstruction *'>
-	jumpTarget := self jumpTargetAddress.
+	jumpTarget := self longJumpTargetAddress.
 	self at: 0 moveCw: jumpTarget intoR: RISCTempReg.
 	"mov lr, pc"
 	"Because the pc always points to the actual address + 8, the value at pc is the address of the instruction after the branch (add pc, r3, #<byte0>"
@@ -1016,6 +1031,13 @@ CogARMCompiler >> genSaveRegisters [
 		gen: STMFD operand: 16r7F
 ]
 
+{ #category : #'abstract instructions' }
+CogARMCompiler >> genSubstituteReturnAddress: retpc [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^cogit MoveCw: retpc R: LR
+]
+
 { #category : #testing }
 CogARMCompiler >> hasDoublePrecisionFloatingPointSupport [
 	"might be true, but is for the forseeable future disabled"
@@ -1033,6 +1055,16 @@ CogARMCompiler >> hasPCDependentInstruction [
 	^true
 ]
 
+{ #category : #'inline cacheing' }
+CogARMCompiler >> instructionBeforeAddress: followingAddress [
+	"Answer the instruction immediately preceeding followingAddress."
+	^  ((objectMemory byteAt: followingAddress - 1) << 24)
+	+  ((objectMemory byteAt: followingAddress - 2) << 16)
+	+  ((objectMemory byteAt: followingAddress - 3) << 8)
+	+   (objectMemory byteAt: followingAddress - 4)
+
+]
+
 { #category : #testing }
 CogARMCompiler >> is12BitValue: constant ifTrue: trueAlternativeBlock	ifFalse: falseAlternativeBlock [
 	"For LDR and STR, there is an instruction allowing for one instruction encoding if the offset is encodable in 12 bit."
@@ -1042,6 +1074,12 @@ CogARMCompiler >> is12BitValue: constant ifTrue: trueAlternativeBlock	ifFalse: f
 				ifTrue: [trueAlternativeBlock value: 1 value: constant]
 				ifFalse: [trueAlternativeBlock value: 0 value: constant abs]]
 		ifFalse: falseAlternativeBlock
+]
+
+{ #category : #testing }
+CogARMCompiler >> isBranch: anInstruction [
+
+	^ (anInstruction >> 24 bitAnd: 16r0E) = 16rA
 ]
 
 { #category : #testing }
@@ -1089,6 +1127,13 @@ CogARMCompiler >> machineCodeBytes [
 	^20
 ]
 
+{ #category : #printing }
+CogARMCompiler >> nameForRegister: reg [ "<Integer>"
+	"subclasses with special purpose registers may need to override."
+	<doNotGenerate>
+	^#(LR SP PC) detect: [:sym| (self class classPool at: sym) = reg] ifNone: [super nameForRegister: reg]
+]
+
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> nopsFrom: startAddr to: endAddr [
 	self assert: endAddr - startAddr + 1 \\ 4 = 0.
@@ -1106,6 +1151,15 @@ CogARMCompiler >> numberOfSaveableRegisters [
 	 R0 through R12, See genSaveRegisters."
 	<cmacro: '() 13'>
 	^13
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMCompiler >> padIfPossibleWithNopsFrom: startAddr to: endAddr [
+	| nullBytes |
+	nullBytes := (endAddr - startAddr + 1) \\ 4.
+	self nopsFrom: startAddr to: endAddr - nullBytes.
+	endAddr - nullBytes + 1 to: endAddr 
+		do: [ :p | objectMemory byteAt: p put: 16r0]
 ]
 
 { #category : #testing }
@@ -1142,6 +1196,7 @@ CogARMCompiler >> sizePCDependentInstructionAt: eventualAbsoluteAddress [
 		 ^machineCodeSize := (eventualAbsoluteAddress + (alignment - 1) bitAnd: alignment negated)
 							   - eventualAbsoluteAddress].
 	self assert: (self isJump or: [opcode = Call]).
+	self isJump ifTrue: [self resolveJumpTarget].
 	target := operands at: 0.
 	"maximumSpan calculation copied from CogIA32Compiler TODO: extract method?"
 	(self isAnInstruction: (cogit cCoerceSimple: target to: #'void *'))
@@ -1155,9 +1210,9 @@ CogARMCompiler >> sizePCDependentInstructionAt: eventualAbsoluteAddress [
 		ifFalse:
 			[maximumSpan := target - (eventualAbsoluteAddress + 2)].
 	address := eventualAbsoluteAddress.
-	^machineCodeSize := (self isQuick: maximumSpan)
-									ifTrue: [4] "branch"
-									ifFalse: [20] "load address to register, mov"
+	^machineCodeSize := (self isLongJump not and: [self isQuick: maximumSpan])
+								ifTrue: [4] "branch"
+								ifFalse: [20] "load address to register, add"
 ]
 
 { #category : #accessing }

@@ -282,6 +282,13 @@ CogRTLOpcodes class >> initialize [
 ]
 
 { #category : #'debug printing' }
+CogRTLOpcodes class >> nameForAbstractRegister: reg [ "<Integer>"
+	^#(Arg0Reg Arg1Reg ClassReg FPReg ReceiverResultReg SPReg SendNumArgsReg TempReg
+		DPFPReg0 DPFPReg1 DPFPReg2 DPFPReg3 DPFPReg4 DPFPReg5 DPFPReg6 DPFPReg7)
+			detect: [:sym| (classPool at: sym) = reg]
+]
+
+{ #category : #'debug printing' }
 CogRTLOpcodes class >> nameForOpcode: opcode [ "<Integer>"
 	^(classPool keyAtValue: opcode ifAbsent: []) ifNotNil:
 		[:opcodeName|
