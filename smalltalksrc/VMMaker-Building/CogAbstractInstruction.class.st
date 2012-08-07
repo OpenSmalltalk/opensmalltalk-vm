@@ -291,12 +291,12 @@ CogAbstractInstruction >> cogit: aCogit [
 ]
 
 { #category : #'generate machine code' }
-CogAbstractInstruction >> computeJumpTargetOffsetPlus: anInteger [
+CogAbstractInstruction >> computeJumpTargetOffsetPlus: anPCOffset [
 	<inline: true> "Since it's an extraction from other methods."
 	| jumpTarget |
 	<var: #jumpTarget type: #'AbstractInstruction *'>
 	jumpTarget := self jumpTargetAddress.
-	^jumpTarget signedIntFromLong - (address + anInteger) signedIntFromLong.
+	^jumpTarget signedIntFromLong - (address + anPCOffset) signedIntFromLong.
 ]
 
 { #category : #'generate machine code' }
@@ -508,6 +508,11 @@ CogAbstractInstruction >> isJump [
 ]
 
 { #category : #testing }
+CogAbstractInstruction >> isLongJump [
+	^opcode between: FirstJump and: FirstShortJump - 1
+]
+
+{ #category : #testing }
 CogAbstractInstruction >> isPCDependent [
 	"Answer if the receiver is a pc-dependent instruction, such as a relative jump."
 	^self subclassResponsibility
@@ -570,6 +575,20 @@ CogAbstractInstruction >> loadLiteralByteSize [
 	self subclassResponsibility
 ]
 
+{ #category : #'generate machine code' }
+CogAbstractInstruction >> longJumpTargetAddress [
+	<inline: true> "Since it's an extraction from other methods."
+	"This needs to be digfferent from jumpTargetAddress because long jumps can
+	be to absolute addresses and hence we can't assert that the jump target is sane."
+	| jumpTarget |
+	<var: #jumpTarget type: #'AbstractInstruction *'>
+	jumpTarget := cogit cCoerceSimple: (operands at: 0) to: #'AbstractInstruction *'.
+	(self isAnInstruction: jumpTarget) ifTrue:
+		[jumpTarget := cogit cCoerceSimple: jumpTarget address to: #'AbstractInstruction *'].
+	self assert: jumpTarget ~= 0.
+	^jumpTarget
+]
+
 { #category : #accessing }
 CogAbstractInstruction >> machineCode [
 	^machineCode
@@ -608,6 +627,13 @@ CogAbstractInstruction >> maxSize: anObject [
 	"Set the value of maxSize"
 
 	maxSize := anObject
+]
+
+{ #category : #printing }
+CogAbstractInstruction >> nameForRegister: reg [ "<Integer>"
+	"subclasses with special purpose registers may need to override."
+	<doNotGenerate>
+	^CogRTLOpcodes nameForRegister: reg
 ]
 
 { #category : #initialization }
@@ -677,7 +703,7 @@ CogAbstractInstruction >> printStateOn: aStream [
 			 index >= (orneryOperands identityIndexOf: nil ifAbsent: [orneryOperands size + 1]) ifTrue:
 				[aStream print: index - 1; nextPut: $:].
 			 (format notNil and: [(format at: index ifAbsent: nil) = $r])
-				ifTrue: [aStream nextPutAll: (CogRTLOpcodes nameForRegister: operand)]
+				ifTrue: [aStream nextPutAll: (self nameForRegister: operand)]
 				ifFalse:
 					[aStream print: operand.
 					 (operand isInteger and: [operand > 16 and: [opcode ~= Label]]) ifTrue:
