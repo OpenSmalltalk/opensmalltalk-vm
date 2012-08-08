@@ -936,11 +936,8 @@ BochsIA32Alien >> smashCallerSavedRegistersWithValuesFrom: base by: step [
 ]
 
 { #category : #'accessing-abstract' }
-BochsIA32Alien >> smashRegistersWithValuesFrom: base by: step [
-	#(eax: ebx: ecx: edx: esi: edi:)
-	   withIndexDo:
-		[:accessor :index|
-		self perform: accessor with: index - 1 * step + base]
+BochsIA32Alien >> smashRegisterAccessors [
+	^#(eax: ebx: ecx: edx: esi: edi:)
 ]
 
 { #category : #'accessing-abstract' }
