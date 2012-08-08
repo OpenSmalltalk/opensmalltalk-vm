@@ -2608,13 +2608,13 @@ CogIA32Compiler >> numLowLevelLockOpcodes [
 CogIA32Compiler >> numberOfSaveableRegisters [
 	"Answer the number of registers to be saved in a trampoline call that saves registers.
 	 See genSaveRegisters"
-	<cmacro: '() 6'>
+	<cmacro: '(self) 6'>
 	^6
 ]
 
 { #category : #'generate machine code' }
 CogIA32Compiler >> padIfPossibleWithNopsFrom: startAddr to: endAddr [
-	^self nopsFrom: startAddr to: endAddr
+	self nopsFrom: startAddr to: endAddr
 ]
 
 { #category : #'inline cacheing' }

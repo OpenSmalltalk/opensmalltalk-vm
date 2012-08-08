@@ -142,6 +142,7 @@ NewCoObjectMemory >> startOfMemory [
 	"Return the start of object memory.  This is immediately after the native code zone.
 	 N.B. the stack zone is alloca'ed."
 	<api>
+	<returnTypeC: #usqInt>
 	^coInterpreter heapBase
 ]
 

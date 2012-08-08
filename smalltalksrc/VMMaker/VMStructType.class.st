@@ -149,6 +149,11 @@ VMStructType class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 	self subclassResponsibility
 ]
 
+{ #category : #'accessing class hierarchy' }
+VMStructType class >> isAbstract [
+	^self == VMStructType
+]
+
 { #category : #translation }
 VMStructType class >> isAccessor: aSelector [
 	"Answer if aSelector is simply an accessor method for one of our fields."

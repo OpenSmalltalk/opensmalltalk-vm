@@ -872,7 +872,8 @@ CCodeGenerator >> emitCTypesOn: aStream [
 	vmClass ifNotNil:
 		[vmClass ancilliaryStructClasses do:
 			[:structClass|
-			(vmClass shouldGenerateTypedefFor: structClass) ifTrue:
+			(structClass isAbstract not
+			 and: [vmClass shouldGenerateTypedefFor: structClass]) ifTrue:
 				[structClass printTypedefOn: aStream.
 				 aStream cr; cr]]]
 ]

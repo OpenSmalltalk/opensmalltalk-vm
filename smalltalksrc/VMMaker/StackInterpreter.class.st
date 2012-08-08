@@ -3326,7 +3326,7 @@ StackInterpreter >> convertFloatsToPlatformOrderFrom: startOop to: stopAddr [
 	 Ensure floats are in platform-order."
 	| oop temp |
 	objectMemory vmEndianness = imageFloatsBigEndian ifTrue:
-		[^self].
+		[^nil].
 	self assert: ClassFloatCompactIndex ~= 0.
 	oop := startOop.
 	[self oop: oop isLessThan: stopAddr] whileTrue:
@@ -5074,7 +5074,7 @@ StackInterpreter >> highBit: anUnsignedValue [
 	<var: #shifted type: #usqInt>
 	shifted := anUnsignedValue.
 	bitNo := 0.
-	self cppIf: [BytesPerWord > 4]
+	self cppIf: BytesPerWord > 4
 		ifTrue:
 			[shifted < (1 << 32) ifFalse:
 				[shifted := shifted >> 32.

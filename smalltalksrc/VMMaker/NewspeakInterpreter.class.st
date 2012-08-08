@@ -3549,7 +3549,7 @@ NewspeakInterpreter >> highBit: anUnsignedValue [
 	<var: #shifted type: #usqInt>
 	shifted := anUnsignedValue.
 	bitNo := 0.
-	self cppIf: [BytesPerWord > 4]
+	self cppIf: BytesPerWord > 4
 		ifTrue:
 			[shifted < (1 << 32) ifFalse:
 				[shifted := shifted >> 32.
