@@ -21,7 +21,7 @@ CogProcessorAlien >> disassembleFrom: startAddress to: endAddress in: memory on:
 	address := startAddress.
 	[address < endAddress] whileTrue:
 		[[:size :string|
-		aStream nextPutAll: string; cr; flush.
+		aStream nextPutAll: (address printStringBase: 16 length: 8 padded: true); nextPut: $:; tab; nextPutAll: string; cr; flush.
 		address := address + size]
 			valueWithArguments: (self
 									primitiveDisassembleAt: address
@@ -124,4 +124,17 @@ CogProcessorAlien >> singleStepIn: aMemory readExecuteOnlyBelow: minWriteMaxExec
 	result := self primitiveSingleStepInMemory: aMemory minimumAddress: 0 readOnlyBelow: minWriteMaxExecAddr.
 	result ~~ self ifTrue:
 		[self error: 'eek!']
+]
+
+{ #category : #'accessing-abstract' }
+CogProcessorAlien >> smashRegisterAccessors [
+	self subclassResponsibility
+]
+
+{ #category : #'accessing-abstract' }
+CogProcessorAlien >> smashRegistersWithValuesFrom: base by: step [
+	self smashRegisterAccessors
+	   withIndexDo:
+		[:accessor :index|
+		self perform: accessor with: index - 1 * step + base]
 ]
