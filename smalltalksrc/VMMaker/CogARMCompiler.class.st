@@ -1170,7 +1170,7 @@ CogARMCompiler >> nopsFrom: startAddr to: endAddr [
 CogARMCompiler >> numberOfSaveableRegisters [
 	"Answer the number of registers to be saved in a trampoline call that saves registers.
 	 R0 through R12, See genSaveRegisters."
-	<cmacro: '() 13'>
+	<cmacro: '(self) 13'>
 	^13
 ]
 

@@ -383,12 +383,6 @@ Cogit class >> cog: aCompiledMethod selector: aSelector [
 			ex pass]
 ]
 
-{ #category : #accessing }
-Cogit class >> cogCompilerClass [
-	"Answer the concrete subclass of CogAbstractCompiler in current use."
-	^ProcessorClass basicNew abstractInstructionCompilerClass
-]
-
 { #category : #documentation }
 Cogit class >> cogToBytecodeMethodMapping [
 	"When first written the VM maintained a one-to-one mapping between bytecoded methods and cog methods.
