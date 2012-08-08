@@ -157,7 +157,7 @@ GdbARMAlien >> nflag [
 { #category : #opcodes }
 GdbARMAlien >> nopOpcode [
 	"mov r0, r0"
-	^ 16rE1A01001
+	^ 16rE1A00000
 ]
 
 { #category : #accessing }
@@ -225,6 +225,18 @@ GdbARMAlien >> primitiveSingleStepInMemory: memoryArray "<Bitmap|ByteArray>" min
 					minimumAddress: minimumAddress
 					readOnlyBelow: minimumWritableAddress]
 		ifFalse: [self reportPrimitiveFailure]
+]
+
+{ #category : #printing }
+GdbARMAlien >> printOn: aStream [
+	aStream nextPutAll: 'an ARMAlien('.
+	self registerState allButLast with: self registerStateNames allButLast do: [ :state :i |
+		aStream 
+			<< i << ': ' 
+			<< (state abs > 15 ifTrue: [state hex] ifFalse: [state asString]) 
+			<< ', '].
+	aStream << 'NZCVIF: ' 
+		<< (self registerState last printStringBase: 2 length: 6 padded: true) << ')'.
 ]
 
 { #category : #printing }
@@ -406,6 +418,11 @@ GdbARMAlien >> registerState [
 		self r8. self r9. self r10. self r11. self r12. self sp. self lr. self pc. self eflags }
 ]
 
+{ #category : #'accessing-abstract' }
+GdbARMAlien >> registerStateNames [
+	^#(	r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 sp lr pc eflags)
+]
+
 { #category : #accessing }
 GdbARMAlien >> reset [
 	self primitiveResetCPU
@@ -414,7 +431,7 @@ GdbARMAlien >> reset [
 { #category : #opcodes }
 GdbARMAlien >> retOpcode [
 	"the ret command does not generally exist. the most similar would be mov pc, lr"
-	^ self halt.
+	^ self notYetImplemented
 ]
 
 { #category : #'accessing-abstract' }
@@ -427,6 +444,17 @@ GdbARMAlien >> setFramePointer: framePointer stackPointer: stackPointer [
 { #category : #accessing }
 GdbARMAlien >> sflag [
 	^self unsignedLongAt: 589
+]
+
+{ #category : #execution }
+GdbARMAlien >> simulateLeafCallOf: address nextpc: nextpc memory: aMemory [
+	self lr: nextpc.
+	self pc: address
+]
+
+{ #category : #'accessing-abstract' }
+GdbARMAlien >> smashRegisterAccessors [
+	^#(r0: r1: r2: r3: r4: r5: r6: r7: r8:)
 ]
 
 { #category : #accessing }
