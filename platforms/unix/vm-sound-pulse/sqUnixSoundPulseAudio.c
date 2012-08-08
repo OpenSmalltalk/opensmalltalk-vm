@@ -151,6 +151,7 @@ typedef struct {
 	
 	/* PULSE, Simple API parameters */
 	pa_simple *pa_conn;
+	int dummy;
   pa_sample_spec pa_spec;
  } audioIO_t;
 
@@ -194,16 +195,16 @@ static int  ioInit();
 static int trace();
 
 static sqInt sound_AvailableSpace(void);
-static sqInt sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr, int samplesOfLeadTime);
-static sqInt sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex);
+static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt samplesOfLeadTime);
+static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void *arrayIndex, sqInt startIndex);
 static sqInt sound_PlaySilence(void);
-static sqInt sound_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex);
+static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex);
 static sqInt sound_Stop(void);
 
-static sqInt sound_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex);
+static sqInt sound_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo, sqInt semaIndex);
 static sqInt sound_StopRecording(void);
 static double sound_GetRecordingSampleRate(void);
-static sqInt sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeInBytes);
+static sqInt sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes);
 
 static int mixer_open(char *name);
 static void mixer_close(void);
@@ -825,20 +826,20 @@ static sqInt sound_AvailableSpace(void) {
 	return ioFreeBytes(&audioOut);
 }
 
-static sqInt sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr, int samplesOfLeadTime) {
+static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt samplesOfLeadTime) {
 DBGMSG(">sound_InsertSamplesFromLeadTime()");
 	return 0; /* or maxBytes? */
 }
 
 
-static sqInt sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex) {
+static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void *srcBufPtr, sqInt startIndex) {
 	unsigned int bufferNext, samples, sampleBytes;
 
 	if (0 >= frameCount) return 0;
 	
 	samples = MIN(audioOut.maxSamples, frameCount);
 	
-	if (0 == (sampleBytes = ioAddPlayBuffer((void *)(arrayIndex + startIndex * 2 * audioOut.pa_spec.channels), samples)))
+	if (0 == (sampleBytes = ioAddPlayBuffer(srcBufPtr + startIndex * 2 * audioOut.pa_spec.channels, samples)))
 		DBGMSG("sound_PlaySamplesFromAtLength(): No free buffers!");
 	
 	sigSignal(&audioOut.sigRun);
@@ -853,7 +854,7 @@ DBGMSG(">sound_PlaySilence()");
 }
 
 
-static sqInt sound_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex) {
+static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex) {
 	int rc;
 	
 DBGMSG(">sound_Start()");
@@ -928,7 +929,7 @@ DBGMSG("<sound_Stop()");
 
 /* ================================== AUDIO IN */
 
-static sqInt sound_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex) {
+static sqInt sound_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo, sqInt semaIndex) {
 	int rc;
 	pa_buffer_attr pa_buffer_metrics; /* For recording */
 
@@ -1017,7 +1018,7 @@ static double sound_GetRecordingSampleRate(void) {
 	return (double)audioIn.pa_spec.rate;
 }
 
-static sqInt sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeInBytes) {
+static sqInt sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes) {
 	unsigned int bufferNext, bufferBytes, sampleBytes;
 
 	bufferBytes = MAX(0, bufferSizeInBytes - (startSliceIndex * 2));
