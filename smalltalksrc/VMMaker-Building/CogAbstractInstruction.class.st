@@ -30,13 +30,13 @@ CogAbstractInstruction class >> for: aCogit [
 { #category : #translation }
 CogAbstractInstruction class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in an AbstractInstruction struct."
-	"CogIA32Compiler printTypedefOn: Transcript"
-	"CogARMCompiler printTypedefOn: Transcript"
+	"{CogAbstractInstruction. CogIA32Compiler. CogARMCompiler} do:
+		[:c| Transcript print: c; cr. c printTypedefOn: Transcript]"
 	| machineCodeBytes |
 	machineCodeBytes := self ==  CogAbstractInstruction
 								ifTrue: [0]
-								ifFalse: [Cogit cogCompilerClass basicNew machineCodeBytes].
-	self filteredInstVarNames do:
+								ifFalse: [self basicNew machineCodeBytes].
+	(self filteredInstVarNames copyWithout: 'machineCode'), #('machineCode') do:
 		[:ivn|
 		ivn ~= 'bcpc' ifTrue:
 			[aBinaryBlock
@@ -48,6 +48,11 @@ CogAbstractInstruction class >> instVarNamesAndTypesForTranslationDo: aBinaryBlo
 							['dependent']		-> ['struct _AbstractInstruction *']}
 						otherwise:
 							[#char])]]
+]
+
+{ #category : #testing }
+CogAbstractInstruction class >> isAbstract [
+	^self == CogAbstractInstruction
 ]
 
 { #category : #translation }
@@ -82,7 +87,7 @@ CogAbstractInstruction class >> specificOpcodes [
 
 { #category : #translation }
 CogAbstractInstruction class >> structTypeName [
-	^self name allButFirst: 3 "Drop initial Cog"
+	^'AbstractInstruction'
 ]
 
 { #category : #translation }

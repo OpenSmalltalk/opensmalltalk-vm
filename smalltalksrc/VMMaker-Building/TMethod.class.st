@@ -529,8 +529,11 @@ TMethod >> exitVar: exitVar label: exitLabel [
 					ifTrue:
 						[exitVar
 							ifNil:
-								[stmt expression isLeaf ifFalse: "evaluate return expression even though value isn't used"
-									[newStmts add: stmt expression]]
+								[false "eem 8/8/2012 14:18 why exclude leaves explicity?  Makes no sense to me and breaks inlining of asimple accessors"
+									ifTrue:
+										[stmt expression isLeaf ifFalse: "evaluate return expression even though value isn't used"
+											[newStmts add: stmt expression]]
+									ifFalse: [newStmts add: stmt expression]]
 							ifNotNil: "assign return expression to exit variable"
 								[newStmts add:
 									(TAssignmentNode new
@@ -916,7 +919,7 @@ TMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar in:
 	 otherwise the assignee variable type must match the return type of the inlinee.  Return
 	 types are not propagated."
 
-	| sel meth exitLabel labelUsed inlineStmts label exitType |
+	| sel meth exitLabel inlineStmts label exitType |
 	sel := aSendNode selector.
 	meth := aCodeGen methodNamed: sel.
 	meth args size = aSendNode args size ifFalse:
@@ -948,7 +951,7 @@ TMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar in:
 	meth hasReturn ifTrue:[
 		directReturn ifFalse:[
 			exitLabel := self unusedLabelForInliningInto: self.
-			(labelUsed := meth exitVar: exitVar label: exitLabel)
+			(meth exitVar: exitVar label: exitLabel) "is label used?"
 				ifTrue: [ labels add: exitLabel ]
 				ifFalse: [ exitLabel := nil ]]].
 	(inlineStmts := OrderedCollection new: 100)

@@ -4142,7 +4142,7 @@ ObjectMemory >> startOfFreeSpace [
 { #category : #'object enumeration' }
 ObjectMemory >> startOfMemory [
 	"Return the start of object memory."
-
+	<returnTypeC: #usqInt>
 	^memory
 ]
 

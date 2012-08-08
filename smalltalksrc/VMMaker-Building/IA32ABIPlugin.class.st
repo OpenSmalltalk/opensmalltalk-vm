@@ -260,7 +260,7 @@ IA32ABIPlugin >> primCallOutDoubleReturn [
 	| errCode mac result |
 	<export: true>
 	mac := interpreterProxy methodArgumentCount.
-	self cppIf: [STACKVM]
+	self cppIf: STACKVM
 		ifTrue: "In the STACKVM stacks grow down"
 			[self cCode: 'errCode = callIA32DoubleReturn(interpreterProxy->getStackPointer() + mac - 2, /* arg vec */
 															1 - mac	/* nargs */,

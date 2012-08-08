@@ -714,7 +714,7 @@ StackToRegisterMappingCogit >> availableRegister [
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> availableRegisterOrNil [
-	<returnType: #sqInt>
+	<returnTypeC: #sqInt>
 	| liveRegs |
 	liveRegs := self liveRegisters.
 	(liveRegs anyMask: (self registerMaskFor: Arg1Reg)) ifFalse:
