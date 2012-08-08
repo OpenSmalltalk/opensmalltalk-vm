@@ -421,6 +421,7 @@ AbstractInstructionTests >> runBinaryConditionalJumps: assertPrintBar [
 		jumpTaken jmpTarget: (self gen: MoveCqR operand: 1 operand: 0).
 		jumpNotTaken jmpTarget: (nop := self gen: Nop).
 		memory := self generateInstructions.
+		"self processor disassembleFrom: 0 to: memory size in: memory on: Transcript"
 		bogus := false.
 		self pairs: (-2 to: 2)  do:
 			[:a :b| | taken |
@@ -584,6 +585,7 @@ AbstractInstructionTests >> runCmpRdRd: assertPrintBar [
 	"self defaultTester runCmpRdRd: false"
 	"self defaultTester runCmpRdRd: true"
 	| resultReg result reg1 reg2 setreg1 setreg2 |
+	self concreteCompilerClass new hasDoublePrecisionFloatingPointSupport ifFalse: [^true].
 	resultReg := 0.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
 		[:n :get :set| n = resultReg ifTrue: [result := get]].

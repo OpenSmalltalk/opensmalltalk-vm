@@ -7418,7 +7418,7 @@ Cogit >> simulateCogCodeAt: address [ "<Integer>"
 	<doNotGenerate>
 	| stackZoneBase |
 	stackZoneBase := coInterpreter stackZoneBase.
-	processor eip: address.
+	processor pc: address.
 	[[[singleStep ifTrue:
 		[[processor sp < stackZoneBase ifTrue: [self halt].
 		  self recordRegisters.

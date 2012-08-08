@@ -188,7 +188,7 @@ CogARMCompiler >> computeMaximumSize [
 	({Jump. JumpR. JumpZero. JumpNonZero. JumpNegative. JumpNonNegative. JumpOverflow.
 	JumpOverflow. JumpNoOverflow. JumpCarry. JumpNoCarry. JumpLess. JumpGreaterOrEqual. JumpGreater. JumpLessOrEqual. JumpBelow. JumpAboveOrEqual} 
 		anySatisfy: [ :each | each = opcode])
-			ifTrue: [^maxSize := 20].
+			ifTrue: [^maxSize := 16].
 	
 	opcode
 		caseOf: {
@@ -225,9 +225,9 @@ CogARMCompiler >> computeMaximumSize [
 			[JumpFPLessOrEqual]	-> [^maxSize := 8].
 			[JumpFPOrdered]		-> [^maxSize := 8].
 			[JumpFPUnordered]		-> [^maxSize := 8].
-			[JumpLong]				-> [^maxSize := 20].
-			[JumpLongZero]		-> [^maxSize := 20].
-			[JumpLongNonZero]	-> [^maxSize := 20].
+			[JumpLong]				-> [^maxSize := 16].
+			[JumpLongZero]		-> [^maxSize := 16].
+			[JumpLongNonZero]	-> [^maxSize := 16].
 			[LoadEffectiveAddressMwrR] -> [self rotateable8bitImmediate: (operands at: 0)
 												ifTrue: [ :r :i | ^maxSize := 4]
 												ifFalse: [^maxSize := 20]].
@@ -347,7 +347,13 @@ CogARMCompiler >> concretizeCall [
 			self machineCodeAt: 0 put: (self t: 5 o: 8) + (offset >> 2 bitAnd: 16r00FFFFFF). "BL offset"
 			^machineCodeSize := 4]
 		ifFalse: [
-			self notYetImplemented]
+
+			self concretizeConditionalJumpLong: AL.
+			self machineCodeAt: 16 put: (self machineCodeAt: 12).
+			"mov lr, pc"
+	"Because the pc always points to the actual address + 8, the value at pc is the address of the instruction after the branch (add pc, r3, #<byte0>"
+			self machineCodeAt: 12 put: (self t: 0 o: 16rD s: 0 rn: 0 rd: LR shifterOperand: PC).
+			^machineCodeSize := 20]
 	"We should push at least lr. The problem is, that any push added here is only executed after return, and therefore useless."
 ]
 
@@ -397,7 +403,7 @@ CogARMCompiler >> concretizeConditionalJump: conditionCode [
 	offset := self computeJumpTargetOffsetPlus: 8.
  	(self isQuick: offset)
 		ifTrue: [
-			self machineCodeAt: 0 put: (self t: 5 o: 8) + (offset >> 2 bitAnd: 16r00FFFFFF). "BL offset"
+			self machineCodeAt: 0 put: (self c: conditionCode t: 5 o: 0 s: 0) + (offset >> 2 bitAnd: 16r00FFFFFF). "B offset"
 			^machineCodeSize := 4]
 		ifFalse: [
 			^self concretizeConditionalJumpLong: conditionCode]
@@ -415,12 +421,9 @@ CogARMCompiler >> concretizeConditionalJumpLong: conditionCode [
 	<var: #jumpTarget type: #'AbstractInstruction *'>
 	jumpTarget := self longJumpTargetAddress.
 	self at: 0 moveCw: jumpTarget intoR: RISCTempReg.
-	"mov lr, pc"
-	"Because the pc always points to the actual address + 8, the value at pc is the address of the instruction after the branch (add pc, r3, #<byte0>"
-	self machineCodeAt: 12 put: (self t: 0 o: 16rD s: 0 rn: 0 rd: LR shifterOperand: PC).
 	"add pc, r3, #<byte 0>"
-	self machineCodeAt: 16 put: (self t: 1 o: 4 s: 0 rn: RISCTempReg rd: PC shifterOperand: (jumpTarget bitAnd: 16rFF)).
-	^machineCodeSize := 20
+	self machineCodeAt: 12 put: (self t: 1 o: 4 s: 0 rn: RISCTempReg rd: PC shifterOperand: (jumpTarget bitAnd: 16rFF)).
+	^machineCodeSize := 16
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -920,8 +923,8 @@ CogARMCompiler >> dispatchConcretize [
 		[JumpGreaterOrEqual]		-> [^self concretizeConditionalJump: GE].
 		[JumpGreater]				-> [^self concretizeConditionalJump: GT].
 		[JumpLessOrEqual]			-> [^self concretizeConditionalJump: LE].
-		[JumpBelow]				-> [^self concretizeConditionalJump: CS]. "according to http://courses.engr.illinois.edu/ece390/books/labmanual/assembly.html"
-		[JumpAboveOrEqual]		-> [^self concretizeConditionalJump: CC]. " --""-- "
+		[JumpBelow]				-> [^self concretizeConditionalJump: CC]. "unsigned lower"
+		[JumpAboveOrEqual]		-> [^self concretizeConditionalJump: CS]. "unsigned greater or equal"
 		[JumpAbove]				-> [^self concretizeConditionalJump: HI].
 		[JumpBelowOrEqual]		-> [^self concretizeConditionalJump: LS].
 		[JumpFPEqual]				-> [^self concretizeFPConditionalJump: EQ].
@@ -1083,6 +1086,15 @@ CogARMCompiler >> isBranch: anInstruction [
 ]
 
 { #category : #testing }
+CogARMCompiler >> isCallPreceedingReturnPC: mcpc [
+	"Assuming mcpc is a return pc answer if the instruction before it is a call."
+	"There are two types of calls: BL and (MOV, ORR, ORR, MOV, ADD)"
+	^(objectMemory byteAt: mcpc - 3) >> 4 = 16rB
+		or: [ (objectMemory longAt: mcpc - 8) = 16rE1A0E00F "MOV pc, lr" ]
+		"MOV pc, lr is sufficient as a test, because call instructions are the only insturctions, during which lr is loaded from pc."
+]
+
+{ #category : #testing }
 CogARMCompiler >> isPCDependent [
 	"Answer if the receiver is a pc-dependent instruction."
 	^self isJump or: [opcode = AlignmentNops] or: [opcode = Call]
@@ -1102,6 +1114,15 @@ CogARMCompiler >> leafCallStackPointerDelta [
 	 to capture the c stack pointer to use in trampolines back into the C run-time."
 	"This might actually be false, since directly after a call, lr, fp and variable registers need be pushed onto the stack. It depends on the implementation of call."
 	^0
+]
+
+{ #category : #accessing }
+CogARMCompiler >> machineCodeAt: anOffset [
+	"read aWord from machineCode, with little endian"
+	<inline: true>
+	^((machineCode at: anOffset"+0")"<< 0" bitOr: (machineCode at: anOffset + 1) << 8) 
+		bitOr: ((machineCode at: anOffset + 2) << 16 bitOr: (machineCode at: anOffset + 3) << 24)
+
 ]
 
 { #category : #accessing }
@@ -1212,7 +1233,7 @@ CogARMCompiler >> sizePCDependentInstructionAt: eventualAbsoluteAddress [
 	address := eventualAbsoluteAddress.
 	^machineCodeSize := (self isLongJump not and: [self isQuick: maximumSpan])
 								ifTrue: [4] "branch"
-								ifFalse: [20] "load address to register, add"
+								ifFalse: [16] "load address to register, add"
 ]
 
 { #category : #accessing }
