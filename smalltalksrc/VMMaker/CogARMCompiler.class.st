@@ -129,6 +129,19 @@ CogARMCompiler >> c: c t: t o: o s: s [
 	^ c << 28 bitOr: ((t << 25) bitOr: ((o << 21) bitOr: (s << 20)))
 ]
 
+{ #category : #encoding }
+CogARMCompiler >> c: conditionCode t: type o: flagsOrOpcode s: doUpdateStatusRegister rn:  sourceRegister rd: targetRegister [
+	<inline: true>
+	^(self c: conditionCode t: type o: flagsOrOpcode s: doUpdateStatusRegister) 
+		bitOr: (sourceRegister << 16 bitOr: targetRegister << 12)
+]
+
+{ #category : #encoding }
+CogARMCompiler >> c: conditionCode t: type o: flagsOrOpcode s: doUpdateStatusRegister rn:  sourceRegister rd: targetRegister shifterOperand: so [
+	<inline: true>
+	^(self c: conditionCode t: type o: flagsOrOpcode s: doUpdateStatusRegister rn: sourceRegister rd: targetRegister) bitOr: so
+]
+
 { #category : #abi }
 CogARMCompiler >> cResultRegister [
 	"Answer the abstract register for the C result register.
@@ -174,21 +187,15 @@ CogARMCompiler >> canMulRR [
 
 { #category : #'generate machine code' }
 CogARMCompiler >> computeMaximumSize [
-	"Because we don't use Thumb, each instruction has a multiple of 4 bytes. Most have exactly 4, but some abstract opcodes need more than one instruction."
+	"Because we don't use Thumb, each ARM instruction has 4 bytes. Some abstract opcodes need more than one instruction."
 	
-	({CmpCqR. AddCqR. SubCqR. AndCqR. OrCqR. XorCqR} 
-		anySatisfy: [ :each | each = opcode])
-			ifTrue: [^self rotateable8bitImmediate: (operands at: 0)
+	| rotateableAt0then4or20Block |
+	rotateableAt0then4or20Block := [^self rotateable8bitImmediate: (operands at: 0)
 											ifTrue: [:r :i| maxSize := 4]
 											ifFalse: [maxSize := 20]].
-	({CmpCwR. AddCwR. SubCwR. AndCwR. OrCwR. XorCwR} 
-		anySatisfy: [ :each | each = opcode])
-			ifTrue: [^maxSize := 20].
 	
-	({Jump. JumpR. JumpZero. JumpNonZero. JumpNegative. JumpNonNegative. JumpOverflow.
-	JumpOverflow. JumpNoOverflow. JumpCarry. JumpNoCarry. JumpLess. JumpGreaterOrEqual. JumpGreater. JumpLessOrEqual. JumpBelow. JumpAboveOrEqual} 
-		anySatisfy: [ :each | each = opcode])
-			ifTrue: [^maxSize := 16].
+	
+	(opcode between: FirstShortJump and: LastJump) ifTrue: [^maxSize := 16].
 	
 	opcode
 		caseOf: {
@@ -216,11 +223,23 @@ CogARMCompiler >> computeMaximumSize [
 			[RetN]					-> [^(operands at: 0) = 0 
 											ifTrue: [maxSize := 4]
 											ifFalse: [maxSize := 8]].
-			[JumpR]					-> [^maxSize := 8].
+			[CmpCqR]				-> [rotateableAt0then4or20Block value].
+			[AddCqR]				-> [rotateableAt0then4or20Block value].
+			[SubCqR]				-> [rotateableAt0then4or20Block value].
+			[AndCqR]				-> [rotateableAt0then4or20Block value].
+			[OrCqR]					-> [rotateableAt0then4or20Block value].
+			[XorCqR]				-> [rotateableAt0then4or20Block value].
+			[CmpCwR]				-> [^maxSize := 20].
+			[AddCwR]				-> [^maxSize := 20].
+			[SubCwR]				-> [^maxSize := 20].
+			[AndCwR]				-> [^maxSize := 20].
+			[OrCwR]				-> [^maxSize := 20].
+			[XorCwR]				-> [^maxSize := 20].
+			[JumpR]					-> [^maxSize := 4].
 			[JumpFPEqual]			-> [^maxSize := 8].
 			[JumpFPNotEqual]		-> [^maxSize := 8].
 			[JumpFPLess]			-> [^maxSize := 8].
-			[JumpFPGreaterOrEqual]	-> [^maxSize := 8].
+			[JumpFPGreaterOrEqual]-> [^maxSize := 8].
 			[JumpFPGreater]		-> [^maxSize := 8].
 			[JumpFPLessOrEqual]	-> [^maxSize := 8].
 			[JumpFPOrdered]		-> [^maxSize := 8].
@@ -228,9 +247,7 @@ CogARMCompiler >> computeMaximumSize [
 			[JumpLong]				-> [^maxSize := 16].
 			[JumpLongZero]		-> [^maxSize := 16].
 			[JumpLongNonZero]	-> [^maxSize := 16].
-			[LoadEffectiveAddressMwrR] -> [self rotateable8bitImmediate: (operands at: 0)
-												ifTrue: [ :r :i | ^maxSize := 4]
-												ifFalse: [^maxSize := 20]].
+			[LoadEffectiveAddressMwrR] -> [rotateableAt0then4or20Block value].
 			[PushCw]				-> [^maxSize := 20].
 		}
 		otherwise: [^maxSize := 4].
@@ -347,14 +364,14 @@ CogARMCompiler >> concretizeCall [
 			self machineCodeAt: 0 put: (self t: 5 o: 8) + (offset >> 2 bitAnd: 16r00FFFFFF). "BL offset"
 			^machineCodeSize := 4]
 		ifFalse: [
-
 			self concretizeConditionalJumpLong: AL.
+			"move the actual jump one instruction later, insterting the pc back up to lr."
 			self machineCodeAt: 16 put: (self machineCodeAt: 12).
 			"mov lr, pc"
 	"Because the pc always points to the actual address + 8, the value at pc is the address of the instruction after the branch (add pc, r3, #<byte0>"
 			self machineCodeAt: 12 put: (self t: 0 o: 16rD s: 0 rn: 0 rd: LR shifterOperand: PC).
 			^machineCodeSize := 20]
-	"We should push at least lr. The problem is, that any push added here is only executed after return, and therefore useless."
+	"We should push also lr. The problem is, that any push added here is only executed after return, and therefore useless."
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -422,7 +439,7 @@ CogARMCompiler >> concretizeConditionalJumpLong: conditionCode [
 	jumpTarget := self longJumpTargetAddress.
 	self at: 0 moveCw: jumpTarget intoR: RISCTempReg.
 	"add pc, r3, #<byte 0>"
-	self machineCodeAt: 12 put: (self t: 1 o: 4 s: 0 rn: RISCTempReg rd: PC shifterOperand: (jumpTarget bitAnd: 16rFF)).
+	self machineCodeAt: 12 put: (self c: conditionCode t: 1 o: 4 s: 0 rn: RISCTempReg rd: PC shifterOperand: (jumpTarget bitAnd: 16rFF)).
 	^machineCodeSize := 16
 ]
 
@@ -493,12 +510,9 @@ CogARMCompiler >> concretizeJumpR [
 	<inline: true>
 	| reg |
 	reg := self concreteRegister: (operands at: 0).
-	"mov lr, pc"
-	"Because the pc always points to the actual address + 8, the value at pc is the address of the instruction after the branch (add pc, r3, #<byte0>"
-	self machineCodeAt: 0 put: (self t: 0 o: 16rD s: 0 rn: 0 rd: LR shifterOperand: PC).
 	"mov pc, r?, #0"
-	self machineCodeAt: 4 put: (self t: 0 o: 16rD s: 0 rn: 0 rd: PC shifterOperand: reg).
-	^machineCodeSize := 8
+	self machineCodeAt: 0 put: (self t: 0 o: 16rD s: 0 rn: 0 rd: PC shifterOperand: reg).
+	^machineCodeSize := 4
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -687,7 +701,6 @@ CogARMCompiler >> concretizeMoveRMbr [
 	destReg := self concreteRegister: (operands at: 2).
 	self is12BitValue: offset
 		ifTrue: [ :u :immediate | 
-			"ldr:       (self t: 2 o: (8 bitOr: u <<2) s: 1 rn: srcReg rd: destReg shifterOperand: immediate)."
 			self machineCodeAt: 0 
 			"strb 	destReg, [srcReg, #immediate]"
 				put: (self t: 2 o: (16rA bitOr: u<<2) s: 0 rn: destReg rd: srcReg shifterOperand: immediate).
@@ -709,7 +722,6 @@ CogARMCompiler >> concretizeMoveRMwr [
 	destReg := self concreteRegister: (operands at: 2).
 	self is12BitValue: offset
 		ifTrue: [ :u :immediate | 
-			"ldr     (self t: 2 o: (8 bitOr: u <<2) s: 1 rn: srcReg rd: destReg shifterOperand: immediate)."
 			self machineCodeAt: 0 
 			"strb 	destReg, [srcReg, #immediate]"
 				put: (self t: 2 o: (8 bitOr: u<<2) s: 0 rn: destReg rd: srcReg shifterOperand: immediate).
