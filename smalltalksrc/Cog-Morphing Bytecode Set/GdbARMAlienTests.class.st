@@ -7,30 +7,6 @@ Class {
 	#category : #'Cog-Processors-Tests'
 }
 
-{ #category : #tests }
-GdbARMAlienTests >> callTrapPerformance: n [
-	"Call a function that is out-of-range.  Ensure the call is trapped."
-	"self new testCallTrap"
-	| memory |
-	 "The address is out of range of memory every which way (whether relative or absolute and whether big-endian or little."
-	memory := ByteArray new: 1024.
-	memory replaceFrom: 1 to: 5 with: { self processor callOpcode. 0. 16r80. 16r80. 0. } asByteArray.
-	self processor
-			eip: 0;
-			esp: (memory size - 4). "Room for return address"
-	1 to: n do:
-		[:ign|
-		[self processor singleStepIn: memory]
-			on: ProcessorSimulationTrap
-			do: [:ex|]].
-
-	"QSystemProfiler spyOn: [GdbARMAlienTests new callTrapPerformance: 1024*128]"
-	"Time millisecondsToRun: [GdbARMAlienTests new callTrapPerformance: 1024*128] 2463"
-	"Time millisecondsToRun: [1 to: 1024*1024*64 do: [:ign| nil yourself]] 636"
-	"Time millisecondsToRun: [1 to: 1024*1024*64 do: [:ign| nil perform: #ifNotNilDo: with: nil]] 3639"
-	"Time millisecondsToRun: [1 to: 1024*1024*64 do: [:ign| nil perform: #ifNotNilDo:ifNil: with: nil with: nil]] 12401"
-]
-
 { #category : #accessing }
 GdbARMAlienTests >> nfib [
 	"long fib(long n) { return n <= 1 ? 1 : fib(n-1) + fib(n-2) + 1; }
@@ -94,7 +70,7 @@ GdbARMAlienTests >> runNFib: n disassemble: disassemble printRegisters: printReg
 	"Run nfib wth the argument. Answer the result."
 	"self new runNFib: 5 disassemble: true printRegisters: true"
 	| memory |
-	memory := WordArray new: 1024 * 2 withAll: self processor nopOpcode.
+	memory := Bitmap new: 1024 * 2 withAll: self processor nopOpcode.
 	memory replaceFrom: 1 to: self nfib size with: self nfib asWordArray startingAt: 1.
 	self processor
 		r0: n;"argument n"
@@ -157,7 +133,10 @@ GdbARMAlienTests >> testCallTrap [
 			[:pst|
 			self assert: self processor pc = 1024.
 			self assert: self processor lr = 4.
-			self assert: pst messageText = 'Error 0: Illegal Instruction fetch address (0x00000400).'].
+			self assert: pst pc = 0.
+			self assert: pst nextpc = 4.
+			self assert: pst address = 1024.
+			self assert: pst type = #call].
 ]
 
 { #category : #tests }

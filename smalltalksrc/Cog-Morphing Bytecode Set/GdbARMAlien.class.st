@@ -3,7 +3,6 @@ Class {
 	#superclass : #CogProcessorAlien,
 	#type : #bytes,
 	#classVars : [
-		'OpcodeExceptionMap',
 		'PostBuildStackDelta'
 	],
 	#category : #'Cog-Processors'
@@ -62,20 +61,53 @@ GdbARMAlien >> bitsInWord [
 GdbARMAlien >> branchAndLinkOpcodeWithOffset: aNumber [
 	
 	| offset |
-	offset := (aNumber - 8) asInteger >> 2.
-	(offset bitAnd: 16rFF000000) ~= 0 ifTrue: [self error: 'The offset is to far. ARM does not support such far jumps.'].
-	^ 16reb000000 bitOr: (offset bitAnd: 16r00FFFFFF)
-]
+	offset := (aNumber - 8) asInteger.
+	(offset between: -33554432 and: 33554428) ifFalse: [self error: 'The offset is to far. ARM does not support such far jumps.'].
+	^ 16reb000000 bitOr: (offset >> 2 bitAnd: 16r00FFFFFF)
 
-{ #category : #opcodes }
-GdbARMAlien >> callOpcode [
-	"The call command does not generally exist. The most similar would be bl <offset>"
-	^ self branchAndLinkOpcodeWithOffset: 0.
 ]
 
 { #category : #accessing }
 GdbARMAlien >> cflag [
 	^self unsignedLongAt: 577
+]
+
+{ #category : #disassembly }
+GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager [ "<Cogit>"
+	| string i1 i2 v |
+	string := anInstructionString.
+	(i1 := string indexOfSubCollection: '%ds:0x') > 0 ifTrue:
+		[i2 := i1 + 6.
+		 ['0123456789abcdef' includes: (string at: i2)] whileTrue: [i2 := i2 + 1].
+		 string := string
+					copyReplaceFrom: i1 + 4
+					to: i2 - 1
+					with: (aSymbolManager lookupCHexString: (string copyFrom: i1 + 4 to: i2 - 1))].
+	(i1 := string indexOfSubCollection: '%ss:0x') > 0 ifTrue:
+		[i2 := i1 + 6.
+		 ['0123456789abcdef' includes: (string at: i2)] whileTrue: [i2 := i2 + 1].
+		 ((string at: i2) = $(
+		 and: [(string at: i2 + 1) = $%]) ifTrue:
+			[v := Integer readFrom: (ReadStream on: string from: i1 + 6 to: i2 - 1) base: 16.
+			string := string
+						copyReplaceFrom: i1
+						to: i2 - 1
+						with: ((v bitAnd: (1 bitShift: 31) - 1) - (v bitAnd: (1 bitShift: 31))) printString]].
+	(i1 := string indexOfSubCollection: '$0x') > 0 ifTrue:
+		[i2 := i1 + 3.
+		 ['0123456789abcdef' includes: (string at: i2)] whileTrue: [i2 := i2 + 1].
+		 string := string
+					copyReplaceFrom: i1 + 1
+					to: i2 - 1
+					with: (aSymbolManager lookupCHexString: (string copyFrom: i1 + 1 to: i2 - 1))].
+	((i1 := string indexOf: $() > 1
+	 and: [(string at: i1 + 1) isDigit
+	 and: [i1 < (i2 := string indexOf: $))]]) ifTrue:
+		[string := string
+					copyReplaceFrom: i1 + 1
+					to: i2 - 1
+					with: (aSymbolManager lookupCHexString: (string copyFrom: i1 + 1 to: i2 - 1))].
+	^string
 ]
 
 { #category : #accessing }
@@ -110,26 +142,218 @@ GdbARMAlien >> fp: aNumber [
 ]
 
 { #category : #'error handling' }
+GdbARMAlien >> handleCallFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+	"Convert an execution primitive failure for a call into a ProcessorSimulationTrap signal."
+	|  relativeJump callAddress |
+	((memoryArray byteAt: pc + 4) bitAnd: 16rF) = 16rB "BL opcode"
+		ifTrue: ["short jump via BL, therefore we have a 24bit signed integer offset"
+			relativeJump := (memoryArray unsignedLongAt: pc + 1 bigEndian: false) bitAnd: 16r00FFFFFF.
+			relativeJump := (relativeJump bitAt: 24) = 1 
+									ifTrue: [((relativeJump bitOr: 16r3F000000) << 2) signedIntFromLong]
+									ifFalse: [relativeJump << 2].
+			callAddress := (pc + 8 + relativeJump)]
+		
+		ifFalse: ["long jump using RISCTempReg"
+			"The memoryArray starts indexing from 1, whereas the pc is based on 0-indexing, therefore all access-offsets are one greater than expected"
+			callAddress := (memoryArray byteAt: pc + 4) 
+								+ ((memoryArray byteAt: pc - 4) << 24) 
+								+ ((memoryArray byteAt: pc - 8) << 16) 
+								+ ((memoryArray byteAt: pc - 12) << 8)].
+	^(ProcessorSimulationTrap
+			pc: pc
+			nextpc: pc + 4
+			address: callAddress signedIntToLong
+			type: #call)
+		signal
+]
+
+{ #category : #'error handling' }
+GdbARMAlien >> handleExecutionPrimitiveFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+	"Handle an execution primitive failure for an unhandled opcode."
+	^self reportPrimitiveFailure
+]
+
+{ #category : #'error handling' }
 GdbARMAlien >> handleExecutionPrimitiveFailureIn: memoryArray "<Bitmap|ByteArray>" minimumAddress: minimumAddress "<Integer>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
 	"Handle an execution primitive failure.  Convert out-of-range call and absolute
 	 memory read into register instructions into ProcessorSimulationTrap signals."
-	"self printIntegerRegistersOn: Transcript"
 	"self printRegistersOn: Transcript"
-	
-	"| pc opcode |
+	| pc |
 	((pc := self pc) between: minimumAddress and: memoryArray byteSize - 1) ifTrue:
-		[opcode := memoryArray byteAt: pc + 1.
-		^self
-			perform: (OpcodeExceptionMap at: opcode + 1)
-			with: pc
-			with: memoryArray
-			with: minimumWritableAddress]."
+		[(self instructionTypeAt: pc in: memoryArray)
+			caseOf: {
+				[#Call] 			-> [^self handleCallFailureAt: pc in: memoryArray readOnlyBelow: minimumWritableAddress].
+				[#Jump] 		-> [^self handleJmpFailureAt: pc in: memoryArray readOnlyBelow: minimumWritableAddress].
+				[#MoveAwR]	-> [^self handleMoveAwRFailureAt: pc in: memoryArray readOnlyBelow: minimumWritableAddress].
+				[#MoveMbrR]	-> [^self handleMoveMbrRFailureAt: pc in: memoryArray readOnlyBelow: minimumWritableAddress].
+				[#MoveRAw]	-> [^self handleMoveRAwFailureAt: pc in: memoryArray readOnlyBelow: minimumWritableAddress].
+				[#MoveRMbr]	-> [^self handleMoveRMbrFailureAt: pc in: memoryArray readOnlyBelow: minimumWritableAddress].
+				[#Ret]			-> [^self handleRetFailureAt: pc in: memoryArray readOnlyBelow: minimumWritableAddress].} 
+			otherwise: [^self handleExecutionPrimitiveFailureAt: pc in: memoryArray readOnlyBelow: minimumWritableAddress]].
+	((pc := self lr - 4) between: minimumAddress and: memoryArray byteSize - 1) ifTrue:
+		[(self instructionTypeAt: pc in: memoryArray)
+			caseOf: {
+				[#Call] 		-> [^self handleCallFailureAt: pc in: memoryArray readOnlyBelow: minimumWritableAddress].
+				[#Jump] 	-> [^self handleJmpFailureAt: pc in: memoryArray readOnlyBelow: minimumWritableAddress].
+				[#Ret]		-> [^self handleRetFailureAt: pc in: memoryArray readOnlyBelow: minimumWritableAddress].} 
+			otherwise: [^self handleExecutionPrimitiveFailureAt: pc in: memoryArray readOnlyBelow: minimumWritableAddress]].
 	^self reportPrimitiveFailure
+]
+
+{ #category : #'error handling' }
+GdbARMAlien >> handleJmpFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+	"Convert an execution primitive failure for a jmp into a ProcessorSimulationTrap signal."
+	|  relativeJump |
+	self halt.
+	relativeJump := memoryArray longAt: pc + 2 bigEndian: false.
+	^(ProcessorSimulationTrap
+			pc: pc
+			nextpc: pc + 5
+			address: (pc + 5 + relativeJump) signedIntToLong
+			type: #jump)
+		signal
+]
+
+{ #category : #'error handling' }
+GdbARMAlien >> handleMoveAwRFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+	"Convert an execution primitive failure for a register load from an Address into a ProcessorSimulationTrap signal."
+	((memoryArray byteAt: pc + 4) = 16rE5  "test for E593 as the most significant two bytes"
+		and: [(memoryArray byteAt: pc + 3) = (16r90 + (CogARMCompiler classPool at: #RISCTempReg))])
+		ifTrue:
+			[(ProcessorSimulationTrap
+					pc: pc
+					nextpc: pc + 4 
+					address: (memoryArray byteAt: pc + 1) "address, combined from four instructions"
+								+ ((memoryArray byteAt: pc - 3) << 24) 
+								+ ((memoryArray byteAt: pc - 7) << 16) 
+								+ ((memoryArray byteAt: pc - 11) << 8)
+					type: #read
+					accessor: (self registerStateSetters at: ((memoryArray byteAt: pc + 2) >> 4) + 1))
+				signal]
+		ifFalse:
+			[self reportPrimitiveFailure]
+]
+
+{ #category : #'error handling' }
+GdbARMAlien >> handleMoveMbrRFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+	"Convert an execution primitive failure for a byte register load into a ProcessorSimulationTrap signal."
+	"MoveMbrR"
+	| modrmByte |
+	self halt.
+	^(((modrmByte := memoryArray byteAt: pc + 2) bitAnd: 16rC0) = 16r80) "ModRegRegDisp32"
+		ifTrue:
+			[(ProcessorSimulationTrap
+					pc: pc
+					nextpc: pc + 6
+					address: ((self perform: (#(eax ecx edx ebx esp ebp esi edi) at: (modrmByte bitAnd: 7) + 1))
+							+ (memoryArray unsignedLongAt: pc + 3 bigEndian: false)
+								bitAnd: 16rFFFFFFFF)
+					type: #read
+					accessor: (#(al: cl: dl: bl: ah: ch: dh: bh:) at: ((modrmByte >> 3 bitAnd: 7) + 1)))
+				signal]
+		ifFalse:
+			[self reportPrimitiveFailure]
+]
+
+{ #category : #'error handling' }
+GdbARMAlien >> handleMoveRAwFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+	"Convert an execution primitive failure for a register write into Memory at a predefined address into a ProcessorSimulationTrap signal."
+	^((memoryArray byteAt: pc + 4) = 16rE5 
+		and: [(memoryArray byteAt: pc + 3) = (16r80 + (CogARMCompiler classPool at: #RISCTempReg))])
+		ifTrue:
+			[(ProcessorSimulationTrap
+					pc: pc
+					nextpc: pc + 4
+					address: (memoryArray byteAt: pc + 1) 
+								+ ((memoryArray byteAt: pc - 3) << 24) 
+								+ ((memoryArray byteAt: pc - 7) << 16) 
+								+ ((memoryArray byteAt: pc - 11) << 8)
+					type: #write
+					accessor: (self registerStateNames at: ((memoryArray byteAt: pc + 2) >> 4) + 1))
+				signal]
+		ifFalse:
+			[self reportPrimitiveFailure]
+]
+
+{ #category : #'error handling' }
+GdbARMAlien >> handleMoveRMbrFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+		"Convert an execution primitive failure for a byte register write into a ProcessorSimulationTrap signal."
+	"MoveRMbr"
+	| modrmByte |
+	self halt.
+	^(((modrmByte := memoryArray byteAt: pc + 2) bitAnd: 16rC0) = 16r80) "ModRegRegDisp32"
+		ifTrue:
+			[(ProcessorSimulationTrap
+					pc: pc
+					nextpc: pc + 6
+					address: ((self perform: (#(eax ecx edx ebx esp ebp esi edi) at: (modrmByte bitAnd: 7) + 1))
+							+ (memoryArray unsignedLongAt: pc + 3 bigEndian: false)
+								bitAnd: 16rFFFFFFFF)
+					type: #write
+					accessor: (#(al cl dl bl ah ch dh bh) at: ((modrmByte >> 3 bitAnd: 7) + 1)))
+				signal]
+		ifFalse:
+			[self reportPrimitiveFailure]
+]
+
+{ #category : #'error handling' }
+GdbARMAlien >> handleRetFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+	"Convert an execution primitive failure for a ret into a ProcessorSimulationTrap signal."
+	self halt.
+	^(ProcessorSimulationTrap
+			pc: pc
+			nextpc: pc + 4
+			address: (memoryArray unsignedLongAt: self sp + 1)
+			type: #return
+			accessor: #pc:)
+		signal
 ]
 
 { #category : #accessing }
 GdbARMAlien >> ifflags [
 	^self unsignedLongAt: 585
+]
+
+{ #category : #'error handling' }
+GdbARMAlien >> instructionTypeAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
+	"Identify which type of instruction is at pc in memoryArray. For the time beeing, only those instructions needed for PrimitiveFailure are identified."
+	| RISCTempReg lastInstruction typeOperandStatus |
+	RISCTempReg := CogARMCompiler classPool at: #RISCTempReg.
+	lastInstruction := memoryArray unsignedLongAt: pc + 1 bigEndian: false.
+	"self disassembleFrom: pc - 16 to: pc + 3 in: memoryArray on: Transcript cr"
+	
+	"Ret"
+	lastInstruction = 16rE8BD8000 ifTrue: [#Ret].
+
+	"Call"
+	(((memoryArray byteAt: pc + 4) bitAnd: 16rF) = 16rB "BL opcode"
+		or: [(memoryArray unsignedLongAt: pc - 3 bigEndian: false) = 16rE1A0E00F]) ifTrue: [^#Call].
+	
+	"Jump"
+	((memoryArray byteAt: pc + 3) >> 4 = 16rA "B opcode, for short jumps"
+		or: [(lastInstruction >> 12 bitAnd: 16r0FFFF) = 
+				(16r0280F + (RISCTempReg << 4)) 	"ADD? PC, RISCTempReg, #anything, for JumpLong-Instructions"])
+		ifTrue: [^#Jump].
+		
+	typeOperandStatus := lastInstruction >> 20 bitAnd: 16rFF.
+	"MoveRMbr"
+	(typeOperandStatus = 16r54 or: [typeOperandStatus = 16r5C] or: [typeOperandStatus = 16r7C])
+		ifTrue: [^#MoveRMbr].
+		
+	"MoveRAw"
+	(typeOperandStatus = 16r58 and: [(lastInstruction >> 16 bitAnd: 16rF) = RISCTempReg])
+		ifTrue: [^#MoveRAw].
+		
+	"MoveMbrR"
+	(typeOperandStatus = 16r55 or: [typeOperandStatus = 16r5D] or: [typeOperandStatus = 16r7D])
+		ifTrue: [^#MoveMbrR].
+		
+	"MoveAwR"
+	((typeOperandStatus = 16r59) and: [(lastInstruction >> 16 bitAnd: 16rF) = RISCTempReg])
+		ifTrue: [^#MoveAwR].
+	
+	
+	^#UnidentifiedInstruction
 ]
 
 { #category : #'accessing-abstract' }
@@ -175,7 +399,7 @@ GdbARMAlien >> pc: anUnsignedInteger [
 GdbARMAlien >> primitiveDisassembleAt: address inMemory: memoryArray [ "<Bitmap|ByteArray>"
 	"Answer an Array of the size and the disassembled code string for the instruction at the current instruction pointer in memory."
 	<primitive: 'primitiveDisassembleAtInMemory' module: 'GdbARMPlugin'>
-	^self primitiveFailed
+	^self reportPrimitiveFailure
 ]
 
 { #category : #primitives }
@@ -420,18 +644,17 @@ GdbARMAlien >> registerState [
 
 { #category : #'accessing-abstract' }
 GdbARMAlien >> registerStateNames [
-	^#(	r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 sp lr pc eflags)
+	^#(	r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 fp r12 sp lr pc eflags)
+]
+
+{ #category : #'accessing-abstract' }
+GdbARMAlien >> registerStateSetters [
+	^#(	r0: r1: r2: r3: r4: r5: r6: r7: r8: r9: r10: fp: r12: sp: lr: pc:)
 ]
 
 { #category : #accessing }
 GdbARMAlien >> reset [
 	self primitiveResetCPU
-]
-
-{ #category : #opcodes }
-GdbARMAlien >> retOpcode [
-	"the ret command does not generally exist. the most similar would be mov pc, lr"
-	^ self notYetImplemented
 ]
 
 { #category : #'accessing-abstract' }
@@ -444,6 +667,15 @@ GdbARMAlien >> setFramePointer: framePointer stackPointer: stackPointer [
 { #category : #accessing }
 GdbARMAlien >> sflag [
 	^self unsignedLongAt: 589
+]
+
+{ #category : #'execution simulation' }
+GdbARMAlien >> simulateCallOf: address nextpc: nextpc memory: aMemory [
+	"Simulate a frame-building call of address.  Build a frame since
+	a) this is used for calls into the run-time which are unlikely to be leaf-calls, and
+	b) stack alignment needs to be realistic for assert checking for platforms such as Mac OS X"
+	self lr: nextpc.
+	self pc: address
 ]
 
 { #category : #execution }
