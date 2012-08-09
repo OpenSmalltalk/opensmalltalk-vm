@@ -258,32 +258,6 @@ BochsIA32Alien >> decorateDisassembly: anInstructionString for: aSymbolManager [
 	^string
 ]
 
-{ #category : #disassembly }
-BochsIA32Alien >> disassembleFrom: startAddress to: endAddress in: memory for: aSymbolManager "<Cogit>" labels: labelDictionary on: aStream [
-	| address |
-	address := startAddress.
-	[address <= endAddress] whileTrue:
-		[[:size :string|
-		(aSymbolManager labelForPC: address) ifNotNil:
-			[:label| aStream nextPutAll: label; nextPut: $:; cr].
-		(labelDictionary at: address ifAbsent: []) ifNotNil:
-			[:label| aStream nextPutAll: label; nextPut: $:; cr].
-		aStream nextPutAll: (self decorateDisassembly: string for: aSymbolManager); cr; flush.
-		address := address + size]
-			valueWithArguments: (self
-									primitiveDisassembleAt: address
-									inMemory: memory)]
-]
-
-{ #category : #disassembly }
-BochsIA32Alien >> disassembleNextInstructionIn: memory for: aSymbolManager [ "<Cogit|nil>"
-	| string |
-	string := (self primitiveDisassembleAt: self eip inMemory: memory) last.
-	^aSymbolManager
-		ifNil: [string]
-		ifNotNil: [self decorateDisassembly: string for: aSymbolManager]
-]
-
 { #category : #accessing }
 BochsIA32Alien >> dl [
 	^self edx bitAnd: 16rFF

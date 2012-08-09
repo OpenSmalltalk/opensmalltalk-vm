@@ -16,12 +16,29 @@ CogProcessorAlien >> callOpcode [
 ]
 
 { #category : #disassembly }
+CogProcessorAlien >> disassembleFrom: startAddress to: endAddress in: memory for: aSymbolManager "<Cogit>" labels: labelDictionary on: aStream [
+	| address |
+	address := startAddress.
+	[address <= endAddress] whileTrue:
+		[[:size :string|
+		(aSymbolManager labelForPC: address) ifNotNil:
+			[:label| aStream nextPutAll: label; nextPut: $:; cr].
+		(labelDictionary at: address ifAbsent: []) ifNotNil:
+			[:label| aStream nextPutAll: label; nextPut: $:; cr].
+		aStream nextPutAll: (self decorateDisassembly: string for: aSymbolManager); cr; flush.
+		address := address + size]
+			valueWithArguments: (self
+									primitiveDisassembleAt: address
+									inMemory: memory)]
+]
+
+{ #category : #disassembly }
 CogProcessorAlien >> disassembleFrom: startAddress to: endAddress in: memory on: aStream [
 	| address |
 	address := startAddress.
 	[address < endAddress] whileTrue:
 		[[:size :string|
-		aStream nextPutAll: (address printStringBase: 16 length: 8 padded: true); nextPut: $:; tab; nextPutAll: string; cr; flush.
+		aStream nextPutAll: (address printStringBase: 16 length: 8 padded: true); nextPut: $:; tab; tab; nextPutAll: string; cr; flush.
 		address := address + size]
 			valueWithArguments: (self
 									primitiveDisassembleAt: address
@@ -43,6 +60,15 @@ CogProcessorAlien >> disassembleInstructionAt: ip In: memory into: aBlock [
 { #category : #disassembly }
 CogProcessorAlien >> disassembleNextInstructionIn: memory [
 	^(self primitiveDisassembleAt: self pc inMemory: memory) last
+]
+
+{ #category : #disassembly }
+CogProcessorAlien >> disassembleNextInstructionIn: memory for: aSymbolManager [ "<Cogit|nil>"
+	| string |
+	string := (self primitiveDisassembleAt: self pc inMemory: memory) last.
+	^aSymbolManager
+		ifNil: [string]
+		ifNotNil: [self decorateDisassembly: string for: aSymbolManager]
 ]
 
 { #category : #'accessing-abstract' }
