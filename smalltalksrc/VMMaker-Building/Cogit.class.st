@@ -5576,19 +5576,19 @@ Cogit >> latestContinuationPCFor: descriptor at: pc byte0: opcodeByte in: aMetho
 ]
 
 { #category : #'in-line cacheing' }
-Cogit >> linkSendAt: callSiteReturnAddress in: sendingMethod to: targetMethod offset: entryOffset receiver: receiver [
+Cogit >> linkSendAt: callSiteReturnAddress in: sendingMethod to: targetMethod offset: theEntryOffset receiver: receiver [
 	<api>
 	<var: #sendingMethod type: #'CogMethod *'>
 	<var: #targetMethod type: #'CogMethod *'>
 	| inlineCacheTag address extent |
 	self cppIf: NewspeakVM
-		ifTrue: [self assert: (entryOffset = cmEntryOffset
-							or: [entryOffset = cmNoCheckEntryOffset
-							or: [entryOffset = cmDynSuperEntryOffset]])]
-		ifFalse: [self assert: (entryOffset = cmEntryOffset
-							or: [entryOffset = cmNoCheckEntryOffset])].
+		ifTrue: [self assert: (theEntryOffset = cmEntryOffset
+							or: [theEntryOffset = cmNoCheckEntryOffset
+							or: [theEntryOffset = cmDynSuperEntryOffset]])]
+		ifFalse: [self assert: (theEntryOffset = cmEntryOffset
+							or: [theEntryOffset = cmNoCheckEntryOffset])].
 	self assert: (callSiteReturnAddress between: methodZoneBase and: methodZone zoneLimit).
-	inlineCacheTag := entryOffset = cmNoCheckEntryOffset
+	inlineCacheTag := theEntryOffset = cmNoCheckEntryOffset
 						ifTrue: [targetMethod selector "i.e. no change"]
 						ifFalse: [objectRepresentation inlineCacheTagForInstance: receiver].
 	(sendingMethod cmRefersToYoung not
@@ -5596,7 +5596,7 @@ Cogit >> linkSendAt: callSiteReturnAddress in: sendingMethod to: targetMethod of
 		[self assert: (methodZone occurrencesInYoungReferrers: sendingMethod) = 0.
 		 sendingMethod cmRefersToYoung: true.
 		 methodZone addToYoungReferrers: sendingMethod].
-	address := targetMethod asInteger + entryOffset.
+	address := targetMethod asInteger + theEntryOffset.
 	extent := backEnd
 				rewriteInlineCacheAt: callSiteReturnAddress
 				tag: inlineCacheTag
