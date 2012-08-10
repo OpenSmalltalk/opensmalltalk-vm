@@ -29,6 +29,7 @@ sqInt sqSocketConnectionStatus(SocketPtr s);
 void  sqSocketConnectToPort(SocketPtr s, sqInt addr, sqInt port);
 void  sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaID(SocketPtr s, sqInt netType, sqInt socketType, sqInt recvBufSize, sqInt sendBufSize, sqInt semaIndex);
 void  sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s, sqInt netType, sqInt socketType, sqInt recvBufSize, sqInt sendBufSize, sqInt semaIndex, sqInt readSemaIndex, sqInt writeSemaIndex);
+void sqSocketCreateRawProtoTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s, sqInt domain, sqInt protocol, sqInt recvBufSize, sqInt sendBufSize, sqInt semaIndex, sqInt readSemaIndex, sqInt writeSemaIndex);
 void  sqSocketDestroy(SocketPtr s);
 sqInt sqSocketError(SocketPtr s);
 void  sqSocketListenOnPort(SocketPtr s, sqInt port);
