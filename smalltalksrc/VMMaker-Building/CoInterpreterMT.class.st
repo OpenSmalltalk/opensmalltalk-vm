@@ -1407,7 +1407,7 @@ CoInterpreterMT >> tryToExecuteSmalltalk: vmThread [
 				withValue: activeProc].
 	activeProc = objectMemory nilObject ifTrue:
 		[cogThreadManager releaseVM.
-		 ^self].
+		 ^nil].
 	ownerIndex := self ownerIndexOfProcess: activeProc.
 	(ownerIndex = 0
 	 or: [ownerIndex ~= 0 and: [ownerIndex = cogThreadManager getVMOwner]])
