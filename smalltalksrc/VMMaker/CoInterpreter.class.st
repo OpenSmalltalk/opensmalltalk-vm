@@ -3777,8 +3777,10 @@ CoInterpreter >> interpretMethodFromMachineCode [
 				[self return: self popStack toExecutive: false
 				 "NOTREACHED"]]
 		ifFalse:
-			[self assert: ((self primitiveIndexOf: newMethod) = 0
-						or: [(self functionPointerFor: (self primitiveIndexOf: newMethod) inClass: objectMemory nilObject) = 0])].
+			[self assert: ((self isOopCompiledMethod: newMethod)
+						   and: [(self primitiveIndexOf: newMethod) = 0
+								or: [(self functionPointerFor: (self primitiveIndexOf: newMethod) inClass: objectMemory nilObject) = 0
+								or: [self isNullExternalPrimitiveCall: newMethod]]])].
 	"if not primitive, or primitive failed, activate the method and reenter the interpreter"
 	self activateNewMethod.
 	self siglong: reenterInterpreter jmp: ReturnToInterpreter.

@@ -452,6 +452,12 @@ CogVMSimulator >> cogit [
 	^cogit
 ]
 
+{ #category : #'process primitive support' }
+CogVMSimulator >> commenceCogCompiledCodeCompaction [
+	self halt.
+	^super commenceCogCompiledCodeCompaction
+]
+
 { #category : #initialization }
 CogVMSimulator >> convertToArray [
 	"This won't work for the Cog VM because the processor simulators need raw bytes for the memory."

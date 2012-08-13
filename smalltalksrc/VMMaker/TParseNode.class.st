@@ -43,6 +43,17 @@ TParseNode >> comment: aComment [
 	comment := aComment 
 ]
 
+{ #category : #enumerating }
+TParseNode >> detect: aBlock [
+	^self detect: aBlock ifNone: [self error: 'Node is not in the tree']
+]
+
+{ #category : #enumerating }
+TParseNode >> detect: aBlock ifNone: defaultBlock [
+	self nodesDo: [:n| (aBlock value: n) ifTrue: [^n]].
+	^defaultBlock value
+]
+
 { #category : #'C code generation' }
 TParseNode >> emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen [
 	^self emitCCodeOn: aStream level: level generator: aCodeGen
