@@ -2406,7 +2406,7 @@ Cogit >> ceSICMiss: receiver [
 	innerReturn := coInterpreter popStack.
 	targetMethod := self cCoerceSimple: innerReturn - missOffset to: #'CogMethod *'.
 	outerReturn := coInterpreter stackTop.
-	self assert: (outerReturn between: methodZoneBase and: methodZone zoneLimit).
+	self assert: (outerReturn between: methodZoneBase and: methodZone freeStart).
 	entryPoint := backEnd callTargetFromReturnAddress: outerReturn.
 
 	self assert: targetMethod selector ~= objectMemory nilObject.
@@ -2891,7 +2891,7 @@ Cogit >> cogCodeConstituents [
 			 count := count + 2].
 		cogMethod := methodZone methodAfter: cogMethod].
 	((label := coInterpreter stringForCString: 'CCFree') isNil
-	 or: [(value := coInterpreter cePositive32BitIntegerFor: methodZone zoneLimit) isNil]) ifTrue:
+	 or: [(value := coInterpreter cePositive32BitIntegerFor: methodZone freeStart) isNil]) ifTrue:
 		[coInterpreter popRemappableOop.
 		 ^nil].
 	coInterpreter
@@ -3030,7 +3030,7 @@ Cogit >> cogMethodDoesntLookKosher: cogMethod [
 		 cogMethod objectHeader signedIntFromLong >= 0 ifTrue:
 			[(cogMethod methodObject ~= 0
 			 and: [cogMethod methodObject < methodZoneBase
-				   or: [cogMethod methodObject > (methodZone zoneLimit - openPICSize)
+				   or: [cogMethod methodObject > (methodZone freeStart - openPICSize)
 				   or: [(cogMethod methodObject bitAnd: BytesPerWord - 1) ~= 0
 				   or: [(self cCoerceSimple: cogMethod methodObject
 							to: #'CogMethod *') cmType ~= CMOpenPIC]]]]) ifTrue:
@@ -3201,7 +3201,7 @@ Cogit >> compactCogCompiledCode [
 	methodZone compactCompiledCode: objectMemory nullHeaderForMachineCodeMethod.
 	self assert: self allMethodsHaveCorrectHeader.
 	self assert: methodZone kosherYoungReferrers.
-	processor flushICacheFrom: methodZoneBase to: methodZone zoneLimit
+	processor flushICacheFrom: methodZoneBase to: methodZone freeStart
 ]
 
 { #category : #'simulation only' }
@@ -4102,14 +4102,17 @@ Cogit >> fixupAt: index [
 
 { #category : #compaction }
 Cogit >> freePICsWithFreedTargets [
-	| cogMethod |
+	| cogMethod count |
 	<var: #cogMethod type: #'CogMethod *'>
 	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
+	count := 0.
 	[cogMethod < methodZone limitZony] whileTrue:
 		[(cogMethod cmType = CMClosedPIC
 		 and: [self cPICHasFreedTargets: cogMethod]) ifTrue:
 			[cogMethod cmType: CMFree].
-		 cogMethod := methodZone methodAfter: cogMethod]
+		 cogMethod := methodZone methodAfter: cogMethod.
+		 count := count + 1].
+	self assert: count = methodZone numMethods
 ]
 
 { #category : #'compile abstract instructions' }
@@ -4754,7 +4757,7 @@ Cogit >> generateCogMethod: selector [
 	headerSize := self sizeof: CogMethod.
 	methodLabel address: headerSize negated.
 	self computeMaximumSizes.
-	methodLabel concretizeAt: (methodZone allocate: 0).
+	methodLabel concretizeAt: methodZone freeStart.
 	codeSize := self generateInstructionsAt: methodLabel address + headerSize.
 	mapSize := self generateMapAt: 0 start: methodLabel address + cmNoCheckEntryOffset.
 	totalSize := methodZone roundUpLength: headerSize + codeSize + mapSize.
@@ -5259,7 +5262,7 @@ Cogit >> handleCallOrJumpSimulationTrap: aProcessorSimulationTrap [
 	result ~~ #continueNoReturn ifTrue:
 		[self recordInstruction: {'(simulated return to '. processor retpcIn: coInterpreter memory. ')'}.
 		 rpc := processor retpcIn: coInterpreter memory.
-		 self assert: (rpc >= codeBase and: [rpc < methodZone zoneLimit]).
+		 self assert: (rpc >= codeBase and: [rpc < methodZone freeStart]).
 		 processor
 			smashCallerSavedRegistersWithValuesFrom: 16r80000000 by: BytesPerWord;
 			simulateReturnIn: coInterpreter memory].
@@ -5517,7 +5520,7 @@ Cogit >> isPCWithinMethodZone: address [
 	<var: #address type: #'char *'>
 	^address asUnsignedInteger
 		between: methodZoneBase
-		and: methodZone zoneLimit
+		and: methodZone freeStart
 ]
 
 { #category : #'method map' }
@@ -5537,7 +5540,7 @@ Cogit >> isSendReturnPC: retpc [
 		[^false].
 	target := backEnd callTargetFromReturnAddress: retpc.
 	^(target between: firstSend and: lastSend)
-	   or: [target between: methodZoneBase and: methodZone zoneLimit]
+	   or: [target between: methodZoneBase and: methodZone freeStart]
 ]
 
 { #category : #disassembly }
@@ -5587,7 +5590,7 @@ Cogit >> linkSendAt: callSiteReturnAddress in: sendingMethod to: targetMethod of
 							or: [theEntryOffset = cmDynSuperEntryOffset]])]
 		ifFalse: [self assert: (theEntryOffset = cmEntryOffset
 							or: [theEntryOffset = cmNoCheckEntryOffset])].
-	self assert: (callSiteReturnAddress between: methodZoneBase and: methodZone zoneLimit).
+	self assert: (callSiteReturnAddress between: methodZoneBase and: methodZone freeStart).
 	inlineCacheTag := theEntryOffset = cmNoCheckEntryOffset
 						ifTrue: [targetMethod selector "i.e. no change"]
 						ifFalse: [objectRepresentation inlineCacheTagForInstance: receiver].
@@ -5644,7 +5647,7 @@ Cogit >> lookup: selector for: receiver methodAndErrorSelectorInto: binaryBlock 
 Cogit >> lookupAddress: address [
 	<doNotGenerate>
 	| cogMethod |
-	address < methodZone zoneLimit ifTrue:
+	address < methodZone freeStart ifTrue:
 		[address >= methodZoneBase
 			ifTrue:
 				[(cogMethod := methodZone methodFor: address) ~= 0 ifTrue:
@@ -5859,7 +5862,10 @@ Cogit >> mapObjectReferencesInMachineCode: gcMode [
 	gcMode caseOf: {
 		[GCModeIncr]		-> [self mapObjectReferencesInMachineCodeForIncrementalGC].
 		[GCModeFull]		-> [self mapObjectReferencesInMachineCodeForFullGC].
-		[GCModeBecome]	-> [self mapObjectReferencesInMachineCodeForBecome] }
+		[GCModeBecome]	-> [self mapObjectReferencesInMachineCodeForBecome] }.
+
+	(self asserta: methodZone freeStart <= methodZone youngReferrers) ifFalse:
+		[self error: 'youngReferrers list overflowed']
 ]
 
 { #category : #'garbage collection' }
@@ -6586,7 +6592,7 @@ Cogit >> outputInstructionsForGeneratedRuntimeAt: startAddress [
 	self assert: startAddress + size = endAddress.
 	methodZoneBase := self alignUptoRoutineBoundary: endAddress.
 	backEnd nopsFrom: endAddress to: methodZoneBase - 1.
-	self cCode: '' inSmalltalk: [methodZone zoneLimit: methodZoneBase].
+	self cCode: '' inSmalltalk: [methodZone freeStart: methodZoneBase].
 	^startAddress
 ]
 
@@ -7473,7 +7479,7 @@ Cogit >> simulateEnilopmart: enilopmartAddress numArgs: n [
 	 called from machine code. We should also smash the register state
 	 since, being an abnormal entry, no saved registers will be restored."
 	self assert: (coInterpreter isOnRumpCStack: processor sp).
-	self assert: ((coInterpreter stackValue: n) between: guardPageSize and: methodZone zoneLimit - 1).
+	self assert: ((coInterpreter stackValue: n) between: guardPageSize and: methodZone freeStart - 1).
 	(printInstructions or: [printRegisters]) ifTrue:
 		[coInterpreter printExternalHeadFrame].
 	processor
