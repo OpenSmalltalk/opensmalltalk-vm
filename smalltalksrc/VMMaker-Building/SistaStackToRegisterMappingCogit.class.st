@@ -536,7 +536,7 @@ SistaStackToRegisterMappingCogit >> handleWriteSimulationTrap: aProcessorSimulat
 	<doNotGenerate>
 	| address end |
 	address := aProcessorSimulationTrap address.
-	(address >= methodZone zoneLimit
+	(address >= methodZone freeStart
 	or: [address <= methodZoneBase]) ifTrue:
 		[^super handleWriteSimulationTrap: aProcessorSimulationTrap].
 

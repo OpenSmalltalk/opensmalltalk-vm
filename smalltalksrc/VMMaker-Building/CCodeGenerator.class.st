@@ -988,6 +988,24 @@ CCodeGenerator >> exportedPrimitiveNames [
 
 ]
 
+{ #category : #utilities }
+CCodeGenerator >> extractTypeFor: aVariable fromDeclaration: aVariableDeclaration [
+	"Eliminate inessentials from aVariableDeclaration to answer a C type without the variable,
+	 or initializations etc"
+	| decl fpIndex |
+	decl := aVariableDeclaration.
+	(decl beginsWith: 'static') ifTrue:
+		[decl := decl allButFirst: 6].
+	(decl indexOf: $= ifAbsent: []) ifNotNil:
+		[:index| decl := decl copyFrom: 1 to: index - 1].
+	decl := decl copyReplaceAll: aVariable with: '' tokenish: [:ch| ch = $_ or: [ch isAlphaNumeric]].
+	(fpIndex := decl indexOfSubCollection: '(*') > 0 ifTrue:
+		[decl := decl copyReplaceFrom: (decl indexOf: $( startingAt: fpIndex + 1)
+					to: (decl indexOf: $) startingAt: fpIndex + 1)
+					with: ''].
+	^decl withBlanksTrimmed
+]
+
 { #category : #'C code generator' }
 CCodeGenerator >> fileHeaderVersionStampForSourceClass: sourceClass [
 	"Answer a suitable versiomn stamp to include in the header."
@@ -3228,6 +3246,19 @@ CCodeGenerator >> structTargetKindForVariableName: varName [ "<String>"
 ]
 
 { #category : #utilities }
+CCodeGenerator >> testInliningFor: selector as: inlineFlagOrSymbol [
+	"Test inlining for the method with the given selector.
+	 Do all inlining first (cuz that's how the algorithm works.
+	 Then try and inline into a copy of the method.  This isn't
+	 exactly what happens in the real deal but is close enough."
+	| meth |
+	meth := (self methodNamed: selector) copy.
+	self doBasicInlining: inlineFlagOrSymbol.
+	self halt.
+	meth tryToInlineMethodsIn: self
+]
+
+{ #category : #utilities }
 CCodeGenerator >> translationMethodClass [
 	"return the class used to produce C translation methods from MethodNodes"
 	^TMethod
@@ -3238,8 +3269,12 @@ CCodeGenerator >> typeOfVariable: varName [ "<String>"
 	scopeStack reverseDo:
 		[:dict|
 		(dict includesKey: varName) ifTrue:
-			[^dict at: varName]].
-	^variableDeclarations at: varName ifAbsent: nil
+			[^self
+				extractTypeFor: varName
+				fromDeclaration: (dict at: varName)]].
+	^self
+		extractTypeFor: varName
+		fromDeclaration: (variableDeclarations at: varName ifAbsent: [^nil])
 ]
 
 { #category : #utilities }

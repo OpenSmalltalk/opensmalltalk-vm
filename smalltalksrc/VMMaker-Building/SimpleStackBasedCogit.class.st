@@ -2598,12 +2598,18 @@ SimpleStackBasedCogit >> rewritePrimInvocationIn: cogMethod to: primFunctionPoin
 	(flags bitAnd: PrimCallMayCallBack) ~= 0
 		ifTrue:
 			[address := cogMethod asUnsignedInteger
-					+ (externalPrimJumpOffsets at: cogMethod cmNumArgs).
-			extent := backEnd rewriteJumpLongAt: address target: primFunctionPointer asInteger]
+						+ (externalPrimJumpOffsets at: cogMethod cmNumArgs).
+			extent := backEnd
+						rewriteJumpLongAt: address
+						target: (self cCode: [primFunctionPointer asUnsignedInteger]
+									inSmalltalk: [self simulatedTrampolineFor: primFunctionPointer])]
 		ifFalse:
 			[address := cogMethod asUnsignedInteger
-				+ (externalPrimCallOffsets at: cogMethod cmNumArgs).
-			extent := backEnd rewriteCallAt: address target: primFunctionPointer asInteger].
+						+ (externalPrimCallOffsets at: cogMethod cmNumArgs).
+			extent := backEnd
+						rewriteCallAt: address
+						target: (self cCode: [primFunctionPointer asUnsignedInteger]
+									inSmalltalk: [self simulatedTrampolineFor: primFunctionPointer])].
 	processor flushICacheFrom: address to: address + extent
 ]
 
