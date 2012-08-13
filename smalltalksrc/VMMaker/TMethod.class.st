@@ -686,24 +686,6 @@ TMethod >> extractStaticDirective [
 		default: (export or: [(properties includesKey: #api) or: [properties includesKey: #api:]]) not
 ]
 
-{ #category : #utilities }
-TMethod >> extractTypeFor: aVariable fromDeclaration: aVariableDeclaration [
-	"Eliminate inessentials from aVariableDeclaration to answer a C type without the variable,
-	 or initializations etc"
-	| decl fpIndex |
-	decl := aVariableDeclaration.
-	(decl beginsWith: 'static') ifTrue:
-		[decl := decl allButFirst: 6].
-	(decl indexOf: $= ifAbsent: []) ifNotNil:
-		[:index| decl := decl copyFrom: 1 to: index - 1].
-	decl := decl copyReplaceAll: aVariable with: '' tokenish: [:ch| ch = $_ or: [ch isAlphaNumeric]].
-	(fpIndex := decl indexOfSubCollection: '(*') > 0 ifTrue:
-		[decl := decl copyReplaceFrom: (decl indexOf: $( startingAt: fpIndex + 1)
-					to: (decl indexOf: $) startingAt: fpIndex + 1)
-					with: ''].
-	^decl withBlanksTrimmed
-]
-
 { #category : #'primitive compilation' }
 TMethod >> fetchRcvrExpr [
 	"Return the parse tree for an expression that fetches the receiver from the stack."
@@ -928,7 +910,7 @@ TMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar in:
 		[:formal :actual|
 		(actual isVariable
 		and: [(aCodeGen
-				variableOfType: (self typeFor: formal)
+				variableOfType: (self typeFor: formal using: aCodeGen)
 				acceptsValueOfType: (self typeFor: actual name in: aCodeGen)) not]) ifTrue:
 			[aCodeGen logger
 				nextPutAll:
@@ -1439,9 +1421,10 @@ TMethod >> propagateReturnIn: aCodeGen [
 				receiver: (TVariableNode new setName: 'self')
 				arguments: {node expression.
 							TConstantNode new "The following is necessary for functions returning functions, which have problematic syntax"
-								setValue: (self extractTypeFor: (aCodeGen cFunctionNameFor: self selector)
+								setValue: (aCodeGen
+											extractTypeFor: (aCodeGen cFunctionNameFor: self selector)
 											fromDeclaration: returnType) })]].
-	self replaceNodesIn: map.
+	self replaceNodesIn: map
 ]
 
 { #category : #accessing }
@@ -1969,13 +1952,6 @@ TMethod >> tryToInlineMethodsIn: aCodeGen [
 ]
 
 { #category : #utilities }
-TMethod >> typeFor: aVariable [
-	"Answer the type for aVariable.  Answer nil for variables without types.  nil for
-	 typelessness is required by the type propagation logic in inlineSend:directReturn:exitVar:in:."
-	^self extractTypeFor: aVariable fromDeclaration: (declarations at: aVariable asString ifAbsent: [^nil])
-]
-
-{ #category : #utilities }
 TMethod >> typeFor: aVariable in: aCodeGen [
 	"Answer the type for aVariable, deferring to aCodeGen (which defers to the vmClass)
 	 if no type is found and the variable is global (not an arg or a local).  Expect the
@@ -1986,7 +1962,14 @@ TMethod >> typeFor: aVariable in: aCodeGen [
 			ifAbsent: [((locals includes: aVariable) or: [args includes: aVariable]) ifFalse:
 						[aCodeGen typeOfVariable: aVariable]]) ifNotNil:
 		[:decl|
-		self extractTypeFor: aVariable fromDeclaration: decl]
+		aCodeGen extractTypeFor: aVariable fromDeclaration: decl]
+]
+
+{ #category : #utilities }
+TMethod >> typeFor: aVariable using: aCCodeGen [
+	"Answer the type for aVariable.  Answer nil for variables without types.  nil for
+	 typelessness is required by the type propagation logic in inlineSend:directReturn:exitVar:in:."
+	^aCCodeGen extractTypeFor: aVariable fromDeclaration: (declarations at: aVariable asString ifAbsent: [^nil])
 ]
 
 { #category : #utilities }

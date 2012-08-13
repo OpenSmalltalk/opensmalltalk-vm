@@ -6,6 +6,7 @@ Class {
 	#superclass : #CogClass,
 	#instVars : [
 		'youngReferrers',
+		'methodCount',
 		'openPICList',
 		'mzFreeStart',
 		'baseAddress',
@@ -76,10 +77,12 @@ CogMethodZone >> addToYoungReferrers: cogMethod [
 CogMethodZone >> allocate: numBytes [
 	| roundedBytes allocation |
 	roundedBytes := numBytes + 7 bitAnd: -8.
-	mzFreeStart + roundedBytes > (youngReferrers - BytesPerWord) ifTrue:
+	mzFreeStart + roundedBytes >= (limitAddress - (methodCount * BytesPerWord)) ifTrue:
 		[^0].
 	allocation := mzFreeStart.
 	mzFreeStart := mzFreeStart + roundedBytes.
+	methodCount := methodCount + 1.
+	self assert: self roomOnYoungReferrersList.
 	self cCode: '' inSmalltalk:
 		[(cogit breakPC isInteger
 		   and: [cogit breakPC between: allocation and: mzFreeStart]) ifTrue:
@@ -97,10 +100,7 @@ CogMethodZone >> clearCogCompiledCode [
 		[cogMethod cmType = CMMethod ifTrue:
 			[self freeMethod: cogMethod].
 		 cogMethod := self methodAfter: cogMethod].
-	mzFreeStart := baseAddress.
-	youngReferrers := limitAddress.
-	openPICList := nil.
-	methodBytesFreedSinceLastCompaction := 0
+	self manageFrom: baseAddress to: limitAddress
 ]
 
 { #category : #printing }
@@ -116,6 +116,13 @@ CogMethodZone >> cogMethodsSelect: aBlock [
 	^cogMethods
 ]
 
+{ #category : #'simulation only' }
+CogMethodZone >> cogit [
+	"This is for the sizeof: CogMethod hook that allows different cogit classes to use differet CogMethod variants."
+	<doNotGenerate>
+	^cogit
+]
+
 { #category : #compaction }
 CogMethodZone >> compactCompiledCode: objectHeaderValue [
 	| source dest bytes |
@@ -123,6 +130,7 @@ CogMethodZone >> compactCompiledCode: objectHeaderValue [
 	<var: #dest type: #'CogMethod *'>
 	source := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
 	openPICList := nil.
+	methodCount := 0.
 	[source < self limitZony
 	 and: [source cmType ~= CMFree]] whileTrue:
 		[self assert: (cogit cogMethodDoesntLookKosher: source) = 0.
@@ -132,6 +140,7 @@ CogMethodZone >> compactCompiledCode: objectHeaderValue [
 		 source cmType = CMOpenPIC ifTrue:
 			[source nextOpenPIC: openPICList asUnsignedInteger.
 			 openPICList := source].
+		 methodCount := methodCount + 1.
 		 source := self methodAfter: source].
 	source >= self limitZony ifTrue:
 		[^self halt: 'no free methods; cannot compact.'].
@@ -140,7 +149,8 @@ CogMethodZone >> compactCompiledCode: objectHeaderValue [
 		[self assert: (cogit maybeFreeCogMethodDoesntLookKosher: source) = 0.
 		 bytes := source blockSize.
 		 source cmType ~= CMFree ifTrue:
-			[self mem: dest mo: source ve: bytes.
+			[methodCount := methodCount + 1.
+			 self mem: dest mo: source ve: bytes.
 			 dest objectHeader: objectHeaderValue.
 			 dest cmType = CMMethod
 				ifTrue:
@@ -240,6 +250,19 @@ CogMethodZone >> freeOlderMethodsForCompaction [
 						cr; flush]
 ]
 
+{ #category : #accessing }
+CogMethodZone >> freeStart [
+	<inline: true>
+	<returnTypeC: #usqInt>
+	^mzFreeStart
+]
+
+{ #category : #accessing }
+CogMethodZone >> freeStart: zoneLimit [
+	<doNotGenerate>
+	^mzFreeStart := zoneLimit
+]
+
 { #category : #'young referers' }
 CogMethodZone >> kosherYoungReferrers [
 	"Answer that all entries in youngReferrers are in-use and have the cmRefersToYoung flag set.
@@ -271,7 +294,8 @@ CogMethodZone >> manageFrom: theStartAddress to: theLimitAddress [
 	mzFreeStart := baseAddress := theStartAddress.
 	youngReferrers := limitAddress := theLimitAddress.
 	openPICList := nil.
-	methodBytesFreedSinceLastCompaction := 0
+	methodBytesFreedSinceLastCompaction := 0.
+	methodCount := 0
 ]
 
 { #category : #compaction }
@@ -294,12 +318,6 @@ CogMethodZone >> methodAfter: cogMethod [
 	^coInterpreter
 		cCoerceSimple: (self roundUpLength: cogMethod asInteger + cogMethod blockSize)
 		to: #'CogMethod *'
-]
-
-{ #category : #accessing }
-CogMethodZone >> methodBytesFreedSinceLastCompaction [
-	<cmacro: '() methodBytesFreedSinceLastCompaction'> "we all get a tad fatigued now and again..."
-	^methodBytesFreedSinceLastCompaction
 ]
 
 { #category : #'jit - api' }
@@ -351,6 +369,11 @@ CogMethodZone >> methodsDo: aBlock [
 		[cogMethod cmType ~= CMFree ifTrue:
 			[aBlock value: cogMethod].
 		 cogMethod := self methodAfter: cogMethod]"
+]
+
+{ #category : #accessing }
+CogMethodZone >> numMethods [
+	^methodCount
 ]
 
 { #category : #'jit - api' }
@@ -560,7 +583,15 @@ CogMethodZone >> removeFromOpenPICList: anOpenPIC [
 
 { #category : #'young referers' }
 CogMethodZone >> roomOnYoungReferrersList [
-	^youngReferrers - BytesPerWord >= mzFreeStart
+	"The youngReferrers list holds methods that may contain a reference to a young
+	 object and hence need to be visited during young-space garbage collection.  The
+	 list saves walking through all of code space to do so, as in typical circumstances
+	 there are no methods that refer to young objects.However, events like become:
+	 can potentially cause every method to refer to a new object (becomming true for
+	 example).  So there needs to be room on the list for as many methods as exist."
+	self assert: (youngReferrers <= limitAddress
+				and: [youngReferrers >= (limitAddress - (methodCount * BytesPerWord))]).
+	^limitAddress - (methodCount * BytesPerWord) >= mzFreeStart
 ]
 
 { #category : #accessing }
@@ -608,17 +639,6 @@ CogMethodZone >> youngReferrers [
 
 { #category : #accessing }
 CogMethodZone >> zoneEnd [
+	<inline: true>
 	^limitAddress
-]
-
-{ #category : #accessing }
-CogMethodZone >> zoneLimit [
-	<returnTypeC: #usqInt>
-	^mzFreeStart
-]
-
-{ #category : #accessing }
-CogMethodZone >> zoneLimit: zoneLimit [
-	<doNotGenerate>
-	^mzFreeStart := zoneLimit
 ]
