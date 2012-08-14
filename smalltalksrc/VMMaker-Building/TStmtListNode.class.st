@@ -61,7 +61,7 @@ TStmtListNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 
 { #category : #'C code generation' }
 TStmtListNode >> emitCCodeOn: aStream prependToEnd: aNodeOrNil level: level generator: aCodeGen [
-
+	self emitCCommentOn: aStream level: level.
 	statements withIndexDo:
 		[:s :idx|
 		s emitCCommentOn: aStream level: level.

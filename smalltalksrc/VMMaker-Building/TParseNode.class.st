@@ -37,6 +37,19 @@ TParseNode >> bindVariablesIn: aDictionary [
 	^self
 ]
 
+{ #category : #enumerating }
+TParseNode >> collect: aBlock [
+	| nodes |
+	nodes := OrderedCollection new.
+	self nodesDo: [:n| (aBlock value: n) ifTrue: [nodes add: n]].
+	^nodes
+]
+
+{ #category : #accessing }
+TParseNode >> comment [
+	^comment
+]
+
 { #category : #accessing }
 TParseNode >> comment: aComment [
 
