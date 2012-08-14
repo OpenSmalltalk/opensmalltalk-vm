@@ -9056,7 +9056,7 @@ NewspeakInterpreter >> printOop: oop [
 	self printHex: oop.
 	(self isIntegerObject: oop) ifTrue:
 		[^self
-			cCode: 'printf("=%ld\n", integerValueOf(oop))'
+			cCode: 'printf("=%ld\n", (long)integerValueOf(oop))'
 			inSmalltalk: [self print: (self shortPrint: oop); cr]].
 	(oop between: self startOfMemory and: freeBlock) ifFalse:
 		[self printHex: oop; print: ' is not on the heap'; cr.
@@ -10107,7 +10107,7 @@ NewspeakInterpreter >> shortPrintOop: oop [
 	<inline: false>
 	self printHex: oop.
 	(self isIntegerObject: oop) ifTrue:
-		[^self cCode: 'printf("=%ld\n", integerValueOf(oop))' inSmalltalk: [self print: (self shortPrint: oop); cr]].
+		[^self cCode: 'printf("=%ld\n", (long)integerValueOf(oop))' inSmalltalk: [self print: (self shortPrint: oop); cr]].
 	(oop between: self startOfMemory and: freeBlock) ifFalse:
 		[self printHex: oop; print: ' is not on the heap'; cr.
 		 ^nil].

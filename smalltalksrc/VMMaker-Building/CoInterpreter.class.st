@@ -5502,7 +5502,7 @@ CoInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imag
 								allocateMemory: heapSize
 								minimum: minimumMemory
 								imageFile: f
-								headerSize: headerSize).	
+								headerSize: headerSize) asUnsignedInteger.	
 	
 	objectMemory memory = nil ifTrue: [self insufficientMemoryAvailableError].
 	heapBase := objectMemory memory + cogCodeSize.
