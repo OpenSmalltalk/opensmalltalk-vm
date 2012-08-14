@@ -8576,7 +8576,7 @@ Interpreter >> printOop: oop [
 	<inline: false>
 	self printNum: oop.
 	(self isIntegerObject: oop) ifTrue:
-		[^self cCode: 'printf("=%ld\n", integerValueOf(oop))' inSmalltalk: [self shortPrint: oop]].
+		[^self cCode: 'printf("=%ld\n", (long)integerValueOf(oop))' inSmalltalk: [self shortPrint: oop]].
 	self print: ': a(n) '.
 	self printNameOfClass: (self fetchClassOf: oop) count: 5.
 	self cr.

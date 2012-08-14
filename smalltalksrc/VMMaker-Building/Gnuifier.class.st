@@ -114,13 +114,13 @@ Gnuifier >> gnuifyFrom: inFileStream to: outFileStream [
 					(inLine findString: 'register struct foo * foo = &fum;') > 0 ifTrue: [
 						outLine := 'register struct foo * foo FOO_REG = &fum;' ].
 					(inLine findString: ' localIP;') > 0 ifTrue: [
-						outLine := '    char* localIP IP_REG;' ].
+						outLine := '	register char* localIP IP_REG;' ].
 					(inLine findString: ' localFP;') > 0 ifTrue: [
-						outLine := '    char* localFP FP_REG;' ].
+						outLine := '	register char* localFP FP_REG;' ].
 					(inLine findString: ' localSP;') > 0 ifTrue: [
-						outLine := '    char* localSP SP_REG;' ].
+						outLine := '	register char* localSP SP_REG;' ].
 					(inLine findString: ' currentBytecode;') > 0 ifTrue: [
-						outLine := '    sqInt currentBytecode CB_REG;' ].
+						outLine := '	register sqInt currentBytecode CB_REG;' ].
 					inLine isEmpty ifTrue: [
 						"reached end of variables"
 						inInterpretVars := false.
