@@ -149,7 +149,7 @@ StackInterpreterPrimitives >> primitiveContextAtPut [
 	(index between: 1 and: (self stackPointerIndexForFrame: spouseFP)) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
 	self temporary: index - 1 in: spouseFP put: value.
-	^self pop: argumentCount + 1 thenPush: value
+	self pop: argumentCount + 1 thenPush: value
 ]
 
 { #category : #'indexing primitives' }
