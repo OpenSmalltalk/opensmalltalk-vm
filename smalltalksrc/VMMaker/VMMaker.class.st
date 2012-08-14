@@ -293,7 +293,8 @@ VMMaker class >> generateNewspeakCogVM [
 	^VMMaker
 		generate: CoInterpreter
 		and: StackToRegisterMappingCogit"Cogit chooseCogitClass"
-		with: #(NewspeakVM true)
+		with: #(	NewspeakVM true
+				MULTIPLEBYTECODESETS false)
 		to: (FileDirectory default pathFromURI: 'oscogvm/nscogsrc')
 		platformDir: (FileDirectory default pathFromURI: '../Newspeak/newclosurevm/platforms')
 		including:#(	AsynchFilePlugin BMPReadWriterPlugin BalloonEnginePlugin BitBltSimulation DSAPlugin DropPlugin
@@ -351,6 +352,8 @@ VMMaker class >> generateSqueakCogVM [
 		generate: (Smalltalk at: ([:choices| choices at: (UIManager default chooseFrom: choices) ifAbsent: [^self]]
 									value: #(CoInterpreter CoInterpreterMT)))
 		and: StackToRegisterMappingCogit
+		with: #(	MULTIPLEBYTECODESETS false
+				NewspeakVM false)
 		to: (FileDirectory default pathFromURI: 'oscogvm/src')
 		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
 		including:#(	ADPCMCodecPlugin AsynchFilePlugin BalloonEnginePlugin B3DAcceleratorPlugin
@@ -751,6 +754,7 @@ VMMaker >> createCodeGenerator [
 "set up a CCodeGenerator for this VMMaker"
 	^CCodeGenerator new initialize
 		logger: logger;
+		options: optionsDictionary;
 		yourself
 ]
 
@@ -758,6 +762,7 @@ VMMaker >> createCodeGenerator [
 VMMaker >> createCogitCodeGenerator [
 	^CCodeGenerator new initialize
 		logger: logger;
+		options: optionsDictionary;
 		yourself
 ]
 
@@ -1377,6 +1382,11 @@ VMMaker >> needsToRegenerateInterpreterFile [
 		[^self confirm: 'The interpreter classes have not been modified since\ the interpreter file was last generated.\Do you still want to regenerate their source file?' withCRs]].
 	^true
 
+]
+
+{ #category : #accessing }
+VMMaker >> options [
+	^optionsDictionary
 ]
 
 { #category : #initialize }

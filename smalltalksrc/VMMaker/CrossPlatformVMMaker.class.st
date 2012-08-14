@@ -14,6 +14,7 @@ CrossPlatformVMMaker >> createCodeGenerator [
 		globalStructDefined: true;
 		structDefDefine: 'USE_GLOBAL_STRUCT';
 		logger: logger;
+		options: optionsDictionary;
 		yourself
 ]
 

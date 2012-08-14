@@ -6787,6 +6787,8 @@ StackInterpreter >> marryFrame: theFP SP: theSP [
 	"Marry an unmarried frame.  This means creating a spouse context
 	 initialized with a subset of the frame's state (state through the last argument)
 	 that references the frame."
+	<var: #theFP type: #'char *'>
+	<var: #theSP type: #'char *'>
 	<inline: false>
 	^self marryFrame: theFP SP: theSP copyTemps: false
 ]
@@ -8197,7 +8199,7 @@ StackInterpreter >> printOop: oop [
 	self printHex: oop.
 	(objectMemory isIntegerObject: oop) ifTrue:
 		[^self
-			cCode: 'printf("=%ld\n", integerValueOf(oop))'
+			cCode: 'printf("=%ld\n", (long)integerValueOf(oop))'
 			inSmalltalk: [self print: (self shortPrint: oop); cr]].
 	(oop between: objectMemory startOfMemory and: objectMemory freeStart) ifFalse:
 		[self printHex: oop; print: ' is not on the heap'; cr.
@@ -9580,7 +9582,7 @@ StackInterpreter >> shortPrintContext: aContext [
 						[(self isMachineCodeFrame: (theFP := self frameOfMarriedContext: aContext))
 							ifTrue: [self print: ' M (']
 							ifFalse: [self print: ' I ('].
-						 self printHex: theFP; print: ') ']
+						 self printHex: theFP asUnsignedInteger; print: ') ']
 					ifFalse:
 						[self print: ' w ']]
 		ifFalse: [self print: ' s '].
@@ -9654,7 +9656,7 @@ StackInterpreter >> shortPrintOop: oop [
 	<inline: false>
 	self printNum: oop.
 	(objectMemory isIntegerObject: oop) ifTrue:
-		[^self cCode: 'printf("=%ld\n", integerValueOf(oop))' inSmalltalk: [self print: (self shortPrint: oop); cr]].
+		[^self cCode: 'printf("=%ld\n", (long)integerValueOf(oop))' inSmalltalk: [self print: (self shortPrint: oop); cr]].
 	(oop between: objectMemory startOfMemory and: objectMemory freeStart) ifFalse:
 		[self printHex: oop; print: ' is not on the heap'; cr.
 		 ^nil].
