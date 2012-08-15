@@ -50,7 +50,7 @@ usqInt	sqGetAvailableMemory() {
 	return availableMemory;
 }
 
-usqInt sqAllocateMemoryMac(sqInt minHeapSize, sqInt *desiredHeapSize) {
+usqInt sqAllocateMemoryMac(sqInt minHeapSize, sqInt desiredHeapSize) {
     void * debug, *actually;
 	#pragma unused(minHeapSize,desiredHeapSize)
      
