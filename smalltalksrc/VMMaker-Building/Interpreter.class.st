@@ -491,10 +491,10 @@ Interpreter class >> initializePrimitiveTable [
 		(35 primitiveBitOrLargeIntegers)
 		(36 primitiveBitXorLargeIntegers)
 		(37 primitiveBitShiftLargeIntegers)
-		(38 primitiveFail)
-		(39 primitiveFail)
 
-		"Float Primitives (40-59)"
+		"Float Primitives (38-59)"
+		(38 primitiveFloatAt)
+		(39 primitiveFloatAtPut)
 		(40 primitiveAsFloat)
 		(41 primitiveFloatAdd)
 		(42 primitiveFloatSubtract)
@@ -575,7 +575,7 @@ Interpreter class >> initializePrimitiveTable [
 		(109 primitiveKbdPeek)
 
 		"System Primitives (110-119)"
-		(110 primitiveEquivalent)
+		(110 primitiveIdentical)
 		(111 primitiveClass)
 		(112 primitiveBytesLeft)
 		(113 primitiveQuit)
@@ -629,7 +629,8 @@ Interpreter class >> initializePrimitiveTable [
 		"File Primitives (150-169) - NO LONGER INDEXED"
 		(150 159 primitiveFail)
 		(160 primitiveAdoptInstance)
-		(161 164 primitiveFail)
+		(161 primitiveSetIdentityHash) "CogMemoryManager primitives"
+		(162 164 primitiveFail)
 		(165 primitiveIntegerAt)		"hacked in here for now"
 		(166 primitiveIntegerAtPut)
 		(167 primitiveYield)
@@ -637,7 +638,12 @@ Interpreter class >> initializePrimitiveTable [
 		(169 primitiveNotIdentical)
 
 		"Sound Primitives (170-199) - NO LONGER INDEXED"
-		(170 185 primitiveFail)
+		(170 174 primitiveFail)
+
+		"CogMemoryManager primitives"
+		(175 primitiveBehaviorHash)
+		(176 primitiveMaxIdentityHash)
+		(177 185 primitiveFail)
 
 		"Old closure primitives"
 		(186 primitiveFail) "was primitiveClosureValue"
@@ -688,7 +694,9 @@ Interpreter class >> initializePrimitiveTable [
 		(235 primitiveFail) "primStringcomparewithcollated"
 		(236 primitiveFail) "primSampledSoundconvert8bitSignedFromto16Bit"
 		(237 primitiveFail) "primBitmapcompresstoByteArray"
-		(238 241 primitiveFail) "serial port primitives"
+		(238 239 primitiveFail) "serial port primitives"
+		(240 primitiveUTCMicrosecondClock)		"was serial port primitive"
+		(241 primitiveLocalMicrosecondClock)		"was serial port primitive"
 		(242 primitiveFail)
 		(243 primitiveFail) "primStringtranslatefromtotable"
 		(244 primitiveFail) "primStringfindFirstInStringinSetstartingAt"
@@ -704,7 +712,7 @@ Interpreter class >> initializePrimitiveTable [
 		(252 primitiveVMProfileSamplesInto "primitiveStopVMProfiling")
 		(253 primitiveFail "primitiveVMProfileInfoInto")
 		(254 primitiveVMParameter)
-		(255 primitiveInstVarsPutFromStack) "Never used except in Disney tests.  Remove after 2.3 release."
+		(255 primitiveFail) "primitiveInstVarsPutFromStack. Never used except in Disney tests.  Remove after 2.3 release."
 
 		"Quick Push Const Methods"
 		(256 primitivePushSelf)
@@ -6673,6 +6681,32 @@ Interpreter >> primitiveLoadInstVar [
 	self push: (self fetchPointer: primitiveIndex-264 ofObject: thisReceiver)
 ]
 
+{ #category : #'system control primitives' }
+Interpreter >> primitiveLocalMicrosecondClock [
+	"Answer the local microseconds since the Smalltalk epoch. The value is
+	derived from the Posix epoch with a constant offset corresponding to
+	elapsed microseconds between the two epochs according to RFC 868,
+	and with an offset duration corresponding to the current offset of local
+	time from UTC."
+	
+	| clock offset offsetMillis epochDelta uSecs |
+
+	<export: true>
+	<var: #clock type: 'usqLong'>
+	<var: #offset type: 'int'>
+	<var: #offsetMillis type: 'usqLong'>
+	<var: #epochDelta declareC: 'static usqLong epochDelta= 2177452800000000ULL'>
+	(self cCode: 'ioUtcWithOffset(&clock, &offset)' inSmalltalk: [-1]) = -1
+		ifTrue: [^ self primitiveFail].
+	clock := clock + epochDelta. "adjust for nominal Smalltalk epoch"
+	offsetMillis := offset.
+	offsetMillis := offsetMillis * 1000000.
+	clock := clock + offsetMillis. "adjust for local time offset"
+	uSecs := self positive64BitIntegerFor: clock.
+	self pop: 1 thenPush: uSecs.
+
+]
+
 { #category : #'arithmetic float primitives' }
 Interpreter >> primitiveLogN [
 	"Natural log."
@@ -8062,6 +8096,25 @@ Interpreter >> primitiveTruncated [
 	successFlag
 		ifTrue: [self cCode: 'pushInteger((sqInt) trunc)' inSmalltalk: [self pushInteger: trunc]]
 		ifFalse: [self unPop: 1]
+]
+
+{ #category : #'system control primitives' }
+Interpreter >> primitiveUTCMicrosecondClock [
+	"Answer the UTC microseconds since the Smalltalk epoch. The value is
+	derived from the Posix epoch with a constant offset corresponding to
+	elapsed microseconds between the two epochs according to RFC 868."
+	| clock epochDelta uSecs |
+
+	<export: true>
+	<var: #clock type: 'usqLong'>
+	<var: #offset type: 'int'>
+	<var: #epochDelta declareC: 'static usqLong epochDelta= 2177452800000000ULL'>
+	(self cCode: 'ioUtcWithOffset(&clock, &offset)' inSmalltalk: [-1]) = -1
+		ifTrue: [^ self primitiveFail].
+	clock := clock + epochDelta.
+	uSecs := self positive64BitIntegerFor: clock.
+	self pop: 1 thenPush: uSecs.
+
 ]
 
 { #category : #'plugin primitives' }
