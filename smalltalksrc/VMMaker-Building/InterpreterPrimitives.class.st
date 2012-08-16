@@ -3308,6 +3308,24 @@ InterpreterPrimitives >> primitiveUpdateTimezone [
 	self ioUpdateVMTimezone
 ]
 
+{ #category : #'system control primitives' }
+InterpreterPrimitives >> primitiveUtcWithOffset [
+	"Answer an array with UTC microseconds since the Posix epoch and
+	the current seconds offset from GMT in the local time zone.
+	This is a named (not numbered) primitive in the null module (ie the VM)"
+	| offset resultArray |
+
+	<export: true>
+	<var: #clock type: 'sqLong'>
+	offset := self ioUTCMicroseconds - self ioLocalMicroseconds.
+	objectMemory pushRemappableOop: (self positive64BitIntegerFor: self ioUTCMicroseconds).
+	resultArray := objectMemory instantiateClass: objectMemory classArray indexableSize: 2.
+	self stObject: resultArray at: 1 put: objectMemory popRemappableOop.
+	self stObject: resultArray at: 2 put: (objectMemory integerObjectOf: offset).
+	self pop: 1 thenPush: resultArray
+
+]
+
 { #category : #'process primitives' }
 InterpreterPrimitives >> primitiveVMCurrentThreadId [
 	"Simulation only.  Fail."
