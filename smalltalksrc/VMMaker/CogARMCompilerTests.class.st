@@ -184,8 +184,7 @@ CogARMCompilerTests >> testRetN [
 			into: [:str :sz| | plainJane herIntended |
 				"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
 				plainJane := self strip: str.
-				herIntended := 'pop	{pc}'.
-				self assert: (plainJane match: herIntended).
+				self assert: (plainJane match: 'pop	{pc}') | (plainJane match: 'ldmfd	sp!, {pc}').
 				self assert: len = sz]].
 	
 	#(1 2 4 8 16 31) do:
