@@ -169,14 +169,14 @@ GdbARMAlienTests >> testExecutionTrap [
 		withExceptionDo:
 			[:err|
 			self assert: self processor pc = (memory size / 2).
-			self assert: ('Error 0: Illegal Instruction fetch address (0x00001000).' match: err messageText)].
+			self assert: ('Error 0: Illegal Instruction fetch address (0x1000).' match: err messageText)].
 	self processor pc: 0.
 	self should: [[self processor singleStepIn: memory minimumAddress: 0 readOnlyBelow: memory size / 2] repeat]
 		raise: Error
 		withExceptionDo:
 			[:err|
 			self assert: self processor pc = (memory size / 2).
-			self assert: ('Error 0: Illegal Instruction fetch address (0x00001000).' match: err messageText)]
+			self assert: ('Error 0: Illegal Instruction fetch address (0x1000).' match: err messageText)]
 ]
 
 { #category : #tests }
@@ -222,7 +222,7 @@ GdbARMAlienTests >> testNfib1 [
 	self should: [self runNFib: 1 disassemble: false printRegisters: false]
 		raise: Error
 		withExceptionDo: 
-			[:err| self assert: err messageText = 'Error 0: Illegal Instruction fetch address (0x00001000).'].
+			[:err| self assert: err messageText = 'Error 0: Illegal Instruction fetch address (0x1000).'].
 	self deny: (self processor pc between: 0 and: self nfib size).
 	self assert: self processor r0 = 1 benchFib
 ]
