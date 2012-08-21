@@ -76,7 +76,7 @@ fi
 if [ -n "$CW" ]; then
 	test -d cogwin || mkdir cogwin
 	rm -rf cogwin/* cogwin.zip
-	ln cygwinbuild/build/vm/{Croquet.exe,Croquet.ini,Croquet.map} cogwin
+	ln cygwinbuild/build/vm/{Croquet.exe,Croquet.ini,Croquet.map,Croquet.exe.manifest} cogwin
 	ln cygwinbuild/build/vm/{CroquetConsole.exe,CroquetConsole.ini,CroquetConsole.map} cogwin
 	ln cygwinbuild/build/vm/*.dll cogwin
 	zip -vr cogwin.zip cogwin
@@ -85,7 +85,7 @@ fi
 if [ -n "$CTW" ]; then
 	test -d cogmtwin || mkdir cogmtwin
 	rm -rf cogmtwin/* cogmtwin.zip
-	ln cygwinbuild/buildmt/vm/{Croquet.exe,Croquet.ini,Croquet.map} cogmtwin
+	ln cygwinbuild/buildmt/vm/{Croquet.exe,Croquet.ini,Croquet.map,Croquet.exe.manifest} cogmtwin
 	ln cygwinbuild/buildmt/vm/{CroquetConsole.exe,CroquetConsole.ini,CroquetConsole.map} cogmtwin
 	ln cygwinbuild/buildmt/vm/*.dll cogmtwin
 	zip -vr cogmtwin.zip cogmtwin
@@ -106,7 +106,7 @@ fi
 if [ -n "$NW" ]; then
 	test -d nsvmwin || mkdir nsvmwin
 	rm -rf nsvmwin/* nsvmwin.zip
-	ln $NSB/cygwinbuild/build/vm/{nsvm.exe,nsvm.map} nsvmwin
+	ln $NSB/cygwinbuild/build/vm/{nsvm.exe,nsvm.map,nsvm.exe.manifest} nsvmwin
 	ln $NSB/cygwinbuild/build/vm/*.dll nsvmwin
 	zip -vr nsvmwin.zip nsvmwin
 	EXES="$EXES	nsvmwin/nsvm.exe"

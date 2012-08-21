@@ -355,6 +355,7 @@ gnu-interp.c:	interp.c $(GNUIFY)
 
 $(VMRES): $(BASEDIR)/$(VM).rc
 	$(RC) $(RCFLAGS) -i $(BASEDIR)/$(VM).rc -o $(OBJDIR)/$@
+	$(CP) $(VM).exe.manifest $(OBJDIR)
 
 resource.o:	$(VMRES)
 		$(RC) $(RCFLAGS) -i $(OBJDIR)/$< -o $(OBJDIR)/$@

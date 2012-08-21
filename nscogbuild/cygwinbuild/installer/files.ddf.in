@@ -10,4 +10,5 @@
 ; For unknown reasons, it is important that the files come in this exact order
 @@VM_EXECUTABLE@@
 @@VM_EXECUTABLE_MAP@@
+@@VM_EXECUTABLE_MANIFEST@@
 %SourcesDir%\@@SOURCEFILENAME1@@ @@SOURCEFILENAME1@@

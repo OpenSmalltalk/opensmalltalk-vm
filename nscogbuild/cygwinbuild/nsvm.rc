@@ -2,4 +2,13 @@
 1                       ICON    DISCARDABLE     "nsvm.ico"
 2                       ICON    DISCARDABLE     "nsvm.ico"
 3                       ICON    DISCARDABLE     "nsvm.ico"
+#ifndef RT_MANIFEST
+#	define RT_MANIFEST 24
+#endif
+
+#ifndef CREATEPROCESS_MANIFEST_RESOURCE_ID
+#	define CREATEPROCESS_MANIFEST_RESOURCE_ID 1
+#endif
+
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "nsvm.exe.manifest"
 #endif

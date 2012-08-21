@@ -14,6 +14,7 @@ include branding.gmk
 # Cab contents:
 VM_EXECUTABLE := $(VM_BASE_NAME).exe
 VM_EXECUTABLE_MAP := $(VM_BASE_NAME).map
+VM_EXECUTABLE_MANIFEST := $(VM_EXECUTABLE).manifest
 VM_ICON := $(VM_BASE_NAME).ico
 SOURCEFILENAME1 := SqueakV41.sources
 
@@ -30,6 +31,10 @@ $(VM_EXECUTABLE): ../build/vm/$(VM_EXECUTABLE)
 	cp $< $@
 
 $(VM_EXECUTABLE_MAP):	../build/vm/$(VM_EXECUTABLE_MAP)
+	rm -f $@
+	cp $< $@
+
+$(VM_EXECUTABLE_MANIFEST):	../build/vm/$(VM_EXECUTABLE_MANIFEST)
 	rm -f $@
 	cp $< $@
 
