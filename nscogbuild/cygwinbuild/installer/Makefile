@@ -15,8 +15,14 @@ include branding.gmk
 VM_EXECUTABLE := $(VM_BASE_NAME).exe
 VM_EXECUTABLE_MAP := $(VM_BASE_NAME).map
 VM_EXECUTABLE_MANIFEST := $(VM_EXECUTABLE).manifest
+VM_MANIFEST_8DOT3 := $(VM_BASE_NAME).man
 VM_ICON := $(VM_BASE_NAME).ico
 SOURCEFILENAME1 := SqueakV41.sources
+
+CAB_FILES := $(VM_EXECUTABLE) $(VM_EXECUTABLE_MAP) $(VM_EXECUTABLE_MANIFEST)
+ifeq ($(strip $(SOURCES)),yes)
+CAB_FILES := $(CAB_FILES) $(SOURCEFILENAME1)
+endif
 
 CC := /usr/bin/gcc
 CP := /usr/bin/cp

@@ -37,8 +37,7 @@ FRESH_GUID = $(shell $(UUIDGEN) /c)
 FRESH_GUID_RULE1 = -e 's/@@FRESH_GUID1@@/$(FRESH_GUID)/g;'
 FRESH_GUID_RULE2 = -e 's/@@FRESH_GUID2@@/$(FRESH_GUID)/g;'
 FRESH_GUID_RULE3 = -e 's/@@FRESH_GUID3@@/$(FRESH_GUID)/g;'
-FRESH_GUID_RULE4 = -e 's/@@FRESH_GUID4@@/$(FRESH_GUID)/g;'
-FRESH_GUID_RULE = $(FRESH_GUID_RULE1) $(FRESH_GUID_RULE2) $(FRESH_GUID_RULE3) $(FRESH_GUID_RULE4)
+FRESH_GUID_RULE = $(FRESH_GUID_RULE1) $(FRESH_GUID_RULE2) $(FRESH_GUID_RULE3)
 
 REGULAR_IDTS := Feature.idt
 REGULAR_IDTS += Icon.idt
@@ -53,11 +52,13 @@ SOURCES_IDTS += Directory.idt
 SOURCES_IDTS += Component.idt
 SOURCES_IDTS += FeatureComponents.idt
 File.idt : File-with-sources.idt.in
+files.ddf : files-with-sources.ddf.in
 else
 REGULAR_IDTS += Directory.idt
 REGULAR_IDTS += Component.idt
 REGULAR_IDTS += FeatureComponents.idt
 File.idt : File.idt.in
+files.ddf : files.ddf.in $(DOCUMENTATION_INDEX) $(DOCUMENTATION_FILES)
 endif
 
 IDTS := File.idt $(REGULAR_IDTS) $(SOURCES_IDTS)
@@ -111,7 +112,7 @@ Icon/$(notdir $(VM_ICON)).exe: icon.o nopMain.o
 	gcc -mwindows $^ -o $@
 	strip $@
 
-files.ddf: files.ddf.in $(DOCUMENTATION_INDEX) $(DOCUMENTATION_FILES)
+files.ddf:
 	$(SED) $(SED_RULES) $(FRESH_GUID_RULE) < $< > $@.tmp
 	@echo $(DOCUMENTATION_INDEX) $(DOCUMENTATION_FILES) | xargs -n 1 >> $@.tmp
 	mv $@.tmp $@

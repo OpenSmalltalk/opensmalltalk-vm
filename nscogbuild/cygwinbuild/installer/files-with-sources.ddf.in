@@ -11,5 +11,5 @@
 ; see http://msdn.microsoft.com/en-us/library/windows/desktop/aa368596(v=vs.85).aspx
 @@VM_EXECUTABLE@@
 @@VM_EXECUTABLE_MANIFEST@@
-index.html index.html
+%SourcesDir%\@@SOURCEFILENAME1@@ @@SOURCEFILENAME1@@
 @@VM_EXECUTABLE_MAP@@
