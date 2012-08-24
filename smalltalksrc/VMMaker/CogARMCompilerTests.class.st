@@ -70,35 +70,35 @@ CogARMCompilerTests >> testAdd [
 				In: inst machineCode object
 				into: [:str :sz| | plainJane herIntended |
 					plainJane := self strip: str.
-					herIntended := 'mov	r3, #', (n bitAnd: 16rFF << 8) asString.
+					herIntended := 'mov	sl, #', (n bitAnd: 16rFF << 8) asString.
 					self assert: (plainJane match: herIntended)].
 			self processor
 				disassembleInstructionAt: 4
 				In: inst machineCode object
 				into: [:str :sz| | plainJane herIntended |
 					plainJane := self strip: str.
-					herIntended := 'orr	r3, r3, #', (n bitAnd: 16rFF << 16) asString.
+					herIntended := 'orr	sl, sl, #', (n bitAnd: 16rFF << 16) asString.
 					self assert: (plainJane match: herIntended)].
 			self processor
 				disassembleInstructionAt: 8
 				In: inst machineCode object
 				into: [:str :sz| | plainJane herIntended |
 					plainJane := self strip: str.
-					herIntended := 'orr	r3, r3, #', (n bitAnd: 16rFF << 24) signedIntFromLong asString.
+					herIntended := 'orr	sl, sl, #', (n bitAnd: 16rFF << 24) signedIntFromLong asString.
 					self assert: (plainJane match: herIntended)].
 			self processor
 				disassembleInstructionAt: 12
 				In: inst machineCode object
 				into: [:str :sz| | plainJane herIntended |
 					plainJane := self strip: str.
-					herIntended := 'orr	r3, r3, #', (n bitAnd: 16rFF) asString.
+					herIntended := 'orr	sl, sl, #', (n bitAnd: 16rFF) asString.
 					self assert: (plainJane match: herIntended)].
 			self processor
 				disassembleInstructionAt: 16
 				In: inst machineCode object
 				into: [:str :sz| | plainJane herIntended |
 					plainJane := self strip: str.
-					herIntended := 'adds	', regName, ', ', regName, ', r3'.
+					herIntended := 'adds	', regName, ', ', regName, ', sl'.
 					self assert: (plainJane match: herIntended)]]]
 
 ]
@@ -144,7 +144,7 @@ CogARMCompilerTests >> testPrefetchAw [
 			into: [:str :sz| | plainJane herIntended |
 				"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
 				plainJane := self strip: str.
-				herIntended := 'pld	[r3', ((n bitAnd: 16rFF) = 0 ifTrue: [''] ifFalse: [', #', (n bitAnd: 16rFF) asString]) ,']'.
+				herIntended := 'pld	[sl', ((n bitAnd: 16rFF) = 0 ifTrue: [''] ifFalse: [', #', (n bitAnd: 16rFF) asString]) ,']'.
 				self assert: (plainJane match: herIntended).
 				self assert: len = 16]].
 
