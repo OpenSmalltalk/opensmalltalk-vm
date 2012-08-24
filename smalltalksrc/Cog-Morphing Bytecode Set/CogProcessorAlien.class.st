@@ -1,3 +1,6 @@
+"
+I am the superclass for the Simulation CPU instance wrappers. I ensure that methods used in both/all of them need not be copied.
+"
 Class {
 	#name : #CogProcessorAlien,
 	#superclass : #Alien,
@@ -16,6 +19,49 @@ CogProcessorAlien >> callOpcode [
 ]
 
 { #category : #disassembly }
+CogProcessorAlien >> decorateDisassembly: anInstructionString for: aSymbolManager [ "<Cogit>"
+	| string i1 i2 v |
+	string := anInstructionString.
+	(i1 := string indexOfSubCollection: '%ds:0x') > 0 ifTrue:
+		[i2 := i1 + 6.
+		 ['0123456789abcdef' includes: (string at: i2)] whileTrue: [i2 := i2 + 1].
+		 string := string
+					copyReplaceFrom: i1 + 4
+					to: i2 - 1
+					with: (aSymbolManager lookupCHexString: (string copyFrom: i1 + 4 to: i2 - 1))].
+	(i1 := string indexOfSubCollection: '%ss:0x') > 0 ifTrue:
+		[i2 := i1 + 6.
+		 ['0123456789abcdef' includes: (string at: i2)] whileTrue: [i2 := i2 + 1].
+		 ((string at: i2) = $(
+		 and: [(string at: i2 + 1) = $%]) ifTrue:
+			[v := Integer readFrom: (ReadStream on: string from: i1 + 6 to: i2 - 1) base: 16.
+			string := string
+						copyReplaceFrom: i1
+						to: i2 - 1
+						with: ((v bitAnd: (1 bitShift: 31) - 1) - (v bitAnd: (1 bitShift: 31))) printString]].
+	(i1 := string indexOfSubCollection: '$0x') > 0 ifTrue:
+		[i2 := i1 + 3.
+		 ['0123456789abcdef' includes: (string at: i2)] whileTrue: [i2 := i2 + 1].
+		 string := string
+					copyReplaceFrom: i1 + 1
+					to: i2 - 1
+					with: (aSymbolManager lookupCHexString: (string copyFrom: i1 + 1 to: i2 - 1))].
+	((i1 := string indexOf: $() > 1
+	 and: [(string at: i1 + 1) isDigit
+	 and: [i1 < (i2 := string indexOf: $))]]) ifTrue:
+		[string := string
+					copyReplaceFrom: i1 + 1
+					to: i2 - 1
+					with: (aSymbolManager lookupCHexString: (string copyFrom: i1 + 1 to: i2 - 1))].
+	^string
+]
+
+{ #category : #disassembly }
+CogProcessorAlien >> decorateDisassembly: anInstructionString for: aSymbolManager "<Cogit>" fromAddress: address [
+	^self decorateDisassembly: anInstructionString for: aSymbolManager
+]
+
+{ #category : #disassembly }
 CogProcessorAlien >> disassembleFrom: startAddress to: endAddress in: memory for: aSymbolManager "<Cogit>" labels: labelDictionary on: aStream [
 	| address |
 	address := startAddress.
@@ -25,7 +71,7 @@ CogProcessorAlien >> disassembleFrom: startAddress to: endAddress in: memory for
 			[:label| aStream nextPutAll: label; nextPut: $:; cr].
 		(labelDictionary at: address ifAbsent: []) ifNotNil:
 			[:label| aStream nextPutAll: label; nextPut: $:; cr].
-		aStream nextPutAll: (self decorateDisassembly: string for: aSymbolManager); cr; flush.
+		aStream nextPutAll: (self decorateDisassembly: string for: aSymbolManager fromAddress: address); cr; flush.
 		address := address + size]
 			valueWithArguments: (self
 									primitiveDisassembleAt: address
