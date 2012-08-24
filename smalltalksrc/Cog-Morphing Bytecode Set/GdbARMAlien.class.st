@@ -1,3 +1,6 @@
+"
+I am a wrapper around the ARMulator CPU instance and emulator routines and I give access to disassembling using libopcodes. My C-part must be compiled with -DMODET, because otherwise my offesets are wrong by one field.
+"
 Class {
 	#name : #GdbARMAlien,
 	#superclass : #CogProcessorAlien,
@@ -73,41 +76,13 @@ GdbARMAlien >> cflag [
 ]
 
 { #category : #disassembly }
-GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager [ "<Cogit>"
-	| string i1 i2 v |
-	string := anInstructionString.
-	(i1 := string indexOfSubCollection: '%ds:0x') > 0 ifTrue:
-		[i2 := i1 + 6.
-		 ['0123456789abcdef' includes: (string at: i2)] whileTrue: [i2 := i2 + 1].
-		 string := string
-					copyReplaceFrom: i1 + 4
-					to: i2 - 1
-					with: (aSymbolManager lookupCHexString: (string copyFrom: i1 + 4 to: i2 - 1))].
-	(i1 := string indexOfSubCollection: '%ss:0x') > 0 ifTrue:
-		[i2 := i1 + 6.
-		 ['0123456789abcdef' includes: (string at: i2)] whileTrue: [i2 := i2 + 1].
-		 ((string at: i2) = $(
-		 and: [(string at: i2 + 1) = $%]) ifTrue:
-			[v := Integer readFrom: (ReadStream on: string from: i1 + 6 to: i2 - 1) base: 16.
-			string := string
-						copyReplaceFrom: i1
-						to: i2 - 1
-						with: ((v bitAnd: (1 bitShift: 31) - 1) - (v bitAnd: (1 bitShift: 31))) printString]].
-	(i1 := string indexOfSubCollection: '$0x') > 0 ifTrue:
-		[i2 := i1 + 3.
-		 ['0123456789abcdef' includes: (string at: i2)] whileTrue: [i2 := i2 + 1].
-		 string := string
-					copyReplaceFrom: i1 + 1
-					to: i2 - 1
-					with: (aSymbolManager lookupCHexString: (string copyFrom: i1 + 1 to: i2 - 1))].
-	((i1 := string indexOf: $() > 1
-	 and: [(string at: i1 + 1) isDigit
-	 and: [i1 < (i2 := string indexOf: $))]]) ifTrue:
-		[string := string
-					copyReplaceFrom: i1 + 1
-					to: i2 - 1
-					with: (aSymbolManager lookupCHexString: (string copyFrom: i1 + 1 to: i2 - 1))].
-	^string
+GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager "<Cogit>" fromAddress: address [
+	"Prepend the address to the decoration string."
+	| addressPrefix |
+	addressPrefix := ((address storeStringBase: 16 length: 9 padded: true) allButFirst: 3), ' ', String tab.
+	anInstructionString = 'mov	r1, r1' 
+		ifTrue: [^super decorateDisassembly: addressPrefix, 'nop' for: aSymbolManager].
+	^super decorateDisassembly: addressPrefix, anInstructionString for: aSymbolManager
 ]
 
 { #category : #accessing }
@@ -395,11 +370,25 @@ GdbARMAlien >> pc: anUnsignedInteger [
 	^self unsignedLongAt: 73 put: anUnsignedInteger
 ]
 
+{ #category : #execution }
+GdbARMAlien >> postCallArgumentsNumArgs: numArgs "<Integer>" in: memory [ "<ByteArray|Bitmap>"
+	"Answer an argument vector of the requested size after a vanilla
+	 ABI call. For ARM the Procedure Calling Specification can be found in IHI0042D_aapcs.pdf.
+	On ARM this typically means accessing r0 through r3 and fetching additional arguments from the stack, acording to pages 20f. aapcs.
+	We assume that all arguments are single word arguments, which can not be supplied on co-processor-registers.
+	 For compatibility with Cog/Slang we answer unsigned values."
+	^(1 to: numArgs) collect: [:i |
+		i < 5 
+			ifTrue: [self perform: (self registerStateNames at: i)]
+			"ARM uses a full descending stack. Directly after calling a procedure, nothing but the arguments are pushed."
+			ifFalse: [memory unsignedLongAt: self sp + (i-5)*4 bigEndian: false]].
+]
+
 { #category : #primitives }
 GdbARMAlien >> primitiveDisassembleAt: address inMemory: memoryArray [ "<Bitmap|ByteArray>"
 	"Answer an Array of the size and the disassembled code string for the instruction at the current instruction pointer in memory."
 	<primitive: 'primitiveDisassembleAtInMemory' module: 'GdbARMPlugin'>
-	^self reportPrimitiveFailure
+	^self primitiveFailed
 ]
 
 { #category : #primitives }
