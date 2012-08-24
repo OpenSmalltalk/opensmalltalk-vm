@@ -53,12 +53,14 @@ SOURCES_IDTS += Component.idt
 SOURCES_IDTS += FeatureComponents.idt
 File.idt : File-with-sources.idt.in
 files.ddf : files-with-sources.ddf.in
+files.cab: files.ddf $(VM_EXECUTABLE) $(VM_EXECUTABLE_MAP) $(VM_EXECUTABLE_MANIFEST) $(SOURCEFILENAME1)
 else
 REGULAR_IDTS += Directory.idt
 REGULAR_IDTS += Component.idt
 REGULAR_IDTS += FeatureComponents.idt
 File.idt : File.idt.in
-files.ddf : files.ddf.in $(DOCUMENTATION_INDEX) $(DOCUMENTATION_FILES)
+files.ddf : files.ddf.in $(DOCUMENTATION_FILES) $(DOCUMENTATION_INDEX)
+files.cab : files.ddf $(VM_EXECUTABLE) $(VM_EXECUTABLE_MAP) $(VM_EXECUTABLE_MANIFEST)
 endif
 
 IDTS := File.idt $(REGULAR_IDTS) $(SOURCES_IDTS)
@@ -117,13 +119,13 @@ files.ddf:
 	@echo $(DOCUMENTATION_INDEX) $(DOCUMENTATION_FILES) | xargs -n 1 >> $@.tmp
 	mv $@.tmp $@
 
-File.idt: $(DOCUMENTATION_FILES)
+File.idt: Makefile
 File.idt:
 	$(SED) $(SED_RULES) $(FRESH_GUID_RULE) < $< > $@.tmp
 	echo $(foreach docfile,$(strip $(DOCUMENTATION_FILES)), '$(notdir $(docfile))' '$(call dosname,$(notdir $(docfile)))' '$(notdir $(docfile))') | xargs -r -n 3 printf '%s\tDocumentation\t%s|%s\t0\t\t\t16896\t1\n' >> $@.tmp
 	mv $@.tmp $@
 
-files.cab: files.ddf $(VM_EXECUTABLE) $(VM_EXECUTABLE_MAP) $(VM_EXECUTABLE_MANIFEST) $(DOCUMENTATION_FILES) $(SOURCEFILENAME1)
+files.cab:
 	makecab /D SourcesDir='$(shell cygpath -wa .)' /f $<
 	@echo
 
