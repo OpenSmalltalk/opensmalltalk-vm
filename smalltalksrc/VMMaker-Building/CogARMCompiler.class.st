@@ -1,8 +1,20 @@
+"
+I generate ARM instructions from CogAbstractInstructions.  For reference see
+http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.set.architecture/index.html
+
+The Architecture Reference Manual used is that of version 5, which includes some version 6 instructions. Of those, only pld is used(for PrefetchAw).
+
+This class does not take any special action to flush the instruction cache on instruction-modification.
+"
 Class {
 	#name : #CogARMCompiler,
 	#superclass : #CogAbstractInstruction,
 	#classVars : [
 		'AL',
+		'CArg0Reg',
+		'CArg1Reg',
+		'CArg2Reg',
+		'CArg3Reg',
 		'CC',
 		'CS',
 		'EQ',
@@ -61,7 +73,9 @@ CogARMCompiler class >> initialize [
 	LR := 14.
 	PC := 15.
 	
-	RISCTempReg := R3.
+	CArg0Reg := 0. CArg1Reg := 1. CArg2Reg := 2. CArg3Reg := 3.
+	
+	RISCTempReg := R10.
 	
 	"Condition Codes"
 	conditionCodes := #(EQ NE CS CC MI PL VS VC HI LS GE LT GT LE AL).
@@ -146,7 +160,7 @@ CogARMCompiler >> c: conditionCode t: type o: flagsOrOpcode s: doUpdateStatusReg
 CogARMCompiler >> cResultRegister [
 	"Answer the abstract register for the C result register.
 	 Only partially implemented.  Works on x86 since TempReg = EAX = C result reg."
-	^self abstractRegisterForConcreteRegister: R0
+	^R0
 ]
 
 { #category : #'inline cacheing' }
@@ -262,14 +276,14 @@ CogARMCompiler >> concreteRegister: registerIndex [
 	 negative assume it is an abstract register."
 	
 	"N.B. According to BSABI, R0-R3 are caller-save, R4-R12 are callee save.
-	Note that R9 might be a special register for the implementation. In some slides it is refered to as sb. R10 contains the stack limit (sl), R11 the fp. R12 is an intra-procedure scratch instruction pointer for link purposes.
-	R3 is used as temporary inside a single abstract opcode implementation"
-
+	Note that R9 might be a special register for the implementation. In some slides it is refered to as sb. R10 can contain the stack limit (sl), R11 the fp. R12 is an intra-procedure scratch instruction pointer for link purposes. It can also be used.
+	R10 is used as temporary inside a single abstract opcode implementation"
+	"R0-R3 are used when calling back to the interpreter. Using them would require saving and restoring their values, so they are omitted so far. R12 is the only unused register at the moment.."
 	^registerIndex
 		caseOf: {
-			[TempReg]				-> [R0].
-			[ClassReg]				-> [R1].
-			[ReceiverResultReg]	-> [R2].
+			[TempReg]				-> [R7].
+			[ClassReg]				-> [R8].
+			[ReceiverResultReg]	-> [R9].
 			[SendNumArgsReg]		-> [R6].
 			[SPReg]					-> [SP].
 			[FPReg]					-> [R11].
@@ -1018,32 +1032,38 @@ CogARMCompiler >> genGetLeafCallStackPointerFunction [
 
 { #category : #abi }
 CogARMCompiler >> genPassConst: constant asArgument: zeroRelativeArgIndex [
-	cogit
-		MoveCq: constant R: TempReg;
-		PushR: TempReg.
+	zeroRelativeArgIndex caseOf: {
+		[0] -> [cogit MoveCq: constant R: CArg0Reg].
+		[1] -> [cogit MoveCq: constant R: CArg1Reg].
+		[2] -> [cogit MoveCq: constant R: CArg2Reg].
+		[3] -> [cogit MoveCq: constant R: CArg3Reg].}.
 	^0
 ]
 
 { #category : #abi }
 CogARMCompiler >> genPassReg: abstractRegister asArgument: zeroRelativeArgIndex [
-	cogit PushR: abstractRegister.
+	zeroRelativeArgIndex caseOf: {
+		[0] -> [cogit MoveR: abstractRegister R: CArg0Reg].
+		[1] -> [cogit MoveR: abstractRegister R: CArg1Reg].
+		[2] -> [cogit MoveR: abstractRegister R: CArg2Reg].
+		[3] -> [cogit MoveR: abstractRegister R: CArg3Reg].}.
 	^0
 ]
 
 { #category : #abi }
 CogARMCompiler >> genRestoreRegisters [
 	"Load the general purpose registers after the return of a trampoline call."
-	"Load r0-r6, all of which were saved. Don't load sb(r9), sl(r10), fp(r11), sp or lr"
-	cogit
-		gen: LDMFD operand: 16r7F
+	"Because no registers were saved we don't restore any."
+	"cogit
+		gen: LDMFD operand: 16r7F"
 ]
 
 { #category : #abi }
 CogARMCompiler >> genSaveRegisters [
 	"Save the general purpose registers for a trampoline call."
-	"Save r0-r6, all of which are used for variables. Don't save sb(r9), sl(r10), fp(r11), sp or lr"
-	cogit
-		gen: STMFD operand: 16r7F
+	"Save none, because we use only callee saved registers."
+	"cogit
+		gen: STMFD operand: 16r7F"
 ]
 
 { #category : #'abstract instructions' }
