@@ -187,7 +187,7 @@ CogAbstractInstruction >> abstractRegisterForConcreteRegister: reg [
 	self error: 'could not find abstract register'.
 	^0
 
-	"While the below works fine in Smalltalk it fo course doesn't work in C ;)"
+	"While the below works fine in Smalltalk it of course doesn't work in C ;)"
 	
 	"^reg caseOf: {
 		[self concreteRegister: TempReg] -> [TempReg].
