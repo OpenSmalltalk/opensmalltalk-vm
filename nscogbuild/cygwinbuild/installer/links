@@ -1,11 +1,9 @@
 #!/bin/sh
 if [ "$1" = rm -o "$1" = mk ]; then
-	rm SqueakV41.sources nsvm.exe nsvm.map
+	rm SqueakV41.sources
 fi
 if [ "$1" = mk ]; then
 	ln ~/Squeak/SqueakV41.sources .
-	ln ../build/vm/nsvm.exe .
-	grep " [tT] " ../build/vm/nsvm.map | grep -v ' t \.text$' >nsvm.map
 fi
 if [ \( "$1" != rm \) -a \( "$1" != mk \) ]; then
 	echo usage: $0 'mk|rm'
