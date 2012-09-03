@@ -84,7 +84,7 @@ CMakeVMGenerator >> generate [
 		project: config executableName.
 
 	config setupDirectories: self.
-		
+	
 	self message: '${CMAKE_MODULE_PATH}'.
 	self set: 'CMAKE_CONFIGURATION_TYPES' to: 'Release'.
 
@@ -105,8 +105,6 @@ CMakeVMGenerator >> generate [
 	
 	self processThirdpartyLibraries.
 	
-		
-
 	self processPlugins:  intPlugins, extPlugins.
 
 	config setExtraTargetProperties: self.
@@ -117,7 +115,7 @@ CMakeVMGenerator >> generate [
 	config postBuildActions: self.
 	
 	self saveFile.
-	
+	self generateBuildScript.
 ]
 
 { #category : #'code generation' }
@@ -125,6 +123,13 @@ CMakeVMGenerator >> generate: aConfigOrClass [
 	
 	config := aConfigOrClass isBehavior ifTrue: [ aConfigOrClass new ] ifFalse: [aConfigOrClass].
 	^ self generate
+]
+
+{ #category : #'build script' }
+CMakeVMGenerator >> generateBuildScript [
+
+	(self buildDir forceNewFileNamed: 'build.sh') nextPutAll: (config fixLineEndsOf: config buildScript); close.
+	
 ]
 
 { #category : #'as yet unclassified' }
