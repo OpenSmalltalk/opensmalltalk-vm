@@ -134,7 +134,7 @@ CPlatformConfig >> addThirdpartyLibrary: libName [
 	lib :=  libs detect: [:each | each canonicalName = libName] ifNone: [ nil ].
 	
 	lib ifNil: [
-		lib := (CMThirdpartyLibrary named: libName config: self).
+		lib := (CMThirdpartyLibrary named: libName).
 		"add dependencies first, so thirpartyLibs collection will be naturally dependency sorted"
 		lib dependencies do: [:dep | self addThirdpartyLibrary: dep ].
 		libs add: lib.
@@ -161,6 +161,20 @@ CPlatformConfig >> buildDir: anObject [
 CPlatformConfig >> buildDirName [
 	^ 'build'
 
+]
+
+{ #category : #'build script' }
+CPlatformConfig >> buildScript [
+	"answer the build script for building everything"
+	
+
+	^ 
+'#!bash
+../codegen-scripts/extract-commit-info.sh
+cmake .
+make
+
+'
 ]
 
 { #category : #accessing }
@@ -728,12 +742,6 @@ CPlatformConfig >> outputDir: anObject [
 { #category : #accessing }
 CPlatformConfig >> outputDirName [
 	^ 'results'
-]
-
-{ #category : #accessing }
-CPlatformConfig >> platformName [
-	"override in subclass"
-	self subclassResponsibility 
 ]
 
 { #category : #'source files' }
