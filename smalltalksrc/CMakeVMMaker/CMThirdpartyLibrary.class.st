@@ -14,12 +14,13 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'gen',
-		'vmGen'
+		'vmGen',
+		'configurationFlags'
 	],
 	#category : #'CMakeVMMaker-Libs'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 CMThirdpartyLibrary class >> canonicalName [
 	"answer the library canonical name, like 
 		'freetype2'
@@ -32,11 +33,23 @@ CMThirdpartyLibrary class >> canonicalName [
 	^ self subclassResponsibility
 ]
 
-{ #category : #'as yet unclassified' }
-CMThirdpartyLibrary class >> named: aName [
+{ #category : #'instance creation' }
+CMThirdpartyLibrary class >> named: aName config: aCPlatformConfig [
 
-	^ (self allSubclasses detect: [:cls | cls canonicalName = aName])
+	^ (self allSubclasses detect: [:cls | 
+		cls canonicalName = aName and: [ cls supports: aCPlatformConfig ] ])
 		new
+]
+
+{ #category : #accessing }
+CMThirdpartyLibrary class >> platformName [ 
+	^nil
+]
+
+{ #category : #testing }
+CMThirdpartyLibrary class >> supports: aConfig [
+	"default implementation"
+	^ self platformName = aConfig platformName 
 ]
 
 { #category : #'package properties' }
@@ -71,10 +84,30 @@ CMThirdpartyLibrary >> canonicalName [
 	^ self class canonicalName
 ]
 
+{ #category : #settings }
+CMThirdpartyLibrary >> configurationFlags [ 
+	^(configurationFlags 
+		ifNil: [ self defaultConfigurationFlags ])
+		reduce: [ :a :b | a, ' ', b]
+]
+
+{ #category : #settings }
+CMThirdpartyLibrary >> configurationFlags: aCollection [
+	configurationFlags := aCollection
+	
+]
+
 { #category : #'generating actions' }
 CMThirdpartyLibrary >> copyArtefacts [
 
 	self subclassResponsibility
+]
+
+{ #category : #settings }
+CMThirdpartyLibrary >> defaultConfigurationFlags [ 
+	^#(
+		'CFLAGS=''-arch i386''' 
+		'LDFLAGS=''-arch i386''')
 ]
 
 { #category : #'generating actions' }

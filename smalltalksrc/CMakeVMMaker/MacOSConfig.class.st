@@ -16,21 +16,6 @@ Class {
 	#category : #'CMakeVMMaker-MacOS'
 }
 
-{ #category : #'build script' }
-MacOSConfig >> buildScript [
-	"answer the build script for building everything"
-	
-
-	^ 
-'#!bash
-../codegen-scripts/extract-commit-info.sh
-cmake .
-make
-make install
-
-'
-]
-
 { #category : #accessing }
 MacOSConfig >> cMakeMacros [ 
 	^'macro(add_framework appname fwname)
