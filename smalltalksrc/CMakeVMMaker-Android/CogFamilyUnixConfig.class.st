@@ -139,20 +139,6 @@ vm-display-null
 	vm-sound-null"
 ]
 
-{ #category : #'build script' }
-CogFamilyUnixConfig >> buildScript [
-	"answer the build script for building everything"
-	
-
-	^ 
-'#!bash
-../codegen-scripts/extract-commit-info.sh
-cmake .
-make
-
-'
-]
-
 { #category : #'compiler flags' }
 CogFamilyUnixConfig >> compilerFlags [
 	^ self subclassResponsibility
