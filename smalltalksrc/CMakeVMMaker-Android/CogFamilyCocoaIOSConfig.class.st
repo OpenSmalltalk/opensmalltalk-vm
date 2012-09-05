@@ -274,8 +274,8 @@ CogFamilyCocoaIOSConfig >> setGlobalOptions: maker [
 
 	"set any CMake global options, before declaring a project in cmake file"
 	
-	maker set: 'CMAKE_C_COMPILER' to: '/usr/bin/gcc-4.2'.
-	maker set: 'CMAKE_CXX_COMPILER' to: '/usr/bin/g++-4.2'.	
+	maker set: 'CMAKE_C_COMPILER' to: '/usr/bin/gcc'.
+	maker set: 'CMAKE_CXX_COMPILER' to: '/usr/bin/g++'.	
 	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'.
 	maker set: 'CMAKE_OSX_SYSROOT' to: '/'.
 	
