@@ -88,7 +88,7 @@ sqInt clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) 
 			data = CFDataCreateWithBytesNoCopy (kCFAllocatorDefault, bytes, needed, kCFAllocatorMalloc);
 			err = PasteboardPutItemFlavor (pb, (PasteboardItemID)1, kUTTypeUTF16PlainText, data, 0);
 			CFRelease (str);
-			return (err = 0);	
+			return 0;	
 		} else {
 			free (bytes);
 		}

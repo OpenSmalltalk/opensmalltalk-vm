@@ -875,7 +875,7 @@ MyWindowEventKBHandler(EventHandlerCallRef myHandler,
         case kEventRawKeyUp: {
 			UniChar key;
 			//fprintf(stdout,"\nrawkey up %i",ioMSecs()); fflush(stdout);
-			if ((key = findInKeyMap(keyCode)) != -1)
+			if ((key = findInKeyMap(keyCode)) != (UniChar)-1)
 				enterKeystroke(EventTypeKeyboard, keyCode, EventKeyUp,
 								key, ModifierStateCarbon(event));
 			removeFromKeyMap(keyCode);

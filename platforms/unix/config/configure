@@ -1049,13 +1049,13 @@ Optional Packages:
   --without-rfb           disable Remote FrameBuffer support default=enabled
   --without-npsqueak      disable browser plugin support default=enabled
   --with-custom-display   enable custom window support default=disabled
+  --without-vm-display-fbdev      disable frame buffer vm display support default=enabled
   --without-quartz        disable MacOSX Window System support default=enabled
   --without-x             disable X Window System support default=enabled
   --without-gl            disable OpenGL support default=enabled
   --with-x                use the X Window System
   --with-custom-sound     enable custom sound support default=disabled
   --without-vm-sound-OSS      disable OSS vm sound support default=enabled
-  --without-vm-display-fbdev      disable frame buffer vm display support default=enabled
 
 Some influential environment variables:
   CC          C compiler command
@@ -24844,6 +24844,20 @@ rm -f vm-display-fbdev.sub vm-display-fbdev.lib
 # -*- sh -*-
 
 
+# Check whether --with-vm-display-fbdev or --without-vm-display-fbdev was given.
+if test "${with_vm_display_fbdev+set}" = set; then
+  withval="$with_vm_display_fbdev"
+  with_vm_display_fbdev="$withval"
+else
+  with_vm_display_fbdev="yes"
+fi;
+if test "$with_vm_display_fbdev" = "no"; then
+
+  echo "$as_me:$LINENO: result: ******** disabling vm-display-fbdev" >&5
+echo "${ECHO_T}******** disabling vm-display-fbdev" >&6
+  disabled_plugins="${disabled_plugins} vm-display-fbdev";
+else
+
 for ac_header in linux/fb.h
 do
 as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
@@ -24999,6 +25013,7 @@ fi
 
 done
 
+fi
 if test "${plibs}"; then
   llibs="${LIBS}"
   for l in ${plibs}; do
@@ -25031,6 +25046,7 @@ if test "$have_quartz" = "yes"; then
 _ACEOF
 
   if test "$have_gl" = ""; then have_gl="no"; fi
+  if test "$have_gl" = "yes"; then
 
 for ac_header in OpenGL/gl.h
 do
@@ -25177,8 +25193,8 @@ if test `eval echo '${'$as_ac_Header'}'` = yes; then
 #define `echo "HAVE_$ac_header" | $as_tr_cpp` 1
 _ACEOF
 
-    have_gl=yes
-    cat >>confdefs.h <<\_ACEOF
+      have_gl=yes
+      cat >>confdefs.h <<\_ACEOF
 #define USE_QUARTZ_CGL 1
 _ACEOF
 
@@ -25187,6 +25203,12 @@ fi
 
 done
 
+  else
+    cat >>confdefs.h <<\_ACEOF
+#define USE_QUARTZ_CGL 0
+_ACEOF
+
+  fi
 else
 
 
@@ -26779,6 +26801,7 @@ _ACEOF
 fi
 
     if test "$have_gl" = ""; then have_gl="no"; fi
+	if test "$have_gl" = "yes"; then
 
 for ac_header in GL/gl.h
 do
@@ -26925,8 +26948,8 @@ if test `eval echo '${'$as_ac_Header'}'` = yes; then
 #define `echo "HAVE_$ac_header" | $as_tr_cpp` 1
 _ACEOF
 
-      have_gl=yes
-      cat >>confdefs.h <<\_ACEOF
+		  have_gl=yes
+		  cat >>confdefs.h <<\_ACEOF
 #define USE_X11_GLX 1
 _ACEOF
 
@@ -27009,6 +27032,12 @@ fi
 
 done
 
+	else
+		cat >>confdefs.h <<\_ACEOF
+#define USE_X11_GLX 0
+_ACEOF
+
+	fi
 
 else
 
@@ -27301,6 +27330,15 @@ plibs=""
 rm -f vm-sound-null.sub vm-sound-null.lib
 # -*- sh -*-
 # empty to provoke config/mkacinc into including vm-sound-null for consideration
+
+#AC_ARG_WITH(vm-sound-null,
+#[  --without-vm-sound-null      disable null vm sound support [default=enabled]],
+#  [with_vm_sound_null="$withval"],
+#  [with_vm_sound_null="yes"])
+#if test "$with_vm_sound_null" = "no"; then
+#	AC_PLUGIN_DISABLE_PLUGIN(vm-sound-null);
+#fi
+
 if test "${plibs}"; then
   llibs="${LIBS}"
   for l in ${plibs}; do
@@ -27313,7 +27351,21 @@ plibs=""
 rm -f vm-sound-OSS.sub vm-sound-OSS.lib
 # -*- sh -*-
 
-if test "$with_vm_sound_OSS"="yes"; then
+
+# Check whether --with-vm-sound-OSS or --without-vm-sound-OSS was given.
+if test "${with_vm_sound_OSS+set}" = set; then
+  withval="$with_vm_sound_OSS"
+  with_vm_sound_OSS="$withval"
+else
+  with_vm_sound_OSS="yes"
+fi;
+
+if test "$with_vm_sound_OSS" = "no"; then
+
+  echo "$as_me:$LINENO: result: ******** disabling vm-sound-OSS" >&5
+echo "${ECHO_T}******** disabling vm-sound-OSS" >&6
+  disabled_plugins="${disabled_plugins} vm-sound-OSS";
+else
 	echo "$as_me:$LINENO: checking for Open Sound System" >&5
 echo $ECHO_N "checking for Open Sound System... $ECHO_C" >&6
 	cat >conftest.$ac_ext <<_ACEOF
@@ -28386,53 +28438,11 @@ if test "${plibs}"; then
 fi
 
 
-#AC_ARG_WITH(vm-sound-null,
-#[  --without-vm-sound-null      disable null vm sound support [default=enabled]],
-#  [with_vm_sound_null="$withval"],
-#  [with_vm_sound_null="yes"])
-#if test "$with_vm_sound_null" = "no"; then
-#	AC_PLUGIN_DISABLE_PLUGIN(vm-sound-null);
-#fi
-
-
-# Check whether --with-vm-sound-OSS or --without-vm-sound-OSS was given.
-if test "${with_vm_sound_OSS+set}" = set; then
-  withval="$with_vm_sound_OSS"
-  with_vm_sound_OSS="$withval"
-else
-  with_vm_sound_OSS="yes"
-fi;
-if test "$with_vm_sound_OSS" = "no"; then
-
-  echo "$as_me:$LINENO: result: ******** disabling vm-sound-OSS" >&5
-echo "${ECHO_T}******** disabling vm-sound-OSS" >&6
-  disabled_plugins="${disabled_plugins} vm-sound-OSS";
-fi
-
-
-# Check whether --with-vm-display-fbdev or --without-vm-display-fbdev was given.
-if test "${with_vm_display_fbdev+set}" = set; then
-  withval="$with_vm_display_fbdev"
-  with_vm_display_fbdev="$withval"
-else
-  with_vm_display_fbdev="yes"
-fi;
-if test "$with_vm_display_fbdev" = "no"; then
-
-  echo "$as_me:$LINENO: result: ******** disabling vm-display-fbdev" >&5
-echo "${ECHO_T}******** disabling vm-display-fbdev" >&6
-  disabled_plugins="${disabled_plugins} vm-display-fbdev";
-fi
-
 # Plugins not generated by VMM must be listed here...
 int_plugins=""
 ext_plugins=""
 
 
-
-#if test "$have_x" = "no"; then
-#  AC_PLUGIN_DISABLE_PLUGIN(UnixOSProcessPlugin)
-#fi
 
 if test "${disabled_plugins}" != ""; then
   echo ${disabled_plugins} | tr ' ' '\012' | sort -u > plugins.exc

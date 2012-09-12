@@ -34,11 +34,15 @@ if test "$have_x" = "yes"; then
     LIBS="${LIBS} -lX11"
     AC_CHECK_LIB(Xext, XShmAttach)
     if test "$have_gl" = ""; then have_gl="no"; fi
-    AC_CHECK_HEADERS(GL/gl.h, [
-      have_gl=yes
-      AC_DEFINE(USE_X11_GLX, [1])
-      AC_CHECK_LIB(GL,glIsEnabled)
-    ])
+	if test "$have_gl" = "yes"; then
+		AC_CHECK_HEADERS(GL/gl.h, [
+		  have_gl=yes
+		  AC_DEFINE(USE_X11_GLX, [1])
+		  AC_CHECK_LIB(GL,glIsEnabled)
+		])
+	else
+		AC_DEFINE(USE_X11_GLX, 0)
+	fi
   ],[
     AC_PLUGIN_DISABLE
   ])

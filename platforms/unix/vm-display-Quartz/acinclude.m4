@@ -13,10 +13,14 @@ esac
 if test "$have_quartz" = "yes"; then
   AC_DEFINE(USE_QUARTZ, [1])
   if test "$have_gl" = ""; then have_gl="no"; fi
-  AC_CHECK_HEADERS(OpenGL/gl.h, [
-    have_gl=yes
-    AC_DEFINE(USE_QUARTZ_CGL, [1])
-  ])
+  if test "$have_gl" = "yes"; then
+	AC_CHECK_HEADERS(OpenGL/gl.h, [
+      have_gl=yes
+      AC_DEFINE(USE_QUARTZ_CGL, [1])
+	])
+  else
+    AC_DEFINE(USE_QUARTZ_CGL, 0)
+  fi
 else
   AC_PLUGIN_DISABLE
 fi
