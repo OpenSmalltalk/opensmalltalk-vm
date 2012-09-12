@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 30 July 2012 4:52:23 pm 
-   by VMMaker 4.9.8
+/* Automatically generated from Squeak on 13 September 2012 6:51:39 am 
+   by VMMaker 4.10.2
  */
 #if 1
 # define SQ_USE_GLOBAL_STRUCT 1
@@ -111,7 +111,9 @@ void defaultErrorProc(char *s) {
 #define ClassFloat 9
 #define ClassInteger 5
 #define ClassLargeNegativeInteger 42
+#define ClassLargeNegativeIntegerCompactIndex 4
 #define ClassLargePositiveInteger 13
+#define ClassLargePositiveIntegerCompactIndex 5
 #define ClassMessage 15
 #define ClassMethodContext 10
 #define ClassPoint 12
@@ -156,7 +158,7 @@ void defaultErrorProc(char *s) {
 #define InitialIPIndex 4
 #define InstanceSpecificationIndex 2
 #define InstructionPointerIndex 1
-#define InterpreterSourceVersion "4.9.8"
+#define InterpreterSourceVersion "4.10.2"
 #define InvokeCallbackSelector 53
 #define LargeContextBit 262144
 #define LastLinkIndex 1
@@ -393,6 +395,7 @@ sqInt isInMemory(sqInt address);
 sqInt isIndexable(sqInt oop);
 sqInt isIntegerObject(sqInt objectPointer);
 sqInt isIntegerValue(sqInt intValue);
+sqInt isNegativeIntegerValueOf(sqInt oop);
 sqInt isPointers(sqInt oop);
 sqInt isWeak(sqInt oop);
 sqInt isWords(sqInt oop);
@@ -410,6 +413,8 @@ sqInt lookupMethodInClass(sqInt class);
 sqInt lookupMethodInDictionary(sqInt dictionary);
 sqInt lookupMethodNoMNUEtcInClass(sqInt class);
 sqInt lowestFreeAfter(sqInt chunk);
+sqInt magnitude64BitIntegerForneg(usqLong magnitude, sqInt isNegative);
+usqLong magnitude64BitValueOf(sqInt oop);
 sqInt makePointwithxValueyValue(sqInt xValue, sqInt yValue);
 sqInt mapPointersInObjectsFromto(sqInt memStart, sqInt memEnd);
 sqInt markAndTrace(sqInt oop);
@@ -599,6 +604,9 @@ sqInt primitiveListBuiltinModule(void);
 sqInt primitiveListExternalModule(void);
 sqInt primitiveLoadImageSegment(void);
 sqInt primitiveLoadInstVar(void);
+#pragma export on
+EXPORT(sqInt) primitiveLocalMicrosecondClock(void);
+#pragma export off
 sqInt primitiveLogN(void);
 sqInt primitiveLowSpaceSemaphore(void);
 sqInt primitiveMakePoint(void);
@@ -658,6 +666,9 @@ sqInt primitiveQuo(void);
 EXPORT(sqInt) primitiveQuoLargeIntegers(void);
 #pragma export off
 sqInt primitiveRelinquishProcessor(void);
+#pragma export on
+EXPORT(sqInt) primitiveRemLargeIntegers(void);
+#pragma export off
 sqInt primitiveResponse(void);
 sqInt primitiveResume(void);
 #pragma export on
@@ -707,6 +718,9 @@ sqInt primitiveTerminateTo(void);
 sqInt primitiveTestDisplayDepth(void);
 sqInt primitiveTimesTwoPower(void);
 sqInt primitiveTruncated(void);
+#pragma export on
+EXPORT(sqInt) primitiveUTCMicrosecondClock(void);
+#pragma export off
 sqInt primitiveUnloadModule(void);
 #pragma export on
 EXPORT(sqInt) primitiveUtcWithOffset(void);
@@ -1160,8 +1174,8 @@ void *primitiveTable[577] = {
 	/* 237*/ (void *)primitiveFail,
 	/* 238*/ (void *)primitiveFail,
 	/* 239*/ (void *)primitiveFail,
-	/* 240*/ (void *)primitiveFail,
-	/* 241*/ (void *)primitiveFail,
+	/* 240*/ (void *)primitiveUTCMicrosecondClock,
+	/* 241*/ (void *)primitiveLocalMicrosecondClock,
 	/* 242*/ (void *)primitiveFail,
 	/* 243*/ (void *)primitiveFail,
 	/* 244*/ (void *)primitiveFail,
@@ -13036,6 +13050,60 @@ sqInt isIntegerValue(sqInt intValue) {
 }
 
 
+/*	Answer true if integer object is negative.
+	Fail if object pointed by oop i not an integer. */
+
+sqInt isNegativeIntegerValueOf(sqInt oop) {
+register struct foo * foo = &fum;
+    sqInt ok;
+    sqInt smallInt;
+    sqInt classOop;
+    sqInt ccIndex;
+    sqInt classOop1;
+    sqInt ccIndex1;
+    sqInt oop1;
+    sqInt oop2;
+
+	if ((oop & 1)) {
+		smallInt = (oop >> 1);
+		return smallInt < 0;
+	}
+	/* begin isClassOfNonImm:equalTo:compactClassIndex: */
+	/* begin fetchPointer:ofObject: */
+	oop1 = foo->specialObjectsOop;
+	classOop = longAt((oop1 + (BASE_HEADER_SIZE)) + (ClassLargePositiveInteger << (SHIFT_FOR_WORD)));
+	assert(!((oop & 1)));
+	ccIndex = (((usqInt) (longAt(oop))) >> 12) & 31;
+	ok = (ClassLargePositiveIntegerCompactIndex == 0
+		? (ccIndex == 0
+	? ((longAt(oop - (BASE_HEADER_SIZE))) & (ALL_BUT_TYPE_MASK)) == classOop
+	: 0)
+		: ClassLargePositiveIntegerCompactIndex == ccIndex);
+	if (ok) {
+		return 0;
+	}
+	/* begin isClassOfNonImm:equalTo:compactClassIndex: */
+	/* begin fetchPointer:ofObject: */
+	oop2 = foo->specialObjectsOop;
+	classOop1 = longAt((oop2 + (BASE_HEADER_SIZE)) + (ClassLargeNegativeInteger << (SHIFT_FOR_WORD)));
+	assert(!((oop & 1)));
+	ccIndex1 = (((usqInt) (longAt(oop))) >> 12) & 31;
+	ok = (ClassLargeNegativeIntegerCompactIndex == 0
+		? (ccIndex1 == 0
+	? ((longAt(oop - (BASE_HEADER_SIZE))) & (ALL_BUT_TYPE_MASK)) == classOop1
+	: 0)
+		: ClassLargeNegativeIntegerCompactIndex == ccIndex1);
+	if (ok) {
+		return 1;
+	}
+	/* begin primitiveFail */
+	if (foo->primFailCode == 0) {
+		foo->primFailCode = 1;
+	}
+	return 0;
+}
+
+
 /*	Answer true if the argument has only fields that can hold oops. See comment in formatOf: */
 
 sqInt isPointers(sqInt oop) {
@@ -13526,6 +13594,160 @@ register struct foo * foo = &fum;
 		oop = (oop + oopSize) + (foo->headerTypeBytes[(longAt(oop + oopSize)) & TypeMask]);
 	}
 	error("expected to find at least one free object");
+}
+
+
+/*	Return a Large Integer object for the given integer magnitude and sign */
+
+sqInt magnitude64BitIntegerForneg(usqLong magnitude, sqInt isNegative) {
+register struct foo * foo = &fum;
+    usqInt highWord;
+    sqInt i;
+    sqInt intValue;
+    sqInt isSmall;
+    sqInt largeClass;
+    sqInt newLargeInteger;
+    sqInt smallVal;
+    sqInt sz;
+    sqInt oop;
+    sqInt oop1;
+
+	isSmall = (isNegative
+		? magnitude <= 1073741824
+		: magnitude < 1073741824);
+	if (isSmall) {
+		smallVal = ((sqInt) magnitude);
+		if (isNegative) {
+			smallVal = 0 - smallVal;
+		}
+		return ((smallVal << 1) | 1);
+	}
+	if (isNegative) {
+		/* begin fetchPointer:ofObject: */
+		oop = foo->specialObjectsOop;
+		largeClass = longAt((oop + (BASE_HEADER_SIZE)) + (ClassLargeNegativeInteger << (SHIFT_FOR_WORD)));
+	} else {
+		/* begin fetchPointer:ofObject: */
+		oop1 = foo->specialObjectsOop;
+		largeClass = longAt((oop1 + (BASE_HEADER_SIZE)) + (ClassLargePositiveInteger << (SHIFT_FOR_WORD)));
+	}
+
+	/* shift is coerced to usqInt otherwise */
+
+	highWord = magnitude >> 32;
+	if (highWord == 0) {
+		sz = 4;
+	} else {
+		sz = 5;
+		if (!(((highWord = ((usqInt) highWord) >> 8)) == 0)) {
+			sz += 1;
+		}
+		if (!(((highWord = ((usqInt) highWord) >> 8)) == 0)) {
+			sz += 1;
+		}
+		if (!(((highWord = ((usqInt) highWord) >> 8)) == 0)) {
+			sz += 1;
+		}
+	}
+	newLargeInteger = instantiateClassindexableSize(largeClass, sz);
+	for (i = 0; i <= (sz - 1); i += 1) {
+		intValue = (magnitude >> (i * 8)) & 255;
+		byteAtput((newLargeInteger + (BASE_HEADER_SIZE)) + i, intValue);
+	}
+	return newLargeInteger;
+}
+
+
+/*	Convert the given object into an integer value.
+	The object may be either a positive SmallInteger or a eight-byte LargeInteger. */
+
+usqLong magnitude64BitValueOf(sqInt oop) {
+register struct foo * foo = &fum;
+    sqInt i;
+    sqInt ok;
+    sqInt smallIntValue;
+    sqInt sz;
+    usqLong value;
+    sqInt classOop;
+    sqInt ccIndex;
+    sqInt classOop1;
+    sqInt ccIndex1;
+    sqInt header;
+    sqInt oop1;
+    sqInt oop2;
+    sqInt sz1;
+
+	if ((oop & 1)) {
+		smallIntValue = (oop >> 1);
+		if (smallIntValue < 0) {
+			smallIntValue = 0 - smallIntValue;
+		}
+		return ((usqLong) smallIntValue);
+	}
+	/* begin isClassOfNonImm:equalTo:compactClassIndex: */
+	/* begin fetchPointer:ofObject: */
+	oop2 = foo->specialObjectsOop;
+	classOop1 = longAt((oop2 + (BASE_HEADER_SIZE)) + (ClassLargePositiveInteger << (SHIFT_FOR_WORD)));
+	assert(!((oop & 1)));
+	ccIndex1 = (((usqInt) (longAt(oop))) >> 12) & 31;
+	ok = (ClassLargePositiveIntegerCompactIndex == 0
+		? (ccIndex1 == 0
+	? ((longAt(oop - (BASE_HEADER_SIZE))) & (ALL_BUT_TYPE_MASK)) == classOop1
+	: 0)
+		: ClassLargePositiveIntegerCompactIndex == ccIndex1);
+	if (!(ok)) {
+		/* begin isClassOfNonImm:equalTo:compactClassIndex: */
+		/* begin fetchPointer:ofObject: */
+		oop1 = foo->specialObjectsOop;
+		classOop = longAt((oop1 + (BASE_HEADER_SIZE)) + (ClassLargeNegativeInteger << (SHIFT_FOR_WORD)));
+		assert(!((oop & 1)));
+		ccIndex = (((usqInt) (longAt(oop))) >> 12) & 31;
+		ok = (ClassLargeNegativeIntegerCompactIndex == 0
+			? (ccIndex == 0
+	? ((longAt(oop - (BASE_HEADER_SIZE))) & (ALL_BUT_TYPE_MASK)) == classOop
+	: 0)
+			: ClassLargeNegativeIntegerCompactIndex == ccIndex);
+		if (!(ok)) {
+			/* begin primitiveFail */
+			if (foo->primFailCode == 0) {
+				foo->primFailCode = 1;
+			}
+			return null;
+		}
+	}
+	/* begin lengthOf: */
+	header = longAt(oop);
+	/* begin lengthOf:baseHeader:format: */
+	if ((header & TypeMask) == HeaderTypeSizeAndClass) {
+		sz1 = (longAt(oop - ((BYTES_PER_WORD) * 2))) & (LONG_SIZE_MASK);
+	} else {
+		sz1 = header & (SIZE_MASK);
+	}
+	sz1 -= header & (SIZE_4_BIT);
+	if (((((usqInt) header) >> 8) & 15) <= 4) {
+		sz = ((usqInt) (sz1 - (BASE_HEADER_SIZE))) >> (SHIFT_FOR_WORD);
+		goto l1;
+	}
+	if (((((usqInt) header) >> 8) & 15) < 8) {
+		sz = ((usqInt) (sz1 - (BASE_HEADER_SIZE))) >> 2;
+		goto l1;
+	} else {
+		sz = (sz1 - (BASE_HEADER_SIZE)) - (((((usqInt) header) >> 8) & 15) & 3);
+		goto l1;
+	}
+l1:	/* end lengthOf:baseHeader:format: */;
+	if (sz > (sizeof(sqLong))) {
+		/* begin primitiveFail */
+		if (foo->primFailCode == 0) {
+			foo->primFailCode = 1;
+		}
+		return null;
+	}
+	value = 0;
+	for (i = 0; i <= (sz - 1); i += 1) {
+		value += (((sqLong) (byteAt((oop + (BASE_HEADER_SIZE)) + i)))) << (i * 8);
+	}
+	return value;
 }
 
 
@@ -15172,34 +15394,46 @@ register struct foo * foo = &fum;
 
 EXPORT(sqInt) primitiveAddLargeIntegers(void) {
 register struct foo * foo = &fum;
-    sqLong integerArg;
-    sqLong integerRcvr;
+    usqLong a;
+    sqInt aIsNegative;
+    usqLong b;
+    sqInt bIsNegative;
+    sqInt oopArg;
+    sqInt oopRcvr;
     sqInt oopResult;
-    sqLong result;
+    usqLong result;
+    sqInt resultIsNegative;
     sqInt sp;
 
-	integerArg = signed64BitValueOf(longAt(foo->stackPointer - (0 * (BYTES_PER_WORD))));
-	integerRcvr = signed64BitValueOf(longAt(foo->stackPointer - (1 * (BYTES_PER_WORD))));
+	oopArg = longAt(foo->stackPointer - (0 * (BYTES_PER_WORD)));
+	oopRcvr = longAt(foo->stackPointer - (1 * (BYTES_PER_WORD)));
+	aIsNegative = isNegativeIntegerValueOf(oopRcvr);
+	bIsNegative = isNegativeIntegerValueOf(oopArg);
+	a = magnitude64BitValueOf(oopRcvr);
+	b = magnitude64BitValueOf(oopArg);
 	if (!(!foo->primFailCode)) {
 		return null;
 	}
-
-	/* Now check overflow conditions. First is whether rcvr and arg are of the same sign.
-	If they are we need to check for overflow more carefully. */
-
-	result = integerRcvr + integerArg;
-	if (!((integerRcvr ^ integerArg) < 0)) {
-		if ((integerRcvr ^ result) < 0) {
+	if (aIsNegative == bIsNegative) {
+		if (a > (18446744073709551615U - b)) {
 			/* begin primitiveFail */
 			if (foo->primFailCode == 0) {
 				foo->primFailCode = 1;
 			}
+			return null;
+		}
+		result = a + b;
+		resultIsNegative = aIsNegative;
+	} else {
+		if (a >= b) {
+			result = a - b;
+			resultIsNegative = aIsNegative;
+		} else {
+			result = b - a;
+			resultIsNegative = bIsNegative;
 		}
 	}
-	if (!(!foo->primFailCode)) {
-		return null;
-	}
-	oopResult = signed64BitIntegerFor(result);
+	oopResult = magnitude64BitIntegerForneg(result, resultIsNegative);
 	if (!foo->primFailCode) {
 		/* begin pop:thenPush: */
 		longAtput((sp = foo->stackPointer - ((2 - 1) * (BYTES_PER_WORD))), oopResult);
@@ -15863,14 +16097,16 @@ l1:	/* end popInteger */;
 }
 
 
-/*	Primitive logical operations for large integers in 64 bit range */
+/*	Primitive arithmetic operations for large integers in 64 bit range */
 
 EXPORT(sqInt) primitiveBitShiftLargeIntegers(void) {
 register struct foo * foo = &fum;
-    sqLong integerArg;
-    sqLong integerRcvr;
+    usqLong a;
+    sqInt aIsNegative;
+    sqInt oopRcvr;
     sqInt oopResult;
-    sqLong shifted;
+    usqLong result;
+    sqInt shift;
     sqInt sp;
     sqInt integerPointer;
 
@@ -15878,48 +16114,50 @@ register struct foo * foo = &fum;
 	integerPointer = longAt(foo->stackPointer - (0 * (BYTES_PER_WORD)));
 	/* begin checkedIntegerValueOf: */
 	if ((integerPointer & 1)) {
-		integerArg = (integerPointer >> 1);
+		shift = (integerPointer >> 1);
 		goto l1;
 	} else {
 		/* begin primitiveFail */
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		integerArg = 0;
+		shift = 0;
 		goto l1;
 	}
-	integerArg = null;
+	shift = null;
 l1:	/* end stackIntegerValue: */;
-	integerRcvr = signed64BitValueOf(longAt(foo->stackPointer - (1 * (BYTES_PER_WORD))));
-	if (!foo->primFailCode) {
-		if (integerArg >= 0) {
-			/* begin success: */
-			if (!(integerArg < 64)) {
-				if (!foo->primFailCode) {
-					foo->primFailCode = 1;
-				}
-			}
-			shifted = integerRcvr << integerArg;
-			/* begin success: */
-			if (!((shifted >> integerArg) == integerRcvr)) {
-				if (!foo->primFailCode) {
-					foo->primFailCode = 1;
-				}
-			}
-		} else {
-			/* begin success: */
-			if (!(integerArg > -64)) {
-				if (!foo->primFailCode) {
-					foo->primFailCode = 1;
-				}
-			}
-			shifted = integerRcvr >> (0 - integerArg);
-		}
-	}
+	oopRcvr = longAt(foo->stackPointer - (1 * (BYTES_PER_WORD)));
+	aIsNegative = isNegativeIntegerValueOf(oopRcvr);
+	a = magnitude64BitValueOf(oopRcvr);
 	if (!(!foo->primFailCode)) {
 		return null;
 	}
-	oopResult = signed64BitIntegerFor(shifted);
+	if (shift >= 0) {
+
+		/* Protect against overflow */
+		/* This is to avoid undue (usqInt) cast */
+
+		result = 18446744073709551615U;
+		if ((shift >= 64) || (a > (((usqInt) result) >> shift))) {
+			/* begin primitiveFail */
+			if (foo->primFailCode == 0) {
+				foo->primFailCode = 1;
+			}
+			return null;
+		}
+		result = a << shift;
+	} else {
+		shift = 0 - shift;
+		if (shift >= 64) {
+			result = 0;
+		} else {
+			result = ((usqInt) a) >> shift;
+		}
+		if (aIsNegative && ((result << shift) != a)) {
+			result += 1;
+		}
+	}
+	oopResult = magnitude64BitIntegerForneg(result, aIsNegative);
 	if (!foo->primFailCode) {
 		/* begin pop:thenPush: */
 		longAtput((sp = foo->stackPointer - ((2 - 1) * (BYTES_PER_WORD))), oopResult);
@@ -16876,17 +17114,24 @@ register struct foo * foo = &fum;
 
 EXPORT(sqInt) primitiveDivLargeIntegers(void) {
 register struct foo * foo = &fum;
-    sqLong integerArg;
-    sqLong integerRcvr;
+    usqLong a;
+    sqInt aIsNegative;
+    usqLong b;
+    sqInt bIsNegative;
+    sqInt oopArg;
+    sqInt oopRcvr;
     sqInt oopResult;
-    sqLong posArg;
-    sqLong posRcvr;
-    sqLong result;
+    usqLong rem;
+    usqLong result;
     sqInt sp;
 
-	integerArg = signed64BitValueOf(longAt(foo->stackPointer - (0 * (BYTES_PER_WORD))));
-	integerRcvr = signed64BitValueOf(longAt(foo->stackPointer - (1 * (BYTES_PER_WORD))));
-	if (integerArg == 0) {
+	oopArg = longAt(foo->stackPointer - (0 * (BYTES_PER_WORD)));
+	oopRcvr = longAt(foo->stackPointer - (1 * (BYTES_PER_WORD)));
+	aIsNegative = isNegativeIntegerValueOf(oopRcvr);
+	bIsNegative = isNegativeIntegerValueOf(oopArg);
+	a = magnitude64BitValueOf(oopRcvr);
+	b = magnitude64BitValueOf(oopArg);
+	if (b == 0) {
 		/* begin primitiveFail */
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
@@ -16895,49 +17140,22 @@ register struct foo * foo = &fum;
 	if (!(!foo->primFailCode)) {
 		return null;
 	}
-	if (integerRcvr > 0) {
-		if (integerArg > 0) {
-			result = integerRcvr / integerArg;
-		} else {
+	result = a / b;
+	if (!(a == 0)) {
+		if (!(bIsNegative == aIsNegative)) {
 
-			/* round negative result toward negative infinity */
+			/* Round toward negative infinity */
 
-			posArg = 0 - integerArg;
+			rem = a % b;
+			if (!(rem == 0)) {
 
-			/* can overflow! */
+				/* This can not overflow, because b > 1, otherwise rem = 0 */
 
-			posRcvr = integerRcvr + (posArg - 1);
-			if (posRcvr < 0) {
-				/* begin primitiveFail */
-				if (foo->primFailCode == 0) {
-					foo->primFailCode = 1;
-				}
+				result += 1;
 			}
-			result = 0 - (posRcvr / posArg);
-		}
-	} else {
-		posRcvr = 0 - integerRcvr;
-		if (integerArg > 0) {
-
-			/* round negative result toward negative infinity */
-			/* can overflow! */
-
-			posRcvr += integerArg - 1;
-			if (posRcvr < 0) {
-				/* begin primitiveFail */
-				if (foo->primFailCode == 0) {
-					foo->primFailCode = 1;
-				}
-			}
-			result = 0 - (posRcvr / integerArg);
-		} else {
-			posArg = 0 - integerArg;
-			result = posRcvr / posArg;
 		}
 	}
-	if (!foo->primFailCode) {
-		oopResult = signed64BitIntegerFor(result);
-	}
+	oopResult = magnitude64BitIntegerForneg(result, bIsNegative != aIsNegative);
 	if (!foo->primFailCode) {
 		/* begin pop:thenPush: */
 		longAtput((sp = foo->stackPointer - ((2 - 1) * (BYTES_PER_WORD))), oopResult);
@@ -17018,25 +17236,34 @@ l2:	/* end stackIntegerValue: */;
 
 EXPORT(sqInt) primitiveDivideLargeIntegers(void) {
 register struct foo * foo = &fum;
-    sqLong integerArg;
-    sqLong integerRcvr;
+    usqLong a;
+    sqInt aIsNegative;
+    usqLong b;
+    sqInt bIsNegative;
+    sqInt oopArg;
+    sqInt oopRcvr;
     sqInt oopResult;
-    sqLong result;
+    usqLong result;
     sqInt sp;
 
-	integerArg = signed64BitValueOf(longAt(foo->stackPointer - (0 * (BYTES_PER_WORD))));
-	integerRcvr = signed64BitValueOf(longAt(foo->stackPointer - (1 * (BYTES_PER_WORD))));
-	if (!((integerArg != 0) && ((integerRcvr % integerArg) == 0))) {
+	oopArg = longAt(foo->stackPointer - (0 * (BYTES_PER_WORD)));
+	oopRcvr = longAt(foo->stackPointer - (1 * (BYTES_PER_WORD)));
+	aIsNegative = isNegativeIntegerValueOf(oopRcvr);
+	bIsNegative = isNegativeIntegerValueOf(oopArg);
+	a = magnitude64BitValueOf(oopRcvr);
+	b = magnitude64BitValueOf(oopArg);
+	if (!(!foo->primFailCode)) {
+		return null;
+	}
+	if (!((b != 0) && ((a % b) == 0))) {
 		/* begin primitiveFail */
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-	}
-	if (!(!foo->primFailCode)) {
 		return null;
 	}
-	result = integerRcvr / integerArg;
-	oopResult = signed64BitIntegerFor(result);
+	result = a / b;
+	oopResult = magnitude64BitIntegerForneg(result, aIsNegative != bIsNegative);
 	if (!foo->primFailCode) {
 		/* begin pop:thenPush: */
 		longAtput((sp = foo->stackPointer - ((2 - 1) * (BYTES_PER_WORD))), oopResult);
@@ -20354,6 +20581,45 @@ register struct foo * foo = &fum;
 }
 
 
+/*	Answer the local microseconds since the Smalltalk epoch. The value is
+	derived from the Posix epoch (see primitiveUTCMicrosecondClock) with a
+	constant offset corresponding to elapsed microseconds between the two
+	epochs according to RFC 868, and with an offset duration corresponding to
+	the current offset of local time from UTC. */
+
+EXPORT(sqInt) primitiveLocalMicrosecondClock(void) {
+register struct foo * foo = &fum;
+    usqLong clock;
+    static usqLong epochDelta= 2177452800000000ULL;
+    int offset;
+    usqLong offsetMillis;
+    sqInt uSecs;
+    sqInt sp;
+
+	if ((ioUtcWithOffset(&clock, &offset)) == -1) {
+		/* begin primitiveFail */
+		if (foo->primFailCode == 0) {
+			foo->primFailCode = 1;
+		}
+		return null;
+	}
+
+	/* adjust for nominal Smalltalk epoch */
+
+	clock += epochDelta;
+	offsetMillis = offset;
+	offsetMillis = offsetMillis * 1000000;
+
+	/* adjust for local time offset */
+
+	clock += offsetMillis;
+	uSecs = positive64BitIntegerFor(clock);
+	/* begin pop:thenPush: */
+	longAtput((sp = foo->stackPointer - ((1 - 1) * (BYTES_PER_WORD))), uSecs);
+	foo->stackPointer = sp;
+}
+
+
 /*	Natural log. */
 
 sqInt primitiveLogN(void) {
@@ -20583,15 +20849,23 @@ register struct foo * foo = &fum;
 
 EXPORT(sqInt) primitiveModLargeIntegers(void) {
 register struct foo * foo = &fum;
-    sqLong integerArg;
-    sqLong integerRcvr;
+    usqLong a;
+    sqInt aIsNegative;
+    usqLong b;
+    sqInt bIsNegative;
+    sqInt oopArg;
+    sqInt oopRcvr;
     sqInt oopResult;
-    sqLong result;
+    usqLong result;
     sqInt sp;
 
-	integerArg = signed64BitValueOf(longAt(foo->stackPointer - (0 * (BYTES_PER_WORD))));
-	integerRcvr = signed64BitValueOf(longAt(foo->stackPointer - (1 * (BYTES_PER_WORD))));
-	if (integerArg == 0) {
+	oopArg = longAt(foo->stackPointer - (0 * (BYTES_PER_WORD)));
+	oopRcvr = longAt(foo->stackPointer - (1 * (BYTES_PER_WORD)));
+	aIsNegative = isNegativeIntegerValueOf(oopRcvr);
+	bIsNegative = isNegativeIntegerValueOf(oopArg);
+	a = magnitude64BitValueOf(oopRcvr);
+	b = magnitude64BitValueOf(oopArg);
+	if (b == 0) {
 		/* begin primitiveFail */
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
@@ -20601,19 +20875,15 @@ register struct foo * foo = &fum;
 		return null;
 	}
 
-	/* ensure that the result has the same sign as the integerArg */
+	/* Handle remainder of same sign as argument */
 
-	result = integerRcvr % integerArg;
-	if (integerArg < 0) {
-		if (result > 0) {
-			result += integerArg;
-		}
-	} else {
-		if (result < 0) {
-			result += integerArg;
+	result = a % b;
+	if (!(result == 0)) {
+		if (!(bIsNegative == aIsNegative)) {
+			result = b - result;
 		}
 	}
-	oopResult = signed64BitIntegerFor(result);
+	oopResult = magnitude64BitIntegerForneg(result, bIsNegative);
 	if (!foo->primFailCode) {
 		/* begin pop:thenPush: */
 		longAtput((sp = foo->stackPointer - ((2 - 1) * (BYTES_PER_WORD))), oopResult);
@@ -20763,31 +21033,34 @@ l2:	/* end stackIntegerValue: */;
 
 EXPORT(sqInt) primitiveMultiplyLargeIntegers(void) {
 register struct foo * foo = &fum;
-    sqLong integerArg;
-    sqLong integerRcvr;
+    usqLong a;
+    sqInt aIsNegative;
+    usqLong b;
+    sqInt bIsNegative;
+    sqInt oopArg;
+    sqInt oopRcvr;
     sqInt oopResult;
-    sqInt r;
-    sqLong result;
-    sqInt twoToThe64;
+    usqLong result;
     sqInt sp;
 
-	integerArg = signed64BitValueOf(longAt(foo->stackPointer - (0 * (BYTES_PER_WORD))));
-	integerRcvr = signed64BitValueOf(longAt(foo->stackPointer - (1 * (BYTES_PER_WORD))));
+	oopArg = longAt(foo->stackPointer - (0 * (BYTES_PER_WORD)));
+	oopRcvr = longAt(foo->stackPointer - (1 * (BYTES_PER_WORD)));
+	aIsNegative = isNegativeIntegerValueOf(oopRcvr);
+	bIsNegative = isNegativeIntegerValueOf(oopArg);
+	a = magnitude64BitValueOf(oopRcvr);
+	b = magnitude64BitValueOf(oopArg);
 	if (!(!foo->primFailCode)) {
 		return null;
 	}
-
-	/* check for C overflow by seeing if computation is reversible */
-
-	result = integerRcvr * integerArg;
-	if ((integerArg == 0) || ((result / integerArg) == integerRcvr)) {
-		oopResult = signed64BitIntegerFor(result);
-	} else {
+	if ((a > 1) && ((b > 1) && (a > (18446744073709551615U / b)))) {
 		/* begin primitiveFail */
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
+		return null;
 	}
+	result = a * b;
+	oopResult = magnitude64BitIntegerForneg(result, aIsNegative != bIsNegative);
 	if (!foo->primFailCode) {
 		/* begin pop:thenPush: */
 		longAtput((sp = foo->stackPointer - ((2 - 1) * (BYTES_PER_WORD))), oopResult);
@@ -22260,15 +22533,23 @@ l2:	/* end stackIntegerValue: */;
 
 EXPORT(sqInt) primitiveQuoLargeIntegers(void) {
 register struct foo * foo = &fum;
-    sqLong integerArg;
-    sqLong integerRcvr;
+    usqLong a;
+    sqInt aIsNegative;
+    usqLong b;
+    sqInt bIsNegative;
+    sqInt oopArg;
+    sqInt oopRcvr;
     sqInt oopResult;
-    sqLong result;
+    usqLong result;
     sqInt sp;
 
-	integerArg = signed64BitValueOf(longAt(foo->stackPointer - (0 * (BYTES_PER_WORD))));
-	integerRcvr = signed64BitValueOf(longAt(foo->stackPointer - (1 * (BYTES_PER_WORD))));
-	if (integerArg == 0) {
+	oopArg = longAt(foo->stackPointer - (0 * (BYTES_PER_WORD)));
+	oopRcvr = longAt(foo->stackPointer - (1 * (BYTES_PER_WORD)));
+	aIsNegative = isNegativeIntegerValueOf(oopRcvr);
+	bIsNegative = isNegativeIntegerValueOf(oopArg);
+	a = magnitude64BitValueOf(oopRcvr);
+	b = magnitude64BitValueOf(oopArg);
+	if (b == 0) {
 		/* begin primitiveFail */
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
@@ -22277,20 +22558,8 @@ register struct foo * foo = &fum;
 	if (!(!foo->primFailCode)) {
 		return null;
 	}
-	if (integerRcvr > 0) {
-		if (integerArg > 0) {
-			result = integerRcvr / integerArg;
-		} else {
-			result = 0 - (integerRcvr / (0 - integerArg));
-		}
-	} else {
-		if (integerArg > 0) {
-			result = 0 - ((0 - integerRcvr) / integerArg);
-		} else {
-			result = (0 - integerRcvr) / (0 - integerArg);
-		}
-	}
-	oopResult = signed64BitIntegerFor(result);
+	result = a / b;
+	oopResult = magnitude64BitIntegerForneg(result, bIsNegative != aIsNegative);
 	if (!foo->primFailCode) {
 		/* begin pop:thenPush: */
 		longAtput((sp = foo->stackPointer - ((2 - 1) * (BYTES_PER_WORD))), oopResult);
@@ -22326,6 +22595,45 @@ l1:	/* end stackIntegerValue: */;
 		ioRelinquishProcessorForMicroseconds(microSecs);
 		/* begin pop: */
 		foo->stackPointer -= 1 * (BYTES_PER_WORD);
+	}
+}
+
+
+/*	Primitive arithmetic operations for large integers in 64 bit range */
+
+EXPORT(sqInt) primitiveRemLargeIntegers(void) {
+register struct foo * foo = &fum;
+    usqLong a;
+    sqInt aIsNegative;
+    usqLong b;
+    sqInt bIsNegative;
+    sqInt oopArg;
+    sqInt oopRcvr;
+    sqInt oopResult;
+    usqLong result;
+    sqInt sp;
+
+	oopArg = longAt(foo->stackPointer - (0 * (BYTES_PER_WORD)));
+	oopRcvr = longAt(foo->stackPointer - (1 * (BYTES_PER_WORD)));
+	aIsNegative = isNegativeIntegerValueOf(oopRcvr);
+	bIsNegative = isNegativeIntegerValueOf(oopArg);
+	a = magnitude64BitValueOf(oopRcvr);
+	b = magnitude64BitValueOf(oopArg);
+	if (b == 0) {
+		/* begin primitiveFail */
+		if (foo->primFailCode == 0) {
+			foo->primFailCode = 1;
+		}
+	}
+	if (!(!foo->primFailCode)) {
+		return null;
+	}
+	result = a % b;
+	oopResult = magnitude64BitIntegerForneg(result, aIsNegative != bIsNegative);
+	if (!foo->primFailCode) {
+		/* begin pop:thenPush: */
+		longAtput((sp = foo->stackPointer - ((2 - 1) * (BYTES_PER_WORD))), oopResult);
+		foo->stackPointer = sp;
 	}
 }
 
@@ -24670,49 +24978,46 @@ register struct foo * foo = &fum;
 
 EXPORT(sqInt) primitiveSubtractLargeIntegers(void) {
 register struct foo * foo = &fum;
-    sqLong integerArg;
-    sqLong integerArgNegated;
-    sqLong integerRcvr;
+    usqLong a;
+    sqInt aIsNegative;
+    usqLong b;
+    sqInt bIsNegative;
+    sqInt oopArg;
+    sqInt oopRcvr;
     sqInt oopResult;
-    sqLong result;
+    usqLong result;
+    sqInt resultIsNegative;
     sqInt sp;
 
-	integerArg = signed64BitValueOf(longAt(foo->stackPointer - (0 * (BYTES_PER_WORD))));
-	integerRcvr = signed64BitValueOf(longAt(foo->stackPointer - (1 * (BYTES_PER_WORD))));
+	oopArg = longAt(foo->stackPointer - (0 * (BYTES_PER_WORD)));
+	oopRcvr = longAt(foo->stackPointer - (1 * (BYTES_PER_WORD)));
+	aIsNegative = isNegativeIntegerValueOf(oopRcvr);
+	bIsNegative = isNegativeIntegerValueOf(oopArg);
+	a = magnitude64BitValueOf(oopRcvr);
+	b = magnitude64BitValueOf(oopArg);
 	if (!(!foo->primFailCode)) {
 		return null;
 	}
-	if (integerArg == 0) {
-		result = integerRcvr;
-	} else {
-
-		/* Reverse the argument so that we can recycle the overflow code from addition.
-			 But the most -ve 64-bit value can overflow, so check; 0 - most -ve = most -ve */
-
-		integerArgNegated = 0 - integerArg;
-		if (integerArgNegated == integerArg) {
+	if (aIsNegative != bIsNegative) {
+		if (a > (18446744073709551615U - b)) {
 			/* begin primitiveFail */
 			if (foo->primFailCode == 0) {
 				foo->primFailCode = 1;
 			}
 			return null;
 		}
-
-		/* Now check overflow conditions. First is whether rcvr and arg are of the same sign.
-			 If they are we need to check for overflow more carefully. */
-
-		result = integerRcvr + integerArgNegated;
-		if (!((integerRcvr ^ integerArgNegated) < 0)) {
-			if ((integerRcvr ^ result) < 0) {
-				/* begin primitiveFail */
-				if (foo->primFailCode == 0) {
-					foo->primFailCode = 1;
-				}
-				return null;
-			}
+		result = a + b;
+		resultIsNegative = aIsNegative;
+	} else {
+		if (a >= b) {
+			result = a - b;
+			resultIsNegative = aIsNegative;
+		} else {
+			result = b - a;
+			resultIsNegative = !aIsNegative;
 		}
 	}
-	oopResult = signed64BitIntegerFor(result);
+	oopResult = magnitude64BitIntegerForneg(result, resultIsNegative);
 	if (!foo->primFailCode) {
 		/* begin pop:thenPush: */
 		longAtput((sp = foo->stackPointer - ((2 - 1) * (BYTES_PER_WORD))), oopResult);
@@ -24986,6 +25291,34 @@ register struct foo * foo = &fum;
 		/* begin unPop: */
 		foo->stackPointer += 1 * (BYTES_PER_WORD);
 	}
+}
+
+
+/*	Answer the UTC microseconds since the Smalltalk epoch. The value is
+	derived from the Posix epoch (see primitiveUTCMicrosecondClock) with a
+	constant offset corresponding to elapsed microseconds between the two
+	epochs according to RFC 868. */
+
+EXPORT(sqInt) primitiveUTCMicrosecondClock(void) {
+register struct foo * foo = &fum;
+    usqLong clock;
+    static usqLong epochDelta= 2177452800000000ULL;
+    int offset;
+    sqInt uSecs;
+    sqInt sp;
+
+	if ((ioUtcWithOffset(&clock, &offset)) == -1) {
+		/* begin primitiveFail */
+		if (foo->primFailCode == 0) {
+			foo->primFailCode = 1;
+		}
+		return null;
+	}
+	clock += epochDelta;
+	uSecs = positive64BitIntegerFor(clock);
+	/* begin pop:thenPush: */
+	longAtput((sp = foo->stackPointer - ((1 - 1) * (BYTES_PER_WORD))), uSecs);
+	foo->stackPointer = sp;
 }
 
 
@@ -29052,6 +29385,7 @@ void* vm_exports[][3] = {
 	{"", "primitiveRootTable", (void*)primitiveRootTable},
 	{"", "primitiveImageFormatVersion", (void*)primitiveImageFormatVersion},
 	{"", "dumpImage", (void*)dumpImage},
+	{"", "primitiveLocalMicrosecondClock", (void*)primitiveLocalMicrosecondClock},
 	{"", "callInterpreter", (void*)callInterpreter},
 	{"", "primitiveDivLargeIntegers", (void*)primitiveDivLargeIntegers},
 	{"", "primitiveMillisecondClockMask", (void*)primitiveMillisecondClockMask},
@@ -29070,8 +29404,10 @@ void* vm_exports[][3] = {
 	{"", "primitiveMultiplyLargeIntegers", (void*)primitiveMultiplyLargeIntegers},
 	{"", "primitiveIsRoot", (void*)primitiveIsRoot},
 	{"", "moduleUnloaded", (void*)moduleUnloaded},
-	{"", "primitiveRootTableAt", (void*)primitiveRootTableAt},
+	{"", "primitiveUTCMicrosecondClock", (void*)primitiveUTCMicrosecondClock},
 	{"", "addGCRoot", (void*)addGCRoot},
+	{"", "primitiveRootTableAt", (void*)primitiveRootTableAt},
+	{"", "primitiveRemLargeIntegers", (void*)primitiveRemLargeIntegers},
 	{"", "getStackPointer", (void*)getStackPointer},
 	{"", "primitiveNotEqualLargeIntegers", (void*)primitiveNotEqualLargeIntegers},
 	{"", "callbackEnter", (void*)callbackEnter},
