@@ -1,3 +1,8 @@
+2012-09-14  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* cmake/squeak.in (jit): Allow the interpreter VM to execute
+	format 6505 images.
+
 2012-09-14    <piumarta@netbsd32>
 
 	* plugins/FT2Plugin/config.cmake: Check for ft2build.h instead of

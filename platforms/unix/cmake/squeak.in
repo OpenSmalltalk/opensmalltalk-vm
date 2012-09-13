@@ -3,7 +3,7 @@
 # Launch squeakvm from the command line or a menu script, with a good
 # plugin path, text encodings and pulseaudio kludge
 # 
-# Last edited: 2011-01-24 17:36:04 by piumarta on emilia.ipe.media.kyoto-u.ac.jp
+# Last edited: 2012-09-14 00:56:50 by piumarta on emilia.local
 
 PATH=/usr/bin:/bin
 
@@ -96,7 +96,7 @@ if test -x "${ck}" -a -f "${image}"; then
     case "${format}" in
 	6502)	vms="${squeakvm}";;
 	6504)	vms="${cogvm} ${squeakvm}";;
-	6505)	vms="${cogvm}";;
+	6505)	vms="${cogvm} ${squeakvm}";;
 	68000)	vms="${squeakvm64}";;
 	68002)	vms="${squeakvm64}";;
 	68003)	vms="${squeakvm64}";;
