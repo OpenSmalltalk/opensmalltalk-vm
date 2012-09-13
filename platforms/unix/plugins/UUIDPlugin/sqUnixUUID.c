@@ -16,7 +16,7 @@
 
 int MakeUUID(char *location)
 {
-#if defined(HAVE_UUID_CREATE)
+#if defined(HAVE_UUID_CREATE) && !defined(HAVE_UUIDGEN) && !defined(HAVE_UUID_GENERATE)
   size_t  len= 16;	/* 128 bits */
   uuid_t *uuid;
   uuid_create(&uuid);

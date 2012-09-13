@@ -1,3 +1,8 @@
+2012-09-14    <piumarta@netbsd32>
+
+	* plugins/UUIDPlugin/sqUnixUUID.c (MakeUUID): Always prefer
+	uuidgen or uuid_generate to uuid_create.
+
 2012-09-14  Ian Piumarta  <piumarta@openbsd32.my.domain>
 
 	* vm/config.cmake: Check for and use libiconv if available.
