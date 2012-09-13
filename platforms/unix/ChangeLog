@@ -1,5 +1,10 @@
 2012-09-14  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
+	* vm-display-null/sqUnixDisplayNull.c (display_ioSetDisplayMode):
+	Allow a headless image to change the size of the Display.
+
+2012-09-14  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
 	* vm/sqUnixMain.c (sqUnixUtcWithOffset): Compute gmt offset from
 	gmtime - localtime when tm_gmtoff not available.
 

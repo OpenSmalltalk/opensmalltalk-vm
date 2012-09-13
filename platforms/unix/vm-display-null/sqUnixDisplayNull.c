@@ -75,7 +75,8 @@ static sqInt display_ioHasDisplayDepth(sqInt i)
 
 static sqInt display_ioSetDisplayMode(sqInt w, sqInt h, sqInt d, sqInt fullscreenFlag)
 {
-  return 0;
+  setSavedWindowSize((w << 16) + (h & 0xFFFF));
+  return 1;
 }
 
 static sqInt display_clipboardSize(void)
