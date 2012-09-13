@@ -27,7 +27,7 @@
 // was #undef EXPORT(returnType) but screws NorCroft cc
 #define EXPORT(returnType) static returnType
 #endif
-#include "aio.h"
+#include "sqaio.h"
 	#define DBUS_API_SUBJECT_TO_CHANGE
 #include <dbus/dbus.h>
 	typedef struct sqDBusData {

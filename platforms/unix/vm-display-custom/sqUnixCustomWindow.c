@@ -17,7 +17,7 @@
 #include "sqUnixMain.h"
 #include "sqUnixGlobals.h"
 #include "sqUnixCharConv.h"		/* not required, but probably useful */
-#include "aio.h"			/* ditto */
+#include "sqaio.h"			/* ditto */
 
 #include "SqDisplay.h"
 

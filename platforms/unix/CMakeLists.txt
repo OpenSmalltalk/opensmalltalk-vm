@@ -97,6 +97,14 @@ IF (EXISTS /usr/pkg/include)
   SET (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I/usr/pkg/include")
 ENDIF (EXISTS /usr/pkg/include)
 
+IF (EXISTS /usr/local/include)
+  SET (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I/usr/local/include")
+ENDIF (EXISTS /usr/local/include)
+
+IF (EXISTS /usr/local/lib)
+  SET (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -L/usr/local/lib")
+ENDIF (EXISTS /usr/local/lib)
+
 MESSAGE (STATUS "Using CFLAGS ${CMAKE_C_FLAGS}")
 
 MACRO (USE_LIBRARY lib)

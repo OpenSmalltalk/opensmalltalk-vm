@@ -16,15 +16,22 @@
 
 int MakeUUID(char *location)
 {
+#if defined(HAVE_UUID_CREATE)
+  size_t  len= 16;	/* 128 bits */
+  uuid_t *uuid;
+  uuid_create(&uuid);
+  uuid_make(uuid, UUID_MAKE_V1);
+  uuid_export(uuid, UUID_FMT_BIN, (void **)&location, &len);
+  uuid_destroy(uuid);
+#else
   uuid_t uuid;
-
-#if defined(HAVE_UUIDGEN)
+#  if defined(HAVE_UUIDGEN)
   uuidgen(&uuid, 1);
-#elif defined(HAVE_UUID_GENERATE)
+#  elif defined(HAVE_UUID_GENERATE)
   uuid_generate(uuid);
-#endif
-
+#  endif
   memcpy((void *)location, (void *)&uuid, sizeof(uuid));
+#endif
   return 1;
 }
 

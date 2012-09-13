@@ -1,3 +1,18 @@
+2012-09-14  Ian Piumarta  <piumarta@openbsd32.my.domain>
+
+	* vm/config.cmake: Check for and use libiconv if available.
+
+	* plugins/UUIDPlugin/sqUnixUUID.c (MakeUUID): Use uuid_create() if
+	available.
+
+	* plugins/UUIDPlugin/config.cmake: Also check for uuid_create().
+
+	* CMakeLists.txt: If /usr/local/include and/or /usr/local/lib
+	exist, search them for headers and libraries, respectively.
+
+	* vm-display-custom/sqUnixCustomWindow.c: Rename "aio.h" ->
+	"sqaio.h".
+
 2012-09-14  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* cmake/squeak.in (jit): Allow the interpreter VM to execute
