@@ -49,6 +49,14 @@
 	platforms/unix/.svn was removed by a repository upgrade for
 	compatibility with recent versions of svn.
 
+2012-09-12  piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+        * src/vm/interp.[ch]: Update to version 4.10.2.
+
+2012-08-07  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+        * vm-sound-pulse/sqUnixSoundPulseAudio.c: Fix type declarations.
+
 2012-07-30  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* Version is 4.9.8-2562.
