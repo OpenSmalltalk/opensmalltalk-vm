@@ -1,3 +1,11 @@
+2012-09-14  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm/sqUnixMain.c (sqUnixUtcWithOffset): Compute gmt offset from
+	gmtime - localtime when tm_gmtoff not available.
+
+	* vm-sound-Sun/sqUnixSoundSun.c (sound_InsertSamplesFromLeadTime):
+	Fix typo in prototype: sqint -> sqInt.
+
 2012-09-12  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* cmake/configure: Check for platforms/.svn because

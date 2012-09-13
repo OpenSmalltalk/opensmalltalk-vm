@@ -263,8 +263,7 @@ static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void *srcBufPtr, sq
 }
 
 
-static sqInt sound_InsertSamplesFromLeadTime(sqint frameCount, void *srcBufPtr,
-				  sqInt samplesOfLeadTime)
+static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt samplesOfLeadTime)
 {
   PRINTF(("(frameCount=%d, srcBufPtr=%d, samplesOfLeadTime=%d)",
 		frameCount, srcBufPtr, samplesOfLeadTime));
