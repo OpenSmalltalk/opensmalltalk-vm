@@ -1,3 +1,9 @@
+2012-09-12  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* cmake/configure: Check for platforms/.svn because
+	platforms/unix/.svn was removed by a repository upgrade for
+	compatibility with recent versions of svn.
+
 2012-07-30  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* Version is 4.9.8-2562.
