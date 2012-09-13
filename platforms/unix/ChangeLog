@@ -1,3 +1,10 @@
+2012-09-14    <piumarta@netbsd32>
+
+	* plugins/FT2Plugin/config.cmake: Check for ft2build.h instead of
+	freetype.h.
+
+	* CMakeLists.txt: Search /usr/pkg/include if it exists.
+
 2012-09-14  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm-display-null/sqUnixDisplayNull.c (display_ioSetDisplayMode):
