@@ -1,6 +1,6 @@
 /* Definitions for "gnuified" interp.c; author: Ian Piumarta (ian.piumarta@inria.fr)
  *
- * last edited: Sun Jun 20 14:56:09 1999 by piumarta (Ian Piumarta) on clotho
+ * last edited: 2012-09-15 20:42:11 by piumarta on W530
  *
  * NOTES:
  *	this file is #included *IN PLACE OF* sq.h
@@ -175,7 +175,7 @@
 
 #define PROFILE_BYTECODE(x) __asm__("movl %0, _bcProfileCurrent" : : "i" (x))
 
-#define PROFILE_BYTECODE_END __asm__("
+#define PROFILE_BYTECODE_END __asm__("\
 	cmpl $0, _profilerActive;\
 	je 0f;\
 	pushl %ebx;\
