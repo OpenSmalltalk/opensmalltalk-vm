@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h> /* _O_BINARY */
-#include <Float.h>
+#include <mingw-include/float.h>	/* prevent the one in lib/gcc/XYZ/include from interfering */
 #include <ole2.h>
 #include "sq.h"
 #include "sqWin32Args.h"
@@ -266,7 +266,7 @@ void SetSystemTrayIcon(BOOL on)
   if(!hShell) hShell = LoadLibrary(TEXT("shell32.dll"));
   if(!hShell) return; /* should not happen */
   /* On WinNT 3.* the following will just return NULL */
-  (FARPROC)ShellNotifyIcon = GetProcAddress(hShell, "Shell_NotifyIconA");
+  ShellNotifyIcon = GetProcAddress(hShell, "Shell_NotifyIconA");
   if(!ShellNotifyIcon) return;  /* ok, we don't have it */
   nid.cbSize = sizeof(nid);
   nid.hWnd   = stWindow;
@@ -329,6 +329,8 @@ char *GetImageOption(int id)
     return NULL;
 }
 
+#if 0
+
 typedef struct _OSVERSIONINFOEX {
   DWORD dwOSVersionInfoSize;
   DWORD dwMajorVersion;
@@ -351,6 +353,8 @@ typedef struct _DISPLAY_DEVICE {
   TCHAR DeviceID[128];
   TCHAR DeviceKey[128];
 } DISPLAY_DEVICE, *PDISPLAY_DEVICE;
+
+#endif
 
 typedef BOOL (CALLBACK *pfnEnumDisplayDevices)(
   LPCTSTR lpDevice,                // device name
