@@ -54,6 +54,10 @@
 /* Async file handle (defined in header file):
 */
 
+#ifndef STACK_SIZE_PARAM_IS_A_RESERVATION
+# define STACK_SIZE_PARAM_IS_A_RESERVATION 0x00010000
+#endif
+
 typedef struct {
   /* Win stuff */
   HANDLE hFile;		/* The file handle we're operating on */
