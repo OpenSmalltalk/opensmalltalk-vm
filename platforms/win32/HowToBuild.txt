@@ -1,1 +1,83 @@
-Please see docs/compiling.html for a detailed description of the build process.
+0. Prerequisites
+
+You will need a working installation of MinGW (for the compilation environment)
+and MSYS (for the configuration and build environment).  See:
+
+    http://www.mingw.org/wiki/Getting_Started
+
+You will also need the DX7 SDK.  This can be obtained from:
+
+    http://squeakvm.org/win32
+
+In the instructions that follow we assume that you are working in an MSYS
+terminal window.
+
+
+1. Obtain the Squeak VM sources
+
+A recent, reliable set of sources can be obtained from http://squeakvm.org/win32
+as a zip archive.  Unpack them and descend one level into the folder structure
+that is created.
+
+    unzip SqueakX.Y.Z-N.win32-src.zip
+    cd SqueakX.Y.Z-N
+
+If you prefer to live dangerously, the current developers' sources can be
+checked out from the Sqeuak VM repository:
+
+    svn co http://squeakvm.org/svn/squeak/trunk/platforms
+
+In either case, you should now have a folder called 'platforms' in the current
+working directory.
+
+
+2. Create and configure a build environment
+
+Create a folder in which to build the VM and 'cd' into it.  This can be
+anywhere, but a folder next to 'platforms' is typical.  If you followed the
+instructions above, you might simply type:
+
+    mkdir build
+    cd build
+
+Configure the build environment by running the 'platforms/win32/build/configure'
+script from within your build folder.
+
+    ../platforms/win32/build/configure
+
+This will attempt to locate the roots of your MinGW and DX7SDK trees.  If it
+fails then you must run the script with one or more of the following options to
+tell it where to look:
+
+    .../configure MINGW=<path-to-your-MinGW-folder>
+    .../configure DX7SDK=<path-to-your-dx7sdk-folder>
+
+(Note that there is another option:
+
+    .../configure SRC=<path-to-your-src-folder>
+
+to specify the location of the generated 'src' tree to use.  If you run VMMaker
+yourself then this option tells the build to use your 'src' tree instead of the
+one bundled in the zip file and repository under platforms/win32/build/src.)
+
+
+3. Compile the VM
+
+Running:
+
+    make
+
+should leave a folder in your working directory called SqueakX.Y.Z-N that
+contains the VM .exe file, the .dll files that it uses, and the default .ini
+file.  (Note that parallel builds, using "make -j N", are not supported at this
+time.)
+
+The VM is 'portable' and can be run directly from the Squeak.X.Y.Z-N folder.
+
+
+4. Install the VM
+
+Just copy the above SqueakX.Y.Z-N folder from your build directory to
+"C:\Program Files" or some other location.  Since it is 'portable' you can also
+copy it to any media (USB flash drive, etc.) and run it directly, without
+installation, from that media.
