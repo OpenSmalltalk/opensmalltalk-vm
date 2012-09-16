@@ -1,0 +1,26 @@
+#############################################################################
+# Makefile for Win32 Squeak
+# Common definitions between main Makefile and Makefile.plugin
+# 
+# Last edited: 2012-09-15 20:06:57 by piumarta on W530
+
+# What is the name of the VM to build?
+VM = Squeak
+
+# What's the version identifier?
+VERSION = @VM_VERSION@
+
+# What's the RC version identifier?
+RCVERSION = @RC_VERSION@
+
+# Where is the root of the platform tree?
+PLATDIR = @PLATDIR@
+
+# Where is the root of the source tree?
+SRCDIR = @SRCDIR@
+
+# Where is the root of the MinGW tree?
+MINGWDIR = @MINGWDIR@
+
+# Where is the root of the DX7 SDK tree?
+DX7DIR = @DX7DIR@

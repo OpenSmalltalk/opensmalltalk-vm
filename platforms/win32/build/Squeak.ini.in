@@ -1,0 +1,11 @@
+[Global]
+DeferUpdate=1
+ShowConsole=0
+DynamicConsole=1
+ReduceCPUUsage=1
+ReduceCPUInBackground=0
+3ButtonMouse=0
+1ButtonMouse=0
+PriorityBoost=1
+B3DXUsesOpenGL=1
+CaseSensitiveFileMode=0

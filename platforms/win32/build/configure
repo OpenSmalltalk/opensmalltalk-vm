@@ -1,0 +1,126 @@
+#!/bin/sh
+
+# Configure compilation of Win32 Squeak under MinGW+MSYS
+# 
+# Author: Ian Piumarta (first-name@last-name.com)
+# 
+# Last edited: 2012-09-16 10:08:56 by piumarta on W530
+
+usage () {
+    cat <<__EOT
+
+Usage: $0 [<option>...]
+Where '<option>' is one of:
+  help                  print this message
+  MINGW=<mingw-dir>     specify the location of MinGW
+  DX7SDK=<dx7sdk-dir>   specify the location of dx7sdk
+  SRC=<src-dir>         specify the location of the VM generated sources
+
+__EOT
+}
+
+CONFIG=$(dirname "$0")
+WIN32=$(dirname "${CONFIG}")
+PLATDIR=$(dirname "${WIN32}")
+SRC=${WIN32}/build/src
+
+MINGW=""
+DX7SDK=""
+
+for d in /d /c . ..; do
+  [ -d "${d}/MinGW" ]  && MINGW="${d}/MinGW"
+  [ -d "${d}/dx7sdk" ] && DX7SDK="${d}/dx7sdk"
+done
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+	MINGW=*)	MINGW=`expr substr "$1" 7 99` ;;
+	DX7SDK=*)	DX7SDK=`expr substr "$1" 8 99` ;;
+	SRC=*)		SRC=`expr substr "$1" 5 99` ;;
+	*)		usage ; exit 1 ;;
+    esac
+    shift
+done
+
+reconf() {
+    echo "Please reconfigure with the option: $1=<dir>"
+    exit 1
+}
+
+checkdir () {
+    [ "x$2" == "x" ] && {
+        echo "Could not locate $1."
+        reconf $1
+    }
+    [ -d "$2" ] || {
+        echo "The directory '$2' does not exist."
+        reconf $1
+    }
+    [ -f "$2/$3" ] || {
+        echo "Could not find '$3' under '$2'."
+        reconf $1
+    }
+}
+
+checkvar () {
+    [ "x$2" == "x" ] && {
+	echo "Could not find a value for: $1"
+	exit 1
+    }
+}
+
+checkdir MINGW  "${MINGW}"  include/float.h
+checkdir DX7SDK "${DX7SDK}" include/d3d.h
+checkdir SRC    "${SRC}"    vm/interp.h
+
+PLATDIR=`(cd ${PLATDIR}; echo $PWD)`
+SRC=`(cd ${SRC}; echo $PWD)`
+MINGW=`(cd ${MINGW}; echo $PWD)`
+DX7SDK=`(cd ${DX7SDK}; echo $PWD)`
+
+VMMVERSION=`grep VMMAKER_VERSION ${SRC}/vm/interp.h | sed 's/[^"]*"//;s/".*//'`
+
+SUBVERSION=""
+if [ -d ${PLATDIR}/.svn ]; then SUBVERSION=`svn info ${WIN32} | grep Revision: | awk '{print $2}'`; fi
+if [ "x${SUBVERSION}" == "x" ]; then
+    if [ -f ${SRC}/revision.txt ]; then
+	SUBVERSION=`cat ${SRC}/revision.txt`
+    else
+	SUBVERSION=0
+    fi
+fi
+
+checkvar VMMVERSION "$VMMVERSION"
+checkvar SUBVERSION "$SUBVERSION"
+
+VM_VERSION=${VMMVERSION}-${SUBVERSION}
+RC_VERSION=`echo "${VMMVERSION}.${SUBVERSION}" | tr '.' ','`
+
+echo "PLATDIR=    ${PLATDIR}"
+echo "MINGW=      ${MINGW}"
+echo "DX7SDK=     ${DX7SDK}"
+echo "SRC=        ${SRC}"
+echo "VM_VERSION= ${VM_VERSION}"
+echo "RC_VERSION= ${RC_VERSION}"
+echo
+
+echo "Configuring: build directory"
+
+rm -rf mingw-include
+mkdir mingw-include
+ln -s -f ${MINGW}/include/float.h mingw-include/float.h
+
+for src in ${WIN32}/build/Makefile*.in; do
+    out=`basename "${src}" .in`
+    echo "Configuring: ${out}"
+    sed "
+s|@PLATDIR@|${PLATDIR}|g;
+s|@SRCDIR@|${SRC}|g;
+s|@MINGWDIR@|${MINGW}|g;
+s|@DX7DIR@|${DX7SDK}|g;
+s|@VMMVERSION@|${VMMVERSION}|g;
+s|@SUBVERSION@|${SUBVERSION}|g;
+s|@VM_VERSION@|${VM_VERSION}|g;
+s|@RC_VERSION@|${RC_VERSION}|g;
+" < "${src}" > "${out}"
+done

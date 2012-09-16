@@ -1,0 +1,253 @@
+#############################################################################
+# Makefile for Win32 Squeak
+#
+# Last edited: 2012-09-16 10:19:04 by piumarta on W530
+
+#############################################################################
+# Common definitions: VM, VERSION, RCVERSION, PLATDIR, SRCDIR, MINGWDIR, DX7DIR
+
+include Makefile.common
+
+#############################################################################
+# Base definitions:
+
+# Is this a Croquet VM (defaults to OGL instead of D3D)?
+# CROQUET=-DCROQUET
+
+#############################################################################
+# Default locations
+#
+ifndef BASEDIR
+BASEDIR= .
+endif
+
+BLDDIR= $(BASEDIR)/obj
+OBJDIR= $(BLDDIR)/vm
+
+CROSSDIR=$(PLATDIR)/Cross/vm
+WIN32DIR=$(PLATDIR)/win32/vm
+MAKERDIR=$(SRCDIR)/vm
+XMISCDIR=$(PLATDIR)/win32/misc
+
+CROSSSRC= $(wildcard $(CROSSDIR)/*.c)
+WIN32SRC= $(wildcard $(WIN32DIR)/*.c)
+MAKERSRC= $(wildcard $(MAKERDIR)/*.c)
+VMSRC   = $(notdir $(MAKERSRC) $(WIN32SRC) $(CROSSSRC))
+
+VPATH= $(VMDIR) $(WIN32DIR) $(CROSSDIR) $(XMISCDIR)
+
+#############################################################################
+# The internal (.lib) and external (.dll) plugins
+#
+include $(SRCDIR)/plugins.ext
+include $(SRCDIR)/plugins.int
+
+LIBS = $(addsuffix .lib, $(INTERNAL_PLUGINS))
+DLLS = $(addsuffix .dll, $(EXTERNAL_PLUGINS))
+
+#############################################################################
+# Generic VM source file definitions
+#
+VMDIR= $(SRCDIR)/vm
+VMOBJ:=	$(VMSRC:.c=.o)
+VMOBJ:=	$(filter-out interp.o sqFilePrims.o, $(VMOBJ))
+
+#LIBSRC = $(wildcard *.c)
+#LIBOBJ = $(LIBSRC:.c=.o)
+
+#############################################################################
+# SqueakVM definitions
+#
+SQUEAK= $(VM)$(VERSION)
+VMEXE=  $(VM)$(VERSION).exe
+VMDEF=	$(VM).def
+VMEXP=	$(VM).exp
+VMLIB=	$(VM).lib
+VMRES=	$(VM).res
+VMDEFIN=$(VM).def.in
+
+
+.SECONDARY:
+
+.PRECIOUS: gnu-interp.c
+
+#############################################################################
+# C compiler settings
+#
+CC=	gcc
+OFLAGS= -O2
+CFLAGS=	-g -mwindows \
+	-fomit-frame-pointer -funroll-loops -fschedule-insns2 $(OFLAGS)
+DEFS=	-DWIN32_FILE_SUPPORT -DNO_SERVICE -DNO_STD_FILE_SUPPORT -DNDEBUG \
+	-DLSB_FIRST -DVM_NAME="\"$(VM)\"" -DVM_VERSION="\"$(VERSION)\"" -DX86 $(XDEFS) $(CROQUET)
+XDEFS=	-DSQUEAK_BUILTIN_PLUGIN
+INCLUDES= -I. -I$(VMDIR) -I$(WIN32DIR) -I$(CROSSDIR) -I$(DX7DIR)/include -I$(MINGWDIR)/include $(XINC)
+
+#############################################################################
+# Linker settings
+#
+# Note: I had to use 'gcc' instead of 'ld' to prevent unresolved symbols
+#       The switch '-mwindows' gives us a GUI app instead of a console app.
+#
+LD=	 gcc
+LDFLAGS= -mwindows
+STDLIBS= -lddraw -ldinput -lopengl32 -lwsock32 -lcomdlg32 -lole32 -lwinmm \
+	 -lversion -luser32 -lgdi32 -lkernel32 -lcrtdll
+#LIBS=	 $(STDLIBS) $(CRTLIB)
+
+#############################################################################
+# Gnuifier settings
+#
+AWK=		gawk
+GNUIFY= $(PLATDIR)/win32/misc/gnuify
+
+#############################################################################
+# Tools to use
+#
+AR = ar rc
+CP = cp
+RM = rm
+DLLTOOL=	dlltool
+DLLWRAP=	dllwrap
+
+#############################################################################
+# RC settings
+#
+# Note: RC compiles the .rc files into linkable .o files
+#
+RC=	 windres
+RCFLAGS= 
+
+.SUFFIXES:
+.SUFFIXES:	.ccg .cc .c .o .s .i .rc .res .cg .hg .ccg
+
+
+
+#############################################################################
+# Common build rules
+#
+default: print-settings $(OBJDIR) $(VMEXE) $(DLLS) squeak
+
+print-settings:
+	@echo ---------------- Makefile settings ------------------
+	@echo "VPATH   =$(VPATH)"
+	@echo "INCLUDES=$(INCLUDES)"
+	@echo "CFLAGS  =$(CFLAGS)"
+	@echo -----------------------------------------------------
+
+$(VMEXE): gnu-interp.o $(VMOBJ) $(LIBS) $(VMEXP) resource.o
+	$(LD) $(LDFLAGS) -o $(OBJDIR)/$(VMEXE) $(OBJDIR)/gnu-interp.o $(addprefix $(OBJDIR)/,$(VMOBJ)) $(OBJDIR)/$(VMEXP) $(OBJDIR)/resource.o $(addprefix $(OBJDIR)/,$(LIBS)) $(STDLIBS)
+	$(RM) $(OBJDIR)/version.o
+	strip --strip-all $(OBJDIR)/$(VMEXE)
+
+gnu-interp.o : gnu-interp.c
+
+$(OBJDIR):
+	mkdir -p $(OBJDIR)
+
+squeak:
+	mkdir -p $(SQUEAK)
+	cp -p $(OBJDIR)/*.exe $(SQUEAK)/.
+	cp -p $(OBJDIR)/*.dll $(SQUEAK)/.
+	cp -p $(PLATDIR)/win32/build/Squeak.ini.in $(SQUEAK)/$(SQUEAK).ini
+	cp -p $(PLATDIR)/win32/build/splash.bmp $(SQUEAK)/.
+	ls -l $(SQUEAK)
+
+#############################################################################
+# The exports for named primitives from Squeak (required by VM)
+#
+$(VMDEF) $(VMEXP) $(VMLIB): $(VMOBJ)
+	$(DLLTOOL) --input-def $(PLATDIR)/win32/build/$(VMDEFIN) --output-def $(OBJDIR)/$(VMDEF) --output-exp $(OBJDIR)/$(VMEXP) --output-lib $(OBJDIR)/$(VMLIB) $(addprefix $(OBJDIR)/,$(VMOBJ))
+
+#############################################################################
+# Building plugins
+
+%.lib: $(BLDDIR)/%/Makefile.lib
+	$(MAKE) -C $(BLDDIR)/$* -fMakefile.lib LIBNAME=$* \
+	BASEDIR=../../$(BASEDIR) \
+	XDEFS=-DSQUEAK_BUILTIN_PLUGIN $*.lib
+	@$(CP) $(BLDDIR)/$*/$*.lib $(OBJDIR)
+
+# Check for Makefile in win32 plugins directory
+$(BLDDIR)/%/Makefile.lib: $(PLATDIR)/win32/plugins/%/Makefile
+	-mkdir -p $(BLDDIR)/$*
+	cp $< $@
+
+# Otherwise use default Makefile
+$(BLDDIR)/%/Makefile.lib: Makefile.plugin
+	-mkdir -p $(BLDDIR)/$*
+	cp $< $@
+
+%.dll: $(BLDDIR)/%/Makefile.dll
+	$(MAKE) -C $(BLDDIR)/$* -fMakefile.dll LIBNAME=$* \
+		BASEDIR=../../$(BASEDIR) \
+		$*.dll
+	@$(CP) $(BLDDIR)/$*/$*.dll $(OBJDIR)
+
+# Check for Makefile in win32 plugins directory
+$(BLDDIR)/%/Makefile.dll: $(PLATDIR)/win32/plugins/%/Makefile
+	@-mkdir -p $(BLDDIR)/$*
+	@cp $< $@
+
+# Otherwise use default Makefile
+$(BLDDIR)/%/Makefile.dll: Makefile.plugin
+	@-mkdir -p $(BLDDIR)/$*
+	@cp $< $@
+
+
+#############################################################################
+# Basic rules
+
+.c.o:
+		$(CC) -o $(OBJDIR)/$@ $(CFLAGS) $(INCLUDES) $(DEFS) -c $<
+
+.c.s:
+		$(CC) -S -o $@ -fverbose-asm -Wa,ah $(CFLAGS) $(INCLUDES) $(DEFS) -c $<
+
+gnu-interp.c:	interp.c $(GNUIFY)
+		$(AWK) -f $(GNUIFY) $< > $(BASEDIR)/$@
+
+.rc.res:
+		$(RC) $(RCFLAGS) -v -D RCVERSION="$(RCVERSION)" -D VMVERSION="\"\\\"$(VERSION)\\\"\"" --include-dir $(dir $<) -i $< -o $(OBJDIR)/$@
+
+resource.o:	$(VMRES)
+		$(RC) $(RCFLAGS) -i $(OBJDIR)/$< -o $(OBJDIR)/$@
+
+#############################################################################
+# Extra specific dependencies
+#
+
+sqNamedPrims.o:	sqNamedPrims.c sqNamedPrims.h
+
+#Squeak.res: misc/Squeak.rc
+#	$(RC) $(RCFLAGS) -i $< -o $(OBJDIR)/$@
+#
+#Croquet.res: misc/Croquet.rc
+#	$(RC) $(RCFLAGS) -i $< -o $(OBJDIR)/$@
+
+#############################################################################
+# Maintainer rules
+#
+
+BINRELEASE=$(SQUEAK).win32-i386
+SRCRELEASE=$(SQUEAK).win32-src
+SUBVERSION=@SUBVERSION@
+
+release: $(BINRELEASE) $(SRCRELEASE)
+
+$(BINRELEASE):
+	zip -9r $(BINRELEASE).zip $(SQUEAK)
+	rm -rf $(RELEASE)
+
+$(SRCRELEASE):
+	mkdir -p $(SQUEAK)/platforms
+	ln -s $(PLATDIR)/Cross $(SQUEAK)/platforms/Cross
+	ln -s $(PLATDIR)/win32 $(SQUEAK)/platforms/win32
+	echo "$(SUBVERSION)" > $(SQUEAK)/platforms/win32/build/src/revision.txt
+	cp $(SQUEAK)/platforms/win32/HowToBuild.txt $(SQUEAK)/.
+	find $(SQUEAK)/platforms -name '*~' -exec rm {} \;
+	zip -9r $(SRCRELEASE).zip $(SQUEAK)/HowToBuild.txt $(SQUEAK)/platforms
+	rm -rf $(SQUEAK)/platforms
+
+dist:
+	rsync -Pva *.zip squeakvm.org:public_html/squeak/win32/release/.

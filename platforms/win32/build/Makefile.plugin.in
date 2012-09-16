@@ -1,0 +1,128 @@
+#############################################################################
+# Generic Makefile for plugins
+#############################################################################
+include $(BASEDIR)/Makefile.common
+
+AR = ar rc
+CP = cp
+RM = rm
+
+# These are the two key locations (set via invocation):
+# BASEDIR: Where is the root of the build tree?
+# PLATDIR: Where is the root of the platforms tree?
+
+#############################################################################
+# Standard directory locations:
+#   CROSSDIR: The location of the cross platform sources
+#   WIN32DIR: The location of the win32 sources
+#   MAKERDIR: The location of the VMMaker generated sources
+#   BUILDDIR: The location where the plugin is built
+#
+CROSSDIR=   $(PLATDIR)/Cross/plugins/$(LIBNAME)
+WIN32DIR=   $(PLATDIR)/Win32/plugins/$(LIBNAME)
+MAKERDIR=   $(SRCDIR)/$(LIBNAME)
+BUILDDIR=   $(BASEDIR)/obj/$(LIBNAME)
+
+# Support directory locations
+CROSSVMDIR= $(PLATDIR)/Cross/vm
+WIN32VMDIR= $(PLATDIR)/Win32/vm
+MAKERVMDIR= $(SRCDIR)/vm
+BUILVMDDIR= $(BASEDIR)/obj/vm
+
+INCLUDES= -I. -I$(DX7DIR)/include \
+	  -I$(MAKERVMDIR) -I$(WIN32VMDIR) -I$(CROSSVMDIR) \
+	  -I$(MAKERDIR) -I$(WIN32DIR) -I$(CROSSDIR)
+
+#############################################################################
+# If no source files were given, use standard set
+#
+
+CROSSSRC= $(wildcard $(CROSSDIR)/*.c)
+WIN32SRC= $(wildcard $(WIN32DIR)/*.c)
+MAKERSRC= $(wildcard $(MAKERDIR)/*.c)
+LIBSRC  = $(notdir $(MAKERSRC) $(WIN32SRC) $(CROSSSRC))
+
+#############################################################################
+# C compiler settings (for egcs-1.1.2)
+#
+CC=	gcc
+OFLAGS= -O2
+CFLAGS=	-g -mwindows -fomit-frame-pointer -funroll-loops \
+	-fschedule-insns2 $(OFLAGS)
+DEFS=	-DWIN32_FILE_SUPPORT -DNO_SERVICE -DNO_STD_FILE_SUPPORT -DNDEBUG \
+	-DLSB_FIRST -DVM_NAME="\"$(VM)\"" -DVM_VERSION="\"$(VERSION)\""  -DX86 $(XDEFS)
+
+#############################################################################
+# DLL settings
+#
+# Note: DLLTOOL/DLLWRAP does the work for everything related to plugins
+#
+DLLTOOL=	dlltool
+DLLWRAP=	dllwrap
+
+.SUFFIXES:	.c .o .s .rc .res .dep
+
+#############################################################################
+# Plugin settings
+#
+OBJDIR=    $(BASEDIR)/obj/$(LIBNAME)
+VMDIR=     $(BASEDIR)/obj/vm
+PLUGINLIB= $(LIBNAME).lib
+PLUGINDLL= $(LIBNAME).dll
+LIBOBJ=    $(LIBSRC:.c=.o)
+
+VPATH= $(MAKERDIR) $(WIN32DIR) $(CROSSDIR) $(OBJDIR)
+
+all:	$(PLUGINLIB) $(PLUGINDLL)
+
+print-settings:
+	@echo ---------------- Makefile settings ------------------
+	@echo VPATH=$(VPATH)
+	@echo INCLUDES=$(INCLUDES)
+	@echo CFLAGS=$(CFLAGS)
+	@echo CROSSDIR=$(CROSSDIR)
+	@echo WIN32DIR=$(WIN32DIR)
+	@echo MAKERDIR=$(MAKERDIR)
+	@echo LIBSRC=$(LIBSRC)
+	@echo LIBOBJ=$(LIBOBJ)
+	@echo -----------------------------------------------------
+
+$(OBJDIR):
+	mkdir -p $(OBJDIR)
+
+$(VMDIR):
+	mkdir -p $(VMDIR)
+
+$(PLUGINLIB): $(VMDIR) $(OBJDIR) $(LIBOBJ)
+	$(AR) $(OBJDIR)/$(PLUGINLIB) $(LIBOBJ)
+
+$(PLUGINDLL): $(VMDIR) $(OBJDIR) $(LIBOBJ)
+	$(DLLTOOL) \
+		--output-def $(OBJDIR)/$(LIBNAME).def \
+		--output-exp $(OBJDIR)/$(LIBNAME).exp \
+		--output-lib $(OBJDIR)/$(LIBNAME).lib \
+		$(addprefix $(OBJDIR)/,$(LIBOBJ))
+	$(DLLWRAP) -mwindows \
+		-def $(OBJDIR)/$(LIBNAME).def \
+		-o   $(OBJDIR)/$(LIBNAME).dll \
+		$(OBJDIR)/$(LIBNAME).exp \
+		$(addprefix $(OBJDIR)/,$(LIBOBJ))\
+		$(EXTRALIBS)
+	strip --strip-all $(OBJDIR)/$(LIBNAME).dll
+	-rm $(OBJDIR)/$(LIBNAME).lib
+
+#############################################################################
+# Rules for automated builds
+#
+
+.c.o:
+		$(CC) -o $(OBJDIR)/$@ $(CFLAGS) $(INCLUDES) $(DEFS) -c $<
+
+.c.s:
+		$(CC) -S -o $@ -fverbose-asm -Wa,ah $(CFLAGS) $(INCLUDES) $(DEFS) -c $<
+
+.rc.res:
+		$(RC) $(RCFLAGS) -i $< -o $(OBJDIR)/$@
+
+.c.dep:
+		$(CC) -M -o $(OBJDIR)/$(notdir $@) $(CFLAGS) $(INCLUDES) $(DEFS) -c $<
