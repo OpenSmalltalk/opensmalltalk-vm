@@ -3,12 +3,11 @@
 # Rewrite the interpreter source in $1 to use GNU C extensions, writing the
 # modified file to stdout.  Author: Ian.Piumarta@inria.fr
 #
-# Last edited: Wed Dec 16 01:46:39 1998 by piumarta (Ian Piumarta) on clotho
+# Last edited: 2012-09-15 16:34:23 by piumarta on W530
 
 BEGIN {
-  print "/* This file has been post-processed for GNU C */\n\
-\n\
-";
+  print "/* This file has been post-processed for GNU C */\n";
+  print "\n";
   print "copying first section of file" > "/dev/stderr";
   stage= 0;
 }
@@ -20,8 +19,7 @@ BEGIN {
 
 # A prototype for internalPush means the interprer was not inlined
 
-/^sqInt internalPush\(/ \
-{
+/^sqInt internalPush\(/ {
   print "" > "/dev/stderr";
   print "*** interpreter was not inlined: bailing out! ***" > "/dev/stderr";
   print "" > "/dev/stderr";
