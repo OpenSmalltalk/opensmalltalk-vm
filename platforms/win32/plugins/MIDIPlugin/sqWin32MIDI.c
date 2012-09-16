@@ -21,6 +21,10 @@
 
 #ifndef NO_MIDI
 
+#ifndef STACK_SIZE_PARAM_IS_A_RESERVATION
+# define STACK_SIZE_PARAM_IS_A_RESERVATION 0x00010000
+#endif
+
 #ifndef NO_RCSID
   static char RCSID[] = "$Id$";
 #endif
