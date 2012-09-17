@@ -3,7 +3,7 @@
 # Launch squeakvm from the command line or a menu script, with a good
 # plugin path, text encodings and pulseaudio kludge
 # 
-# Last edited: 2012-09-14 00:56:50 by piumarta on emilia.local
+# Last edited: 2012-09-17 09:06:59 by piumarta on linux64
 
 PATH=/usr/bin:/bin
 
@@ -36,6 +36,7 @@ useoss="[useoss]"
 ck="ckformat"
 squeakvm="squeakvm"
 squeakvm64="squeakvm64"
+plgd64="${plgdir}_64bit"
 cogvm="cogvm"
 cogvm64="cogvm64"
 vm=""
@@ -70,7 +71,9 @@ options "$@"
 
 # try to find the image file format
 
-if   test -x "${plgdir}/${ck}"; then ck="${plgdir}/${ck}"
+if   test -x "${plgd64}/${ck}"; then ck="${plgd64}/${ck}"
+elif test -x "${plgdir}/${ck}"; then ck="${plgdir}/${ck}"
+elif test -x "${libdir}/${ck}"; then ck="${libdir}/${ck}"
 elif test -x "${bindir}/${ck}"; then ck="${bindir}/${ck}"
 elif test -x "`which ${ck}`";	then ck="`which ${ck}`"
 fi
@@ -97,9 +100,9 @@ if test -x "${ck}" -a -f "${image}"; then
 	6502)	vms="${squeakvm}";;
 	6504)	vms="${cogvm} ${squeakvm}";;
 	6505)	vms="${cogvm} ${squeakvm}";;
-	68000)	vms="${squeakvm64}";;
-	68002)	vms="${squeakvm64}";;
-	68003)	vms="${squeakvm64}";;
+	68000)	vms="${squeakvm64}"; plgdir="${plgd64}";;
+	68002)	vms="${squeakvm64}"; plgdir="${plgd64}";;
+	68003)	vms="${squeakvm64}"; plgdir="${plgd64}";;
 	*)	vms="${squeakvm}";;
     esac
 fi

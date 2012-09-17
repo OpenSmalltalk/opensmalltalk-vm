@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Last edited: 2012-09-12 17:16:25 by piumarta on margaux1
+# Last edited: 2012-09-16 21:35:15 by piumarta on linux64
 
 RELEASE_TAG=""
 
@@ -15,6 +15,7 @@ Options include:
   --without-<plugin>    do not build the named plugin
   --without-gl          disable everything that depends on OpenGL
   --without-SUGAR       disable support for SUGAR environment
+  --image64             build a VM for running 64-bit images
 Notes:
 1. By default the CFLAGS will be set to create optimised binaries.  If you are
    debugging the VM you probably want to use '--CFLAGS=-g' when invoking this

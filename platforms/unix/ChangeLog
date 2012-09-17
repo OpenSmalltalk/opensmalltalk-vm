@@ -1,3 +1,25 @@
+2012-09-17  piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* CMakeLists.txt: Add option '--image64'.  With --image64
+	specified: append '_64bit' to plgdir, set scriptsuffix to '64' and
+	versionsuffix to '64_bit'.
+
+	* vm/config.cmake: Configure VM_VERSION_INFO as VM_VERSION with
+	versionsuffix appended.
+
+	* vm/sqUnixMain.c: Use VM_VERSION_INFO in output of '-version'.
+
+	* vm/build.cmake: Append ${scriptsuffix} to squeakvm.
+
+	* cmake/squeak.in: Search plgdir and plgd64 for 'ckformat'
+	program.  Append '64_bit' to plgdir when 64-bit image detected.
+
+	* cmake/configure: Add option '--image64' to help text.
+
+	* plugins/DropPlugin/sqUnixDragDrop.c,
+	plugins/HostWindowPlugin/sqUnixHostWindowPlugin.c: Fix prototypes
+	for 64 bits.
+
 2012-09-14    <piumarta@netbsd32>
 
 	* plugins/UUIDPlugin/sqUnixUUID.c (MakeUUID): Always prefer

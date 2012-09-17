@@ -1,6 +1,6 @@
 LINK_DIRECTORIES (${vm_link_directories})
 
-ADD_EXECUTABLE (squeakvm
+ADD_EXECUTABLE (squeakvm${scriptsuffix}
   ${bld}/${interp}.c
   ${unix}/vm/aio.c
   ${unix}/vm/debug.c
@@ -43,11 +43,11 @@ INCLUDE_DIRECTORIES (
   ${vm_include_directories}
 )
 
-SET_TARGET_PROPERTIES (squeakvm PROPERTIES LINK_FLAGS "${CMAKE_EXE_EXPORTS_C_FLAG}")
+SET_TARGET_PROPERTIES (squeakvm${scriptsuffix} PROPERTIES LINK_FLAGS "${CMAKE_EXE_EXPORTS_C_FLAG}")
 
-TARGET_LINK_LIBRARIES (squeakvm m ${squeak_libs} ${vm_link_libraries})
+TARGET_LINK_LIBRARIES (squeakvm${scriptsuffix} m ${squeak_libs} ${vm_link_libraries})
 
-INSTALL (PROGRAMS ${bld}/squeakvm DESTINATION ${plgdir})
+INSTALL (PROGRAMS ${bld}/squeakvm${scriptsuffix} DESTINATION ${plgdir})
 
 IF (vm-sound-OSS_disabled)
   SET (useoss "false")
@@ -81,7 +81,7 @@ ADD_EXECUTABLE (ckformat
 
 INSTALL (PROGRAMS ${bld}/ckformat DESTINATION ${plgdir})
 
-ADD_DEPENDENCIES (squeakvm squeak squeak.sh ckformat)
+ADD_DEPENDENCIES (squeakvm${scriptsuffix} squeak squeak.sh ckformat)
 
 # manual page
 
@@ -89,5 +89,5 @@ ADD_CUSTOM_TARGET (squeak.1
   DEPENDS ${unix}/doc/squeak.1
   COMMAND sh ${bld}/config ${unix}/doc/squeak.1 ${bld}/squeak.1
 )
-ADD_DEPENDENCIES (squeakvm squeak.1)
+ADD_DEPENDENCIES (squeakvm${scriptsuffix} squeak.1)
 INSTALL (FILES ${bld}/squeak.1 DESTINATION share/man/man1)

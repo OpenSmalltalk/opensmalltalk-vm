@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2012-09-14 05:15:14 by piumarta on solaris11x86
+ * Last edited: 2012-09-16 21:47:24 by piumarta on linux64
  */
 
 #include "sq.h"
@@ -1184,7 +1184,7 @@ char *getVersionInfo(int verbose)
 
   if (verbose)
     sprintf(info+strlen(info), "Squeak VM version: ");
-  sprintf(info+strlen(info), "%s #%d", VM_VERSION, vm_serial);
+  sprintf(info+strlen(info), "%s #%d", VM_VERSION_INFO, vm_serial);
 #if defined(USE_XSHM)
   sprintf(info+strlen(info), " XShm");
 #endif

@@ -1,6 +1,6 @@
 # Yes, it's true: you can write makefiles in COBOL.
 # 
-# Last edited: 2010-05-13 12:54:20 by piumarta on emilia-2.local
+# Last edited: 2012-09-16 21:19:57 by piumarta on linux64
 
 PROJECT (squeak)
 
@@ -13,13 +13,19 @@ IF (NOT DEFINED VM_HOST OR NOT DEFINED VM_VERSION)
   )
 ENDIF (NOT DEFINED VM_HOST OR NOT DEFINED VM_VERSION)
 
+IF (DEFINED OPT--image64)
+  SET (SQ_VI_BYTES_PER_WORD 8)
+  SET (versionsuffix "_64bit")
+  SET (scriptsuffix "64")
+ENDIF (DEFINED OPT--image64)
+
 SET (prefix  ${CMAKE_INSTALL_PREFIX})
 
 SET (version ${VM_VERSION})
 
 SET (bindir bin)
 SET (imgdir lib/squeak)
-SET (plgdir lib/squeak/${version})
+SET (plgdir lib/squeak/${version}${versionsuffix})
 SET (mandir man/man1)
 SET (docdir share/doc/squeak-${version})
 
