@@ -60,10 +60,10 @@ sqInt 	dndOutStart(char *types, int ntypes);
 sqInt 	dndOutAcceptedType(char *type, int ntype);
 void    dndOutSend(char *bytes, int nbytes);
 
-int dropInit(void)	{ return 1; }
-int dropShutdown(void)	{ return 1; }
+sqInt dropInit(void)	{ return 1; }
+sqInt dropShutdown(void)	{ return 1; }
 
-char *dropRequestFileName(int dropIndex)	/* in st coordinates */
+char *dropRequestFileName(sqInt dropIndex)	/* in st coordinates */
 {
   if ((dropIndex > 0) && (dropIndex <= uxDropFileCount))
     {
@@ -73,7 +73,7 @@ char *dropRequestFileName(int dropIndex)	/* in st coordinates */
   return 0;
 }
 
-int dropRequestFileHandle(int dropIndex)
+sqInt dropRequestFileHandle(sqInt dropIndex)
 {
   char *path= dropRequestFileName(dropIndex);
   if (path)
@@ -116,6 +116,6 @@ void sqDndOutSend(char *aByteArray, int nbytes)
   dndOutSend(aByteArray, nbytes);
 }
 
-int  sqSecFileAccessCallback(void *callback)		 { return 0; }
-void sqSetNumberOfDropFiles(int numberOfFiles)		 { }
-void sqSetFileInformation(int dropIndex, void *dropFile) { }
+sqInt  sqSecFileAccessCallback(void *callback)		 { return 0; }
+void sqSetNumberOfDropFiles(sqInt numberOfFiles)		 { }
+void sqSetFileInformation(sqInt dropIndex, void *dropFile) { }
