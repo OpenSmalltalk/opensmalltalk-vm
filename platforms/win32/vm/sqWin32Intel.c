@@ -24,7 +24,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h> /* _O_BINARY */
-#include <mingw-include/float.h>	/* prevent the one in lib/gcc/XYZ/include from interfering */
+#if defined(__MINGW32__) || defined(__MINGW64__)
+# include <mingw-include/float.h>	/* prevent the one in lib/gcc/XYZ/include from interfering */
+#else
+# include <float.h>
+#endif
 #include <ole2.h>
 #include "sq.h"
 #include "sqWin32Args.h"
