@@ -12,7 +12,7 @@ CMLibPng class >> canonicalName [
 { #category : #'package properties' }
 CMLibPng >> archiveMD5Sum [
 
-	^ '8ea7f60347a306c5faf70b977fa80e28'
+	^ '0fd51add1da6a0e470e0c726c59171b9'
 ]
 
 { #category : #'generating actions' }
