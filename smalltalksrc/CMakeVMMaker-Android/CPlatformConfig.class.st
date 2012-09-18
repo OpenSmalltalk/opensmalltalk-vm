@@ -170,7 +170,7 @@ CPlatformConfig >> buildScript [
 
 	^ 
 '#!bash
-../codegen-scripts/extract-commit-info.sh
+
 cmake .
 make
 
