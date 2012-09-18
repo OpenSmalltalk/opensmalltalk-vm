@@ -57,7 +57,7 @@ CogFamilyWindowsConfig >> buildScript [
 
 	^ 
 '#!bash
-../codegen-scripts/extract-commit-info.sh
+
 cmake -G "MSYS Makefiles" .
 make
 
