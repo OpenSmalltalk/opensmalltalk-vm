@@ -12,7 +12,7 @@ CMLibPng class >> canonicalName [
 { #category : #'package properties' }
 CMLibPng >> archiveMD5Sum [
 
-	^ '39a35257cd888d29f1d000c2ffcc79eb'
+	^ '8ea7f60347a306c5faf70b977fa80e28'
 ]
 
 { #category : #'generating actions' }
@@ -83,7 +83,7 @@ CMLibPng >> dependencies [
 { #category : #'package properties' }
 CMLibPng >> downloadURL [
 
-	^ 'ftp://ftp.simplesystems.org/pub/libpng/png/src/libpng-1.2.49.tar.gz'
+	^ 'ftp://ftp.simplesystems.org/pub/libpng/png/src/libpng-1.5.12.tar.xz'
 ]
 
 { #category : #'package properties' }

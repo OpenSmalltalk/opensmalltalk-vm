@@ -36,7 +36,7 @@ StackIPhoneConfig >> UIFileSharingEnabled [
 
 { #category : #accessing }
 StackIPhoneConfig >> architecture [ 
-	^'armv7'
+	^'armv6'
 ]
 
 { #category : #accessing }
@@ -82,41 +82,6 @@ StackIPhoneConfig >> compilerFlagsDebug [
 { #category : #settings }
 StackIPhoneConfig >> compilerFlagsRelease [
 	^#('-g0' '-O3' '-fomit-frame-pointer' '-DNDEBUG' '-DDEBUGVM=0' '-DSTACKVM')
-]
-
-{ #category : #'plugin extra rules' }
-StackIPhoneConfig >> configureFT2Plugin: maker [
-	"extra rules for Freetype plugin.
-	a custom rule to build freetype library"
-	| lib devRoot sdkRoot |
-	
-	"maker isExternal 
-		ifFalse: [ self error: 'building internal FT2Plugin is not supported yet' ]."
-
-	devRoot := '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer'.
-	sdkRoot := '{devRoot}/SDKs/iPhoneOS{sdkVersion}.sdk' 
-		nameFormat: {'devRoot'->devRoot. 'sdkVersion'->self sdkVersion} asDictionary.
-
-	"add freetype library into loop"
-	lib := self addThirdpartyLibrary: 'freetype2'.
-	lib configurationFlags: ({
-		'--without-zlib'.
-		'--without-bzip2'.
- 		'--host=arm-apple-darwin'.
-		'--enable-static=yes'. 
-		'--enable-shared=no'.
-		'CC={devRoot}/usr/bin/gcc'.
-		'CXX={devRoot}/usr/bin/g++'.
-		'CFLAGS=\\"-arch armv7 -std=c99 -Wno-trigraphs -O2 -fwrapv -Wreturn-type -Wunused-variable -fmessage-length=0 -miphoneos-version-min=4.0 -I{sdkRoot}/usr/include/libxml2 -isysroot {sdkRoot}\\"'.
-		'LDFLAGS=\\"-arch armv7 -isysroot {sdkRoot}\\"'}
-		collect: [ :each | each nameFormat: {'sdkRoot'->sdkRoot. 'devRoot'->devRoot} asDictionary ]).
-
-	"maker set: 'XCODE_ATTRIBUTE_CONFIGURATION_BUILD_DIR' toString: ''."
-
-	"link plugin with freetype lib"
-	maker addExternalLibrary: '${thirdpartyDir}/out/lib/', lib libraryFileName.
-	maker includeDirectories: lib includeDir.
-
 ]
 
 { #category : #'plugin extra rules' }
@@ -243,11 +208,6 @@ StackIPhoneConfig >> frameworks [
 ]
 
 { #category : #accessing }
-StackIPhoneConfig >> freetypeLibClass [ 
-	^CMIOSFreetype2
-]
-
-{ #category : #accessing }
 StackIPhoneConfig >> imageName [
 	^'iPhone'
 ]
@@ -306,7 +266,6 @@ StackIPhoneConfig >> platformSources [
 		'iPhone/osExports.c'
 		"'iPhone/sqDummyaio.c'" "I'm using real aio.c from unix (and seems to work)"
 		'iPhone/sqMacV2Memory.c'
-		'iPhone/sqMacUnixExternalPrims.m'
 		)
 ]
 
@@ -408,14 +367,15 @@ StackIPhoneConfig >> setCommonProperties: maker [
 
 	maker set: 'CMAKE_OSX_SYSROOT' to: 'iphoneos${SDKVER}'.
 		
+	maker set: 'CMAKE_C_COMPILER' to: '${DEVROOT}/usr/bin/llvm-gcc'.
+	maker set: 'CMAKE_CXX_COMPILER' to: '${DEVROOT}/usr/bin/llvm-g++'.
+		
 	maker set: 'CMAKE_FIND_ROOT_PATH' to: '"${SDKROOT}" "${DEVROOT}"'.
 	maker set: 'CMAKE_FIND_ROOT_PATH_MODE_PROGRAM' to: 'ONLY'.
 	maker set: 'CMAKE_FIND_ROOT_PATH_MODE_LIBRARY' to: 'ONLY'.
 	maker set: 'CMAKE_FIND_ROOT_PATH_MODE_INCLUDE' to: 'ONLY'.
 	
-	maker set: 'CMAKE_EXE_LINKER_FLAGS' toString: '--sysroot ${SDKROOT} -L${SDKROOT}/usr/lib -L${SDKROOT}/usr/lib/system'.
-	maker set: 'CMAKE_C_FLAGS' toString: '--sysroot ${SDKROOT} -L${SDKROOT}/usr/lib -L${SDKROOT}/usr/lib/system'.
-	maker set: 'CMAKE_CXX_FLAGS' toString: '--sysroot ${SDKROOT} -L${SDKROOT}/usr/lib -L${SDKROOT}/usr/lib/system'.
+	maker set: 'CMAKE_EXE_LINKER_FLAGS' toString: '-L${SDKROOT}/usr/lib -L${SDKROOT}/usr/lib/system'.
 
 	maker addFrameworks: self frameworks.
 ]
@@ -461,21 +421,6 @@ StackIPhoneConfig >> setExtraTargetProperties: maker [
 	
 	maker puts: 'set_source_files_properties(${srcVMDir}/gcc3x-cointerp.c PROPERTIES COMPILE_FLAGS -O0)'
 
-]
-
-{ #category : #settings }
-StackIPhoneConfig >> setGlobalOptions: maker [
-	"set any CMake global options, before declaring a project in cmake file"
-	
-	maker 
-		set: 'CMAKE_C_COMPILER' 
-		to: '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/gcc'.
-	maker 
-		set: 'CMAKE_CXX_COMPILER' 
-		to: '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/g++'.	
-	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'arm6'.
-	maker set: 'CMAKE_OSX_SYSROOT' to: '/'.
-	
 ]
 
 { #category : #settings }
