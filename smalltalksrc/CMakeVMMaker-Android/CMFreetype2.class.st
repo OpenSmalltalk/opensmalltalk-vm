@@ -7,7 +7,7 @@ Class {
 	#category : #'CMakeVMMaker-Libs'
 }
 
-{ #category : #accessing }
+{ #category : #'as yet unclassified' }
 CMFreetype2 class >> canonicalName [
 	^ 'freetype2'
 ]
@@ -20,12 +20,11 @@ CMFreetype2 >> archiveMD5Sum [
 
 { #category : #'generating actions' }
 CMFreetype2 >> build [
-
 	gen 
 		puts:
 '
 add_custom_command(OUTPUT "${ft2config}"
-	COMMAND ./configure --prefix=''${installPrefix}'' ', self configurationFlags, '
+	COMMAND ./configure --prefix=''${installPrefix}'' CFLAGS=''-arch i386'' LDFLAGS=''-arch i386''
 	WORKING_DIRECTORY "${libSourcesDir}"
 	DEPENDS "${unpackTarget}"
 )
@@ -46,7 +45,7 @@ CMFreetype2 >> copyArtefacts [
 	gen puts:
 'add_custom_command(
 	OUTPUT "${externalModulesDir}/${libraryFileName}"
-	COMMAND cp "${ft2libInstalled}" "${externalModulesDir}/${libraryFileName}"
+	COMMAND cp ${installPrefix}/lib/${libraryFileName} ${externalModulesDir}/${libraryFileName}
 	DEPENDS "${ft2libInstalled}"
 )'
 ]
@@ -92,7 +91,7 @@ CMFreetype2 >> downloadURL [
 
 ]
 
-{ #category : #accessing }
+{ #category : #'as yet unclassified' }
 CMFreetype2 >> includeDir [
 	"see setVariables"
 
