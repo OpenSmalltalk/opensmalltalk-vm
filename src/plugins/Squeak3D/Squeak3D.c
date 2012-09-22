@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 30 July 2012 4:52:56 pm 
-   by VMMaker 4.9.8
+/* Automatically generated from Squeak on 22 September 2012 12:36:04 pm 
+   by VMMaker 4.10.3
  */
 
 #include <math.h>
@@ -2872,39 +2872,39 @@ static void* vbLoadArraysize(sqInt oop, sqInt count) {
 #ifdef SQUEAK_BUILTIN_PLUGIN
 
 
-void* nil_exports[][3] = {
-	{"nil", "b3dShaderVersion", (void*)b3dShaderVersion},
-	{"nil", "b3dTransformPrimitiveNormal", (void*)b3dTransformPrimitiveNormal},
-	{"nil", "b3dClipPolygon", (void*)b3dClipPolygon},
-	{"nil", "b3dOrthoNormInverseMatrix", (void*)b3dOrthoNormInverseMatrix},
-	{"nil", "b3dTransformVertexBuffer", (void*)b3dTransformVertexBuffer},
-	{"nil", "b3dComputeMinZ", (void*)b3dComputeMinZ},
-	{"nil", "b3dInitializeRasterizerState", (void*)b3dInitializeRasterizerState},
-	{"nil", "b3dDetermineClipFlags", (void*)b3dDetermineClipFlags},
-	{"nil", "getModuleName", (void*)getModuleName},
-	{"nil", "setInterpreter", (void*)setInterpreter},
-	{"nil", "b3dTransformPrimitiveRasterPosition", (void*)b3dTransformPrimitiveRasterPosition},
-	{"nil", "primitiveSetBitBltPlugin", (void*)primitiveSetBitBltPlugin},
-	{"nil", "b3dTransformMatrixWithInto", (void*)b3dTransformMatrixWithInto},
-	{"nil", "b3dStartRasterizer", (void*)b3dStartRasterizer},
-	{"nil", "b3dShadeVertexBuffer", (void*)b3dShadeVertexBuffer},
-	{"nil", "b3dRasterizerVersion", (void*)b3dRasterizerVersion},
-	{"nil", "b3dInitPrimitiveObject", (void*)b3dInitPrimitiveObject},
-	{"nil", "b3dLoadVertexBuffer", (void*)b3dLoadVertexBuffer},
-	{"nil", "b3dTransformDirection", (void*)b3dTransformDirection},
-	{"nil", "moduleUnloaded", (void*)moduleUnloaded},
-	{"nil", "b3dPrimitiveTextureSize", (void*)b3dPrimitiveTextureSize},
-	{"nil", "b3dComputeMinIndexZ", (void*)b3dComputeMinIndexZ},
-	{"nil", "b3dMapVertexBuffer", (void*)b3dMapVertexBuffer},
-	{"nil", "initialiseModule", (void*)initialiseModule},
-	{"nil", "b3dTransformerVersion", (void*)b3dTransformerVersion},
-	{"nil", "b3dTransposeMatrix", (void*)b3dTransposeMatrix},
-	{"nil", "b3dPrimitiveNextClippedTriangle", (void*)b3dPrimitiveNextClippedTriangle},
-	{"nil", "b3dTransformPoint", (void*)b3dTransformPoint},
-	{"nil", "b3dTransformPrimitivePosition", (void*)b3dTransformPrimitivePosition},
-	{"nil", "b3dPrimitiveObjectSize", (void*)b3dPrimitiveObjectSize},
-	{"nil", "b3dLoadIndexArray", (void*)b3dLoadIndexArray},
-	{"nil", "b3dInplaceHouseHolderInvert", (void*)b3dInplaceHouseHolderInvert},
+void* Squeak3D_exports[][3] = {
+	{"Squeak3D", "b3dShaderVersion", (void*)b3dShaderVersion},
+	{"Squeak3D", "b3dTransformPrimitiveNormal", (void*)b3dTransformPrimitiveNormal},
+	{"Squeak3D", "b3dClipPolygon", (void*)b3dClipPolygon},
+	{"Squeak3D", "b3dOrthoNormInverseMatrix", (void*)b3dOrthoNormInverseMatrix},
+	{"Squeak3D", "b3dTransformVertexBuffer", (void*)b3dTransformVertexBuffer},
+	{"Squeak3D", "b3dComputeMinZ", (void*)b3dComputeMinZ},
+	{"Squeak3D", "b3dInitializeRasterizerState", (void*)b3dInitializeRasterizerState},
+	{"Squeak3D", "b3dDetermineClipFlags", (void*)b3dDetermineClipFlags},
+	{"Squeak3D", "getModuleName", (void*)getModuleName},
+	{"Squeak3D", "setInterpreter", (void*)setInterpreter},
+	{"Squeak3D", "b3dTransformPrimitiveRasterPosition", (void*)b3dTransformPrimitiveRasterPosition},
+	{"Squeak3D", "primitiveSetBitBltPlugin", (void*)primitiveSetBitBltPlugin},
+	{"Squeak3D", "b3dTransformMatrixWithInto", (void*)b3dTransformMatrixWithInto},
+	{"Squeak3D", "b3dStartRasterizer", (void*)b3dStartRasterizer},
+	{"Squeak3D", "b3dShadeVertexBuffer", (void*)b3dShadeVertexBuffer},
+	{"Squeak3D", "b3dRasterizerVersion", (void*)b3dRasterizerVersion},
+	{"Squeak3D", "b3dInitPrimitiveObject", (void*)b3dInitPrimitiveObject},
+	{"Squeak3D", "b3dLoadVertexBuffer", (void*)b3dLoadVertexBuffer},
+	{"Squeak3D", "b3dTransformDirection", (void*)b3dTransformDirection},
+	{"Squeak3D", "moduleUnloaded", (void*)moduleUnloaded},
+	{"Squeak3D", "b3dPrimitiveTextureSize", (void*)b3dPrimitiveTextureSize},
+	{"Squeak3D", "b3dComputeMinIndexZ", (void*)b3dComputeMinIndexZ},
+	{"Squeak3D", "b3dMapVertexBuffer", (void*)b3dMapVertexBuffer},
+	{"Squeak3D", "initialiseModule", (void*)initialiseModule},
+	{"Squeak3D", "b3dTransformerVersion", (void*)b3dTransformerVersion},
+	{"Squeak3D", "b3dTransposeMatrix", (void*)b3dTransposeMatrix},
+	{"Squeak3D", "b3dPrimitiveNextClippedTriangle", (void*)b3dPrimitiveNextClippedTriangle},
+	{"Squeak3D", "b3dTransformPoint", (void*)b3dTransformPoint},
+	{"Squeak3D", "b3dTransformPrimitivePosition", (void*)b3dTransformPrimitivePosition},
+	{"Squeak3D", "b3dPrimitiveObjectSize", (void*)b3dPrimitiveObjectSize},
+	{"Squeak3D", "b3dLoadIndexArray", (void*)b3dLoadIndexArray},
+	{"Squeak3D", "b3dInplaceHouseHolderInvert", (void*)b3dInplaceHouseHolderInvert},
 	{NULL, NULL, NULL}
 };
 

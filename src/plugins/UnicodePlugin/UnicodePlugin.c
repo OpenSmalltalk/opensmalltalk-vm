@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 30 July 2012 4:53:06 pm 
-   by VMMaker 4.9.8
+/* Automatically generated from Squeak on 22 September 2012 12:36:13 pm 
+   by VMMaker 4.10.3
  */
 
 #include <math.h>
@@ -62,9 +62,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"UnicodePlugin 30 July 2012 (i)"
+	"UnicodePlugin 22 September 2012 (i)"
 #else
-	"UnicodePlugin 30 July 2012 (e)"
+	"UnicodePlugin 22 September 2012 (e)"
 #endif
 ;
 

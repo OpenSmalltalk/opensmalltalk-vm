@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 30 July 2012 4:52:29 pm 
-   by VMMaker 4.9.8
+/* Automatically generated from Squeak on 22 September 2012 12:35:47 pm 
+   by VMMaker 4.10.3
  */
 
 #include <math.h>
@@ -51,9 +51,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"BMPReadWriterPlugin 30 July 2012 (i)"
+	"BMPReadWriterPlugin 22 September 2012 (i)"
 #else
-	"BMPReadWriterPlugin 30 July 2012 (e)"
+	"BMPReadWriterPlugin 22 September 2012 (e)"
 #endif
 ;
 

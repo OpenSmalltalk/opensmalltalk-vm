@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 30 July 2012 4:52:58 pm 
-   by VMMaker 4.9.8
+/* Automatically generated from Squeak on 22 September 2012 12:36:05 pm 
+   by VMMaker 4.10.3
  */
 
 #include <math.h>
@@ -27,7 +27,7 @@
 // was #undef EXPORT(returnType) but screws NorCroft cc
 #define EXPORT(returnType) static returnType
 #endif
-#include "sqaio.h"
+#include "aio.h"
 	#define DBUS_API_SUBJECT_TO_CHANGE
 #include <dbus/dbus.h>
 	typedef struct sqDBusData {
@@ -136,9 +136,9 @@ static DBusMessage* message;
 static DBusMessageIter messageIter[DBUS_MAXIMUM_TYPE_RECURSION_DEPTH];
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"DBusPlugin 30 July 2012 (i)"
+	"DBusPlugin 22 September 2012 (i)"
 #else
-	"DBusPlugin 30 July 2012 (e)"
+	"DBusPlugin 22 September 2012 (e)"
 #endif
 ;
 static DBusMessage* writeMessage;

@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 30 July 2012 4:53:09 pm 
-   by VMMaker 4.9.8
+/* Automatically generated from Squeak on 22 September 2012 12:36:15 pm 
+   by VMMaker 4.10.3
  */
 
 #include <math.h>
@@ -54,9 +54,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"WeDoPlugin 30 July 2012 (i)"
+	"WeDoPlugin 22 September 2012 (i)"
 #else
-	"WeDoPlugin 30 July 2012 (e)"
+	"WeDoPlugin 22 September 2012 (e)"
 #endif
 ;
 

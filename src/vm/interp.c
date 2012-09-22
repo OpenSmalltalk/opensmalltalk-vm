@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 13 September 2012 6:51:39 am 
-   by VMMaker 4.10.2
+/* Automatically generated from Squeak on 22 September 2012 12:35:45 pm 
+   by VMMaker 4.10.3
  */
 #if 1
 # define SQ_USE_GLOBAL_STRUCT 1
@@ -158,7 +158,7 @@ void defaultErrorProc(char *s) {
 #define InitialIPIndex 4
 #define InstanceSpecificationIndex 2
 #define InstructionPointerIndex 1
-#define InterpreterSourceVersion "4.10.2"
+#define InterpreterSourceVersion "4.10.3"
 #define InvokeCallbackSelector 53
 #define LargeContextBit 262144
 #define LastLinkIndex 1
@@ -929,7 +929,7 @@ sqInt remapBuffer[26];
 struct foo * foo = &fum;
 
 sqInt extraVMMemory;
-const char *interpreterVersion = "Squeak4.3 of 22 December 2011 [latest update: #11860]";
+const char *interpreterVersion = "Squeak4.3 of 27 June 2012 [latest update: #12109]";
 sqInt (*compilerHooks[16])();
 struct VirtualMachine* interpreterProxy;
 sqInt imageFormatVersionNumber = 0;

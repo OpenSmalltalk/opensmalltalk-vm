@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 30 July 2012 4:52:54 pm 
-   by VMMaker 4.9.8
+/* Automatically generated from Squeak on 22 September 2012 12:36:03 pm 
+   by VMMaker 4.10.3
  */
 /* This is an automatically generated table of all builtin modules in the VM */
 
