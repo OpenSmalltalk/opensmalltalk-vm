@@ -328,6 +328,11 @@ CocoaIOSConfig >> frameworks [
 ]
 
 { #category : #accessing }
+CocoaIOSConfig >> freetypeLibClass [ 
+	^CMOSXFreetype2
+]
+
+{ #category : #accessing }
 CocoaIOSConfig >> generateForDebug [
 	generateForRelease := false
 ]
