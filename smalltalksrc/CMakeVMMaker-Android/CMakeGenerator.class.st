@@ -146,6 +146,11 @@ CMakeGenerator >> includeDirectories: aString [
 ]
 
 { #category : #'cmake commands' }
+CMakeGenerator >> linkDirectories: aString [
+	^ self cmd: 'link_directories' params: aString
+]
+
+{ #category : #'cmake commands' }
 CMakeGenerator >> message: aString [
 	
 	self cmd: 'message' qparams: aString.
