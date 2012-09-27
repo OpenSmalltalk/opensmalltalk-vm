@@ -4,7 +4,7 @@ this will build a pkg-config package, required to built cairo
 "
 Class {
 	#name : #CMPkgConfig,
-	#superclass : #CMThirdpartyLibrary,
+	#superclass : #CMCairoBundle,
 	#category : #'CMakeVMMaker-Libs'
 }
 

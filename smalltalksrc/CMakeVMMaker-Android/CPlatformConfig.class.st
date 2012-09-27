@@ -132,7 +132,7 @@ CPlatformConfig >> addThirdpartyLibrary: libName [
 	libs := self thirdpartyLibs.
 	
 	lib :=  libs 
-		detect: [:each | each canonicalName = libName and: [ each supports: self ] ] 
+		detect: [:each | each canonicalName = libName ] 
 		ifNone: [ nil ].
 		
 	lib ifNil: [ 

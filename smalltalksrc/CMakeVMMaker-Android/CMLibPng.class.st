@@ -1,6 +1,6 @@
 Class {
 	#name : #CMLibPng,
-	#superclass : #CMThirdpartyLibrary,
+	#superclass : #CMCairoBundle,
 	#category : #'CMakeVMMaker-Libs'
 }
 

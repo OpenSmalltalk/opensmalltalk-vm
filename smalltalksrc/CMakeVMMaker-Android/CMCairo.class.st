@@ -1,6 +1,9 @@
+"
+This is Cairo library config for building on MacOSX
+"
 Class {
 	#name : #CMCairo,
-	#superclass : #CMThirdpartyLibrary,
+	#superclass : #CMCairoBundle,
 	#category : #'CMakeVMMaker-Libs'
 }
 
