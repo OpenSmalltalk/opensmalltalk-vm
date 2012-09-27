@@ -1,6 +1,6 @@
 Class {
 	#name : #CMPixman,
-	#superclass : #CMThirdpartyLibrary,
+	#superclass : #CMCairoBundle,
 	#category : #'CMakeVMMaker-Libs'
 }
 
