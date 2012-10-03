@@ -87,6 +87,13 @@ Android class >> onScreenKbd: anInteger [
 ]
 
 { #category : #'system primitives' }
+Android class >> openURI: aString [
+	"open an URI in browser"
+	<primitive: 'primOpenURI' module: 'AndroidPlugin'>
+	self primitiveFailed.
+]
+
+{ #category : #'system primitives' }
 Android class >> setPitch: aFloat [
 	"set TTS synthesized speech pitch"
 	<primitive: 'primSetPitch' module: 'AndroidPlugin'>
