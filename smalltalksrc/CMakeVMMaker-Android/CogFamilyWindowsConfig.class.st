@@ -257,19 +257,22 @@ CogFamilyWindowsConfig >> configureSocketPlugin:  maker [
 
 { #category : #'plugin extra rules' }
 CogFamilyWindowsConfig >> configureSqueakSSLPlugin: maker [
-	
+	| lib |
 	maker addPlatformSources: #('sqUnixOpenSSL.c').
 	
-	maker addPlatformSources: #('libcrypto.dll.a' 'libssl.dll.a').
+	lib := self addThirdpartyLibrary: 'openssl'.
 
-	maker includeDirectories: '"C:/MinGW/msys/1.0/home/sig/openssl/openssl-1.0.1c/include/"'.
+	maker includeDirectories: lib includeDir.
 	maker linkDirectories: '${outputDir}'.
 	
 	maker addExternalLibraries: 
 		#( 
-			'libeay32.dll'
+			'libeay32.dll' 
 			'ssleay32.dll'
-		)
+		).
+		
+	maker addDependency: lib buildTarget
+
 ]
 
 { #category : #'plugin extra rules' }
