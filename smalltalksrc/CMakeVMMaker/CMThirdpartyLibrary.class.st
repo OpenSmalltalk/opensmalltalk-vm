@@ -98,6 +98,20 @@ CMThirdpartyLibrary >> configurationFlags: aCollection [
 ]
 
 { #category : #'generating actions' }
+CMThirdpartyLibrary >> copy: src to: dest [
+
+	| str |
+
+	
+	str := 'add_custom_command( OUTPUT "{2}"
+	COMMAND cp "{1}" "{2}"
+	DEPENDS "{1}"
+	)' format: {src. dest }.
+	
+	gen puts: str
+]
+
+{ #category : #'generating actions' }
 CMThirdpartyLibrary >> copyArtefacts [
 
 	self subclassResponsibility
@@ -172,7 +186,7 @@ CMThirdpartyLibrary >> generate [
 { #category : #'generating cmake file' }
 CMThirdpartyLibrary >> generateFor: aVMGenerator [
 
-	| libDir stream |
+	| libDir stream contents |
 	
 	vmGen := aVMGenerator.
 	
@@ -181,16 +195,38 @@ CMThirdpartyLibrary >> generateFor: aVMGenerator [
 	
 	libDir := (aVMGenerator thirdpartyDir / self canonicalName) assureExistence.
 
-	stream := libDir forceNewFileNamed: gen outputFileName.
-	stream ifNil: [ self error: 'Cannot write ',  gen outputFileName , 'to: ', libDir fullName ].
-
+	stream := String new writeStream.
+	
 	self generate.
 
-	stream nextPutAll: (vmGen config fixLineEndsOf: gen output contents); close.
+	stream nextPutAll: (vmGen config fixLineEndsOf: gen output contents).
+
+	contents := stream contents. 
+	
+	(self isFile: (libDir fullNameFor: gen outputFileName)  hasContents: contents) ifFalse: [
+		"contents changed, update the file. Because fucking cmake will force rebuild everything if we change its modification date
+		without changing its contents"
+		(libDir forceNewFileNamed: gen outputFileName) nextPutAll: contents; close.
+		].
+	
 
 	vmGen addSubdirectory:  vmGen thirdpartyDirName , '/' , self canonicalName.
 	self defineGlobalTargets.
 	
+]
+
+{ #category : #'generating cmake file' }
+CMThirdpartyLibrary >> isFile: aFileName hasContents: aString [
+
+	| newContents old |
+	
+	newContents := false.
+	
+	old := FileStream oldFileOrNoneNamed: aFileName.
+	
+	old ifNil: [ ^ false ].
+	
+	^ [ old contents = aString ] ensure: [ old close ]
 ]
 
 { #category : #'package properties' }

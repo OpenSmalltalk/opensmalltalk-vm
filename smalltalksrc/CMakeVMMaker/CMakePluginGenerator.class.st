@@ -140,12 +140,12 @@ CMakePluginGenerator >> generate [
 		params: 'TARGET ', name, ' PROPERTY LINK_FLAGS "${linkFlags}"'.
 	
 	"set dependencies"
-	self puts: 'IF (${',self moduleName , '_dependencies})'.
+	self puts: 'IF (',self moduleName , '_dependencies)'.
 	
 	self cmd: 'add_dependencies'
 		params: name , ' ${', self moduleName , '_dependencies}'.
 	
-	self puts: 'ENDIF (${',self moduleName , '_dependencies})'.
+	self puts: 'ENDIF (',self moduleName , '_dependencies)'.
 	self saveFile.
 ]
 
