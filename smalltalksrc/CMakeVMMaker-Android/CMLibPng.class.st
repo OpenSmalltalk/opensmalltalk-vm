@@ -50,7 +50,7 @@ CMLibPng >> defineAsTarget [
 	
 	gen puts:
 	'add_custom_target(${libName}
-		DEPENDS "${externalModulesDir}/${libraryFileName}"
+		DEPENDS zlib "${externalModulesDir}/${libraryFileName}"
 	)'
 ]
 
