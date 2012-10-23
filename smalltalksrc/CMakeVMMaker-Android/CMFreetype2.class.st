@@ -43,9 +43,12 @@ add_custom_command(OUTPUT "${ft2libInstalled}"
 { #category : #'generating actions' }
 CMFreetype2 >> copyArtefacts [
 
-	self 
-		copy: '${ft2libInstalled}' 
-		to: '${externalModulesDir}/${libraryFileName}'.
+	gen puts:
+'add_custom_command(
+	OUTPUT "${externalModulesDir}/${libraryFileName}"
+	COMMAND cp "${ft2libInstalled}" "${externalModulesDir}/${libraryFileName}"
+	DEPENDS "${ft2libInstalled}"
+)'
 ]
 
 { #category : #'generating actions' }

@@ -4,12 +4,6 @@ Class {
 	#category : #'CMakeVMMaker-Libs'
 }
 
-{ #category : #'as yet unclassified' }
-CMIOSFreetype2 class >> supports: aConfig [ 
-	"just for iPhone"
-	^ aConfig class = StackIPhoneConfig
-]
-
 { #category : #'generating actions' }
 CMIOSFreetype2 >> copyArtefacts [
 

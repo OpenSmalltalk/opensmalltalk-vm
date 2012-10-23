@@ -15,11 +15,12 @@ CMCairo class >> canonicalName [
 { #category : #'package properties' }
 CMCairo >> archiveMD5Sum [
 
-	^ '645b7c1421ed52260d0853e3215c1d8f'
+	^ '87649eb75789739d517c743e94879e51'
 ]
 
 { #category : #'generating actions' }
 CMCairo >> build [
+
 	gen 
 		puts:
 '
@@ -40,10 +41,12 @@ add_custom_command(OUTPUT "${libcairoInstalled}"
 { #category : #'generating actions' }
 CMCairo >> copyArtefacts [
 
-	self 
-		copy: '${libcairoInstalled}' 
-		to: '${externalModulesDir}/${libraryFileName}'
-
+	gen puts:
+'add_custom_command(
+	OUTPUT "${externalModulesDir}/${libraryFileName}"
+	COMMAND cp ${libcairoInstalled} ${externalModulesDir}/${libraryFileName}
+	DEPENDS "${libcairoInstalled}"
+)'
 ]
 
 { #category : #'generating actions' }
@@ -51,7 +54,7 @@ CMCairo >> defineAsTarget [
 	
 	gen puts:
 	'add_custom_target(${libName}
-		DEPENDS pixman freetype2 "${externalModulesDir}/${libraryFileName}" 
+		DEPENDS "${externalModulesDir}/${libraryFileName}"
 	)'
 ]
 
@@ -84,7 +87,7 @@ CMCairo >> dependencies [
 { #category : #'package properties' }
 CMCairo >> downloadURL [
 
-	^ 'http://www.cairographics.org/releases/cairo-1.12.6.tar.xz'
+	^ 'http://www.cairographics.org/releases/cairo-1.12.2.tar.xz'
 ]
 
 { #category : #'package properties' }
@@ -129,5 +132,5 @@ CMCairo >> unpack [
 
 { #category : #'package properties' }
 CMCairo >> unpackedDirName [
-	^ 'cairo-1.12.6'
+	^ 'cairo-1.12.2'
 ]
