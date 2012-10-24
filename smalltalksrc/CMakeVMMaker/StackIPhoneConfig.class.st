@@ -44,16 +44,6 @@ StackIPhoneConfig >> CFBundleIconFile72 [
 ]
 
 { #category : #'bundle strings' }
-StackIPhoneConfig >> ImageIsScrollable [
-	^false
-]
-
-{ #category : #'bundle strings' }
-StackIPhoneConfig >> ImageIsWritable [
-	^true
-]
-
-{ #category : #'bundle strings' }
 StackIPhoneConfig >> UIDeviceFamily [
 	^self targetedDeviceFamilyAsTemplateString
 ]
@@ -63,24 +53,9 @@ StackIPhoneConfig >> UIFileSharingEnabled [
 	^false
 ]
 
-{ #category : #'bundle strings' }
-StackIPhoneConfig >> VMMemorySize [
-	^1024 * 1024 * 64 "64M"
-]
-
-{ #category : #'bundle strings' }
-StackIPhoneConfig >> WebViewAsUI [
-	^false
-]
-
-{ #category : #'bundle strings' }
-StackIPhoneConfig >> WebViewUrl [
-	^'http://localhost:8080'
-]
-
 { #category : #accessing }
 StackIPhoneConfig >> architecture [ 
-	^'armv7'
+	^'armv6'
 ]
 
 { #category : #accessing }
@@ -93,7 +68,7 @@ StackIPhoneConfig >> commonCompilerFlags [
 	"Common compiler flags"
 	^{
 	"'-miphoneos-version-min=4.3'. "
-	'-isysroot /Applications/Xcode.app/Contents/Developer/Platforms/{target}.platform/Developer/SDKs/{target}{sdkVersion}.sdk' nameFormat: { 'target'-> self targetDevice. 'sdkVersion'->self sdkVersion} asDictionary.
+	'-isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS', self sdkVersion, '.sdk'.
 	'-x objective-c'.
 	'-std=gnu99'.
 	'-falign-functions=16'.
@@ -115,8 +90,7 @@ StackIPhoneConfig >> commonCompilerFlags [
 	'-DLSB_FIRST'.
 	'-DHAVE_NANOSLEEP'.
 	'-DISQUEAK_IMAGE=', self imageName.
-	'-DISQUEAK_SOURCES=PharoV10'.
-	'-DSTACKVM'}
+	'-DISQUEAK_SOURCES=PharoV10'}
 ]
 
 { #category : #settings }
@@ -126,7 +100,7 @@ StackIPhoneConfig >> compilerFlagsDebug [
 
 { #category : #settings }
 StackIPhoneConfig >> compilerFlagsRelease [
-	^#('-g0' '-O3' '-fomit-frame-pointer' '-DNDEBUG' '-DDEBUGVM=0')
+	^#('-g0' '-O3' '-fomit-frame-pointer' '-DNDEBUG' '-DDEBUGVM=0' '-DSTACKVM')
 ]
 
 { #category : #'plugin extra rules' }
@@ -138,8 +112,7 @@ StackIPhoneConfig >> configureFT2Plugin: maker [
 	"maker isExternal 
 		ifFalse: [ self error: 'building internal FT2Plugin is not supported yet' ]."
 
-	devRoot := '/Applications/Xcode.app/Contents/Developer/Platforms/{target}.platform/Developer'
-		nameFormat: { 'target'->self targetDevice} asDictionary.
+	devRoot := '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer'.
 	sdkRoot := '{devRoot}/SDKs/iPhoneOS{sdkVersion}.sdk' 
 		nameFormat: {'devRoot'->devRoot. 'sdkVersion'->self sdkVersion} asDictionary.
 
@@ -153,12 +126,9 @@ StackIPhoneConfig >> configureFT2Plugin: maker [
 		'--enable-shared=no'.
 		'CC={devRoot}/usr/bin/gcc'.
 		'CXX={devRoot}/usr/bin/g++'.
-		'CFLAGS=\\"-arch {architecture} -std=c99 -Wno-trigraphs -O2 -fwrapv -Wreturn-type -Wunused-variable -fmessage-length=0 -miphoneos-version-min=4.0 -I{sdkRoot}/usr/include/libxml2 -isysroot {sdkRoot}\\"'.
-		'LDFLAGS=\\"-arch {architecture} -isysroot {sdkRoot}\\"'}
-		collect: [ :each | each nameFormat: {
-			'architecture'->self architecture. 
-			'sdkRoot'->sdkRoot. 
-			'devRoot'->devRoot} asDictionary ]).
+		'CFLAGS=\\"-arch armv6 -std=c99 -Wno-trigraphs -O2 -fwrapv -Wreturn-type -Wunused-variable -fmessage-length=0 -miphoneos-version-min=4.0 -I{sdkRoot}/usr/include/libxml2 -isysroot {sdkRoot}\\"'.
+		'LDFLAGS=\\"-arch armv6 -isysroot {sdkRoot}\\"'}
+		collect: [ :each | each nameFormat: {'sdkRoot'->sdkRoot. 'devRoot'->devRoot} asDictionary ]).
 
 	"maker set: 'XCODE_ATTRIBUTE_CONFIGURATION_BUILD_DIR' toString: ''."
 
@@ -366,12 +336,7 @@ StackIPhoneConfig >> plistKeys [
 	CFBundleIconFile72 
 	CFBundleIconFile1024
 	UIDeviceFamily 
-	UIFileSharingEnabled
-	VMMemorySize
-	ImageIsWritable
-	ImageIsScrollable
-	WebViewAsUI
-	WebViewUrl)
+	UIFileSharingEnabled)
 
 ]
 
@@ -430,17 +395,7 @@ StackIPhoneConfig >> plistTemplate [
 	<key>UIStatusBarHidden</key>
 	<true/>
 	<key>UIFileSharingEnabled</key>
-	<@UIFileSharingEnabled@/>
-	<key>ImageIsWritable</key>
-	<@ImageIsWritable@/>
-	<key>ImageIsScrollable</key>
-	<@ImageIsScrollable@/>
-	<key>VMMemorySize</key>
-	<integer>@VMMemorySize@</integer>
-	<key>WebViewAsUI</key>
-	<@WebViewAsUI@/>
-	<key>WebViewUrl</key>
-	<string>@WebViewUrl@</string>
+	<@UIFileSharingEnabled@/>	
 </dict>
 </plist>
 '
@@ -473,7 +428,7 @@ StackIPhoneConfig >> resourcesDir [
 
 { #category : #accessing }
 StackIPhoneConfig >> sdkVersion [ 
-	^'6.0'
+	^'5.1'
 ]
 
 { #category : #settings }
@@ -483,9 +438,8 @@ StackIPhoneConfig >> setCommonProperties: maker [
 	maker set: 'CMAKE_SYSTEM_PROCESSOR' to: 'arm'.
 
 	maker set: 'SDKVER' toString: self sdkVersion.
-	maker set: 'DEVROOT' toString: ('/Applications/Xcode.app/Contents/Developer/Platforms/{target}.platform/Developer'
-		nameFormat: {'target'->self targetDevice} asDictionary).
-	maker set: 'SDKROOT' toString: '${DEVROOT}/SDKs/', self targetDevice,'${SDKVER}.sdk'.
+	maker set: 'DEVROOT' toString: '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer'.
+	maker set: 'SDKROOT' toString: '${DEVROOT}/SDKs/iPhoneOS${SDKVER}.sdk'.
 
 	maker set: 'CMAKE_OSX_SYSROOT' to: 'iphoneos${SDKVER}'.
 		
@@ -550,14 +504,11 @@ StackIPhoneConfig >> setGlobalOptions: maker [
 	
 	maker 
 		set: 'CMAKE_C_COMPILER' 
-		to: ('/Applications/Xcode.app/Contents/Developer/Platforms/{target}.platform/Developer/usr/bin/gcc'
-			nameFormat: {'target' -> self targetDevice} asDictionary).
+		to: '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/gcc'.
 	maker 
 		set: 'CMAKE_CXX_COMPILER' 
-		to: ('/Applications/Xcode.app/Contents/Developer/Platforms/{target}.platform/Developer/usr/bin/g++'
-			nameFormat: {'target' -> self targetDevice } asDictionary).	
-	self architecture ifNotNil: [
-		maker set: 'CMAKE_OSX_ARCHITECTURES' to: self architecture ].
+		to: '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/g++'.	
+	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'arm6'.
 	maker set: 'CMAKE_OSX_SYSROOT' to: '/'.
 	
 ]
@@ -610,11 +561,6 @@ StackIPhoneConfig >> standardIncludes [
 	'${crossDir}/plugins/FilePlugin'
 	)	
 
-]
-
-{ #category : #accessing }
-StackIPhoneConfig >> targetDevice [ 
-	^'iPhoneOS'
 ]
 
 { #category : #accessing }
