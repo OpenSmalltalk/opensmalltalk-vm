@@ -30,6 +30,15 @@ add_custom_command(OUTPUT "${libpngInstalled}"
 ]
 
 { #category : #'as yet unclassified' }
+CMWin32LibPng >> defineAsTarget [
+	
+	gen puts:
+	'add_custom_target(${libName}
+		DEPENDS zlib "${externalModulesDir}/${libraryFileName}"
+	)'
+]
+
+{ #category : #'as yet unclassified' }
 CMWin32LibPng >> dependencies [
 	^ #( 'pkg-config' 'zlib')
 ]
