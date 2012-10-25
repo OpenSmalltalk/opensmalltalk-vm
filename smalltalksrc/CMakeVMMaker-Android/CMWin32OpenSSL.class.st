@@ -33,7 +33,7 @@ add_custom_command(OUTPUT "${libSourcesDir}/Makefile"
 	DEPENDS "${unpackTarget}"
 )
 
-add_custom_command(OUTPUT "${libInstalled}"
+add_custom_command(OUTPUT "${installPrefix}/bin/libeay32.dll" "${installPrefix}/bin/ssleay32.dll"
 	COMMAND make
 	COMMAND make install
 	WORKING_DIRECTORY "${libSourcesDir}"
