@@ -87,6 +87,12 @@ CogFamilyCocoaIOSConfig >> configureSqueakSSLPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
+CogFamilyCocoaIOSConfig >> configureSystemInfoPlugin: maker [
+	maker includeDirectories: '${platformsDir}/Cross/plugins/SystemInfoPlugin'.
+	maker addPlatformSources: #('sqSystemInfo.m' ).
+]
+
+{ #category : #'plugin extra rules' }
 CogFamilyCocoaIOSConfig >> configureUnixAioPlugin: maker [
 	maker includeDirectories: '${crossDir}/plugins/FilePlugin'.
 	maker includeDirectories: '${platformsDir}/Cross/plugins/SocketPlugin'.
