@@ -24,10 +24,10 @@ Class {
 		'PlatformByteOrderBit',
 		'ReservedBitsMask'
 	],
-	#category : #ImageFormat
+	#category : #'ImageFormat-Header'
 }
 
-{ #category : #'image formats' }
+{ #category : #utility }
 ImageFormat class >> allVersionNumberByteArrays [
 	"All known version numbers expressed as byte arrays of size 4 and 8 in little
 	endian and big endian byte ordering."
@@ -44,7 +44,22 @@ ImageFormat class >> allVersionNumberByteArrays [
 	^byteArrays
 ]
 
-{ #category : #'initialize-release' }
+{ #category : #'image formats' }
+ImageFormat class >> availableBits [
+	"Bits available for use as capability bits. Reserve high order bit as the
+	extension bit, to be set true if additional bits are required in the future."
+	
+	"ImageFormat availableBits printStringBase: 2"
+
+	| mask |
+	mask := 0.
+	self bitAssignments doWithIndex: [ :e :i |
+		mask := mask bitAt: i put: (e isNil ifTrue: [ 1 ] ifFalse: [ 0 ])].
+	^ mask
+
+]
+
+{ #category : #'image formats' }
 ImageFormat class >> baseVersionMask [
 	"Mask the bits associated with base format number exclusive of capability bits"
 
@@ -56,7 +71,7 @@ ImageFormat class >> baseVersionMask [
 
 ]
 
-{ #category : #'initialize-release' }
+{ #category : #'image formats' }
 ImageFormat class >> baseVersionNumbers [
 	"The well-known image format versions for basic 32 and 64 bit images,
 	including images that require closure bytecode support. These base
@@ -68,16 +83,70 @@ ImageFormat class >> baseVersionNumbers [
 
 ]
 
+{ #category : #'initialize-release' }
+ImageFormat class >> bitAssignments [
+
+	"ImageFormat bitAssignments
+		doWithIndex: [ :e :i | Transcript cr; show: 'bit ', i asString, ' is ', (e ifNil: ['unused'])]"
+
+	| bits |
+	bits := Array new: 32.
+		"If bit 1 is set, the high and low order 32-bit words of a Float are stored in
+		platform word order. If bit 1 is not set, big-endian word order is used for Float
+		regardless of the platform." 
+	bits at: 1 put: 'the use platform float word order bit (Cog and StackInterpreter)'.
+	bits at: 2 put: 'used in base version numbers'.
+	bits at: 3 put: 'used in base version numbers'.
+	bits at: 4 put: 'used in base version numbers'.
+	bits at: 5 put: nil.	"unassigned bit available for future image formats"
+	bits at: 6 put: 'used in base version numbers'.
+	bits at: 7 put: 'used in base version numbers'.
+	bits at: 8 put: 'used in base version numbers'.
+	bits at: 9 put: 'used in base version numbers'.
+	bits at: 10 put: nil.	"unassigned bit available for future image formats"
+	bits at: 11 put: nil.	"unassigned bit available for future image formats"
+	bits at: 12 put: 'used in base version numbers'.
+	bits at: 13 put: 'used in base version numbers'.
+	bits at: 14 put: nil.	"unassigned bit available for future image formats"
+	bits at: 15 put: nil.	"unassigned bit available for future image formats"
+	bits at: 16 put: nil.	"unassigned bit available for future image formats"
+	bits at: 17 put: 'used in base version numbers'.
+	bits at: 18 put: nil.	"unassigned bit available for future image formats"
+	bits at: 19 put: nil.	"unassigned bit available for future image formats"
+	bits at: 20 put: nil.	"unassigned bit available for future image formats"
+	bits at: 21 put: nil.	"unassigned bit available for future image formats"
+	bits at: 22 put: nil.	"unassigned bit available for future image formats"
+	bits at: 23 put: nil.	"unassigned bit available for future image formats"
+	bits at: 24 put: nil.	"unassigned bit available for future image formats"
+	bits at: 25 put: nil.	"unassigned bit available for future image formats"
+	bits at: 26 put: nil.	"unassigned bit available for future image formats"
+	bits at: 27 put: nil.	"unassigned bit available for future image formats"
+	bits at: 28 put: nil.	"unassigned bit available for future image formats"
+	bits at: 29 put: nil.	"unassigned bit available for future image formats"
+	bits at: 30 put: nil.	"unassigned bit available for future image formats"
+	bits at: 31 put: nil.	"unassigned bit available for future image formats"
+		"If bit 32 is set, additional image format information will be stored in one or
+		more additional words. Currently this is unused, and bit 32 is always zero."
+	bits at: 32 put: 'the extension bit (reserved for future use)'.
+	^bits
+
+]
+
 { #category : #'image formats' }
 ImageFormat class >> bitsInUse [
 	"Answer a mask of the bits used by all known version format numbers"
 
 	"Transcript cr; show: (ImageFormat bitsInUse printStringBase: 2)"
 
-	^ self baseVersionMask bitOr: self capabilitiesBitsMask
+	| mask |
+	mask := 0.
+	self bitAssignments doWithIndex: [ :e :i |
+		mask := mask bitAt: i put: (e notNil ifTrue: [ 1 ] ifFalse: [ 0 ])].
+	^ mask
+
 ]
 
-{ #category : #'initialize-release' }
+{ #category : #'image formats' }
 ImageFormat class >> capabilitiesBitsMask [
 	"Bits currently used as capability bits."
 	
@@ -87,7 +156,7 @@ ImageFormat class >> capabilitiesBitsMask [
 
 ]
 
-{ #category : #utility }
+{ #category : #ckformat }
 ImageFormat class >> createCkStatusProgram [
 	"Create ckformat source file in the default directory"
 
@@ -234,33 +303,27 @@ ImageFormat class >> initialize [
 	BaseVersionNumbers := self baseVersionNumbers.
 	BaseVersionMask := self baseVersionMask.
 	CapabilitiesBitsMask := self capabilitiesBitsMask.
-	ReservedBitsMask := self reservedBitsMask.
+	ReservedBitsMask := self availableBits.
 	KnownVersionNumbers := self knownVersionNumbers
 
 ]
 
 { #category : #'initialize-release' }
 ImageFormat class >> knownVersionNumbers [
-	"Version number currently in use or likely to be used (e.g. 64-bit Cog formats)"
+	"Version numbers currently in use or likely to be used (e.g. 64-bit Cog formats)"
 
 	"ImageFormat knownVersionNumbers collect: [:e | (ImageFormat fromInteger: e) description]"
 
-	^ #(6502 6504 6505 68000 68002 68003)
-]
-
-{ #category : #'initialize-release' }
-ImageFormat class >> reservedBitsMask [
-	"Bits available for use as capability bits. Reserve high order bit as the
-	extension bit, to be set true if additional bits are required in the future."
-	
-	"ImageFormat reservedBitsMask printStringBase: 2"
-
-	^(16rFFFFFFFF bitXor: BaseVersionMask)
-		bitAt: PlatformByteOrderBit put: 0
+	^ self baseVersionNumbers, "the original four variants"
+		{
+			6505 .	"Cog and StackVM"
+			68003	"Cog and StackVM running 64-bit image"
+				" ... add others here as bits are allocated to represent requirements of other image formats"
+		}
 
 ]
 
-{ #category : #utility }
+{ #category : #ckformat }
 ImageFormat class >> storeCkstatusOnFile: fileName [
 	"Store source code for an image format version reader in a file. The program
 	is intended for testing image file format from a unix shell script such that
@@ -285,7 +348,7 @@ ImageFormat class >> thisImageFileFormat [
 
 ]
 
-{ #category : #'image formats' }
+{ #category : #utility }
 ImageFormat class >> versionDescriptions [
 
 	"ImageFormat versionDescriptions"
@@ -296,7 +359,7 @@ ImageFormat class >> versionDescriptions [
 				collect: [:e | e -> (self fromInteger: e) description])
 ]
 
-{ #category : #'image formats' }
+{ #category : #utility }
 ImageFormat class >> versionNumberByteArrays [
 	"All byte array expressions of known version numbers. These are the possible values
 	that may appear in the first 4 or 8 bytes of a saved image file. A 64 bit image saves
@@ -437,7 +500,7 @@ ImageFormat >> isValidVersionNumber [
 { #category : #printing }
 ImageFormat >> printDescriptionOn: stream [
 
-		stream nextPutAll: 'A ';
+		stream nextPutAll: 'a ';
 			nextPutAll: (wordSize * 8) asString;
 			nextPutAll: '-bit image with '.
 		self requiresClosureSupport ifFalse: [stream nextPutAll: 'no '].
@@ -505,6 +568,16 @@ ImageFormat >> setNativeFloatWordOrderRequirement: aBoolean [
 
 	requiresNativeFloatWordOrder := aBoolean
 
+]
+
+{ #category : #printing }
+ImageFormat >> storeOn: aStream [ 
+	"Append to the argument aStream a sequence of characters that is an 
+	expression whose evaluation creates an object similar to the receiver."
+
+	aStream nextPutAll: self class name;
+		nextPutAll: ' fromInteger: ';
+		nextPutAll: self asInteger asString
 ]
 
 { #category : #accessing }

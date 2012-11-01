@@ -4,7 +4,7 @@ Verify and document the values of ImageFormat. The image format is an integer va
 Class {
 	#name : #ImageFormatTest,
 	#superclass : #TestCase,
-	#category : #ImageFormat
+	#category : #'ImageFormat-Tests'
 }
 
 { #category : #testing }
