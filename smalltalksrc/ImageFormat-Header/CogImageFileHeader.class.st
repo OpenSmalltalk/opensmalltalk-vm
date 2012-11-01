@@ -20,9 +20,9 @@ CogImageFileHeader >> desiredEdenBytes [
 ]
 
 { #category : #accessing }
-CogImageFileHeader >> desiredEdenBytes: anObject [
+CogImageFileHeader >> desiredEdenBytes: anInteger [
 
-	desiredEdenBytes := anObject
+	desiredEdenBytes := anInteger
 ]
 
 { #category : #accessing }
@@ -32,9 +32,9 @@ CogImageFileHeader >> desiredNumStackPages [
 ]
 
 { #category : #accessing }
-CogImageFileHeader >> desiredNumStackPages: anObject [
+CogImageFileHeader >> desiredNumStackPages: anInteger [
 
-	desiredNumStackPages := anObject
+	desiredNumStackPages := anInteger
 ]
 
 { #category : #accessing }
@@ -44,9 +44,9 @@ CogImageFileHeader >> maxExtSemTabSizeSet [
 ]
 
 { #category : #accessing }
-CogImageFileHeader >> maxExtSemTabSizeSet: anObject [
+CogImageFileHeader >> maxExtSemTabSizeSet: anInteger [
 
-	maxExtSemTabSizeSet := anObject
+	maxExtSemTabSizeSet := anInteger
 ]
 
 { #category : #reading }
@@ -94,9 +94,9 @@ CogImageFileHeader >> unknownShortOrCodeSizeInKs [
 ]
 
 { #category : #accessing }
-CogImageFileHeader >> unknownShortOrCodeSizeInKs: anObject [
+CogImageFileHeader >> unknownShortOrCodeSizeInKs: anInteger [
 
-	unknownShortOrCodeSizeInKs := anObject
+	unknownShortOrCodeSizeInKs := anInteger
 ]
 
 { #category : #writing }

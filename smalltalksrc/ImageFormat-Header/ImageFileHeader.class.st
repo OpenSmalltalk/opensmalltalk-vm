@@ -54,9 +54,9 @@ ImageFileHeader >> extraVMMemory [
 ]
 
 { #category : #accessing }
-ImageFileHeader >> extraVMMemory: anObject [
+ImageFileHeader >> extraVMMemory: anInteger [
 
-	extraVMMemory := anObject
+	extraVMMemory := anInteger
 ]
 
 { #category : #accessing }
@@ -66,9 +66,9 @@ ImageFileHeader >> headerSize [
 ]
 
 { #category : #accessing }
-ImageFileHeader >> headerSize: anObject [
+ImageFileHeader >> headerSize: anInteger [
 
-	headerSize := anObject
+	headerSize := anInteger
 ]
 
 { #category : #accessing }
@@ -78,9 +78,9 @@ ImageFileHeader >> imageBytes [
 ]
 
 { #category : #accessing }
-ImageFileHeader >> imageBytes: anObject [
+ImageFileHeader >> imageBytes: anInteger [
 
-	imageBytes := anObject
+	imageBytes := anInteger
 ]
 
 { #category : #accessing }
@@ -90,9 +90,9 @@ ImageFileHeader >> imageFormat [
 ]
 
 { #category : #accessing }
-ImageFileHeader >> imageFormat: anObject [
+ImageFileHeader >> imageFormat: anImageFormat [
 
-	imageFormat := anObject
+	imageFormat := anImageFormat
 ]
 
 { #category : #accessing }
@@ -102,9 +102,9 @@ ImageFileHeader >> imageHeaderFlags [
 ]
 
 { #category : #accessing }
-ImageFileHeader >> imageHeaderFlags: anObject [
+ImageFileHeader >> imageHeaderFlags: anInteger [
 
-	imageHeaderFlags := anObject
+	imageHeaderFlags := anInteger
 ]
 
 { #category : #accessing }
@@ -114,9 +114,9 @@ ImageFileHeader >> lastHash [
 ]
 
 { #category : #accessing }
-ImageFileHeader >> lastHash: anObject [
+ImageFileHeader >> lastHash: anInteger [
 
-	lastHash := anObject
+	lastHash := anInteger
 ]
 
 { #category : #reading }
@@ -148,13 +148,14 @@ ImageFileHeader >> printOn: aStream [
 ImageFileHeader >> readFieldsFrom: aStream startingAt: imageOffset headerWordSize: headerWordSize littleEndian: littleEndian [
 	"Read data fields and answer number of bytes read"
 
-	| remainder |
+	| remainder screenSizeWord |
 	headerSize := self nextNumber: headerWordSize from: aStream littleEndian: littleEndian.
 	imageBytes := self nextNumber: headerWordSize from: aStream littleEndian: littleEndian.
 	startOfMemory := self nextNumber: headerWordSize from: aStream littleEndian: littleEndian.
 	specialObjectsOop := self nextNumber: headerWordSize from: aStream littleEndian: littleEndian.
 	lastHash := self nextNumber: headerWordSize from: aStream littleEndian: littleEndian.
-	self screenSize: (self nextNumber: headerWordSize from: aStream littleEndian: littleEndian).
+	screenSizeWord := self nextNumber: headerWordSize from: aStream littleEndian: littleEndian.
+	screenSize := (screenSizeWord >> 16) @ (screenSizeWord bitAnd: 16rFFFF).
 	imageHeaderFlags := self nextNumber: headerWordSize from: aStream littleEndian: littleEndian.
 	extraVMMemory := self nextNumber: headerWordSize from: aStream littleEndian: littleEndian.
 	remainder := headerSize - (9 * imageFormat wordSize).
@@ -233,16 +234,14 @@ ImageFileHeader >> screenSize [
 ]
 
 { #category : #accessing }
-ImageFileHeader >> screenSize: anIntegerOrPoint [
+ImageFileHeader >> screenSize: aPoint [
 	"World extent at the time of image save, packed into 32 bit integer when
 	saved to file header."
 
 	"right=  windowBounds.x + ((unsigned)savedWindowSize >> 16);
 	bottom= windowBounds.y + (savedWindowSize & 0xFFFF);"
 
-	anIntegerOrPoint isInteger
-		ifTrue: [screenSize := ((anIntegerOrPoint >> 16) @ (anIntegerOrPoint bitAnd: 16rFFFF))]
-		ifFalse: [screenSize := anIntegerOrPoint]
+	screenSize := aPoint
 
 ]
 
@@ -253,9 +252,9 @@ ImageFileHeader >> specialObjectsOop [
 ]
 
 { #category : #accessing }
-ImageFileHeader >> specialObjectsOop: anObject [
+ImageFileHeader >> specialObjectsOop: anInteger [
 
-	specialObjectsOop := anObject
+	specialObjectsOop := anInteger
 ]
 
 { #category : #accessing }
@@ -265,9 +264,9 @@ ImageFileHeader >> startOfMemory [
 ]
 
 { #category : #accessing }
-ImageFileHeader >> startOfMemory: anObject [
+ImageFileHeader >> startOfMemory: anInteger [
 
-	startOfMemory := anObject
+	startOfMemory := anInteger
 ]
 
 { #category : #printing }
