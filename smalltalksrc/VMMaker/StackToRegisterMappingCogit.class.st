@@ -792,12 +792,12 @@ StackToRegisterMappingCogit >> compileAbstractInstructionsFrom: start through: e
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<var: #fixup type: #'BytecodeFixup *'>
 	self traceSimStack.
-	bytecodePointer := start.
+	bytecodePC := start.
 	descriptor := nil.
 	deadCode := false.
 	[self cCode: '' inSmalltalk:
-		[(debugBytecodePointers includes: bytecodePointer) ifTrue: [self halt]].
-	fixup := self fixupAt: bytecodePointer - initialPC.
+		[(debugBytecodePointers includes: bytecodePC) ifTrue: [self halt]].
+	fixup := self fixupAt: bytecodePC - initialPC.
 	fixup targetInstruction asUnsignedInteger > 0
 		ifTrue:
 			[deadCode := false.
@@ -812,15 +812,15 @@ StackToRegisterMappingCogit >> compileAbstractInstructionsFrom: start through: e
 	 self cCode: '' inSmalltalk:
 		[deadCode ifFalse:
 			[self assert: simStackPtr + (needsFrame ifTrue: [0] ifFalse: [1])
-						= (self debugStackPointerFor: bytecodePointer)]].
-	 byte0 := objectMemory fetchByte: bytecodePointer ofObject: methodObj.
+						= (self debugStackPointerFor: bytecodePC)]].
+	 byte0 := objectMemory fetchByte: bytecodePC ofObject: methodObj.
 	 descriptor := self generatorAt: byte0.
 	 descriptor numBytes > 1 ifTrue:
-		[byte1 := objectMemory fetchByte: bytecodePointer + 1 ofObject: methodObj.
+		[byte1 := objectMemory fetchByte: bytecodePC + 1 ofObject: methodObj.
 		 descriptor numBytes > 2 ifTrue:
-			[byte2 := objectMemory fetchByte: bytecodePointer + 2 ofObject: methodObj.
+			[byte2 := objectMemory fetchByte: bytecodePC + 2 ofObject: methodObj.
 			 descriptor numBytes > 3 ifTrue:
-				[byte3 := objectMemory fetchByte: bytecodePointer + 3 ofObject: methodObj.
+				[byte3 := objectMemory fetchByte: bytecodePC + 3 ofObject: methodObj.
 				 descriptor numBytes > 4 ifTrue:
 					[self notYetImplemented]]]].
 	 nextOpcodeIndex := opcodeIndex.
@@ -839,8 +839,8 @@ StackToRegisterMappingCogit >> compileAbstractInstructionsFrom: start through: e
 		 opcodeIndex = nextOpcodeIndex ifTrue:
 			[self Label].
 		 fixup targetInstruction: (self abstractInstructionAt: nextOpcodeIndex)].
-	 bytecodePointer := self nextBytecodePCFor: descriptor at: bytecodePointer byte0: byte0 in: methodObj.
-	 result = 0 and: [bytecodePointer <= end]] whileTrue.
+	 bytecodePC := self nextBytecodePCFor: descriptor at: bytecodePC byte0: byte0 in: methodObj.
+	 result = 0 and: [bytecodePC <= end]] whileTrue.
 	self checkEnoughOpcodes.
 	^result
 ]
@@ -1968,7 +1968,7 @@ StackToRegisterMappingCogit >> genPushClosureCopyCopiedValuesBytecode [
 	 blocks.  The block's actual code will be compiled later."
 	| numCopied |
 	self assert: needsFrame.
-	self addBlockStartAt: bytecodePointer + 4
+	self addBlockStartAt: bytecodePC + 4
 		numArgs: (byte1 bitAnd: 16rF)
 		numCopied: (numCopied := byte1 >> 4)
 		span: (byte2 << 8) + byte3.
@@ -1976,7 +1976,7 @@ StackToRegisterMappingCogit >> genPushClosureCopyCopiedValuesBytecode [
 		[self ssFlushTo: simStackPtr].
 	optStatus isReceiverResultRegLive: false.
 	self ssAllocateCallReg: SendNumArgsReg and: ReceiverResultReg.
-	self MoveCq: (byte1 bitOr: bytecodePointer + 5 << 8) R: SendNumArgsReg.
+	self MoveCq: (byte1 bitOr: bytecodePC + 5 << 8) R: SendNumArgsReg.
 	self CallRT: ceClosureCopyTrampoline.
 	numCopied > 0 ifTrue:
 		[self AddCq: numCopied * BytesPerWord R: SPReg.
@@ -2468,7 +2468,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorComparison [
 											ifTrue: [objectMemory trueObject]
 											ifFalse: [objectMemory falseObject])].
 
-	branchPC := bytecodePointer + primDescriptor numBytes.
+	branchPC := bytecodePC + primDescriptor numBytes.
 	branchBytecode := objectMemory fetchByte: branchPC ofObject: methodObj.
 	branchDescriptor := self generatorAt: branchBytecode.
 	"Only interested in inlining if followed by a conditional branch."
@@ -2552,7 +2552,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 			self CmpR: argReg R: rcvrReg].
 	self ssPop: 1; ssPushRegister: resultReg.
 	primDescriptor := self generatorAt: byte0.
-	nextPC := bytecodePointer + primDescriptor numBytes.
+	nextPC := bytecodePC + primDescriptor numBytes.
 	branchBytecode := objectMemory fetchByte: nextPC ofObject: methodObj.
 	branchDescriptor := self generatorAt: branchBytecode.
 	(branchDescriptor isBranchTrue
@@ -3180,7 +3180,7 @@ StackToRegisterMappingCogit >> merge: fixup afterContinuation: mergeWithContinua
 		 fixup targetInstruction: self Label].
 	self assert: simStackPtr >= fixup simStackPtr.
 	self cCode: '' inSmalltalk:
-		[self assert: fixup simStackPtr = (self debugStackPointerFor: bytecodePointer)].
+		[self assert: fixup simStackPtr = (self debugStackPointerFor: bytecodePC)].
 	simStackPtr := fixup simStackPtr.
 	simSpillBase := methodOrBlockNumTemps.
 	"For now throw away all type information for values on the stack, but sometime consider
@@ -3553,7 +3553,7 @@ StackToRegisterMappingCogit >> ssPushAnnotatedConstant: literal [
 		annotateUse: true;
 		spilled: false;
 		constant: literal;
-		bcptr: bytecodePointer.
+		bcptr: bytecodePC.
 	^0
 ]
 
@@ -3568,7 +3568,7 @@ StackToRegisterMappingCogit >> ssPushBase: reg offset: offset [
 		annotateUse: false;
 		register: reg;
 		offset: offset;
-		bcptr: bytecodePointer.
+		bcptr: bytecodePC.
 	^0
 ]
 
@@ -3582,7 +3582,7 @@ StackToRegisterMappingCogit >> ssPushConstant: literal [
 		spilled: false;
 		annotateUse: false;
 		constant: literal;
-		bcptr: bytecodePointer.
+		bcptr: bytecodePC.
 	^0
 ]
 
@@ -3595,7 +3595,7 @@ StackToRegisterMappingCogit >> ssPushDesc: simStackEntry [
 			simStackEntry
 				spilled: false;
 				annotateUse: false;
-				bcptr: bytecodePointer.
+				bcptr: bytecodePC.
 			 simStack
 				at: (simStackPtr := simStackPtr + 1)
 				put: simStackEntry]
@@ -3607,7 +3607,7 @@ StackToRegisterMappingCogit >> ssPushDesc: simStackEntry [
 						ifFalse: [simStackEntry type]);
 				spilled: false;
 				annotateUse: false;
-				bcptr: bytecodePointer].
+				bcptr: bytecodePC].
 	simSpillBase > simStackPtr ifTrue:
 		[simSpillBase := simStackPtr max: 0].
 	^0
@@ -3623,7 +3623,7 @@ StackToRegisterMappingCogit >> ssPushRegister: reg [
 		spilled: false;
 		annotateUse: false;
 		register: reg;
-		bcptr: bytecodePointer.
+		bcptr: bytecodePC.
 	^0
 ]
 
@@ -3669,7 +3669,7 @@ StackToRegisterMappingCogit >> ssValue: n [
 StackToRegisterMappingCogit >> traceDescriptor: descriptor [
 	<cmacro: '(ign) 0'>
 	(compilationTrace anyMask: 2) ifTrue:
-		[coInterpreter transcript cr; print: bytecodePointer; space; nextPutAll: descriptor generator; flush]
+		[coInterpreter transcript cr; print: bytecodePC; space; nextPutAll: descriptor generator; flush]
 ]
 
 { #category : #'simulation only' }
@@ -3680,7 +3680,7 @@ StackToRegisterMappingCogit >> traceFixup: fixup [
 		[index := (fixups object identityIndexOf: fixup) - 1.
 		 coInterpreter transcript
 			ensureCr;
-			print: bytecodePointer; nextPutAll: ' -> '; print: index; nextPut: $/; print: index + initialPC;
+			print: bytecodePC; nextPutAll: ' -> '; print: index; nextPut: $/; print: index + initialPC;
 			nextPut: $:; space.
 			fixup printStateOn: coInterpreter transcript.
 			coInterpreter transcript cr; flush]
@@ -3711,5 +3711,5 @@ StackToRegisterMappingCogit >> traceSimStack [
 StackToRegisterMappingCogit >> traceSpill: simStackEntry [
 	<cmacro: '(ign) 0'>
 	(compilationTrace anyMask: 2) ifTrue:
-		[coInterpreter transcript cr; print: bytecodePointer; space; print: simStackEntry; flush]
+		[coInterpreter transcript cr; print: bytecodePC; space; print: simStackEntry; flush]
 ]

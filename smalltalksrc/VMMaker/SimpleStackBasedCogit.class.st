@@ -1146,7 +1146,7 @@ SimpleStackBasedCogit >> genJumpTo: targetBytecodePC [
 SimpleStackBasedCogit >> genLongJumpIfFalse [
 	| distance target |
 	distance := self longForwardBranchDist: byte0 ance: byte1.
-	target := distance + 2 + bytecodePointer.
+	target := distance + 2 + bytecodePC.
 	^self genJumpIf: objectMemory falseObject to: target
 ]
 
@@ -1154,7 +1154,7 @@ SimpleStackBasedCogit >> genLongJumpIfFalse [
 SimpleStackBasedCogit >> genLongJumpIfTrue [
 	| distance target |
 	distance := self longForwardBranchDist: byte0 ance: byte1.
-	target := distance + 2 + bytecodePointer.
+	target := distance + 2 + bytecodePC.
 	^self genJumpIf: objectMemory trueObject to: target
 ]
 
@@ -1163,7 +1163,7 @@ SimpleStackBasedCogit >> genLongUnconditionalBackwardJump [
 	| distance targetpc |
 	distance := self longBranchDist: byte0 ance: byte1.
 	self assert: distance < 0.
-	targetpc := distance + 2 + bytecodePointer.
+	targetpc := distance + 2 + bytecodePC.
 	^self genJumpBackTo: targetpc
 ]
 
@@ -1172,7 +1172,7 @@ SimpleStackBasedCogit >> genLongUnconditionalForwardJump [
 	| distance targetpc |
 	distance := self longBranchDist: byte0 ance: byte1.
 	self assert: distance >= 0.
-	targetpc := distance + 2 + bytecodePointer.
+	targetpc := distance + 2 + bytecodePC.
 	^self genJumpTo: targetpc
 ]
 
@@ -1872,11 +1872,11 @@ SimpleStackBasedCogit >> genPushClosureCopyCopiedValuesBytecode [
 	 blocks.  The block's actual code will be compiled later."
 	| numCopied |
 	self assert: needsFrame.
-	self addBlockStartAt: bytecodePointer + 4
+	self addBlockStartAt: bytecodePC + 4
 		numArgs: (byte1 bitAnd: 16rF)
 		numCopied: (numCopied := byte1 >> 4)
 		span: (byte2 << 8) + byte3.
-	self MoveCq: (byte1 bitOr: bytecodePointer + 5 << 8) R: SendNumArgsReg.
+	self MoveCq: (byte1 bitOr: bytecodePC + 5 << 8) R: SendNumArgsReg.
 	self CallRT: ceClosureCopyTrampoline.
 	numCopied > 0
 		ifTrue:
@@ -2234,13 +2234,13 @@ SimpleStackBasedCogit >> genSendSuper: selector numArgs: numArgs [
 SimpleStackBasedCogit >> genShortJumpIfFalse [
 	^self
 		genJumpIf: objectMemory falseObject
-		to: (self shortForwardBranchDistance: byte0) + 1 + bytecodePointer
+		to: (self shortForwardBranchDistance: byte0) + 1 + bytecodePC
 ]
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genShortUnconditionalJump [
 	| target |
-	target := (self shortForwardBranchDistance: byte0) + 1 + bytecodePointer.
+	target := (self shortForwardBranchDistance: byte0) + 1 + bytecodePC.
 	^self genJumpTo: target
 ]
 
