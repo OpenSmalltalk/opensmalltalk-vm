@@ -425,7 +425,7 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 											ifTrue: [objectMemory trueObject]
 											ifFalse: [objectMemory falseObject])].
 
-	branchPC := bytecodePointer + primDescriptor numBytes.
+	branchPC := bytecodePC + primDescriptor numBytes.
 	branchBytecode := objectMemory fetchByte: branchPC ofObject: methodObj.
 	branchDescriptor := self generatorAt: branchBytecode.
 	"Only interested in inlining if followed by a conditional branch."
