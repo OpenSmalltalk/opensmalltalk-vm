@@ -167,7 +167,7 @@ Class {
 		'byte1',
 		'byte2',
 		'byte3',
-		'bytecodePointer',
+		'bytecodePC',
 		'opcodeIndex',
 		'numAbstractOpcodes',
 		'annotationIndex',
@@ -1418,7 +1418,7 @@ Cogit >> JumpZero: jumpTarget [
 Cogit >> Label [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: Label operand: (labelCounter := labelCounter + 1) operand: bytecodePointer
+	^self gen: Label operand: (labelCounter := labelCounter + 1) operand: bytecodePC
 ]
 
 { #category : #'abstract instructions' }
@@ -1731,7 +1731,7 @@ Cogit >> abstractOpcodes [
 ]
 
 { #category : #'compile abstract instructions' }
-Cogit >> addBlockStartAt: bytecodepc numArgs: numArgs numCopied: numCopied span: span [
+Cogit >> addBlockStartAt: bcpc numArgs: numArgs numCopied: numCopied span: span [
 	"Add a blockStart for an embedded block.  For a binary tree walk block dispatch
 	 blocks must be compiled in pc/depth-first order but are scanned in breadth-first
 	 order, so do an insertion sort (which of course is really a bubble sort because we
@@ -1743,7 +1743,7 @@ Cogit >> addBlockStartAt: bytecodepc numArgs: numArgs numCopied: numCopied span:
 		ifTrue:
 			[i := blockCount - 1.
 			 [blockStart := self addressOf: (blockStarts at: i).
-			   blockStart startpc > bytecodepc
+			   blockStart startpc > bcpc
 			   and: [i > 0]] whileTrue:
 				[i := i - 1].
 			 blockCount to: i + 1 by: -1 do:
@@ -1756,7 +1756,7 @@ Cogit >> addBlockStartAt: bytecodepc numArgs: numArgs numCopied: numCopied span:
 								inSmalltalk: [blockStarts at: blockCount put: CogBlockStart new]].
 	blockCount := blockCount + 1.
 	blockStart
-		startpc: bytecodepc;
+		startpc: bcpc;
 		numArgs: numArgs;
 		numCopied: numCopied;
 		stackCheckLabel: nil;
@@ -3232,28 +3232,28 @@ Cogit >> compileAbstractInstructionsFrom: start through: end [
 	| nextOpcodeIndex descriptor fixup result |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<var: #fixup type: #'BytecodeFixup *'>
-	bytecodePointer := start.
-	[byte0 := objectMemory fetchByte: bytecodePointer ofObject: methodObj.
+	bytecodePC := start.
+	[byte0 := objectMemory fetchByte: bytecodePC ofObject: methodObj.
 	 descriptor := self generatorAt: byte0.
 	 descriptor numBytes > 1 ifTrue:
-		[byte1 := objectMemory fetchByte: bytecodePointer + 1 ofObject: methodObj.
+		[byte1 := objectMemory fetchByte: bytecodePC + 1 ofObject: methodObj.
 		 descriptor numBytes > 2 ifTrue:
-			[byte2 := objectMemory fetchByte: bytecodePointer + 2 ofObject: methodObj.
+			[byte2 := objectMemory fetchByte: bytecodePC + 2 ofObject: methodObj.
 			 descriptor numBytes > 3 ifTrue:
-				[byte3 := objectMemory fetchByte: bytecodePointer + 3 ofObject: methodObj.
+				[byte3 := objectMemory fetchByte: bytecodePC + 3 ofObject: methodObj.
 				 descriptor numBytes > 4 ifTrue:
 					[self notYetImplemented]]]].
 	 nextOpcodeIndex := opcodeIndex.
 	 result := self perform: descriptor generator.
-	 fixup := self fixupAt: bytecodePointer - initialPC.
+	 fixup := self fixupAt: bytecodePC - initialPC.
 	 fixup targetInstruction ~= 0 ifTrue:
 		["There is a fixup for this bytecode.  It must point to the first generated
 		   instruction for this bytecode.  If there isn't one we need to add a label."
 		 opcodeIndex = nextOpcodeIndex ifTrue:
 			[self Label].
 		 fixup targetInstruction: (self abstractInstructionAt: nextOpcodeIndex)].
-	 bytecodePointer := self nextBytecodePCFor: descriptor at: bytecodePointer byte0: byte0 in: methodObj.
-	 result = 0 and: [bytecodePointer <= end]] whileTrue.
+	 bytecodePC := self nextBytecodePCFor: descriptor at: bytecodePC byte0: byte0 in: methodObj.
+	 result = 0 and: [bytecodePC <= end]] whileTrue.
 	self checkEnoughOpcodes.
 	^result
 ]
@@ -4137,7 +4137,7 @@ Cogit >> gen: opcode [ "<Integer>"
 	abstractInstruction := self abstractInstructionAt: opcodeIndex.
 	opcodeIndex := opcodeIndex + 1.
 	abstractInstruction opcode: opcode.
-	self cCode: '' inSmalltalk: [abstractInstruction bcpc: bytecodePointer].
+	self cCode: '' inSmalltalk: [abstractInstruction bcpc: bytecodePC].
 	^abstractInstruction
 ]
 
@@ -4152,7 +4152,7 @@ Cogit >> gen: opcode "<Integer>" operand: operand [ "<Integer|CogAbstractInstruc
 	opcodeIndex := opcodeIndex + 1.
 	abstractInstruction opcode: opcode.
 	abstractInstruction operands at: 0 put: operand.
-	self cCode: '' inSmalltalk: [abstractInstruction bcpc: bytecodePointer].
+	self cCode: '' inSmalltalk: [abstractInstruction bcpc: bytecodePC].
 	^abstractInstruction
 ]
 
@@ -4168,7 +4168,7 @@ Cogit >> gen: opcode "<Integer>" operand: operandOne "<Integer|CogAbstractInstru
 	abstractInstruction opcode: opcode.
 	abstractInstruction operands at: 0 put: operandOne.
 	abstractInstruction operands at: 1 put: operandTwo.
-	self cCode: '' inSmalltalk: [abstractInstruction bcpc: bytecodePointer].
+	self cCode: '' inSmalltalk: [abstractInstruction bcpc: bytecodePC].
 	^abstractInstruction
 ]
 
@@ -4185,7 +4185,7 @@ Cogit >> gen: opcode "<Integer>" operand: operandOne "<Integer|CogAbstractInstru
 	abstractInstruction operands at: 0 put: operandOne.
 	abstractInstruction operands at: 1 put: operandTwo.
 	abstractInstruction operands at: 2 put: operandThree.
-	self cCode: '' inSmalltalk: [abstractInstruction bcpc: bytecodePointer].
+	self cCode: '' inSmalltalk: [abstractInstruction bcpc: bytecodePC].
 	^abstractInstruction
 ]
 
