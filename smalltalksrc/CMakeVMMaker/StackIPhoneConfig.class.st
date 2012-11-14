@@ -298,14 +298,14 @@ StackIPhoneConfig >> freetypeLibClass [
 
 { #category : #accessing }
 StackIPhoneConfig >> imageName [
-	^'iPhone'
+	^'iOS'
 ]
 
 { #category : #settings }
 StackIPhoneConfig >> imageResources [ 
-	^#(
-	'iPhone.changes'
-	'PharoV10.sources')
+	^{
+	self imageName, '.changes'.
+	'PharoV10.sources' }
 ]
 
 { #category : #'source files' }
