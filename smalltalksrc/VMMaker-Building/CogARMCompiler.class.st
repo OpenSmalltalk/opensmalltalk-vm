@@ -1125,10 +1125,11 @@ CogARMCompiler >> isBranch: anInstruction [
 { #category : #testing }
 CogARMCompiler >> isCallPreceedingReturnPC: mcpc [
 	"Assuming mcpc is a return pc answer if the instruction before it is a call."
-	"There are two types of calls: BL and (MOV, ORR, ORR, MOV, ADD)"
-	^(objectMemory byteAt: mcpc - 3) >> 4 = 16rB
-		or: [ (objectMemory longAt: mcpc - 8) = 16rE1A0E00F "MOV pc, lr" ]
-		"MOV pc, lr is sufficient as a test, because call instructions are the only insturctions, during which lr is loaded from pc."
+	"There are two types of calls: PUSH, BL and (MOV, ORR, ORR, ADD, PUSH, ADD)"
+	"PUSH {pc} is not sufficient as a test, because pc may be pushed using the PushR opcode"
+	^(objectMemory longAt: mcpc - 8) =  (self t: 4 o: 9 s: 0 rn: SP rd: 8 shifterOperand: 0)
+		and: [(objectMemory byteAt: mcpc - 3) >> 4 = 16rB "BL" 
+			or: [ (objectMemory longAt: mcpc - 12) = 16rE1A0E00F "MOV pc, lr" ]]
 ]
 
 { #category : #testing }
