@@ -3441,7 +3441,8 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 				ifFalse: ['print instructions each instruction'])
 			action: [cogit printInstructions: cogit printInstructions not];
 		addLine;
-		add: 'set break count...' action: #setBreakCount;
+		add: 'set break count...' action: [|s| s := UIManager default request: 'break count (dec)'.
+											s notEmpty ifTrue: [breakCount := Integer readFrom: s readStream]];
 		add: 'set break selector...' action: [|s| s := UIManager default request: 'break selector'.
 											s notEmpty ifTrue: [self setBreakSelector: s]];
 		add: (printBytecodeAtEachStep
