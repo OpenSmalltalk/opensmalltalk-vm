@@ -234,6 +234,7 @@ CogARMCompiler >> computeMaximumSize [
 											ifTrue: [ :u :i | ^maxSize := 4]
 											ifFalse: [ ^maxSize := 20 ]].
 			[PrefetchAw] 			-> [^maxSize := 16].
+			[Call]					-> [^maxSize := "<="24 "recomputed in #sizePCDependentInstruction."].
 			[RetN]					-> [^(operands at: 0) = 0 
 											ifTrue: [maxSize := 4]
 											ifFalse: [maxSize := 8]].
@@ -372,20 +373,24 @@ CogARMCompiler >> concretizeCall [
 	| offset |
 	self assert: (operands at: 0) ~= 0.
 	self assert: (operands at: 0) \\ 4 = 0.
-	offset := (operands at: 0) signedIntFromLong - (address + 8) signedIntFromLong.
+	offset := (operands at: 0) signedIntFromLong - (address + 8 "normal pc offset" + 4 "push instruction") signedIntFromLong.
 	(self isQuick: offset)
 		ifTrue: [
-			self machineCodeAt: 0 put: (self t: 5 o: 8) + (offset >> 2 bitAnd: 16r00FFFFFF). "BL offset"
-			^machineCodeSize := 4]
+			self machineCodeAt: 0 put: (self t: 4 o: 9 s: 0 rn: SP rd: 8 shifterOperand: 0). "push {pc}"
+			self machineCodeAt: 4 put: (self t: 5 o: 8) + (offset >> 2 bitAnd: 16r00FFFFFF). "BL offset"
+			^machineCodeSize := 8]
 		ifFalse: [
 			self concretizeConditionalJumpLong: AL.
-			"move the actual jump one instruction later, insterting the pc back up to lr."
-			self machineCodeAt: 16 put: (self machineCodeAt: 12).
-			"mov lr, pc"
-	"Because the pc always points to the actual address + 8, the value at pc is the address of the instruction after the branch (add pc, r3, #<byte0>"
-			self machineCodeAt: 12 put: (self t: 0 o: 16rD s: 0 rn: 0 rd: LR shifterOperand: PC).
-			^machineCodeSize := 20]
-	"We should push also lr. The problem is, that any push added here is only executed after return, and therefore useless."
+			"move the actual jump two instructions further, inserting the pc back-up to lr and the pc push."
+			self machineCodeAt: 20 put: (self machineCodeAt: 12).
+		"Because the pc always points to the actual address + 8, the value at pc is the address of the instruction after the branch"
+			"add lr, pc, #4"
+			self machineCodeAt: 12 put: (self t: 1 o: 4 s: 0 rn: PC rd: LR shifterOperand: 4).
+			"self machineCodeAt: 12 put: (self t: 0 o: 16rD s: 0 rn: 0 rd: LR shifterOperand: PC)."
+			
+			"push {pc} -- IA32 ABI, needed only for within JIT, when calling outside, like in a trampoline, maybe not."
+			self machineCodeAt: 16 put: (self new t: 4 o: 9 s: 0 rn: SP rd: 8 shifterOperand: 0).
+			^machineCodeSize := 24]
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1182,9 +1187,10 @@ CogARMCompiler >> machineCodeBytes [
 
 { #category : #printing }
 CogARMCompiler >> nameForRegister: reg [ "<Integer>"
-	"subclasses with special purpose registers may need to override."
+	
 	<doNotGenerate>
-	^#(LR SP PC) detect: [:sym| (self class classPool at: sym) = reg] ifNone: [super nameForRegister: reg]
+	^#(LR SP PC CArg0Reg CArg0Reg CArg1Reg CArg2Reg CArg3Reg) detect: [:sym| (self class classPool at: sym) = reg] 
+		ifNone: [super nameForRegister: reg]
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1263,9 +1269,11 @@ CogARMCompiler >> sizePCDependentInstructionAt: eventualAbsoluteAddress [
 		ifFalse:
 			[maximumSpan := target - (eventualAbsoluteAddress + 2)].
 	address := eventualAbsoluteAddress.
-	^machineCodeSize := (self isLongJump not and: [self isQuick: maximumSpan])
-								ifTrue: [4] "branch"
-								ifFalse: [16] "load address to register, add"
+	^machineCodeSize := opcode = Call 
+				ifTrue: [(self isQuick: maximumSpan - 4 "push instruction") ifTrue: [8] ifFalse: [24]]
+				ifFalse: [(self isLongJump not and: [self isQuick: maximumSpan])
+								ifTrue: [4]
+								ifFalse: [16]] "load address to register, add"
 ]
 
 { #category : #accessing }

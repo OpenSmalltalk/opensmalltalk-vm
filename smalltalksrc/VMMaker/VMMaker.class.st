@@ -357,7 +357,7 @@ VMMaker class >> generateSqueakCogVM [
 		to: (FileDirectory default pathFromURI: 'oscogvm/src')
 		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
 		including:#(	ADPCMCodecPlugin AsynchFilePlugin BalloonEnginePlugin B3DAcceleratorPlugin
-					BMPReadWriterPlugin BitBltSimulation BochsIA32Plugin CroquetPlugin DSAPlugin
+					BMPReadWriterPlugin BitBltSimulation BochsIA32Plugin GdbARMPlugin CroquetPlugin DSAPlugin
 					DeflatePlugin DropPlugin FT2Plugin FFTPlugin FileCopyPlugin FilePlugin FloatArrayPlugin
 					FloatMathPlugin GeniePlugin HostWindowPlugin IA32ABIPlugin InternetConfigPlugin
 					JPEGReadWriter2Plugin JPEGReaderPlugin JoystickTabletPlugin KlattSynthesizerPlugin
@@ -1483,7 +1483,7 @@ VMMaker >> plugins: aCollection do: aBlock [
 	aCollection do: [:sym | (Smalltalk hasClassNamed: sym)
 			ifTrue: [aBlock value: (Smalltalk classNamed: sym)]
 			ifFalse:["Another place to raise a sensible error to the UI"
-				^self couldNotFindPluginClass: sym]]
+				self couldNotFindPluginClass: sym]]
 ]
 
 { #category : #'private - copying files' }
