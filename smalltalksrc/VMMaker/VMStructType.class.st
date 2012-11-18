@@ -184,9 +184,14 @@ VMStructType class >> isTypePointerToStruct: type [
 VMStructType class >> needsTypeTag [
 	self instVarNamesAndTypesForTranslationDo:
 		[:ivn :type|
-		((type isArray ifTrue: [type first] ifFalse: [type]) includesSubString: self structTagName) ifTrue:
-			[^true]].
+		((type isArray ifTrue: [type] ifFalse: [{type}]) anySatisfy:
+			[:str|
+			str isString
+			and: [str includesSubString: self structTagName]]) ifTrue:
+				[^true]].
 	^false
+
+	"VMStructType allSubclasses select: [:sc| sc needsTypeTag]"
 ]
 
 { #category : #translation }

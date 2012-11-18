@@ -168,9 +168,12 @@ VMClass class >> initializeMiscConstantsWith: optionsDictionary [
 	 Subclass implementations need to include a super initializeMiscConstantsWith:."
 
 	VMBIGENDIAN class. "Mention this for the benefit of CCodeGenerator>>emitCConstantsOn:"
-	STACKVM := COGVM := COGMTVM := false.
-	IMMUTABILITY := NewspeakVM := false.
-	MULTIPLEBYTECODESETS := false
+	self isInterpreterClass ifTrue:
+		[STACKVM := COGVM := COGMTVM := false].
+	NewspeakVM := optionsDictionary at: #NewspeakVM ifAbsent: [false].
+	MULTIPLEBYTECODESETS := optionsDictionary at: #MULTIPLEBYTECODESETS ifAbsent: [false].
+	"N.B.  Not yet implemented."
+	IMMUTABILITY := optionsDictionary at: #IMMUTABILITY ifAbsent: [false]
 ]
 
 { #category : #initialization }
@@ -447,6 +450,11 @@ VMClass >> fetchSingleFloatAtPointer: pointer into: aFloat [
 	^self fetchSingleFloatAt: pointer into: aFloat
 ]
 
+{ #category : #testing }
+VMClass >> isCurrentImageFacade [
+	^false
+]
+
 { #category : #'plugin support' }
 VMClass >> isInterpreterProxy [
 	<doNotGenerate>
@@ -506,6 +514,12 @@ VMClass >> minorVersion [
 	"This is implemented in sqVirtualMachine.c, so this form is for simulation only."
 	<doNotGenerate>
 	^self class vmProxyMinorVersion
+]
+
+{ #category : #'translation support' }
+VMClass >> numElementsIn: anArray [
+	<cmacro: '(anArray) (sizeof(anArray)/sizeof(anArray[0]))'>
+	^anArray size
 ]
 
 { #category : #'oop comparison' }
@@ -572,6 +586,17 @@ VMClass >> pointerForOop: oop [
 	<doNotGenerate>
 
 	^oop
+]
+
+{ #category : #'simulation support' }
+VMClass >> promptHex: string [
+	<doNotGenerate>
+	| s |
+	s := UIManager default request: string, ' (hex)'.
+	^s notEmpty ifTrue:
+		[(s size > 3 and: [s third = $r or: [s first = $- and: [s fourth = $r]]]) ifTrue:
+			[s := (s first = $- ifTrue: ['-'] ifFalse: ['']), (s allButFirst: (s indexOf: $r))].
+		Integer readFrom: s readStream base: 16]
 ]
 
 { #category : #arithmetic }

@@ -8,11 +8,22 @@ Class {
 	#category : #'VMMaker-Support'
 }
 
+{ #category : #decoding }
+StackDepthFinder >> alternateInterpretNextInstructionFor: client [
+	joins at: pc put: stackp.
+	^super alternateInterpretNextInstructionFor: client
+]
+
 { #category : #'instruction decoding' }
 StackDepthFinder >> blockReturnTop [
 	"Return Top Of Stack bytecode."
 	self drop.
 	self resetStackAfterBranchOrReturn
+]
+
+{ #category : #'instruction decoding' }
+StackDepthFinder >> callPrimitive: primitiveIndex [
+	"Call Primitive bytecode.  Effectively a no-op."
 ]
 
 { #category : #accessing }
@@ -276,10 +287,18 @@ StackDepthFinder >> stackPointerAt: aPC [
 
 { #category : #accessing }
 StackDepthFinder >> stackPointers [
+	"Collect the stack depth for each bytecode in the method.
+	 For the convenience of clients, write teh stack depth for extended bytecodes
+	 to the bytecode pc, as well as the bytecocdes' extensions' pcs."
 	| stackPointers end |
 	stackPointers :=  Array new: (end := self method endPC).
 	[pc <= end] whileTrue:
 		[stackPointers at: pc put: stackp.
+		 self method usesAlternateBytecodeSet ifTrue:
+			[self extensionsAt: pc into:
+				[:extA :extB :delta|
+				delta > 0 ifTrue:
+					[stackPointers at: pc + delta put: stackp]]].
 		 self interpretNextInstructionFor: self].
 	^stackPointers
 ]

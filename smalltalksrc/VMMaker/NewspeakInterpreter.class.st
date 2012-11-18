@@ -1499,8 +1499,8 @@ NewspeakInterpreter >> booleanCheat: cond [
 { #category : #utilities }
 NewspeakInterpreter >> booleanCheatFalse [
 	"cheat the interpreter out of the pleasure of handling the next bytecode IFF it is a jump-on-boolean. Which it is, often enough when the current bytecode is something like bytecodePrimEqual"
+	<sharedCodeNamed: 'booleanCheatFalse' inCase: #bytecodePrimGreaterThan>
 	| bytecode offset |
-	<sharedCodeNamed: 'booleanCheatFalse' inCase: 179>
 
 	bytecode := self fetchByte.  "assume next bytecode is jumpIfFalse (99%)"
 	self internalPop: 2.
@@ -1519,8 +1519,8 @@ NewspeakInterpreter >> booleanCheatFalse [
 { #category : #utilities }
 NewspeakInterpreter >> booleanCheatTrue [
 	"cheat the interpreter out of the pleasure of handling the next bytecode IFF it is a jump-on-boolean. Which it is, often enough when the current bytecode is something like bytecodePrimEqual"
+	<sharedCodeNamed: 'booleanCheatTrue' inCase: #bytecodePrimLessThan>
 	| bytecode offset |
-	<sharedCodeNamed: 'booleanCheatTrue' inCase: 178>
 
 	bytecode := self fetchByte.  "assume next bytecode is jumpIfFalse (99%)"
 	self internalPop: 2.
@@ -2435,9 +2435,8 @@ NewspeakInterpreter >> commonAtPut: stringy [
 NewspeakInterpreter >> commonReturn [
 	"Note: Assumed to be inlined into the dispatch loop."
 
+	<sharedCodeNamed: 'commonReturn' inCase: #returnReceiver>
 	| nilOop thisCntx contextOfCaller localCntx localVal unwindMarked |
-	<inline: true>
-	<sharedCodeNamed: 'commonReturn' inCase: 120>
 
 	nilOop := nilObj. "keep in a register"
 	thisCntx := activeContext.
@@ -2497,7 +2496,7 @@ NewspeakInterpreter >> commonSend [
 	"Assume: messageSelector and argumentCount have been set, and that 
 	the receiver and arguments have been pushed onto the stack,"
 	"Note: This method is inlined into the interpreter dispatch loop."
-	<sharedCodeNamed: 'commonSend' inCase: 131>
+	<sharedCodeNamed: 'commonSend' inCase: #singleExtendedSendBytecode>
 	self fastLogSend: messageSelector.
 	self sendBreak: messageSelector + BaseHeaderSize
 		point: (self lengthOf: messageSelector)
@@ -3976,9 +3975,8 @@ NewspeakInterpreter >> internalPop: nItems thenPush: oop [
 
 { #category : #'control primitives' }
 NewspeakInterpreter >> internalPrimitiveValue [
+	<sharedCodeNamed: 'commonPrimitiveValue' inCase: #bytecodePrimValue>
 	| newContext blockArgumentCount initialIP |
-	<inline: true>
-	<sharedCodeNamed: 'commonPrimitiveValue' inCase: 201>
 	self initPrimCall.
 	newContext := self internalStackValue: argumentCount.
 	self assertClassOf: newContext is: (self splObj: ClassBlockContext).
@@ -4799,9 +4797,8 @@ NewspeakInterpreter >> normalSend [
 	"Assume: messageSelector and argumentCount have been set, and that 
 	the receiver and arguments have been pushed onto the stack,"
 	"Note: This method is inlined into the interpreter dispatch loop."
+	<sharedCodeNamed: 'normalSend' inCase: #singleExtendedSendBytecode>
 	| rcvr |
-	<inline: true>
-	<sharedCodeNamed: 'normalSend' inCase: 131>
 	rcvr := self internalStackValue: argumentCount.
 	lkupClass := self fetchClassOf: rcvr.
 	self commonSend
@@ -9436,9 +9433,13 @@ NewspeakInterpreter >> pushLiteralConstant: literalIndex [
 { #category : #'stack bytecodes' }
 NewspeakInterpreter >> pushLiteralConstantBytecode [
 	<expandCases>
-	self fetchNextBytecode.
-	"this bytecode will be expanded so that refs to currentBytecode below will be constant"
-	self pushLiteralConstant: (currentBytecode bitAnd: 16r1F)
+	self
+		cCode: "this bytecode will be expanded so that refs to currentBytecode below will be constant"
+			[self fetchNextBytecode.
+			 self pushLiteralConstant: (currentBytecode bitAnd: 16r1F)]
+		inSmalltalk: "Interpreter version has fetchNextBytecode out of order"
+			[self pushLiteralConstant: (currentBytecode bitAnd: 16r1F).
+			 self fetchNextBytecode]
 ]
 
 { #category : #'stack bytecodes' }
@@ -9451,9 +9452,13 @@ NewspeakInterpreter >> pushLiteralVariable: literalIndex [
 { #category : #'stack bytecodes' }
 NewspeakInterpreter >> pushLiteralVariableBytecode [
 	<expandCases>
-	self fetchNextBytecode.
-	"this bytecode will be expanded so that refs to currentBytecode below will be constant"
-	self pushLiteralVariable: (currentBytecode bitAnd: 16r1F)
+	self
+		cCode: "this bytecode will be expanded so that refs to currentBytecode below will be constant"
+			[self fetchNextBytecode.
+			 self pushLiteralVariable: (currentBytecode bitAnd: 16r1F)]
+		inSmalltalk: "Interpreter version has fetchNextBytecode out of order"
+			[self pushLiteralVariable: (currentBytecode bitAnd: 16r1F).
+			 self fetchNextBytecode]
 ]
 
 { #category : #'stack bytecodes' }
@@ -9493,9 +9498,13 @@ NewspeakInterpreter >> pushReceiverVariable: fieldIndex [
 { #category : #'stack bytecodes' }
 NewspeakInterpreter >> pushReceiverVariableBytecode [
 	<expandCases>
-	self fetchNextBytecode.
-	"this bytecode will be expanded so that refs to currentBytecode below will be constant"
-	self pushReceiverVariable: (currentBytecode bitAnd: 16rF)
+	self
+		cCode: "this bytecode will be expanded so that refs to currentBytecode below will be constant"
+			[self fetchNextBytecode.
+			 self pushReceiverVariable: (currentBytecode bitAnd: 16rF)]
+		inSmalltalk: "Interpreter version has fetchNextBytecode out of order"
+			[self pushReceiverVariable: (currentBytecode bitAnd: 16rF).
+			 self fetchNextBytecode]
 ]
 
 { #category : #'stack bytecodes' }
@@ -9523,9 +9532,13 @@ NewspeakInterpreter >> pushTemporaryVariable: temporaryIndex [
 { #category : #'stack bytecodes' }
 NewspeakInterpreter >> pushTemporaryVariableBytecode [
 	<expandCases>
-	self fetchNextBytecode.
-	"this bytecode will be expanded so that refs to currentBytecode below will be constant"
-	self pushTemporaryVariable: (currentBytecode bitAnd: 16rF)
+	self
+		cCode: "this bytecode will be expanded so that refs to currentBytecode below will be constant"
+			[self fetchNextBytecode.
+			 self pushTemporaryVariable: (currentBytecode bitAnd: 16rF)]
+		inSmalltalk: "Interpreter version has fetchNextBytecode out of order"
+			[self pushTemporaryVariable: (currentBytecode bitAnd: 16rF).
+			 self fetchNextBytecode]
 ]
 
 { #category : #'image save/restore' }
@@ -10673,19 +10686,31 @@ NewspeakInterpreter >> storeAndPopReceiverVariableBytecode [
 	 store check explicitly in order to help the translator produce better code."
 	| rcvr top |
 	<expandCases>
-	"this bytecode will be expanded so that refs to currentBytecode below will be constant"
-	rcvr := receiver.
-	top := self internalStackTop.
-	(self internalIsImmutable: rcvr) ifTrue:
-		[self internalPop: 1.
-		 self internalCannotAssign: top to: receiver withIndex: (currentBytecode bitAnd: 7)].
-	"cannot fetch next bytecode until after immutability check so pc is correct (set to
-	 following bytecode, not the bytecode after that) after attemptToAssign:withIndex:"
-	self fetchNextBytecode.
-	rcvr < youngStart ifTrue:
-		[self possibleRootStoreInto: rcvr value: top].
-	self storePointerUnchecked: (currentBytecode bitAnd: 7) ofObject: rcvr withValue: top.
-	self internalPop: 1
+	self
+		cCode: "this bytecode will be expanded so that refs to currentBytecode below will be constant"
+			[rcvr := receiver.
+			 top := self internalStackTop.
+			 (self internalIsImmutable: rcvr) ifTrue:
+				[self internalPop: 1.
+				 self internalCannotAssign: top to: receiver withIndex: (currentBytecode bitAnd: 7)].
+			 "cannot fetch next bytecode until after immutability check so pc is correct (set to
+			  following bytecode, not the bytecode after that) after attemptToAssign:withIndex:"
+			 self fetchNextBytecode.
+			 rcvr < youngStart ifTrue:
+				[self possibleRootStoreInto: rcvr value: top].
+			 self storePointerUnchecked: (currentBytecode bitAnd: 7) ofObject: rcvr withValue: top.
+			 self internalPop: 1]
+		inSmalltalk: "Interpreter version has fetchNextBytecode out of order"
+			[rcvr := receiver.
+			 top := self internalStackTop.
+			 (self internalIsImmutable: rcvr) ifTrue:
+				[self internalPop: 1.
+				 self internalCannotAssign: top to: receiver withIndex: (currentBytecode bitAnd: 7)].
+			 rcvr < youngStart ifTrue:
+				[self possibleRootStoreInto: rcvr value: top].
+			 self storePointerUnchecked: (currentBytecode bitAnd: 7) ofObject: rcvr withValue: top.
+			 self internalPop: 1.
+			 self fetchNextBytecode]
 ]
 
 { #category : #'stack bytecodes' }
@@ -10697,12 +10722,19 @@ NewspeakInterpreter >> storeAndPopRemoteTempLongBytecode [
 { #category : #'stack bytecodes' }
 NewspeakInterpreter >> storeAndPopTemporaryVariableBytecode [
 	<expandCases>
-	self fetchNextBytecode.
-	"this bytecode will be expanded so that refs to currentBytecode below will be constant"
-	self storePointerUnchecked: (currentBytecode bitAnd: 7) + TempFrameStart
-		ofObject: localHomeContext
-		withValue: self internalStackTop.
-	self internalPop: 1
+	self
+		cCode: "this bytecode will be expanded so that refs to currentBytecode below will be constant"
+			[self fetchNextBytecode.
+			 self storePointerUnchecked: (currentBytecode bitAnd: 7) + TempFrameStart
+				ofObject: localHomeContext
+				withValue: self internalStackTop.
+			self internalPop: 1]
+		inSmalltalk: "Interpreter version has fetchNextBytecode out of order"
+			[self storePointerUnchecked: (currentBytecode bitAnd: 7) + TempFrameStart
+				ofObject: localHomeContext
+				withValue: self internalStackTop.
+			self internalPop: 1.
+			self fetchNextBytecode]
 ]
 
 { #category : #contexts }
@@ -10846,10 +10878,30 @@ NewspeakInterpreter >> superclassSend [
 	"Send a message to self, starting lookup with the superclass of the class containing the currently executing method."
 	"Assume: messageSelector and argumentCount have been set, and that the receiver and arguments have been pushed onto the stack,"
 	"Note: This method is inlined into the interpreter dispatch loop."
-	<inline: true>
-	<sharedCodeNamed: 'commonSupersend' inCase: 133>
+	<sharedCodeNamed: 'commonSupersend' inCase: #singleExtendedSuperBytecode>
 	lkupClass := self superclassOf: (self methodClassOf: method).
 	self commonSend
+]
+
+{ #category : #'debug support' }
+NewspeakInterpreter >> symbolicMethod: aMethod [
+	<doNotGenerate>
+	| ts prim |
+	(ts := self transcript) ensureCr.
+	(prim := self primitiveIndexOf: aMethod) > 0 ifTrue:
+		[ts nextPutAll: '<primitive: '; print: prim; nextPut: $>.
+		(self isQuickPrimitiveIndex: prim) ifTrue:
+			[ts nextPutAll: ' quick method'; cr; flush.
+			 ^self].
+		ts cr].
+	(InstructionPrinter
+			on: (VMCompiledMethodProxy new
+					for: method
+					coInterpreter: self
+					objectMemory: self))
+		indent: 0;
+		printInstructionsOn: ts.
+	ts flush
 ]
 
 { #category : #'process primitive support' }

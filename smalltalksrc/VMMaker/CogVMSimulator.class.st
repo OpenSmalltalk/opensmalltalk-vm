@@ -14,6 +14,7 @@ Class {
 		'enableCog',
 		'byteCount',
 		'lastPollCount',
+		'lastExtPC',
 		'sendCount',
 		'printSends',
 		'traceOn',
@@ -69,11 +70,10 @@ CogVMSimulator >> allObjectsDo: objBlock [
 
 	| oop |
 	oop := objectMemory firstObject.
-	[oop < objectMemory endOfMemory] whileTrue:
-			[(objectMemory isFreeObject: oop)
-				ifFalse: [objBlock value: oop].
-			oop := objectMemory objectAfter: oop].
-
+	[oop < objectMemory freeStart] whileTrue:
+		[(objectMemory isFreeObject: oop) ifFalse:
+			[objBlock value: oop].
+		 oop := objectMemory objectAfter: oop]
 ]
 
 { #category : #'debug support' }
@@ -193,6 +193,7 @@ CogVMSimulator >> cCoerceSimple: value to: cTypeString [
 		[#'void *']				->	[value].
 		[#sqInt]					->	[value].
 		[#'void (*)()']			->	[value].
+		[#'void (*)(void)']		->	[value].
 		[#'CogMethod *']		->	[cogit cogMethodSurrogateAt: value asUnsignedInteger].
 		[#'CogBlockMethod *']	->	[cogit cogBlockMethodSurrogateAt: value asUnsignedInteger] }
 ]
@@ -288,7 +289,7 @@ CogVMSimulator >> ceSend: selector super: superNormalBar to: rcvr numArgs: numAr
 	"self printOop: rcvr"
 	self logSend: selector.
 	cogit assertCStackWellAligned.
-	self maybeCheckStackDepth: numArgs + 1 sp: stackPointer.
+	self maybeCheckStackDepth: numArgs + 1 sp: stackPointer pc: (stackPages longAt: stackPointer).
 	^super ceSend: selector super: superNormalBar to: rcvr numArgs: numArgs
 ]
 
@@ -298,7 +299,7 @@ CogVMSimulator >> ceSendAbort: selector to: rcvr numArgs: numArgs [
 	"self printOop: rcvr"
 	self logSend: selector.
 	cogit assertCStackWellAligned.
-	self maybeCheckStackDepth: 0 sp: stackPointer.
+	self maybeCheckStackDepth: 0 sp: stackPointer pc: (stackPages longAt: stackPointer).
 	^super ceSendAbort: selector to: rcvr numArgs: numArgs
 ]
 
@@ -344,7 +345,7 @@ CogVMSimulator >> ceTraceLinkedSend: theReceiver [
 				   and: [cogMethod cmNumArgs > cogit numRegArgs])
 					ifTrue: [cogMethod cmNumArgs + 1]
 					ifFalse: [0].
-		 self maybeCheckStackDepth: delta sp: stackPointer + BytesPerWord]. "skip return address for ceTraceLinkedSend call."
+		 self maybeCheckStackDepth: delta sp: stackPointer + BytesPerWord pc: (stackPages longAt: stackPointer)]. "skip return address for ceTraceLinkedSend call."
 	^#continue
 ]
 
@@ -747,6 +748,22 @@ CogVMSimulator >> executeCogBlock: cogMethod closure: closure mayContextSwitch: 
 	"(#(16r56E90 16r133D0) includes: cogMethod asInteger)  ifTrue: [self halt]."
 	"self halt."
 	^super executeCogBlock: cogMethod closure: closure mayContextSwitch: mayContextSwitch
+]
+
+{ #category : #'miscellaneous bytecodes' }
+CogVMSimulator >> extABytecode [
+	"224		11100000	aaaaaaaa	Extend A (Ext A = Ext A prev * 256 + Ext A)"
+	(extA = 0 and: [extB = 0]) ifTrue:
+		[lastExtPC := localIP].
+	^super extABytecode
+]
+
+{ #category : #'miscellaneous bytecodes' }
+CogVMSimulator >> extBBytecode [
+	"225		11100001	sbbbbbbb	Extend B (Ext B = Ext B prev * 256 + Ext B)"
+	(extA = 0 and: [extB = 0]) ifTrue:
+		[lastExtPC := localIP].
+	^super extBBytecode
 ]
 
 { #category : #'debugging traps' }
@@ -1279,6 +1296,7 @@ CogVMSimulator >> interpret [
 	self browserPluginInitialiseIfNeeded.
 	self internalizeIPandSP.
 	self fetchNextBytecode.
+	extA := extB := 0.
 	[true] whileTrue:
 		[self assertValidExecutionPointers.
 		 atEachStepBlock value. "N.B. may be nil"
@@ -1874,7 +1892,7 @@ CogVMSimulator >> markAndTraceInterpreterOops: fullGCFlag [
 ]
 
 { #category : #'debug support' }
-CogVMSimulator >> maybeCheckStackDepth: delta sp: sp [
+CogVMSimulator >> maybeCheckStackDepth: delta sp: sp pc: mcpc [
 	| asp bcpc cogHomeMethod cogBlockMethod csp debugStackPointers |
 	debugStackDepthDictionary ifNil: [^self].
 	(self isMachineCodeFrame: framePointer) ifFalse: [^self].
@@ -1884,16 +1902,14 @@ CogVMSimulator >> maybeCheckStackDepth: delta sp: sp [
 								at: cogHomeMethod methodObject
 								ifAbsentPut: [self debugStackPointersFor: cogHomeMethod methodObject].
 	bcpc := cogit
-				bytecodePCFor: (stackPages longAt: sp)
+				bytecodePCFor: mcpc
 				startBcpc: (cogHomeMethod = cogBlockMethod
-									ifTrue: [self startPCOfMethod: cogHomeMethod methodObject]
-									ifFalse: [self startPCOfClosure: (self pushedReceiverOrClosureOfFrame: framePointer)])
+								ifTrue: [self startPCOfMethod: cogHomeMethod methodObject]
+								ifFalse: [self startPCOfClosure: (self pushedReceiverOrClosureOfFrame: framePointer)])
 				in: cogBlockMethod.
 	self assert: bcpc ~= 0.
 	asp := self stackPointerIndexForFrame: framePointer WithSP: sp + BytesPerWord.
 	csp := debugStackPointers at: bcpc.
-	"self printFrame: framePointer WithSP: stackPointer."
-	"transcript ensureCr; print: bcpc; space; nextPutAll: (stackPages longAt: stackPointer) hex; space; print: asp - numArgs - 1; space; nextPutAll: (self stringOf: selector); cr; flush."
 	self assert: asp - delta + 1 = csp
 ]
 
@@ -1905,6 +1921,12 @@ CogVMSimulator >> memory [
 { #category : #'simulation only' }
 CogVMSimulator >> methodCacheSize [
 	^MethodCacheSize * BytesPerWord
+]
+
+{ #category : #'simulation only' }
+CogVMSimulator >> methodForContext: aContextOop [
+	self assert: (self isContext: aContextOop).
+	^objectMemory fetchPointer: MethodIndex ofObject: aContextOop
 ]
 
 { #category : #initialization }
@@ -2202,6 +2224,12 @@ CogVMSimulator >> ownerIndexOfThreadId: threadId [
 		inSuperclass: (cogThreadManager ifNil: [CoInterpreterPrimitives] ifNotNil: [CoInterpreterMT])
 ]
 
+{ #category : #'simulation only' }
+CogVMSimulator >> penultimateLiteralOf: aMethodOop [
+	self assert: (objectMemory isOopCompiledMethod: aMethodOop).
+	^self literal: (self literalCountOf: aMethodOop) - 2 ofMethod: aMethodOop
+]
+
 { #category : #'plugin support' }
 CogVMSimulator >> pluginEntryFor: mapIndex [
 	^mappedPluginEntries at: (mapIndex > 1000
@@ -2472,7 +2500,8 @@ CogVMSimulator >> primitiveObjectAtPut [
 	newValue := self stackValue: 0.
 	((self stackValue: 1) = ConstOne
 	 and: [(objectMemory isIntegerObject: newValue) not
-		   or: [(objectMemory integerValueOf: newValue) < 0]]) ifTrue:
+		   or: [MULTIPLEBYTECODESETS not
+			and: [(objectMemory integerValueOf: newValue) < 0]]]) ifTrue:
 		[self halt].
 	^super primitiveObjectAtPut
 ]
@@ -2715,52 +2744,6 @@ CogVMSimulator >> printStringOf: oop on: aStream [
 	aStream flush
 ]
 
-{ #category : #UI }
-CogVMSimulator >> promptHex: string [
-	| s |
-	s := UIManager default request: string, ' (hex)'.
-	^s notEmpty ifTrue:
-		[(s size > 3 and: [s third = $r]) ifTrue:
-			[s := s allButFirst: 3].
-		Integer readFrom: s readStream base: 16]
-]
-
-{ #category : #'bytecode routines' }
-CogVMSimulator >> pushLiteralConstantBytecode [
-
-	"Interpreter version has fetchNextBytecode out of order"
-	self pushLiteralConstant: (currentBytecode bitAnd: 16r1F).
-	self fetchNextBytecode.
-
-]
-
-{ #category : #'bytecode routines' }
-CogVMSimulator >> pushLiteralVariableBytecode [
-
-	"Interpreter version has fetchNextBytecode out of order"
-	self pushLiteralVariable: (currentBytecode bitAnd: 16r1F).
-	self fetchNextBytecode.
-
-]
-
-{ #category : #'bytecode routines' }
-CogVMSimulator >> pushReceiverVariableBytecode [
-
-	"Interpreter version has fetchNextBytecode out of order"
-	self pushReceiverVariable: (currentBytecode bitAnd: 16rF).
-	self fetchNextBytecode.
-
-]
-
-{ #category : #'bytecode routines' }
-CogVMSimulator >> pushTemporaryVariableBytecode [
-
-	"Interpreter version has fetchNextBytecode out of order"
-	self pushTemporaryVariable: (currentBytecode bitAnd: 16rF).
-	self fetchNextBytecode.
-
-]
-
 { #category : #'multi-threading simulation switch' }
 CogVMSimulator >> recordThreadSwitchTo: ownerIndex source: sourceCode [
 	"This method includes or excludes CoInterpreterMT methods as required.
@@ -2905,6 +2888,20 @@ CogVMSimulator >> sendInvokeCallbackContext: vmCallbackContext [
 	^self perform: #sendInvokeCallbackContext:
 		withArguments: {vmCallbackContext}
 		inSuperclass: (cogThreadManager ifNil: [CoInterpreterPrimitives] ifNotNil: [CoInterpreterMT])
+]
+
+{ #category : #UI }
+CogVMSimulator >> setBreakBlockFromString: aString [
+	| bString block |
+	bString := aString withBlanksTrimmed.
+	bString first ~= $[ ifTrue:
+		[bString := '[:ct|', bString, ']'].
+	block := [Compiler evaluate: bString for: self logged: false]
+				on: Error
+				do: [:ex|
+					UIManager default warn: ex messageText.
+					^self].
+	cogit breakBlock: block
 ]
 
 { #category : #'multi-threading simulation switch' }
@@ -3101,17 +3098,36 @@ CogVMSimulator >> stackZoneBase [
 	^cogCodeSize
 ]
 
+{ #category : #'simulation only' }
+CogVMSimulator >> startInContextSuchThat: aBlock [
+	"Change the active process's suspendedContext to its sender, which short-cuts the
+	 initialization of the system.  This can be a short-cut to running code, e.g. when doing
+		Smalltalk saveAs.
+		Compiler recompileAll
+	 via e.g.
+		vm startInContextSuchThat: [:ctxt| (vm stringOf: (vm penultimateLiteralOf: (vm methodForContext: ctxt))) = 'DoIt']"
+	<doNotGenerate>
+	| context activeProc |
+	activeProc := self activeProcess.
+	context := objectMemory fetchPointer: SuspendedContextIndex ofObject: activeProc.
+	[context = objectMemory nilObject ifTrue:
+		[self error: 'no context found'].
+	 aBlock value: context] whileFalse:
+		[context := objectMemory fetchPointer: SenderIndex ofObject: context].
+	objectMemory storePointer: SuspendedContextIndex ofObject: activeProc withValue: context.
+	"Now push a dummy return value."
+	objectMemory
+		storePointer: (self fetchStackPointerOf: context) + CtxtTempFrameStart
+		ofObject: context
+		withValue: objectMemory nilObject.
+	self storeInteger: StackPointerIndex
+		ofObject: context
+		withValue: (self fetchStackPointerOf: context) + 1
+]
+
 { #category : #'debugging traps' }
 CogVMSimulator >> startOfMemory [
 	self shouldNotImplement
-]
-
-{ #category : #'bytecode routines' }
-CogVMSimulator >> storeAndPopTemporaryVariableBytecode [
-	"Interpreter version has fetchNextBytecode out of order"
-	self itemporary: (currentBytecode bitAnd: 7) in: localFP put: self internalStackTop.
-	self fetchNextBytecode.
-	self internalPop: 1
 ]
 
 { #category : #'interpreter access' }
@@ -3139,69 +3155,6 @@ CogVMSimulator >> stringOf: oop [
 			strm nextPutAll: (i=nLongs
 							ifTrue: [chars copyFrom: 1 to: size-1\\BytesPerWord+1]
 							ifFalse: [chars])]]
-]
-
-{ #category : #'debug printing' }
-CogVMSimulator >> symbolicExtensions: offset at: ip inMethod: meth [
-	| type offset2 byte2 byte3 byte4 |
-	offset <=6 ifTrue: 
-		["Extended op codes 128-134"
-		byte2 := objectMemory fetchByte: ip+1 ofObject: meth.
-		offset <= 2 ifTrue:
-			["128-130:  extended pushes and pops"
-			type := byte2 >> 6 bitAnd: 3.
-			offset2 := byte2 bitAnd: 63.
-			offset = 0 ifTrue: 
-				[type = 0 ifTrue: [^ 'pushRcvr ' , offset2 printString].
-				type = 1 ifTrue: [^ 'pushTemp ' , offset2 printString].
-				type = 2  ifTrue: [^ 'pushLit ' , (offset2 + 1) printString].
-				type = 3 ifTrue: [^ 'pushLitVar ' , (offset2 + 1) printString]].
-			offset = 1 ifTrue: 
-				[type = 0 ifTrue: [^ 'storeIntoRcvr ' , offset2 printString].
-				type = 1 ifTrue: [^ 'storeIntoTemp ' , offset2 printString].
-				type = 2 ifTrue: [^ 'illegalStore'].
-				type = 3 ifTrue: [^ 'storeIntoLitVar ' , (offset2 + 1) printString]].
-			offset = 2 ifTrue: 
-				[type = 0 ifTrue: [^ 'storePopRcvr ' , offset2 printString].
-				type = 1 ifTrue: [^ 'storePopTemp ' , offset2 printString].
-				type = 2 ifTrue: [^ 'illegalStore'].
-				type = 3  ifTrue: [^ 'storePopLitVar ' , (offset2 + 1) printString]]].
-		"131-134: extended sends"
-		offset = 3 ifTrue:  "Single extended send"
-			[^ 'send ' , (self stringOf: (self literal: byte2 \\ 32 ofMethod: meth))].
-		offset = 4 ifTrue:    "Double extended do-anything"
-			[byte3 := objectMemory fetchByte: ip+2 ofObject: meth.
-			type := byte2 // 32.
-			type = 0 ifTrue: [^ 'send ' , (self stringOf: (self literal: byte3 ofMethod: meth))].
-			type = 1 ifTrue: [^ 'superSend ' , (self stringOf: (self literal: byte3 ofMethod: meth))].
-			type = 2 ifTrue: [^ 'pushRcvr ' , byte3 printString].
-			type = 3 ifTrue: [^ 'pushLit ' , byte3 printString].
-			type = 4 ifTrue: [^ 'pushLitVar ' , byte3 printString].
-			type = 5 ifTrue: [^ 'storeIntoRcvr ' , byte3 printString].
-			type = 6 ifTrue: [^ 'storePopRcvr ' , byte3 printString].
-			type = 7 ifTrue: [^ 'storeIntoLitVar ' , byte3 printString]].
-		offset = 5 ifTrue:  "Single extended send to super"
-			[^ 'superSend ' , (self stringOf: (self literal: byte2 \\ 32 ofMethod: meth))].
-		offset = 6 ifTrue:   "Second extended send"
-			[^ 'send ' , (self stringOf: (self literal: byte2 \\ 64 ofMethod: meth))]].
-	offset = 7 ifTrue: [^ 'doPop'].
-	offset = 8 ifTrue: [^ 'doDup'].
-	offset = 9 ifTrue: [^ 'pushActiveContext'].
-	byte2 := objectMemory fetchByte: ip+1 ofObject: meth.
-	offset = 10 ifTrue:
-		[^byte2 < 128
-			ifTrue: ['pushNewArrayOfSize: ', byte2 printString]
-			ifFalse: ['pushConsArrayWithElements: ', (byte2 - 128) printString]].
-	offset = 11 ifTrue: [^ 'unusedBytecode'].
-	byte3 := objectMemory fetchByte: ip+2 ofObject: meth.
-	offset = 12 ifTrue: [^'pushRemoteTemp: ', byte2 printString, ' inVectorAt: ', byte3 printString].
-	offset = 13 ifTrue: [^'storeIntoRemoteTemp: ', byte2 printString, ' inVectorAt: ', byte3 printString].
-	offset = 14 ifTrue: [^'popIntoRemoteTemp: ', byte2 printString, ' inVectorAt: ', byte3 printString].
-	"offset = 15"
-	byte4 := objectMemory fetchByte: ip+3 ofObject: meth.
-	^'pushClosureCopyNumCopiedValues: ', (byte2 bitShift: -4) printString,
-		' numArgs: ', (byte2 bitAnd: 16rF) printString,
-		' blockSize: ', ((byte3 * 256) + byte4) printString
 ]
 
 { #category : #'simulation only' }
@@ -3281,10 +3234,16 @@ CogVMSimulator >> testPCMapping [
 		[:o|
 		((objectMemory isCompiledMethod: o)
 		 and: [self methodShouldBeCogged: o]) ifTrue:
-			[[(cogit cog: o selector: objectMemory nilObject) isNil
-			   and: [cogCompiledCodeCompactionCalledFor]] whileTrue:
-				[cogMethodZone clearCogCompiledCode.
-				 cogCompiledCodeCompactionCalledFor := false].
+			[(self methodHasCogMethod: o) ifFalse:
+				[[([cogit cog: o selector: objectMemory nilObject]
+					on: Error
+					do: [:ex|
+						ex messageText = 'This won''t work...' ifTrue:
+							[ex resumeUnchecked: nil].
+						ex pass]) isNil
+				   and: [cogCompiledCodeCompactionCalledFor]] whileTrue:
+					[cogMethodZone clearCogCompiledCode.
+					 cogCompiledCodeCompactionCalledFor := false]].
 			 (self methodHasCogMethod: o)
 				ifTrue:
 					[transcript nextPut: $.; flush.
@@ -3414,7 +3373,9 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'print registers' action: [cogit processor printRegistersOn: transcript];
 		add: 'disassemble method/trampoline...' action: [(self promptHex: 'pc') ifNotNil: [:pc| cogit disassembleCodeAt: pc]];
 		add: 'disassemble method/trampoline at pc' action: [cogit disassembleCodeAt: cogit processor pc];
+		add: 'disassemble ext head frame method' action: [cogit disassembleMethod: (self frameMethod: framePointer)];
 		add: 'print oop...' action: [(self promptHex: 'print oop') ifNotNil: [:oop| self printOop: oop]];
+		add: 'long print oop...' action: [(self promptHex: 'print oop') ifNotNil: [:oop| self longPrintOop: oop]];
 		addLine;
 		add: 'inspect object memory' target: objectMemory action: #inspect;
 		add: 'inspect cointerpreter' action: #inspect;
@@ -3441,10 +3402,11 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 				ifFalse: ['print instructions each instruction'])
 			action: [cogit printInstructions: cogit printInstructions not];
 		addLine;
-		add: 'set break count...' action: [|s| s := UIManager default request: 'break count (dec)'.
-											s notEmpty ifTrue: [breakCount := Integer readFrom: s readStream]];
+		add: 'set break count...' action: #setBreakCount;
 		add: 'set break selector...' action: [|s| s := UIManager default request: 'break selector'.
 											s notEmpty ifTrue: [self setBreakSelector: s]];
+		add: 'set break block...' action: [|s| s := UIManager default request: 'break selector'.
+											s notEmpty ifTrue: [self setBreakBlockFromString: s]];
 		add: (printBytecodeAtEachStep
 				ifTrue: ['no print bytecode each bytecode']
 				ifFalse: ['print bytecode each bytecode'])

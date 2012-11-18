@@ -15,6 +15,11 @@ TGoToNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 	aStream nextPutAll: label.
 ]
 
+{ #category : #'C code generation' }
+TGoToNode >> emitCCodeOn: aStream prependToEnd: aNodeOrNil level: lev generator: gen [
+	self emitCCodeOn: aStream level: lev generator: gen
+]
+
 { #category : #testing }
 TGoToNode >> isGoTo [
 

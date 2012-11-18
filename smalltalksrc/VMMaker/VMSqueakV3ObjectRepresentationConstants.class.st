@@ -24,12 +24,14 @@ Class {
 		'HashMaskUnshifted',
 		'HeaderTypeShort',
 		'HeaderTypeSizeAndClass',
+		'ImmediateTagMask',
 		'ImmutabilityBit',
 		'LongSizeMask',
 		'MarkBit',
 		'RootBit',
 		'Size4Bit',
 		'SizeMask',
+		'SmallIntegerShift',
 		'TypeMask'
 	],
 	#category : #'VMMaker-Interpreter'

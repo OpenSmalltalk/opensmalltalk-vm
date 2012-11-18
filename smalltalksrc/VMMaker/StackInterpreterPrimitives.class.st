@@ -274,7 +274,7 @@ StackInterpreterPrimitives >> primitiveDoNamedPrimitiveWithArgs [
 	isArray := self isInstanceOfClassArray: spec.
 	(isArray
 	and: [(objectMemory lengthOf: spec) = 4
-	and: [(self primitiveIndexOfMethodHeader: methodHeader) = 117]]) ifFalse:
+	and: [(self primitiveIndexOfMethod: methodArg header: methodHeader) = 117]]) ifFalse:
 		[^self primitiveFailFor: -3]. "invalid methodArg state"
 
 	(self argumentCountOfMethodHeader: methodHeader) = arraySize ifFalse:
@@ -809,7 +809,7 @@ StackInterpreterPrimitives >> primitiveTerminateTo [
 				[(self frameCallerFP: theFP) ~= contextsFP ifTrue:
 					[stackedReceiverOffset := self frameStackedReceiverOffset: theFP.
 					 frameAbove := self findFrameAbove: contextsFP inPage: pageToStopOn.
-					 contextsIP := self frameCallerSavedIP: frameAbove.
+					 contextsIP := (self frameCallerSavedIP: frameAbove) asUnsignedInteger.
 					 newSP := self frameCallerSP: frameAbove.
 					 newFP := newSP - stackedReceiverOffset - BytesPerWord.
 					 theFP + stackedReceiverOffset
@@ -922,8 +922,7 @@ StackInterpreterPrimitives >> primitiveTerminateTo [
 			 self frameCallerContext: theFP put: aContextOrNil]
 		ifFalse: [objectMemory storePointer: SenderIndex ofObject: thisCtx withValue: aContextOrNil].
 	self pop: 1.
-	self assert: stackPage = stackPages mostRecentlyUsedPage.
-	^nil
+	self assert: stackPage = stackPages mostRecentlyUsedPage
 ]
 
 { #category : #'system control primitives' }
@@ -944,15 +943,15 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		9	incremental GCs since startup (read-only)
 		10	total milliseconds in incremental GCs since startup (read-only)
 		11	tenures of surving objects since startup (read-only)
-		12-20 specific to the translating VM
+		12-20 specific to ikp's JITTER VM
 		21	root table size (read-only)
 		22	root table overflows since startup (read-only)
 		23	bytes of extra memory to reserve for VM buffers, plugins, etc.
 		24	memory threshold above which shrinking object memory (rw)
 		25	memory headroom when growing object memory (rw)
-		26  interruptChecksEveryNms - force an ioProcessEvents every N milliseconds (rw)
+		26	interruptChecksEveryNms - force an ioProcessEvents every N milliseconds (rw)
 		27	number of times mark loop iterated for current IGC/FGC (read-only) includes ALL marking
-		28	number of times sweep loop iterated  for current IGC/FGC (read-only)
+		28	number of times sweep loop iterated for current IGC/FGC (read-only)
 		29	number of times make forward loop iterated for current IGC/FGC (read-only)
 		30	number of times compact move loop iterated for current IGC/FGC (read-only)
 		31	number of grow memory requests (read-only)
@@ -960,12 +959,12 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		33	number of root table entries used for current IGC/FGC (read-only)
 		34	number of allocations done before current IGC/FGC (read-only)
 		35	number of survivor objects after current IGC/FGC (read-only)
-		36  millisecond clock when current IGC/FGC completed (read-only)
-		37  number of marked objects for Roots of the world, not including Root Table entries for current IGC/FGC (read-only)
-		38  milliseconds taken by current IGC  (read-only)
-		39  Number of finalization signals for Weak Objects pending when current IGC/FGC completed (read-only)
-		40  BytesPerWord for this image
-		41  imageFormatVersion for the VM
+		36	millisecond clock when current IGC/FGC completed (read-only)
+		37	number of marked objects for Roots of the world, not including Root Table entries for current IGC/FGC (read-only)
+		38	milliseconds taken by current IGC (read-only)
+		39	Number of finalization signals for Weak Objects pending when current IGC/FGC completed (read-only)
+		40	BytesPerWord for this image
+		41	imageFormatVersion for the VM
 		42	number of stack pages in use
 		43	desired number of stack pages (stored in image file header, max 65535)
 		44	size of eden, in bytes
@@ -1005,6 +1004,7 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		objectMemory storePointerUnchecked: 8	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statIncrGCs).
 		objectMemory storePointerUnchecked: 9	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statIncrGCUsecs + 500 // 1000).
 		objectMemory storePointerUnchecked: 10	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statTenures).
+		"JITTER VM info"
 		11 to: 19 do:
 			[:i | objectMemory storePointerUnchecked: i ofObject: result withValue: ConstZero].
 		objectMemory storePointerUnchecked: 20	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory rootTableCount).
@@ -1047,7 +1047,8 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		objectMemory storePointerUnchecked: 61	ofObject: result withValue: self getCodeCompactionCount.
 		objectMemory storePointerUnchecked: 62	ofObject: result withValue: self getCodeCompactionMSecs.
 		objectMemory storePointerUnchecked: 63	ofObject: result withValue: self getCogMethodCount.
-		64 to: 68 do: "reserved for more Cog-related info"
+		objectMemory storePointerUnchecked: 64	ofObject: result withValue: (objectMemory booleanObjectOf: MULTIPLEBYTECODESETS).
+		65 to: 68 do: "reserved for more Cog-related info"
 			[:i | objectMemory storePointerUnchecked: i ofObject: result withValue: objectMemory nilObject].
 		objectMemory
 			storePointerUnchecked: 69
@@ -1078,7 +1079,7 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		arg = 9		ifTrue: [result := objectMemory integerObjectOf: objectMemory statIncrGCs].
 		arg = 10	ifTrue: [result := objectMemory integerObjectOf: objectMemory statIncrGCUsecs + 500 // 1000].
 		arg = 11	ifTrue: [result := objectMemory integerObjectOf: objectMemory statTenures].
-		(arg between: 12 and: 20) ifTrue: [result := ConstZero].
+		(arg between: 12 and: 20) ifTrue: [result := ConstZero]. "JITTER VM info"
 		arg = 21	ifTrue: [result := objectMemory integerObjectOf: objectMemory rootTableCount].
 		arg = 22	ifTrue: [result := objectMemory integerObjectOf: objectMemory statRootTableOverflows].
 		arg = 23	ifTrue: [result := objectMemory integerObjectOf: extraVMMemory].
@@ -1094,31 +1095,32 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		arg = 33	ifTrue: [result := objectMemory integerObjectOf: objectMemory statRootTableCount].
 		arg = 34	ifTrue: [result := objectMemory nilObject "was statAllocationCount"].
 		arg = 35	ifTrue: [result := objectMemory integerObjectOf: objectMemory statSurvivorCount].
-		arg = 36  	ifTrue: [result := objectMemory integerObjectOf: (self microsecondsToMilliseconds: objectMemory statGCEndUsecs)].
-		arg = 37  	ifTrue: [result := objectMemory integerObjectOf: objectMemory statSpecialMarkCount].
-		arg = 38  	ifTrue: [result := objectMemory integerObjectOf: objectMemory statIGCDeltaUsecs + 500 // 1000].
-		arg = 39  	ifTrue: [result := objectMemory integerObjectOf: statPendingFinalizationSignals].
-		arg = 40  	ifTrue: [result := objectMemory integerObjectOf: BytesPerWord].
-		arg = 41  	ifTrue: [result := objectMemory integerObjectOf: self imageFormatVersion].
-		arg = 42  	ifTrue: [result := objectMemory integerObjectOf: numStackPages].
-		arg = 43  	ifTrue: [result := objectMemory integerObjectOf: desiredNumStackPages].
-		arg = 44  	ifTrue: [result := objectMemory integerObjectOf: objectMemory edenBytes].
-		arg = 45  	ifTrue: [result := objectMemory integerObjectOf: desiredEdenBytes].
+		arg = 36	ifTrue: [result := objectMemory integerObjectOf: (self microsecondsToMilliseconds: objectMemory statGCEndUsecs)].
+		arg = 37	ifTrue: [result := objectMemory integerObjectOf: objectMemory statSpecialMarkCount].
+		arg = 38	ifTrue: [result := objectMemory integerObjectOf: objectMemory statIGCDeltaUsecs + 500 // 1000].
+		arg = 39	ifTrue: [result := objectMemory integerObjectOf: statPendingFinalizationSignals].
+		arg = 40	ifTrue: [result := objectMemory integerObjectOf: BytesPerWord].
+		arg = 41	ifTrue: [result := objectMemory integerObjectOf: self imageFormatVersion].
+		arg = 42	ifTrue: [result := objectMemory integerObjectOf: numStackPages].
+		arg = 43	ifTrue: [result := objectMemory integerObjectOf: desiredNumStackPages].
+		arg = 44	ifTrue: [result := objectMemory integerObjectOf: objectMemory edenBytes].
+		arg = 45	ifTrue: [result := objectMemory integerObjectOf: desiredEdenBytes].
 		arg = 46	ifTrue: [result := self getCogCodeSize].
 		arg = 47	ifTrue: [result := self getDesiredCogCodeSize].
 		arg = 48	ifTrue: [result := self getCogVMFlags].
 		arg = 49	ifTrue: [result := objectMemory integerObjectOf: self ioGetMaxExtSemTableSize].
-		(arg between: 50 and: 55) ifTrue: [result := objectMemory nilObject].
-		arg = 56  	ifTrue: [result := objectMemory integerObjectOf: statProcessSwitch].
-		arg = 57  	ifTrue: [result := objectMemory integerObjectOf: statIOProcessEvents].
-		arg = 58  	ifTrue: [result := objectMemory integerObjectOf: statForceInterruptCheck].
-		arg = 59  	ifTrue: [result := objectMemory integerObjectOf: statCheckForEvents].
-		arg = 60  	ifTrue: [result := objectMemory integerObjectOf: statStackOverflow].
-		arg = 61  	ifTrue: [result := objectMemory integerObjectOf: statStackPageDivorce].
+		"(arg between: 50 and: 55) ifTrue: [result := objectMemory nilObject]."
+		arg = 56	ifTrue: [result := objectMemory integerObjectOf: statProcessSwitch].
+		arg = 57	ifTrue: [result := objectMemory integerObjectOf: statIOProcessEvents].
+		arg = 58	ifTrue: [result := objectMemory integerObjectOf: statForceInterruptCheck].
+		arg = 59	ifTrue: [result := objectMemory integerObjectOf: statCheckForEvents].
+		arg = 60	ifTrue: [result := objectMemory integerObjectOf: statStackOverflow].
+		arg = 61	ifTrue: [result := objectMemory integerObjectOf: statStackPageDivorce].
 		arg = 62	ifTrue: [result := self getCodeCompactionCount].
 		arg = 63	ifTrue: [result := self getCodeCompactionMSecs].
 		arg = 64	ifTrue: [result := self getCogMethodCount].
-		(arg between: 65 and: 69) ifTrue: [result := objectMemory nilObject]. "reserved for more Cog-related info"
+		arg = 65	ifTrue: [result := objectMemory booleanObjectOf: MULTIPLEBYTECODESETS].
+		"(arg between: 66 and: 69) ifTrue: [result := objectMemory nilObject]." "reserved for more Cog-related info"
 		arg = 70 ifTrue: [result := self integerObjectOf: (self cCode: 'VM_PROXY_MAJOR' inSmalltalk: [self class vmProxyMajorVersion])].
 		arg = 71 ifTrue: [result := self integerObjectOf: (self cCode: 'VM_PROXY_MINOR' inSmalltalk: [self class vmProxyMinorVersion])].
 
@@ -1191,7 +1193,7 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 
 	self successful ifTrue:
 		[self pop: 3 thenPush: (objectMemory integerObjectOf: result).  "return old value"
-		^ nil].
+		^nil].
 
 	self primitiveFailFor: PrimErrInappropriate  "attempting to write a read-only or non-existent parameter"
 ]

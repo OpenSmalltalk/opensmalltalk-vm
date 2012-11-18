@@ -21,6 +21,20 @@ TCaseStmtNode >> bindVariableUsesIn: aDictionary [
 ]
 
 { #category : #transformations }
+TCaseStmtNode >> bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold in: codeGen [
+	"Answer either the receiver, if it contains no references to the given variables, or a new node with the given variables rebound."
+	| newExpression newCases |
+	newExpression := expression bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold in: codeGen.
+	newCases := cases collect: [:c| c bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold in: codeGen].
+	^(newExpression = expression
+	   and: [newCases = cases])
+		ifTrue: [self]
+		ifFalse: [self shallowCopy
+					setExpression: newExpression cases: newCases;
+					yourself]
+]
+
+{ #category : #transformations }
 TCaseStmtNode >> bindVariablesIn: aDictionary [
 
 	expression := expression bindVariablesIn: aDictionary.
@@ -34,7 +48,7 @@ TCaseStmtNode >> cases [
 ]
 
 { #category : #transformations }
-TCaseStmtNode >> customizeCase: caseParseTree forVar: varName from: firstIndex to: lastIndex in: codeGen method: aTMethod [
+TCaseStmtNode >> customizeCase: caseParseTree forVar: varName from: firstIndex to: lastIndex in: codeGen method: aTMethod expandedCases: seen [
 	"Return a collection of copies of the given parse tree, each of which has the value of the case index substituted for the given variable."
 
 	| newCases dict newCase |
@@ -43,22 +57,25 @@ TCaseStmtNode >> customizeCase: caseParseTree forVar: varName from: firstIndex t
 		[ :caseIndex |
 		dict := Dictionary new.
 		dict at: varName put: (TConstantNode new setValue: caseIndex).
-		newCase := caseParseTree copy bindVariableUsesIn: dict.
-		self processSharedCodeBlocks: newCase forCase: caseIndex in: codeGen method: aTMethod.
+		newCase := caseParseTree copy bindVariableUsesIn: dict andConstantFoldIf: true in: codeGen.
+		self processSharedCodeBlocks: newCase forCase: caseIndex in: codeGen method: aTMethod expandedCases: seen.
 		newCases addLast: newCase].
 	^newCases
 ]
 
 { #category : #transformations }
 TCaseStmtNode >> customizeShortCasesForDispatchVar: varName in: codeGen method: aTMethod [
-	"Make customized versions of a short bytecode methods, substituting a constant having the case index value for the given variable. This produces better code for short bytecodes such as instance variable pushes that encode the index of the instance variable in the bytecode."
+	"Make customized versions of short bytecode methods, substituting a constant having the case index value for the given variable.
+	 This produces better code for short bytecodes such as instance variable pushes that encode the index of the instance variable in the bytecode."
 
-	| newFirsts newLasts newCases l f case expanded |
+	| newFirsts newLasts newCases seen |
 	newFirsts := OrderedCollection new.
 	newLasts := OrderedCollection new.
 	newCases := OrderedCollection new.
+	seen := Set new.	"So that sharedCodeNamed:inCase:'s can be used in multiple bytecode set
+						 configurations we need to expand the code only once."
 	1 to: cases size do:
-		[ :i |
+		[ :i | | l f case expanded |
 		l := lasts at: i.
 		f := firsts at: i.
 		case := cases at: i.
@@ -67,10 +84,10 @@ TCaseStmtNode >> customizeShortCasesForDispatchVar: varName in: codeGen method: 
 		 and: [case shouldExpand]) ifTrue:
 				[newFirsts addAll: (f to: l) asArray.
 				 newLasts addAll: (f to: l) asArray.
-				 newCases addAll: (self customizeCase: case forVar: varName from: f to: l in: codeGen method: aTMethod).
+				 newCases addAll: (self customizeCase: case forVar: varName from: f to: l in: codeGen method: aTMethod expandedCases: seen).
 				 expanded := true].
 		expanded ifFalse:
-			[self processSharedCodeBlocks: case forCase: f in: codeGen method: aTMethod.
+			[self processSharedCodeBlocks: case forCase: f in: codeGen method: aTMethod expandedCases: seen.
 			 newFirsts addLast: f.
 			 newLasts addLast: l.
 			 newCases addLast: case]].
@@ -113,24 +130,37 @@ TCaseStmtNode >> emitCCodeOn: aStream addToEndOfCases: aNodeOrNil level: level g
 
 { #category : #'C code generation' }
 TCaseStmtNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
-
-	| indent |
-	indent := String new: level withAll: Character tab.
+	| printMod expansions duplicates |
+	printMod := false.
 	(expression isVariable
 	 and: [expression name = 'currentBytecode']) ifTrue:
-		[aStream nextPutAll: 'bytecodeDispatchDebugHook();'; cr; crtab: level.
+		[printMod := true.
+		 aStream nextPutAll: 'bytecodeDispatchDebugHook();'; cr; crtab: level.
 		 aCodeGen outputAsmLabel: 'bytecodeDispatch' on: aStream.
 		 aStream crtab: level].
 	aStream nextPutAll: 'switch ('.
 	expression emitCCodeOn: aStream level: level generator: aCodeGen.
 	aStream nextPutAll: ') {'; cr.
-	1 to: cases size do: [ :i |
-		(firsts at: i) to: (lasts at: i) do:
-			[ :caseIndex |
-			aStream nextPutAll: indent; nextPutAll: 'case '; print: caseIndex; nextPut: $:; cr].
-		(cases at: i) emitCCodeOn: aStream level: level + 1 generator: aCodeGen.
-		aStream nextPutAll: indent; tab; nextPutAll: 'break;'.
-		aStream cr].
+	expansions := cases collect:
+		[:case|
+		self filterCodeFrom:
+			(String streamContents:
+				[:s|
+				case emitCCodeOn: s level: 0 generator: aCodeGen])].
+	duplicates := Set new.
+	1 to: cases size do:
+		[:i|
+		(duplicates includes: i) ifFalse:
+			[(duplicates addAll: ((i to: cases size) select: [:j| (expansions at: i) = (expansions at: j)])) do:
+				[:k|
+				(firsts at: k) to: (lasts at: k) do:
+					[:caseIndex|
+					aStream tab: level; nextPutAll: 'case '; print: caseIndex; nextPut: $:.
+					(caseIndex > 255 and: [printMod]) ifTrue:
+						[aStream nextPutAll: ' /*'; print: (caseIndex bitAnd: 255); nextPutAll: '*/'].
+					aStream cr]].
+			(cases at: i) emitCCodeOn: aStream level: level + 1 generator: aCodeGen.
+			aStream tab: level + 1; nextPutAll: 'break;'; cr]].
 	aStream tab: level; nextPut: $}
 ]
 
@@ -138,6 +168,24 @@ TCaseStmtNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 TCaseStmtNode >> expression [
 
 	^expression
+]
+
+{ #category : #private }
+TCaseStmtNode >> filterCodeFrom: aString [
+	"elide any /* comment */ and VM_LABEL(...) occurrences from aString."
+	| m n i closer |
+	m := aString indexOfSubCollection: '/*'.
+	n := aString indexOfSubCollection: 'VM_LABEL('.
+	m + n = 0 ifTrue:
+		[^aString].
+	(m ~= 0 and: [n = 0 or: [m < n]])
+		ifTrue: [closer := '*/'. i := m]
+		ifFalse: [closer := ');'. i := n].
+	^(aString copyFrom: 1 to: i - 1),
+	  (self filterCodeFrom:
+		(aString
+			copyFrom: (aString indexOfSubCollection: closer startingAt: i + 2) + closer size
+			to: aString size))
 ]
 
 { #category : #testing }
@@ -192,45 +240,46 @@ TCaseStmtNode >> printOn: aStream level: level [
 ]
 
 { #category : #transformations }
-TCaseStmtNode >> processSharedCodeBlocks: caseTree forCase: caseIndex in: codeGen method: aTMethod [
+TCaseStmtNode >> processSharedCodeBlocks: caseTree forCase: caseIndex in: codeGen method: aTMethod expandedCases: seen [
 	"Process any shared code blocks in the case parse tree for the given case, either inlining them or making them a 'goto sharedLabel'."
-	| map meth sharedNode exitLabel |
+	| caseMethod map meth sharedNode exitLabel |
 	exitLabel := nil.
-
+	"caseTree is expected to be a TStmtListNode whose first element is a comment
+	 and whose second element is a TInlineNode for a method."
+	caseMethod := caseTree statements second method.
 	[sharedNode := nil.
-	map := IdentityDictionary new.
-	caseTree nodesDo:[:node|
+	 map := IdentityDictionary new.
+	 caseTree nodesDo:
+		[:node|
 		(node isSend 
-			and:[(meth := codeGen methodNamed: node selector) notNil
-			and:[meth sharedCase notNil]]) ifTrue:[
-			meth sharedCase = caseIndex ifTrue:[
-				sharedNode := meth.
-				map at: node put: (TLabeledCommentNode new setComment: 'goto ', meth sharedLabel).
-			] ifFalse:[
-				map at: node put: (TGoToNode new setLabel: meth sharedLabel).
-			].
-		].
-	].
-	caseTree replaceNodesIn: map.
-	"recursively expand"
-	sharedNode == nil] whileFalse:[
-		meth := sharedNode copy.
-		(meth hasReturn) ifTrue: [
-			exitLabel ifNil:[
-				exitLabel := aTMethod unusedLabelForInliningInto: aTMethod.
-				aTMethod labels add: exitLabel.
-			].
-			meth exitVar: nil label: exitLabel.
-		].
-		meth renameLabelsForInliningInto: aTMethod.
-		aTMethod labels addAll: meth labels.
-		caseTree setStatements: (caseTree statements copyWith: meth asInlineNode).
-	].
-	exitLabel ifNotNil:[
-		caseTree setStatements: (caseTree statements copyWith:
-			(TLabeledCommentNode new setLabel: exitLabel comment: 'end case')).
-
-	].
+		and:[(meth := codeGen methodNamed: node selector) notNil
+		and:[meth sharedCase notNil]]) ifTrue:
+			[(meth sharedCase = (meth sharedCase isSymbol
+									ifTrue: [caseMethod selector]
+									ifFalse: [caseIndex])
+			  and: [(seen includes: meth sharedLabel) not])
+				ifTrue:
+					[sharedNode := meth.
+					 seen add: meth sharedLabel.
+					 map at: node put: (TLabeledCommentNode new setComment: 'goto ', meth sharedLabel)]
+				ifFalse:
+					[map at: node put: (TGoToNode new setLabel: meth sharedLabel)]]].
+	 caseTree replaceNodesIn: map.
+	 "recursively expand"
+	 sharedNode == nil]
+		whileFalse:
+			[meth := sharedNode copy.
+			 meth hasReturn ifTrue:
+				[exitLabel ifNil:
+					[exitLabel := aTMethod unusedLabelForInliningInto: aTMethod.
+					 aTMethod labels add: exitLabel].
+				meth exitVar: nil label: exitLabel].
+			meth renameLabelsForInliningInto: aTMethod.
+			aTMethod labels addAll: meth labels.
+			caseTree setStatements: (caseTree statements copyWith: meth asInlineNode)].
+	exitLabel ifNotNil:
+		[caseTree setStatements: (caseTree statements copyWith:
+			(TLabeledCommentNode new setLabel: exitLabel comment: 'end case'))]
 ]
 
 { #category : #transformations }
@@ -246,6 +295,12 @@ TCaseStmtNode >> replaceNodesIn: aDictionary [
 		expression := expression replaceNodesIn: aDictionary.
 		cases := cases collect: [ :c | c replaceNodesIn: aDictionary ].
 		self]
+]
+
+{ #category : #private }
+TCaseStmtNode >> setExpression: newExpression cases: newCases [
+	expression := newExpression.
+	cases := newCases
 ]
 
 { #category : #accessing }

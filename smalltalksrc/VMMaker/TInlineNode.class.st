@@ -13,6 +13,18 @@ TInlineNode >> bindVariableUsesIn: aDictionary [
 
 ]
 
+{ #category : #transformations }
+TInlineNode >> bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold in: codeGen [
+	"Answer either the receiver, if it contains no references to the given variables, or a new node with the given variables rebound."
+	| newMethod |
+	newMethod := method bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold in: codeGen.
+	^newMethod = method
+		ifTrue: [self]
+		ifFalse: [self shallowCopy
+					method: newMethod;
+					yourself]
+]
+
 { #category : #'C code generation' }
 TInlineNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 	method emitInlineOn: aStream level: level generator: aCodeGen.

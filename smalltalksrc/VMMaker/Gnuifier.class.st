@@ -125,14 +125,17 @@ Gnuifier >> gnuifyFrom: inFileStream to: outFileStream [
 						"reached end of variables"
 						inInterpretVars := false.
 						outLine := '    JUMP_TABLE;'.
-						extraOutLine := inLine ] ]
+						extraOutLine := '\#if MULTIPLEBYTECODESETS\	if(!asserta((sizeof(jumpTable)/sizeof(jumpTable[0])) >= 512))\		error("jumpTable too small");\#endif\' withCRs]]
 				ifFalse: [
 				inInterpret ifTrue: [
 					"working inside interpret(); translate the switch statement"
 					(inLine beginsWith: '		case ') ifTrue: [
-						| caseLabel |
-						caseLabel := (inLine findTokens: '	 :') second.
-						outLine := '		CASE(', caseLabel, ')' ].
+						| tokens |
+						tokens := inLine findTokens: '	 :'.
+						outLine := '		CASE(', tokens second, ')'.
+						tokens size > 2 ifTrue:
+							[(tokens allButFirst: 2) do:
+								[:token| outLine := outLine, ' ', token]]].
 					inLine = '			break;' ifTrue: [
 						outLine := '			BREAK;' ].
 					inLine = '}' ifTrue: [
