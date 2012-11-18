@@ -259,6 +259,12 @@ ObjectMemory class >> initializeCompactClassIndices [
 ]
 
 { #category : #initialization }
+ObjectMemory class >> initializeImmediates [
+	"The Squeak VM supports 31-bit immediate 2's compliment SmallInteger objects as the only immediate type."
+	ImmediateTagMask := SmallIntegerShift := 1
+]
+
+{ #category : #initialization }
 ObjectMemory class >> initializeObjectHeaderConstants [
 
 	BytesPerWord ifNil: [BytesPerWord := 4].  "May get called on fileIn, so supply default"
@@ -419,6 +425,7 @@ ObjectMemory class >> initializeWithOptions: optionsDictionary [
 	DoAssertionChecks := optionsDictionary at: #DoAssertionChecks ifAbsent: [false].
 	DoExpensiveAssertionChecks := optionsDictionary at: #DoExpensiveAssertionChecks ifAbsent: [false].
 
+	self initializeImmediates.
 	self initializeSpecialObjectIndices.
 	self initializeCompactClassIndices.
 	self initializePrimitiveErrorCodes.
@@ -848,6 +855,12 @@ ObjectMemory >> biasToGrowCheckGCLimit [
 			gcBiasToGrowThreshold := youngStart - memory].
 
 					
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> booleanObjectOf: bool [
+	<inline: true>
+	^bool ifTrue: [trueObj] ifFalse: [falseObj]
 ]
 
 { #category : #'indexing primitive support' }

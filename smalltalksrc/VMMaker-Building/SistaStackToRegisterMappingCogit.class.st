@@ -106,7 +106,7 @@ SistaStackToRegisterMappingCogit >> compileBlockBodies [
 		 initialCounterIndex := counterIndex.
 		 [self compileBlockEntry: blockStart.
 		  initialStackPtr := simStackPtr.
-		  (result := self compileAbstractInstructionsFrom: blockStart startpc + blockStart numInitialNils
+		  (result := self compileAbstractInstructionsFrom: blockStart startpc + ((self pushNilSize: methodObj) * blockStart numInitialNils)
 						through: blockStart startpc + blockStart span - 1) < 0 ifTrue:
 			[^result].
 		  "If the final simStackPtr is less than the initial simStackPtr then scanBlock: over-
@@ -385,7 +385,7 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	 inline the comparison we decrement the counter (without writing it back)
 	 and if it trips simply abort the inlining, falling back to the normal send which
 	 will then continue to the conditional branch which will trip and enter the abort."
-	| branchPC postBranchPC targetBytecodePC branchBytecode primDescriptor branchDescriptor
+	| nextPC postBranchPC targetBytecodePC primDescriptor branchDescriptor nExts
 	  rcvrIsInt argIsInt rcvrInt argInt result jumpNotSmallInts inlineCAB annotateInst counter countTripped |
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
@@ -425,9 +425,12 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 											ifTrue: [objectMemory trueObject]
 											ifFalse: [objectMemory falseObject])].
 
-	branchPC := bytecodePC + primDescriptor numBytes.
-	branchBytecode := objectMemory fetchByte: branchPC ofObject: methodObj.
-	branchDescriptor := self generatorAt: branchBytecode.
+	nextPC := bytecodePC + primDescriptor numBytes.
+	nExts := 0.
+	[branchDescriptor := self generatorAt: (objectMemory fetchByte: nextPC ofObject: methodObj) + (byte0 bitAnd: 256).
+	 branchDescriptor isExtension] whileTrue:
+		[nExts := nExts + 1.
+		 nextPC := nextPC + branchDescriptor numBytes].
 	"Only interested in inlining if followed by a conditional branch."
 	inlineCAB := branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse].
 	"Further, only interested in inlining = and ~= if there's a SmallInteger constant involved.
@@ -437,10 +440,10 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	inlineCAB ifFalse:
 		[^self genSpecialSelectorSend].
 
-	targetBytecodePC := branchPC
+	targetBytecodePC := nextPC
 							+ branchDescriptor numBytes
-							+ (self spanFor: branchDescriptor at: branchPC byte0: branchBytecode in: methodObj).
-	postBranchPC := branchPC + branchDescriptor numBytes.
+							+ (self spanFor: branchDescriptor at: nextPC exts: nExts in: methodObj).
+	postBranchPC := nextPC + branchDescriptor numBytes.
 	argIsInt
 		ifTrue:
 			[(self ssValue: 1) popToReg: ReceiverResultReg.
@@ -484,7 +487,8 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	countTripped jmpTarget: (jumpNotSmallInts jmpTarget: self Label).
 	argIsInt ifTrue:
 		[self MoveCq: argInt R: Arg0Reg].
-	^self genMarshalledSend: (coInterpreter specialSelector: byte0 - 176) numArgs: 1
+	^self genMarshalledSend: (coInterpreter specialSelector: byte0 - self firstSpecialSelectorBytecodeOffset)
+		numArgs: 1
 ]
 
 { #category : #'generate machine code' }
@@ -588,7 +592,7 @@ SistaStackToRegisterMappingCogit >> mapFor: cogMethod bcpc: startbcpc performUnt
 	<var: #functionSymbol declareC: 'sqInt (*functionSymbol)(BytecodeDescriptor * desc, char *mcpc, sqInt bcpc, void *arg)'>
 	<var: #arg type: #'void *'>
 	| isInBlock mcpc bcpc endbcpc map mapByte homeMethod aMethodObj result
-	  latestContinuation byte descriptor |
+	  latestContinuation byte descriptor bsOffset nExts |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<var: #homeMethod type: #'CogMethod *'>
 	self assert: cogMethod stackCheckOffset > 0.
@@ -605,7 +609,8 @@ SistaStackToRegisterMappingCogit >> mapFor: cogMethod bcpc: startbcpc performUnt
 						 or: [(objectMemory byteAt: map) >> AnnotationShift = IsDisplacementX2N]]).
 			 latestContinuation := startbcpc.
 			 aMethodObj := homeMethod methodObject.
-			 endbcpc := (objectMemory byteSizeOf: aMethodObj) - 1]
+			 endbcpc := (objectMemory byteSizeOf: aMethodObj) - 1.
+			 bsOffset := self bytecodeSetOffsetForHeader: homeMethod methodHeader]
 		ifFalse:
 			[isInBlock := true.
 			 homeMethod := cogMethod cmHomeMethod.
@@ -618,12 +623,14 @@ SistaStackToRegisterMappingCogit >> mapFor: cogMethod bcpc: startbcpc performUnt
 				[map := map - 1].
 			 map := map - 1. "skip fiducial; i.e. the map entry for the pc immediately following the method header."
 			 aMethodObj := homeMethod methodObject.
-			 bcpc := startbcpc - BlockCreationBytecodeSize.
-			 byte := objectMemory fetchByte: bcpc ofObject: aMethodObj.
+			 bcpc := startbcpc - (self blockCreationBytecodeSizeForHeader: homeMethod methodHeader).
+			 bsOffset := self bytecodeSetOffsetForHeader: homeMethod methodHeader.
+			 byte := (objectMemory fetchByte: bcpc ofObject: aMethodObj) + bsOffset.
 			 descriptor := self generatorAt: byte.
-			 endbcpc := self nextBytecodePCFor: descriptor at: bcpc byte0: byte in: aMethodObj].
+			 endbcpc := self nextBytecodePCFor: descriptor at: bcpc exts: -1 in: aMethodObj].
 	bcpc := startbcpc.
 	mcpc := cogMethod asUnsignedInteger + cogMethod stackCheckOffset.
+	nExts := 0.
 	"as a hack for collecting counters, remember the prev mcpc in a static variable."
 	prevMapAbsPCMcpc := 0.
 	"The stack check maps to the start of the first bytecode,
@@ -646,7 +653,7 @@ SistaStackToRegisterMappingCogit >> mapFor: cogMethod bcpc: startbcpc performUnt
 				annotation := mapByte >> AnnotationShift.
 				mcpc := mcpc + (mapByte bitAnd: DisplacementMask).
 				(self isPCMappedAnnotation: annotation) ifTrue:
-					[[byte := objectMemory fetchByte: bcpc ofObject: aMethodObj.
+					[[byte := (objectMemory fetchByte: bcpc ofObject: aMethodObj) + bsOffset.
 					  descriptor := self generatorAt: byte.
 					  isInBlock
 						ifTrue: [bcpc >= endbcpc ifTrue: [^0]]
@@ -654,19 +661,20 @@ SistaStackToRegisterMappingCogit >> mapFor: cogMethod bcpc: startbcpc performUnt
 							[(descriptor isReturn and: [bcpc > latestContinuation]) ifTrue: [^0].
 							 (descriptor isBranch or: [descriptor isBlockCreation]) ifTrue:
 								[| targetPC |
-								 targetPC := self latestContinuationPCFor: descriptor at: bcpc byte0: byte in: aMethodObj.
+								 targetPC := self latestContinuationPCFor: descriptor at: bcpc exts: nExts in: aMethodObj.
 								 latestContinuation := latestContinuation max: targetPC]].
-					  nextBcpc := self nextBytecodePCFor: descriptor at: bcpc byte0: byte in: aMethodObj.
+					  nextBcpc := self nextBytecodePCFor: descriptor at: bcpc exts: nExts in: aMethodObj.
 					  descriptor isMapped
 					  or: [isInBlock and: [descriptor isMappedInBlock]]] whileFalse:
-						[bcpc := nextBcpc].
+						[bcpc := nextBcpc.
+						 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]].
 					"All subsequent bytecodes except backward branches map to the
 					 following bytecode. Backward branches map to themselves other-
 					 wise mapping could cause premature breaking out of loops." 
 					result := self perform: functionSymbol
 									with: descriptor
 									with: (self cCoerceSimple: mcpc to: #'char *')
-									with: (descriptor isBackwardBranch
+									with: ((self isBackwardBranch: descriptor at: bcpc exts: nExts in: aMethodObj)
 											ifTrue: [bcpc]
 											ifFalse: [bcpc + descriptor numBytes])
 									with: arg.
@@ -952,7 +960,7 @@ SistaStackToRegisterMappingCogit >> scanMethod [
 		- how many blocks it creates
 		- how many counters it needs/conditional branches it contains
 	 Answer the block count or on error a negative error code"
-	| latestContinuation descriptor pc numBlocks distance targetPC |
+	| latestContinuation nExts descriptor pc numBlocks distance targetPC |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	needsFrame := false.
 	numCounters := 0.
@@ -961,8 +969,9 @@ SistaStackToRegisterMappingCogit >> scanMethod [
 		[^0].
 	numBlocks := 0.
 	pc := latestContinuation := initialPC.
+	nExts := 0.
 	[pc <= endPC] whileTrue:
-		[byte0 := objectMemory fetchByte: pc ofObject: methodObj.
+		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
 		descriptor := self generatorAt: byte0.
 		(descriptor isReturn
 		 and: [pc >= latestContinuation]) ifTrue:
@@ -972,9 +981,9 @@ SistaStackToRegisterMappingCogit >> scanMethod [
 			  or: [self perform: descriptor needsFrameFunction with: false]]) ifTrue:
 			[needsFrame := true].
 		descriptor isBranch ifTrue:
-			[distance := self spanFor: descriptor at: pc byte0: byte0 in: methodObj.
+			[distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.
-			 descriptor isBackwardBranch
+			 (self isBackwardBranch: descriptor at: pc exts: nExts in: methodObj)
 				ifTrue: [self initializeFixupAt: targetPC - initialPC]
 				ifFalse:
 					[latestContinuation := latestContinuation max: targetPC.
@@ -982,9 +991,10 @@ SistaStackToRegisterMappingCogit >> scanMethod [
 						[numCounters := numCounters + 1]]].
 		descriptor isBlockCreation ifTrue:
 			[numBlocks := numBlocks + 1.
-			 distance := self spanFor: descriptor at: pc byte0: byte0 in: methodObj.
+			 distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.
 			 latestContinuation := latestContinuation max: targetPC].
-		pc := pc + descriptor numBytes].
+		pc := pc + descriptor numBytes.
+		nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]].
 	^numBlocks
 ]

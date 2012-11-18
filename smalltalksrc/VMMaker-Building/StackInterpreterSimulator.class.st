@@ -296,7 +296,8 @@ StackInterpreterSimulator >> dispatchOn: anInteger in: selectorArray [
 	The given integer must be between 0 and selectorArray size-1, inclusive.
 	For speed, no range test is done, since it is done by the at: operation.
 	Note that, unlike many other arrays used in the Interpreter, this method expect NO CArrayAccessor wrapping - it would duplicate the +1. Maybe this would be better updated to make it all uniform"
-
+	selectorArray == BytecodeTable ifTrue:
+		[self assert: (anInteger between: bytecodeSetSelector and: bytecodeSetSelector + 255)].
 	self perform: (selectorArray at: (anInteger + 1)).
 ]
 
@@ -1109,6 +1110,12 @@ StackInterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize
 	^ results
 ]
 
+{ #category : #'simulation only' }
+StackInterpreterSimulator >> methodForContext: aContextOop [
+	self assert: (self isContext: aContextOop).
+	^objectMemory fetchPointer: MethodIndex ofObject: aContextOop
+]
+
 { #category : #'debug support' }
 StackInterpreterSimulator >> nameOfClass: classOop [
 	(objectMemory sizeBitsOf: classOop) = metaclassSizeBits ifTrue:
@@ -1275,6 +1282,12 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 	Utilities informUser: 'Relocating object pointers...'
 				during: [self initializeInterpreter: bytesToShift].
 
+]
+
+{ #category : #'simulation only' }
+StackInterpreterSimulator >> penultimateLiteralOf: aMethodOop [
+	self assert: (objectMemory isOopCompiledMethod: aMethodOop).
+	^self literal: (self literalCountOf: aMethodOop) - 2 ofMethod: aMethodOop
 ]
 
 { #category : #'debugging traps' }
@@ -1678,56 +1691,10 @@ StackInterpreterSimulator >> profileSends: nBytecodes [
 	self close
 ]
 
-{ #category : #UI }
-StackInterpreterSimulator >> promptHex: string [
-	| s |
-	s := UIManager default request: string, ' (hex)'.
-	^s notEmpty ifTrue:
-		[(s size > 3 and: [s third = $r]) ifTrue:
-			[s := s allButFirst: 3].
-		Integer readFrom: s readStream base: 16]
-]
-
-{ #category : #'bytecode routines' }
-StackInterpreterSimulator >> pushLiteralConstantBytecode [
-
-	"Interpreter version has fetchNextBytecode out of order"
-	self pushLiteralConstant: (currentBytecode bitAnd: 16r1F).
-	self fetchNextBytecode.
-
-]
-
-{ #category : #'bytecode routines' }
-StackInterpreterSimulator >> pushLiteralVariableBytecode [
-
-	"Interpreter version has fetchNextBytecode out of order"
-	self pushLiteralVariable: (currentBytecode bitAnd: 16r1F).
-	self fetchNextBytecode.
-
-]
-
 { #category : #'debugging traps' }
 StackInterpreterSimulator >> pushMaybeContextReceiverVariable: index [
 	"(index = SenderIndex or: [index = ClosureIndex]) ifTrue: [self halt]."
 	^super pushMaybeContextReceiverVariable: index
-]
-
-{ #category : #'bytecode routines' }
-StackInterpreterSimulator >> pushReceiverVariableBytecode [
-
-	"Interpreter version has fetchNextBytecode out of order"
-	self pushReceiverVariable: (currentBytecode bitAnd: 16rF).
-	self fetchNextBytecode.
-
-]
-
-{ #category : #'bytecode routines' }
-StackInterpreterSimulator >> pushTemporaryVariableBytecode [
-
-	"Interpreter version has fetchNextBytecode out of order"
-	self pushTemporaryVariable: (currentBytecode bitAnd: 16rF).
-	self fetchNextBytecode.
-
 ]
 
 { #category : #initialization }
@@ -1997,19 +1964,60 @@ StackInterpreterSimulator >> sqShrinkMemory: oldLimit By: delta [
 	^ oldLimit
 ]
 
+{ #category : #'simulation only' }
+StackInterpreterSimulator >> startInContextSuchThat: aBlock [
+	"Change the active process's suspendedContext to its sender, which short-cuts the
+	 initialization of the system.  This can be a short-cut to running code, e.g. when doing
+		Smalltalk saveAs.
+		Compiler recompileAll
+	 via e.g.
+		vm startInContextSuchThat: [:ctxt| (vm stringOf: (vm penultimateLiteralOf: (vm methodForContext: ctxt))) = 'DoIt']"
+	<doNotGenerate>
+	| context activeProc |
+	activeProc := self activeProcess.
+	context := objectMemory fetchPointer: SuspendedContextIndex ofObject: activeProc.
+	[context = objectMemory nilObject ifTrue:
+		[self error: 'no context found'].
+	 aBlock value: context] whileFalse:
+		[context := objectMemory fetchPointer: SenderIndex ofObject: context].
+	objectMemory storePointer: SuspendedContextIndex ofObject: activeProc withValue: context.
+	"Now push a dummy return value."
+	objectMemory
+		storePointer: (self fetchStackPointerOf: context) + CtxtTempFrameStart
+		ofObject: context
+		withValue: objectMemory nilObject.
+	self storeInteger: StackPointerIndex
+		ofObject: context
+		withValue: (self fetchStackPointerOf: context) + 1
+]
+
+{ #category : #'simulation only' }
+StackInterpreterSimulator >> startInSender [
+	"Change the active process's suspendedContext to its sender, which short-cuts the
+	 initialization of the system.  This can be a short-cut to running code, e.g. when doing
+		Smalltalk saveAs.
+		Compiler recompileAll"
+	
+	| activeContext activeProc senderContext |
+	activeProc := self activeProcess.
+	activeContext := objectMemory fetchPointer: SuspendedContextIndex ofObject: activeProc.
+	senderContext := objectMemory fetchPointer: SenderIndex ofObject: activeContext.
+	objectMemory storePointer: SuspendedContextIndex ofObject: activeProc withValue: senderContext.
+	"Now push a dummy return value."
+	objectMemory
+		storePointer: (self fetchStackPointerOf: senderContext) + CtxtTempFrameStart
+		ofObject: senderContext
+		withValue: objectMemory nilObject.
+	self storeInteger: StackPointerIndex
+		ofObject: senderContext
+		withValue: (self fetchStackPointerOf: senderContext) + 1
+]
+
 { #category : #initialization }
 StackInterpreterSimulator >> startOfMemory [
 	"Return the start of object memory."
 
 	^ 0
-]
-
-{ #category : #'bytecode routines' }
-StackInterpreterSimulator >> storeAndPopTemporaryVariableBytecode [
-	"Interpreter version has fetchNextBytecode out of order"
-	self temporary: (currentBytecode bitAnd: 7) in: localFP put: self internalStackTop.
-	self fetchNextBytecode.
-	self internalPop: 1
 ]
 
 { #category : #'debug support' }
@@ -2032,69 +2040,6 @@ StackInterpreterSimulator >> success: successBoolean [
 	"successBoolean ifFalse:
 		[self halt]."
 	^super success: successBoolean
-]
-
-{ #category : #'debug printing' }
-StackInterpreterSimulator >> symbolicExtensions: offset at: ip inMethod: meth [
-	| type offset2 byte2 byte3 byte4 |
-	offset <=6 ifTrue: 
-		["Extended op codes 128-134"
-		byte2 := objectMemory fetchByte: ip+1 ofObject: meth.
-		offset <= 2 ifTrue:
-			["128-130:  extended pushes and pops"
-			type := byte2 >> 6 bitAnd: 3.
-			offset2 := byte2 bitAnd: 63.
-			offset = 0 ifTrue: 
-				[type = 0 ifTrue: [^ 'pushRcvr ' , offset2 printString].
-				type = 1 ifTrue: [^ 'pushTemp ' , offset2 printString].
-				type = 2  ifTrue: [^ 'pushLit ' , (offset2 + 1) printString].
-				type = 3 ifTrue: [^ 'pushLitVar ' , (offset2 + 1) printString]].
-			offset = 1 ifTrue: 
-				[type = 0 ifTrue: [^ 'storeIntoRcvr ' , offset2 printString].
-				type = 1 ifTrue: [^ 'storeIntoTemp ' , offset2 printString].
-				type = 2 ifTrue: [^ 'illegalStore'].
-				type = 3 ifTrue: [^ 'storeIntoLitVar ' , (offset2 + 1) printString]].
-			offset = 2 ifTrue: 
-				[type = 0 ifTrue: [^ 'storePopRcvr ' , offset2 printString].
-				type = 1 ifTrue: [^ 'storePopTemp ' , offset2 printString].
-				type = 2 ifTrue: [^ 'illegalStore'].
-				type = 3  ifTrue: [^ 'storePopLitVar ' , (offset2 + 1) printString]]].
-		"131-134: extended sends"
-		offset = 3 ifTrue:  "Single extended send"
-			[^ 'send ' , (self stringOf: (self literal: byte2 \\ 32 ofMethod: meth))].
-		offset = 4 ifTrue:    "Double extended do-anything"
-			[byte3 := objectMemory fetchByte: ip+2 ofObject: meth.
-			type := byte2 // 32.
-			type = 0 ifTrue: [^ 'send ' , (self stringOf: (self literal: byte3 ofMethod: meth))].
-			type = 1 ifTrue: [^ 'superSend ' , (self stringOf: (self literal: byte3 ofMethod: meth))].
-			type = 2 ifTrue: [^ 'pushRcvr ' , byte3 printString].
-			type = 3 ifTrue: [^ 'pushLit ' , byte3 printString].
-			type = 4 ifTrue: [^ 'pushLitVar ' , byte3 printString].
-			type = 5 ifTrue: [^ 'storeIntoRcvr ' , byte3 printString].
-			type = 6 ifTrue: [^ 'storePopRcvr ' , byte3 printString].
-			type = 7 ifTrue: [^ 'storeIntoLitVar ' , byte3 printString]].
-		offset = 5 ifTrue:  "Single extended send to super"
-			[^ 'superSend ' , (self stringOf: (self literal: byte2 \\ 32 ofMethod: meth))].
-		offset = 6 ifTrue:   "Second extended send"
-			[^ 'send ' , (self stringOf: (self literal: byte2 \\ 64 ofMethod: meth))]].
-	offset = 7 ifTrue: [^ 'doPop'].
-	offset = 8 ifTrue: [^ 'doDup'].
-	offset = 9 ifTrue: [^ 'pushActiveContext'].
-	byte2 := objectMemory fetchByte: ip+1 ofObject: meth.
-	offset = 10 ifTrue:
-		[^byte2 < 128
-			ifTrue: ['pushNewArrayOfSize: ', byte2 printString]
-			ifFalse: ['pushConsArrayWithElements: ', (byte2 - 128) printString]].
-	offset = 11 ifTrue: [^ 'unusedBytecode'].
-	byte3 := objectMemory fetchByte: ip+2 ofObject: meth.
-	offset = 12 ifTrue: [^'pushRemoteTemp: ', byte2 printString, ' inVectorAt: ', byte3 printString].
-	offset = 13 ifTrue: [^'storeIntoRemoteTemp: ', byte2 printString, ' inVectorAt: ', byte3 printString].
-	offset = 14 ifTrue: [^'popIntoRemoteTemp: ', byte2 printString, ' inVectorAt: ', byte3 printString].
-	"offset = 15"
-	byte4 := objectMemory fetchByte: ip+3 ofObject: meth.
-	^'pushClosureCopyNumCopiedValues: ', (byte2 bitShift: -4) printString,
-		' numArgs: ', (byte2 bitAnd: 16rF) printString,
-		' blockSize: ', ((byte3 * 256) + byte4) printString
 ]
 
 { #category : #'debug printing' }
@@ -2282,16 +2227,23 @@ StackInterpreterSimulator >> utilitiesMenu: aMenuMorph [
 		addLine;
 		add: 'print ext head frame' action: #printExternalHeadFrame;
 		add: 'print int head frame' action: #printHeadFrame;
-		add: 'short print frame & callers' action: [self shortPrintFrameAndCallers: framePointer];
-		add: 'long print frame & callers' action: [self printFrameAndCallers: framePointer SP: stackPointer];
-		add: 'print frame...' target: self action: [(self promptHex: 'print frame') ifNotNil: [:fp| self printFrame: fp]];
+		add: 'short print ext frame & callers' action: [self shortPrintFrameAndCallers: framePointer];
+		add: 'short print int frame & callers' action: [self shortPrintFrameAndCallers: localFP];
+		add: 'long print ext frame & callers' action: [self printFrameAndCallers: framePointer SP: stackPointer];
+		add: 'long print int frame & callers' action: [self printFrameAndCallers: localFP SP: localSP];
+		add: 'print frame...' action: [(self promptHex: 'print frame') ifNotNil: [:fp| self printFrame: fp]];
 		add: 'print call stack' action: #printCallStack;
+		add: 'print all stacks' action: #printAllStacks;
+		addLine;
 		add: 'print oop...' action: [(self promptHex: 'print oop') ifNotNil: [:oop| self printOop: oop]];
+		add: 'long print oop...' action: [(self promptHex: 'print oop') ifNotNil: [:oop| self longPrintOop: oop]];
 		addLine;
 		add: 'inspect object memory' target: objectMemory action: #inspect;
 		add: 'inspect cointerpreter' action: #inspect;
 		addLine;
 		add: 'set break count...' action: #setBreakCount;
+		add: 'set break selector...' action: [|s| s := UIManager default request: 'break selector'.
+											s notEmpty ifTrue: [self setBreakSelector: s]];
 		add: (printSends
 				ifTrue: ['no print sends']
 				ifFalse: ['print sends'])

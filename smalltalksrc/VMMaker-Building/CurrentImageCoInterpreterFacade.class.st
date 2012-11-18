@@ -7,6 +7,7 @@ Class {
 		'coInterpreter',
 		'objectMemory',
 		'objectMap',
+		'headerToMethodMap',
 		'cachedObject',
 		'cachedOop',
 		'variables'
@@ -22,6 +23,14 @@ Class {
 CurrentImageCoInterpreterFacade >> addLabel: l [
 	(variables includesKey: l) ifFalse:
 		[variables at: l put: variables size * 4 + 65536]
+]
+
+{ #category : #'debug support' }
+CurrentImageCoInterpreterFacade >> addressCouldBeOop: anOop [ 
+	[self objectForOop: anOop]
+		on: Error
+		do: [:ex| ^false].
+	^true
 ]
 
 { #category : #labels }
@@ -41,7 +50,7 @@ CurrentImageCoInterpreterFacade >> argumentCountOf: anOop [
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> argumentCountOfMethodHeader: aSmallIntegerOop [
-	^(CompiledMethod newMethod: 16 header: (objectMemory integerValueOf: aSmallIntegerOop)) numArgs
+	^(headerToMethodMap at: aSmallIntegerOop) numArgs
 ]
 
 { #category : #accessing }
@@ -52,6 +61,15 @@ CurrentImageCoInterpreterFacade >> byteAt: index [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> byteAt: index put: value [
 	^memory at: index + 1 put: value
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> byteLengthOf: anOop [
+	| obj |
+	obj := self objectForOop: anOop.
+	obj class isBytes ifTrue:
+		[^obj basicSize].
+	self error: 'cannot determine byte size of argument'
 ]
 
 { #category : #accessing }
@@ -76,8 +94,8 @@ CurrentImageCoInterpreterFacade >> callForCogCompiledCodeCompaction [
 ]
 
 { #category : #accessing }
-CurrentImageCoInterpreterFacade >> canContextSwitchIfActivating: methodHeader [
-	^coInterpreter canContextSwitchIfActivating: methodHeader
+CurrentImageCoInterpreterFacade >> canContextSwitchIfActivating: method header: header [
+	^coInterpreter canContextSwitchIfActivating: method header: header
 ]
 
 { #category : #accessing }
@@ -214,9 +232,15 @@ CurrentImageCoInterpreterFacade >> functionPointerForCompiledMethod: methodOop p
 		self addressForLabel: symbol]
 ]
 
+{ #category : #testing }
+CurrentImageCoInterpreterFacade >> headerIndicatesAlternateBytecodeSet: methodHeader [
+	"A negative header selects the alternate bytecode set."
+	^(self objectForOop: methodHeader) < 0
+]
+
 { #category : #accessing }
-CurrentImageCoInterpreterFacade >> headerOf: methodPointer [
-	^objectMemory integerObjectOf: (self objectForOop: methodPointer) header
+CurrentImageCoInterpreterFacade >> headerOf: aMethodOop [
+	^self rawHeaderOf: aMethodOop
 ]
 
 { #category : #accessing }
@@ -227,6 +251,12 @@ CurrentImageCoInterpreterFacade >> inMemoryCFramePointerAddress [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> inMemoryCStackPointerAddress [
 	^self addressForLabel: #CStackPointer
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> initialPCForHeader: methodHeaderOop method: aMethodOop [
+	self assert: (self objectForOop: aMethodOop) == (headerToMethodMap at: methodHeaderOop).
+	^{ self objectForOop: aMethodOop. (self objectForOop: aMethodOop) initialPC }
 ]
 
 { #category : #'initialize-release' }
@@ -242,6 +272,7 @@ CurrentImageCoInterpreterFacade >> initialize [
 	variables := Dictionary new.
 	#('stackLimit') do:
 		[:l| self addressForLabel: l].
+	headerToMethodMap := Dictionary new.
 	self initializeObjectMap
 ]
 
@@ -292,6 +323,11 @@ CurrentImageCoInterpreterFacade >> isCogMethodReference: methodHeader [
 	^coInterpreter isCogMethodReference: methodHeader
 ]
 
+{ #category : #testing }
+CurrentImageCoInterpreterFacade >> isCurrentImageFacade [
+	^true
+]
+
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> isIntegerObject: anOop [
 	^objectMemory isIntegerObject: anOop
@@ -309,14 +345,7 @@ CurrentImageCoInterpreterFacade >> isNonIntegerObject: anOop [
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> isQuickPrimitiveIndex: primNum [
-	^(CompiledMethod
-		newBytes: 0
-		trailerBytes: CompiledMethodTrailer empty
-		nArgs: 0
-		nTemps: 0
-		nStack: 0
-		nLits: 0
-		primitive: primNum) isQuick
+	^coInterpreter isQuickPrimitiveIndex: primNum
 ]
 
 { #category : #accessing }
@@ -374,11 +403,6 @@ CurrentImageCoInterpreterFacade >> memory [
 ]
 
 { #category : #accessing }
-CurrentImageCoInterpreterFacade >> method: methodObj withInitialPCHasErrorCode: initialPC [
-	^(self fetchByte: initialPC ofObject: methodObj) = 129 "long store temp"
-]
-
-{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> methodCacheAddress [
 	^memory size * 3 / 4
 ]
@@ -386,6 +410,22 @@ CurrentImageCoInterpreterFacade >> methodCacheAddress [
 { #category : #testing }
 CurrentImageCoInterpreterFacade >> methodHasCogMethod: aCompiledMethod [ 
 	^false
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> methodHasErrorCode: aMethodObj header: methodHeaderOop initialIP: initialPC [
+	"Answer if the method starts with a long store temp bytecode, which indicates it has a primitive error code."
+	"234		11101010	i i i i i i i i	Store Temporary Variable #iiiiiiii"
+	"129 		10000001 jjkkkkkk 	Store (Receiver Variable, Temporary Location, Illegal, Literal Variable) [jj] #kkkkkk"
+	| method |
+	method := self objectForOop: aMethodObj.
+	self assert: method primitive > 0.
+	self assert: method == (headerToMethodMap at: methodHeaderOop).
+	^method usesAlternateBytecodeSet
+		ifTrue:
+			[(method byteAt: method initialPC + 3 "Skip CallPrimitive") = 234 "long store temp"]
+		ifFalse:
+			[(method byteAt: method initialPC) = 129 "long store (but can only be for a temp)"]
 ]
 
 { #category : #testing }
@@ -426,8 +466,8 @@ CurrentImageCoInterpreterFacade >> objectForOop: anOop [
 		[0] -> [anOop = cachedOop
 				ifTrue: [cachedObject]
 				ifFalse: [cachedObject := objectMap keyAtValue: (cachedOop := anOop)]].
-		[1] -> [anOop >> 1].
-		[3] -> [anOop >> 1] }
+		[1] -> [anOop signedIntFromLong >> 1].
+		[3] -> [anOop signedIntFromLong >> 1] }
 ]
 
 { #category : #accessing }
@@ -513,8 +553,12 @@ CurrentImageCoInterpreterFacade >> quickPrimitiveInstVarIndexFor: aQuickPrimitiv
 ]
 
 { #category : #accessing }
-CurrentImageCoInterpreterFacade >> rawHeaderOf: anOop [
-	^objectMemory integerObjectOf: (self objectForOop: anOop) header
+CurrentImageCoInterpreterFacade >> rawHeaderOf: aMethodOop [
+	| method headerOop |
+	method := self objectForOop: aMethodOop.
+	headerOop := objectMemory integerObjectOf: (self objectForOop: aMethodOop) header.
+	self assert: method = (headerToMethodMap at: headerOop ifAbsentPut: [method]).
+	^headerOop
 ]
 
 { #category : #accessing }
@@ -530,6 +574,16 @@ CurrentImageCoInterpreterFacade >> rumpCStackAddress [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> scavengeThresholdAddress [
 	^self addressForLabel: #scavengeThreshold
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> sizeOfCallPrimitiveBytecode: methodHeaderOop [
+	^coInterpreter sizeOfCallPrimitiveBytecode: methodHeaderOop
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> sizeOfLongStoreTempBytecode: methodHeaderOop [ 
+	^coInterpreter sizeOfLongStoreTempBytecode: methodHeaderOop
 ]
 
 { #category : #accessing }
@@ -570,7 +624,7 @@ CurrentImageCoInterpreterFacade >> startPCOfMethod: anOop [
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> startPCOfMethodHeader: aSmallIntegerOop [
-	^(CompiledMethod newMethod: 16 header: (objectMemory integerValueOf: aSmallIntegerOop)) initialPC - 1
+	^(headerToMethodMap at: aSmallIntegerOop) initialPC - 1
 ]
 
 { #category : #testing }
@@ -591,9 +645,9 @@ CurrentImageCoInterpreterFacade >> stringOf: anOop [
 ]
 
 { #category : #testing }
-CurrentImageCoInterpreterFacade >> tempCountForBlockAt: startpc in: methodOop [
+CurrentImageCoInterpreterFacade >> tempCountForBlockStartingAt: startpc in: methodOop [
 	^BlockLocalTempCounter
-		tempCountForBlockAt: startpc - 4
+		tempCountForBlockStartingAt: startpc
 		in: (self objectForOop: methodOop)
 ]
 

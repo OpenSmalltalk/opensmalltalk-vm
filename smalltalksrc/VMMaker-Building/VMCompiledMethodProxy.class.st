@@ -53,3 +53,9 @@ VMCompiledMethodProxy >> numTemps [
 VMCompiledMethodProxy >> size [
 	^objectMemory byteLengthOf: oop
 ]
+
+{ #category : #accessing }
+VMCompiledMethodProxy >> usesAlternateBytecodeSet [
+
+	^coInterpreter headerIndicatesAlternateBytecodeSet: self header
+]

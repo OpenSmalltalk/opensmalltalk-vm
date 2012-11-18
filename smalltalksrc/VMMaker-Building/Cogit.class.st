@@ -117,7 +117,7 @@ Class {
 		'breakBlock',
 		'singleStep',
 		'guardPageSize',
-		'traceLinkedSends',
+		'traceFlags',
 		'traceStores',
 		'breakMethod',
 		'methodObj',
@@ -168,6 +168,7 @@ Class {
 		'byte2',
 		'byte3',
 		'bytecodePC',
+		'bytecodeSetOffset',
 		'opcodeIndex',
 		'numAbstractOpcodes',
 		'annotationIndex',
@@ -225,9 +226,12 @@ Class {
 		'ceTryLockVMOwner',
 		'ceUnlockVMOwner',
 		'cogMethodSurrogateClass',
-		'cogBlockMethodSurrogateClass'
+		'cogBlockMethodSurrogateClass',
+		'extA',
+		'extB'
 	],
 	#classVars : [
+		'AltBlockCreationBytecodeSize',
 		'AnnotationConstantNames',
 		'AnnotationShift',
 		'BlockCreationBytecodeSize',
@@ -318,6 +322,21 @@ Cogit class >> apiExportHeaderName [
 	^'cogit.h'
 ]
 
+{ #category : #'in-image compilation' }
+Cogit class >> asOptionsDictionary: optionsDictionaryOrArray [
+	optionsDictionaryOrArray isArray ifTrue:
+		[| dict |
+		dict := Dictionary new.
+		self assert: optionsDictionaryOrArray size even.
+		1 to: optionsDictionaryOrArray size by: 2 do:
+			[:i| | key |
+			key := optionsDictionaryOrArray at: i.
+			self assert: key isSymbol.
+			dict at: key put: (optionsDictionaryOrArray at: i + 1)].
+		^dict].
+	^optionsDictionaryOrArray
+]
+
 { #category : #documentation }
 Cogit class >> assumptions [
 	"Byte architecture; no 9-bit bit bytes etc.
@@ -361,26 +380,28 @@ Cogit class >> chooseCogitClass [
 
 { #category : #'in-image compilation' }
 Cogit class >> cog: aCompiledMethod selector: aSelector [
-	"COGMTVM := false. StackToRegisterMappingCogit cog: (Integer >> #benchFib) selector: #benchFib"
-	"| tuple |
-	 COGMTVM := false.
-	 tuple := StackToRegisterMappingCogit cog: (Object >> #at:) selector: #at:.
-	 tuple second disassembleMethod: tuple last"
-	| coInterpreter |
-	self initialize.
-	coInterpreter := CurrentImageCoInterpreterFacade new cogit: self new; yourself.
-	^[{ coInterpreter.
-		coInterpreter cogit.
-		coInterpreter cogit
-			setInterpreter: coInterpreter;
-			singleStep: true;
-			initializeCodeZoneFrom: 1024 upTo: coInterpreter memory size;
-			cog: (coInterpreter oopForObject: aCompiledMethod) selector: (coInterpreter oopForObject: aSelector) }]
+	^self cog: aCompiledMethod selector: aSelector options: #()
+]
+
+{ #category : #'in-image compilation' }
+Cogit class >> cog: aCompiledMethod selector: aSelector options: optionsDictionaryOrArray [
+	"StackToRegisterMappingCogit cog: (Integer >> #benchFib) selector: #benchFib options: #(COGMTVM false)"
+	| coInterpreter cogit |
+	self initializeWithOptions: (self asOptionsDictionary: optionsDictionaryOrArray).
+	coInterpreter := CurrentImageCoInterpreterFacade new cogit: (cogit := self new); yourself.
+	[cogit
+		setInterpreter: coInterpreter;
+		singleStep: true;
+		initializeCodeZoneFrom: 1024 upTo: coInterpreter memory size.
+	 cogit methodZone freeStart: (cogit methodZone freeStart roundUpTo: 1024)]
 		on: Notification
 		do: [:ex|
 			(ex messageText beginsWith: 'cannot find receiver for') ifTrue:
 				[ex resume: coInterpreter].
-			ex pass]
+			ex pass].
+	^{ coInterpreter.
+		cogit.
+		cogit cog: (coInterpreter oopForObject: aCompiledMethod) selector: (coInterpreter oopForObject: aSelector) }
 ]
 
 { #category : #documentation }
@@ -480,8 +501,8 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 			declareC: 'static sqInt cePositive32BitIntegerTrampoline';
 		var: #labelCounter
 			declareC: 'static int labelCounter';
-		var: #traceLinkedSends
-			declareC: 'int traceLinkedSends = 8 /* prim trace log on by default */';
+		var: #traceFlags
+			declareC: 'int traceFlags = 8 /* prim trace log on by default */';
 		var: #cStackAlignment
 			declareC: 'const int cStackAlignment = STACK_ALIGN_BYTES'.
 	aCCodeGenerator
@@ -491,7 +512,7 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		declareVar: #debugPrimCallStackOffset type: #'unsigned long'.
 	aCCodeGenerator
 		var: #generatorTable
-			declareC: 'BytecodeDescriptor generatorTable[256]'
+			declareC: 'BytecodeDescriptor generatorTable[', aCCodeGenerator vmClass generatorTable size, ']'
 						, (self tableInitializerFor: aCCodeGenerator vmClass generatorTable
 							in: aCCodeGenerator);
 		var: #primitiveGeneratorTable
@@ -521,16 +542,23 @@ Cogit class >> exportAPISelectors [
 
 { #category : #'in-image compilation' }
 Cogit class >> genAndDis: methodOrDoitString [
+	^self genAndDis: methodOrDoitString options: #()
+]
+
+{ #category : #'in-image compilation' }
+Cogit class >> genAndDis: methodOrDoitString options: optionsDictionaryOrArray [
 	| tuple |
 	methodOrDoitString isCompiledMethod ifFalse:
-		[^self genAndDis: (Compiler new
-								compiledMethodFor: methodOrDoitString
-								in: nil
-								to: nil
-								notifying: nil
-								ifFail: nil
-								logged: false)].
-	tuple := self cog: methodOrDoitString selector: methodOrDoitString selector.
+		[^self
+			genAndDis: (Compiler new
+							compiledMethodFor: methodOrDoitString
+							in: nil
+							to: nil
+							notifying: nil
+							ifFail: nil
+							logged: false)
+			 options: optionsDictionaryOrArray].
+	tuple := self cog: methodOrDoitString selector: methodOrDoitString selector options: optionsDictionaryOrArray.
 	tuple second disassembleMethod: tuple last.
 	^tuple
 ]
@@ -550,15 +578,14 @@ Cogit class >> generatorTableFrom: anArray [
 						numBytes: tuple first;
 						generator: tuple fourth;
 						isReturn: (tuple includes: #return);
-						isMapped: (tuple includes: #mapped);
-						isMappedInBlock: (tuple includes: #mappedInBlock);
+						isMapped: (tuple includes: #isMapped);
+						isMappedInBlock: (tuple includes: #isMappedInBlock);
 						isBlockCreation: (tuple includes: #block);
-						isBranch: ((tuple includes: #forward) or: [tuple includes: #backward]);
-						spanFunction: ((descriptor isBranch or: [descriptor isBlockCreation]) ifTrue:
-										[tuple last]);
-						isBackwardBranch: (tuple includes: #backward);
-						isBranchTrue: (tuple includes: true);
-						isBranchFalse: (tuple includes: false);
+						spanFunction: (((tuple includes: #block) or: [(tuple includes: #branch)]) ifTrue:
+										[tuple detect: [:thing| thing isSymbol and: [thing numArgs = 4]]]);
+						isBranchTrue: (tuple includes: #isBranchTrue);
+						isBranchFalse: (tuple includes: #isBranchFalse);
+						isExtension: (tuple includes: #extension);
 						yourself.
 		descriptor isBlockCreation ifTrue:
 			[blockCreationBytecodeSize
@@ -567,7 +594,7 @@ Cogit class >> generatorTableFrom: anArray [
 		tuple do:
 			[:thing|
 			thing isSymbol ifTrue:
-				[(thing beginsWith: 'needsFrame') ifTrue:
+				[(thing beginsWith: #needsFrame) ifTrue:
 					[descriptor needsFrameFunction: thing].
 				 (CogRTLOpcodes classPool at: thing ifAbsent: []) ifNotNil:
 					[:opcode| descriptor opcode: opcode]]].
@@ -670,9 +697,26 @@ Cogit class >> initializeBytecodeTable [
 	"StackToRegisterMappingCogit initializeBytecodeTable"
 
 	NewspeakVM ifTrue:
-		[^self initializeBytecodeTableForNewspeakV3PlusClosures].
+		[^MULTIPLEBYTECODESETS
+			ifTrue: [self initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid]
+			ifFalse: [self initializeBytecodeTableForNewspeakV3PlusClosures]].
 
 	^self initializeBytecodeTableForSqueakV3PlusClosures
+]
+
+{ #category : #'class initialization' }
+Cogit class >> initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid [
+	"SimpleStackBasedCogit initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid"
+	"StackToRegisterMappingCogit initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid"
+
+	| v3Table v4Table |
+	"N.B. Must do it backwards to evaluate AltBlockCreationBytecodeSize & BlockCreationBytecodeSize correctly."
+	self initializeBytecodeTableForNewspeakV4.
+	v4Table := generatorTable.
+	AltBlockCreationBytecodeSize := BlockCreationBytecodeSize.
+	self initializeBytecodeTableForNewspeakV3PlusClosures.
+	v3Table := generatorTable.
+	generatorTable := CArrayAccessor on: v3Table object, v4Table object
 ]
 
 { #category : #'class initialization' }
@@ -701,6 +745,7 @@ Cogit class >> initializeErrorCodes [
 
 { #category : #'class initialization' }
 Cogit class >> initializeMiscConstantsWith: optionsDictionary [
+	super initializeMiscConstantsWith: optionsDictionary.
 	Debug := optionsDictionary at: #Debug ifAbsent: [false].
 	(optionsDictionary includesKey: #EagerInstructionDecoration)
 		ifTrue:
@@ -708,10 +753,6 @@ Cogit class >> initializeMiscConstantsWith: optionsDictionary [
 		ifFalse:
 			[EagerInstructionDecoration isNil ifTrue:
 				[EagerInstructionDecoration := false]]. "speeds up single stepping but could lose fidelity"
-
-	NewspeakVM := optionsDictionary at: #NewspeakVM ifAbsent: [false].
-	"N.B.  Not yet implemented!!"
-	IMMUTABILITY := optionsDictionary at: #IMMUTABILITY ifAbsent: [false].
 
 	"Currently only the ceImplicitReceiverTrampoline contains object references."
 	NumObjRefsInRuntime := 2
@@ -761,7 +802,7 @@ Cogit class >> mustBeGlobal: var [
 		'cmEntryOffset' 'cmNoCheckEntryOffset' 'cmDynSuperEntryOffset'
 		'blockNoContextSwitchOffset' 'breakPC'
 		'labelCounter' 'CFramePointer' 'CStackPointer' 'cFramePointerInUse' 'ceGetSP'
-		'traceLinkedSends' 'traceStores' 'debugPrimCallStackOffset')
+		'traceFlags' 'traceStores' 'debugPrimCallStackOffset')
 			includes: var
 ]
 
@@ -1986,18 +2027,20 @@ Cogit >> assertSaneJumpTarget: jumpTarget [
 ]
 
 { #category : #'tests-method map' }
-Cogit >> bcpcsAndDescriptorsFor: aMethodObj do: trinaryBlock [
+Cogit >> bcpcsAndDescriptorsFor: aMethod do: trinaryBlock [
 	<doNotGenerate>
-	| byte descriptor endpc latestContinuation pc primIdx |
-	((primIdx := coInterpreter primitiveIndexOf: aMethodObj) > 0
+	| bsOffset nExts byte descriptor endpc latestContinuation pc primIdx |
+	((primIdx := coInterpreter primitiveIndexOf: aMethod) > 0
 	and: [coInterpreter isQuickPrimitiveIndex: primIdx]) ifTrue:
 		[^self].
-	latestContinuation := pc := coInterpreter startPCOfMethod: aMethodObj.
+	latestContinuation := pc := coInterpreter startPCOfMethod: aMethod.
 	trinaryBlock value: pc value: nil value: nil. "stackCheck/entry pc"
-	endpc := objectMemory byteSizeOf: aMethodObj.
+	bsOffset := self bytecodeSetOffsetFor: aMethod.
+	nExts := 0.
+	endpc := objectMemory byteSizeOf: aMethod.
 	[pc <= endpc] whileTrue:
-		[byte := objectMemory fetchByte: pc ofObject: aMethodObj.
-		descriptor := self generatorAt: byte.
+		[byte := objectMemory fetchByte: pc ofObject: aMethod.
+		descriptor := self generatorAt: byte + bsOffset.
 		trinaryBlock value: pc value: byte value: descriptor.
 		(descriptor isReturn
 		 and: [pc >= latestContinuation]) ifTrue:
@@ -2007,9 +2050,22 @@ Cogit >> bcpcsAndDescriptorsFor: aMethodObj do: trinaryBlock [
 			[| targetPC |
 			 descriptor isBlockCreation ifTrue:
 				[trinaryBlock value: pc + descriptor numBytes value: nil value: nil]. "stackCheck/entry pc"
-			 targetPC := self latestContinuationPCFor: descriptor at: pc byte0: byte in: aMethodObj.
+			 targetPC := self latestContinuationPCFor: descriptor at: pc exts: nExts in: aMethod.
+			 self assert: targetPC < endpc.
 			 latestContinuation := latestContinuation max: targetPC].
-		pc := pc + descriptor numBytes]
+		pc := pc + descriptor numBytes.
+		 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]]
+]
+
+{ #category : #'method map' }
+Cogit >> blockCreationBytecodeSizeForHeader: methodHeader [
+	<inline: true>
+	^self cppIf: MULTIPLEBYTECODESETS
+		ifTrue:
+			[(coInterpreter headerIndicatesAlternateBytecodeSet: methodHeader)
+				ifTrue: [AltBlockCreationBytecodeSize]
+				ifFalse: [BlockCreationBytecodeSize]]
+		ifFalse: [BlockCreationBytecodeSize]
 ]
 
 { #category : #disassembly }
@@ -2080,24 +2136,28 @@ Cogit >> blockStartAt: index [
 Cogit >> blockStartPcsIn: aMethod [
 	"Answer the start bytecopde pcs in a method in compilation order, i.e. depth-first.
 	 Blocks must occur in pc/depth-first order for binary tree block dispatch to work."
-	| startpcs pc latestContinuation end descriptor byte |
+	| startpcs pc latestContinuation end descriptor byte bsOffset nExts |
 	<doNotGenerate>
 	startpcs := OrderedCollection new.
 	startpcs add: (pc := latestContinuation := coInterpreter startPCOfMethod: aMethod).
 	end := objectMemory byteSizeOf: aMethod.
+	bsOffset := self bytecodeSetOffsetFor: aMethod.
+	nExts := 0.
 	[pc <= end] whileTrue:
-		[descriptor := self generatorAt: (byte := objectMemory fetchByte: pc ofObject: aMethod).
-		(descriptor isReturn
-		 and: [pc >= latestContinuation]) ifTrue:
+		[byte := objectMemory fetchByte: pc ofObject: aMethod.
+		 descriptor := self generatorAt: byte + bsOffset.
+		 (descriptor isReturn
+		  and: [pc >= latestContinuation]) ifTrue:
 			[end := pc].
-		(descriptor isBranch
-		 or: [descriptor isBlockCreation]) ifTrue:
+		 (descriptor isBranch
+		  or: [descriptor isBlockCreation]) ifTrue:
 			[| targetPC |
-			 targetPC := self latestContinuationPCFor: descriptor at: pc byte0: byte in: aMethod.
+			 targetPC := self latestContinuationPCFor: descriptor at: pc exts: nExts in: aMethod.
 			 latestContinuation := latestContinuation max: targetPC].
 		 pc := pc + descriptor numBytes.
 		 descriptor isBlockCreation ifTrue:
-			[startpcs add: pc]].
+			[startpcs add: pc].
+		 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]].
 	^startpcs
 ]
 
@@ -2116,8 +2176,8 @@ Cogit >> breakMethod [
 { #category : #debugging }
 Cogit >> breakOnImplicitReceiver [
 	<api>
-	<cmacro: '() (traceLinkedSends & 32)'>
-	^(traceLinkedSends bitAnd: 32) ~= 0
+	<cmacro: '() (traceFlags & 32)'>
+	^(traceFlags bitAnd: 32) ~= 0
 ]
 
 { #category : #'simulation only' }
@@ -2130,6 +2190,9 @@ Cogit >> breakPC [
 Cogit >> breakPC: anAddress [
 	<doNotGenerate>
 	breakPC := anAddress.
+	(breakPC isInteger
+	 and: [anAddress between: codeBase and: coInterpreter heapBase]) ifTrue:
+		[singleStep := true].
 	"If there's a breakPC then it is anded with breakBlock's result, so the breakBlock must default to true.
 	If there's no breakPC the break block is used on its own and so must befault to false."
 	(breakBlock isNil
@@ -2163,6 +2226,30 @@ Cogit >> bytecodePCFor: mcpc startBcpc: startbcpc in: cogMethod [
 		bcpc: startbcpc
 		performUntil: #findMcpc:Bcpc:MatchingMcpc: asSymbol
 		arg: (self cCoerceSimple: mcpc to: #'void *')
+]
+
+{ #category : #initialization }
+Cogit >> bytecodeSetOffsetFor: aMethodObj [
+	<inline: true>
+	^self
+		cppIf: MULTIPLEBYTECODESETS
+		ifTrue:
+			[(coInterpreter methodUsesAlternateBytecodeSet: aMethodObj)
+				ifTrue: [256]
+				ifFalse: [0]]
+		ifFalse: [0]
+]
+
+{ #category : #initialization }
+Cogit >> bytecodeSetOffsetForHeader: methodHeader [
+	<inline: true>
+	^self
+		cppIf: MULTIPLEBYTECODESETS
+		ifTrue:
+			[(coInterpreter headerIndicatesAlternateBytecodeSet: methodHeader)
+				ifTrue: [256]
+				ifFalse: [0]]
+		ifFalse: [0]
 ]
 
 { #category : #'translation support' }
@@ -2793,9 +2880,15 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 						 cogMethod methodObject: aMethodObj.
 						 coInterpreter rawHeaderOf: aMethodObj put: cogMethod asInteger].
 					^cogMethod]].
-	"The alternate bytecode set is for now always interpreted."
-	(coInterpreter methodUsesAlternateBytecodeSet: aMethodObj) ifTrue:
-		[^nil].
+	"If the generators for the alternate bytecode set are missing then interpret."
+	(coInterpreter methodUsesAlternateBytecodeSet: aMethodObj)
+		ifTrue:
+			[(self numElementsIn: generatorTable) <= 256 ifTrue:
+				[^nil].
+			 bytecodeSetOffset := 256]
+		ifFalse:
+			[bytecodeSetOffset := 0].
+	extA := extB := 0.
 	methodObj := aMethodObj.
 	cogMethod := self compileCogMethod: aSelectorOop.
 	(cogMethod asInteger between: MaxNegativeErrorCode and: -1) ifTrue:
@@ -3229,11 +3322,12 @@ Cogit >> compileAbort [
 { #category : #'compile abstract instructions' }
 Cogit >> compileAbstractInstructionsFrom: start through: end [
 	"Loop over bytecodes, dispatching to the generator for each bytecode, handling fixups in due course."
-	| nextOpcodeIndex descriptor fixup result |
+	| nextOpcodeIndex descriptor fixup result nExts |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<var: #fixup type: #'BytecodeFixup *'>
 	bytecodePC := start.
-	[byte0 := objectMemory fetchByte: bytecodePC ofObject: methodObj.
+	nExts := 0.
+	[byte0 := (objectMemory fetchByte: bytecodePC ofObject: methodObj)  + bytecodeSetOffset.
 	 descriptor := self generatorAt: byte0.
 	 descriptor numBytes > 1 ifTrue:
 		[byte1 := objectMemory fetchByte: bytecodePC + 1 ofObject: methodObj.
@@ -3245,6 +3339,8 @@ Cogit >> compileAbstractInstructionsFrom: start through: end [
 					[self notYetImplemented]]]].
 	 nextOpcodeIndex := opcodeIndex.
 	 result := self perform: descriptor generator.
+	 descriptor isExtension ifFalse: "extended bytecodes must consume their extensions"
+		[self assert: (extA = 0 and: [extB = 0])].
 	 fixup := self fixupAt: bytecodePC - initialPC.
 	 fixup targetInstruction ~= 0 ifTrue:
 		["There is a fixup for this bytecode.  It must point to the first generated
@@ -3252,8 +3348,10 @@ Cogit >> compileAbstractInstructionsFrom: start through: end [
 		 opcodeIndex = nextOpcodeIndex ifTrue:
 			[self Label].
 		 fixup targetInstruction: (self abstractInstructionAt: nextOpcodeIndex)].
-	 bytecodePC := self nextBytecodePCFor: descriptor at: bytecodePC byte0: byte0 in: methodObj.
-	 result = 0 and: [bytecodePC <= end]] whileTrue.
+	 bytecodePC := self nextBytecodePCFor: descriptor at: bytecodePC exts: nExts in: methodObj.
+	 result = 0 and: [bytecodePC <= end]]
+		whileTrue:
+			[nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]].
 	self checkEnoughOpcodes.
 	^result
 ]
@@ -3749,6 +3847,14 @@ Cogit >> disassembleMethod: surrogateOrAddress on: aStream [
 	 to be used in the real VM.  Apologies."
 	(codeRanges := self codeRangesFor: cogMethod) do:
 		[:range|
+		(cogMethod cmType = CMMethod) ifTrue:
+			[mapEntries keysAndValuesDo:
+				[:mcpc :label| | bcpc |
+				((range includes: mcpc)
+				 and: [#(IsSendCall HasBytecodePC) includes: label]) ifTrue:
+					[bcpc := self bytecodePCFor: mcpc startBcpc: range startpc in: range cogMethod.
+					 bcpc ~= 0 ifTrue:
+						[mapEntries at: mcpc put: label, ' bc ', bcpc printString, '/', (bcpc + 1) printString]]]].
 		(cogMethod blockEntryOffset ~= 0
 		 and: [range first = (cogMethod blockEntryOffset + cogMethod asInteger)])
 			ifTrue:
@@ -3827,28 +3933,27 @@ Cogit >> dynSuperEntryOffset [
 
 { #category : #'simulation only' }
 Cogit >> endPCOf: aMethod [
-	| pc end latestContinuation descriptor prim distance targetPC byte |
+	| pc end latestContinuation descriptor prim distance targetPC byte bsOffset nExts |
 	pc := latestContinuation := coInterpreter startPCOfMethod: aMethod.
 	(prim := coInterpreter primitiveIndexOf: aMethod) > 0 ifTrue:
 		[(coInterpreter isQuickPrimitiveIndex: prim) ifTrue:
 			[^pc - 1]].
+	bsOffset := self bytecodeSetOffsetFor: aMethod.
+	nExts := 0.
 	end := objectMemory byteSizeOf: aMethod.
 	[pc <= end] whileTrue:
 		[byte := objectMemory fetchByte: pc ofObject: aMethod.
-		descriptor := self generatorAt: byte.
+		descriptor := self generatorAt: byte + bsOffset.
 		(descriptor isReturn
 		 and: [pc >= latestContinuation]) ifTrue:
 			[end := pc].
-		descriptor isBranch ifTrue:
-			[distance := self spanFor: descriptor at: pc byte0: byte in: aMethod.
-			 targetPC := pc + descriptor numBytes + distance.
-			 descriptor isBackwardBranch ifFalse:
-				[latestContinuation := latestContinuation max: targetPC]].
-		descriptor isBlockCreation ifTrue:
-			[distance := self spanFor: descriptor at: pc byte0: byte in: aMethod.
+		(descriptor isBranch or: [descriptor isBlockCreation]) ifTrue:
+			[distance := self spanFor: descriptor at: pc exts: nExts in: aMethod.
 			 targetPC := pc + descriptor numBytes + distance.
 			 latestContinuation := latestContinuation max: targetPC.
-			 pc := pc + distance].
+			 descriptor isBlockCreation ifTrue:
+				[pc := pc + distance]].
+		nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0].
 		pc := pc + descriptor numBytes].
 	^end
 ]
@@ -3897,6 +4002,22 @@ Cogit >> entryOffset [
 	<api>
 	<cmacro: '() cmEntryOffset'>
 	^cmEntryOffset
+]
+
+{ #category : #'bytecode generators' }
+Cogit >> extABytecode [
+	"224		11100000	aaaaaaaa	Extend A (Ext A = Ext A prev * 256 + Ext A)"
+	extA := (extA bitShift: 8) + byte1.
+	^0
+]
+
+{ #category : #'bytecode generators' }
+Cogit >> extBBytecode [
+	"225		11100001	sbbbbbbb	Extend B (Ext B = Ext B prev * 256 + Ext B)"
+	extB := (extB = 0 and: [byte1 > 127])
+				ifTrue: [byte1 - 256]
+				ifFalse: [(extB bitShift: 8) + byte1].
+	^0
 ]
 
 { #category : #'generate machine code' }
@@ -5512,6 +5633,20 @@ Cogit >> inverseBranchFor: opcode [
 	^0
 ]
 
+{ #category : #'compile abstract instructions' }
+Cogit >> isBackwardBranch: descriptor at: pc exts: nExts in: aMethodObj [
+	"Answer if the branch bytecode with the given descriptor is a backward branch."
+	<inline: true>
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	self assert: descriptor spanFunction notNil.
+	^(self
+		perform: descriptor spanFunction
+		with: descriptor
+		with: pc
+		with: nExts
+		with: aMethodObj) < 0
+]
+
 { #category : #initialization }
 Cogit >> isCFramePointerInUse [
 	<doNotGenerate>
@@ -5580,13 +5715,13 @@ Cogit >> lastOpcode [
 ]
 
 { #category : #'compile abstract instructions' }
-Cogit >> latestContinuationPCFor: descriptor at: pc byte0: opcodeByte in: aMethodObj [
+Cogit >> latestContinuationPCFor: descriptor at: pc exts: nExts in: aMethodObj [
 	"Assuming the descriptor is that for a branch or block,
 	 answer the furthest reachable pc for this bytecode."
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<inline: true>
 	| distance |
-	distance := self spanFor: descriptor at: pc byte0: opcodeByte in: aMethodObj.
+	distance := self spanFor: descriptor at: pc exts: nExts in: aMethodObj.
 	^pc + descriptor numBytes + (distance max: 0)
 ]
 
@@ -5714,7 +5849,7 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 	<var: #functionSymbol declareC: 'sqInt (*functionSymbol)(char *mcpc, sqInt bcpc, void *arg)'>
 	<var: #arg type: #'void *'>
 	| isInBlock mcpc bcpc endbcpc map mapByte homeMethod aMethodObj result
-	  latestContinuation byte descriptor |
+	  latestContinuation byte descriptor bsOffset nExts |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<var: #homeMethod type: #'CogMethod *'>
 	self assert: cogMethod stackCheckOffset > 0.
@@ -5726,30 +5861,33 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 			 homeMethod := self cCoerceSimple: cogMethod to: #'CogMethod *'.
 			 self assert: startbcpc = (coInterpreter startPCOfMethodHeader: homeMethod methodHeader).
 			 map := self mapStartFor: homeMethod.
-			 self assert: ((coInterpreter byteAt: map) >> AnnotationShift = IsAbsPCReference
-						 or: [(coInterpreter byteAt: map) >> AnnotationShift = IsRelativeCall
-						 or: [(coInterpreter byteAt: map) >> AnnotationShift = IsDisplacementX2N]]).
+			 self assert: ((objectMemory byteAt: map) >> AnnotationShift = IsAbsPCReference
+						 or: [(objectMemory byteAt: map) >> AnnotationShift = IsRelativeCall
+						 or: [(objectMemory byteAt: map) >> AnnotationShift = IsDisplacementX2N]]).
 			 latestContinuation := startbcpc.
 			 aMethodObj := homeMethod methodObject.
-			 endbcpc := (objectMemory byteSizeOf: aMethodObj) - 1]
+			 endbcpc := (objectMemory byteSizeOf: aMethodObj) - 1.
+			 bsOffset := self bytecodeSetOffsetForHeader: homeMethod methodHeader]
 		ifFalse:
 			[isInBlock := true.
 			 homeMethod := cogMethod cmHomeMethod.
 			 map := self findMapLocationForMcpc: cogMethod asUnsignedInteger + (self sizeof: CogBlockMethod)
 						inMethod: homeMethod.
 			 self assert: map ~= 0.
-			 self assert: ((coInterpreter byteAt: map) >> AnnotationShift = HasBytecodePC "fiducial"
-						 or: [(coInterpreter byteAt: map) >> AnnotationShift = IsDisplacementX2N]).
-			 [(coInterpreter byteAt: map) >> AnnotationShift ~= HasBytecodePC] whileTrue:
+			 self assert: ((objectMemory byteAt: map) >> AnnotationShift = HasBytecodePC "fiducial"
+						 or: [(objectMemory byteAt: map) >> AnnotationShift = IsDisplacementX2N]).
+			 [(objectMemory byteAt: map) >> AnnotationShift ~= HasBytecodePC] whileTrue:
 				[map := map - 1].
 			 map := map - 1. "skip fiducial; i.e. the map entry for the pc immediately following the method header."
 			 aMethodObj := homeMethod methodObject.
-			 bcpc := startbcpc - BlockCreationBytecodeSize.
-			 byte := objectMemory fetchByte: bcpc ofObject: aMethodObj.
+			 bcpc := startbcpc - (self blockCreationBytecodeSizeForHeader: homeMethod methodHeader).
+			 bsOffset := self bytecodeSetOffsetForHeader: homeMethod methodHeader.
+			 byte := (objectMemory fetchByte: bcpc ofObject: aMethodObj) + bsOffset.
 			 descriptor := self generatorAt: byte.
-			 endbcpc := self nextBytecodePCFor: descriptor at: bcpc byte0: byte in: aMethodObj].
+			 endbcpc := self nextBytecodePCFor: descriptor at: bcpc exts: -1 in: aMethodObj].
 	bcpc := startbcpc.
 	mcpc := cogMethod asUnsignedInteger + cogMethod stackCheckOffset.
+	nExts := 0.
 	"The stack check maps to the start of the first bytecode,
 	 the first bytecode being effectively after frame build."
 	result := self perform: functionSymbol
@@ -5759,7 +5897,7 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 	result ~= 0 ifTrue:
 		[^result].
 	"Now skip up through the bytecode pc map entry for the stack check." 
-	[(coInterpreter byteAt: map) >> AnnotationShift ~= HasBytecodePC] whileTrue:
+	[(objectMemory byteAt: map) >> AnnotationShift ~= HasBytecodePC] whileTrue:
 		[map := map - 1].
 	map := map - 1.
 	[(mapByte := objectMemory byteAt: map) ~= MapEnd] whileTrue: "defensive; we exit on bcpc"
@@ -5769,7 +5907,7 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 				annotation := mapByte >> AnnotationShift.
 				mcpc := mcpc + (mapByte bitAnd: DisplacementMask).
 				(self isPCMappedAnnotation: annotation) ifTrue:
-					[[byte := objectMemory fetchByte: bcpc ofObject: aMethodObj.
+					[[byte := (objectMemory fetchByte: bcpc ofObject: aMethodObj) + bsOffset.
 					  descriptor := self generatorAt: byte.
 					  isInBlock
 						ifTrue: [bcpc >= endbcpc ifTrue: [^0]]
@@ -5777,24 +5915,27 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 							[(descriptor isReturn and: [bcpc > latestContinuation]) ifTrue: [^0].
 							 (descriptor isBranch or: [descriptor isBlockCreation]) ifTrue:
 								[| targetPC |
-								 targetPC := self latestContinuationPCFor: descriptor at: bcpc byte0: byte in: aMethodObj.
+								 targetPC := self latestContinuationPCFor: descriptor at: bcpc exts: nExts in: aMethodObj.
 								 latestContinuation := latestContinuation max: targetPC]].
-					  nextBcpc := self nextBytecodePCFor: descriptor at: bcpc byte0: byte in: aMethodObj.
+					  nextBcpc := self nextBytecodePCFor: descriptor at: bcpc exts: nExts in: aMethodObj.
 					  descriptor isMapped
 					  or: [isInBlock and: [descriptor isMappedInBlock]]] whileFalse:
-						[bcpc := nextBcpc].
+						[bcpc := nextBcpc.
+						 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]].
 					"All subsequent bytecodes except backward branches map to the
 					 following bytecode. Backward branches map to themselves other-
 					 wise mapping could cause premature breaking out of loops." 
 					result := self perform: functionSymbol
 									with: (self cCoerceSimple: mcpc to: #'char *')
-									with: (descriptor isBackwardBranch
+									with: ((descriptor isBranch
+										   and: [self isBackwardBranch: descriptor at: bcpc exts: nExts in: aMethodObj])
 											ifTrue: [bcpc]
 											ifFalse: [bcpc + descriptor numBytes])
 									with: arg.
 					 result ~= 0 ifTrue:
 						[^result].
-					 bcpc := nextBcpc]]
+					 bcpc := nextBcpc.
+					 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]]]
 			ifFalse:
 				[mcpc := mcpc + (mapByte >= DisplacementX2N
 									ifTrue: [mapByte - DisplacementX2N << AnnotationShift]
@@ -6437,6 +6578,18 @@ Cogit >> mnuOffset [
 	^missOffset
 ]
 
+{ #category : #'simulation only' }
+Cogit >> nExtensionsFor: bcpc in: aMethodObj [
+	(coInterpreter methodUsesAlternateBytecodeSet: aMethodObj) ifFalse:
+		[^0].
+	^(InstructionStream on: (VMCompiledMethodProxy new
+								for: aMethodObj
+								coInterpreter: coInterpreter
+								objectMemory: objectMemory))
+		extensionsForBytecodeAt: bcpc + 1
+		into: [:extAValue :extBValue| (extAValue ~= 0 ifTrue: [1] ifFalse: [0]) + (extBValue ~= 0 ifTrue: [1] ifFalse: [0])]
+]
+
 { #category : #'compile abstract instructions' }
 Cogit >> needsFrameIfInBlock: isInBlock [
 	^inBlock
@@ -6448,14 +6601,14 @@ Cogit >> needsFrameNever: isInBlock [
 ]
 
 { #category : #'compile abstract instructions' }
-Cogit >> nextBytecodePCFor: descriptor at: pc byte0: opcodeByte in: aMethodObj [
+Cogit >> nextBytecodePCFor: descriptor at: pc exts: nExts in: aMethodObj [
 	"Compute the distance to the logically subsequent bytecode, i.e. skip over blocks."
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<inline: true>
 	^pc
 		+ descriptor numBytes
 		+ (descriptor isBlockCreation
-			ifTrue: [self spanFor: descriptor at: pc byte0: opcodeByte in: aMethodObj]
+			ifTrue: [self spanFor: descriptor at: pc exts: nExts in: aMethodObj]
 			ifFalse: [0])
 ]
 
@@ -6723,6 +6876,13 @@ Cogit >> printMapEntry: annotation mcpc: mcpc args: tupleOfStreamCodeRangesAndMe
 			[aStream
 				nextPutAll: ', bc: ';
 				print: (self bytecodePCFor: mcpc startBcpc: codeRange startpc in: subMethod)].
+		(self isSendAnnotation: annotation) ifTrue:
+			[| sel |
+			sel := self selectorForSendAt: mcpc annotation: annotation.
+			sel isInteger ifTrue:
+				[sel := self lookupAddress: sel].
+			sel isString ifTrue:
+				[aStream space; nextPutAll: sel]].
 		aStream
 			nextPut: $);
 			cr; flush]]
@@ -6806,8 +6966,8 @@ Cogit >> printNum: n [
 { #category : #debugging }
 Cogit >> printOnTrace [
 	<api>
-	<cmacro: '() (traceLinkedSends & 1)'>
-	^(traceLinkedSends bitAnd: 1) ~= 0
+	<cmacro: '() (traceFlags & 1)'>
+	^(traceFlags bitAnd: 1) ~= 0
 ]
 
 { #category : #'method map' }
@@ -6867,15 +7027,15 @@ Cogit >> processorHasMultiply: ignoredPrimIndex [
 { #category : #debugging }
 Cogit >> recordBlockTrace [
 	<api>
-	<cmacro: '() (traceLinkedSends & 4)'>
-	^(traceLinkedSends bitAnd: 4) ~= 0
+	<cmacro: '() (traceFlags & 4)'>
+	^(traceFlags bitAnd: 4) ~= 0
 ]
 
 { #category : #debugging }
 Cogit >> recordEventTrace [
 	<api>
-	<cmacro: '() (traceLinkedSends & 16)'>
-	^(traceLinkedSends bitAnd: 16) ~= 0
+	<cmacro: '() (traceFlags & 16)'>
+	^(traceFlags bitAnd: 16) ~= 0
 ]
 
 { #category : #initialization }
@@ -6908,8 +7068,8 @@ Cogit >> recordLastInstruction [
 { #category : #debugging }
 Cogit >> recordPrimTrace [
 	<api>
-	<cmacro: '() (traceLinkedSends & 8)'>
-	^(traceLinkedSends bitAnd: 8) ~= 0
+	<cmacro: '() (traceFlags & 8)'>
+	^(traceFlags bitAnd: 8) ~= 0
 ]
 
 { #category : #debugging }
@@ -6948,8 +7108,8 @@ Cogit >> recordRunTimeObjectReferences [
 { #category : #debugging }
 Cogit >> recordSendTrace [
 	<api>
-	<cmacro: '() (traceLinkedSends & 2)'>
-	^(traceLinkedSends bitAnd: 2) ~= 0
+	<cmacro: '() (traceFlags & 2)'>
+	^(traceFlags bitAnd: 2) ~= 0
 ]
 
 { #category : #disassembly }
@@ -7205,28 +7365,30 @@ Cogit >> reportLastNInstructions [
 { #category : #'compile abstract instructions' }
 Cogit >> scanBlock: blockStart [
 	"Scan the block to determine if the block needs a frame or not"
-	| descriptor pc end stackDelta |
+	| descriptor pc end stackDelta nExts |
 	<var: #blockStart type: #'BlockStart *'>
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	needsFrame := false.
 	methodOrBlockNumArgs := blockStart numArgs.
+	nExts := 0.
 	pc := blockStart startpc.
 	end := blockStart startpc + blockStart span.
 	stackDelta := 0.
 	[pc < end] whileTrue:
-		[byte0 := objectMemory fetchByte: pc ofObject: methodObj.
+		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
 		 descriptor := self generatorAt: byte0.
 		 needsFrame ifFalse:
 			[(descriptor needsFrameFunction isNil
 			  or: [self perform: descriptor needsFrameFunction with: true])
 				ifTrue: [needsFrame := true]
 				ifFalse: [stackDelta := stackDelta + descriptor stackDelta]].
-		 pc := self nextBytecodePCFor: descriptor at: pc byte0: byte0 in: methodObj].
+		 pc := self nextBytecodePCFor: descriptor at: pc exts: nExts in: methodObj.
+		 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]].
 	needsFrame ifFalse:
 		[stackDelta < 0 ifTrue:
 			[self error: 'negative stack delta in block; block contains bogus code or internal error'].
 		 [stackDelta > 0] whileTrue:
-			[descriptor := self generatorAt: (objectMemory fetchByte: blockStart startpc ofObject: methodObj).
+			[descriptor := self generatorAt: (objectMemory fetchByte: blockStart startpc ofObject: methodObj) + bytecodeSetOffset.
 			 descriptor generator ~~ #genPushConstantNilBytecode asSymbol ifTrue:
 				[self error: 'frameless block doesn''t start with enough pushNils'].
 			 blockStart
@@ -7243,7 +7405,7 @@ Cogit >> scanMethod [
 		- what are the targets of any backward branches.
 		- how many blocks it creates
 	 Answer the block count or on error a negative error code"
-	| latestContinuation descriptor pc numBlocks distance targetPC |
+	| latestContinuation nExts descriptor pc numBlocks distance targetPC |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	needsFrame := false.
 	(primitiveIndex > 0
@@ -7251,8 +7413,9 @@ Cogit >> scanMethod [
 		[^0].
 	numBlocks := 0.
 	pc := latestContinuation := initialPC.
+	nExts := 0.
 	[pc <= endPC] whileTrue:
-		[byte0 := objectMemory fetchByte: pc ofObject: methodObj.
+		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
 		descriptor := self generatorAt: byte0.
 		(descriptor isReturn
 		 and: [pc >= latestContinuation]) ifTrue:
@@ -7262,39 +7425,70 @@ Cogit >> scanMethod [
 			  or: [self perform: descriptor needsFrameFunction with: false]]) ifTrue:
 			[needsFrame := true].
 		descriptor isBranch ifTrue:
-			[distance := self spanFor: descriptor at: pc byte0: byte0 in: methodObj.
+			[distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.
-			 descriptor isBackwardBranch
+			 (self isBackwardBranch: descriptor at: pc exts: nExts in: methodObj)
 				ifTrue: [self initializeFixupAt: targetPC - initialPC]
 				ifFalse: [latestContinuation := latestContinuation max: targetPC]].
 		descriptor isBlockCreation ifTrue:
 			[numBlocks := numBlocks + 1.
-			 distance := self spanFor: descriptor at: pc byte0: byte0 in: methodObj.
+			 distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.
 			 latestContinuation := latestContinuation max: targetPC].
-		pc := pc + descriptor numBytes].
+		pc := pc + descriptor numBytes.
+		nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]].
 	^numBlocks
+]
+
+{ #category : #'simulation only' }
+Cogit >> selectorForSendAt: mcpc annotation: annotation [
+	<doNotGenerate>
+	| entryPoint offset targetMethod selector |
+	entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
+	selector := entryPoint > methodZoneBase
+					ifTrue: "It's a linked send."
+						[self
+							offsetAndSendTableFor: entryPoint
+							annotation: annotation
+							into: [:off :table| offset := off].
+						targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
+						targetMethod selector]
+					ifFalse:
+						[backEnd inlineCacheTagAt: mcpc].
+	^coInterpreter isCurrentImageFacade
+		ifTrue: [coInterpreter objectForOop: selector]
+		ifFalse: [selector]
+]
+
+{ #category : #'simulation only' }
+Cogit >> selectorForSendBefore: bcpc in: aCompiledMethod [
+	<doNotGenerate>
+	| is sel |
+	"sends map to the following pc.  need to find the selector for the previous pc"
+	is := InstructionStream on: aCompiledMethod.
+	is pc: (aCompiledMethod pcPreviousTo: bcpc + 1). "bcpc is 0-rel"
+	^(sel := is selectorToSendOrSelf) ~~ is ifTrue: [sel]
 ]
 
 { #category : #debugging }
 Cogit >> sendTrace [
 	<doNotGenerate>
-	^traceLinkedSends
+	^traceFlags
 ]
 
 { #category : #debugging }
 Cogit >> sendTrace: aBooleanOrInteger [
 	<doNotGenerate>
-	"traceLinkedSends is a set of flags.
-	 1 => print trace (if somethign below is selected)
+	"traceFlags is a set of flags.
+	 1 => print trace (if somethigg below is selected)
 	 2 => trace sends
 	 4 => trace block activations
 	 8 => trace interpreter primitives
 	 16 => trace events (context switches, GCs, etc)
 	 32 => send breakpoint on implicit receiver (Newspeak VM only)"
-	traceLinkedSends := aBooleanOrInteger isInteger
+	traceFlags := aBooleanOrInteger isInteger
 							ifTrue: [aBooleanOrInteger]
-							ifFalse: [aBooleanOrInteger ifTrue: [1] ifFalse: [0]]
+							ifFalse: [aBooleanOrInteger ifTrue: [6] ifFalse: [0]]
 ]
 
 { #category : #debugging }
@@ -7345,7 +7539,7 @@ Cogit >> setInterpreter: aCoInterpreter [
 	simulatedVariableGetters := Dictionary new.
 	simulatedVariableSetters := Dictionary new.
 	traceStores := 0.
-	traceLinkedSends := 8. "record prim trace on by default (see Cogit class>>decareCVarsIn:)"
+	traceFlags := 8. "record prim trace on by default (see Cogit class>>decareCVarsIn:)"
 	debugPrimCallStackOffset := 0.
 	singleStep := printRegisters := printInstructions := clickConfirm := false.
 	breakBlock ifNil: [self breakPC: breakPC].
@@ -7362,7 +7556,8 @@ Cogit >> setInterpreter: aCoInterpreter [
 	trampolineAddresses := CArrayAccessor on: (Array new: NumTrampolines * 2).
 	trampolineTableIndex := 0.
 
-	compilationTrace ifNil: [compilationTrace := 0]
+	compilationTrace ifNil: [compilationTrace := 0].
+	extA := extB := 0
 ]
 
 { #category : #'jit - api' }
@@ -7418,6 +7613,13 @@ Cogit >> shortcutTrampoline: aProcessorSimulationTrap to: aBlock [
 		sp: coInterpreter stackPointer;
 		fp: coInterpreter framePointer;
 		simulateLeafReturnIn: coInterpreter memory
+]
+
+{ #category : #'bytecode generators' }
+Cogit >> shouldBeImplemented [
+	"In the production VM we can continue in the interpreter..."
+	self cCode: [coInterpreter warning: 'bytecode should be implemented; interpreting']
+		inSmalltalk: [super shouldBeImplemented]
 ]
 
 { #category : #'simulation processor access' }
@@ -7582,13 +7784,17 @@ Cogit >> simulatedReadWriteVariableAddress: getter in: receiver [
 ]
 
 { #category : #initialization }
-Cogit >> simulatedTrampolineFor: selector [
+Cogit >> simulatedTrampolineFor: selectorOrAddress [
 	"Set a simulated trampoline.  This is a method in the cogit, coInterpreter
 	 or objectMemory that is called from a machine code trampoline."
 	<doNotGenerate>
 	| address |
-	address := self simulatedAddressFor: selector.
-	simulatedTrampolines at: address ifAbsentPut: [selector].
+	selectorOrAddress isInteger ifTrue:
+		[self assert: (simulatedTrampolines includesKey: selectorOrAddress).
+		 ^selectorOrAddress].
+	self assert: selectorOrAddress isSymbol.
+	address := self simulatedAddressFor: selectorOrAddress.
+	simulatedTrampolines at: address ifAbsentPut: [selectorOrAddress].
 	^address
 ]
 
@@ -7618,28 +7824,16 @@ Cogit >> singleStep: aBoolean [
 ]
 
 { #category : #'compile abstract instructions' }
-Cogit >> spanFor: descriptor at: pc byte0: opcodeByte in: aMethodObj [
+Cogit >> spanFor: descriptor at: pc exts: nExts in: aMethodObj [
 	"Compute the span (jump distance) for a particular bytecode, e.g. a backward branch or a block."
+	<inline: true>
 	<var: #descriptor type: #'BytecodeDescriptor *'>
-	^descriptor numBytes caseOf:
-		{ [1] -> [self
-					perform: descriptor spanFunction
-					with: opcodeByte].
-		   [2] -> [self
-					perform: descriptor spanFunction
-					with: opcodeByte
-					with: (objectMemory fetchByte: pc + 1 ofObject: aMethodObj)].
-		   [3] -> [self
-					perform: descriptor spanFunction
-					with: opcodeByte
-					with: (objectMemory fetchByte: pc + 1 ofObject: aMethodObj)
-					with: (objectMemory fetchByte: pc + 2 ofObject: aMethodObj)].
-		   [4] -> [self
-					perform: descriptor spanFunction
-					with: opcodeByte
-					with: (objectMemory fetchByte: pc + 1 ofObject: aMethodObj)
-					with: (objectMemory fetchByte: pc + 2 ofObject: aMethodObj)
-					with: (objectMemory fetchByte: pc + 3 ofObject: aMethodObj)] }
+	^self
+		perform: descriptor spanFunction
+		with: descriptor
+		with: pc
+		with: nExts
+		with: aMethodObj
 ]
 
 { #category : #'jit - api' }
@@ -7693,7 +7887,7 @@ Cogit >> testBcToMcPcMappingForMethod: cogMethod [
 		[:bcpc :byte :desc| | subMethod |
 		(desc notNil and: [desc isBlockCreation]) ifTrue:
 			[subMethod := subMethods detect: [:sm| sm startpc = (bcpc + desc numBytes)].
-			 subMethod endPC: bcpc + desc numBytes + (self spanFor: desc at: bcpc byte0: byte in: aMethodObj) - 1]].
+			 subMethod endPC: bcpc + desc numBytes + (self spanFor: desc at: bcpc exts: -1 in: aMethodObj) - 1]].
 	subMethods allButFirst do:
 		[:blockSubMethod| | cogBlockMethod |
 		cogBlockMethod := self
@@ -7707,7 +7901,9 @@ Cogit >> testBcToMcPcMappingForMethod: cogMethod [
 		 and: [desc isNil or: [desc isMapped]]) ifTrue:
 			["The first bytecode and backward branch bytecodes are mapped to their pc.
 			  Other bytecodes map to their following pc."
-			mappedBcpc := (desc isNil or: [desc isBackwardBranch])
+			mappedBcpc := (desc isNil
+							   or: [desc isBranch
+								   and: [(self isBackwardBranch: desc at: bcpc exts: (self nExtensionsFor: bcpc in: aMethodObj) in: aMethodObj)]])
 								ifTrue: [bcpc]
 								ifFalse: [bcpc + desc numBytes].
 			 relMcpc := self
@@ -7725,13 +7921,19 @@ Cogit >> testBcToMcPcMappingForMethod: cogMethod [
 { #category : #'tests-method map' }
 Cogit >> testMcToBcPcMappingForMethod: cogMethod [
 	<doNotGenerate>
-	| subMethods prevMcpc |
+	| bcMethod subMethods prevMcpc |
 	"self disassembleMethod: cogMethod"
 	"coInterpreter symbolicMethod: cogMethod methodObject"
 	"coInterpreter printOop: cogMethod methodObject"
 	"self printPCMapPairsFor: cogMethod on: Transcript"
 	cogMethod stackCheckOffset = 0 ifTrue: "frameless"
 		[^self].
+	bcMethod := coInterpreter isCurrentImageFacade
+					ifTrue: [coInterpreter objectForOop: cogMethod methodObject]
+					ifFalse: [VMCompiledMethodProxy new
+								for: cogMethod methodObject
+								coInterpreter: coInterpreter
+								objectMemory: objectMemory].
 	subMethods := self subMethodsAsRangesFor: cogMethod.
 	self mapFor: cogMethod do:
 		[:annotation :mcpc| | subMethod bcpc mappedpc |
@@ -7753,8 +7955,14 @@ Cogit >> testMcToBcPcMappingForMethod: cogMethod [
 				"mcpc = mappedpc is obviously what we want and expect.  PrevMcpc = mappedpc hacks
 				 around frame building accessors where the frst bytecode is mapped twice, once for the
 				 stack check and once for the context inst var access.  The bytecode pc can only map
-				 back to a single mcpc, the first, so the second map entry will fail with- out this hack."
-				self assert: (mcpc = mappedpc or: [prevMcpc = mappedpc])].
+				 back to a single mcpc, the first, so the second map entry will fail without this hack."
+				self assert: (mcpc = mappedpc or: [prevMcpc = mappedpc]).
+				(self isSendAnnotation: annotation) ifTrue:
+					[| mcSelector bcSelector |
+					mcSelector := self selectorForSendAt: mcpc annotation: annotation.
+					"sends map to the following pc.  need to find the selector for the previous pc"
+					bcSelector := self selectorForSendBefore: bcpc in: bcMethod.
+					self assert: mcSelector = bcSelector]].
 			 prevMcpc := mcpc].
 		 false "keep scanning"]
 ]
@@ -7777,7 +7985,7 @@ Cogit >> traceLinkedSendOffset [
 { #category : #'method map' }
 Cogit >> traceMap: annotation byte: byte at: address for: mcpc [
 	<cmacro: '(ig,no,re,d) 0'>
-	| s code |
+	| s code bytecode |
 	(compilationTrace anyMask: 16) ifTrue:
 		[code := annotation isInteger ifTrue: [annotation] ifFalse: [annotation annotation].
 		(s := coInterpreter transcript)
@@ -7792,7 +8000,9 @@ Cogit >> traceMap: annotation byte: byte at: address for: mcpc [
 			 s space.
 			 annotation instruction printStateOn: s.
 			 s space.
-			 (self generatorAt: (objectMemory fetchByte: annotation instruction bcpc ofObject: methodObj)) printStateOn: s.
+			 bytecode := objectMemory fetchByte: annotation instruction bcpc ofObject: methodObj.
+			 bytecode := bytecode + (self bytecodeSetOffsetForHeader: (coInterpreter headerOf: methodObj)).
+			 (self generatorAt: bytecode) printStateOn: s.
 			 s cr; flush]]
 ]
 

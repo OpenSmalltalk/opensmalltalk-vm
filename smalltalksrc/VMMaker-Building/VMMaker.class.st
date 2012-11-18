@@ -294,7 +294,7 @@ VMMaker class >> generateNewspeakCogVM [
 		generate: CoInterpreter
 		and: StackToRegisterMappingCogit"Cogit chooseCogitClass"
 		with: #(	NewspeakVM true
-				MULTIPLEBYTECODESETS false)
+				MULTIPLEBYTECODESETS true)
 		to: (FileDirectory default pathFromURI: 'oscogvm/nscogsrc')
 		platformDir: (FileDirectory default pathFromURI: '../Newspeak/newclosurevm/platforms')
 		including:#(	AsynchFilePlugin BMPReadWriterPlugin BalloonEnginePlugin BitBltSimulation DSAPlugin DropPlugin
@@ -321,14 +321,14 @@ VMMaker class >> generateNewspeakInterpreterVM [
 VMMaker class >> generateNewspeakStackVM [
 	^VMMaker
 		generate: StackInterpreter
-		with: #(NewspeakVM true)
+		with: #(NewspeakVM true MULTIPLEBYTECODESETS true)
 		to: (FileDirectory default pathFromURI: 'oscogvm/nsstacksrc')
 		platformDir: (FileDirectory default pathFromURI: '../Newspeak/newclosurevm/platforms')
 		including:#(	AsynchFilePlugin BMPReadWriterPlugin BalloonEnginePlugin BitBltSimulation DSAPlugin DropPlugin
 					FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin InflatePlugin JPEGReadWriter2Plugin
 					JPEGReaderPlugin LargeIntegersPlugin Matrix2x3Plugin MiscPrimitivePlugin NewsqueakIA32ABIPlugin
-					RePlugin SecurityPlugin SocketPlugin SoundPlugin SurfacePlugin UUIDPlugin UnixOSProcessPlugin
-					VMProfileMacSupportPlugin Win32OSProcessPlugin)
+					RePlugin SecurityPlugin SocketPlugin SoundPlugin SurfacePlugin ThreadedIA32FFIPlugin
+					UUIDPlugin UnixOSProcessPlugin VMProfileMacSupportPlugin Win32OSProcessPlugin)
 ]
 
 { #category : #configurations }

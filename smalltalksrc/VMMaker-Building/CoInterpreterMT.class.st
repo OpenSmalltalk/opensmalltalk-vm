@@ -1360,6 +1360,7 @@ CoInterpreterMT >> transferTo: newProc from: sourceCode [
 	self externalWriteBackHeadFramePointers.
 	sched := self schedulerPointer.
 	oldProc := objectMemory fetchPointer: ActiveProcessIndex ofObject: sched.
+	self recordContextSwitchFrom: oldProc in: sourceCode.
 	activeContext := self ensureFrameIsMarried: framePointer SP: stackPointer.
 	objectMemory storePointer: SuspendedContextIndex ofObject: oldProc withValue: activeContext.
 
@@ -1377,8 +1378,7 @@ CoInterpreterMT >> transferTo: newProc from: sourceCode [
 	self threadSwitchIfNecessary: newProc from: sourceCode.
 
 	self externalSetStackPageAndPointersForSuspendedContextOfProcess: newProc.
-	instructionPointer := self popStack.
-	self recordContextSwitchFrom: sourceCode
+	instructionPointer := self popStack
 ]
 
 { #category : #'vm scheduling' }

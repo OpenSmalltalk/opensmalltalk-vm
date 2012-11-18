@@ -1015,15 +1015,6 @@ NewspeakInterpreterSimulator >> nextLongFrom: aStream swap: swapFlag [
 		ifFalse: [^ self nextLongFrom: aStream]
 ]
 
-{ #category : #'debugging traps' }
-NewspeakInterpreterSimulator >> normalSend [
-	"Catch errors before we start the whole morphic error process"
-
-	"(byteCount > 4000000 and: [(self stringOf: messageSelector) = 'sorts:before:'])
-		ifTrue: [self halt]."
-	^ super normalSend
-]
-
 { #category : #testing }
 NewspeakInterpreterSimulator >> objectBefore: addr [
 	| oop prev |
@@ -1536,52 +1527,6 @@ NewspeakInterpreterSimulator >> profileSends: nBytecodes [
 	self close
 ]
 
-{ #category : #UI }
-NewspeakInterpreterSimulator >> promptHex: string [
-	| s |
-	s := UIManager default request: string, ' (hex)'.
-	^s notEmpty ifTrue:
-		[(s size > 3 and: [s third = $r]) ifTrue:
-			[s := s allButFirst: 3].
-		Integer readFrom: s readStream base: 16]
-]
-
-{ #category : #'bytecode routines' }
-NewspeakInterpreterSimulator >> pushLiteralConstantBytecode [
-
-	"Interpreter version has fetchNextBytecode out of order"
-	self pushLiteralConstant: (currentBytecode bitAnd: 16r1F).
-	self fetchNextBytecode.
-
-]
-
-{ #category : #'bytecode routines' }
-NewspeakInterpreterSimulator >> pushLiteralVariableBytecode [
-
-	"Interpreter version has fetchNextBytecode out of order"
-	self pushLiteralVariable: (currentBytecode bitAnd: 16r1F).
-	self fetchNextBytecode.
-
-]
-
-{ #category : #'bytecode routines' }
-NewspeakInterpreterSimulator >> pushReceiverVariableBytecode [
-
-	"Interpreter version has fetchNextBytecode out of order"
-	self pushReceiverVariable: (currentBytecode bitAnd: 16rF).
-	self fetchNextBytecode.
-
-]
-
-{ #category : #'bytecode routines' }
-NewspeakInterpreterSimulator >> pushTemporaryVariableBytecode [
-
-	"Interpreter version has fetchNextBytecode out of order"
-	self pushTemporaryVariable: (currentBytecode bitAnd: 16rF).
-	self fetchNextBytecode.
-
-]
-
 { #category : #initialization }
 NewspeakInterpreterSimulator >> reverseBytesFrom: begin to: end [
 	"Byte-swap the given range of memory (not inclusive!)."
@@ -1847,37 +1792,6 @@ NewspeakInterpreterSimulator >> stats [
 	^ stats sortedElements
 ]
 
-{ #category : #'bytecode routines' }
-NewspeakInterpreterSimulator >> storeAndPopReceiverVariableBytecode [
-	"Note: This code uses storePointerUnchecked:ofObject:withValue: and does the store check explicitely in order to help the translator produce better code."
-
-	"Interpreter version has fetchNextBytecode out of order"
-	| rcvr top |
-	rcvr := receiver.
-	top := self internalStackTop.
-	(rcvr < youngStart) ifTrue: [
-		self possibleRootStoreInto: rcvr value: top.
-	].
-	self storePointerUnchecked: (currentBytecode bitAnd: 7)
-		ofObject: rcvr
-		withValue: top.
-	self internalPop: 1.
-	self fetchNextBytecode.
-
-]
-
-{ #category : #'bytecode routines' }
-NewspeakInterpreterSimulator >> storeAndPopTemporaryVariableBytecode [
-
-	"Interpreter version has fetchNextBytecode out of order"
-	self storePointerUnchecked: (currentBytecode bitAnd: 7) + TempFrameStart
-		ofObject: localHomeContext
-		withValue: self internalStackTop.
-	self internalPop: 1.
-	self fetchNextBytecode.
-
-]
-
 { #category : #'float primitives' }
 NewspeakInterpreterSimulator >> storeFloatAt: floatBitsAddress from: aFloat [
 
@@ -1899,106 +1813,6 @@ NewspeakInterpreterSimulator >> stringOf: oop [
 			strm nextPutAll: (i=nLongs
 							ifTrue: [chars copyFrom: 1 to: size-1\\BytesPerWord+1]
 							ifFalse: [chars])]]
-]
-
-{ #category : #'debug printing' }
-NewspeakInterpreterSimulator >> symbolic: byte at: ip inMethod: meth [
-	"Print a bytecode in simple symbolic form"
-
-	| type offset |
-	type := byte // 16.  
-	offset := byte \\ 16.  
-	type=0 ifTrue: [^ 'pushRcvr ' , offset printString].
-	type=1 ifTrue: [^ 'pushTemp ' , offset printString].
-	type=2 ifTrue: [^ 'pushLit ' , offset printString].
-	type=3 ifTrue: [^ 'pushLit ' , (offset+16) printString].
-	type=4 ifTrue: [^ 'pushLitVar ' , offset printString].
-	type=5 ifTrue: [^ 'pushLitVar ' , (offset+16) printString].
-	type=6 ifTrue: [offset<8
-					ifTrue: [^ 'storePopRcvr ' , offset printString]
-					ifFalse: [^ 'storePopTemp ' , (offset-8) printString]].
-	type=7 ifTrue: [offset=0 ifTrue: [^ 'pushRcvr'].
-				offset<8 ifTrue: [^ 'pushConst ' , ( #(true false nil -1 0 1 2) at: offset) printString].
-				offset=8 ifTrue: [^ 'returnSelf'].
-				offset<12 ifTrue: [^ 'returnConst ' , ( #(true false nil -1 0 1 2) at: offset-8) printString].
-				offset=12 ifTrue: [^ 'returnTop'].
-				offset=13 ifTrue: [^ 'blockReturnTop'].
-				offset=14 ifTrue: [^ 'sendToDynamicSuperclass'].
-				offset=15 ifTrue: [^ 'pushImplicitReceiver']].
-	type=8 ifTrue: [^ self symbolicExtensions: offset at: ip inMethod: meth].
-	type=9 ifTrue:  "short jumps"
-			[offset<8 ifTrue: [^ 'jump ' , (offset+1) printString].
-			^ 'jumpIfFalse ' , (offset-8+1) printString].
-	type=10 ifTrue:  "long jumps"
-			[offset<8 ifTrue: [^ 'extendedJump'].
-			offset<12 ifTrue: [^ 'extendedJumpIfTrue'].
-			true ifTrue: [^ 'extendedJumpIfFalse']].
-	type=11 ifTrue: [^ 'sendSpl ' , (Smalltalk specialSelectorAt: offset+1)].
-	type=12 ifTrue: [^ 'sendSpl ' , (Smalltalk specialSelectorAt: offset+17)].
-	type>12 ifTrue: [^ 'send ' , (self stringOf: (self literal: offset ofMethod: meth))]
-]
-
-{ #category : #'debug printing' }
-NewspeakInterpreterSimulator >> symbolicExtensions: offset at: ip inMethod: meth [
-	| type offset2 byte2 byte3 byte4 |
-	offset <=6 ifTrue: 
-		["Extended op codes 128-134"
-		byte2 := self fetchByte: ip+1 ofObject: meth.
-		offset <= 2 ifTrue:
-			["128-130:  extended pushes and pops"
-			type := byte2 >> 6 bitAnd: 3.
-			offset2 := byte2 bitAnd: 63.
-			offset = 0 ifTrue: 
-				[type = 0 ifTrue: [^ 'pushRcvr ' , offset2 printString].
-				type = 1 ifTrue: [^ 'pushTemp ' , offset2 printString].
-				type = 2  ifTrue: [^ 'pushLit ' , (offset2 + 1) printString].
-				type = 3 ifTrue: [^ 'pushLitVar ' , (offset2 + 1) printString]].
-			offset = 1 ifTrue: 
-				[type = 0 ifTrue: [^ 'storeIntoRcvr ' , offset2 printString].
-				type = 1 ifTrue: [^ 'storeIntoTemp ' , offset2 printString].
-				type = 2 ifTrue: [^ 'illegalStore'].
-				type = 3 ifTrue: [^ 'storeIntoLitVar ' , (offset2 + 1) printString]].
-			offset = 2 ifTrue: 
-				[type = 0 ifTrue: [^ 'storePopRcvr ' , offset2 printString].
-				type = 1 ifTrue: [^ 'storePopTemp ' , offset2 printString].
-				type = 2 ifTrue: [^ 'illegalStore'].
-				type = 3  ifTrue: [^ 'storePopLitVar ' , (offset2 + 1) printString]]].
-		"131-134: extended sends"
-		offset = 3 ifTrue:  "Single extended send"
-			[^ 'send ' , (self stringOf: (self literal: byte2 \\ 32 ofMethod: meth))].
-		offset = 4 ifTrue:    "Double extended do-anything"
-			[byte3 := self fetchByte: ip+2 ofObject: meth.
-			type := byte2 // 32.
-			type = 0 ifTrue: [^ 'send ' , (self stringOf: (self literal: byte3 ofMethod: meth))].
-			type = 1 ifTrue: [^ 'superSend ' , (self stringOf: (self literal: byte3 ofMethod: meth))].
-			type = 2 ifTrue: [^ 'pushRcvr ' , byte3 printString].
-			type = 3 ifTrue: [^ 'pushLit ' , byte3 printString].
-			type = 4 ifTrue: [^ 'pushLitVar ' , byte3 printString].
-			type = 5 ifTrue: [^ 'storeIntoRcvr ' , byte3 printString].
-			type = 6 ifTrue: [^ 'storePopRcvr ' , byte3 printString].
-			type = 7 ifTrue: [^ 'storeIntoLitVar ' , byte3 printString]].
-		offset = 5 ifTrue:  "Single extended send to super"
-			[^ 'superSend ' , (self stringOf: (self literal: byte2 \\ 32 ofMethod: meth))].
-		offset = 6 ifTrue:   "Second extended send"
-			[^ 'send ' , (self stringOf: (self literal: byte2 \\ 64 ofMethod: meth))]].
-	offset = 7 ifTrue: [^ 'doPop'].
-	offset = 8 ifTrue: [^ 'doDup'].
-	offset = 9 ifTrue: [^ 'pushActiveContext'].
-	byte2 := self fetchByte: ip+1 ofObject: meth.
-	offset = 10 ifTrue:
-		[^byte2 < 128
-			ifTrue: ['pushNewArrayOfSize: ', byte2 printString]
-			ifFalse: ['pushConsArrayWithElements: ', (byte2 - 128) printString]].
-	offset = 11 ifTrue: [^ 'unusedBytecode'].
-	byte3 := self fetchByte: ip+2 ofObject: meth.
-	offset = 12 ifTrue: [^'pushRemoteTemp: ', byte2 printString, ' inVectorAt: ', byte3 printString].
-	offset = 13 ifTrue: [^'storeIntoRemoteTemp: ', byte2 printString, ' inVectorAt: ', byte3 printString].
-	offset = 14 ifTrue: [^'popIntoRemoteTemp: ', byte2 printString, ' inVectorAt: ', byte3 printString].
-	"offset = 15"
-	byte4 := self fetchByte: ip+3 ofObject: meth.
-	^'pushClosureCopyNumCopiedValues: ', (byte2 bitShift: -4) printString,
-		' numArgs: ', (byte2 bitAnd: 16rF) printString,
-		' blockSize: ', ((byte3 * 256) + byte4) printString
 ]
 
 { #category : #'debug support' }

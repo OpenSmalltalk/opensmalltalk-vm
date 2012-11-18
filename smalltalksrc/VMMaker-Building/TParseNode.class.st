@@ -32,6 +32,14 @@ TParseNode >> bindVariableUsesIn: aDictionary [
 ]
 
 { #category : #transformations }
+TParseNode >> bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold in: codeGen [
+	"Answer either the receiver, if it contains no references to the given variables, or a new node with the given variables rebound.
+	 But do not change variables that appear on the left-hand-side of an assignment statement."
+	^self
+
+]
+
+{ #category : #transformations }
 TParseNode >> bindVariablesIn: aDictionary [
 
 	^self
@@ -86,24 +94,25 @@ TParseNode >> emitCCodeOn: aStream level: lev generator: gen [
 TParseNode >> emitCCodeOn: aStream prependToEnd: aNodeOrNil level: lev generator: gen [
 	aNodeOrNil ifNotNil:
 		[aNodeOrNil prependCCodeOn: aStream level: lev generator: gen].
-	self emitCCodeOn: aStream level: lev generator: gen
+	self emitCCodeAsExpressionOn: aStream
+		level: ((aNodeOrNil notNil and: [self isLeaf]) ifTrue: [0] ifFalse: [lev])
+		generator: gen
 ]
 
 { #category : #'C code generation' }
 TParseNode >> emitCCommentOn: aStream level: level [
 	"Emit the transferred Smalltalk comments as C comments."
 
-	comment ifNotNil: [
-		comment isString ifTrue: [^self].	"safety catch"
-		aStream cr.
-		1 to: comment size do: [:index | 
-			aStream 
-				tab: level;
-				nextPutAll: '/* ';
-				nextPutAll: (comment at: index);
-				nextPutAll: ' */';
-				cr].
-		aStream cr]
+	comment ifNotNil:
+		[comment isString ifTrue: [^self].	"safety catch"
+		 aStream cr.
+		 1 to: comment size do: [:index | 
+			aStream tab: level; nextPutAll: '/* '.
+			((comment at: index) findTokens: Character cr)
+				do: [:line| aStream nextPutAll: line withBlanksTrimmed]
+				separatedBy: [aStream crtab: level; next: 3 put: Character space].
+			aStream nextPutAll: ' */'; cr].
+		 aStream cr]
 ]
 
 { #category : #testing }

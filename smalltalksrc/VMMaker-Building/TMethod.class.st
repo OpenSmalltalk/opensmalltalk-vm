@@ -173,6 +173,18 @@ TMethod >> bindVariableUsesIn: aDictionary [
 ]
 
 { #category : #transformations }
+TMethod >> bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold in: codeGen [
+	"Answer either the receiver, if it contains no references to the given variables, or a new node with the given variables rebound."
+	| newParseTree |
+	newParseTree := parseTree bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold in: codeGen.
+	^newParseTree = parseTree
+		ifTrue: [self]
+		ifFalse: [self shallowCopy
+					parseTree: newParseTree;
+					yourself]
+]
+
+{ #category : #transformations }
 TMethod >> buildCaseStmt: aSendNode [
 	"Build a case statement node for the given send of dispatchOn:in:."
 	"Note: the first argument is the variable to be dispatched on. The second argument is a constant node holding an array of unary selectors, which will be turned into sends to self."
@@ -465,25 +477,27 @@ TMethod >> emitCLocalsOn: aStream generator: aCodeGen [
 TMethod >> emitInlineOn: aStream level: level generator: aCodeGen [
 	"Emit C code for this method onto the given stream. All calls to inlined methods should already have been expanded."
 	self removeUnusedTemps.
-	sharedLabel ifNotNil:[
-		aStream crtab: level-1; nextPutAll: sharedLabel; nextPut: $:.
+	sharedLabel ifNotNil:
+		[aStream crtab: level-1; nextPutAll: sharedLabel; nextPut: $:.
 		aStream crtab: level.
 		aStream nextPutAll: '/* '; nextPutAll: selector; nextPutAll: ' */'.
 		aStream crtab: level].
-	aStream nextPut: ${; cr.
-	locals do: [ :var |
-		aStream
-			tab: level+1;
-			nextPutAll: (self declarationAt: var);
-			nextPut: $;;
-			cr].
-	aStream crtab: level + 1.
+	aStream nextPut: ${.
+	locals isEmpty ifFalse:
+		[locals do:
+			[:var|
+			 aStream
+				crtab: level+1;
+				nextPutAll: (self declarationAt: var);
+				nextPut: $;].
+			 aStream cr].
+	aStream crtab: level+1.
 	aCodeGen outputAsmLabel: selector on: aStream.
-	aStream crtab: level + 1.
+	aStream crtab: level+1.
 	aCodeGen
 		pushScope: declarations
 		while: [parseTree emitCCodeOn: aStream level: level+1 generator: aCodeGen].
-	aStream tab: level; nextPut: $}; cr.
+	aStream tab: level; nextPut: $}
 ]
 
 { #category : #'C code generation' }
@@ -904,6 +918,8 @@ TMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar in:
 	| sel meth exitLabel inlineStmts label exitType |
 	sel := aSendNode selector.
 	meth := aCodeGen methodNamed: sel.
+	"convenient for debugging..."
+	self maybeBreakFor: aSendNode in: aCodeGen.
 	meth args size = aSendNode args size ifFalse:
 		[^nil].
 	meth args with: aSendNode args do:
@@ -965,6 +981,7 @@ TMethod >> inlineableFunctionCall: aNode in: aCodeGen [
 	"Answer true if the given send node is a call to a 'functional' method--a method whose body is a single return statement of some expression and whose actual parameters can all be directly substituted."
 
 	| m |
+	self maybeBreakFor: aNode in: aCodeGen.
 	^aNode isSend
 	and: [(m := aCodeGen methodNamed: aNode selector) notNil  "nil if builtin or external function"
 	and: [m isFunctional
@@ -977,6 +994,7 @@ TMethod >> inlineableSend: aNode in: aCodeGen [
 	"Answer true if the given send node is a call to a method that can be inlined."
 
 	| m |
+	self maybeBreakFor: aNode in: aCodeGen.
 	aNode isSend ifFalse: [ ^false ].
 	m := aCodeGen methodNamed: aNode selector.  "nil if builtin or external function"
 	^(m ~= nil) and: [m isComplete and: [aCodeGen mayInline: m selector]]
@@ -1136,6 +1154,16 @@ TMethod >> maySubstituteGlobal: globalVar in: aCodeGen [
 	writtenToGlobalVarsCache = nil ifTrue:
 		[self computePossibleSideEffectsInto: (Set new: 50) visited: (Set new: 50) in: aCodeGen].
 	^(writtenToGlobalVarsCache includes: globalVar) not
+]
+
+{ #category : #inlining }
+TMethod >> maybeBreakFor: aNode in: aCodeGen [
+	"convenient for debugging..."
+	(aNode isSend
+	and: [(aCodeGen breakSrcInlineSelector notNil or: [aCodeGen breakDestInlineSelector notNil])
+	and: [(aCodeGen breakSrcInlineSelector ifNil: [true] ifNotNil: [:srcSel| srcSel = aNode selector])
+	and: [aCodeGen breakDestInlineSelector ifNil: [true] ifNotNil: [:dstSel| dstSel = selector]]]]) ifTrue:
+		[self halt]
 ]
 
 { #category : #inlining }

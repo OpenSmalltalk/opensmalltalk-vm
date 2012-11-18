@@ -14,6 +14,12 @@ TVariableNode >> bindVariableUsesIn: aDictionary [
 ]
 
 { #category : #transformations }
+TVariableNode >> bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold in: codeGen [
+	"Answer either the receiver, if it is not a reference to one of the given variables, or the replacement if it is."
+	^(aDictionary at: name ifAbsent: [^self]) copy
+]
+
+{ #category : #transformations }
 TVariableNode >> bindVariablesIn: aDictionary [ 
 	^ (aDictionary at: name ifAbsent: [^ self]) copy
 ]

@@ -7,18 +7,17 @@ Class {
 	#instVars : [
 		'generator',
 		'spanFunction',
+		'needsFrameFunction',
 		'stackDelta',
 		'opcode',
 		'numBytes',
-		'needsFrameFunction',
-		'isBranch',
-		'isBackwardBranch',
 		'isBranchTrue',
 		'isBranchFalse',
 		'isReturn',
 		'isBlockCreation',
 		'isMapped',
-		'isMappedInBlock'
+		'isMappedInBlock',
+		'isExtension'
 	],
 	#category : #'VMMaker-JIT'
 }
@@ -33,7 +32,7 @@ CogBytecodeDescriptor class >> instVarNamesAndTypesForTranslationDo: aBinaryBloc
 			value: ivn
 			value: (ivn caseOf: {
 							['generator']			->	[#('sqInt (*' ')(void)')].
-							['spanFunction']			->	[#('sqInt (*' ')(unsigned char,...)')].
+							['spanFunction']			->	[#('sqInt (*' ')(struct _BytecodeDescriptor *,sqInt,sqInt,sqInt)')].
 							['needsFrameFunction']	->	[#('sqInt (*' ')(sqInt)')].
 							['numBytes']			->	['unsigned char'].
 							['stackDelta']			->	['signed char'].
@@ -61,20 +60,6 @@ CogBytecodeDescriptor >> generator: anObject [
 ]
 
 { #category : #accessing }
-CogBytecodeDescriptor >> isBackwardBranch [
-	"Answer the value of isBackwardBranch"
-
-	^ isBackwardBranch
-]
-
-{ #category : #accessing }
-CogBytecodeDescriptor >> isBackwardBranch: anObject [
-	"Set the value of isBackwardBranch"
-
-	^isBackwardBranch := anObject
-]
-
-{ #category : #accessing }
 CogBytecodeDescriptor >> isBlockCreation [
 	"Answer the value of isBlockCreation"
 
@@ -90,16 +75,7 @@ CogBytecodeDescriptor >> isBlockCreation: anObject [
 
 { #category : #accessing }
 CogBytecodeDescriptor >> isBranch [
-	"Answer the value of isBranch"
-
-	^isBranch
-]
-
-{ #category : #accessing }
-CogBytecodeDescriptor >> isBranch: anObject [
-	"Set the value of isBranch"
-
-	^isBranch := anObject
+	^self spanFunction notNil and: [self isBlockCreation not]
 ]
 
 { #category : #accessing }
@@ -128,6 +104,20 @@ CogBytecodeDescriptor >> isBranchTrue: anObject [
 	"Set the value of isBranchTrue"
 
 	^isBranchTrue := anObject
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> isExtension [
+	"Answer the value of isExtension"
+
+	^ isExtension
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> isExtension: anObject [
+	"Set the value of isExtension"
+
+	^isExtension := anObject
 ]
 
 { #category : #accessing }
@@ -175,7 +165,7 @@ CogBytecodeDescriptor >> isReturn: anObject [
 { #category : #accessing }
 CogBytecodeDescriptor >> isUnconditionalBranch [
 
-	^isBranch and: [(isBranchTrue or: [isBranchFalse]) not]
+	^self isBranch and: [(isBranchTrue or: [isBranchFalse]) not]
 ]
 
 { #category : #accessing }
@@ -234,7 +224,7 @@ CogBytecodeDescriptor >> printCInitializerOn: aStream in: aCCodeGenerator [
 			ifTrue: [value isInteger
 						ifTrue: [aStream print: value]
 						ifFalse: [aStream nextPut: ((value notNil and: [value]) ifTrue: [$1] ifFalse: [$0])]]
-			ifFalse: [ivn =  'spanFunction' ifTrue:
+			ifFalse: [(false and: [#('spanFunction' 'isBackwardBranchFunction') includes: ivn]) ifTrue:
 						[aStream nextPut: $(; nextPutAll: type first; nextPutAll: type last; nextPut: $)].
 					aStream nextPutAll: (value
 											ifNotNil: [aCCodeGenerator cFunctionNameFor: value]
@@ -245,11 +235,11 @@ CogBytecodeDescriptor >> printCInitializerOn: aStream in: aCCodeGenerator [
 { #category : #'debug printing' }
 CogBytecodeDescriptor >> printStateOn: aStream [
 	<doNotGenerate> "Smalltalk-side only"
-	generator isNil ifTrue:
+	generator ifNil:
 		[^self].
 	aStream space; nextPut: $(; nextPutAll: generator; space; print: numBytes.
 	needsFrameFunction ifNotNil: [aStream space; nextPutAll: needsFrameFunction].
-	isBackwardBranch ifTrue: [aStream nextPutAll: ' isBackwardBranch'].
+	spanFunction ifNotNil: [:func| aStream space; nextPutAll: func].
 	isReturn ifTrue: [aStream nextPutAll: ' isReturn'].
 	opcode ifNotNil: [aStream space; nextPutAll: (CogRTLOpcodes nameForOpcode: opcode)].
 	aStream nextPut: $)
@@ -258,15 +248,15 @@ CogBytecodeDescriptor >> printStateOn: aStream [
 { #category : #accessing }
 CogBytecodeDescriptor >> spanFunction [
 	"Answer the value of spanFunction"
-	<returnTypeC: 'int (*)(unsigned char,...)'>
+	<returnTypeC: 'sqInt (*)(BytecodeDescriptor *,sqInt,sqInt,sqInt)'>
 	^spanFunction
 ]
 
 { #category : #accessing }
 CogBytecodeDescriptor >> spanFunction: functionPointer [
 	"Set the value of spanFunction"
-	<returnTypeC: 'int (*)(unsigned char,...)'>
-	<var: #functionPointer declareC: 'int (*functionPointer)(unsigned char,...)'>
+	<returnTypeC: 'sqInt (*)(BytecodeDescriptor *,sqInt,sqInt,sqInt)'>
+	<var: #functionPointer declareC: 'sqInt (*functionPointer)(BytecodeDescriptor *,sqInt,sqInt,sqInt)'>
 	^spanFunction := functionPointer
 ]
 
