@@ -21,6 +21,19 @@ TStmtListNode >> bindVariableUsesIn: aDictionary [
 ]
 
 { #category : #transformations }
+TStmtListNode >> bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold in: codeGen [
+	"Answer either the receiver, if it contains no references to the given variables, or a new node with the given variables rebound."
+	| newStatements |
+	newStatements := statements collect: [:s| s bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold in: codeGen].
+	^newStatements = statements
+		ifTrue: [self]
+		ifFalse:
+			[self shallowCopy
+				setStatements: newStatements;
+				yourself]
+]
+
+{ #category : #transformations }
 TStmtListNode >> bindVariablesIn: aDictionary [
 
 	statements := statements collect: [ :s | s bindVariablesIn: aDictionary ].
@@ -65,12 +78,12 @@ TStmtListNode >> emitCCodeOn: aStream prependToEnd: aNodeOrNil level: level gene
 	statements withIndexDo:
 		[:s :idx|
 		s emitCCommentOn: aStream level: level.
-		aStream tab: level.
+		aStream peekLast ~~ Character tab ifTrue:
+			[aStream tab: level].
 		(aNodeOrNil notNil
 		 and: [idx = statements size])
 			ifTrue:
-				[aNodeOrNil prependCCodeOn: aStream level: level generator: aCodeGen.
-				 s emitCCodeAsExpressionOn: aStream level: level generator: aCodeGen]
+				[s emitCCodeOn: aStream prependToEnd: aNodeOrNil level: level generator: aCodeGen]
 			ifFalse:
 				[s emitCCodeOn: aStream level: level generator: aCodeGen].
 		((self endsWithCloseBracket: aStream)

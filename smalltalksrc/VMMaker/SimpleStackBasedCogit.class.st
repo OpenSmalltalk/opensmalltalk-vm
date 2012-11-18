@@ -45,7 +45,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV3PlusClosures 
 		(1  16   31 genPushTemporaryVariableBytecode)
 		(1  32   63 genPushLiteralConstantBytecode needsFrameNever: 1)
 		(1  64   95 genPushLiteralVariableBytecode needsFrameNever: 1)
-		(1  96 103 genStoreAndPopReceiverVariableBytecode needsFrameNever: -1)
+		(1  96 103 genStoreAndPopReceiverVariableBytecode needsFrameNever: -1) "N.B. not frameless if immutability"
 		(1 104 111 genStoreAndPopTemporaryVariableBytecode)
 		(1 112 112 genPushReceiverBytecode)
 		(1 113 113 genPushConstantTrueBytecode needsFrameNever: 1)
@@ -53,54 +53,141 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV3PlusClosures 
 		(1 115 115 genPushConstantNilBytecode needsFrameNever: 1)
 		(1 116 119 genPushQuickIntegerConstantBytecode needsFrameNever: 1)
 		"method returns in blocks need a frame because of nonlocalReturn:through:"
-		(1 120 120 genReturnReceiver				return needsFrameIfInBlock: mappedInBlock 0)
-		(1 121 121 genReturnTrue					return needsFrameIfInBlock: mappedInBlock 0)
-		(1 122 122 genReturnFalse					return needsFrameIfInBlock: mappedInBlock 0)
-		(1 123 123 genReturnNil						return needsFrameIfInBlock: mappedInBlock 0)
-		(1 124 124 genReturnTopFromMethod		return needsFrameIfInBlock: mappedInBlock -1)
-		(1 125 125 genReturnTopFromBlock			return needsFrameNever: -1)
+		(1 120 120 genReturnReceiver				return needsFrameIfInBlock: isMappedInBlock 0)
+		(1 121 121 genReturnTrue					return needsFrameIfInBlock: isMappedInBlock 0)
+		(1 122 122 genReturnFalse					return needsFrameIfInBlock: isMappedInBlock 0)
+		(1 123 123 genReturnNil					return needsFrameIfInBlock: isMappedInBlock 0)
+		(1 124 124 genReturnTopFromMethod		return needsFrameIfInBlock: isMappedInBlock -1)
+		(1 125 125 genReturnTopFromBlock		return needsFrameNever: -1)
 
-		(3 126 126 genDynamicSuperSendBytecode mapped)		"Newspeak"
-		(2 127 127 genPushImplicitReceiverBytecode mapped)	"Newspeak"
+		(3 126 126 genDynamicSuperSendBytecode isMapped)		"Newspeak"
+		(2 127 127 genPushImplicitReceiverBytecode isMapped)	"Newspeak"
 
 		(2 128 128 extendedPushBytecode needsFrameNever: 1)
 		(2 129 129 extendedStoreBytecode)
 		(2 130 130 extendedStoreAndPopBytecode)
-		(2 131 131 genExtendedSendBytecode mapped)
-		(3 132 132 doubleExtendedDoAnythingBytecode mapped)
-		(2 133 133 genExtendedSuperBytecode mapped)
-		(2 134 134 genSecondExtendedSendBytecode mapped)
+		(2 131 131 genExtendedSendBytecode isMapped)
+		(3 132 132 doubleExtendedDoAnythingBytecode isMapped)
+		(2 133 133 genExtendedSuperBytecode isMapped)
+		(2 134 134 genSecondExtendedSendBytecode isMapped)
 		(1 135 135 genPopStackBytecode needsFrameNever: -1)
 		(1 136 136 duplicateTopBytecode needsFrameNever: 1)
 
 		(1 137 137 genPushActiveContextBytecode)
 		(2 138 138 genPushNewArrayBytecode)
 
-		(2 139 139 genPushExplicitOuterSendReceiverBytecode mapped)	"Newspeak"
+		(2 139 139 genPushExplicitOuterSendReceiverBytecode isMapped)	"Newspeak"
 
 		(3 140 140 genPushRemoteTempLongBytecode)
 		(3 141 141 genStoreRemoteTempLongBytecode)
 		(3 142 142 genStoreAndPopRemoteTempLongBytecode)
-		(4 143 143 genPushClosureCopyCopiedValuesBytecode block blockCodeS:i:z:e:)
+		(4 143 143 genPushClosureCopyCopiedValuesBytecode block v3:Block:Code:Size:)
 
-		(1 144 151 genShortUnconditionalJump		forward shortForwardBranchDistance:)
-		(1 152 159 genShortJumpIfFalse				forward false mapped "because of mustBeBoolean"
-														shortForwardBranchDistance:)
-		(2 160 163 genLongUnconditionalBackwardJump	backward mapped "because of interrupt check"
-														longBranchDist:ance:)
-		(2 164 167 genLongUnconditionalForwardJump	forward longBranchDist:ance:)
-		(2 168 171 genLongJumpIfTrue				forward true mapped "because of mustBeBoolean"
-														longForwardBranchDist:ance:)
-		(2 172 175 genLongJumpIfFalse				forward false mapped "because of mustBeBoolean"
-														longForwardBranchDist:ance:)
+		(1 144 151 genShortUnconditionalJump			branch v3:ShortForward:Branch:Distance:)
+		(1 152 159 genShortJumpIfFalse					branch isBranchFalse isMapped "because of mustBeBoolean"
+															v3:ShortForward:Branch:Distance:)
+		(2 160 163 genLongUnconditionalBackwardJump	branch isMapped "because of interrupt check"
+															v3:Long:Branch:Distance:)
+		(2 164 167 genLongUnconditionalForwardJump		branch v3:Long:Branch:Distance:)
+		(2 168 171 genLongJumpIfTrue					branch isBranchTrue isMapped "because of mustBeBoolean"
+															v3:LongForward:Branch:Distance:)
+		(2 172 175 genLongJumpIfFalse					branch isBranchFalse isMapped "because of mustBeBoolean"
+															v3:LongForward:Branch:Distance:)
 
-		(1 176 197 genSpecialSelectorSend mapped)
+		(1 176 197 genSpecialSelectorSend isMapped)
 		(1 198 198 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
 		(1 199 199 genSpecialSelectorClass needsFrameNever: notMapped 0) "not mapped because it is directly inlined (for now)"
-		(1 200 207 genSpecialSelectorSend mapped)
-		(1 208 223 genSendLiteralSelector0ArgsBytecode mapped)
-		(1 224 239 genSendLiteralSelector1ArgBytecode mapped)
-		(1 240 255 genSendLiteralSelector2ArgsBytecode mapped))
+		(1 200 207 genSpecialSelectorSend isMapped)
+		(1 208 223 genSendLiteralSelector0ArgsBytecode isMapped)
+		(1 224 239 genSendLiteralSelector1ArgBytecode isMapped)
+		(1 240 255 genSendLiteralSelector2ArgsBytecode isMapped))
+]
+
+{ #category : #'class initialization' }
+SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV4 [
+	"SimpleStackBasedCogit initializeBytecodeTableForNewspeakV4"
+
+	self flag:
+'Special selector send class must be inlined to agree with the interpreter, which
+ inlines class.  If class is sent to e.g. a general instance of ProtoObject then unless
+ class is inlined there will be an MNU.  It must be that the Cointerpreter and Cogit
+ have identical semantics.  We get away with not hardwiring the other special
+ selectors either because in the Cointerpreter they are not inlined or because they
+ are inlined only to instances of classes for which there will always be a method.'.
+	self generatorTableFrom: #(
+		"1 byte bytecodes"
+		(1    0   15 genPushReceiverVariableBytecode)
+		(1  16   31 genPushLiteralVariable16CasesBytecode needsFrameNever: 1)
+		(1  32   63 genPushLiteralConstantBytecode needsFrameNever: 1)
+		(1  64   75 genPushTemporaryVariableBytecode)
+		(1  76   76 genPushReceiverBytecode)
+		(1  77   77 genExtPushPseudoVariableOrOuterBytecode)
+		(1  78   78 genPushConstantZeroBytecode)
+		(1  79   79 genPushConstantOneBytecode)
+
+		(1   80 101 genSpecialSelectorSend isMapped) "#+ #- #< #> #<= #>= #= #~= #at: #at:put: #size #next #nextPut: #atEnd"
+		(1 102 102 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
+		(1 103 103 genSpecialSelectorClass needsFrameNever: notMapped 0) "not mapped because it is directly inlined (for now)"
+		(1 104 111 genSpecialSelectorSend isMapped) "#blockCopy: #value #value: #do: #new #new: #x #y"
+
+		(1 112 127 genSendLiteralSelector0ArgsBytecode isMapped)
+		(1 128 143 genSendLiteralSelector1ArgBytecode isMapped)
+		(1 144 159 genSendLiteralSelector2ArgsBytecode isMapped)
+		(1 160 175	genSendAbsentImplicit0ArgsBytecode isMapped)
+
+		(1 176 183 genStoreAndPopReceiverVariableBytecode needsFrameNever: -1) "N.B. not frameless if immutability"
+		(1 184 191 genStoreAndPopTemporaryVariableBytecode)
+
+		(1 192 199 genShortUnconditionalJump	branch v3:ShortForward:Branch:Distance:)
+		(1 200 207 genShortJumpIfTrue			branch isBranchTrue isMapped "because of mustBeBoolean"
+													v3:ShortForward:Branch:Distance:)
+		(1 208 215 genShortJumpIfFalse			branch isBranchFalse isMapped "because of mustBeBoolean"
+													v3:ShortForward:Branch:Distance:)
+
+		(1 216 216 genReturnReceiver				return needsFrameIfInBlock: isMappedInBlock 0)
+		(1 217 217 genReturnTopFromMethod		return needsFrameIfInBlock: isMappedInBlock -1)
+		(1 218 218 genExtReturnTopFromBlock	return needsFrameNever: -1)
+
+		(1 219 219 duplicateTopBytecode			needsFrameNever: 1)
+		(1 220 220 genPopStackBytecode			needsFrameNever: -1)
+		(1 221 221 genExtNopBytecode			needsFrameNever: 0)
+		(1 222 223	unknownBytecode)
+
+		"2 byte bytecodes"
+		(2 224 224 extABytecode extension)
+		(2 225 225 extBBytecode extension)
+		(2 226 226 genExtPushReceiverVariableBytecode)
+		(2 227 227 genExtPushLiteralVariableBytecode		needsFrameNever: 1)
+		(2 228 228 genExtPushLiteralBytecode					needsFrameNever: 1)
+		(2 229 229 genExtPushIntegerBytecode				needsFrameNever: 1)
+		(2 230 230 genLongPushTemporaryVariableBytecode)
+		(2 231 231 genPushNewArrayBytecode)
+		(2 232 232 genExtStoreReceiverVariableBytecode)
+		(2 233 233 genExtStoreLiteralVariableBytecode)
+		(2 234 234 genLongStoreTemporaryVariableBytecode)
+		(2 235 235 genExtStoreAndPopReceiverVariableBytecode)
+		(2 236 236 genExtStoreAndPopLiteralVariableBytecode)
+		(2 237 237 genLongStoreAndPopTemporaryVariableBytecode)
+
+		(2 238 238 genExtSendBytecode isMapped)
+		(2 239 239 genExtSendSuperBytecode isMapped)
+		(2 240 240 genExtSendAbsentImplicitBytecode isMapped)
+		(2 241 241 genExtSendAbsentDynamicSuperBytecode isMapped)
+
+		(2 242 242 genExtUnconditionalJump	branch isMapped "because of interrupt check" v4:Long:Branch:Distance:)
+		(2 243 243 genExtJumpIfTrue			branch isBranchTrue isMapped "because of mustBeBoolean" v4:Long:Branch:Distance:)
+		(2 244 244 genExtJumpIfFalse			branch isBranchFalse isMapped "because of mustBeBoolean" v4:Long:Branch:Distance:)
+
+		(2 245 248	unknownBytecode)
+
+		"3 byte bytecodes"
+		(3 249 249 callPrimitiveBytecode)
+		(3 250 250 genPushRemoteTempLongBytecode)
+		(3 251 251 genStoreRemoteTempLongBytecode)
+		(3 252 252 genStoreAndPopRemoteTempLongBytecode)
+		(3 253 253 genExtPushClosureBytecode block v4:Block:Code:Size:)
+
+		(3 254 255	unknownBytecode))
 ]
 
 { #category : #'class initialization' }
@@ -119,7 +206,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSqueakV3PlusClosures [
 		(1  16   31 genPushTemporaryVariableBytecode)
 		(1  32   63 genPushLiteralConstantBytecode needsFrameNever: 1)
 		(1  64   95 genPushLiteralVariableBytecode needsFrameNever: 1)
-		(1  96 103 genStoreAndPopReceiverVariableBytecode needsFrameNever: -1)
+		(1  96 103 genStoreAndPopReceiverVariableBytecode needsFrameNever: -1) "N.B. not frameless if immutability"
 		(1 104 111 genStoreAndPopTemporaryVariableBytecode)
 		(1 112 112 genPushReceiverBytecode)
 		(1 113 113 genPushConstantTrueBytecode needsFrameNever: 1)
@@ -127,22 +214,22 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSqueakV3PlusClosures [
 		(1 115 115 genPushConstantNilBytecode needsFrameNever: 1)
 		(1 116 119 genPushQuickIntegerConstantBytecode needsFrameNever: 1)
 		"method returns in blocks need a frame because of nonlocalReturn:through:"
-		(1 120 120 genReturnReceiver				return needsFrameIfInBlock: mappedInBlock 0)
-		(1 121 121 genReturnTrue					return needsFrameIfInBlock: mappedInBlock 0)
-		(1 122 122 genReturnFalse					return needsFrameIfInBlock: mappedInBlock 0)
-		(1 123 123 genReturnNil						return needsFrameIfInBlock: mappedInBlock 0)
-		(1 124 124 genReturnTopFromMethod		return needsFrameIfInBlock: mappedInBlock -1)
-		(1 125 125 genReturnTopFromBlock			return needsFrameNever: -1)
+		(1 120 120 genReturnReceiver				return needsFrameIfInBlock: isMappedInBlock 0)
+		(1 121 121 genReturnTrue					return needsFrameIfInBlock: isMappedInBlock 0)
+		(1 122 122 genReturnFalse					return needsFrameIfInBlock: isMappedInBlock 0)
+		(1 123 123 genReturnNil					return needsFrameIfInBlock: isMappedInBlock 0)
+		(1 124 124 genReturnTopFromMethod		return needsFrameIfInBlock: isMappedInBlock -1)
+		(1 125 125 genReturnTopFromBlock		return needsFrameNever: -1)
 
 		(1 126 127 unknownBytecode)
 
 		(2 128 128 extendedPushBytecode needsFrameNever: 1)
 		(2 129 129 extendedStoreBytecode)
 		(2 130 130 extendedStoreAndPopBytecode)
-		(2 131 131 genExtendedSendBytecode mapped)
-		(3 132 132 doubleExtendedDoAnythingBytecode mapped)
-		(2 133 133 genExtendedSuperBytecode mapped)
-		(2 134 134 genSecondExtendedSendBytecode mapped)
+		(2 131 131 genExtendedSendBytecode isMapped)
+		(3 132 132 doubleExtendedDoAnythingBytecode isMapped)
+		(2 133 133 genExtendedSuperBytecode isMapped)
+		(2 134 134 genSecondExtendedSendBytecode isMapped)
 		(1 135 135 genPopStackBytecode needsFrameNever: -1)
 		(1 136 136 duplicateTopBytecode needsFrameNever: 1)
 
@@ -154,26 +241,26 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSqueakV3PlusClosures [
 		(3 140 140 genPushRemoteTempLongBytecode)
 		(3 141 141 genStoreRemoteTempLongBytecode)
 		(3 142 142 genStoreAndPopRemoteTempLongBytecode)
-		(4 143 143 genPushClosureCopyCopiedValuesBytecode block blockCodeS:i:z:e:)
+		(4 143 143 genPushClosureCopyCopiedValuesBytecode block v3:Block:Code:Size:)
 
-		(1 144 151 genShortUnconditionalJump		forward shortForwardBranchDistance:)
-		(1 152 159 genShortJumpIfFalse				forward false mapped "because of mustBeBoolean"
-														shortForwardBranchDistance:)
-		(2 160 163 genLongUnconditionalBackwardJump	backward mapped "because of interrupt check"
-														longBranchDist:ance:)
-		(2 164 167 genLongUnconditionalForwardJump	forward longBranchDist:ance:)
-		(2 168 171 genLongJumpIfTrue				forward true mapped "because of mustBeBoolean"
-														longForwardBranchDist:ance:)
-		(2 172 175 genLongJumpIfFalse				forward false mapped "because of mustBeBoolean"
-														longForwardBranchDist:ance:)
+		(1 144 151 genShortUnconditionalJump			branch v3:ShortForward:Branch:Distance:)
+		(1 152 159 genShortJumpIfFalse					branch isBranchFalse isMapped "because of mustBeBoolean"
+															v3:ShortForward:Branch:Distance:)
+		(2 160 163 genLongUnconditionalBackwardJump	branch isMapped "because of interrupt check"
+															v3:Long:Branch:Distance:)
+		(2 164 167 genLongUnconditionalForwardJump		branch v3:Long:Branch:Distance:)
+		(2 168 171 genLongJumpIfTrue					branch isBranchTrue isMapped "because of mustBeBoolean"
+															v3:LongForward:Branch:Distance:)
+		(2 172 175 genLongJumpIfFalse					branch isBranchFalse isMapped "because of mustBeBoolean"
+															v3:LongForward:Branch:Distance:)
 
-		(1 176 197 genSpecialSelectorSend mapped)
+		(1 176 197 genSpecialSelectorSend isMapped)
 		(1 198 198 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
 		(1 199 199 genSpecialSelectorClass needsFrameNever: notMapped 0) "not mapped because it is directly inlined (for now)"
-		(1 200 207 genSpecialSelectorSend mapped)
-		(1 208 223 genSendLiteralSelector0ArgsBytecode mapped)
-		(1 224 239 genSendLiteralSelector1ArgBytecode mapped)
-		(1 240 255 genSendLiteralSelector2ArgsBytecode mapped))
+		(1 200 207 genSpecialSelectorSend isMapped)
+		(1 208 223 genSendLiteralSelector0ArgsBytecode isMapped)
+		(1 224 239 genSendLiteralSelector1ArgBytecode isMapped)
+		(1 240 255 genSendLiteralSelector2ArgsBytecode isMapped))
 ]
 
 { #category : #'class initialization' }
@@ -375,15 +462,6 @@ SimpleStackBasedCogit class >> prepareToBeAddedToCodeGenerator: aCCodeGenerator 
 			[aCCodeGenerator removeMethodForSelector: sel]]
 ]
 
-{ #category : #'bytecode functions' }
-SimpleStackBasedCogit >> blockCodeS: byteZero i: byteOne z: byteTwo e: byteThree [
-	<var: #byteZero type: #'unsigned char'>
-	<var: #byteOne type: #'unsigned char'>
-	<var: #byteTwo type: #'unsigned char'>
-	<var: #byteThree type: #'unsigned char'>
-	^byteTwo * 256 + byteThree
-]
-
 { #category : #'simulation only' }
 SimpleStackBasedCogit >> bytecodeFixupClass [
 	<doNotGenerate>
@@ -395,12 +473,21 @@ SimpleStackBasedCogit >> cPICMissTrampolineFor: numArgs [
 	^ceCPICMissTrampoline
 ]
 
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> callPrimitiveBytecode [
+	"249		11111001	i i i i i i i i	jjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjjj * 256)"
+	self assert: (primitiveIndex = (byte1 + (byte2 << 8))
+				or: [primitiveIndex = 0 "disabled primitives, e.g. stream prims"
+					and: [(coInterpreter primitiveIndexOf: methodObj) = (byte1 + (byte2 << 8))]]).
+	^0
+]
+
 { #category : #trampolines }
 SimpleStackBasedCogit >> ceClosureCopyDescriptor: descriptor [ "<Integer>" 
 	^coInterpreter
-		createClosureNumArgs: (descriptor bitAnd: 16rF)
-		numCopied: ((descriptor >> 4) bitAnd: 16rF)
-		startpc: descriptor >> 8
+		createClosureNumArgs: (descriptor bitAnd: 16r3F)
+		numCopied: ((descriptor >> 6) bitAnd: 16r3F)
+		startpc: descriptor >> 12
 ]
 
 { #category : #'simulation only' }
@@ -564,10 +651,11 @@ SimpleStackBasedCogit >> compileFrameBuild [
 	If there is a primitive and an error code the Nth temp is the error code.
 	Ensure SendNumArgsReg is set early on (incidentally to nilObj) because
 	it is the flag determining whether context switch is allowed on stack-overflow."
-	| jumpSkip |
+	| methodHeader jumpSkip |
 	<inline: false>
 	<var: #jumpSkip type: #'AbstractInstruction *'>
 	needsFrame ifFalse: [^0].
+	methodHeader := coInterpreter headerOf: methodObj.
 	self PushR: FPReg.
 	self MoveR: SPReg R: FPReg.
 	methodLabel addDependent: (self annotateAbsolutePCRef:
@@ -580,13 +668,21 @@ SimpleStackBasedCogit >> compileFrameBuild [
 		[:i|
 		self PushR: SendNumArgsReg].
 	(primitiveIndex > 0
-	 and: [(coInterpreter method: methodObj withInitialPCHasErrorCode: initialPC)]) ifTrue:
-		[self compileGetErrorCode].
+	 and: [(coInterpreter
+			methodHasErrorCode: methodObj
+			header: methodHeader
+			initialIP: (self pointerForOop: (coInterpreter
+											initialPCForHeader: methodHeader
+											method: methodObj)))]) ifTrue:
+		[self compileGetErrorCode.
+		 initialPC := initialPC
+				   + (coInterpreter sizeOfCallPrimitiveBytecode: methodHeader)
+				   + (coInterpreter sizeOfLongStoreTempBytecode: methodHeader)].
 	self MoveAw: coInterpreter stackLimitAddress R: TempReg.
 	self CmpR: TempReg R: SPReg. "N.B. FLAGS := SPReg - TempReg"
 	"If we can't context switch for this method, use a slightly
 	 slower overflow check that clears SendNumArgsReg."
-	(coInterpreter canContextSwitchIfActivating: (coInterpreter headerOf: methodObj))
+	(coInterpreter canContextSwitchIfActivating: methodObj header: methodHeader)
 		ifTrue:
 			[self JumpBelow: stackOverflowCall.
 			 stackCheckLabel := self Label]
@@ -945,6 +1041,14 @@ SimpleStackBasedCogit >> extendedStoreBytecode [
 ]
 
 { #category : #'bytecode generators' }
+SimpleStackBasedCogit >> firstSpecialSelectorBytecodeOffset [
+	<inline: true>
+	^self cppIf: MULTIPLEBYTECODESETS
+		ifTrue: [bytecodeSetOffset = 256 ifTrue: [80 + 256] ifFalse: [176]]
+		ifFalse: [176]
+]
+
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> frameOffsetOfTemporary: index [
 	^index < methodOrBlockNumArgs
 		ifTrue: [FoxCallerSavedIP + ((methodOrBlockNumArgs - index) * BytesPerWord)]
@@ -1067,6 +1171,233 @@ SimpleStackBasedCogit >> genDynamicSuperSendBytecode [
 ]
 
 { #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtJumpIfFalse [
+	"244		11110100	i i i i i i i i	Pop and Jump 0n False i i i i i i i i (+ Extend B * 256, where Extend B >= 0)"
+	| distance target |
+	distance := byte1 + (extB << 8).
+	self assert: distance = (self v4: (self generatorAt: byte0)
+								LongForward: bytecodePC
+								Branch: (extA ~= 0 ifTrue: [1] ifFalse: [0]) + (extB ~= 0 ifTrue: [1] ifFalse: [0])
+								Distance: methodObj).
+	extB := 0.
+	target := distance + 2 + bytecodePC.
+	^self genJumpIf: objectMemory falseObject to: target
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtJumpIfTrue [
+	"243		11110011	i i i i i i i i	Pop and Jump 0n True i i i i i i i i (+ Extend B * 256, where Extend B >= 0)"
+	| distance target |
+	distance := byte1 + (extB << 8).
+	self assert: distance = (self v4: (self generatorAt: byte0)
+								LongForward: bytecodePC
+								Branch: (extA ~= 0 ifTrue: [1] ifFalse: [0]) + (extB ~= 0 ifTrue: [1] ifFalse: [0])
+								Distance: methodObj).
+	extB := 0.
+	target := distance + 2 + bytecodePC.
+	^self genJumpIf: objectMemory trueObject to: target
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtNopBytecode [
+	"221		11011101		Nop"
+	extA := extB := 0.
+	^0
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtPushClosureBytecode [
+	"Block compilation.  At this point in the method create the block.  Note its start
+	 and defer generating code for it until after the method and any other preceeding
+	 blocks.  The block's actual code will be compiled later."
+	"253		11111101 eei i i kkk	jjjjjjjj		Push Closure Num Copied iii (+ Ext A // 16 * 8) Num Args kkk (+ Ext A \\ 16 * 8) BlockSize jjjjjjjj (+ Ext B * 256). ee = num extensions"
+	| numArgs numCopied |
+	self assert: needsFrame.
+	self addBlockStartAt: bytecodePC + 3 "0 relative"
+		numArgs: (numArgs := (byte1 bitAnd: 16r7) + (extA \\ 16 * 8))
+		numCopied: (numCopied := ((byte1 >> 3) bitAnd: 7) + (extA // 16 * 8))
+		span: byte2 + (extB << 8).
+	extA := extB := 0.
+	"see ceClosureCopyDescriptor:"
+	self MoveCq: numArgs + (numCopied << 6) + (bytecodePC + 4 "1 relative" << 12) R: SendNumArgsReg.
+	self CallRT: ceClosureCopyTrampoline.
+	numCopied > 0
+		ifTrue:
+			[numCopied > 1 ifTrue:
+				[self AddCq: (numCopied - 1) * BytesPerWord R: SPReg].
+			 self MoveR: ReceiverResultReg Mw: 0 r: SPReg]
+		ifFalse:
+			[self PushR: ReceiverResultReg].
+	^0
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtPushIntegerBytecode [
+	"229		11100101	i i i i i i i i	Push Integer #iiiiiiii (+ Extend B * 256, where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)"
+	| value |
+	value := byte1 + (extB << 8).
+	extB := 0.
+	^self genPushLiteral: (objectMemory integerObjectOf: value)
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtPushLiteralBytecode [
+	"228		11100100	i i i i i i i i	Push Literal #iiiiiiii (+ Extend A * 256)"
+	| index |
+	index := byte1 + (extA << 8).
+	extA := 0.
+	^self genPushLiteralIndex: index
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtPushLiteralVariableBytecode [
+	"227		11100011	i i i i i i i i	Push Literal Variable #iiiiiiii (+ Extend A * 256)"
+	| index |
+	index := byte1 + (extA << 8).
+	extA := 0.
+	^self genPushLiteralVariable: index
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtPushPseudoVariableOrOuterBytecode [
+	"77			01001101		Push false [* 1:true, 2:nil, 3:thisContext, ..., -N: pushExplicitOuter: N, N = Extend B]"
+	| ext |
+	ext := extB.
+	extB := 0.
+	ext caseOf: {
+		[0]	->	[^self genPushLiteral: objectMemory falseObject].
+		[1]	->	[^self genPushLiteral: objectMemory trueObject].
+		[2]	->	[^self genPushLiteral: objectMemory nilObject].
+		[3]	->	[^self genPushActiveContextBytecode]
+		}
+		otherwise:
+			[ext < 0 ifTrue:
+				[^self genPushExplicitOuterSendReceiver: 0 - ext].
+			 self warning: 'undefined extension for extPushPseudoVariableOrOuter'.
+			 ^self unknownBytecode].
+	^0
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtPushReceiverVariableBytecode [
+	"226		11100010	i i i i i i i i	Push Receiver Variable #iiiiiiii (+ Extend A * 256)"
+	| index |
+	index := byte1 + (extA << 8).
+	extA := 0.
+	^index > StackPointerIndex
+		ifTrue: [self genPushReceiverVariable: index]
+		ifFalse: [self genPushMaybeContextReceiverVariable: index]
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtReturnTopFromBlock [
+	"218		11011010		Return Stack Top From Block [* return from enclosing block N, N = Extend A]
+	 If extA is zero, return to the caller of the current block activation.
+	 If extA is non-zero return to the caller of the Nth enclosing block activation."
+	extA = 0 ifTrue:
+		[^self genReturnTopFromBlock].
+	self shouldBeImplemented.
+	extA := 0.
+	^EncounteredUnknownBytecode
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtSendAbsentDynamicSuperBytecode [
+	"241		11110001	i i i i i j j j	Send To Absent Dynamic Superclass Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
+	self shouldBeImplemented.
+	^EncounteredUnknownBytecode
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtSendAbsentImplicitBytecode [
+	"240		11110000	i i i i i j j j	Send To Absent Implicit Receiver Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
+	self shouldBeImplemented.
+	^EncounteredUnknownBytecode
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtSendBytecode [
+	"238		11101110	i i i i i j j j	Send Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
+	| litIndex nArgs |
+	litIndex := (byte1 >> 3) + (extA << 5).
+	extA := 0.
+	nArgs := (byte1 bitAnd: 7) + (extB << 3).
+	extB := 0.
+	^self genSend: (coInterpreter literal: litIndex ofMethod: methodObj) numArgs: nArgs
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtSendSuperBytecode [
+	"239		11101111	i i i i i j j j	Send To Superclass Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
+	| litIndex nArgs |
+	litIndex := (byte1 >> 3) + (extA << 5).
+	extA := 0.
+	nArgs := (byte1 bitAnd: 7) + (extB << 3).
+	extB := 0.
+	^self genSendSuper: (coInterpreter literal: litIndex ofMethod: methodObj) numArgs: nArgs
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtStoreAndPopLiteralVariableBytecode [
+	"236		11101100	i i i i i i i i	Pop and Store Literal Variable #iiiiiiii (+ Extend A * 256)"
+	| index |
+	index := byte1 + (extA << 8).
+	extA := 0.
+	^self genStorePop: true LiteralVariable: index
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtStoreAndPopReceiverVariableBytecode [
+	"235		11101011	i i i i i i i i	Pop and Store Receiver Variable #iiiiiii (+ Extend A * 256)"
+	| index |
+	index := byte1 + (extA << 8).
+	extA := 0.
+	^index > StackPointerIndex
+		ifTrue: [self genStorePop: true ReceiverVariable: index]
+		ifFalse: [self genStorePop: true MaybeContextReceiverVariable: index]
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtStoreLiteralVariableBytecode [
+	"233		11101001	i i i i i i i i	Store Literal Variable #iiiiiiii (+ Extend A * 256)"
+	| index |
+	index := byte1 + (extA << 8).
+	extA := 0.
+	^self genStorePop: false LiteralVariable: index
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtStoreReceiverVariableBytecode [
+	"232		11101000	i i i i i i i i	Store Receiver Variable #iiiiiii (+ Extend A * 256)"
+	| index |
+	index := byte1 + (extA << 8).
+	extA := 0.
+	^index > StackPointerIndex
+		ifTrue: [self genStorePop: false ReceiverVariable: index]
+		ifFalse: [self genStorePop: false MaybeContextReceiverVariable: index]
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtUnconditionalJump [
+	"242		11110010	i i i i i i i i	Jump i i i i i i i i (+ Extend B * 256, where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)"
+	| distance target |
+	distance := byte1 + (extB << 8).
+	self assert: distance = (self v4: (self generatorAt: byte0)
+								Long: bytecodePC
+								Branch: (extA ~= 0 ifTrue: [1] ifFalse: [0]) + (extB ~= 0 ifTrue: [1] ifFalse: [0])
+								Distance: methodObj).
+	extB := 0.
+	target := distance + 2 + bytecodePC.
+	distance < 0 ifTrue:
+		[^self genJumpBackTo: target].
+	self genJumpTo: target.
+	"The bytecode must be mapped since it can be either forward or backward, and
+	  backwards branches must be mapped. So if forward, we need to map."
+	self annotateBytecode: self lastOpcode.
+	^0
+]
+
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtendedSendBytecode [
 	"Can use any of the first 32 literals for the selector and pass up to 7 arguments."
 
@@ -1145,7 +1476,7 @@ SimpleStackBasedCogit >> genJumpTo: targetBytecodePC [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genLongJumpIfFalse [
 	| distance target |
-	distance := self longForwardBranchDist: byte0 ance: byte1.
+	distance := self v3: (self generatorAt: byte0) LongForward: bytecodePC Branch: 0 Distance: methodObj.
 	target := distance + 2 + bytecodePC.
 	^self genJumpIf: objectMemory falseObject to: target
 ]
@@ -1153,15 +1484,36 @@ SimpleStackBasedCogit >> genLongJumpIfFalse [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genLongJumpIfTrue [
 	| distance target |
-	distance := self longForwardBranchDist: byte0 ance: byte1.
+	distance := self v3: (self generatorAt: byte0) LongForward: bytecodePC Branch: 0 Distance: methodObj.
 	target := distance + 2 + bytecodePC.
 	^self genJumpIf: objectMemory trueObject to: target
 ]
 
 { #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genLongPushTemporaryVariableBytecode [
+	"230		11100110	i i i i i i i i	Push Temporary Variable #iiiiiiii"
+	^self genPushTemporaryVariable: byte1
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genLongStoreAndPopTemporaryVariableBytecode [
+	"237		11101101	i i i i i i i i	Pop and Store Temporary Variable #iiiiiiii"
+	^self genStorePop: true TemporaryVariable: byte1
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genLongStoreTemporaryVariableBytecode [
+	"234		11101010	i i i i i i i i	Store Temporary Variable #iiiiiiii"
+	^self genStorePop: false TemporaryVariable: byte1
+]
+
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genLongUnconditionalBackwardJump [
 	| distance targetpc |
-	distance := self longBranchDist: byte0 ance: byte1.
+	distance := self v3: (self generatorAt: byte0)
+					Long: bytecodePC
+					Branch: 0
+					Distance: methodObj.
 	self assert: distance < 0.
 	targetpc := distance + 2 + bytecodePC.
 	^self genJumpBackTo: targetpc
@@ -1170,7 +1522,10 @@ SimpleStackBasedCogit >> genLongUnconditionalBackwardJump [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genLongUnconditionalForwardJump [
 	| distance targetpc |
-	distance := self longBranchDist: byte0 ance: byte1.
+	distance := self v3: (self generatorAt: byte0)
+					Long: bytecodePC
+					Branch: 0
+					Distance: methodObj.
 	self assert: distance >= 0.
 	targetpc := distance + 2 + bytecodePC.
 	^self genJumpTo: targetpc
@@ -1870,13 +2225,15 @@ SimpleStackBasedCogit >> genPushClosureCopyCopiedValuesBytecode [
 	"Block compilation.  At this point in the method create the block.  Note its start
 	 and defer generating code for it until after the method and any other preceeding
 	 blocks.  The block's actual code will be compiled later."
-	| numCopied |
+	"143   10001111 llllkkkk jjjjjjjj iiiiiiii	Push Closure Num Copied llll Num Args kkkk BlockSize jjjjjjjjiiiiiiii"
+	| numArgs numCopied |
 	self assert: needsFrame.
-	self addBlockStartAt: bytecodePC + 4
-		numArgs: (byte1 bitAnd: 16rF)
+	self addBlockStartAt: bytecodePC + 4 "0 relative"
+		numArgs: (numArgs := byte1 bitAnd: 16rF)
 		numCopied: (numCopied := byte1 >> 4)
 		span: (byte2 << 8) + byte3.
-	self MoveCq: (byte1 bitOr: bytecodePC + 5 << 8) R: SendNumArgsReg.
+	"see ceClosureCopyDescriptor:"
+	self MoveCq: numArgs + (numCopied << 6) + (bytecodePC + 5 "1 relative" << 12) R: SendNumArgsReg.
 	self CallRT: ceClosureCopyTrampoline.
 	numCopied > 0
 		ifTrue:
@@ -1899,8 +2256,30 @@ SimpleStackBasedCogit >> genPushConstantNilBytecode [
 ]
 
 { #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genPushConstantOneBytecode [
+	"79			01001111		Push 1"
+	^self genPushLiteral: (objectMemory integerObjectOf: 1)
+]
+
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPushConstantTrueBytecode [
 	^self genPushLiteral: objectMemory trueObject
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genPushConstantZeroBytecode [
+	"78			01001110		Push 0"
+	^self genPushLiteral: (objectMemory integerObjectOf: 0)
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genPushExplicitOuterSendReceiver: level [
+	"Uncached push explicit outer send receiver"
+	self assert: needsFrame. "because this should always be followed by a send"
+	self MoveCq: level R: SendNumArgsReg.
+	self CallRT: ceExplicitReceiverTrampoline.
+	self PushR: ReceiverResultReg.
+	^0
 ]
 
 { #category : #'bytecode generators' }
@@ -1909,11 +2288,7 @@ SimpleStackBasedCogit >> genPushExplicitOuterSendReceiverBytecode [
 	| levelOop |
 	levelOop := coInterpreter literal: byte1 ofMethod: methodObj.
 	self assert: (objectMemory isIntegerObject: levelOop).
-	self assert: needsFrame.
-	self MoveCq: (objectMemory integerValueOf: levelOop) R: SendNumArgsReg.
-	self CallRT: ceExplicitReceiverTrampoline.
-	self PushR: ReceiverResultReg.
-	^0
+	^self genPushExplicitOuterSendReceiver: (objectMemory integerValueOf: levelOop)
 ]
 
 { #category : #'bytecode generators' }
@@ -1960,6 +2335,12 @@ SimpleStackBasedCogit >> genPushLiteralIndex: literalIndex [ "<SmallInteger>"
 	| literal |
 	literal := coInterpreter literal: literalIndex ofMethod: methodObj.
 	^self genPushLiteral: literal
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genPushLiteralVariable16CasesBytecode [
+	"16-31		0001 i i i i		Push Literal Variable #iiii"
+	^self genPushLiteralVariable: (byte0 bitAnd: 15)
 ]
 
 { #category : #'bytecode generators' }
@@ -2189,6 +2570,8 @@ SimpleStackBasedCogit >> genSend: selector numArgs: numArgs [
 	(objectMemory isYoung: selector) ifTrue:
 		[hasYoungReferent := true].
 	self assert: needsFrame.
+	self assert: (numArgs between: 0 and: 256). "say"
+	self assert: (objectMemory addressCouldBeOop: selector).
 	self MoveMw: numArgs * BytesPerWord r: SPReg R: ReceiverResultReg.
 	numArgs > 2 ifTrue:
 		[self MoveCq: numArgs R: SendNumArgsReg].
@@ -2197,6 +2580,13 @@ SimpleStackBasedCogit >> genSend: selector numArgs: numArgs [
 	self flag: 'currently caller pushes result'.
 	self PushR: ReceiverResultReg.
 	^0
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genSendAbsentImplicit0ArgsBytecode [
+	"160-175	1010 i i i i		Send To Absent Implicit Receiver Literal Selector #iiii With 0 Arguments"
+	self shouldBeImplemented.
+	^EncounteredUnknownBytecode
 ]
 
 { #category : #'bytecode generators' }
@@ -2218,6 +2608,8 @@ SimpleStackBasedCogit >> genSendLiteralSelector2ArgsBytecode [
 SimpleStackBasedCogit >> genSendSuper: selector numArgs: numArgs [
 	<inline: false>
 	self assert: needsFrame.
+	self assert: (numArgs between: 0 and: 256). "say"
+	self assert: (objectMemory addressCouldBeOop: selector).
 	(objectMemory isYoung: selector) ifTrue:
 		[hasYoungReferent := true].
 	self MoveMw: numArgs * BytesPerWord r: SPReg R: ReceiverResultReg.
@@ -2232,15 +2624,34 @@ SimpleStackBasedCogit >> genSendSuper: selector numArgs: numArgs [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genShortJumpIfFalse [
-	^self
-		genJumpIf: objectMemory falseObject
-		to: (self shortForwardBranchDistance: byte0) + 1 + bytecodePC
+	| distance target |
+	distance := self v3: (self generatorAt: byte0)
+					ShortForward: bytecodePC
+					Branch: 0
+					Distance: methodObj.
+	target := distance + 1 + bytecodePC.
+	^self genJumpIf: objectMemory falseObject to: target
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genShortJumpIfTrue [
+	| distance target |
+	distance := self v3: (self generatorAt: byte0)
+					ShortForward: bytecodePC
+					Branch: 0
+					Distance: methodObj.
+	target := distance + 1 + bytecodePC.
+	^self genJumpIf: objectMemory trueObject to: target
 ]
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genShortUnconditionalJump [
-	| target |
-	target := (self shortForwardBranchDistance: byte0) + 1 + bytecodePC.
+	| distance target |
+	distance := self v3: (self generatorAt: byte0)
+					ShortForward: bytecodePC
+					Branch: 0
+					Distance: methodObj.
+	target := distance + 1 + bytecodePC.
 	^self genJumpTo: target
 ]
 
@@ -2298,7 +2709,7 @@ SimpleStackBasedCogit >> genSpecialSelectorEqualsEquals [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSpecialSelectorSend [
 	| index selector numArgs |
-	index := byte0 - 176.
+	index := byte0 - self firstSpecialSelectorBytecodeOffset.
 	selector := coInterpreter specialSelector: index.
 	numArgs := coInterpreter specialSelectorNumArgs: index.
 	^self genSend: selector numArgs: numArgs
@@ -2448,6 +2859,15 @@ SimpleStackBasedCogit >> genUpArrowReturn [
 	^0
 ]
 
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genV4SpecialSelectorSend [
+	| index selector numArgs |
+	index := byte0 - 80.
+	selector := coInterpreter specialSelector: index.
+	numArgs := coInterpreter specialSelectorNumArgs: index.
+	^self genSend: selector numArgs: numArgs
+]
+
 { #category : #initialization }
 SimpleStackBasedCogit >> generateMissAbortTrampolines [
 	"Generate the run-time entries for the various method and PIC entry misses and aborts..
@@ -2506,22 +2926,6 @@ SimpleStackBasedCogit >> generateTracingTrampolines [
 					 a]
 ]
 
-{ #category : #'bytecode functions' }
-SimpleStackBasedCogit >> longBranchDist: byteZero ance: byteOne [
-	<var: #byteZero type: #'unsigned char'>
-	<var: #byteOne type: #'unsigned char'>
-	"Answer the distance of a two byte long jump."
-	^(byteZero bitAnd: 7) - 4 * 256 + byteOne
-]
-
-{ #category : #'bytecode functions' }
-SimpleStackBasedCogit >> longForwardBranchDist: byteZero ance: byteOne [
-	<var: #byteZero type: #'unsigned char'>
-	<var: #byteOne type: #'unsigned char'>
-	"Answer the distance of a two byte forward long jump."
-	^(byteZero bitAnd: 3) * 256 + byteOne
-]
-
 { #category : #trampolines }
 SimpleStackBasedCogit >> methodAbortTrampolineFor: numArgs [
 	^ceMethodAbortTrampoline
@@ -2533,6 +2937,30 @@ SimpleStackBasedCogit >> numRegArgs [
 	"Use of the macro allows the compiler to avoid the call and test in cointerpreter.c"
 	<cmacro: '() 0'>
 	^0
+]
+
+{ #category : #'span functions' }
+SimpleStackBasedCogit >> parseV4Exts: nExts priorTo: bcpc in: aMethodObj into: aBinaryBlock [
+	"224		11100000	aaaaaaaa	Extend A (Ext A = Ext A prev * 256 + Ext A)
+	 225		11100001	sbbbbbbb	Extend B (Ext B = Ext B prev * 256 + Ext B)"
+	| extAValue extBValue pc byte extByte |
+	<inline: true>
+	extAValue := extBValue := 0.
+	pc := bcpc - nExts - nExts.
+	[pc < bcpc] whileTrue:
+		[byte := objectMemory fetchByte: pc ofObject: aMethodObj.
+		 pc := pc + 1.
+		 extByte := objectMemory fetchByte: pc ofObject: aMethodObj.
+		 pc := pc + 1.
+		 self assert: (byte = 224 or: [byte = 225]).
+		 byte = 224
+			ifTrue:
+				[extAValue := (extAValue bitShift: 8) + extByte]
+			ifFalse:
+				[extBValue := (extBValue = 0 and: [extByte > 127])
+							ifTrue: [extByte - 256]
+							ifFalse: [(extBValue bitShift: 8) + extByte]]].
+	aBinaryBlock value: extAValue value: extBValue
 ]
 
 { #category : #trampolines }
@@ -2592,7 +3020,9 @@ SimpleStackBasedCogit >> rewritePrimInvocationIn: cogMethod to: primFunctionPoin
 	<var: #primFunctionPointer declareC: #'void (*primFunctionPointer)(void)'>
 	| primIndex flags address extent |
 	self assert: cogMethod cmType = CMMethod.
-	primIndex := coInterpreter primitiveIndexOfMethodHeader: cogMethod methodHeader.
+	primIndex := coInterpreter
+					primitiveIndexOfMethod: cogMethod methodObject
+					header: cogMethod methodHeader.
 	flags := coInterpreter primitivePropertyFlags: primIndex.
 	"See compileInterpreterPrimitive:"
 	(flags bitAnd: PrimCallMayCallBack) ~= 0
@@ -2624,11 +3054,75 @@ SimpleStackBasedCogit >> setInterpreter: aCoInterpreter [
 	externalPrimCallOffsets := CArrayAccessor on: (Array new: MaxNumArgs + 1)
 ]
 
-{ #category : #'bytecode functions' }
-SimpleStackBasedCogit >> shortForwardBranchDistance: byte [
-	<var: #byte type: #'unsigned char'>
+{ #category : #'span functions' }
+SimpleStackBasedCogit >> v3: descriptor Block: pc Code: nExts Size: aMethodObj [
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	self assert: nExts <= 0.
+	^((objectMemory fetchByte: pc + 2 ofObject: aMethodObj) << 8)
+	+ (objectMemory fetchByte: pc + 3 ofObject: aMethodObj)
+]
+
+{ #category : #'span functions' }
+SimpleStackBasedCogit >> v3: descriptor Long: pc Branch: nExts Distance: aMethodObj [
 	"Answer the distance of a two byte forward long jump."
-	^(byte bitAnd: 7) + 1
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	self assert: nExts = 0.
+	^(((objectMemory fetchByte: pc ofObject: aMethodObj) bitAnd: 7) - 4 << 8)
+	 + (objectMemory fetchByte: pc + 1 ofObject: aMethodObj)
+]
+
+{ #category : #'span functions' }
+SimpleStackBasedCogit >> v3: descriptor LongForward: pc Branch: nExts Distance: aMethodObj [
+	"Answer the distance of a two byte forward long jump."
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	self assert: nExts = 0.
+	^(((objectMemory fetchByte: pc ofObject: aMethodObj) bitAnd: 3) << 8)
+	 + (objectMemory fetchByte: pc + 1 ofObject: aMethodObj)
+]
+
+{ #category : #'span functions' }
+SimpleStackBasedCogit >> v3: descriptor ShortForward: pc Branch: nExts Distance: aMethodObj [
+	"N.B.  This serves for both BlueBook/V3 and V4 short jumps."
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	self assert: nExts = 0.
+	^((objectMemory fetchByte: pc ofObject: aMethodObj) bitAnd: 7) + 1
+]
+
+{ #category : #'span functions' }
+SimpleStackBasedCogit >> v4: descriptor Block: pc Code: nExts Size: aMethodObj [
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	"253		11111101 eei i i kkk	jjjjjjjj		Push Closure Num Copied iii (+ Ext A // 16 * 8) Num Args kkk (+ Ext A \\ 16 * 8) BlockSize jjjjjjjj (+ Ext B * 256). ee = num extensions"
+	| byteOne extBValue |
+	byteOne := objectMemory fetchByte: pc + 1 ofObject: aMethodObj.
+	"If nExts < 0 it isn't known and we rely on the number of extensions encoded in the eeiiikkk byte."
+	self assert: (nExts < 0 or: [nExts = (byteOne >> 6)]).
+	self parseV4Exts: byteOne >> 6 priorTo: pc in: aMethodObj into: [:ea :eb| extBValue := eb].
+	^(objectMemory fetchByte: pc + 2 ofObject: aMethodObj)
+	+ (extBValue << 8)
+]
+
+{ #category : #'span functions' }
+SimpleStackBasedCogit >> v4: descriptor Long: pc Branch: nExts Distance: aMethodObj [
+	"242		11110010	i i i i i i i i	Jump i i i i i i i i (+ Extend B * 256, where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)"
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	| extBValue |
+	self assert: nExts >= 0.
+	self parseV4Exts: nExts priorTo: pc in: aMethodObj into: [:ea :eb| extBValue := eb].
+	^(objectMemory fetchByte: pc + 1 ofObject: aMethodObj)
+	+ (extBValue << 8)
+]
+
+{ #category : #'span functions' }
+SimpleStackBasedCogit >> v4: descriptor LongForward: pc Branch: nExts Distance: aMethodObj [
+	"242		11110010	i i i i i i i i	Jump i i i i i i i i (+ Extend B * 256, where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)"
+	"243		11110011	i i i i i i i i	Pop and Jump 0n True i i i i i i i i (+ Extend A * 256)"
+	"244		11110100	i i i i i i i i	Pop and Jump 0n False i i i i i i i i (+ Extend A * 256)"
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	| extBValue |
+	self assert: nExts >= 0.
+	self parseV4Exts: nExts priorTo: pc in: aMethodObj into: [:ea :eb| extBValue := eb].
+	^(objectMemory fetchByte: pc + 1 ofObject: aMethodObj)
+	+ (extBValue << 8)
 ]
 
 { #category : #'jit - api' }

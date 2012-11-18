@@ -2332,8 +2332,8 @@ Interpreter >> commonAtPut: stringy [
 Interpreter >> commonReturn [
 	"Note: Assumed to be inlined into the dispatch loop."
 
+	<sharedCodeNamed: 'commonReturn' inCase: #returnReceiver>
 	| nilOop thisCntx contextOfCaller localCntx localVal unwindMarked |
-	<sharedCodeNamed: 'commonReturn' inCase: 120>
 
 	nilOop := nilObj. "keep in a register"
 	thisCntx := activeContext.
@@ -2392,7 +2392,7 @@ Interpreter >> commonSend [
 	"Assume: messageSelector and argumentCount have been set, and that 
 	the receiver and arguments have been pushed onto the stack,"
 	"Note: This method is inlined into the interpreter dispatch loop."
-	<sharedCodeNamed: 'commonSend' inCase: 131>
+	<sharedCodeNamed: 'commonSend' inCase: #singleExtendedSendBytecode>
 	self internalFindNewMethod.
 	self internalExecuteNewMethod.
 	self fetchNextBytecode
@@ -3614,8 +3614,8 @@ Interpreter >> internalPrimitiveResponse [
 
 { #category : #'control primitives' }
 Interpreter >> internalPrimitiveValue [
+	<sharedCodeNamed: 'commonPrimitiveValue' inCase: #bytecodePrimValue>
 	| newContext blockArgumentCount initialIP |
-	<sharedCodeNamed: 'commonPrimitiveValue' inCase: 201>
 	successFlag := true.
 	newContext := self internalStackValue: argumentCount.
 	self assertClassOf: newContext is: (self splObj: ClassBlockContext).
@@ -4257,8 +4257,8 @@ Interpreter >> normalSend [
 	"Assume: messageSelector and argumentCount have been set, and that 
 	the receiver and arguments have been pushed onto the stack,"
 	"Note: This method is inlined into the interpreter dispatch loop."
+	<sharedCodeNamed: 'normalSend' inCase: #singleExtendedSendBytecode>
 	| rcvr |
-	<sharedCodeNamed: 'normalSend' inCase: 131>
 	rcvr := self internalStackValue: argumentCount.
 	lkupClass := self fetchClassOf: rcvr.
 	receiverClass := lkupClass.
@@ -8817,9 +8817,13 @@ Interpreter >> pushLiteralConstant: literalIndex [
 { #category : #'stack bytecodes' }
 Interpreter >> pushLiteralConstantBytecode [
 	<expandCases>
-	self fetchNextBytecode.
-	"this bytecode will be expanded so that refs to currentBytecode below will be constant"
-	self pushLiteralConstant: (currentBytecode bitAnd: 16r1F)
+	self
+		cCode: "this bytecode will be expanded so that refs to currentBytecode below will be constant"
+			[self fetchNextBytecode.
+			 self pushLiteralConstant: (currentBytecode bitAnd: 16r1F)]
+		inSmalltalk: "Interpreter version has fetchNextBytecode out of order"
+			[self pushLiteralConstant: (currentBytecode bitAnd: 16r1F).
+			 self fetchNextBytecode]
 ]
 
 { #category : #'stack bytecodes' }
@@ -8832,9 +8836,13 @@ Interpreter >> pushLiteralVariable: literalIndex [
 { #category : #'stack bytecodes' }
 Interpreter >> pushLiteralVariableBytecode [
 	<expandCases>
-	self fetchNextBytecode.
-	"this bytecode will be expanded so that refs to currentBytecode below will be constant"
-	self pushLiteralVariable: (currentBytecode bitAnd: 16r1F)
+	self
+		cCode: "this bytecode will be expanded so that refs to currentBytecode below will be constant"
+			[self fetchNextBytecode.
+			 self pushLiteralVariable: (currentBytecode bitAnd: 16r1F)]
+		inSmalltalk: "Interpreter version has fetchNextBytecode out of order"
+			[self pushLiteralVariable: (currentBytecode bitAnd: 16r1F).
+			 self fetchNextBytecode]
 ]
 
 { #category : #'stack bytecodes' }
@@ -8874,9 +8882,13 @@ Interpreter >> pushReceiverVariable: fieldIndex [
 { #category : #'stack bytecodes' }
 Interpreter >> pushReceiverVariableBytecode [
 	<expandCases>
-	self fetchNextBytecode.
-	"this bytecode will be expanded so that refs to currentBytecode below will be constant"
-	self pushReceiverVariable: (currentBytecode bitAnd: 16rF)
+	self
+		cCode: "this bytecode will be expanded so that refs to currentBytecode below will be constant"
+			[self fetchNextBytecode.
+			 self pushReceiverVariable: (currentBytecode bitAnd: 16rF)]
+		inSmalltalk: "Interpreter version has fetchNextBytecode out of order"
+			[self pushReceiverVariable: (currentBytecode bitAnd: 16rF).
+			 self fetchNextBytecode]
 ]
 
 { #category : #'stack bytecodes' }
@@ -8904,9 +8916,13 @@ Interpreter >> pushTemporaryVariable: temporaryIndex [
 { #category : #'stack bytecodes' }
 Interpreter >> pushTemporaryVariableBytecode [
 	<expandCases>
-	self fetchNextBytecode.
-	"this bytecode will be expanded so that refs to currentBytecode below will be constant"
-	self pushTemporaryVariable: (currentBytecode bitAnd: 16rF)
+	self
+		cCode: "this bytecode will be expanded so that refs to currentBytecode below will be constant"
+			[self fetchNextBytecode.
+			 self pushTemporaryVariable: (currentBytecode bitAnd: 16rF)]
+		inSmalltalk: "Interpreter version has fetchNextBytecode out of order"
+			[self pushTemporaryVariable: (currentBytecode bitAnd: 16rF).
+			 self fetchNextBytecode]
 ]
 
 { #category : #'image save/restore' }
@@ -9823,12 +9839,19 @@ Interpreter >> storeAndPopRemoteTempLongBytecode [
 { #category : #'stack bytecodes' }
 Interpreter >> storeAndPopTemporaryVariableBytecode [
 	<expandCases>
-	self fetchNextBytecode.
-	"this bytecode will be expanded so that refs to currentBytecode below will be constant"
-	self storePointerUnchecked: (currentBytecode bitAnd: 7) + TempFrameStart
-		ofObject: localHomeContext
-		withValue: self internalStackTop.
-	self internalPop: 1
+	self
+		cCode: "this bytecode will be expanded so that refs to currentBytecode below will be constant"
+			[self fetchNextBytecode.
+			 self storePointerUnchecked: (currentBytecode bitAnd: 7) + TempFrameStart
+				ofObject: localHomeContext
+				withValue: self internalStackTop.
+			self internalPop: 1]
+		inSmalltalk: "Interpreter version has fetchNextBytecode out of order"
+			[self storePointerUnchecked: (currentBytecode bitAnd: 7) + TempFrameStart
+				ofObject: localHomeContext
+				withValue: self internalStackTop.
+			self internalPop: 1.
+			self fetchNextBytecode]
 ]
 
 { #category : #contexts }
@@ -9943,12 +9966,33 @@ Interpreter >> superclassSend [
 	"Send a message to self, starting lookup with the superclass of the class containing the currently executing method."
 	"Assume: messageSelector and argumentCount have been set, and that the receiver and arguments have been pushed onto the stack,"
 	"Note: This method is inlined into the interpreter dispatch loop."
+	<sharedCodeNamed: 'commonSupersend' inCase: #singleExtendedSuperBytecode>
 	| rcvr |
-	<sharedCodeNamed: 'commonSupersend' inCase: 133>
 	lkupClass := self superclassOf: (self methodClassOf: method).
 	rcvr := self internalStackValue: argumentCount.
 	receiverClass := self fetchClassOf: rcvr.
 	self commonSend
+]
+
+{ #category : #'debug support' }
+Interpreter >> symbolicMethod: aMethod [
+	<doNotGenerate>
+	| ts prim |
+	(ts := self transcript) ensureCr.
+	(prim := self primitiveIndexOf: aMethod) > 0 ifTrue:
+		[ts nextPutAll: '<primitive: '; print: prim; nextPut: $>.
+		(self isQuickPrimitiveIndex: prim) ifTrue:
+			[ts nextPutAll: ' quick method'; cr; flush.
+			 ^self].
+		ts cr].
+	(InstructionPrinter
+			on: (VMCompiledMethodProxy new
+					for: method
+					coInterpreter: self
+					objectMemory: self))
+		indent: 0;
+		printInstructionsOn: ts.
+	ts flush
 ]
 
 { #category : #'process primitive support' }
