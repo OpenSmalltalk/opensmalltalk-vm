@@ -27,7 +27,9 @@ Class {
 		'asmLabelCounts',
 		'pools',
 		'selectorTranslations',
-		'optionsDictionary'
+		'optionsDictionary',
+		'breakSrcInlineSelector',
+		'breakDestInlineSelector'
 	],
 	#classVars : [
 		'UseRightShiftForDivide'
@@ -313,6 +315,26 @@ CCodeGenerator >> arrayInitializerCalled: varName for: array type: cType [
 							ifFalse: [s space]].
 				s crtab; nextPut: $}].
 		s cr]
+]
+
+{ #category : #accessing }
+CCodeGenerator >> breakDestInlineSelector [
+	^breakDestInlineSelector
+]
+
+{ #category : #accessing }
+CCodeGenerator >> breakDestInlineSelector: aSelector [
+	breakDestInlineSelector := aSelector
+]
+
+{ #category : #accessing }
+CCodeGenerator >> breakSrcInlineSelector [
+	^breakSrcInlineSelector
+]
+
+{ #category : #accessing }
+CCodeGenerator >> breakSrcInlineSelector: aSelector [
+	breakSrcInlineSelector := aSelector
 ]
 
 { #category : #utilities }
@@ -1306,12 +1328,11 @@ CCodeGenerator >> generateDivide: msgNode on: aStream indent: level [
 CCodeGenerator >> generateDoWhileFalse: msgNode on: aStream indent: level [
 	"Generate do {stmtList} while(!(cond))"
 
-	| stmts testStmt |
-	stmts := msgNode receiver statements asOrderedCollection.
-	testStmt := stmts removeLast.
-	msgNode receiver setStatements: stmts.
+	| testStmt receiverWithoutTest |
+	testStmt := msgNode receiver statements last.
+	receiverWithoutTest := TStmtListNode new setStatements: msgNode receiver statements allButLast.
 	aStream nextPutAll: 'do {'; cr.
-	msgNode receiver emitCCodeOn: aStream level: level + 1 generator: self.
+	receiverWithoutTest emitCCodeOn: aStream level: level + 1 generator: self.
 	level timesRepeat: [ aStream tab ].
 	aStream nextPutAll: '} while(!('.
 	testStmt emitCCodeOn: aStream level: 0 generator: self.
@@ -1322,12 +1343,11 @@ CCodeGenerator >> generateDoWhileFalse: msgNode on: aStream indent: level [
 CCodeGenerator >> generateDoWhileTrue: msgNode on: aStream indent: level [
 	"Generate do {stmtList} while(cond)"
 
-	| stmts testStmt |
-	stmts := msgNode receiver statements asOrderedCollection.
-	testStmt := stmts removeLast.
-	msgNode receiver setStatements: stmts.
+	| testStmt receiverWithoutTest |
+	testStmt := msgNode receiver statements last.
+	receiverWithoutTest := TStmtListNode new setStatements: msgNode receiver statements allButLast.
 	aStream nextPutAll: 'do {'; cr.
-	msgNode receiver emitCCodeOn: aStream level: level + 1 generator: self.
+	receiverWithoutTest emitCCodeOn: aStream level: level + 1 generator: self.
 	level timesRepeat: [ aStream tab ].
 	aStream nextPutAll: '} while('.
 	testStmt emitCCodeOn: aStream level: 0 generator: self.
@@ -1704,8 +1724,9 @@ CCodeGenerator >> generateInlineCppIfElse: msgNode asArgument: asArgument on: aS
 				[expansion := expansion allButFirst: (expansion findFirst: [:c| c ~~ Character tab]) - 1].
 			 aStream nextPutAll: expansion]].
 
-	(msgNode args first isConstant
-	 and: [#(true false) includes: (optionsDictionary at: msgNode args first name ifAbsent: [nil])]) ifTrue:
+	(optionsDictionary notNil
+	 and: [msgNode args first isConstant
+	 and: [#(true false) includes: (optionsDictionary at: msgNode args first name ifAbsent: [nil])]]) ifTrue:
 		[(optionsDictionary at: msgNode args first name)
 			ifTrue:
 				[putStatement value: msgNode args second]
@@ -2249,22 +2270,18 @@ CCodeGenerator >> generateWhileForeverBreakIf: breakBoolean loop: msgNode on: aS
 		while(1) {stmtListA; if(cond) break; stmtListB}
 		while(1) {stmtListA; if(!(cond)) break; stmtListB}."
 
-	| stmts testStmt |
-	stmts := msgNode receiver statements asOrderedCollection.
-	testStmt := stmts removeLast.
-	msgNode receiver setStatements: stmts.
-	aStream tab: level - 1.
-	aStream nextPutAll: 'while (1) {'; cr.
-	msgNode receiver emitCCodeOn: aStream level: level + 1 generator: self.
-	aStream tab: level + 1.
-	aStream nextPutAll: 'if ('.
+	| testStmt receiverWithoutTest |
+	aStream tab: level - 1; nextPutAll: 'while (1) {'; cr.
+	testStmt := msgNode receiver statements last.
+	receiverWithoutTest := TStmtListNode new setStatements: msgNode receiver statements allButLast.
+	receiverWithoutTest emitCCodeOn: aStream level: level + 1 generator: self.
+	aStream tab: level + 1; nextPutAll: 'if ('.
 	breakBoolean ifFalse: [aStream nextPut: $!; nextPut: $(].
 	testStmt emitCCodeOn: aStream level: 0 generator: self.
 	breakBoolean ifFalse: [aStream nextPut: $)].
 	aStream nextPutAll: ') break;'; cr.
 	msgNode args first emitCCodeOn: aStream level: level + 1 generator: self.
-	level timesRepeat: [ aStream tab ].
-	aStream nextPut: $}
+	aStream tab: level; nextPut: $}
 ]
 
 { #category : #'C translation' }
@@ -2548,14 +2565,16 @@ CCodeGenerator >> kernel: sel [
 	"Answer true if the given selector is one of the kernel selectors that are implemented as macros."
 
 	^(#(error:
+		 oopAt: oopAt:put: oopAtPointer: oopAtPointer:put:
 		 byteAt: byteAt:put: byteAtPointer: byteAtPointer:put:
+		 shortAt: shortAt:put: shortAtPointer: shortAtPointer:put:
 		 intAt: intAt:put: intAtPointer: intAtPointer:put:
 		 longAt: longAt:put: longAtPointer: longAtPointer:put:
-		 shortAt: shortAt:put: shortAtPointer: shortAtPointer:put:
 		 fetchFloatAt:into: storeFloatAt:from:
 				fetchFloatAtPointer:into: storeFloatAtPointer:from:
 		 fetchSingleFloatAt:into: storeSingleFloatAt:from:
-				fetchSingleFloatAtPointer:into: storeSingleFloatAtPointer:from:)
+				fetchSingleFloatAtPointer:into: storeSingleFloatAtPointer:from:
+		 pointerForOop: oopForPointer:)
 			includes: sel)
 ]
 

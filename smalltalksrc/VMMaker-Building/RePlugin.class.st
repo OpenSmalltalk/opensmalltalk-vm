@@ -374,11 +374,11 @@ RePlugin >> rcvrExtraPtr [
 	|extraObj|
 	<inline: true>
 	extraObj := interpreterProxy fetchPointer: 3 ofObject: rcvr.
-	(extraObj = (interpreterProxy nilObject))
-		ifTrue: [^ self cCode: '(int) NULL'].
 	^self 
-		cCoerce:(interpreterProxy arrayValueOf: extraObj)
-		to: 'int'.
+		cCoerce: (extraObj = interpreterProxy nilObject
+					ifTrue: [nil]
+					ifFalse: [interpreterProxy arrayValueOf: extraObj])
+		to: 'int'
 ]
 
 { #category : #'rcvr linkage' }
@@ -454,8 +454,7 @@ RePlugin >> rePluginFree: aPointer [
 	<returnTypeC: 'void'>
 
 	numFrees := numFrees + 1.
-	(aPointer)
-		ifTrue: [self cCode: 'free(aPointer)']	
+	aPointer notNil ifTrue: [self free: aPointer]	
 ]
 
 { #category : #'memory management' }
@@ -468,8 +467,8 @@ RePlugin >> rePluginMalloc: anInteger [
 	<var: #aPointer type: 'void *'>
 	<returnTypeC: 'void *'>
 	numAllocs := numAllocs + 1.
-	(aPointer := self cCode: 'malloc(anInteger)')
-		ifTrue: [lastAlloc := anInteger].
+	(aPointer := self malloc: anInteger) notNil ifTrue:
+		[lastAlloc := anInteger].
 	^aPointer
 
 ]
