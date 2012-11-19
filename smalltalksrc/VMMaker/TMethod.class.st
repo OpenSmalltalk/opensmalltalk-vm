@@ -528,36 +528,37 @@ TMethod >> endsWithReturn [
 
 { #category : #inlining }
 TMethod >> exitVar: exitVar label: exitLabel [
-	"Replace each return statement in this method with an assignment to the exit variable followed by a goto to the given label. Return true if a goto was generated."
+	"Replace each return statement in this method with an assignment to the
+	 exit variable followed by either a return or a goto to the given label.
+	 Answer if a goto was generated."
 	"Optimization: If exitVar is nil, the return value of the inlined method is not being used, so don't add the assignment statement."
 
-	| labelUsed |
+	| labelUsed map |
 	labelUsed := false.
+	map := Dictionary new.
 	parseTree nodesDo:
-		[:node | | newStmts |
-		node isStmtList ifTrue:
-			[newStmts := OrderedCollection new: 100.
-			node statements do:
-				[:stmt |
-				stmt isReturn
-					ifTrue:
-						[exitVar
-							ifNil:
-								[false "eem 8/8/2012 14:18 why exclude leaves explicity?  Makes no sense to me and breaks inlining of asimple accessors"
-									ifTrue:
-										[stmt expression isLeaf ifFalse: "evaluate return expression even though value isn't used"
-											[newStmts add: stmt expression]]
-									ifFalse: [newStmts add: stmt expression]]
-							ifNotNil: "assign return expression to exit variable"
-								[newStmts add:
-									(TAssignmentNode new
-										setVariable: (TVariableNode new setName: exitVar)
-										expression: stmt expression)].
-						stmt ~~ parseTree statements last ifTrue: "generate a goto (this return is NOT the last statement in the method)"
-							[newStmts add: (TGoToNode new setLabel: exitLabel).
-							labelUsed := true]]
-					ifFalse: [newStmts addLast: stmt]].
-			node setStatements: newStmts asArray]].
+		[:node | | replacement |
+		node isReturn ifTrue:
+			[replacement := exitVar
+								ifNil: [node expression]
+								ifNotNil: [TAssignmentNode new
+											setVariable: (TVariableNode new setName: exitVar)
+											expression: node expression].
+			 node ~~ parseTree statements last ifTrue:
+				[replacement := TStmtListNode new
+									setArguments: #()
+									statements: {replacement.
+												  TGoToNode new setLabel: exitLabel; yourself};
+									yourself.
+				 labelUsed := true].
+			map at: node put: replacement]].
+	parseTree replaceNodesIn: map.
+	"Now flatten any new statement lists..."
+	parseTree nodesDo:
+		[:node| | list |
+		(node isStmtList and: [node statements last isStmtList]) ifTrue:
+			[list := node statements last statements.
+			 node statements removeLast; addAllLast: list]].
 	^labelUsed
 ]
 

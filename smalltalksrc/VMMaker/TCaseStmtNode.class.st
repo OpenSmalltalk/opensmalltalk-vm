@@ -141,12 +141,13 @@ TCaseStmtNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 	aStream nextPutAll: 'switch ('.
 	expression emitCCodeOn: aStream level: level generator: aCodeGen.
 	aStream nextPutAll: ') {'; cr.
-	expansions := cases collect:
-		[:case|
-		self filterCodeFrom:
-			(String streamContents:
-				[:s|
-				case emitCCodeOn: s level: 0 generator: aCodeGen])].
+	expansions := aCodeGen suppressAsmLabelsWhile:
+						[cases collect:
+							[:case|
+							self filterCommentsFrom:
+								(String streamContents:
+									[:s|
+									case emitCCodeOn: s level: 0 generator: aCodeGen])]].
 	duplicates := Set new.
 	1 to: cases size do:
 		[:i|
@@ -171,20 +172,14 @@ TCaseStmtNode >> expression [
 ]
 
 { #category : #private }
-TCaseStmtNode >> filterCodeFrom: aString [
-	"elide any /* comment */ and VM_LABEL(...) occurrences from aString."
-	| m n i closer |
-	m := aString indexOfSubCollection: '/*'.
-	n := aString indexOfSubCollection: 'VM_LABEL('.
-	m + n = 0 ifTrue:
-		[^aString].
-	(m ~= 0 and: [n = 0 or: [m < n]])
-		ifTrue: [closer := '*/'. i := m]
-		ifFalse: [closer := ');'. i := n].
+TCaseStmtNode >> filterCommentsFrom: aString [
+	"elide any /* comment */ occurrences from aString."
+	| i |
+	i := aString indexOfSubCollection: '/*'startingAt: 1 ifAbsent: [^aString].
 	^(aString copyFrom: 1 to: i - 1),
-	  (self filterCodeFrom:
+	  (self filterCommentsFrom:
 		(aString
-			copyFrom: (aString indexOfSubCollection: closer startingAt: i + 2) + closer size
+			copyFrom: (aString indexOfSubCollection: '*/' startingAt: i + 2) + 2
 			to: aString size))
 ]
 
@@ -196,10 +191,11 @@ TCaseStmtNode >> isCaseStmt [
 
 { #category : #enumerating }
 TCaseStmtNode >> nodesDo: aBlock [
-
+	"Apply aBlock to all nodes in the receiver.
+	 N.B. This is assumed to be bottom-up, leaves first."
 	expression nodesDo: aBlock.
 	cases do: [ :c | c nodesDo: aBlock ].
-	aBlock value: self.
+	aBlock value: self
 ]
 
 { #category : #enumerating }
