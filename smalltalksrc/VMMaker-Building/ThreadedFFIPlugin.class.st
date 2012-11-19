@@ -520,7 +520,13 @@ ThreadedFFIPlugin >> ffiCall: externalFunction ArgArrayOrNil: argArrayOrNil NumA
 	(calloutState structReturnSize > 0
 	 and: [self nonRegisterStructReturnIsViaImplicitFirstArgument
 	 and: [(self returnStructInRegisters: calloutState structReturnSize) not]]) ifTrue:
-		[self ffiPushPointer: calloutState limit in: calloutState].
+		[err := self ffiPushPointer: calloutState limit in: calloutState.
+		 err ~= 0 ifTrue:
+			[self cleanupCalloutState: calloutState.
+			 self cppIf: COGMTVM ifTrue:
+			 [err = PrimErrObjectMayMove negated ifTrue:
+				[^PrimErrObjectMayMove]]. "N.B. Do not fail if object may move because caller will GC and retry."
+			 ^self ffiFail: err]].
 	1 to: nArgs do:
 		[:i|
 		argType := interpreterProxy fetchPointer: i ofObject: argTypeArray.
@@ -1256,11 +1262,12 @@ ThreadedFFIPlugin >> primitiveCallout [
 	externalFunction := interpreterProxy literal: 0 ofMethod: meth.
 	self cppIf: COGMTVM
 		ifTrue:
-			[ | nArgs retryCount |
+			[ | nArgs retryCount result |
 			nArgs := interpreterProxy methodArgumentCount.
 			retryCount := 0.
-			[(self ffiCall: externalFunction ArgArrayOrNil: nil NumArgs: nArgs) = PrimErrObjectMayMove
-			 and: [(retryCount := retryCount + 1) <= nArgs]] whileTrue:
+			[result := self ffiCall: externalFunction ArgArrayOrNil: nil NumArgs: nArgs.
+			 result = PrimErrObjectMayMove
+			 and: [(retryCount := retryCount + 1) <= (nArgs + 1)]] whileTrue:
 				[interpreterProxy tenuringIncrementalGC]]
 		ifFalse:
 			[self ffiCall: externalFunction ArgArrayOrNil: nil NumArgs: interpreterProxy methodArgumentCount].
@@ -1279,15 +1286,16 @@ ThreadedFFIPlugin >> primitiveCalloutWithArgs [
 		[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
 	self cppIf: COGMTVM
 		ifTrue:
-			[| retryCount |
+			[| retryCount result |
 			retryCount := 0.
 			[externalFunction := interpreterProxy stackValue: 1.
 			 argArray := interpreterProxy stackValue: 0.
 			 (interpreterProxy isArray: argArray) ifFalse:
 				[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 			 nArgs := interpreterProxy slotSizeOf: argArray.
-			 (self ffiCall: externalFunction ArgArrayOrNil: argArray NumArgs: nArgs) = PrimErrObjectMayMove
-			  and: [(retryCount := retryCount + 1) <= nArgs]] whileTrue:
+			 result := self ffiCall: externalFunction ArgArrayOrNil: argArray NumArgs: nArgs.
+			 result = PrimErrObjectMayMove
+			  and: [(retryCount := retryCount + 1) <= (nArgs + 1)]] whileTrue:
 				[interpreterProxy tenuringIncrementalGC]]
 		ifFalse:
 			[externalFunction := interpreterProxy stackValue: 1.

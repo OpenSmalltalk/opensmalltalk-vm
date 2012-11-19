@@ -24,6 +24,7 @@ Class {
 		'generateDeadCode',
 		'requiredSelectors',
 		'logger',
+		'suppressAsmLabels',
 		'asmLabelCounts',
 		'pools',
 		'selectorTranslations',
@@ -1761,14 +1762,18 @@ CCodeGenerator >> generateInlineCppIfElse: msgNode asArgument: asArgument on: aS
 		ensureCr;
 		nextPut: $#; next: level * 2 put: Character space; nextPutAll: 'if '; nextPutAll: expr; cr.
 
-	putStatement value: msgNode args second.
+	self with: msgNode args first
+		ifAppropriateSetTo: true
+		do: [putStatement value: msgNode args second].
 	expr := ' /* ', expr, ' */'.
 	msgNode args size >= 3 ifTrue:
 		[aStream
 			ensureCr;
 			nextPut: $#; next: level * 2 put: Character space; nextPutAll: 'else'; nextPutAll: expr;
 			cr.
-		putStatement value: msgNode args third].
+		self with: msgNode args first
+			ifAppropriateSetTo: false
+			do: [putStatement value: msgNode args third]].
 	aStream
 		ensureCr;
 		nextPut: $#; next: level * 2 put: Character space; nextPutAll: 'endif'; nextPutAll: expr;
@@ -2335,7 +2340,8 @@ CCodeGenerator >> initialize [
 	scopeStack := OrderedCollection new.
 	logger := (ProvideAnswerNotification new tag: #logger; signal) ifNil: [Transcript].
 	pools := IdentitySet new.
-	selectorTranslations := IdentityDictionary new
+	selectorTranslations := IdentityDictionary new.
+	suppressAsmLabels := false
 ]
 
 { #category : #'C translation' }
@@ -2785,12 +2791,22 @@ CCodeGenerator >> options [
 
 { #category : #accessing }
 CCodeGenerator >> options: aDictionary [
-	optionsDictionary := aDictionary
+	"Set optionsDictionary to the argument and scan it for accessors on the receiver,
+	 performing the accessor with the value, allowing one to specify things like
+	 generateDeadCode: false in the options."
+	optionsDictionary := aDictionary.
+	optionsDictionary keysAndValuesDo:
+		[:k :v| | accessor |
+		((self class instVarNames includes: k)
+		and: [(Symbol hasInterned: k, ':' ifTrue: [:s| accessor := s])
+		and: [self class canUnderstand: accessor]]) ifTrue:
+			[self perform: accessor with: v]]
 ]
 
 { #category : #utilities }
 CCodeGenerator >> outputAsmLabel: selector on: aStream [
 	| count |
+	suppressAsmLabels ifTrue: [^self].
 	asmLabelCounts isNil ifTrue:
 		[asmLabelCounts := Dictionary new].
 	count := asmLabelCounts
@@ -3310,6 +3326,24 @@ CCodeGenerator >> structTargetKindForVariableName: varName [ "<String>"
 	^VMStructType structTargetKindForDeclaration: (self typeOfVariable: varName)
 ]
 
+{ #category : #accessing }
+CCodeGenerator >> suppressAsmLabels [
+	^suppressAsmLabels
+]
+
+{ #category : #accessing }
+CCodeGenerator >> suppressAsmLabels: aBoolean [
+	suppressAsmLabels := aBoolean
+]
+
+{ #category : #utilities }
+CCodeGenerator >> suppressAsmLabelsWhile: aBlock [
+	| oldSuppressAsmLabels |
+	oldSuppressAsmLabels := suppressAsmLabels.
+	suppressAsmLabels := true.
+	^aBlock ensure: [suppressAsmLabels := oldSuppressAsmLabels]
+]
+
 { #category : #utilities }
 CCodeGenerator >> testInliningFor: selector as: inlineFlagOrSymbol [
 	"Test inlining for the method with the given selector.
@@ -3454,6 +3488,21 @@ CCodeGenerator >> wantsLabels [
 	 loop unrolling.  We use the asmLabel: directive to control labelling in the
 	 interpreter proper. But it is too much work doing that for plugins too."
 	^vmClass notNil and: [vmClass wantsLabels]
+]
+
+{ #category : #utilities }
+CCodeGenerator >> with: aNode ifAppropriateSetTo: aBoolean do: aBlock [
+	"If aNode is a TDefineNode for a variable, set it to the supplied boolean for the duration
+	 of aBlock.  This avoids duplicating both arms of nested cppIf:ifTrue:[ifFalse:]'s."
+	| savedOptions |
+	(aNode isConstant and: [aNode name notEmpty and: [aNode name first isLetter]]) ifFalse:
+		[^aBlock value].
+	savedOptions := optionsDictionary.
+	optionsDictionary := savedOptions
+							ifNil: [Dictionary new]
+							ifNotNil: [savedOptions copy].
+	optionsDictionary at: aNode name put: aBoolean.
+	^aBlock ensure: [optionsDictionary := savedOptions]
 ]
 
 { #category : #public }

@@ -1922,7 +1922,8 @@ NewspeakInterpreterSimulator >> utilitiesMenu: aMenuMorph [
 		addLine;
 		add: 'inspect interpreter' action: #inspect;
 		addLine;
-		add: 'set break count...' action: #setBreakCount;
+		add: 'set break count...' action: [|s| s := UIManager default request: 'break count (dec)'.
+											s notEmpty ifTrue: [breakCount := Integer readFrom: s readStream]];
 		add: (printSends
 				ifTrue: ['no print sends']
 				ifFalse: ['print sends'])
