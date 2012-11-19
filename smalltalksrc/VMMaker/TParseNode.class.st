@@ -250,8 +250,9 @@ TParseNode >> nodeCount [
 
 { #category : #enumerating }
 TParseNode >> nodesDo: aBlock [
-
-	aBlock value: self.
+	"Apply aBlock to all nodes in the receiver.
+	 N.B. This is assumed to be bottom-up, leaves first."
+	aBlock value: self
 ]
 
 { #category : #enumerating }

@@ -73,9 +73,10 @@ TReturnNode >> isReturn [
 
 { #category : #enumerating }
 TReturnNode >> nodesDo: aBlock [
-
+	"Apply aBlock to all nodes in the receiver.
+	 N.B. This is assumed to be bottom-up, leaves first."
 	expression nodesDo: aBlock.
-	aBlock value: self.
+	aBlock value: self
 ]
 
 { #category : #enumerating }
