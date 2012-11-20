@@ -765,9 +765,7 @@ CCodeGenerator >> emitCConstantsOn: aStream [
 		[:lit|
 		lit isVariableBinding ifTrue:
 			[unused add: lit key]].
-	 "force inclusion of BytesPerWord and MULTIPLEBYTECODESETS declarations."
-	#(BytesPerWord MULTIPLEBYTECODESETS) do:
-		[:key| unused remove: key ifAbsent: []].
+	unused remove: #BytesPerWord ifAbsent: []. "force inclusion of BytesPerWord declaration"
 	constList := constants keys reject:[:any| unused includes: any].
 	aStream cr; nextPutAll: '/*** Constants ***/'; cr.
 	(self sortStrings: constList) do:
