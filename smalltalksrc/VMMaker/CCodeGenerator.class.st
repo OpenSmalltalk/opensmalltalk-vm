@@ -3139,7 +3139,7 @@ CCodeGenerator >> reservedWords [
 		'break'
 		'case' 'char' 'const' 'continue'
 		'default' 'do' 'double'
-		'else' 'entry' 'enum' 'extern'
+		'else' "'entry' obsolete" 'enum' 'extern'
 		'float' 'for'
 		'goto'
 		'if' 'int'
