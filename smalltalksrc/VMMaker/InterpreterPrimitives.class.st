@@ -2176,15 +2176,14 @@ InterpreterPrimitives >> primitiveMultiplyLargeIntegers [
 
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveNew [
-	"Allocate a new fixed-size instance. Fail if the allocation would leave less than lowSpaceThreshold bytes free. May cause a GC"
+	"Allocate a new fixed-size instance. Fail if the allocation would leave less than lowSpaceThreshold bytes free. May cause a GC."
 
-	| class spaceOkay |
-	class := self stackTop.
 	"The following may cause GC!"
-	spaceOkay := objectMemory sufficientSpaceToInstantiate: class indexableSize: 0.
-	self success: spaceOkay.
-	self successful ifTrue:
-			[self push: (objectMemory instantiateClass: self popStack indexableSize: 0)]
+	(objectMemory sufficientSpaceToInstantiate: self stackTop indexableSize: 0)
+		ifTrue: [self
+					pop: argumentCount + 1
+					thenPush: (objectMemory instantiateClass: self stackTop indexableSize: 0)]
+		ifFalse: [self primitiveFailFor: PrimErrNoMemory]
 ]
 
 { #category : #'compiled methods' }
@@ -2206,18 +2205,20 @@ InterpreterPrimitives >> primitiveNewMethod [
 
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveNewWithArg [
-	"Allocate a new indexable instance. Fail if the allocation would leave less than lowSpaceThreshold bytes free."
-	| size class spaceOkay |
+	"Allocate a new indexable instance. Fail if the allocation would leave less than lowSpaceThreshold bytes free. May cause a GC."
+	| size |
 	size := self positive32BitValueOf: self stackTop.
-	class := self stackValue: 1.
-	self success: size >= 0.
-	self successful ifTrue:
-		["The following may cause GC!"
-		spaceOkay := objectMemory sufficientSpaceToInstantiate: class indexableSize: size.
-		self success: spaceOkay.
-		class := self stackValue: 1].
-	self successful ifTrue:
-		[self pop: 2 thenPush: (objectMemory instantiateClass: class indexableSize: size)]
+	(self successful and: [size >= 0])
+		ifTrue:
+			[(objectMemory sufficientSpaceToInstantiate: (self stackValue: 1) indexableSize: size)
+				ifTrue:
+					[self
+						pop: argumentCount + 1
+						thenPush: (objectMemory instantiateClass: (self stackValue: 1) indexableSize: size)]
+				ifFalse:
+					[self primitiveFailFor: PrimErrNoMemory]]
+		ifFalse:
+			[self primitiveFailFor: PrimErrBadArgument]
 ]
 
 { #category : #'object access primitives' }
