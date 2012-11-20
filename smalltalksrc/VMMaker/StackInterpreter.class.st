@@ -201,10 +201,11 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 	"This defines bytecodeSetSelector as 0 if MULTIPLEBYTECODESETS
 	 is not defined, for the benefit of the interpreter on slow machines."
 	aCCodeGenerator addConstantForBinding: (self bindingOf: #MULTIPLEBYTECODESETS).
-	MULTIPLEBYTECODESETS ifFalse:
+	MULTIPLEBYTECODESETS == false ifTrue:
 		[aCCodeGenerator
-			var: #bytecodeSetSelector
-			declareC: '#define bytecodeSetSelector 0'].
+			removeVariable: 'extA';
+			removeVariable: 'extB';
+			removeVariable: 'bytecodeSetSelector'].
 	aCCodeGenerator
 		var: #methodCache
 		declareC: 'long methodCache[MethodCacheSize + 1 /* ', (MethodCacheSize + 1) printString, ' */]'.
@@ -5803,10 +5804,8 @@ StackInterpreter >> includesBehavior: aClass ThatOf: aSuperclass [
 
 { #category : #'simulation support' }
 StackInterpreter >> initExtensions [
-	<doNotGenerate>
-	"In the real VM, these are zeroed in interpret, in which they are localized.
-	 But we need to zero them for simulation also."
-	extA := extB := 0
+	<inline: true>
+	self cppIf: MULTIPLEBYTECODESETS ifTrue: [extA := extB := 0]
 ]
 
 { #category : #initialization }
@@ -6290,7 +6289,7 @@ StackInterpreter >> interpret [
 	self browserPluginInitialiseIfNeeded.
 	self internalizeIPandSP.
 	self fetchNextBytecode.
-	extA := extB := 0.
+	self initExtensions.
 	[true] whileTrue: [self dispatchOn: currentBytecode in: BytecodeTable].
 	localIP := localIP - 1.  "undo the pre-increment of IP before returning"
 	self externalizeIPandSP.
