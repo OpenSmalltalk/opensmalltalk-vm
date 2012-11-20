@@ -1296,7 +1296,7 @@ CogVMSimulator >> interpret [
 	self browserPluginInitialiseIfNeeded.
 	self internalizeIPandSP.
 	self fetchNextBytecode.
-	extA := extB := 0.
+	self initExtensions.
 	[true] whileTrue:
 		[self assertValidExecutionPointers.
 		 atEachStepBlock value. "N.B. may be nil"
