@@ -2177,10 +2177,10 @@ InterpreterPrimitives >> primitiveMultiplyLargeIntegers [
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveNew [
 	"Allocate a new fixed-size instance. Fail if the allocation would leave less than lowSpaceThreshold bytes free. May cause a GC."
-
+	| spaceOkay |
 	"The following may cause GC!"
-	(objectMemory sufficientSpaceToInstantiate: self stackTop indexableSize: 0)
-		ifTrue: [self
+	spaceOkay := objectMemory sufficientSpaceToInstantiate: self stackTop indexableSize: 0.
+	spaceOkay	ifTrue: [self
 					pop: argumentCount + 1
 					thenPush: (objectMemory instantiateClass: self stackTop indexableSize: 0)]
 		ifFalse: [self primitiveFailFor: PrimErrNoMemory]
@@ -2206,12 +2206,12 @@ InterpreterPrimitives >> primitiveNewMethod [
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveNewWithArg [
 	"Allocate a new indexable instance. Fail if the allocation would leave less than lowSpaceThreshold bytes free. May cause a GC."
-	| size |
+	| size spaceOkay |
 	size := self positive32BitValueOf: self stackTop.
 	(self successful and: [size >= 0])
 		ifTrue:
-			[(objectMemory sufficientSpaceToInstantiate: (self stackValue: 1) indexableSize: size)
-				ifTrue:
+			[spaceOkay := objectMemory sufficientSpaceToInstantiate: (self stackValue: 1) indexableSize: size.
+			 spaceOkay ifTrue:
 					[self
 						pop: argumentCount + 1
 						thenPush: (objectMemory instantiateClass: (self stackValue: 1) indexableSize: size)]
