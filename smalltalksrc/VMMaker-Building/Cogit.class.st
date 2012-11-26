@@ -2084,7 +2084,7 @@ Cogit >> blockDispatchFor: cogMethod perform: quaternaryFunction arg: arg [
 	[pc < end] whileTrue:
 		[(backEnd isJumpAt: pc)
 			ifTrue:
-				[targetpc := backEnd jumpTargetAt: pc.
+				[targetpc := backEnd jumpTargetPCAt: pc.
 				 pc := pc + (backEnd instructionSizeAt: pc).
 				 targetpc < blockEntry ifTrue:
 					[result := self perform: quaternaryFunction
@@ -2115,7 +2115,7 @@ Cogit >> blockDispatchTargetsFor: cogMethod perform: binaryFunction arg: arg [
 	end := (self mapEndFor: cogMethod) - 1.
 	[pc < end] whileTrue:
 		[(backEnd isJumpAt: pc) ifTrue:
-			[targetpc := backEnd jumpTargetAt: pc.
+			[targetpc := backEnd jumpTargetPCAt: pc.
 			 targetpc < blockEntry ifTrue:
 				[result := self perform: binaryFunction
 							with: targetpc
@@ -2831,7 +2831,7 @@ Cogit >> codeRangesFor: cogMethod [
 		[| targetpc |
 		 targetpc := blockEntry.
 		 (backEnd isJumpAt: pc) ifTrue:
-			[targetpc := backEnd jumpTargetAt: pc.
+			[targetpc := backEnd jumpTargetPCAt: pc.
 			 targetpc < blockEntry ifTrue:
 				[starts add: (self cCoerceSimple: targetpc - (self sizeof: CogBlockMethod) to: #'CogBlockMethod *')]].
 		 pc := pc + (backEnd instructionSizeAt: pc)].

@@ -2522,7 +2522,8 @@ CogIA32Compiler >> jumpShortByteSize [
 ]
 
 { #category : #disassembly }
-CogIA32Compiler >> jumpTargetAt: pc [ 
+CogIA32Compiler >> jumpTargetPCAt: pc [
+	<returnTypeC: #sqInt>
 	| size byte offset |
 	size := self instructionSizeAt: pc.
 	size = 2

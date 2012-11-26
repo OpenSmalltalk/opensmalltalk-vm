@@ -653,7 +653,7 @@ FilePlugin >> primitiveFileStdioHandles [
 		[(self cCode: ' ((sqInt (*)(void))sHFAfn)()' inSmalltalk: [true]) ifFalse:
 			[^interpreterProxy primitiveFailFor: PrimErrUnsupported]].
 	self cCode: '' inSmalltalk: [fileRecords := Array new: 3].
-	validMask := self sqFileStdioHandlesInto: (self addressOf: fileRecords).
+	validMask := self sqFileStdioHandlesInto: fileRecords.
 	validMask = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrUnsupported].
 	result := interpreterProxy instantiateClass: interpreterProxy classArray indexableSize: 3.
