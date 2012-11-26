@@ -918,6 +918,7 @@ VMMaker >> generateEntire [
 			[:generator|
 			logger
 				nextPutAll: (generator selector copyReplaceAll: 'generate' with: '');
+				cr;
 				flush]].
 	self generateMainVM.
 	self generateExternalPlugins
