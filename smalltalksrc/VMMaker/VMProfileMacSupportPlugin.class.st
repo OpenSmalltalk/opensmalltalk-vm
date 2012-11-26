@@ -36,7 +36,7 @@ VMProfileMacSupportPlugin >> primitiveDLSym [
 	self free: name.
 	^interpreterProxy methodReturnValue: (addr = 0
 												ifTrue: [interpreterProxy nilObject]
-												ifFalse: [interpreterProxy positive32BitIntegerFor: addr])
+												ifFalse: [interpreterProxy positive32BitIntegerFor: addr asUnsignedLong])
 ]
 
 { #category : #primitives }

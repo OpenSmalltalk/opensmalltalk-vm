@@ -187,37 +187,27 @@ CCodeGenerator >> addMethodFor: aClass selector: selector [
 { #category : #public }
 CCodeGenerator >> addMethodsForPrimitives: classAndSelectorList [ 
 	| verbose |
-	classAndSelectorList do: 
-		[:classAndSelector | | aClass sel meth source |
-		aClass := Smalltalk at: (classAndSelector at: 1).
+	verbose := false.
+	classAndSelectorList do:
+		[:classAndSelector | | aClass selector meth |
+		aClass := Smalltalk at: classAndSelector first.
+		selector := classAndSelector last.
 		self addAllClassVarsFor: aClass.
 "TPR - should pool vars also be added here?"
 
-		"find the method in either the class or the metaclass"
-		sel := classAndSelector at: 2.
-		source := (aClass includesSelector: sel)
-					ifTrue: [aClass sourceCodeAt: sel]
-					ifFalse: [aClass class sourceCodeAt: sel].
-
-		"compile the method source and convert to a suitable translation 
-		method "
-		meth := (Compiler new
-					parse: source
-					in: aClass
-					notifying: nil)
-					asTranslationMethodOfClass: self translationMethodClass.
-
-		(aClass includesSelector: sel)
-			ifTrue: [meth definingClass: aClass]
-			ifFalse: [meth definingClass: aClass class].
+		"compile the method source and convert to a suitable translation method.
+		 find the method in either the class or the metaclass"
+		meth := self
+					compileToTMethodSelector: selector
+					in: ((aClass includesSelector: selector)
+							ifTrue: [aClass]
+							ifFalse: [aClass class]).
 		meth primitive > 0 ifTrue:[meth preparePrimitiveName].
 		"for old-style array accessing: 
 		meth covertToZeroBasedArrayReferences."
 		meth replaceSizeMessages.
 		self addMethod: meth].
 
-	"method preparation"
-	verbose := false.
 	self prepareMethods.
 	verbose
 		ifTrue: 
@@ -752,6 +742,12 @@ CCodeGenerator >> emitCConstantsOn: aStream [
 	"Store the global variable declarations on the given stream."
 	| unused constList |
 	unused := constants keys asSet.
+	"Don't generate any defines for the externally defined constants,
+	 STACKVM, COGVM, COGMTVM et al, unless they're actuaslly used."
+	(VMClass class>>#initializeMiscConstantsWith:) literalsDo:
+		[:lit|
+		(lit isVariableBinding and: [lit key isString]) ifTrue:
+			[unused add: lit key]].
 	methods do:
 		[:meth|
 		meth parseTree nodesDo:
@@ -760,13 +756,8 @@ CCodeGenerator >> emitCConstantsOn: aStream [
 		[:const|
 		(variableDeclarations anySatisfy: [:value| value includesSubString: const]) ifTrue:
 			[unused remove: const ifAbsent: []]].
-	"Don't generate any defines for the externally defined constants, STACKVM, COGVM, COGMTVM et al."
-	(VMClass class>>#initializeMiscConstantsWith:) literalsDo:
-		[:lit|
-		lit isVariableBinding ifTrue:
-			[unused add: lit key]].
 	unused remove: #BytesPerWord ifAbsent: []. "force inclusion of BytesPerWord declaration"
-	constList := constants keys reject:[:any| unused includes: any].
+	constList := constants keys reject: [:any| unused includes: any].
 	aStream cr; nextPutAll: '/*** Constants ***/'; cr.
 	(self sortStrings: constList) do:
 		[:varName| | node default value |
@@ -1123,6 +1114,15 @@ CCodeGenerator >> generateAsUnsignedInteger: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll:'((usqInt)'.
+	self emitCExpression: msgNode receiver on: aStream.
+	aStream nextPut: $)
+]
+
+{ #category : #'C translation' }
+CCodeGenerator >> generateAsUnsignedLong: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	aStream nextPutAll:'((unsigned long)'.
 	self emitCExpression: msgNode receiver on: aStream.
 	aStream nextPut: $)
 ]
@@ -2073,7 +2073,9 @@ CCodeGenerator >> generateShiftRight: msgNode on: aStream indent: level [
 			 (decl first = $u) ifFalse:
 				[aStream
 					nextPutAll: '((unsigned ';
-					nextPutAll: (decl allButLast: msgNode receiver name size);
+					nextPutAll: ((decl endsWith: msgNode receiver name)
+									ifTrue: [decl allButLast: msgNode receiver name size]
+									ifFalse: [decl]);
 					nextPut: $)].
 			 self emitCExpression: msgNode receiver on: aStream.
 			 (decl first = $u) ifFalse:
@@ -2432,6 +2434,7 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#asFloat					#generateAsFloat:on:indent:
 	#asInteger					#generateAsInteger:on:indent:
 	#asUnsignedInteger		#generateAsUnsignedInteger:on:indent:
+	#asUnsignedLong			#generateAsUnsignedLong:on:indent:
 	#asSymbol					#generateAsSymbol:on:indent:
 	#anyMask:					#generateBitAnd:on:indent:
 	#raisedTo:					#generateRaisedTo:on:indent:

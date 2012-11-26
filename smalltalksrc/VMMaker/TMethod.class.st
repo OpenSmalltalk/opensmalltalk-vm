@@ -533,25 +533,41 @@ TMethod >> exitVar: exitVar label: exitLabel [
 	 Answer if a goto was generated."
 	"Optimization: If exitVar is nil, the return value of the inlined method is not being used, so don't add the assignment statement."
 
-	| labelUsed map |
+	| labelUsed map eliminateReturnSelfs |
 	labelUsed := false.
 	map := Dictionary new.
+	"Conceivably one might ^self from a struct class and mean it.  In most cases though
+	 ^self means `get me outta here, fast'.  So unless this method is from a VMStruct class,
+	 elide any ^self's"
+	eliminateReturnSelfs := ((definingClass inheritsFrom: VMClass) and: [definingClass isStructClass]) not
+							  and: [returnType = #void or: [returnType = #sqInt]].
 	parseTree nodesDo:
 		[:node | | replacement |
 		node isReturn ifTrue:
-			[replacement := exitVar
-								ifNil: [node expression]
-								ifNotNil: [TAssignmentNode new
-											setVariable: (TVariableNode new setName: exitVar)
-											expression: node expression].
+			[replacement := (node expression isVariable "Eliminate ^self's"
+							   and: [node expression name = 'self'
+							   and: [eliminateReturnSelfs]])
+								ifTrue: [nil]
+								ifFalse:
+									[exitVar
+										ifNil: [node expression]
+										ifNotNil: [TAssignmentNode new
+													setVariable: (TVariableNode new setName: exitVar)
+													expression: node expression]].
 			 node ~~ parseTree statements last ifTrue:
-				[replacement := TStmtListNode new
-									setArguments: #()
-									statements: {replacement.
-												  TGoToNode new setLabel: exitLabel; yourself};
-									yourself.
+				[replacement := replacement
+									ifNil: [TGoToNode new setLabel: exitLabel; yourself]
+									ifNotNil:
+										[TStmtListNode new
+											setArguments: #()
+											statements: {replacement.
+														  TGoToNode new setLabel: exitLabel; yourself};
+											yourself].
 				 labelUsed := true].
-			map at: node put: replacement]].
+			map
+				at: node
+				put: (replacement ifNil:
+						[TLabeledCommentNode new setComment: 'return ', node expression printString])]].
 	parseTree replaceNodesIn: map.
 	"Now flatten any new statement lists..."
 	parseTree nodesDo:
@@ -1441,7 +1457,13 @@ TMethod >> printTempsAndVar: varName on: aStream [
 { #category : #'inlining support' }
 TMethod >> propagateReturnIn: aCodeGen [
 	"Propagate the return type to all return nodes"
-	| map |
+	| map coercionType |
+	returnType = #void ifTrue:
+		[^self].
+	"The following is necessary for functions returning functions, which have problematic syntax"
+	coercionType := aCodeGen
+							extractTypeFor: (aCodeGen cFunctionNameFor: self selector)
+							fromDeclaration: returnType.
 	map := IdentityDictionary new.
 	parseTree nodesDo:[:node|
 		node isReturn ifTrue:[
@@ -1449,10 +1471,7 @@ TMethod >> propagateReturnIn: aCodeGen [
 				setSelector: #cCoerce:to:
 				receiver: (TVariableNode new setName: 'self')
 				arguments: {node expression.
-							TConstantNode new "The following is necessary for functions returning functions, which have problematic syntax"
-								setValue: (aCodeGen
-											extractTypeFor: (aCodeGen cFunctionNameFor: self selector)
-											fromDeclaration: returnType) })]].
+							TConstantNode new setValue: coercionType})]].
 	self replaceNodesIn: map
 ]
 
@@ -1540,25 +1559,27 @@ TMethod >> removeAssertions [
 { #category : #transformations }
 TMethod >> removeFinalSelfReturn [
 	"The Smalltalk parser automatically adds the statement '^self' to the end of methods
-	 without explicit returns.  This method removes such statements, since the generated
-	 code has no notion of 'self' anyway.  THis is a hack because it doesn't distinguish
-	 methods with an explicit return self."
+	 without explicit returns.  This method removes such statements, since in most VMMaker
+	 classes (except struct classes) the generated code has no notion of 'self' anyway.
+	 If the statement is removed and no return type has yet been specified asnd the class
+	 specifies a default return type (e.g. #void) for methods that don't return, then set the
+	 return type accordingly."
 
-	| stmtList lastStmt |
-	stmtList := parseTree statements asOrderedCollection.
-	lastStmt := stmtList last.
-
-	(lastStmt isReturn
+	| lastStmt |
+	((lastStmt := parseTree statements last) isReturn
 	 and: [lastStmt expression isVariable
 	 and: ['self' = lastStmt expression name]]) ifTrue:
-		[stmtList removeLast.
-		parseTree setStatements: stmtList.
-		returnType = #sqInt ifTrue:
-			[([definingClass implicitReturnTypeFor: selector]
-				on: MessageNotUnderstood
-				do: [:ex| nil]) ifNotNil:
-				[:defaultReturnType|
-				returnType := defaultReturnType]]]
+		[| tokens |
+		tokens := Scanner new scanTokens: (definingClass sourceCodeAt: selector ifAbsent: ['']).
+		(tokens size < 2
+		 or: [(tokens last: 2) ~= #(#^ 'self')]) ifTrue:
+			[parseTree setStatements: parseTree statements allButLast.
+			 returnType = #sqInt ifTrue:
+				[([definingClass implicitReturnTypeFor: selector]
+					on: MessageNotUnderstood
+					do: [:ex| nil]) ifNotNil:
+						[:defaultReturnType|
+						returnType := defaultReturnType]]]]
 ]
 
 { #category : #utilities }
