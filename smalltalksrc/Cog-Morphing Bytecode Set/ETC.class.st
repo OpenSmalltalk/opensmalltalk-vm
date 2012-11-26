@@ -156,7 +156,7 @@ ETC >> pushClosureCopyNumCopiedValues: numCopied numArgs: numArgs blockSize: blo
 	1 to: numCopied do:
 		[:i| currentContext push: (blockClosure at: i)].
 	j := numArgs + numCopied.
-	[scanner nextByte = ParseNode pushNilCode] whileTrue:
+	[scanner willPushNil] whileTrue:
 		[scanner interpretNextInstructionFor: self.
 		 currentContext at: currentContext stackPtr put: 'blktmp', (j := j + 1) printString]
 
