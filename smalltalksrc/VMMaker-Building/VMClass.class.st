@@ -202,6 +202,12 @@ VMClass class >> isInterpreterClass [
 ]
 
 { #category : #translation }
+VMClass class >> isStructClass [
+	"The various VMStructType classes override this."
+	^false
+]
+
+{ #category : #translation }
 VMClass class >> noteCompilationOf: aSelector meta: isMeta [
 	"note the recompiliation by resetting the timeStamp "
 	timeStamp := Time totalSeconds.
