@@ -910,11 +910,17 @@ VMMaker >> generateCogitFile [
 
 { #category : #'generate sources' }
 VMMaker >> generateEntire [
-"generate the interp, internal plugins and exports as well as the external plugins"
-
+	"Generate the interp, internal plugins and exports as well as the external plugins.
+	 If this comes from a generator, log it for convenience."
+	(thisContext findContextSuchThat: [:ctxt| ctxt selector == #generateConfiguration]) ifNotNil:
+		[:root|
+		(thisContext findContextSuchThat: [:ctxt| ctxt sender == root]) ifNotNil:
+			[:generator|
+			logger
+				nextPutAll: (generator selector copyReplaceAll: 'generate' with: '');
+				flush]].
 	self generateMainVM.
-	self generateExternalPlugins.
-
+	self generateExternalPlugins
 ]
 
 { #category : #exports }
