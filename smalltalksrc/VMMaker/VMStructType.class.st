@@ -166,6 +166,11 @@ VMStructType class >> isNonArgumentImplicitReceiverVariableName: aString [
 ]
 
 { #category : #translation }
+VMStructType class >> isStructClass [
+	^true
+]
+
+{ #category : #translation }
 VMStructType class >> isTypePointerToStruct: type [
 	| index |
 	StructTypeNameCache ifNil:
