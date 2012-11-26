@@ -916,10 +916,9 @@ VMMaker >> generateEntire [
 		[:root|
 		(thisContext findContextSuchThat: [:ctxt| ctxt sender == root]) ifNotNil:
 			[:generator|
-			logger
-				nextPutAll: (generator selector copyReplaceAll: 'generate' with: '');
-				cr;
-				flush]].
+			logger nextPutAll: (generator selector copyReplaceAll: 'generate' with: '').
+			interpreterClassName ifNotNil: [logger space; nextPutAll: interpreterClassName].
+			logger cr; flush]].
 	self generateMainVM.
 	self generateExternalPlugins
 ]

@@ -8265,6 +8265,7 @@ StackInterpreter >> primitiveIndexOfMethod: theMethod header: methodHeader [
 	 since the derived primitive function pointer is stored in the method cache.  With the new
 	 format we assume a 3-byte CallPrimitive with a little-endian 16-bit primitive index."
 	<api>
+	<inline: true>
 	^self cppIf: MULTIPLEBYTECODESETS
 		ifTrue:
 			[(self headerIndicatesAlternateBytecodeSet: methodHeader)
