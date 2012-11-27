@@ -41,6 +41,7 @@ static char __buildInfo[] = "FT2Plugin Freetype-Plugin-Igor.Stasenko.57 uuid: b7
 
 
 /*** Constants ***/
+#define BytesPerWord 4
 #define FormBitsIndex 0
 #define FormDepthIndex 3
 #define FormHeightIndex 2
@@ -186,6 +187,8 @@ ftAllocateHandleInReceiverForPointer(void *aPointer)
 	if (aPointer) {
 
 		/* Allocate a Smalltalk ByteArray -- lastAlloc contains the length */
+
+
 		/* Copy from the C bytecode buffer to the Smalltalk ByteArray */
 
 		returnedHandle = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classByteArray(), sizeof(void **));
@@ -213,6 +216,8 @@ ftAllocateStringForPointer(const char *aPointer)
 	if (aPointer) {
 
 		/* Allocate a Smalltalk ByteArray -- lastAlloc contains the length */
+
+
 		/* Copy from the C bytecode buffer to the Smalltalk ByteArray */
 
 		returnedHandle = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classString(), strlen(aPointer));
@@ -235,15 +240,15 @@ ftEncodingValueFromString(sqInt string)
 	unsigned char*ptr;
 	unsigned long retval;
 
-	interpreterProxy->success((!((string & 1)))
+	interpreterProxy->success((!(interpreterProxy->isIntegerObject(string)))
 	 && ((interpreterProxy->isBytes(string))
- && ((interpreterProxy->slotSizeOf(string)) == (sizeof(FT_Encoding)))));
+	 && ((interpreterProxy->slotSizeOf(string)) == (sizeof(FT_Encoding)))));
 	if (interpreterProxy->failed()) {
 		return null;
 	}
 	retval = 0;
 
-	/* 	ptr := self cCode: '(unsigned char *) (string + 4)'. */
+	/* ptr := self cCode: '(unsigned char *) (string + 4)'. */
 
 	ptr = interpreterProxy->arrayValueOf(string);
 	;
@@ -273,7 +278,7 @@ ftHandleValueFromReceiver(sqInt rcvrOop)
 	if (interpreterProxy->failed()) {
 		return null;
 	}
-	btw = bytesPerWord();
+	btw = BytesPerWord;
 	return *(void**)(pointerForOop(oop + btw));
 }
 
@@ -658,11 +663,11 @@ static const struct ftError ftErrors[] =
 	ftError = ftErrors;
 	;
 	while (((str = ftError->errMsg))
- && (FT_ERROR_BASE(errorCode) != ftError->errCode)) {
+	 && (FT_ERROR_BASE(errorCode) != ftError->errCode)) {
 		ftError++;
 	}
 	;
-	if (!(str)) {
+	if (!str) {
 		interpreterProxy->success(0);
 	}
 	if (interpreterProxy->failed()) {
@@ -762,7 +767,7 @@ primitiveGetFaceCharMap(void)
 		return null;
 	}
 	charmap = face->charmap;
-	if (!(charmap)) {
+	if (!charmap) {
 		return null;
 	}
 	interpreterProxy->pushRemappableOop(rcvr);
@@ -1027,7 +1032,7 @@ primitiveHasKerning(void)
 		interpreterProxy->primitiveFail();
 		return null;
 	}
-	_return_value = (((FT_HAS_KERNING( face )) << 1) | 1);
+	_return_value = interpreterProxy->integerObjectOf(FT_HAS_KERNING( face ));
 	if (interpreterProxy->failed()) {
 		ftParameterError();
 		return null;
@@ -1194,6 +1199,10 @@ primitiveLoadFaceFields(void)
 	interpreterProxy->storeIntegerofObjectwithValue(8, rcvr, face->num_fixed_sizes);
 	interpreterProxy->storeIntegerofObjectwithValue(10, rcvr, face->num_charmaps);
 	if (face->face_flags & FT_FACE_FLAG_SCALABLE) {
+
+		/* bbox -- Rectangle xMin, yMin, xMax, yMax */
+		/* unitsPerEm */
+
 		interpreterProxy->storeIntegerofObjectwithValue(13, rcvr, face->units_per_EM);
 		interpreterProxy->storeIntegerofObjectwithValue(14, rcvr, face->ascender);
 		interpreterProxy->storeIntegerofObjectwithValue(15, rcvr, face->descender);
@@ -1279,7 +1288,7 @@ primitiveLoadGlyphSlotFromFace(void)
 		return null;
 	}
 	gs = face->glyph;
-	if (!(gs)) {
+	if (!gs) {
 		interpreterProxy->primitiveFail();
 		return null;
 	}
@@ -1292,7 +1301,7 @@ primitiveLoadGlyphSlotFromFace(void)
 	interpreterProxy->pushRemappableOop(rcvr);
 	gfOop = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classByteArray(), sizeof(FT_Glyph_Format));
 	;
-	btw = bytesPerWord();
+	btw = BytesPerWord;
 	gfPtr = (FT_Glyph_Format *) pointerForOop(gfOop + btw);
 	;
 	if (interpreterProxy->failed()) {
@@ -1341,6 +1350,10 @@ primitiveLoadOutlineArraysFromFace(void)
 	sqInt rcvr;
 	char*tags;
 
+
+	/* ptr to struct */
+	/* ptr to struct */
+
 	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "FT2Face"));
 	aFace = interpreterProxy->stackValue(0);
 	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(1), "FT2Outline"));
@@ -1360,7 +1373,7 @@ primitiveLoadOutlineArraysFromFace(void)
 		return null;
 	}
 	gs = face->glyph;
-	if (!(gs)) {
+	if (!gs) {
 		interpreterProxy->primitiveFail();
 		return null;
 	}
@@ -1450,7 +1463,7 @@ primitiveLoadOutlineSizesFromFace(void)
 		return null;
 	}
 	gs = face->glyph;
-	if (!(gs)) {
+	if (!gs) {
 		interpreterProxy->primitiveFail();
 		return null;
 	}
@@ -1613,13 +1626,13 @@ primitiveNumberOfOutlineCountours(void)
 		return null;
 	}
 	gs = face->glyph;
-	if (!(gs)) {
+	if (!gs) {
 		interpreterProxy->primitiveFail();
 		return null;
 	}
 	;
 	contoursSize = gs->outline.n_contours;
-	_return_value = ((contoursSize << 1) | 1);
+	_return_value = interpreterProxy->integerObjectOf(contoursSize);
 	if (interpreterProxy->failed()) {
 		ftParameterError();
 		return null;

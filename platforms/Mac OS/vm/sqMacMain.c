@@ -414,6 +414,20 @@ main(int argc, char **argv, char **envp)
 
 	SetVMPathFromApplicationDirectory();
 
+#if 1
+	unixArgcInterface(argCnt,argVec,envVec);
+
+	if (!gSqueakHeadless) {
+		/* install apple event handlers and wait for open event */
+		InstallAppleEventHandlers();
+		while (ShortImageNameIsEmpty()) {
+			GetNextEvent(everyEvent, &theEvent);
+			if (theEvent.what == kHighLevelEvent) {
+				AEProcessAppleEvent(&theEvent);
+			}
+		}
+	}
+#else
 	/* install apple event handlers and wait for open event */
 	InstallAppleEventHandlers();
 	while (ShortImageNameIsEmpty()) {
@@ -424,6 +438,7 @@ main(int argc, char **argv, char **envp)
 	}
 
 	unixArgcInterface(argCnt,argVec,envVec);
+#endif
 
 	if (!gSqueakHeadless) {
 		ProcessSerialNumber psn = { 0, kCurrentProcess };

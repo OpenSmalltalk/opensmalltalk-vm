@@ -1366,20 +1366,20 @@ static int vm_parseArgument(int argc, char **argv)
 		extern sqInt desiredCogCodeSize;
 		desiredCogCodeSize = strtobkm(argv[1]);	 
 		return 2; }
-# define TLSLEN (sizeof("-sendtrace")-1)
-      else if (!strncmp(argv[0], "-sendtrace", TLSLEN)) { 
-		extern int traceLinkedSends;
+# define TLSLEN (sizeof("-trace")-1)
+      else if (!strncmp(argv[0], "-trace", TLSLEN)) { 
+		extern int traceFlags;
 		char *equalsPos = strchr(argv[0],'=');
 
 		if (!equalsPos) {
-			traceLinkedSends = 1;
+			traceFlags = 1;
 			return 1;
 		}
 		if (equalsPos - argv[0] != TLSLEN
 		  || (equalsPos[1] != '-' && !isdigit(equalsPos[1])))
 			return 0;
 
-		traceLinkedSends = atoi(equalsPos + 1);
+		traceFlags = atoi(equalsPos + 1);
 		return 1; }
       else if (!strcmp(argv[0], "-tracestores")) { 
 		extern sqInt traceStores;
@@ -1438,9 +1438,15 @@ static void vm_printUsage(void)
   printf("  -textenc <enc>        set encoding for external text (default: UTF-8)\n");
   printf("  -version              print version information, then exit\n");
   printf("  -vm-<sys>-<dev>       use the <dev> driver for <sys> (see below)\n");
+#if STACKVM || NewspeakVM
+# if COGVM
+  printf("  -trace[=num]      enable tracing (optionally to a specific value)\n");
+# else
+  printf("  -sendtrace        enable send tracing\n");
+# endif
+#endif
 #if COGVM
   printf("  -codesize <size>[mk]  set machine code memory to bytes\n");
-  printf("  -sendtrace[=num]      enable send tracing (optionally to a specific value)\n");
   printf("  -tracestores          enable store tracing (assert check stores)\n");
   printf("  -cogmaxlits <n>       set max number of literals for methods compiled to machine code\n");
   printf("  -cogminjumps <n>      set min number of backward jumps for interpreted methods to be considered for compilation to machine code\n");

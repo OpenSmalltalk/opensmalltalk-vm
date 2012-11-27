@@ -5033,8 +5033,9 @@ static sqInt display_ioSetFullScreen(sqInt fullScreen)
   int winX, winY;
   unsigned int winW, winH;
 
+  setFullScreenFlag(fullScreen);
   if (!isConnectedToXServer)
-    return 0;
+    return 1;
 
   if (fullScreen)
     {
@@ -5103,7 +5104,7 @@ static sqInt display_ioSetFullScreen(sqInt fullScreen)
   XSync(stDisplay, False);
   getMousePosition();
 
-  return 0;
+  return 1;
 }
 
 
@@ -5620,6 +5621,8 @@ static sqInt display_ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sq
 {
   fprintf(stderr, "ioSetDisplayMode(%d, %d, %d, %d)\n",
 	  width, height, depth, fullscreenFlag);
+  setSavedWindowSize((winW << 16) + (winH & 0xFFFF));
+  setFullScreenFlag(fullScreen);
   return 0;
 }
 

@@ -55,7 +55,8 @@ static sqInt display_ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt
 
 static sqInt display_ioSetFullScreen(sqInt fullScreen)
 {
-  return 0;
+  setFullScreenFlag(fullScreen);
+  return 1;
 }
 
 static sqInt display_ioForceDisplayUpdate(void)
@@ -73,9 +74,11 @@ static sqInt display_ioHasDisplayDepth(sqInt i)
   return 1;
 }
 
-static sqInt display_ioSetDisplayMode(sqInt w, sqInt h, sqInt d, sqInt fullscreenFlag)
+static sqInt display_ioSetDisplayMode(sqInt w, sqInt h, sqInt d, sqInt fullScreen)
 {
-  return 0;
+  setSavedWindowSize((winW << 16) + (winH & 0xFFFF));
+  setFullScreenFlag(fullScreen);
+  return 1;
 }
 
 static sqInt display_clipboardSize(void)

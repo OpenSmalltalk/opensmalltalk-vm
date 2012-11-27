@@ -1253,7 +1253,7 @@ extern sqInt suppressHeartbeatFlag;
 #endif /* STACKVM */
 #if COGVM
 extern sqInt desiredCogCodeSize;
-extern int traceLinkedSends;
+extern int traceFlags;
 extern sqInt traceStores;
 extern unsigned long debugPrimCallStackOffset;
 extern sqInt maxLiteralCountForCompile;
@@ -1685,20 +1685,20 @@ parseVMArgument(int argc, char *argv[])
 		extern sqInt desiredCogCodeSize;
 		desiredCogCodeSize = strtobkm(argv[1]);	 
 		return 2; }
-# define TLSLEN (sizeof("-sendtrace")-1)
-	else if (!strncmp(argv[0], "-sendtrace", TLSLEN)) { 
-		extern int traceLinkedSends;
+# define TLSLEN (sizeof("-trace")-1)
+	else if (!strncmp(argv[0], "-trace", TLSLEN)) { 
+		extern int traceFlags;
 		char *equalsPos = strchr(argv[0],'=');
 
 		if (!equalsPos) {
-			traceLinkedSends = 1;
+			traceFlags = 1;
 			return 1;
 		}
 		if (equalsPos - argv[0] != TLSLEN
 		  || (equalsPos[1] != '-' && !isdigit(equalsPos[1])))
 			return 0;
 
-		traceLinkedSends = atoi(equalsPos + 1);
+		traceFlags = atoi(equalsPos + 1);
 		return 1; }
 	else if (!strcmp(argv[0], "-tracestores")) { 
 		extern sqInt traceStores;

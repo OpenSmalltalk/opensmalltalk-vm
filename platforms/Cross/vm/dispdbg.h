@@ -73,13 +73,14 @@
 	validInstructionPointerinMethodframePointer((usqInt)localIP, GIV(method), localFP)
 #else
 # define ValidInstructionPointerCheck() \
-	validInstructionPointerinMethod((usqInt)localIP, GIV(method))
+	(GIV(method) == iframeMethod(localFP) \
+	 && validInstructionPointerinMethod((usqInt)localIP, GIV(method)))
 #endif
 
 #if PRODUCTION
 # define bytecodeDispatchDebugHook() 0
 
-#elif 0 /* check for valid instruction pointer */
+#elif 1 /* check for valid instruction pointer */
 # define bytecodeDispatchDebugHook() do { \
 	if (!ValidInstructionPointerCheck()) \
 		warning("invalidInstructionPointerinMethod"); \
@@ -134,7 +135,7 @@
 		warning("invalidInstructionPointerinMethod"); \
 	if (sendTrace > 1) printCallStack(); \
   } while (0)
-#elif MULTIPLEBYTECODESETS /* maintain byteCount & check for valid instruction pointer */
+#elif MULTIPLEBYTECODESETS && 0 /* maintain bytecode trace and check against trace file */
 # if defined(SQ_USE_GLOBAL_STRUCT) /* define only in interpreter */
 static FILE *bct = 0;
 void openBytecodeTraceFile(char *fn)

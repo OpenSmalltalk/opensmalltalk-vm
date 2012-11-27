@@ -3204,11 +3204,17 @@ int printUsage(int level)
                    TEXT("\n\t-numextsems: n \t(allow up to n external semaphores)")
                    TEXT("\n\t-noheartbeat \t(no heartbeat for debug)")
 #endif /* STACKVM */
+#if STACKVM || NewspeakVM
+# if COGVM
+					TEXT("\n\t-trace[=num]\tenable tracing (optionally to a specific value)\n")
+# else
+                   TEXT("\n\t-sendtrace \t(trace sends to stdout for debug)")
+# endif
+#endif
 #if COGVM
                    TEXT("\n\t-codesize: bytes \t(set machine-code memory size to bytes)")
                    TEXT("\n\t-cogmaxlits: n \t(set max number of literals for methods to be compiled to machine code)")
                    TEXT("\n\t-cogminjumps: n \t(set min number of backward jumps for interpreted methods to be considered for compilation to machine code)")
-                   TEXT("\n\t-sendtrace \t(trace sends in log for debug)")
                    TEXT("\n\t-tracestores \t(assert-check stores for debug)")
                    TEXT("\n\t-dpcso: bytes \t(stack offset for prim calls for debug)")
 #endif /* COGVM */
