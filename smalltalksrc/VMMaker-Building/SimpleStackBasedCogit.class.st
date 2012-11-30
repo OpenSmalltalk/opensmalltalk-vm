@@ -668,12 +668,10 @@ SimpleStackBasedCogit >> compileFrameBuild [
 		[:i|
 		self PushR: SendNumArgsReg].
 	(primitiveIndex > 0
-	 and: [(coInterpreter
-			methodHasErrorCode: methodObj
-			header: methodHeader
-			initialIP: (self pointerForOop: (coInterpreter
-											initialPCForHeader: methodHeader
-											method: methodObj)))]) ifTrue:
+	 and: [(coInterpreter longStoreBytecodeForHeader: methodHeader)
+			= (objectMemory
+				fetchByte: initialPC + (coInterpreter sizeOfCallPrimitiveBytecode: methodHeader)
+				ofObject: methodObj)]) ifTrue:
 		[self compileGetErrorCode.
 		 initialPC := initialPC
 				   + (coInterpreter sizeOfCallPrimitiveBytecode: methodHeader)

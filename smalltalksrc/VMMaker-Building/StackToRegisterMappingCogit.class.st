@@ -844,6 +844,17 @@ StackToRegisterMappingCogit >> addBlockStartAt: bytecodepc numArgs: numArgs numC
 	^blockStart
 ]
 
+{ #category : #'bytecode generators' }
+StackToRegisterMappingCogit >> annotateBytecodeIfAnnotated: aSimStackEntry [
+	<var: #aSimStackEntry type: #'SimStackEntry'>
+	<inline: false>
+	aSimStackEntry annotateUse ifTrue:
+		[self annotateBytecode: (self prevInstIsPCAnnotated
+									ifTrue: [self Nop]
+									ifFalse: [self Label]).
+		 aSimStackEntry annotateUse: false]
+]
+
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> availableRegister [
 	| liveRegs |
@@ -1691,6 +1702,7 @@ StackToRegisterMappingCogit >> genPICMissTrampolineFor: numArgs [
 
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genPopStackBytecode [
+	self annotateBytecodeIfAnnotated: self ssTop.
 	self ssTop spilled ifTrue:
 		[self AddCq: BytesPerWord R: SPReg].
 	self ssPop: 1.
@@ -2514,14 +2526,8 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 			[OrRR]	-> [result := rcvrInt bitOr: argInt] }.
 		(objectMemory isIntegerValue: result) ifTrue:
 			["Must enter any annotatedConstants into the map"
-			 (self ssValue: 1) annotateUse ifTrue:
-				[self annotateBytecode: (self prevInstIsPCAnnotated
-											ifTrue: [self Nop]
-											ifFalse: [self Label])].
-			 self ssTop annotateUse ifTrue:
-				[self annotateBytecode: (self prevInstIsPCAnnotated
-											ifTrue: [self Nop]
-											ifFalse: [self Label])].
+			 self annotateBytecodeIfAnnotated: (self ssValue: 1).
+			 self annotateBytecodeIfAnnotated: self ssTop.
 			 "Must annotate the bytecode for correct pc mapping."
 			^self ssPop: 2; ssPushAnnotatedConstant: (objectMemory integerObjectOf: result)].
 		^self genSpecialSelectorSend].
@@ -2635,14 +2641,8 @@ StackToRegisterMappingCogit >> genSpecialSelectorComparison [
 			[JumpZero]				-> [result := rcvrInt = argInt].
 			[JumpNonZero]			-> [result := rcvrInt ~= argInt] }.
 		 "Must enter any annotatedConstants into the map"
-		 (self ssValue: 1) annotateUse ifTrue:
-			[self annotateBytecode: (self prevInstIsPCAnnotated
-											ifTrue: [self Nop]
-											ifFalse: [self Label])].
-		 self ssTop annotateUse ifTrue:
-			[self annotateBytecode: (self prevInstIsPCAnnotated
-											ifTrue: [self Nop]
-											ifFalse: [self Label])].
+		 self annotateBytecodeIfAnnotated: (self ssValue: 1).
+		 self annotateBytecodeIfAnnotated: self ssTop.
 		 "Must annotate the bytecode for correct pc mapping."
 		 self ssPop: 2.
 		 ^self ssPushAnnotatedConstant: (result

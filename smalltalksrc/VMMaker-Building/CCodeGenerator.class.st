@@ -1706,21 +1706,20 @@ CCodeGenerator >> generateInlineCppIfElse: msgNode asArgument: asArgument on: aS
 			[[:node| | expansion |
 			  expansion := String streamContents: [:s| node emitCCodeAsArgumentOn: s level: level generator: self].
 			  aStream nextPutAll:
-				((expansion includes: Character cr)
-					ifTrue:
-						[(String streamContents:
-								[:s|
-								s next: level + 1 put: Character tab.
-								node emitCCodeAsArgumentOn: s level: level generator: self])
-							copyReplaceAll: (String with: Character cr)
-							with: (String with: Character cr), (String new: level + 1 withAll: Character tab)]
-					ifFalse: [expansion])]]
+			  ((expansion includes: Character cr)
+				ifTrue:
+					[(String streamContents:
+							[:s|
+							s position > 0 ifTrue: [s tab: level + 1].
+							node emitCCodeAsArgumentOn: s level: level generator: self])
+						copyReplaceAll: (String with: Character cr)
+						with: (String with: Character cr), (String new: level + 1 withAll: Character tab)]
+				ifFalse: [expansion])]]
 		ifFalse:
 			[[:node| | expansion |
 			  expansion := String streamContents: [:s| node emitCCodeOn: s level: level generator: self].
 			 "Remove tabs from first line to avoid indenting a second time"
-			 (aStream position > 0 and: [aStream last ~= Character tab]) ifTrue:
-				[expansion := expansion allButFirst: (expansion findFirst: [:c| c ~~ Character tab]) - 1].
+			 expansion := expansion allButFirst: (expansion findFirst: [:c| c ~~ Character tab]) - 1.
 			 aStream nextPutAll: expansion]].
 
 	(optionsDictionary notNil

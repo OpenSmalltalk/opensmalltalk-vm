@@ -1553,17 +1553,16 @@ NewObjectMemory >> longPrintReferencesTo: anOop [
 		[((self isPointers: oop) or: [self isCompiledMethod: oop]) ifTrue:
 			[(self isCompiledMethod: oop)
 				ifTrue:
-					[i := (self literalCountOf: oop) - 1]
+					[i := self literalCountOf: oop]
 				ifFalse:
-					[(self isContext: oop)
-						ifTrue: [i := CtxtTempFrameStart + (self fetchStackPointerOf: oop) - 1]
-						ifFalse: [i := (self lengthOf: oop) - 1]].
-			[i >= 0] whileTrue:
+					[(coInterpreter isContext: oop)
+						ifTrue: [i := CtxtTempFrameStart + (coInterpreter fetchStackPointerOf: oop)]
+						ifFalse: [i := self lengthOf: oop]].
+			[(i := i - 1) >= 0] whileTrue:
 				[anOop = (self fetchPointer: i ofObject: oop) ifTrue:
 					[self printHex: oop; print: ' @ '; printNum: i; cr.
 					 prntObj := true.
-					 i := 0].
-				 i := i - 1].
+					 i := 0]].
 			prntObj ifTrue:
 				[prntObj := false.
 				 coInterpreter longPrintOop: oop]].
@@ -1907,6 +1906,28 @@ NewObjectMemory >> printObjectsFrom: startAddress to: endAddress [
 		[(self isFreeObject: oop) ifFalse:
 			[self printOop: oop].
 		oop := self objectAfter: oop].
+]
+
+{ #category : #'debug printing' }
+NewObjectMemory >> printReferencesTo: anOop [
+	"Scan the heap printing the oops of any and all objects that refer to anOop"
+	| oop i |
+	<api>
+	oop := self firstAccessibleObject.
+	[oop = nil] whileFalse:
+		[((self isPointers: oop) or: [self isCompiledMethod: oop]) ifTrue:
+			[(self isCompiledMethod: oop)
+				ifTrue:
+					[i := self literalCountOf: oop]
+				ifFalse:
+					[(coInterpreter isContext: oop)
+						ifTrue: [i := CtxtTempFrameStart + (coInterpreter fetchStackPointerOf: oop)]
+						ifFalse: [i := self lengthOf: oop]].
+			[(i := i - 1) >= 0] whileTrue:
+				[anOop = (self fetchPointer: i ofObject: oop) ifTrue:
+					[self interpreter printHex: oop; print: ' @ '; printNum: i; space; printOopShort: oop; cr.
+					 i := 0]]].
+		 oop := self accessibleObjectAfter: oop]
 ]
 
 { #category : #'image segment in/out' }
