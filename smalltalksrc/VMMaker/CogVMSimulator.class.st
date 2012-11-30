@@ -644,7 +644,7 @@ CogVMSimulator >> ensureMethodIsCogged: methodObj [
 	"[self commenceCogCompiledCodeCompaction]
 		on: Halt
 		do: [:ex| ex resume: nil]."
-	super ensureMethodIsCogged: methodObj
+	^super ensureMethodIsCogged: methodObj
 ]
 
 { #category : #initialization }
@@ -3111,7 +3111,7 @@ CogVMSimulator >> startInContextSuchThat: aBlock [
 	activeProc := self activeProcess.
 	context := objectMemory fetchPointer: SuspendedContextIndex ofObject: activeProc.
 	[context = objectMemory nilObject ifTrue:
-		[self error: 'no context found'].
+		[^self error: 'no context found'].
 	 aBlock value: context] whileFalse:
 		[context := objectMemory fetchPointer: SenderIndex ofObject: context].
 	objectMemory storePointer: SuspendedContextIndex ofObject: activeProc withValue: context.

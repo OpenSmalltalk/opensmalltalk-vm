@@ -283,10 +283,7 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 		  not so that the simStackPtr can be kept correct."
 		 fixup := self ensureFixupAt: targetBytecodePC - initialPC.
 		 "Must enter any annotatedConstants into the map"
-		 desc annotateUse ifTrue:
-			[self annotateBytecode: (self prevInstIsPCAnnotated
-											ifTrue: [self Nop]
-											ifFalse: [self Label])].
+		 self annotateBytecodeIfAnnotated: desc.
 		 "Must annotate the bytecode for correct pc mapping."
 		 self annotateBytecode: (desc constant = boolean
 									ifTrue: [self Jump: fixup]
@@ -411,14 +408,8 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 			[JumpZero]				-> [result := rcvrInt = argInt].
 			[JumpNonZero]			-> [result := rcvrInt ~= argInt] }.
 		 "Must enter any annotatedConstants into the map"
-		 (self ssValue: 1) annotateUse ifTrue:
-			[self annotateBytecode: (self prevInstIsPCAnnotated
-											ifTrue: [self Nop]
-											ifFalse: [self Label])].
-		 self ssTop annotateUse ifTrue:
-			[self annotateBytecode: (self prevInstIsPCAnnotated
-											ifTrue: [self Nop]
-											ifFalse: [self Label])].
+		 self annotateBytecodeIfAnnotated: (self ssValue: 1).
+		 self annotateBytecodeIfAnnotated: self ssTop.
 		 "Must annotate the bytecode for correct pc mapping."
 		 self ssPop: 2.
 		 ^self ssPushAnnotatedConstant: (result
