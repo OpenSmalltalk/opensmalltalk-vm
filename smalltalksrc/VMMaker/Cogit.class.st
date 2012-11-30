@@ -2176,8 +2176,8 @@ Cogit >> breakMethod [
 { #category : #debugging }
 Cogit >> breakOnImplicitReceiver [
 	<api>
-	<cmacro: '() (traceFlags & 32)'>
-	^(traceFlags bitAnd: 32) ~= 0
+	<cmacro: '() (traceFlags & 64)'>
+	^(traceFlags bitAnd: 64) ~= 0
 ]
 
 { #category : #'simulation only' }
@@ -5051,11 +5051,11 @@ Cogit >> generateNewspeakRuntime [
 	<var: #jumpMiss type: #'AbstractInstruction *'>
 	<var: #jumpItsTheReceiverStupid type: #'AbstractInstruction *'>
 	"Generate the non-send runtime support for Newspeak, explicit outer and implicit receiver.
-	 The dynamic frequency of explicit outer is so low we merely cann an interpreter routine."
+	 The dynamic frequency of explicit outer is so low we merely call an interpreter routine."
 	ceExplicitReceiverTrampoline := self genTrampolineFor: #ceExplicitReceiverAt: asSymbol
-												called: 'ceExplicitReceiverTrampoline'
-												arg: SendNumArgsReg
-												result: ReceiverResultReg.
+										called: 'ceExplicitReceiverTrampoline'
+										arg: SendNumArgsReg
+										result: ReceiverResultReg.
 	"Cached push implicit receiver implementation.  Caller looks like
 				mov selector, ClassReg
 				call ceImplicitReceiver
@@ -7063,6 +7063,13 @@ Cogit >> recordLastInstruction [
 	self recordInstruction: (processor
 								disassembleNextInstructionIn: coInterpreter memory
 								for: (EagerInstructionDecoration ifTrue: [self]))
+]
+
+{ #category : #debugging }
+Cogit >> recordOverflowTrace [
+	<api>
+	<cmacro: '() (traceFlags & 32)'>
+	^(traceFlags bitAnd: 32) ~= 0
 ]
 
 { #category : #debugging }

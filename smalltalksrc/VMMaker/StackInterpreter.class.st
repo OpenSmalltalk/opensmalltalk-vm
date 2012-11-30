@@ -3608,6 +3608,24 @@ StackInterpreter >> context: thisCntx hasSender: aContext [
 	^handlerOrNilOrZero == 0
 ]
 
+{ #category : #'debug support' }
+StackInterpreter >> context: aContext hasValidInversePCMappingOf: theIP in: theFP [
+	"For asserts.  Check that theIP maps back correctly to the context's pc.
+	 The CallPrimitive bytecode presents a complication."
+	| pc encodedip |
+	<var: #theFP type: #'char *'>
+	pc := objectMemory fetchPointer: InstructionPointerIndex ofObject: aContext.
+	encodedip := self contextInstructionPointer: theIP frame: theFP.
+	^self cppIf: MULTIPLEBYTECODESETS
+		ifTrue: [pc = encodedip
+				or: [| methodHeader |
+					methodHeader := self headerOf: (objectMemory fetchPointer: MethodIndex ofObject: aContext).
+					(self methodHeaderHasPrimitive: methodHeader)
+					and: [(objectMemory integerValueOf: encodedip) - (objectMemory integerValueOf: pc)
+						= (self sizeOfCallPrimitiveBytecode: methodHeader)]]]
+		ifFalse: [pc = encodedip]
+]
+
 { #category : #'frame access' }
 StackInterpreter >> contextInstructionPointer: theIP frame: theFP [
 	<var: #theFP type: #'char *'>
@@ -5281,16 +5299,6 @@ StackInterpreter >> frameHasContext: theFP [
 ]
 
 { #category : #'frame access' }
-StackInterpreter >> frameInstructionPointerForContext: aContext method: aMethod [
-	"Answer the instruction pointer for usage in a frame (a pointer to a bytecode)
-	 from the index instructionPointer in the given context."
-	^aMethod
-	+ (self quickFetchInteger: InstructionPointerIndex ofObject: aContext)
-	+ BaseHeaderSize
-	- 2
-]
-
-{ #category : #'frame access' }
 StackInterpreter >> frameIsBlockActivation: theFP [ "<Integer>"
 	<inline: true>
 	<var: #theFP type: #'char *'>
@@ -5564,6 +5572,7 @@ StackInterpreter >> handleStackOverflow [
 	stackPointer < stackPage realStackLimit ifFalse:
 		[^self].
 
+	self maybeTraceStackOverflow.
 	statStackOverflow := statStackOverflow + 1.
 
 	"The stack has overflowed this page.  If the system is executing some recursive algorithm,
@@ -5726,6 +5735,13 @@ StackInterpreter >> ifValidWriteBackStack: theCFP Pointers: theCSP Save: savedFP
 	<var: #savedFPP type: #'char **'>
 	<var: #savedSPP type: #'char **'>
 	<returnTypeC: #void>
+]
+
+{ #category : #'frame access' }
+StackInterpreter >> iframeInstructionPointerForIndex: ip method: aMethod [
+	"Answer the instruction pointer for use in an interpreter frame (a pointer to a bytecode)."
+	self assert: (ip between: (objectMemory lastPointerOf: aMethod) and: (objectMemory lengthOf: aMethod)).
+	^aMethod + ip + BaseHeaderSize - 2
 ]
 
 { #category : #'frame access' }
@@ -6091,7 +6107,7 @@ StackInterpreter >> internalActivateNewMethod [
 	self internalPush: localFP.
 	localFP := localSP.
 	self internalPush: newMethod.
-	self setMethod: newMethod.
+	self setMethod: newMethod methodHeader: methodHeader.
 	self internalPush: (self
 						encodeFrameFieldHasContext: false
 						isBlock: false
@@ -6107,14 +6123,15 @@ StackInterpreter >> internalActivateNewMethod [
 	localIP := self pointerForOop: (self initialPCForHeader: methodHeader method: newMethod) - 1.
 
 	(self methodHeaderHasPrimitive: methodHeader) ifTrue:
-		["Skip the CallPrimitive bytecode, if it's there, and store the error code if the method
-		  starts with a long store temp.  Strictly no need to skip the store because it's a noop."
-		(self methodHasErrorCode: newMethod header: methodHeader initialIP: localIP + 1) ifTrue:
-			[primFailCode ~= 0 ifTrue:
+		["Skip the CallPrimitive bytecode, if it's there, and store the error code if the method starts
+		  with a long store temp.  Strictly no need to skip the store because it's effectively a noop."
+		 localIP := localIP + (self sizeOfCallPrimitiveBytecode: methodHeader).
+		 primFailCode ~= 0 ifTrue:
+			[(objectMemory byteAt: localIP + 1)
+			  = (self longStoreBytecodeForHeader: methodHeader) ifTrue:
 				[errorCode := self getErrorObjectFromPrimFailCode.
 				 self internalStackTopPut: errorCode "nil if primFailCode == 1, or primFailCode"].
-				 primFailCode := 0].
-		localIP := localIP + (self sizeOfCallPrimitiveBytecode: methodHeader)].
+			 primFailCode := 0]].
 
 	self assert: (self frameNumArgs: localFP) == argumentCount.
 	self assert: (self frameIsBlockActivation: localFP) not.
@@ -6476,7 +6493,8 @@ StackInterpreter >> isNullExternalPrimitiveCall: aMethodObj [
 	lit := self literal: 0 ofMethod: aMethodObj.
 	^(objectMemory isArray: lit)
 	  and: [(objectMemory lengthOf: lit) = 4
-	  and: [(objectMemory fetchPointer: 3 ofObject: lit) = ConstZero]]
+	  and: [(objectMemory fetchPointer: 3 ofObject: lit) = ConstZero
+			or: [(objectMemory fetchPointer: 3 ofObject: lit) = ConstMinusOne]]]
 ]
 
 { #category : #'primitive support' }
@@ -6587,7 +6605,7 @@ StackInterpreter >> justActivateNewMethod [
 	self push: framePointer.
 	framePointer := stackPointer.
 	self push: newMethod.
-	self setMethod: newMethod.
+	self setMethod: newMethod methodHeader: methodHeader.
 	self push: (self encodeFrameFieldHasContext: false isBlock: false numArgs: numArgs).
 	self push: objectMemory nilObject. "FxThisContext field"
 	self push: rcvr.
@@ -6599,14 +6617,15 @@ StackInterpreter >> justActivateNewMethod [
 	instructionPointer := (self initialPCForHeader: methodHeader method: newMethod) - 1.
 
 	(self methodHeaderHasPrimitive: methodHeader) ifTrue:
-		["Skip the CallPrimitive bytecode, if it's there, and store the error code if the method
-		  starts with a long store temp.  Strictly no need to skip the store because it's a noop."
-		(self methodHasErrorCode: newMethod header: methodHeader initialIP: instructionPointer + 1) ifTrue:
-			[primFailCode ~= 0 ifTrue:
+		["Skip the CallPrimitive bytecode, if it's there, and store the error code if the method starts
+		  with a long store temp.  Strictly no need to skip the store because it's effectively a noop."
+		 instructionPointer := instructionPointer + (self sizeOfCallPrimitiveBytecode: methodHeader).
+		 primFailCode ~= 0 ifTrue:
+			[(objectMemory byteAt: instructionPointer + 1)
+			  = (self longStoreBytecodeForHeader: methodHeader) ifTrue:
 				[errorCode := self getErrorObjectFromPrimFailCode.
 				 self stackTopPut: errorCode "nil if primFailCode == 1, or primFailCode"].
-				 primFailCode := 0].
-		instructionPointer := instructionPointer + (self sizeOfCallPrimitiveBytecode: methodHeader)].
+			 primFailCode := 0]].
 
 	^methodHeader
 ]
@@ -6758,8 +6777,8 @@ StackInterpreter >> longPrintOop: oop [
 			 startIP to: lastIndex do:
 				[:index| | byte |
 				column = 1 ifTrue:
-					[self cCode: 'printf("%08x: ", oop+index-1)'
-						inSmalltalk: [self print: (oop+index-1) hex; print: ': ']].
+					[self cCode: 'printf("0x%08x: ", oop+BaseHeaderSize+index-1)'
+						inSmalltalk: [self print: (oop+BaseHeaderSize+index-1) hex; print: ': ']].
 				byte := objectMemory fetchByte: index - 1 ofObject: oop.
 				self cCode: 'printf(" %02x/%-3d", byte,byte)'
 					inSmalltalk: [self space; print: (byte radix: 16); printChar: $/; printNum: byte].
@@ -6784,6 +6803,18 @@ StackInterpreter >> longStoreAndPopTemporaryVariableBytecode [
 	"237		11101101	i i i i i i i i	Pop and Store Temporary Variable #iiiiiiii"
 	self longStoreTemporaryVariableBytecode.
 	self internalPop: 1
+]
+
+{ #category : #'compiled methods' }
+StackInterpreter >> longStoreBytecodeForHeader: methodHeader [
+	"Answer the relevant long store temp bytecode, which indicates it has a primitive error code."
+	"234		11101010	i i i i i i i i	Store Temporary Variable #iiiiiiii"
+	"129 		10000001 jjkkkkkk 	Store (Receiver Variable, Temporary Location, Illegal, Literal Variable) [jj] #kkkkkk"
+	<api>
+	<inline: true>
+	^self cppIf: MULTIPLEBYTECODESETS
+		ifTrue: [(self headerIndicatesAlternateBytecodeSet: methodHeader) ifTrue: [234] ifFalse: [129]]
+		ifFalse: [129]
 ]
 
 { #category : #'stack bytecodes' }
@@ -6967,26 +6998,39 @@ StackInterpreter >> lookupMethodNoMNUEtcInClass: class [
 
 { #category : #'frame access' }
 StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
-	"Marry aContext with the base frame of a new stack page.  Build
-	 the base frame to reflect the context's state.  Answer the new page."
-	| page pointer theMethod numArgs stackPtrIndex maybeClosure |
+	"Marry aContext with the base frame of a new stack page.  Build the base
+	 frame to reflect the context's state.  Answer the new page."
+	<returnTypeC: #'StackPage *'>
+	| page pointer theMethod theIP numArgs stackPtrIndex maybeClosure |
 	<inline: false>
 	<var: #page type: #'StackPage *'>
 	<var: #pointer type: #'char *'>
-	<returnTypeC: 'StackPage *'>
 	self assert: (self isSingleContext: aContext).
 	page := self newStackPage.
 	pointer := page baseAddress.
+	theIP := objectMemory fetchPointer: InstructionPointerIndex ofObject: aContext.
 	theMethod := objectMemory fetchPointer: MethodIndex ofObject: aContext.
+	(objectMemory isIntegerObject: theIP) ifFalse:
+		[self error: 'context is not resumable'].
+	theIP := objectMemory integerValueOf: theIP.
 	"If the frame is a closure activation then the closure should be on the stack in
 	 the pushed receiver position (closures receiver the value[:value:] messages).
 	 Otherwise it should be the receiver proper."
-	maybeClosure := (objectMemory fetchPointer: ClosureIndex ofObject: aContext).
+	maybeClosure := objectMemory fetchPointer: ClosureIndex ofObject: aContext.
 	maybeClosure ~= objectMemory nilObject
-		ifTrue: [numArgs := self argumentCountOfClosure: maybeClosure.
+		ifTrue:
+			[numArgs := self argumentCountOfClosure: maybeClosure.
 			 stackPages longAt: pointer put: maybeClosure]
 		ifFalse:
-			[numArgs := self argumentCountOf: theMethod.
+			[| header |
+			 header := self headerOf: theMethod.
+			 numArgs := self argumentCountOfMethodHeader: header.
+			 self cppIf: MULTIPLEBYTECODESETS
+				ifTrue: "If this is a synthetic context its IP could be pointing at the CallPrimitive opcode.  If so, skip it."
+					[(theIP signedIntFromLong > 0
+					  and: [(self methodHeaderHasPrimitive: header)
+					  and: [theIP = (1 + (objectMemory lastPointerOf: theMethod))]]) ifTrue:
+						[theIP := theIP + (self sizeOfCallPrimitiveBytecode: header)]].
 			 stackPages longAt: pointer put: (objectMemory fetchPointer: ReceiverIndex ofObject: aContext)].
 	"Put the arguments on the stack"
 	1 to: numArgs do:
@@ -7024,19 +7068,15 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 		stackPages
 			longAt: (pointer := pointer - BytesPerWord)
 			put: (objectMemory fetchPointer: ReceiverIndex + i ofObject: aContext)].
-	"last thing on stack is the instruction pointer"
-	(objectMemory isIntegerObject: (objectMemory fetchPointer: InstructionPointerIndex ofObject: aContext)) ifFalse:
-		[self error: 'context is not resumable'].
-	stackPages
-		longAt: (pointer := pointer - BytesPerWord)
-		put: (self frameInstructionPointerForContext: aContext method: theMethod).
-	self assert: (objectMemory fetchPointer: InstructionPointerIndex ofObject: aContext)
-			= (self contextInstructionPointer: (stackPages longAt: pointer) frame: page baseFP).
+	"top of stack is the instruction pointer"
+	theIP := self iframeInstructionPointerForIndex: theIP method: theMethod.
+	stackPages longAt: (pointer := pointer - BytesPerWord) put: theIP.
 	page headSP: pointer.
+	self assert: (self context: aContext hasValidInversePCMappingOf: theIP in: page baseFP).
 
 	"Mark context as married by setting its sender to the frame pointer plus SmallInteger
 	 tags and the InstructionPointer to the saved fp (which ensures correct alignment
-	 w.r.t. the frame when we check for validity)"
+	 w.r.t. the frame when we check for validity) plus SmallInteger tags."
 	objectMemory storePointerUnchecked: SenderIndex
 		ofObject: aContext
 		withValue: (self withSmallIntegerTags: page baseFP).
@@ -7045,7 +7085,7 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 		withValue: (self withSmallIntegerTags: 0).
 	self assert: (objectMemory isIntegerObject: (objectMemory fetchPointer: SenderIndex ofObject: aContext)).
 	self assert: (self frameOfMarriedContext: aContext) = page baseFP.
-
+	self assert: self validStackPageBaseFrames.
 	^page
 ]
 
@@ -7537,6 +7577,11 @@ StackInterpreter >> maybeFlagMethodAsInterpreted: aMethod [
 	"Convenient  noop in the StackInterpreter e.g. for sendInvokeCallbackContext:"
 ]
 
+{ #category : #'debug support' }
+StackInterpreter >> maybeTraceStackOverflow [
+	"nop in the stack interpreter"
+]
+
 { #category : #'plugin primitive support' }
 StackInterpreter >> methodArg: index [
 	"Like #stackValue: but access method arguments left-to-right"
@@ -7571,26 +7616,6 @@ StackInterpreter >> methodClassOf: methodPointer [
 				ifFalse: [objectMemory fetchPointer: ValueIndex ofObject: literal]]
 		ifFalse:
 			[objectMemory fetchPointer: ValueIndex ofObject: (self literal: (self literalCountOf: methodPointer) - 1 ofMethod: methodPointer)]
-]
-
-{ #category : #'compiled methods' }
-StackInterpreter >> methodHasErrorCode: aMethodObj header: methodHeader initialIP: initialPC [
-	"Answer if the method starts with a long store temp bytecode, which indicates it has a primitive error code."
-	"234		11101010	i i i i i i i i	Store Temporary Variable #iiiiiiii"
-	"129 		10000001 jjkkkkkk 	Store (Receiver Variable, Temporary Location, Illegal, Literal Variable) [jj] #kkkkkk"
-	<api>
-	<inline: true>
-	<var: #initialPC type: #'char *'>
-	^self
-		cppIf: MULTIPLEBYTECODESETS
-		ifTrue:
-			[(self headerIndicatesAlternateBytecodeSet: methodHeader)
-				ifTrue:
-					[(objectMemory byteAt: initialPC + 3 "Skip CallPrimitive") = 234 "long store temp"]
-				ifFalse:
-					[(objectMemory byteAt: initialPC) = 129 "long store (but can only be for a temp)"]]
-		ifFalse:
-			[(objectMemory byteAt: initialPC) = 129 "long store (but can only be for a temp)"]
 ]
 
 { #category : #'compiled methods' }
@@ -7782,6 +7807,11 @@ StackInterpreter >> nextImplicitReceiverFor: anObject withMixin: mixin [
 				[^objectMemory nilObject].
 			 targetMixin := objectMemory fetchPointer: EnclosingMixinIndex ofObject: theMixin].
 	^implicitReceiver
+]
+
+{ #category : #'compiled methods' }
+StackInterpreter >> noAssertHeaderOf: methodPointer [
+	^objectMemory fetchPointer: HeaderIndex ofObject: methodPointer
 ]
 
 { #category : #'internal interpreter access' }
@@ -8965,8 +8995,8 @@ StackInterpreter >> printOop: oop [
 			 startIP to: lastIndex do:
 				[:index| | byte |
 				column = 1 ifTrue:
-					[self cCode: 'printf("%08x: ", oop+index-1)'
-						inSmalltalk: [self print: (oop+index-1) hex; print: ': ']].
+					[self cCode: 'printf("0x%08x: ", oop+BaseHeaderSize+index-1)'
+						inSmalltalk: [self print: (oop+BaseHeaderSize+index-1) hex; print: ': ']].
 				byte := objectMemory fetchByte: index - 1 ofObject: oop.
 				self cCode: 'printf(" %02x/%-3d", byte,byte)'
 					inSmalltalk: [self space; print: (byte radix: 16); printChar: $/; printNum: byte].
@@ -9143,18 +9173,18 @@ StackInterpreter >> printStackPagesInUse [
 
 { #category : #'debug printing' }
 StackInterpreter >> printStringOf: oop [
-	| fmt cnt i |
+	| fmt len cnt max i |
 	<inline: false>
 	(objectMemory isIntegerObject: oop) ifTrue:
 		[^nil].
 	(oop between: objectMemory startOfMemory and: objectMemory freeStart) ifFalse:
 		[^nil].
-	(oop bitAnd: (BytesPerWord - 1)) ~= 0 ifTrue:
+	(oop bitAnd: (BytesPerOop - 1)) ~= 0 ifTrue:
 		[^nil].
 	fmt := objectMemory formatOf: oop.
-	fmt < 8 ifTrue: [ ^nil ].
+	fmt < 8 ifTrue: [^nil].
 
-	cnt := 100 min: (objectMemory lengthOf: oop).
+	cnt := (max := 128) min: (len := objectMemory lengthOf: oop).
 	i := 0.
 
 	((objectMemory is: oop
@@ -9167,13 +9197,15 @@ StackInterpreter >> printStringOf: oop [
 			instanceOf: (objectMemory splObj: ClassLargeNegativeInteger)
 			compactClassIndex: ClassLargeNegativeIntegerCompactIndex)]])
 		ifTrue:
-			[[i < cnt] whileTrue: [
-				self printHex: (objectMemory fetchByte: i ofObject: oop).
-				i := i + 1]]
+			[[i < cnt] whileTrue:
+				[self printHex: (objectMemory fetchByte: i ofObject: oop).
+				 i := i + 1]]
 		ifFalse:
-			[[i < cnt] whileTrue: [
-				self printChar: (objectMemory fetchByte: i ofObject: oop).
-				i := i + 1]].
+			[[i < cnt] whileTrue:
+				[self printChar: (objectMemory fetchByte: i ofObject: oop).
+				 i := i + 1]].
+	len > max ifTrue:
+		[self print: '...'].
 	self flush
 ]
 
@@ -10262,6 +10294,22 @@ StackInterpreter >> setMethod: aMethodObj [
 	self assert: (objectMemory isOopCompiledMethod: method).
 	self cppIf: MULTIPLEBYTECODESETS
 		ifTrue: [bytecodeSetSelector := (self methodUsesAlternateBytecodeSet: method)
+											ifTrue: [256]
+											ifFalse: [0]]
+]
+
+{ #category : #'internal interpreter access' }
+StackInterpreter >> setMethod: aMethodObj methodHeader: methodHeader [
+	"Set the method and determine the bytecode set based on the method header's sign.
+	 If MULTIPLEBYTECODESETS then a negative header selects the alternate bytecode set.
+	 Conditionalizing the code on MULTIPLEBYTECODESETS allows the header sign bit to be
+	 used for other experiments."
+	<inline: true>
+	method := aMethodObj.
+	self assert: (objectMemory isOopCompiledMethod: method).
+	self assert: (self headerOf: method) = methodHeader.
+	self cppIf: MULTIPLEBYTECODESETS
+		ifTrue: [bytecodeSetSelector := (self headerIndicatesAlternateBytecodeSet: methodHeader)
 											ifTrue: [256]
 											ifFalse: [0]]
 ]
@@ -11443,11 +11491,27 @@ StackInterpreter >> validInstructionPointer: anInstrPointer inFrame: fp [
 ]
 
 { #category : #'debug support' }
-StackInterpreter >> validInstructionPointer: instrPointer inMethod: aMethod framePointer: fp [
-	<var: #instrPointer type: #usqInt>
+StackInterpreter >> validInstructionPointer: theInstrPointer inMethod: aMethod framePointer: fp [
+	<var: #theInstrPointer type: #usqInt>
 	<var: #aMethod type: #usqInt>
-	^instrPointer >= (aMethod + (objectMemory lastPointerOf: aMethod) + BytesPerWord - 1)
-	  and: [instrPointer < (aMethod + (objectMemory byteLengthOf: aMethod) + BaseHeaderSize)]
+	^self
+		cppIf: MULTIPLEBYTECODESETS
+		ifTrue:
+			[| methodHeader |
+			 methodHeader := self noAssertHeaderOf: aMethod. "-1 for pre-increment in fetchNextBytecode"
+			 theInstrPointer >= (aMethod + (self lastPointerOf: aMethod) + BaseHeaderSize - 1)
+			 and: [theInstrPointer < (aMethod + (self byteLengthOf: aMethod) + BaseHeaderSize - 1)
+			 and: ["If the method starts with a CallPrimitive opcode the instruction pointer should be past it."
+				((self headerIndicatesAlternateBytecodeSet: methodHeader)
+				and: [(self methodHeaderHasPrimitive: methodHeader)
+				and: [theInstrPointer < (aMethod
+										+ BaseHeaderSize - 1
+										+ (self lastPointerOf: aMethod)
+										+ (self sizeOfCallPrimitiveBytecode: methodHeader) - 1)]])
+					not]]]
+		ifFalse: "-1 for pre-increment in fetchNextBytecode"
+			[theInstrPointer >= (aMethod + (objectMemory lastPointerOf: aMethod) + BaseHeaderSize - 1)
+			 and: [theInstrPointer < (aMethod + (objectMemory byteLengthOf: aMethod) + BaseHeaderSize - 1)]]
 ]
 
 { #category : #'stack pages' }

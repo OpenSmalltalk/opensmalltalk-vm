@@ -387,6 +387,16 @@ CurrentImageCoInterpreterFacade >> longAt: index put: value [
 	^memory longAt: index + 1 put: value bigEndian: false
 ]
 
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> longStoreBytecodeForHeader: methodHeaderOop [
+	"Answer the relevant long store temp bytecode, which indicates it has a primitive error code."
+	"234		11101010	i i i i i i i i	Store Temporary Variable #iiiiiiii"
+	"129 		10000001 jjkkkkkk 	Store (Receiver Variable, Temporary Location, Illegal, Literal Variable) [jj] #kkkkkk"
+	^(headerToMethodMap at: methodHeaderOop) usesAlternateBytecodeSet
+		ifTrue: [234]
+		ifFalse: [129]
+]
+
 { #category : #labels }
 CurrentImageCoInterpreterFacade >> lookupAddress: address [
 	^(objectMap
@@ -410,22 +420,6 @@ CurrentImageCoInterpreterFacade >> methodCacheAddress [
 { #category : #testing }
 CurrentImageCoInterpreterFacade >> methodHasCogMethod: aCompiledMethod [ 
 	^false
-]
-
-{ #category : #accessing }
-CurrentImageCoInterpreterFacade >> methodHasErrorCode: aMethodObj header: methodHeaderOop initialIP: initialPC [
-	"Answer if the method starts with a long store temp bytecode, which indicates it has a primitive error code."
-	"234		11101010	i i i i i i i i	Store Temporary Variable #iiiiiiii"
-	"129 		10000001 jjkkkkkk 	Store (Receiver Variable, Temporary Location, Illegal, Literal Variable) [jj] #kkkkkk"
-	| method |
-	method := self objectForOop: aMethodObj.
-	self assert: method primitive > 0.
-	self assert: method == (headerToMethodMap at: methodHeaderOop).
-	^method usesAlternateBytecodeSet
-		ifTrue:
-			[(method byteAt: method initialPC + 3 "Skip CallPrimitive") = 234 "long store temp"]
-		ifFalse:
-			[(method byteAt: method initialPC) = 129 "long store (but can only be for a temp)"]
 ]
 
 { #category : #testing }
