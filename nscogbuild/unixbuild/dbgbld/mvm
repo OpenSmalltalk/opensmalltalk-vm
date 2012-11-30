@@ -1,4 +1,5 @@
 #!/bin/bash
+INSTALLDIR=nsvmlinuxdbg
 OPT=-O0
 
 echo -n "clean? "
@@ -7,13 +8,13 @@ case $a in
 n|no|N|NO)	echo "ok but this isn't safe!!";;
 *)			make reallyclean
 esac
-test -f config.h || ../../../platforms/unix/config/configure --with-src=nscogsrc --without-vm-display-fbdev --without-npsqueak CFLAGS="-g $OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DDEBUGVM=1 -mno-omit-frame-pointer -mno-omit-leaf-frame-pointer" LIBS="-lpthread -luuid"
+test -f config.h || ../../../platforms/unix/config/configure --with-src=nscogsrc --without-vm-display-fbdev --without-npsqueak CFLAGS="-g $OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DDEBUGVM=1 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer" LIBS="-lpthread -luuid"
 ../../../scripts/nukeversion
-rm -rf ../../../nsvmlinux
-# would prefer make install prefix=`readlink -f \`pwd\`/../../../nsvmlinuxdbg`
+rm -rf ../../../$INSTALLDIR
+# would prefer make install prefix=`readlink -f \`pwd\`/../../../$INSTALLDIR`
 # but older linux readlinks lack the -f flag
-make install prefix=`(cd ../../../;pwd)`/nsvmlinuxdbg
-(cd ../../../nsvmlinuxdbg
+make install prefix=`(cd ../../../;pwd)`/$INSTALLDIR
+(cd ../../../$INSTALLDIR
  if [ -f squeak ]; then
         mv squeak nsvm
         ex -u NONE "+g/squeak/s/squeak/nsvm/g" +w +q nsvm
