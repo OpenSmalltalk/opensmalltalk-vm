@@ -846,7 +846,7 @@ StackToRegisterMappingCogit >> addBlockStartAt: bytecodepc numArgs: numArgs numC
 
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> annotateBytecodeIfAnnotated: aSimStackEntry [
-	<var: #aSimStackEntry type: #'SimStackEntry'>
+	<var: #aSimStackEntry type: #'CogSimStackEntry'>
 	<inline: false>
 	aSimStackEntry annotateUse ifTrue:
 		[self annotateBytecode: (self prevInstIsPCAnnotated
