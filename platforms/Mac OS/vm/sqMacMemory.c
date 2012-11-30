@@ -87,11 +87,11 @@ sqInt sqMemoryExtraBytesLeft(int flag) {
 }
 
 void sqMacMemoryFree() {
-	if (memoryAllocationBase == nil) 
+	if (!memoryAllocationBase) 
 		return;
 	if (munmap((void *)memoryAllocationBase,gMaxHeapSize+pageSize))
 		perror("munmap");
-	memoryAllocationBase = nil;
+	memoryAllocationBase = 0;
 }
 
 #if COGVM

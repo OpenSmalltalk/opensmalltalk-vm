@@ -84,15 +84,14 @@ Boolean ImageNameIsEmpty() {
 }
 
 void getShortImageNameWithEncoding(char *target,UInt32 encoding) {
-    if (shortImageNameString == NULL) {
+    if (!shortImageNameString)
         *target = 0x00;
-        return;
-    }
-    CFStringGetCString (shortImageNameString, target, SHORTIMAGE_NAME_SIZE, encoding);
+    else
+		CFStringGetCString (shortImageNameString, target, SHORTIMAGE_NAME_SIZE, encoding);
 }
 
 void SetShortImageNameViaString(char *string,UInt32 encoding) {
-    if (shortImageNameString != NULL)
+    if (shortImageNameString)
         CFRelease(shortImageNameString);
     shortImageNameString = CFStringCreateWithCString(NULL, string, encoding);
 }

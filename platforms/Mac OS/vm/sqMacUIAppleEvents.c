@@ -66,8 +66,11 @@ pascal OSErr HandleOpenAppEvent(const AEDescList *aevt,  AEDescList *reply, long
 #pragma unused(refCon)
 #pragma unused(reply)
 
-	/* use default image name in same directory as the VM */
-	SetShortImageNameViaString(&gSqueakImageName,gCurrentVMEncoding);
+	char string[PATH_MAX+1];
+	getShortImageNameWithEncoding(string,gCurrentVMEncoding);
+	/* use current image or, if unset, default image name */
+	SetShortImageNameViaString(string[0] ? string : &gSqueakImageName,
+								gCurrentVMEncoding);
 	return noErr;
 }
 

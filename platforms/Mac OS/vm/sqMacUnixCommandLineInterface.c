@@ -290,9 +290,9 @@ static void printUsage(void)
 #endif
 #if STACKVM || NewspeakVM
 # if COGVM
-  printf("  -trace[=num]      enable tracing (optionally to a specific value)\n");
+  printf("  -trace[=num]          enable tracing (optionally to a specific value)\n");
 # else
-  printf("  -sendtrace        enable send tracing\n");
+  printf("  -sendtrace            enable send tracing\n");
 # endif
 #endif
 #if COGVM

@@ -151,7 +151,6 @@ sqInt printAllStacks(void);
 sqInt printCallStack(void);
 extern void dumpPrimTraceLog(void);
 extern BOOL NSApplicationLoad(void);
-static void fetchPrefrences(void);
 char *getVersionInfo(int verbose);
 
 
@@ -410,7 +409,7 @@ main(int argc, char **argv, char **envp)
 
 	LoadScrap();
 	SetUpClipboard();
-	fetchPrefrences();
+	fetchPreferences();
 
 	SetVMPathFromApplicationDirectory();
 
@@ -749,8 +748,8 @@ int getAttributeIntoLength(int id, int byteArrayIndex, int length) {
 }
 
 
-static void
-fetchPrefrences() {
+void
+fetchPreferences() {
     CFBundleRef  myBundle;
     CFDictionaryRef myDictionary;
     CFNumberRef SqueakWindowType,

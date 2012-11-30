@@ -1440,9 +1440,9 @@ static void vm_printUsage(void)
   printf("  -vm-<sys>-<dev>       use the <dev> driver for <sys> (see below)\n");
 #if STACKVM || NewspeakVM
 # if COGVM
-  printf("  -trace[=num]      enable tracing (optionally to a specific value)\n");
+  printf("  -trace[=num]          enable tracing (optionally to a specific value)\n");
 # else
-  printf("  -sendtrace        enable send tracing\n");
+  printf("  -sendtrace            enable send tracing\n");
 # endif
 #endif
 #if COGVM
