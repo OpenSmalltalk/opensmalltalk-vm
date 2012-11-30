@@ -3640,16 +3640,15 @@ ObjectMemory >> printReferencesTo: anOop [
 		[((self isPointers: oop) or: [self isCompiledMethod: oop]) ifTrue:
 			[(self isCompiledMethod: oop)
 				ifTrue:
-					[i := (self literalCountOf: oop) - 1]
+					[i := self literalCountOf: oop]
 				ifFalse:
 					[(self isContext: oop)
-						ifTrue: [i := CtxtTempFrameStart + (self fetchStackPointerOf: oop) - 1]
-						ifFalse: [i := (self lengthOf: oop) - 1]].
-			[i >= 0] whileTrue:
+						ifTrue: [i := CtxtTempFrameStart + (self fetchStackPointerOf: oop)]
+						ifFalse: [i := self lengthOf: oop]].
+			[(i := i - 1) >= 0] whileTrue:
 				[anOop = (self fetchPointer: i ofObject: oop) ifTrue:
 					[self interpreter printHex: oop; print: ' @ '; printNum: i; space; printOopShort: oop; cr.
-					 i := 0].
-				 i := i - 1]].
+					 i := 0]]].
 		 oop := self accessibleObjectAfter: oop]
 ]
 
