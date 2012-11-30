@@ -1572,7 +1572,7 @@ TMethod >> removeFinalSelfReturn [
 		[| tokens |
 		tokens := Scanner new scanTokens: (definingClass sourceCodeAt: selector ifAbsent: ['']).
 		(tokens size < 2
-		 or: [(tokens last: 2) ~= #(#^ 'self')]) ifTrue:
+		 or: [(tokens last: 2) ~= #(#'^' 'self')]) ifTrue:
 			[parseTree setStatements: parseTree statements allButLast.
 			 returnType = #sqInt ifTrue:
 				[([definingClass implicitReturnTypeFor: selector]
