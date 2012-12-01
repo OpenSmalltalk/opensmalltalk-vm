@@ -5621,7 +5621,7 @@ static sqInt display_ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sq
 {
   fprintf(stderr, "ioSetDisplayMode(%d, %d, %d, %d)\n",
 	  width, height, depth, fullscreenFlag);
-  setSavedWindowSize((winW << 16) + (winH & 0xFFFF));
+  setSavedWindowSize((width << 16) + (height & 0xFFFF));
   setFullScreenFlag(fullScreen);
   return 0;
 }
