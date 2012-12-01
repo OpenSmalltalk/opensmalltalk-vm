@@ -76,7 +76,7 @@ static sqInt display_ioHasDisplayDepth(sqInt i)
 
 static sqInt display_ioSetDisplayMode(sqInt w, sqInt h, sqInt d, sqInt fullScreen)
 {
-  setSavedWindowSize((winW << 16) + (winH & 0xFFFF));
+  setSavedWindowSize((w << 16) + (h & 0xFFFF));
   setFullScreenFlag(fullScreen);
   return 1;
 }
