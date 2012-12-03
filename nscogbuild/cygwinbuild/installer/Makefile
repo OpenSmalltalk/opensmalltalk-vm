@@ -38,7 +38,7 @@ $(VM_EXECUTABLE): ../build/vm/$(VM_EXECUTABLE)
 
 $(VM_EXECUTABLE_MAP):	../build/vm/$(VM_EXECUTABLE_MAP)
 	rm -f $@
-	grep " [tT] " $< | grep -v ' t \.text$' >$@
+	grep " [tT] " $< | grep -v ' t \.text' >$@
 
 $(VM_EXECUTABLE_MANIFEST):	../build/vm/$(VM_EXECUTABLE_MANIFEST)
 	rm -f $@
