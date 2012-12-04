@@ -119,15 +119,15 @@ endif
 
 # Set minimum version to WindowsXP (see /cygwin/usr/include//w32api/w32api.h)
 WINVER:=-D_WIN32_WINNT=0x0501 -DWINVER=0x0501
+WINDEFS:=$(WINVER) -DWIN32 -DWIN32_FILE_SUPPORT -DNO_STD_FILE_SUPPORT
 
 INCLUDEPATH:= -isystem/usr/include/mingw -I/usr/include/w32api
 # define _MT to eliminate the inline versions of printf et al in mingw/stdio.h
 NOBUILTIN:= -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
 CFLAGS:= $(INCLUDEPATH) -msse2 -ggdb2 -mwindows -mthreads -mno-cygwin -mwin32 \
 	-mno-rtd -mms-bitfields -mno-accumulate-outgoing-args $(OFLAGS) $(NOBUILTIN)
-DEFS:=	-DDEBUGVM=$(DEBUGVM) $(WINVER) -DWIN32 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
-		-DNO_SERVICE -DNO_STD_FILE_SUPPORT \
-		$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' -DX86 $(XDEFS)
+DEFS:=	-DMULTIPLEBYTECODESETS=1 -D'VM_NAME="$(VM_NAME)"' -DDEBUGVM=$(DEBUGVM) \
+		$(WINDEFS) -DNO_ISNAN -DNO_SERVICE $(NDEBUG) -DLSB_FIRST -DX86 $(XDEFS)
 XDEFS:=	-DSQUEAK_BUILTIN_PLUGIN
 INCLUDES:= -I. -I$(VMDIR) -I$(WIN32DIR) -I$(CROSSDIR) -I$(DXDIR) $(XINC)
 

@@ -11,6 +11,10 @@ case $REV in
 	esac
 	REV="`svnversion | sed 's/^.*://' | sed 's/M//'`";;
 esac
+if [ "$1" = "-r" -a -n "$2" ]; then
+	REV="$2"
+	shift;shift
+fi
 TAG=`date +%g.%U.`$REV
 echo REV=$REV TAG=$TAG
 
