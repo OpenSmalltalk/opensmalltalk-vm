@@ -157,12 +157,12 @@ ImageFormat class >> capabilitiesBitsMask [
 ]
 
 { #category : #ckformat }
-ImageFormat class >> createCkStatusProgram [
+ImageFormat class >> createCkFormatProgram [
 	"Create ckformat source file in the default directory"
 
-	"ImageFormat createCkStatusProgram"
+	"ImageFormat createCkFormatProgram"
 
-	^self storeCkstatusOnFile: 'ckformat.c' 
+	^self storeCkFormatOnFile: 'ckformat.c' 
 ]
 
 { #category : #'instance creation' }
@@ -234,7 +234,7 @@ ImageFormat class >> fromStream: stream [
 ]
 
 { #category : #ckformat }
-ImageFormat class >> generateCkStatusProgram: programName on: stream [
+ImageFormat class >> generateCkFormatProgram: programName on: stream [
 	"Generate source code for an image format version reader. The program
 	is intended for testing image file format from a unix shell script such that
 	the shell script can decide what VM to run based on image requirements."
@@ -286,10 +286,10 @@ ImageFormat class >> generateCkStatusProgram: programName on: stream [
 				false].
 			stream nextPutAll: '};'; cr;
 					tab; nextPutAll: 'if (strncmp(buf, ', b, ', ', v size asString, ') == 0) {'; cr;
-					tab; tab; nextPutAll: 'printf("%d", ', formatNumber, ');'; cr;
+					tab; tab; nextPutAll: 'printf("%d\n", ', formatNumber, ');'; cr;
 					tab; tab; nextPutAll: 'exit(0);'; cr;
 					tab; nextPutAll: '}'; cr; tab; nextPutAll: '}'; cr]].
-	stream tab; nextPutAll: 'printf("0"); /* print an invalid format number */';cr;
+	stream tab; nextPutAll: 'printf("0\n"); /* print an invalid format number */';cr;
 			tab; nextPutAll: 'exit (-1); /* not found, exit with error code */'; cr;
 			nextPutAll: '}'; cr
 
@@ -324,16 +324,23 @@ ImageFormat class >> knownVersionNumbers [
 ]
 
 { #category : #ckformat }
-ImageFormat class >> storeCkstatusOnFile: fileName [
+ImageFormat class >> storeCkFormatOnFile: fileName [
 	"Store source code for an image format version reader in a file. The program
 	is intended for testing image file format from a unix shell script such that
 	the shell script can decide what VM to run based on image requirements."
 
 	| f |
 	f := CrLfFileStream newFileNamed: fileName.
-	[self generateCkStatusProgram: 'ckformat' on: f]
+	[self generateCkFormatProgram: 'ckformat' on: f]
 		ensure: [f ifNotNil: [f close]].
 	^fileName
+]
+
+{ #category : #ckformat }
+ImageFormat class >> storeCkstatusOnFile: fileName [
+	"Deprecated 07-Dec-2012, use storeCkFormatOnFile:"
+	^self storeCkFormatOnFile: fileName
+
 ]
 
 { #category : #'instance creation' }
