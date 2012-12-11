@@ -933,9 +933,9 @@ LargeIntegersPlugin >> digitMontgomery: firstLarge times: secondLarge modulo: th
 	secondLen := self byteSizeOfBytes: secondLarge.
 	thirdLen := self byteSizeOfBytes: thirdLarge.
 
-	firstLen <= thirdLen ifFalse: [^self error: 'firstLarge must be less than thirdLarge'].
-	secondLen <= thirdLen ifFalse: [^self error: 'secondLarge must be less than thirdLarge'].
-	(mInv >= 0 and: [mInv <= 255]) ifFalse: [^self error: 'mInvMod256 must be between 0 and 255'].
+	firstLen <= thirdLen ifFalse: [^interpreterProxy primitiveFail].
+	secondLen <= thirdLen ifFalse: [^interpreterProxy primitiveFail].
+	(mInv >= 0 and: [mInv <= 255]) ifFalse: [^interpreterProxy primitiveFail].
 	self remapOop: #(firstLarge secondLarge thirdLarge) in: [prod := interpreterProxy instantiateClass: interpreterProxy classLargePositiveInteger indexableSize: thirdLen].
 	self
 				cdigitMontgomery: (interpreterProxy firstIndexableField: firstLarge)

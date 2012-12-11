@@ -283,155 +283,55 @@ SmartSyntaxPluginCodeGenerator >> ccgValBlock: valString [
 			nextPutAll: '))']] 
 ]
 
-{ #category : #linking }
-SmartSyntaxPluginCodeGenerator >> emitLoad: aString asBooleanValueFrom: anInteger on: aStream [
-
-	aStream
-		nextPutAll: aString;
-		nextPutAll: ' = interpreterProxy->booleanValueOf(';
-		crtab: 2;
-		nextPutAll: 'interpreterProxy->stackValue(';
-		nextPutAll: anInteger asString;
-		nextPutAll: '))'
+{ #category : #'translating builtins' }
+SmartSyntaxPluginCodeGenerator >> genCallOf: aSelector with: aNode on: aStream [
+	pluginFunctionsUsed add: aSelector.
+	aStream nextPutAll: (self cFunctionNameFor: aSelector).
+	aStream nextPut: $(.
+	self emitCExpression: aNode on: aStream.
+	aStream nextPut: $)
 ]
 
-{ #category : #linking }
-SmartSyntaxPluginCodeGenerator >> emitLoad: aString asCharPtrFrom: anInteger on: aStream [
-
-	aStream
-		nextPutAll: aString;
-		nextPutAll: 	' = (char *) interpreterProxy->firstIndexableField(';
-		crtab: 2;
-		nextPutAll: 	'interpreterProxy->stackValueOf(';
-		nextPutAll: anInteger asString;
-		nextPutAll: '))'
+{ #category : #'translating builtins' }
+SmartSyntaxPluginCodeGenerator >> genCallOf: aSelector with: firstArgNode with: secondArgNode on: aStream [
+	pluginFunctionsUsed add: aSelector.
+	aStream nextPutAll: (self cFunctionNameFor: aSelector).
+	aStream nextPut: $(.
+	self emitCExpression: firstArgNode on: aStream.
+	aStream nextPut: $,.
+	self emitCExpression: secondArgNode on: aStream.
+	aStream nextPut: $)
 ]
 
-{ #category : #linking }
-SmartSyntaxPluginCodeGenerator >> emitLoad: aString asFloatPtrFrom: anInteger on: aStream [
-
-	aStream
-		nextPutAll: aString;
-		nextPutAll: 	' = (float *) interpreterProxy->firstIndexableField(';
-		crtab: 2;
-		nextPutAll: 	'interpreterProxy->stackValueOf(';
-		nextPutAll: anInteger asString;
-		nextPutAll: '))'
-]
-
-{ #category : #linking }
-SmartSyntaxPluginCodeGenerator >> emitLoad: aString asFloatValueFrom: anInteger on: aStream [
-
-	aStream
-		nextPutAll: aString;
-		nextPutAll: 	' = interpreterProxy->stackFloatValue(';
-		nextPutAll: anInteger asString;
-		nextPutAll: ')'
-]
-
-{ #category : #linking }
-SmartSyntaxPluginCodeGenerator >> emitLoad: aString asIntPtrFrom: anInteger on: aStream [
-
-	aStream
-		nextPutAll: aString;
-		nextPutAll: 	' = (int *) interpreterProxy->firstIndexableField(';
-		crtab: 2;
-		nextPutAll: 	'interpreterProxy->stackValueOf(';
-		nextPutAll: anInteger asString;
-		nextPutAll: '))'
-]
-
-{ #category : #linking }
-SmartSyntaxPluginCodeGenerator >> emitLoad: aString asIntegerValueFrom: anInteger on: aStream [
-
-	aStream
-		nextPutAll: aString;
-		nextPutAll: 	' = interpreterProxy stackIntegerValue(';
-		nextPutAll: anInteger asString;
-		nextPutAll: ')'
-]
-
-{ #category : #linking }
-SmartSyntaxPluginCodeGenerator >> emitLoad: aString asKindOf: aClass from: anInteger on: aStream [
-
-	self emitLoad: aString asNakedOopFrom: anInteger on: aStream.
-	aStream
-		crtab;
-		nextPutAll: 'interpreterProxy->success(interpreterProxy->isKindOf(';
-		nextPutAll: aString;
-		nextPutAll: 	', ''';
-		nextPutAll:	aClass asString;
-		nextPutAll: '''))'
-]
-
-{ #category : #linking }
-SmartSyntaxPluginCodeGenerator >> emitLoad: aString asMemberOf: aClass from: anInteger on: aStream [
-
-	self emitLoad: aString asNakedOopFrom: anInteger on: aStream.
-	aStream
-		crtab;
-		nextPutAll: 'interpreterProxy->success(interpreterProxy->isMemberOf(';
-		nextPutAll: aString;
-		nextPutAll: 	', ''';
-		nextPutAll:	aClass asString;
-		nextPutAll: '''))'
-]
-
-{ #category : #linking }
-SmartSyntaxPluginCodeGenerator >> emitLoad: aString asNakedOopFrom: anInteger on: aStream [
-
-	aStream
-		nextPutAll: aString;
-		nextPutAll: ' = interpreterProxy stackValue(';
-		nextPutAll: anInteger asString;
-		nextPutAll: ')'
-]
-
-{ #category : #linking }
-SmartSyntaxPluginCodeGenerator >> emitLoad: aString asNonIntegerValueFrom: anInteger on: aStream [
-
-	aStream
-		nextPutAll: aString;
-		nextPutAll: 	' = interpreterProxy stackObjectValue(';
-		nextPutAll: anInteger asString;
-		nextPutAll: ')'
-]
-
-{ #category : #linking }
-SmartSyntaxPluginCodeGenerator >> emitLoad: aString asUnsignedValueFrom: anInteger on: aStream [
-
-	aStream
-		nextPutAll: aString;
-		nextPutAll: 	' = interpreterProxy->positive32BitValueOf(';
-		crtab: 2;
-		nextPutAll: 	'interpreterProxy->stackValue(';
-		nextPutAll: anInteger asString;
-		nextPutAll: '))'
+{ #category : #'translating builtins' }
+SmartSyntaxPluginCodeGenerator >> genCallOf: aSelector with: firstArgNode with: secondArgNode with: thirdArgNode on: aStream [
+	pluginFunctionsUsed add: aSelector.
+	aStream nextPutAll: (self cFunctionNameFor: aSelector).
+	aStream nextPut: $(.
+	self emitCExpression: firstArgNode on: aStream.
+	aStream nextPut: $,.
+	self emitCExpression: secondArgNode on: aStream.
+	aStream nextPut: $,.
+	self emitCExpression: thirdArgNode on: aStream.
+	aStream nextPut: $)
 ]
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateAsBooleanObj: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: '('.
+	pluginFunctionsUsed add: #trueObject; add: #falseObject.
+	aStream nextPutAll: '(('.
 	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: 
-		') ? interpreterProxy->trueObject(): interpreterProxy->falseObject()'.
+	aStream nextPutAll: ') ? trueObject() : falseObject())'.
 ]
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateAsCBoolean: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: 'interpreterProxy->booleanValueOf('.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ')'.
+	self genCallOf: #booleanValueOf: with: aNode receiver on: aStream
 ]
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateAsCDouble: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: 'interpreterProxy->floatValueOf('.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ')'.
+	self genCallOf: #floatValueOf: with: aNode receiver on: aStream
 ]
 
 { #category : #'translating builtins' }
@@ -444,26 +344,17 @@ SmartSyntaxPluginCodeGenerator >> generateAsCInt: aNode on: aStream indent: anIn
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateAsCUnsigned: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: 'interpreterProxy->positive32BitValueOf('.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ')'.
+	self genCallOf: #positive32BitValueOf: with: aNode receiver on: aStream
 ]
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateAsCharPtr: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: '(char *) interpreterProxy->firstIndexableField('.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ')'.
+	self generateCoerceToPtr: 'char *' fromObject: aNode receiver on: aStream
 ]
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateAsFloatObj: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: 'interpreterProxy->floatObjectOf('.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ')'.
+	self genCallOf: #floatObjectOf: with: aNode receiver on: aStream
 ]
 
 { #category : #'translating builtins' }
@@ -472,21 +363,16 @@ SmartSyntaxPluginCodeGenerator >> generateAsIfVar: aNode on: aStream indent: anI
 	| cName fName class index |
 	cName := String streamContents: 
 		[:scStr | self emitCExpression: aNode args first on: scStr].
-	class := Smalltalk 
-		at: (cName asSymbol) 
-		ifAbsent: [nil].
-	(class isNil not and: [class isBehavior]) ifFalse: 
+	(class := Smalltalk classNamed: cName) isBehavior ifFalse: 
 		[^self error: 'first arg must identify class'].
 	fName := aNode args second value.
-	index := class allInstVarNames
-		indexOf: fName
-		ifAbsent: [^self error: 'second arg must be instVar'].
-	aStream 
-		nextPutAll: 'interpreterProxy->fetchPointerofObject(';
-		nextPutAll: (index - 1) asString;
-		nextPutAll: ','.
+	index := class
+				instVarIndexFor: fName
+				ifAbsent: [^self error: 'second arg must be instVar'].
+	pluginFunctionsUsed add: #fetchPointer:ofObject:.
+	aStream nextPutAll: 'fetchPointerofObject('; print: index - 1; nextPut: $,.
 	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ')'.
+	aStream nextPut: $)
 ]
 
 { #category : #'translating builtins' }
@@ -494,27 +380,19 @@ SmartSyntaxPluginCodeGenerator >> generateAsIfVarAsValue: aNode on: aStream inde
 
 	| cName fName class index fetchNode |
 	cName := String streamContents: 
-		[:scStr | self emitCExpression: aNode args first on: scStr].
-	class := Smalltalk 
-		at: (cName asSymbol) 
-		ifAbsent: [nil].
-	(class isNil not and: [class isBehavior]) ifFalse: 
+				[:scStr | self emitCExpression: aNode args first on: scStr].
+	(class := Smalltalk classNamed: cName) isBehavior ifFalse: 
 		[^self error: 'first arg must identify class'].
 	fName := aNode args second value.
-	index := class allInstVarNames
-		indexOf: fName
-		ifAbsent: [^self error: 'second arg must be instVar'].
+	index := class
+				instVarIndexFor: fName
+				ifAbsent: [^self error: 'second arg must be instVar'].
 	fetchNode := TSendNode new
-		setSelector: #fetchPointer:ofObject:
-		receiver: (TVariableNode new setName: 'interpreterProxy')
-		arguments: (Array
-			with: (TConstantNode new setValue: index - 1)
-			with: aNode receiver).
+					setSelector: #fetchPointer:ofObject:
+					receiver: (TVariableNode new setName: 'self')
+					arguments: { TConstantNode new setValue: index - 1. aNode receiver}.
 	cName := aNode args third nameOrValue.
-	class := Smalltalk 
-		at: (cName asSymbol) 
-		ifAbsent: [nil].
-	(class isNil not and: [class isBehavior]) ifFalse: 
+	(class := Smalltalk classNamed: cName) isBehavior ifFalse: 
 		[^self error: 'third arg must identify class'].
 	class ccg: self generateCoerceToValueFrom: fetchNode on: aStream
 
@@ -526,31 +404,23 @@ SmartSyntaxPluginCodeGenerator >> generateAsIfVarPut: aNode on: aStream indent: 
 	| cName fName class index |
 	cName := String streamContents: 
 		[:scStr | self emitCExpression: aNode args first on: scStr].
-	class := Smalltalk 
-		at: (cName asSymbol) 
-		ifAbsent: [nil].
-	(class isNil not and: [class isBehavior]) ifFalse: 
+	(class := Smalltalk classNamed: cName) isBehavior ifFalse: 
 		[^self error: 'first arg must identify class'].
 	fName := aNode args second value.
-	index := class allInstVarNames
-		indexOf: fName
-		ifAbsent: [^self error: 'second arg must be instVar'].
-	aStream 
-		nextPutAll: 'interpreterProxy->storePointerofObjectwithValue(';
-		nextPutAll: (index - 1) asString;
-		nextPutAll: ','.
+	index := class
+				instVarIndexFor: fName
+				ifAbsent: [^self error: 'second arg must be instVar'].
+	pluginFunctionsUsed add: #storePointer:ofObject:withValue:.
+	aStream  nextPutAll: 'storePointerofObjectwithValue('; print: index - 1; nextPut: $,.
 	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ','.
+	aStream  nextPut: $,.
 	self emitCExpression: aNode args third on: aStream.
-	aStream nextPutAll: ')'.
+	aStream  nextPut: $)
 ]
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateAsIntPtr: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: '(int *) interpreterProxy->firstIndexableField('.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ')'.
+	self generateCoerceToPtr: 'int *' fromObject: aNode receiver on: aStream
 ]
 
 { #category : #'translating builtins' }
@@ -568,18 +438,12 @@ SmartSyntaxPluginCodeGenerator >> generateAsOop: aNode on: aStream indent: anInt
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateAsPositiveIntegerObj: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: 'interpreterProxy->positive32BitIntegerFor('.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ')'.
+	self genCallOf: #positive32BitIntegerFor: with: aNode receiver on: aStream
 ]
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateAsSmallIntegerObj: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: 'interpreterProxy->integerObjectOf('.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ')'.
+	self genCallOf: #integerObjectOf: with: aNode receiver on: aStream
 ]
 
 { #category : #'translating builtins' }
@@ -607,42 +471,30 @@ SmartSyntaxPluginCodeGenerator >> generateCPtrAsOop: aNode on: aStream indent: a
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateClass: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: 'interpreterProxy->fetchClassOf('.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ')'.
+	self genCallOf: #fetchClassOf: with: aNode receiver on: aStream
 ]
 
 { #category : #'asOop:/asValue:' }
 SmartSyntaxPluginCodeGenerator >> generateCoerceToBooleanObjectFrom: aNode on: aStream [
-
-	aStream nextPutAll: '('.
+	pluginFunctionsUsed add: #trueObject; add: #falseObject.
+	aStream nextPutAll: '(('.
 	self emitCExpression: aNode on: aStream.
-	aStream nextPutAll: '? interpreterProxy->trueObject(): interpreterProxy->falseObject())'
+	aStream nextPutAll: ') ? trueObject() : falseObject())'
 ]
 
 { #category : #'asOop:/asValue:' }
 SmartSyntaxPluginCodeGenerator >> generateCoerceToBooleanValueFrom: aNode on: aStream [
-
-	aStream nextPutAll: 'interpreterProxy->booleanValueOf('.
-	self emitCExpression: aNode on: aStream.
-	aStream nextPutAll: ')'
+	self genCallOf: #booleanValueOf: with: aNode receiver on: aStream
 ]
 
 { #category : #'asOop:/asValue:' }
 SmartSyntaxPluginCodeGenerator >> generateCoerceToFloatObjectFrom: aNode on: aStream [
-
-	aStream nextPutAll: 'interpreterProxy->floatObjectOf('.
-	self emitCExpression: aNode on: aStream.
-	aStream nextPutAll: ')'
+	self genCallOf: #floatObjectOf: with: aNode on: aStream
 ]
 
 { #category : #'asOop:/asValue:' }
 SmartSyntaxPluginCodeGenerator >> generateCoerceToFloatValueFrom: aNode on: aStream [
-
-	aStream nextPutAll: 'interpreterProxy->floatValueOf('.
-	self emitCExpression: aNode on: aStream.
-	aStream nextPutAll: ')'
+	self genCallOf: #floatValueOf: with: aNode on: aStream
 ]
 
 { #category : #'asOop:/asValue:' }
@@ -657,45 +509,32 @@ SmartSyntaxPluginCodeGenerator >> generateCoerceToObjectFromPtr: aNode on: aStre
 { #category : #'asOop:/asValue:' }
 SmartSyntaxPluginCodeGenerator >> generateCoerceToPtr: aString fromObject: aNode on: aStream [
 	"This code assumes no named instance variables"
-
 	aStream 
 		nextPutAll: '((';
 		nextPutAll: aString;
-		nextPutAll: ') interpreterProxy->firstIndexableField('.
-	self emitCExpression: aNode on: aStream.
-	aStream nextPutAll: '))'
+		nextPut: $).
+	self genCallOf: #firstIndexableField: with: aNode on: aStream.
+	aStream nextPut: $)
 ]
 
 { #category : #'asOop:/asValue:' }
 SmartSyntaxPluginCodeGenerator >> generateCoerceToSmallIntegerObjectFrom: aNode on: aStream [
-
-	aStream nextPutAll: 'interpreterProxy->integerObjectOf('.
-	self emitCExpression: aNode on: aStream.
-	aStream nextPutAll: ')'
+	self genCallOf: #integerObjectOf: with: aNode on: aStream
 ]
 
 { #category : #'asOop:/asValue:' }
 SmartSyntaxPluginCodeGenerator >> generateCoerceToSmallIntegerValueFrom: aNode on: aStream [
-
-	aStream nextPutAll: 'interpreterProxy->integerValueOf('.
-	self emitCExpression: aNode on: aStream.
-	aStream nextPutAll: ')'
+	self genCallOf: #integerValueOf: with: aNode on: aStream
 ]
 
 { #category : #'asOop:/asValue:' }
 SmartSyntaxPluginCodeGenerator >> generateCoerceToUnsignedObjectFrom: aNode on: aStream [
-
-	aStream nextPutAll: 'interpreterProxy->positive32BitIntegerFor('.
-	self emitCExpression: aNode on: aStream.
-	aStream nextPutAll: ')'
+	self genCallOf: #positive32BitIntegerFor: with: aNode on: aStream
 ]
 
 { #category : #'asOop:/asValue:' }
 SmartSyntaxPluginCodeGenerator >> generateCoerceToUnsignedValueFrom: aNode on: aStream [
-
-	aStream nextPutAll: 'interpreterProxy->positive32BitValueOf('.
-	self emitCExpression: aNode on: aStream.
-	aStream nextPutAll: ')'
+	self genCallOf: #positive32BitValueOf: with: aNode on: aStream
 ]
 
 { #category : #'debug code' }
@@ -727,133 +566,78 @@ SmartSyntaxPluginCodeGenerator >> generateDebugCode: aNode on: aStream indent: l
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateField: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: 'interpreterProxy->fetchPointerofObject('.
-	self emitCExpression: aNode args first on: aStream.
-	aStream nextPutAll: ','.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ')'.
+	self genCallOf: #fetchPointer:ofObject: with: aNode args first with: aNode receiver on: aStream
 ]
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateFieldPut: aNode on: aStream indent: anInteger [
-		
-	aStream nextPutAll: 'interpreterProxy->storePointerofObjectwithValue('.
-	self emitCExpression: aNode args first on: aStream.
-	aStream nextPutAll: ','.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ','.
-	self emitCExpression: aNode args second on: aStream.
-	aStream nextPutAll: ')'.
+	self genCallOf: #storePointer:ofObject:withValue:
+		with: aNode args first
+		with: aNode receiver
+		with: aNode args second
+		on: aStream
 ]
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateFromStack: aNode on: aStream indent: anInteger [
-
 	| idList |
 	aNode args first isConstant ifFalse: [^self error: 'arg must be constant'].
+	pluginFunctionsUsed add: #stackValue:.
 	idList := aNode args first value.
 	(1 to: idList size)
 		do: [:i | 
 			aStream 
 				nextPutAll: (idList at: i);
-				nextPutAll: ' = interpreterProxy->stackValue(';
+				nextPutAll: ' = stackValue(';
 				nextPutAll: (idList size - i) asString;
-				nextPutAll: ')']
+				nextPut: $)]
 		separatedBy: [aStream nextPut: $;; crtab: anInteger].
 
 ]
 
 { #category : #'translating builtins' }
-SmartSyntaxPluginCodeGenerator >> generateIsBytes: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: 'interpreterProxy->isBytes('.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ')'.
-]
-
-{ #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateIsFloat: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: 'interpreterProxy->isFloatObject('.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ')'.
+	self genCallOf: #isFloatObject: with: aNode receiver on: aStream
 ]
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateIsIndexable: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: 'interpreterProxy->isIndexable('.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ')'.
-]
-
-{ #category : #'translating builtins' }
-SmartSyntaxPluginCodeGenerator >> generateIsInteger: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: 'interpreterProxy->isIntegerValue('.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ')'.
+	self genCallOf: #isIndexable: with: aNode receiver on: aStream
 ]
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateIsIntegerOop: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: 'interpreterProxy->isIntegerObject('.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ')'.
+	self genCallOf: #isIntegerObject: with: aNode receiver on: aStream
 ]
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateIsIntegerValue: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: 'interpreterProxy->isIntegerValue('.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ')'.
+	self genCallOf: #isIntegerValue: with: aNode receiver on: aStream
 ]
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateIsKindOf: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: 'interpreterProxy->isKindOf('.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ','''.
-	self emitCExpression: aNode args first on: aStream.
-	aStream nextPutAll: ''')'.
+	self genCallOf: #is:KindOf: with: aNode receiver with: aNode args first on: aStream
 ]
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateIsMemberOf: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: 'interpreterProxy->isMemberOf('.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ','''.
-	self emitCExpression: aNode args first on: aStream.
-	aStream nextPutAll: ''')'.
+	self genCallOf: #is:MemberOf: with: aNode receiver with: aNode args first on: aStream
 ]
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateIsPointers: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: 'interpreterProxy->isPointers('.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ')'.
+	self genCallOf: #isPointers: with: aNode receiver on: aStream
 ]
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateIsWords: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: 'interpreterProxy->isWords('.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ')'.
+	self genCallOf: #isWords: with: aNode receiver on: aStream
 ]
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateIsWordsOrBytes: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: 'interpreterProxy->isWordsOrBytes('.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ')'.
+	self genCallOf: #isWordsOrBytes: with: aNode receiver on: aStream
 ]
 
 { #category : #'translating builtins' }
@@ -875,12 +659,13 @@ SmartSyntaxPluginCodeGenerator >> generateRemapOopIn: aNode on: aStream indent: 
 	"Generate the C code for this message onto the given stream."
 
 	| idList |
+	pluginFunctionsUsed add: #pushRemappableOop:; add: #popRemappableOop.
 	idList := aNode args first nameOrValue.
 	idList class == Array ifFalse: [idList := Array with: idList].
 	idList do:
 		[:each | 
 		 aStream 
-			nextPutAll: 'interpreterProxy->pushRemappableOop(';
+			nextPutAll: 'pushRemappableOop(';
 			nextPutAll: each asString;
 			nextPutAll: ');']
 		separatedBy: [aStream crtab: level].
@@ -891,40 +676,27 @@ SmartSyntaxPluginCodeGenerator >> generateRemapOopIn: aNode on: aStream indent: 
 		[:each |
 		 aStream 
 			nextPutAll: each asString;
-			nextPutAll: ' = interpreterProxy->popRemappableOop()']
+			nextPutAll: ' = popRemappableOop()']
 		separatedBy: [aStream nextPut: $;; crtab: level].
 ]
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateStAt: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: 'interpreterProxy->stObjectat('.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ','.
-	self emitCExpression: aNode args first on: aStream.
-	aStream nextPutAll: ')'
-
+	self genCallOf: #stObject:at: with: aNode receiver with: aNode args first on: aStream
 ]
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateStAtPut: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: 'interpreterProxy->stObjectatput('.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ','.
-	self emitCExpression: aNode args first on: aStream.
-	aStream nextPutAll: ','.
-	self emitCExpression: aNode args second on: aStream.
-	aStream nextPutAll: ')'
-
+	self genCallOf: #stObject:at:put:
+		with: aNode receiver
+		with: aNode args first
+		with: aNode args second
+		on: aStream
 ]
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateStSize: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: 'interpreterProxy->stSizeOf('.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ')'.
+	self genCallOf: #stSizeOf: with: aNode receiver on: aStream
 ]
 
 { #category : #initialize }

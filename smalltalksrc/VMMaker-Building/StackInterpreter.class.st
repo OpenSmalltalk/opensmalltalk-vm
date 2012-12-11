@@ -5547,7 +5547,7 @@ StackInterpreter >> getStackPointer [
 	"For Alien FFI"
 	<api>
 	<returnTypeC: #'sqInt *'>
-	^self cCoerceSimple: stackPointer to: #'sqInt *'
+	^self cCoerce: stackPointer to: #'sqInt *'
 ]
 
 { #category : #'plugin support' }
@@ -10859,13 +10859,13 @@ StackInterpreter >> stObject: array at: index put: value [
 			((self oop: index isGreaterThanOrEqualTo: 1)
 			 and: [(self oop: index isLessThanOrEqualTo: stSize)
 			 and: [self isStillMarriedContext: array]]) ifTrue:
-				[self noInlineTemporary: index - 1 in: (self frameOfMarriedContext: array) put: value.
-				 ^self]]
+				[^self noInlineTemporary: index - 1 in: (self frameOfMarriedContext: array) put: value]]
 		ifFalse: [stSize := totalLength - fixedFields].
 	((self oop: index isGreaterThanOrEqualTo: (objectMemory firstValidIndexOfIndexableObject: array withFormat: fmt))
 	 and: [self oop: index isLessThanOrEqualTo: stSize])
 		ifTrue: [self subscript: array with: (index + fixedFields) storing: value format: fmt]
-		ifFalse: [self primitiveFailFor: (fmt <= 1 ifTrue: [PrimErrBadReceiver] ifFalse: [PrimErrBadIndex])]
+		ifFalse: [self primitiveFailFor: (fmt <= 1 ifTrue: [PrimErrBadReceiver] ifFalse: [PrimErrBadIndex])].
+	^value
 ]
 
 { #category : #'indexing primitive support' }

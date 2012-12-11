@@ -202,6 +202,12 @@ InterpreterPlugin class >> translateInDirectory: directory doInlining: inlineFla
 ]
 
 { #category : #initialize }
+InterpreterPlugin >> expandDereferenceInterpreterProxyFunctionTable [
+	"This is a dummy funciton that the VMPluginCodeGenerator expands into a
+	 sequence of assignments from interpreterProxy funcitons to local function pointers."
+]
+
+{ #category : #initialize }
 InterpreterPlugin >> getInterpreter [
 	"Note: This is coded so that plugins can be run from Squeak."
 
@@ -226,6 +232,20 @@ InterpreterPlugin >> halt [
 	^0
 ]
 
+{ #category : #'simulation support' }
+InterpreterPlugin >> majorVersion [
+	"This is implemented in sqVirtualMachine.c, so this form is for simulation only."
+	<doNotGenerate>
+	^1
+]
+
+{ #category : #'simulation support' }
+InterpreterPlugin >> minorVersion [
+	"This is implemented in sqVirtualMachine.c, so this form is for simulation only."
+	<doNotGenerate>
+	^8
+]
+
 { #category : #debugging }
 InterpreterPlugin >> msg: s [ 
 	<var: #s type: 'char *'>
@@ -235,14 +255,15 @@ InterpreterPlugin >> msg: s [
 
 { #category : #initialize }
 InterpreterPlugin >> setInterpreter: anInterpreter [ 
-	"Note: This is coded so that is can be run from Squeak."
+	"Note: This is coded so that it can be run in Squeak."
 
 	| ok |
 	<export: true>
 	<var: #anInterpreter type: #'struct VirtualMachine*'>
 	interpreterProxy := anInterpreter.
-	ok := self cCode: 'interpreterProxy->majorVersion() == VM_PROXY_MAJOR'.
-	ok == false ifTrue: [^ false].
-	ok := self cCode: 'interpreterProxy->minorVersion() >= VM_PROXY_MINOR'.
-	^ ok
+	ok := interpreterProxy majorVersion = (self cCode: 'VM_PROXY_MAJOR' inSmalltalk: [self majorVersion])
+		and: [interpreterProxy minorVersion >= (self cCode: 'VM_PROXY_MINOR' inSmalltalk: [self minorVersion])].
+	ok ifTrue:
+		[self expandDereferenceInterpreterProxyFunctionTable].
+	^ok
 ]

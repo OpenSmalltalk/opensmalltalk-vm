@@ -17,6 +17,12 @@ Class {
 	#category : #'VMMaker-InterpreterSimulation'
 }
 
+{ #category : #translation }
+InterpreterProxy class >> implicitReturnTypeFor: aSelector [
+	"Answer the return type for methods that don't have an explicit return."
+	^#sqInt
+]
+
 { #category : #private }
 InterpreterProxy class >> validateProxyImplementation: anInterpreter [ 
 	"InterpreterProxy validateProxyImplementation: Interpreter"
@@ -193,6 +199,11 @@ InterpreterProxy >> copyBitsFrom: leftX to: rightX at: yValue [
 	bb copyBitsFrom: leftX to: rightX at: yValue.
 ]
 
+{ #category : #'FFI support' }
+InterpreterProxy >> disownVM: flags [
+	self error: 'not yet implemented in Smalltalk'
+]
+
 { #category : #'special objects' }
 InterpreterProxy >> displayObject [
 	^Display
@@ -316,7 +327,13 @@ InterpreterProxy >> fullGC [
 ]
 
 { #category : #other }
+InterpreterProxy >> getInterruptPending [
+	self error: 'not yet implemented in Smalltalk'
+]
+
+{ #category : #other }
 InterpreterProxy >> getStackPointer [
+	<returnTypeC: #'sqInt *'>
 	self error: 'not yet implemented in Smalltalk'
 ]
 
@@ -385,6 +402,8 @@ InterpreterProxy >> integerValueOf: oop [
 
 { #category : #converting }
 InterpreterProxy >> ioFilename: aCharBuffer fromString: aFilenameString ofLength: filenameLength resolveAliases: aBoolean [
+	<var: #aCharBuffer type: #'char *'>
+	<var: #aFilenameString type: #'char *'>
 	"the vm has to convert aFilenameString via any canonicalization and char-mapping and put the result in aCharBuffer. This doesn't translate well in Smalltalk since we know how long strings are rather than considering them terminated by a 0 char. Do the best we can.
 Note the resolveAliases flag - this is an awful artefact of OSX and Apples demented alias handling. When opening a file, the flag must be  true, when closing or renaming it must be false. Sigh."
 	aCharBuffer replaceFrom:1 to: filenameLength with: aFilenameString
@@ -392,18 +411,23 @@ Note the resolveAliases flag - this is an awful artefact of OSX and Apples demen
 
 { #category : #'FFI support' }
 InterpreterProxy >> ioLoadFunction: functionName From: moduleName [
+	<returnTypeC: #'void *'>
+	<var: #functionName type: #'char *'>
+	<var: #moduleName type: #'char *'>
 	"Dummy - provided by support code"
 	^0
 ]
 
 { #category : #'FFI support' }
 InterpreterProxy >> ioLoadModule: moduleNameIndex OfLength: moduleLength [
+	<returnTypeC: #'void *'>
 	"Dummy - provided by support code"
 	^0
 ]
 
 { #category : #'FFI support' }
 InterpreterProxy >> ioLoadSymbol: functionNameIndex OfLength: functionLength FromModule: moduleHandle [
+	<returnTypeC: #'void *'>
 	"Dummy - provided by support code"
 	^0
 ]
@@ -504,6 +528,11 @@ InterpreterProxy >> isWordsOrBytes: oop [
 	^(self isBytes: oop) or:[self isWords: oop]
 ]
 
+{ #category : #'FFI support' }
+InterpreterProxy >> isYoung: anOop [
+	self error: 'not yet implemented in Smalltalk'
+]
+
 { #category : #'object access' }
 InterpreterProxy >> literal: offset ofMethod: methodPointer [
 	^methodPointer literalAt: offset+1
@@ -598,6 +627,11 @@ InterpreterProxy >> obsoleteDontUseThisFetchWord: fieldIndex ofObject: oop [
 	self halt: 'deprecated method'
 ]
 
+{ #category : #'FFI support' }
+InterpreterProxy >> ownVM: flags [
+	self error: 'not yet implemented in Smalltalk'
+]
+
 { #category : #'stack access' }
 InterpreterProxy >> pop: nItems [
 	1 to: nItems do:[:i| stack removeLast].
@@ -632,6 +666,7 @@ InterpreterProxy >> positive32BitValueOf: oop [
 
 { #category : #converting }
 InterpreterProxy >> positive64BitIntegerFor: integerValue [
+	<var: 'integerValue' type: #sqLong>
 	integerValue isInteger ifFalse:[self error:'Not an Integer object'].
 	^integerValue > 0
 		ifTrue:[integerValue]
@@ -640,6 +675,7 @@ InterpreterProxy >> positive64BitIntegerFor: integerValue [
 
 { #category : #converting }
 InterpreterProxy >> positive64BitValueOf: oop [
+	<returnTypeC: #sqLong>
 	oop isInteger ifFalse:[self error:'Not an integer object'].
 	oop < 0 
 		ifTrue:[self primitiveFail. ^0]
@@ -648,6 +684,7 @@ InterpreterProxy >> positive64BitValueOf: oop [
 
 { #category : #converting }
 InterpreterProxy >> positiveMachineIntegerValueOf: oop [
+	<returnTypeC: #'unsigned long'>
 	oop isInteger ifFalse:[self error: 'Not an integer object'].
 	^oop < 0 
 		ifTrue: [self primitiveFail. 0]
@@ -726,6 +763,7 @@ InterpreterProxy >> reestablishContextPriorToCallback: callbackContext [
 
 { #category : #'callback support' }
 InterpreterProxy >> returnAs: returnTypeOop ThroughCallback: vmCallbackContext Context: callbackMethodContext [
+	<var: #vmCallbackContext type: #'VMCallbackContext *'>
 	"callbackMethodContext is an activation of invokeCallback:[stack:registers:jmpbuf:].
 	 Its sender is the VM's state prior to the callback.  Reestablish that state (via longjmp),
 	 and mark callbackMethodContext as dead."
@@ -742,6 +780,7 @@ InterpreterProxy >> sendInvokeCallback: thunkPtr Stack: stackPtr Registers: regs
 
 { #category : #'callback support' }
 InterpreterProxy >> sendInvokeCallbackContext: vmCallbackContext [
+	<var: #vmCallbackContext type: #'VMCallbackContext *'>
 	"Send the calllback message to Alien class with the supplied arg(s).  Use either the
 	 1 arg invokeCallbackContext: or the 4 arg invokeCallback:stack:registers:jmpbuf:
 	 message, depending on what selector is installed in the specialObjectsArray.
@@ -753,6 +792,8 @@ InterpreterProxy >> sendInvokeCallbackContext: vmCallbackContext [
 
 { #category : #other }
 InterpreterProxy >> setInterruptCheckChain: aFunction [
+	<returnTypeC: 'void (*setInterruptCheckChain(void (*aFunction)(void)))()'>
+	<var: #aFunction declareC: 'void (*aFunction)()'>
 	self error: 'not yet implemented in Smalltalk'
 ]
 
@@ -760,6 +801,11 @@ InterpreterProxy >> setInterruptCheckChain: aFunction [
 InterpreterProxy >> showDisplayBits: aForm Left: l Top: t Right: r Bottom: b [
 	aForm == Display ifTrue:[
 		Display forceToScreen: (Rectangle left: l right: r top: t bottom: b)].
+]
+
+{ #category : #'callback support' }
+InterpreterProxy >> signalNoResume: aSemaphore [
+	self error: 'not yet implemented in Smalltalk'
 ]
 
 { #category : #other }
@@ -775,24 +821,28 @@ InterpreterProxy >> signed32BitIntegerFor: integerValue [
 
 { #category : #converting }
 InterpreterProxy >> signed32BitValueOf: oop [
+	<returnTypeC: #int>
 	oop isInteger ifFalse:[self error:'Not an integer object'].
 	^oop
 ]
 
 { #category : #converting }
 InterpreterProxy >> signed64BitIntegerFor: integerValue [
+	<var: 'integerValue' type: #sqLong>
 	integerValue isInteger ifFalse:[self error:'Not an Integer object'].
 	^integerValue
 ]
 
 { #category : #converting }
 InterpreterProxy >> signed64BitValueOf: oop [
+	<returnTypeC: #sqLong>
 	oop isInteger ifFalse:[self error:'Not an integer object'].
 	^oop
 ]
 
 { #category : #converting }
 InterpreterProxy >> signedMachineIntegerValueOf: oop [
+	<returnTypeC: #'long'>
 	oop isInteger ifFalse:[self error:'Not an integer object'].
 	^oop
 ]

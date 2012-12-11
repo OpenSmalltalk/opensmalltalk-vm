@@ -97,10 +97,8 @@ CCodeGeneratorGlobalStructure >> emitCVariablesOn: aStream [
 				[self isGeneratingPluginCode
 					ifTrue:
 						[varString = 'interpreterProxy'
-							ifTrue: ["quite special..."
-								target cr; nextPutAll: '#ifdef SQUEAK_BUILTIN_PLUGIN'.
-								target cr; nextPutAll: 'extern'.
-								target cr; nextPutAll: '#endif'; cr]
+							ifTrue: "quite special..."
+								[self preDeclareInterpreterProxyOn: target]
 							ifFalse: [target nextPutAll: 'static ']]
 					ifFalse:
 						[(vmClass mustBeGlobal: varString) ifFalse:
