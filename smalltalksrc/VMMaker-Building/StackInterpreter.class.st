@@ -4819,8 +4819,13 @@ StackInterpreter >> findClassForSelector: aSelector lookupClass: startClass do: 
 { #category : #'debug support' }
 StackInterpreter >> findClassOfMethod: meth forReceiver: rcvr [
 
-	| currClass classDict classDictSize methodArray i |
-	currClass := objectMemory fetchClassOf: rcvr.
+	| rclass currClass classDict classDictSize methodArray i |
+	(self addressCouldBeObj: meth) ifFalse:
+		[^objectMemory nilObject].
+	(self addressCouldBeOop: rcvr)
+		ifTrue: [rclass := objectMemory fetchClassOf: rcvr]
+		ifFalse: [rclass := self methodClassOf: meth].
+	currClass := rclass.
 	[classDict := objectMemory fetchPointer: MethodDictionaryIndex ofObject: currClass.
 	 classDictSize := objectMemory fetchWordLengthOf: classDict.
 	 methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: classDict.
@@ -4831,7 +4836,7 @@ StackInterpreter >> findClassOfMethod: meth forReceiver: rcvr [
 		 i := i + 1].
 	 currClass := self superclassOf: currClass.
 	 currClass = objectMemory nilObject] whileFalse.
-	^objectMemory fetchClassOf: rcvr    "method not found in superclass chain"
+	^rclass		"method not found in superclass chain"
 ]
 
 { #category : #'frame access' }
@@ -5019,7 +5024,11 @@ StackInterpreter >> findSelectorAndClassForMethod: meth lookupClass: startClass 
 StackInterpreter >> findSelectorOfMethod: meth forReceiver: rcvr [
 
 	| currClass classDict classDictSize methodArray i |
-	currClass := objectMemory fetchClassOf: rcvr.
+	(self addressCouldBeObj: meth) ifFalse:
+		[^objectMemory nilObject].
+	(self addressCouldBeOop: rcvr)
+		ifTrue: [currClass := objectMemory fetchClassOf: rcvr]
+		ifFalse: [currClass := self methodClassOf: meth].
 	[classDict := objectMemory fetchPointer: MethodDictionaryIndex ofObject: currClass.
 	 classDictSize := objectMemory fetchWordLengthOf: classDict.
 	 methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: classDict.
@@ -7825,7 +7834,7 @@ StackInterpreter >> noInlineTemporary: offset in: theFP [
 StackInterpreter >> noInlineTemporary: offset in: theFP put: valueOop [
 	<var: #theFP type: #'char *'>
 	<inline: false>
-	self temporary: offset in: theFP put: valueOop
+	^self temporary: offset in: theFP put: valueOop
 ]
 
 { #category : #'object memory support' }
@@ -9116,9 +9125,10 @@ StackInterpreter >> printStackPage: page [
 		[self print: ' (free)'].
 	page = stackPages mostRecentlyUsedPage ifTrue:
 		[self print: ' (MRU)'].
-	self cr; tab;
-		printHexPtr: page baseAddress; print: ' - ';
-		printHexPtr: page realStackLimit; print: ' - ';
+	self cr; tab; print: 'ba: ';
+		printHexPtr: page baseAddress; print: ' - sl: ';
+		printHexPtr: page realStackLimit; print: ' - sl-so: ';
+		printHexPtr: page realStackLimit - self stackLimitOffset; print: ' - la:';
 		printHexPtr: page lastAddress.
 	(stackPages isFree: page) ifFalse:
 		[self cr; tab; print: 'baseFP '; printHexPtr: page baseFP.
@@ -11319,7 +11329,7 @@ StackInterpreter >> temporary: offset in: theFP put: valueOop [
 	| frameNumArgs |
 	<inline: true>
 	<var: #theFP type: #'char *'>
-	offset < (frameNumArgs := self frameNumArgs: theFP)
+	^offset < (frameNumArgs := self frameNumArgs: theFP)
 		ifTrue: [stackPages longAt: theFP + FoxCallerSavedIP + ((frameNumArgs - offset) * BytesPerWord) put: valueOop]
 		ifFalse: [stackPages longAt: theFP + FoxReceiver - BytesPerWord + ((frameNumArgs - offset) * BytesPerWord) put: valueOop]
 ]

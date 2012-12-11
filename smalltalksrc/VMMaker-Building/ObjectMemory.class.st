@@ -2454,7 +2454,7 @@ ObjectMemory >> instantiateClass: classPointer indexableSize: size [
 	class format word. The sizeHiBits will go away and other shifts change by 2 
 	when the split fields get merged in an (incompatible) image change."
 	<api>
-	| hash header1 header2 cClass byteSize format binc header3 hdrSize newObj sizeHiBits bm1 classFormat |
+	| hash header1 header2 cClass byteSize format binc header3 hdrSize sizeHiBits bm1 classFormat |
 	<inline: false>
 	self assert: size >= 0. "'cannot have a negative indexable field count"
 	hash := self newObjectHash.
@@ -2462,7 +2462,6 @@ ObjectMemory >> instantiateClass: classPointer indexableSize: size [
 	"Low 2 bits are 0"
 	header1 := (classFormat bitAnd: 16r1FF00) bitOr: (hash bitAnd: HashMaskUnshifted) << HashBitsOffset.
 	header2 := classPointer.
-	header3 := 0.
 	sizeHiBits := (classFormat bitAnd: 16r60000) >> 9.
 	cClass := header1 bitAnd: CompactClassMask. "compact class field from format word"
 	byteSize := (classFormat bitAnd: SizeMask + Size4Bit) + sizeHiBits.
@@ -2491,17 +2490,10 @@ ObjectMemory >> instantiateClass: classPointer indexableSize: size [
 			header1 := header1 bitOr: (binc bitAnd: 3) << 8.
 			"extra low bit (4) for 64-bit VM goes in 4-bit (betw hdr bits and sizeBits)"
 			header1 := header1 bitOr: (binc bitAnd: 4)].
-	byteSize > 255
-		ifTrue: ["requires size header word"
-			header3 := byteSize.
-			header1 := header1]
-		ifFalse: [header1 := header1 bitOr: byteSize].
-	
-	hdrSize := header3 > 0
-				ifTrue: [3 "requires full header"]
-				ifFalse: [cClass = 0 ifTrue: [2] ifFalse: [1]].
-	newObj := self allocate: byteSize headerSize: hdrSize h1: header1 h2: header2 h3: header3 doFill: true format: format.
-	^ newObj
+	byteSize > 255 "requires size header word/full header"
+		ifTrue: [header3 := byteSize. hdrSize := 3]
+		ifFalse: [header1 := header1 bitOr: byteSize. hdrSize := cClass = 0 ifTrue: [2] ifFalse: [1]].
+	^self allocate: byteSize headerSize: hdrSize h1: header1 h2: header2 h3: header3 doFill: true format: format
 ]
 
 { #category : #'interpreter access' }
@@ -4153,7 +4145,8 @@ ObjectMemory >> startOfFreeSpace [
 
 { #category : #'object enumeration' }
 ObjectMemory >> startOfMemory [
-	"Return the start of object memory."
+	"Return the start of object memory. Use a macro so as not to punish the debug VM."
+	<cmacro: '() memory'>
 	<returnTypeC: #usqInt>
 	^memory
 ]
