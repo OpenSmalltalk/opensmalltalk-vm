@@ -357,6 +357,13 @@ VMClass >> addressOf: anObject [
 ]
 
 { #category : #'C library simulation' }
+VMClass >> alloca: size [
+	"Simulation of alloca(3)"
+	<doNotGenerate>
+	^ByteArray new: size
+]
+
+{ #category : #'C library simulation' }
 VMClass >> asString: stringIndex size: stringSize [
 	"stringIndex is an address in the heap.  Create a String of the requested length
 	form the bytes in the heap starting at stringIndex."
