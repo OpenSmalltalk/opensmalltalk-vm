@@ -125,7 +125,7 @@ Gnuifier >> gnuifyFrom: inFileStream to: outFileStream [
 						"reached end of variables"
 						inInterpretVars := false.
 						outLine := '    JUMP_TABLE;'.
-						extraOutLine := '\#if MULTIPLEBYTECODESETS\	if(!asserta((sizeof(jumpTable)/sizeof(jumpTable[0])) >= 512))\		error("jumpTable too small");\#endif\' withCRs]]
+						extraOutLine := '\#if MULTIPLEBYTECODESETS\	if(!asserta((sizeof(jumpTable)/sizeof(jumpTable[0])) >= 512))\		error("bytecode jumpTable too small");\#endif\' withCRs]]
 				ifFalse: [
 				inInterpret ifTrue: [
 					"working inside interpret(); translate the switch statement"

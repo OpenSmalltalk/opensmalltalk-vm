@@ -5767,7 +5767,7 @@ Cogit >> lookup: selector for: receiver methodAndErrorSelectorInto: binaryBlock 
 	methodOrSelectorIndex := coInterpreter
 									lookup: selector
 									receiver: receiver.
-	methodOrSelectorIndex asUnsignedInteger > objectMemory startOfMemory ifTrue:
+	methodOrSelectorIndex asUnsignedInteger >= objectMemory nilObject ifTrue:
 		[(objectMemory isOopCompiledMethod: methodOrSelectorIndex) ifFalse:
 			[^binaryBlock value: methodOrSelectorIndex value: SelectorCannotInterpret].
 		 ((coInterpreter methodHasCogMethod: methodOrSelectorIndex) not
@@ -5779,7 +5779,7 @@ Cogit >> lookup: selector for: receiver methodAndErrorSelectorInto: binaryBlock 
 		[methodOrSelectorIndex := coInterpreter
 										lookup: (objectMemory splObj: SelectorDoesNotUnderstand)
 										receiver: receiver.
-		 methodOrSelectorIndex asUnsignedInteger > objectMemory startOfMemory ifTrue:
+		 methodOrSelectorIndex asUnsignedInteger >= objectMemory nilObject ifTrue:
 			[self assert: (objectMemory isOopCompiledMethod: methodOrSelectorIndex).
 			 ((coInterpreter methodHasCogMethod: methodOrSelectorIndex) not
 			  and: [coInterpreter methodShouldBeCogged: methodOrSelectorIndex]) ifTrue:
