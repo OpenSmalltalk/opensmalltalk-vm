@@ -2,15 +2,16 @@
 InterpreterPrimitives implements most of the VM's core primitives.  It is the root of the interpreter hierarchy so as to share the core primitives amongst the varioius interpreters.
 
 Instance Variables
-	argumentCount:		<Integer>
-	messageSelector:		<Integer>
+	argumentCount:	<Integer>
+	messageSelector:	<Integer>
 	newMethod:		<Integer>
 	nextProfileTick:		<Integer>
-	objectMemory:		<ObjectMemory>
-	preemptionYields:		<Boolean>
+	objectMemory:		<ObjectMemory> (simulation only)
+	preemptionYields:	<Boolean>
 	primFailCode:		<Integer>
 	profileMethod:		<Integer>
 	profileProcess:		<Integer>
+	profileSemaphore:	<Integer>
 
 argumentCount
 	- the number of arguments of the current message
@@ -129,8 +130,98 @@ InterpreterPrimitives >> isIndirectAlien: oop [
 ]
 
 { #category : #'primitive support' }
+InterpreterPrimitives >> isNegativeIntegerValueOf: oop [
+	"Answer true if integer object is negative.
+	Fail if object pointed by oop i not an integer."
+	| ok smallInt |
+
+	(objectMemory isIntegerObject: oop)
+		ifTrue:
+			[smallInt := objectMemory integerValueOf: oop.
+			^smallInt < 0].
+
+	ok := objectMemory isClassOfNonImm: oop
+					equalTo: (objectMemory splObj: ClassLargePositiveInteger)
+					compactClassIndex: ClassLargePositiveIntegerCompactIndex.
+	ok ifTrue: [^false].
+		
+	ok := objectMemory isClassOfNonImm: oop
+							equalTo: (objectMemory splObj: ClassLargeNegativeInteger)
+							compactClassIndex: ClassLargeNegativeIntegerCompactIndex.
+	ok ifTrue: [^true].
+	self primitiveFail.
+	^false
+]
+
+{ #category : #'primitive support' }
 InterpreterPrimitives >> isPointerAlien: oop [
 	^(self sizeFieldOfAlien: oop) = 0
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> magnitude64BitIntegerFor: magnitude neg: isNegative [
+	"Return a Large Integer object for the given integer magnitude and sign"
+	| newLargeInteger largeClass intValue highWord sz isSmall smallVal |
+	<var: 'magnitude' type: 'usqLong'>
+	<var: 'highWord' type: 'usqInt'>
+
+	isSmall := isNegative
+		ifTrue: [magnitude <= 16r40000000]
+		ifFalse: [magnitude < 16r40000000].
+	isSmall
+		ifTrue:
+			[smallVal := self cCoerce: magnitude to: #sqInt.
+			isNegative	ifTrue: [smallVal := 0 - smallVal].
+			^self integerObjectOf: smallVal].
+	isNegative
+		ifTrue:[	largeClass := self classLargeNegativeInteger]
+		ifFalse:[	largeClass := self classLargePositiveInteger].
+	highWord := self cCode: 'magnitude >> 32'. "shift is coerced to usqInt otherwise"
+	highWord = 0 
+		ifTrue: [sz := 4] 
+		ifFalse:[
+			sz := 5.
+			(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1].
+			(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1].
+			(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1].
+		].
+	newLargeInteger := self instantiateClass: largeClass indexableSize:  sz.
+	0 to: sz-1 do: [:i |
+		intValue := self cCode: '(magnitude >> (i * 8)) & 255'.
+		self storeByte: i ofObject: newLargeInteger withValue: intValue].
+	^ newLargeInteger
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> magnitude64BitValueOf: oop [
+	"Convert the given object into an integer value.
+	The object may be either a positive SmallInteger or a eight-byte LargeInteger."
+	| sz value ok smallIntValue |
+	<returnTypeC: #usqLong>
+	<var: #value type: #usqLong>
+
+	(objectMemory isIntegerObject: oop) ifTrue:
+		[smallIntValue := (objectMemory integerValueOf: oop).
+		smallIntValue < 0 ifTrue: [smallIntValue := 0 - smallIntValue].
+		^self cCoerce: smallIntValue to: #usqLong].
+
+	ok := objectMemory isClassOfNonImm: oop
+					equalTo: (objectMemory splObj: ClassLargePositiveInteger)
+					compactClassIndex: ClassLargePositiveIntegerCompactIndex.
+	ok
+		ifFalse:
+			[ok := objectMemory isClassOfNonImm: oop
+							equalTo: (objectMemory splObj: ClassLargeNegativeInteger)
+							compactClassIndex: ClassLargeNegativeIntegerCompactIndex.
+			ok ifFalse: [^self primitiveFail]].
+	sz := objectMemory lengthOf: oop.
+	sz > (self sizeof: #sqLong asSymbol) ifTrue:
+		[^self primitiveFail].
+
+	value := 0.
+	0 to: sz - 1 do: [:i |
+		value := value + ((self cCoerce: (objectMemory fetchByte: i ofObject: oop) to: #sqLong) <<  (i*8))].
+	^value
 ]
 
 { #category : #'primitive support' }
@@ -226,29 +317,35 @@ InterpreterPrimitives >> primitiveAdd [
 { #category : #'arithmetic largeint primitives' }
 InterpreterPrimitives >> primitiveAddLargeIntegers [
 	"Primitive arithmetic operations for large integers in 64 bit range"
-	| integerRcvr integerArg result oopResult |
+	| a b result oopResult aIsNegative bIsNegative resultIsNegative oopArg oopRcvr |
 	<export: true>
-	<var: 'integerRcvr' type: 'sqLong'>
-	<var: 'integerArg' type: 'sqLong'>
-	<var: 'result' type: 'sqLong'>
+	<var: 'a' type: 'usqLong'>
+	<var: 'b' type: 'usqLong'>
+	<var: 'result' type: 'usqLong'>
 
-	integerArg := self signed64BitValueOf: (self stackValue: 0).
-	integerRcvr := self signed64BitValueOf: (self stackValue: 1).
+	oopArg := self stackValue: 0.
+	oopRcvr := self stackValue: 1.
+	aIsNegative := self isNegativeIntegerValueOf: oopRcvr.
+	bIsNegative := self isNegativeIntegerValueOf: oopArg.
+	a := self magnitude64BitValueOf: oopRcvr.
+	b := self magnitude64BitValueOf: oopArg.
 	self successful ifFalse:[^nil].
-
-	"Compute the preliminary result (which may overflow)"
-	result := integerRcvr + integerArg.
-
-	"Now check overflow conditions. First is whether rcvr and arg are of the same sign.
-	If they are we need to check for overflow more carefully."
-	(integerRcvr bitXor: integerArg) < 0 ifFalse:[
-		"Second is whether rcvr and result are of the same sign. If not, we have an overflow."
-		(integerRcvr bitXor: result) < 0 ifTrue:[self primitiveFail]].
-			
-	self successful ifFalse:[^nil].
-
-	oopResult := self signed64BitIntegerFor: result.
-	self successful ifTrue:[self pop: 2 thenPush: oopResult]
+	(aIsNegative = bIsNegative)
+		ifTrue:
+			["Protect against overflow"
+			a > (16rFFFFFFFFFFFFFFFF - b) ifTrue: [self primitiveFail. ^nil].
+			result := a + b.
+			resultIsNegative := aIsNegative]
+		ifFalse:
+			[(a >= b)
+				ifTrue:
+					[result := a - b.
+					resultIsNegative := aIsNegative]
+				ifFalse:
+					[result := b - a.
+					resultIsNegative := bIsNegative]].
+	oopResult := self magnitude64BitIntegerFor: result neg: resultIsNegative.
+	self successful ifTrue:[self pop: 2 thenPush: oopResult].
 ]
 
 { #category : #'object access primitives' }
@@ -537,33 +634,32 @@ InterpreterPrimitives >> primitiveBitShift [
 
 { #category : #'arithmetic largeint primitives' }
 InterpreterPrimitives >> primitiveBitShiftLargeIntegers [
-	"Primitive logical operations for large integers in 64 bit range"
-	| shifted integerArg integerRcvr oopResult |
+	"Primitive arithmetic operations for large integers in 64 bit range"
+	| a shift result oopResult aIsNegative oopRcvr |
 	<export: true>
-	<var: 'integerRcvr' type: 'sqLong'>
-	<var: 'integerArg' type: 'sqLong'>
-	<var: 'shifted' type: 'sqLong'>
+	<var: 'a' type: 'usqLong'>
+	<var: 'result' type: 'usqLong'>
 
-	integerArg := self stackIntegerValue: 0.
-	integerRcvr := self signed64BitValueOf: (self stackValue: 1).
-
-	self successful ifTrue: [
-		integerArg >= 0 ifTrue: [
-			"Left shift -- must fail if we lose bits beyond 64"
-			self success: integerArg < 64.
-			shifted := integerRcvr << integerArg.
-			self success: integerRcvr = (self cCode: 'shifted >> integerArg'
-											inSmalltalk: [shifted >> integerArg]).
-		] ifFalse: [
-			"Right shift -- OK to lose bits"
-			self success: integerArg > -64.
-			shifted := self cCode: 'integerRcvr >> (0 - integerArg)' "right shift coerces to usqInt"
-						inSmalltalk: [integerRcvr >> (0 - integerArg)]
-		].
-	].
+	shift := self stackIntegerValue: 0.
+	oopRcvr := self stackValue: 1.
+	aIsNegative := self isNegativeIntegerValueOf: oopRcvr.
+	a := self magnitude64BitValueOf: oopRcvr.
 	self successful ifFalse:[^nil].
-	oopResult := self signed64BitIntegerFor: shifted.
-	self successful ifTrue:[self pop: 2 thenPush: oopResult]
+	(shift >= 0)
+		ifTrue:
+			["Protect against overflow"
+			result := 16rFFFFFFFFFFFFFFFF. "This is to avoid undue (usqInt) cast"
+			(shift >= 64 or: [a > (result >> shift)]) ifTrue: [self primitiveFail. ^nil].
+			result := a << shift]
+		ifFalse:
+			[shift := 0 - shift.
+			shift >= 64
+				ifTrue: [result := 0]
+				ifFalse: [result := a >> shift].
+			"Fake 2 complement for negative values"
+			(aIsNegative and: [result << shift ~= a]) ifTrue: [result := result + 1]].
+	oopResult := self magnitude64BitIntegerFor: result neg: aIsNegative.
+	self successful ifTrue:[self pop: 2 thenPush: oopResult].
 ]
 
 { #category : #'arithmetic integer primitives' }
@@ -957,37 +1053,35 @@ InterpreterPrimitives >> primitiveDiv [
 { #category : #'arithmetic largeint primitives' }
 InterpreterPrimitives >> primitiveDivLargeIntegers [
 	"Primitive arithmetic operations for large integers in 64 bit range"
-	| integerRcvr integerArg result posArg posRcvr oopResult |
+	| result oopResult a aIsNegative b bIsNegative oopArg oopRcvr rem |
 	<export: true>
-	<var: 'integerRcvr' type: 'sqLong'>
-	<var: 'integerArg' type: 'sqLong'>
-	<var: 'posRcvr' type: 'sqLong'>
-	<var: 'posArg' type: 'sqLong'>
-	<var: 'result' type: 'sqLong'>
+	<var: 'a' type: 'usqLong'>
+	<var: 'b' type: 'usqLong'>
+	<var: 'result' type: 'usqLong'>
+	<var: 'rem' type: 'usqLong'>
 
-	integerArg := self signed64BitValueOf: (self stackValue: 0).
-	integerRcvr := self signed64BitValueOf: (self stackValue: 1).
-	integerArg = 0 ifTrue:[self primitiveFail].
+	oopArg := self stackValue: 0.
+	oopRcvr := self stackValue: 1.
+	aIsNegative := self isNegativeIntegerValueOf: oopRcvr.
+	bIsNegative := self isNegativeIntegerValueOf: oopArg.
+	a := self magnitude64BitValueOf: oopRcvr.
+	b := self magnitude64BitValueOf: oopArg.
+	b = 0 ifTrue:[self primitiveFail].
 	self successful ifFalse:[^nil].
 
-	integerRcvr > 0
-		ifTrue: [integerArg > 0
-					ifTrue: [result := integerRcvr // integerArg]
-					ifFalse: ["round negative result toward negative infinity"
-							posArg := 0 - integerArg.
-							posRcvr := integerRcvr + (posArg - 1). "can overflow!"
-							posRcvr < 0 ifTrue:[self primitiveFail].
-							result := 0 - (posRcvr // posArg)]]
-		ifFalse: [posRcvr := 0 - integerRcvr.
-				integerArg > 0
-					ifTrue: ["round negative result toward negative infinity"
-							posRcvr := posRcvr + (integerArg - 1). "can overflow!"
-							posRcvr < 0 ifTrue:[self primitiveFail].
-							result := 0 - (posRcvr // integerArg)]
-					ifFalse: [posArg := 0 - integerArg.
-							result := posRcvr // posArg]].
-	self successful ifTrue:[oopResult := self signed64BitIntegerFor: result].
-	self successful ifTrue:[self pop: 2 thenPush: oopResult]
+	result := a // b.
+	
+	a = 0
+		ifFalse: [bIsNegative = aIsNegative
+			ifFalse:
+				["Round toward negative infinity"
+				rem := a \\ b.
+				rem = 0 ifFalse:
+					["This can not overflow, because b > 1, otherwise rem = 0"
+					result := result + 1]]].
+
+	oopResult := self magnitude64BitIntegerFor: result neg: bIsNegative ~= aIsNegative.
+	self successful ifTrue: [self pop: 2 thenPush: oopResult].
 ]
 
 { #category : #'arithmetic integer primitives' }
@@ -1003,19 +1097,28 @@ InterpreterPrimitives >> primitiveDivide [
 { #category : #'arithmetic largeint primitives' }
 InterpreterPrimitives >> primitiveDivideLargeIntegers [
 	"Primitive arithmetic operations for large integers in 64 bit range"
-	| integerRcvr integerArg result oopResult |
+	| a b result oopResult aIsNegative bIsNegative oopArg oopRcvr |
 	<export: true>
-	<var: 'integerRcvr' type: 'sqLong'>
-	<var: 'integerArg' type: 'sqLong'>
-	<var: 'result' type: 'sqLong'>
+	<var: 'a' type: 'usqLong'>
+	<var: 'b' type: 'usqLong'>
+	<var: 'result' type: 'usqLong'>
 
-	integerArg := self signed64BitValueOf: (self stackValue: 0).
-	integerRcvr := self signed64BitValueOf: (self stackValue: 1).
-	(integerArg ~= 0 and:[integerRcvr \\ integerArg = 0]) ifFalse:[self primitiveFail].
+	oopArg := self stackValue: 0.
+	oopRcvr := self stackValue: 1.
+	aIsNegative := self isNegativeIntegerValueOf: oopRcvr.
+	bIsNegative := self isNegativeIntegerValueOf: oopArg.
+	a := self magnitude64BitValueOf: oopRcvr.
+	b := self magnitude64BitValueOf: oopArg.
 	self successful ifFalse:[^nil].
-	result := integerRcvr // integerArg.
-	oopResult := self signed64BitIntegerFor: result.
-	self successful ifTrue:[self pop: 2 thenPush: oopResult]
+	
+	"check for exact division"
+	(b ~= 0 and:[a \\ b = 0]) ifFalse:[self primitiveFail. ^nil].
+
+	result := a // b.
+	oopResult := self magnitude64BitIntegerFor: result neg: aIsNegative ~= bIsNegative.
+
+	self successful ifTrue:[self pop: 2 thenPush: oopResult].
+
 ]
 
 { #category : #'process primitives' }
@@ -2085,28 +2188,31 @@ InterpreterPrimitives >> primitiveMod [
 { #category : #'arithmetic largeint primitives' }
 InterpreterPrimitives >> primitiveModLargeIntegers [
 	"Primitive arithmetic operations for large integers in 64 bit range"
-	| integerRcvr integerArg result oopResult |
+	| result oopResult a aIsNegative b bIsNegative oopArg oopRcvr |
 	<export: true>
-	<var: 'integerRcvr' type: 'sqLong'>
-	<var: 'integerArg' type: 'sqLong'>
-	<var: 'result' type: 'sqLong'>
+	<var: 'a' type: 'usqLong'>
+	<var: 'b' type: 'usqLong'>
+	<var: 'result' type: 'usqLong'>
 
-	integerArg := self signed64BitValueOf: (self stackValue: 0).
-	integerRcvr := self signed64BitValueOf: (self stackValue: 1).
-	integerArg = 0 ifTrue:[self primitiveFail].
+	oopArg := self stackValue: 0.
+	oopRcvr := self stackValue: 1.
+	aIsNegative := self isNegativeIntegerValueOf: oopRcvr.
+	bIsNegative := self isNegativeIntegerValueOf: oopArg.
+	a := self magnitude64BitValueOf: oopRcvr.
+	b := self magnitude64BitValueOf: oopArg.
+	b = 0 ifTrue:[self primitiveFail].
 	self successful ifFalse:[^nil].
 
-	result := integerRcvr \\ integerArg.
+	result := a \\ b.
 
-	"ensure that the result has the same sign as the integerArg"
-	integerArg < 0
-		ifTrue: [result > 0
-			ifTrue: [result := result + integerArg]]
-		ifFalse: [result < 0
-			ifTrue: [result := result + integerArg]].
+	"Handle remainder of same sign as argument"
+	result = 0
+		ifFalse: [bIsNegative = aIsNegative
+			ifFalse: [result := b - result]].
 
-	oopResult := self signed64BitIntegerFor: result.
-	self successful ifTrue:[self pop: 2 thenPush: oopResult]
+	oopResult := self magnitude64BitIntegerFor: result neg: bIsNegative.
+	self successful ifTrue: [self pop: 2 thenPush: oopResult].
+
 ]
 
 { #category : #'I/O primitives' }
@@ -2149,29 +2255,29 @@ InterpreterPrimitives >> primitiveMultiply [
 { #category : #'arithmetic largeint primitives' }
 InterpreterPrimitives >> primitiveMultiplyLargeIntegers [
 	"Primitive arithmetic operations for large integers in 64 bit range"
-	| integerRcvr integerArg result oopResult |
+	| a b result oopResult aIsNegative bIsNegative oopArg oopRcvr |
 	<export: true>
-	<var: 'integerRcvr' type: 'sqLong'>
-	<var: 'integerArg' type: 'sqLong'>
-	<var: 'result' type: 'sqLong'>
+	<var: 'a' type: 'usqLong'>
+	<var: 'b' type: 'usqLong'>
+	<var: 'result' type: 'usqLong'>
 
-	integerArg := self signed64BitValueOf: (self stackValue: 0).
-	integerRcvr := self signed64BitValueOf: (self stackValue: 1).
+	oopArg := self stackValue: 0.
+	oopRcvr := self stackValue: 1.
+	aIsNegative := self isNegativeIntegerValueOf: oopRcvr.
+	bIsNegative := self isNegativeIntegerValueOf: oopArg.
+	a := self magnitude64BitValueOf: oopRcvr.
+	b := self magnitude64BitValueOf: oopArg.
 	self successful ifFalse:[^nil].
+	
+	"check for overflow"
+	(a > 1 and: [b > 1 and: [a > (16rFFFFFFFFFFFFFFFF / b)]])
+		ifTrue: [self primitiveFail. ^nil].
 
-	result := self
-				cCode: [integerRcvr * integerArg]
-				inSmalltalk:
-					[| twoToThe64 r |
-					twoToThe64 := 2 raisedTo: 64.
-					r := integerRcvr * integerArg bitAnd: twoToThe64 - 1.
-					(r bitAt: 64) = 0 ifTrue: [r] ifFalse: [r - twoToThe64]].
-	"check for C overflow by seeing if computation is reversible"
-	((integerArg = 0) or: [(result // integerArg) = integerRcvr])
-		ifTrue:[oopResult := self signed64BitIntegerFor: result]
-		ifFalse: [self primitiveFail].
+	result := a * b.
+	oopResult := self magnitude64BitIntegerFor: result neg: aIsNegative ~= bIsNegative.
 
-	self successful ifTrue:[self pop: 2 thenPush: oopResult]
+	self successful ifTrue:[self pop: 2 thenPush: oopResult].
+
 ]
 
 { #category : #'object access primitives' }
@@ -2522,29 +2628,25 @@ InterpreterPrimitives >> primitiveQuo [
 { #category : #'arithmetic largeint primitives' }
 InterpreterPrimitives >> primitiveQuoLargeIntegers [
 	"Primitive arithmetic operations for large integers in 64 bit range"
-	| integerRcvr integerArg result oopResult |
+	| result oopResult a aIsNegative b bIsNegative oopArg oopRcvr |
 	<export: true>
-	<var: 'integerRcvr' type: 'sqLong'>
-	<var: 'integerArg' type: 'sqLong'>
-	<var: 'result' type: 'sqLong'>
+	<var: 'a' type: 'usqLong'>
+	<var: 'b' type: 'usqLong'>
+	<var: 'result' type: 'usqLong'>
 
-	integerArg := self signed64BitValueOf: (self stackValue: 0).
-	integerRcvr := self signed64BitValueOf: (self stackValue: 1).
-	integerArg = 0 ifTrue:[self primitiveFail].
+	oopArg := self stackValue: 0.
+	oopRcvr := self stackValue: 1.
+	aIsNegative := self isNegativeIntegerValueOf: oopRcvr.
+	bIsNegative := self isNegativeIntegerValueOf: oopArg.
+	a := self magnitude64BitValueOf: oopRcvr.
+	b := self magnitude64BitValueOf: oopArg.
+	b = 0 ifTrue:[self primitiveFail].
 	self successful ifFalse:[^nil].
 
-	integerRcvr > 0 ifTrue: [
-		integerArg > 0 
-			ifTrue: [result := integerRcvr // integerArg]
-			ifFalse: [result := 0 - (integerRcvr // (0 - integerArg))].
-	] ifFalse: [
-		integerArg > 0 
-			ifTrue: [result := 0 - ((0 - integerRcvr) // integerArg)]
-			ifFalse: [result := (0 - integerRcvr) // (0 - integerArg)].
-	].
+	result := a // b.
 
-	oopResult := self signed64BitIntegerFor: result.
-	self successful ifTrue:[self pop: 2 thenPush: oopResult]
+	oopResult := self magnitude64BitIntegerFor: result neg: bIsNegative ~= aIsNegative.
+	self successful ifTrue: [self pop: 2 thenPush: oopResult].
 ]
 
 { #category : #'I/O primitives' }
@@ -2561,6 +2663,30 @@ InterpreterPrimitives >> primitiveRelinquishProcessor [
 		nextProfileTick = 0 ifTrue:[self ioRelinquishProcessorForMicroseconds: microSecs].
 		self pop: 1.  "microSecs; leave rcvr on stack"
 	]
+]
+
+{ #category : #'arithmetic largeint primitives' }
+InterpreterPrimitives >> primitiveRemLargeIntegers [
+	"Primitive arithmetic operations for large integers in 64 bit range"
+	| result oopResult a aIsNegative b bIsNegative oopArg oopRcvr |
+	<export: true>
+	<var: 'a' type: 'usqLong'>
+	<var: 'b' type: 'usqLong'>
+	<var: 'result' type: 'usqLong'>
+
+	oopArg := self stackValue: 0.
+	oopRcvr := self stackValue: 1.
+	aIsNegative := self isNegativeIntegerValueOf: oopRcvr.
+	bIsNegative := self isNegativeIntegerValueOf: oopArg.
+	a := self magnitude64BitValueOf: oopRcvr.
+	b := self magnitude64BitValueOf: oopArg.
+	b = 0 ifTrue:[self primitiveFail].
+	self successful ifFalse:[^nil].
+
+	result := a \\ b.
+
+	oopResult := self magnitude64BitIntegerFor: result neg: aIsNegative ~= bIsNegative.
+	self successful ifTrue: [self pop: 2 thenPush: oopResult].
 ]
 
 { #category : #'process primitives' }
@@ -3149,43 +3275,36 @@ InterpreterPrimitives >> primitiveSubtract [
 { #category : #'arithmetic largeint primitives' }
 InterpreterPrimitives >> primitiveSubtractLargeIntegers [
 	"Primitive arithmetic operations for large integers in 64 bit range"
-	| integerRcvr integerArg integerArgNegated result oopResult |
+	| a b result oopResult aIsNegative bIsNegative resultIsNegative oopArg oopRcvr |
 	<export: true>
-	<var: 'integerRcvr' type: 'sqLong'>
-	<var: 'integerArg' type: 'sqLong'>
-	<var: 'integerArgNegated' type: 'sqLong'>
-	<var: 'result' type: 'sqLong'>
+	<var: 'a' type: 'usqLong'>
+	<var: 'b' type: 'usqLong'>
+	<var: 'result' type: 'usqLong'>
 
-	integerArg := self signed64BitValueOf: (self stackValue: 0).
-	integerRcvr := self signed64BitValueOf: (self stackValue: 1).
-	self successful ifFalse:
-		[^nil].
-
-	"In the test for the argument being most -ve we would
-	 have to check for zero if we don't do so here.
-	 So do so here and short-circuit the whole subtraction."
-	integerArg = 0
-		ifTrue: [result := integerRcvr]
+	oopArg := self stackValue: 0.
+	oopRcvr := self stackValue: 1.
+	aIsNegative := self isNegativeIntegerValueOf: oopRcvr.
+	bIsNegative := self isNegativeIntegerValueOf: oopArg.
+	a := self magnitude64BitValueOf: oopRcvr.
+	b := self magnitude64BitValueOf: oopArg.
+	self successful ifFalse:[^nil].
+	(aIsNegative ~= bIsNegative)
+		ifTrue:
+			["Protect against overflow"
+			a > (16rFFFFFFFFFFFFFFFF - b) ifTrue: [self primitiveFail. ^nil].
+			result := a + b.
+			resultIsNegative := aIsNegative]
 		ifFalse:
-			["Reverse the argument so that we can recycle the overflow code from addition.
-			 But the most -ve 64-bit value can overflow, so check; 0 - most -ve = most -ve"
-			integerArgNegated := 0 - integerArg.
-			integerArgNegated = integerArg ifTrue:
-				[^self primitiveFail].
+			[(a >= b)
+				ifTrue:
+					[result := a - b.
+					resultIsNegative := aIsNegative]
+				ifFalse:
+					[result := b - a.
+					resultIsNegative := aIsNegative not]].
+	oopResult := self magnitude64BitIntegerFor: result neg: resultIsNegative.
+	self successful ifTrue:[self pop: 2 thenPush: oopResult].
 
-			"Compute the preliminary result (which may overflow)"
-			result := integerRcvr + integerArgNegated.
-
-			"Now check overflow conditions. First is whether rcvr and arg are of the same sign.
-			 If they are we need to check for overflow more carefully."
-			(integerRcvr bitXor: integerArgNegated) < 0 ifFalse:
-				"Second is whether rcvr and result are of the same sign. If not, we have an overflow."
-				[(integerRcvr bitXor: result) < 0 ifTrue:
-					[^self primitiveFail]]].
-
-	oopResult := self signed64BitIntegerFor: result.
-	self successful ifTrue:
-		[self pop: 2 thenPush: oopResult]
 ]
 
 { #category : #'process primitives' }
