@@ -509,6 +509,18 @@ InterpreterProxy >> isInterpreterProxy [
 ]
 
 { #category : #testing }
+InterpreterProxy >> isOopImmutable: anOop [
+	<api>
+	^self error: 'not yet implemented in Smalltalk'
+]
+
+{ #category : #testing }
+InterpreterProxy >> isOopMutable: anOop [
+	<api>
+	^self error: 'not yet implemented in Smalltalk'
+]
+
+{ #category : #testing }
 InterpreterProxy >> isPointers: oop [
 	^oop class isPointers
 ]

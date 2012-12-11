@@ -179,12 +179,6 @@ NewCoObjectMemorySimulator >> incrementalGC [
 ]
 
 { #category : #'simulation only' }
-NewCoObjectMemorySimulator >> internalIsImmutable: oop [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter internalIsImmutable: oop
-]
-
-{ #category : #'simulation only' }
 NewCoObjectMemorySimulator >> interpreterAllocationReserveBytes [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter interpreterAllocationReserveBytes

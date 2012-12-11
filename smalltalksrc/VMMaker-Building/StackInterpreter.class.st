@@ -983,7 +983,7 @@ StackInterpreter class >> initializePrimitiveTable [
 		(150 159 primitiveFail)
 		(160 primitiveAdoptInstance)
 		(161 primitiveSetIdentityHash)
-		(162 164 primitiveFail)
+		(162 164 primitiveFail)			"reserved for immutablity primitives"
 		(165 primitiveIntegerAt)		"hacked in here for now"
 		(166 primitiveIntegerAtPut)
 		(167 primitiveYield)
@@ -6203,14 +6203,6 @@ StackInterpreter >> internalFindUnwindThroughContext: homeContext [
 	 answer 0.  If homeContext is itself an unwind-protect answer the context, not 0."
 	self externalizeIPandSP.
 	^self findUnwindThroughContext: homeContext
-]
-
-{ #category : #'object format' }
-StackInterpreter >> internalIsImmutable: oop [
-	<option: #NewspeakVM>
-	<inline: true>
-	<export: true>
-	^((objectMemory baseHeader: oop) bitAnd: ImmutabilityBit) ~= 0
 ]
 
 { #category : #'return bytecodes' }

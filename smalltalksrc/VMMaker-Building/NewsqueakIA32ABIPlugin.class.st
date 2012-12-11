@@ -113,7 +113,7 @@ NewsqueakIA32ABIPlugin >> primAddressFieldPut [
 	value := interpreterProxy positive32BitValueOf: valueOop.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(interpreterProxy internalIsImmutable: rcvr) ifTrue:
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	self longAt: rcvr + BaseHeaderSize + BytesPerOop put: value.
 	^interpreterProxy methodReturnValue: valueOop
@@ -191,7 +191,7 @@ NewsqueakIA32ABIPlugin >> primAlienReplace [
 					(replStart >= 1 and: [stop - start + replStart <= totalLength]) ifFalse:
 						[^interpreterProxy primitiveFailFor: PrimErrBadIndex]]].
 
-	(interpreterProxy internalIsImmutable: array) ifTrue:
+	(interpreterProxy isOopImmutable: array) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 
 	count := stop - start + 1.
@@ -399,7 +399,7 @@ NewsqueakIA32ABIPlugin >> primDoubleAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 8 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	(interpreterProxy internalIsImmutable: rcvr) ifTrue:
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
@@ -458,7 +458,7 @@ NewsqueakIA32ABIPlugin >> primFloatAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 4 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	(interpreterProxy internalIsImmutable: rcvr) ifTrue:
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
@@ -664,7 +664,7 @@ NewsqueakIA32ABIPlugin >> primSignedByteAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 1 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	(interpreterProxy internalIsImmutable: rcvr) ifTrue:
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
@@ -711,7 +711,7 @@ NewsqueakIA32ABIPlugin >> primSignedLongAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 4 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	(interpreterProxy internalIsImmutable: rcvr) ifTrue:
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
@@ -768,7 +768,7 @@ NewsqueakIA32ABIPlugin >> primSignedLongLongAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 8 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	(interpreterProxy internalIsImmutable: rcvr) ifTrue:
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
@@ -819,7 +819,7 @@ NewsqueakIA32ABIPlugin >> primSignedShortAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 2 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	(interpreterProxy internalIsImmutable: rcvr) ifTrue:
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
@@ -855,7 +855,7 @@ NewsqueakIA32ABIPlugin >> primSizeFieldPut [
 	value := interpreterProxy signed32BitValueOf: valueOop.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(interpreterProxy internalIsImmutable: rcvr) ifTrue:
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	self longAt: rcvr + BaseHeaderSize put: value.
 	^interpreterProxy methodReturnValue: valueOop
@@ -965,7 +965,7 @@ NewsqueakIA32ABIPlugin >> primUnsignedByteAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 1 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	(interpreterProxy internalIsImmutable: rcvr) ifTrue:
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
@@ -1012,7 +1012,7 @@ NewsqueakIA32ABIPlugin >> primUnsignedLongAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 4 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	(interpreterProxy internalIsImmutable: rcvr) ifTrue:
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
@@ -1070,7 +1070,7 @@ NewsqueakIA32ABIPlugin >> primUnsignedLongLongAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 8 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	(interpreterProxy internalIsImmutable: rcvr) ifTrue:
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
@@ -1120,7 +1120,7 @@ NewsqueakIA32ABIPlugin >> primUnsignedShortAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 2 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
-	(interpreterProxy internalIsImmutable: rcvr) ifTrue:
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].

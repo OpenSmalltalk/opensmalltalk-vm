@@ -1643,7 +1643,7 @@ NewspeakInterpreter >> bytecodePrimAtPut [
 	rcvr := self internalStackValue: 2.
 	self success: ((self isIntegerObject: rcvr) not
 					and: [(self isIntegerObject: index)
-					and: [self internalIsMutable: rcvr]]).
+					and: [self isObjMutable: rcvr]]).
 	self successful ifTrue:
 		[atIx := (rcvr bitAnd: AtCacheMask) + AtPutBase.  "Index into atPutCache"
 		 (atCache at: atIx+AtCacheOop) = rcvr ifTrue:
@@ -2403,7 +2403,7 @@ NewspeakInterpreter >> commonAtPut: stringy [
 	index := self positive32BitValueOf: (self stackValue: 1).
 	self successful ifFalse:
 		[^self primitiveFailFor: PrimErrBadArgument].
-	(self internalIsMutable: rcvr) ifFalse:
+	(self isOopImmutable: rcvr) ifTrue:
 		[^self primitiveFailFor: PrimErrNoModification].
 	value := self stackTop.
 
@@ -2840,14 +2840,14 @@ NewspeakInterpreter >> doubleExtendedDoAnythingBytecode [
 	opType = 4 ifTrue: [^ self pushLiteralVariable: byte3].
 	opType = 5 ifTrue:
 		[top := self internalStackTop.
-		(self internalIsImmutable: receiver) ifTrue:
+		(self isObjImmutable: receiver) ifTrue:
 			[self undoFetchNextBytecode.
 			 ^self internalCannotAssign: top to: receiver withIndex: byte3].
 		 ^ self storePointer: byte3 ofObject: receiver withValue: top].
 	opType = 6 ifTrue:
 		[top := self internalStackTop.
 		 self internalPop: 1.
-		(self internalIsImmutable: receiver) ifTrue:
+		(self isObjImmutable: receiver) ifTrue:
 			[self undoFetchNextBytecode.
 			 ^self internalCannotAssign: top to: receiver withIndex: byte3].
 		 ^ self storePointer: byte3 ofObject: receiver withValue: top].
@@ -3003,7 +3003,7 @@ NewspeakInterpreter >> extendedStoreBytecode [
 		[^self error: 'illegal store'].
 	value := self internalStackTop.
 	variableType = 0 ifTrue:
-		[(self internalIsImmutable: receiver) ifTrue:
+		[(self isObjImmutable: receiver) ifTrue:
 			[isPop ifTrue: [self internalPop: 1].
 			 self undoFetchNextBytecode.
 			 ^self internalCannotAssign: value to: receiver withIndex: variableIndex].
@@ -3012,7 +3012,7 @@ NewspeakInterpreter >> extendedStoreBytecode [
 		[^self storePointerUnchecked: variableIndex + TempFrameStart ofObject: localHomeContext withValue: value].
 	variableType = 3 ifTrue:
 		[association := self literal: variableIndex.
-		 (self internalIsImmutable: association) ifTrue:
+		 (self isObjImmutable: association) ifTrue:
 			[isPop ifTrue: [self internalPop: 1].
 			 self undoFetchNextBytecode.
 			 ^self internalCannotAssign: value to: association withIndex: ValueIndex].
@@ -3933,20 +3933,6 @@ NewspeakInterpreter >> internalFindNewMethod [
 		self internalizeIPandSP.
 		self addNewMethodToCache].
 
-]
-
-{ #category : #'object format' }
-NewspeakInterpreter >> internalIsImmutable: oop [
-	<inline: true>
-	<export: true>
-	^((self baseHeader: oop) bitAnd: ImmutabilityBit) ~= 0
-]
-
-{ #category : #'object format' }
-NewspeakInterpreter >> internalIsMutable: oop [
-	<inline: true>
-	<export: true>
-	^((self baseHeader: oop) bitAnd: ImmutabilityBit) = 0
 ]
 
 { #category : #contexts }
@@ -5513,7 +5499,7 @@ NewspeakInterpreter >> primitiveByteArrayDoubleAtPut [
 	self failed ifTrue:[^self primitiveFailFor: PrimErrInappropriate].
 	addr := self addressOf: rcvr startingAt: byteOffset size: 8.
 	self failed ifTrue:[^0].
-	(self internalIsMutable: rcvr) ifFalse:
+	(self isOopImmutable: rcvr) ifTrue:
 		[^self primitiveFailFor: PrimErrNoModification].
 	self cCode:'((int*)addr)[0] = ((int*)(&floatValue))[0]'.
 	self cCode:'((int*)addr)[1] = ((int*)(&floatValue))[1]'.
@@ -5560,7 +5546,7 @@ NewspeakInterpreter >> primitiveByteArrayFloatAtPut [
 		[^self primitiveFailFor: PrimErrInappropriate].
 	addr := self addressOf: rcvr startingAt: byteOffset size: 4.
 	self failed ifTrue:[^0].
-	(self internalIsMutable: rcvr) ifFalse:
+	(self isOopImmutable: rcvr) ifTrue:
 		[^self primitiveFailFor: PrimErrNoModification].
 	self cCode:'((int*)addr)[0] = ((int*)(&floatValue))[0]'.
 	self pop: 3.
@@ -5599,7 +5585,7 @@ NewspeakInterpreter >> primitiveByteArrayNByteIIntegerAtPut [
 			] ifFalse:[
 				value >= (1 << (8*byteSize)) ifTrue:[^self primitiveFail].
 			].
-			(self internalIsMutable: rcvr) ifFalse:
+			(self isOopImmutable: rcvr) ifTrue:
 				[^self primitiveFailFor: PrimErrNoModification]..
 			"short/byte"
 			byteSize = 1 
@@ -5607,7 +5593,7 @@ NewspeakInterpreter >> primitiveByteArrayNByteIIntegerAtPut [
 				ifFalse:[	self cCode: '*((short int *) addr) = value' 
 							inSmalltalk: [self shortAt: addr put: value]]]
 		ifFalse:
-			[(self internalIsMutable: rcvr) ifFalse:
+			[(self isOopImmutable: rcvr) ifTrue:
 				[^self primitiveFailFor: PrimErrNoModification].
 			self longAt: addr put: value].
 	self pop: 5.
@@ -6988,7 +6974,7 @@ NewspeakInterpreter >> primitiveIntegerAtPut [
 	sz := self lengthOf: rcvr.  "number of fields"
 	(index >= 1 and: [index <= sz]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
-	(self internalIsMutable: rcvr) ifFalse:
+	(self isOopImmutable: rcvr) ifTrue:
 		[^self primitiveFailFor: PrimErrNoModification].
 	addr := rcvr + BaseHeaderSize - 4 "for zero indexing" + (index * 4).
 	value := self intAt: addr put: value.
@@ -7488,8 +7474,8 @@ NewspeakInterpreter >> primitiveNextPut [
 	(index < limit
 	 and: [(atCache at: atIx+AtCacheOop) = array]) ifFalse:
 		[^self primitiveFail].
-	((self internalIsMutable: stream)
-	 and: [self internalIsMutable: array]) ifFalse:
+	((self isOopImmutable: stream)
+	 or: [self isOopImmutable: array]) ifTrue:
 		[^self primitiveFailFor: PrimErrNoModification].
 
 	"OK -- its not at end, and the array is in the cache"
@@ -7543,17 +7529,17 @@ NewspeakInterpreter >> primitiveObjectAt [
 { #category : #'object access primitives' }
 NewspeakInterpreter >> primitiveObjectAtPut [
 "Defined for CompiledMethods only"
-	| thisReceiver index newValue |
+	| rcvr index newValue |
 	newValue := self stackValue: 0.
 	index := self stackIntegerValue: 1.
 	self successful ifFalse:
 		[^self primitiveFailFor: PrimErrBadArgument].
-	thisReceiver := self stackValue: 2.
-	(index > 0 and: [index <= ((self literalCountOf: thisReceiver) + LiteralStart)]) ifFalse:
+	rcvr := self stackValue: 2.
+	(index > 0 and: [index <= ((self literalCountOf: rcvr) + LiteralStart)]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
-	(self internalIsMutable: thisReceiver) ifFalse:
+	(self isOopImmutable: rcvr) ifTrue:
 		[^self primitiveFailFor: PrimErrNoModification].
-	self storePointer: index - 1 ofObject: thisReceiver withValue: newValue.
+	self storePointer: index - 1 ofObject: rcvr withValue: newValue.
 	self pop: 3 thenPush: newValue
 ]
 
@@ -8094,7 +8080,7 @@ NewspeakInterpreter >> primitiveShortAtPut [
 	sz := ((self sizeBitsOf: rcvr) - BaseHeaderSize) // 2.  "number of 16-bit fields"
 	(index >= 1 and: [index <= sz]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
-	(self internalIsMutable: rcvr) ifFalse:
+	(self isOopImmutable: rcvr) ifTrue:
 		[^self primitiveFailFor: PrimErrNoModification].
 	addr := rcvr + BaseHeaderSize + (2 * (index - 1)).
 	self shortAt: addr put: value.
@@ -10690,7 +10676,7 @@ NewspeakInterpreter >> storeAndPopReceiverVariableBytecode [
 		cCode: "this bytecode will be expanded so that refs to currentBytecode below will be constant"
 			[rcvr := receiver.
 			 top := self internalStackTop.
-			 (self internalIsImmutable: rcvr) ifTrue:
+			 (self isObjImmutable: rcvr) ifTrue:
 				[self internalPop: 1.
 				 self internalCannotAssign: top to: receiver withIndex: (currentBytecode bitAnd: 7)].
 			 "cannot fetch next bytecode until after immutability check so pc is correct (set to
@@ -10703,7 +10689,7 @@ NewspeakInterpreter >> storeAndPopReceiverVariableBytecode [
 		inSmalltalk: "Interpreter version has fetchNextBytecode out of order"
 			[rcvr := receiver.
 			 top := self internalStackTop.
-			 (self internalIsImmutable: rcvr) ifTrue:
+			 (self isObjImmutable: rcvr) ifTrue:
 				[self internalPop: 1.
 				 self internalCannotAssign: top to: receiver withIndex: (currentBytecode bitAnd: 7)].
 			 rcvr < youngStart ifTrue:
