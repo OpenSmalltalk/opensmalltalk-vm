@@ -3904,7 +3904,7 @@ CoInterpreter >> itemporary: offset in: theFP put: valueOop [
 	| frameNumArgs |
 	<inline: true>
 	<var: #theFP type: #'char *'>
-	offset < (frameNumArgs := self iframeNumArgs: theFP)
+	^offset < (frameNumArgs := self iframeNumArgs: theFP)
 		ifTrue: [stackPages longAt: theFP + FoxCallerSavedIP + ((frameNumArgs - offset) * BytesPerWord) put: valueOop]
 		ifFalse: [stackPages longAt: theFP + FoxIFReceiver - BytesPerWord + ((frameNumArgs - offset) * BytesPerWord) put: valueOop]
 ]
@@ -4804,7 +4804,7 @@ CoInterpreter >> mtemporary: offset in: theFP put: valueOop [
 	| frameNumArgs |
 	<inline: true>
 	<var: #theFP type: #'char *'>
-	stackPages
+	^stackPages
 		longAt: (offset < (frameNumArgs := self mframeNumArgs: theFP)
 					ifTrue: [theFP + FoxCallerSavedIP + ((frameNumArgs - offset) * BytesPerWord)]
 					ifFalse: [theFP + FoxMFReceiver - BytesPerWord + ((frameNumArgs - offset) * BytesPerWord)])
@@ -6165,7 +6165,7 @@ CoInterpreter >> temporary: offset in: theFP [
 { #category : #'internal interpreter access' }
 CoInterpreter >> temporary: offset in: theFP put: valueOop [
 	<inline: true>
-	(self isMachineCodeFrame: theFP)
+	^(self isMachineCodeFrame: theFP)
 		ifTrue: [self mtemporary: offset in: theFP put: valueOop]
 		ifFalse: [self itemporary: offset in: theFP put: valueOop]
 ]

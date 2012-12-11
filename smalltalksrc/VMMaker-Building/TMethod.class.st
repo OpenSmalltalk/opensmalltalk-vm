@@ -22,7 +22,6 @@ Class {
 		'canAsmLabel',
 		'mustAsmLabel',
 		'properties',
-		'typedByPropagation',
 		'cascadeVariableNumber'
 	],
 	#classVars : [
@@ -1235,13 +1234,6 @@ TMethod >> nodeCount [
 	^cnt
 ]
 
-{ #category : #inlining }
-TMethod >> noteTypedByPropagation: aVariableName [
-	typedByPropagation ifNil:
-		[typedByPropagation := Set new].
-	 typedByPropagation add: aVariableName
-]
-
 { #category : #accessing }
 TMethod >> parseTree [
 	"The parse tree of this method."
@@ -1272,8 +1264,7 @@ TMethod >> postCopy [
 	locals := locals copy.
 	declarations := declarations copy.
 	parseTree := parseTree copy.
-	labels := labels copy.
-	typedByPropagation := typedByPropagation copy
+	labels := labels copy
 ]
 
 { #category : #transformations }
@@ -2070,10 +2061,4 @@ TMethod >> variablesAssignedTo [
 TMethod >> vmNameString [
 	"return the string to use as the vm name in code generated for this method"
 	^'self'
-]
-
-{ #category : #inlining }
-TMethod >> wasTypedByPropagation: aVariableName [
-	^typedByPropagation notNil
-	  and: [typedByPropagation includes: aVariableName]
 ]

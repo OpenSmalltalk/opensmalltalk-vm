@@ -75,7 +75,7 @@ CogObjectRepresentationForSqueakV3 >> compactClassFieldMask [
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> couldBeObject: oop [
 	^(objectMemory isNonIntegerObject: oop)
-	  and: [oop asUnsignedInteger > objectMemory startOfMemory]
+	  and: [oop asUnsignedInteger >= objectMemory nilObject]
 ]
 
 { #category : #'compile abstract instructions' }
