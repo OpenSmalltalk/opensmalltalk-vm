@@ -157,12 +157,6 @@ ThreadedFFIPlugin class >> prepareToBeAddedToCodeGenerator: aCodeGen [
 				[aCodeGen removeMethodForSelector: sel]]]
 ]
 
-{ #category : #simulation }
-ThreadedFFIPlugin >> alloca: size [
-	<doNotGenerate>
-	^ByteArray new: size
-]
-
 { #category : #marshalling }
 ThreadedFFIPlugin >> allocaLiesSoUseGetsp [
 	"At least one alloca implementation does not answer the actual top of stack.

@@ -129,7 +129,7 @@ CoInterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots p
 	| numPages page structStackPageSize pageStructBase count |
 	<var: #page type: #'StackPage *'>
 	<var: #pageStructBase type: #'char *'>
-	self cCode: ''
+	self cCode: []
 		inSmalltalk:
 			[self assert: objectMemory startOfMemory - coInterpreter cogCodeSize - coInterpreter methodCacheSize - coInterpreter primTraceLogSize - coInterpreter rumpCStackSize
 					= (stackSlots * BytesPerWord)].
@@ -159,10 +159,10 @@ CoInterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots p
 		 page := self stackPageAt: index.
 		 page
 			lastAddress: theStackPages + (index * bytesPerPage);
-			baseAddress: (page lastAddress + bytesPerPage);
-			stackLimit: page lastAddress
-                            + stackLimitOffsetBytes
-                            + stackPageHeadroomBytes;
+			baseAddress: page lastAddress + bytesPerPage;
+			stackLimit: page baseAddress
+						- stackLimitOffsetBytes
+						- stackPageHeadroomBytes;
 			realStackLimit: page stackLimit;
 			baseFP: 0;
 			nextPage: (self stackPageAt: (index = (numPages - 1) ifTrue: [0] ifFalse: [index + 1]));
@@ -171,7 +171,7 @@ CoInterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots p
 	"Now compute stackBasePlus1 so that the pageIndexFor: call maps all addresses from
 	 aPage baseAddress to aBase limitAddress + 1 to the same index (stacks grow down)"
 	stackBasePlus1 := (self cCoerceSimple: theStackPages to: #'char *') + 1.
-	self cCode: ''
+	self cCode: []
 		inSmalltalk:
 			[minStackAddress := theStackPages.
 			 maxStackAddress := theStackPages + (numPages * bytesPerPage) + BytesPerWord - 1].
@@ -187,7 +187,7 @@ CoInterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots p
 		 self assert: (self pageIndexFor: page baseAddress - (slotsPerPage - 1 * BytesPerWord)) == index.
 		 self assert: (self stackPageFor: page baseAddress) == page.
 		 self assert: (self stackPageFor: page stackLimit) == page.
-		 self cCode: ''
+		 self cCode: []
 			inSmalltalk:
 				[| memIndex |
 				 memIndex := index * slotsPerPage + 1. "this is memIndex in the block above"

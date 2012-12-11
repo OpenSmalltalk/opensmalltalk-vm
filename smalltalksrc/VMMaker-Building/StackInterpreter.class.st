@@ -5841,7 +5841,7 @@ StackInterpreter >> initStackPages [
 	stackPageBytes := self stackPageByteSize.
 	stackPagesBytes := self computeStackZoneSize.
 	theStackMemory := self
-						cCode: 'alloca(stackPagesBytes)'
+						cCode: [self alloca: stackPagesBytes]
 						inSmalltalk:
 							[stackPages := self stackPagesClass new.
 							 stackPages initializeWithByteSize: stackPagesBytes for: self].
@@ -5867,7 +5867,7 @@ StackInterpreter >> initStackPagesAndInterpret [
 	stackPageBytes := self stackPageByteSize.
 	stackPagesBytes := self computeStackZoneSize.
 	theStackMemory := self
-						cCode: 'alloca(stackPagesBytes)'
+						cCode: [self alloca: stackPagesBytes]
 						inSmalltalk:
 							[stackPages := self stackPagesClass new.
 							 stackPages initializeWithByteSize: stackPagesBytes for: self].
