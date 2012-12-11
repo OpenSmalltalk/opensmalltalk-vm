@@ -1483,10 +1483,10 @@ ObjectMemory >> containOnlyMutableOops: array1 and: array2 [
 	fieldOffset := self lastPointerOf: array1.
 	"same size as array2"
 	[fieldOffset >= BaseHeaderSize] whileTrue:
-		[(self internalIsImmutable: (self longAt: array1 + fieldOffset)) ifTrue: [^ false].
-		 (self internalIsImmutable: (self longAt: array2 + fieldOffset)) ifTrue: [^ false].
+		[(self isOopImmutable: (self longAt: array1 + fieldOffset)) ifTrue: [^false].
+		 (self isOopImmutable: (self longAt: array2 + fieldOffset)) ifTrue: [^false].
 		 fieldOffset := fieldOffset - BytesPerWord].
-	^ true
+	^true
 ]
 
 { #category : #become }
@@ -2755,6 +2755,20 @@ ObjectMemory >> isNonIntegerObject: objectPointer [
 	^ (objectPointer bitAnd: 1) = 0
 ]
 
+{ #category : #'header access' }
+ObjectMemory >> isObjImmutable: anOop [
+	<inline: true>
+	^self cppIf: IMMUTABILITY
+		ifTrue: [((self baseHeader: anOop) bitAnd: ImmutabilityBit hex) ~= 0]
+		ifFalse: [false]
+]
+
+{ #category : #'header access' }
+ObjectMemory >> isObjMutable: anOop [
+	<inline: true>
+	^(self isObjImmutable: anOop) not
+]
+
 { #category : #'gc -- compaction' }
 ObjectMemory >> isObjectForwarded: oop [ 
 	"Answer if the given object has a forwarding table entry 
@@ -2767,6 +2781,20 @@ ObjectMemory >> isOopCompiledMethod: oop [
     "Answer whether the oop is an object of compiled method format"
 	<api>
     ^(self isNonIntegerObject: oop) and: [(self formatOf: oop) >= 12]
+]
+
+{ #category : #'header access' }
+ObjectMemory >> isOopImmutable: anOop [
+	<api>
+	^(self isIntegerObject: anOop)
+	  or: [self isObjImmutable: anOop]
+]
+
+{ #category : #'header access' }
+ObjectMemory >> isOopMutable: anOop [
+	<api>
+	^(self isIntegerObject: anOop) not
+	  and: [(self isObjImmutable: anOop) not]
 ]
 
 { #category : #'header access' }
