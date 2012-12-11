@@ -6,7 +6,8 @@ Class {
 	#superclass : #CCodeGenerator,
 	#instVars : [
 		'pluginClass',
-		'pluginName'
+		'pluginName',
+		'pluginFunctionsUsed'
 	],
 	#category : #'VMMaker-Translation to C'
 }
@@ -18,32 +19,62 @@ VMPluginCodeGenerator >> doInlining: inlineFlag [
 ]
 
 { #category : #'C code generator' }
+VMPluginCodeGenerator >> emitCCodeOn: aStream doInlining: inlineFlag doAssertions: assertionFlag [
+	"Generate twice; the first time to collect the used functions, the second to output the used functions."
+	[super emitCCodeOn: NullStream new doInlining: inlineFlag doAssertions: assertionFlag]
+		on: MessageNotUnderstood
+		do: [:ex|
+				(#(peekLast tab: crtab:) includes: ex message selector) ifTrue:
+					[ex resume: nil].
+				ex pass].
+	super emitCCodeOn: aStream doInlining: inlineFlag doAssertions: assertionFlag
+]
+
+{ #category : #'C code generator' }
 VMPluginCodeGenerator >> emitCHeaderForPrimitivesOn: aStream [
 	"Write a C file header for compiled primitives onto the given stream."
 
 	self emitCHeaderOn: aStream.
 	aStream nextPutAll: '
 /*** Proxy Functions ***/
-#define stackValue(i) (interpreterProxy->stackValue(i))
-#define stackIntegerValue(i) (interpreterProxy->stackIntegerValue(i))
-#define successFlag (!interpreterProxy->failed())
-#define success(bool) (interpreterProxy->success(bool))
-#define arrayValueOf(oop) (interpreterProxy->arrayValueOf(oop))
-#define checkedIntegerValueOf(oop) (interpreterProxy->checkedIntegerValueOf(oop))
-#define fetchArrayofObject(idx,oop) (interpreterProxy->fetchArrayofObject(idx,oop))
-#define fetchFloatofObject(idx,oop) (interpreterProxy->fetchFloatofObject(idx,oop))
-#define fetchIntegerofObject(idx,oop) (interpreterProxy->fetchIntegerofObject(idx,oop))
-#define floatValueOf(oop) (interpreterProxy->floatValueOf(oop))
-#define pop(n) (interpreterProxy->pop(n))
-#define pushInteger(n) (interpreterProxy->pushInteger(n))
-#define sizeOfSTArrayFromCPrimitive(cPtr) (interpreterProxy->sizeOfSTArrayFromCPrimitive(cPtr))
-#define storeIntegerofObjectwithValue(idx,oop,value) (interpreterProxy->storeIntegerofObjectwithValue(idx,oop,value))
-#define primitiveFail() interpreterProxy->primitiveFail()
+#if defined(SQUEAK_BUILTIN_PLUGIN)
+extern sqInt stackValue(sqInt offset);
+extern sqInt stackIntegerValue(sqInt offset);
+extern sqInt failed(void);
+# define successFlag (!failed())
+extern sqInt success(sqInt aBoolean);
+extern void * arrayValueOf(sqInt oop);
+extern void * fetchArrayofObject(sqInt fieldIndex, sqInt objectPointer);
+extern double fetchFloatofObject(sqInt fieldIndex, sqInt objectPointer);
+extern sqInt fetchIntegerofObject(sqInt fieldIndex, sqInt objectPointer);
+extern double floatValueOf(sqInt oop);
+extern sqInt pop(sqInt nItems);
+extern sqInt pushInteger(sqInt integerValue);
+extern sqInt sizeOfSTArrayFromCPrimitive(void *cPtr);
+extern sqInt storeIntegerofObjectwithValue(sqInt index, sqInt oop, sqInt integer);
+extern sqInt primitiveFail(void);
+#else /* SQUEAK_BUILTIN_PLUGIN */
+# define stackValue(i) (interpreterProxy->stackValue(i))
+# define stackIntegerValue(i) (interpreterProxy->stackIntegerValue(i))
+# define successFlag (!interpreterProxy->failed())
+# define success(bool) (interpreterProxy->success(bool))
+# define arrayValueOf(oop) (interpreterProxy->arrayValueOf(oop))
+# define fetchArrayofObject(idx,oop) (interpreterProxy->fetchArrayofObject(idx,oop))
+# define fetchFloatofObject(idx,oop) (interpreterProxy->fetchFloatofObject(idx,oop))
+# define fetchIntegerofObject(idx,oop) (interpreterProxy->fetchIntegerofObject(idx,oop))
+# define floatValueOf(oop) (interpreterProxy->floatValueOf(oop))
+# define pop(n) (interpreterProxy->pop(n))
+# define pushInteger(n) (interpreterProxy->pushInteger(n))
+# define sizeOfSTArrayFromCPrimitive(cPtr) (interpreterProxy->sizeOfSTArrayFromCPrimitive(cPtr))
+# define storeIntegerofObjectwithValue(idx,oop,value) (interpreterProxy->storeIntegerofObjectwithValue(idx,oop,value))
+# define primitiveFail() interpreterProxy->primitiveFail()
+#endif /* SQUEAK_BUILTIN_PLUGIN */
+
 /* allows accessing Strings in both C and Smalltalk */
 #define asciiValue(c) c
 
-'.
-	aStream cr.
+
+'
 ]
 
 { #category : #'C code generator' }
@@ -144,6 +175,35 @@ VMPluginCodeGenerator >> generateCodeStringForPrimitives [
 
 ]
 
+{ #category : #'C translation' }
+VMPluginCodeGenerator >> generateInterpreterProxyFunctionDeference: aNode on: aStream indent: anInteger [
+	| pluginsToClone |
+	(pluginsToClone := self pluginFunctionsToClone) isEmpty ifTrue:
+		[^self].
+	aStream cr; nextPutAll: '#if !defined(SQUEAK_BUILTIN_PLUGIN)'.
+	pluginsToClone do:
+		[:s| | cs |
+		cs := self cFunctionNameFor: s.
+		aStream crtab: anInteger; nextPutAll: cs; nextPutAll: ' = interpreterProxy->'; nextPutAll: cs; nextPut: $;].
+	aStream cr; nextPutAll: '#endif /* !defined(SQUEAK_BUILTIN_PLUGIN) */'.
+]
+
+{ #category : #public }
+VMPluginCodeGenerator >> initialize [
+	super initialize.
+	pluginFunctionsUsed := Set new
+]
+
+{ #category : #public }
+VMPluginCodeGenerator >> initializeCTranslationDictionary [ 
+	"Initialize the dictionary mapping message names to actions for C code generation."
+
+	super initializeCTranslationDictionary.
+	translationDict
+		at: #expandDereferenceInterpreterProxyFunctionTable
+		put: #generateInterpreterProxyFunctionDeference:on:indent:
+]
+
 { #category : #testing }
 VMPluginCodeGenerator >> isGeneratingPluginCode [
 	^true
@@ -152,6 +212,17 @@ VMPluginCodeGenerator >> isGeneratingPluginCode [
 { #category : #public }
 VMPluginCodeGenerator >> localizeGlobalVariables [
 "TPR - we don't do this for plugins"
+]
+
+{ #category : #public }
+VMPluginCodeGenerator >> noteUsedPluginFunction: aSelector [
+	"Remember aSelector and answer whether the call should be made through
+	 interpreterProxy. If not, it will be made either directly (in an internal plugin)
+	 or through a local copy of the function pointer (in an external plugin)."
+	pluginFunctionsUsed add: aSelector.
+	"These two are static to sqVirtualMachine.c and so
+	 they must be called through the interpreterProxy."
+	^#(majorVersion minorVersion) includes: aSelector
 ]
 
 { #category : #public }
@@ -169,10 +240,54 @@ VMPluginCodeGenerator >> pluginClass: aPluginClass [
 ]
 
 { #category : #public }
+VMPluginCodeGenerator >> pluginFunctionsToClone [
+	"Answer those of the used plugin functions to clone as a sorted collection.
+	 Exclude those that are static to sqVirtualMachine.c and hence always need
+	 to be called through interpreterProxy."
+
+	^(pluginFunctionsUsed reject:
+		[:selector| self noteUsedPluginFunction: selector])
+			asSortedCollection
+]
+
+{ #category : #public }
 VMPluginCodeGenerator >> pluginName: aString [
 "TPR - moved from CCodeGenerator"
 	"Set the plugin name when generating plugins."
 	pluginName := aString.
+]
+
+{ #category : #'C code generator' }
+VMPluginCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
+	"Put the necessary #defines needed before interpreterProxy.  Basically
+	 internal plugins use the VM's interpreterProxy variable and external plugins
+	 use their own.  Override to keep local copies of all functions in external
+	 prims, and link directly in internal plugins."
+	| pluginsToClone |
+	(pluginsToClone := self pluginFunctionsToClone) isEmpty ifTrue:
+		[^super preDeclareInterpreterProxyOn: aStream].
+	aStream cr; nextPutAll: '#if !defined(SQUEAK_BUILTIN_PLUGIN)'; cr.
+	pluginsToClone do:
+		[:selector| | functionName |
+		functionName := self cFunctionNameFor: selector.
+		aStream nextPutAll:
+			((String streamContents:
+				[:s|
+				(self compileToTMethodSelector: selector in: InterpreterProxy)
+					emitCFunctionPrototype: s generator: self])
+				copyReplaceAll: functionName
+				with: '(*', functionName, ')').
+		aStream nextPut: $;; cr].
+	aStream nextPutAll: '#else /* !defined(SQUEAK_BUILTIN_PLUGIN) */'; cr.
+	pluginsToClone do:
+		[:selector|
+		aStream nextPutAll: 'extern '.
+		(self compileToTMethodSelector: selector in: InterpreterProxy)
+			static: false;
+			emitCFunctionPrototype: aStream generator: self.
+		aStream nextPut: $;; cr].
+	aStream cr; nextPutAll: 'extern'.
+	aStream cr; nextPutAll: '#endif'; cr
 ]
 
 { #category : #private }
