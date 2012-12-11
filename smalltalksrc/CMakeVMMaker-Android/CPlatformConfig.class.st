@@ -652,7 +652,7 @@ CPlatformConfig >> generateSources [
 		self cogitClass ifNotNil: [:cg | 
 			maker cogitClass: cg.
 			"this is ugly, before VMMaker will be fixed to initialize stuff properly"
-			Cogit initializeCompilationConstants.
+			Cogit initializeCompilationWithConstantsOptions: Dictionary new.
 			cg initializeWithOptions: (maker instVarNamed: 'optionsDictionary')
 		].
 		
