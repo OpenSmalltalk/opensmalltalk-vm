@@ -2240,7 +2240,7 @@ BalloonEnginePlugin >> primitiveAddBezier [
 
 { #category : #primitives }
 BalloonEnginePlugin >> primitiveAddBezierShape [
-	| failureCode points lineFill lineWidth fillIndex length isArray segSize nSegments |
+	| failureCode points lineFill lineWidth fillIndex length pointsIsArray segSize nSegments |
 	<export: true>
 	<inline: false>
 
@@ -2262,7 +2262,7 @@ BalloonEnginePlugin >> primitiveAddBezierShape [
 	"First, do a check if the points look okay"
 	length := interpreterProxy slotSizeOf: points.
 	(interpreterProxy isWords: points) ifTrue:[
-		isArray := false.
+		pointsIsArray := false.
 		"Either PointArray or ShortPointArray"
 		(length = (nSegments * 3) or:[length = (nSegments * 6)])
 			ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
@@ -2271,7 +2271,7 @@ BalloonEnginePlugin >> primitiveAddBezierShape [
 			ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 		length = (nSegments * 3)
 			ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-		isArray := true.
+		pointsIsArray := true.
 	].
 
 	"Now check that we have some hope to have enough free space.
@@ -2304,7 +2304,7 @@ BalloonEnginePlugin >> primitiveAddBezierShape [
 		lineWidth < 1 ifTrue:[lineWidth := 1]].
 
 	"And load the actual shape"
-	isArray ifTrue:[
+	pointsIsArray ifTrue:[
 		self loadArrayShape: points nSegments: nSegments
 			fill: fillIndex lineWidth: lineWidth lineFill: lineFill.
 	] ifFalse:[
@@ -2584,7 +2584,7 @@ BalloonEnginePlugin >> primitiveAddOval [
 
 { #category : #primitives }
 BalloonEnginePlugin >> primitiveAddPolygon [
-	| failureCode points lineFill lineWidth fillIndex nPoints length isArray segSize |
+	| failureCode points lineFill lineWidth fillIndex nPoints length pointsIsArray segSize |
 	<export: true>
 	<inline: false>
 
@@ -2606,7 +2606,7 @@ BalloonEnginePlugin >> primitiveAddPolygon [
 	"First, do a check if the points look okay"
 	length := interpreterProxy slotSizeOf: points.
 	(interpreterProxy isWords: points) ifTrue:[
-		isArray := false.
+		pointsIsArray := false.
 		"Either PointArray or ShortPointArray"
 		(length = nPoints or:[nPoints * 2 = length])
 			ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
@@ -2615,7 +2615,7 @@ BalloonEnginePlugin >> primitiveAddPolygon [
 			ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 		length = nPoints
 			ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-		isArray := true.
+		pointsIsArray := true.
 	].
 
 	"Now check that we have some hope to have enough free space.
@@ -2646,7 +2646,7 @@ BalloonEnginePlugin >> primitiveAddPolygon [
 	lineWidth = 0 ifFalse:[lineWidth := self transformWidth: lineWidth].
 
 	"And load the actual polygon"
-	isArray ifTrue:[
+	pointsIsArray ifTrue:[
 		self loadArrayPolygon: points nPoints: nPoints
 			fill: fillIndex lineWidth: lineWidth lineFill: lineFill
 	] ifFalse:[

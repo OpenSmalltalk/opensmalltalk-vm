@@ -9751,7 +9751,8 @@ Interpreter >> stObject: array at: index put: value [
 	((self oop: index isGreaterThanOrEqualTo: 1)
 			and: [self oop: index isLessThanOrEqualTo: stSize])
 		ifTrue: [self subscript: array with: (index + fixedFields) storing: value format: fmt]
-		ifFalse: [successFlag := false]
+		ifFalse: [successFlag := false].
+	^value
 ]
 
 { #category : #'array primitive support' }

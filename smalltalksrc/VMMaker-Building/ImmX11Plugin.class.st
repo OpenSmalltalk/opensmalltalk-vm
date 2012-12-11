@@ -15,7 +15,7 @@ ImmX11Plugin class >> declareHeaderFilesIn: cg [
 		'extern int setCompostionFocus(int);'.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'initialize-release' }
 ImmX11Plugin >> initialiseModule [
 
 	<export: true>
@@ -23,7 +23,7 @@ ImmX11Plugin >> initialiseModule [
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #primitives }
 ImmX11Plugin >> primGetEncoding [
 
 	| ret array len |
@@ -42,7 +42,7 @@ ImmX11Plugin >> primGetEncoding [
 	^ ret.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #primitives }
 ImmX11Plugin >> primGetLocale [
 
 	| ret array len locale |
@@ -52,21 +52,21 @@ ImmX11Plugin >> primGetLocale [
 	<var: #array type: 'char *'>
 	<var: #locale type: 'char *'>
 	
-	locale _ self cCode: 'setlocale(LC_CTYPE, "")'.
+	locale := self cCode: 'setlocale(LC_CTYPE, "")'.
 	(self cCode: 'locale')
-		ifFalse: [ ret _ interpreterProxy nilObject ]
+		ifFalse: [ ret := interpreterProxy nilObject ]
 		ifTrue: [
-			len _ self cCode: 'strlen(locale)'.
-			ret _ interpreterProxy
+			len := self cCode: 'strlen(locale)'.
+			ret := interpreterProxy
 				instantiateClass: interpreterProxy classString
 				indexableSize: len.
-			array _ self cCoerce: (interpreterProxy firstIndexableField: ret) to: 'char *'.
+			array := self cCoerce: (interpreterProxy firstIndexableField: ret) to: 'char *'.
 			self cCode: 'strncpy(array, (char *)locale, len)'.
 		].	
 	^ ret.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #primitives }
 ImmX11Plugin >> primGetLocaleEncoding [
 
 	| ret array len |
@@ -88,7 +88,7 @@ ImmX11Plugin >> primGetLocaleEncoding [
 	^ ret.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #primitives }
 ImmX11Plugin >> primGetPathEnc [
 
 	| ret array len |
@@ -107,7 +107,7 @@ ImmX11Plugin >> primGetPathEnc [
 	^ ret.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #primitives }
 ImmX11Plugin >> primGetTextEnc [
 
 	| ret array len |
@@ -126,7 +126,7 @@ ImmX11Plugin >> primGetTextEnc [
 	^ ret.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #primitives }
 ImmX11Plugin >> primGetXWinEnc [
 
 	| ret array len |
@@ -145,7 +145,7 @@ ImmX11Plugin >> primGetXWinEnc [
 	^ ret.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #primitives }
 ImmX11Plugin >> primIsTextEncUTF8 [
 
 	<export: true>
@@ -153,7 +153,7 @@ ImmX11Plugin >> primIsTextEncUTF8 [
 	^ (self cCode: 'textEncodingUTF8') asOop: Boolean.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #primitives }
 ImmX11Plugin >> primSetCompositionFocus: bool [
 
 	| ret |
@@ -172,7 +172,7 @@ ImmX11Plugin >> primSetCompositionFocus: bool [
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #primitives }
 ImmX11Plugin >> primSetCompositionWindowPositionX: x y: y [
 
 	| ret |
@@ -194,21 +194,21 @@ ImmX11Plugin >> primSetCompositionWindowPositionX: x y: y [
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #primitives }
 ImmX11Plugin >> primSetEncoding: encoding [
 
 	| name len |
 	<export: true>
 	<var: #name type: 'char *'>
 	<var: #len type: 'size_t'>
-	len _ interpreterProxy stSizeOf: encoding.
-	name _ self cCoerce: (interpreterProxy firstIndexableField: encoding) to: 'char *'.
+	len := interpreterProxy stSizeOf: encoding.
+	name := self cCoerce: (interpreterProxy firstIndexableField: encoding) to: 'char *'.
 	self cCode: 'setNEncoding(&sqTextEncoding, name, len)'.
 	^ encoding.
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #primitives }
 ImmX11Plugin >> primSetEncodingToLocale [
 
 	| ret |
@@ -224,7 +224,7 @@ ImmX11Plugin >> primSetEncodingToLocale [
 	^ ret
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #primitives }
 ImmX11Plugin >> primSetLocale: locale [
 
 	| name len ret array |
@@ -232,51 +232,51 @@ ImmX11Plugin >> primSetLocale: locale [
 	<var: #name type: 'char *'>
 	<var: #array type: 'char *'>
 	<var: #len type: 'size_t'>
-	len _  interpreterProxy stSizeOf: locale.
-	name _ self cCoerce: (interpreterProxy arrayValueOf: locale) to: 'char *'.
-	name _ self cCode: 'setLocale(name, len)'.
+	len :=  interpreterProxy stSizeOf: locale.
+	name := self cCoerce: (interpreterProxy arrayValueOf: locale) to: 'char *'.
+	name := self cCode: 'setLocale(name, len)'.
 	(self cCode: '(int) name')
 		ifFalse: [^ interpreterProxy nilObject ]
 		ifTrue: [
-			len _ self cCode: 'strlen(name)'.
-			ret _ interpreterProxy
+			len := self cCode: 'strlen(name)'.
+			ret := interpreterProxy
 				instantiateClass: interpreterProxy classString
 				indexableSize: len.
-			array _ self cCoerce: (interpreterProxy firstIndexableField: ret) to: 'char *'.
+			array := self cCoerce: (interpreterProxy firstIndexableField: ret) to: 'char *'.
 			self cCode: 'strncpy(array, (char *)name, len)'.
 			^ ret ].
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #primitives }
 ImmX11Plugin >> primSetLocaleEncoding: encoding [
 
 	| name len |
 	<export: true>
 	<var: #name type: 'char *'>
 	<var: #len type: 'size_t'>
-	len _ interpreterProxy stSizeOf: encoding.
-	name _ self cCoerce: (interpreterProxy firstIndexableField: encoding) to: 'char *'.
+	len := interpreterProxy stSizeOf: encoding.
+	name := self cCoerce: (interpreterProxy firstIndexableField: encoding) to: 'char *'.
 	self cCode: 'setNEncoding(&localeEncoding, name, len)'.
 	self cCode: 'sqTextEncoding= uxTextEncoding= uxPathEncoding= uxXWinEncoding= localeEncoding'.
 	^ encoding.
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #primitives }
 ImmX11Plugin >> primSetPathEnc: encoding [
 
 	| name len |
 	<export: true>
 	<var: #name type: 'char *'>
 	<var: #len type: 'size_t'>
-	len _ interpreterProxy stSizeOf: encoding.
-	name _ self cCoerce: (interpreterProxy firstIndexableField: encoding) to: 'char *'.
+	len := interpreterProxy stSizeOf: encoding.
+	name := self cCoerce: (interpreterProxy firstIndexableField: encoding) to: 'char *'.
 	self cCode: 'setNEncoding(&uxPathEncoding, name, len)'.
 	^ encoding.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #primitives }
 ImmX11Plugin >> primSetPathEncToLocale [
 
 	| ret |
@@ -292,20 +292,20 @@ ImmX11Plugin >> primSetPathEncToLocale [
 	^ ret
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #primitives }
 ImmX11Plugin >> primSetTextEnc: encoding [
 
 	| name len |
 	<export: true>
 	<var: #name type: 'char *'>
 	<var: #len type: 'size_t'>
-	len _ interpreterProxy stSizeOf: encoding.
-	name _ self cCoerce: (interpreterProxy firstIndexableField: encoding) to: 'char *'.
+	len := interpreterProxy stSizeOf: encoding.
+	name := self cCoerce: (interpreterProxy firstIndexableField: encoding) to: 'char *'.
 	self cCode: 'setNEncoding(&uxTextEncoding, name, len)'.
 	^ encoding.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #primitives }
 ImmX11Plugin >> primSetTextEncToLocale [
 
 	| ret |
@@ -321,7 +321,7 @@ ImmX11Plugin >> primSetTextEncToLocale [
 	^ ret
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #primitives }
 ImmX11Plugin >> primSetTextEncUTF8: bool [
 
 	<export: true>
@@ -331,20 +331,20 @@ ImmX11Plugin >> primSetTextEncUTF8: bool [
 	^ bool asOop: Boolean.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #primitives }
 ImmX11Plugin >> primSetXWinEnc: encoding [
 
 	| name len |
 	<export: true>
 	<var: #name type: 'char *'>
 	<var: #len type: 'size_t'>
-	len _ interpreterProxy stSizeOf: encoding.
-	name _ self cCoerce: (interpreterProxy firstIndexableField: encoding) to: 'char *'.
+	len := interpreterProxy stSizeOf: encoding.
+	name := self cCoerce: (interpreterProxy firstIndexableField: encoding) to: 'char *'.
 	self cCode: 'setNEncoding(&uxXWinEncoding, name, len)'.
 	^ encoding.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #primitives }
 ImmX11Plugin >> primSetXWinEncToLocale [
 
 	| ret |
@@ -360,7 +360,7 @@ ImmX11Plugin >> primSetXWinEncToLocale [
 	^ ret
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'initialize-release' }
 ImmX11Plugin >> shutdownModule [
 
 	<export: true>
