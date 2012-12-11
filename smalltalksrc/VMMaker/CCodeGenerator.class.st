@@ -907,10 +907,8 @@ CCodeGenerator >> emitCVariablesOn: aStream [
 				[self isGeneratingPluginCode
 					ifTrue:
 						[varString = 'interpreterProxy'
-							ifTrue: ["quite special..."
-								aStream cr; nextPutAll: '#ifdef SQUEAK_BUILTIN_PLUGIN'.
-								aStream cr; nextPutAll: 'extern'.
-								aStream cr; nextPutAll: '#endif'; cr]
+							ifTrue: "quite special..."
+								[self preDeclareInterpreterProxyOn: aStream]
 							ifFalse: [(decl beginsWith: 'static') ifFalse:
 										[aStream nextPutAll: 'static ']]]
 					ifFalse:
@@ -2818,6 +2816,17 @@ CCodeGenerator >> outputAsmLabel: selector on: aStream [
 		nextPutAll: (self cFunctionNameFor: selector);
 		nextPut: $);
 		nextPut: $;
+]
+
+{ #category : #'C code generator' }
+CCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
+	"Put the necessary #defines needed before interpreterProxy.  Basically
+	 internal plugins use the VM's interpreterProxy variable and external plugins use
+	 their own.  In addition the VMPluginCodeGenerator can choose to keep local copies
+	 all functions."
+	aStream cr; nextPutAll: '#ifdef SQUEAK_BUILTIN_PLUGIN'.
+	aStream cr; nextPutAll: 'extern'.
+	aStream cr; nextPutAll: '#endif'; cr
 ]
 
 { #category : #utilities }

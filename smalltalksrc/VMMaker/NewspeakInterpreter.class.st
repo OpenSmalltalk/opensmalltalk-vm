@@ -3524,7 +3524,7 @@ NewspeakInterpreter >> getStackPointer [
 	"For Newsqueak FFI"
 	<export: true>
 	<returnTypeC: #'sqInt *'>
-	^stackPointer
+	^self cCoerce: stackPointer to: #'sqInt *'
 ]
 
 { #category : #'plugin support' }
@@ -10187,7 +10187,6 @@ NewspeakInterpreter >> signed32BitIntegerFor: integerValue [
 	"Return a full 32 bit integer object for the given integer value"
 	| newLargeInteger value largeClass |
 	<inline: false>
-	<var: #integerValue type: 'int'>
 	(self isIntegerValue: integerValue)
 		ifTrue: [^ self integerObjectOf: integerValue].
 	integerValue < 0
@@ -10574,7 +10573,8 @@ NewspeakInterpreter >> stObject: array at: index put: value [
 	((self oop: index isGreaterThanOrEqualTo: 1)
 	 and: [self oop: index isLessThanOrEqualTo: stSize])
 		ifTrue: [self subscript: array with: (index + fixedFields) storing: value format: fmt]
-		ifFalse: [self primitiveFailFor: (fmt <= 1 ifTrue: [PrimErrBadReceiver] ifFalse: [PrimErrBadIndex])]
+		ifFalse: [self primitiveFailFor: (fmt <= 1 ifTrue: [PrimErrBadReceiver] ifFalse: [PrimErrBadIndex])].
+	^value
 ]
 
 { #category : #'indexing primitive support' }
