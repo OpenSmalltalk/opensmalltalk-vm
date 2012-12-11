@@ -3,7 +3,7 @@ These tests require VMMaker and should be considered part of it.
 "
 Class {
 	#name : #BitBltSimulationTest,
-	#superclass : #ProtoObject,
+	#superclass : #TestCase,
 	#category : #'VMMaker-Tests'
 }
 
