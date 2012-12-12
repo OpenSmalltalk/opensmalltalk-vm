@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "interp.h"
 
+char * GetAttributeString(int id);
 #if !NewspeakVM
 int win32JoystickDebugInfo(void);
 int win32JoystickDebugPrintRawValues(void);
@@ -21,6 +22,7 @@ extern void* preMessageHook;
 extern int fUseOpenGL;
 
 void *os_exports[][3] = {
+  {"","GetAttributeString", GetAttributeString},
 #if !NewspeakVM
   {"","win32JoystickDebugInfo", win32JoystickDebugInfo},
   {"","win32JoystickDebugPrintRawValues", win32JoystickDebugPrintRawValues},
@@ -34,7 +36,7 @@ void *os_exports[][3] = {
   {"","primitivePluginRequestFileHandle", primitivePluginRequestFileHandle},
   {"","primitivePluginDestroyRequest", primitivePluginDestroyRequest},
   {"","primitivePluginRequestState", primitivePluginRequestState},
-  {"", "printf", printf},
+  {"","printf", printf},
   {"","stWindow", &stWindow},
   {"","firstMessageHook", &firstMessageHook},
   {"","preMessageHook", &preMessageHook},

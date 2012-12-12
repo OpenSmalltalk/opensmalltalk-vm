@@ -395,7 +395,7 @@ extern sqInt suppressHeartbeatFlag;
 #if NEED_SIGALTSTACK
 	if (!signal_stack.ss_size) {
 		signal_stack.ss_flags = 0;
-		signal_stack.ss_size = SIGNAL_STACK_SIZE;
+		signal_stack.ss_size = max(SIGNAL_STACK_SIZE,MINSIGSTKSZ);
 		if (!(signal_stack.ss_sp = malloc(signal_stack.ss_size))) {
 			perror("ioInitHeartbeat malloc");
 			exit(1);

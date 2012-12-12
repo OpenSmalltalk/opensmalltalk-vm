@@ -3,6 +3,7 @@
 #define XFN(export) {"", #export, (void*)export}
 #define XFN2(plugin, export) {#plugin, #export, (void*)plugin##_##export}
 
+char * GetAttributeString(int id);
 #if !defined(HEADLESS)
 int   primitivePluginBrowserReady(void);
 int   primitivePluginRequestURLStream(void);
@@ -17,6 +18,7 @@ void *ioGetWindow(void);
 
 void *os_exports[][3]=
 {
+  XFN(GetAttributeString)
 #if !defined(HEADLESS)
   XFN(primitivePluginBrowserReady),
   XFN(primitivePluginRequestURLStream),
