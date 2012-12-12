@@ -1641,7 +1641,7 @@ StackToRegisterMappingCogit >> genMethodAbortTrampolineFor: numArgs [
 	opcodeIndex := 0.
 	self CmpCq: 0 R: ReceiverResultReg.
 	jumpSICMiss := self JumpNonZero: 0.
-	self compileTrampolineFor: #ceStackOverflow: asSymbol
+	self compileTrampolineFor: #ceStackOverflow:
 		callJumpBar: true
 		numArgs: 1
 		arg: SendNumArgsReg
@@ -1652,7 +1652,7 @@ StackToRegisterMappingCogit >> genMethodAbortTrampolineFor: numArgs [
 		resultReg: nil.
 	jumpSICMiss jmpTarget: self Label.
 	self genPushRegisterArgsForAbortMissNumArgs: numArgs.
-	^self genTrampolineFor: #ceSICMiss: asSymbol
+	^self genTrampolineFor: #ceSICMiss:
 		called: (self trampolineName: 'ceMethodAbort' numArgs: (numArgs <= self numRegArgs ifTrue: [numArgs] ifFalse: [-1]))
 		callJumpBar: true
 		numArgs: 1
@@ -1686,7 +1686,7 @@ StackToRegisterMappingCogit >> genPICMissTrampolineFor: numArgs [
 	opcodeIndex := 0.
 	"N.B. a closed PIC jumps to the miss routine, not calls it, so there is only one retpc on the stack."
 	self genPushRegisterArgsForNumArgs: numArgs.
-	self genTrampolineFor: #ceCPICMiss:receiver: asSymbol
+	self genTrampolineFor: #ceCPICMiss:receiver:
 		called: (self trampolineName: 'cePICMiss' numArgs: (numArgs <= self numRegArgs ifTrue: [numArgs] ifFalse: [-1]))
 		callJumpBar: true
 		numArgs: 2
@@ -2992,13 +2992,13 @@ StackToRegisterMappingCogit >> generateEnilopmarts [
 				self genEnilopmartFor: ReceiverResultReg
 					and: Arg0Reg
 					called: 'realCEEnterCogCodePopReceiverArg0Regs'.
-			 ceEnterCogCodePopReceiverArg0Regs := #enterCogCodePopReceiverArg0Regs asSymbol.
+			 ceEnterCogCodePopReceiverArg0Regs := #enterCogCodePopReceiverArg0Regs.
 			 realCEEnterCogCodePopReceiverArg1Arg0Regs :=
 				self genEnilopmartFor: ReceiverResultReg
 					and: Arg0Reg							
 					and: Arg1Reg
 					called: 'realCEEnterCogCodePopReceiverArg1Arg0Regs'.
-			 ceEnterCogCodePopReceiverArg1Arg0Regs := #enterCogCodePopReceiverArg1Arg0Regs asSymbol]
+			 ceEnterCogCodePopReceiverArg1Arg0Regs := #enterCogCodePopReceiverArg1Arg0Regs]
 		ifFalse:
 			[ceEnterCogCodePopReceiverArg0Regs :=
 				self genEnilopmartFor: ReceiverResultReg
@@ -3050,12 +3050,11 @@ StackToRegisterMappingCogit >> generateMissAbortTrampolines [
 { #category : #initialization }
 StackToRegisterMappingCogit >> generateSendTrampolines [
 	"Override to generate code to push the register arg(s) for <= numRegArg arity sends."
-	"Slang needs these apparently superfluous asSymbol sends."
 	0 to: NumSendTrampolines - 2 do:
 		[:numArgs|
 		sendTrampolines
 			at: numArgs
-			put: (self genSendTrampolineFor: #ceSend:super:to:numArgs: asSymbol
+			put: (self genSendTrampolineFor: #ceSend:super:to:numArgs:
 					  numArgs: numArgs
 					  called: (self trampolineName: 'ceSend' numArgs: numArgs)
 					  arg: ClassReg
@@ -3064,7 +3063,7 @@ StackToRegisterMappingCogit >> generateSendTrampolines [
 					  arg: numArgs)].
 	sendTrampolines
 		at: NumSendTrampolines - 1
-		put: (self genSendTrampolineFor: #ceSend:super:to:numArgs: asSymbol
+		put: (self genSendTrampolineFor: #ceSend:super:to:numArgs:
 					numArgs: self numRegArgs + 1
 					called: (self trampolineName: 'ceSend' numArgs: -1)
 					arg: ClassReg
@@ -3077,7 +3076,7 @@ StackToRegisterMappingCogit >> generateSendTrampolines [
 				[:numArgs|
 				dynamicSuperSendTrampolines
 					at: numArgs
-					put: (self genSendTrampolineFor: #ceDynamicSuperSend:to:numArgs: asSymbol
+					put: (self genSendTrampolineFor: #ceDynamicSuperSend:to:numArgs:
 							  numArgs: numArgs
 							  called: (self trampolineName: 'ceDynSuperSend' numArgs: numArgs)
 							  arg: ClassReg
@@ -3085,7 +3084,7 @@ StackToRegisterMappingCogit >> generateSendTrampolines [
 							  arg: numArgs)].
 			dynamicSuperSendTrampolines
 				at: NumSendTrampolines - 1
-				put: (self genSendTrampolineFor: #ceDynamicSuperSend:to:numArgs: asSymbol
+				put: (self genSendTrampolineFor: #ceDynamicSuperSend:to:numArgs:
 							numArgs: self numRegArgs + 1
 							called: (self trampolineName: 'ceDynSuperSend' numArgs: -1)
 							arg: ClassReg
@@ -3095,7 +3094,7 @@ StackToRegisterMappingCogit >> generateSendTrampolines [
 		[:numArgs|
 		superSendTrampolines
 			at: numArgs
-			put: (self genSendTrampolineFor: #ceSend:super:to:numArgs: asSymbol
+			put: (self genSendTrampolineFor: #ceSend:super:to:numArgs:
 					  numArgs: numArgs
 					  called: (self trampolineName: 'ceSuperSend' numArgs: numArgs)
 					  arg: ClassReg
@@ -3104,7 +3103,7 @@ StackToRegisterMappingCogit >> generateSendTrampolines [
 					  arg: numArgs)].
 	superSendTrampolines
 		at: NumSendTrampolines - 1
-		put: (self genSendTrampolineFor: #ceSend:super:to:numArgs: asSymbol
+		put: (self genSendTrampolineFor: #ceSend:super:to:numArgs:
 					numArgs: self numRegArgs + 1
 					called: (self trampolineName: 'ceSuperSend' numArgs: -1)
 					arg: ClassReg
@@ -3122,7 +3121,7 @@ StackToRegisterMappingCogit >> generateTracingTrampolines [
 	 trampolines, but we need them in the real vm."
 	ceTraceLinkedSendTrampoline
 		:= self cCode:
-					[self genSafeTrampolineFor: #ceTraceLinkedSend: asSymbol
+					[self genSafeTrampolineFor: #ceTraceLinkedSend:
 						called: 'ceTraceLinkedSendTrampoline'
 						arg: ReceiverResultReg]
 				inSmalltalk:
@@ -3133,7 +3132,7 @@ StackToRegisterMappingCogit >> generateTracingTrampolines [
 					 a].
 	ceTraceBlockActivationTrampoline
 		:= self cCode:
-					[self genTrampolineFor: #ceTraceBlockActivation asSymbol
+					[self genTrampolineFor: #ceTraceBlockActivation
 						called: 'ceTraceBlockActivationTrampoline']
 				inSmalltalk:
 					[| a |
@@ -3143,7 +3142,7 @@ StackToRegisterMappingCogit >> generateTracingTrampolines [
 					 a].
 	ceTraceStoreTrampoline
 		:= self cCode:
-					[self genSafeTrampolineFor: #ceTraceStoreOf:into: asSymbol
+					[self genSafeTrampolineFor: #ceTraceStoreOf:into:
 						called: 'ceTraceStoreTrampoline'
 						arg: TempReg
 						arg: ReceiverResultReg]
@@ -3927,7 +3926,7 @@ StackToRegisterMappingCogit >> traceSpill: simStackEntry [
 StackToRegisterMappingCogit >> v3: descriptor Is: pc Push: nExts Nil: aMethodObj [
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<inline: true>
-	^descriptor generator == #genPushConstantNilBytecode asSymbol
+	^descriptor generator == #genPushConstantNilBytecode
 ]
 
 { #category : #'span functions' }
@@ -3954,7 +3953,7 @@ StackToRegisterMappingCogit >> v3or4PushNilSize: aMethodObj [
 StackToRegisterMappingCogit >> v4: descriptor Is: pc Push: nExts Nil: aMethodObj [
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<inline: true>
-	^descriptor generator == #genExtPushPseudoVariableOrOuterBytecode asSymbol
+	^descriptor generator == #genExtPushPseudoVariableOrOuterBytecode
 	  and: [self assert: (objectMemory fetchByte: pc ofObject: aMethodObj) = 77.
 			nExts = 1
 	  and: [(objectMemory fetchByte: pc - 1 ofObject: aMethodObj) = 2]]

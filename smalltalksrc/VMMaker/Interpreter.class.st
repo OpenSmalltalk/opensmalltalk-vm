@@ -1169,7 +1169,7 @@ Interpreter >> addNewMethodToCache [
 			[primitiveIndex := self primitiveIndexOf: newMethod.
 			 primitiveFunctionPointer := self functionPointerFor: primitiveIndex inClass: lkupClass]
 		ifFalse:
-			[primitiveFunctionPointer := #primitiveInvokeObjectAsMethod asSymbol].
+			[primitiveFunctionPointer := #primitiveInvokeObjectAsMethod].
 
 	primitiveFunctionPointer := self functionPointerFor: primitiveIndex inClass: lkupClass.
 	
@@ -4547,7 +4547,7 @@ Interpreter >> positive64BitValueOf: oop [
 			equalTo: (self splObj: ClassLargePositiveInteger)
 			compactClassIndex: ClassLargePositiveIntegerCompactIndex) ifFalse:
 		[^self primitiveFail].
-	szsqLong := self sizeof: #sqLong asSymbol.
+	szsqLong := self sizeof: #sqLong.
 	sz := self lengthOf: oop.
 	sz > szsqLong ifTrue:
 		[^self primitiveFail].
@@ -9568,7 +9568,7 @@ Interpreter >> signed64BitValueOf: oop [
 		ifFalse:[largeClass = self classLargeNegativeInteger
 					ifTrue:[negative := true]
 					ifFalse:[^self primitiveFail]].
-	szsqLong := self sizeof: #sqLong asSymbol.
+	szsqLong := self sizeof: #sqLong.
 	sz := self lengthOf: oop.
 	sz > szsqLong 
 		ifTrue: [^ self primitiveFail].

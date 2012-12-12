@@ -855,7 +855,7 @@ CoInterpreterMT >> ownVM: threadIndexAndFlags [
 	self cCode:
 			[self mem: reenterInterpreter
 				cp: vmThread reenterInterpreter
-				y: (self sizeof: #'jmp_buf' asSymbol)]
+				y: (self sizeof: #'jmp_buf')]
 		inSmalltalk:
 			[reenterInterpreter := vmThread reenterInterpreter].
 	vmThread newMethodOrNull: nil.
@@ -1004,7 +1004,7 @@ CoInterpreterMT >> preemptDisowningThread [
 	self cCode:
 			[self mem: preemptedThread reenterInterpreter
 				cp: reenterInterpreter
-				y: (self sizeof: #'jmp_buf' asSymbol)]
+				y: (self sizeof: #'jmp_buf')]
 		inSmalltalk:
 			[preemptedThread reenterInterpreter: reenterInterpreter]
 ]
@@ -1083,7 +1083,7 @@ CoInterpreterMT >> primitiveRelinquishProcessor [
 		 self cCode:
 			[self mem: (self cCoerceSimple: savedReenterInterpreter to: #'void *')
 				cp: reenterInterpreter
-				y: (self sizeof: #'jmp_buf' asSymbol)].
+				y: (self sizeof: #'jmp_buf')].
 		 threadIndexAndFlags := self disownVM: DisownVMForProcessorRelinquish.
 		 self assert: relinquishing.
 		 self ioRelinquishProcessorForMicroseconds: (objectMemory integerValueOf: microSecs).
@@ -1096,7 +1096,7 @@ CoInterpreterMT >> primitiveRelinquishProcessor [
 		 self cCode:
 			[self assert: (self mem: (self cCoerceSimple: savedReenterInterpreter to: #'void *')
 						cm: reenterInterpreter
-						p: (self sizeof: #'jmp_buf' asSymbol)) = 0]].
+						p: (self sizeof: #'jmp_buf')) = 0]].
 	self assert: (objectMemory fetchPointer: MyListIndex ofObject: self activeProcess) = objectMemory nilObject.
 	self pop: 1  "microSecs; leave rcvr on stack"
 ]
@@ -1221,7 +1221,7 @@ CoInterpreterMT >> returnToSchedulingLoopAndReleaseVMOrWakeThread: vmThread sour
 	self cCode:
 			[self mem: (self cCoerceSimple: savedReenterInterpreter to: #'void *')
 				cp: reenterInterpreter
-				y: (self sizeof: #'jmp_buf' asSymbol)]
+				y: (self sizeof: #'jmp_buf')]
 		inSmalltalk:
 			[savedReenterInterpreter := reenterInterpreter].
 	self recordThreadSwitchTo: (vmThread ifNotNil: [vmThread index] ifNil: [0]) source: source.
