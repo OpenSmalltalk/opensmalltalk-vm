@@ -80,10 +80,8 @@ sqInt instanceSizeOf(sqInt aClass);
 sqInt tenuringIncrementalGC(void);
 #endif
 sqInt isArray(sqInt oop);
-#if IMMUTABILITY
-sqInt internalIsMutable(sqInt oop);
-sqInt internalIsImmutable(sqInt oop);
-#endif
+sqInt isOopMutable(sqInt oop);
+sqInt isOopImmutable(sqInt oop);
 
 /* InterpreterProxy methodsFor: 'converting' */
 sqInt  booleanValueOf(sqInt obj);
@@ -432,13 +430,8 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->sendInvokeCallbackStackRegistersJmpbuf = sendInvokeCallbackStackRegistersJmpbuf;
 	VM->reestablishContextPriorToCallback = reestablishContextPriorToCallback;
 	VM->getStackPointer     = (sqInt *(*)(void))getStackPointer;
-# if IMMUTABILITY
-	VM->internalIsImmutable = internalIsImmutable;
-	VM->internalIsMutable   = internalIsMutable;
-# else
-	VM->internalIsImmutable = isIntegerObject;
-	VM->internalIsMutable   = isNonIntegerObject;
-# endif
+	VM->isOopImmutable = isOopImmutable;
+	VM->isOopMutable   = isOopMutable;
 #endif
 
 #if VM_PROXY_MINOR > 9

@@ -1,9 +1,14 @@
-/* Automatically generated from Squeak on {26 November 2012 . 4:09:30 pm} */
+/* Automatically generated from Squeak on {11 December 2012 . 5:56:02 pm} */
 
-static char __buildInfo[] = "Generated on {26 November 2012 . 4:09:30 pm}. Compiled on "__DATE__ ;
+static char __buildInfo[] = "Generated on {11 December 2012 . 5:56:02 pm}. Compiled on "__DATE__ ;
 
 
 
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,6 +36,7 @@ static char __buildInfo[] = "Generated on {26 November 2012 . 4:09:30 pm}. Compi
 #endif
 
 #include "BochsIA32Plugin.h"
+#include "sqMemoryAccess.h"
 #include "sqMemoryAccess.h"
 
 
@@ -64,15 +70,61 @@ static sqInt startOfData(sqInt rcvr);
 
 /*** Variables ***/
 
-#ifdef SQUEAK_BUILTIN_PLUGIN
+#if !defined(SQUEAK_BUILTIN_PLUGIN)
+static void * (*arrayValueOf)(sqInt oop);
+static sqInt (*byteSizeOf)(sqInt oop);
+static sqInt (*classArray)(void);
+static sqInt (*classString)(void);
+static sqInt (*failed)(void);
+static void * (*firstIndexableField)(sqInt oop);
+static sqInt (*getInterruptPending)(void);
+static sqInt (*instantiateClassindexableSize)(sqInt classPointer, sqInt size);
+static sqInt (*integerObjectOf)(sqInt value);
+static sqInt (*isWordsOrBytes)(sqInt oop);
+static sqInt (*pop)(sqInt nItems);
+static sqInt (*popthenPush)(sqInt nItems, sqInt oop);
+static sqInt (*popRemappableOop)(void);
+static sqInt (*positive32BitIntegerFor)(sqInt integerValue);
+static sqInt (*positive32BitValueOf)(sqInt oop);
+static sqInt (*primitiveFail)(void);
+static sqInt (*primitiveFailFor)(sqInt reasonCode);
+static sqInt (*pushRemappableOop)(sqInt oop);
+static void (*(*setInterruptCheckChain)(void (*aFunction)(void)))() ;
+static sqInt (*stackValue)(sqInt offset);
+static sqInt (*storePointerofObjectwithValue)(sqInt index, sqInt oop, sqInt valuePointer);
+static sqInt (*success)(sqInt aBoolean);
+#else /* !defined(SQUEAK_BUILTIN_PLUGIN) */
+extern void * arrayValueOf(sqInt oop);
+extern sqInt byteSizeOf(sqInt oop);
+extern sqInt classArray(void);
+extern sqInt classString(void);
+extern sqInt failed(void);
+extern void * firstIndexableField(sqInt oop);
+extern sqInt getInterruptPending(void);
+extern sqInt instantiateClassindexableSize(sqInt classPointer, sqInt size);
+extern sqInt integerObjectOf(sqInt value);
+extern sqInt isWordsOrBytes(sqInt oop);
+extern sqInt pop(sqInt nItems);
+extern sqInt popthenPush(sqInt nItems, sqInt oop);
+extern sqInt popRemappableOop(void);
+extern sqInt positive32BitIntegerFor(sqInt integerValue);
+extern sqInt positive32BitValueOf(sqInt oop);
+extern sqInt primitiveFail(void);
+extern sqInt primitiveFailFor(sqInt reasonCode);
+extern sqInt pushRemappableOop(sqInt oop);
+extern void (*setInterruptCheckChain(void (*aFunction)(void)))() ;
+extern sqInt stackValue(sqInt offset);
+extern sqInt storePointerofObjectwithValue(sqInt index, sqInt oop, sqInt valuePointer);
+extern sqInt success(sqInt aBoolean);
+
 extern
 #endif
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"BochsIA32Plugin 26 November 2012 (i)"
+	"BochsIA32Plugin 11 December 2012 (i)"
 #else
-	"BochsIA32Plugin 26 November 2012 (e)"
+	"BochsIA32Plugin 11 December 2012 (e)"
 #endif
 ;
 
@@ -80,7 +132,7 @@ static const char *moduleName =
 static void
 forceStopOnInterrupt(void)
 {
-	if (interpreterProxy->getInterruptPending()) {
+	if (getInterruptPending()) {
 		forceStopRunning();
 	}
 }
@@ -142,46 +194,46 @@ primitiveDisassembleAtInMemory(void)
 	char *memory;
 	sqInt resultObj;
 
-	address = interpreterProxy->positive32BitValueOf(interpreterProxy->stackValue(1));
-	interpreterProxy->success(interpreterProxy->isWordsOrBytes(interpreterProxy->stackValue(0)));
-	memory = ((char *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(0))));
-	cpuAlien = interpreterProxy->stackValue(2);
-	if (interpreterProxy->failed()) {
+	address = positive32BitValueOf(stackValue(1));
+	success(isWordsOrBytes(stackValue(0)));
+	memory = ((char *) (firstIndexableField(stackValue(0))));
+	cpuAlien = stackValue(2);
+	if (failed()) {
 		return null;
 	}
 	if (((cpu = ((longAt(cpuAlien + BaseHeaderSize)) > 0
 	? (cpuAlien + BaseHeaderSize) + BytesPerOop
 	: longAt((cpuAlien + BaseHeaderSize) + BytesPerOop)))) == 0) {
-		interpreterProxy->primitiveFailFor(PrimErrBadReceiver);
+		primitiveFailFor(PrimErrBadReceiver);
 		return null;
 	}
-	instrLenOrErr = disassembleForAtInSize(cpu, address, memory, interpreterProxy->byteSizeOf(((sqInt)(long)(memory) - 4)));
+	instrLenOrErr = disassembleForAtInSize(cpu, address, memory, byteSizeOf(((sqInt)(long)(memory) - 4)));
 	if (instrLenOrErr < 0) {
-		interpreterProxy->primitiveFailFor(PrimErrInappropriate);
+		primitiveFailFor(PrimErrInappropriate);
 		return null;
 	}
 	log = getlog((&logLen));
-	resultObj = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classArray(), 2);
+	resultObj = instantiateClassindexableSize(classArray(), 2);
 	if (resultObj == 0) {
-		interpreterProxy->primitiveFailFor(PrimErrNoMemory);
+		primitiveFailFor(PrimErrNoMemory);
 		return null;
 	}
-	interpreterProxy->pushRemappableOop(resultObj);
-	logObj = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classString(), logLen);
-	if (interpreterProxy->failed()) {
-		interpreterProxy->popRemappableOop();
-		interpreterProxy->primitiveFailFor(PrimErrNoMemory);
+	pushRemappableOop(resultObj);
+	logObj = instantiateClassindexableSize(classString(), logLen);
+	if (failed()) {
+		popRemappableOop();
+		primitiveFailFor(PrimErrNoMemory);
 		return null;
 	}
-	logObjData = interpreterProxy->arrayValueOf(logObj);
+	logObjData = arrayValueOf(logObj);
 	memcpy(logObjData, log, logLen);
-	resultObj = interpreterProxy->popRemappableOop();
-	interpreterProxy->storePointerofObjectwithValue(0, resultObj, interpreterProxy->integerObjectOf(instrLenOrErr));
-	interpreterProxy->storePointerofObjectwithValue(1, resultObj, logObj);
-	if (interpreterProxy->failed()) {
+	resultObj = popRemappableOop();
+	storePointerofObjectwithValue(0, resultObj, integerObjectOf(instrLenOrErr));
+	storePointerofObjectwithValue(1, resultObj, logObj);
+	if (failed()) {
 		return null;
 	}
-	interpreterProxy->popthenPush(3, resultObj);
+	popthenPush(3, resultObj);
 	return null;
 }
 
@@ -195,27 +247,27 @@ primitiveErrorAndLog(void)
 	sqInt resultObj;
 
 	log = getlog((&logLen));
-	resultObj = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classArray(), 2);
+	resultObj = instantiateClassindexableSize(classArray(), 2);
 	if (resultObj == 0) {
-		interpreterProxy->primitiveFailFor(PrimErrNoMemory);
+		primitiveFailFor(PrimErrNoMemory);
 		return null;
 	}
-	interpreterProxy->storePointerofObjectwithValue(0, resultObj, interpreterProxy->integerObjectOf(errorAcorn()));
+	storePointerofObjectwithValue(0, resultObj, integerObjectOf(errorAcorn()));
 	if (logLen > 0) {
-		interpreterProxy->pushRemappableOop(resultObj);
-		logObj = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classString(), logLen);
-		if (interpreterProxy->failed()) {
-			interpreterProxy->popRemappableOop();
-			interpreterProxy->primitiveFailFor(PrimErrNoMemory);
+		pushRemappableOop(resultObj);
+		logObj = instantiateClassindexableSize(classString(), logLen);
+		if (failed()) {
+			popRemappableOop();
+			primitiveFailFor(PrimErrNoMemory);
 			return null;
 		}
-		resultObj = interpreterProxy->popRemappableOop();
-		logObjData = interpreterProxy->arrayValueOf(logObj);
+		resultObj = popRemappableOop();
+		logObjData = arrayValueOf(logObj);
 		memcpy(logObjData, log, logLen);
-		interpreterProxy->storePointerofObjectwithValue(1, resultObj, logObj);
+		storePointerofObjectwithValue(1, resultObj, logObj);
 	}
-	interpreterProxy->popthenPush(1, resultObj);
-	if (interpreterProxy->failed()) {
+	popthenPush(1, resultObj);
+	if (failed()) {
 		return null;
 	}
 	return null;
@@ -235,23 +287,23 @@ primitiveFlushICacheFromTo(void)
 	unsigned long endAddress;
 	unsigned long startAddress;
 
-	startAddress = interpreterProxy->positive32BitValueOf(interpreterProxy->stackValue(1));
-	endAddress = interpreterProxy->positive32BitValueOf(interpreterProxy->stackValue(0));
-	cpuAlien = interpreterProxy->stackValue(2);
-	if (interpreterProxy->failed()) {
+	startAddress = positive32BitValueOf(stackValue(1));
+	endAddress = positive32BitValueOf(stackValue(0));
+	cpuAlien = stackValue(2);
+	if (failed()) {
 		return null;
 	}
 	if (((cpu = ((longAt(cpuAlien + BaseHeaderSize)) > 0
 	? (cpuAlien + BaseHeaderSize) + BytesPerOop
 	: longAt((cpuAlien + BaseHeaderSize) + BytesPerOop)))) == 0) {
-		interpreterProxy->primitiveFailFor(PrimErrBadReceiver);
+		primitiveFailFor(PrimErrBadReceiver);
 		return null;
 	}
 	flushICacheFromTo(cpu, startAddress, endAddress);
-	if (interpreterProxy->failed()) {
+	if (failed()) {
 		return null;
 	}
-	interpreterProxy->pop(2);
+	pop(2);
 	return null;
 }
 
@@ -262,11 +314,11 @@ primitiveNewCPU(void)
 
 	cpu = newCPU();
 	if (cpu == 0) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->popthenPush(1, interpreterProxy->positive32BitIntegerFor(((unsigned long) cpu)));
-	if (interpreterProxy->failed()) {
+	popthenPush(1, positive32BitIntegerFor(((unsigned long) cpu)));
+	if (failed()) {
 		return null;
 	}
 	return null;
@@ -279,25 +331,25 @@ primitiveResetCPU(void)
 	sqInt cpuAlien;
 	sqInt maybeErr;
 
-	cpuAlien = interpreterProxy->stackValue(0);
-	if (interpreterProxy->failed()) {
+	cpuAlien = stackValue(0);
+	if (failed()) {
 		return null;
 	}
 	if (((cpu = ((longAt(cpuAlien + BaseHeaderSize)) > 0
 	? (cpuAlien + BaseHeaderSize) + BytesPerOop
 	: longAt((cpuAlien + BaseHeaderSize) + BytesPerOop)))) == 0) {
-		interpreterProxy->primitiveFailFor(PrimErrBadReceiver);
+		primitiveFailFor(PrimErrBadReceiver);
 		return null;
 	}
 	maybeErr = resetCPU(cpu);
 	if (maybeErr != 0) {
-		interpreterProxy->primitiveFailFor(PrimErrInappropriate);
+		primitiveFailFor(PrimErrInappropriate);
 		return null;
 	}
-	if (interpreterProxy->failed()) {
+	if (failed()) {
 		return null;
 	}
-	interpreterProxy->popthenPush(1, cpuAlien);
+	popthenPush(1, cpuAlien);
 	return null;
 }
 
@@ -321,34 +373,34 @@ primitiveRunInMemoryMinimumAddressReadWrite(void)
 	unsigned long minAddress;
 	unsigned long minWriteMaxExecAddress;
 
-	interpreterProxy->success(interpreterProxy->isWordsOrBytes(interpreterProxy->stackValue(2)));
-	memory = ((char *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(2))));
-	minAddress = interpreterProxy->positive32BitValueOf(interpreterProxy->stackValue(1));
-	minWriteMaxExecAddress = interpreterProxy->positive32BitValueOf(interpreterProxy->stackValue(0));
-	cpuAlien = interpreterProxy->stackValue(3);
-	if (interpreterProxy->failed()) {
+	success(isWordsOrBytes(stackValue(2)));
+	memory = ((char *) (firstIndexableField(stackValue(2))));
+	minAddress = positive32BitValueOf(stackValue(1));
+	minWriteMaxExecAddress = positive32BitValueOf(stackValue(0));
+	cpuAlien = stackValue(3);
+	if (failed()) {
 		return null;
 	}
 	if (((cpu = ((longAt(cpuAlien + BaseHeaderSize)) > 0
 	? (cpuAlien + BaseHeaderSize) + BytesPerOop
 	: longAt((cpuAlien + BaseHeaderSize) + BytesPerOop)))) == 0) {
-		interpreterProxy->primitiveFailFor(PrimErrBadReceiver);
+		primitiveFailFor(PrimErrBadReceiver);
 		return null;
 	}
-	prevInterruptCheckChain = interpreterProxy->setInterruptCheckChain(forceStopOnInterrupt);
+	prevInterruptCheckChain = setInterruptCheckChain(forceStopOnInterrupt);
 	if (prevInterruptCheckChain == (forceStopOnInterrupt)) {
 		prevInterruptCheckChain == 0;
 	}
-	maybeErr = runCPUInSizeMinAddressReadWrite(cpu, memory, interpreterProxy->byteSizeOf(((sqInt)(long)(memory) - 4)), minAddress, minWriteMaxExecAddress);
-	interpreterProxy->setInterruptCheckChain(prevInterruptCheckChain);
+	maybeErr = runCPUInSizeMinAddressReadWrite(cpu, memory, byteSizeOf(((sqInt)(long)(memory) - 4)), minAddress, minWriteMaxExecAddress);
+	setInterruptCheckChain(prevInterruptCheckChain);
 	if (maybeErr != 0) {
-		interpreterProxy->primitiveFailFor(PrimErrInappropriate);
+		primitiveFailFor(PrimErrInappropriate);
 		return null;
 	}
-	if (interpreterProxy->failed()) {
+	if (failed()) {
 		return null;
 	}
-	interpreterProxy->popthenPush(4, cpuAlien);
+	popthenPush(4, cpuAlien);
 	return null;
 }
 
@@ -371,34 +423,34 @@ primitiveSingleStepInMemoryMinimumAddressReadWrite(void)
 	unsigned long minAddress;
 	unsigned long minWriteMaxExecAddress;
 
-	interpreterProxy->success(interpreterProxy->isWordsOrBytes(interpreterProxy->stackValue(2)));
-	memory = ((char *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(2))));
-	minAddress = interpreterProxy->positive32BitValueOf(interpreterProxy->stackValue(1));
-	minWriteMaxExecAddress = interpreterProxy->positive32BitValueOf(interpreterProxy->stackValue(0));
-	cpuAlien = interpreterProxy->stackValue(3);
-	if (interpreterProxy->failed()) {
+	success(isWordsOrBytes(stackValue(2)));
+	memory = ((char *) (firstIndexableField(stackValue(2))));
+	minAddress = positive32BitValueOf(stackValue(1));
+	minWriteMaxExecAddress = positive32BitValueOf(stackValue(0));
+	cpuAlien = stackValue(3);
+	if (failed()) {
 		return null;
 	}
 	if (((cpu = ((longAt(cpuAlien + BaseHeaderSize)) > 0
 	? (cpuAlien + BaseHeaderSize) + BytesPerOop
 	: longAt((cpuAlien + BaseHeaderSize) + BytesPerOop)))) == 0) {
-		interpreterProxy->primitiveFailFor(PrimErrBadReceiver);
+		primitiveFailFor(PrimErrBadReceiver);
 		return null;
 	}
-	maybeErr = singleStepCPUInSizeMinAddressReadWrite(cpu, memory, interpreterProxy->byteSizeOf(((sqInt)(long)(memory) - 4)), minAddress, minWriteMaxExecAddress);
+	maybeErr = singleStepCPUInSizeMinAddressReadWrite(cpu, memory, byteSizeOf(((sqInt)(long)(memory) - 4)), minAddress, minWriteMaxExecAddress);
 	if (maybeErr != 0) {
-		interpreterProxy->primitiveFailFor(PrimErrInappropriate);
+		primitiveFailFor(PrimErrInappropriate);
 		return null;
 	}
-	if (interpreterProxy->failed()) {
+	if (failed()) {
 		return null;
 	}
-	interpreterProxy->popthenPush(4, cpuAlien);
+	popthenPush(4, cpuAlien);
 	return null;
 }
 
 
-/*	Note: This is coded so that is can be run from Squeak. */
+/*	Note: This is coded so that it can be run in Squeak. */
 
 EXPORT(sqInt)
 setInterpreter(struct VirtualMachine*anInterpreter)
@@ -406,11 +458,35 @@ setInterpreter(struct VirtualMachine*anInterpreter)
 	sqInt ok;
 
 	interpreterProxy = anInterpreter;
-	ok = interpreterProxy->majorVersion() == VM_PROXY_MAJOR;
-	if (ok == 0) {
-		return 0;
+	ok = ((interpreterProxy->majorVersion()) == (VM_PROXY_MAJOR))
+	 && ((interpreterProxy->minorVersion()) >= (VM_PROXY_MINOR));
+	if (ok) {
+		
+#if !defined(SQUEAK_BUILTIN_PLUGIN)
+		arrayValueOf = interpreterProxy->arrayValueOf;
+		byteSizeOf = interpreterProxy->byteSizeOf;
+		classArray = interpreterProxy->classArray;
+		classString = interpreterProxy->classString;
+		failed = interpreterProxy->failed;
+		firstIndexableField = interpreterProxy->firstIndexableField;
+		getInterruptPending = interpreterProxy->getInterruptPending;
+		instantiateClassindexableSize = interpreterProxy->instantiateClassindexableSize;
+		integerObjectOf = interpreterProxy->integerObjectOf;
+		isWordsOrBytes = interpreterProxy->isWordsOrBytes;
+		pop = interpreterProxy->pop;
+		popthenPush = interpreterProxy->popthenPush;
+		popRemappableOop = interpreterProxy->popRemappableOop;
+		positive32BitIntegerFor = interpreterProxy->positive32BitIntegerFor;
+		positive32BitValueOf = interpreterProxy->positive32BitValueOf;
+		primitiveFail = interpreterProxy->primitiveFail;
+		primitiveFailFor = interpreterProxy->primitiveFailFor;
+		pushRemappableOop = interpreterProxy->pushRemappableOop;
+		setInterruptCheckChain = interpreterProxy->setInterruptCheckChain;
+		stackValue = interpreterProxy->stackValue;
+		storePointerofObjectwithValue = interpreterProxy->storePointerofObjectwithValue;
+		success = interpreterProxy->success;
+#endif /* !defined(SQUEAK_BUILTIN_PLUGIN) */;
 	}
-	ok = interpreterProxy->minorVersion() >= VM_PROXY_MINOR;
 	return ok;
 }
 

@@ -276,8 +276,8 @@ typedef struct VirtualMachine {
 	sqInt  (*sendInvokeCallbackStackRegistersJmpbuf)(sqInt thunkPtrAsInt, sqInt stackPtrAsInt, sqInt regsPtrAsInt, sqInt jmpBufPtrAsInt);
 	sqInt  (*reestablishContextPriorToCallback)(sqInt callbackContext);
 	sqInt *(*getStackPointer)(void);
-	sqInt  (*internalIsImmutable)(sqInt oop);
-	sqInt  (*internalIsMutable)(sqInt oop);
+	sqInt  (*isOopImmutable)(sqInt oop);
+	sqInt  (*isOopMutable)(sqInt oop);
 #endif
 
 #if VM_PROXY_MINOR > 9

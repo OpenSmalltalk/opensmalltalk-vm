@@ -1,0 +1,9 @@
+#!/bin/sh
+# Touch the primitives in the supplied directories
+for d in "$@"; do
+	if [ -d "$d/plugins" ]; then
+		d="$d/plugins"
+	fi # 200101210400 = 42 ;-)
+	touch -t 200101210400 "$d"/*/*.c
+	rm "$d"/MiscPrimitivePlugin/MiscPrimitivePlugin.c
+done

@@ -17,6 +17,7 @@ FileCopyPlugin \
 FilePlugin \
 FloatArrayPlugin \
 FloatMathPlugin \
+GdbARMPlugin \
 GeniePlugin \
 HostWindowPlugin \
 IA32ABI \

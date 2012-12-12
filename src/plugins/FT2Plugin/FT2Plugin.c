@@ -12,6 +12,11 @@ static char __buildInfo[] = "FT2Plugin Freetype-Plugin-Igor.Stasenko.57 uuid: b7
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 #include <ft2build.h>
 
 /* Default EXPORT macro that does nothing (see comment in sq.h): */
@@ -37,6 +42,7 @@ static char __buildInfo[] = "FT2Plugin Freetype-Plugin-Igor.Stasenko.57 uuid: b7
 #include FT_TRUETYPE_TABLES_H
 #include FT_FREETYPE_H
 #include FT_OUTLINE_H
+#include "sqMemoryAccess.h"
 #include "sqMemoryAccess.h"
 
 
@@ -120,7 +126,77 @@ static void sqAssert(sqInt aBool);
 /*** Variables ***/
 static int errorCode;
 
-#ifdef SQUEAK_BUILTIN_PLUGIN
+#if !defined(SQUEAK_BUILTIN_PLUGIN)
+static void * (*arrayValueOf)(sqInt oop);
+static sqInt (*byteSizeOf)(sqInt oop);
+static sqInt (*classByteArray)(void);
+static sqInt (*classString)(void);
+static sqInt (*failed)(void);
+static void * (*fetchArrayofObject)(sqInt fieldIndex, sqInt objectPointer);
+static sqInt (*fetchIntegerofObject)(sqInt fieldIndex, sqInt objectPointer);
+static sqInt (*fetchPointerofObject)(sqInt index, sqInt oop);
+static void * (*firstIndexableField)(sqInt oop);
+static sqInt (*instantiateClassindexableSize)(sqInt classPointer, sqInt size);
+static sqInt (*integerObjectOf)(sqInt value);
+static sqInt (*ioFilenamefromStringofLengthresolveAliases)(char *aCharBuffer, char *aFilenameString, sqInt filenameLength, sqInt aBoolean);
+static sqInt (*isKindOf)(sqInt oop, char *aString);
+static sqInt (*isBytes)(sqInt oop);
+static sqInt (*isIndexable)(sqInt oop);
+static sqInt (*isIntegerObject)(sqInt objectPointer);
+static sqInt (*isPointers)(sqInt oop);
+static sqInt (*isWords)(sqInt oop);
+static sqInt (*makePointwithxValueyValue)(sqInt xValue, sqInt yValue);
+static sqInt (*methodArgumentCount)(void);
+static sqInt (*nilObject)(void);
+static sqInt (*pop)(sqInt nItems);
+static sqInt (*popthenPush)(sqInt nItems, sqInt oop);
+static sqInt (*popRemappableOop)(void);
+static sqInt (*positive32BitIntegerFor)(sqInt integerValue);
+static sqInt (*primitiveFail)(void);
+static sqInt (*pushRemappableOop)(sqInt oop);
+static sqInt (*slotSizeOf)(sqInt oop);
+static sqInt (*stackIntegerValue)(sqInt offset);
+static sqInt (*stackObjectValue)(sqInt offset);
+static sqInt (*stackValue)(sqInt offset);
+static sqInt (*storeIntegerofObjectwithValue)(sqInt index, sqInt oop, sqInt integer);
+static sqInt (*storePointerofObjectwithValue)(sqInt index, sqInt oop, sqInt valuePointer);
+static sqInt (*success)(sqInt aBoolean);
+#else /* !defined(SQUEAK_BUILTIN_PLUGIN) */
+extern void * arrayValueOf(sqInt oop);
+extern sqInt byteSizeOf(sqInt oop);
+extern sqInt classByteArray(void);
+extern sqInt classString(void);
+extern sqInt failed(void);
+extern void * fetchArrayofObject(sqInt fieldIndex, sqInt objectPointer);
+extern sqInt fetchIntegerofObject(sqInt fieldIndex, sqInt objectPointer);
+extern sqInt fetchPointerofObject(sqInt index, sqInt oop);
+extern void * firstIndexableField(sqInt oop);
+extern sqInt instantiateClassindexableSize(sqInt classPointer, sqInt size);
+extern sqInt integerObjectOf(sqInt value);
+extern sqInt ioFilenamefromStringofLengthresolveAliases(char *aCharBuffer, char *aFilenameString, sqInt filenameLength, sqInt aBoolean);
+extern sqInt isKindOf(sqInt oop, char *aString);
+extern sqInt isBytes(sqInt oop);
+extern sqInt isIndexable(sqInt oop);
+extern sqInt isIntegerObject(sqInt objectPointer);
+extern sqInt isPointers(sqInt oop);
+extern sqInt isWords(sqInt oop);
+extern sqInt makePointwithxValueyValue(sqInt xValue, sqInt yValue);
+extern sqInt methodArgumentCount(void);
+extern sqInt nilObject(void);
+extern sqInt pop(sqInt nItems);
+extern sqInt popthenPush(sqInt nItems, sqInt oop);
+extern sqInt popRemappableOop(void);
+extern sqInt positive32BitIntegerFor(sqInt integerValue);
+extern sqInt primitiveFail(void);
+extern sqInt pushRemappableOop(sqInt oop);
+extern sqInt slotSizeOf(sqInt oop);
+extern sqInt stackIntegerValue(sqInt offset);
+extern sqInt stackObjectValue(sqInt offset);
+extern sqInt stackValue(sqInt offset);
+extern sqInt storeIntegerofObjectwithValue(sqInt index, sqInt oop, sqInt integer);
+extern sqInt storePointerofObjectwithValue(sqInt index, sqInt oop, sqInt valuePointer);
+extern sqInt success(sqInt aBoolean);
+
 extern
 #endif
 struct VirtualMachine* interpreterProxy;
@@ -139,10 +215,10 @@ fetchByteArrayofObjectassureSize(sqInt fieldIndex, sqInt objectPointer, sqInt aS
 {
 	sqInt array;
 
-	array = interpreterProxy->fetchPointerofObject(fieldIndex, objectPointer);
-	if ((interpreterProxy->isBytes(array))
-	 && ((interpreterProxy->slotSizeOf(array)) == aSize)) {
-		return interpreterProxy->arrayValueOf(array);
+	array = fetchPointerofObject(fieldIndex, objectPointer);
+	if ((isBytes(array))
+	 && ((slotSizeOf(array)) == aSize)) {
+		return arrayValueOf(array);
 	}
 	return null;
 }
@@ -152,10 +228,10 @@ fetchShortArrayofObjectassureSize(sqInt fieldIndex, sqInt objectPointer, sqInt a
 {
 	sqInt array;
 
-	array = interpreterProxy->fetchPointerofObject(fieldIndex, objectPointer);
-	if ((interpreterProxy->isWords(array))
-	 && ((interpreterProxy->slotSizeOf(array)) == (((sqInt) (aSize + 1) >> 1)))) {
-		return interpreterProxy->arrayValueOf(array);
+	array = fetchPointerofObject(fieldIndex, objectPointer);
+	if ((isWords(array))
+	 && ((slotSizeOf(array)) == (((sqInt) (aSize + 1) >> 1)))) {
+		return arrayValueOf(array);
 	}
 	return null;
 }
@@ -165,10 +241,10 @@ fetchWordArrayofObjectassureSize(sqInt fieldIndex, sqInt objectPointer, sqInt aS
 {
 	sqInt array;
 
-	array = interpreterProxy->fetchPointerofObject(fieldIndex, objectPointer);
-	if ((interpreterProxy->isWords(array))
-	 && ((interpreterProxy->slotSizeOf(array)) == aSize)) {
-		return interpreterProxy->arrayValueOf(array);
+	array = fetchPointerofObject(fieldIndex, objectPointer);
+	if ((isWords(array))
+	 && ((slotSizeOf(array)) == aSize)) {
+		return arrayValueOf(array);
 	}
 	return null;
 }
@@ -191,14 +267,14 @@ ftAllocateHandleInReceiverForPointer(void *aPointer)
 
 		/* Copy from the C bytecode buffer to the Smalltalk ByteArray */
 
-		returnedHandle = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classByteArray(), sizeof(void **));
-		extraByteArrayPtr = interpreterProxy->arrayValueOf(returnedHandle);
+		returnedHandle = instantiateClassindexableSize(classByteArray(), sizeof(void **));
+		extraByteArrayPtr = arrayValueOf(returnedHandle);
 		*extraByteArrayPtr = (void *)(aPointer);
 	}
 	else {
-		returnedHandle = interpreterProxy->nilObject();
+		returnedHandle = nilObject();
 	}
-	interpreterProxy->storePointerofObjectwithValue(0, interpreterProxy->stackObjectValue(interpreterProxy->methodArgumentCount()), returnedHandle);
+	storePointerofObjectwithValue(0, stackObjectValue(methodArgumentCount()), returnedHandle);
 	;
 	return returnedHandle;
 }
@@ -220,13 +296,13 @@ ftAllocateStringForPointer(const char *aPointer)
 
 		/* Copy from the C bytecode buffer to the Smalltalk ByteArray */
 
-		returnedHandle = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classString(), strlen(aPointer));
-		extraByteArrayPtr = interpreterProxy->arrayValueOf(returnedHandle);
+		returnedHandle = instantiateClassindexableSize(classString(), strlen(aPointer));
+		extraByteArrayPtr = arrayValueOf(returnedHandle);
 		;
 		strncpy(extraByteArrayPtr, aPointer, strlen(aPointer));
 	}
 	else {
-		returnedHandle = interpreterProxy->nilObject();
+		returnedHandle = nilObject();
 	}
 	return returnedHandle;
 }
@@ -240,17 +316,17 @@ ftEncodingValueFromString(sqInt string)
 	unsigned char*ptr;
 	unsigned long retval;
 
-	interpreterProxy->success((!(interpreterProxy->isIntegerObject(string)))
-	 && ((interpreterProxy->isBytes(string))
-	 && ((interpreterProxy->slotSizeOf(string)) == (sizeof(FT_Encoding)))));
-	if (interpreterProxy->failed()) {
+	success((!(isIntegerObject(string)))
+	 && ((isBytes(string))
+	 && ((slotSizeOf(string)) == (sizeof(FT_Encoding)))));
+	if (failed()) {
 		return null;
 	}
 	retval = 0;
 
 	/* ptr := self cCode: '(unsigned char *) (string + 4)'. */
 
-	ptr = interpreterProxy->arrayValueOf(string);
+	ptr = arrayValueOf(string);
 	;
 	retval = ((unsigned long)ptr[0]) << 24;
 	retval += ((unsigned long)ptr[1]) << 16;
@@ -272,10 +348,10 @@ ftHandleValueFromReceiver(sqInt rcvrOop)
 	sqInt btw;
 	sqInt oop;
 
-	oop = interpreterProxy->fetchPointerofObject(0, rcvrOop);
-	interpreterProxy->success((interpreterProxy->isBytes(oop))
-	 && ((interpreterProxy->slotSizeOf(oop)) == (sizeof(void *))));
-	if (interpreterProxy->failed()) {
+	oop = fetchPointerofObject(0, rcvrOop);
+	success((isBytes(oop))
+	 && ((slotSizeOf(oop)) == (sizeof(void *))));
+	if (failed()) {
 		return null;
 	}
 	btw = BytesPerWord;
@@ -297,16 +373,16 @@ ftInitBitmapfromForm(FT_Bitmap*bitmap, sqInt formOop)
 	sqInt width;
 	sqInt wordsPerRow;
 
-	interpreterProxy->success(interpreterProxy->isPointers(formOop));
-	interpreterProxy->success((interpreterProxy->slotSizeOf(formOop)) >= FormInstSize);
-	if (interpreterProxy->failed()) {
+	success(isPointers(formOop));
+	success((slotSizeOf(formOop)) >= FormInstSize);
+	if (failed()) {
 		return null;
 	}
-	width = interpreterProxy->fetchIntegerofObject(FormWidthIndex, formOop);
-	height = interpreterProxy->fetchIntegerofObject(FormHeightIndex, formOop);
-	depth = interpreterProxy->fetchIntegerofObject(FormDepthIndex, formOop);
-	buffer = ((void*) (interpreterProxy->fetchArrayofObject(FormBitsIndex, formOop)));
-	if (interpreterProxy->failed()) {
+	width = fetchIntegerofObject(FormWidthIndex, formOop);
+	height = fetchIntegerofObject(FormHeightIndex, formOop);
+	depth = fetchIntegerofObject(FormDepthIndex, formOop);
+	buffer = ((void*) (fetchArrayofObject(FormBitsIndex, formOop)));
+	if (failed()) {
 		return null;
 	}
 	if (depth < 0) {
@@ -324,7 +400,7 @@ ftInitBitmapfromForm(FT_Bitmap*bitmap, sqInt formOop)
 			pixelMode = FT_PIXEL_MODE_GRAY;
 		}
 		else {
-			return interpreterProxy->primitiveFail();
+			return primitiveFail();
 		}
 	}
 	
@@ -332,7 +408,7 @@ ftInitBitmapfromForm(FT_Bitmap*bitmap, sqInt formOop)
 	depth = depth * -1;
 #endif
 ;
-	interpreterProxy->storeIntegerofObjectwithValue(FormDepthIndex, formOop, depth);
+	storeIntegerofObjectwithValue(FormDepthIndex, formOop, depth);
 	pitch = wordsPerRow * 4;
 	bitmap->rows = height;
 	bitmap->width = width;
@@ -358,16 +434,16 @@ ftInitBitmapfromFormrenderMode(FT_Bitmap*bitmap, sqInt formOop, sqInt mode)
 	sqInt width;
 	sqInt wordsPerRow;
 
-	interpreterProxy->success(interpreterProxy->isPointers(formOop));
-	interpreterProxy->success((interpreterProxy->slotSizeOf(formOop)) >= FormInstSize);
-	if (interpreterProxy->failed()) {
+	success(isPointers(formOop));
+	success((slotSizeOf(formOop)) >= FormInstSize);
+	if (failed()) {
 		return null;
 	}
-	width = interpreterProxy->fetchIntegerofObject(FormWidthIndex, formOop);
-	height = interpreterProxy->fetchIntegerofObject(FormHeightIndex, formOop);
-	depth = interpreterProxy->fetchIntegerofObject(FormDepthIndex, formOop);
-	buffer = ((void*) (interpreterProxy->fetchArrayofObject(FormBitsIndex, formOop)));
-	if (interpreterProxy->failed()) {
+	width = fetchIntegerofObject(FormWidthIndex, formOop);
+	height = fetchIntegerofObject(FormHeightIndex, formOop);
+	depth = fetchIntegerofObject(FormDepthIndex, formOop);
+	buffer = ((void*) (fetchArrayofObject(FormBitsIndex, formOop)));
+	if (failed()) {
 		return null;
 	}
 	if (depth < 0) {
@@ -383,7 +459,7 @@ ftInitBitmapfromFormrenderMode(FT_Bitmap*bitmap, sqInt formOop, sqInt mode)
 			numGrays = 256;
 		}
 		else {
-			return interpreterProxy->primitiveFail();
+			return primitiveFail();
 		}
 	}
 	
@@ -391,7 +467,7 @@ ftInitBitmapfromFormrenderMode(FT_Bitmap*bitmap, sqInt formOop, sqInt mode)
 	depth = depth * -1;
 #endif
 ;
-	interpreterProxy->storeIntegerofObjectwithValue(FormDepthIndex, formOop, depth);
+	storeIntegerofObjectwithValue(FormDepthIndex, formOop, depth);
 	pitch = wordsPerRow * 4;
 	bitmap->rows = height;
 	bitmap->width = width;
@@ -406,7 +482,7 @@ static int
 ftParameterError(void)
 {
 	errorCode = 255;
-	return interpreterProxy->primitiveFail();
+	return primitiveFail();
 }
 
 
@@ -418,12 +494,12 @@ ftStringFromEncodingValue(FT_Encoding encoding)
 	unsigned char*ptr;
 	sqInt stringOop;
 
-	stringOop = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classString(), sizeof(FT_Encoding));
+	stringOop = instantiateClassindexableSize(classString(), sizeof(FT_Encoding));
 	;
-	if (interpreterProxy->failed()) {
+	if (failed()) {
 		return null;
 	}
-	ptr = interpreterProxy->firstIndexableField(stringOop);
+	ptr = firstIndexableField(stringOop);
 	;
 	ptr[0] = (encoding & 0xFF000000) >> 24;
 	ptr[1] = (encoding & 0x00FF0000) >> 16;
@@ -488,29 +564,33 @@ primitiveCopyToExternalMemory(void)
 	size_t byteSize;
 	sqInt rcvr;
 
-	interpreterProxy->success(interpreterProxy->isBytes(interpreterProxy->stackValue(0)));
-	aByteArray = ((char *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(0))));
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(1), "FreeTypeExternalMemory"));
-	rcvr = interpreterProxy->stackValue(1);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	success(isBytes(stackValue(0)));
+	aByteArray = ((char *) (firstIndexableField(stackValue(0))));
+	success(isKindOf(stackValue(1), "FreeTypeExternalMemory"));
+	rcvr = stackValue(1);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	;
 	errorCode = 0;
-	byteSize = interpreterProxy->byteSizeOf(((sqInt)(long)(aByteArray) - 4));
+	byteSize = byteSizeOf(((sqInt)(long)(aByteArray) - 4));
 	;
-	if (interpreterProxy->failed()) {
+	if (failed()) {
 		return null;
 	}
 	aPointer = malloc(byteSize);
 	memcpy(aPointer,aByteArray,byteSize);
 	ftAllocateHandleInReceiverForPointer(aPointer);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->pop(1);
+	pop(1);
 	return null;
 }
 
@@ -525,15 +605,17 @@ primitiveDoneFace(void)
 	sqInt i;
 	sqInt rcvr;
 
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "FT2Face"));
-	rcvr = interpreterProxy->stackValue(0);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	success(isKindOf(stackValue(0), "FT2Face"));
+	rcvr = stackValue(0);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	face = ftHandleValueFromReceiver(rcvr);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	;
@@ -542,11 +624,13 @@ primitiveDoneFace(void)
 
 	errorCode = FT_Done_Face(face);
 	for (i = 0; i <= 23; i += 1) {
-		interpreterProxy->storePointerofObjectwithValue(i, rcvr, interpreterProxy->nilObject());
+		storePointerofObjectwithValue(i, rcvr, nilObject());
 	}
-	interpreterProxy->success(errorCode == 0);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	success(errorCode == 0);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	return null;
@@ -564,15 +648,17 @@ primitiveDoneFacePreserveFields(void)
 	FT_Face face;
 	sqInt rcvr;
 
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "FT2Face"));
-	rcvr = interpreterProxy->stackValue(0);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	success(isKindOf(stackValue(0), "FT2Face"));
+	rcvr = stackValue(0);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	face = ftHandleValueFromReceiver(rcvr);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	;
@@ -580,10 +666,12 @@ primitiveDoneFacePreserveFields(void)
 	/* nil the handle field */
 
 	errorCode = FT_Done_Face(face);
-	interpreterProxy->storePointerofObjectwithValue(0, rcvr, interpreterProxy->nilObject());
-	interpreterProxy->success(errorCode == 0);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	storePointerofObjectwithValue(0, rcvr, nilObject());
+	success(errorCode == 0);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	return null;
@@ -603,28 +691,32 @@ primitiveEmboldenFaceGlyphSlotOutline(void)
 	sqInt rcvr;
 	sqInt strength;
 
-	strength = interpreterProxy->stackIntegerValue(0);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(1), "FT2Face"));
-	rcvr = interpreterProxy->stackValue(1);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	strength = stackIntegerValue(0);
+	success(isKindOf(stackValue(1), "FT2Face"));
+	rcvr = stackValue(1);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	face = ftHandleValueFromReceiver(rcvr);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	errorCode = FT_Outline_Embolden( &face->glyph->outline, strength );
-	interpreterProxy->success(errorCode == 0);
-	if (interpreterProxy->failed()) {
+	success(errorCode == 0);
+	if (failed()) {
 		return null;
 	}
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->pop(1);
+	pop(1);
 	return null;
 }
 
@@ -636,12 +728,14 @@ primitiveErrorCode(void)
 {
 	sqInt _return_value;
 
-	_return_value = interpreterProxy->positive32BitIntegerFor((FT_ERROR_BASE(errorCode)));
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	_return_value = positive32BitIntegerFor((FT_ERROR_BASE(errorCode)));
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->popthenPush(1, _return_value);
+	popthenPush(1, _return_value);
 	return null;
 }
 
@@ -668,14 +762,16 @@ static const struct ftError ftErrors[] =
 	}
 	;
 	if (!str) {
-		interpreterProxy->success(0);
+		success(0);
 	}
-	if (interpreterProxy->failed()) {
+	if (failed()) {
 		return null;
 	}
-	interpreterProxy->popthenPush(1, ftAllocateStringForPointer(str));
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	popthenPush(1, ftAllocateStringForPointer(str));
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	return null;
@@ -687,10 +783,12 @@ primitiveFreeExternalMemory(void)
 	void*memPointer;
 	sqInt rcvr;
 
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "FreeTypeExternalMemory"));
-	rcvr = interpreterProxy->stackValue(0);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	success(isKindOf(stackValue(0), "FreeTypeExternalMemory"));
+	rcvr = stackValue(0);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	;
@@ -702,8 +800,10 @@ primitiveFreeExternalMemory(void)
 	if (!(memPointer == null)) {
 		free(memPointer);
 	}
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	return null;
@@ -723,26 +823,30 @@ primitiveGetFaceCharIndex(void)
 	sqInt result;
 	sqInt _return_value;
 
-	charIndex = interpreterProxy->stackIntegerValue(0);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(1), "FT2Face"));
-	rcvr = interpreterProxy->stackValue(1);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	charIndex = stackIntegerValue(0);
+	success(isKindOf(stackValue(1), "FT2Face"));
+	rcvr = stackValue(1);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	errorCode = 0;
 	face = ftHandleValueFromReceiver(rcvr);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	result = FT_Get_Char_Index(face, charIndex);
-	_return_value = interpreterProxy->positive32BitIntegerFor(result);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	_return_value = positive32BitIntegerFor(result);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->popthenPush(2, _return_value);
+	popthenPush(2, _return_value);
 	return null;
 }
 
@@ -755,33 +859,37 @@ primitiveGetFaceCharMap(void)
 	sqInt rcvr;
 	sqInt stringOop;
 
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "FT2Face"));
-	rcvr = interpreterProxy->stackValue(0);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	success(isKindOf(stackValue(0), "FT2Face"));
+	rcvr = stackValue(0);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	face = ftHandleValueFromReceiver(rcvr);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	charmap = face->charmap;
 	if (!charmap) {
 		return null;
 	}
-	interpreterProxy->pushRemappableOop(rcvr);
+	pushRemappableOop(rcvr);
 	encoding = charmap->encoding;
 	stringOop = ftStringFromEncodingValue(encoding);
-	rcvr = interpreterProxy->popRemappableOop();
-	interpreterProxy->storePointerofObjectwithValue(22, rcvr, stringOop);
-	interpreterProxy->storeIntegerofObjectwithValue(23, rcvr, charmap->platform_id);
-	interpreterProxy->storeIntegerofObjectwithValue(24, rcvr, charmap->encoding_id);
-	if (interpreterProxy->failed()) {
+	rcvr = popRemappableOop();
+	storePointerofObjectwithValue(22, rcvr, stringOop);
+	storeIntegerofObjectwithValue(23, rcvr, charmap->platform_id);
+	storeIntegerofObjectwithValue(24, rcvr, charmap->encoding_id);
+	if (failed()) {
 		return null;
 	}
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	return null;
@@ -799,42 +907,46 @@ primitiveGetFaceCharMapsIntoArray(void)
 	sqInt rcvr;
 	sqInt stringOop;
 
-	interpreterProxy->success(interpreterProxy->isIndexable(interpreterProxy->stackValue(0)));
-	array = ((int *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(0))));
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(1), "FT2Face"));
-	rcvr = interpreterProxy->stackValue(1);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	success(isIndexable(stackValue(0)));
+	array = ((int *) (firstIndexableField(stackValue(0))));
+	success(isKindOf(stackValue(1), "FT2Face"));
+	rcvr = stackValue(1);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	face = ftHandleValueFromReceiver(rcvr);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	numCharmaps = face->num_charmaps;
 	arrayOop = ((int) array) - 4;
-	interpreterProxy->success((interpreterProxy->slotSizeOf(arrayOop)) == numCharmaps);
-	if (interpreterProxy->failed()) {
+	success((slotSizeOf(arrayOop)) == numCharmaps);
+	if (failed()) {
 		return null;
 	}
 	charmap = face->charmaps;
 	;
 	for (i = 0; i <= (numCharmaps - 1); i += 1) {
-		interpreterProxy->pushRemappableOop(arrayOop);
+		pushRemappableOop(arrayOop);
 		stringOop = ftStringFromEncodingValue((*charmap)->encoding);
-		arrayOop = interpreterProxy->popRemappableOop();
-		interpreterProxy->storePointerofObjectwithValue(i, arrayOop, stringOop);
+		arrayOop = popRemappableOop();
+		storePointerofObjectwithValue(i, arrayOop, stringOop);
 		charmap++;
 	}
-	if (interpreterProxy->failed()) {
+	if (failed()) {
 		return null;
 	}
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->pop(1);
+	pop(1);
 	return null;
 }
 
@@ -850,29 +962,33 @@ primitiveGetFaceGlyphName(void)
 	sqInt rcvr;
 	sqInt string;
 
-	glyphIndex = interpreterProxy->stackIntegerValue(0);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(1), "FT2Face"));
-	rcvr = interpreterProxy->stackValue(1);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	glyphIndex = stackIntegerValue(0);
+	success(isKindOf(stackValue(1), "FT2Face"));
+	rcvr = stackValue(1);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	face = ftHandleValueFromReceiver(rcvr);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	errorCode = FT_Get_Glyph_Name(face, glyphIndex, buffer, 100);
-	interpreterProxy->success(errorCode == 0);
-	if (interpreterProxy->failed()) {
+	success(errorCode == 0);
+	if (failed()) {
 		return null;
 	}
 	string = ftAllocateStringForPointer(buffer);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->popthenPush(2, string);
+	popthenPush(2, string);
 	return null;
 }
 
@@ -887,33 +1003,37 @@ primitiveGetKerningLeftRight(void)
 	FT_Vector result;
 	sqInt rightGlyph;
 
-	leftGlyph = interpreterProxy->stackIntegerValue(1);
-	rightGlyph = interpreterProxy->stackIntegerValue(0);
+	leftGlyph = stackIntegerValue(1);
+	rightGlyph = stackIntegerValue(0);
 	
 		result.x=3;
 		result.y=4;;
 	;
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(2), "FT2Face"));
-	rcvr = interpreterProxy->stackValue(2);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	success(isKindOf(stackValue(2), "FT2Face"));
+	rcvr = stackValue(2);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	errorCode = 0;
 	face = ftHandleValueFromReceiver(rcvr);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	kernMode = FT_KERNING_UNSCALED;
 	;
 	FT_Get_Kerning(face, leftGlyph, rightGlyph, kernMode, &result);;
-	pointOop = interpreterProxy->makePointwithxValueyValue(result.x, result.y);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	pointOop = makePointwithxValueyValue(result.x, result.y);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->popthenPush(3, pointOop);
+	popthenPush(3, pointOop);
 	return null;
 }
 
@@ -928,29 +1048,33 @@ primitiveGetPostscriptName(void)
 	sqInt rcvr;
 	sqInt string;
 
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "FT2Face"));
-	rcvr = interpreterProxy->stackValue(0);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	success(isKindOf(stackValue(0), "FT2Face"));
+	rcvr = stackValue(0);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	buffer = 0;
 	face = ftHandleValueFromReceiver(rcvr);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	buffer = FT_Get_Postscript_Name(face);
-	interpreterProxy->success(buffer != 0);
-	if (interpreterProxy->failed()) {
+	success(buffer != 0);
+	if (failed()) {
 		return null;
 	}
 	string = ftAllocateStringForPointer(buffer);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->popthenPush(1, string);
+	popthenPush(1, string);
 	return null;
 }
 
@@ -967,40 +1091,46 @@ primitiveGetSfntTableOS2(void)
 	sqInt returnedHandle;
 	sqInt _return_value;
 
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "FT2Face"));
-	rcvr = interpreterProxy->stackValue(0);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	success(isKindOf(stackValue(0), "FT2Face"));
+	rcvr = stackValue(0);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	buffer = 0;
 	face = ftHandleValueFromReceiver(rcvr);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	buffer = FT_Get_Sfnt_Table(face,ft_sfnt_os2);
 	if (buffer == 0) {
-		_return_value = interpreterProxy->integerObjectOf(-1);
-		if (interpreterProxy->failed()) {
-			ftParameterError();
+		_return_value = integerObjectOf(-1);
+		if (failed()) {
+			/* begin ftParameterError */
+			errorCode = 255;
+			primitiveFail();
 			return null;
 		}
-		interpreterProxy->popthenPush(1, _return_value);
+		popthenPush(1, _return_value);
 		return null;
 	}
 
 	/* Copy from the C bytecode buffer to the Smalltalk ByteArray */
 
-	returnedHandle = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classByteArray(), sizeof(TT_OS2));
-	extraByteArrayPtr = interpreterProxy->arrayValueOf(returnedHandle);
+	returnedHandle = instantiateClassindexableSize(classByteArray(), sizeof(TT_OS2));
+	extraByteArrayPtr = arrayValueOf(returnedHandle);
 	;
 	memcpy(extraByteArrayPtr, buffer, sizeof(TT_OS2));
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->popthenPush(1, returnedHandle);
+	popthenPush(1, returnedHandle);
 	return null;
 }
 
@@ -1010,7 +1140,7 @@ primitiveGetSfntTableOS2(void)
 static sqInt
 primitiveGetTrackKerningPointSizedegree(sqInt pointSize, sqInt degree)
 {
-	return interpreterProxy->primitiveFail();
+	return primitiveFail();
 }
 
 EXPORT(sqInt)
@@ -1020,24 +1150,28 @@ primitiveHasKerning(void)
 	sqInt rcvr;
 	sqInt _return_value;
 
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "FT2Face"));
-	rcvr = interpreterProxy->stackValue(0);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	success(isKindOf(stackValue(0), "FT2Face"));
+	rcvr = stackValue(0);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	errorCode = 0;
 	face = ftHandleValueFromReceiver(rcvr);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
-	_return_value = interpreterProxy->integerObjectOf(FT_HAS_KERNING( face ));
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	_return_value = integerObjectOf(FT_HAS_KERNING( face ));
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->popthenPush(1, _return_value);
+	popthenPush(1, _return_value);
 	return null;
 }
 
@@ -1051,16 +1185,20 @@ primitiveLibraryHandle(void)
 {
 	sqInt rcvr;
 
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "FT2Library"));
-	rcvr = interpreterProxy->stackValue(0);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	success(isKindOf(stackValue(0), "FT2Library"));
+	rcvr = stackValue(0);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	errorCode = 0;
 	ftAllocateHandleInReceiverForPointer(library);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	return null;
@@ -1080,29 +1218,33 @@ primitiveLoadCharacter(void)
 	sqInt index;
 	sqInt rcvr;
 
-	index = interpreterProxy->stackIntegerValue(1);
-	flags = interpreterProxy->stackIntegerValue(0);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(2), "FT2Face"));
-	rcvr = interpreterProxy->stackValue(2);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	index = stackIntegerValue(1);
+	flags = stackIntegerValue(0);
+	success(isKindOf(stackValue(2), "FT2Face"));
+	rcvr = stackValue(2);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	face = ftHandleValueFromReceiver(rcvr);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	errorCode = FT_Load_Char(face, index, flags);
-	interpreterProxy->success(errorCode == 0);
-	if (interpreterProxy->failed()) {
+	success(errorCode == 0);
+	if (failed()) {
 		return null;
 	}
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->pop(2);
+	pop(2);
 	return null;
 }
 
@@ -1115,48 +1257,52 @@ primitiveLoadFaceBbox(void)
 	sqInt rcvr;
 	sqInt rectOop;
 
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "Rectangle"));
-	aRectangle = interpreterProxy->stackValue(0);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(1), "FT2Face"));
-	rcvr = interpreterProxy->stackValue(1);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	success(isKindOf(stackValue(0), "Rectangle"));
+	aRectangle = stackValue(0);
+	success(isKindOf(stackValue(1), "FT2Face"));
+	rcvr = stackValue(1);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	rectOop = aRectangle;
-	if (!(interpreterProxy->isPointers(rectOop))) {
-		interpreterProxy->primitiveFail();
+	if (!(isPointers(rectOop))) {
+		primitiveFail();
 		return null;
 	}
-	if ((interpreterProxy->slotSizeOf(rectOop)) < 2) {
-		interpreterProxy->primitiveFail();
+	if ((slotSizeOf(rectOop)) < 2) {
+		primitiveFail();
 		return null;
 	}
 	face = ftHandleValueFromReceiver(rcvr);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	;
 	if (!(face->face_flags & FT_FACE_FLAG_SCALABLE)) {
-		interpreterProxy->success(0);
+		success(0);
 	}
-	if (interpreterProxy->failed()) {
+	if (failed()) {
 		return null;
 	}
-	interpreterProxy->pushRemappableOop(rectOop);
-	pointOop = interpreterProxy->makePointwithxValueyValue(face->bbox.xMin, face->bbox.yMin);
-	rectOop = interpreterProxy->popRemappableOop();
-	interpreterProxy->storePointerofObjectwithValue(0, rectOop, pointOop);
-	interpreterProxy->pushRemappableOop(rectOop);
-	pointOop = interpreterProxy->makePointwithxValueyValue(face->bbox.xMax, face->bbox.yMax);
-	rectOop = interpreterProxy->popRemappableOop();
-	interpreterProxy->storePointerofObjectwithValue(1, rectOop, pointOop);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	pushRemappableOop(rectOop);
+	pointOop = makePointwithxValueyValue(face->bbox.xMin, face->bbox.yMin);
+	rectOop = popRemappableOop();
+	storePointerofObjectwithValue(0, rectOop, pointOop);
+	pushRemappableOop(rectOop);
+	pointOop = makePointwithxValueyValue(face->bbox.xMax, face->bbox.yMax);
+	rectOop = popRemappableOop();
+	storePointerofObjectwithValue(1, rectOop, pointOop);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->pop(1);
+	pop(1);
 	return null;
 }
 
@@ -1171,49 +1317,53 @@ primitiveLoadFaceFields(void)
 	sqInt rcvr;
 	sqInt strOop;
 
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "FT2Face"));
-	rcvr = interpreterProxy->stackValue(0);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	success(isKindOf(stackValue(0), "FT2Face"));
+	rcvr = stackValue(0);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	face = ftHandleValueFromReceiver(rcvr);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	;
-	interpreterProxy->storeIntegerofObjectwithValue(1, rcvr, face->num_faces);
-	interpreterProxy->storeIntegerofObjectwithValue(2, rcvr, face->face_index);
-	interpreterProxy->storeIntegerofObjectwithValue(3, rcvr, face->face_flags);
-	interpreterProxy->storeIntegerofObjectwithValue(4, rcvr, face->style_flags);
-	interpreterProxy->storeIntegerofObjectwithValue(5, rcvr, face->num_glyphs);
-	interpreterProxy->pushRemappableOop(rcvr);
+	storeIntegerofObjectwithValue(1, rcvr, face->num_faces);
+	storeIntegerofObjectwithValue(2, rcvr, face->face_index);
+	storeIntegerofObjectwithValue(3, rcvr, face->face_flags);
+	storeIntegerofObjectwithValue(4, rcvr, face->style_flags);
+	storeIntegerofObjectwithValue(5, rcvr, face->num_glyphs);
+	pushRemappableOop(rcvr);
 	strOop = ftAllocateStringForPointer(face->family_name);
-	rcvr = interpreterProxy->popRemappableOop();
-	interpreterProxy->storePointerofObjectwithValue(6, rcvr, strOop);
-	interpreterProxy->pushRemappableOop(rcvr);
+	rcvr = popRemappableOop();
+	storePointerofObjectwithValue(6, rcvr, strOop);
+	pushRemappableOop(rcvr);
 	strOop = ftAllocateStringForPointer(face->style_name);
-	rcvr = interpreterProxy->popRemappableOop();
-	interpreterProxy->storePointerofObjectwithValue(7, rcvr, strOop);
-	interpreterProxy->storeIntegerofObjectwithValue(8, rcvr, face->num_fixed_sizes);
-	interpreterProxy->storeIntegerofObjectwithValue(10, rcvr, face->num_charmaps);
+	rcvr = popRemappableOop();
+	storePointerofObjectwithValue(7, rcvr, strOop);
+	storeIntegerofObjectwithValue(8, rcvr, face->num_fixed_sizes);
+	storeIntegerofObjectwithValue(10, rcvr, face->num_charmaps);
 	if (face->face_flags & FT_FACE_FLAG_SCALABLE) {
 
 		/* bbox -- Rectangle xMin, yMin, xMax, yMax */
 		/* unitsPerEm */
 
-		interpreterProxy->storeIntegerofObjectwithValue(13, rcvr, face->units_per_EM);
-		interpreterProxy->storeIntegerofObjectwithValue(14, rcvr, face->ascender);
-		interpreterProxy->storeIntegerofObjectwithValue(15, rcvr, face->descender);
-		interpreterProxy->storeIntegerofObjectwithValue(16, rcvr, face->height);
-		interpreterProxy->storeIntegerofObjectwithValue(17, rcvr, face->max_advance_width);
-		interpreterProxy->storeIntegerofObjectwithValue(18, rcvr, face->max_advance_height);
-		interpreterProxy->storeIntegerofObjectwithValue(19, rcvr, face->underline_position);
-		interpreterProxy->storeIntegerofObjectwithValue(20, rcvr, face->underline_thickness);
+		storeIntegerofObjectwithValue(13, rcvr, face->units_per_EM);
+		storeIntegerofObjectwithValue(14, rcvr, face->ascender);
+		storeIntegerofObjectwithValue(15, rcvr, face->descender);
+		storeIntegerofObjectwithValue(16, rcvr, face->height);
+		storeIntegerofObjectwithValue(17, rcvr, face->max_advance_width);
+		storeIntegerofObjectwithValue(18, rcvr, face->max_advance_height);
+		storeIntegerofObjectwithValue(19, rcvr, face->underline_position);
+		storeIntegerofObjectwithValue(20, rcvr, face->underline_thickness);
 	}
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	return null;
@@ -1227,29 +1377,33 @@ primitiveLoadGlyph(void)
 	sqInt index;
 	sqInt rcvr;
 
-	index = interpreterProxy->stackIntegerValue(1);
-	flags = interpreterProxy->stackIntegerValue(0);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(2), "FT2Face"));
-	rcvr = interpreterProxy->stackValue(2);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	index = stackIntegerValue(1);
+	flags = stackIntegerValue(0);
+	success(isKindOf(stackValue(2), "FT2Face"));
+	rcvr = stackValue(2);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	face = ftHandleValueFromReceiver(rcvr);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	errorCode = FT_Load_Glyph(face, index, flags);
-	interpreterProxy->success(errorCode == 0);
-	if (interpreterProxy->failed()) {
+	success(errorCode == 0);
+	if (failed()) {
 		return null;
 	}
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->pop(2);
+	pop(2);
 	return null;
 }
 
@@ -1269,62 +1423,66 @@ primitiveLoadGlyphSlotFromFace(void)
 	FT_GlyphSlot gs;
 	sqInt rcvr;
 
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "FT2Face"));
-	aFace = interpreterProxy->stackValue(0);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(1), "FT2GlyphSlot"));
-	rcvr = interpreterProxy->stackValue(1);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	success(isKindOf(stackValue(0), "FT2Face"));
+	aFace = stackValue(0);
+	success(isKindOf(stackValue(1), "FT2GlyphSlot"));
+	rcvr = stackValue(1);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	errorCode = 0;
-	if ((interpreterProxy->slotSizeOf(rcvr)) < 8) {
-		interpreterProxy->primitiveFail();
+	if ((slotSizeOf(rcvr)) < 8) {
+		primitiveFail();
 		return null;
 	}
 	face = ftHandleValueFromReceiver(aFace);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	gs = face->glyph;
 	if (!gs) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	;
-	interpreterProxy->storePointerofObjectwithValue(0, rcvr, aFace);
-	interpreterProxy->storeIntegerofObjectwithValue(1, rcvr, gs->linearHoriAdvance);
-	interpreterProxy->storeIntegerofObjectwithValue(2, rcvr, gs->linearVertAdvance);
-	interpreterProxy->storeIntegerofObjectwithValue(3, rcvr, gs->advance.x);
-	interpreterProxy->storeIntegerofObjectwithValue(4, rcvr, gs->advance.y);
-	interpreterProxy->pushRemappableOop(rcvr);
-	gfOop = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classByteArray(), sizeof(FT_Glyph_Format));
+	storePointerofObjectwithValue(0, rcvr, aFace);
+	storeIntegerofObjectwithValue(1, rcvr, gs->linearHoriAdvance);
+	storeIntegerofObjectwithValue(2, rcvr, gs->linearVertAdvance);
+	storeIntegerofObjectwithValue(3, rcvr, gs->advance.x);
+	storeIntegerofObjectwithValue(4, rcvr, gs->advance.y);
+	pushRemappableOop(rcvr);
+	gfOop = instantiateClassindexableSize(classByteArray(), sizeof(FT_Glyph_Format));
 	;
 	btw = BytesPerWord;
 	gfPtr = (FT_Glyph_Format *) pointerForOop(gfOop + btw);
 	;
-	if (interpreterProxy->failed()) {
+	if (failed()) {
 		return null;
 	}
 	*gfPtr = gs->format;
-	rcvr = interpreterProxy->popRemappableOop();
-	interpreterProxy->storePointerofObjectwithValue(5, rcvr, gfOop);
-	interpreterProxy->storeIntegerofObjectwithValue(6, rcvr, gs->bitmap_left);
-	interpreterProxy->storeIntegerofObjectwithValue(7, rcvr, gs->bitmap_top);
-	interpreterProxy->storeIntegerofObjectwithValue(8, rcvr, gs->metrics.width);
-	interpreterProxy->storeIntegerofObjectwithValue(9, rcvr, gs->metrics.height);
-	interpreterProxy->storeIntegerofObjectwithValue(10, rcvr, gs->metrics.horiBearingX);
-	interpreterProxy->storeIntegerofObjectwithValue(11, rcvr, gs->metrics.horiBearingY);
-	interpreterProxy->storeIntegerofObjectwithValue(12, rcvr, gs->metrics.horiAdvance);
-	interpreterProxy->storeIntegerofObjectwithValue(13, rcvr, gs->metrics.vertBearingX);
-	interpreterProxy->storeIntegerofObjectwithValue(14, rcvr, gs->metrics.vertBearingY);
-	interpreterProxy->storeIntegerofObjectwithValue(15, rcvr, gs->metrics.vertAdvance);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	rcvr = popRemappableOop();
+	storePointerofObjectwithValue(5, rcvr, gfOop);
+	storeIntegerofObjectwithValue(6, rcvr, gs->bitmap_left);
+	storeIntegerofObjectwithValue(7, rcvr, gs->bitmap_top);
+	storeIntegerofObjectwithValue(8, rcvr, gs->metrics.width);
+	storeIntegerofObjectwithValue(9, rcvr, gs->metrics.height);
+	storeIntegerofObjectwithValue(10, rcvr, gs->metrics.horiBearingX);
+	storeIntegerofObjectwithValue(11, rcvr, gs->metrics.horiBearingY);
+	storeIntegerofObjectwithValue(12, rcvr, gs->metrics.horiAdvance);
+	storeIntegerofObjectwithValue(13, rcvr, gs->metrics.vertBearingX);
+	storeIntegerofObjectwithValue(14, rcvr, gs->metrics.vertBearingY);
+	storeIntegerofObjectwithValue(15, rcvr, gs->metrics.vertAdvance);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->pop(1);
+	pop(1);
 	return null;
 }
 
@@ -1354,55 +1512,57 @@ primitiveLoadOutlineArraysFromFace(void)
 	/* ptr to struct */
 	/* ptr to struct */
 
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "FT2Face"));
-	aFace = interpreterProxy->stackValue(0);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(1), "FT2Outline"));
-	rcvr = interpreterProxy->stackValue(1);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	success(isKindOf(stackValue(0), "FT2Face"));
+	aFace = stackValue(0);
+	success(isKindOf(stackValue(1), "FT2Outline"));
+	rcvr = stackValue(1);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	errorCode = 0;
-	if ((interpreterProxy->slotSizeOf(rcvr)) < FT2OutlineInstSize) {
-		interpreterProxy->primitiveFail();
+	if ((slotSizeOf(rcvr)) < FT2OutlineInstSize) {
+		primitiveFail();
 		return null;
 	}
 	face = ftHandleValueFromReceiver(aFace);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	gs = face->glyph;
 	if (!gs) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	;
 	pointsSize = gs->outline.n_points;
 	/* begin fetchWordArray:ofObject:assureSize: */
-	array = interpreterProxy->fetchPointerofObject(FT2OutlinePointsIndex, rcvr);
-	if ((interpreterProxy->isWords(array))
-	 && ((interpreterProxy->slotSizeOf(array)) == (pointsSize * 2))) {
-		points = interpreterProxy->arrayValueOf(array);
+	array = fetchPointerofObject(FT2OutlinePointsIndex, rcvr);
+	if ((isWords(array))
+	 && ((slotSizeOf(array)) == (pointsSize * 2))) {
+		points = arrayValueOf(array);
 		goto l1;
 	}
 	points = null;
 l1:	/* end fetchWordArray:ofObject:assureSize: */;
 	if (points == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	/* begin fetchByteArray:ofObject:assureSize: */
-	array1 = interpreterProxy->fetchPointerofObject(FT2OutlineTagsIndex, rcvr);
-	if ((interpreterProxy->isBytes(array1))
-	 && ((interpreterProxy->slotSizeOf(array1)) == pointsSize)) {
-		tags = ((char *) (interpreterProxy->arrayValueOf(array1)));
+	array1 = fetchPointerofObject(FT2OutlineTagsIndex, rcvr);
+	if ((isBytes(array1))
+	 && ((slotSizeOf(array1)) == pointsSize)) {
+		tags = ((char *) (arrayValueOf(array1)));
 		goto l2;
 	}
 	tags = ((char *) null);
 l2:	/* end fetchByteArray:ofObject:assureSize: */;
 	if (tags == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	for (i = 0; i <= (pointsSize - 1); i += 1) {
@@ -1412,10 +1572,10 @@ l2:	/* end fetchByteArray:ofObject:assureSize: */;
 	}
 	contoursSize = gs->outline.n_contours;
 	/* begin fetchShortArray:ofObject:assureSize: */
-	array2 = interpreterProxy->fetchPointerofObject(FT2OutlineContoursIndex, rcvr);
-	if ((interpreterProxy->isWords(array2))
-	 && ((interpreterProxy->slotSizeOf(array2)) == (((sqInt) (contoursSize + 1) >> 1)))) {
-		contours = ((short*) (interpreterProxy->arrayValueOf(array2)));
+	array2 = fetchPointerofObject(FT2OutlineContoursIndex, rcvr);
+	if ((isWords(array2))
+	 && ((slotSizeOf(array2)) == (((sqInt) (contoursSize + 1) >> 1)))) {
+		contours = ((short*) (arrayValueOf(array2)));
 		goto l3;
 	}
 	contours = ((short*) null);
@@ -1423,11 +1583,13 @@ l3:	/* end fetchShortArray:ofObject:assureSize: */;
 	for (i = 0; i <= (contoursSize - 1); i += 1) {
 		contours[i] = (gs->outline.contours[i]);
 	}
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->pop(1);
+	pop(1);
 	return null;
 }
 
@@ -1444,38 +1606,42 @@ primitiveLoadOutlineSizesFromFace(void)
 	FT_GlyphSlot gs;
 	sqInt rcvr;
 
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "FT2Face"));
-	aFace = interpreterProxy->stackValue(0);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(1), "FT2Outline"));
-	rcvr = interpreterProxy->stackValue(1);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	success(isKindOf(stackValue(0), "FT2Face"));
+	aFace = stackValue(0);
+	success(isKindOf(stackValue(1), "FT2Outline"));
+	rcvr = stackValue(1);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	errorCode = 0;
-	if ((interpreterProxy->slotSizeOf(rcvr)) < FT2OutlineInstSize) {
-		interpreterProxy->primitiveFail();
+	if ((slotSizeOf(rcvr)) < FT2OutlineInstSize) {
+		primitiveFail();
 		return null;
 	}
 	face = ftHandleValueFromReceiver(aFace);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	gs = face->glyph;
 	if (!gs) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	;
-	interpreterProxy->storeIntegerofObjectwithValue(FT2OutlineContoursSizeIndex, rcvr, gs->outline.n_contours);
-	interpreterProxy->storeIntegerofObjectwithValue(FT2OutlinePointsSizeIndex, rcvr, gs->outline.n_points);
-	interpreterProxy->storeIntegerofObjectwithValue(FT2OutlineFlagsIndex, rcvr, gs->outline.flags);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	storeIntegerofObjectwithValue(FT2OutlineContoursSizeIndex, rcvr, gs->outline.n_contours);
+	storeIntegerofObjectwithValue(FT2OutlinePointsSizeIndex, rcvr, gs->outline.n_points);
+	storeIntegerofObjectwithValue(FT2OutlineFlagsIndex, rcvr, gs->outline.flags);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->pop(1);
+	pop(1);
 	return null;
 }
 
@@ -1487,12 +1653,14 @@ primitiveModuleErrorCode(void)
 {
 	sqInt _return_value;
 
-	_return_value = interpreterProxy->positive32BitIntegerFor((FT_ERROR_MODULE(errorCode)));
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	_return_value = positive32BitIntegerFor((FT_ERROR_MODULE(errorCode)));
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->popthenPush(1, _return_value);
+	popthenPush(1, _return_value);
 	return null;
 }
 
@@ -1510,40 +1678,44 @@ primitiveNewFaceFromFileAndIndex(void)
 	sqInt rcvr;
 	char translatedFilePath[1024];
 
-	interpreterProxy->success(interpreterProxy->isBytes(interpreterProxy->stackValue(1)));
-	fontFilePath = ((char *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(1))));
-	anInteger = interpreterProxy->stackIntegerValue(0);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(2), "FT2Face"));
-	rcvr = interpreterProxy->stackValue(2);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	success(isBytes(stackValue(1)));
+	fontFilePath = ((char *) (firstIndexableField(stackValue(1))));
+	anInteger = stackIntegerValue(0);
+	success(isKindOf(stackValue(2), "FT2Face"));
+	rcvr = stackValue(2);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	;
 	errorCode = 0;
-	byteSize = interpreterProxy->byteSizeOf(((sqInt)(long)(fontFilePath) - 4));
+	byteSize = byteSizeOf(((sqInt)(long)(fontFilePath) - 4));
 	;
-	if (interpreterProxy->failed()) {
+	if (failed()) {
 		return null;
 	}
 	if (byteSize > 1000) {
-		interpreterProxy->success(0);
+		success(0);
 		return null;
 	}
-	interpreterProxy->ioFilenamefromStringofLengthresolveAliases(translatedFilePath, fontFilePath, byteSize, 1);
+	ioFilenamefromStringofLengthresolveAliases(translatedFilePath, fontFilePath, byteSize, 1);
 	errorCode = FT_New_Face(library, translatedFilePath, anInteger, &face);
 	;
 	;
-	interpreterProxy->success(errorCode == 0);
-	if (interpreterProxy->failed()) {
+	success(errorCode == 0);
+	if (failed()) {
 		return null;
 	}
 	ftAllocateHandleInReceiverForPointer(face);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->pop(2);
+	pop(2);
 	return null;
 }
 
@@ -1561,35 +1733,39 @@ primitiveNewMemoryFaceFromExternalMemoryAndIndex(void)
 	void *memPointer;
 	sqInt rcvr;
 
-	aFreeTypeExternalMemory = interpreterProxy->stackValue(2);
-	byteSize = interpreterProxy->stackIntegerValue(1);
-	anInteger = interpreterProxy->stackIntegerValue(0);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(3), "FT2Face"));
-	rcvr = interpreterProxy->stackValue(3);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	aFreeTypeExternalMemory = stackValue(2);
+	byteSize = stackIntegerValue(1);
+	anInteger = stackIntegerValue(0);
+	success(isKindOf(stackValue(3), "FT2Face"));
+	rcvr = stackValue(3);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	;
 	errorCode = 0;
 	memPointer = ftHandleValueFromReceiver(aFreeTypeExternalMemory);
 	;
-	if (interpreterProxy->failed()) {
+	if (failed()) {
 		return null;
 	}
 	errorCode = FT_New_Memory_Face(library, memPointer, byteSize, anInteger, &face);
 	;
 	;
-	interpreterProxy->success(errorCode == 0);
-	if (interpreterProxy->failed()) {
+	success(errorCode == 0);
+	if (failed()) {
 		return null;
 	}
 	ftAllocateHandleInReceiverForPointer(face);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->pop(3);
+	pop(3);
 	return null;
 }
 
@@ -1608,36 +1784,40 @@ primitiveNumberOfOutlineCountours(void)
 	sqInt rcvr;
 	sqInt _return_value;
 
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "FT2GlyphSlot"));
-	rcvr = interpreterProxy->stackValue(0);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	success(isKindOf(stackValue(0), "FT2GlyphSlot"));
+	rcvr = stackValue(0);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	errorCode = 0;
-	if ((interpreterProxy->slotSizeOf(rcvr)) < FT2GlyphSlotInstSize) {
-		interpreterProxy->primitiveFail();
+	if ((slotSizeOf(rcvr)) < FT2GlyphSlotInstSize) {
+		primitiveFail();
 		return null;
 	}
-	aFace = interpreterProxy->fetchPointerofObject(FT2GlyphSlotFaceIndex, rcvr);
+	aFace = fetchPointerofObject(FT2GlyphSlotFaceIndex, rcvr);
 	face = ftHandleValueFromReceiver(aFace);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	gs = face->glyph;
 	if (!gs) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	;
 	contoursSize = gs->outline.n_contours;
-	_return_value = interpreterProxy->integerObjectOf(contoursSize);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	_return_value = integerObjectOf(contoursSize);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->popthenPush(1, _return_value);
+	popthenPush(1, _return_value);
 	return null;
 }
 
@@ -1652,30 +1832,34 @@ primitiveRenderGlyphIntoForm(void)
 	sqInt faceOop;
 	sqInt formOop;
 
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "Form"));
-	formOop = interpreterProxy->stackValue(0);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(1), "FT2Face"));
-	faceOop = interpreterProxy->stackValue(1);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	success(isKindOf(stackValue(0), "Form"));
+	formOop = stackValue(0);
+	success(isKindOf(stackValue(1), "FT2Face"));
+	faceOop = stackValue(1);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	face = ftHandleValueFromReceiver(faceOop);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	ftInitBitmapfromForm(&bitmap, formOop);
-	if (interpreterProxy->failed()) {
+	if (failed()) {
 		return null;
 	}
 	errorCode = FT_Outline_Get_Bitmap(library, &face->glyph->outline, &bitmap);
-	interpreterProxy->success(errorCode == 0);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	success(errorCode == 0);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->pop(1);
+	pop(1);
 	return null;
 }
 
@@ -1691,31 +1875,35 @@ primitiveRenderGlyphIntoFormWithRenderMode(void)
 	sqInt formOop;
 	sqInt mode;
 
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(1), "Form"));
-	formOop = interpreterProxy->stackValue(1);
-	mode = interpreterProxy->stackIntegerValue(0);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(2), "FT2Face"));
-	faceOop = interpreterProxy->stackValue(2);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	success(isKindOf(stackValue(1), "Form"));
+	formOop = stackValue(1);
+	mode = stackIntegerValue(0);
+	success(isKindOf(stackValue(2), "FT2Face"));
+	faceOop = stackValue(2);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	face = ftHandleValueFromReceiver(faceOop);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	ftInitBitmapfromFormrenderMode(&bitmap, formOop, mode);
-	if (interpreterProxy->failed()) {
+	if (failed()) {
 		return null;
 	}
 	errorCode = FT_Outline_Get_Bitmap(library, &face->glyph->outline, &bitmap);
-	interpreterProxy->success(errorCode == 0);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	success(errorCode == 0);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->pop(2);
+	pop(2);
 	return null;
 }
 
@@ -1727,12 +1915,14 @@ primitiveResetErrorCode(void)
 
 	oldError = errorCode;
 	errorCode = 0;
-	_return_value = interpreterProxy->positive32BitIntegerFor(oldError);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	_return_value = positive32BitIntegerFor(oldError);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->popthenPush(1, _return_value);
+	popthenPush(1, _return_value);
 	return null;
 }
 
@@ -1744,33 +1934,37 @@ primitiveSetFaceCharMap(void)
 	FT_Face face;
 	sqInt rcvr;
 
-	encodingString = interpreterProxy->stackValue(0);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(1), "FT2Face"));
-	rcvr = interpreterProxy->stackValue(1);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	encodingString = stackValue(0);
+	success(isKindOf(stackValue(1), "FT2Face"));
+	rcvr = stackValue(1);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	face = ftHandleValueFromReceiver(rcvr);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	encoding = ftEncodingValueFromString(encodingString);
-	if (interpreterProxy->failed()) {
+	if (failed()) {
 		return null;
 	}
 	;
 	errorCode = FT_Select_Charmap(face, encoding);
-	interpreterProxy->success(errorCode == 0);
-	if (interpreterProxy->failed()) {
+	success(errorCode == 0);
+	if (failed()) {
 		return null;
 	}
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->pop(1);
+	pop(1);
 	return null;
 }
 
@@ -1782,29 +1976,33 @@ primitiveSetPixelSizes(void)
 	sqInt x;
 	sqInt y;
 
-	x = interpreterProxy->stackIntegerValue(1);
-	y = interpreterProxy->stackIntegerValue(0);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(2), "FT2Face"));
-	rcvr = interpreterProxy->stackValue(2);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	x = stackIntegerValue(1);
+	y = stackIntegerValue(0);
+	success(isKindOf(stackValue(2), "FT2Face"));
+	rcvr = stackValue(2);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	face = ftHandleValueFromReceiver(rcvr);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
 	errorCode = FT_Set_Pixel_Sizes(face, x, y);
-	interpreterProxy->success(errorCode == 0);
-	if (interpreterProxy->failed()) {
+	success(errorCode == 0);
+	if (failed()) {
 		return null;
 	}
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->pop(2);
+	pop(2);
 	return null;
 }
 
@@ -1820,32 +2018,36 @@ primitiveSetTransform(void)
 	sqInt matrixWordArray;
 	sqInt rcvr;
 
-	matrixWordArray = interpreterProxy->stackValue(1);
-	deltaWordArray = interpreterProxy->stackValue(0);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(2), "FT2Face"));
-	rcvr = interpreterProxy->stackValue(2);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	matrixWordArray = stackValue(1);
+	deltaWordArray = stackValue(0);
+	success(isKindOf(stackValue(2), "FT2Face"));
+	rcvr = stackValue(2);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	face = ftHandleValueFromReceiver(rcvr);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
-	matrixsqIntPtr = interpreterProxy->arrayValueOf(matrixWordArray);
-	deltasqIntPtr = interpreterProxy->arrayValueOf(deltaWordArray);
+	matrixsqIntPtr = arrayValueOf(matrixWordArray);
+	deltasqIntPtr = arrayValueOf(deltaWordArray);
 	delta.x = deltasqIntPtr[0]; delta.y = deltasqIntPtr[1];;
 	matrix.xx = matrixsqIntPtr[0]; matrix.xy = matrixsqIntPtr[1]; 
 		matrix.yx = matrixsqIntPtr[2]; matrix.yy = matrixsqIntPtr[3]; ;
-	if (!(interpreterProxy->failed())) {
+	if (!(failed())) {
 		FT_Set_Transform( face, &matrix, &delta);
 	}
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->pop(2);
+	pop(2);
 	return null;
 }
 
@@ -1858,29 +2060,33 @@ primitiveTransformFaceGlyphSlotOutline(void)
 	sqInt matrixWordArray;
 	sqInt rcvr;
 
-	matrixWordArray = interpreterProxy->stackValue(0);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(1), "FT2Face"));
-	rcvr = interpreterProxy->stackValue(1);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	matrixWordArray = stackValue(0);
+	success(isKindOf(stackValue(1), "FT2Face"));
+	rcvr = stackValue(1);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	face = ftHandleValueFromReceiver(rcvr);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
-	matrixsqIntPtr = interpreterProxy->arrayValueOf(matrixWordArray);
+	matrixsqIntPtr = arrayValueOf(matrixWordArray);
 	matrix.xx = matrixsqIntPtr[0]; matrix.xy = matrixsqIntPtr[1]; 
 		matrix.yx = matrixsqIntPtr[2]; matrix.yy = matrixsqIntPtr[3]; ;
-	if (!(interpreterProxy->failed())) {
+	if (!(failed())) {
 		FT_Outline_Transform( &face->glyph->outline, &matrix );
 	}
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->pop(1);
+	pop(1);
 	return null;
 }
 
@@ -1893,28 +2099,32 @@ primitiveTranslateFaceGlyphSlotOutline(void)
 	FT_Face face;
 	sqInt rcvr;
 
-	deltaWordArray = interpreterProxy->stackValue(0);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(1), "FT2Face"));
-	rcvr = interpreterProxy->stackValue(1);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	deltaWordArray = stackValue(0);
+	success(isKindOf(stackValue(1), "FT2Face"));
+	rcvr = stackValue(1);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	face = ftHandleValueFromReceiver(rcvr);
 	if (face == null) {
-		interpreterProxy->primitiveFail();
+		primitiveFail();
 		return null;
 	}
-	deltasqIntPtr = interpreterProxy->arrayValueOf(deltaWordArray);
+	deltasqIntPtr = arrayValueOf(deltaWordArray);
 	delta.x = deltasqIntPtr[0]; delta.y = deltasqIntPtr[1];;
-	if (!(interpreterProxy->failed())) {
+	if (!(failed())) {
 		FT_Outline_Translate( &face->glyph->outline, delta.x, delta.y );
 	}
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
-	interpreterProxy->pop(1);
+	pop(1);
 	return null;
 }
 
@@ -1926,29 +2136,33 @@ primitiveVersion(void)
 	int apatch;
 	sqInt rcvr;
 
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "FT2Version"));
-	rcvr = interpreterProxy->stackValue(0);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	success(isKindOf(stackValue(0), "FT2Version"));
+	rcvr = stackValue(0);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	errorCode = 0;
 	FT_Library_Version(library, &amajor, &aminor, &apatch);
 	;
-	interpreterProxy->storeIntegerofObjectwithValue(0, rcvr, amajor);
+	storeIntegerofObjectwithValue(0, rcvr, amajor);
 	;
-	interpreterProxy->storeIntegerofObjectwithValue(1, rcvr, aminor);
+	storeIntegerofObjectwithValue(1, rcvr, aminor);
 	;
-	interpreterProxy->storeIntegerofObjectwithValue(2, rcvr, apatch);
-	if (interpreterProxy->failed()) {
-		ftParameterError();
+	storeIntegerofObjectwithValue(2, rcvr, apatch);
+	if (failed()) {
+		/* begin ftParameterError */
+		errorCode = 255;
+		primitiveFail();
 		return null;
 	}
 	return null;
 }
 
 
-/*	Note: This is coded so that is can be run from Squeak. */
+/*	Note: This is coded so that it can be run in Squeak. */
 
 EXPORT(sqInt)
 setInterpreter(struct VirtualMachine*anInterpreter)
@@ -1956,11 +2170,47 @@ setInterpreter(struct VirtualMachine*anInterpreter)
 	sqInt ok;
 
 	interpreterProxy = anInterpreter;
-	ok = interpreterProxy->majorVersion() == VM_PROXY_MAJOR;
-	if (ok == 0) {
-		return 0;
+	ok = ((interpreterProxy->majorVersion()) == (VM_PROXY_MAJOR))
+	 && ((interpreterProxy->minorVersion()) >= (VM_PROXY_MINOR));
+	if (ok) {
+		
+#if !defined(SQUEAK_BUILTIN_PLUGIN)
+		arrayValueOf = interpreterProxy->arrayValueOf;
+		byteSizeOf = interpreterProxy->byteSizeOf;
+		classByteArray = interpreterProxy->classByteArray;
+		classString = interpreterProxy->classString;
+		failed = interpreterProxy->failed;
+		fetchArrayofObject = interpreterProxy->fetchArrayofObject;
+		fetchIntegerofObject = interpreterProxy->fetchIntegerofObject;
+		fetchPointerofObject = interpreterProxy->fetchPointerofObject;
+		firstIndexableField = interpreterProxy->firstIndexableField;
+		instantiateClassindexableSize = interpreterProxy->instantiateClassindexableSize;
+		integerObjectOf = interpreterProxy->integerObjectOf;
+		ioFilenamefromStringofLengthresolveAliases = interpreterProxy->ioFilenamefromStringofLengthresolveAliases;
+		isKindOf = interpreterProxy->isKindOf;
+		isBytes = interpreterProxy->isBytes;
+		isIndexable = interpreterProxy->isIndexable;
+		isIntegerObject = interpreterProxy->isIntegerObject;
+		isPointers = interpreterProxy->isPointers;
+		isWords = interpreterProxy->isWords;
+		makePointwithxValueyValue = interpreterProxy->makePointwithxValueyValue;
+		methodArgumentCount = interpreterProxy->methodArgumentCount;
+		nilObject = interpreterProxy->nilObject;
+		pop = interpreterProxy->pop;
+		popthenPush = interpreterProxy->popthenPush;
+		popRemappableOop = interpreterProxy->popRemappableOop;
+		positive32BitIntegerFor = interpreterProxy->positive32BitIntegerFor;
+		primitiveFail = interpreterProxy->primitiveFail;
+		pushRemappableOop = interpreterProxy->pushRemappableOop;
+		slotSizeOf = interpreterProxy->slotSizeOf;
+		stackIntegerValue = interpreterProxy->stackIntegerValue;
+		stackObjectValue = interpreterProxy->stackObjectValue;
+		stackValue = interpreterProxy->stackValue;
+		storeIntegerofObjectwithValue = interpreterProxy->storeIntegerofObjectwithValue;
+		storePointerofObjectwithValue = interpreterProxy->storePointerofObjectwithValue;
+		success = interpreterProxy->success;
+#endif /* !defined(SQUEAK_BUILTIN_PLUGIN) */;
 	}
-	ok = interpreterProxy->minorVersion() >= VM_PROXY_MINOR;
 	return ok;
 }
 
