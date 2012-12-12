@@ -1869,7 +1869,7 @@ Cogit >> allMachineCodeObjectReferencesValid [
 		(cogMethod cmType = CMMethod
 		 or: [cogMethod cmType = CMOpenPIC]) ifTrue:
 			[(self asserta: ((self mapFor: cogMethod
-								 performUntil: #checkIfValidObjectRefAndTarget:pc:cogMethod: asSymbol
+								 performUntil: #checkIfValidObjectRefAndTarget:pc:cogMethod:
 								 arg: cogMethod asInteger) = 0)) ifFalse:
 				[ok := false]].
 		cogMethod cmType = CMClosedPIC ifTrue:
@@ -2224,7 +2224,7 @@ Cogit >> bytecodePCFor: mcpc startBcpc: startbcpc in: cogMethod [
 	^self
 		mapFor: cogMethod
 		bcpc: startbcpc
-		performUntil: #findMcpc:Bcpc:MatchingMcpc: asSymbol
+		performUntil: #findMcpc:Bcpc:MatchingMcpc:
 		arg: (self cCoerceSimple: mcpc to: #'void *')
 ]
 
@@ -2664,7 +2664,7 @@ Cogit >> checkIntegrityOfObjectReferencesInCode: fullGCFlag [
 						[self print: 'object leak in CM '; printHex: cogMethod asInteger; print: ' methodObject'; cr.
 						 ok := false].
 					 (self mapFor: cogMethod
-						 performUntil: #checkIfValidObjectRef:pc:cogMethod: asSymbol
+						 performUntil: #checkIfValidObjectRef:pc:cogMethod:
 						 arg: cogMethod asInteger) ~= 0
 							ifTrue: [ok := false].
 					 fullGCFlag ifFalse:
@@ -2682,7 +2682,7 @@ Cogit >> checkIntegrityOfObjectReferencesInCode: fullGCFlag [
 							[cogMethod cmType = CMOpenPIC
 								ifTrue:
 									[(self mapFor: cogMethod
-										performUntil: #checkIfValidObjectRef:pc:cogMethod: asSymbol
+										performUntil: #checkIfValidObjectRef:pc:cogMethod:
 										arg: cogMethod asInteger) ~= 0
 											ifTrue: [ok := false]]]]].
 		cogMethod := methodZone methodAfter: cogMethod].
@@ -3839,7 +3839,7 @@ Cogit >> disassembleMethod: surrogateOrAddress on: aStream [
 				put: 'ClosedPICCase', i printString]].
 
 	self mapFor: cogMethod
-		performUntil: #collectMapEntry:address:into: asSymbol
+		performUntil: #collectMapEntry:address:into:
 		arg: mapEntries.
 
 	"This would all be far more elegant and simple if we used blocks.
@@ -4161,7 +4161,7 @@ Cogit >> findEnclosingMethodFor: mcpc inHomeMethod: cogMethod [
 	cogMethod blockEntryOffset = 0 ifTrue:
 		[^self cCoerceSimple: cogMethod to: #'CogBlockMethod *'].
 	maxMethodBefore := self cCoerceSimple: cogMethod to: #'CogBlockMethod *'.
-	self blockDispatchTargetsFor: cogMethod perform: #findMinAndMaxMethodsPC:around: asSymbol arg: mcpc.
+	self blockDispatchTargetsFor: cogMethod perform: #findMinAndMaxMethodsPC:around: arg: mcpc.
 	^maxMethodBefore
 ]
 
@@ -4211,7 +4211,7 @@ Cogit >> findMethodForStartBcpc: startbcpc inHomeMethod: cogMethod [
 		[^self cCoerceSimple: cogMethod to: #'CogBlockMethod *'].
 	self assert: cogMethod blockEntryOffset ~= 0.
 	^self cCoerceSimple: (self blockDispatchTargetsFor: cogMethod
-								perform: #findBlockMethodWithEntry:startBcpc: asSymbol
+								perform: #findBlockMethodWithEntry:startBcpc:
 								arg: startbcpc)
 		to: #'CogBlockMethod *'
 ]
@@ -4322,7 +4322,7 @@ Cogit >> genActiveContextTrampoline [
 	self MoveMw: FoxThisContext r: FPReg R: ReceiverResultReg.
 	self RetN: 0.
 	jumpSingle jmpTarget: self Label.
-	^self genTrampolineFor: #ceActiveContext asSymbol
+	^self genTrampolineFor: #ceActiveContext
 		called: 'ceActiveContextTrampoline'
 		callJumpBar: true
 		numArgs: 0
@@ -4340,7 +4340,7 @@ Cogit >> genCheckForInterruptsTrampoline [
 	opcodeIndex := 0.
 	self PopR: TempReg. "instruction pointer"
 	self MoveR: TempReg Aw: coInterpreter instructionPointerAddress.
-	^self genTrampolineFor: #ceCheckForInterrupts asSymbol
+	^self genTrampolineFor: #ceCheckForInterrupts
 		called: 'ceCheckForInterruptsTrampoline'
 		callJumpBar: true
 		numArgs: 0
@@ -4467,7 +4467,7 @@ Cogit >> genInnerPICAbortTrampoline: name [
 	<var: #jumpMNUCase type: #'AbstractInstruction *'>
 	self CmpCq: 0 R: ClassReg.
 	jumpMNUCase := self JumpZero: 0.
-	self compileTrampolineFor: #ceInterpretMethodFromPIC:receiver: asSymbol
+	self compileTrampolineFor: #ceInterpretMethodFromPIC:receiver:
 		callJumpBar: true
 		numArgs: 2
 		arg: SendNumArgsReg
@@ -4477,7 +4477,7 @@ Cogit >> genInnerPICAbortTrampoline: name [
 		saveRegs: false
 		resultReg: nil.
 	jumpMNUCase jmpTarget: self Label.
-	^self genTrampolineFor: #ceMNUFromPICMNUMethod:receiver: asSymbol
+	^self genTrampolineFor: #ceMNUFromPICMNUMethod:receiver:
 		called: name
 		callJumpBar: true
 		numArgs: 2
@@ -4534,7 +4534,7 @@ Cogit >> genMethodAbortTrampoline [
 	opcodeIndex := 0.
 	self CmpCq: 0 R: ReceiverResultReg.
 	jumpSICMiss := self JumpNonZero: 0.
-	self compileTrampolineFor: #ceStackOverflow: asSymbol
+	self compileTrampolineFor: #ceStackOverflow:
 		callJumpBar: true
 		numArgs: 1
 		arg: SendNumArgsReg
@@ -4544,7 +4544,7 @@ Cogit >> genMethodAbortTrampoline [
 		saveRegs: false
 		resultReg: nil.
 	jumpSICMiss jmpTarget: self Label.
-	^self genTrampolineFor: #ceSICMiss: asSymbol
+	^self genTrampolineFor: #ceSICMiss:
 		called: 'ceMethodAbort'
 		callJumpBar: true
 		numArgs: 1
@@ -4562,7 +4562,7 @@ Cogit >> genNonLocalReturnTrampoline [
 	opcodeIndex := 0.
 	self PopR: TempReg. "instruction pointer"
 	self MoveR: TempReg Aw: coInterpreter instructionPointerAddress.
-	^self genTrampolineFor: #ceNonLocalReturn: asSymbol
+	^self genTrampolineFor: #ceNonLocalReturn:
 		called: 'ceNonLocalReturnTrampoline'
 		callJumpBar: true
 		numArgs: 1
@@ -4922,12 +4922,12 @@ Cogit >> generateEnilopmarts [
 			[realCEEnterCogCodePopReceiverReg :=
 				self genEnilopmartFor: ReceiverResultReg
 					called: 'realCEEnterCogCodePopReceiverReg'.
-			 ceEnterCogCodePopReceiverReg := #enterCogCodePopReceiver asSymbol.
+			 ceEnterCogCodePopReceiverReg := #enterCogCodePopReceiver.
 			 realCEEnterCogCodePopReceiverAndClassRegs :=
 				self genEnilopmartFor: ReceiverResultReg
 					and: ClassReg
 					called: 'realCEEnterCogCodePopReceiverAndClassRegs'.
-			 ceEnterCogCodePopReceiverAndClassRegs := #enterCogCodePopReceiverAndClassRegs asSymbol]
+			 ceEnterCogCodePopReceiverAndClassRegs := #enterCogCodePopReceiverAndClassRegs]
 		ifFalse:
 			[ceEnterCogCodePopReceiverReg := self genEnilopmartFor: ReceiverResultReg
 				called: 'ceEnterCogCodePopReceiverReg'.
@@ -5052,7 +5052,7 @@ Cogit >> generateNewspeakRuntime [
 	<var: #jumpItsTheReceiverStupid type: #'AbstractInstruction *'>
 	"Generate the non-send runtime support for Newspeak, explicit outer and implicit receiver.
 	 The dynamic frequency of explicit outer is so low we merely call an interpreter routine."
-	ceExplicitReceiverTrampoline := self genTrampolineFor: #ceExplicitReceiverAt: asSymbol
+	ceExplicitReceiverTrampoline := self genTrampolineFor: #ceExplicitReceiverAt:
 										called: 'ceExplicitReceiverTrampoline'
 										arg: SendNumArgsReg
 										result: ReceiverResultReg.
@@ -5080,7 +5080,7 @@ Cogit >> generateNewspeakRuntime [
 	jumpItsTheReceiverStupid jmpTarget: (self RetN: 0).
 	jumpMiss jmpTarget: self Label.
 	ceImplicitReceiverTrampoline := self
-										genTrampolineFor: #ceImplicitReceiverFor:receiver:class: asSymbol
+										genTrampolineFor: #ceImplicitReceiverFor:receiver:class:
 										called: 'ceImplicitReceiverTrampoline'
 										callJumpBar: true
 										numArgs: 3
@@ -5125,52 +5125,50 @@ Cogit >> generateRunTimeTrampolines [
 														called: 'ceSendMustBeBooleanAddFalseTrampoline'.
 	ceSendMustBeBooleanAddTrueTrampoline := self genMustBeBooleanTrampolineFor: objectMemory trueObject
 														called: 'ceSendMustBeBooleanAddTrueTrampoline'.
-	"Slang needs these apparently superfluous asSymbol sends."
-	ceClosureCopyTrampoline := self genTrampolineFor: #ceClosureCopyDescriptor: asSymbol
+	ceClosureCopyTrampoline := self genTrampolineFor: #ceClosureCopyDescriptor:
 									called: 'ceClosureCopyTrampoline'
 									arg: SendNumArgsReg
 									result: ReceiverResultReg.
 	ceActiveContextTrampoline := self genActiveContextTrampoline.
 	ceNonLocalReturnTrampoline := self genNonLocalReturnTrampoline.
-	ceBaseFrameReturnTrampoline := self genTrampolineFor: #ceBaseFrameReturn: asSymbol
+	ceBaseFrameReturnTrampoline := self genTrampolineFor: #ceBaseFrameReturn:
 										called: 'ceBaseFrameReturnTrampoline'
 										arg: ReceiverResultReg.
-	ceCreateNewArrayTrampoline := self genTrampolineFor: #ceNewArraySlotSize: asSymbol
+	ceCreateNewArrayTrampoline := self genTrampolineFor: #ceNewArraySlotSize:
 										called: 'ceCreateNewArrayTrampoline'
 										arg: SendNumArgsReg
 										result: ReceiverResultReg.
 	ceCheckForInterruptTrampoline := self genCheckForInterruptsTrampoline.
 	ceStoreCheckTrampoline := objectRepresentation genStoreCheckTrampoline.
-	ceFetchContextInstVarTrampoline := self genTrampolineFor: #ceContext:instVar: asSymbol
+	ceFetchContextInstVarTrampoline := self genTrampolineFor: #ceContext:instVar:
 											called: 'ceFetchContextInstVarTrampoline'
 											arg: ReceiverResultReg
 											arg: SendNumArgsReg
 											result: SendNumArgsReg.
-	ceStoreContextInstVarTrampoline := self genTrampolineFor: #ceContext:instVar:value: asSymbol
+	ceStoreContextInstVarTrampoline := self genTrampolineFor: #ceContext:instVar:value:
 											called: 'ceStoreContextInstVarTrampoline'
 											arg: ReceiverResultReg
 											arg: SendNumArgsReg
 											arg: ClassReg
 											result: ReceiverResultReg. "to keep ReceiverResultReg live."
-	cePositive32BitIntegerTrampoline := self genTrampolineFor: #cePositive32BitIntegerFor: asSymbol
+	cePositive32BitIntegerTrampoline := self genTrampolineFor: #cePositive32BitIntegerFor:
 											called: 'cePositive32BitIntegerTrampoline'
 											arg: ReceiverResultReg
 											result: TempReg.
-	ceReturnToInterpreterTrampoline := self genTrampolineFor: #ceReturnToInterpreter: asSymbol
+	ceReturnToInterpreterTrampoline := self genTrampolineFor: #ceReturnToInterpreter:
 											called: 'ceReturnToInterpreterTrampoline'
 											arg: ReceiverResultReg.
-	ceCannotResumeTrampoline := self genTrampolineFor: #ceCannotResume asSymbol
+	ceCannotResumeTrampoline := self genTrampolineFor: #ceCannotResume
 											called: 'ceCannotResumeTrampoline'
 ]
 
 { #category : #initialization }
 Cogit >> generateSendTrampolines [
-	"Slang needs these apparently superfluous asSymbol sends."
 	0 to: NumSendTrampolines - 2 do:
 		[:numArgs|
 		sendTrampolines
 			at: numArgs
-			put: (self genTrampolineFor: #ceSend:super:to:numArgs: asSymbol
+			put: (self genTrampolineFor: #ceSend:super:to:numArgs:
 					  called: (self trampolineName: 'ceSend' numArgs: numArgs)
 					  arg: ClassReg
 					  arg: 0
@@ -5178,7 +5176,7 @@ Cogit >> generateSendTrampolines [
 					  arg: numArgs)].
 	sendTrampolines
 		at: NumSendTrampolines - 1
-		put: (self genTrampolineFor: #ceSend:super:to:numArgs: asSymbol
+		put: (self genTrampolineFor: #ceSend:super:to:numArgs:
 					called: (self trampolineName: 'ceSend' numArgs: -1)
 					arg: ClassReg
 					arg: 0
@@ -5190,14 +5188,14 @@ Cogit >> generateSendTrampolines [
 				[:numArgs|
 				dynamicSuperSendTrampolines
 					at: numArgs
-					put: (self genTrampolineFor: #ceDynamicSuperSend:to:numArgs: asSymbol
+					put: (self genTrampolineFor: #ceDynamicSuperSend:to:numArgs:
 							  called: (self trampolineName: 'ceDynSuperSend' numArgs: numArgs)
 							  arg: ClassReg
 							  arg: ReceiverResultReg
 							  arg: numArgs)].
 			dynamicSuperSendTrampolines
 				at: NumSendTrampolines - 1
-				put: (self genTrampolineFor: #ceDynamicSuperSend:to:numArgs: asSymbol
+				put: (self genTrampolineFor: #ceDynamicSuperSend:to:numArgs:
 							called: (self trampolineName: 'ceDynSuperSend' numArgs: -1)
 							arg: ClassReg
 							arg: ReceiverResultReg
@@ -5206,7 +5204,7 @@ Cogit >> generateSendTrampolines [
 		[:numArgs|
 		superSendTrampolines
 			at: numArgs
-			put: (self genTrampolineFor: #ceSend:super:to:numArgs: asSymbol
+			put: (self genTrampolineFor: #ceSend:super:to:numArgs:
 					  called: (self trampolineName: 'ceSuperSend' numArgs: numArgs)
 					  arg: ClassReg
 					  arg: 1
@@ -5214,7 +5212,7 @@ Cogit >> generateSendTrampolines [
 					  arg: numArgs)].
 	superSendTrampolines
 		at: NumSendTrampolines - 1
-		put: (self genTrampolineFor: #ceSend:super:to:numArgs: asSymbol
+		put: (self genTrampolineFor: #ceSend:super:to:numArgs:
 					called: (self trampolineName: 'ceSuperSend' numArgs: -1)
 					arg: ClassReg
 					arg: 1
@@ -5235,7 +5233,7 @@ Cogit >> generateStackPointerCapture [
 	oldMethodZoneBase := methodZoneBase.
 	oldTrampolineTableIndex := trampolineTableIndex.
 	self generateCaptureCStackPointers: true.
-	self perform: #ceCaptureCStackPointers asSymbol.
+	self perform: #ceCaptureCStackPointers.
 	(cFramePointerInUse := self isCFramePointerInUse) ifFalse:
 		[methodZoneBase := oldMethodZoneBase.
 		 trampolineTableIndex := oldTrampolineTableIndex.
@@ -6062,8 +6060,8 @@ Cogit >> mapObjectReferencesInMachineCodeForBecome [
 							[hasYoungObj := true]].
 					 self mapFor: cogMethod
 						 performUntil: (self cppIf: NewspeakVM
-											ifTrue: [#remapNSIfObjectRef:pc:hasYoung: asSymbol]
-											ifFalse: [#remapIfObjectRef:pc:hasYoung: asSymbol])
+											ifTrue: [#remapNSIfObjectRef:pc:hasYoung:]
+											ifFalse: [#remapIfObjectRef:pc:hasYoung:])
 						 arg: hasYoungObjPtr.
 					 hasYoungObj
 						ifTrue:
@@ -6105,8 +6103,8 @@ Cogit >> mapObjectReferencesInMachineCodeForFullGC [
 						 cogMethod methodObject: (objectRepresentation remapOop: cogMethod methodObject)].
 					 self mapFor: cogMethod
 						 performUntil: (self cppIf: NewspeakVM
-											ifTrue: [#remapNSIfObjectRef:pc:hasYoung: asSymbol]
-											ifFalse: [#remapIfObjectRef:pc:hasYoung: asSymbol])
+											ifTrue: [#remapNSIfObjectRef:pc:hasYoung:]
+											ifFalse: [#remapIfObjectRef:pc:hasYoung:])
 						 arg: 0.
 					 (cogMethod cmRefersToYoung
 					  and: [objectRepresentation allYoungObjectsAgeInFullGC]) ifTrue:
@@ -6153,8 +6151,8 @@ Cogit >> mapObjectReferencesInMachineCodeForIncrementalGC [
 							[hasYoungObj := true]].
 					 self mapFor: cogMethod
 						 performUntil: (self cppIf: NewspeakVM
-											ifTrue: [#remapNSIfObjectRef:pc:hasYoung: asSymbol]
-											ifFalse: [#remapIfObjectRef:pc:hasYoung: asSymbol])
+											ifTrue: [#remapNSIfObjectRef:pc:hasYoung:]
+											ifFalse: [#remapIfObjectRef:pc:hasYoung:])
 						 arg: hasYoungObjPtr.
 					 hasYoungObj
 						ifTrue: [hasYoungObj := false]
@@ -6411,8 +6409,8 @@ Cogit >> markLiteralsAndUnlinkUnmarkedSendsIn: cogMethod [
 	objectRepresentation markAndTraceLiteral: cogMethod selector.
 	self mapFor: cogMethod
 		 performUntil: (self cppIf: NewspeakVM
-						ifTrue: [#markLiteralsAndUnlinkIfUnmarkedSendOrPushImplicit:pc:method: asSymbol]
-						ifFalse: [#markLiteralsAndUnlinkIfUnmarkedSend:pc:method: asSymbol])
+						ifTrue: [#markLiteralsAndUnlinkIfUnmarkedSendOrPushImplicit:pc:method:]
+						ifFalse: [#markLiteralsAndUnlinkIfUnmarkedSend:pc:method:])
 		 arg: cogMethod asInteger
 ]
 
@@ -6429,7 +6427,7 @@ Cogit >> markMethodAndReferents: aCogMethod [
 					ifFalse: [aCogMethod cmHomeMethod].
 	cogMethod cmUsageCount: CMMaxUsageCount.
 	self mapFor: cogMethod
-		performUntil: #incrementUsageOfTargetIfLinkedSend:mcpc:ignored: asSymbol
+		performUntil: #incrementUsageOfTargetIfLinkedSend:mcpc:ignored:
 		arg: 0
 ]
 
@@ -6483,8 +6481,8 @@ Cogit >> markYoungObjectsIn: cogMethod [
 		[objectMemory markAndTrace: cogMethod methodObject].
 	self mapFor: cogMethod
 		 performUntil: (self cppIf: NewspeakVM
-						ifTrue: [#markNSYoungObjects:pc:method: asSymbol]
-						ifFalse: [#markYoungObjects:pc:method: asSymbol])
+						ifTrue: [#markNSYoungObjects:pc:method:]
+						ifFalse: [#markYoungObjects:pc:method:])
 		 arg: cogMethod asInteger
 ]
 
@@ -6547,7 +6545,7 @@ Cogit >> mcPCFor: bcpc startBcpc: startbcpc in: cogMethod [
 	absPC := self
 				mapFor: cogMethod
 				bcpc: startbcpc
-				performUntil: #findMcpc:Bcpc:MatchingBcpc: asSymbol
+				performUntil: #findMcpc:Bcpc:MatchingBcpc:
 				arg: (self cCoerceSimple: bcpc to: #'void *').
 	^absPC ~= 0
 		ifTrue: [absPC asUnsignedInteger - cogMethod asUnsignedInteger]
@@ -7137,7 +7135,7 @@ Cogit >> relocateCallsAndSelfReferencesInMethod: cogMethod [
 	delta := cogMethod objectHeader signedIntFromLong.
 	backEnd relocateCallBeforeReturnPC: cogMethod asInteger + missOffset by: delta negated.
 	self mapFor: cogMethod
-		performUntil: #relocateIfCallOrMethodReference:mcpc:delta: asSymbol
+		performUntil: #relocateIfCallOrMethodReference:mcpc:delta:
 		arg: delta
 ]
 
@@ -7396,7 +7394,7 @@ Cogit >> scanBlock: blockStart [
 			[self error: 'negative stack delta in block; block contains bogus code or internal error'].
 		 [stackDelta > 0] whileTrue:
 			[descriptor := self generatorAt: (objectMemory fetchByte: blockStart startpc ofObject: methodObj) + bytecodeSetOffset.
-			 descriptor generator ~~ #genPushConstantNilBytecode asSymbol ifTrue:
+			 descriptor generator ~~ #genPushConstantNilBytecode ifTrue:
 				[self error: 'frameless block doesn''t start with enough pushNils'].
 			 blockStart
 				startpc: blockStart startpc + descriptor numBytes;
@@ -8062,7 +8060,7 @@ Cogit >> unlinkAllSends [
 		[cogMethod cmType = CMMethod
 			ifTrue:
 				[self mapFor: cogMethod
-					 performUntil: #unlinkIfLinkedSend:pc:ignored: asSymbol
+					 performUntil: #unlinkIfLinkedSend:pc:ignored:
 					 arg: 0]
 			ifFalse:
 				[cogMethod cmType ~= CMFree ifTrue:
@@ -8193,7 +8191,7 @@ Cogit >> unlinkSendsOf: selector isMNUSelector: isMNUSelector [
 		[cogMethod cmType = CMMethod
 			ifTrue:
 				[self mapFor: cogMethod
-					 performUntil: #unlinkIfLinkedSend:pc:of: asSymbol
+					 performUntil: #unlinkIfLinkedSend:pc:of:
 					 arg: selector]
 			ifFalse:
 				[(cogMethod cmType ~= CMFree
@@ -8226,7 +8224,7 @@ Cogit >> unlinkSendsTo: targetMethodObject andFreeIf: freeIfTrue [
 		[cogMethod cmType = CMMethod
 			ifTrue:
 				[self mapFor: cogMethod
-					 performUntil: #unlinkIfLinkedSend:pc:to: asSymbol
+					 performUntil: #unlinkIfLinkedSend:pc:to:
 					 arg: targetMethod asInteger]
 			ifFalse:
 				[(cogMethod cmType = CMClosedPIC
@@ -8255,7 +8253,7 @@ Cogit >> unlinkSendsToFree [
 		[cogMethod cmType = CMMethod
 			ifTrue:
 				[self mapFor: cogMethod
-					 performUntil: #unlinkIfLinkedSendToFree:pc:ignored: asSymbol
+					 performUntil: #unlinkIfLinkedSendToFree:pc:ignored:
 					 arg: 0]
 			ifFalse:
 				[cogMethod cmType = CMClosedPIC ifTrue:

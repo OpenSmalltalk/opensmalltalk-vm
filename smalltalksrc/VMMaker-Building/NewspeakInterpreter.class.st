@@ -5086,10 +5086,10 @@ NewspeakInterpreter >> positiveMachineIntegerValueOf: oop [
 			isClassOfNonImm: oop
 			equalTo: (self splObj: ClassLargePositiveInteger)
 			compactClassIndex: ClassLargePositiveIntegerCompactIndex.
-	(ok and: [(bs := self lengthOf: oop) <= (self sizeof: #'unsigned long' asSymbol)]) ifFalse:
+	(ok and: [(bs := self lengthOf: oop) <= (self sizeof: #'unsigned long')]) ifFalse:
 		[^self primitiveFail].
 
-	((self sizeof: #'unsigned long' asSymbol) = 8
+	((self sizeof: #'unsigned long') = 8
 	and: [bs > 4]) ifTrue:
 		[^  (self fetchByte: 0 ofObject: oop)
 		 + ((self fetchByte: 1 ofObject: oop) <<  8)
@@ -10319,10 +10319,10 @@ NewspeakInterpreter >> signedMachineIntegerValueOf: oop [
 							equalTo: (self splObj: ClassLargeNegativeInteger)
 							compactClassIndex: ClassLargeNegativeIntegerCompactIndex.
 			ok ifFalse: [^self primitiveFail]].
-	(bs := self lengthOf: oop) > (self sizeof: #'unsigned long' asSymbol) ifTrue:
+	(bs := self lengthOf: oop) > (self sizeof: #'unsigned long') ifTrue:
 		[^self primitiveFail].
 
-	((self sizeof: #'unsigned long' asSymbol) = 8
+	((self sizeof: #'unsigned long') = 8
 	 and: [bs > 4])
 		ifTrue:
 			[value :=   (self fetchByte: 0 ofObject: oop)

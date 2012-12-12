@@ -12,14 +12,13 @@ TParseNode >> allCalls [
 	"Answer a collection of selectors for the messages sent in this parse tree."
 
 	| calls |
-	calls := Set new: 100.
+	calls := Set new: 32.
 	self nodesDo:
-		[ :node |
+		[:node|
 		node isSend ifTrue:
-			[((calls add: node selector) = #asSymbol
-			  and: [node receiver isConstant
-			  and: [node receiver value isSymbol]]) ifTrue:
-				[calls add: node receiver value]]].
+			[calls add: node selector].
+		(node isConstant and: [node value isSymbol]) ifTrue:
+			[calls add: node value]].
 	^calls
 ]
 

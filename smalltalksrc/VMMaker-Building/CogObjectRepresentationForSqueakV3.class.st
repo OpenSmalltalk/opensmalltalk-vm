@@ -89,7 +89,7 @@ CogObjectRepresentationForSqueakV3 >> genAllocFloatValue: dpreg into: resultReg 
 	<returnTypeC: #'AbstractInstruction *'>
 	| allocSize newFloatHeaderSansHash jumpFail |
 	<var: #jumpFail type: #'AbstractInstruction *'>
-	allocSize := BaseHeaderSize + (objectMemory sizeof: #double asSymbol).
+	allocSize := BaseHeaderSize + (objectMemory sizeof: #double).
 	newFloatHeaderSansHash := ((objectMemory classFloatCompactIndex << objectMemory compactClassFieldLSB
 									bitOr: (objectMemory formatOfClass: objectMemory classFloat))
 									bitOr: allocSize)
@@ -526,7 +526,7 @@ CogObjectRepresentationForSqueakV3 >> genShiftAwaySmallIntegerTagsInScratchReg: 
 CogObjectRepresentationForSqueakV3 >> genStoreCheckTrampoline [
 	"Call noteAsRoot: with the object stored into"
 	^cogit
-		genTrampolineFor: #ceStoreCheck: asSymbol
+		genTrampolineFor: #ceStoreCheck:
 		called: 'ceStoreCheckTrampoline'
 		arg: ReceiverResultReg
 		result: cogit returnRegForStoreCheck

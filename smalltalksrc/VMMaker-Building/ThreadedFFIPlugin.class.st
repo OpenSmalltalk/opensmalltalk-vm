@@ -492,7 +492,7 @@ ThreadedFFIPlugin >> ffiCall: externalFunction ArgArrayOrNil: argArrayOrNil NumA
 	stackSize := requiredStackSize < 0 ifTrue: [DefaultMaxStackSize] ifFalse: [requiredStackSize].
 	self cCode: [] inSmalltalk: [theCalloutState := self class calloutStateClass new].
 	calloutState := self addressOf: theCalloutState.
-	self cCode: [self me: calloutState ms: 0 et: (self sizeof: #CalloutState asSymbol)].
+	self cCode: [self me: calloutState ms: 0 et: (self sizeof: #CalloutState)].
 	calloutState callFlags: flags.
 	"Fetch return type and args"
 	argType := interpreterProxy fetchPointer: 0 ofObject: argTypeArray.

@@ -584,7 +584,7 @@ CogThreadManager >> startThreadForThreadInfo: vmThread [
 					 (thisContext home stackOfSize: 10) do:
 						[:ctxt|
 						coInterpreter transcript cr; print: ctxt; flush]]."
-	(self ioNewOS: #startVMThread: asSymbol Thread: vmThread) = 0 ifTrue:
+	(self ioNewOS: #startVMThread: Thread: vmThread) = 0 ifTrue:
 		[self ioTransferTimeslice.
 		^true].
 	memoryIsScarce := true.

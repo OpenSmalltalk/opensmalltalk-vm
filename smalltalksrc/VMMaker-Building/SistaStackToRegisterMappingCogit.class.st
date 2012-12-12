@@ -81,7 +81,7 @@ SistaStackToRegisterMappingCogit >> bytecodePCFor: mcpc startBcpc: startbcpc in:
 	^self
 		mapFor: cogMethod
 		bcpc: startbcpc
-		performUntil: #find:Mcpc:Bcpc:MatchingMcpc: asSymbol
+		performUntil: #find:Mcpc:Bcpc:MatchingMcpc:
 		arg: (self cCoerceSimple: mcpc to: #'void *')
 ]
 
@@ -350,7 +350,7 @@ SistaStackToRegisterMappingCogit >> genMustBeBooleanTrampolineFor: boolean calle
 	opcodeIndex := 0.
 	self CmpCq: 0 R: SendNumArgsReg.
 	jumpMBB := self JumpZero: 0.
-	self compileTrampolineFor: #ceCounterTripped: asSymbol
+	self compileTrampolineFor: #ceCounterTripped:
 		callJumpBar: true
 		numArgs: 1
 		arg: TempReg
@@ -362,7 +362,7 @@ SistaStackToRegisterMappingCogit >> genMustBeBooleanTrampolineFor: boolean calle
 	"If the objectRepresentation does want true & false to be mobile then we need to record these addresses."
 	self assert: (objectRepresentation shouldAnnotateObjectReference: boolean) not.
 	jumpMBB jmpTarget: (self AddCq: boolean R: TempReg).
-	^self genTrampolineFor: #ceSendMustBeBoolean: asSymbol
+	^self genTrampolineFor: #ceSendMustBeBoolean:
 		called: trampolineName
 		callJumpBar: true
 		numArgs: 1
@@ -700,7 +700,7 @@ SistaStackToRegisterMappingCogit >> mcPCFor: bcpc startBcpc: startbcpc in: cogMe
 	absPC := self
 				mapFor: cogMethod
 				bcpc: startbcpc
-				performUntil: #find:Mcpc:Bcpc:MatchingBcpc: asSymbol
+				performUntil: #find:Mcpc:Bcpc:MatchingBcpc:
 				arg: (self cCoerceSimple: bcpc to: #'void *').
 	^absPC ~= 0
 		ifTrue: [absPC asUnsignedInteger - cogMethod asUnsignedInteger]
@@ -755,7 +755,7 @@ SistaStackToRegisterMappingCogit >> picDataFor: cogMethod into: arrayObj [
 	errCode := self
 					mapFor: (self cCoerceSimple: cogMethod to: #'CogBlockMethod *')
 					bcpc: (coInterpreter startPCOfMethod: cogMethod methodObject)
-					performUntil: #picDataFor:Mcpc:Bcpc:Method: asSymbol
+					performUntil: #picDataFor:Mcpc:Bcpc:Method:
 					arg: (self cCoerceSimple: cogMethod to: #'void *').
 	errCode ~= 0 ifTrue:
 		[self assert: errCode = PrimErrNoMemory.
