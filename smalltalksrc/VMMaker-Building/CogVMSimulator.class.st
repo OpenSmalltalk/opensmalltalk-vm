@@ -1385,7 +1385,6 @@ CogVMSimulator >> ioLoadExternalFunction: functionName OfLength: functionLength 
 	1 to: moduleLength do:[:i| pluginString byteAt: i put: (objectMemory byteAt: moduleName+i-1)].
 	functionString := String new: functionLength.
 	1 to: functionLength do:[:i| functionString byteAt: i put: (objectMemory byteAt: functionName+i-1)].
-	functionString := functionString asSymbol.
 	^self ioLoadFunction: functionString From: pluginString
 ]
 
@@ -2803,7 +2802,7 @@ CogVMSimulator >> reverseBytesInImage [
 CogVMSimulator >> rewriteMethodCacheEntryForExternalPrimitiveToFunction: localPrimAddress [
 	super rewriteMethodCacheEntryForExternalPrimitiveToFunction:
 				(self mapFunctionToAddress: (localPrimAddress = 0
-												ifTrue: [#primitiveFail asSymbol]
+												ifTrue: [#primitiveFail]
 												ifFalse: [localPrimAddress])).
 	"Hack; the super call will rewrite the entry to the address of the function.
 	 So (when simulating) undo the damage and put back the functionPointer"

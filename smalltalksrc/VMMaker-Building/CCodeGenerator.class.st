@@ -353,8 +353,8 @@ CCodeGenerator >> cCodeForMethod: selector [
 
 { #category : #'C code generator' }
 CCodeGenerator >> cFunctionNameFor: aSelector [
-	"Create a C function name from the given selector by omitting colons
-	and prefixing with the plugin name if the method is exported."
+	"Create a C function name from the given selector by finding
+	 a specific translation, or if none, simply omitting colons."
 	^selectorTranslations at: aSelector ifAbsent: [aSelector copyWithout: $:]
 ]
 
@@ -370,7 +370,9 @@ CCodeGenerator >> cLiteralFor: anObject [
 			anObject isFloat ifTrue:
 				[^anObject printString]]
 		ifFalse:
-			[anObject isString ifTrue:
+			[anObject isSymbol ifTrue:
+				[^self cFunctionNameFor: anObject].
+			anObject isString ifTrue:
 				[^'"', (anObject copyReplaceAll: (String with: Character cr) with: '\n') , '"'].
 			anObject == nil ifTrue: [^ 'null' ].
 			anObject == true ifTrue: [^ '1' ].
@@ -385,7 +387,8 @@ CCodeGenerator >> cLiteralFor: anObject [
 
 { #category : #'C code generator' }
 CCodeGenerator >> cLiteralFor: anObject name: smalltalkName [
-	"Return a string representing the C literal value for the given object."
+	"Return a string representing the C literal value for the given object.
+	 This version may use hex for integers that are bit masks."
 	anObject isInteger ifTrue:
 		[| hex dec rep |
 		hex := anObject printStringBase: 16.
@@ -399,16 +402,7 @@ CCodeGenerator >> cLiteralFor: anObject name: smalltalkName [
 		^(anObject < 16r7FFFFFFF)
 			ifTrue: [rep]
 			ifFalse: [rep, ObjectMemory unsignedIntegerSuffix "ikp"]].
-	anObject isFloat ifTrue:
-		[^anObject printString].
-	anObject isString ifTrue:
-		[^'"', (anObject copyReplaceAll: (String with: Character cr) with: '\n') , '"'].
-	anObject == nil ifTrue: [^ 'null' ].
-	anObject == true ifTrue: [^ '1' ].			"ikp"
-	anObject == false ifTrue: [^ '0' ].			"ikp"
-	anObject isCharacter ifTrue:[^anObject asString printString]. "ar"
-	self error: 'Warning: A Smalltalk literal could not be translated into a C constant: ', anObject printString.
-	^'"XXX UNTRANSLATABLE CONSTANT XXX"'
+	^self cLiteralFor: anObject
 ]
 
 { #category : #'error notification' }
@@ -1358,6 +1352,23 @@ CCodeGenerator >> generateEqual: msgNode on: aStream indent: level [
 	self emitCExpression: msgNode receiver on: aStream.
 	aStream nextPutAll: ' == '.
 	self emitCExpression: msgNode args first on: aStream.
+]
+
+{ #category : #'C translation' }
+CCodeGenerator >> generateFlag: msgNode on: aStream indent: level [
+	"Compoensate for the use of self flag: #aSymbol.  We used to translate  symbols
+	 as strings unless they were quoted via #aSymbol asSymbol. But this is too tedious,
+	 so we now translate symbols directly.  The only use that this affected was in
+		 self flag: #aSymbol,
+	 so hard-code it to produce a string value.  Note that this isn't strictly necessary
+	 because there's a
+		#define flag(foo) 0
+	 in C land, but it makes the generated C less dissonant."
+
+	aStream
+		nextPutAll: 'flag(';
+		nextPutAll: (self cLiteralFor: msgNode args last value asString);
+		nextPut: $)
 ]
 
 { #category : #'C translation' }
@@ -2433,6 +2444,7 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#asUnsignedInteger		#generateAsUnsignedInteger:on:indent:
 	#asUnsignedLong			#generateAsUnsignedLong:on:indent:
 	#asSymbol					#generateAsSymbol:on:indent:
+	#flag:						#generateFlag:on:indent:
 	#anyMask:					#generateBitAnd:on:indent:
 	#raisedTo:					#generateRaisedTo:on:indent:
 	#touch:						#generateTouch:on:indent:

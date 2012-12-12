@@ -776,7 +776,7 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 		 methodLabel addDependent:
 			(self annotateAbsolutePCRef:
 				(self MoveCw: methodLabel asInteger R: ClassReg)).
-		 self MoveMw: (self offset: CogMethod of: #methodObject asSymbol) r: ClassReg R: TempReg.
+		 self MoveMw: (self offset: CogMethod of: #methodObject) r: ClassReg R: TempReg.
 		 self MoveR: TempReg Aw: coInterpreter newMethodAddress].
 	self PrefetchAw: coInterpreter primFailCodeAddress.
 	(flags bitAnd: PrimCallMayCallBack) ~= 0
@@ -1426,7 +1426,7 @@ SimpleStackBasedCogit >> genFastPrimTraceUsing: r1 and: r2 [
 	methodLabel addDependent:
 		(self annotateAbsolutePCRef:
 			(self MoveCw: methodLabel asInteger R: r1)).
-	self MoveMw: (self offset: CogMethod of: #selector asSymbol) r: r1 R: TempReg.
+	self MoveMw: (self offset: CogMethod of: #selector) r: r1 R: TempReg.
 	self MoveCw: coInterpreter primTraceLogAddress asInteger R: r1.
 	self MoveR: TempReg Xwr: r2 R: r1
 ]
@@ -1537,7 +1537,7 @@ SimpleStackBasedCogit >> genMustBeBooleanTrampolineFor: boolean called: trampoli
 	"If the objectRepresentation does want true & false to be mobile then we need to record these addresses."
 	self assert: (objectRepresentation shouldAnnotateObjectReference: boolean) not.
 	self AddCq: boolean R: TempReg.
-	^self genTrampolineFor: #ceSendMustBeBoolean: asSymbol
+	^self genTrampolineFor: #ceSendMustBeBoolean:
 		called: trampolineName
 		callJumpBar: true
 		numArgs: 1
@@ -1829,12 +1829,12 @@ SimpleStackBasedCogit >> genPrimitiveClosureValue [
 		genLoadSlot: HeaderIndex sourceReg: SendNumArgsReg destReg: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpBCMethod := objectRepresentation genJumpSmallIntegerInScratchReg: TempReg.
-	self MoveM16: (self offset: CogMethod of: #blockEntryOffset asSymbol) r: ClassReg R: TempReg.
+	self MoveM16: (self offset: CogMethod of: #blockEntryOffset) r: ClassReg R: TempReg.
 	self AddR: ClassReg R: TempReg.
 	primitiveRoutine := coInterpreter
 							functionPointerForCompiledMethod: methodObj
 							primitiveIndex: primitiveIndex.
-	primitiveRoutine = #primitiveClosureValueNoContextSwitch asSymbol ifTrue:
+	primitiveRoutine = #primitiveClosureValueNoContextSwitch ifTrue:
 		[blockNoContextSwitchOffset = nil ifTrue:
 			[^NotFullyInitialized].
 		 self SubCq: blockNoContextSwitchOffset R: TempReg].
@@ -1954,32 +1954,32 @@ SimpleStackBasedCogit >> genPrimitiveFloatAdd [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveFloatDivide [
-	^self genDoubleArithmetic: DivRdRd preOpCheck: #genDoubleFailIfZeroArgRcvr:arg: asSymbol
+	^self genDoubleArithmetic: DivRdRd preOpCheck: #genDoubleFailIfZeroArgRcvr:arg:
 ]
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveFloatEqual [
-	^self genDoubleComparison: #JumpFPEqual: asSymbol invert: false
+	^self genDoubleComparison: #JumpFPEqual: invert: false
 ]
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveFloatGreaterOrEqual [
-	^self genDoubleComparison: #JumpFPGreaterOrEqual: asSymbol invert: false
+	^self genDoubleComparison: #JumpFPGreaterOrEqual: invert: false
 ]
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveFloatGreaterThan [
-	^self genDoubleComparison: #JumpFPGreater: asSymbol invert: false
+	^self genDoubleComparison: #JumpFPGreater: invert: false
 ]
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveFloatLessOrEqual [
-	^self genDoubleComparison: #JumpFPGreaterOrEqual: asSymbol invert: true
+	^self genDoubleComparison: #JumpFPGreaterOrEqual: invert: true
 ]
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveFloatLessThan [
-	^self genDoubleComparison: #JumpFPGreater: asSymbol invert: true
+	^self genDoubleComparison: #JumpFPGreater: invert: true
 ]
 
 { #category : #'primitive generators' }
@@ -1989,7 +1989,7 @@ SimpleStackBasedCogit >> genPrimitiveFloatMultiply [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveFloatNotEqual [
-	^self genDoubleComparison: #JumpFPNotEqual: asSymbol invert: false
+	^self genDoubleComparison: #JumpFPNotEqual: invert: false
 ]
 
 { #category : #'primitive generators' }
@@ -2831,7 +2831,7 @@ SimpleStackBasedCogit >> genStoreRemoteTempLongBytecode [
 
 { #category : #initialization }
 SimpleStackBasedCogit >> genTraceStoreTrampoline [
-	ceTraceStoreTrampoline := self genSafeTrampolineFor: #ceTraceStoreOf:into: asSymbol
+	ceTraceStoreTrampoline := self genSafeTrampolineFor: #ceTraceStoreOf:into:
 										called: 'ceTraceStoreTrampoline'
 										arg: ClassReg
 										arg: ReceiverResultReg
@@ -2871,10 +2871,9 @@ SimpleStackBasedCogit >> generateMissAbortTrampolines [
 	"Generate the run-time entries for the various method and PIC entry misses and aborts..
 	 Read the class-side method trampolines for documentation on the various trampolines"
 
-	"Slang needs these apparently superfluous asSymbol sends."
 	ceMethodAbortTrampoline := self genMethodAbortTrampoline.
 	cePICAbortTrampoline := self genPICAbortTrampoline.
-	ceCPICMissTrampoline := self genTrampolineFor: #ceCPICMiss:receiver: asSymbol
+	ceCPICMissTrampoline := self genTrampolineFor: #ceCPICMiss:receiver:
 								called: 'ceCPICMissTrampoline'
 								arg: ClassReg
 								arg: ReceiverResultReg.
@@ -2891,7 +2890,7 @@ SimpleStackBasedCogit >> generateTracingTrampolines [
 	 trampolines, but we need them in the real vm."
 	ceTraceLinkedSendTrampoline
 		:= self cCode:
-					[self genSafeTrampolineFor: #ceTraceLinkedSend: asSymbol
+					[self genSafeTrampolineFor: #ceTraceLinkedSend:
 						called: 'ceTraceLinkedSendTrampoline'
 						arg: ReceiverResultReg]
 				inSmalltalk:
@@ -2902,7 +2901,7 @@ SimpleStackBasedCogit >> generateTracingTrampolines [
 					 a].
 	ceTraceBlockActivationTrampoline
 		:= self cCode:
-					[self genTrampolineFor: #ceTraceBlockActivation asSymbol
+					[self genTrampolineFor: #ceTraceBlockActivation
 						called: 'ceTraceBlockActivationTrampoline']
 				inSmalltalk:
 					[| a |
@@ -2912,7 +2911,7 @@ SimpleStackBasedCogit >> generateTracingTrampolines [
 					 a].
 	ceTraceStoreTrampoline
 		:= self cCode:
-					[self genSafeTrampolineFor: #ceTraceStoreOf:into: asSymbol
+					[self genSafeTrampolineFor: #ceTraceStoreOf:into:
 						called: 'ceTraceStoreTrampoline'
 						arg: ClassReg
 						arg: ReceiverResultReg]
