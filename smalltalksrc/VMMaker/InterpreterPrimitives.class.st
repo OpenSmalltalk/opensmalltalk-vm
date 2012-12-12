@@ -215,7 +215,7 @@ InterpreterPrimitives >> magnitude64BitValueOf: oop [
 							compactClassIndex: ClassLargeNegativeIntegerCompactIndex.
 			ok ifFalse: [^self primitiveFail]].
 	sz := objectMemory lengthOf: oop.
-	sz > (self sizeof: #sqLong asSymbol) ifTrue:
+	sz > (self sizeof: #sqLong) ifTrue:
 		[^self primitiveFail].
 
 	value := 0.
@@ -264,7 +264,7 @@ InterpreterPrimitives >> positive64BitValueOf: oop [
 			isClassOfNonImm: oop
 			equalTo: (objectMemory splObj: ClassLargePositiveInteger)
 			compactClassIndex: ClassLargePositiveIntegerCompactIndex.
-	(ok and: [(sz := objectMemory lengthOf: oop) <= (self sizeof: #sqLong asSymbol)]) ifFalse:
+	(ok and: [(sz := objectMemory lengthOf: oop) <= (self sizeof: #sqLong)]) ifFalse:
 		[^self primitiveFail].
 
 	value := 0.
@@ -288,10 +288,10 @@ InterpreterPrimitives >> positiveMachineIntegerValueOf: oop [
 			isClassOfNonImm: oop
 			equalTo: (objectMemory splObj: ClassLargePositiveInteger)
 			compactClassIndex: ClassLargePositiveIntegerCompactIndex.
-	(ok and: [(bs := objectMemory lengthOf: oop) <= (self sizeof: #'unsigned long' asSymbol)]) ifFalse:
+	(ok and: [(bs := objectMemory lengthOf: oop) <= (self sizeof: #'unsigned long')]) ifFalse:
 		[^self primitiveFail].
 
-	((self sizeof: #'unsigned long' asSymbol) = 8
+	((self sizeof: #'unsigned long') = 8
 	and: [bs > 4]) ifTrue:
 		[^  (objectMemory fetchByte: 0 ofObject: oop)
 		 + ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
@@ -3646,7 +3646,7 @@ InterpreterPrimitives >> signed64BitValueOf: oop [
 							compactClassIndex: ClassLargeNegativeIntegerCompactIndex.
 			ok ifFalse: [^self primitiveFail]].
 	sz := objectMemory lengthOf: oop.
-	sz > (self sizeof: #sqLong asSymbol) ifTrue:
+	sz > (self sizeof: #sqLong) ifTrue:
 		[^self primitiveFail].
 
 	value := 0.
@@ -3698,10 +3698,10 @@ InterpreterPrimitives >> signedMachineIntegerValueOf: oop [
 							equalTo: (objectMemory splObj: ClassLargeNegativeInteger)
 							compactClassIndex: ClassLargeNegativeIntegerCompactIndex.
 			ok ifFalse: [^self primitiveFail]].
-	(bs := objectMemory lengthOf: oop) > (self sizeof: #'unsigned long' asSymbol) ifTrue:
+	(bs := objectMemory lengthOf: oop) > (self sizeof: #'unsigned long') ifTrue:
 		[^self primitiveFail].
 
-	((self sizeof: #'unsigned long' asSymbol) = 8
+	((self sizeof: #'unsigned long') = 8
 	 and: [bs > 4])
 		ifTrue:
 			[value :=   (objectMemory fetchByte: 0 ofObject: oop)

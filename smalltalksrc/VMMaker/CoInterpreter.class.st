@@ -231,20 +231,20 @@ CoInterpreter class >> initializeFrameIndices [
 	fxMFReceiver := -3.
 
 	"For debugging nil out values that differ in the StackInterpreter."
-	FrameSlots := #undeclared asSymbol.
+	FrameSlots := #undeclared.
 	IFrameSlots := fxCallerSavedIP - fxIFReceiver + 1.
 	MFrameSlots := fxCallerSavedIP - fxMFReceiver + 1.
 
 	FoxCallerSavedIP := fxCallerSavedIP * BytesPerWord.
 	"In Cog a base frame's caller context is stored on the first word of the stack page."
-	FoxCallerContext := #undeclared asSymbol.
+	FoxCallerContext := #undeclared.
 	FoxSavedFP := fxSavedFP * BytesPerWord.
 	FoxMethod := fxMethod * BytesPerWord.
 	FoxThisContext := fxThisContext * BytesPerWord.
-	FoxFrameFlags := #undeclared asSymbol.
+	FoxFrameFlags := #undeclared.
 	FoxIFrameFlags := fxIFrameFlags * BytesPerWord.
 	FoxIFSavedIP := fxIFSavedIP * BytesPerWord.
-	FoxReceiver := #undeclared asSymbol.
+	FoxReceiver := #undeclared.
 	FoxIFReceiver := fxIFReceiver * BytesPerWord.
 	FoxMFReceiver := fxMFReceiver * BytesPerWord.
 
@@ -704,7 +704,7 @@ CoInterpreter >> addNewMethodToCache: class [
 	"Override to refuse to cache other than compiled methods.
 	 This protects open PICs against having to test for compiled methods."
 	(objectMemory isOopCompiledMethod: newMethod) ifFalse:
-		[primitiveFunctionPointer := #primitiveInvokeObjectAsMethod asSymbol.
+		[primitiveFunctionPointer := #primitiveInvokeObjectAsMethod.
 		^self].
 	super addNewMethodToCache: class
 ]
@@ -748,7 +748,7 @@ CoInterpreter >> assertValidExecutionPointe: lip r: lifp s: lisp imbar: inInterp
 	<var: #cogMethod type: #'CogMethod *'>
 	self assert: stackPage = (stackPages stackPageFor: lifp).
 	self assert: stackPage = stackPages mostRecentlyUsedPage.
-	self deferStackLimitSmashAround: #assertValidStackLimits asSymbol.
+	self deferStackLimitSmashAround: #assertValidStackLimits.
 	self assert: lifp < stackPage baseAddress.
 	self assert: lisp < lifp.
 	self assert: lifp > lisp.
@@ -946,10 +946,10 @@ CoInterpreter >> bytecodePrimAt [
 			 (self lookupInMethodCacheSel: messageSelector class: lkupClass) ifFalse:
 				[argumentCount := 1.
 				 ^self commonSend].
-			 primitiveFunctionPointer == #primitiveAt asSymbol
+			 primitiveFunctionPointer == #primitiveAt
 				ifTrue: [self install: rcvr inAtCache: atCache at: atIx string: false]
 				ifFalse:
-					[primitiveFunctionPointer == #primitiveStringAt asSymbol
+					[primitiveFunctionPointer == #primitiveStringAt
 						ifTrue: [self install: rcvr inAtCache: atCache at: atIx string: true]
 						ifFalse:
 							[argumentCount := 1.
@@ -987,10 +987,10 @@ CoInterpreter >> bytecodePrimAtPut [
 			 (self lookupInMethodCacheSel: messageSelector class: lkupClass) ifFalse:
 				[argumentCount := 2.
 				 ^self commonSend].
-			 primitiveFunctionPointer == #primitiveAtPut asSymbol
+			 primitiveFunctionPointer == #primitiveAtPut
 				ifTrue: [self install: rcvr inAtCache: atCache at: atIx string: false]
 				ifFalse:
-					[primitiveFunctionPointer == #primitiveStringAtPut asSymbol
+					[primitiveFunctionPointer == #primitiveStringAtPut
 						ifTrue: [self install: rcvr inAtCache: atCache at: atIx string: true]
 						ifFalse:
 							[argumentCount := 2.
@@ -1070,7 +1070,7 @@ CoInterpreter >> callbackEnter: callbackID [
 	currentCFramePointer := cogit getCFramePointer.
 	self mem: (self cCoerceSimple: savedReenterInterpreter to: #'void *')
 		cp: reenterInterpreter
-		y: (self sizeof: #'jmp_buf' asSymbol).
+		y: (self sizeof: #'jmp_buf').
 	cogit assertCStackWellAligned.
 	(self setjmp: (jmpBuf at: jmpDepth)) == 0 ifTrue: "Fill in callbackID"
 		[callbackID at: 0 put: jmpDepth.
@@ -1082,7 +1082,7 @@ CoInterpreter >> callbackEnter: callbackID [
 	cogit setCFramePointer: currentCFramePointer.
 	self mem: reenterInterpreter
 		cp: (self cCoerceSimple: savedReenterInterpreter to: #'void *')
-		y: (self sizeof: #'jmp_buf' asSymbol).
+		y: (self sizeof: #'jmp_buf').
 
 	"Transfer back to the previous process so that caller can push result"
 	self putToSleep: self activeProcess yieldingIf: preemptionYields.
@@ -3063,7 +3063,7 @@ CoInterpreter >> flushExternalPrimitiveOf: methodObj [
 	(self methodHasCogMethod: methodObj) ifTrue:
 		[cogit
 			rewritePrimInvocationIn: (self cogMethodOf: methodObj)
-			to: #primitiveExternalCall asSymbol]
+			to: #primitiveExternalCall]
 ]
 
 { #category : #'method lookup cache' }
@@ -3227,21 +3227,21 @@ CoInterpreter >> functionForPrimitiveExternalCall: methodObj [
 	<returnTypeC: 'void (*functionForPrimitiveExternalCall(sqInt methodObj))(void)'>
 	| lit index functionPointer |
 	<var: #functionPointer declareC: #'void (*functionPointer)(void)'>
-	cogit setPostCompileHook: #recordCallOffsetIn:of: asSymbol.
+	cogit setPostCompileHook: #recordCallOffsetIn:of:.
 	(self literalCountOf: methodObj) > 0 ifFalse:
-		[^#primitiveExternalCall asSymbol].
+		[^#primitiveExternalCall].
 	lit := self literal: 0 ofMethod: methodObj. 
 	"Check if it's an array of length 4"
 	((objectMemory isArray: lit) and: [(objectMemory lengthOf: lit) = 4]) ifFalse:
-		[^#primitiveExternalCall asSymbol].
+		[^#primitiveExternalCall].
 	index := objectMemory fetchPointer: 3 ofObject: lit.
 	((objectMemory isIntegerObject: index)
 	and: [(index := objectMemory integerValueOf: index) > 0
 	and: [index <= MaxExternalPrimitiveTableSize]]) ifFalse:
-		[^#primitiveExternalCall asSymbol].
+		[^#primitiveExternalCall].
 	functionPointer := externalPrimitiveTable at: index - 1.
 	functionPointer = 0 ifTrue:
-		[^#primitiveExternalCall asSymbol].
+		[^#primitiveExternalCall].
 	^functionPointer
 ]
 
@@ -3252,17 +3252,17 @@ CoInterpreter >> functionPointerForCompiledMethod: methodObj primitiveIndex: pri
 	| functionPointer |
 	<var: #functionPointer declareC: #'void (*functionPointer)(void)'>
 	functionPointer := self functionPointerFor: primIndex inClass: nil.
-	functionPointer == #primitiveAt asSymbol ifTrue:
-		[^#primitiveNoAtCacheAt asSymbol].
-	functionPointer == #primitiveAtPut asSymbol ifTrue:
-		[^#primitiveNoAtCacheAtPut asSymbol].
-	functionPointer == #primitiveStringAt asSymbol ifTrue:
-		[^#primitiveNoAtCacheStringAt asSymbol].
-	functionPointer == #primitiveStringAtPut asSymbol ifTrue:
-		[^#primitiveNoAtCacheStringAtPut asSymbol].
-	functionPointer == #primitiveCalloutToFFI asSymbol ifTrue:
+	functionPointer == #primitiveAt ifTrue:
+		[^#primitiveNoAtCacheAt].
+	functionPointer == #primitiveAtPut ifTrue:
+		[^#primitiveNoAtCacheAtPut].
+	functionPointer == #primitiveStringAt ifTrue:
+		[^#primitiveNoAtCacheStringAt].
+	functionPointer == #primitiveStringAtPut ifTrue:
+		[^#primitiveNoAtCacheStringAtPut].
+	functionPointer == #primitiveCalloutToFFI ifTrue:
 		[^self functionForPrimitiveCallout].
-	functionPointer == #primitiveExternalCall asSymbol ifTrue:
+	functionPointer == #primitiveExternalCall ifTrue:
 		[^self functionForPrimitiveExternalCall: methodObj].
 	^functionPointer
 ]
@@ -3776,7 +3776,7 @@ CoInterpreter >> interpretAddress [
 	 we just answer something not low."
 	<api>
 	<returnTypeC: #usqInt>
-	^self cCode: [(self addressOf: #interpret asSymbol) asUnsignedInteger]
+	^self cCode: [(self addressOf: #interpret) asUnsignedInteger]
 		inSmalltalk: [heapBase]
 ]
 
@@ -3791,7 +3791,7 @@ CoInterpreter >> interpretMethodFromMachineCode [
 	self assert: (self validInstructionPointer: instructionPointer inFrame: framePointer).
 	primitiveFunctionPointer ~= 0
 		ifTrue:
-			[primitiveFunctionPointer = #primitiveInvokeObjectAsMethod asSymbol
+			[primitiveFunctionPointer = #primitiveInvokeObjectAsMethod
 				ifTrue: [self assert: (objectMemory isOopCompiledMethod: newMethod) not]
 				ifFalse: [self assert: ((objectMemory isOopCompiledMethod: newMethod)
 									  and: [(self primitiveIndexOf: newMethod) ~= 0])].
@@ -5069,7 +5069,7 @@ CoInterpreter >> primitiveFailAddress [
 	 compilers change things around.  In the simulator we just answer something not low."
 	<api>
 	<returnTypeC: #usqInt>
-	^self cCode: [(self addressOf: #primitiveFail asSymbol) asUnsignedInteger]
+	^self cCode: [(self addressOf: #primitiveFail) asUnsignedInteger]
 		inSmalltalk: [heapBase]
 ]
 
@@ -5095,8 +5095,8 @@ CoInterpreter >> primitivePropertyFlags: primIndex [
 	longRunningPrimitiveCheckSemaphore ~= nil ifTrue:
 		[baseFlags := baseFlags bitOr: PrimCallNeedsNewMethod].
 
-		(functionPointer == #primitiveExternalCall asSymbol
-	 or: [functionPointer == #primitiveCalloutToFFI asSymbol]) ifTrue: "For callbacks"
+		(functionPointer == #primitiveExternalCall
+	 or: [functionPointer == #primitiveCalloutToFFI]) ifTrue: "For callbacks"
 		[baseFlags := baseFlags bitOr: PrimCallNeedsNewMethod + PrimCallNeedsPrimitiveFunction + PrimCallMayCallBack].
 
 	^baseFlags
@@ -5445,15 +5445,15 @@ CoInterpreter >> quickPrimitiveGeneratorFor: aQuickPrimitiveIndex [
 	<returnTypeC: 'int (*quickPrimitiveGeneratorFor(sqInt aQuickPrimitiveIndex))(void)'>
 	^aQuickPrimitiveIndex
 		caseOf: {
-			[256] -> [#genQuickReturnSelf asSymbol].
-			[257] -> [#genQuickReturnConst asSymbol].
-			[258] -> [#genQuickReturnConst asSymbol].
-			[259] -> [#genQuickReturnConst asSymbol].
-			[260] -> [#genQuickReturnConst asSymbol].
-			[261] -> [#genQuickReturnConst asSymbol].
-			[262] -> [#genQuickReturnConst asSymbol].
-			[263] -> [#genQuickReturnConst asSymbol] }
-		otherwise: [#genQuickReturnInstVar asSymbol]
+			[256] -> [#genQuickReturnSelf].
+			[257] -> [#genQuickReturnConst].
+			[258] -> [#genQuickReturnConst].
+			[259] -> [#genQuickReturnConst].
+			[260] -> [#genQuickReturnConst].
+			[261] -> [#genQuickReturnConst].
+			[262] -> [#genQuickReturnConst].
+			[263] -> [#genQuickReturnConst] }
+		otherwise: [#genQuickReturnInstVar]
 ]
 
 { #category : #'cog jit support' }
@@ -5623,7 +5623,7 @@ CoInterpreter >> restoreCStackStateForCallbackContext: vmCallbackContext [
 		setCFramePointer: vmCallbackContext savedCFramePointer.
 	self mem: reenterInterpreter
 		cp: (self cCoerceSimple: vmCallbackContext savedReenterInterpreter to: #'void *')
-		y: (self sizeof: #'jmp_buf' asSymbol)
+		y: (self sizeof: #'jmp_buf')
 ]
 
 { #category : #'process primitive support' }
@@ -5778,7 +5778,7 @@ CoInterpreter >> rewriteMethodCacheEntryForExternalPrimitiveToFunction: localPri
 		[cogit
 			rewritePrimInvocationIn: (self cogMethodOf: newMethod)
 			to: (localPrimAddress = 0
-				ifTrue: [self cCoerceSimple: #primitiveFail asSymbol to: #'void (*)(void)']
+				ifTrue: [self cCoerceSimple: #primitiveFail to: #'void (*)(void)']
 				ifFalse: [localPrimAddress])].
 	(methodCache at: lastMethodCacheProbeWrite + MethodCacheMethod) = newMethod ifTrue:
 		[methodCache
@@ -5809,7 +5809,7 @@ CoInterpreter >> saveCStackStateForCallbackContext: vmCallbackContext [
 		savedCFramePointer: cogit getCFramePointer.
 	self mem: (self cCoerceSimple: vmCallbackContext savedReenterInterpreter to: #'void *')
 		cp: reenterInterpreter
-		y: (self sizeof: #'jmp_buf' asSymbol)
+		y: (self sizeof: #'jmp_buf')
 ]
 
 { #category : #'cog jit support' }

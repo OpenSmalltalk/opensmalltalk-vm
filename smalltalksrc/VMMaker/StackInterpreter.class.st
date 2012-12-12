@@ -1659,7 +1659,7 @@ StackInterpreter >> addNewMethodToCache: class [
 			[primitiveIndex := self primitiveIndexOf: newMethod.
 			 primitiveFunctionPointer := self functionPointerFor: primitiveIndex inClass: class]
 		ifFalse:
-			[primitiveFunctionPointer := #primitiveInvokeObjectAsMethod asSymbol].
+			[primitiveFunctionPointer := #primitiveInvokeObjectAsMethod].
 
 	0 to: CacheProbeMax-1 do:
 		[:p | probe := (hash >> p) bitAnd: MethodCacheMask.

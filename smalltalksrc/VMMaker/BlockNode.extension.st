@@ -25,9 +25,10 @@ BlockNode >> isPotentialCCaseLabel [
 	| stmt |
 	^statements size = 1
 	  and: [(stmt := statements first) isVariableNode
-		or: [stmt isConstantNumber
+		or: [(stmt isLiteralNode
+				and: [stmt isConstantNumber or: [stmt literalValue isSymbol]])
 		or: [stmt isMessageNode
 			and: [stmt selector key = #asSymbol
-			and: [stmt receiver isLiteral
+			and: [stmt receiver isLiteralNode
 			and: [stmt receiver literalValue isSymbol]]]]]]
 ]
