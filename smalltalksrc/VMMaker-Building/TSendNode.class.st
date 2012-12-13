@@ -246,6 +246,15 @@ TSendNode >> isValueExpansion [
 	 and: [selector keywords allSatisfy: [:k| #('value' 'value:') includes: k]]
 ]
 
+{ #category : #testing }
+TSendNode >> needsTrailingSemicolon [
+	"Answer if, when emitted as a statement (in particular in a TStmtList), the
+	 receiver needs a trailing semicolon.  Preprocessor directives and special expansions do not."
+	^(self isPreprocessorDirective
+	   or: [self isValueExpansion
+	   or: [selector == #expandDereferenceInterpreterProxyFunctionTable]]) not
+]
+
 { #category : #enumerating }
 TSendNode >> nodesDo: aBlock [
 	"Apply aBlock to all nodes in the receiver.
