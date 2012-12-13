@@ -188,11 +188,6 @@ TParseNode >> isLiteralArrayDeclaration [
 ]
 
 { #category : #testing }
-TParseNode >> isPreprocessorDirective [
-	^false
-]
-
-{ #category : #testing }
 TParseNode >> isReturn [
 
 	^false
@@ -235,6 +230,13 @@ TParseNode >> isVariable [
 TParseNode >> nameOrValue [
 
 	self error: 'object is neither variable nor constant'
+]
+
+{ #category : #testing }
+TParseNode >> needsTrailingSemicolon [
+	"Answer if, when emitted as a statement (in particular in a TStmtList), the
+	 receiver needs a trailing semicolon.  Subclasses redefine as appropriate."
+	^true
 ]
 
 { #category : #utilities }
