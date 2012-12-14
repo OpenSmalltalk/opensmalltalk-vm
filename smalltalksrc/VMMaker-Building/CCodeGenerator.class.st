@@ -121,8 +121,21 @@ CCodeGenerator >> addConstantForBinding: variableBinding [
 
 { #category : #public }
 CCodeGenerator >> addHeaderFile: aString [
-	"Add a header file. The argument must be a quoted string!"
-	headerFiles addLast: aString.
+	"Add a header file. As a hack we allow C preprocessor defs such as #ifdef"
+	self assert: (('"<#' includes: aString first) or: [(aString last: 2) = '_H']).
+	(aString first ~= $#
+	 and: [headerFiles includes: aString]) ifTrue:
+		[logger nextPutAll: 'warning, attempt to include ', aString, ' a second time'; cr; flush.
+		 ^self].
+	headerFiles addLast: aString
+]
+
+{ #category : #public }
+CCodeGenerator >> addHeaderFileFirst: aString [
+	"Add a header file to the front of the sequence."
+	self assert: (('"<' includes: aString first) and: ['">' includes: aString last]).
+	self assert: (headerFiles includes: aString) not.
+	headerFiles addFirst: aString
 ]
 
 { #category : #public }
@@ -737,13 +750,18 @@ CCodeGenerator >> emitCConstantsOn: aStream [
 	| unused constList |
 	unused := constants keys asSet.
 	"Don't generate any defines for the externally defined constants,
-	 STACKVM, COGVM, COGMTVM et al, unless they're actuaslly used."
+	 STACKVM, COGVM, COGMTVM et al, unless they're actually used."
 	(VMClass class>>#initializeMiscConstantsWith:) literalsDo:
 		[:lit|
 		(lit isVariableBinding and: [lit key isString]) ifTrue:
 			[unused add: lit key]].
 	methods do:
 		[:meth|
+		meth declarations keysDo:
+			[:v|
+			(meth typeFor: v in: self) ifNotNil:
+				[:type| unused remove: type ifAbsent: []]].
+		unused remove: meth returnType ifAbsent: [].
 		meth parseTree nodesDo:
 			[:n| n isConstant ifTrue: [unused remove: n name ifAbsent: []]]].
 	unused copy do:
@@ -757,8 +775,11 @@ CCodeGenerator >> emitCConstantsOn: aStream [
 		[:varName| | node default value |
 		node := constants at: varName.
 		node name isEmpty ifFalse:
-			["Allow the class to provide an alternative definition, either of just the value or the whole shebang"
-			default := self cLiteralFor: node value name: varName.
+			["If the definition includes a C comment, take it as is, otherwise convert the value from Smalltalk to C.
+			  Allow the class to provide an alternative definition, either of just the value or the whole shebang."
+			default := (node value isString and: [node value includesSubString: '/*'])
+							ifTrue: [node value]
+							ifFalse: [self cLiteralFor: node value name: varName].
 			value := vmClass
 						ifNotNil:
 							[(vmClass specialValueForConstant: node name default: default)
@@ -819,9 +840,9 @@ CCodeGenerator >> emitCHeaderOn: aStream [
 	aStream nextPutAll: (self fileHeaderVersionStampForSourceClass: headerClass); cr; cr.
 	self emitGlobalStructFlagOn: aStream.
 
-	headerFiles addFirst: '"sq.h"'.
+	self addHeaderFileFirst: '"sq.h"'.
 	vmClass isInterpreterClass ifTrue:
-		[headerFiles addLast: '"sqMemoryAccess.h"'].
+		[self addHeaderFile: '"sqMemoryAccess.h"'].
 	"Additional header files; include C library ones first."
 	self emitHeaderFiles: (headerFiles select: [:hdr| hdr includes: $<]) on: aStream.
 	"Additional header files; include squeak VM ones last"
@@ -1019,7 +1040,10 @@ CCodeGenerator >> fileHeaderVersionStampForSourceClass: sourceClass [
 						ifTrue: ['char *__interpBuildInfo = __buildInfo;']
 						ifFalse:
 							[sourceClass isCogitClass
-								ifTrue: ['char *__cogitBuildInfo = __buildInfo;']]]
+								ifTrue: ['char *__cogitBuildInfo = __buildInfo;']
+								ifFalse:
+									[sourceClass isPluginClass ifTrue:
+										[sourceClass exportBuildInfoOrNil]]]]
 		on: MessageNotUnderstood
 		do: [:ex| ex resume: false].
 	[slangDescription := self monticelloDescriptionFor: self class.

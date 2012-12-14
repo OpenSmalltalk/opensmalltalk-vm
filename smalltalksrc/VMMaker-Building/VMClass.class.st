@@ -158,6 +158,12 @@ VMClass class >> isInterpreterClass [
 ]
 
 { #category : #translation }
+VMClass class >> isPluginClass [
+	"InterpreterPlugin class override this."
+	^false
+]
+
+{ #category : #translation }
 VMClass class >> isStructClass [
 	"The various VMStructType classes override this."
 	^false
