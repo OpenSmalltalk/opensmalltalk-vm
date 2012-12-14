@@ -79,6 +79,13 @@ InterpreterPlugin class >> doPrimitive: primitiveName [
 ]
 
 { #category : #translation }
+InterpreterPlugin class >> exportBuildInfoOrNil [
+	"A hook for classes to emit some descriptive build string.
+	 See CCodeGenerator>>fileHeaderVersionStampForSourceClass:"
+	^nil
+]
+
+{ #category : #translation }
 InterpreterPlugin class >> hasHeaderFile [
 	"If there is a single intrinsic header file to be associated with the plugin, here is where you want to flag"
 	^false
@@ -87,6 +94,11 @@ InterpreterPlugin class >> hasHeaderFile [
 { #category : #accessing }
 InterpreterPlugin class >> isCPP [
 	^ false
+]
+
+{ #category : #translation }
+InterpreterPlugin class >> isPluginClass [
+	^true
 ]
 
 { #category : #accessing }
