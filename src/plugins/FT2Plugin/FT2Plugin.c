@@ -12,11 +12,6 @@ static char __buildInfo[] = "FT2Plugin Freetype-Plugin-Igor.Stasenko.57 uuid: b7
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
 #include <ft2build.h>
 
 /* Default EXPORT macro that does nothing (see comment in sq.h): */
@@ -42,7 +37,6 @@ static char __buildInfo[] = "FT2Plugin Freetype-Plugin-Igor.Stasenko.57 uuid: b7
 #include FT_TRUETYPE_TABLES_H
 #include FT_FREETYPE_H
 #include FT_OUTLINE_H
-#include "sqMemoryAccess.h"
 #include "sqMemoryAccess.h"
 
 
