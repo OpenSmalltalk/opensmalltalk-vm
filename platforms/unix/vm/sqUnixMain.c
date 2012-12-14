@@ -445,7 +445,7 @@ sqInt ioDisablePowerManager(sqInt disableIfNonZero)
 # endif
 #endif
 
-static char *
+char *
 GetAttributeString(sqInt id)
 {
   if (id < 0)	/* VM argument */
