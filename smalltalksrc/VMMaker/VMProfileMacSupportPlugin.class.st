@@ -10,7 +10,6 @@ Class {
 { #category : #translation }
 VMProfileMacSupportPlugin class >> declareCVarsIn: aCCodeGen [
 	aCCodeGen
-		addHeaderFile: '<stdlib.h>';
 		addHeaderFile: '<dlfcn.h>';
 		addHeaderFile: '<mach-o/dyld.h>';
 		addHeaderFile: '<mach-o/getsect.h>'
