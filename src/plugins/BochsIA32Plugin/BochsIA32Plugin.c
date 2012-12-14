@@ -1,6 +1,6 @@
-/* Automatically generated from Squeak on {12 December 2012 . 12:45:20 pm} */
+/* Automatically generated from Squeak on {13 December 2012 . 4:20:55 pm} */
 
-static char __buildInfo[] = "Generated on {12 December 2012 . 12:45:20 pm}. Compiled on "__DATE__ ;
+static char __buildInfo[] = "Generated on {13 December 2012 . 4:20:55 pm}. Compiled on "__DATE__ ;
 
 
 
@@ -122,9 +122,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"BochsIA32Plugin 12 December 2012 (i)"
+	"BochsIA32Plugin 13 December 2012 (i)"
 #else
-	"BochsIA32Plugin 12 December 2012 (e)"
+	"BochsIA32Plugin 13 December 2012 (e)"
 #endif
 ;
 
@@ -485,7 +485,7 @@ setInterpreter(struct VirtualMachine*anInterpreter)
 		stackValue = interpreterProxy->stackValue;
 		storePointerofObjectwithValue = interpreterProxy->storePointerofObjectwithValue;
 		success = interpreterProxy->success;
-#endif /* !defined(SQUEAK_BUILTIN_PLUGIN) */;
+#endif /* !defined(SQUEAK_BUILTIN_PLUGIN) */
 	}
 	return ok;
 }

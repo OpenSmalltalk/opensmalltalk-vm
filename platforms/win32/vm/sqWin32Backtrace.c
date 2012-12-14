@@ -258,7 +258,8 @@ get_modules(void)
 	strcpy(all_exports[moduleCount].name,"CogCode");
 	all_exports[moduleCount].module = (void *)cogCodeBase();
 	all_exports[moduleCount].info.lpBaseOfDll = (void *)cogCodeBase();
-	all_exports[moduleCount].info.SizeOfImage = startOfMemory() - cogCodeBase();
+	/* startOfMemory() => nilObject() is temporary; FIX ME */
+	all_exports[moduleCount].info.SizeOfImage = nilObject() - cogCodeBase();
 	all_exports[moduleCount].find_symbol = find_in_cog;
 	++moduleCount;
 #endif

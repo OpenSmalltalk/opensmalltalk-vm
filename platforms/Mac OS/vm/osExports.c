@@ -1,9 +1,6 @@
 /* note: this file is only a backward compatible wrapper
-
    for the old-style "platform.exports" definitions.
-
    If your platform has migrated to the new exports
-
    style you may as well insert the exports right here */
 
 #include "sqVirtualMachine.h"
@@ -19,10 +16,8 @@
 #endif
 
 /* duh ... this is ugly */
-
 #define XFN(export) {"", #export, (void*)export},
-
-#define XFN2(plugin, export) {#plugin, #export, (void*)plugin##_##export}
+#define XFN2(plugin, export) {#plugin, #export, (void*)plugin##_##export},
 
 WindowPtr getSTWindow(void);
 void setMessageHook(eventMessageHook theHook);
@@ -45,7 +40,6 @@ int primitivePluginPostURL(void);
 #endif
 
 void *os_exports[][3] = {
-
 	XFN(getSTWindow)
 	XFN(setMessageHook)
 	XFN(setPostMessageHook)
@@ -66,16 +60,14 @@ void *os_exports[][3] = {
 /* Plugin support primitives
    We should make these primitives a proper plugin
    but right now we just need the exports. */
-XFN(primitivePluginBrowserReady)
+	XFN(primitivePluginBrowserReady)
 #ifdef ENABLE_URL_FETCH
-XFN(primitivePluginRequestURLStream)
-XFN(primitivePluginRequestURL)
-XFN(primitivePluginPostURL)
-XFN(primitivePluginRequestFileHandle)
-XFN(primitivePluginDestroyRequest)
-XFN(primitivePluginRequestState)
+	XFN(primitivePluginRequestURLStream)
+	XFN(primitivePluginRequestURL)
+	XFN(primitivePluginPostURL)
+	XFN(primitivePluginRequestFileHandle)
+	XFN(primitivePluginDestroyRequest)
+	XFN(primitivePluginRequestState)
 #endif
 	{NULL, NULL, NULL}
-
 };
-

@@ -502,13 +502,16 @@ heartbeat_handler(int sig, struct siginfo *sig_info, void *context)
 #endif
 }
 
-#define NEED_SIGALTSTACK 1 /* for safety; some time need to turn off and test */
+/* Especially useful on linux when LD_BIND_NOW is not in effect and the
+ * dynamic linker happens to run in a signal handler.
+ */
+#define NEED_SIGALTSTACK 1
 #if NEED_SIGALTSTACK
 /* If the ticker is run from the heartbeat signal handler one needs to use an
  * alternative stack to avoid overflowing the VM's stack pages.  Keep
  * the structure around for reference during debugging.
  */
-#define SIGNAL_STACK_SIZE (1024 * sizeof(void *) * 16)
+# define SIGNAL_STACK_SIZE (1024 * sizeof(void *) * 16)
 static stack_t signal_stack;
 #endif /* NEED_SIGALTSTACK */
 
@@ -524,6 +527,7 @@ extern sqInt suppressHeartbeatFlag;
 	if (suppressHeartbeatFlag) return;
 
 #if NEED_SIGALTSTACK
+# define max(x,y) (((x)>(y))?(x):(y))
 	if (!signal_stack.ss_size) {
 		signal_stack.ss_flags = 0;
 		signal_stack.ss_size = max(SIGNAL_STACK_SIZE,MINSIGSTKSZ);

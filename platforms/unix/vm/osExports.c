@@ -1,7 +1,5 @@
-#include <stdio.h>
-
-#define XFN(export) {"", #export, (void*)export}
-#define XFN2(plugin, export) {#plugin, #export, (void*)plugin##_##export}
+#define XFN(export) {"", #export, (void*)export},
+#define XFN2(plugin, export) {#plugin, #export, (void*)plugin##_##export},
 
 char * GetAttributeString(int id);
 #if !defined(HEADLESS)
@@ -20,15 +18,15 @@ void *os_exports[][3]=
 {
   XFN(GetAttributeString)
 #if !defined(HEADLESS)
-  XFN(primitivePluginBrowserReady),
-  XFN(primitivePluginRequestURLStream),
-  XFN(primitivePluginRequestURL),
-  XFN(primitivePluginPostURL),
-  XFN(primitivePluginRequestFileHandle),
-  XFN(primitivePluginDestroyRequest),
-  XFN(primitivePluginRequestState),
-  XFN(ioGetDisplay),
-  XFN(ioGetWindow),
+  XFN(primitivePluginBrowserReady)
+  XFN(primitivePluginRequestURLStream)
+  XFN(primitivePluginRequestURL)
+  XFN(primitivePluginPostURL)
+  XFN(primitivePluginRequestFileHandle)
+  XFN(primitivePluginDestroyRequest)
+  XFN(primitivePluginRequestState)
+  XFN(ioGetDisplay)
+  XFN(ioGetWindow)
 #endif
   { 0, 0, 0 }
 };

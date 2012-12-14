@@ -2209,7 +2209,7 @@ setInterpreter(struct VirtualMachine*anInterpreter)
 		storeIntegerofObjectwithValue = interpreterProxy->storeIntegerofObjectwithValue;
 		storePointerofObjectwithValue = interpreterProxy->storePointerofObjectwithValue;
 		success = interpreterProxy->success;
-#endif /* !defined(SQUEAK_BUILTIN_PLUGIN) */;
+#endif /* !defined(SQUEAK_BUILTIN_PLUGIN) */
 	}
 	return ok;
 }
