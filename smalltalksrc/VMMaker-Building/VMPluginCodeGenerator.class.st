@@ -21,12 +21,15 @@ VMPluginCodeGenerator >> doInlining: inlineFlag [
 { #category : #'C code generator' }
 VMPluginCodeGenerator >> emitCCodeOn: aStream doInlining: inlineFlag doAssertions: assertionFlag [
 	"Generate twice; the first time to collect the used functions, the second to output the used functions."
+	| savedHeaders |
+	savedHeaders := headerFiles copy.
 	[super emitCCodeOn: NullStream new doInlining: inlineFlag doAssertions: assertionFlag]
 		on: MessageNotUnderstood
 		do: [:ex|
-				(#(peekLast tab: crtab:) includes: ex message selector) ifTrue:
+				(#(cr crtab: peekLast space tab tab:) includes: ex message selector) ifTrue:
 					[ex resume: nil].
 				ex pass].
+	headerFiles := savedHeaders.
 	super emitCCodeOn: aStream doInlining: inlineFlag doAssertions: assertionFlag
 ]
 
@@ -85,7 +88,7 @@ VMPluginCodeGenerator >> emitCHeaderOn: aStream [
 	aStream cr; cr.
 
 	#('<math.h>' '<stdio.h>' '<stdlib.h>' '<string.h>' '<time.h>') reverseDo:
-		[:hdr| headerFiles addFirst: hdr].
+		[:hdr| self addHeaderFileFirst: hdr].
 
 	"Additional header files; include C library ones first."
 	self emitHeaderFiles: (headerFiles select: [:hdr| hdr includes: $<]) on: aStream.
@@ -109,7 +112,7 @@ VMPluginCodeGenerator >> emitCHeaderOn: aStream [
 // was #undef EXPORT(returnType) but screws NorCroft cc
 #define EXPORT(returnType) static returnType
 #endif'; cr; cr.
-	headerFiles addLast: '"sqMemoryAccess.h"'.
+	self addHeaderFile: '"sqMemoryAccess.h"'.
 	"Additional header files; include squeak VM ones last"
 	self emitHeaderFiles: (headerFiles reject: [:hdr| hdr includes: $<]) on: aStream.
 	pluginClass preambleCCode ifNotNil:
