@@ -1001,17 +1001,17 @@ ObjectMemory >> changeClassOf: rcvr to: argClass [
 				[(byteSize - BaseHeaderSize) > (self byteSizeOf: rcvr) ifTrue:
 					[^PrimErrBadReceiver]]].
 
+	ccIndex := classHdr bitAnd: CompactClassMask.
 	(self headerTypeOfHeader: rcvrHdr) = HeaderTypeShort
 		ifTrue: "Compact classes. Check if the arg's class is compact and exchange ccIndex"
-			[ccIndex := classHdr bitAnd: CompactClassMask.
-			ccIndex = 0 ifTrue:
+			[ccIndex = 0 ifTrue:
 				[^PrimErrInappropriate]. "class is not compact"
 			self cppIf: IMMUTABILITY
 				ifTrue: [(rcvrHdr bitAnd: ImmutabilityBit) ~= 0 ifTrue:
 							[^PrimErrNoModification]].
 			self baseHeader: rcvr
 				put: (((self longAt: rcvr) bitClear: CompactClassMask) bitOr: ccIndex)]
-		ifFalse: "Exchange the class pointer, which could make rcvr a root for argClass"
+		ifFalse: "Exchange the class pointer, which could make rcvr a root for argClass.  Don't forget to set ccIndex."
 			[self cppIf: IMMUTABILITY
 				ifTrue: [(rcvrHdr bitAnd: ImmutabilityBit) ~= 0 ifTrue:
 							[^PrimErrNoModification]].
