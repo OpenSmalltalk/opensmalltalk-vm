@@ -36,6 +36,12 @@ ThreadedFFIPlugin class >> calloutStateClass [
 	^ThreadedFFICalloutState
 ]
 
+{ #category : #translation }
+ThreadedFFIPlugin class >> declareCVarsIn: cg [
+	super declareCVarsIn: cg.
+	cg removeConstant: #COGMTVM "this should be defined at compile time"
+]
+
 { #category : #'class initialization' }
 ThreadedFFIPlugin class >> initialize [
 	"c.f. ExternalFunction allInstVarNames
