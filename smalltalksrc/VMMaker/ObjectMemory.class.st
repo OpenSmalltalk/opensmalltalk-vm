@@ -1015,9 +1015,8 @@ ObjectMemory >> changeClassOf: rcvr to: argClass [
 			[self cppIf: IMMUTABILITY
 				ifTrue: [(rcvrHdr bitAnd: ImmutabilityBit) ~= 0 ifTrue:
 							[^PrimErrNoModification]].
-			(self compactClassIndexOf: rcvr) ~= 0 ifTrue:
-				[self baseHeader: rcvr
-					put: (((self baseHeader: rcvr) bitClear: CompactClassMask) bitOr: ccIndex)].			
+			self baseHeader: rcvr
+				put: (((self baseHeader: rcvr) bitClear: CompactClassMask) bitOr: ccIndex).			
 			self longAt: rcvr-BaseHeaderSize put: (argClass bitOr: (self headerType: rcvr)).
 			(self oop: rcvr isLessThan: youngStart) ifTrue:
 				[self possibleRootStoreInto: rcvr value: argClass]].
