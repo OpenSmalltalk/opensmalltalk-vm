@@ -25,7 +25,7 @@ GdbARMAlien class >> defaultIntegerBaseInDebugger [
 { #category : #'class initialization' }
 GdbARMAlien class >> initialize [
 	"GdbARMAlien initialize"
-	super initialize.
+
 	PostBuildStackDelta := 0.
 ]
 
