@@ -153,8 +153,8 @@ CogObjectRepresentationForSqueakV3 >> genGetClassFormatOfNonInt: instReg into: d
 	"Don't have to subtract one from the destReg compactClassArray index because of the header word."
 	self assert: BaseHeaderSize = BytesPerWord.
 	jumpCompact jmpTarget:
-		(cogit annotate: (cogit MoveMw: objectMemory compactClassTable r: destReg R: scratchReg)
-			objRef: objectMemory compactClassTable).
+		(cogit annotate: (cogit MoveMw: (objectMemory splObj: CompactClasses) r: destReg R: scratchReg)
+			objRef: (objectMemory splObj: CompactClasses)).
 	jumpGotClass jmpTarget:
 		(cogit MoveMw: InstanceSpecificationIndex << ShiftForWord + BytesPerWord r: scratchReg R: destReg).
 	^0
@@ -190,8 +190,8 @@ CogObjectRepresentationForSqueakV3 >> genGetClassObjectOf: instReg into: destReg
 	"Don't have to subtract one from the destReg compactClassArray index because of the header word."
 	self assert: BaseHeaderSize = BytesPerWord.
 	jumpCompact jmpTarget:
-		(cogit annotate: (cogit MoveMw: objectMemory compactClassTable r: scratchReg R: destReg)
-			objRef: objectMemory compactClassTable).
+		(cogit annotate: (cogit MoveMw: (objectMemory splObj: CompactClasses) r: scratchReg R: destReg)
+			objRef: (objectMemory splObj: CompactClasses)).
 	jumpGotClass jmpTarget:
 	(jumpGotClass2 jmpTarget: cogit Label).
 	^0
