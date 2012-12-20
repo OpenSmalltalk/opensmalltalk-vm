@@ -416,7 +416,11 @@ extern sqInt suppressHeartbeatFlag;
 	 * during the heartbeat.  We *must* include SA_RESTART to avoid breaking
 	 * lots of external code (e.g. the mysql odbc connect).
 	 */
+#if NEED_SIGALTSTACK
 	heartbeat_handler_action.sa_flags = SA_RESTART | SA_ONSTACK;
+#else
+	heartbeat_handler_action.sa_flags = SA_RESTART;
+#endif
 	sigemptyset(&heartbeat_handler_action.sa_mask);
 	if (sigaction(ITIMER_SIGNAL, &heartbeat_handler_action, 0)) {
 		perror("ioInitHeartbeat sigaction");

@@ -560,7 +560,11 @@ extern sqInt suppressHeartbeatFlag;
 	 * during the heartbeat. We /must/ include SA_RESTART to avoid issues with
      * e.g. ODBC connections.
 	 */
-	ticker_handler_action.sa_flags = SA_RESTART | SA_ONSTACK;
+#if NEED_SIGALTSTACK
+	ticker_handler_action.sa_flags = SA_RESTART;
+#else
+	ticker_handler_action.sa_flags = SA_RESTART;
+#endif
 	sigemptyset(&ticker_handler_action.sa_mask);
 	if (sigaction(TICKER_SIGNAL, &ticker_handler_action, 0)) {
 		perror("ioInitHeartbeat sigaction");
@@ -572,7 +576,11 @@ extern sqInt suppressHeartbeatFlag;
 	 * during the heartbeat.  We *must* include SA_RESTART to avoid breaking
 	 * lots of external code (e.g. the mysql odbc connect).
 	 */
+#if NEED_SIGALTSTACK
 	heartbeat_handler_action.sa_flags = SA_RESTART | SA_ONSTACK;
+#else
+	heartbeat_handler_action.sa_flags = SA_RESTART;
+#endif
 	sigemptyset(&heartbeat_handler_action.sa_mask);
 	if (sigaction(ITIMER_SIGNAL, &heartbeat_handler_action, 0)) {
 		perror("ioInitHeartbeat sigaction");
