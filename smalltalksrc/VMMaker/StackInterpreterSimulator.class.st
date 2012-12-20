@@ -73,16 +73,6 @@ StackInterpreterSimulator >> allObjectsSelect: objBlock [
 	^ selected
 ]
 
-{ #category : #'debugging traps' }
-StackInterpreterSimulator >> allocate: byteSize headerSize: hdrSize h1: baseHeader h2: classOop h3: extendedSize doFill: doFill format: format [
-	| newObj |
-	newObj := super allocate: byteSize headerSize: hdrSize h1: baseHeader h2: classOop h3: extendedSize doFill: doFill format: format.
-	"newObj = 22186072 ifTrue: [self halt]."
-	"byteCount < 600000 ifTrue: [^ newObj]."
-	"(self baseHeader: newObj) =  16r0FCC0600 ifTrue: [self halt]."
-	^newObj
-]
-
 { #category : #testing }
 StackInterpreterSimulator >> assertValidExecutionPointers [
 	self assertValidExecutionPointe: localIP r: localFP s: localSP
@@ -364,16 +354,6 @@ StackInterpreterSimulator >> dumpMethodHeader: hdr [
 		]
 ]
 
-{ #category : #'debugging traps' }
-StackInterpreterSimulator >> eeAllocate: byteSize headerSize: hdrSize h1: baseHeader h2: classOop h3: extendedSize doFill: doFill format: format [
-	| newObj |
-	newObj := super eeAllocate: byteSize headerSize: hdrSize h1: baseHeader h2: classOop h3: extendedSize doFill: doFill format: format.
-	"newObj = 22163268 ifTrue: [self halt]."
-	"byteCount < 600000 ifTrue: [^ newObj]."
-	"(self baseHeader: newObj) =  16r0FCC0600 ifTrue: [self halt]."
-	^newObj
-]
-
 { #category : #'debug printing' }
 StackInterpreterSimulator >> elementsPerPrintOopLine [
 	^4
@@ -502,13 +482,6 @@ StackInterpreterSimulator >> fullDisplayUpdate [
 	primFailCode := primFailCodeValue
 ]
 
-{ #category : #'debug support' }
-StackInterpreterSimulator >> fullGC [
-	transcript cr; show:'<Running full GC ...'.
-	super fullGC.
-	transcript show: ' done>'.
-]
-
 { #category : #'interpreter shell' }
 StackInterpreterSimulator >> functionPointerFor: primIndex inClass: lookupClass [
 	"Override Interpreter to handle the external primitives caching.  See also
@@ -550,12 +523,6 @@ StackInterpreterSimulator >> incrementByteCount [
 		[self doOrDefer: [self changed: #byteCountText].
 		 self forceInterruptCheck.
 		 byteCount \\ 10000 = 0 ifTrue: [self fullDisplayUpdate]]
-]
-
-{ #category : #'debug support' }
-StackInterpreterSimulator >> incrementalGC [
-	transcript cr; nextPutAll: 'incrementalGC ('; print: byteCount; nextPut: $); flush.
-	^super incrementalGC
 ]
 
 { #category : #initialization }
@@ -1427,7 +1394,7 @@ StackInterpreterSimulator >> primitiveDirectoryLookup [
 
 { #category : #'debugging traps' }
 StackInterpreterSimulator >> primitiveDoPrimitiveWithArgs [
-	self halt.
+	NewspeakVM ifFalse: [self halt].
 	^super primitiveDoPrimitiveWithArgs
 ]
 
@@ -2047,12 +2014,6 @@ StackInterpreterSimulator >> tab [
 	traceOn ifTrue: [ transcript tab ].
 ]
 
-{ #category : #'debug support' }
-StackInterpreterSimulator >> tenuringIncrementalGC [
-	transcript cr; nextPutAll: 'tenuringIncrementalGC ('; print: byteCount; nextPut: $); flush.
-	^super tenuringIncrementalGC
-]
-
 { #category : #testing }
 StackInterpreterSimulator >> test [
 	self initStackPages.
@@ -2232,6 +2193,7 @@ StackInterpreterSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'long print int frame & callers' action: [self printFrameAndCallers: localFP SP: localSP];
 		add: 'print frame...' action: [(self promptHex: 'print frame') ifNotNil: [:fp| self printFrame: fp]];
 		add: 'print call stack' action: #printCallStack;
+		add: 'print call stack of...' action: [(self promptHex: 'context or process oop') ifNotNil: [:obj| self printCallStackOf: obj]];
 		add: 'print all stacks' action: #printAllStacks;
 		addLine;
 		add: 'print oop...' action: [(self promptHex: 'print oop') ifNotNil: [:oop| self printOop: oop]];

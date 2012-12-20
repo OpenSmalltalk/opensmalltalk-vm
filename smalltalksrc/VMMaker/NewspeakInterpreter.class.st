@@ -1314,12 +1314,13 @@ NewspeakInterpreter >> addressOf: rcvr startingAt: byteOffset size: byteSize [
 NewspeakInterpreter >> allAccessibleObjectsOkay [
 	"Ensure that all accessible objects in the heap are okay."
 
-	| oop |
+	| oop ok |
+	ok := true.
 	oop := self firstAccessibleObject.
-	[oop = nil] whileFalse: [
-		self okayFields: oop.
-		oop := self accessibleObjectAfter: oop.
-	].
+	[oop = nil] whileFalse:
+		[ok := ok & (self okayFields: oop).
+		 oop := self accessibleObjectAfter: oop].
+	^ok
 ]
 
 { #category : #'as yet unclassified' }
@@ -1424,20 +1425,9 @@ NewspeakInterpreter >> asciiOfCharacter: characterObj [  "Returns an integer obj
 NewspeakInterpreter >> assertClassOf: oop is: classOop [
 	"Succeed if the given (non-integer) object is an instance of the given class. Fail if the object is an integer."
 
-	| ccIndex cl |
 	<inline: true>
-	(self isIntegerObject: oop) ifTrue: [^self primitiveFail].
-
-	ccIndex := ((self baseHeader: oop) >> 12) bitAnd: 16r1F.
-	ccIndex = 0
-		ifTrue: [ cl := ((self classHeader: oop) bitAnd: AllButTypeMask) ]
-		ifFalse: [
-			"look up compact class"
-			cl := (self fetchPointer: (ccIndex - 1)
-					ofObject: (self fetchPointer: CompactClasses ofObject: specialObjectsOop))].
-
-	self success: cl = classOop.
-
+	<asmLabel: false>
+	self success: (self isClassOfNonImm: oop equalTo: classOop)
 ]
 
 { #category : #become }
@@ -2108,10 +2098,7 @@ NewspeakInterpreter >> cStringOrNullFor: oop [
 	<returnTypeC: #'char *'>
 	| isString len cString |
 	<var: 'cString' type: #'char *'>
-	isString := self
-					isClassOfNonImm: oop
-					equalTo: (self splObj: ClassByteString)
-					compactClassIndex: ClassByteStringCompactIndex.
+	isString := self isInstanceOfClassByteString: oop.
 	isString ifFalse:
 		[oop ~= nilObj ifTrue:
 			[self primitiveFailFor: PrimErrBadArgument].
@@ -3326,20 +3313,14 @@ NewspeakInterpreter >> floatObjectOf: aFloat [
 
 { #category : #utilities }
 NewspeakInterpreter >> floatValueOf: oop [
-	"Fetch the instance variable at the given index of the given object.  Answer the C
-	 double precision floating point value of that instance variable, or fail if it is not a Float."
+	"Answer the C double precision floating point value of the argument,
+	 or fail if it is not a Float, and answer 0.
+	 Note: May be called by translated primitive code."
 
 	| isFloat result |
 	<returnTypeC: #double>
 	<var: #result type: #double>
-	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
-	 (because is:instanceOf:compactClassIndex: has an inline: pragma) the
-	 phrase (self splObj: ClassArray) is expanded in-place and is _not_ evaluated if
-	 ClassArrayCompactIndex is non-zero."
-	isFloat := self
-				is: oop
-				instanceOf: (self splObj: ClassFloat)
-				compactClassIndex: ClassFloatCompactIndex.
+	isFloat := self isInstanceOfClassFloat: oop.
 	isFloat ifTrue:
 		[self cCode: '' inSmalltalk: [result := Float new: 2].
 		 self fetchFloatAt: oop + BaseHeaderSize into: result.
@@ -4148,20 +4129,6 @@ NewspeakInterpreter >> is: oop MemberOf: className [
 NewspeakInterpreter >> isContext: oop [
 	<inline: true>
 	^(self isNonIntegerObject: oop) and: [self isContextHeader: (self baseHeader: oop)]
-]
-
-{ #category : #contexts }
-NewspeakInterpreter >> isContext: oop header: hdr [
-	"NOTE: anOop is assumed not to be an integer"
-	| ccIndex theClass |
-	<inline: true>
-	ccIndex := (hdr >> 12) bitAnd: 16r1F.
-	ccIndex = 0
-		ifTrue: [theClass := (self classHeader: oop) bitAnd: AllButTypeMask]
-		ifFalse: ["look up compact class"
-				theClass := self fetchPointer: ccIndex - 1 ofObject: (self splObj: CompactClasses)].
-	^ theClass = (self splObj: ClassMethodContext) or: [theClass = (self splObj: ClassBlockContext)]
-
 ]
 
 { #category : #'process primitive support' }
@@ -5683,18 +5650,18 @@ NewspeakInterpreter >> primitiveCalloutToFFI [
 
 { #category : #'object access primitives' }
 NewspeakInterpreter >> primitiveChangeClass [
-	"Primitive. Change the class of the receiver into the class of the argument given that
-	 the format of the receiver matches the format of the argument's class. Fail if receiver
-	 or argument are SmallIntegers, or the receiver is an instance of a compact class and
-	 the argument isn't, or when the format of the receiver is different from the format of
-	 the argument's class, or when the arguments class is fixed and the receiver's size
-	 differs from the size that an instance of the argument's class should have."
+	"Primitive.  Change the class of the receiver into the class of the argument given that
+	 the format of the receiver matches the format of the argument's class.  Fail if the
+	 receiver or argument are SmallIntegers, or the receiver is an instance of a compact
+	 class and the argument isn't, or when the argument's class is compact and the receiver
+	 isn't, or when the format of the receiver is different from the format of the argument's
+	 class, or when the arguments class is fixed and the receiver's size differs from the size
+	 that an instance of the argument's class should have."
 	| arg rcvr argClass err |
 	arg := self stackObjectValue: 0.
 	rcvr := self stackObjectValue: 1.
 	self successful ifFalse:[^nil].
 	argClass := self fetchClassOfNonInt: arg.
-
 	err := self changeClassOf: rcvr to: argClass.
 	err = 0
 		ifTrue: ["Flush at cache because rcvr's class has changed."
@@ -10230,32 +10197,35 @@ NewspeakInterpreter >> signed64BitIntegerFor: integerValue [
 	"Return a Large Integer object for the given integer value"
 	| newLargeInteger magnitude largeClass intValue highWord sz |
 	<inline: false>
-	<var: 'integerValue' type: 'sqLong'>
-	<var: 'magnitude' type: 'unsigned sqLong'>
-	<var: 'highWord' type: 'usqInt'>
+	<var: 'integerValue' type: #sqLong>
+	<var: 'magnitude' type: #sqLong>
+	<var: 'highWord' type: #usqInt>
 
 	integerValue < 0
-		ifTrue:[	largeClass := self classLargeNegativeInteger.
+		ifTrue: [largeClass := self classLargeNegativeInteger.
 				magnitude := 0 - integerValue]
-		ifFalse:[	largeClass := self classLargePositiveInteger.
+		ifFalse: [largeClass := self classLargePositiveInteger.
 				magnitude := integerValue].
 
-	magnitude <= 16r7FFFFFFF ifTrue:[^self signed32BitIntegerFor: integerValue].
+	"Make sure to handle the most -ve value correctly.
+	 0 - most -ve = most -ve and most -ve - 1 is +ve"
+	(magnitude <= 16r7FFFFFFF
+	 and: [integerValue >= 0 or: [integerValue - 1 < 0]]) ifTrue:
+		[^self signed32BitIntegerFor: integerValue].
 
-	highWord := self cCode: 'magnitude >> 32'. "shift is coerced to usqInt otherwise"
+	highWord := magnitude >> 32.
 	highWord = 0 
 		ifTrue:[sz := 4] 
-		ifFalse:[
-			sz := 5.
+		ifFalse:
+			[sz := 5.
 			(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1].
 			(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1].
-			(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1].
-		].
+			(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1]].
 	newLargeInteger := self instantiateClass: largeClass indexableSize:  sz.
 	0 to: sz-1 do: [:i |
-		intValue := self cCode: '(magnitude >> (i * 8)) & 255'.
+		intValue := (magnitude >> (i * 8)) bitAnd: 255.
 		self storeByte: i ofObject: newLargeInteger withValue: intValue].
-	^ newLargeInteger
+	^newLargeInteger
 ]
 
 { #category : #'primitive support' }

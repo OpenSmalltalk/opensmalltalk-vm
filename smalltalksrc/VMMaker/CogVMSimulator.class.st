@@ -937,14 +937,6 @@ CogVMSimulator >> fullDisplayUpdate [
 	primFailCode := primFailCodeValue
 ]
 
-{ #category : #'debug support' }
-CogVMSimulator >> fullGC [
-	self halt.
-	transcript cr; show:'<Running full GC ...'.
-	super fullGC.
-	transcript show: ' done>'.
-]
-
 { #category : #'plugin primitives' }
 CogVMSimulator >> functionForPrimitiveExternalCall: methodObj [
 	"Override to jump through the plugin simulation hoops."
@@ -1072,12 +1064,6 @@ CogVMSimulator >> incrementByteCount [
 		[self doOrDefer: [self changed: #byteCountText; changed: #composeAll].
 		 self forceInterruptCheck.
 		 byteCount \\ 10000 = 0 ifTrue: [self fullDisplayUpdate]]
-]
-
-{ #category : #'debug support' }
-CogVMSimulator >> incrementalGC [
-	transcript cr; nextPutAll: 'incrementalGC ('; print: byteCount; nextPut: $); flush.
-	^super incrementalGC
 ]
 
 { #category : #initialization }
@@ -2006,13 +1992,6 @@ CogVMSimulator >> nextShortFrom: aStream swap: swapFlag [
 	^swapFlag 
 		ifTrue: [(aShort bitShift: -8) + ((aShort bitAnd: 16rFF) bitShift: 8)]
 		ifFalse: [aShort]
-]
-
-{ #category : #'debugging traps' }
-CogVMSimulator >> noteAsRoot: oop headerLoc: headerLoc [
-	"Trap attempts to make cog methods roots."
-	self assert: oop >= objectMemory startOfMemory.
-	^super noteAsRoot: oop headerLoc: headerLoc
 ]
 
 { #category : #testing }
@@ -3129,18 +3108,6 @@ CogVMSimulator >> startOfMemory [
 	self shouldNotImplement
 ]
 
-{ #category : #'interpreter access' }
-CogVMSimulator >> storePointer: index ofObject: oop withValue: valuePointer [
-	"Override to ensure acess is within the heap"
-	self assert: oop >= objectMemory startOfMemory.
-	^super storePointer: index ofObject: oop withValue: valuePointer
-]
-
-{ #category : #'interpreter access' }
-CogVMSimulator >> storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer [
-	self shouldNotImplement
-]
-
 { #category : #'debug support' }
 CogVMSimulator >> stringOf: oop [
 	| size long nLongs chars |
@@ -3171,12 +3138,6 @@ CogVMSimulator >> tab [
 CogVMSimulator >> tearDownAndRebuildFrameForCannotReturnBaseFrameReturnFrom: contextToReturnFrom to: contextToReturnTo returnValue: returnValue [
 	self halt.
 	^super tearDownAndRebuildFrameForCannotReturnBaseFrameReturnFrom: contextToReturnFrom to: contextToReturnTo returnValue: returnValue
-]
-
-{ #category : #'debug support' }
-CogVMSimulator >> tenuringIncrementalGC [
-	transcript cr; nextPutAll: 'tenuringIncrementalGC ('; print: byteCount; nextPut: $); flush.
-	^super tenuringIncrementalGC
 ]
 
 { #category : #testing }
@@ -3367,6 +3328,7 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'long print mc/cog frame & callers' action: [self printFrameAndCallers: cogit processor fp SP: cogit processor sp];
 		add: 'print frame...' action: [(self promptHex: 'print frame') ifNotNil: [:fp| self printFrame: fp]];
 		add: 'print call stack' action: #printCallStack;
+		add: 'print call stack of...' action: [(self promptHex: 'context or process oop') ifNotNil: [:obj| self printCallStackOf: obj]];
 		add: 'print all stacks' action: #printAllStacks;
 		addLine;
 		add: 'print registers' action: [cogit processor printRegistersOn: transcript];

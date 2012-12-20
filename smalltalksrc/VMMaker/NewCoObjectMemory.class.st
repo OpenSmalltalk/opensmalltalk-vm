@@ -62,12 +62,6 @@ NewCoObjectMemory >> cogit: aCogit [
 	cogit := aCogit
 ]
 
-{ #category : #'cog jit support' }
-NewCoObjectMemory >> compactClassTable [
-	<api>
-	^self splObj: CompactClasses
-]
-
 { #category : #'image segment in/out' }
 NewCoObjectMemory >> copyObj: oop toSegment: segmentWordArray addr: lastSeg stopAt: stopAddr saveOopAt: oopPtr headerAt: hdrPtr [
 	"Copy this object into the segment beginning at lastSeg.
