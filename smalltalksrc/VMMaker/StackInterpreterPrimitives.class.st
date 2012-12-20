@@ -983,7 +983,8 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		62	compiled code compactions since startup (read-only; Cog only; otherwise nil)
 		63	total milliseconds in compiled code compactions since startup (read-only; Cog only; otherwise nil)
 		64	the number of methods that currently have jitted machine-code
-		65 - 69 reserved for more Cog-related info
+		65	whether the VM supports MULTIPLE_BYTECODE_SETS or not.
+		66 - 69 reserved for more Cog-related info
 		70	the vmProxyMajorVersion (the interpreterProxy VM_MAJOR_VERSION)
 		71	the vmProxyMinorVersion (the interpreterProxy VM_MINOR_VERSION)
 	Note: Thanks to Ian Piumarta for this primitive."

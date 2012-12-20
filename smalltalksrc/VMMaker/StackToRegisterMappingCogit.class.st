@@ -179,10 +179,10 @@ StackToRegisterMappingCogit class >> declareCVarsIn: aCodeGen [
 			type: #CogSimStackEntry;
 		var: #optStatus
 			type: #CogSSOptStatus;
-		var: #isPushNilFunction
-			declareC: 'const sqInt (*isPushNilFunction)(struct _BytecodeDescriptor *,sqInt,sqInt,sqInt) = ', (aCodeGen cFunctionNameFor: self isPushNilFunction);
-		var: #pushNilSizeFunction
-			declareC: 'const sqInt (*pushNilSizeFunction)(sqInt) = ', (aCodeGen cFunctionNameFor: self pushNilSizeFunction).
+		var: 'isPushNilFunction'
+			declareC: 'sqInt (* const isPushNilFunction)(struct _BytecodeDescriptor *,sqInt,sqInt,sqInt) = ', (aCodeGen cFunctionNameFor: self isPushNilFunction);
+		var: 'pushNilSizeFunction'
+			declareC: 'sqInt (* const pushNilSizeFunction)(sqInt) = ', (aCodeGen cFunctionNameFor: self pushNilSizeFunction).
 
 	aCodeGen
 		addSelectorTranslation: #register to: (aCodeGen cFunctionNameFor: 'registerr');
