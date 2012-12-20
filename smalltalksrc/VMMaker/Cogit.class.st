@@ -473,7 +473,7 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		var: #maxMethodBefore type: #'CogBlockMethod *'.
 	aCCodeGenerator
 		declareVar: 'aMethodLabel' type: #'AbstractInstruction'; "Has to come lexicographically before backEnd & methodLabel"
-		var: #backEnd declareC: 'AbstractInstruction *backEnd = &aMethodLabel';
+		var: #backEnd declareC: 'const AbstractInstruction *backEnd = &aMethodLabel';
 		var: #methodLabel declareC: 'AbstractInstruction *methodLabel = &aMethodLabel';
 		var: #primInvokeLabel type: #'AbstractInstruction *'.
 	self declareC: #(abstractOpcodes stackCheckLabel

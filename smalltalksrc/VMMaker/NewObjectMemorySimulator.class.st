@@ -14,6 +14,18 @@ NewObjectMemorySimulator class >> new [
 ]
 
 { #category : #'simulation only' }
+NewObjectMemorySimulator class >> vmProxyMajorVersion [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^StackInterpreter vmProxyMajorVersion
+]
+
+{ #category : #'simulation only' }
+NewObjectMemorySimulator class >> vmProxyMinorVersion [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^CoInterpreter vmProxyMinorVersion
+]
+
+{ #category : #'simulation only' }
 NewObjectMemorySimulator >> arrayValueOf: arrayOop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter arrayValueOf: arrayOop
@@ -131,7 +143,7 @@ NewObjectMemorySimulator >> forceInterruptCheck [
 NewObjectMemorySimulator >> fullGC [
 	self halt.
 	coInterpreter transcript
-		cr; nextPutAll:'<Running full GC ('; print: coInterpreter byteCount; nextPutAll: ')...'; flush.
+		cr; nextPutAll:'<Running full GC ('; print: coInterpreter byteCount; space; print: freeStart; nextPutAll: ')...'; flush.
 	super fullGC.
 	coInterpreter transcript show: ' done>'
 ]
@@ -148,7 +160,7 @@ NewObjectMemorySimulator >> halfWordLowInLong32: long32 [
 
 { #category : #'debug support' }
 NewObjectMemorySimulator >> incrementalGC [
-	coInterpreter transcript cr; nextPutAll: 'incrementalGC ('; print: coInterpreter byteCount; nextPut: $); flush.
+	coInterpreter transcript cr; nextPutAll: 'incrementalGC ('; print: coInterpreter byteCount; space; print: freeStart; nextPut: $); flush.
 	^super incrementalGC
 ]
 
@@ -367,6 +379,15 @@ NewObjectMemorySimulator >> printHexPtr: address [
 ]
 
 { #category : #printing }
+NewObjectMemorySimulator >> printMemoryFrom: start to: end [
+	| address |
+	address := start bitAnd: (BytesPerWord - 1) bitInvert.
+	[address < end] whileTrue:
+		[self printHex: address; printChar: $:; space; printHex: (self longAt: address); cr.
+		 address := address + BytesPerWord]
+]
+
+{ #category : #printing }
 NewObjectMemorySimulator >> printNum: n [
 	coInterpreter printNum: n
 ]
@@ -429,6 +450,11 @@ NewObjectMemorySimulator >> showDisplayBits: aForm Left: l Top: t Right: r Botto
 NewObjectMemorySimulator >> signalFinalization: oop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter signalFinalization: oop
+]
+
+{ #category : #printing }
+NewObjectMemorySimulator >> space [
+	^coInterpreter space
 ]
 
 { #category : #'memory access' }
@@ -503,6 +529,30 @@ NewObjectMemorySimulator >> storeInteger: fieldIndex ofObject: objectPointer wit
 	^coInterpreter storeInteger: fieldIndex ofObject: objectPointer withValue: integerValue
 ]
 
+{ #category : #'interpreter access' }
+NewObjectMemorySimulator >> storePointer: index ofObject: oop withValue: valuePointer [
+	"Override to ensure acess is within the heap, and within the object"
+	| fmt hdr |
+	self assert: oop >= self startOfMemory.
+	hdr := self baseHeader: oop.
+	fmt := self formatOfHeader: hdr.
+	self assert: ((fmt <= 4 or: [fmt >= 12])
+				and: [index >= 0 and: [index < (self lengthOf: oop baseHeader: hdr format: fmt)]]).
+	^super storePointer: index ofObject: oop withValue: valuePointer
+]
+
+{ #category : #'interpreter access' }
+NewObjectMemorySimulator >> storePointerUnchecked: index ofObject: oop withValue: valuePointer [
+	"Override to ensure acess is within the heap, and within the object"
+	| fmt hdr |
+	self assert: oop >= self startOfMemory.
+	hdr := self baseHeader: oop.
+	fmt := self formatOfHeader: hdr.
+	self assert: ((fmt <= 4 or: [fmt >= 12])
+				and: [index >= 0 and: [index < (self lengthOf: oop baseHeader: hdr format: fmt)]]).
+	^super storePointerUnchecked: index ofObject: oop withValue: valuePointer
+]
+
 { #category : #'simulation only' }
 NewObjectMemorySimulator >> stringOf: oop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
@@ -522,7 +572,7 @@ NewObjectMemorySimulator >> tab [
 
 { #category : #'debug support' }
 NewObjectMemorySimulator >> tenuringIncrementalGC [
-	coInterpreter transcript cr; nextPutAll: 'tenuringIncrementalGC ('; print: coInterpreter byteCount; nextPut: $); flush.
+	coInterpreter transcript cr; nextPutAll: 'tenuringIncrementalGC ('; print: coInterpreter byteCount; space; print: freeStart; nextPut: $); flush.
 	^super tenuringIncrementalGC
 ]
 

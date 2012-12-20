@@ -151,7 +151,7 @@ NewCoObjectMemorySimulator >> forceInterruptCheck [
 NewCoObjectMemorySimulator >> fullGC [
 	self halt.
 	coInterpreter transcript
-		cr; nextPutAll:'<Running full GC ('; print: coInterpreter byteCount; nextPutAll: ')...'; flush.
+		cr; nextPutAll:'<Running full GC ('; print: coInterpreter byteCount; space; print: freeStart; nextPutAll: ')...'; flush.
 	super fullGC.
 	coInterpreter transcript show: ' done>'
 ]
@@ -174,7 +174,7 @@ NewCoObjectMemorySimulator >> halfWordLowInLong32: long32 [
 
 { #category : #'debug support' }
 NewCoObjectMemorySimulator >> incrementalGC [
-	coInterpreter transcript cr; nextPutAll: 'incrementalGC ('; print: coInterpreter byteCount; nextPut: $); flush.
+	coInterpreter transcript cr; nextPutAll: 'incrementalGC ('; print: coInterpreter byteCount; space; print: freeStart; nextPut: $); flush.
 	^super incrementalGC
 ]
 
@@ -549,16 +549,26 @@ NewCoObjectMemorySimulator >> storeInteger: fieldIndex ofObject: objectPointer w
 
 { #category : #'interpreter access' }
 NewCoObjectMemorySimulator >> storePointer: index ofObject: oop withValue: valuePointer [
-	"Override to ensure acess is within the heap"
+	"Override to ensure acess is within the heap, and within the object"
+	| fmt hdr |
 	self assert: oop >= self startOfMemory.
+	hdr := self baseHeader: oop.
+	fmt := self formatOfHeader: hdr.
+	self assert: ((fmt <= 4 or: [fmt >= 12])
+				and: [index >= 0 and: [index < (self lengthOf: oop baseHeader: hdr format: fmt)]]).
 	^super storePointer: index ofObject: oop withValue: valuePointer
 ]
 
 { #category : #'interpreter access' }
-NewCoObjectMemorySimulator >> storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer [
-	"Override to ensure acess is within the heap"
+NewCoObjectMemorySimulator >> storePointerUnchecked: index ofObject: oop withValue: valuePointer [
+	"Override to ensure acess is within the heap, and within the object"
+	| fmt hdr |
 	self assert: oop >= self startOfMemory.
-	^super storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer
+	hdr := self baseHeader: oop.
+	fmt := self formatOfHeader: hdr.
+	self assert: ((fmt <= 4 or: [fmt >= 12])
+				and: [index >= 0 and: [index < (self lengthOf: oop baseHeader: hdr format: fmt)]]).
+	^super storePointerUnchecked: index ofObject: oop withValue: valuePointer
 ]
 
 { #category : #'simulation only' }
@@ -580,7 +590,7 @@ NewCoObjectMemorySimulator >> tab [
 
 { #category : #'debug support' }
 NewCoObjectMemorySimulator >> tenuringIncrementalGC [
-	coInterpreter transcript cr; nextPutAll: 'tenuringIncrementalGC ('; print: coInterpreter byteCount; nextPut: $); flush.
+	coInterpreter transcript cr; nextPutAll: 'tenuringIncrementalGC ('; print: coInterpreter byteCount; space; print: freeStart; nextPut: $); flush.
 	^super tenuringIncrementalGC
 ]
 

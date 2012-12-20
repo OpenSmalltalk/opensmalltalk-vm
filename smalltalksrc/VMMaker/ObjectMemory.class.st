@@ -964,21 +964,21 @@ ObjectMemory >> bytesPerWord [
 
 { #category : #'interpreter access' }
 ObjectMemory >> changeClassOf: rcvr to: argClass [
-	"Attempt to change the class of the receiver into the class of the the argument given that the
-	 format of the receiver matches the format of the argument. If successful answer 0, otherwise
-	 answer an error code indicating the reason for failure.  Fail if receiver or argument are
-	 SmallIntegers, or the receiver is an instance of a compact class and the argument isn't, or when
-	 the format of the receiver is different from the format of the argument's class, or when the
-	 arguments class is fixed and the receiver's size differs from the size that an instance of the
-	 argument's class should have."
-	| classHdr sizeHiBits byteSize argFormat rcvrFormat rcvrHdr ccIndex |
+	"Attempt to change the class of the receiver to the argument given that the
+	 format of the receiver matches the format of the argument.  If successful,
+	 answer 0, otherwise answer an error code indicating the reason for failure. 
+	 Fail if the receiver is an instance of a compact class and the argument isn't,
+	 or if the format of the receiver is incompatible with the format of the argument,
+	 or if the argument is a fixed class and the receiver's size differs from the size
+	 that an instance of the argument should have."
+	| classHdr sizeHiBits argClassInstByteSize argFormat rcvrFormat rcvrHdr ccIndex |
 	"Check what the format of the class says"
 	classHdr := self formatOfClass: argClass. "Low 2 bits are 0"
 
 	"Compute the size of instances of the class (used for fixed field classes only)"
 	sizeHiBits := (classHdr bitAnd: 16r60000) >> 9.
 	classHdr := classHdr bitAnd: 16r1FFFF.
-	byteSize := (classHdr bitAnd: SizeMask) + sizeHiBits. "size in bytes -- low 2 bits are 0"
+	argClassInstByteSize := (classHdr bitAnd: SizeMask) + sizeHiBits. "size in bytes -- low 2 bits are 0"
 
 	"Check the receiver's format against that of the class"
 	argFormat := self formatOfHeader: classHdr.
@@ -991,33 +991,35 @@ ObjectMemory >> changeClassOf: rcvr to: argClass [
 		[^PrimErrInappropriate]. "no way"
 
 	"For fixed field classes, the sizes must match.
-	Note: byteSize-4 because base header is included in class size."
+	Note: argClassInstByteSize-4 because base header is included in class size."
 	argFormat < 2
 		ifTrue:
-			[(byteSize - BaseHeaderSize) ~= (self byteSizeOf: rcvr) ifTrue:
+			[(argClassInstByteSize - BaseHeaderSize) ~= (self byteSizeOf: rcvr) ifTrue:
 				[^PrimErrBadReceiver]]
 		ifFalse:
 			[argFormat = 3 ifTrue: "For indexable plus fixed fields the receiver must be at least big enough."
-				[(byteSize - BaseHeaderSize) > (self byteSizeOf: rcvr) ifTrue:
+				[(argClassInstByteSize - BaseHeaderSize) > (self byteSizeOf: rcvr) ifTrue:
 					[^PrimErrBadReceiver]]].
 
-	ccIndex := classHdr bitAnd: CompactClassMask.
 	(self headerTypeOfHeader: rcvrHdr) = HeaderTypeShort
 		ifTrue: "Compact classes. Check if the arg's class is compact and exchange ccIndex"
-			[ccIndex = 0 ifTrue:
+			[ccIndex := classHdr bitAnd: CompactClassMask.
+			ccIndex = 0 ifTrue:
 				[^PrimErrInappropriate]. "class is not compact"
 			self cppIf: IMMUTABILITY
 				ifTrue: [(rcvrHdr bitAnd: ImmutabilityBit) ~= 0 ifTrue:
 							[^PrimErrNoModification]].
-			self baseHeader: rcvr
-				put: (((self longAt: rcvr) bitClear: CompactClassMask) bitOr: ccIndex)]
-		ifFalse: "Exchange the class pointer, which could make rcvr a root for argClass.  Don't forget to set ccIndex."
+			self baseHeader: rcvr put: ((rcvrHdr bitClear: CompactClassMask) bitOr: ccIndex)]
+		ifFalse: "Exchange the class pointer, which could make rcvr a root for argClass"
 			[self cppIf: IMMUTABILITY
 				ifTrue: [(rcvrHdr bitAnd: ImmutabilityBit) ~= 0 ifTrue:
 							[^PrimErrNoModification]].
-			self baseHeader: rcvr
-				put: (((self baseHeader: rcvr) bitClear: CompactClassMask) bitOr: ccIndex).			
-			self longAt: rcvr-BaseHeaderSize put: (argClass bitOr: (self headerType: rcvr)).
+			"N.B. the recursive scan-mark algorithm uses the header word's size and compact class
+			 fields to determine the header type when it reuses the header type bits for the mark
+			 state.  So it is alas an invariant that non-compact headers have a 0 compact class field."
+			(self compactClassIndexOfHeader: rcvrHdr) ~= 0 ifTrue:
+				[self baseHeader: rcvr put: (rcvrHdr bitClear: CompactClassMask)].			
+			self longAt: rcvr - BaseHeaderSize put: (argClass bitOr: (self headerTypeOfHeader: rcvrHdr)).
 			(self oop: rcvr isLessThan: youngStart) ifTrue:
 				[self possibleRootStoreInto: rcvr value: argClass]].
 	"ok"
@@ -1044,8 +1046,7 @@ ObjectMemory >> checkCompactIndex: compactIndex isClass: specialIndex named: nam
 	"Check that a class the VM assumes is compact has the right index."
 	<inline: true> "macrofication of the name arg in invalidCompactClassError only works if this method is inlined so the name is a string literal not a parameter"
 	(compactIndex ~= 0
-	 and: [(self splObj: specialIndex) ~= (self fetchPointer: compactIndex - 1
-											ofObject: (self splObj: CompactClasses))]) ifTrue:
+	 and: [(self splObj: specialIndex) ~= (self compactClassAt: compactIndex)]) ifTrue:
 		[self invalidCompactClassError: name]
 ]
 
@@ -1442,11 +1443,10 @@ ObjectMemory >> clone: obj [
 { #category : #'interpreter access' }
 ObjectMemory >> compactClassAt: ccIndex [
 	"Index must be between 1 and compactClassArray size.  A zero compact class
-	 index in the base header indicate that the class is in the class header word."
+	 index in the base header indicates that the class is in the class header word."
 	<api>
-	| classesArray |
-	classesArray := self fetchPointer: CompactClasses ofObject: self specialObjectsOop.
-	^self fetchPointer: ccIndex - 1 ofObject: classesArray
+	<inline: true>
+	^self fetchPointer: ccIndex - 1 ofObject: (self splObj: CompactClasses)
 ]
 
 { #category : #'header access' }
@@ -1625,13 +1625,12 @@ ObjectMemory >> fetchClassOf: oop [
 	| ccIndex |
 	<inline: true>
 	<asmLabel: false>
-	(self isIntegerObject: oop) ifTrue: [^self splObj: ClassInteger].
-
-	(ccIndex := (self compactClassIndexOf: oop)) = 0
-		ifTrue: [^(self classHeader: oop) bitAnd: AllButTypeMask]
-		ifFalse: "look up compact class"
-			[^self fetchPointer: ccIndex - 1
-				ofObject: (self splObj: CompactClasses)]
+	^(self isIntegerObject: oop)
+		ifTrue: [self splObj: ClassInteger]
+		ifFalse:
+			[(ccIndex := (self compactClassIndexOf: oop)) = 0
+				ifTrue: [(self classHeader: oop) bitAnd: AllButTypeMask]
+				ifFalse: [self compactClassAt: ccIndex]]
 ]
 
 { #category : #'interpreter access' }
@@ -1639,11 +1638,9 @@ ObjectMemory >> fetchClassOfNonInt: oop [
 	| ccIndex |
 	<inline: true>
 	<asmLabel: false>
-	(ccIndex := (self compactClassIndexOf: oop)) = 0
-		ifTrue: [^(self classHeader: oop) bitAnd: AllButTypeMask]
-		ifFalse: "look up compact class"
-			[^self fetchPointer: ccIndex - 1
-				ofObject: (self splObj: CompactClasses)]
+	^(ccIndex := (self compactClassIndexOf: oop)) = 0
+		ifTrue: [(self classHeader: oop) bitAnd: AllButTypeMask]
+		ifFalse: [self compactClassAt: ccIndex]
 ]
 
 { #category : #'interpreter access' }
@@ -2577,19 +2574,14 @@ ObjectMemory >> interpreter [
 ObjectMemory >> is: oop instanceOf: classOop compactClassIndex: compactClassIndex [
 	"Answer if oop is an instance of the given class. If the class has a (non-zero)
 	 compactClassIndex use that to speed up the check.  N.B. Inlining should
-	 result in classOop not being accessed if compactClassIndex is non-zero."
+	 result in classOop not being accessed if oop's compact class index and
+	 compactClassIndex are non-zero."
 
-	| ccIndex |
 	<inline: true>
 	(self isIntegerObject: oop) ifTrue:
 		[^false].
 
-	ccIndex := self compactClassIndexOf: oop.
-	compactClassIndex ~= 0 ifTrue:
-		[^compactClassIndex == ccIndex].
-
-	^ccIndex = 0
-	  and: [((self classHeader: oop) bitAnd: AllButTypeMask) = classOop]
+	^self isClassOfNonImm: oop equalTo: classOop compactClassIndex: compactClassIndex
 ]
 
 { #category : #'header access' }
@@ -2631,10 +2623,7 @@ ObjectMemory >> isClassOfNonImm: oop equalTo: classOop [
 
 	cl := (ccIndex := self compactClassIndexOf: oop) = 0
 			ifTrue: [(self classHeader: oop) bitAnd: AllButTypeMask]
-			ifFalse: "look up compact class"
-				[self fetchPointer: ccIndex - 1
-					ofObject: (self fetchPointer: CompactClasses ofObject: specialObjectsOop)].
-
+			ifFalse: [self compactClassAt: ccIndex].
 	^cl = classOop
 ]
 
@@ -2643,7 +2632,10 @@ ObjectMemory >> isClassOfNonImm: oop equalTo: classOop compactClassIndex: compac
 	"Answer if the given (non-immediate) object is an instance of the given class
 	 that may have a compactClassIndex (if compactClassIndex is non-zero).
 	 N.B. Inlining and/or compiler optimization should result in classOop not being
-	 accessed if compactClassIndex is non-zero."
+	 accessed if oop's compact class index and compactClassIndex are non-zero.
+	 N.B.  Generally one cannot assume that if compactClassIndex is non-zero the
+	 instances of the corresponding class always have the compactClassIndex
+	 because the compact class index is only non-zero in short header instances."
 
 	| ccIndex |
 	<inline: true>
@@ -2651,13 +2643,11 @@ ObjectMemory >> isClassOfNonImm: oop equalTo: classOop compactClassIndex: compac
 	self assert: (self isIntegerObject: oop) not.
 
 	ccIndex := self compactClassIndexOf: oop.
-	^compactClassIndex = 0
-		ifTrue:
-			[ccIndex = 0
-				ifTrue: [((self classHeader: oop) bitAnd: AllButTypeMask) = classOop]
-				ifFalse: [false]]
-		ifFalse:
-			[compactClassIndex == ccIndex]
+	ccIndex = 0 ifTrue:
+		[^((self classHeader: oop) bitAnd: AllButTypeMask) = classOop].
+	compactClassIndex ~= 0 ifTrue:
+		[^compactClassIndex = ccIndex].
+	^classOop = (self compactClassAt: ccIndex)
 ]
 
 { #category : #'interpreter access' }
@@ -4097,6 +4087,7 @@ ObjectMemory >> specialObjectsOop: anObject [
 { #category : #'interpreter access' }
 ObjectMemory >> splObj: index [
 	<api>
+	<inline: true>
 	"Return one of the objects in the SpecialObjectsArray"
 	^self fetchPointer: index ofObject: specialObjectsOop
 ]
