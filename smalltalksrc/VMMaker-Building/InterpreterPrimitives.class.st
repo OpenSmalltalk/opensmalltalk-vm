@@ -83,10 +83,7 @@ InterpreterPrimitives >> cStringOrNullFor: oop [
 	<returnTypeC: #'char *'>
 	| isString len cString |
 	<var: 'cString' type: #'char *'>
-	isString := objectMemory
-					isClassOfNonImm: oop
-					equalTo: (objectMemory splObj: ClassByteString)
-					compactClassIndex: ClassByteStringCompactIndex.
+	isString := self isInstanceOfClassByteString: oop.
 	isString ifFalse:
 		[oop ~= objectMemory nilObject ifTrue:
 			[self primitiveFailFor: PrimErrBadArgument].
@@ -130,6 +127,97 @@ InterpreterPrimitives >> isIndirectAlien: oop [
 ]
 
 { #category : #'primitive support' }
+InterpreterPrimitives >> isInstanceOfClassArray: oop [
+	<inline: true>
+	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
+	 (because is:instanceOf:compactClassIndex: has an inline: pragma) the
+	 phrase (objectMemory splObj: ClassArray) is expanded in-place and
+	 is _not_ evaluated if oop has a non-zero CompactClassIndex."
+	^objectMemory
+		is: oop
+		instanceOf: (objectMemory splObj: ClassArray) 
+		compactClassIndex: ClassArrayCompactIndex
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> isInstanceOfClassBlockClosure: oop [
+	<inline: true>
+	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
+	 (because is:instanceOf:compactClassIndex: has an inline: pragma) the
+	 phrase (objectMemory splObj: ClassBlockClosure) is expanded in-place
+	 and is _not_ evaluated if oop has a non-zero CompactClassIndex."
+	^objectMemory
+		is: oop
+		instanceOf: (objectMemory splObj: ClassBlockClosure) 
+		compactClassIndex: ClassBlockClosureCompactIndex
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> isInstanceOfClassByteString: oop [
+	<inline: true>
+	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
+	 (because is:instanceOf:compactClassIndex: has an inline: pragma) the
+	 phrase (objectMemory splObj: ClassString) is expanded in-place and
+	 is _not_ evaluated if oop has a non-zero CompactClassIndex."
+	^objectMemory
+		is: oop
+		instanceOf: (objectMemory splObj: ClassString) 
+		compactClassIndex: ClassByteStringCompactIndex
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> isInstanceOfClassCharacter: oop [
+	<inline: true>
+	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
+	 (because is:instanceOf:compactClassIndex: has an inline: pragma) the
+	 phrase (objectMemory splObj: ClassCharacter) is expanded in-place
+	 and is _not_ evaluated if oop has a non-zero CompactClassIndex."
+	^objectMemory
+		is: oop
+		instanceOf: (objectMemory splObj: ClassCharacter) 
+		compactClassIndex: 0
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> isInstanceOfClassFloat: oop [
+	<inline: true>
+	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
+	 (because is:instanceOf:compactClassIndex: has an inline: pragma) the
+	 phrase (objectMemory splObj: ClassFloat) is expanded in-place and is
+	 _not_ evaluated if oop has a non-zero CompactClassIndex."
+	^objectMemory
+		is: oop
+		instanceOf: (objectMemory splObj: ClassFloat) 
+		compactClassIndex: ClassFloatCompactIndex
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> isInstanceOfClassLargeNegativeInteger: oop [
+	<inline: true>
+	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
+	 (because is:instanceOf:compactClassIndex: has an inline: pragma) the
+	 phrase (objectMemory splObj: ClassLargeNegativeInteger) is expanded
+	 in-place and is _not_ evaluated if oop has a non-zero CompactClassIndex."
+	^objectMemory
+		is: oop
+		instanceOf: (objectMemory splObj: ClassLargeNegativeInteger) 
+		compactClassIndex: ClassLargeNegativeIntegerCompactIndex
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> isInstanceOfClassLargePositiveInteger: oop [
+	<inline: true>
+	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
+	 (because is:instanceOf:compactClassIndex: has an inline: pragma) the
+	 phrase (objectMemory splObj: ClassLargePositiveInteger) is expanded
+	 in-place and is _not_ evaluated if oop has a non-zero CompactClassIndex."
+	^objectMemory
+		is: oop
+		instanceOf: (objectMemory splObj: ClassLargePositiveInteger) 
+		compactClassIndex: ClassLargePositiveIntegerCompactIndex
+]
+
+{ #category : #'primitive support' }
 InterpreterPrimitives >> isNegativeIntegerValueOf: oop [
 	"Answer true if integer object is negative.
 	Fail if object pointed by oop i not an integer."
@@ -162,34 +250,32 @@ InterpreterPrimitives >> isPointerAlien: oop [
 InterpreterPrimitives >> magnitude64BitIntegerFor: magnitude neg: isNegative [
 	"Return a Large Integer object for the given integer magnitude and sign"
 	| newLargeInteger largeClass intValue highWord sz isSmall smallVal |
-	<var: 'magnitude' type: 'usqLong'>
-	<var: 'highWord' type: 'usqInt'>
+	<var: 'magnitude' type: #usqLong>
+	<var: 'highWord' type: #usqInt>
 
 	isSmall := isNegative
-		ifTrue: [magnitude <= 16r40000000]
-		ifFalse: [magnitude < 16r40000000].
-	isSmall
-		ifTrue:
-			[smallVal := self cCoerce: magnitude to: #sqInt.
-			isNegative	ifTrue: [smallVal := 0 - smallVal].
-			^self integerObjectOf: smallVal].
-	isNegative
-		ifTrue:[	largeClass := self classLargeNegativeInteger]
-		ifFalse:[	largeClass := self classLargePositiveInteger].
-	highWord := self cCode: 'magnitude >> 32'. "shift is coerced to usqInt otherwise"
+				ifTrue: [magnitude <= 16r40000000]
+				ifFalse: [magnitude < 16r40000000].
+	isSmall ifTrue:
+		[smallVal := self cCoerceSimple: magnitude to: #sqInt.
+		isNegative	ifTrue: [smallVal := 0 - smallVal].
+		^objectMemory integerObjectOf: smallVal].
+	largeClass := isNegative
+					ifTrue: [objectMemory classLargeNegativeInteger]
+					ifFalse: [objectMemory classLargePositiveInteger].
+	highWord := magnitude >> 32.
 	highWord = 0 
 		ifTrue: [sz := 4] 
-		ifFalse:[
-			sz := 5.
-			(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1].
-			(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1].
-			(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1].
-		].
-	newLargeInteger := self instantiateClass: largeClass indexableSize:  sz.
+		ifFalse:
+			[sz := 5.
+			(highWord := highWord >> 8) = 0 ifFalse: [sz := sz + 1].
+			(highWord := highWord >> 8) = 0 ifFalse: [sz := sz + 1].
+			(highWord := highWord >> 8) = 0 ifFalse: [sz := sz + 1]].
+	newLargeInteger := objectMemory instantiateClass: largeClass indexableSize:  sz.
 	0 to: sz-1 do: [:i |
-		intValue := self cCode: '(magnitude >> (i * 8)) & 255'.
-		self storeByte: i ofObject: newLargeInteger withValue: intValue].
-	^ newLargeInteger
+		intValue := (magnitude >> (i * 8)) bitAnd: 255.
+		objectMemory storeByte: i ofObject: newLargeInteger withValue: intValue].
+	^newLargeInteger
 ]
 
 { #category : #'primitive support' }
@@ -724,13 +810,18 @@ InterpreterPrimitives >> primitiveCalloutToFFI [
 
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveChangeClass [
-	"Primitive. Change the class of the receiver into the class of the argument given that the format of the receiver matches the format of the argument's class. Fail if receiver or argument are SmallIntegers, or the receiver is an instance of a compact class and the argument isn't, or when the argument's class is compact and the receiver isn't, or when the format of the receiver is different from the format of the argument's class, or when the arguments class is fixed and the receiver's size differs from the size that an instance of the argument's class should have."
+	"Primitive.  Change the class of the receiver into the class of the argument given that
+	 the format of the receiver matches the format of the argument's class.  Fail if the
+	 receiver or argument are SmallIntegers, or the receiver is an instance of a compact
+	 class and the argument isn't, or when the argument's class is compact and the receiver
+	 isn't, or when the format of the receiver is different from the format of the argument's
+	 class, or when the arguments class is fixed and the receiver's size differs from the size
+	 that an instance of the argument's class should have."
 	| arg rcvr argClass err |
 	arg := self stackObjectValue: 0.
 	rcvr := self stackObjectValue: 1.
 	self successful ifFalse:[^nil].
-	argClass := self fetchClassOfNonInt: arg.
-
+	argClass := objectMemory fetchClassOfNonInt: arg.
 	err := objectMemory changeClassOf: rcvr to: argClass.
 	err = 0
 		ifTrue: ["Flush at cache because rcvr's class has changed."

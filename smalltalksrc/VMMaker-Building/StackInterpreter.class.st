@@ -1705,13 +1705,13 @@ StackInterpreter >> addToExternalPrimitiveTable: functionAddress [
 { #category : #'debug support' }
 StackInterpreter >> allAccessibleObjectsOkay [
 	"Ensure that all accessible objects in the heap are okay."
-
-	| oop |
+	| ok oop |
+	ok := true.
 	oop := objectMemory firstAccessibleObject.
-	[oop = nil] whileFalse: [
-		self okayFields: oop.
-		oop := objectMemory accessibleObjectAfter: oop.
-	].
+	[oop = nil] whileFalse:
+		[ok := ok & (self okayFields: oop).
+		oop := objectMemory accessibleObjectAfter: oop].
+	^ok
 ]
 
 { #category : #'image save/restore' }
@@ -2618,10 +2618,7 @@ StackInterpreter >> bytecodePrimValue [
 	| rcvr isBlock |
 	rcvr := self internalStackTop.
 	argumentCount := 0.
-	isBlock := objectMemory
-					is: rcvr
-					instanceOf: (objectMemory splObj: ClassBlockClosure)
-					compactClassIndex: ClassBlockClosureCompactIndex.
+	isBlock := self isInstanceOfClassBlockClosure: rcvr.
 	isBlock ifTrue:
 		[self externalizeIPandSP.
 		self initPrimCall.
@@ -2639,10 +2636,7 @@ StackInterpreter >> bytecodePrimValueWithArg [
 	| rcvr isBlock |
 	rcvr := self internalStackValue: 1.
 	argumentCount := 1.
-	isBlock := objectMemory
-					is: rcvr
-					instanceOf: (objectMemory splObj: ClassBlockClosure)
-					compactClassIndex: ClassBlockClosureCompactIndex.
+	isBlock := self isInstanceOfClassBlockClosure: rcvr.
 	isBlock ifTrue:
 		[self externalizeIPandSP.
 		self initPrimCall.
@@ -4820,9 +4814,9 @@ StackInterpreter >> findClassForSelector: aSelector lookupClass: startClass do: 
 StackInterpreter >> findClassOfMethod: meth forReceiver: rcvr [
 
 	| rclass currClass classDict classDictSize methodArray i |
-	(self addressCouldBeObj: meth) ifFalse:
+	(objectMemory addressCouldBeObj: meth) ifFalse:
 		[^objectMemory nilObject].
-	(self addressCouldBeOop: rcvr)
+	(objectMemory addressCouldBeOop: rcvr)
 		ifTrue: [rclass := objectMemory fetchClassOf: rcvr]
 		ifFalse: [rclass := self methodClassOf: meth].
 	currClass := rclass.
@@ -5024,9 +5018,9 @@ StackInterpreter >> findSelectorAndClassForMethod: meth lookupClass: startClass 
 StackInterpreter >> findSelectorOfMethod: meth forReceiver: rcvr [
 
 	| currClass classDict classDictSize methodArray i |
-	(self addressCouldBeObj: meth) ifFalse:
+	(objectMemory addressCouldBeObj: meth) ifFalse:
 		[^objectMemory nilObject].
-	(self addressCouldBeOop: rcvr)
+	(objectMemory addressCouldBeOop: rcvr)
 		ifTrue: [currClass := objectMemory fetchClassOf: rcvr]
 		ifFalse: [currClass := self methodClassOf: meth].
 	[classDict := objectMemory fetchPointer: MethodDictionaryIndex ofObject: currClass.
@@ -5094,20 +5088,14 @@ StackInterpreter >> floatObjectOf: aFloat [
 
 { #category : #utilities }
 StackInterpreter >> floatValueOf: oop [
-	"Fetch the instance variable at the given index of the given object. Return the C double precision floating point value of that instance variable, or fail if it is not a Float."
-	"Note: May be called by translated primitive code."
+	"Answer the C double precision floating point value of the argument,
+	 or fail if it is not a Float, and answer 0.
+	 Note: May be called by translated primitive code."
 
 	| isFloat result |
 	<returnTypeC: #double>
 	<var: #result type: #double>
-	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
-	 (because is:instanceOf:compactClassIndex: has an inline: pragma) the
-	 phrase (self splObj: ClassArray) is expanded in-place and is _not_ evaluated if
-	 ClassArrayCompactIndex is non-zero."
-	isFloat := objectMemory
-				is: oop
-				instanceOf: (objectMemory splObj: ClassFloat)
-				compactClassIndex: ClassFloatCompactIndex.
+	isFloat := self isInstanceOfClassFloat: oop.
 	isFloat ifTrue:
 		[self cCode: '' inSmalltalk: [result := Float new: 2].
 		 objectMemory fetchFloatAt: oop + BaseHeaderSize into: result.
@@ -6422,49 +6410,13 @@ StackInterpreter >> isIndexable: oop [
 	^(objectMemory formatOf: oop) >= 2
 ]
 
-{ #category : #'primitive support' }
-StackInterpreter >> isInstanceOfClassArray: oop [
-	<inline: true>
-	^objectMemory
-		is: oop
-		instanceOf: (objectMemory splObj: ClassArray) 
-		compactClassIndex: ClassArrayCompactIndex
-]
-
-{ #category : #'primitive support' }
-StackInterpreter >> isInstanceOfClassByteString: oop [
-	<inline: true>
-	^objectMemory
-		is: oop
-		instanceOf: (objectMemory splObj: ClassString) 
-		compactClassIndex: ClassByteStringCompactIndex
-]
-
-{ #category : #'primitive support' }
-StackInterpreter >> isInstanceOfClassCharacter: oop [
-	<inline: true>
-	^objectMemory
-		is: oop
-		instanceOf: (objectMemory splObj: ClassCharacter) 
-		compactClassIndex: 0
-]
-
-{ #category : #'primitive support' }
-StackInterpreter >> isInstanceOfClassFloat: oop [
-	<inline: true>
-	^objectMemory
-		is: oop
-		instanceOf: (objectMemory splObj: ClassFloat) 
-		compactClassIndex: ClassFloatCompactIndex
-]
-
 { #category : #'frame access' }
 StackInterpreter >> isLiveContext: oop [
 	"Answer if the argument, which can be any object, is a live context."
 	(self isContext: oop) ifFalse:
 		[^false].
 	(self isSingleContext: oop) ifTrue:
-		[^self isIntegerObject: (self fetchPointer: InstructionPointerIndex ofObject: oop)].
+		[^objectMemory isIntegerObject: (objectMemory fetchPointer: InstructionPointerIndex ofObject: oop)].
 	^(self isWidowedContext: oop) not
 ]
 
@@ -6710,6 +6662,7 @@ StackInterpreter >> loadFloatOrIntFrom: floatOrInt [
 
 { #category : #initialization }
 StackInterpreter >> loadInitialContext [
+	<inline: false>
 	| activeProc activeContext |
 	self cCode: [] inSmalltalk: [self initExtensions].
 	objectMemory leakCheckFullGC ifTrue:
@@ -6746,15 +6699,18 @@ StackInterpreter >> longPrintOop: oop [
 	((objectMemory isIntegerObject: oop)
 	 or: [(oop between: objectMemory startOfMemory and: objectMemory freeStart) not
 	 or: [(oop bitAnd: (BytesPerWord - 1)) ~= 0
-	 or: [(objectMemory isFreeObject: oop)
-	 or: [(fmt := objectMemory formatOf: oop) between: 5 and: 11]]]]) ifTrue:
+	 or: [(objectMemory isFreeObject: oop)]]]) ifTrue:
 		[^self printOop: oop].
 	self printHex: oop;
 		print: ': a(n) ';
 		printNameOfClass: (objectMemory fetchClassOfNonInt: oop) count: 5.
+	fmt := objectMemory formatOf: oop.
 	fmt > 4 ifTrue:
 		[self print: ' nbytes '; printNum: (objectMemory byteSizeOf: oop)].
+	objectMemory printHeaderTypeOf: oop.
 	self cr.
+	(fmt between: 5 and: 11) ifTrue:
+		[^self].
 	lastIndex := 256 min: (startIP := (objectMemory lastPointerOf: oop) / BytesPerWord).
 	lastIndex > 0 ifTrue:
 		[1 to: lastIndex do:
@@ -7116,7 +7072,7 @@ StackInterpreter >> mapInterpreterOops [
 	self mapTraceLogs.
 	self mapVMRegisters.
 	self mapProfileState.
-	tempOop = 0 ifFalse: [tempOop := self remap: tempOop].
+	tempOop = 0 ifFalse: [tempOop := objectMemory remap: tempOop].
 	1 to: objectMemory remapBufferCount do: [:i | 
 			oop := objectMemory remapBuffer at: i.
 			(objectMemory isIntegerObject: oop)
@@ -7285,7 +7241,7 @@ StackInterpreter >> markAndTraceInterpreterOops: fullGCFlag [
 		[objectMemory markAndTrace: newMethod.
 	objectMemory markAndTrace: lkupClass].
 	self traceProfileState.
-	tempOop = 0 ifFalse: [self markAndTrace: tempOop].
+	tempOop = 0 ifFalse: [objectMemory markAndTrace: tempOop].
 
 	1 to: objectMemory remapBufferCount do: [:i | 
 			oop := objectMemory remapBuffer at: i.
@@ -9192,12 +9148,8 @@ StackInterpreter >> printStringOf: oop [
 	((objectMemory is: oop
 		  instanceOf: (objectMemory splObj: ClassByteArray)
 		  compactClassIndex: classByteArrayCompactIndex)
-	or: [(objectMemory is: oop
-			instanceOf: (objectMemory splObj: ClassLargePositiveInteger)
-			compactClassIndex: ClassLargePositiveIntegerCompactIndex)
-	or: [(objectMemory is: oop
-			instanceOf: (objectMemory splObj: ClassLargeNegativeInteger)
-			compactClassIndex: ClassLargeNegativeIntegerCompactIndex)]])
+	or: [(self isInstanceOfClassLargePositiveInteger: oop)
+	or: [(self isInstanceOfClassLargeNegativeInteger: oop)]])
 		ifTrue:
 			[[i < cnt] whileTrue:
 				[self printHex: (objectMemory fetchByte: i ofObject: oop).
@@ -10582,9 +10534,9 @@ StackInterpreter >> signed64BitIntegerFor: integerValue [
 	"Return a Large Integer object for the given integer value"
 	| newLargeInteger magnitude largeClass intValue highWord sz |
 	<inline: false>
-	<var: 'integerValue' type: 'sqLong'>
-	<var: 'magnitude' type: 'sqLong'>
-	<var: 'highWord' type: 'usqInt'>
+	<var: 'integerValue' type: #sqLong>
+	<var: 'magnitude' type: #sqLong>
+	<var: 'highWord' type: #usqInt>
 
 	integerValue < 0
 		ifTrue:[	largeClass := objectMemory classLargeNegativeInteger.
@@ -10601,20 +10553,19 @@ StackInterpreter >> signed64BitIntegerFor: integerValue [
 						inSmalltalk: [integerValue << 1 bitAnd: (1 << 64) - 1])]]) ifTrue:
 			[^self signed32BitIntegerFor: integerValue].
 
-	highWord := self cCode: 'magnitude >> 32' inSmalltalk: [magnitude >> 32]. "shift is coerced to usqInt otherwise"
+	highWord := magnitude >> 32.
 	highWord = 0 
 		ifTrue:[sz := 4] 
-		ifFalse:[
-			sz := 5.
+		ifFalse:
+			[sz := 5.
 			(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1].
 			(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1].
-			(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1].
-		].
+			(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1]].
 	newLargeInteger := objectMemory instantiateClass: largeClass indexableSize:  sz.
 	0 to: sz-1 do: [:i |
-		intValue := self cCode: '(magnitude >> (i * 8)) & 255' inSmalltalk: [(magnitude >> (i * 8)) bitAnd: 255].
+		intValue := (magnitude >> (i * 8)) bitAnd: 255.
 		objectMemory storeByte: i ofObject: newLargeInteger withValue: intValue].
-	^ newLargeInteger
+	^newLargeInteger
 ]
 
 { #category : #'send bytecodes' }
@@ -11501,14 +11452,14 @@ StackInterpreter >> validInstructionPointer: theInstrPointer inMethod: aMethod f
 		ifTrue:
 			[| methodHeader |
 			 methodHeader := self noAssertHeaderOf: aMethod. "-1 for pre-increment in fetchNextBytecode"
-			 theInstrPointer >= (aMethod + (self lastPointerOf: aMethod) + BaseHeaderSize - 1)
-			 and: [theInstrPointer < (aMethod + (self byteLengthOf: aMethod) + BaseHeaderSize - 1)
+			 theInstrPointer >= (aMethod + (objectMemory lastPointerOf: aMethod) + BaseHeaderSize - 1)
+			 and: [theInstrPointer < (aMethod + (objectMemory byteLengthOf: aMethod) + BaseHeaderSize - 1)
 			 and: ["If the method starts with a CallPrimitive opcode the instruction pointer should be past it."
 				((self headerIndicatesAlternateBytecodeSet: methodHeader)
-				and: [(self methodHeaderHasPrimitive: methodHeader)
+				and: [(self alternateHeaderHasPrimitiveFlag: methodHeader)
 				and: [theInstrPointer < (aMethod
 										+ BaseHeaderSize - 1
-										+ (self lastPointerOf: aMethod)
+										+ (objectMemory lastPointerOf: aMethod)
 										+ (self sizeOfCallPrimitiveBytecode: methodHeader) - 1)]])
 					not]]]
 		ifFalse: "-1 for pre-increment in fetchNextBytecode"
