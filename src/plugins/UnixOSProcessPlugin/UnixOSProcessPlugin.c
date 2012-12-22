@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 22 September 2012 12:36:15 pm 
-   by VMMaker 4.10.3
+/* Automatically generated from Squeak on 22 December 2012 4:28:38 pm 
+   by VMMaker 4.10.5
  */
 
 #include <math.h>
@@ -29,7 +29,7 @@
 #endif
 #include <sys/types.h>
 /* D T Lewis - UnixOSProcessPlugin.c translated from class
-   UnixOSProcessPlugin of OSProcessPlugin version 4.4.11 */
+   UnixOSProcessPlugin of OSProcessPlugin version 4.5.1 */
 #include <sys/time.h>
 #include <sys/wait.h>
 #include <signal.h>
@@ -90,6 +90,7 @@ static sqInt maskSignalForThisThread(int sigNum);
 #pragma export on
 EXPORT(sqInt) moduleUnloaded(char *aModuleName);
 #pragma export off
+static sqInt msg(char *s);
 static sqInt newPthreadTypeByteArray(pthread_t aPthreadType);
 #pragma export on
 EXPORT(sqInt) primitiveArgumentAt(void);
@@ -181,7 +182,8 @@ static SESSIONIDENTIFIERTYPE sessionIdentifierFromSqFile(SQFile *sqFile);
 #pragma export on
 EXPORT(sqInt) setInterpreter(struct VirtualMachine*anInterpreter);
 #pragma export off
-static void * setSignalNumberhandler(sqInt anInteger, void *signalHandlerAddress);
+static sqInt setSigaltstack(void);
+static void * setSignalNumberhandler(sqInt signalNumber, void *signalHandlerAddress);
 #pragma export on
 EXPORT(sqInt) shutdownModule(void);
 #pragma export off
@@ -216,9 +218,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"UnixOSProcessPlugin 22 September 2012 (i)"
+	"UnixOSProcessPlugin 22 December 2012 (i)"
 #else
-	"UnixOSProcessPlugin 22 September 2012 (e)"
+	"UnixOSProcessPlugin 22 December 2012 (e)"
 #endif
 ;
 static void *originalSigHandlers[NSIG];
@@ -641,6 +643,16 @@ static sqInt initializeModuleForPlatform(void) {
 		atexit(sendSignalToPids);
 ;
 	vmThread = pthread_self();
+	
+# ifdef SA_ONSTACK  // true if platform supports sigaltstack, else meaningless redeclarations of stack_t and sigaction
+	setSigaltstack();
+# else
+	
+# define stack_t sqInt
+	
+# define sigaction VirtualMachine
+# endif  // SA_ONSTACK
+	
 }
 
 
@@ -719,6 +731,10 @@ static sqInt maskSignalForThisThread(int sigNum) {
 	Make sure we have no dangling references. */
 
 EXPORT(sqInt) moduleUnloaded(char *aModuleName) {
+}
+
+static sqInt msg(char *s) {
+	fprintf(stderr, "\n%s: %s", moduleName, s);
 }
 
 
@@ -2786,10 +2802,65 @@ EXPORT(sqInt) setInterpreter(struct VirtualMachine*anInterpreter) {
 }
 
 
+/*	Set a new signal stack, or reuse existing signal stack if one has been previously
+	allocated. Signals will be delivered on this stack to avoid consuming native stack
+	space that may be required for a StackInterpreter. */
+
+static sqInt setSigaltstack(void) {
+    sqInt SigStackSize;
+    stack_t sigstack;
+
+	
+# ifdef SA_ONSTACK  // true if platform supports sigaltstack
+	if ((sigaltstack(0,&sigstack)) < 0) {
+		perror("sigaltstack");
+	}
+	
+# ifdef SA_DISABLE  // Use existing signal stack if available. Mac OS documents SA_DISABLE but defines SS_DISABLE
+	if (!(sigstack.ss_size == 0 || (sigstack.ss_flags & SA_DISABLE))) {
+		return 1;
+	}
+# else
+	if (!(sigstack.ss_size == 0 || (sigstack.ss_flags & SS_DISABLE))) {
+		return 1;
+	}
+# endif  // SA_DISABLE
+	
+	SigStackSize = ((((1024 * (sizeof(void *))) * 16) < (MINSIGSTKSZ)) ? (MINSIGSTKSZ) : ((1024 * (sizeof(void *))) * 16));
+	if (null == (sigstack.ss_size = SigStackSize, sigstack.ss_sp = malloc(SigStackSize))) {
+		msg("sigstack malloc failed");
+		return 0;
+	}
+	if (sigaltstack(&sigstack, 0) < 0) {
+		msg("sigaltstack install failed");
+		(void)free(sigstack.ss_sp);
+		return 0;
+	}
+	return 1;
+# endif  // SA_ONSTACK
+	
+}
+
+
 /*	Set a signal handler. The C code translator will convert #sig:nal: into 'signal(parm1, parm2)' */
 
-static void * setSignalNumberhandler(sqInt anInteger, void *signalHandlerAddress) {
-	return signal(anInteger, signalHandlerAddress);
+static void * setSignalNumberhandler(sqInt signalNumber, void *signalHandlerAddress) {
+    struct sigaction oldHandlerAction;
+    struct sigaction sigHandlerAction;
+
+	
+# ifdef SA_ONSTACK  // true if platform supports sigaltstack
+	sigHandlerAction.sa_sigaction = signalHandlerAddress;
+	sigHandlerAction.sa_flags = SA_ONSTACK | SA_RESTART;
+	sigemptyset(&sigHandlerAction.sa_mask);
+	if ((sigaction(signalNumber, (&sigHandlerAction), (&oldHandlerAction))) != 0) {
+		perror("signal");
+	}
+	return oldHandlerAction.sa_sigaction;
+# else
+	return signal(signalNumber, signalHandlerAddress);
+# endif  // SA_ONSTACK
+	
 }
 
 EXPORT(sqInt) shutdownModule(void) {
@@ -3011,7 +3082,7 @@ static int unixFileNumber(FILEHANDLETYPE fileHandle) {
 /*	Answer a string identifying the version level for this plugin. */
 
 static char * versionString(void) {
-    static char version[]= "4.4.11";
+    static char version[]= "4.5.1";
 
 	return version;
 }

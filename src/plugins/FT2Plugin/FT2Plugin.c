@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 22 September 2012 12:35:54 pm 
-   by VMMaker 4.10.3
+/* Automatically generated from Squeak on 22 December 2012 4:28:32 pm 
+   by VMMaker 4.10.5
  */
 
 #include <math.h>
@@ -115,9 +115,9 @@ struct VirtualMachine* interpreterProxy;
 static FT_Library library;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"FT2Plugin 22 September 2012 (i)"
+	"FT2Plugin 22 December 2012 (i)"
 #else
-	"FT2Plugin 22 September 2012 (e)"
+	"FT2Plugin 22 December 2012 (e)"
 #endif
 ;
 

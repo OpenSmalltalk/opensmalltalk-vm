@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 22 September 2012 12:35:54 pm 
-   by VMMaker 4.10.3
+/* Automatically generated from Squeak on 22 December 2012 4:28:32 pm 
+   by VMMaker 4.10.5
  */
 
 #include <math.h>
@@ -87,9 +87,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"FilePlugin 22 September 2012 (i)"
+	"FilePlugin 22 December 2012 (i)"
 #else
-	"FilePlugin 22 September 2012 (e)"
+	"FilePlugin 22 December 2012 (e)"
 #endif
 ;
 static void * sCCPfn;
