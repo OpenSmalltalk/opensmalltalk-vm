@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 22 December 2012 4:28:33 pm 
-   by VMMaker 4.10.5
+/* Automatically generated from Squeak on 29 December 2012 7:52:47 pm 
+   by VMMaker 4.10.7
  */
 
 #include <math.h>
@@ -67,9 +67,9 @@ static double m23ResultX;
 static double m23ResultY;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"Matrix2x3Plugin 22 December 2012 (i)"
+	"Matrix2x3Plugin 29 December 2012 (i)"
 #else
-	"Matrix2x3Plugin 22 December 2012 (e)"
+	"Matrix2x3Plugin 29 December 2012 (e)"
 #endif
 ;
 

@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 22 December 2012 4:28:29 pm 
-   by VMMaker 4.10.5
+/* Automatically generated from Squeak on 29 December 2012 7:52:34 pm 
+   by VMMaker 4.10.7
  */
 #if 1
 # define SQ_USE_GLOBAL_STRUCT 1
@@ -158,7 +158,7 @@ void defaultErrorProc(char *s) {
 #define InitialIPIndex 4
 #define InstanceSpecificationIndex 2
 #define InstructionPointerIndex 1
-#define InterpreterSourceVersion "4.10.5"
+#define InterpreterSourceVersion "4.10.7"
 #define InvokeCallbackSelector 53
 #define LargeContextBit 262144
 #define LastLinkIndex 1
@@ -11149,7 +11149,7 @@ register struct foo * foo = &fum;
 								foo->primFailCode = 1;
 							}
 						}
-						shifted = ((integerArgument < 0) ? ((usqInt) integerReceiver >> -integerArgument) : ((usqInt) integerReceiver << integerArgument));
+						shifted = ((usqInt) integerReceiver) >> (0 - integerArgument);
 					}
 				}
 				if (!foo->primFailCode) {
@@ -16082,7 +16082,7 @@ l1:	/* end popInteger */;
 					foo->primFailCode = 1;
 				}
 			}
-			shifted = ((integerArgument < 0) ? ((usqInt) integerReceiver >> -integerArgument) : ((usqInt) integerReceiver << integerArgument));
+			shifted = ((usqInt) integerReceiver) >> (0 - integerArgument);
 		}
 	}
 	if (!foo->primFailCode) {

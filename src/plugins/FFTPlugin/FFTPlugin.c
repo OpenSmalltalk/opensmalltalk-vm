@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 22 December 2012 4:28:32 pm 
-   by VMMaker 4.10.5
+/* Automatically generated from Squeak on 29 December 2012 7:52:42 pm 
+   by VMMaker 4.10.7
  */
 
 #include <math.h>
@@ -61,9 +61,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"FFTPlugin 22 December 2012 (i)"
+	"FFTPlugin 29 December 2012 (i)"
 #else
-	"FFTPlugin 22 December 2012 (e)"
+	"FFTPlugin 29 December 2012 (e)"
 #endif
 ;
 static sqInt nu;
@@ -262,7 +262,7 @@ static sqInt transformForward(sqInt forward) {
 	fftSize2 = ((sqInt) fftSize >> 1);
 	fftSize4 = ((sqInt) fftSize >> 2);
 	for (level = 1; level <= nu; level += 1) {
-		lev = ((level < 0) ? ((usqInt) 1 >> -level) : ((usqInt) 1 << level));
+		lev = 1 << level;
 		lev1 = ((sqInt) lev >> 1);
 		fftScale = fftSize / lev;
 		for (j = 1; j <= lev1; j += 1) {

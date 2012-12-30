@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 22 December 2012 4:28:33 pm 
-   by VMMaker 4.10.5
+/* Automatically generated from Squeak on 29 December 2012 7:52:44 pm 
+   by VMMaker 4.10.7
  */
 
 #include <math.h>
@@ -77,7 +77,6 @@ static sqInt colorComponentfrom(int *aColorComponent, sqInt oop);
 static sqInt colorComponentBlocksfrom(int **blocks, sqInt oop);
 static sqInt crColorComponentFrom(sqInt oop);
 static sqInt decodeBlockIntocomponent(int *anArray, int *aColorComponent);
-static sqInt getBits(sqInt requestedBits);
 #pragma export on
 EXPORT(const char*) getModuleName(void);
 #pragma export off
@@ -130,9 +129,9 @@ static sqInt jsPosition;
 static sqInt jsReadLimit;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"JPEGReaderPlugin 22 December 2012 (i)"
+	"JPEGReaderPlugin 29 December 2012 (i)"
 #else
-	"JPEGReaderPlugin 22 December 2012 (e)"
+	"JPEGReaderPlugin 29 December 2012 (e)"
 #endif
 ;
 static int *residuals;
@@ -217,16 +216,49 @@ static sqInt decodeBlockIntocomponent(int *anArray, int *aColorComponent) {
     sqInt i;
     sqInt index;
     sqInt zeroCount;
+    sqInt value;
+    sqInt byte1;
+    sqInt value1;
+    sqInt byte2;
 
 	byte = jpegDecodeValueFromsize(dcTable, dcTableSize);
 	if (byte < 0) {
 		return interpreterProxy->primitiveFail();
 	}
 	if (byte != 0) {
-		bits = getBits(byte);
+		/* begin getBits: */
+		if (byte > jsBitCount) {
+			/* begin fillBuffer */
+			while (jsBitCount <= 16) {
+				if (!(jsPosition < jsReadLimit)) {
+					goto l3;
+				}
+				byte1 = jsCollection[jsPosition];
+				jsPosition += 1;
+				if (byte1 == 255) {
+					if (!((jsPosition < jsReadLimit) && ((jsCollection[jsPosition]) == 0))) {
+						jsPosition -= 1;
+						goto l3;
+					}
+					jsPosition += 1;
+				}
+				jsBitBuffer = (((usqInt) jsBitBuffer << 8)) | byte1;
+				jsBitCount += 8;
+			}
+		l3:	/* end fillBuffer */;
+			if (byte > jsBitCount) {
+				bits = -1;
+				goto l4;
+			}
+		}
+		jsBitCount -= byte;
+		value = ((usqInt) jsBitBuffer) >> jsBitCount;
+		jsBitBuffer = jsBitBuffer & ((1 << jsBitCount) - 1);
+		bits = value;
+	l4:	/* end getBits: */;
 		/* begin scaleAndSignExtend:inFieldWidth: */
-		if (bits < ((((byte - 1) < 0) ? ((usqInt) 1 >> -(byte - 1)) : ((usqInt) 1 << (byte - 1))))) {
-			byte = (bits - (((byte < 0) ? ((usqInt) 1 >> -byte) : ((usqInt) 1 << byte)))) + 1;
+		if (bits < (1 << (byte - 1))) {
+			byte = (bits - (1 << byte)) + 1;
 			goto l1;
 		} else {
 			byte = bits;
@@ -249,10 +281,39 @@ static sqInt decodeBlockIntocomponent(int *anArray, int *aColorComponent) {
 		byte = byte & 15;
 		if (byte != 0) {
 			index += zeroCount;
-			bits = getBits(byte);
+			/* begin getBits: */
+			if (byte > jsBitCount) {
+				/* begin fillBuffer */
+				while (jsBitCount <= 16) {
+					if (!(jsPosition < jsReadLimit)) {
+						goto l5;
+					}
+					byte2 = jsCollection[jsPosition];
+					jsPosition += 1;
+					if (byte2 == 255) {
+						if (!((jsPosition < jsReadLimit) && ((jsCollection[jsPosition]) == 0))) {
+							jsPosition -= 1;
+							goto l5;
+						}
+						jsPosition += 1;
+					}
+					jsBitBuffer = (((usqInt) jsBitBuffer << 8)) | byte2;
+					jsBitCount += 8;
+				}
+			l5:	/* end fillBuffer */;
+				if (byte > jsBitCount) {
+					bits = -1;
+					goto l6;
+				}
+			}
+			jsBitCount -= byte;
+			value1 = ((usqInt) jsBitBuffer) >> jsBitCount;
+			jsBitBuffer = jsBitBuffer & ((1 << jsBitCount) - 1);
+			bits = value1;
+		l6:	/* end getBits: */;
 			/* begin scaleAndSignExtend:inFieldWidth: */
-			if (bits < ((((byte - 1) < 0) ? ((usqInt) 1 >> -(byte - 1)) : ((usqInt) 1 << (byte - 1))))) {
-				byte = (bits - (((byte < 0) ? ((usqInt) 1 >> -byte) : ((usqInt) 1 << byte)))) + 1;
+			if (bits < (1 << (byte - 1))) {
+				byte = (bits - (1 << byte)) + 1;
 				goto l2;
 			} else {
 				byte = bits;
@@ -272,39 +333,6 @@ static sqInt decodeBlockIntocomponent(int *anArray, int *aColorComponent) {
 		}
 		index += 1;
 	}
-}
-
-static sqInt getBits(sqInt requestedBits) {
-    sqInt value;
-    sqInt byte;
-
-	if (requestedBits > jsBitCount) {
-		/* begin fillBuffer */
-		while (jsBitCount <= 16) {
-			if (!(jsPosition < jsReadLimit)) {
-				goto l1;
-			}
-			byte = jsCollection[jsPosition];
-			jsPosition += 1;
-			if (byte == 255) {
-				if (!((jsPosition < jsReadLimit) && ((jsCollection[jsPosition]) == 0))) {
-					jsPosition -= 1;
-					goto l1;
-				}
-				jsPosition += 1;
-			}
-			jsBitBuffer = (((usqInt) jsBitBuffer << 8)) | byte;
-			jsBitCount += 8;
-		}
-	l1:	/* end fillBuffer */;
-		if (requestedBits > jsBitCount) {
-			return -1;
-		}
-	}
-	value = (((requestedBits - jsBitCount) < 0) ? ((usqInt) jsBitBuffer >> -(requestedBits - jsBitCount)) : ((usqInt) jsBitBuffer << (requestedBits - jsBitCount)));
-	jsBitBuffer = jsBitBuffer & (((((jsBitCount - requestedBits) < 0) ? ((usqInt) 1 >> -(jsBitCount - requestedBits)) : ((usqInt) 1 << (jsBitCount - requestedBits)))) - 1);
-	jsBitCount -= requestedBits;
-	return value;
 }
 
 
@@ -354,7 +382,7 @@ static sqInt idctBlockIntqt(int *anArray, int *qt) {
 			}
 		}
 		if (anACTerm == -1) {
-			dcval = ((usqInt) ((anArray[i]) * (qt[0])) << 2);
+			dcval = ((anArray[i]) * (qt[0])) << Pass1Bits;
 			for (j = 0; j <= (DCTSize - 1); j += 1) {
 				ws[(j * DCTSize) + i] = dcval;
 			}
@@ -366,8 +394,8 @@ static sqInt idctBlockIntqt(int *anArray, int *qt) {
 			t3 = z1 + (z2 * FIXn0n765366865);
 			z2 = (anArray[i]) * (qt[i]);
 			z3 = (anArray[(DCTSize * 4) + i]) * (qt[(DCTSize * 4) + i]);
-			t0 = ((usqInt) (z2 + z3) << 13);
-			t1 = ((usqInt) (z2 - z3) << 13);
+			t0 = (z2 + z3) << ConstBits;
+			t1 = (z2 - z3) << ConstBits;
 			t10 = t0 + t3;
 			t13 = t0 - t3;
 			t11 = t1 + t2;
@@ -411,8 +439,8 @@ static sqInt idctBlockIntqt(int *anArray, int *qt) {
 		z1 = (z2 + z3) * FIXn0n541196100;
 		t2 = z1 + (z3 * (0 - FIXn1n847759065));
 		t3 = z1 + (z2 * FIXn0n765366865);
-		t0 = ((usqInt) ((ws[i]) + (ws[i + 4])) << 13);
-		t1 = ((usqInt) ((ws[i]) - (ws[i + 4])) << 13);
+		t0 = ((ws[i]) + (ws[i + 4])) << ConstBits;
+		t1 = ((ws[i]) - (ws[i + 4])) << ConstBits;
 		t10 = t0 + t3;
 		t13 = t0 - t3;
 		t11 = t1 + t2;
@@ -484,6 +512,8 @@ static sqInt jpegDecodeValueFromsize(int *table, sqInt tableSize) {
     sqInt index;
     sqInt tableIndex;
     sqInt value;
+    sqInt value1;
+    sqInt byte;
 
 
 	/* Initial bits needed */
@@ -497,10 +527,36 @@ static sqInt jpegDecodeValueFromsize(int *table, sqInt tableSize) {
 
 	tableIndex = 2;
 	while (1) {
-
-		/* Get bits */
-
-		bits = getBits(bitsNeeded);
+		/* begin getBits: */
+		if (bitsNeeded > jsBitCount) {
+			/* begin fillBuffer */
+			while (jsBitCount <= 16) {
+				if (!(jsPosition < jsReadLimit)) {
+					goto l1;
+				}
+				byte = jsCollection[jsPosition];
+				jsPosition += 1;
+				if (byte == 255) {
+					if (!((jsPosition < jsReadLimit) && ((jsCollection[jsPosition]) == 0))) {
+						jsPosition -= 1;
+						goto l1;
+					}
+					jsPosition += 1;
+				}
+				jsBitBuffer = (((usqInt) jsBitBuffer << 8)) | byte;
+				jsBitCount += 8;
+			}
+		l1:	/* end fillBuffer */;
+			if (bitsNeeded > jsBitCount) {
+				bits = -1;
+				goto l2;
+			}
+		}
+		jsBitCount -= bitsNeeded;
+		value1 = ((usqInt) jsBitBuffer) >> jsBitCount;
+		jsBitBuffer = jsBitBuffer & ((1 << jsBitCount) - 1);
+		bits = value1;
+	l2:	/* end getBits: */;
 		if (bits < 0) {
 			return -1;
 		}
@@ -624,7 +680,7 @@ EXPORT(sqInt) primitiveColorConvertGrayscaleMCU(void) {
 		dy = yComponent[CurrentYIndex];
 		sx = yComponent[HScaleIndex];
 		sy = yComponent[VScaleIndex];
-		if (!((sx == 0) && (sy == 0))) {
+		if ((sx != 0) && (sy != 0)) {
 			dx = dx / sx;
 			dy = dy / sy;
 		}
@@ -742,7 +798,7 @@ EXPORT(sqInt) primitiveColorConvertMCU(void) {
 		dy = yComponent[CurrentYIndex];
 		sx = yComponent[HScaleIndex];
 		sy = yComponent[VScaleIndex];
-		if (!((sx == 0) && (sy == 0))) {
+		if ((sx != 0) && (sy != 0)) {
 			dx = dx / sx;
 			dy = dy / sy;
 		}
@@ -762,7 +818,7 @@ EXPORT(sqInt) primitiveColorConvertMCU(void) {
 		dy1 = cbComponent[CurrentYIndex];
 		sx1 = cbComponent[HScaleIndex];
 		sy1 = cbComponent[VScaleIndex];
-		if (!((sx1 == 0) && (sy1 == 0))) {
+		if ((sx1 != 0) && (sy1 != 0)) {
 			dx1 = dx1 / sx1;
 			dy1 = dy1 / sy1;
 		}
@@ -783,7 +839,7 @@ EXPORT(sqInt) primitiveColorConvertMCU(void) {
 		dy2 = crComponent[CurrentYIndex];
 		sx2 = crComponent[HScaleIndex];
 		sy2 = crComponent[VScaleIndex];
-		if (!((sx2 == 0) && (sy2 == 0))) {
+		if ((sx2 != 0) && (sy2 != 0)) {
 			dx2 = dx2 / sx2;
 			dy2 = dy2 / sy2;
 		}

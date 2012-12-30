@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 22 December 2012 4:28:32 pm 
-   by VMMaker 4.10.5
+/* Automatically generated from Squeak on 29 December 2012 7:52:41 pm 
+   by VMMaker 4.10.7
  */
 
 #include <math.h>
@@ -78,9 +78,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"ZipPlugin 22 December 2012 (i)"
+	"ZipPlugin 29 December 2012 (i)"
 #else
-	"ZipPlugin 22 December 2012 (e)"
+	"ZipPlugin 29 December 2012 (e)"
 #endif
 ;
 static unsigned int zipBaseDistance[] = {
@@ -227,7 +227,7 @@ static sqInt deflateBlockchainLengthgoodMatch(sqInt lastIndex, sqInt chainLength
 
 			matchResult = findMatchlastLengthlastMatchchainLengthgoodMatch(here, DeflateMinMatch - 1, here, chainLength, goodMatch);
 			/* begin insertStringAt: */
-			zipHashValue = ((((usqInt) zipHashValue << 5)) ^ (zipCollection[(here + DeflateMinMatch) - 1])) & DeflateHashMask;
+			zipHashValue = ((zipHashValue << DeflateHashShift) ^ (zipCollection[(here + DeflateMinMatch) - 1])) & DeflateHashMask;
 			prevEntry = zipHashHead[zipHashValue];
 			zipHashHead[zipHashValue] = here;
 			zipHashTail[here & DeflateWindowMask] = prevEntry;
@@ -260,7 +260,7 @@ static sqInt deflateBlockchainLengthgoodMatch(sqInt lastIndex, sqInt chainLength
 			for (i = 1; i <= (hereLength - 1); i += 1) {
 				/* begin insertStringAt: */
 				here1 = (here += 1);
-				zipHashValue = ((((usqInt) zipHashValue << 5)) ^ (zipCollection[(here1 + DeflateMinMatch) - 1])) & DeflateHashMask;
+				zipHashValue = ((zipHashValue << DeflateHashShift) ^ (zipCollection[(here1 + DeflateMinMatch) - 1])) & DeflateHashMask;
 				prevEntry1 = zipHashHead[zipHashValue];
 				zipHashHead[zipHashValue] = here1;
 				zipHashTail[here1 & DeflateWindowMask] = prevEntry1;
@@ -278,7 +278,7 @@ static sqInt deflateBlockchainLengthgoodMatch(sqInt lastIndex, sqInt chainLength
 			here += 1;
 			if ((here <= lastIndex) && (!flushNeeded)) {
 				/* begin insertStringAt: */
-				zipHashValue = ((((usqInt) zipHashValue << 5)) ^ (zipCollection[(here + DeflateMinMatch) - 1])) & DeflateHashMask;
+				zipHashValue = ((zipHashValue << DeflateHashShift) ^ (zipCollection[(here + DeflateMinMatch) - 1])) & DeflateHashMask;
 				prevEntry2 = zipHashHead[zipHashValue];
 				zipHashHead[zipHashValue] = here;
 				zipHashTail[here & DeflateWindowMask] = prevEntry2;
@@ -323,7 +323,7 @@ static sqInt findMatchlastLengthlastMatchchainLengthgoodMatch(sqInt here, sqInt 
 
 	/* Compute the distance to the (possible) match */
 
-	matchPos = zipHashHead[((((usqInt) zipHashValue << 5)) ^ (zipCollection[(here + DeflateMinMatch) - 1])) & DeflateHashMask];
+	matchPos = zipHashHead[((zipHashValue << DeflateHashShift) ^ (zipCollection[(here + DeflateMinMatch) - 1])) & DeflateHashMask];
 
 	/* Note: It is required that 0 < distance < MaxDistance */
 
@@ -890,7 +890,7 @@ static sqInt sendBlockwithwithwith(sqInt literalStream, sqInt distanceStream, sq
 		interpreterProxy->primitiveFail();
 		goto l6;
 	}
-	zipBitBuf = zipBitBuf | (((zipBitPos < 0) ? ((usqInt) 0 >> -zipBitPos) : ((usqInt) 0 << zipBitPos)));
+	zipBitBuf = zipBitBuf | (0 << zipBitPos);
 	zipBitPos += 0;
 	while ((zipBitPos >= 8) && (zipPosition < zipCollectionSize)) {
 		zipCollection[zipPosition] = (zipBitBuf & 255);
@@ -917,7 +917,7 @@ l6:	/* end nextZipBits:put: */;
 				interpreterProxy->primitiveFail();
 				goto l1;
 			}
-			zipBitBuf = zipBitBuf | (((zipBitPos < 0) ? ((usqInt) (llCodes[lit]) >> -zipBitPos) : ((usqInt) (llCodes[lit]) << zipBitPos)));
+			zipBitBuf = zipBitBuf | ((llCodes[lit]) << zipBitPos);
 			zipBitPos += llBitLengths[lit];
 			while ((zipBitPos >= 8) && (zipPosition < zipCollectionSize)) {
 				zipCollection[zipPosition] = (zipBitBuf & 255);
@@ -943,7 +943,7 @@ l6:	/* end nextZipBits:put: */;
 				interpreterProxy->primitiveFail();
 				goto l4;
 			}
-			zipBitBuf = zipBitBuf | (((zipBitPos < 0) ? ((usqInt) (llCodes[code]) >> -zipBitPos) : ((usqInt) (llCodes[code]) << zipBitPos)));
+			zipBitBuf = zipBitBuf | ((llCodes[code]) << zipBitPos);
 			zipBitPos += llBitLengths[code];
 			while ((zipBitPos >= 8) && (zipPosition < zipCollectionSize)) {
 				zipCollection[zipPosition] = (zipBitBuf & 255);
@@ -960,7 +960,7 @@ l6:	/* end nextZipBits:put: */;
 					interpreterProxy->primitiveFail();
 					goto l2;
 				}
-				zipBitBuf = zipBitBuf | (((zipBitPos < 0) ? ((usqInt) lit >> -zipBitPos) : ((usqInt) lit << zipBitPos)));
+				zipBitBuf = zipBitBuf | (lit << zipBitPos);
 				zipBitPos += extra;
 				while ((zipBitPos >= 8) && (zipPosition < zipCollectionSize)) {
 					zipCollection[zipPosition] = (zipBitBuf & 255);
@@ -987,7 +987,7 @@ l6:	/* end nextZipBits:put: */;
 				interpreterProxy->primitiveFail();
 				goto l5;
 			}
-			zipBitBuf = zipBitBuf | (((zipBitPos < 0) ? ((usqInt) (distCodes[code]) >> -zipBitPos) : ((usqInt) (distCodes[code]) << zipBitPos)));
+			zipBitBuf = zipBitBuf | ((distCodes[code]) << zipBitPos);
 			zipBitPos += distBitLengths[code];
 			while ((zipBitPos >= 8) && (zipPosition < zipCollectionSize)) {
 				zipCollection[zipPosition] = (zipBitBuf & 255);
@@ -1004,7 +1004,7 @@ l6:	/* end nextZipBits:put: */;
 					interpreterProxy->primitiveFail();
 					goto l3;
 				}
-				zipBitBuf = zipBitBuf | (((zipBitPos < 0) ? ((usqInt) dist >> -zipBitPos) : ((usqInt) dist << zipBitPos)));
+				zipBitBuf = zipBitBuf | (dist << zipBitPos);
 				zipBitPos += extra;
 				while ((zipBitPos >= 8) && (zipPosition < zipCollectionSize)) {
 					zipCollection[zipPosition] = (zipBitBuf & 255);

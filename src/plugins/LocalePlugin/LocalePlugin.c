@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 22 December 2012 4:28:33 pm 
-   by VMMaker 4.10.5
+/* Automatically generated from Squeak on 29 December 2012 7:52:46 pm 
+   by VMMaker 4.10.7
  */
 
 #include <math.h>
@@ -64,9 +64,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"LocalePlugin 22 December 2012 (i)"
+	"LocalePlugin 29 December 2012 (i)"
 #else
-	"LocalePlugin 22 December 2012 (e)"
+	"LocalePlugin 29 December 2012 (e)"
 #endif
 ;
 

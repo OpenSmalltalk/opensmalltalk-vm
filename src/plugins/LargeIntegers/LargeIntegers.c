@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 22 December 2012 4:28:33 pm 
-   by VMMaker 4.10.5
+/* Automatically generated from Squeak on 29 December 2012 7:52:46 pm 
+   by VMMaker 4.10.7
  */
 
 #include <math.h>
@@ -146,10 +146,10 @@ static sqInt anyBitOfBytesfromto(sqInt aBytesOop, sqInt start, sqInt stopArg) {
 	}
 	firstByteIx = (((sqInt) (start - 1) >> 3)) + 1;
 	lastByteIx = (((sqInt) (stop - 1) >> 3)) + 1;
-	rightShift = 0 - ((start - 1) % 8);
+	rightShift = (start - 1) % 8;
 	leftShift = 7 - ((stop - 1) % 8);
 	if (firstByteIx == lastByteIx) {
-		mask = ((((0 - rightShift) < 0) ? ((usqInt) 255 >> -(0 - rightShift)) : ((usqInt) 255 << (0 - rightShift)))) & ((((0 - leftShift) < 0) ? ((usqInt) 255 >> -(0 - leftShift)) : ((usqInt) 255 << (0 - leftShift))));
+		mask = (255 << rightShift) & (((usqInt) 255) >> leftShift);
 		/* begin digitOfBytes:at: */
 		if (firstByteIx > (interpreterProxy->slotSizeOf(magnitude))) {
 			digit = 0;
@@ -161,7 +161,7 @@ static sqInt anyBitOfBytesfromto(sqInt aBytesOop, sqInt start, sqInt stopArg) {
 	l1:	/* end digitOfBytes:at: */;
 		return (digit & mask) != 0;
 	}
-	if ((((rightShift < 0) ? ((usqInt) (digitOfBytesat(magnitude, firstByteIx)) >> -rightShift) : ((usqInt) (digitOfBytesat(magnitude, firstByteIx)) << rightShift))) != 0) {
+	if ((((usqInt) (digitOfBytesat(magnitude, firstByteIx))) >> rightShift) != 0) {
 		return 1;
 	}
 	for (ix = (firstByteIx + 1); ix <= (lastByteIx - 1); ix += 1) {
@@ -169,7 +169,7 @@ static sqInt anyBitOfBytesfromto(sqInt aBytesOop, sqInt start, sqInt stopArg) {
 			return 1;
 		}
 	}
-	if (((((leftShift < 0) ? ((usqInt) (digitOfBytesat(magnitude, lastByteIx)) >> -leftShift) : ((usqInt) (digitOfBytesat(magnitude, lastByteIx)) << leftShift))) & 255) != 0) {
+	if ((((digitOfBytesat(magnitude, lastByteIx)) << leftShift) & 255) != 0) {
 		return 1;
 	}
 	return 0;
@@ -685,7 +685,7 @@ static unsigned char cDigitMultiplylenwithleninto(unsigned char *  pByteShort, s
 /*	ST indexed! */
 
 static sqInt cDigitOfCSIat(sqInt csi, sqInt ix) {
-	if (ix < 0) {
+	if (ix < 1) {
 		interpreterProxy->primitiveFail();
 	}
 	if (ix > 4) {
@@ -693,9 +693,9 @@ static sqInt cDigitOfCSIat(sqInt csi, sqInt ix) {
 	}
 	if (csi < 0) {
 		;
-		return (((((1 - ix) * 8) < 0) ? ((usqInt) (0 - csi) >> -((1 - ix) * 8)) : ((usqInt) (0 - csi) << ((1 - ix) * 8)))) & 255;
+		return (((usqInt) (0 - csi)) >> ((ix - 1) * 8)) & 255;
 	} else {
-		return (((((1 - ix) * 8) < 0) ? ((usqInt) csi >> -((1 - ix) * 8)) : ((usqInt) csi << ((1 - ix) * 8)))) & 255;
+		return (((usqInt) csi) >> ((ix - 1) * 8)) & 255;
 	}
 }
 

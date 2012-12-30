@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 22 December 2012 4:28:34 pm 
-   by VMMaker 4.10.5
+/* Automatically generated from Squeak on 29 December 2012 7:52:47 pm 
+   by VMMaker 4.10.7
  */
 
 #include <math.h>
@@ -72,9 +72,9 @@ static int lastAlloc = 0;
 static sqInt matchFlags;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"RePlugin 22 December 2012 (i)"
+	"RePlugin 29 December 2012 (i)"
 #else
-	"RePlugin 22 December 2012 (e)"
+	"RePlugin 29 December 2012 (e)"
 #endif
 ;
 static int netMemory = 0;
