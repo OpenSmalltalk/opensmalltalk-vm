@@ -7,7 +7,7 @@
 /* Window & OS interface stuff                                            */
 /**************************************************************************/
 
-/* To recompile this reliably you will need    */           
+/* To recompile this reliably you will need    */
 /* OSLib -  http://ro-oslib.sourceforge.net/   */
 /* Castle/AcornC/C++, the Acorn TCPIPLib       */
 /* and a little luck                           */
@@ -195,7 +195,7 @@ windowDescriptorBlock *AddWindowBlock(void) {
  * prim and fail it cleanly.
  * Initialize the block to a sensible state
  */
-static int nextIndex = 1; 
+static int nextIndex = 1;
 windowDescriptorBlock *thisWindow;
 	thisWindow = (windowDescriptorBlock*) calloc(1, sizeof(windowDescriptorBlock));
 	if ( thisWindow == NULL) {
@@ -437,7 +437,7 @@ unsigned int startTime, stopTime;
 #ifdef DEBUG
 	stopTime = microsecondsvalue();
 	PRINTF(("\\t DisplayReverseArea @ %d for w:%d h:%d took: %d\n", startTime, x1 - x0, y1 - y0, stopTime - startTime));
-#endif 
+#endif
 	return;
 }
 
@@ -461,7 +461,7 @@ windowDescriptorBlock * thisWindow;
 	}
 	more = wimp_redraw_window( wblock );
 	while ( more ) {
-		PRINTF(("\\t display pixmap l:%d t:%d r:%d b:%d\n", wblock->box.x0, wblock->box.y1, wblock->box.x1, wblock->box.y0)); 
+		PRINTF(("\\t display pixmap l:%d t:%d r:%d b:%d\n", wblock->box.x0, wblock->box.y1, wblock->box.x1, wblock->box.y0));
 		if ((e = xosspriteop_put_sprite_scaled (
 			osspriteop_PTR,
 			spriteAreaPtr,
@@ -524,19 +524,19 @@ os_error * e;
 
 
 /* window status */
- 
+
 void ResizeWindow(windowDescriptorBlock * thisWindow) {
 wimp_drag dragBlock;
 	PRINTF(("\\t ResizeWindow %x\n", (int)thisWindow->handle));
 	dragBlock.w = thisWindow->handle;
 	dragBlock.type = wimp_DRAG_SYSTEM_SIZE;
 	dragBlock.initial.x0 = thisWindow->visibleArea.x0;
-	dragBlock.initial.y0 = thisWindow->visibleArea.y0; 
+	dragBlock.initial.y0 = thisWindow->visibleArea.y0;
 	dragBlock.initial.x1 = thisWindow->visibleArea.x1;
-	dragBlock.initial.y1 = thisWindow->visibleArea.y1; 
+	dragBlock.initial.y1 = thisWindow->visibleArea.y1;
 	wimp_drag_box(&dragBlock);
 	/* when the drag is finished a window open_Request is sent,
-	 * and WindowOpen called to reset the cached size etc */ 
+	 * and WindowOpen called to reset the cached size etc */
 	return;
 }
 
@@ -563,7 +563,7 @@ void SetupWindowTitle(void) {
 /* set the root window title string.
  * if the -windowlabel: option was used, the title is the
  * string given; limited to the last WindowTitleLength (150) chars.
- */ 
+ */
 extern char * windowLabel;
 char * string;
 	if ( windowLabel == NULL) {
@@ -589,9 +589,9 @@ os_error * e;
 	}
 	/* set size of window */
 	wblock.visible.x0 = thisWindow->visibleArea.x0;
-	wblock.visible.y0 = thisWindow->visibleArea.y0; 
-	wblock.visible.x1 = thisWindow->visibleArea.x1; 
-	wblock.visible.y1 = thisWindow->visibleArea.y1; 
+	wblock.visible.y0 = thisWindow->visibleArea.y0;
+	wblock.visible.x1 = thisWindow->visibleArea.x1;
+	wblock.visible.y1 = thisWindow->visibleArea.y1;
 	/* insist on 0 scroll offsets */
 	wblock.xscroll = 0;
 	wblock.yscroll = 0;
@@ -641,7 +641,7 @@ os_palette * currPal;
 		/* plenty big enough for even 32bpp, but is not awkwardly big */
 		thisWindow->pixelTranslationTable = realloc( thisWindow->pixelTranslationTable, 1024);
 		for( i = 0; i<256; i++) {
-			xcolourtrans_return_colour_number_for_mode((os_colour)(paletteTable.entries[i]), colourtrans_CURRENT_MODE, (os_palette*)colourtrans_CURRENT_PALETTE, &val);
+			xcolourtrans_return_colour_number_for_mode((os_colour)(paletteTable.entries[i]), os_CURRENT_MODE, (os_palette*)colourtrans_CURRENT_PALETTE, &val);
 			if ( screenBitPerPixel <= 8) {
 				thisWindow->pixelTranslationTable->c[i] = (byte)(val & 0xFF);
 			} else  {
@@ -665,7 +665,7 @@ os_palette * currPal;
 	} else {
 		currPal = (log2bpp > 3) ? colourtrans_CURRENT_PALETTE : (os_palette*)&paletteTable;
 		/* call colourTrans_generate_table to find out how big the tx table has to be */
-		if ( (e = xcolourtrans_generate_table(  thisWindow->displaySprite->mode, currPal, colourtrans_CURRENT_MODE, colourtrans_CURRENT_PALETTE, NULL, colourtrans_RETURN_WIDE_ENTRIES, NULL, NULL, &tableSize )) != NULL) {
+		if ( (e = xcolourtrans_generate_table(  thisWindow->displaySprite->mode, currPal, os_CURRENT_MODE, colourtrans_CURRENT_PALETTE, NULL, colourtrans_RETURN_WIDE_ENTRIES, NULL, NULL, &tableSize )) != NULL) {
 			platReportFatalError(e);
 			return ;
 		}
@@ -674,7 +674,7 @@ os_palette * currPal;
 		thisWindow->pixelTranslationTable = realloc( thisWindow->pixelTranslationTable, tableSize);
 		PRINTF(("ok %0x s: %d\n", (int)thisWindow->pixelTranslationTable, tableSize));
 		/* call colourTrans_generate_table to build the tx table  */
-		if ( (e = xcolourtrans_generate_table(  thisWindow->displaySprite->mode, currPal, colourtrans_CURRENT_MODE, colourtrans_CURRENT_PALETTE, thisWindow->pixelTranslationTable,  colourtrans_RETURN_WIDE_ENTRIES, NULL, NULL, &tableSize )) != NULL) {
+		if ( (e = xcolourtrans_generate_table(  thisWindow->displaySprite->mode, currPal, os_CURRENT_MODE, colourtrans_CURRENT_PALETTE, thisWindow->pixelTranslationTable,  colourtrans_RETURN_WIDE_ENTRIES, NULL, NULL, &tableSize )) != NULL) {
 			platReportFatalError(e);
 			return ;
 		}
@@ -815,7 +815,7 @@ byte * daBaseAddress;
 			return false;
 	}
 	/* setup the sprite area . Start it at the beginning of the allocated chunk */
-	spriteAreaPtr = (osspriteop_area *)(ptr); 
+	spriteAreaPtr = (osspriteop_area *)(ptr);
 	spriteAreaPtr->size = neededSize;
 	spriteAreaPtr->sprite_count = 1;
 	spriteAreaPtr->first = 16;
@@ -841,7 +841,7 @@ int sprMode;
 	} else {
 		/* make the sprite name be SqW0001 etc */
 		sprintf(thisWindow->spriteName, "SqW%08d", thisWindow->windowIndex);
-	} 
+	}
 		/* derive the sprite mode from the depth(d) requested */
 	#define SPR_MODE_WORD(arg) ((arg<<osspriteop_TYPE_SHIFT) | (180<<osspriteop_YRES_SHIFT) | (180<<osspriteop_XRES_SHIFT) | 1 )
 		switch (thisWindow->squeakDisplayDepth) {
@@ -878,7 +878,7 @@ void DeleteSprite(windowDescriptorBlock * thisWindow) {
 	sprintf(thisWindow->spriteName, "\0");
 	thisWindow->displaySprite = null;
 	PRINTF(("DeleteSpr2: pTT %0x\n", thisWindow->pixelTranslationTable));
-	UpdateDisplaySpritePtrs();  
+	UpdateDisplaySpritePtrs();
 }
 
 void InitRootWindow(void) {
@@ -886,7 +886,7 @@ void InitRootWindow(void) {
  * code can run ok. Set the pointer to hostWindow[1] and make sure its
  * handle is null
  */
-	rootWindow = AddWindowBlock(); 
+	rootWindow = AddWindowBlock();
 	PRINTF(("\\t initRootWindow: &%x, %d\n", (int)rootWindow, (int)rootWindow->handle));
 }
 
@@ -899,7 +899,7 @@ void DeleteWindow(windowDescriptorBlock * thisWindow) {
 	RemoveWindowBlock(thisWindow);
 	xwimp_close_window(thisWindow->handle);
 
- 
+
 }
 
 void BuildWindow(windowDescriptorBlock * thisWindow) {
@@ -936,7 +936,7 @@ os_coord originP, sizeP;
 	wblock.flags = wimp_WINDOW_NEW_FORMAT | wimp_WINDOW_MOVEABLE
 			| wimp_WINDOW_BOUNDED_ONCE | wimp_WINDOW_IGNORE_XEXTENT
 			| wimp_WINDOW_IGNORE_YEXTENT
-			| thisWindow->attributes;         
+			| thisWindow->attributes;
 	/* colours */
 	wblock.title_fg = wimp_COLOUR_BLACK;
 	wblock.title_bg = wimp_COLOUR_LIGHT_GREY;
@@ -951,7 +951,7 @@ os_coord originP, sizeP;
 	wblock.extent.x1 = screenSizeP.x<<scalingFactor.x;
 	wblock.extent.y1 = 0;
 	/* titlebar flags */
-	wblock.title_flags = wimp_ICON_TEXT 
+	wblock.title_flags = wimp_ICON_TEXT
 		| wimp_ICON_FILLED  | wimp_ICON_HCENTRED
 		| wimp_ICON_VCENTRED | wimp_ICON_BORDER | wimp_ICON_INDIRECTED;
 	/* work area flags */
@@ -989,7 +989,7 @@ void CreateRootWindow(windowDescriptorBlock * thisWindow) {
 os_coord originP, sizeP;
 wimp_window_info wblock;
 	/* set the size of the root window.
-	 * don't make it bigger than the screen size and centre it 
+	 * don't make it bigger than the screen size and centre it
 	 */
 
 	/* maximum size is screen size */
@@ -1004,7 +1004,7 @@ wimp_window_info wblock;
 	thisWindow->visibleArea.x1 = Pix2OSX(originP.x + sizeP.x);
 	thisWindow->visibleArea.y1 = Pix2OSY(originP.y + sizeP.y);
 
-	thisWindow->attributes =  
+	thisWindow->attributes =
 		wimp_WINDOW_TITLE_ICON|
 		wimp_WINDOW_CLOSE_ICON |
 		wimp_WINDOW_BACK_ICON;
@@ -1014,7 +1014,7 @@ wimp_window_info wblock;
 }
 void CreatePlainWindow(windowDescriptorBlock * thisWindow) {
 /* Create a plain window. The visibleArea values MUST be setup before this
- * can be called, as well as the windowIndex 
+ * can be called, as well as the windowIndex
  */
 	PRINTF(("\\t Create plain window %d\n", thisWindow->windowIndex));
 	thisWindow->title[0] = '\0';
@@ -1043,7 +1043,7 @@ int byteSize;
 	 * requested width@height but the bitmap MUST be
 	 * that size or we will have great fun trying to do
 	 * the reversal echoing.
-	 */ 
+	 */
 	PRINTF(("\\t CreateDisplayBitmap i: %d p:%x w: %d h:%d d:%d\n", thisWindow->windowIndex, (int)thisWindow->handle, width, height, depth));
 
 	/* create the RiscOS pixmap to the right dimensions */
@@ -1076,7 +1076,7 @@ int byteSize;
 			return false;
 		}
 		PRINTF(("\\t extend sprite area to size: %d, used: %d\n", spriteAreaPtr->size, spriteAreaPtr->used));
-	} 
+	}
 
 	/* build the actual sprite and translation table */
 	CreateSprite(thisWindow);
@@ -1107,7 +1107,7 @@ windowDescriptorBlock * thisWindow = null;
 	thisWindow->attributes = 0;
 	if (attributeListLength == 4) {
 	/* if the attribute list is 4 bytes we treat it as an int
-	 * otherwise we ignore it */ 
+	 * otherwise we ignore it */
 		thisWindow->attributes  = *(int*)attributeList;
 	}
 	return thisWindow->windowIndex;
@@ -1139,7 +1139,7 @@ int ioCloseAllWindows(void) {
 }
 
 /* ioShowDisplayOnWindow: similar to ioShowDisplay but adds the int windowIndex
- * Return true if ok, false if not, but not currently checked 
+ * Return true if ok, false if not, but not currently checked
  * BitBlt has messed with part of the Display/Window - inform the WIMP so
  * that it gets redrawn when we do HandleEvents and get a
  * wimp_REDRAW_WINDOW_REQUEST */
@@ -1151,7 +1151,7 @@ windowDescriptorBlock * thisWindow;
 	affectedR = MIN(affectedR, width);
 	affectedT = MAX(affectedT, 0);
 	affectedB = MIN(affectedB, height);
-	
+
 	if(affectedR <= affectedL || affectedT >= affectedB) return true;
 
 	PRINTF(("\\t ioShowDisplayOnWindow: %d @ %d l:%d t:%d r:%d b:%d\n", windowIndex, microsecondsvalue(), affectedL, affectedT, affectedR, affectedB));
@@ -1165,7 +1165,7 @@ windowDescriptorBlock * thisWindow;
 	 * build a window to suit. That can be dropped someday when
 	 * Display is not a special case.
 	 */
-	
+
 	if( thisWindow->displaySprite == NULL ||
 		thisWindow->bitmapExtentP.x != width ||
 		thisWindow->bitmapExtentP.y != height ||
@@ -1211,7 +1211,7 @@ windowDescriptorBlock * thisWindow;
 		return -1;
 	}
 	if (windowIndex == 1 && thisWindow->handle == null) {
-		/* main window not yet open, derive from saved size in image 
+		/* main window not yet open, derive from saved size in image
 		   if there's no window yet, we need to check the
 		   screen metrics to make sure we
 		   don't make too big a window later */
@@ -1257,7 +1257,7 @@ int w,h;
 	/* x0 stays as currently set */
 	/* y0 is y1 - h<<scale */
 	thisWindow->visibleArea.y0 = thisWindow->visibleArea.y1
-		- Pix2OSY(height); 
+		- Pix2OSY(height);
 	/* y1 stays as is */
 	/* x1 is x0 + w<<scale */
 	thisWindow->visibleArea.x1 = thisWindow->visibleArea.x0
@@ -1346,7 +1346,7 @@ windowDescriptorBlock * thisWindow;
 	if ((thisWindow->attributes | wimp_WINDOW_TITLE_ICON) == 0 ) {
 		return -1;
 	}
-	
+
 	/* copy to the window */
 	strncpy(thisWindow->title, newTitle, sizeOfTitle);
 	thisWindow->title[sizeOfTitle] = '\0';
@@ -1389,7 +1389,7 @@ os_error *e;
 			   if it is 1 as well, set 'black' */
 			if(maskWord & (1<<(j))) {
 				line |= (1<< ((15-j)<<1));
-				if(cursorWord & (1<<(j))) 
+				if(cursorWord & (1<<(j)))
 					line |= (2<< ((15-j)<<1));
 			}
 		}
@@ -1463,7 +1463,7 @@ windowDescriptorBlock * thisWindow;
 			thisWindow->visibleArea.y1 = Pix2OSY(screenSizeP.y) - thisWindow->visibleArea.y0;
 			thisWindow->visibleArea.y0 = 0;
 			SetWindowBounds(thisWindow);
-		}  
+		}
 		/* save the new size in case the image is saved */
 		setSavedWindowSize(
 			(OS2PixX(thisWindow->visibleArea.x1 - thisWindow->visibleArea.x0) << 16)
@@ -1498,8 +1498,8 @@ sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullScreenF
  * Fail if we can't meet the request 'reasonably'.
  */
 
-// not viable for multiple windows and not decently specified anyway 
-static os_box prevSize = {0,0,0,0}; 
+// not viable for multiple windows and not decently specified anyway
+static os_box prevSize = {0,0,0,0};
 	if (fullScreenFlag) {
 		/* find out if we can do a screen mode change to requested size.
 		 * fail if not.
@@ -1548,7 +1548,7 @@ sqInt ioScreenDepth(void) {
 }
 
 sqInt ioHasDisplayDepth(sqInt bitsPerPixel) {
-// return true for all supported bpp supported. 
+// return true for all supported bpp supported.
 	switch((int)bitsPerPixel) {
 // -ve numbers invoke a littleendian display - doesn't quite work for
 // some reason.
