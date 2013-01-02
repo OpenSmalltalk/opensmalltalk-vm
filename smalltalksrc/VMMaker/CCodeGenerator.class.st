@@ -377,9 +377,11 @@ CCodeGenerator >> cLiteralFor: anObject [
 	anObject isNumber
 		ifTrue:
 			[anObject isInteger ifTrue:
-				[^(anObject < 16r7FFFFFFF)
-					ifTrue: [anObject printString]
-					ifFalse: [anObject printString , ObjectMemory unsignedIntegerSuffix]].
+				[^anObject > 16rFFFFFFFF
+						ifTrue: [anObject printString , ObjectMemory unsignedLongLongSuffix]
+						ifFalse: [anObject < 16r7FFFFFFF
+							ifTrue: [anObject printString]
+							ifFalse: [anObject printString , ObjectMemory unsignedIntegerSuffix]]].
 			anObject isFloat ifTrue:
 				[^anObject printString]]
 		ifFalse:
@@ -412,9 +414,11 @@ CCodeGenerator >> cLiteralFor: anObject name: smalltalkName [
 					and: [(smalltalkName endsWith: 'Size') not]]])
 					ifTrue: [hex first = $- ifTrue: ['-0x', hex allButFirst] ifFalse: ['0x', hex]]
 					ifFalse: [dec].
-		^(anObject < 16r7FFFFFFF)
-			ifTrue: [rep]
-			ifFalse: [rep, ObjectMemory unsignedIntegerSuffix "ikp"]].
+		^anObject > 16rFFFFFFFF
+			ifTrue: [rep, ObjectMemory unsignedLongLongSuffix]
+			ifFalse: [anObject < 16r7FFFFFFF
+				ifTrue: [rep]
+				ifFalse: [rep, ObjectMemory unsignedIntegerSuffix]]].
 	^self cLiteralFor: anObject
 ]
 
