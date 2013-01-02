@@ -472,6 +472,13 @@ ObjectMemory class >> unsignedIntegerSuffix [
 	^BytesPerWord = 4 ifTrue: ['UL'] ifFalse: ['ULL']
 ]
 
+{ #category : #translation }
+ObjectMemory class >> unsignedLongLongSuffix [
+	"Answer the suffix that should be appended to unsigned integer literals in generated code."
+
+	^'ULL'
+]
+
 { #category : #'gc -- mark and sweep' }
 ObjectMemory >> aComment [
 	"The mark phase is based on a pointer reversing traversal. This is a little tricky because the class, which is needed by the traversal, may be in either the header (as a compact class index) or in the word above the header. See memo 'Revised object format'.
