@@ -1501,7 +1501,7 @@ ThreadedFFIPlugin >> primitiveFFIIntegerAt [
 		"short/byte"
 		byteSize = 1 
 			ifTrue:[value := interpreterProxy byteAt: addr]
-			ifFalse:[	value := self cCode: '*((short int *) addr)' 
+			ifFalse:[	value := self cCode: '*((unsigned short int *) addr)' 
 								inSmalltalk: [interpreterProxy shortAt: addr]].
 		isSigned ifTrue:["sign extend value"
 			mask := 1 << (byteSize * 8 - 1).
