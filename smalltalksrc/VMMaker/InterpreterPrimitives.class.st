@@ -157,11 +157,11 @@ InterpreterPrimitives >> isInstanceOfClassByteString: oop [
 	<inline: true>
 	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
 	 (because is:instanceOf:compactClassIndex: has an inline: pragma) the
-	 phrase (objectMemory splObj: ClassString) is expanded in-place and
+	 phrase (objectMemory splObj: ClassByteString) is expanded in-place and
 	 is _not_ evaluated if oop has a non-zero CompactClassIndex."
 	^objectMemory
 		is: oop
-		instanceOf: (objectMemory splObj: ClassString) 
+		instanceOf: (objectMemory splObj: ClassByteString) 
 		compactClassIndex: ClassByteStringCompactIndex
 ]
 
@@ -710,7 +710,7 @@ InterpreterPrimitives >> primitiveBitShift [
 		] ifFalse: [
 			"Right shift -- OK to lose bits"
 			self success: integerArgument >= -31.
-			shifted := integerReceiver bitShift: integerArgument.
+			shifted := integerReceiver >> (0 - integerArgument).
 		].
 	].
 	self successful
@@ -860,7 +860,7 @@ InterpreterPrimitives >> primitiveClipboardText [
 					self pop: 1]]
 		ifFalse: [sz := self clipboardSize.
 			(objectMemory sufficientSpaceToAllocate: sz) ifFalse:[^self primitiveFail].
-			s := objectMemory instantiateClass: (objectMemory splObj: ClassString) indexableSize: sz.
+			s := objectMemory instantiateClass: (objectMemory splObj: ClassByteString) indexableSize: sz.
 			self clipboardRead: sz Into: s + BaseHeaderSize At: 0.
 			self pop: 1 thenPush: s]
 ]
@@ -1633,7 +1633,7 @@ InterpreterPrimitives >> primitiveGetAttribute [
 		ifTrue: [sz := self attributeSize: attr].
 	self successful
 		ifTrue: [s := objectMemory
-						instantiateClass: (objectMemory splObj: ClassString)
+						instantiateClass: (objectMemory splObj: ClassByteString)
 						indexableSize: sz.
 			self
 				getAttribute: attr
@@ -1811,7 +1811,7 @@ InterpreterPrimitives >> primitiveImageName [
 		sCRIfn ~= 0 ifTrue:[okToRename := self cCode:' ((sqInt (*)(void))sCRIfn)()'.
 			okToRename ifFalse:[^self primitiveFail]].
 		s := self stackTop.
-		self assertClassOf: s is: (objectMemory splObj: ClassString).
+		self assertClassOf: s is: (objectMemory splObj: ClassByteString).
 		self successful ifTrue: [
 			sz := self stSizeOf: s.
 			self imageNamePut: (s + BaseHeaderSize) Length: sz.
@@ -1819,7 +1819,7 @@ InterpreterPrimitives >> primitiveImageName [
 		].
 	] ifFalse: [
 		sz := self imageNameSize.
-		s := objectMemory instantiateClass: (objectMemory splObj: ClassString) indexableSize: sz.
+		s := objectMemory instantiateClass: (objectMemory splObj: ClassByteString) indexableSize: sz.
 		self imageNameGet: (s + BaseHeaderSize) Length: sz.
 		self pop: 1.  "rcvr"
 		self push: s.
@@ -3550,7 +3550,7 @@ InterpreterPrimitives >> primitiveVMPath [
 
 	| s sz |
 	sz := self vmPathSize.
-	s := objectMemory instantiateClass: (objectMemory splObj: ClassString) indexableSize: sz.
+	s := objectMemory instantiateClass: (objectMemory splObj: ClassByteString) indexableSize: sz.
 	self vmPathGet: (s + BaseHeaderSize) Length: sz.
 	self pop: 1 thenPush: s.
 

@@ -5080,7 +5080,7 @@ Interpreter >> primitiveClipboardText [
 					self pop: 1]]
 		ifFalse: [sz := self clipboardSize.
 			(self sufficientSpaceToAllocate: sz) ifFalse:[^self primitiveFail].
-			s := self instantiateClass: (self splObj: ClassString) indexableSize: sz.
+			s := self instantiateClass: (self splObj: ClassByteString) indexableSize: sz.
 			self clipboardRead: sz Into: s + BaseHeaderSize At: 0.
 			self pop: 1 thenPush: s]
 ]
@@ -6028,7 +6028,7 @@ Interpreter >> primitiveGetAttribute [
 		ifTrue: [sz := self attributeSize: attr].
 	successFlag
 		ifTrue: [s := self
-						instantiateClass: (self splObj: ClassString)
+						instantiateClass: (self splObj: ClassByteString)
 						indexableSize: sz.
 			self
 				getAttribute: attr
@@ -6186,7 +6186,7 @@ Interpreter >> primitiveImageName [
 		sCRIfn ~= 0 ifTrue:[okToRename := self cCode:' ((sqInt (*)(void))sCRIfn)()'.
 			okToRename ifFalse:[^self primitiveFail]].
 		s := self stackTop.
-		self assertClassOf: s is: (self splObj: ClassString).
+		self assertClassOf: s is: (self splObj: ClassByteString).
 		successFlag ifTrue: [
 			sz := self stSizeOf: s.
 			self imageNamePut: (s + BaseHeaderSize) Length: sz.
@@ -6194,7 +6194,7 @@ Interpreter >> primitiveImageName [
 		].
 	] ifFalse: [
 		sz := self imageNameSize.
-		s := self instantiateClass: (self splObj: ClassString) indexableSize: sz.
+		s := self instantiateClass: (self splObj: ClassByteString) indexableSize: sz.
 		self imageNameGet: (s + BaseHeaderSize) Length: sz.
 		self pop: 1.  "rcvr"
 		self push: s.
@@ -8335,7 +8335,7 @@ Interpreter >> primitiveVMPath [
 
 	| s sz |
 	sz := self vmPathSize.
-	s := self instantiateClass: (self splObj: ClassString) indexableSize: sz.
+	s := self instantiateClass: (self splObj: ClassByteString) indexableSize: sz.
 	self vmPathGet: (s + BaseHeaderSize) Length: sz.
 	self pop: 1 thenPush: s.
 
