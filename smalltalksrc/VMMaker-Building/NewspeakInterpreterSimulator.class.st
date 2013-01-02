@@ -968,7 +968,7 @@ NewspeakInterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize
 	self pushRemappableOop:
 		(self instantiateClass: (self splObj: ClassArray) indexableSize: 5).
 	self pushRemappableOop:
-		(self instantiateClass: (self splObj: ClassString) indexableSize: entryNameSize)..
+		(self instantiateClass: (self splObj: ClassByteString) indexableSize: entryNameSize)..
 	self pushRemappableOop: (self positive32BitIntegerFor: createDate).
 	self pushRemappableOop: (self positive32BitIntegerFor: modifiedDate).
 
@@ -1266,7 +1266,7 @@ NewspeakInterpreterSimulator >> primitiveGetAttribute [
 	self successful ifTrue: [
 		attribute := Smalltalk getSystemAttribute: attr.
 		attribute ifNil: [ ^self primitiveFail ].
-		s := self instantiateClass: (self splObj: ClassString) indexableSize: attribute size.
+		s := self instantiateClass: (self splObj: ClassByteString) indexableSize: attribute size.
 		1 to: attribute size do: [ :i |
 			self storeByte: i-1 ofObject: s withValue: (attribute at: i) asciiValue].
 		self pop: 2.  "rcvr, attr"
@@ -1280,7 +1280,7 @@ NewspeakInterpreterSimulator >> primitiveImageName [
 	| result imageNameSize |
 	self pop: 1.
 	imageNameSize := imageName size.
-	result := self instantiateClass: (self splObj: ClassString)
+	result := self instantiateClass: (self splObj: ClassByteString)
 				   indexableSize: imageNameSize.
 	1 to: imageNameSize do:
 		[:i | self storeByte: i-1 ofObject: result

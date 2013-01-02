@@ -1815,7 +1815,7 @@ CogVMSimulator >> makeDirEntryName: entryName size: entryNameSize
 	<var: 'entryName' type: 'char *'>
 
 	results			:= objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 5.
-	nameString		:= objectMemory instantiateClass: (objectMemory splObj: ClassString) indexableSize: entryNameSize.
+	nameString		:= objectMemory instantiateClass: (objectMemory splObj: ClassByteString) indexableSize: entryNameSize.
 	createDateOop	:= self positive32BitIntegerFor: createDate.
 	modDateOop	:= self positive32BitIntegerFor: modifiedDate.
 
@@ -2414,7 +2414,7 @@ CogVMSimulator >> primitiveGetAttribute [
 	self successful ifTrue: [
 		attribute := systemAttributes at: index ifAbsent: [Smalltalk getSystemAttribute: index].
 		attribute ifNil: [ ^self primitiveFail ].
-		s := objectMemory instantiateClass: (objectMemory splObj: ClassString) indexableSize: attribute size.
+		s := objectMemory instantiateClass: (objectMemory splObj: ClassByteString) indexableSize: attribute size.
 		1 to: attribute size do: [ :i |
 			objectMemory storeByte: i-1 ofObject: s withValue: (attribute at: i) asciiValue].
 		self pop: 2.  "rcvr, attr"
@@ -2427,7 +2427,7 @@ CogVMSimulator >> primitiveImageName [
 	| result imageNameSize |
 	self pop: 1.
 	imageNameSize := imageName size.
-	result := objectMemory instantiateClass: (objectMemory splObj: ClassString)
+	result := objectMemory instantiateClass: (objectMemory splObj: ClassByteString)
 				   indexableSize: imageNameSize.
 	1 to: imageNameSize do:
 		[:i | objectMemory storeByte: i-1 ofObject: result

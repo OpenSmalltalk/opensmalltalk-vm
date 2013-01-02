@@ -1371,7 +1371,7 @@ ObjectMemory >> classSmallInteger [
 
 { #category : #'plugin support' }
 ObjectMemory >> classString [
-	^self splObj: ClassString
+	^self splObj: ClassByteString
 ]
 
 { #category : #'plugin support' }
