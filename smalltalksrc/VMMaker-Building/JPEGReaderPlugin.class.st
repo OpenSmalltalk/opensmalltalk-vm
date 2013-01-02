@@ -331,9 +331,9 @@ JPEGReaderPlugin >> getBits: requestedBits [
 	requestedBits > jsBitCount ifTrue:[
 		self fillBuffer.
 		requestedBits > jsBitCount ifTrue:[^-1]].
-	value := jsBitBuffer bitShift: (requestedBits - jsBitCount).
-	jsBitBuffer := jsBitBuffer bitAnd: (1 bitShift: (jsBitCount - requestedBits)) -1.
 	jsBitCount := jsBitCount - requestedBits.
+	value := jsBitBuffer >> jsBitCount.
+	jsBitBuffer := jsBitBuffer bitAnd: (1 << jsBitCount) -1.
 	^ value
 ]
 
@@ -351,7 +351,7 @@ JPEGReaderPlugin >> idctBlockInt: anArray qt: qt [
 			anACTerm = -1 ifTrue:[
 				(anArray at: row * DCTSize + i) = 0 ifFalse:[anACTerm := row]]].
 		anACTerm = -1 ifTrue:[
-			dcval := (anArray at: i) * (qt at: 0) bitShift: Pass1Bits.
+			dcval := (anArray at: i) * (qt at: 0) << Pass1Bits.
 			0 to: DCTSize-1 do: [:j | ws at: (j * DCTSize + i) put: dcval]
 		] ifFalse:[
 			z2 := (anArray at: (DCTSize * 2 + i)) * (qt at: (DCTSize * 2 + i)).
@@ -361,8 +361,8 @@ JPEGReaderPlugin >> idctBlockInt: anArray qt: qt [
 			t3 := z1 + (z2 * FIXn0n765366865).
 			z2 := (anArray at: i) * (qt at: i).
 			z3 := (anArray at: (DCTSize * 4 + i)) * (qt at: (DCTSize * 4 + i)).
-			t0 := (z2 + z3) bitShift: ConstBits.
-			t1 := (z2 - z3) bitShift: ConstBits.
+			t0 := (z2 + z3) << ConstBits.
+			t1 := (z2 - z3) << ConstBits.
 			t10 := t0 + t3.
 			t13 := t0 - t3.
 			t11 := t1 + t2.
@@ -406,8 +406,8 @@ JPEGReaderPlugin >> idctBlockInt: anArray qt: qt [
 		z1 := (z2 + z3) * FIXn0n541196100.
 		t2 := z1 + (z3 * (0-FIXn1n847759065)).
 		t3 := z1 + (z2 * FIXn0n765366865).
-		t0 := (ws at: i) + (ws at: (i + 4)) bitShift: ConstBits.
-		t1 := (ws at: i) - (ws at: (i + 4)) bitShift: ConstBits.
+		t0 := (ws at: i) + (ws at: (i + 4)) << ConstBits.
+		t1 := (ws at: i) - (ws at: (i + 4)) << ConstBits.
 		t10 := t0 + t3.
 		t13 := t0 - t3.
 		t11 := t1 + t2.
@@ -770,8 +770,8 @@ JPEGReaderPlugin >> primitiveIdctInt [
 { #category : #decoding }
 JPEGReaderPlugin >> scaleAndSignExtend: aNumber inFieldWidth: w [
 	<inline: true>
-	aNumber < (1 bitShift: (w - 1))
-		ifTrue: [^aNumber - (1 bitShift: w) + 1]
+	aNumber < (1 << (w - 1))
+		ifTrue: [^aNumber - (1 << w) + 1]
 		ifFalse: [^aNumber]
 ]
 

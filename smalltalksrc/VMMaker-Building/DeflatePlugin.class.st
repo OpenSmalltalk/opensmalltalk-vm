@@ -359,7 +359,7 @@ DeflatePlugin >> nextZipBits: nBits put: value [
 	<inline: true>
 	(value >= 0 and:[(1 << nBits) > value])
 		ifFalse:[^interpreterProxy primitiveFail].
-	zipBitBuf := zipBitBuf bitOr: (value bitShift: zipBitPos).
+	zipBitBuf := zipBitBuf bitOr: value << zipBitPos.
 	zipBitPos := zipBitPos + nBits.
 	[zipBitPos >= 8 and:[zipPosition < zipCollectionSize]] whileTrue:[
 		zipCollection at: zipPosition put: (zipBitBuf bitAnd: 255).
@@ -654,7 +654,7 @@ DeflatePlugin >> shouldFlush [
 DeflatePlugin >> updateHash: nextValue [
 	"Update the running hash value based on the next input byte.
 	Return the new updated hash value."
-	^((zipHashValue bitShift: DeflateHashShift) bitXor: nextValue) bitAnd: DeflateHashMask.
+	^((zipHashValue << DeflateHashShift) bitXor: nextValue) bitAnd: DeflateHashMask.
 ]
 
 { #category : #deflating }
