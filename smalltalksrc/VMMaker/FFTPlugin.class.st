@@ -175,7 +175,7 @@ FFTPlugin >> transformForward: forward [
 	fftSize4 := fftSize // 4.
 	1 to: nu do:
 		[:level |
-		lev := 1 bitShift: level.
+		lev := 1 << level.
 		lev1 := lev // 2.
 		fftScale := fftSize // lev.
 		1 to: lev1 do:

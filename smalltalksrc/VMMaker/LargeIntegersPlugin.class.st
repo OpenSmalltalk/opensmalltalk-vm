@@ -133,17 +133,16 @@ LargeIntegersPlugin >> anyBitOfBytes: aBytesOop from: start to: stopArg [
 		ifTrue: [^ false].
 	firstByteIx := start - 1 // 8 + 1.
 	lastByteIx := stop - 1 // 8 + 1.
-	rightShift := 0 - (start - 1 \\ 8).
+	rightShift := (start - 1 \\ 8).
 	leftShift := 7 - (stop - 1 \\ 8).
 	firstByteIx = lastByteIx
 		ifTrue: [| digit mask | 
-			mask := (255 bitShift: 0 - rightShift)
-						bitAnd: (255 bitShift: 0 - leftShift).
+			mask := (255 << rightShift) bitAnd: (255 >> leftShift).
 			digit := self digitOfBytes: magnitude at: firstByteIx.
 			^ (digit bitAnd: mask)
 				~= 0].
 	((self digitOfBytes: magnitude at: firstByteIx)
-			bitShift: rightShift)
+			>> rightShift)
 			~= 0
 		ifTrue: [^ true].
 	firstByteIx + 1
@@ -152,7 +151,7 @@ LargeIntegersPlugin >> anyBitOfBytes: aBytesOop from: start to: stopArg [
 					~= 0
 				ifTrue: [^ true]].
 	(((self digitOfBytes: magnitude at: lastByteIx)
-			bitShift: leftShift)
+			<< leftShift)
 			bitAnd: 255)
 			~= 0
 		ifTrue: [^ true].
@@ -605,7 +604,7 @@ LargeIntegersPlugin >> cDigitOfCSI: csi at: ix [
 	LargePositiveInteger uses bytes of base two number, and each is a       
 	      'digit' base 256."
 	"ST indexed!"
-	ix < 0 ifTrue: [interpreterProxy primitiveFail].
+	ix < 1 ifTrue: [interpreterProxy primitiveFail].
 	ix > 4 ifTrue: [^ 0].
 	csi < 0
 		ifTrue: 
@@ -613,9 +612,9 @@ LargeIntegersPlugin >> cDigitOfCSI: csi at: ix [
 				inSmalltalk: [csi = -1073741824 ifTrue: ["SmallInteger minVal"
 						"Can't negate minVal -- treat specially"
 						^ #(0 0 0 64 ) at: ix]].
-			^ (0 - csi bitShift: 1 - ix * 8)
+			^ (0 - csi) >> (ix - 1 * 8)
 				bitAnd: 255]
-		ifFalse: [^ (csi bitShift: 1 - ix * 8)
+		ifFalse: [^ csi >> (ix - 1 * 8)
 				bitAnd: 255]
 ]
 
