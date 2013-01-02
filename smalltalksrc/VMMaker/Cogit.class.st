@@ -435,6 +435,7 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 			'ceImplicitReceiverTrampoline' 'ceExplicitReceiverTrampoline' 'cmDynSuperEntryOffset') do:
 				[:variableNotNeededInNormalVM|
 				aCCodeGenerator removeVariable: variableNotNeededInNormalVM]].
+	aCCodeGenerator removeConstant: #COGMTVM. "this should be defined at compile time"
 	aCCodeGenerator
 		addHeaderFile:'<stddef.h>'; "for e.g. offsetof"
 		addHeaderFile:'"sqCogStackAlignment.h"';
