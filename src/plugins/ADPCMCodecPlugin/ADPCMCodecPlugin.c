@@ -1,4 +1,4 @@
-/* Automatically generated from Squeak on 29 December 2012 7:52:36 pm 
+/* Automatically generated from Squeak on 2 January 2013 7:47:35 pm 
    by VMMaker 4.10.7
  */
 
@@ -62,9 +62,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"ADPCMCodecPlugin 29 December 2012 (i)"
+	"ADPCMCodecPlugin 2 January 2013 (i)"
 #else
-	"ADPCMCodecPlugin 29 December 2012 (e)"
+	"ADPCMCodecPlugin 2 January 2013 (e)"
 #endif
 ;
 
@@ -159,14 +159,15 @@ EXPORT(sqInt) primitiveDecodeMono(void) {
 			remaining = 16;
 			while(1) {
 				shift = remaining - bitPosition;
-				result += ((shift < 0) ? ((usqInt) currentByte >> -shift) : ((usqInt) currentByte << shift));
 				if (shift > 0) {
+					result += currentByte << shift;
 					remaining -= bitPosition;
 					currentByte = encodedBytes[(byteIndex += 1)];
 					bitPosition = 8;
 				} else {
+					result += ((usqInt) currentByte) >> (0 - shift);
 					bitPosition -= remaining;
-					currentByte = currentByte & ((((bitPosition - 8) < 0) ? ((usqInt) 255 >> -(bitPosition - 8)) : ((usqInt) 255 << (bitPosition - 8))));
+					currentByte = currentByte & (((usqInt) 255) >> (8 - bitPosition));
 					predicted = result;
 					goto l1;
 				}
@@ -180,14 +181,15 @@ EXPORT(sqInt) primitiveDecodeMono(void) {
 			remaining1 = 6;
 			while(1) {
 				shift1 = remaining1 - bitPosition;
-				result1 += ((shift1 < 0) ? ((usqInt) currentByte >> -shift1) : ((usqInt) currentByte << shift1));
 				if (shift1 > 0) {
+					result1 += currentByte << shift1;
 					remaining1 -= bitPosition;
 					currentByte = encodedBytes[(byteIndex += 1)];
 					bitPosition = 8;
 				} else {
+					result1 += ((usqInt) currentByte) >> (0 - shift1);
 					bitPosition -= remaining1;
-					currentByte = currentByte & ((((bitPosition - 8) < 0) ? ((usqInt) 255 >> -(bitPosition - 8)) : ((usqInt) 255 << (bitPosition - 8))));
+					currentByte = currentByte & (((usqInt) 255) >> (8 - bitPosition));
 					index = result1;
 					goto l2;
 				}
@@ -200,14 +202,15 @@ EXPORT(sqInt) primitiveDecodeMono(void) {
 			remaining2 = bitsPerSample;
 			while(1) {
 				shift2 = remaining2 - bitPosition;
-				result2 += ((shift2 < 0) ? ((usqInt) currentByte >> -shift2) : ((usqInt) currentByte << shift2));
 				if (shift2 > 0) {
+					result2 += currentByte << shift2;
 					remaining2 -= bitPosition;
 					currentByte = encodedBytes[(byteIndex += 1)];
 					bitPosition = 8;
 				} else {
+					result2 += ((usqInt) currentByte) >> (0 - shift2);
 					bitPosition -= remaining2;
-					currentByte = currentByte & ((((bitPosition - 8) < 0) ? ((usqInt) 255 >> -(bitPosition - 8)) : ((usqInt) 255 << (bitPosition - 8))));
+					currentByte = currentByte & (((usqInt) 255) >> (8 - bitPosition));
 					delta = result2;
 					goto l3;
 				}
@@ -351,14 +354,15 @@ EXPORT(sqInt) primitiveDecodeStereo(void) {
 			remaining = 16;
 			while(1) {
 				shift = remaining - bitPosition;
-				result += ((shift < 0) ? ((usqInt) currentByte >> -shift) : ((usqInt) currentByte << shift));
 				if (shift > 0) {
+					result += currentByte << shift;
 					remaining -= bitPosition;
 					currentByte = encodedBytes[(byteIndex += 1)];
 					bitPosition = 8;
 				} else {
+					result += ((usqInt) currentByte) >> (0 - shift);
 					bitPosition -= remaining;
-					currentByte = currentByte & ((((bitPosition - 8) < 0) ? ((usqInt) 255 >> -(bitPosition - 8)) : ((usqInt) 255 << (bitPosition - 8))));
+					currentByte = currentByte & (((usqInt) 255) >> (8 - bitPosition));
 					predictedLeft = result;
 					goto l1;
 				}
@@ -369,14 +373,15 @@ EXPORT(sqInt) primitiveDecodeStereo(void) {
 			remaining1 = 6;
 			while(1) {
 				shift1 = remaining1 - bitPosition;
-				result1 += ((shift1 < 0) ? ((usqInt) currentByte >> -shift1) : ((usqInt) currentByte << shift1));
 				if (shift1 > 0) {
+					result1 += currentByte << shift1;
 					remaining1 -= bitPosition;
 					currentByte = encodedBytes[(byteIndex += 1)];
 					bitPosition = 8;
 				} else {
+					result1 += ((usqInt) currentByte) >> (0 - shift1);
 					bitPosition -= remaining1;
-					currentByte = currentByte & ((((bitPosition - 8) < 0) ? ((usqInt) 255 >> -(bitPosition - 8)) : ((usqInt) 255 << (bitPosition - 8))));
+					currentByte = currentByte & (((usqInt) 255) >> (8 - bitPosition));
 					indexLeft = result1;
 					goto l2;
 				}
@@ -387,14 +392,15 @@ EXPORT(sqInt) primitiveDecodeStereo(void) {
 			remaining2 = 16;
 			while(1) {
 				shift2 = remaining2 - bitPosition;
-				result2 += ((shift2 < 0) ? ((usqInt) currentByte >> -shift2) : ((usqInt) currentByte << shift2));
 				if (shift2 > 0) {
+					result2 += currentByte << shift2;
 					remaining2 -= bitPosition;
 					currentByte = encodedBytes[(byteIndex += 1)];
 					bitPosition = 8;
 				} else {
+					result2 += ((usqInt) currentByte) >> (0 - shift2);
 					bitPosition -= remaining2;
-					currentByte = currentByte & ((((bitPosition - 8) < 0) ? ((usqInt) 255 >> -(bitPosition - 8)) : ((usqInt) 255 << (bitPosition - 8))));
+					currentByte = currentByte & (((usqInt) 255) >> (8 - bitPosition));
 					predictedRight = result2;
 					goto l3;
 				}
@@ -405,14 +411,15 @@ EXPORT(sqInt) primitiveDecodeStereo(void) {
 			remaining3 = 6;
 			while(1) {
 				shift3 = remaining3 - bitPosition;
-				result3 += ((shift3 < 0) ? ((usqInt) currentByte >> -shift3) : ((usqInt) currentByte << shift3));
 				if (shift3 > 0) {
+					result3 += currentByte << shift3;
 					remaining3 -= bitPosition;
 					currentByte = encodedBytes[(byteIndex += 1)];
 					bitPosition = 8;
 				} else {
+					result3 += ((usqInt) currentByte) >> (0 - shift3);
 					bitPosition -= remaining3;
-					currentByte = currentByte & ((((bitPosition - 8) < 0) ? ((usqInt) 255 >> -(bitPosition - 8)) : ((usqInt) 255 << (bitPosition - 8))));
+					currentByte = currentByte & (((usqInt) 255) >> (8 - bitPosition));
 					indexRight = result3;
 					goto l4;
 				}
@@ -432,14 +439,15 @@ EXPORT(sqInt) primitiveDecodeStereo(void) {
 			remaining4 = bitsPerSample;
 			while(1) {
 				shift4 = remaining4 - bitPosition;
-				result4 += ((shift4 < 0) ? ((usqInt) currentByte >> -shift4) : ((usqInt) currentByte << shift4));
 				if (shift4 > 0) {
+					result4 += currentByte << shift4;
 					remaining4 -= bitPosition;
 					currentByte = encodedBytes[(byteIndex += 1)];
 					bitPosition = 8;
 				} else {
+					result4 += ((usqInt) currentByte) >> (0 - shift4);
 					bitPosition -= remaining4;
-					currentByte = currentByte & ((((bitPosition - 8) < 0) ? ((usqInt) 255 >> -(bitPosition - 8)) : ((usqInt) 255 << (bitPosition - 8))));
+					currentByte = currentByte & (((usqInt) 255) >> (8 - bitPosition));
 					deltaLeft = result4;
 					goto l5;
 				}
@@ -450,14 +458,15 @@ EXPORT(sqInt) primitiveDecodeStereo(void) {
 			remaining5 = bitsPerSample;
 			while(1) {
 				shift5 = remaining5 - bitPosition;
-				result5 += ((shift5 < 0) ? ((usqInt) currentByte >> -shift5) : ((usqInt) currentByte << shift5));
 				if (shift5 > 0) {
+					result5 += currentByte << shift5;
 					remaining5 -= bitPosition;
 					currentByte = encodedBytes[(byteIndex += 1)];
 					bitPosition = 8;
 				} else {
+					result5 += ((usqInt) currentByte) >> (0 - shift5);
 					bitPosition -= remaining5;
-					currentByte = currentByte & ((((bitPosition - 8) < 0) ? ((usqInt) 255 >> -(bitPosition - 8)) : ((usqInt) 255 << (bitPosition - 8))));
+					currentByte = currentByte & (((usqInt) 255) >> (8 - bitPosition));
 					deltaRight = result5;
 					goto l6;
 				}
@@ -615,14 +624,15 @@ EXPORT(sqInt) primitiveEncodeMono(void) {
 			while(1) {
 				bitsAvailable = 8 - bitPosition;
 				shift = bitsAvailable - bufBits;
-				currentByte += ((shift < 0) ? ((usqInt) buf >> -shift) : ((usqInt) buf << shift));
 				if (shift < 0) {
+					currentByte += ((usqInt) buf) >> (0 - shift);
 					encodedBytes[(byteIndex += 1)] = currentByte;
 					bitPosition = 0;
 					currentByte = 0;
-					buf = buf & (((((0 - shift) < 0) ? ((usqInt) 1 >> -(0 - shift)) : ((usqInt) 1 << (0 - shift)))) - 1);
+					buf = buf & ((1 << (0 - shift)) - 1);
 					bufBits -= bitsAvailable;
 				} else {
+					currentByte += buf << shift;
 					bitPosition += bufBits;
 					goto l1;
 				}
@@ -650,14 +660,15 @@ EXPORT(sqInt) primitiveEncodeMono(void) {
 			while(1) {
 				bitsAvailable1 = 8 - bitPosition;
 				shift1 = bitsAvailable1 - bufBits1;
-				currentByte += ((shift1 < 0) ? ((usqInt) buf1 >> -shift1) : ((usqInt) buf1 << shift1));
 				if (shift1 < 0) {
+					currentByte += ((usqInt) buf1) >> (0 - shift1);
 					encodedBytes[(byteIndex += 1)] = currentByte;
 					bitPosition = 0;
 					currentByte = 0;
-					buf1 = buf1 & (((((0 - shift1) < 0) ? ((usqInt) 1 >> -(0 - shift1)) : ((usqInt) 1 << (0 - shift1)))) - 1);
+					buf1 = buf1 & ((1 << (0 - shift1)) - 1);
 					bufBits1 -= bitsAvailable1;
 				} else {
+					currentByte += buf1 << shift1;
 					bitPosition += bufBits1;
 					goto l2;
 				}
@@ -719,14 +730,15 @@ EXPORT(sqInt) primitiveEncodeMono(void) {
 			while(1) {
 				bitsAvailable2 = 8 - bitPosition;
 				shift2 = bitsAvailable2 - bufBits2;
-				currentByte += ((shift2 < 0) ? ((usqInt) buf2 >> -shift2) : ((usqInt) buf2 << shift2));
 				if (shift2 < 0) {
+					currentByte += ((usqInt) buf2) >> (0 - shift2);
 					encodedBytes[(byteIndex += 1)] = currentByte;
 					bitPosition = 0;
 					currentByte = 0;
-					buf2 = buf2 & (((((0 - shift2) < 0) ? ((usqInt) 1 >> -(0 - shift2)) : ((usqInt) 1 << (0 - shift2)))) - 1);
+					buf2 = buf2 & ((1 << (0 - shift2)) - 1);
 					bufBits2 -= bitsAvailable2;
 				} else {
+					currentByte += buf2 << shift2;
 					bitPosition += bufBits2;
 					goto l3;
 				}
