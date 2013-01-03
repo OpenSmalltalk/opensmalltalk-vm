@@ -24,7 +24,7 @@ static int numOptions;
 static char** optionArray;
 int ImageVersionNumber;
 
-static char* nextOption() {
+static char* nextOption(void) {
 	if(opt >= numOptions) return 0;
 	return optionArray[opt++];
 }

@@ -60,34 +60,45 @@ if(1) {int sqfni;\
 	dst[num] = 0;\
 }
 
-
-/* undefine this to stop using my MillisecondTimer module and rely upon clock()
- * instead. You lose millisecond precision in the process */
-#define TIMERMOD
-usqInt millisecondValue(void);
-unsigned int microsecondsvalue(void);
 /* undefine clock macros that are implemented as functions */
+/* basic millisecond timer value */
 #undef ioMSecs
-#define ioMSecs()  (sqInt)(millisecondValue())
-#undef ioMicroMSecs
+
+/* less important timer, return mSec values but can be lower actual resolution */
 #undef ioLowResMSecs
-#define ioLowResMSecs() (ioMSecs())
+/* a high-res timer for debugging */
+unsigned int microsecondsvalue(void);
+
+/* define one or other of these to choose the time system in use
+   DRUCKTIMERMOD means using the TimerMod by druck; this is intended for
+   microsecond timers for unixy programs etc
+   HALTIMERMOD means using a combination of Rik Griffin's HALTimer and
+   my MillisecondTimer to keep a runing count of milliseconds
+   Currently HALTimer won't run on a RaspberryPi, so use drucks code */
+#define DRUCKTIMERMOD
+// #define HALTIMERMOD
+
+usqInt millisecondTimerValue(void);
+#define ioMSecs()  (sqInt)(millisecondTimerValue())
+#define ioLowResMSecs() (sqInt)(millisecondTimerValue())
+
+
 
 /* extended fileplugin support */
 extern int dir_DirectoryExists(char *pathString, int pathStringLength);
 extern int dir_FileExists(char *pathString, int pathStringLength);
-extern void dir_SetImageFileType(void); 
+extern void dir_SetImageFileType(void);
 
 /* Debugging support - printf is #def'd to repprint which outputs to
  * a logfile or to !Reporter if it is active
  */
-#ifdef DEBUG 
+#ifdef DEBUG
 #define PRINTF(s)\
 {\
 	printf s;\
 };
 #else
-#define PRINTF(s) 
+#define PRINTF(s)
 #endif
 
 extern int repprintf(const char * format, ...);
@@ -106,7 +117,7 @@ typedef struct windowDescriptorBlock {
 	struct windowDescriptorBlock * next;
 	wimp_w			handle;
 	int				windowIndex;
-	os_coord		bitmapExtentP; 
+	os_coord		bitmapExtentP;
 	os_box			visibleArea;  // rename to visibleArea
 	int				squeakDisplayDepth;
 	osspriteop_header *	displaySprite; // the sprite pointer
@@ -123,7 +134,7 @@ extern int windowIndexFromHandle(wimp_w windowHandle);
 
 #define OS2PixX(val) ((val)>>scalingFactor.x)
 #define OS2PixY(val) ((val)>>scalingFactor.y)
- 
+
 #define Pix2OSX(val) ((val)<<scalingFactor.x)
 #define Pix2OSY(val) ((val)<<scalingFactor.y)
 

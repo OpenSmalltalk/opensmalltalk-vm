@@ -7,7 +7,7 @@
 /* OS interface stuff, commandline option handling and so on              */
 /**************************************************************************/
 
-/* To recompile this reliably you will need    */           
+/* To recompile this reliably you will need    */
 /* OSLib -  http://ro-oslib.sourceforge.net/   */
 /* Castle/AcornC/C++, the Acorn TCPIPLib       */
 /* and a little luck                           */
@@ -45,20 +45,22 @@ wimp_version_no		actualOSLevel;
 os_error		privateErr;
 char			versionString[20];
 static			FILE *logfile= 0;
+#ifdef HALTIMERMOD
 static			unsigned int *timerValPtr;
+#endif
 
 /* argument handling stuff  -- see c.sqArgument */
 int 			numOptionsVM;
 char			*(vmOptions[MAX_OPTIONS]);
 int 			numOptionsImage;
 char			*(imageOptions[MAX_OPTIONS]);
-            	
+
 int				headlessFlag = 0;
 int				helpMe = 0;
 int				versionMe = 0;
 int				swapMeta = 0;
 int				objectHeadroom = 4*1024*1024;
-char			*windowLabel, *taskNameArg; 
+char			*windowLabel, *taskNameArg;
 int				useDAMemory = 0;
 
 vmArg args[] = {
@@ -68,7 +70,7 @@ vmArg args[] = {
 		{ ARG_FLAG,   &useDAMemory, "-useDA" },
 		{ ARG_FLAG,   &swapMeta,  "-swapmeta"},
 		{ ARG_UINT,   &objectHeadroom, "-memory:"},
-		{ ARG_STRING, &windowLabel, "-windowlabel:"}, 
+		{ ARG_STRING, &windowLabel, "-windowlabel:"},
 		{ ARG_STRING, &taskNameArg, "-taskname:"},
 		{ ARG_NONE, NULL, NULL }
 	};
@@ -106,7 +108,7 @@ int openLogStream(void) {
 		logfile = (FILE *)-1;
 		return 0;
 	}
-	return (int)logfile; 
+	return (int)logfile;
 }
 /* override printf()
  * - see also the #define printf repprintf in sqPlatforSpecific.h
@@ -154,7 +156,7 @@ void platReportFatalError( os_error * e) {
 }
 
 char*rinkMalloc(size_t size) {
-	printf("\\t rink alloc %d\n", (int)size);
+        PRINTF(("\\t rink alloc %d\n", (int)size));
 	return malloc(size);
 }
 
@@ -166,7 +168,7 @@ byte * daBaseAddress;
 	PRINTF(("\\t platAllocateMemory requesting: %08x\n", amount));
 	/* work out the size of dynamic area allowed to see if we can use a large
 	 * application space allocation. On RISC OS 4 or if Aemulor is running
-	 * on RISC OS 5, we can't. We also have the -useDA cmdline flag */ 
+	 * on RISC OS 5, we can't. We also have the -useDA cmdline flag */
 	if ((e = xos_read_dynamic_area(
 				os_DYNAMIC_AREA_APPLICATION_SPACE,
 				&daBaseAddress,
@@ -208,7 +210,7 @@ byte * daBaseAddress;
 			platReportFatalError(&privateErr);
 			return false;
 		}
-	}  
+	}
 
 	PRINTF(("\\t platAllocateMemory(%d) at %0x\n", amount, (int)daBaseAddress));
 
@@ -219,10 +221,13 @@ byte * daBaseAddress;
 void setTimer(void) {
 /* Initialise the MillisecondTimer value address
 */
-#ifdef TIMERMOD
 _kernel_swi_regs regs;
+#ifdef HALTIMERMOD
 	_kernel_swi(/* MillisecondTimer_Val_Ptr*/ 0x58101, &regs, &regs);
 	timerValPtr = (unsigned int *)(regs.r[0]);
+#endif
+#ifdef DRUCKTIMERMOD
+	_kernel_swi(/* Timer_Start*/ 0x490C0, &regs, &regs);
 #endif
 }
 
@@ -314,7 +319,7 @@ sqInt ioExit(void) {
 int ioAssertion(void) {
 	return 1;
 }
- 
+
 void exit_function(void) {
 /* do we need to do any special tidy up here ? RiscOS needs to kill the
    pointer bitmap and release the dynamic areas
@@ -333,14 +338,32 @@ extern void SetDefaultPointer(void);
 	if ( (int)logfile > 0) fclose( logfile);
 }
 
+usqInt millisecondTimerValue(void) {
+/* return the raw unsigned value of the millsecond time for internal VM use */
+_kernel_swi_regs regs;
+#ifdef DRUCKTIMERMOD
+	_kernel_swi(/* Timer_Value*/ 0x490C2, &regs, &regs);
+	return (usqInt)(regs.r[0] * 1000) + (int)(regs.r[1] / 1000);
+#endif
+#ifdef HALTIMERMOD
+//	_kernel_swi(/* MillisecondTimer_Value */ 0x58100, &regs, &regs);
+//	return (regs.r[0]) ;
+	return (usqIt)*timerValPtr;
+#endif
+}
+
 unsigned int microsecondsvalue(void) {
 /* return the microsecond value (ignoring wrap arounds etc) for debug timer
  * purposes
  */
+#ifdef DRUCKTIMERMOD
 _kernel_swi_regs regs;
 	_kernel_swi(/* Timer_Value*/ 0x490C2, &regs, &regs);
 	return  ((regs.r[0] %1000) * 1000000)   + (int)(regs.r[1]) ;
-
+#endif
+#ifdef HALTIMERMOD
+	return 1000 * millisecondTimerValue();
+#endif
 }
 
 sqInt ioMicroMSecs(void) {
@@ -352,23 +375,13 @@ sqInt ioMicroMSecs(void) {
    in units of milliseconds.) This clock must have enough precision to
    provide accurate timings, and normally isn't called frequently
    enough to slow down the VM. Thus, it can use a more expensive clock
-   than ioMSecs().
+   that ioMSecs().
+   This has to be a separate function because it is involved in the
+   function table in sqVirtualMachine.c
 */
-	return (sqInt)millisecondValue();
-}
+	return millisecondTimerValue();
 
-usqInt millisecondValue(void) {
-/* return the raw unsigned value of the millsecond time for internal VM use */
-#ifdef TIMERMOD
-_kernel_swi_regs regs;
-//	_kernel_swi(/* MillisecondTimer_Value */ 0x58100, &regs, &regs);
-//	return (regs.r[0]) ;
-	return *timerValPtr;
-#else
-	return (clock() * 1000/CLOCKS_PER_SEC);
-#endif
 }
-
 
 sqInt ioSeconds(void) {
 /*	  Unix epoch to Smalltalk epoch conversion.
@@ -602,7 +615,7 @@ extern char VMVersion[];
 	if ((id < 0) && ( -id < numOptionsVM)) {
 			tmp = vmOptions[-id];
 			if (*tmp) return tmp;
-	} 
+	}
 	if ((id > 1) &&(id <= numOptionsImage)) {
 		// we have an offset of 1 for + ids in
 		// order to accommodate the vmPath at 0
@@ -611,7 +624,7 @@ extern char VMVersion[];
 	}
 	/* fail the prim to ensure we return nil instead of an empty string */
 	success(false);
-	return ""; 
+	return "";
 }
 
 sqInt attributeSize(sqInt id) {
@@ -646,7 +659,7 @@ FILE * f;
 		fclose(f);
 		sprintf(runHelp, "chain:Filer_Run %s%s\n", progname, helpname);
 		system(runHelp);
-	} 
+	}
 }
 
 void versionMessage(char * progname) {

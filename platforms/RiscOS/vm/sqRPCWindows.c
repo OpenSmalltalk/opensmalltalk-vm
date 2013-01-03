@@ -88,6 +88,8 @@ void		platReportError( os_error * e);
 /* Display related stuff */
 
 void GetDisplayParameters(void) {
+// Read the screen metrics - size, bits per pixels, pixel<->os unit
+// scaling factors
 int bpp;
 bits junk;
 	/* get the screen size x & y */
@@ -117,26 +119,17 @@ void DisplayModeChanged(void){
 #endif
 }
 
-int ioIconiseWindow(wimp_message * wblock) {
-/* We received an iconise message. Send the image a message to let it know */
-extern void EventBufAppendWindow( int action, int left, int top, int right, int bottom, int windowIndex);
-windowDescriptorBlock * thisWindow;
-	/* need the window block with this handle */
-	thisWindow = windowBlockFromHandle(((wimp_full_message_iconise *)wblock)->w);
-
-	PRINTF(("\\t Iconise %d\n", thisWindow->windowIndex));
-		EventBufAppendWindow( WindowEventIconise, 0, 0, 0, 0,
-			thisWindow->windowIndex);
-}
 
 void SetDefaultPointer(void) {
-/* setup the pointer buffer for use in the Squeak window */
+/* setup the pointer buffer as shape #2 for use in the Squeak window
+        In theory this ought to be replaced with calls to xwimpspriteop_set_pointer_shape() */
 	xwimp_set_pointer_shape(2, (byte const *)pointerBuffer, 16, 16, 0, 0);
 	/* and then return the pointer to no.1 */
 	xwimp_set_pointer_shape(1, (byte const *)-1, 0, 0, 0, 0);
 }
 
 /* window list management */
+/* we maintain a linked list of windowDescriptorBlocks describing each of the window created and used.*/
 
 windowDescriptorBlock *windowBlockFromIndex(int windowIndex) {
 windowDescriptorBlock *entry;
@@ -234,12 +227,14 @@ windowDescriptorBlock *prevEntry;
 }
 
 /* displaying bitmap related routines  */
+/* we have to do pixel transformations as part of converting from a stupid big-endian Form layout to RISC OSs format */
 
 void reverseNothing(void) {
 /* do nothing, as fast as possible */
 }
 
 void reverse_image_1bpps(void) {
+/* reverse the order of each bit winth the word */
 unsigned int * srcPtr, *dstPtr;
 int j;
 	for(j = startY; j < stopY; j += scanLine) {
@@ -261,6 +256,7 @@ int j;
 }
 
 void reverse_image_2bpps(void) {
+/* swap 2-bit chunks ofwords */
 unsigned int * srcPtr, *dstPtr;
 int j;
 	for(j = startY; j < stopY; j += scanLine) {
@@ -282,6 +278,7 @@ int j;
 }
 
 void reverse_image_4bpps(void) {
+/* swap 4-bit chunks of words */
 unsigned int * srcPtr, *dstPtr;
 int j;
 	for(j = startY; j < stopY; j += scanLine) {
@@ -313,6 +310,7 @@ int j;
 }
 
 void reverse_image_bytes(void)  {
+/* swap byte chunks of words */
 unsigned int * srcPtr, *dstPtr;
 int j;
 	for(j = startY; j < stopY; j += scanLine) {
@@ -336,6 +334,7 @@ int j;
 }
 
 void reverse_image_words(void) {
+/* swap 15-bit chunks out of 16 bit words within the 32-bit word; we askip over the alpha bit assumed in other OSs */
 unsigned int * srcPtr, *dstPtr;
 int j;
 	for(j = startY; j < stopY; j += scanLine) {
@@ -350,6 +349,7 @@ int j;
 				nw = (nw << 5) | (w & 0x1F);
 				w = w >> 5;
 				nw = (nw << 5) | (w & 0x1F);
+                                // shift an extra bit to drop the alpha bit
 				w = w >> 6;
 				nw = (nw << 6) | (w & 0x1F);
 				w = w >> 5;
@@ -363,6 +363,7 @@ int j;
 }
 
 void reverse_image_longs(void) {
+/* swap 24-bit chunks out of 32-bit words. Skip the alpha bit assumed in some other OSs */
 unsigned int * srcPtr, *dstPtr;
 int j;
 	for(j = startY; j < stopY; j += scanLine) {
@@ -384,6 +385,7 @@ int j;
 }
 
 void simple_copy_image(void) {
+/* yay - no swapping version for some usages */
 unsigned int * srcPtr, *dstPtr;
 int j;
 	for(j = startY; j < stopY; j += scanLine) {
@@ -398,6 +400,7 @@ int j;
 }
 
 void DisplayReverseArea(windowDescriptorBlock * thisWindow, int x0, int y0, int x1, int y1) {
+/* we have to process each pixel in the rectangle */
 int stopX, pixelsPerWord, pixelsPerWordShift;
 #ifdef DEBUG
 unsigned int startTime, stopTime;
@@ -452,13 +455,15 @@ windowDescriptorBlock * thisWindow;
 	thisWindow = (windowDescriptorBlock *)windowBlockFromHandle(wblock->w);
 
 	if ( thisWindow->displaySprite == NULL ) {
-		/* flush the damage rectangles, we're not set up yet */
+                /* there's no window set up yet, so flush the damage rectangles */
 		more = wimp_redraw_window( wblock );
 		while ( more ) {
 			xwimp_get_rectangle (wblock, &more);
 		}
 		return;
 	}
+        /* for each damage region in this window, update the display by writing the rectangle of our displaySprite
+           with the appropriate scaling and pixel translation table. It really ought to be simpler than this */
 	more = wimp_redraw_window( wblock );
 	while ( more ) {
 		PRINTF(("\\t display pixmap l:%d t:%d r:%d b:%d\n", wblock->box.x0, wblock->box.y1, wblock->box.x1, wblock->box.y0));
@@ -562,7 +567,7 @@ os_error * e;
 void SetupWindowTitle(void) {
 /* set the root window title string.
  * if the -windowlabel: option was used, the title is the
- * string given; limited to the last WindowTitleLength (150) chars.
+ * string given; if it's too long only the last WindowTitleLength (150) chars are used.
  */
 extern char * windowLabel;
 char * string;
@@ -795,7 +800,7 @@ byte * daBaseAddress;
 				os_DYNAMIC_AREA_APPLICATION_SPACE,
 				neededSize,
 				(byte const*)-1,
-				(bits)128, // stops it being draggable size in taskmanager
+                                os_AREA_NO_USER_DRAG, // stops it being draggable size in taskmanager
 				40*1024*1024, // -1 means 'unlimited'
 				NULL,
 				NULL,
@@ -904,14 +909,9 @@ void DeleteWindow(windowDescriptorBlock * thisWindow) {
 
 void BuildWindow(windowDescriptorBlock * thisWindow) {
 /* Do the basic building of a window.
- * if isIndirected, then the title is a pointer to a _global_ var string
- * and the indirected flag must be set.
+ *
+ * Create a window block and set various structures and flags to suit the windowDescriptorBlock
  * Otherwise the title is copied into the literal string in the structure
- */
-/* create a window of width and height, centred on the screen
- * since it is possible that width and height are not possible on the screen
- * we check against the screen metrics and modify, then set the
- * global values as required.
  */
 wimp_window wblock;
 os_error * e;
@@ -936,7 +936,7 @@ os_coord originP, sizeP;
 	wblock.flags = wimp_WINDOW_NEW_FORMAT | wimp_WINDOW_MOVEABLE
 			| wimp_WINDOW_BOUNDED_ONCE | wimp_WINDOW_IGNORE_XEXTENT
 			| wimp_WINDOW_IGNORE_YEXTENT
-			| thisWindow->attributes;
+                        | thisWindow->attributes; // <--- these are the flags settable from Squeak
 	/* colours */
 	wblock.title_fg = wimp_COLOUR_BLACK;
 	wblock.title_bg = wimp_COLOUR_LIGHT_GREY;
@@ -962,7 +962,9 @@ os_coord originP, sizeP;
 	/* minimum window size allowed */
 	wblock.xmin = (short)100;
 	wblock.ymin = (short)100;
-	/* window title - limited to 151 chars by struct defn */
+        /* window title - limited to 151 chars by struct defn
+         * since it is indirected, the title is a pointer to a _global_ var string
+         * and the wimp_ICON_INDIRECTED flag must be set (above).*/
 	wblock.title_data.indirected_text.text =  thisWindow->title;
 	wblock.title_data.indirected_text.validation = (char*)-1;
 	wblock.title_data.indirected_text.size = strlen(thisWindow->title);
@@ -970,12 +972,12 @@ os_coord originP, sizeP;
 	wblock.icon_count = 0;
 	/* wblock.icons = (wimp_icon *)NULL;*/
 
-	/* call wimp_createWindow */
+        /* call wimp_create_window to actaully do the deed */
 	if ( (e = xwimp_create_window(&wblock, &w)) != NULL) {
 		platReportFatalError(e);
 		return;
 	}
-	/* save the window handle */
+        /* save the window handle in the windowDescriptorBlock */
 	thisWindow->handle = w;
 
 	/* actually set the window size/position - may modify windowVisibleArea */
@@ -1136,6 +1138,7 @@ int ioCloseAllWindows(void) {
 	while(windowListRoot) {
 		DeleteWindow(windowListRoot);
 	}
+        return true;
 }
 
 /* ioShowDisplayOnWindow: similar to ioShowDisplay but adds the int windowIndex
@@ -1296,8 +1299,6 @@ int ioPositionOfWindowSetxy(int windowIndex, int x, int y) {
  * origin x/y for the window. Return the actual origin the OS
  * produced in (left<<16 || top) format or -1 for failure, as above */
 windowDescriptorBlock * thisWindow;
-wimp_window_state wblock;
-os_error * e;
 int w,h;
 
 	thisWindow = (windowDescriptorBlock *)windowBlockFromIndex(windowIndex);
@@ -1332,6 +1333,7 @@ int ioSetTitleOfWindow(int windowIndex, char * newTitle, int sizeOfTitle) {
 /* ioSetTitleOfWindow: args are int windowIndex, char* newTitle and
  * int size of new title. Fail with -1 if windowIndex is invalid, string is too long for platform etc. Leave previous title in place on failure */
 windowDescriptorBlock * thisWindow;
+os_error *e;
 	thisWindow = (windowDescriptorBlock *)windowBlockFromIndex(windowIndex);
 	if (thisWindow == NULL) {
 		/* seems to be an invalid window index */
@@ -1341,19 +1343,24 @@ windowDescriptorBlock * thisWindow;
 	if ( sizeOfTitle > WindowTitleLength ) {
 		return -1;
 	}
+        PRINTF(( "\\t ioSetWindowTitle: string length & window ID ok\n"));
 
 	/* check the titlebar flag is set */
-	if ((thisWindow->attributes | wimp_WINDOW_TITLE_ICON) == 0 ) {
+        if ((thisWindow->attributes & wimp_WINDOW_TITLE_ICON) == 0 ) {
 		return -1;
 	}
+        PRINTF(( "\\t ioSetWindowTitle: titlebar flag ok\n"));
 
 	/* copy to the window */
 	strncpy(thisWindow->title, newTitle, sizeOfTitle);
 	thisWindow->title[sizeOfTitle] = '\0';
 	/* update the titlebar if the window is built */
 	if (thisWindow->handle) {
-		xwimp_force_redraw_furniture(thisWindow->handle, wimp_FURNITURE_TITLE);
+                if ((e = xwimp_force_redraw_furniture(thisWindow->handle, wimp_FURNITURE_TITLE)) != NULL) {
+                platReportError(e);
+                }
 	}
+        PRINTF(( "\\t ioSetWindowTitle: should be ok\n"));
 	return true;
 }
 
@@ -1568,3 +1575,14 @@ sqInt ioHasDisplayDepth(sqInt bitsPerPixel) {
 	}
 }
 
+int ioIconiseWindow(wimp_message * wblock) {
+/* We received an iconise message. Send the image a message to let it know */
+extern void EventBufAppendWindow( int action, int left, int top, int right, int bottom, int windowIndex);
+windowDescriptorBlock * thisWindow;
+        /* find the window block with this OS handle */
+        thisWindow = windowBlockFromHandle(((wimp_full_message_iconise *)wblock)->w);
+
+        PRINTF(("\\t Iconise window: %d\n",thisWindow->windowIndex));
+        EventBufAppendWindow( WindowEventIconise, 0,0,0,0, thisWindow->windowIndex);
+        return true;
+}

@@ -7,7 +7,7 @@
 /* OS interface stuff                                                     */
 /**************************************************************************/
 
-/* To recompile this reliably you will need    */           
+/* To recompile this reliably you will need    */
 /* OSLib -  http://ro-oslib.sourceforge.net/   */
 /* Castle/AcornC/C++, the Acorn TCPIPLib       */
 /* and a little luck                           */
@@ -103,7 +103,7 @@ void (*socketPollFunction)(int delay, int extraFd) = null;
 /* Squeak expects to get kbd modifiers as the top 4bits of the 8bit char code,
  * or as the 2r1111000 bits of the buttons word. RiscOS doesnt give me the
  * modifiers with keypresses, so we have to manually collect them. SQ only
- * seems to care about them when doing primMouseButtons anyway.  
+ * seems to care about them when doing primMouseButtons anyway.
  *	ST bits:  <command><option><control><shift>
  * Notice how Macish this is!
 */
@@ -226,7 +226,7 @@ unsigned char keymap[0x68] = {
 /* 0x67 k-enter */ /* 0x0d */ 0
 };
 
- 
+
 /*** Functions ***/
 	 void DisplayPixmap(wimp_draw * wblock);
 extern	 void DisplayModeChanged(void);
@@ -286,7 +286,7 @@ windowDescriptorBlock * thisWindow;
 static windowDescriptorBlock * lastWindow = NULL;
 
 	/* Don't mouse poll more than once every 5 milliseconds */
-	if ( nextMousePollTick > (thisTick = millisecondValue())) return;
+	if ( nextMousePollTick > (thisTick = ioMSecs())) return;
 	nextMousePollTick = thisTick + 5;
 
 	if ( mouseButtonDown || windowActive) {
@@ -315,7 +315,7 @@ static windowDescriptorBlock * lastWindow = NULL;
 		 * and thisWindow will be 0. At this point we'd like to know the
 		 * window that _was_ active so we can use it instead of thisWindow.
 		 * While buttonDown is true we need to maintain the same window.
-		 * 
+		 *
 		 * It is possible for a MousePoll to hpapen before a leave is processed,
 		 * (ie windowActive is improperly true) so we should check and ignore
 		 * the mouse pos.
@@ -430,7 +430,7 @@ int HandleSingleEvent(wimp_block *pollBlock, wimp_event_no pollEvent) {
 			UserMessage(&(pollBlock->message)); break;
 		case wimp_USER_MESSAGE_ACKNOWLEDGE	:
 			UserMessage(&(pollBlock->message)); break;
-	} 
+	}
 	return true;
 }
 
@@ -445,14 +445,14 @@ int HandleSocketPoll(int microSecondsToDelay) {
 
 #if 0
 /* this is pretty much obsolete - we can't do microsecond delays and
- * anything longer just slows Squeak down horribly */ 
+ * anything longer just slows Squeak down horribly */
 int HandleEventsWithWait(int microSecondsToDelay) {
 /* use wimp_poll_delay so that we don't return a null before
  * the end of the delay, thus giving some cpu back to everyone else
  * NB - RISC OS uses centi-Seconds for delays etc.
  */
 int pollDelay, nextWakeTick, currentTick;
-extern int getNextWakeupTick(void); 
+extern int getNextWakeupTick(void);
 	pollDelay = microSecondsToDelay /* * CLOCKS_PER_SEC / 1000000 */
 			>> 14 /* will always give small answer, but good enough */;
 	if ( microSecondsToDelay ) {
@@ -516,10 +516,10 @@ int HandleEventsNotTooOften(void) {
  * those times are redundant, throttle it back a little */
 static int nextPollTick = 0;
 unsigned int thisTick;
-	if ( nextPollTick > (thisTick = millisecondValue())) return false;
+	if ( nextPollTick > (thisTick = ioMSecs())) return false;
 	HandleEvents();
 	nextPollTick = thisTick +5;
-	return true; 
+	return true;
 }
 
 /****************************************/
@@ -612,7 +612,7 @@ windowDescriptorBlock * thisWindow;
 		if ((wblock->buttons == wimp_CLICK_SELECT)) {
 		/* select-click on iconbar icon means bring window to front
 		 * - but what if we have multiple windows?  */
-		extern void SetWindowToTop(int windowIndex); 
+		extern void SetWindowToTop(int windowIndex);
 			SetWindowToTop(1);
 			return;
 		}
@@ -621,12 +621,12 @@ windowDescriptorBlock * thisWindow;
 			return;
 		}
 	}
- 
+
 	/* need the window block with this handle */
 	thisWindow = (windowDescriptorBlock *)windowBlockFromHandle(wblock->w);
 	if ( thisWindow
 		&& (wblock->i == (wimp_i)wimp_ICON_WINDOW)) {
-		PRINTF(("\\t buttons %x w: %d\n", wblock->buttons, thisWindow->windowIndex)); 
+		PRINTF(("\\t buttons %x w: %d\n", wblock->buttons, thisWindow->windowIndex));
 		/* claim caret via message_claimentity() iff we
 		 *don't already have it */
 		claimCaret(wblock);
@@ -690,7 +690,7 @@ int keystate, dkey, modState, thisWindowIndex;
 		 * if a key maps, replace the keystate with the result
 		 */
 		unsigned int testkey = (dblock->deepkey)
-					>>wimp_DEEPKEY_KEYNUMSHIFT; 
+					>>wimp_DEEPKEY_KEYNUMSHIFT;
 		if ((testkey <= 0x67) && (testkey = keymap[testkey]) )
 			keystate = testkey;
 	} else {
@@ -743,13 +743,13 @@ extern wimp_t Task_Handle;
 		 * can be found in c.sqRPCClipboard>fetchClipboard()
 		 */
 		case message_DATA_REQUEST: receivedDataRequest(wblock);
-								break; 
+								break;
 		case message_DATA_SAVE_ACK: receivedDataSaveAck(wblock);
 								break;
 		/* We _might_ sometime respond to DATA_LOAD & DATA_SAVE
 		 * here in order to allow dropping of text files via the
 		 * DropPlugin
-		 */ 
+		 */
 		default: return;
 	}
 }
@@ -802,21 +802,21 @@ sqKeyboardEvent *evt;
 	evt->modifiers = modifiers;
 	evt->utf32Code = keyValue; /* what Unicode ? */
 	evt->reserved1 = 0;
-	evt->windowIndex = windowIndex; 
+	evt->windowIndex = windowIndex;
 	evt = (sqKeyboardEvent *)EventBufAppendEvent( EventTypeKeyboard);
 	evt->charCode = keyValue;
 	evt->pressCode = EventKeyChar;
 	evt->modifiers = modifiers;
 	evt->utf32Code = keyValue; /* what Unicode ? */
 	evt->reserved1 = 0;
-	evt->windowIndex = windowIndex; 
+	evt->windowIndex = windowIndex;
 	evt = (sqKeyboardEvent *)EventBufAppendEvent( EventTypeKeyboard);
 	evt->charCode = keyValue;
 	evt->pressCode = EventKeyUp;
 	evt->modifiers = modifiers;
 	evt->utf32Code = keyValue; /* what Unicode ? */
 	evt->reserved1 = 0;
-	evt->windowIndex = windowIndex; 
+	evt->windowIndex = windowIndex;
 }
 
 void EventBufAppendMouse( int buttons, int modifiers, int x, int y, int windowIndex) {
@@ -849,7 +849,7 @@ sqWindowEvent *evt;
 	evt->value2 = top;
 	evt->value3 = right;
 	evt->value4 = bottom;
-	evt->windowIndex = windowIndex; 
+	evt->windowIndex = windowIndex;
 }
 
 /* key buffer functions to support older images */
@@ -887,7 +887,7 @@ sqInt ioGetNextEvent(sqInputEvent *evt) {
 // 	if (evt->type == EventTypeKeyboard) {
 // 		PRINTF(("\\t key ev(%d) read %c\n", evt->timeStamp, ((sqKeyboardEvent *)evt)->charCode));
 // 	}
-// #endif 
+// #endif
 	return true;
 }
 
@@ -922,7 +922,7 @@ sqInt ioProcessEvents(void) {
  * in the middle of one already
  */
 	HandleEvents();
-	return true; 
+	return true;
 }
 
 /* older polling state style access - completely unused by images after
