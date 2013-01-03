@@ -3421,7 +3421,7 @@ CoInterpreter >> ifBackwardsCheckForEvents: offset [
 							 self resetBackwardJumpVariables. "only to force variables to be global"
 							 self attemptToSwitchToMachineCode: (self oopForPointer: localIP) - offset - method - BaseHeaderSize - 1]
 						ifFalse: "don't ask if one should compile a second time..."
-							[backwardJumpCount := 1 bitShift: BytesPerWord * 8 - 2]]]
+							[backwardJumpCount := 1 << (BytesPerWord * 8 - 2)]]]
 			ifFalse:
 				[lastBackwardJumpMethod := method.
 				backwardJumpCount := minBackwardJumpCountForCompile]]

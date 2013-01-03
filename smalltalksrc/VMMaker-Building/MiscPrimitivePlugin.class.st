@@ -8,6 +8,16 @@ Class {
 }
 
 { #category : #translation }
+MiscPrimitivePlugin class >> monticelloDescription [
+	"Override to include the primitive-supplying classes."
+	"self monticelloDescription"
+	^super monticelloDescription, '\' withCRs,
+	 ((self translatedPrimitives
+		collect: [:pair| CCodeGenerator monticelloDescriptionFor: (Smalltalk classNamed: pair first)])
+			asSet asArray sort reduce: [:a :b| a, '\' withCRs, b])
+]
+
+{ #category : #translation }
 MiscPrimitivePlugin class >> translateInDirectory: directory doInlining: inlineFlag [
 "handle a special case code string rather than normal generated code."
 	| cg fname fstat |

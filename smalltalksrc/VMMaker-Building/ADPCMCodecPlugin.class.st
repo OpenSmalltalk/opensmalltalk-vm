@@ -8,6 +8,13 @@ Class {
 }
 
 { #category : #translation }
+ADPCMCodecPlugin class >> monticelloDescription [
+	"Override to include the ADPCMCodec class."
+	"self monticelloDescription"
+	^super monticelloDescription, '\' withCRs, (CCodeGenerator monticelloDescriptionFor: ADPCMCodec)
+]
+
+{ #category : #translation }
 ADPCMCodecPlugin class >> translateInDirectory: directory doInlining: inlineFlag [
 "handle a special case code string rather than generated code"
 "Not currently hooked into the timeStamp mechanism for VMMaker since this would mean replicating code from InterpreterPlugin; waiting for a more elegant solution to appear. In the meantime this means that this plugin will always get regenerated even if the file is uptodate"
