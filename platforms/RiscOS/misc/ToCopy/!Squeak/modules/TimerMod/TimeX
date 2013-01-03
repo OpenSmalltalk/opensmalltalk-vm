@@ -1,0 +1,8 @@
+|
+| Put this file on your Run$Path, and alter the RMLoad below
+| to load the TimerMod module if it is not in the same directory
+|
+RMEnsure TimerMod 1.00 RMLoad <Obey$Dir>.TimerMod
+TimerStart
+%*0
+TimerStop
