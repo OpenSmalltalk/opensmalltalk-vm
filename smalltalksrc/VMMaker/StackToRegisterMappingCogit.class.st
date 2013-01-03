@@ -3461,21 +3461,21 @@ StackToRegisterMappingCogit >> pushNilSize: aMethodObj [
 StackToRegisterMappingCogit >> registerMaskFor: reg [
 	"Answer a bit mask identifying the symbolic register.
 	 Registers are negative numbers."
-	^1 bitShift: 1 - reg
+	^1 << (1 - reg)
 ]
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> registerMaskFor: reg1 and: reg2 [
 	"Answer a bit mask identifying the symbolic registers.
 	 Registers are negative numbers."
-	^(1 bitShift: 1 - reg1) bitOr: (1 bitShift: 1 - reg2)
+	^1 << (1 - reg1) bitOr: 1 << (1 - reg2)
 ]
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> registerMaskFor: reg1 and: reg2 and: reg3 [
 	"Answer a bit mask identifying the symbolic registers.
 	 Registers are negative numbers."
-	^((1 bitShift: 1 - reg1) bitOr: (1 bitShift: 1 - reg2)) bitOr: (1 bitShift: 1 - reg3)
+	^(1 << (1 - reg1) bitOr: 1 << (1 - reg2)) bitOr: 1 << (1 - reg3)
 ]
 
 { #category : #'compile abstract instructions' }

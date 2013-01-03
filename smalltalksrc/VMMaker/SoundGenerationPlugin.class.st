@@ -18,6 +18,13 @@ SoundGenerationPlugin class >> hasHeaderFile [
 	^true
 ]
 
+{ #category : #translation }
+SoundGenerationPlugin class >> monticelloDescription [
+	"Override to include the AbstractSound class."
+	"self monticelloDescription"
+	^super monticelloDescription, '\' withCRs, (CCodeGenerator monticelloDescriptionFor: AbstractSound)
+]
+
 { #category : #accessing }
 SoundGenerationPlugin class >> translateInDirectory: directory doInlining: inlineFlag [
 "handle a special case code string rather than generated code. 

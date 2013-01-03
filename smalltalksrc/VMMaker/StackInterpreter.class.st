@@ -10892,7 +10892,7 @@ StackInterpreter >> stackPageByteSize [
 	"Room for 512 bytes of frames gives around 40 frames a page which is a
 	 good compromise between overflow rate and latency in divorcing a page."
 	<inline: false>
-	^1 bitShift: (512 + self stackLimitOffset + self stackPageHeadroom - 1) highBit
+	^1 << (512 + self stackLimitOffset + self stackPageHeadroom - 1) highBit
 ]
 
 { #category : #'stack pages' }
