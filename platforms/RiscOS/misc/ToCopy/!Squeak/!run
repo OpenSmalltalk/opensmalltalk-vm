@@ -1,15 +1,22 @@
 Wimpslot -min 400K  -max 700k
 Set Squeak$Dir <Obey$Dir>
+
+| Timers: we're either using the druck TimerMod or the Rik Griffin HALTimer
+
 | Make sure the MillisecondTimer & HALTimer module are loaded
-RMEnsure HALTimer 0.03 RMLoad <Squeak$Dir>.modules.HALTimer
-RMEnsure MillisecondTimer 1.00 RMLoad <Squeak$Dir>.modules.MillisecondTimer
+|RMEnsure HALTimer 0.03 RMLoad <Squeak$Dir>.modules.HALTimer
+|RMEnsure MillisecondTimer 1.00 RMLoad <Squeak$Dir>.modules.MillisecondTimer
+|
+RMEnsure TimerMod 4.12 RMLoad <Squeak$Dir>.modules.TimerMod.TimerMod
+
+
 | syntax:
 | {appname} [-vmoption [-vmoption]] imagefilepath [startupfile/URL] [imageoption [imageoption]]
 | vmoptions -
 | -version
 |      Display the version info in a dialogue box
 | -help
-|      Open the help file 
+|      Open the help file
 | -memory:<number>[m|k]
 |      Specify amount of free space to attempt to allocate for Squeak's object
 |      memory.  More will be claimed for the display sprite that is used.
@@ -31,4 +38,4 @@ RMEnsure MillisecondTimer 1.00 RMLoad <Squeak$Dir>.modules.MillisecondTimer
 | imageoption - any words following will be available to the image via
 | Smalltalk getSystemAttribute: -{1000, 1}
 /<Squeak$Dir>.!Boot
-/<Squeak$Dir>.!RunImage -memory:50m  %*0
+/<Squeak$Dir>.!RunImage -memory:90m  %*0

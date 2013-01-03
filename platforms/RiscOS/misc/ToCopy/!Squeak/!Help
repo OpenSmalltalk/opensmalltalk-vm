@@ -3,7 +3,7 @@ Help for Squeak
 
 What is this?
 -------------
-This is the RISC OS port of Squeak 3.8, a public domain Smalltalk system.
+This is the RISC OS port of Squeak 3.9, a public domain Smalltalk system.
 Updates, patches etc are available from:
 	http://www.rowledge.org/tim/squeak
 as and when I can make time to produce then. The main website for the Squeak project is:
@@ -24,7 +24,7 @@ What is Smalltalk?
 Smalltalk is the original object oriented programming language and environment from which most OSs have learnt about windowing, pixel displays, menus and so on. You will need to read about Smalltalk to make best use of it, since it is likely to be quite unfamiliar to you at first.
 
 Be warned, the user interface is not quite like RISC OS; in particular:-
-a) the right hand mouse button is NOT used as 'adjust', but to operate on the window currently active; thus serving many of the functions of the window icons under RISC OS. 
+a) the right hand mouse button is NOT used as 'adjust', but to operate on the window currently active; thus serving many of the functions of the window icons under RISC OS.
 b) the menus make the choice when you _release_ the menu button over an item. So, press the menu button and hold it down whilst you make your choice.
 c) as you will quickly notice, the Squeak windows can exist only within the single big RiscOS window. This may change later.
 
@@ -32,13 +32,7 @@ Online Information
 ------------------
 For those with web access, there is plenty of information available about Squeak and all the other variants of Smalltalk. See
 	http://www.squeak.org/
-the Squeak.Org main site for updates, releases, goodies etc and perhaps most important, the squeak mailing list. You may get yourself onto the list by sending email to:
-
-        squeak-dev-request@lists.squeakfoundation.org
-
-with the subject line set to -
-
-subscribe
+the Squeak.Org main site for updates, releases, goodies etc and perhaps most important, the squeak mailing list. You may get yourself onto the list by visiting the 'Squeak Mailing Lists' page on the main website.
 
 Printed Information
 -------------------
@@ -64,7 +58,7 @@ In print there are a number of good sources, some of which you might find on the
       Designing Object-Oriented Software,
             Rebecca Wirfs-Brock, Brian Wilkerson, and Lauren Wiener
             Prentice-Hall 1990 ISBN 0-13-629825-7
-   Squeak specific         
+   Squeak specific
       Squeak, Open Personal Computing for Multimedia, Mark Guzdial & Kim Rose,
             editors, 2001, Prentice-Hall
       Squeak: Object-oriented design with Multimedia Applications, Mark
@@ -93,39 +87,11 @@ Quitting Squeak. Normally one uses the main World Menu and chooses 'quit', 'save
 
 The legal bit
 =============
-The license under which Squeak is provided is specified by Apple Computer and can be found in full on http://www.squeak.org:-
-   .:. Plain English Examples of License Terms
-   .:. Our license agreement contains conditions intended to keep 
-   .:. Squeak open and available to the user community, while 
-   .:. allowing users to do useful things with Squeak. You will see 
-   .:. the license once you begin installing Squeak. These following 
-   .:. examples are provided as illustrations and are not legally 
-   .:. binding. See the license for the real terms. To the extent that 
-   .:. the examples and the license conflict, the license will govern.
-   .:. 
-   .:. You are allowed to change Squeak, write extensions to 
-   .:. Squeak, build an application in Squeak, and include some or 
-   .:. all of Squeak with your products. You may distribute all of 
-   .:. these things along with Squeak, or portions of Squeak, for free 
-   .:. or for money. However, you must distribute these things under 
-   .:. a license that protects Apple in the way described in our 
-   .:. license to you.
-   .:. 
-   .:. If you modify any of the methods of class objects (or their 
-   .:. relationships) that come with Squeak (as opposed to building 
-   .:. on top of what we provide), you must post the modifications 
-   .:. on a web site or otherwise make them available for free to 
-   .:. others, just as we have done with Squeak. Our license to you 
-   .:. explains how you must do this.
-   .:. 
-   .:. The same is true if you port Squeak to another machine or 
-   .:. operating system - you must post your port on a web site or 
-   .:. otherwise make it available for free to others under the terms 
-   .:. described in our license to you.
+The license under which Squeak is provided - the MIT License, with some portions covered by the Apache License version 2.0-   can be found in full on http://www.squeak.org
 
 Finally
 -------
-Have fun, join the mailing list, let us know how you do. 
+Have fun, join the mailing list, let us know how you do.
 
 tim
 
