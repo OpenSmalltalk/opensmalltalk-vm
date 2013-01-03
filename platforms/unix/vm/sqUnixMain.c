@@ -819,6 +819,9 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 # elif __sun__ && __i386__
       void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_FP]: 0);
       void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_SP]: 0);
+# elif __x86_64__
+#	error Currently this VM must be build as a 32-bit binary.
+#	error See section 3e in unixbuild/HowToBuild.
 # else
 #	error need to implement extracting pc from a ucontext_t on this system
 # endif
