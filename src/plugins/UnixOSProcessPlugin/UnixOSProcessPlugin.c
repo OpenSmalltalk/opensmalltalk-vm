@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 29 December 2012 7:53:02 pm 
-   by VMMaker 4.10.7
+/* Automatically generated from Squeak on 3 January 2013 11:27:07 pm 
+   by VMMaker 4.10.8
  */
 
 #include <math.h>
@@ -218,9 +218,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"UnixOSProcessPlugin 29 December 2012 (i)"
+	"UnixOSProcessPlugin 3 January 2013 (i)"
 #else
-	"UnixOSProcessPlugin 29 December 2012 (e)"
+	"UnixOSProcessPlugin 3 January 2013 (e)"
 #endif
 ;
 static void *originalSigHandlers[NSIG];
@@ -278,6 +278,9 @@ static sqInt createPipeForReaderwriter(FILEHANDLETYPE *readerIOStreamPtr, FILEHA
     int filedes[2];
 
 	if ((pipe(filedes)) == -1) {
+
+		/* Translates to a pipe() system call */
+
 		return 0;
 	} else {
 		*writerIOStreamPtr= (FILE *) fdopen (filedes[1], "a");
@@ -442,6 +445,10 @@ EXPORT(pid_t) forkSqueak(void) {
     pid_t pid;
     struct itimerval saveIntervalTimer;
 
+
+	/* Turn off the interval timer. If this is not done, then the program which we exec in
+	the child process will receive a timer interrupt, and will not know how to handle it. */
+
 	intervalTimer.it_interval.tv_sec = 0;
 	intervalTimer.it_interval.tv_usec = 0;
 	intervalTimer.it_value.tv_sec = 0;
@@ -473,19 +480,26 @@ static void * forwardSignaltoSemaphoreAt(sqInt sigNum, sqInt semaphoreIndex) {
 		return null;
 	}
 	if (semaphoreIndex == 0) {
+
+		/* Disable the handler */
+
 		if ((semaIndices[sigNum]) != 0) {
-
-			/* Disable the handler */
-
 			oldHandler = originalSigHandlers[sigNum];
 			oldHandler = setSignalNumberhandler(sigNum, oldHandler);
 			semaIndices[sigNum] = 0;
 			return oldHandler;
 		} else {
+
+			/* either -1 for printAllStacks or a positive integer for semaphore forwarding */
+			/* Signal handler had not been set, answer an error */
+
 			return sigErrorNumber();
 		}
 	}
 	if ((semaIndices[sigNum]) > 0) {
+
+		/* Handler is already set, answer an error */
+
 		return sigErrorNumber();
 	}
 	oldHandler = setSignalNumberhandler(sigNum, handleSignalFunctionAddress());
@@ -647,6 +661,10 @@ static sqInt initializeModuleForPlatform(void) {
 # ifdef SA_ONSTACK  // true if platform supports sigaltstack, else meaningless redeclarations of stack_t and sigaction
 	setSigaltstack();
 # else
+
+	/* override stack_t declared in sigstack.h because declarations
+			cannot easily be removed from setSigaltstack */
+
 	
 # define stack_t sqInt
 	
@@ -1192,10 +1210,17 @@ EXPORT(sqInt) primitiveForkExec(void) {
     sqInt workingDir;
     sqInt sigNum;
 
+
+	/* Do not fork child if running in secure mode */
+
 	if ((sandboxSecurity()) == 1) {
 		interpreterProxy->pop(10);
 		interpreterProxy->pushInteger(-1);
 	} else {
+
+		/* Turn off the interval timer. If this is not done, then the program which we exec in
+	the child process will receive a timer interrupt, and will not know how to handle it. */
+
 		intervalTimer.it_interval.tv_sec = 0;
 		intervalTimer.it_interval.tv_usec = 0;
 		intervalTimer.it_value.tv_sec = 0;
@@ -1289,6 +1314,10 @@ EXPORT(sqInt) primitiveForkExec(void) {
 				/* Can't get here from there */;
 			}
 		} else {
+
+			/* Normal return to Smalltalk - this is the old parent process. */
+			/* Enable the timer again before resuming Smalltalk. */
+
 			setitimer (ITIMER_REAL, &saveIntervalTimer, 0L);
 			interpreterProxy->pop(10);
 			interpreterProxy->pushInteger(pid);
@@ -1326,6 +1355,9 @@ EXPORT(sqInt) primitiveForkSqueak(void) {
 
 EXPORT(sqInt) primitiveForkSqueakWithoutSigHandler(void) {
     pid_t pid;
+
+
+	/* Do not fork child if running in secure mode */
 
 	if ((sandboxSecurity()) == 1) {
 		interpreterProxy->pop(1);
@@ -1717,6 +1749,9 @@ EXPORT(sqInt) primitiveNice(void) {
 	errno = 0;
 	result = nice(niceIncrement);
 	if (result == -1) {
+
+		/* sys call may have failed, test errno to be sure */
+
 		if (!(errno == 0)) {
 			return interpreterProxy->primitiveFail();
 		}
@@ -1768,6 +1803,9 @@ EXPORT(sqInt) primitivePutEnv(void) {
 	keyValueString = interpreterProxy->stackObjectValue(0);
 	cStringPtr = cStringFromString(keyValueString);
 	if ((putenv(cStringPtr)) == 0) {
+
+		/* Set environment variable. */
+
 		interpreterProxy->pop(2);
 		interpreterProxy->push(keyValueString);
 	} else {
@@ -1972,6 +2010,9 @@ EXPORT(sqInt) primitiveSendSigabrtTo(sqInt anIntegerPid) {
     int result;
     sqInt sig;
 
+
+	/* Do not allow signal sending if running in secure mode */
+
 	if ((sandboxSecurity()) == 1) {
 		interpreterProxy->pop(2);
 		interpreterProxy->pushInteger(-1);
@@ -1999,6 +2040,9 @@ EXPORT(sqInt) primitiveSendSigalrmTo(sqInt anIntegerPid) {
     pid_t pidToSignal;
     int result;
     sqInt sig;
+
+
+	/* Do not allow signal sending if running in secure mode */
 
 	if ((sandboxSecurity()) == 1) {
 		interpreterProxy->pop(2);
@@ -2029,6 +2073,9 @@ EXPORT(sqInt) primitiveSendSigchldTo(sqInt anIntegerPid) {
     int result;
     sqInt sig;
 
+
+	/* Do not allow signal sending if running in secure mode */
+
 	if ((sandboxSecurity()) == 1) {
 		interpreterProxy->pop(2);
 		interpreterProxy->pushInteger(-1);
@@ -2056,6 +2103,9 @@ EXPORT(sqInt) primitiveSendSigcontTo(sqInt anIntegerPid) {
     pid_t pidToSignal;
     int result;
     sqInt sig;
+
+
+	/* Do not allow signal sending if running in secure mode */
 
 	if ((sandboxSecurity()) == 1) {
 		interpreterProxy->pop(2);
@@ -2085,6 +2135,9 @@ EXPORT(sqInt) primitiveSendSighupTo(sqInt anIntegerPid) {
     int result;
     sqInt sig;
 
+
+	/* Do not allow signal sending if running in secure mode */
+
 	if ((sandboxSecurity()) == 1) {
 		interpreterProxy->pop(2);
 		interpreterProxy->pushInteger(-1);
@@ -2112,6 +2165,9 @@ EXPORT(sqInt) primitiveSendSigintTo(sqInt anIntegerPid) {
     pid_t pidToSignal;
     int result;
     sqInt sig;
+
+
+	/* Do not allow signal sending if running in secure mode */
 
 	if ((sandboxSecurity()) == 1) {
 		interpreterProxy->pop(2);
@@ -2141,6 +2197,9 @@ EXPORT(sqInt) primitiveSendSigkillTo(sqInt anIntegerPid) {
     int result;
     sqInt sig;
 
+
+	/* Do not allow signal sending if running in secure mode */
+
 	if ((sandboxSecurity()) == 1) {
 		interpreterProxy->pop(2);
 		interpreterProxy->pushInteger(-1);
@@ -2168,6 +2227,9 @@ EXPORT(sqInt) primitiveSendSigpipeTo(sqInt anIntegerPid) {
     pid_t pidToSignal;
     int result;
     sqInt sig;
+
+
+	/* Do not allow signal sending if running in secure mode */
 
 	if ((sandboxSecurity()) == 1) {
 		interpreterProxy->pop(2);
@@ -2197,6 +2259,9 @@ EXPORT(sqInt) primitiveSendSigquitTo(sqInt anIntegerPid) {
     int result;
     sqInt sig;
 
+
+	/* Do not allow signal sending if running in secure mode */
+
 	if ((sandboxSecurity()) == 1) {
 		interpreterProxy->pop(2);
 		interpreterProxy->pushInteger(-1);
@@ -2224,6 +2289,9 @@ EXPORT(sqInt) primitiveSendSigstopTo(sqInt anIntegerPid) {
     pid_t pidToSignal;
     int result;
     sqInt sig;
+
+
+	/* Do not allow signal sending if running in secure mode */
 
 	if ((sandboxSecurity()) == 1) {
 		interpreterProxy->pop(2);
@@ -2253,6 +2321,9 @@ EXPORT(sqInt) primitiveSendSigtermTo(sqInt anIntegerPid) {
     int result;
     sqInt sig;
 
+
+	/* Do not allow signal sending if running in secure mode */
+
 	if ((sandboxSecurity()) == 1) {
 		interpreterProxy->pop(2);
 		interpreterProxy->pushInteger(-1);
@@ -2281,6 +2352,9 @@ EXPORT(sqInt) primitiveSendSigusr1To(sqInt anIntegerPid) {
     int result;
     sqInt sig;
 
+
+	/* Do not allow signal sending if running in secure mode */
+
 	if ((sandboxSecurity()) == 1) {
 		interpreterProxy->pop(2);
 		interpreterProxy->pushInteger(-1);
@@ -2308,6 +2382,9 @@ EXPORT(sqInt) primitiveSendSigusr2To(sqInt anIntegerPid) {
     pid_t pidToSignal;
     int result;
     sqInt sig;
+
+
+	/* Do not allow signal sending if running in secure mode */
 
 	if ((sandboxSecurity()) == 1) {
 		interpreterProxy->pop(2);
@@ -2666,6 +2743,9 @@ static void * printAllStacksOnSignal(sqInt sigNum) {
 		return null;
 	}
 	if ((semaIndices[sigNum]) > 0) {
+
+		/* Handler is already set, answer an error */
+
 		return sigErrorNumber();
 	}
 	newHandler = getPrintAllStacksFunction();
@@ -2812,6 +2892,9 @@ static sqInt setSigaltstack(void) {
 
 	
 # ifdef SA_ONSTACK  // true if platform supports sigaltstack
+
+	/* See if there's already a sigaltstack in place */
+
 	if ((sigaltstack(0,&sigstack)) < 0) {
 		perror("sigaltstack");
 	}

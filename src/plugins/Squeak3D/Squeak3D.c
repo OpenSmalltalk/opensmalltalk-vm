@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 29 December 2012 7:52:51 pm 
-   by VMMaker 4.10.7
+/* Automatically generated from Squeak on 3 January 2013 11:27:05 pm 
+   by VMMaker 4.10.8
  */
 
 #include <math.h>
@@ -873,11 +873,20 @@ EXPORT(sqInt) b3dPrimitiveNextClippedTriangle(void) {
 
 			triMask = (vtxArray[(idx1 * PrimVertexSize) + PrimVtxClipFlags]) & ((vtxArray[(idx2 * PrimVertexSize) + PrimVtxClipFlags]) & (vtxArray[(idx3 * PrimVertexSize) + PrimVtxClipFlags]));
 			if (!((InAllMask & triMask) == InAllMask)) {
+
+				/* Tri is not completely inside -> needs clipping. */
+
 				if (triMask & OutAllMask) {
+
+					/* tri is completely outside. Store all zeros */
+
 					idxArray[i] = 0;
 					idxArray[i + 1] = 0;
 					idxArray[i + 2] = 0;
 				} else {
+
+					/* tri must be partially clipped. */
+
 					interpreterProxy->pop(6);
 					interpreterProxy->pushInteger(i);
 					return null;
@@ -950,6 +959,9 @@ EXPORT(sqInt) b3dShadeVertexBuffer(void) {
 
 	lightCount = interpreterProxy->slotSizeOf(lightArray);
 	for (i = 1; i <= vtxCount; i += 1) {
+
+		/* Load the primitive vertex */
+
 		/* begin loadPrimitiveVertex */
 		rgba = (((int*) litVertex))[PrimVtxColor32];
 		vtxInColor[2] = ((rgba & 255) * (1.0 / 255.0));
@@ -960,6 +972,9 @@ EXPORT(sqInt) b3dShadeVertexBuffer(void) {
 		rgba = ((usqInt) rgba) >> 8;
 		vtxInColor[3] = ((rgba & 255) * (1.0 / 255.0));
 		if (vbFlags & VBTrackEmission) {
+
+			/* Load color from vertex */
+
 			vtxOutColor[0] = ((vtxInColor[0]) + (primMaterial[EmissionRed]));
 			vtxOutColor[1] = ((vtxInColor[1]) + (primMaterial[EmissionGreen]));
 			vtxOutColor[2] = ((vtxInColor[2]) + (primMaterial[EmissionBlue]));
@@ -971,6 +986,9 @@ EXPORT(sqInt) b3dShadeVertexBuffer(void) {
 			vtxOutColor[3] = (primMaterial[EmissionAlpha]);
 		}
 		for (j = 0; j <= (lightCount - 1); j += 1) {
+
+			/* Fetch the light source */
+
 			/* begin fetchLightSource:ofObject: */
 			lightOop = interpreterProxy->fetchPointerofObject(j, lightArray);
 			primLight = interpreterProxy->firstIndexableField(lightOop);
@@ -1575,6 +1593,10 @@ static double computeSpotFactor(void) {
 	}
 	deltaCos = primLight[SpotLightDeltaCos];
 	if (deltaCos <= 1.0e-5) {
+
+		/* No delta -- a sharp boundary between on and off.
+		Since off has already been determined above, we are on */
+
 		return 1.0;
 	}
 	cosAngle = (cosAngle - minCos) / deltaCos;
@@ -1819,6 +1841,9 @@ static sqInt loadRasterizerState(sqInt stackIndex) {
     sqInt stateOop;
 
 	if ((copyBitsFn == 0) || (loadBBFn == 0)) {
+
+		/* We need loadBitBltFrom/copyBits here so try to load it implicitly */
+
 		if (!(initialiseModule())) {
 			return 0;
 		}
@@ -2148,6 +2173,9 @@ EXPORT(sqInt) primitiveSetBitBltPlugin(void) {
 	ptr = interpreterProxy->firstIndexableField(pluginName);
 	needReload = 0;
 	for (i = 0; i <= (length - 1); i += 1) {
+
+		/* Compare and store the plugin to be used */
+
 		if (!((bbPluginName[i]) == (ptr[i]))) {
 			bbPluginName[i] = (ptr[i]);
 			needReload = 1;
@@ -2328,6 +2356,9 @@ static sqInt shadeVertex(void) {
 		lightScale = lightScale * (computeSpotFactor());
 	}
 	if (lightScale > 0.001) {
+
+		/* Compute the ambient part */
+
 		if (lightFlags & FlagAmbientPart) {
 			/* begin addPart:from:trackFlag:scale: */
 			if (vbFlags & VBTrackAmbient) {
@@ -2349,6 +2380,8 @@ static sqInt shadeVertex(void) {
 		if (lightFlags & FlagDiffusePart) {
 
 			/* Compute angle from light->vertex to vertex normal */
+
+
 			/* For one-sided lighting negate cosAngle if necessary */
 
 			cosAngle = dotProductOfFloatwithDouble(litVertex + PrimVtxNormal, l2vDirection);
@@ -2376,6 +2409,9 @@ static sqInt shadeVertex(void) {
 		}
 	}
 	if ((lightFlags & FlagSpecularPart) && ((primMaterial[MaterialShininess]) > 0.0)) {
+
+		/* Compute specular part */
+
 		l2vSpecDir[0] = (l2vDirection[0]);
 		l2vSpecDir[1] = (l2vDirection[1]);
 		l2vSpecDir[2] = (l2vDirection[2]);
@@ -2388,6 +2424,8 @@ static sqInt shadeVertex(void) {
 		if (cosAngle > 0.0) {
 
 			/* Normalize the angle */
+
+
 			/* cosAngle should be somewhere between 0 and 1.
 			If not, then the vertex normal was not normalized */
 
@@ -2776,7 +2814,13 @@ static sqInt transformVBcountbyandflags(float *vtxArray, sqInt vtxCount, float *
 		}
 	}
 	if ((mvFlags & FlagM44NoPerspective) && (prFlags == 0)) {
+
+		/* Modelview matrix has no perspective part and projection is not optimized */
+
 		if ((mvFlags == FlagM44NoTranslation) == 0) {
+
+			/* Modelview matrix with translation */
+
 			for (i = 1; i <= vtxCount; i += 1) {
 				if (hasNormals) {
 					transformPrimitiveNormalbyrescale(pVertex, modelViewMatrix, rescale);
@@ -2786,6 +2830,9 @@ static sqInt transformVBcountbyandflags(float *vtxArray, sqInt vtxCount, float *
 				pVertex += PrimVertexSize;
 			}
 		} else {
+
+			/* Modelview matrix without translation */
+
 			for (i = 1; i <= vtxCount; i += 1) {
 				if (hasNormals) {
 					transformPrimitiveNormalbyrescale(pVertex, modelViewMatrix, rescale);
@@ -2798,6 +2845,9 @@ static sqInt transformVBcountbyandflags(float *vtxArray, sqInt vtxCount, float *
 		return null;
 	}
 	if ((mvFlags & prFlags) & FlagM44Identity) {
+
+		/* If both are identity matrices just copy entries */
+
 		for (i = 1; i <= vtxCount; i += 1) {
 			pVertex[PrimVtxRasterPosX] = (pVertex[PrimVtxPositionX]);
 			pVertex[PrimVtxRasterPosY] = (pVertex[PrimVtxPositionY]);
@@ -2808,6 +2858,9 @@ static sqInt transformVBcountbyandflags(float *vtxArray, sqInt vtxCount, float *
 		return null;
 	}
 	if (mvFlags & FlagM44Identity) {
+
+		/* If model view matrix is identity just perform projection */
+
 		for (i = 1; i <= vtxCount; i += 1) {
 			transformPrimitiveRasterPositionby(pVertex, projectionMatrix);
 			pVertex += PrimVertexSize;
@@ -2815,6 +2868,10 @@ static sqInt transformVBcountbyandflags(float *vtxArray, sqInt vtxCount, float *
 		return null;
 	}
 	if (prFlags & FlagM44Identity) {
+
+		/* If projection matrix is identity just transform and copy.
+		Note: This case is not very likely so it's not been unrolled. */
+
 		for (i = 1; i <= vtxCount; i += 1) {
 			if (hasNormals) {
 				transformPrimitiveNormalbyrescale(pVertex, modelViewMatrix, rescale);

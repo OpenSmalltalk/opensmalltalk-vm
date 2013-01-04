@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 29 December 2012 7:53:02 pm 
-   by VMMaker 4.10.7
+/* Automatically generated from Squeak on 3 January 2013 11:27:08 pm 
+   by VMMaker 4.10.8
  */
 
 #include <math.h>
@@ -70,9 +70,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"XDisplayControlPlugin 29 December 2012 (i)"
+	"XDisplayControlPlugin 3 January 2013 (i)"
 #else
-	"XDisplayControlPlugin 29 December 2012 (e)"
+	"XDisplayControlPlugin 3 January 2013 (e)"
 #endif
 ;
 static int osprocessSandboxSecurity;
@@ -114,6 +114,9 @@ EXPORT(sqInt) primitiveCanConnectToDisplay(void) {
     sqInt name;
     char * namePtr;
 
+
+	/* Do not allow this if running in secure mode */
+
 	if ((sandboxSecurity()) == 1) {
 		interpreterProxy->pop(2);
 		interpreterProxy->push(interpreterProxy->falseObject());
@@ -122,9 +125,15 @@ EXPORT(sqInt) primitiveCanConnectToDisplay(void) {
 		namePtr = transientCStringFromString(name);
 		d = XOpenDisplay(namePtr);
 		if (d == 0) {
+
+			/* Failed to make connection to server, answer false */
+
 			interpreterProxy->pop(2);
 			interpreterProxy->push(interpreterProxy->falseObject());
 		} else {
+
+			/* Successfully opened connection; close it and answer true */
+
 			XCloseDisplay(d);
 			interpreterProxy->pop(2);
 			interpreterProxy->push(interpreterProxy->trueObject());
@@ -220,6 +229,9 @@ EXPORT(sqInt) primitiveSetDisplayName(void) {
     sqInt name;
     static char nameBuffer[501];
     char * namePtr;
+
+
+	/* Do not allow this if running in secure mode */
 
 	if ((sandboxSecurity()) == 1) {
 		interpreterProxy->pop(2);

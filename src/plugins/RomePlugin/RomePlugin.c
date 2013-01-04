@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 29 December 2012 7:52:59 pm 
-   by VMMaker 4.10.7
+/* Automatically generated from Squeak on 3 January 2013 11:27:07 pm 
+   by VMMaker 4.10.8
  */
 
 #include <math.h>
@@ -192,9 +192,9 @@ struct VirtualMachine* interpreterProxy;
 static sqInt maxSurfaceID;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"RomePlugin yo.39 29 December 2012 (i)"
+	"RomePlugin yo.39 3 January 2013 (i)"
 #else
-	"RomePlugin yo.39 29 December 2012 (e)"
+	"RomePlugin yo.39 3 January 2013 (e)"
 #endif
 ;
 static fn_ioRegisterSurface registerSurfaceFn;
@@ -232,6 +232,9 @@ static sqInt addAlignmentinto(sqInt attrArrayOop, PangoAttrList *pangoAttrList) 
 		pangoAlignment = PANGO_ALIGN_CENTER;
 	}
 	if (alignment == 3) {
+
+		/* self pangoLayoutSetJustify */
+
 		null;
 	}
 }
@@ -490,6 +493,9 @@ static cairo_t* contextFrom(sqInt canvasOop) {
 	if (interpreterProxy->failed()) {
 		contextIndex = interpreterProxy->fetchPointerofObject(CanvasHandleIndex, canvasOop);
 		if (!(contextIndex == (interpreterProxy->nilObject()))) {
+
+			/* fail silently */
+
 			fail("canvas handle not an integer");
 		}
 		return null;
@@ -1492,6 +1498,9 @@ EXPORT(sqInt) primitiveDrawGeneralBezierShape(void) {
 			if ((xFrom == xVia) && (yFrom == yVia)) {
 				cairo_line_to(context, xTo, yTo);
 			} else {
+
+				/* increase degree to cubic: via1 = 1/3 from + 2/3 via, via2 = 2/3 via + 1/3 to */
+
 				cairo_curve_to(context, (xFrom + (2.0 * xVia)) / 3.0, (yFrom + (2.0 * yVia)) / 3.0, ((2.0 * xVia) + xTo) / 3.0, ((2.0 * yVia) + yTo) / 3.0, xTo, yTo);
 			}
 			seg += 6;
@@ -2823,6 +2832,22 @@ EXPORT(sqInt) primitivePangoShowString(void) {
 	if (1) {
 		pango_cairo_show_layout(context, layout);
 	} else {
+
+		/* 	self cairoTranslate: context x: 0 y: (self cCode: 'PANGO_PIXELS(baseline)').
+	0 to: lineCount - 1 do: [:lineIndex |
+		line := self pangoLayoutIterGetLineReadonly: lineIter.
+		
+		self pangoLayoutLineGetExtents: line ink: (self cCode: '&ink') logical: (self cCode: '&logical').
+		self cairoTranslate: context x: (self cCode: '-(PANGO_PIXELS(ink.x))') y: 0.
+		self pangoCairoShowLayoutLine: context line: line.
+		self pangoLayoutIterNextLine: lineIter.
+		prevBaseline := baseline.
+		baseline := self pangoLayoutIterGetBaseline: lineIter.
+		self cairoTranslate: context x: (self cCode: 'PANGO_PIXELS(ink.x)')
+			y: (self cCode: 'PANGO_PIXELS(baseline-prevBaseline)').
+	].
+ */
+
 		null;
 	}
 	if (selStart == selEnd) {
@@ -3471,18 +3496,33 @@ static sqInt translateSqAttrsToPangoAttrsinto(sqInt sqAttrsArrayOop, PangoAttrLi
 		symbolOop = interpreterProxy->fetchPointerofObject(0, attrArray);
 		symbol = interpreterProxy->firstIndexableField(symbolOop);
 		if ((symbol[0]) == 65) {
+
+			/* A */
+
 			addAlignmentinto(attrArray, pangoAttrList);
 		}
 		if ((symbol[0]) == 67) {
+
+			/* C */
+
 			addColorinto(attrArray, pangoAttrList);
 		}
 		if ((symbol[0]) == 69) {
+
+			/* E */
+
 			addEmphasisinto(attrArray, pangoAttrList);
 		}
 		if ((symbol[0]) == 70) {
+
+			/* F */
+
 			addFontinto(attrArray, pangoAttrList);
 		}
 		if ((symbol[0]) == 76) {
+
+			/* L */
+
 			addLanguageinto(attrArray, pangoAttrList);
 		}
 	}

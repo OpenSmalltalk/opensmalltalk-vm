@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 29 December 2012 7:52:58 pm 
-   by VMMaker 4.10.7
+/* Automatically generated from Squeak on 3 January 2013 11:27:06 pm 
+   by VMMaker 4.10.8
  */
 
 #include <math.h>
@@ -94,9 +94,9 @@ struct VirtualMachine* interpreterProxy;
 static sqInt maximumNumberOfFilesToWatch;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"Mpeg3Plugin 29 December 2012 (i)"
+	"Mpeg3Plugin 3 January 2013 (i)"
 #else
-	"Mpeg3Plugin 29 December 2012 (e)"
+	"Mpeg3Plugin 3 January 2013 (e)"
 #endif
 ;
 static mpeg3_t *mpegFiles[1024+1];
@@ -921,6 +921,18 @@ EXPORT(sqInt) primitiveMPEG3ReadFrameBufferOffset(void) {
 	sqInt aByteNumber;
 	sqInt _return_value;
 
+
+	/* int mpeg3_read_frame(mpeg3_t *file, 
+		unsigned char **output_rows, 
+		int in_x, 
+		int in_y, 
+		int in_w, 
+		int in_h, 
+		int out_w, 
+		int out_h, 
+		int color_model,
+		int stream) */
+
 	fileHandle = interpreterProxy->stackValue(11);
 	interpreterProxy->success(interpreterProxy->isWords(interpreterProxy->stackValue(10)));
 	aBuffer = ((unsigned *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(10))));
@@ -990,6 +1002,18 @@ EXPORT(sqInt) primitiveMPEG3ReadFrame(void) {
 	sqInt aNumber;
 	sqInt aByteNumber;
 	sqInt _return_value;
+
+
+	/* int mpeg3_read_frame(mpeg3_t *file, 
+		unsigned char **output_rows, 
+		int in_x, 
+		int in_y, 
+		int in_w, 
+		int in_h, 
+		int out_w, 
+		int out_h, 
+		int color_model,
+		int stream) */
 
 	fileHandle = interpreterProxy->stackValue(10);
 	interpreterProxy->success(interpreterProxy->isWords(interpreterProxy->stackValue(9)));

@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 29 December 2012 7:52:53 pm 
-   by VMMaker 4.10.7
+/* Automatically generated from Squeak on 3 January 2013 11:27:05 pm 
+   by VMMaker 4.10.8
  */
 
 #include <math.h>
@@ -125,9 +125,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"SqueakFFIPrims 29 December 2012 (i)"
+	"SqueakFFIPrims 3 January 2013 (i)"
 #else
-	"SqueakFFIPrims 29 December 2012 (e)"
+	"SqueakFFIPrims 3 January 2013 (e)"
 #endif
 ;
 
@@ -205,6 +205,10 @@ static sqInt ffiArgumentSpecClass(sqInt oop, sqInt argSpec, sqInt argClass) {
 
 	nilOop = interpreterProxy->nilObject();
 	if (!(argClass == nilOop)) {
+
+		/* Type check 1: 
+		Is the required class of the argument a subclass of ExternalStructure? */
+
 		if (!(interpreterProxy->includesBehaviorThatOf(argClass, interpreterProxy->classExternalStructure()))) {
 			/* begin ffiFail: */
 			ffiLastError = FFIErrorWrongType;
@@ -218,10 +222,10 @@ static sqInt ffiArgumentSpecClass(sqInt oop, sqInt argSpec, sqInt argClass) {
 	}
 	isStruct = 0;
 	if (!(((oop & 1)) || (oop == nilOop))) {
+
+		/* #isPointers: will fail if oop is SmallInteger so don't even attempt to use it */
+
 		if (interpreterProxy->isPointers(oop)) {
-
-			/* #isPointers: will fail if oop is SmallInteger so don't even attempt to use it */
-
 			isStruct = interpreterProxy->includesBehaviorThatOf(oopClass, interpreterProxy->classExternalStructure());
 			if (!((argClass == nilOop) || (isStruct))) {
 				/* begin ffiFail: */
@@ -265,6 +269,9 @@ static sqInt ffiArgumentSpecClass(sqInt oop, sqInt argSpec, sqInt argClass) {
 
 	ffiArgHeader = longAt(ffiArgSpec);
 	if (ffiArgHeader & FFIFlagStructure) {
+
+		/* argument must be ExternalStructure */
+
 		if (!(isStruct)) {
 			/* begin ffiFail: */
 			ffiLastError = FFIErrorCoercionFailed;
@@ -315,6 +322,9 @@ static sqInt ffiArgumentSpecClass(sqInt oop, sqInt argSpec, sqInt argClass) {
 		return interpreterProxy->primitiveFail();
 	}
 	if (ffiArgHeader & FFIFlagPointer) {
+
+		/* no integers for pointers please */
+
 		if ((oop & 1)) {
 			/* begin ffiFail: */
 			ffiLastError = FFIErrorIntAsPointer;
@@ -324,6 +334,9 @@ static sqInt ffiArgumentSpecClass(sqInt oop, sqInt argSpec, sqInt argClass) {
 			return ffiPushPointer(null);
 		}
 		if (ffiArgHeader & FFIFlagAtomic) {
+
+			/* e.g., ExternalData */
+
 			if (isStruct) {
 				/* begin ffiAtomicStructByReference:Class: */
 				if (!(oopClass == (interpreterProxy->classExternalData()))) {
@@ -448,6 +461,9 @@ static sqInt ffiArgumentSpecClass(sqInt oop, sqInt argSpec, sqInt argClass) {
 		return ffiPushPointerContentsOf(valueOop);
 	}
 	if (ffiArgHeader & FFIFlagAtomic) {
+
+		/* argument is atomic value */
+
 		/* begin ffiArgByValue: */
 		atomicType2 = ((usqInt) (ffiArgHeader & FFIAtomicTypeMask)) >> FFIAtomicTypeShift;
 		if ((atomicType2 < 0) || (atomicType2 > FFITypeDoubleFloat)) {
@@ -583,10 +599,10 @@ static sqInt ffiCalloutToWithFlags(sqInt address, sqInt callType) {
     sqInt shift;
     sqInt value;
 
+
+	/* Note: Order is important here since FFIFlagPointer + FFIFlagStructure is used to represent 'typedef void* VoidPointer' and VoidPointer must be returned as pointer *not* as struct */
+
 	if (ffiRetHeader & FFIFlagPointer) {
-
-		/* Note: Order is important here since FFIFlagPointer + FFIFlagStructure is used to represent 'typedef void* VoidPointer' and VoidPointer must be returned as pointer *not* as struct */
-
 		retVal = ffiCallAddressOfWithPointerReturn(address, callType);
 		return ffiCreateReturnPointer(retVal);
 	}
@@ -692,6 +708,9 @@ static sqInt ffiCreateLongLongReturn(sqInt isSigned) {
 	lowWord = ffiLongLongResultLow();
 	highWord = ffiLongLongResultHigh();
 	if (isSigned) {
+
+		/* check for 32 bit signed */
+
 		if ((highWord == 0) && (lowWord >= 0)) {
 			return interpreterProxy->signed32BitIntegerFor(lowWord);
 		}
@@ -713,6 +732,9 @@ static sqInt ffiCreateLongLongReturn(sqInt isSigned) {
 			largeClass = interpreterProxy->classLargePositiveInteger();
 		}
 	} else {
+
+		/* check for 32 bit unsigned */
+
 		if (highWord == 0) {
 			return interpreterProxy->positive32BitIntegerFor(lowWord);
 		}
@@ -768,6 +790,9 @@ static sqInt ffiCreateReturnPointer(sqInt retVal) {
 
 		atomicType = ((usqInt) (ffiRetHeader & FFIAtomicTypeMask)) >> FFIAtomicTypeShift;
 		if ((((usqInt) atomicType) >> 1) == (((usqInt) FFITypeSignedChar) >> 1)) {
+
+			/* String return */
+
 			return ffiReturnCStringFrom(retVal);
 		}
 		interpreterProxy->pushRemappableOop(ffiRetOop);
@@ -857,6 +882,8 @@ static sqInt ffiLoadCalloutAddress(sqInt lit) {
 
 
 	/* Lookup the address */
+
+
 	/* Make sure it's an external handle */
 
 	addressPtr = interpreterProxy->fetchPointerofObject(0, lit);
@@ -885,6 +912,9 @@ l1:	/* end ffiContentsOfHandle:errCode: */;
 		return 0;
 	}
 	if (address == 0) {
+
+		/* Go look it up in the module */
+
 		if ((interpreterProxy->slotSizeOf(lit)) < 5) {
 			/* begin ffiFail: */
 			ffiLastError = FFIErrorNoModule;
@@ -1771,10 +1801,10 @@ EXPORT(sqInt) primitiveFFIIntegerAt(void) {
 		return 0;
 	}
 	if (byteSize < 4) {
+
+		/* short/byte */
+
 		if (byteSize == 1) {
-
-			/* short/byte */
-
 			value = byteAt(addr);
 		} else {
 			value = *((unsigned short int *) addr);

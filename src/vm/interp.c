@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 29 December 2012 7:52:34 pm 
-   by VMMaker 4.10.7
+/* Automatically generated from Squeak on 3 January 2013 11:26:59 pm 
+   by VMMaker 4.10.8
  */
 #if 1
 # define SQ_USE_GLOBAL_STRUCT 1
@@ -158,7 +158,7 @@ void defaultErrorProc(char *s) {
 #define InitialIPIndex 4
 #define InstanceSpecificationIndex 2
 #define InstructionPointerIndex 1
-#define InterpreterSourceVersion "4.10.7"
+#define InterpreterSourceVersion "4.10.8"
 #define InvokeCallbackSelector 53
 #define LargeContextBit 262144
 #define LastLinkIndex 1
@@ -929,7 +929,7 @@ sqInt remapBuffer[26];
 struct foo * foo = &fum;
 
 sqInt extraVMMemory;
-const char *interpreterVersion = "Squeak4.3 of 22 December 2011 [latest update: #11860]";
+const char *interpreterVersion = "Squeak4.3 of 2 January 2013 [latest update: #12359]";
 sqInt (*compilerHooks[16])();
 struct VirtualMachine* interpreterProxy;
 sqInt imageFormatVersionNumber = 0;
@@ -1722,6 +1722,9 @@ register struct foo * foo = &fum;
 	for (p = 0; p <= (CacheProbeMax - 1); p += 1) {
 		probe = (((usqInt) hash) >> p) & MethodCacheMask;
 		if ((foo->methodCache[probe + MethodCacheSelector]) == 0) {
+
+			/* Found an empty entry -- use it */
+
 			foo->methodCache[probe + MethodCacheSelector] = foo->messageSelector;
 			foo->methodCache[probe + MethodCacheClass] = foo->lkupClass;
 			foo->methodCache[probe + MethodCacheMethod] = foo->newMethod;
@@ -1937,6 +1940,9 @@ register struct foo * foo = &fum;
     sqInt oop3;
 
 	if (foo->allocationCount >= foo->allocationsBetweenGCs) {
+
+		/* do an incremental GC every so many allocations to  keep pauses short */
+
 		incrementalGC();
 	}
 	/* begin sufficientSpaceToAllocate: */
@@ -2103,6 +2109,9 @@ register struct foo * foo = &fum;
 		return 1;
 	}
 	if (!foo->primFailCode) {
+
+		/* Successful prim, stack must have exactly nArgs arguments popped off */
+
 		return ((foo->stackPointer - foo->activeContext) + (nArgs * (BYTES_PER_WORD))) == delta;
 	}
 	return (foo->stackPointer - foo->activeContext) == delta;
@@ -2117,6 +2126,9 @@ register struct foo * foo = &fum;
     sqInt header;
 
 	if (((((usqInt) oop)) < (((usqInt) foo->youngStart))) && (!((oop & 1)))) {
+
+		/* Yes, oop is an old object */
+
 		/* begin noteAsRoot:headerLoc: */
 		header = longAt(oop);
 		if ((header & (ROOT_BIT)) == 0) {
@@ -2176,6 +2188,9 @@ register struct foo * foo = &fum;
 			}
 		}
 	} else {
+
+		/* Normal -- no forwarding */
+
 		/* begin noteAsRoot:headerLoc: */
 		header2 = longAt(oop);
 		if ((header2 & (ROOT_BIT)) == 0) {
@@ -2241,8 +2256,14 @@ register struct foo * foo = &fum;
 		return 0;
 	}
 	if (allYoungand(array1, array2)) {
+
+		/* sweep only the young objects plus the roots */
+
 		mapPointersInObjectsFromto(foo->youngStart, foo->endOfMemory);
 	} else {
+
+		/* sweep all objects */
+
 		mapPointersInObjectsFromto(memory, foo->endOfMemory);
 	}
 	if (twoWayFlag) {
@@ -2536,6 +2557,9 @@ register struct foo * foo = &fum;
     sqInt lastLink;
     sqInt oop21;
 
+
+	/* For now, do not allow a callback unless we're in a primitiveResponse */
+
 	if (foo->primitiveIndex == 0) {
 		return 0;
 	}
@@ -2561,6 +2585,9 @@ register struct foo * foo = &fum;
 	foo->nextPollTick = 0;
 	result = setjmp(foo->jmpBuf[foo->jmpDepth]);
 	if (result == 0) {
+
+		/* Fill in callbackID */
+
 		callbackID[0] = foo->jmpDepth;
 		interpret();
 	}
@@ -2693,6 +2720,9 @@ register struct foo * foo = &fum;
 		}
 		longAtput(rcvr, ((longAt(rcvr)) & (~CompactClassMask)) | ccIndex);
 	} else {
+
+		/* Exchange the class pointer, which could make rcvr a root for argClass */
+
 		longAtput(rcvr - (BASE_HEADER_SIZE), argClass | ((longAt(rcvr)) & TypeMask));
 		if ((((usqInt) rcvr)) < (((usqInt) foo->youngStart))) {
 			possibleRootStoreIntovalue(rcvr, argClass);
@@ -2753,9 +2783,11 @@ register struct foo * foo = &fum;
 
 	now = (ioMSecs()) & MillisecondClockMask;
 	if (!(foo->interruptCheckCounter < -100)) {
+
+		/* don't play with the feedback if we forced a check. It only makes life difficult */
+
 		if ((now - foo->lastTick) < foo->interruptChecksEveryNms) {
 
-			/* don't play with the feedback if we forced a check. It only makes life difficult */
 			/* wrapping is not a concern, it'll get caught quickly  
 				enough. This clause is trying to keep a reasonable  
 				guess of how many times per 	interruptChecksEveryNms we are calling  
@@ -2882,6 +2914,9 @@ register struct foo * foo = &fum;
 sqInt checkImageVersionFromstartingAt(sqImageFile  f, squeakFileOffsetType  imageOffset) {
     sqInt firstVersion;
 
+
+	/* check the version number */
+
 	sqImageFileSeek(f, imageOffset);
 	imageFormatInitialVersion = (firstVersion = getLongFromFileswap(f, 0));
 	if (readableFormat(imageFormatInitialVersion)) {
@@ -2893,6 +2928,9 @@ sqInt checkImageVersionFromstartingAt(sqImageFile  f, squeakFileOffsetType  imag
 		return 1;
 	}
 	if (imageOffset == 0) {
+
+		/* try skipping the first 512 bytes (prepended by certain Mac file transfer utilities) */
+
 		sqImageFileSeek(f, 512);
 		imageFormatInitialVersion = getLongFromFileswap(f, 0);
 		if (readableFormat(imageFormatInitialVersion)) {
@@ -3284,10 +3322,15 @@ register struct foo * foo = &fum;
 	if ((foo->messageSelector == (fetchPointerofObject(16 * 2, fetchPointerofObject(SpecialSelectors, foo->specialObjectsOop)))) && (foo->lkupClass == (fetchClassOfNonInt(rcvr)))) {
 
 		/* OK -- look in the at-cache */
+
+
 		/* Index into atCache = 4N, for N = 0 ... 7 */
 
 		atIx = rcvr & AtCacheMask;
 		if (!((foo->atCache[atIx + AtCacheOop]) == rcvr)) {
+
+			/* Rcvr not in cache.  Install it... */
+
 			installinAtCacheatstring(rcvr, foo->atCache, atIx, stringy);
 		}
 		if (!foo->primFailCode) {
@@ -3352,10 +3395,15 @@ register struct foo * foo = &fum;
 	if ((foo->messageSelector == (fetchPointerofObject(17 * 2, fetchPointerofObject(SpecialSelectors, foo->specialObjectsOop)))) && (foo->lkupClass == (fetchClassOfNonInt(rcvr)))) {
 
 		/* OK -- look in the at-cache */
+
+
 		/* Index into atPutCache */
 
 		atIx = (rcvr & AtCacheMask) + AtPutBase;
 		if (!((foo->atCache[atIx + AtCacheOop]) == rcvr)) {
+
+			/* Rcvr not in cache.  Install it... */
+
 			installinAtCacheatstring(rcvr, foo->atCache, atIx, stringy);
 		}
 		if (!foo->primFailCode) {
@@ -3456,12 +3504,19 @@ register struct foo * foo = &fum;
 			return result;
 		}
 		if (fmt >= 16) {
+
+			/* Note fmt >= 16 is an artificial flag for strings */
+			/* String */
+
 			/* begin fetchPointer:ofObject: */
 			/* begin fetchPointer:ofObject: */
 			oop1 = foo->specialObjectsOop;
 			oop = longAt((oop1 + (BASE_HEADER_SIZE)) + (CharacterTable << (SHIFT_FOR_WORD)));
 			return longAt((oop + (BASE_HEADER_SIZE)) + ((byteAt((rcvr + (BASE_HEADER_SIZE)) + (index - 1))) << (SHIFT_FOR_WORD)));
 		} else {
+
+			/* ByteArray */
+
 			return (((byteAt((rcvr + (BASE_HEADER_SIZE)) + (index - 1))) << 1) | 1);
 		}
 	}
@@ -3793,6 +3848,9 @@ register struct foo * foo = &fum;
 	}
 	longAtput((message + (BASE_HEADER_SIZE)) + (MessageArgumentsIndex << (SHIFT_FOR_WORD)), argumentArray);
 	if ((lastPointerOf(message)) >= ((MessageLookupClassIndex * (BYTES_PER_WORD)) + (BASE_HEADER_SIZE))) {
+
+		/* Only store lookupClass if message has 3 fields (old images don't) */
+
 		/* begin storePointer:ofObject:withValue: */
 		if ((((usqInt) message)) < (((usqInt) foo->youngStart))) {
 			possibleRootStoreIntovalue(message, lookupClass);
@@ -4148,6 +4206,9 @@ register struct foo * foo = &fum;
 	if (ccIndex == 0) {
 		return (longAt(oop - (BASE_HEADER_SIZE))) & (ALL_BUT_TYPE_MASK);
 	} else {
+
+		/* look up compact class */
+
 		/* begin fetchPointer:ofObject: */
 		/* begin fetchPointer:ofObject: */
 		oop3 = foo->specialObjectsOop;
@@ -4165,6 +4226,9 @@ sqInt fetchClassOfNonInt(sqInt oop) {
 	if (ccIndex == 0) {
 		return (longAt(oop - (BASE_HEADER_SIZE))) & (ALL_BUT_TYPE_MASK);
 	} else {
+
+		/* look up compact class */
+
 		/* begin fetchPointer:ofObject: */
 		/* begin fetchPointer:ofObject: */
 		oop2 = foo->specialObjectsOop;
@@ -4339,19 +4403,22 @@ l2:	/* end lastPointerOf: */;
 
 		weakOop = longAt(oop + i);
 		if (!((weakOop == foo->nilObj) || (((weakOop & 1)) || (weakOop < foo->youngStart)))) {
-			if (weakOop < oop) {
 
-				/* Check if the object is being collected. 
+			/* Check if the object is being collected. 
 					If the weak reference points  
 					* backward: check if the weakOops chunk is free
 					* forward: check if the weakOoop has been marked by GC */
 
+			if (weakOop < oop) {
 				chunk = weakOop - (foo->headerTypeBytes[(longAt(weakOop)) & TypeMask]);
 				oopGone = ((longAt(chunk)) & TypeMask) == HeaderTypeFree;
 			} else {
 				oopGone = ((longAt(weakOop)) & (MARK_BIT)) == 0;
 			}
 			if (oopGone) {
+
+				/* Store nil in the pointer and signal the  interpreter  */
+
 				longAtput(oop + i, foo->nilObj);
 				if (nonWeakCnt >= 2) {
 					/* begin weakFinalizerCheck: */
@@ -4507,6 +4574,9 @@ register struct foo * foo = &fum;
 	ok = 0;
 l1:	/* end lookupInMethodCacheSel:class: */;
 	if (!(ok)) {
+
+		/* entry was not found in the cache; look it up the hard way  */
+
 		lookupMethodInClass(class);
 		foo->lkupClass = class;
 		addNewMethodToCache();
@@ -4692,10 +4762,16 @@ l2:	/* end fetchClassOf: */;
 l3:	/* end fixedFieldsOf:format:length: */;
 	if (fmt < 8) {
 		if (fmt == 6) {
+
+			/* 32 bit field objects */
+
 			return pointerForOop((oop + (BASE_HEADER_SIZE)) + (fixedFields << 2));
 		}
 		return pointerForOop((oop + (BASE_HEADER_SIZE)) + (fixedFields << (SHIFT_FOR_WORD)));
 	} else {
+
+		/* Byte objects */
+
 		return pointerForOop((oop + (BASE_HEADER_SIZE)) + fixedFields);
 	}
 }
@@ -4800,10 +4876,16 @@ register struct foo * foo = &fum;
 	while ((((usqInt) oop)) < (((usqInt) foo->endOfMemory))) {
 		if (!(((longAt(oop)) & TypeMask) == HeaderTypeFree)) {
 			if (((((usqInt) (longAt(oop))) >> 8) & 15) >= 12) {
+
+				/* This is a compiled method */
+
 				/* begin primitiveIndexOf: */
 				primBits = (((usqInt) (longAt((oop + (BASE_HEADER_SIZE)) + (HeaderIndex << (SHIFT_FOR_WORD))))) >> 1) & 268435967;
 				primIdx = (primBits & 511) + (((usqInt) primBits) >> 19);
 				if (primIdx == PrimitiveExternalCallIndex) {
+
+					/* It's primitiveExternalCall */
+
 					flushExternalPrimitiveOf(oop);
 				}
 			}
@@ -4952,6 +5034,9 @@ l1:	/* end fullCompaction */;
 
 sqInt fwdTableInit(sqInt blkSize) {
 register struct foo * foo = &fum;
+
+	/* set endOfMemory to just after a minimum-sized free block */
+
 	/* begin setSizeOfFree:to: */
 	longAtput(foo->freeBlock, ((BASE_HEADER_SIZE) & (ALL_BUT_TYPE_MASK)) | HeaderTypeFree);
 
@@ -5107,6 +5192,9 @@ sqInt incCompBody(void) {
 register struct foo * foo = &fum;
     sqInt bytesFreed;
 
+
+	/* reserve memory for forwarding table */
+
 	fwdTableInit((BYTES_PER_WORD) * 2);
 
 	/* update pointers to point at new oops */
@@ -5145,6 +5233,9 @@ register struct foo * foo = &fum;
 		if (((longAt(oop)) & TypeMask) == HeaderTypeFree) {
 			bytesFreed += (longAt(oop)) & (ALL_BUT_TYPE_MASK);
 		} else {
+
+			/* create a forwarding block for oop */
+
 			/* begin fwdBlockGet: */
 			foo->fwdTableNext += (BYTES_PER_WORD) * 2;
 			if (foo->fwdTableNext <= foo->fwdTableLast) {
@@ -5368,6 +5459,9 @@ register struct foo * foo = &fum;
 	if ((objectAfter(newFreeChunk)) == foo->endOfMemory) {
 		initializeMemoryFirstFree(newFreeChunk);
 	} else {
+
+		/* newFreeChunk is not at end of memory; re-install freeBlock  */
+
 		initializeMemoryFirstFree(foo->freeBlock);
 	}
 	return newFreeChunk;
@@ -5784,6 +5878,9 @@ register struct foo * foo = &fum;
 	hdr = longAt(rcvr);
 	fmt = (((usqInt) hdr) >> 8) & 15;
 	if ((fmt == 3) && ((((((usqInt) hdr) >> 12) & 31) == 13) || ((((((usqInt) hdr) >> 12) & 31) == 14) || (((((usqInt) hdr) >> 12) & 31) == 4)))) {
+
+		/* Contexts must not be put in the atCache, since their size is not constant */
+
 		/* begin primitiveFail */
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
@@ -6391,8 +6488,14 @@ sqInt integerObjectOf(sqInt value) {
 
 sqInt integerValueOf(sqInt objectPointer) {
 	if ((objectPointer & 2147483648U) != 0) {
+
+		/* negative */
+
 		return ((((usqInt) (objectPointer & 2147483647U)) >> 1) - 1073741823) - 1;
 	} else {
+
+		/* positive */
+
 		return ((usqInt) objectPointer) >> 1;
 	}
 }
@@ -12935,6 +13038,9 @@ sqInt isExcessiveAllocationRequestshift(sqInt size, sqInt bits) {
     sqInt int64;
     sqInt shiftCount;
 
+
+	/* 32 bit signed integer */
+
 	
 # ifdef SQ_IMAGE64  // a 64-bit object memory word size
 	
@@ -12956,6 +13062,9 @@ sqInt isExcessiveAllocationRequestshift(sqInt size, sqInt bits) {
 	}
 	return 0;
 # else
+
+	/* if sqInt is 64 bit, size parameter may overflow int32 */
+
 	if (size > 4294967295U) {
 		return 0;
 	}
@@ -13162,6 +13271,9 @@ sqInt lastPointerOf(sqInt oop) {
 	fmt = (((usqInt) header) >> 8) & 15;
 	if (fmt <= 4) {
 		if ((fmt == 3) && ((((((usqInt) header) >> 12) & 31) == 13) || ((((((usqInt) header) >> 12) & 31) == 14) || (((((usqInt) header) >> 12) & 31) == 4)))) {
+
+			/* contexts end at the stack pointer */
+
 			/* begin fetchStackPointerOf: */
 			sp = longAt((oop + (BASE_HEADER_SIZE)) + (StackPointerIndex << (SHIFT_FOR_WORD)));
 			if (!((sp & 1))) {
@@ -13381,6 +13493,10 @@ register struct foo * foo = &fum;
 	while (currentClass != foo->nilObj) {
 		dictionary = longAt((currentClass + (BASE_HEADER_SIZE)) + (MessageDictionaryIndex << (SHIFT_FOR_WORD)));
 		if (dictionary == foo->nilObj) {
+
+			/* MethodDict pointer is nil (hopefully due a swapped out stub)
+				-- raise exception #cannotInterpret:. */
+
 			/* begin pushRemappableOop: */
 			foo->remapBuffer[(foo->remapBufferCount += 1)] = currentClass;
 			createActualMessageTo(class);
@@ -13897,12 +14013,17 @@ register struct foo * foo = &fum;
 	if (((((usqInt) (longAt(oop))) >> 8) & 15) == 4) {
 
 		/* Set lastFieldOffset before the weak fields in the receiver */
+
+
 		/* And remember as weak root */
 
 		lastFieldOffset = (nonWeakFieldsOf(oop)) << (SHIFT_FOR_WORD);
 		foo->weakRootCount += 1;
 		foo->weakRoots[foo->weakRootCount] = oop;
 	} else {
+
+		/* Do it the usual way */
+
 		/* begin lastPointerOf: */
 		header1 = longAt(oop);
 		fmt = (((usqInt) header1) >> 8) & 15;
@@ -14264,6 +14385,9 @@ register struct foo * foo = &fum;
     sqInt oop2;
     sqInt oop3;
 
+
+	/* No need to inline - we won't call this often */
+
 	if (!(((((usqInt) (longAt(oop))) >> 8) & 15) == 4)) {
 		error("Called fixedFieldsOfWeak: with a non-weak oop");
 	}
@@ -14310,6 +14434,9 @@ register struct foo * foo = &fum;
     sqInt header2;
 
 	if (!(isBigEnder())) {
+
+		/* Swap words within Float objects, taking them out of native platform ordering */
+
 		/* begin firstAccessibleObject */
 		obj1 = memory + (foo->headerTypeBytes[(longAt(memory)) & TypeMask]);
 		while ((((usqInt) obj1)) < (((usqInt) foo->endOfMemory))) {
@@ -14417,9 +14544,11 @@ register struct foo * foo = &fum;
 
 	header = longAt(headerLoc);
 	if ((header & (ROOT_BIT)) == 0) {
+
+		/* record oop as root only if not already recorded */
+
 		if (foo->rootTableCount < RootTableRedZone) {
 
-			/* record oop as root only if not already recorded */
 			/* record root if there is enough room in the roots 
 					table  */
 
@@ -14427,9 +14556,11 @@ register struct foo * foo = &fum;
 			foo->rootTable[foo->rootTableCount] = oop;
 			longAtput(headerLoc, header | (ROOT_BIT));
 		} else {
+
+			/* we're getting in the red zone */
+
 			if (foo->rootTableCount < RootTableSize) {
 
-				/* we're getting in the red zone */
 				/* but there's still space to record it */
 
 				foo->rootTableCount += 1;
@@ -15108,6 +15239,9 @@ register struct foo * foo = &fum;
     sqInt header;
 
 	if (((((usqInt) valueObj)) >= (((usqInt) foo->youngStart))) && (!((valueObj & 1)))) {
+
+		/* Yes, valueObj is a young object */
+
 		/* begin noteAsRoot:headerLoc: */
 		header = longAt(oop);
 		if ((header & (ROOT_BIT)) == 0) {
@@ -15148,6 +15282,10 @@ register struct foo * foo = &fum;
 		}
 	}
 	if (oopisGreaterThan((longAt(foo->freeBlock)) & (ALL_BUT_TYPE_MASK), foo->shrinkThreshold)) {
+
+		/* Attempt to shrink memory after successfully 
+			reclaiming lots of memory */
+
 		/* begin shrinkObjectMemory: */
 		delta = ((longAt(foo->freeBlock)) & (ALL_BUT_TYPE_MASK)) - foo->growHeadroom;
 		foo->statShrinkMemory += 1;
@@ -15328,6 +15466,9 @@ l4:	/* end lastPointerOf: */;
 			}
 			longAtput(oop1, (((usqInt) fwdBlock) >> 1) | ((MARK_BIT) | originalHeaderType1));
 			if (twoWayFlag) {
+
+				/* Second block maps oop2 back to oop1 for two-way become */
+
 				/* begin fwdBlockGet: */
 				foo->fwdTableNext += fwdBlkSize;
 				if (foo->fwdTableNext <= foo->fwdTableLast) {
@@ -15415,6 +15556,9 @@ register struct foo * foo = &fum;
 		return null;
 	}
 	if (aIsNegative == bIsNegative) {
+
+		/* Protect against overflow */
+
 		if (a > (18446744073709551615U - b)) {
 			/* begin primitiveFail */
 			if (foo->primFailCode == 0) {
@@ -15485,6 +15629,9 @@ l1:	/* end stackObjectValue: */;
 l2:	/* end stackObjectValue: */;
 	err = changeClassOfto(arg, rcvr);
 	if (err == 0) {
+
+		/* Flush at cache because rcvr's class has changed. */
+
 		/* begin flushAtCache */
 		for (i = 1; i <= AtCacheTotalSize; i += 1) {
 			foo->atCache[i] = 0;
@@ -15741,6 +15888,9 @@ register struct foo * foo = &fum;
 		offsetX = fetchIntegerofObject(0, offsetObj);
 		offsetY = fetchIntegerofObject(1, offsetObj);
 		if ((foo->argumentCount == 0) && (depth == 32)) {
+
+			/* Support arbitrary-sized 32 bit ARGB forms --bf 3/1/2007 23:51 */
+
 			/* begin success: */
 			successBoolean = (extentX > 0) && (extentY > 0);
 			if (!(successBoolean)) {
@@ -16062,6 +16212,9 @@ l1:	/* end popInteger */;
 	integerReceiver = positive32BitValueOf(top);
 	if (!foo->primFailCode) {
 		if (integerArgument >= 0) {
+
+			/* Left shift -- must fail if we lose bits beyond 32 */
+
 			/* begin success: */
 			if (!(integerArgument <= 31)) {
 				if (!foo->primFailCode) {
@@ -16076,6 +16229,9 @@ l1:	/* end popInteger */;
 				}
 			}
 		} else {
+
+			/* Right shift -- OK to lose bits */
+
 			/* begin success: */
 			if (!(integerArgument >= -31)) {
 				if (!foo->primFailCode) {
@@ -16135,6 +16291,8 @@ l1:	/* end stackIntegerValue: */;
 	if (shift >= 0) {
 
 		/* Protect against overflow */
+
+
 		/* This is to avoid undue (usqInt) cast */
 
 		result = 18446744073709551615U;
@@ -16302,6 +16460,9 @@ register struct foo * foo = &fum;
     sqInt sp1;
 
 	if (foo->argumentCount == 0) {
+
+		/* old behavior - just return the size of the free block */
+
 		/* begin pop:thenPush: */
 		oop = positive64BitIntegerFor((longAt(foo->freeBlock)) & (ALL_BUT_TYPE_MASK));
 		longAtput((sp = foo->stackPointer - ((1 - 1) * (BYTES_PER_WORD))), oop);
@@ -16309,6 +16470,9 @@ register struct foo * foo = &fum;
 		return null;
 	}
 	if (foo->argumentCount == 1) {
+
+		/* new behaviour -including or excluding swap space depending on aBool */
+
 		/* begin booleanValueOf: */
 		if ((longAt(foo->stackPointer)) == foo->trueObj) {
 			aBool = 1;
@@ -16578,6 +16742,9 @@ register struct foo * foo = &fum;
 
 	newCopy = clone(longAt(foo->stackPointer));
 	if (newCopy == 0) {
+
+		/* not enough memory most likely */
+
 		/* begin primitiveFail */
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
@@ -16664,6 +16831,10 @@ l1:	/* end sizeBitsOf: */;
 
 		copiedValues = longAt(foo->stackPointer);
 		for (i = 0; i <= (numCopiedValues - 1); i += 1) {
+
+			/* Assume: have just allocated a new BlockClosure; it must be young.
+			 Thus, can use unchecked stores. */
+
 			/* begin storePointerUnchecked:ofObject:withValue: */
 			valuePointer = longAt((copiedValues + (BASE_HEADER_SIZE)) + (i << (SHIFT_FOR_WORD)));
 			longAtput((newClosure + (BASE_HEADER_SIZE)) + ((i + ClosureFirstCopiedValueIndex) << (SHIFT_FOR_WORD)), valuePointer);
@@ -17375,6 +17546,9 @@ l3:	/* end stackIntegerValue: */;
 	foo->remapBufferCount -= 1;
 	argumentArray = oop;
 	if (!(!foo->primFailCode)) {
+
+		/* If primitive failed, then restore state for failure code */
+
 		/* begin pop: */
 		foo->stackPointer -= arraySize * (BYTES_PER_WORD);
 		/* begin pushInteger: */
@@ -17532,6 +17706,11 @@ register struct foo * foo = &fum;
 		return null;
 	}
 	if (foo->argumentCount > 2) {
+
+		/* CompiledMethod class>>receiver:withArguments:executeMethod:
+								SqueakObjectPrimitives class >> receiver:withArguments:apply:
+								VMMirror>>ifFail:object:with:executeMethod: et al */
+
 		if (foo->argumentCount > 4) {
 			/* begin primitiveFail */
 			if (foo->primFailCode == 0) {
@@ -17610,6 +17789,9 @@ register struct foo * foo = &fum;
 
 	rcvr = popFloat();
 	if (!foo->primFailCode) {
+
+		/* rcvr = frac * 2^pwr, where frac is in [0.5..1.0) */
+
 		frac = frexp(rcvr, &pwr);
 		/* begin pushInteger: */
 		/* begin push: */
@@ -17670,6 +17852,9 @@ register struct foo * foo = &fum;
     sqInt sz;
     sqInt sz1;
 
+
+	/* Fetch the first literal of the method */
+
 	/* begin success: */
 	successBoolean1 = (literalCountOf(foo->newMethod)) > 0;
 	if (!(successBoolean1)) {
@@ -17711,6 +17896,10 @@ l1:	/* end checkedIntegerValueOf: */;
 		return null;
 	}
 	if (index < 0) {
+
+		/* Function address was not found in this session, 
+			Rewrite the mcache entry with a zero primitive index. */
+
 		rewriteMethodCacheSelclassprimIndex(foo->messageSelector, foo->lkupClass, 0);
 		/* begin success: */
 		if (!(0)) {
@@ -17821,6 +18010,9 @@ l3:	/* end lengthOf:baseHeader:format: */;
 		rewriteMethodCacheSelclassprimIndexprimFunction(foo->messageSelector, foo->lkupClass, 1000 + index, addr);
 		callExternalPrimitive(addr);
 	} else {
+
+		/* Otherwise rewrite the primitive index */
+
 		rewriteMethodCacheSelclassprimIndex(foo->messageSelector, foo->lkupClass, 0);
 	}
 }
@@ -18826,6 +19018,9 @@ register struct foo * foo = &fum;
 			longAtput((arg + (BASE_HEADER_SIZE)) + (i << (SHIFT_FOR_WORD)), value);
 		}
 	} else {
+
+		/* Event time stamp */
+
 		/* begin storeInteger:ofObject:withValue: */
 		if (
 # ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
@@ -18869,6 +19064,9 @@ register struct foo * foo = &fum;
 					}
 				}
 			} else {
+
+				/* Need to remap because allocation may cause GC */
+
 				/* begin pushRemappableOop: */
 				foo->remapBuffer[(foo->remapBufferCount += 1)] = arg;
 				value = positive32BitIntegerFor(value);
@@ -19220,6 +19418,9 @@ register struct foo * foo = &fum;
 
 	arg = longAt(foo->stackPointer);
 	if ((arg & 1)) {
+
+		/* If arg is integer, then condsider it as an index  into the external objects array and install it  as the new event semaphore */
+
 		ioSetInputSemaphore((arg >> 1));
 		if (!foo->primFailCode) {
 			/* begin pop: */
@@ -20343,6 +20544,9 @@ register struct foo * foo = &fum;
 
 	endSeg = (segmentWordArray + (sizeBitsOf(segmentWordArray))) - (BASE_HEADER_SIZE);
 	if (!((((((usqInt) (longAt(outPointerArray))) >> 8) & 15) == 2) && (((((usqInt) (longAt(segmentWordArray))) >> 8) & 15) == 6))) {
+
+		/* Must be indexable words */
+
 		/* begin primitiveFail */
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
@@ -20351,6 +20555,10 @@ register struct foo * foo = &fum;
 	}
 	data = longAt(segmentWordArray + (BASE_HEADER_SIZE));
 	if (!(readableFormat(data & 65535))) {
+
+		/* low 2 bytes */
+		/* Not readable -- try again with reversed bytes... */
+
 		/* begin reverseBytesFrom:to: */
 		flag("Dan");
 		addr1 = segmentWordArray + (BASE_HEADER_SIZE);
@@ -20360,6 +20568,10 @@ register struct foo * foo = &fum;
 		}
 		data = longAt(segmentWordArray + (BASE_HEADER_SIZE));
 		if (!(readableFormat(data & 65535))) {
+
+			/* low 2 bytes */
+			/* Still NG -- put things back and fail */
+
 			/* begin reverseBytesFrom:to: */
 			flag("Dan");
 			addr = segmentWordArray + (BASE_HEADER_SIZE);
@@ -20380,6 +20592,8 @@ register struct foo * foo = &fum;
 	if (!((((usqInt) data) >> 16) == (((usqInt) (imageSegmentVersion())) >> 16))) {
 
 		/* Reverse the byte-type objects once */
+
+
 		/* Oop of first embedded object */
 
 		segOop = ((segmentWordArray + (BASE_HEADER_SIZE)) + (BYTES_PER_WORD)) + (foo->headerTypeBytes[(longAt((segmentWordArray + (BASE_HEADER_SIZE)) + (BYTES_PER_WORD))) & TypeMask]);
@@ -21239,6 +21453,9 @@ register struct foo * foo = &fum;
 		}
 	}
 	if (!foo->primFailCode) {
+
+		/* The following may cause GC! */
+
 		/* begin sufficientSpaceToInstantiate:indexableSize: */
 		format = (((usqInt) ((longAt((class + (BASE_HEADER_SIZE)) + (InstanceSpecificationIndex << (SHIFT_FOR_WORD)))) - 1)) >> 8) & 15;
 		if ((size > 0) && (format < 2)) {
@@ -21988,6 +22205,10 @@ l1:	/* end fetchClassOf: */;
 		/* begin initPrimCall */
 		foo->primFailCode = 0;
 	} else {
+
+		/* Slide the args back up (sigh) and re-insert the 
+			selector.  */
+
 		for (i = 1; i <= foo->argumentCount; i += 1) {
 			/* begin storePointer:ofObject:withValue: */
 			fieldIndex = ((foo->argumentCount - i) + 1) + selectorIndex;
@@ -22053,6 +22274,9 @@ register struct foo * foo = &fum;
 		return null;
 	}
 	if (!foo->primFailCode) {
+
+		/* Check for enough space in thisContext to push all args */
+
 		/* begin fetchWordLengthOf: */
 		/* begin sizeBitsOf: */
 		header = longAt(argumentArray);
@@ -22126,6 +22350,9 @@ register struct foo * foo = &fum;
 		/* begin initPrimCall */
 		foo->primFailCode = 0;
 	} else {
+
+		/* Restore the state by popping all those array entries and pushing back the selector and array, and fail */
+
 		/* begin pop: */
 		foo->stackPointer -= foo->argumentCount * (BYTES_PER_WORD);
 		/* begin push: */
@@ -22199,6 +22426,9 @@ l1:	/* end fetchClassOf: */;
 		}
 	}
 	if (foo->argumentCount == 3) {
+
+		/* normal primitive call with 3 arguments expected on the stack */
+
 		/* begin popStack */
 		top = longAt(foo->stackPointer);
 		foo->stackPointer -= BYTES_PER_WORD;
@@ -22210,6 +22440,10 @@ l1:	/* end fetchClassOf: */;
 		}
 	} else {
 		if (foo->argumentCount == 4) {
+
+			/* mirror primitive call with extra argument specifying object to serve as receiver */
+			/* save stack contents */
+
 			/* begin popStack */
 			top1 = longAt(foo->stackPointer);
 			foo->stackPointer -= BYTES_PER_WORD;
@@ -22241,6 +22475,9 @@ l1:	/* end fetchClassOf: */;
 			foo->stackPointer = sp8;
 			primitivePerformAt(lookupClass);
 			if (!(!foo->primFailCode)) {
+
+				/* restore original stack */
+
 				/* begin pop: */
 				foo->stackPointer -= 3 * (BYTES_PER_WORD);
 				/* begin push: */
@@ -22260,6 +22497,9 @@ l1:	/* end fetchClassOf: */;
 				foo->stackPointer = sp5;
 			}
 		} else {
+
+			/* wrong number of arguments */
+
 			return (foo->primFailCode = PrimErrBadNumArgs);
 		}
 	}
@@ -22980,10 +23220,15 @@ l3:	/* end stackObjectValue: */;
 	while (scanLastIndex <= scanStopIndex) {
 
 		/* Known to be okay since scanStartIndex > 0 and scanStopIndex <= sourceString size */
+
+
 		/* Known to be okay since stops size >= 258 */
 
 		ascii = byteAt((sourceString + (BASE_HEADER_SIZE)) + (scanLastIndex - 1));
 		if (!(((stopReason = longAt((stops + (BASE_HEADER_SIZE)) + (ascii << (SHIFT_FOR_WORD))))) == nilOop)) {
+
+			/* Store everything back and get out of here since some stop conditionn needs to be checked */
+
 			if (!(
 # ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
 					(((((int) scanDestX)) ^ ((((int) scanDestX)) << 1)) >= 0)
@@ -23055,6 +23300,9 @@ l3:	/* end stackObjectValue: */;
 		}
 		nextDestX = (scanDestX + sourceX2) - sourceX;
 		if (nextDestX > scanRightX) {
+
+			/* Store everything back and get out of here since we got to the right edge */
+
 			if (!(
 # ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
 					(((((int) scanDestX)) ^ ((((int) scanDestX)) << 1)) >= 0)
@@ -24252,6 +24500,9 @@ register struct foo * foo = &fum;
 
 	arrayOfRoots = longAt(foo->stackPointer - (2 * (BYTES_PER_WORD)));
 	if (!((((((usqInt) (longAt(arrayOfRoots))) >> 8) & 15) == 2) && ((((((usqInt) (longAt(outPointerArray))) >> 8) & 15) == 2) && (((((usqInt) (longAt(segmentWordArray))) >> 8) & 15) == 6)))) {
+
+		/* Must be indexable words */
+
 		/* begin primitiveFail */
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
@@ -24259,6 +24510,9 @@ register struct foo * foo = &fum;
 		return null;
 	}
 	if (!((((longAt(outPointerArray)) & TypeMask) == HeaderTypeSizeAndClass) && (((longAt(segmentWordArray)) & TypeMask) == HeaderTypeSizeAndClass))) {
+
+		/* Must be 3-word header */
+
 		/* begin primitiveFail */
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
@@ -24534,6 +24788,9 @@ register struct foo * foo = &fum;
 	}
 	restoreHeadersFromtofromandtofrom(firstIn, lastIn, hdrBaseIn, firstOut, lastOut, hdrBaseOut);
 	if ((((outPointerArray + (lastPointerOf(outPointerArray))) - lastOut) < 12) || ((endSeg - lastSeg) < 12)) {
+
+		/* Not enough room to insert simple 3-word headers */
+
 		/* begin primitiveFailAfterCleanup: */
 		lastAddr3 = outPointerArray + (lastPointerOf(outPointerArray));
 		i3 = outPointerArray + (BASE_HEADER_SIZE);
@@ -24647,6 +24904,9 @@ l2:	/* end stackIntegerValue: */;
 	stackp = (sp >> 1);
 l1:	/* end fetchStackPointerOf: */;
 	if ((((usqInt) newStackp)) > (((usqInt) stackp))) {
+
+		/* Nil any newly accessible cells */
+
 		for (i = (stackp + 1); i <= newStackp; i += 1) {
 			/* begin storePointer:ofObject:withValue: */
 			valuePointer = foo->nilObj;
@@ -24770,6 +25030,9 @@ l5:	/* end stackIntegerValue: */;
 		return null;
 	}
 	if ((repl & 1)) {
+
+		/* can happen in LgInt copy */
+
 		/* begin primitiveFail */
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
@@ -24918,6 +25181,9 @@ l9:	/* end fixedFieldsOf:format:length: */;
 
 	srcIndex = (replStart + replInstSize) - 1;
 	if (arrayFmt <= 4) {
+
+		/* pointer type objects */
+
 		for (i = ((start + arrayInstSize) - 1); i <= ((stop + arrayInstSize) - 1); i += 1) {
 			/* begin storePointer:ofObject:withValue: */
 			valuePointer = longAt((repl + (BASE_HEADER_SIZE)) + (srcIndex << (SHIFT_FOR_WORD)));
@@ -24929,6 +25195,9 @@ l9:	/* end fixedFieldsOf:format:length: */;
 		}
 	} else {
 		if (arrayFmt < 8) {
+
+			/* 32-bit-word type objects */
+
 			for (i = ((start + arrayInstSize) - 1); i <= ((stop + arrayInstSize) - 1); i += 1) {
 				/* begin storeLong32:ofObject:withValue: */
 				valueWord = long32At((repl + (BASE_HEADER_SIZE)) + (srcIndex << 2));
@@ -24936,6 +25205,9 @@ l9:	/* end fixedFieldsOf:format:length: */;
 				srcIndex += 1;
 			}
 		} else {
+
+			/* byte-type objects */
+
 			for (i = ((start + arrayInstSize) - 1); i <= ((stop + arrayInstSize) - 1); i += 1) {
 				byteAtput((array + (BASE_HEADER_SIZE)) + i, byteAt((repl + (BASE_HEADER_SIZE)) + srcIndex));
 				srcIndex += 1;
@@ -24999,6 +25271,9 @@ register struct foo * foo = &fum;
 		return null;
 	}
 	if (aIsNegative != bIsNegative) {
+
+		/* Protect against overflow */
+
 		if (a > (18446744073709551615U - b)) {
 			/* begin primitiveFail */
 			if (foo->primFailCode == 0) {
@@ -25735,6 +26010,9 @@ register struct foo * foo = &fum;
 	arg = (arg >> 1);
 	resultLargePositiveInteger = -1;
 	if (foo->argumentCount == 1) {
+
+		/* read VM parameter */
+
 		if ((arg < 1) || (arg > paramsArraySize)) {
 			/* begin primitiveFail */
 			if (foo->primFailCode == 0) {
@@ -26423,6 +26701,9 @@ register struct foo * foo = &fum;
     sqInt oop2;
     sqInt oop3;
 
+
+	/* exported to permit access from plugins */
+
 	/* begin fetchPointer:ofObject: */
 	/* begin fetchPointer:ofObject: */
 	/* begin fetchPointer:ofObject: */
@@ -26684,6 +26965,9 @@ sqInt printHex(sqInt n) {
     char buf[35];
     sqInt len;
 
+
+	/* large enough for a 64-bit value in hex plus the null plus 16 spaces */
+
 	memset(buf,' ',34);
 	len = sprintf(buf + 2 + 2 * BYTES_PER_WORD, "0x%lx", (unsigned long)(n));
 	printf("%s", buf + len);
@@ -26698,6 +26982,9 @@ sqInt printNameOfClasscount(sqInt classOop, sqInt cnt) {
 		return print("bad class");
 	}
 	if ((sizeBitsOf(classOop)) == (7 * (BYTES_PER_WORD))) {
+
+		/* (Metaclass instSize+1 * 4) */
+
 		printNameOfClasscount(longAt((classOop + (BASE_HEADER_SIZE)) + (5 << (SHIFT_FOR_WORD))), cnt - 1);
 		print(" class");
 	} else {
@@ -26870,6 +27157,9 @@ register struct foo * foo = &fum;
 	foo->fullScreenFlag = flagsWord & 1;
 	extraVMMemory = getLongFromFileswap(f, swapBytes);
 	if (foo->lastHash == 0) {
+
+		/* lastHash wasn't stored (e.g. by the cloner); use 999 as the seed */
+
 		/* begin lastHash: */
 		foo->lastHash = 999;
 	}
@@ -26918,6 +27208,11 @@ register struct foo * foo = &fum;
 	initializeInterpreter(bytesToShift);
 	isBigEnder();
 	if ((imageFormatInitialVersion & 1) == 1) {
+
+		/* Low order bit set, indicating that the image was saved from
+			a StackInterpreter (Cog) VM. Storage of all Float objects must be
+			returned to older object memory format. */
+
 		normalizeFloatOrderingInImage();
 	}
 	return dataSize;
@@ -27067,6 +27362,9 @@ register struct foo * foo = &fum;
 	for (i = 1; i <= foo->extraRootCount; i++) {
 		root = foo->extraRoots[i];
 		if (root == varLoc) {
+
+			/* swap varLoc with last entry */
+
 			foo->extraRoots[i] = (foo->extraRoots[foo->extraRootCount]);
 			foo->extraRootCount -= 1;
 			return 1;
@@ -28513,10 +28811,10 @@ sqInt storePointerofObjectwithValue(sqInt fieldIndex, sqInt oop, sqInt valuePoin
 sqInt success(sqInt successBoolean) {
 register struct foo * foo = &fum;
 	if (!(successBoolean)) {
+
+		/* Don't overwrite an error code that has already been set. */
+
 		if (!foo->primFailCode) {
-
-			/* Don't overwrite an error code that has already been set. */
-
 			foo->primFailCode = 1;
 		}
 	}
@@ -28565,6 +28863,9 @@ register struct foo * foo = &fum;
 			/* begin oop:isGreaterThanOrEqualTo: */
 			anOop = (longAt(foo->freeBlock)) & (ALL_BUT_TYPE_MASK);
 			if ((((usqInt) anOop)) >= (((usqInt) minFreePlus))) break;
+
+			/* If the memoryLimit doesn't change then presumably the platform can't grow anymore. */
+
 			if (oldLimit == foo->memoryLimit) {
 				return 0;
 			}
@@ -28586,6 +28887,8 @@ register struct foo * foo = &fum;
 	/* Note: Arithmetic overflow may occur in calculation of minFree (indicated by
 	minFree < bytes after calculation of minFree). The check is performed by sender
 	to avoid redundant test here. */
+
+
 	/* check for low-space */
 
 	minFree = (foo->lowSpaceThreshold + bytes) + (BASE_HEADER_SIZE);
@@ -28665,6 +28968,10 @@ register struct foo * foo = &fum;
 			}
 		}
 		if ((oopHeader & (MARK_BIT)) == 0) {
+
+			/* object is not marked; free it */
+			/* <-- Finalization support: We need to mark each oop chunk as free --> */
+
 			longAtput(oop - hdrBytes, HeaderTypeFree);
 			if (freeChunk != -1) {
 
@@ -28674,6 +28981,8 @@ register struct foo * foo = &fum;
 			} else {
 
 				/* start a new free chunk */
+
+
 				/* chunk may start 4 or 8 bytes before oop */
 
 				freeChunk = oop - hdrBytes;
@@ -28686,6 +28995,10 @@ register struct foo * foo = &fum;
 				}
 			}
 		} else {
+
+			/* object is marked; clear its mark bit and possibly adjust 
+					the compaction start */
+
 			longAtput(oop, oopHeader & (ALL_BUT_MARK_BIT));
 			if (((((usqInt) (longAt(oop))) >> 8) & 15) == 4) {
 				finalizeReference(oop);
@@ -28699,6 +29012,9 @@ register struct foo * foo = &fum;
 				firstFree = freeChunk;
 			}
 			if (freeChunk != -1) {
+
+				/* record the size of the last free chunk */
+
 				longAtput(freeChunk, (freeChunkSize & (LONG_SIZE_MASK)) | HeaderTypeFree);
 				freeChunk = -1;
 			}
@@ -28707,6 +29023,9 @@ register struct foo * foo = &fum;
 		oop = (oop + oopSize) + (foo->headerTypeBytes[(longAt(oop + oopSize)) & TypeMask]);
 	}
 	if (freeChunk != -1) {
+
+		/* record size of final free chunk */
+
 		longAtput(freeChunk, (freeChunkSize & (LONG_SIZE_MASK)) | HeaderTypeFree);
 	}
 	if (!(oop == foo->endOfMemory)) {
@@ -29024,6 +29343,11 @@ register struct foo * foo = &fum;
 	for (i = 1; i <= foo->rootTableCount; i += 1) {
 		oop = foo->rootTable[i];
 		if (((((usqInt) oop)) < (((usqInt) memStart))) || ((((usqInt) oop)) >= (((usqInt) memEnd)))) {
+
+			/* Note: must not remap the fields of any object twice! */
+			/* remap this oop only if not in the memory range 
+					covered below */
+
 			/* begin remapFieldsAndClassOf: */
 			/* begin lastPointerWhileForwarding: */
 			header = longAt(oop);
@@ -29142,11 +29466,26 @@ register struct foo * foo = &fum;
 
 					header = longAt(oop);
 					if ((header & (ROOT_BIT)) == 0) {
+
+						/* Forbidden: points to young obj but root bit not set. */
+
 						if (DoAssertionChecks) {
 							error("root bit not set");
 						}
 						badRoot = 1;
 					} else {
+
+						/* Root bit is set */
+						/* Extreme test -- validate that oop was entered in rootTable too... */
+						/* Disabled for now...
+						found := false.
+						1 to: rootTableCount do:
+							[:i | oop = (rootTable at: i) ifTrue: [found := true]].
+						found ifFalse:
+							[DoAssertionChecks ifTrue: [self error: 'root table not set'].
+							badRoot := true].
+						... */
+
 						null;
 					}
 				}
@@ -29187,6 +29526,9 @@ register struct foo * foo = &fum;
 	oop = memory + (foo->headerTypeBytes[(longAt(memory)) & TypeMask]);
 	while ((((usqInt) oop)) < (((usqInt) foo->endOfMemory))) {
 		if (((longAt(oop)) & TypeMask) == HeaderTypeFree) {
+
+			/* There should only be one free block at end of memory. */
+
 			if (!((objectAfter(oop)) == foo->endOfMemory)) {
 				error("Invalid obj with HeaderTypeBits = Free.");
 			}
@@ -29335,6 +29677,9 @@ register struct foo * foo = &fum;
 	headerSize = 16 * (BYTES_PER_WORD);
 	f = sqImageFileOpen(imageName, "wb");
 	if (f == null) {
+
+		/* could not open the image file for writing */
+
 		/* begin success: */
 		if (!(0)) {
 			if (!foo->primFailCode) {
@@ -29359,6 +29704,9 @@ register struct foo * foo = &fum;
 		putLongtoFile(0, f);
 	}
 	if (!(!foo->primFailCode)) {
+
+		/* file write or seek failure */
+
 		sqImageFileClose(f);
 		return null;
 	}

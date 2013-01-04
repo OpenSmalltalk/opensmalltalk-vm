@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 29 December 2012 7:53 pm 
-   by VMMaker 4.10.7
+/* Automatically generated from Squeak on 3 January 2013 11:27:07 pm 
+   by VMMaker 4.10.8
  */
 
 #include <math.h>
@@ -82,9 +82,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"ScratchPlugin 29 December 2012 (i)"
+	"ScratchPlugin 3 January 2013 (i)"
 #else
-	"ScratchPlugin 29 December 2012 (e)"
+	"ScratchPlugin 3 January 2013 (e)"
 #endif
 ;
 
@@ -1534,6 +1534,9 @@ l3:	/* end checkedUnsignedIntPtrOf: */;
 				saturation = ((max - min) * 1000) / max;
 			}
 			if (saturation > 0) {
+
+				/* do nothing if pixel is unsaturated (gray) */
+
 				/* begin hueFromR:G:B:min:max: */
 				span = max - min;
 				if (span == 0) {

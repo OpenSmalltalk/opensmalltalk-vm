@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 29 December 2012 7:52:53 pm 
-   by VMMaker 4.10.7
+/* Automatically generated from Squeak on 3 January 2013 11:27:05 pm 
+   by VMMaker 4.10.8
  */
 
 #include <math.h>
@@ -136,9 +136,9 @@ static DBusMessage* message;
 static DBusMessageIter messageIter[DBUS_MAXIMUM_TYPE_RECURSION_DEPTH];
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"DBusPlugin 29 December 2012 (i)"
+	"DBusPlugin 3 January 2013 (i)"
 #else
-	"DBusPlugin 29 December 2012 (e)"
+	"DBusPlugin 3 January 2013 (e)"
 #endif
 ;
 static DBusMessage* writeMessage;
@@ -440,6 +440,9 @@ static DBusConnection * getConnectionFromOop(sqInt aDBusConnection) {
 	connections[h] = conn;
 	data = newDataStructWithConnectionandSemaphore(conn, semaIndex);
 	if (data != null) {
+
+		/* register watch functions with data */
+
 		if (!(dbus_connection_set_watch_functions(
 			conn,
 			sqDBusPluginAddWatchwithData,
