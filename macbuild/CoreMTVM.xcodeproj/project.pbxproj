@@ -20,7 +20,7 @@
 		739C6EDA112DCBD10049B7D3 /* sqAssert.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C6ED8112DCBD10049B7D3 /* sqAssert.h */; };
 		73B54C530E55EFED00FE780C /* sqUnixVMProfile.c in Sources */ = {isa = PBXBuildFile; fileRef = 73B54C520E55EFED00FE780C /* sqUnixVMProfile.c */; };
 		73B96E490E47D7A10079C51B /* sqUnixHeartbeat.c in Sources */ = {isa = PBXBuildFile; fileRef = 73B96E480E47D7A10079C51B /* sqUnixHeartbeat.c */; };
-		73BC1BBB0F576864003412C5 /* cogit.c in Sources */ = {isa = PBXBuildFile; fileRef = 73BC1BB60F576864003412C5 /* cogit.c */; };
+		73BC1BBB0F576864003412C5 /* cogit.c in Sources */ = {isa = PBXBuildFile; fileRef = 73BC1BB60F576864003412C5 /* cogit.c */; settings = {COMPILER_FLAGS = "-fno-inline"; }; };
 		73BC1BBC0F576864003412C5 /* cogit.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BC1BB70F576864003412C5 /* cogit.h */; };
 		73BC1BBD0F576864003412C5 /* cogmethod.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BC1BB80F576864003412C5 /* cogmethod.h */; };
 		73BC1BBE0F576864003412C5 /* gcc3x-cointerpmt.c in Sources */ = {isa = PBXBuildFile; fileRef = 73BC1BB90F576864003412C5 /* gcc3x-cointerpmt.c */; };
