@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 29 December 2012 7:52:43 pm 
-   by VMMaker 4.10.7
+/* Automatically generated from Squeak on 4 January 2013 12:29:02 am 
+   by VMMaker 4.10.8
  */
 
 #include <math.h>
@@ -87,9 +87,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"FilePlugin 29 December 2012 (i)"
+	"FilePlugin 4 January 2013 (i)"
 #else
-	"FilePlugin 29 December 2012 (e)"
+	"FilePlugin 4 January 2013 (e)"
 #endif
 ;
 static void * sCCPfn;
@@ -127,6 +127,10 @@ EXPORT(sqInt) fileOpenNamesizewritesecure(char *nameIndex, sqInt nameSize, sqInt
 l1:	/* end fileValueOf: */;
 	if (!(interpreterProxy->failed())) {
 		if (secureFlag) {
+
+			/* If the security plugin can be loaded, use it to check for permission.
+				If not, assume it's ok */
+
 			if (sCOFfn != 0) {
 				okToOpen = ((sqInt (*) (char *, sqInt, sqInt)) sCOFfn)(nameIndex, nameSize, writeFlag);
 				if (!(okToOpen)) {
@@ -203,6 +207,10 @@ static sqInt makeDirEntryNamesizecreateDatemodDateisDirfileSize(char *entryName,
     sqInt results;
     char *stringPtr;
 
+
+	/* allocate storage for results, remapping newly allocated
+	 oops in case GC happens during allocation */
+
 	interpreterProxy->pushRemappableOop(interpreterProxy->instantiateClassindexableSize(interpreterProxy->classArray(), 5));
 	interpreterProxy->pushRemappableOop(interpreterProxy->instantiateClassindexableSize(interpreterProxy->classString(), entryNameSize));
 	interpreterProxy->pushRemappableOop(interpreterProxy->positive32BitIntegerFor(createDate));
@@ -238,6 +246,9 @@ static sqInt makeDirEntryNamesizecreateDatemodDateisDirfileSize(char *entryName,
 
 EXPORT(sqInt) moduleUnloaded(char *aModuleName) {
 	if ((strcmp(aModuleName, "SecurityPlugin")) == 0) {
+
+		/* The security plugin just shut down. How odd. */
+
 		sCCPfn = (sCDPfn = (sCGFTfn = (sCLPfn = (sCSFTfn = (sDFAfn = (sCDFfn = (sCOFfn = (sCRFfn = (sHFAfn = 0)))))))));
 	}
 }
@@ -391,6 +402,9 @@ EXPORT(sqInt) primitiveDirectoryLookup(void) {
 		return null;
 	}
 	if (status == DirNoMoreEntries) {
+
+		/* no more entries; return nil */
+
 		interpreterProxy->popthenPush(3, interpreterProxy->nilObject());
 		return null;
 	}
@@ -840,6 +854,10 @@ l1:	/* end fileValueOf: */;
 
 EXPORT(sqInt) primitiveHasFileAccess(void) {
     sqInt hasAccess;
+
+
+	/* If the security plugin can be loaded, use it to check . 
+	If not, assume it's ok */
 
 	if (sHFAfn != 0) {
 		hasAccess =  ((sqInt (*)(void))sHFAfn)();

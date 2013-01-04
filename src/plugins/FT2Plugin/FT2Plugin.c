@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 29 December 2012 7:52:42 pm 
-   by VMMaker 4.10.7
+/* Automatically generated from Squeak on 4 January 2013 12:29:02 am 
+   by VMMaker 4.10.8
  */
 
 #include <math.h>
@@ -115,9 +115,9 @@ struct VirtualMachine* interpreterProxy;
 static FT_Library library;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"FT2Plugin 29 December 2012 (i)"
+	"FT2Plugin 4 January 2013 (i)"
 #else
-	"FT2Plugin 29 December 2012 (e)"
+	"FT2Plugin 4 January 2013 (e)"
 #endif
 ;
 
@@ -134,6 +134,8 @@ static sqInt ftAllocateHandleInReceiverForPointer(void *aPointer) {
 	if (aPointer) {
 
 		/* Allocate a Smalltalk ByteArray -- lastAlloc contains the length */
+
+
 		/* Copy from the C bytecode buffer to the Smalltalk ByteArray */
 
 		returnedHandle = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classByteArray(), sizeof(void **));
@@ -158,6 +160,8 @@ static sqInt ftAllocateStringForPointer(const char *aPointer) {
 	if (aPointer) {
 
 		/* Allocate a Smalltalk ByteArray -- lastAlloc contains the length */
+
+
 		/* Copy from the C bytecode buffer to the Smalltalk ByteArray */
 
 		returnedHandle = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classString(), strlen(aPointer));
@@ -1044,6 +1048,10 @@ EXPORT(sqInt) primitiveLoadFaceFields(void) {
 	interpreterProxy->storeIntegerofObjectwithValue(8, rcvr, face->num_fixed_sizes);
 	interpreterProxy->storeIntegerofObjectwithValue(10, rcvr, face->num_charmaps);
 	if (face->face_flags & FT_FACE_FLAG_SCALABLE) {
+
+		/* bbox -- Rectangle xMin, yMin, xMax, yMax */
+		/* unitsPerEm */
+
 		interpreterProxy->storeIntegerofObjectwithValue(13, rcvr, face->units_per_EM);
 		interpreterProxy->storeIntegerofObjectwithValue(14, rcvr, face->ascender);
 		interpreterProxy->storeIntegerofObjectwithValue(15, rcvr, face->descender);
@@ -1180,6 +1188,10 @@ EXPORT(sqInt) primitiveLoadOutlineArraysFromFace(void) {
 	sqInt array;
 	sqInt array1;
 	sqInt array2;
+
+
+	/* ptr to struct */
+	/* ptr to struct */
 
 	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "FT2Face"));
 	aFace = interpreterProxy->stackValue(0);

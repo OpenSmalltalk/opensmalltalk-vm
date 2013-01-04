@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 29 December 2012 7:52:40 pm 
-   by VMMaker 4.10.7
+/* Automatically generated from Squeak on 4 January 2013 12:29:01 am 
+   by VMMaker 4.10.8
  */
 
 #include <math.h>
@@ -237,9 +237,9 @@ static int maskTable[33] = {
 };
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"BitBltPlugin 29 December 2012 (i)"
+	"BitBltPlugin 4 January 2013 (i)"
 #else
-	"BitBltPlugin 29 December 2012 (e)"
+	"BitBltPlugin 4 January 2013 (e)"
 #endif
 ;
 static sqInt nWords;
@@ -359,6 +359,9 @@ static sqInt OLDtallyIntoMapwith(sqInt sourceWord, sqInt destinationWord) {
 		return destinationWord;
 	}
 	if (destDepth == 16) {
+
+		/* Two pixels  Tally the right half... */
+
 		/* begin rgbMap:from:to: */
 		if (((d = cmBitsPerColor - 5)) > 0) {
 			mask = (1 << 5) - 1;
@@ -446,6 +449,9 @@ static sqInt OLDtallyIntoMapwith(sqInt sourceWord, sqInt destinationWord) {
 	l2:	/* end rgbMap:from:to: */;
 		cmLookupTable[mapIndex & cmMask] = ((cmLookupTable[mapIndex & cmMask]) + 1);
 	} else {
+
+		/* Just one pixel. */
+
 		/* begin rgbMap:from:to: */
 		if (((d2 = cmBitsPerColor - 8)) > 0) {
 			mask4 = (1 << 8) - 1;
@@ -604,9 +610,11 @@ static sqInt alphaBlendConstwithpaintMode(sqInt sourceWord, sqInt destinationWor
 	sourceShifted = sourceWord;
 	result = destinationWord;
 	if (destPPW == 1) {
+
+		/* 32bpp blends include alpha */
+
 		if (!(paintMode && (sourceWord == 0))) {
 
-			/* 32bpp blends include alpha */
 			/* painting a transparent pixel */
 
 			result = 0;
@@ -661,6 +669,8 @@ static sqInt alphaBlendScaledwith(sqInt sourceWord, sqInt destinationWord) {
 
 
 	/* Do NOT inline this into optimized loops */
+
+
 	/* High 8 bits of source pixel */
 
 	unAlpha = 255 - (((usqInt) sourceWord) >> 24);
@@ -728,6 +738,8 @@ static sqInt alphaSourceBlendBits16(void) {
 
 
 	/* This particular method should be optimized in itself */
+
+
 	/* So we can pre-decrement */
 
 	deltaY = bbH + 1;
@@ -764,6 +776,9 @@ static sqInt alphaSourceBlendBits16(void) {
 			sourceWord = long32At(srcIndex);
 			srcAlpha = ((usqInt) sourceWord) >> 24;
 			if (srcAlpha == 255) {
+
+				/* Dither from 32 to 16 bit */
+
 				/* begin dither32To16:threshold: */
 				addThreshold = ((usqInt) ditherThreshold << 8);
 				sourceWord = ((((usqInt) (dither8Lookup[addThreshold + ((((usqInt) sourceWord >> 16)) & 255)]) << 10)) + (((usqInt) (dither8Lookup[addThreshold + ((((usqInt) sourceWord >> 8)) & 255)]) << 5))) + (dither8Lookup[addThreshold + (sourceWord & 255)]);
@@ -778,9 +793,11 @@ static sqInt alphaSourceBlendBits16(void) {
 				dstValue = dstValue | sourceWord;
 				long32Atput(dstIndex, dstValue);
 			} else {
+
+				/* srcAlpha ~= 255 */
+
 				if (!(srcAlpha == 0)) {
 
-					/* srcAlpha ~= 255 */
 					/* 0 < srcAlpha < 255 */
 					/* If we have to mix colors then just copy a single word */
 
@@ -862,6 +879,8 @@ static sqInt alphaSourceBlendBits32(void) {
 	(good to know on an Intel architecture) but then the increments
 	would be different between ST code and C code so must hope the
 	compiler notices what happens (MS Visual C does) */
+
+
 	/* So we can pre-decrement */
 
 	deltaY = bbH + 1;
@@ -895,10 +914,10 @@ static sqInt alphaSourceBlendBits32(void) {
 				}
 				deltaX += 1;
 			} else {
+
+				/* srcAlpha ~= 255 */
+
 				if (srcAlpha == 0) {
-
-					/* srcAlpha ~= 255 */
-
 					srcIndex += 4;
 
 					/* Now skip as many words as possible, */
@@ -993,9 +1012,11 @@ static sqInt alphaSourceBlendBits8(void) {
 			sourceWord = ((long32At(srcIndex)) & (~adjust)) + adjust;
 			srcAlpha = ((usqInt) sourceWord) >> 24;
 			if (srcAlpha > 31) {
+
+				/* Everything below 31 is transparent */
+
 				if (srcAlpha < 224) {
 
-					/* Everything below 31 is transparent */
 					/* Everything above 224 is opaque */
 
 					destWord = long32At(dstIndex);
@@ -1498,15 +1519,20 @@ static sqInt copyLoop(void) {
 	}
 	y = dy;
 	for (i = 1; i <= bbH; i += 1) {
+
+		/* here is the vertical loop */
+
 		if (halftoneHeight > 1) {
 
-			/* here is the vertical loop */
 			/* Otherwise, its always the same */
 
 			halftoneWord = long32At(halftoneBase + ((y % halftoneHeight) * 4));
 			y += vDir;
 		}
 		if (preload) {
+
+			/* load the 64-bit shifter */
+
 			/* begin srcLongAt: */
 			idx = sourceIndex;
 			prevWord = long32At(idx);
@@ -1539,7 +1565,13 @@ static sqInt copyLoop(void) {
 		destMask = AllOnes;
 		if (combinationRule == 3) {
 			if ((skew == 0) && (halftoneWord == AllOnes)) {
+
+				/* Very special inner loop for STORE mode with no skew -- just move words */
+
 				if (hDir == -1) {
+
+					/* Woeful patch: revert to older code for hDir = -1 */
+
 					for (word = 2; word <= (nWords - 1); word += 1) {
 						/* begin srcLongAt: */
 						idx1 = sourceIndex;
@@ -1552,6 +1584,9 @@ static sqInt copyLoop(void) {
 					}
 				} else {
 					for (word = 2; word <= (nWords - 1); word += 1) {
+
+						/* Note loop starts with prevWord loaded (due to preload) */
+
 						/* begin dstLongAt:put: */
 						idx3 = destIndex;
 						long32Atput(idx3, prevWord);
@@ -1563,6 +1598,9 @@ static sqInt copyLoop(void) {
 					}
 				}
 			} else {
+
+				/* Special inner loop for STORE mode -- no need to call merge */
+
 				for (word = 2; word <= (nWords - 1); word += 1) {
 					/* begin srcLongAt: */
 					idx5 = sourceIndex;
@@ -1581,6 +1619,9 @@ static sqInt copyLoop(void) {
 			}
 		} else {
 			for (word = 2; word <= (nWords - 1); word += 1) {
+
+				/* Normal inner loop does merge: */
+
 				/* begin srcLongAt: */
 				idx7 = sourceIndex;
 				thisWord = long32At(idx7);
@@ -1645,10 +1686,10 @@ static sqInt copyLoopNoSource(void) {
 	mergeFnwith = ((sqInt (*)(sqInt, sqInt)) (opTable[combinationRule + 1]));
 	mergeFnwith;
 	for (i = 1; i <= bbH; i += 1) {
+
+		/* here is the vertical loop */
+
 		if (noHalftone) {
-
-			/* here is the vertical loop */
-
 			halftoneWord = AllOnes;
 		} else {
 			/* begin halftoneAt: */
@@ -1681,7 +1722,13 @@ static sqInt copyLoopNoSource(void) {
 				destIndex += 4;
 			}
 		} else {
+
+			/* Normal inner loop does merge */
+
 			for (word = 2; word <= (nWords - 1); word += 1) {
+
+				/* Normal inner loop does merge */
+
 				/* begin dstLongAt: */
 				idx2 = destIndex;
 				destWord = long32At(idx2);
@@ -1797,11 +1844,11 @@ static sqInt copyLoopPixMap(void) {
 		dstShiftLeft = 32 - destDepth;
 	}
 	for (i = 1; i <= bbH; i += 1) {
+
+		/* here is the vertical loop */
+		/* *** is it possible at all that noHalftone == false? *** */
+
 		if (noHalftone) {
-
-			/* here is the vertical loop */
-			/* *** is it possible at all that noHalftone == false? *** */
-
 			halftoneWord = AllOnes;
 		} else {
 			/* begin halftoneAt: */
@@ -1817,6 +1864,9 @@ static sqInt copyLoopPixMap(void) {
 		nPix = startBits;
 		words = nWords;
 		do {
+
+			/* pick up the word */
+
 			/* begin pickSourcePixels:flags:srcMask:destMask:srcShiftInc:dstShiftInc: */
 			/* begin srcLongAt: */
 			idx21 = sourceIndex;
@@ -1890,6 +1940,9 @@ static sqInt copyLoopPixMap(void) {
 				value = destMask & mergeWord;
 				long32Atput(idx1, value);
 			} else {
+
+				/* General version using dest masking */
+
 				/* begin dstLongAt: */
 				idx2 = destIndex;
 				destWord = long32At(idx2);
@@ -2550,6 +2603,9 @@ static sqInt lockSurfaces(void) {
 
 	hasSurfaceLock = 0;
 	if (destBits == 0) {
+
+		/* Blitting *to* OS surface */
+
 		if (lockSurfaceFn == 0) {
 			if (!(loadSurfacePlugin())) {
 				return null;
@@ -2563,6 +2619,10 @@ static sqInt lockSurfaces(void) {
 
 			sourceHandle = interpreterProxy->fetchIntegerofObject(FormBitsIndex, sourceForm);
 			if (sourceHandle == destHandle) {
+
+				/* If we have overlapping source/dest we lock the entire area
+				so that there is only one area transmitted */
+
 				if (isWarping) {
 
 					/* Otherwise use overlapping area */
@@ -2573,6 +2633,9 @@ static sqInt lockSurfaces(void) {
 					b = (((sy < sy) ? sy : sy)) + bbH;
 					sourceBits = fn(sourceHandle, &sourcePitch, l, t, r-l, b-t);
 				} else {
+
+					/* When warping we always need the entire surface for the source */
+
 					sourceBits = fn(sourceHandle, &sourcePitch, 0,0, sourceWidth, sourceHeight);
 				}
 				destBits = sourceBits;
@@ -2614,6 +2677,9 @@ static sqInt lockSurfaces(void) {
 
 EXPORT(sqInt) moduleUnloaded(char *aModuleName) {
 	if ((strcmp(aModuleName, "SurfacePlugin")) == 0) {
+
+		/* The surface plugin just shut down. How nasty. */
+
 		querySurfaceFn = (lockSurfaceFn = (unlockSurfaceFn = 0));
 	}
 }
@@ -2986,6 +3052,9 @@ EXPORT(sqInt) primitiveDisplayString(void) {
 		return interpreterProxy->primitiveFail();
 	}
 	if ((combinationRule == 30) || (combinationRule == 31)) {
+
+		/* needs extra source alpha */
+
 		return interpreterProxy->primitiveFail();
 	}
 	quickBlt = (destBits != 0) && ((sourceBits != 0) && ((noSource == 0) && ((sourceForm != destForm) && ((cmFlags != 0) || ((sourceMSB != destMSB) || (sourceDepth != destDepth))))));
@@ -3292,11 +3361,20 @@ static sqInt querySourceSurface(sqInt handle) {
 
 static sqInt rgbAddwith(sqInt sourceWord, sqInt destinationWord) {
 	if (destDepth < 16) {
+
+		/* Add each pixel separately */
+
 		return partitionedAddtonBitsnPartitions(sourceWord, destinationWord, destDepth, destPPW);
 	}
 	if (destDepth == 16) {
+
+		/* Add RGB components of each pixel separately */
+
 		return (partitionedAddtonBitsnPartitions(sourceWord, destinationWord, 5, 3)) + ((partitionedAddtonBitsnPartitions(((usqInt) sourceWord) >> 16, ((usqInt) destinationWord) >> 16, 5, 3)) << 16);
 	} else {
+
+		/* Add RGBA components of the pixel separately */
+
 		return partitionedAddtonBitsnPartitions(sourceWord, destinationWord, 8, 4);
 	}
 }
@@ -3446,6 +3524,8 @@ static sqInt rgbComponentAlpha32(void) {
 	(good to know on an Intel architecture) but then the increments
 	would be different between ST code and C code so must hope the
 	compiler notices what happens (MS Visual C does) */
+
+
 	/* So we can pre-decrement */
 
 	deltaY = bbH + 1;
@@ -3676,9 +3756,11 @@ static sqInt rgbComponentAlpha8(void) {
 			srcAlpha = sourceWord & 16777215;
 			srcAlpha = (((((usqInt) srcAlpha) >> 16) + ((((usqInt) srcAlpha) >> 8) & 255)) + (srcAlpha & 255)) / 3;
 			if (srcAlpha > 31) {
+
+				/* Everything below 31 is transparent */
+
 				if (srcAlpha > 224) {
 
-					/* Everything below 31 is transparent */
 					/* treat everything above 224 as opaque */
 
 					sourceWord = 4294967295U;
@@ -3913,6 +3995,8 @@ static sqInt rgbMapfromto(sqInt sourcePixel, sqInt nBitsIn, sqInt nBitsOut) {
 	if (((d = nBitsOut - nBitsIn)) > 0) {
 
 		/* Expand to more bits by zero-fill */
+
+
 		/* Transfer mask */
 
 		mask = (1 << nBitsIn) - 1;
@@ -3923,11 +4007,22 @@ static sqInt rgbMapfromto(sqInt sourcePixel, sqInt nBitsIn, sqInt nBitsOut) {
 		srcPix = srcPix << d;
 		return (destPix + (srcPix & mask)) + ((srcPix << d) & (mask << nBitsOut));
 	} else {
+
+		/* Compress to fewer bits by truncation */
+
 		if (d == 0) {
 			if (nBitsIn == 5) {
+
+				/* Sometimes called with 16 bits, though pixel is 15,
+					but we must never return more than 15. */
+
 				return sourcePixel & 32767;
 			}
 			if (nBitsIn == 8) {
+
+				/* Sometimes called with 32 bits, though pixel is 24,
+					but we must never return more than 24. */
+
 				return sourcePixel & 16777215;
 			}
 			return sourcePixel;
@@ -3954,22 +4049,40 @@ static sqInt rgbMapfromto(sqInt sourcePixel, sqInt nBitsIn, sqInt nBitsOut) {
 
 static sqInt rgbMaxwith(sqInt sourceWord, sqInt destinationWord) {
 	if (destDepth < 16) {
+
+		/* Max each pixel separately */
+
 		return partitionedMaxwithnBitsnPartitions(sourceWord, destinationWord, destDepth, destPPW);
 	}
 	if (destDepth == 16) {
+
+		/* Max RGB components of each pixel separately */
+
 		return (partitionedMaxwithnBitsnPartitions(sourceWord, destinationWord, 5, 3)) + ((partitionedMaxwithnBitsnPartitions(((usqInt) sourceWord) >> 16, ((usqInt) destinationWord) >> 16, 5, 3)) << 16);
 	} else {
+
+		/* Max RGBA components of the pixel separately */
+
 		return partitionedMaxwithnBitsnPartitions(sourceWord, destinationWord, 8, 4);
 	}
 }
 
 static sqInt rgbMinwith(sqInt sourceWord, sqInt destinationWord) {
 	if (destDepth < 16) {
+
+		/* Min each pixel separately */
+
 		return partitionedMinwithnBitsnPartitions(sourceWord, destinationWord, destDepth, destPPW);
 	}
 	if (destDepth == 16) {
+
+		/* Min RGB components of each pixel separately */
+
 		return (partitionedMinwithnBitsnPartitions(sourceWord, destinationWord, 5, 3)) + ((partitionedMinwithnBitsnPartitions(((usqInt) sourceWord) >> 16, ((usqInt) destinationWord) >> 16, 5, 3)) << 16);
 	} else {
+
+		/* Min RGBA components of the pixel separately */
+
 		return partitionedMinwithnBitsnPartitions(sourceWord, destinationWord, 8, 4);
 	}
 }
@@ -3979,33 +4092,60 @@ static sqInt rgbMinInvertwith(sqInt wordToInvert, sqInt destinationWord) {
 
 	sourceWord = ~wordToInvert;
 	if (destDepth < 16) {
+
+		/* Min each pixel separately */
+
 		return partitionedMinwithnBitsnPartitions(sourceWord, destinationWord, destDepth, destPPW);
 	}
 	if (destDepth == 16) {
+
+		/* Min RGB components of each pixel separately */
+
 		return (partitionedMinwithnBitsnPartitions(sourceWord, destinationWord, 5, 3)) + ((partitionedMinwithnBitsnPartitions(((usqInt) sourceWord) >> 16, ((usqInt) destinationWord) >> 16, 5, 3)) << 16);
 	} else {
+
+		/* Min RGBA components of the pixel separately */
+
 		return partitionedMinwithnBitsnPartitions(sourceWord, destinationWord, 8, 4);
 	}
 }
 
 static sqInt rgbMulwith(sqInt sourceWord, sqInt destinationWord) {
 	if (destDepth < 16) {
+
+		/* Mul each pixel separately */
+
 		return partitionedMulwithnBitsnPartitions(sourceWord, destinationWord, destDepth, destPPW);
 	}
 	if (destDepth == 16) {
+
+		/* Mul RGB components of each pixel separately */
+
 		return (partitionedMulwithnBitsnPartitions(sourceWord, destinationWord, 5, 3)) + ((partitionedMulwithnBitsnPartitions(((usqInt) sourceWord) >> 16, ((usqInt) destinationWord) >> 16, 5, 3)) << 16);
 	} else {
+
+		/* Mul RGBA components of the pixel separately */
+
 		return partitionedMulwithnBitsnPartitions(sourceWord, destinationWord, 8, 4);
 	}
 }
 
 static sqInt rgbSubwith(sqInt sourceWord, sqInt destinationWord) {
 	if (destDepth < 16) {
+
+		/* Sub each pixel separately */
+
 		return partitionedSubfromnBitsnPartitions(sourceWord, destinationWord, destDepth, destPPW);
 	}
 	if (destDepth == 16) {
+
+		/* Sub RGB components of each pixel separately */
+
 		return (partitionedSubfromnBitsnPartitions(sourceWord, destinationWord, 5, 3)) + ((partitionedSubfromnBitsnPartitions(((usqInt) sourceWord) >> 16, ((usqInt) destinationWord) >> 16, 5, 3)) << 16);
 	} else {
+
+		/* Sub RGBA components of the pixel separately */
+
 		return partitionedSubfromnBitsnPartitions(sourceWord, destinationWord, 8, 4);
 	}
 }
@@ -4043,6 +4183,9 @@ static sqInt setupColorMasks(void) {
 		bits = 8;
 	}
 	if (cmBitsPerColor == 0) {
+
+		/* Convert to destDepth */
+
 		if (destDepth <= 8) {
 			return null;
 		}
@@ -4434,10 +4577,16 @@ l6:	/* end deltaFrom:to:nSteps: */;
 		sourceMapOop = interpreterProxy->stackValue(0);
 		if (sourceMapOop == (interpreterProxy->nilObject())) {
 			if (sourceDepth < 16) {
+
+				/* color map is required to smooth non-RGB dest */
+
 				return interpreterProxy->primitiveFail();
 			}
 		} else {
 			if ((interpreterProxy->slotSizeOf(sourceMapOop)) < (1 << sourceDepth)) {
+
+				/* sourceMap must be long enough for sourceDepth */
+
 				return interpreterProxy->primitiveFail();
 			}
 			sourceMapOop = oopForPointer(interpreterProxy->firstIndexableField(sourceMapOop));
@@ -4499,6 +4648,9 @@ l6:	/* end deltaFrom:to:nSteps: */;
 		dstShiftLeft = 0;
 	}
 	for (i = 1; i <= bbH; i += 1) {
+
+		/* here is the vertical loop... */
+
 		/* begin deltaFrom:to:nSteps: */
 		if (pBx > pAx) {
 			xDelta = (((pBx - pAx) + FixedPt1) / (nSteps + 1)) + 1;
@@ -4561,7 +4713,13 @@ l6:	/* end deltaFrom:to:nSteps: */;
 		nPix = startBits;
 		words = nWords;
 		do {
+
+			/* pick up word */
+
 			if (smoothingCount == 1) {
+
+				/* Faster if not smoothing */
+
 				/* begin warpPickSourcePixels:xDeltah:yDeltah:xDeltav:yDeltav:dstShiftInc:flags: */
 				dstMask = maskTable[destDepth];
 				destWord1 = 0;
@@ -4628,6 +4786,9 @@ l6:	/* end deltaFrom:to:nSteps: */;
 				}
 				skewWord = destWord1;
 			} else {
+
+				/* more difficult with smoothing */
+
 				skewWord = warpPickSmoothPixelsxDeltahyDeltahxDeltavyDeltavsourceMapsmoothingdstShiftInc(nPix, xDelta, yDelta, deltaP12x, deltaP12y, sourceMapOop, smoothingCount, dstShiftInc);
 			}
 			dstBitShift = dstShiftLeft;
@@ -4641,6 +4802,9 @@ l6:	/* end deltaFrom:to:nSteps: */;
 				value = destMask & mergeWord;
 				long32Atput(idx1, value);
 			} else {
+
+				/* General version using dest masking */
+
 				/* begin dstLongAt: */
 				idx2 = destIndex;
 				destWord = long32At(idx2);
@@ -4744,6 +4908,9 @@ static sqInt warpPickSmoothPixelsxDeltahyDeltahxDeltavyDeltavsourceMapsmoothingd
 			yy = y;
 			k = n;
 			do {
+
+				/* get a single subpixel */
+
 				/* begin pickWarpPixelAtX:y: */
 				if ((xx < 0) || ((yy < 0) || ((((x1 = ((usqInt) xx) >> BinaryPoint)) >= sourceWidth) || (((y1 = ((usqInt) yy) >> BinaryPoint)) >= sourceHeight)))) {
 					rgb = 0;
@@ -4761,12 +4928,15 @@ static sqInt warpPickSmoothPixelsxDeltahyDeltahxDeltavyDeltavsourceMapsmoothingd
 
 					nPix += 1;
 					if (sourceDepth < 16) {
+
+						/* Get RGBA values from sourcemap table */
+
 						rgb = long32At(sourceMap + (rgb << 2));
 					} else {
+
+						/* Already in RGB format */
+
 						if (sourceDepth == 16) {
-
-							/* Already in RGB format */
-
 							rgb = (((rgb & 31) << 3) | ((rgb & 992) << 6)) | ((rgb & 31744) << 9);
 						} else {
 							rgb = rgb;
@@ -4789,9 +4959,11 @@ static sqInt warpPickSmoothPixelsxDeltahyDeltahxDeltavyDeltavsourceMapsmoothingd
 
 			rgb = 0;
 		} else {
+
+			/* normalize rgba sums */
+
 			if (nPix == 4) {
 
-				/* normalize rgba sums */
 				/* Try to avoid divides for most common n */
 
 				r = ((usqInt) r) >> 2;
@@ -4809,10 +4981,10 @@ static sqInt warpPickSmoothPixelsxDeltahyDeltahxDeltavyDeltavsourceMapsmoothingd
 
 			rgb = (((a << 24) + (r << 16)) + (g << 8)) + b;
 			if (rgb == 0) {
+
+				/* only generate zero if pixel is really transparent */
+
 				if ((((r + g) + b) + a) > 0) {
-
-					/* only generate zero if pixel is really transparent */
-
 					rgb = 1;
 				}
 			}

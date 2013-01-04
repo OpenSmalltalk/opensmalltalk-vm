@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 29 December 2012 7:52:42 pm 
-   by VMMaker 4.10.7
+/* Automatically generated from Squeak on 4 January 2013 12:29:02 am 
+   by VMMaker 4.10.8
  */
 
 #include <math.h>
@@ -61,9 +61,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"FFTPlugin 29 December 2012 (i)"
+	"FFTPlugin 4 January 2013 (i)"
 #else
-	"FFTPlugin 29 December 2012 (e)"
+	"FFTPlugin 4 January 2013 (e)"
 #endif
 ;
 static sqInt nu;
@@ -171,6 +171,9 @@ EXPORT(sqInt) primitiveFFTPermuteData(void) {
 	}
 	permuteData();
 	if (interpreterProxy->failed()) {
+
+		/* permuteData went wrong. Do the permutation again -- this will restore the original order */
+
 		permuteData();
 	}
 }

@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 29 December 2012 7:52:39 pm 
-   by VMMaker 4.10.7
+/* Automatically generated from Squeak on 4 January 2013 12:29:01 am 
+   by VMMaker 4.10.8
  */
 
 #include <math.h>
@@ -414,9 +414,9 @@ struct VirtualMachine* interpreterProxy;
 static void * loadBBFn;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"B2DPlugin 29 December 2012 (i)"
+	"B2DPlugin 4 January 2013 (i)"
 #else
-	"B2DPlugin 29 December 2012 (e)"
+	"B2DPlugin 4 January 2013 (e)"
 #endif
 ;
 static int* objBuffer;
@@ -597,6 +597,9 @@ static sqInt allocateGETEntry(sqInt nSlots) {
     sqInt i;
     sqInt srcIndex;
 
+
+	/* First allocate nSlots in the AET */
+
 	if (!(needAvailableSpace(nSlots))) {
 		return 0;
 	}
@@ -655,6 +658,9 @@ static sqInt allocateObjEntry(sqInt nSlots) {
     sqInt i;
     sqInt srcIndex;
 
+
+	/* First allocate nSlots in the GET */
+
 	if (!(allocateGETEntry(nSlots))) {
 		return 0;
 	}
@@ -705,6 +711,9 @@ static sqInt checkCompressedFills(sqInt indexList) {
     int *fillPtr;
     sqInt i;
     sqInt length;
+
+
+	/* First check if the oops have the right format */
 
 	if (!(interpreterProxy->isWords(indexList))) {
 		return 0;
@@ -1047,6 +1056,9 @@ static sqInt computeFinalWideBezierValueswidth(sqInt bezier, sqInt lineWidth) {
 
 static sqInt copyBitsFromtoat(sqInt x0, sqInt x1, sqInt yValue) {
 	if (copyBitsFn == 0) {
+
+		/* We need copyBits here so try to load it implicitly */
+
 		if (!(initialiseModule())) {
 			return 0;
 		}
@@ -1066,7 +1078,13 @@ static sqInt createGlobalEdgeTable(void) {
 	object = 0;
 	end = objUsed;
 	while (object < end) {
+
+		/* Note: addEdgeToGET: may fail on insufficient space but that's not a problem here */
+
 		if (isEdge(object)) {
+
+			/* Check if the edge starts below fillMaxY. */
+
 			if (!((objBuffer[object + GEYValue]) >= (workBuffer[GWFillMaxY]))) {
 				/* begin checkedAddEdgeToGET: */
 				if ((((objBuffer[object + GEObjectType]) & GEPrimitiveTypeMask) & GEPrimitiveWideMask) == GEPrimitiveLine) {
@@ -1164,6 +1182,9 @@ static sqInt fillBitmapSpanfromto(int *bits, sqInt leftX, sqInt rightX) {
 
 	bitX = -1;
 	if ((workBuffer[GWAALevel]) == 1) {
+
+		/* Speedy version for no anti-aliasing */
+
 		while (x0 < x1) {
 			fillValue = (((int *) bits))[(bitX += 1)];
 			spanBuffer[x0] = fillValue;
@@ -1740,6 +1761,10 @@ static sqInt fillColorSpanAAx0x1(sqInt pixelValue32, sqInt leftX, sqInt rightX) 
     sqInt x;
     sqInt firstPixel1;
 
+
+	/* Not now -- maybe later */
+	/* Compute the pixel boundaries. */
+
 	/* begin aaFirstPixelFrom:to: */
 	firstPixel1 = ((leftX + (workBuffer[GWAALevel])) - 1) & (~((workBuffer[GWAALevel]) - 1));
 	if (firstPixel1 > rightX) {
@@ -1843,6 +1868,9 @@ static sqInt fillLinearGradientfromtoat(sqInt fill, sqInt leftX, sqInt rightX, s
 	l1:	/* end fillColorSpan:from:to: */;
 	}
 	if ((workBuffer[GWAALevel]) == 1) {
+
+		/* Fast version w/o anti-aliasing */
+
 		while (((((rampIndex = ((sqInt) ds >> 16))) < rampSize) && (rampIndex >= 0)) && (x < x1)) {
 			spanBuffer[x] = (ramp[rampIndex]);
 			x += 1;
@@ -2021,6 +2049,9 @@ l1:	/* end aaFirstPixelFrom:to: */;
 		rampValue = (((int *) ramp))[rampIndex];
 		rampValue = ((usqInt) (rampValue & colorMask)) >> colorShift;
 		while (x < firstPixel) {
+
+			/* Try to copy the current value more than just once */
+
 			while ((x < firstPixel) && ((((((sqInt) ds >> 16)) * (((sqInt) ds >> 16))) + ((((sqInt) dt >> 16)) * (((sqInt) dt >> 16)))) >= length2)) {
 				index = ((usqInt) x) >> baseShift;
 				spanBuffer[index] = ((spanBuffer[index]) + rampValue);
@@ -2043,6 +2074,9 @@ l1:	/* end aaFirstPixelFrom:to: */;
 		rampValue = (((int *) ramp))[rampIndex];
 		rampValue = ((usqInt) (rampValue & colorMask)) >> colorShift;
 		while (x < lastPixel) {
+
+			/* Try to copy the current value more than just once */
+
 			while ((x < lastPixel) && ((((((sqInt) ds >> 16)) * (((sqInt) ds >> 16))) + ((((sqInt) dt >> 16)) * (((sqInt) dt >> 16)))) >= length2)) {
 				index = ((usqInt) x) >> baseShift;
 				spanBuffer[index] = ((spanBuffer[index]) + rampValue);
@@ -2065,6 +2099,9 @@ l1:	/* end aaFirstPixelFrom:to: */;
 		rampValue = (((int *) ramp))[rampIndex];
 		rampValue = ((usqInt) (rampValue & colorMask)) >> colorShift;
 		while (x < x1) {
+
+			/* Try to copy the current value more than just once */
+
 			while ((x < x1) && ((((((sqInt) ds >> 16)) * (((sqInt) ds >> 16))) + ((((sqInt) dt >> 16)) * (((sqInt) dt >> 16)))) >= length2)) {
 				index = ((usqInt) x) >> baseShift;
 				spanBuffer[index] = ((spanBuffer[index]) + rampValue);
@@ -2173,6 +2210,9 @@ static sqInt fillRadialGradientfromtoat(sqInt fill, sqInt leftX, sqInt rightX, s
 	deltaST[0] = ds;
 	deltaST[1] = dt;
 	if (x < (objBuffer[fill + GFOriginX])) {
+
+		/* Draw the decreasing part */
+
 		if ((workBuffer[GWAALevel]) == 1) {
 			/* begin fillRadialDecreasing:ramp:deltaST:dsX:dtX:from:to: */
 			ds1 = (((int*) deltaST))[0];
@@ -2207,6 +2247,9 @@ static sqInt fillRadialGradientfromtoat(sqInt fill, sqInt leftX, sqInt rightX, s
 		}
 	}
 	if (x < x1) {
+
+		/* Draw the increasing part */
+
 		if ((workBuffer[GWAALevel]) == 1) {
 			/* begin fillRadialIncreasing:ramp:deltaST:dsX:dtX:from:to: */
 			ds2 = (((int*) deltaST))[0];
@@ -2318,6 +2361,9 @@ l1:	/* end aaFirstPixelFrom:to: */;
 		rampValue = (((int *) ramp))[rampIndex];
 		rampValue = ((usqInt) (rampValue & colorMask)) >> colorShift;
 		while ((x < firstPixel) && (lastLength < length2)) {
+
+			/* Try to copy the current value more than once */
+
 			while ((x < firstPixel) && ((((((sqInt) ds >> 16)) * (((sqInt) ds >> 16))) + ((((sqInt) dt >> 16)) * (((sqInt) dt >> 16)))) <= nextLength)) {
 				index = ((usqInt) x) >> baseShift;
 				spanBuffer[index] = ((spanBuffer[index]) + rampValue);
@@ -2340,6 +2386,9 @@ l1:	/* end aaFirstPixelFrom:to: */;
 		rampValue = (((int *) ramp))[rampIndex];
 		rampValue = ((usqInt) (rampValue & colorMask)) >> colorShift;
 		while ((x < lastPixel) && (lastLength < length2)) {
+
+			/* Try to copy the current value more than once */
+
 			while ((x < lastPixel) && ((((((sqInt) ds >> 16)) * (((sqInt) ds >> 16))) + ((((sqInt) dt >> 16)) * (((sqInt) dt >> 16)))) <= nextLength)) {
 				index = ((usqInt) x) >> baseShift;
 				spanBuffer[index] = ((spanBuffer[index]) + rampValue);
@@ -2362,6 +2411,9 @@ l1:	/* end aaFirstPixelFrom:to: */;
 		rampValue = (((int *) ramp))[rampIndex];
 		rampValue = ((usqInt) (rampValue & colorMask)) >> colorShift;
 		while ((x < rightX) && (lastLength < length2)) {
+
+			/* Try to copy the current value more than once */
+
 			while ((x < rightX) && ((((((sqInt) ds >> 16)) * (((sqInt) ds >> 16))) + ((((sqInt) dt >> 16)) * (((sqInt) dt >> 16)))) <= nextLength)) {
 				index = ((usqInt) x) >> baseShift;
 				spanBuffer[index] = ((spanBuffer[index]) + rampValue);
@@ -2463,6 +2515,9 @@ static sqInt fillSpanfromto(unsigned int fill, sqInt leftX, sqInt rightX) {
 		}
 	l1:	/* end fillColorSpan:from:to: */;
 	} else {
+
+		/* Store the values for the dispatch */
+
 		workBuffer[GWLastExportedFill] = fill;
 		workBuffer[GWLastExportedLeftX] = x0;
 		workBuffer[GWLastExportedRightX] = x1;
@@ -2603,6 +2658,9 @@ static sqInt findNextExternalFillFromAET(void) {
 			rightEdge = aetBuffer[workBuffer[GWAETStart]];
 			rightX = objBuffer[rightEdge + GEXValue];
 			if (rightX >= (workBuffer[GWFillMinX])) {
+
+				/* This is the visible portion */
+
 				/* begin fillAllFrom:to: */
 				/* begin topFill */
 				if (((workBuffer[GWSize]) - (workBuffer[GWBufferTop])) == 0) {
@@ -2775,8 +2833,14 @@ static sqInt findNextExternalUpdateFromAET(void) {
 		edge = aetBuffer[workBuffer[GWAETStart]];
 		count = (objBuffer[edge + GENumLines]) - 1;
 		if (count == 0) {
+
+			/* Edge at end -- remove it */
+
 			removeFirstAETEntry();
 		} else {
+
+			/* Store remaining lines back */
+
 			objBuffer[edge + GENumLines] = count;
 			type = (objBuffer[edge + GEObjectType]) & GEPrimitiveTypeMask;
 			if ((type & GEPrimitiveWideMask) == GEPrimitiveEdge) {
@@ -2986,6 +3050,9 @@ static sqInt initializeGETProcessing(void) {
 		return null;
 	}
 	if ((workBuffer[GWGETUsed]) == 0) {
+
+		/* Nothing to do */
+
 		workBuffer[GWCurrentY] = (workBuffer[GWFillMaxY]);
 		return 0;
 	}
@@ -3008,6 +3075,9 @@ static sqInt initializeGETProcessing(void) {
 static sqInt insertEdgeIntoAET(sqInt edge) {
     sqInt index;
 
+
+	/* Check for the number of lines remaining */
+
 	if ((objBuffer[edge + GENumLines]) <= 0) {
 		return null;
 	}
@@ -3023,6 +3093,9 @@ static sqInt insertEdgeIntoAET(sqInt edge) {
 
 static sqInt insertToAETbeforeIndex(sqInt edge, sqInt index) {
     sqInt i;
+
+
+	/* Make sure we have space in the AET */
 
 	if (!(needAvailableSpace(1))) {
 		return null;
@@ -3137,6 +3210,9 @@ static sqInt loadArrayShapenSegmentsfilllineWidthlineFill(sqInt points, sqInt nS
 		if (((x0 == y0) && (x1 == y1)) || ((x1 == x2) && (y1 == y2))) {
 			loadWideLinefromtolineFillleftFillrightFill(lineWidth, ((int *) (workBuffer + GWPoint1)), ((int *) (workBuffer + GWPoint3)), lineFill, fillIndex, 0);
 		} else {
+
+			/* Need bezier */
+
 			segs = loadAndSubdivideBezierFromviatoisWide(((int *) (workBuffer + GWPoint1)), ((int *) (workBuffer + GWPoint2)), ((int *) (workBuffer + GWPoint3)), (lineWidth != 0) && (lineFill != 0));
 			if (engineStopped) {
 				return null;
@@ -3174,6 +3250,9 @@ static sqInt loadArrayTransformFromintolength(sqInt transformOop, float *destPtr
 
 static sqInt loadBeziersegmentleftFillrightFilloffset(sqInt bezier, sqInt index, sqInt leftFillIndex, sqInt rightFillIndex, sqInt yOffset) {
 	if ((workBuffer[(workBuffer[GWBufferTop]) + ((((workBuffer[GWSize]) - (workBuffer[GWBufferTop])) - index) + 5)]) >= (workBuffer[(workBuffer[GWBufferTop]) + ((((workBuffer[GWSize]) - (workBuffer[GWBufferTop])) - index) + 1)])) {
+
+		/* Top to bottom */
+
 		objBuffer[bezier + GEXValue] = (workBuffer[(workBuffer[GWBufferTop]) + ((((workBuffer[GWSize]) - (workBuffer[GWBufferTop])) - index) + 0)]);
 		objBuffer[bezier + GEYValue] = ((workBuffer[(workBuffer[GWBufferTop]) + ((((workBuffer[GWSize]) - (workBuffer[GWBufferTop])) - index) + 1)]) - yOffset);
 		objBuffer[bezier + GBViaX] = (workBuffer[(workBuffer[GWBufferTop]) + ((((workBuffer[GWSize]) - (workBuffer[GWBufferTop])) - index) + 2)]);
@@ -3195,6 +3274,9 @@ static sqInt loadBeziersegmentleftFillrightFilloffset(sqInt bezier, sqInt index,
 
 static sqInt loadBitBltFrom(sqInt bbObj) {
 	if (loadBBFn == 0) {
+
+		/* We need copyBits here so try to load it implicitly */
+
 		if (!(initialiseModule())) {
 			return 0;
 		}
@@ -3355,10 +3437,10 @@ static sqInt loadCompressedShapesegmentsleftFillsrightFillslineWidthslineFillsfi
 	leftLength = (rightLength = (widthLength = (lineFillLength = 1)));
 	leftValue = (rightValue = (widthValue = (lineFillValue = 0)));
 	for (i = 1; i <= nSegments; i += 1) {
+
+		/* Decrement current run length and load new stuff */
+
 		if (((leftLength -= 1)) <= 0) {
-
-			/* Decrement current run length and load new stuff */
-
 			leftRun += 1;
 			leftLength = ((usqInt) ((((int *) leftFills))[leftRun]) >> 16);
 			leftValue = ((((int *) leftFills))[leftRun]) & 65535;
@@ -4200,9 +4282,15 @@ static sqInt needAvailableSpace(sqInt nSlots) {
 
 static sqInt postDisplayAction(void) {
 	if (((workBuffer[GWGETStart]) >= (workBuffer[GWGETUsed])) && ((workBuffer[GWAETUsed]) == 0)) {
+
+		/* No more entries to process */
+
 		workBuffer[GWState] = GEStateCompleted;
 	}
 	if ((workBuffer[GWCurrentY]) >= (workBuffer[GWFillMaxY])) {
+
+		/* Out of clipping range */
+
 		workBuffer[GWState] = GEStateCompleted;
 	}
 }
@@ -4278,6 +4366,9 @@ EXPORT(sqInt) primitiveAddBezier(void) {
     sqInt startOop;
     sqInt viaOop;
 
+
+	/* Fail if we have the wrong number of arguments */
+
 	if (!((interpreterProxy->methodArgumentCount()) == 5)) {
 		return interpreterProxy->primitiveFail();
 	}
@@ -4334,6 +4425,9 @@ l1:	/* end needAvailableSpace: */;
 		loadWideBezierlineFillleftFillrightFilln(0, 0, leftFill, rightFill, nSegments);
 	}
 	if (engineStopped) {
+
+		/* Make sure the stack is okay */
+
 		/* begin wbStackClear */
 		workBuffer[GWBufferTop] = (workBuffer[GWSize]);
 		return interpreterProxy->primitiveFail();
@@ -4354,6 +4448,9 @@ EXPORT(sqInt) primitiveAddBezierShape(void) {
     sqInt nSegments;
     sqInt points;
     sqInt segSize;
+
+
+	/* Fail if we have the wrong number of arguments */
 
 	if (!((interpreterProxy->methodArgumentCount()) == 5)) {
 		return interpreterProxy->primitiveFail();
@@ -4379,6 +4476,9 @@ EXPORT(sqInt) primitiveAddBezierShape(void) {
 			return interpreterProxy->primitiveFail();
 		}
 	} else {
+
+		/* Must be Array of points */
+
 		if (!(interpreterProxy->isArray(points))) {
 			return interpreterProxy->primitiveFail();
 		}
@@ -4438,6 +4538,9 @@ EXPORT(sqInt) primitiveAddBitmapFill(void) {
     sqInt tileFlag;
     sqInt xIndex;
 
+
+	/* Fail if we have the wrong number of arguments */
+
 	if (!((interpreterProxy->methodArgumentCount()) == 7)) {
 		return interpreterProxy->primitiveFail();
 	}
@@ -4470,6 +4573,9 @@ EXPORT(sqInt) primitiveAddBitmapFill(void) {
 	}
 	fill = loadBitmapFillcolormaptilefromalongnormalxIndex(formOop, cmOop, tileFlag, ((int *) (workBuffer + GWPoint1)), ((int *) (workBuffer + GWPoint2)), ((int *) (workBuffer + GWPoint3)), xIndex - 1);
 	if (engineStopped) {
+
+		/* Make sure the stack is okay */
+
 		return interpreterProxy->primitiveFail();
 	}
 	if (!(interpreterProxy->failed())) {
@@ -4489,6 +4595,9 @@ EXPORT(sqInt) primitiveAddCompressedShape(void) {
     sqInt points;
     sqInt pointsShort;
     sqInt rightFills;
+
+
+	/* Fail if we have the wrong number of arguments */
 
 	if (!((interpreterProxy->methodArgumentCount()) == 7)) {
 		return interpreterProxy->primitiveFail();
@@ -4536,6 +4645,9 @@ EXPORT(sqInt) primitiveAddGradientFill(void) {
     sqInt originOop;
     sqInt rampOop;
 
+
+	/* Fail if we have the wrong number of arguments */
+
 	if (!((interpreterProxy->methodArgumentCount()) == 5)) {
 		return interpreterProxy->primitiveFail();
 	}
@@ -4558,6 +4670,9 @@ EXPORT(sqInt) primitiveAddGradientFill(void) {
 	}
 	fill = loadGradientFillfromalongnormalisRadial(rampOop, ((int *) (workBuffer + GWPoint1)), ((int *) (workBuffer + GWPoint2)), ((int *) (workBuffer + GWPoint3)), isRadial);
 	if (engineStopped) {
+
+		/* Make sure the stack is okay */
+
 		return interpreterProxy->primitiveFail();
 	}
 	if (!(interpreterProxy->failed())) {
@@ -4573,6 +4688,9 @@ EXPORT(sqInt) primitiveAddLine(void) {
     sqInt leftFill;
     sqInt rightFill;
     sqInt startOop;
+
+
+	/* Fail if we have the wrong number of arguments */
 
 	if (!((interpreterProxy->methodArgumentCount()) == 4)) {
 		return interpreterProxy->primitiveFail();
@@ -4630,6 +4748,9 @@ EXPORT(sqInt) primitiveAddOval(void) {
     sqInt endOop;
     sqInt fillIndex;
     sqInt startOop;
+
+
+	/* Fail if we have the wrong number of arguments */
 
 	if (!((interpreterProxy->methodArgumentCount()) == 5)) {
 		return interpreterProxy->primitiveFail();
@@ -4698,6 +4819,9 @@ EXPORT(sqInt) primitiveAddPolygon(void) {
     sqInt y0;
     sqInt y1;
 
+
+	/* Fail if we have the wrong number of arguments */
+
 	if (!((interpreterProxy->methodArgumentCount()) == 5)) {
 		return interpreterProxy->primitiveFail();
 	}
@@ -4722,6 +4846,9 @@ EXPORT(sqInt) primitiveAddPolygon(void) {
 			return interpreterProxy->primitiveFail();
 		}
 	} else {
+
+		/* Must be Array of points */
+
 		if (!(interpreterProxy->isArray(points))) {
 			return interpreterProxy->primitiveFail();
 		}
@@ -4812,6 +4939,9 @@ EXPORT(sqInt) primitiveAddRect(void) {
     sqInt endOop;
     sqInt fillIndex;
     sqInt startOop;
+
+
+	/* Fail if we have the wrong number of arguments */
 
 	if (!((interpreterProxy->methodArgumentCount()) == 5)) {
 		return interpreterProxy->primitiveFail();
@@ -5610,6 +5740,9 @@ EXPORT(sqInt) primitiveNextGlobalEdgeEntry(void) {
 	if (hasEdge) {
 		workBuffer[GWState] = GEStateWaitingForEdge;
 	} else {
+
+		/* Start scanning the AET */
+
 		workBuffer[GWState] = GEStateScanningAET;
 		workBuffer[GWClearSpanBuffer] = 1;
 		workBuffer[GWAETStart] = 0;
@@ -5798,6 +5931,9 @@ EXPORT(sqInt) primitiveSetBitBltPlugin(void) {
 	ptr = interpreterProxy->firstIndexableField(pluginName);
 	needReload = 0;
 	for (i = 0; i <= (length - 1); i += 1) {
+
+		/* Compare and store the plugin to be used */
+
 		if (!((bbPluginName[i]) == (ptr[i]))) {
 			bbPluginName[i] = (ptr[i]);
 			needReload = 1;
@@ -6243,6 +6379,9 @@ static sqInt quickSortGlobalEdgeTablefromto(int *array, sqInt i, sqInt j) {
     sqInt tmp;
     sqInt tt;
 
+
+	/* The prefix d means the data at that index. */
+
 	if (((n = (j + 1) - i)) <= 1) {
 		return 0;
 	}
@@ -6459,6 +6598,9 @@ static sqInt showFilldepthrightX(sqInt fillIndex, sqInt depth, sqInt rightX) {
 		return null;
 	}
 	if (fillSortsbefore(0, ((workBuffer[GWSize]) - (workBuffer[GWBufferTop])) - 3)) {
+
+		/* New top fill */
+
 		workBuffer[(workBuffer[GWBufferTop]) + 0] = (workBuffer[(workBuffer[GWBufferTop]) + (((workBuffer[GWSize]) - (workBuffer[GWBufferTop])) - 3)]);
 		workBuffer[(workBuffer[GWBufferTop]) + (0 + 1)] = (workBuffer[(workBuffer[GWBufferTop]) + ((((workBuffer[GWSize]) - (workBuffer[GWBufferTop])) - 3) + 1)]);
 		workBuffer[(workBuffer[GWBufferTop]) + (0 + 2)] = (workBuffer[(workBuffer[GWBufferTop]) + ((((workBuffer[GWSize]) - (workBuffer[GWBufferTop])) - 3) + 2)]);
@@ -6511,6 +6653,9 @@ static sqInt stepToFirstBezierInat(sqInt bezier, sqInt yValue) {
     sqInt minY;
     sqInt word1;
     sqInt word2;
+
+
+	/* Do a quick check if there is anything at all to do */
 
 	if ((!((((objBuffer[bezier + GEObjectType]) & GEPrimitiveTypeMask) & GEPrimitiveWide) != 0)) && (yValue >= (objBuffer[bezier + GBEndY]))) {
 		return objBuffer[bezier + GENumLines] = 0;
@@ -6595,6 +6740,9 @@ static sqInt stepToFirstLineInat(sqInt line, sqInt yValue) {
     sqInt err;
     sqInt x;
 
+
+	/* Do a quick check if there is anything at all to do */
+
 	if ((!((((objBuffer[line + GEObjectType]) & GEPrimitiveTypeMask) & GEPrimitiveWide) != 0)) && (yValue >= (objBuffer[line + GLEndY]))) {
 		return objBuffer[line + GENumLines] = 0;
 	}
@@ -6623,9 +6771,11 @@ static sqInt stepToFirstLineInat(sqInt line, sqInt yValue) {
 		xInc = deltaX;
 		errorAdjUp = 0;
 	} else {
+
+		/* Check if edge is y-major */
+
 		if (deltaY > widthX) {
 
-			/* Check if edge is y-major */
 			/* Note: The '>' instead of '>=' could be important here... */
 
 			xInc = 0;
@@ -6724,6 +6874,9 @@ static sqInt stepToFirstWideBezierInat(sqInt bezier, sqInt yValue) {
 	}
 	computeFinalWideBezierValueswidth(bezier, lineWidth);
 	if (!(startY == yValue)) {
+
+		/* Note: Must single step here so that entry/exit works */
+
 		for (i = startY; i <= (yValue - 1); i += 1) {
 			stepToNextWideBezierInat(bezier, i);
 		}
@@ -6934,6 +7087,9 @@ static sqInt stepToNextWideBezierInat(sqInt bezier, sqInt yValue) {
 		(((int*) ((objBuffer + bezier) + GBUpdateData)))[GBUpdateDY] = fwDy;
 		((sqInt) lastX >> 8);
 	} else {
+
+		/* Adjust the last x value to the final x recorded previously */
+
 		((objBuffer + bezier) + GBUpdateData)[GBUpdateX] = ((objBuffer[bezier + GBFinalX]) * 256);
 	}
 	/* begin stepToNextBezierForward:at: */
@@ -6999,6 +7155,9 @@ static sqInt stepToNextWideLineInat(sqInt line, sqInt yValue) {
 
 	nextX = objBuffer[line + GEXValue];
 	if ((yEntry <= lineWidth) || ((yExit + lineOffset) >= 0)) {
+
+		/* Yes, need an update */
+
 		adjustWideLineafterSteppingFromto(line, lastX, nextX);
 	}
 }
@@ -7042,6 +7201,9 @@ static sqInt storeRenderingState(void) {
 		return null;
 	}
 	if (engineStopped) {
+
+		/* Check the stop reason and store the required information */
+
 		/* begin storeStopStateIntoEdge:fill: */
 		edgeOop = interpreterProxy->stackObjectValue(1);
 		fillOop = interpreterProxy->stackObjectValue(0);
@@ -7417,6 +7579,9 @@ static sqInt transformPoint(int *point) {
     sqInt y;
 
 	if ((workBuffer[GWHasEdgeTransform]) != 0) {
+
+		/* Note: AA adjustment is done in #transformPoint: for higher accuracy */
+
 		/* begin transformPoint:into: */
 		/* begin transformPointX:y:into: */
 		transform = ((float *) (workBuffer + GWEdgeTransform));
@@ -7425,6 +7590,9 @@ static sqInt transformPoint(int *point) {
 		(((int *) point))[0] = x;
 		(((int *) point))[1] = y;
 	} else {
+
+		/* Multiply each component by aaLevel and add a half pixel */
+
 		point[0] = (((point[0]) + (workBuffer[GWDestOffsetX])) * (workBuffer[GWAALevel]));
 		point[1] = (((point[1]) + (workBuffer[GWDestOffsetY])) * (workBuffer[GWAALevel]));
 	}

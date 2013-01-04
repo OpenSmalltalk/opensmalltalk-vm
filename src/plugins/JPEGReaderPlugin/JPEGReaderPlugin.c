@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 29 December 2012 7:52:44 pm 
-   by VMMaker 4.10.7
+/* Automatically generated from Squeak on 4 January 2013 12:29:02 am 
+   by VMMaker 4.10.8
  */
 
 #include <math.h>
@@ -129,9 +129,9 @@ static sqInt jsPosition;
 static sqInt jsReadLimit;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"JPEGReaderPlugin 29 December 2012 (i)"
+	"JPEGReaderPlugin 4 January 2013 (i)"
 #else
-	"JPEGReaderPlugin 29 December 2012 (e)"
+	"JPEGReaderPlugin 4 January 2013 (e)"
 #endif
 ;
 static int *residuals;

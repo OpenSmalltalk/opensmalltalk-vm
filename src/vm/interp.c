@@ -1,4 +1,4 @@
-/* Automatically generated from Squeak on 3 January 2013 11:26:59 pm 
+/* Automatically generated from Squeak on 4 January 2013 12:28:59 am 
    by VMMaker 4.10.8
  */
 #if 1
@@ -929,7 +929,7 @@ sqInt remapBuffer[26];
 struct foo * foo = &fum;
 
 sqInt extraVMMemory;
-const char *interpreterVersion = "Squeak4.3 of 2 January 2013 [latest update: #12359]";
+const char *interpreterVersion = "Squeak4.3 of 3 January 2013 [latest update: #12370]";
 sqInt (*compilerHooks[16])();
 struct VirtualMachine* interpreterProxy;
 sqInt imageFormatVersionNumber = 0;

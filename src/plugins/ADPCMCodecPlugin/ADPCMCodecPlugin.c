@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 2 January 2013 7:47:35 pm 
-   by VMMaker 4.10.7
+/* Automatically generated from Squeak on 4 January 2013 12:29 am 
+   by VMMaker 4.10.8
  */
 
 #include <math.h>
@@ -62,9 +62,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"ADPCMCodecPlugin 2 January 2013 (i)"
+	"ADPCMCodecPlugin 4 January 2013 (i)"
 #else
-	"ADPCMCodecPlugin 2 January 2013 (e)"
+	"ADPCMCodecPlugin 4 January 2013 (e)"
 #endif
 ;
 
@@ -154,6 +154,9 @@ EXPORT(sqInt) primitiveDecodeMono(void) {
 	}
 	for (i = 1; i <= count; i += 1) {
 		if ((i & frameSizeMask) == 1) {
+
+			/* start of frame; read frame header */
+
 			/* begin nextBits: */
 			result = 0;
 			remaining = 16;
@@ -312,6 +315,9 @@ EXPORT(sqInt) primitiveDecodeStereo(void) {
     short int *stepSizeTable;
     short int *indexTable;
 
+
+	/* make local copies of decoder state variables */
+
 	rcvr = stackValue(1);
 	count = stackIntegerValue(0);
 	predicted = fetchArrayofObject(0, rcvr);
@@ -340,15 +346,15 @@ EXPORT(sqInt) primitiveDecodeStereo(void) {
 	if (!(successFlag)) {
 		return null;
 	}
-
-	/* make local copies of decoder state variables */
-
 	predictedLeft = predicted[1];
 	predictedRight = predicted[2];
 	indexLeft = index[1];
 	indexRight = index[2];
 	for (i = 1; i <= count; i += 1) {
 		if ((i & frameSizeMask) == 1) {
+
+			/* start of frame; read frame header */
+
 			/* begin nextBits: */
 			result = 0;
 			remaining = 16;
@@ -747,6 +753,9 @@ EXPORT(sqInt) primitiveEncodeMono(void) {
 		}
 	}
 	if (bitPosition > 0) {
+
+		/* flush the last output byte, if necessary */
+
 		encodedBytes[(byteIndex += 1)] = currentByte;
 	}
 	if (!(successFlag)) {

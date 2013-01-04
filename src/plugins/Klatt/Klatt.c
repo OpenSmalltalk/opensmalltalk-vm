@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 29 December 2012 7:52:45 pm 
-   by VMMaker 4.10.7
+/* Automatically generated from Squeak on 4 January 2013 12:29:03 am 
+   by VMMaker 4.10.8
  */
 
 #include <math.h>
@@ -148,9 +148,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"Klatt 29 December 2012 (i)"
+	"Klatt 4 January 2013 (i)"
 #else
-	"Klatt 29 December 2012 (e)"
+	"Klatt 4 January 2013 (e)"
 #endif
 ;
 static float nlast;
@@ -565,6 +565,9 @@ static void setCurrentFrame(float *aKlattFrame) {
 	ampF6F = ((pow(2.0,(((frame[A6f]) - 87.0) / 6.0))) * 32.767) * 0.03;
 	if (cascade >= 8) {
 		if (samplingRate >= 16000) {
+
+			/* Inside Nyquist rate? */
+
 			resonatorfrequencybandwidth(R8c, 7500, 600);
 		} else {
 			cascade = 6;
@@ -572,6 +575,9 @@ static void setCurrentFrame(float *aKlattFrame) {
 	}
 	if (cascade >= 7) {
 		if (samplingRate >= 16000) {
+
+			/* Inside Nyquist rate? */
+
 			resonatorfrequencybandwidth(R7c, 6500, 500);
 		} else {
 			cascade = 6;
@@ -695,6 +701,8 @@ static void synthesizeFrameintostartingAt(float *aKlattFrame, short *buffer, sqI
 	while (index <= top) {
 
 		/* Get low-passed random number for aspiration and friction noise */
+
+
 		/* radom number between -8196.0 and 8196.0 */
 		/* Tilt down noise spectrum by soft low-pass filter having
 		 a pole near the origin in the z-plane. */

@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 29 December 2012 7:52:49 pm 
-   by VMMaker 4.10.7
+/* Automatically generated from Squeak on 4 January 2013 12:29:04 am 
+   by VMMaker 4.10.8
  */
 
 #include <math.h>
@@ -53,9 +53,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"SoundCodecPrims 29 December 2012 (i)"
+	"SoundCodecPrims 4 January 2013 (i)"
 #else
-	"SoundCodecPrims 29 December 2012 (e)"
+	"SoundCodecPrims 4 January 2013 (e)"
 #endif
 ;
 

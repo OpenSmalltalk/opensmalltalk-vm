@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 29 December 2012 7:52:47 pm 
-   by VMMaker 4.10.7
+/* Automatically generated from Squeak on 4 January 2013 12:29:03 am 
+   by VMMaker 4.10.8
  */
 
 #include <math.h>
@@ -62,9 +62,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"MiscPrimitivePlugin 29 December 2012 (i)"
+	"MiscPrimitivePlugin 4 January 2013 (i)"
 #else
-	"MiscPrimitivePlugin 29 December 2012 (e)"
+	"MiscPrimitivePlugin 4 January 2013 (e)"
 #endif
 ;
 
@@ -263,7 +263,13 @@ l5:	/* end encodeInt:in:at: */;
 			j += 1;
 		}
 		if (j > k) {
+
+			/* We have two or more = words, ending at j */
+
 			if (eqBytes) {
+
+				/* Actually words of = bytes */
+
 				/* begin encodeInt:in:at: */
 				if (((((j - k) + 1) * 4) + 1) <= 223) {
 					ba[i] = ((((j - k) + 1) * 4) + 1);
@@ -313,7 +319,13 @@ l5:	/* end encodeInt:in:at: */;
 			}
 			k = j + 1;
 		} else {
+
+			/* Check for word of 4 = bytes */
+
 			if (eqBytes) {
+
+				/* Note 1 word of 4 = bytes */
+
 				/* begin encodeInt:in:at: */
 				if (((1 * 4) + 1) <= 223) {
 					ba[i] = ((1 * 4) + 1);
@@ -337,6 +349,9 @@ l5:	/* end encodeInt:in:at: */;
 				i += 1;
 				k += 1;
 			} else {
+
+				/* Finally, check for junk */
+
 				while ((j < size) && ((bm[j]) != (bm[j + 1]))) {
 					j += 1;
 				}
@@ -497,6 +512,9 @@ EXPORT(sqInt) primitiveDecompressFromByteArray(void) {
 		}
 		code = anInt & 3;
 		if (code == 0) {
+
+			/* skip */
+
 			null;
 		}
 		if (code == 1) {
@@ -527,10 +545,10 @@ EXPORT(sqInt) primitiveDecompressFromByteArray(void) {
 			}
 		}
 		if (code == 3) {
+
+			/* n consecutive words from the data... */
+
 			for (m = 1; m <= n; m += 1) {
-
-				/* n consecutive words from the data... */
-
 				data = 0;
 				for (j = 1; j <= 4; j += 1) {
 					data = (((usqInt) data << 8)) | (ba[i]);

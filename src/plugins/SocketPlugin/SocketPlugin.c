@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 29 December 2012 7:52:48 pm 
-   by VMMaker 4.10.7
+/* Automatically generated from Squeak on 4 January 2013 12:29:04 am 
+   by VMMaker 4.10.8
  */
 
 #include <math.h>
@@ -122,9 +122,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"SocketPlugin 29 December 2012 (i)"
+	"SocketPlugin 4 January 2013 (i)"
 #else
-	"SocketPlugin 29 December 2012 (e)"
+	"SocketPlugin 4 January 2013 (e)"
 #endif
 ;
 static void * sCCLOPfn;
@@ -179,6 +179,9 @@ static sqInt intToNetAddress(sqInt addr) {
 
 EXPORT(sqInt) moduleUnloaded(char *aModuleName) {
 	if ((strcmp(aModuleName, "SecurityPlugin")) == 0) {
+
+		/* The security plugin just shut down. How odd. */
+
 		sDSAfn = (sHSAfn = (sCCTPfn = (sCCLOPfn = (sCCSOTfn = 0))));
 	}
 }
@@ -208,6 +211,10 @@ EXPORT(sqInt) primitiveDisableSocketAccess(void) {
 
 EXPORT(sqInt) primitiveHasSocketAccess(void) {
 	sqInt hasAccess;
+
+
+	/* If the security plugin can be loaded, use it to check . 
+	If not, assume it's ok */
 
 	if (sHSAfn != 0) {
 		hasAccess =  ((int (*) (void)) sHSAfn)();

@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 29 December 2012 7:52:46 pm 
-   by VMMaker 4.10.7
+/* Automatically generated from Squeak on 4 January 2013 12:29:03 am 
+   by VMMaker 4.10.8
  */
 
 #include <math.h>
@@ -386,6 +386,10 @@ static int cBytesLshiftfromlentolen(sqInt shiftCount, unsigned char *  pFrom, sq
 	byteShift = ((sqInt) shiftCount >> 3);
 	bitShift = shiftCount % 8;
 	if (bitShift == 0) {
+
+		/* Fast version for byte-aligned shifts */
+		/* C indexed! */
+
 		return cBytesReplacefromtowithstartingAt(pTo, byteShift, lenTo - 1, pFrom, 0);
 	}
 	carry = 0;
@@ -442,6 +446,10 @@ static sqInt cCoreBytesRshiftCountnfbytesfromlentolen(sqInt count, sqInt n, sqIn
 	/* missing DebugCode */;
 l1:	/* end sqAssert: */;
 	if (n == 0) {
+
+		/* Fast version for byte-aligned shifts */
+		/* C indexed! */
+
 		return cBytesReplacefromtowithstartingAt(pTo, 0, toLen - 1, pFrom, b);
 	}
 	x = (pFrom[b]) << f;
@@ -499,6 +507,8 @@ static sqInt cCoreDigitDivDivlenremlenquolen(unsigned char *  pDiv, sqInt divLen
 		/* The estimate is q = qhi*16+qlo, where qhi and qlo are nibbles. */
 		/* Nibbles are kicked off! We use full 16 bits now, because we are in  
 		the year 2000 ;-) [sr] */
+
+
 		/* r1 := rem digitAt: j. */
 
 		j = (remLen + 1) - k;
@@ -887,10 +897,10 @@ static sqInt digitAddLargewith(sqInt firstInteger, sqInt secondInteger) {
 	shortInt = interpreterProxy->popRemappableOop();
 	over = cDigitAddlenwithleninto(interpreterProxy->firstIndexableField(shortInt), shortLen, interpreterProxy->firstIndexableField(longInt), longLen, interpreterProxy->firstIndexableField(sum));
 	if (over > 0) {
-		interpreterProxy->pushRemappableOop(sum);
 
 		/* sum := sum growby: 1. */
 
+		interpreterProxy->pushRemappableOop(sum);
 		newSum = interpreterProxy->instantiateClassindexableSize(resClass, longLen + 1);
 		sum = interpreterProxy->popRemappableOop();
 		cBytesCopyFromtolen(interpreterProxy->firstIndexableField(sum), interpreterProxy->firstIndexableField(newSum), longLen);
@@ -1291,6 +1301,10 @@ l1:	/* end digitLength: */;
 		if ((((pointer2 = interpreterProxy->firstIndexableField(anInteger)))[sLen - 1]) < (cDigitOfCSIat(minVal, sLen))) {
 			return 0;
 		} else {
+
+			/* if just one digit differs, then anInteger < minval (the corresponding digit byte is greater!)
+						and therefore a LargeNegativeInteger */
+
 			for (ix = 1; ix <= sLen; ix += 1) {
 				if (!((((pointer3 = interpreterProxy->firstIndexableField(anInteger)))[ix - 1]) == (cDigitOfCSIat(minVal, ix)))) {
 					return 1;
@@ -1346,8 +1360,18 @@ static sqInt normalizeNegative(sqInt aLargeNegativeInteger) {
 			return interpreterProxy->integerObjectOf(val);
 		}
 		for (i = 1; i <= sLen; i += 1) {
+
+			/* If all digits same, then = minVal (sr: minVal digits 1 to 3 are 
+				          0) */
+
 			if (!((digitOfBytesat(aLargeNegativeInteger, i)) == (cDigitOfCSIat(minVal, i)))) {
+
+				/* Not so; return self shortened */
+
 				if (len < oldLen) {
+
+					/* ^ self growto: len */
+
 					return bytesgrowTo(aLargeNegativeInteger, len);
 				} else {
 					return aLargeNegativeInteger;
@@ -1357,6 +1381,9 @@ static sqInt normalizeNegative(sqInt aLargeNegativeInteger) {
 		return interpreterProxy->integerObjectOf(minVal);
 	}
 	if (len < oldLen) {
+
+		/* ^ self growto: len */
+
 		return bytesgrowTo(aLargeNegativeInteger, len);
 	} else {
 		return aLargeNegativeInteger;
@@ -1398,6 +1425,9 @@ static sqInt normalizePositive(sqInt aLargePositiveInteger) {
 		return interpreterProxy->integerObjectOf(val);
 	}
 	if (len < oldLen) {
+
+		/* ^ self growto: len */
+
 		return bytesgrowTo(aLargePositiveInteger, len);
 	} else {
 		return aLargePositiveInteger;
@@ -1548,20 +1578,20 @@ EXPORT(sqInt) primDigitAdd(void) {
 		return null;
 	}
 	if ((firstInteger & 1)) {
-		interpreterProxy->pushRemappableOop(secondInteger);
 
 		/* convert it to a not normalized LargeInteger */
 
+		interpreterProxy->pushRemappableOop(secondInteger);
 		firstLarge = createLargeFromSmallInteger(firstInteger);
 		secondInteger = interpreterProxy->popRemappableOop();
 	} else {
 		firstLarge = firstInteger;
 	}
 	if ((secondInteger & 1)) {
-		interpreterProxy->pushRemappableOop(firstLarge);
 
 		/* convert it to a not normalized LargeInteger */
 
+		interpreterProxy->pushRemappableOop(firstLarge);
 		secondLarge = createLargeFromSmallInteger(secondInteger);
 		firstLarge = interpreterProxy->popRemappableOop();
 	} else {
@@ -1591,20 +1621,20 @@ EXPORT(sqInt) primDigitAddWith(void) {
 		return null;
 	}
 	if ((firstInteger & 1)) {
-		interpreterProxy->pushRemappableOop(secondInteger);
 
 		/* convert it to a not normalized LargeInteger */
 
+		interpreterProxy->pushRemappableOop(secondInteger);
 		firstLarge = createLargeFromSmallInteger(firstInteger);
 		secondInteger = interpreterProxy->popRemappableOop();
 	} else {
 		firstLarge = firstInteger;
 	}
 	if ((secondInteger & 1)) {
-		interpreterProxy->pushRemappableOop(firstLarge);
 
 		/* convert it to a not normalized LargeInteger */
 
+		interpreterProxy->pushRemappableOop(firstLarge);
 		secondLarge = createLargeFromSmallInteger(secondInteger);
 		firstLarge = interpreterProxy->popRemappableOop();
 	} else {
@@ -1837,7 +1867,13 @@ EXPORT(sqInt) primDigitCompare(void) {
 		return null;
 	}
 	if ((firstInteger & 1)) {
+
+		/* first */
+
 		if ((secondInteger & 1)) {
+
+			/* second */
+
 			if (((firstVal = (firstInteger >> 1))) > ((secondVal = (secondInteger >> 1)))) {
 				_return_value = interpreterProxy->integerObjectOf(1);
 				if (interpreterProxy->failed()) {
@@ -1863,6 +1899,9 @@ EXPORT(sqInt) primDigitCompare(void) {
 				}
 			}
 		} else {
+
+			/* SECOND */
+
 			_return_value = interpreterProxy->integerObjectOf(-1);
 			if (interpreterProxy->failed()) {
 				return null;
@@ -1871,7 +1910,13 @@ EXPORT(sqInt) primDigitCompare(void) {
 			return null;
 		}
 	} else {
+
+		/* FIRST */
+
 		if ((secondInteger & 1)) {
+
+			/* second */
+
 			_return_value = interpreterProxy->integerObjectOf(1);
 			if (interpreterProxy->failed()) {
 				return null;
@@ -1879,6 +1924,9 @@ EXPORT(sqInt) primDigitCompare(void) {
 			interpreterProxy->popthenPush(2, _return_value);
 			return null;
 		} else {
+
+			/* SECOND */
+
 			_return_value = digitCompareLargewith(firstInteger, secondInteger);
 			if (interpreterProxy->failed()) {
 				return null;
@@ -1905,7 +1953,13 @@ EXPORT(sqInt) primDigitCompareWith(void) {
 		return null;
 	}
 	if ((firstInteger & 1)) {
+
+		/* first */
+
 		if ((secondInteger & 1)) {
+
+			/* second */
+
 			if (((firstVal = (firstInteger >> 1))) > ((secondVal = (secondInteger >> 1)))) {
 				_return_value = interpreterProxy->integerObjectOf(1);
 				if (interpreterProxy->failed()) {
@@ -1931,6 +1985,9 @@ EXPORT(sqInt) primDigitCompareWith(void) {
 				}
 			}
 		} else {
+
+			/* SECOND */
+
 			_return_value = interpreterProxy->integerObjectOf(-1);
 			if (interpreterProxy->failed()) {
 				return null;
@@ -1939,7 +1996,13 @@ EXPORT(sqInt) primDigitCompareWith(void) {
 			return null;
 		}
 	} else {
+
+		/* FIRST */
+
 		if ((secondInteger & 1)) {
+
+			/* second */
+
 			_return_value = interpreterProxy->integerObjectOf(1);
 			if (interpreterProxy->failed()) {
 				return null;
@@ -1947,6 +2010,9 @@ EXPORT(sqInt) primDigitCompareWith(void) {
 			interpreterProxy->popthenPush(3, _return_value);
 			return null;
 		} else {
+
+			/* SECOND */
+
 			_return_value = digitCompareLargewith(firstInteger, secondInteger);
 			if (interpreterProxy->failed()) {
 				return null;
@@ -1990,16 +2056,19 @@ EXPORT(sqInt) primDigitDivNegative(void) {
 		return null;
 	}
 	if ((firstInteger & 1)) {
-		interpreterProxy->pushRemappableOop(secondInteger);
 
 		/* convert to LargeInteger */
 
+		interpreterProxy->pushRemappableOop(secondInteger);
 		firstAsLargeInteger = createLargeFromSmallInteger(firstInteger);
 		secondInteger = interpreterProxy->popRemappableOop();
 	} else {
 		firstAsLargeInteger = firstInteger;
 	}
 	if ((secondInteger & 1)) {
+
+		/* check for zerodivide and convert to LargeInteger */
+
 		if (((secondInteger >> 1)) == 0) {
 			interpreterProxy->primitiveFail();
 			return null;
@@ -2040,16 +2109,19 @@ EXPORT(sqInt) primDigitDivWithNegative(void) {
 		return null;
 	}
 	if ((firstInteger & 1)) {
-		interpreterProxy->pushRemappableOop(secondInteger);
 
 		/* convert to LargeInteger */
 
+		interpreterProxy->pushRemappableOop(secondInteger);
 		firstAsLargeInteger = createLargeFromSmallInteger(firstInteger);
 		secondInteger = interpreterProxy->popRemappableOop();
 	} else {
 		firstAsLargeInteger = firstInteger;
 	}
 	if ((secondInteger & 1)) {
+
+		/* check for zerodivide and convert to LargeInteger */
+
 		if (((secondInteger >> 1)) == 0) {
 			interpreterProxy->primitiveFail();
 			return null;
@@ -2086,20 +2158,20 @@ EXPORT(sqInt) primDigitMultiplyNegative(void) {
 		return null;
 	}
 	if ((firstInteger & 1)) {
-		interpreterProxy->pushRemappableOop(secondInteger);
 
 		/* convert it to a not normalized LargeInteger */
 
+		interpreterProxy->pushRemappableOop(secondInteger);
 		firstLarge = createLargeFromSmallInteger(firstInteger);
 		secondInteger = interpreterProxy->popRemappableOop();
 	} else {
 		firstLarge = firstInteger;
 	}
 	if ((secondInteger & 1)) {
-		interpreterProxy->pushRemappableOop(firstLarge);
 
 		/* convert it to a not normalized LargeInteger */
 
+		interpreterProxy->pushRemappableOop(firstLarge);
 		secondLarge = createLargeFromSmallInteger(secondInteger);
 		firstLarge = interpreterProxy->popRemappableOop();
 	} else {
@@ -2131,20 +2203,20 @@ EXPORT(sqInt) primDigitMultiplyWithNegative(void) {
 		return null;
 	}
 	if ((firstInteger & 1)) {
-		interpreterProxy->pushRemappableOop(secondInteger);
 
 		/* convert it to a not normalized LargeInteger */
 
+		interpreterProxy->pushRemappableOop(secondInteger);
 		firstLarge = createLargeFromSmallInteger(firstInteger);
 		secondInteger = interpreterProxy->popRemappableOop();
 	} else {
 		firstLarge = firstInteger;
 	}
 	if ((secondInteger & 1)) {
-		interpreterProxy->pushRemappableOop(firstLarge);
 
 		/* convert it to a not normalized LargeInteger */
 
+		interpreterProxy->pushRemappableOop(firstLarge);
 		secondLarge = createLargeFromSmallInteger(secondInteger);
 		firstLarge = interpreterProxy->popRemappableOop();
 	} else {
@@ -2174,20 +2246,20 @@ EXPORT(sqInt) primDigitSubtract(void) {
 		return null;
 	}
 	if ((firstInteger & 1)) {
-		interpreterProxy->pushRemappableOop(secondInteger);
 
 		/* convert it to a not normalized LargeInteger */
 
+		interpreterProxy->pushRemappableOop(secondInteger);
 		firstLarge = createLargeFromSmallInteger(firstInteger);
 		secondInteger = interpreterProxy->popRemappableOop();
 	} else {
 		firstLarge = firstInteger;
 	}
 	if ((secondInteger & 1)) {
-		interpreterProxy->pushRemappableOop(firstLarge);
 
 		/* convert it to a not normalized LargeInteger */
 
+		interpreterProxy->pushRemappableOop(firstLarge);
 		secondLarge = createLargeFromSmallInteger(secondInteger);
 		firstLarge = interpreterProxy->popRemappableOop();
 	} else {
@@ -2217,20 +2289,20 @@ EXPORT(sqInt) primDigitSubtractWith(void) {
 		return null;
 	}
 	if ((firstInteger & 1)) {
-		interpreterProxy->pushRemappableOop(secondInteger);
 
 		/* convert it to a not normalized LargeInteger */
 
+		interpreterProxy->pushRemappableOop(secondInteger);
 		firstLarge = createLargeFromSmallInteger(firstInteger);
 		secondInteger = interpreterProxy->popRemappableOop();
 	} else {
 		firstLarge = firstInteger;
 	}
 	if ((secondInteger & 1)) {
-		interpreterProxy->pushRemappableOop(firstLarge);
 
 		/* convert it to a not normalized LargeInteger */
 
+		interpreterProxy->pushRemappableOop(firstLarge);
 		secondLarge = createLargeFromSmallInteger(secondInteger);
 		firstLarge = interpreterProxy->popRemappableOop();
 	} else {
@@ -2289,11 +2361,11 @@ EXPORT(sqInt) primMontgomeryTimesModulo(void) {
 		return null;
 	}
 	if ((firstInteger & 1)) {
-		interpreterProxy->pushRemappableOop(secondOperandInteger);
-		interpreterProxy->pushRemappableOop(thirdModuloInteger);
 
 		/* convert it to a not normalized LargeInteger */
 
+		interpreterProxy->pushRemappableOop(secondOperandInteger);
+		interpreterProxy->pushRemappableOop(thirdModuloInteger);
 		firstLarge = createLargeFromSmallInteger(firstInteger);
 		thirdModuloInteger = interpreterProxy->popRemappableOop();
 		secondOperandInteger = interpreterProxy->popRemappableOop();
@@ -2301,11 +2373,11 @@ EXPORT(sqInt) primMontgomeryTimesModulo(void) {
 		firstLarge = firstInteger;
 	}
 	if ((secondOperandInteger & 1)) {
-		interpreterProxy->pushRemappableOop(firstLarge);
-		interpreterProxy->pushRemappableOop(thirdModuloInteger);
 
 		/* convert it to a not normalized LargeInteger */
 
+		interpreterProxy->pushRemappableOop(firstLarge);
+		interpreterProxy->pushRemappableOop(thirdModuloInteger);
 		secondLarge = createLargeFromSmallInteger(secondOperandInteger);
 		thirdModuloInteger = interpreterProxy->popRemappableOop();
 		firstLarge = interpreterProxy->popRemappableOop();
@@ -2313,11 +2385,11 @@ EXPORT(sqInt) primMontgomeryTimesModulo(void) {
 		secondLarge = secondOperandInteger;
 	}
 	if ((thirdModuloInteger & 1)) {
-		interpreterProxy->pushRemappableOop(firstLarge);
-		interpreterProxy->pushRemappableOop(secondLarge);
 
 		/* convert it to a not normalized LargeInteger */
 
+		interpreterProxy->pushRemappableOop(firstLarge);
+		interpreterProxy->pushRemappableOop(secondLarge);
 		thirdLarge = createLargeFromSmallInteger(thirdModuloInteger);
 		secondLarge = interpreterProxy->popRemappableOop();
 		firstLarge = interpreterProxy->popRemappableOop();

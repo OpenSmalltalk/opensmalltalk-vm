@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 29 December 2012 7:52:41 pm 
-   by VMMaker 4.10.7
+/* Automatically generated from Squeak on 4 January 2013 12:29:02 am 
+   by VMMaker 4.10.8
  */
 
 #include <math.h>
@@ -78,9 +78,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"ZipPlugin 29 December 2012 (i)"
+	"ZipPlugin 4 January 2013 (i)"
 #else
-	"ZipPlugin 29 December 2012 (e)"
+	"ZipPlugin 4 January 2013 (e)"
 #endif
 ;
 static unsigned int zipBaseDistance[] = {
@@ -243,6 +243,9 @@ static sqInt deflateBlockchainLengthgoodMatch(sqInt lastIndex, sqInt chainLength
 
 		newLength = ((usqInt) matchResult >> 16);
 		if ((hereLength >= newLength) && (hereLength >= DeflateMinMatch)) {
+
+			/* Encode the current match */
+
 			/* begin encodeMatch:distance: */
 			zipLiterals[zipLiteralCount] = (hereLength - DeflateMinMatch);
 			zipDistances[zipLiteralCount] = (here - hereMatch);
@@ -268,6 +271,11 @@ static sqInt deflateBlockchainLengthgoodMatch(sqInt lastIndex, sqInt chainLength
 			hasMatch = 0;
 			here += 1;
 		} else {
+
+			/* Either the next match is better than the current one or we didn't
+			have a good match after all (e.g., current match length < MinMatch).
+			Output a single literal. */
+
 			/* begin encodeLiteral: */
 			lit = zipCollection[here];
 			zipLiterals[zipLiteralCount] = lit;
@@ -277,6 +285,9 @@ static sqInt deflateBlockchainLengthgoodMatch(sqInt lastIndex, sqInt chainLength
 			flushNeeded = (zipLiteralCount == zipLiteralSize) || (((zipLiteralCount & 4095) == 0) && (shouldFlush()));
 			here += 1;
 			if ((here <= lastIndex) && (!flushNeeded)) {
+
+				/* Cache the results for the next round */
+
 				/* begin insertStringAt: */
 				zipHashValue = ((zipHashValue << DeflateHashShift) ^ (zipCollection[(here + DeflateMinMatch) - 1])) & DeflateHashMask;
 				prevEntry2 = zipHashHead[zipHashValue];
@@ -314,6 +325,8 @@ static sqInt findMatchlastLengthlastMatchchainLengthgoodMatch(sqInt here, sqInt 
 
 
 	/* Compute the default match result */
+
+
 	/* There is no way to find a better match than MaxMatch */
 
 	matchResult = (((usqInt) lastLength << 16)) | lastMatch;
@@ -345,6 +358,9 @@ static sqInt findMatchlastLengthlastMatchchainLengthgoodMatch(sqInt here, sqInt 
 	}
 	bestLength = lastLength;
 	while (1) {
+
+		/* Compare the current string with the string at match position */
+
 		/* begin compare:with:min: */
 		if (!((zipCollection[here + bestLength]) == (zipCollection[matchPos + bestLength]))) {
 			length = 0;
@@ -542,6 +558,9 @@ EXPORT(sqInt) primitiveDeflateBlock(void) {
 	}
 	result = deflateBlockchainLengthgoodMatch(lastIndex, chainLength, goodMatch);
 	if (!(interpreterProxy->failed())) {
+
+		/* Store back modified values */
+
 		interpreterProxy->storeIntegerofObjectwithValue(6, rcvr, zipHashValue);
 		interpreterProxy->storeIntegerofObjectwithValue(7, rcvr, zipBlockPos);
 		interpreterProxy->storeIntegerofObjectwithValue(13, rcvr, zipLiteralCount);
@@ -672,6 +691,9 @@ EXPORT(sqInt) primitiveInflateDecompressBlock(void) {
 	zipSource = interpreterProxy->firstIndexableField(oop);
 	zipDecompressBlock();
 	if (!(interpreterProxy->failed())) {
+
+		/* store modified values back */
+
 		interpreterProxy->storeIntegerofObjectwithValue(2, rcvr, zipReadLimit + 1);
 		interpreterProxy->storeIntegerofObjectwithValue(3, rcvr, zipState);
 		interpreterProxy->storeIntegerofObjectwithValue(4, rcvr, zipBitBuf);
@@ -1053,6 +1075,11 @@ static sqInt shouldFlush(void) {
 		return 0;
 	}
 	if ((zipMatchCount * 10) <= zipLiteralCount) {
+
+		/* This is basically random data. 
+		There is no need to flush early since the overhead
+		for encoding the trees will add to the overall size */
+
 		return 0;
 	}
 	nLits = zipLiteralCount - zipMatchCount;
@@ -1148,11 +1175,16 @@ static sqInt zipDecompressBlock(void) {
 		oldPos = zipSourcePos;
 		value = zipDecodeValueFromsize(zipLitTable, zipLitTableSize);
 		if (value < 256) {
+
+			/* A literal */
+
 			zipCollection[(zipReadLimit += 1)] = value;
 		} else {
+
+			/* length/distance or end of block */
+
 			if (value == 256) {
 
-				/* length/distance or end of block */
 				/* End of block */
 
 				zipState = zipState & StateNoMoreData;
