@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 4 January 2013 12:28:59 am 
-   by VMMaker 4.10.8
+/* Automatically generated from Squeak on 5 January 2013 9:49:28 am 
+   by VMMaker 4.10.9
  */
 #if 1
 # define SQ_USE_GLOBAL_STRUCT 1
@@ -158,7 +158,7 @@ void defaultErrorProc(char *s) {
 #define InitialIPIndex 4
 #define InstanceSpecificationIndex 2
 #define InstructionPointerIndex 1
-#define InterpreterSourceVersion "4.10.8"
+#define InterpreterSourceVersion "4.10.9"
 #define InvokeCallbackSelector 53
 #define LargeContextBit 262144
 #define LastLinkIndex 1
@@ -954,7 +954,7 @@ void *primitiveTable[577] = {
 	/* 17*/ (void *)primitiveBitShift,
 	/* 18*/ (void *)primitiveMakePoint,
 	/* 19*/ (void *)primitiveFail,
-	/* 20*/ (void *)primitiveFail,
+	/* 20*/ (void *)primitiveRemLargeIntegers,
 	/* 21*/ (void *)primitiveAddLargeIntegers,
 	/* 22*/ (void *)primitiveSubtractLargeIntegers,
 	/* 23*/ (void *)primitiveLessThanLargeIntegers,
