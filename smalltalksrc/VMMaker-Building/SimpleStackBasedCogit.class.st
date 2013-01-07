@@ -1309,8 +1309,12 @@ SimpleStackBasedCogit >> genExtSendAbsentDynamicSuperBytecode [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtSendAbsentImplicitBytecode [
 	"240		11110000	i i i i i j j j	Send To Absent Implicit Receiver Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
-	self shouldBeImplemented.
-	^EncounteredUnknownBytecode
+	| litIndex nArgs |
+	litIndex := (byte1 >> 3) + (extA << 5).
+	extA := 0.
+	nArgs := (byte1 bitAnd: 7) + (extB << 3).
+	extB := 0.
+	^self genSendAbsentImplicit: (coInterpreter literal: litIndex ofMethod: methodObj) numArgs: nArgs
 ]
 
 { #category : #'bytecode generators' }
@@ -1429,6 +1433,32 @@ SimpleStackBasedCogit >> genFastPrimTraceUsing: r1 and: r2 [
 	self MoveMw: (self offset: CogMethod of: #selector) r: r1 R: TempReg.
 	self MoveCw: coInterpreter primTraceLogAddress asInteger R: r1.
 	self MoveR: TempReg Xwr: r2 R: r1
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genGetImplicitReceiverFor: selector [
+	"Cached implicit receiver implementation.  Caller looks like
+		mov selector, ClassReg
+				call cePushImplicitReceiver
+				br continue
+		Lclass	.word
+		Lmixin:	.word
+		continue:
+	 If class matches class of receiver then mixin contains either 0 or the implicit receiver.
+	 If 0, answer the actual receiver.  This is done in the trampoline.
+	 See generateNewspeakRuntime."
+	| skip |
+	<var: #skip type: #'AbstractInstruction *'>
+	(objectMemory isYoung: selector) ifTrue:
+		[hasYoungReferent := true].
+	self assert: needsFrame.
+	self MoveCw: selector R: SendNumArgsReg.
+	self CallNewspeakSend: ceImplicitReceiverTrampoline.
+	skip := self Jump: 0.
+	self Fill32: 0.
+	self Fill32: 0.
+	skip jmpTarget: self Label.
+	^0
 ]
 
 { #category : #'bytecode generators' }
@@ -2291,28 +2321,11 @@ SimpleStackBasedCogit >> genPushExplicitOuterSendReceiverBytecode [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPushImplicitReceiverBytecode [
-	"Cached push implicit receiver implementation.  Caller looks like
-		mov selector, ClassReg
-				call cePushImplicitReceiver
-				br continue
-		Lclass	.word
-		Lmixin:	.word
-		continue:
-	 If class matches class of receiver then mixin contains either 0 or the implicit receiver.
-	 If 0, push the actual receiver."
-	| selector skip |
-	<var: #skip type: #'AbstractInstruction *'>
-
-	selector := coInterpreter literal: byte1 ofMethod: methodObj.
-	(objectMemory isYoung: selector) ifTrue:
-		[hasYoungReferent := true].
-	self assert: needsFrame.
-	self MoveCw: selector R: SendNumArgsReg.
-	self CallNewspeakSend: ceImplicitReceiverTrampoline.
-	skip := self Jump: 0.
-	self Fill32: 0.
-	self Fill32: 0.
-	skip jmpTarget: (self PushR: ReceiverResultReg).
+	| result |
+	result := self genGetImplicitReceiverFor: (coInterpreter literal: byte1 ofMethod: methodObj).
+	result ~= 0 ifTrue:
+		[^result].
+	self PushR: ReceiverResultReg.
 	^0
 ]
 
@@ -2582,9 +2595,33 @@ SimpleStackBasedCogit >> genSend: selector numArgs: numArgs [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSendAbsentImplicit0ArgsBytecode [
-	"160-175	1010 i i i i		Send To Absent Implicit Receiver Literal Selector #iiii With 0 Arguments"
-	self shouldBeImplemented.
-	^EncounteredUnknownBytecode
+	"160-175	1010 i i i i		Send To Absent Implicit Receiver Literal Selector #iiii With 0 Arguments."
+	^self genSendAbsentImplicit: (coInterpreter literal: (byte0 bitAnd: 15) ofMethod: methodObj) numArgs: 0
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genSendAbsentImplicit: selector numArgs: numArgs [
+	"Get the implicit receiver and shuffle arguments if necessary.
+	 Then send."
+	<inline: false>
+	| result |
+	result := self genGetImplicitReceiverFor: selector.
+	result ~= 0 ifTrue:
+		[^result].
+	numArgs = 0
+		ifTrue:
+			[self PushR: ReceiverResultReg]
+		ifFalse:
+			[self MoveMw: 0 r: SPReg R: TempReg.
+			self PushR: TempReg.
+			2 to: numArgs do:
+				[:index|
+				self MoveMw: index * BytesPerWord r: SPReg R: TempReg.
+				self MoveR: TempReg Mw: index - 1 * BytesPerWord r: SPReg].
+			"if we copied the code in genSend:numArgs: we could save an instruction.
+			But we care not; the smarts are in StackToRegisterMappingCogit et al"
+			self MoveR: ReceiverResultReg Mw: numArgs * BytesPerWord r: SPReg].
+	^self genSend: selector numArgs: numArgs
 ]
 
 { #category : #'bytecode generators' }
