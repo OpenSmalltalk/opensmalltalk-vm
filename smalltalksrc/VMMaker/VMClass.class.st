@@ -129,7 +129,15 @@ VMClass class >> initializeMiscConstantsWith: optionsDictionary [
 	NewspeakVM := optionsDictionary at: #NewspeakVM ifAbsent: [false].
 	MULTIPLEBYTECODESETS := optionsDictionary at: #MULTIPLEBYTECODESETS ifAbsent: [false].
 	"N.B.  Not yet implemented."
-	IMMUTABILITY := optionsDictionary at: #IMMUTABILITY ifAbsent: [false]
+	IMMUTABILITY := optionsDictionary at: #IMMUTABILITY ifAbsent: [false].
+
+	"These for scripts etc... Usually they should get set by an Interpreter class's initializeMiscConstantsWith:"
+	(optionsDictionary includesKey: #STACKVM) ifTrue:
+		[STACKVM := optionsDictionary at: #STACKVM].
+	(optionsDictionary includesKey: #COGVM) ifTrue:
+		[COGVM := optionsDictionary at: #COGVM].
+	(optionsDictionary includesKey: #COGMTVM) ifTrue:
+		[COGMTVM := optionsDictionary at: #COGMTVM]
 ]
 
 { #category : #initialization }

@@ -225,6 +225,12 @@ NewspeakStackDepthFinder >> pushImplicitReceiverForMessage: selector [
 ]
 
 { #category : #'instruction decoding' }
+NewspeakStackDepthFinder >> sendToAbsentImplicitReceiver: selector numArgs: numArgs [
+	"Send Message With Selector, selector, to dynamic superclass bytecode."
+	self drop: numArgs - 1 "i.e. if 0 args, pushes a result"
+]
+
+{ #category : #'instruction decoding' }
 NewspeakStackDepthFinder >> sendToDynamicSuperclass: selector numArgs: numArgs [
 	"Send Message With Selector, selector, to dynamic superclass bytecode."
 	self drop: numArgs
