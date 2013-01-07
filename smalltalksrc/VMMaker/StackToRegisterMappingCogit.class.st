@@ -1539,7 +1539,7 @@ StackToRegisterMappingCogit >> genGetImplicitReceiverFor: selector [
 	 If class matches class of receiver then mixin contains either 0 or the implicit receiver.
 	 If 0, answer the actual receiver.  This is done in the trampoline.
 	 See generateNewspeakRuntime."
-	self ssAllocateCallReg: SendNumArgsReg and: ReceiverResultReg and: ClassReg.
+	self ssAllocateCallReg: SendNumArgsReg and: ReceiverResultReg and: ClassReg and: Arg1Reg.
 	^super genGetImplicitReceiverFor: selector
 ]
 
@@ -3343,21 +3343,22 @@ StackToRegisterMappingCogit >> marshallImplicitReceiverSendArguments: numArgs [
 	numArgs > self numRegArgs
 		ifTrue:
 			["The arguments must be pushed to the stack, and hence the receiver
-			   must be inserted beneath the args.  If nothing has been spilled first
-			   avoid the argument shuffle by pushing ReceiverResultReg first."
-			 (self noSpillsInTopNItems: numArgs)
+			   must be inserted beneath the args.  Reduce or eliminate the argument
+			   shuffle by only moving already spilled items."
+			| numSpilled |
+			numSpilled := self numberOfSpillsInTopNItems: numArgs.
+			numSpilled > 0
 				ifTrue:
-					[self PushR: ReceiverResultReg.
-					 self ssFlushTo: simStackPtr]
-				ifFalse:
-					[self ssFlushTo: simStackPtr.
-					 self MoveMw: 0 r: SPReg R: TempReg.
+					[self MoveMw: 0 r: SPReg R: TempReg.
 					 self PushR: TempReg.
-					 2 to: numArgs do:
+					 2 to: numSpilled do:
 						[:index|
 						self MoveMw: index * BytesPerWord r: SPReg R: TempReg.
 						self MoveR: TempReg Mw: index - 1 * BytesPerWord r: SPReg].
-					 self MoveR: ReceiverResultReg Mw: numArgs * BytesPerWord r: SPReg]]
+					 self MoveR: ReceiverResultReg Mw: numSpilled * BytesPerWord r: SPReg]
+				ifFalse:
+					[self PushR: ReceiverResultReg].
+			self ssFlushTo: simStackPtr]
 		"Move the args to the register arguments, being careful to do
 		 so last to first so e.g. previous contents don't get overwritten.
 		 Also check for any arg registers in use by other args."
@@ -3456,20 +3457,20 @@ StackToRegisterMappingCogit >> needsFrameIfMod16GENumArgs: isInBlock [
 	^byte0 \\ 16 >= methodOrBlockNumArgs
 ]
 
-{ #category : #'simulation stack' }
-StackToRegisterMappingCogit >> noSpillsInTopNItems: n [
-	"Answer if the simStack contains no spills in the top n items."
-	0 to: n - 1 do:
-		[:i| (self simStackAt: i) type = SSSpill ifTrue: [^false]].
-	^true
-]
-
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> numRegArgs [
 	<api>
 	"Use of the macro allows the compiler to avoid the call and test in cointerpreter.c"
 	<cmacro: '() 1'>
 	^1
+]
+
+{ #category : #'simulation stack' }
+StackToRegisterMappingCogit >> numberOfSpillsInTopNItems: n [
+	simStackPtr to: simStackPtr - n + 1 by: -1 do:
+		[:i| (self simStackAt: i) type = SSSpill ifTrue:
+			[^n - (simStackPtr - i)]].
+	^0
 ]
 
 { #category : #trampolines }
@@ -3749,7 +3750,7 @@ StackToRegisterMappingCogit >> ssAllocateRequiredRegMask: requiredRegsMask upThr
 	(simSpillBase max: 0) to: stackPtr do:
 		[:i|
 		liveRegs := liveRegs bitOr: (self simStackAt: i) registerMask.
-		(liveRegs bitAnd: requiredRegsMask) ~= 0 ifTrue:
+		((self simStackAt: i) registerMask bitAnd: requiredRegsMask) ~= 0 ifTrue:
 			[lastRequired := i]].
 	"If any of requiredRegsMask are live we must spill."
 	(liveRegs bitAnd: requiredRegsMask) = 0 ifFalse:
