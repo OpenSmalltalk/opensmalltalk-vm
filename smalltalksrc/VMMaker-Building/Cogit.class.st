@@ -5066,13 +5066,13 @@ Cogit >> generateNewspeakRuntime [
 		continue:
 	 If class matches class of receiver then mixin contains either 0 or the implicit receiver.
 	 If 0, answer the actual receiver, otherwise the mixin.
-	 Generate the class fetch and cache probe inline for speed. Smashes caller-saved regs."
+	 Generate the class fetch and cache probe inline for speed. Smashes Arg0Reg and caller-saved regs."
 	opcodeIndex := 0.
 	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
 	objectRepresentation genGetClassObjectOf: ReceiverResultReg into: ClassReg scratchReg: TempReg.
-	self MoveMw: 0 r: SPReg R: TempReg. "get return address..."
-	self MoveMw: backEnd jumpShortByteSize r: TempReg R: ReceiverResultReg. "get cached class..."
-	self CmpR: ClassReg R: ReceiverResultReg.
+	self MoveMw: 0 r: SPReg R: TempReg.
+	self MoveMw: backEnd jumpShortByteSize r: TempReg R: Arg1Reg.
+	self CmpR: ClassReg R: Arg1Reg.
 	jumpMiss := self JumpNonZero: 0.
 	self MoveMw: backEnd jumpShortByteSize + BytesPerOop r: TempReg R: ClassReg.
 	self CmpCq: 0 R: ClassReg.
