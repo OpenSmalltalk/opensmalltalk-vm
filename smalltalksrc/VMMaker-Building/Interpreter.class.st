@@ -472,8 +472,8 @@ Interpreter class >> initializePrimitiveTable [
 		(18 primitiveMakePoint)
 		(19 primitiveFail)					"Guard primitive for simulation -- *must* fail"
 
-		"LargeInteger Primitives (20-39)"
-		(20 primitiveFail)
+		"LargeInteger Primitives (20-37)"
+		(20 primitiveRemLargeIntegers)
 		(21 primitiveAddLargeIntegers)
 		(22 primitiveSubtractLargeIntegers)
 		(23 primitiveLessThanLargeIntegers)
