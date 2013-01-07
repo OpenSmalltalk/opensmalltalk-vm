@@ -168,7 +168,9 @@ CurrentImageCoInterpreterFacade >> compilationBreak: aString point: length [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> debugStackPointersFor: anOop [
 	^CArrayAccessor on:
-		((StackDepthFinder on: (objectMap keyAtValue: anOop))
+		(((NewspeakVM
+				ifTrue: [NewspeakStackDepthFinder]
+				ifFalse: [StackDepthFinder]) on: (objectMap keyAtValue: anOop))
 			stackPointers)
 ]
 
@@ -593,7 +595,9 @@ CurrentImageCoInterpreterFacade >> specialSelectorNumArgs: index [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> splObj: splObjIndex [
 	^splObjIndex caseOf: {
-		[ClassArray] -> [self oopForObject: Array] }
+		[ClassArray]		-> [self oopForObject: Array].
+		[CompactClasses]	-> [self oopForObject: Smalltalk compactClassesArray]
+		}
 ]
 
 { #category : #labels }
