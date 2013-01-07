@@ -515,9 +515,25 @@ NewspeakInterpreter class >> initializePrimitiveTable [
 		(18 primitiveMakePoint)
 		(19 primitiveFail)					"Guard primitive for simulation -- *must* fail"
 
-		"LargeInteger Primitives (20-39)"
-		"32-bit logic is aliased to Integer prims above"
-		(20 37 primitiveFail)
+		"LargeInteger Primitives (20-37)"
+		(20 primitiveRemLargeIntegers)
+		(21 primitiveAddLargeIntegers)
+		(22 primitiveSubtractLargeIntegers)
+		(23 primitiveLessThanLargeIntegers)
+		(24 primitiveGreaterThanLargeIntegers)
+		(25 primitiveLessOrEqualLargeIntegers)
+		(26 primitiveGreaterOrEqualLargeIntegers)
+		(27 primitiveEqualLargeIntegers)
+		(28 primitiveNotEqualLargeIntegers)
+		(29 primitiveMultiplyLargeIntegers)
+		(30 primitiveDivideLargeIntegers)
+		(31 primitiveModLargeIntegers)
+		(32 primitiveDivLargeIntegers)
+		(33 primitiveQuoLargeIntegers)
+		(34 primitiveBitAndLargeIntegers)
+		(35 primitiveBitOrLargeIntegers)
+		(36 primitiveBitXorLargeIntegers)
+		(37 primitiveBitShiftLargeIntegers)
 
 		"Float Primitives (38-59)"
 		(38 primitiveAt) "for compatibility with Cog's primitiveFloatAt"
