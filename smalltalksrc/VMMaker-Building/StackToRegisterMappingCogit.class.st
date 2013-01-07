@@ -1528,6 +1528,22 @@ StackToRegisterMappingCogit >> genExternalizePointersForPrimitiveCall [
 ]
 
 { #category : #'bytecode generators' }
+StackToRegisterMappingCogit >> genGetImplicitReceiverFor: selector [
+	"Cached implicit receiver implementation.  Caller looks like
+		mov selector, ClassReg
+				call cePushImplicitReceiver
+				br continue
+		Lclass	.word
+		Lmixin:	.word
+		continue:
+	 If class matches class of receiver then mixin contains either 0 or the implicit receiver.
+	 If 0, answer the actual receiver.  This is done in the trampoline.
+	 See generateNewspeakRuntime."
+	self ssAllocateCallReg: SendNumArgsReg and: ReceiverResultReg and: ClassReg.
+	^super genGetImplicitReceiverFor: selector
+]
+
+{ #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genJumpBackTo: targetBytecodePC [
 	self ssFlushTo: simStackPtr.
 	^super genJumpBackTo: targetBytecodePC
@@ -2191,28 +2207,10 @@ StackToRegisterMappingCogit >> genPushExplicitOuterSendReceiver: level [
 
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genPushImplicitReceiverBytecode [
-	"Cached push implicit receiver implementation.  Caller looks like
-		mov selector, ClassReg
-				call cePushImplicitReceiver
-				br continue
-		Lclass	.word
-		Lmixin:	.word
-		continue:
-	 If class matches class of receiver then mixin contains either 0 or the implicit receiver.
-	 If 0, push the actual receiver."
-	| selector skip |
-	<var: #skip type: #'AbstractInstruction *'>
-	self ssAllocateCallReg: SendNumArgsReg and: ReceiverResultReg and: ClassReg and: Arg0Reg.
-	selector := coInterpreter literal: byte1 ofMethod: methodObj.
-	(objectMemory isYoung: selector) ifTrue:
-		[hasYoungReferent := true].
-	self assert: needsFrame.
-	self MoveCw: selector R: SendNumArgsReg.
-	self CallNewspeakSend: ceImplicitReceiverTrampoline.
-	skip := self Jump: 0.
-	self Fill32: 0.
-	self Fill32: 0.
-	skip jmpTarget: self Label.
+	| result |
+	result := self genGetImplicitReceiverFor: (coInterpreter literal: byte1 ofMethod: methodObj).
+	result ~= 0 ifTrue:
+		[^result].
 	^self ssPushRegister: ReceiverResultReg
 ]
 
@@ -2424,6 +2422,19 @@ StackToRegisterMappingCogit >> genReturnTopFromMethod [
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genSend: selector numArgs: numArgs [
 	self marshallSendArguments: numArgs.
+	^self genMarshalledSend: selector numArgs: numArgs
+]
+
+{ #category : #'bytecode generators' }
+StackToRegisterMappingCogit >> genSendAbsentImplicit: selector numArgs: numArgs [
+	"Get the implicit receiver and marshall arguments, shuffling the
+	 stack to push the implicit receiver if necessary. Then send."
+	<inline: false>
+	| result |
+	result := self genGetImplicitReceiverFor: selector.
+	result ~= 0 ifTrue:
+		[^result].
+	self marshallImplicitReceiverSendArguments: numArgs.
 	^self genMarshalledSend: selector numArgs: numArgs
 ]
 
@@ -3324,6 +3335,50 @@ StackToRegisterMappingCogit >> liveRegisters [
 ]
 
 { #category : #'simulation stack' }
+StackToRegisterMappingCogit >> marshallImplicitReceiverSendArguments: numArgs [
+	"Spill everything on the simulated stack that needs spilling (that below arguments).
+	 Marshall arguments to stack and/or registers depending on arg count.
+	 If the args don't fit in registers push receiver and args (spill everything).  Assume
+	 receiver already in ResultReceiverReg so shuffle args and push it if necessary."
+	numArgs > self numRegArgs
+		ifTrue:
+			["The arguments must be pushed to the stack, and hence the receiver
+			   must be inserted beneath the args.  If nothing has been spilled first
+			   avoid the argument shuffle by pushing ReceiverResultReg first."
+			 (self noSpillsInTopNItems: numArgs)
+				ifTrue:
+					[self PushR: ReceiverResultReg.
+					 self ssFlushTo: simStackPtr]
+				ifFalse:
+					[self ssFlushTo: simStackPtr.
+					 self MoveMw: 0 r: SPReg R: TempReg.
+					 self PushR: TempReg.
+					 2 to: numArgs do:
+						[:index|
+						self MoveMw: index * BytesPerWord r: SPReg R: TempReg.
+						self MoveR: TempReg Mw: index - 1 * BytesPerWord r: SPReg].
+					 self MoveR: ReceiverResultReg Mw: numArgs * BytesPerWord r: SPReg]]
+		"Move the args to the register arguments, being careful to do
+		 so last to first so e.g. previous contents don't get overwritten.
+		 Also check for any arg registers in use by other args."
+		ifFalse:
+			[self ssFlushTo: simStackPtr - numArgs - 1.
+			 numArgs > 0 ifTrue:
+				[(self numRegArgs > 1 and: [numArgs > 1])
+					ifTrue:
+						[self ssAllocateRequiredReg: Arg0Reg upThrough: simStackPtr - 2.
+						 self ssAllocateRequiredReg: Arg1Reg upThrough: simStackPtr - 1]
+					ifFalse:
+						[self ssAllocateRequiredReg: Arg0Reg upThrough: simStackPtr - 1]].
+			 (self numRegArgs > 1 and: [numArgs > 1]) ifTrue:
+				[(self simStackAt: simStackPtr) popToReg: Arg1Reg].
+			 numArgs > 0 ifTrue:
+				[(self simStackAt: simStackPtr - numArgs + 1)
+					popToReg: Arg0Reg]].
+	self ssPop: numArgs
+]
+
+{ #category : #'simulation stack' }
 StackToRegisterMappingCogit >> marshallSendArguments: numArgs [ 
 	"Spill everything on the simulated stack that needs spilling (that below receiver and arguments).
 	 Marshall receiver and arguments to stack and/or registers depending on arg count.
@@ -3399,6 +3454,14 @@ StackToRegisterMappingCogit >> methodAbortTrampolineFor: numArgs [
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> needsFrameIfMod16GENumArgs: isInBlock [
 	^byte0 \\ 16 >= methodOrBlockNumArgs
+]
+
+{ #category : #'simulation stack' }
+StackToRegisterMappingCogit >> noSpillsInTopNItems: n [
+	"Answer if the simStack contains no spills in the top n items."
+	0 to: n - 1 do:
+		[:i| (self simStackAt: i) type = SSSpill ifTrue: [^false]].
+	^true
 ]
 
 { #category : #'compile abstract instructions' }
