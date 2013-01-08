@@ -3,12 +3,12 @@
 #if defined(HAVE_SYS_UUID_H)
 # include <sys/types.h>
 # include <sys/uuid.h>
-#endif
-#if defined(HAVE_UUID_UUID_H)
+#elif defined(HAVE_UUID_UUID_H)
 # include <uuid/uuid.h>
-#endif
-#if defined(HAVE_UUID_H)
+#elif defined(HAVE_UUID_H)
 # include <uuid.h>
+#else
+# error cannot find a uuid.h to include
 #endif
 
 #include "sq.h"
