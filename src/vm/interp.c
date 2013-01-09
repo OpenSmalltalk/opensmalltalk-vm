@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 5 January 2013 9:49:28 am 
-   by VMMaker 4.10.9
+/* Automatically generated from Squeak on 8 January 2013 8:57:46 pm 
+   by VMMaker 4.10.10
  */
 #if 1
 # define SQ_USE_GLOBAL_STRUCT 1
@@ -158,7 +158,7 @@ void defaultErrorProc(char *s) {
 #define InitialIPIndex 4
 #define InstanceSpecificationIndex 2
 #define InstructionPointerIndex 1
-#define InterpreterSourceVersion "4.10.9"
+#define InterpreterSourceVersion "4.10.10"
 #define InvokeCallbackSelector 53
 #define LargeContextBit 262144
 #define LastLinkIndex 1
@@ -22846,7 +22846,6 @@ register struct foo * foo = &fum;
     usqLong a;
     sqInt aIsNegative;
     usqLong b;
-    sqInt bIsNegative;
     sqInt oopArg;
     sqInt oopRcvr;
     sqInt oopResult;
@@ -22856,7 +22855,6 @@ register struct foo * foo = &fum;
 	oopArg = longAt(foo->stackPointer - (0 * (BYTES_PER_WORD)));
 	oopRcvr = longAt(foo->stackPointer - (1 * (BYTES_PER_WORD)));
 	aIsNegative = isNegativeIntegerValueOf(oopRcvr);
-	bIsNegative = isNegativeIntegerValueOf(oopArg);
 	a = magnitude64BitValueOf(oopRcvr);
 	b = magnitude64BitValueOf(oopArg);
 	if (b == 0) {
@@ -22869,7 +22867,7 @@ register struct foo * foo = &fum;
 		return null;
 	}
 	result = a % b;
-	oopResult = magnitude64BitIntegerForneg(result, aIsNegative != bIsNegative);
+	oopResult = magnitude64BitIntegerForneg(result, aIsNegative);
 	if (!foo->primFailCode) {
 		/* begin pop:thenPush: */
 		longAtput((sp = foo->stackPointer - ((2 - 1) * (BYTES_PER_WORD))), oopResult);
