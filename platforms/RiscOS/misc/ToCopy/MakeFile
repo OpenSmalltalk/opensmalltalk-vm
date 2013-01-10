@@ -1,5 +1,5 @@
-# Project:   sq38plugin
-# Make the pluginised VM for v3.8
+# Project:   squeak
+# Make the pluginised VM for v3.9
 # Reworked to use VMMaker non-copying of platform & cross files
 # Add check for Squeak3D dir to optionally compile the Squeak3D plugin
 # Ditto for HostWindow and LocalePlugin
@@ -11,7 +11,7 @@ CCflags = -c -fa -Wabp -depend !Depend -IC:,OSLib:,C:^.rink,$(PVM),$(CVM),$(SVM)
 #CCVMflags = $(ccflags) -g
 CCVMflags = $(ccflags)
 # likewise, linkflags with -debug...
-Linkflags = -aif -c++ -o $@ 
+Linkflags = -aif -c++ -o $@
 #Linkflags = -aif -c++ -debug -o $@
 ObjAsmflags = -throwback -NoCache -depend !Depend
 LibFileflags = -c -o $@
@@ -50,19 +50,19 @@ endif
 
 vm:	$(Sqk).!Runimage vmobjdir
 	@
-	
+
 clean:
 	$(MAKEFILEDIR).each @ -type d -name o -exec wipe %0.* ~C ";"
 
 # User-editable dependencies:
 
-vmobjdir:	  
+vmobjdir:
         @ifthere $(Sqk) then else CDir $(Sqk)
         @ifthere @.vm.o then else CDir @.vm.o
         @ifthere @.vm.o.sqRPCVersion then delete @.vm.o.sqRPCVersion
 
-pluginDir:	
-	@ifthere $(SqPlugins) then else CDir $(SqPlugins) 
+pluginDir:
+	@ifthere $(SqPlugins) then else CDir $(SqPlugins)
 	@ifthere @.o then else CDir @.o
 
 plugins: $(pluginList) pluginDir
@@ -72,18 +72,18 @@ $(Sqk).!Runimage:	@.vm.o.sqRPCMain @.vm.o.interp @.vm.o.sqArgument \
         @.vm.o.sqNamedPrims @.vm.o.sqRPCClipboard @.vm.o.sqRPCVersion \
         @.vm.o.sqRPCEvents @.vm.o.sqRPCExternalPrims @.vm.o.sqRPCFormPrint \
         @.vm.o.sqRPCWindows @.vm.o.sqVirtualMachine @.vm.o.osExports \
-        @.vm.o.fperrors OSLib:o.OSLib32 C:o.stubs @.vm.o.ptrblock C:^.rink.o.rink_rtsys 
+        @.vm.o.fperrors OSLib:o.OSLib32 C:o.stubs @.vm.o.ptrblock C:^.rink.o.rink_rtsys
         link $(linkflags)  @.vm.o.sqRPCMain @.vm.o.interp @.vm.o.sqArgument \
         @.vm.o.sqNamedPrims @.vm.o.sqRPCClipboard @.vm.o.sqRPCVersion \
         @.vm.o.sqRPCEvents @.vm.o.sqRPCExternalPrims @.vm.o.sqRPCFormPrint \
         @.vm.o.sqRPCWindows @.vm.o.sqVirtualMachine @.vm.o.osExports \
-        @.vm.o.fperrors OSLib:o.OSLib32 C:o.stubs @.vm.o.ptrblock C:^.rink.o.rink_rtsys 
+        @.vm.o.fperrors OSLib:o.OSLib32 C:o.stubs @.vm.o.ptrblock C:^.rink.o.rink_rtsys
 
 # extract the link info for rink to use
 # relies upon the partially populated !squeak directory having been copied to
 # the working directory
 
-@.vm.o.ptrblock:   $(Sqk).ptrblkmap 
+@.vm.o.ptrblock:   $(Sqk).ptrblkmap
         rinkptr $(rinkptrflags) $(Sqk).ptrblkmap  @.vm.o.ptrblock
 
 $(Sqk).ptrblkmap:    C:o.stubs @.vm.o.sqRPCMain @.vm.o.sqRPCWindows  $(PVM).dsc.block
@@ -113,7 +113,7 @@ $(SPlug).ADPCMCodecPlugin.o.ADPCMCodecPlugin: $(SPlug).ADPCMCodecPlugin.c.ADPCMC
 
 ###########
 # B2D Plugin
-# Very simple, only the one source file 
+# Very simple, only the one source file
 ###########
 B2DPlugin:	$(SqPlugins).B2DPlugin
 	@echo done $*
@@ -164,7 +164,7 @@ $(SqPlugins).BMPReadWriterPlugin:	$(SPlug).BMPReadWriterPlugin.o.BMPReadWriterPl
 		-a $(SPlug).BMPReadWriterPlugin.o.BMPReadWriterPlugin
 
 $(SPlug).BMPReadWriterPlugin.o.BMPReadWriterPlugin: $(SPlug).BMPReadWriterPlugin.c.BMPReadWriterPlugin $(PlHdr)
-	cc $(ccflags) -o $@ $*.c 
+	cc $(ccflags) -o $@ $*.c
 
 
 ###########
@@ -229,14 +229,14 @@ $(SqPlugins).FilePlugin:	$(SPlug).FilePlugin.o.FilePlugin \
 		-m $(Sqk).ptrblkmap \
 		-a $(SPlug).FilePlugin.o.FilePlugin \
 			$(SPlug).FilePlugin.o.sqRPCDirectory \
-			$(SPlug).FilePlugin.o.sqFilePluginBasicPrims 
+			$(SPlug).FilePlugin.o.sqFilePluginBasicPrims
 
 $(SPlug).FilePlugin.o.FilePlugin: $(SPlug).FilePlugin.c.FilePlugin $(PlHdr)
-	cc $(ccflags) -I$(CPlug).FilePlugin -o $@ $(SPlug).FilePlugin.c.FilePlugin 
+	cc $(ccflags) -I$(CPlug).FilePlugin -o $@ $(SPlug).FilePlugin.c.FilePlugin
 $(SPlug).FilePlugin.o.sqRPCDirectory: $(PPlug).FilePlugin.c.sqRPCDirectory $(PlHdr)
-	cc $(ccflags) -o $@ $(PPlug).FilePlugin.c.sqRPCDirectory 
+	cc $(ccflags) -o $@ $(PPlug).FilePlugin.c.sqRPCDirectory
 $(SPlug).FilePlugin.o.sqFilePluginBasicPrims: $(PPlug).FilePlugin.c.sqFilePluginBasicPrims $(PlHdr)
-	cc $(ccflags) -I$(CPlug).FilePlugin -o $@ $(PPlug).FilePlugin.c.sqFilePluginBasicPrims 
+	cc $(ccflags) -I$(CPlug).FilePlugin -o $@ $(PPlug).FilePlugin.c.sqFilePluginBasicPrims
 
 
 
@@ -260,12 +260,12 @@ $(SqPlugins).FileCopyPlugin:	$(SPlug).FileCopyPlugin.o.FileCopyPlugin \
 		-h $(SPlug).FileCopyPlugin.dsc.FileCopyPlugin \
 		-m $(Sqk).ptrblkmap \
 		-a $(SPlug).FileCopyPlugin.o.FileCopyPlugin \
-			$(SPlug).FileCopyPlugin.o.sqRPCFileCopy 
+			$(SPlug).FileCopyPlugin.o.sqRPCFileCopy
 
 $(SPlug).FileCopyPlugin.o.FileCopyPlugin: $(SPlug).FileCopyPlugin.c.FileCopyPlugin $(PlHdr)
-	cc $(ccflags) -I$(CPlug).FileCopyPlugin -o $@ $*.c 
+	cc $(ccflags) -I$(CPlug).FileCopyPlugin -o $@ $*.c
 $(SPlug).FileCopyPlugin.o.sqRPCFileCopy: $(PPlug).FileCopyPlugin.c.sqRPCFileCopy
-	cc $(ccflags) -o $@ $(PPlug).FileCopyPlugin.c.sqRPCFileCopy 
+	cc $(ccflags) -o $@ $(PPlug).FileCopyPlugin.c.sqRPCFileCopy
 
 
 ###########
@@ -323,7 +323,7 @@ $(SqPlugins).HostWindowPlugin:	$(SPlug).HostWindowPlugin.o.HostWindowPlugin \
 		-a $(SPlug).HostWindowPlugin.o.HostWindowPlugin
 
 $(SPlug).HostWindowPlugin.o.HostWindowPlugin: $(SPlug).HostWindowPlugin.c.HostWindowPlugin $(PlHdr)
-	cc $(ccflags) -I$(CPlug).HostWindowPlugin -o $@ $*.c 
+	cc $(ccflags) -I$(CPlug).HostWindowPlugin -o $@ $*.c
 
 
 
@@ -387,10 +387,10 @@ $(SqPlugins).LocalePlugin:	$(SPlug).LocalePlugin.o.LocalePlugin \
 		-h $(SPlug).LocalePlugin.dsc.LocalePlugin \
 		-m $(Sqk).ptrblkmap \
 		-a $(SPlug).LocalePlugin.o.LocalePlugin \
-			$(SPlug).LocalePlugin.o.sqRPCLocale 
+			$(SPlug).LocalePlugin.o.sqRPCLocale
 
 $(SPlug).LocalePlugin.o.LocalePlugin: $(SPlug).LocalePlugin.c.LocalePlugin $(PlHdr)
-	cc $(ccflags) -I$(CPlug).LocalePlugin -o $@ $*.c 
+	cc $(ccflags) -I$(CPlug).LocalePlugin -o $@ $*.c
 $(SPlug).LocalePlugin.o.sqRPCLocale: $(PPlug).LocalePlugin.c.sqRPCLocale  $(PlHdr)
 	cc $(ccflags) -I$(CPlug).LocalePlugin -o $@ $(PPlug).LocalePlugin.c.sqRPCLocale
 
@@ -428,7 +428,7 @@ $(SqPlugins).MiscPrimitivePlugin:	$(SPlug).MiscPrimitivePlugin.o.MiscPrimitivePl
 		-a $(SPlug).MiscPrimitivePlugin.o.MiscPrimitivePlugin
 
 $(SPlug).MiscPrimitivePlugin.o.MiscPrimitivePlugin: $(SPlug).MiscPrimitivePlugin.c.MiscPrimitivePlugin $(PlHdr)
-	cc $(ccflags) -o $@ $*.c 
+	cc $(ccflags) -o $@ $*.c
 
 ###########
 # Regular expressions Plugin make rule.
@@ -454,20 +454,20 @@ $(SqPlugins).RePlugin:	$(SPlug).RePlugin.o.RePlugin \
 			$(SPlug).RePlugin.o.chartables \
 			$(SPlug).RePlugin.o.get \
 			$(SPlug).RePlugin.o.pcre \
-			$(SPlug).RePlugin.o.study 
+			$(SPlug).RePlugin.o.study
 
 $(SPlug).RePlugin.o.RePlugin: $(SPlug).RePlugin.c.RePlugin $(PlHdr)
 	cc $(ccflags) -I$(CPlug).RePlugin -o $@ $(SPlug).RePlugin.c.RePlugin
- 
+
 $(SPlug).RePlugin.o.chartables: $(CPlug).RePlugin.c.chartables
 	cc $(ccflags) -o $@ $(CPlug).RePlugin.c.chartables
- 
+
 $(SPlug).RePlugin.o.get: $(CPlug).RePlugin.c.get
 	cc $(ccflags) -o $@ $(CPlug).RePlugin.c.get
 
 $(SPlug).RePlugin.o.pcre: $(CPlug).RePlugin.c.pcre
 	cc $(ccflags) -o $@ $(CPlug).RePlugin.c.pcre
-	
+
 $(SPlug).RePlugin.o.study: $(CPlug).RePlugin.c.study
 	cc $(ccflags) -o $@ $(CPlug).RePlugin.c.study
 
@@ -491,10 +491,10 @@ $(SqPlugins).SecurityPlugin:	$(SPlug).SecurityPlugin.o.SecurityPlugin \
 		-h $(SPlug).SecurityPlugin.dsc.SecurityPlugin \
 		-m $(Sqk).ptrblkmap \
 		-a $(SPlug).SecurityPlugin.o.SecurityPlugin \
-			$(SPlug).SecurityPlugin.o.sqRPCSecurity 
+			$(SPlug).SecurityPlugin.o.sqRPCSecurity
 
 $(SPlug).SecurityPlugin.o.SecurityPlugin: $(SPlug).SecurityPlugin.c.SecurityPlugin $(PlHdr)
-	cc $(ccflags) -I$(CPlug).SecurityPlugin -o $@ $*.c 
+	cc $(ccflags) -I$(CPlug).SecurityPlugin -o $@ $*.c
 $(SPlug).SecurityPlugin.o.sqRPCSecurity: $(PPlug).SecurityPlugin.c.sqRPCSecurity  $(PlHdr)
 	cc $(ccflags) -I$(CPlug).SecurityPlugin -o $@ $(PPlug).SecurityPlugin.c.sqRPCSecurity
 
@@ -506,7 +506,7 @@ $(SPlug).SecurityPlugin.o.sqRPCSecurity: $(PPlug).SecurityPlugin.c.sqRPCSecurity
 # SocketPlugin.c is generated
 # SocketPlugin.h is in Cross
 # sqRPCNetPlugin.c is in RiscOS
-# and the socket includes are needed as well 
+# and the socket includes are needed as well
 ###########
 SocketPlugin:	$(SqPlugins).SocketPlugin
 	@echo done $*
@@ -527,10 +527,10 @@ $(SqPlugins).SocketPlugin:	$(SPlug).SocketPlugin.o.SocketPlugin \
 ######$(SokLib)inetlibzm $(SokLib)socklib $(SokLib)unixlib
 
 $(SPlug).SocketPlugin.o.SocketPlugin: $(SPlug).SocketPlugin.c.SocketPlugin $(PlHdr)
-	cc $(ccflags) -I$(PPlug).SocketPlugin,$(CPlug).SocketPlugin  -o $@ $(SPlug).SocketPlugin.c.SocketPlugin 
+	cc $(ccflags) -I$(PPlug).SocketPlugin,$(CPlug).SocketPlugin  -o $@ $(SPlug).SocketPlugin.c.SocketPlugin
 
 $(SPlug).SocketPlugin.o.sqRPCNetPlugin: $(PPlug).SocketPlugin.c.sqRPCNetPlugin $(PlHdr)
-	cc $(ccflags) -I$(PPlug).SocketPlugin,$(CPlug).SocketPlugin,$(Soklib) -o $@ $(PPlug).SocketPlugin.c.sqRPCNetPlugin 
+	cc $(ccflags) -I$(PPlug).SocketPlugin,$(CPlug).SocketPlugin,$(Soklib) -o $@ $(PPlug).SocketPlugin.c.sqRPCNetPlugin
 
 ###########
 # Sound Plugin make rule.
@@ -538,7 +538,6 @@ $(SPlug).SocketPlugin.o.sqRPCNetPlugin: $(PPlug).SocketPlugin.c.sqRPCNetPlugin $
 # SoundPlugin.c is generated
 # SoundPlugin.h is in Cross
 # sqRPCSound.c is in RiscOS
-
 ###########
 SoundPlugin:	$(SqPlugins).SoundPlugin
 	@echo done $*
@@ -551,10 +550,10 @@ $(SqPlugins).SoundPlugin:	$(SPlug).SoundPlugin.o.SoundPlugin \
 		-h $(SPlug).SoundPlugin.dsc.SoundPlugin \
 		-m $(Sqk).ptrblkmap \
 		-a $(SPlug).SoundPlugin.o.SoundPlugin \
-			$(SPlug).SoundPlugin.o.sqRPCSound 
+			$(SPlug).SoundPlugin.o.sqRPCSound
 
 $(SPlug).SoundPlugin.o.SoundPlugin: $(SPlug).SoundPlugin.c.SoundPlugin $(PlHdr)
-	cc $(ccflags) -I$(CPlug).SoundPlugin -o $@ $*.c 
+	cc $(ccflags) -I$(CPlug).SoundPlugin -o $@ $*.c
 $(SPlug).SoundPlugin.o.sqRPCSound: $(PPlug).SoundPlugin.c.sqRPCSound  $(PlHdr)
 	cc $(ccflags) -I$(CPlug).SoundPlugin -o $@ $(PPlug).SoundPlugin.c.sqRPCSound
 
@@ -587,15 +586,15 @@ $(SqPlugins).Squeak3D:	$(SPlug).Squeak3D.o.Squeak3D \
 			$(SPlug).Squeak3D.o.Squeak3D
 
 $(SPlug).Squeak3D.o.Squeak3D: $(SPlug).Squeak3D.c.Squeak3D $(PlHdr)
-	cc $(ccflags) -I$(CPlug).Squeak3D -o $@ $*.c 
+	cc $(ccflags) -I$(CPlug).Squeak3D -o $@ $*.c
 $(SPlug).Squeak3D.o.b3dalloc: $(CPlug).Squeak3D.c.b3dalloc
-	cc $(ccflags) -I$(CPlug).Squeak3D -o $@ $(CPlug).Squeak3D.c.b3dalloc 
+	cc $(ccflags) -I$(CPlug).Squeak3D -o $@ $(CPlug).Squeak3D.c.b3dalloc
 $(SPlug).Squeak3D.o.b3ddraw: $(CPlug).Squeak3D.c.b3ddraw
 	cc $(ccflags) -I$(CPlug).Squeak3D -o $@ $(CPlug).Squeak3D.c.b3ddraw
 $(SPlug).Squeak3D.o.b3dinit: $(CPlug).Squeak3D.c.b3dinit
-	cc $(ccflags) -I$(CPlug).Squeak3D -o $@ $(CPlug).Squeak3D.c.b3dinit 
+	cc $(ccflags) -I$(CPlug).Squeak3D -o $@ $(CPlug).Squeak3D.c.b3dinit
 $(SPlug).Squeak3D.o.b3dmain: $(CPlug).Squeak3D.c.b3dmain
-	cc $(ccflags) -I$(CPlug).Squeak3D -o $@ $(CPlug).Squeak3D.c.b3dmain 
+	cc $(ccflags) -I$(CPlug).Squeak3D -o $@ $(CPlug).Squeak3D.c.b3dmain
 $(SPlug).Squeak3D.o.b3dremap: $(CPlug).Squeak3D.c.b3dremap
 	cc $(ccflags) -I$(CPlug).Squeak3D -o $@ $(CPlug).Squeak3D.c.b3dremap
 
@@ -615,7 +614,7 @@ $(SqPlugins).StarSqueakPlugin:	$(SPlug).StarSqueakPlugin.o.StarSqueakPlugin \
 	-a $(SPlug).StarSqueakPlugin.o.StarSqueakPlugin
 
 $(SPlug).StarSqueakPlugin.o.StarSqueakPlugin: $(SPlug).StarSqueakPlugin.c.StarSqueakPlugin $(PlHdr)
-	cc $(ccflags) -o $@ $*.c 
+	cc $(ccflags) -o $@ $*.c
 
 ###########
 # Surface Plugin
@@ -623,7 +622,7 @@ $(SPlug).StarSqueakPlugin.o.StarSqueakPlugin: $(SPlug).StarSqueakPlugin.c.StarSq
 # SurfacePlugin.c & .h are BOTH on Cross
 # only the .dsc file is generated
 ###########
-SurfacePlugin:	$(SqPlugins).SurfacePlugin 
+SurfacePlugin:	$(SqPlugins).SurfacePlugin
 	@echo done $*
 
 $(SqPlugins).SurfacePlugin:	$(SPlug).SurfacePlugin.o.SurfacePlugin \
@@ -635,13 +634,13 @@ $(SqPlugins).SurfacePlugin:	$(SPlug).SurfacePlugin.o.SurfacePlugin \
 		-a $(SPlug).SurfacePlugin.o.SurfacePlugin
 
 $(SPlug).SurfacePlugin.o.SurfacePlugin: $(CPlug).SurfacePlugin.c.SurfacePlugin $(PlHdr)
-	cc $(ccflags) -I$(CPlug).SurfacePlugin -o $@ $(CPlug).SurfacePlugin.c.SurfacePlugin 
+	cc $(ccflags) -I$(CPlug).SurfacePlugin -o $@ $(CPlug).SurfacePlugin.c.SurfacePlugin
 
 
 ###########
 # Zip Plugin
-# Very simple, only the one source file 
-########### 
+# Very simple, only the one source file
+###########
 ZipPlugin:	$(SqPlugins).ZipPlugin
 	@echo done $*
 
@@ -661,27 +660,27 @@ $(SPlug).ZipPlugin.o.ZipPlugin: $(SPlug).ZipPlugin.c.ZipPlugin  $(PlHdr)
 # platform specific code
 @.vm.o.osExports:    $(PVM).c.osExports
   cc $(ccvmflags) -o $@ $(PVM).c.osExports
-  
+
 @.vm.o.sqArgument:    $(PVM).c.sqArgument $(PVM).h.sqArguments $(VMHdr)
   cc $(ccvmflags) -o $@ $(PVM).c.sqArgument
-  
+
 @.vm.o.sqRPCClipboard:    $(PVM).c.sqRPCClipboard $(VMHdr)
   cc $(ccvmflags) -o $@ $(PVM).c.sqRPCClipboard
-  
+
 @.vm.o.sqRPCEvents:    $(PVM).c.sqRPCEvents $(VMHdr)
   cc $(ccvmflags) -o $@ $(PVM).c.sqRPCEvents
-  
+
 @.vm.o.sqRPCExternalPrims:    $(PVM).c.sqRPCExternalPrims $(VMHdr)
   cc $(ccvmflags) -o $@ $(PVM).c.sqRPCExternalPrims
-  
+
 @.vm.o.sqRPCFormPrint:    $(PVM).c.sqRPCFormPrint $(VMHdr)
   cc $(ccvmflags) -o $@ $(PVM).c.sqRPCFormPrint
-  
+
 @.vm.o.sqRPCSyscall:    $(PVM).c.sqRPCSyscall $(VMHdr)
   cc $(ccvmflags) -o $@ $(PVM).c.sqRPCSysCall
 
 # sqRPCVersion depends on all the obj files (except its own)
-# so that it will always be recompiled if any other file is  
+# so that it will always be recompiled if any other file is
 @.vm.o.sqRPCVersion:    $(PVM).c.sqRPCVersion @.vm.o.interp @.vm.o.sqArgument \
         @.vm.o.sqNamedPrims @.vm.o.sqRPCClipboard \
         @.vm.o.sqRPCEvents @.vm.o.sqRPCExternalPrims @.vm.o.sqRPCFormPrint \
@@ -701,13 +700,13 @@ $(SPlug).ZipPlugin.o.ZipPlugin: $(SPlug).ZipPlugin.c.ZipPlugin  $(PlHdr)
 # cross platform code
 @.vm.o.sqNamedPrims:    $(CVM).c.sqNamedPrims $(VMHdr)
   cc $(ccvmflags) -o $@ $(CVM).c.sqNamedPrims
-  
+
 @.vm.o.sqVirtualMachine:    $(CVM).c.sqVirtualMachine $(VMHdr)
   cc $(ccvmflags) -o $@ $(CVM).c.sqVirtualMachine
-  
+
 @.vm.o.interp:    $(SVM).c.interp $(VMHdr)
   cc $(ccvmflags) -o $@ $(SVM).c.interp
-  
+
 
 
 # Dynamic dependencies:
