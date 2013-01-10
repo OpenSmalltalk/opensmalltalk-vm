@@ -259,9 +259,6 @@
 /* Begin PBXProject section */
 		66DF6BFD01D7DCEA00A80119 /* Project object */ = {
 			isa = PBXProject;
-			attributes = {
-				ORGANIZATIONNAME = "Teleplace, Inc.";
-			};
 			buildConfigurationList = 946BCE000959347500803517 /* Build configuration list for PBXProject "Mpeg3Plugin" */;
 			compatibilityVersion = "Xcode 3.0";
 			developmentRegion = English;

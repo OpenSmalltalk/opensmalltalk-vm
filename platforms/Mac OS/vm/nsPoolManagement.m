@@ -3,7 +3,7 @@
 //  CoreVM
 //
 //  Created by Brad Fowlow on 10/15/09.
-//  Copyright 2009 Teleplace, Inc. All rights reserved.
+//  Copyright (c) 2013 3D Immersive Collaboration Consulting, LLC.
 
 #import "interp.h"
 #import "sqMemoryAccess.h" /* for sqInt ?!?!? */

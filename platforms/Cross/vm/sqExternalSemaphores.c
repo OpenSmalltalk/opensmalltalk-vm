@@ -3,7 +3,7 @@
  *
  *	Authors: Eliot Miranda & Brad Fowlow
  *
- *	Copyright (C) 2009 by Teleplace, Inc.
+ *	Copyright (c) 2013 3D Immersive Collaboration Consulting, LLC.
  *
  *	All rights reserved.
  *   

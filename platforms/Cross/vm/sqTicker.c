@@ -3,7 +3,7 @@
  *
  *	Authors: Eliot Miranda & Josh Gargus
  *
- *	Copyright (C) 2010 by Teleplace, Inc.
+ *	Copyright (c) 2013 3D Immersive Collaboration Consulting, LLC.
  *
  *	All rights reserved.
  *   
