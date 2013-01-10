@@ -1454,15 +1454,6 @@ StackToRegisterMappingCogit >> genDoubleComparison: jumpOpcodeGenerator invert: 
 	^0
 ]
 
-{ #category : #'bytecode generators' }
-StackToRegisterMappingCogit >> genDynamicSuperSendBytecode [
-	| numArgs selector |
-	numArgs := byte1.
-	selector := coInterpreter literal: byte2 ofMethod: methodObj.
-	self marshallSendArguments: numArgs.
-	^self genMarshalledSendDynamicSuper: selector numArgs: numArgs
-]
-
 { #category : #initialization }
 StackToRegisterMappingCogit >> genEnterPICEnilopmartNumArgs: numArgs [
 	"Generate special versions of the ceEnterCogCodePopReceiverAndClassRegs
@@ -2426,6 +2417,20 @@ StackToRegisterMappingCogit >> genSend: selector numArgs: numArgs [
 ]
 
 { #category : #'bytecode generators' }
+StackToRegisterMappingCogit >> genSendAbsentDynamicSuper: selector numArgs: numArgs [
+	"OK, we could do better and avoid spilling ReceiverResultReg if we refactored
+	 marshallImplicitReceiverSendArguments: to take a flag saying whether the
+	 receiver was in ReceiverResultReg (absent receiver send) or on the stack
+	 (absent dynamic super send) and in the latter case loading ReceiverResultReg
+	 from the stack after marshalling.  But this is a rare bytecode so for the moment
+	 don't bother."
+	self ssAllocateCallReg: ReceiverResultReg.
+	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
+	self marshallImplicitReceiverSendArguments: numArgs.
+	^self genMarshalledSendDynamicSuper: selector numArgs: numArgs
+]
+
+{ #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genSendAbsentImplicit: selector numArgs: numArgs [
 	"Get the implicit receiver and marshall arguments, shuffling the
 	 stack to push the implicit receiver if necessary. Then send."
@@ -2436,6 +2441,12 @@ StackToRegisterMappingCogit >> genSendAbsentImplicit: selector numArgs: numArgs 
 		[^result].
 	self marshallImplicitReceiverSendArguments: numArgs.
 	^self genMarshalledSend: selector numArgs: numArgs
+]
+
+{ #category : #'bytecode generators' }
+StackToRegisterMappingCogit >> genSendDynamicSuper: selector numArgs: numArgs [
+	self marshallSendArguments: numArgs.
+	^self genMarshalledSendDynamicSuper: selector numArgs: numArgs
 ]
 
 { #category : #'bytecode generators' }

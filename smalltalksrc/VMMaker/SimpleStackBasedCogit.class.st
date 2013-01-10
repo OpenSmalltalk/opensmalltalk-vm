@@ -1152,20 +1152,7 @@ SimpleStackBasedCogit >> genDoubleFailIfZeroArgRcvr: rcvrReg arg: argReg [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genDynamicSuperSendBytecode [
-	| numArgs selector |
-	numArgs := byte1.
-	selector := coInterpreter literal: byte2 ofMethod: methodObj.
-	(objectMemory isYoung: selector) ifTrue:
-		[hasYoungReferent := true].
-	self assert: needsFrame.
-	self MoveMw: numArgs * BytesPerWord r: SPReg R: ReceiverResultReg.
-	numArgs > 2 ifTrue:
-		[self MoveCq: numArgs R: SendNumArgsReg].
-	self MoveCw: selector R: ClassReg.
-	self CallNewspeakSend: (dynamicSuperSendTrampolines at: (numArgs min: NumSendTrampolines - 1)).
-	self flag: 'currently caller pushes result'.
-	self PushR: ReceiverResultReg.
-	^0
+	^self genSendDynamicSuper: (coInterpreter literal: byte2 ofMethod: methodObj) numArgs: byte1
 ]
 
 { #category : #'bytecode generators' }
@@ -1302,8 +1289,12 @@ SimpleStackBasedCogit >> genExtReturnTopFromBlock [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtSendAbsentDynamicSuperBytecode [
 	"241		11110001	i i i i i j j j	Send To Absent Dynamic Superclass Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
-	self shouldBeImplemented.
-	^EncounteredUnknownBytecode
+	| litIndex nArgs |
+	litIndex := (byte1 >> 3) + (extA << 5).
+	extA := 0.
+	nArgs := (byte1 bitAnd: 7) + (extB << 3).
+	extB := 0.
+	^self genSendAbsentDynamicSuper: (coInterpreter literal: litIndex ofMethod: methodObj) numArgs: nArgs
 ]
 
 { #category : #'bytecode generators' }
@@ -2594,6 +2585,27 @@ SimpleStackBasedCogit >> genSend: selector numArgs: numArgs [
 ]
 
 { #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genSendAbsentDynamicSuper: selector numArgs: numArgs [
+	"Shuffle arguments if necessary and push receiver.
+	 Then send."
+	<inline: false>
+	numArgs = 0
+		ifTrue:
+			[self PushR: ReceiverResultReg]
+		ifFalse:
+			[self MoveMw: 0 r: SPReg R: TempReg.
+			self PushR: TempReg.
+			2 to: numArgs do:
+				[:index|
+				self MoveMw: index * BytesPerWord r: SPReg R: TempReg.
+				self MoveR: TempReg Mw: index - 1 * BytesPerWord r: SPReg].
+			"if we copied the code in genSendDynamicSuper: we could save an instruction.
+			But we care not; the smarts are in StackToRegisterMappingCogit et al"
+			self MoveR: ReceiverResultReg Mw: numArgs * BytesPerWord r: SPReg].
+	^self genSendDynamicSuper: selector numArgs: numArgs
+]
+
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSendAbsentImplicit0ArgsBytecode [
 	"160-175	1010 i i i i		Send To Absent Implicit Receiver Literal Selector #iiii With 0 Arguments."
 	^self genSendAbsentImplicit: (coInterpreter literal: (byte0 bitAnd: 15) ofMethod: methodObj) numArgs: 0
@@ -2622,6 +2634,21 @@ SimpleStackBasedCogit >> genSendAbsentImplicit: selector numArgs: numArgs [
 			But we care not; the smarts are in StackToRegisterMappingCogit et al"
 			self MoveR: ReceiverResultReg Mw: numArgs * BytesPerWord r: SPReg].
 	^self genSend: selector numArgs: numArgs
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genSendDynamicSuper: selector numArgs: numArgs [
+	(objectMemory isYoung: selector) ifTrue:
+		[hasYoungReferent := true].
+	self assert: needsFrame.
+	self MoveMw: numArgs * BytesPerWord r: SPReg R: ReceiverResultReg.
+	numArgs > 2 ifTrue:
+		[self MoveCq: numArgs R: SendNumArgsReg].
+	self MoveCw: selector R: ClassReg.
+	self CallNewspeakSend: (dynamicSuperSendTrampolines at: (numArgs min: NumSendTrampolines - 1)).
+	self flag: 'currently caller pushes result'.
+	self PushR: ReceiverResultReg.
+	^0
 ]
 
 { #category : #'bytecode generators' }
