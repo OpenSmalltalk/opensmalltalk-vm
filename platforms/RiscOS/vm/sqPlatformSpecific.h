@@ -75,8 +75,8 @@ unsigned int microsecondsvalue(void);
    HALTIMERMOD means using a combination of Rik Griffin's HALTimer and
    my MillisecondTimer to keep a runing count of milliseconds
    Currently HALTimer won't run on a RaspberryPi, so use drucks code */
-#define DRUCKTIMERMOD
-// #define HALTIMERMOD
+// #define DRUCKTIMERMOD
+#define HALTIMERMOD
 
 usqInt millisecondTimerValue(void);
 #define ioMSecs()  (sqInt)(millisecondTimerValue())

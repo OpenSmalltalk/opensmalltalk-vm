@@ -348,7 +348,7 @@ _kernel_swi_regs regs;
 #ifdef HALTIMERMOD
 //	_kernel_swi(/* MillisecondTimer_Value */ 0x58100, &regs, &regs);
 //	return (regs.r[0]) ;
-	return (usqIt)*timerValPtr;
+	return (usqInt)*timerValPtr;
 #endif
 }
 
