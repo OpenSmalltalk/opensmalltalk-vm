@@ -93,12 +93,12 @@ int openLogStream(void) {
 		/* No Report: so try an ordinary log file */
 		#define LogName "Squeak/vmlog\0"
 		char *logPath;
-		logPath = (char*)malloc(strlen(vmPath) + strlen(LogName));
+		logPath = (char*)malloc(strlen(vmPath) + strlen(LogName) + 2);
 		if (logPath == NULL) {
 			logfile = (FILE *)-1;
 			return 0;
 		}
-		sprintf(logPath, "%s%s", vmPath, LogName);
+		sprintf(logPath, "%s^.%s", vmPath, LogName);
 		logfile= fopen(logPath, "a+");
 		free(logPath);
 	}
@@ -702,7 +702,10 @@ extern void setMetaKeyOptions(int swap);
 
 	dummyWimpPoll();
 
-	/* read the image file and allocate memory for Squeak heap */
+	/* read the image file and allocate memory for Squeak heap
+	    - the image name has been set to the path parsed by c.sqArgument
+	    - if no filename was passed in, the default is to expect an image
+	      file (Squeak/image) inside the application directory */
 	f = fopen(imageName, "rb");
 	PRINTF(("\\t Starting Squeak with image file: %s\n", imageName));
 	if (f == NULL) {
@@ -710,7 +713,8 @@ extern void setMetaKeyOptions(int swap);
 		extern char VMVersion[];
 		privateErr.errnum = (bits)0;
 		sprintf(privateErr.errmess, "Could not open the Squeak image file '%s' (Squeak version: %s)", imageName, VMVersion);
-		printf("%s\n", privateErr.errmess);
+		printf("Squeak version: %s was unable to find and open the image file supposedly at %s\n", VMVersion, imageName);
+		printf("If you simply tried to run the !Squeak application, it will have attempted to run a default image within the application directory which is not usually present\n");
 		platReportError((os_error *)&privateErr);
 		helpMessage(vmPath, "!ImName");
 		ioExit();
