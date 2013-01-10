@@ -4,10 +4,10 @@ Set Squeak$Dir <Obey$Dir>
 | Timers: we're either using the druck TimerMod or the Rik Griffin HALTimer
 
 | Make sure the MillisecondTimer & HALTimer module are loaded
-|RMEnsure HALTimer 0.03 RMLoad <Squeak$Dir>.modules.HALTimer
-|RMEnsure MillisecondTimer 1.00 RMLoad <Squeak$Dir>.modules.MillisecondTimer
+RMEnsure HALTimer 0.03 RMLoad <Squeak$Dir>.modules.HALTimer
+RMEnsure MillisecondTimer 1.00 RMLoad <Squeak$Dir>.modules.MillisecondTimer
 |
-RMEnsure TimerMod 4.12 RMLoad <Squeak$Dir>.modules.TimerMod.TimerMod
+|RMEnsure TimerMod 4.12 RMLoad <Squeak$Dir>.modules.TimerMod.TimerMod
 
 
 | syntax:
@@ -38,4 +38,4 @@ RMEnsure TimerMod 4.12 RMLoad <Squeak$Dir>.modules.TimerMod.TimerMod
 | imageoption - any words following will be available to the image via
 | Smalltalk getSystemAttribute: -{1000, 1}
 /<Squeak$Dir>.!Boot
-/<Squeak$Dir>.!RunImage -memory:90m  %*0
+/<Squeak$Dir>.!RunImage -memory:60m  %*0
