@@ -38,6 +38,13 @@ VMCompiledMethodProxy >> literalAt: index [
 ]
 
 { #category : #accessing }
+VMCompiledMethodProxy >> numArgs [
+	"Answer the argument count of the receiver."
+	
+	^coInterpreter argumentCountOf: oop
+]
+
+{ #category : #accessing }
 VMCompiledMethodProxy >> numLiterals [
 	"Answer the number of literals used by the receiver."
 	

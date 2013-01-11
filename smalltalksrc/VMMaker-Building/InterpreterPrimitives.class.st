@@ -1795,7 +1795,8 @@ InterpreterPrimitives >> primitiveIdentityHash [
 	thisReceiver := self stackTop.
 	(objectMemory isIntegerObject: thisReceiver)
 		ifTrue: [self primitiveFail]
-		ifFalse: [self pop:1 thenPushInteger: (objectMemory hashBitsOf: thisReceiver)]
+		ifFalse: [self pop: argumentCount + 1
+					thenPushInteger: (objectMemory hashBitsOf: thisReceiver)]
 ]
 
 { #category : #'other primitives' }

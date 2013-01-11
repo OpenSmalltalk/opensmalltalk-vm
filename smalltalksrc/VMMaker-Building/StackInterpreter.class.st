@@ -3746,7 +3746,7 @@ StackInterpreter >> defaultNumStackPages [
 { #category : #'debug support' }
 StackInterpreter >> detailedSymbolicMethod: aMethod [
 	<doNotGenerate>
-	| ts prim |
+	| ts prim proxy |
 	(ts := self transcript) ensureCr.
 	(prim := self primitiveIndexOf: aMethod) > 0 ifTrue:
 		[ts nextPutAll: '<primitive: '; print: prim; nextPut: $>.
@@ -3754,11 +3754,15 @@ StackInterpreter >> detailedSymbolicMethod: aMethod [
 			[ts nextPutAll: ' quick method'; cr; flush.
 			 ^self].
 		ts cr].
-	(DetailedInstructionPrinter
-			on: (VMCompiledMethodProxy new
+	proxy := VMCompiledMethodProxy new
 					for: aMethod
 					coInterpreter: self
-					objectMemory: objectMemory))
+					objectMemory: objectMemory.
+	(DetailedInstructionPrinter on: proxy)
+		stackHeightComputer: ((NewspeakVM
+										ifTrue: [NewspeakStackDepthFinder]
+										ifFalse: [StackDepthFinder])
+									on: proxy);
 		indent: 0;
 		printInstructionsOn: ts.
 	ts flush
@@ -8484,7 +8488,9 @@ StackInterpreter >> printAllStacks [
 { #category : #'debug printing' }
 StackInterpreter >> printCallStack [
 	<inline: false>
-	self printCallStackFP: framePointer
+	framePointer = nil
+		ifTrue: [self printCallStackOf: (objectMemory fetchPointer: SuspendedContextIndex ofObject: self activeProcess)]
+		ifFalse: [self printCallStackFP: framePointer]
 ]
 
 { #category : #'debug printing' }
