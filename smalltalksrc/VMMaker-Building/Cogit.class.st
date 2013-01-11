@@ -3785,10 +3785,21 @@ Cogit >> disassemble: targetmcpc from: startpc to: endpc arg: aStream [
 	^0
 ]
 
+{ #category : #'simulation only' }
+Cogit >> disassembleCachedOop: address [
+	<doNotGenerate>
+	| oopOrZero |
+	"Answer a disassembly string for an implicit receiver cache entry in a Newspeak send."
+	oopOrZero := objectMemory unalignedLongAt: address.
+	^(objectMemory addressCouldBeObj: oopOrZero)
+		ifTrue: [oopOrZero hex, ': ', (coInterpreter shortPrint: oopOrZero)]
+		ifFalse: [oopOrZero = 0 ifTrue: [oopOrZero printString] ifFalse: [oopOrZero hex]]
+]
+
 { #category : #disassembly }
 Cogit >> disassembleCodeAt: pc [
 	<doNotGenerate>
-	(pc between: (trampolineAddresses at: 1) and: methodZoneBase) ifTrue:
+	(pc between: (trampolineAddresses at: 1) and: methodZoneBase - 1) ifTrue:
 		[^self disassembleTrampolineFor: pc].
 	self disassembleMethodFor: pc
 ]
@@ -3842,6 +3853,17 @@ Cogit >> disassembleMethod: surrogateOrAddress on: aStream [
 	self mapFor: cogMethod
 		performUntil: #collectMapEntry:address:into:
 		arg: mapEntries.
+
+	self cppIf: NewspeakVM
+		ifTrue:
+			[mapEntries keys do:
+				[:a|
+				(mapEntries at: a) = #IsNSSendCall ifTrue:
+					[mapEntries
+						at: a + backEnd jumpShortByteSize
+							put: {'Class'. #disassembleCachedOop:. BytesPerWord};
+						at: a + backEnd jumpShortByteSize + BytesPerOop
+							put: {'ImplicitReceiver'. #disassembleCachedOop:. BytesPerWord}]]].
 
 	"This would all be far more elegant and simple if we used blocks.
 	 But there are no blocks in C and the basic enumerators here need
@@ -5630,6 +5652,18 @@ Cogit >> inverseBranchFor: opcode [
 		[JumpBelowOrEqual]	->	[^JumpAbove] }.
 	self error: 'invalid opcode for inverse'.
 	^0
+]
+
+{ #category : #'simulation only' }
+Cogit >> isAbsentReceiverSendAt: mcpc in: cogHomeMethod [
+	| prev this |
+	self mapFor: cogHomeMethod
+		do: [:a :m|
+			m < mcpc
+				ifTrue: [prev := a]
+				ifFalse: [m = mcpc ifTrue: [this := a]].
+			false].
+	^this = IsSendCall and: [prev = IsNSSendCall]
 ]
 
 { #category : #'compile abstract instructions' }
