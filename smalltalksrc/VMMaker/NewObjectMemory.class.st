@@ -284,7 +284,7 @@ NewObjectMemory >> become: array1 with: array2 twoWay: twoWayFlag copyHash: copy
 	((self isArray: array2)
 	 and: [(self lastPointerOf: array1) = (self lastPointerOf: array2)]) ifFalse:
 		[^PrimErrBadArgument].
-	twoWayFlag
+	(twoWayFlag or: [copyHashFlag])
 		ifTrue: [(self containOnlyOops: array1 and: array2) ifFalse: [^PrimErrInappropriate]]
 		ifFalse: [(self containOnlyOops: array1) ifFalse: [^PrimErrInappropriate]].
 

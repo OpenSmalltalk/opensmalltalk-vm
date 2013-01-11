@@ -665,7 +665,8 @@ ObjectMemory >> allYoung: array1 and: array2 [
 	[fieldOffset >= BaseHeaderSize] whileTrue:
 		[(self oop: (self longAt: array1 + fieldOffset) isLessThan: youngStart)
 			ifTrue: [^ false].
-		(self oop: (self longAt: array2 + fieldOffset) isLessThan: youngStart)
+		((self oop: (self longAt: array2 + fieldOffset) isLessThan: youngStart)
+		 and: [self isNonIntegerObject: (self longAt: array2 + fieldOffset)])
 			ifTrue: [^ false].
 		fieldOffset := fieldOffset - BytesPerWord].
 	^ true
@@ -1856,6 +1857,23 @@ ObjectMemory >> forwardingPointerOf: forwardedObj [
 	"Answer the pointer to the given forwardedOop's forwarding block."
 	<inline: true>
 	^((self longAt: forwardedObj) bitAnd: AllButMarkBitAndTypeMask) << 1
+]
+
+{ #category : #become }
+ObjectMemory >> freeObject: obj [
+	| objHeader objHeaderBytes objHeaderType objSize |
+	objHeader := self baseHeader: obj.
+	objHeaderType := objHeader bitAnd: TypeMask.
+	objHeaderBytes := headerTypeBytes at: objHeaderType.
+	(objHeaderType bitAnd: 1) = 1 "HeaderTypeClass or HeaderTypeShort"
+		ifTrue: [objSize := objHeader bitAnd: SizeMask]
+		ifFalse:
+			[objHeaderType = HeaderTypeFree
+				ifTrue: [^nil]. "already free"
+			objSize := (self sizeHeader: obj) bitAnd: LongSizeMask].
+	self assert: (objSize + objHeaderBytes bitAnd: AllButTypeMask) = (objSize + objHeaderBytes).
+	self longAt: obj - objHeaderBytes
+		put: ((objSize + objHeaderBytes) bitOr: HeaderTypeFree)
 ]
 
 { #category : #'garbage collection' }
@@ -3822,11 +3840,10 @@ ObjectMemory >> restoreHeadersAfterBecoming: list1 with: list2 [
 ]
 
 { #category : #become }
-ObjectMemory >> restoreHeadersAfterForwardBecome: copyHashFlag [ 
-	"Forward become leaves us with no original oops in the 
-	mutated object list, 
-	so we must enumerate the (four-word) forwarding blocks 
-	where we have stored backpointers."
+ObjectMemory >> restoreHeadersAfterForwardBecome: copyHashFlag [
+	"Forward become leaves us with no original oops in the
+	 mutated object list, so we must enumerate the (four-word)
+	 forwarding blocks where we have stored backpointers."
 	"This loop start is copied from fwdTableInit:"
 	| oop1 fwdBlock oop2 hdr1 hdr2 |
 	fwdBlock := endOfMemory + BaseHeaderSize + 7 bitAnd: WordMask - 7.
@@ -3835,17 +3852,19 @@ ObjectMemory >> restoreHeadersAfterForwardBecome: copyHashFlag [
 	"fwdBlockGet: did a pre-increment"
 	[self oop: fwdBlock isLessThanOrEqualTo: fwdTableNext
 	"fwdTableNext points to the last active block"]
-		whileTrue: [oop1 := self longAt: fwdBlock + (BytesPerWord*2).
+		whileTrue:
+			[oop1 := self longAt: fwdBlock + (BytesPerWord*2).
 			"Backpointer to mutated object."
 			oop2 := self longAt: fwdBlock.
 			self restoreHeaderOf: oop1.
-			copyHashFlag
-				ifTrue: ["Change the hash of the new oop (oop2) to be that of the old (oop1) 
-					so mutated objects in hash structures will be 
-					happy after the change."
-					hdr1 := self longAt: oop1.
-					hdr2 := self longAt: oop2.
-					self longAt: oop2 put: ((hdr2 bitAnd: AllButHashBits) bitOr: (hdr1 bitAnd: HashBits))].
+			copyHashFlag ifTrue:
+				"Change the hash of the new oop (oop2) to be that of the old (oop1)
+				 so mutated objects in hash structures will be  happy after the change."
+				[hdr1 := self longAt: oop1.
+				 hdr2 := self longAt: oop2.
+				 self longAt: oop2 put: ((hdr2 bitAnd: AllButHashBits) bitOr: (hdr1 bitAnd: HashBits))].
+			"Free the old object so it won't resurface through e.g. alInstances or allObjects."
+			self freeObject: oop1.
 			fwdBlock := fwdBlock + (BytesPerWord*4)]
 ]
 
