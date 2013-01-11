@@ -44,3 +44,17 @@ DetailedInstructionPrinter >> print: instruction [
 		cr;
 		flush
 ]
+
+{ #category : #accessing }
+DetailedInstructionPrinter >> stackHeightComputer [
+	"Answer the value of stackHeightComputer"
+
+	^ stackHeightComputer
+]
+
+{ #category : #accessing }
+DetailedInstructionPrinter >> stackHeightComputer: anObject [
+	"Set the value of stackHeightComputer"
+
+	stackHeightComputer := anObject
+]

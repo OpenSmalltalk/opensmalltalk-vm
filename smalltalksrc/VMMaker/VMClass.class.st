@@ -584,8 +584,10 @@ VMClass >> promptHex: string [
 	| s |
 	s := UIManager default request: string, ' (hex)'.
 	^s notEmpty ifTrue:
-		[(s size > 3 and: [s third = $r or: [s first = $- and: [s fourth = $r]]]) ifTrue:
-			[s := (s first = $- ifTrue: ['-'] ifFalse: ['']), (s allButFirst: (s indexOf: $r))].
+		[(#('16r' '-16r' '0x' '-0x') detect: [:prefix| s beginsWith: prefix] ifNone: []) ifNotNil:
+			[:prefix|
+			s := s allButFirst: prefix size.
+			prefix first = $- ifTrue: [s := '-', s]].
 		Integer readFrom: s readStream base: 16]
 ]
 

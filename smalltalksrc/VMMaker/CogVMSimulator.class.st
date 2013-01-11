@@ -37,7 +37,8 @@ Class {
 		'externalSemaphoreSignalRequests',
 		'externalSemaphoreSignalResponses',
 		'extSemTabSize',
-		'debugStackDepthDictionary'
+		'debugStackDepthDictionary',
+		'performFilters'
 	],
 	#category : #'VMMaker-JITSimulation'
 }
@@ -829,6 +830,17 @@ CogVMSimulator >> fetchPointer: fieldIndex ofObject: oop [
 	^objectMemory fetchPointer: fieldIndex ofObject: oop
 ]
 
+{ #category : #'control primitives' }
+CogVMSimulator >> filterPerformOf: selector to: receiver [
+	"This is to allow simulator to filter start-up items to avoid as-yet unsimulatable plugins."
+	performFilters ifNil: [^false].
+	(performFilters at: (self shortPrint: receiver) ifAbsent: []) ifNotNil:
+		[:messages|
+		self halt.
+		^messages includes: (self stringOf: selector)].
+	^false
+]
+
 { #category : #testing }
 CogVMSimulator >> findNewMethodInClass: class [
 "
@@ -875,6 +887,13 @@ CogVMSimulator >> flush [
 CogVMSimulator >> flushExternalPrimitives [
 	mappedPluginEntries := OrderedCollection new.
 	super flushExternalPrimitives.
+]
+
+{ #category : #'control primitives' }
+CogVMSimulator >> forShortPrintString: shortPrintString filterPerformMessages: aCollection [
+	performFilters ifNil:
+		[performFilters := Dictionary new].
+	performFilters at: shortPrintString put: aCollection
 ]
 
 { #category : #'multi-threading simulation switch' }
@@ -1895,6 +1914,11 @@ CogVMSimulator >> maybeCheckStackDepth: delta sp: sp pc: mcpc [
 	self assert: bcpc ~= 0.
 	asp := self stackPointerIndexForFrame: framePointer WithSP: sp + BytesPerWord.
 	csp := debugStackPointers at: bcpc.
+	"Compensate lazily for absent receiver sends."
+	(NewspeakVM
+	 and: [asp - delta = csp
+	 and: [cogit isAbsentReceiverSendAt: mcpc in: cogHomeMethod]]) ifTrue:
+		[csp := debugStackPointers at: bcpc put: csp + 1].
 	self assert: asp - delta + 1 = csp
 ]
 
@@ -2387,7 +2411,8 @@ CogVMSimulator >> primitiveDirectoryLookup [
 CogVMSimulator >> primitiveDoPrimitiveWithArgs [
 	| primIndex |
 	primIndex := objectMemory integerValueOf: (self stackValue: 1).
-	transcript nextPutAll: 'DO PRIMITIVE: '; print: (self functionPointerFor: primIndex inClass: nil); cr; flush.
+	NewspeakVM ifFalse:
+		[transcript nextPutAll: 'DO PRIMITIVE: '; print: (self functionPointerFor: primIndex inClass: nil); cr; flush].
 	primIndex = 76 ifTrue:
 		[self halt].
 	^super primitiveDoPrimitiveWithArgs
@@ -2472,6 +2497,15 @@ CogVMSimulator >> primitiveMousePoint [
 				self push: (self makePointwithxValue: relPt x yValue: relPt y)]
 ]
 
+{ #category : #'control primitives' }
+CogVMSimulator >> primitiveObject: actualReceiver perform: selector withArguments: argumentArray lookedUpIn: lookupClass [
+	"Override to allow simulator to filter start-up items to avoid as-yet unsimulatable plugins."
+
+	(self filterPerformOf: selector to: actualReceiver) ifTrue:
+		[^self pop: argumentCount + 1 thenPush: actualReceiver].
+	^super primitiveObject: actualReceiver perform: selector withArguments: argumentArray lookedUpIn: lookupClass
+]
+
 { #category : #'object access primitives' }
 CogVMSimulator >> primitiveObjectAtPut [
 	| newValue |
@@ -2497,6 +2531,8 @@ CogVMSimulator >> primitivePerform [
 	self sendBreak: selector + BaseHeaderSize
 		point: (objectMemory lengthOf: selector)
 		receiver: (self stackValue: argumentCount).
+	(self filterPerformOf: selector to: (self stackValue: argumentCount)) ifTrue:
+		[^self pop: argumentCount].
 	^super primitivePerform
 ]
 
