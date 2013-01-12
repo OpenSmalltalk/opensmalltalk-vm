@@ -20,6 +20,7 @@
 #include "oslib/wimp.h"
 #include "oslib/wimpspriteop.h"
 #include "oslib/colourtrans.h"
+#include "oslib/territory.h"
 #include "sq.h"
 #include "sqArguments.h"
 #include <kernel.h>
@@ -390,8 +391,13 @@ sqInt ioSeconds(void) {
 	is
 			2177452800
 	limit is about 2057ad - this may cause problems...
+	Add the timezone offset in seconds; this seems to be a change from
+	log practice, no idea how it wasn't already needed.
 */
-	return  (int)((unsigned long)time(NULL) + 2177452800uL);
+char * tzName;
+int tzOffset;
+	xterritory_read_current_time_zone( &tzName, &tzOffset);
+	return  (int)((unsigned long)time(NULL) + 2177452800uL + (tzOffset/100));
 }
 
 /*** Image File Naming ***/
