@@ -856,6 +856,17 @@ StackToRegisterMappingCogit >> annotateBytecodeIfAnnotated: aSimStackEntry [
 ]
 
 { #category : #'simulation stack' }
+StackToRegisterMappingCogit >> anyReferencesToRegister: reg inTopNItems: n [
+	| regMask |
+	regMask := self registerMaskFor: reg.
+	simStackPtr to: simStackPtr - n + 1 by: -1 do:
+		[:i|
+		((self simStackAt: i) registerMask anyMask: regMask) ifTrue:
+			[^true]].
+	^false
+]
+
+{ #category : #'simulation stack' }
 StackToRegisterMappingCogit >> availableRegister [
 	| liveRegs |
 	liveRegs := self liveRegisters.
@@ -3351,6 +3362,7 @@ StackToRegisterMappingCogit >> marshallImplicitReceiverSendArguments: numArgs [
 	 Marshall arguments to stack and/or registers depending on arg count.
 	 If the args don't fit in registers push receiver and args (spill everything).  Assume
 	 receiver already in ResultReceiverReg so shuffle args and push it if necessary."
+	self ssFlushTo: simStackPtr - numArgs.
 	numArgs > self numRegArgs
 		ifTrue:
 			["The arguments must be pushed to the stack, and hence the receiver
@@ -3374,8 +3386,7 @@ StackToRegisterMappingCogit >> marshallImplicitReceiverSendArguments: numArgs [
 		 so last to first so e.g. previous contents don't get overwritten.
 		 Also check for any arg registers in use by other args."
 		ifFalse:
-			[self ssFlushTo: simStackPtr - numArgs - 1.
-			 numArgs > 0 ifTrue:
+			[numArgs > 0 ifTrue:
 				[(self numRegArgs > 1 and: [numArgs > 1])
 					ifTrue:
 						[self ssAllocateRequiredReg: Arg0Reg upThrough: simStackPtr - 2.
@@ -3396,17 +3407,31 @@ StackToRegisterMappingCogit >> marshallSendArguments: numArgs [
 	 Marshall receiver and arguments to stack and/or registers depending on arg count.
 	 If the args don't fit in registers push receiver and args (spill everything), but still assign
 	 the receiver to ReceiverResultReg."
+	self ssFlushTo: simStackPtr - numArgs - 1.
 	numArgs > self numRegArgs
 		ifTrue:
-			[self ssFlushTo: simStackPtr.
-			 (self simStackAt: simStackPtr - numArgs)
-				storeToReg: ReceiverResultReg]
-		"move the args to the register arguments, being careful to do
-		 so last to first so e.g. previous contents don't get overwritten.
-		 Also check for any arg registers in use by other args."
+			"If there are no spills and no references to ReceiverResultReg
+			 the fetch of ReceiverResultReg from the stack can be avoided
+			 by assigning directly to ReceiverResultReg and pushing it."
+			[| numSpilled anyRefs |
+			numSpilled := self numberOfSpillsInTopNItems: numArgs + 1.
+			anyRefs := self anyReferencesToRegister: ReceiverResultReg inTopNItems: numArgs + 1.
+			(numSpilled > 0 or: [anyRefs])
+				ifTrue:
+					[self ssFlushTo: simStackPtr.
+					 (self simStackAt: simStackPtr - numArgs)
+						storeToReg: ReceiverResultReg]
+				ifFalse:
+					[(self simStackAt: simStackPtr - numArgs)
+						storeToReg: ReceiverResultReg;
+					 	type: SSRegister;
+						register: ReceiverResultReg.
+					 self ssFlushTo: simStackPtr]]
 		ifFalse:
-			[self ssFlushTo: simStackPtr - numArgs - 1.
-			 numArgs > 0 ifTrue:
+			"Move the args to the register arguments, being careful to do
+			 so last to first so e.g. previous contents don't get overwritten.
+			 Also check for any arg registers in use by other args."
+			[numArgs > 0 ifTrue:
 				[(self numRegArgs > 1 and: [numArgs > 1])
 					ifTrue:
 						[self ssAllocateRequiredReg: Arg0Reg upThrough: simStackPtr - 2.

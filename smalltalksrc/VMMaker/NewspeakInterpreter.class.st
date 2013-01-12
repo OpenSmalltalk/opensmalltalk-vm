@@ -7015,10 +7015,8 @@ NewspeakInterpreter >> primitiveIsRoot [
 	| oop |
 	<export: true>
 	oop := self stackObjectValue: 0.
-	self successful ifTrue:[
-		self pop: argumentCount + 1.
-		self pushBool: ((self baseHeader: oop) bitAnd: RootBit).
-	].
+	self successful ifTrue:
+		[self pop: argumentCount + 1 thenPushBool: (self isYoungRoot: oop)]
 ]
 
 { #category : #'memory space primitives' }

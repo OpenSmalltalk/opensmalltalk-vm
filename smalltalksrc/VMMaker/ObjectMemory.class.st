@@ -1078,7 +1078,7 @@ ObjectMemory >> checkHeapIntegrity [
 				[sz := self sizeOfFree: obj]
 			ifFalse:
 				[hdr := self baseHeader: obj.
-				 (hdr bitAnd: RootBit) ~= 0 ifTrue:
+				 (self isYoungRootHeader: hdr) ifTrue:
 					[numRootsInHeap := numRootsInHeap + 1].
 				 (self compactClassIndexOfHeader: hdr) = 0 ifTrue:
 					[fieldOop := (self classHeader: obj) bitAnd: AllButTypeMask.
@@ -1123,7 +1123,7 @@ ObjectMemory >> checkHeapIntegrity [
 						 ok := false]
 					ifFalse:
 						[hdr := self baseHeader: obj.
-						 (hdr bitAnd: RootBit) = 0 ifTrue:
+						 (self isYoungRootHeader: hdr) ifFalse:
 							[self print: 'non-root in rootTable @ '; printNum: ri; print: ' = '; printHex: obj; cr.
 							 ok := false]]]].
 	1 to: remapBufferCount do:
@@ -1208,8 +1208,7 @@ ObjectMemory >> checkOkayOop: oop [
 	((self longAt: oop) bitAnd: MarkBit) = 0
 		ifFalse: [ self print: 'mark bit should not be set except during GC' ].
 xxx"
-	(((self longAt: oop) bitAnd: RootBit) = 1 and:
-	 [oop >= youngStart])
+	((self isYoungRoot: oop) and: [oop >= youngStart])
 		ifTrue: [ self print: 'root bit is set in a young object'; cr. ^false ].
 	^true
 
@@ -1863,6 +1862,8 @@ ObjectMemory >> forwardingPointerOf: forwardedObj [
 ObjectMemory >> freeObject: obj [
 	| objHeader objHeaderBytes objHeaderType objSize |
 	objHeader := self baseHeader: obj.
+	(self isYoungRootHeader: objHeader) ifTrue:
+		[self removeYoungRoot: obj].
 	objHeaderType := objHeader bitAnd: TypeMask.
 	objHeaderBytes := headerTypeBytes at: objHeaderType.
 	(objHeaderType bitAnd: 1) = 1 "HeaderTypeClass or HeaderTypeShort"
@@ -2878,7 +2879,13 @@ ObjectMemory >> isYoung: oop [
 { #category : #'garbage collection' }
 ObjectMemory >> isYoungRoot: oop [
 	"Answer if oop is a root for objects in youngSpace"
-	^((self baseHeader: oop) bitAnd: RootBit) ~= 0
+	^self isYoungRootHeader: (self baseHeader: oop)
+]
+
+{ #category : #'garbage collection' }
+ObjectMemory >> isYoungRootHeader: header [
+	"Answer if oop is a root for objects in youngSpace"
+	^(header bitAnd: RootBit) ~= 0
 ]
 
 { #category : #accessing }
@@ -3155,7 +3162,8 @@ ObjectMemory >> mapPointersInObjectsFrom: memStart to: memEnd [
 	self mapInterpreterOops.
 	1 to: extraRootCount do:[:i |
 		oop := (extraRoots at: i) at: 0.
-		(self isIntegerObject: oop) ifFalse:[(extraRoots at: i) at: 0 put: (self remap: oop)]].
+		((self isIntegerObject: oop) or: [self isFreeObject: oop]) ifFalse:
+			[(extraRoots at: i) at: 0 put: (self remap: oop)]].
 	self flushMethodCacheFrom: memStart to: memEnd.
 	self updatePointersInRootObjectsFrom: memStart to: memEnd.
 	self updatePointersInRangeFrom: memStart to: memEnd.
@@ -3220,11 +3228,12 @@ ObjectMemory >> markPhase [
 	statSpecialMarkCount := statMarkCount.
 	"trace the roots"
 	1 to: rootTableCount do: [:i | 
-			oop := rootTable at: i.
-			self markAndTrace: oop].
+		oop := rootTable at: i.
+		self markAndTrace: oop].
 	1 to: extraRootCount do:[:i|
-			oop := (extraRoots at: i) at: 0.
-			(self isIntegerObject: oop) ifFalse:[self markAndTrace: oop]].
+		oop := (extraRoots at: i) at: 0.
+		((self isIntegerObject: oop) or: [self isFreeObject: oop]) ifFalse:
+			[self markAndTrace: oop]].
 
 ]
 
@@ -3305,22 +3314,21 @@ ObjectMemory >> noteAsRoot: oop headerLoc: headerLoc [
 	<inline: true>
 	<asmLabel: false> 
 	header := self longAt: headerLoc.
-	(header bitAnd: RootBit) = 0
-		ifTrue: ["record oop as root only if not already recorded"
-			rootTableCount < RootTableRedZone
-				ifTrue: ["record root if there is enough room in the roots 
-					table "
-					rootTableCount := rootTableCount + 1.
-					rootTable at: rootTableCount put: oop.
-					self longAt: headerLoc put: (header bitOr: RootBit)]
-				ifFalse: ["we're getting in the red zone"
-					rootTableCount < RootTableSize
-						ifTrue: ["but there's still space to record it"
-							rootTableCount := rootTableCount + 1.
-							rootTable at: rootTableCount put: oop.
-							self longAt: headerLoc put: (header bitOr: RootBit).
-							"but force an IGC on the next allocation"
-							allocationCount := allocationsBetweenGCs + 1]]]
+	(self isYoungRootHeader: header) ifFalse:
+		["record oop as root only if not already recorded"
+		rootTableCount < RootTableRedZone
+			ifTrue: ["record root if there is enough room in the roots table "
+				rootTableCount := rootTableCount + 1.
+				rootTable at: rootTableCount put: oop.
+				self longAt: headerLoc put: (header bitOr: RootBit)]
+			ifFalse: ["we're getting in the red zone"
+				rootTableCount < RootTableSize
+					ifTrue: ["but there's still space to record it"
+						rootTableCount := rootTableCount + 1.
+						rootTable at: rootTableCount put: oop.
+						self longAt: headerLoc put: (header bitOr: RootBit).
+						"but force an IGC on the next allocation"
+						allocationCount := allocationsBetweenGCs + 1]]]
 ]
 
 { #category : #'object enumeration' }
@@ -3487,8 +3495,7 @@ ObjectMemory >> okayOop: signedOop [
 	((self longAt: oop) bitAnd: MarkBit) = 0
 		ifFalse: [ self error: 'mark bit should not be set except during GC' ].
 xxx"
-	(((self longAt: oop) bitAnd: RootBit) = 1 and:
-	 [oop >= youngStart])
+	((self isYoungRoot: oop) and: [oop >= youngStart])
 		ifTrue: [ self error: 'root bit is set in a young object'. ^false ].
 	^true
 
@@ -3786,15 +3793,26 @@ ObjectMemory >> remappedObj: forwardedObj [
 { #category : #'plugin support' }
 ObjectMemory >> removeGCRoot: varLoc [
 	"Remove the given variable location to the extra roots table"
-	| root |
 	<export: true>
 	<var: #varLoc type: #'sqInt *'>
-	<var: #root type: #'sqInt *'>
-	1 to: extraRootCount do:[:i|
-		root := extraRoots at: i.
-		root == varLoc ifTrue:["swap varLoc with last entry"
-			extraRoots at: i put: (extraRoots at: extraRootCount).
-			extraRootCount := extraRootCount-1.
+	1 to: extraRootCount do:
+		[:i|
+		varLoc = (extraRoots at: i) ifTrue: "swap varLoc with last entry"
+			[extraRoots at: i put: (extraRoots at: extraRootCount).
+			 extraRootCount := extraRootCount-1.
+			 ^true]].
+	^false "not found"
+]
+
+{ #category : #become }
+ObjectMemory >> removeYoungRoot: obj [
+	"Remove the given young root form the root table (for freeObject: for becomeForward:)."
+	<inline: false>
+	1 to: rootTableCount do:
+		[:i|
+		obj = (rootTable at: i) ifTrue:"swap obj with last entry"
+			[rootTable at: i put: (rootTable at: rootTableCount).
+			rootTableCount := rootTableCount-1.
 			^true]].
 	^false "not found"
 ]
