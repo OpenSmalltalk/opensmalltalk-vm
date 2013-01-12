@@ -836,7 +836,6 @@ CogVMSimulator >> filterPerformOf: selector to: receiver [
 	performFilters ifNil: [^false].
 	(performFilters at: (self shortPrint: receiver) ifAbsent: []) ifNotNil:
 		[:messages|
-		self halt.
 		^messages includes: (self stringOf: selector)].
 	^false
 ]
