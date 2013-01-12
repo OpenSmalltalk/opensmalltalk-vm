@@ -380,8 +380,7 @@ NewObjectMemory >> checkOkayOop: oop [
 	((self longAt: oop) bitAnd: MarkBit) = 0
 		ifFalse: [ self print: 'mark bit should not be set except during GC' ].
 xxx"
-	(((self longAt: oop) bitAnd: RootBit) = 1 and:
-	 [oop >= youngStart])
+	((self isYoungRoot: oop) and: [oop >= youngStart])
 		ifTrue: [ self print: 'root bit is set in a young object'; cr. ^false ].
 	^true
 
@@ -1610,7 +1609,7 @@ NewObjectMemory >> mapPointersInObjectsFrom: memStart to: memEnd [
 	1 to: extraRootCount do:
 		[:i | | oop |
 		oop := (extraRoots at: i) at: 0.
-		(self isIntegerObject: oop) ifFalse:
+		((self isIntegerObject: oop) or: [self isFreeObject: oop]) ifFalse:
 			[(extraRoots at: i) at: 0 put: (self remap: oop)]].
 	coInterpreter flushMethodCacheFrom: memStart to: memEnd.
 	self updatePointersInRootObjectsFrom: memStart to: memEnd.
@@ -1639,7 +1638,7 @@ NewObjectMemory >> markPhase: fullGCFlag [
 	1 to: extraRootCount do:
 		[:i|
 		oop := (extraRoots at: i) at: 0.
-		(self isIntegerObject: oop) ifFalse:
+		((self isIntegerObject: oop) or: [self isFreeObject: oop]) ifFalse:
 			[self markAndTrace: oop]].
 	statMarkCountPriorToStackPageFreeing := statMarkCount.
 	"Only safe to free stack pages after all roots have been traced."
@@ -1685,10 +1684,10 @@ NewObjectMemory >> noteAsRoot: oop headerLoc: headerLoc [
 	<inline: true>
 	<asmLabel: false> 
 	header := self longAt: headerLoc.
-	(header bitAnd: RootBit) = 0 ifTrue:
+	(self isYoungRootHeader: header) ifFalse:
 		"record oop as root only if not already recorded"
 		[rootTableCount < RootTableSize ifTrue:
-			"record root if there is enough room in the roots  table "
+			"record root if there is enough room in the roots table"
 			[rootTableCount := rootTableCount + 1.
 			 rootTable at: rootTableCount put: oop.
 			 self longAt: headerLoc put: (header bitOr: RootBit).
@@ -1757,8 +1756,7 @@ NewObjectMemory >> okayOop: signedOop [
 	((self longAt: oop) bitAnd: MarkBit) = 0
 		ifFalse: [ self error: 'mark bit should not be set except during GC' ].
 xxx"
-	(((self longAt: oop) bitAnd: RootBit) = 1 and:
-	 [oop >= youngStart])
+	((self isYoungRoot: oop) and: [oop >= youngStart])
 		ifTrue: [ self error: 'root bit is set in a young object'. ^false ].
 	^true
 

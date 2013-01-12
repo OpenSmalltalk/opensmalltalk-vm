@@ -23,7 +23,7 @@ NewCoObjectMemory >> ceStoreCheck: anOop [
 	it allows the code generator to reload ReceiverResultReg cheaply."
 	self assert: (self isNonIntegerObject: anOop).
 	self assert: (self oop: anOop isLessThan: self youngStart).
-	self assert: ((self baseHeader: anOop) bitAnd: RootBit) = 0.
+	self assert: (self isYoungRoot: anOop) not.
 	self noteAsRoot: anOop headerLoc: anOop.
 	^anOop
 ]
@@ -95,6 +95,12 @@ NewCoObjectMemory >> copyObj: oop toSegment: segmentWordArray addr: lastSeg stop
 
 	"Return new end of segment"
 	^lastSeg + extraSize + bodySize
+]
+
+{ #category : #become }
+NewCoObjectMemory >> freeObject: obj [
+	self assert: ((self isCompiledMethod: obj) not or: [(self methodHasCogMethod: obj) not]).
+	super freeObject: obj
 ]
 
 { #category : #'trampoline support' }
