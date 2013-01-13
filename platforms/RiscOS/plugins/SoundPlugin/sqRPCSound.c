@@ -7,7 +7,7 @@
 /*  hook up to RiscOS sound stuff - eventually                            */
 /**************************************************************************/
 
-/* To recompile this reliably you will need    */           
+/* To recompile this reliably you will need    */
 /* OSLib -  http://ro-oslib.sourceforge.net/   */
 /* Castle/AcornC/C++, the Acorn TCPIPLib       */
 /* and a little luck                           */
@@ -25,6 +25,7 @@ int soundInit(void) {
 
 int soundShutdown(void) {
 // anything to do?
+	return 0;
 }
 
 /****************/
@@ -34,28 +35,32 @@ int soundShutdown(void) {
 int snd_AvailableSpace(void) {
 
 /*	Returns the number of bytes of available sound output buffer space.  This should be (frames*4) if the device is in stereo mode, or (frames*2) otherwise */
+	return 0;
 }
 
 int snd_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr, int samplesOfLeadTime) {
 
-/*	Insert a buffer's worth of sound samples into the currently playing  
-	buffer. Used to make a sound start playing as quickly as possible. The  
+/*	Insert a buffer's worth of sound samples into the currently playing
+	buffer. Used to make a sound start playing as quickly as possible. The
 	new sound is mixed with the previously buffered sampled. */
-/*	Details: Unlike primitiveSoundPlaySamples, this primitive always starts  
-	with the first sample the given sample buffer. Its third argument  
-	specifies the number of samples past the estimated sound output buffer  
-	position the inserted sound should start. If successful, it returns the  
+/*	Details: Unlike primitiveSoundPlaySamples, this primitive always starts
+	with the first sample the given sample buffer. Its third argument
+	specifies the number of samples past the estimated sound output buffer
+	position the inserted sound should start. If successful, it returns the
 	number of samples inserted. */
+	return 0;
 }
 
 int snd_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex) {
 /*	Output a buffer's worth of sound samples. */
+	return 0;
 }
 
 int snd_PlaySilence(void) {
 
 
 /*	Output a buffer's worth of silence. Returns the number of sample frames played. */
+	return 0;
 }
 
 int snd_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex) {
@@ -75,31 +80,26 @@ int snd_Stop(void) {
 /***************/
 
 
-int snd_SetRecordLevel(int level) {
-	interpreterProxy->primitiveFail();
+int snd_SetRecordLevel(int level) {;
 	return null;
 }
 
 int snd_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex) {
-	interpreterProxy->primitiveFail();
 	return null;
 }
 
 int snd_StopRecording(void) {
-	interpreterProxy->primitiveFail();
 	return null;
 }
 
 double snd_GetRecordingSampleRate(void) {
-	interpreterProxy->primitiveFail();
 	return (double)1.0;
 }
 
 int snd_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeInBytes) {
-	interpreterProxy->primitiveFail();
 	return null;
 }
-  
+
 void snd_Volume(double *left, double *right) {
 // used to GET the volume settings
 }
