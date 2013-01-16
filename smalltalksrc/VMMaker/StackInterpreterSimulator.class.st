@@ -564,6 +564,8 @@ StackInterpreterSimulator >> initialize [
 	pluginList := #().
 	mappedPluginEntries := #().
 	desiredNumStackPages := desiredEdenBytes := 0.
+	"This is initialized on loading the image, but convenient for testing stack page values..."
+	numStackPages := self defaultNumStackPages. 
 	startMicroseconds := Time totalSeconds * 1000000.
 
 	"initialize InterpreterSimulator variables used for debugging"
@@ -640,7 +642,7 @@ StackInterpreterSimulator >> internalFindNewMethod [
 			ifFalse: [(self nameOfClass: class)].
 		self cr; print: cName , '>>' , (self stringOf: messageSelector)].
 "
-	(self stringOf: messageSelector) = 'doesNotUnderstand:' ifTrue: [self halt].
+	messageSelector = (objectMemory splObj: SelectorDoesNotUnderstand) ifTrue: [self halt].
 
 	sendCount := sendCount + 1.
 
@@ -783,6 +785,19 @@ StackInterpreterSimulator >> ioMicroMSecs [
 
 { #category : #'I/O primitives' }
 StackInterpreterSimulator >> ioProcessEvents [
+]
+
+{ #category : #'I/O primitive support' }
+StackInterpreterSimulator >> ioRelinquishProcessorForMicroseconds: microseconds [
+	"In the simulator give an indication that we're idling and check for input."
+	Display reverse: (0@0 extent: 16@16).
+	Sensor peekEvent ifNotNil:
+		[self forceInterruptCheck].
+	Processor activeProcess == Project uiProcess ifTrue:
+		[World doOneCycle].
+	microseconds >= 1000
+		ifTrue: [(Delay forMilliseconds: microseconds + 999 // 1000) wait]
+		ifFalse: [Processor yield]
 ]
 
 { #category : #'I/O primitives' }
@@ -1469,13 +1484,6 @@ StackInterpreterSimulator >> primitiveMousePoint [
 		ifTrue: [self push: (self makePointwithxValue: 99 yValue: 66)]
 		ifFalse: [relPt := Sensor cursorPoint - self displayLocation.
 				self push: (self makePointwithxValue: relPt x yValue: relPt y)]
-]
-
-{ #category : #'I/O primitives support' }
-StackInterpreterSimulator >> primitiveRelinquishProcessor [
-	"No-op in simulator"
-
-	^ self pop: 1
 ]
 
 { #category : #'I/O primitives' }

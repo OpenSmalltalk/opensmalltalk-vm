@@ -222,7 +222,9 @@ CogBytecodeDescriptor >> printCInitializerOn: aStream in: aCCodeGenerator [
 		value := self instVarNamed: ivn.
 		(#(#'unsigned char' #'signed char' #('unsigned' ' : 1')) includes: type)
 			ifTrue: [value isInteger
-						ifTrue: [aStream print: value]
+						ifTrue: [ivn = 'opcode'
+									ifTrue: [aStream nextPutAll: (CogRTLOpcodes nameForOpcode: value)]
+									ifFalse: [aStream print: value]]
 						ifFalse: [aStream nextPut: ((value notNil and: [value]) ifTrue: [$1] ifFalse: [$0])]]
 			ifFalse: [(false and: [#('spanFunction' 'isBackwardBranchFunction') includes: ivn]) ifTrue:
 						[aStream nextPut: $(; nextPutAll: type first; nextPutAll: type last; nextPut: $)].

@@ -164,7 +164,9 @@ InterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots pag
 	 and the address of the first slot (the lowest address, or its end) is
 		- pageByteSize * (numPages + 1)"
 	self cCode: '' inSmalltalk: [indexOffset := (numPages + 1) * slotsPerPage].
-
+	"make sure there's enough headroom"
+	self assert: interpreter stackPageByteSize - interpreter stackLimitBytes - interpreter stackLimitOffset
+				>= interpreter stackPageHeadroom.
 	0 to: numPages - 1 do:
 		[:index|
 		 page := self stackPageAt: index.
@@ -172,9 +174,7 @@ InterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots pag
 			lastAddress: (self cCode: '(char *)theStackPages + (index * GIV(bytesPerPage))'
 							inSmalltalk: [(index * slotsPerPage - indexOffset) * BytesPerWord]);
 			baseAddress: (page lastAddress + bytesPerPage);
-			stackLimit: page lastAddress
-                            + stackLimitOffsetBytes
-                            + stackPageHeadroomBytes;
+			stackLimit: page baseAddress - interpreter stackLimitBytes;
 			realStackLimit: page stackLimit;
 			baseFP: 0;
 			nextPage: (self stackPageAt: (index = (numPages - 1) ifTrue: [0] ifFalse: [index + 1]));

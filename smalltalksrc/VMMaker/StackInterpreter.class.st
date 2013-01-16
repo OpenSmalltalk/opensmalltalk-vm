@@ -5649,8 +5649,11 @@ StackInterpreter >> headerOf: methodPointer [
 
 { #category : #'stack pages' }
 StackInterpreter >> highBit: anUnsignedValue [ 
-	"This is a C implementation needed by stackPageByteSize when translated."
+	"This is a C implementation needed by ioSetMaxExtSemTableSize
+	 and e.g. stackPageByteSize."
 	| shifted bitNo |
+	<api>
+	<highBit> "so it shows up in senders..."
 	<var: #anUnsignedValue type: #usqInt>
 	<var: #shifted type: #usqInt>
 	shifted := anUnsignedValue.
@@ -6314,10 +6317,10 @@ StackInterpreter >> interpreterAllocationReserveBytes [
 	 to senders, etc.  But the snapshot primitive voids all stack pages.
 	 So a safe margin is the size of a large context times the maximum
 	 number of frames per page times the number of pages."
-	| availableBytesPerPage maxFramesPerPage |
-	availableBytesPerPage := self stackPageByteSize - self stackLimitOffset - self stackPageHeadroom.
-	maxFramesPerPage := availableBytesPerPage / BytesPerWord // FrameSlots.
-	^2 raisedTo: (maxFramesPerPage * LargeContextSize * numStackPages) highBit
+	| maxUsedBytesPerPage maxFramesPerPage |
+	maxUsedBytesPerPage := self stackPageFrameBytes + self stackLimitOffset.
+	maxFramesPerPage := maxUsedBytesPerPage / BytesPerWord // MFrameSlots.
+	^maxFramesPerPage * LargeContextSize * numStackPages
 ]
 
 { #category : #'plugin support' }
@@ -10858,6 +10861,13 @@ StackInterpreter >> stackIntegerValue: offset [
 ]
 
 { #category : #'stack pages' }
+StackInterpreter >> stackLimitBytes [
+	"Answer the actual stackLimit offset in a page.  Since stackPageByteSize may have chosen to shrink a page
+	 this may be less than stackPageFrameBytes, but it should be no more than stackPageFrameBytes."
+	^self stackPageFrameBytes min: self stackPageByteSize - self stackLimitOffset - self stackPageHeadroom.
+]
+
+{ #category : #'stack pages' }
 StackInterpreter >> stackLimitOffset [
 	"Answer the amount of slots needed to fit a new frame at the point the stack
 	 limit is checked.  A frame looks like this at the point the stack limit is checked:
@@ -10895,10 +10905,30 @@ StackInterpreter >> stackObjectValue: offset [
 
 { #category : #'stack pages' }
 StackInterpreter >> stackPageByteSize [
-	"Room for 512 bytes of frames gives around 40 frames a page which is a
+	"Answer a page size that is a power-of-two and contains a useful number of frames.
+	 Room for 512 bytes of frames gives around 40 frames a page which is a
 	 good compromise between overflow rate and latency in divorcing a page."
 	<inline: false>
-	^1 << (512 + self stackLimitOffset + self stackPageHeadroom - 1) highBit
+	| pageBytes largeSize smallSize |
+	pageBytes := self stackPageFrameBytes + self stackLimitOffset + self stackPageHeadroom.
+	(pageBytes bitAnd: pageBytes - 1) = 0 ifTrue: "= 0 => a power of two"
+		[^pageBytes].
+	"round up or round down; that is the question.  If rounding down reduces
+	 the size by no more than 1/8th round down, otherwise roundup."
+	largeSize := 1 << pageBytes highBit.
+	smallSize := 1 << (pageBytes highBit - 1).
+	self assert: (largeSize > pageBytes and: [pageBytes > smallSize]).
+	^(pageBytes - smallSize) <= (smallSize / 8)
+		ifTrue: [smallSize]
+		ifFalse: [largeSize]
+]
+
+{ #category : #'stack pages' }
+StackInterpreter >> stackPageFrameBytes [
+	"Answer a byte size that accomodates a useful number of frames.
+	 512 bytes is room for around 40 frames a page which is a good
+	 compromise between overflow rate and latency in divorcing a page."
+	^512
 ]
 
 { #category : #'stack pages' }
