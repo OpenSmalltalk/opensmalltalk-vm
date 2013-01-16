@@ -117,7 +117,7 @@ InterpreterStackPages >> freeStackPageNoAssert: aPage [ "<InterpreterStackPage>"
 ]
 
 { #category : #initialization }
-InterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots pageSize: slotsPerPage stackLimitOffset: stackLimitOffsetBytes stackPageHeadroom: stackPageHeadroomBytes [
+InterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots pageSize: slotsPerPage [
 	"Initialize the stack pages.  For testing I want stack addresses to be disjoint from
 	 normal memory addresses so stack addresses are negative.  The first address is
 	 -pageSize bytes.  So for example if there are 1024 bytes per page and 3 pages

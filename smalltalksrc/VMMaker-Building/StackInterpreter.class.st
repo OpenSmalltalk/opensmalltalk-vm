@@ -5844,8 +5844,6 @@ StackInterpreter >> initStackPages [
 		initializeStack: theStackMemory
 		numSlots: stackPagesBytes / BytesPerWord
 		pageSize: stackPageBytes / BytesPerWord
-		stackLimitOffset: self stackLimitOffset
-		stackPageHeadroom: self stackPageHeadroom
 ]
 
 { #category : #initialization }
@@ -5869,9 +5867,7 @@ StackInterpreter >> initStackPagesAndInterpret [
 	stackPages
 		initializeStack: theStackMemory
 		numSlots: stackPagesBytes / BytesPerWord
-		pageSize: stackPageBytes / BytesPerWord
-		stackLimitOffset: self stackLimitOffset
-		stackPageHeadroom: self stackPageHeadroom.
+		pageSize: stackPageBytes / BytesPerWord.
 
 	"Once the stack pages are initialized we can continue to bootstrap the system."
 	self loadInitialContext.
