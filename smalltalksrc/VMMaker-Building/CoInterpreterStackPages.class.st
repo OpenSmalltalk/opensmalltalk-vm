@@ -154,15 +154,16 @@ CoInterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots p
 						do: [:pageSurrogate|
 							pageMap at: pageSurrogate address put: pageSurrogate];
 						yourself].
+	"make sure there's enough headroom"
+	self assert: coInterpreter stackPageByteSize - coInterpreter stackLimitBytes - coInterpreter stackLimitOffset
+				>= coInterpreter stackPageHeadroom.
 	0 to: numPages - 1 do:
 		[:index|
 		 page := self stackPageAt: index.
 		 page
 			lastAddress: theStackPages + (index * bytesPerPage);
 			baseAddress: page lastAddress + bytesPerPage;
-			stackLimit: page baseAddress
-						- stackLimitOffsetBytes
-						- stackPageHeadroomBytes;
+			stackLimit: page baseAddress - coInterpreter stackLimitBytes;
 			realStackLimit: page stackLimit;
 			baseFP: 0;
 			nextPage: (self stackPageAt: (index = (numPages - 1) ifTrue: [0] ifFalse: [index + 1]));

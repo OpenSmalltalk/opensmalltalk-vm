@@ -1142,6 +1142,8 @@ CogVMSimulator >> initialize [
 	pluginList := #().
 	mappedPluginEntries := OrderedCollection new.
 	desiredNumStackPages := desiredEdenBytes := desiredCogCodeSize := 0.
+	"This is initialized on loading the image, but convenient for testing stack page values..."
+	numStackPages := self defaultNumStackPages. 
 	startMicroseconds := Time totalSeconds * 1000000.
 	maxLiteralCountForCompile := MaxLiteralCountForCompile.
 	minBackwardJumpCountForCompile := MinBackwardJumpCountForCompile.
@@ -1258,7 +1260,7 @@ CogVMSimulator >> internalFindNewMethod [
 			ifFalse: [(self nameOfClass: class)].
 		self cr; print: cName , '>>' , (self stringOf: messageSelector)].
 "
-	(self stringOf: messageSelector) = 'doesNotUnderstand:' ifTrue: [self halt].
+	messageSelector = (objectMemory splObj: SelectorDoesNotUnderstand) ifTrue: [self halt].
 
 	self logSend: messageSelector.
 "
