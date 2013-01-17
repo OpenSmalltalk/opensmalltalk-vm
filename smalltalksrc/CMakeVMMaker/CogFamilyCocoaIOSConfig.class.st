@@ -126,7 +126,7 @@ CogFamilyCocoaIOSConfig >> defaultExternalPlugins [
 		MIDIPlugin
 		B3DAcceleratorPlugin
 		LocalePlugin
-		ObjectiveCPlugin
+		"ObjectiveCPlugin"
 		QuicktimePlugin
 		TestOSAPlugin
 		SqueakSSLPlugin
