@@ -87,6 +87,22 @@ END
 	svn log platforms/Cross/vm/sqSCCSVersion.h >>README.$REV
 	vi README.$REV
 fi
+echo compiling ChangeHistory
+THEM="`ls README.* | sort -n -t. -k2 -r`"
+>ChangeHistory
+for r in $MEHT; do
+	m="`echo $r | sed 's/README.//'`"
+	if [ $n -ge $m ]; then
+		test $n -ne $m && echo "-------------------------------" >>ChangeHistory
+		ls -lT $r | awk '{ print $6, $7, $9; }' >>ChangeHistory
+		if grep -s "^------------" $r >/dev/null; then
+			awk '{if (line>0) print};/^--------/ {line=1}' $r >>ChangeHistory
+		else
+			cat $r >>ChangeHistory
+		fi
+		echo >>ChangeHistory
+	fi
+done
 ssh -x eliotmiranda@bugsy.dreamhost.com mkdir mirandabanda.org/files/Cog/VM/VM.r$REV
-echo scp README.$REV $ARCHIVES "$@" eliotmiranda@bugsy.dreamhost.com:mirandabanda.org/files/Cog/VM/VM.r$REV
-scp README.$REV $ARCHIVES "$@" eliotmiranda@bugsy.dreamhost.com:mirandabanda.org/files/Cog/VM/VM.r$REV
+echo scp -p ChangeHistory README.$REV $ARCHIVES "$@" eliotmiranda@bugsy.dreamhost.com:mirandabanda.org/files/Cog/VM/VM.r$REV
+scp -p ChangeHistory README.$REV $ARCHIVES "$@" eliotmiranda@bugsy.dreamhost.com:mirandabanda.org/files/Cog/VM/VM.r$REV

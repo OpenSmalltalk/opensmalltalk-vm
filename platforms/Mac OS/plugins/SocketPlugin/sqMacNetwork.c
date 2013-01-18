@@ -2423,7 +2423,7 @@ static SInt32	lookupOptionName(EPInfo *epi, Boolean trueIfGet, char *aString, UI
 
 	if (strcmp("SO_DEBUG",aString)==0) 			    	{return SetFourByteOption(epi,trueIfGet,XTI_GENERIC,XTI_DEBUG,value,result);};
 	if (strcmp("SO_REUSEADDR",aString)==0) 			    {return SetFourByteOption(epi,trueIfGet,INET_IP,kIP_REUSEADDR,value,result);;};
-	if (strcmp("SO_REUSEPORT",aString)==0) 			    {return SetFourByteOption(epi,trueIfGet,INET_IP,kIP_REUSEADDR,value,result);};
+	if (strcmp("SO_REUSEPORT",aString)==0) 			    {return SetFourByteOption(epi,trueIfGet,INET_IP,kIP_REUSEPORT,value,result);};
 	if (strcmp("SO_DONTROUTE",aString)==0) 			    {return SetFourByteOption(epi,trueIfGet,INET_IP,kIP_DONTROUTE,value,result);};
 	if (strcmp("SO_BROADCAST",aString)==0) 			    {return SetFourByteOption(epi,trueIfGet,INET_IP,kIP_BROADCAST,value,result);};
 	if (strcmp("SO_SNDBUF",aString)==0) 			    {return SetFourByteOption(epi,trueIfGet,XTI_GENERIC,XTI_SNDBUF,value,result);};

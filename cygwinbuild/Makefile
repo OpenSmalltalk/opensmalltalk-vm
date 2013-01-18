@@ -6,6 +6,7 @@
 #############################################################################
 # Base definitions:
 # default configuration from product, assert & debug
+#
 CONFIGURATION=product
 # default VM threading from multi, single
 THREADING=single
@@ -161,19 +162,16 @@ INCLUDES:= -I. -I$(VMDIR) -I$(WIN32DIR) -I$(CROSSDIR) -I$(DXDIR) $(XINC)
 #
 # Note: I had to use 'gcc' instead of 'ld' to prevent unresolved symbols
 #       The switch '-mwindows' gives us a GUI app instead of a console app.
+#		Newer cygwins want --export-all-symbols in place of --export-dynamic.
 #
 LD:=	 gcc
 LDFLAGS:= -mno-cygwin -mwindows -mthreads -Wl,--export-dynamic -L/usr/lib/mingw
 CONSOLELDFLAGS:= -mno-cygwin -mconsole -mthreads -Wl,--export-dynamic -L/usr/lib/mingw
+#LDFLAGS:= -mno-cygwin -mwindows -mthreads -Wl,--export-all-symbols -L/usr/lib/mingw
+#CONSOLELDFLAGS:= -mno-cygwin -mconsole -mthreads -Wl,--export-all-symbols -L/usr/lib/mingw
 STDLIBS:= -lddraw -ldinput -lopengl32 -lwsock32 -lcomdlg32 -lole32 -lwinmm \
 	 -lversion -lwininet -luser32 -lgdi32 -lpsapi -lkernel32 -lcrtdll \
 	-ldsound -lsecur32
-
-#############################################################################
-# Gnuifier settings
-#
-AWK:=		gawk
-GNUIFY:= $(PLATDIR)/win32/misc/gnuify
 
 #############################################################################
 # Tools to use
@@ -313,7 +311,6 @@ $(VMDEF) $(VMEXP) $(VMLIB): $(VMOBJ)
 #############################################################################
 # Building plugins
 #
-
 .PHONY: FORCE
 
 # Internal plugin.  Build as lib then link in lib
@@ -340,15 +337,12 @@ FORCE:
 
 #############################################################################
 # Basic rules
-
+#
 $(OBJDIR)/%.o: %.c $(wildcard $(CROSSDIR)/*.h) $(wildcard $(WIN32DIR)/*.h) $(wildcard $(MAKERDIR)/*.h)
 		$(CC) -o $@ $(CFLAGS) $(INCLUDES) $(DEFS) -c $<
 
 .c.s:
 		$(CC) -S -o $@ -fverbose-asm -Wa,ah $(CFLAGS) $(INCLUDES) $(DEFS) -c $<
-
-gnu-interp.c:	interp.c $(GNUIFY)
-		$(AWK) -f $(GNUIFY) $< > $(VMDIR)/$@
 
 .rc.res:
 		$(RC) $(RCFLAGS) -i $< -o $(OBJDIR)/$@
@@ -363,7 +357,6 @@ resource.o:	$(VMRES)
 #############################################################################
 # Extra specific dependencies
 #
-
 sqNamedPrims.h: plugins.int mkNamedPrims.exe
 	./mkNamedPrims.exe $(INTERNAL_PLUGINS) > sqNamedPrims.h
 

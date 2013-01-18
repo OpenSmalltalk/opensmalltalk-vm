@@ -8,16 +8,23 @@ How to Build the Cog VM on Windows
 1. Install the tools:
 - Install cygwin from www.cygwin.com.  As of writing the VM is built using
 CYGWIN_NT-5.1 mcstalkerxp 1.5.24(0.156/4/2) 2007-01-31 10:57 i686 Cygwin
+Make sure you install the MinGW support, which in th elist of packages is called
+"mingw-binutils: Binutils for MinGW.org Win32 toolchain".
+If, on compiling, you see the error
+	--export-dynamic is not supported for PE targets, did you mean --export-all-symbols?
+then replace --export-dynamic with --export-all-symbols in the makefiles.
+
 2. Check out the following sources from svn (if you haven't already - if you're
    reading this in cygwinbuild its likely you've already got the sources)
      svn co http://www.squeakvm.org/svn/squeak/branches/Cog/platforms
-     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/src
-     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/cygwinbuild
+     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/nscogsrc
+     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/nscogbuild
 2a. If you want the whole kit and caboodle including the VMMaker image try e.g.
-     svn co http://www.squeakvm.org/svn/squeak/branches/Cog cogvm
+     svn co http://www.squeakvm.org/svn/squeak/branches/Cog oscogvm
 
-3. Open a cygwin bash shell, cd into the cygbuild directory and execute
-     make
+3. Open a cygwin bash shell, cd into the nscogbuild/cygwinbuild directory and
+   execute
+     mvm
 
    Caution: if you previously used the mingw gnutools approach, you probably
    have a path to that 2.x gcc in your Windows PATH.  Make sure that 'which gcc'
@@ -36,9 +43,10 @@ N.B. The plugin set is defined by plugins.ext and plugins.int in the build dir.
 3a. The cygwin makefile supports building three VM configurations, product,
     assert and debug, building product by default.  To build a configuration
 	simply type make configuration, e.g.
+		make
 		make assert
 	The configurations are
-	product: stripped  & unstripped production VMs optimized at -O2 in
+	product (default): stripped  & unstripped production VMs optimized at -O2 in
 		build/vm/Croquet.exe
 		build/vm/CroquetUnstripped.exe
 	assert: an unstripped VM that includes assertion checks optimized at -O1 in
@@ -63,8 +71,7 @@ N.B. The plugin set is defined by plugins.ext and plugins.int in the build dir.
 
 3a. If you want to get the Cog VM simulator working you'll need to build the
 BochsIA32Plugin/BochsIA32Plugin.xcodeproj project and to build that you'll
-need to first build bochs.  WARNING: No one has tried to build the plugin on
-Win32.  You are on your own but your efforts will be warmly welcomed.
+need to first build bochs.
 First check-out the processor simulator source tree containing Bochs:
      svn co http://www.squeakvm.org/svn/squeak/branches/Cog/processors
 Then build the libraries winbochs/{cpu/libcpu.a,disasm/libdisasm.a,fpu/libfpu.a}
