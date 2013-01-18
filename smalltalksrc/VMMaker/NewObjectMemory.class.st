@@ -120,6 +120,33 @@ NewObjectMemory >> addressCouldBeObjWhileForwarding: address [
 	  and: [address asUnsignedInteger < freeStart]]
 ]
 
+{ #category : #initialization }
+NewObjectMemory >> adjustAllOopsBy: bytesToShift [ 
+	"Adjust all oop references by the given number of bytes. This 
+	is done just after reading in an image when the new base 
+	address of the object heap is different from the base address 
+	in the image."
+	"di 11/18/2000 - return number of objects found"
+
+	| oop totalObjects |
+	<inline: false>
+	bytesToShift = 0 ifTrue: [^300000].
+	"this is probably an improvement over the previous answer of 
+	nil, but maybe we should do the obejct counting loop and 
+	simply guard the adjustFieldsAndClass... with a bytesToShift 
+	= 0 ifFalse: ?"
+	totalObjects := 0.
+	oop := self firstObject.
+	[self oop: oop isLessThan: freeStart]
+		whileTrue:
+			[(self isFreeObject: oop)
+				ifFalse:
+					[totalObjects := totalObjects + 1.
+					 self adjustFieldsAndClassOf: oop by: bytesToShift].
+			 oop := self objectAfter: oop].
+	^totalObjects
+]
+
 { #category : #allocation }
 NewObjectMemory >> allocate: byteSize headerSize: hdrSize h1: baseHeader h2: classOopArg h3: extendedSize doFill: doFill format: format [
 	"Allocate a new object of the given size and number of header words. (Note: byteSize already includes space for the base header word.) Initialize the header fields of the new object and fill the remainder of the object with a value appropriate for the format.
@@ -295,7 +322,7 @@ NewObjectMemory >> become: array1 with: array2 twoWay: twoWayFlag copyHash: copy
 		ifTrue: [start := youngStart"sweep only the young objects plus the roots"]
 		ifFalse: [start := self startOfMemory"sweep all objects"].
 	coInterpreter preBecomeAction.
-	self mapPointersInObjectsFrom: start to: endOfMemory.
+	self mapPointersInObjectsFrom: start to: freeStart.
 	twoWayFlag
 		ifTrue: [self restoreHeadersAfterBecoming: array1 with: array2]
 		ifFalse: [self restoreHeadersAfterForwardBecome: copyHashFlag].
@@ -325,6 +352,102 @@ NewObjectMemory >> checkForLeaks [
 	^checkForLeaks
 ]
 
+{ #category : #'memory access' }
+NewObjectMemory >> checkHeapIntegrity [
+	"Perform an integrity/leak check using the heapMap.  Assume
+	 clearLeakMapAndMapAccessibleObjects has set a bit at each
+	 object's header.  Scan all objects in the heap checking that every
+	 pointer points to a header.  Scan the rootTable, remapBuffer and
+	 extraRootTable checking that every entry is a pointer to a header.
+	 Check that the number of roots is correct and that all rootTable
+	 entries have their rootBit set. Answer if all checks pass."
+	| ok obj sz hdr fmt fi fieldOop numRootsInHeap |
+	<inline: false>
+	ok := true.
+	numRootsInHeap := 0.
+	obj := self firstObject.
+	[self oop: obj isLessThan: self startOfFreeSpace] whileTrue:
+		[(self isFreeObject: obj)
+			ifTrue:
+				[sz := self sizeOfFree: obj]
+			ifFalse:
+				[hdr := self baseHeader: obj.
+				 (self isYoungRootHeader: hdr) ifTrue:
+					[numRootsInHeap := numRootsInHeap + 1].
+				 (self compactClassIndexOfHeader: hdr) = 0 ifTrue:
+					[fieldOop := (self classHeader: obj) bitAnd: AllButTypeMask.
+					 ((self isIntegerObject: fieldOop)
+					   or: [(self heapMapAtWord: (self pointerForOop: fieldOop)) = 0]) ifTrue:
+						[self print: 'object leak in '; printHex: obj; print: ' class = '; printHex: fieldOop; cr.
+						 ok := false]].
+				 fmt := self formatOfHeader: hdr.
+				 (fmt <= 4 "pointers" or: [fmt >= 12 "compiled method"]) ifTrue:
+					[fmt >= 12
+						ifTrue: [fi := (self literalCountOf: obj) + 1 "+ 1 = methodHeader slot"]
+						ifFalse: [(fmt = 3 and: [self isContextHeader: hdr])
+									ifTrue: [fi := CtxtTempFrameStart + (self fetchStackPointerOf: obj)]
+									ifFalse: [fi := self lengthOf: obj]].
+					[(fi := fi - 1) >= 0] whileTrue:
+						[fieldOop := self fetchPointer: fi ofObject: obj.
+						 (self isNonIntegerObject: fieldOop) ifTrue:
+							[(fieldOop bitAnd: BytesPerWord - 1) ~= 0
+								ifTrue:
+									[self print: 'misaligned oop in '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; cr.
+									 ok := false]
+								ifFalse:
+									[(self heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
+										[self print: 'object leak in '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; cr.
+										 ok := false]]]]].
+				 sz := self sizeBitsOf: obj].
+		 obj := self oopFromChunk: obj + sz].
+	numRootsInHeap ~= rootTableCount ifTrue:
+		[self print: 'root count mismatch. #heap roots '; printNum: numRootsInHeap; print: '; #roots '; printNum: rootTableCount; cr.
+		"But the system copes with overflow..."
+		ok := rootTableOverflowed and: [needGCFlag]].
+	1 to: rootTableCount do:
+		[:ri|
+		obj := rootTable at: ri.
+		(obj bitAnd: BytesPerWord - 1) ~= 0
+			ifTrue:
+				[self print: 'misaligned oop in rootTable @ '; printNum: ri; print: ' = '; printHex: obj; cr.
+				 ok := false]
+			ifFalse:
+				[(self heapMapAtWord: (self pointerForOop: obj)) = 0
+					ifTrue:
+						[self print: 'object leak in rootTable @ '; printNum: ri; print: ' = '; printHex: obj; cr.
+						 ok := false]
+					ifFalse:
+						[hdr := self baseHeader: obj.
+						 (self isYoungRootHeader: hdr) ifFalse:
+							[self print: 'non-root in rootTable @ '; printNum: ri; print: ' = '; printHex: obj; cr.
+							 ok := false]]]].
+	1 to: remapBufferCount do:
+		[:ri|
+		obj := remapBuffer at: ri.
+		(obj bitAnd: BytesPerWord - 1) ~= 0
+			ifTrue:
+				[self print: 'misaligned remapRoot @ '; printNum: ri; print: ' = '; printHex: obj; cr.
+				 ok := false]
+			ifFalse:
+				[(self heapMapAtWord: (self pointerForOop: obj)) = 0
+					ifTrue:
+						[self print: 'object leak in remapRoots @ '; printNum: ri; print: ' = '; printHex: obj; cr.
+						 ok := false]]].
+	1 to: extraRootCount do:
+		[:ri|
+		obj := (extraRoots at: ri) at: 0.
+		(obj bitAnd: BytesPerWord - 1) ~= 0
+			ifTrue:
+				[self print: 'misaligned extraRoot @ '; printNum: ri; print: ' => '; printHex: obj; cr.
+				 ok := false]
+			ifFalse:
+				[(self heapMapAtWord: (self pointerForOop: obj)) = 0
+					ifTrue:
+						[self print: 'object leak in extraRoots @ '; printNum: ri; print: ' => '; printHex: obj; cr.
+						 ok := false]]].
+	^ok
+]
+
 { #category : #'debug support' }
 NewObjectMemory >> checkOkayOop: oop [
 	"Verify that the given oop is legitimate. Check address, header, and size but not class.
@@ -336,37 +459,37 @@ NewObjectMemory >> checkOkayOop: oop [
 
 	"address and size checks"
 	(self isIntegerObject: oop) ifTrue: [ ^true ].
-	(oop >= self startOfMemory and: [oop < freeStart])
-		ifFalse: [ self print: 'oop is not a valid address'; cr. ^false ].
+	((self oop: oop isGreaterThanOrEqualTo: self startOfMemory) and: [self oop: oop isLessThan: freeStart])
+		ifFalse: [ self print: 'oop '; printHex: oop; print: ' is not a valid address'; cr. ^false ].
 	((oop \\ BytesPerWord) = 0)
-		ifFalse: [ self print: 'oop is not a word-aligned address'; cr. ^false ].
+		ifFalse: [ self print: 'oop '; printHex: oop; print: ' is not a word-aligned address'; cr. ^false ].
 	sz := self sizeBitsOf: oop.
-	(oop + sz) < freeStart
-		ifFalse: [ self print: 'oop size would make it extend beyond the end of memory'; cr. ^false ].
+	(self oop: oop + sz isLessThanOrEqualTo: freeStart)
+		ifFalse: [ self print: 'oop '; printHex: oop; print: ' size would make it extend beyond the end of memory'; cr. ^false ].
 
 	"header type checks"
 	type := self headerType: oop.
 	type = HeaderTypeFree
-		ifTrue:  [ self print: 'oop is a free chunk, not an object'; cr. ^false ].
+		ifTrue:  [ self print: 'oop '; printHex: oop; print: ' is a free chunk, not an object'; cr. ^false ].
 	type = HeaderTypeShort ifTrue: [
 		(self compactClassIndexOf: oop) = 0
-			ifTrue:  [ self print: 'cannot have zero compact class field in a short header'; cr. ^false ].
+			ifTrue:  [ self print: 'oop '; printHex: oop; print: ' cannot have zero compact class field in a short header'; cr. ^false ].
 	].
 	type = HeaderTypeClass ifTrue: [
 		((oop >= BytesPerWord) and: [(self headerType: oop - BytesPerWord) = type])
-			ifFalse: [ self print: 'class header word has wrong type'; cr. ^false ].
+			ifFalse: [ self print: 'oop '; printHex: oop; print: ' class header word has wrong type'; cr. ^false ].
 	].
 	type = HeaderTypeSizeAndClass ifTrue: [
 		((oop >= (BytesPerWord*2)) and:
 		 [(self headerType: oop - (BytesPerWord*2)) = type and:
 		 [(self headerType: oop - BytesPerWord) = type]])
-			ifFalse: [ self print: 'class header word has wrong type'; cr. ^false ].
+			ifFalse: [ self print: 'oop '; printHex: oop; print: ' class header word has wrong type'; cr. ^false ].
 	].
 
 	"format check"
 	fmt := self formatOf: oop.
 	((fmt = 5) | (fmt = 7))
-		ifTrue:  [ self print: 'oop has an unknown format type'; cr. ^false ].
+		ifTrue:  [ self print: 'oop '; printHex: oop; print: ' has an unknown format type'; cr. ^false ].
 
 	"mark and root bit checks"
 	unusedBit := 16r20000000.
@@ -375,13 +498,13 @@ NewObjectMemory >> checkOkayOop: oop [
 			[unusedBit := unusedBit << 16.
 			 unusedBit := unusedBit << 16].
 	((self longAt: oop) bitAnd: unusedBit) = 0
-		ifFalse: [ self print: 'unused header bit 30 is set; should be zero'; cr. ^false ].
+		ifFalse: [ self print: 'oop '; printHex: oop; print: ' unused header bit 30 is set; should be zero'; cr. ^false ].
 "xxx
 	((self longAt: oop) bitAnd: MarkBit) = 0
 		ifFalse: [ self print: 'mark bit should not be set except during GC' ].
 xxx"
 	((self isYoungRoot: oop) and: [oop >= youngStart])
-		ifTrue: [ self print: 'root bit is set in a young object'; cr. ^false ].
+		ifTrue: [ self print: 'oop '; printHex: oop; print: ' root bit is set in a young object'; cr. ^false ].
 	^true
 
 ]
@@ -848,6 +971,7 @@ NewObjectMemory >> fullGC [
 		 ^self].
 	self runLeakCheckerForFullGC: true.
 	self preGCAction: GCModeFull.
+	needGCFlag := false.
 	gcStartUsecs := self ioUTCMicrosecondsNow.
 	statSweepCount := statMarkCount := statMkFwdCount := statCompMoveCount := 0.
 	self clearRootsTable.
@@ -977,7 +1101,7 @@ NewObjectMemory >> incCompMakeFwd [
 				self assert: (self oop: newOop isGreaterThan: self startOfMemory andLessThan: freeStart).
 				self initForwardBlock: fwdBlock mapping: oop to: newOop withBackPtr: false].
 			oop := self objectAfterWhileForwarding: oop].
-	compEnd := endOfMemory.
+	compEnd := freeStart.
 	^bytesToBeFreed
 ]
 
@@ -1064,12 +1188,14 @@ NewObjectMemory >> incrementalGC [
 	| survivorCount weDidGrow |
 	<inline: false>
 
-	rootTableCount >= RootTableSize ifTrue:
-		["root table overflow; cannot do an incremental GC (this should be very rare)"
+	rootTableOverflowed ifTrue:
+		["root table overflow; cannot do an incremental GC because some roots are missing.
+		 (this should be very rare)"
 		 statRootTableOverflows := statRootTableOverflows + 1.
 		 ^self fullGC].
 	self runLeakCheckerForFullGC: false.
 	self preGCAction: GCModeIncr.
+	needGCFlag := false.
 	gcStartUsecs := self ioUTCMicrosecondsNow.
 	statSweepCount := statMarkCount := statMkFwdCount := statCompMoveCount := 0.
 	self initWeakTableForIncrementalGC: true.
@@ -1152,7 +1278,8 @@ NewObjectMemory >> initialize [
 	<doNotGenerate>
 	"Initialize NewObjectMemory when simulating the VM inside Smalltalk."
 	super initialize.
-	checkForLeaks := fullGCLock := 0
+	checkForLeaks := fullGCLock := 0.
+	needGCFlag := false
 ]
 
 { #category : #initialization }
@@ -1187,16 +1314,13 @@ NewObjectMemory >> initializeMemoryFirstFree: firstFree [
 	reserveStart := endOfMemory - self interpreterAllocationReserveBytes.
 	freeStart := firstFree. "bytes available for oops"
 	scavengeThreshold := freeStart + edenBytes min: reserveStart.
-	AllocationCheckFiller ~= 0 ifTrue:
-		[freeStart to: scavengeThreshold by: BytesPerWord do:
-			[:i| self longAt: i put: (AllocationCheckFiller == 16rADD4E55
-									ifTrue: [i]
-									ifFalse: [AllocationCheckFiller])]].
-	needGCFlag := false.
+	self maybeFillWithAllocationCheckFillerFrom: freeStart to: scavengeThreshold.
 
-	self assert: freeStart < reserveStart.
-	self assert: reserveStart < endOfMemory.
-	self assert: endOfMemory < memoryLimit
+	self assert: (self oop: freeStart isLessThan: reserveStart).
+	"We would like to assert this but can't because in GC situations it may be false.  It is
+	established by sufficientSpaceToAllocate: and sufficientSpaceAfterGC:"
+	false ifTrue: [self assert: (self oop: reserveStart isLessThan: endOfMemory)].
+	self assert: (self oop: endOfMemory isLessThan: memoryLimit)
 ]
 
 { #category : #initialization }
@@ -1213,7 +1337,7 @@ NewObjectMemory >> initializeObjectMemory: bytesToShift [
 	<inline: false>
 
 	"set the start of the young object space"
-	youngStart := endOfMemory.
+	youngStart := freeStart := endOfMemory.
 
 	"image may be at a different address; adjust oops for new location"
 	totalObjectCount := self adjustAllOopsBy: bytesToShift.
@@ -1228,6 +1352,7 @@ NewObjectMemory >> initializeObjectMemory: bytesToShift [
 	trueObj	:= self splObj: TrueObject.
 
 	rootTableCount := 0.
+	rootTableOverflowed := false.
 	lowSpaceThreshold := 0.
 	signalLowSpace := false.
 	compStart := 0.
@@ -1649,14 +1774,21 @@ NewObjectMemory >> markPhase: fullGCFlag [
 	statSpecialMarkCount := statSpecialMarkCount + (statMarkCount - statMarkCountPriorToStackPageFreeing)
 ]
 
-{ #category : #accessing }
-NewObjectMemory >> needGCFlag [
-	^needGCFlag
+{ #category : #allocation }
+NewObjectMemory >> maybeFillWithAllocationCheckFillerFrom: start to: end [
+	"Fill free memory with a bit pattern for chekcing if the last object has been overwritten."
+	<inline: true>
+	AllocationCheckFiller ~= 0 ifTrue:
+		[start to: end by: BytesPerWord do:
+			[:i|
+			self longAt: i put: (AllocationCheckFiller = 16rADD4E55
+									ifTrue: [i]
+									ifFalse: [AllocationCheckFiller])]]
 ]
 
 { #category : #accessing }
-NewObjectMemory >> needGCFlag: aValue [
-	^needGCFlag := aValue
+NewObjectMemory >> needGCFlag [
+	^needGCFlag
 ]
 
 { #category : #allocation }
@@ -1677,23 +1809,46 @@ NewObjectMemory >> nilObject: anOop [
 
 { #category : #'garbage collection' }
 NewObjectMemory >> noteAsRoot: oop headerLoc: headerLoc [ 
-	"Record that the given oop in the old object area points to an 
-	 object in the young area. HeaderLoc is usually = oop, but may
-	 be an addr in a forwarding block."
+	"Record that the given oop in the old object area points to an object in the young area.
+	 HeaderLoc is usually = oop, but may be an addr in a forwarding block."
 	| header |
 	<inline: true>
 	<asmLabel: false> 
 	header := self longAt: headerLoc.
 	(self isYoungRootHeader: header) ifFalse:
 		"record oop as root only if not already recorded"
-		[rootTableCount < RootTableSize ifTrue:
-			"record root if there is enough room in the roots table"
-			[rootTableCount := rootTableCount + 1.
-			 rootTable at: rootTableCount put: oop.
-			 self longAt: headerLoc put: (header bitOr: RootBit).
-			 rootTableCount > RootTableRedZone ifTrue:
-				"if we're now in the red zone force an IGC ASAP"
-				[self scheduleIncrementalGC]]]
+		[rootTableCount < RootTableSize
+			ifTrue:
+				"record root if there is enough room in the roots table.
+				 IMPORTANT: since clearRootsTable is the only thing that clears root bits
+				 do *not* set the root bit unless an object is in the root table.  checking
+				 routines will complain about the root bit being unset instead of the table
+				 being full, but that's life"
+				[rootTableCount := rootTableCount + 1.
+				 rootTable at: rootTableCount put: oop.
+				 self longAt: headerLoc put: (header bitOr: RootBit).
+				 rootTableCount >= RootTableRedZone ifTrue:
+					"if we're now in the red zone force an IGC ASAP"
+					[self scheduleIncrementalGC]]
+			ifFalse: "note overflow; will need to do a fullGC instead of an incremental."
+				[rootTableOverflowed := true]]
+]
+
+{ #category : #'object enumeration' }
+NewObjectMemory >> objectAfter: oop [ 
+	"Return the object or free chunk immediately following the 
+	given object or free chunk in memory. Return endOfMemory 
+	when enumeration is complete."
+	| sz |
+	<api>
+	<inline: true>
+	<asmLabel: false>
+	(self asserta: (self oop: oop isLessThan: freeStart)) ifFalse:
+		[self error: 'no objects after the end of memory'].
+	(self isFreeObject: oop)
+		ifTrue: [sz := self sizeOfFree: oop]
+		ifFalse: [sz := self sizeBitsOf: oop].
+	^self oopFromChunk: oop + sz
 ]
 
 { #category : #'cog jit support' }
@@ -2037,6 +2192,42 @@ NewObjectMemory >> setCheckForLeaks: anInteger [
 	 4 = check for leaks on become
 	 7 = check for leaks on all three."
 	checkForLeaks := anInteger
+]
+
+{ #category : #initialization }
+NewObjectMemory >> setEndOfMemory: newEndOfMemory [
+	super setEndOfMemory: newEndOfMemory.
+	freeStart isNil ifTrue:
+		[freeStart := newEndOfMemory]
+]
+
+{ #category : #allocation }
+NewObjectMemory >> shorten: obj toIndexableSize: nSlots [
+	"Currently this works for pointer objects only, and is almost certainly wrong for 64 bits."
+	| deltaBytes desiredLength fixedFields fmt hdr totalLength |
+	(self isPointers: obj) ifFalse:
+		[^obj].
+	hdr := self baseHeader: obj.
+	fmt := self formatOfHeader: hdr.
+	totalLength := self lengthOf: obj baseHeader: hdr format: fmt.
+	fixedFields := self fixedFieldsOf: obj format: fmt length: totalLength.
+	desiredLength := fixedFields + nSlots.
+	deltaBytes := (totalLength - desiredLength) * BytesPerWord.
+	obj + BaseHeaderSize + (totalLength * BytesPerWord) = freeStart
+		ifTrue: "Shortening the last object.  Need to reduce freeStart."
+			[self maybeFillWithAllocationCheckFillerFrom: obj + BaseHeaderSize + (desiredLength * BytesPerWord) to: freeStart.
+			freeStart := obj + BaseHeaderSize + (desiredLength * BytesPerWord)]
+		ifFalse: "Shortening some interior object.  Need to create a free block."
+			[self setSizeOfFree: obj + BaseHeaderSize + (desiredLength * BytesPerWord)
+				to: deltaBytes].
+	(self headerType: obj) caseOf:	{
+		[HeaderTypeSizeAndClass] ->
+			[self longAt: obj put: hdr - deltaBytes].
+		[HeaderTypeClass] ->
+			[self longAt: obj put: ((hdr bitClear: SizeMask) bitOr: (hdr bitAnd: SizeMask) - deltaBytes)].
+		[HeaderTypeShort] ->
+			[self longAt: obj put: ((hdr bitClear: SizeMask) bitOr: (hdr bitAnd: SizeMask) - deltaBytes)] }.
+	^obj
 ]
 
 { #category : #allocation }
