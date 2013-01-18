@@ -2812,16 +2812,7 @@ InterpreterPrimitives >> primitiveRootTable [
 	The primitive can cause GC itself and if so the return value may
 	be inaccurate - in this case one should guard the read operation
 	by looking at the gc counter statistics."
-	| oop sz |
-	<export: true>
-	sz := objectMemory rootTableCount.
-	oop := objectMemory instantiateClass: objectMemory classArray indexableSize: sz. "can cause GC"
-	sz > objectMemory rootTableCount ifTrue:[sz := objectMemory rootTableCount].
-	1 to: sz do:[:i| 
-		objectMemory storePointer: i-1 ofObject: oop withValue: (objectMemory rootTable at: i).
-	].
-	self pop: argumentCount + 1.
-	self push: oop.
+	self pop: argumentCount + 1 thenPush: objectMemory rootTableObject
 ]
 
 { #category : #'memory space primitives' }
