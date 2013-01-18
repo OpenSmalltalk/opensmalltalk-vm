@@ -2774,6 +2774,19 @@ StackInterpreter >> characterForAscii: ascii [  "Arg must lie in range 0-255!"
 	^ objectMemory fetchPointer: ascii ofObject: (objectMemory splObj: CharacterTable)
 ]
 
+{ #category : #'debug support' }
+StackInterpreter >> checkAllAccessibleObjectsOkay [
+	"Ensure that all accessible objects in the heap are okay."
+	<api>
+	| ok oop |
+	ok := true.
+	oop := objectMemory firstAccessibleObject.
+	[oop = nil] whileFalse:
+		[ok := ok & (self checkOkayFields: oop).
+		oop := objectMemory accessibleObjectAfter: oop].
+	^ok
+]
+
 { #category : #initialization }
 StackInterpreter >> checkAssumedCompactClasses [
 	"Check that the classes the VM assumes are compact have the right indices."
@@ -2842,8 +2855,7 @@ StackInterpreter >> checkForEventsMayContextSwitch: mayContextSwitch [
 	self checkCogCompiledCodeCompactionCalledFor.
 
 	objectMemory needGCFlag ifTrue:
-		[objectMemory needGCFlag: false.
-		"sufficientSpaceAfterGC: runs the incremental GC and
+		["sufficientSpaceAfterGC: runs the incremental GC and
 		 then, if not enough space is available, the fullGC."
 		 (objectMemory sufficientSpaceAfterGC: 0) ifFalse:
 			[self setSignalLowSpaceFlagAndSaveProcess]].
@@ -3074,32 +3086,152 @@ StackInterpreter >> checkLogIntegrity [
 ]
 
 { #category : #'debug support' }
-StackInterpreter >> checkOopHasOkayClass: oop [
-	"Attempt to verify that the given oop has a reasonable behavior. The class must be a valid, non-integer oop and must not be nilObj. It must be a pointers object with three or more fields. Finally, the instance specification field of the behavior must match that of the instance. If OK answer true.  If  not, print reason and answer false."
+StackInterpreter >> checkOkayFields: oop [
+	"Check if the argument is an ok object.
+	 If this is a pointers object, check that its fields are all okay oops."
+
+	| hasYoung i fieldOop |
+	(oop = nil or: [oop = 0]) ifTrue: [ ^true ]. "?? eem 1/16/2013"
+	(objectMemory isIntegerObject: oop) ifTrue: [ ^true ].
+	(objectMemory checkOkayOop: oop) ifFalse: [ ^false ].
+	(self checkOopHasOkayClass: oop) ifFalse: [ ^false ].
+	hasYoung := objectMemory isYoung: (objectMemory fetchClassOfNonInt: oop).
+	((objectMemory isPointers: oop) or: [objectMemory isCompiledMethod: oop]) ifTrue:
+		[(objectMemory isCompiledMethod: oop)
+			ifTrue:
+				[i := (self literalCountOf: oop) - 1]
+			ifFalse:
+				[(self isContext: oop)
+					ifTrue: [i := CtxtTempFrameStart + (self fetchStackPointerOf: oop) - 1]
+					ifFalse: [i := (objectMemory lengthOf: oop) - 1]].
+		[i >= 0] whileTrue:
+			[fieldOop := objectMemory fetchPointer: i ofObject: oop.
+			(objectMemory isIntegerObject: fieldOop) ifFalse:
+				[hasYoung := hasYoung or: [objectMemory isYoung: fieldOop].
+				(objectMemory checkOkayOop: fieldOop) ifFalse: [ ^false ].
+				(self checkOopHasOkayClass: fieldOop) ifFalse: [ ^false ]].
+			i := i - 1]].
+	hasYoung ifTrue:
+		[^objectMemory checkOkayYoungReferrer: oop].
+	^true
+]
+
+{ #category : #'debug support' }
+StackInterpreter >> checkOkayInterpreterObjects: writeBack [
+	<api>
+	| ok oopOrZero oop |
+	ok := true.
+	ok := ok & (self checkOkayFields: objectMemory nilObject).
+	ok := ok & (self checkOkayFields: objectMemory falseObject).
+	ok := ok & (self checkOkayFields: objectMemory trueObject).
+	ok := ok & (self checkOkayFields: objectMemory specialObjectsOop).
+	ok := ok & (self checkOkayFields: messageSelector).
+	ok := ok & (self checkOkayFields: newMethod).
+	ok := ok & (self checkOkayFields: lkupClass).
+	0 to: MethodCacheEntries - 1 by: MethodCacheEntrySize do:
+		[ :i |
+		oopOrZero := methodCache at: i + MethodCacheSelector.
+		oopOrZero = 0 ifFalse:
+			[ok := ok & (self checkOkayFields: (methodCache at: i + MethodCacheSelector)).
+			ok := ok & (self checkOkayFields: (methodCache at: i + MethodCacheClass)).
+			ok := ok & (self checkOkayFields: (methodCache at: i + MethodCacheMethod))]].
+	1 to: objectMemory remapBufferCount do:
+		[ :i |
+		oop := objectMemory remapBuffer at: i.
+		(objectMemory isIntegerObject: oop) ifFalse:
+			[ok := ok & (self checkOkayFields: oop)]].
+	ok := ok & (self checkOkayStackZone: writeBack).
+	^ok
+]
+
+{ #category : #'debug support' }
+StackInterpreter >> checkOkayStackPage: thePage [
+	| theSP theFP ok frameRcvrOffset callerFP oop |
+	<var: #thePage type: #'StackPage *'>
+	<var: #theSP type: #'char *'>
+	<var: #theFP type: #'char *'>
+	<var: #frameRcvrOffset type: #'char *'>
+	<var: #callerFP type: #'char *'>
+	<inline: false>
+	theSP := thePage headSP.
+	theFP := thePage  headFP.
+	ok := true.
+	"Skip the instruction pointer on top of stack of inactive pages."
+	thePage = stackPage ifFalse:
+		[theSP := theSP + BytesPerWord].
+	[frameRcvrOffset := self frameReceiverOffset: theFP.
+	 [theSP <= frameRcvrOffset] whileTrue:
+		[oop := stackPages longAt: theSP.
+		 (objectMemory isIntegerObject: oop) ifFalse:
+			[ok := ok & (self checkOkayFields: oop)].
+		 theSP := theSP + BytesPerWord].
+	(self frameHasContext: theFP) ifTrue:
+		[self assert: (self isContext: (self frameContext: theFP)).
+		 ok := ok & (self checkOkayFields: (self frameContext: theFP))].
+	ok := ok & (self checkOkayFields: (self frameMethodObject: theFP)).
+	(callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
+		[theSP := theFP + FoxCallerSavedIP + BytesPerWord.
+		 theFP := callerFP].
+	theSP := self isCog
+				ifTrue: [theFP + FoxCallerSavedIP + BytesPerWord] "caller ip is ceBaseReturnPC"
+				ifFalse: [theFP + FoxCallerSavedIP]. "caller ip is frameCallerContext in a base frame"
+	[theSP <= thePage baseAddress] whileTrue:
+		[oop := stackPages longAt: theSP.
+		 (objectMemory isIntegerObject: oop) ifFalse:
+			[ok := ok & (self checkOkayFields: oop)].
+		 theSP := theSP + BytesPerWord].
+	^ok
+]
+
+{ #category : #'debug support' }
+StackInterpreter >> checkOkayStackZone: writeBack [
+	"Check that all objects in the stack zone are okay"
+	| ok thePage |
+	<var: #thePage type: #'StackPage *'>
+	<inline: false>
+	writeBack ifTrue:
+		[self externalWriteBackHeadFramePointers].
+	ok := true.
+
+	0 to: numStackPages - 1 do:
+		[:i|
+		thePage := stackPages stackPageAt: i.
+		(stackPages isFree: thePage) ifFalse:
+			[ok := ok & (self checkOkayStackPage: thePage)]].
+
+	^ok
+]
+
+{ #category : #'debug support' }
+StackInterpreter >> checkOopHasOkayClass: obj [
+	"Attempt to verify that the given obj has a reasonable behavior. The class must be a
+	 valid, non-integer oop and must not be nilObj. It must be a pointers object with three
+	 or more fields. Finally, the instance specification field of the behavior must match that
+	 of the instance. If OK answer true.  If  not, print reason and answer false."
 
 	<api>
 	<var: #oop type: #usqInt>
-	| oopClass formatMask behaviorFormatBits oopFormatBits |
+	| objClass formatMask behaviorFormatBits objFormatBits |
 	<var: #oopClass type: #usqInt>
 
-	(objectMemory checkOkayOop: oop) ifFalse:
+	(objectMemory checkOkayOop: obj) ifFalse:
 		[^false].
-	oopClass := self cCoerce: (objectMemory fetchClassOf: oop) to: #usqInt.
+	objClass := self cCoerce: (objectMemory fetchClassOfNonInt: obj) to: #usqInt.
 
-	(objectMemory isIntegerObject: oopClass) ifTrue:
-		[self print: 'a SmallInteger is not a valid class or behavior'; cr. ^false].
-	(objectMemory okayOop: oopClass) ifFalse:
-		[self print: 'class oop is not ok'; cr. ^false].
-	((objectMemory isPointers: oopClass) and: [(objectMemory lengthOf: oopClass) >= 3]) ifFalse:
-		[self print: 'a class (behavior) must be a pointers object of size >= 3'; cr. ^false].
-	formatMask := (objectMemory isBytes: oop)
+	(objectMemory isIntegerObject: objClass) ifTrue:
+		[self print: 'obj '; printHex: obj; print: ' a SmallInteger is not a valid class or behavior'; cr. ^false].
+	(objectMemory okayOop: objClass) ifFalse:
+		[self print: 'obj '; printHex: obj; print: ' class obj is not ok'; cr. ^false].
+	((objectMemory isPointers: objClass) and: [(objectMemory lengthOf: objClass) >= 3]) ifFalse:
+		[self print: 'obj '; printHex: obj; print: ' a class (behavior) must be a pointers object of size >= 3'; cr. ^false].
+	formatMask := (objectMemory isBytes: obj)
 						ifTrue: [16rC00]  "ignore extra bytes size bits"
 						ifFalse: [16rF00].
 
-	behaviorFormatBits := (objectMemory formatOfClass: oopClass) bitAnd: formatMask.
-	oopFormatBits := (objectMemory baseHeader: oop) bitAnd: formatMask.
-	behaviorFormatBits = oopFormatBits ifFalse:
-		[self print: 'object and its class (behavior) formats differ'; cr. ^false].
+	behaviorFormatBits := (objectMemory formatOfClass: objClass) bitAnd: formatMask.
+	objFormatBits := (objectMemory baseHeader: obj) bitAnd: formatMask.
+	behaviorFormatBits = objFormatBits ifFalse:
+		[self print: 'obj '; printHex: obj; print: ' and its class (behavior) formats differ'; cr. ^false].
 	^true
 ]
 
@@ -4090,7 +4222,7 @@ StackInterpreter >> ensureImageFormatIsUpToDate: swapBytes [
 	<inline: false>
 	swapBytes
 		ifTrue: [self reverseBytesInImage]
-		ifFalse: [self convertFloatsToPlatformOrderFrom: objectMemory firstObject to: objectMemory endOfMemory]
+		ifFalse: [self convertFloatsToPlatformOrderFrom: objectMemory firstObject to: objectMemory freeStart]
 ]
 
 { #category : #'callback support' }
@@ -6698,15 +6830,16 @@ StackInterpreter >> longJumpIfTrue [
 { #category : #'debug printing' }
 StackInterpreter >> longPrintOop: oop [
 	<api>
-	| fmt lastIndex startIP bytecodesPerLine column |
+	| class fmt lastIndex startIP bytecodesPerLine column |
 	((objectMemory isIntegerObject: oop)
 	 or: [(oop between: objectMemory startOfMemory and: objectMemory freeStart) not
 	 or: [(oop bitAnd: (BytesPerWord - 1)) ~= 0
 	 or: [(objectMemory isFreeObject: oop)]]]) ifTrue:
 		[^self printOop: oop].
+	class := objectMemory fetchClassOfNonInt: oop.
 	self printHex: oop;
-		print: ': a(n) ';
-		printNameOfClass: (objectMemory fetchClassOfNonInt: oop) count: 5.
+		print: ': a(n) '; printNameOfClass: class count: 5;
+		print: ' ('; printHex: class; print: ')'.
 	fmt := objectMemory formatOf: oop.
 	fmt > 4 ifTrue:
 		[self print: ' nbytes '; printNum: (objectMemory byteSizeOf: oop)].
@@ -7297,9 +7430,7 @@ StackInterpreter >> markAndTraceStackPage: thePage [
 	(callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
 		[theSP := theFP + FoxCallerSavedIP + BytesPerWord.
 		 theFP := callerFP].
-	theSP := self isCog
-				ifTrue: [theFP + FoxCallerSavedIP + BytesPerWord] "caller ip is ceBaseReturnPC"
-				ifFalse: [theFP + FoxCallerSavedIP]. "caller ip is frameCallerContext in a base frame"
+	theSP := theFP + FoxCallerSavedIP. "caller ip is frameCallerContext in a base frame"
 	[theSP <= thePage baseAddress] whileTrue:
 		[oop := stackPages longAt: theSP.
 		 (objectMemory isIntegerObject: oop) ifFalse:
@@ -8348,7 +8479,7 @@ StackInterpreter >> print: s [
 	"For testing in Smalltalk, this method should be overridden in a subclass."
 	<api>
 	<var: #s type: #'char *'>
-	self cCode: 'printf("%s", s)'.
+	self cCode: 'fputs(s, stdout)'
 ]
 
 { #category : #'debug printing' }
@@ -8559,7 +8690,7 @@ StackInterpreter >> printCallStackOf: aContext currentFP: currFP [
 						 self shortPrintFrameAndCallers: theFP.
 						 theFP := thePage baseFP.
 						 ctxt := self frameCallerContext: theFP]
-					ifFalse: [self print: 'widowed caller frame '; print: theFP; cr.
+					ifFalse: [self print: 'widowed caller frame '; printHexPtr: theFP; cr.
 							^nil]]]
 ]
 
@@ -8822,7 +8953,7 @@ StackInterpreter >> printHex: n [
 
 { #category : #'debug printing' }
 StackInterpreter >> printHexPtr: p [
-	"Print n in hex, passed to 10 characters in the form '    0x1234'"
+	"Print p in hex, passed to 10 characters in the form '    0x1234'"
 	<inline: true>
 	<var: #p type: #'void *'>
 	self printHex: (self oopForPointer: p)
@@ -9929,11 +10060,11 @@ StackInterpreter >> reverseBytesInImage [
 	"Byte-swap all words in memory after reading in the entire image file with bulk read. Contributed by Tim Rowledge."
 
 	"First, byte-swap every word in the image. This fixes objects headers."
-	objectMemory reverseBytesFrom: objectMemory startOfMemory to: objectMemory endOfMemory.
+	objectMemory reverseBytesFrom: objectMemory startOfMemory to: objectMemory freeStart.
 
 	"Second, return the bytes of bytes-type objects to their orginal order, and perform any
 	 other format conversions."
-	self updateObjectsPostByteSwapFrom: objectMemory firstObject to: objectMemory endOfMemory
+	self updateObjectsPostByteSwapFrom: objectMemory firstObject to: objectMemory freeStart
 ]
 
 { #category : #'I/O primitive support' }
