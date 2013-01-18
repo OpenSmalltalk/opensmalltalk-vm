@@ -40,6 +40,7 @@ Class {
 		'specialObjectsOop',
 		'rootTable',
 		'rootTableCount',
+		'rootTableOverflowed',
 		'extraRoots',
 		'extraRootCount',
 		'weakRoots',
@@ -791,18 +792,21 @@ ObjectMemory >> beRootIfOld: oop [
 ObjectMemory >> beRootWhileForwarding: oop [
 	"Record that the given oop in the old object area points to an object in the young area when oop may be forwarded."
 	"Warning: No young objects should be recorded as roots. Callers are responsible for ensuring this constraint is not violated."
-
-	| header fwdBlock |
+	<inline: false> "for debugging..."
+	| header fwdBlock headerLoc |
 	"If labelled, gcc duplicates the label when inlining updatePointersInRangeFrom:to:"
-	<asmLabel: false> 
+	<asmLabel: false>
 	header := self longAt: oop.
 	(header bitAnd: MarkBit) ~= 0
-		ifTrue: ["This oop is forwarded"
-				fwdBlock := (header bitAnd: AllButMarkBitAndTypeMask) << 1.
-				self assert: (self fwdBlockValid: fwdBlock).
-				self noteAsRoot: oop headerLoc: fwdBlock + BytesPerWord]
-		ifFalse: ["Normal -- no forwarding"
-				self noteAsRoot: oop headerLoc: oop]
+		ifTrue: "This oop is forwarded"
+			[fwdBlock := (header bitAnd: AllButMarkBitAndTypeMask) << 1.
+			self assert: (self fwdBlockValid: fwdBlock).
+			headerLoc := fwdBlock + BytesPerWord]
+		ifFalse: "Normal -- no forwarding"
+			[headerLoc := oop].
+	"use headerLoc var to eliminate duplication on inlining noteAsRoot:headerLoc:
+	 older versions of this method had two separate sends of noteAsRoot:headerLoc:"
+	self noteAsRoot: oop headerLoc: headerLoc
 ]
 
 { #category : #become }
@@ -1108,7 +1112,8 @@ ObjectMemory >> checkHeapIntegrity [
 		 obj := self oopFromChunk: obj + sz].
 	numRootsInHeap ~= rootTableCount ifTrue:
 		[self print: 'root count mismatch. #heap roots '; printNum: numRootsInHeap; print: '; #roots '; printNum: rootTableCount; cr.
-		 ok := false].
+		"But the system copes with overflow..."
+		ok := rootTableOverflowed and: [allocationCount > allocationsBetweenGCs]].
 	1 to: rootTableCount do:
 		[:ri|
 		obj := rootTable at: ri.
@@ -1211,6 +1216,27 @@ xxx"
 	((self isYoungRoot: oop) and: [oop >= youngStart])
 		ifTrue: [ self print: 'root bit is set in a young object'; cr. ^false ].
 	^true
+
+]
+
+{ #category : #'debug support' }
+ObjectMemory >> checkOkayYoungReferrer: obj [
+	"Verify that the given obj is a valid youngReferrer. Check RootBit is set and
+	 is in rootTable.  Answer true if OK.  Otherwise print reason and answer false.
+	 Assumes the object contains young references."
+
+	(self oop: obj isGreaterThanOrEqualTo: youngStart) ifTrue:
+		[^true].
+
+	(self isYoungRoot: obj) ifFalse:
+		[ self print: 'root bit is not set in '; printHex: obj; cr. ^false ].
+
+	1 to: rootTableCount do:
+		[:i| obj = (rootTable at: i) ifTrue: [^true]].
+
+	self printHex: obj; print: ' has root bit set but is not in rootTable'; cr.
+
+	^false
 
 ]
 
@@ -1393,19 +1419,16 @@ ObjectMemory >> clearLeakMapAndMapAccessibleObjects [
 
 { #category : #'garbage collection' }
 ObjectMemory >> clearRootsTable [
-	"Clear the root bits of the current roots, then empty the roots 
-	table. "
-	"Caution: This should only be done when the young object 
-	space is empty."
-	"reset the roots table (after this, all objects are old so there 
-	are no roots)"
-	| oop |
-	1 to: rootTableCount do: [:i | 
-			"clear root bits of current root table entries"
-			oop := rootTable at: i.
-			self longAt: oop put: ((self longAt: oop) bitAnd: AllButRootBit).
-			rootTable at: i put: 0].
-	rootTableCount := 0
+	"Clear the root bits of the current roots, then empty the roots table. "
+	"Caution: This should only be done when the young object space is empty."
+	"reset the roots table (after this, all objects are old so there are no roots)"
+	1 to: rootTableCount do:
+		[:i | | oop |
+		oop := rootTable at: i.
+		self longAt: oop put: ((self longAt: oop) bitAnd: AllButRootBit).
+		rootTable at: i put: 0].
+	rootTableCount := 0.
+	rootTableOverflowed := false.
 ]
 
 { #category : #allocation }
@@ -2218,10 +2241,11 @@ ObjectMemory >> incrementalGC [
 	young objects from the old object area."
 	| survivorCount weDidGrow |
 	<inline: false>
-	rootTableCount >= RootTableSize
-		ifTrue: ["root table overflow; cannot do an incremental GC (this should be very rare)"
-			statRootTableOverflows := statRootTableOverflows + 1.
-			^ self fullGC].
+	rootTableOverflowed ifTrue:
+		["root table overflow; cannot do an incremental GC because some roots are missing.
+		 (this should be very rare)"
+		 statRootTableOverflows := statRootTableOverflows + 1.
+		 ^self fullGC].
 
 	DoAssertionChecks ifTrue:
 		[self reverseDisplayFrom: 8 to: 15.
@@ -2401,6 +2425,7 @@ ObjectMemory >> initializeObjectMemory: bytesToShift [
 	trueObj	:= self splObj: TrueObject.
 
 	rootTableCount := 0.
+	rootTableOverflowed := false.
 	freeContexts := NilContext.
 	freeLargeContexts := NilContext.
 	allocationCount := 0.
@@ -3306,29 +3331,29 @@ ObjectMemory >> nonWeakFieldsOf: oop [
 
 { #category : #'garbage collection' }
 ObjectMemory >> noteAsRoot: oop headerLoc: headerLoc [ 
-	"Record that the given oop in the old object area points to an 
-	object in the young area. 
-	HeaderLoc is usually = oop, but may be an addr in a 
-	forwarding block."
+	"Record that the given oop in the old object area points to an object in the young area.
+	 HeaderLoc is usually = oop, but may be an addr in a forwarding block."
 	| header |
 	<inline: true>
 	<asmLabel: false> 
 	header := self longAt: headerLoc.
 	(self isYoungRootHeader: header) ifFalse:
-		["record oop as root only if not already recorded"
-		rootTableCount < RootTableRedZone
-			ifTrue: ["record root if there is enough room in the roots table "
-				rootTableCount := rootTableCount + 1.
-				rootTable at: rootTableCount put: oop.
-				self longAt: headerLoc put: (header bitOr: RootBit)]
-			ifFalse: ["we're getting in the red zone"
-				rootTableCount < RootTableSize
-					ifTrue: ["but there's still space to record it"
-						rootTableCount := rootTableCount + 1.
-						rootTable at: rootTableCount put: oop.
-						self longAt: headerLoc put: (header bitOr: RootBit).
-						"but force an IGC on the next allocation"
-						allocationCount := allocationsBetweenGCs + 1]]]
+		"record oop as root only if not already recorded"
+		[rootTableCount < RootTableSize
+			ifTrue:
+				"record root if there is enough room in the roots table.
+				 IMPORTANT: since clearRootsTable is the only thing that clears root bits
+				 do *not* set the root bit unless an object is in the root table.  checking
+				 routines will complain about the root bit being unset instead of the table
+				 being full, but that's life"
+				[rootTableCount := rootTableCount + 1.
+				 rootTable at: rootTableCount put: oop.
+				 self longAt: headerLoc put: (header bitOr: RootBit).
+				 rootTableCount >= RootTableRedZone ifTrue:
+					"if we're now in the red zone force an IGC ASAP"
+					[allocationCount := allocationsBetweenGCs + 1]]
+			ifFalse: "note overflow; will need to do a fullGC instead of an incremental."
+				[rootTableOverflowed := true]]
 ]
 
 { #category : #'object enumeration' }
@@ -3806,13 +3831,13 @@ ObjectMemory >> removeGCRoot: varLoc [
 
 { #category : #become }
 ObjectMemory >> removeYoungRoot: obj [
-	"Remove the given young root form the root table (for freeObject: for becomeForward:)."
+	"Remove the given young root from the root table (for freeObject: for becomeForward:)."
 	<inline: false>
 	1 to: rootTableCount do:
 		[:i|
 		obj = (rootTable at: i) ifTrue:"swap obj with last entry"
 			[rootTable at: i put: (rootTable at: rootTableCount).
-			rootTableCount := rootTableCount-1.
+			rootTableCount := rootTableCount - 1.
 			^true]].
 	^false "not found"
 ]
@@ -3951,11 +3976,6 @@ ObjectMemory >> rootTable [
 ]
 
 { #category : #accessing }
-ObjectMemory >> rootTable: aValue [
-	^rootTable := aValue
-]
-
-{ #category : #accessing }
 ObjectMemory >> rootTableCount [
 	^rootTableCount
 ]
@@ -3963,6 +3983,23 @@ ObjectMemory >> rootTableCount [
 { #category : #accessing }
 ObjectMemory >> rootTableCount: aValue [
 	^rootTableCount := aValue
+]
+
+{ #category : #'primitive support' }
+ObjectMemory >> rootTableObject [
+	"Answer an object containing the contents of the rootTable for primitiveRootTable.
+	 The allocation can cause a GC itself and if so the return value may be inaccurate
+	 - in this case one should guard the read operation by looking at the gc counter statistics."
+	| tableObj sz j |
+	sz := rootTableCount.
+	tableObj := self instantiateClass: self classArray indexableSize: sz. "can cause GC (and hence reduce number of roots)"
+	j := 0.
+	1 to: rootTableCount do:
+		[:i| "By definition the roots are old and being new, tableObj is young so there is no need to store check."
+		self storePointerUnchecked: j ofObject: tableObj withValue: (rootTable at: i)].
+	rootTableCount < sz ifTrue:
+		[self shorten: tableObj toIndexableSize: rootTableCount].
+	^tableObj
 ]
 
 { #category : #'debug printing' }

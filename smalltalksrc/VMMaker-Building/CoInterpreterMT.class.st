@@ -287,8 +287,7 @@ CoInterpreterMT >> checkForEventsMayContextSwitch: mayContextSwitch [
 	self checkCogCompiledCodeCompactionCalledFor.
 
 	objectMemory needGCFlag ifTrue:
-		[objectMemory needGCFlag: false.
-		"sufficientSpaceAfterGC: runs the incremental GC and
+		["sufficientSpaceAfterGC: runs the incremental GC and
 		 then, if not enough space is available, the fullGC."
 		 (objectMemory sufficientSpaceAfterGC: 0) ifFalse:
 			[self setSignalLowSpaceFlagAndSaveProcess]].
