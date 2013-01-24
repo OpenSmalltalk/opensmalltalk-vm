@@ -1,14 +1,16 @@
 Wimpslot -min 400K  -max 700k
 Set Squeak$Dir <Obey$Dir>
 
-| Timers: we're either using the druck TimerMod or the Rik Griffin HALTimer
-
-| Make sure the MillisecondTimer & HALTimer module are loaded
-RMEnsure HALTimer 0.03 RMLoad <Squeak$Dir>.modules.HALTimer
+|  Make sure the MillisecondTimer & HALTimer module are loaded
+RMEnsure HALTimer 0.05 RMLoad <Squeak$Dir>.modules.HALTimer
+RMEnsure HALTimer 0.05 Error You need HALTimer 0.05 or later
 RMEnsure MillisecondTimer 1.00 RMLoad <Squeak$Dir>.modules.MillisecondTimer
-|
-|RMEnsure TimerMod 4.12 RMLoad <Squeak$Dir>.modules.TimerMod.TimerMod
-
+RMEnsure MillisecondTimer 1.00 Error You need MillisecondTimer 1.00 or later
+|  Sound support modules
+RMEnsure StreamManager 0.03 RMLoad System:Modules.StreamMan
+RMEnsure StreamManager 0.03 Error You need StreamManager 0.03 or later
+RMEnsure SharedSoundBuffer 0.07 RMLoad System:Modules.SSBuffer
+RMEnsure SharedSoundBuffer 0.07 You need SharedSoundBuffer 0.07 or later
 
 | syntax:
 | {appname} [-vmoption [-vmoption]] imagefilepath [startupfile/URL] [imageoption [imageoption]]

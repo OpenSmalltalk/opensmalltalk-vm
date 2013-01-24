@@ -1,16 +1,32 @@
-/**************************************************************************/
-/*  A Squeak VM for Acorn RiscOS machines by Tim Rowledge                 */
-/*  tim@rowledge.org & http://www.rowledge.org/tim                        */
-/*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
-/*  other machines not yet tested.                                        */
-/*                       sqRPCDirectory.c                                 */
-/*  hook up to RiscOS directory listing etc                               */
-/**************************************************************************/
+//  A Squeak VM for RiscOS machines
+//  Suited to RISC OS > 4, preferably > 5
+// See www.squeak.org for much more information
+//
+// tim Rowledge tim@rowledge.org
+//
+// License: MIT License -
+// Copyright (C) <2013> <tim rowledge>
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the "Software"),
+// to deal in the Software without restriction, including without limitation
+// the rights to use, copy, modify, merge, publish, distribute, sublicense,
+// and/or sell copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+//  all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
+// This is sqRPCFileDirectory.c
+// It provides the Squeak directory related low-level calls
 
-/* To recompile this reliably you will need    */           
-/* OSLib -  http://ro-oslib.sourceforge.net/   */
-/* Castle/AcornC/C++, the Acorn TCPIPLib       */
-/* and a little luck                           */
 /* debugging stuff; uncommnet for debugging trace */
 //#define DEBUG
 #include "oslib/os.h"
@@ -64,7 +80,7 @@ int tzoffset;
 
 	/* Remove the centiseconds from the time.
 	 * 0x1000000000 / 100 = 42949672.96 */
-	low = (low / 100) + (high * 42949673U); 
+	low = (low / 100) + (high * 42949673U);
 	low -= (high / 25); /* compensate for that 0.04 error.  */
 
 	return (int)low + (tzoffset/100);
@@ -135,13 +151,13 @@ sqInt dir_LookupRoot(int context, char *fname, sqInt *fnameLength, sqInt *creati
 		goto decode_disc_id;
 	}
 	run_total += scsifs_flop;
-	    
+
 	if (  context < (run_total + scsifs_hard) ) {
 		// it's a scsifs hard disc
 		sprintf( discid, "SCSI::%d", context - run_total + F2HJump);
 		goto decode_disc_id;
 	}
-	run_total += scsifs_hard;    
+	run_total += scsifs_hard;
 
 	xramfs_drives (&junk, &ramfs_flop,  &ramfs_hard);
 	if (  context < ( run_total + ramfs_flop) ) {
@@ -149,13 +165,13 @@ sqInt dir_LookupRoot(int context, char *fname, sqInt *fnameLength, sqInt *creati
 		sprintf( discid, "RAM::%d", context - run_total);
 		goto decode_disc_id;
 	}
-	run_total += ramfs_flop;    
+	run_total += ramfs_flop;
 	if (  context < (run_total + ramfs_hard) ) {
 		// it's a ramfs hard disc
 		sprintf( discid, "RAM::%d", context - run_total + F2HJump);
 		goto decode_disc_id;
 	}
-	run_total += ramfs_hard;    
+	run_total += ramfs_hard;
 
 	xcdfs_get_number_of_drives( &cdfs_hard);
 	if (  context < (run_total + cdfs_hard) ) {
@@ -263,7 +279,7 @@ sqInt dir_SetMacFileTypeAndCreator(char * filename, sqInt filenamesize, char* ty
 		 */
 		strncpy(name, filename, filenamesize);
 		name[filenamesize] = null;
-		PRINTF(("\\tsettype of %s \n", name)); 
+		PRINTF(("\\tsettype of %s \n", name));
 		if (strstr(name, ".$.") ) {
 			/* .$. is a strong hint that the name is already in RISC OS form */
 			xosfile_set_type(name, (bits)0xFAA);

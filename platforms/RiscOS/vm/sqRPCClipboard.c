@@ -1,16 +1,32 @@
-/**************************************************************************/
-/*  A Squeak VM for Acorn RiscOS machines by Tim Rowledge                 */
-/*  tim@rowledge.org & http://www.rowledge.org/tim                        */
-/*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
-/*  other machines not yet tested.                                        */
-/*                       sqRPCClipboard.c                                 */
-/*  hook up to RiscOS clipboard stuff                                     */
-/**************************************************************************/
+//  A Squeak VM for RiscOS machines
+//  Suited to RISC OS > 4, preferably > 5
+// See www.squeak.org for much more information
+//
+// tim Rowledge tim@rowledge.org
+//
+// License: MIT License -
+// Copyright (C) <2013> <tim rowledge>
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the "Software"),
+// to deal in the Software without restriction, including without limitation
+// the rights to use, copy, modify, merge, publish, distribute, sublicense,
+// and/or sell copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+//  all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
+// This is sqRPCClipboard.c
+// It connects the Squeakclipboard to the RISC OS one
 
-/* To recompile this reliably you will need    */           
-/* OSLib -  http://ro-oslib.sourceforge.net/   */
-/* Castle/AcornC/C++, the Acorn TCPIPLib       */
-/* and a little luck                           */
 //#define DEBUG
 #include "oslib/os.h"
 #include "oslib/osbyte.h"
@@ -30,7 +46,7 @@ int		clipboardByteSize = 0;
 int		clipboardMessageID = 0;
 
 int allocClipboard(size_t size);
- 
+
 /* caret (input focus) and clipboard claiming functions */
 
 void ClaimEntity( int flags) {
@@ -120,14 +136,14 @@ void freeClipboard(void) {
 }
 
 /* clipboard fetching - we don't own the clipboard and do want the contents */
- 
+
 void sendDataRequest(wimp_message* wmessage) {
 /* We want to fetch the clipboard contents from some other application
  * Broadcast the message_DATA_REQUEST message
  */
 	wmessage->size = 52;
 	wmessage->sender = (wimp_t)NULL;
-	wmessage->my_ref = 0; 
+	wmessage->my_ref = 0;
 	wmessage->your_ref = 0;
 	wmessage->action = message_DATA_REQUEST;
 	wmessage->data.data_request.w = 0 /* sqWindowHandle */;
@@ -233,7 +249,7 @@ extern void PointerEnterWindow(wimp_block* wblock);
 
 void fetchClipboard(void) {
 /*  fetch the clipboard from the current owner */
-wimp_block wblock; 
+wimp_block wblock;
 	/* ask for the clipboard contents */
 	sendDataRequest(&wblock.message);
 	if( !pollForClipboardMessage(message_DATA_SAVE, &wblock))
@@ -304,7 +320,7 @@ extern int	forceInterruptCheck(void);
 		 */
 		fetchClipboard();
 		forceInterruptCheck();
-	} 
+	}
 	return strlen(clipboardBuffer);
 }
 

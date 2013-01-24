@@ -1,16 +1,32 @@
-/**************************************************************************/
-/*  A Squeak VM for Acorn RiscOS machines by Tim Rowledge                 */
-/*  tim@rowledge.org & http://www.rowledge.org/tim                        */
-/*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
-/*  other machines not yet tested.                                        */
-/*                       sqRPCMain.c                                      */
-/* OS interface stuff, commandline option handling and so on              */
-/**************************************************************************/
+//  A Squeak VM for RiscOS machines
+//  Suited to RISC OS > 4, preferably > 5
+// See www.squeak.org for much more information
+//
+// tim Rowledge tim@rowledge.org
+//
+// License: MIT License -
+// Copyright (C) <2013> <tim rowledge>
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the "Software"),
+// to deal in the Software without restriction, including without limitation
+// the rights to use, copy, modify, merge, publish, distribute, sublicense,
+// and/or sell copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+//  all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
+// This is the big one - sqRPCMain.c
+// This is where it all starts - see main().
 
-/* To recompile this reliably you will need    */
-/* OSLib -  http://ro-oslib.sourceforge.net/   */
-/* Castle/AcornC/C++, the Acorn TCPIPLib       */
-/* and a little luck                           */
 // define this to get lots of debug notifiers
 //#define DEBUG
 
@@ -46,9 +62,7 @@ wimp_version_no		actualOSLevel;
 os_error		privateErr;
 char			versionString[20];
 static			FILE *logfile= 0;
-#ifdef HALTIMERMOD
 static			unsigned int *timerValPtr;
-#endif
 
 /* argument handling stuff  -- see c.sqArgument */
 int 			numOptionsVM;
@@ -223,13 +237,8 @@ void setTimer(void) {
 /* Initialise the MillisecondTimer value address
 */
 _kernel_swi_regs regs;
-#ifdef HALTIMERMOD
 	_kernel_swi(/* MillisecondTimer_Val_Ptr*/ 0x58101, &regs, &regs);
 	timerValPtr = (unsigned int *)(regs.r[0]);
-#endif
-#ifdef DRUCKTIMERMOD
-	_kernel_swi(/* Timer_Start*/ 0x490C0, &regs, &regs);
-#endif
 }
 
 
@@ -342,29 +351,14 @@ extern void SetDefaultPointer(void);
 usqInt millisecondTimerValue(void) {
 /* return the raw unsigned value of the millsecond time for internal VM use */
 _kernel_swi_regs regs;
-#ifdef DRUCKTIMERMOD
-	_kernel_swi(/* Timer_Value*/ 0x490C2, &regs, &regs);
-	return (usqInt)(regs.r[0] * 1000) + (int)(regs.r[1] / 1000);
-#endif
-#ifdef HALTIMERMOD
-//	_kernel_swi(/* MillisecondTimer_Value */ 0x58100, &regs, &regs);
-//	return (regs.r[0]) ;
 	return (usqInt)*timerValPtr;
-#endif
 }
 
 unsigned int microsecondsvalue(void) {
 /* return the microsecond value (ignoring wrap arounds etc) for debug timer
- * purposes
+ * purposes. We may consider trying a real uSec timer sometime
  */
-#ifdef DRUCKTIMERMOD
-_kernel_swi_regs regs;
-	_kernel_swi(/* Timer_Value*/ 0x490C2, &regs, &regs);
-	return  ((regs.r[0] %1000) * 1000000)   + (int)(regs.r[1]) ;
-#endif
-#ifdef HALTIMERMOD
 	return 1000 * millisecondTimerValue();
-#endif
 }
 
 sqInt ioMicroMSecs(void) {

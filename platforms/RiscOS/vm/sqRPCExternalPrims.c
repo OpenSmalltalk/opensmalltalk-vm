@@ -1,16 +1,34 @@
-/**************************************************************************/
-/*  A Squeak VM for Acorn RiscOS machines by Tim Rowledge                 */
-/*  tim@rowledge.org & http://www.rowledge.org/tim                        */
-/*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
-/*  other machines not yet tested.                                        */
-/*                       sqRPCExternalPrims.c                             */
-/* hook up to RiscOS external code modules using 'rink'                   */
-/**************************************************************************/
+//  A Squeak VM for RiscOS machines
+//  Suited to RISC OS > 4, preferably > 5
+// See www.squeak.org for much more information
+//
+// tim Rowledge tim@rowledge.org
+//
+// License: MIT License -
+// Copyright (C) <2013> <tim rowledge>
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the "Software"),
+// to deal in the Software without restriction, including without limitation
+// the rights to use, copy, modify, merge, publish, distribute, sublicense,
+// and/or sell copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+//  all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
+// This is sqRPCExternalPrims.c
+// It connects Squeak to the external plugins in the plugins directory
+// within the application.
+// It relies upon 'rink' by Ben Summers, Nick Clark and Tom Hughes - Thanks!
 
-/* To recompile this reliably you will need    */           
-/* OSLib -  http://ro-oslib.sourceforge.net/   */
-/* Castle/AcornC/C++, the Acorn TCPIPLib       */
-/* and a little luck                           */
 // define this to get lots of debug notifiers
 //#define DEBUG
 
@@ -34,7 +52,7 @@ const char * foundName;
 		if ( strcmp(foundName, symbol) == 0) {
 			PRINTF(( "found %s\n",foundName));
 			return address;
-		} 
+		}
 	}
 
 	/* failed to find the function... */
@@ -63,7 +81,7 @@ const rink_check CheckBlock = {"SqueakSO", 100, 0};
 		PRINTF(( "\\t Plugin load failed: %s\n", codeName));
 		return (void*)NULL;
 	}
-	
+
 	/* OK, let's have a look at the version of the segment we've just
 	 * loaded. It might be nice to check them to see that it's acceptable.
 	 * It is a bad plan to alter the returned structure.

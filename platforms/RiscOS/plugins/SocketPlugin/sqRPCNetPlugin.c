@@ -1,16 +1,33 @@
-/**************************************************************************/
-/*  A Squeak VM for Acorn RiscOS machines by Tim Rowledge                 */
-/*  tim@rowledge.org & http://www.rowledge.org/tim                        */
-/*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
-/*  other machines not yet tested.                                        */
-/*                       sqRPCNetPlugin.c                                 */
-/*  hook up to RiscOS socket stuff                                        */
-/**************************************************************************/
+//  A Squeak VM for RiscOS machines
+//  Suited to RISC OS > 4, preferably > 5
+// See www.squeak.org for much more information
+//
+// tim Rowledge tim@rowledge.org
+//
+// License: MIT License -
+// Copyright (C) <2013> <tim rowledge>
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the "Software"),
+// to deal in the Software without restriction, including without limitation
+// the rights to use, copy, modify, merge, publish, distribute, sublicense,
+// and/or sell copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+//  all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
 
-/* To recompile this reliably you will need    */           
-/* OSLib -  http://ro-oslib.sourceforge.net/   */
-/* Castle/AcornC/C++, the Acorn TCPIPLib       */
-/* and a little luck                           */
+// This is sqRPCNetPlugin.c
+// It provides unix like sockets for Squeak.
+// If you understand sockets and RISC OS, feel free to offer to improve it.
 
 /* Shamelessly copied from Unix socket support.
  *
@@ -19,52 +36,52 @@
  */
 
 /* sqUnixSocket.c -- Unix socket support
- * 
+ *
  *   Copyright (C) 1996-2003 Ian Piumarta and other authors/contributors
  *     as listed elsewhere in this file.
  *   All rights reserved.
- *   
+ *
  *     You are NOT ALLOWED to distribute modified versions of this file
  *     under its original name.  If you want to modify it and then make
  *     your modifications available publicly, rename the file first.
- * 
+ *
  *   This file is part of Unix Squeak.
- * 
+ *
  *   This file is distributed in the hope that it will be useful, but WITHOUT
  *   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  *   FITNESS FOR A PARTICULAR PURPOSE.
- *   
+ *
  *   You may use and/or distribute this file ONLY as part of Squeak, under
  *   the terms of the Squeak License as described in `LICENSE' in the base of
  *   this distribution, subject to the following additional restrictions:
- * 
+ *
  *   1. The origin of this software must not be misrepresented; you must not
  *      claim that you wrote the original software.  If you use this software
  *      in a product, an acknowledgment to the original author(s) (and any
  *      other contributors mentioned herein) in the product documentation
  *      would be appreciated but is not required.
- * 
+ *
  *   2. You must not distribute (or make publicly available by any
  *      means) a modified copy of this file unless you first rename it.
- * 
+ *
  *   3. This notice must not be removed or altered in any source distribution.
- * 
+ *
  *   Using (or modifying this file for use) in any context other than Squeak
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
  */
 
 /* Author: Ian.Piumarta@inria.fr
- * 
+ *
  * Last edited: 2004-04-02 14:21:17 by piumarta on emilia.local
- * 
+ *
  * Support for BSD-style "accept" primitives contributed by:
  *	Lex Spoon <lex@cc.gatech.edu>
- * 
+ *
  * Notes:
  * 	Sockets are completely asynchronous, but the resolver is still
  *	synchronous.
- * 
+ *
  * BUGS:
  *	Now that the image has real UDP primitives, the TCP/UDP duality in
  *	many of the connection-oriented functions should be removed and
@@ -113,7 +130,7 @@
 # include <netdb.h>
 # include <errno.h>
 # include <unistd.h>
-  
+
 #endif /* !ACORN */
 
 /* Solaris sometimes fails to define this in netdb.h */
@@ -286,7 +303,7 @@ void aioInit(void)
   FD_ZERO(&exMask);
   FD_ZERO(&xdMask);
   maxFd= 0;
-#ifndef ACORN  
+#ifndef ACORN
   signal(SIGPIPE, SIG_IGN);
 #endif
 }
@@ -309,7 +326,7 @@ void aioFini(void)
       }
   while (maxFd && !FD_ISSET(maxFd - 1, &fdMask))
     --maxFd;
-#ifndef ACORN    
+#ifndef ACORN
   signal(SIGPIPE, SIG_DFL);
 #endif
 }
@@ -568,7 +585,7 @@ static int socketWritable(int s)
 {
   struct timeval tv= { 0, 0 };
   fd_set fds;
-  
+
   FD_ZERO(&fds);
   FD_SET(s, &fds);
   return select(s+1, 0, &fds, 0, &tv) > 0;
@@ -987,7 +1004,7 @@ void sqSocketConnectToPort(SocketPtr s, sqInt addr, sqInt port)
 
 void sqSocketAcceptFromRecvBytesSendBytesSemaID(SocketPtr s, SocketPtr serverSocket, sqInt recvBufSize, sqInt sendBufSize, sqInt semaIndex){
   sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID
-    (s, serverSocket, recvBufSize, sendBufSize, 
+    (s, serverSocket, recvBufSize, sendBufSize,
      semaIndex, semaIndex, semaIndex);
 }
 
@@ -1098,7 +1115,7 @@ void sqSocketAbortConnection(SocketPtr s) {
 }
 
 
-/* Release the resources associated with this socket. 
+/* Release the resources associated with this socket.
    If a connection is open, abort it. */
 
 void sqSocketDestroy(SocketPtr s)
@@ -1308,7 +1325,7 @@ sqInt sqSocketReceiveDataBufCount(SocketPtr s, char* buf, sqInt bufSize)
 
 /* write data to the socket s from buf for at most bufSize bytes.
    answer the number of bytes actually written.
-*/ 
+*/
 sqInt sqSocketSendDataBufCount(SocketPtr s, char * buf, sqInt bufSize)
 {
   int nsent= 0;
@@ -1361,7 +1378,7 @@ sqInt sqSocketSendDataBufCount(SocketPtr s, char * buf, sqInt bufSize)
 
 /* read data from the UDP socket s into buf for at most bufSize bytes.
    answer the number of bytes actually read.
-*/ 
+*/
 sqInt sqSocketReceiveUDPDataBufCountaddressportmoreFlag
     (SocketPtr s, char * buf, sqInt bufSize,  sqInt *address,  sqInt *port, sqInt *moreFlag)
 {
@@ -1372,7 +1389,7 @@ sqInt sqSocketReceiveUDPDataBufCountaddressportmoreFlag
 
       FPRINTF((stderr, "recvFrom(%d)\n", SOCKET(s)));
       memset(&saddr, 0, sizeof(saddr));
-      { 
+      {
 	int nread= recvfrom(SOCKET(s), (void *)buf, bufSize, 0,
 			    (struct sockaddr *)&saddr,
 			    &addrSize);
@@ -1395,7 +1412,7 @@ sqInt sqSocketReceiveUDPDataBufCountaddressportmoreFlag
 
 /* write data to the UDP socket s from buf for at most bufSize bytes.
  * answer the number of bytes actually written.
- */ 
+ */
 sqInt sqSockettoHostportSendDataBufCount(SocketPtr s, sqInt address, sqInt port,
 				       char * buf, sqInt bufSize)
 {
@@ -1414,7 +1431,7 @@ sqInt sqSockettoHostportSendDataBufCount(SocketPtr s, sqInt address, sqInt port,
 			  sizeof(saddr));
 	if (nsent >= 0)
 	  return nsent;
-	
+
 	if (errno == EWOULDBLOCK)	/* asynchronous write in progress */
 	  return 0;
 	FPRINTF((stderr, "UDP send failed\n"));
@@ -1605,7 +1622,7 @@ sqInt sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue
   interpreterProxy->success(false);
   return errno;
 }
-   
+
 void sqSocketBindToPort(SocketPtr s, int addr, int port)
 {
   int result;

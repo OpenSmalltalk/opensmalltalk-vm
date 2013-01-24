@@ -1,18 +1,35 @@
-/**************************************************************************/
-/*  A Squeak VM for Acorn RiscOS machines by Tim Rowledge                 */
-/*  tim@rowledge.org & http://www.rowledge.org/tim                        */
-/*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
-/*  other machines not yet tested.                                        */
-/*           sqFilePluginBasicPrims.c                                     */
-/* Replacement for the Cross/plugins/filePlugin/sqFilePluginBasicPrims.c  */
-/* to attempt to provide multiple opening of writable files, thus         */
-/* coping with the idiocy of the FileStream>readOnlyCopy method           */
-/**************************************************************************/
-
-/* To recompile this reliably you will need    */           
-/* OSLib -  http://ro-oslib.sourceforge.net/   */
-/* Castle/AcornC/C++, the Acorn TCPIPLib       */
-/* and a little luck                           */
+//  A Squeak VM for RiscOS machines
+//  Suited to RISC OS > 4, preferably > 5
+// See www.squeak.org for much more information
+//
+// tim Rowledge tim@rowledge.org
+//
+// License: MIT License -
+// Copyright (C) <2013> <tim rowledge>
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the "Software"),
+// to deal in the Software without restriction, including without limitation
+// the rights to use, copy, modify, merge, publish, distribute, sublicense,
+// and/or sell copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+//  all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
+// This is sqFilePluginBasicPrims.c
+// It provides the low level File calls for Squeak, with some twists to
+// handle a few other-platform quirks, such as being able to open the ssame file
+// for read amd read/write multiple times.
+// and to keep life a little simpler within Squeak, RISC OS filenames
+// are converted to a URL-lite format, mainly swapping the '/' for '.'
 
 /* define this to get lots of debug reports  */
 //#define DEBUG
@@ -26,7 +43,7 @@
 #include "oslib/osfscontrol.h"
 #include "oslib/osargs.h"
 #include "oslib/osgbpb.h"
-#include "oslib/osfile.h"                                                   
+#include "oslib/osfile.h"
 #include "sq.h"
 #include "FilePlugin.h"
 
@@ -54,12 +71,17 @@
 		int		sessionID;
 		File	*file;
 		int		writable;
-		squeakFileOffsetType		fileSize; 
+		squeakFileOffsetType		fileSize;
 		int		lastOp;  // 0 = uncommitted, 1 = read, 2 = write -
 		(used for RISCOS specific code to hold file postion pointer)
 	} SQFile;
 
-For this perversion of the filesystem we need to do some trickery to attempt to persuade RISC OS to pretend to allow multiple openings of one file. The approach is to open files with SWIs and keep a list of canoncalized filenames. When opening a file we search for a matching filename and if found we use the same fileid number. Since Squeak uses a really annoying position/read/write api (to match posix I guess) we have to cache the position and use it in later read/writes.
+For this perversion of the filesystem we need to do some trickery to attempt to
+persuade RISC OS to pretend to allow multiple openings of one file. The approach
+ is to open files with SWIs and keep a list of canoncalized filenames. When open
+ing a file we search for a matching filename and if found we use the same fileid
+ number. Since Squeak uses a really annoying position/read/write api (to match p
+osix I guess) we have to cache the position and use it in later read/writes.
 
 w/r
 file not open (name not in list)
@@ -73,7 +95,7 @@ return
 
 w/r
 file open (name in list)
-h = list entry->handle 
+h = list entry->handle
 sqFile->file = h
 sqFile->writable = true
 return
@@ -155,7 +177,8 @@ static OpenFileListEntry *addToOpenFileList(char *fName, os_fw handle) {
  * copy the fName into the new entry so the fName string can be freed later
  */
 OpenFileListEntry *entry;
-	entry = (OpenFileListEntry*) calloc(1, sizeof(OpenFileListEntry) + strlen(fName));
+	entry = (OpenFileListEntry*) calloc(1, sizeof(OpenFileListEntry) + strlen(fN
+ame));
 	if ( entry == NULL) {
 		return NULL;
 	}
@@ -210,7 +233,8 @@ os_fw handle;
 			 */
 			entry->refCt = -1;
 		}
-		PRINTF(("\\t file entry %s (%0x):%d\n",entry->name, entry->handle, entry->refCt));
+		PRINTF(("\\t file entry %s (%0x):%d\n",entry->name, entry->handle, entry
+->refCt));
 		return entry;
 	}
 	/* the file is not open so open it */
@@ -246,7 +270,8 @@ os_fw handle;
 
 /* primitive support */
 
-sqInt sqFileOpen(SQFile *f, char* sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
+sqInt sqFileOpen(SQFile *f, char* sqFileName, sqInt sqFileNameSize, sqInt writeF
+lag) {
 /* Opens the given file using the supplied sqFile structure
  * to record its state. Fails with no side effects if f is
  * already open. Files are always opened in binary mode;
@@ -261,7 +286,8 @@ OpenFileListEntry * entry;
 		FAIL();
 	}
 
-	if (!canonicalizeFilenameToString(sqFileName, sqFileNameSize, cFilename)) FAIL();
+	if (!canonicalizeFilenameToString(sqFileName, sqFileNameSize, cFilename)) FA
+IL();
 
 	PRINTF(("\\t sqFileOpen: canonicalized filename: %s\n", cFilename));
 
@@ -275,7 +301,7 @@ OpenFileListEntry * entry;
 		f->writable = true;
 		FAIL();
 	}
- 
+
 	if (writeFlag) {
 		f->writable = true;
 	} else {
@@ -306,7 +332,8 @@ sqInt sqFileClose(SQFile *f) {
 	PRINTF(("\\t sqFileClose: failed\n"));
 		FAIL();
 	}
-	PRINTF(("\\t close file entry %s (%0x):%d\n",entry->name, entry->handle, entry->refCt));
+	PRINTF(("\\t close file entry %s (%0x):%d\n",entry->name, entry->handle, ent
+ry->refCt));
 	entry->refCt -= 2;
 	if (entry->refCt == 0) {
 		/* all uses closed, so close file and remove entry */
@@ -341,7 +368,8 @@ squeakFileOffsetType position;
 		PRINTF(("\\t sqFileGetPosition: attempt to query invalid file\n"));
 		FAIL();
 	}
-	PRINTF(("\\t sqFileGetPosition: file %x at %d\n", FILE_HANDLE(f), FILE_POSITION(f)));
+	PRINTF(("\\t sqFileGetPosition: file %x at %d\n", FILE_HANDLE(f), FILE_POSIT
+ION(f)));
 	return FILE_POSITION(f);
 }
 
@@ -351,7 +379,8 @@ sqInt sqFileSetPosition(SQFile *f, squeakFileOffsetType position) {
 		PRINTF(("\\t sqFileSetPosition: attempt to set invalid file\n"));
 		FAIL();
 	}
-	PRINTF(("\\t sqFileSetPosition: file %x to %d\n", FILE_HANDLE(f), position));
+	PRINTF(("\\t sqFileSetPosition: file %x to %d\n", FILE_HANDLE(f), position))
+;
 	FILE_POSITION(f) = position;
 	return true;
 }
@@ -360,7 +389,7 @@ squeakFileOffsetType sqFileSize(SQFile *f) {
 /* Return the length of the given file. */
 int extent;
 	if (!sqFileValid(f)) {
-		PRINTF(("\\t sqFileSize: attempt to query invalid file\n")); 
+		PRINTF(("\\t sqFileSize: attempt to query invalid file\n"));
 		FAIL();
 	}
 	return f->fileSize;
@@ -379,13 +408,14 @@ int extent;
 	if (!sqFileValid(f)) FAIL();
 	if (xosargs_set_extw(FILE_HANDLE(f), offset) != NULL) {
 		FAIL();
-	} 
+	}
 	xosargs_read_extw(FILE_HANDLE(f), &extent);
 	f->fileSize = extent;
 	return true;
 }
 
-size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {
+size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t st
+artIndex) {
 /* Read count bytes from the given file into byteArray starting at
  * startIndex. byteArray is the address of the first byte of a
  * Squeak bytes object (e.g. String or ByteArray). startIndex
@@ -400,13 +430,16 @@ int bytesUnread;
 	}
 	dst = (byte *) (byteArrayIndex + startIndex);
 
-	xosgbpb_read_atw(FILE_HANDLE(f), dst, count, FILE_POSITION(f), &bytesUnread);
+	xosgbpb_read_atw(FILE_HANDLE(f), dst, count, FILE_POSITION(f), &bytesUnread)
+;
 	FILE_POSITION(f) += (count - bytesUnread);
-	PRINTF(("\\t sqFileReadIntoAt: read %d bytes of %d from file %x to %0x\n",count - bytesUnread, count, (int)FILE_HANDLE(f), (int)dst));
+	PRINTF(("\\t sqFileReadIntoAt: read %d bytes of %d from file %x to %0x\n",co
+unt - bytesUnread, count, (int)FILE_HANDLE(f), (int)dst));
 	return count - bytesUnread;
 }
 
-size_t sqFileWriteFromAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {
+size_t sqFileWriteFromAt(SQFile *f, size_t count, char* byteArrayIndex, size_t s
+tartIndex) {
 /* Write count bytes to the given writable file starting at startIndex
  * in the given byteArray. (See comment in sqFileReadIntoAt for interpretation
  * of byteArray and startIndex).
@@ -420,9 +453,11 @@ int extent;
 		FAIL();
 	}
 	src = (byte *) (byteArrayIndex + startIndex);
-	xosgbpb_write_atw(FILE_HANDLE(f), src, count, FILE_POSITION(f), &bytesUnwritten);
+	xosgbpb_write_atw(FILE_HANDLE(f), src, count, FILE_POSITION(f), &bytesUnwrit
+ten);
 	FILE_POSITION(f) += (count - bytesUnwritten);
-	PRINTF(("\\t sqFileWriteFromAt: wrote %d bytes of %d from %0x to file %x\n",count - bytesUnwritten, count, (int)src, (int)f->file));
+	PRINTF(("\\t sqFileWriteFromAt: wrote %d bytes of %d from %0x to file %x\n",
+count - bytesUnwritten, count, (int)src, (int)f->file));
 
 	xosargs_read_extw(FILE_HANDLE(f), &extent);
 	f->fileSize = extent;
@@ -434,11 +469,14 @@ int extent;
 	return count;
 }
 
-sqInt sqFileRenameOldSizeNewSize(char* oldNameIndex, sqInt oldNameSize, char* newNameIndex, sqInt newNameSize) {
+sqInt sqFileRenameOldSizeNewSize(char* oldNameIndex, sqInt oldNameSize, char* ne
+wNameIndex, sqInt newNameSize) {
 char cNewName[MAXDIRNAMELENGTH];
 
-	if (!canonicalizeFilenameToString(oldNameIndex, oldNameSize, cFilename)) FAIL();
-	if (!canonicalizeFilenameToString(newNameIndex, newNameSize, cNewName)) FAIL();
+	if (!canonicalizeFilenameToString(oldNameIndex, oldNameSize, cFilename)) FAI
+L();
+	if (!canonicalizeFilenameToString(newNameIndex, newNameSize, cNewName)) FAIL
+();
 
 	if (xosfscontrol_rename(cFilename, cNewName) != NULL) {
 		FAIL();
@@ -453,7 +491,8 @@ bits loadaddr, execaddr;
 int size;
 fileswitch_attr attr;
 
-	if (!canonicalizeFilenameToString(sqFileName, sqFileNameSize, cFilename)) FAIL();;
+	if (!canonicalizeFilenameToString(sqFileName, sqFileNameSize, cFilename)) FA
+IL();;
 
 	PRINTF(("\\t sqFileDeleteNameSize: canonicalized name %s\n",cFilename));
 
