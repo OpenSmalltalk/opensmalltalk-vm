@@ -31,7 +31,7 @@
 // relied on reading Andrew Sellors excellent code for !RDPClient.
 // Thank you both.
 
-#define DEBUG
+// #define DEBUG
 
 #include "sq.h"
 #include "SoundPlugin.h"
@@ -40,16 +40,17 @@
 
 
 
-extern struct VirtualMachine * interpreterProxy;
-static unsigned sound_initialised = false;
-static int sound_handle = 0;
-static int sound_stream = 0;
-static unsigned sound_volume = 0; // this ought to be queriable from system
+extern struct		VirtualMachine * interpreterProxy;
+static unsigned		sound_initialised = false;
+static int			sound_handle = 0;
+static int			sound_stream = 0;
+static unsigned		sound_volume = 0; // this ought to be queriable from system
 static unsigned char *sound_global_buffer_data = NULL;
-static int sound_global_buffer_length = 0;
-static int sound_buffersize = 0;
-static unsigned sound_delayed_start = false;
-static unsigned int sound_delayed_start_time = 0;
+static int			sound_global_buffer_length = 0;
+static int			sound_buffersize = 0;
+static unsigned int * soundPollWordAddr = 0;
+static int			soundPollBit = 0;
+extern int			setupSoundSignalling(unsigned int ** addr, int * flagBit, int semIndex);
 
 
 /*********************/
@@ -129,19 +130,28 @@ static void ssb_samplerate(int handle, int samplerate) {
 	_kernel_swi(SWI_XOS_Bit | SWI_SharedSoundBuffer_SampleRate, &r, &r);
 }
 
+static void ssb_streamend(int handle) {
+// closes the stream but allows the buffers already filled to play out
+	PRINTF(("ssb_streamend %08X\n", handle));
+	_kernel_swi_regs r;
+
+	r.r[0] = (int)handle;
+
+	_kernel_swi(SWI_XOS_Bit | SWI_SharedSoundBuffer_StreamEnd, &r, &r);
+}
+
 static void ssb_volume(int handle, unsigned int volume) {
 	_kernel_swi_regs r;
 
 	r.r[0] = (int)handle;
 	r.r[1] = (int)volume;
-	sound_volume = volume;
 
 	PRINTF(("ssb setsvolume\n"));
 	_kernel_swi(SWI_XOS_Bit | SWI_SharedSoundBuffer_Volume, &r, &r);
 }
 
 static unsigned ssb_getvolume(int handle) {
-// this really needs to be done with a query SWI
+// this really needs to be done with a query SWI. Currently not implemented though
 	PRINTF(("ssb getvolume\n"));
 	return sound_volume;
 }
@@ -201,6 +211,19 @@ static void sm_setdalimits(int da_max_bytes, int heap_max_bytes) {
 	_kernel_swi(SWI_XOS_Bit | SWI_StreamManager_SetDALimits, &r, &r);
 }
 
+static int * sm_srcpollword(int stream, int flags, unsigned int * pollwordptr, int bittoset) {
+	_kernel_swi_regs r;
+
+	r.r[0] = stream;
+	r.r[1] = flags; // only bit 0 has any effect
+	r.r[2] = (int)pollwordptr;
+	r.r[3] = bittoset;
+	PRINTF(("sm set src pollword stream: %d flag: %d ptr: %08X bit: %d\n", r.r[0], r.r[1], (int)(r.r[2]), r.r[3]));
+
+	_kernel_swi(SWI_XOS_Bit | SWI_StreamManager_SrcPollWord, &r, &r);
+	return (int *)r.r[0];
+}
+
 /**********************************/
 /* module initialization/shutdown */
 /**********************************/
@@ -214,8 +237,6 @@ int soundInit(void) {
 	sound_global_buffer_length = 0;
 	sound_buffersize = 0;
 
-	sound_delayed_start = false;
-	sound_delayed_start_time = 0;
 	PRINTF(("soundInit\n"));
 	return true;
 }
@@ -225,6 +246,7 @@ int soundShutdown(void) {
 	PRINTF(("soundShutdown\n"));
 
 	if(sound_initialised){
+		setupSoundSignalling(NULL, NULL, NULL);
 		ssb_closestream(sound_handle);
 		sound_initialised = false;
 	}
@@ -288,23 +310,25 @@ int snd_PlaySilence(void) {
 int snd_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex) {
 // Start the buffered sound output with the given buffer size, sample rate, stereo flag and semaphore index.
 	extern char sqTaskName[];
+
 	PRINTF(("snd_Start"));
 
-// just for now we won't mess with semaphores
-	if ( semaIndex ) {
-		PRINTF((" fails due to semaphore use\n"));
-		 return false;
-	}
+	// looks a bit strange but first thing we do is shut down any pre-existing sound stream
+	soundShutdown();
 	if(!sound_initialised) {
 		PRINTF((" initialising sound setup\n"));
+		// before bothering the sound sysem we check that RISC OS is ready for it
+		if ( !setupSoundSignalling(&soundPollWordAddr,&soundPollBit, semaIndex)) {
+			return false;
+		}
 		sm_setdalimits(SOUND_DA_MAX_SIZE, SOUND_HEAP_MAX_SIZE);
 		if(ssb_openstream(sqTaskName, true,BYTESFROMSAMPLES(frameCount), &sound_handle)) {
 			if(ssb_returnstreamhandle(sound_handle, &sound_stream)) {
 				sound_buffersize =  SOUND_BUFFER_SIZE(frameCount);
 				sm_setbuffer(sound_stream, sound_buffersize);
 				ssb_volume(sound_handle, 0xFFFFFFFF);
-				ssb_samplerate(sound_handle, samplesPerSec << 10);
-					// uses 1/1024Hz, so multiply given rate by 1024
+				ssb_samplerate(sound_handle, samplesPerSec << 10);// uses 1/1024Hz units
+				sm_srcpollword(sound_stream, 0, soundPollWordAddr, soundPollBit);
 				ssb_pause(sound_handle, true);
 				sound_initialised = true;
 			}
@@ -315,18 +339,28 @@ int snd_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex) {
 		if(!sound_initialised){
 			sound_handle = 0;
 			sound_stream = 0;
+			setupSoundSignalling(NULL, NULL, NULL);
 			PRINTF(("snd_Start failed to init\n"));
 			return false;
 		}
 	}
 	PRINTF(("snd_Start initialised OK\n"));
+
 	return true;
 }
 
 int snd_Stop(void) {
 	PRINTF(("snd_Stop\n"));
-	// soundShutdown();
-	ssb_pause(sound_handle, true);
+	// cancel any further signalling
+	//	setupSoundSignalling(NULL, NULL, NULL);
+	//	// let the stream get to its end and then close
+	//	if ( sound_initialised) {
+	//		ssb_streamend(sound_handle);
+	//		sound_handle = 0;
+	//		sound_stream = 0;
+	//		sound_initialised = false;
+	//	}
+	soundShutdown();
 	return null;
 }
 
@@ -334,12 +368,8 @@ int snd_Stop(void) {
 void snd_Volume(double *left, double *right) {
 // used to GET the volume settings
 unsigned int leftVol, rightVol;
-	if (!sound_initialised) {
-		interpreterProxy->success(false);
-		PRINTF(("snd_Volume failed - sound not initialised\n"));
-		return;
-	}
 // get the volume and make doubles out if it
+// there ought to be a SWI for this but currently we have to simply record it manually
 	leftVol = sound_volume >> 16;
 	rightVol = sound_volume & 0xFFFF;
 	*left = leftVol  / 65535.0;
@@ -350,16 +380,14 @@ unsigned int leftVol, rightVol;
 void snd_SetVolume(double left, double right) {
 // used to SET the volume settings
 unsigned int leftVol, rightVol;
-	if (!sound_initialised) {
-		interpreterProxy->success(false);
-		PRINTF(("snd_SetVolume failed - sound not initialised\n"));
-		return;
-	}
 
 	leftVol = (unsigned int)((left > 1.0 ? 1.0 : left) * 0xFFFF) & 0xFFFF;
 	rightVol = (unsigned int)((right > 1.0 ? 1.0 : right) * 0xFFFF) & 0xFFFF;
+	sound_volume = (leftVol << 16) | rightVol;
 	PRINTF(("snd_SetVolume %f:%f\n", left, right));
-	ssb_volume(sound_handle, (leftVol << 16) | rightVol);
+	if (sound_initialised) {
+		ssb_volume(sound_handle, sound_volume) ;
+	}
 }
 
 /***************/

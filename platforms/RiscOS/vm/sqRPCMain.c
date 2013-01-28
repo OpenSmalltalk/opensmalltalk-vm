@@ -248,8 +248,10 @@ os_error * e;
 extern  wimp_icon_create sqIconBarIcon;
 extern void		GetDisplayParameters(void);
 extern void		SetupWindowTitle(void);
-extern void SetDefaultPointer(void);
-extern void InitRootWindow(void);
+extern void		SetDefaultPointer(void);
+extern void		InitRootWindow(void);
+extern int		setupSoundSignalling(unsigned int ** addr, int * flagBit, int semIndex);
+extern void		initialiseSoundPollword(void);
 int width;
 
 	SetDefaultPointer();
@@ -266,7 +268,7 @@ int width;
 		strncpy(sqTaskName, taskNameArg, sqTaskNameLength );
 	}
 
-	if ((e = xwimp_initialise (wimp_VERSION_RO35,
+	if ((e = xwimp_initialise (wimp_VERSION_RO38,
 					sqTaskName,
 					(wimp_message_list*)&importantWimpMessages,
 					&actualOSLevel,
@@ -308,8 +310,8 @@ int width;
 	SetupWindowTitle();
 
 	setFPStatus(0);
-
 	setTimer();
+	initialiseSoundPollword();
 
 	return true;
 }
@@ -336,6 +338,7 @@ void exit_function(void) {
 */
 extern void ioShutdownAllModules(void);
 extern void SetDefaultPointer(void);
+extern void shutdownSoundPollword(void);
 
 	ioShutdownAllModules();
 
@@ -346,11 +349,11 @@ extern void SetDefaultPointer(void);
 		xosdynamicarea_delete ( SqueakDisplayDA );
 	PRINTF(("\\t exiting Squeak\n"));
 	if ( (int)logfile > 0) fclose( logfile);
+	shutdownSoundPollword();
 }
 
 usqInt millisecondTimerValue(void) {
 /* return the raw unsigned value of the millsecond time for internal VM use */
-_kernel_swi_regs regs;
 	return (usqInt)*timerValPtr;
 }
 

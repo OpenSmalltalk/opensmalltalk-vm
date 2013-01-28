@@ -29,11 +29,12 @@
 // and passes them up to Squeak
 // It makes use of the Celerica !!DeepKeys module
 // define this to get lots of debug notifiers
-//#define DEBUG
+// #define DEBUG
 
 #include "oslib/os.h"
 #include "oslib/osbyte.h"
 #include "oslib/osfscontrol.h"
+#include "oslib/osmodule.h"
 #include "oslib/wimp.h"
 #include "oslib/wimpspriteop.h"
 #include "oslib/colourtrans.h"
@@ -42,7 +43,7 @@
 
 wimp_block			wimpPollBlock;
 wimp_event_no		wimpPollEvent;
-int					wimpPollWord;
+int					wimpPollWord = 0;
 int					windowActive = false;
 extern int			pointerBuffer[];
 extern os_coord		pointerOffset;
@@ -114,7 +115,9 @@ extern int		setInterruptPending(int value);
 extern int		forceInterruptCheck(void);
 extern int		ioIconiseWindow(wimp_message * wblock);
 
-void (*socketPollFunction)(int delay, int extraFd) = null;
+void			(*socketPollFunction)(int delay, int extraFd) = null;
+int				soundBufferEmptySemaphoreIndex = 0;
+unsigned int *	soundPollWordPtr = 0;
 
 
 /* Squeak expects to get kbd modifiers as the top 4bits of the 8bit char code,
@@ -125,16 +128,16 @@ void (*socketPollFunction)(int delay, int extraFd) = null;
  * Notice how Macish this is!
 */
 
-#define		MacDownCursor	31
-#define		MacUpCursor	30
-#define		MacLeftCursor	28
-#define		MacRightCursor	29
-#define		MacHomeKey	1
-#define		MacEndKey	4
-#define		MacInsertKey	5
-#define		MacDeleteKey	8
-#define		MacPageUpKey	11
-#define		MacPageDownKey	12
+#define			MacDownCursor	31
+#define			MacUpCursor	30
+#define			MacLeftCursor	28
+#define			MacRightCursor	29
+#define			MacHomeKey	1
+#define			MacEndKey	4
+#define			MacInsertKey	5
+#define			MacDeleteKey	8
+#define			MacPageUpKey	11
+#define			MacPageDownKey	12
 
 unsigned char keymap[0x68] = {
 /* 0x00 Esc */ 0x1b ,
@@ -245,32 +248,83 @@ unsigned char keymap[0x68] = {
 
 
 /*** Functions ***/
-	 void DisplayPixmap(wimp_draw * wblock);
-extern	 void DisplayModeChanged(void);
-	 void DoNothing(void);
-	  int HandleEvents(void);
-	 void KeyPressed( wimp_key * wblock);
-	 void KeyBufAppend(int key);
-	 void UserMessage(wimp_message * wblock);
-	 void MouseButtons( wimp_pointer * wblock);
-	 void PointerEnterWindow(wimp_entering *wblock);
-	 void PointerLeaveWindow(wimp_leaving *wblock);
-	 void WindowClose(wimp_close * wblock);
-	 void WindowOpen( wimp_open * wblock);
-extern	 void claimCaret(wimp_pointer * wblock);
-extern	 void receivedClaimEntity(wimp_message * wblock);
-extern	 void receivedDataRequest(wimp_message * wmessage);
-extern	 void receivedDataSave(wimp_message * wblock);
-extern	 void receivedDataSaveAck(wimp_message * wblock);
-	 void EventBufAppendKey( int key, int buttons, int x, int y, int windowIndex);
-	 void EventBufAppendMouse(int buttons, int modifiers, int x, int y, int windowIndex);
-extern	 void platReportError( os_error * e);
-void EventBufAppendWindow( int action, int left, int top, int right, int bottom,int windowIndex);
+void			DisplayPixmap(wimp_draw * wblock);
+extern void		DisplayModeChanged(void);
+void			DoNothing(void);
+int				HandleEvents(void);
+void			KeyPressed( wimp_key * wblock);
+void			KeyBufAppend(int key);
+void			UserMessage(wimp_message * wblock);
+void			MouseButtons( wimp_pointer * wblock);
+void			PointerEnterWindow(wimp_entering *wblock);
+void			PointerLeaveWindow(wimp_leaving *wblock);
+void			WindowClose(wimp_close * wblock);
+void			WindowOpen( wimp_open * wblock);
+extern void		claimCaret(wimp_pointer * wblock);
+extern void		receivedClaimEntity(wimp_message * wblock);
+extern void		receivedDataRequest(wimp_message * wmessage);
+extern void		receivedDataSave(wimp_message * wblock);
+extern void		receivedDataSaveAck(wimp_message * wblock);
+void			EventBufAppendKey( int key, int buttons, int x, int y, int windowIndex);
+void			EventBufAppendMouse(int buttons, int modifiers, int x, int y, int windowIndex);
+extern void		platReportError( os_error * e);
+void			EventBufAppendWindow( int action, int left, int top, int right, int bottom,int windowIndex);
 
 void setSocketPollFunction(int spf ) {
 /* called from SocketPlugin init code */
 	socketPollFunction = (void(*)(int, int))spf;
 	PRINTF(( "\\t socketPoll %0x\n", (int)socketPollFunction));
+}
+
+void initialiseSoundPollword(void) {
+// create an RMA allocationfor the sound pollword to live in
+os_error *e;
+	if (!soundPollWordPtr) {
+		// we need to allocate some memory in RMA space and 0 it
+		if ((e = xosmodule_alloc(4, (void **)&soundPollWordPtr)) != NULL) {
+			// damn, failed
+			platReportError(e);
+			return;
+		}
+		*soundPollWordPtr = 0;
+		PRINTF(("allocated pollword block %08X (%d)\n", (int)soundPollWordPtr, *soundPollWordPtr));
+	}
+}
+
+void shutdownSoundPollword(void) {
+// free the RMA space used for the sound pollword
+os_error *e;
+	if (soundPollWordPtr) {
+		if ((e = xosmodule_free(soundPollWordPtr)) != NULL) {
+			platReportError(e);
+		};
+		soundPollWordPtr = 0;
+	}
+	return;
+}
+
+int setupSoundSignalling(unsigned int ** addr, int * flagBit, int semIndex) {
+// set the the sound buffer flagword address from an RMA allocation.
+// set the bit in that flaword that the sound system should use (1 will do for now)
+// we also have to keep track of the semaphore to signal when the pollword is
+// triggered. For now, we'll use this fn to let the sound code tell us
+// what it is
+	if (addr == NULL) {
+		// if the passed in addr is NULL, we're not polling anymore
+		soundBufferEmptySemaphoreIndex = 0;
+		return true;
+	}
+
+	if (!soundPollWordPtr) {
+		// we were unabel to make the pollword RMA area, so fail
+		return false;
+	}
+	// pass in the pollword ptr
+	*addr = soundPollWordPtr;
+	*flagBit = 1;
+	soundBufferEmptySemaphoreIndex = semIndex;
+	PRINTF(("setupSoundSignalling ptr: %08X sem: %d\n", soundPollWordPtr, soundBufferEmptySemaphoreIndex));
+	return true;
 }
 
 void setMetaKeyOptions(int swap) {
@@ -420,33 +474,46 @@ int HandleSingleEvent(wimp_block *pollBlock, wimp_event_no pollEvent) {
 			/* null means no more interesting events,
 			   so return false*/
 			return false ; break;
-		case wimp_REDRAW_WINDOW_REQUEST	:
+		case wimp_REDRAW_WINDOW_REQUEST:
 			PRINTF(("\\t display\n"));
-			DisplayPixmap(&(pollBlock->redraw)); break;
-		case wimp_OPEN_WINDOW_REQUEST	:
-			WindowOpen(&(pollBlock->open)); break;
-		case wimp_CLOSE_WINDOW_REQUEST	:
-			WindowClose(&(pollBlock->close)); break;
-		case wimp_POINTER_LEAVING_WINDOW :
-			PointerLeaveWindow(&(pollBlock->leaving)); break;
+			DisplayPixmap(&(pollBlock->redraw));
+			break;
+		case wimp_OPEN_WINDOW_REQUEST:
+			WindowOpen(&(pollBlock->open));
+			break;
+		case wimp_CLOSE_WINDOW_REQUEST:
+			WindowClose(&(pollBlock->close));
+			break;
+		case wimp_POINTER_LEAVING_WINDOW:
+			PointerLeaveWindow(&(pollBlock->leaving));
+			break;
 		case wimp_POINTER_ENTERING_WINDOW:
-			PointerEnterWindow(&(pollBlock->entering)); break;
-		case wimp_MOUSE_CLICK			:
-			MouseButtons(&(pollBlock->pointer)); break;
-		case wimp_USER_DRAG_BOX			:
-			DoNothing(); break;
-		case wimp_KEY_PRESSED			:
-			KeyPressed( &(pollBlock->key)); break;
-		case wimp_MENU_SELECTION		:
-			DoNothing(); break;
-		case wimp_SCROLL_REQUEST		:
-			DoNothing(); break;
-		case wimp_USER_MESSAGE			:
-			UserMessage(&(pollBlock->message)); break;
-		case wimp_USER_MESSAGE_RECORDED		:
-			UserMessage(&(pollBlock->message)); break;
-		case wimp_USER_MESSAGE_ACKNOWLEDGE	:
-			UserMessage(&(pollBlock->message)); break;
+			PointerEnterWindow(&(pollBlock->entering));
+			break;
+		case wimp_MOUSE_CLICK:
+			MouseButtons(&(pollBlock->pointer));
+			break;
+		case wimp_USER_DRAG_BOX:
+			DoNothing();
+			break;
+		case wimp_KEY_PRESSED:
+			KeyPressed( &(pollBlock->key));
+			break;
+		case wimp_MENU_SELECTION:
+			DoNothing();
+			break;
+		case wimp_SCROLL_REQUEST:
+			DoNothing();
+			break;
+		case wimp_USER_MESSAGE:
+			UserMessage(&(pollBlock->message));
+			break;
+		case wimp_USER_MESSAGE_RECORDED:
+			UserMessage(&(pollBlock->message));
+			break;
+		case wimp_USER_MESSAGE_ACKNOWLEDGE:
+			UserMessage(&(pollBlock->message));
+			break;
 	}
 	return true;
 }
@@ -457,6 +524,21 @@ int HandleSocketPoll(int microSecondsToDelay) {
  */
 	if(socketPollFunction) {
 		socketPollFunction(microSecondsToDelay, 0);
+	}
+}
+
+int HandleSoundPoll(void) {
+// if there is a sound semaphore set up and a non-0 sound pollword address and the sound pollword
+// has been tickled, 0 out the pollword and signal the semaphore
+	if ( soundBufferEmptySemaphoreIndex && (int)soundPollWordPtr) {
+		int pollwd;
+		pollwd = *soundPollWordPtr;
+PRINTF(("HandleSoundPoll: %d\n", pollwd));
+		if (pollwd) {
+			*soundPollWordPtr = 0;
+			signalSemaphoreWithIndex(soundBufferEmptySemaphoreIndex);
+			PRINTF(("signal sound semaphore:%d pollword: %d\n", soundBufferEmptySemaphoreIndex, pollwd));
+		}
 	}
 }
 
@@ -495,7 +577,7 @@ extern int getNextWakeupTick(void);
 	//PRINTF(("\\t HandleEventsWithWait %d\n", pollDelay));
 	HandleMousePoll();
 	HandleSocketPoll(microSecondsToDelay);
-	do { xwimp_poll_idle((wimp_MASK_POLLWORD
+	do { xwimp_poll_idle(wimp_MASK_POLLWORD
 		| wimp_MASK_GAIN
 		| wimp_MASK_LOSE
 		| wimp_SAVE_FP) ,
@@ -511,6 +593,7 @@ int HandleEvents(void) {
 /* track buttons and pos, send event if any change */
 	HandleMousePoll();
 	HandleSocketPoll(0);
+	HandleSoundPoll();
 	//PRINTF(("\\t HandleEvents\n"));
 	/* One poll to bring them all.
 	 * One poll to find them.
@@ -733,7 +816,11 @@ int keystate, dkey, modState, thisWindowIndex;
 	} else {
 		KeyBufAppend(keystate | ((modState)<<8));
 	}
-	PRINTF(("\\t KeyPressed .c%c .d%x keystate(%d-%d) w: %d\n", dblock->c, (dblock->deepkey)>>wimp_DEEPKEY_KEYNUMSHIFT, keystate, modState, thisWindowIndex));
+	PRINTF(("\\t KeyPressed .c%c .d%x keystate(%d-%d) w: %d\n",
+		 dblock->c,
+		 (dblock->deepkey)>>wimp_DEEPKEY_KEYNUMSHIFT,
+		 keystate, modState,
+		 thisWindowIndex));
 }
 
 void UserMessage(wimp_message * wblock) {

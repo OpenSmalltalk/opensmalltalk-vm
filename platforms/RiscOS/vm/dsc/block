@@ -21,3 +21,4 @@ xramfs_drives
 xscsifs_drives
 xadfs_drives
 xterritory_read_current_time_zone
+uri_dispatch

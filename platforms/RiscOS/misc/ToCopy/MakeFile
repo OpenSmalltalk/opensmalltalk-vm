@@ -1,5 +1,5 @@
-# Project:   squeak
-# Make the pluginised VM for v3.9
+# Project:   sq38plugin
+# Make the pluginised VM for v3.8
 # Reworked to use VMMaker non-copying of platform & cross files
 # Add check for Squeak3D dir to optionally compile the Squeak3D plugin
 # Ditto for HostWindow and LocalePlugin
@@ -33,7 +33,7 @@ SQ3DTestFile= $(SPlug).Squeak3D.dsc.Squeak3D
 HWTestFile= $(SPlug).HostWindowPlugin.dsc.HostWindowPlugin
 LocaleTestFile= $(Plug).LocalePlugin.dsc.LocalePlugin
 
-pluginList=B2DPlugin BitBltPlugin BMPReadWriterPlugin DSAPrims FFTPlugin FilePlugin FileCopyPlugin FloatArrayPlugin GeniePlugin JPEGReaderPlugin  LargeIntegers Matrix2x3Plugin MiscPrimitivePlugin RePlugin SecurityPlugin SocketPlugin SoundPlugin StarSqueakPlugin  SurfacePlugin ZipPlugin
+pluginList= ADPCMCodecPlugin B2DPlugin BitBltPlugin BMPReadWriterPlugin DSAPrims FFTPlugin FilePlugin FileCopyPlugin FloatArrayPlugin  GeniePlugin JPEGReaderPlugin  LargeIntegers Matrix2x3Plugin MiscPrimitivePlugin RePlugin ScratchPlugin SecurityPlugin SocketPlugin SoundCodecPrims SoundGenerationPlugin SoundPlugin StarSqueakPlugin  SurfacePlugin ZipPlugin
 
 # Final targets:
 all: plugins vm
@@ -86,11 +86,13 @@ $(Sqk).!Runimage:	@.vm.o.sqRPCMain @.vm.o.interp @.vm.o.sqArgument \
 @.vm.o.ptrblock:   $(Sqk).ptrblkmap
         rinkptr $(rinkptrflags) $(Sqk).ptrblkmap  @.vm.o.ptrblock
 
-$(Sqk).ptrblkmap:    C:o.stubs @.vm.o.sqRPCMain @.vm.o.sqRPCWindows  $(PVM).dsc.block
+$(Sqk).ptrblkmap:    C:o.stubs @.vm.o.sqRPCMain @.vm.o.sqRPCWindows \
+			 @.vm.o.sqRPCEvents $(PVM).dsc.block
         copy $(PVM).dsc.block $* f~c
         extractsym -e $* C:o.stubs,*
         extractsym -e $* @.vm.o.sqRPCMain
         extractsym -e $* @.vm.o.sqRPCWindows
+        extractsym -e $* @.vm.o.sqRPCEvents
 
 ###########
 # ADPCMCodecPlugin make rule.
@@ -247,7 +249,6 @@ $(SPlug).FilePlugin.o.sqFilePluginBasicPrims: $(PPlug).FilePlugin.c.sqFilePlugin
 # FileCopyPlugin.c is generated
 # FileCopyPlugin.h is in Cross
 # sqRPCFileCopy.c is in RiscOS
-
 ###########
 FileCopyPlugin:	$(SqPlugins).FileCopyPlugin
 	@echo done $*
@@ -284,6 +285,24 @@ $(SqPlugins).FloatArrayPlugin:	$(SPlug).FloatArrayPlugin.o.FloatArrayPlugin\
 		-a $(SPlug).FloatArrayPlugin.o.FloatArrayPlugin
 
 $(SPlug).FloatArrayPlugin.o.FloatArrayPlugin: $(SPlug).FloatArrayPlugin.c.FloatArrayPlugin $(PlHdr)
+	cc $(ccflags) -o $@ $*.c
+
+###########
+# FloatMath Plugin make rule.
+# Very simple, only the one source file
+###########
+FloatMathPlugin:	$(SqPlugins).FloatMathPlugin
+	@echo done $*
+
+$(SqPlugins).FloatMathPlugin:	$(SPlug).FloatMathPlugin.o.FloatMathPlugin\
+		$(SPlug).FloatMathPlugin.dsc.FloatMathPlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).FloatMathPlugin \
+		-h $(SPlug).FloatMathPlugin.dsc.FloatMathPlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).FloatMathPlugin.o.FloatMathPlugin
+
+$(SPlug).FloatMathPlugin.o.FloatMathPlugin: $(SPlug).FloatMathPlugin.c.FloatMathPlugin $(PlHdr)
 	cc $(ccflags) -o $@ $*.c
 
 
@@ -374,7 +393,6 @@ $(SPlug).LargeIntegers.o.LargeIntegers: $(SPlug).LargeIntegers.c.LargeIntegers $
 # LocalePlugin.c is generated
 # LocalePlugin.h is in Cross
 # sqRPCLocale.c is in RiscOS
-
 ###########
 LocalePlugin:	$(SqPlugins).LocalePlugin
 	@echo done $*
@@ -473,12 +491,36 @@ $(SPlug).RePlugin.o.study: $(CPlug).RePlugin.c.study
 
 
 ###########
+# Scratch Plugin make rule.
+# More complex - involves files from several sources
+# ScratchPlugin.c is generated
+# ScratchPlugin.h is in Cross
+# sqRPCScratch.c is in RiscOS
+###########
+ScratchPlugin:	$(SqPlugins).ScratchPlugin
+	@echo done $*
+
+$(SqPlugins).ScratchPlugin:	$(SPlug).ScratchPlugin.o.ScratchPlugin \
+		$(SPlug).ScratchPlugin.o.sqRPCScratchOps  \
+		$(SPlug).ScratchPlugin.dsc.ScratchPlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).ScratchPlugin \
+		-h $(SPlug).ScratchPlugin.dsc.ScratchPlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).ScratchPlugin.o.ScratchPlugin \
+			$(SPlug).ScratchPlugin.o.sqRPCScratchOps
+
+$(SPlug).ScratchPlugin.o.ScratchPlugin: $(SPlug).ScratchPlugin.c.ScratchPlugin $(PlHdr)
+	cc $(ccflags) -I$(CPlug).ScratchPlugin -o $@ $*.c
+$(SPlug).ScratchPlugin.o.sqRPCScratchOps: $(PPlug).ScratchPlugin.c.sqRPCScratchOps  $(PlHdr)
+	cc $(ccflags) -I$(CPlug).ScratchPlugin -o $@ $(PPlug).ScratchPlugin.c.sqRPCScratchOps
+
+###########
 # Security Plugin make rule.
 # More complex - involves files from several sources
 # SecurityPlugin.c is generated
 # SecurityPlugin.h is in Cross
 # sqRPCSecurity.c is in RiscOS
-
 ###########
 SecurityPlugin:	$(SqPlugins).SecurityPlugin
 	@echo done $*
@@ -533,11 +575,57 @@ $(SPlug).SocketPlugin.o.sqRPCNetPlugin: $(PPlug).SocketPlugin.c.sqRPCNetPlugin $
 	cc $(ccflags) -I$(PPlug).SocketPlugin,$(CPlug).SocketPlugin,$(Soklib) -o $@ $(PPlug).SocketPlugin.c.sqRPCNetPlugin
 
 ###########
+# SoundCodec Plugin make rule. Bizarrely called SoundCodecPrims in use.
+# More complex - involves files from several sources
+# SoundCodecPrims.c is generated
+# SoundCodecPrims.h is in Cross
+# sqSoundCodecPluginBasicPrims.c is in Cross
+###########
+SoundCodecPrims:	$(SqPlugins).SoundCodecPrims
+	@echo done $*
+
+$(SqPlugins).SoundCodecPrims:	$(SPlug).SoundCodecPrims.o.SoundCodecPrims \
+                $(SPlug).SoundCodecPrims.o.sqSoundCodecPluginBasicPrims \
+		$(SPlug).SoundCodecPrims.dsc.SoundCodecPrims \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).SoundCodecPrims \
+		-h $(SPlug).SoundCodecPrims.dsc.SoundCodecPrims \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).SoundCodecPrims.o.SoundCodecPrims \
+		       $(SPlug).SoundCodecPrims.o.sqSoundCodecPluginBasicPrims
+
+$(SPlug).SoundCodecPrims.o.SoundCodecPrims: $(SPlug).SoundCodecPrims.c.SoundCodecPrims $(PlHdr)
+	cc $(ccflags) -I$(CPlug).SoundCodecPrims -o $@ $*.c
+$(SPlug).SoundCodecPrims.o.sqSoundCodecPluginBasicPrims: $(CPlug).SoundCodecPrims.c.sqSoundCodecPluginBasicPrims  $(PlHdr)
+	cc $(ccflags) -I$(CPlug).sqSoundCodecPluginBasicPrims -o $@ $(CPlug).SoundCodecPrims.c.sqSoundCodecPluginBasicPrims
+
+###########
+# SoundGeneration Plugin make rule.
+# Very simple, only the one source file
+###########
+SoundGenerationPlugin:	$(SqPlugins).SoundGenerationPlugin
+	@echo done $*
+
+$(SqPlugins).SoundGenerationPlugin:	$(SPlug).SoundGenerationPlugin.o.SoundGenerationPlugin \
+		$(SPlug).SoundGenerationPlugin.dsc.SoundGenerationPlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).SoundGenerationPlugin \
+		-h $(SPlug).SoundGenerationPlugin.dsc.SoundGenerationPlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).SoundGenerationPlugin.o.SoundGenerationPlugin
+
+$(SPlug).SoundGenerationPlugin.o.SoundGenerationPlugin: $(SPlug).SoundGenerationPlugin.c.SoundGenerationPlugin $(PlHdr)
+	cc $(ccflags) -o $@ $*.c
+
+
+
+###########
 # Sound Plugin make rule.
 # More complex - involves files from several sources
 # SoundPlugin.c is generated
 # SoundPlugin.h is in Cross
 # sqRPCSound.c is in RiscOS
+
 ###########
 SoundPlugin:	$(SqPlugins).SoundPlugin
 	@echo done $*
