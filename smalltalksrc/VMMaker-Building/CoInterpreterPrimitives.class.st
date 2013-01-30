@@ -260,6 +260,12 @@ CoInterpreterPrimitives >> primitiveMethodXray [
 	self pop: 1 thenPush: (objectMemory integerObjectOf: flags)
 ]
 
+{ #category : #'other primitives' }
+CoInterpreterPrimitives >> primitiveMinimumUnusedHeadroom [
+	<export: true>
+	self methodReturnValue: (self integerObjectOf: self minimumUnusedHeadroom)
+]
+
 { #category : #'indexing primitives' }
 CoInterpreterPrimitives >> primitiveNoAtCacheAt [
 

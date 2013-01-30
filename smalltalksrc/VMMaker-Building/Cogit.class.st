@@ -3670,6 +3670,10 @@ Cogit >> compileTrampolineFor: aRoutine callJumpBar: callJumpBar "<Boolean>" num
 	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
 	<var: #aRoutine type: #'void *'>
 	<inline: false>
+	"If on a RISC processor the return address needs to be pushed to the
+	 stack so that the interpreter sees the same stack layout as on CISC."
+	backEnd hasLinkRegister ifTrue:
+		[self PushR: LinkReg].
 	self genSaveStackPointers.
 	self genLoadCStackPointers.
 	cStackAlignment > BytesPerWord ifTrue:
@@ -3697,8 +3701,6 @@ Cogit >> compileTrampolineFor: aRoutine callJumpBar: callJumpBar "<Boolean>" num
 		regOrConst0 < 0
 			ifTrue: [backEnd genPassReg: regOrConst0 asArgument: 0]
 			ifFalse: [backEnd genPassConst: regOrConst0 asArgument: 0]].
-	backEnd hasLinkRegister 
-		ifTrue: [self gen: PushR operand: LinkReg].
 	self gen: (callJumpBar ifTrue: [Call] ifFalse: [Jump])
 		operand: (self cCode: [aRoutine asUnsignedInteger]
 					   inSmalltalk: [self simulatedTrampolineFor: aRoutine]).
@@ -3712,6 +3714,8 @@ Cogit >> compileTrampolineFor: aRoutine callJumpBar: callJumpBar "<Boolean>" num
 				ifNotNil: [backEnd genRestoreRegsExcept: resultRegOrNil]
 				ifNil: [backEnd genRestoreRegs]].
 		self genLoadStackPointers.
+		backEnd hasLinkRegister ifTrue:
+			[self PopR: LinkReg].
 		self RetN: 0]
 ]
 
@@ -4561,8 +4565,6 @@ Cogit >> genMethodAbortTrampoline [
 	opcodeIndex := 0.
 	self CmpCq: 0 R: ReceiverResultReg.
 	jumpSICMiss := self JumpNonZero: 0.
-	backEnd hasLinkRegister 
-		ifTrue: [self MoveR: LinkReg Mw: 0 r: SPReg]. "overwrite send ret address with ceMethodAbortTrampoline call ret address"
 	self compileTrampolineFor: #ceStackOverflow:
 		callJumpBar: true
 		numArgs: 1
@@ -4573,8 +4575,6 @@ Cogit >> genMethodAbortTrampoline [
 		saveRegs: false
 		resultReg: nil.
 	jumpSICMiss jmpTarget: self Label.
-	backEnd hasLinkRegister 
-		ifTrue: [self PushR: LinkReg]. "push ret address for ceMethodAbortTrampoline call"
 	^self genTrampolineFor: #ceSICMiss:
 		called: 'ceMethodAbort'
 		callJumpBar: true
@@ -7882,13 +7882,6 @@ Cogit >> spanFor: descriptor at: pc exts: nExts in: aMethodObj [
 		with: pc
 		with: nExts
 		with: aMethodObj
-]
-
-{ #category : #'jit - api' }
-Cogit >> stackPageHeadroomBytes [
-	<api>
-	"Delegate this to the processor..."
-	^backEnd stackPageInterruptHeadroomBytes
 ]
 
 { #category : #disassembly }

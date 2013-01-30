@@ -1084,6 +1084,19 @@ CogVMSimulator >> incrementByteCount [
 		 byteCount \\ 10000 = 0 ifTrue: [self fullDisplayUpdate]]
 ]
 
+{ #category : #'test support' }
+CogVMSimulator >> initStackPagesForTests [
+	numStackPages := 8.
+	stackPages := self stackPagesClass new.
+	objectMemory allocateMemoryOfSize: 1024 * 1024.
+	cogCodeSize := 0.
+	heapBase := self methodCacheSize
+				+ self primTraceLogSize
+				+ self rumpCStackSize
+				+ self computeStackZoneSize.
+	self initStackPages
+]
+
 { #category : #initialization }
 CogVMSimulator >> initialEnterSmalltalkExecutive [
 	"Main entry-point into the interpreter at system start-up.
@@ -2019,6 +2032,11 @@ CogVMSimulator >> nextShortFrom: aStream swap: swapFlag [
 		ifFalse: [aShort]
 ]
 
+{ #category : #'test support' }
+CogVMSimulator >> numStackPages [
+	^numStackPages
+]
+
 { #category : #testing }
 CogVMSimulator >> objectBefore: addr [
 	| oop prev |
@@ -2185,6 +2203,12 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 	Utilities informUser: 'Relocating object pointers...'
 				during: [self initializeInterpreter: bytesToShift].
 	self initializeCodeGenerator
+]
+
+{ #category : #'stack pages' }
+CogVMSimulator >> osCogStackPageHeadroom [
+	"Notional headroom for the simulator.  The platform provides this in the real VM."
+	^1024
 ]
 
 { #category : #'multi-threading simulation switch' }

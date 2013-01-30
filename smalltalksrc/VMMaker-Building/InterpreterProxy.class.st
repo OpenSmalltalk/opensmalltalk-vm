@@ -82,6 +82,20 @@ InterpreterProxy >> byteSizeOf: oop [
 		ifFalse:[(self slotSizeOf: oop) * 4]
 ]
 
+{ #category : #'callback support' }
+InterpreterProxy >> callbackEnter: callbackID [
+	"Re-enter the interpreter for executing a callback"
+	<var: #callbackID type: #'sqInt *'>
+	^self notYetImplementedError
+]
+
+{ #category : #'callback support' }
+InterpreterProxy >> callbackLeave: cbID [
+	"Leave from a previous callback"
+	<var: #callbackID type: #'sqInt *'>
+	^self notYetImplementedError
+]
+
 { #category : #'special objects' }
 InterpreterProxy >> characterTable [
 	^Character characterTable
@@ -201,7 +215,7 @@ InterpreterProxy >> copyBitsFrom: leftX to: rightX at: yValue [
 
 { #category : #'FFI support' }
 InterpreterProxy >> disownVM: flags [
-	self error: 'not yet implemented in Smalltalk'
+	^self notYetImplementedError
 ]
 
 { #category : #'special objects' }
@@ -328,13 +342,13 @@ InterpreterProxy >> fullGC [
 
 { #category : #other }
 InterpreterProxy >> getInterruptPending [
-	self error: 'not yet implemented in Smalltalk'
+	^self notYetImplementedError
 ]
 
 { #category : #other }
 InterpreterProxy >> getStackPointer [
 	<returnTypeC: #'sqInt *'>
-	self error: 'not yet implemented in Smalltalk'
+	^self notYetImplementedError
 ]
 
 { #category : #other }
@@ -511,13 +525,13 @@ InterpreterProxy >> isInterpreterProxy [
 { #category : #testing }
 InterpreterProxy >> isOopImmutable: anOop [
 	<api>
-	^self error: 'not yet implemented in Smalltalk'
+	^self notYetImplementedError
 ]
 
 { #category : #testing }
 InterpreterProxy >> isOopMutable: anOop [
 	<api>
-	^self error: 'not yet implemented in Smalltalk'
+	^self notYetImplementedError
 ]
 
 { #category : #testing }
@@ -542,7 +556,7 @@ InterpreterProxy >> isWordsOrBytes: oop [
 
 { #category : #'FFI support' }
 InterpreterProxy >> isYoung: anOop [
-	self error: 'not yet implemented in Smalltalk'
+	^self notYetImplementedError
 ]
 
 { #category : #'object access' }
@@ -624,6 +638,11 @@ InterpreterProxy >> nilObject [
 	^nil
 ]
 
+{ #category : #private }
+InterpreterProxy >> notYetImplementedError [
+	^self error: 'not yet implemented in Smalltalk'
+]
+
 { #category : #'stack access' }
 InterpreterProxy >> objectArg: offset [
 	"Like #stackObjectValue: but access method arguments left-to-right"
@@ -641,7 +660,7 @@ InterpreterProxy >> obsoleteDontUseThisFetchWord: fieldIndex ofObject: oop [
 
 { #category : #'FFI support' }
 InterpreterProxy >> ownVM: flags [
-	self error: 'not yet implemented in Smalltalk'
+	^self notYetImplementedError
 ]
 
 { #category : #'stack access' }
@@ -806,7 +825,7 @@ InterpreterProxy >> sendInvokeCallbackContext: vmCallbackContext [
 InterpreterProxy >> setInterruptCheckChain: aFunction [
 	<returnTypeC: 'void (*setInterruptCheckChain(void (*aFunction)(void)))()'>
 	<var: #aFunction declareC: 'void (*aFunction)()'>
-	self error: 'not yet implemented in Smalltalk'
+	^self notYetImplementedError
 ]
 
 { #category : #other }
@@ -817,7 +836,7 @@ InterpreterProxy >> showDisplayBits: aForm Left: l Top: t Right: r Bottom: b [
 
 { #category : #'callback support' }
 InterpreterProxy >> signalNoResume: aSemaphore [
-	self error: 'not yet implemented in Smalltalk'
+	^self notYetImplementedError
 ]
 
 { #category : #other }
