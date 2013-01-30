@@ -120,21 +120,21 @@ GdbARMAlienTests >> testCallTrap [
 	"self new testCallTrap"
 	| memory |
 	memory := Bitmap new: 256 withAll: self processor nopOpcode.
-	memory longAt: 1 put: (self processor branchAndLinkOpcodeWithOffset: 1024) bigEndian: false.
+	memory longAt: 5 put: (self processor branchAndLinkOpcodeWithOffset: 1020) bigEndian: false.
 	memory := memory asByteArray.
 	self processor
-			pc: 0;
+			pc: 4;
 			sp: (memory size - 4); "Room for return address"
 			singleStepIn: memory.
 			"We have to step twice, because the first step only changes the pc, but does not fetch anything from the address it points to."
 	self should: [self processor singleStepIn: memory]
-		raise: Error
+		raise: ProcessorSimulationTrap
 		withExceptionDo:
 			[:pst|
 			self assert: self processor pc = 1024.
-			self assert: self processor lr = 4.
-			self assert: pst pc = 0.
-			self assert: pst nextpc = 4.
+			self assert: self processor lr = 8.
+			self assert: pst pc = 4.
+			self assert: pst nextpc = 8.
 			self assert: pst address = 1024.
 			self assert: pst type = #call].
 ]
@@ -151,7 +151,7 @@ GdbARMAlienTests >> testDisassembling [
 		into: [:str :len | 
 			self 
 				assert: len = 4;
-				assert: str = 'svc	0x00200000'].
+				assert: str = '0x00000000: svc	0x00200000'].
 ]
 
 { #category : #tests }
@@ -193,14 +193,14 @@ GdbARMAlienTests >> testFlags [
 		into: [:str :len | 
 			self 
 				assert: len = 4;
-				assert: str = 'mov	r3, #1'].
+				assert: str equals: '0x00000000: mov	r3, #1'].
 	self processor
 		disassembleInstructionAt: 4 
 		In: memory 
 		into: [:str :len | 
 			self 
 				assert: len = 4;
-				assert: str = 'cmp	r3, #1'].
+				assert: str equals: '0x00000004: cmp	r3, #1'].
 	self processor
 		pc: 0;
 		singleStepIn: memory;
