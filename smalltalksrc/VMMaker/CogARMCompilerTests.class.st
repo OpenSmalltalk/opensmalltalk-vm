@@ -37,7 +37,9 @@ CogARMCompilerTests >> processor [
 { #category : #accessing }
 CogARMCompilerTests >> strip: aFancyDisassembledInstruction [
 	"When havin an immediate > 15, the disassembler appends '	; 0x\d\d'. That is stripped."
-	^(aFancyDisassembledInstruction copyUpTo: $;) withBlanksTrimmed
+	^((aFancyDisassembledInstruction 
+		allButFirst: (aFancyDisassembledInstruction indexOf: $:) + 1)
+			copyUpTo: $;) withBlanksTrimmed
 ]
 
 { #category : #tests }
