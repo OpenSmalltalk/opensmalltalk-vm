@@ -5972,6 +5972,7 @@ StackInterpreter >> initStackPages [
 						inSmalltalk:
 							[stackPages := self stackPagesClass new.
 							 stackPages initializeWithByteSize: stackPagesBytes for: self].
+	self cCode: [self me: theStackMemory ms: 0 et: stackPagesBytes].
 	stackPages
 		initializeStack: theStackMemory
 		numSlots: stackPagesBytes / BytesPerWord
@@ -5996,6 +5997,7 @@ StackInterpreter >> initStackPagesAndInterpret [
 						inSmalltalk:
 							[stackPages := self stackPagesClass new.
 							 stackPages initializeWithByteSize: stackPagesBytes for: self].
+	self cCode: [self me: theStackMemory ms: 0 et: stackPagesBytes].
 	stackPages
 		initializeStack: theStackMemory
 		numSlots: stackPagesBytes / BytesPerWord
@@ -7805,6 +7807,8 @@ StackInterpreter >> moveFramesIn: oldPage through: theFP toPage: newPage [
 	self assert: (self frameHasContext: callerFP).
 	callerIP := self oopForPointer: (self frameCallerSavedIP: theFP).
 	stackPages longAt: theFP + stackedReceiverOffset put: callerIP.
+	self assert: (callerFP < oldPage baseAddress
+				and: [callerFP > (oldPage realStackLimit - (LargeContextSize / 2))]).
 	oldPage
 		headFP: callerFP;
 		headSP: theFP + stackedReceiverOffset.

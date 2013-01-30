@@ -26,7 +26,7 @@ CCodeGeneratorTests >> testIntegerGeneration [
 		self assert: (literal endsWith: 'UL')].
 
 	"Test the 64-bit integers. They need to be marked as unsigned long longs."
-	((32 to: 64) collect: [:shift| 16rFFFFFFFFFFFFFFFF bitClear: (1 bitShift: shift) - 1]) do:
+	((32 to: 63) collect: [:shift| 16rFFFFFFFFFFFFFFFF bitClear: (1 bitShift: shift) - 1]) do:
 		[:number| | literal |
 		literal := self cg cLiteralFor: number.
 		self assert: ((literal allButLast: 3) allSatisfy: [:c| c isDigit]).
