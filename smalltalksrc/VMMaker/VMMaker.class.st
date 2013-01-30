@@ -357,7 +357,7 @@ VMMaker class >> generateSqueakCogVM [
 		to: (FileDirectory default pathFromURI: 'oscogvm/src')
 		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
 		including:#(	ADPCMCodecPlugin AsynchFilePlugin BalloonEnginePlugin B3DAcceleratorPlugin
-					BMPReadWriterPlugin BitBltSimulation BochsIA32Plugin GdbARMPlugin CroquetPlugin DSAPlugin
+					BMPReadWriterPlugin BitBltSimulation BochsIA32Plugin CroquetPlugin DSAPlugin
 					DeflatePlugin DropPlugin FT2Plugin FFTPlugin FileCopyPlugin FilePlugin FloatArrayPlugin
 					FloatMathPlugin GeniePlugin HostWindowPlugin IA32ABIPlugin InternetConfigPlugin
 					JPEGReadWriter2Plugin JPEGReaderPlugin JoystickTabletPlugin KlattSynthesizerPlugin
