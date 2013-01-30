@@ -3317,6 +3317,8 @@ Cogit >> compileAbort [
 	 The abort routine must be called;  In the callee the method is located by
 	 adding the relevant offset to the return address of the call."
 	stackOverflowCall := self MoveCq: 0 R: ReceiverResultReg.
+	backEnd hasLinkRegister ifTrue:
+		[self PushR: LinkReg].
 	sendMissCall := self Call: (self methodAbortTrampolineFor: methodOrBlockNumArgs)
 ]
 
@@ -3695,6 +3697,8 @@ Cogit >> compileTrampolineFor: aRoutine callJumpBar: callJumpBar "<Boolean>" num
 		regOrConst0 < 0
 			ifTrue: [backEnd genPassReg: regOrConst0 asArgument: 0]
 			ifFalse: [backEnd genPassConst: regOrConst0 asArgument: 0]].
+	backEnd hasLinkRegister 
+		ifTrue: [self gen: PushR operand: LinkReg].
 	self gen: (callJumpBar ifTrue: [Call] ifFalse: [Jump])
 		operand: (self cCode: [aRoutine asUnsignedInteger]
 					   inSmalltalk: [self simulatedTrampolineFor: aRoutine]).
@@ -4557,6 +4561,8 @@ Cogit >> genMethodAbortTrampoline [
 	opcodeIndex := 0.
 	self CmpCq: 0 R: ReceiverResultReg.
 	jumpSICMiss := self JumpNonZero: 0.
+	backEnd hasLinkRegister 
+		ifTrue: [self MoveR: LinkReg Mw: 0 r: SPReg]. "overwrite send ret address with ceMethodAbortTrampoline call ret address"
 	self compileTrampolineFor: #ceStackOverflow:
 		callJumpBar: true
 		numArgs: 1
@@ -4567,6 +4573,8 @@ Cogit >> genMethodAbortTrampoline [
 		saveRegs: false
 		resultReg: nil.
 	jumpSICMiss jmpTarget: self Label.
+	backEnd hasLinkRegister 
+		ifTrue: [self PushR: LinkReg]. "push ret address for ceMethodAbortTrampoline call"
 	^self genTrampolineFor: #ceSICMiss:
 		called: 'ceMethodAbort'
 		callJumpBar: true

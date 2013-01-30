@@ -75,6 +75,7 @@ Class {
 		'Label',
 		'LastJump',
 		'LastRTLCode',
+		'LinkReg',
 		'LoadEffectiveAddressMwrR',
 		'LogicalShiftLeftCqR',
 		'LogicalShiftLeftRR',
@@ -188,6 +189,8 @@ CogRTLOpcodes class >> initialize [
 	DPFPReg5 := -14.
 	DPFPReg6 := -15.
 	DPFPReg7 := -16.
+	
+	LinkReg := -17.
 
 	opcodeNames := #("Noops & Pseudo Ops"
 						Label
@@ -284,7 +287,7 @@ CogRTLOpcodes class >> initialize [
 { #category : #'debug printing' }
 CogRTLOpcodes class >> nameForAbstractRegister: reg [ "<Integer>"
 	^#(Arg0Reg Arg1Reg ClassReg FPReg ReceiverResultReg SPReg SendNumArgsReg TempReg
-		DPFPReg0 DPFPReg1 DPFPReg2 DPFPReg3 DPFPReg4 DPFPReg5 DPFPReg6 DPFPReg7)
+		DPFPReg0 DPFPReg1 DPFPReg2 DPFPReg3 DPFPReg4 DPFPReg5 DPFPReg6 DPFPReg7 LinkReg)
 			detect: [:sym| (classPool at: sym) = reg]
 ]
 
@@ -301,7 +304,7 @@ CogRTLOpcodes class >> nameForOpcode: opcode [ "<Integer>"
 { #category : #'debug printing' }
 CogRTLOpcodes class >> nameForRegister: reg [ "<Integer>"
 	^#(Arg0Reg Arg1Reg ClassReg FPReg ReceiverResultReg SPReg SendNumArgsReg TempReg
-		DPFPReg0 DPFPReg1 DPFPReg2 DPFPReg3 DPFPReg4 DPFPReg5 DPFPReg6 DPFPReg7)
+		DPFPReg0 DPFPReg1 DPFPReg2 DPFPReg3 DPFPReg4 DPFPReg5 DPFPReg6 DPFPReg7 LinkReg)
 			detect: [:sym| (classPool at: sym) = reg]
 ]
 

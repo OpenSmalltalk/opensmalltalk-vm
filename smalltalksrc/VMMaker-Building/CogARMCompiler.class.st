@@ -168,6 +168,7 @@ CogARMCompiler >> callTargetFromReturnAddress: callSiteReturnAddress [
 	"Answer the address the call immediately preceeding callSiteReturnAddress will jump to."
 	| callDistance call |
 	call := self instructionBeforeAddress: callSiteReturnAddress.
+	self assert: call ~= 0. "andeq r0, r0 will not be generated, not even as nops"
 	(self isBranch: call)
 		ifTrue: [ callDistance := (call bitAnd: 16r00FFFFFF) << 2.
 			"The distance is a signed 24bit number. Therefore, the highest (26th) bit has to be expanded"
@@ -234,7 +235,7 @@ CogARMCompiler >> computeMaximumSize [
 											ifTrue: [ :u :i | ^maxSize := 4]
 											ifFalse: [ ^maxSize := 20 ]].
 			[PrefetchAw] 			-> [^maxSize := 16].
-			[Call]					-> [^maxSize := "<="24 "recomputed in #sizePCDependentInstruction."].
+			[Call]					-> [^maxSize := 20 "recomputed in #sizePCDependentInstruction."].
 			[RetN]					-> [^(operands at: 0) = 0 
 											ifTrue: [maxSize := 4]
 											ifFalse: [maxSize := 8]].
@@ -289,7 +290,8 @@ CogARMCompiler >> concreteRegister: registerIndex [
 			[SPReg]					-> [SP].
 			[FPReg]					-> [R11].
 			[Arg0Reg]				-> [R4].
-			[Arg1Reg]				-> [R5] }
+			[Arg1Reg]				-> [R5].
+			[LinkReg]				-> [LR]. }
 		otherwise:
 			[self assert: (registerIndex between: R0 and: PC).
 			 registerIndex]
@@ -373,24 +375,19 @@ CogARMCompiler >> concretizeCall [
 	| offset |
 	self assert: (operands at: 0) ~= 0.
 	self assert: (operands at: 0) \\ 4 = 0.
-	offset := (operands at: 0) signedIntFromLong - (address + 8 "normal pc offset" + 4 "push instruction") signedIntFromLong.
+	offset := (operands at: 0) signedIntFromLong - (address + 8 "normal pc offset") signedIntFromLong.
 	(self isQuick: offset)
 		ifTrue: [
-			self machineCodeAt: 0 put: (self t: 4 o: 9 s: 0 rn: SP rd: 8 shifterOperand: 0). "push {pc}"
-			self machineCodeAt: 4 put: (self t: 5 o: 8) + (offset >> 2 bitAnd: 16r00FFFFFF). "BL offset"
-			^machineCodeSize := 8]
+			self machineCodeAt: 0 put: (self t: 5 o: 8) + (offset >> 2 bitAnd: 16r00FFFFFF). "BL offset"
+			^machineCodeSize := 4]
 		ifFalse: [
 			self concretizeConditionalJumpLong: AL.
 			"move the actual jump two instructions further, inserting the pc back-up to lr and the pc push."
-			self machineCodeAt: 20 put: (self machineCodeAt: 12).
+			self machineCodeAt: 16 put: (self machineCodeAt: 12).
 		"Because the pc always points to the actual address + 8, the value at pc is the address of the instruction after the branch"
-			"add lr, pc, #4"
-			self machineCodeAt: 12 put: (self t: 1 o: 4 s: 0 rn: PC rd: LR shifterOperand: 4).
-			"self machineCodeAt: 12 put: (self t: 0 o: 16rD s: 0 rn: 0 rd: LR shifterOperand: PC)."
-			
-			"push {pc} -- IA32 ABI, needed only for within JIT, when calling outside, like in a trampoline, maybe not."
-			self machineCodeAt: 16 put: (self new t: 4 o: 9 s: 0 rn: SP rd: 8 shifterOperand: 0).
-			^machineCodeSize := 24]
+			"mov lr, pc"
+			self machineCodeAt: 12 put: (self t: 0 o: 16rD s: 0 rn: 0 rd: LR shifterOperand: PC).
+			^machineCodeSize := 20]
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1125,11 +1122,10 @@ CogARMCompiler >> isBranch: anInstruction [
 { #category : #testing }
 CogARMCompiler >> isCallPreceedingReturnPC: mcpc [
 	"Assuming mcpc is a return pc answer if the instruction before it is a call."
-	"There are two types of calls: PUSH, BL and (MOV, ORR, ORR, ADD, PUSH, ADD)"
+	"There are two types of calls: BL and (MOV, ORR, ORR, ADD, ADD)"
 	"PUSH {pc} is not sufficient as a test, because pc may be pushed using the PushR opcode"
-	^(objectMemory longAt: mcpc - 8) =  (self t: 4 o: 9 s: 0 rn: SP rd: 8 shifterOperand: 0)
-		and: [(objectMemory byteAt: mcpc - 3) >> 4 = 16rB "BL" 
-			or: [ (objectMemory longAt: mcpc - 12) = 16rE1A0E00F "MOV pc, lr" ]]
+	^ (objectMemory byteAt: mcpc - 3) >> 4 = 16rB "BL" 
+			or: [ (objectMemory longAt: mcpc - 4) >> 12 = ((self t: 1 o: 4 s: 0 rn: RISCTempReg rd: PC)"add pc, r3, 0" >> 12) ]
 ]
 
 { #category : #testing }
@@ -1271,7 +1267,7 @@ CogARMCompiler >> sizePCDependentInstructionAt: eventualAbsoluteAddress [
 			[maximumSpan := target - (eventualAbsoluteAddress + 2)].
 	address := eventualAbsoluteAddress.
 	^machineCodeSize := opcode = Call 
-				ifTrue: [(self isQuick: maximumSpan - 4 "push instruction") ifTrue: [8] ifFalse: [24]]
+				ifTrue: [(self isQuick: maximumSpan) ifTrue: [4] ifFalse: [20]]
 				ifFalse: [(self isLongJump not and: [self isQuick: maximumSpan])
 								ifTrue: [4]
 								ifFalse: [16]] "load address to register, add"
