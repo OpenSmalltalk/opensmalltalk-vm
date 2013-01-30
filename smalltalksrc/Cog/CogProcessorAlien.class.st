@@ -13,6 +13,16 @@ CogProcessorAlien >> abstractInstructionCompilerClass [
 	self subclassResponsibility
 ]
 
+{ #category : #'accessing-abstract' }
+CogProcessorAlien >> cResultRegister [
+	^self subclassResponsibility
+]
+
+{ #category : #'accessing-abstract' }
+CogProcessorAlien >> cResultRegister: aValue [
+	^self subclassResponsibility
+]
+
 { #category : #opcodes }
 CogProcessorAlien >> callOpcode [
 	self subclassResponsibility.
@@ -111,7 +121,9 @@ CogProcessorAlien >> disassembleNextInstructionIn: memory [
 { #category : #disassembly }
 CogProcessorAlien >> disassembleNextInstructionIn: memory for: aSymbolManager [ "<Cogit|nil>"
 	| string |
-	string := (self primitiveDisassembleAt: self pc inMemory: memory) last.
+	string := self pc < memory size 
+				ifTrue: [(self primitiveDisassembleAt: self pc inMemory: memory) last.]
+				ifFalse: ['Invalid address (', (self pc hex allButFirst: 3), ')'].
 	^aSymbolManager
 		ifNil: [string]
 		ifNotNil: [self decorateDisassembly: string for: aSymbolManager]
@@ -137,6 +149,12 @@ CogProcessorAlien >> printRegisterState: registerStateVector on: aStream [
 CogProcessorAlien >> printRegistersOn: aStream [
 	self printRegisterState: self registerState on: aStream.
 	aStream flush
+]
+
+{ #category : #'accessing-abstract' }
+CogProcessorAlien >> registerStatePCIndex [
+	"Return the index of the PC register among all register, assuming they are copied into a Smalltalk array."
+	^self subclassResponsibility
 ]
 
 { #category : #'error handling' }
