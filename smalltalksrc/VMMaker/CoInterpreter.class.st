@@ -3570,6 +3570,7 @@ CoInterpreter >> initStackPagesAndInterpret [
 						inSmalltalk:
 							[stackPages := self stackPagesClass new.
 							 stackPages initializeWithByteSize: stackPagesBytes for: self].
+	self cCode: [self me: theStackMemory ms: 0 et: stackPagesBytes].
 	self sqMakeMemoryNotExecutableFrom: objectMemory startOfMemory asUnsignedInteger
 		To: objectMemory memoryLimit asUnsignedInteger.
 	self sqMakeMemoryNotExecutableFrom: theStackMemory asUnsignedInteger
@@ -3578,6 +3579,7 @@ CoInterpreter >> initStackPagesAndInterpret [
 		initializeStack: theStackMemory
 		numSlots: stackPagesBytes / BytesPerWord
 		pageSize: stackPageBytes / BytesPerWord.
+	self assert: self minimumUnusedHeadroom = stackPageBytes.
 
 	"Once the stack pages are initialized we can continue to bootstrap the system."
 	self loadInitialContext.
@@ -3840,6 +3842,9 @@ CoInterpreter >> interpretMethodFromMachineCode [
 			"Assign stackPage headFP so we can tell if the primitive built a frame.  We can't simply save
 			 the framePointer since e.g. assignment to contexts (via primitiveInstVarAt:put:) can change the
 			 framePointer.  But context assignments will change both the framePointer and stackPage headFP."
+			
+			 self assert: (framePointer < stackPage baseAddress
+						and: [framePointer > (stackPage realStackLimit - (LargeContextSize / 2))]).
 			 stackPage headFP: framePointer.
 			 self isPrimitiveFunctionPointerAnIndex
 				ifTrue:
@@ -4721,6 +4726,28 @@ CoInterpreter >> mframeReceiver: theFP [
 	^stackPages longAt: theFP + FoxMFReceiver
 ]
 
+{ #category : #'debug support' }
+CoInterpreter >> minimumUnusedHeadroom [
+	"Traverse all stack pages looking for non-zero bytes in the headroom part of each page.
+	 Answer the minimum size of unused headroom (zero bytes) in the pages.  This is for
+	 checking that there is enough headroom allocated in stack pages."
+	| minUnused page |
+	<var: #page type: #'StackPage *'>
+	<var: #p type: #'char *'>
+	minUnused := (stackPages stackPageAt: 0) baseAddress - (stackPages stackPageAt: 0) lastAddress.
+	0 to: numStackPages - 1 do:
+		[:i| | p unused |
+		page := stackPages stackPageAt: i.
+		p := page lastAddress.
+		[p := p + BytesPerWord.
+		(self longAtPointer: p) = 0
+		 and: [p <= page baseAddress]] whileTrue.
+		unused := p - BytesPerWord - page lastAddress.
+		unused < minUnused ifTrue:
+			[minUnused := unused]].
+	^minUnused
+]
+
 { #category : #'message sending' }
 CoInterpreter >> mnuMethodOrNilFor: rcvr [
 	"Lookup the doesNotUnderstand: selector in the class of the argument rcvr.
@@ -4790,6 +4817,8 @@ CoInterpreter >> moveFramesIn: oldPage through: theFP toPage: newPage [
 		[self iframeSavedIP: callerFP put: callerIP.
 		 callerIP := cogit ceReturnToInterpreterPC].
 	stackPages longAt: theFP + stackedReceiverOffset put: callerIP.
+	self assert: (callerFP < oldPage baseAddress
+				and: [callerFP > (oldPage realStackLimit - (LargeContextSize / 2))]).
 	oldPage
 		headFP: callerFP;
 		headSP: theFP + stackedReceiverOffset.
@@ -5625,6 +5654,20 @@ CoInterpreter >> recordTrace: classOrInteger thing: selector source: source [
 	traceLogIndex := traceLogIndex + 3 \\ TraceBufferSize
 ]
 
+{ #category : #'debug support' }
+CoInterpreter >> reportMinimumUnusedHeadroom [
+	"Report the stack page size and minimum unused headroom to stdout."
+	<api>
+	self cCode:
+			[self prin: 'stack page size %ld minimum unused stack headroom %ld bytes\n'
+				t: self stackPageByteSize
+				f: self minimumUnusedHeadroom]
+		inSmalltalk:
+			[self print: 'stack page size '; printNum: self stackPageByteSize;
+				print: ' minimum unused stack headroom '; printNum: self minimumUnusedHeadroom;
+				print: ' bytes'; cr]
+]
+
 { #category : #'jump bytecodes' }
 CoInterpreter >> resetBackwardJumpVariables [
 	"Reference these variables from outside interpret to avoid them being localised to interpret.
@@ -6026,9 +6069,11 @@ CoInterpreter >> stackLimitOffset [
 { #category : #'stack pages' }
 CoInterpreter >> stackPageHeadroom [
 	"Return a minimum amount of headroom for each stack page (in bytes).
-	 In a JIT the stack has to have room for interrupt handlers which will run on the
-	 stack.  In the interpreter we don't actually need any headroom."
-	^cogit stackPageHeadroomBytes + 1024
+	 In the interpreter we don't actually need any headroom.  In a JIT the stack
+	 has to have room for interrupt handlers which will run on the stack.
+	 Defer to the platform for this one."
+	<inline: true>
+	^self osCogStackPageHeadroom
 ]
 
 { #category : #initialization }
