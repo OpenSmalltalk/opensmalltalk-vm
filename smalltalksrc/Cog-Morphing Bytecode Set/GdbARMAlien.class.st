@@ -70,6 +70,16 @@ GdbARMAlien >> branchAndLinkOpcodeWithOffset: aNumber [
 
 ]
 
+{ #category : #'accessing-abstract' }
+GdbARMAlien >> cResultRegister [
+	self r0
+]
+
+{ #category : #'accessing-abstract' }
+GdbARMAlien >> cResultRegister: aValue [
+	self r0: aValue
+]
+
 { #category : #accessing }
 GdbARMAlien >> cflag [
 	^self unsignedLongAt: 577
@@ -77,12 +87,9 @@ GdbARMAlien >> cflag [
 
 { #category : #disassembly }
 GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager "<Cogit>" fromAddress: address [
-	"Prepend the address to the decoration string."
-	| addressPrefix |
-	addressPrefix := ((address storeStringBase: 16 length: 9 padded: true) allButFirst: 3), ' ', String tab.
-	anInstructionString = 'mov	r1, r1' 
-		ifTrue: [^super decorateDisassembly: addressPrefix, 'nop' for: aSymbolManager].
-	^super decorateDisassembly: addressPrefix, anInstructionString for: aSymbolManager
+	(anInstructionString endsWith: 'mov	r1, r1')
+		ifTrue: [^super decorateDisassembly: 'nop' for: aSymbolManager].
+	^super decorateDisassembly: anInstructionString for: aSymbolManager
 ]
 
 { #category : #accessing }
@@ -457,7 +464,7 @@ GdbARMAlien >> printRegisterState: registerStateVector on: aStream [
 	| rsvs fields|
 	aStream ensureCr.
 	rsvs := registerStateVector readStream.
-	fields := #(	r0 r1 r2 r3 r4 r5 r6 cr r7 r8 r9 r10 r11 r12 cr sp lr pc eflags cr).
+	fields := #(	r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 sp lr pc eflags cr).
 	fields withIndexDo:
 		[:sym :index| | val |
 		sym = #cr
@@ -637,6 +644,11 @@ GdbARMAlien >> registerStateNames [
 ]
 
 { #category : #'accessing-abstract' }
+GdbARMAlien >> registerStatePCIndex [
+	^16
+]
+
+{ #category : #'accessing-abstract' }
 GdbARMAlien >> registerStateSetters [
 	^#(	r0: r1: r2: r3: r4: r5: r6: r7: r8: r9: r10: fp: r12: sp: lr: pc:)
 ]
@@ -675,7 +687,7 @@ GdbARMAlien >> simulateLeafCallOf: address nextpc: nextpc memory: aMemory [
 
 { #category : #'accessing-abstract' }
 GdbARMAlien >> smashRegisterAccessors [
-	^#(r0: r1: r2: r3: r4: r5: r6: r7: r8:)
+	^#(r0: r1: r2: r3: r4: r5: r6: r7: r8: r9: r10:)
 ]
 
 { #category : #accessing }
