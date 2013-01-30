@@ -266,6 +266,12 @@ VMPluginCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 	 internal plugins use the VM's interpreterProxy variable and external plugins
 	 use their own.  Override to keep local copies of all functions in external
 	 prims, and link directly in internal plugins."
+	"| pcc |
+	pcc := self new.
+	(InterpreterProxy selectors reject: [:s| #(initialize private) includes: (InterpreterProxy whichCategoryIncludesSelector: s)]) do:
+		[:s| pcc noteUsedPluginFunction: s].
+	pcc preDeclareInterpreterProxyOn: Transcript.
+	Transcript flush"
 	| pluginsToClone |
 	(pluginsToClone := self pluginFunctionsToClone) isEmpty ifTrue:
 		[^super preDeclareInterpreterProxyOn: aStream].
