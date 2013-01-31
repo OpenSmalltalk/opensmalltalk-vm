@@ -52,6 +52,8 @@ extern void sqMakeMemoryExecutableFromTo(unsigned long, unsigned long);
 extern void sqMakeMemoryNotExecutableFromTo(unsigned long, unsigned long);
 
 extern int isCFramePointerInUse(void);
+extern int osCogStackPageHeadroom(void);
+extern void reportMinimumUnusedHeadroom(void);
 #endif
 
 /* warnPrintf is provided (and needed) on the win32 platform.

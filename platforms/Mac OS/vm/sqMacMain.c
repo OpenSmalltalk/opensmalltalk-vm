@@ -77,6 +77,7 @@
 #include <objc/objc-runtime.h>
 
 #include "sq.h"
+#include "sqAssert.h"
 #include "sqMacUIConstants.h"
 #include "sqMacMain.h"
 #include "sqMacUIMenuBar.h"
@@ -107,6 +108,7 @@
 # include <execinfo.h>
 # define BACKTRACE_DEPTH 64
 #endif
+#include <signal.h>
 #include <sys/ucontext.h>
 
 extern pthread_mutex_t gEventQueueLock,gSleepLock;
@@ -235,6 +237,10 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 #if STACKVM
 	printf("\nMost recent primitives\n");
 	dumpPrimTraceLog();
+# if COGVM
+	printf("\n");
+	reportMinimumUnusedHeadroom();
+# endif
 #endif
 	printf("\n\t(%s)\n", msg);
 	fflush(stdout);
@@ -541,6 +547,11 @@ sqInt
 ioExitWithErrorCode(int ec)
 {
 	extern void printPhaseTime(int);
+#if COGVM
+extern sqInt reportStackHeadroom;
+	if (reportStackHeadroom)
+		reportMinimumUnusedHeadroom();
+#endif
 	printPhaseTime(3);
     UnloadScrap();
     ioShutdownAllModules();
@@ -1018,6 +1029,8 @@ getVersionInfo(int verbose)
  * Support code for Cog.
  * a) Answer whether the C frame pointer is in use, for capture of the C stack
  *    pointers.
+ * b) answer the amount of stack room to ensure in a Cog stack page, including
+ *    the size of the redzone, if any.
  */
 # if defined(i386) || defined(__i386) || defined(__i386__)
 /*
@@ -1040,4 +1053,51 @@ isCFramePointerInUse()
 	return CFramePointer >= CStackPointer && CFramePointer <= currentCSP;
 }
 # endif /* defined(i386) || defined(__i386) || defined(__i386__) */
+
+/* Answer an approximation of the size of the redzone (if any).  Do so by
+ * sending a signal to the process and computing the difference between the
+ * stack pointer in the signal handler and that in the caller. Assumes stacks
+ * descend.
+ */
+
+#if !defined(min)
+# define min(x,y) (((x)>(y))?(y):(x))
+#endif
+static char *p = 0;
+
+static void
+sighandler(int sig) { p = (char *)&sig; }
+
+static int
+getRedzoneSize()
+{
+	struct sigaction handler_action, old;
+	handler_action.sa_sigaction = sighandler;
+	handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
+	sigemptyset(&handler_action.sa_mask);
+	(void)sigaction(SIGPROF, &handler_action, &old);
+
+	do kill(getpid(),SIGPROF); while (!p);
+	(void)sigaction(SIGPROF, &old, 0);
+	return (char *)min(&old,&handler_action) - sizeof(struct sigaction) - p;
+}
+
+sqInt reportStackHeadroom;
+static int stackPageHeadroom;
+
+/* Answer the redzone size plus space for any signal handlers to run in.
+ * N.B. Space for signal handers may include space for the dynamic linker to
+ * run in since signal handlers may reference other functions, and linking may
+ * be lazy.  The reportheadroom switch can be used to check empirically that
+ * there is sufficient headroom.  At least on Mac OS X we see no large stack
+ * usage that would indicate e.g. dynamic linking in signal handlers.
+ * So answer only the redzone size and likely get small (2048 byte) pages.
+ */
+int
+osCogStackPageHeadroom()
+{
+	if (!stackPageHeadroom)
+		stackPageHeadroom = getRedzoneSize();
+	return stackPageHeadroom;
+}
 #endif /* COGVM */

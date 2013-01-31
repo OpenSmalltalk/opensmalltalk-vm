@@ -24,7 +24,7 @@ then replace --export-dynamic with --export-all-symbols in the makefiles.
 
 3. Open a cygwin bash shell, cd into the nscogbuild/cygwinbuild directory and
    execute
-     mvm
+     ./mvm
 
    Caution: if you previously used the mingw gnutools approach, you probably
    have a path to that 2.x gcc in your Windows PATH.  Make sure that 'which gcc'

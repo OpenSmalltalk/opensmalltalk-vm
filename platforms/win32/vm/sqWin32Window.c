@@ -3203,6 +3203,7 @@ int printUsage(int level)
 				   TEXT("\n\t-stackpages: n \t(use n stack pages)")
                    TEXT("\n\t-numextsems: n \t(allow up to n external semaphores)")
                    TEXT("\n\t-noheartbeat \t(no heartbeat for debug)")
+                   TEXT("\n\t-reportheadroom \t(print unused stack headroom on exit)")
 #endif /* STACKVM */
 #if STACKVM || NewspeakVM
 # if COGVM

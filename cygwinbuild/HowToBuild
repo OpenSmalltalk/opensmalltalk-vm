@@ -23,7 +23,7 @@ then replace --export-dynamic with --export-all-symbols in the makefiles.
      svn co http://www.squeakvm.org/svn/squeak/branches/Cog oscogvm
 
 3. Open a cygwin bash shell, cd into the cygwinbuild directory and execute
-     mvm
+     ./mvm
 
    Caution: if you previously used the mingw gnutools approach, you probably
    have a path to that 2.x gcc in your Windows PATH.  Make sure that 'which gcc'
@@ -34,7 +34,9 @@ then replace --export-dynamic with --export-all-symbols in the makefiles.
      make  CC=gcc-3 LD=gcc-3 DLLWRAP='dllwrap -mno-cygwin --driver-name gcc-3'
    
 4. At the end of this process you should have a brand new Croquet VM in the
-   cygwinbuild/build/vm folder (make sure you copy Croquet.map along with it)
+   cygwinbuild/build/vm folder (make sure you copy Croquet.map along with it).
+   Putting the relevant sources file(s) (e.g. SqueakV41.sources) in the vm
+   folder is then all you need to use that vm to run images.
 
 N.B. The plugin set is defined by plugins.ext and plugins.int in the build dir.
 

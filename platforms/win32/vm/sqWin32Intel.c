@@ -19,6 +19,7 @@
 #include <float.h>
 #include <ole2.h>
 #include "sq.h"
+#include "sqAssert.h"
 #include "sqWin32Backtrace.h"
 #include "sqSCCSVersion.h"
 #if COGVM
@@ -1017,6 +1018,11 @@ int ioExit(void) { return ioExitWithErrorCode(0); }
 sqInt
 ioExitWithErrorCode(int ec)
 {
+#if COGVM
+extern sqInt reportStackHeadroom;
+	if (reportStackHeadroom)
+		reportMinimumUnusedHeadroom();
+#endif
 	printPhaseTime(3);
 	inCleanExit = 1;
 	exit(ec);
@@ -1132,6 +1138,9 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
   print_backtrace(stdout, nframes, MAXFRAMES, callstack, symbolic_pcs);
   /* print the caller's stack to stdout */
   dumpStackIfInMainThread(0);
+#if COGVM
+  reportMinimumUnusedHeadroom();
+#endif
 
   } EXCEPT(EXCEPTION_EXECUTE_HANDLER) {
     /* that's too bad ... */
@@ -1679,6 +1688,10 @@ parseVMArgument(int argc, char *argv[])
 		extern sqInt suppressHeartbeatFlag;
 		suppressHeartbeatFlag = 1;
 		return 1; }
+    else if (!strcmp(argv[0], "-reportheadroom")) { 
+		extern sqInt reportStackHeadroom;
+		reportStackHeadroom = 1;
+		return 1; }
 #endif /* STACKVM */
 #if COGVM
 	else if (!strcmp(argv[0], "-codesize")) { 
@@ -1895,11 +1908,16 @@ parseArguments(int argc, char *argv[])
 }
 
 #if COGVM
+#include <signal.h>
+
 /*
  * Support code for Cog.
  * a) Answer whether the C frame pointer is in use, for capture of the C stack
  *    pointers.
+ * b) answer the amount of stack room to ensure in a Cog stack page, including
+ *    the size of the redzone, if any.
  */
+# if defined(i386) || defined(__i386) || defined(__i386__)
 /*
  * Cog has already captured CStackPointer  before calling this routine.  Record
  * the original value, capture the pointers again and determine if CFramePointer
@@ -1916,9 +1934,60 @@ isCFramePointerInUse()
 
 	currentCSP = CStackPointer;
 	ceCaptureCStackPointers();
-#if defined(assert)
 	assert(CStackPointer < currentCSP);
-#endif
 	return CFramePointer >= CStackPointer && CFramePointer <= currentCSP;
+}
+# endif /* defined(i386) || defined(__i386) || defined(__i386__) */
+
+/* Answer an approximation of the size of the redzone (if any).  Do so by
+ * sending a signal to the process and computing the difference between the
+ * stack pointer in the signal handler and that in the caller. Assumes stacks
+ * descend.
+ */
+
+#if !defined(min)
+# define min(x,y) (((x)>(y))?(y):(x))
+#endif
+static char *p = 0;
+
+static void
+sighandler(int sig) { p = (char *)&sig; }
+
+static int
+getRedzoneSize()
+{
+#if defined(SIGPROF) /* cygwin */
+	struct sigaction handler_action, old;
+	handler_action.sa_sigaction = sighandler;
+	handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
+	sigemptyset(&handler_action.sa_mask);
+	(void)sigaction(SIGPROF, &handler_action, &old);
+
+	do kill(getpid(),SIGPROF); while (!p);
+	(void)sigaction(SIGPROF, &old, 0);
+	return (char *)min(&old,&handler_action) - sizeof(struct sigaction) - p;
+#else /* cygwin */
+	void (*old)(int) = signal(SIGBREAK, sighandler);
+
+	do raise(SIGBREAK); while (!p);
+	return (char *)&old - p;
+#endif /* cygwin */
+}
+
+sqInt reportStackHeadroom;
+static int stackPageHeadroom;
+
+/* Answer the redzone size plus space for any signal handlers to run in.
+ * N.B. Space for signal handers may include space for the dynamic linker to
+ * run in since signal handlers may reference other functions, and linking may
+ * be lazy.  The reportheadroom switch can be used to check empirically that
+ * there is sufficient headroom.
+ */
+int
+osCogStackPageHeadroom()
+{
+	if (!stackPageHeadroom)
+		stackPageHeadroom = getRedzoneSize() + 1024;
+	return stackPageHeadroom;
 }
 #endif /* COGVM */
