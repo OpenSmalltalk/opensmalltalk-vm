@@ -656,6 +656,7 @@ SimpleStackBasedCogit >> compileFrameBuild [
 	<var: #jumpSkip type: #'AbstractInstruction *'>
 	needsFrame ifFalse: [^0].
 	methodHeader := coInterpreter headerOf: methodObj.
+	backEnd hasLinkRegister ifTrue: [self PushR: LinkReg].
 	self PushR: FPReg.
 	self MoveR: SPReg R: FPReg.
 	methodLabel addDependent: (self annotateAbsolutePCRef:
