@@ -1204,9 +1204,9 @@ CogARMCompiler >> nopsFrom: startAddr to: endAddr [
 { #category : #abi }
 CogARMCompiler >> numberOfSaveableRegisters [
 	"Answer the number of registers to be saved in a trampoline call that saves registers.
-	 R0 through R12, See genSaveRegisters."
-	<cmacro: '(self) 13'>
-	^13
+	 None, See genSaveRegisters."
+	<cmacro: '(self) 0'>
+	^0
 ]
 
 { #category : #'generate machine code - concretize' }
