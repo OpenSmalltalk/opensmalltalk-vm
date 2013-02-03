@@ -111,25 +111,13 @@ CogARMCompiler >> at: offset moveCw: constant intoR: destReg [
 	with minimal choice of the rotation (last digit)"
 	"The same area can be modified multiple times, because the opperation is (inclusive) or."
 	<inline: true>
-	0 to: 12 by: 4 do: [ :i | | rightRingRotation byte |
-		rightRingRotation := 16rC - i.
-		"Counter rotation to get the according byte. Because Smalltalk does not have left ring shift, shift further right."
-		rightRingRotation ~= 0 ifTrue: [
-			byte := constant >> (-2 * rightRingRotation + 32) bitAnd: 16rFF.
-			"For 0, the shift has to be 0. For other immediates, the encoding with minimal rightRingRotation should be choosen."
-			byte = 0
-				ifTrue: [ rightRingRotation := 0]
-				ifFalse: [
-					0 to: 2 do: [ :j | 
-						(byte bitAnd: 16r03) = 0
-							ifTrue: [ rightRingRotation := rightRingRotation - 1.
-									byte := byte >> 2 ]]]]
-			ifFalse: [ byte := constant bitAnd: 16rFF].
+	0 to: 12 by: 4 do: [ :i | | rightRingRotation |
+		rightRingRotation := self minimalRightRingRotationFor: constant initialRotation: 12 - i.
 		machineCode
 			at: offset + i + 3 put: 16rE3;
 			at: offset + i + 2 put: (16r80 bitOr: destReg);
-			at: offset + i + 1 put: (rightRingRotation bitOr: destReg << 4);
-			at: offset + i"+0"put: byte.
+			at: offset + i + 1 put: ((rightRingRotation at: 1) bitOr: destReg << 4);
+			at: offset + i"+0"put: (rightRingRotation at: 2).
 		].
 	machineCode at: offset + 2 put: 16rA0. "only the first operation need be MOV"
 	^16
@@ -381,6 +369,7 @@ CogARMCompiler >> concretizeCall [
 			self machineCodeAt: 0 put: (self t: 5 o: 8) + (offset >> 2 bitAnd: 16r00FFFFFF). "BL offset"
 			^machineCodeSize := 4]
 		ifFalse: [
+			self error: 'While we know how to generate a long distance call, we can''t update such a send site yet. Please restart with smaller cache size'.
 			self concretizeConditionalJumpLong: AL.
 			"move the actual jump two instructions further, inserting the pc back-up to lr and the pc push."
 			self machineCodeAt: 16 put: (self machineCodeAt: 12).
@@ -807,6 +796,36 @@ CogARMCompiler >> concretizeMoveRXwrR [
 ]
 
 { #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeMoveXbrRR [
+	"Will get inlined into concretizeAt: switch."
+	
+	<inline: true>
+	| index base dest |
+	index := self concreteRegister: (operands at: 0).
+	base := self concreteRegister: (operands at: 1).
+	dest := self concreteRegister: (operands at: 2).
+	"LDR	dest, [base, +index, LSL #0]"
+	"cond 011 1100 1 base dest 00000 00 0 inde"
+	self machineCodeAt: 0 put: (self t: 3 o: 16rC s: 1 rn: base rd: dest shifterOperand: index).
+	^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeMoveXwrRR [
+	"Will get inlined into concretizeAt: switch."
+	
+	<inline: true>
+	| index base dest |
+	index := self concreteRegister: (operands at: 0).
+	base := self concreteRegister: (operands at: 1).
+	dest := self concreteRegister: (operands at: 2).
+	"LDR	dest, [base, +index, LSL #2]"
+	"cond 011 1100 1 base dest 00010 00 0 inde"
+	self machineCodeAt: 0 put: (self t: 3 o: 16rC s: 1 rn: base rd: dest shifterOperand: (16r100 bitOr: index)).
+	^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeNegateR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -1182,6 +1201,26 @@ CogARMCompiler >> machineCodeBytes [
 	^20
 ]
 
+{ #category : #encoding }
+CogARMCompiler >> minimalRightRingRotationFor: constant initialRotation: iniRightRingRotation [
+	"Given a constant and some initial rotation, tries to minimize that rotation in an effort to encode the according byte in constant. This is used, to encode the last 12bit of many operations, for which a 8bit immediate rotated by (2*)4bit is available. That immediate need be encoded with minimal rotation."
+	| byte rightRingRotation |
+	rightRingRotation := iniRightRingRotation.
+		"Counter rotation to get the according byte. Because Smalltalk does not have left ring shift, shift further right."
+		rightRingRotation ~= 0 ifTrue: [
+			byte := constant >> (-2 * rightRingRotation + 32) bitAnd: 16rFF.
+			"For 0, the shift has to be 0. For other immediates, the encoding with minimal rightRingRotation should be choosen."
+			byte = 0
+				ifTrue: [ rightRingRotation := 0]
+				ifFalse: [
+					0 to: 2 do: [ :j | 
+						(byte bitAnd: 16r03) = 0
+							ifTrue: [ rightRingRotation := rightRingRotation - 1.
+									byte := byte >> 2 ]]]]
+			ifFalse: [ byte := constant bitAnd: 16rFF].
+	^{rightRingRotation. byte}
+]
+
 { #category : #printing }
 CogARMCompiler >> nameForRegister: reg [ "<Integer>"
 	
@@ -1216,6 +1255,51 @@ CogARMCompiler >> padIfPossibleWithNopsFrom: startAddr to: endAddr [
 	self nopsFrom: startAddr to: endAddr - nullBytes.
 	endAddr - nullBytes + 1 to: endAddr 
 		do: [ :p | objectMemory byteAt: p put: 16r0]
+]
+
+{ #category : #'inline cacheing' }
+CogARMCompiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag target: callTargetAddress [
+	"Rewrite an inline cache to call a different target for a new tag.  This variant is used
+	 to link unlinked sends in ceSend:to:numArgs: et al.  Answer the extent of the code
+	 change which is used to compute the range of the icache to flush."
+	
+	"chacheTag contains an oop to the selector which need be loaded before jumping"
+	<var: #callSiteReturnAddress type: #usqInt>
+	<var: #callTargetAddress type: #usqInt>
+	| call callDistance |
+	"self cCode: ''
+		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 20 to: callSiteReturnAddress -1]."
+	false
+		ifTrue: [self assert: callTargetAddress >= cogit minCallAddress]
+		ifFalse: [callTargetAddress >= cogit minCallAddress ifFalse:
+					[self error: 'linking callsite to invalid address']].
+	callDistance := (callTargetAddress - (callSiteReturnAddress + 8 "pc offset"- 4 "return offset")) signedIntToLong.
+	
+	self assert: (self isQuick: callDistance). "we don't support long call updates, yet"
+	call := (self t: 5 o: 8)"BL" + (callDistance >> 2 bitAnd: 16rFFFFFF).
+	objectMemory
+		byteAt: callSiteReturnAddress - 1 put: (call >> 24 bitAnd: 16rFF);
+		byteAt: callSiteReturnAddress - 2 put: (call >> 16 bitAnd: 16rFF);
+		byteAt: callSiteReturnAddress - 3 put: (call >>   8 bitAnd: 16rFF);
+		byteAt: callSiteReturnAddress - 4 put: (call            bitAnd: 16rFF).
+	
+	"The cacheTag is loaded byte by byte. Each byte needs to be encoded with minimal right ring rotation. See also #at:moveCw:intoR:"
+	-20 to: -8 by: 4 do: [ :offset || rotation |
+		rotation := self minimalRightRingRotationFor: cacheTag initialRotation: (offset + 8) negated.
+		(offset + 8) ~= 0 ifTrue: [ "in case of decoration which may change the last instrution, we should not overwrite bits 9 to 12"
+			objectMemory 
+				byteAt: callSiteReturnAddress + offset + 1 
+				put: (((objectMemory byteAt: callSiteReturnAddress - offset + 1) 
+							bitAnd: 16rF0)
+						bitOr: (rotation at: 1))].
+		objectMemory
+			byteAt: callSiteReturnAddress + offset
+			put: (rotation at: 2)].
+
+	self assert: (self callTargetFromReturnAddress: callSiteReturnAddress) signedIntToLong = callTargetAddress.
+	"self cCode: ''
+		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 20 to: callSiteReturnAddress - 1]."
+	^20
 ]
 
 { #category : #testing }
