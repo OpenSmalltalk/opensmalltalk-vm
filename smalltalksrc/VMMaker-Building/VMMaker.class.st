@@ -373,7 +373,7 @@ VMMaker class >> generateSqueakStackVM [
 	^VMMaker
 		generate: StackInterpreter
 		to: (FileDirectory default pathFromURI: 'oscogvm/stacksrc')
-		platformDir: (FileDirectory default pathFromURI: 'cogvm/platforms')
+		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
 		excluding: (InterpreterPlugin withAllSubclasses collect: [:ea| ea name])
 ]
 

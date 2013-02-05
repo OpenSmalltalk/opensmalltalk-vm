@@ -5659,13 +5659,16 @@ CoInterpreter >> reportMinimumUnusedHeadroom [
 	"Report the stack page size and minimum unused headroom to stdout."
 	<api>
 	self cCode:
-			[self prin: 'stack page size %ld minimum unused stack headroom %ld bytes\n'
-				t: self stackPageByteSize
+			[self pri: 'stack page bytes %ld available headroom %ld minimum unused headroom %ld\n'
+				n: self stackPageByteSize
+				t: self stackPageByteSize - self stackLimitBytes - self stackLimitOffset
 				f: self minimumUnusedHeadroom]
 		inSmalltalk:
-			[self print: 'stack page size '; printNum: self stackPageByteSize;
-				print: ' minimum unused stack headroom '; printNum: self minimumUnusedHeadroom;
-				print: ' bytes'; cr]
+			["CogVMSimulator new initStackPagesForTests reportMinimumUnusedHeadroom"
+			 self print: 'stack page bytes '; printNum: self stackPageByteSize;
+				print: ' available headroom '; printNum: self stackPageByteSize - self stackLimitBytes - self stackLimitOffset;
+				print: ' minimum unused headroom '; printNum: self minimumUnusedHeadroom;
+				cr]
 ]
 
 { #category : #'jump bytecodes' }
