@@ -5339,7 +5339,7 @@ StackInterpreter >> forceInterruptCheck [
 	stackLimit = 0 ifTrue:
 		[^nil].
 	thePage := stackPage.
-	thePage notNil ifTrue:
+	(thePage notNil and: [thePage ~= 0]) ifTrue:
 		[thePage stackLimit: (self cCoerceSimple: -1 signedIntToLong to: #'char *')].
 	stackLimit := self cCoerceSimple: -1 signedIntToLong to: #'char *'.
 	self sqLowLevelMFence.
@@ -10804,6 +10804,11 @@ StackInterpreter >> snapshot: embedded [
 	| activeContext activeProc dataSize rcvr setMacType stackIndex |
 	<var: #setMacType type: 'void *'>
 
+	"For nowe the stack munging below doesn't deal with more than omne argument.
+	 It can, and should."
+	argumentCount ~= 0 ifTrue:
+		[^self primitiveFailFor: PrimErrBadNumArgs].
+
 	"Need to convert all frames into contexts since the snapshot file only holds objects."
 	self push: instructionPointer.
 	activeContext := self voidVMStateForSnapshot.
@@ -10836,26 +10841,30 @@ StackInterpreter >> snapshot: embedded [
 		  to arrange that the snapshot resumes with true.  N.B. stackIndex is one-relative."
 		stackIndex := self quickFetchInteger: StackPointerIndex ofObject: activeContext.
 		rcvr := objectMemory fetchPointer: stackIndex + CtxtTempFrameStart - 1 ofObject: activeContext.
-		objectMemory storePointerUnchecked: stackIndex + CtxtTempFrameStart - 1
+		objectMemory
+			storePointerUnchecked: stackIndex + CtxtTempFrameStart - 1
 			ofObject: activeContext
 			withValue: objectMemory trueObject.
 		"now attempt to write the snapshot file"
-		self writeImageFile: dataSize.
-		embedded ifFalse:
+		self writeImageFileIO: dataSize.
+		(self successful and: [embedded not]) ifTrue:
 			["set Mac file type and creator; this is a noop on other platforms"
 			setMacType := self ioLoadFunction: 'setMacFileTypeAndCreator' From: 'FilePlugin'.
 			setMacType = 0 ifFalse:
 				[self cCode: '((sqInt (*)(char *, char *, char *))setMacType)(imageName, "STim", "FAST")']].
 		"Without contexts or stacks simulate
 			self pop: 1"
-		objectMemory storePointerUnchecked: StackPointerIndex
+		objectMemory
+			storePointerUnchecked: StackPointerIndex
 			ofObject: activeContext
 			withValue: (objectMemory integerObjectOf: stackIndex - 1)].
 
 	self marryContextInNewStackPageAndInitializeInterpreterRegisters: activeContext.
 	self successful
 		ifTrue: [self push: objectMemory falseObject]
-		ifFalse: [self push: rcvr]
+		ifFalse:
+			[self push: rcvr.
+			 self justActivateNewMethod]
 ]
 
 { #category : #'image save/restore' }
@@ -11753,11 +11762,11 @@ StackInterpreter >> writeImageFile: imageBytes [
 	| fn |
 	<var: #fn type: 'void *'>
 	self writeImageFileIO: imageBytes.
-	"set Mac file type and creator; this is a noop on other platforms"
-	fn := self ioLoadFunction: 'setMacFileTypeAndCreator' From: 'FilePlugin'.
-	fn = 0 ifFalse:[
-		self cCode:'((sqInt (*)(char*, char*, char*))fn)(imageName, "STim", "FAST")'.
-	].
+	self successful ifTrue:
+		["set Mac file type and creator; this is a noop on other platforms"
+		fn := self ioLoadFunction: 'setMacFileTypeAndCreator' From: 'FilePlugin'.
+		fn = 0 ifFalse:
+			[self cCode:'((sqInt (*)(char*, char*, char*))fn)(imageName, "STim", "FAST")']]
 
 ]
 
