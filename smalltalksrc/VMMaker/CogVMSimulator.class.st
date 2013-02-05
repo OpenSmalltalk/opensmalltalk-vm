@@ -3562,9 +3562,12 @@ CogVMSimulator >> writeImageFileIO: numberOfBytesToWrite [
 	headerSize := 64.
 
 	[
-		file := (FileStream fileNamed: imageName) binary.
-		file == nil ifTrue: [^nil].
-	
+		file := FileStream fileNamed: imageName.
+		file == nil ifTrue:
+			[self primitiveFail.
+			 ^nil].
+		file binary.
+
 		{
 			self imageFormatVersion.
 			headerSize.
@@ -3602,5 +3605,5 @@ CogVMSimulator >> writeImageFileIO: numberOfBytesToWrite [
 	
 		self success: true
 	]
-		ensure: [file close]
+		ensure: [file ifNotNil: [file close]]
 ]

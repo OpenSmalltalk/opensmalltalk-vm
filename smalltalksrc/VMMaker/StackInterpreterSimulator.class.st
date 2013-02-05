@@ -2318,8 +2318,11 @@ StackInterpreterSimulator >> writeImageFileIO: numberOfBytesToWrite [
 	headerSize := 64.
 
 	[
-		file := (FileStream fileNamed: imageName) binary.
-		file == nil ifTrue: [^nil].
+		file := FileStream fileNamed: imageName.
+		file == nil ifTrue:
+			[self primitiveFail.
+			 ^nil].
+		file binary.
 	
 		{
 			self imageFormatVersion.
@@ -2358,7 +2361,7 @@ StackInterpreterSimulator >> writeImageFileIO: numberOfBytesToWrite [
 	
 		self success: true
 	]
-		ensure: [file close]
+		ensure: [file ifNotNil: [file close]]
 ]
 
 { #category : #'debug printing' }
