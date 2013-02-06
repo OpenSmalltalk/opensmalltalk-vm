@@ -205,10 +205,6 @@ static int parseArgument(int argc, char **argv)
 		extern sqInt pollpip;
 		pollpip = atoi(argv[1]);	 
 		return 2; }
-      else if (!strcmp(argv[0], "-reportheadroom")) { 
-		extern sqInt reportStackHeadroom;
-		reportStackHeadroom = 1;
-		return 1; }
 #endif /* STACKVM */
 #if COGVM
       else if (!strcmp(argv[0], "-codesize")) { 
@@ -246,6 +242,10 @@ static int parseArgument(int argc, char **argv)
 		extern sqInt minBackwardJumpCountForCompile;
 		minBackwardJumpCountForCompile = strtobkm(argv[1]);	 
 		return 2; }
+      else if (!strcmp(argv[0], "-reportheadroom")) { 
+		extern sqInt reportStackHeadroom;
+		reportStackHeadroom = 1;
+		return 1; }
 #endif /* COGVM */
       else if (!strcmp(argv[0], "-pathenc")) { 
 		setEncodingType(argv[1]); 

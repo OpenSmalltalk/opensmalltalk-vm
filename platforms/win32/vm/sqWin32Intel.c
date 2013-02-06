@@ -1688,10 +1688,6 @@ parseVMArgument(int argc, char *argv[])
 		extern sqInt suppressHeartbeatFlag;
 		suppressHeartbeatFlag = 1;
 		return 1; }
-    else if (!strcmp(argv[0], "-reportheadroom")) { 
-		extern sqInt reportStackHeadroom;
-		reportStackHeadroom = 1;
-		return 1; }
 #endif /* STACKVM */
 #if COGVM
 	else if (!strcmp(argv[0], "-codesize")) { 
@@ -1737,6 +1733,10 @@ parseVMArgument(int argc, char *argv[])
 		extern sqInt minBackwardJumpCountForCompile;
 		minBackwardJumpCountForCompile = strtobkm(argv[0]+13);	 
 		return 2; }
+    else if (!strcmp(argv[0], "-reportheadroom")) { 
+		extern sqInt reportStackHeadroom;
+		reportStackHeadroom = 1;
+		return 1; }
 #endif /* COGVM */
 
   /* NOTE: the following flags are "undocumented" */
