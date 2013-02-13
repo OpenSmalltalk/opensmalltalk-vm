@@ -1,12 +1,12 @@
-/* Automatically generated from Squeak on 4 January 2013 12:28:57 am 
-   by VMMaker 4.10.8
+/* Automatically generated from Squeak on 13 February 2013 8:00:20 am 
+   by VMMaker 4.10.11
  */
 
 #ifndef HAVE_INTERP_H
 # define HAVE_INTERP_H
 #endif
 
-#define VMMAKER_VERSION "4.10.8"
+#define VMMAKER_VERSION "4.10.11"
 #define VM_PROXY_MAJOR 1
 #define VM_PROXY_MINOR 9
 

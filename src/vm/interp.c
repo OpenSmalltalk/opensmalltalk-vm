@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 8 January 2013 8:57:46 pm 
-   by VMMaker 4.10.10
+/* Automatically generated from Squeak on 13 February 2013 8:00:24 am 
+   by VMMaker 4.10.11
  */
 #if 1
 # define SQ_USE_GLOBAL_STRUCT 1
@@ -158,7 +158,7 @@ void defaultErrorProc(char *s) {
 #define InitialIPIndex 4
 #define InstanceSpecificationIndex 2
 #define InstructionPointerIndex 1
-#define InterpreterSourceVersion "4.10.10"
+#define InterpreterSourceVersion "4.10.11"
 #define InvokeCallbackSelector 53
 #define LargeContextBit 262144
 #define LastLinkIndex 1
@@ -15843,12 +15843,6 @@ register struct foo * foo = &fum;
     sqInt successBoolean11;
     sqInt successBoolean12;
 
-	flag("Dan");
-	if ((BYTES_PER_WORD) == 8) {
-		/* begin pop: */
-		foo->stackPointer -= foo->argumentCount * (BYTES_PER_WORD);
-		return null;
-	}
 	if (foo->argumentCount == 0) {
 		cursorObj = longAt(foo->stackPointer);
 		maskBitsIndex = null;
