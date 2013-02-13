@@ -26,25 +26,26 @@ CogFamilyCocoaIOSConfig >> CFBundleVersion [
 { #category : #settings }
 CogFamilyCocoaIOSConfig >> commonCompilerFlags [
 	^super commonCompilerFlags, 
-		#(
-	'-funroll-loops' 
-	'-fasm-blocks' 
-	'-finline-functions' 
-	'-mfpmath=sse' 
-	'-march=pentium-m' 
-	'-mtune=prescott' 
-	'-falign-functions=16' 
-	'-fno-gcse' 
-	'-fno-cse-follow-jumps' 
-	'-std=gnu99' 
-	'-DBUILD_FOR_OSX' 
+		{
+	'-isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX', self sdkVersion, '.sdk'.
+	'-funroll-loops'.
+	'-fasm-blocks'. 
+	'-finline-functions'. 
+	'-mfpmath=sse'. 
+	'-march=pentium-m'. 
+	'-mtune=prescott'. 
+	'-falign-functions=16'. 
+	'-fno-gcse'. 
+	'-fno-cse-follow-jumps'. 
+	'-std=gnu99'. 
+	'-DBUILD_FOR_OSX'. 
 	"'-DUSE_INLINE_MEMORY_ACCESSORS=1' "
-	'-DLSB_FIRST' 
-	'-DHAVE_SYS_TIME_H' 
-	'-DHAVE_NANOSLEEP' 
-	'-DCOGMTVM=0' 
-	'-DUSE_GLOBAL_STRUCT=0' 
-	'-DBASE_HEADER_SIZE=4')
+	'-DLSB_FIRST'. 
+	'-DHAVE_SYS_TIME_H'. 
+	'-DHAVE_NANOSLEEP'. 
+	'-DCOGMTVM=0'. 
+	'-DUSE_GLOBAL_STRUCT=0'. 
+	'-DBASE_HEADER_SIZE=4' }
 ]
 
 { #category : #settings }
@@ -126,7 +127,7 @@ CogFamilyCocoaIOSConfig >> defaultExternalPlugins [
 		MIDIPlugin
 		B3DAcceleratorPlugin
 		LocalePlugin
-		"ObjectiveCPlugin"
+		ObjectiveCPlugin
 		QuicktimePlugin
 		TestOSAPlugin
 		SqueakSSLPlugin
@@ -236,6 +237,11 @@ CogFamilyCocoaIOSConfig >> platformSources [
 	  	'Common/Classes/sqSqueakScreenAPI.m')
 ]
 
+{ #category : #accessing }
+CogFamilyCocoaIOSConfig >> sdkVersion [ 
+	^'10.6'
+]
+
 { #category : #settings }
 CogFamilyCocoaIOSConfig >> setExtraTargetProperties: maker [
 	| plist |
@@ -281,11 +287,14 @@ CogFamilyCocoaIOSConfig >> setGlobalOptions: maker [
 	"set any CMake global options, before declaring a project in cmake file"
 	
 	maker set: 'CMAKE_C_COMPILER' to: '/usr/bin/gcc'.
-	maker set: 'CMAKE_CXX_COMPILER' to: '/usr/bin/g++'.	
+	maker set: 'CMAKE_CXX_COMPILER' to: '/usr/bin/g++'.
 	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'.
-	maker set: 'CMAKE_OSX_SYSROOT' to: '/'.
+	maker set: 'CMAKE_OSX_DEPLOYMENT_TARGET' to: '10.6'.
 	
-	"maker set: 'CMAKE_OSX_SYSROOT' to: '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.8.sdk'"
+	"maker set: 'CMAKE_OSX_SYSROOT' to: '/'."
+	maker 
+		set: 'CMAKE_OSX_SYSROOT' 
+		to: '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX', self sdkVersion, '.sdk'
 ]
 
 { #category : #settings }
