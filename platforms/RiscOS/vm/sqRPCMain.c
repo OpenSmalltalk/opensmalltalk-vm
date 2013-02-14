@@ -102,7 +102,7 @@ int openLogStream(void) {
 	}
 	if (!logfile) {
 		/* try to open fake file Report: for the !Reporter logging */
-		logfile= fopen("Report:", "a+");
+		logfile= fopen("Report:", "w+");
 	}
 	if (!logfile) {
 		/* No Report: so try an ordinary log file */
@@ -250,9 +250,7 @@ extern void		GetDisplayParameters(void);
 extern void		SetupWindowTitle(void);
 extern void		SetDefaultPointer(void);
 extern void		InitRootWindow(void);
-extern int		setupSoundSignalling(unsigned int ** addr, int * flagBit, int semIndex);
 extern void		initialiseSoundPollword(void);
-int width;
 
 	SetDefaultPointer();
 	importantWimpMessages.messages[0] = message_MODE_CHANGE;
@@ -282,11 +280,10 @@ int width;
  * wimp_creat_icon the larger of that and width (below). Oh and respond
  * to the message Message_FontChanged by recalculating it and using
  * wimp_resize_icon(wimp_ICON_BAR, icon id, x/y, x/y). */
-	width = wimptextop_string_width(sqTaskName, 0);
 	sqIconBarIcon.w = wimp_ICON_BAR_RIGHT;
 	sqIconBarIcon.icon.extent.x0 = 0;
 	sqIconBarIcon.icon.extent.y0 = -16;
-	sqIconBarIcon.icon.extent.x1 = width;
+	sqIconBarIcon.icon.extent.x1 = wimptextop_string_width(sqTaskName, 0);
 	sqIconBarIcon.icon.extent.y1 = 84;
 	sqIconBarIcon.icon.flags =
 			wimp_ICON_INDIRECTED
@@ -437,7 +434,7 @@ int canonicalizeFilenameToString(char * sqString, int sqSize, char * cString) {
  * You may transform the characters as needed - in this case go from unix like
  * path to RISC OS & then canonicalize
  */
-int i, spare;
+int i;
 char c;
 char temp[MAXDIRNAMELENGTH];
 

@@ -91,17 +91,15 @@ os_PALETTE (256)	paletteTable;
 /*** Functions ***/
 void		SetColorEntry(int index, int red, int green, int blue);
 void		GetDisplayParameters(void);
+extern int	HandleEventsNotTooOften(void);
 extern int	HandleEvents(void);
-int			InitRiscOS(void);
-void		MouseButtons( wimp_pointer * wblock);
 void		CreateWindow(windowDescriptorBlock * currentWindow);
 void		SetInitialWindowSize(int w, int h);
 int			CreateSprite(windowDescriptorBlock * currentWindow);
 void		SetupPixelTranslationTable(windowDescriptorBlock * currentWindow);
 void		SetupPaletteTable(void);
-int			platAllocateMemory( int amount);
-void		platReportFatalError( os_error * e);
-void		platReportError( os_error * e);
+extern void		platReportFatalError( os_error * e);
+extern void		platReportError( os_error * e);
 
 /* Display related stuff */
 
@@ -422,7 +420,7 @@ void DisplayReverseArea(windowDescriptorBlock * thisWindow, int x0, int y0, int 
 int stopX, pixelsPerWord, pixelsPerWordShift;
 #ifdef DEBUG
 unsigned int startTime, stopTime;
-	startTime = microsecondsvalue();
+	startTime = millisecondTimerValue();
 #endif
 	switch (thisWindow->squeakDisplayDepth) {
 	case 32:pixelsPerWordShift = 0;
@@ -456,8 +454,9 @@ unsigned int startTime, stopTime;
 			+ thisWindow->displaySprite->image);
 	reverserFunction();
 #ifdef DEBUG
-	stopTime = microsecondsvalue();
-	PRINTF(("\\t DisplayReverseArea @ %d for w:%d h:%d took: %d\n", startTime, x1 - x0, y1 - y0, stopTime - startTime));
+{int i; for(i=0; i<1; i++) {reverserFunction();}} // loop makes for multiple runs of the function make for better timing accuracy  - set the count to 9 for 10X etc
+	stopTime = millisecondTimerValue();
+	PRINTF(("\\t DisplayReverseArea @ %i for w:%d h:%d took:%d uSec\n", startTime, x1 - x0, y1 - y0, stopTime - startTime));
 #endif
 	return;
 }
@@ -484,7 +483,16 @@ windowDescriptorBlock * thisWindow;
            with the appropriate scaling and pixel translation table. It really ought to be simpler than this */
 	more = wimp_redraw_window( wblock );
 	while ( more ) {
-		PRINTF(("\\t display pixmap l:%d t:%d r:%d b:%d\n", wblock->box.x0, wblock->box.y1, wblock->box.x1, wblock->box.y0));
+//		PRINTF(("\\t display pixmap l:%d t:%d r:%d b:%d\n", wblock->clip.x0, wblock->clip.y1, wblock->clip.x1, wblock->clip.y0));
+		PRINTF(("\\t DisplayPixmap w:%d h:%d\n", (wblock->clip.x1- wblock->clip.x0)>>scalingFactor.x, (wblock->clip.y1 - wblock->clip.y0)>>scalingFactor.y));
+#ifdef DEBUG
+// do the screen update 10 times to get a measure of the time taken up by it
+{
+int i;
+unsigned int startTime, stopTime;
+	startTime = millisecondTimerValue();
+for (i=0; i<1; i++) { // loop makes for multiple runs of the function make for better timing accuracy - set the count to 10 for 10X etc
+#endif //DEBUG
 		if ((e = xosspriteop_put_sprite_scaled (
 			osspriteop_PTR,
 			spriteAreaPtr,
@@ -499,6 +507,13 @@ windowDescriptorBlock * thisWindow;
 				return;
 			}
 		}
+#ifdef DEBUG
+}
+	stopTime = millisecondTimerValue();
+	PRINTF(("\\t DisplayPixmap took:%d uSec\n", stopTime - startTime));
+
+}
+#endif // DEBUG
 		xwimp_get_rectangle (wblock, &more);
 	}
 }
@@ -525,7 +540,7 @@ os_error * e;
 	wblock.box.x1 = screenSizeP.x<<scalingFactor.x;
 	wblock.box.y1 = 0;
 
-	PRINTF(("\\t display NOW\n"));
+	PRINTF(("\\t DisplayPixmapNow\n"));
 	more = wimp_update_window( &wblock );
 	while ( more ) {
 		if ((e = xosspriteop_put_sprite_scaled (
@@ -628,7 +643,7 @@ os_error * e;
 		platReportFatalError(e);
 		return false;
 	}
-	PRINTF(("\\tSetWindowBounds id: %d r:%d@%d-%d@%d, a: %d@%d-%d@%d\n",
+	PRINTF(("\\t SetWindowBounds id: %d requested:%d@%d->%d@%d, actual: %d@%d->%d@%d\n",
 		thisWindow->windowIndex,
 		thisWindow->visibleArea.x0, thisWindow->visibleArea.y0,
 		thisWindow->visibleArea.x1, thisWindow->visibleArea.y1,
@@ -693,9 +708,9 @@ os_palette * currPal;
 			return ;
 		}
 		/* realloc the table to the new size */
-		PRINTF(("pixel table %0x realloc\n", (int)thisWindow->pixelTranslationTable));
+		PRINTF(("SetupPixelTranslationTable: pixel table %0x realloc\n", (int)thisWindow->pixelTranslationTable));
 		thisWindow->pixelTranslationTable = realloc( thisWindow->pixelTranslationTable, tableSize);
-		PRINTF(("ok %0x s: %d\n", (int)thisWindow->pixelTranslationTable, tableSize));
+		PRINTF(("SetupPixelTranslationTable: ok %0x s: %d\n", (int)thisWindow->pixelTranslationTable, tableSize));
 		/* call colourTrans_generate_table to build the tx table  */
 		if ( (e = xcolourtrans_generate_table(  thisWindow->displaySprite->mode, currPal, os_CURRENT_MODE, colourtrans_CURRENT_PALETTE, thisWindow->pixelTranslationTable,  colourtrans_RETURN_WIDE_ENTRIES, NULL, NULL, &tableSize )) != NULL) {
 			platReportFatalError(e);
@@ -774,8 +789,8 @@ int i,r,g,b;
 				i = 40 + ((36 * r) + (6 * b) + g);
 				if (i > 255) {
 					privateErr.errnum = 0;
-					sprintf( privateErr.errmess, "index out of range in color table compuation\n");
-					platReportFatalError(&privateErr);
+					sprintf( privateErr.errmess, "index out of range in color table computation\n");
+					platReportError(&privateErr);
 				}
 				SetColorEntry(i, (r * 65535) / 5, (g * 65535) / 5, (b * 65535) / 5);
 			}
@@ -797,7 +812,7 @@ windowDescriptorBlock * entry;
 				xosspriteop_select_sprite(osspriteop_NAME, spriteAreaPtr,
 					(osspriteop_id)entry->spriteName,
 						&(entry->displaySprite));
-				PRINTF(("\\t Sprite %s at %0x, pTT: %0x\n",
+				PRINTF(("\\t Sprite %s at %0x, pTT: &%0x\n",
 					entry->displaySprite->name,
 					(int)entry->displaySprite,
 					entry->pixelTranslationTable));
@@ -895,12 +910,12 @@ int sprMode;
 void DeleteSprite(windowDescriptorBlock * thisWindow) {
 /* remove the sprite from thisWindow, delete the actual sprite, update
  * all the sprite pointers and nul thisWindow's spriteName */
-	PRINTF(("DeleteSpr: pTT %0x n: %s\n", thisWindow->pixelTranslationTable,
+	PRINTF(("DeleteSprite: pTT %0x n: %s\n", thisWindow->pixelTranslationTable,
 		thisWindow->spriteName));
 	xosspriteop_delete_sprite(osspriteop_NAME, spriteAreaPtr, (osspriteop_id)thisWindow->spriteName);
 	sprintf(thisWindow->spriteName, "\0");
 	thisWindow->displaySprite = null;
-	PRINTF(("DeleteSpr2: pTT %0x\n", thisWindow->pixelTranslationTable));
+	PRINTF(("DeleteSprite: pTT %0x\n", thisWindow->pixelTranslationTable));
 	UpdateDisplaySpritePtrs();
 }
 
@@ -910,7 +925,7 @@ void InitRootWindow(void) {
  * handle is null
  */
 	rootWindow = AddWindowBlock();
-	PRINTF(("\\t initRootWindow: &%x, %d\n", (int)rootWindow, (int)rootWindow->handle));
+	PRINTF(("\\t InitRootWindow: &%x, %d\n", (int)rootWindow, (int)rootWindow->handle));
 }
 
 void DeleteWindow(windowDescriptorBlock * thisWindow) {
@@ -934,8 +949,7 @@ void BuildWindow(windowDescriptorBlock * thisWindow) {
 wimp_window wblock;
 os_error * e;
 wimp_w w;
-os_coord originP, sizeP;
-	PRINTF(("\\t Build window %d\n", thisWindow->windowIndex));
+	PRINTF(("\\t BuildWindow %d\n", thisWindow->windowIndex));
 
 	/* fill-in window block */
 
@@ -1007,7 +1021,6 @@ void CreateRootWindow(windowDescriptorBlock * thisWindow) {
  * or otherwise specified title and is centred upon creation.
  */
 os_coord originP, sizeP;
-wimp_window_info wblock;
 	/* set the size of the root window.
 	 * don't make it bigger than the screen size and centre it
 	 */
@@ -1036,7 +1049,7 @@ void CreatePlainWindow(windowDescriptorBlock * thisWindow) {
 /* Create a plain window. The visibleArea values MUST be setup before this
  * can be called, as well as the windowIndex
  */
-	PRINTF(("\\t Create plain window %d\n", thisWindow->windowIndex));
+	PRINTF(("\\t CreatePlainWindow %d\n", thisWindow->windowIndex));
 	thisWindow->title[0] = '\0';
 
 	BuildWindow( thisWindow);
@@ -1111,7 +1124,7 @@ int createWindowWidthheightoriginXyattrlength(int w, int h, int x, int y, char *
 windowDescriptorBlock * thisWindow = null;
 
 	thisWindow = AddWindowBlock();
-	PRINTF(("\\t createWindow  tw: %0x\n", (int)thisWindow));
+	PRINTF(("\\t createWindow  tw: %0x\n", thisWindow->windowIndex));
 	if (!thisWindow) {
 		return 0;
 	}
@@ -1175,7 +1188,7 @@ windowDescriptorBlock * thisWindow;
 
 	if(affectedR <= affectedL || affectedT >= affectedB) return true;
 
-	PRINTF(("\\t ioShowDisplayOnWindow: %d @ %d l:%d t:%d r:%d b:%d\n", windowIndex, microsecondsvalue(), affectedL, affectedT, affectedR, affectedB));
+	PRINTF(("\\t ioShowDisplayOnWindow: %d @ %d l:%d t:%d r:%d b:%d\n", windowIndex, millisecondTimerValue(), affectedL, affectedT, affectedR, affectedB));
 
 	thisWindow = (windowDescriptorBlock *)windowBlockFromIndex(windowIndex);
 	if ( !thisWindow) return false;
@@ -1263,8 +1276,6 @@ int ioSizeOfWindowSetxy(int windowIndex, int width, int height) {
  * width / height to make the window. Return the actual size the OS
  * produced in (width<<16 || height) format or -1 for failure as above. */
 windowDescriptorBlock * thisWindow;
-wimp_window_state wblock;
-os_error * e;
 int w,h;
 
 	thisWindow = (windowDescriptorBlock *)windowBlockFromIndex(windowIndex);
@@ -1361,13 +1372,13 @@ os_error *e;
 	if ( sizeOfTitle > WindowTitleLength ) {
 		return -1;
 	}
-        PRINTF(( "\\t ioSetWindowTitle: string length & window ID ok\n"));
+        PRINTF(( "\\t ioSetTitleOfWindow: string length & window ID ok\n"));
 
 	/* check the titlebar flag is set */
         if ((thisWindow->attributes & wimp_WINDOW_TITLE_ICON) == 0 ) {
 		return -1;
 	}
-        PRINTF(( "\\t ioSetWindowTitle: titlebar flag ok\n"));
+        PRINTF(( "\\t ioSetTitleOfWindow: titlebar flag ok\n"));
 
 	/* copy to the window */
 	strncpy(thisWindow->title, newTitle, sizeOfTitle);
@@ -1378,7 +1389,7 @@ os_error *e;
                 platReportError(e);
                 }
 	}
-        PRINTF(( "\\t ioSetWindowTitle: should be ok\n"));
+        PRINTF(( "\\t ioSetTitleOfWindow: should be ok\n"));
 	return true;
 }
 
@@ -1437,17 +1448,17 @@ sqInt ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY) {
 
 /* Backwards compat stub */
 sqInt ioShowDisplay( sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth, sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB) {
-	ioShowDisplayOnWindow( (unsigned *)dispBitsIndex, width, height, depth, affectedL, affectedR, affectedT, affectedB, 1);
+	return ioShowDisplayOnWindow( (unsigned *)dispBitsIndex, width, height, depth, affectedL, affectedR, affectedT, affectedB, 1);
 }
 
 
 sqInt ioForceDisplayUpdate(void) {
-	PRINTF(("\\t ioForceDisplayUpdate @ %d\n", microsecondsvalue()));
+	PRINTF(("\\t ioForceDisplayUpdate @ %d\n", millisecondTimerValue()));
 	// This immediate display update seems to display the right bits but
 	// takes a huge % of the machine time. By going back to the older
 	// HandleEvents we get a nice snappy machine. Weird.
 	// DisplayPixmapNow();
-	HandleEvents();   /* we might need to forceInterruptCheck() here ? */
+	HandleEventsNotTooOften();   /* we might need to forceInterruptCheck() here ? */
 	return false;
 }
 
@@ -1600,7 +1611,7 @@ windowDescriptorBlock * thisWindow;
         /* find the window block with this OS handle */
         thisWindow = windowBlockFromHandle(((wimp_full_message_iconise *)wblock)->w);
 
-        PRINTF(("\\t Iconise window: %d\n",thisWindow->windowIndex));
+        PRINTF(("\\t ioIconiseWindow: %d\n",thisWindow->windowIndex));
         EventBufAppendWindow( WindowEventIconise, 0,0,0,0, thisWindow->windowIndex);
         return true;
 }
