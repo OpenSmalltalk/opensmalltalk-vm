@@ -54,11 +54,22 @@ CogUnixConfig >> compilerFlagsDebug [
 
 { #category : #'compiler flags' }
 CogUnixConfig >> compilerFlagsRelease [
+"
+THIS FLAGS ARE CREASHING COMPILER 
 
-	^ '-g0 -O2 -msse2 -D_GNU_SOURCE -DNDEBUG -DITIMER_HEARTBEAT=1 
-	-DNO_VM_PROFILE=1 -DDEBUGVM=0'
+-fschedule-insns2 
+-fschedule-insns 
 
+THIS FLAGS ARE CRASHING VM
+-ftree-pre  
 
+THIS FLAGS ARE WORKING 
+-O1 -fthread-jumps -falign-functions -falign-jumps -falign-loops -falign-labels -fcrossjumping -fcse-follow-jumps -fcse-skip-blocks -fdelete-null-pointer-checks -fdevirtualize -fexpensive-optimizations -fgcse -fgcse-lm -finline-small-functions -findirect-inlining -fipa-sra -foptimize-sibling-calls -fpartial-inlining -fpeephole2 -fregmove -freorder-blocks -frerun-cse-after-loop -fcaller-saves -freorder-functions -fsched-interblock -fsched-spec -fstrict-aliasing -fstrict-overflow  -ftree-switch-conversion -ftree-vrp
+
+THIS IS LIKE: -O2 -fno-tree-pre
+"
+
+	^ '-g0 -O2 -fno-tree-pre -msse2 -D_GNU_SOURCE -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DDEBUGVM=0'
 ]
 
 { #category : #'headers generation' }
