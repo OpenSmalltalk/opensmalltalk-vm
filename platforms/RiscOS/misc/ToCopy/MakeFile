@@ -4,6 +4,10 @@
 # Add check for Squeak3D dir to optionally compile the Squeak3D plugin
 # Ditto for HostWindow and LocalePlugin
 
+# Rules
+.SUFFIXES:	.o .c
+.c.o:;	cc $(ccflags) -o $@ $*.c
+
 # Toolflags:
 CCflags = -c -fa -Wabp -depend !Depend -IC:,OSLib:,C:^.rink,$(PVM),$(CVM),$(SVM) -throwback  -DACORN -Otime
 # extra ccflags for debugging go here because rink doesnt deal with debug
@@ -33,7 +37,7 @@ SQ3DTestFile= $(SPlug).Squeak3D.dsc.Squeak3D
 HWTestFile= $(SPlug).HostWindowPlugin.dsc.HostWindowPlugin
 LocaleTestFile= $(Plug).LocalePlugin.dsc.LocalePlugin
 
-pluginList= ADPCMCodecPlugin B2DPlugin BitBltPlugin BMPReadWriterPlugin DSAPrims FFTPlugin FilePlugin FileCopyPlugin FloatArrayPlugin  GeniePlugin JPEGReaderPlugin  LargeIntegers Matrix2x3Plugin MiscPrimitivePlugin RePlugin ScratchPlugin SecurityPlugin SocketPlugin SoundCodecPrims SoundGenerationPlugin SoundPlugin StarSqueakPlugin  SurfacePlugin ZipPlugin
+pluginList= ADPCMCodecPlugin B2DPlugin BitBltPlugin BMPReadWriterPlugin DSAPrims FFTPlugin FilePlugin FileCopyPlugin FloatArrayPlugin  GeniePlugin JPEGReaderPlugin JPEGReadWriter2Plugin LargeIntegers Matrix2x3Plugin MiscPrimitivePlugin RePlugin ScratchPlugin SecurityPlugin SocketPlugin SoundCodecPrims SoundGenerationPlugin SoundPlugin StarSqueakPlugin  SurfacePlugin ZipPlugin
 
 # Final targets:
 all: plugins vm
@@ -364,6 +368,231 @@ $(SqPlugins).JPEGReaderPlugin:	$(SPlug).JPEGReaderPlugin.o.JPEGReaderPlugin \
 $(SPlug).JPEGReaderPlugin.o.JPEGReaderPlugin: $(SPlug).JPEGReaderPlugin.c.JPEGReaderPlugin $(PlHdr)
 	cc $(ccflags) -o $@ $*.c
 
+
+
+###########
+# JPEGReadWriter2 Plugin make rule.
+# More complex - involves files from several sources
+# JPEGReadWriter2Plugin.c is generated
+# JPEGReadWriter2Plugin.h is in Cross
+# many files in Cross; all .h files 49 files in .c
+###########
+JPEGReadWriter2Plugin:	$(SqPlugins).JPEGReadWriter2Plugin
+	@echo done $*
+
+$(SqPlugins).JPEGReadWriter2Plugin:	$(SPlug).JPEGReadWriter2Plugin.lib \
+		$(SPlug).JPEGReadWriter2Plugin.dsc.JPEGReadWriter2Plugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).JPEGReadWriter2Plugin \
+		-h $(SPlug).JPEGReadWriter2Plugin.dsc.JPEGReadWriter2Plugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).JPEGReadWriter2Plugin.o.JPEGReadWriter2Plugin \
+		$(SPlug).JPEGReadWriter2Plugin.lib
+
+# make a library because this is too many files t ofeed in one go to rink
+$(SPlug).JPEGReadWriter2Plugin.lib:	$(SPlug).JPEGReadWriter2Plugin.o.JPEGReadWriter2Plugin \
+		$(SPlug).JPEGReadWriter2Plugin.o.Error \
+		$(SPlug).JPEGReadWriter2Plugin.o.jcapimin \
+		$(SPlug).JPEGReadWriter2Plugin.o.jcapistd \
+		$(SPlug).JPEGReadWriter2Plugin.o.jccoefct \
+		$(SPlug).JPEGReadWriter2Plugin.o.jccolor  \
+		$(SPlug).JPEGReadWriter2Plugin.o.jcdctmgr \
+		$(SPlug).JPEGReadWriter2Plugin.o.jchuff   \
+		$(SPlug).JPEGReadWriter2Plugin.o.jcinit   \
+		$(SPlug).JPEGReadWriter2Plugin.o.jcmainct \
+		$(SPlug).JPEGReadWriter2Plugin.o.jcmarker \
+		$(SPlug).JPEGReadWriter2Plugin.o.jcmaster \
+		$(SPlug).JPEGReadWriter2Plugin.o.jcomapi  \
+		$(SPlug).JPEGReadWriter2Plugin.o.jcparam  \
+		$(SPlug).JPEGReadWriter2Plugin.o.jcphuff  \
+		$(SPlug).JPEGReadWriter2Plugin.o.jcprepct \
+		$(SPlug).JPEGReadWriter2Plugin.o.jcsample \
+		$(SPlug).JPEGReadWriter2Plugin.o.jctrans  \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdapimin \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdapistd \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdatadst \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdatasrc \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdcoefct \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdcolor  \
+		$(SPlug).JPEGReadWriter2Plugin.o.jddctmgr \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdhuff   \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdinput  \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdmainct \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdmarker \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdmaster \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdmerge  \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdphuff  \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdpostct \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdsample \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdtrans  \
+		$(SPlug).JPEGReadWriter2Plugin.o.jerror   \
+		$(SPlug).JPEGReadWriter2Plugin.o.jfdctflt \
+		$(SPlug).JPEGReadWriter2Plugin.o.jfdctfst \
+		$(SPlug).JPEGReadWriter2Plugin.o.jfdctint \
+		$(SPlug).JPEGReadWriter2Plugin.o.jidctflt \
+		$(SPlug).JPEGReadWriter2Plugin.o.jidctfst \
+		$(SPlug).JPEGReadWriter2Plugin.o.jidctint \
+		$(SPlug).JPEGReadWriter2Plugin.o.jidctred \
+		$(SPlug).JPEGReadWriter2Plugin.o.jmemdatadst \
+		$(SPlug).JPEGReadWriter2Plugin.o.jmemdatasrc \
+		$(SPlug).JPEGReadWriter2Plugin.o.jmemmgr  \
+		$(SPlug).JPEGReadWriter2Plugin.o.jmemnobs \
+		$(SPlug).JPEGReadWriter2Plugin.o.jquant1  \
+		$(SPlug).JPEGReadWriter2Plugin.o.jquant2  \
+		$(SPlug).JPEGReadWriter2Plugin.jutils.o
+	LibFile -c $* $(SPlug).JPEGReadWriter2Plugin.o.*
+
+
+$(SPlug).JPEGReadWriter2Plugin.o.JPEGReadWriter2Plugin: $(SPlug).JPEGReadWriter2Plugin.c.JPEGReadWriter2Plugin $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(SPlug).JPEGReadWriter2Plugin.c.JPEGReadWriter2Plugin
+
+$(SPlug).JPEGReadWriter2Plugin.jutils.o: $(CPlug).JPEGReadWriter2Plugin.jutils.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jutils.c
+
+$(SPlug).JPEGReadWriter2Plugin.jquant2.o: $(CPlug).JPEGReadWriter2Plugin.jquant2.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jquant2.c
+
+$(SPlug).JPEGReadWriter2Plugin.jquant1.o: $(CPlug).JPEGReadWriter2Plugin.jquant1.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jquant1.c
+
+$(SPlug).JPEGReadWriter2Plugin.jmemnobs.o: $(CPlug).JPEGReadWriter2Plugin.jmemnobs.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jmemnobs.c
+
+$(SPlug).JPEGReadWriter2Plugin.jmemmgr.o: $(CPlug).JPEGReadWriter2Plugin.jmemmgr.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jmemmgr.c
+
+$(SPlug).JPEGReadWriter2Plugin.jmemdatasrc.o: $(CPlug).JPEGReadWriter2Plugin.jmemdatasrc.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jmemdatasrc.c
+
+$(SPlug).JPEGReadWriter2Plugin.jmemdatadst.o: $(CPlug).JPEGReadWriter2Plugin.jmemdatadst.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jmemdatadst.c
+
+$(SPlug).JPEGReadWriter2Plugin.jidctred.o: $(CPlug).JPEGReadWriter2Plugin.jidctred.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jidctred.c
+
+$(SPlug).JPEGReadWriter2Plugin.jidctint.o: $(CPlug).JPEGReadWriter2Plugin.jidctint.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jidctint.c
+
+$(SPlug).JPEGReadWriter2Plugin.jidctfst.o: $(CPlug).JPEGReadWriter2Plugin.jidctfst.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jidctfst.c
+
+$(SPlug).JPEGReadWriter2Plugin.jidctflt.o: $(CPlug).JPEGReadWriter2Plugin.jidctflt.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jidctflt.c
+
+$(SPlug).JPEGReadWriter2Plugin.jfdctint.o: $(CPlug).JPEGReadWriter2Plugin.jfdctint.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jfdctint.c
+
+$(SPlug).JPEGReadWriter2Plugin.jfdctfst.o: $(CPlug).JPEGReadWriter2Plugin.jfdctfst.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jfdctfst.c
+
+$(SPlug).JPEGReadWriter2Plugin.jfdctflt.o: $(CPlug).JPEGReadWriter2Plugin.jfdctflt.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jfdctflt.c
+
+$(SPlug).JPEGReadWriter2Plugin.jerror.o: $(CPlug).JPEGReadWriter2Plugin.jerror.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jerror.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdtrans.o: $(CPlug).JPEGReadWriter2Plugin.jdtrans.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdtrans.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdsample.o: $(CPlug).JPEGReadWriter2Plugin.jdsample.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdsample.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdpostct.o: $(CPlug).JPEGReadWriter2Plugin.jdpostct.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdpostct.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdphuff.o: $(CPlug).JPEGReadWriter2Plugin.jdphuff.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdphuff.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdmerge.o: $(CPlug).JPEGReadWriter2Plugin.jdmerge.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdmerge.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdmaster.o: $(CPlug).JPEGReadWriter2Plugin.jdmaster.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdmaster.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdmarker.o: $(CPlug).JPEGReadWriter2Plugin.jdmarker.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdmarker.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdmainct.o: $(CPlug).JPEGReadWriter2Plugin.jdmainct.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdmainct.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdinput.o: $(CPlug).JPEGReadWriter2Plugin.jdinput.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdinput.c
+
+$(SPlug).JPEGReadWriter2Plugin.jddctmgr.o: $(CPlug).JPEGReadWriter2Plugin.jddctmgr.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jddctmgr.c
+
+
+$(SPlug).JPEGReadWriter2Plugin.jdhuff.o: $(CPlug).JPEGReadWriter2Plugin.jdhuff.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdhuff.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdcolor.o: $(CPlug).JPEGReadWriter2Plugin.jdcolor.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdcolor.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdcoefct.o: $(CPlug).JPEGReadWriter2Plugin.jdcoefct.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdcoefct.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdatasrc.o: $(CPlug).JPEGReadWriter2Plugin.jdatasrc.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdatasrc.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdatadst.o: $(CPlug).JPEGReadWriter2Plugin.jdatadst.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdatadst.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdapistd.o: $(CPlug).JPEGReadWriter2Plugin.jdapistd.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdapistd.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdapimin.o: $(CPlug).JPEGReadWriter2Plugin.jdapimin.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdapimin.c
+
+$(SPlug).JPEGReadWriter2Plugin.jctrans.o: $(CPlug).JPEGReadWriter2Plugin.jctrans.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jctrans.c
+
+$(SPlug).JPEGReadWriter2Plugin.jcsample.o: $(CPlug).JPEGReadWriter2Plugin.jcsample.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jcsample.c
+
+$(SPlug).JPEGReadWriter2Plugin.jcprepct.o: $(CPlug).JPEGReadWriter2Plugin.jcprepct.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jcprepct.c
+
+$(SPlug).JPEGReadWriter2Plugin.jcphuff.o: $(CPlug).JPEGReadWriter2Plugin.jcphuff.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jcphuff.c
+
+$(SPlug).JPEGReadWriter2Plugin.jcparam.o: $(CPlug).JPEGReadWriter2Plugin.jcparam.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jcparam.c
+
+$(SPlug).JPEGReadWriter2Plugin.jcomapi.o: $(CPlug).JPEGReadWriter2Plugin.jcomapi.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jcomapi.c
+
+$(SPlug).JPEGReadWriter2Plugin.jcmaster.o: $(CPlug).JPEGReadWriter2Plugin.jcmaster.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jcmaster.c
+
+$(SPlug).JPEGReadWriter2Plugin.jcmarker.o: $(CPlug).JPEGReadWriter2Plugin.jcmarker.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jcmarker.c
+
+$(SPlug).JPEGReadWriter2Plugin.jcmainct.o: $(CPlug).JPEGReadWriter2Plugin.jcmainct.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jcmainct.c
+
+$(SPlug).JPEGReadWriter2Plugin.jcinit.o: $(CPlug).JPEGReadWriter2Plugin.jcinit.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jcinit.c
+
+$(SPlug).JPEGReadWriter2Plugin.jchuff.o: $(CPlug).JPEGReadWriter2Plugin.jchuff.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jchuff.c
+
+$(SPlug).JPEGReadWriter2Plugin.jcdctmgr.o: $(CPlug).JPEGReadWriter2Plugin.jcdctmgr.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jcdctmgr.c
+
+$(SPlug).JPEGReadWriter2Plugin.jccolor.o: $(CPlug).JPEGReadWriter2Plugin.jccolor.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jccolor.c
+
+$(SPlug).JPEGReadWriter2Plugin.jccoefct.o: $(CPlug).JPEGReadWriter2Plugin.jccoefct.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jccoefct.c
+
+$(SPlug).JPEGReadWriter2Plugin.jcapistd.o: $(CPlug).JPEGReadWriter2Plugin.jcapistd.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jcapistd.c
+
+$(SPlug).JPEGReadWriter2Plugin.jcapimin.o: $(CPlug).JPEGReadWriter2Plugin.jcapimin.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jcapimin.c
+
+$(SPlug).JPEGReadWriter2Plugin.Error.o: $(CPlug).JPEGReadWriter2Plugin.Error.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.Error.c
 
 
 
@@ -798,4 +1027,3 @@ $(SPlug).ZipPlugin.o.ZipPlugin: $(SPlug).ZipPlugin.c.ZipPlugin  $(PlHdr)
 
 
 # Dynamic dependencies:
-
