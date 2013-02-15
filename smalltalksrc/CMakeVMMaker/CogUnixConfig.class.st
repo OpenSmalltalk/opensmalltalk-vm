@@ -55,8 +55,7 @@ CogUnixConfig >> compilerFlagsDebug [
 { #category : #'compiler flags' }
 CogUnixConfig >> compilerFlagsRelease [
 "
-THIS FLAGS ARE CREASHING COMPILER 
-
+THIS FLAGS ARE CRASHING COMPILER 
 -fschedule-insns2 
 -fschedule-insns 
 
