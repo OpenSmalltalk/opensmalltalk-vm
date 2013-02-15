@@ -83,6 +83,8 @@ CMakeVMGenerator >> generate [
 		printHeader;
 		project: config executableName.
 
+	config setGlobalOptionsAfterDetermineSystem: self.
+
 	config setupDirectories: self.
 	
 	self message: '${CMAKE_MODULE_PATH}'.
