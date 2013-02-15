@@ -11,8 +11,8 @@ Class {
 }
 
 { #category : #settings }
-StackCocoaIOSConfig >> compilerFlagsRelease [ 
-	^super compilerFlagsRelease, #('-DSTACKVM')
+StackCocoaIOSConfig >> commonCompilerFlags [ 
+	^super commonCompilerFlags, #('-DSTACKVM')
 ]
 
 { #category : #'source files' }

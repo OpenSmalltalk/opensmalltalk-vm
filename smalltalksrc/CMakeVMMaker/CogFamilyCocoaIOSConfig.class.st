@@ -45,7 +45,8 @@ CogFamilyCocoaIOSConfig >> commonCompilerFlags [
 	'-DHAVE_NANOSLEEP'. 
 	'-DCOGMTVM=0'. 
 	'-DUSE_GLOBAL_STRUCT=0'. 
-	'-DBASE_HEADER_SIZE=4' }
+	'-DBASE_HEADER_SIZE=4'.
+	 '-fwrapv' }
 ]
 
 { #category : #settings }
@@ -288,10 +289,12 @@ CogFamilyCocoaIOSConfig >> setGlobalOptions: maker [
 	
 	maker set: 'CMAKE_C_COMPILER' to: '/usr/bin/gcc'.
 	maker set: 'CMAKE_CXX_COMPILER' to: '/usr/bin/g++'.
-	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'.
-	maker set: 'CMAKE_OSX_DEPLOYMENT_TARGET' to: '10.6'.
-	
-	"maker set: 'CMAKE_OSX_SYSROOT' to: '/'."
+]
+
+{ #category : #'as yet unclassified' }
+CogFamilyCocoaIOSConfig >> setGlobalOptionsAfterDetermineSystem:  maker [
+
+	maker set: 'CMAKE_OSX_DEPLOYMENT_TARGET' to: '10.5'.
 	maker 
 		set: 'CMAKE_OSX_SYSROOT' 
 		to: '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX', self sdkVersion, '.sdk'
