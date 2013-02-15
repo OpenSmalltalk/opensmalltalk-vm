@@ -859,6 +859,14 @@ CPlatformConfig >> setGlobalOptions: maker [
 	
 ]
 
+{ #category : #utils }
+CPlatformConfig >> setGlobalOptionsAfterDetermineSystem: maker [
+
+	"set any CMake global options, right after declare project and determine running system. 
+	 This is sometimes necesary to override cmake settings"
+	
+]
+
 { #category : #directories }
 CPlatformConfig >> setupDirectories: gen [
 	| dirsInclude |
