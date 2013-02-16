@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 4 January 2013 12:29:07 am 
-   by VMMaker 4.10.8
+/* Automatically generated from Squeak on 15 February 2013 7:50:54 pm 
+   by VMMaker 4.10.12
  */
 
 #include <math.h>
@@ -218,9 +218,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"UnixOSProcessPlugin 4 January 2013 (i)"
+	"UnixOSProcessPlugin 15 February 2013 (i)"
 #else
-	"UnixOSProcessPlugin 4 January 2013 (e)"
+	"UnixOSProcessPlugin 15 February 2013 (e)"
 #endif
 ;
 static void *originalSigHandlers[NSIG];

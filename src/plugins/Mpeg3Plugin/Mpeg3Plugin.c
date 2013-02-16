@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 4 January 2013 12:29:06 am 
-   by VMMaker 4.10.8
+/* Automatically generated from Squeak on 15 February 2013 7:50:53 pm 
+   by VMMaker 4.10.12
  */
 
 #include <math.h>
@@ -94,9 +94,9 @@ struct VirtualMachine* interpreterProxy;
 static sqInt maximumNumberOfFilesToWatch;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"Mpeg3Plugin 4 January 2013 (i)"
+	"Mpeg3Plugin 15 February 2013 (i)"
 #else
-	"Mpeg3Plugin 4 January 2013 (e)"
+	"Mpeg3Plugin 15 February 2013 (e)"
 #endif
 ;
 static mpeg3_t *mpegFiles[1024+1];

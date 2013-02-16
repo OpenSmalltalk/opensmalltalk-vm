@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 4 January 2013 12:29:01 am 
-   by VMMaker 4.10.8
+/* Automatically generated from Squeak on 15 February 2013 7:50:48 pm 
+   by VMMaker 4.10.12
  */
 
 #include <math.h>
@@ -237,9 +237,9 @@ static int maskTable[33] = {
 };
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"BitBltPlugin 4 January 2013 (i)"
+	"BitBltPlugin 15 February 2013 (i)"
 #else
-	"BitBltPlugin 4 January 2013 (e)"
+	"BitBltPlugin 15 February 2013 (e)"
 #endif
 ;
 static sqInt nWords;

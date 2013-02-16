@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 4 January 2013 12:29 am 
-   by VMMaker 4.10.8
+/* Automatically generated from Squeak on 15 February 2013 7:50:46 pm 
+   by VMMaker 4.10.12
  */
 
 #include <math.h>
@@ -43,6 +43,7 @@
 #define fetchFloatofObject(idx,oop) (interpreterProxy->fetchFloatofObject(idx,oop))
 #define fetchIntegerofObject(idx,oop) (interpreterProxy->fetchIntegerofObject(idx,oop))
 #define floatValueOf(oop) (interpreterProxy->floatValueOf(oop))
+#define isBytes(oop) (interpreterProxy->isBytes(oop))
 #define pop(n) (interpreterProxy->pop(n))
 #define pushInteger(n) (interpreterProxy->pushInteger(n))
 #define sizeOfSTArrayFromCPrimitive(cPtr) (interpreterProxy->sizeOfSTArrayFromCPrimitive(cPtr))
@@ -62,9 +63,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"ADPCMCodecPlugin 4 January 2013 (i)"
+	"ADPCMCodecPlugin 15 February 2013 (i)"
 #else
-	"ADPCMCodecPlugin 4 January 2013 (e)"
+	"ADPCMCodecPlugin 15 February 2013 (e)"
 #endif
 ;
 

@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 13 February 2013 8:00:24 am 
-   by VMMaker 4.10.11
+/* Automatically generated from Squeak on 15 February 2013 7:50:45 pm 
+   by VMMaker 4.10.12
  */
 #if 1
 # define SQ_USE_GLOBAL_STRUCT 1
@@ -158,7 +158,7 @@ void defaultErrorProc(char *s) {
 #define InitialIPIndex 4
 #define InstanceSpecificationIndex 2
 #define InstructionPointerIndex 1
-#define InterpreterSourceVersion "4.10.11"
+#define InterpreterSourceVersion "4.10.12"
 #define InvokeCallbackSelector 53
 #define LargeContextBit 262144
 #define LastLinkIndex 1
@@ -233,7 +233,7 @@ sqInt activateNewMethod(void);
 EXPORT(sqInt) addGCRoot(sqInt *varLoc);
 #pragma export off
 sqInt addNewMethodToCache(void);
-sqInt addToExternalPrimitiveTable(void *functionAddress);
+sqInt addToExternalPrimitiveTable(void (*functionAddress)(void));
 sqInt adjustAllOopsBy(sqInt bytesToShift);
 sqInt allYoungand(sqInt array1, sqInt array2);
 sqInt allocateChunk(sqInt byteSize);
@@ -251,7 +251,7 @@ sqInt booleanValueOf(sqInt obj);
 sqInt byteSizeOf(sqInt oop);
 sqInt byteSwapByteObjectsFromto(sqInt startOop, sqInt stopAddr);
 sqInt byteSwapped(sqInt w);
-sqInt callExternalPrimitive(void *functionID);
+sqInt callExternalPrimitive(void *functionID(void));
 #pragma export on
 EXPORT(sqInt) callInterpreter(void);
 EXPORT(sqInt) callbackEnter(sqInt *callbackID);
@@ -305,8 +305,8 @@ sqInt copyBits(void);
 sqInt copyBitsFromtoat(sqInt x0, sqInt x1, sqInt y);
 sqInt copyObjtoSegmentaddrstopAtsaveOopAtheaderAt(sqInt oop, sqInt segmentWordArray, sqInt lastSeg, sqInt stopAddr, sqInt oopPtr, sqInt hdrPtr);
 sqInt createActualMessageTo(sqInt aClass);
-sqInt dispatchFunctionPointer(void *aFunctionPointer);
-sqInt dispatchFunctionPointerOnin(sqInt primIdx, void *primTable[]);
+sqInt dispatchFunctionPointer(void (*aFunctionPointer)(void));
+sqInt dispatchFunctionPointerOnin(sqInt primIdx, void (*primTable[])(void));
 sqInt displayBitsOfLeftTopRightBottom(sqInt aForm, sqInt l, sqInt t, sqInt r, sqInt b);
 sqInt displayObject(void);
 sqInt doPrimitiveDivby(sqInt rcvr, sqInt arg);
@@ -460,7 +460,7 @@ sqInt primitiveArrayBecome(void);
 sqInt primitiveArrayBecomeOneWay(void);
 sqInt primitiveArrayBecomeOneWayCopyHash(void);
 sqInt primitiveAsFloat(void);
-sqInt primitiveAsOop(void);
+void primitiveAsOop(void);
 sqInt primitiveAt(void);
 sqInt primitiveAtPut(void);
 sqInt primitiveBeCursor(void);
@@ -483,7 +483,7 @@ sqInt primitiveBitXor(void);
 #pragma export on
 EXPORT(sqInt) primitiveBitXorLargeIntegers(void);
 #pragma export off
-sqInt primitiveBlockCopy(void);
+void primitiveBlockCopy(void);
 sqInt primitiveBytesLeft(void);
 sqInt primitiveCalloutToFFI(void);
 sqInt primitiveChangeClass(void);
@@ -492,14 +492,14 @@ EXPORT(sqInt) primitiveChangeClassWithClass(void);
 #pragma export off
 sqInt primitiveClass(void);
 sqInt primitiveClipboardText(void);
-sqInt primitiveClone(void);
-sqInt primitiveClosureCopyWithCopiedValues(void);
-sqInt primitiveClosureValue(void);
-sqInt primitiveClosureValueNoContextSwitch(void);
-sqInt primitiveClosureValueWithArgs(void);
+void primitiveClone(void);
+void primitiveClosureCopyWithCopiedValues(void);
+void primitiveClosureValue(void);
+void primitiveClosureValueNoContextSwitch(void);
+void primitiveClosureValueWithArgs(void);
 sqInt primitiveConstantFill(void);
-sqInt primitiveCopyObject(void);
-sqInt primitiveDeferDisplayUpdates(void);
+void primitiveCopyObject(void);
+void primitiveDeferDisplayUpdates(void);
 #pragma export on
 EXPORT(sqInt) primitiveDisablePowerManager(void);
 #pragma export off
@@ -511,25 +511,25 @@ sqInt primitiveDivide(void);
 #pragma export on
 EXPORT(sqInt) primitiveDivideLargeIntegers(void);
 #pragma export off
-sqInt primitiveDoPrimitiveWithArgs(void);
+void primitiveDoPrimitiveWithArgs(void);
 sqInt primitiveEqual(void);
 #pragma export on
 EXPORT(sqInt) primitiveEqualLargeIntegers(void);
 #pragma export off
-sqInt primitiveExecuteMethod(void);
-sqInt primitiveExecuteMethodArgsArray(void);
+void primitiveExecuteMethod(void);
+void primitiveExecuteMethodArgsArray(void);
 sqInt primitiveExitToDebugger(void);
 sqInt primitiveExp(void);
 sqInt primitiveExponent(void);
-sqInt primitiveExternalCall(void);
+void primitiveExternalCall(void);
 sqInt primitiveFail(void);
 sqInt primitiveFailFor(sqInt reasonCode);
 sqInt primitiveFindHandlerContext(void);
 sqInt primitiveFindNextUnwindContext(void);
 sqInt primitiveFloatAdd(void);
 sqInt primitiveFloatAddtoArg(sqInt rcvrOop, sqInt argOop);
-sqInt primitiveFloatAt(void);
-sqInt primitiveFloatAtPut(void);
+void primitiveFloatAt(void);
+void primitiveFloatAtPut(void);
 sqInt primitiveFloatDivide(void);
 sqInt primitiveFloatDividebyArg(sqInt rcvrOop, sqInt argOop);
 sqInt primitiveFloatEqual(void);
@@ -548,8 +548,8 @@ sqInt primitiveFloatNotEqual(void);
 sqInt primitiveFloatSubtract(void);
 sqInt primitiveFloatSubtractfromArg(sqInt rcvrOop, sqInt argOop);
 sqInt primitiveFlushCache(void);
-sqInt primitiveFlushCacheByMethod(void);
-sqInt primitiveFlushCacheSelective(void);
+void primitiveFlushCacheByMethod(void);
+void primitiveFlushCacheSelective(void);
 sqInt primitiveFlushExternalPrimitives(void);
 sqInt primitiveForceDisplayUpdate(void);
 #pragma export on
@@ -585,7 +585,7 @@ sqInt primitiveIntegerAtPut(void);
 EXPORT(sqInt) primitiveInterpreterSourceVersion(void);
 #pragma export off
 sqInt primitiveInterruptSemaphore(void);
-sqInt primitiveInvokeObjectAsMethod(void);
+void primitiveInvokeObjectAsMethod(void);
 #pragma export on
 EXPORT(sqInt) primitiveIsRoot(void);
 EXPORT(sqInt) primitiveIsYoung(void);
@@ -603,7 +603,7 @@ EXPORT(sqInt) primitiveLessThanLargeIntegers(void);
 sqInt primitiveListBuiltinModule(void);
 sqInt primitiveListExternalModule(void);
 sqInt primitiveLoadImageSegment(void);
-sqInt primitiveLoadInstVar(void);
+void primitiveLoadInstVar(void);
 #pragma export on
 EXPORT(sqInt) primitiveLocalMicrosecondClock(void);
 #pragma export off
@@ -645,21 +645,21 @@ sqInt primitiveNotIdentical(void);
 sqInt primitiveObjectAt(void);
 sqInt primitiveObjectAtPut(void);
 sqInt primitiveObjectPointsTo(void);
-sqInt primitivePerform(void);
+void primitivePerform(void);
 sqInt primitivePerformAt(sqInt lookupClass);
-sqInt primitivePerformInSuperclass(void);
-sqInt primitivePerformWithArgs(void);
+void primitivePerformInSuperclass(void);
+void primitivePerformWithArgs(void);
 #pragma export on
 EXPORT(sqInt) primitivePlatformSourceVersion(void);
 #pragma export off
-sqInt primitivePushFalse(void);
-sqInt primitivePushMinusOne(void);
-sqInt primitivePushNil(void);
-sqInt primitivePushOne(void);
-sqInt primitivePushSelf(void);
-sqInt primitivePushTrue(void);
-sqInt primitivePushTwo(void);
-sqInt primitivePushZero(void);
+void primitivePushFalse(void);
+void primitivePushMinusOne(void);
+void primitivePushNil(void);
+void primitivePushOne(void);
+void primitivePushSelf(void);
+void primitivePushTrue(void);
+void primitivePushTwo(void);
+void primitivePushZero(void);
 sqInt primitiveQuit(void);
 sqInt primitiveQuo(void);
 #pragma export on
@@ -670,7 +670,7 @@ sqInt primitiveRelinquishProcessor(void);
 EXPORT(sqInt) primitiveRemLargeIntegers(void);
 #pragma export off
 sqInt primitiveResponse(void);
-sqInt primitiveResume(void);
+void primitiveResume(void);
 #pragma export on
 EXPORT(sqInt) primitiveRootTable(void);
 EXPORT(sqInt) primitiveRootTableAt(void);
@@ -695,7 +695,7 @@ sqInt primitiveShortAtPut(void);
 sqInt primitiveShowDisplayRect(void);
 sqInt primitiveSignal(void);
 sqInt primitiveSignalAtBytesLeft(void);
-sqInt primitiveSignalAtMilliseconds(void);
+void primitiveSignalAtMilliseconds(void);
 sqInt primitiveSine(void);
 sqInt primitiveSize(void);
 sqInt primitiveSnapshot(void);
@@ -705,7 +705,7 @@ sqInt primitiveSomeObject(void);
 sqInt primitiveSpecialObjectsOop(void);
 sqInt primitiveSquareRoot(void);
 sqInt primitiveStoreImageSegment(void);
-sqInt primitiveStoreStackp(void);
+void primitiveStoreStackp(void);
 sqInt primitiveStringAt(void);
 sqInt primitiveStringAtPut(void);
 sqInt primitiveStringReplace(void);
@@ -714,7 +714,7 @@ sqInt primitiveSubtract(void);
 EXPORT(sqInt) primitiveSubtractLargeIntegers(void);
 #pragma export off
 sqInt primitiveSuspend(void);
-sqInt primitiveTerminateTo(void);
+void primitiveTerminateTo(void);
 sqInt primitiveTestDisplayDepth(void);
 sqInt primitiveTimesTwoPower(void);
 sqInt primitiveTruncated(void);
@@ -725,14 +725,14 @@ sqInt primitiveUnloadModule(void);
 #pragma export on
 EXPORT(sqInt) primitiveUtcWithOffset(void);
 #pragma export off
-sqInt primitiveVMParameter(void);
+void primitiveVMParameter(void);
 sqInt primitiveVMPath(void);
 #pragma export on
 EXPORT(sqInt) primitiveVMVersion(void);
 #pragma export off
-sqInt primitiveValue(void);
-sqInt primitiveValueUninterruptably(void);
-sqInt primitiveValueWithArgs(void);
+void primitiveValue(void);
+void primitiveValueUninterruptably(void);
+void primitiveValueWithArgs(void);
 sqInt primitiveWait(void);
 sqInt primitiveYield(void);
 sqInt print(char *s);
@@ -770,7 +770,7 @@ sqInt restoreHeadersFromtofromandtofrom(sqInt firstIn, sqInt lastIn, sqInt hdrBa
 sqInt resume(sqInt aProcess);
 sqInt reverseDisplayFromto(sqInt startIndex, sqInt endIndex);
 sqInt rewriteMethodCacheSelclassprimIndex(sqInt selector, sqInt class, sqInt localPrimIndex);
-sqInt rewriteMethodCacheSelclassprimIndexprimFunction(sqInt selector, sqInt class, sqInt localPrimIndex, void *localPrimAddress);
+sqInt rewriteMethodCacheSelclassprimIndexprimFunction(sqInt selector, sqInt class, sqInt localPrimIndex, void (*localPrimAddress)(void));
 #pragma export on
 EXPORT(sqInt) sendInvokeCallbackStackRegistersJmpbuf(sqInt thunkPtr, sqInt stackPtr, sqInt regsPtr, sqInt jmpBufPtr);
 #pragma export off
@@ -899,7 +899,6 @@ sqLong statFullGCMSecs;
 usqInt shrinkThreshold;
 sqInt statIncrGCUsecs;
 sqInt semaphoresToSignalB[501];
-void *externalPrimitiveTable[4097];
 sqInt semaphoresToSignalA[501];
 usqInt method;
 usqInt theHomeContext;
@@ -933,586 +932,587 @@ const char *interpreterVersion = "Squeak4.3 of 3 January 2013 [latest update: #1
 sqInt (*compilerHooks[16])();
 struct VirtualMachine* interpreterProxy;
 sqInt imageFormatVersionNumber = 0;
-void *primitiveTable[577] = {
-	/* 0*/ (void *)primitiveFail,
-	/* 1*/ (void *)primitiveAdd,
-	/* 2*/ (void *)primitiveSubtract,
-	/* 3*/ (void *)primitiveLessThan,
-	/* 4*/ (void *)primitiveGreaterThan,
-	/* 5*/ (void *)primitiveLessOrEqual,
-	/* 6*/ (void *)primitiveGreaterOrEqual,
-	/* 7*/ (void *)primitiveEqual,
-	/* 8*/ (void *)primitiveNotEqual,
-	/* 9*/ (void *)primitiveMultiply,
-	/* 10*/ (void *)primitiveDivide,
-	/* 11*/ (void *)primitiveMod,
-	/* 12*/ (void *)primitiveDiv,
-	/* 13*/ (void *)primitiveQuo,
-	/* 14*/ (void *)primitiveBitAnd,
-	/* 15*/ (void *)primitiveBitOr,
-	/* 16*/ (void *)primitiveBitXor,
-	/* 17*/ (void *)primitiveBitShift,
-	/* 18*/ (void *)primitiveMakePoint,
-	/* 19*/ (void *)primitiveFail,
-	/* 20*/ (void *)primitiveRemLargeIntegers,
-	/* 21*/ (void *)primitiveAddLargeIntegers,
-	/* 22*/ (void *)primitiveSubtractLargeIntegers,
-	/* 23*/ (void *)primitiveLessThanLargeIntegers,
-	/* 24*/ (void *)primitiveGreaterThanLargeIntegers,
-	/* 25*/ (void *)primitiveLessOrEqualLargeIntegers,
-	/* 26*/ (void *)primitiveGreaterOrEqualLargeIntegers,
-	/* 27*/ (void *)primitiveEqualLargeIntegers,
-	/* 28*/ (void *)primitiveNotEqualLargeIntegers,
-	/* 29*/ (void *)primitiveMultiplyLargeIntegers,
-	/* 30*/ (void *)primitiveDivideLargeIntegers,
-	/* 31*/ (void *)primitiveModLargeIntegers,
-	/* 32*/ (void *)primitiveDivLargeIntegers,
-	/* 33*/ (void *)primitiveQuoLargeIntegers,
-	/* 34*/ (void *)primitiveBitAndLargeIntegers,
-	/* 35*/ (void *)primitiveBitOrLargeIntegers,
-	/* 36*/ (void *)primitiveBitXorLargeIntegers,
-	/* 37*/ (void *)primitiveBitShiftLargeIntegers,
-	/* 38*/ (void *)primitiveFloatAt,
-	/* 39*/ (void *)primitiveFloatAtPut,
-	/* 40*/ (void *)primitiveAsFloat,
-	/* 41*/ (void *)primitiveFloatAdd,
-	/* 42*/ (void *)primitiveFloatSubtract,
-	/* 43*/ (void *)primitiveFloatLessThan,
-	/* 44*/ (void *)primitiveFloatGreaterThan,
-	/* 45*/ (void *)primitiveFloatLessOrEqual,
-	/* 46*/ (void *)primitiveFloatGreaterOrEqual,
-	/* 47*/ (void *)primitiveFloatEqual,
-	/* 48*/ (void *)primitiveFloatNotEqual,
-	/* 49*/ (void *)primitiveFloatMultiply,
-	/* 50*/ (void *)primitiveFloatDivide,
-	/* 51*/ (void *)primitiveTruncated,
-	/* 52*/ (void *)primitiveFractionalPart,
-	/* 53*/ (void *)primitiveExponent,
-	/* 54*/ (void *)primitiveTimesTwoPower,
-	/* 55*/ (void *)primitiveSquareRoot,
-	/* 56*/ (void *)primitiveSine,
-	/* 57*/ (void *)primitiveArctan,
-	/* 58*/ (void *)primitiveLogN,
-	/* 59*/ (void *)primitiveExp,
-	/* 60*/ (void *)primitiveAt,
-	/* 61*/ (void *)primitiveAtPut,
-	/* 62*/ (void *)primitiveSize,
-	/* 63*/ (void *)primitiveStringAt,
-	/* 64*/ (void *)primitiveStringAtPut,
-	/* 65*/ (void *)primitiveFail,
-	/* 66*/ (void *)primitiveFail,
-	/* 67*/ (void *)primitiveFail,
-	/* 68*/ (void *)primitiveObjectAt,
-	/* 69*/ (void *)primitiveObjectAtPut,
-	/* 70*/ (void *)primitiveNew,
-	/* 71*/ (void *)primitiveNewWithArg,
-	/* 72*/ (void *)primitiveArrayBecomeOneWay,
-	/* 73*/ (void *)primitiveInstVarAt,
-	/* 74*/ (void *)primitiveInstVarAtPut,
-	/* 75*/ (void *)primitiveAsOop,
-	/* 76*/ (void *)primitiveStoreStackp,
-	/* 77*/ (void *)primitiveSomeInstance,
-	/* 78*/ (void *)primitiveNextInstance,
-	/* 79*/ (void *)primitiveNewMethod,
-	/* 80*/ (void *)primitiveBlockCopy,
-	/* 81*/ (void *)primitiveValue,
-	/* 82*/ (void *)primitiveValueWithArgs,
-	/* 83*/ (void *)primitivePerform,
-	/* 84*/ (void *)primitivePerformWithArgs,
-	/* 85*/ (void *)primitiveSignal,
-	/* 86*/ (void *)primitiveWait,
-	/* 87*/ (void *)primitiveResume,
-	/* 88*/ (void *)primitiveSuspend,
-	/* 89*/ (void *)primitiveFlushCache,
-	/* 90*/ (void *)primitiveMousePoint,
-	/* 91*/ (void *)primitiveTestDisplayDepth,
-	/* 92*/ (void *)primitiveSetDisplayMode,
-	/* 93*/ (void *)primitiveInputSemaphore,
-	/* 94*/ (void *)primitiveGetNextEvent,
-	/* 95*/ (void *)primitiveInputWord,
-	/* 96*/ (void *)primitiveFail,
-	/* 97*/ (void *)primitiveSnapshot,
-	/* 98*/ (void *)primitiveStoreImageSegment,
-	/* 99*/ (void *)primitiveLoadImageSegment,
-	/* 100*/ (void *)primitivePerformInSuperclass,
-	/* 101*/ (void *)primitiveBeCursor,
-	/* 102*/ (void *)primitiveBeDisplay,
-	/* 103*/ (void *)primitiveScanCharacters,
-	/* 104*/ (void *)primitiveFail,
-	/* 105*/ (void *)primitiveStringReplace,
-	/* 106*/ (void *)primitiveScreenSize,
-	/* 107*/ (void *)primitiveMouseButtons,
-	/* 108*/ (void *)primitiveKbdNext,
-	/* 109*/ (void *)primitiveKbdPeek,
-	/* 110*/ (void *)primitiveIdentical,
-	/* 111*/ (void *)primitiveClass,
-	/* 112*/ (void *)primitiveBytesLeft,
-	/* 113*/ (void *)primitiveQuit,
-	/* 114*/ (void *)primitiveExitToDebugger,
-	/* 115*/ (void *)primitiveChangeClass,
-	/* 116*/ (void *)primitiveFlushCacheByMethod,
-	/* 117*/ (void *)primitiveExternalCall,
-	/* 118*/ (void *)primitiveDoPrimitiveWithArgs,
-	/* 119*/ (void *)primitiveFlushCacheSelective,
-	/* 120*/ (void *)primitiveCalloutToFFI,
-	/* 121*/ (void *)primitiveImageName,
-	/* 122*/ (void *)primitiveNoop,
-	/* 123*/ (void *)primitiveValueUninterruptably,
-	/* 124*/ (void *)primitiveLowSpaceSemaphore,
-	/* 125*/ (void *)primitiveSignalAtBytesLeft,
-	/* 126*/ (void *)primitiveDeferDisplayUpdates,
-	/* 127*/ (void *)primitiveShowDisplayRect,
-	/* 128*/ (void *)primitiveArrayBecome,
-	/* 129*/ (void *)primitiveSpecialObjectsOop,
-	/* 130*/ (void *)primitiveFullGC,
-	/* 131*/ (void *)primitiveIncrementalGC,
-	/* 132*/ (void *)primitiveObjectPointsTo,
-	/* 133*/ (void *)primitiveSetInterruptKey,
-	/* 134*/ (void *)primitiveInterruptSemaphore,
-	/* 135*/ (void *)primitiveMillisecondClock,
-	/* 136*/ (void *)primitiveSignalAtMilliseconds,
-	/* 137*/ (void *)primitiveSecondsClock,
-	/* 138*/ (void *)primitiveSomeObject,
-	/* 139*/ (void *)primitiveNextObject,
-	/* 140*/ (void *)primitiveBeep,
-	/* 141*/ (void *)primitiveClipboardText,
-	/* 142*/ (void *)primitiveVMPath,
-	/* 143*/ (void *)primitiveShortAt,
-	/* 144*/ (void *)primitiveShortAtPut,
-	/* 145*/ (void *)primitiveConstantFill,
-	/* 146*/ (void *)primitiveFail,
-	/* 147*/ (void *)primitiveFail,
-	/* 148*/ (void *)primitiveClone,
-	/* 149*/ (void *)primitiveGetAttribute,
-	/* 150*/ (void *)primitiveFail,
-	/* 151*/ (void *)primitiveFail,
-	/* 152*/ (void *)primitiveFail,
-	/* 153*/ (void *)primitiveFail,
-	/* 154*/ (void *)primitiveFail,
-	/* 155*/ (void *)primitiveFail,
-	/* 156*/ (void *)primitiveFail,
-	/* 157*/ (void *)primitiveFail,
-	/* 158*/ (void *)primitiveFail,
-	/* 159*/ (void *)primitiveFail,
-	/* 160*/ (void *)primitiveAdoptInstance,
-	/* 161*/ (void *)primitiveSetIdentityHash,
-	/* 162*/ (void *)primitiveFail,
-	/* 163*/ (void *)primitiveFail,
-	/* 164*/ (void *)primitiveFail,
-	/* 165*/ (void *)primitiveIntegerAt,
-	/* 166*/ (void *)primitiveIntegerAtPut,
-	/* 167*/ (void *)primitiveYield,
-	/* 168*/ (void *)primitiveCopyObject,
-	/* 169*/ (void *)primitiveNotIdentical,
-	/* 170*/ (void *)primitiveFail,
-	/* 171*/ (void *)primitiveFail,
-	/* 172*/ (void *)primitiveFail,
-	/* 173*/ (void *)primitiveFail,
-	/* 174*/ (void *)primitiveFail,
-	/* 175*/ (void *)primitiveBehaviorHash,
-	/* 176*/ (void *)primitiveMaxIdentityHash,
-	/* 177*/ (void *)primitiveFail,
-	/* 178*/ (void *)primitiveFail,
-	/* 179*/ (void *)primitiveFail,
-	/* 180*/ (void *)primitiveFail,
-	/* 181*/ (void *)primitiveFail,
-	/* 182*/ (void *)primitiveFail,
-	/* 183*/ (void *)primitiveFail,
-	/* 184*/ (void *)primitiveFail,
-	/* 185*/ (void *)primitiveFail,
-	/* 186*/ (void *)primitiveFail,
-	/* 187*/ (void *)primitiveFail,
-	/* 188*/ (void *)primitiveExecuteMethodArgsArray,
-	/* 189*/ (void *)primitiveExecuteMethod,
-	/* 190*/ (void *)primitiveFail,
-	/* 191*/ (void *)primitiveFail,
-	/* 192*/ (void *)primitiveFail,
-	/* 193*/ (void *)primitiveFail,
-	/* 194*/ (void *)primitiveFail,
-	/* 195*/ (void *)primitiveFindNextUnwindContext,
-	/* 196*/ (void *)primitiveTerminateTo,
-	/* 197*/ (void *)primitiveFindHandlerContext,
-	/* 198*/ (void *)primitiveMarkUnwindMethod,
-	/* 199*/ (void *)primitiveMarkHandlerMethod,
-	/* 200*/ (void *)primitiveClosureCopyWithCopiedValues,
-	/* 201*/ (void *)primitiveClosureValue,
-	/* 202*/ (void *)primitiveClosureValue,
-	/* 203*/ (void *)primitiveClosureValue,
-	/* 204*/ (void *)primitiveClosureValue,
-	/* 205*/ (void *)primitiveClosureValue,
-	/* 206*/ (void *)primitiveClosureValueWithArgs,
-	/* 207*/ (void *)primitiveFail,
-	/* 208*/ (void *)primitiveFail,
-	/* 209*/ (void *)primitiveFail,
-	/* 210*/ (void *)primitiveAt,
-	/* 211*/ (void *)primitiveAtPut,
-	/* 212*/ (void *)primitiveSize,
-	/* 213*/ (void *)primitiveFail,
-	/* 214*/ (void *)primitiveFail,
-	/* 215*/ (void *)primitiveFail,
-	/* 216*/ (void *)primitiveFail,
-	/* 217*/ (void *)primitiveFail,
-	/* 218*/ (void *)primitiveFail,
-	/* 219*/ (void *)primitiveFail,
-	/* 220*/ (void *)primitiveFail,
-	/* 221*/ (void *)primitiveClosureValueNoContextSwitch,
-	/* 222*/ (void *)primitiveClosureValueNoContextSwitch,
-	/* 223*/ (void *)primitiveFail,
-	/* 224*/ (void *)primitiveFail,
-	/* 225*/ (void *)primitiveFail,
-	/* 226*/ (void *)primitiveFail,
-	/* 227*/ (void *)primitiveFail,
-	/* 228*/ (void *)primitiveFail,
-	/* 229*/ (void *)primitiveFail,
-	/* 230*/ (void *)primitiveRelinquishProcessor,
-	/* 231*/ (void *)primitiveForceDisplayUpdate,
-	/* 232*/ (void *)primitiveFormPrint,
-	/* 233*/ (void *)primitiveSetFullScreen,
-	/* 234*/ (void *)primitiveFail,
-	/* 235*/ (void *)primitiveFail,
-	/* 236*/ (void *)primitiveFail,
-	/* 237*/ (void *)primitiveFail,
-	/* 238*/ (void *)primitiveFail,
-	/* 239*/ (void *)primitiveFail,
-	/* 240*/ (void *)primitiveUTCMicrosecondClock,
-	/* 241*/ (void *)primitiveLocalMicrosecondClock,
-	/* 242*/ (void *)primitiveFail,
-	/* 243*/ (void *)primitiveFail,
-	/* 244*/ (void *)primitiveFail,
-	/* 245*/ (void *)primitiveFail,
-	/* 246*/ (void *)primitiveFail,
-	/* 247*/ (void *)primitiveSnapshotEmbedded,
-	/* 248*/ (void *)primitiveInvokeObjectAsMethod,
-	/* 249*/ (void *)primitiveArrayBecomeOneWayCopyHash,
-	/* 250*/ (void *)clearProfile,
-	/* 251*/ (void *)dumpProfile,
-	/* 252*/ (void *)startProfiling,
-	/* 253*/ (void *)stopProfiling,
-	/* 254*/ (void *)primitiveVMParameter,
-	/* 255*/ (void *)primitiveFail,
-	/* 256*/ (void *)primitivePushSelf,
-	/* 257*/ (void *)primitivePushTrue,
-	/* 258*/ (void *)primitivePushFalse,
-	/* 259*/ (void *)primitivePushNil,
-	/* 260*/ (void *)primitivePushMinusOne,
-	/* 261*/ (void *)primitivePushZero,
-	/* 262*/ (void *)primitivePushOne,
-	/* 263*/ (void *)primitivePushTwo,
-	/* 264*/ (void *)primitiveLoadInstVar,
-	/* 265*/ (void *)primitiveLoadInstVar,
-	/* 266*/ (void *)primitiveLoadInstVar,
-	/* 267*/ (void *)primitiveLoadInstVar,
-	/* 268*/ (void *)primitiveLoadInstVar,
-	/* 269*/ (void *)primitiveLoadInstVar,
-	/* 270*/ (void *)primitiveLoadInstVar,
-	/* 271*/ (void *)primitiveLoadInstVar,
-	/* 272*/ (void *)primitiveLoadInstVar,
-	/* 273*/ (void *)primitiveLoadInstVar,
-	/* 274*/ (void *)primitiveLoadInstVar,
-	/* 275*/ (void *)primitiveLoadInstVar,
-	/* 276*/ (void *)primitiveLoadInstVar,
-	/* 277*/ (void *)primitiveLoadInstVar,
-	/* 278*/ (void *)primitiveLoadInstVar,
-	/* 279*/ (void *)primitiveLoadInstVar,
-	/* 280*/ (void *)primitiveLoadInstVar,
-	/* 281*/ (void *)primitiveLoadInstVar,
-	/* 282*/ (void *)primitiveLoadInstVar,
-	/* 283*/ (void *)primitiveLoadInstVar,
-	/* 284*/ (void *)primitiveLoadInstVar,
-	/* 285*/ (void *)primitiveLoadInstVar,
-	/* 286*/ (void *)primitiveLoadInstVar,
-	/* 287*/ (void *)primitiveLoadInstVar,
-	/* 288*/ (void *)primitiveLoadInstVar,
-	/* 289*/ (void *)primitiveLoadInstVar,
-	/* 290*/ (void *)primitiveLoadInstVar,
-	/* 291*/ (void *)primitiveLoadInstVar,
-	/* 292*/ (void *)primitiveLoadInstVar,
-	/* 293*/ (void *)primitiveLoadInstVar,
-	/* 294*/ (void *)primitiveLoadInstVar,
-	/* 295*/ (void *)primitiveLoadInstVar,
-	/* 296*/ (void *)primitiveLoadInstVar,
-	/* 297*/ (void *)primitiveLoadInstVar,
-	/* 298*/ (void *)primitiveLoadInstVar,
-	/* 299*/ (void *)primitiveLoadInstVar,
-	/* 300*/ (void *)primitiveLoadInstVar,
-	/* 301*/ (void *)primitiveLoadInstVar,
-	/* 302*/ (void *)primitiveLoadInstVar,
-	/* 303*/ (void *)primitiveLoadInstVar,
-	/* 304*/ (void *)primitiveLoadInstVar,
-	/* 305*/ (void *)primitiveLoadInstVar,
-	/* 306*/ (void *)primitiveLoadInstVar,
-	/* 307*/ (void *)primitiveLoadInstVar,
-	/* 308*/ (void *)primitiveLoadInstVar,
-	/* 309*/ (void *)primitiveLoadInstVar,
-	/* 310*/ (void *)primitiveLoadInstVar,
-	/* 311*/ (void *)primitiveLoadInstVar,
-	/* 312*/ (void *)primitiveLoadInstVar,
-	/* 313*/ (void *)primitiveLoadInstVar,
-	/* 314*/ (void *)primitiveLoadInstVar,
-	/* 315*/ (void *)primitiveLoadInstVar,
-	/* 316*/ (void *)primitiveLoadInstVar,
-	/* 317*/ (void *)primitiveLoadInstVar,
-	/* 318*/ (void *)primitiveLoadInstVar,
-	/* 319*/ (void *)primitiveLoadInstVar,
-	/* 320*/ (void *)primitiveLoadInstVar,
-	/* 321*/ (void *)primitiveLoadInstVar,
-	/* 322*/ (void *)primitiveLoadInstVar,
-	/* 323*/ (void *)primitiveLoadInstVar,
-	/* 324*/ (void *)primitiveLoadInstVar,
-	/* 325*/ (void *)primitiveLoadInstVar,
-	/* 326*/ (void *)primitiveLoadInstVar,
-	/* 327*/ (void *)primitiveLoadInstVar,
-	/* 328*/ (void *)primitiveLoadInstVar,
-	/* 329*/ (void *)primitiveLoadInstVar,
-	/* 330*/ (void *)primitiveLoadInstVar,
-	/* 331*/ (void *)primitiveLoadInstVar,
-	/* 332*/ (void *)primitiveLoadInstVar,
-	/* 333*/ (void *)primitiveLoadInstVar,
-	/* 334*/ (void *)primitiveLoadInstVar,
-	/* 335*/ (void *)primitiveLoadInstVar,
-	/* 336*/ (void *)primitiveLoadInstVar,
-	/* 337*/ (void *)primitiveLoadInstVar,
-	/* 338*/ (void *)primitiveLoadInstVar,
-	/* 339*/ (void *)primitiveLoadInstVar,
-	/* 340*/ (void *)primitiveLoadInstVar,
-	/* 341*/ (void *)primitiveLoadInstVar,
-	/* 342*/ (void *)primitiveLoadInstVar,
-	/* 343*/ (void *)primitiveLoadInstVar,
-	/* 344*/ (void *)primitiveLoadInstVar,
-	/* 345*/ (void *)primitiveLoadInstVar,
-	/* 346*/ (void *)primitiveLoadInstVar,
-	/* 347*/ (void *)primitiveLoadInstVar,
-	/* 348*/ (void *)primitiveLoadInstVar,
-	/* 349*/ (void *)primitiveLoadInstVar,
-	/* 350*/ (void *)primitiveLoadInstVar,
-	/* 351*/ (void *)primitiveLoadInstVar,
-	/* 352*/ (void *)primitiveLoadInstVar,
-	/* 353*/ (void *)primitiveLoadInstVar,
-	/* 354*/ (void *)primitiveLoadInstVar,
-	/* 355*/ (void *)primitiveLoadInstVar,
-	/* 356*/ (void *)primitiveLoadInstVar,
-	/* 357*/ (void *)primitiveLoadInstVar,
-	/* 358*/ (void *)primitiveLoadInstVar,
-	/* 359*/ (void *)primitiveLoadInstVar,
-	/* 360*/ (void *)primitiveLoadInstVar,
-	/* 361*/ (void *)primitiveLoadInstVar,
-	/* 362*/ (void *)primitiveLoadInstVar,
-	/* 363*/ (void *)primitiveLoadInstVar,
-	/* 364*/ (void *)primitiveLoadInstVar,
-	/* 365*/ (void *)primitiveLoadInstVar,
-	/* 366*/ (void *)primitiveLoadInstVar,
-	/* 367*/ (void *)primitiveLoadInstVar,
-	/* 368*/ (void *)primitiveLoadInstVar,
-	/* 369*/ (void *)primitiveLoadInstVar,
-	/* 370*/ (void *)primitiveLoadInstVar,
-	/* 371*/ (void *)primitiveLoadInstVar,
-	/* 372*/ (void *)primitiveLoadInstVar,
-	/* 373*/ (void *)primitiveLoadInstVar,
-	/* 374*/ (void *)primitiveLoadInstVar,
-	/* 375*/ (void *)primitiveLoadInstVar,
-	/* 376*/ (void *)primitiveLoadInstVar,
-	/* 377*/ (void *)primitiveLoadInstVar,
-	/* 378*/ (void *)primitiveLoadInstVar,
-	/* 379*/ (void *)primitiveLoadInstVar,
-	/* 380*/ (void *)primitiveLoadInstVar,
-	/* 381*/ (void *)primitiveLoadInstVar,
-	/* 382*/ (void *)primitiveLoadInstVar,
-	/* 383*/ (void *)primitiveLoadInstVar,
-	/* 384*/ (void *)primitiveLoadInstVar,
-	/* 385*/ (void *)primitiveLoadInstVar,
-	/* 386*/ (void *)primitiveLoadInstVar,
-	/* 387*/ (void *)primitiveLoadInstVar,
-	/* 388*/ (void *)primitiveLoadInstVar,
-	/* 389*/ (void *)primitiveLoadInstVar,
-	/* 390*/ (void *)primitiveLoadInstVar,
-	/* 391*/ (void *)primitiveLoadInstVar,
-	/* 392*/ (void *)primitiveLoadInstVar,
-	/* 393*/ (void *)primitiveLoadInstVar,
-	/* 394*/ (void *)primitiveLoadInstVar,
-	/* 395*/ (void *)primitiveLoadInstVar,
-	/* 396*/ (void *)primitiveLoadInstVar,
-	/* 397*/ (void *)primitiveLoadInstVar,
-	/* 398*/ (void *)primitiveLoadInstVar,
-	/* 399*/ (void *)primitiveLoadInstVar,
-	/* 400*/ (void *)primitiveLoadInstVar,
-	/* 401*/ (void *)primitiveLoadInstVar,
-	/* 402*/ (void *)primitiveLoadInstVar,
-	/* 403*/ (void *)primitiveLoadInstVar,
-	/* 404*/ (void *)primitiveLoadInstVar,
-	/* 405*/ (void *)primitiveLoadInstVar,
-	/* 406*/ (void *)primitiveLoadInstVar,
-	/* 407*/ (void *)primitiveLoadInstVar,
-	/* 408*/ (void *)primitiveLoadInstVar,
-	/* 409*/ (void *)primitiveLoadInstVar,
-	/* 410*/ (void *)primitiveLoadInstVar,
-	/* 411*/ (void *)primitiveLoadInstVar,
-	/* 412*/ (void *)primitiveLoadInstVar,
-	/* 413*/ (void *)primitiveLoadInstVar,
-	/* 414*/ (void *)primitiveLoadInstVar,
-	/* 415*/ (void *)primitiveLoadInstVar,
-	/* 416*/ (void *)primitiveLoadInstVar,
-	/* 417*/ (void *)primitiveLoadInstVar,
-	/* 418*/ (void *)primitiveLoadInstVar,
-	/* 419*/ (void *)primitiveLoadInstVar,
-	/* 420*/ (void *)primitiveLoadInstVar,
-	/* 421*/ (void *)primitiveLoadInstVar,
-	/* 422*/ (void *)primitiveLoadInstVar,
-	/* 423*/ (void *)primitiveLoadInstVar,
-	/* 424*/ (void *)primitiveLoadInstVar,
-	/* 425*/ (void *)primitiveLoadInstVar,
-	/* 426*/ (void *)primitiveLoadInstVar,
-	/* 427*/ (void *)primitiveLoadInstVar,
-	/* 428*/ (void *)primitiveLoadInstVar,
-	/* 429*/ (void *)primitiveLoadInstVar,
-	/* 430*/ (void *)primitiveLoadInstVar,
-	/* 431*/ (void *)primitiveLoadInstVar,
-	/* 432*/ (void *)primitiveLoadInstVar,
-	/* 433*/ (void *)primitiveLoadInstVar,
-	/* 434*/ (void *)primitiveLoadInstVar,
-	/* 435*/ (void *)primitiveLoadInstVar,
-	/* 436*/ (void *)primitiveLoadInstVar,
-	/* 437*/ (void *)primitiveLoadInstVar,
-	/* 438*/ (void *)primitiveLoadInstVar,
-	/* 439*/ (void *)primitiveLoadInstVar,
-	/* 440*/ (void *)primitiveLoadInstVar,
-	/* 441*/ (void *)primitiveLoadInstVar,
-	/* 442*/ (void *)primitiveLoadInstVar,
-	/* 443*/ (void *)primitiveLoadInstVar,
-	/* 444*/ (void *)primitiveLoadInstVar,
-	/* 445*/ (void *)primitiveLoadInstVar,
-	/* 446*/ (void *)primitiveLoadInstVar,
-	/* 447*/ (void *)primitiveLoadInstVar,
-	/* 448*/ (void *)primitiveLoadInstVar,
-	/* 449*/ (void *)primitiveLoadInstVar,
-	/* 450*/ (void *)primitiveLoadInstVar,
-	/* 451*/ (void *)primitiveLoadInstVar,
-	/* 452*/ (void *)primitiveLoadInstVar,
-	/* 453*/ (void *)primitiveLoadInstVar,
-	/* 454*/ (void *)primitiveLoadInstVar,
-	/* 455*/ (void *)primitiveLoadInstVar,
-	/* 456*/ (void *)primitiveLoadInstVar,
-	/* 457*/ (void *)primitiveLoadInstVar,
-	/* 458*/ (void *)primitiveLoadInstVar,
-	/* 459*/ (void *)primitiveLoadInstVar,
-	/* 460*/ (void *)primitiveLoadInstVar,
-	/* 461*/ (void *)primitiveLoadInstVar,
-	/* 462*/ (void *)primitiveLoadInstVar,
-	/* 463*/ (void *)primitiveLoadInstVar,
-	/* 464*/ (void *)primitiveLoadInstVar,
-	/* 465*/ (void *)primitiveLoadInstVar,
-	/* 466*/ (void *)primitiveLoadInstVar,
-	/* 467*/ (void *)primitiveLoadInstVar,
-	/* 468*/ (void *)primitiveLoadInstVar,
-	/* 469*/ (void *)primitiveLoadInstVar,
-	/* 470*/ (void *)primitiveLoadInstVar,
-	/* 471*/ (void *)primitiveLoadInstVar,
-	/* 472*/ (void *)primitiveLoadInstVar,
-	/* 473*/ (void *)primitiveLoadInstVar,
-	/* 474*/ (void *)primitiveLoadInstVar,
-	/* 475*/ (void *)primitiveLoadInstVar,
-	/* 476*/ (void *)primitiveLoadInstVar,
-	/* 477*/ (void *)primitiveLoadInstVar,
-	/* 478*/ (void *)primitiveLoadInstVar,
-	/* 479*/ (void *)primitiveLoadInstVar,
-	/* 480*/ (void *)primitiveLoadInstVar,
-	/* 481*/ (void *)primitiveLoadInstVar,
-	/* 482*/ (void *)primitiveLoadInstVar,
-	/* 483*/ (void *)primitiveLoadInstVar,
-	/* 484*/ (void *)primitiveLoadInstVar,
-	/* 485*/ (void *)primitiveLoadInstVar,
-	/* 486*/ (void *)primitiveLoadInstVar,
-	/* 487*/ (void *)primitiveLoadInstVar,
-	/* 488*/ (void *)primitiveLoadInstVar,
-	/* 489*/ (void *)primitiveLoadInstVar,
-	/* 490*/ (void *)primitiveLoadInstVar,
-	/* 491*/ (void *)primitiveLoadInstVar,
-	/* 492*/ (void *)primitiveLoadInstVar,
-	/* 493*/ (void *)primitiveLoadInstVar,
-	/* 494*/ (void *)primitiveLoadInstVar,
-	/* 495*/ (void *)primitiveLoadInstVar,
-	/* 496*/ (void *)primitiveLoadInstVar,
-	/* 497*/ (void *)primitiveLoadInstVar,
-	/* 498*/ (void *)primitiveLoadInstVar,
-	/* 499*/ (void *)primitiveLoadInstVar,
-	/* 500*/ (void *)primitiveLoadInstVar,
-	/* 501*/ (void *)primitiveLoadInstVar,
-	/* 502*/ (void *)primitiveLoadInstVar,
-	/* 503*/ (void *)primitiveLoadInstVar,
-	/* 504*/ (void *)primitiveLoadInstVar,
-	/* 505*/ (void *)primitiveLoadInstVar,
-	/* 506*/ (void *)primitiveLoadInstVar,
-	/* 507*/ (void *)primitiveLoadInstVar,
-	/* 508*/ (void *)primitiveLoadInstVar,
-	/* 509*/ (void *)primitiveLoadInstVar,
-	/* 510*/ (void *)primitiveLoadInstVar,
-	/* 511*/ (void *)primitiveLoadInstVar,
-	/* 512*/ (void *)primitiveLoadInstVar,
-	/* 513*/ (void *)primitiveLoadInstVar,
-	/* 514*/ (void *)primitiveLoadInstVar,
-	/* 515*/ (void *)primitiveLoadInstVar,
-	/* 516*/ (void *)primitiveLoadInstVar,
-	/* 517*/ (void *)primitiveLoadInstVar,
-	/* 518*/ (void *)primitiveLoadInstVar,
-	/* 519*/ (void *)primitiveLoadInstVar,
-	/* 520*/ (void *)primitiveFail,
-	/* 521*/ (void *)primitiveFail,
-	/* 522*/ (void *)primitiveFail,
-	/* 523*/ (void *)primitiveFail,
-	/* 524*/ (void *)primitiveFail,
-	/* 525*/ (void *)primitiveFail,
-	/* 526*/ (void *)primitiveFail,
-	/* 527*/ (void *)primitiveFail,
-	/* 528*/ (void *)primitiveFail,
-	/* 529*/ (void *)primitiveFail,
-	/* 530*/ (void *)primitiveFail,
-	/* 531*/ (void *)primitiveFail,
-	/* 532*/ (void *)primitiveFail,
-	/* 533*/ (void *)primitiveFail,
-	/* 534*/ (void *)primitiveFail,
-	/* 535*/ (void *)primitiveFail,
-	/* 536*/ (void *)primitiveFail,
-	/* 537*/ (void *)primitiveFail,
-	/* 538*/ (void *)primitiveFail,
-	/* 539*/ (void *)primitiveFail,
-	/* 540*/ (void *)primitiveFail,
-	/* 541*/ (void *)primitiveFail,
-	/* 542*/ (void *)primitiveFail,
-	/* 543*/ (void *)primitiveFail,
-	/* 544*/ (void *)primitiveFail,
-	/* 545*/ (void *)primitiveFail,
-	/* 546*/ (void *)primitiveFail,
-	/* 547*/ (void *)primitiveFail,
-	/* 548*/ (void *)primitiveFail,
-	/* 549*/ (void *)primitiveFail,
-	/* 550*/ (void *)primitiveFail,
-	/* 551*/ (void *)primitiveFail,
-	/* 552*/ (void *)primitiveFail,
-	/* 553*/ (void *)primitiveFail,
-	/* 554*/ (void *)primitiveFail,
-	/* 555*/ (void *)primitiveFail,
-	/* 556*/ (void *)primitiveFail,
-	/* 557*/ (void *)primitiveFail,
-	/* 558*/ (void *)primitiveFail,
-	/* 559*/ (void *)primitiveFail,
-	/* 560*/ (void *)primitiveFail,
-	/* 561*/ (void *)primitiveFail,
-	/* 562*/ (void *)primitiveFail,
-	/* 563*/ (void *)primitiveFail,
-	/* 564*/ (void *)primitiveFail,
-	/* 565*/ (void *)primitiveFail,
-	/* 566*/ (void *)primitiveFail,
-	/* 567*/ (void *)primitiveFail,
-	/* 568*/ (void *)primitiveFail,
-	/* 569*/ (void *)primitiveFail,
-	/* 570*/ (void *)primitiveFlushExternalPrimitives,
-	/* 571*/ (void *)primitiveUnloadModule,
-	/* 572*/ (void *)primitiveListBuiltinModule,
-	/* 573*/ (void *)primitiveListExternalModule,
-	/* 574*/ (void *)primitiveFail,
-	/* 575*/ (void *)primitiveFail,
+void (*primitiveTable[577] )(void)= {
+	/* 0*/ (void (*)(void))primitiveFail,
+	/* 1*/ (void (*)(void))primitiveAdd,
+	/* 2*/ (void (*)(void))primitiveSubtract,
+	/* 3*/ (void (*)(void))primitiveLessThan,
+	/* 4*/ (void (*)(void))primitiveGreaterThan,
+	/* 5*/ (void (*)(void))primitiveLessOrEqual,
+	/* 6*/ (void (*)(void))primitiveGreaterOrEqual,
+	/* 7*/ (void (*)(void))primitiveEqual,
+	/* 8*/ (void (*)(void))primitiveNotEqual,
+	/* 9*/ (void (*)(void))primitiveMultiply,
+	/* 10*/ (void (*)(void))primitiveDivide,
+	/* 11*/ (void (*)(void))primitiveMod,
+	/* 12*/ (void (*)(void))primitiveDiv,
+	/* 13*/ (void (*)(void))primitiveQuo,
+	/* 14*/ (void (*)(void))primitiveBitAnd,
+	/* 15*/ (void (*)(void))primitiveBitOr,
+	/* 16*/ (void (*)(void))primitiveBitXor,
+	/* 17*/ (void (*)(void))primitiveBitShift,
+	/* 18*/ (void (*)(void))primitiveMakePoint,
+	/* 19*/ (void (*)(void))primitiveFail,
+	/* 20*/ (void (*)(void))primitiveRemLargeIntegers,
+	/* 21*/ (void (*)(void))primitiveAddLargeIntegers,
+	/* 22*/ (void (*)(void))primitiveSubtractLargeIntegers,
+	/* 23*/ (void (*)(void))primitiveLessThanLargeIntegers,
+	/* 24*/ (void (*)(void))primitiveGreaterThanLargeIntegers,
+	/* 25*/ (void (*)(void))primitiveLessOrEqualLargeIntegers,
+	/* 26*/ (void (*)(void))primitiveGreaterOrEqualLargeIntegers,
+	/* 27*/ (void (*)(void))primitiveEqualLargeIntegers,
+	/* 28*/ (void (*)(void))primitiveNotEqualLargeIntegers,
+	/* 29*/ (void (*)(void))primitiveMultiplyLargeIntegers,
+	/* 30*/ (void (*)(void))primitiveDivideLargeIntegers,
+	/* 31*/ (void (*)(void))primitiveModLargeIntegers,
+	/* 32*/ (void (*)(void))primitiveDivLargeIntegers,
+	/* 33*/ (void (*)(void))primitiveQuoLargeIntegers,
+	/* 34*/ (void (*)(void))primitiveBitAndLargeIntegers,
+	/* 35*/ (void (*)(void))primitiveBitOrLargeIntegers,
+	/* 36*/ (void (*)(void))primitiveBitXorLargeIntegers,
+	/* 37*/ (void (*)(void))primitiveBitShiftLargeIntegers,
+	/* 38*/ (void (*)(void))primitiveFloatAt,
+	/* 39*/ (void (*)(void))primitiveFloatAtPut,
+	/* 40*/ (void (*)(void))primitiveAsFloat,
+	/* 41*/ (void (*)(void))primitiveFloatAdd,
+	/* 42*/ (void (*)(void))primitiveFloatSubtract,
+	/* 43*/ (void (*)(void))primitiveFloatLessThan,
+	/* 44*/ (void (*)(void))primitiveFloatGreaterThan,
+	/* 45*/ (void (*)(void))primitiveFloatLessOrEqual,
+	/* 46*/ (void (*)(void))primitiveFloatGreaterOrEqual,
+	/* 47*/ (void (*)(void))primitiveFloatEqual,
+	/* 48*/ (void (*)(void))primitiveFloatNotEqual,
+	/* 49*/ (void (*)(void))primitiveFloatMultiply,
+	/* 50*/ (void (*)(void))primitiveFloatDivide,
+	/* 51*/ (void (*)(void))primitiveTruncated,
+	/* 52*/ (void (*)(void))primitiveFractionalPart,
+	/* 53*/ (void (*)(void))primitiveExponent,
+	/* 54*/ (void (*)(void))primitiveTimesTwoPower,
+	/* 55*/ (void (*)(void))primitiveSquareRoot,
+	/* 56*/ (void (*)(void))primitiveSine,
+	/* 57*/ (void (*)(void))primitiveArctan,
+	/* 58*/ (void (*)(void))primitiveLogN,
+	/* 59*/ (void (*)(void))primitiveExp,
+	/* 60*/ (void (*)(void))primitiveAt,
+	/* 61*/ (void (*)(void))primitiveAtPut,
+	/* 62*/ (void (*)(void))primitiveSize,
+	/* 63*/ (void (*)(void))primitiveStringAt,
+	/* 64*/ (void (*)(void))primitiveStringAtPut,
+	/* 65*/ (void (*)(void))primitiveFail,
+	/* 66*/ (void (*)(void))primitiveFail,
+	/* 67*/ (void (*)(void))primitiveFail,
+	/* 68*/ (void (*)(void))primitiveObjectAt,
+	/* 69*/ (void (*)(void))primitiveObjectAtPut,
+	/* 70*/ (void (*)(void))primitiveNew,
+	/* 71*/ (void (*)(void))primitiveNewWithArg,
+	/* 72*/ (void (*)(void))primitiveArrayBecomeOneWay,
+	/* 73*/ (void (*)(void))primitiveInstVarAt,
+	/* 74*/ (void (*)(void))primitiveInstVarAtPut,
+	/* 75*/ (void (*)(void))primitiveAsOop,
+	/* 76*/ (void (*)(void))primitiveStoreStackp,
+	/* 77*/ (void (*)(void))primitiveSomeInstance,
+	/* 78*/ (void (*)(void))primitiveNextInstance,
+	/* 79*/ (void (*)(void))primitiveNewMethod,
+	/* 80*/ (void (*)(void))primitiveBlockCopy,
+	/* 81*/ (void (*)(void))primitiveValue,
+	/* 82*/ (void (*)(void))primitiveValueWithArgs,
+	/* 83*/ (void (*)(void))primitivePerform,
+	/* 84*/ (void (*)(void))primitivePerformWithArgs,
+	/* 85*/ (void (*)(void))primitiveSignal,
+	/* 86*/ (void (*)(void))primitiveWait,
+	/* 87*/ (void (*)(void))primitiveResume,
+	/* 88*/ (void (*)(void))primitiveSuspend,
+	/* 89*/ (void (*)(void))primitiveFlushCache,
+	/* 90*/ (void (*)(void))primitiveMousePoint,
+	/* 91*/ (void (*)(void))primitiveTestDisplayDepth,
+	/* 92*/ (void (*)(void))primitiveSetDisplayMode,
+	/* 93*/ (void (*)(void))primitiveInputSemaphore,
+	/* 94*/ (void (*)(void))primitiveGetNextEvent,
+	/* 95*/ (void (*)(void))primitiveInputWord,
+	/* 96*/ (void (*)(void))primitiveFail,
+	/* 97*/ (void (*)(void))primitiveSnapshot,
+	/* 98*/ (void (*)(void))primitiveStoreImageSegment,
+	/* 99*/ (void (*)(void))primitiveLoadImageSegment,
+	/* 100*/ (void (*)(void))primitivePerformInSuperclass,
+	/* 101*/ (void (*)(void))primitiveBeCursor,
+	/* 102*/ (void (*)(void))primitiveBeDisplay,
+	/* 103*/ (void (*)(void))primitiveScanCharacters,
+	/* 104*/ (void (*)(void))primitiveFail,
+	/* 105*/ (void (*)(void))primitiveStringReplace,
+	/* 106*/ (void (*)(void))primitiveScreenSize,
+	/* 107*/ (void (*)(void))primitiveMouseButtons,
+	/* 108*/ (void (*)(void))primitiveKbdNext,
+	/* 109*/ (void (*)(void))primitiveKbdPeek,
+	/* 110*/ (void (*)(void))primitiveIdentical,
+	/* 111*/ (void (*)(void))primitiveClass,
+	/* 112*/ (void (*)(void))primitiveBytesLeft,
+	/* 113*/ (void (*)(void))primitiveQuit,
+	/* 114*/ (void (*)(void))primitiveExitToDebugger,
+	/* 115*/ (void (*)(void))primitiveChangeClass,
+	/* 116*/ (void (*)(void))primitiveFlushCacheByMethod,
+	/* 117*/ (void (*)(void))primitiveExternalCall,
+	/* 118*/ (void (*)(void))primitiveDoPrimitiveWithArgs,
+	/* 119*/ (void (*)(void))primitiveFlushCacheSelective,
+	/* 120*/ (void (*)(void))primitiveCalloutToFFI,
+	/* 121*/ (void (*)(void))primitiveImageName,
+	/* 122*/ (void (*)(void))primitiveNoop,
+	/* 123*/ (void (*)(void))primitiveValueUninterruptably,
+	/* 124*/ (void (*)(void))primitiveLowSpaceSemaphore,
+	/* 125*/ (void (*)(void))primitiveSignalAtBytesLeft,
+	/* 126*/ (void (*)(void))primitiveDeferDisplayUpdates,
+	/* 127*/ (void (*)(void))primitiveShowDisplayRect,
+	/* 128*/ (void (*)(void))primitiveArrayBecome,
+	/* 129*/ (void (*)(void))primitiveSpecialObjectsOop,
+	/* 130*/ (void (*)(void))primitiveFullGC,
+	/* 131*/ (void (*)(void))primitiveIncrementalGC,
+	/* 132*/ (void (*)(void))primitiveObjectPointsTo,
+	/* 133*/ (void (*)(void))primitiveSetInterruptKey,
+	/* 134*/ (void (*)(void))primitiveInterruptSemaphore,
+	/* 135*/ (void (*)(void))primitiveMillisecondClock,
+	/* 136*/ (void (*)(void))primitiveSignalAtMilliseconds,
+	/* 137*/ (void (*)(void))primitiveSecondsClock,
+	/* 138*/ (void (*)(void))primitiveSomeObject,
+	/* 139*/ (void (*)(void))primitiveNextObject,
+	/* 140*/ (void (*)(void))primitiveBeep,
+	/* 141*/ (void (*)(void))primitiveClipboardText,
+	/* 142*/ (void (*)(void))primitiveVMPath,
+	/* 143*/ (void (*)(void))primitiveShortAt,
+	/* 144*/ (void (*)(void))primitiveShortAtPut,
+	/* 145*/ (void (*)(void))primitiveConstantFill,
+	/* 146*/ (void (*)(void))primitiveFail,
+	/* 147*/ (void (*)(void))primitiveFail,
+	/* 148*/ (void (*)(void))primitiveClone,
+	/* 149*/ (void (*)(void))primitiveGetAttribute,
+	/* 150*/ (void (*)(void))primitiveFail,
+	/* 151*/ (void (*)(void))primitiveFail,
+	/* 152*/ (void (*)(void))primitiveFail,
+	/* 153*/ (void (*)(void))primitiveFail,
+	/* 154*/ (void (*)(void))primitiveFail,
+	/* 155*/ (void (*)(void))primitiveFail,
+	/* 156*/ (void (*)(void))primitiveFail,
+	/* 157*/ (void (*)(void))primitiveFail,
+	/* 158*/ (void (*)(void))primitiveFail,
+	/* 159*/ (void (*)(void))primitiveFail,
+	/* 160*/ (void (*)(void))primitiveAdoptInstance,
+	/* 161*/ (void (*)(void))primitiveSetIdentityHash,
+	/* 162*/ (void (*)(void))primitiveFail,
+	/* 163*/ (void (*)(void))primitiveFail,
+	/* 164*/ (void (*)(void))primitiveFail,
+	/* 165*/ (void (*)(void))primitiveIntegerAt,
+	/* 166*/ (void (*)(void))primitiveIntegerAtPut,
+	/* 167*/ (void (*)(void))primitiveYield,
+	/* 168*/ (void (*)(void))primitiveCopyObject,
+	/* 169*/ (void (*)(void))primitiveNotIdentical,
+	/* 170*/ (void (*)(void))primitiveFail,
+	/* 171*/ (void (*)(void))primitiveFail,
+	/* 172*/ (void (*)(void))primitiveFail,
+	/* 173*/ (void (*)(void))primitiveFail,
+	/* 174*/ (void (*)(void))primitiveFail,
+	/* 175*/ (void (*)(void))primitiveBehaviorHash,
+	/* 176*/ (void (*)(void))primitiveMaxIdentityHash,
+	/* 177*/ (void (*)(void))primitiveFail,
+	/* 178*/ (void (*)(void))primitiveFail,
+	/* 179*/ (void (*)(void))primitiveFail,
+	/* 180*/ (void (*)(void))primitiveFail,
+	/* 181*/ (void (*)(void))primitiveFail,
+	/* 182*/ (void (*)(void))primitiveFail,
+	/* 183*/ (void (*)(void))primitiveFail,
+	/* 184*/ (void (*)(void))primitiveFail,
+	/* 185*/ (void (*)(void))primitiveFail,
+	/* 186*/ (void (*)(void))primitiveFail,
+	/* 187*/ (void (*)(void))primitiveFail,
+	/* 188*/ (void (*)(void))primitiveExecuteMethodArgsArray,
+	/* 189*/ (void (*)(void))primitiveExecuteMethod,
+	/* 190*/ (void (*)(void))primitiveFail,
+	/* 191*/ (void (*)(void))primitiveFail,
+	/* 192*/ (void (*)(void))primitiveFail,
+	/* 193*/ (void (*)(void))primitiveFail,
+	/* 194*/ (void (*)(void))primitiveFail,
+	/* 195*/ (void (*)(void))primitiveFindNextUnwindContext,
+	/* 196*/ (void (*)(void))primitiveTerminateTo,
+	/* 197*/ (void (*)(void))primitiveFindHandlerContext,
+	/* 198*/ (void (*)(void))primitiveMarkUnwindMethod,
+	/* 199*/ (void (*)(void))primitiveMarkHandlerMethod,
+	/* 200*/ (void (*)(void))primitiveClosureCopyWithCopiedValues,
+	/* 201*/ (void (*)(void))primitiveClosureValue,
+	/* 202*/ (void (*)(void))primitiveClosureValue,
+	/* 203*/ (void (*)(void))primitiveClosureValue,
+	/* 204*/ (void (*)(void))primitiveClosureValue,
+	/* 205*/ (void (*)(void))primitiveClosureValue,
+	/* 206*/ (void (*)(void))primitiveClosureValueWithArgs,
+	/* 207*/ (void (*)(void))primitiveFail,
+	/* 208*/ (void (*)(void))primitiveFail,
+	/* 209*/ (void (*)(void))primitiveFail,
+	/* 210*/ (void (*)(void))primitiveAt,
+	/* 211*/ (void (*)(void))primitiveAtPut,
+	/* 212*/ (void (*)(void))primitiveSize,
+	/* 213*/ (void (*)(void))primitiveFail,
+	/* 214*/ (void (*)(void))primitiveFail,
+	/* 215*/ (void (*)(void))primitiveFail,
+	/* 216*/ (void (*)(void))primitiveFail,
+	/* 217*/ (void (*)(void))primitiveFail,
+	/* 218*/ (void (*)(void))primitiveFail,
+	/* 219*/ (void (*)(void))primitiveFail,
+	/* 220*/ (void (*)(void))primitiveFail,
+	/* 221*/ (void (*)(void))primitiveClosureValueNoContextSwitch,
+	/* 222*/ (void (*)(void))primitiveClosureValueNoContextSwitch,
+	/* 223*/ (void (*)(void))primitiveFail,
+	/* 224*/ (void (*)(void))primitiveFail,
+	/* 225*/ (void (*)(void))primitiveFail,
+	/* 226*/ (void (*)(void))primitiveFail,
+	/* 227*/ (void (*)(void))primitiveFail,
+	/* 228*/ (void (*)(void))primitiveFail,
+	/* 229*/ (void (*)(void))primitiveFail,
+	/* 230*/ (void (*)(void))primitiveRelinquishProcessor,
+	/* 231*/ (void (*)(void))primitiveForceDisplayUpdate,
+	/* 232*/ (void (*)(void))primitiveFormPrint,
+	/* 233*/ (void (*)(void))primitiveSetFullScreen,
+	/* 234*/ (void (*)(void))primitiveFail,
+	/* 235*/ (void (*)(void))primitiveFail,
+	/* 236*/ (void (*)(void))primitiveFail,
+	/* 237*/ (void (*)(void))primitiveFail,
+	/* 238*/ (void (*)(void))primitiveFail,
+	/* 239*/ (void (*)(void))primitiveFail,
+	/* 240*/ (void (*)(void))primitiveUTCMicrosecondClock,
+	/* 241*/ (void (*)(void))primitiveLocalMicrosecondClock,
+	/* 242*/ (void (*)(void))primitiveFail,
+	/* 243*/ (void (*)(void))primitiveFail,
+	/* 244*/ (void (*)(void))primitiveFail,
+	/* 245*/ (void (*)(void))primitiveFail,
+	/* 246*/ (void (*)(void))primitiveFail,
+	/* 247*/ (void (*)(void))primitiveSnapshotEmbedded,
+	/* 248*/ (void (*)(void))primitiveInvokeObjectAsMethod,
+	/* 249*/ (void (*)(void))primitiveArrayBecomeOneWayCopyHash,
+	/* 250*/ (void (*)(void))clearProfile,
+	/* 251*/ (void (*)(void))dumpProfile,
+	/* 252*/ (void (*)(void))startProfiling,
+	/* 253*/ (void (*)(void))stopProfiling,
+	/* 254*/ (void (*)(void))primitiveVMParameter,
+	/* 255*/ (void (*)(void))primitiveFail,
+	/* 256*/ (void (*)(void))primitivePushSelf,
+	/* 257*/ (void (*)(void))primitivePushTrue,
+	/* 258*/ (void (*)(void))primitivePushFalse,
+	/* 259*/ (void (*)(void))primitivePushNil,
+	/* 260*/ (void (*)(void))primitivePushMinusOne,
+	/* 261*/ (void (*)(void))primitivePushZero,
+	/* 262*/ (void (*)(void))primitivePushOne,
+	/* 263*/ (void (*)(void))primitivePushTwo,
+	/* 264*/ (void (*)(void))primitiveLoadInstVar,
+	/* 265*/ (void (*)(void))primitiveLoadInstVar,
+	/* 266*/ (void (*)(void))primitiveLoadInstVar,
+	/* 267*/ (void (*)(void))primitiveLoadInstVar,
+	/* 268*/ (void (*)(void))primitiveLoadInstVar,
+	/* 269*/ (void (*)(void))primitiveLoadInstVar,
+	/* 270*/ (void (*)(void))primitiveLoadInstVar,
+	/* 271*/ (void (*)(void))primitiveLoadInstVar,
+	/* 272*/ (void (*)(void))primitiveLoadInstVar,
+	/* 273*/ (void (*)(void))primitiveLoadInstVar,
+	/* 274*/ (void (*)(void))primitiveLoadInstVar,
+	/* 275*/ (void (*)(void))primitiveLoadInstVar,
+	/* 276*/ (void (*)(void))primitiveLoadInstVar,
+	/* 277*/ (void (*)(void))primitiveLoadInstVar,
+	/* 278*/ (void (*)(void))primitiveLoadInstVar,
+	/* 279*/ (void (*)(void))primitiveLoadInstVar,
+	/* 280*/ (void (*)(void))primitiveLoadInstVar,
+	/* 281*/ (void (*)(void))primitiveLoadInstVar,
+	/* 282*/ (void (*)(void))primitiveLoadInstVar,
+	/* 283*/ (void (*)(void))primitiveLoadInstVar,
+	/* 284*/ (void (*)(void))primitiveLoadInstVar,
+	/* 285*/ (void (*)(void))primitiveLoadInstVar,
+	/* 286*/ (void (*)(void))primitiveLoadInstVar,
+	/* 287*/ (void (*)(void))primitiveLoadInstVar,
+	/* 288*/ (void (*)(void))primitiveLoadInstVar,
+	/* 289*/ (void (*)(void))primitiveLoadInstVar,
+	/* 290*/ (void (*)(void))primitiveLoadInstVar,
+	/* 291*/ (void (*)(void))primitiveLoadInstVar,
+	/* 292*/ (void (*)(void))primitiveLoadInstVar,
+	/* 293*/ (void (*)(void))primitiveLoadInstVar,
+	/* 294*/ (void (*)(void))primitiveLoadInstVar,
+	/* 295*/ (void (*)(void))primitiveLoadInstVar,
+	/* 296*/ (void (*)(void))primitiveLoadInstVar,
+	/* 297*/ (void (*)(void))primitiveLoadInstVar,
+	/* 298*/ (void (*)(void))primitiveLoadInstVar,
+	/* 299*/ (void (*)(void))primitiveLoadInstVar,
+	/* 300*/ (void (*)(void))primitiveLoadInstVar,
+	/* 301*/ (void (*)(void))primitiveLoadInstVar,
+	/* 302*/ (void (*)(void))primitiveLoadInstVar,
+	/* 303*/ (void (*)(void))primitiveLoadInstVar,
+	/* 304*/ (void (*)(void))primitiveLoadInstVar,
+	/* 305*/ (void (*)(void))primitiveLoadInstVar,
+	/* 306*/ (void (*)(void))primitiveLoadInstVar,
+	/* 307*/ (void (*)(void))primitiveLoadInstVar,
+	/* 308*/ (void (*)(void))primitiveLoadInstVar,
+	/* 309*/ (void (*)(void))primitiveLoadInstVar,
+	/* 310*/ (void (*)(void))primitiveLoadInstVar,
+	/* 311*/ (void (*)(void))primitiveLoadInstVar,
+	/* 312*/ (void (*)(void))primitiveLoadInstVar,
+	/* 313*/ (void (*)(void))primitiveLoadInstVar,
+	/* 314*/ (void (*)(void))primitiveLoadInstVar,
+	/* 315*/ (void (*)(void))primitiveLoadInstVar,
+	/* 316*/ (void (*)(void))primitiveLoadInstVar,
+	/* 317*/ (void (*)(void))primitiveLoadInstVar,
+	/* 318*/ (void (*)(void))primitiveLoadInstVar,
+	/* 319*/ (void (*)(void))primitiveLoadInstVar,
+	/* 320*/ (void (*)(void))primitiveLoadInstVar,
+	/* 321*/ (void (*)(void))primitiveLoadInstVar,
+	/* 322*/ (void (*)(void))primitiveLoadInstVar,
+	/* 323*/ (void (*)(void))primitiveLoadInstVar,
+	/* 324*/ (void (*)(void))primitiveLoadInstVar,
+	/* 325*/ (void (*)(void))primitiveLoadInstVar,
+	/* 326*/ (void (*)(void))primitiveLoadInstVar,
+	/* 327*/ (void (*)(void))primitiveLoadInstVar,
+	/* 328*/ (void (*)(void))primitiveLoadInstVar,
+	/* 329*/ (void (*)(void))primitiveLoadInstVar,
+	/* 330*/ (void (*)(void))primitiveLoadInstVar,
+	/* 331*/ (void (*)(void))primitiveLoadInstVar,
+	/* 332*/ (void (*)(void))primitiveLoadInstVar,
+	/* 333*/ (void (*)(void))primitiveLoadInstVar,
+	/* 334*/ (void (*)(void))primitiveLoadInstVar,
+	/* 335*/ (void (*)(void))primitiveLoadInstVar,
+	/* 336*/ (void (*)(void))primitiveLoadInstVar,
+	/* 337*/ (void (*)(void))primitiveLoadInstVar,
+	/* 338*/ (void (*)(void))primitiveLoadInstVar,
+	/* 339*/ (void (*)(void))primitiveLoadInstVar,
+	/* 340*/ (void (*)(void))primitiveLoadInstVar,
+	/* 341*/ (void (*)(void))primitiveLoadInstVar,
+	/* 342*/ (void (*)(void))primitiveLoadInstVar,
+	/* 343*/ (void (*)(void))primitiveLoadInstVar,
+	/* 344*/ (void (*)(void))primitiveLoadInstVar,
+	/* 345*/ (void (*)(void))primitiveLoadInstVar,
+	/* 346*/ (void (*)(void))primitiveLoadInstVar,
+	/* 347*/ (void (*)(void))primitiveLoadInstVar,
+	/* 348*/ (void (*)(void))primitiveLoadInstVar,
+	/* 349*/ (void (*)(void))primitiveLoadInstVar,
+	/* 350*/ (void (*)(void))primitiveLoadInstVar,
+	/* 351*/ (void (*)(void))primitiveLoadInstVar,
+	/* 352*/ (void (*)(void))primitiveLoadInstVar,
+	/* 353*/ (void (*)(void))primitiveLoadInstVar,
+	/* 354*/ (void (*)(void))primitiveLoadInstVar,
+	/* 355*/ (void (*)(void))primitiveLoadInstVar,
+	/* 356*/ (void (*)(void))primitiveLoadInstVar,
+	/* 357*/ (void (*)(void))primitiveLoadInstVar,
+	/* 358*/ (void (*)(void))primitiveLoadInstVar,
+	/* 359*/ (void (*)(void))primitiveLoadInstVar,
+	/* 360*/ (void (*)(void))primitiveLoadInstVar,
+	/* 361*/ (void (*)(void))primitiveLoadInstVar,
+	/* 362*/ (void (*)(void))primitiveLoadInstVar,
+	/* 363*/ (void (*)(void))primitiveLoadInstVar,
+	/* 364*/ (void (*)(void))primitiveLoadInstVar,
+	/* 365*/ (void (*)(void))primitiveLoadInstVar,
+	/* 366*/ (void (*)(void))primitiveLoadInstVar,
+	/* 367*/ (void (*)(void))primitiveLoadInstVar,
+	/* 368*/ (void (*)(void))primitiveLoadInstVar,
+	/* 369*/ (void (*)(void))primitiveLoadInstVar,
+	/* 370*/ (void (*)(void))primitiveLoadInstVar,
+	/* 371*/ (void (*)(void))primitiveLoadInstVar,
+	/* 372*/ (void (*)(void))primitiveLoadInstVar,
+	/* 373*/ (void (*)(void))primitiveLoadInstVar,
+	/* 374*/ (void (*)(void))primitiveLoadInstVar,
+	/* 375*/ (void (*)(void))primitiveLoadInstVar,
+	/* 376*/ (void (*)(void))primitiveLoadInstVar,
+	/* 377*/ (void (*)(void))primitiveLoadInstVar,
+	/* 378*/ (void (*)(void))primitiveLoadInstVar,
+	/* 379*/ (void (*)(void))primitiveLoadInstVar,
+	/* 380*/ (void (*)(void))primitiveLoadInstVar,
+	/* 381*/ (void (*)(void))primitiveLoadInstVar,
+	/* 382*/ (void (*)(void))primitiveLoadInstVar,
+	/* 383*/ (void (*)(void))primitiveLoadInstVar,
+	/* 384*/ (void (*)(void))primitiveLoadInstVar,
+	/* 385*/ (void (*)(void))primitiveLoadInstVar,
+	/* 386*/ (void (*)(void))primitiveLoadInstVar,
+	/* 387*/ (void (*)(void))primitiveLoadInstVar,
+	/* 388*/ (void (*)(void))primitiveLoadInstVar,
+	/* 389*/ (void (*)(void))primitiveLoadInstVar,
+	/* 390*/ (void (*)(void))primitiveLoadInstVar,
+	/* 391*/ (void (*)(void))primitiveLoadInstVar,
+	/* 392*/ (void (*)(void))primitiveLoadInstVar,
+	/* 393*/ (void (*)(void))primitiveLoadInstVar,
+	/* 394*/ (void (*)(void))primitiveLoadInstVar,
+	/* 395*/ (void (*)(void))primitiveLoadInstVar,
+	/* 396*/ (void (*)(void))primitiveLoadInstVar,
+	/* 397*/ (void (*)(void))primitiveLoadInstVar,
+	/* 398*/ (void (*)(void))primitiveLoadInstVar,
+	/* 399*/ (void (*)(void))primitiveLoadInstVar,
+	/* 400*/ (void (*)(void))primitiveLoadInstVar,
+	/* 401*/ (void (*)(void))primitiveLoadInstVar,
+	/* 402*/ (void (*)(void))primitiveLoadInstVar,
+	/* 403*/ (void (*)(void))primitiveLoadInstVar,
+	/* 404*/ (void (*)(void))primitiveLoadInstVar,
+	/* 405*/ (void (*)(void))primitiveLoadInstVar,
+	/* 406*/ (void (*)(void))primitiveLoadInstVar,
+	/* 407*/ (void (*)(void))primitiveLoadInstVar,
+	/* 408*/ (void (*)(void))primitiveLoadInstVar,
+	/* 409*/ (void (*)(void))primitiveLoadInstVar,
+	/* 410*/ (void (*)(void))primitiveLoadInstVar,
+	/* 411*/ (void (*)(void))primitiveLoadInstVar,
+	/* 412*/ (void (*)(void))primitiveLoadInstVar,
+	/* 413*/ (void (*)(void))primitiveLoadInstVar,
+	/* 414*/ (void (*)(void))primitiveLoadInstVar,
+	/* 415*/ (void (*)(void))primitiveLoadInstVar,
+	/* 416*/ (void (*)(void))primitiveLoadInstVar,
+	/* 417*/ (void (*)(void))primitiveLoadInstVar,
+	/* 418*/ (void (*)(void))primitiveLoadInstVar,
+	/* 419*/ (void (*)(void))primitiveLoadInstVar,
+	/* 420*/ (void (*)(void))primitiveLoadInstVar,
+	/* 421*/ (void (*)(void))primitiveLoadInstVar,
+	/* 422*/ (void (*)(void))primitiveLoadInstVar,
+	/* 423*/ (void (*)(void))primitiveLoadInstVar,
+	/* 424*/ (void (*)(void))primitiveLoadInstVar,
+	/* 425*/ (void (*)(void))primitiveLoadInstVar,
+	/* 426*/ (void (*)(void))primitiveLoadInstVar,
+	/* 427*/ (void (*)(void))primitiveLoadInstVar,
+	/* 428*/ (void (*)(void))primitiveLoadInstVar,
+	/* 429*/ (void (*)(void))primitiveLoadInstVar,
+	/* 430*/ (void (*)(void))primitiveLoadInstVar,
+	/* 431*/ (void (*)(void))primitiveLoadInstVar,
+	/* 432*/ (void (*)(void))primitiveLoadInstVar,
+	/* 433*/ (void (*)(void))primitiveLoadInstVar,
+	/* 434*/ (void (*)(void))primitiveLoadInstVar,
+	/* 435*/ (void (*)(void))primitiveLoadInstVar,
+	/* 436*/ (void (*)(void))primitiveLoadInstVar,
+	/* 437*/ (void (*)(void))primitiveLoadInstVar,
+	/* 438*/ (void (*)(void))primitiveLoadInstVar,
+	/* 439*/ (void (*)(void))primitiveLoadInstVar,
+	/* 440*/ (void (*)(void))primitiveLoadInstVar,
+	/* 441*/ (void (*)(void))primitiveLoadInstVar,
+	/* 442*/ (void (*)(void))primitiveLoadInstVar,
+	/* 443*/ (void (*)(void))primitiveLoadInstVar,
+	/* 444*/ (void (*)(void))primitiveLoadInstVar,
+	/* 445*/ (void (*)(void))primitiveLoadInstVar,
+	/* 446*/ (void (*)(void))primitiveLoadInstVar,
+	/* 447*/ (void (*)(void))primitiveLoadInstVar,
+	/* 448*/ (void (*)(void))primitiveLoadInstVar,
+	/* 449*/ (void (*)(void))primitiveLoadInstVar,
+	/* 450*/ (void (*)(void))primitiveLoadInstVar,
+	/* 451*/ (void (*)(void))primitiveLoadInstVar,
+	/* 452*/ (void (*)(void))primitiveLoadInstVar,
+	/* 453*/ (void (*)(void))primitiveLoadInstVar,
+	/* 454*/ (void (*)(void))primitiveLoadInstVar,
+	/* 455*/ (void (*)(void))primitiveLoadInstVar,
+	/* 456*/ (void (*)(void))primitiveLoadInstVar,
+	/* 457*/ (void (*)(void))primitiveLoadInstVar,
+	/* 458*/ (void (*)(void))primitiveLoadInstVar,
+	/* 459*/ (void (*)(void))primitiveLoadInstVar,
+	/* 460*/ (void (*)(void))primitiveLoadInstVar,
+	/* 461*/ (void (*)(void))primitiveLoadInstVar,
+	/* 462*/ (void (*)(void))primitiveLoadInstVar,
+	/* 463*/ (void (*)(void))primitiveLoadInstVar,
+	/* 464*/ (void (*)(void))primitiveLoadInstVar,
+	/* 465*/ (void (*)(void))primitiveLoadInstVar,
+	/* 466*/ (void (*)(void))primitiveLoadInstVar,
+	/* 467*/ (void (*)(void))primitiveLoadInstVar,
+	/* 468*/ (void (*)(void))primitiveLoadInstVar,
+	/* 469*/ (void (*)(void))primitiveLoadInstVar,
+	/* 470*/ (void (*)(void))primitiveLoadInstVar,
+	/* 471*/ (void (*)(void))primitiveLoadInstVar,
+	/* 472*/ (void (*)(void))primitiveLoadInstVar,
+	/* 473*/ (void (*)(void))primitiveLoadInstVar,
+	/* 474*/ (void (*)(void))primitiveLoadInstVar,
+	/* 475*/ (void (*)(void))primitiveLoadInstVar,
+	/* 476*/ (void (*)(void))primitiveLoadInstVar,
+	/* 477*/ (void (*)(void))primitiveLoadInstVar,
+	/* 478*/ (void (*)(void))primitiveLoadInstVar,
+	/* 479*/ (void (*)(void))primitiveLoadInstVar,
+	/* 480*/ (void (*)(void))primitiveLoadInstVar,
+	/* 481*/ (void (*)(void))primitiveLoadInstVar,
+	/* 482*/ (void (*)(void))primitiveLoadInstVar,
+	/* 483*/ (void (*)(void))primitiveLoadInstVar,
+	/* 484*/ (void (*)(void))primitiveLoadInstVar,
+	/* 485*/ (void (*)(void))primitiveLoadInstVar,
+	/* 486*/ (void (*)(void))primitiveLoadInstVar,
+	/* 487*/ (void (*)(void))primitiveLoadInstVar,
+	/* 488*/ (void (*)(void))primitiveLoadInstVar,
+	/* 489*/ (void (*)(void))primitiveLoadInstVar,
+	/* 490*/ (void (*)(void))primitiveLoadInstVar,
+	/* 491*/ (void (*)(void))primitiveLoadInstVar,
+	/* 492*/ (void (*)(void))primitiveLoadInstVar,
+	/* 493*/ (void (*)(void))primitiveLoadInstVar,
+	/* 494*/ (void (*)(void))primitiveLoadInstVar,
+	/* 495*/ (void (*)(void))primitiveLoadInstVar,
+	/* 496*/ (void (*)(void))primitiveLoadInstVar,
+	/* 497*/ (void (*)(void))primitiveLoadInstVar,
+	/* 498*/ (void (*)(void))primitiveLoadInstVar,
+	/* 499*/ (void (*)(void))primitiveLoadInstVar,
+	/* 500*/ (void (*)(void))primitiveLoadInstVar,
+	/* 501*/ (void (*)(void))primitiveLoadInstVar,
+	/* 502*/ (void (*)(void))primitiveLoadInstVar,
+	/* 503*/ (void (*)(void))primitiveLoadInstVar,
+	/* 504*/ (void (*)(void))primitiveLoadInstVar,
+	/* 505*/ (void (*)(void))primitiveLoadInstVar,
+	/* 506*/ (void (*)(void))primitiveLoadInstVar,
+	/* 507*/ (void (*)(void))primitiveLoadInstVar,
+	/* 508*/ (void (*)(void))primitiveLoadInstVar,
+	/* 509*/ (void (*)(void))primitiveLoadInstVar,
+	/* 510*/ (void (*)(void))primitiveLoadInstVar,
+	/* 511*/ (void (*)(void))primitiveLoadInstVar,
+	/* 512*/ (void (*)(void))primitiveLoadInstVar,
+	/* 513*/ (void (*)(void))primitiveLoadInstVar,
+	/* 514*/ (void (*)(void))primitiveLoadInstVar,
+	/* 515*/ (void (*)(void))primitiveLoadInstVar,
+	/* 516*/ (void (*)(void))primitiveLoadInstVar,
+	/* 517*/ (void (*)(void))primitiveLoadInstVar,
+	/* 518*/ (void (*)(void))primitiveLoadInstVar,
+	/* 519*/ (void (*)(void))primitiveLoadInstVar,
+	/* 520*/ (void (*)(void))primitiveFail,
+	/* 521*/ (void (*)(void))primitiveFail,
+	/* 522*/ (void (*)(void))primitiveFail,
+	/* 523*/ (void (*)(void))primitiveFail,
+	/* 524*/ (void (*)(void))primitiveFail,
+	/* 525*/ (void (*)(void))primitiveFail,
+	/* 526*/ (void (*)(void))primitiveFail,
+	/* 527*/ (void (*)(void))primitiveFail,
+	/* 528*/ (void (*)(void))primitiveFail,
+	/* 529*/ (void (*)(void))primitiveFail,
+	/* 530*/ (void (*)(void))primitiveFail,
+	/* 531*/ (void (*)(void))primitiveFail,
+	/* 532*/ (void (*)(void))primitiveFail,
+	/* 533*/ (void (*)(void))primitiveFail,
+	/* 534*/ (void (*)(void))primitiveFail,
+	/* 535*/ (void (*)(void))primitiveFail,
+	/* 536*/ (void (*)(void))primitiveFail,
+	/* 537*/ (void (*)(void))primitiveFail,
+	/* 538*/ (void (*)(void))primitiveFail,
+	/* 539*/ (void (*)(void))primitiveFail,
+	/* 540*/ (void (*)(void))primitiveFail,
+	/* 541*/ (void (*)(void))primitiveFail,
+	/* 542*/ (void (*)(void))primitiveFail,
+	/* 543*/ (void (*)(void))primitiveFail,
+	/* 544*/ (void (*)(void))primitiveFail,
+	/* 545*/ (void (*)(void))primitiveFail,
+	/* 546*/ (void (*)(void))primitiveFail,
+	/* 547*/ (void (*)(void))primitiveFail,
+	/* 548*/ (void (*)(void))primitiveFail,
+	/* 549*/ (void (*)(void))primitiveFail,
+	/* 550*/ (void (*)(void))primitiveFail,
+	/* 551*/ (void (*)(void))primitiveFail,
+	/* 552*/ (void (*)(void))primitiveFail,
+	/* 553*/ (void (*)(void))primitiveFail,
+	/* 554*/ (void (*)(void))primitiveFail,
+	/* 555*/ (void (*)(void))primitiveFail,
+	/* 556*/ (void (*)(void))primitiveFail,
+	/* 557*/ (void (*)(void))primitiveFail,
+	/* 558*/ (void (*)(void))primitiveFail,
+	/* 559*/ (void (*)(void))primitiveFail,
+	/* 560*/ (void (*)(void))primitiveFail,
+	/* 561*/ (void (*)(void))primitiveFail,
+	/* 562*/ (void (*)(void))primitiveFail,
+	/* 563*/ (void (*)(void))primitiveFail,
+	/* 564*/ (void (*)(void))primitiveFail,
+	/* 565*/ (void (*)(void))primitiveFail,
+	/* 566*/ (void (*)(void))primitiveFail,
+	/* 567*/ (void (*)(void))primitiveFail,
+	/* 568*/ (void (*)(void))primitiveFail,
+	/* 569*/ (void (*)(void))primitiveFail,
+	/* 570*/ (void (*)(void))primitiveFlushExternalPrimitives,
+	/* 571*/ (void (*)(void))primitiveUnloadModule,
+	/* 572*/ (void (*)(void))primitiveListBuiltinModule,
+	/* 573*/ (void (*)(void))primitiveListExternalModule,
+	/* 574*/ (void (*)(void))primitiveFail,
+	/* 575*/ (void (*)(void))primitiveFail,
  0 };
+void (*externalPrimitiveTable[4097])(void);
 void* showSurfaceFn;
-void (*primitiveFunctionPointer)();
+void (*primitiveFunctionPointer)(void);
 sqInt imageFormatInitialVersion = 0;
 usqInt memory;
 
@@ -1754,13 +1754,12 @@ register struct foo * foo = &fum;
 /*	Add the given function address to the external primitive table and return the index where it's stored. This function doesn't need to be fast since it is only called when an external primitive has been looked up (which takes quite a bit of time itself). So there's nothing specifically complicated here.
 	Note: Return index will be one-based (ST convention) */
 
-sqInt addToExternalPrimitiveTable(void *functionAddress) {
-register struct foo * foo = &fum;
+sqInt addToExternalPrimitiveTable(void (*functionAddress)(void)) {
     sqInt i;
 
 	for (i = 0; i <= (MaxExternalPrimitiveTableSize - 1); i += 1) {
-		if ((foo->externalPrimitiveTable[i]) == 0) {
-			foo->externalPrimitiveTable[i] = functionAddress;
+		if ((externalPrimitiveTable[i]) == 0) {
+			externalPrimitiveTable[i] = functionAddress;
 			return i + 1;
 		}
 	}
@@ -2525,7 +2524,7 @@ sqInt byteSwapped(sqInt w) {
 
 /*	Call the external plugin function identified. In the VM this is an address, see 	InterpreterSimulator for it's version.  */
 
-sqInt callExternalPrimitive(void *functionID) {
+sqInt callExternalPrimitive(void *functionID(void)) {
 	dispatchFunctionPointer(functionID);
 }
 
@@ -3859,14 +3858,14 @@ register struct foo * foo = &fum;
 	}
 }
 
-sqInt dispatchFunctionPointer(void *aFunctionPointer) {
-	((void (*)(void))aFunctionPointer)();
+sqInt dispatchFunctionPointer(void (*aFunctionPointer)(void)) {
+	(aFunctionPointer)();
 }
 
 
 /*	Call the primitive at index primIdx in the primitiveTable. */
 
-sqInt dispatchFunctionPointerOnin(sqInt primIdx, void *primTable[]) {
+sqInt dispatchFunctionPointerOnin(sqInt primIdx, void (*primTable[])(void)) {
 	return dispatchFunctionPointer(primTable[primIdx]);
 }
 
@@ -4549,7 +4548,7 @@ register struct foo * foo = &fum;
 		foo->newMethod = foo->methodCache[probe + MethodCacheMethod];
 		foo->primitiveIndex = foo->methodCache[probe + MethodCachePrim];
 		foo->newNativeMethod = foo->methodCache[probe + MethodCacheNative];
-		primitiveFunctionPointer = ((void *) (foo->methodCache[probe + MethodCachePrimFunction]));
+		primitiveFunctionPointer = ((void (*)(void)) (foo->methodCache[probe + MethodCachePrimFunction]));
 		ok = 1;
 		goto l1;
 	}
@@ -4558,7 +4557,7 @@ register struct foo * foo = &fum;
 		foo->newMethod = foo->methodCache[probe + MethodCacheMethod];
 		foo->primitiveIndex = foo->methodCache[probe + MethodCachePrim];
 		foo->newNativeMethod = foo->methodCache[probe + MethodCacheNative];
-		primitiveFunctionPointer = ((void *) (foo->methodCache[probe + MethodCachePrimFunction]));
+		primitiveFunctionPointer = ((void (*)(void)) (foo->methodCache[probe + MethodCachePrimFunction]));
 		ok = 1;
 		goto l1;
 	}
@@ -4567,7 +4566,7 @@ register struct foo * foo = &fum;
 		foo->newMethod = foo->methodCache[probe + MethodCacheMethod];
 		foo->primitiveIndex = foo->methodCache[probe + MethodCachePrim];
 		foo->newNativeMethod = foo->methodCache[probe + MethodCacheNative];
-		primitiveFunctionPointer = ((void *) (foo->methodCache[probe + MethodCachePrimFunction]));
+		primitiveFunctionPointer = ((void (*)(void)) (foo->methodCache[probe + MethodCachePrimFunction]));
 		ok = 1;
 		goto l1;
 	}
@@ -4922,7 +4921,7 @@ register struct foo * foo = &fum;
 	}
 	/* begin flushExternalPrimitiveTable */
 	for (i2 = 0; i2 <= (MaxExternalPrimitiveTableSize - 1); i2 += 1) {
-		foo->externalPrimitiveTable[i2] = 0;
+		externalPrimitiveTable[i2] = 0;
 	}
 }
 
@@ -9353,7 +9352,7 @@ register struct foo * foo = &fum;
 					foo->newMethod = foo->methodCache[probe + MethodCacheMethod];
 					foo->primitiveIndex = foo->methodCache[probe + MethodCachePrim];
 					foo->newNativeMethod = foo->methodCache[probe + MethodCacheNative];
-					primitiveFunctionPointer = ((void *) (foo->methodCache[probe + MethodCachePrimFunction]));
+					primitiveFunctionPointer = ((void (*)(void)) (foo->methodCache[probe + MethodCachePrimFunction]));
 					ok = 1;
 					goto l45;
 				}
@@ -9362,7 +9361,7 @@ register struct foo * foo = &fum;
 					foo->newMethod = foo->methodCache[probe + MethodCacheMethod];
 					foo->primitiveIndex = foo->methodCache[probe + MethodCachePrim];
 					foo->newNativeMethod = foo->methodCache[probe + MethodCacheNative];
-					primitiveFunctionPointer = ((void *) (foo->methodCache[probe + MethodCachePrimFunction]));
+					primitiveFunctionPointer = ((void (*)(void)) (foo->methodCache[probe + MethodCachePrimFunction]));
 					ok = 1;
 					goto l45;
 				}
@@ -9371,7 +9370,7 @@ register struct foo * foo = &fum;
 					foo->newMethod = foo->methodCache[probe + MethodCacheMethod];
 					foo->primitiveIndex = foo->methodCache[probe + MethodCachePrim];
 					foo->newNativeMethod = foo->methodCache[probe + MethodCacheNative];
-					primitiveFunctionPointer = ((void *) (foo->methodCache[probe + MethodCachePrimFunction]));
+					primitiveFunctionPointer = ((void (*)(void)) (foo->methodCache[probe + MethodCachePrimFunction]));
 					ok = 1;
 					goto l45;
 				}
@@ -13443,7 +13442,7 @@ register struct foo * foo = &fum;
 		foo->newMethod = foo->methodCache[probe + MethodCacheMethod];
 		foo->primitiveIndex = foo->methodCache[probe + MethodCachePrim];
 		foo->newNativeMethod = foo->methodCache[probe + MethodCacheNative];
-		primitiveFunctionPointer = ((void *) (foo->methodCache[probe + MethodCachePrimFunction]));
+		primitiveFunctionPointer = ((void (*)(void)) (foo->methodCache[probe + MethodCachePrimFunction]));
 		return 1;
 	}
 
@@ -13454,7 +13453,7 @@ register struct foo * foo = &fum;
 		foo->newMethod = foo->methodCache[probe + MethodCacheMethod];
 		foo->primitiveIndex = foo->methodCache[probe + MethodCachePrim];
 		foo->newNativeMethod = foo->methodCache[probe + MethodCacheNative];
-		primitiveFunctionPointer = ((void *) (foo->methodCache[probe + MethodCachePrimFunction]));
+		primitiveFunctionPointer = ((void (*)(void)) (foo->methodCache[probe + MethodCachePrimFunction]));
 		return 1;
 	}
 	probe = (((usqInt) hash) >> 2) & MethodCacheMask;
@@ -13462,7 +13461,7 @@ register struct foo * foo = &fum;
 		foo->newMethod = foo->methodCache[probe + MethodCacheMethod];
 		foo->primitiveIndex = foo->methodCache[probe + MethodCachePrim];
 		foo->newNativeMethod = foo->methodCache[probe + MethodCacheNative];
-		primitiveFunctionPointer = ((void *) (foo->methodCache[probe + MethodCachePrimFunction]));
+		primitiveFunctionPointer = ((void (*)(void)) (foo->methodCache[probe + MethodCachePrimFunction]));
 		return 1;
 	}
 	return 0;
@@ -15784,7 +15783,7 @@ l1:	/* end popInteger */;
 	}
 }
 
-sqInt primitiveAsOop(void) {
+void primitiveAsOop(void) {
 register struct foo * foo = &fum;
     sqInt thisReceiver;
     sqInt sp;
@@ -16374,7 +16373,7 @@ register struct foo * foo = &fum;
 	}
 }
 
-sqInt primitiveBlockCopy(void) {
+void primitiveBlockCopy(void) {
 register struct foo * foo = &fum;
     sqInt context;
     sqInt contextSize;
@@ -16729,7 +16728,7 @@ register struct foo * foo = &fum;
 
 /*	Return a shallow copy of the receiver. */
 
-sqInt primitiveClone(void) {
+void primitiveClone(void) {
 register struct foo * foo = &fum;
     sqInt newCopy;
     sqInt sp;
@@ -16743,14 +16742,14 @@ register struct foo * foo = &fum;
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	/* begin pop:thenPush: */
 	longAtput((sp = foo->stackPointer - ((1 - 1) * (BYTES_PER_WORD))), newCopy);
 	foo->stackPointer = sp;
 }
 
-sqInt primitiveClosureCopyWithCopiedValues(void) {
+void primitiveClosureCopyWithCopiedValues(void) {
 register struct foo * foo = &fum;
     sqInt copiedValues;
     sqInt i;
@@ -16796,7 +16795,7 @@ l2:	/* end stackIntegerValue: */;
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	/* begin fetchWordLengthOf: */
 	/* begin sizeBitsOf: */
@@ -16839,7 +16838,7 @@ l1:	/* end sizeBitsOf: */;
 	foo->stackPointer = sp;
 }
 
-sqInt primitiveClosureValue(void) {
+void primitiveClosureValue(void) {
 register struct foo * foo = &fum;
     sqInt blockArgumentCount;
     sqInt blockClosure;
@@ -16853,7 +16852,7 @@ register struct foo * foo = &fum;
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	outerContext = longAt((blockClosure + (BASE_HEADER_SIZE)) + (ClosureOuterContextIndex << (SHIFT_FOR_WORD)));
 	if (!(((outerContext & 1) == 0) && ((((((usqInt) (longAt(outerContext))) >> 12) & 31) == 13) || ((((((usqInt) (longAt(outerContext))) >> 12) & 31) == 14) || (((((usqInt) (longAt(outerContext))) >> 12) & 31) == 4))))) {
@@ -16861,7 +16860,7 @@ register struct foo * foo = &fum;
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 
 	/* Check if the closure's method is actually a CompiledMethod. */
@@ -16872,7 +16871,7 @@ register struct foo * foo = &fum;
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	activateNewClosureMethod(blockClosure);
 	/* begin quickCheckForInterrupts */
@@ -16885,7 +16884,7 @@ register struct foo * foo = &fum;
 /*	An exact clone of primitiveClosureValue except that this version will not
 	 check for interrupts on stack overflow. */
 
-sqInt primitiveClosureValueNoContextSwitch(void) {
+void primitiveClosureValueNoContextSwitch(void) {
 register struct foo * foo = &fum;
     sqInt blockArgumentCount;
     sqInt blockClosure;
@@ -16899,7 +16898,7 @@ register struct foo * foo = &fum;
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	outerContext = longAt((blockClosure + (BASE_HEADER_SIZE)) + (ClosureOuterContextIndex << (SHIFT_FOR_WORD)));
 	if (!(((outerContext & 1) == 0) && ((((((usqInt) (longAt(outerContext))) >> 12) & 31) == 13) || ((((((usqInt) (longAt(outerContext))) >> 12) & 31) == 14) || (((((usqInt) (longAt(outerContext))) >> 12) & 31) == 4))))) {
@@ -16907,7 +16906,7 @@ register struct foo * foo = &fum;
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 
 	/* Check if the closure's method is actually a CompiledMethod. */
@@ -16918,12 +16917,12 @@ register struct foo * foo = &fum;
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	activateNewClosureMethod(blockClosure);
 }
 
-sqInt primitiveClosureValueWithArgs(void) {
+void primitiveClosureValueWithArgs(void) {
 register struct foo * foo = &fum;
     sqInt argumentArray;
     sqInt arraySize;
@@ -16948,7 +16947,7 @@ register struct foo * foo = &fum;
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	/* begin fetchWordLengthOf: */
 	/* begin sizeBitsOf: */
@@ -16980,7 +16979,7 @@ l2:	/* end sizeBitsOf: */;
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	blockClosure = longAt(foo->stackPointer - (foo->argumentCount * (BYTES_PER_WORD)));
 	blockArgumentCount = ((longAt((blockClosure + (BASE_HEADER_SIZE)) + (ClosureNumArgsIndex << (SHIFT_FOR_WORD)))) >> 1);
@@ -16989,7 +16988,7 @@ l2:	/* end sizeBitsOf: */;
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	outerContext = longAt((blockClosure + (BASE_HEADER_SIZE)) + (ClosureOuterContextIndex << (SHIFT_FOR_WORD)));
 	if (!(((outerContext & 1) == 0) && ((((((usqInt) (longAt(outerContext))) >> 12) & 31) == 13) || ((((((usqInt) (longAt(outerContext))) >> 12) & 31) == 14) || (((((usqInt) (longAt(outerContext))) >> 12) & 31) == 4))))) {
@@ -16997,7 +16996,7 @@ l2:	/* end sizeBitsOf: */;
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 
 	/* Check if the closure's method is actually a CompiledMethod. */
@@ -17008,7 +17007,7 @@ l2:	/* end sizeBitsOf: */;
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	/* begin popStack */
 	top = longAt(foo->stackPointer);
@@ -17088,7 +17087,7 @@ register struct foo * foo = &fum;
 		Fail if receiver and argument have different lengths (for indexable objects).
 	 */
 
-sqInt primitiveCopyObject(void) {
+void primitiveCopyObject(void) {
 register struct foo * foo = &fum;
     sqInt arg;
     sqInt i;
@@ -17105,7 +17104,7 @@ register struct foo * foo = &fum;
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	/* begin stackObjectValue: */
 	oop = longAt(foo->stackPointer - (0 * (BYTES_PER_WORD)));
@@ -17132,21 +17131,21 @@ l1:	/* end stackObjectValue: */;
 	rcvr = oop1;
 l2:	/* end stackObjectValue: */;
 	if (foo->primFailCode) {
-		return null;
+		return;
 	}
 	if (!(((rcvr & 1) == 0) && (((((usqInt) (longAt(rcvr))) >> 8) & 15) <= 4))) {
 		/* begin primitiveFail */
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	if (!((fetchClassOf(rcvr)) == (fetchClassOf(arg)))) {
 		/* begin primitiveFail */
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	/* begin lengthOf: */
 	header = longAt(rcvr);
@@ -17174,7 +17173,7 @@ l3:	/* end lengthOf:baseHeader:format: */;
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	for (i = 0; i <= (length - 1); i += 1) {
 		/* begin storePointer:ofObject:withValue: */
@@ -17193,7 +17192,7 @@ l3:	/* end lengthOf:baseHeader:format: */;
 	the Display object are propagated to the underlying 
 	platform's screen. */
 
-sqInt primitiveDeferDisplayUpdates(void) {
+void primitiveDeferDisplayUpdates(void) {
 register struct foo * foo = &fum;
     sqInt flag;
 
@@ -17436,7 +17435,7 @@ register struct foo * foo = &fum;
 	}
 }
 
-sqInt primitiveDoPrimitiveWithArgs(void) {
+void primitiveDoPrimitiveWithArgs(void) {
 register struct foo * foo = &fum;
     sqInt argumentArray;
     sqInt arraySize;
@@ -17494,7 +17493,7 @@ l2:	/* end sizeBitsOf: */;
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	/* begin stackIntegerValue: */
 	integerPointer = longAt(foo->stackPointer - (1 * (BYTES_PER_WORD)));
@@ -17517,7 +17516,7 @@ l3:	/* end stackIntegerValue: */;
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	/* begin pop: */
 	foo->stackPointer -= 2 * (BYTES_PER_WORD);
@@ -17622,7 +17621,7 @@ register struct foo * foo = &fum;
 
 /*	receiver, args, then method are on top of stack. Execute method against receiver and args */
 
-sqInt primitiveExecuteMethod(void) {
+void primitiveExecuteMethod(void) {
 register struct foo * foo = &fum;
     sqInt top;
     sqInt methodPointer;
@@ -17671,7 +17670,7 @@ register struct foo * foo = &fum;
 	 Set primitiveFunctionPointer because no cache lookup has been done for the
 	 method, and hence primitiveFunctionPointer is stale. */
 
-sqInt primitiveExecuteMethodArgsArray(void) {
+void primitiveExecuteMethodArgsArray(void) {
 register struct foo * foo = &fum;
     sqInt argCnt;
     sqInt argumentArray;
@@ -17689,7 +17688,7 @@ register struct foo * foo = &fum;
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	argCnt = (((usqInt) (longAt((methodArgument + (BASE_HEADER_SIZE)) + (HeaderIndex << (SHIFT_FOR_WORD))))) >> 25) & 15;
 	if (!(argCnt == (fetchWordLengthOf(argumentArray)))) {
@@ -17697,7 +17696,7 @@ register struct foo * foo = &fum;
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	if (foo->argumentCount > 2) {
 
@@ -17710,7 +17709,7 @@ register struct foo * foo = &fum;
 			if (foo->primFailCode == 0) {
 				foo->primFailCode = 1;
 			}
-			return null;
+			return;
 		}
 		longAtput(foo->stackPointer - (foo->argumentCount * (BYTES_PER_WORD)), longAt(foo->stackPointer - (2 * (BYTES_PER_WORD))));
 	}
@@ -17827,9 +17826,9 @@ register struct foo * foo = &fum;
 	always remove the rewrite. 
 	 */
 
-sqInt primitiveExternalCall(void) {
+void primitiveExternalCall(void) {
 register struct foo * foo = &fum;
-    void *addr;
+    void (*extFnAddr)(void);
     sqInt functionLength;
     sqInt functionName;
     sqInt index;
@@ -17857,7 +17856,7 @@ register struct foo * foo = &fum;
 		}
 	}
 	if (!(!foo->primFailCode)) {
-		return null;
+		return;
 	}
 	/* begin literal:ofMethod: */
 	methodPointer = foo->newMethod;
@@ -17870,7 +17869,7 @@ register struct foo * foo = &fum;
 		}
 	}
 	if (!(!foo->primFailCode)) {
-		return null;
+		return;
 	}
 	index = longAt((lit + (BASE_HEADER_SIZE)) + (3 << (SHIFT_FOR_WORD)));
 	/* begin checkedIntegerValueOf: */
@@ -17887,7 +17886,7 @@ register struct foo * foo = &fum;
 	}
 l1:	/* end checkedIntegerValueOf: */;
 	if (!(!foo->primFailCode)) {
-		return null;
+		return;
 	}
 	if (index < 0) {
 
@@ -17901,20 +17900,20 @@ l1:	/* end checkedIntegerValueOf: */;
 				foo->primFailCode = 1;
 			}
 		}
-		return null;
+		return;
 	}
 	if ((index > 0) && (index <= MaxExternalPrimitiveTableSize)) {
-		addr = foo->externalPrimitiveTable[index - 1];
-		if (addr != 0) {
-			rewriteMethodCacheSelclassprimIndexprimFunction(foo->messageSelector, foo->lkupClass, 1000 + index, addr);
-			callExternalPrimitive(addr);
-			return null;
+		extFnAddr = externalPrimitiveTable[index - 1];
+		if (extFnAddr != 0) {
+			rewriteMethodCacheSelclassprimIndexprimFunction(foo->messageSelector, foo->lkupClass, 1000 + index, extFnAddr);
+			callExternalPrimitive(extFnAddr);
+			return;
 		}
 		/* begin primitiveFail */
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	longAtput((lit + (BASE_HEADER_SIZE)) + (2 << (SHIFT_FOR_WORD)), ConstZero);
 	longAtput((lit + (BASE_HEADER_SIZE)) + (3 << (SHIFT_FOR_WORD)), ConstZero);
@@ -17982,16 +17981,16 @@ l1:	/* end checkedIntegerValueOf: */;
 	}
 l3:	/* end lengthOf:baseHeader:format: */;
 	if (!(!foo->primFailCode)) {
-		return null;
+		return;
 	}
-	addr = ioLoadExternalFunctionOfLengthFromModuleOfLength(functionName + (BASE_HEADER_SIZE), functionLength, moduleName + (BASE_HEADER_SIZE), moduleLength);
-	if (addr == 0) {
+	extFnAddr = ((void (*)(void)) (ioLoadExternalFunctionOfLengthFromModuleOfLength(functionName + (BASE_HEADER_SIZE), functionLength, moduleName + (BASE_HEADER_SIZE), moduleLength)));
+	if (extFnAddr == 0) {
 		index = -1;
 	} else {
 
 		/* add the function to the external primitive table */
 
-		index = addToExternalPrimitiveTable(addr);
+		index = addToExternalPrimitiveTable(extFnAddr);
 	}
 	/* begin success: */
 	if (!(index >= 0)) {
@@ -18000,9 +17999,9 @@ l3:	/* end lengthOf:baseHeader:format: */;
 		}
 	}
 	longAtput((lit + (BASE_HEADER_SIZE)) + (3 << (SHIFT_FOR_WORD)), ((index << 1) | 1));
-	if ((!foo->primFailCode) && (addr != 0)) {
-		rewriteMethodCacheSelclassprimIndexprimFunction(foo->messageSelector, foo->lkupClass, 1000 + index, addr);
-		callExternalPrimitive(addr);
+	if ((!foo->primFailCode) && (extFnAddr != 0)) {
+		rewriteMethodCacheSelclassprimIndexprimFunction(foo->messageSelector, foo->lkupClass, 1000 + index, extFnAddr);
+		callExternalPrimitive(extFnAddr);
 	} else {
 
 		/* Otherwise rewrite the primitive index */
@@ -18170,7 +18169,7 @@ l2:	/* end loadFloatOrIntFrom: */;
 	 a Float.  Map index 1 onto the most significant word and index 2
 	 onto the least significant word. */
 
-sqInt primitiveFloatAt(void) {
+void primitiveFloatAt(void) {
 register struct foo * foo = &fum;
     sqInt index;
     sqInt rcvr;
@@ -18188,14 +18187,14 @@ register struct foo * foo = &fum;
 		/* begin pop:thenPush: */
 		longAtput((sp = foo->stackPointer - ((2 - 1) * (BYTES_PER_WORD))), result);
 		foo->stackPointer = sp;
-		return null;
+		return;
 	}
 	if (index == ConstTwo) {
 		result = positive32BitIntegerFor(long32At((rcvr + (BASE_HEADER_SIZE)) + (1 << 2)));
 		/* begin pop:thenPush: */
 		longAtput((sp1 = foo->stackPointer - ((2 - 1) * (BYTES_PER_WORD))), result);
 		foo->stackPointer = sp1;
-		return null;
+		return;
 	}
 	/* begin primitiveFailFor: */
 	reasonCode = ((index & 1)
@@ -18209,7 +18208,7 @@ register struct foo * foo = &fum;
 	 a Float.  Map index 1 onto the most significant word and index 2
 	 onto the least significant word. */
 
-sqInt primitiveFloatAtPut(void) {
+void primitiveFloatAtPut(void) {
 register struct foo * foo = &fum;
     sqInt index;
     sqInt oopToStore;
@@ -18224,7 +18223,7 @@ register struct foo * foo = &fum;
 	oopToStore = longAt(foo->stackPointer);
 	valueToStore = positive32BitValueOf(oopToStore);
 	if (!(!foo->primFailCode)) {
-		return (foo->primFailCode = PrimErrBadArgument);
+		(foo->primFailCode = PrimErrBadArgument); return;
 	}
 	rcvr = longAt(foo->stackPointer - (2 * (BYTES_PER_WORD)));
 	index = longAt(foo->stackPointer - (1 * (BYTES_PER_WORD)));
@@ -18233,14 +18232,14 @@ register struct foo * foo = &fum;
 		/* begin pop:thenPush: */
 		longAtput((sp = foo->stackPointer - ((3 - 1) * (BYTES_PER_WORD))), oopToStore);
 		foo->stackPointer = sp;
-		return null;
+		return;
 	}
 	if (index == ConstTwo) {
 		long32Atput((rcvr + (BASE_HEADER_SIZE)) + (1 << 2), valueToStore);
 		/* begin pop:thenPush: */
 		longAtput((sp1 = foo->stackPointer - ((3 - 1) * (BYTES_PER_WORD))), oopToStore);
 		foo->stackPointer = sp1;
-		return null;
+		return;
 	}
 	/* begin primitiveFailFor: */
 	reasonCode = ((index & 1)
@@ -18699,7 +18698,7 @@ register struct foo * foo = &fum;
 
 /*	The receiver is a compiledMethod.  Clear all entries in the method lookup cache that refer to this method, presumably because it has been redefined, overridden or removed. */
 
-sqInt primitiveFlushCacheByMethod(void) {
+void primitiveFlushCacheByMethod(void) {
 register struct foo * foo = &fum;
     sqInt i;
     sqInt oldMethod;
@@ -18722,7 +18721,7 @@ register struct foo * foo = &fum;
 
 /*	The receiver is a message selector.  Clear all entries in the method lookup cache with this selector, presumably because an associated method has been redefined. */
 
-sqInt primitiveFlushCacheSelective(void) {
+void primitiveFlushCacheSelective(void) {
 register struct foo * foo = &fum;
     sqInt i;
     sqInt probe;
@@ -19982,7 +19981,7 @@ register struct foo * foo = &fum;
 		run: originalSelector with: arguments in: aReceiver.
 	 */
 
-sqInt primitiveInvokeObjectAsMethod(void) {
+void primitiveInvokeObjectAsMethod(void) {
 register struct foo * foo = &fum;
     sqInt lookupClass;
     sqInt newReceiver;
@@ -20768,7 +20767,7 @@ register struct foo * foo = &fum;
 	foo->stackPointer = sp;
 }
 
-sqInt primitiveLoadInstVar(void) {
+void primitiveLoadInstVar(void) {
 register struct foo * foo = &fum;
     sqInt thisReceiver;
     sqInt top;
@@ -22112,7 +22111,7 @@ l2:	/* end lastPointerOf: */;
 	}
 }
 
-sqInt primitivePerform(void) {
+void primitivePerform(void) {
 register struct foo * foo = &fum;
     sqInt i;
     sqInt lookupClass;
@@ -22361,7 +22360,7 @@ register struct foo * foo = &fum;
 	}
 }
 
-sqInt primitivePerformInSuperclass(void) {
+void primitivePerformInSuperclass(void) {
 register struct foo * foo = &fum;
     sqInt currentClass;
     sqInt lookupClass;
@@ -22416,7 +22415,7 @@ l1:	/* end fetchClassOf: */;
 	while (currentClass != lookupClass) {
 		currentClass = longAt((currentClass + (BASE_HEADER_SIZE)) + (SuperclassIndex << (SHIFT_FOR_WORD)));
 		if (currentClass == foo->nilObj) {
-			return (foo->primFailCode = PrimErrBadArgument);
+			(foo->primFailCode = PrimErrBadArgument); return;
 		}
 	}
 	if (foo->argumentCount == 3) {
@@ -22494,12 +22493,12 @@ l1:	/* end fetchClassOf: */;
 
 			/* wrong number of arguments */
 
-			return (foo->primFailCode = PrimErrBadNumArgs);
+			(foo->primFailCode = PrimErrBadNumArgs); return;
 		}
 	}
 }
 
-sqInt primitivePerformWithArgs(void) {
+void primitivePerformWithArgs(void) {
 register struct foo * foo = &fum;
     sqInt lookupClass;
     sqInt rcvr;
@@ -22572,7 +22571,7 @@ l1:	/* end arrayValueOf: */;
 	foo->stackPointer = sp;
 }
 
-sqInt primitivePushFalse(void) {
+void primitivePushFalse(void) {
 register struct foo * foo = &fum;
     sqInt top;
     sqInt sp;
@@ -22585,7 +22584,7 @@ register struct foo * foo = &fum;
 	foo->stackPointer = sp;
 }
 
-sqInt primitivePushMinusOne(void) {
+void primitivePushMinusOne(void) {
 register struct foo * foo = &fum;
     sqInt top;
     sqInt sp;
@@ -22598,7 +22597,7 @@ register struct foo * foo = &fum;
 	foo->stackPointer = sp;
 }
 
-sqInt primitivePushNil(void) {
+void primitivePushNil(void) {
 register struct foo * foo = &fum;
     sqInt top;
     sqInt sp;
@@ -22611,7 +22610,7 @@ register struct foo * foo = &fum;
 	foo->stackPointer = sp;
 }
 
-sqInt primitivePushOne(void) {
+void primitivePushOne(void) {
 register struct foo * foo = &fum;
     sqInt top;
     sqInt sp;
@@ -22630,10 +22629,10 @@ register struct foo * foo = &fum;
 	self push: thisReceiver
  */
 
-sqInt primitivePushSelf(void) {
+void primitivePushSelf(void) {
 }
 
-sqInt primitivePushTrue(void) {
+void primitivePushTrue(void) {
 register struct foo * foo = &fum;
     sqInt top;
     sqInt sp;
@@ -22646,7 +22645,7 @@ register struct foo * foo = &fum;
 	foo->stackPointer = sp;
 }
 
-sqInt primitivePushTwo(void) {
+void primitivePushTwo(void) {
 register struct foo * foo = &fum;
     sqInt top;
     sqInt sp;
@@ -22659,7 +22658,7 @@ register struct foo * foo = &fum;
 	foo->stackPointer = sp;
 }
 
-sqInt primitivePushZero(void) {
+void primitivePushZero(void) {
 register struct foo * foo = &fum;
     sqInt top;
     sqInt sp;
@@ -22903,7 +22902,7 @@ register struct foo * foo = &fum;
 /*	Put this process on the scheduler's lists thus allowing it to proceed next
 	time there is a chance for processes of its priority level */
 
-sqInt primitiveResume(void) {
+void primitiveResume(void) {
 register struct foo * foo = &fum;
     sqInt proc;
 
@@ -24089,7 +24088,7 @@ l1:	/* end popInteger */;
 	equal to the given tick value. A tick value of zero turns off
 	timer interrupts. */
 
-sqInt primitiveSignalAtMilliseconds(void) {
+void primitiveSignalAtMilliseconds(void) {
 register struct foo * foo = &fum;
     sqInt sema;
     sqInt tick;
@@ -24836,7 +24835,7 @@ register struct foo * foo = &fum;
 /*	Atomic store into context stackPointer. 
 	Also ensures that any newly accessible cells are initialized to nil  */
 
-sqInt primitiveStoreStackp(void) {
+void primitiveStoreStackp(void) {
 register struct foo * foo = &fum;
     sqInt ctxt;
     sqInt i;
@@ -24885,7 +24884,7 @@ l2:	/* end stackIntegerValue: */;
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	/* begin fetchStackPointerOf: */
 	sp = longAt((ctxt + (BASE_HEADER_SIZE)) + (StackPointerIndex << (SHIFT_FOR_WORD)));
@@ -25417,7 +25416,7 @@ register struct foo * foo = &fum;
 
 /*	Primitive. Terminate up the context stack from the receiver up to but not including the argument, if previousContext is on my Context stack. Make previousContext my sender. This prim has to shadow the code in ContextPart>terminateTo: to be correct */
 
-sqInt primitiveTerminateTo(void) {
+void primitiveTerminateTo(void) {
 register struct foo * foo = &fum;
     sqInt aContext;
     sqInt currentCntx;
@@ -25462,7 +25461,7 @@ register struct foo * foo = &fum;
 	/* begin push: */
 	longAtput((sp = foo->stackPointer + (BYTES_PER_WORD)), thisCntx);
 	foo->stackPointer = sp;
-	return null;
+	return;
 }
 
 
@@ -25706,7 +25705,7 @@ register struct foo * foo = &fum;
 		
 	Note: Thanks to Ian Piumarta for this primitive. */
 
-sqInt primitiveVMParameter(void) {
+void primitiveVMParameter(void) {
 register struct foo * foo = &fum;
     sqInt arg;
     sqInt i;
@@ -25989,7 +25988,7 @@ register struct foo * foo = &fum;
 		/* begin pop:thenPush: */
 		longAtput((sp = foo->stackPointer - ((1 - 1) * (BYTES_PER_WORD))), result);
 		foo->stackPointer = sp;
-		return null;
+		return;
 	}
 	arg = longAt(foo->stackPointer);
 	if (!((arg & 1))) {
@@ -25997,7 +25996,7 @@ register struct foo * foo = &fum;
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	arg = (arg >> 1);
 	resultLargePositiveInteger = -1;
@@ -26010,7 +26009,7 @@ register struct foo * foo = &fum;
 			if (foo->primFailCode == 0) {
 				foo->primFailCode = 1;
 			}
-			return null;
+			return;
 		}
 		if (arg == 1) {
 			resultLargePositiveInteger = foo->youngStart - mem;
@@ -26118,14 +26117,14 @@ register struct foo * foo = &fum;
 			longAtput((sp2 = foo->stackPointer - ((2 - 1) * (BYTES_PER_WORD))), oop9);
 			foo->stackPointer = sp2;
 		}
-		return null;
+		return;
 	}
 	if (!(foo->argumentCount == 2)) {
 		/* begin primitiveFail */
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	index = longAt(foo->stackPointer - (1 * (BYTES_PER_WORD)));
 	if (!((index & 1))) {
@@ -26133,7 +26132,7 @@ register struct foo * foo = &fum;
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	index = (index >> 1);
 	if (index <= 0) {
@@ -26141,7 +26140,7 @@ register struct foo * foo = &fum;
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	/* begin primitiveFail */
 	if (foo->primFailCode == 0) {
@@ -26197,7 +26196,7 @@ register struct foo * foo = &fum;
 		/* begin pop:thenPush: */
 		longAtput((sp3 = foo->stackPointer - ((3 - 1) * (BYTES_PER_WORD))), ((result << 1) | 1));
 		foo->stackPointer = sp3;
-		return null;
+		return;
 	}
 	/* begin primitiveFail */
 	if (foo->primFailCode == 0) {
@@ -26267,7 +26266,7 @@ l1:	/* end arrayValueOf: */;
 	foo->stackPointer = sp;
 }
 
-sqInt primitiveValue(void) {
+void primitiveValue(void) {
 register struct foo * foo = &fum;
     sqInt blockArgumentCount;
     sqInt blockContext;
@@ -26371,11 +26370,11 @@ l1:	/* end argumentCountOfBlock: */;
 
 /*	The only purpose of this primitive is to indicate that the new EH mechanisms are supported. */
 
-sqInt primitiveValueUninterruptably(void) {
-	return primitiveValue();
+void primitiveValueUninterruptably(void) {
+	primitiveValue(); return;
 }
 
-sqInt primitiveValueWithArgs(void) {
+void primitiveValueWithArgs(void) {
 register struct foo * foo = &fum;
     sqInt argumentArray;
     sqInt arrayArgumentCount;
@@ -26428,7 +26427,7 @@ l2:	/* end argumentCountOfBlock: */;
 		if (foo->primFailCode == 0) {
 			foo->primFailCode = 1;
 		}
-		return null;
+		return;
 	}
 	if (!foo->primFailCode) {
 		/* begin fetchWordLengthOf: */
@@ -27592,7 +27591,7 @@ register struct foo * foo = &fum;
 /*	Rewrite the cache entry with the given primitive index and matching function pointer */
 
 sqInt rewriteMethodCacheSelclassprimIndex(sqInt selector, sqInt class, sqInt localPrimIndex) {
-    void *primPtr;
+    void (*primPtr)(void);
 
 	if (localPrimIndex == 0) {
 		primPtr = 0;
@@ -27606,7 +27605,7 @@ sqInt rewriteMethodCacheSelclassprimIndex(sqInt selector, sqInt class, sqInt loc
 /*	Rewrite an existing entry in the method cache with a new primitive 
 	index & function address. Used by primExternalCall to make direct jumps to found external prims */
 
-sqInt rewriteMethodCacheSelclassprimIndexprimFunction(sqInt selector, sqInt class, sqInt localPrimIndex, void *localPrimAddress) {
+sqInt rewriteMethodCacheSelclassprimIndexprimFunction(sqInt selector, sqInt class, sqInt localPrimIndex, void (*localPrimAddress)(void)) {
 register struct foo * foo = &fum;
     sqInt hash;
     sqInt p;
