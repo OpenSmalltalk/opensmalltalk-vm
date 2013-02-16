@@ -1446,6 +1446,11 @@ sqInt ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY) {
 	return ioSetCursorWithMask(cursorBitsIndex, NULL, offsetX, offsetY);
 }
 
+sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY) {
+// no information on what this is supposed to do yet, assume old api can work for now
+	return ioSetCursorWithMask(cursorBitsIndex, NULL, offsetX, offsetY);
+}
+
 /* Backwards compat stub */
 sqInt ioShowDisplay( sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth, sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB) {
 	return ioShowDisplayOnWindow( (unsigned *)dispBitsIndex, width, height, depth, affectedL, affectedR, affectedT, affectedB, 1);

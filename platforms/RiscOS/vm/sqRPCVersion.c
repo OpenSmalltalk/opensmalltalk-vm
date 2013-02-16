@@ -28,4 +28,4 @@
 // A trivial file to recompile every time a VM is built so as to track
 // the exact time and date of build
 
-char	VMVersion[] = "3.9 of "__DATE__"@"__TIME__;
+char	VMVersion[] = "4.4 of "__DATE__"@"__TIME__;
