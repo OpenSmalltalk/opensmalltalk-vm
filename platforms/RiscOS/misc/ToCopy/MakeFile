@@ -1,6 +1,5 @@
-# Project:   sq38plugin
-# Make the pluginised VM for v3.8
-# Reworked to use VMMaker non-copying of platform & cross files
+# Project:   squeak vm 4.4
+# Make the pluginised VM for v4.4
 # Add check for Squeak3D dir to optionally compile the Squeak3D plugin
 # Ditto for HostWindow and LocalePlugin
 
@@ -37,8 +36,9 @@ SQ3DTestFile= $(SPlug).Squeak3D.dsc.Squeak3D
 HWTestFile= $(SPlug).HostWindowPlugin.dsc.HostWindowPlugin
 LocaleTestFile= $(Plug).LocalePlugin.dsc.LocalePlugin
 
-pluginList= ADPCMCodecPlugin B2DPlugin BitBltPlugin BMPReadWriterPlugin DSAPrims FFTPlugin FilePlugin FileCopyPlugin FloatArrayPlugin  GeniePlugin JPEGReaderPlugin JPEGReadWriter2Plugin LargeIntegers Matrix2x3Plugin MiscPrimitivePlugin RePlugin ScratchPlugin SecurityPlugin SocketPlugin SoundCodecPrims SoundGenerationPlugin SoundPlugin StarSqueakPlugin  SurfacePlugin ZipPlugin
+pluginList= ADPCMCodecPlugin B2DPlugin BitBltPlugin BMPReadWriterPlugin DSAPrims FFTPlugin FilePlugin FileCopyPlugin FloatArrayPlugin  GeniePlugin JPEGReaderPlugin JPEGReadWriter2Plugin LargeIntegers Matrix2x3Plugin MiscPrimitivePlugin   SecurityPlugin  SoundCodecPrims SoundGenerationPlugin SoundPlugin StarSqueakPlugin  SurfacePlugin ZipPlugin
 
+notYetList=SocketPlugin ScratchPlugin RePlugin
 # Final targets:
 all: plugins vm
 
@@ -844,7 +844,7 @@ $(SqPlugins).SoundGenerationPlugin:	$(SPlug).SoundGenerationPlugin.o.SoundGenera
 		-a $(SPlug).SoundGenerationPlugin.o.SoundGenerationPlugin
 
 $(SPlug).SoundGenerationPlugin.o.SoundGenerationPlugin: $(SPlug).SoundGenerationPlugin.c.SoundGenerationPlugin $(PlHdr)
-	cc $(ccflags) -o $@ $*.c
+	cc $(ccflags) -I$(CPlug).SoundGenerationPlugin -o $@ $*.c
 
 
 
