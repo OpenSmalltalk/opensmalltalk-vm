@@ -228,7 +228,7 @@ static int * sm_srcpollword(int stream, int flags, unsigned int * pollwordptr, i
 /* module initialization/shutdown */
 /**********************************/
 
-int soundInit(void) {
+sqInt soundInit(void) {
 // make sure all state variables are setup ok
 	sound_initialised = false;
 	sound_handle = 0;
@@ -241,7 +241,7 @@ int soundInit(void) {
 	return true;
 }
 
-int soundShutdown(void) {
+sqInt soundShutdown(void) {
 // close down the streams etc
 	PRINTF(("soundShutdown\n"));
 
@@ -257,7 +257,7 @@ int soundShutdown(void) {
 /* sound output */
 /****************/
 
-int snd_AvailableSpace(void) {
+sqInt snd_AvailableSpace(void) {
 
 // Returns the number of bytes of available sound output buffer space.
 // This should be (frames*4) if the device is in stereo mode,
@@ -271,7 +271,7 @@ int snd_AvailableSpace(void) {
 	return (sound_buffersize - sm_bufferstats(sound_stream));
 }
 
-int snd_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr, int samplesOfLeadTime) {
+sqInt snd_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt samplesOfLeadTime) {
 
 /*	Insert a buffer's worth of sound samples into the currently playing
 	buffer. Used to make a sound start playing as quickly as possible. The
@@ -285,7 +285,7 @@ int snd_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr, int samplesOfLe
 	return 0;
 }
 
-int snd_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex) {
+sqInt snd_PlaySamplesFromAtLength(sqInt frameCount, void *arrayIndex, sqInt startIndex) {
 // Output a frameCount sound samplesfrom the passed in array, starting from startIndex.
 // return the number actually 'played'; though no one uses it
 	if (!sound_initialised) {
@@ -294,12 +294,12 @@ int snd_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex) 
 		return false;
 	}
 	PRINTF(("snd_PlaySamplesFrom: %d At: %d Length: %d", arrayIndex, startIndex, frameCount));
-	sm_addblock(sound_stream, (unsigned char *)(arrayIndex + startIndex), BYTESFROMSAMPLES(frameCount));
+	sm_addblock(sound_stream, (unsigned char *)((int)arrayIndex + startIndex), BYTESFROMSAMPLES(frameCount));
 	ssb_pause(sound_handle, false);
 	return frameCount;
 }
 
-int snd_PlaySilence(void) {
+sqInt snd_PlaySilence(void) {
 /*	Output a buffer's worth of silence. Returns the number of sample frames played. */
 // What? Doesn't appear to be used, has no readily apparent purpose
 	PRINTF(("snd_PlaySilence\n"));
@@ -307,7 +307,7 @@ int snd_PlaySilence(void) {
 	return 42;
 }
 
-int snd_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex) {
+sqInt snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex) {
 // Start the buffered sound output with the given buffer size, sample rate, stereo flag and semaphore index.
 	extern char sqTaskName[];
 
@@ -349,7 +349,7 @@ int snd_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex) {
 	return true;
 }
 
-int snd_Stop(void) {
+sqInt snd_Stop(void) {
 	PRINTF(("snd_Stop\n"));
 	// cancel any further signalling
 	//	setupSoundSignalling(NULL, NULL, NULL);
@@ -395,15 +395,15 @@ unsigned int leftVol, rightVol;
 /***************/
 
 
-int snd_SetRecordLevel(int level) {
+void snd_SetRecordLevel(sqInt level) {
+	return;
+}
+
+sqInt snd_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo, sqInt semaIndex) {
 	return null;
 }
 
-int snd_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex) {
-	return null;
-}
-
-int snd_StopRecording(void) {
+sqInt snd_StopRecording(void) {
 	return null;
 }
 
@@ -411,6 +411,6 @@ double snd_GetRecordingSampleRate(void) {
 	return (double)1.0;
 }
 
-int snd_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeInBytes) {
+sqInt snd_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes) {
 	return null;
 }
