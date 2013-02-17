@@ -22,7 +22,9 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
+// #define DEBUG
 
+#include "sq.h"
 #include "ScratchPlugin.h"
 #include <stdlib.h>
 #include <string.h>
@@ -51,20 +53,31 @@ void GetFolderPathForID(int folderID, char *path, int maxPath) {
 	//  5 - user's music folder
 	// path is filled in with a zero-terminated string of max length maxPath
 	// RISC OS really doesn't do things this way but let's see if it works out
-extern char * getImageName();
-char * imageName = getImageName();
+extern char * getImageName(void);
 extern void sqStringFromFilename( char * sqString, char*fileName, int sqSize);
-	int imagePathLen = strrchr(imageName, '.') - imageName;
+extern char * getAttributeString(sqInt id) ;
+char * vmPath = getAttributeString(0);
+char * imageName = getImageName();
+	if ((imageName == NULL) || (strlen(imageName) == 0)) return;
 
-	char *s = NULL;
+	int imagePathLen = strrchr(imageName, '.') - imageName;
+	PRINTF(("GetFolderPathForID: vmPath: %s ln: %d\n", vmPath, strlen(vmPath)));
+	PRINTF(("GetFolderPathForID: image path: %s ln: %d\n", imageName, imagePathLen));
 
 	path[0] = 0;  // a zero-length path indicates failure
 
-	// get the scratch image's directory
-	s = getImageName();
-	if ((s == NULL) || (strlen(s) == 0)) return;
+	// convert the RISC OS string to a Squeak format string
+	sqStringFromFilename(path, imageName, imagePathLen);
 
-	strncat(path, s, imagePathLen -1); // home folder
+	// if the path is the same as the vmPath we need
+	// to go up one more level since that implies we are using an image
+	// within a !Scratch application bundle
+	if (strncmp(vmPath, imageName, imagePathLen -1) == 0) {
+		PRINTF(("paths equal, chop image path back\n"));
+		*strrchr(path, '/') = NULL;
+	}
+	PRINTF(("GetFolderPathForID: final image path: %s ln: %d\n", path, imagePathLen));
+
 
 	if (folderID == 1) return;
 	if (folderID == 2) strncat(path, "/Desktop", maxPath);
