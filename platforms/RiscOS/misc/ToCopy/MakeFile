@@ -8,7 +8,7 @@
 .c.o:;	cc $(ccflags) -o $@ $*.c
 
 # Toolflags:
-CCflags = -c -fa -Wabp -depend !Depend -IC:,OSLib:,C:^.rink,$(PVM),$(CVM),$(SVM) -throwback  -DACORN -Otime
+CCflags = -c -fa -Wabp -depend !Depend -IC:,OSLib:,C:^.rink,$(PVM),$(CVM),$(SVM) -throwback  -DACORN -D__LITTLE_ENDIAN -Otime
 # extra ccflags for debugging go here because rink doesnt deal with debug
 # segment. remember to use ccvmflags with all core vm files
 #CCVMflags = $(ccflags) -g
@@ -36,9 +36,9 @@ SQ3DTestFile= $(SPlug).Squeak3D.dsc.Squeak3D
 HWTestFile= $(SPlug).HostWindowPlugin.dsc.HostWindowPlugin
 LocaleTestFile= $(Plug).LocalePlugin.dsc.LocalePlugin
 
-pluginList= ADPCMCodecPlugin B2DPlugin BitBltPlugin BMPReadWriterPlugin DSAPrims FFTPlugin FilePlugin FileCopyPlugin FloatArrayPlugin  GeniePlugin JPEGReaderPlugin JPEGReadWriter2Plugin LargeIntegers Matrix2x3Plugin MiscPrimitivePlugin   SecurityPlugin  SoundCodecPrims SoundGenerationPlugin SoundPlugin StarSqueakPlugin  SurfacePlugin ZipPlugin
+pluginList= ADPCMCodecPlugin B2DPlugin BitBltPlugin BMPReadWriterPlugin DSAPrims FFTPlugin FilePlugin FileCopyPlugin FloatArrayPlugin  GeniePlugin JPEGReaderPlugin JPEGReadWriter2Plugin LargeIntegers Matrix2x3Plugin MiscPrimitivePlugin ScratchPlugin  SecurityPlugin  SoundCodecPrims SoundGenerationPlugin SoundPlugin StarSqueakPlugin  SurfacePlugin ZipPlugin
 
-notYetList=SocketPlugin ScratchPlugin RePlugin
+notYetList=SocketPlugin  RePlugin  FloatMathPlugin
 # Final targets:
 all: plugins vm
 
@@ -291,24 +291,173 @@ $(SqPlugins).FloatArrayPlugin:	$(SPlug).FloatArrayPlugin.o.FloatArrayPlugin\
 $(SPlug).FloatArrayPlugin.o.FloatArrayPlugin: $(SPlug).FloatArrayPlugin.c.FloatArrayPlugin $(PlHdr)
 	cc $(ccflags) -o $@ $*.c
 
+
 ###########
 # FloatMath Plugin make rule.
-# Very simple, only the one source file
+# More complex - involves files from several sources
+# FloatMathPlugin.c is generated
+# FloatMathPlugin.h is in Cross
+# many files in Cross; all .h files 49 files in .c
 ###########
 FloatMathPlugin:	$(SqPlugins).FloatMathPlugin
 	@echo done $*
 
-$(SqPlugins).FloatMathPlugin:	$(SPlug).FloatMathPlugin.o.FloatMathPlugin\
+$(SqPlugins).FloatMathPlugin:	$(SPlug).FloatMathPlugin.lib \
 		$(SPlug).FloatMathPlugin.dsc.FloatMathPlugin \
 		$(Sqk).ptrblkmap
 	rink -o $(SqPlugins).FloatMathPlugin \
 		-h $(SPlug).FloatMathPlugin.dsc.FloatMathPlugin \
 		-m $(Sqk).ptrblkmap \
-		-a $(SPlug).FloatMathPlugin.o.FloatMathPlugin
+		-a $(SPlug).FloatMathPlugin.o.FloatMathPlugin \
+		$(SPlug).FloatMathPlugin.lib
+
+# make a library because this is too many files t ofeed in one go to rink
+$(SPlug).FloatMathPlugin.lib:	$(SPlug).FloatMathPlugin.o.FloatMathPlugin \
+		$(SPlug).FloatMathPlugin.o.acos \
+		$(SPlug).FloatMathPlugin.o.acosh \
+		$(SPlug).FloatMathPlugin.o.asin \
+		$(SPlug).FloatMathPlugin.o.asinh \
+		$(SPlug).FloatMathPlugin.o.atan \
+		$(SPlug).FloatMathPlugin.o.atan2 \
+		$(SPlug).FloatMathPlugin.o.atanh \
+		$(SPlug).FloatMathPlugin.o.copysign \
+		$(SPlug).FloatMathPlugin.o.cos \
+		$(SPlug).FloatMathPlugin.o.cosh \
+		$(SPlug).FloatMathPlugin.o.exp \
+		$(SPlug).FloatMathPlugin.o.expm1 \
+		$(SPlug).FloatMathPlugin.o.finite \
+		$(SPlug).FloatMathPlugin.o.fmod \
+		$(SPlug).FloatMathPlugin.o.hypot \
+		$(SPlug).FloatMathPlugin.o.isnan \
+		$(SPlug).FloatMathPlugin.o.k_cos \
+		$(SPlug).FloatMathPlugin.o.k_rem_pio2 \
+		$(SPlug).FloatMathPlugin.o.k_sin \
+		$(SPlug).FloatMathPlugin.o.k_tan \
+		$(SPlug).FloatMathPlugin.o.ldexp \
+		$(SPlug).FloatMathPlugin.o.log \
+		$(SPlug).FloatMathPlugin.o.log10 \
+		$(SPlug).FloatMathPlugin.o.log1p \
+		$(SPlug).FloatMathPlugin.o.modf \
+		$(SPlug).FloatMathPlugin.o.pow \
+		$(SPlug).FloatMathPlugin.o.rem_pio2 \
+		$(SPlug).FloatMathPlugin.o.rint \
+		$(SPlug).FloatMathPlugin.o.scalb \
+		$(SPlug).FloatMathPlugin.o.scalbn \
+		$(SPlug).FloatMathPlugin.o.sin \
+		$(SPlug).FloatMathPlugin.o.sinh \
+		$(SPlug).FloatMathPlugin.o.sqrt \
+		$(SPlug).FloatMathPlugin.o.tan \
+		$(SPlug).FloatMathPlugin.o.tanh
+	LibFile -c $* $(SPlug).FloatMathPlugin.o.*
+
 
 $(SPlug).FloatMathPlugin.o.FloatMathPlugin: $(SPlug).FloatMathPlugin.c.FloatMathPlugin $(PlHdr)
-	cc $(ccflags) -o $@ $*.c
+	cc $(ccflags) -DNO_ISNAN -I$(CPlug).FloatMathPlugin -o $@ $(SPlug).FloatMathPlugin.c.FloatMathPlugin
 
+$(SPlug).FloatMathPlugin.acos.o: $(CPlug).FloatMathPlugin.acos.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.acos.c
+
+$(SPlug).FloatMathPlugin.acosh.o: $(CPlug).FloatMathPlugin.acosh.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.acosh.c
+
+$(SPlug).FloatMathPlugin.asin.o: $(CPlug).FloatMathPlugin.asin.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.asin.c
+
+$(SPlug).FloatMathPlugin.asinh.o: $(CPlug).FloatMathPlugin.asinh.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.asinh.c
+
+$(SPlug).FloatMathPlugin.atan.o: $(CPlug).FloatMathPlugin.atan.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.atan.c
+
+$(SPlug).FloatMathPlugin.atan2.o: $(CPlug).FloatMathPlugin.atan2.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.atan2.c
+
+$(SPlug).FloatMathPlugin.atanh.o: $(CPlug).FloatMathPlugin.atanh.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.atanh.c
+
+$(SPlug).FloatMathPlugin.copysign.o: $(CPlug).FloatMathPlugin.copysign.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.copysign.c
+
+$(SPlug).FloatMathPlugin.cos.o: $(CPlug).FloatMathPlugin.cos.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.cos.c
+
+$(SPlug).FloatMathPlugin.cosh.o: $(CPlug).FloatMathPlugin.cosh.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.cosh.c
+
+$(SPlug).FloatMathPlugin.exp.o: $(CPlug).FloatMathPlugin.exp.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.exp.c
+
+$(SPlug).FloatMathPlugin.expm1.o: $(CPlug).FloatMathPlugin.expm1.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.expm1.c
+
+$(SPlug).FloatMathPlugin.finite.o: $(CPlug).FloatMathPlugin.finite.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.finite.c
+
+$(SPlug).FloatMathPlugin.fmod.o: $(CPlug).FloatMathPlugin.fmod.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.fmod.c
+
+$(SPlug).FloatMathPlugin.hypot.o: $(CPlug).FloatMathPlugin.hypot.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.hypot.c
+
+$(SPlug).FloatMathPlugin.isnan.o: $(CPlug).FloatMathPlugin.isnan.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.isnan.c
+
+$(SPlug).FloatMathPlugin.k_cos.o: $(CPlug).FloatMathPlugin.k_cos.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.k_cos.c
+
+$(SPlug).FloatMathPlugin.k_rem_pio2.o: $(CPlug).FloatMathPlugin.k_rem_pio2.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.k_rem_pio2.c
+
+$(SPlug).FloatMathPlugin.k_sin.o: $(CPlug).FloatMathPlugin.k_sin.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.k_sin.c
+
+$(SPlug).FloatMathPlugin.k_tan.o: $(CPlug).FloatMathPlugin.k_tan.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.k_tan.c
+
+$(SPlug).FloatMathPlugin.ldexp.o: $(CPlug).FloatMathPlugin.ldexp.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.ldexp.c
+
+$(SPlug).FloatMathPlugin.log.o: $(CPlug).FloatMathPlugin.log.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.log.c
+
+$(SPlug).FloatMathPlugin.log10.o: $(CPlug).FloatMathPlugin.log10.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.log10.c
+
+$(SPlug).FloatMathPlugin.log1p.o: $(CPlug).FloatMathPlugin.log1p.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.log1p.c
+
+$(SPlug).FloatMathPlugin.modf.o: $(CPlug).FloatMathPlugin.modf.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.modf.c
+
+$(SPlug).FloatMathPlugin.pow.o: $(CPlug).FloatMathPlugin.pow.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.pow.c
+
+$(SPlug).FloatMathPlugin.rem_pio2.o: $(CPlug).FloatMathPlugin.rem_pio2.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.rem_pio2.c
+
+$(SPlug).FloatMathPlugin.rint.o: $(CPlug).FloatMathPlugin.rint.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.rint.c
+
+$(SPlug).FloatMathPlugin.scalb.o: $(CPlug).FloatMathPlugin.scalb.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.scalb.c
+
+$(SPlug).FloatMathPlugin.scalbn.o: $(CPlug).FloatMathPlugin.scalbn.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.scalbn.c
+
+$(SPlug).FloatMathPlugin.sin.o: $(CPlug).FloatMathPlugin.sin.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.sin.c
+
+$(SPlug).FloatMathPlugin.sinh.o: $(CPlug).FloatMathPlugin.sinh.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.sinh.c
+
+$(SPlug).FloatMathPlugin.sqrt.o: $(CPlug).FloatMathPlugin.sqrt.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.sqrt.c
+
+$(SPlug).FloatMathPlugin.tan.o: $(CPlug).FloatMathPlugin.tan.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.tan.c
+
+$(SPlug).FloatMathPlugin.tanh.o: $(CPlug).FloatMathPlugin.tanh.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.tanh.c
 
 
 ###########
