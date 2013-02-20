@@ -5520,7 +5520,8 @@ CoInterpreter >> rawHeaderOf: methodPointer [
 { #category : #'compiled methods' }
 CoInterpreter >> rawHeaderOf: methodOop put: cogMethodOrMethodHeader [
 	<api>
-	self assert: (objectMemory isCompiledMethod: methodOop).
+	"Since methods may be updated while forwarding during become, make the assert accomodate this."
+	self assert: (objectMemory isCompiledMethodHeader: (objectMemory headerWhileForwardingOf: methodOop)).
 	objectMemory
 		storePointerUnchecked: HeaderIndex
 		ofObject: methodOop
@@ -5660,9 +5661,9 @@ CoInterpreter >> reportMinimumUnusedHeadroom [
 	<api>
 	self cCode:
 			[self pri: 'stack page bytes %ld available headroom %ld minimum unused headroom %ld\n'
-				n: self stackPageByteSize
-				t: self stackPageByteSize - self stackLimitBytes - self stackLimitOffset
-				f: self minimumUnusedHeadroom]
+				n: self stackPageByteSize asLong
+				t: (self stackPageByteSize - self stackLimitBytes - self stackLimitOffset) asLong
+				f: self minimumUnusedHeadroom asLong]
 		inSmalltalk:
 			["CogVMSimulator new initStackPagesForTests reportMinimumUnusedHeadroom"
 			 self print: 'stack page bytes '; printNum: self stackPageByteSize;
