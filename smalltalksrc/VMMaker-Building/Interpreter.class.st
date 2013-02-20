@@ -3101,6 +3101,13 @@ Interpreter >> floatValueOf: oop [
 	^0.0
 ]
 
+{ #category : #'method lookup cache' }
+Interpreter >> flushAtCache [
+	"Flush the at cache. The method cache is flushed on every programming change and garbage collect."
+
+	1 to: AtCacheTotalSize do: [ :i | atCache at: i put: 0 ]
+]
+
 { #category : #'plugin primitive support' }
 Interpreter >> flushExternalPrimitiveOf: methodPtr [
 	"methodPtr is a CompiledMethod containing an external primitive. Flush the function address and session ID of the CM"
@@ -4722,9 +4729,6 @@ Interpreter >> primitiveBeCursor [
 	"Set the cursor to the given shape. The Mac only supports 16x16 pixel cursors. Cursor offsets are handled by Smalltalk."
 
 	| cursorObj maskBitsIndex maskObj bitsObj extentX extentY depth offsetObj offsetX offsetY cursorBitsIndex ourCursor |
-
-self flag: #Dan.  "This is disabled until we convert bitmaps appropriately"
-BytesPerWord = 8 ifTrue: [self pop: argumentCount. ^nil].
 
 	argumentCount = 0 ifTrue: [
 		cursorObj := self stackTop.

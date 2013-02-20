@@ -1,5 +1,16 @@
 "
-I am the code generator for the Cog VM.  My job is to produce machine code versions of methods for faster execution and to manage inline caches for faster send performance.
+I am the code generator for the Cog VM.  My job is to produce machine code versions of methods for faster execution and to manage inline caches for faster send performance.  I can be tested in the current image using my class-side in-image compilation facilities.  e.g. try
+
+	StackToRegisterMappingCogit genAndDis: (Integer >> #benchFib)
+
+I have concrete subclasses that implement different levels of optimization:
+	SimpleStackBasedCogit is the simplest code generator.
+
+	StackToRegisterMappingCogit is the current production code generator  It defers pushing operands
+	to the stack until necessary and implements a register-based calling convention for low-arity sends.
+
+	StackToRegisterMappingCogit is an experimental code generator with support for counting
+	conditional branches, intended to support adaptive optimization.
 
 coInterpreter <CoInterpreterSimulator>
 	the VM's interpreter with which I cooperate

@@ -538,9 +538,6 @@ InterpreterPrimitives >> primitiveBeCursor [
 
 	| cursorObj maskBitsIndex maskObj bitsObj extentX extentY depth offsetObj offsetX offsetY cursorBitsIndex ourCursor |
 
-self flag: #Dan.  "This is disabled until we convert bitmaps appropriately"
-BytesPerWord = 8 ifTrue: [self pop: argumentCount. ^nil].
-
 	argumentCount = 0 ifTrue: [
 		cursorObj := self stackTop.
 		maskBitsIndex := nil].
@@ -1358,54 +1355,14 @@ InterpreterPrimitives >> primitiveFailureCode [
 InterpreterPrimitives >> primitiveFindHandlerContext [
 	"Primitive. Search up the context stack for the next method context marked
 	 for exception handling starting at the receiver. Return nil if none found"
-	| handlerOrNilOrZero |
-	self externalWriteBackHeadFramePointers.
-	handlerOrNilOrZero := self
-							findMethodWithPrimitive: 199
-							FromContext: self stackTop
-							UpToContext: objectMemory nilObject.
-	handlerOrNilOrZero = 0 ifTrue:
-		[handlerOrNilOrZero := objectMemory nilObject].
-	self pop: 1 thenPush: handlerOrNilOrZero
+	self subclassResponsibility
 ]
 
 { #category : #'control primitives' }
 InterpreterPrimitives >> primitiveFindNextUnwindContext [
 	"Primitive. Search up the context stack for the next method context marked for unwind
 	 handling from the receiver up to but not including the argument. Return nil if none found."
-	| stopContext calleeContext handlerOrNilOrZero |
-	<var: #theFP type: #'char *'>
-	stopContext := self stackTop.
-	calleeContext := self stackValue: 1.
-	(stopContext = objectMemory nilObject or: [self isContext: stopContext]) ifFalse:
-		[^self primitiveFail].
-	self externalWriteBackHeadFramePointers.
-	(self isStillMarriedContext: calleeContext)
-		ifTrue:
-			[| theFP |
-			 theFP := self frameOfMarriedContext: calleeContext.
-			 (self isBaseFrame: theFP)
-				ifTrue:
-					[handlerOrNilOrZero := self findMethodWithPrimitive: 198
-												FromContext: (self frameCallerContext: theFP)
-												UpToContext: stopContext]
-				ifFalse:
-					[handlerOrNilOrZero :=  self findMethodWithPrimitive: 198
-												FromFP: (self frameCallerFP: theFP)
-												UpToContext: stopContext]]
-		ifFalse:
-			[| startContext |
-			 startContext := objectMemory fetchPointer: SenderIndex ofObject: calleeContext.
-			 (self isContext: startContext)
-				ifTrue:
-					[handlerOrNilOrZero := self findMethodWithPrimitive: 198
-												FromContext: startContext
-												UpToContext: stopContext]
-				ifFalse:
-					[handlerOrNilOrZero := 0]].
-	handlerOrNilOrZero = 0 ifTrue:
-		[handlerOrNilOrZero := objectMemory nilObject].
-	self pop: 2 thenPush: handlerOrNilOrZero
+	self subclassResponsibility
 ]
 
 { #category : #'arithmetic float primitives' }
@@ -1616,7 +1573,6 @@ InterpreterPrimitives >> primitiveFullGC [
 
 	objectMemory fullGCLock > 0 ifTrue:
 		[^self primitiveFailFor: PrimErrInappropriate].
-	self externalWriteBackHeadFramePointers.
 	objectMemory incrementalGC.  "maximimize space for forwarding table"
 	objectMemory fullGC.
 	self pop: 1 thenPushInteger: (objectMemory bytesLeft: true).
@@ -1832,7 +1788,6 @@ InterpreterPrimitives >> primitiveIncrementalGC [
 	"Do a quick, incremental garbage collection and return the number of bytes immediately available.
 	 (Note: more space may be made available by doing a full garbage collection."
 
-	self externalWriteBackHeadFramePointers.
 	objectMemory incrementalGC.
 	self pop: 1 thenPushInteger: (objectMemory bytesLeft: false)
 ]
@@ -1875,16 +1830,13 @@ InterpreterPrimitives >> primitiveInstVarAt [
 	rcvr := self stackValue: 1.
 	self successful ifFalse:
 		[^self primitiveFailFor: PrimErrBadArgument].
-	hdr := objectMemory baseHeader: rcvr.
+	hdr := self baseHeader: rcvr.
 	fmt := objectMemory formatOfHeader: hdr.
-	totalLength := objectMemory lengthOf: rcvr baseHeader: hdr format: fmt.
-	fixedFields := objectMemory fixedFieldsOf: rcvr format: fmt length: totalLength.
+	totalLength := self lengthOf: rcvr baseHeader: hdr format: fmt.
+	fixedFields := self fixedFieldsOf: rcvr format: fmt length: totalLength.
 	(index >= 1 and: [index <= fixedFields]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
-	(fmt = 3
-	 and: [objectMemory isContextHeader: hdr])
-		ifTrue: [value := self externalInstVar: index - 1 ofContext: rcvr]
-		ifFalse: [value := self subscript: rcvr with: index format: fmt].
+	value := self subscript: rcvr with: index format: fmt.
 	self pop: argumentCount + 1 thenPush: value
 ]
 
@@ -1902,10 +1854,7 @@ InterpreterPrimitives >> primitiveInstVarAtPut [
 	fixedFields := objectMemory fixedFieldsOf: rcvr format: fmt length: totalLength.
 	(index >= 1 and: [index <= fixedFields]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
-	(fmt = 3
-	 and: [objectMemory isContextHeader: hdr])
-		ifTrue: [self externalInstVar: index - 1 ofContext: rcvr put: newValue]
-		ifFalse: [self subscript: rcvr with: index storing: newValue format: fmt].
+	self subscript: rcvr with: index storing: newValue format: fmt.
 	self pop: argumentCount + 1 thenPush: newValue
 ]
 
@@ -2519,42 +2468,13 @@ InterpreterPrimitives >> primitiveObjectAtPut [
 
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveObjectPointsTo [
-	"This primitive is assumed to be fast (see e.g. MethodDictionary>>includesKey:) so make it so.
-	 N.B.  Written to use literalHeaderOf: so that in Cog subclasses cogged methods (whose headers
-	 point to the machine code method) are still correctly scanned, for the header as well as literals."
-	| rcvr thang header fmt lastField methodHeader |
+	| rcvr thang lastField |
 	thang := self stackTop.
 	rcvr := self stackValue: 1.
 	(objectMemory isIntegerObject: rcvr) ifTrue:
 		[^self pop: 2 thenPushBool: false].
 
-	"Inlined version of lastPointerOf: for speed in determining if rcvr is a context."
-	header := objectMemory baseHeader: rcvr.
-	fmt := objectMemory formatOfHeader: header.
-	fmt <= 4
-		ifTrue:
-			[(fmt = 3
-			  and: [objectMemory isContextHeader: header]) 
-				ifTrue:
-	 				[(self isMarriedOrWidowedContext: rcvr) ifTrue:
-						[self externalWriteBackHeadFramePointers.
-						 (self isStillMarriedContext: rcvr) ifTrue:
-							[^self pop: 2
-									thenPushBool: (self marriedContext: rcvr
-														pointsTo: thang
-														stackDeltaForCurrentFrame: 2)]].
-					"contexts end at the stack pointer"
-					lastField := CtxtTempFrameStart + (self fetchStackPointerOf: rcvr) * BytesPerWord]
-				ifFalse:
-					[lastField := (objectMemory sizeBitsOfSafe: rcvr) - BaseHeaderSize]]
-		ifFalse:
-			[fmt < 12 "no pointers" ifTrue:
-				[^self pop: 2 thenPushBool: false].
-			"CompiledMethod: contains both pointers and bytes:"
-			methodHeader := self headerOf: rcvr.
-			methodHeader = thang ifTrue: [^self pop: 2 thenPushBool: true].
-			lastField := ((self literalCountOfHeader: methodHeader) + 1) * BytesPerWord].
-
+	lastField := self lastPointerOf: rcvr.
 	BaseHeaderSize to: lastField by: BytesPerWord do:
 		[:i |
 		(self longAt: rcvr + i) = thang ifTrue:
