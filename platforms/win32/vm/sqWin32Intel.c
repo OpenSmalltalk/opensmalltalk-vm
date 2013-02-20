@@ -1723,17 +1723,18 @@ parseVMArgument(int argc, char *argv[])
 		return 2; }
 	else if (!strncmp(argv[0], "-cogmaxlits:", 12)) { 
 		extern sqInt maxLiteralCountForCompile;
-		maxLiteralCountForCompile = strtobkm(argv[0]+12);	 
+		maxLiteralCountForCompile = strtobkm(argv[0]+12); 
 		return 2; }
 	else if (argc > 1 && !strcmp(argv[0], "-cogminjumps")) { 
 		extern sqInt minBackwardJumpCountForCompile;
-		minBackwardJumpCountForCompile = strtobkm(argv[1]);	 
+		minBackwardJumpCountForCompile = strtobkm(argv[1]); 
 		return 2; }
 	else if (!strncmp(argv[0], "-cogminjumps:",13)) { 
 		extern sqInt minBackwardJumpCountForCompile;
-		minBackwardJumpCountForCompile = strtobkm(argv[0]+13);	 
+		minBackwardJumpCountForCompile = strtobkm(argv[0]+13); 
 		return 2; }
-    else if (!strcmp(argv[0], "-reportheadroom")) { 
+    else if (!strcmp(argv[0], "-reportheadroom")
+          || !strcmp(argv[0], "-rh")) { 
 		extern sqInt reportStackHeadroom;
 		reportStackHeadroom = 1;
 		return 1; }

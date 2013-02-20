@@ -45,6 +45,11 @@
  *   option to allocate a fixed size heap.
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/mman.h>
 
 #include "sq.h"
 #include "sqMemoryAccess.h"
@@ -61,11 +66,6 @@ static unsigned int pageMask = 0;
 
 #if defined(HAVE_MMAP)
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/mman.h>
 #include <fcntl.h>
 
 #if !defined(MAP_ANON)

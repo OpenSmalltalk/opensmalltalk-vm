@@ -154,8 +154,8 @@ typedef struct VirtualMachine {
 	sqInt (*byteSwapped)(sqInt w);
 	sqInt (*failed)(void);
 	sqInt (*fullDisplayUpdate)(void);
-	sqInt (*fullGC)(void);
-	sqInt (*incrementalGC)(void);
+	void (*fullGC)(void);
+	void (*incrementalGC)(void);
 	sqInt (*primitiveFail)(void);
 	sqInt (*showDisplayBitsLeftTopRightBottom)(sqInt aForm, sqInt l, sqInt t, sqInt r, sqInt b);
 	sqInt (*signalSemaphoreWithIndex)(sqInt semaIndex);
@@ -226,13 +226,13 @@ typedef struct VirtualMachine {
 
 #if VM_PROXY_MINOR > 5
 	sqInt (*isArray)(sqInt oop);
-	sqInt (*forceInterruptCheck)(void);
+	void (*forceInterruptCheck)(void);
 #endif
 
 #if VM_PROXY_MINOR > 6
 	sqInt  (*fetchLong32ofObject)(sqInt fieldFieldIndex, sqInt oop);
 	sqInt  (*getThisSessionID)(void);
-	sqInt	  (*ioFilenamefromStringofLengthresolveAliases)(char* aCharBuffer, char* filenameIndex, sqInt filenameLength, sqInt resolveFlag);
+	sqInt  (*ioFilenamefromStringofLengthresolveAliases)(char* aCharBuffer, char* filenameIndex, sqInt filenameLength, sqInt resolveFlag);
 	sqInt  (*vmEndianness)(void);	
 #endif
 
@@ -296,7 +296,7 @@ typedef struct VirtualMachine {
   void  (*addHighPriorityTickee)(void (*ticker)(void), unsigned periodms);
   void  (*addSynchronousTickee)(void (*ticker)(void), unsigned periodms, unsigned roundms);
   usqLong (*utcMicroseconds)(void);
-  sqInt (*tenuringIncrementalGC)(void);
+  void (*tenuringIncrementalGC)(void);
   sqInt (*isYoung) (sqInt anOop);
   sqInt (*isKindOfClass)(sqInt oop, sqInt aClass);
   sqInt (*primitiveErrorTable)(void);

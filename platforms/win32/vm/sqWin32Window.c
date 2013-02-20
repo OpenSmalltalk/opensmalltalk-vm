@@ -346,7 +346,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
 	timeDelta = timeNow - lastClickTime;
 	nrClicks = (timeDelta <= GetDoubleClickTime()) ? (nrClicks + 1) : 1;
 	lastClickTime = timeNow;
-	
+
     if(inputSemaphoreIndex) {
       recordMouseEvent(lastMessage, nrClicks);
       break;
@@ -357,11 +357,11 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     /* check for console focus */
     recordMouseDown(wParam, lParam);
     recordModifierButtons();
-	
+
 	/* capture the mouse as long as the button is pressed so we can scroll outside */
     SetCapture(stWindow);
     break;
-	
+
   case WM_LBUTTONUP:
   case WM_RBUTTONUP:
   case WM_MBUTTONUP:
@@ -3217,6 +3217,7 @@ int printUsage(int level)
                    TEXT("\n\t-cogmaxlits: n \t(set max number of literals for methods to be compiled to machine code)")
                    TEXT("\n\t-cogminjumps: n \t(set min number of backward jumps for interpreted methods to be considered for compilation to machine code)")
                    TEXT("\n\t-tracestores \t(assert-check stores for debug)")
+                   TEXT("\n\t-reportheadroom\t(report unused stack headroom on exit)");
                    TEXT("\n\t-dpcso: bytes \t(stack offset for prim calls for debug)")
 #endif /* COGVM */
                    );
