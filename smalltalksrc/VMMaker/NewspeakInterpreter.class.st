@@ -5281,9 +5281,6 @@ NewspeakInterpreter >> primitiveBeCursor [
 
 	| cursorObj maskBitsIndex maskObj bitsObj extentX extentY depth offsetObj offsetX offsetY cursorBitsIndex ourCursor |
 
-self flag: #Dan.  "This is disabled until we convert bitmaps appropriately"
-BytesPerWord = 8 ifTrue: [^ self pop: argumentCount].
-
 	argumentCount = 0 ifTrue: [
 		cursorObj := self stackTop.
 		maskBitsIndex := nil].

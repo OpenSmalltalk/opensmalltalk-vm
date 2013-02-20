@@ -6174,10 +6174,13 @@ StackInterpreter >> instVar: index ofContext: aMarriedContext put: anOop [
 		 ^nil].
 	self externalizeIPandSP.
 	self externalDivorceFrame: theFP andContext: aMarriedContext.
-	objectMemory storePointer: index ofObject: aMarriedContext withValue: anOop..
+	objectMemory storePointer: index ofObject: aMarriedContext withValue: anOop.
 	index = StackPointerIndex ifTrue:
 		[self ensureContextIsExecutionSafeAfterAssignToStackPointer: aMarriedContext].
-	self internalizeIPandSP
+	self internalizeIPandSP.
+	"Assigning various fields can force a divorce which can change the stackPage."
+	stackPages markStackPageMostRecentlyUsed: stackPage.
+	self assertValidExecutionPointe: localIP r: localFP s: localSP imbar: true
 ]
 
 { #category : #'indexing primitive support' }
@@ -8840,10 +8843,11 @@ StackInterpreter >> printFrameAndCallers: theFP SP: theSP short: printShort [
 		[self printFrameAndCallers: (self frameCallerFP: theFP)
 			SP: (self frameCallerSP: theFP)
 			short: printShort].
+	printShort ifTrue:
+		[self shortPrintFrame: theFP.
+		 ^nil].
 	self cr.
-	printShort
-		ifTrue: [self shortPrintFrame: theFP]
-		ifFalse: [self printFrame: theFP WithSP: theSP]
+	self printFrame: theFP WithSP: theSP
 ]
 
 { #category : #'debug printing' }
@@ -10565,7 +10569,7 @@ StackInterpreter >> shortPrintFramesInPage: thePage [
 { #category : #'debug printing' }
 StackInterpreter >> shortPrintOop: oop [
 	<inline: false>
-	self printNum: oop.
+	self printHex: oop.
 	(objectMemory isIntegerObject: oop) ifTrue:
 		[^self cCode: 'printf("=%ld\n", (long)integerValueOf(oop))' inSmalltalk: [self print: (self shortPrint: oop); cr]].
 	(oop between: objectMemory startOfMemory and: objectMemory freeStart) ifFalse:
