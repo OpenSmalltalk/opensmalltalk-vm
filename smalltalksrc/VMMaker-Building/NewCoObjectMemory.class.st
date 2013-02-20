@@ -98,9 +98,11 @@ NewCoObjectMemory >> copyObj: oop toSegment: segmentWordArray addr: lastSeg stop
 ]
 
 { #category : #become }
-NewCoObjectMemory >> freeObject: obj [
-	self assert: ((self isCompiledMethod: obj) not or: [(self methodHasCogMethod: obj) not]).
-	super freeObject: obj
+NewCoObjectMemory >> freeObject: obj header: objHeader [
+	(self isCompiledMethodHeader: objHeader) ifTrue:
+		[(self asserta: (coInterpreter methodHasCogMethod: obj) not) ifFalse:
+			[self error: 'attempt to free cogged method']].
+	super freeObject: obj header: objHeader
 ]
 
 { #category : #'trampoline support' }
@@ -129,6 +131,15 @@ NewCoObjectMemory >> nullHeaderForMachineCodeMethod [
 	^(1 << 12 "CompactClassIndex 1") + HeaderTypeShort
 ]
 
+{ #category : #become }
+NewCoObjectMemory >> restoreHeaderOf: obj to: objHeader [
+	super restoreHeaderOf: obj to: objHeader.
+	(self isCompiledMethodHeader: objHeader) ifTrue:
+		[(self asserta: ((coInterpreter methodHasCogMethod: obj) not
+						or: [obj = (coInterpreter cogMethodOf: obj)])) ifFalse:
+			[self error: 'attempt to become cogged method']]
+]
+
 { #category : #'trampoline support' }
 NewCoObjectMemory >> scavengeThresholdAddress [
 	<api>
@@ -144,6 +155,26 @@ NewCoObjectMemory >> startOfMemory [
 	<cmacro: '() heapBase'>
 	<returnTypeC: #usqInt>
 	^coInterpreter heapBase
+]
+
+{ #category : #'cog jit support' }
+NewCoObjectMemory >> withoutForwardingOn: obj1 and: obj2 sendToCogit: selector [
+	"For the purposes of become: send selector to the cogit with obj1 and obj2 and
+	 answer the result. Undo forwarding for the selector, but redo forwarding after since
+	 become:'s restoreHeadersAfter*Become* methods expect to be able to restore."
+	<api>
+	<var: #selector declareC: 'sqInt (*selector)(sqInt,sqInt)'>
+	| savedHeaderA savedHeaderB result |
+	savedHeaderA := self baseHeader: obj1.
+	self baseHeader: obj1 put: (self headerWhileForwardingOf: obj1).
+	savedHeaderB := self baseHeader: obj2.
+	self baseHeader: obj2 put: (self headerWhileForwardingOf: obj2).
+
+	result := cogit perform: selector with: obj1 with: obj2.
+
+	self baseHeader: obj1 put: savedHeaderA.
+	self baseHeader: obj2 put: savedHeaderB.
+	^result
 ]
 
 { #category : #'trampoline support' }

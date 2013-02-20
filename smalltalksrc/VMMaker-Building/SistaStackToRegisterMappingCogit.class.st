@@ -158,7 +158,7 @@ SistaStackToRegisterMappingCogit >> compileCogMethod: selector [
 	"initial estimate.  Actual endPC is determined in scanMethod."
 	endPC := (coInterpreter isQuickPrimitiveIndex: primitiveIndex)
 					ifTrue: [initialPC - 1]
-					ifFalse: [objectMemory byteSizeOf: methodObj].
+					ifFalse: [objectMemory byteLengthOf: methodObj].
 	numBytecodes := endPC - initialPC + 1.
 	self allocateOpcodes: (numBytecodes + extra) * 10 bytecodes: numBytecodes.
 	(numBlocks := self scanMethod) < 0 ifTrue:
@@ -600,7 +600,7 @@ SistaStackToRegisterMappingCogit >> mapFor: cogMethod bcpc: startbcpc performUnt
 						 or: [(objectMemory byteAt: map) >> AnnotationShift = IsDisplacementX2N]]).
 			 latestContinuation := startbcpc.
 			 aMethodObj := homeMethod methodObject.
-			 endbcpc := (objectMemory byteSizeOf: aMethodObj) - 1.
+			 endbcpc := (objectMemory byteLengthOf: aMethodObj) - 1.
 			 bsOffset := self bytecodeSetOffsetForHeader: homeMethod methodHeader]
 		ifFalse:
 			[isInBlock := true.

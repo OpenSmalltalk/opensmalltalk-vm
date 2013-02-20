@@ -1134,6 +1134,15 @@ CCodeGenerator >> generateAsInteger: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
+CCodeGenerator >> generateAsLong: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	aStream nextPutAll:'((long)'.
+	self emitCExpression: msgNode receiver on: aStream.
+	aStream nextPut: $)
+]
+
+{ #category : #'C translation' }
 CCodeGenerator >> generateAsSymbol: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream.
 	 The receiver is expected to be a TConstantNode."
@@ -2482,6 +2491,7 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#asFloat					#generateAsFloat:on:indent:
 	#asInteger					#generateAsInteger:on:indent:
 	#asUnsignedInteger		#generateAsUnsignedInteger:on:indent:
+	#asLong					#generateAsLong:on:indent:
 	#asUnsignedLong			#generateAsUnsignedLong:on:indent:
 	#asSymbol					#generateAsSymbol:on:indent:
 	#flag:						#generateFlag:on:indent:
