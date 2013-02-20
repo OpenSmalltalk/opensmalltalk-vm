@@ -1,12 +1,12 @@
 # Automatically generated makefile include for external plugins
 EXTERNAL_PLUGINS = \
 ADPCMCodecPlugin \
+AioPlugin \
 AsynchFilePlugin \
 B3DAcceleratorPlugin \
 BMPReadWriterPlugin \
 B2DPlugin \
 BitBltPlugin \
-BochsIA32Plugin \
 CroquetPlugin \
 DSAPrims \
 ZipPlugin \
@@ -17,7 +17,6 @@ FileCopyPlugin \
 FilePlugin \
 FloatArrayPlugin \
 FloatMathPlugin \
-GdbARMPlugin \
 GeniePlugin \
 HostWindowPlugin \
 IA32ABI \
