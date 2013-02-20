@@ -876,12 +876,15 @@ ObjectMemory >> booleanObjectOf: bool [
 ]
 
 { #category : #'indexing primitive support' }
-ObjectMemory >> byteLengthOf: oop [
-	"Return the number of indexable bytes in the given object. This is basically a special copy of lengthOf: for BitBlt."
+ObjectMemory >> byteLengthOf: obj [
+	"Return the number of indexable bytes in the given object.
+	 This is basically a special copy of lengthOf: for BitBlt. But it is also
+	 whoorishly used for the Cogit."
+	<api>
 	| header sz fmt |
-	header := self baseHeader: oop.
+	header := self baseHeader: obj.
 	sz := (header bitAnd: TypeMask) = HeaderTypeSizeAndClass
-			ifTrue: [(self sizeHeader: oop) bitAnd: AllButTypeMask]
+			ifTrue: [(self sizeHeader: obj) bitAnd: AllButTypeMask]
 			ifFalse: [header bitAnd: SizeMask].
 	fmt := self formatOfHeader: header.
 	^fmt < 8
@@ -1883,8 +1886,14 @@ ObjectMemory >> forwardingPointerOf: forwardedObj [
 
 { #category : #become }
 ObjectMemory >> freeObject: obj [
-	| objHeader objHeaderBytes objHeaderType objSize |
+	| objHeader |
 	objHeader := self baseHeader: obj.
+	self freeObject: obj header: objHeader
+]
+
+{ #category : #become }
+ObjectMemory >> freeObject: obj header: objHeader [
+	| objHeaderBytes objHeaderType objSize |
 	(self isYoungRootHeader: objHeader) ifTrue:
 		[self removeYoungRoot: obj].
 	objHeaderType := objHeader bitAnd: TypeMask.
@@ -3843,15 +3852,23 @@ ObjectMemory >> removeYoungRoot: obj [
 ]
 
 { #category : #become }
-ObjectMemory >> restoreHeaderOf: oop [ 
-	"Restore the original header of the given oop from its 
-	forwarding block."
-	| fwdHeader fwdBlock |
-	fwdHeader := self longAt: oop.
+ObjectMemory >> restoreHeaderOf: obj [
+	"Restore the original header of the given obj from its forwarding block."
+	<inline: true> "for subclasses"
+	| fwdHeader fwdBlock objHeader |
+	fwdHeader := self longAt: obj.
 	fwdBlock := (fwdHeader bitAnd: AllButMarkBitAndTypeMask) << 1.
 	self assert: (fwdHeader bitAnd: MarkBit) ~= 0.
 	self assert: (self fwdBlockValid: fwdBlock).
-	self longAt: oop put: (self longAt: fwdBlock + BytesPerWord)
+	objHeader := self longAt: fwdBlock + BytesPerWord.
+	self restoreHeaderOf: obj to: objHeader
+]
+
+{ #category : #become }
+ObjectMemory >> restoreHeaderOf: obj to: objHeader [
+	"helper for restoreHeaderOf: for subclasses to override"
+	<inline: true> "for subclasses"
+	self longAt: obj put: objHeader
 ]
 
 { #category : #become }

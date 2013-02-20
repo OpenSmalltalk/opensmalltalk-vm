@@ -6180,7 +6180,7 @@ StackInterpreter >> instVar: index ofContext: aMarriedContext put: anOop [
 	self internalizeIPandSP.
 	"Assigning various fields can force a divorce which can change the stackPage."
 	stackPages markStackPageMostRecentlyUsed: stackPage.
-	self assertValidExecutionPointe: localIP r: localFP s: localSP imbar: true
+	self assertValidExecutionPointe: localIP asUnsignedInteger r: localFP s: localSP imbar: true
 ]
 
 { #category : #'indexing primitive support' }
@@ -11459,6 +11459,7 @@ StackInterpreter >> temporary: offset in: theFP put: valueOop [
 
 { #category : #'compiled methods' }
 StackInterpreter >> temporaryCountOfMethodHeader: header [
+	<api>
 	<inline: true>
 	^(header >> 19) bitAnd: 16r3F
 ]

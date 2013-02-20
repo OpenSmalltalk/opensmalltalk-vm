@@ -919,6 +919,14 @@ NewObjectMemory >> formatOfMethodContext [
 	+ (CtxtTempFrameStart + (BaseHeaderSize / BytesPerWord) << 2)
 ]
 
+{ #category : #become }
+NewObjectMemory >> freeObject: obj header: objHeader [
+	(self isContextHeader: objHeader) ifTrue:
+		[(self asserta: ((coInterpreter isStillMarriedContext: obj) not)) ifFalse:
+			[self error: 'attempt to free married context']].
+	super freeObject: obj header: objHeader
+]
+
 { #category : #allocation }
 NewObjectMemory >> freeSize [
 	"Return the instantaneous amount of free memory which is that
@@ -930,6 +938,8 @@ NewObjectMemory >> freeSize [
 
 { #category : #accessing }
 NewObjectMemory >> freeStart [
+	"This is a horribe hack and only works because C macros are generated after Interpreter variables."
+	<cmacro: '() freeStart'>
 	^freeStart
 ]
 
@@ -2076,6 +2086,14 @@ NewObjectMemory >> printReferencesTo: anOop [
 					[self interpreter printHex: oop; print: ' @ '; printNum: i; space; printOopShort: oop; cr.
 					 i := 0]]].
 		 oop := self accessibleObjectAfter: oop]
+]
+
+{ #category : #become }
+NewObjectMemory >> restoreHeaderOf: obj to: objHeader [
+	super restoreHeaderOf: obj to: objHeader.
+	(self isContextHeader: objHeader) ifTrue:
+		[(self asserta: ((coInterpreter isStillMarriedContext: obj) not)) ifFalse:
+			[self error: 'attempt to become married context']]
 ]
 
 { #category : #'image segment in/out' }
