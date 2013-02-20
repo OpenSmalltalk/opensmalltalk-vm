@@ -235,7 +235,7 @@ TMethod >> checkForCompleteness: stmtLists in: aCodeGen [
 				[complete := false.  "more inlining to do"
 				^self]]
 		unless:
-			[ :n | n isSend and: [#(cCode:inSmalltalk: assert:) includes: n selector]]
+			[ :n | n isSend and: [#(cCode:inSmalltalk: assert: asserta:) includes: n selector]]
 ]
 
 { #category : #'primitive compilation' }
@@ -1825,7 +1825,7 @@ TMethod >> statementsListsForInlining [
 			node isStmtList ifTrue: [ stmtLists add: node ]]
 		unless:
 			[ :node |
-			node isSend and: [#(cCode:inSmalltalk: assert:) includes: node selector]].
+			node isSend and: [#(cCode:inSmalltalk: assert: asserta:) includes: node selector]].
 	parseTree nodesDo:
 		[ :node | 
 		node isSend ifTrue:
@@ -1959,7 +1959,7 @@ TMethod >> tryToInlineMethodsIn: aCodeGen [
 			(self inlineableFunctionCall: n in: aCodeGen) ifTrue:
 				[sendsToInline at: n put: (self inlineFunctionCall: n in: aCodeGen)]]
 		unless: "Don't inline the arguments to asserts to keep the asserts readable"
-			[:n| n isSend and: [#(cCode:inSmalltalk: assert:) includes: n selector]].
+			[:n| n isSend and: [#(cCode:inSmalltalk: assert: asserta:) includes: n selector]].
 
 	sendsToInline isEmpty ifFalse:
 		[didSomething := true.

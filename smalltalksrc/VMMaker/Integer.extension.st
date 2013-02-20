@@ -1,6 +1,11 @@
 Extension { #name : #Integer }
 
 { #category : #'*VMMaker-interpreter simulator' }
+Integer >> asLong [
+	^self
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
 Integer >> asUnsignedInteger [
 	self assert: self >= 0.
 	^self

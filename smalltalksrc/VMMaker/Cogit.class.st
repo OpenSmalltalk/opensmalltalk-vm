@@ -2049,7 +2049,7 @@ Cogit >> bcpcsAndDescriptorsFor: aMethod do: trinaryBlock [
 	trinaryBlock value: pc value: nil value: nil. "stackCheck/entry pc"
 	bsOffset := self bytecodeSetOffsetFor: aMethod.
 	nExts := 0.
-	endpc := objectMemory byteSizeOf: aMethod.
+	endpc := objectMemory byteLengthOf: aMethod.
 	[pc <= endpc] whileTrue:
 		[byte := objectMemory fetchByte: pc ofObject: aMethod.
 		descriptor := self generatorAt: byte + bsOffset.
@@ -2152,7 +2152,7 @@ Cogit >> blockStartPcsIn: aMethod [
 	<doNotGenerate>
 	startpcs := OrderedCollection new.
 	startpcs add: (pc := latestContinuation := coInterpreter startPCOfMethod: aMethod).
-	end := objectMemory byteSizeOf: aMethod.
+	end := objectMemory byteLengthOf: aMethod.
 	bsOffset := self bytecodeSetOffsetFor: aMethod.
 	nExts := 0.
 	[pc <= end] whileTrue:
@@ -2212,14 +2212,6 @@ Cogit >> breakPC: anAddress [
 		[breakBlock := breakPC isInteger
 						ifTrue: [[:cogit| true]]
 						ifFalse: [[:cogit| false]]]
-]
-
-{ #category : #'generate machine code' }
-Cogit >> byteAt: anAddress put: aValue [
-	"Store a byte in memory.  In Smaltalk defer to the coInterpreter.
-	 In C this will be replaced by a macro (byteAtPut)."
-	<doNotGenerate> 
-	objectMemory byteAt: anAddress put: aValue
 ]
 
 { #category : #'simulation only' }
@@ -3526,7 +3518,7 @@ Cogit >> compileCogMethod: selector [
 	"initial estimate.  Actual endPC is determined in scanMethod."
 	endPC := (coInterpreter isQuickPrimitiveIndex: primitiveIndex)
 					ifTrue: [initialPC - 1]
-					ifFalse: [objectMemory byteSizeOf: methodObj].
+					ifFalse: [objectMemory byteLengthOf: methodObj].
 	numBytecodes := endPC - initialPC + 1.
 	self allocateOpcodes: (numBytecodes + extra) * 10 bytecodes: numBytecodes.
 	(numBlocks := self scanMethod) < 0 ifTrue:
@@ -3973,8 +3965,9 @@ Cogit >> dynSuperEntryOffset [
 	^cmDynSuperEntryOffset
 ]
 
-{ #category : #'simulation only' }
+{ #category : #'compiled methods' }
 Cogit >> endPCOf: aMethod [
+	<var: #descriptor type: #'BytecodeDescriptor *'>
 	| pc end latestContinuation descriptor prim distance targetPC byte bsOffset nExts |
 	pc := latestContinuation := coInterpreter startPCOfMethod: aMethod.
 	(prim := coInterpreter primitiveIndexOf: aMethod) > 0 ifTrue:
@@ -3982,7 +3975,7 @@ Cogit >> endPCOf: aMethod [
 			[^pc - 1]].
 	bsOffset := self bytecodeSetOffsetFor: aMethod.
 	nExts := 0.
-	end := objectMemory byteSizeOf: aMethod.
+	end := objectMemory byteLengthOf: aMethod.
 	[pc <= end] whileTrue:
 		[byte := objectMemory fetchByte: pc ofObject: aMethod.
 		descriptor := self generatorAt: byte + bsOffset.
@@ -5918,7 +5911,7 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 						 or: [(objectMemory byteAt: map) >> AnnotationShift = IsDisplacementX2N]]).
 			 latestContinuation := startbcpc.
 			 aMethodObj := homeMethod methodObject.
-			 endbcpc := (objectMemory byteSizeOf: aMethodObj) - 1.
+			 endbcpc := (objectMemory byteLengthOf: aMethodObj) - 1.
 			 bsOffset := self bytecodeSetOffsetForHeader: homeMethod methodHeader]
 		ifFalse:
 			[isInBlock := true.
@@ -6106,10 +6099,29 @@ Cogit >> mapObjectReferencesInMachineCodeForBecome [
 					[(objectMemory isYoung: cogMethod selector) ifTrue:
 						[hasYoungObj := true].
 					 cogMethod cmType = CMMethod ifTrue:
-						[self assert: cogMethod objectHeader = objectMemory nullHeaderForMachineCodeMethod.
+						[| remappedMethod |
+						 self assert: cogMethod objectHeader = objectMemory nullHeaderForMachineCodeMethod.
 						 self assert: ((coInterpreter rawHeaderOf: cogMethod methodObject) = cogMethod asInteger
 									or: [(self noAssertMethodClassAssociationOf: cogMethod methodObject)
 											= objectMemory nilObject]).
+						 remappedMethod := objectRepresentation remapOop: cogMethod methodObject.
+						 remappedMethod ~= cogMethod methodObject ifTrue:
+							[(coInterpreter methodHasCogMethod: remappedMethod) ifTrue:
+								[self error: 'attempt to become two cogged methods'].
+							 (objectMemory
+									withoutForwardingOn: cogMethod methodObject
+									and: remappedMethod
+									sendToCogit: #method:hasSameCodeAs:) ifFalse:
+								[self error: 'attempt to become cogged method into different method'].
+							 coInterpreter
+								rawHeaderOf: cogMethod methodObject
+								put: cogMethod methodHeader.
+							 cogMethod
+								methodHeader: (coInterpreter rawHeaderOf: remappedMethod);
+								methodObject: remappedMethod.
+							 coInterpreter
+								rawHeaderOf: remappedMethod
+								put: cogMethod asInteger].
 						 (objectMemory isYoung: cogMethod methodObject) ifTrue:
 							[hasYoungObj := true]].
 					 self mapFor: cogMethod
@@ -6604,6 +6616,34 @@ Cogit >> mcPCFor: bcpc startBcpc: startbcpc in: cogMethod [
 	^absPC ~= 0
 		ifTrue: [absPC asUnsignedInteger - cogMethod asUnsignedInteger]
 		ifFalse: [absPC]
+]
+
+{ #category : #'garbage collection' }
+Cogit >> method: methodA hasSameCodeAs: methodB [
+	"For the purposes of become: see if the two methods are similar, i.e. can be safely becommed.
+	 This is pretty strict.  All literals and bytecodes must be identical.  Only trailer bytes and header
+	  flags can differ."
+	<inline: false>
+	| headerA headerB numLitsA endPCA |
+	headerA := coInterpreter headerOf: methodA.
+	headerB := coInterpreter headerOf: methodB.
+	numLitsA := coInterpreter literalCountOfHeader: headerA.
+	endPCA := self endPCOf: methodA.
+	((coInterpreter argumentCountOfMethodHeader: headerA) ~= (coInterpreter argumentCountOfMethodHeader: headerB)
+	 or: [(coInterpreter temporaryCountOfMethodHeader: headerA) ~= (coInterpreter temporaryCountOfMethodHeader: headerB)
+	 or: [(coInterpreter primitiveIndexOfMethod: methodA header: headerA) ~= (coInterpreter primitiveIndexOfMethod: methodB header: headerB)
+	 or: [numLitsA ~= (coInterpreter literalCountOfHeader: headerB)
+	 or: [endPCA > (objectMemory byteLengthOf: methodB)]]]]) ifTrue:
+		[^false].
+	 1 to: numLitsA - 1 do:
+		[:li|
+		(objectMemory fetchPointer: li ofObject: methodA) ~= (objectMemory fetchPointer: li ofObject: methodB) ifTrue:
+			[^false]].
+	(coInterpreter startPCOfMethod: methodA) to: endPCA do:
+		[:bi|
+		(objectMemory fetchByte: bi ofObject: methodA) ~= (objectMemory fetchByte: bi ofObject: methodB) ifTrue:
+			[^false]].
+	^true
 ]
 
 { #category : #'simulation only' }
