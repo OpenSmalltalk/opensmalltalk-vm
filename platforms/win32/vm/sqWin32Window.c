@@ -3203,7 +3203,6 @@ int printUsage(int level)
 				   TEXT("\n\t-stackpages: n \t(use n stack pages)")
                    TEXT("\n\t-numextsems: n \t(allow up to n external semaphores)")
                    TEXT("\n\t-noheartbeat \t(no heartbeat for debug)")
-                   TEXT("\n\t-reportheadroom \t(print unused stack headroom on exit)")
 #endif /* STACKVM */
 #if STACKVM || NewspeakVM
 # if COGVM
@@ -3217,7 +3216,7 @@ int printUsage(int level)
                    TEXT("\n\t-cogmaxlits: n \t(set max number of literals for methods to be compiled to machine code)")
                    TEXT("\n\t-cogminjumps: n \t(set min number of backward jumps for interpreted methods to be considered for compilation to machine code)")
                    TEXT("\n\t-tracestores \t(assert-check stores for debug)")
-                   TEXT("\n\t-reportheadroom\t(report unused stack headroom on exit)");
+                   TEXT("\n\t-reportheadroom\t(report unused stack headroom on exit)")
                    TEXT("\n\t-dpcso: bytes \t(stack offset for prim calls for debug)")
 #endif /* COGVM */
                    );
