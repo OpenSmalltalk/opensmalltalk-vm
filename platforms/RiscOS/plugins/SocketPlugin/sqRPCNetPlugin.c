@@ -1719,4 +1719,126 @@ void sqResolverStartNameLookup(char *hostName, sqInt nameSize) {
   interpreterProxy->signalSemaphoreWithIndex(resolverSema);
 }
 
+// stubs for newer socketplugin routines - fail them for now
+void  sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol(char *hostName, sqInt hostSize, char *servName, sqInt servSize,
+									 sqInt flags, sqInt family, sqInt type, sqInt protocol) {
+	interpreterProxy->success(false);
+	return;
+}
+
+sqInt sqResolverGetAddressInfoSize(void) {return -1;}
+
+void  sqResolverGetAddressInfoResultSize(char *addr, sqInt addrSize) {
+	interpreterProxy->success(false);
+	return;
+}
+
+sqInt sqResolverGetAddressInfoFamily(void) {
+	interpreterProxy->success(false);
+	return 0;
+}
+
+sqInt sqResolverGetAddressInfoType(void) {
+	interpreterProxy->success(false);
+	return 0;
+}
+
+sqInt sqResolverGetAddressInfoProtocol(void) {
+	interpreterProxy->success(false);
+	return 0;
+}
+
+sqInt sqResolverGetAddressInfoNext(void) {
+	return false;
+}
+
+sqInt sqSocketAddressSizeGetPort(char *addr, sqInt addrSize) {
+	interpreterProxy->success(false);
+	return 0;
+}
+
+void  sqSocketAddressSizeSetPort(char *addr, sqInt addrSize, sqInt port) {
+	interpreterProxy->success(false);
+	return;
+}
+
+void  sqResolverGetNameInfoSizeFlags(char *addr, sqInt addrSize, sqInt flags) {
+	interpreterProxy->success(false);
+	return;
+}
+
+sqInt sqResolverGetNameInfoHostSize(void) {
+	interpreterProxy->success(false);
+	return 0;
+}
+
+void  sqResolverGetNameInfoHostResultSize(char *name, sqInt nameSize) {
+	interpreterProxy->success(false);
+	return;
+}
+
+sqInt sqResolverGetNameInfoServiceSize(void) {
+	interpreterProxy->success(false);
+	return 0;
+}
+
+void  sqResolverGetNameInfoServiceResultSize(char *name, sqInt nameSize) {
+	interpreterProxy->success(false);
+	return;
+}
+
+sqInt sqResolverHostNameSize(void) {
+	interpreterProxy->success(false);
+	return 0;
+}
+
+void  sqResolverHostNameResultSize(char *name, sqInt nameSize) {
+	interpreterProxy->success(false);
+	return;
+}
+
+void  sqSocketBindToAddressSize(SocketPtr s, char *addr, sqInt addrSize) {
+	interpreterProxy->success(false);
+	return;
+}
+
+void  sqSocketListenBacklog(SocketPtr s, sqInt backlogSize) {
+	interpreterProxy->success(false);
+	return;
+}
+
+void  sqSocketConnectToAddressSize(SocketPtr s, char *addr, sqInt addrSize) {
+	interpreterProxy->success(false);
+	return;
+}
+
+sqInt sqSocketLocalAddressSize(SocketPtr s) {
+	interpreterProxy->success(false);
+	return 0;
+}
+
+void  sqSocketLocalAddressResultSize(SocketPtr s, char *addr, int addrSize) {
+	interpreterProxy->success(false);
+	return;
+}
+
+sqInt sqSocketRemoteAddressSize(SocketPtr s) {
+	interpreterProxy->success(false);
+	return -1;
+}
+
+void  sqSocketRemoteAddressResultSize(SocketPtr s, char *addr, int addrSize) {
+	interpreterProxy->success(false);
+	return;
+}
+
+sqInt sqSocketSendUDPToSizeDataBufCount(SocketPtr s, char *addr, sqInt addrSize, char *buf, sqInt bufSize) {
+	interpreterProxy->success(false);
+	return 0;
+}
+
+sqInt sqSocketReceiveUDPDataBufCount(SocketPtr s, char *buf, sqInt bufSize) {
+	interpreterProxy->success(false);
+	return 0;
+}
 
