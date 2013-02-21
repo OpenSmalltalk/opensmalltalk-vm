@@ -1448,7 +1448,7 @@ sqInt ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY) {
 
 sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY) {
 // no information on what this is supposed to do yet, assume old api can work for now
-	return ioSetCursorWithMask(cursorBitsIndex, NULL, offsetX, offsetY);
+	return 0;
 }
 
 /* Backwards compat stub */
