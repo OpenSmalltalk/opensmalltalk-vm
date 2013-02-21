@@ -9913,6 +9913,23 @@ StackInterpreter >> removeProcess: aProcess fromList: aList [
 	objectMemory storePointer: NextLinkIndex ofObject: aProcess withValue: objectMemory nilObject
 ]
 
+{ #category : #'miscellaneous bytecodes' }
+StackInterpreter >> respondToUnknownBytecode [
+	"If an error selector is available then send it to the activeContext, otherwise abort."
+	<sharedCodeNamed: #respondToUnknownBytecode inCase: #unknownBytecode>
+	| unknownBytecodeSelector ourContext |
+	unknownBytecodeSelector := objectMemory maybeSplObj: SelectorUnknownBytecode.
+	unknownBytecodeSelector isNil ifTrue:
+		[self error: 'Unknown bytecode'].
+	ourContext := self ensureFrameIsMarried: localFP SP: localSP.
+	"N.B. Do Not:
+	self fetchNextBytecode."
+	self internalPush: ourContext.
+	messageSelector := unknownBytecodeSelector.
+	argumentCount := 0.
+	self commonSend
+]
+
 { #category : #'callback support' }
 StackInterpreter >> restoreCStackStateForCallbackContext: vmCallbackContext [
 	<var: #vmCallbackContext type: #'VMCallbackContext *'>
@@ -11524,11 +11541,10 @@ StackInterpreter >> undoFetchNextBytecode [
 	localIP := localIP - 1
 ]
 
-{ #category : #'interpreter shell' }
+{ #category : #'miscellaneous bytecodes' }
 StackInterpreter >> unknownBytecode [
-	"This should never get called; it means that an unimplemented bytecode appears in a CompiledMethod."
-
-	self error: 'Unknown bytecode'.
+	"If an error selector is available then send it to the activeContext, otherwise abort."
+	self respondToUnknownBytecode
 ]
 
 { #category : #'image save/restore' }

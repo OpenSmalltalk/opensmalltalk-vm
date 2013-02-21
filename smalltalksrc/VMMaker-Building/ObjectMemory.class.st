@@ -411,7 +411,9 @@ ObjectMemory class >> initializeSpecialObjectIndices [
 
 	ForeignCallbackProcess := 56.
 
-	SelectorCounterTripped := 57
+	SelectorUnknownBytecode := 57.
+	SelectorCounterTripped := 58
+
 ]
 
 { #category : #initialization }
@@ -3279,7 +3281,7 @@ ObjectMemory >> maxIdentityHash [
 { #category : #'interpreter access' }
 ObjectMemory >> maybeSplObj: index [
 	<api>
-	"Return one of the objects in the SpecialObjectsArray, if in range, otherwise ansser nil"
+	"Answer one of the objects in the SpecialObjectsArray, if in range, otherwise answer nil."
 	^index < (self lengthOf: specialObjectsOop) ifTrue:
 		[self fetchPointer: index ofObject: specialObjectsOop]
 ]
