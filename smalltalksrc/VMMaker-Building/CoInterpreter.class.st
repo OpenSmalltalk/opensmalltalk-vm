@@ -1296,7 +1296,7 @@ CoInterpreter >> ceContext: maybeMarriedContext instVar: slotIndex value: anOop 
 CoInterpreter >> ceCounterTripped: condition [
 	<api>
 	<option: #SistaStackToRegisterMappingCogit>
-	"Send e.g. thisContext conditionalBranchCounterTrippedAt: bcpc boolean: boolean."
+	"Send e.g. thisContext conditionalBranchCounterTrippedOn: boolean."
 	| context counterTrippedSelector |
 	counterTrippedSelector := objectMemory maybeSplObj: SelectorCounterTripped.
 	(counterTrippedSelector isNil
