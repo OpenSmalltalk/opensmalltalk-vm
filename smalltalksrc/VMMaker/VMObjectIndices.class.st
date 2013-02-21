@@ -88,6 +88,7 @@ Class {
 		'SelectorMustBeBoolean',
 		'SelectorRunWithIn',
 		'SelectorStart',
+		'SelectorUnknownBytecode',
 		'SenderIndex',
 		'SpecialSelectors',
 		'StackPointerIndex',
