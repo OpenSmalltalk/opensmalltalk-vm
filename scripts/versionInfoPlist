@@ -10,6 +10,7 @@ if [ $# != 3 ]; then
 	echo usage: $0 platformDir referencePlist toBeEditedPlist 1>&2
 	exit 1
 fi
+trap 'exit 2' HUP INT PIPE TERM 0
 REV=`grep 'SvnRawRevisionString.*Rev:' "$1/Cross/vm/sqSCCSVersion.h" \
 	| sed 's/^.*Rev: \([0-9][0-9]*\) $";/\1/'`
 for p in `grep -e --version-- "$2" \

@@ -59,7 +59,9 @@ else
 fi
 if [ -n "$CheckDMG" -a ! -f "Newspeak Virtual Machine-$TAG.dmg" ]; then
 	NMID=nscogbuild/macbuild/installer
-	if [ -f "$NMID/Newspeak Virtual Machine-$TAG.dmg" ]; then
+	if [ -f "Newspeak Virtual Machine-$TAG.dmg" ]; then
+		echo -n
+	elif [ -f "$NMID/Newspeak Virtual Machine-$TAG.dmg" ]; then
 		ln "$NMID/Newspeak Virtual Machine-$TAG.dmg" .
 	else
 		echo Newspeak Virtual Machine-$TAG.dmg is missing 1>&2
@@ -68,7 +70,9 @@ if [ -n "$CheckDMG" -a ! -f "Newspeak Virtual Machine-$TAG.dmg" ]; then
 fi
 if [ -n "$CheckMSI" -a ! -f nsvm-$TAG.msi ]; then
 	NWID=nscogbuild/cygwinbuild/installer
-	if [ -f "$NWID/nsvm-$TAG.msi" ]; then
+	if [ -f nsvm-$TAG.msi ]; then
+		echo -n
+	elif [ -f "$NWID/nsvm-$TAG.msi" ]; then
 		ln "$NWID/nsvm-$TAG.msi" .
 	else
 		echo nsvm-$TAG.msi is missing 1>&2
@@ -106,3 +110,4 @@ done
 ssh -x eliotmiranda@bugsy.dreamhost.com mkdir mirandabanda.org/files/Cog/VM/VM.r$REV
 echo scp -p ChangeHistory README.$REV $ARCHIVES "$@" eliotmiranda@bugsy.dreamhost.com:mirandabanda.org/files/Cog/VM/VM.r$REV
 scp -p ChangeHistory README.$REV $ARCHIVES "$@" eliotmiranda@bugsy.dreamhost.com:mirandabanda.org/files/Cog/VM/VM.r$REV
+ssh eliotmiranda@bugsy.dreamhost.com chmod a-w mirandabanda.org/files/Cog/VM/VM.r$REV "mirandabanda.org/files/Cog/VM/VM.r$REV/*"

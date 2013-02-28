@@ -29,8 +29,8 @@
 #if SQ_IMAGE32
 /*
  * 32-bit address space = 2^32 bytes = 2^30 words.  If we have 256 root pages
- * then each page needs to cover 2^30 / 256 words = 4 megawords.  Each 8-bit
- * byte in the leak map covers 8 words.  So each page needs to be 4M / 8 bytes
+ * then each page needs to cover 2^30 / 256 words = 8 megawords.  Each 8-bit
+ * byte in the leak map covers 8 words.  So each page needs to be 8M / 8 bytes
  * = 512k bytes per page.
  */
  
@@ -38,7 +38,7 @@
 
 static uchar *mapPages[256] = { 0, };
 
-#define PAGESIZE (512*1024)
+#define PAGESIZE (1024*1024)
 #define PAGESHIFT 24
 #define PAGEMASK 0xFFFFFF
 #define LOGWORDSIZE 2

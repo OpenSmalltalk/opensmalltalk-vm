@@ -15,8 +15,9 @@ while [ -n "$1" ]; do
 done
 if [ -n "$H" -o -z "$D$A$F" ]; then
 	echo usage: $0 -A \| -AS \| -d -a -f
-	exit
+	exit 1
 fi
+trap 'exit 2' HUP INT PIPE TERM 0
 test -n "$D" && (makevm -d 2>&1 | tee $D;grep "BUILD .*ED" $D)
 test -n "$A" && (makevm -a 2>&1 | tee $A;grep "BUILD .*ED" $A)
 test -n "$F" && (makevm -s 2>&1 | tee $F;grep "BUILD .*ED" $F)

@@ -25,8 +25,9 @@ while [ -n "$1" ]; do
 done
 if [ -n "$H" -o -z "$D$A$F$DT$AT$FT" ]; then
 	echo usage: $0 -A \| -AS -AT \| -d -a -f -dt -at -ft
-	exit
+	exit 1
 fi
+trap 'exit 2' HUP INT PIPE TERM 0
 test -n "$D" && (makevm $C -d 2>&1 | tee $D;grep "BUILD .*ED" $D)
 test -n "$A" && (makevm $C -a 2>&1 | tee $A;grep "BUILD .*ED" $A)
 test -n "$F" && (makevm $C -s 2>&1 | tee $F;grep "BUILD .*ED" $F)
