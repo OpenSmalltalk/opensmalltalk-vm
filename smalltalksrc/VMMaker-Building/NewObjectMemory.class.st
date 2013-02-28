@@ -13,7 +13,8 @@ Class {
 		'fullGCLock',
 		'edenBytes',
 		'checkForLeaks',
-		'statGCEndUsecs'
+		'statGCEndUsecs',
+		'heapMap'
 	],
 	#classVars : [
 		'AllocationCheckFiller'
@@ -377,15 +378,16 @@ NewObjectMemory >> checkHeapIntegrity [
 				 (self compactClassIndexOfHeader: hdr) = 0 ifTrue:
 					[fieldOop := (self classHeader: obj) bitAnd: AllButTypeMask.
 					 ((self isIntegerObject: fieldOop)
-					   or: [(self heapMapAtWord: (self pointerForOop: fieldOop)) = 0]) ifTrue:
+					   or: [(heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0]) ifTrue:
 						[self print: 'object leak in '; printHex: obj; print: ' class = '; printHex: fieldOop; cr.
+						 self eek.
 						 ok := false]].
 				 fmt := self formatOfHeader: hdr.
 				 (fmt <= 4 "pointers" or: [fmt >= 12 "compiled method"]) ifTrue:
 					[fmt >= 12
 						ifTrue: [fi := (self literalCountOf: obj) + 1 "+ 1 = methodHeader slot"]
 						ifFalse: [(fmt = 3 and: [self isContextHeader: hdr])
-									ifTrue: [fi := CtxtTempFrameStart + (self fetchStackPointerOf: obj)]
+									ifTrue: [fi := CtxtTempFrameStart + (coInterpreter fetchStackPointerOf: obj)]
 									ifFalse: [fi := self lengthOf: obj]].
 					[(fi := fi - 1) >= 0] whileTrue:
 						[fieldOop := self fetchPointer: fi ofObject: obj.
@@ -393,10 +395,12 @@ NewObjectMemory >> checkHeapIntegrity [
 							[(fieldOop bitAnd: BytesPerWord - 1) ~= 0
 								ifTrue:
 									[self print: 'misaligned oop in '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; cr.
+									 self eek.
 									 ok := false]
 								ifFalse:
-									[(self heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
+									[(heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
 										[self print: 'object leak in '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; cr.
+										 self eek.
 										 ok := false]]]]].
 				 sz := self sizeBitsOf: obj].
 		 obj := self oopFromChunk: obj + sz].
@@ -410,16 +414,19 @@ NewObjectMemory >> checkHeapIntegrity [
 		(obj bitAnd: BytesPerWord - 1) ~= 0
 			ifTrue:
 				[self print: 'misaligned oop in rootTable @ '; printNum: ri; print: ' = '; printHex: obj; cr.
+				 self eek.
 				 ok := false]
 			ifFalse:
-				[(self heapMapAtWord: (self pointerForOop: obj)) = 0
+				[(heapMap heapMapAtWord: (self pointerForOop: obj)) = 0
 					ifTrue:
 						[self print: 'object leak in rootTable @ '; printNum: ri; print: ' = '; printHex: obj; cr.
+						 self eek.
 						 ok := false]
 					ifFalse:
 						[hdr := self baseHeader: obj.
 						 (self isYoungRootHeader: hdr) ifFalse:
 							[self print: 'non-root in rootTable @ '; printNum: ri; print: ' = '; printHex: obj; cr.
+							 self eek.
 							 ok := false]]]].
 	1 to: remapBufferCount do:
 		[:ri|
@@ -427,11 +434,13 @@ NewObjectMemory >> checkHeapIntegrity [
 		(obj bitAnd: BytesPerWord - 1) ~= 0
 			ifTrue:
 				[self print: 'misaligned remapRoot @ '; printNum: ri; print: ' = '; printHex: obj; cr.
+				 self eek.
 				 ok := false]
 			ifFalse:
-				[(self heapMapAtWord: (self pointerForOop: obj)) = 0
+				[(heapMap heapMapAtWord: (self pointerForOop: obj)) = 0
 					ifTrue:
 						[self print: 'object leak in remapRoots @ '; printNum: ri; print: ' = '; printHex: obj; cr.
+						 self eek.
 						 ok := false]]].
 	1 to: extraRootCount do:
 		[:ri|
@@ -439,11 +448,13 @@ NewObjectMemory >> checkHeapIntegrity [
 		(obj bitAnd: BytesPerWord - 1) ~= 0
 			ifTrue:
 				[self print: 'misaligned extraRoot @ '; printNum: ri; print: ' => '; printHex: obj; cr.
+				 self eek.
 				 ok := false]
 			ifFalse:
-				[(self heapMapAtWord: (self pointerForOop: obj)) = 0
+				[(heapMap heapMapAtWord: (self pointerForOop: obj)) = 0
 					ifTrue:
 						[self print: 'object leak in extraRoots @ '; printNum: ri; print: ' => '; printHex: obj; cr.
+						 self eek.
 						 ok := false]]].
 	^ok
 ]
@@ -525,18 +536,22 @@ NewObjectMemory >> classFloatCompactIndex [
 { #category : #'object enumeration' }
 NewObjectMemory >> clearLeakMapAndMapAccessibleObjects [
 	"Perform an integrity/leak check using the heapMap.  Set a bit at each object's header."
-	| obj sz |
+	| obj sz nextHeader |
 	<inline: false>
-	self clearHeapMap.
+	<var: #obj type: #usqInt>
+	<var: #sz type: #usqInt>
+	<var: #nextHeader type: #usqInt>
+	heapMap clearHeapMap.
 	obj := self firstObject.
 	[self oop: obj isLessThan: freeStart] whileTrue:
 		[(self isFreeObject: obj)
 			ifTrue:
 				[sz := self sizeOfFree: obj]
 			ifFalse:
-				[self heapMapAtWord: (self pointerForOop: obj) Put: 1.
+				[heapMap heapMapAtWord: (self pointerForOop: obj) Put: 1.
 				 sz := self sizeBitsOf: obj].
-		 obj := self oopFromChunk: obj + sz]
+		nextHeader := obj + sz.
+		obj := self oopFromChunk: nextHeader].
 ]
 
 { #category : #allocation }
@@ -544,7 +559,7 @@ NewObjectMemory >> clone: obj [
 	"Return a shallow copy of the given object. May cause GC"
 	"Assume: Oop is a real object, not a small integer.
 	 Override to assert it's not a married context"
-	self assert: ((coInterpreter isContext: obj) not
+	self assert: ((self isContext: obj) not
 				or: [(coInterpreter isMarriedOrWidowedContext: obj) not]). 
 	^super clone: obj
 ]
@@ -804,13 +819,14 @@ NewObjectMemory >> eeInstantiateMethodContextByteSize: sizeInBytes [
 	 and should include four bytes for the base header word.
 	 Will *not* cause a GC."
 	| hash header1 |
-	hash := self newObjectHash.
-	header1 := (hash bitAnd: HashMaskUnshifted) << HashBitsOffset bitOr: self formatOfMethodContext.
+	self assert: (sizeInBytes == SmallContextSize or: [sizeInBytes == LargeContextSize]).
 	self assert: sizeInBytes <= SizeMask.
+	hash := self newObjectHash.
+	header1 := (hash bitAnd: HashMaskUnshifted) << HashBitsOffset bitOr: self formatOfMethodContextMinusSize.
 	self assert: (header1 bitAnd: CompactClassMask) > 0. "contexts must be compact"
+	self assert: (header1 bitAnd: SizeMask) = 0.
 	"OR size into header1.  Must not do this if size > SizeMask"
-	header1 := header1 + (sizeInBytes - (header1 bitAnd: SizeMask)).
-	self flag: #Dan.  "Check details of context sizes"
+	header1 := header1 + sizeInBytes.
 	^self eeAllocate: sizeInBytes headerSize: 1 h1: header1 h2: nil h3: nil
 ]
 
@@ -837,6 +853,11 @@ NewObjectMemory >> eeInstantiateSmallClass: classPointer sizeInBytes: sizeInByte
 				ifFalse: [2].
 	header1 := header1 + (sizeInBytes - (header1 bitAnd: SizeMask+Size4Bit)).
 	^self eeAllocate: sizeInBytes headerSize: hdrSize h1: header1 h2: header2 h3: 0
+]
+
+{ #category : #'memory access' }
+NewObjectMemory >> eek [
+	<inline: true>
 ]
 
 { #category : #accessing }
@@ -910,6 +931,106 @@ NewObjectMemory >> firstValidIndexOfIndexableObject: obj withFormat: fmt [
 		ifFalse: [1]
 ]
 
+{ #category : #initialization }
+NewObjectMemory >> fixContextSizes [
+	"Correct context sizes at start-up."
+	| numBadContexts obj oop map delta hdr len i methodContextProtoIndex methodContextProto |
+	<var: #map type: #'sqInt *'>
+	methodContextProto := self splObj: (methodContextProtoIndex := 35).
+	((self isContext: methodContextProto)
+	 and: [self badContextSize: methodContextProto]) ifTrue:
+		[self splObj: methodContextProtoIndex put: nilObj.
+		 "If it is unreferenced except here; nuke it, otherwise resize it"
+		 (self numReferencesTo: methodContextProto) = 0 ifTrue:
+			[self freeObject: methodContextProto]].
+	"Count the number of bad contexts"
+	numBadContexts := 0.
+	obj := self firstObject.
+	[obj < freeStart] whileTrue:
+		[((self isFreeObject: obj) not
+		   and: [(self isContextNonInt: obj)
+		   and: [self badContextSize: obj]]) ifTrue:
+			[numBadContexts := numBadContexts + 1].
+		 obj := self objectAfter: obj].
+	numBadContexts = 0 ifTrue:
+		[^self].
+	"Allocate a map of pairs of context obj and how much it has to move."
+	map := self cCode: [self malloc: numBadContexts + 1 * 2 * BytesPerOop]
+				inSmalltalk: [CArrayAccessor on: (Array new: numBadContexts + 1 * 2)].
+	"compute the map"
+	numBadContexts := 0.
+	delta := 0.
+	obj := self firstObject.
+	[obj < freeStart] whileTrue:
+		[((self isFreeObject: obj) not
+		   and: [(self isContextNonInt: obj)
+		   and: [self badContextSize: obj]]) ifTrue:
+			[delta := ((self byteLengthOf: obj) > SmallContextSize
+						ifTrue: [LargeContextSize]
+						ifFalse: [SmallContextSize]) - (self byteLengthOf: obj).
+			 map at: numBadContexts put: (self objectAfter: obj).
+			 numBadContexts = 0
+				ifTrue: [map at: numBadContexts + 1 put: delta]
+				ifFalse: [map at: numBadContexts + 1 put: delta + (map at: numBadContexts - 1)].
+			numBadContexts := numBadContexts + 2].
+		 obj := self objectAfter: obj].
+	"block-move the segments to make room for the resized contexts"
+	map at: numBadContexts put: freeStart.
+	self assert: freeStart = youngStart. "designed to be run at startup"
+	freeStart := freeStart + (map at: numBadContexts - 1).
+	youngStart := freeStart.
+	[(numBadContexts := numBadContexts - 2) >= 0] whileTrue:
+		[obj := map at: numBadContexts.
+		 oop := map at: numBadContexts + 2.
+		 self mem:	"dest" obj + (map at: numBadContexts + 1)
+			  mo: 	"src" obj
+			  ve:	"len" oop - obj].
+	"now fix-up objs, resizing wrongly-sized contexts along the way."
+	obj := self firstObject.
+	[obj < freeStart] whileTrue:
+		[(self isFreeObject: obj) not ifTrue:
+			[((self isContextNonInt: obj)
+			   and: [self badContextSize: obj]) ifTrue:
+				[hdr := self baseHeader: obj.
+				 len := (hdr bitAnd: SizeMask) > SmallContextSize ifTrue: [LargeContextSize] ifFalse: [SmallContextSize].
+				 self baseHeader: obj put: ((hdr bitClear: SizeMask) bitOr: len).
+				 "now check the enumeration"
+				 oop := self objectAfter: obj.
+				 self assert: oop <= freeStart.
+				 numBadContexts := 0.
+				 [oop > (map at: numBadContexts)] whileTrue:
+					[numBadContexts := numBadContexts + 2].
+				 self assert: oop = ((map at: numBadContexts) + (map at: numBadContexts + 1))].
+			(self headerType: obj) ~= HeaderTypeShort ifTrue: "see remapClassOf:"
+				[oop := (hdr := self longAt: obj - BytesPerWord) bitAnd: AllButTypeMask.
+				 oop >= (map at: 0) ifTrue:
+					[numBadContexts := 2.
+					 [oop >= (map at: numBadContexts)] whileTrue:
+						[numBadContexts := numBadContexts + 2].
+					 hdr := oop + (map at: numBadContexts - 1) + (hdr bitAnd: TypeMask).
+					 self longAt: obj - BytesPerWord put: hdr]].
+			((self isPointersNonInt: obj) or: [self isCompiledMethod: obj]) ifTrue:
+				[(self isCompiledMethod: obj)
+					ifTrue:
+						[i := self literalCountOf: obj]
+					ifFalse:
+						[(self isContextNonInt: obj)
+							ifTrue: [i := CtxtTempFrameStart + (coInterpreter fetchStackPointerOf: obj)]
+							ifFalse: [i := self lengthOf: obj]].
+				[(i := i - 1) >= 0] whileTrue:
+					[oop := self fetchPointer: i ofObject: obj.
+					 ((self isNonIntegerObject: oop)
+					  and: [oop >= (map at: 0)]) ifTrue:
+						[numBadContexts := 2.
+						 [oop >= (map at: numBadContexts)] whileTrue:
+							[numBadContexts := numBadContexts + 2].
+						 self storePointerUnchecked: i ofObject: obj withValue: oop + (map at: numBadContexts - 1)]]]].
+		 obj := self objectAfter: obj].
+	self clearLeakMapAndMapAccessibleObjects.
+	(self asserta: self checkHeapIntegrity) ifFalse:
+		[self error: 'failed to resize contexts correctly']
+]
+
 { #category : #'frame access' }
 NewObjectMemory >> formatOfMethodContext [
 	"Answer the class format word for MethodContext which is used to instantiate
@@ -917,6 +1038,14 @@ NewObjectMemory >> formatOfMethodContext [
 	^(ClassMethodContextCompactIndex << 12)
 	+ (3 << 8) "Pointers+Variable"
 	+ (CtxtTempFrameStart + (BaseHeaderSize / BytesPerWord) << 2)
+]
+
+{ #category : #'frame access' }
+NewObjectMemory >> formatOfMethodContextMinusSize [
+	"Answer the class format word for MethodContext which is used to instantiate
+	 contexts without needing to fetch it from the class MethodContext itself."
+	^(ClassMethodContextCompactIndex << 12)
+	+ (3 << 8) "Pointers+Variable"
 ]
 
 { #category : #become }
@@ -1289,7 +1418,8 @@ NewObjectMemory >> initialize [
 	"Initialize NewObjectMemory when simulating the VM inside Smalltalk."
 	super initialize.
 	checkForLeaks := fullGCLock := 0.
-	needGCFlag := false
+	needGCFlag := false.
+	heapMap := CogCheck32BitHeapMap new
 ]
 
 { #category : #initialization }
@@ -1670,12 +1800,12 @@ NewObjectMemory >> longPrintReferencesTo: anOop [
 	prntObj := false.
 	oop := self firstAccessibleObject.
 	[oop = nil] whileFalse:
-		[((self isPointers: oop) or: [self isCompiledMethod: oop]) ifTrue:
+		[((self isPointersNonInt: oop) or: [self isCompiledMethod: oop]) ifTrue:
 			[(self isCompiledMethod: oop)
 				ifTrue:
 					[i := self literalCountOf: oop]
 				ifFalse:
-					[(coInterpreter isContext: oop)
+					[(self isContextNonInt: oop)
 						ifTrue: [i := CtxtTempFrameStart + (coInterpreter fetchStackPointerOf: oop)]
 						ifFalse: [i := self lengthOf: oop]].
 			[(i := i - 1) >= 0] whileTrue:
@@ -1842,6 +1972,30 @@ NewObjectMemory >> noteAsRoot: oop headerLoc: headerLoc [
 					[self scheduleIncrementalGC]]
 			ifFalse: "note overflow; will need to do a fullGC instead of an incremental."
 				[rootTableOverflowed := true]]
+]
+
+{ #category : #'debug printing' }
+NewObjectMemory >> numReferencesTo: anOop [
+	"Answer the number of objects that refer to anOop, other than anOop."
+	| oop i n |
+	oop := self firstAccessibleObject.
+	n := 0.
+	[oop = nil] whileFalse:
+		[((self isPointersNonInt: oop) or: [self isCompiledMethod: oop]) ifTrue:
+			[(self isCompiledMethod: oop)
+				ifTrue:
+					[i := self literalCountOf: oop]
+				ifFalse:
+					[(self isContextNonInt: oop)
+						ifTrue: [i := CtxtTempFrameStart + (coInterpreter fetchStackPointerOf: oop)]
+						ifFalse: [i := self lengthOf: oop]].
+			[(i := i - 1) >= 0] whileTrue:
+				[anOop = (self fetchPointer: i ofObject: oop) ifTrue:
+					[anOop ~= oop ifTrue:
+						[n := n + 1].
+					 i := 0]]].
+		 oop := self accessibleObjectAfter: oop].
+	^n
 ]
 
 { #category : #'object enumeration' }
@@ -2073,18 +2227,40 @@ NewObjectMemory >> printReferencesTo: anOop [
 	<api>
 	oop := self firstAccessibleObject.
 	[oop = nil] whileFalse:
-		[((self isPointers: oop) or: [self isCompiledMethod: oop]) ifTrue:
+		[((self isPointersNonInt: oop) or: [self isCompiledMethod: oop]) ifTrue:
 			[(self isCompiledMethod: oop)
 				ifTrue:
 					[i := self literalCountOf: oop]
 				ifFalse:
-					[(coInterpreter isContext: oop)
+					[(self isContextNonInt: oop)
 						ifTrue: [i := CtxtTempFrameStart + (coInterpreter fetchStackPointerOf: oop)]
 						ifFalse: [i := self lengthOf: oop]].
 			[(i := i - 1) >= 0] whileTrue:
 				[anOop = (self fetchPointer: i ofObject: oop) ifTrue:
 					[self interpreter printHex: oop; print: ' @ '; printNum: i; space; printOopShort: oop; cr.
 					 i := 0]]].
+		 oop := self accessibleObjectAfter: oop]
+]
+
+{ #category : #'debug printing' }
+NewObjectMemory >> printWronglySizedContexts [
+	"Override.  We implement printWronglySizedContexts:"
+	<doNotGenerate>
+	super printWronglySizedContexts
+]
+
+{ #category : #'debug printing' }
+NewObjectMemory >> printWronglySizedContexts: printContexts [
+	"Scan the heap printing the oops of any and all contexts whose size is not either SmallContextSize or LargeContextSize"
+	| oop |
+	<api>
+	oop := self firstAccessibleObject.
+	[oop = nil] whileFalse:
+		[((self isContextNonInt: oop)
+		   and: [self badContextSize: oop]) ifTrue:
+			[self printHex: oop; space; printNum: (self byteLengthOf: oop); cr.
+			 printContexts ifTrue:
+				[coInterpreter printContext: oop]].
 		 oop := self accessibleObjectAfter: oop]
 ]
 
@@ -2223,7 +2399,7 @@ NewObjectMemory >> setEndOfMemory: newEndOfMemory [
 NewObjectMemory >> shorten: obj toIndexableSize: nSlots [
 	"Currently this works for pointer objects only, and is almost certainly wrong for 64 bits."
 	| deltaBytes desiredLength fixedFields fmt hdr totalLength |
-	(self isPointers: obj) ifFalse:
+	(self isPointersNonInt: obj) ifFalse:
 		[^obj].
 	hdr := self baseHeader: obj.
 	fmt := self formatOfHeader: hdr.

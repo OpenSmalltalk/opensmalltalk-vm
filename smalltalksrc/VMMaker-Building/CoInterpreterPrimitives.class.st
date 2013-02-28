@@ -380,7 +380,7 @@ CoInterpreterPrimitives >> primitiveResume [
 	 is higher than the current process, preempt the current process."
 	| proc inInterpreter |
 	proc := self stackTop.  "rcvr"
-	(self isContext: (objectMemory fetchPointer: SuspendedContextIndex ofObject: proc)) ifFalse:
+	(objectMemory isContext: (objectMemory fetchPointer: SuspendedContextIndex ofObject: proc)) ifFalse:
 		[^self primitiveFail].
 	"We're about to switch process, either to an interpreted frame or a
 	 machine code frame. To know whether to return or enter machine code
@@ -400,7 +400,7 @@ CoInterpreterPrimitives >> primitiveResume [
 	myList := objectMemory fetchPointer: MyListIndex ofObject: proc.
 	classLinkedList := self superclassOf: (objectMemory splObj: ClassSemaphore).
 	((self fetchClassOfNonInt: myList) ~= classLinkedList
-	and: [self isContext: (objectMemory fetchPointer: SuspendedContextIndex ofObject: proc)]) ifFalse:
+	and: [objectMemory isContext: (objectMemory fetchPointer: SuspendedContextIndex ofObject: proc)]) ifFalse:
 		[^self primitiveFail].
 	''We're about to switch process, either to an interpreted frame or a
 	 machine code frame. To know whether to return or enter machine code
@@ -526,7 +526,7 @@ CoInterpreterPrimitives >> primitiveTerminateTo [
 	<var: #thePage type: #'StackPage *'>
 
 	aContextOrNil := self stackTop.
-	(aContextOrNil = objectMemory nilObject or: [self isContext: aContextOrNil]) ifFalse:
+	(aContextOrNil = objectMemory nilObject or: [objectMemory isContext: aContextOrNil]) ifFalse:
 		[^self primitiveFail].
 	thisCtx := self stackValue: 1.
 	thisCtx = aContextOrNil ifTrue:
@@ -572,7 +572,7 @@ CoInterpreterPrimitives >> primitiveTerminateTo [
 						[self iframeSavedIP: contextsFP put: contextsIP.
 						 contextsIP := cogit ceReturnToInterpreterPC].
 					 stackPages longAt: newFP + FoxCallerSavedIP put: contextsIP.
-					 self assert: (self isContext: thisCtx).
+					 self assert: (objectMemory isContext: thisCtx).
 					 objectMemory storePointerUnchecked: SenderIndex
 						ofObject: thisCtx
 						withValue: (self withSmallIntegerTags: newFP).
@@ -598,7 +598,7 @@ CoInterpreterPrimitives >> primitiveTerminateTo [
 		["Need to walk the stack freeing stack pages and nilling contexts."
 		[currentCtx = aContextOrNil
 		 or: [currentCtx = objectMemory nilObject]] whileFalse:
-			[self assert: (self isContext: currentCtx).
+			[self assert: (objectMemory isContext: currentCtx).
 			 (self isMarriedOrWidowedContext: currentCtx)
 				ifTrue:
 					[theFP := self frameOfMarriedContext: currentCtx.
