@@ -416,7 +416,7 @@ CoInterpreter class >> interpreterMachineCodeTransitions [
 
 { #category : #translation }
 CoInterpreter class >> isNonArgumentImplicitReceiverVariableName: aString [
-	^#('self' 'stackPages' 'cogit' 'coInterpreter' 'cogMethodZone' 'objectMemory' 'interpreter') includes: aString
+	^#('self' 'stackPages' 'cogit' 'coInterpreter' 'cogMethodZone' 'objectMemory' 'interpreter' 'heapMap') includes: aString
 ]
 
 { #category : #testing }
@@ -850,7 +850,7 @@ CoInterpreter >> baseFrameReturn [
 	 tracing the dead frame.  Since freeing now temporarily violates the page-list
 	 ordering invariant, use the assert-free version."
 	stackPages freeStackPageNoAssert: stackPage.
-	retToContext := self isContext: contextToReturnTo.
+	retToContext := objectMemory isContext: contextToReturnTo.
 	(retToContext
 	 and: [self isStillMarriedContext: contextToReturnTo])
 		ifTrue:
@@ -1157,9 +1157,9 @@ CoInterpreter >> ceBaseFrameReturn: returnValue [
 	 be overwritten which will cause the isBaseFrame assert in frameCallerContext: to fail."
 	"self assert: (self frameCallerContext: stackPage baseFP) = (stackPages longAt: stackPage baseAddress)."
 	self assert: ((objectMemory addressCouldBeObj: (stackPages longAt: stackPage baseAddress - BytesPerWord))
-				and: [self isContext: (stackPages longAt: stackPage baseAddress - BytesPerWord)]).
+				and: [objectMemory isContext: (stackPages longAt: stackPage baseAddress - BytesPerWord)]).
 	self assert: ((objectMemory addressCouldBeObj: (stackPages longAt: stackPage baseAddress))
-				and: [self isContext: (stackPages longAt: stackPage baseAddress)]).
+				and: [objectMemory isContext: (stackPages longAt: stackPage baseAddress)]).
 	contextToReturnTo := stackPages longAt: stackPage baseAddress.
 
 	"The stack page is effectively free now, so free it.  We must free it to be
@@ -1169,7 +1169,7 @@ CoInterpreter >> ceBaseFrameReturn: returnValue [
 	 tracing the dead frame.  Since freeing now temporarily violates the page-list
 	 ordering invariant, use the assert-free version."
 	stackPages freeStackPageNoAssert: stackPage.
-	isAContext := self isContext: contextToReturnTo.
+	isAContext := objectMemory isContext: contextToReturnTo.
 	(isAContext
 	 and: [self isStillMarriedContext: contextToReturnTo])
 		ifTrue:
@@ -1539,7 +1539,7 @@ CoInterpreter >> ceNonLocalReturn: returnValue [
 					[frameToReturnTo := self frameCallerFP: theFP]]
 		ifFalse:
 			[contextToReturnTo := objectMemory fetchPointer: SenderIndex ofObject: home.
-			 ((self isContext: contextToReturnTo)
+			 ((objectMemory isContext: contextToReturnTo)
 			  and: [self isMarriedOrWidowedContext: contextToReturnTo]) ifTrue:
 				[self assert: (self checkIsStillMarriedContext: contextToReturnTo currentFP: framePointer).
 			 	 frameToReturnTo := self frameOfMarriedContext: contextToReturnTo.
@@ -1563,9 +1563,9 @@ CoInterpreter >> ceNonLocalReturn: returnValue [
 	newPage ~~ stackPage ifTrue:
 		[| currentCtx thePage nextCntx |
 		 currentCtx := self frameCallerContext: stackPage baseFP.
-		 self assert: (self isContext: currentCtx).
+		 self assert: (objectMemory isContext: currentCtx).
 		 stackPages freeStackPage: stackPage.
-		 [self assert: (self isContext: currentCtx).
+		 [self assert: (objectMemory isContext: currentCtx).
 		  (self isMarriedOrWidowedContext: currentCtx)
 		   and: [(stackPages stackPageFor: (theFP := self frameOfMarriedContext: currentCtx)) = newPage]] whileFalse:
 			[(self isMarriedOrWidowedContext: currentCtx)
@@ -1945,12 +1945,12 @@ CoInterpreter >> checkOkayFields: oop [
 	(objectMemory checkOkayOop: oop) ifFalse: [ ^false ].
 	(self checkOopHasOkayClass: oop) ifFalse: [ ^false ].
 	hasYoung := objectMemory isYoung: (objectMemory fetchClassOfNonInt: oop).
-	((objectMemory isPointers: oop) or: [objectMemory isCompiledMethod: oop]) ifFalse: [ ^true ].
+	((objectMemory isPointersNonInt: oop) or: [objectMemory isCompiledMethod: oop]) ifFalse: [ ^true ].
 	(objectMemory isCompiledMethod: oop)
 		ifTrue:
 			[i := (self literalCountOf: oop) - 1]
 		ifFalse:
-			[(self isContext: oop)
+			[(objectMemory isContext: oop)
 				ifTrue: [i := CtxtTempFrameStart + (self fetchStackPointerOf: oop) - 1]
 				ifFalse: [i := (objectMemory lengthOf: oop) - 1]].
 	[i >= 0] whileTrue:
@@ -2015,7 +2015,7 @@ CoInterpreter >> checkStackIntegrity [
 				   or: [(self heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
 					[self printFrameThing: 'object leak in frame ctxt' at: theFP + FoxThisContext; cr.
 					 ok := false].
-				 (oop = objectMemory nilObject or: [self isContext: oop]) ifFalse:
+				 (oop = objectMemory nilObject or: [objectMemory isContext: oop]) ifFalse:
 					[self printFrameThing: 'frame ctxt should be context' at: theFP + FoxThisContext; cr.
 					 ok := false]].
 			 (self isMachineCodeFrame: theFP)
@@ -2192,7 +2192,7 @@ CoInterpreter >> commonReturn [
 					[frameToReturnTo := self frameCallerFP: theFP]]
 		ifFalse:
 			[contextToReturnTo := objectMemory fetchPointer: SenderIndex ofObject: home.
-			 ((self isContext: contextToReturnTo)
+			 ((objectMemory isContext: contextToReturnTo)
 			  and: [self isMarriedOrWidowedContext: contextToReturnTo]) ifTrue:
 				[self assert: (self checkIsStillMarriedContext: contextToReturnTo currentFP: localFP).
 			 	 frameToReturnTo := self frameOfMarriedContext: contextToReturnTo.
@@ -2215,7 +2215,7 @@ CoInterpreter >> commonReturn [
 	newPage ~~ stackPage ifTrue:
 		[| currentCtx thePage nextCntx |
 		 currentCtx := self frameCallerContext: stackPage baseFP.
-		 self assert: (self isContext: currentCtx).
+		 self assert: (objectMemory isContext: currentCtx).
 		 stackPages freeStackPage: stackPage.
 		 [(self isMarriedOrWidowedContext: currentCtx)
 		   and: [(stackPages stackPageFor: (theFP := self frameOfMarriedContext: currentCtx)) = newPage]] whileFalse:
@@ -3007,7 +3007,7 @@ CoInterpreter >> externalInstVar: offset ofContext: aContext [
 	<var: #thePage type: #'StackPage *'>
 	<var: #theFPAbove type: #'char *'>
 
-	self assert: (self isContext: aContext).
+	self assert: (objectMemory isContext: aContext).
 	self externalWriteBackHeadFramePointers.
 	"method, closureOrNil & receiver need no special handling; only
 	 sender, pc & stackp have to be computed for married contexts."
@@ -3148,7 +3148,7 @@ CoInterpreter >> frameCallerContext: theFP [
 	thePage := stackPages stackPageFor: theFP.
 	callerContextOrNil := stackPages longAt: thePage baseAddress.
 	self assert: (objectMemory addressCouldBeObj: callerContextOrNil).
-	self assert: (callerContextOrNil = objectMemory nilObject or: [self isContext: callerContextOrNil]).
+	self assert: (callerContextOrNil = objectMemory nilObject or: [objectMemory isContext: callerContextOrNil]).
 	^callerContextOrNil
 ]
 
@@ -3622,7 +3622,7 @@ CoInterpreter >> instVar: offset ofContext: aContext [
 	<var: #theFPAbove type: #'char *'>
 	<inline: true>
 	self assert: offset < MethodIndex.
-	self assert: (self isContext: aContext).
+	self assert: (objectMemory isContext: aContext).
 	self writeBackHeadFramePointers.
 	(self isMarriedOrWidowedContext: aContext) ifFalse:
 		[value := objectMemory fetchPointer: offset ofObject: aContext.
@@ -4068,6 +4068,7 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	<var: #pointer type: #'char *'>
 	<var: #cogMethod type: #'CogMethod *'>
 	self assert: (self isSingleContext: aContext).
+	self assert: (objectMemory goodContextSize: aContext).
 	theIP := objectMemory fetchPointer: InstructionPointerIndex ofObject: aContext.
 	self assert: HasBeenReturnedFromMCPC signedIntFromLong < 0.
 	theIP := (objectMemory isIntegerObject: theIP)
@@ -4421,7 +4422,7 @@ CoInterpreter >> markAndTraceStackPage: thePage [
 			[objectMemory markAndTrace: oop].
 		 theSP := theSP + BytesPerWord].
 	(self frameHasContext: theFP) ifTrue:
-		[self assert: (self isContext: (self frameContext: theFP)).
+		[self assert: (objectMemory isContext: (self frameContext: theFP)).
 		 objectMemory markAndTrace: (self frameContext: theFP)].
 	(self isMachineCodeFrame: theFP)
 		ifTrue: [self markAndTraceMachineCodeMethod: (self mframeCogMethod: theFP)]
@@ -4793,7 +4794,7 @@ CoInterpreter >> moveFramesIn: oldPage through: theFP toPage: newPage [
 	self assert: self validStackPageBaseFrames.
 	callerFP := self frameCallerFP: theFP.
 	self assert: (self frameHasContext: callerFP).
-	self assert: (self isContext: (self frameContext: callerFP)).
+	self assert: (objectMemory isContext: (self frameContext: callerFP)).
 	theContext := self ensureFrameIsMarried: theFP
 					SP: theFP + ((self isMachineCodeFrame: theFP) ifTrue: [FoxMFReceiver] ifFalse: [FoxIFReceiver]).
 	stackPages
@@ -6341,7 +6342,7 @@ CoInterpreter >> updateStateOfSpouseContextForFrame: theFP WithSP: theSP [
 	<var: #argsPointer type: #'char *'>
 	self assert: (self frameHasContext: theFP).
 	theContext := self frameContext: theFP.
-	self assert: (self isContext: theContext).
+	self assert: (objectMemory isContext: theContext).
 	self assert: (self frameReceiver: theFP)
 				= (objectMemory fetchPointer: ReceiverIndex ofObject: theContext).
 	(self isMachineCodeFrame: theFP)
@@ -6429,9 +6430,9 @@ CoInterpreter >> validStackPageBaseFrames [
 				[^false].
 			 (self asserta: (objectMemory addressCouldBeObj: savedThisContext)) ifFalse:
 				[^false].
-			 (self asserta: (senderContextOrNil = objectMemory nilObject or: [self isContext: senderContextOrNil])) ifFalse:
+			 (self asserta: (senderContextOrNil = objectMemory nilObject or: [objectMemory isContext: senderContextOrNil])) ifFalse:
 				[^false].
-			 (self asserta: (self isContext: savedThisContext)) ifFalse:
+			 (self asserta: (objectMemory isContext: savedThisContext)) ifFalse:
 				[^false].
 			 (self asserta: (self frameCallerContext: aPage baseFP) = senderContextOrNil) ifFalse:
 				[^false].

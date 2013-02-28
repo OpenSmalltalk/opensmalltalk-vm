@@ -4141,12 +4141,6 @@ NewspeakInterpreter >> is: oop MemberOf: className [
 	^(self classNameOf: oopClass Is: className)
 ]
 
-{ #category : #'internal interpreter access' }
-NewspeakInterpreter >> isContext: oop [
-	<inline: true>
-	^(self isNonIntegerObject: oop) and: [self isContextHeader: (self baseHeader: oop)]
-]
-
 { #category : #'process primitive support' }
 NewspeakInterpreter >> isEmptyList: aLinkedList [
 

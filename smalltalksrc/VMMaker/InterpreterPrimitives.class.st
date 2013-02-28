@@ -917,7 +917,7 @@ InterpreterPrimitives >> primitiveClosureValue [
 	"Somewhat paranoiac checks we need while debugging that we may be able to discard
 	 in a robust system."
 	outerContext := objectMemory fetchPointer: ClosureOuterContextIndex ofObject: blockClosure.
-	(self isContext: outerContext) ifFalse:
+	(objectMemory isContext: outerContext) ifFalse:
 		[^self primitiveFail].
 	closureMethod := objectMemory fetchPointer: MethodIndex ofObject: outerContext.
 	"Check if the closure's method is actually a CompiledMethod."
@@ -943,7 +943,7 @@ InterpreterPrimitives >> primitiveClosureValueNoContextSwitch [
 	"Somewhat paranoiac checks we need while debugging that we may be able to discard
 	 in a robust system."
 	outerContext := objectMemory fetchPointer: ClosureOuterContextIndex ofObject: blockClosure.
-	(self isContext: outerContext) ifFalse:
+	(objectMemory isContext: outerContext) ifFalse:
 		[^self primitiveFail].
 	closureMethod := objectMemory fetchPointer: MethodIndex ofObject: outerContext.
 	"Check if the closure's method is actually a CompiledMethod."
@@ -975,7 +975,7 @@ InterpreterPrimitives >> primitiveClosureValueWithArgs [
 	"Somewhat paranoiac checks we need while debugging that we may be able to discard
 	 in a robust system."
 	outerContext := objectMemory fetchPointer: ClosureOuterContextIndex ofObject: blockClosure.
-	(self isContext: outerContext) ifFalse:
+	(objectMemory isContext: outerContext) ifFalse:
 		[^self primitiveFail].
 	closureMethod := objectMemory fetchPointer: MethodIndex ofObject: outerContext.
 	"Check if the closure's method is actually a CompiledMethod."
@@ -2708,7 +2708,7 @@ InterpreterPrimitives >> primitiveResume [
 	 is higher than the current process, preempt the current process."
 	| proc |
 	proc := self stackTop.  "rcvr"
-	(self isContext: (objectMemory fetchPointer: SuspendedContextIndex ofObject: proc)) ifFalse:
+	(objectMemory isContext: (objectMemory fetchPointer: SuspendedContextIndex ofObject: proc)) ifFalse:
 		[^self primitiveFail].
 	self resume: proc preemptedYieldingIf: preemptionYields
 
@@ -2721,7 +2721,7 @@ InterpreterPrimitives >> primitiveResume [
 	myList := objectMemory fetchPointer: MyListIndex ofObject: proc.
 	classLinkedList := self superclassOf: (objectMemory splObj: ClassSemaphore).
 	((self fetchClassOfNonInt: myList) ~= classLinkedList
-	and: [self isContext: (objectMemory fetchPointer: SuspendedContextIndex ofObject: proc)]) ifFalse:
+	and: [objectMemory isContext: (objectMemory fetchPointer: SuspendedContextIndex ofObject: proc)]) ifFalse:
 		[^self primitiveFail].
 	self resume: proc preemptedYieldingIf: preemptionYields"
 ]

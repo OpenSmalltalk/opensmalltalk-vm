@@ -32,22 +32,7 @@ NewCoObjectMemory >> ceStoreCheck: anOop [
 NewCoObjectMemory >> clearLeakMapAndMapAccessibleObjects [
 	"Perform an integrity/leak check using the heapMap.  Set a bit at each object's header.
 	 Override to set a bit at each Cog method"
-	| obj sz nextHeader |
-	<inline: false>
-	<var: #obj type: #usqInt>
-	<var: #sz type: #usqInt>
-	<var: #nextHeader type: #usqInt>
-	self clearHeapMap.
-	obj := self firstObject.
-	[obj < freeStart] whileTrue:
-		[(self isFreeObject: obj)
-			ifTrue:
-				[sz := self sizeOfFree: obj]
-			ifFalse:
-				[self heapMapAtWord: (self pointerForOop: obj) Put: 1.
-				 sz := self sizeBitsOf: obj].
-		nextHeader := obj + sz.
-		obj := self oopFromChunk: nextHeader].
+	super clearLeakMapAndMapAccessibleObjects.
 	cogit addCogMethodsToHeapMap
 ]
 

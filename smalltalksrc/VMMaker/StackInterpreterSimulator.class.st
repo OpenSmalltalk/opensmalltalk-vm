@@ -91,7 +91,7 @@ StackInterpreterSimulator >> assertValidExecutionPointers [
 StackInterpreterSimulator >> baseFrameReturn [
 	| contextToReturnTo |
 	contextToReturnTo := self frameCallerContext: localFP.
-	((self isContext: contextToReturnTo)
+	((objectMemory isContext: contextToReturnTo)
 	 and: [self isMarriedOrWidowedContext: contextToReturnTo]) ifTrue:
 		[(self checkIsStillMarriedContext: contextToReturnTo currentFP: nil) ifFalse:
 			[self halt]].
@@ -391,7 +391,7 @@ StackInterpreterSimulator >> externalInstVar: index ofContext: aMarriedContext p
 	| imMarried shesMarried result |
 	index == SenderIndex ifTrue:
 		[imMarried := self checkIsStillMarriedContext: aMarriedContext currentFP: localFP.
-		(self isContext: anOop) ifTrue:
+		(objectMemory isContext: anOop) ifTrue:
 			[shesMarried := self checkIsStillMarriedContext: anOop currentFP: localFP.
 			 "self shortPrintContext: aMarriedContext.
 			  self shortPrintContext: anOop"]].
@@ -596,7 +596,7 @@ StackInterpreterSimulator >> instVar: index ofContext: aMarriedContext put: anOo
 	| imMarried shesMarried result |
 	index == SenderIndex ifTrue:
 		[imMarried := self checkIsStillMarriedContext: aMarriedContext currentFP: localFP.
-		(self isContext: anOop) ifTrue:
+		(objectMemory isContext: anOop) ifTrue:
 			[shesMarried := self checkIsStillMarriedContext: anOop currentFP: localFP.
 			"self cr.
 			self shortPrintContext: aMarriedContext.
@@ -1102,7 +1102,7 @@ StackInterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize
 
 { #category : #'simulation only' }
 StackInterpreterSimulator >> methodForContext: aContextOop [
-	self assert: (self isContext: aContextOop).
+	self assert: (objectMemory isContext: aContextOop).
 	^objectMemory fetchPointer: MethodIndex ofObject: aContextOop
 ]
 

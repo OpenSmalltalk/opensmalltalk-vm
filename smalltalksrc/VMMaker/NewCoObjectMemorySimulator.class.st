@@ -95,6 +95,11 @@ NewCoObjectMemorySimulator >> cr [
 	^coInterpreter cr
 ]
 
+{ #category : #'memory access' }
+NewCoObjectMemorySimulator >> eek [
+	self halt
+]
+
 { #category : #'simulation only' }
 NewCoObjectMemorySimulator >> failed [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"

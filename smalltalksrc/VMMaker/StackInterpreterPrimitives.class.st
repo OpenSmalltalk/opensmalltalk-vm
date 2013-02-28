@@ -6,9 +6,10 @@ Class {
 
 { #category : #'primitive support' }
 StackInterpreterPrimitives >> cloneContext: aContext [ 
-	| cloned spouseFP sp |
+	| sz cloned spouseFP sp |
 	<var: #spouseFP type: #'char *'>
-	cloned := objectMemory eeInstantiateMethodContextByteSize: (objectMemory byteSizeOf: aContext).
+	sz := (objectMemory byteLengthOf: aContext) + BaseHeaderSize.
+	cloned := objectMemory eeInstantiateMethodContextByteSize: sz.
 	cloned ~= 0 ifTrue:
 		[0 to: StackPointerIndex do:
 			[:i|
@@ -550,7 +551,7 @@ StackInterpreterPrimitives >> primitiveFindNextUnwindContext [
 	<var: #theFP type: #'char *'>
 	stopContext := self stackTop.
 	calleeContext := self stackValue: 1.
-	(stopContext = objectMemory nilObject or: [self isContext: stopContext]) ifFalse:
+	(stopContext = objectMemory nilObject or: [objectMemory isContext: stopContext]) ifFalse:
 		[^self primitiveFail].
 	self externalWriteBackHeadFramePointers.
 	(self isStillMarriedContext: calleeContext)
@@ -569,7 +570,7 @@ StackInterpreterPrimitives >> primitiveFindNextUnwindContext [
 		ifFalse:
 			[| startContext |
 			 startContext := objectMemory fetchPointer: SenderIndex ofObject: calleeContext.
-			 (self isContext: startContext)
+			 (objectMemory isContext: startContext)
 				ifTrue:
 					[handlerOrNilOrZero := self findMethodWithPrimitive: 198
 												FromContext: startContext
@@ -944,7 +945,7 @@ StackInterpreterPrimitives >> primitiveTerminateTo [
 	<var: #thePage type: #'StackPage *'>
 
 	aContextOrNil := self stackTop.
-	(aContextOrNil = objectMemory nilObject or: [self isContext: aContextOrNil]) ifFalse:
+	(aContextOrNil = objectMemory nilObject or: [objectMemory isContext: aContextOrNil]) ifFalse:
 		[^self primitiveFail].
 	thisCtx := self stackValue: 1.
 	thisCtx = aContextOrNil ifTrue:
@@ -982,7 +983,7 @@ StackInterpreterPrimitives >> primitiveTerminateTo [
 							stackPages longAt: newSP put: (stackPages longAt: source)].
 					 stackPages longAt: newFP + FoxSavedFP put: contextsFP.
 					 stackPages longAt: newFP + FoxCallerSavedIP put: contextsIP.
-					 self assert: (self isContext: thisCtx).
+					 self assert: (objectMemory isContext: thisCtx).
 					 objectMemory storePointerUnchecked: SenderIndex
 						ofObject: thisCtx
 						withValue: (self withSmallIntegerTags: newFP).
@@ -1008,7 +1009,7 @@ StackInterpreterPrimitives >> primitiveTerminateTo [
 		["Need to walk the stack freeing stack pages and nilling contexts."
 		[currentCtx = aContextOrNil
 		 or: [currentCtx = objectMemory nilObject]] whileFalse:
-			[self assert: (self isContext: currentCtx).
+			[self assert: (objectMemory isContext: currentCtx).
 			 (self isMarriedOrWidowedContext: currentCtx)
 				ifTrue:
 					[theFP := self frameOfMarriedContext: currentCtx.

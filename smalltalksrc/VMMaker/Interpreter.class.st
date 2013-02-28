@@ -3775,12 +3775,6 @@ Interpreter >> is: oop MemberOf: className [
 	^(self classNameOf: oopClass Is: className)
 ]
 
-{ #category : #contexts }
-Interpreter >> isContext: oop [
-	<inline: true>
-	^(self isNonIntegerObject: oop) and: [self isContextHeader: (self baseHeader: oop)]
-]
-
 { #category : #'process primitive support' }
 Interpreter >> isEmptyList: aLinkedList [
 
