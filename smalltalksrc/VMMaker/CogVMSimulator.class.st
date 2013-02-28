@@ -1981,7 +1981,7 @@ CogVMSimulator >> methodCacheSize [
 
 { #category : #'simulation only' }
 CogVMSimulator >> methodForContext: aContextOop [
-	self assert: (self isContext: aContextOop).
+	self assert: (objectMemory isContext: aContextOop).
 	^objectMemory fetchPointer: MethodIndex ofObject: aContextOop
 ]
 

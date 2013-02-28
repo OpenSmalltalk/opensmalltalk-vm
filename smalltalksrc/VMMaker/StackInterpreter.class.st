@@ -1847,7 +1847,7 @@ StackInterpreter >> baseFrameReturn [
 	<var: #thePage type: #'StackPage *'>
 	<var: #frameAbove type: #'char *'>
 	contextToReturnTo := self frameCallerContext: localFP.
-	isAContext := self isContext: contextToReturnTo.
+	isAContext := objectMemory isContext: contextToReturnTo.
 	(isAContext
 	 and: [self isStillMarriedContext: contextToReturnTo])
 		ifTrue:
@@ -3076,7 +3076,7 @@ StackInterpreter >> checkIsStillMarriedContext: aContext currentFP: currentFP [
 			= (objectMemory fetchPointer: MethodIndex ofObject: aContext)
 	   and: [(self frameHasContext: theFP)
 	   and: [(self frameContext: theFP) = aContext
-	   and: [self isContext: aContext]]]]]]
+	   and: [objectMemory isContext: aContext]]]]]]
 ]
 
 { #category : #'object memory support' }
@@ -3096,12 +3096,12 @@ StackInterpreter >> checkOkayFields: oop [
 	(objectMemory checkOkayOop: oop) ifFalse: [ ^false ].
 	(self checkOopHasOkayClass: oop) ifFalse: [ ^false ].
 	hasYoung := objectMemory isYoung: (objectMemory fetchClassOfNonInt: oop).
-	((objectMemory isPointers: oop) or: [objectMemory isCompiledMethod: oop]) ifTrue:
+	((objectMemory isPointersNonInt: oop) or: [objectMemory isCompiledMethod: oop]) ifTrue:
 		[(objectMemory isCompiledMethod: oop)
 			ifTrue:
 				[i := (self literalCountOf: oop) - 1]
 			ifFalse:
-				[(self isContext: oop)
+				[(objectMemory isContext: oop)
 					ifTrue: [i := CtxtTempFrameStart + (self fetchStackPointerOf: oop) - 1]
 					ifFalse: [i := (objectMemory lengthOf: oop) - 1]].
 		[i >= 0] whileTrue:
@@ -3166,7 +3166,7 @@ StackInterpreter >> checkOkayStackPage: thePage [
 			[ok := ok & (self checkOkayFields: oop)].
 		 theSP := theSP + BytesPerWord].
 	(self frameHasContext: theFP) ifTrue:
-		[self assert: (self isContext: (self frameContext: theFP)).
+		[self assert: (objectMemory isContext: (self frameContext: theFP)).
 		 ok := ok & (self checkOkayFields: (self frameContext: theFP))].
 	ok := ok & (self checkOkayFields: (self frameMethodObject: theFP)).
 	(callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
@@ -3222,7 +3222,7 @@ StackInterpreter >> checkOopHasOkayClass: obj [
 		[self print: 'obj '; printHex: obj; print: ' a SmallInteger is not a valid class or behavior'; cr. ^false].
 	(objectMemory okayOop: objClass) ifFalse:
 		[self print: 'obj '; printHex: obj; print: ' class obj is not ok'; cr. ^false].
-	((objectMemory isPointers: objClass) and: [(objectMemory lengthOf: objClass) >= 3]) ifFalse:
+	((objectMemory isPointersNonInt: objClass) and: [(objectMemory lengthOf: objClass) >= 3]) ifFalse:
 		[self print: 'obj '; printHex: obj; print: ' a class (behavior) must be a pointers object of size >= 3'; cr. ^false].
 	formatMask := (objectMemory isBytes: obj)
 						ifTrue: [16rC00]  "ignore extra bytes size bits"
@@ -3289,7 +3289,7 @@ StackInterpreter >> checkStackIntegrity [
 				   or: [(self heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
 					[self printFrameThing: 'object leak in frame ctxt' at: theFP + FoxThisContext; cr.
 					 ok := false].
-				 (self isContext: oop) ifFalse:
+				 (objectMemory isContext: oop) ifFalse:
 					[self printFrameThing: 'frame ctxt should be context' at: theFP + FoxThisContext; cr.
 					 ok := false]].
 			 oop := self frameMethod: theFP.
@@ -3535,7 +3535,7 @@ StackInterpreter >> commonReturn [
 					[frameToReturnTo := self frameCallerFP: theFP]]
 		ifFalse:
 			[contextToReturnTo := objectMemory fetchPointer: SenderIndex ofObject: home.
-			 ((self isContext: contextToReturnTo)
+			 ((objectMemory isContext: contextToReturnTo)
 			  and: [self isMarriedOrWidowedContext: contextToReturnTo]) ifTrue:
 				[self assert: (self checkIsStillMarriedContext: contextToReturnTo currentFP: localFP).
 			 	 frameToReturnTo := self frameOfMarriedContext: contextToReturnTo.
@@ -3558,9 +3558,9 @@ StackInterpreter >> commonReturn [
 	newPage ~~ stackPage ifTrue:
 		[| currentCtx thePage nextCntx |
 		 currentCtx := self frameCallerContext: stackPage baseFP.
-		 self assert: (self isContext: currentCtx).
+		 self assert: (objectMemory isContext: currentCtx).
 		 stackPages freeStackPage: stackPage.
-		 [self assert: (self isContext: currentCtx).
+		 [self assert: (objectMemory isContext: currentCtx).
 		  (self isMarriedOrWidowedContext: currentCtx)
 		   and: [(stackPages stackPageFor: (theFP := self frameOfMarriedContext: currentCtx)) = newPage]] whileFalse:
 			[(self isMarriedOrWidowedContext: currentCtx)
@@ -4210,7 +4210,7 @@ StackInterpreter >> ensureFrameIsMarried: theFP SP: theSP [
 	<var: #theFP type: #'char *'>
 	<var: #theSP type: #'char *'>
 	(self frameHasContext: theFP) ifTrue:
-		[self assert: (self isContext: (self frameContext: theFP)).
+		[self assert: (objectMemory isContext: (self frameContext: theFP)).
 		^self frameContext: theFP].
 
 	^self marryFrame: theFP SP: theSP
@@ -4236,7 +4236,7 @@ StackInterpreter >> establishFrameForContextToReturnTo: contextToReturnTo [
 	| thePage |
 	<var: #thePage type: #'StackPage *'>
 	<returnTypeC: 'char *'>
-	(self isContext: contextToReturnTo) ifFalse:
+	(objectMemory isContext: contextToReturnTo) ifFalse:
 		[^0].
 	(self isMarriedOrWidowedContext: contextToReturnTo) ifTrue:
 		[(self isWidowedContext: contextToReturnTo) ifTrue:
@@ -4675,7 +4675,7 @@ StackInterpreter >> externalInstVar: offset ofContext: aContext [
 	<var: #thePage type: #'StackPage *'>
 	<var: #theFPAbove type: #'char *'>
 
-	self assert: (self isContext: aContext).
+	self assert: (objectMemory isContext: aContext).
 	"method, closureOrNil & receiver need no special handling; only
 	 sender, pc & stackp have to be computed for married contexts."
 	(offset < MethodIndex 
@@ -4712,7 +4712,7 @@ StackInterpreter >> externalInstVar: index ofContext: maybeMarriedContext put: a
 	| theFP thePage onCurrentPage |
 	<var: #theFP type: #'char *'>
 	<var: #thePage type: #'StackPage *'>
-	self assert: (self isContext: maybeMarriedContext).
+	self assert: (objectMemory isContext: maybeMarriedContext).
 	self externalWriteBackHeadFramePointers.
 	"Assign the field of a married context."
 	(self isStillMarriedContext: maybeMarriedContext) ifFalse:
@@ -4775,7 +4775,7 @@ StackInterpreter >> externalSetStackPageAndPointersForSuspendedContextOfProcess:
 	<var: #thePage type: #'StackPage *'>
 	
 	newContext := objectMemory fetchPointer: SuspendedContextIndex ofObject: aProcess.
-	self assert: (self isContext: newContext).
+	self assert: (objectMemory isContext: newContext).
 	(self isMarriedOrWidowedContext: newContext) ifTrue:
 		[self assert: (self checkIsStillMarriedContext: newContext currentFP: framePointer)].
 	objectMemory storePointerUnchecked: SuspendedContextIndex ofObject: aProcess withValue: objectMemory nilObject.
@@ -4994,7 +4994,7 @@ StackInterpreter >> findFrameAbove: theFP inPage: thePage [
 StackInterpreter >> findHomeForContext: aContext [
 	| closureOrNil |
 	<inline: false>
-	(self isContext: aContext) ifFalse:
+	(objectMemory isContext: aContext) ifFalse:
 		[^nil].
 	closureOrNil := objectMemory fetchPointer: ClosureIndex ofObject: aContext.
 	closureOrNil = objectMemory nilObject ifTrue:
@@ -5010,8 +5010,8 @@ StackInterpreter >> findMethodWithPrimitive: primitive FromContext: senderContex
 	 findMethodWithPrimitive:FromFP:SP:ThroughContext: instead of iterative.
 	 We're doing the simplest thing that could possibly work.  Niceties can wait."
 	| theContext theMethod |
-	self assert: (senderContext = objectMemory nilObject or: [self isContext: senderContext]).
-	self assert: (homeContext = objectMemory nilObject or: [self isContext: homeContext]).
+	self assert: (senderContext = objectMemory nilObject or: [objectMemory isContext: senderContext]).
+	self assert: (homeContext = objectMemory nilObject or: [objectMemory isContext: homeContext]).
 	theContext := senderContext.
 	[theContext = objectMemory nilObject ifTrue:
 		[^theContext].
@@ -5056,7 +5056,7 @@ StackInterpreter >> findMethodWithPrimitive: primitive FromFP: startFP UpToConte
 	 theFP := self frameCallerFP: theFP.
 	 theFP ~= 0] whileTrue.
 	senderContext := self frameCallerContext: theFPAbove.
-	(self isContext: senderContext) ifFalse:
+	(objectMemory isContext: senderContext) ifFalse:
 		[^objectMemory nilObject].
 	^self
 		findMethodWithPrimitive: primitive
@@ -5743,7 +5743,7 @@ StackInterpreter >> handleStackOverflow [
 			[self assert: (self validInstructionPointer: instructionPointer
 							inFrame: framePointer).
 			 self assert: ((self frameHasContext: framePointer) not
-						or: [self isContext: (self frameContext: framePointer)])]
+						or: [objectMemory isContext: (self frameContext: framePointer)])]
 ]
 
 { #category : #'message sending' }
@@ -6114,7 +6114,7 @@ StackInterpreter >> instVar: offset ofContext: aContext [
 	<var: #theFPAbove type: #'char *'>
 	<inline: true>
 	self assert: offset < MethodIndex.
-	self assert: (self isContext: aContext).
+	self assert: (objectMemory isContext: aContext).
 	(self isMarriedOrWidowedContext: aContext) ifFalse:
 		[^objectMemory fetchPointer: offset ofObject: aContext].
 
@@ -6525,12 +6525,6 @@ StackInterpreter >> isCog [
 	^false
 ]
 
-{ #category : #'internal interpreter access' }
-StackInterpreter >> isContext: oop [
-	<inline: true>
-	^(objectMemory isNonIntegerObject: oop) and: [objectMemory isContextHeader: (objectMemory baseHeader: oop)]
-]
-
 { #category : #'process primitive support' }
 StackInterpreter >> isEmptyList: aLinkedList [
 
@@ -6553,7 +6547,7 @@ StackInterpreter >> isIndexable: oop [
 { #category : #'frame access' }
 StackInterpreter >> isLiveContext: oop [
 	"Answer if the argument, which can be any object, is a live context."
-	(self isContext: oop) ifFalse:
+	(objectMemory isContext: oop) ifFalse:
 		[^false].
 	(self isSingleContext: oop) ifTrue:
 		[^objectMemory isIntegerObject: (objectMemory fetchPointer: InstructionPointerIndex ofObject: oop)].
@@ -6626,7 +6620,7 @@ StackInterpreter >> isWidowedContext: aOnceMarriedContext [
 	<var: #theFrame type: #'char *'>
 	<var: #thePage type: #'StackPage *'>
 	<var: #shouldBeFrameCallerField type: #'char *'>
-	self assert: ((self isContext: aOnceMarriedContext)
+	self assert: ((objectMemory isContext: aOnceMarriedContext)
 				  and: [self isMarriedOrWidowedContext: aOnceMarriedContext]).
 	theFrame := self frameOfMarriedContext: aOnceMarriedContext.
 	thePage := stackPages stackPageFor: theFrame.
@@ -6847,7 +6841,7 @@ StackInterpreter >> longPrintOop: oop [
 		print: ' ('; printHex: class; print: ')'.
 	fmt := objectMemory formatOf: oop.
 	fmt > 4 ifTrue:
-		[self print: ' nbytes '; printNum: (objectMemory byteSizeOf: oop)].
+		[self print: ' nbytes '; printNum: (objectMemory byteLengthOf: oop)].
 	objectMemory printHeaderTypeOf: oop.
 	self cr.
 	(fmt between: 5 and: 11) ifTrue:
@@ -7104,6 +7098,7 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	<var: #page type: #'StackPage *'>
 	<var: #pointer type: #'char *'>
 	self assert: (self isSingleContext: aContext).
+	self assert: (objectMemory goodContextSize: aContext).
 	page := self newStackPage.
 	pointer := page baseAddress.
 	theIP := objectMemory fetchPointer: InstructionPointerIndex ofObject: aContext.
@@ -7429,7 +7424,7 @@ StackInterpreter >> markAndTraceStackPage: thePage [
 			[objectMemory markAndTrace: oop].
 		 theSP := theSP + BytesPerWord].
 	(self frameHasContext: theFP) ifTrue:
-		[self assert: (self isContext: (self frameContext: theFP)).
+		[self assert: (objectMemory isContext: (self frameContext: theFP)).
 		 objectMemory markAndTrace: (self frameContext: theFP)].
 	objectMemory markAndTrace: (self iframeMethod: theFP).
 	(callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
@@ -7485,7 +7480,7 @@ StackInterpreter >> markAndTraceStackPages: fullGCFlag [
 	[thePage trace: 2.
 	 self markAndTraceStackPage: thePage.
 	 context := self frameCallerContext: thePage baseFP.
-	 ((self isContext: context)
+	 ((objectMemory isContext: context)
 	  and: [(self isMarriedOrWidowedContext: context)
 	  and: [self isStillMarriedContext: context]]) ifTrue:
 		[thePage := stackPages stackPageFor:  (self frameOfMarriedContext: context).
@@ -7504,7 +7499,7 @@ StackInterpreter >> markContextAsDead: oop [
 	 For married or widowed contexts this breaks any link to the spouse and makes the context single.
 	 For all contexts, marks the context as inactive/having been returned from."
 	<inline: true>
-	self assert: (self isContext: oop).
+	self assert: (objectMemory isContext: oop).
 	objectMemory
 		storePointerUnchecked: SenderIndex ofObject: oop withValue: objectMemory nilObject;
 		storePointerUnchecked: InstructionPointerIndex ofObject: oop withValue: objectMemory nilObject
@@ -7936,7 +7931,7 @@ StackInterpreter >> noMarkedContextsOnPage: thePage [
 	self assert: (stackPages isFree: thePage) not.
 	theFP := thePage  headFP.
 	[(self frameHasContext: theFP) ifTrue:
-		[self assert: (self isContext: (self frameContext: theFP)).
+		[self assert: (objectMemory isContext: (self frameContext: theFP)).
 		 (objectMemory isMarked: (self frameContext:  theFP)) ifTrue:
 			[^false]].
 	(theFP := self frameCallerFP: theFP) ~= 0] whileTrue.
@@ -7988,12 +7983,12 @@ StackInterpreter >> okayFields: oop [
 	(objectMemory isIntegerObject: oop) ifTrue: [ ^true ].
 	(objectMemory okayOop: oop) ifFalse: [ ^false ].
 	(self oopHasOkayClass: oop) ifFalse: [ ^false ].
-	((objectMemory isPointers: oop) or: [objectMemory isCompiledMethod: oop]) ifFalse: [ ^true ].
+	((objectMemory isPointersNonInt: oop) or: [objectMemory isCompiledMethod: oop]) ifFalse: [ ^true ].
 	(objectMemory isCompiledMethod: oop)
 		ifTrue:
 			[i := (self literalCountOf: oop) - 1]
 		ifFalse:
-			[(self isContext: oop)
+			[(objectMemory isContext: oop)
 				ifTrue: [i := CtxtTempFrameStart + (self fetchStackPointerOf: oop) - 1]
 				ifFalse: [i := (objectMemory lengthOf: oop) - 1]].
 	[i >= 0] whileTrue: [
@@ -8051,7 +8046,7 @@ StackInterpreter >> oopHasOkayClass: signedOop [
 		ifTrue: [ self error: 'a SmallInteger is not a valid class or behavior'. ^false ].
 	(objectMemory okayOop: oopClass)
 		ifFalse: [ self error: 'class oop is not ok'. ^false ].
-	((objectMemory isPointers: oopClass) and: [(objectMemory lengthOf: oopClass) >= 3])
+	((objectMemory isPointersNonInt: oopClass) and: [(objectMemory lengthOf: oopClass) >= 3])
 		ifFalse: [ self error: 'a class (behavior) must be a pointers object of size >= 3'. ^false ].
 	(objectMemory isBytes: oop)
 		ifTrue: [ formatMask := 16rC00 ]  "ignore extra bytes size bits"
@@ -8653,9 +8648,9 @@ StackInterpreter >> printCallStackOf: aContextOrProcess [
 	| context |
 	<inline: false>
 	<var: #theFP type: #'char *'>
-	((self isContext: aContextOrProcess) not
+	((objectMemory isContext: aContextOrProcess) not
 	and: [(objectMemory lengthOf: aContextOrProcess) > MyListIndex
-	and: [self isContext: (objectMemory
+	and: [objectMemory isContext: (objectMemory
 									fetchPointer: SuspendedContextIndex
 									ofObject: aContextOrProcess)]]) ifTrue:
 		[^self printCallStackOf: (objectMemory
@@ -9046,7 +9041,7 @@ StackInterpreter >> printOop: oop [
 		 ^nil].
 	fmt := objectMemory formatOf: oop.
 	fmt > 4 ifTrue:
-		[self print: ' nbytes '; printNum: (objectMemory byteSizeOf: oop)].
+		[self print: ' nbytes '; printNum: (objectMemory byteLengthOf: oop)].
 	self cr.
 	(fmt > 4 and: [fmt < 12]) ifTrue:
 		["This will answer false if splObj: ClassAlien is nilObject"
@@ -9061,7 +9056,7 @@ StackInterpreter >> printOop: oop [
 			 self printHex: (self startOfAlienData: oop) asUnsignedInteger; cr.
 			 ^nil].
 		 (objectMemory isWords: oop) ifTrue:
-			[lastIndex := 64 min: ((objectMemory byteSizeOf: oop) / BytesPerWord).
+			[lastIndex := 64 min: ((objectMemory byteLengthOf: oop) / BytesPerWord).
 			 lastIndex > 0 ifTrue:
 				[1 to: lastIndex do:
 					[:index|
@@ -10176,7 +10171,7 @@ StackInterpreter >> secondExtendedSendBytecode [
 
 { #category : #'debug printing' }
 StackInterpreter >> selectorOfContext: aContext [
-	(self isContext: aContext) ifFalse:
+	(objectMemory isContext: aContext) ifFalse:
 		[^nil].
 	^self
 		findSelectorOfMethod: (objectMemory fetchPointer: MethodIndex ofObject: aContext)
@@ -10504,7 +10499,7 @@ StackInterpreter >> shortPrintContext: aContext [
 	| theFP |
 	<inline: false>
 	<var: #theFP type: #'char *'>
-	(self isContext: aContext) ifFalse:
+	(objectMemory isContext: aContext) ifFalse:
 		[self printHex: aContext; print: ' is not a context'; cr.
 		^nil].
 	self printHex: aContext.
@@ -11677,7 +11672,7 @@ StackInterpreter >> validStackPageBaseFrames [
 			 senderContextOrNil := self frameCallerContext: aPage baseFP.
 			 (self asserta: (objectMemory addressCouldBeObj: senderContextOrNil)) ifFalse:
 				[^false].
-			 (self asserta: (senderContextOrNil = objectMemory nilObject or: [self isContext: senderContextOrNil])) ifFalse:
+			 (self asserta: (senderContextOrNil = objectMemory nilObject or: [objectMemory isContext: senderContextOrNil])) ifFalse:
 				[^false]]].
 	^true
 ]
