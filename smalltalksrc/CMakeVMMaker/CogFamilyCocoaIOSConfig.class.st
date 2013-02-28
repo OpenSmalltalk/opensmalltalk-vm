@@ -27,7 +27,6 @@ CogFamilyCocoaIOSConfig >> CFBundleVersion [
 CogFamilyCocoaIOSConfig >> commonCompilerFlags [
 	^super commonCompilerFlags, 
 		{
-	'-isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX', self sdkVersion, '.sdk'.
 	'-funroll-loops'.
 	'-fasm-blocks'. 
 	'-finline-functions'. 
