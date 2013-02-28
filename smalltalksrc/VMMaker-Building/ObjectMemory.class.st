@@ -452,7 +452,7 @@ ObjectMemory class >> initializeWithOptions: optionsDictionary [
 
 { #category : #translation }
 ObjectMemory class >> isNonArgumentImplicitReceiverVariableName: aString [
-	^#('self' 'interpreter' 'coInterpreter') includes: aString
+	^#('self' 'interpreter' 'coInterpreter' 'heapMap') includes: aString
 ]
 
 { #category : #translation }
@@ -766,6 +766,12 @@ ObjectMemory >> allocateMemoryOfSize: limit [
 					ifFalse: [Bitmap]) new: memoryLimit // 4
 ]
 
+{ #category : #contexts }
+ObjectMemory >> badContextSize: oop [
+	^(self byteLengthOf: oop) ~= (SmallContextSize-BaseHeaderSize)
+	   and: [(self byteLengthOf: oop) ~= (LargeContextSize-BaseHeaderSize)]
+]
+
 { #category : #'header access' }
 ObjectMemory >> baseHeader: oop [
 
@@ -1011,11 +1017,11 @@ ObjectMemory >> changeClassOf: rcvr to: argClass [
 	Note: argClassInstByteSize-4 because base header is included in class size."
 	argFormat < 2
 		ifTrue:
-			[(argClassInstByteSize - BaseHeaderSize) ~= (self byteSizeOf: rcvr) ifTrue:
+			[(argClassInstByteSize - BaseHeaderSize) ~= (self byteLengthOf: rcvr) ifTrue:
 				[^PrimErrBadReceiver]]
 		ifFalse:
 			[argFormat = 3 ifTrue: "For indexable plus fixed fields the receiver must be at least big enough."
-				[(argClassInstByteSize - BaseHeaderSize) > (self byteSizeOf: rcvr) ifTrue:
+				[(argClassInstByteSize - BaseHeaderSize) > (self byteLengthOf: rcvr) ifTrue:
 					[^PrimErrBadReceiver]]].
 
 	(self headerTypeOfHeader: rcvrHdr) = HeaderTypeShort
@@ -2062,6 +2068,12 @@ ObjectMemory >> gcStartUsecs [
 	^gcStartUsecs
 ]
 
+{ #category : #contexts }
+ObjectMemory >> goodContextSize: oop [
+	^(self byteLengthOf: oop) = (SmallContextSize-BaseHeaderSize)
+	   or: [(self byteLengthOf: oop) = (LargeContextSize-BaseHeaderSize)]
+]
+
 { #category : #accessing }
 ObjectMemory >> growHeadroom [
 	^growHeadroom
@@ -2723,6 +2735,12 @@ ObjectMemory >> isCompiledMethod: oop [
 ObjectMemory >> isCompiledMethodHeader: objHeader [
     "Answer whether the argument header has compiled method format"
     ^(self formatOfHeader: objHeader) >= 12
+]
+
+{ #category : #contexts }
+ObjectMemory >> isContext: oop [
+	<inline: true>
+	^(self isNonIntegerObject: oop) and: [self isContextHeader: (self baseHeader: oop)]
 ]
 
 { #category : #contexts }
@@ -3714,18 +3732,31 @@ ObjectMemory >> printReferencesTo: anOop [
 	<api>
 	oop := self firstAccessibleObject.
 	[oop = nil] whileFalse:
-		[((self isPointers: oop) or: [self isCompiledMethod: oop]) ifTrue:
+		[((self isPointersNonInt: oop) or: [self isCompiledMethod: oop]) ifTrue:
 			[(self isCompiledMethod: oop)
 				ifTrue:
 					[i := self literalCountOf: oop]
 				ifFalse:
-					[(self isContext: oop)
+					[(self isContextNonInt: oop)
 						ifTrue: [i := CtxtTempFrameStart + (self fetchStackPointerOf: oop)]
 						ifFalse: [i := self lengthOf: oop]].
 			[(i := i - 1) >= 0] whileTrue:
 				[anOop = (self fetchPointer: i ofObject: oop) ifTrue:
 					[self interpreter printHex: oop; print: ' @ '; printNum: i; space; printOopShort: oop; cr.
 					 i := 0]]].
+		 oop := self accessibleObjectAfter: oop]
+]
+
+{ #category : #'debug printing' }
+ObjectMemory >> printWronglySizedContexts [
+	"Scan the heap printing the oops of any and all contexts whose size is not either SmallContextSize or LargeContextSize"
+	| oop |
+	<api>
+	oop := self firstAccessibleObject.
+	[oop = nil] whileFalse:
+		[((self isContextNonInt: oop)
+		   and: [self badContextSize: oop]) ifTrue:
+			[self printHex: oop; space; printNum: (self byteLengthOf: oop); cr].
 		 oop := self accessibleObjectAfter: oop]
 ]
 
@@ -4076,7 +4107,7 @@ ObjectMemory >> setSizeOfFree: chunk to: byteSize [
 ObjectMemory >> shorten: obj toIndexableSize: nSlots [
 	"Currently this works for pointer objects only, and is almost certainly wrong for 64 bits."
 	| deltaBytes desiredLength fixedFields fmt hdr totalLength |
-	(self isPointers: obj) ifFalse:
+	(self isPointersNonInt: obj) ifFalse:
 		[^obj].
 	hdr := self baseHeader: obj.
 	fmt := self formatOfHeader: hdr.
