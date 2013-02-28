@@ -134,14 +134,14 @@ StackIPhoneConfig >> configureFT2Plugin: maker [
 	"extra rules for Freetype plugin.
 	a custom rule to build freetype library"
 	| lib devRoot sdkRoot |
-	
-	"maker isExternal 
-		ifFalse: [ self error: 'building internal FT2Plugin is not supported yet' ]."
 
 	devRoot := '/Applications/Xcode.app/Contents/Developer/Platforms/{target}.platform/Developer'
 		nameFormat: { 'target'->self targetDevice} asDictionary.
-	sdkRoot := '{devRoot}/SDKs/iPhoneOS{sdkVersion}.sdk' 
-		nameFormat: {'devRoot'->devRoot. 'sdkVersion'->self sdkVersion} asDictionary.
+	sdkRoot := '{devRoot}/SDKs/{target}{sdkVersion}.sdk' 
+		nameFormat: {
+			'devRoot'->devRoot. 
+			'target'->self targetDevice.
+			'sdkVersion'->self sdkVersion} asDictionary.
 
 	"add freetype library into loop"
 	lib := self addThirdpartyLibrary: 'freetype2'.
@@ -160,12 +160,9 @@ StackIPhoneConfig >> configureFT2Plugin: maker [
 			'sdkRoot'->sdkRoot. 
 			'devRoot'->devRoot} asDictionary ]).
 
-	"maker set: 'XCODE_ATTRIBUTE_CONFIGURATION_BUILD_DIR' toString: ''."
-
 	"link plugin with freetype lib"
 	maker addExternalLibrary: '${thirdpartyDir}/out/lib/', lib libraryFileName.
-	maker includeDirectories: lib includeDir.
-
+	maker includeDirectories: lib includeDir. 
 ]
 
 { #category : #'plugin extra rules' }
@@ -558,8 +555,15 @@ StackIPhoneConfig >> setGlobalOptions: maker [
 			nameFormat: {'target' -> self targetDevice } asDictionary).	
 	self architecture ifNotNil: [
 		maker set: 'CMAKE_OSX_ARCHITECTURES' to: self architecture ].
-	maker set: 'CMAKE_OSX_SYSROOT' to: '/'.
 	
+]
+
+{ #category : #utils }
+StackIPhoneConfig >> setGlobalOptionsAfterDetermineSystem: maker [
+	maker 
+		set: 'CMAKE_OSX_SYSROOT' 
+		to: ('/Applications/Xcode.app/Contents/Developer/Platforms/{target}.platform/Developer/SDKs/{target}{sdkVersion}.sdk'
+			nameFormat: { 'target'->self targetDevice. 'sdkVersion'->self sdkVersion } asDictionary)
 ]
 
 { #category : #settings }

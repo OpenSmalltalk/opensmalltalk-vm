@@ -8,3 +8,11 @@ Class {
 CMOSXFreetype2 class >> platformName [ 
 	^'iOS'
 ]
+
+{ #category : #testing }
+CMOSXFreetype2 class >> supports: aConfig [ 
+	"just for iPhone"
+
+	^ (super supports: aConfig) 
+		and: [ (aConfig isKindOf: StackIPhoneConfig) not ]
+]
