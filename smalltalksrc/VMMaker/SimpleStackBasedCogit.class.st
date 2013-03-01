@@ -966,9 +966,9 @@ SimpleStackBasedCogit >> doubleExtendedDoAnythingBytecode [
 	| opType |
 	opType := byte1 >> 5.
 	opType = 0 ifTrue:
-		[^self genSend: (coInterpreter literal: byte2 ofMethod: methodObj) numArgs: (byte1 bitAnd: 31)].
+		[^self genSend: (self getLiteral: byte2) numArgs: (byte1 bitAnd: 31)].
 	opType = 1 ifTrue:
-		[^self genSendSuper: (coInterpreter literal: byte2 ofMethod: methodObj) numArgs: (byte1 bitAnd: 31)].
+		[^self genSendSuper: (self getLiteral: byte2) numArgs: (byte1 bitAnd: 31)].
 	"We need a map entry for this bytecode for correct parsing.
 	 The sends will get an IsSend entry anyway.  The other cases need a
 	 fake one.  We could of course special case the scanning but that's silly."
@@ -1153,7 +1153,7 @@ SimpleStackBasedCogit >> genDoubleFailIfZeroArgRcvr: rcvrReg arg: argReg [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genDynamicSuperSendBytecode [
-	^self genSendDynamicSuper: (coInterpreter literal: byte2 ofMethod: methodObj) numArgs: byte1
+	^self genSendDynamicSuper: (self getLiteral: byte2) numArgs: byte1
 ]
 
 { #category : #'bytecode generators' }
@@ -1295,7 +1295,7 @@ SimpleStackBasedCogit >> genExtSendAbsentDynamicSuperBytecode [
 	extA := 0.
 	nArgs := (byte1 bitAnd: 7) + (extB << 3).
 	extB := 0.
-	^self genSendAbsentDynamicSuper: (coInterpreter literal: litIndex ofMethod: methodObj) numArgs: nArgs
+	^self genSendAbsentDynamicSuper: (self getLiteral: litIndex) numArgs: nArgs
 ]
 
 { #category : #'bytecode generators' }
@@ -1306,7 +1306,7 @@ SimpleStackBasedCogit >> genExtSendAbsentImplicitBytecode [
 	extA := 0.
 	nArgs := (byte1 bitAnd: 7) + (extB << 3).
 	extB := 0.
-	^self genSendAbsentImplicit: (coInterpreter literal: litIndex ofMethod: methodObj) numArgs: nArgs
+	^self genSendAbsentImplicit: (self getLiteral: litIndex) numArgs: nArgs
 ]
 
 { #category : #'bytecode generators' }
@@ -1317,7 +1317,7 @@ SimpleStackBasedCogit >> genExtSendBytecode [
 	extA := 0.
 	nArgs := (byte1 bitAnd: 7) + (extB << 3).
 	extB := 0.
-	^self genSend: (coInterpreter literal: litIndex ofMethod: methodObj) numArgs: nArgs
+	^self genSend: (self getLiteral: litIndex) numArgs: nArgs
 ]
 
 { #category : #'bytecode generators' }
@@ -1328,7 +1328,7 @@ SimpleStackBasedCogit >> genExtSendSuperBytecode [
 	extA := 0.
 	nArgs := (byte1 bitAnd: 7) + (extB << 3).
 	extB := 0.
-	^self genSendSuper: (coInterpreter literal: litIndex ofMethod: methodObj) numArgs: nArgs
+	^self genSendSuper: (self getLiteral: litIndex) numArgs: nArgs
 ]
 
 { #category : #'bytecode generators' }
@@ -1395,12 +1395,12 @@ SimpleStackBasedCogit >> genExtUnconditionalJump [
 SimpleStackBasedCogit >> genExtendedSendBytecode [
 	"Can use any of the first 32 literals for the selector and pass up to 7 arguments."
 
-	^self genSend: (coInterpreter literal: (byte1 bitAnd: 16r1F) ofMethod: methodObj) numArgs: byte1 >> 5
+	^self genSend: (self getLiteral: (byte1 bitAnd: 16r1F)) numArgs: byte1 >> 5
 ]
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtendedSuperBytecode [
-	^self genSendSuper: (coInterpreter literal: (byte1 bitAnd: 16r1F) ofMethod: methodObj) numArgs: byte1 >> 5
+	^self genSendSuper: (self getLiteral: (byte1 bitAnd: 16r1F)) numArgs: byte1 >> 5
 ]
 
 { #category : #'primitive generators' }
@@ -2306,7 +2306,7 @@ SimpleStackBasedCogit >> genPushExplicitOuterSendReceiver: level [
 SimpleStackBasedCogit >> genPushExplicitOuterSendReceiverBytecode [
 	"Uncached push explicit outer send receiver"
 	| levelOop |
-	levelOop := coInterpreter literal: byte1 ofMethod: methodObj.
+	levelOop := self getLiteral: byte1.
 	self assert: (objectMemory isIntegerObject: levelOop).
 	^self genPushExplicitOuterSendReceiver: (objectMemory integerValueOf: levelOop)
 ]
@@ -2314,7 +2314,7 @@ SimpleStackBasedCogit >> genPushExplicitOuterSendReceiverBytecode [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPushImplicitReceiverBytecode [
 	| result |
-	result := self genGetImplicitReceiverFor: (coInterpreter literal: byte1 ofMethod: methodObj).
+	result := self genGetImplicitReceiverFor: (self getLiteral: byte1).
 	result ~= 0 ifTrue:
 		[^result].
 	self PushR: ReceiverResultReg.
@@ -2336,7 +2336,7 @@ SimpleStackBasedCogit >> genPushLiteralConstantBytecode [
 SimpleStackBasedCogit >> genPushLiteralIndex: literalIndex [ "<SmallInteger>"
 	<inline: false>
 	| literal |
-	literal := coInterpreter literal: literalIndex ofMethod: methodObj.
+	literal := self getLiteral: literalIndex.
 	^self genPushLiteral: literal
 ]
 
@@ -2350,7 +2350,7 @@ SimpleStackBasedCogit >> genPushLiteralVariable16CasesBytecode [
 SimpleStackBasedCogit >> genPushLiteralVariable: literalIndex [
 	<inline: false>
 	| association |
-	association := coInterpreter literal: literalIndex ofMethod: methodObj.
+	association := self getLiteral: literalIndex.
 	"N.B. Do _not_ use ReceiverResultReg to avoid overwriting receiver in assignment in frameless methods."
 	self annotate: (self MoveCw: association R: ClassReg) objRef: association.
 	objectRepresentation
@@ -2564,7 +2564,7 @@ SimpleStackBasedCogit >> genReturnTrue [
 SimpleStackBasedCogit >> genSecondExtendedSendBytecode [
 	"Can use any of the first 64 literals for the selector and pass up to 3 arguments."
 
-	^self genSend: (coInterpreter literal: (byte1 bitAnd: 16r3F) ofMethod: methodObj) numArgs: byte1 >> 6
+	^self genSend: (self getLiteral: (byte1 bitAnd: 16r3F)) numArgs: byte1 >> 6
 ]
 
 { #category : #'bytecode generators' }
@@ -2609,7 +2609,7 @@ SimpleStackBasedCogit >> genSendAbsentDynamicSuper: selector numArgs: numArgs [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSendAbsentImplicit0ArgsBytecode [
 	"160-175	1010 i i i i		Send To Absent Implicit Receiver Literal Selector #iiii With 0 Arguments."
-	^self genSendAbsentImplicit: (coInterpreter literal: (byte0 bitAnd: 15) ofMethod: methodObj) numArgs: 0
+	^self genSendAbsentImplicit: (self getLiteral: (byte0 bitAnd: 15)) numArgs: 0
 ]
 
 { #category : #'bytecode generators' }
@@ -2654,17 +2654,17 @@ SimpleStackBasedCogit >> genSendDynamicSuper: selector numArgs: numArgs [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSendLiteralSelector0ArgsBytecode [
-	^self genSend: (coInterpreter literal: (byte0 bitAnd: 15) ofMethod: methodObj) numArgs: 0
+	^self genSend: (self getLiteral: (byte0 bitAnd: 15)) numArgs: 0
 ]
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSendLiteralSelector1ArgBytecode [
-	^self genSend: (coInterpreter literal: (byte0 bitAnd: 15) ofMethod: methodObj) numArgs: 1
+	^self genSend: (self getLiteral: (byte0 bitAnd: 15)) numArgs: 1
 ]
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSendLiteralSelector2ArgsBytecode [
-	^self genSend: (coInterpreter literal: (byte0 bitAnd: 15) ofMethod: methodObj) numArgs: 2
+	^self genSend: (self getLiteral: (byte0 bitAnd: 15)) numArgs: 2
 ]
 
 { #category : #'bytecode generators' }
@@ -2798,7 +2798,7 @@ SimpleStackBasedCogit >> genStorePop: popBoolean LiteralVariable: litVarIndex [
 	<inline: false>
 	| association |
 	self assert: needsFrame.
-	association := coInterpreter literal: litVarIndex ofMethod: methodObj.
+	association := self getLiteral: litVarIndex.
 	self annotate: (self MoveCw: association R: ReceiverResultReg) objRef: association.
 	popBoolean
 		ifTrue: [self PopR: ClassReg]

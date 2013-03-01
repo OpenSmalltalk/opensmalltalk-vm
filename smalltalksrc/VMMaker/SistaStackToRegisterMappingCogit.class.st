@@ -504,6 +504,8 @@ SistaStackToRegisterMappingCogit >> generateCogMethod: selector [
 	mapSize := self generateMapAt: 0 start: methodLabel address + cmNoCheckEntryOffset.
 	countersSize := counterIndex * CounterBytes.
 	totalSize := methodZone roundUpLength: headerSize + codeSize + mapSize + countersSize.
+	totalSize > MaxMethodSize ifTrue:
+		[^self cCoerceSimple: MethodTooBig to: #'CogMethod *'].
 	startAddress := methodZone allocate: totalSize.
 	startAddress = 0 ifTrue:
 		[^self cCoerceSimple: InsufficientCodeSpace to: #'CogMethod *'].
