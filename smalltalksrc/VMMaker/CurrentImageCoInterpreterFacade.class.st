@@ -375,6 +375,11 @@ CurrentImageCoInterpreterFacade >> literal: index ofMethod: anOop [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> literalCountOfHeader: methodHeader [
+	^(headerToMethodMap at: methodHeader) numLiterals
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> long32At: index put: value [
 	^memory longAt: index + 1 put: value bigEndian: false
 ]
