@@ -191,6 +191,7 @@ Class {
 		'expectedFPAlignment',
 		'codeModified',
 		'maxMethodBefore',
+		'maxLitIndex',
 		'ceMethodAbortTrampoline',
 		'cePICAbortTrampoline',
 		'ceCheckForInterruptTrampoline',
@@ -267,6 +268,7 @@ Class {
 		'MaxUnitDisplacement',
 		'MaxUnreportableError',
 		'MaxX2NDisplacement',
+		'MethodTooBig',
 		'NotFullyInitialized',
 		'NumObjRefsInRuntime',
 		'NumSendTrampolines',
@@ -749,9 +751,10 @@ Cogit class >> initializeErrorCodes [
 	self flag: 'these should be positive quantities and the check for error code should be a comparison against minCogMethodAddress/methodZoneBase'.
 	NotFullyInitialized := -1.
 	InsufficientCodeSpace := -2.
-	YoungSelectorInPIC := -3.
+	MethodTooBig := -4.
+	YoungSelectorInPIC := -5.
 	MaxUnreportableError := YoungSelectorInPIC.
-	EncounteredUnknownBytecode := -4.
+	EncounteredUnknownBytecode := -6.
 	MaxNegativeErrorCode := EncounteredUnknownBytecode
 ]
 
@@ -3510,6 +3513,7 @@ Cogit >> compileCogMethod: selector [
 	inBlock := false.
 	primInvokeLabel := nil.
 	postCompileHook := nil.
+	maxLitIndex := -1.
 	extra := ((primitiveIndex := coInterpreter primitiveIndexOf: methodObj) > 0
 			and: [(coInterpreter isQuickPrimitiveIndex: primitiveIndex) not])
 				ifTrue: [30]
@@ -4135,13 +4139,20 @@ Cogit >> fillInMethodHeader: method size: size selector: selector [
 		[methodZone addToYoungReferrers: method].
 	method cmUsageCount: self initialMethodUsageCount.
 	method cpicHasMNUCase: false.
+	method cmUsesPenultimateLit: maxLitIndex >= ((coInterpreter literalCountOfHeader: methodHeader) - 2).
 	method blockEntryOffset: (blockEntryLabel notNil
 								ifTrue: [blockEntryLabel address - method asInteger]
 								ifFalse: [0]).
+	"This can be an error check since a large stackCheckOffset is caused by compiling
+	 a machine-code primitive, and hence depends on the Cogit, not the input method."
+	needsFrame ifTrue:
+		[stackCheckLabel address - method asInteger <= MaxStackCheckOffset ifFalse:
+			[self error: 'too much code for stack check offset']].
 	method stackCheckOffset: (needsFrame
 								ifTrue: [stackCheckLabel address - method asInteger]
 								ifFalse: [0]).
-	self assert: (backEnd callTargetFromReturnAddress: method asInteger + missOffset) = (self methodAbortTrampolineFor: method cmNumArgs).
+	self assert: (backEnd callTargetFromReturnAddress: method asInteger + missOffset)
+				= (self methodAbortTrampolineFor: method cmNumArgs).
 	self assert: size = (methodZone roundUpLength: size).
 	^method
 ]
@@ -4929,6 +4940,8 @@ Cogit >> generateCogMethod: selector [
 	codeSize := self generateInstructionsAt: methodLabel address + headerSize.
 	mapSize := self generateMapAt: 0 start: methodLabel address + cmNoCheckEntryOffset.
 	totalSize := methodZone roundUpLength: headerSize + codeSize + mapSize.
+	totalSize > MaxMethodSize ifTrue:
+		[^self cCoerceSimple: MethodTooBig to: #'CogMethod *'].
 	startAddress := methodZone allocate: totalSize.
 	startAddress = 0 ifTrue:
 		[^self cCoerceSimple: InsufficientCodeSpace to: #'CogMethod *'].
@@ -5359,6 +5372,13 @@ Cogit >> getCStackPointer [
 	<cmacro: '() CStackPointer'>
 	"and in the simulator we use..."
 	^objectMemory longAt: coInterpreter inMemoryCStackPointerAddress
+]
+
+{ #category : #'compile abstract instructions' }
+Cogit >> getLiteral: litIndex [
+	maxLitIndex < litIndex ifTrue:
+		[maxLitIndex := litIndex].
+	^coInterpreter literal: litIndex ofMethod: methodObj
 ]
 
 { #category : #'translation support' }
@@ -6111,7 +6131,8 @@ Cogit >> mapObjectReferencesInMachineCodeForBecome [
 							 (objectMemory
 									withoutForwardingOn: cogMethod methodObject
 									and: remappedMethod
-									sendToCogit: #method:hasSameCodeAs:) ifFalse:
+									with: cogMethod cmUsesPenultimateLit
+									sendToCogit: #method:hasSameCodeAs:checkPenultimate:) ifFalse:
 								[self error: 'attempt to become cogged method into different method'].
 							 coInterpreter
 								rawHeaderOf: cogMethod methodObject
@@ -6639,6 +6660,36 @@ Cogit >> method: methodA hasSameCodeAs: methodB [
 		[:li|
 		(objectMemory fetchPointer: li ofObject: methodA) ~= (objectMemory fetchPointer: li ofObject: methodB) ifTrue:
 			[^false]].
+	(coInterpreter startPCOfMethod: methodA) to: endPCA do:
+		[:bi|
+		(objectMemory fetchByte: bi ofObject: methodA) ~= (objectMemory fetchByte: bi ofObject: methodB) ifTrue:
+			[^false]].
+	^true
+]
+
+{ #category : #'garbage collection' }
+Cogit >> method: methodA hasSameCodeAs: methodB checkPenultimate: comparePenultimateLiteral [
+	"For the purposes of become: see if the two methods are similar, i.e. can be safely becommed.
+	 This is pretty strict.  All literals and bytecodes must be identical.  Only trailer bytes and header
+	  flags can differ."
+	<inline: false>
+	| headerA headerB numLitsA endPCA |
+	headerA := coInterpreter headerOf: methodA.
+	headerB := coInterpreter headerOf: methodB.
+	numLitsA := coInterpreter literalCountOfHeader: headerA.
+	endPCA := self endPCOf: methodA.
+	((coInterpreter argumentCountOfMethodHeader: headerA) ~= (coInterpreter argumentCountOfMethodHeader: headerB)
+	 or: [(coInterpreter temporaryCountOfMethodHeader: headerA) ~= (coInterpreter temporaryCountOfMethodHeader: headerB)
+	 or: [(coInterpreter primitiveIndexOfMethod: methodA header: headerA) ~= (coInterpreter primitiveIndexOfMethod: methodB header: headerB)
+	 or: [numLitsA ~= (coInterpreter literalCountOfHeader: headerB)
+	 or: [endPCA > (objectMemory byteLengthOf: methodB)]]]]) ifTrue:
+		[^false].
+	 1 to: numLitsA - 1 do:
+		[:li|
+		(objectMemory fetchPointer: li ofObject: methodA) ~= (objectMemory fetchPointer: li ofObject: methodB) ifTrue:
+			[(li < (numLitsA - 1) "If the method doesn't use the penultimate literal then don't fail the comparison."
+			  or: [comparePenultimateLiteral]) ifTrue:
+				[^false]]].
 	(coInterpreter startPCOfMethod: methodA) to: endPCA do:
 		[:bi|
 		(objectMemory fetchByte: bi ofObject: methodA) ~= (objectMemory fetchByte: bi ofObject: methodB) ifTrue:

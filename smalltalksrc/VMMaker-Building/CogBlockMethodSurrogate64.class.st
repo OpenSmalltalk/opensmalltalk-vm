@@ -81,6 +81,19 @@ CogBlockMethodSurrogate64 >> cmUsageCount: aValue [
 ]
 
 { #category : #accessing }
+CogBlockMethodSurrogate64 >> cmUsesPenultimateLit [
+	^((memory unsignedByteAt: address + 11) bitAnd: 16r1) ~= 0
+]
+
+{ #category : #accessing }
+CogBlockMethodSurrogate64 >> cmUsesPenultimateLit: aValue [
+	memory
+		unsignedByteAt: address + 11
+		put: (((memory unsignedByteAt: address + 11) bitAnd: 16rFE) + (aValue ifTrue: [1] ifFalse: [0])).
+	^aValue
+]
+
+{ #category : #accessing }
 CogBlockMethodSurrogate64 >> cpicHasMNUCase [
 	^(((memory unsignedByteAt: address + 10) bitShift: -4) bitAnd: 16r1) ~= 0
 ]
@@ -119,14 +132,16 @@ CogBlockMethodSurrogate64 >> padToWord: aValue [
 
 { #category : #accessing }
 CogBlockMethodSurrogate64 >> stackCheckOffset [
-	^memory unsignedShortAt: address + 11
+	^((memory unsignedShortAt: address + 11) bitShift: -4) bitAnd: 16rFFF
 ]
 
 { #category : #accessing }
 CogBlockMethodSurrogate64 >> stackCheckOffset: aValue [
-	^memory
+	self assert: (aValue between: 0 and: 16rFFF).
+	memory
 		unsignedShortAt: address + 11
-		put: aValue
+		put: ((memory unsignedShortAt: address + 11) bitAnd: 16rF) + (aValue bitShift: 4).
+	^aValue
 ]
 
 { #category : #accessing }

@@ -28,6 +28,8 @@ Class {
 		'cmRefersToYoung',
 		'cpicHasMNUCase',
 		'cmUsageCount',
+		'cmUsesPenultimateLit',
+		'cmUnusedFlags',
 		'stackCheckOffset'
 	],
 	#pools : [
@@ -58,7 +60,10 @@ CogBlockMethod class >> initialize [
 		[:cbms64|
 		self checkGenerateSurrogate: cbms64 bytesPerWord: 8].
 
-	CMMaxUsageCount := 7 "see instVarNamesAndTypesForTranslationDo:"
+	"see instVarNamesAndTypesForTranslationDo:"
+	CMMaxUsageCount		:= (2 raisedTo: 3) - 1.
+	MaxStackCheckOffset	:= (2 raisedTo: 12) - 1.
+	MaxMethodSize		:= (2 raisedTo: 16) - 1
 
 	"{ CogBlockMethodSurrogate32 selectors reject: [:s| CogBlockMethod includesSelector: s].
 	    CogBlockMethodSurrogate64 selectors reject: [:s| CogBlockMethod includesSelector: s].
@@ -80,17 +85,19 @@ CogBlockMethod class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 				[aBinaryBlock
 					value: ivn
 					value: (ivn caseOf: {
-								['cmNumArgs']			-> [#(unsigned ' : 8')]. "SqueakV3 needs only 5 bits"
-								['cmType']				-> [#(unsigned ' : 3')].
-								['cmRefersToYoung']	-> [#(unsigned #Boolean ' : 1')].
-								['cpicHasMNUCase']	-> [#(unsigned #Boolean ' : 1')].
-								['cmUsageCount']		-> [#(unsigned ' : 3')]. "see CMMaxUsageCount in initialize"
-								['stackCheckOffset']	-> [#(unsigned ' : 16')]. "a.k.a. cPICNumCases"
-								['blockSize']			-> [#'unsigned short'].
-								['blockEntryOffset']		-> [#'unsigned short'].
-								['homeOffset']			-> [#'unsigned short'].
-								['startpc']				-> [#'unsigned short'].
-								['padToWord']			-> [#(#BytesPerWord 8 'unsigned int')]}
+								['cmNumArgs']				-> [#(unsigned ' : 8')]. "SqueakV3 needs only 5 bits"
+								['cmType']					-> [#(unsigned ' : 3')].
+								['cmRefersToYoung']		-> [#(unsigned #Boolean ' : 1')].
+								['cpicHasMNUCase']		-> [#(unsigned #Boolean ' : 1')].
+								['cmUsageCount']			-> [#(unsigned ' : 3')]. "see CMMaxUsageCount in initialize"
+								['cmUsesPenultimateLit']	-> [#(unsigned #Boolean ' : 1')].
+								['cmUnusedFlags']			-> [#(unsigned ' : 3')].
+								['stackCheckOffset']		-> [#(unsigned ' : 12')]. "See MaxStackCheckOffset in initialize. a.k.a. cPICNumCases"
+								['blockSize']				-> [#'unsigned short']. "See MaxMethodSize in initialize"
+								['blockEntryOffset']			-> [#'unsigned short'].
+								['homeOffset']				-> [#'unsigned short'].
+								['startpc']					-> [#'unsigned short'].
+								['padToWord']				-> [#(#BytesPerWord 8 'unsigned int')]}
 							otherwise:
 								[#sqInt])]]
 ]
@@ -181,6 +188,20 @@ CogBlockMethod >> cmUsageCount: anInteger [
 	"Set the value of cmUsageCount"
 
 	^cmUsageCount := anInteger
+]
+
+{ #category : #accessing }
+CogBlockMethod >> cmUsesPenultimateLit [
+	"Answer the value of cmUsesPenultimateLit"
+
+	^cmUsesPenultimateLit
+]
+
+{ #category : #accessing }
+CogBlockMethod >> cmUsesPenultimateLit: anObject [
+	"Set the value of cmUsesPenultimateLit"
+
+	^cmUsesPenultimateLit := anObject
 ]
 
 { #category : #accessing }

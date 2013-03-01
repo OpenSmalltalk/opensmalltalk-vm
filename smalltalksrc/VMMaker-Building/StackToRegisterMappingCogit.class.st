@@ -1242,9 +1242,9 @@ StackToRegisterMappingCogit >> doubleExtendedDoAnythingBytecode [
 	| opType |
 	opType := byte1 >> 5.
 	opType = 0 ifTrue:
-		[^self genSend: (coInterpreter literal: byte2 ofMethod: methodObj) numArgs: (byte1 bitAnd: 31)].
+		[^self genSend: (self getLiteral: byte2) numArgs: (byte1 bitAnd: 31)].
 	opType = 1 ifTrue:
-		[^self genSendSuper: (coInterpreter literal: byte2 ofMethod: methodObj) numArgs: (byte1 bitAnd: 31)].
+		[^self genSendSuper: (self getLiteral: byte2) numArgs: (byte1 bitAnd: 31)].
 	"We need a map entry for this bytecode for correct parsing.
 	 The sends will get an IsSend entry anyway.  The other cases need a
 	 fake one.  We could of course special case the scanning but that's silly."
@@ -2210,7 +2210,7 @@ StackToRegisterMappingCogit >> genPushExplicitOuterSendReceiver: level [
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genPushImplicitReceiverBytecode [
 	| result |
-	result := self genGetImplicitReceiverFor: (coInterpreter literal: byte1 ofMethod: methodObj).
+	result := self genGetImplicitReceiverFor: (self getLiteral: byte1).
 	result ~= 0 ifTrue:
 		[^result].
 	^self ssPushRegister: ReceiverResultReg
@@ -2226,7 +2226,7 @@ StackToRegisterMappingCogit >> genPushLiteralVariable: literalIndex [
 	<inline: false>
 	| association freeReg |
 	freeReg := self ssAllocatePreferredReg: ClassReg.
-	association := coInterpreter literal: literalIndex ofMethod: methodObj.
+	association := self getLiteral: literalIndex.
 	"N.B. Do _not_ use ReceiverResultReg to avoid overwriting receiver in assignment in frameless methods."
 	"So far descriptors are not rich enough to describe the entire dereference so generate the register
 	 load but don't push the result.  There is an order-or-evaluation issue if we defer the dereference."
@@ -2817,7 +2817,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean LiteralVariable: litVarIn
 	optStatus isReceiverResultRegLive: false.
 	"N.B.  No need to check the stack for references because we generate code for
 	 literal variable loads that stores the result in a register, deferring only the register push."
-	association := coInterpreter literal: litVarIndex ofMethod: methodObj.
+	association := self getLiteral: litVarIndex.
 	constVal := self ssTop maybeConstant.
 	"Avoid store check for immediate values"
 	(self ssTop type = SSConstant
