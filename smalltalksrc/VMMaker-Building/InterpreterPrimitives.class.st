@@ -2215,7 +2215,7 @@ InterpreterPrimitives >> primitiveMillisecondClockMask [
 	of durations based on the millisecond clock value."
 
 	<export: true>
-	self pop: 1 thenPush: (self integerObjectOf: MillisecondClockMask)
+	self pop: 1 thenPush: (objectMemory integerObjectOf: MillisecondClockMask)
 
 ]
 
