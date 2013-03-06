@@ -41,7 +41,7 @@ sqInt  fetchPointerofObject(sqInt index, sqInt oop);
  * equivalent but 64 bit valid function is added as           *
  * 'fetchLong32OfObject'                                      */
 sqInt  obsoleteDontUseThisFetchWordofObject(sqInt index, sqInt oop);
-sqInt  fetchLong32ofObject(sqInt index, sqInt oop); 
+sqInt  fetchLong32ofObject(sqInt index, sqInt oop);
 void  *firstFixedField(sqInt oop);
 void  *firstIndexableField(sqInt oop);
 sqInt  literalofMethod(sqInt offset, sqInt methodPointer);
@@ -153,7 +153,7 @@ usqLong ioUTCMicroseconds(void);
 sqInt forceInterruptCheck(void);
 sqInt getThisSessionID(void);
 sqInt ioFilenamefromStringofLengthresolveAliases(char* aCharBuffer, char* filenameIndex, sqInt filenameLength, sqInt resolveFlag);
-sqInt vmEndianness(void);	
+sqInt vmEndianness(void);
 sqInt getInterruptPending(void);
 
 /* InterpreterProxy methodsFor: 'BitBlt support' */
@@ -326,7 +326,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->falseObject = falseObject;
 	VM->nilObject = nilObject;
 	VM->trueObject = trueObject;
-	
+
 	/* InterpreterProxy methodsFor: 'special classes' */
 	VM->classArray = classArray;
 	VM->classBitmap = classBitmap;
@@ -511,6 +511,11 @@ fopen_for_append(char *filename)
 # define fopen_for_append(filename) fopen(filename,"a+")
 #endif
 
+#if defined (ACORN)
+#define fileno(thing) 0
+// just to make it compile - it wont actually work
+#endif
+
 void
 pushOutputFile(char *filenameOrStdioIndex)
 {
@@ -541,7 +546,7 @@ pushOutputFile(char *filenameOrStdioIndex)
 }
 
 void
-popOutputFile()
+popOutputFile(void)
 {
 	if (stdoutStackIdx < 0) {
 		fprintf(stderr,"output file stack is empty.\n");
@@ -560,3 +565,4 @@ popOutputFile()
 	}
 	*stdout = stdoutStack[stdoutStackIdx--];
 }
+
