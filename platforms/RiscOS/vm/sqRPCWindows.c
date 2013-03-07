@@ -1177,7 +1177,7 @@ int ioCloseAllWindows(void) {
  * BitBlt has messed with part of the Display/Window - inform the WIMP so
  * that it gets redrawn when we do HandleEvents and get a
  * wimp_REDRAW_WINDOW_REQUEST */
-int ioShowDisplayOnWindow( unsigned * dispBitsIndex, int width, int height, int depth, int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex) {
+int ioShowDisplayOnWindow( unsigned char * dispBitsIndex, int width, int height, int depth, int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex) {
 os_error *e;
 windowDescriptorBlock * thisWindow;
 	/* quickly check bounds */
@@ -1453,7 +1453,7 @@ sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt
 
 /* Backwards compat stub */
 sqInt ioShowDisplay( sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth, sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB) {
-	return ioShowDisplayOnWindow( (unsigned *)dispBitsIndex, width, height, depth, affectedL, affectedR, affectedT, affectedB, 1);
+	return ioShowDisplayOnWindow( (unsigned char *)dispBitsIndex, width, height, depth, affectedL, affectedR, affectedT, affectedB, 1);
 }
 
 

@@ -8,7 +8,7 @@
 .c.o:;	cc $(ccflags) -o $@ $*.c
 
 # Toolflags:
-CCflags = -c -fa -Wabp -depend !Depend -IC:,OSLib:,C:^.rink,$(PVM),$(CVM),$(SVM) -throwback  -DACORN -D__LITTLE_ENDIAN -Otime
+CCflags = -c -fa -Wabpdnv -ec -depend !Depend -IC:,OSLib:,C:^.rink,$(PVM),$(CVM),$(SVM) -throwback  -DACORN -D__LITTLE_ENDIAN -Otime
 # extra ccflags for debugging go here because rink doesnt deal with debug
 # segment. remember to use ccvmflags with all core vm files
 #CCVMflags = $(ccflags) -g
