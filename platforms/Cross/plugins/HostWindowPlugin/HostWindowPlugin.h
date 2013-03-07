@@ -18,7 +18,7 @@ char * list, sqInt attributeListLength);
 
 /* ioShowDisplayOnWindow: similar to ioShowDisplay but adds the sqInt windowIndex
  * Return true if ok, false if not, but not currently checked */
-extern sqInt ioShowDisplayOnWindow( unsigned /* TPR char */ * dispBitsIndex, sqInt width, sqInt
+extern sqInt ioShowDisplayOnWindow( unsigned char * dispBitsIndex, sqInt width, sqInt
 height, sqInt depth, sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB,
 sqInt windowIndex);
 
