@@ -235,14 +235,11 @@ InterpreterStackPages >> initializeWithByteSize: byteSize "<Integer>" for: anInt
 
 { #category : #'page access' }
 InterpreterStackPages >> isFree: thePage [
-	"This is a sad workaround.  Ideally this is an accessor on InterpreterStackPages.
-	 But it isn't easy to extend Slang to deal with this.  There's no easy place to put
-	 the type information and Slang doesn't ever do substitution on self.  It merely
-	 elides self."
-	<inline: true>
-	<var: #thePage type: 'StackPage *'>
+	"This is an anachronism.  Previously Slang couldn't generate the method correctly
+	 from e.g. InterpreterStackPage>>isFree since Slang didn't do substitution on self.
+	 Now it does, but there are still callers of isFree: so we keep this for simulation."
+	<doNotGenerate>
 	^thePage baseFP = 0
-	
 ]
 
 { #category : #'memory access' }
