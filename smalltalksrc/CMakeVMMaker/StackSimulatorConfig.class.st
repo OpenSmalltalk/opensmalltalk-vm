@@ -14,6 +14,11 @@ StackSimulatorConfig >> executableName [
 	^'iStackVMSimulator'
 ]
 
+{ #category : #accessing }
+StackSimulatorConfig >> sdkTarget [ 
+	^'iphonesimulator', self sdkVersion
+]
+
 { #category : #'source files' }
 StackSimulatorConfig >> standardIncludes [ 
 	^super standardIncludes, {'/Applications/Xcode.app/Contents/Developer/Platforms/{target}.platform/Developer/SDKs/{target}{sdkVersion}.sdk/usr/include/'
