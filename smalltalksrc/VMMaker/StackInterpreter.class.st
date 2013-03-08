@@ -1175,7 +1175,7 @@ StackInterpreter class >> isInterpreterClass [
 
 { #category : #translation }
 StackInterpreter class >> isNonArgumentImplicitReceiverVariableName: aString [
-	^#('self' 'stackPages' 'interpreter' 'objectMemory' 'coInterpreter') includes: aString
+	^#('self' 'stackPages' 'interpreter' 'objectMemory' 'coInterpreter' 'heapMap') includes: aString
 ]
 
 { #category : #benchmarks }
