@@ -1805,7 +1805,7 @@ StackInterpreter >> assertValidExecutionPointe: lip r: lifp s: lisp [
 
 { #category : #'debug support' }
 StackInterpreter >> assertValidExecutionPointe: lip r: lfp s: lsp imbar: inInterpreter [
-	<var: #lip type: #'char *'>
+	<var: #lip type: #usqInt>
 	<var: #lfp type: #'char *'>
 	<var: #lsp type: #'char *'>
 	self assert: inInterpreter.
@@ -4770,23 +4770,34 @@ StackInterpreter >> externalSetStackPageAndPointersForSuspendedContextOfProcess:
 	"Set stackPage, framePointer and stackPointer for the suspendedContext of aProcess,
 	 marrying the context if necessary, and niling the suspendedContext slot.  This is used
 	 on process switch to ensure a context has a stack frame and so can continue execution."
-	| newContext theFrame thePage |
+	| newContext theFrame thePage newPage |
 	<var: #theFrame type: #'char *'>
 	<var: #thePage type: #'StackPage *'>
+	<var: #newPage type: #'StackPage *'>
 	
 	newContext := objectMemory fetchPointer: SuspendedContextIndex ofObject: aProcess.
 	self assert: (objectMemory isContext: newContext).
 	(self isMarriedOrWidowedContext: newContext) ifTrue:
 		[self assert: (self checkIsStillMarriedContext: newContext currentFP: framePointer)].
-	objectMemory storePointerUnchecked: SuspendedContextIndex ofObject: aProcess withValue: objectMemory nilObject.
+	objectMemory
+		storePointerUnchecked: SuspendedContextIndex
+		ofObject: aProcess
+		withValue: objectMemory nilObject.
 	(self isStillMarriedContext: newContext)
 		ifTrue:
 			[theFrame := self frameOfMarriedContext: newContext.
-			 thePage := stackPages stackPageFor: theFrame]
+			 thePage := stackPages stackPageFor: theFrame.
+			 theFrame ~= thePage headFP ifTrue:
+				["explicit assignment of suspendedContext can cause switch to interior frame."
+				 newPage := self newStackPage.
+				 self moveFramesIn: thePage
+					through: (self findFrameAbove: theFrame inPage: thePage)
+					toPage: newPage.
+				  stackPages markStackPageLeastMostRecentlyUsed: newPage].
+			 self assert: thePage headFP = theFrame]
 		ifFalse:
 			[thePage := self makeBaseFrameFor: newContext.
 			 theFrame := thePage baseFP].
-	self assert: thePage headFP = theFrame.
 	self setStackPageAndLimit: thePage.
 	stackPointer := thePage headSP.
 	framePointer := thePage headFP.
@@ -9912,17 +9923,17 @@ StackInterpreter >> removeProcess: aProcess fromList: aList [
 StackInterpreter >> respondToUnknownBytecode [
 	"If an error selector is available then send it to the activeContext, otherwise abort."
 	<sharedCodeNamed: #respondToUnknownBytecode inCase: #unknownBytecode>
-	| unknownBytecodeSelector ourContext |
-	unknownBytecodeSelector := objectMemory maybeSplObj: SelectorUnknownBytecode.
-	unknownBytecodeSelector isNil ifTrue:
+	| ourContext |
+	messageSelector := objectMemory maybeSplObj: SelectorUnknownBytecode.
+	(messageSelector isNil
+	or: [messageSelector = objectMemory nilObject]) ifTrue:
 		[self error: 'Unknown bytecode'].
 	ourContext := self ensureFrameIsMarried: localFP SP: localSP.
-	"N.B. Do Not:
-	self fetchNextBytecode."
+	"undo fetch of bytecode so that context's pc is pointing to the unknown bytecode."
+	localIP := localIP - 1.
 	self internalPush: ourContext.
-	messageSelector := unknownBytecodeSelector.
 	argumentCount := 0.
-	self commonSend
+	self normalSend
 ]
 
 { #category : #'callback support' }
@@ -11639,6 +11650,7 @@ StackInterpreter >> validInstructionPointer: anInstrPointer inFrame: fp [
 StackInterpreter >> validInstructionPointer: theInstrPointer inMethod: aMethod framePointer: fp [
 	<var: #theInstrPointer type: #usqInt>
 	<var: #aMethod type: #usqInt>
+	<var: #fp type: #'char *'>
 	^self
 		cppIf: MULTIPLEBYTECODESETS
 		ifTrue:

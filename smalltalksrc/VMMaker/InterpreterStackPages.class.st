@@ -257,13 +257,43 @@ InterpreterStackPages >> longAt: byteAddress put: a32BitValue [
 ]
 
 { #category : #'page access' }
+InterpreterStackPages >> markStackPageLeastMostRecentlyUsed: page [ "<InterpreterStackPage>"
+	"This method is used to move a page to the end of the used pages.
+	 This is to keep asserts checking pageListIsWellFormed happy."
+
+	"MRUP-->used page<->used page<->used page<->used page<--LRUP
+	               ^                        <-next-prev->                         ^
+	                |                                                                       |
+	                v                        <-prev-next->                         v
+	                free page<->free page<->free page<->free page"
+
+	<var: #page type: #'StackPage *'>
+	<returnTypeC: #void>
+	| lastUsedPage |
+	<var: #lastUsedPage type: #'StackPage *'>
+	self assert: page = mostRecentlyUsedPage nextPage.
+	lastUsedPage := page nextPage.
+	[lastUsedPage isFree] whileTrue:
+		[lastUsedPage := lastUsedPage nextPage].
+	lastUsedPage nextPage = page ifTrue:
+		[^nil].
+	page prevPage nextPage: page nextPage.
+	page nextPage prevPage: page prevPage.
+	lastUsedPage prevPage nextPage: page.
+	page prevPage: lastUsedPage prevPage.
+	page nextPage: lastUsedPage.
+	lastUsedPage prevPage: page.
+	self assert: self pageListIsWellFormed
+]
+
+{ #category : #'page access' }
 InterpreterStackPages >> markStackPageMostRecentlyUsed: page [ "<InterpreterStackPage>"
 	"MRUP-->used page<->used page<->used page<->used page<--LRUP
 	               ^                        <-next-prev->                         ^
 	                |                                                                       |
 	                v                        <-prev-next->                         v
 	                free page<->free page<->free page<->free page"
-	<var: #page type: 'StackPage *'>
+	<var: #page type: #'StackPage *'>
 	<asmLabel: false>
 	page == mostRecentlyUsedPage ifTrue:
 		[^nil].
@@ -295,7 +325,7 @@ InterpreterStackPages >> markStackPageNextMostRecentlyUsed: page [ "<Interpreter
 	                v                        <-prev-next->                         v
 	                free page<->free page<->free page<->free page"
 
-	<var: #page type: 'StackPage *'>
+	<var: #page type: #'StackPage *'>
 	self assert: page ~~ mostRecentlyUsedPage.
 	page nextPage == mostRecentlyUsedPage ifTrue:
 		[^nil].
@@ -329,7 +359,7 @@ InterpreterStackPages >> overflowLimit [
 InterpreterStackPages >> pageIndexFor: pointer [ "<Integer>"
 	"Answer the page index for a pointer into stack memory, i.e. the index
 	 for the page the address is in.  N.B.  This is a zero-relative index."
-	<var: #pointer type: 'void *'>
+	<var: #pointer type: #'void *'>
 	^self pageIndexFor: pointer stackMemory: stackMemory bytesPerPage: bytesPerPage
 ]
 
@@ -354,7 +384,7 @@ InterpreterStackPages >> pageListIsWellFormed [
 	                free page<->free page<->free page<->free page"
 	| ok page count limit |
 	<inline: false>
-	<var: #page type: 'StackPage *'>
+	<var: #page type: #'StackPage *'>
 	ok := true.
 	page := mostRecentlyUsedPage nextPage.
 	count := 1.
@@ -396,7 +426,7 @@ InterpreterStackPages >> somePageHasHeadFrameFP: theFP [
 InterpreterStackPages >> stackPageAt: index [
 	"Answer the page for a page index.
 	 N.B.  This is a zero-relative index."
-	<returnTypeC: 'StackPage *'>
+	<returnTypeC: #'StackPage *'>
 	^self stackPageAt: index pages: pages
 ]
 
