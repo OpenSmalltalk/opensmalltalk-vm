@@ -58,6 +58,9 @@ CogFamilyWindowsConfig >> buildScript [
 	^ 
 '#!bash
 
+if [ ! -e vmVersionInfo.h ]; then
+	../codegen-scripts/extract-commit-info.sh
+fi
 cmake -G "MSYS Makefiles" .
 make
 
