@@ -83,6 +83,23 @@ StackIPhoneConfig >> architecture [
 	^'armv7'
 ]
 
+{ #category : #'build script' }
+StackIPhoneConfig >> buildScript [
+	"answer the build script for building everything"
+	
+
+	^ 
+'#!bash
+
+if [ ! -e vmVersionInfo.h ]; then
+	../codegen-scripts/extract-commit-info.sh
+fi
+cmake -G Xcode .
+xcodebuild -sdk {sdk} -configuration Release -target {name}
+
+' nameFormat: {#name->self executableName. #sdk->self sdkTarget} asDictionary
+]
+
 { #category : #accessing }
 StackIPhoneConfig >> codeSignIdentity [ 
 	^'iPhone Developer'
@@ -466,6 +483,11 @@ StackIPhoneConfig >> resources [
 StackIPhoneConfig >> resourcesDir [ 
 	"Answer the value of resourcesDir"
 	^ resourcesDir ifNil: [ resourcesDir := (self topDir / 'iosbuild' / 'resources') fullName ]
+]
+
+{ #category : #accessing }
+StackIPhoneConfig >> sdkTarget [ 
+	^'iphone', self sdkVersion
 ]
 
 { #category : #accessing }
