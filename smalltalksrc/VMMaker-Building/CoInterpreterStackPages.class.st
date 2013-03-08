@@ -248,13 +248,43 @@ CoInterpreterStackPages >> longAt: byteAddress put: a32BitValue [
 ]
 
 { #category : #'page access' }
+CoInterpreterStackPages >> markStackPageLeastMostRecentlyUsed: page [ "<InterpreterStackPage>"
+	"This method is used to move a page to the end of the used pages.
+	 This is to keep asserts checking pageListIsWellFormed happy."
+
+	"MRUP-->used page<->used page<->used page<->used page<--LRUP
+	               ^                        <-next-prev->                         ^
+	                |                                                                       |
+	                v                        <-prev-next->                         v
+	                free page<->free page<->free page<->free page"
+
+	<var: #page type: #'StackPage *'>
+	<returnTypeC: #void>
+	| lastUsedPage |
+	<var: #lastUsedPage type: #'StackPage *'>
+	self assert: page = mostRecentlyUsedPage nextPage.
+	lastUsedPage := page nextPage.
+	[lastUsedPage isFree] whileTrue:
+		[lastUsedPage := lastUsedPage nextPage].
+	lastUsedPage nextPage = page ifTrue:
+		[^nil].
+	page prevPage nextPage: page nextPage.
+	page nextPage prevPage: page prevPage.
+	lastUsedPage prevPage nextPage: page.
+	page prevPage: lastUsedPage prevPage.
+	page nextPage: lastUsedPage.
+	lastUsedPage prevPage: page.
+	self assert: self pageListIsWellFormed
+]
+
+{ #category : #'page access' }
 CoInterpreterStackPages >> markStackPageMostRecentlyUsed: page [ "<InterpreterStackPage>"
 	"MRUP-->used page<->used page<->used page<->used page<--LRUP
 	               ^                        <-next-prev->                         ^
 	                |                                                                       |
 	                v                        <-prev-next->                         v
 	                free page<->free page<->free page<->free page"
-	<var: #page type: 'StackPage *'>
+	<var: #page type: #'StackPage *'>
 	<asmLabel: false>
 	<returnTypeC: #void>
 	page == mostRecentlyUsedPage ifTrue:
@@ -287,7 +317,7 @@ CoInterpreterStackPages >> markStackPageNextMostRecentlyUsed: page [ "<Interpret
 	                v                        <-prev-next->                         v
 	                free page<->free page<->free page<->free page"
 
-	<var: #page type: 'StackPage *'>
+	<var: #page type: #'StackPage *'>
 	<returnTypeC: #void>
 	self assert: page ~~ mostRecentlyUsedPage.
 	page nextPage == mostRecentlyUsedPage ifTrue:
@@ -349,7 +379,7 @@ CoInterpreterStackPages >> pageListIsWellFormed [
 	                free page<->free page<->free page<->free page"
 	| ok page count limit |
 	<inline: false>
-	<var: #page type: 'StackPage *'>
+	<var: #page type: #'StackPage *'>
 	ok := true.
 	page := mostRecentlyUsedPage nextPage.
 	count := 1.
@@ -389,7 +419,7 @@ CoInterpreterStackPages >> somePageHasHeadFrameFP: theFP [
 CoInterpreterStackPages >> stackPageAt: index [
 	"Answer the page for a page index.
 	 N.B.  This is a zero-relative index."
-	<returnTypeC: 'StackPage *'>
+	<returnTypeC: #'StackPage *'>
 	^self stackPageAt: index pages: pages
 ]
 
