@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 15 February 2013 7:50:53 pm 
-   by VMMaker 4.10.12
+/* Automatically generated from Squeak on 9 March 2013 9:51:28 am 
+   by VMMaker 4.10.13
  */
 
 #include <math.h>
@@ -94,9 +94,9 @@ struct VirtualMachine* interpreterProxy;
 static sqInt maximumNumberOfFilesToWatch;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"Mpeg3Plugin 15 February 2013 (i)"
+	"Mpeg3Plugin 9 March 2013 (i)"
 #else
-	"Mpeg3Plugin 15 February 2013 (e)"
+	"Mpeg3Plugin 9 March 2013 (e)"
 #endif
 ;
 static mpeg3_t *mpegFiles[1024+1];
@@ -908,7 +908,7 @@ EXPORT(sqInt) primitiveMPEG3ReadFrameBufferOffset(void) {
 	mpeg3_t * file;
 	sqInt result;
 	sqInt fileHandle;
-	usqInt *aBuffer;
+	unsigned *aBuffer;
 	sqInt aBufferOffset;
 	sqInt xNumber;
 	sqInt yNumber;
@@ -991,7 +991,7 @@ EXPORT(sqInt) primitiveMPEG3ReadFrame(void) {
 	mpeg3_t *  file;
 	sqInt result;
 	sqInt fileHandle;
-	usqInt *aBuffer;
+	unsigned *aBuffer;
 	sqInt xNumber;
 	sqInt yNumber;
 	sqInt width;

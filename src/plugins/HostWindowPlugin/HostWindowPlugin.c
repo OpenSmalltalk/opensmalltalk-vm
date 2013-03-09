@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 15 February 2013 7:50:52 pm 
-   by VMMaker 4.10.12
+/* Automatically generated from Squeak on 9 March 2013 9:51:27 am 
+   by VMMaker 4.10.13
  */
 
 #include <math.h>
@@ -59,9 +59,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"HostWindowPlugin 15 February 2013 (i)"
+	"HostWindowPlugin 9 March 2013 (i)"
 #else
-	"HostWindowPlugin 15 February 2013 (e)"
+	"HostWindowPlugin 9 March 2013 (e)"
 #endif
 ;
 
@@ -290,7 +290,7 @@ platform routine returns false to indicate failure */
 EXPORT(sqInt) primitiveShowHostWindowRect(void) {
 	sqInt ok;
 	sqInt windowIndex;
-	usqInt *dispBits;
+	unsigned *dispBits;
 	sqInt w;
 	sqInt h;
 	sqInt d;

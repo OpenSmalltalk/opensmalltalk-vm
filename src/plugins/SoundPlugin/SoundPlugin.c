@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 15 February 2013 7:50:50 pm 
-   by VMMaker 4.10.12
+/* Automatically generated from Squeak on 9 March 2013 9:51:26 am 
+   by VMMaker 4.10.13
  */
 
 #include <math.h>
@@ -66,9 +66,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"SoundPlugin 15 February 2013 (i)"
+	"SoundPlugin 9 March 2013 (i)"
 #else
-	"SoundPlugin 15 February 2013 (e)"
+	"SoundPlugin 9 March 2013 (e)"
 #endif
 ;
 
@@ -167,7 +167,7 @@ EXPORT(sqInt) primitiveSoundGetVolume(void) {
 EXPORT(sqInt) primitiveSoundInsertSamples(void) {
 	sqInt framesPlayed;
 	sqInt frameCount;
-	usqInt *buf;
+	unsigned *buf;
 	sqInt leadTime;
 	sqInt _return_value;
 
@@ -197,7 +197,7 @@ EXPORT(sqInt) primitiveSoundInsertSamples(void) {
 EXPORT(sqInt) primitiveSoundPlaySamples(void) {
 	sqInt framesPlayed;
 	sqInt frameCount;
-	usqInt *buf;
+	unsigned *buf;
 	sqInt startIndex;
 	sqInt _return_value;
 
@@ -250,7 +250,7 @@ EXPORT(sqInt) primitiveSoundRecordSamples(void) {
 	sqInt bufSizeInBytes;
 	sqInt byteOffset;
 	char*bufPtr;
-	usqInt *buf;
+	unsigned *buf;
 	sqInt startWordIndex;
 	sqInt _return_value;
 
