@@ -26,31 +26,32 @@ CogFamilyCocoaIOSConfig >> CFBundleVersion [
 { #category : #settings }
 CogFamilyCocoaIOSConfig >> commonCompilerFlags [
 	^super commonCompilerFlags, 
-		{
-	'-funroll-loops'.
-	'-fasm-blocks'. 
-	'-finline-functions'. 
-	'-mfpmath=sse'. 
-	'-march=pentium-m'. 
-	'-mtune=prescott'. 
-	'-falign-functions=16'. 
-	'-fno-gcse'. 
-	'-fno-cse-follow-jumps'. 
-	'-std=gnu99'. 
-	'-DBUILD_FOR_OSX'. 
+		#(
+	'-funroll-loops' 
+	'-fasm-blocks' 
+	'-fno-inline-functions' 
+	'-mfpmath=sse' 
+	'-march=pentium-m' 
+	'-mtune=prescott' 
+	'-falign-functions=16' 
+	'-fno-gcse' 
+	'-fno-cse-follow-jumps' 
+	'-std=gnu99'
+	'-fmessage-length=0' 
+	'-fpascal-strings' 
+	'-DBUILD_FOR_OSX' 
 	"'-DUSE_INLINE_MEMORY_ACCESSORS=1' "
-	'-DLSB_FIRST'. 
-	'-DHAVE_SYS_TIME_H'. 
-	'-DHAVE_NANOSLEEP'. 
-	'-DCOGMTVM=0'. 
-	'-DUSE_GLOBAL_STRUCT=0'. 
-	'-DBASE_HEADER_SIZE=4'.
-	 '-fwrapv' }
+	'-DLSB_FIRST' 
+	'-DHAVE_SYS_TIME_H' 
+	'-DHAVE_NANOSLEEP' 
+	'-DCOGMTVM=0' 
+	'-DUSE_GLOBAL_STRUCT=0' 
+	'-DBASE_HEADER_SIZE=4')
 ]
 
 { #category : #settings }
 CogFamilyCocoaIOSConfig >> compilerFlagsDebug [
-	^#('-g3' '-O0' '-DDEBUGVM=1')
+	^#('-g3' '-O1' '-DDEBUGVM=1')
 ]
 
 { #category : #settings }
@@ -290,9 +291,8 @@ CogFamilyCocoaIOSConfig >> setGlobalOptions: maker [
 	maker set: 'CMAKE_CXX_COMPILER' to: '/usr/bin/g++'.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #settings }
 CogFamilyCocoaIOSConfig >> setGlobalOptionsAfterDetermineSystem:  maker [
-
 	maker set: 'CMAKE_OSX_DEPLOYMENT_TARGET' to: '10.5'.
 	maker 
 		set: 'CMAKE_OSX_SYSROOT' 
