@@ -4,6 +4,9 @@ I am an abstract superclass for all classes in the VM that want to maintain a so
 Class {
 	#name : #VMClass,
 	#superclass : #Object,
+	#classVars : [
+		'DefaultBase'
+	],
 	#pools : [
 		'VMBasicConstants'
 	],
@@ -78,7 +81,10 @@ VMClass class >> declareInterpreterVersionIn: aCCodeGenerator defaultName: defau
 
 { #category : #debugger }
 VMClass class >> defaultIntegerBaseInDebugger [
-	^16
+	"DefaultBase := 16."
+	"DefaultBase := 10."
+	DefaultBase isNil ifTrue: [DefaultBase := 16].
+	^DefaultBase
 ]
 
 { #category : #translation }

@@ -943,16 +943,27 @@ Cogit class >> tableInitializerFor: aTable in: aCCodeGenerator [
 
 { #category : #tests }
 Cogit class >> testPCMappingFor: aCompiledMethod [
+	^self testPCMappingFor: aCompiledMethod options: #()
+]
+
+{ #category : #tests }
+Cogit class >> testPCMappingFor: aCompiledMethod options: optionsDictionaryOrArray [
 	| tuple |
-	tuple := self cog: aCompiledMethod selector: aCompiledMethod selector.
+	tuple := self cog: aCompiledMethod selector: aCompiledMethod selector options: optionsDictionaryOrArray.
 	tuple second testPCMappingForMethod: tuple last
 ]
 
 { #category : #tests }
 Cogit class >> testPCMappingSelect: aBlock [
 	"Test pc mapping both ways using the methods in the current image"
+	self testPCMappingSelect: aBlock options: #()
+]
+
+{ #category : #tests }
+Cogit class >> testPCMappingSelect: aBlock options: optionsDictionaryOrArray [
+	"Test pc mapping both ways using the methods in the current image"
 	| cogit coInterpreter |
-	self initialize.
+	self initializeWithOptions: (self asOptionsDictionary: optionsDictionaryOrArray).
 	cogit := self new.
 	coInterpreter := CurrentImageCoInterpreterFacade new cogit: cogit; yourself.
 	[cogit
@@ -5977,7 +5988,7 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 					  isInBlock
 						ifTrue: [bcpc >= endbcpc ifTrue: [^0]]
 						ifFalse:
-							[(descriptor isReturn and: [bcpc > latestContinuation]) ifTrue: [^0].
+							[(descriptor isReturn and: [bcpc >= latestContinuation]) ifTrue: [^0].
 							 (descriptor isBranch or: [descriptor isBlockCreation]) ifTrue:
 								[| targetPC |
 								 targetPC := self latestContinuationPCFor: descriptor at: bcpc exts: nExts in: aMethodObj.

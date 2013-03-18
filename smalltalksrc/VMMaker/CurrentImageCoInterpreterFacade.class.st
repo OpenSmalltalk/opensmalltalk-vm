@@ -26,6 +26,12 @@ CurrentImageCoInterpreterFacade >> addLabel: l [
 ]
 
 { #category : #'debug support' }
+CurrentImageCoInterpreterFacade >> addressCouldBeObj: address [
+	^(address bitAnd: 3) = 0
+	  and: [self addressCouldBeOop: address]
+]
+
+{ #category : #'debug support' }
 CurrentImageCoInterpreterFacade >> addressCouldBeOop: anOop [ 
 	[self objectForOop: anOop]
 		on: Error
@@ -466,7 +472,9 @@ CurrentImageCoInterpreterFacade >> objectForOop: anOop [
 	^(anOop bitAnd: 3) caseOf: {
 		[0] -> [anOop = cachedOop
 				ifTrue: [cachedObject]
-				ifFalse: [cachedObject := objectMap keyAtValue: (cachedOop := anOop)]].
+				ifFalse: [cachedObject := objectMap keyAtValue: anOop. "may raise Error"
+						cachedOop := anOop. "Dom't assign until accessed without error"
+						cachedObject]].
 		[1] -> [anOop signedIntFromLong >> 1].
 		[3] -> [anOop signedIntFromLong >> 1] }
 ]
@@ -672,6 +680,11 @@ CurrentImageCoInterpreterFacade >> transcript [
 { #category : #'object map' }
 CurrentImageCoInterpreterFacade >> trueObject [
 	^objectMap at: true
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> unalignedLongAt: index [ 
+	^memory unsignedLongAt: index + 1
 ]
 
 { #category : #accessing }
