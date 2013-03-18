@@ -33,6 +33,7 @@ SimpleStackBasedCogit class >> declareCVarsIn: aCCodeGenerator [
 SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV3PlusClosures [
 	"SimpleStackBasedCogit initializeBytecodeTableForNewspeakV3PlusClosures"
 
+	NSSendIsPCAnnotated := true. "IsNSSendCall used by PushImplicitReceiver"
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
  inlines class.  If class is sent to e.g. a general instance of ProtoObject then unless
@@ -107,6 +108,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV3PlusClosures 
 SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV4 [
 	"SimpleStackBasedCogit initializeBytecodeTableForNewspeakV4"
 
+	NSSendIsPCAnnotated := false. "IsNSSendCall used by SendAbsentImplicit"
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
  inlines class.  If class is sent to e.g. a general instance of ProtoObject then unless
@@ -1431,14 +1433,18 @@ SimpleStackBasedCogit >> genFastPrimTraceUsing: r1 and: r2 [
 SimpleStackBasedCogit >> genGetImplicitReceiverFor: selector [
 	"Cached implicit receiver implementation.  Caller looks like
 		mov selector, ClassReg
-				call cePushImplicitReceiver
+				call ceImplicitReceiverTrampoline
 				br continue
 		Lclass	.word
 		Lmixin:	.word
 		continue:
 	 If class matches class of receiver then mixin contains either 0 or the implicit receiver.
 	 If 0, answer the actual receiver.  This is done in the trampoline.
-	 See generateNewspeakRuntime."
+	 See generateNewspeakRuntime.
+
+	 N.B. For PC mapping either this is used for SendAbsentImplicit or for PushAbsentReceiver
+	 but not both.  So any Newspeak instruction set has to choose either SendAbsentImplicit
+	 or PushAbsentReceiver.  See isPCMappedAnnotation:alternateInstructionSet:"
 	| skip |
 	<var: #skip type: #'AbstractInstruction *'>
 	(objectMemory isYoung: selector) ifTrue:

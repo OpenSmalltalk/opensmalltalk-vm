@@ -286,6 +286,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV3PlusClo
 
 	isPushNilFunction := #v3:Is:Push:Nil:.
 	pushNilSizeFunction := #v3PushNilSize:.
+	NSSendIsPCAnnotated := true. "IsNSSendCall used by PushImplicitReceiver"
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
  inlines class.  If class is sent to e.g. a general instance of ProtoObject then unless
@@ -382,6 +383,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
 
 	isPushNilFunction := #v4:Is:Push:Nil:.
 	pushNilSizeFunction := #v4PushNilSize:.
+	NSSendIsPCAnnotated := false. "IsNSSendCall used by SendAbsentImplicit"
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
  inlines class.  If class is sent to e.g. a general instance of ProtoObject then unless
@@ -3522,7 +3524,8 @@ StackToRegisterMappingCogit >> prevInstIsPCAnnotated [
 	annotationIndex > 0 ifFalse:
 		[^false].
 	annotation := self addressOf: (annotations at: annotationIndex - 1).
-	(self isPCMappedAnnotation: annotation annotation) ifFalse:
+	(self isPCMappedAnnotation: annotation annotation
+			alternateInstructionSet: bytecodeSetOffset > 0) ifFalse:
 		[^false].
 	prevIndex := opcodeIndex - 1.
 	[prevIndex <= 0 ifTrue: [^false].
