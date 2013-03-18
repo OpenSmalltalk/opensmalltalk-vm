@@ -12,6 +12,7 @@ WordArray class >> ccg: cg prolog: aBlock expr: aString index: anInteger [
 
 { #category : #'*VMMaker-plugin generation' }
 WordArray class >> ccgDeclareCForVar: aSymbolOrString [
+	"Address of an unsigned 32 bit value, regardless of Smalltalk wordSize"
 
-	^'usqInt *', aSymbolOrString
+	^'unsigned *', aSymbolOrString
 ]
