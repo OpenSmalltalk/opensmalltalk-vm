@@ -244,6 +244,7 @@ Class {
 	],
 	#classVars : [
 		'AltBlockCreationBytecodeSize',
+		'AltNSSendIsPCAnnotated',
 		'AnnotationConstantNames',
 		'AnnotationShift',
 		'BlockCreationBytecodeSize',
@@ -269,6 +270,7 @@ Class {
 		'MaxUnreportableError',
 		'MaxX2NDisplacement',
 		'MethodTooBig',
+		'NSSendIsPCAnnotated',
 		'NotFullyInitialized',
 		'NumObjRefsInRuntime',
 		'NumSendTrampolines',
@@ -728,6 +730,7 @@ Cogit class >> initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid 
 	self initializeBytecodeTableForNewspeakV4.
 	v4Table := generatorTable.
 	AltBlockCreationBytecodeSize := BlockCreationBytecodeSize.
+	AltNSSendIsPCAnnotated := NSSendIsPCAnnotated.
 	self initializeBytecodeTableForNewspeakV3PlusClosures.
 	v3Table := generatorTable.
 	generatorTable := CArrayAccessor on: v3Table object, v4Table object
@@ -5731,10 +5734,25 @@ Cogit >> isCFramePointerInUse [
 ]
 
 { #category : #'method map' }
-Cogit >> isPCMappedAnnotation: annotation [
+Cogit >> isPCMappedAnnotation: annotation alternateInstructionSet: isAlternateInstSet [
 	<inline: true>
-	^(self isSendAnnotation: annotation)
-	  or: [annotation = HasBytecodePC]
+	^self cppIf: NewspeakVM
+		ifTrue:
+			"For Newspeak we shoe-horn in implicit receiver inline cache handling as an inline
+			 send, since these caches are processed similarly to inline send caches.  But if
+			 the Newspeak instruction set includes an absent receiver send then there are
+			 two map entries for the one bytecode, the first for the implicit receiver cache
+			 and the second for the send cache. Only one of these can function as the pc-
+			 mapped entry since there is only one bytecode. c.f. isSendAnnotation:"
+			[annotation = IsSendCall
+			or: [(annotation = IsNSSendCall
+				and: [isAlternateInstSet
+						ifTrue: [AltNSSendIsPCAnnotated]
+						ifFalse: [NSSendIsPCAnnotated]])
+			or: [annotation = HasBytecodePC]]]
+		ifFalse:
+			[(self isSendAnnotation: annotation)
+			  or: [annotation = HasBytecodePC]]
 ]
 
 { #category : #disassembly }
@@ -5982,7 +6000,7 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 				[| annotation nextBcpc |
 				annotation := mapByte >> AnnotationShift.
 				mcpc := mcpc + (mapByte bitAnd: DisplacementMask).
-				(self isPCMappedAnnotation: annotation) ifTrue:
+				(self isPCMappedAnnotation: annotation alternateInstructionSet: bsOffset > 0) ifTrue:
 					[[byte := (objectMemory fetchByte: bcpc ofObject: aMethodObj) + bsOffset.
 					  descriptor := self generatorAt: byte.
 					  isInBlock
@@ -7012,7 +7030,8 @@ Cogit >> printInstructions: aBoolean [
 Cogit >> printMapEntry: annotation mcpc: mcpc args: tupleOfStreamCodeRangesAndMethod [
 	"Print the Map entry's mcpc, its annotation and the corresponding bytecode pc, if any."
 	<doNotGenerate>
-	[:aStream :codeRanges :cogMethod|
+	[:aStream :codeRanges :cogMethod| | isAltInstSet |
+	isAltInstSet := coInterpreter headerIndicatesAlternateBytecodeSet: cogMethod methodHeader.
 	self startMcpcAndCogMethodForMcpc: mcpc in: cogMethod do:
 		[:startmcpc :subMethod| | name codeRange |
 		"Find the start of the block by searching the code ranges."
@@ -7026,7 +7045,7 @@ Cogit >> printMapEntry: annotation mcpc: mcpc args: tupleOfStreamCodeRangesAndMe
 			next: 20 - name size put: Character space;
 			nextPut: $(;
 			nextPutAll: (self findMapLocationForMcpc: mcpc inMethod: cogMethod) hex.
-		(self isPCMappedAnnotation: annotation) ifTrue:
+		(self isPCMappedAnnotation: annotation alternateInstructionSet: isAltInstSet) ifTrue:
 			[aStream
 				nextPutAll: ', bc: ';
 				print: (self bytecodePCFor: mcpc startBcpc: codeRange startpc in: subMethod)].
@@ -8075,7 +8094,7 @@ Cogit >> testBcToMcPcMappingForMethod: cogMethod [
 { #category : #'tests-method map' }
 Cogit >> testMcToBcPcMappingForMethod: cogMethod [
 	<doNotGenerate>
-	| bcMethod subMethods prevMcpc |
+	| bcMethod subMethods prevMcpc isAltInstSet |
 	"self disassembleMethod: cogMethod"
 	"coInterpreter symbolicMethod: cogMethod methodObject"
 	"coInterpreter printOop: cogMethod methodObject"
@@ -8089,9 +8108,10 @@ Cogit >> testMcToBcPcMappingForMethod: cogMethod [
 								coInterpreter: coInterpreter
 								objectMemory: objectMemory].
 	subMethods := self subMethodsAsRangesFor: cogMethod.
+	isAltInstSet := coInterpreter headerIndicatesAlternateBytecodeSet: cogMethod methodHeader.
 	self mapFor: cogMethod do:
 		[:annotation :mcpc| | subMethod bcpc mappedpc |
-		(self isPCMappedAnnotation: annotation) ifTrue:
+		(self isPCMappedAnnotation: annotation alternateInstructionSet: isAltInstSet) ifTrue:
 			[subMethod := subMethods
 								detect: [:range| range includes: mcpc]
 								ifNone: ["a trailing call ceNonLocalReturnTrampoline's following
