@@ -651,7 +651,7 @@ SistaStackToRegisterMappingCogit >> mapFor: cogMethod bcpc: startbcpc performUnt
 					  isInBlock
 						ifTrue: [bcpc >= endbcpc ifTrue: [^0]]
 						ifFalse:
-							[(descriptor isReturn and: [bcpc > latestContinuation]) ifTrue: [^0].
+							[(descriptor isReturn and: [bcpc >= latestContinuation]) ifTrue: [^0].
 							 (descriptor isBranch or: [descriptor isBlockCreation]) ifTrue:
 								[| targetPC |
 								 targetPC := self latestContinuationPCFor: descriptor at: bcpc exts: nExts in: aMethodObj.
