@@ -87,9 +87,13 @@ when manually repeating the link command
 
 Optimization level and gcc version
 ----------------------------------
-There are issues with gcc version > 4.2.1.  One must include -fno-caller-saves
-with these versions. e.g.
-     ../../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -msse2 -fno-caller-saves -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS=-lpthread
+There are issues with gcc version > 4.2.1.  Any of the following flags may break the build at -O2:
+-ftree-pre
+-fpartial-inlining
+-fcaller-saves
+
+So turn them off.  e.g.
+     ../../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -msse2 -fno-caller-saves -fno-partial-inlining -fno-tree-pre -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS=-lpthread
 See http://smallissimo.blogspot.fr/2013/02/compiling-squeak-cog-virtual-machine-on.html
 
 There appear to be issues with 3.4.x gcc version on RedHat.  In particular

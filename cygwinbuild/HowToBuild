@@ -30,6 +30,7 @@ then replace --export-dynamic with --export-all-symbols in the makefiles.
    evalautes to the cygwin gcc 3.4.x not the MinGW gcc 2.95.x (try gcc -v).
 
    Caution: if your default gcc is too recent (gcc-4), compilation may fail.
+   See below, Optimization level and gcc version.
    In this case, you should rather use the following commmand
      make  CC=gcc-3 LD=gcc-3 DLLWRAP='dllwrap -mno-cygwin --driver-name gcc-3'
    
@@ -81,3 +82,14 @@ Then build the libraries winbochs/{cpu/libcpu.a,disasm/libdisasm.a,fpu/libfpu.a}
 and build the plugin either via make (for the entire VM) or just
   $ cd ROOT/cygwinbuild
   $ make build/vm/BochsIA32Plugin.dll
+
+Optimization level and gcc version
+----------------------------------
+There are issues with gcc version > 4.2.1.  Any of the following flags may break the build at -O2:
+-ftree-pre
+-fpartial-inlining
+-fcaller-saves
+
+So turn them off.  e.g.
+     ../../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -msse2 -fno-caller-saves -fno-partial-inlining -fno-tree-pre -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS=-lpthread
+See http://smallissimo.blogspot.fr/2013/02/compiling-squeak-cog-virtual-machine-on.html
