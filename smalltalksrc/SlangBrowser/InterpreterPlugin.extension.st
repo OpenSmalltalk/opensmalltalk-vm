@@ -14,7 +14,7 @@ InterpreterPlugin classSide >> asCString: aSelector [
 			String cr, '/* ', cg, ' */'].
 	method := cg methodNamed: aSelector.
 	method ifNil: [^ ObjectMemory methodNotTranslatedMessage: aSelector].
-	stream := ReadWriteStream on: ''.
+	stream := ReadWriteStream on: String new.
 	method emitCCodeOn: stream generator: cg.
 	^ stream contents
 
@@ -34,7 +34,7 @@ InterpreterPlugin classSide >> asInlinedCString: aSelector [
 			String cr, '/* ', cg, ' */'].
 	method := cg methodNamed: aSelector.
 	method ifNil: [^ ObjectMemory methodNotTranslatedMessage: aSelector].
-	stream := ReadWriteStream on: ''.
+	stream := ReadWriteStream on: String new.
 	method emitCCodeOn: stream generator: cg.
 	^ stream contents
 
