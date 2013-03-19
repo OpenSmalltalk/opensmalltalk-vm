@@ -1,18 +1,25 @@
 Extension { #name : #VMMaker }
 
 { #category : #'*SlangBrowser-browser support' }
+VMMaker classSide >> buildCodeGenerator: aClass inlined: doInlining [
+	"Answer a new C code generator for aClass"
+
+	| cg |
+	ObjectMemory initialize; initializeConstants.
+	cg := aClass buildCodeGeneratorInlined: doInlining.
+	cg prepareMethodsInlined: doInlining doAssertions: true.
+	^ cg
+
+]
+
+{ #category : #'*SlangBrowser-browser support' }
 VMMaker classSide >> cCodeGenerator: aClass inCache: cache inlined: doInlining [
 	"Answer a C code generator, or a string explaining why a code generator is not available"
 
 	| cg |
 	cg := cache
 		at: aClass name asSymbol
-		ifAbsentPut:
-			[ObjectMemory initialize.
-			ObjectMemory initializeConstants.
-			cg := aClass buildCodeGeneratorInlined: doInlining.
-			cg prepareMethodsInlined: doInlining doAssertions: true.
-			cg].
+		ifAbsentPut: [self buildCodeGenerator: aClass inlined: doInlining].
 	^ cg
 
 ]
