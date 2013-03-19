@@ -13,7 +13,7 @@ Object class >> asCString [
 		ifTrue: [vmm := Smalltalk at: #VMMaker]
 		ifFalse: [^ self notify: 'VMMaker not in this image'].
 	cg := vmm codeGenerator: #cCode forClass: self.
-	stream := ReadWriteStream on: ''.
+	stream := ReadWriteStream on: String new.
 	cg emitCCodeOn: stream doAssertions: true.
 	^ stream contents
 
@@ -36,7 +36,7 @@ Object class >> asCString: aSelector [
 			String cr, '/* ', cg, ' */'].
 	method := cg methodNamed: aSelector.
 	method ifNil: [^ self methodNotTranslatedMessage: aSelector].
-	stream := ReadWriteStream on: ''.
+	stream := ReadWriteStream on: String new.
 	method emitCCodeOn: stream generator: cg.
 	^ stream contents
 
@@ -55,7 +55,7 @@ Object class >> asInlinedCString [
 		ifTrue: [vmm := Smalltalk at: #VMMaker]
 		ifFalse: [^ self notify: 'VMMaker not in this image'].
 	cg := vmm codeGenerator: #inlinedCCode forClass: self.
-	stream := ReadWriteStream on: ''.
+	stream := ReadWriteStream on: String new.
 	cg emitCCodeOn: stream doAssertions: true.
 	^ stream contents
 
@@ -78,7 +78,7 @@ Object class >> asInlinedCString: aSelector [
 			String cr, '/* ', cg, ' */'].
 	method := cg methodNamed: aSelector.
 	method ifNil: [^ ObjectMemory methodNotTranslatedMessage: aSelector].
-	stream := ReadWriteStream on: ''.
+	stream := ReadWriteStream on: String new.
 	method emitCCodeOn: stream generator: cg.
 	^ stream contents
 
