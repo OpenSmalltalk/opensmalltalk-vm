@@ -8247,17 +8247,24 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc ignored: superfluity [
 	<var: #sendTable type: #'sqInt *'>
 	(self isSendAnnotation: annotation) ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
-		 entryPoint > methodZoneBase ifTrue: "It's a linked send."
-			[self
-				offsetAndSendTableFor: entryPoint
-				annotation: annotation
-				into: [:off :table| offset := off. sendTable := table].
-			targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
-			unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
-			backEnd
-				rewriteInlineCacheAt: mcpc asInteger
-				tag: targetMethod selector
-				target: unlinkedRoutine]].
+		 entryPoint > methodZoneBase
+			ifTrue: "It's a linked send."
+				[self
+					offsetAndSendTableFor: entryPoint
+					annotation: annotation
+					into: [:off :table| offset := off. sendTable := table].
+				targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
+				unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
+				backEnd
+					rewriteInlineCacheAt: mcpc asInteger
+					tag: targetMethod selector
+					target: unlinkedRoutine]
+			ifFalse:
+				[self cppIf: NewspeakVM ifTrue:
+					[entryPoint = ceImplicitReceiverTrampoline ifTrue:
+						[backEnd
+							unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize put: 0;
+							unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop put: 0]]]].
 	^0 "keep scanning"
 ]
 
@@ -8269,25 +8276,27 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc of: theSelector [
 	<var: #sendTable type: #'sqInt *'>
 	(self isSendAnnotation: annotation) ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
-		 self cppIf: NewspeakVM ifTrue:
-			[entryPoint = ceImplicitReceiverTrampoline ifTrue:
-				[(backEnd inlineCacheTagAt: mcpc asInteger) = theSelector ifTrue:
-				 	[backEnd
-						unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize put: 0;
-						unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop put: 0]]].
-		 entryPoint > methodZoneBase ifTrue: "It's a linked send."
-			[self
-				offsetAndSendTableFor: entryPoint
-				annotation: annotation
-				into: [:off :table| offset := off. sendTable := table].
-			targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
-			targetMethod selector = theSelector ifTrue:
-				[unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
-				 backEnd
-					rewriteInlineCacheAt: mcpc asInteger
-					tag: targetMethod selector
-					target: unlinkedRoutine.
-				 codeModified := true]]].
+		 entryPoint > methodZoneBase
+			ifTrue: "It's a linked send."
+				[self
+					offsetAndSendTableFor: entryPoint
+					annotation: annotation
+					into: [:off :table| offset := off. sendTable := table].
+				targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
+				targetMethod selector = theSelector ifTrue:
+					[unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
+					 backEnd
+						rewriteInlineCacheAt: mcpc asInteger
+						tag: targetMethod selector
+						target: unlinkedRoutine.
+					 codeModified := true]]
+			ifFalse:
+				[self cppIf: NewspeakVM ifTrue:
+					[entryPoint = ceImplicitReceiverTrampoline ifTrue:
+						[(backEnd inlineCacheTagAt: mcpc asInteger) = theSelector ifTrue:
+						 	[backEnd
+								unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize put: 0;
+								unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop put: 0]]]]].
 	^0 "keep scanning"
 ]
 
@@ -8299,19 +8308,26 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc to: theCogMethod [
 	<var: #sendTable type: #'sqInt *'>
 	(self isSendAnnotation: annotation) ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
-		 entryPoint > methodZoneBase ifTrue: "It's a linked send."
-			[self
-				offsetAndSendTableFor: entryPoint
-				annotation: annotation
-				into: [:off :table| offset := off. sendTable := table].
-			targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
-			targetMethod asInteger = theCogMethod ifTrue:
-				[unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
-				 backEnd
-					rewriteInlineCacheAt: mcpc asInteger
-					tag: targetMethod selector
-					target: unlinkedRoutine.
-				 codeModified := true]]].
+		 entryPoint > methodZoneBase
+			ifTrue: "It's a linked send."
+				[self
+					offsetAndSendTableFor: entryPoint
+					annotation: annotation
+					into: [:off :table| offset := off. sendTable := table].
+				targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
+				targetMethod asInteger = theCogMethod ifTrue:
+					[unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
+					 backEnd
+						rewriteInlineCacheAt: mcpc asInteger
+						tag: targetMethod selector
+						target: unlinkedRoutine.
+					 codeModified := true]]
+			ifFalse: "Can't tell the target with PushReciver/SendImplicit so flush anyway."
+				[self cppIf: NewspeakVM ifTrue:
+					[entryPoint = ceImplicitReceiverTrampoline ifTrue:
+						[backEnd
+							unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize put: 0;
+							unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop put: 0]]]].
 	^0 "keep scanning"
 ]
 
@@ -8377,8 +8393,7 @@ Cogit >> unlinkSendsTo: targetMethodObject andFreeIf: freeIfTrue [
 	<api>
 	"Unlink all sends in cog methods to a particular target method.
 	 If targetMethodObject isn't actually a method (perhaps being
-	 used via invokeAsMethod) then flush all sends since anything
-	 could be affected."
+	 used via invokeAsMethod) then there's nothing to do."
 	| cogMethod targetMethod freedPIC |
 	<var: #cogMethod type: #'CogMethod *'>
 	<var: #targetMethod type: #'CogMethod *'>
