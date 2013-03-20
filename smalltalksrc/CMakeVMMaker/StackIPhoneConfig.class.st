@@ -567,7 +567,7 @@ StackIPhoneConfig >> setExtraTargetProperties: maker [
 StackIPhoneConfig >> setGlobalOptions: maker [
 	"set any CMake global options, before declaring a project in cmake file"
 	
-	maker 
+"	maker 
 		set: 'CMAKE_C_COMPILER' 
 		to: ('/Applications/Xcode.app/Contents/Developer/Platforms/{target}.platform/Developer/usr/bin/gcc'
 			nameFormat: {'target' -> self targetDevice} asDictionary).
@@ -576,12 +576,13 @@ StackIPhoneConfig >> setGlobalOptions: maker [
 		to: ('/Applications/Xcode.app/Contents/Developer/Platforms/{target}.platform/Developer/usr/bin/g++'
 			nameFormat: {'target' -> self targetDevice } asDictionary).	
 	self architecture ifNotNil: [
-		maker set: 'CMAKE_OSX_ARCHITECTURES' to: self architecture ].
+		maker set: 'CMAKE_OSX_ARCHITECTURES' to: self architecture ]."
 	
 ]
 
 { #category : #utils }
 StackIPhoneConfig >> setGlobalOptionsAfterDetermineSystem: maker [
+	self setGlobalOptions: maker.	
 	maker 
 		set: 'CMAKE_OSX_SYSROOT' 
 		to: ('/Applications/Xcode.app/Contents/Developer/Platforms/{target}.platform/Developer/SDKs/{target}{sdkVersion}.sdk'
