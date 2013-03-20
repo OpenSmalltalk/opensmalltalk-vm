@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 15 February 2013 7:50:50 pm 
-   by VMMaker 4.10.12
+/* Automatically generated from Squeak on 19 March 2013 7:55:52 pm 
+   by VMMaker 4.11.1
  */
 /* This is an automatically generated table of all builtin modules in the VM */
 
@@ -31,7 +31,6 @@ extern sqExport MiscPrimitivePlugin_exports[];
 extern sqExport RePlugin_exports[];
 extern sqExport SecurityPlugin_exports[];
 extern sqExport SerialPlugin_exports[];
-extern sqExport SlangTestSupportPlugin_exports[];
 extern sqExport SocketPlugin_exports[];
 extern sqExport SoundCodecPrims_exports[];
 extern sqExport SoundGenerationPlugin_exports[];
@@ -68,7 +67,6 @@ sqExport *pluginExports[] = {
 	RePlugin_exports,
 	SecurityPlugin_exports,
 	SerialPlugin_exports,
-	SlangTestSupportPlugin_exports,
 	SocketPlugin_exports,
 	SoundCodecPrims_exports,
 	SoundGenerationPlugin_exports,

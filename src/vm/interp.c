@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on 15 February 2013 7:50:45 pm 
-   by VMMaker 4.10.12
+/* Automatically generated from Squeak on 19 March 2013 7:55:47 pm 
+   by VMMaker 4.11.1
  */
 #if 1
 # define SQ_USE_GLOBAL_STRUCT 1
@@ -158,7 +158,7 @@ void defaultErrorProc(char *s) {
 #define InitialIPIndex 4
 #define InstanceSpecificationIndex 2
 #define InstructionPointerIndex 1
-#define InterpreterSourceVersion "4.10.12"
+#define InterpreterSourceVersion "4.11.1"
 #define InvokeCallbackSelector 53
 #define LargeContextBit 262144
 #define LastLinkIndex 1
@@ -549,7 +549,7 @@ sqInt primitiveFloatSubtract(void);
 sqInt primitiveFloatSubtractfromArg(sqInt rcvrOop, sqInt argOop);
 sqInt primitiveFlushCache(void);
 void primitiveFlushCacheByMethod(void);
-void primitiveFlushCacheSelective(void);
+void primitiveFlushCacheBySelector(void);
 sqInt primitiveFlushExternalPrimitives(void);
 sqInt primitiveForceDisplayUpdate(void);
 #pragma export on
@@ -928,7 +928,7 @@ sqInt remapBuffer[26];
 struct foo * foo = &fum;
 
 sqInt extraVMMemory;
-const char *interpreterVersion = "Squeak4.3 of 3 January 2013 [latest update: #12370]";
+const char *interpreterVersion = "Squeak4.3 of 8 March 2013 [latest update: #12519]";
 sqInt (*compilerHooks[16])();
 struct VirtualMachine* interpreterProxy;
 sqInt imageFormatVersionNumber = 0;
@@ -1052,7 +1052,7 @@ void (*primitiveTable[577] )(void)= {
 	/* 116*/ (void (*)(void))primitiveFlushCacheByMethod,
 	/* 117*/ (void (*)(void))primitiveExternalCall,
 	/* 118*/ (void (*)(void))primitiveDoPrimitiveWithArgs,
-	/* 119*/ (void (*)(void))primitiveFlushCacheSelective,
+	/* 119*/ (void (*)(void))primitiveFlushCacheBySelector,
 	/* 120*/ (void (*)(void))primitiveCalloutToFFI,
 	/* 121*/ (void (*)(void))primitiveImageName,
 	/* 122*/ (void (*)(void))primitiveNoop,
@@ -2672,8 +2672,6 @@ register struct foo * foo = &fum;
     sqInt classHdr;
     sqInt rcvrFormat;
     sqInt sizeHiBits;
-    sqInt i;
-    sqInt i1;
 
 
 	/* Low 2 bits are 0 */
@@ -2726,14 +2724,6 @@ register struct foo * foo = &fum;
 		if ((((usqInt) rcvr)) < (((usqInt) foo->youngStart))) {
 			possibleRootStoreIntovalue(rcvr, argClass);
 		}
-	}
-	/* begin flushMethodCache */
-	for (i = 1; i <= MethodCacheSize; i += 1) {
-		foo->methodCache[i] = 0;
-	}
-	/* begin flushAtCache */
-	for (i1 = 1; i1 <= AtCacheTotalSize; i1 += 1) {
-		foo->atCache[i1] = 0;
 	}
 }
 
@@ -16531,6 +16521,7 @@ register struct foo * foo = &fum;
     sqInt arg;
     sqInt argClass;
     sqInt rcvr;
+    sqInt i;
     sqInt ccIndex;
     sqInt oop;
     sqInt oop1;
@@ -16591,6 +16582,10 @@ l3:	/* end stackObjectValue: */;
 l1:	/* end fetchClassOf: */;
 	changeClassOfto(rcvr, argClass);
 	if (!foo->primFailCode) {
+		/* begin flushAtCache */
+		for (i = 1; i <= AtCacheTotalSize; i += 1) {
+			foo->atCache[i] = 0;
+		}
 		/* begin pop: */
 		foo->stackPointer -= 1 * (BYTES_PER_WORD);
 	}
@@ -16604,6 +16599,7 @@ EXPORT(sqInt) primitiveChangeClassWithClass(void) {
 register struct foo * foo = &fum;
     sqInt argClass;
     sqInt rcvr;
+    sqInt i;
     sqInt oop;
     sqInt oop1;
 
@@ -16640,6 +16636,10 @@ l1:	/* end stackObjectValue: */;
 l2:	/* end stackObjectValue: */;
 	changeClassOfto(rcvr, argClass);
 	if (!foo->primFailCode) {
+		/* begin flushAtCache */
+		for (i = 1; i <= AtCacheTotalSize; i += 1) {
+			foo->atCache[i] = 0;
+		}
 		/* begin pop: */
 		foo->stackPointer -= 1 * (BYTES_PER_WORD);
 	}
@@ -18703,6 +18703,7 @@ register struct foo * foo = &fum;
     sqInt i;
     sqInt oldMethod;
     sqInt probe;
+    sqInt i1;
 
 	oldMethod = longAt(foo->stackPointer);
 	probe = 0;
@@ -18711,6 +18712,10 @@ register struct foo * foo = &fum;
 			foo->methodCache[probe + MethodCacheSelector] = 0;
 		}
 		probe += MethodCacheEntrySize;
+	}
+	/* begin flushAtCache */
+	for (i1 = 1; i1 <= AtCacheTotalSize; i1 += 1) {
+		foo->atCache[i1] = 0;
 	}
 	/* begin compilerFlushCacheHook: */
 	if (foo->compilerInitialized) {
@@ -18721,11 +18726,12 @@ register struct foo * foo = &fum;
 
 /*	The receiver is a message selector.  Clear all entries in the method lookup cache with this selector, presumably because an associated method has been redefined. */
 
-void primitiveFlushCacheSelective(void) {
+void primitiveFlushCacheBySelector(void) {
 register struct foo * foo = &fum;
     sqInt i;
     sqInt probe;
     sqInt selector;
+    sqInt i1;
 
 	selector = longAt(foo->stackPointer);
 	probe = 0;
@@ -18734,6 +18740,12 @@ register struct foo * foo = &fum;
 			foo->methodCache[probe + MethodCacheSelector] = 0;
 		}
 		probe += MethodCacheEntrySize;
+	}
+	if ((selector == (fetchPointerofObject(16 * 2, fetchPointerofObject(SpecialSelectors, foo->specialObjectsOop)))) || (selector == (fetchPointerofObject(17 * 2, fetchPointerofObject(SpecialSelectors, foo->specialObjectsOop))))) {
+		/* begin flushAtCache */
+		for (i1 = 1; i1 <= AtCacheTotalSize; i1 += 1) {
+			foo->atCache[i1] = 0;
+		}
 	}
 }
 
