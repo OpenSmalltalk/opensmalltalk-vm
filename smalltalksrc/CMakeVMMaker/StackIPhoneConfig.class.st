@@ -487,7 +487,7 @@ StackIPhoneConfig >> resourcesDir [
 
 { #category : #accessing }
 StackIPhoneConfig >> sdkTarget [ 
-	^'iphone', self sdkVersion
+	^'iphoneos', self sdkVersion
 ]
 
 { #category : #accessing }

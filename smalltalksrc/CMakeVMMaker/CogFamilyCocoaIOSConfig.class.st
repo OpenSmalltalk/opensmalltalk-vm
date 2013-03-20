@@ -51,7 +51,7 @@ CogFamilyCocoaIOSConfig >> commonCompilerFlags [
 
 { #category : #settings }
 CogFamilyCocoaIOSConfig >> compilerFlagsDebug [
-	^#('-g3' '-O1' '-DDEBUGVM=1')
+	^#('-g3' '-O0' '-DDEBUGVM=1')
 ]
 
 { #category : #settings }
