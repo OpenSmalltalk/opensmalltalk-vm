@@ -20,6 +20,24 @@ SimpleStackBasedCogit class >> ancilliaryClasses [
 	^super ancilliaryClasses, { CogObjectRepresentationForSqueakV3 }
 ]
 
+{ #category : #documentation }
+SimpleStackBasedCogit class >> callingConvention [
+	"The Smalltalk-to-Smalltalk calling convention for SimpleStackBasedCogit is
+	 designed to be congruent with the interpreter and convenient for inline cacheing.
+	 For inline cacheing it is convenient if the receiver is in a register.
+
+	 Hence the calling convention is:
+	
+		On call ReceiverResultReg (edx on x86) contains the receiver, and the receiver
+		and arguments are all on the stack, receiver furthest from top-of-stack.
+	
+		If the number of arguments is 3 or greater then the argument count is passed in
+		SendNumArgsReg (this is for the linking run-time routine; it is ignored in linked sends).
+
+		On return result is in ReceiverResultReg.  The callee removes arguments from the stack.
+		The caller pushes the result if the result is used."
+]
+
 { #category : #translation }
 SimpleStackBasedCogit class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
@@ -1430,7 +1448,7 @@ SimpleStackBasedCogit >> genFastPrimTraceUsing: r1 and: r2 [
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genGetImplicitReceiverFor: selector [
+SimpleStackBasedCogit >> genGetImplicitReceiverFor: selector forPush: forPushSendBar [
 	"Cached implicit receiver implementation.  Caller looks like
 		mov selector, ClassReg
 				call ceImplicitReceiverTrampoline
@@ -1440,13 +1458,15 @@ SimpleStackBasedCogit >> genGetImplicitReceiverFor: selector [
 		continue:
 	 If class matches class of receiver then mixin contains either 0 or the implicit receiver.
 	 If 0, answer the actual receiver.  This is done in the trampoline.
-	 See generateNewspeakRuntime.
+	 See generateNewspeakRuntime."
 
-	 N.B. For PC mapping either this is used for SendAbsentImplicit or for PushAbsentReceiver
-	 but not both.  So any Newspeak instruction set has to choose either SendAbsentImplicit
-	 or PushAbsentReceiver.  See isPCMappedAnnotation:alternateInstructionSet:"
 	| skip |
 	<var: #skip type: #'AbstractInstruction *'>
+	"N.B. For PC mapping either this is used for SendAbsentImplicit or for PushAbsentReceiver
+	 but not both.  So any Newspeak instruction set has to choose either SendAbsentImplicit
+	 or PushImplicitReceiver.  See isPCMappedAnnotation:alternateInstructionSet:"
+	self assert: forPushSendBar = (self isPCMappedAnnotation: IsNSSendCall
+										alternateInstructionSet: bytecodeSetOffset > 0).
 	(objectMemory isYoung: selector) ifTrue:
 		[hasYoungReferent := true].
 	self assert: needsFrame.
@@ -2320,7 +2340,7 @@ SimpleStackBasedCogit >> genPushExplicitOuterSendReceiverBytecode [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPushImplicitReceiverBytecode [
 	| result |
-	result := self genGetImplicitReceiverFor: (self getLiteral: byte1).
+	result := self genGetImplicitReceiverFor: (self getLiteral: byte1) forPush: true.
 	result ~= 0 ifTrue:
 		[^result].
 	self PushR: ReceiverResultReg.
@@ -2624,7 +2644,7 @@ SimpleStackBasedCogit >> genSendAbsentImplicit: selector numArgs: numArgs [
 	 Then send."
 	<inline: false>
 	| result |
-	result := self genGetImplicitReceiverFor: selector.
+	result := self genGetImplicitReceiverFor: selector forPush: false.
 	result ~= 0 ifTrue:
 		[^result].
 	numArgs = 0
