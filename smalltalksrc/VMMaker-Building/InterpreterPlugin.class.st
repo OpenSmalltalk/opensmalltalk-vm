@@ -134,8 +134,7 @@ InterpreterPlugin class >> pluginClassesUpTo: aPluginClass [
 	classes := OrderedCollection new.
 	theClass := self.
 	[theClass == Object
-	 or: [theClass == InterpreterSimulationObject
-	 or: [theClass == VMClass]]] whileFalse:
+	 or: [theClass == VMClass]] whileFalse:
 		[classes addLast: theClass.
 		theClass := theClass superclass].
 	^classes reverse

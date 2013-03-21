@@ -267,7 +267,6 @@ Class {
 		'MaxCompiledPrimitiveIndex',
 		'MaxNegativeErrorCode',
 		'MaxUnitDisplacement',
-		'MaxUnreportableError',
 		'MaxX2NDisplacement',
 		'MethodTooBig',
 		'NSSendIsPCAnnotated',
@@ -751,12 +750,10 @@ Cogit class >> initializeCompilationWithConstantsOptions: optionsDictionary [
 
 { #category : #'class initialization' }
 Cogit class >> initializeErrorCodes [
-	self flag: 'these should be positive quantities and the check for error code should be a comparison against minCogMethodAddress/methodZoneBase'.
 	NotFullyInitialized := -1.
 	InsufficientCodeSpace := -2.
 	MethodTooBig := -4.
 	YoungSelectorInPIC := -5.
-	MaxUnreportableError := YoungSelectorInPIC.
 	EncounteredUnknownBytecode := -6.
 	MaxNegativeErrorCode := EncounteredUnknownBytecode
 ]
@@ -2558,20 +2555,18 @@ Cogit >> ceSICMiss: receiver [
 					Case1Method: newTargetMethodOrNil
 					tag: cacheTag
 					isMNUCase: errorSelectorOrNil = SelectorDoesNotUnderstand.
-		 (errorSelectorOrNil notNil
-		  or: [pic asInteger between: MaxNegativeErrorCode and: -1]) ifTrue:
-			["If for some reason the PIC couldn't be generated, most likely a lack of code memory.
-			  Continue as if this is an unlinked send.  If this is an error case continue as if this is an
-			  unlinked send to invoke the appropriate error behavior (MNU, cannot interpret et al)."
+		 pic asInteger < 0 ifTrue:
+			["For some reason the PIC couldn't be generated, most likely a lack of code memory.
+			  Continue as if this is an unlinked send."
 			 pic asInteger = InsufficientCodeSpace ifTrue:
 				[coInterpreter callForCogCompiledCodeCompaction].
-			^coInterpreter ceSendFromInLineCacheMiss: targetMethod]].
+			^coInterpreter ceSendFromInLineCacheMiss: targetMethod].
+		 processor flushICacheFrom: pic asInteger to: pic asInteger + closedPICSize].
+	"Relink the send site to the pic."
 	extent := backEnd
 				rewriteCallAt: outerReturn
 				target: pic asInteger + cmEntryOffset.
-	processor
-		flushICacheFrom: outerReturn - 1 - extent to: outerReturn - 1;
-		flushICacheFrom: pic asInteger to: pic asInteger + closedPICSize.
+	processor flushICacheFrom: outerReturn - 1 - extent to: outerReturn - 1.
 	"Jump back into the pic at its entry in case this is an MNU (newTargetMethodOrNil is nil)"
 	coInterpreter
 		executeCogMethodFromLinkedSend: pic
@@ -2913,12 +2908,10 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 	methodObj := aMethodObj.
 	cogMethod := self compileCogMethod: aSelectorOop.
 	(cogMethod asInteger between: MaxNegativeErrorCode and: -1) ifTrue:
-		[cogMethod asInteger >= MaxUnreportableError
-			ifTrue:
-				[cogMethod asInteger = InsufficientCodeSpace ifTrue:
-					[coInterpreter callForCogCompiledCodeCompaction]]
-			ifFalse:
-				[self reportError: (self cCoerceSimple: cogMethod to: #sqInt)].
+		[cogMethod asUnsignedInteger = InsufficientCodeSpace ifTrue:
+			[coInterpreter callForCogCompiledCodeCompaction].
+		"Right now no errors should be reported, so nothing more to do."
+		"self reportError: (self cCoerceSimple: cogMethod to: #sqInt)."
 		 ^nil].
 	"self cCode: ''
 		inSmalltalk:
