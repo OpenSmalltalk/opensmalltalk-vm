@@ -99,7 +99,7 @@ CogMethodSurrogate >> nextOpenPIC [
 	| moField |
 	moField := self methodObject.
 	^moField ~= 0 ifTrue:
-		[cogit cogMethodSurrogateAt: moField - self homeOffset]
+		[cogit cogMethodSurrogateAt: moField]
 ]
 
 { #category : #accessing }
