@@ -352,7 +352,7 @@ VMMaker class >> generateSqueakCogVM [
 				NewspeakVM false)
 		to: (FileDirectory default pathFromURI: 'oscogvm/src')
 		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
-		including:#(	AioPlugin ADPCMCodecPlugin AsynchFilePlugin BalloonEnginePlugin B3DAcceleratorPlugin
+		including:#(	ADPCMCodecPlugin AsynchFilePlugin BalloonEnginePlugin B3DAcceleratorPlugin
 					BMPReadWriterPlugin BitBltSimulation BochsIA32Plugin CroquetPlugin DSAPlugin
 					DeflatePlugin DropPlugin FT2Plugin FFTPlugin FileCopyPlugin FilePlugin FloatArrayPlugin
 					FloatMathPlugin GeniePlugin HostWindowPlugin IA32ABIPlugin InternetConfigPlugin
@@ -360,7 +360,8 @@ VMMaker class >> generateSqueakCogVM [
 					LargeIntegersPlugin LocalePlugin MIDIPlugin MacMenubarPlugin Matrix2x3Plugin
 					MiscPrimitivePlugin Mpeg3Plugin QuicktimePlugin RePlugin SecurityPlugin SerialPlugin
 					SocketPlugin SoundCodecPlugin SoundGenerationPlugin SoundPlugin SqueakSSLPlugin StarSqueakPlugin
-					ThreadedIA32FFIPlugin UUIDPlugin UnixOSProcessPlugin Win32OSProcessPlugin VMProfileMacSupportPlugin)
+					ThreadedIA32FFIPlugin UnixAioPlugin UUIDPlugin UnixOSProcessPlugin
+					Win32OSProcessPlugin VMProfileMacSupportPlugin)
 ]
 
 { #category : #configurations }
