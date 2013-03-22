@@ -296,11 +296,11 @@ VMMaker class >> generateNewspeakCogVM [
 		with: #(	NewspeakVM true
 				MULTIPLEBYTECODESETS true)
 		to: (FileDirectory default pathFromURI: 'oscogvm/nscogsrc')
-		platformDir: (FileDirectory default pathFromURI: '../Newspeak/newclosurevm/platforms')
+		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
 		including:#(	AsynchFilePlugin BMPReadWriterPlugin BalloonEnginePlugin BitBltSimulation DSAPlugin DropPlugin
 					FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin InflatePlugin JPEGReadWriter2Plugin
 					JPEGReaderPlugin LargeIntegersPlugin Matrix2x3Plugin MiscPrimitivePlugin NewsqueakIA32ABIPlugin
-					RePlugin SecurityPlugin SocketPlugin SoundPlugin SurfacePlugin ThreadedIA32FFIPlugin
+					RePlugin SecurityPlugin SocketPlugin SoundPlugin SqueakSSLPlugin SurfacePlugin ThreadedIA32FFIPlugin
 					UUIDPlugin UnixOSProcessPlugin VMProfileMacSupportPlugin Win32OSProcessPlugin)
 ]
 
@@ -309,12 +309,12 @@ VMMaker class >> generateNewspeakInterpreterVM [
 	^VMMaker
 		generate: NewspeakInterpreter
 		to: (FileDirectory default pathFromURI: 'oscogvm/nssrc')
-		platformDir: (FileDirectory default pathFromURI: '../Newspeak/newclosurevm/platforms')
+		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
 		including:#(	AsynchFilePlugin BMPReadWriterPlugin BalloonEnginePlugin BitBltSimulation DSAPlugin DropPlugin
 					FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin InflatePlugin JPEGReadWriter2Plugin
 					JPEGReaderPlugin LargeIntegersPlugin Matrix2x3Plugin MiscPrimitivePlugin NewsqueakIA32ABIPlugin
-					RePlugin SecurityPlugin SocketPlugin SoundPlugin SurfacePlugin UUIDPlugin UnixOSProcessPlugin
-					VMProfileMacSupportPlugin Win32OSProcessPlugin)
+					RePlugin SecurityPlugin SocketPlugin SoundPlugin SqueakSSLPlugin SurfacePlugin
+					UUIDPlugin UnixOSProcessPlugin VMProfileMacSupportPlugin Win32OSProcessPlugin)
 ]
 
 { #category : #configurations }
@@ -323,11 +323,11 @@ VMMaker class >> generateNewspeakStackVM [
 		generate: StackInterpreter
 		with: #(NewspeakVM true MULTIPLEBYTECODESETS true)
 		to: (FileDirectory default pathFromURI: 'oscogvm/nsstacksrc')
-		platformDir: (FileDirectory default pathFromURI: '../Newspeak/newclosurevm/platforms')
+		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
 		including:#(	AsynchFilePlugin BMPReadWriterPlugin BalloonEnginePlugin BitBltSimulation DSAPlugin DropPlugin
 					FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin InflatePlugin JPEGReadWriter2Plugin
 					JPEGReaderPlugin LargeIntegersPlugin Matrix2x3Plugin MiscPrimitivePlugin NewsqueakIA32ABIPlugin
-					RePlugin SecurityPlugin SocketPlugin SoundPlugin SurfacePlugin ThreadedIA32FFIPlugin
+					RePlugin SecurityPlugin SocketPlugin SoundPlugin SurfacePlugin SqueakSSLPlugin ThreadedIA32FFIPlugin
 					UUIDPlugin UnixOSProcessPlugin VMProfileMacSupportPlugin Win32OSProcessPlugin)
 ]
 
@@ -337,13 +337,9 @@ VMMaker class >> generateSqueakCogSistaVM [
 		generate: (Smalltalk at: ([:choices| choices at: (UIManager default chooseFrom: choices) ifAbsent: [^self]]
 									value: #(CoInterpreter CoInterpreterMT)))
 		and: SistaStackToRegisterMappingCogit
-		to: (FileDirectory default pathFromURI: 'cogvm/sistasrc')
-		platformDir: (FileDirectory default pathFromURI: 'cogvm/platforms')
-		excluding:#(BrokenPlugin DShowVideoDecoderPlugin NewsqueakIA32ABIPlugin NewsqueakIA32ABIPluginAttic
-					CroquetPlugin HostWindowPlugin SoundPlugin
-					QuicktimePlugin QVideoCodecPlugin QwaqMediaPlugin SlangTestPlugin TestOSAPlugin
-					FFIPlugin ThreadedARMFFIPlugin ThreadedFFIPlugin ThreadedPPCBEFFIPlugin
-					ReentrantARMFFIPlugin ReentrantFFIPlugin ReentrantIA32FFIPlugin ReentrantPPCBEFFIPlugin)
+		to: (FileDirectory default pathFromURI: 'oscogvm/sistasrc')
+		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
+		excluding: (InterpreterPlugin withAllSubclasses collect: [:ea| ea name])
 ]
 
 { #category : #configurations }
@@ -363,8 +359,8 @@ VMMaker class >> generateSqueakCogVM [
 					JPEGReadWriter2Plugin JPEGReaderPlugin JoystickTabletPlugin KlattSynthesizerPlugin
 					LargeIntegersPlugin LocalePlugin MIDIPlugin MacMenubarPlugin Matrix2x3Plugin
 					MiscPrimitivePlugin Mpeg3Plugin QuicktimePlugin RePlugin SecurityPlugin SerialPlugin
-					SocketPlugin SoundCodecPlugin SoundGenerationPlugin SoundPlugin ThreadedIA32FFIPlugin
-					StarSqueakPlugin UUIDPlugin UnixOSProcessPlugin Win32OSProcessPlugin VMProfileMacSupportPlugin)
+					SocketPlugin SoundCodecPlugin SoundGenerationPlugin SoundPlugin SqueakSSLPlugin StarSqueakPlugin
+					ThreadedIA32FFIPlugin UUIDPlugin UnixOSProcessPlugin Win32OSProcessPlugin VMProfileMacSupportPlugin)
 ]
 
 { #category : #configurations }
