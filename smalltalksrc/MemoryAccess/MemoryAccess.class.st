@@ -1,11 +1,7 @@
 "
-MemoryAccess defines the low level mapping of object memory addresses to the underlying machine address space. When implemented as Smalltalk methods, the generated C code
-is available for debugging and profiling. The Squeak code generator inlines the methods
-such that the resulting VM will have performance very similar to that obtained with
-traditional C preprocessor macros or inlined static functions.
+MemoryAccess defines the low level mapping of object memory addresses to the underlying machine address space. When implemented as Smalltalk methods, the generated C code is available for debugging and profiling. The Squeak code generator inlines the methods such that the resulting VM will have performance very similar to that obtained with traditional C preprocessor macros or inlined static functions.
 
-Methods are categorized and commented in order to clarify the type casting and memory
-address translation.
+Methods are categorized and commented in order to clarify the type casting and memory address translation.
 
 MemoryAccess replaces the traditional external definitions in sqMemoryAccess.h:
 
@@ -64,7 +60,7 @@ MemoryAccess replaces the traditional external definitions in sqMemoryAccess.h:
 "
 Class {
 	#name : #MemoryAccess,
-	#superclass : #Object,
+	#superclass : #VMClass,
 	#classVars : [
 		'Enabled'
 	],
