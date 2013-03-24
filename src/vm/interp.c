@@ -1,6 +1,6 @@
-/* Automatically generated from Squeak on 22 March 2013 8:31:25 am 
-   by VMMaker 4.11.2
- */
+/* Smalltalk from Squeak4.3 with VMMaker 4.11.3 translated as C source on 23 March 2013 11:29:12 pm */
+
+
 #if 1
 # define SQ_USE_GLOBAL_STRUCT 1
 #else
@@ -158,7 +158,7 @@ void defaultErrorProc(char *s) {
 #define InitialIPIndex 4
 #define InstanceSpecificationIndex 2
 #define InstructionPointerIndex 1
-#define InterpreterSourceVersion "4.11.2"
+#define InterpreterSourceVersion "4.11.3"
 #define InvokeCallbackSelector 53
 #define LargeContextBit 262144
 #define LastLinkIndex 1
