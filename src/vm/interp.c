@@ -1,4 +1,4 @@
-/* Smalltalk from Squeak4.3 with VMMaker 4.11.3 translated as C source on 23 March 2013 11:29:12 pm */
+/* Smalltalk from Squeak4.3 with VMMaker 4.11.4 translated as C source on 25 March 2013 9:43:44 pm */
 
 
 #if 1
@@ -158,7 +158,7 @@ void defaultErrorProc(char *s) {
 #define InitialIPIndex 4
 #define InstanceSpecificationIndex 2
 #define InstructionPointerIndex 1
-#define InterpreterSourceVersion "4.11.3"
+#define InterpreterSourceVersion "4.11.4"
 #define InvokeCallbackSelector 53
 #define LargeContextBit 262144
 #define LastLinkIndex 1
