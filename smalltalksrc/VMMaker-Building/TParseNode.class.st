@@ -22,6 +22,12 @@ TParseNode >> allCalls [
 	^calls
 ]
 
+{ #category : #enumerating }
+TParseNode >> anySatisfy: aBlock [
+	self nodesDo: [:n| (aBlock value: n) ifTrue: [^true]].
+	^false
+]
+
 { #category : #transformations }
 TParseNode >> bindVariableUsesIn: aDictionary [
 	"Bind uses of all variables in the given dictionary, but do not change variables that appear on the left-hand-side of an assignment statement."
@@ -261,6 +267,12 @@ TParseNode >> nodesDo: aBlock unless: cautionaryBlock [
 
 	(cautionaryBlock value: self) ifTrue: [^self].
 	aBlock value: self
+]
+
+{ #category : #enumerating }
+TParseNode >> noneSatisfy: aBlock [
+	self nodesDo: [:n| (aBlock value: n) ifTrue: [^false]].
+	^true
 ]
 
 { #category : #printing }

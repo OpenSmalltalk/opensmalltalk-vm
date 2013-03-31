@@ -53,20 +53,15 @@ TMethod >> addTypeForSelf [
 TMethod >> addVarsDeclarationsAndLabelsOf: methodToBeInlined except: doNotRename [
 	"Prepare to inline the body of the given method into the receiver by making the args and locals of the argument to the receiver be locals of the receiver. Record any type declarations for these variables. Record labels. Assumes that the variables have already be renamed to avoid name clashes."
 
-	methodToBeInlined args, methodToBeInlined locals do:
-		[ :v |
-		((doNotRename includes: v)
-		 or: [locals includes: v]) ifFalse:
-			[locals addLast: v]].
-
+	locals
+		addAll: (methodToBeInlined args reject: [ :v | doNotRename includes: v]);
+		addAll: (methodToBeInlined locals reject: [ :v | doNotRename includes: v]).
 	methodToBeInlined declarations keysAndValuesDo:
 		[ :v :decl |
 		(doNotRename includes: v) ifFalse:
 			[self declarationAt: v put: decl]].
 
-	methodToBeInlined labels do:
-		[ :label |
-		labels add: label]
+	labels addAll: methodToBeInlined labels
 ]
 
 { #category : #utilities }
@@ -266,7 +261,7 @@ TMethod >> compiledMethod [
 
 { #category : #'inlining support' }
 TMethod >> computePossibleSideEffectsInto: writtenToVars visited: visitedSelectors in: aCodeGen [
-	"Add all variables written to by this mathod and its callees to writtenToVars.
+	"Add all variables written to by this method and its callees to writtenToVars.
 	 Avoid circularity via visitedSelectors"
 
 	(visitedSelectors includes: selector) ifTrue:
@@ -282,7 +277,8 @@ TMethod >> computePossibleSideEffectsInto: writtenToVars visited: visitedSelecto
 				ifTrue:
 					[writtenToVars add: node variable name].
 			(node isSend
-			and: [node isBuiltinOperator not]) ifTrue:
+			 and: [node isBuiltinOperator not
+			 and: [(node isStructSend: aCodeGen) not]]) ifTrue:
 				[(aCodeGen methodNamed: node selector) ifNotNil:
 					[:method|
 					 method
@@ -483,7 +479,7 @@ TMethod >> emitInlineOn: aStream level: level generator: aCodeGen [
 		aStream crtab: level].
 	aStream nextPut: ${.
 	locals isEmpty ifFalse:
-		[locals do:
+		[(aCodeGen sortStrings: locals) do:
 			[:var|
 			 aStream
 				crtab: level+1;
@@ -863,10 +859,7 @@ TMethod >> inlineCaseStatementBranchesIn: aCodeGen localizingVars: varsList [
 			[self error: 'temp variable name conflicts with an existing local or arg'].
 		locals addLast: v].
 	"make local versions of the given globals"
-	varsList do:
-		[:var |
-		(usedVars includes: var) ifFalse:
-			[locals addFirst: var asString]]
+	locals addAll: (varsList reject: [:var | usedVars includes: var])
 ]
 
 { #category : #inlining }
@@ -1093,11 +1086,6 @@ TMethod >> isFunctional [
 ]
 
 { #category : #testing }
-TMethod >> isLocal: aVariableName [
-	^locals includes: aVariableName
-]
-
-{ #category : #testing }
 TMethod >> isRealMethod [
 	^(self definedAsMacro or: [self isStructAccessor]) not
 ]
@@ -1285,20 +1273,36 @@ TMethod >> prepareMethodIn: aCodeGen [
 				 self declarationAt: varName
 					put: (decl value: self value: aCodeGen), ' ', varName]]].
 	replacements := IdentityDictionary new.
-	parseTree nodesDo:
-		[:node|
-		 node isSend ifTrue:
-			[(aCodeGen builtin: node selector)
-				ifTrue:
-					[node isBuiltinOperator: true]
-				ifFalse:
-					[(CaseStatements includes: node selector) ifTrue:
-						[replacements at: node put: (self buildCaseStmt: node)].
-					 (#(caseOf: #caseOf:otherwise:) includes: node selector) ifTrue:
-						[replacements at: node put: (self buildSwitchStmt: node)]]].
-		 ((node isAssignment or: [node isReturn])
-		  and: [node expression isSwitch]) ifTrue:
-			[replacements at: node put: (self transformSwitchExpression: node)]].
+	aCodeGen
+		pushScope: declarations
+		while:
+			[parseTree nodesDo:
+				[:node|
+				 node isSend ifTrue:
+					[(aCodeGen builtin: node selector)
+						ifTrue:
+							[node isBuiltinOperator: true.
+							"If a to:by:do:'s limit has side-effects, declare the limit variable, otherwise delete it from the args"
+							 (node selector = #to:by:do:
+							  and: [node args size = 4]) ifTrue:
+								[| limitExpr |
+								 limitExpr := node args first.
+								 (limitExpr anySatisfy:
+										[:subNode|
+										subNode isSend
+										and: [(aCodeGen builtin: subNode selector) not
+										and: [(subNode isStructSend: aCodeGen) not]]])
+									ifTrue: [locals add: node args last name]
+									ifFalse:
+										[node arguments: node args allButLast]]]
+						ifFalse:
+							[(CaseStatements includes: node selector) ifTrue:
+								[replacements at: node put: (self buildCaseStmt: node)].
+							 (#(caseOf: #caseOf:otherwise:) includes: node selector) ifTrue:
+								[replacements at: node put: (self buildSwitchStmt: node)]]].
+				 ((node isAssignment or: [node isReturn])
+				  and: [node expression isSwitch]) ifTrue:
+					[replacements at: node put: (self transformSwitchExpression: node)]]].
 	replacements isEmpty ifFalse:
 		[parseTree := parseTree replaceNodesIn: replacements]
 ]
@@ -1673,14 +1677,13 @@ TMethod >> renameVarsForInliningInto: destMethod except: doNotRename in: aCodeGe
 	usedVars := destVars copy.  "keeps track of names in use"
 	usedVars addAll: args; addAll: locals.
 	varMap := Dictionary new: 100.
-	args, locals do: [ :v |
+	locals, args do:
+		[ :v |
 		((doNotRename includes: v) not
-		and: [destVars includes: v]) ifTrue: [
-			newVarName := self unusedNamePrefixedBy: v avoiding: usedVars.
-			varMap at: v put: newVarName.
-		].
-	].
-	self renameVariablesUsing: varMap.
+		  and: [destVars includes: v]) ifTrue:
+			[newVarName := self unusedNamePrefixedBy: v avoiding: usedVars.
+			varMap at: v put: newVarName]].
+	self renameVariablesUsing: varMap
 ]
 
 { #category : #transformations }
@@ -1741,7 +1744,7 @@ TMethod >> setSelector: sel definingClass: class args: argList locals: localList
 	definingClass := class.
 	returnType := #sqInt. 	 "assume return type is long for now"
 	args := argList asOrderedCollection collect: [:arg | arg key].
-	locals := (localList asSortedCollection: [:a :b| a key < b key]) collect: [:arg | arg key].
+	locals := (localList collect: [:arg | arg key]) asSet.
 	declarations := Dictionary new.
 	self addTypeForSelf.
 	primitive := aNumber.
@@ -1892,7 +1895,7 @@ TMethod >> superExpansionNodeFor: aSelector args: argumentNodes [
 					[:k| varMap at: k put: (superTMethod unusedNamePrefixedBy: k avoiding: self allLocals)].
 				 superTMethod renameVariablesUsing: varMap].
 			self assert: (superTMethod locals allSatisfy: [:var| (self locals includes: var) not]).
-			locals addAllFirst: superTMethod locals.
+			locals addAll: superTMethod locals.
 			superTMethod declarations keysAndValuesDo:
 				[:var :decl|
 				self declarationAt: var put: decl].

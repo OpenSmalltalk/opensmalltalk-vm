@@ -463,7 +463,7 @@ SmartSyntaxPluginTMethod >> setSelector: sel definingClass: class args: argList 
 	definingClass := class.
 	returnType := #sqInt. 	 "assume return type is sqInt for now"
 	args := argList asOrderedCollection collect: [:arg | arg key].
-	locals := localList asOrderedCollection collect: [:arg | arg key].
+	locals := (localList collect: [:arg | arg key]) asSet.
 	declarations := Dictionary new.
 	primitive := aNumber.
 	properties := methodProperties.
