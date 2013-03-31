@@ -2235,26 +2235,33 @@ CCodeGenerator >> generateTimes: msgNode on: aStream indent: level [
 { #category : #'C translation' }
 CCodeGenerator >> generateToByDo: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
-
-	| iterationVar step negative |
-	(msgNode args last args size = 1) ifFalse: [
-		self error: 'wrong number of block arguments'.
-	].
-	iterationVar := msgNode args last args first.
+	"N.B. MessageNode>>asTranslatorNodeIn: adds the limit var as a hidden fourth argument."
+	| blockExpr iterationVar limitExpr mayHaveSideEffects limitVar step negative |
+	blockExpr := msgNode args third.
+	blockExpr args size = 1 ifFalse:
+		[self error: 'wrong number of block arguments'].
+	iterationVar := blockExpr args first.
+	limitExpr := msgNode args first.
 	aStream nextPutAll: 'for (', iterationVar, ' = '.
 	self emitCExpression: msgNode receiver on: aStream.
+	mayHaveSideEffects := msgNode args size = 4. "See TMethod>>prepareMethodIn:"
+	mayHaveSideEffects ifTrue:
+		[limitVar := msgNode args last.
+		 aStream nextPutAll: ', ', limitVar name, ' = '.
+		 self emitCExpression: limitExpr on: aStream.
+		 limitExpr := limitVar].
 	aStream nextPutAll: '; ', iterationVar.
 	negative := ((step := msgNode args at: 2) isConstant and: [step value < 0])
 				or: [step isSend and: [step selector == #negated
 					and: [step receiver isConstant and: [step receiver value >= 0]]]].
 	aStream nextPutAll: (negative ifTrue: [' >= '] ifFalse: [' <= ']).
-	self emitCExpression: msgNode args first on: aStream.
+	self emitCExpression: limitExpr on: aStream.
 	aStream nextPutAll: '; ', iterationVar, ' += '.
 	self emitCExpression: step on: aStream.
 	aStream nextPutAll: ') {'; cr.
-	msgNode args last emitCCodeOn: aStream level: level + 1 generator: self.
-	level timesRepeat: [ aStream tab ].
-	aStream nextPutAll: '}'.
+	blockExpr emitCCodeOn: aStream level: level + 1 generator: self.
+	aStream tab: level.
+	aStream nextPut: $}
 ]
 
 { #category : #'C translation' }
@@ -3061,6 +3068,9 @@ CCodeGenerator >> removeConstant: aName [
 { #category : #utilities }
 CCodeGenerator >> removeMethodForSelector: aSelector [
 	"Remove the given method from the code base"
+	(breakSrcInlineSelector == aSelector
+	 or: [breakDestInlineSelector == aSelector]) ifTrue:
+		[self halt].
 	methods removeKey:  aSelector ifAbsent: []
 ]
 
