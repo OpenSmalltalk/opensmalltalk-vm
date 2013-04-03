@@ -1414,7 +1414,7 @@ StackInterpreter class >> requiredMethodNames [
 		assertValidExecutionPointe:r:s:
 		characterForAscii: checkedLongAt:
 		delayExpired
-		findClassOfMethod:forReceiver: findSelectorOfMethod:forReceiver:
+		findClassOfMethod:forReceiver: findSelectorOfMethod:
 			forceInterruptCheck forceInterruptCheckFromHeartbeat fullDisplayUpdate
 		getCurrentBytecode getFullScreenFlag getInterruptKeycode getInterruptPending
 			getSavedWindowSize getThisSessionID
@@ -1700,6 +1700,17 @@ StackInterpreter >> addToExternalPrimitiveTable: functionAddress [
 			^externalPrimitiveTableFirstFreeIndex := i+1]].
 	"if no space left, return zero so it'll looked up again"
 	^0
+]
+
+{ #category : #'debug support' }
+StackInterpreter >> addressCouldBeClassObj: maybeClassObj [
+	"Answer if maybeClassObj looks like a class object"
+	<inline: false>
+	^(objectMemory addressCouldBeObj: maybeClassObj)
+	  and: [((objectMemory isPointersNonInt: maybeClassObj) and: [(objectMemory lengthOf: maybeClassObj) >= 3])
+	  and: [(objectMemory isPointersNonInt: (objectMemory fetchPointer: SuperclassIndex ofObject: maybeClassObj))
+	  and: [(objectMemory isPointersNonInt: (objectMemory fetchPointer: MethodDictionaryIndex ofObject: maybeClassObj))
+	  and: [(objectMemory isIntegerObject: (objectMemory fetchPointer: InstanceSpecificationIndex ofObject: maybeClassObj))]]]]
 ]
 
 { #category : #'debug support' }
@@ -4939,6 +4950,23 @@ StackInterpreter >> findApplicationOfTargetMixin: targetMixin startingAtNonMetaC
 ]
 
 { #category : #'debug support' }
+StackInterpreter >> findClassContainingMethod: meth startingAt: classObj [
+	| currClass classDict classDictSize methodArray i |
+	currClass := classObj.
+	[classDict := objectMemory fetchPointer: MethodDictionaryIndex ofObject: currClass.
+	 classDictSize := objectMemory fetchWordLengthOf: classDict.
+	 methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: classDict.
+	 i := 0.
+	 [i < (classDictSize - SelectorStart)] whileTrue:
+		[meth = (objectMemory fetchPointer: i ofObject: methodArray) ifTrue:
+			[^currClass].
+		 i := i + 1].
+	 currClass := self superclassOf: currClass.
+	 currClass = objectMemory nilObject] whileFalse.
+	^currClass		"method not found in superclass chain"
+]
+
+{ #category : #'debug support' }
 StackInterpreter >> findClassForSelector: aSelector lookupClass: startClass do: unaryBlock [
 	"Search startClass' class hierarchy looking for aSelector and if found, evaluate unaryBlock
 	 with the class where the selector is found.  Otherwise evaluate unaryBlock with nil."
@@ -4959,25 +4987,16 @@ StackInterpreter >> findClassForSelector: aSelector lookupClass: startClass do: 
 
 { #category : #'debug support' }
 StackInterpreter >> findClassOfMethod: meth forReceiver: rcvr [
-
-	| rclass currClass classDict classDictSize methodArray i |
+	| rclass |
+	(objectMemory addressCouldBeOop: rcvr) ifTrue:
+		[rclass := objectMemory fetchClassOf: rcvr.
+		 (self addressCouldBeClassObj: rclass) ifTrue:
+			[rclass := self findClassContainingMethod: meth startingAt: rclass.
+			rclass ~= objectMemory nilObject ifTrue:
+				[^rclass]]].
 	(objectMemory addressCouldBeObj: meth) ifFalse:
 		[^objectMemory nilObject].
-	(objectMemory addressCouldBeOop: rcvr)
-		ifTrue: [rclass := objectMemory fetchClassOf: rcvr]
-		ifFalse: [rclass := self methodClassOf: meth].
-	currClass := rclass.
-	[classDict := objectMemory fetchPointer: MethodDictionaryIndex ofObject: currClass.
-	 classDictSize := objectMemory fetchWordLengthOf: classDict.
-	 methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: classDict.
-	 i := 0.
-	 [i < (classDictSize - SelectorStart)] whileTrue:
-		[meth = (objectMemory fetchPointer: i ofObject: methodArray) ifTrue:
-			[^currClass].
-		 i := i + 1].
-	 currClass := self superclassOf: currClass.
-	 currClass = objectMemory nilObject] whileFalse.
-	^rclass		"method not found in superclass chain"
+	^self findClassContainingMethod: meth startingAt: (self methodClassOf: meth)
 ]
 
 { #category : #'frame access' }
@@ -5162,25 +5181,21 @@ StackInterpreter >> findSelectorAndClassForMethod: meth lookupClass: startClass 
 ]
 
 { #category : #'debug support' }
-StackInterpreter >> findSelectorOfMethod: meth forReceiver: rcvr [
-
-	| currClass classDict classDictSize methodArray i |
+StackInterpreter >> findSelectorOfMethod: meth [
+	| classObj classDict classDictSize methodArray i |
 	(objectMemory addressCouldBeObj: meth) ifFalse:
 		[^objectMemory nilObject].
-	(objectMemory addressCouldBeOop: rcvr)
-		ifTrue: [currClass := objectMemory fetchClassOf: rcvr]
-		ifFalse: [currClass := self methodClassOf: meth].
-	[classDict := objectMemory fetchPointer: MethodDictionaryIndex ofObject: currClass.
-	 classDictSize := objectMemory fetchWordLengthOf: classDict.
-	 methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: classDict.
-	 i := 0.
-	 [i <= (classDictSize - SelectorStart)] whileTrue:
-		[meth = (objectMemory fetchPointer: i ofObject: methodArray) ifTrue:
-			[^(objectMemory fetchPointer: i + SelectorStart ofObject: classDict)].
-			i := i + 1].
-	 currClass := self superclassOf: currClass.
-	 currClass = objectMemory nilObject] whileFalse.
-	^currClass    "method not found in superclass chain"
+	classObj := self methodClassOf: meth.
+	(self addressCouldBeClassObj: classObj) ifTrue:
+		[classDict := objectMemory fetchPointer: MethodDictionaryIndex ofObject: classObj.
+		 classDictSize := objectMemory fetchWordLengthOf: classDict.
+		 methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: classDict.
+		 i := 0.
+		 [i <= (classDictSize - SelectorStart)] whileTrue:
+			[meth = (objectMemory fetchPointer: i ofObject: methodArray) ifTrue:
+				[^(objectMemory fetchPointer: i + SelectorStart ofObject: classDict)].
+				 i := i + 1]].
+	^objectMemory nilObject
 ]
 
 { #category : #'return bytecodes' }
@@ -8497,18 +8512,19 @@ StackInterpreter >> print: s [
 
 { #category : #'debug printing' }
 StackInterpreter >> printActivationNameFor: aMethod receiver: anObject isBlock: isBlock firstTemporary: maybeMessage [
-	| methClass methodSel |
+	| methClass methodSel classObj |
 	<inline: false>
 	isBlock ifTrue:
 		[self print: '[] in '].
 	methClass := self findClassOfMethod: aMethod forReceiver: anObject.
-	methodSel := self findSelectorOfMethod: aMethod forReceiver: anObject.
-	(objectMemory addressCouldBeOop: anObject)
+	methodSel := self findSelectorOfMethod: aMethod.
+	((objectMemory addressCouldBeOop: anObject)
+	 and: [self addressCouldBeClassObj: (classObj := objectMemory fetchClassOf: anObject)])
 		ifTrue:
-			[(objectMemory fetchClassOf: anObject) = methClass
+			[classObj = methClass
 				ifTrue: [self printNameOfClass: methClass count: 5]
 				ifFalse:
-					[self printNameOfClass: (objectMemory fetchClassOf: anObject) count: 5.
+					[self printNameOfClass: classObj count: 5.
 					 self print: '('.
 					 self printNameOfClass: methClass count: 5.
 					 self print: ')']]
@@ -10184,9 +10200,7 @@ StackInterpreter >> secondExtendedSendBytecode [
 StackInterpreter >> selectorOfContext: aContext [
 	(objectMemory isContext: aContext) ifFalse:
 		[^nil].
-	^self
-		findSelectorOfMethod: (objectMemory fetchPointer: MethodIndex ofObject: aContext)
-		forReceiver:  (objectMemory fetchPointer: ReceiverIndex ofObject: aContext)
+	^self findSelectorOfMethod: (objectMemory fetchPointer: MethodIndex ofObject: aContext)
 ]
 
 { #category : #'send bytecodes' }

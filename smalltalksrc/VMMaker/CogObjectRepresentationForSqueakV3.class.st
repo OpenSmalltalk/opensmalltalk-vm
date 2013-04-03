@@ -75,7 +75,7 @@ CogObjectRepresentationForSqueakV3 >> compactClassFieldMask [
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> couldBeObject: oop [
 	^(objectMemory isNonIntegerObject: oop)
-	  and: [oop asUnsignedInteger >= objectMemory nilObject]
+	  and: [self oop: oop isGreaterThanOrEqualTo: objectMemory nilObject]
 ]
 
 { #category : #'compile abstract instructions' }
@@ -702,7 +702,7 @@ CogObjectRepresentationForSqueakV3 >> shouldAnnotateObjectReference: anOop [
 	"self assert: ((objectMemory isIntegerObject: anOop)
 				or: [objectMemory addressCouldBeObj: anOop])."
 	^(objectMemory isNonIntegerObject: anOop)
-	  and: [anOop > objectMemory trueObject]
+	  and: [self oop: anOop isGreaterThan: objectMemory trueObject]
 ]
 
 { #category : #'compile abstract instructions' }
