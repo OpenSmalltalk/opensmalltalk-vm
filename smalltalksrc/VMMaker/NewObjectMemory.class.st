@@ -148,6 +148,17 @@ NewObjectMemory >> adjustAllOopsBy: bytesToShift [
 	^totalObjects
 ]
 
+{ #category : #'debug support' }
+NewObjectMemory >> allObjectsDo: aBlock [
+	<doNotGenerate>
+	| oop |
+	oop := self firstObject.
+	[oop < freeStart] whileTrue:
+		[(self isFreeObject: oop) ifFalse:
+			[aBlock value: oop].
+		 oop := self objectAfterWhileForwarding: oop]
+]
+
 { #category : #allocation }
 NewObjectMemory >> allocate: byteSize headerSize: hdrSize h1: baseHeader h2: classOopArg h3: extendedSize doFill: doFill format: format [
 	"Allocate a new object of the given size and number of header words. (Note: byteSize already includes space for the base header word.) Initialize the header fields of the new object and fill the remainder of the object with a value appropriate for the format.
@@ -332,7 +343,6 @@ NewObjectMemory >> become: array1 with: array2 twoWay: twoWayFlag copyHash: copy
 	self initializeMemoryFirstFree: freeStart. "re-initialize memory used for forwarding table"
 	self leakCheckBecome ifTrue:
 		[self runLeakCheckerForFullGC: true].
-	self forceInterruptCheck. "pretty much guaranteed to take a long time, so check for timers etc ASAP"
 
 	^PrimNoErr "success"
 ]
@@ -1881,6 +1891,12 @@ NewObjectMemory >> mapPointersInObjectsFrom: memStart to: memEnd [
 	self updatePointersInRangeFrom: memStart to: memEnd
 ]
 
+{ #category : #'primitive support' }
+NewObjectMemory >> mark: obj [
+	<inline: true>
+	self baseHeader: obj put: ((self baseHeader: obj) bitOr: MarkBit)
+]
+
 { #category : #'gc -- mark and sweep' }
 NewObjectMemory >> markPhase: fullGCFlag [
 	"Mark phase of the mark and sweep garbage collector. Set 
@@ -1939,6 +1955,13 @@ NewObjectMemory >> newObjectHash [
 	 a well-distributed and fairly random set of values."
 	<inline: true>
 	^freeStart >> ShiftForWord
+]
+
+{ #category : #'primitive support' }
+NewObjectMemory >> nilFieldsOf: arrayObj [ 
+	0 to: (self lengthOf: arrayObj) - 1 do:
+		[:i|
+		self storePointerUnchecked: i ofObject: arrayObj withValue: nilObj]
 ]
 
 { #category : #accessing }
@@ -2850,6 +2873,18 @@ NewObjectMemory >> sweepPhaseForFullGC [
 NewObjectMemory >> trueObject: anOop [
 	"For mapInterpreterOops"
 	trueObj := anOop
+]
+
+{ #category : #'primitive support' }
+NewObjectMemory >> unmarkAllObjects [
+	| oop hdr |
+	oop := self firstObject.
+	[oop < freeStart] whileTrue:
+		[(self isFreeObject: oop) ifFalse:
+			[hdr := self baseHeader: oop.
+			 (hdr bitAnd: MarkBit) ~= 0 ifTrue:
+				[self baseHeader: oop put: (hdr bitAnd: AllButMarkBit)]].
+		 oop := self objectAfter: oop]
 ]
 
 { #category : #simulation }

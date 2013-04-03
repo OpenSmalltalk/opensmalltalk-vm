@@ -1222,6 +1222,15 @@ TMethod >> nodeCount [
 	^cnt
 ]
 
+{ #category : #private }
+TMethod >> oopVariable: aString [
+
+	(locals includes: aString) ifFalse:
+		[locals add: aString.
+		self declarationAt: aString put: 'sqInt ', aString].
+	^TVariableNode new setName: aString
+]
+
 { #category : #accessing }
 TMethod >> parseTree [
 	"The parse tree of this method."
