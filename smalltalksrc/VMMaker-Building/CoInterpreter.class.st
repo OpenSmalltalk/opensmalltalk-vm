@@ -49,6 +49,7 @@ Class {
 		'CSYield',
 		'CogitClass',
 		'HasBeenReturnedFromMCPC',
+		'MFMethodFlagFrameIsMarkedFlag',
 		'MinBackwardJumpCountForCompile',
 		'PrimTraceLogSize',
 		'ReturnToInterpreter',
@@ -252,7 +253,8 @@ CoInterpreter class >> initializeFrameIndices [
 	 is at least needed to distinguish the checked and uncecked entry points by their alignment."
 	MFMethodFlagHasContextFlag := 1.
 	MFMethodFlagIsBlockFlag := 2.
-	MFMethodFlagsMask := MFMethodFlagHasContextFlag + MFMethodFlagIsBlockFlag.
+	MFMethodFlagFrameIsMarkedFlag := 4. "for pathTo:using:followWeak:"
+	MFMethodFlagsMask := MFMethodFlagHasContextFlag + MFMethodFlagIsBlockFlag + MFMethodFlagFrameIsMarkedFlag.
 	MFMethodMask := (MFMethodFlagsMask + 1) negated
 ]
 
