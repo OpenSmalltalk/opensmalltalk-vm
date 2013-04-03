@@ -277,15 +277,6 @@ SmartSyntaxPluginTMethod >> oldReplaceSizeMessages [
 
 ]
 
-{ #category : #private }
-SmartSyntaxPluginTMethod >> oopVariable: aString [
-
-	(locals includes: aString) ifFalse:
-		[locals add: aString.
-		self declarationAt: aString put: 'sqInt ', aString].
-	^TVariableNode new setName: aString
-]
-
 { #category : #accessing }
 SmartSyntaxPluginTMethod >> parmSpecs [
 

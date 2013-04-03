@@ -2489,6 +2489,21 @@ InterpreterPrimitives >> primitiveOriginalMillisecondClock [
 	self pop: 1 thenPush: (objectMemory integerObjectOf: (self ioOldMSecs bitAnd: MillisecondClockMask))
 ]
 
+{ #category : #'other primitives' }
+InterpreterPrimitives >> primitivePathToUsing [
+	"primitivePathTo: anObject using: stack <Array> followWeak: boolean
+	 Answer a path to anObject from the root that does not pass through
+	 the current context"
+	| err path |
+	<export: true>
+	self externalWriteBackHeadFramePointers.
+	err := self pathTo: (self stackValue: 2) using: (self stackValue: 1) followWeak: self stackTop = objectMemory trueObject.
+	err ~= 0 ifTrue:
+		[^self primitiveFailFor: err].
+	path := self self stackValue: 1.
+	self pop: argumentCount + 1 thenPush: path
+]
+
 { #category : #'control primitives' }
 InterpreterPrimitives >> primitivePerformInSuperclass [
 	| lookupClass rcvr currentClass |
