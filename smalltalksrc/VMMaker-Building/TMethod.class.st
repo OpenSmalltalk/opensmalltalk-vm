@@ -1352,7 +1352,7 @@ Undeclared variables are taken to be integers and will be converted from Smallta
 	o method can only return an integer"
 
 	| prolog postlog instVarsUsed varsAssignedTo instVarList primArgCount varName endsWithReturn aClass |
-selector == #setInterpreter: ifTrue:[self halt].
+	self assert: selector ~~ #setInterpreter:.
 	aClass := definingClass.
 	prolog := OrderedCollection new.
 	postlog := OrderedCollection new.
@@ -1381,11 +1381,10 @@ selector == #setInterpreter: ifTrue:[self halt].
 				postlog addAll: (self instVarPutExprFor: varName offset: varIndex - 1)]]].
 	prolog addAll: self checkSuccessExpr.
 
-	locals addAllFirst: args.
-	locals addFirst: 'rcvr'.
+	((locals includes: 'rcvr') or: [(locals intersection: args) notEmpty]) ifTrue:
+		[self error: 'local name conflicts with instance variable name'].
+	locals add: 'rcvr'; addAll: args.
 	args := args class new.
-	locals asSet size = locals size
-		ifFalse: [self error: 'local name conflicts with instance variable name'].
 	endsWithReturn := self endsWithReturn.
 	self fixUpReturns: primArgCount postlog: postlog.
 
