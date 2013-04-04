@@ -29,7 +29,7 @@ CP := /usr/bin/cp
 SED := /usr/bin/sed
 WINDRES := /usr/bin/windres
 
-icon.o:	../$(VM_BASE_NAME).rc
+icon.o:	$(VM_BASE_NAME).rc
 	$(WINDRES) --include-dir=.. --define _WIN32 -l 0 -i $< -o $@
 
 $(VM_EXECUTABLE): ../build/vm/$(VM_EXECUTABLE)
