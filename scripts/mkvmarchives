@@ -47,68 +47,68 @@ fi
 EXES=
 REV=`grep 'SvnRawRevisionString.*Rev:' platforms/Cross/vm/sqSCCSVersion.h \
 	| sed 's/^.*Rev: \([0-9][0-9]*\) $";/\1/'`
-echo SVNREV=$REV
-export REV
+TAG=`date +%g.%U.`$REV
+echo REV=$REV TAG=$TAG
 if [ -n "$CL" ]; then
-	rm -rf coglinux.tgz
-	COPYFILE_DISABLE=1 tar czf coglinux.tgz coglinux
+	rm -rf coglinux-$TAG.tgz
+	COPYFILE_DISABLE=1 tar czf coglinux-$TAG.tgz coglinux
 	EXES="$EXES	coglinux/lib/squeak/[0-9.-]*/squeak"
 fi
 if [ -n "$CTL" ]; then
-	rm -rf cogmtlinux.tgz
-	COPYFILE_DISABLE=1 tar czf cogmtlinux.tgz cogmtlinux
+	rm -rf cogmtlinux-$TAG.tgz
+	COPYFILE_DISABLE=1 tar czf cogmtlinux-$TAG.tgz cogmtlinux
 	EXES="$EXES	cogmtlinux/lib/squeak/[0-9.-]*/squeak"
 fi
 if [ -n "$CM" ]; then
 	test -d Cog.app || mkdir Cog.app
-	rm -rf Cog.app/* Cog.app.tgz
+	rm -rf Cog.app/* Cog.app-$TAG.tgz
 	(cd macbuild/Fast.app>/dev/null;tar cf - *)|(cd Cog.app;tar xvf -)
-	tar czf Cog.app.tgz Cog.app
-	EXES="$EXES	Cog.app/Contents/MacOS/Croquet"
+	tar czf Cog.app-$TAG.tgz Cog.app
+	EXES="$EXES	Cog.app/Contents/MacOS/Squeak"
 fi
 if [ -n "$CTM" ]; then
 	test -d CogMT.app || mkdir CogMT.app
-	rm -rf CogMT.app/* CogMT.app.tgz
+	rm -rf CogMT.app/* CogMT.app-$TAG.tgz
 	(cd macbuild/FastMT.app>/dev/null;tar cf - *)|(cd CogMT.app;tar xvf -)
-	tar czf CogMT.app.tgz CogMT.app
-	EXES="$EXES	CogMT.app/Contents/MacOS/Croquet"
+	tar czf CogMT.app-$TAG.tgz CogMT.app
+	EXES="$EXES	CogMT.app/Contents/MacOS/Squeak"
 fi
 if [ -n "$CW" ]; then
 	test -d cogwin || mkdir cogwin
-	rm -rf cogwin/* cogwin.zip
-	ln cygwinbuild/build/vm/{Croquet.exe,Croquet.ini,Croquet.map,Croquet.exe.manifest} cogwin
-	ln cygwinbuild/build/vm/{CroquetConsole.exe,CroquetConsole.ini,CroquetConsole.map} cogwin
+	rm -rf cogwin/* cogwin-$TAG.zip
+	ln cygwinbuild/build/vm/{Squeak.exe,Squeak.ini,Squeak.map,Squeak.exe.manifest} cogwin
+	ln cygwinbuild/build/vm/{SqueakConsole.exe,SqueakConsole.ini,SqueakConsole.map} cogwin
 	ln cygwinbuild/build/vm/*.dll cogwin
-	zip -vr cogwin.zip cogwin
-	EXES="$EXES	cogwin/Croquet.exe"
+	zip -vr cogwin-$TAG.zip cogwin
+	EXES="$EXES	cogwin/Squeak.exe"
 fi
 if [ -n "$CTW" ]; then
 	test -d cogmtwin || mkdir cogmtwin
-	rm -rf cogmtwin/* cogmtwin.zip
-	ln cygwinbuild/buildmt/vm/{Croquet.exe,Croquet.ini,Croquet.map,Croquet.exe.manifest} cogmtwin
-	ln cygwinbuild/buildmt/vm/{CroquetConsole.exe,CroquetConsole.ini,CroquetConsole.map} cogmtwin
+	rm -rf cogmtwin/* cogmtwin-$TAG.zip
+	ln cygwinbuild/buildmt/vm/{Squeak.exe,Squeak.ini,Squeak.map,Squeak.exe.manifest} cogmtwin
+	ln cygwinbuild/buildmt/vm/{SqueakConsole.exe,SqueakConsole.ini,SqueakConsole.map} cogmtwin
 	ln cygwinbuild/buildmt/vm/*.dll cogmtwin
-	zip -vr cogmtwin.zip cogmtwin
-	EXES="$EXES	cogmtwin/Croquet.exe"
+	zip -vr cogmtwin-$TAG.zip cogmtwin
+	EXES="$EXES	cogmtwin/Squeak.exe"
 fi
 if [ -n "$NL" ]; then
-	rm -rf nsvmlinux.tgz nsvmlinux-`date +%g.%U.$REV`.tgz
-	COPYFILE_DISABLE=1 tar czf nsvmlinux-`date +%g.%U.$REV`.tgz nsvmlinux
+	rm -rf nsvmlinux-$TAG.tgz nsvmlinux-$TAG.tgz
+	COPYFILE_DISABLE=1 tar czf nsvmlinux-$TAG.tgz nsvmlinux
 	EXES="$EXES	nsvmlinux/lib/nsvm/4.0-$REV/nsvm"
 fi
 if [ -n "$NM" ]; then
 	test -d Newspeak\ Virtual\ Machine.app || mkdir Newspeak\ Virtual\ Machine.app
-	rm -rf Newspeak\ Virtual\ Machine.app/* Newspeak\ Virtual\ Machine.app.tgz
+	rm -rf Newspeak\ Virtual\ Machine.app/* Newspeak\ Virtual\ Machine.app-$TAG.tgz
 	(cd $NSB/macbuild/Fast.app>/dev/null;tar cf - *)|(cd Newspeak\ Virtual\ Machine.app;tar xvf -)
-	tar czf Newspeak\ Virtual\ Machine.app.tgz Newspeak\ Virtual\ Machine.app
+	tar czf Newspeak\ Virtual\ Machine.app-$TAG.tgz Newspeak\ Virtual\ Machine.app
 	EXES="$EXES	Newspeak Virtual Machine.app/Contents/MacOS/Newspeak Virtual Machine"
 fi
 if [ -n "$NW" ]; then
 	test -d nsvmwin || mkdir nsvmwin
-	rm -rf nsvmwin/* nsvmwin.zip
+	rm -rf nsvmwin/* nsvmwin-$TAG.zip
 	ln $NSB/cygwinbuild/build/vm/{nsvm.exe,nsvm.map,nsvm.exe.manifest} nsvmwin
 	ln $NSB/cygwinbuild/build/vm/*.dll nsvmwin
-	zip -vr nsvmwin.zip nsvmwin
+	zip -vr nsvmwin-$TAG.zip nsvmwin
 	EXES="$EXES	nsvmwin/nsvm.exe"
 fi
 for vm in $EXES

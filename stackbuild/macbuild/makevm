@@ -6,8 +6,9 @@ IFS='
 BUILD_CONFIGURATION=Deployment
 NSD_BUILD_CONFIGURATION=Deployment
 XCD_BUILD_CONFIGURATION=Release
+APP=Squeak.app
 VMAPP=".app"
-DEST="Croquet"
+DEST="Squeak"
 VMXCP=CoreVM
 SFP=SqueakFFIPrims
 KEEP=
@@ -57,9 +58,9 @@ echo
 echo $VMXCP xcodebuild -project $VMXCP.xcodeproj -configuration $BUILD_CONFIGURATION
 xcodebuild -project $VMXCP.xcodeproj -configuration $BUILD_CONFIGURATION
 if [ -d "$DEST" ]; then
-	mv build/$BUILD_CONFIGURATION/Croquet.app/* "$DEST"
+	mv build/$BUILD_CONFIGURATION/$APP/* "$DEST"
 else
-	mv build/$BUILD_CONFIGURATION/Croquet.app "$DEST"
+	mv build/$BUILD_CONFIGURATION/$APP "$DEST"
 fi
 ../../scripts/versionInfoPlist ../../platforms CoreVM.plist "$DEST/Contents/Info.plist"
 

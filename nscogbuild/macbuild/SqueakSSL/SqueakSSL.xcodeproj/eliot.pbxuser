@@ -1,0 +1,98 @@
+// !$*UTF8*$!
+{
+	089C1669FE841209C02AAC07 /* Project object */ = {
+		activeBuildConfigurationName = Debug;
+		activeTarget = 8D01CCC60486CAD60068D4B7 /* SqueakSSL */;
+		addToTargets = (
+			8D01CCC60486CAD60068D4B7 /* SqueakSSL */,
+		);
+		codeSenseManager = 73D8A610170124CE00C66275 /* Code sense */;
+		perUserDictionary = {
+			PBXConfiguration.PBXFileTableDataSource3.PBXFileTableDataSource = {
+				PBXFileTableDataSourceColumnSortingDirectionKey = "-1";
+				PBXFileTableDataSourceColumnSortingKey = PBXFileDataSource_Filename_ColumnID;
+				PBXFileTableDataSourceColumnWidthsKey = (
+					20,
+					619,
+					20,
+					48,
+					43,
+					43,
+					20,
+				);
+				PBXFileTableDataSourceColumnsKey = (
+					PBXFileDataSource_FiletypeID,
+					PBXFileDataSource_Filename_ColumnID,
+					PBXFileDataSource_Built_ColumnID,
+					PBXFileDataSource_ObjectSize_ColumnID,
+					PBXFileDataSource_Errors_ColumnID,
+					PBXFileDataSource_Warnings_ColumnID,
+					PBXFileDataSource_Target_ColumnID,
+				);
+			};
+			PBXPerProjectTemplateStateSaveDate = 385953318;
+			PBXWorkspaceStateSaveDate = 385953318;
+		};
+		perUserProjectItems = {
+			73027B7017012E740086D8E4 /* PlistBookmark */ = 73027B7017012E740086D8E4 /* PlistBookmark */;
+			732D9F7A17012BA000E25893 /* PlistBookmark */ = 732D9F7A17012BA000E25893 /* PlistBookmark */;
+		};
+		sourceControlManager = 73D8A60F170124CE00C66275 /* Source Control */;
+		userBuildSettings = {
+		};
+	};
+	73027B7017012E740086D8E4 /* PlistBookmark */ = {
+		isa = PlistBookmark;
+		fRef = 8D01CCD10486CAD60068D4B7 /* Info.plist */;
+		fallbackIsa = PBXBookmark;
+		isK = 0;
+		kPath = (
+		);
+		name = /Users/eliot/Cog/oscogvm/macbuild/SqueakSSL/Info.plist;
+		rLen = 0;
+		rLoc = 9223372036854775807;
+	};
+	732D9F7A17012BA000E25893 /* PlistBookmark */ = {
+		isa = PlistBookmark;
+		fRef = 8D01CCD10486CAD60068D4B7 /* Info.plist */;
+		fallbackIsa = PBXBookmark;
+		isK = 1;
+		kPath = (
+			CFBundleName,
+		);
+		name = /Users/eliot/Cog/oscogvm/macbuild/SqueakSSL/Info.plist;
+		rLen = 11;
+		rLoc = 0;
+	};
+	73D8A60F170124CE00C66275 /* Source Control */ = {
+		isa = PBXSourceControlManager;
+		fallbackIsa = XCSourceControlManager;
+		isSCMEnabled = 0;
+		scmConfiguration = {
+			repositoryNamesForRoots = {
+				"" = "";
+			};
+		};
+	};
+	73D8A610170124CE00C66275 /* Code sense */ = {
+		isa = PBXCodeSenseManager;
+		indexTemplatePath = "";
+	};
+	73D8A62E1701259800C66275 /* SqueakSSL.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {797, 1885}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{2942, 1671}";
+		};
+	};
+	8D01CCC60486CAD60068D4B7 /* SqueakSSL */ = {
+		activeExec = 0;
+	};
+	DA3A20F50AA63CBF0050B983 /* interp.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {797, 636}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 774}";
+		};
+	};
+}

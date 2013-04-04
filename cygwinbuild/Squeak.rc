@@ -1,11 +1,11 @@
 #ifdef _WIN32
-1                       ICON    DISCARDABLE     "squeak.ico"
+1                       ICON    DISCARDABLE     "GreenCogSqueak.ico"
 2                       ICON    DISCARDABLE     "squeak2.ico"
 3                       ICON    DISCARDABLE     "squeak3.ico"
 
 1 VERSIONINFO
- FILEVERSION 3,11,3,0
- PRODUCTVERSION 3,11,0,0
+ FILEVERSION FILEVERSIONVALUES
+ PRODUCTVERSION 4,0,0,0
  FILEFLAGSMASK 0x3fL
  FILEFLAGS 0xaL
  FILEOS 0x10001L
@@ -17,11 +17,11 @@ BEGIN
         BLOCK "040904E4"    // Lang=US English, CharSet=Windows Multilin
         BEGIN
             VALUE "CompanyName", "Squeak.org\0"
-            VALUE "FileDescription", "Squeak Virtual Machine\0"
-            VALUE "FileVersion", "3.11.3\0"
-            VALUE "LegalCopyright", "Copyright \251 Squeak.org 1996-2009\0"
-            VALUE "ProductName", "Squeak\0"
-            VALUE "ProductVersion", "3.11\0"
+            VALUE "FileDescription", "Squeak Cog Virtual Machine\0"
+            VALUE "FileVersion", FILEVERSIONSTRING
+            VALUE "LegalCopyright", "Copyright \251 Squeak.org 1996-2013\0"
+            VALUE "ProductName", "Squeak Cog\0"
+            VALUE "ProductVersion", "4.0\0"
         END
     END
     BLOCK "VarFileInfo"

@@ -1,6 +1,7 @@
 #!/bin/sh
 IFS="	
 "
+VERBOSE=
 REV="`svnversion | sed 's/^.*://'`"
 case $REV in
 *M)	echo -n "source tree is modified, are you sure you want to continue? "
@@ -18,8 +19,8 @@ fi
 TAG=`date +%g.%U.`$REV
 echo REV=$REV TAG=$TAG
 
-CSARCS="Cog.app.tgz	coglinux.tgz	cogwin.zip"
-CMARCS="cogmtlinux.tgz	CogMT.app.tgz	cogmtwin.zip"
+CSARCS="Cog.app-$TAG.tgz	coglinux-$TAG.tgz	cogwin-$TAG.zip"
+CMARCS="cogmtlinux-$TAG.tgz	CogMT.app-$TAG.tgz	cogmtwin-$TAG.zip"
 NSARCS="Newspeak Virtual Machine-$TAG.dmg	nsvmlinux-$TAG.tgz	nsvm-$TAG.msi"
 NMARCS="Newspeak Virtual MachineMT-$TAG.dmg	nsvmmtlinux-$TAG.tgz	nsvmmt-$TAG.msi"
 if [ $# = 0 ]; then
@@ -34,22 +35,23 @@ else
 		case $1 in
 		-r)		REV=$1;;
 		-c)		ARCHIVES="$ARCHIVES		$CSARCS		$CMARCS";;
-		-cl)	ARCHIVES="$ARCHIVES	coglinux.tgz";;
-		-cm)	ARCHIVES="$ARCHIVES	Cog.app.tgz";;
-		-cw)	ARCHIVES="$ARCHIVES	cogwin.zip";;
-		-ctl)	ARCHIVES="$ARCHIVES	cogmtlinux.tgz";;
-		-ctm)	ARCHIVES="$ARCHIVES	CogMT.app.tgz";;
-		-ctw)	ARCHIVES="$ARCHIVES	cogmtwin.zip";;
+		-cl)	ARCHIVES="$ARCHIVES	coglinux-$TAG.tgz";;
+		-cm)	ARCHIVES="$ARCHIVES	Cog.app-$TAG.tgz";;
+		-cw)	ARCHIVES="$ARCHIVES	cogwin-$TAG.zip";;
+		-ctl)	ARCHIVES="$ARCHIVES	cogmtlinux-$TAG.tgz";;
+		-ctm)	ARCHIVES="$ARCHIVES	CogMT.app-$TAG.tgz";;
+		-ctw)	ARCHIVES="$ARCHIVES	cogmtwin-$TAG.zip";;
 		-nl)	ARCHIVES="$ARCHIVES	nsvmlinux-$TAG.tgz";;
 		-nm)	ARCHIVES="$ARCHIVES	Newspeak Virtual Machine-$TAG.dmg"
 				CheckDMG=1;;
 		-nw)	ARCHIVES="$ARCHIVES	nsvm-$TAG.msi"
 				CheckMSI=1;;
 		-n)		ARCHIVES="$ARCHIVES		$NSARCS";;
-		-l)		ARCHIVES="$ARCHIVES	coglinux.tgz	cogmtlinux.tgz	nsvmlinux-$TAG.tgz";;
-		-m)		ARCHIVES="$ARCHIVES	Cog.app.tgz	CogMT.app.tgz	Newspeak Virtual Machine-$TAG.dmg"
+		-l)		ARCHIVES="$ARCHIVES	coglinux-$TAG.tgz	cogmtlinux-$TAG.tgz	nsvmlinux-$TAG.tgz";;
+		-m)		ARCHIVES="$ARCHIVES	Cog.app-$TAG.tgz	CogMT.app-$TAG.tgz	Newspeak Virtual Machine-$TAG.dmg"
 				CheckDMG=1;;
-		-w)		ARCHIVES="$ARCHIVES	cogwin.tgz	cogmtwin.zip	nsvm-$TAG.msi"
+		-v)		VERBOSE=1;;
+		-w)		ARCHIVES="$ARCHIVES	cogwin-$TAG.tgz	cogmtwin-$TAG.zip	nsvm-$TAG.msi"
 				CheckMSI=1;;
 		-?|-h)  echo usage: $0 [-r REV -l -m -w -c -n -cl -cm -cw -ctl -ctm -ctw -nl -nm -nw]; exit 0;;
 		*)	break
@@ -57,10 +59,15 @@ else
 		shift
 	done
 fi
+if [ -n "$VERBOSE" ]; then
+	for a in $ARCHIVES; do
+		echo upload $a
+	done
+fi
 if [ -n "$CheckDMG" -a ! -f "Newspeak Virtual Machine-$TAG.dmg" ]; then
 	NMID=nscogbuild/macbuild/installer
 	if [ -f "Newspeak Virtual Machine-$TAG.dmg" ]; then
-		echo -n
+		true
 	elif [ -f "$NMID/Newspeak Virtual Machine-$TAG.dmg" ]; then
 		ln "$NMID/Newspeak Virtual Machine-$TAG.dmg" .
 	else
@@ -71,7 +78,7 @@ fi
 if [ -n "$CheckMSI" -a ! -f nsvm-$TAG.msi ]; then
 	NWID=nscogbuild/cygwinbuild/installer
 	if [ -f nsvm-$TAG.msi ]; then
-		echo -n
+		true
 	elif [ -f "$NWID/nsvm-$TAG.msi" ]; then
 		ln "$NWID/nsvm-$TAG.msi" .
 	else
@@ -88,6 +95,7 @@ N.B. For Squeak/Pharo/Croquet please use the archives whose names begin with
      non-blocking FFI calls.
 
 END
+	echo getting svn log
 	svn log platforms/Cross/vm/sqSCCSVersion.h >>README.$REV
 	vi README.$REV
 fi
@@ -110,5 +118,5 @@ done
 ssh -x eliotmiranda@bugsy.dreamhost.com mkdir mirandabanda.org/files/Cog/VM/VM.r$REV
 echo scp -p ChangeHistory README.$REV $ARCHIVES "$@" eliotmiranda@bugsy.dreamhost.com:mirandabanda.org/files/Cog/VM/VM.r$REV
 scp -p ChangeHistory README.$REV $ARCHIVES "$@" eliotmiranda@bugsy.dreamhost.com:mirandabanda.org/files/Cog/VM/VM.r$REV
-echo ssh eliotmiranda@bugsy.dreamhost.com chmod a-w mirandabanda.org/files/Cog/VM/VM.r$REV mirandabanda.org/files/Cog/VM/VM.r$REV/* \\\; ls -al mirandabanda.org/files/Cog/VM/VM.r$REV
-ssh eliotmiranda@bugsy.dreamhost.com chmod a-w mirandabanda.org/files/Cog/VM/VM.r$REV \"mirandabanda.org/files/Cog/VM/VM.r$REV/*\" \; ls -al mirandabanda.org/files/Cog/VM/VM.r$REV
+echo ssh eliotmiranda@bugsy.dreamhost.com mirandabanda.org/files/Cog/VM/VM.r$REV/* \\\; ls -al mirandabanda.org/files/Cog/VM/VM.r$REV
+ssh eliotmiranda@bugsy.dreamhost.com chmod a-w \"mirandabanda.org/files/Cog/VM/VM.r$REV/*\" \; ls -al mirandabanda.org/files/Cog/VM/VM.r$REV

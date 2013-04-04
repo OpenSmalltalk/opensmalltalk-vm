@@ -250,7 +250,7 @@
 		A2FB6B730CCD723F00A29088 /* LocalePlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = A2FB6B720CCD723F00A29088 /* LocalePlugin.h */; };
 		DA6061C40AA515470009E25D /* sqMacMain.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AEF402EB4E0A0100013C /* sqMacMain.c */; };
 		DA6061CA0AA5155E0009E25D /* sqNamedPrims.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AFDD02EB4E0A0100013C /* sqNamedPrims.c */; };
-		DAFA08940AA64625008DF459 /* Croquet.icns in Resources */ = {isa = PBXBuildFile; fileRef = DAFA08930AA64625008DF459 /* Croquet.icns */; };
+		DAFA08940AA64625008DF459 /* GreenCogSqueak.icns in Resources */ = {isa = PBXBuildFile; fileRef = DAFA08930AA64625008DF459 /* GreenCogSqueak.icns */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -291,7 +291,7 @@
 		94196AAE09974200005962BF /* sqMacUIEventsUniversal.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacUIEventsUniversal.c; sourceTree = "<group>"; };
 		94196AAF09974200005962BF /* sqMacUIMenuBarUniversal.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacUIMenuBarUniversal.c; sourceTree = "<group>"; };
 		94196AB009974200005962BF /* sqMacWindowUniversal.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacWindowUniversal.c; sourceTree = "<group>"; };
-		941A3C0C09AA144000C9D25A /* Croquet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Croquet.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		941A3C0C09AA144000C9D25A /* Squeak.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Squeak.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9426FF0F09F489D200ECEDDC /* chartables.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = chartables.c; sourceTree = "<group>"; };
 		9426FF1009F489D200ECEDDC /* config.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
 		9426FF1109F489D200ECEDDC /* get.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = get.c; sourceTree = "<group>"; };
@@ -386,7 +386,7 @@
 		A2FB6B580CCD71B000A29088 /* sqMacLocaleCarbon.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqMacLocaleCarbon.h; path = LocalePlugin/sqMacLocaleCarbon.h; sourceTree = "<group>"; };
 		A2FB6B720CCD723F00A29088 /* LocalePlugin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = LocalePlugin.h; path = LocalePlugin/LocalePlugin.h; sourceTree = "<group>"; };
 		DAD40DAF0AA60CE90082521A /* CoreVM.plist */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text.plist.xml; path = CoreVM.plist; sourceTree = "<group>"; };
-		DAFA08930AA64625008DF459 /* Croquet.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = Croquet.icns; path = resources/ProjectBuilder/Croquet.icns; sourceTree = "<group>"; };
+		DAFA08930AA64625008DF459 /* GreenCogSqueak.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = GreenCogSqueak.icns; path = resources/ProjectBuilder/GreenCogSqueak.icns; sourceTree = "<group>"; };
 		F5F8AE0F02EB4E090100013C /* sqMacOpenGL.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqMacOpenGL.h; sourceTree = "<group>"; };
 		F5F8AE3D02EB4E090100013C /* sqMacInternetConfiguration.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacInternetConfiguration.c; sourceTree = "<group>"; };
 		F5F8AE3F02EB4E090100013C /* sqMacJoystickAndTablet.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacJoystickAndTablet.c; sourceTree = "<group>"; };
@@ -553,7 +553,7 @@
 			isa = PBXGroup;
 			children = (
 				664A73DB0300584000A80109 /* Squeak VM.r */,
-				DAFA08930AA64625008DF459 /* Croquet.icns */,
+				DAFA08930AA64625008DF459 /* GreenCogSqueak.icns */,
 				664A73DC0300584000A80109 /* Squeak.icns */,
 				664A73DD0300584000A80109 /* SqueakChanges.icns */,
 				664A73DE0300584000A80109 /* SqueakImage.icns */,
@@ -569,7 +569,7 @@
 		08773F3000C6A1C4C0A80109 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				941A3C0C09AA144000C9D25A /* Croquet.app */,
+				941A3C0C09AA144000C9D25A /* Squeak.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -1695,9 +1695,9 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
-		941A3B2B09AA144000C9D25A /* Croquet */ = {
+		941A3B2B09AA144000C9D25A /* Squeak */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 941A3C0709AA144000C9D25A /* Build configuration list for PBXNativeTarget "Croquet" */;
+			buildConfigurationList = 941A3C0709AA144000C9D25A /* Build configuration list for PBXNativeTarget "Squeak" */;
 			buildPhases = (
 				941A3B2C09AA144000C9D25A /* Headers */,
 				941A3B7109AA144000C9D25A /* Resources */,
@@ -1714,10 +1714,10 @@
 ";
 			dependencies = (
 			);
-			name = Croquet;
+			name = Squeak;
 			productInstallPath = "$(USER_APPS_DIR)";
 			productName = "Squeak VM OPT";
-			productReference = 941A3C0C09AA144000C9D25A /* Croquet.app */;
+			productReference = 941A3C0C09AA144000C9D25A /* Squeak.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -1740,7 +1740,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				941A3B2B09AA144000C9D25A /* Croquet */,
+				941A3B2B09AA144000C9D25A /* Squeak */,
 			);
 		};
 /* End PBXProject section */
@@ -1758,7 +1758,7 @@
 				941A3B7709AA144000C9D25A /* SqueakGeneric.icns in Resources */,
 				941A3B7809AA144000C9D25A /* SqueakProject.icns in Resources */,
 				941A3B7909AA144000C9D25A /* SqueakSources.icns in Resources */,
-				DAFA08940AA64625008DF459 /* Croquet.icns in Resources */,
+				DAFA08940AA64625008DF459 /* GreenCogSqueak.icns in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1981,7 +1981,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				OTHER_LDFLAGS = "";
 				OTHER_REZFLAGS = "";
-				PRODUCT_NAME = Croquet;
+				PRODUCT_NAME = Squeak;
 				SECTORDER_FLAGS = "";
 				UNSTRIPPED_PRODUCT = YES;
 				WARNING_CFLAGS = "";
@@ -2057,7 +2057,7 @@
 				OTHER_LDFLAGS = "";
 				OTHER_REZFLAGS = "";
 				PER_ARCH_CFLAGS_i386 = "";
-				PRODUCT_NAME = Croquet;
+				PRODUCT_NAME = Squeak;
 				WARNING_CFLAGS = "";
 				WRAPPER_EXTENSION = app;
 				ZERO_LINK = NO;
@@ -2084,7 +2084,7 @@
 					HAVE_SYS_TIME_H,
 				);
 				GCC_PREPROCESSOR_DEFINITIONS_NOT_USED_IN_PRECOMPS = "$(GCC_PREPROCESSOR_DEFINITIONS_NOT_USED_IN_PRECOMPS_QUOTED_FOR_TARGET_1)";
-				GCC_PREPROCESSOR_DEFINITIONS_NOT_USED_IN_PRECOMPS_QUOTED_FOR_TARGET_1 = "BUILD_VERSION=\"\\\"Croquet Cog OS/X 4.0.0\\\"\"";
+				GCC_PREPROCESSOR_DEFINITIONS_NOT_USED_IN_PRECOMPS_QUOTED_FOR_TARGET_1 = "BUILD_VERSION=\"\\\"Squeak Cog OS/X 4.0.0\\\"\"";
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_UNROLL_LOOPS = YES;
 				GCC_VERSION_i386 = 4.2;
@@ -2095,7 +2095,7 @@
 					$SRCROOT,
 				);
 				ICC_DATA_NO_ALIAS = NO;
-				ICC_DEFINES = "ILP32=1 _NONSTD_SOURCE $(GCC_PREPROCESSOR_DEFINITIONS) BUILD_VERSION=\"\\\"Croquet Cog OS/X 4.0.0\\\"\"";
+				ICC_DEFINES = "ILP32=1 _NONSTD_SOURCE $(GCC_PREPROCESSOR_DEFINITIONS) BUILD_VERSION=\"\\\"Squeak Cog OS/X 4.0.0\\\"\"";
 				ICC_FP_MODEL = src;
 				ICC_LANG_ANSI_OPT = NO;
 				ICC_OPTLEVEL = speedHLO;
@@ -2109,7 +2109,7 @@
 				OTHER_LDFLAGS = "";
 				OTHER_REZFLAGS = "";
 				PER_ARCH_CFLAGS_i386 = "-O3  -falign-functions=16 -fno-gcse -mtune=prescott -march=pentium-m  -mfpmath=sse -finline-functions -Wall -DUSE_INLINE_MEMORY_ACCESSORS";
-				PRODUCT_NAME = Croquet;
+				PRODUCT_NAME = Squeak;
 				SECTORDER_FLAGS = "";
 				WARNING_CFLAGS = "";
 				WRAPPER_EXTENSION = app;
@@ -2152,7 +2152,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				OTHER_LDFLAGS = "";
 				OTHER_REZFLAGS = "";
-				PRODUCT_NAME = Croquet;
+				PRODUCT_NAME = Squeak;
 				SECTORDER_FLAGS = "";
 				UNSTRIPPED_PRODUCT = YES;
 				WARNING_CFLAGS = "";
@@ -2234,7 +2234,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		941A3C0709AA144000C9D25A /* Build configuration list for PBXNativeTarget "Croquet" */ = {
+		941A3C0709AA144000C9D25A /* Build configuration list for PBXNativeTarget "Squeak" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				941A3C0809AA144000C9D25A /* Development */,

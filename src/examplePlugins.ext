@@ -1,12 +1,12 @@
 # Automatically generated makefile include for external plugins
 EXTERNAL_PLUGINS = \
 ADPCMCodecPlugin \
-AioPlugin \
 AsynchFilePlugin \
 B3DAcceleratorPlugin \
 BMPReadWriterPlugin \
 B2DPlugin \
 BitBltPlugin \
+BochsIA32Plugin \
 CroquetPlugin \
 DSAPrims \
 ZipPlugin \
@@ -40,9 +40,11 @@ SocketPlugin \
 SoundCodecPrims \
 SoundGenerationPlugin \
 SoundPlugin \
+SqueakSSL \
 StarSqueakPlugin \
 SqueakFFIPrims \
 UUIDPlugin \
+AioPlugin \
 UnixOSProcessPlugin \
 VMProfileMacSupportPlugin \
 Win32OSProcessPlugin

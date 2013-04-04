@@ -11,4 +11,30 @@
 #endif
 
 CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "nsvm.exe.manifest"
+
+1 VERSIONINFO
+ FILEVERSION FILEVERSIONVALUES
+ PRODUCTVERSION 4,0,0,0
+ FILEFLAGSMASK 0x3fL
+ FILEFLAGS 0xaL
+ FILEOS 0x10001L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4"    // Lang=US English, CharSet=Windows Multilin
+        BEGIN
+            VALUE "CompanyName", "newspeaklanguage.org\0"
+            VALUE "FileDescription", "Newsqueak Cog Virtual Machine\0"
+            VALUE "FileVersion", FILEVERSIONSTRING
+            VALUE "ProductName", "Newsqueak Cog\0"
+            VALUE "ProductVersion", "4.0\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1252
+    END
+END
 #endif

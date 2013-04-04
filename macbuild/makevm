@@ -1,13 +1,14 @@
 #!/bin/bash
 # Build a "complete" Mac VM consisting of CoreVM/CoreMTVM + Plugins.
-# By default build the Deployment configuration into Croquet.app.
+# By default build the Deployment configuration into $APP (Squeak.app)
 IFS='	
 '
 BUILD_CONFIGURATION=Deployment
 NSD_BUILD_CONFIGURATION=Deployment
 XCD_BUILD_CONFIGURATION=Release
+APP=Squeak.app
 VMAPP=".app"
-DEST="Croquet"
+DEST="Squeak"
 VMXCP=CoreVM
 SFP=SqueakFFIPrims
 KEEP=
@@ -36,7 +37,7 @@ while getopts 'admskh?' opt $@; do
 			echo '  -d: compile Development configuration in Debug.app for debugging'
 			echo '  -m: compile the multi-threaded version of the target, e.g. FastMT.app instead of Fast.app'
 			echo '  -s: compile DeploymentSymbols configuration in Fast.app for partial debugging'
-			echo '  -k: keep (do not delete) the existing Croquet.app prior to the build'
+			echo "  -k: keep (do not delete) the existing $APP prior to the build"
 			echo '	-h: display this help'
 			exit 0;;
 	esac
@@ -61,9 +62,9 @@ echo
 echo $VMXCP xcodebuild -project $VMXCP.xcodeproj -configuration $BUILD_CONFIGURATION
 xcodebuild -project $VMXCP.xcodeproj -configuration $BUILD_CONFIGURATION
 if [ -d "$DEST" ]; then
-	mv build/$BUILD_CONFIGURATION/Croquet.app/* "$DEST"
+	mv build/$BUILD_CONFIGURATION/$APP/* "$DEST"
 else
-	mv build/$BUILD_CONFIGURATION/Croquet.app "$DEST"
+	mv build/$BUILD_CONFIGURATION/$APP "$DEST"
 fi
 ../scripts/versionInfoPlist ../platforms CoreVM.plist "$DEST/Contents/Info.plist"
 
@@ -100,6 +101,13 @@ echo SqueakFFIPlugin xcodebuild -project $SFP/SqueakFFI.xcodeproj -configuration
 xcodebuild -project $SFP/SqueakFFI.xcodeproj -configuration $NSD_BUILD_CONFIGURATION
 rm -rf "$DEST/Contents/Resources/SqueakFFIPrims.bundle"
 cp -R $SFP/build/$NSD_BUILD_CONFIGURATION/SqueakFFIPrims.bundle "$DEST/Contents/Resources"
+
+# Build the SSL plugin (New as of 25 March 2013)
+echo
+echo SqueakSSL xcodebuild -project SqueakSSL/SqueakSSL.xcodeproj -configuration $XCD_BUILD_CONFIGURATION
+xcodebuild -project SqueakSSL/SqueakSSL.xcodeproj -configuration $XCD_BUILD_CONFIGURATION
+rm -rf "$DEST/Contents/Resources/SqueakSSL.bundle"
+cp -R SqueakSSL/build/$XCD_BUILD_CONFIGURATION/SqueakSSL.bundle "$DEST/Contents/Resources"
 
 # Build the BochsIA32Plugin
 # N.B. To build the plugin you also have to build the Bochs libraries in

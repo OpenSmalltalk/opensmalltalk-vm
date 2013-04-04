@@ -12,7 +12,7 @@ CONFIGURATION=product
 THREADING=single
 
 # The name of the VM to build
-VM:=Croquet
+VM:=Squeak
 VM_NAME?=$(VM)
 
 # Is this a Croquet VM (defaults to OGL instead of D3D)?
@@ -190,7 +190,8 @@ OBJCOPY:=	objcopy
 # Note: RC compiles the .rc files into linkable .o files
 #
 RC:=	 windres
-RCFLAGS:= --include-dir $(PLATDIR)/win32/misc -D_WIN32
+SVNREV:= $(shell sed -e "s/^static.*SvnRawRevisionString.*Rev: \([0-9][0-9]*\).*/\\1/p" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h)
+RCFLAGS:= --include-dir $(PLATDIR)/win32/misc -D_WIN32 -DFILEVERSIONVALUES=4,0,$(SVNREV),0 '-DFILEVERSIONSTRING=\"4.0.$(SVNREV)\\0\"'
 
 .SUFFIXES:
 .SUFFIXES:	.ccg .cc .c .o .s .i .rc .res .cg .hg .ccg .cpp
@@ -201,6 +202,9 @@ RCFLAGS:= --include-dir $(PLATDIR)/win32/misc -D_WIN32
 # Common build rules
 #
 default: print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) $(STRIPEXE) $(STRIPCONSOLEEXE)
+
+svnver:
+	echo $(RC) $(RCFLAGS)
 
 productmt:;
 	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=product THREADING=multi $(@,product=) default

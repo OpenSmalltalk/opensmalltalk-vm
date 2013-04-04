@@ -7,6 +7,7 @@ BUILD_CONFIGURATION=Deployment
 NSD_BUILD_CONFIGURATION=Deployment
 XCD_BUILD_CONFIGURATION=Release
 DEST="Newspeak Virtual Machine.app"
+CONF=FAST
 KEEP=
 
 USAGE="usage: `basename $0` -[adskh?]"
@@ -16,10 +17,12 @@ while getopts 'adskh?' opt $@; do
 	a)		BUILD_CONFIGURATION=Assert
 			NSD_BUILD_CONFIGURATION=Development
 			XCD_BUILD_CONFIGURATION=Debug
+			CONF=ASSERT
 			DEST="Assert.app";;
 	d)		BUILD_CONFIGURATION=Development
 			NSD_BUILD_CONFIGURATION=Development
 			XCD_BUILD_CONFIGURATION=Debug
+			CONF=DEBUG
 			DEST="Debug.app";;
 	s)		BUILD_CONFIGURATION=DeploymentSymbols
 			DEST="Fast.app";;
@@ -58,6 +61,14 @@ else
 	mv build/$BUILD_CONFIGURATION/Newspeak\ Virtual\ Machine.app "$DEST"
 fi
 ../../scripts/versionInfoPlist ../../platforms CoreVM.plist "$DEST/Contents/Info.plist"
+ex -u NONE "+g/????/s/????/$CONF/" +w +q "$DEST/Contents/Info.plist"
+
+# Build the SSL plugin (New as of 25 March 2013)
+echo
+echo SqueakSSL xcodebuild -project SqueakSSL/SqueakSSL.xcodeproj -configuration $XCD_BUILD_CONFIGURATION
+xcodebuild -project SqueakSSL/SqueakSSL.xcodeproj -configuration $XCD_BUILD_CONFIGURATION
+rm -rf "$DEST/Contents/Resources/SqueakSSL.bundle"
+cp -R SqueakSSL/build/$XCD_BUILD_CONFIGURATION/SqueakSSL.bundle "$DEST/Contents/Resources"
 
 if false; then
 # Build the BochsIA32Plugin

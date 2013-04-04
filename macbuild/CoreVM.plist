@@ -14,9 +14,9 @@
 				<string>image</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
-			<string>Croquet.icns</string>
+			<string>SqueakImage.icns</string>
 			<key>CFBundleTypeName</key>
-			<string>Croquet Image File</string>
+			<string>Squeak Image File</string>
 			<key>CFBundleTypeOSTypes</key>
 			<array>
 				<string>STim</string>
@@ -30,9 +30,9 @@
 				<string>sources</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
-			<string>Croquet.icns</string>
+			<string>SqueakSources.icns</string>
 			<key>CFBundleTypeName</key>
-			<string>Croquet Sources File</string>
+			<string>Squeak Sources File</string>
 			<key>CFBundleTypeOSTypes</key>
 			<array>
 				<string>STso</string>
@@ -46,9 +46,9 @@
 				<string>changes</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
-			<string>Croquet.icns</string>
+			<string>SqueakChanges.icns</string>
 			<key>CFBundleTypeName</key>
-			<string>Croquet Changes File</string>
+			<string>Squeak Changes File</string>
 			<key>CFBundleTypeOSTypes</key>
 			<array>
 				<string>STch</string>
@@ -366,21 +366,21 @@
 		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
-	<string>Croquet</string>
+	<string>Squeak</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Croquet Cog 4.0.0 http://www.mirandabanda.org</string><!--version-->
+	<string>Squeak Cog 4.0.0 http://www.mirandabanda.org</string><!--version-->
 	<key>CFBundleShortVersionString</key>
-	<string>Croquet Cog 4.0.0</string><!--version-->
+	<string>Squeak Cog 4.0.0</string><!--version-->
 	<key>CFBundleVersion</key>
 	<string>4.0.0</string><!--version-->
 	<key>CFBundleIconFile</key>
-	<string>Croquet.icns</string>
+	<string>GreenCogSqueak.icns</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.squeak.Cog</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Croquet</string>
+	<string>Squeak</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleSignature</key>
@@ -484,7 +484,7 @@
 	<key>SqueakUIFlushUseHighPercisionClock</key>
 	<true/>
 	<key>SqueakUnTrustedDirectory</key>
-	<string>~/Library/Preferences/Croquet/Internet/Untrusted/</string>
+	<string>~/Library/Preferences/Squeak/Internet/Untrusted/</string>
 	<key>SqueakWindowAttribute</key>
 	<data>ggAAHw==</data>
 	<key>SqueakWindowHasTitle</key>

@@ -21,6 +21,7 @@ RePlugin \
 SecurityPlugin \
 SocketPlugin \
 SoundPlugin \
+SqueakSSL \
 SurfacePlugin \
 SqueakFFIPrims \
 UUIDPlugin \
