@@ -2,7 +2,7 @@
  *
  * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2010-04-01 13:48:37 by piumarta on emilia-2.local
+ * Last edited: 2013-04-04 13:59:35 by piumarta on linux32
  *
  *   Copyright (C) 2006 by Ian Piumarta
  *   All rights reserved.
@@ -65,8 +65,10 @@ static void sigio_restore(void);
 /* output */
 
 
+#if 0
 #define SQ_SND_PLAY_START_THRESHOLD	7/8
 #define SQ_SND_PLAY_AVAIL_MIN		4/8
+#endif
 
 static snd_pcm_t		*output_handle= 0;
 static snd_async_handler_t	*output_handler= 0;
@@ -99,8 +101,8 @@ static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sq
   int			 err;
   snd_pcm_hw_params_t	*hwparams;
   snd_pcm_sw_params_t	*swparams;
+  snd_pcm_uframes_t	 period_size;
   unsigned int		 uval;
-  int			 dir;
 
   if (output_handle) sound_Stop();
 
@@ -114,18 +116,25 @@ static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sq
   snd_pcm_hw_params_set_format(output_handle, hwparams, SND_PCM_FORMAT_S16_LE);
   snd_pcm_hw_params_set_channels(output_handle, hwparams, output_channels);
   uval= samplesPerSec;
-  snd_pcm_hw_params_set_rate_near(output_handle, hwparams, &uval, &dir);
+  snd_pcm_hw_params_set_rate_near(output_handle, hwparams, &uval, 0);
   output_buffer_period_size= frameCount;
-  snd_pcm_hw_params_set_period_size_near(output_handle, hwparams, &output_buffer_period_size, &dir);
+  snd_pcm_hw_params_set_period_size_near(output_handle, hwparams, &output_buffer_period_size, 0);
   snd(pcm_hw_params(output_handle, hwparams), "sound_Start: snd_pcm_hw_params");
 
   snd_pcm_sw_params_alloca(&swparams);
   snd(pcm_sw_params_current(output_handle, swparams), "sound_Start: snd_pcm_sw_params_current");
+#if 0
   snd(pcm_sw_params_set_start_threshold(output_handle, swparams, frameCount * SQ_SND_PLAY_START_THRESHOLD), "sound_Start: snd_pcm_sw_params_set_start_threshold");
   snd(pcm_sw_params_set_avail_min(output_handle, swparams, frameCount * SQ_SND_PLAY_AVAIL_MIN), "sound_Start: snd_pcm_sw_parama_set_avail_min");
+#endif
   snd(pcm_sw_params_set_xfer_align(output_handle, swparams, 1), "sound_Start: snd_pcm_sw_params_set_xfer_align");
   snd(pcm_sw_params(output_handle, swparams), "sound_Start: snd_pcm_sw_params");
+
+  snd(pcm_hw_params_get_period_size(hwparams, &period_size, 0), "sound_Start: pcm_hw_params_get_period_size");
   snd(pcm_hw_params_get_buffer_size(hwparams, &output_buffer_size), "sound_Start: pcm_hw_params_get_buffer_size");
+  snd(pcm_sw_params_set_avail_min(output_handle, swparams, period_size), "sound_Start: snd_pcm_sw_parama_set_avail_min");
+  snd(pcm_sw_params_set_start_threshold(output_handle, swparams, output_buffer_size), "sound_Start: snd_pcm_sw_params_set_start_threshold");
+
   output_buffer_frames_available= 1;
   max_delay_frames= output_buffer_period_size * 2;	/* set initial delay frames */
 
@@ -200,6 +209,7 @@ static sqInt  sound_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr,
 
 static sqInt  sound_PlaySamplesFromAtLength(sqInt frameCount, void *srcBufPtr, sqInt startIndex)
 {
+#if 0
   if (output_handle)
     {
       void *samples= srcBufPtr + startIndex * output_channels * 2;
@@ -222,6 +232,41 @@ static sqInt  sound_PlaySamplesFromAtLength(sqInt frameCount, void *srcBufPtr, s
       return count;
     }
   success(false);
+#else
+  if (!output_handle)
+      success(false);
+  else {
+      void *samples= srcBufPtr + startIndex * output_channels * 2;
+      int   count=   snd_pcm_writei(output_handle, samples, frameCount);
+
+      if (count < frameCount / 2)
+	  output_buffer_frames_available= 0;
+
+      if (count >= 0)
+	  return count;
+
+      switch (count) {
+	  case -EPIPE: {	/* under-run */
+	      int err= snd_pcm_prepare(output_handle);
+	      if (err < 0) fprintf(stderr, "sound_PlaySamples: can't recover from underrun, snd_pcm_prepare failed: %s", snd_strerror(err));
+	      break;
+	  }
+	  case -ESTRPIPE: {	/* stream suspended */
+	      int err;
+	      int timeout= 5;	/* half a second */
+	      while (-EAGAIN == (err= snd_pcm_resume(output_handle)) && timeout--)
+		  usleep(100000);		/* wait 1/10 of a second for suspend flag to be released */
+	      if (-EAGAIN == err) break;	/* return to interpreter and try to recover next time around */
+	      if (err < 0) err= snd_pcm_prepare(output_handle);
+	      if (err < 0) fprintf(stderr, "sound_PlaySamples: can't recover from suspend, snd_pcm_prepare failed: %s", snd_strerror(err));
+	      break;
+	  }
+	  default:
+	      fprintf(stderr, "snd_pcm_writei returned %i\n", count);
+	      break;
+      }
+  }
+#endif
   return 0;
 }
 
@@ -231,8 +276,10 @@ static sqInt  sound_PlaySilence(void)										FAIL(8192)
 /* input */
 
 
+#if 0
 #define SQ_SND_REC_START_THRESHOLD	4/8
 #define SQ_SND_REC_AVAIL_MIN		4/8
+#endif
 
 static snd_pcm_t		*input_handle= 0;
 static snd_async_handler_t	*input_handler= 0;
@@ -262,7 +309,8 @@ static sqInt sound_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo, sqIn
   snd_pcm_hw_params_t	*hwparams;
   snd_pcm_sw_params_t	*swparams;
   snd_pcm_uframes_t	 frames;
-  int			 dir;
+  snd_pcm_uframes_t	 period_size;
+  snd_pcm_uframes_t	 buffer_size;
 
   if (input_handle) sound_StopRecording();
 
@@ -276,15 +324,23 @@ static sqInt sound_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo, sqIn
   snd_pcm_hw_params_set_format(input_handle, hwparams, SND_PCM_FORMAT_S16_LE);
   snd_pcm_hw_params_set_channels(input_handle, hwparams, input_channels);
   input_rate= desiredSamplesPerSec;
-  snd_pcm_hw_params_set_rate_near(input_handle, hwparams, &input_rate, &dir);
+  snd_pcm_hw_params_set_rate_near(input_handle, hwparams, &input_rate, 0);
   frames= 4096;
-  snd_pcm_hw_params_set_period_size_near(input_handle, hwparams, &frames, &dir);
+  snd_pcm_hw_params_set_period_size_near(input_handle, hwparams, &frames, 0);
   snd(pcm_hw_params(input_handle, hwparams), "sound_StartRecording: snd_pcm_hw_params");
+
+  snd(pcm_hw_params_get_period_size(hwparams, &period_size, 0), "sound_Start: pcm_hw_params_get_period_size");
+  snd(pcm_hw_params_get_buffer_size(hwparams, &buffer_size), "sound_Start: pcm_hw_params_get_buffer_size");
 
   snd_pcm_sw_params_alloca(&swparams);
   snd(pcm_sw_params_current(input_handle, swparams), "sound_StartRecording: snd_pcm_sw_params_current");
+#if 0
   snd(pcm_sw_params_set_start_threshold(input_handle, swparams, frames * SQ_SND_REC_START_THRESHOLD), "sound_StartRecording: snd_pcm_sw_params_set_start_threshold");
   snd(pcm_sw_params_set_avail_min(input_handle, swparams, frames * SQ_SND_REC_AVAIL_MIN), "sound_StartRecording: snd_pcm_sw_parama_set_avail_min");
+#else
+  snd(pcm_sw_params_set_start_threshold(input_handle, swparams, buffer_size), "sound_StartRecording: snd_pcm_sw_params_set_start_threshold");
+  snd(pcm_sw_params_set_avail_min(input_handle, swparams, period_size), "sound_StartRecording: snd_pcm_sw_parama_set_avail_min");
+#endif
   snd(pcm_sw_params_set_xfer_align(input_handle, swparams, 1), "sound_StartRecording: snd_pcm_sw_params_set_xfer_align");
   snd(pcm_sw_params(input_handle, swparams), "sound_StartRecording: snd_pcm_sw_params");
 
