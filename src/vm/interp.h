@@ -1,4 +1,4 @@
-/* Smalltalk from Squeak4.3 with VMMaker 4.11.4 translated as C source on 25 March 2013 9:43:40 pm */
+/* Smalltalk from Squeak4.3 with VMMaker 4.11.5 translated as C source on 6 April 2013 10:59:29 am */
 
 
 
@@ -6,7 +6,7 @@
 # define HAVE_INTERP_H
 #endif
 
-#define VMMAKER_VERSION "4.11.4"
+#define VMMAKER_VERSION "4.11.5"
 #define VM_PROXY_MAJOR 1
 #define VM_PROXY_MINOR 9
 

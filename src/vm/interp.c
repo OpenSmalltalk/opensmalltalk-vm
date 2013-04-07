@@ -1,4 +1,4 @@
-/* Smalltalk from Squeak4.3 with VMMaker 4.11.4 translated as C source on 25 March 2013 9:43:44 pm */
+/* Smalltalk from Squeak4.3 with VMMaker 4.11.5 translated as C source on 6 April 2013 10:59:33 am */
 
 
 #if 1
@@ -158,7 +158,7 @@ void defaultErrorProc(char *s) {
 #define InitialIPIndex 4
 #define InstanceSpecificationIndex 2
 #define InstructionPointerIndex 1
-#define InterpreterSourceVersion "4.11.4"
+#define InterpreterSourceVersion "4.11.5"
 #define InvokeCallbackSelector 53
 #define LargeContextBit 262144
 #define LastLinkIndex 1
@@ -928,7 +928,7 @@ sqInt remapBuffer[26];
 struct foo * foo = &fum;
 
 sqInt extraVMMemory;
-const char *interpreterVersion = "Squeak4.3 of 21 March 2013 [latest update: #12549]";
+const char *interpreterVersion = "Squeak4.3 of 30 March 2013 [latest update: #12568]";
 sqInt (*compilerHooks[16])();
 struct VirtualMachine* interpreterProxy;
 sqInt imageFormatVersionNumber = 0;
@@ -13879,6 +13879,7 @@ register struct foo * foo = &fum;
     sqInt probe;
     sqInt i2;
     sqInt oop1;
+    sqInt iLimiT;
 
 	/* begin compilerMapHookFrom:to: */
 	if (foo->compilerInitialized) {
@@ -13905,7 +13906,7 @@ register struct foo * foo = &fum;
 	foo->methodClass = remap(foo->methodClass);
 	foo->lkupClass = remap(foo->lkupClass);
 	foo->receiverClass = remap(foo->receiverClass);
-	for (i2 = 1; i2 <= foo->remapBufferCount; i2 += 1) {
+	for (i2 = 1, iLimiT = foo->remapBufferCount; i2 <= iLimiT; i2 += 1) {
 		oop1 = foo->remapBuffer[i2];
 		if (!((oop1 & 1))) {
 			foo->remapBuffer[i2] = (remap(oop1));
@@ -14273,6 +14274,7 @@ register struct foo * foo = &fum;
     sqInt oop;
     sqInt i1;
     sqInt oop1;
+    sqInt iLimiT;
 
 
 	/* clear the recycled context lists */
@@ -14300,7 +14302,7 @@ register struct foo * foo = &fum;
 	markAndTrace(foo->methodClass);
 	markAndTrace(foo->lkupClass);
 	markAndTrace(foo->receiverClass);
-	for (i1 = 1; i1 <= foo->remapBufferCount; i1 += 1) {
+	for (i1 = 1, iLimiT = foo->remapBufferCount; i1 <= iLimiT; i1 += 1) {
 		oop1 = foo->remapBuffer[i1];
 		if (!((oop1 & 1))) {
 			markAndTrace(oop1);
@@ -24487,6 +24489,7 @@ register struct foo * foo = &fum;
     sqInt lastAddr3;
     sqInt i4;
     sqInt oop;
+    sqInt iLimiT;
     sqInt in;
     sqInt lastIn1;
     sqInt out;
@@ -24590,7 +24593,7 @@ register struct foo * foo = &fum;
 	markAndTrace(foo->methodClass);
 	markAndTrace(foo->lkupClass);
 	markAndTrace(foo->receiverClass);
-	for (i4 = 1; i4 <= foo->remapBufferCount; i4 += 1) {
+	for (i4 = 1, iLimiT = foo->remapBufferCount; i4 <= iLimiT; i4 += 1) {
 		oop = foo->remapBuffer[i4];
 		if (!((oop & 1))) {
 			markAndTrace(oop);
