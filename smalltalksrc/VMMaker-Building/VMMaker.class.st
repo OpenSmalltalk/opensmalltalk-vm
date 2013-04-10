@@ -369,8 +369,8 @@ VMMaker class >> generateSqueakStackVM [
 	"No primitives since we can use those for the Cog VM"
 	^VMMaker
 		generate: StackInterpreter
-		to: (FileDirectory default pathFromURI: 'oscogvm/stacksrc')
-		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
+		to: (FileDirectory default directoryNamed: 'oscogvm/stacksrc') fullName
+		platformDir: (FileDirectory default directoryNamed: 'oscogvm/platforms') fullName
 		excluding: (InterpreterPlugin withAllSubclasses collect: [:ea| ea name])
 ]
 
@@ -1048,9 +1048,7 @@ VMMaker >> generateInterpreterFile [
 	self interpreterClass apiExportHeaderName ifNotNil:
 		[cg storeAPIExportHeader: self interpreterClass apiExportHeaderName
 			OnFile: (self sourceFilePathFor: self interpreterClass apiExportHeaderName)].
-	(Gnuifier on: self coreVMDirectory)
-		interpreterFilename: self interpreterFilename;
-		gnuify.
+	self gnuifyInterpreterFile
 ]
 
 { #category : #'generate sources' }
@@ -1062,6 +1060,14 @@ VMMaker >> generateMainVM [
 		processFilesForCoreVM;
 		generateInternalPlugins;
 		generateExportsFile
+]
+
+{ #category : #'processing external files' }
+VMMaker >> gnuifyInterpreterFile [
+"post-process the interp.c file to make it gcc friendly"
+	(Gnuifier on: self coreVMDirectory)
+		interpreterFilename: self interpreterFilename;
+		gnuify.
 ]
 
 { #category : #initialize }
