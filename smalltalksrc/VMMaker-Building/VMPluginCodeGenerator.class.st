@@ -26,7 +26,7 @@ VMPluginCodeGenerator >> emitCCodeOn: aStream doInlining: inlineFlag doAssertion
 	[super emitCCodeOn: NullStream new doInlining: inlineFlag doAssertions: assertionFlag]
 		on: MessageNotUnderstood
 		do: [:ex|
-				(#(cr crtab: peekLast space tab tab:) includes: ex message selector) ifTrue:
+				(#(cr crtab: ensureCr peekLast space tab tab:) includes: ex message selector) ifTrue:
 					[ex resume: nil].
 				ex pass].
 	headerFiles := savedHeaders.

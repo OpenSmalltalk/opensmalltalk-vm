@@ -7,6 +7,23 @@ Class {
 	#category : #'VMMaker-Building'
 }
 
+{ #category : #initialisation }
+RiscOSVMMaker class >> forPlatform: ignired [
+	"over-ride to keep a RiscOSVMMaker in charge instead of a CrossPlatormVMMaker"
+		^self new initialize setPlatName: self name
+]
+
+{ #category : #configurations }
+RiscOSVMMaker class >> generateSqueakStackVM [
+	"RISC OS version; build needed plugins, make sure filename tweaking is used"
+"RiscOSVMMaker generateSqueakStackVM"
+	^self
+		generate: StackInterpreter
+		to: (FileDirectory default directoryNamed: 'stacksrc') fullName
+		platformDir: (FileDirectory default directoryNamed: 'platforms') fullName
+		excluding: #(AsynchFilePlugin BrokenPlugin CroquetPlugin FFIPlugin IA32ABIPlugin ImmX11Plugin InternetConfigPlugin JoystickTabletPlugin MIDIPlugin MacMenubarPlugin Mpeg3Plugin NewsqueakIA32ABIPlugin QuicktimePlugin SerialPlugin  TestOSAPlugin ThreadedARMFFIPlugin ThreadedFFIPlugin ThreadedIA32FFIPlugin ThreadedPPCBEFFIPlugin UUIDPlugin VMProfileMacSupportPlugin)
+]
+
 { #category : #initialize }
 RiscOSVMMaker >> createCodeGenerator [
 "set up a CCodeGenerator for this VMMaker - RiscOS uses the global struct and no local def of the structure because of the global register trickery"
@@ -55,6 +72,11 @@ named_entries:
 	f close.
 	(fd directoryNamed: 'o') assureExistence
 
+]
+
+{ #category : #'processing external files' }
+RiscOSVMMaker >> gnuifyInterpreterFile [
+"do nothing here"
 ]
 
 { #category : #'generate sources' }
@@ -137,11 +159,11 @@ RiscOSVMMaker >> processFilesForInternalPlugin: plugin [
 ]
 
 { #category : #'generate sources' }
-RiscOSVMMaker >> sourceFilePathFor: class [
+RiscOSVMMaker >> sourceFilePathFor: sourceFileName [
 	"return the full path for the interpreter file"
 	"RiscOS keeps the interp file in a 'c' subdirectory of coreVMDirectory"
 	self coreVMDirectory assureExistenceOfPath: 'c'.
-	^(self coreVMDirectory directoryNamed: 'c') fullNameFor: class sourceFileName
+	^(self coreVMDirectory directoryNamed: 'c') fullNameFor: (sourceFileName allButLast: 2)
 ]
 
 { #category : #exports }
