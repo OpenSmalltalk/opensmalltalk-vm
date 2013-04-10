@@ -8,9 +8,9 @@ Class {
 }
 
 { #category : #initialisation }
-RiscOSVMMaker class >> forPlatform: ignired [
-	"over-ride to keep a RiscOSVMMaker in charge instead of a CrossPlatormVMMaker"
-		^self new initialize setPlatName: self name
+RiscOSVMMaker class >> forPlatform: ignored [
+	"override to keep a RiscOSVMMaker in charge instead of a CrossPlatformVMMaker"
+	^self new initialize setPlatName: self name
 ]
 
 { #category : #configurations }

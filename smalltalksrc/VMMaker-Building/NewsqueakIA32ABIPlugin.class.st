@@ -507,8 +507,9 @@ NewsqueakIA32ABIPlugin >> primInLibraryFindSymbol [
 	 or:
 		libraryHandle <Alien>  primFindSymbol: symbolName <String> ^<Integer>
 			<primitive: 'primInLibraryFindSymbol' error: errorCode module: 'IA32ABI'>"
-	| functionName libraryProxy address |
 	<export: true>
+	| functionName libraryProxy address |
+	<var: #address type: #'void *'>
 	functionName := interpreterProxy stackValue: 0.
 	libraryProxy := interpreterProxy stackValue: 1.
 	((self isAlien: libraryProxy)
@@ -517,13 +518,13 @@ NewsqueakIA32ABIPlugin >> primInLibraryFindSymbol [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	address := interpreterProxy
 					ioLoadSymbol: (self cCoerce: (interpreterProxy firstIndexableField: functionName)
-										to: 'sqInt')
+										to: #sqInt)
 					OfLength: (interpreterProxy byteSizeOf: functionName)
 					FromModule: (self longAt: libraryProxy + BaseHeaderSize + BytesPerOop).
 	(interpreterProxy failed
 	 or: [address = 0]) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNotFound].
-	interpreterProxy methodReturnValue: (interpreterProxy positive32BitIntegerFor: address)
+	interpreterProxy methodReturnValue: (interpreterProxy positive32BitIntegerFor: address asUnsignedInteger)
 ]
 
 { #category : #'primitives-library loading' }
@@ -532,8 +533,9 @@ NewsqueakIA32ABIPlugin >> primLoadLibrary [
 	 of the form:
 		<Anywhere>  primLoadLibrary: libraryName <String> ^<Integer>
 			<primitive: 'primLoadLibrary' error: errorCode module: 'IA32ABI'>"
-	| libraryName libraryHandle |
 	<export: true>
+	| libraryName libraryHandle |
+	<var: #libraryHandle type: #'void *'>
 	libraryName := interpreterProxy stackValue: 0.
 	(interpreterProxy isBytes: libraryName)
 		ifFalse: [^ interpreterProxy primitiveFailFor: PrimErrBadArgument].
@@ -542,7 +544,7 @@ NewsqueakIA32ABIPlugin >> primLoadLibrary [
 					OfLength: (interpreterProxy byteSizeOf: libraryName).
 	libraryHandle = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNotFound].
-	interpreterProxy methodReturnValue: (interpreterProxy positive32BitIntegerFor: libraryHandle)
+	interpreterProxy methodReturnValue: (interpreterProxy positive32BitIntegerFor: libraryHandle asUnsignedInteger)
 ]
 
 { #category : #'primitives-memory management' }
@@ -569,16 +571,36 @@ NewsqueakIA32ABIPlugin >> primMalloc [
 { #category : #'primitives-callbacks' }
 NewsqueakIA32ABIPlugin >> primReturnAsFromContextThrough [
 	"Return a result from a callback to the callback's callee.  The primitive
-	has a signature of the form:
+	 has a signature of either of the forms:
 		result <VMCallbackContext32/64>
 				primReturnAs: returnTypeCode <Integer>
 				FromContext: callbackContext <Context>
-			<primitive: 'primReturnAsFromContextThrough' error: errorCode module: 'IA32ABI'>"
+		result <VMCallbackContext32/64>
+				primSignal: aSemaphore <Semaphore>
+				andReturnAs: returnTypeCode <Integer>
+				FromContext: callbackContext <Context>
+			<primitive: 'primReturnAsFromContextThrough' error: errorCode module: 'IA32ABI'>.
+	 If of the second form answer false if this is not the most recent callback, and signal aSemaphore
+	 if it is, so as to implement LIFO ordering of callbacks."
 	<export: true>
+	| vmCallbackContext isMostRecent |
+	<var: #vmCallbackContext type: #'VMCallbackContext *'>
+	interpreterProxy methodArgumentCount = 3
+		ifTrue:
+			[vmCallbackContext := self cCoerceSimple: (self startOfData: (interpreterProxy stackValue: 3))
+										to: #'VMCallbackContext *'.
+			 isMostRecent := vmCallbackContext = self getMostRecentCallbackContext.
+			 isMostRecent ifFalse:
+				[^interpreterProxy methodReturnValue: interpreterProxy falseObject].
+			(interpreterProxy fetchClassOf: (interpreterProxy stackValue: 2)) = interpreterProxy classSemaphore ifFalse:
+				[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+			[interpreterProxy signalNoResume: (interpreterProxy stackValue: 2)] whileFalse]
+		ifFalse:
+			[vmCallbackContext := self cCoerceSimple: (self startOfData: (interpreterProxy stackValue: 2))
+										to: #'VMCallbackContext *'].
 	(interpreterProxy
 		returnAs: (interpreterProxy stackValue: 1)
-		ThroughCallback: (self cCoerceSimple: (self startOfData: (interpreterProxy stackValue: 2))
-								to: #'VMCallbackContext *')
+		ThroughCallback: vmCallbackContext
 		Context: (interpreterProxy stackValue: 0)) ifFalse:
 			[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	"NOTREACHED"
@@ -587,9 +609,12 @@ NewsqueakIA32ABIPlugin >> primReturnAsFromContextThrough [
 { #category : #'primitives-callbacks' }
 NewsqueakIA32ABIPlugin >> primReturnFromContextThrough [
 	"Return a result from a callback to the callback's callee.  The primitive
-	has a signature of the form:
-		result <FFICallbackResult> primReturnFromContext: callbackContext <Context> through: jmpBuf <Integer>
-			<primitive: 'primReturnFromContextThrough' error: errorCode module: 'IA32ABI'>"
+	 has a signature of either of the forms:
+		result <FFICallbackResult> primReturnFromContext: callbackContext <MethodContext> through: jmpBuf <Integer>
+		result <FFICallbackResult> primSignal: aSemaphore <Semaphore> andReturnFromContext: callbackContext <MethodContext> through: jmpBuf <Integer>
+			<primitive: 'primReturnFromContextThrough' error: errorCode module: 'IA32ABI'>.
+	 If of the second form answer true if this is not the most recent callback, and signal aSemaphore
+	 if it is, so as to implement LIFO ordering of callbacks."
 	<export: true>
 	<legacy>
 	| mac vmCallbackContext vmCallbackReturnValue isMostRecent |
@@ -605,7 +630,7 @@ NewsqueakIA32ABIPlugin >> primReturnFromContextThrough [
 		isMostRecent ifFalse:
 			[interpreterProxy methodReturnValue: interpreterProxy trueObject.
 			^nil].
-		(interpreterProxy fetchClassOf: (interpreterProxy stackValue: 2)) == interpreterProxy classSemaphore
+		(interpreterProxy fetchClassOf: (interpreterProxy stackValue: 2)) = interpreterProxy classSemaphore
 			ifFalse: [^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 		[interpreterProxy signalNoResume: (interpreterProxy stackValue: 2)] whileFalse].
 	vmCallbackReturnValue := self cCoerceSimple: (self startOfData: (interpreterProxy stackValue: mac))
