@@ -36,6 +36,7 @@
  
 #include "sq.h"		/* sqUnixConfig.h */
 #include "sqAssert.h"
+#include "sqUnixMain.h"
 
 #if (DEBUG)
 # define DPRINTF(ARGS) fprintf ARGS
@@ -133,11 +134,13 @@ extern char vmPath[];
 #endif
 
 
-static void *tryLoadModule(char *in, char *name)
+static void *
+tryLoadModule(char *in, char *name)
 {
   char path[PATH_MAX], *out= path;
   void *handle= 0;
   int c;
+  DPRINTF((stderr, __FILE__ " %d tryLoadModule(%s,%s)\n", __LINE__, in, name));
   while ((c= *in++) && ':' != c) {	/* copy next plugin path to path[] */
     switch (c) {
     case '%':
@@ -160,7 +163,7 @@ static void *tryLoadModule(char *in, char *name)
   }
   sprintf(out, "/" MODULE_PREFIX "%s" MODULE_SUFFIX, name);
   handle= dlopen(path, RTLD_NOW | RTLD_GLOBAL);
-  DPRINTF((stderr, "tryLoading(%s) = %p\n", path, handle));
+  DPRINTF((stderr, __FILE__ " %d tryLoading dlopen(%s) = %p\n", __LINE__, path, handle));
   if (!handle) {
     struct stat buf;
     if ((0 == stat(path, &buf)) && ! S_ISDIR(buf.st_mode))
@@ -176,13 +179,14 @@ void *ioLoadModule(char *pluginName)
   char *dir= squeakPlugins;
   void *handle= 0;
 
+  DPRINTF((stderr, __FILE__ " %d ioLoadModule(%s)\n", __LINE__, pluginName));
   if ((0 == pluginName) || ('\0' == pluginName[0])) {	/* find module in main program */
     handle= dlopen(0, RTLD_NOW | RTLD_GLOBAL);
     if (handle == 0) {
-      fprintf(stderr, "ioLoadModule(<intrinsic>): %s\n", dlerror());
+      fprintf(stderr, __FILE__ " %d ioLoadModule dlopen(<intrinsic>): %s\n", __LINE__, dlerror());
     }
     else {
-      DPRINTF((stderr, "loaded: <intrinsic>\n"));
+      DPRINTF((stderr, __FILE__ " %d ioLoadModule loaded: <intrinsic>\n", __LINE__));
     }
     return handle;
   }
@@ -205,7 +209,7 @@ void *ioLoadModule(char *pluginName)
 # endif
 
   handle= dlopen(path, RTLD_NOW | RTLD_GLOBAL);
-  DPRINTF((stderr, "ioLoadModule(%s) = %p\n", path, handle));
+  DPRINTF((stderr, __FILE__ " %d ioLoadModule dlopen(%s) = %p%s\n", __LINE__, path, handle, handle ? "" : dlerror()));
 
   return handle;
 }
@@ -215,7 +219,8 @@ void *ioLoadModule(char *pluginName)
 
 /*  Attempt to load the shared library named by the concatenation of prefix,
  *  moduleName and suffix.  Answer the new module entry, or 0 if the shared
- *  library could not be loaded.
+ *  library could not be loaded. Try all combinations of prefixes and suffixes,
+ *	including no prefix or suffix.
  */
 static void *
 tryLoading(char *dirName, char *moduleName)
@@ -225,6 +230,7 @@ tryLoading(char *dirName, char *moduleName)
   void        *handle= 0;
   char	     **prefix= 0, **suffix= 0;
 
+  DPRINTF((stderr, __FILE__ " %d tryLoadModule(%s,%s)\n", __LINE__, dirName, moduleName));
   for (prefix= prefixes;  *prefix;  ++prefix)
 	for (suffix= suffixes;  *suffix;  ++suffix) {
 		char        libName[NAME_MAX + 32];	/* headroom for prefix/suffix */
@@ -234,10 +240,10 @@ tryLoading(char *dirName, char *moduleName)
 		assert(n >= 0 && n < NAME_MAX + 32);
 		if (!stat(libName, &buf)) {
 			if (S_ISDIR(buf.st_mode))
-				DPRINTF((stderr, "ignoring directory: %s\n", libName));
+				DPRINTF((stderr, __FILE__ " %d ignoring directory: %s\n", __LINE__, libName));
 			else {
-				DPRINTF((stderr, "tryLoading %s\n", libName));
 				handle= dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
+				DPRINTF((stderr, __FILE__ " %d tryLoading dlopen(%s) = %p\n", __LINE__, libName, handle));
 				if (handle == 0) {
 					if (!sqIgnorePluginErrors)
 						fprintf(stderr, "ioLoadModule(%s):\n  %s\n", libName, dlerror());
@@ -291,10 +297,10 @@ ioLoadModule(char *pluginName)
 
 	if (!pluginName || !*pluginName) {
 		if (!(handle= dlopen(0, RTLD_NOW | RTLD_GLOBAL))) {
-			fprintf(stderr, "ioLoadModule(<intrinsic>): %s\n", dlerror());
+			fprintf(stderr, __FILE__ " %d ioLoadModule(<intrinsic>): %s\n", __LINE__, dlerror());
 			return 0;
 		}
-		DPRINTF((stderr, "loaded: <intrinsic>\n"));
+		DPRINTF((stderr, __FILE__ " %d ioLoadModule loaded: <intrinsic>\n", __LINE__));
 		return handle;
 	}
 
@@ -311,8 +317,8 @@ ioLoadModule(char *pluginName)
 				*out++= c;
 		}
 		*out= '\0';
-		DPRINTF((stderr, "ioLoadModule plugins = %s\n                path = %s\n",
-				squeakPlugins, path));
+		DPRINTF((stderr, "%s %d ioLoadModule plugins = %s path = %s\n",
+				__FILE__, __LINE__, squeakPlugins, path));
 		if ((handle= tryLoading("", path)))
 			return handle;
 		if (!(out > path && *(out - 1) == '/')) {
