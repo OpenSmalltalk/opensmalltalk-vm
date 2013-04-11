@@ -385,13 +385,26 @@ heartbeat_handler(int sig, struct siginfo *sig_info, void *context)
 static stack_t signal_stack;
 #endif /* NEED_SIGALTSTACK */
 
+static void
+setIntervalTimer(long milliseconds)
+{
+	struct itimerval pulse;
+
+	pulse.it_interval.tv_sec = milliseconds / 1000;
+	pulse.it_interval.tv_usec = (milliseconds % 1000) * 1000;
+	pulse.it_value = pulse.it_interval;
+	if (setitimer(THE_ITIMER, &pulse, &pulse)) {
+		perror("ioInitHeartbeat setitimer");
+		exit(1);
+	}
+}
+
 void
 ioInitHeartbeat()
 {
 extern sqInt suppressHeartbeatFlag;
 	int er;
 	struct sigaction heartbeat_handler_action;
-	struct itimerval pulse;
 
 	if (suppressHeartbeatFlag) return;
 
@@ -427,27 +440,54 @@ extern sqInt suppressHeartbeatFlag;
 		exit(1);
 	}
 
-	pulse.it_interval.tv_sec = beatMilliseconds / 1000;
-	pulse.it_interval.tv_usec = (beatMilliseconds % 1000) * 1000;
-	pulse.it_value = pulse.it_interval;
-	if (setitimer(THE_ITIMER, &pulse, &pulse)) {
-		perror("ioInitHeartbeat setitimer");
-		exit(1);
-	}
+	setIntervalTimer(beatMilliseconds);
 }
 
 void
 ioDisableHeartbeat() /* for debugging */
 {
-	struct itimerval expire;
+	setIntervalTimer(0);
+}
 
-	expire.it_interval.tv_sec =
-	expire.it_interval.tv_usec = 0;
-	expire.it_value = expire.it_interval;
-	if (setitimer(THE_ITIMER, &expire, 0)) {
-		perror("ioDisableHeartbeat setitimer");
-		exit(1);
-	}
+/* Occasionally bizarre interactions cause the heartbeat's interval timer to
+ * disable.  On CentOS linux when using PAM to authenticate, a failing authen-
+ * tication sequence disables the interval timer, for reasons unknown (setting
+ * a breakpoint in setitimer doesn't show an actual call).  So a work around is
+ * to check the timer as a side-effect of ioRelinquishProcessorForMicroseconds.
+ */
+void
+checkHeartStillBeats()
+{
+	struct itimerval hb_itimer;
+
+	if (getitimer(THE_ITIMER, &hb_itimer) < 0)
+		perror("getitimer");
+	else if (!hb_itimer.it_interval.tv_sec
+		  && !hb_itimer.it_interval.tv_usec)
+		setIntervalTimer(beatMilliseconds);
+}
+
+void
+printHeartbeatTimer()
+{
+	struct itimerval hb_itimer;
+	struct sigaction hb_handler_action;
+
+	if (getitimer(THE_ITIMER, &hb_itimer) < 0)
+		perror("getitimer");
+	else
+		printf("heartbeat timer interval s %ld us %ld value s %ld us %ld\n",
+				hb_itimer.it_interval.tv_sec, hb_itimer.it_interval.tv_usec,
+				hb_itimer.it_value.tv_sec, hb_itimer.it_value.tv_usec);
+
+	if (sigaction(ITIMER_SIGNAL, 0, &hb_handler_action) < 0)
+		perror("sigaction");
+	else
+		printf("heartbeat signal handler %p (%s)\n",
+				hb_handler_action.sa_sigaction,
+				hb_handler_action.sa_sigaction == heartbeat_handler
+					? "heartbeat_handler"
+					: "????");
 }
 
 void

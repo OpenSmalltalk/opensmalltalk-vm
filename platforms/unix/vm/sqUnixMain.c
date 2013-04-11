@@ -544,6 +544,11 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
 #if STACKVM
 sqInt ioRelinquishProcessorForMicroseconds(sqInt us)
 {
+# if ITIMER_HEARTBEAT
+  extern void checkHeartStillBeats();
+
+  checkHeartStillBeats();
+# endif
   dpy->ioRelinquishProcessorForMicroseconds(us);
   return 0;
 }
