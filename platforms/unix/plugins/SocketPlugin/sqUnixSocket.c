@@ -29,15 +29,17 @@
  * 
  * Support for BSD-style "accept" primitives contributed by:
  *	Lex Spoon <lex@cc.gatech.edu>
+ *
+ * Raw Socket Support by Andreas Raab, RIP.
+ *
+ * Fix to option parsing in sqSocketSetOptions... by Eliot Miranda, 2013/4/12
  * 
  * Notes:
- * 	Sockets are completely asynchronous, but the resolver is still
- *	synchronous.
+ * 	Sockets are completely asynchronous, but the resolver is still synchronous.
  * 
  * BUGS:
  *	Now that the image has real UDP primitives, the TCP/UDP duality in
- *	many of the connection-oriented functions should be removed and
- * 	cremated.
+ *	many of the connection-oriented functions should be removed and cremated.
  */
 
 #include "sq.h"
@@ -1335,14 +1337,13 @@ sqInt sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValue
 
 	  memset((void *)buf, 0, sizeof(buf));
 	  memcpy((void *)buf, optionValue, optionValueSize);
-	  if (optionValueSize == 1)	/* character `1' or `0' */
+	  if (optionValueSize <= sizeof(int)
+	   && (strtol(buf, &endptr, 0),
+	       endptr - buf == optionValueSize)) /* are all option chars digits? */
 	    {
 	      val= strtol(buf, &endptr, 0);
-	      if (endptr != buf)
-		{
 		  memcpy((void *)buf, (void *)&val, sizeof(val));
 		  optionValueSize= sizeof(val);
-		}
 	    }
 	  if ((setsockopt(PSP(s)->s, opt->optlevel, opt->optname,
 			  (const void *)buf, optionValueSize)) < 0)
