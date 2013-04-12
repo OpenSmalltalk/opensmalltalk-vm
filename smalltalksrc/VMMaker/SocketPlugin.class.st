@@ -433,30 +433,27 @@ SocketPlugin >> primitiveSocket: socket connectTo: address port: port [
 SocketPlugin >> primitiveSocket: socket getOptions: optionName [
 
 	| s optionNameStart optionNameSize returnedValue errorCode results |
-	<var: #s type: 'SocketPtr'>
-	<var: #optionNameStart type: 'char *'>
+	<var: #s type: #SocketPtr>
+	<var: #optionNameStart type: #'char *'>
 	self primitive: 'primitiveSocketGetOptions'
 		parameters: #(Oop Oop).
 
 	s := self socketValueOf: socket.
 	interpreterProxy success: (interpreterProxy isBytes: optionName).
-	optionNameStart := self cCoerce: (interpreterProxy firstIndexableField: optionName) to: 'char *'.
+	optionNameStart := self cCoerce: (interpreterProxy firstIndexableField: optionName) to: #'char *'.
 	optionNameSize := interpreterProxy slotSizeOf: optionName.
 
 	interpreterProxy failed ifTrue: [^nil].
 	returnedValue := 0.
 
 	errorCode := self sqSocketGetOptions: s 
-			optionNameStart: optionNameStart 
-			optionNameSize: optionNameSize
-			returnedValue: (self cCode: '&returnedValue').
+					optionNameStart: optionNameStart 
+					optionNameSize: optionNameSize
+					returnedValue: (self addressOf: returnedValue).
 
-	interpreterProxy pushRemappableOop: returnedValue asSmallIntegerObj.
-	interpreterProxy pushRemappableOop: errorCode asSmallIntegerObj.
-	interpreterProxy pushRemappableOop: (interpreterProxy instantiateClass: (interpreterProxy classArray) indexableSize: 2).
-	results := interpreterProxy popRemappableOop.
-	interpreterProxy storePointer: 0 ofObject: results withValue: interpreterProxy popRemappableOop.
-	interpreterProxy storePointer: 1 ofObject: results withValue: interpreterProxy popRemappableOop.
+	results := interpreterProxy instantiateClass: interpreterProxy classArray indexableSize: 2.
+	interpreterProxy storePointer: 0 ofObject: results withValue: errorCode asSmallIntegerObj.
+	interpreterProxy storePointer: 1 ofObject: results withValue: returnedValue asSmallIntegerObj.
 	^ results
 ]
 
@@ -574,50 +571,45 @@ SocketPlugin >> primitiveSocket: socket receiveDataBuf: array start: startIndex 
 
 { #category : #primitives }
 SocketPlugin >> primitiveSocket: socket receiveUDPDataBuf: array start: startIndex count: count [ 
-	| s byteSize arrayBase bufStart bytesReceived results address port moreFlag |
-	<var: #s type: 'SocketPtr'>
-	<var: #arrayBase type: 'char *'>
-	<var: #bufStart type: 'char *'>
+	| s elementSize arrayBase bufStart bytesReceived results address port moreFlag |
+	<var: #s type: #SocketPtr>
+	<var: #arrayBase type: #'char *'>
+	<var: #bufStart type: #'char *'>
 	self primitive: 'primitiveSocketReceiveUDPDataBufCount'
-		parameters: #(Oop Oop SmallInteger SmallInteger ).
+		parameters: #(Oop Oop SmallInteger SmallInteger).
 	s := self socketValueOf: socket.
 
 	"buffer can be any indexable words or bytes object"
 	interpreterProxy success: (interpreterProxy isWordsOrBytes: array).
 	(interpreterProxy isWords: array)
-		ifTrue: [byteSize := 4]
-		ifFalse: [byteSize := 1].
+		ifTrue: [elementSize := 4]
+		ifFalse: [elementSize := 1].
 	interpreterProxy success: (startIndex >= 1
 			and: [count >= 0 and: [startIndex + count - 1 <= (interpreterProxy slotSizeOf: array)]]).
 	interpreterProxy failed
 		ifFalse: ["Note: adjust bufStart for zero-origin indexing"
-			arrayBase := self cCoerce: (interpreterProxy firstIndexableField: array) to: 'char *'.
-			bufStart := arrayBase + (startIndex - 1 * byteSize).
+			arrayBase		:= self cCoerce: (interpreterProxy firstIndexableField: array) to: #'char *'.
+			bufStart		:= arrayBase + (startIndex - 1 * elementSize).
+			address		:= 0.
+			port			:= 0.
+			moreFlag		:= 0.
+			bytesReceived := self sqSocket: s
+									ReceiveUDPDataBuf: bufStart
+									Count: count * elementSize
+									address: (self addressOf: address)
+									port: (self addressOf: port)
+									moreFlag: (self addressOf: moreFlag).
+
 			"allocate storage for results, remapping newly allocated
 			 oops in case GC happens during allocation"
-			address		  := 0.
-			port			  := 0.
-			moreFlag	  := 0.
-			bytesReceived := self
-						sqSocket: s
-						ReceiveUDPDataBuf: bufStart
-						Count: count * byteSize
-						address: (self cCode: '&address')
-						port: (self cCode: '&port')
-						moreFlag: (self cCode: '&moreFlag').
-				
-			interpreterProxy pushRemappableOop: port asSmallIntegerObj.
 			interpreterProxy pushRemappableOop: (self intToNetAddress: address).
-			interpreterProxy pushRemappableOop: (bytesReceived // byteSize) asSmallIntegerObj.
-			interpreterProxy pushRemappableOop:
-				(interpreterProxy instantiateClass: (interpreterProxy classArray) indexableSize: 4).
-			results         := interpreterProxy popRemappableOop.
-			interpreterProxy storePointer: 0 ofObject: results withValue: interpreterProxy popRemappableOop.
+			results := interpreterProxy instantiateClass: interpreterProxy classArray indexableSize: 4.
+			interpreterProxy storePointer: 0 ofObject: results withValue: (bytesReceived // elementSize) asSmallIntegerObj.
 			interpreterProxy storePointer: 1 ofObject: results withValue: interpreterProxy popRemappableOop.
-			interpreterProxy storePointer: 2 ofObject: results withValue: interpreterProxy popRemappableOop.
-			moreFlag
-				ifTrue: [ interpreterProxy storePointer: 3 ofObject: results withValue: interpreterProxy trueObject ]
-				ifFalse: [ interpreterProxy storePointer: 3 ofObject: results withValue: interpreterProxy falseObject ].
+			interpreterProxy storePointer: 2 ofObject: results withValue: port asSmallIntegerObj.
+			interpreterProxy storePointer: 3 ofObject: results withValue: (moreFlag
+																			ifTrue: [interpreterProxy trueObject]
+																			ifFalse: [interpreterProxy falseObject]).
 			].
 	^ results
 ]
@@ -696,38 +688,38 @@ SocketPlugin >> primitiveSocket: socket sendUDPData: array toHost: hostAddress  
 
 { #category : #primitives }
 SocketPlugin >> primitiveSocket: socket setOptions: optionName value: optionValue [
-
+	"THIS BADLY NEEDS TO BE REWRITTEN TO TAKE Booleans AND Integers AS WELL AS (OR INSTEAD OF) Strings.
+	 It is only used with booleans and integers and parsing these back out of strings in
+	 sqSocketSetOptions:optionNameStart:optionNameSize:optionValueStart:optionValueSize:returnedValue:
+	 is STUPID."
 	| s optionNameStart optionNameSize optionValueStart optionValueSize returnedValue errorCode results |
-	<var: #s type: 'SocketPtr'>
-	<var: #optionNameStart type: 'char *'>
-	<var: #optionValueStart type: 'char *'>
+	<var: #s type: #SocketPtr>
+	<var: #optionNameStart type: #'char *'>
+	<var: #optionValueStart type: #'char *'>
 	self primitive: 'primitiveSocketSetOptions'
 		parameters: #(Oop Oop Oop).
 
 	s := self socketValueOf: socket.
 	interpreterProxy success: (interpreterProxy isBytes: optionName).
-	optionNameStart := self cCoerce: (interpreterProxy firstIndexableField: optionName) to: 'char *'.
+	optionNameStart := self cCoerce: (interpreterProxy firstIndexableField: optionName) to: #'char *'.
 	optionNameSize := interpreterProxy slotSizeOf: optionName.
 	interpreterProxy success: (interpreterProxy isBytes: optionValue).
-	optionValueStart:= self cCoerce: (interpreterProxy firstIndexableField: optionValue) to: 'char *'.
+	optionValueStart:= self cCoerce: (interpreterProxy firstIndexableField: optionValue) to: #'char *'.
 	optionValueSize := interpreterProxy slotSizeOf: optionValue.
 
 	interpreterProxy failed ifTrue: [^nil].
 	returnedValue := 0.
 
 	errorCode := self sqSocketSetOptions: s 
-			optionNameStart: optionNameStart 
-			optionNameSize: optionNameSize
-			optionValueStart: optionValueStart
-			optionValueSize: optionValueSize
-			returnedValue: (self cCode: '&returnedValue').
+					optionNameStart: optionNameStart 
+					optionNameSize: optionNameSize
+					optionValueStart: optionValueStart
+					optionValueSize: optionValueSize
+					returnedValue: (self addressOf: returnedValue).
 
-	interpreterProxy pushRemappableOop: returnedValue asSmallIntegerObj.
-	interpreterProxy pushRemappableOop: errorCode asSmallIntegerObj.
-	interpreterProxy pushRemappableOop: (interpreterProxy instantiateClass: (interpreterProxy classArray) indexableSize: 2).
-	results := interpreterProxy popRemappableOop.
-	interpreterProxy storePointer: 0 ofObject: results withValue: interpreterProxy popRemappableOop.
-	interpreterProxy storePointer: 1 ofObject: results withValue: interpreterProxy popRemappableOop.
+	results := interpreterProxy instantiateClass: interpreterProxy classArray indexableSize: 2.
+	interpreterProxy storePointer: 0 ofObject: results withValue: errorCode asSmallIntegerObj.
+	interpreterProxy storePointer: 1 ofObject: results withValue: returnedValue asSmallIntegerObj.
 	^ results
 ]
 
