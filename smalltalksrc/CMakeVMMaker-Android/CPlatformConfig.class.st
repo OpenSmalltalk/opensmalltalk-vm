@@ -876,7 +876,7 @@ CPlatformConfig >> setupDirectories: gen [
 		gen
 			set: #topDir toString: (self topDir fullName); 
 			set: #buildDir toString: (self buildDir ifNil: ['${topDir}/build'] ifNotNil: [self buildDir fullName] );
-			set: #thirdpartyDir toString: '${buildDir}/thirdparty';
+			set: #thirdpartyDir toString: '${buildDir}/thirdParty';
 			set: #platformsDir toString: self platformsDir;
 			set: #srcDir toString: self srcDir;
 			set: #srcPluginsDir toString: (pluginsDir ifNil: [ '${srcDir}/plugins' ]);
