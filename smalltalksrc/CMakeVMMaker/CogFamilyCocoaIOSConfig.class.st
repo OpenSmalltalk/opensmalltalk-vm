@@ -127,6 +127,9 @@ CogFamilyCocoaIOSConfig >> defaultExternalPlugins [
 		JoystickTabletPlugin
 		MIDIPlugin
 		B3DAcceleratorPlugin
+		JPEGReadWriter2Plugin 
+		JPEGReaderPlugin
+		RePlugin
 		LocalePlugin
 		ObjectiveCPlugin
 		QuicktimePlugin
@@ -152,14 +155,14 @@ CogFamilyCocoaIOSConfig >> defaultInternalPlugins [
 		FloatArrayPlugin 
 		GeniePlugin 
 		HostWindowPlugin 
-		JPEGReadWriter2Plugin 
-		JPEGReaderPlugin 
+		"JPEGReadWriter2Plugin 
+		JPEGReaderPlugin" 
 		KlattSynthesizerPlugin 
 		LargeIntegersPlugin 
 		"MacMenubarPlugin" "This plugin is not yet ported"
 		Matrix2x3Plugin 
 		MiscPrimitivePlugin 
-		RePlugin 
+		"RePlugin" 
 		SecurityPlugin 
 		SocketPlugin 
 		SoundCodecPlugin 
