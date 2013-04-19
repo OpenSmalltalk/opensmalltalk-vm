@@ -44,6 +44,11 @@ StackIPhoneConfig >> CFBundleIconFile72 [
 ]
 
 { #category : #'bundle strings' }
+StackIPhoneConfig >> CFBundleVersion [
+	^'1.0.0'
+]
+
+{ #category : #'bundle strings' }
 StackIPhoneConfig >> ImageIsScrollable [
 	^false
 ]
@@ -379,6 +384,7 @@ StackIPhoneConfig >> plistKeys [
 	#(CFBundleIconFile57 
 	CFBundleIconFile72 
 	CFBundleIconFile1024
+	CFBundleVersion
 	UIDeviceFamily 
 	UIFileSharingEnabled
 	VMMemorySize
@@ -391,13 +397,14 @@ StackIPhoneConfig >> plistKeys [
 
 { #category : #'bundle strings' }
 StackIPhoneConfig >> plistTemplate [ 
-	self flag: #todo. "CFBundleDisplayName is using @CFBundleExecutable@ that's probably wrong"
 	^'<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<key>CFBundleVersion</key>
+	<string>@CFBundleVersion@</string>
 	<key>CFBundleDisplayName</key>
 	<string>@CFBundleExecutable@</string>
 	<key>CFBundleExecutable</key>
@@ -427,8 +434,6 @@ StackIPhoneConfig >> plistTemplate [
 	<array>
 		<string>iPhoneOS</string>
 	</array>
-	<key>CFBundleVersion</key>
-	<string>1.1.7</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>MinimumOSVersion</key>
@@ -492,7 +497,7 @@ StackIPhoneConfig >> sdkTarget [
 
 { #category : #accessing }
 StackIPhoneConfig >> sdkVersion [ 
-	^'6.0'
+	^'6.1'
 ]
 
 { #category : #settings }
