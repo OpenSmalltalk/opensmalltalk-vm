@@ -246,6 +246,9 @@ CogUnixConfig >> defaultExternalPlugins [
 		ThreadedIA32FFIPlugin "SqueakFFIPrims"
 		"UUIDPlugin"
 		"UnixOSProcessPlugin ?? "	
+		JPEGReaderPlugin 
+		JPEGReadWriter2Plugin 			
+		RePlugin
 		InternetConfigPlugin
 	)
 ]
@@ -270,15 +273,12 @@ CogUnixConfig >> defaultInternalPlugins [
 		FloatMathPlugin 
 		IA32ABIPlugin "IA32ABI"
 		JoystickTabletPlugin 
-		JPEGReaderPlugin 
-		JPEGReadWriter2Plugin 
 		KlattSynthesizerPlugin "Klatt"
 		LargeIntegersPlugin "LargeIntegers"
 		Matrix2x3Plugin 
 		MIDIPlugin 
 		MiscPrimitivePlugin 
-		Mpeg3Plugin 
-		RePlugin 	
+		Mpeg3Plugin  	
 		SecurityPlugin 
 		SerialPlugin 
 		SocketPlugin 
