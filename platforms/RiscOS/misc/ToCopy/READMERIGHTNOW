@@ -1,0 +1,20 @@
+What to do next
+
+This zipfile contains the basic !Squeak application for running Squeak systems from 2.8 up to 4.0; before you can do anything useful with it you will need to -
+
+1) fetch three files
+a) the image and changelog files.
+  The image file is the recorded state of a Squeak system and the changelog is a matching audit trail of what code changes have been made since a certain point in time.  You can obtain those two files from the www.squeak.org site and visiting the downloads page and then going to the FTP archive - specifially ftp.squeak.org/4.0/Squeak4.0-basic.zip
+b) the sources file.
+  This is *not* the C/asm sources for the !Squeak application but the Smalltalk system code. This file is large and has all the Smalltalk code, all the class definitions and comments, for the system. It does not change very often and is not written to by the running system. It too can be obtained from the Squeak site, specifically ftp.squeak.org/4.0/SqueakV40.sources.gz
+2) unzip the Squeak4.0-basic.zip file.
+  You should end up with a file Squeak4/0-basic/image of size 13478196 bytes, and another file Squeak4/0-basic/changes of size 694 bytes. Change the filetype of the Squeak4/0-basic/image file to faa (STimage). If you don't know how to do this you will need to read that fine manual for RISC OS.
+3) unzip the SqueakV40/sources/gz file - depending on exctly how you downloaded it you may find that it has already been decompressed. I don't know why that seems to happen. You should end up with SqueakV40/sources file of size 16748347 bytes.
+4) move the SqueakV40/sources file *into the !Squeak application*. If you don't know how to do this you will need to read that fine manual for RISC OS.
+5) While you have the application directory open, take a moment to *read the frickin !Help file*
+
+To assist with getting keyboard input more effectively, you should download the DeepKeys module; open deepkeys2/zip and
+If you want to be able to play sounds from Squeak you will have to install the StreamManager & SharedSoundBuffer modules that make it possible; open ssb.zip
+and install it in the usual manner as described in the 'ReadFirst file within the package.
+
+Now, you have an installation that can run. Double-click on the 'Squeak4/0-basic/image' file and wait a moment (it might take ten seconds or depending your disc speed etc) for it to be read in and started up. You should see a medium sized window labelled with the path of the image file and containing a number of slightly odd looking windows. For further help, read the contents of the www.squeak.org site, join the mailing list(s) and ask questions.
