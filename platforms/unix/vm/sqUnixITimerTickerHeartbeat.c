@@ -481,7 +481,8 @@ heartbeat_handler(int sig, struct siginfo *sig_info, void *context)
 
 #if !defined(SA_NODEFER)
   {	int zeroAndPreviousHandlingHeartbeat = 0;
-    sqCompareAndSwap(handling_heartbeat,zeroAndPreviousHandlingHeartbeat,1);
+    sqCompareAndSwapRes(handling_heartbeat,zeroAndPreviousHandlingHeartbeat,
+						1,zeroAndPreviousHandlingHeartbeat);
 	if (zeroAndPreviousHandlingHeartbeat)
 		return;
   }
