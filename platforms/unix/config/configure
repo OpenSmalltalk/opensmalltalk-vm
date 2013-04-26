@@ -23833,7 +23833,8 @@ esac
 echo "$as_me:$LINENO: result: $CFLAGS_32" >&5
 echo "${ECHO_T}$CFLAGS_32" >&6
 
-CFLAGS="$CFLAGS_32 $CFLAGS -msse"
+# CFLAGS="$CFLAGS_32 $CFLAGS -msse"
+CFLAGS="$CFLAGS_32 $CFLAGS"
 
 echo "$as_me:$LINENO: checking whether byte ordering is bigendian" >&5
 echo $ECHO_N "checking whether byte ordering is bigendian... $ECHO_C" >&6
