@@ -220,7 +220,7 @@ AtomicGet(uint64_t *target)
 					: "g"(old), "r"(new), "m"(var)\
 					: "memory", "%eax")
 
-# define sqCompareAndSwapRes(var,old,new,res) \/tmp/ccf1WMiY.s:
+# define sqCompareAndSwapRes(var,old,new,res) \
 	asm volatile ("movl %2, %%eax; lock cmpxchg %3, %0; movl %%eax, %1" \
 					: "=m"(var), "=g"(res) \
 					: "g"(old), "r"(new), "m"(var) \
