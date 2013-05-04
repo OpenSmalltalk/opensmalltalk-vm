@@ -3450,15 +3450,20 @@ InterpreterPrimitives >> primitiveUtcWithOffset [
 	"Answer an array with UTC microseconds since the Posix epoch and
 	the current seconds offset from GMT in the local time zone.
 	This is a named (not numbered) primitive in the null module (ie the VM)"
-	| offset resultArray |
+	| epochDelta offset resultArray utcMicroseconds |
 
 	<export: true>
-	<var: #clock type: 'sqLong'>
-	offset := self ioUTCMicroseconds - self ioLocalMicroseconds.
-	objectMemory pushRemappableOop: (self positive64BitIntegerFor: self ioUTCMicroseconds).
+	<var: #epochDelta declareC: 'static usqLong epochDelta= 2177452800000000ULL'>
+	<var: #utcMicroseconds type: #usqLong>
+	<var: #offset type: #sqLong>
+	utcMicroseconds := self ioUTCMicroseconds.
+	offset := self ioLocalMicroseconds - utcMicroseconds.
+	offset := offset / 1000000.
+	objectMemory pushRemappableOop: (objectMemory integerObjectOf: offset).
+	objectMemory pushRemappableOop: (self positive64BitIntegerFor: utcMicroseconds - epochDelta).
 	resultArray := objectMemory instantiateClass: objectMemory classArray indexableSize: 2.
 	self stObject: resultArray at: 1 put: objectMemory popRemappableOop.
-	self stObject: resultArray at: 2 put: (objectMemory integerObjectOf: offset).
+	self stObject: resultArray at: 2 put: objectMemory popRemappableOop.
 	self pop: 1 thenPush: resultArray
 
 ]
