@@ -166,8 +166,8 @@ NewObjectMemory >> allocate: byteSize headerSize: hdrSize h1: baseHeader h2: cla
 
 	| newObj classOop |
 	<inline: true>
-	<var: #i type: 'usqInt'>
-	<var: #end type: 'usqInt'>
+	<var: #i type: #usqInt>
+	<var: #end type: #usqInt>
 	newObj := self allocateChunk: byteSize + (hdrSize - 1 * BytesPerWord).
 	newObj = 0
 		ifTrue:
@@ -196,13 +196,14 @@ NewObjectMemory >> allocate: byteSize headerSize: hdrSize h1: baseHeader h2: cla
 	doFill ifTrue:
 		[| fillWord end i |
 		 fillWord := format <= 4
-					ifTrue: [nilObj] "if pointers, fill with nil oop"
-					ifFalse: [0].
+						ifTrue: [nilObj] "if pointers, fill with nil oop"
+						ifFalse: [0].
 		 end := newObj + byteSize.
-		 i := newObj + BytesPerWord.
+		 i := newObj + BytesPerWord. "skip header"
 		 [i < end] whileTrue:
 			[self longAt: i put: fillWord.
-			 i := i + BytesPerWord]].
+			 i := i + BytesPerWord].
+		 self assert: i = freeStart.].
 	DoExpensiveAssertionChecks ifTrue:
 		[self okayOop: newObj.
 		 self oopHasOkayClass: newObj.
@@ -617,14 +618,14 @@ NewObjectMemory >> edenBytes: aValue [
 { #category : #allocation }
 NewObjectMemory >> eeAllocate: byteSize headerSize: hdrSize h1: baseHeader h2: classOop h3: extendedSize [
 	"Allocate a new object of the given size and number of header words. (Note: byteSize already includes
-	 space for the base header word.) Initialize the header fields of the new object and fill the remainder of
-	 the object with the given value.  Will not cause a GC.  This version is for the execution engine"
+	 space for the base header word.) Initialize the header fields of the new object.
+	 Does *not* initialize the objects' fields. Will *not* cause a GC.  This version is for the execution engine's use only."
 
 	| newObj |
 	<inline: true>
 	<asmLabel: false>
-	<var: #i type: 'usqInt'>
-	<var: #end type: 'usqInt'>
+	<var: #i type: #usqInt>
+	<var: #end type: #usqInt>
 	newObj := self allocateInterpreterChunk: byteSize + (hdrSize - 1 * BytesPerWord).
 	newObj = 0 ifTrue: [^newObj].
 	hdrSize = 3 ifTrue:
@@ -1701,11 +1702,11 @@ NewObjectMemory >> loadImageSegmentFrom: segmentWordArray outPointers: outPointe
 
 	"Version check.  Byte order of the WordArray now"
 	data := self longAt: segmentWordArray + BaseHeaderSize.
-	(self readableFormat: (data bitAnd: 16rFFFF "low 2 bytes")) ifFalse:
+	(coInterpreter readableFormat: (data bitAnd: 16rFFFF "low 2 bytes")) ifFalse:
 		"Not readable -- try again with reversed bytes..."
 		[self reverseBytesFrom: segmentWordArray + BaseHeaderSize to: endSeg + BytesPerWord.
 		data := self longAt: segmentWordArray + BaseHeaderSize.
-		(self readableFormat: (data bitAnd: 16rFFFF "low 2 bytes")) ifFalse:
+		(coInterpreter readableFormat: (data bitAnd: 16rFFFF "low 2 bytes")) ifFalse:
 			"Still NG -- put things back and fail"
 			[self reverseBytesFrom: segmentWordArray + BaseHeaderSize to: endSeg + BytesPerWord.
 			DoAssertionChecks ifTrue: [self verifyCleanHeaders].
@@ -2115,17 +2116,14 @@ NewObjectMemory >> oopHasAcceptableClass: signedOop [
 	(self isIntegerObject: signedOop) ifTrue: [^ true].
 
 	oop := self cCoerce: signedOop to: #usqInt.
+	(self addressCouldBeObj: oop) ifFalse: [^ false].
 
-	oop < freeStart ifFalse: [^ false].
-	((oop \\ BytesPerWord) = 0) ifFalse: [^ false].
-	(oop + (self sizeBitsOf: oop)) <= freeStart ifFalse: [^ false].
 	oopClass := self cCoerce: (self fetchClassOfNonInt: oop) to: #usqInt.
-
-	(self isIntegerObject: oopClass) ifTrue: [^ false].
-	(oopClass < freeStart) ifFalse: [^ false].
-	((oopClass \\ BytesPerWord) = 0) ifFalse: [^ false].
+	(self addressCouldBeObj: oopClass) ifFalse: [^ false].
 	(oopClass + (self sizeBitsOf: oopClass)) <= freeStart ifFalse: [^ false].
+
 	((self isPointersNonInt: oopClass) and: [(self lengthOf: oopClass) >= 3]) ifFalse: [^ false].
+
 	formatMask := (self isBytesNonInt: oop)
 						ifTrue: [16rC00]  "ignore extra bytes size bits"
 						ifFalse: [16rF00].
