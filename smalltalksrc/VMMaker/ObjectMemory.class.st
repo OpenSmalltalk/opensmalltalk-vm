@@ -3573,20 +3573,17 @@ ObjectMemory >> oopHasAcceptableClass: signedOop [
 	(self isIntegerObject: signedOop) ifTrue: [^ true].
 
 	oop := self cCoerce: signedOop to: #usqInt.
+	(self addressCouldBeObj: oop) ifFalse: [^ false].
 
-	oop < freeBlock ifFalse: [^ false].
-	((oop \\ BytesPerWord) = 0) ifFalse: [^ false].
-	(oop + (self sizeBitsOf: oop)) < freeBlock ifFalse: [^ false].
 	oopClass := self cCoerce: (self fetchClassOfNonInt: oop) to: #usqInt.
-
-	(self isIntegerObject: oopClass) ifTrue: [^ false].
-	(oopClass < freeBlock) ifFalse: [^ false].
-	((oopClass \\ BytesPerWord) = 0) ifFalse: [^ false].
+	(self addressCouldBeObj: oopClass) ifFalse: [^ false].
 	(oopClass + (self sizeBitsOf: oopClass)) < freeBlock ifFalse: [^ false].
+
 	((self isPointersNonInt: oopClass) and: [(self lengthOf: oopClass) >= 3]) ifFalse: [^ false].
-	(self isBytesNonInt: oop)
-		ifTrue: [ formatMask := 16rC00 ]  "ignore extra bytes size bits"
-		ifFalse: [ formatMask := 16rF00 ].
+
+	formatMask := (self isBytesNonInt: oop)
+						ifTrue: [16rC00]  "ignore extra bytes size bits"
+						ifFalse: [16rF00].
 
 	behaviorFormatBits := (self formatOfClass: oopClass) bitAnd: formatMask.
 	oopFormatBits := (self baseHeader: oop) bitAnd: formatMask.
