@@ -1078,8 +1078,8 @@ NewObjectMemory >> freeSize [
 
 { #category : #accessing }
 NewObjectMemory >> freeStart [
-	"This is a horribe hack and only works because C macros are generated after Interpreter variables."
-	<cmacro: '() freeStart'>
+	"This is a horrible hack and only works because C macros are generated after Interpreter variables."
+	<cmacro: '() GIV(freeStart)'>
 	^freeStart
 ]
 
