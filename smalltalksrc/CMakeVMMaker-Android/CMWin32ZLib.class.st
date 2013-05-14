@@ -23,7 +23,7 @@ CMWin32ZLib >> archiveMD5Sum [
 	  md5 filename
 	from command line
 	"
-	^ '60df6a37c56e7c1366cca812414f7b85'
+	^ '44d667c142d7cda120332623eab69f40'
 ]
 
 { #category : #'as yet unclassified' }
@@ -73,7 +73,7 @@ CMWin32ZLib >> defineGlobalTargets [
 
 { #category : #'as yet unclassified' }
 CMWin32ZLib >> downloadURL [ 
-	^ 'http://zlib.net/zlib-1.2.7.tar.gz'
+	^ 'http://zlib.net/zlib-1.2.8.tar.gz'
 ]
 
 { #category : #'as yet unclassified' }
