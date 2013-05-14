@@ -92,5 +92,5 @@ CMWin32ZLib >> setVariables [
 
 { #category : #'as yet unclassified' }
 CMWin32ZLib >> unpackedDirName [
-	^ 'zlib-1.2.7'
+	^ 'zlib-1.2.8'
 ]
