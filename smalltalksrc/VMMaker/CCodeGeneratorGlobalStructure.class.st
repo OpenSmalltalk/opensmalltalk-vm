@@ -49,23 +49,29 @@ CCodeGeneratorGlobalStructure >> buildSortedVariablesCollection [
 CCodeGeneratorGlobalStructure >> checkForGlobalUsage: vars in: aTMethod [ 
 	"override to handle global struct needs"
 	super checkForGlobalUsage: vars in: aTMethod.
-	"if localStructDef is false, we  don't ever need to include a reference to it in a function"
-	localStructDef ifFalse:[^self].
+
 	vars asSet do:
 		[:var |
 		"if any var is global and in the global var struct 
-		tell the TMethod it will be refering to the  struct"
+		tell the TMethod it may be refering to the  struct, depending upon the #defines"
 		 ((variables includes: var)
 		  and: [self placeInStructure: var]) ifTrue:
-			[aTMethod referencesGlobalStructIncrementBy: (vars occurrencesOf: var)]]
+			[aTMethod referencesGlobalStruct]]
 ]
 
 { #category : #'C code generator' }
 CCodeGeneratorGlobalStructure >> emitCCodeOn: aStream doInlining: inlineFlag doAssertions: assertionFlag [
 	super emitCCodeOn: aStream doInlining: inlineFlag doAssertions: assertionFlag.
 
-	"if the machine needs the globals structure defined locally in the interp.c file, don't add the folowing function"
-	localStructDef ifFalse:[self emitStructureInitFunctionOn: aStream]
+	"we add an initialiser for the pointer to the global struct; "
+	aStream 
+		cr;
+		nextPutAll: 'void initGlobalStructure(void) {';cr;
+		nextPutAll: '#if SQ_USE_GLOBAL_STRUCT_REG';cr;
+		nextPutAll: 'foo = &fum;' ; cr;
+		nextPutAll: '#endif';  cr;
+		nextPutAll:'}';
+		cr
 ]
 
 { #category : #'C code generator' }
@@ -108,8 +114,13 @@ CCodeGeneratorGlobalStructure >> emitCVariablesOn: aStream [
 		nextPutAll: '#undef _iss'; cr;
 		nextPutAll: '#if SQ_USE_GLOBAL_STRUCT'; cr;
 		nextPutAll: ' } fum;'; cr;
+		nextPutAll: ' #if SQ_USE_GLOBAL_STRUCT_REGISTER';cr;
+		nextPutAll: '# define DECL_MAYBE_SQ_GLOBAL_STRUCT /* using a global reg pointer */'; cr;
+		nextPutAll: '# define DECL_MAYBE_VOLATILE_SQ_GLOBAL_STRUCT /* using a global reg pointer */'; cr;
+		nextPutAll:'#else';cr;
 		nextPutAll: '# define DECL_MAYBE_SQ_GLOBAL_STRUCT register struct foo * foo = &fum;'; cr;
 		nextPutAll: '# define DECL_MAYBE_VOLATILE_SQ_GLOBAL_STRUCT volatile register struct foo * foo = &fum;'; cr;
+		nextPutAll: '#endif';cr;
 		nextPutAll: '# define GIV(interpreterInstVar) (foo->interpreterInstVar)'; cr;
 		nextPutAll: '#else'; cr;
 		nextPutAll: '# define DECL_MAYBE_SQ_GLOBAL_STRUCT /* oh, no mr bill! */'; cr;
@@ -117,12 +128,15 @@ CCodeGeneratorGlobalStructure >> emitCVariablesOn: aStream [
 		nextPutAll: '# define GIV(interpreterInstVar) interpreterInstVar'; cr;
 		nextPutAll: '#endif'; cr.
 
-	"if the machine needs the fum structure defining locally, do it now"
-	localStructDef ifTrue:
-		[structure
-			nextPutAll: '#if SQ_USE_GLOBAL_STRUCT'; cr;
-			nextPutAll: 'static struct foo * foo = &fum;'; cr;
-			nextPutAll: '#endif'; cr].
+	"if the machine needs the fum structure defining locally, do it now; global register users don't need this"
+	structure
+		nextPutAll: '#if SQ_USE_GLOBAL_STRUCT'; cr;
+		nextPutAll: '#if SQ_USE_GLOBAL_STRUCT_REGISTER';cr;
+		nextPutAll: 'register struct foo * foo asm("USE_GLOBAL_STRUCT_REG")'; cr;
+		nextPutAll: '#else'; cr;
+		nextPutAll: 'static struct foo * foo = &fum;'; cr;
+		nextPutAll: '#endif'; cr;
+		nextPutAll: '#endif'; cr.
 
 	aStream
 		nextPutAll: structure contents;
@@ -132,7 +146,7 @@ CCodeGeneratorGlobalStructure >> emitCVariablesOn: aStream [
 
 { #category : #'C code generator' }
 CCodeGeneratorGlobalStructure >> emitGlobalStructFlagOn: aStream [
-	"Define SQ_USE_GLOBAL_STRUCT before including the header."
+	"Depending upon the value of structDefDefine (See also #structDefDefine:), define SQ_USE_GLOBAL_STRUCT before including the header. Also derive the flag for using the global register; define USE_GLOBAL_STRUCT_REG to do so"
 
 	aStream
 		nextPutAll: '#if ';
@@ -141,27 +155,18 @@ CCodeGeneratorGlobalStructure >> emitGlobalStructFlagOn: aStream [
 		nextPutAll: '#else'; cr;
 		nextPutAll: '# define SQ_USE_GLOBAL_STRUCT 0'; cr;
 		nextPutAll: '#endif'; cr;
+		nextPutAll: '#if USE_GLOBAL_STRUCT_REG '; cr;
+		nextPutAll: '# define SQ_USE_GLOBAL_STRUCT_REG 1'; cr;
+		nextPutAll: '#else'; cr;
+		nextPutAll: '# define SQ_USE_GLOBAL_STRUCT_REG 0'; cr;
+		nextPutAll: '#endif'; cr;
 		cr
-]
-
-{ #category : #'C code generator' }
-CCodeGeneratorGlobalStructure >> emitStructureInitFunctionOn: aStream [ 
-	"For the VM using a global struct for most of the global vars (useful for ARM and PPC so far), append the initGlobalStructure() function"
-	aStream 
-		cr;
-		nextPutAll: 'void initGlobalStructure(void) {foo = &fum;}';
-		cr
-]
-
-{ #category : #'C code generator' }
-CCodeGeneratorGlobalStructure >> globalStructDefined: aBool [
-	localStructDef := aBool
 ]
 
 { #category : #'C code generator' }
 CCodeGeneratorGlobalStructure >> initialize [
 	super initialize.
-	localStructDef := false.
+	localStructDef := nil. "ignored ivar - no longer used"
 	structDefDefine := '1'
 ]
 
@@ -206,5 +211,9 @@ CCodeGeneratorGlobalStructure >> returnPrefixFromVariable: aName [
 
 { #category : #'initialize-release' }
 CCodeGeneratorGlobalStructure >> structDefDefine: aString [
+"set the string that will appear in the C file to define whether or not to use the global struct; reasonable values would be:
+'USE_GLOBAL_STRUCT' - which would be defined in a header or makefile
+'0' - which would mean never do it
+'1' - which would mean always do it"
 	structDefDefine := aString
 ]
