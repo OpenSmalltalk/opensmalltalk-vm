@@ -14,7 +14,6 @@ UnixVMMaker class >> isActiveVMMakerClassFor: platformName [
 UnixVMMaker >> createCodeGenerator [
 
 	^CCodeGeneratorGlobalStructure new initialize;
-		globalStructDefined: true;
 		logger: logger;
 		yourself
 ]
