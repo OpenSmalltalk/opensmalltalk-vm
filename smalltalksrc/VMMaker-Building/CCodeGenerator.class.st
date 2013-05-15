@@ -479,7 +479,7 @@ CCodeGenerator >> checkForGlobalUsage: vars in: aTMethod [
 		(variables includes: var) ifTrue: "find the set of method names using this global var"
 			[(globalVariableUsage at: var ifAbsentPut: [Set new])
 				add: aTMethod selector]].
-	aTMethod referencesGlobalStructMakeZero.
+	aTMethod clearReferencesToGlobalStruct.
 	(aTMethod locals select: [:l| self reservedWords includes: l]) do:
 		[:l| | em |
 		em := aTMethod definingClass name, '>>', aTMethod selector, ' has variable that is a C reserved word: ', l.

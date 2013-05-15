@@ -244,6 +244,11 @@ TMethod >> checkSuccessExpr [
 ]
 
 { #category : #accessing }
+TMethod >> clearReferencesToGlobalStruct [
+	globalStructureBuildMethodHasFoo := false
+]
+
+{ #category : #accessing }
 TMethod >> comment [
 	^comment
 ]
@@ -448,7 +453,7 @@ TMethod >> emitCLocalsOn: aStream generator: aCodeGen [
 
 	| volatileVariables |
 	volatileVariables := properties includesKey: #volatile.
-	self globalStructureBuildMethodHasFoo > 1 ifTrue:
+	self refersToGlobalStruct ifTrue:
 		[aStream
 			next: 3 put: Character space; "there's already an opening ${ on this line; see sender"
 			nextPutAll: (volatileVariables
@@ -767,11 +772,6 @@ TMethod >> freeVariableReferences [
 	locals do: [ :var | refs remove: var asString ifAbsent: [] ].
 	#('self' 'nil' 'true' 'false') do: [ :var | refs remove: var ifAbsent: [] ].
 	^refs
-]
-
-{ #category : #accessing }
-TMethod >> globalStructureBuildMethodHasFoo [
-	^globalStructureBuildMethodHasFoo
 ]
 
 { #category : #utilities }
@@ -1545,13 +1545,13 @@ TMethod >> recordDeclarations [
 ]
 
 { #category : #accessing }
-TMethod >> referencesGlobalStructIncrementBy: value [
-	globalStructureBuildMethodHasFoo := globalStructureBuildMethodHasFoo + value.
+TMethod >> referencesGlobalStruct [
+	globalStructureBuildMethodHasFoo := true
 ]
 
 { #category : #accessing }
-TMethod >> referencesGlobalStructMakeZero [
-	globalStructureBuildMethodHasFoo := 0
+TMethod >> refersToGlobalStruct [
+	^globalStructureBuildMethodHasFoo
 ]
 
 { #category : #transformations }
@@ -1768,7 +1768,7 @@ TMethod >> setSelector: sel definingClass: class args: argList locals: localList
 	self extractSharedCase.
 	self removeFinalSelfReturn.	"must preceed recordDeclarations because this may set returnType"
 	self recordDeclarations.
-	globalStructureBuildMethodHasFoo := 0
+	globalStructureBuildMethodHasFoo := false
 ]
 
 { #category : #accessing }
