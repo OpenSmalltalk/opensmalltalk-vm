@@ -114,7 +114,7 @@ CCodeGeneratorGlobalStructure >> emitCVariablesOn: aStream [
 		nextPutAll: '#undef _iss'; cr;
 		nextPutAll: '#if SQ_USE_GLOBAL_STRUCT'; cr;
 		nextPutAll: ' } fum;'; cr;
-		nextPutAll: ' #if SQ_USE_GLOBAL_STRUCT_REGISTER';cr;
+		nextPutAll: ' #if SQ_USE_GLOBAL_STRUCT_REG';cr;
 		nextPutAll: '# define DECL_MAYBE_SQ_GLOBAL_STRUCT /* using a global reg pointer */'; cr;
 		nextPutAll: '# define DECL_MAYBE_VOLATILE_SQ_GLOBAL_STRUCT /* using a global reg pointer */'; cr;
 		nextPutAll:'#else';cr;
@@ -128,11 +128,13 @@ CCodeGeneratorGlobalStructure >> emitCVariablesOn: aStream [
 		nextPutAll: '# define GIV(interpreterInstVar) interpreterInstVar'; cr;
 		nextPutAll: '#endif'; cr.
 
-	"if the machine needs the fum structure defining locally, do it now; global register users don't need this"
+	"if the machine needs the fum structure defining locally, do it now; global register users don't need that, but DO need some batshit insane C macro fudging in order to convert the define of USE_GLOBAL_STRUCT_REG into a simple string to use in the asm clause below. Sigh."
 	structure
 		nextPutAll: '#if SQ_USE_GLOBAL_STRUCT'; cr;
-		nextPutAll: '#if SQ_USE_GLOBAL_STRUCT_REGISTER';cr;
-		nextPutAll: 'register struct foo * foo asm("USE_GLOBAL_STRUCT_REG")'; cr;
+		nextPutAll: '#if SQ_USE_GLOBAL_STRUCT_REG';cr;
+		nextPutAll: '#define fooxstr(s) foostr(s)'; cr;
+		nextPutAll: '#define foostr(s)  #s'; cr;
+		nextPutAll: 'register struct foo * foo asm(fooxstr(USE_GLOBAL_STRUCT_REG));'; cr;
 		nextPutAll: '#else'; cr;
 		nextPutAll: 'static struct foo * foo = &fum;'; cr;
 		nextPutAll: '#endif'; cr;
