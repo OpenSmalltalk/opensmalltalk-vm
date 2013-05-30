@@ -119,7 +119,7 @@ CMCairo >> unpack [
 	
 	gen puts:
 'add_custom_command(OUTPUT "${unpackTarget}"
-		COMMAND tar -Jxf "${libName}.tgz" 
+		COMMAND tar -Jxf "${archiveFileName}"  
 		COMMAND touch "${unpackTarget}"
 		COMMENT "Unpacking ${libName} ... "
 	)
