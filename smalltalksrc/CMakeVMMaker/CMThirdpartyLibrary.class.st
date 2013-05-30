@@ -52,6 +52,11 @@ CMThirdpartyLibrary class >> supports: aConfig [
 	^ self platformName = aConfig platformName 
 ]
 
+{ #category : #'as yet unclassified' }
+CMThirdpartyLibrary >> archiveFileName [
+	^ self downloadURL asUrl fileName 
+]
+
 { #category : #'package properties' }
 CMThirdpartyLibrary >> archiveMD5Sum [
 	"answer the MD5 checksum (in string) for downloaded library archive 
@@ -149,17 +154,34 @@ CMThirdpartyLibrary >> download [
 	we build"	
 	
 	gen puts:
-'if (NOT EXISTS "${workDir}/${libName}.tgz")
-	Message("Downloading ${url} ....")
-	Message("Into: ${workDir}/${libName}.tgz")
-	
+'if (NOT EXISTS "${workDir}/${archiveFileName}")
+	Message("Downloading  ',self fileServerURL,'${archiveFileName}")
+
 	FILE(DOWNLOAD
-		${url}
-	 	"${workDir}/${libName}.tgz"
+		', self fileServerURL , self archiveFileName ,'
+	 	"${workDir}/${archiveFileName}"
+		STATUS downloadStatus
 		SHOW_PROGRESS
-		EXPECTED_MD5 ${md5sum}
 	)
-endif (NOT EXISTS "${workDir}/${libName}.tgz")
+	
+	LIST(GET downloadStatus 0 downloadError)
+	if (NOT downloadError EQUAL 0)
+		Message("File is missing on file server (', self fileServerURL,'), downloading from official repository...")
+		FILE(DOWNLOAD
+			${url}
+		 	"${workDir}/${archiveFileName}"
+			STATUS downloadStatus
+			SHOW_PROGRESS
+			EXPECTED_MD5 ${md5sum}
+		)
+		LIST(GET downloadStatus 0 downloadError)
+	endif ()
+	if (NOT downloadError EQUAL 0)
+		message(FATAL_ERROR "Cannot find/download the source file from:" ${url})
+	endif ()
+		
+	
+endif ()
 '
 ]
 
@@ -167,6 +189,12 @@ endif (NOT EXISTS "${workDir}/${libName}.tgz")
 CMThirdpartyLibrary >> downloadURL [
 	"answer the url where given library can be downloaded from"
 	^ self subclassResponsibility
+]
+
+{ #category : #settings }
+CMThirdpartyLibrary >> fileServerURL [
+	"Base url to file server where all external libs sources stored"
+	^'http://files.pharo.org/vm/src/lib/'
 ]
 
 { #category : #'generating cmake file' }
@@ -246,6 +274,7 @@ CMThirdpartyLibrary >> setVariables [
 		set: #libSourcesDir toString: '${workDir}/${unpackedDirName}';
 		set: #url toString: self downloadURL;
 		set: #md5sum toString: self archiveMD5Sum;
+		set: #archiveFileName toString: self archiveFileName;
 		set: #installPrefix toString: '${thirdpartyDir}/out'.
 ]
 
@@ -272,7 +301,7 @@ CMThirdpartyLibrary >> unpack [
 	
 	gen puts:
 'add_custom_command(OUTPUT "${unpackTarget}"
-		COMMAND tar -xzf "${libName}.tgz" 
+		COMMAND tar -xzf "${archiveFileName}" 
 		COMMAND touch "${unpackTarget}"
 		COMMENT "Unpacking ${libName} ... "
 	)

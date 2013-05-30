@@ -14,7 +14,7 @@ CMWin32ZLib class >> supports: aConfig [
 	^  aConfig platformName  = 'win32' 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'package properties' }
 CMWin32ZLib >> archiveMD5Sum [
 	"answer the MD5 checksum (in string) for downloaded library archive 
 	(to check that downloaded file is not corrupt).
@@ -26,7 +26,7 @@ CMWin32ZLib >> archiveMD5Sum [
 	^ '44d667c142d7cda120332623eab69f40'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'generating actions' }
 CMWin32ZLib >> build [
 
 '	COMMAND ./configure --prefix="${installPrefix}" --archs="-arch i386" '.
@@ -44,7 +44,7 @@ add_custom_command(OUTPUT "${libzInstalled}"
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'generating actions' }
 CMWin32ZLib >> copyArtefacts [
 
 	self 
@@ -53,7 +53,7 @@ CMWin32ZLib >> copyArtefacts [
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'generating actions' }
 CMWin32ZLib >> defineAsTarget [ 
 	
 	gen puts:
@@ -66,22 +66,22 @@ CMWin32ZLib >> defineAsTarget [
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'generating actions' }
 CMWin32ZLib >> defineGlobalTargets [ 
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'package properties' }
 CMWin32ZLib >> downloadURL [ 
 	^ 'http://zlib.net/zlib-1.2.8.tar.gz'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'package properties' }
 CMWin32ZLib >> libraryFileName [
 	^ 'zlib1.dll'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'generating actions' }
 CMWin32ZLib >> setVariables [
 	super setVariables.
 	gen 
@@ -90,7 +90,7 @@ CMWin32ZLib >> setVariables [
 		
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'package properties' }
 CMWin32ZLib >> unpackedDirName [
 	^ 'zlib-1.2.8'
 ]
