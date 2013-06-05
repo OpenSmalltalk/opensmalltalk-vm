@@ -774,6 +774,11 @@ StackInterpreterSimulator >> ioLoadFunction: functionString From: pluginString [
 ]
 
 { #category : #'I/O primitives support' }
+StackInterpreterSimulator >> ioLocalSecondsOffset [
+	^DateAndTime localOffset asSeconds
+]
+
+{ #category : #'I/O primitives support' }
 StackInterpreterSimulator >> ioMSecs [
 	"Return the value of the millisecond clock."
 	"NOT.  Actually, we want something a lot slower and, for exact debugging,
