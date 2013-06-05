@@ -301,7 +301,7 @@ VMMaker class >> generateNewspeakCogVM [
 					FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin InflatePlugin JPEGReadWriter2Plugin
 					JPEGReaderPlugin LargeIntegersPlugin Matrix2x3Plugin MiscPrimitivePlugin NewsqueakIA32ABIPlugin
 					RePlugin SecurityPlugin SocketPlugin SoundPlugin SqueakSSLPlugin SurfacePlugin ThreadedIA32FFIPlugin
-					UUIDPlugin UnixOSProcessPlugin VMProfileMacSupportPlugin Win32OSProcessPlugin)
+					UUIDPlugin UnixOSProcessPlugin VMProfileLinuxSupportPlugin VMProfileMacSupportPlugin Win32OSProcessPlugin)
 ]
 
 { #category : #configurations }
@@ -314,7 +314,7 @@ VMMaker class >> generateNewspeakInterpreterVM [
 					FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin InflatePlugin JPEGReadWriter2Plugin
 					JPEGReaderPlugin LargeIntegersPlugin Matrix2x3Plugin MiscPrimitivePlugin NewsqueakIA32ABIPlugin
 					RePlugin SecurityPlugin SocketPlugin SoundPlugin SqueakSSLPlugin SurfacePlugin
-					UUIDPlugin UnixOSProcessPlugin VMProfileMacSupportPlugin Win32OSProcessPlugin)
+					UUIDPlugin UnixOSProcessPlugin VMProfileLinuxSupportPlugin VMProfileMacSupportPlugin Win32OSProcessPlugin)
 ]
 
 { #category : #configurations }
@@ -328,7 +328,7 @@ VMMaker class >> generateNewspeakStackVM [
 					FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin InflatePlugin JPEGReadWriter2Plugin
 					JPEGReaderPlugin LargeIntegersPlugin Matrix2x3Plugin MiscPrimitivePlugin NewsqueakIA32ABIPlugin
 					RePlugin SecurityPlugin SocketPlugin SoundPlugin SurfacePlugin SqueakSSLPlugin ThreadedIA32FFIPlugin
-					UUIDPlugin UnixOSProcessPlugin VMProfileMacSupportPlugin Win32OSProcessPlugin)
+					UUIDPlugin UnixOSProcessPlugin VMProfileLinuxSupportPlugin VMProfileMacSupportPlugin Win32OSProcessPlugin)
 ]
 
 { #category : #configurations }
@@ -361,7 +361,7 @@ VMMaker class >> generateSqueakCogVM [
 					MiscPrimitivePlugin Mpeg3Plugin QuicktimePlugin RePlugin SecurityPlugin SerialPlugin
 					SocketPlugin SoundCodecPlugin SoundGenerationPlugin SoundPlugin SqueakSSLPlugin StarSqueakPlugin
 					ThreadedIA32FFIPlugin UnixAioPlugin UUIDPlugin UnixOSProcessPlugin
-					Win32OSProcessPlugin VMProfileMacSupportPlugin)
+					Win32OSProcessPlugin VMProfileLinuxSupportPlugin VMProfileMacSupportPlugin)
 ]
 
 { #category : #configurations }
