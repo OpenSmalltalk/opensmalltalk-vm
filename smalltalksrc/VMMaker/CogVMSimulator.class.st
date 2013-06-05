@@ -1477,6 +1477,11 @@ CogVMSimulator >> ioLoadFunction: functionString From: pluginString [
 ]
 
 { #category : #'I/O primitives support' }
+CogVMSimulator >> ioLocalSecondsOffset [
+	^DateAndTime localOffset asSeconds
+]
+
+{ #category : #'I/O primitives support' }
 CogVMSimulator >> ioMSecs [
 	"Return the value of the millisecond clock."
 	"NOT.  Actually, we want something a lot slower and, for exact debugging,
