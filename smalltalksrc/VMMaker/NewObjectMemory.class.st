@@ -245,7 +245,7 @@ NewObjectMemory >> allocateChunk: byteSize [
 
 { #category : #allocation }
 NewObjectMemory >> allocateChunkAfterGC: byteSize [ 
-	"Garbage colect and then allocate a chunk of the given size. Sender must be sure
+	"Garbage collect and then allocate a chunk of the given size. Sender must be sure
 	 that the requested size includes enough space for the header word(s)."
 	| newChunk enoughSpace |
 	<inline: true>
@@ -257,7 +257,7 @@ NewObjectMemory >> allocateChunkAfterGC: byteSize [
 	(self oop: freeStart + byteSize isGreaterThan: reserveStart) ifTrue:
 		[^0 "Allocation failed.  Client should e.g. fail the primtive"].
 
-	"if we get here, there is enough space for allocation to  succeed "
+	"if we get here, there is enough space for allocation to succeed "
 	newChunk := freeStart.
 	freeStart := freeStart + byteSize.
 	^self oopForPointer: newChunk
@@ -1933,8 +1933,11 @@ NewObjectMemory >> markPhase: fullGCFlag [
 
 { #category : #allocation }
 NewObjectMemory >> maybeFillWithAllocationCheckFillerFrom: start to: end [
-	"Fill free memory with a bit pattern for chekcing if the last object has been overwritten."
+	"Fill free memory with a bit pattern for checking if the last object has been overwritten."
 	<inline: true>
+	<var: 'start' type: #usqInt>
+	<var: 'end' type: #usqInt>
+	<var: 'i' type: #usqInt>
 	AllocationCheckFiller ~= 0 ifTrue:
 		[start to: end by: BytesPerWord do:
 			[:i|
