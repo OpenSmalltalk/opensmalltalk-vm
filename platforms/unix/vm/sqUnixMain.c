@@ -1566,13 +1566,19 @@ char *getVersionInfo(int verbose)
 # define BuildVariant "Assert"
 #endif
 
+#if ITIMER_HEARTBEAT
+# define HBID " ITHB"
+#else
+# define HBID
+#endif
+
   if (verbose)
     sprintf(info+strlen(info), IMAGE_DIALECT_NAME " VM version: ");
   sprintf(info+strlen(info), "%s #%d", VM_VERSION, vm_serial);
 #if defined(USE_XSHM)
   sprintf(info+strlen(info), " XShm");
 #endif
-  sprintf(info+strlen(info), " %s %s [%s VM]\n", vm_date, cc_version, BuildVariant);
+  sprintf(info+strlen(info), " %s %s [" BuildVariant HBID " VM]\n", vm_date, cc_version, BuildVariant);
   if (verbose)
     sprintf(info+strlen(info), "Built from: ");
   sprintf(info+strlen(info), "%s\n", INTERP_BUILD);

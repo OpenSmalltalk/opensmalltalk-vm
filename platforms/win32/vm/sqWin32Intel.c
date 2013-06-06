@@ -781,7 +781,7 @@ getVersionInfo(int verbose)
 # define BuildVariant "Assert"
 #endif
 
-  sprintf(info+strlen(info), "%s [%s VM]\n", vmBuildString, BuildVariant);
+  sprintf(info+strlen(info), "%s [" BuildVariant " VM]\n", vmBuildString);
   if (verbose)
     sprintf(info+strlen(info), "Built from: ");
   sprintf(info+strlen(info), "%s\n", INTERP_BUILD);
