@@ -1,4 +1,5 @@
 #!/bin/sh
+# VM with VM profiler and threaded heartbeat assuming multiple thread priorities
 echo -n "clean? "
 read a
 case $a in
@@ -7,9 +8,9 @@ n|no|N|NO)	echo "ok but this isn't safe!!";;
 esac
 test -f config.h || ../../platforms/unix/config/configure --without-npsqueak \
 	CC="gcc -m32" \
-	CFLAGS="-g3 -O0 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=1" \
+	CFLAGS="-g3 -O0 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=0 -DDEBUGVM=1" \
 	LIBS=-lpthread \
 	LDFLAGS=-Wl,-z,now
 ../../scripts/nukeversion
-rm -rf ../../cogdbglinux
-make install prefix=`(cd ../../;pwd)`/cogdbglinux
+rm -rf ../../cogdbglinuxpt
+make install prefix=`(cd ../../;pwd)`/cogdbglinuxpt

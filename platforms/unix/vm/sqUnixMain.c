@@ -1558,13 +1558,21 @@ char *getVersionInfo(int verbose)
   char *info= (char *)malloc(4096);
   info[0]= '\0';
 
+#if defined(NDEBUG)
+# define BuildVariant "Production"
+#elif DEBUGVM
+# define BuildVariant "Debug"
+# else
+# define BuildVariant "Assert"
+#endif
+
   if (verbose)
     sprintf(info+strlen(info), IMAGE_DIALECT_NAME " VM version: ");
   sprintf(info+strlen(info), "%s #%d", VM_VERSION, vm_serial);
 #if defined(USE_XSHM)
   sprintf(info+strlen(info), " XShm");
 #endif
-  sprintf(info+strlen(info), " %s %s\n", vm_date, cc_version);
+  sprintf(info+strlen(info), " %s %s [%s VM]\n", vm_date, cc_version, BuildVariant);
   if (verbose)
     sprintf(info+strlen(info), "Built from: ");
   sprintf(info+strlen(info), "%s\n", INTERP_BUILD);

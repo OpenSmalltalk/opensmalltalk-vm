@@ -1,5 +1,5 @@
 #!/bin/sh
-rm -rf build*/vm/Croquet*.exe
+rm -rf build*/vm/Croquet*.exe build*/vm/Squeak*.exe
 make debug;make assert;make
 make THREADING=multi CONFIGURATION=debug;make THREADING=multi CONFIGURATION=assert;make THREADING=multi
 ls -rlt build*/vm/Squeak*.exe

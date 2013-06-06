@@ -239,6 +239,9 @@ ioUTCMicroseconds() { return get64(utcMicrosecondClock); }
 usqLong
 ioLocalMicroseconds() { return get64(localMicrosecondClock); }
 
+usqInt
+ioLocalSecondsOffset() { return (usqInt)(vmGMTOffset / MicrosecondsPerSecond); }
+
 /* This is an expensive interface for use by profiling code that wants the time
  * now rather than as of the last heartbeat.
  */
@@ -382,6 +385,11 @@ ioInitHeartbeat()
 		exit(errno);
 	}
 	++stateMachinePriority.sched_priority;
+	/* If the priority isn't appropriate for the policy (typically SCHED_OTHER)
+	 * then change policy.
+	 */
+	if (sched_get_priority_max(stateMachinePolicy) < stateMachinePriority.sched_priority)
+		stateMachinePolicy = SCHED_FIFO;
 	halfAMo.tv_sec  = 0;
 	halfAMo.tv_nsec = 1000 * 100;
 	if ((er= pthread_create(&careLess,

@@ -1003,6 +1003,14 @@ getVersionInfo(int verbose)
   char *info= (char *)malloc(4096);
   info[0]= '\0';
 
+#if defined(NDEBUG)
+# define BuildVariant "Production"
+#elif DEBUGVM
+# define BuildVariant "Debug"
+# else
+# define BuildVariant "Assert"
+#endif
+
   if (verbose)
     sprintf(info+strlen(info), IMAGE_DIALECT_NAME " VM version: ");
   sprintf(info+strlen(info), "%s ", VM_VERSION);
@@ -1010,7 +1018,7 @@ getVersionInfo(int verbose)
 						CFBundleGetMainBundle(),
 						CFSTR("CFBundleVersion"))))
     CFStringGetCString(versionString, info+strlen(info), 4095-strlen(info), gCurrentVMEncoding);
-  sprintf(info+strlen(info), " %s\n", vmBuildString);
+  sprintf(info+strlen(info), " %s [%s VM]\n", vmBuildString, BuildVariant);
   if (verbose)
     sprintf(info+strlen(info), "Built from: ");
   sprintf(info+strlen(info), "%s\n", INTERP_BUILD);

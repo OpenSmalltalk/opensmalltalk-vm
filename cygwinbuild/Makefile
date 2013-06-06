@@ -227,6 +227,8 @@ debug:
 # Do make init to allow make -n to function.
 init:	$(OBJDIR) eitheror.exe mkNamedPrims.exe
 
+cleanall:	clean cleanmt cleanast cleanmtast cleandbg cleanmtdbg
+
 clean:
 	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe build
 
@@ -238,6 +240,9 @@ cleanast:
 
 cleanmtast:
 	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe buildmtast
+
+cleandbg:
+	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe builddbg
 
 cleanmtdbg:
 	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe buildmtdbg
@@ -251,6 +256,7 @@ print-settings:
 	@echo CFLAGS=$(CFLAGS)
 	@echo INTERNAL_PLUGINS=$(INTERNAL_PLUGINS)
 	@echo EXTERNAL_PLUGINS=$(EXTERNAL_PLUGINS)
+	@echo OBJDIR=$(OBJDIR)
 	@echo LIBS=$(LIBS)
 	@echo DLLS=$(DLLS)
 	@echo -----------------------------------------------------
@@ -261,6 +267,9 @@ print-objects:
 	@echo -----------------------------------------------------
 
 eitheror.exe: $(WIN32UTILDIR)/eitheror.c
+	$(CC) -o $@ -O1 -mconsole -mno-cygwin $<
+
+mingw32ver.exe: $(WIN32UTILDIR)/mingw32ver.c
 	$(CC) -o $@ -O1 -mconsole -mno-cygwin $<
 
 mkNamedPrims.exe: $(WIN32UTILDIR)/mkNamedPrims.c
@@ -274,7 +283,7 @@ $(ETOBJ):	$(WIN32MISCDIR)/etext.c
 
 vm:	$(VMEXE)
 
-$(VMEXE): $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ)
+$(VMEXE): $(OBJDIR) $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ)
 	$(CC) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(WIN32DIR)/version.c
 	$(LD) $(LDFLAGS) -o $(VMEXE) \
 			$(BTOBJ) $(VMOBJ) $(VMEXP) $(OBJDIR)/resource.o $(LIBS) $(STDLIBS) $(ETOBJ)

@@ -21,8 +21,8 @@
 #endif
 #include <limits.h>
 #include <windef.h>
+#include <winbase.h> /* damn right 2 (must preceed wincon.h in later mingw vers) */
 #include <wincon.h> /* damn right */
-#include <winbase.h> /* damn right 2 */
 
 #define ForCOGMTVMImplementation 1
 

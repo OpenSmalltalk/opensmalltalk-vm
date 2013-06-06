@@ -32,4 +32,5 @@ SoundCodecPrims \
 SoundGenerationPlugin \
 SoundPlugin \
 StarSqueakPlugin \
-SurfacePlugin
+SurfacePlugin \
+VMProfileLinuxSupportPlugin
