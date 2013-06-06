@@ -1,5 +1,6 @@
 #!/bin/sh
 # VM with VM profiler and threaded heartbeat assuming multiple thread priorities
+INSTALLDIR=cogastlinuxpt
 echo -n "clean? "
 read a
 case $a in
@@ -12,5 +13,5 @@ test -f config.h || ../../platforms/unix/config/configure --without-npsqueak \
 	LIBS=-lpthread \
 	LDFLAGS=-Wl,-z,now
 ../../scripts/nukeversion
-rm -rf ../../cogastlinuxpt
-make install prefix=`(cd ../../;pwd)`/cogastlinuxpt
+rm -rf ../../$INSTALLDIR
+make install prefix=`(cd ../../;pwd)`/$INSTALLDIR

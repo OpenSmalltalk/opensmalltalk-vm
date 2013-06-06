@@ -22,4 +22,5 @@ SecurityPlugin \
 SocketPlugin \
 SurfacePlugin \
 UUIDPlugin \
-UnixOSProcessPlugin
+UnixOSProcessPlugin \
+VMProfileLinuxSupportPlugin

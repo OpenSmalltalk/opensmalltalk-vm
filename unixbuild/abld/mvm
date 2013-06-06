@@ -1,4 +1,5 @@
 #!/bin/sh
+INSTALLDIR=cogastlinux
 echo -n "clean? "
 read a
 case $a in
@@ -11,5 +12,5 @@ test -f config.h || ../../platforms/unix/config/configure --without-npsqueak \
 	LIBS=-lpthread \
 	LDFLAGS=-Wl,-z,now
 ../../scripts/nukeversion
-rm -rf ../../cogastlinux
-make install prefix=`(cd ../../;pwd)`/cogastlinux
+rm -rf ../../$INSTALLDIR
+make install prefix=`(cd ../../;pwd)`/$INSTALLDIR

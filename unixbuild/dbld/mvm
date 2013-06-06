@@ -1,4 +1,5 @@
 #!/bin/sh
+INSTALLDIR=cogdbglinux
 echo -n "clean? "
 read a
 case $a in
@@ -11,5 +12,5 @@ test -f config.h || ../../platforms/unix/config/configure --without-npsqueak \
 	LIBS=-lpthread \
 	LDFLAGS=-Wl,-z,now
 ../../scripts/nukeversion
-rm -rf ../../cogdbglinux
-make install prefix=`(cd ../../;pwd)`/cogdbglinux
+rm -rf ../../$INSTALLDIR
+make install prefix=`(cd ../../;pwd)`/$INSTALLDIR

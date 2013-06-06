@@ -1,4 +1,5 @@
 #!/bin/sh
+INSTALLDIR=cogmtlinux
 # Some gcc versions create a broken VM using -O2
 case `gcc -v 2>&1 | grep version | sed 's/gcc version *//'` in
 3.4.*)	OPT=-O1;;
@@ -18,5 +19,5 @@ test -f config.h || ../../platforms/unix/config/configure INTERP=cointerpmt \
 	LIBS=-lpthread \
 	LDFLAGS=-Wl,-z,now
 ../../scripts/nukeversion
-rm -rf ../../cogmtlinux
-make install prefix=`(cd ../../;pwd)`/cogmtlinux
+rm -rf ../../$INSTALLDIR
+make install prefix=`(cd ../../;pwd)`/$INSTALLDIR
