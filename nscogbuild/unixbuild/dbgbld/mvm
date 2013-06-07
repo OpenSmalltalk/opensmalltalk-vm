@@ -1,5 +1,8 @@
 #!/bin/bash
 INSTALLDIR=nsvmlinuxdbg
+if [ $# -ge 1 ]; then
+	INSTALLDIR="$1"; shift
+fi
 OPT=-O0
 
 echo -n "clean? "
@@ -33,7 +36,9 @@ make install prefix=`(cd ../../../;pwd)`/$INSTALLDIR
   test -f $LIBDIR/squeak && mv $LIBDIR/squeak $LIBDIR/nsvm
   test -d lib/squeak && mv lib/squeak lib/nsvm
   LIBDIR="`echo lib/nsvm/[0-9.-]*`"
-  if [ -h ~/Squeak/SqueakV41.sources ]; then
+  if [ "$1" = -copysource ]; then
+	cp ~/Squeak/SqueakV41.sources $LIBDIR
+  elif [ -h ~/Squeak/SqueakV41.sources ]; then
 	ln "`readlink ~/Squeak/SqueakV41.sources`" $LIBDIR
   elif [ -f ~/Squeak/SqueakV41.sources ]; then
 	ln ~/Squeak/SqueakV41.sources $LIBDIR

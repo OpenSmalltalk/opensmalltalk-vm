@@ -1,6 +1,9 @@
 #!/bin/sh
 # VM with VM profiler and threaded heartbeat assuming multiple thread priorities
 INSTALLDIR=cogastlinuxpt
+if [ $# -ge 1 ]; then
+	INSTALLDIR="$1"; shift
+fi
 echo -n "clean? "
 read a
 case $a in
