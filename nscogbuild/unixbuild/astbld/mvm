@@ -9,7 +9,7 @@ echo -n "clean? "
 read a
 case $a in
 n|no|N|NO)	echo "ok but this isn't safe!!";;
-*)			make reallyclean
+*)			test -f Makefile && make reallyclean
 esac
 test -f config.h || ../../../platforms/unix/config/configure --with-src=nscogsrc \
 	--without-vm-display-fbdev --without-npsqueak \
