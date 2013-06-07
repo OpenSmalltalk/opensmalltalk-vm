@@ -1578,7 +1578,7 @@ char *getVersionInfo(int verbose)
 #if defined(USE_XSHM)
   sprintf(info+strlen(info), " XShm");
 #endif
-  sprintf(info+strlen(info), " %s %s [" BuildVariant HBID " VM]\n", vm_date, cc_version, BuildVariant);
+  sprintf(info+strlen(info), " %s %s [" BuildVariant HBID " VM]\n", vm_date, cc_version);
   if (verbose)
     sprintf(info+strlen(info), "Built from: ");
   sprintf(info+strlen(info), "%s\n", INTERP_BUILD);

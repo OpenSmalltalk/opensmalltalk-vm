@@ -1018,7 +1018,7 @@ getVersionInfo(int verbose)
 						CFBundleGetMainBundle(),
 						CFSTR("CFBundleVersion"))))
     CFStringGetCString(versionString, info+strlen(info), 4095-strlen(info), gCurrentVMEncoding);
-  sprintf(info+strlen(info), " %s [" BuildVariant " VM]\n", vmBuildString, BuildVariant);
+  sprintf(info+strlen(info), " %s [" BuildVariant " VM]\n", vmBuildString);
   if (verbose)
     sprintf(info+strlen(info), "Built from: ");
   sprintf(info+strlen(info), "%s\n", INTERP_BUILD);
