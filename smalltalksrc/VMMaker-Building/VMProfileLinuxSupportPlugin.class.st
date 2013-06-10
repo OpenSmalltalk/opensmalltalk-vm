@@ -19,7 +19,9 @@ Class {
 { #category : #translation }
 VMProfileLinuxSupportPlugin class >> declareHeaderFilesIn: cg [
 
-	cg  addHeaderFile: '#ifndef _GNU_SOURCE\# define _GNU_SOURCE\#endif\#include <link.h>' withCRs
+	cg
+		addHeaderFile: '<limits.h>';
+		addHeaderFile: '#ifndef _GNU_SOURCE\# define _GNU_SOURCE\#endif\#include <link.h>' withCRs
 ]
 
 { #category : #'iteration callbacks' }
@@ -73,7 +75,9 @@ VMProfileLinuxSupportPlugin >> primitiveDLSymInLibrary [
 
 { #category : #primitives }
 VMProfileLinuxSupportPlugin >> primitiveExecutableModules [
-	"Answer an Array of strings for executable modules (the VM executable and loaded libraries)."
+	"Answer an Array of pairs of strings for executable modules (the VM executable and loaded libraries).
+	 The first element in each pair is the filename of the module.  The second element is either nil or
+	 the symlink's target, if the filename is a symlink."
 	<export: true>
 	<var: #name type: 'const char *'>
 	<var: #nameObjData type: #'char *'>
@@ -82,12 +86,12 @@ VMProfileLinuxSupportPlugin >> primitiveExecutableModules [
 	self cCode: 'dl_iterate_phdr(countnummodules,0)' inSmalltalk: [0].
 	resultObj := interpreterProxy
 					instantiateClass: interpreterProxy classArray
-					indexableSize: numModules - 1. "skip the fake linux-gate.so.1"
+					indexableSize: numModules - 1 * 2. "skip the fake linux-gate.so.1"
 	resultObj = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoMemory].
 	interpreterProxy pushRemappableOop: resultObj.
 	primErr := numModules := 0.
-	self cCode: 'dl_iterate_phdr(reapmodulenames,0)' inSmalltalk: [0].
+	self cCode: 'dl_iterate_phdr(reapmodulesymlinks,0)' inSmalltalk: [0].
 	resultObj := interpreterProxy popRemappableOop.
 	primErr ~= 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: primErr].
@@ -131,5 +135,59 @@ VMProfileLinuxSupportPlugin >> reap: info module: size names: ignored [
 		ofObject: interpreterProxy topRemappableOop
 		withValue: moduleNameObj.
 	numModules := numModules + 1.
+	^0
+]
+
+{ #category : #'iteration callbacks' }
+VMProfileLinuxSupportPlugin >> reap: info module: size symlinks: ignored [
+	"like reap:module:names:, but follows symlinks"
+	| elfModuleName len moduleNameObj GetAttributeString symLinkBuf |
+	<var: #info type: #'struct dl_phdr_info *'>
+	<var: 'elfModuleName' type: #'const char *'>
+	<var: #GetAttributeString declareC: 'extern char *GetAttributeString(sqInt)'>
+	<var: #symLinkBuf declareC: 'char symLinkBuf[PATH_MAX]'>
+	<var: #size type: #'size_t'>
+	<var: #ignored type: #'void *'>
+	self touch: GetAttributeString.
+	elfModuleName := self cCode: 'numModules ? info->dlpi_name : GetAttributeString(0)'.
+	(elfModuleName isNil
+	 or: [(len := self strlen: elfModuleName) = 0]) ifTrue:
+		[^0]. "skip the fake linux-gate.so.1"
+	moduleNameObj := interpreterProxy
+							instantiateClass: interpreterProxy classString
+							indexableSize: len.
+	moduleNameObj = 0 ifTrue:
+		[primErr := PrimErrNoMemory.
+		 ^1]. "stop iteration"
+	self st: (interpreterProxy arrayValueOf: moduleNameObj)
+		rn: elfModuleName
+		cpy: len. "(char *)strncpy()"
+	interpreterProxy
+		storePointer: numModules
+		ofObject: interpreterProxy topRemappableOop
+		withValue: moduleNameObj.
+	"now dereference the symlink, if it exists"
+	self str: symLinkBuf cpy: elfModuleName.
+	(len := self read: elfModuleName li: symLinkBuf nk: #'PATH_MAX') > 0
+		ifTrue:
+			[moduleNameObj := interpreterProxy
+									instantiateClass: interpreterProxy classString
+									indexableSize: len.
+			 moduleNameObj = 0 ifTrue:
+				[primErr := PrimErrNoMemory.
+				 ^1]. "stop iteration"
+			 self st: (interpreterProxy arrayValueOf: moduleNameObj)
+				rn: symLinkBuf
+				cpy: len. "(char *)strncpy()"
+			 interpreterProxy
+				storePointer: numModules + 1
+				ofObject: interpreterProxy topRemappableOop
+				withValue: moduleNameObj]
+		ifFalse:
+			[interpreterProxy
+				storePointer: numModules + 1
+				ofObject: interpreterProxy topRemappableOop
+				withValue: interpreterProxy nilObject].
+	numModules := numModules + 2.
 	^0
 ]
