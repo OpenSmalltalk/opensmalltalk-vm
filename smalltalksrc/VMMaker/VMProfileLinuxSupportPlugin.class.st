@@ -47,6 +47,7 @@ VMProfileLinuxSupportPlugin >> primitiveDLSymInLibrary [
 	sz := interpreterProxy byteSizeOf: nameObj.
 	libName := self malloc: sz+1.
 	self st: libName rn: (interpreterProxy firstIndexableField: nameObj) cpy: sz.
+	libName at: sz put: 0.
 	nameObj := interpreterProxy stackValue: 1.
 	(interpreterProxy isBytes: nameObj) ifFalse:
 		[self free: libName.
@@ -54,7 +55,8 @@ VMProfileLinuxSupportPlugin >> primitiveDLSymInLibrary [
 	sz := interpreterProxy byteSizeOf: nameObj.
 	symName := self malloc: sz+1.
 	self st: symName rn: (interpreterProxy firstIndexableField: nameObj) cpy: sz.
-	lib := self dl: libName open: #'RTLD_LAZY' | #'RTLD_NODELETE'.
+	symName at: sz put: 0.
+	lib := self dl: libName open: (#'RTLD_LAZY' bitOr: #'RTLD_NODELETE').
 	lib ifNil:
 		[self free: libName; free: symName.
 		 ^interpreterProxy primitiveFailFor: PrimErrInappropriate].
@@ -66,7 +68,7 @@ VMProfileLinuxSupportPlugin >> primitiveDLSymInLibrary [
 	self dlclose: lib.
 	ok ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrNotFound].
-	^interpreterProxy methodReturnValue: (interpreterProxy positiveMachineIntegerValueOf: addr asUnsignedLong)
+	^interpreterProxy methodReturnValue: (interpreterProxy positive32BitIntegerFor: addr asUnsignedLong)
 ]
 
 { #category : #primitives }
