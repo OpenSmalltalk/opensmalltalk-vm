@@ -47,8 +47,8 @@ ioClearProfile(void)
 #if __linux__
 # if !defined(__USE_GNU)
 #	define UNDEF__USE_GNU 1
+#	define __USE_GNU /* to get register defines in sys/ucontext.h */
 # endif
-# define __USE_GNU /* to get register defines in sys/ucontext.h */
 #endif
 #include <sys/ucontext.h>
 #if  __linux__ && UNDEF__USE_GNU
@@ -111,7 +111,7 @@ profileStateMachine(void *ignored)
 	if ((er = pthread_setschedparam(pthread_self(),
 									profThreadPolicy,
 									&profThreadPriority)))
-		bail_out(er,"pthread_getschedparam failed");
+		bail_out(er,"pthread_setschedparam failed");
 
 	profileState = quiescent;
 	while (profileState != dead) {
@@ -229,6 +229,11 @@ initProfile(void)
 	 * want to profile.
 	 */
 	profThreadPriority.sched_priority += 2;
+	/* If the priority isn't appropriate for the policy (typically SCHED_OTHER)
+	 * then change policy.
+	 */
+	if (sched_get_priority_max(profThreadPolicy) < profThreadPriority.sched_priority)
+		profThreadPolicy = SCHED_FIFO;
 	profileState = nascent;
 	if ((er= pthread_create(&careLess,
 							(const pthread_attr_t *)0,
@@ -340,6 +345,11 @@ initProfileThread()
 	 * want to profile.
 	 */
 	profThreadPriority.sched_priority += 2;
+	/* If the priority isn't appropriate for the policy (typically SCHED_OTHER)
+	 * then change policy.
+	 */
+	if (sched_get_priority_max(profThreadPolicy) < profThreadPriority.sched_priority)
+		profThreadPolicy = SCHED_FIFO;
 	profileState = nascent;
 	if ((er= pthread_create(&careLess,
 							(const pthread_attr_t *)0,
