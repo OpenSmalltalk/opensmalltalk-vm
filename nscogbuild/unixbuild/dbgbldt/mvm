@@ -1,8 +1,11 @@
 #!/bin/bash
 # VM with VM profiler and threaded heartbeat assuming multiple thread priorities
 INSTALLDIR=nsvmlinuxdbgpt
-if [ $# -ge 1 -a -d "$1" ]; then
-	INSTALLDIR="$1"; shift
+if [ $# -ge 1 ]; then
+	case "$1" in
+	-*)	;;
+	*)	INSTALLDIR="$1"; shift
+	esac
 fi
 OPT=-O0
 

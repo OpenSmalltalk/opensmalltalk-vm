@@ -1,7 +1,10 @@
 #!/bin/bash
 INSTALLDIR=nsvmlinuxast
-if [ $# -ge 1 -a -d "$1" ]; then
-	INSTALLDIR="$1"; shift
+if [ $# -ge 1 ]; then
+	case "$1" in
+	-*)	;;
+	*)	INSTALLDIR="$1"; shift
+	esac
 fi
 OPT=-O1
 
