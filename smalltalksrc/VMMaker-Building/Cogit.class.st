@@ -2555,7 +2555,7 @@ Cogit >> ceSICMiss: receiver [
 					Case1Method: newTargetMethodOrNil
 					tag: cacheTag
 					isMNUCase: errorSelectorOrNil = SelectorDoesNotUnderstand.
-		 pic asInteger < 0 ifTrue:
+		 (pic asInteger between: MaxNegativeErrorCode and: -1) ifTrue:
 			["For some reason the PIC couldn't be generated, most likely a lack of code memory.
 			  Continue as if this is an unlinked send."
 			 pic asInteger = InsufficientCodeSpace ifTrue:
