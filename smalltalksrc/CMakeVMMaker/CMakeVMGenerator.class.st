@@ -130,7 +130,7 @@ CMakeVMGenerator >> generate: aConfigOrClass [
 { #category : #'build script' }
 CMakeVMGenerator >> generateBuildScript [
 
-	(self buildDir forceNewFileNamed: 'build.sh') nextPutAll: (config fixLineEndsOf: config buildScript); close.
+	(FileStream forceNewFileNamed: (self buildDir / 'build.sh') fullName) nextPutAll: (config fixLineEndsOf: config buildScript); close.
 	
 ]
 
@@ -162,7 +162,7 @@ extern sqExport os_exports[];
 
 	].
 
-	(self buildDir forceNewFileNamed: 'sqNamedPrims.h') nextPutAll: (config fixLineEndsOf: content); close.
+	(FileStream forceNewFileNamed: (self buildDir /'sqNamedPrims.h') fullName) nextPutAll: (config fixLineEndsOf: content); close.
 	
 ]
 

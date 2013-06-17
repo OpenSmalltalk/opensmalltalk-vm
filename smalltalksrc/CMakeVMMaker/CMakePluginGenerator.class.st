@@ -184,9 +184,11 @@ CMakePluginGenerator >> plugin [
 { #category : #'as yet unclassified' }
 CMakePluginGenerator >> saveFile [
 	
-	(((vmGen config dirFrom: vmGen buildDir) / plugin moduleName) assureExistence forceNewFileNamed: self outputFileName) 
-		nextPutAll: (self config fixLineEndsOf: output contents); close.
-
+	| reference |
+	reference := ((vmGen config dirFrom: vmGen buildDir) / plugin moduleName) ensureDirectory; yourself.
+	(FileStream forceNewFileNamed: (reference / self outputFileName) fullName)
+		nextPutAll: (self config fixLineEndsOf: output contents);
+		close.
 ]
 
 { #category : #accessing }

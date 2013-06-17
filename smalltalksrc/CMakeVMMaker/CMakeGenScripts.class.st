@@ -34,7 +34,7 @@ CMakeGenScripts class >> generateCocoaVM [
 	| platformDirectoryName |
 	"B3DAcceleratorPlugin"
 	"Not using it right now"
-	platformDirectoryName := (FileSystem workingDirectory parent directoryNamed: 'platforms') fullName.
+	platformDirectoryName := (FileSystem workingDirectory parent / 'platforms') fullName.
 	VMMaker default
 		platformRootDirectoryName: platformDirectoryName;
 		sourceDirectoryName: platformDirectoryName , '/iOS/vm/src';

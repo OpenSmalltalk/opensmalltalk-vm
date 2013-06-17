@@ -147,7 +147,7 @@ CPlatformConfig >> addThirdpartyLibrary: libName [
 { #category : #directories }
 CPlatformConfig >> buildDir [
 	
-	^ buildDir ifNil: [ buildDir := (self topDir / self buildDirName) assureExistence ].
+	^ buildDir ifNil: [ buildDir := (self topDir / self buildDirName) ensureDirectory; yourself ].
 
 ]
 
@@ -884,7 +884,7 @@ CPlatformConfig >> setupDirectories: gen [
 			set: #targetPlatform to: '${platformsDir}/${platformName}';
 			set: #crossDir toString: '${platformsDir}/Cross';
 			set: #platformVMDir toString: '${targetPlatform}/vm';
-			set: #outputDir toString: self outputDir.
+			set: #outputDir toString: self outputDir fullName.
 	].
 
 	self write: dirsInclude toFile: 'directories.cmake'.
@@ -956,6 +956,8 @@ CPlatformConfig >> write: aContents toFile: aFileName [
 	bldDir := self buildDir.
 	bldDir isString
 		ifTrue: [ bldDir := bldDir asFileReference ].
-	bldDir assureExistence.
-	bldDir forceNewFileNamed: aFileName do: [ :stream | stream nextPutAll: (self fixLineEndsOf: aContents) ]
+	bldDir ensureDirectory.
+	FileStream
+		forceNewFileNamed: (bldDir / aFileName) fullName
+		do: [ :stream | stream nextPutAll: (self fixLineEndsOf: aContents) ]
 ]
