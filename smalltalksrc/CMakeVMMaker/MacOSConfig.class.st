@@ -350,7 +350,7 @@ MacOSConfig >> fixLineEndsOf: string [
 MacOSConfig >> outputDir [
 
 	"the directory where built binaries will be stored"
-	^ outputDir ifNil: [ outputDir := (self buildDir containingDirectory fullName , '/', self outputDirName) ]
+	^ outputDir ifNil: [ outputDir := (self buildDir parent / self outputDirName) ]
 	
 ]
 
