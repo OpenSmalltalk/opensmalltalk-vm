@@ -255,7 +255,7 @@ CogFamilyCocoaIOSConfig >> setExtraTargetProperties: maker [
 	" generated and add Info.plist file "
 	plist := self plistFile.
 
-	(maker buildDir forceNewFileNamed: 'Info.plist') 
+	(FileStream forceNewFileNamed: (maker buildDir / 'Info.plist') fullName) 
 		nextPutAll: plist; 
 		close.
 
@@ -263,7 +263,7 @@ CogFamilyCocoaIOSConfig >> setExtraTargetProperties: maker [
 		addProperty: 'MACOSX_BUNDLE_INFO_PLIST' 
 		value: '${buildDir}/Info.plist'.  
 
-	(maker buildDir forceNewFileNamed: self prefixHeaderFileName) 
+	(FileStream forceNewFileNamed: (maker buildDir / self prefixHeaderFileName) fullName )
 		nextPutAll: self precompiledHeaders;
 		close.
 	maker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/', self prefixHeaderFileName.
@@ -281,8 +281,8 @@ CogFamilyCocoaIOSConfig >> setExtraTargetProperties: maker [
 "	maker set: 'CMAKE_C_COMPILER' to: '/usr/bin/gcc-4.2'.
 	maker set: 'CMAKE_CXX_COMPILER' to: '/usr/bin/g++-4.2'.		
 "
-	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir.
-	maker set: 'RUNTIME_OUTPUT_DIRECTORY' toString: self outputDir.
+	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir fullName.
+	maker set: 'RUNTIME_OUTPUT_DIRECTORY' toString: self outputDir fullName.
 ]
 
 { #category : #settings }
