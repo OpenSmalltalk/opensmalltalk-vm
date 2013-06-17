@@ -370,7 +370,8 @@ CMakeVMGenerator >> thirdpartyDirName [
 { #category : #accessing }
 CMakeVMGenerator >> topDir [
 	| dir |
-	dir := self config topDir ifNil: [ FileDirectory default containingDirectory ].
-	dir isString ifTrue: [^ FileDirectory on: ( FileDirectory fullPathForURI: dir) ].
+	dir := self config topDir ifNil: [ FileSystem workingDirectory parent ].
+	dir isString
+		ifTrue: [ ^dir asFileReference ].
 	^ dir
 ]

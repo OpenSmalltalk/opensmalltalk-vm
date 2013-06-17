@@ -568,10 +568,9 @@ CPlatformConfig >> defaultInternalPlugins [
 
 { #category : #utils }
 CPlatformConfig >> dirFrom: aStringOrDir [
-	
-	^ aStringOrDir isString ifTrue: [
-		FileDirectory on: ( FileDirectory fullPathForURI: aStringOrDir)] 
-	ifFalse: [ aStringOrDir ]
+	^ aStringOrDir isString
+		ifTrue: [ aStringOrDir asFileReference ]
+		ifFalse: [ aStringOrDir ]
 ]
 
 { #category : #utils }
@@ -927,23 +926,19 @@ CPlatformConfig >> thirdpartyLibs [
 
 { #category : #directories }
 CPlatformConfig >> topDir [
-	
-	^ topDir ifNil: [ topDir := FileDirectory default containingDirectory ].
-
+	^ topDir ifNil: [ topDir := FileSystem workingDirectory parent ]
 ]
 
 { #category : #directories }
 CPlatformConfig >> topDir: pathString [
-
-	topDir :=
-		FileDirectory on: (FileDirectory fullPathForURI: pathString).
-	topDir assureExistence.
+	topDir := pathString asFileReference.
+	topDir assureExistence
 ]
 
 { #category : #'source generation' }
 CPlatformConfig >> validateSourcesPresent [
 	| sources |
-	sources := FileDirectory openSources: SmalltalkImage current sourcesName forImage: SmalltalkImage current imageName.
+	sources := Smalltalk openSources: SmalltalkImage current sourcesName forImage: SmalltalkImage current imageName.
 	
 	((sources == nil or: [sources atEnd])
 			and: [ SmalltalkImage current checkSourcesFileAvailability])
@@ -954,18 +949,13 @@ CPlatformConfig >> validateSourcesPresent [
 
 { #category : #directories }
 CPlatformConfig >> write: aContents toFile: aFileName [
-
 	"write a file to current output directory (buildDir).
 	use line end convention appropriate for config platform"
-	
 
 	| bldDir |
-	
 	bldDir := self buildDir.
-	
- 	bldDir isString ifTrue: [ bldDir := FileDirectory on: (FileDirectory fullPathForURI: bldDir) ].
+	bldDir isString
+		ifTrue: [ bldDir := bldDir asFileReference ].
 	bldDir assureExistence.
-	
-	bldDir forceNewFileNamed: aFileName 
-		do: [:stream | stream nextPutAll: (self fixLineEndsOf: aContents) ].
+	bldDir forceNewFileNamed: aFileName do: [ :stream | stream nextPutAll: (self fixLineEndsOf: aContents) ]
 ]

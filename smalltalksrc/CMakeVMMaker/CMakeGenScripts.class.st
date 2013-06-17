@@ -32,76 +32,33 @@ CMakeGenScripts class >> fileoutLoaderScript [
 { #category : #'sources generation' }
 CMakeGenScripts class >> generateCocoaVM [
 	| platformDirectoryName |
-
-"B3DAcceleratorPlugin" "Not using it right now"
-
-	platformDirectoryName := (FileDirectory default 
-		containingDirectory 
-			directoryNamed: 'platforms') 
-				fullName.
-	VMMaker default 
-		platformRootDirectoryName:  platformDirectoryName; 
-		sourceDirectoryName: platformDirectoryName, '/iOS/vm/src';
-		internal: #(
-			ADPCMCodecPlugin 
-			B3DEnginePlugin 
-			BalloonEnginePlugin
-			BitBltSimulation 
-			BMPReadWriterPlugin 
-			ClipboardExtendedPlugin 
-			DeflatePlugin 
-			DSAPlugin 
-			FFIPlugin 
-			FFTPlugin 
-			FilePlugin 
-			FloatArrayPlugin 
-			GeniePlugin 
-			HostWindowPlugin 
-			JPEGReaderPlugin 
-			JPEGReadWriter2Plugin 
-			KlattSynthesizerPlugin 
-			LargeIntegersPlugin 
-			Matrix2x3Plugin 
-			MacMenubarPlugin 
-			MiscPrimitivePlugin
-			NewsqueakIA32ABIPlugin 
-			ObjectiveCPlugin
-			RePlugin 
-			SecurityPlugin 
-			SocketPlugin 
-			SoundCodecPlugin 
-			SoundGenerationPlugin 
-			SoundPlugin 
-			StarSqueakPlugin 
-			SurfacePlugin 
-			UUIDPlugin 
-			DropPlugin)	
-		external: #(
-			UnixOSProcessPlugin);
+	"B3DAcceleratorPlugin"
+	"Not using it right now"
+	platformDirectoryName := (FileSystem workingDirectory parent directoryNamed: 'platforms') fullName.
+	VMMaker default
+		platformRootDirectoryName: platformDirectoryName;
+		sourceDirectoryName: platformDirectoryName , '/iOS/vm/src';
+		internal:
+				#(#ADPCMCodecPlugin #B3DEnginePlugin #BalloonEnginePlugin #BitBltSimulation #BMPReadWriterPlugin #ClipboardExtendedPlugin #DeflatePlugin #DSAPlugin #FFIPlugin #FFTPlugin #FilePlugin #FloatArrayPlugin #GeniePlugin #HostWindowPlugin #JPEGReaderPlugin #JPEGReadWriter2Plugin #KlattSynthesizerPlugin #LargeIntegersPlugin #Matrix2x3Plugin #MacMenubarPlugin #MiscPrimitivePlugin #NewsqueakIA32ABIPlugin #ObjectiveCPlugin #RePlugin #SecurityPlugin #SocketPlugin #SoundCodecPlugin #SoundGenerationPlugin #SoundPlugin #StarSqueakPlugin #SurfacePlugin #UUIDPlugin #DropPlugin)
+			external: #(#UnixOSProcessPlugin);
 		generateMainVM;
-		generateExternalPlugins.
-
-	"Gnuifier"
-	(Gnuifier on:((FileDirectory on: platformDirectoryName, '/iOS/vm/src/vm') pathName)) gnuify.	
-
+		generateExternalPlugins.	"Gnuifier"
+	(Gnuifier on: (platformDirectoryName , '/iOS/vm/src/vm') asFileReference pathName) gnuify
 ]
 
 { #category : #'as yet unclassified' }
 CMakeGenScripts class >> generateCogMacOS [
 	" generate sources for Stack Interpreter of Mac OS"
+
 	| top |
-	top := FileDirectory default containingDirectory.				
-	
+	top := FileSystem workingDirectory parent.
 	VMMaker
 		generate: CoInterpreter
 		to: (top / 'src') fullName
-		platformDir: ( top / 'platforms') fullName
-		excluding:#(BrokenPlugin IA32ABIPluginSimulator SlangTestPlugin TestOSAPlugin
-					FFIPlugin ReentrantARMFFIPlugin ReentrantFFIPlugin ReentrantPPCBEFFIPlugin).
-						
-	CogMacOSConfig generate.
-
-	
+		platformDir: (top / 'platforms') fullName
+		excluding:
+			#(#BrokenPlugin #IA32ABIPluginSimulator #SlangTestPlugin #TestOSAPlugin #FFIPlugin #ReentrantARMFFIPlugin #ReentrantFFIPlugin #ReentrantPPCBEFFIPlugin).
+	CogMacOSConfig generate
 ]
 
 { #category : #'sources generation' }
@@ -111,21 +68,16 @@ CMakeGenScripts class >> generateCogSources [
 	" generate sources for CoInterpreter"
 
 	| top |
-	
 	CogRTLOpcodes initialize.
 	CogIA32Compiler initialize.
-	
-	top := FileDirectory default containingDirectory.				
-	
+	top := FileSystem workingDirectory parent.
 	VMMaker
 		generate: CoInterpreter
 		and: StackToRegisterMappingCogit
 		to: (top / 'src') fullName
-		platformDir: ( top / 'platforms') fullName
-		excluding:#(BrokenPlugin IA32ABIPluginSimulator SlangTestPlugin TestOSAPlugin
-					FFIPlugin ReentrantARMFFIPlugin ReentrantFFIPlugin ReentrantPPCBEFFIPlugin NewsqueakIA32ABIPlugin
-					 NewsqueakIA32ABIPluginAttic).
-
+		platformDir: (top / 'platforms') fullName
+		excluding:
+			#(#BrokenPlugin #IA32ABIPluginSimulator #SlangTestPlugin #TestOSAPlugin #FFIPlugin #ReentrantARMFFIPlugin #ReentrantFFIPlugin #ReentrantPPCBEFFIPlugin #NewsqueakIA32ABIPlugin #NewsqueakIA32ABIPluginAttic)
 ]
 
 { #category : #'sources generation' }
@@ -157,25 +109,19 @@ CMakeGenScripts class >> generateCogSources: config [
 CMakeGenScripts class >> generateCogSourcesEmm40 [
 	" self generateCogSourcesEmm40 "
 
-
 	" generate sources for CoInterpreter"
 
 	| top |
-	
 	CogRTLOpcodes initialize.
 	CogIA32Compiler initialize.
-	
-	top := FileDirectory default containingDirectory.				
-	
+	top := FileSystem workingDirectory parent.
 	VMMaker
 		generate: CoInterpreter
 		and: StackToRegisterMappingCogit
 		to: (top / 'src') fullName
-		platformDir: ( top / 'platforms') fullName
-		excluding:#(BrokenPlugin IA32ABIPluginSimulator SlangTestPlugin TestOSAPlugin
-					FFIPlugin ReentrantARMFFIPlugin ReentrantFFIPlugin 					ReentrantPPCBEFFIPlugin NewsqueakIA32ABIPlugin
-					 NewsqueakIA32ABIPluginAttic).
-
+		platformDir: (top / 'platforms') fullName
+		excluding:
+			#(#BrokenPlugin #IA32ABIPluginSimulator #SlangTestPlugin #TestOSAPlugin #FFIPlugin #ReentrantARMFFIPlugin #ReentrantFFIPlugin #ReentrantPPCBEFFIPlugin #NewsqueakIA32ABIPlugin #NewsqueakIA32ABIPluginAttic)
 ]
 
 { #category : #'as yet unclassified' }
@@ -191,19 +137,15 @@ CMakeGenScripts class >> generateStackMacOS [
 { #category : #'sources generation' }
 CMakeGenScripts class >> generateStackSources [
 	" generate sources for Stack Interpreter of Mac OS"
+
 	| top |
-	top := FileDirectory default containingDirectory.
-	
+	top := FileSystem workingDirectory parent.
 	VMMaker
 		generate: StackInterpreter
 		to: (top / 'src') fullName
-		platformDir: ( top / 'platforms') fullName
-		excluding: #(BrokenPlugin IA32ABIPluginSimulator SlangTestPlugin TestOSAPlugin
-			FFIPlugin ReentrantARMFFIPlugin ReentrantFFIPlugin ReentrantPPCBEFFIPlugin).
-			
-	
-
-	
+		platformDir: (top / 'platforms') fullName
+		excluding:
+			#(#BrokenPlugin #IA32ABIPluginSimulator #SlangTestPlugin #TestOSAPlugin #FFIPlugin #ReentrantARMFFIPlugin #ReentrantFFIPlugin #ReentrantPPCBEFFIPlugin)
 ]
 
 { #category : #'scripts generation' }
