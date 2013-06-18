@@ -163,7 +163,7 @@ typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _swapper;
 
 /* This doesn't belong here, but neither do 'self flag: ...'s belong in the image. */
 
-static void inline flag(char *ignored)
+static inline void flag(char *ignored)
 {
   (void)ignored;
 }
