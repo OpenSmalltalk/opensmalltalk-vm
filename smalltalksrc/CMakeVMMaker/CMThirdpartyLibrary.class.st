@@ -234,7 +234,7 @@ CMThirdpartyLibrary >> generateFor: aVMGenerator [
 	(self isFile: (libDir asFileReference / gen outputFileName) fullName hasContents: contents) ifFalse: [
 		"contents changed, update the file. Because fucking cmake will force rebuild everything if we change its modification date
 		without changing its contents"
-		(libDir forceNewFileNamed: gen outputFileName) nextPutAll: contents; close.
+		(FileStream forceNewFileNamed: (libDir asFileReference / gen outputFileName)) nextPutAll: contents; close.
 		].
 	
 
