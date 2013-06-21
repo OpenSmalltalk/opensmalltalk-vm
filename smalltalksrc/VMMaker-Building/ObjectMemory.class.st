@@ -1703,8 +1703,8 @@ ObjectMemory >> fetchLong32LengthOf: objectPointer [
 { #category : #'interpreter access' }
 ObjectMemory >> fetchPointer: fieldIndex ofObject: oop [
 	"index by word size, and return a pointer as long as the word size"
-
-	^ self longAt: oop + BaseHeaderSize + (fieldIndex << ShiftForWord)
+	<api>
+	^self longAt: oop + BaseHeaderSize + (fieldIndex << ShiftForWord)
 ]
 
 { #category : #'interpreter access' }
@@ -2798,7 +2798,7 @@ ObjectMemory >> isIntegerValue: intValue [
 	 In C, use a shift and XOR to set the sign bit if and only if the top two bits of the given
 	 value are the same, then test the sign bit. Note that the top two bits are equal for
 	 exactly those integers in the range that can be represented in 31-bits or 63-bits."
-
+	<api>
 	^self
 		cCode: [(intValue bitXor: (intValue << 1)) >= 0]
 		inSmalltalk: [intValue >= 16r-40000000 and: [intValue <= 16r3FFFFFFF]]

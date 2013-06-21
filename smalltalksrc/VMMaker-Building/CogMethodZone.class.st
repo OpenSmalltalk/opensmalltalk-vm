@@ -330,12 +330,12 @@ CogMethodZone >> methodFor: address [
 	<var: #nextMethod type: #'CogMethod *'>
 	cogMethod := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
 	[cogMethod < self limitZony
-	 and: [(self cCoerceSimple: cogMethod to: #'void *') <= address]] whileTrue:
+	 and: [cogMethod asUnsignedInteger <= address asUnsignedInteger]] whileTrue:
 		[nextMethod := self methodAfter: cogMethod.
 		 nextMethod = cogMethod ifTrue:
 			[^0].
-		 (address >= (self cCoerceSimple: cogMethod to: #'void *')
-		  and: [address < (self cCoerceSimple: nextMethod to: #'void *')]) ifTrue:
+		 (address asUnsignedInteger >= cogMethod asUnsignedInteger
+		  and: [address asUnsignedInteger < nextMethod asUnsignedInteger]) ifTrue:
 			[^cogMethod].
 		 cogMethod := nextMethod].
 	^0
