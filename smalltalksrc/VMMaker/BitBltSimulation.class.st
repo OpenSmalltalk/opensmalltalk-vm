@@ -193,6 +193,16 @@ BitBltSimulation class >> copyBitsFrom: aBitBlt [
 
 { #category : #translation }
 BitBltSimulation class >> declareCVarsIn: aCCodeGenerator [
+
+	"add option of  fast path BitBLT code header"
+	aCCodeGenerator
+		addHeaderFile:'#ifdef ENABLE_FAST_BLT
+#include "BitBltDispatch.h"
+#else
+// to handle the unavoidable decl in the spec of copyBitsFallback();
+#define operation_t void
+#endif'.
+		
 	aCCodeGenerator var: 'opTable'
 		declareC: 'void *opTable[' , OpTableSize printString , ']'.
 	aCCodeGenerator var: 'maskTable'
@@ -1035,8 +1045,163 @@ BitBltSimulation >> copyBits [
 		^ nil].
 	"Lock the surfaces"
 	self lockSurfaces ifFalse:[^interpreterProxy primitiveFail].
-	self copyBitsLockedAndClipped.
+
+	self
+		cppIf: #'ENABLE_FAST_BLT'
+		ifTrue:["you really, really mustn't call this unless you have the rest of the code to link to"
+			self copyBitsFastPathSpecialised]
+		ifFalse:[self copyBitsLockedAndClipped].
+
 	self unlockSurfaces.
+]
+
+{ #category : #setup }
+BitBltSimulation >> copyBits: op Fallback: flags [
+	"Recover from the fast path specialised code saying Help-I-cant-cope"
+	|done |
+	<static: false>
+	<returnTypeC: 'void'>
+	<inline: false>
+	<var: #op type: 'operation_t *'>
+	<var: #flags type:'unsigned int'>
+	self cppIf: #'ENABLE_FAST_BLT'
+		ifTrue:[
+			"recover values from the operation struct used by the fast ARM code"
+			self cCode:'
+	combinationRule = op->combinationRule;
+	noSource = op->noSource;
+	sourceBits = (sqInt) op->src.bits;
+	sourcePitch = op->src.pitch;
+	sourceDepth = op->src.depth;
+	sourceMSB = op->src.msb;
+	sx = op->src.x;
+	sy = op->src.y;
+	destBits = (sqInt) op->dest.bits;
+	destPitch = op->dest.pitch;
+	destDepth = op->dest.depth;
+	destMSB = op->dest.msb;
+	dx = op->dest.x;
+	dy = op->dest.y;
+	bbW = op->width;
+	bbH = op->height;
+	cmFlags = op->cmFlags;
+	cmShiftTable = (void *) op->cmShiftTable;
+	cmMaskTable = (void *) op->cmMaskTable;
+	cmMask = op->cmMask;
+	cmLookupTable = (void *) op->cmLookupTable;
+	noHalftone = op->noHalftone;
+	halftoneHeight = op->halftoneHeight;
+	halftoneBase = (sqInt) op->halftoneBase;
+	if (combinationRule == 30 || combinationRule == 31) {
+		sourceAlpha = op->opt.sourceAlpha;
+	}
+	if (combinationRule == 41) {
+		componentAlphaModeColor = op->opt.componentAlpha.componentAlphaModeColor;
+		componentAlphaModeAlpha = op->opt.componentAlpha.componentAlphaModeAlpha;
+		gammaLookupTable = (void *) op->opt.componentAlpha.gammaLookupTable;
+		ungammaLookupTable = (void *) op->opt.componentAlpha.ungammaLookupTable;
+	}'.
+	
+				destPPW := 32 / destDepth.
+				cmBitsPerColor := 0.
+				cmMask = 16r1FF ifTrue: [cmBitsPerColor := 3].
+				cmMask = 16rFFF ifTrue: [cmBitsPerColor := 4].
+				cmMask = 16r3FFF ifTrue: [cmBitsPerColor := 5].
+	
+				"Try a shortcut for stuff that should be run as quickly as possible"
+				done := self tryCopyingBitsQuickly.
+				done ifTrue:[^nil].
+
+				bitCount := 0.
+				"Choose and perform the actual copy loop."
+				self performCopyLoop]
+
+	
+
+
+
+]
+
+{ #category : #setup }
+BitBltSimulation >> copyBitsFastPathSpecialised [
+	"Perform the actual copyBits operation using the fast path specialised code; fail some cases by falling back to normal code.
+	Assume: Surfaces have been locked and clipping was performed."
+	<inline: false>
+
+	self
+		cppIf: #'ENABLE_FAST_BLT'
+		ifTrue:[
+	"set the affected area to 0 first"
+	affectedL := affectedR := affectedT := affectedB := 0.
+	
+	self copyBitsRule41Test.	
+	(interpreterProxy failed not)
+		ifFalse: [^ interpreterProxy primitiveFail].
+
+ 	"we skip the tryCopyingBitsQuickly and leave that to falback code"
+	 
+	(combinationRule = 30) | (combinationRule = 31) ifTrue:
+		["Check and fetch source alpha parameter for alpha blend"
+		interpreterProxy methodArgumentCount = 1
+			ifTrue: [sourceAlpha := interpreterProxy stackIntegerValue: 0.
+					(interpreterProxy failed not and: [(sourceAlpha >= 0) & (sourceAlpha <= 255)])
+						ifFalse: [^ interpreterProxy primitiveFail]]
+			ifFalse: [^ interpreterProxy primitiveFail]].
+
+	"we don't worry about bitCount"
+	"bitCount := 0."
+
+	"We don't  do - Choose and perform the actual copy loop."
+	"self performCopyLoop."
+
+	"this is done inversely to plain copyBitsLockedAndClipped"
+	(combinationRule ~= 22) & (combinationRule ~= 32) ifTrue:
+		["zero width and height; return the count"
+		affectedL := dx.
+		affectedR := dx + bbW.
+		affectedT := dy.
+		affectedB := dy + bbH].
+	
+	"Now we fill the 'operation' structure and pass it to the sneaky ARM code"
+	self cCode:'
+	// fill the operation structure
+	operation_t op;
+	op.combinationRule = combinationRule;
+	op.noSource = noSource;
+	op.src.bits = (void *) sourceBits;
+	op.src.pitch = sourcePitch;
+	op.src.depth = sourceDepth;
+	op.src.msb = sourceMSB;
+	op.src.x = sx;
+	op.src.y = sy;
+	op.dest.bits = (void *) destBits;
+	op.dest.pitch = destPitch;
+	op.dest.depth = destDepth;
+	op.dest.msb = destMSB;
+	op.dest.x = dx;
+	op.dest.y = dy;
+	op.width = bbW;
+	op.height = bbH;
+	op.cmFlags = cmFlags;
+	op.cmShiftTable = (void *) cmShiftTable;
+	op.cmMaskTable = (void *) cmMaskTable;
+	op.cmMask = cmMask;
+	op.cmLookupTable = (void *) cmLookupTable;
+	op.noHalftone = noHalftone;
+	op.halftoneHeight = halftoneHeight;
+	op.halftoneBase = (void *) halftoneBase;
+	if (combinationRule == 30 || combinationRule == 31) {
+		op.opt.sourceAlpha = sourceAlpha;
+	}
+	if (combinationRule == 41) {
+		op.opt.componentAlpha.componentAlphaModeColor = componentAlphaModeColor;
+		op.opt.componentAlpha.componentAlphaModeAlpha = componentAlphaModeAlpha;
+		op.opt.componentAlpha.gammaLookupTable = (void *) gammaLookupTable;
+		op.opt.componentAlpha.ungammaLookupTable = (void *) ungammaLookupTable;
+	}
+	// call the sneaky code
+	copyBitsDispatch(&op)'
+	]
 ]
 
 { #category : #setup }
@@ -1055,9 +1220,49 @@ BitBltSimulation >> copyBitsFrom: startX to: stopX at: yValue [
 BitBltSimulation >> copyBitsLockedAndClipped [
 	"Perform the actual copyBits operation.
 	Assume: Surfaces have been locked and clipping was performed."
-	| done gammaLookupTableOop ungammaLookupTableOop |
-	<inline: true>
-	"Try a shortcut for stuff that should be run as quickly as possible"
+	| done |
+	<inline: false>
+	
+	self copyBitsRule41Test.	
+	(interpreterProxy failed not)
+		ifFalse: [^ interpreterProxy primitiveFail].
+
+ 	"Try a shortcut for stuff that should be run as quickly as possible"
+	done := self tryCopyingBitsQuickly.
+	done ifTrue:[^nil].
+
+	(combinationRule = 30) | (combinationRule = 31) ifTrue:
+		["Check and fetch source alpha parameter for alpha blend"
+		interpreterProxy methodArgumentCount = 1
+			ifTrue: [sourceAlpha := interpreterProxy stackIntegerValue: 0.
+					(interpreterProxy failed not and: [(sourceAlpha >= 0) & (sourceAlpha <= 255)])
+						ifFalse: [^ interpreterProxy primitiveFail]]
+			ifFalse: [^ interpreterProxy primitiveFail]].
+
+	bitCount := 0.
+	"Choose and perform the actual copy loop."
+	self performCopyLoop.
+
+	(combinationRule = 22) | (combinationRule = 32) ifTrue:
+		["zero width and height; return the count"
+		affectedL := affectedR := affectedT := affectedB := 0]. 
+	hDir > 0
+		ifTrue: [affectedL := dx.
+				affectedR := dx + bbW]
+		ifFalse: [affectedL := dx - bbW + 1.
+				affectedR := dx + 1].
+	vDir > 0
+		ifTrue: [affectedT := dy.
+				affectedB := dy + bbH]
+		ifFalse: [affectedT := dy - bbH + 1.
+				affectedB := dy + 1]
+]
+
+{ #category : #setup }
+BitBltSimulation >> copyBitsRule41Test [
+	"Test possible use of rule 41, rgbComponentAlpha:with: Nothing to return, just set up some variables"
+	| gammaLookupTableOop ungammaLookupTableOop |
+	<inline: false>
 	
 	combinationRule = 41
 		ifTrue:["fetch the forecolor into componentAlphaModeColor."
@@ -1088,35 +1293,9 @@ BitBltSimulation >> copyBitsLockedAndClipped [
 							(interpreterProxy failed not)
 								ifFalse: [^ interpreterProxy primitiveFail]]
 						ifFalse:[^ interpreterProxy primitiveFail]]].	
-	
- 	done := self tryCopyingBitsQuickly.
-	done ifTrue:[^nil].
 
-	(combinationRule = 30) | (combinationRule = 31) ifTrue:
-		["Check and fetch source alpha parameter for alpha blend"
-		interpreterProxy methodArgumentCount = 1
-			ifTrue: [sourceAlpha := interpreterProxy stackIntegerValue: 0.
-					(interpreterProxy failed not and: [(sourceAlpha >= 0) & (sourceAlpha <= 255)])
-						ifFalse: [^ interpreterProxy primitiveFail]]
-			ifFalse: [^ interpreterProxy primitiveFail]].
 
-	bitCount := 0.
-	"Choose and perform the actual copy loop."
-	self performCopyLoop.
 
-	(combinationRule = 22) | (combinationRule = 32) ifTrue:
-		["zero width and height; return the count"
-		affectedL := affectedR := affectedT := affectedB := 0]. 
-	hDir > 0
-		ifTrue: [affectedL := dx.
-				affectedR := dx + bbW]
-		ifFalse: [affectedL := dx - bbW + 1.
-				affectedR := dx + 1].
-	vDir > 0
-		ifTrue: [affectedT := dy.
-				affectedB := dy + bbH]
-		ifFalse: [affectedT := dy - bbH + 1.
-				affectedB := dy + 1]
 ]
 
 { #category : #'inner loop' }
