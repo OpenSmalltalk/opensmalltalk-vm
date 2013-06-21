@@ -594,7 +594,7 @@ VMMakerTool >> generateSelectedInternalPlugin [
 
 	| pluginName |
 	pluginName := self internalModules
-						at: self currentExternalModuleIndex
+						at: self currentInternalModuleIndex
 						ifAbsent: [^self inform: 'no such plugin'].
 	vmMaker interpreterClass
 		ifNil: [^self inform: 'please set an interpreter class']
