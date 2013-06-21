@@ -492,7 +492,7 @@ CogAbstractInstruction >> isAFixup: fixupOrAddress [
 
 { #category : #testing }
 CogAbstractInstruction >> isAnInstruction: addressOrInstruction [
-	<var: #addressOrInstruction type: #'void *'>
+	<var: #addressOrInstruction type: #'AbstractInstruction *'>
 	^cogit addressIsInInstructions: addressOrInstruction
 ]
 
