@@ -21,7 +21,7 @@ CogIA32CompilerTests >> assertCheckQuickArithOpCodeSize: bytes [
 
 { #category : #'cogit compatibility' }
 CogIA32CompilerTests >> assertSaneJumpTarget: jumpTarget [
-	<var: #jumpTarget type: #'void *'>
+	<var: #jumpTarget type: #'AbstractInstruction *'>
 
 	self assert: (self addressIsInInstructions: jumpTarget)
 ]

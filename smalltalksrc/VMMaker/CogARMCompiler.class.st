@@ -1327,7 +1327,7 @@ CogARMCompiler >> sizePCDependentInstructionAt: eventualAbsoluteAddress [
 	 between that instruction's address (which by now is its eventual absolute
 	 address) or absolute address and eventualAbsoluteAddress."
 
-	| target maximumSpan |
+	| target maximumSpan abstractInstruction |
 	<var: #abstractInstruction type: #'AbstractInstruction *'>
 	opcode = AlignmentNops ifTrue:
 		[| alignment |
@@ -1338,12 +1338,11 @@ CogARMCompiler >> sizePCDependentInstructionAt: eventualAbsoluteAddress [
 	self assert: (self isJump or: [opcode = Call]).
 	self isJump ifTrue: [self resolveJumpTarget].
 	target := operands at: 0.
+	abstractInstruction := cogit cCoerceSimple: target to: #'AbstractInstruction *'.
 	"maximumSpan calculation copied from CogIA32Compiler TODO: extract method?"
-	(self isAnInstruction: (cogit cCoerceSimple: target to: #'void *'))
+	(self isAnInstruction: abstractInstruction)
 		ifTrue:
-			[| abstractInstruction |
-			abstractInstruction := cogit cCoerceSimple: target to: #'AbstractInstruction *'.
-			maximumSpan := abstractInstruction address
+			[maximumSpan := abstractInstruction address
 							- (((cogit abstractInstruction: self follows: abstractInstruction)
 								ifTrue: [eventualAbsoluteAddress]
 								ifFalse: [address]) + 2)]

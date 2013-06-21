@@ -1164,7 +1164,7 @@ CogIA32Compiler >> concretizeMoveAwR [
 	<inline: true>
 	| addressOperand reg |
 	addressOperand := operands at: 0.
-	(self isAnInstruction: (cogit cCoerceSimple: addressOperand to: #'void *')) ifTrue:
+	(self isAnInstruction: (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *')) ifTrue:
 		[addressOperand := (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *') address].
 	reg := self concreteRegister: (operands at: 1).
 	reg = EAX ifTrue:
@@ -1418,7 +1418,7 @@ CogIA32Compiler >> concretizeMoveRAw [
 	| addressOperand reg |
 	reg := self concreteRegister: (operands at: 0).
 	addressOperand := operands at: 1.
-	(self isAnInstruction: (cogit cCoerceSimple: addressOperand to: #'void *')) ifTrue:
+	(self isAnInstruction: (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *')) ifTrue:
 		[addressOperand := (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *') address].
 	reg = EAX ifTrue:
 		[machineCode
@@ -2795,7 +2795,7 @@ CogIA32Compiler >> sizePCDependentInstructionAt: eventualAbsoluteAddress [
 	 between that instruction's address (which by now is its eventual absolute
 	 address) or absolute address and eventualAbsoluteAddress."
 
-	| target maximumSpan |
+	| target maximumSpan abstractInstruction |
 	<var: #abstractInstruction type: #'AbstractInstruction *'>
 	opcode = AlignmentNops ifTrue:
 		[| alignment |
@@ -2805,11 +2805,10 @@ CogIA32Compiler >> sizePCDependentInstructionAt: eventualAbsoluteAddress [
 							   - eventualAbsoluteAddress].
 	self assert: self isJump.
 	target := operands at: 0.
-	(self isAnInstruction: (cogit cCoerceSimple: target to: #'void *'))
+	abstractInstruction := cogit cCoerceSimple: target to: #'AbstractInstruction *'.
+	(self isAnInstruction: abstractInstruction)
 		ifTrue:
-			[| abstractInstruction |
-			abstractInstruction := cogit cCoerceSimple: target to: #'AbstractInstruction *'.
-			maximumSpan := abstractInstruction address
+			[maximumSpan := abstractInstruction address
 							- (((cogit abstractInstruction: self follows: abstractInstruction)
 								ifTrue: [eventualAbsoluteAddress]
 								ifFalse: [address]) + 2)]
