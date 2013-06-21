@@ -1847,16 +1847,16 @@ Cogit >> addCogMethodsToHeapMap [
 
 { #category : #testing }
 Cogit >> addressIsInFixups: address [
-	<var: #address type: #'void *'>
-	^self cCode: 'address >= (void *)&fixups[0] && address < (void *)&fixups[numAbstractOpcodes]'
+	<var: #address type: #'AbstractInstruction *'>
+	^self cCode: 'address >= (AbstractInstruction *)&fixups[0] && address < (AbstractInstruction *)&fixups[numAbstractOpcodes]'
 		inSmalltalk: [fixups notNil
 					and: [(fixups object identityIndexOf: address) between: 1 and: numAbstractOpcodes]]
 ]
 
 { #category : #testing }
 Cogit >> addressIsInInstructions: address [
-	<var: #address type: #'void *'>
-	^self cCode: 'address >= (void *)&abstractOpcodes[0] && address < (void *)&abstractOpcodes[opcodeIndex]'
+	<var: #address type: #'AbstractInstruction *'>
+	^self cCode: 'address >= &abstractOpcodes[0] && address < &abstractOpcodes[opcodeIndex]'
 		inSmalltalk: [(abstractOpcodes object identityIndexOf: address) between: 1 and: opcodeIndex]
 ]
 
@@ -2042,12 +2042,12 @@ Cogit >> assertCStackWellAligned [
 
 { #category : #debugging }
 Cogit >> assertSaneJumpTarget: jumpTarget [
-	<var: #jumpTarget type: #'void *'>
+	<var: #jumpTarget type: #'AbstractInstruction *'>
 
 	self assert: (closedPICSize isNil "don't whinge when producing the PIC prototypes"
 			or: [openPICSize isNil
 			or: [(self addressIsInInstructions: jumpTarget)
-			or: [(jumpTarget asInteger
+			or: [(jumpTarget asUnsignedInteger
 					between: codeBase
 					and: methodZone limitZony asInteger + (closedPICSize max: openPICSize))]]])
 ]
