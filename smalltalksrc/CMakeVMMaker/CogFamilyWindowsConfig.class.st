@@ -331,8 +331,7 @@ CogFamilyWindowsConfig >> outputDir [
 
 	"the directory where built binaries will be stored"
 
-	^ outputDir ifNil: [ outputDir := self msysPathFor: (self buildDir containingDirectory fullName , '/', self outputDirName) ]
-	
+	^ outputDir ifNil: [ outputDir := self msysPathFor: (self buildDir parent / self outputDirName) ]
 ]
 
 { #category : #'as yet unclassified' }
