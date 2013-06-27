@@ -897,7 +897,7 @@ CPlatformConfig >> setupDirectories: gen [
 CPlatformConfig >> srcDir [
 	"Answer the value of srcDir"
 
-	^ srcDir ifNil: [ srcDir := (self topDir / self srcDirName) assureExistence fullName ]
+	^ srcDir ifNil: [ srcDir := (self topDir / self srcDirName) ensureDirectory fullName ]
 ]
 
 { #category : #accessing }
@@ -957,7 +957,8 @@ CPlatformConfig >> write: aContents toFile: aFileName [
 	bldDir isString
 		ifTrue: [ bldDir := bldDir asFileReference ].
 	bldDir ensureDirectory.
-	FileStream
-		forceNewFileNamed: (bldDir / aFileName) fullName
-		do: [ :stream | stream nextPutAll: (self fixLineEndsOf: aContents) ]
+	(bldDir / aFileName)
+		ensureFile
+		writeStream
+		nextPutAll: (self fixLineEndsOf: aContents)
 ]
