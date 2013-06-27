@@ -353,7 +353,7 @@ StackEvtAndroidConfig >> mkFileList: anArray baseDir: aDir [
 StackEvtAndroidConfig >> outputDir [
 
 	"the directory where built binaries will be stored - for now it is copied from CogFamilyUnixConfig"
-	^ outputDir ifNil: [ outputDir := (self buildDir containingDirectory fullName , '/', self outputDirName) ]
+	^ outputDir ifNil: [ outputDir := (self buildDir parent / self outputDirName) ]
 	
 ]
 

@@ -79,15 +79,15 @@ CogFamilyUnixConfig >> addDriver: name sources: aSources generator: cmakeGen ext
 			includeDirectories: '${crossDir}/plugins/FilePlugin';
 			includeDirectories: '${targetPlatform}/plugins/B3DAcceleratorPlugin';
 			includeDirectories: '${crossDir}/plugins/B3DAcceleratorPlugin';
-			set: 'LIBRARY_OUTPUT_PATH' toString: self outputDir;
+			set: 'LIBRARY_OUTPUT_PATH' toString: self outputDir fullName;
 			addExternalLibraries: extLibs;
 			cmd: 'target_link_libraries' params: name , ' ${LINKLIBS}';
 			cmd: 'set_target_properties' params: name , ' PROPERTIES PREFIX "" SUFFIX "" 
 			LINK_FLAGS -m32' 
 	].
 	
-		
-	self write: cfg toFile: ((self buildDir / name) assureExistence / cmakeGen outputFileName) fullName.
+	(self buildDir / name) ensureDirectory.
+	self write: cfg toFile: name , '/', cmakeGen outputFileName.
 	cmakeGen addSubdirectory:  name.
 	
 ]
@@ -372,8 +372,7 @@ CogFamilyUnixConfig >> linkFlags [
 CogFamilyUnixConfig >> outputDir [
 
 	"the directory where built binaries will be stored"
-	^ outputDir ifNil: [ outputDir := (self buildDir containingDirectory fullName , '/', self outputDirName) ]
-	
+	^ outputDir ifNil: [ outputDir := (self buildDir parent / self outputDirName) ]	
 ]
 
 { #category : #'as yet unclassified' }
@@ -392,6 +391,6 @@ CogFamilyUnixConfig >> setExtraTargetProperties: maker [
 			'pthread' "posix threads" 
 		).
 		
-	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir.
+	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir fullName.
 	self addVMDrivers: maker.
 ]
