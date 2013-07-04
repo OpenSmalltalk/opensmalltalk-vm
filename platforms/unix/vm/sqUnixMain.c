@@ -1736,6 +1736,8 @@ void imgInit(void)
 # define mtfsfi(fpscr)
 #endif
 
+extern void initGlobalStructure(void); // this is effectively null if a global register is not being used
+
 int
 main(int argc, char **argv, char **envp)
 {
@@ -1757,7 +1759,9 @@ main(int argc, char **argv, char **envp)
   }
 #endif
 
-  /* Allocate arrays to store copies of pointers to command line
+	initGlobalStructure();
+ 
+ /* Allocate arrays to store copies of pointers to command line
      arguments.  Used by getAttributeIntoLength(). */
 
   if ((vmArgVec= calloc(argc + 1, sizeof(char *))) == 0)
