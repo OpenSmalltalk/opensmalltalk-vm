@@ -319,7 +319,7 @@ CogFamilyWindowsConfig >> fixLineEndsOf: string [
 CogFamilyWindowsConfig >> msysPathFor: aPath [
 	| path |
 	
-	path := aPath.
+	path := aPath asFileReference fullName.
 	
 	path := path copyReplaceAll: '\' with: '/'.
 	
