@@ -50,7 +50,7 @@ Class {
 	#category : #'CMakeVMMaker-Windows'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #'build script' }
 CogFamilyWindowsConfig >> buildScript [
 	"answer the build script for building everything"
 	
@@ -80,7 +80,7 @@ CogFamilyWindowsConfig >> commonCompilerFlags [
 	^ '-march=pentium4 -mwindows -D_MT -msse2 -mthreads -mwin32 -mno-rtd -mms-bitfields -mno-accumulate-outgoing-args ', self winVer ,
 	' -DWIN32 -DWIN32_FILE_SUPPORT -DNO_ISNAN -DNO_SERVICE -DNO_STD_FILE_SUPPORT ',
 	'-DLSB_FIRST -DVM_NAME="', self executableName,'" -DX86 ',
-	'-DSTACK_ALIGN_BYTES=16 -DALLOCA_LIES_SO_USE_GETSP=0 '
+	'-DSTACK_ALIGN_BYTES=16 -DALLOCA_LIES_SO_USE_GETSP=0 -DENABLE_FAST_BLT '
 ]
 
 { #category : #'plugin extra rules' }
@@ -298,24 +298,24 @@ CogFamilyWindowsConfig >> configureWin32OSProcessPlugin: maker [
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 CogFamilyWindowsConfig >> executableType [
 	^ 'WIN32'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 CogFamilyWindowsConfig >> externalModulesDir [
 	"answer the location in VM bundle, where plugins and rest of dynamic libs will be copied,
 	"
 	^ '${outputDir}'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #utils }
 CogFamilyWindowsConfig >> fixLineEndsOf: string [
 	^ string copyReplaceAll: String cr with: String crlf
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 CogFamilyWindowsConfig >> msysPathFor: aPath [
 	| path |
 	
@@ -334,12 +334,12 @@ CogFamilyWindowsConfig >> outputDir [
 	^ outputDir ifNil: [ outputDir := self msysPathFor: (self buildDir parent / self outputDirName) ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 CogFamilyWindowsConfig >> platformName [
 	^ 'win32'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #directories }
 CogFamilyWindowsConfig >> setupDirectories: gen [
 	"we have to override that, because we need to convert windoze paths to msys ones"
 	| dirsInclude |
@@ -369,7 +369,7 @@ CogFamilyWindowsConfig >> setupDirectories: gen [
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 CogFamilyWindowsConfig >> winVer [
 	"Set minimum version to WindowsXP (see /cygwin/usr/include//w32api/w32api.h)"
 	
