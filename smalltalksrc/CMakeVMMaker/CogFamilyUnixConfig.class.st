@@ -161,7 +161,7 @@ CogFamilyUnixConfig >> compilerFlags [
 	^ self subclassResponsibility
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'plugin extra rules' }
 CogFamilyUnixConfig >> configureAsynchFilePlugin: maker [
 
 	maker addPlatformSources:
@@ -205,7 +205,7 @@ CogFamilyUnixConfig >> configureFT2Plugin: maker [
 	maker includeDirectories:  '/usr/include/freetype2'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'plugin extra rules' }
 CogFamilyUnixConfig >> configureFileCopyPlugin: maker [
 	"extra rules for DropPlugin"
 
@@ -335,7 +335,7 @@ CogFamilyUnixConfig >> extraPluginSettings: maker [
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #settings }
 CogFamilyUnixConfig >> extraVMSettings: maker [
 	| versionC |
 	self generateConfigH.
@@ -375,7 +375,7 @@ CogFamilyUnixConfig >> outputDir [
 	^ outputDir ifNil: [ outputDir := (self buildDir parent / self outputDirName) ]	
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 CogFamilyUnixConfig >> platformName [
 	^ 'unix'
 ]

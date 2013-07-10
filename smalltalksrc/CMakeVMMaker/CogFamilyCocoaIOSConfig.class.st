@@ -46,7 +46,8 @@ CogFamilyCocoaIOSConfig >> commonCompilerFlags [
 	'-DHAVE_NANOSLEEP' 
 	'-DCOGMTVM=0' 
 	'-DUSE_GLOBAL_STRUCT=0' 
-	'-DBASE_HEADER_SIZE=4')
+	'-DBASE_HEADER_SIZE=4'
+	'-DENABLE_FAST_BLT')
 ]
 
 { #category : #settings }
