@@ -100,9 +100,9 @@ if [ ! -e vmVersionInfo.h ]; then
 	../codegen-scripts/extract-commit-info.sh
 fi
 cmake -G Xcode .
-xcodebuild -sdk {sdk} -configuration Release -target {name}
+xcodebuild -sdk {2} -configuration Release -target {1}
 
-' nameFormat: {#name->self executableName. #sdk->self sdkTarget} asDictionary
+' format: {self executableName. self sdkTarget}
 ]
 
 { #category : #accessing }
@@ -115,7 +115,7 @@ StackIPhoneConfig >> commonCompilerFlags [
 	"Common compiler flags"
 	^{
 	"'-miphoneos-version-min=4.3'. "
-	'-isysroot /Applications/Xcode.app/Contents/Developer/Platforms/{target}.platform/Developer/SDKs/{target}{sdkVersion}.sdk' nameFormat: { 'target'-> self targetDevice. 'sdkVersion'->self sdkVersion} asDictionary.
+	'-isysroot /Applications/Xcode.app/Contents/Developer/Platforms/{1}.platform/Developer/SDKs/{1}{2}.sdk' format: { self targetDevice. self sdkVersion}.
 	'-x objective-c'.
 	'-std=gnu99'.
 	'-falign-functions=16'.
@@ -157,13 +157,10 @@ StackIPhoneConfig >> configureFT2Plugin: maker [
 	a custom rule to build freetype library"
 	| lib devRoot sdkRoot |
 
-	devRoot := '/Applications/Xcode.app/Contents/Developer/Platforms/{target}.platform/Developer'
-		nameFormat: { 'target'->self targetDevice} asDictionary.
-	sdkRoot := '{devRoot}/SDKs/{target}{sdkVersion}.sdk' 
-		nameFormat: {
-			'devRoot'->devRoot. 
-			'target'->self targetDevice.
-			'sdkVersion'->self sdkVersion} asDictionary.
+	devRoot := '/Applications/Xcode.app/Contents/Developer/Platforms/{1}.platform/Developer'
+		format: { self targetDevice}.
+	sdkRoot := '{1}/SDKs/{2}{3}.sdk' 
+		format: { devRoot. self targetDevice. self sdkVersion}.
 
 	"add freetype library into loop"
 	lib := self addThirdpartyLibrary: 'freetype2'.
@@ -173,14 +170,11 @@ StackIPhoneConfig >> configureFT2Plugin: maker [
  		'--host=arm-apple-darwin'.
 		'--enable-static=yes'. 
 		'--enable-shared=no'.
-		'CC={devRoot}/usr/bin/gcc'.
-		'CXX={devRoot}/usr/bin/g++'.
-		'CFLAGS=\\"-arch {architecture} -std=c99 -Wno-trigraphs -O2 -fwrapv -Wreturn-type -Wunused-variable -fmessage-length=0 -miphoneos-version-min=4.0 -I{sdkRoot}/usr/include/libxml2 -isysroot {sdkRoot}\\"'.
-		'LDFLAGS=\\"-arch {architecture} -isysroot {sdkRoot}\\"'}
-		collect: [ :each | each nameFormat: {
-			'architecture'->self architecture. 
-			'sdkRoot'->sdkRoot. 
-			'devRoot'->devRoot} asDictionary ]).
+		'CC={3}/usr/bin/gcc'.
+		'CXX={3}/usr/bin/g++'.
+		'CFLAGS=\\"-arch {1} -std=c99 -Wno-trigraphs -O2 -fwrapv -Wreturn-type -Wunused-variable -fmessage-length=0 -miphoneos-version-min=4.0 -I{2}/usr/include/libxml2 -isysroot {2}\\"'.
+		'LDFLAGS=\\"-arch {1} -isysroot {2}\\"'}
+		collect: [ :each | each format: { self architecture. sdkRoot. devRoot} ]).
 
 	"link plugin with freetype lib"
 	maker addExternalLibrary: '${thirdpartyDir}/out/lib/', lib libraryFileName.
@@ -507,8 +501,8 @@ StackIPhoneConfig >> setCommonProperties: maker [
 	maker set: 'CMAKE_SYSTEM_PROCESSOR' to: 'arm'.
 
 	maker set: 'SDKVER' toString: self sdkVersion.
-	maker set: 'DEVROOT' toString: ('/Applications/Xcode.app/Contents/Developer/Platforms/{target}.platform/Developer'
-		nameFormat: {'target'->self targetDevice} asDictionary).
+	maker set: 'DEVROOT' toString: ('/Applications/Xcode.app/Contents/Developer/Platforms/{1}.platform/Developer'
+		format: { self targetDevice }).
 	maker set: 'SDKROOT' toString: '${DEVROOT}/SDKs/', self targetDevice,'${SDKVER}.sdk'.
 
 	maker set: 'CMAKE_OSX_SYSROOT' to: 'iphoneos${SDKVER}'.
@@ -532,7 +526,7 @@ StackIPhoneConfig >> setExtraTargetProperties: maker [
 	| precompiledHeaders plist |
 	
 	precompiledHeaders := (self executableName, '_Prefix.pch').
-	(maker buildDir forceNewFileNamed: precompiledHeaders) 
+	(FileStream forceNewFileNamed: (maker buildDir / precompiledHeaders) fullName) 
 		nextPutAll: self precompiledHeaders;
 		close.
 	
@@ -542,7 +536,7 @@ StackIPhoneConfig >> setExtraTargetProperties: maker [
 
 	" generated and add Info.plist file "
 	plist := self plistFile.
-	(maker buildDir forceNewFileNamed: 'Info.plist') 
+	(FileStream forceNewFileNamed: (maker buildDir / 'Info.plist') fullName) 
 		nextPutAll: plist; 
 		close.
 
@@ -562,7 +556,7 @@ StackIPhoneConfig >> setExtraTargetProperties: maker [
 	maker set: 'CMAKE_XCODE_ATTRIBUTE_CONFIGURATION_TEMP_DIR' 
 		toString: '$(BUILD_DIR)/$(CONFIGURATION)'.
 
-	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir.
+	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir fullName.
 	
 	maker puts: 'set_source_files_properties(${srcVMDir}/gcc3x-cointerp.c PROPERTIES COMPILE_FLAGS -O0)'
 
@@ -590,8 +584,8 @@ StackIPhoneConfig >> setGlobalOptionsAfterDetermineSystem: maker [
 	self setGlobalOptions: maker.	
 	maker 
 		set: 'CMAKE_OSX_SYSROOT' 
-		to: ('/Applications/Xcode.app/Contents/Developer/Platforms/{target}.platform/Developer/SDKs/{target}{sdkVersion}.sdk'
-			nameFormat: { 'target'->self targetDevice. 'sdkVersion'->self sdkVersion } asDictionary)
+		to: ('/Applications/Xcode.app/Contents/Developer/Platforms/{1}.platform/Developer/SDKs/{1}{2}.sdk'
+			format: { self targetDevice. self sdkVersion })
 ]
 
 { #category : #settings }
