@@ -200,6 +200,19 @@ CPlatformConfig >> configureB3DAcceleratorPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
+CPlatformConfig >> configureBitBltSimulation: maker [
+	"extra rules for BitBltSimulation"
+
+	maker includeDirectories: '${pluginCross}'.
+
+	maker addCrossSources: #(
+		'BitBltGeneric.c'
+		'BitBltDispatch.c'
+	).
+	
+]
+
+{ #category : #'plugin extra rules' }
 CPlatformConfig >> configureBochsIA32Plugin: maker [
 
 	"this stuff is not ready for use yet" 
