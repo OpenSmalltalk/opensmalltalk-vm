@@ -676,7 +676,7 @@ StackInterpreter class >> initializeContextIndices [
 	InstructionPointerIndex := 1.
 	StackPointerIndex := 2.
 	MethodIndex := 3.
-	ClosureIndex := 4. "N.B. Called receiverMap in the image."
+	ClosureIndex := 4. "N.B. Called receiverMap in old images, closureOrNil in newer images."
 	ReceiverIndex := 5.
 	CtxtTempFrameStart := 6.
 
@@ -689,7 +689,7 @@ StackInterpreter class >> initializeContextIndices [
 
 	contextFixedSizePlusHeader := CtxtTempFrameStart + 1.
 	SmallContextSize := contextFixedSizePlusHeader + 16 * BytesPerWord.  "16 indexable fields"
-	"Large contexts have 56 indexable fileds.  Max with single header word."
+	"Large contexts have 56 indexable fields.  Max with single header word."
 	"However note that in 64 bits, for now, large contexts have 3-word headers"
 	LargeContextSize := contextFixedSizePlusHeader + 56 * BytesPerWord
 ]
@@ -6627,6 +6627,16 @@ StackInterpreter >> isQuickPrimitiveIndex: anInteger [
 ]
 
 { #category : #'frame access' }
+StackInterpreter >> isReadMediatedContextInstVarIndex: index [
+	"Reading the sender, instructionPointer and stackPointer inst vars of a context must take
+	 account of potentially married contexts and fetch the state from the frame. method,
+	 closureOrNil and receiver can safely be fetched from the context without checking."
+	<api>
+	<inline: true>
+	^index <= StackPointerIndex
+]
+
+{ #category : #'frame access' }
 StackInterpreter >> isSingleContext: aContext [
 	^objectMemory isNonIntegerObject: (objectMemory fetchPointer: SenderIndex ofObject: aContext)
 ]
@@ -6669,6 +6679,16 @@ StackInterpreter >> isWidowedContext: aOnceMarriedContext [
 	 It is widowed. Time to wear black."
 	self markContextAsDead: aOnceMarriedContext.
 	^true
+]
+
+{ #category : #'frame access' }
+StackInterpreter >> isWriteMediatedContextInstVarIndex: index [
+	"Wrining any inst vars of a context must take account of potentially married contexts
+	 and set the state in the frame. Inst vars in subclasses don't need mediation; subclasses
+	 can't marry."
+	<api>
+	<inline: true>
+	^index <= ReceiverIndex
 ]
 
 { #category : #'jump bytecodes' }
@@ -9572,7 +9592,7 @@ StackInterpreter >> pushMaybeContextReceiverVariable: fieldIndex [
 	| rcvr |
 	<inline: true>
 	rcvr := self receiver.
-	(fieldIndex < MethodIndex
+	((self isReadMediatedContextInstVarIndex: fieldIndex)
 	and: [objectMemory isContextNonInt: rcvr])
 		ifTrue:
 			[self internalPush: (self instVar: fieldIndex ofContext: rcvr)]
@@ -11274,7 +11294,7 @@ StackInterpreter >> storeMaybeContextReceiverVariable: fieldIndex withValue: anO
 	 method is only used by the long-form bytecodes, evading the cost."
 	| rcvr |
 	rcvr := self receiver.
-	(fieldIndex <= ReceiverIndex
+	((self isWriteMediatedContextInstVarIndex: fieldIndex)
 	and: [(objectMemory isContextNonInt: rcvr)
 	and: [self isMarriedOrWidowedContext: rcvr]])
 		ifTrue:
