@@ -1283,7 +1283,7 @@ StackToRegisterMappingCogit >> doubleExtendedDoAnythingBytecode [
 	 The sends will get an IsSend entry anyway.  The other cases need a
 	 fake one.  We could of course special case the scanning but that's silly."
 	opType caseOf: {
-			[2]	->	[byte2 <= StackPointerIndex
+			[2]	->	[(coInterpreter isReadMediatedContextInstVarIndex: byte2)
 						ifTrue: [self genPushMaybeContextReceiverVariable: byte2]
 						ifFalse: [self genPushReceiverVariable: byte2.
 								self ssTop annotateUse: true.
@@ -1294,7 +1294,7 @@ StackToRegisterMappingCogit >> doubleExtendedDoAnythingBytecode [
 			[4]	->	[self genPushLiteralVariable: byte2.].
 			[7]	->	[self genStorePop: false LiteralVariable: byte2] }
 		otherwise: "5 & 6"
-			[byte2 <= StackPointerIndex
+			[(coInterpreter isWriteMediatedContextInstVarIndex: byte2)
 				ifTrue: [self genStorePop: opType = 6 MaybeContextReceiverVariable: byte2]
 				ifFalse: [self genStorePop: opType = 6 ReceiverVariable: byte2]].
 	"We need a map entry for this bytecode for correct parsing (if the method builds a frame).

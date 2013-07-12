@@ -993,14 +993,14 @@ SimpleStackBasedCogit >> doubleExtendedDoAnythingBytecode [
 	 The sends will get an IsSend entry anyway.  The other cases need a
 	 fake one.  We could of course special case the scanning but that's silly."
 	opType caseOf: {
-			[2]	->	[byte2 <= StackPointerIndex
+			[2]	->	[(coInterpreter isReadMediatedContextInstVarIndex: byte2)
 						ifTrue: [self genPushMaybeContextReceiverVariable: byte2]
 						ifFalse: [self genPushReceiverVariable: byte2]].
 			[3]	->	[self genPushLiteralIndex: byte2].
 			[4]	->	[self genPushLiteralVariable: byte2].
 			[7]	->	[self genStorePop: false LiteralVariable: byte2] }
 		otherwise: "5 & 6"
-			[byte2 <= StackPointerIndex
+			[(coInterpreter isWriteMediatedContextInstVarIndex: byte2)
 				ifTrue: [self genStorePop: opType = 6 MaybeContextReceiverVariable: byte2]
 				ifFalse: [self genStorePop: opType = 6 ReceiverVariable: byte2]].
 	"We need a map entry for this bytecode for correct parsing (if the method builds a frame).
@@ -1290,9 +1290,9 @@ SimpleStackBasedCogit >> genExtPushReceiverVariableBytecode [
 	| index |
 	index := byte1 + (extA << 8).
 	extA := 0.
-	^index > StackPointerIndex
-		ifTrue: [self genPushReceiverVariable: index]
-		ifFalse: [self genPushMaybeContextReceiverVariable: index]
+	^(coInterpreter isReadMediatedContextInstVarIndex: index)
+		ifTrue: [self genPushMaybeContextReceiverVariable: index]
+		ifFalse: [self genPushReceiverVariable: index]
 ]
 
 { #category : #'bytecode generators' }
@@ -1366,9 +1366,9 @@ SimpleStackBasedCogit >> genExtStoreAndPopReceiverVariableBytecode [
 	| index |
 	index := byte1 + (extA << 8).
 	extA := 0.
-	^index > StackPointerIndex
-		ifTrue: [self genStorePop: true ReceiverVariable: index]
-		ifFalse: [self genStorePop: true MaybeContextReceiverVariable: index]
+	^(coInterpreter isWriteMediatedContextInstVarIndex: index)
+		ifTrue: [self genStorePop: true MaybeContextReceiverVariable: index]
+		ifFalse: [self genStorePop: true ReceiverVariable: index]
 ]
 
 { #category : #'bytecode generators' }
@@ -1386,9 +1386,9 @@ SimpleStackBasedCogit >> genExtStoreReceiverVariableBytecode [
 	| index |
 	index := byte1 + (extA << 8).
 	extA := 0.
-	^index > StackPointerIndex
-		ifTrue: [self genStorePop: false ReceiverVariable: index]
-		ifFalse: [self genStorePop: false MaybeContextReceiverVariable: index]
+	^(coInterpreter isWriteMediatedContextInstVarIndex: index)
+		ifTrue: [self genStorePop: false MaybeContextReceiverVariable: index]
+		ifFalse: [self genStorePop: false ReceiverVariable: index]
 ]
 
 { #category : #'bytecode generators' }

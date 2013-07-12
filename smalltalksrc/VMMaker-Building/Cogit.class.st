@@ -2908,7 +2908,7 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 	methodObj := aMethodObj.
 	cogMethod := self compileCogMethod: aSelectorOop.
 	(cogMethod asInteger between: MaxNegativeErrorCode and: -1) ifTrue:
-		[cogMethod asUnsignedInteger = InsufficientCodeSpace ifTrue:
+		[cogMethod asInteger = InsufficientCodeSpace ifTrue:
 			[coInterpreter callForCogCompiledCodeCompaction].
 		"Right now no errors should be reported, so nothing more to do."
 		"self reportError: (self cCoerceSimple: cogMethod to: #sqInt)."
