@@ -6,6 +6,8 @@
 #
 IFS="	
 "
+TERMINAL=dumb
+#TERMINAL=glasstty
 if [ $# != 3 ]; then
 	echo usage: $0 platformDir referencePlist toBeEditedPlist 1>&2
 	exit 1
@@ -17,5 +19,5 @@ for p in `grep -e --version-- "$2" \
 		| sed 's/^[	 ]*\(.*\)<!--version-->/\1/' \
 		| sed 's./.\\\\/.g'` # double up for ex command below
 do
-	ex -u NONE "+g/$p/s/0\([< ]\)/$REV\1/" +w +q "$3"
+	ex -T $TERMINAL -u NONE "+g/$p/s/0\([< ]\)/$REV\1/" +w +q "$3"
 done
