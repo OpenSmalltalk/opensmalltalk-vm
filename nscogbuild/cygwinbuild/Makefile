@@ -190,6 +190,8 @@ debug:
 # Do make init to allow make -n to function.
 init:	$(OBJDIR) eitheror.exe mkNamedPrims.exe
 
+cleanall:	clean cleanast cleandbg
+
 clean:
 	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe build
 
