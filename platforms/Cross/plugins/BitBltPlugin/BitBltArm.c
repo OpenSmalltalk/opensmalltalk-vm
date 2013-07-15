@@ -23,6 +23,7 @@
  *
  */
 
+#if ENABLE_FAST_BLT
 #include "BitBltArm.h"
 #include "BitBltArmSimd.h"
 
@@ -34,3 +35,4 @@ void addArmFastPaths(void)
 	if (armCpuFeatures & ARM_V6)
 		addArmSimdFastPaths();
 }
+#endif /* ENABLE_FAST_BLT */

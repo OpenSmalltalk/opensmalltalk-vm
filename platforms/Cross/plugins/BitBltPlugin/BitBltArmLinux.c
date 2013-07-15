@@ -25,6 +25,7 @@
 * An equivalent file will be required for other ARM platforms; see BitBtArmOther.c in this directory
  */
 
+#if ENABLE_FAST_BLT
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -76,3 +77,4 @@ arm_cpu_features_t detectCpuFeatures(void)
 
     return features;
 }
+#endif /* ENABLE_FAST_BLT */
