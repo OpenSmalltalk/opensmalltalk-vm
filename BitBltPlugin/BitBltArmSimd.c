@@ -23,6 +23,7 @@
  *
  */
 
+#if ENABLE_FAST_BLT
 #include <stddef.h>
 #include <stdint.h>
 
@@ -261,3 +262,4 @@ void addArmSimdFastPaths(void)
 {
 	addFastPaths(fastPaths, sizeof fastPaths / sizeof *fastPaths);
 }
+#endif /* ENABLE_FAST_BLT */
