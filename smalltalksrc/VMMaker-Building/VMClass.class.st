@@ -360,12 +360,24 @@ VMClass >> asmLabel: aBoolean [
 ]
 
 { #category : #'debug support' }
+VMClass >> assert: aBooleanExpression l: linenum [
+	<doNotGenerate>
+	^self assert: aBooleanExpression
+]
+
+{ #category : #'debug support' }
 VMClass >> asserta: aBooleanExpression [
 	<doNotGenerate>
 	| result |
 	(result := aBooleanExpression value) ifFalse:
 		[AssertionFailure signal: 'Assertion failed'].
 	^result
+]
+
+{ #category : #'debug support' }
+VMClass >> asserta: aBooleanExpression l: linenum [
+	<doNotGenerate>
+	^self asserta: aBooleanExpression
 ]
 
 { #category : #accessing }

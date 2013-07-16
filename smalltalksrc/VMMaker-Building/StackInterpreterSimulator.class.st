@@ -82,11 +82,6 @@ StackInterpreterSimulator >> allObjectsSelect: objBlock [
 	^ selected
 ]
 
-{ #category : #testing }
-StackInterpreterSimulator >> assertValidExecutionPointers [
-	self assertValidExecutionPointe: localIP r: localFP s: localSP
-]
-
 { #category : #'return bytecodes' }
 StackInterpreterSimulator >> baseFrameReturn [
 	| contextToReturnTo |

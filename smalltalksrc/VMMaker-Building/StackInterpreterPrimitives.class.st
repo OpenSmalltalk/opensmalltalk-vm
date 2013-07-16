@@ -59,7 +59,7 @@ StackInterpreterPrimitives >> field: index ofFrame: theFP [
 								ifFalse: [(self frameHasContext: callerFP)
 											ifTrue: [self assert: (self checkIsStillMarriedContext: (self frameContext: callerFP) currentFP: nil).
 													self frameContext: callerFP]
-											ifFalse: [callerFP]]].
+											ifFalse: [callerFP asInteger]]].
 		[StackPointerIndex]			->	[ConstZero].
 		[InstructionPointerIndex]	->	[ConstZero].
 		[MethodIndex]				->	[self frameMethodObject: theFP].
