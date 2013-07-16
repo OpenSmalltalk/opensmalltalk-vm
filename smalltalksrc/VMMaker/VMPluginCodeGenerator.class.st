@@ -115,9 +115,7 @@ VMPluginCodeGenerator >> emitCHeaderOn: aStream [
 	self addHeaderFile: '"sqMemoryAccess.h"'.
 	"Additional header files; include squeak VM ones last"
 	self emitHeaderFiles: (headerFiles reject: [:hdr| hdr includes: $<]) on: aStream.
-	pluginClass preambleCCode ifNotNil:
-		[:preamble|
-		aStream cr; nextPutAll: preamble].
+	self maybePutPreambleFor: pluginClass on: aStream.
 	aStream cr.
 ]
 

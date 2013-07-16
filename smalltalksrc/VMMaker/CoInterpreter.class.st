@@ -742,48 +742,52 @@ CoInterpreter >> asCogHomeMethod: aCogMethod [
 ]
 
 { #category : #'debug support' }
-CoInterpreter >> assertValidExecutionPointe: lip r: lifp s: lisp imbar: inInterpreter [
+CoInterpreter >> assertValidExecutionPointe: lip r: lifp s: lisp imbar: inInterpreter line: ln [
 	<var: #lip type: #usqInt>
 	<var: #lifp type: #'char *'>
 	<var: #lisp type: #'char *'>
 	| methodField cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
-	self assert: stackPage = (stackPages stackPageFor: lifp).
-	self assert: stackPage = stackPages mostRecentlyUsedPage.
-	self deferStackLimitSmashAround: #assertValidStackLimits.
-	self assert: lifp < stackPage baseAddress.
-	self assert: lisp < lifp.
-	self assert: lifp > lisp.
-	self assert: lisp >= (stackPage realStackLimit - self stackLimitOffset).
-	self assert:  (lifp - lisp) < LargeContextSize.
+	self assert: stackPage = (stackPages stackPageFor: lifp) l: ln.
+	self assert: stackPage = stackPages mostRecentlyUsedPage l: ln.
+	self deferStackLimitSmashAround: #assertValidStackLimits: asSymbol with: ln.
+	self assert: lifp < stackPage baseAddress l: ln.
+	self assert: lisp < lifp l: ln.
+	self assert: lifp > lisp l: ln.
+	self assert: lisp >= (stackPage realStackLimit - self stackLimitOffset) l: ln.
+	self assert:  (lifp - lisp) < LargeContextSize l: ln.
 	methodField := self frameMethodField: lifp.
 	inInterpreter
 		ifTrue:
-			[self assert: (self isMachineCodeFrame: lifp) not.
-			 self assert: method = methodField.
+			[self assert: (self isMachineCodeFrame: lifp) not l: ln.
+			 self assert: method = methodField l: ln.
 			 self cppIf: MULTIPLEBYTECODESETS
-				ifTrue: [self assert: (self methodUsesAlternateBytecodeSet: method) = (bytecodeSetSelector = 256)].
-			 ((self asserta: methodField asUnsignedInteger > objectMemory startOfMemory)
-			   and: [self asserta: methodField asUnsignedInteger < objectMemory freeStart]) ifTrue:
+				ifTrue: [self assert: (self methodUsesAlternateBytecodeSet: method) = (bytecodeSetSelector = 256) l: ln].
+			 ((self asserta: methodField asUnsignedInteger > objectMemory startOfMemory l: ln)
+			   and: [self asserta: methodField asUnsignedInteger < objectMemory freeStart l: ln]) ifTrue:
 				[lip ~= cogit ceReturnToInterpreterPC ifTrue:
 					[self assert: (lip >= (methodField + (objectMemory lastPointerOf: methodField) + BaseHeaderSize - 1)
-								  and: [lip < (methodField + (objectMemory byteLengthOf: methodField) + BaseHeaderSize)])]].
+								  and: [lip < (methodField + (objectMemory byteLengthOf: methodField) + BaseHeaderSize)])
+						l: ln]].
 			 self assert: ((self iframeIsBlockActivation: lifp)
-					or: [(self pushedReceiverOrClosureOfFrame: lifp) = (self iframeReceiver: lifp)])]
+					or: [(self pushedReceiverOrClosureOfFrame: lifp) = (self iframeReceiver: lifp)])
+				l: ln]
 		ifFalse:
-			[self assert: (self isMachineCodeFrame: lifp).
-			 ((self asserta: methodField asUnsignedInteger >= cogit minCogMethodAddress)
-			  and: [self asserta: methodField asUnsignedInteger < cogit maxCogMethodAddress]) ifTrue:
+			[self assert: (self isMachineCodeFrame: lifp) l: ln.
+			 ((self asserta: methodField asUnsignedInteger >= cogit minCogMethodAddress l: ln)
+			  and: [self asserta: methodField asUnsignedInteger < cogit maxCogMethodAddress l: ln]) ifTrue:
 				[cogMethod := self mframeHomeMethod: lifp.
 				 self assert: (lip > (methodField + ((self mframeIsBlockActivation: lifp)
 													ifTrue: [self sizeof: CogBlockMethod]
 													ifFalse: [self sizeof: CogMethod]))
-						and: [lip < (methodField + cogMethod blockSize)])].
+						and: [lip < (methodField + cogMethod blockSize)])
+					l: ln].
 			 self assert: ((self mframeIsBlockActivation: lifp)
-					or: [(self pushedReceiverOrClosureOfFrame: lifp) = (self mframeReceiver: lifp)])].
+					or: [(self pushedReceiverOrClosureOfFrame: lifp) = (self mframeReceiver: lifp)])
+				l: ln].
 	(self isBaseFrame: lifp) ifTrue:
-		[self assert: (self frameHasContext: lifp).
-		 self assert: (self frameContext: lifp) = (stackPages longAt: stackPage baseAddress - BytesPerWord)]
+		[self assert: (self frameHasContext: lifp) l: ln.
+		 self assert: (self frameContext: lifp) = (stackPages longAt: stackPage baseAddress - BytesPerWord) l: ln]
 ]
 
 { #category : #'debug support' }
@@ -1623,7 +1627,8 @@ CoInterpreter >> ceReturnToInterpreter: anOop [
 	self assertValidExecutionPointe: (self iframeSavedIP: framePointer)
 		r: framePointer
 		s: stackPointer
-		imbar: true.
+		imbar: true
+		line: #'__LINE__'.
 	instructionPointer := self iframeSavedIP: framePointer.
 	self push: anOop.
 	self siglong: reenterInterpreter jmp: ReturnToInterpreter.
@@ -1835,7 +1840,7 @@ CoInterpreter >> ceStackOverflow: contextSwitchIfNotNil [
 	cogMethod := self mframeCogMethod: framePointer.
 	self assert: cesoRetAddr - cogit abortOffset = (self asCogHomeMethod: cogMethod) asInteger.
 	instructionPointer := cogMethod asInteger + cogMethod stackCheckOffset.
-	self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: false.
+	self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: false line: #'__LINE__'.
 	method := newMethod := messageSelector := lkupClass := objectMemory nilObject.
 	switched := self handleStackOverflowOrEventAllowContextSwitch: contextSwitchIfNotNil ~= 0.
 	self returnToExecutive: false postContextSwitch: switched.
@@ -2461,6 +2466,21 @@ CoInterpreter >> deferStackLimitSmashAround: functionSymbol [
 		 self forceInterruptCheck]
 ]
 
+{ #category : #'process primitive support' }
+CoInterpreter >> deferStackLimitSmashAround: functionSymbol with: arg [
+	"Defer smashes of the stackLimit around the call of functionSymbol (for assert checks)"
+	<var: #functionSymbol declareC: 'void (*functionSymbol)(sqInt)'>
+	deferSmash := true.
+	self sqLowLevelMFence.
+	self perform: functionSymbol with: arg.
+	deferSmash := false.
+	self sqLowLevelMFence.
+	deferredSmash ifTrue:
+		[deferredSmash := false.
+		 self sqLowLevelMFence.
+		 self forceInterruptCheck]
+]
+
 { #category : #'frame access' }
 CoInterpreter >> divorceAMachineCodeFrameWithCogMethod: cogMethod in: aStackPage [
 	"Divorce at most one frame in the current page (since the divorce may cause the page to be split)
@@ -2781,7 +2801,7 @@ CoInterpreter >> enterSmalltalkExecutiveImplementation [
 	self setMethod: (self iframeMethod: framePointer).
 	instructionPointer = cogit ceReturnToInterpreterPC ifTrue:
 		[instructionPointer := self iframeSavedIP: framePointer].
-	self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: true.
+	self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: true line: #'__LINE__'.
 	self interpret.
 	^0
 ]
@@ -2829,7 +2849,7 @@ CoInterpreter >> executeCogMethodFromLinkedSend: cogMethod withReceiver: rcvr [
 	<var: #cogMethod type: #'CogMethod *'>
 	cogit assertCStackWellAligned.
 	self assert: (self isMachineCodeFrame: framePointer).
-	self assertValidExecutionPointe: self stackTop r: framePointer s: stackPointer imbar: false.
+	self assertValidExecutionPointe: self stackTop r: framePointer s: stackPointer imbar: false line: #'__LINE__'.
 	self
 		cppIf: cogit numRegArgs > 0
 		ifTrue:
@@ -2856,7 +2876,7 @@ CoInterpreter >> executeCogMethodFromLinkedSend: cogMethod withReceiver: rcvr an
 	<var: #cogMethod type: #'CogMethod *'>
 	cogit assertCStackWellAligned.
 	self assert: (self isMachineCodeFrame: framePointer).
-	self assertValidExecutionPointe: self stackTop r: framePointer s: stackPointer imbar: false.
+	self assertValidExecutionPointe: self stackTop r: framePointer s: stackPointer imbar: false line: #'__LINE__'.
 	self push: cogMethod asInteger + cogit entryOffset.
 	self
 		cppIf: cogit numRegArgs > 0
@@ -2891,7 +2911,7 @@ CoInterpreter >> executeCogMethodFromUnlinkedSend: cogMethod withReceiver: rcvr 
 	<var: #cogMethod type: #'CogMethod *'>
 	cogit assertCStackWellAligned.
 	self assert: (self isMachineCodeFrame: framePointer).
-	self assertValidExecutionPointe: self stackTop r: framePointer s: stackPointer imbar: false.
+	self assertValidExecutionPointe: self stackTop r: framePointer s: stackPointer imbar: false line: #'__LINE__'.
 	self
 		cppIf: cogit numRegArgs > 0
 		ifTrue:
@@ -3132,9 +3152,13 @@ CoInterpreter >> forceInterruptCheckFromHeartbeat [
 	 timer to allow for repeatable debugging."
 	suppressHeartbeatFlag ifFalse:
 		[self checkForLongRunningPrimitive.
+		 self sqLowLevelMFence.
 		 deferSmash
-			ifTrue: [deferredSmash := true]
-			ifFalse: [self forceInterruptCheck]]
+			ifTrue:
+				[deferredSmash := true.
+				 self sqLowLevelMFence]
+			ifFalse:
+				[self forceInterruptCheck]]
 ]
 
 { #category : #'frame access' }
@@ -4014,7 +4038,7 @@ CoInterpreter >> long: aJumpBuf jmp: returnValue [
 	 Signal the exception that simulates a longjmp back to the interpreter." 
 	<doNotGenerate>
 	aJumpBuf == reenterInterpreter ifTrue:
-		[self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: true].
+		[self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: true line: nil].
 	aJumpBuf returnValue: returnValue; signal
 ]
 
@@ -5235,6 +5259,7 @@ CoInterpreter >> printFrame: theFP [
 
 { #category : #'debug printing' }
 CoInterpreter >> printFrame: theFP WithSP: theSP [
+	<api>
 	| theMethod theMethodEnd numArgs numTemps rcvrAddress topThing |
 	<inline: false>
 	<var: #theFP type: #'char *'>
@@ -5765,14 +5790,14 @@ CoInterpreter >> return: returnValue toExecutive: inInterpreter [
 
 	cogit assertCStackWellAligned.
 	(self isMachineCodeFrame: framePointer) ifTrue:
-		[self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: false.
+		[self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: false line: #'__LINE__'.
 		 self push: instructionPointer.
 		 self push: returnValue.
 		 cogit ceEnterCogCodePopReceiverReg
 		 "NOTREACHED"].
 	self push: returnValue.
 	self setMethod: (self iframeMethod: framePointer).
-	self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: true.
+	self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: true line: #'__LINE__'.
 	instructionPointer = cogit ceReturnToInterpreterPC ifTrue:
 		[instructionPointer := self iframeSavedIP: framePointer].
 	inInterpreter ifTrue:
@@ -5797,7 +5822,7 @@ CoInterpreter >> returnToExecutive: inInterpreter postContextSwitch: switchedCon
 
 	cogit assertCStackWellAligned.
 	(self isMachineCodeFrame: framePointer) ifTrue:
-		[self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: false.
+		[self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: false line: #'__LINE__'.
 		 "If returning after a context switch then a result may have to be popped from the stack.
 		  If the process is suspended at a send then the result of the primitive in which the
 		  process was suspended is still on the stack and must be popped into ReceiverResultReg.
@@ -5822,7 +5847,7 @@ CoInterpreter >> returnToExecutive: inInterpreter postContextSwitch: switchedCon
 	instructionPointer = cogit ceReturnToInterpreterPC ifTrue:
 		[instructionPointer := (self iframeSavedIP: framePointer) asUnsignedInteger.
 		 fullyInInterpreter := false].
-	self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: true.
+	self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: true line: #'__LINE__'.
 	fullyInInterpreter ifFalse:
 		[self siglong: reenterInterpreter jmp: ReturnToInterpreter.
 		 "NOTREACHED"].
@@ -5836,7 +5861,7 @@ CoInterpreter >> returnToMachineCodeFrame [
 	cogit assertCStackWellAligned.
 	self assert: localIP asUnsignedInteger < objectMemory startOfMemory.
 	self assert: (self isMachineCodeFrame: localFP).
-	self assertValidExecutionPointe: localIP asUnsignedInteger r: localFP s: localSP imbar: false.
+	self assertValidExecutionPointe: localIP asUnsignedInteger r: localFP s: localSP imbar: false line: #'__LINE__'.
 	self internalStackTopPut: localIP.
 	self internalPush: localReturnValue.
 	self externalizeFPandSP.
@@ -5998,7 +6023,7 @@ CoInterpreter >> siglong: aJumpBuf jmp: returnValue [
 	(aJumpBuf == reenterInterpreter
 	 and: [returnValue ~= 2 "2 == returnToThreadSchedulingLoopVia:"]) ifTrue:
 		[self assert: (self isOnRumpCStack: cogit processor sp).
-		 self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: true].
+		 self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: true line: nil].
 	aJumpBuf returnValue: returnValue; signal
 ]
 
