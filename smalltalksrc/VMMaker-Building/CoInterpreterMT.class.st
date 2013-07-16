@@ -413,6 +413,25 @@ CoInterpreterMT >> deferStackLimitSmashAround: functionSymbol [
 		 self checkVMOwnershipFromHeartbeat]
 ]
 
+{ #category : #'process primitive support' }
+CoInterpreterMT >> deferStackLimitSmashAround: functionSymbol with: arg [
+	"Defer smashes of the stackLimit around the call of functionSymbol (for assert checks).	
+
+	 N.B. SYNCHRONIZE WITH forceInterruptCheckFromHeartbeat"
+
+	<var: #functionSymbol declareC: 'void (*functionSymbol)(sqInt)'>
+	deferSmash := true.
+	self sqLowLevelMFence.
+	self perform: functionSymbol with: arg.
+	deferSmash := false.
+	self sqLowLevelMFence.
+	deferredSmash ifTrue:
+		[deferredSmash := false.
+		 self sqLowLevelMFence.
+		 self forceInterruptCheck.
+		 self checkVMOwnershipFromHeartbeat]
+]
+
 { #category : #'vm scheduling' }
 CoInterpreterMT >> disownVM: flags [
 	"Release the VM to other threads and answer the current thread's index.
@@ -555,7 +574,7 @@ CoInterpreterMT >> enterSmalltalkExecutiveImplementation [
 	self setMethod: (self iframeMethod: framePointer).
 	instructionPointer = cogit ceReturnToInterpreterPC ifTrue:
 		[instructionPointer := self iframeSavedIP: framePointer].
-	self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: true.
+	self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: true line: #'__LINE__'.
 	self interpret.
 	"NOTREACHED"
 	^0
@@ -570,8 +589,11 @@ CoInterpreterMT >> forceInterruptCheckFromHeartbeat [
 	 N.B. SYNCHRONIZE WITH deferStackLimitSmashAround:"
 	suppressHeartbeatFlag ifFalse:
 		[self checkForLongRunningPrimitive.
+		 self sqLowLevelMFence.
 		 deferSmash
-			ifTrue: [deferredSmash := true]
+			ifTrue:
+				[deferredSmash := true.
+				self sqLowLevelMFence]
 			ifFalse:
 				[self forceInterruptCheck.
 				 self checkVMOwnershipFromHeartbeat]]

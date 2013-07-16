@@ -52,7 +52,7 @@ CoInterpreterPrimitives >> pathTo: goal using: stack followWeak: followWeak [
 		[next := (stackPages couldBeFramePointer: current)
 					ifTrue:
 						[index >= 0
-							ifTrue: [self field: index ofFrame: current]
+							ifTrue: [self field: index ofFrame: (self cCoerceSimple: current to: #'char *')]
 							ifFalse: [objectMemory nilObject]]
 					ifFalse:
 						[index >= 0
@@ -64,7 +64,8 @@ CoInterpreterPrimitives >> pathTo: goal using: stack followWeak: followWeak [
 							ifFalse:
 								[objectMemory fetchClassOfNonInt: current]].
 		 (stackPages couldBeFramePointer: next)
-			ifTrue: [self assert: (self isFrame: next onPage: (stackPages stackPageFor: next))]
+			ifTrue: [self assert: (self isFrame: (self cCoerceSimple: next to: #'char *')
+										onPage: (stackPages stackPageFor: (self cCoerceSimple: next to: #'char *')))]
 			ifFalse:
 				[next >= heapBase ifTrue:
 					[self assert: (self checkOkayOop: next)]].

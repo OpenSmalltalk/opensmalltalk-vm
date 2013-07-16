@@ -864,7 +864,7 @@ CCodeGenerator >> emitCHeaderOn: aStream [
 	self emitHeaderFiles: (headerFiles reject: [:hdr| hdr includes: $<]) on: aStream.
 
 	vmClass isInterpreterClass ifTrue:
-		[aStream cr; cr; nextPutAll: vmClass preambleCCode].
+		[self maybePutPreambleFor: vmClass on: aStream].
 
 	aStream cr
 ]
@@ -2694,6 +2694,18 @@ CCodeGenerator >> mayInline: sel [
 	"Answer true if the method with the given selector may be inlined."
 
 	^sel ~~ #assert: and: [inlineList includes: sel]
+]
+
+{ #category : #'C code generator' }
+CCodeGenerator >> maybePutPreambleFor: aClass on: aStream [
+	aClass preambleCCode ifNotNil:
+		[:preamble| | actualClass |
+		 actualClass := aClass class whichClassIncludesSelector: #preambleCCode.
+		 aStream
+			ensureCr; cr;
+			nextPutAll: '/* '; print: actualClass; nextPutAll: '>>preambleCCode */'; cr;
+			nextPutAll: preamble; cr;
+			nextPutAll: '/* end '; print: actualClass; nextPutAll: '>>preambleCCode */'; cr]
 ]
 
 { #category : #utilities }

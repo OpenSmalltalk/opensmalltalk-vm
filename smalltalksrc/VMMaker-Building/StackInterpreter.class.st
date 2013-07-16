@@ -1304,20 +1304,20 @@ StackInterpreter class >> preGenerationHook: aCCodeGenerator [
 { #category : #translation }
 StackInterpreter class >> preambleCCode [
 	^	
-'void printCallStack(void);
-
-/* Disable Intel compiler inlining of warning which is used for breakpoints */
+'/* Disable Intel compiler inlining of warning which is used for breakpoints */
 #pragma auto_inline off
 void
 warning(char *s) { /* Print an error message but don''t exit. */
 	printf("\n%s\n", s);
 }
+void
+warningat(char *s, int l) { /* ditto with line number. */
+	printf("\n%s %d\n", s,l);
+}
 #pragma auto_inline on
 
 void
 invalidCompactClassError(char *s) { /* Print a compact class index error message and exit. */
-	static sqInt printingStack = true; /* not running at this point */
-
 	printf("\nClass %s does not have the required compact class index\n", s);
 	exit(-1);
 }
@@ -1808,43 +1808,53 @@ StackInterpreter >> assertClassOf: oop is: classOop [
 
 { #category : #'debug support' }
 StackInterpreter >> assertValidExecutionPointe: lip r: lifp s: lisp [
+	<inline: true>
 	<var: #lip type: #'usqInt'>
 	<var: #lifp type: #'char *'>
 	<var: #lisp type: #'char *'>
-	self assertValidExecutionPointe: lip r: lifp s: lisp imbar: (self isMachineCodeFrame: lifp) not
+	self assertValidExecutionPointe: lip r: lifp s: lisp imbar: (self isMachineCodeFrame: lifp) not line: #'__LINE__'
 ]
 
 { #category : #'debug support' }
-StackInterpreter >> assertValidExecutionPointe: lip r: lfp s: lsp imbar: inInterpreter [
+StackInterpreter >> assertValidExecutionPointe: lip r: lfp s: lsp imbar: inInterpreter line: ln [
 	<var: #lip type: #usqInt>
 	<var: #lfp type: #'char *'>
 	<var: #lsp type: #'char *'>
-	self assert: inInterpreter.
-	self assert: stackPage = (stackPages stackPageFor: lfp).
-	self assert: stackPage = stackPages mostRecentlyUsedPage.
-	self assertValidStackLimits.
-	self assert: lfp < stackPage baseAddress.
-	self assert: lsp < lfp.
-	self assert: lfp > lsp.
-	self assert: lsp >= (stackPage realStackLimit - self stackLimitOffset).
-	self assert:  (lfp - lsp) < LargeContextSize.
-	self assert: (self validInstructionPointer: lip inFrame: lfp).
+	self assert: inInterpreter l: ln.
+	self assert: stackPage = (stackPages stackPageFor: lfp) l: ln.
+	self assert: stackPage = stackPages mostRecentlyUsedPage l: ln.
+	self assertValidStackLimits: ln.
+	self assert: lfp < stackPage baseAddress l: ln.
+	self assert: lsp < lfp l: ln.
+	self assert: lfp > lsp l: ln.
+	self assert: lsp >= (stackPage realStackLimit - self stackLimitOffset) l: ln.
+	self assert:  (lfp - lsp) < LargeContextSize l: ln.
+	self assert: (self validInstructionPointer: lip inFrame: lfp) l: ln.
 	self assert: ((self frameIsBlockActivation: lfp)
-				or: [(self pushedReceiverOrClosureOfFrame: lfp) = (self frameReceiver: lfp)]).
-	self assert: method = (self frameMethod: lfp).
+				or: [(self pushedReceiverOrClosureOfFrame: lfp) = (self frameReceiver: lfp)])
+		l: ln.
+	self assert: method = (self frameMethod: lfp) l: ln.
 	self cppIf: MULTIPLEBYTECODESETS
-		ifTrue: [self assert: (self methodUsesAlternateBytecodeSet: method) = (bytecodeSetSelector = 256)].
+		ifTrue: [self assert: (self methodUsesAlternateBytecodeSet: method) = (bytecodeSetSelector = 256)  l: ln].
+]
+
+{ #category : #'debug support' }
+StackInterpreter >> assertValidExecutionPointers [
+	<doNotGenerate> "simulator only"
+	self assertValidExecutionPointe: localIP r: localFP s: localSP
 ]
 
 { #category : #'process primitive support' }
-StackInterpreter >> assertValidStackLimits [
+StackInterpreter >> assertValidStackLimits: ln [
 	<returnTypeC: #void>
 	"Order in the stackLimit checks is important because stackLimit is smashed by
 	 interrupts. So always check for unsmashed value first to avoid race condition."
 	self assert: (stackLimit = stackPage realStackLimit
-				or: [stackLimit = (self cCoerceSimple: -1 signedIntToLong to: 'char *')]).
+				or: [stackLimit = (self cCoerceSimple: -1 signedIntToLong to: #'char *')])
+		l: ln.
 	self assert: (stackPage stackLimit = stackPage realStackLimit
-				or: [stackPage stackLimit = (self cCoerceSimple: -1 signedIntToLong to: 'char *')])
+				or: [stackPage stackLimit = (self cCoerceSimple: -1 signedIntToLong to: #'char *')])
+		l: ln
 ]
 
 { #category : #'return bytecodes' }
@@ -6207,7 +6217,7 @@ StackInterpreter >> instVar: index ofContext: aMarriedContext put: anOop [
 	self internalizeIPandSP.
 	"Assigning various fields can force a divorce which can change the stackPage."
 	stackPages markStackPageMostRecentlyUsed: stackPage.
-	self assertValidExecutionPointe: localIP asUnsignedInteger r: localFP s: localSP imbar: true
+	self assertValidExecutionPointe: localIP asUnsignedInteger r: localFP s: localSP imbar: true line: #'__LINE__'
 ]
 
 { #category : #'indexing primitive support' }
@@ -8838,6 +8848,7 @@ StackInterpreter >> printFrame: theFP [
 
 { #category : #'debug printing' }
 StackInterpreter >> printFrame: theFP WithSP: theSP [
+	<api>
 	| theMethod numArgs topThing |
 	<inline: false>
 	<var: #theFP type: #'char *'>

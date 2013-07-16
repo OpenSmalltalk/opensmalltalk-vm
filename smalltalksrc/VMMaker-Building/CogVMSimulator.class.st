@@ -154,11 +154,6 @@ CogVMSimulator >> assertSaneThreadAndProcess [
 		inSuperclass: (cogThreadManager ifNil: [CoInterpreterPrimitives] ifNotNil: [CoInterpreterMT])
 ]
 
-{ #category : #testing }
-CogVMSimulator >> assertValidExecutionPointers [
-	self assertValidExecutionPointe: localIP r: localFP s: localSP
-]
-
 { #category : #'jump bytecodes' }
 CogVMSimulator >> attemptToSwitchToMachineCode: bcpc [
 	"method = 16r96A294 ifTrue: [self halt]."
