@@ -26,5 +26,6 @@ SurfacePlugin \
 SqueakFFIPrims \
 UUIDPlugin \
 UnixOSProcessPlugin \
+VMProfileLinuxSupportPlugin \
 VMProfileMacSupportPlugin \
 Win32OSProcessPlugin

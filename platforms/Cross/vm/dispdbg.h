@@ -90,7 +90,7 @@
 # define bytecodeDispatchDebugHook() do { \
 	if (++GIV(byteCount) % 100000 == 0) \
 		forceInterruptCheck(); \
-	assertValidExecutionPointersimbar(localIP,localFP,localSP,1); \
+	assertValidExecutionPointersimbarline(localIP,localFP,localSP,1,__LINE__); \
   } while (0)
 
 #elif 0 /* maintain byteCount & break-point & heart-beat every 100k bytecodes */
