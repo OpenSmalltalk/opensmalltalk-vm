@@ -266,6 +266,7 @@ Class {
 		'MapEnd',
 		'MaxCompiledPrimitiveIndex',
 		'MaxNegativeErrorCode',
+		'MaxStackAllocSize',
 		'MaxUnitDisplacement',
 		'MaxX2NDisplacement',
 		'MethodTooBig',
@@ -741,14 +742,6 @@ Cogit class >> initializeCogMethodConstants [
 ]
 
 { #category : #'class initialization' }
-Cogit class >> initializeCompilationWithConstantsOptions: optionsDictionary [
-	ProcessorClass := (optionsDictionary at: #ISA ifAbsent: [#IA32]) caseOf: {
-							[#IA32] 	->	[BochsIA32Alien].
-							[#ARMv5]	->	[GdbARMAlien]. }.
-	NumSendTrampolines := 4
-]
-
-{ #category : #'class initialization' }
 Cogit class >> initializeErrorCodes [
 	NotFullyInitialized := -1.
 	InsufficientCodeSpace := -2.
@@ -769,8 +762,18 @@ Cogit class >> initializeMiscConstantsWith: optionsDictionary [
 			[EagerInstructionDecoration isNil ifTrue:
 				[EagerInstructionDecoration := false]]. "speeds up single stepping but could lose fidelity"
 
+	ProcessorClass := (optionsDictionary at: #ISA ifAbsent: [#IA32]) caseOf: {
+							[#IA32] 	->	[BochsIA32Alien].
+							[#ARMv5]	->	[GdbARMAlien]. }.
+	"we special-case 0, 1 & 2 argument sends, N is numArgs >= 3"
+	NumSendTrampolines := 4.
 	"Currently only the ceImplicitReceiverTrampoline contains object references."
-	NumObjRefsInRuntime := 2
+	NumObjRefsInRuntime := 2.
+	"Max size to alloca when compiling.
+	 Mac OS X 10.6.8 segfaults approaching 8Mb.
+	 Linux 2.6.9 segfaults above 11Mb.
+	 WIndows XP segfaults approaching 2Mb."
+	MaxStackAllocSize := 1024 * 1024 * 3 / 2 
 ]
 
 { #category : #'class initialization' }
@@ -786,7 +789,6 @@ Cogit class >> initializeWithOptions: optionsDictionary [
 	self initializeErrorCodes.
 	self initializeCogMethodConstants.
 	self initializeAnnotationConstants.
-	self initializeCompilationWithConstantsOptions: optionsDictionary.
 	self initializeBytecodeTable.
 	self initializePrimitiveTable
 ]
@@ -1953,6 +1955,48 @@ Cogit >> allocateOpcodes: numberOfAbstractOpcodes bytecodes: numberOfBytecodes [
 		annotations = (void *)((char *)fixups + fixupSize); \
 		opcodeIndex = labelCounter = annotationIndex = 0; \
 } while (0)'>
+	numAbstractOpcodes := numberOfAbstractOpcodes.
+	abstractOpcodes := CArrayAccessor on:
+						((1 to: numAbstractOpcodes) collect:
+							[:ign| processor abstractInstructionCompilerClass for: self]).
+	fixups := CArrayAccessor on:
+						((1 to: numAbstractOpcodes) collect:
+							[:ign| self bytecodeFixupClass new]).
+	annotations := CArrayAccessor on:
+						((1 to: numAbstractOpcodes + 3 // 4) collect:
+							[:ign| CogInstructionAnnotation new]).
+	opcodeIndex := labelCounter := annotationIndex := 0
+]
+
+{ #category : #initialization }
+Cogit >> allocateOpcodes: numberOfAbstractOpcodes bytecodes: numberOfBytecodes ifFail: failBlock [
+	"Allocate the various arrays needed to compile abstract instructions.
+	 This needs to be a macro since the arrays are alloca'ed (stack allocated)
+	 to ensure their being freed when compilation is done.
+	 Notionally we only need as many fixups as there are bytecodes.  But we
+	 reuse fixups to record pc-dependent instructions in generateInstructionsAt:
+	 and so need at least as many as there are abstract opcodes.
+
+	 N.B. We do one single alloca to save embarrassing C optimizers that
+	 generate incorrect code as both gcc and the intel compiler do on x86."
+	<cmacro: '(numberOfAbstractOpcodes,numberOfBytecodes,failBlock) do { \
+		int opcodeSize = sizeof(AbstractInstruction) * (numAbstractOpcodes = (numberOfAbstractOpcodes)); \
+		int fixupSize = sizeof(BytecodeFixup) * numAbstractOpcodes; \
+		int annotationSize = sizeof(InstructionAnnotation) * ((numAbstractOpcodes + 3) / 4); \
+		int allocSize = opcodeSize + fixupSize + annotationSize; \
+		if (allocSize > MaxStackAllocSize) failBlock; \
+		abstractOpcodes = alloca(allocSize); \
+		bzero(abstractOpcodes, opcodeSize + fixupSize); \
+		fixups = (void *)((char *)abstractOpcodes + opcodeSize); \
+		annotations = (void *)((char *)fixups + fixupSize); \
+		opcodeIndex = labelCounter = annotationIndex = 0; \
+} while (0)'>
+	| opcodeSize fixupSize annotationSize allocSize |
+	opcodeSize := (self sizeof: #AbstractInstruction) * numberOfAbstractOpcodes.
+	fixupSize := (self sizeof: #BytecodeFixup) * numberOfAbstractOpcodes.
+	annotationSize := (self sizeof: #InstructionAnnotation) * ((numberOfAbstractOpcodes + 3) / 4).
+	allocSize := opcodeSize + fixupSize + annotationSize.
+	allocSize > MaxStackAllocSize ifTrue: [^failBlock value].
 	numAbstractOpcodes := numberOfAbstractOpcodes.
 	abstractOpcodes := CArrayAccessor on:
 						((1 to: numAbstractOpcodes) collect:
@@ -3531,7 +3575,9 @@ Cogit >> compileCogMethod: selector [
 					ifTrue: [initialPC - 1]
 					ifFalse: [objectMemory byteLengthOf: methodObj].
 	numBytecodes := endPC - initialPC + 1.
-	self allocateOpcodes: (numBytecodes + extra) * 10 bytecodes: numBytecodes.
+	self allocateOpcodes: (numBytecodes + extra) * 10
+		bytecodes: numBytecodes
+		ifFail: [^coInterpreter cCoerceSimple: MethodTooBig to: #'CogMethod *'].
 	(numBlocks := self scanMethod) < 0 ifTrue:
 		[^coInterpreter cCoerceSimple: numBlocks to: #'CogMethod *'].
 	self allocateBlockStarts: numBlocks.
