@@ -410,7 +410,8 @@ CoInterpreterMT >> deferStackLimitSmashAround: functionSymbol [
 	deferredSmash ifTrue:
 		[deferredSmash := false.
 		 self forceInterruptCheck.
-		 self checkVMOwnershipFromHeartbeat]
+		 self checkVMOwnershipFromHeartbeat].
+	^true "called from assert"
 ]
 
 { #category : #'process primitive support' }
@@ -429,7 +430,8 @@ CoInterpreterMT >> deferStackLimitSmashAround: functionSymbol with: arg [
 		[deferredSmash := false.
 		 self sqLowLevelMFence.
 		 self forceInterruptCheck.
-		 self checkVMOwnershipFromHeartbeat]
+		 self checkVMOwnershipFromHeartbeat].
+	^true "called from assert"
 ]
 
 { #category : #'vm scheduling' }
