@@ -750,7 +750,7 @@ CoInterpreter >> assertValidExecutionPointe: lip r: lifp s: lisp imbar: inInterp
 	<var: #cogMethod type: #'CogMethod *'>
 	self assert: stackPage = (stackPages stackPageFor: lifp) l: ln.
 	self assert: stackPage = stackPages mostRecentlyUsedPage l: ln.
-	self deferStackLimitSmashAround: #assertValidStackLimits: asSymbol with: ln.
+	self assert: (self deferStackLimitSmashAround: #assertValidStackLimits: asSymbol with: ln).
 	self assert: lifp < stackPage baseAddress l: ln.
 	self assert: lisp < lifp l: ln.
 	self assert: lifp > lisp l: ln.
@@ -2463,7 +2463,8 @@ CoInterpreter >> deferStackLimitSmashAround: functionSymbol [
 	deferSmash := false.
 	deferredSmash ifTrue:
 		[deferredSmash := false.
-		 self forceInterruptCheck]
+		 self forceInterruptCheck].
+	^true "called from assert"
 ]
 
 { #category : #'process primitive support' }
@@ -2478,7 +2479,8 @@ CoInterpreter >> deferStackLimitSmashAround: functionSymbol with: arg [
 	deferredSmash ifTrue:
 		[deferredSmash := false.
 		 self sqLowLevelMFence.
-		 self forceInterruptCheck]
+		 self forceInterruptCheck].
+	^true "called from assert"
 ]
 
 { #category : #'frame access' }
