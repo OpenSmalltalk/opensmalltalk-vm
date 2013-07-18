@@ -1992,9 +1992,9 @@ Cogit >> allocateOpcodes: numberOfAbstractOpcodes bytecodes: numberOfBytecodes i
 		opcodeIndex = labelCounter = annotationIndex = 0; \
 } while (0)'>
 	| opcodeSize fixupSize annotationSize allocSize |
-	opcodeSize := (self sizeof: #AbstractInstruction) * numberOfAbstractOpcodes.
-	fixupSize := (self sizeof: #BytecodeFixup) * numberOfAbstractOpcodes.
-	annotationSize := (self sizeof: #InstructionAnnotation) * ((numberOfAbstractOpcodes + 3) / 4).
+	opcodeSize := (self sizeof: CogAbstractInstruction) * numberOfAbstractOpcodes.
+	fixupSize := (self sizeof: CogBytecodeFixup) * numberOfAbstractOpcodes.
+	annotationSize := (self sizeof: CogInstructionAnnotation) * ((numberOfAbstractOpcodes + 3) / 4).
 	allocSize := opcodeSize + fixupSize + annotationSize.
 	allocSize > MaxStackAllocSize ifTrue: [^failBlock value].
 	numAbstractOpcodes := numberOfAbstractOpcodes.

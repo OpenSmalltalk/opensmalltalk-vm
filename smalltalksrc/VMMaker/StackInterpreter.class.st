@@ -4788,8 +4788,8 @@ StackInterpreter >> externalQuickPrimitiveResponse [
 
 { #category : #'frame access' }
 StackInterpreter >> externalSetStackPageAndPointersForSuspendedContextOfProcess: aProcess [
-	"Set stackPage, framePointer and stackPointer for the suspendedContext of aProcess,
-	 marrying the context if necessary, and niling the suspendedContext slot.  This is used
+	"Set stackPage, instructionPointer, framePointer and stackPointer for the suspendedContext of
+	 aProcess, marrying the context if necessary, and niling the suspendedContext slot.  This is used
 	 on process switch to ensure a context has a stack frame and so can continue execution."
 	| newContext theFrame thePage newPage |
 	<var: #theFrame type: #'char *'>
@@ -4823,8 +4823,9 @@ StackInterpreter >> externalSetStackPageAndPointersForSuspendedContextOfProcess:
 	stackPointer := thePage headSP.
 	framePointer := thePage headFP.
 	(self isMachineCodeFrame: framePointer) ifFalse:
-		[self setMethod: (self iframeMethod: framePointer)].
-	self assertValidExecutionPointe: self stackTop asUnsignedInteger r: framePointer s: stackPointer
+		[self setMethod: (self iframeMethod: framePointer)]..
+	instructionPointer := self popStack.
+	self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer
 ]
 
 { #category : #'stack pages' }
@@ -11570,14 +11571,14 @@ StackInterpreter >> transferTo: newProc [
 	statProcessSwitch := statProcessSwitch + 1.
 	self push: instructionPointer.
 	self externalWriteBackHeadFramePointers.
+	self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer.
 	sched := self schedulerPointer.
 	oldProc := objectMemory fetchPointer: ActiveProcessIndex ofObject: sched.
 	activeContext := self ensureFrameIsMarried: framePointer SP: stackPointer.
 	objectMemory storePointer: SuspendedContextIndex ofObject: oldProc withValue: activeContext.
 	objectMemory storePointer: ActiveProcessIndex ofObject: sched withValue: newProc.
 	objectMemory storePointerUnchecked: MyListIndex ofObject: newProc withValue: objectMemory nilObject.
-	self externalSetStackPageAndPointersForSuspendedContextOfProcess: newProc.
-	instructionPointer := self popStack
+	self externalSetStackPageAndPointersForSuspendedContextOfProcess: newProc
 ]
 
 { #category : #'internal interpreter access' }

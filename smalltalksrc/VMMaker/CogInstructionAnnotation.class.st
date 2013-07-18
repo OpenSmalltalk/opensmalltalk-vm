@@ -11,6 +11,13 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
+{ #category : #'simulation only' }
+CogInstructionAnnotation class >> byteSizeForSimulator: aVMClass [
+	"Answer an approximation of the byte size of an AbstractInstruction struct.
+	 This is for estimating the alloca in allocateOpcodes:bytecodes:ifFail:"
+	^self instSize * (aVMClass sizeof: #'void *')
+]
+
 { #category : #translation }
 CogInstructionAnnotation class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in a CogInstructionAnnotation struct."

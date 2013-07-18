@@ -16,6 +16,11 @@ VMStructType class >> addSubclass: aSubclass [
 	^super addSubclass: aSubclass
 ]
 
+{ #category : #'simulation only' }
+VMStructType class >> alignedByteSizeOf: objectSymbolOrClass forClient: aVMClass [
+	^objectSymbolOrClass byteSizeForSimulator: aVMClass
+]
+
 { #category : #'code generation' }
 VMStructType class >> checkGenerateFieldAccessors: fieldSpecs bitPosition: firstBitPosition in: surrogateClass [
 	| bitPosition alignedByteSize |
