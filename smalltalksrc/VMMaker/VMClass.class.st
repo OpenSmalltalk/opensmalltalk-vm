@@ -416,11 +416,11 @@ VMClass >> cppIf: conditionBlockOrValue ifTrue: trueExpressionOrBlock [
 		self cppIf: IMMUTABILITY
 			ifTrue: [(self internalIsImmutable: obj) ifTrue:
 						[^self primitiveFailFor: PrimErrNoModification]]"
-	^self cppIf: conditionBlockOrValue ifTrue: trueExpressionOrBlock ifFalse: []
+	^self cppIf: conditionBlockOrValue ifTrue: trueExpressionOrBlock ifFalse: nil
 ]
 
 { #category : #'translation support' }
-VMClass >> cppIf: conditionBlockOrValue ifTrue: trueExpressionOrBlock ifFalse: falseExpressionOrBlockOrNil [
+VMClass >> cppIf: conditionBlockOrSymbolValue ifTrue: trueExpressionOrBlock ifFalse: falseExpressionOrBlockOrNil [
 	"When translated, produces #if (condition) #else #endif CPP directives.
 	 Example usage:
 
@@ -429,13 +429,21 @@ VMClass >> cppIf: conditionBlockOrValue ifTrue: trueExpressionOrBlock ifFalse: f
 			ifFalse: [self doSomethingFor32Bit]
 		self cppIf: BytesPerWord = 8
 			ifTrue: [self doSomethingFor64Bit]
+			ifFalse: [self doSomethingFor32Bit]
+		self cppIf: #A_GLOBAL
+			ifTrue: [self doSomethingFor64Bit]
 			ifFalse: [self doSomethingFor32Bit]"
-	^(conditionBlockOrValue value
+	^(conditionBlockOrSymbolValue value
 		ifNil: [false]
 		ifNotNil: [:value|
 			value isInteger
 				ifTrue: [value ~= 0]
-				ifFalse: [value]])
+				ifFalse:
+					[value isSymbol
+						ifTrue: [(self class bindingOf: value)
+									ifNil: [false]
+									ifNotNil: [:binding| binding value]]
+						ifFalse: [value]]])
 		ifTrue: trueExpressionOrBlock
 		ifFalse: falseExpressionOrBlockOrNil
 ]
