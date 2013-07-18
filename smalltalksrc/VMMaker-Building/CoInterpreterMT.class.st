@@ -868,7 +868,6 @@ CoInterpreterMT >> ownVM: threadIndexAndFlags [
 	self externalSetStackPageAndPointersForSuspendedContextOfProcess: myProc.
 	"If this primitive is called from machine code maintain the invariant that the return pc
 	 of an interpreter callee calling a machine code caller is ceReturnToInterpreterPC."
-	instructionPointer := self popStack.
 	(vmThread inMachineCode
 	 and: [instructionPointer >= objectMemory startOfMemory]) ifTrue:
 		[self iframeSavedIP: framePointer put: instructionPointer.
@@ -1400,8 +1399,7 @@ CoInterpreterMT >> transferTo: newProc from: sourceCode [
 
 	self threadSwitchIfNecessary: newProc from: sourceCode.
 
-	self externalSetStackPageAndPointersForSuspendedContextOfProcess: newProc.
-	instructionPointer := self popStack
+	self externalSetStackPageAndPointersForSuspendedContextOfProcess: newProc
 ]
 
 { #category : #'vm scheduling' }
@@ -1437,8 +1435,7 @@ CoInterpreterMT >> tryToExecuteSmalltalk: vmThread [
 		ifTrue:
 			[self assert: (objectMemory fetchPointer: MyListIndex ofObject: self activeProcess) = objectMemory nilObject.
 			 (objectMemory fetchPointer: SuspendedContextIndex ofObject: activeProc) ~= objectMemory nilObject ifTrue:
-				[self externalSetStackPageAndPointersForSuspendedContextOfProcess: activeProc.
-				 instructionPointer := self popStack].
+				[self externalSetStackPageAndPointersForSuspendedContextOfProcess: activeProc].
 			 self enterSmalltalkExecutive.
 			 "When we return here we should have already given up
 			  the VM and so we cannot touch any interpreter state."]
