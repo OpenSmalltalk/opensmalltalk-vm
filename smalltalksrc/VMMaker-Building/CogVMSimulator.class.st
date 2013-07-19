@@ -2866,14 +2866,6 @@ CogVMSimulator >> returnToSchedulingLoopAndReleaseVMOrWakeThread: vmThread sourc
 		inSuperclass: (cogThreadManager ifNil: [CoInterpreterPrimitives] ifNotNil: [CoInterpreterMT])
 ]
 
-{ #category : #initialization }
-CogVMSimulator >> reverseBytesFrom: begin to: end [
-	"Byte-swap the given range of memory (not inclusive!)."
-	| wordAddr |
-	wordAddr := begin.
-	objectMemory memory swapBytesFrom: wordAddr // 4 + 1 to: end // 4
-]
-
 { #category : #'image save/restore' }
 CogVMSimulator >> reverseBytesInImage [
 	Utilities

@@ -1680,14 +1680,6 @@ StackInterpreterSimulator >> pushMaybeContextReceiverVariable: index [
 	^super pushMaybeContextReceiverVariable: index
 ]
 
-{ #category : #initialization }
-StackInterpreterSimulator >> reverseBytesFrom: begin to: end [
-	"Byte-swap the given range of memory (not inclusive!)."
-	| wordAddr |
-	wordAddr := begin.
-	objectMemory memory swapBytesFrom: wordAddr // 4 + 1 to: end // 4
-]
-
 { #category : #'image save/restore' }
 StackInterpreterSimulator >> reverseBytesInImage [
 	Utilities

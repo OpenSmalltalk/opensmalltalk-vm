@@ -246,9 +246,10 @@ VMPluginCodeGenerator >> pluginFunctionsToClone [
 	 Exclude those that are static to sqVirtualMachine.c and hence always need
 	 to be called through interpreterProxy."
 
-	^(pluginFunctionsUsed reject:
-		[:selector| self noteUsedPluginFunction: selector])
-			asSortedCollection
+	^((pluginFunctionsUsed
+		reject: [:selector| self noteUsedPluginFunction: selector])
+			select: [:selector| InterpreterProxy includesSelector: selector])
+				asSortedCollection
 ]
 
 { #category : #public }

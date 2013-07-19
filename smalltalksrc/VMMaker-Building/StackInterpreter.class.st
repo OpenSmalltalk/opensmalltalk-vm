@@ -3925,11 +3925,16 @@ StackInterpreter >> detailedSymbolicMethod: aMethod [
 StackInterpreter >> dispatchFunctionPointer: aFunctionPointer [
 	"In C aFunctionPointer is void (*aFunctionPointer)()"
 	<cmacro: '(aFunctionPointer) (aFunctionPointer)()'>
+	| result |
 	(aFunctionPointer isInteger
 	 and: [aFunctionPointer >= 1000]) ifTrue:
-		[^self callExternalPrimitive: aFunctionPointer].
+		[result := self callExternalPrimitive: aFunctionPointer.
+		 objectMemory checkForLastObjectOverwrite.
+		 ^result].
 	"In Smalltalk aFunctionPointer is a message selector symbol"
-	^self perform: aFunctionPointer
+	result := self perform: aFunctionPointer.
+	 objectMemory checkForLastObjectOverwrite.
+	 ^result
 ]
 
 { #category : #'I/O primitives' }

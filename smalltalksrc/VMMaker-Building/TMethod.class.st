@@ -1288,7 +1288,7 @@ TMethod >> prepareMethodIn: aCodeGen [
 			[parseTree nodesDo:
 				[:node|
 				 node isSend ifTrue:
-					[(aCodeGen builtin: node selector)
+					[(aCodeGen isBuiltinSelector: node selector)
 						ifTrue:
 							[node isBuiltinOperator: true.
 							"If a to:by:do:'s limit has side-effects, declare the limit variable, otherwise delete it from the args"
@@ -1299,7 +1299,7 @@ TMethod >> prepareMethodIn: aCodeGen [
 								 (limitExpr anySatisfy:
 										[:subNode|
 										subNode isSend
-										and: [(aCodeGen builtin: subNode selector) not
+										and: [(aCodeGen isBuiltinSelector: subNode selector) not
 										and: [(subNode isStructSend: aCodeGen) not]]])
 									ifTrue: [locals add: node args last name]
 									ifFalse:

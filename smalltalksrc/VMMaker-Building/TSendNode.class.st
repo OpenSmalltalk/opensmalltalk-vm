@@ -51,7 +51,7 @@ TSendNode >> bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold in:
 	(constantFold
 	 and: [newReceiver isConstant and: [newReceiver value isInteger]
 	 and: [(newArguments allSatisfy: [:ea| ea isConstant and: [ea value isInteger]])
-	 and: [codeGen builtin: selector]]]) ifTrue:
+	 and: [codeGen isBuiltinSelector: selector]]]) ifTrue:
 		[| value |
 		value := [newReceiver value perform: selector withArguments: (newArguments collect: [:ea| ea value])]
 					on: Error

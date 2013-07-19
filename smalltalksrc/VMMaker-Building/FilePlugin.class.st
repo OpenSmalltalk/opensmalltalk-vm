@@ -567,7 +567,7 @@ FilePlugin >> primitiveFileRead [
 	 bytesRead := self
 					sqFile: file
 					Read: count * elementSize
-					Into: (self cCoerce: (interpreterProxy firstIndexableField: array) to: #'char *')
+					Into: (interpreterProxy cCoerce: (interpreterProxy firstIndexableField: array) to: #'char *')
 					At: (startIndex - 1) * elementSize.
 	 interpreterProxy primitiveFailureCode = PrimErrObjectMayMove
 	 and: [(retryCount := retryCount + 1) <= 2] "Two objects, the file and the array can move"] whileTrue:
@@ -707,35 +707,36 @@ FilePlugin >> primitiveFileTruncate [
 
 { #category : #'file primitives' }
 FilePlugin >> primitiveFileWrite [
-	| count startIndex array file byteSize arrayIndex bytesWritten |
+	| count startIndex array file elementSize bytesWritten |
 	<var: 'file' type: 'SQFile *'>
 	<var: 'arrayIndex' type: 'char *'>
 	<var: 'count' type: 'size_t'>
 	<var: 'startIndex' type: 'size_t'>
-	<var: 'byteSize' type: 'size_t'>
+	<var: 'elementSize' type: 'size_t'>
 	<export: true>
 	count := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
 	startIndex := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 1).
 	array := interpreterProxy stackValue: 2.
 	file := self fileValueOf: (interpreterProxy stackValue: 3).
-	"buffer can be any indexable words or bytes object except CompiledMethod "
-	(interpreterProxy isWordsOrBytes: array)
-		ifFalse: [^ interpreterProxy primitiveFail].
-	(interpreterProxy isWords: array)
-		ifTrue: [byteSize := 4]
-		ifFalse: [byteSize := 1].
-	(startIndex >= 1 and: [startIndex + count - 1 <= (interpreterProxy slotSizeOf: array)])
-		ifFalse: [^ interpreterProxy primitiveFail].
-	interpreterProxy failed
-		ifFalse: [arrayIndex := interpreterProxy firstIndexableField: array.
-			"Note: adjust startIndex for zero-origin indexing"
-			bytesWritten := self
+
+	 (interpreterProxy failed
+	 "buffer can be any indexable words or bytes object except CompiledMethod"
+	 or: [(interpreterProxy isWordsOrBytes: array) not]) ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+
+	 elementSize := (interpreterProxy isWords: array) ifTrue: [4] ifFalse: [1].
+	 (startIndex >= 1
+	  and: [(startIndex + count - 1) <= (interpreterProxy slotSizeOf: array)]) ifFalse:
+		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+
+	"Note: adjust startIndex for zero-origin indexing"
+	bytesWritten := self
 						sqFile: file
-						Write: count * byteSize
-						From: arrayIndex
-						At: startIndex - 1 * byteSize].
-	interpreterProxy failed
-		ifFalse: [interpreterProxy pop: 5 thenPush:( interpreterProxy integerObjectOf: bytesWritten // byteSize)]
+						Write: count * elementSize
+						From: (interpreterProxy cCoerce: (interpreterProxy firstIndexableField: array) to: #'char *')
+						At: startIndex - 1 * elementSize.
+	interpreterProxy failed ifFalse:
+		[interpreterProxy pop: 5 thenPush: (interpreterProxy integerObjectOf: bytesWritten // elementSize)]
 ]
 
 { #category : #'security primitives' }

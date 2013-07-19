@@ -353,13 +353,6 @@ CCodeGenerator >> breakSrcInlineSelector: aSelector [
 ]
 
 { #category : #utilities }
-CCodeGenerator >> builtin: sel [
-	"Answer true if the given selector is one of the builtin selectors."
-
-	^(self kernel: sel) or: [translationDict includesKey: sel]
-]
-
-{ #category : #utilities }
 CCodeGenerator >> cCodeForMethod: selector [
 	"Answer a string containing the C code for the given method."
 	"Example:
@@ -2575,6 +2568,13 @@ CCodeGenerator >> inlineDispatchesInMethodNamed: selector localizingVars: varsLi
 	]
 ]
 
+{ #category : #utilities }
+CCodeGenerator >> isBuiltinSelector: sel [
+	"Answer true if the given selector is one of the builtin selectors."
+
+	^(self isKernelSelector: sel) or: [translationDict includesKey: sel]
+]
+
 { #category : #'C code generator' }
 CCodeGenerator >> isCLiteral: anObject [
 	(anObject isKindOf: Integer) ifTrue: [^true].
@@ -2612,6 +2612,25 @@ CCodeGenerator >> isIntegralCType: aCType [ "<String>"
 ]
 
 { #category : #utilities }
+CCodeGenerator >> isKernelSelector: sel [
+	"Answer true if the given selector is one of the kernel selectors that are implemented as macros."
+
+	^(#(error:
+		 oopAt: oopAt:put: oopAtPointer: oopAtPointer:put:
+		 byteAt: byteAt:put: byteAtPointer: byteAtPointer:put:
+		 shortAt: shortAt:put: shortAtPointer: shortAtPointer:put:
+		 intAt: intAt:put: intAtPointer: intAtPointer:put:
+		 longAt: longAt:put: longAtPointer: longAtPointer:put:
+		 fetchFloatAt:into: storeFloatAt:from:
+				fetchFloatAtPointer:into: storeFloatAtPointer:from:
+		 fetchSingleFloatAt:into: storeSingleFloatAt:from:
+				fetchSingleFloatAtPointer:into: storeSingleFloatAtPointer:from:
+		 pointerForOop: oopForPointer:
+		 cCoerce:to: cCoerceSimple:to:)
+			includes: sel)
+]
+
+{ #category : #utilities }
 CCodeGenerator >> isNilConstantReceiverOf: sendNode [
 	"Answer true if the receiver of the given message send is the constant nil. Used to suppress conditional code when the condition is a translation-time constant."
 
@@ -2631,24 +2650,6 @@ CCodeGenerator >> isNonArgumentImplicitReceiverVariableName: aString [
 CCodeGenerator >> isVoidPointer: aCType [ "<String>"
 	"sigh..."
 	^#('void *' 'void*') includes: aCType asString
-]
-
-{ #category : #utilities }
-CCodeGenerator >> kernel: sel [
-	"Answer true if the given selector is one of the kernel selectors that are implemented as macros."
-
-	^(#(error:
-		 oopAt: oopAt:put: oopAtPointer: oopAtPointer:put:
-		 byteAt: byteAt:put: byteAtPointer: byteAtPointer:put:
-		 shortAt: shortAt:put: shortAtPointer: shortAtPointer:put:
-		 intAt: intAt:put: intAtPointer: intAtPointer:put:
-		 longAt: longAt:put: longAtPointer: longAtPointer:put:
-		 fetchFloatAt:into: storeFloatAt:from:
-				fetchFloatAtPointer:into: storeFloatAtPointer:from:
-		 fetchSingleFloatAt:into: storeSingleFloatAt:from:
-				fetchSingleFloatAtPointer:into: storeSingleFloatAtPointer:from:
-		 pointerForOop: oopForPointer:)
-			includes: sel)
 ]
 
 { #category : #utilities }
@@ -2713,7 +2714,7 @@ CCodeGenerator >> messageReceiverIsInterpreterProxy: sendNode [
 	^self isGeneratingPluginCode
 	  and: [sendNode receiver isVariable
 	  and: ['interpreterProxy' = sendNode receiver name
-	  and: [(self kernel: sendNode selector) not]]]
+	  and: [(self isKernelSelector: sendNode selector) not]]]
 ]
 
 { #category : #utilities }
@@ -3111,7 +3112,7 @@ CCodeGenerator >> removeUnneededBuiltins [
 	toRemove := Set new: 64.
 	methods keysDo:
 		[:sel|
-		(self builtin: sel) ifTrue:
+		(self isBuiltinSelector: sel) ifTrue:
 			[(requiredSelectors includes: sel) ifFalse:
 				[toRemove add: sel]]].
 	toRemove do:

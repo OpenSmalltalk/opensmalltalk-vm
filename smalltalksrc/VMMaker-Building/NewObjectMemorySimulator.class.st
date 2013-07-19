@@ -384,15 +384,6 @@ NewObjectMemorySimulator >> printHexPtr: address [
 ]
 
 { #category : #printing }
-NewObjectMemorySimulator >> printMemoryFrom: start to: end [
-	| address |
-	address := start bitAnd: (BytesPerWord - 1) bitInvert.
-	[address < end] whileTrue:
-		[self printHex: address; printChar: $:; space; printHex: (self longAt: address); cr.
-		 address := address + BytesPerWord]
-]
-
-{ #category : #printing }
 NewObjectMemorySimulator >> printNum: n [
 	coInterpreter printNum: n
 ]
@@ -424,14 +415,6 @@ NewObjectMemorySimulator >> pushFloat: f [
 NewObjectMemorySimulator >> pushInteger: integerValue [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter pushInteger: integerValue
-]
-
-{ #category : #initialization }
-NewObjectMemorySimulator >> reverseBytesFrom: begin to: end [
-	"Byte-swap the given range of memory (not inclusive!)."
-	| wordAddr |
-	wordAddr := begin.
-	memory swapBytesFrom: wordAddr // 4 + 1 to: end // 4
 ]
 
 { #category : #'memory access' }
