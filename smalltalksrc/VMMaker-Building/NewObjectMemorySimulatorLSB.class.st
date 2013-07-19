@@ -30,7 +30,7 @@ NewObjectMemorySimulatorLSB >> byteAt: byteAddress put: byte [
 		[2] -> [ (long bitAnd: 16rFF00FFFF) bitOr: (byte bitShift: 16)  ].
 		[3] -> [ (long bitAnd: 16r00FFFFFF) bitOr: (byte bitShift: 24)  ]
 	}).
-
+	self assert: longAddress < freeStart.
 	self longAt: longAddress put: long.
 	^byte
 ]
