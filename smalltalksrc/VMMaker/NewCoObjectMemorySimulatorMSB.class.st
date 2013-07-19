@@ -25,6 +25,7 @@ NewCoObjectMemorySimulatorMSB >> byteAt: byteAddress put: byte [
 	longWord := longWord
 				- (longWord bitAnd: (16rFF bitShift: shift))
 				+ (byte bitShift: shift).
+	self assert: longAddress < freeStart.
 	self longAt: longAddress put: longWord.
 	^byte
 ]

@@ -116,6 +116,7 @@ NewCoObjectMemorySimulator >> fetchInteger: fieldIndex ofObject: objectPointer [
 NewCoObjectMemorySimulator >> fetchPointer: fieldIndex ofObject: oop [
 	"index by word size, and return a pointer as long as the word size"
 	self assert: oop >= self startOfMemory.
+	self assert: oop + BaseHeaderSize + (fieldIndex << ShiftForWord) < freeStart.
 	^super fetchPointer: fieldIndex ofObject: oop
 ]
 
@@ -444,14 +445,6 @@ NewCoObjectMemorySimulator >> pushInteger: integerValue [
 	^coInterpreter pushInteger: integerValue
 ]
 
-{ #category : #initialization }
-NewCoObjectMemorySimulator >> reverseBytesFrom: begin to: end [
-	"Byte-swap the given range of memory (not inclusive!)."
-	| wordAddr |
-	wordAddr := begin.
-	memory swapBytesFrom: wordAddr // 4 + 1 to: end // 4
-]
-
 { #category : #'memory access' }
 NewCoObjectMemorySimulator >> shortAt: byteAddress [
     "Return the half-word at byteAddress which must be even."
@@ -553,27 +546,29 @@ NewCoObjectMemorySimulator >> storeInteger: fieldIndex ofObject: objectPointer w
 ]
 
 { #category : #'interpreter access' }
-NewCoObjectMemorySimulator >> storePointer: index ofObject: oop withValue: valuePointer [
+NewCoObjectMemorySimulator >> storePointer: fieldIndex ofObject: oop withValue: valuePointer [
 	"Override to ensure acess is within the heap, and within the object"
 	| fmt hdr |
 	self assert: oop >= self startOfMemory.
 	hdr := self baseHeader: oop.
 	fmt := self formatOfHeader: hdr.
 	self assert: ((fmt <= 4 or: [fmt >= 12])
-				and: [index >= 0 and: [index < (self lengthOf: oop baseHeader: hdr format: fmt)]]).
-	^super storePointer: index ofObject: oop withValue: valuePointer
+				and: [fieldIndex >= 0 and: [fieldIndex < (self lengthOf: oop baseHeader: hdr format: fmt)]]).
+	self assert: oop + BaseHeaderSize + (fieldIndex << ShiftForWord) < freeStart.
+	^super storePointer: fieldIndex ofObject: oop withValue: valuePointer
 ]
 
 { #category : #'interpreter access' }
-NewCoObjectMemorySimulator >> storePointerUnchecked: index ofObject: oop withValue: valuePointer [
+NewCoObjectMemorySimulator >> storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer [
 	"Override to ensure acess is within the heap, and within the object"
 	| fmt hdr |
 	self assert: oop >= self startOfMemory.
 	hdr := self baseHeader: oop.
 	fmt := self formatOfHeader: hdr.
 	self assert: ((fmt <= 4 or: [fmt >= 12])
-				and: [index >= 0 and: [index < (self lengthOf: oop baseHeader: hdr format: fmt)]]).
-	^super storePointerUnchecked: index ofObject: oop withValue: valuePointer
+				and: [fieldIndex >= 0 and: [fieldIndex < (self lengthOf: oop baseHeader: hdr format: fmt)]]).
+	self assert: oop + BaseHeaderSize + (fieldIndex << ShiftForWord) < freeStart.
+	^super storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer
 ]
 
 { #category : #'simulation only' }
