@@ -746,7 +746,7 @@ CoInterpreter >> assertValidExecutionPointe: lip r: lifp s: lisp imbar: inInterp
 	<var: #lip type: #usqInt>
 	<var: #lifp type: #'char *'>
 	<var: #lisp type: #'char *'>
-	| methodField cogMethod |
+	| methodField cogMethod savedIP  |
 	<var: #cogMethod type: #'CogMethod *'>
 	self assert: stackPage = (stackPages stackPageFor: lifp) l: ln.
 	self assert: stackPage = stackPages mostRecentlyUsedPage l: ln.
@@ -765,10 +765,16 @@ CoInterpreter >> assertValidExecutionPointe: lip r: lifp s: lisp imbar: inInterp
 				ifTrue: [self assert: (self methodUsesAlternateBytecodeSet: method) = (bytecodeSetSelector = 256) l: ln].
 			 ((self asserta: methodField asUnsignedInteger > objectMemory startOfMemory l: ln)
 			   and: [self asserta: methodField asUnsignedInteger < objectMemory freeStart l: ln]) ifTrue:
-				[lip ~= cogit ceReturnToInterpreterPC ifTrue:
-					[self assert: (lip >= (methodField + (objectMemory lastPointerOf: methodField) + BaseHeaderSize - 1)
+				[lip = cogit ceReturnToInterpreterPC
+					ifTrue:
+						[savedIP := self iframeSavedIP: lifp.
+						 self assert: (savedIP >= (methodField + (objectMemory lastPointerOf: methodField) + BaseHeaderSize - 1)
+								  and: [savedIP < (methodField + (objectMemory byteLengthOf: methodField) + BaseHeaderSize)])
+							l: ln]
+					ifFalse:
+						[self assert: (lip >= (methodField + (objectMemory lastPointerOf: methodField) + BaseHeaderSize - 1)
 								  and: [lip < (methodField + (objectMemory byteLengthOf: methodField) + BaseHeaderSize)])
-						l: ln]].
+							l: ln]].
 			 self assert: ((self iframeIsBlockActivation: lifp)
 					or: [(self pushedReceiverOrClosureOfFrame: lifp) = (self iframeReceiver: lifp)])
 				l: ln]
@@ -818,6 +824,64 @@ CoInterpreter >> assertValidStackPageHeadPointers [
 	self assert: stackPage headSP < stackPage headFP.
 	self assert: stackPage headFP > stackPage headSP.
 	self assert: stackPage headSP >= (stackPage realStackLimit - self stackLimitOffset)
+]
+
+{ #category : #'debug support' }
+CoInterpreter >> assertValidStackedInstructionPointers: ln [
+	"Check that the stacked instruction pointers in all pages are correct.
+	 Checks the interpreter sender/machine code callee contract.
+	 Written so it will be optimized away if not in an assert VM."
+	| thePage |
+	<inline: false>
+	<var: #thePage type: #'StackPage *'>
+	0 to: numStackPages - 1 do:
+		[:i|
+		thePage := stackPages stackPageAt: i.
+		(stackPages isFree: thePage) ifFalse:
+			[self assert: (self assertValidStackedInstructionPointersIn: thePage line: ln) l: ln]]
+]
+
+{ #category : #'debug support' }
+CoInterpreter >> assertValidStackedInstructionPointersIn: aStackPage line: ln [
+	"Check that the stacked instruction pointers in the given page are correct.
+	 Checks the interpreter sender/machine code callee contract."
+	<var: #aStackPage type: #'StackPage *'>
+	<var: #theFP type: #'char *'>
+	<var: #callerFP type: #'char *'>
+	<var: #theIPPtr type: #'char *'>
+	<var: #theIP type: #usqInt>
+	<var: #theMethod type: #'CogMethod *'>
+	<inline: false>
+	| prevFrameWasCogged theFP callerFP theMethod theIP theIPPtr methodObj |
+	(self asserta: (stackPages isFree: aStackPage) not l: ln) ifFalse:
+		[^false].
+	prevFrameWasCogged := false.
+	theIPPtr := aStackPage headSP.
+	theFP := aStackPage headFP.
+	[(self isMachineCodeFrame: theFP)
+		ifTrue:
+			[theMethod := self mframeHomeMethod: theFP.
+			 theIP := (stackPages longAt: theIPPtr) asUnsignedInteger.
+			 self assert: (theIP = cogit ceCannotResumePC
+						  or: [self asserta: (theIP >= theMethod asUnsignedInteger
+							   and: [theIP < (theMethod asUnsignedInteger + theMethod blockSize)])])
+				l: ln.
+			prevFrameWasCogged := true]
+		ifFalse: "assert-check the interpreter frame."
+			[theIP := (stackPages longAt: theIPPtr) asUnsignedInteger.
+			 methodObj := self iframeMethod: theFP.
+			 prevFrameWasCogged ifTrue:
+				[self assert: theIP = cogit ceReturnToInterpreterPC l: ln].
+			 theIP = cogit ceReturnToInterpreterPC ifTrue:
+				[theIP := self iframeSavedIP: theFP].
+			 self assert: (theIP >= (methodObj + (objectMemory lastPointerOf: methodObj) + BaseHeaderSize - 1)
+						  and: [theIP < (methodObj + (objectMemory byteLengthOf: methodObj) + BaseHeaderSize)])
+				l: ln.
+			 prevFrameWasCogged := false].
+	(callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
+		[theIPPtr := theFP + FoxCallerSavedIP.
+		 theFP := callerFP].
+	^true
 ]
 
 { #category : #'jump bytecodes' }
@@ -2108,7 +2172,9 @@ CoInterpreter >> commenceCogCompiledCodeCompaction [
 	instructionPointer ~= 0 ifTrue:
 		[self push: instructionPointer.
 		 self externalWriteBackHeadStackPointer].
+	self assertValidStackedInstructionPointers: #'__LINE__'.
 	cogit compactCogCompiledCode.
+	self assertValidStackedInstructionPointers: #'__LINE__'.
 	instructionPointer ~= 0 ifTrue:
 		[instructionPointer := self popStack.
 		 self externalWriteBackHeadStackPointer].

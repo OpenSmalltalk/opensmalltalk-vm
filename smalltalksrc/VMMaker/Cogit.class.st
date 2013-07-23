@@ -1872,13 +1872,20 @@ Cogit >> addressOfEndOfCase: n inCPIC: cPIC [
 { #category : #accessing }
 Cogit >> addressSpaceMask [
 	<doNotGenerate>
-	"The first parenthesis generates a word of ones, -3 removes the two lowest bits because of ARM's requirement to have 4-aligned jumping addresses"
-	^((1 << (8 * BytesPerWord)) - 1) - 3
+	"Quad-byte-align, because the ARM requires 4-byte aligned jump & call targets."
+	^((1 << (8 * BytesPerWord)) - 1) bitAnd: -4
 ]
 
 { #category : #'generate machine code' }
 Cogit >> alignUptoRoutineBoundary: anAddress [ 
 	^anAddress + 7 bitClear: 7
+]
+
+{ #category : #accessing }
+Cogit >> allButTopBitOfAddressSpaceMask [
+	<doNotGenerate>
+	"Quad-byte-align, because the ARM requires 4-byte aligned jump & call targets."
+	^((1 << (8 * BytesPerWord - 1)) - 1) bitAnd: -4
 ]
 
 { #category : #'garbage collection' }
@@ -6324,7 +6331,7 @@ Cogit >> mapPrimitive: primitiveRoutine "<Symbol>" withIndexToUniqueAddress: pri
 	| uniqueAddress |
 	<doNotGenerate>
 	self assert: (primitiveRoutine isSymbol or: [primitiveRoutine isBlock]).
-	uniqueAddress := -1 - methodZoneBase - (primitiveIndex * 4) - 16r1000 bitAnd: self addressSpaceMask.
+	uniqueAddress := -1 - methodZoneBase - (primitiveIndex * 4) - 16r1000 bitAnd: self allButTopBitOfAddressSpaceMask.
 	simulatedTrampolines
 		at: uniqueAddress
 		ifAbsentPut:
@@ -7122,14 +7129,13 @@ Cogit >> printMethodHeader: cogMethod on: aStream [
 	aStream ensureCr.
 	cogMethod asInteger printOn: aStream base: 16.
 	aStream crtab.
-	cogMethod cmType = CMMethod
-		ifTrue:
-			[aStream nextPutAll: 'objhdr: '.
-			cogMethod objectHeader printOn: aStream base: 16]
-		ifFalse:
-			[aStream nextPutAll: 'homemth: '.
-			cogMethod cmHomeMethod asUnsignedInteger printOn: aStream base: 16.
-			aStream crtab; nextPutAll: 'startpc: '; print: cogMethod startpc].
+	cogMethod cmType = CMMethod ifTrue:
+		[aStream nextPutAll: 'objhdr: '.
+		cogMethod objectHeader printOn: aStream base: 16].
+	cogMethod cmType = CMBlock ifTrue:
+		[aStream nextPutAll: 'homemth: '.
+		cogMethod cmHomeMethod asUnsignedInteger printOn: aStream base: 16.
+		aStream crtab; nextPutAll: 'startpc: '; print: cogMethod startpc].
 	aStream
 		crtab; nextPutAll: 'nArgs: ';	print: cogMethod cmNumArgs;
 		tab;    nextPutAll: 'type: ';	print: cogMethod cmType.
@@ -7980,11 +7986,14 @@ Cogit >> simulateLeafReturnIn: aMemory [
 Cogit >> simulatedAddressFor: anObject [
 	"Answer a simulated address for a block or a symbol.  This is an address that
 	 can be called, read or written by generated machine code, and will be mapped
-	 into a Smalltalk message send or block evaluation."
+	 into a Smalltalk message send or block evaluation.
+
+	 N.B. These addresses are at the top end of the bottom half of the address space
+	 so that they don't have the sign bit set and so will not look like negative numbers."
 	<doNotGenerate>
 	^simulatedAddresses
 		at: anObject
-		ifAbsentPut: [(simulatedAddresses size + 101 * BytesPerWord) negated bitAnd: self addressSpaceMask]
+		ifAbsentPut: [(simulatedAddresses size + 101 * BytesPerWord) negated bitAnd: self allButTopBitOfAddressSpaceMask]
 ]
 
 { #category : #initialization }
