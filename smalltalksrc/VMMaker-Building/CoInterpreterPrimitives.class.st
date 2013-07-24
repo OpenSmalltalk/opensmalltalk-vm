@@ -660,7 +660,8 @@ CoInterpreterPrimitives >> primitiveTerminateTo [
 			  aContextOrNil's frame. Common in the exception system and so helps to be fast."
 			 (theFP = framePointer
 			  and: [pageToStopOn = stackPage]) ifTrue:
-				[(self frameCallerFP: theFP) ~= contextsFP ifTrue:
+				[self assertValidStackedInstructionPointersIn: stackPage line: #'__LINE__'.
+				 (self frameCallerFP: theFP) ~= contextsFP ifTrue:
 					[stackedReceiverOffset := self frameStackedReceiverOffset: theFP.
 					 frameAbove := self findFrameAbove: contextsFP inPage: pageToStopOn.
 					 contextsIP := (self frameCallerSavedIP: frameAbove) asUnsignedInteger.
@@ -691,9 +692,10 @@ CoInterpreterPrimitives >> primitiveTerminateTo [
 						withValue: (self withSmallIntegerTags: contextsFP).
 					 framePointer := newFP.
 					 stackPointer := newSP].
-				self pop: 1.
-				self assert: stackPage = stackPages mostRecentlyUsedPage.
-				^nil].
+				 self pop: 1.
+				 self assertValidStackedInstructionPointersIn: stackPage line: #'__LINE__'.
+				 self assert: stackPage = stackPages mostRecentlyUsedPage.
+				 ^nil].
 			 theFP := self externalEnsureIsBaseFrame: theFP. "May cause a GC!!"
 			 currentCtx := self frameCallerContext: theFP.
 			 "May also reclaim aContextOrNil's page, hence..."
@@ -704,6 +706,7 @@ CoInterpreterPrimitives >> primitiveTerminateTo [
 		ifFalse:
 			[currentCtx := objectMemory fetchPointer: SenderIndex ofObject: thisCtx].
 
+	self assertValidStackedInstructionPointers: #'__LINE__'.
 	(self context: thisCtx hasSender: aContextOrNil) ifTrue:
 		["Need to walk the stack freeing stack pages and nilling contexts."
 		[currentCtx = aContextOrNil
@@ -782,8 +785,10 @@ CoInterpreterPrimitives >> primitiveTerminateTo [
 			 self assert: (self isBaseFrame: (self frameOfMarriedContext: thisCtx)).
 			 theFP := self frameOfMarriedContext: thisCtx.
 			 self frameCallerContext: theFP put: aContextOrNil]
-		ifFalse: [objectMemory storePointer: SenderIndex ofObject: thisCtx withValue: aContextOrNil].
+		ifFalse:
+			[objectMemory storePointer: SenderIndex ofObject: thisCtx withValue: aContextOrNil].
 	self pop: 1.
+	self assertValidStackedInstructionPointers: #'__LINE__'.
 	self assert: stackPage = stackPages mostRecentlyUsedPage
 ]
 
