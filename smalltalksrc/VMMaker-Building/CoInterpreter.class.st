@@ -866,14 +866,14 @@ CoInterpreter >> assertValidStackedInstructionPointersIn: aStackPage line: ln [
 			[theIP := (stackPages longAt: aStackPage headSP) asUnsignedInteger.
 			 theFP := aStackPage headFP.
 			 stackPage = aStackPage ifTrue:
-				[self assert: framePointer = theFP]].
+				[self assert: framePointer = theFP l: ln]].
 	[(self isMachineCodeFrame: theFP)
 		ifTrue:
 			[theMethod := self mframeHomeMethod: theFP.
 			 self assert: (theIP = cogit ceCannotResumePC
-						  or: [self asserta: (theIP >= theMethod asUnsignedInteger
-							   and: [theIP < (theMethod asUnsignedInteger + theMethod blockSize)])])
-				l: ln.
+						  or: [theIP >= theMethod asUnsignedInteger
+							   and: [theIP < (theMethod asUnsignedInteger + theMethod blockSize)]])
+					l: ln.
 			prevFrameWasCogged := true]
 		ifFalse: "assert-check the interpreter frame."
 			[methodObj := self iframeMethod: theFP.
