@@ -696,6 +696,7 @@ CoInterpreterPrimitives >> primitiveTerminateTo [
 				 self assertValidStackedInstructionPointersIn: stackPage line: #'__LINE__'.
 				 self assert: stackPage = stackPages mostRecentlyUsedPage.
 				 ^nil].
+			 self assertValidStackedInstructionPointers: #'__LINE__'.
 			 theFP := self externalEnsureIsBaseFrame: theFP. "May cause a GC!!"
 			 currentCtx := self frameCallerContext: theFP.
 			 "May also reclaim aContextOrNil's page, hence..."
