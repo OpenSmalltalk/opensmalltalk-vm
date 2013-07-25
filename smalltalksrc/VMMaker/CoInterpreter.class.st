@@ -2170,6 +2170,8 @@ CoInterpreter >> commenceCogCompiledCodeCompaction [
 	cogCompiledCodeCompactionCalledFor := false.
 	cogit recordEventTrace ifTrue:
 		[self recordTrace: TraceCodeCompaction thing: TraceCodeCompaction source: 0].
+	cogit recordPrimTrace ifTrue:
+		[self fastLogPrim: TraceCodeCompaction].
 	startTime := self ioUTCMicrosecondsNow.
 
 	"This can be called in a number of circumstances.  The instructionPointer
@@ -2631,9 +2633,9 @@ CoInterpreter >> dumpPrimTraceLog [
 	(primTraceLog at: (self safe: primTraceLogIndex - 1 mod: PrimTraceLogSize)) = 0 ifTrue: [^nil].
 	(primTraceLog at: primTraceLogIndex) ~= 0 ifTrue:
 		[primTraceLogIndex to: PrimTraceLogSize - 1 do:
-			[:i | objectMemory safePrintStringOf: (primTraceLog at: i); cr]].
+			[:i | self printPrimLogEntryAt: i; cr]].
 	0 to: primTraceLogIndex - 1 do:
-		[:i | objectMemory safePrintStringOf: (primTraceLog at: i); cr]
+		[:i | self printPrimLogEntryAt: i; cr]
 ]
 
 { #category : #'debug support' }
@@ -5159,6 +5161,7 @@ CoInterpreter >> preBecomeAction [
 
 { #category : #'object memory support' }
 CoInterpreter >> preGCAction: gcModeArg [
+	<inline: true>
 	"Need to write back the frame pointers unless all pages are free (as in snapshot).
 	 Need to set gcMode var (to avoid passing the flag through a lot of the updating code)"
 	super preGCAction: gcModeArg.
@@ -5168,7 +5171,12 @@ CoInterpreter >> preGCAction: gcModeArg [
 	cogit recordEventTrace ifTrue:
 		[| traceType |
 		traceType := gcModeArg == GCModeFull ifTrue: [TraceFullGC] ifFalse: [TraceIncrementalGC].
-		self recordTrace: traceType thing: traceType source: 0]
+		self recordTrace: traceType thing: traceType source: 0].
+
+	cogit recordPrimTrace ifTrue:
+		[| traceType |
+		traceType := gcModeArg == GCModeFull ifTrue: [TraceFullGC] ifFalse: [TraceIncrementalGC].
+		self fastLogPrim: traceType]
 ]
 
 { #category : #'cog jit support' }
@@ -5538,6 +5546,24 @@ CoInterpreter >> printMethodHeaderOop: anOop [
 		 cogMethod ~= 0 ifTrue:
 			[^self printHex: anOop; space; printOopShort: cogMethod methodHeader]].
 	^self printOopShort: anOop
+]
+
+{ #category : #'debug support' }
+CoInterpreter >> printPrimLogEntryAt: i [
+	<inline: false>
+	| intOrSelector |
+	intOrSelector := primTraceLog at: i.
+	(objectMemory isIntegerObject: intOrSelector)
+		ifTrue:
+			[ intOrSelector = TraceIncrementalGC ifTrue:
+				[self print: '**IncrementalGC**'. ^nil].
+			 intOrSelector = TraceFullGC ifTrue:
+				[self print: '**FullGC**'. ^nil].
+			 intOrSelector = TraceCodeCompaction ifTrue:
+				[self print: '**CompactCode**'. ^nil].
+			 self print: '???']
+		ifFalse:
+			[objectMemory safePrintStringOf: intOrSelector]
 ]
 
 { #category : #'debug printing' }
