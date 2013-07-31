@@ -216,21 +216,24 @@ TMethod >> checkForCompleteness: stmtLists in: aCodeGen [
 
 	complete := true.
 	stmtLists do:
-		[ :stmtList |
+		[:stmtList|
 		stmtList statements do:
-			[ :node |
+			[:node|
 			[(self inlineableSend: node in: aCodeGen) ifTrue:
 				[complete := false.  "more inlining to do"
 				^self]]]].
 
 	parseTree
 		nodesDo:
-			[ :n |
-			(self inlineableFunctionCall: n in: aCodeGen) ifTrue:
+			[:node|
+			(self inlineableFunctionCall: node in: aCodeGen) ifTrue:
 				[complete := false.  "more inlining to do"
 				^self]]
 		unless:
-			[ :n | n isSend and: [#(cCode:inSmalltalk: assert: asserta:) includes: n selector]]
+			[:node|
+			node isSend
+			and: [node selector == #cCode:inSmalltalk:
+				or: [aCodeGen isAssertSelector: node selector]]]
 ]
 
 { #category : #'primitive compilation' }
@@ -1089,18 +1092,25 @@ TMethod >> isFunctional [
 TMethod >> isNode: aNode substitutableFor: argName inMethod: targetMeth in: aCodeGen [
 	"Answer true if the given parameter node is either a constant, a local variable, or a formal parameter of the receiver. Such parameter nodes may be substituted directly into the body of the method during inlining. Note that global variables cannot be subsituted into methods with possible side effects (i.e., methods that may assign to global variables) because the inlined method might depend on having the value of the global variable captured when it is passed in as an argument."
 
-	| var |
+	| var madeNonTrivialCall |
 	aNode isConstant ifTrue: [^true].
 
 	aNode isVariable ifTrue:
 		[var := aNode name.
 		((locals includes: var) or: [args includes: var]) ifTrue: [^true].
 		(#(self true false nil) includes: var) ifTrue: [^true].
-		"We can substitute any variable provided it is only read in the method being inlined."
+		"We can substitute any variable provided it is only read in the method being inlined,
+		 and if it is not read after any non-trivial call (which may update the variable)."
+		madeNonTrivialCall := false.
 		(targetMeth isComplete
 		 and: [targetMeth parseTree noneSatisfy:
 				[:node|
-				node isAssignment and: [node variable name = argName]]]) ifTrue:
+				 (node isSend
+				  and: [(aCodeGen isBuiltinSelector: node selector) not]) ifTrue:
+					[madeNonTrivialCall := true].
+				 (madeNonTrivialCall and: [node isVariable and: [node name = argName]])
+				 or: [node isAssignment
+					  and: [node variable name = argName]]]]) ifTrue:
 			[^true].
 		(targetMeth maySubstituteGlobal: var in: aCodeGen) ifTrue: [^true]].
 
@@ -1862,7 +1872,7 @@ TMethod >> statementsFor: sourceText varName: varName [
 ]
 
 { #category : #inlining }
-TMethod >> statementsListsForInlining [
+TMethod >> statementsListsForInliningIn: aCodeGen [
 	"Answer a collection of statement list nodes that are candidates for inlining.
 	 Currently, we cannot inline into the argument blocks of and: and or: messages.
 	 We do not want to inline code strings within cCode:inSmalltalk: blocks (those with a
@@ -1873,17 +1883,19 @@ TMethod >> statementsListsForInlining [
 	stmtLists := OrderedCollection new: 10.
 	parseTree
 		nodesDo:
-			[ :node | 
-			node isStmtList ifTrue: [ stmtLists add: node ]]
+			[:node|
+			node isStmtList ifTrue: [stmtLists add: node]]
 		unless:
-			[ :node |
-			node isSend and: [#(cCode:inSmalltalk: assert: asserta:) includes: node selector]].
+			[:node|
+			node isSend
+			and: [node selector == #cCode:inSmalltalk:
+				or: [aCodeGen isAssertSelector: node selector]]].
 	parseTree nodesDo:
-		[ :node | 
+		[:node|
 		node isSend ifTrue:
 			[node selector = #cCode:inSmalltalk: ifTrue:
 				[node nodesDo:
-					[:inStNode| stmtLists remove: inStNode ifAbsent: []]].
+					[:ccisNode| stmtLists remove: ccisNode ifAbsent: []]].
 			 node selector = #cppIf:ifTrue:ifFalse: ifTrue:
 				[node args first nodesDo:
 					[:inCondNode| stmtLists remove: inCondNode ifAbsent: []]].
@@ -1908,7 +1920,7 @@ TMethod >> statementsListsForInlining [
 				stmtLists remove: node args first ifAbsent: [].
 				stmtLists remove: node args second ifAbsent: []]].
 		node isCaseStmt ifTrue: "don't inline cases"
-			[node cases do: [: case | stmtLists remove: case ifAbsent: []]]].
+			[node cases do: [:case| stmtLists remove: case ifAbsent: []]]].
 	^stmtLists
 ]
 
@@ -2007,11 +2019,14 @@ TMethod >> tryToInlineMethodsIn: aCodeGen [
 	sendsToInline := Dictionary new: 100.
 	parseTree
 		nodesDo:
-			[ :n |
-			(self inlineableFunctionCall: n in: aCodeGen) ifTrue:
-				[sendsToInline at: n put: (self inlineFunctionCall: n in: aCodeGen)]]
+			[:node|
+			(self inlineableFunctionCall: node in: aCodeGen) ifTrue:
+				[sendsToInline at: node put: (self inlineFunctionCall: node in: aCodeGen)]]
 		unless: "Don't inline the arguments to asserts to keep the asserts readable"
-			[:n| n isSend and: [#(cCode:inSmalltalk: assert: asserta:) includes: n selector]].
+			[:node|
+			node isSend
+			and: [node selector == #cCode:inSmalltalk:
+				or: [aCodeGen isAssertSelector: node selector]]].
 
 	sendsToInline isEmpty ifFalse:
 		[didSomething := true.
@@ -2021,12 +2036,12 @@ TMethod >> tryToInlineMethodsIn: aCodeGen [
 		[writtenToGlobalVarsCache := nil.
 		^didSomething].
 
-	stmtLists := self statementsListsForInlining.
+	stmtLists := self statementsListsForInliningIn: aCodeGen.
 	stmtLists do:
-		[ :stmtList | 
+		[:stmtList|
 		newStatements := OrderedCollection new: 100.
 		stmtList statements do:
-			[ :stmt |
+			[:stmt|
 			(self inlineCodeOrNilForStatement: stmt in: aCodeGen)
 				ifNil: [newStatements addLast: stmt]
 				ifNotNil: [:inlinedStmts|
