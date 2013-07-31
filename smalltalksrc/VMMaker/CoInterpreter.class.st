@@ -1420,7 +1420,7 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 	depending on whether the target method is cogged or not."
 	<api>
 	<option: #NewspeakVM>
-	| class canLinkCacheTag errSelIdx cogMethod newCogMethod mClassMixin mixinApplication |
+	| class canLinkCacheTag errSelIdx cogMethod mClassMixin mixinApplication |
 	<inline: false>
 	<var: #cogMethod type: #'CogMethod *'>
 	<var: #newCogMethod type: #'CogMethod *'>
@@ -1452,20 +1452,18 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 		ifFalse:
 			[(errSelIdx := self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:
 				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: lkupClass.
-				"NOTREACHED"
-				self assert: false]].
+				self assert: false "NOTREACHED"]].
 	"Method found and has a cog method.  Attempt to link to it."
 	(self maybeMethodHasCogMethod: newMethod) ifTrue:
 		[cogMethod := self cogMethodOf: newMethod.
-		 cogMethod selector = objectMemory nilObject ifTrue:
-			[cogit setSelectorOf: cogMethod to: selector].
-		 "Deal with anonymous accessors, e.g. in Newspeak.  The cogMethod may not have the correct
-		  selector.  If not, try and compile a new method with the correct selector."
-		 cogMethod selector ~= selector ifTrue:
-			[self assert: (self methodClassAssociationOf: newMethod) = objectMemory nilObject.
-			 newCogMethod := cogit cog: newMethod selector: selector.
-			 newCogMethod ifNotNil:
-				[cogMethod := newCogMethod]].
+		 cogMethod selector = objectMemory nilObject
+			ifTrue: [cogit setSelectorOf: cogMethod to: selector]
+			ifFalse:
+				["Deal with anonymous accessors, e.g. in Newspeak.  The cogMethod may not have the correct
+				  selector.  If not, try and compile a new method with the correct selector."
+				 cogMethod selector ~= selector ifTrue:
+					[(cogit cog: newMethod selector: selector) ifNotNil:
+						[:newCogMethod| cogMethod := newCogMethod]]].
 		 (cogMethod selector = selector
 		 and: [canLinkCacheTag]) ifTrue:
 			[cogit
@@ -1476,8 +1474,7 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 				receiver: rcvr].
 		 instructionPointer := self popStack.
 		 self executeNewMethod.
-		 self assert: false
-		 "NOTREACHED"].
+		 self assert: false "NOTREACHED"].
 	instructionPointer := self popStack.
 	^self interpretMethodFromMachineCode
 	"NOTREACHED"
@@ -1723,7 +1720,7 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 	Continue execution via either executeMethod or interpretMethodFromMachineCode:
 	depending on whether the target method is cogged or not."
 	<api>
-	| class canLinkCacheTag errSelIdx cogMethod newCogMethod |
+	| class canLinkCacheTag errSelIdx cogMethod |
 	<inline: false>
 	<var: #cogMethod type: #'CogMethod *'>
 	<var: #newCogMethod type: #'CogMethod *'>
@@ -1765,21 +1762,19 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 									ifFalse: [cogit noCheckEntryOffset])
 							receiver: rcvr].
 				self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: class.
-				"NOTREACHED"
-				self assert: false]].
+				self assert: false "NOTREACHED"]].
 	"Method found and has a cog method.  Attempt to link to it.  The receiver's class may be young.
 	 If the Cogit can't store young classes in inline caches we can link to an open PIC instead."
 	(self maybeMethodHasCogMethod: newMethod) ifTrue:
 		[cogMethod := self cogMethodOf: newMethod.
-		 cogMethod selector = objectMemory nilObject ifTrue:
-			[cogit setSelectorOf: cogMethod to: selector].
-		 "Deal with anonymous accessors, e.g. in Newspeak.  The cogMethod may not have the correct
-		  selector.  If not, try and compile a new method with the correct selector."
-		 cogMethod selector ~= selector ifTrue:
-			[self assert: (self methodClassAssociationOf: newMethod) = objectMemory nilObject.
-			 newCogMethod := cogit cog: newMethod selector: selector.
-			 newCogMethod ifNotNil:
-				[cogMethod := newCogMethod]].
+		 cogMethod selector = objectMemory nilObject
+			ifTrue: [cogit setSelectorOf: cogMethod to: selector]
+			ifFalse:
+				["Deal with anonymous accessors, e.g. in Newspeak.  The cogMethod may not have the
+				  correct selector.  If not, try and compile a new method with the correct selector."
+				 cogMethod selector ~= selector ifTrue:
+					[(cogit cog: newMethod selector: selector) ifNotNil:
+						[:newCogMethod| cogMethod := newCogMethod]]].
 		 (cogMethod selector = selector
 		  and: [canLinkCacheTag])
 			ifTrue:
@@ -1798,8 +1793,7 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 					receiver: rcvr].
 		 instructionPointer := self popStack.
 		 self executeNewMethod.
-		 self assert: false
-		 "NOTREACHED"].
+		 self assert: false "NOTREACHED"].
 	instructionPointer := self popStack.
 	^self interpretMethodFromMachineCode
 	"NOTREACHED"
@@ -2396,24 +2390,6 @@ CoInterpreter >> compilationBreakpointFor: selectorOop [
 CoInterpreter >> computeStackZoneSize [
 	^numStackPages * ((self sizeof: CogStackPage) + self stackPageByteSize)
 	 + stackPages extraStackBytes
-]
-
-{ #category : #'frame access' }
-CoInterpreter >> contextInstructionPointer: mcpc context: aContext [
-	"Answer a value to store in the InstructionPointer index of a context object for mcpc.
-	 This is needed for cannotReturn: where we have the instructionPointer, the context
-	 but not the cog method, and so don't know which method or block we're in.  Find it."
-	<inline: false>
-	| methodObj homeMethod cogMethod |
-	<var: #homeMethod type: #'CogMethod *'>
-	<var: #cogMethod type: #'CogBlockMethod *'>
-	methodObj := objectMemory fetchPointer: MethodIndex ofObject: aContext.
-	self assert: (self methodHasCogMethod: methodObj).
-	homeMethod := self cogMethodOf: methodObj.
-	cogMethod := cogit findEnclosingMethodFor: mcpc inHomeMethod: homeMethod.
-	self assert: (cogMethod cmType = CMBlock)
-				= ((objectMemory fetchPointer: ClosureIndex ofObject: aContext) ~= objectMemory nilObject).
-	^self encodedNativePCOf: mcpc cogMethod: cogMethod
 ]
 
 { #category : #'frame access' }
