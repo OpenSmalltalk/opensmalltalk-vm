@@ -154,13 +154,12 @@ CogMethodZone >> compactCompiledCode: objectHeaderValue [
 			 dest objectHeader: objectHeaderValue.
 			 dest cmType = CMMethod
 				ifTrue:
-					["For non-Newspeak there should ne a one-to-one mapping metween bytecoded and
-					  cog methods. For Newspeak not necessarily, but only for anonymous accessors."
-					 self assert: ((coInterpreter rawHeaderOf: dest methodObject) asInteger = source asInteger
-								or: [(cogit noAssertMethodClassAssociationOf: dest methodObject) = objectMemory nilObject]).
+					["For non-Newspeak there should be a one-to-one mapping metween bytecoded and
+					  cog methods.  For Newspeak not necessarily, but only for anonymous accessors."
 					"Only update the original method's header if it is referring to this CogMethod."
-					 (coInterpreter rawHeaderOf: dest methodObject) asInteger = source asInteger ifTrue:
-						[coInterpreter rawHeaderOf: dest methodObject put: dest asInteger]]
+					 (coInterpreter rawHeaderOf: dest methodObject) asInteger = source asInteger
+						ifTrue: [coInterpreter rawHeaderOf: dest methodObject put: dest asInteger]
+						ifFalse: [self assert: (cogit noAssertMethodClassAssociationOf: dest methodObject) = objectMemory nilObject]]
 				ifFalse:
 					[dest cmType = CMOpenPIC ifTrue:
 						[dest nextOpenPIC: openPICList asUnsignedInteger.
@@ -168,17 +167,33 @@ CogMethodZone >> compactCompiledCode: objectHeaderValue [
 			 dest cmUsageCount > 0 ifTrue:
 				[dest cmUsageCount: dest cmUsageCount // 2].
 			 dest := coInterpreter
-								cCoerceSimple: dest asInteger + bytes
+								cCoerceSimple: dest asUnsignedInteger + bytes
 								to: #'CogMethod *'].
 		 source := coInterpreter
-							cCoerceSimple: source asInteger + bytes
+							cCoerceSimple: source asUnsignedInteger + bytes
 							to: #'CogMethod *'].
-	mzFreeStart := dest asInteger.
+	mzFreeStart := dest asUnsignedInteger.
 	methodBytesFreedSinceLastCompaction := 0
 ]
 
 { #category : #accessing }
 CogMethodZone >> findPreviouslyCompiledVersionOf: aMethodObj with: aSelectorOop [
+	"Newspeak uses a set of methods to implement accessors, a setter and a getter for
+	 each inst var offset (e.g. 0 to 255).  These accessors are installed under the relevant
+	 selectors in different method dictionaries as required.  These methods effectively
+	 have multiple selectors.  The current inline cache design stores the selector of a
+	 linked send in the header of the target method.  So this requires a one-to-many
+	 mapping of bytecoded method to cog method, with the bytecoded method referring
+	 directly to only one cog method, which will have a specific selector, not necessarily
+	 the right one.  It is therefore worth-while searching for a cog method on this method
+	 that has the right selector.
+	 We could revisit this:
+		- a send site could have two loads, one for the selector and one for the class,
+		  eliminating the need to store the selector in the header of a cog method
+		  (although it would still be needed in a PIC, because open PICs are shared)
+		- a set of unpaired cog methods could be maintained to speed up the search. since
+		  the methodHeader field is effectively unused in an unpaired method the list could
+		  link through this field (c.f. the openPICList linked through the methodObject field)."
 	<returnTypeC: #'CogMethod *'>
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
@@ -202,21 +217,20 @@ CogMethodZone >> freeMethod: cogMethod [
 	self assert: (cogit cogMethodDoesntLookKosher: cogMethod) = 0.
 	cogMethod cmType = CMMethod ifTrue:
 		["For non-Newspeak there should ne a one-to-one mapping between bytecoded and
-		  cog methods. For Newspeak not necessarily, but only for anonymous accessors."
-		 self assert: ((coInterpreter rawHeaderOf: cogMethod methodObject) asInteger = cogMethod asInteger
-					or: [(cogit noAssertMethodClassAssociationOf: cogMethod methodObject) = objectMemory nilObject]).
+		  cog methods.  For Newspeak not necessarily, but only for anonymous accessors."
 		"Only reset the original method's header if it is referring to this CogMethod."
-		 (coInterpreter rawHeaderOf: cogMethod methodObject) asInteger = cogMethod asInteger ifTrue:
-			[coInterpreter
-				rawHeaderOf: cogMethod methodObject
-				put: cogMethod methodHeader].
+		 (coInterpreter rawHeaderOf: cogMethod methodObject) asInteger = cogMethod asInteger
+			ifTrue:
+				[coInterpreter rawHeaderOf: cogMethod methodObject put: cogMethod methodHeader]
+			ifFalse:
+				[self assert: (cogit noAssertMethodClassAssociationOf: cogMethod methodObject) = objectMemory nilObject].
 		 cogMethod cmRefersToYoung: false].
 	cogMethod cmType = CMOpenPIC ifTrue:
 		[self removeFromOpenPICList: cogMethod.
 		 cogMethod cmRefersToYoung: false].
 	cogMethod cmType: CMFree.
 	methodBytesFreedSinceLastCompaction := methodBytesFreedSinceLastCompaction
-											+ cogMethod blockSize
+												+ cogMethod blockSize
 ]
 
 { #category : #compaction }
