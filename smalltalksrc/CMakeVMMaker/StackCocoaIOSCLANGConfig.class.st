@@ -10,7 +10,7 @@ Class {
 	#category : #'CMakeVMMaker-IOS'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #'source files' }
 StackCocoaIOSCLANGConfig >> coreSources [ 
 " can't use GCC stuff "
 	^ #(
@@ -18,11 +18,17 @@ StackCocoaIOSCLANGConfig >> coreSources [
 		)
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #settings }
 StackCocoaIOSCLANGConfig >> setExtraTargetProperties: maker [
 
 
 	maker set: 'CMAKE_C_COMPILER' to: 'clang'.
 	
 	super setExtraTargetProperties: maker
+]
+
+{ #category : #settings }
+StackCocoaIOSCLANGConfig >> setGlobalOptions: maker [
+	maker set: 'CMAKE_C_COMPILER' to: '/usr/bin/clang'.
+	maker set: 'CMAKE_CXX_COMPILER' to: '/usr/bin/clang++'.
 ]
