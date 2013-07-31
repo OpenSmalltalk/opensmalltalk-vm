@@ -89,6 +89,7 @@ CoInterpreterStackPages >> freeStackPage: aPage [ "<InterpreterStackPage>"
 	                v                        <-prev-next->                         v
 	                free page<->free page<->free page<->free page"
 	<var: #aPage type: #'StackPage *'>
+	<inline: false>
 	self freeStackPageNoAssert: aPage.
 	self assert: self pageListIsWellFormed
 ]

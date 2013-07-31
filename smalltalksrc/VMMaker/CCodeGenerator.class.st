@@ -510,7 +510,7 @@ CCodeGenerator >> collectInlineList: inlineFlagOrSymbol [
 	"build dictionary to record the number of calls to each method"
 	callsOf := Dictionary new: methods size * 2.
 	methods keysAndValuesDo:
-		[ :s :m |
+		[:s :m|
 		m isRealMethod ifTrue: [callsOf at: s put: 0]].
 
 	"For each method, scan its parse tree once or twice to:
@@ -519,7 +519,9 @@ CCodeGenerator >> collectInlineList: inlineFlagOrSymbol [
 		3. increment the sender counts of the methods it calls"
 	inlineList := Set new: methods size * 2.
 	(methods reject: [:m| selectorsOfMethodsNotToInline includes: m selector]) do:
-		[ :m | | inlineIt hasUnrenamableCCode nodeCount  |
+		[:m| | inlineIt hasUnrenamableCCode nodeCount |
+		breakSrcInlineSelector = m selector ifTrue:
+			[self halt].
 		inlineIt := #dontCare.
 		(translationDict includesKey: m selector)
 			ifTrue: [hasUnrenamableCCode := true]
@@ -527,11 +529,12 @@ CCodeGenerator >> collectInlineList: inlineFlagOrSymbol [
 				[hasUnrenamableCCode := m hasUnrenamableCCode.
 				 nodeCount := 0.
 				 m parseTree nodesDo:
-					[ :node | | sel |
+					[:node|
 					node isSend ifTrue:
-						[sel := node selector.
-						 (callsOf at: sel ifAbsent: [ nil ]) ifNotNil:
-							[:senderCount| callsOf at: sel put: senderCount + 1]].
+						[callsOf
+							at: node selector
+							ifPresent:
+								[:senderCount| callsOf at: node selector put: senderCount + 1]].
 					 nodeCount := nodeCount + 1].
 				inlineIt := m extractInlineDirective].  "may be true, false, or #dontCare"
 		(hasUnrenamableCCode or: [inlineIt == false])
@@ -1026,7 +1029,7 @@ CCodeGenerator >> exportedPrimitiveNames [
 CCodeGenerator >> extractTypeFor: aVariable fromDeclaration: aVariableDeclaration [
 	"Eliminate inessentials from aVariableDeclaration to answer a C type without the variable,
 	 or initializations etc"
-	| decl fpIndex |
+	| decl fpIndex closeidx openidx |
 	decl := aVariableDeclaration.
 	(decl beginsWith: 'static') ifTrue:
 		[decl := decl allButFirst: 6].
@@ -1037,6 +1040,11 @@ CCodeGenerator >> extractTypeFor: aVariable fromDeclaration: aVariableDeclaratio
 		[decl := decl copyReplaceFrom: (decl indexOf: $( startingAt: fpIndex + 1)
 					to: (decl indexOf: $) startingAt: fpIndex + 1)
 					with: ''].
+	"collapse [size] to *"
+	openidx := 0.
+	[(openidx := decl indexOf: $[ startingAt: openidx + 1) > 0
+	 and: [(closeidx := decl indexOf: $] startingAt: openidx + 1) > 0]] whileTrue:
+		[decl := decl copyReplaceFrom: openidx to: closeidx with: '*'].
 	^decl withBlanksTrimmed
 ]
 
@@ -2568,6 +2576,11 @@ CCodeGenerator >> inlineDispatchesInMethodNamed: selector localizingVars: varsLi
 	]
 ]
 
+{ #category : #inlining }
+CCodeGenerator >> isAssertSelector: selector [
+	^#(assert: asserta: assert:l: asserta:l:) includes: selector
+]
+
 { #category : #utilities }
 CCodeGenerator >> isBuiltinSelector: sel [
 	"Answer true if the given selector is one of the builtin selectors."
@@ -2692,9 +2705,9 @@ CCodeGenerator >> logger: aTranscriptStream [
 
 { #category : #inlining }
 CCodeGenerator >> mayInline: sel [
-	"Answer true if the method with the given selector may be inlined."
+	"Answer if the method with the given selector may be inlined."
 
-	^sel ~~ #assert: and: [inlineList includes: sel]
+	^(self isAssertSelector: sel) not and: [inlineList includes: sel]
 ]
 
 { #category : #'C code generator' }
@@ -3434,6 +3447,9 @@ CCodeGenerator >> testInliningFor: selector as: inlineFlagOrSymbol [
 	 Then try and inline into a copy of the method.  This isn't
 	 exactly what happens in the real deal but is close enough."
 	| meth |
+	(breakDestInlineSelector = selector
+	or: [breakSrcInlineSelector = selector]) ifTrue:
+		[self halt].
 	meth := (self methodNamed: selector) copy.
 	self doBasicInlining: inlineFlagOrSymbol.
 	self halt.

@@ -1380,6 +1380,11 @@ CoInterpreterMT >> transferTo: newProc from: sourceCode [
 	statProcessSwitch := statProcessSwitch + 1.
 	self push: instructionPointer.
 	self externalWriteBackHeadFramePointers.
+	self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer.
+	"ensureMethodIsCogged: in makeBaseFrameFor: in
+	 externalSetStackPageAndPointersForSuspendedContextOfProcess:
+	 below may do a code compaction. Nil instructionPointer to avoid it getting pushed twice."
+	instructionPointer := 0.
 	sched := self schedulerPointer.
 	oldProc := objectMemory fetchPointer: ActiveProcessIndex ofObject: sched.
 	self recordContextSwitchFrom: oldProc in: sourceCode.
