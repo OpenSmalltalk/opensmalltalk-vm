@@ -933,7 +933,7 @@ ObjectMemory >> byteSwapByteObjectsFrom: startOop to: stopAddr flipFloatsIf: fli
 				["oop contains bytes; unswap"
 				wordAddr := oop + BaseHeaderSize.
 				fmt >= 12 ifTrue: "compiled method; start after methodHeader and literals"
-					[wordAddr := wordAddr + BytesPerWord + ((self literalCountOf: oop) * BytesPerWord)].
+					[wordAddr := wordAddr + ((self literalCountOf: oop) + LiteralStart * BytesPerOop)].
 				self reverseBytesFrom: wordAddr to: oop + (self sizeBitsOf: oop)].
 			fmt = 6  ifTrue: "Bitmap, Float etc"
 				[(self compactClassIndexOf: oop) = ClassFloatCompactIndex
@@ -1104,7 +1104,7 @@ ObjectMemory >> checkHeapIntegrity [
 				 fmt := self formatOfHeader: hdr.
 				 (fmt <= 4 "pointers" or: [fmt >= 12 "compiled method"]) ifTrue:
 					[fmt >= 12
-						ifTrue: [fi := (self literalCountOf: obj) + 1 "+ 1 = methodHeader slot"]
+						ifTrue: [fi := (self literalCountOf: obj) + LiteralStart]
 						ifFalse: [(fmt = 3 and: [self isContextHeader: hdr])
 									ifTrue: [fi := CtxtTempFrameStart + (self fetchStackPointerOf: obj)]
 									ifFalse: [fi := self lengthOf: obj]].
@@ -1718,35 +1718,34 @@ ObjectMemory >> fetchWordLengthOf: objectPointer [
 
 { #category : #finalization }
 ObjectMemory >> finalizeReference: oop [ 
-	"During sweep phase we have encountered a weak reference. 
-	Check if  its object has gone away (or is about to) and if so, signal a 
-	semaphore. "
-	"Do *not* inline this in sweepPhase - it is quite an unlikely 
-	case to run into a weak reference"
-	| weakOop oopGone chunk firstField lastField |
+	"During sweep phase we have encountered a weak reference. Check if its object
+	 has gone away (or is about to) and if so, signal a semaphore.  Do *not* inline
+	 this in sweepPhase - it is quite an unlikely case to run into a weak reference"
+	| weakOop oopGone chunk numFields firstField lastField |
 	<inline: false>
-	<var: #oop type: 'usqInt'>
-	<var: #weakOop type: 'usqInt'>
-	firstField := BaseHeaderSize + ((self nonWeakFieldsOf: oop) << ShiftForWord).
+	<var: #oop type: #usqInt>
+	<var: #weakOop type: #usqInt>
+	numFields := self nonWeakFieldsOf: oop. "so nonWeakFieldsOf: may be inlined"
+	firstField := BaseHeaderSize + (numFields << ShiftForWord).
 	lastField := self lastPointerOf: oop.
-	firstField to: lastField by: BytesPerWord do: [:i | 
-			weakOop := self longAt: oop + i.
-			"ar 1/18/2005: Added oop < youngStart test to make sure we're not testing
-			objects in non-GCable region. This could lead to a forward reference in
-			old space with the oop pointed to not being marked and thus treated as free."
-			(weakOop == nilObj or: [(self isIntegerObject: weakOop) or:[weakOop < youngStart]])
-
-				ifFalse: ["Check if the object is being collected. 
-					If the weak reference points  
-					* backward: check if the weakOops chunk is free
-					* forward: check if the weakOoop has been marked by GC"
-					weakOop < oop
-						ifTrue: [chunk := self chunkFromOop: weakOop.
-							oopGone := ((self longAt: chunk) bitAnd: TypeMask) = HeaderTypeFree]
-						ifFalse: [oopGone := (self isMarked: weakOop) not].
-					oopGone ifTrue: ["Store nil in the pointer and signal the  interpreter"
-							self longAt: oop + i put: nilObj.
-							self signalFinalization: oop]]]
+	firstField to: lastField by: BytesPerWord do:
+		[:i|
+		weakOop := self longAt: oop + i.
+		"ar 1/18/2005: Added oop < youngStart test to make sure we're not testing
+		objects in non-GCable region. This could lead to a forward reference in
+		old space with the oop pointed to not being marked and thus treated as free."
+		(weakOop = nilObj or: [(self isIntegerObject: weakOop) or:[weakOop < youngStart]]) ifFalse:
+			["Check if the object is being collected. 
+			If the weak reference points  
+			* backward: check if the weakOops chunk is free
+			* forward: check if the weakOoop has been marked by GC"
+			weakOop < oop
+				ifTrue: [chunk := self chunkFromOop: weakOop.
+						oopGone := ((self longAt: chunk) bitAnd: TypeMask) = HeaderTypeFree]
+				ifFalse: [oopGone := (self isMarked: weakOop) not].
+			oopGone ifTrue: "Store nil in the pointer and signal the  interpreter"
+				[self longAt: oop + i put: nilObj.
+				self signalFinalization: oop]]]
 ]
 
 { #category : #'object enumeration' }
@@ -2815,7 +2814,7 @@ ObjectMemory >> isMarked: oop [
 ObjectMemory >> isMethodContextHeader: aHeader [
 	<inline: true>
 	"c.f. {BlockContext. MethodContext. PseudoContext} collect: [:class| class -> class indexIfCompact]"
-	^(self compactClassIndexOfHeader: aHeader) == ClassMethodContextCompactIndex
+	^(self compactClassIndexOfHeader: aHeader) = ClassMethodContextCompactIndex
 ]
 
 { #category : #'interpreter access' }
@@ -2972,7 +2971,7 @@ ObjectMemory >> lastPointerOf: oop [
 
 	"CompiledMethod: contains both pointers and bytes:"
 	methodHeader := self longAt: oop + BaseHeaderSize.
-	^ (methodHeader >> 10 bitAnd: 255) * BytesPerWord + BaseHeaderSize
+	^ (methodHeader >> 10 bitAnd: 255) + LiteralStart * BytesPerWord
 ]
 
 { #category : #'gc -- mark and sweep' }
@@ -2994,18 +2993,18 @@ ObjectMemory >> lastPointerOf: oop recordWeakRoot: recordWeakRoot [ "<Boolean>"
 						[self error: 'weakRoots table overflow'].
 					 weakRoots at: weakRootCount put: oop].
 				"Do not trace the object's indexed fields if it's a weak class"
-				^(self nonWeakFieldsOf: oop) << ShiftForWord].
+				^(self nonWeakFieldsOf: oop) * BytesPerOop].
 			"So fmt is 3"
 			(self isContextHeader: header) ifTrue:
 				["contexts end at the stack pointer avoiding having to init fields beyond it"
 				 contextSize := self fetchStackPointerOf: oop.
-				 ^CtxtTempFrameStart + contextSize * BytesPerWord]].
+				 ^CtxtTempFrameStart + contextSize * BytesPerOop]].
 		 sz := self sizeBitsOfSafe: oop.
 		 ^sz - BaseHeaderSize  "all pointers" ].
 	fmt < 12 ifTrue: [^0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes:"
-	^(self literalCountOf: oop) * BytesPerWord + BaseHeaderSize
+	^(self literalCountOf: oop) + LiteralStart * BytesPerOop
 ]
 
 { #category : #'gc -- compaction' }
@@ -3348,7 +3347,6 @@ ObjectMemory >> nonWeakFieldsOf: oop [
 	Note: The following is copied from fixedFieldsOf:format:length: since we do know
 	the format of the oop (e.g. format = 4) and thus don't need the length."
 	| class classFormat |
-	<inline: false> "No need to inline - we won't call this often"
 
 	self assert: (self isWeakNonInt: oop).
 
@@ -3713,7 +3711,7 @@ ObjectMemory >> printMethodReferencesTo: anOop [
 	oop := self firstAccessibleObject.
 	[oop = nil] whileFalse:
 		[(self isCompiledMethod: oop) ifTrue:
-			[i := (self literalCountOf: oop) - 1.
+			[i := (self literalCountOf: oop) + LiteralStart - 1.
 			 [i >= 0] whileTrue:
 				[anOop = (self fetchPointer: i ofObject: oop) ifTrue:
 					[self printHex: oop; print: ' @ '; printNum: i; cr.
@@ -3732,7 +3730,7 @@ ObjectMemory >> printReferencesTo: anOop [
 		[((self isPointersNonInt: oop) or: [self isCompiledMethod: oop]) ifTrue:
 			[(self isCompiledMethod: oop)
 				ifTrue:
-					[i := self literalCountOf: oop]
+					[i := (self literalCountOf: oop) + LiteralStart]
 				ifFalse:
 					[(self isContextNonInt: oop)
 						ifTrue: [i := CtxtTempFrameStart + (self fetchStackPointerOf: oop)]
@@ -4964,12 +4962,10 @@ ObjectMemory >> weakFinalizerCheck: oop [
 	<asmLabel: false> "prevent label duplication"
 	| listOop listItemOop |
 
-	
 	listOop := self fetchPointer: 0 ofObject: oop.
-	(self fetchClassOf: listOop) == (self splObj: ClassWeakFinalizer) ifTrue: [
-		listItemOop := self fetchPointer: 0 ofObject: listOop.
-		self storePointer: 1 ofObject: oop withValue: listItemOop. 
-		self storePointer: 0 ofObject: listOop withValue: oop.
-	].
+	(self fetchClassOf: listOop) = (self splObj: ClassWeakFinalizer) ifTrue:
+		[listItemOop := self fetchPointer: 0 ofObject: listOop.
+		 self storePointer: 1 ofObject: oop withValue: listItemOop. 
+		 self storePointer: 0 ofObject: listOop withValue: oop]
 
 ]

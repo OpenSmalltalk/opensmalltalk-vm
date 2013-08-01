@@ -2017,11 +2017,11 @@ CoInterpreter >> checkOkayFields: oop [
 	(objectMemory isIntegerObject: oop) ifTrue: [ ^true ].
 	(objectMemory checkOkayOop: oop) ifFalse: [ ^false ].
 	(self checkOopHasOkayClass: oop) ifFalse: [ ^false ].
-	hasYoung := objectMemory isYoung: (objectMemory fetchClassOfNonInt: oop).
 	((objectMemory isPointersNonInt: oop) or: [objectMemory isCompiledMethod: oop]) ifFalse: [ ^true ].
+	hasYoung := objectMemory isYoung: (objectMemory fetchClassOfNonInt: oop).
 	(objectMemory isCompiledMethod: oop)
 		ifTrue:
-			[i := (self literalCountOf: oop) - 1]
+			[i := (self literalCountOf: oop) + LiteralStart - 1]
 		ifFalse:
 			[(objectMemory isContext: oop)
 				ifTrue: [i := CtxtTempFrameStart + (self fetchStackPointerOf: oop) - 1]

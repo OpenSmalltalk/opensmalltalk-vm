@@ -279,7 +279,7 @@ NewObjectMemory >> allocateInterpreterChunk: byteSize [
 	newFreeStart := freeStart + byteSize.
 	newFreeStart < scavengeThreshold ifTrue:
 		[(AllocationCheckFiller ~= 0
-		  and: [(self longAt: newChunk) ~= (AllocationCheckFiller == 16rADD4E55
+		  and: [(self longAt: newChunk) ~= (AllocationCheckFiller = 16rADD4E55
 												ifTrue: [newChunk]
 												ifFalse: [AllocationCheckFiller])]) ifTrue:
 			[self error: 'last object overwritten'].
@@ -406,7 +406,7 @@ NewObjectMemory >> checkHeapIntegrity [
 				 fmt := self formatOfHeader: hdr.
 				 (fmt <= 4 "pointers" or: [fmt >= 12 "compiled method"]) ifTrue:
 					[fmt >= 12
-						ifTrue: [fi := (self literalCountOf: obj) + 1 "+ 1 = methodHeader slot"]
+						ifTrue: [fi := (self literalCountOf: obj) + LiteralStart]
 						ifFalse: [(fmt = 3 and: [self isContextHeader: hdr])
 									ifTrue: [fi := CtxtTempFrameStart + (coInterpreter fetchStackPointerOf: obj)]
 									ifFalse: [fi := self lengthOf: obj]].
@@ -840,7 +840,7 @@ NewObjectMemory >> eeInstantiateMethodContextByteSize: sizeInBytes [
 	 and should include four bytes for the base header word.
 	 Will *not* cause a GC."
 	| hash header1 |
-	self assert: (sizeInBytes == SmallContextSize or: [sizeInBytes == LargeContextSize]).
+	self assert: (sizeInBytes = SmallContextSize or: [sizeInBytes = LargeContextSize]).
 	self assert: sizeInBytes <= SizeMask.
 	hash := self newObjectHash.
 	header1 := (hash bitAnd: HashMaskUnshifted) << HashBitsOffset bitOr: self formatOfMethodContextMinusSize.
@@ -1033,7 +1033,7 @@ NewObjectMemory >> fixContextSizes [
 			((self isPointersNonInt: obj) or: [self isCompiledMethod: obj]) ifTrue:
 				[(self isCompiledMethod: obj)
 					ifTrue:
-						[i := self literalCountOf: obj]
+						[i := (self literalCountOf: obj) + LiteralStart]
 					ifFalse:
 						[(self isContextNonInt: obj)
 							ifTrue: [i := CtxtTempFrameStart + (coInterpreter fetchStackPointerOf: obj)]
@@ -1575,7 +1575,7 @@ NewObjectMemory >> interpreter [
 NewObjectMemory >> isContextHeader: aHeader [
 	<inline: true>
 	"c.f. {BlockContext. MethodContext. PseudoContext} collect: [:class| class -> class indexIfCompact]"
-	^(self compactClassIndexOfHeader: aHeader) == ClassMethodContextCompactIndex
+	^(self compactClassIndexOfHeader: aHeader) = ClassMethodContextCompactIndex
 ]
 
 { #category : #'image segment in/out' }
@@ -1607,13 +1607,13 @@ NewObjectMemory >> lastPointerOf: oop [
 		  and: [self isContextHeader: header]) ifTrue:
 			["contexts end at the stack pointer"
 			contextSize := coInterpreter fetchStackPointerOf: oop.
-			^CtxtTempFrameStart + contextSize * BytesPerWord].
+			^CtxtTempFrameStart + contextSize * BytesPerOop].
 		^(self sizeBitsOfSafe: oop) - BaseHeaderSize  "all pointers"].
 	fmt < 12 ifTrue: [^0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes"
 	numLiterals := coInterpreter literalCountOf: oop.
-	^numLiterals * BytesPerWord + BaseHeaderSize
+	^numLiterals + LiteralStart * BytesPerOop
 ]
 
 { #category : #'object enumeration' }
@@ -1624,7 +1624,7 @@ NewObjectMemory >> lastPointerOf: oop recordWeakRoot: recordWeakRoot [ "<Boolean
 	 This is a version of lastPointerOf: for markAndTrace:.
 	 Already overridden to trace stack pages for the StackInterpreter.
 	 Override to ask coInterpreter to determine literalCount of methods."
-	| fmt sz header contextSize numLiterals |
+	| fmt sz header contextSize numFields |
 	<inline: true>
 	<asmLabel: false>
 	header := self baseHeader: oop.
@@ -1638,21 +1638,22 @@ NewObjectMemory >> lastPointerOf: oop recordWeakRoot: recordWeakRoot [ "<Boolean
 						[self error: 'weakRoots table overflow'].
 					 weakRoots at: weakRootCount put: oop].
 				"Do not trace the object's indexed fields if it's a weak class"
-				^(self nonWeakFieldsOf: oop) << ShiftForWord].
+				numFields := self nonWeakFieldsOf: oop. "so nonWeakFieldsOf: may be inlined"
+				^numFields * BytesPerWord].
 			"So fmt is 3"
 			(self isContextHeader: header) ifTrue:
 				[coInterpreter setTraceFlagOnContextsFramesPageIfNeeded: oop.
 				 "contexts end at the stack pointer avoiding having to init fields beyond it"
 				 contextSize := coInterpreter fetchStackPointerOf: oop.
 				 self assert: ReceiverIndex + contextSize < (self lengthOf: oop baseHeader: header format: fmt).
-				 ^CtxtTempFrameStart + contextSize * BytesPerWord]].
+				 ^CtxtTempFrameStart + contextSize * BytesPerOop]].
 		 sz := self sizeBitsOfSafe: oop.
 		 ^sz - BaseHeaderSize  "all pointers" ].
 	fmt < 12 ifTrue: [^0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes"
-	numLiterals := coInterpreter literalCountOf: oop.
-	^numLiterals * BytesPerWord + BaseHeaderSize
+	numFields := coInterpreter literalCountOf: oop. "so literalCountOf: may be inlined"
+	^numFields + LiteralStart * BytesPerOop
 ]
 
 { #category : #'gc -- compaction' }
@@ -1669,7 +1670,7 @@ NewObjectMemory >> lastPointerWhileForwarding: oop [
 			["contexts end at the stack pointer"
 			 contextSize := coInterpreter nacFetchStackPointerOf: oop.
 			 self assert: ReceiverIndex + contextSize < (self lengthOf: oop baseHeader: header format: fmt).
-			 ^CtxtTempFrameStart + contextSize * BytesPerWord].
+			 ^CtxtTempFrameStart + contextSize * BytesPerOop].
 		 "do sizeBitsOf: using the header we obtained"
 		 size := (header bitAnd: TypeMask) = HeaderTypeSizeAndClass
 					ifTrue: [(self sizeHeader: oop) bitAnd: AllButTypeMask]
@@ -1679,7 +1680,7 @@ NewObjectMemory >> lastPointerWhileForwarding: oop [
 	"CompiledMethod: contains both pointers and bytes"
 	self assert: (header bitAnd: MarkBit) = 0.
 	numLiterals := coInterpreter literalCountOf: oop.
-	^numLiterals * BytesPerWord + BaseHeaderSize
+	^numLiterals + LiteralStart * BytesPerOop
 ]
 
 { #category : #'debug support' }
@@ -1834,7 +1835,7 @@ NewObjectMemory >> longPrintReferencesTo: anOop [
 		[((self isPointersNonInt: oop) or: [self isCompiledMethod: oop]) ifTrue:
 			[(self isCompiledMethod: oop)
 				ifTrue:
-					[i := self literalCountOf: oop]
+					[i := (self literalCountOf: oop) + LiteralStart]
 				ifFalse:
 					[(self isContextNonInt: oop)
 						ifTrue: [i := CtxtTempFrameStart + (coInterpreter fetchStackPointerOf: oop)]
@@ -2031,7 +2032,7 @@ NewObjectMemory >> numReferencesTo: anOop [
 		[((self isPointersNonInt: oop) or: [self isCompiledMethod: oop]) ifTrue:
 			[(self isCompiledMethod: oop)
 				ifTrue:
-					[i := self literalCountOf: oop]
+					[i := (self literalCountOf: oop) + LiteralStart]
 				ifFalse:
 					[(self isContextNonInt: oop)
 						ifTrue: [i := CtxtTempFrameStart + (coInterpreter fetchStackPointerOf: oop)]
@@ -2284,7 +2285,7 @@ NewObjectMemory >> printReferencesTo: anOop [
 		[((self isPointersNonInt: oop) or: [self isCompiledMethod: oop]) ifTrue:
 			[(self isCompiledMethod: oop)
 				ifTrue:
-					[i := self literalCountOf: oop]
+					[i := (self literalCountOf: oop) + LiteralStart]
 				ifFalse:
 					[(self isContextNonInt: oop)
 						ifTrue: [i := CtxtTempFrameStart + (coInterpreter fetchStackPointerOf: oop)]
