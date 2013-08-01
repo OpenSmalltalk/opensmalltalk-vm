@@ -1103,14 +1103,20 @@ TMethod >> isNode: aNode substitutableFor: argName inMethod: targetMeth in: aCod
 		 and if it is not read after any non-trivial call (which may update the variable)."
 		madeNonTrivialCall := false.
 		(targetMeth isComplete
-		 and: [targetMeth parseTree noneSatisfy:
-				[:node|
-				 (node isSend
-				  and: [(aCodeGen isBuiltinSelector: node selector) not]) ifTrue:
-					[madeNonTrivialCall := true].
-				 (madeNonTrivialCall and: [node isVariable and: [node name = argName]])
-				 or: [node isAssignment
-					  and: [node variable name = argName]]]]) ifTrue:
+		 and: [targetMeth parseTree
+				noneSatisfy:
+					[:node|
+					 (node isSend
+					  and: [(aCodeGen isBuiltinSelector: node selector) not]) ifTrue:
+						[var = 'child' ifTrue:
+							[Transcript cr; nextPutAll: node selector; flush].
+						madeNonTrivialCall := true].
+					 (madeNonTrivialCall and: [node isVariable and: [node name = argName]])
+					 or: [node isAssignment
+						  and: [node variable name = argName]]]
+				unless:
+					[:node|
+					node isSend and: [aCodeGen isAssertSelector: node selector]]]) ifTrue:
 			[^true].
 		(targetMeth maySubstituteGlobal: var in: aCodeGen) ifTrue: [^true]].
 
