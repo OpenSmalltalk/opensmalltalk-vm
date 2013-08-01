@@ -1108,9 +1108,7 @@ TMethod >> isNode: aNode substitutableFor: argName inMethod: targetMeth in: aCod
 					[:node|
 					 (node isSend
 					  and: [(aCodeGen isBuiltinSelector: node selector) not]) ifTrue:
-						[var = 'child' ifTrue:
-							[Transcript cr; nextPutAll: node selector; flush].
-						madeNonTrivialCall := true].
+						[madeNonTrivialCall := true].
 					 (madeNonTrivialCall and: [node isVariable and: [node name = argName]])
 					 or: [node isAssignment
 						  and: [node variable name = argName]]]
