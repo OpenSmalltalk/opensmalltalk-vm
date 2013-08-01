@@ -101,7 +101,7 @@ CoInterpreterPrimitives >> pathTo: goal using: stack followWeak: followWeak [
 						[hdr := objectMemory baseHeader: next.
 						 objectMemory baseHeader: next put: (hdr bitOr: MarkBit).
 						 (objectMemory isCompiledMethodHeader: hdr)
-							ifTrue: [index := self literalCountOf: next]
+							ifTrue: [index := (self literalCountOf: next) + LiteralStart]
 							ifFalse: [index := objectMemory lengthOf: next]].
 				 current := next]].
 		 current = objectMemory specialObjectsOop ifTrue:
