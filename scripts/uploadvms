@@ -19,10 +19,10 @@ fi
 TAG=`date +%g.%U.`$REV
 echo REV=$REV TAG=$TAG
 
-CSARCS="Cog.app-$TAG.tgz	coglinux-$TAG.tgz	cogwin-$TAG.zip"
-CMARCS="cogmtlinux-$TAG.tgz	CogMT.app-$TAG.tgz	cogmtwin-$TAG.zip"
-NSARCS="Newspeak Virtual Machine-$TAG.dmg	nsvmlinux-$TAG.tgz	nsvm-$TAG.msi"
-NMARCS="Newspeak Virtual MachineMT-$TAG.dmg	nsvmmtlinux-$TAG.tgz	nsvmmt-$TAG.msi"
+CSARCS="Cog.app-$TAG.tgz	coglinux-$TAG.tgz	coglinuxht-$TAG.tgz	cogwin-$TAG.zip"
+CMARCS="CogMT.app-$TAG.tgz	cogmtlinux-$TAG.tgz	cogmtlinuxht-$TAG.tgz	cogmtwin-$TAG.zip"
+NSARCS="Newspeak Virtual Machine-$TAG.dmg	nsvmlinux-$TAG.tgz	nsvmlinuxht-$TAG.tgz	nsvm-$TAG.msi"
+#NMARCS="Newspeak Virtual MachineMT-$TAG.dmg	nsvmmtlinux-$TAG.tgz	nsvmmtlinuxht-$TAG.tgz	nsvmmt-$TAG.msi"
 if [ $# = 0 ]; then
 	ARCHIVES="$CSARCS	$CMARCS		$NSARCS"
 	CheckDMG=1
@@ -35,19 +35,19 @@ else
 		case $1 in
 		-r)		REV=$1;;
 		-c)		ARCHIVES="$ARCHIVES		$CSARCS		$CMARCS";;
-		-cl)	ARCHIVES="$ARCHIVES	coglinux-$TAG.tgz";;
+		-cl)	ARCHIVES="$ARCHIVES	coglinux-$TAG.tgz	coglinuxht-$TAG.tgz";;
 		-cm)	ARCHIVES="$ARCHIVES	Cog.app-$TAG.tgz";;
 		-cw)	ARCHIVES="$ARCHIVES	cogwin-$TAG.zip";;
-		-ctl)	ARCHIVES="$ARCHIVES	cogmtlinux-$TAG.tgz";;
+		-ctl)	ARCHIVES="$ARCHIVES	cogmtlinux-$TAG.tgz	cogmtlinuxht-$TAG.tgz";;
 		-ctm)	ARCHIVES="$ARCHIVES	CogMT.app-$TAG.tgz";;
 		-ctw)	ARCHIVES="$ARCHIVES	cogmtwin-$TAG.zip";;
-		-nl)	ARCHIVES="$ARCHIVES	nsvmlinux-$TAG.tgz";;
+		-nl)	ARCHIVES="$ARCHIVES	nsvmlinux-$TAG.tgz	nsvmlinuxht-$TAG.tgz";;
 		-nm)	ARCHIVES="$ARCHIVES	Newspeak Virtual Machine-$TAG.dmg"
 				CheckDMG=1;;
 		-nw)	ARCHIVES="$ARCHIVES	nsvm-$TAG.msi"
 				CheckMSI=1;;
 		-n)		ARCHIVES="$ARCHIVES		$NSARCS";;
-		-l)		ARCHIVES="$ARCHIVES	coglinux-$TAG.tgz	cogmtlinux-$TAG.tgz	nsvmlinux-$TAG.tgz";;
+		-l)		ARCHIVES="$ARCHIVES	coglinux-$TAG.tgz	coglinuxht-$TAG.tgz	cogmtlinux-$TAG.tgz	cogmtlinuxht-$TAG.tgz	nsvmlinux-$TAG.tgz	nsvmlinuxht-$TAG.tgz";;
 		-m)		ARCHIVES="$ARCHIVES	Cog.app-$TAG.tgz	CogMT.app-$TAG.tgz	Newspeak Virtual Machine-$TAG.dmg"
 				CheckDMG=1;;
 		-v)		VERBOSE=1;;
@@ -87,14 +87,34 @@ if [ -n "$CheckMSI" -a ! -f nsvm-$TAG.msi ]; then
 	fi
 fi
 if [ ! -f README.$REV ]; then
-	cat <<END >README.$REV
+	cat <<THEEND >README.$REV
 N.B. For Squeak/Pharo/Croquet please use the archives whose names begin with
      Cog or cog.  The archives whose names begin with nsvm or Newspeak are
      for Newspeak and are missing plugins required by Squeak/Pharo/Croquet.
      VMs with "mt" or "MT" in the name are multi-threaded VMs which support
      non-blocking FFI calls.
 
+	There are two variants of the Linux VMs; those ending in "ht" have a
+	heartbeat thread, while those that don't, use an interval timer for the
+	heartbeat (the Windows and Mac VMs have a threaded heartbeat).  The
+	threaded heartbeat is better (for example, signals from the interval timer
+	interfere with system calls, etc), but to use it one must have a kernel
+	later than 2.6.12 and configure linux to allow the VM to use multiple
+	thread priorities.  To do so, create a file called VM.conf where VM is
+	the name of the vm executable ("squeak" for the Squeak vm, "nsvm" for
+	the Newspeak vm) in /etc/security/limits.d/ with contents:
+*       hard    rtprio  2
+*       soft    rtprio  2
+
+	e.g.
+sudo cat >/etc/security/limits.d/squeak.conf <<END
+*       hard    rtprio  2
+*       soft    rtprio  2
+sudo cp /etc/security/limits.d/squeak.conf /etc/security/limits.d/nsvm.conf
 END
+	Then log out and log back in for the limits to take effect.
+
+THEEND
 	echo getting svn log
 	svn log platforms/Cross/vm/sqSCCSVersion.h >>README.$REV
 	vi README.$REV

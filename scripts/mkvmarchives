@@ -53,11 +53,17 @@ if [ -n "$CL" ]; then
 	rm -rf coglinux-$TAG.tgz
 	COPYFILE_DISABLE=1 tar czf coglinux-$TAG.tgz coglinux
 	EXES="$EXES	coglinux/lib/squeak/[0-9.-]*/squeak"
+	rm -rf coglinuxht-$TAG.tgz
+	COPYFILE_DISABLE=1 tar czf coglinuxht-$TAG.tgz coglinuxht
+	EXES="$EXES	coglinuxht/lib/squeak/[0-9.-]*/squeak"
 fi
 if [ -n "$CTL" ]; then
 	rm -rf cogmtlinux-$TAG.tgz
 	COPYFILE_DISABLE=1 tar czf cogmtlinux-$TAG.tgz cogmtlinux
 	EXES="$EXES	cogmtlinux/lib/squeak/[0-9.-]*/squeak"
+	rm -rf cogmtlinuxht-$TAG.tgz
+	COPYFILE_DISABLE=1 tar czf cogmtlinuxht-$TAG.tgz cogmtlinuxht
+	EXES="$EXES	cogmtlinuxht/lib/squeak/[0-9.-]*/squeak"
 fi
 if [ -n "$CM" ]; then
 	test -d Cog.app || mkdir Cog.app
@@ -92,9 +98,12 @@ if [ -n "$CTW" ]; then
 	EXES="$EXES	cogmtwin/Squeak.exe"
 fi
 if [ -n "$NL" ]; then
-	rm -rf nsvmlinux-$TAG.tgz nsvmlinux-$TAG.tgz
+	rm -rf nsvmlinux-$TAG.tgz
 	COPYFILE_DISABLE=1 tar czf nsvmlinux-$TAG.tgz nsvmlinux
 	EXES="$EXES	nsvmlinux/lib/nsvm/4.0-$REV/nsvm"
+	rm -rf nsvmlinuxht-$TAG.tgz
+	COPYFILE_DISABLE=1 tar czf nsvmlinuxht-$TAG.tgz nsvmlinuxht
+	EXES="$EXES	nsvmlinuxht/lib/nsvm/4.0-$REV/nsvm"
 fi
 if [ -n "$NM" ]; then
 	test -d Newspeak\ Virtual\ Machine.app || mkdir Newspeak\ Virtual\ Machine.app
