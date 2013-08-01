@@ -4293,7 +4293,7 @@ Interpreter >> okayFields: oop [
 	((self isPointers: oop) or: [self isCompiledMethod: oop]) ifFalse: [ ^true ].
 	(self isCompiledMethod: oop)
 		ifTrue:
-			[i := (self literalCountOf: oop) - 1]
+			[i := (self literalCountOf: oop) + LiteralStart - 1]
 		ifFalse:
 			[(self isContext: oop)
 				ifTrue: [i := CtxtTempFrameStart + (self fetchStackPointerOf: oop) - 1]

@@ -28,6 +28,14 @@ TParseNode >> anySatisfy: aBlock [
 	^false
 ]
 
+{ #category : #enumerating }
+TParseNode >> anySatisfy: aBlock unless: cautionaryBlock [
+	self
+		nodesDo: [:n| (aBlock value: n) ifTrue: [^true]]
+		unless: cautionaryBlock.
+	^false
+]
+
 { #category : #transformations }
 TParseNode >> bindVariableUsesIn: aDictionary [
 	"Bind uses of all variables in the given dictionary, but do not change variables that appear on the left-hand-side of an assignment statement."
@@ -264,14 +272,23 @@ TParseNode >> nodesDo: aBlock [
 
 { #category : #enumerating }
 TParseNode >> nodesDo: aBlock unless: cautionaryBlock [
-
-	(cautionaryBlock value: self) ifTrue: [^self].
-	aBlock value: self
+	"Evaluate aBlock for all nodes in  the tree except those for which cautionaryBlock
+	 answers true or are children of those for which cautionaryBlock answers true."
+	(cautionaryBlock value: self) ifFalse:
+		[aBlock value: self]
 ]
 
 { #category : #enumerating }
 TParseNode >> noneSatisfy: aBlock [
 	self nodesDo: [:n| (aBlock value: n) ifTrue: [^false]].
+	^true
+]
+
+{ #category : #enumerating }
+TParseNode >> noneSatisfy: aBlock unless: cautionaryBlock [
+	self
+		nodesDo: [:n| (aBlock value: n) ifTrue: [^false]]
+		unless: cautionaryBlock.
 	^true
 ]
 
