@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2012-09-16 21:47:24 by piumarta on linux64
+ * Last edited: 2013-08-10 16:23:03 by piumarta on emilia
  */
 
 #include "sq.h"
@@ -84,7 +84,7 @@ static char **vmArgVec=		0;
 static int    squeakArgCnt=	0;
 static char **squeakArgVec=	0;
 
-static int    extraMemory=	0;
+static long   extraMemory=	0;
        int    useMmap=		DefaultMmapSize * 1024 * 1024;
 
 static int    useItimer=	1;	/* 0 to disable itimer-based clock */
@@ -940,10 +940,10 @@ static void loadModules(void)
 /* built-in main vm module */
 
 
-static int strtobkm(const char *str)
+static long strtobkm(const char *str)
 {
   char *suffix;
-  int value= strtol(str, &suffix, 10);
+  long value= strtol(str, &suffix, 10);
   switch (*suffix)
     {
     case 'k': case 'K':
@@ -1310,9 +1310,9 @@ void imgInit(void)
       else
 	extraMemory= DefaultHeapSize * 1024 *1024;
 #    ifdef DEBUG_IMAGE
-      printf("image size %d + heap size %d (useMmap = %d)\n", (int)sb.st_size, extraMemory, useMmap);
+      printf("image size %d + heap size %ld (useMmap = %d)\n", (int)sb.st_size, extraMemory, useMmap);
 #    endif
-      extraMemory += (int)sb.st_size;
+      extraMemory += (long)sb.st_size;
       readImageFromFileHeapSize(f, extraMemory);
       sqImageFileClose(f);
       break;
