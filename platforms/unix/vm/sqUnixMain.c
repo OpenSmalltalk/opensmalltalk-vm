@@ -103,7 +103,7 @@ static char **vmArgVec=		0;
 static int    squeakArgCnt=	0;
 static char **squeakArgVec=	0;
 
-static int    extraMemory=	0;
+static long   extraMemory=	0;
        int    useMmap=		DefaultMmapSize * 1024 * 1024;
 
 static int    useItimer=	1;	/* 0 to disable itimer-based clock */
@@ -1195,7 +1195,7 @@ static void loadModules(void)
 static int strtobkm(const char *str)
 {
   char *suffix;
-  int value= strtol(str, &suffix, 10);
+  long value= strtol(str, &suffix, 10);
   switch (*suffix)
     {
     case 'k': case 'K':
@@ -1703,11 +1703,11 @@ void imgInit(void)
       if (extraMemory)
 	useMmap= 0;
       else
-	extraMemory= DefaultHeapSize * 1024 *1024;
+	extraMemory= DefaultHeapSize * 1024 * 1024;
 #    ifdef DEBUG_IMAGE
-      printf("image size %d + heap size %d (useMmap = %d)\n", (int)sb.st_size, extraMemory, useMmap);
+      printf("image size %ld + heap size %ld (useMmap = %d)\n", (long)sb.st_size, extraMemory, useMmap);
 #    endif
-      extraMemory += (int)sb.st_size;
+      extraMemory += (long)sb.st_size;
       readImageFromFileHeapSizeStartingAt(f, extraMemory, 0);
       sqImageFileClose(f);
       break;
