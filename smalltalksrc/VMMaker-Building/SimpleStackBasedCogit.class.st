@@ -405,7 +405,7 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueakV3 [
 
 		"System Primitives (110-119)"
 		(110 genPrimitiveEquivalent 1)
-		"(111 genPrimitiveClass)"
+		(111 genPrimitiveClass)
 		"(112 primitiveBytesLeft)"
 		"(113 primitiveQuit)"
 		"(114 primitiveExitToDebugger)"
@@ -1855,6 +1855,17 @@ SimpleStackBasedCogit >> genPrimitiveBitXor [
 	self flag: 'currently caller pushes result'.
 	self RetN: BytesPerWord * 2.
 	jumpNotSI jmpTarget: self Label.
+	^0
+]
+
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> genPrimitiveClass [
+	"Stack looks like
+		receiver (also in ReceiverResultReg)
+		return address"
+	objectRepresentation genGetClassObjectOf: ReceiverResultReg into: ReceiverResultReg scratchReg: TempReg.
+	self flag: 'currently caller pushes result'.
+	self RetN: BytesPerWord.
 	^0
 ]
 

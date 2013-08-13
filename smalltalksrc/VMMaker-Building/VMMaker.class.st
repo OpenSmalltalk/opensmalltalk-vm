@@ -289,6 +289,24 @@ VMMaker class >> generateConfiguration [
 ]
 
 { #category : #configurations }
+VMMaker class >> generateNewNewspeakCogVM [
+	"VMMaker generateNewNewspeakCogVM"
+	^VMMaker
+		generate: CoInterpreter
+		and: StackToRegisterMappingCogit"Cogit chooseCogitClass"
+		with: #(	NewspeakVM true
+				MULTIPLEBYTECODESETS true
+				bytecodeTableInitializer newInitializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid)
+		to: (FileDirectory default pathFromURI: 'oscogvm/nscogsrc')
+		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
+		including:#(	AsynchFilePlugin BMPReadWriterPlugin BalloonEnginePlugin BitBltSimulation DSAPlugin DropPlugin
+					FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin InflatePlugin JPEGReadWriter2Plugin
+					JPEGReaderPlugin LargeIntegersPlugin Matrix2x3Plugin MiscPrimitivePlugin NewsqueakIA32ABIPlugin
+					RePlugin SecurityPlugin SocketPlugin SoundPlugin SqueakSSLPlugin SurfacePlugin ThreadedIA32FFIPlugin
+					UUIDPlugin UnixOSProcessPlugin VMProfileLinuxSupportPlugin VMProfileMacSupportPlugin Win32OSProcessPlugin)
+]
+
+{ #category : #configurations }
 VMMaker class >> generateNewspeakCogVM [
 	^VMMaker
 		generate: CoInterpreter
