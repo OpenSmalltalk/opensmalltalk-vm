@@ -1835,6 +1835,20 @@ Cogit >> addBlockStartAt: bcpc numArgs: numArgs numCopied: numCopied span: span 
 	^blockStart
 ]
 
+{ #category : #'compile abstract instructions' }
+Cogit >> addCleanBlockStarts [
+	1 to: (coInterpreter literalCountOf: methodObj) do:
+		[:i| | lit |
+		lit := coInterpreter fetchPointer: i ofObject: methodObj.
+		(coInterpreter startPCOrNilOfLiteral: lit in: methodObj) ifNotNil:
+			[:startPCOrNil|
+			 maxLitIndex := maxLitIndex max: i.
+			 self addBlockStartAt: startPCOrNil - 1 "1-rel => 0-rel"
+				numArgs: (coInterpreter argumentCountOfClosure: lit)
+				numCopied: (coInterpreter copiedValueCountOfClosure: lit)
+				span: (self spanForCleanBlockStartingAt: startPCOrNil - 1)]]
+]
+
 { #category : #debugging }
 Cogit >> addCogMethodsToHeapMap [
 	<api>
@@ -1935,7 +1949,7 @@ Cogit >> allocateBlockStarts: numBlocks [
 	 needs to be a macro since the structures are alloca'ed (stack
 	 allocated) to ensure their being freed when compilation is done."
 	<cmacro: '(numBlocks) do { \
-		blockStarts = numBlocks ? alloca(sizeof(BlockStart) * numBlocks) : 0; \
+		blockStarts = (numBlocks) ? alloca(sizeof(BlockStart) * (numBlocks)) : 0; \
 } while (0)'>
 	blockStarts := numBlocks > 0 ifTrue:
 					[CArrayAccessor on:
@@ -3566,7 +3580,7 @@ Cogit >> compileClosedPICPrototype [
 { #category : #'compile abstract instructions' }
 Cogit >> compileCogMethod: selector [
 	<returnTypeC: #'CogMethod *'>
-	| numBytecodes numBlocks result extra |
+	| numBytecodes numBlocks numCleanBlocks result extra |
 	hasYoungReferent := (objectMemory isYoung: methodObj)
 						  or: [objectMemory isYoung: selector].
 	methodOrBlockNumArgs := coInterpreter argumentCountOf: methodObj.
@@ -3589,7 +3603,12 @@ Cogit >> compileCogMethod: selector [
 		ifFail: [^coInterpreter cCoerceSimple: MethodTooBig to: #'CogMethod *'].
 	(numBlocks := self scanMethod) < 0 ifTrue:
 		[^coInterpreter cCoerceSimple: numBlocks to: #'CogMethod *'].
-	self allocateBlockStarts: numBlocks.
+	numCleanBlocks := self scanForCleanBlocks.
+	self allocateBlockStarts: numBlocks + numCleanBlocks.
+	blockCount := 0.
+	numCleanBlocks > 0 ifTrue:
+		[self addCleanBlockStarts].
+	self maybeAllocAndInitCounters.
 	blockEntryLabel := nil.
 	methodLabel dependent: nil.
 	(result := self compileEntireMethod) < 0 ifTrue:
@@ -3606,7 +3625,6 @@ Cogit >> compileEntireMethod [
 	(result := self compilePrimitive) < 0 ifTrue:
 		[^result].
 	self compileFrameBuild.
-	blockCount := 0.
 	(result := self compileMethodBody) < 0 ifTrue:
 		[^result].
 	blockCount = 0 ifTrue:
@@ -6640,6 +6658,12 @@ Cogit >> maxCogMethodAddress [
 	^methodZone limitZony asUnsignedInteger
 ]
 
+{ #category : #'compile abstract instructions' }
+Cogit >> maybeAllocAndInitCounters [
+	"No-op in the non-Sista Cogits..."
+	<inline: true>
+]
+
 { #category : #debugging }
 Cogit >> maybeFreeCogMethodDoesntLookKosher: cogMethod [
 	"Check that the header fields are consistent with the type.
@@ -7608,6 +7632,19 @@ Cogit >> scanBlock: blockStart [
 ]
 
 { #category : #'compile abstract instructions' }
+Cogit >> scanForCleanBlocks [
+	"Answer the number of clean blocks found in the literal frame"
+	| numCleanBlocks |
+	numCleanBlocks := 0.
+	1 to: (coInterpreter literalCountOf: methodObj) do:
+		[:i| | lit |
+		lit := coInterpreter fetchPointer: i ofObject: methodObj.
+		(coInterpreter startPCOrNilOfLiteral: lit in: methodObj) ifNotNil:
+			[:startPCOrNil| numCleanBlocks := numCleanBlocks + 1]].
+	^numCleanBlocks
+]
+
+{ #category : #'compile abstract instructions' }
 Cogit >> scanMethod [
 	"Scan the method to determine
 		- what the last bytecode is; extra bytes at the end of a method are used to encode things like source pointers or temp names
@@ -8047,6 +8084,21 @@ Cogit >> spanFor: descriptor at: pc exts: nExts in: aMethodObj [
 		with: pc
 		with: nExts
 		with: aMethodObj
+]
+
+{ #category : #'compile abstract instructions' }
+Cogit >> spanForCleanBlockStartingAt: startPC [
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	| pc end descriptor |
+	pc := startPC.
+	end := objectMemory byteLengthOf: methodObj.
+	[pc <= end] whileTrue:
+		[descriptor := self generatorAt: (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
+		 pc := pc + descriptor numBytes.
+		 descriptor isReturn ifTrue:
+			[^pc - startPC]].
+	self error: 'couldn''t locate end of clean block'.
+	^0
 ]
 
 { #category : #disassembly }
