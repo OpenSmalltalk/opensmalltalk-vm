@@ -953,7 +953,7 @@ SistaStackToRegisterMappingCogit >> scanMethod [
 		- how many blocks it creates
 		- how many counters it needs/conditional branches it contains
 	 Answer the block count or on error a negative error code"
-	| latestContinuation nExts descriptor pc numBlocks distance targetPC |
+	| latestContinuation nExts descriptor pc numBlocks distance targetPC stackDelta |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	needsFrame := false.
 	numCounters := 0.
@@ -963,16 +963,21 @@ SistaStackToRegisterMappingCogit >> scanMethod [
 	numBlocks := 0.
 	pc := latestContinuation := initialPC.
 	nExts := 0.
+	stackDelta := 0.
 	[pc <= endPC] whileTrue:
 		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
 		descriptor := self generatorAt: byte0.
 		(descriptor isReturn
 		 and: [pc >= latestContinuation]) ifTrue:
 			[endPC := pc].
-		 (needsFrame not
-		  and: [descriptor needsFrameFunction isNil
-			  or: [self perform: descriptor needsFrameFunction with: false]]) ifTrue:
-			[needsFrame := true].
+		 needsFrame ifFalse:
+			[(descriptor needsFrameFunction isNil
+			  or: [self perform: descriptor needsFrameFunction with: true])
+				ifTrue:
+					[needsFrame := true]
+				ifFalse: "avoid spilling in frameless methods by not compiling frameless
+						anything with a stack deeper than a single push."
+					[needsFrame := (stackDelta := stackDelta + descriptor stackDelta) > 1]].
 		descriptor isBranch ifTrue:
 			[distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.
