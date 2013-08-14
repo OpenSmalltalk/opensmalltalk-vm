@@ -1770,7 +1770,7 @@ StackInterpreter >> argumentCountOf: methodPointer [
 
 { #category : #'internal interpreter access' }
 StackInterpreter >> argumentCountOfClosure: closurePointer [
-
+	<api> "for Cogit"
 	^self quickFetchInteger: ClosureNumArgsIndex ofObject: closurePointer
 ]
 
@@ -3810,7 +3810,7 @@ StackInterpreter >> convertFloatsToPlatformOrderFrom: startOop to: stopAddr [
 
 { #category : #'internal interpreter access' }
 StackInterpreter >> copiedValueCountOfClosure: closurePointer [
-
+	<api> "for Cogit"
 	^(objectMemory fetchWordLengthOf: closurePointer) - ClosureFirstCopiedValueIndex
 ]
 
