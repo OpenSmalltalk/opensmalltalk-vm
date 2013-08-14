@@ -6260,6 +6260,23 @@ CoInterpreter >> startPCOfMethodHeader: aCompiledMethodHeader [
 	^(self literalCountOfHeader: aCompiledMethodHeader) * BytesPerWord + BaseHeaderSize
 ]
 
+{ #category : #'cog jit support' }
+CoInterpreter >> startPCOrNilOfLiteral: lit in: aMethodObj [
+	"Answer the startPC of lit if it is a (clean) block in aMethodObj, oitherwise answer nil."
+	<api>
+	| outerContext |
+	(objectMemory isIntegerObject: lit) ifTrue:
+		[^nil].
+	(objectMemory lastPointerOf: lit) <= ClosureCopiedValuesIndex ifTrue:
+		[^nil].
+	outerContext := objectMemory fetchPointer: ClosureOuterContextIndex ofObject: lit.
+	(objectMemory isContext: outerContext) ifFalse:
+		[^nil].
+	aMethodObj ~~ (objectMemory fetchPointer: MethodIndex ofObject: outerContext) ifTrue:
+		[^nil].
+	^self quickFetchInteger: ClosureStartPCIndex ofObject: lit
+]
+
 { #category : #'stack bytecodes' }
 CoInterpreter >> storeAndPopTemporaryVariableBytecode [
 	<expandCases>
