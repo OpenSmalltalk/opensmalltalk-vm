@@ -25,8 +25,8 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-extern usqInt  gMaxHeapSize;
-static usqInt	gHeapSize;
+extern usqLong  gMaxHeapSize;
+static usqLong	gHeapSize;
 void *mmapWasAt;
 
 /* compute the desired memory allocation */
@@ -37,17 +37,13 @@ static unsigned int pageMask = 0;
 
 usqInt	sqGetAvailableMemory() {
 
-	sqInt 	availableMemory;
-	
-	availableMemory = gMaxHeapSize;
-
 	/******
 	  Note: 	    
 	    For os-x this doesn't matter we just mmap 512MB for the image, and 
 	    the application allocates more out of the 4GB address for VM logic. 
 	******/
 
-	return availableMemory;
+	return gMaxHeapSize >= 0xFFFFFFFFULL ? 0xFFFFFFFF : gMaxHeapSize;
 }
 
 usqInt sqAllocateMemoryMac(sqInt minHeapSize, sqInt desiredHeapSize) {
@@ -83,7 +79,7 @@ sqInt sqShrinkMemoryBy(sqInt memoryLimit, sqInt delta) {
 }
 
 sqInt sqMemoryExtraBytesLeft(int flag) {
-    return (flag) ? gMaxHeapSize - gHeapSize : 0;
+    return flag ? gMaxHeapSize - gHeapSize : 0;
 }
 
 void sqMacMemoryFree() {

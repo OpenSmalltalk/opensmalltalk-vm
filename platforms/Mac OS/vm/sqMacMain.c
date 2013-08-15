@@ -126,7 +126,7 @@ Boolean			gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,
 				gSqueakVMPathAnswersResources=false;
 long			gSqueakMouseMappings[4][4] = {{0},{0}};
 long			gSqueakBrowserMouseMappings[4][4] = {{0},{0}};
-usqInt          gMaxHeapSize=512*1024*1024;
+usqLong         gMaxHeapSize=512*1024*1024;
 UInt32			gSqueakWindowType=zoomDocProc,gSqueakWindowAttributes=0;
 long			gSqueakUIFlushPrimaryDeferNMilliseconds=20,
 				gSqueakUIFlushSecondaryCleanupDelayMilliseconds=20,
@@ -933,13 +933,8 @@ fetchPreferences() {
 				if (gSqueakBrowserMouseMappings[i][j] < 0 || gSqueakBrowserMouseMappings[i][j] > 3)
 					gSqueakBrowserMouseMappings[i][j] = 0;
 				}
-    if (SqueakMaxHeapSizeType) {
-#if SQ_IMAGE64
+    if (SqueakMaxHeapSizeType)
         CFNumberGetValue(SqueakMaxHeapSizeType,kCFNumberLongLongType,(sqInt *) &gMaxHeapSize);
-#else
-        CFNumberGetValue(SqueakMaxHeapSizeType,kCFNumberLongType,(sqInt *) &gMaxHeapSize);
-#endif
-		}
 
 	if (SqueakUIFlushUseHighPercisionClock)
         gSqueakUIFlushUseHighPercisionClock = CFBooleanGetValue(SqueakUIFlushUseHighPercisionClock);

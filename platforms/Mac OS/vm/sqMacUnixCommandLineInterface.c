@@ -48,7 +48,7 @@ static char **squeakArgVec=	0;
 extern       int    argCnt;	/* global copies for access from plugins */
 extern       char **argVec;
 extern       char **envVec;
-extern UInt32 gMaxHeapSize;
+extern usqLong gMaxHeapSize;
 
 static void outOfMemory(void);
 static void parseArguments(int argc, char **argv);
@@ -56,6 +56,7 @@ static int parseArgument(int argc, char **argv);
 static void usage(void);
 static void parseEnvironment(void);
 static int strtobkm(const char *str);
+static usqLong strtolbkm(const char *str);
 static void printUsage(void);
 static void printUsageNotes(void);
 void resolveWhatTheImageNameIs(char *guess);
@@ -173,7 +174,7 @@ static int parseArgument(int argc, char **argv)
 #endif
   else if (argc > 1) {
 	  if (!strcmp(argv[0], "-memory"))	{ 
-		gMaxHeapSize = strtobkm(argv[1]);	 
+		gMaxHeapSize = strtolbkm(argv[1]);	 
 		return 2; }
 #if STACKVM || NewspeakVM
       else if (!strcmp(argv[0], "-breaksel")) { 
@@ -334,7 +335,8 @@ static void outOfMemory(void)
   exit(1);
 }
 
-static int strtobkm(const char *str)
+static int
+strtobkm(const char *str)
 {
   char *suffix;
   int value= strtol(str, &suffix, 10);
@@ -350,6 +352,23 @@ static int strtobkm(const char *str)
   return value;
 }
 
+static usqLong
+strtolbkm(const char *str)
+{
+  char *suffix;
+  usqLong value= strtol(str, &suffix, 10);
+  switch (*suffix)
+    {
+    case 'k': case 'K':
+      value*= 1024ULL;
+      break;
+    case 'm': case 'M':
+      value*= 1024ULL*1024ULL;
+      break;
+    }
+  return value;
+}
+
 static void parseEnvironment(void)
 {
 	char *ev;
@@ -357,7 +376,7 @@ static void parseEnvironment(void)
 	if ((ev= getenv(IMAGE_ENV_NAME)))		
 		resolveWhatTheImageNameIs(ev);
 	if ((ev= getenv("SQUEAK_MEMORY")))
-		gMaxHeapSize= strtobkm(ev);
+		gMaxHeapSize= strtolbkm(ev);
 	if ((ev= getenv("SQUEAK_PATHENC")))
 		setEncodingType(ev);
 }
