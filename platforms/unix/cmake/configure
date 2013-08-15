@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Last edited: 2012-09-16 21:35:15 by piumarta on linux64
+# Last edited: 2013-08-11 23:16:05 by piumarta on emilia
 
 RELEASE_TAG=""
 
@@ -16,6 +16,7 @@ Options include:
   --without-gl          disable everything that depends on OpenGL
   --without-SUGAR       disable support for SUGAR environment
   --image64             build a VM for running 64-bit images
+  --enableFastBlt       use optimised BitBlt (not supported on most platforms)
 Notes:
 1. By default the CFLAGS will be set to create optimised binaries.  If you are
    debugging the VM you probably want to use '--CFLAGS=-g' when invoking this

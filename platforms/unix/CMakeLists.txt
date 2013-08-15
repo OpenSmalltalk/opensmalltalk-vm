@@ -1,6 +1,6 @@
 # Yes, it's true: you can write makefiles in COBOL.
 # 
-# Last edited: 2012-09-16 21:19:57 by piumarta on linux64
+# Last edited: 2013-08-11 22:54:35 by piumarta on emilia
 
 PROJECT (squeak)
 
@@ -18,6 +18,10 @@ IF (DEFINED OPT--image64)
   SET (versionsuffix "_64bit")
   SET (scriptsuffix "64")
 ENDIF (DEFINED OPT--image64)
+
+IF (DEFINED OPT--enableFastBlt)
+  SET (ENABLE-FAST-BLT 1)
+ENDIF (DEFINED OPT--enableFastBlt)
 
 SET (prefix  ${CMAKE_INSTALL_PREFIX})
 
