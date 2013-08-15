@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2012-06-27 05:07:55 by piumarta on ubuntu32-1204
+ * Last edited: 2013-08-11 23:12:08 by piumarta on emilia
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -64,6 +64,15 @@
 
 #undef HAVE_OPENGL_GL_H		/* don't include Quartz OpenGL if configured */
 #include "SqDisplay.h"
+
+#if defined(USE_FAST_BLT)
+  /* XXX referring to plugin variables *requires* BitBitPlugin to be included by VMM as an internal plugin */
+# if defined(__arm__)
+#   include "../../../Cross/plugins/BitBltPlugin/BitBltArm.h"
+# else
+#   error configuration error
+# endif
+#endif
 
 #if defined(ioMSecs)
 # undef ioMSecs
@@ -5028,17 +5037,68 @@ void copyImage8To24(int *fromImageData, int *toImageData, int width, int height,
     }
 }
 
+#if defined(USE_FAST_BLT)
+# if defined(__arm__)
+
+    extern void armSimdConvert_x888_8_LEPacking32_8_wide(unsigned int width, unsigned int height,
+							 unsigned int *dst, unsigned int dstStride,
+							 unsigned int *src, unsigned int srcStride,
+							 unsigned int halftone, unsigned int halftoneInfo,
+							 unsigned int *colourMap);
+
+    extern void armSimdConvert_x888_8_LEPacking32_8_narrow(unsigned int width, unsigned int height,
+							   unsigned int *dst, unsigned int dstStride,
+							   unsigned int *src, unsigned int srcStride,
+							   unsigned int halftone, unsigned int halftoneInfo,
+							   unsigned int *colourMap);
+
+    static void armSimdCopyImage32To8(int *fromImageData, int *toImageData, int width, int height,
+				      int affectedL, int affectedT, int affectedR, int affectedB,
+				      unsigned int *downGradingColors)
+    {
+      /* Find image strides in 32-bit words */
+      unsigned int srcStride= width;
+      unsigned int dstStride= (width + 3) >> 2;
+      /* Round affected region out to encompass complete words in both images */
+      affectedL &= ~3;
+      affectedR= (affectedR + 3) &~ 3;
+      width=  affectedR - affectedL;
+      height= affectedB - affectedT;
+      /* Find first words */
+      fromImageData += srcStride * affectedT + affectedL;
+      toImageData += dstStride * affectedT + (affectedL >> 2);
+      /* Adjust strides to remove number of words read/written */
+      srcStride -= affectedR - affectedL;
+      dstStride -= (affectedR - affectedL) >> 2;
+      /* Work out which width class this operation is. */
+      if (width > (128 - 32) / 8 && ((-1 ^ (width -(128 - 32) / 8)) & ~(31 / 8)))
+	armSimdConvert_x888_8_LEPacking32_8_wide(width, height, toImageData, dstStride, fromImageData, srcStride, 0, 0, downGradingColors);
+      else
+	armSimdConvert_x888_8_LEPacking32_8_narrow(width, height, toImageData, dstStride, fromImageData, srcStride, 0, 0, downGradingColors);
+    }
+# else
+#   error configuration error
+# endif
+#endif
+
 void copyImage32To8(int *fromImageData, int *toImageData, int width, int height,
 		    int affectedL, int affectedT, int affectedR, int affectedB)
 {
+#if defined(USE_FAST_BLT)
+# if defined(__arm__)
+    armSimdCopyImage32To8(fromImageData, toImageData, width, height, affectedL, affectedT, affectedR, affectedB, stDownGradingColors);
+# else
+#   error configuration error
+# endif
+#else
   int scanLine32, firstWord32, lastWord32;
   int scanLine8, firstWord8;
   int line;
 
-#define map32To8(w) (col= (w), stDownGradingColors[\
-  (((col >> (16+(8-3))) & 0x7) << 5) | \
-  (((col >> ( 8+(8-3))) & 0x7) << 2) | \
-   ((col >> ( 0+(8-2))) & 0x7)])
+# define map32To8(w) (col= (w), stDownGradingColors[\
+    (((col >> (16+(8-3))) & 0x7) << 5) | \
+    (((col >> ( 8+(8-3))) & 0x7) << 2) | \
+     ((col >> ( 0+(8-2))) & 0x7)])
 
   scanLine32= bytesPerLine(width, 32);
   firstWord32= scanLine32*affectedT + bytesPerLineRD(affectedL, 32);
@@ -5061,8 +5121,9 @@ void copyImage32To8(int *fromImageData, int *toImageData, int width, int height,
     firstWord32+= scanLine32;
     lastWord32+= scanLine32;
     firstWord8+= scanLine8;
+# undef map32To8
   }
-#undef map32To8
+#endif /* !USE_FAST_BLT */
 }
 
 void copyImage16To32(int *fromImageData, int *toImageData, int width, int height,
@@ -5187,47 +5248,96 @@ void copyImage16To24(int *fromImageData, int *toImageData, int width, int height
 #undef map16To24
 }
 
+#if defined(USE_FAST_BLT)
+# if defined(__arm__)
+
+    extern void armSimdConvert_x888_0565_LEPacking32_16_wide(unsigned int width, unsigned int height,
+							     unsigned int *dst, unsigned int dstStride,
+							     unsigned int *src, unsigned int srcStride);
+
+    extern void armSimdConvert_x888_0565_LEPacking32_16_narrow(unsigned int width, unsigned int height,
+							       unsigned int *dst, unsigned int dstStride,
+							       unsigned int *src, unsigned int srcStride);
+    static void armSimdCopyImage32To16(int *fromImageData, int *toImageData, int width, int height,
+				       int affectedL, int affectedT, int affectedR, int affectedB)
+    {
+      /* Find image strides in 32-bit words */
+      unsigned int srcStride= width;
+      unsigned int dstStride= (width + 1) >> 1;
+      /* Round affected region out to encompass complete words in both images */
+      affectedL &= ~1;
+      affectedR += affectedR & 1;
+      width=  affectedR - affectedL;
+      height= affectedB - affectedT;
+      /* Find first words */
+      fromImageData += srcStride * affectedT + affectedL;
+      toImageData += dstStride * affectedT + (affectedL >> 1);
+      /* Adjust strides to remove number of words read/written */
+      srcStride -= affectedR - affectedL;
+      dstStride -= (affectedR - affectedL) >> 1;
+      /* Work out which width class this operation is. */
+      if (width > (128 - 32) / 16 && ((-1 ^ (width - (128 - 32) / 16)) & ~(31 / 16)))
+	  armSimdConvert_x888_0565_LEPacking32_16_wide(width, height, toImageData, dstStride, fromImageData, srcStride);
+      else
+	  armSimdConvert_x888_0565_LEPacking32_16_narrow(width, height, toImageData, dstStride, fromImageData, srcStride);
+    }
+
+# else
+#   error configuration error
+# endif
+#endif
 
 void copyImage32To16(int *fromImageData, int *toImageData, int width, int height,
 		     int affectedL, int affectedT, int affectedR, int affectedB)
 {
-  int scanLine32, firstWord32, lastWord32;
-  int scanLine16, firstWord16;
-  int line;
-  int rshift, gshift, bshift;
-  register unsigned int col;
+#if defined(USE_FAST_BLT)
+# if defined(__arm__)
+  if (stRNMask == 5 && stRShift == 11 && stGNMask == 6 && stGShift == 5 && stBNMask == 5 && stBShift == 0)
+    armSimdCopyImage32To16(fromImageData, toImageData, width, height, affectedL, affectedT, affectedR, affectedB);
+  else
+# else
+#  error configuration error
+# endif
+#endif
+  {
+    int scanLine32, firstWord32, lastWord32;
+    int scanLine16, firstWord16;
+    int line;
+    int rshift, gshift, bshift;
+    register unsigned int col;
 
-  rshift= stRNMask-5 + stRShift;
-  gshift= stGNMask-5 + stGShift;
-  bshift= stBNMask-5 + stBShift;
+    rshift= stRNMask-5 + stRShift;
+    gshift= stGNMask-5 + stGShift;
+    bshift= stBNMask-5 + stBShift;
 
-#define map32To16(w) (col= (w), \
-  (((col >> 19) & 0x1f) << rshift) | \
-  (((col >> 11) & 0x1f) << gshift) | \
-  (((col >>  3) & 0x1f) << bshift))
+#   define map32To16(w) (col= (w), \
+      (((col >> 19) & 0x1f) << rshift) | \
+      (((col >> 11) & 0x1f) << gshift) | \
+      (((col >>  3) & 0x1f) << bshift))
 
-  scanLine32= bytesPerLine(width, 32);
-  firstWord32= scanLine32*affectedT + bytesPerLineRD(affectedL, 32);
-  lastWord32= scanLine32*affectedT + bytesPerLine(affectedR, 32);
-  scanLine16= bytesPerLine(width, 16);
-  firstWord16= scanLine16*affectedT + (bytesPerLineRD(affectedL, 32) >> 1);
+    scanLine32= bytesPerLine(width, 32);
+    firstWord32= scanLine32*affectedT + bytesPerLineRD(affectedL, 32);
+    lastWord32= scanLine32*affectedT + bytesPerLine(affectedR, 32);
+    scanLine16= bytesPerLine(width, 16);
+    firstWord16= scanLine16*affectedT + (bytesPerLineRD(affectedL, 32) >> 1);
 
-  for (line= affectedT; line < affectedB; line++)
-    {
-      register unsigned int *from= (unsigned int *)((long)fromImageData+firstWord32);
-      register unsigned int *limit= (unsigned int *)((long)fromImageData+lastWord32);
-      register unsigned short *to= (unsigned short *)((long)toImageData+firstWord16);
-      while (from < limit)
-	{
-	  to[0]= map32To16(from[0]);
-	  from++;
-	  to++;
-	}
-      firstWord32+= scanLine32;
-      lastWord32+= scanLine32;
-      firstWord16+= scanLine16;
-    }
-#undef map32To16
+    for (line= affectedT; line < affectedB; line++)
+      {
+	register unsigned int *from= (unsigned int *)((long)fromImageData+firstWord32);
+	register unsigned int *limit= (unsigned int *)((long)fromImageData+lastWord32);
+	register unsigned short *to= (unsigned short *)((long)toImageData+firstWord16);
+	while (from < limit)
+	  {
+	    to[0]= map32To16(from[0]);
+	    from++;
+	    to++;
+	  }
+	firstWord32+= scanLine32;
+	lastWord32+= scanLine32;
+	firstWord16+= scanLine16;
+      }
+# undef map32To16
+  }
 }
 
 void copyImage16To16(int *fromImageData, int *toImageData, int width, int height,
@@ -5274,42 +5384,85 @@ void copyImage16To16(int *fromImageData, int *toImageData, int width, int height
 #undef map16To16
 }
 
+#if defined(USE_FAST_BLT)
+# if defined(__arm__)
+    extern void armSimdConvert_x888_x888BGR_LEPacking32_32_wide(unsigned int width, unsigned int height,
+								unsigned int *dst, unsigned int dstStride,
+								unsigned int *src, unsigned int srcStride);
+
+    extern void armSimdConvert_x888_x888BGR_LEPacking32_32_narrow(unsigned int width, unsigned int height,
+								  unsigned int *dst, unsigned int dstStride,
+								  unsigned int *src, unsigned int srcStride);
+
+    static void armSimdCopyImage32To32(int *fromImageData, int *toImageData, int width, int height,
+				       int affectedL, int affectedT, int affectedR, int affectedB)
+    {
+      unsigned int stride= width;
+      width=  affectedR - affectedL;
+      height= affectedB - affectedT;
+      /* Find first words */
+      fromImageData += stride * affectedT + affectedL;
+      toImageData   += stride * affectedT + affectedL;
+      /* Adjust stride to remove number of words read/written */
+      stride -= width;
+      /* Work out which width class this operation is. */
+      if (width > (128 - 32) / 32 && (-1 ^ (width - (128 - 32) / 32)))
+	armSimdConvert_x888_x888BGR_LEPacking32_32_wide(width, height, toImageData, stride, fromImageData, stride);
+      else
+	armSimdConvert_x888_x888BGR_LEPacking32_32_narrow(width, height, toImageData, stride, fromImageData, stride);
+    }
+# else
+#   error configuration error
+# endif
+#endif
+
 void copyImage32To32(int *fromImageData, int *toImageData, int width, int height,
 		     int affectedL, int affectedT, int affectedR, int affectedB)
 {
-  int scanLine32, firstWord32, lastWord32;
-  int line;
-  int rshift, gshift, bshift;
-  register unsigned int col;
+#if defined(USE_FAST_BLT)
+# if defined(__arm__)
+    if ((armCpuFeatures & ARM_V6) && stRNMask == 8 && stRShift == 0 && stGNMask == 8 && stGShift == 8 && stBNMask == 8 && stBShift == 16)
+      armSimdCopyImage32To32(fromImageData, toImageData, width, height, affectedL, affectedT, affectedR, affectedB);
+    else
+# else
+#  error unsupported use of ENABLE_FAST_BLT
+# endif
+#endif
+  {
+    int scanLine32, firstWord32, lastWord32;
+    int line;
+    int rshift, gshift, bshift;
+    register unsigned int col;
 
-  rshift= stRNMask-8 + stRShift;
-  gshift= stGNMask-8 + stGShift;
-  bshift= stBNMask-8 + stBShift;
+    rshift= stRNMask-8 + stRShift;
+    gshift= stGNMask-8 + stGShift;
+    bshift= stBNMask-8 + stBShift;
 
-#define map32To32(w) (col= (w), \
-  (((col >> 16) & 0xff) << rshift) | \
-  (((col >> 8)  & 0xff) << gshift) | \
-   ((col & 0xff) << bshift))
+#  define map32To32(w) (col= (w), \
+    (((col >> 16) & 0xff) << rshift) | \
+    (((col >> 8)  & 0xff) << gshift) | \
+     ((col & 0xff) << bshift))
 
-  scanLine32= bytesPerLine(width, 32);
-  firstWord32= scanLine32*affectedT + bytesPerLineRD(affectedL, 32);
-  lastWord32= scanLine32*affectedT + bytesPerLine(affectedR, 32);
+    scanLine32= bytesPerLine(width, 32);
+    firstWord32= scanLine32*affectedT + bytesPerLineRD(affectedL, 32);
+    lastWord32= scanLine32*affectedT + bytesPerLine(affectedR, 32);
 
-  for (line= affectedT; line < affectedB; line++)
-    {
-      register unsigned int *from= (unsigned int *)((long)fromImageData+firstWord32);
-      register unsigned int *limit= (unsigned int *)((long)fromImageData+lastWord32);
-      register unsigned int *to= (unsigned int *)((long)toImageData+firstWord32);
-      while (from < limit)
-	{
-	  *to= map32To32(*from);
-	  from++;
-	  to++;
-	}
-      firstWord32+= scanLine32;
-      lastWord32+= scanLine32;
-    }
-#undef map32To32
+    for (line= affectedT; line < affectedB; line++)
+      {
+	register unsigned int *from= (unsigned int *)((long)fromImageData+firstWord32);
+	register unsigned int *limit= (unsigned int *)((long)fromImageData+lastWord32);
+	register unsigned int *to= (unsigned int *)((long)toImageData+firstWord32);
+	while (from < limit)
+	  {
+	    *to= map32To32(*from);
+	    from++;
+	    to++;
+	  }
+	firstWord32+= scanLine32;
+	lastWord32+= scanLine32;
+      }
+# undef map32To32
+  }
 }
 
 void copyImage32To32Same(int *fromImageData, int *toImageData,
