@@ -209,6 +209,15 @@ CurrentImageCoInterpreterFacade >> fetchByte: index ofObject: anOop [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> fetchPointer: index ofObject: anOop [
+	| obj |
+	obj := (objectMap keyAtValue: anOop).
+	^obj isCompiledMethod
+		ifTrue: [obj objectAt: index + 1]
+		ifFalse: [obj instVarAt: index + 1]
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> formatOfClass: classOop [ 
 	^(self objectForOop: classOop) format << 1
 ]
@@ -378,6 +387,11 @@ CurrentImageCoInterpreterFacade >> literal: index ofMethod: anOop [
 	^lit class == SmallInteger
 		ifTrue: [objectMemory integerObjectOf: lit]
 		ifFalse: [self oopForObject: lit]
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> literalCountOf: anOop [
+	^(objectMap keyAtValue: anOop) numLiterals
 ]
 
 { #category : #accessing }
@@ -636,6 +650,13 @@ CurrentImageCoInterpreterFacade >> startPCOfMethod: anOop [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> startPCOfMethodHeader: aSmallIntegerOop [
 	^(headerToMethodMap at: aSmallIntegerOop) initialPC - 1
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> startPCOrNilOfLiteral: literalOop in: methodOop [
+	^(literalOop isClosure
+	   and: [literalOop method == (objectMap keyAtValue: methodOop)]) ifTrue:
+		[literalOop startpc]
 ]
 
 { #category : #testing }

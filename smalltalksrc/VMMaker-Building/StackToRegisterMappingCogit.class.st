@@ -1402,20 +1402,16 @@ StackToRegisterMappingCogit >> genFramelessStorePop: popBoolean ReceiverVariable
 			genStoreImmediateInSourceReg: TempReg
 			slotIndex: slotIndex
 			destReg: ReceiverResultReg].
-	topReg := ClassReg.
-	self ssPop: 1.
-	self ssAllocateCallReg: topReg. "for the ceStoreCheck call in genStoreSourceReg:... below"
-	self ssPush: 1.
+	(topReg := self ssTop registerOrNil) isNil ifTrue:
+		[topReg := ClassReg].
 	valueReg := self ssStorePop: popBoolean toPreferredReg: topReg.
-	valueReg ~= topReg ifTrue:
-		[self MoveR: valueReg R: topReg].
 	"Note that ReceiverResultReg remains live after ceStoreCheckTrampoline."
 	self ensureReceiverResultRegContainsSelf.
 	 traceStores > 0 ifTrue:
-		[self MoveR: topReg R: TempReg.
+		[self MoveR: valueReg R: TempReg.
 		 self CallRT: ceTraceStoreTrampoline].
 	^objectRepresentation
-		genStoreSourceReg: topReg
+		genStoreSourceReg: valueReg
 		slotIndex: slotIndex
 		destReg: ReceiverResultReg
 		scratchReg: TempReg
