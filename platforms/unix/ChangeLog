@@ -1,3 +1,24 @@
+2013-08-15  Ian Piumarta  <piumarta@raspberrypi>
+
+	* cmake/Plugins.cmake: Process ${plugin}_extra_sources in both
+	internal and external plugins.  Set ${plugin}_source_dir to the
+	location of the generated plugin C source file.
+
+	* cmake/configure: Add option '--enableFastBlt'.
+
+	* CMakeLists.txt: Add option '--enableFastBlt'.
+
+	* plugins/BitBltPlugin/config.cmake: Added.  Use fast bitblt when
+	enabled and supported.
+
+	* vm-display-X11/sqUnixX11Arm.S: Added.  Support fast display copy on ARM.
+
+	* vm-display-X11/config.cmake: Include optimised BitBlt code when
+	supported and enabled.
+
+	* vm-display-X11/sqUnixX11.c: Use optimised BitBlt support when
+	USE_FAST_BLT is defined.
+
 2013-08-10  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm/sqUnixMain.c: extreMemory is 64 bits on LP64 architectures.
