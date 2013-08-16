@@ -29,6 +29,12 @@ NewObjectMemory class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator var: #statGCEndUsecs type: #usqLong
 ]
 
+{ #category : #'class initialization' }
+NewObjectMemory class >> initialize [
+	"This is for Monticello package loading"
+	self initializeWithOptions: Dictionary new
+]
+
 { #category : #initialization }
 NewObjectMemory class >> initializeWithOptions: optionsDictionary [
 	"NewObjectMemory initializeWithOptions: Dictionary new"
