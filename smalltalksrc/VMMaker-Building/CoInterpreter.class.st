@@ -171,6 +171,12 @@ CoInterpreter class >> exportAPISelectors [
 		yourself
 ]
 
+{ #category : #'class initialization' }
+CoInterpreter class >> initialize [
+	"This is for Monticello package loading"
+	self initializeWithOptions: Dictionary new
+]
+
 { #category : #initialization }
 CoInterpreter class >> initializeContextIndices [
 	super initializeContextIndices.
@@ -6268,6 +6274,8 @@ CoInterpreter >> startPCOrNilOfLiteral: lit in: aMethodObj [
 	(objectMemory isIntegerObject: lit) ifTrue:
 		[^nil].
 	(objectMemory lastPointerOf: lit) <= ClosureCopiedValuesIndex ifTrue:
+		[^nil].
+	(objectMemory isArrayNonInt: lit) ifTrue:
 		[^nil].
 	outerContext := objectMemory fetchPointer: ClosureOuterContextIndex ofObject: lit.
 	(objectMemory isContext: outerContext) ifFalse:
