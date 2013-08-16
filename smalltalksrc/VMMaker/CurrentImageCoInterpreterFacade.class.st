@@ -365,9 +365,25 @@ CurrentImageCoInterpreterFacade >> isQuickPrimitiveIndex: primNum [
 	^coInterpreter isQuickPrimitiveIndex: primNum
 ]
 
+{ #category : #'frame access' }
+CurrentImageCoInterpreterFacade >> isReadMediatedContextInstVarIndex: index [
+	"Reading the sender, instructionPointer and stackPointer inst vars of a context must take
+	 account of potentially married contexts and fetch the state from the frame. method,
+	 closureOrNil and receiver can safely be fetched from the context without checking."
+	^index <= StackPointerIndex
+]
+
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> isThreadedVM [
 	^false
+]
+
+{ #category : #'frame access' }
+CurrentImageCoInterpreterFacade >> isWriteMediatedContextInstVarIndex: index [
+	"Wrining any inst vars of a context must take account of potentially married contexts
+	 and set the state in the frame. Inst vars in subclasses don't need mediation; subclasses
+	 can't marry."
+	^index <= ReceiverIndex
 ]
 
 { #category : #accessing }
