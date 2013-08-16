@@ -636,8 +636,8 @@ StackToRegisterMappingCogit class >> newInitializeBytecodeTableForNewspeakV3Plus
 		(1 190 190 genSpecialSelectorArithmetic isMapped AndRR)
 		(1 191 191 genSpecialSelectorArithmetic isMapped OrRR)
 		(1 192 197 genSpecialSelectorSend isMapped) "#at: #at:put: #size #next #nextPut: #atEnd"
-		(1 198 198 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
-		(1 199 199 genSpecialSelectorClass needsFrameNever: notMapped 0) "not mapped because it is directly inlined (for now)"
+		(1 198 198 genSpecialSelectorEqualsEquals needsFrameIfFollowsSend: notMapped -1) "not mapped because it is directly inlined (for now)"
+		(1 199 199 genSpecialSelectorClass needsFrameIfFollowsSend: notMapped 0) "not mapped because it is directly inlined (for now)"
 		(1 200 207 genSpecialSelectorSend isMapped) "#blockCopy: #value #value: #do: #new #new: #x #y"
 		(1 208 223 genSendLiteralSelector0ArgsBytecode isMapped)
 		(1 224 239 genSendLiteralSelector1ArgBytecode isMapped)
@@ -690,8 +690,8 @@ StackToRegisterMappingCogit class >> newInitializeBytecodeTableForNewspeakV4 [
 		(1   94   94 genSpecialSelectorArithmetic isMapped AndRR)
 		(1   95   95 genSpecialSelectorArithmetic isMapped OrRR)
 		(1   96 101 genSpecialSelectorSend isMapped) "#at: #at:put: #size #next #nextPut: #atEnd"
-		(1 102 102 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
-		(1 103 103 genSpecialSelectorClass needsFrameNever: notMapped 0) "not mapped because it is directly inlined (for now)"
+		(1 102 102 genSpecialSelectorEqualsEquals needsFrameIfFollowsSend: notMapped -1) "not mapped because it is directly inlined (for now)"
+		(1 103 103 genSpecialSelectorClass needsFrameIfFollowsSend: notMapped 0) "not mapped because it is directly inlined (for now)"
 		(1 104 111 genSpecialSelectorSend isMapped) "#blockCopy: #value #value: #do: #new #new: #x #y"
 
 		(1 112 127 genSendLiteralSelector0ArgsBytecode isMapped)
@@ -832,8 +832,8 @@ StackToRegisterMappingCogit class >> newInitializeBytecodeTableForSqueakV3PlusCl
 		(1 190 190 genSpecialSelectorArithmetic isMapped AndRR)
 		(1 191 191 genSpecialSelectorArithmetic isMapped OrRR)
 		(1 192 197 genSpecialSelectorSend isMapped) "#at: #at:put: #size #next #nextPut: #atEnd"
-		(1 198 198 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
-		(1 199 199 genSpecialSelectorClass needsFrameNever: notMapped 0) "not mapped because it is directly inlined (for now)"
+		(1 198 198 genSpecialSelectorEqualsEquals needsFrameIfFollowsSend: notMapped -1) "not mapped because it is directly inlined (for now)"
+		(1 199 199 genSpecialSelectorClass needsFrameIfFollowsSend: notMapped 0) "not mapped because it is directly inlined (for now)"
 		(1 200 207 genSpecialSelectorSend isMapped) "#blockCopy: #value #value: #do: #new #new: #x #y"
 		(1 208 223 genSendLiteralSelector0ArgsBytecode isMapped)
 		(1 224 239 genSendLiteralSelector1ArgBytecode isMapped)
