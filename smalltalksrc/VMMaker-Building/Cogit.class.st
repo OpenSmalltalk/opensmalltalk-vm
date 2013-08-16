@@ -3985,7 +3985,8 @@ Cogit >> disassembleMethod: surrogateOrAddress on: aStream [
 			[mapEntries keysAndValuesDo:
 				[:mcpc :label| | bcpc |
 				((range includes: mcpc)
-				 and: [#(IsSendCall HasBytecodePC) includes: label]) ifTrue:
+				 and: [(#(IsSendCall HasBytecodePC) includes: label)
+				 and: [range cogMethod stackCheckOffset > 0]]) ifTrue:
 					[bcpc := self bytecodePCFor: mcpc startBcpc: range startpc in: range cogMethod.
 					 bcpc ~= 0 ifTrue:
 						[mapEntries at: mcpc put: label, ' bc ', bcpc printString, '/', (bcpc + 1) printString]]]].
