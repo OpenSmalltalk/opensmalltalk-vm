@@ -289,13 +289,13 @@ CurrentImageCoInterpreterFacade >> initialize [
 	variables := Dictionary new.
 	#('stackLimit') do:
 		[:l| self addressForLabel: l].
-	headerToMethodMap := Dictionary new.
 	self initializeObjectMap
 ]
 
 { #category : #'initialize-release' }
 CurrentImageCoInterpreterFacade >> initializeObjectMap [
 	objectMap := IdentityDictionary new.
+	headerToMethodMap := Dictionary new.
 	{ nil. false. true. Smalltalk primitiveErrorTable. Float } do:
 		[:o| self oopForObject: o]
 ]
@@ -468,6 +468,11 @@ CurrentImageCoInterpreterFacade >> nextProfileTickAddress [
 { #category : #'object map' }
 CurrentImageCoInterpreterFacade >> nilObject [
 	^objectMap at: nil
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> noAssertHeaderOf: aMethodOop [
+	^self rawHeaderOf: aMethodOop
 ]
 
 { #category : #accessing }
