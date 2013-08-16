@@ -240,6 +240,12 @@ ObjectMemory class >> initBytesPerWord: nBytes [
 	VMBIGENDIAN := Smalltalk endianness == #big
 ]
 
+{ #category : #'class initialization' }
+ObjectMemory class >> initialize [
+	"This is for Monticello package loading"
+	self initializeWithOptions: Dictionary new
+]
+
 { #category : #initialization }
 ObjectMemory class >> initializeCompactClassIndices [
 	"Initialize indices for compact classes we are going to depend on being compact.
