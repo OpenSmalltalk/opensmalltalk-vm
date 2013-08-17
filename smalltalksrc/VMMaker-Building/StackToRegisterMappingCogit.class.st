@@ -304,8 +304,8 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV3PlusClo
 		(1 190 190 genSpecialSelectorArithmetic isMapped AndRR)
 		(1 191 191 genSpecialSelectorArithmetic isMapped OrRR)
 		(1 192 197 genSpecialSelectorSend isMapped) "#at: #at:put: #size #next #nextPut: #atEnd"
-		(1 198 198 genSpecialSelectorEqualsEquals needsFrameIfFollowsSend: notMapped -1) "not mapped because it is directly inlined (for now)"
-		(1 199 199 genSpecialSelectorClass needsFrameIfFollowsSend: notMapped 0) "not mapped because it is directly inlined (for now)"
+		(1 198 198 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
+		(1 199 199 genSpecialSelectorClass needsFrameIfStackGreaterThanOne: notMapped 0) "not mapped because it is directly inlined (for now)"
 		(1 200 207 genSpecialSelectorSend isMapped) "#blockCopy: #value #value: #do: #new #new: #x #y"
 		(1 208 223 genSendLiteralSelector0ArgsBytecode isMapped)
 		(1 224 239 genSendLiteralSelector1ArgBytecode isMapped)
@@ -358,8 +358,8 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(1   94   94 genSpecialSelectorArithmetic isMapped AndRR)
 		(1   95   95 genSpecialSelectorArithmetic isMapped OrRR)
 		(1   96 101 genSpecialSelectorSend isMapped) "#at: #at:put: #size #next #nextPut: #atEnd"
-		(1 102 102 genSpecialSelectorEqualsEquals needsFrameIfFollowsSend: notMapped -1) "not mapped because it is directly inlined (for now)"
-		(1 103 103 genSpecialSelectorClass needsFrameIfFollowsSend: notMapped 0) "not mapped because it is directly inlined (for now)"
+		(1 102 102 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
+		(1 103 103 genSpecialSelectorClass needsFrameIfStackGreaterThanOne: notMapped 0) "not mapped because it is directly inlined (for now)"
 		(1 104 111 genSpecialSelectorSend isMapped) "#blockCopy: #value #value: #do: #new #new: #x #y"
 
 		(1 112 127 genSendLiteralSelector0ArgsBytecode isMapped)
@@ -500,8 +500,8 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 		(1 190 190 genSpecialSelectorArithmetic isMapped AndRR)
 		(1 191 191 genSpecialSelectorArithmetic isMapped OrRR)
 		(1 192 197 genSpecialSelectorSend isMapped) "#at: #at:put: #size #next #nextPut: #atEnd"
-		(1 198 198 genSpecialSelectorEqualsEquals needsFrameIfFollowsSend: notMapped -1) "not mapped because it is directly inlined (for now)"
-		(1 199 199 genSpecialSelectorClass needsFrameIfFollowsSend: notMapped 0) "not mapped because it is directly inlined (for now)"
+		(1 198 198 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
+		(1 199 199 genSpecialSelectorClass needsFrameIfStackGreaterThanOne: notMapped 0) "not mapped because it is directly inlined (for now)"
 		(1 200 207 genSpecialSelectorSend isMapped) "#blockCopy: #value #value: #do: #new #new: #x #y"
 		(1 208 223 genSendLiteralSelector0ArgsBytecode isMapped)
 		(1 224 239 genSendLiteralSelector1ArgBytecode isMapped)
@@ -636,8 +636,8 @@ StackToRegisterMappingCogit class >> newInitializeBytecodeTableForNewspeakV3Plus
 		(1 190 190 genSpecialSelectorArithmetic isMapped AndRR)
 		(1 191 191 genSpecialSelectorArithmetic isMapped OrRR)
 		(1 192 197 genSpecialSelectorSend isMapped) "#at: #at:put: #size #next #nextPut: #atEnd"
-		(1 198 198 genSpecialSelectorEqualsEquals needsFrameIfFollowsSend: notMapped -1) "not mapped because it is directly inlined (for now)"
-		(1 199 199 genSpecialSelectorClass needsFrameIfFollowsSend: notMapped 0) "not mapped because it is directly inlined (for now)"
+		(1 198 198 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
+		(1 199 199 genSpecialSelectorClass needsFrameIfStackGreaterThanOne: notMapped 0) "not mapped because it is directly inlined (for now)"
 		(1 200 207 genSpecialSelectorSend isMapped) "#blockCopy: #value #value: #do: #new #new: #x #y"
 		(1 208 223 genSendLiteralSelector0ArgsBytecode isMapped)
 		(1 224 239 genSendLiteralSelector1ArgBytecode isMapped)
@@ -690,8 +690,8 @@ StackToRegisterMappingCogit class >> newInitializeBytecodeTableForNewspeakV4 [
 		(1   94   94 genSpecialSelectorArithmetic isMapped AndRR)
 		(1   95   95 genSpecialSelectorArithmetic isMapped OrRR)
 		(1   96 101 genSpecialSelectorSend isMapped) "#at: #at:put: #size #next #nextPut: #atEnd"
-		(1 102 102 genSpecialSelectorEqualsEquals needsFrameIfFollowsSend: notMapped -1) "not mapped because it is directly inlined (for now)"
-		(1 103 103 genSpecialSelectorClass needsFrameIfFollowsSend: notMapped 0) "not mapped because it is directly inlined (for now)"
+		(1 102 102 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
+		(1 103 103 genSpecialSelectorClass needsFrameIfStackGreaterThanOne: notMapped 0) "not mapped because it is directly inlined (for now)"
 		(1 104 111 genSpecialSelectorSend isMapped) "#blockCopy: #value #value: #do: #new #new: #x #y"
 
 		(1 112 127 genSendLiteralSelector0ArgsBytecode isMapped)
@@ -832,8 +832,8 @@ StackToRegisterMappingCogit class >> newInitializeBytecodeTableForSqueakV3PlusCl
 		(1 190 190 genSpecialSelectorArithmetic isMapped AndRR)
 		(1 191 191 genSpecialSelectorArithmetic isMapped OrRR)
 		(1 192 197 genSpecialSelectorSend isMapped) "#at: #at:put: #size #next #nextPut: #atEnd"
-		(1 198 198 genSpecialSelectorEqualsEquals needsFrameIfFollowsSend: notMapped -1) "not mapped because it is directly inlined (for now)"
-		(1 199 199 genSpecialSelectorClass needsFrameIfFollowsSend: notMapped 0) "not mapped because it is directly inlined (for now)"
+		(1 198 198 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
+		(1 199 199 genSpecialSelectorClass needsFrameIfStackGreaterThanOne: notMapped 0) "not mapped because it is directly inlined (for now)"
 		(1 200 207 genSpecialSelectorSend isMapped) "#blockCopy: #value #value: #do: #new #new: #x #y"
 		(1 208 223 genSendLiteralSelector0ArgsBytecode isMapped)
 		(1 224 239 genSendLiteralSelector1ArgBytecode isMapped)
@@ -3693,7 +3693,7 @@ StackToRegisterMappingCogit >> methodAbortTrampolineFor: numArgs [
 ]
 
 { #category : #'compile abstract instructions' }
-StackToRegisterMappingCogit >> needsFrameIfFollowsSend: isInBlock [
+StackToRegisterMappingCogit >> needsFrameIfFollowsSend: stackDelta [
 	"As of August 2013, the code generator can't deal with spills in frameless methods (the
 	 issue is to do with the stack offset to get at an argument, which is changed when there's a spill).
 	 The only context in a spill is needed in a frameless method that I can think of is sends
@@ -3706,8 +3706,19 @@ StackToRegisterMappingCogit >> needsFrameIfFollowsSend: isInBlock [
 ]
 
 { #category : #'compile abstract instructions' }
-StackToRegisterMappingCogit >> needsFrameIfMod16GENumArgs: isInBlock [
+StackToRegisterMappingCogit >> needsFrameIfMod16GENumArgs: stackDelta [
 	^byte0 \\ 16 >= methodOrBlockNumArgs
+]
+
+{ #category : #'compile abstract instructions' }
+StackToRegisterMappingCogit >> needsFrameIfStackGreaterThanOne: stackDelta [
+	"As of August 2013, the code generator can't deal with spills in frameless methods (the
+	 issue is to do with the stack offset to get at an argument, which is changed when there's a spill).
+	 In e.g. TextColor>>#dominates: other ^other class == self class the second send of class
+	 needs also rto allocate a register that the first one used, but the first one's register can't be
+	 spilled.  So avoid this by only allowing class to be sent if the stack contains a single element."
+
+	^stackDelta > 1
 ]
 
 { #category : #'compile abstract instructions' }
@@ -3841,25 +3852,25 @@ StackToRegisterMappingCogit >> returnRegForStoreCheck [
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> scanBlock: blockStart [
 	"Scan the block to determine if the block needs a frame or not"
-	| descriptor pc end stackDelta nExts pushingNils |
+	| descriptor pc end framelessStackDelta nExts pushingNils |
 	<var: #blockStart type: #'BlockStart *'>
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	needsFrame := false.
 	prevBCDescriptor := nil.
 	methodOrBlockNumArgs := blockStart numArgs.
-	nExts := 0.
+	inBlock := true.
 	pc := blockStart startpc.
 	end := blockStart startpc + blockStart span.
-	stackDelta := 0.
+	framelessStackDelta := nExts := 0.
 	pushingNils := true.
 	[pc < end] whileTrue:
 		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
 		 descriptor := self generatorAt: byte0.
 		 needsFrame ifFalse:
 			[(descriptor needsFrameFunction isNil
-			  or: [self perform: descriptor needsFrameFunction with: true])
+			  or: [self perform: descriptor needsFrameFunction with: framelessStackDelta])
 				ifTrue: [needsFrame := true]
-				ifFalse: [stackDelta := stackDelta + descriptor stackDelta]].
+				ifFalse: [framelessStackDelta := framelessStackDelta + descriptor stackDelta]].
 		 (pushingNils
 		  and: [descriptor isExtension not]) ifTrue:
 			["Count the initial number of pushed nils acting as temp initializers.  We can't tell
@@ -3878,38 +3889,39 @@ StackToRegisterMappingCogit >> scanBlock: blockStart [
 	 scan for frameless methods so that we don't end up popping too much off
 	 the simulated stack, e.g. for pushNil; returnTopFromBlock methods."
 	needsFrame ifFalse:
-		[self assert: (stackDelta >= 0 and: [blockStart numInitialNils >= stackDelta]).
-		 blockStart numInitialNils: blockStart numInitialNils - stackDelta]
+		[self assert: (framelessStackDelta >= 0 and: [blockStart numInitialNils >= framelessStackDelta]).
+		 blockStart numInitialNils: blockStart numInitialNils - framelessStackDelta]
 ]
 
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> scanMethod [
-	"Scan the method to determine
+	"Scan the method (and all embedded blocks) to determine
 		- what the last bytecode is; extra bytes at the end of a method are used to encode things like source pointers or temp names
 		- if the method needs a frame or not
 		- what are the targets of any backward branches.
 		- how many blocks it creates
 	 Answer the block count or on error a negative error code"
-	| latestContinuation nExts descriptor pc numBlocks distance targetPC |
+	| latestContinuation nExts descriptor pc numBlocks distance targetPC framelessStackDelta |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	needsFrame := false.
+	inBlock := false.
 	prevBCDescriptor := nil.
 	(primitiveIndex > 0
 	 and: [coInterpreter isQuickPrimitiveIndex: primitiveIndex]) ifTrue:
 		[^0].
-	numBlocks := 0.
 	pc := latestContinuation := initialPC.
-	nExts := 0.
+	numBlocks := framelessStackDelta := nExts := 0.
 	[pc <= endPC] whileTrue:
 		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
 		descriptor := self generatorAt: byte0.
 		(descriptor isReturn
 		 and: [pc >= latestContinuation]) ifTrue:
 			[endPC := pc].
-		 (needsFrame not
-		  and: [descriptor needsFrameFunction isNil
-			  or: [self perform: descriptor needsFrameFunction with: false]]) ifTrue:
-			[needsFrame := true].
+		 needsFrame ifFalse:
+			[(descriptor needsFrameFunction isNil
+			  or: [self perform: descriptor needsFrameFunction with: framelessStackDelta])
+				ifTrue: [needsFrame := true]
+				ifFalse: [framelessStackDelta := framelessStackDelta + descriptor stackDelta]].
 		descriptor isBranch ifTrue:
 			[distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.

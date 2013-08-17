@@ -6835,12 +6835,12 @@ Cogit >> nExtensionsFor: bcpc in: aMethodObj [
 ]
 
 { #category : #'compile abstract instructions' }
-Cogit >> needsFrameIfInBlock: isInBlock [
+Cogit >> needsFrameIfInBlock: stackDelta [
 	^inBlock
 ]
 
 { #category : #'compile abstract instructions' }
-Cogit >> needsFrameNever: isInBlock [
+Cogit >> needsFrameNever: stackDelta [
 	^false
 ]
 
@@ -7616,36 +7616,36 @@ Cogit >> reportLastNInstructions [
 { #category : #'compile abstract instructions' }
 Cogit >> scanBlock: blockStart [
 	"Scan the block to determine if the block needs a frame or not"
-	| descriptor pc end stackDelta nExts |
+	| descriptor pc end framelessStackDelta nExts |
 	<var: #blockStart type: #'BlockStart *'>
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	needsFrame := false.
 	methodOrBlockNumArgs := blockStart numArgs.
-	nExts := 0.
+	inBlock := true.
 	pc := blockStart startpc.
 	end := blockStart startpc + blockStart span.
-	stackDelta := 0.
+	framelessStackDelta := nExts := 0.
 	[pc < end] whileTrue:
 		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
 		 descriptor := self generatorAt: byte0.
 		 needsFrame ifFalse:
 			[(descriptor needsFrameFunction isNil
-			  or: [self perform: descriptor needsFrameFunction with: true])
+			  or: [self perform: descriptor needsFrameFunction with: framelessStackDelta])
 				ifTrue: [needsFrame := true]
-				ifFalse: [stackDelta := stackDelta + descriptor stackDelta]].
+				ifFalse: [framelessStackDelta := framelessStackDelta + descriptor stackDelta]].
 		 pc := self nextBytecodePCFor: descriptor at: pc exts: nExts in: methodObj.
 		 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]].
 	needsFrame ifFalse:
-		[stackDelta < 0 ifTrue:
+		[framelessStackDelta < 0 ifTrue:
 			[self error: 'negative stack delta in block; block contains bogus code or internal error'].
-		 [stackDelta > 0] whileTrue:
+		 [framelessStackDelta > 0] whileTrue:
 			[descriptor := self generatorAt: (objectMemory fetchByte: blockStart startpc ofObject: methodObj) + bytecodeSetOffset.
 			 descriptor generator ~~ #genPushConstantNilBytecode ifTrue:
 				[self error: 'frameless block doesn''t start with enough pushNils'].
 			 blockStart
 				startpc: blockStart startpc + descriptor numBytes;
 				span: blockStart span - descriptor numBytes.
-			 stackDelta := stackDelta - 1]]
+			 framelessStackDelta := framelessStackDelta - 1]]
 ]
 
 { #category : #'compile abstract instructions' }
@@ -7663,31 +7663,32 @@ Cogit >> scanForCleanBlocks [
 
 { #category : #'compile abstract instructions' }
 Cogit >> scanMethod [
-	"Scan the method to determine
+	"Scan the method (and all embedded blocks) to determine
 		- what the last bytecode is; extra bytes at the end of a method are used to encode things like source pointers or temp names
 		- if the method needs a frame or not
 		- what are the targets of any backward branches.
 		- how many blocks it creates
 	 Answer the block count or on error a negative error code"
-	| latestContinuation nExts descriptor pc numBlocks distance targetPC |
+	| latestContinuation nExts descriptor pc numBlocks distance targetPC framelessStackDelta |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	needsFrame := false.
+	inBlock := false.
 	(primitiveIndex > 0
 	 and: [coInterpreter isQuickPrimitiveIndex: primitiveIndex]) ifTrue:
 		[^0].
-	numBlocks := 0.
 	pc := latestContinuation := initialPC.
-	nExts := 0.
+	numBlocks := framelessStackDelta := nExts := 0.
 	[pc <= endPC] whileTrue:
 		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
 		descriptor := self generatorAt: byte0.
 		(descriptor isReturn
 		 and: [pc >= latestContinuation]) ifTrue:
 			[endPC := pc].
-		 (needsFrame not
-		  and: [descriptor needsFrameFunction isNil
-			  or: [self perform: descriptor needsFrameFunction with: false]]) ifTrue:
-			[needsFrame := true].
+		 needsFrame ifFalse:
+			[(descriptor needsFrameFunction isNil
+			  or: [self perform: descriptor needsFrameFunction with: framelessStackDelta])
+				ifTrue: [needsFrame := true]
+				ifFalse: [framelessStackDelta := framelessStackDelta + descriptor stackDelta]].
 		descriptor isBranch ifTrue:
 			[distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.
