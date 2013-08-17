@@ -240,7 +240,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV3PlusClo
  are inlined only to instances of classes for which there will always be a method.'.
 	self generatorTableFrom: #(
 		(1    0   15 genPushReceiverVariableBytecode needsFrameNever: 1)
-		(1  16   31 genPushTemporaryVariableBytecode)
+		(1  16   31 genPushTemporaryVariableBytecode needsFrameIfMod16GENumArgs: 1)
 		(1  32   63 genPushLiteralConstantBytecode needsFrameNever: 1)
 		(1  64   95 genPushLiteralVariableBytecode needsFrameNever: 1)
 		(1  96 103 genStoreAndPopReceiverVariableBytecode needsFrameNever: -1) "N.B. not frameless if immutability"
@@ -304,8 +304,8 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV3PlusClo
 		(1 190 190 genSpecialSelectorArithmetic isMapped AndRR)
 		(1 191 191 genSpecialSelectorArithmetic isMapped OrRR)
 		(1 192 197 genSpecialSelectorSend isMapped) "#at: #at:put: #size #next #nextPut: #atEnd"
-		(1 198 198 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
-		(1 199 199 genSpecialSelectorClass needsFrameNever: notMapped 0) "not mapped because it is directly inlined (for now)"
+		(1 198 198 genSpecialSelectorEqualsEquals needsFrameIfFollowsSend: notMapped -1) "not mapped because it is directly inlined (for now)"
+		(1 199 199 genSpecialSelectorClass needsFrameIfFollowsSend: notMapped 0) "not mapped because it is directly inlined (for now)"
 		(1 200 207 genSpecialSelectorSend isMapped) "#blockCopy: #value #value: #do: #new #new: #x #y"
 		(1 208 223 genSendLiteralSelector0ArgsBytecode isMapped)
 		(1 224 239 genSendLiteralSelector1ArgBytecode isMapped)
@@ -340,7 +340,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(1    0   15 genPushReceiverVariableBytecode needsFrameNever: 1)
 		(1  16   31 genPushLiteralVariable16CasesBytecode needsFrameNever: 1)
 		(1  32   63 genPushLiteralConstantBytecode needsFrameNever: 1)
-		(1  64   75 genPushTemporaryVariableBytecode)
+		(1  64   75 genPushTemporaryVariableBytecode needsFrameIfMod16GENumArgs: 1)
 		(1  76   76 genPushReceiverBytecode needsFrameNever: 1)
 		(1  77   77 genExtPushPseudoVariableOrOuterBytecode)
 		(1  78   78 genPushConstantZeroBytecode needsFrameNever: 1)
@@ -358,8 +358,8 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(1   94   94 genSpecialSelectorArithmetic isMapped AndRR)
 		(1   95   95 genSpecialSelectorArithmetic isMapped OrRR)
 		(1   96 101 genSpecialSelectorSend isMapped) "#at: #at:put: #size #next #nextPut: #atEnd"
-		(1 102 102 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
-		(1 103 103 genSpecialSelectorClass needsFrameNever: notMapped 0) "not mapped because it is directly inlined (for now)"
+		(1 102 102 genSpecialSelectorEqualsEquals needsFrameIfFollowsSend: notMapped -1) "not mapped because it is directly inlined (for now)"
+		(1 103 103 genSpecialSelectorClass needsFrameIfFollowsSend: notMapped 0) "not mapped because it is directly inlined (for now)"
 		(1 104 111 genSpecialSelectorSend isMapped) "#blockCopy: #value #value: #do: #new #new: #x #y"
 
 		(1 112 127 genSendLiteralSelector0ArgsBytecode isMapped)
@@ -437,7 +437,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
  are inlined only to instances of classes for which there will always be a method.'.
 	self generatorTableFrom: #(
 		(1    0   15 genPushReceiverVariableBytecode needsFrameNever: 1)
-		(1  16   31 genPushTemporaryVariableBytecode)
+		(1  16   31 genPushTemporaryVariableBytecode needsFrameIfMod16GENumArgs: 1)
 		(1  32   63 genPushLiteralConstantBytecode needsFrameNever: 1)
 		(1  64   95 genPushLiteralVariableBytecode needsFrameNever: 1)
 		(1  96 103 genStoreAndPopReceiverVariableBytecode needsFrameNever: -1) "N.B. not frameless if immutability"
@@ -500,8 +500,8 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 		(1 190 190 genSpecialSelectorArithmetic isMapped AndRR)
 		(1 191 191 genSpecialSelectorArithmetic isMapped OrRR)
 		(1 192 197 genSpecialSelectorSend isMapped) "#at: #at:put: #size #next #nextPut: #atEnd"
-		(1 198 198 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
-		(1 199 199 genSpecialSelectorClass needsFrameNever: notMapped 0) "not mapped because it is directly inlined (for now)"
+		(1 198 198 genSpecialSelectorEqualsEquals needsFrameIfFollowsSend: notMapped -1) "not mapped because it is directly inlined (for now)"
+		(1 199 199 genSpecialSelectorClass needsFrameIfFollowsSend: notMapped 0) "not mapped because it is directly inlined (for now)"
 		(1 200 207 genSpecialSelectorSend isMapped) "#blockCopy: #value #value: #do: #new #new: #x #y"
 		(1 208 223 genSendLiteralSelector0ArgsBytecode isMapped)
 		(1 224 239 genSendLiteralSelector1ArgBytecode isMapped)
