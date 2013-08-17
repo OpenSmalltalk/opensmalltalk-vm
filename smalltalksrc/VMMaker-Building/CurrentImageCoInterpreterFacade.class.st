@@ -442,12 +442,16 @@ CurrentImageCoInterpreterFacade >> longStoreBytecodeForHeader: methodHeaderOop [
 
 { #category : #labels }
 CurrentImageCoInterpreterFacade >> lookupAddress: address [
-	^(objectMap
-		keyAtValue: address
-		ifAbsent:
-			[variables
+	| thing |
+	thing := objectMap
 				keyAtValue: address
-				ifAbsent: [^nil]]) asString
+				ifAbsent:
+					[variables
+						keyAtValue: address
+						ifAbsent: [^nil]].
+	^thing isLiteral
+		ifTrue: [thing storeString]
+		ifFalse: [thing asString]
 ]
 
 { #category : #accessing }

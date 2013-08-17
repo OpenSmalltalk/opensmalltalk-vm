@@ -89,13 +89,14 @@ SistaStackToRegisterMappingCogit >> bytecodePCFor: mcpc startBcpc: startbcpc in:
 SistaStackToRegisterMappingCogit >> compileBlockBodies [
 	"override to maintain counterIndex when recompiling blocks; sigh."
 	<inline: false>
-	| result compiledBlocksCount blockStart savedNeedsFrame savedNumArgs
+	| result compiledBlocksCount blockStart savedNeedsFrame savedNumArgs savedNumTemps
 	  initialStackPtr initialOpcodeIndex initialAnnotationIndex initialCounterIndex |
 	<var: #blockStart type: #'BlockStart *'>
 	self assert: blockCount > 0.
 	"scanBlock: in compileBlockEntry: sets both of these appropriately for each block."
 	savedNeedsFrame := needsFrame.
 	savedNumArgs := methodOrBlockNumArgs.
+	savedNumTemps := methodOrBlockNumTemps.
 	inBlock := true.
 	compiledBlocksCount := 0.
 	[compiledBlocksCount < blockCount] whileTrue:
@@ -134,6 +135,7 @@ SistaStackToRegisterMappingCogit >> compileBlockBodies [
 		compiledBlocksCount := compiledBlocksCount + 1].
 	needsFrame := savedNeedsFrame.
 	methodOrBlockNumArgs := savedNumArgs.
+	methodOrBlockNumTemps := savedNumTemps.
 	^0
 ]
 
