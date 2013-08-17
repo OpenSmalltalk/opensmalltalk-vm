@@ -171,12 +171,6 @@ CoInterpreter class >> exportAPISelectors [
 		yourself
 ]
 
-{ #category : #'class initialization' }
-CoInterpreter class >> initialize [
-	"This is for Monticello package loading"
-	self initializeWithOptions: Dictionary new
-]
-
 { #category : #initialization }
 CoInterpreter class >> initializeContextIndices [
 	super initializeContextIndices.
