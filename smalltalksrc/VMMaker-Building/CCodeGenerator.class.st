@@ -2341,7 +2341,9 @@ CCodeGenerator >> generateWhileForeverBreakIf: breakBoolean loop: msgNode on: aS
 		while(1) {stmtListA; if(!(cond)) break; stmtListB}."
 
 	| testStmt receiverWithoutTest |
-	aStream tab: level - 1; nextPutAll: 'while (1) {'; cr.
+	aStream peekLast ~~ Character tab ifTrue:
+		[aStream tab: level - 1].
+	aStream nextPutAll: 'while (1) {'; cr.
 	testStmt := msgNode receiver statements last.
 	receiverWithoutTest := TStmtListNode new setStatements: msgNode receiver statements allButLast.
 	receiverWithoutTest emitCCodeOn: aStream level: level + 1 generator: self.

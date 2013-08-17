@@ -1163,12 +1163,14 @@ StackToRegisterMappingCogit >> compileAbstractInstructionsFrom: start through: e
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> compileBlockBodies [
 	<inline: false>
-	| result compiledBlocksCount blockStart savedNeedsFrame savedNumArgs initialStackPtr initialOpcodeIndex initialAnnotationIndex |
+	| result compiledBlocksCount blockStart savedNeedsFrame savedNumArgs savedNumTemps
+	  initialStackPtr initialOpcodeIndex initialAnnotationIndex |
 	<var: #blockStart type: #'BlockStart *'>
 	self assert: blockCount > 0.
 	"scanBlock: in compileBlockEntry: sets both of these appropriately for each block."
 	savedNeedsFrame := needsFrame.
 	savedNumArgs := methodOrBlockNumArgs.
+	savedNumTemps := methodOrBlockNumTemps.
 	inBlock := true.
 	compiledBlocksCount := 0.
 	[compiledBlocksCount < blockCount] whileTrue:
@@ -1204,6 +1206,7 @@ StackToRegisterMappingCogit >> compileBlockBodies [
 		compiledBlocksCount := compiledBlocksCount + 1].
 	needsFrame := savedNeedsFrame.
 	methodOrBlockNumArgs := savedNumArgs.
+	methodOrBlockNumTemps := savedNumTemps.
 	^0
 ]
 
@@ -2063,8 +2066,20 @@ StackToRegisterMappingCogit >> genPrimitiveBitXor [
 
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveClass [
+	"Depending on argument count the argument is either
+		0 args: ReceiverResultReg
+		1 args: Arg0Reg
+		N args: top of stack (assuming 1 reg arg for now)"
+	| reg |
+	methodOrBlockNumArgs = 1
+		ifTrue:
+			[reg := Arg0Reg]
+		ifFalse:
+			[methodOrBlockNumArgs > 0 ifTrue:
+				[self MoveMw: BytesPerWord r: SPReg R: ReceiverResultReg].
+			reg := ReceiverResultReg].
 	objectRepresentation
-		genGetClassObjectOf: ReceiverResultReg
+		genGetClassObjectOf: reg
 		into: ReceiverResultReg
 		scratchReg: TempReg.
 	self RetN: 0.
@@ -2823,11 +2838,15 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genSpecialSelectorClass [
+	| topReg |
+	topReg := self ssTop registerOrNil.
 	self ssPop: 1.
-	self ssAllocateRequiredReg: SendNumArgsReg and: ClassReg.
+	(topReg isNil or: [topReg = ClassReg])
+		ifTrue: [self ssAllocateRequiredReg: (topReg := SendNumArgsReg) and: ClassReg]
+		ifFalse: [self ssAllocateRequiredReg: ClassReg].
 	self ssPush: 1.
-	self ssTop popToReg: SendNumArgsReg.
-	objectRepresentation genGetClassObjectOf: SendNumArgsReg into: ClassReg scratchReg: TempReg.
+	self ssTop popToReg: topReg.
+	objectRepresentation genGetClassObjectOf: topReg into: ClassReg scratchReg: TempReg.
 	^self ssPop: 1; ssPushRegister: ClassReg
 ]
 
