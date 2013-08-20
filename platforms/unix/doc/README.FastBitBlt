@@ -1,0 +1,56 @@
+If you enable fast BitBlt using 'configure --enableFastBlt' then you
+might need to install or build additional assembly language tools for
+your platform.
+
+Linux on ARM (e.g., Rapsberry Pi)
+---------------------------------
+
+You will need to build 'asasm' from source.  It is currenly not
+provided as an installable package in any of the ARM repositories that
+I use.
+
+1.  Install packages to satisfy its dependencies:
+
+    sudo apt-get install bison flex libarchive-dev
+
+    (Depending on your setup, you might also need to install automake,
+    autoconf, and libtool.)
+
+2.  Obtain the asasm sources:
+
+    svn co svn://svn.riscos.info/gccsdk/trunk/tools/asasm
+    cd asasm
+
+3.  Kludge a workaround for a bug that the maintainer seems unwilling
+    to fix:
+
+    - open src/output.c with your favourite editor
+    - at the very top, insert the line
+
+    	#define ELF_EABI
+
+4.  Fix the maintainer's incomplete packaging of the sources so that
+    'configure' will actually work:
+
+    autoreconf --install
+
+    You should now have a 'configure' script and all the paraphernalia
+    that it requires (config.guess, ltmain.sh, etc.); if not then
+    perhaps running 'autoconf' will generate some stuff for you.  If
+    not, complain to the maintainer of asasm that the whole point of
+    autotools is that you should never, ever have to do any of the
+    nonsense in step 4 of these instructions.
+
+5. Generate a Makefile:
+
+   ./configure --target=arm-linux-gnueabihf
+
+6.  Build an assember:
+
+    make
+
+7.  Install it so that the Squeak build process can find it:
+
+    sudo make install
+
+You should now be able to build Squeak with fast BitBlt enabled.

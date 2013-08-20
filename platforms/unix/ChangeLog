@@ -1,3 +1,8 @@
+2013-08-19  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* doc/README.FastBitBlt: Added instructions for compiling on ARM
+	running Linux.
+
 2013-08-15  Ian Piumarta  <piumarta@raspberrypi>
 
 	* cmake/Plugins.cmake: Process ${plugin}_extra_sources in both
