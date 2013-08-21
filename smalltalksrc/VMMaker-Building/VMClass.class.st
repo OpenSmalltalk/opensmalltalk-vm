@@ -29,6 +29,13 @@ VMClass class >> apiExportHeaderName [
 ]
 
 { #category : #translation }
+VMClass class >> cogMethodClass: options [
+	^(options at: #NewspeakVM ifAbsent: [false])
+		ifTrue: [NewspeakCogMethod]
+		ifFalse: [CogMethod]
+]
+
+{ #category : #translation }
 VMClass class >> coreInterpreterClass [
 	"While the interpreterClass/vmClass for translation may be
 	 a subclass that holds a few primitives we want the actual
