@@ -85,7 +85,7 @@ CogAbstractInstruction class >> nameForOpcode: opcode [ "<Integer>"
 ]
 
 { #category : #translation }
-CogAbstractInstruction class >> requiredMethodNames [
+CogAbstractInstruction class >> requiredMethodNames: options [
 	^self selectors reject:
 		[:s|
 		(self isAccessor: s)

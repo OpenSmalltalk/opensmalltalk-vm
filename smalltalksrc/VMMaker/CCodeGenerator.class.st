@@ -95,7 +95,7 @@ CCodeGenerator >> addClass: aClass [
 	self addPoolVarsFor: aClass.
 	(aClass inheritsFrom: VMStructType) ifFalse:
 		[variables addAll: aClass instVarNames].
-	self retainMethods: aClass requiredMethodNames.
+	self retainMethods: (aClass requiredMethodNames: self options).
 	
 	'Adding Class ' , aClass name , '...'
 		displayProgressAt: Sensor cursorPoint
@@ -275,7 +275,7 @@ CCodeGenerator >> addStructClass: aClass [
 	aClass prepareToBeAddedToCodeGenerator: self.
 	self addClassVarsFor: aClass.
 	self addPoolVarsFor: aClass.
-	self retainMethods: aClass requiredMethodNames.
+	self retainMethods: (aClass requiredMethodNames: self options).
 	
 	'Adding Class ' , aClass name , '...'
 		displayProgressAt: Sensor cursorPoint
@@ -456,7 +456,9 @@ CCodeGenerator >> checkClassForNameConflicts: aClass [
 	aClass selectors do:
 		[:sel |
 		((methods includesKey: sel)
-		and: [((aClass compiledMethodAt: sel) pragmaAt: #doNotGenerate) isNil]) ifTrue:
+		and: [(aClass isStructClass and: [(aClass isAccessor: sel)
+				and: [(methods at: sel) isStructAccessor]]) not
+		and: [((aClass compiledMethodAt: sel) pragmaAt: #doNotGenerate) isNil]]) ifTrue:
 			[self error: 'Method ', sel, ' was defined in a previously added class.']]
 ]
 
@@ -695,7 +697,7 @@ CCodeGenerator >> emitBuiltinConstructFor: msgNode on: aStream level: level [
 CCodeGenerator >> emitCAPIExportHeaderOn: aStream [ 
 	"Store prototype declarations for all non-inlined methods on the given stream."
 	| api methodList |
-	api := vmClass translationClass exportAPISelectors.
+	api := (vmClass translationClass exportAPISelectors: self options).
 	methodList := api select: [:s| (methods includesKey: s) or: [(vmClass whichClassIncludesSelector: s) notNil]]
 					  thenCollect:
 						[:s|
@@ -909,7 +911,7 @@ CCodeGenerator >> emitCTestBlock: aBlockNode on: aStream indent: level [
 CCodeGenerator >> emitCTypesOn: aStream [ 
 	"Store local type declarations on the given stream."
 	vmClass ifNotNil:
-		[vmClass ancilliaryStructClasses do:
+		[(self structClassesForTranslationClasses: { vmClass }) do:
 			[:structClass|
 			(structClass isAbstract not
 			 and: [vmClass shouldGenerateTypedefFor: structClass]) ifTrue:
@@ -3403,20 +3405,23 @@ CCodeGenerator >> storeHeaderOnFile: fileName contents: contents [
 
 { #category : #utilities }
 CCodeGenerator >> structClassesForTranslationClasses: classes [
-	"Answer in superclass order (any superclass precedes any subclass) the ancilliaryStructClasses for all the given classes."
+	"Answer in superclass order (any superclass precedes any subclass)
+	 the ancilliaryClasses that are struct classes for all the given classes."
 	| structClasses |
-
-	structClasses := Set new.
+	structClasses := OrderedCollection new.
 	classes do:
 		[:aTranslationClass|
-		structClasses addAll:
-			([aTranslationClass ancilliaryStructClasses]
+		([aTranslationClass ancilliaryClasses: self options]
 				on: MessageNotUnderstood
 				do: [:ex|
-					ex message selector == #ancilliaryStructClasses
+					ex message selector == #ancilliaryClasses:
 						ifTrue: [#()]
-						ifFalse: [ex pass]])].
-	^ChangeSet superclassOrder: structClasses asArray
+						ifFalse: [ex pass]]) do:
+			[:class|
+			(class isStructClass
+			 and: [(structClasses includes: class) not]) ifTrue:
+				[structClasses addLast: class]]].
+	^ChangeSet superclassOrder: structClasses
 ]
 
 { #category : #'C code generator' }

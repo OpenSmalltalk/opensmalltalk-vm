@@ -368,7 +368,7 @@ BitBltSimulation class >> opTable [
 ]
 
 { #category : #translation }
-BitBltSimulation class >> requiredMethodNames [
+BitBltSimulation class >> requiredMethodNames: options [
 	^self opTable asSet
 ]
 

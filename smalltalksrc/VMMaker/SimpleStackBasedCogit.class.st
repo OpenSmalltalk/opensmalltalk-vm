@@ -16,8 +16,9 @@ Class {
 }
 
 { #category : #translation }
-SimpleStackBasedCogit class >> ancilliaryClasses [
-	^super ancilliaryClasses, { CogObjectRepresentationForSqueakV3 }
+SimpleStackBasedCogit class >> ancilliaryClasses: options [
+	"hard-wired for now"
+	^(super ancilliaryClasses: options), { CogObjectRepresentationForSqueakV3 }
 ]
 
 { #category : #documentation }
@@ -685,7 +686,7 @@ SimpleStackBasedCogit >> compileFrameBuild [
 		objRef: objectMemory nilObject.
 	self PushR: SendNumArgsReg. "context"
 	self PushR: ReceiverResultReg.
-	methodOrBlockNumArgs + 1 to: (coInterpreter tempCountOf: methodObj) do:
+	methodOrBlockNumArgs + 1 to: (coInterpreter temporaryCountOfMethodHeader: methodHeader) do:
 		[:i|
 		self PushR: SendNumArgsReg].
 	(primitiveIndex > 0

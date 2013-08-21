@@ -123,9 +123,8 @@ Class {
 }
 
 { #category : #translation }
-StackToRegisterMappingCogit class >> ancilliaryStructClasses [
-	"self ancilliaryStructClasses"
-	^(super ancilliaryStructClasses copyWithout: CogBytecodeFixup),
+StackToRegisterMappingCogit class >> ancilliaryClasses: options [
+	^((super ancilliaryClasses: options) copyWithout: CogBytecodeFixup),
 	  { CogSSBytecodeFixup. CogSimStackEntry. CogSSOptStatus }
 ]
 
@@ -857,9 +856,8 @@ StackToRegisterMappingCogit class >> pushNilSizeFunction [
 ]
 
 { #category : #translation }
-StackToRegisterMappingCogit class >> requiredMethodNames [
-	"self requiredMethodNames"
-	^super requiredMethodNames
+StackToRegisterMappingCogit class >> requiredMethodNames: options [
+	^(super requiredMethodNames: options)
 		add: self isPushNilFunction;
 		add: self pushNilSizeFunction;
 		yourself

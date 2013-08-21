@@ -26,16 +26,14 @@ Class {
 	#category : #'VMMaker-Interpreter'
 }
 
-{ #category : #accessing }
+{ #category : #translation }
 InterpreterStackPage class >> alignedByteSize [
-	"Simulation only.  In the simulation stack pages are purely Smalltalk objects
-	 and don't exist in memory."
-	^0
+	^self surrogateClass alignedByteSize
 ]
 
 { #category : #translation }
 InterpreterStackPage class >> alignedByteSizeOf: anObject forClient: aVMClass [
-	^self alignedByteSize
+	^self surrogateClass alignedByteSize
 ]
 
 { #category : #'class initialization' }
@@ -64,6 +62,13 @@ InterpreterStackPage class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock
 { #category : #translation }
 InterpreterStackPage class >> structTypeName [
 	^'StackPage' "Drop initial Cog or Interpreter"
+]
+
+{ #category : #'simulation only' }
+InterpreterStackPage class >> surrogateClass [
+	^BytesPerWord = 4
+		ifTrue: [CogStackPageSurrogate32]
+		ifFalse: [CogStackPageSurrogate64]
 ]
 
 { #category : #'simulation only' }
