@@ -469,9 +469,9 @@ ObjectMemory class >> mustBeGlobal: var [
 ]
 
 { #category : #translation }
-ObjectMemory class >> requiredMethodNames [
+ObjectMemory class >> requiredMethodNames: options [
 	"return the list of method names that should be retained for export or other support reasons"
-	^self exportAPISelectors
+	^self exportAPISelectors: options
 ]
 
 { #category : #translation }
@@ -1377,8 +1377,8 @@ ObjectMemory >> classFloat [
 
 { #category : #'header access' }
 ObjectMemory >> classHeader: oop [
-
-	^ self longAt: oop - BaseHeaderSize
+	<api>
+	^self longAt: oop - BaseHeaderSize
 ]
 
 { #category : #'plugin support' }
@@ -1498,6 +1498,7 @@ ObjectMemory >> compactClassAt: ccIndex [
 
 { #category : #'header access' }
 ObjectMemory >> compactClassIndexOf: oop [
+	<api>
 	<inline: true>
 	^((self baseHeader: oop) >> 12) bitAnd: 16r1F
 ]
@@ -1663,8 +1664,8 @@ ObjectMemory >> falseObject [
 
 { #category : #'interpreter access' }
 ObjectMemory >> fetchByte: byteIndex ofObject: oop [
-
-	^ self byteAt: oop + BaseHeaderSize + byteIndex
+	<api>
+	^self byteAt: oop + BaseHeaderSize + byteIndex
 ]
 
 { #category : #'interpreter access' }
@@ -2825,8 +2826,8 @@ ObjectMemory >> isMethodContextHeader: aHeader [
 
 { #category : #'interpreter access' }
 ObjectMemory >> isNonIntegerObject: objectPointer [
-
-	^ (objectPointer bitAnd: 1) = 0
+	<api>
+	^(objectPointer bitAnd: 1) = 0
 ]
 
 { #category : #'header access' }
@@ -2962,9 +2963,10 @@ ObjectMemory >> lastPointerOf: oop [
 	"Return the byte offset of the last pointer field of the given object.  
 	Works with CompiledMethods, as well as ordinary objects. 
 	Can be used even when the type bits are not correct."
-	| fmt sz methodHeader header contextSize |
+	<api>
 	<inline: true>
 	<asmLabel: false>
+	| fmt sz methodHeader header contextSize |
 	header := self baseHeader: oop.
 	fmt := self formatOfHeader: header.
 	fmt <= 4 ifTrue: [(fmt = 3 and: [self isContextHeader: header])

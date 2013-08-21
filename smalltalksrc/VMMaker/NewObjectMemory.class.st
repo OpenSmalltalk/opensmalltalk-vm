@@ -1603,9 +1603,10 @@ NewObjectMemory >> lastPointerOf: oop [
 	"Return the byte offset of the last pointer field of the given object.  
 	 Can be used even when the type bits are not correct.
 	 Works with CompiledMethods, as well as ordinary objects."
-	| fmt header contextSize numLiterals |
+	<api>
 	<inline: true>
 	<asmLabel: false>
+	| fmt header contextSize numLiterals |
 	header := self baseHeader: oop.
 	fmt := self formatOfHeader: header.
 	fmt <= 4 ifTrue:
