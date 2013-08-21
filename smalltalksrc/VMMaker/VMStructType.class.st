@@ -38,13 +38,13 @@ VMStructType class >> checkGenerateFieldAccessors: fieldSpecs bitPosition: first
 			[code := self getter: spec first
 						 bitPosition: bitPosition
 						 bitWidth: spec second
-						 bool: (spec at: 3 ifAbsent: []) = #Boolean.
+						 type: (spec at: 3 ifAbsent: []).
 			 code ~= (surrogateClass sourceCodeAt: spec first asSymbol ifAbsent: ['']) asString ifTrue:
 				[surrogateClass compile: code classified: #accessing].
 			 code := self setter: spec first
 						 bitPosition: bitPosition
 						 bitWidth: spec second
-						 bool: (spec at: 3 ifAbsent: []) = #Boolean.
+						 type: (spec at: 3 ifAbsent: []).
 			 code ~= (surrogateClass sourceCodeAt: (spec first, ':') asSymbol ifAbsent: ['']) asString ifTrue:
 				[surrogateClass compile: code classified: #accessing]].
 		bitPosition := bitPosition + spec second].
@@ -91,15 +91,21 @@ VMStructType class >> fieldAccessorsForBytesPerWord: bytesPerWord [
 				ifTrue:
 					[Integer readFrom: (typeTuple last readStream skipTo: $:; skipSeparators)]
 				ifFalse:
-					[typeTuple caseOf: {
+					[typeTuple
+						caseOf: {
 								['unsigned char']	->	[8].
 								['unsigned short']	->	[16].
-								['unsigned int']		->	[32].
-								['unsigned long']	->	[bytesPerWord * 8].
-								['sqInt']				->	[bytesPerWord * 8].
-								['usqInt']			->	[bytesPerWord * 8] }].
-			(typeTuple isArray and: [typeTuple size >= 3 and: [typeTuple second = #Boolean]]) ifTrue:
-				[#Boolean] }] valueWithArguments: tuple]
+								['unsigned int']		->	[32] }
+						otherwise: [bytesPerWord * 8]].
+			typeTuple isArray
+				ifTrue:
+					[(typeTuple size >= 3 and: [typeTuple second = #Boolean]) ifTrue:
+						[#Boolean]]
+				ifFalse:
+					[typeTuple last = $* ifTrue:
+						[(typeTuple beginsWith: 'struct _') "remove struct tag if any"
+							ifTrue: [(typeTuple allButFirst: 8) asSymbol]
+							ifFalse: [typeTuple]]] }] valueWithArguments: tuple]
 
 	"#(4 8) collect: [:bpw| (CogBlockMethod fieldAccessorsForBytesPerWord: bpw) asArray]"
 	"#(4 8) collect: [:bpw| (CogMethod fieldAccessorsForBytesPerWord: bpw) asArray]"
@@ -114,16 +120,21 @@ VMStructType class >> filteredInstVarNames [
 ]
 
 { #category : #'code generation' }
-VMStructType class >> getter: getter bitPosition: bitPosition bitWidth: bitWidth bool: isBool [
+VMStructType class >> getter: getter bitPosition: bitPosition bitWidth: bitWidth type: typeOrNil [
 	^String streamContents:
 		[:s| | startByte endByte alignedPowerOf2 shift bool |
 		startByte := bitPosition // 8.
 		endByte := bitPosition + bitWidth - 1 // 8.
 		shift := bitPosition \\ 8.
 		alignedPowerOf2 := (#(8 16 32 64) includes: bitWidth) and: [shift = 0].
-		s nextPutAll: getter; crtab: 1; nextPut: $^.
-		isBool ifTrue:
-			[s nextPut: $(].
+		s nextPutAll: getter; crtab: 1.
+		(typeOrNil notNil and: [typeOrNil last = $*]) ifTrue:
+			[s nextPutAll: '| v |'; crtab: 1].
+		s nextPut: $^.
+		typeOrNil ifNotNil:
+			[s nextPut: $(.
+			 typeOrNil last = $* ifTrue:
+				[s nextPutAll: 'v := ']].
 		alignedPowerOf2 ifFalse:
 			[s nextPut: $(].
 		shift ~= 0 ifTrue:
@@ -137,8 +148,14 @@ VMStructType class >> getter: getter bitPosition: bitPosition bitWidth: bitWidth
 			[s nextPutAll: ') bitShift: -'; print: shift].
 		alignedPowerOf2 ifFalse:
 			[s nextPutAll: ') bitAnd: '; nextPutAll: ((1 << bitWidth) - 1) hex].
-		isBool ifTrue:
-			[s nextPutAll: ') ~= 0']]
+		typeOrNil ifNotNil:
+			[s nextPutAll: ') ~= 0'.
+			typeOrNil last = $* ifTrue:
+				[s nextPutAll: ' ifTrue:';
+					crtab: 2;
+					nextPutAll: '[cogit cCoerceSimple: v to: ';
+					store: typeOrNil;
+					nextPut: $]]]]
 ]
 
 { #category : #translation }
@@ -289,7 +306,7 @@ VMStructType class >> returnTypeForAccessor: aSelector [
 ]
 
 { #category : #'code generation' }
-VMStructType class >> setter: getter bitPosition: bitPosition bitWidth: bitWidth bool: isBool [
+VMStructType class >> setter: getter bitPosition: bitPosition bitWidth: bitWidth type: typeOrNil [
 	^String streamContents:
 		[:s| | startByte endByte shift alignedPowerOf2 accessor mask expr |
 		startByte := bitPosition // 8.
@@ -305,7 +322,7 @@ VMStructType class >> setter: getter bitPosition: bitPosition bitWidth: bitWidth
 						at: endByte - startByte + 1
 						ifAbsent: [(2 raisedTo: 64) - 1].
 		s nextPutAll: getter; nextPutAll: ': aValue'.
-		(isBool or: [alignedPowerOf2]) ifFalse:
+		(typeOrNil notNil or: [alignedPowerOf2]) ifFalse:
 			[s crtab: 1; nextPutAll: 'self assert: (aValue between: 0 and: '; nextPutAll:  ((1 << bitWidth) - 1) hex; nextPutAll: ').'].
 		s crtab: 1.
 		alignedPowerOf2 ifTrue:
@@ -313,19 +330,22 @@ VMStructType class >> setter: getter bitPosition: bitPosition bitWidth: bitWidth
 		s nextPutAll: 'memory';
 		  crtab: 2; nextPutAll: accessor; print: startByte + 1;
 		  crtab: 2; nextPutAll: 'put: '.
-		isBool ifTrue:
+		typeOrNil ifNotNil:
 			[s nextPut: $(].
 		alignedPowerOf2 ifFalse:
 			[s nextPutAll: '((memory '; nextPutAll: accessor; print: startByte + 1;
 			    nextPutAll: ') bitAnd: '; nextPutAll: (mask - ((1 << bitWidth - 1) << shift)) hex;
 			    nextPutAll: ') + '].
-		expr := isBool ifTrue: ['(aValue ifTrue: [1] ifFalse: [0])'] ifFalse: ['aValue'].
+		expr := typeOrNil caseOf: {
+						[nil] -> ['aValue'].
+						[#Boolean] -> ['(aValue ifTrue: [1] ifFalse: [0])'] }
+					otherwise: ['(aValue ifNotNil: [aValue asUnsignedInteger] ifNil: [0])'].
 		shift = 0
 			ifTrue:
 				[s nextPutAll: expr]
 			ifFalse:
 				[s nextPut: $(; nextPutAll: expr; nextPutAll: ' bitShift: '; print: shift; nextPut: $)].
-		isBool ifTrue:
+		typeOrNil notNil ifTrue:
 			[s nextPut: $)].
 		alignedPowerOf2 ifFalse:
 			[s nextPut: $.; crtab: 1; nextPutAll: '^aValue']]
