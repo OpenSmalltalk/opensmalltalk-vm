@@ -107,8 +107,9 @@ CogMethodZone >> clearCogCompiledCode [
 	"Free all methods"
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
-	 cogMethod := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
-	 [cogMethod asUnsignedInteger < mzFreeStart] whileTrue:
+	self cppIf: NewspeakVM ifTrue: [unpairedMethodList := nil].
+	cogMethod := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
+	[cogMethod asUnsignedInteger < mzFreeStart] whileTrue:
 		[cogMethod cmType = CMMethod ifTrue:
 			[self freeMethod: cogMethod].
 		 cogMethod := self methodAfter: cogMethod].
@@ -623,13 +624,12 @@ CogMethodZone >> removeFromUnpairedMethodList: aCogMethod [
 		[unpairedMethodList := aCogMethod nextMethod.
 		 ^nil].
 	prevMethod := unpairedMethodList.
-	[self assert: (prevMethod ~~ nil
-				and: [prevMethod cmType = CMMethod]).
-	 prevMethod nextMethod = aCogMethod ifTrue:
-		[prevMethod nextMethod: aCogMethod nextMethod.
-		 ^nil].
-	  prevMethod := aCogMethod nextMethod.
-	  true] whileTrue
+	[prevMethod notNil] whileTrue:
+		[self assert: (prevMethod ~~ nil and: [prevMethod cmType = CMMethod]).
+		 prevMethod nextMethod = aCogMethod ifTrue:
+			[prevMethod nextMethod: aCogMethod nextMethod.
+			 ^nil].
+		  prevMethod := aCogMethod nextMethod]
 ]
 
 { #category : #'young referers' }
