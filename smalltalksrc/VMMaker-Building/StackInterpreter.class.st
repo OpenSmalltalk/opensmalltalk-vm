@@ -4315,7 +4315,7 @@ StackInterpreter >> explicitOuterReceiver: n withObject: anObject withMixin: mix
 			[^objectMemory nilObject].
 		mixinApplication := self
 								findApplicationOfTargetMixin: targetMixin
-								startingAtNonMetaClass: (self fetchClassOf: explicitReceiver).
+								startingAtNonMetaClass: (objectMemory fetchClassOf: explicitReceiver).
 		mixinApplication = objectMemory nilObject ifTrue:
 			[^objectMemory nilObject]. "should never happen!"
 		explicitReceiver := objectMemory fetchPointer: EnclosingObjectIndex ofObject: mixinApplication.	

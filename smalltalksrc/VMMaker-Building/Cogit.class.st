@@ -298,7 +298,9 @@ Cogit class >> additionalHeadersDo: aBinaryBlock [
 	 any additional header files that need to be generated."
 	aBinaryBlock
 		value: 'cogmethod.h'
-		value: CogMethod cogMethodHeader
+		value: (NewspeakVM
+					ifTrue: [NewspeakCogMethod]
+					ifFalse: [CogMethod]) cogMethodHeader
 ]
 
 { #category : #translation }
@@ -318,8 +320,10 @@ Cogit class >> ancilliaryClasses: options [
 		CogInstructionAnnotation.
 		CogPrimitiveDescriptor.
 		CogBlockMethod.
-		CogMethod
-	  }
+		CogMethod },
+	((options at: #NewspeakVM ifAbsent: [false])
+		ifTrue: [{NewspeakCogMethod}]
+		ifFalse: [#()])
 ]
 
 { #category : #'class initialization' }
@@ -891,7 +895,7 @@ Cogit class >> requiredMethodNames: options [
 { #category : #translation }
 Cogit class >> shouldGenerateTypedefFor: aStructClass [
 	"Hack to work-around mutliple definitions.  Sometimes a type has been defined in an include."
-	^({ CogBlockMethod. CogMethod. SistaCogMethod } includes: aStructClass) not
+	^({ CogBlockMethod. CogMethod. SistaCogMethod. NewspeakCogMethod } includes: aStructClass) not
 ]
 
 { #category : #translation }
@@ -3655,7 +3659,9 @@ Cogit >> compileEntry [
 	 In Newspeak we also need to distinguish dynSuperSends from normal and super
 	 and so bind a the preceeding nop (on x86 there happens to be one anyway)."
 	self cppIf: NewspeakVM
-		ifTrue: [dynSuperEntry := self Nop].
+		ifTrue: "1st nop differentiates dynSuperEntry from no-check entry if using nextMethod"
+			[self Nop. 
+			dynSuperEntry := self Nop].
 	self AlignmentNops: (BytesPerWord max: 8).
 	entry := self Label.
 	objectRepresentation getInlineCacheClassTagFrom: ReceiverResultReg into: TempReg.
@@ -4222,7 +4228,8 @@ Cogit >> fillInMethodHeader: method size: size selector: selector [
 		ifTrue:
 			[originalMethod := self cCoerceSimple: methodHeader to: #'CogMethod *'.
 			self assert: originalMethod blockSize = size.
-			methodHeader := originalMethod methodHeader]
+			methodHeader := originalMethod methodHeader.
+			self cppIf: NewspeakVM ifTrue: [methodZone addToUnpairedMethodList: method]]
 		ifFalse:
 			[coInterpreter rawHeaderOf: methodObj put: method asInteger].
 	method methodHeader: methodHeader.
@@ -5616,9 +5623,15 @@ Cogit >> initialOpenPICUsageCount [
 
 { #category : #initialization }
 Cogit >> initialize [
-	cogMethodSurrogateClass := BytesPerWord = 4
+	cogMethodSurrogateClass := NewspeakVM
+									ifTrue:
+										[BytesPerWord = 4
+											ifTrue: [NewspeakCogMethodSurrogate32]
+											ifFalse: [NewspeakCogMethodSurrogate64]]
+									ifFalse:
+										[BytesPerWord = 4
 											ifTrue: [CogMethodSurrogate32]
-											ifFalse: [CogMethodSurrogate64].
+											ifFalse: [CogMethodSurrogate64]].
 	cogBlockMethodSurrogateClass := BytesPerWord = 4
 											ifTrue: [CogBlockMethodSurrogate32]
 											ifFalse: [CogBlockMethodSurrogate64]
