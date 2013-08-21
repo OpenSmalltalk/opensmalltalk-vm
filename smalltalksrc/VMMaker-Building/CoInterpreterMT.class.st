@@ -31,13 +31,8 @@ Class {
 }
 
 { #category : #translation }
-CoInterpreterMT class >> ancilliaryClasses [
-	^super ancilliaryClasses, { CogThreadManager }
-]
-
-{ #category : #translation }
-CoInterpreterMT class >> ancilliaryStructClasses [
-	^super ancilliaryStructClasses, { CogVMThread }
+CoInterpreterMT class >> ancilliaryClasses: options [
+	^(super ancilliaryClasses: options), { CogThreadManager. CogVMThread }
 ]
 
 { #category : #translation }

@@ -26,7 +26,7 @@ Class {
 }
 
 { #category : #translation }
-NewsqueakIA32ABIPlugin class >> ancilliaryStructClasses [
+NewsqueakIA32ABIPlugin class >> ancilliaryClasses: options [
 	^{ VMCallbackContext. VMCallbackReturnValue }
 ]
 

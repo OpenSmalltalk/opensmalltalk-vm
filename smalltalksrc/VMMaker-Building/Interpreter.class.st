@@ -919,7 +919,7 @@ Interpreter class >> preGenerationHook: aCCodeGenerator [
 	 before it performs code analysis and generation.  In this case, make
 	 all non-exported methods private."
 	| requiredMethodNames |
-	requiredMethodNames := self requiredMethodNames.
+	requiredMethodNames := self requiredMethodNames: aCCodeGenerator options.
 	aCCodeGenerator selectorsAndMethodsDo:
 		[:s :m|
 		(m export or: [requiredMethodNames includes: s]) ifTrue:
@@ -978,7 +978,7 @@ Interpreter class >> primitiveTableString [
 ]
 
 { #category : #translation }
-Interpreter class >> requiredMethodNames [
+Interpreter class >> requiredMethodNames: options [
 	"return the list of method names that should be retained for export or other support reasons"
 	| requiredList |
 	requiredList := Set new: 400.

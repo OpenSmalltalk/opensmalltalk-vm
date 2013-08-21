@@ -80,16 +80,10 @@ Class {
 }
 
 { #category : #translation }
-CoInterpreter class >> ancilliaryClasses [
+CoInterpreter class >> ancilliaryClasses: options [
 	"Answer any extra classes to be included in the translation."
-	^super ancilliaryClasses
-		copyReplaceAll: { InterpreterStackPages }
-		with: { CoInterpreterStackPages }
-]
-
-{ #category : #translation }
-CoInterpreter class >> ancilliaryStructClasses [
-	^{ CogStackPage.
+	^((super ancilliaryClasses: options) copyWithout: InterpreterStackPages),
+	   {	CoInterpreterStackPages.
 		CogBlockMethod.
 		CogMethod }
 ]
@@ -146,29 +140,15 @@ CoInterpreter class >> declareCVarsIn: aCCodeGenerator [
 ]
 
 { #category : #translation }
-CoInterpreter class >> exportAPISelectors [
+CoInterpreter class >> exportAPISelectors: options [
 	"Yes this is a mess.  When all exportAPI methods are marked with the <api> pragma
 	 this can go away."
 	| omExports |
 	omExports := (self objectMemoryClass withAllSuperclasses copyUpTo: VMClass)
-					inject: Set new into: [:api :c| api addAll: c exportAPISelectors; yourself].
-	^((self withAllSuperclasses copyUpTo: VMClass),
-		self ancilliaryClasses
-			inject: omExports
-			into: [:set :class| set addAll: (self exportAPISelectorsFor: class); yourself])
-	 	addAll: #(	classHeader:
-					compactClassIndexOf:
-					fetchByte:ofObject:
-					functionPointerFor:inClass:
-					isNonIntegerObject:
-					lastPointerOf:
-					literal:ofMethod:
-					popStack
-					primitiveClosureValueNoContextSwitch
-					specialSelector:
-					stackTop
-					tempCountOf:);
-		yourself
+					inject: Set new into: [:api :c| api addAll: (c exportAPISelectors: options); yourself].
+	^(self withAllSuperclasses copyUpTo: VMClass), (self ancilliaryClasses: options)
+		inject: omExports
+		into: [:set :class| set addAll: (self exportAPISelectorsFor: class); yourself]
 ]
 
 { #category : #initialization }
@@ -469,7 +449,7 @@ CoInterpreter class >> prepareToBeAddedToCodeGenerator: aCodeGen [
 { #category : #translation }
 CoInterpreter class >> shouldGenerateTypedefFor: aStructClass [
 	"Hack to work-around multiple definitions.  Sometimes a type has been defined in an include."
-	^({ CogBlockMethod. CogMethod. SistaCogMethod } includes: aStructClass) not
+	^({ CogBlockMethod. CogMethod. SistaCogMethod. VMCallbackContext } includes: aStructClass) not
 ]
 
 { #category : #translation }
@@ -2388,7 +2368,7 @@ CoInterpreter >> compilationBreakpointFor: selectorOop [
 
 { #category : #initialization }
 CoInterpreter >> computeStackZoneSize [
-	^numStackPages * ((self sizeof: CogStackPage) + self stackPageByteSize)
+	^numStackPages * ((self sizeof: InterpreterStackPage) + self stackPageByteSize)
 	 + stackPages extraStackBytes
 ]
 
