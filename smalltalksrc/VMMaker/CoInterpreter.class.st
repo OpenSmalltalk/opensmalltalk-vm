@@ -84,8 +84,8 @@ CoInterpreter class >> ancilliaryClasses: options [
 	"Answer any extra classes to be included in the translation."
 	^((super ancilliaryClasses: options) copyWithout: InterpreterStackPages),
 	   {	CoInterpreterStackPages.
-		CogBlockMethod.
-		CogMethod }
+		CogBlockMethod },
+	((Cogit ancilliaryClasses: options) select: [:class| class inheritsFrom: CogBlockMethod])
 ]
 
 { #category : #translation }
@@ -449,7 +449,7 @@ CoInterpreter class >> prepareToBeAddedToCodeGenerator: aCodeGen [
 { #category : #translation }
 CoInterpreter class >> shouldGenerateTypedefFor: aStructClass [
 	"Hack to work-around multiple definitions.  Sometimes a type has been defined in an include."
-	^({ CogBlockMethod. CogMethod. SistaCogMethod. VMCallbackContext } includes: aStructClass) not
+	^({ CogBlockMethod. CogMethod. NewspeakCogMethod. SistaCogMethod. VMCallbackContext } includes: aStructClass) not
 ]
 
 { #category : #translation }
