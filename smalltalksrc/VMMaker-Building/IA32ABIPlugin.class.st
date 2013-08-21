@@ -26,7 +26,7 @@ Class {
 }
 
 { #category : #translation }
-IA32ABIPlugin class >> ancilliaryStructClasses [
+IA32ABIPlugin class >> ancilliaryClasses: options [
 	^{ VMCallbackContext. VMCallbackReturnValue }
 ]
 

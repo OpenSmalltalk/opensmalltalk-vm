@@ -133,7 +133,7 @@ NewspeakInterpreter class >> additionalSelectorTables [
 ]
 
 { #category : #translation }
-NewspeakInterpreter class >> ancilliaryStructClasses [
+NewspeakInterpreter class >> ancilliaryClasses: options [
 	^{ VMCallbackContext }
 ]
 
@@ -958,7 +958,7 @@ NewspeakInterpreter class >> preGenerationHook: aCCodeGenerator [
 	 before it performs code analysis and generation.  In this case, make
 	 all non-exported methods private."
 	| publicMethodNames |
-	publicMethodNames := self requiredMethodNames
+	publicMethodNames := (self requiredMethodNames: aCCodeGenerator options)
 								copyWithoutAll: (self primitiveTable
 														copyWithout: #primitiveFail).
 	aCCodeGenerator selectorsAndMethodsDo:
@@ -1040,10 +1040,10 @@ NewspeakInterpreter class >> primitiveTableString [
 ]
 
 { #category : #translation }
-NewspeakInterpreter class >> requiredMethodNames [
+NewspeakInterpreter class >> requiredMethodNames: options [
 	"return the list of method names that should be retained for export or other support reasons"
 	| requiredList |
-	requiredList := self exportAPISelectors..
+	requiredList := self exportAPISelectors: options.
 	"A number of methods required by VM support code, jitter, specific platforms etc"
 	requiredList addAll: #(fullDisplayUpdate interpret printCallStack printAllStacks printOop: readImageFromFile:HeapSize:StartingAt: success: readableFormat: getCurrentBytecode characterForAscii: findClassOfMethod:forReceiver: findSelectorOfMethod:forReceiver: loadInitialContext primitiveFlushExternalPrimitives getFullScreenFlag getInterruptCheckCounter getInterruptKeycode getInterruptPending getNextWakeupTick getSavedWindowSize setFullScreenFlag: setInterruptCheckCounter: setInterruptKeycode: setInterruptPending: setNextWakeupTick: setSavedWindowSize: forceInterruptCheck getThisSessionID getDeferDisplayUpdates validInstructionPointer:inMethod:).
 

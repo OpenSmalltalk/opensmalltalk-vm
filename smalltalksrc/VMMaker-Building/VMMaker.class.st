@@ -589,7 +589,7 @@ VMMaker >> buildCodeGeneratorForCogit: getAPIMethods [
 	 and: [cogitClass inheritsFrom: Cogit]] whileTrue:
 		[cogitClass := cogitClass superclass].
 	cogitClasses addFirst: VMClass.
-	cogitClasses addAllLast: self cogitClass ancilliaryClasses.
+	cogitClasses addAllLast: ((self cogitClass ancilliaryClasses: optionsDictionary) reject: [:class| class isStructClass]).
 	cogitClasses do: [:cgc| cg addClass: cgc].
 	(cg structClassesForTranslationClasses: cogitClasses) do:
 		[:structClass| cg addStructClass: structClass].
@@ -612,7 +612,7 @@ VMMaker >> buildCodeGeneratorForInterpreter [
 VMMaker >> buildCodeGeneratorForInterpreter: getAPIMethods [
 	"Answer the code generator for translating the interpreter."
 
-	| cg interpreterClass interpreterClasses structClasses apicg |
+	| cg interpreterClass interpreterClasses apicg |
 	interpreterClasses := OrderedCollection new.
 
 	(cg := self createCodeGenerator) vmClass: (interpreterClass := self interpreterClass).
@@ -629,10 +629,8 @@ VMMaker >> buildCodeGeneratorForInterpreter: getAPIMethods [
 			 interpreterClass := interpreterClass superclass]].
 
 	interpreterClasses addFirst: VMClass.
-	interpreterClasses addAllLast: (self interpreterClass ancilliaryClasses copyWithout: cg vmClass objectMemoryClass).
-	structClasses := Set new.
-	interpreterClasses do: [:class| structClasses addAll: class ancilliaryStructClasses].
-	(ChangeSet superclassOrder: structClasses asArray) do:
+	interpreterClasses addAllLast: (((self interpreterClass ancilliaryClasses: optionsDictionary) reject: [:class| class isStructClass]) copyWithout: cg vmClass objectMemoryClass).
+	(cg structClassesForTranslationClasses: interpreterClasses) do:
 		[:structClass|
 		structClass initialize.
 		cg addStructClass: structClass].
@@ -1379,44 +1377,42 @@ VMMaker >> movePlugin: pluginName from: srcListName to: dstListName [
 
 { #category : #'generate sources' }
 VMMaker >> needsToRegenerateCogitFile [
-"check the timestamp for the relevant classes and then the timestamp for the interp.c file if it already exists. Return true if the file needs regenerating, false if not"
+	"Check the timestamp for the relevant classes and then the timestamp for the main source file (e.g. interp.c)
+	 file if it already exists. Answer if the file needs regenerating."
 
-	| cogitClass cogitClasses tStamp fstat |
-	cogitClass := self cogitClass.
-	cogitClasses := cogitClass withAllSuperclasses copyUpThrough: Cogit.
-	cogitClasses addAllLast: cogitClass ancilliaryClasses.
+	| cogitClass cogitClasses tStamp |
+	cogitClasses := (cogitClass := self cogitClass) withAllSuperclasses copyUpThrough: Cogit.
+	cogitClasses addAllLast: (cogitClass ancilliaryClasses: self options).
 	tStamp := cogitClasses inject: 0 into: [:tS :cl| tS max: cl timeStamp].
-	cogitClasses do:
-		[:c|
-		tStamp := c ancilliaryStructClasses inject: tStamp into: [:tS :cl| tS max: cl timeStamp]].
 
 	"don't translate if the file is newer than my timeStamp"
-	fstat := self coreVMDirectory entryAt: cogitClass sourceFileName ifAbsent:[nil].
-	fstat ifNotNil:[tStamp < fstat modificationTime ifTrue:
-		[^self confirm: 'The ', cogitClass printString, ' classes have not been modified since\ the source file was last generated.\Do you still want to regenerate it?' withCRs]].
+	(self coreVMDirectory entryAt: cogitClass sourceFileName ifAbsent: [nil]) ifNotNil:
+		[:fstat|
+		tStamp < fstat modificationTime ifTrue:
+			[^self confirm: 'The ', cogitClass printString, ' classes have not been modified since\ the source file was last generated.\Do you still want to regenerate it?' withCRs]].
 	^true
 
 ]
 
 { #category : #initialize }
 VMMaker >> needsToRegenerateInterpreterFile [
-"check the timestamp for the relevant classes and then the timestamp for the interp.c file if it already exists. Return true if the file needs regenerating, false if not"
+	"Check the timestamp for the relevant classes and then the timestamp for the main
+	 source file (e.g. interp.c) if it already exists.  Answer if the file needs regenerating."
 
-	| classes tStamp fstat |
+	| classes tStamp |
 	classes := self interpreterClass withAllSuperclasses copyUpTo: VMClass.
 	self interpreterClass objectMemoryClass ifNotNil:
 		[:objectMemoryClass|
 		classes addAllLast: (objectMemoryClass  withAllSuperclasses copyUpTo: VMClass)].
 	classes copy do:
-		[:class| classes addAllLast: class ancilliaryClasses].
-	classes copy do:
-		[:class| classes addAllLast: class ancilliaryStructClasses].
+		[:class| classes addAllLast: (class ancilliaryClasses: self options)].
 	tStamp := classes inject: 0 into: [:tS :cl| tS max: cl timeStamp].
 
 	"don't translate if the file is newer than my timeStamp"
-	fstat := self coreVMDirectory entryAt: self interpreterFilename ifAbsent:[nil].
-	fstat ifNotNil:[tStamp < fstat modificationTime ifTrue:
-		[^self confirm: 'The interpreter classes have not been modified since\ the interpreter file was last generated.\Do you still want to regenerate their source file?' withCRs]].
+	(self coreVMDirectory entryAt: self interpreterFilename ifAbsent: [nil]) ifNotNil:
+		[:fstat|
+		tStamp < fstat modificationTime ifTrue:
+			[^self confirm: 'The interpreter classes have not been modified since\ the interpreter file was last generated.\Do you still want to regenerate their source file?' withCRs]].
 	^true
 
 ]

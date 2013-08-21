@@ -28,9 +28,8 @@ SistaStackToRegisterMappingCogit class >> additionalHeadersDo: aBinaryBlock [
 ]
 
 { #category : #translation }
-SistaStackToRegisterMappingCogit class >> ancilliaryStructClasses [
-	"self ancilliaryStructClasses"
-	^super ancilliaryStructClasses copyWith: SistaCogMethod
+SistaStackToRegisterMappingCogit class >> ancilliaryClasses: options [
+	^(super ancilliaryClasses: options) copyWith: SistaCogMethod
 ]
 
 { #category : #translation }

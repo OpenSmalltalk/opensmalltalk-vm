@@ -307,15 +307,10 @@ Cogit class >> additionalSelectorTables [
 ]
 
 { #category : #translation }
-Cogit class >> ancilliaryClasses [
-	^super ancilliaryClasses,
-	  { CogMethodZone }
-]
-
-{ #category : #translation }
-Cogit class >> ancilliaryStructClasses [
+Cogit class >> ancilliaryClasses: options [
 	ProcessorClass ifNil: [thisContext methodClass theNonMetaClass initialize].
-	^{	CogAbstractInstruction.
+	^{	CogMethodZone.
+		CogAbstractInstruction.
 		ProcessorClass basicNew abstractInstructionCompilerClass.
 		CogBlockStart.
 		CogBytecodeDescriptor.
@@ -323,7 +318,8 @@ Cogit class >> ancilliaryStructClasses [
 		CogInstructionAnnotation.
 		CogPrimitiveDescriptor.
 		CogBlockMethod.
-		CogMethod	}
+		CogMethod
+	  }
 ]
 
 { #category : #'class initialization' }
@@ -551,8 +547,8 @@ Cogit class >> doInlining [
 ]
 
 { #category : #translation }
-Cogit class >> exportAPISelectors [
-	^((self withAllSuperclasses copyUpThrough: Cogit), self ancilliaryClasses collect:
+Cogit class >> exportAPISelectors: options [
+	^((self withAllSuperclasses copyUpThrough: Cogit), (self ancilliaryClasses: options) collect:
 		[:c| self exportAPISelectorsFor: c]) fold: [:a :b| a, b]
 ]
 
@@ -869,7 +865,7 @@ Cogit class >> preGenerationHook: aCCodeGenerator [
 	 before it performs code analysis and generation.  In this case, make
 	 all non-exported methods private."
 	| exportAPISelectors |
-	exportAPISelectors := self exportAPISelectors.
+	exportAPISelectors := self exportAPISelectors: aCCodeGenerator options.
 	aCCodeGenerator selectorsAndMethodsDo:
 		[:s :m|
 		(exportAPISelectors includes: s)
@@ -885,9 +881,9 @@ Cogit class >> primitiveTable [
 ]
 
 { #category : #translation }
-Cogit class >> requiredMethodNames [
+Cogit class >> requiredMethodNames: options [
 	"self requiredMethodNames"
-	^self exportAPISelectors
+	^(self exportAPISelectors: options)
 		addAll: self tableFunctions;
 		yourself
 ]

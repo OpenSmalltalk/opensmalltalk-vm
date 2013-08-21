@@ -154,14 +154,12 @@ StackInterpreter class >> additionalSelectorTables [
 ]
 
 { #category : #translation }
-StackInterpreter class >> ancilliaryClasses [
+StackInterpreter class >> ancilliaryClasses: options [
 	"Answer any extra classes to be included in the translation."
-	^{ self objectMemoryClass. InterpreterStackPages }
-]
-
-{ #category : #translation }
-StackInterpreter class >> ancilliaryStructClasses [
-	^{ InterpreterStackPage. VMCallbackContext }
+	^{	self objectMemoryClass.
+		VMCallbackContext.
+		InterpreterStackPages.
+		InterpreterStackPage }
 ]
 
 { #category : #constants }
@@ -253,12 +251,12 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 ]
 
 { #category : #translation }
-StackInterpreter class >> exportAPISelectors [
+StackInterpreter class >> exportAPISelectors: options [
 	| omExports |
 	omExports := (self objectMemoryClass withAllSuperclasses copyUpTo: VMClass)
 					inject: Set new
-					into: [:api :c| api addAll: c exportAPISelectors; yourself].
-	^(self withAllSuperclasses copyUpTo: VMClass), self ancilliaryClasses
+					into: [:api :c| api addAll: (c exportAPISelectors: options); yourself].
+	^(self withAllSuperclasses copyUpTo: VMClass), (self ancilliaryClasses: options)
 		inject: omExports
 		into: [:set :class| set addAll: (self exportAPISelectorsFor: class); yourself]
 ]
@@ -1292,7 +1290,7 @@ StackInterpreter class >> preGenerationHook: aCCodeGenerator [
 	 before it performs code analysis and generation.  In this case, make
 	 all non-exported methods private."
 	| publicMethodNames |
-	publicMethodNames := self requiredMethodNames
+	publicMethodNames := (self requiredMethodNames: aCCodeGenerator options)
 								copyWithoutAll: (self primitiveTable
 														copyWithout: #primitiveFail).
 	aCCodeGenerator selectorsAndMethodsDo:
@@ -1410,21 +1408,19 @@ StackInterpreter class >> reorganizeAsISeeFit [
 ]
 
 { #category : #translation }
-StackInterpreter class >> requiredMethodNames [
+StackInterpreter class >> requiredMethodNames: options [
 	"return the list of method names that should be retained for export or other support reasons"
 	| requiredList |
-	requiredList := self exportAPISelectors.
-	requiredList addAll: NewObjectMemory requiredMethodNames.
+	requiredList := self exportAPISelectors: options.
+	requiredList addAll: (NewObjectMemory requiredMethodNames: options).
 	"A number of methods required by VM support code, jitter, specific platforms etc"
 	requiredList addAll: #(
 		assertValidExecutionPointe:r:s:
-		characterForAscii: checkedLongAt:
-		delayExpired
+		characterForAscii:
 		findClassOfMethod:forReceiver: findSelectorOfMethod:
 			forceInterruptCheck forceInterruptCheckFromHeartbeat fullDisplayUpdate
 		getCurrentBytecode getFullScreenFlag getInterruptKeycode getInterruptPending
 			getSavedWindowSize getThisSessionID
-		highBit:
 		interpret
 		loadInitialContext
 		oopFromChunk:
@@ -3743,7 +3739,7 @@ StackInterpreter >> compare31or32Bits: obj1 equal: obj2 [
 StackInterpreter >> computeStackZoneSize [
 	"In C the StackPage structs live next to the actual stack pages in the alloca'ed stack
 	 zone.  In simulation these live in some dictionary and don't exist in the memory."
-	^numStackPages * ((self cCode: 'sizeof(StackPage)' inSmalltalk: [0])
+	^numStackPages * ((self cCode: [self sizeof: InterpreterStackPage] inSmalltalk: [0])
 						+ self stackPageByteSize)
 	 + stackPages extraStackBytes
 ]
@@ -5600,7 +5596,7 @@ StackInterpreter >> functionPointerFor: primIdx inClass: theClass [
 	"Find an actual function pointer for this primitiveIndex.  This is an
 	opportunity to specialise the prim for the relevant class (format for
 	example).  Default for now is simply the entry in the base primitiveTable."
-
+	<api>
 	<returnTypeC: 'void (*functionPointerForinClass(sqInt primIdx,sqInt theClass))(void)'>
 	^primIdx > MaxPrimitiveIndex ifTrue: [0] ifFalse: [primitiveTable at: primIdx]
 ]
@@ -6803,8 +6799,8 @@ StackInterpreter >> literal: offset [
 
 { #category : #'compiled methods' }
 StackInterpreter >> literal: offset ofMethod: methodPointer [
-
-	^ objectMemory fetchPointer: offset + LiteralStart ofObject: methodPointer
+	<api>
+	^objectMemory fetchPointer: offset + LiteralStart ofObject: methodPointer
 
 ]
 
@@ -8219,6 +8215,7 @@ StackInterpreter >> popPos32BitInteger [
 { #category : #'internal interpreter access' }
 StackInterpreter >> popStack [
 	"In the StackInterpreter stacks grow down."
+	<api>
 	| top |
 	<inline: true>
 	top := stackPages longAt: stackPointer.
@@ -10997,8 +10994,8 @@ StackInterpreter >> space [
 
 { #category : #'message sending' }
 StackInterpreter >> specialSelector: index [
-
-	^ objectMemory fetchPointer: (index * 2) ofObject: (objectMemory splObj: SpecialSelectors)
+	<api>
+	^objectMemory fetchPointer: (index * 2) ofObject: (objectMemory splObj: SpecialSelectors)
 ]
 
 { #category : #'message sending' }
@@ -11234,6 +11231,7 @@ StackInterpreter >> stackSignedMachineIntegerValue: offset [
 
 { #category : #'internal interpreter access' }
 StackInterpreter >> stackTop [
+	<api>
 	^stackPages longAt: stackPointer
 ]
 
@@ -11514,6 +11512,7 @@ StackInterpreter >> tab [
 
 { #category : #'compiled methods' }
 StackInterpreter >> tempCountOf: methodPointer [
+	<api>
 	^self temporaryCountOfMethodHeader: (self headerOf: methodPointer)
 ]
 

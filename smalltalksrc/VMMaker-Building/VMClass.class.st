@@ -17,14 +17,9 @@ Class {
 }
 
 { #category : #translation }
-VMClass class >> ancilliaryClasses [
+VMClass class >> ancilliaryClasses: optionsDictionary [
 	"Answer any extra classes to be included in the translation."
-	^#()
-]
-
-{ #category : #translation }
-VMClass class >> ancilliaryStructClasses [
-	^#()
+	^{}
 ]
 
 { #category : #translation }
@@ -101,7 +96,7 @@ VMClass class >> emitInterpreterProxyVersionOn: aStream [
 ]
 
 { #category : #translation }
-VMClass class >> exportAPISelectors [
+VMClass class >> exportAPISelectors: options [
 	^self exportAPISelectorsFor: self
 ]
 
@@ -269,7 +264,7 @@ VMClass class >> removeThreadedSubSystem [
 ]
 
 { #category : #translation }
-VMClass class >> requiredMethodNames [
+VMClass class >> requiredMethodNames: options [
 	"Answer a list of method names that should be retained for export or other
 	 support reasons.  These are typically entry-points that unless explicitly noted
 	 will be deleted by the code generator since it will assume these are not used."
