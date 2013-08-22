@@ -65,6 +65,7 @@ CogMethodZone >> addToOpenPICList: anOpenPIC [
 
 { #category : #accessing }
 CogMethodZone >> addToUnpairedMethodList: aCogMethod [
+	<option: #NewspeakVM>
 	<var: #aCogMethod type: #'CogMethod *'>
 	self assert: aCogMethod cmType = CMMethod.
 	self assert: (unpairedMethodList == nil
@@ -211,6 +212,7 @@ CogMethodZone >> findPreviouslyCompiledVersionOf: aMethodObj with: aSelectorOop 
 	 method that has the right selector.  To speed up the search we maintain all such unpaired
 	 methods on the unpairedMethodList."
 	<returnTypeC: #'CogMethod *'>
+	<option: #NewspeakVM>
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
 	((coInterpreter methodHasCogMethod: aMethodObj)
@@ -616,6 +618,7 @@ CogMethodZone >> removeFromOpenPICList: anOpenPIC [
 
 { #category : #accessing }
 CogMethodZone >> removeFromUnpairedMethodList: aCogMethod [
+	<option: #NewspeakVM>
 	<var: #aCogMethod type: #'CogMethod *'>
 	| prevMethod |
 	<var: #prevMethod type: #'CogMethod *'>
