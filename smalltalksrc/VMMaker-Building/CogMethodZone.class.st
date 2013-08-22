@@ -632,7 +632,7 @@ CogMethodZone >> removeFromUnpairedMethodList: aCogMethod [
 		 prevMethod nextMethod = aCogMethod ifTrue:
 			[prevMethod nextMethod: aCogMethod nextMethod.
 			 ^nil].
-		  prevMethod := aCogMethod nextMethod]
+		  prevMethod := prevMethod nextMethod]
 ]
 
 { #category : #'young referers' }
