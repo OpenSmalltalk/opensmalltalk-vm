@@ -110,8 +110,8 @@ N.B. For Squeak/Pharo/Croquet please use the archives whose names begin with
 sudo cat >/etc/security/limits.d/squeak.conf <<END
 *       hard    rtprio  2
 *       soft    rtprio  2
-sudo cp /etc/security/limits.d/squeak.conf /etc/security/limits.d/nsvm.conf
 END
+sudo cp /etc/security/limits.d/squeak.conf /etc/security/limits.d/nsvm.conf
 	Then log out and log back in for the limits to take effect.
 
 THEEND
