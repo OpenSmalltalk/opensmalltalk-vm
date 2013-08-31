@@ -11,14 +11,14 @@ CogMemoryManager is currently a place-holder for the design of the new Cog VM's 
 			enter replacement in class table
 behaviorHash is a special version of identityHash that must be implemented in the image by any object that can function as a class (i.e. Behavior).
 
-- more immediate classes.  An immediate Character class would speed up String accessing, especially for WideString, since no instatiation needs to be done on at:put: and no dereference need be done on at:.  In a 32-bit system tag checking is complex since it is thought important to retain 31-bit SmallIntegers.  Hence, as in current Squeak, the least significant bit set implies a SmallInteger, but Characters would likely have a tag pattern of xxx10.  Hence masking with 11 results in two values for SmallInteger, xxx01 and xxx11.  30-bit characters are more than adequate for Unicode.  In a 64-bit system we can use the full three bits and usefully implement an immediate Float.  As in VisualWorks a functional representation takes three bits away from the exponent.  Rotating to put the sign bit in the least significant non-tag bit makes expanding and contracting the 8-bit exponent to the 11-bit IEEE double exponent easy ad makes comparing negative and positive zero easier (an immediate Float is zero if its unsigned 64-bits are < 16).  So the representation looks like
+- more immediate classes.  An immediate Character class would speed up String accessing, especially for WideString, since no instatiation needs to be done on at:put: and no dereference need be done on at:.  In a 32-bit system tag checking is complex since it is thought important to retain 31-bit SmallIntegers.  Hence, as in current Squeak, the least significant bit set implies a SmallInteger, but Characters would likely have a tag pattern of xxx10.  Hence masking with 11 results in two values for SmallInteger, xxx01 and xxx11 (for details see In-line cache probe for immediates below).  30-bit characters are more than adequate for Unicode.  In a 64-bit system we can use the full three bits and usefully implement an immediate Float.  As in VisualWorks a functional representation takes three bits away from the exponent.  Rotating to put the sign bit in the least significant non-tag bit makes expanding and contracting the 8-bit exponent to the 11-bit IEEE double exponent easy ad makes comparing negative and positive zero easier (an immediate Float is zero if its unsigned 64-bits are < 16).  So the representation looks like
 	| 8 bit exponent | 52 bit mantissa | sign bit | 3 tag bits |
 For details see ""60-bit immediate Floats"" below.
 
 
 - efficient scavenging.  The current Squeak GC uses a slow pointer-reversal collector that writes every field in live objects three times in each collection, twice in the pointer-reversing heap traversal to mark live objects and once to update the pointer to its new location.  A scavenger writes every field of live data twice in each collection, once as it does a block copy of the object when copying to to space, once as it traverses the live pointers in the to space objects.  Of course the block copy is a relatively cheap write.
 
-- lazy become.  The JIT's use of inline cacheing provides a cheap way of avoiding scanning the heap as part of a become (which is the simple approach to implementing become in a system with direct pointers).  A becomeForward: on a (set of) non-zero-sized object(s) turns the object into a ""corpse"" or ""forwarding object"" whose first (non-header) word/slot is replaced by a pointer to the target of the becomeForward:.  The corpse's class index is set to one that identifies corpses and, because it is a hidden class index, will always fail an inline cache test.  The inline cache failure code is then responsible for following the forwarding pointer chain (these are Iliffe vectors :) ) and resolving to the actual target.  We have yet to determine exactly how this is done (e.g. change the receiver register and/or stack contents and retry the send, perhaps scanning the current activation).  See below on how we deal with becomes on objects with named inst vars.  Note that we probably don't have to worry about zero-sized objects.  These are unlikely to be passed through the FFI (there is nothing to pass :) ) and so will rarely be becommed.  If they do, they can become slowly.  Alternatively we can insist that objects are at least 16 bytes in size (see a8-byte alignment below) so that there will always be space for a forwarding pointer.  Since none of the immediate classes can have non-immediate instances and since we allocate the immediate classes indices corresponding to their tag pattern (SmallInteger = 1, Character = 3, SmallFloat = 4?) we can use all the class indices from 0 to 7 for special uses, 0 = forward, and e.g. 1 = header-sized filler.
+- lazy become.  The JIT's use of inline cacheing provides a cheap way of avoiding scanning the heap as part of a become (which is the simple approach to implementing become in a system with direct pointers).  A becomeForward: on a (set of) non-zero-sized object(s) turns the object into a ""corpse"" or ""forwarding object"" whose first (non-header) word/slot is replaced by a pointer to the target of the becomeForward:.  The corpse's class index is set to one that identifies corpses and, because it is a hidden class index, will always fail an inline cache test.  The inline cache failure code is then responsible for following the forwarding pointer chain (these are Iliffe vectors :) ) and resolving to the actual target.  We have yet to determine exactly how this is done (e.g. change the receiver register and/or stack contents and retry the send, perhaps scanning the current activation).  See below on how we deal with becomes on objects with named inst vars.  Note that we probably don't have to worry about zero-sized objects.  These are unlikely to be passed through the FFI (there is nothing to pass :) ) and so will rarely be becommed.  If they do, they can become slowly.  Alternatively we can insist that objects are at least 16 bytes in size (see 8-byte alignment below) so that there will always be space for a forwarding pointer.  Since none of the immediate classes can have non-immediate instances and since we allocate the immediate class indices corresponding to their tag pattern (SmallInteger = 1 & 3, Character = 2, SmallFloat = 5?) we can use all the class indices from 0 to 7 for special uses, 0 = forward, and e.g. 1 = header-sized filler.
 
 - pinning.  To support a robust and easy-to-use FFI the memory manager must support temporary pinning where individual objects can be prevented from being moved by the GC for as long as required, either by being one of an in-progress FFI call's arguments, or by having pinning asserted by a primitive (allowing objects to be passed to external code that retains a reference to the object after returning).  Pinning probably implies a per-object ""is-pinned"" bit in the object header.  Pinning will be done via lazy become; i..e an object in new space will be becommed into a pinned object in old space.  We will only support pinning in old space.
 
@@ -46,6 +46,8 @@ We shall probably keep the minimum object size at 16 bytes so that there is alwa
 			    or: [object slotSize ~= OverflowSlotSize])
 					ifTrue: [0]
 					ifFalse: [OverflowSizeBytes])
+
+Note that the size field of an object (its slot size) reflects the logical size of the object e.g. 0-element array => 0 slot size, 1-element array => 1 slot size). The memory manager rounds up the slot size as appropriate, e.g. (sef roundUp: (self slotSizeOf: obj) * 4 to: 8) min: 8.
 
 For the moment we do not tackle the issue of heap growth and shrinkage with the ability to allocate and deallocate heap segments via memory-mapping.  This technique allows space to be released back to the OS by unmapping empty segments.  We may revisit this but it is not a key requirement for the first implementation.
 
@@ -114,9 +116,59 @@ While the class index header field has advantages (saving significant header spa
 This scheme has obvious implications for the inline cache since all prototypes end up having the same inline cache tag.  Either the inline cache check checks for the auto-instance class tag and substitutes the receiver, or the cacheing machinery refuses to add the auto-instance class tag to any inline cache and failure path code checks for the special case.  Note that in V8 failing monomorphic sends are patched to open PICs (megamorphic sends); V8 does not use closed PICs due to the rationale that polymorphism is high in JavaScript.
 
 Issues:
+In-line cache probe for immediates
+We would like to keep 31-bit SmallIntegers for the 32-bit system.  Lots of code could be impacted by a change to 30-bit SmallIntegers.  If so, then 
+	isImmediate: oop	^(oop bitAnd: 3) ~= 0
+	isSmallInteger: oop	^(oop bitAnd: 1) ~= 0
+	isCharacter: oop	^(oop bitAnd: 2) = 2
+If the in-line cache contains 0 for Characters then the in-line cache code (in x86 machine code) could read
+	Lentry:
+		movl %edx, %eax	# copy receiver to temp
+		andl $0x3, %eax	# test for immediate receiver
+		jz Lnon-imm
+		andl $0x1, %eax	# map immediate receiver to cache tag, SmallInteger => 1, Character => 0
+		j Lcmp
+	Lnon-imm:
+		movl 0x4(%edx), %eax # move header word containing class index to %eax
+		andl $0xfffff, %eax		# mask off class index (shift may be faster and/or shorter)
+	Lcmp:
+		cmpl %ecx, %eax		# compact in-line cache to receiver's cache tag
+		jnz Lmiss
+or, for a branch-free common-case,
+	Limm:
+		andl $0x1, %eax
+		j Lcmp
+	Lentry:
+		movl %edx, %eax
+		andl $0x3, %eax
+		jnz Limm
+		movl 0x4(%edx), %eax
+		andl $0xfffff, %eax
+	Lcmp:
+		cmpl %ecx, %eax
+		jnz Lmiss
+
+64-Bit sizes:
 How do we avoid the Size4Bit for 64-bits?  The format word encodes the number of odd bytes, but currently has only 4 bits and hence only supports odd bytes of 0 - 3.  We need odd bytes of 0 - 7.  But I don't like the separate Size4Bit.  Best to change the VI code and have a 5 bit format?  We lose one bit but save two bits (isEphemeron and isWeak (or three, if isPointers)) for a net gain of one (or two)
 
 Further, keep Squeak's format idea or go for separate bits?  For 64-bits we need a 5 bit format field.  This contrasts with isPointers, isWeak, isEphemeron, 3 odd size bits (or byte size)..  format field is quite economical.
+
+Hence I think format needs to be made a 5 bit field with room for 4 bits of odd bytes for 64-bit images.  So then
+
+0 = 0 sized objects (UndefinedObject True False et al)
+1 = non-indexable objects with inst vars (Point et al)
+2 = indexable objects with no inst vars (Array et al)
+3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+4 = weak indexable objects with inst vars (WeakArray et al)
+5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+
+and here it gets messy, we need 8 CompiledMethod values, 8 byte values, 4 16-bit values, 2 32-bit values and a 64-bit value, = 23 values, 23 + 5 = 30, so there may be room.
+
+9 (?) 64-bit indexable
+10 - 11 32-bit indexable
+12 - 15 16-bit indexable
+16 - 23 byte indexable
+24 - 31 compiled method
 
 Are class indices in inline caches strong references to classes or weak references?
 If strong then they must be scanned during GC and the methodZone must be flushed on fullGC to reclaim all classes (this looks to be a bug in the V3 Cogit).
@@ -127,10 +179,112 @@ Class {
 	#name : #CogMemoryManager,
 	#superclass : #VMClass,
 	#instVars : [
-		'coInterpreter'
+		'coInterpreter',
+		'memory',
+		'freeStart',
+		'scavengeThreshold',
+		'newSpaceLimit',
+		'nilObj',
+		'classTableRootObj'
 	],
 	#category : #'VMMaker-MemoryManager'
 }
+
+{ #category : #simulation }
+CogMemoryManager >> allocateMemoryOfSize: limit [
+	<doNotGenerate>
+	memory := (self endianness == #little
+					ifTrue: [LittleEndianBitmap]
+					ifFalse: [Bitmap]) new: (limit roundUpTo: 8).
+	freeStart := 0.
+	scavengeThreshold := newSpaceLimit := memory size * 4 "Bitmap is a 4-byte per word array"
+]
+
+{ #category : #allocation }
+CogMemoryManager >> allocateSlots: numSlots format: formatField classIndex: classIndex [
+	self subclassResponsibility
+]
+
+{ #category : #allocation }
+CogMemoryManager >> allocationUnit [
+	"All objects are a multiple of 8 bytes in length"
+	^8
+]
+
+{ #category : #'class table' }
+CogMemoryManager >> arrayClassIndexPun [
+	"Class puns are class indices not used by any class.  There is an entry
+	 for the pun that refers to the notional class of objects with this class
+	 index.  But because the index doesn't match the class it won't show up
+	 in allInstances, hence hiding the object with a pun as its class index.
+	 The puns occupy indices 16 through 31."
+	^16
+]
+
+{ #category : #'header format' }
+CogMemoryManager >> arrayFormat [
+	^2
+]
+
+{ #category : #'header format' }
+CogMemoryManager >> baseHeaderSize [
+	"Object headers are 8 bytes in length if the slot size fits in the slot size field (max implies overflow),
+	 16 bytes otherwise (slot size in preceeding word)."
+	^8
+]
+
+{ #category : #'header format' }
+CogMemoryManager >> bytesPerSlot [
+	^self subclassResponsibility
+]
+
+{ #category : #'object access' }
+CogMemoryManager >> characterObjectOf: characterCode [ 
+	^characterCode << self numTagBits + self characterTag
+]
+
+{ #category : #'object access' }
+CogMemoryManager >> characterTag [
+	^2
+]
+
+{ #category : #'header format' }
+CogMemoryManager >> classIndexMask [
+	"22-bit class mask => ~ 4M classes"
+	^16r3fffff
+]
+
+{ #category : #'class table' }
+CogMemoryManager >> classTableMajorIndexShift [
+	"1024 entries per page (2^10); 22 bit classIndex implies 2^12 pages"
+	^10
+]
+
+{ #category : #'class table' }
+CogMemoryManager >> classTableMinorIndexMask [
+	"1024 entries per page (2^10); 22 bit classIndex implies 2^12 pages"
+	"self basicNew classTableMinorIndexMask"
+	^1 << self classTableMajorIndexShift - 1
+]
+
+{ #category : #'class table' }
+CogMemoryManager >> classTablePageSize [
+	"1024 entries per page (2^10); 22 bit classIndex implies 2^12 pages"
+	"self basicNew classTablePageSize"
+	^1 << self classTableMajorIndexShift
+]
+
+{ #category : #accessing }
+CogMemoryManager >> classTableRootObj [
+	"For mapInterpreterOops & bootstrap"
+	^classTableRootObj
+]
+
+{ #category : #accessing }
+CogMemoryManager >> classTableRootObj: anOop [
+	"For mapInterpreterOops"
+	classTableRootObj := anOop
+]
 
 { #category : #'class table' }
 CogMemoryManager >> ensureBehaviorHash: aBehavior [
@@ -147,4 +301,150 @@ CogMemoryManager >> ensureBehaviorHash: aBehavior [
 CogMemoryManager >> enterIntoClassTable: aBehavior [
 	"Enter aBehavior into the class table and answer 0.  Otherwise answer a primitive failure code."
 	self shouldBeImplemented
+]
+
+{ #category : #'object access' }
+CogMemoryManager >> fetchLong32: fieldIndex ofObject: oop [
+	"index by 32-bit units, and return a 32-bit value. Intended to replace fetchWord:ofObject:"
+
+	^self long32At: oop + self baseHeaderSize + (fieldIndex << 2)
+]
+
+{ #category : #'header format' }
+CogMemoryManager >> formatMask [
+	^16r1f
+]
+
+{ #category : #'object access' }
+CogMemoryManager >> formatOf: objOop [ 
+	^self subclassResponsibility
+]
+
+{ #category : #'header format' }
+CogMemoryManager >> formatShift [
+	^24
+]
+
+{ #category : #'header format' }
+CogMemoryManager >> headerForSlots: numSlots format: formatField classIndex: classIndex [ 
+	"The header format in LSB is
+	 MSB:	| 8: slotSize			| (on a byte boundary)
+			| 2 bits				|
+			| 22: identityHash	| (on a word boundary)
+			| 3 bits				|
+			| 5: format			| (on a byte boundary)
+			| 2 bits				|
+			| 22: classIndex		| (on a word boundary) : LSB
+	 The remaining bits (7) need to be used for
+		isGrey
+		isMarked
+		isRemembered
+		isPinned
+		isImmutable
+	 leaving 2 unused bits."
+	^ (numSlots << 56)
+	+ (formatField << 24)
+	+ classIndex
+]
+
+{ #category : #'header format' }
+CogMemoryManager >> identityHashHalfWordMask [
+	^16r3fffff
+]
+
+{ #category : #'object testing' }
+CogMemoryManager >> isCompiledMethod: objOop [
+    "Answer whether the argument object is of compiled method format"
+	<api>
+    ^(self formatOf: objOop) >= 24
+]
+
+{ #category : #'object testing' }
+CogMemoryManager >> isPointersNonImm: objOop [ 
+	^(self formatOf: objOop) <= 5
+]
+
+{ #category : #'primitive support' }
+CogMemoryManager >> nilFieldsOf: obj [ 
+	0 to: (self rawSlotSizeOf: obj) - 1 do:
+		[:i|
+		self storePointerUnchecked: i ofObject: obj withValue: nilObj]
+]
+
+{ #category : #accessing }
+CogMemoryManager >> nilObject [
+	^nilObj
+]
+
+{ #category : #accessing }
+CogMemoryManager >> nilObject: anOop [
+	"For mapInterpreterOops"
+	nilObj := anOop
+]
+
+{ #category : #'object access' }
+CogMemoryManager >> numTagBits [
+	^self subclassResponsibility
+]
+
+{ #category : #'object access' }
+CogMemoryManager >> rawSlotSizeOf: oop [
+	<returnTypeC: #usqInt>
+	| header slotSize |
+	header := self longAt: oop.
+	slotSize := header >> self slotSizeHalfWordShift bitAnd: self slotSizeMask.
+	^slotSize = self slotSizeMask
+		ifTrue: [self cCoerceSimple: (self longLongAt: oop - self baseHeaderSize) to: #usqInt]
+		ifFalse: [slotSize]
+]
+
+{ #category : #'header access' }
+CogMemoryManager >> setHashBitsOf: objOop to: hash [
+	self assert: (hash between: 0 and: self identityHashHalfWordMask).
+	self longAt: objOop
+		put: ((self longAt: objOop) bitClear: self identityHashHalfWordMask) + hash
+]
+
+{ #category : #'header format' }
+CogMemoryManager >> slotSizeHalfWordShift [
+	^24
+]
+
+{ #category : #'header format' }
+CogMemoryManager >> slotSizeMask [
+	"8-bit slot size:
+		max 64-bit small obj size 254 * 8 =  2032 bytes
+		max 32-bit small obj size 254 * 4 =   1016 bytes"
+	^255
+]
+
+{ #category : #'object access' }
+CogMemoryManager >> storeLong32: fieldIndex ofObject: obj withValue: valueWord [
+	^self long32At: obj + self baseHeaderSize + (fieldIndex << 2) put: valueWord
+]
+
+{ #category : #'object access' }
+CogMemoryManager >> storePointer: fieldIndex ofObject: oop withValue: valuePointer [
+	"Note must check here for stores of young objects into old ones."
+	^self subclassResponsibility
+]
+
+{ #category : #'object access' }
+CogMemoryManager >> storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer [
+	^self subclassResponsibility
+]
+
+{ #category : #'class table' }
+CogMemoryManager >> weakArrayClassIndexPun [
+	"Class puns are class indices not used by any class.  There is an entry
+	 for the pun that refers to the notional class of objects with this class
+	 index.  But because the index doesn't match the class it won't show up
+	 in allInstances, hence hiding the object with a pun as its class index.
+	 The puns occupy indices 16 through 31."
+	^17
+]
+
+{ #category : #'header format' }
+CogMemoryManager >> weakArrayFormat [
+	^4
 ]

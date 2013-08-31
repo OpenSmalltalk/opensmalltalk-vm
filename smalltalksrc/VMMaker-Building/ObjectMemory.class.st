@@ -372,7 +372,7 @@ ObjectMemory class >> initializeSpecialObjectIndices [
 	ClassLargePositiveInteger := 13.
 	TheDisplay := 14.
 	ClassMessage := 15.
-	ClassCompiledMethod := 16.
+	"ClassCompiledMethod := 16. unused by the VM"
 	TheLowSpaceSemaphore := 17.
 	ClassSemaphore := 18.
 	ClassCharacter := 19.
@@ -383,7 +383,7 @@ ObjectMemory class >> initializeSpecialObjectIndices [
 	CharacterTable := 24.
 	SelectorMustBeBoolean := 25.
 	ClassByteArray := 26.
-	ClassProcess := 27.
+	"ClassProcess := 27. unused"
 	CompactClasses := 28.
 	TheTimerSemaphore := 29.
 	TheInterruptSemaphore := 30.

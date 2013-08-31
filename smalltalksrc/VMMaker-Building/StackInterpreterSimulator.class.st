@@ -1209,7 +1209,7 @@ StackInterpreterSimulator >> openOn: fileName [
 
 { #category : #initialization }
 StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
-	"InterpreterSimulator new openOn: 'clone.im' extraMemory: 100000"
+	"StackInterpreterSimulator new openOn: 'clone.im' extraMemory: 100000"
 
 	| f version headerSize count oldBaseAddr bytesToShift swapBytes
 	  hdrNumStackPages hdrEdenBytes headerFlags |
