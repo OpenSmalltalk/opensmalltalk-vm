@@ -242,18 +242,15 @@ NewCoObjectMemorySimulator >> long32At: byteAddress put: a32BitValue [
 { #category : #'memory access' }
 NewCoObjectMemorySimulator >> longAt: byteAddress [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
-	byteAddress \\ 4 ~= 0 ifTrue: [self error: 'unaligned access'].
-	^memory at: (byteAddress // 4) + 1
+	byteAddress \\ 4 ~= 0 ifTrue: [self unalignedAccessError].
+	^memory at: byteAddress // 4 + 1
 ]
 
 { #category : #'memory access' }
 NewCoObjectMemorySimulator >> longAt: byteAddress put: a32BitValue [
-	"(byteAddress = 16r1896A50
-	and: [a32BitValue = 7]) ifTrue:
-		[self halt]."
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
-	byteAddress \\ 4 ~= 0 ifTrue: [self error: 'unaligned access'].
-	^memory at: (byteAddress // 4) + 1 put: a32BitValue
+	byteAddress \\ 4 ~= 0 ifTrue: [self unalignedAccessError].
+	^memory at: byteAddress // 4 + 1 put: a32BitValue
 ]
 
 { #category : #'simulation only' }

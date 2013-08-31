@@ -275,7 +275,7 @@ Apply the regular expression (stored in <pcrePtr> and <extratr>, generated from 
 { #category : #'re primitives' }
 RePlugin >> primPCREExecfromto [
 
-"<rcvr primPCREExec: searchObject> from: fromInteger to: toInteger>, where rcvr is an object with instance variables:
+"<rcvr primPCREExec: searchObject from: fromInteger to: toInteger>, where rcvr is an object with instance variables:
 
 	'patternStr compileFlags pcrePtr extraPtr errorStr errorOffset matchFlags'	
 
@@ -315,7 +315,7 @@ Apply the regular expression (stored in <pcrePtr> and <extratr>, generated from 
 	result := self 
 		cCode: 'pcre_exec((pcre *)pcrePtr, (pcre_extra *)extraPtr, 
 				searchBuffer, length, 0, matchFlags, matchSpacePtr, matchSpaceSize)'.
-	interpreterProxy pop: 2; pushInteger: result.
+	interpreterProxy pop: 4; pushInteger: result.
 
 	"empty call so compiler doesn't bug me about variables not used"
 	self touch: searchBuffer; touch: matchSpacePtr; touch: matchSpaceSize; touch: length
@@ -332,12 +332,14 @@ RePlugin >> primPCRENumSubPatterns [
 Return the number of subpatterns captured by the compiled pattern."
 
 	<export: true>
-	
+	| ncap |
 	"Load Parameters"
 	self loadRcvrFromStackAt: 0.
 	"Load Instance Variables"
 	pcrePtr := self rcvrPCREBufferPtr.
-	interpreterProxy pop: 1; pushInteger: (self cCode: 'pcre_info((pcre *)pcrePtr, NULL, NULL)').
+	self cCode: 'pcre_fullinfo((const pcre *)pcrePtr, NULL, PCRE_INFO_CAPTURECOUNT, &ncap)'
+		inSmalltalk: [ncap := -1].
+	interpreterProxy pop: 1; pushInteger: ncap.
 
 ]
 
