@@ -879,8 +879,8 @@ InterpreterSimulator >> longPrint: oop [
 			a = 0 ifTrue: [strm cr; tab; nextPutAll: (self dumpHeader: val)].
 			a > 0 ifTrue: [strm nextPutAll: (self shortPrint: val)].
 			a = BytesPerWord ifTrue:
-				[(self fetchClassOf: oop) = (self splObj: ClassCompiledMethod) ifTrue:
-							[strm cr; tab; nextPutAll: (self dumpMethodHeader: val)]]].
+				[(self isCompiledMethod: oop) ifTrue:
+					[strm cr; tab; nextPutAll: (self dumpMethodHeader: val)]]].
 			prevVal := val].
 		lastLong := 256 min: (self sizeBitsOf: oop) - BaseHeaderSize.
 		hdrType = 2
