@@ -2769,6 +2769,18 @@ ObjectMemory >> isFreeObject: oop [
 	^ (self headerType: oop) = HeaderTypeFree
 ]
 
+{ #category : #'interpreter access' }
+ObjectMemory >> isImmediateCharacter: objectPointer [
+
+	^false
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> isImmediateObject: objectPointer [
+
+	^(objectPointer bitAnd: 1) > 0
+]
+
 { #category : #'gc -- compaction' }
 ObjectMemory >> isImmutableWhileForwarding: oop [ 
 	"The given object may have its header word in a forwarding block. Find  

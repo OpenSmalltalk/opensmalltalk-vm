@@ -1423,7 +1423,6 @@ StackInterpreter class >> requiredMethodNames: options [
 			getSavedWindowSize getThisSessionID
 		interpret
 		loadInitialContext
-		oopFromChunk:
 		primitiveFail primitiveFailFor: primitiveFlushExternalPrimitives printAllStacks printCallStack printContext:
 			printExternalHeadFrame printFramesInPage: printFrame: printHeadFrame printMemory printOop:
 				printStackPages printStackPageList printStackPagesInUse printStackPageListInUse
@@ -9090,8 +9089,12 @@ StackInterpreter >> printOop: oop [
 	| cls fmt lastIndex startIP bytecodesPerLine column |
 	<inline: false>
 	self printHex: oop.
-	(objectMemory isIntegerObject: oop) ifTrue:
-		[^self
+	(objectMemory isImmediate: oop) ifTrue:
+		[(objectMemory isImmediateCharacter: oop) ifTrue:
+			[^self
+				cCode: 'printf("=$%ld ($%c)\n", (long)characterValueOf(oop), (long)characterValueOf(oop))'
+				inSmalltalk: [self print: (self shortPrint: oop); cr]].
+		 ^self
 			cCode: 'printf("=%ld\n", (long)integerValueOf(oop))'
 			inSmalltalk: [self print: (self shortPrint: oop); cr]].
 	(oop between: objectMemory startOfMemory and: objectMemory freeStart) ifFalse:
