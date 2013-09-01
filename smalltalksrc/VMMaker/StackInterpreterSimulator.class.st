@@ -1822,8 +1822,12 @@ StackInterpreterSimulator >> sendBreak: selectorString point: selectorLength rec
 { #category : #'debug support' }
 StackInterpreterSimulator >> shortPrint: oop [
 	| name classOop |
-	(objectMemory isIntegerObject: oop) ifTrue: [^ '=' , (objectMemory integerValueOf: oop) printString , 
-		' (' , (objectMemory integerValueOf: oop) hex , ')'].
+	(objectMemory isImmediate: oop) ifTrue:
+		[(objectMemory isImmediateCharacter: oop) ifTrue: [^ '=$' , (objectMemory integerValueOf: oop) printString , 
+			' (' , (String with: (Character value: (objectMemory integerValueOf: oop))) , ')'].
+		(objectMemory isIntegerObject: oop) ifTrue: [^ '=' , (objectMemory integerValueOf: oop) printString , 
+			' (' , (objectMemory integerValueOf: oop) hex , ')'].
+		^'= UNKNOWN IMMEDIATE', ' (' , (objectMemory integerValueOf: oop) hex , ')'].
 	(oop between: objectMemory startOfMemory and: objectMemory freeStart) ifFalse:
 		[^' is not on the heap'].
 	(oop bitAnd: (BytesPerWord - 1)) ~= 0 ifTrue:

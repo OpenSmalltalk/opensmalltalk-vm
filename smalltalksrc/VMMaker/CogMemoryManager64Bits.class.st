@@ -13,7 +13,9 @@ CogMemoryManager64Bits >> allocateSlots: numSlots format: formatField classIndex
 	 and are multiples of 8 bytes in length."
 	numSlots >= self slotSizeMask
 		ifTrue:
-			[newObj := freeStart + self baseHeaderSize.
+			[numSlots > 16rffffffff ifTrue:
+				[^nil].
+			 newObj := freeStart + self baseHeaderSize.
 			 numBytes := (self baseHeaderSize + self baseHeaderSize) "double header"
 						+ (numSlots * self bytesPerSlot)]
 		ifFalse:
@@ -28,8 +30,10 @@ CogMemoryManager64Bits >> allocateSlots: numSlots format: formatField classIndex
 			[^self allocateSlotsInOldSpace: numSlots format: formatField classIndex: classIndex].
 		 self scheduleScavenge].
 	numSlots >= self slotSizeMask
-		ifTrue:
-			[self longLongAt: freeStart put: numSlots.
+		ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
+			[self flag: #endianness.
+			 self longAt: freeStart put: numSlots.
+			 self longAt: freeStart + 4 put: self slotSizeMask << self slotSizeHalfWordShift.
 			 self longLongAt: newObj put: (self headerForSlots: self slotSizeMask format: formatField classIndex: classIndex)]
 		ifFalse:
 			[self longLongAt: newObj put: (self headerForSlots: numSlots format: formatField classIndex: classIndex)].
@@ -42,20 +46,60 @@ CogMemoryManager64Bits >> bytesPerSlot [
 	^8
 ]
 
+{ #category : #'header access' }
+CogMemoryManager64Bits >> classIndexOf: objOop [
+	^(self longLongAt: objOop) bitAnd: self classIndexMask
+]
+
 { #category : #'object access' }
 CogMemoryManager64Bits >> fetchPointer: fieldIndex ofObject: objOop [
 	^self longLongAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
 ]
 
 { #category : #'object access' }
-CogMemoryManager64Bits >> formatOf: objOop [ 
+CogMemoryManager64Bits >> formatOf: objOop [
+	"0 = 0 sized objects (UndefinedObject True False et al)
+	 1 = non-indexable objects with inst vars (Point et al)
+	 2 = indexable objects with no inst vars (Array et al)
+	 3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+	 4 = weak indexable objects with inst vars (WeakArray et al)
+	 5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+	 6,7,8 unused
+	 9 (?) 64-bit indexable
+	 10 - 11 32-bit indexable
+	 12 - 15 16-bit indexable
+	 16 - 23 byte indexable
+	 24 - 31 compiled method"
 	^(self longLongAt: objOop) >> self formatShift bitAnd: self formatMask
+]
+
+{ #category : #'object testing' }
+CogMemoryManager64Bits >> isImmediate: oop [ 
+	^(oop bitAnd: 7) ~= 0
 ]
 
 { #category : #'object access' }
 CogMemoryManager64Bits >> numTagBits [
 	"4th bit reserved for object alignment, which could imply e.g. what space the object is in."
 	^3
+]
+
+{ #category : #'object enumeration' }
+CogMemoryManager64Bits >> objectAfter: objOop [
+	"Object parsing.
+	1. all objects have at least a word following the header, for a forwarding pointer.
+	2. objects with an overflow size have a preceeing word with a saturated slotSize.  If the word following
+	    an object doesn't have a saturated size field it must be a single-header object.  If the word following
+	   does have a saturated slotSize it must be the overflow size word."
+	| followingWordAddress followingWord |
+	followingWordAddress := objOop
+							+ self baseHeaderSize
+							+ ((self rawSlotSizeOf: objOop) << self shiftForWord max: self allocationUnit).
+	self flag: #endianness.
+	followingWord := self longAt: followingWordAddress + 4.
+	^followingWord >> self slotSizeHalfWordShift = self slotSizeMask
+		ifTrue: [followingWordAddress + self baseHeaderSize]
+		ifFalse: [followingWordAddress]
 ]
 
 { #category : #'word size' }

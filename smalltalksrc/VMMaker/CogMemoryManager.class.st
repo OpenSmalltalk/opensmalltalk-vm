@@ -177,18 +177,39 @@ The second approach is faster; the common case is scanning the class table, the 
 "
 Class {
 	#name : #CogMemoryManager,
-	#superclass : #VMClass,
+	#superclass : #CogClass,
 	#instVars : [
 		'coInterpreter',
+		'startOfMemory',
 		'memory',
 		'freeStart',
 		'scavengeThreshold',
 		'newSpaceLimit',
 		'nilObj',
+		'falseObj',
+		'trueObj',
+		'specialObjectsOop',
 		'classTableRootObj'
 	],
 	#category : #'VMMaker-MemoryManager'
 }
+
+{ #category : #'debug support' }
+CogMemoryManager >> allObjectsDo: aBlock [
+	<doNotGenerate>
+	| prevObj prevPrevObj objOop |
+	prevPrevObj := prevObj := nil.
+	objOop := self firstObject.
+	[self assert: objOop \\ self allocationUnit = 0.
+	 objOop < freeStart] whileTrue:
+		[(self isFreeObject: objOop) ifFalse:
+			[aBlock value: objOop].
+		 prevPrevObj := prevObj.
+		 prevObj := objOop.
+		 objOop := self objectAfter: objOop].
+	prevPrevObj class.
+	prevObj class
+]
 
 { #category : #simulation }
 CogMemoryManager >> allocateMemoryOfSize: limit [
@@ -196,8 +217,24 @@ CogMemoryManager >> allocateMemoryOfSize: limit [
 	memory := (self endianness == #little
 					ifTrue: [LittleEndianBitmap]
 					ifFalse: [Bitmap]) new: (limit roundUpTo: 8).
-	freeStart := 0.
+	freeStart := startOfMemory := 0.
 	scavengeThreshold := newSpaceLimit := memory size * 4 "Bitmap is a 4-byte per word array"
+]
+
+{ #category : #simulation }
+CogMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceBytes codeSize: codeBytes [
+	<doNotGenerate>
+	self assert: (memoryBytes \\ self allocationUnit = 0
+				and: [newSpaceBytes \\ self allocationUnit = 0
+				and: [codeBytes \\ self allocationUnit = 0]]).
+	memory := (self endianness == #little
+					ifTrue: [LittleEndianBitmap]
+					ifFalse: [Bitmap]) new: (memoryBytes + newSpaceBytes + codeBytes) // 4.
+	startOfMemory := codeBytes.
+	"leave newSpace empty for the bootstrap"
+	freeStart := newSpaceBytes + startOfMemory.
+	newSpaceLimit := newSpaceBytes + startOfMemory.
+	scavengeThreshold := memory size * 4 "Bitmap is a 4-byte per word array"
 ]
 
 { #category : #allocation }
@@ -254,6 +291,11 @@ CogMemoryManager >> classIndexMask [
 	^16r3fffff
 ]
 
+{ #category : #'header access' }
+CogMemoryManager >> classIndexOf: objOop [
+	^self subclassResponsibility
+]
+
 { #category : #'class table' }
 CogMemoryManager >> classTableMajorIndexShift [
 	"1024 entries per page (2^10); 22 bit classIndex implies 2^12 pages"
@@ -303,11 +345,29 @@ CogMemoryManager >> enterIntoClassTable: aBehavior [
 	self shouldBeImplemented
 ]
 
+{ #category : #accessing }
+CogMemoryManager >> falseObject [
+	^falseObj
+]
+
+{ #category : #accessing }
+CogMemoryManager >> falseObject: anOop [
+	"For mapInterpreterOops"
+	falseObj := anOop
+]
+
 { #category : #'object access' }
 CogMemoryManager >> fetchLong32: fieldIndex ofObject: oop [
 	"index by 32-bit units, and return a 32-bit value. Intended to replace fetchWord:ofObject:"
 
 	^self long32At: oop + self baseHeaderSize + (fieldIndex << 2)
+]
+
+{ #category : #'object enumeration' }
+CogMemoryManager >> firstObject [
+	"Return the first object or free chunk in the heap."
+
+	^nilObj
 ]
 
 { #category : #'header format' }
@@ -316,13 +376,30 @@ CogMemoryManager >> formatMask [
 ]
 
 { #category : #'object access' }
-CogMemoryManager >> formatOf: objOop [ 
+CogMemoryManager >> formatOf: objOop [
+	"0 = 0 sized objects (UndefinedObject True False et al)
+	 1 = non-indexable objects with inst vars (Point et al)
+	 2 = indexable objects with no inst vars (Array et al)
+	 3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+	 4 = weak indexable objects with inst vars (WeakArray et al)
+	 5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+	 6,7,8 unused
+	 9 (?) 64-bit indexable
+	 10 - 11 32-bit indexable
+	 12 - 15 16-bit indexable
+	 16 - 23 byte indexable
+	 24 - 31 compiled method"
 	^self subclassResponsibility
 ]
 
 { #category : #'header format' }
 CogMemoryManager >> formatShift [
 	^24
+]
+
+{ #category : #accessing }
+CogMemoryManager >> freeStart [
+	^freeStart
 ]
 
 { #category : #'header format' }
@@ -342,8 +419,8 @@ CogMemoryManager >> headerForSlots: numSlots format: formatField classIndex: cla
 		isPinned
 		isImmutable
 	 leaving 2 unused bits."
-	^ (numSlots << 56)
-	+ (formatField << 24)
+	^ (numSlots << self slotSizeFullWordShift)
+	+ (formatField << self formatShift)
 	+ classIndex
 ]
 
@@ -357,6 +434,16 @@ CogMemoryManager >> isCompiledMethod: objOop [
     "Answer whether the argument object is of compiled method format"
 	<api>
     ^(self formatOf: objOop) >= 24
+]
+
+{ #category : #'header access' }
+CogMemoryManager >> isFreeObject: objOop [
+	^(self classIndexOf: objOop) = 0
+]
+
+{ #category : #'object testing' }
+CogMemoryManager >> isImmediate: oop [ 
+	^self subclassResponsibility
 ]
 
 { #category : #'object testing' }
@@ -387,14 +474,30 @@ CogMemoryManager >> numTagBits [
 	^self subclassResponsibility
 ]
 
+{ #category : #'object enumeration' }
+CogMemoryManager >> objectAfter: objOop [
+	"Object parsing.
+	1. all objects have at least a word following the header, for a forwarding pointer.
+	2. objects with an overflow size have a preceeing word with a saturated slotSize.  If the word following
+	    an object doesn't have a saturated size field it must be a single-header object.  If the word following
+	   does have a saturated slotSize it must be the overflow size word."
+	^self subclassResponsibility
+]
+
+{ #category : #'header format' }
+CogMemoryManager >> overflowSlotsMask [
+	^self subclassResponsibility
+]
+
 { #category : #'object access' }
 CogMemoryManager >> rawSlotSizeOf: oop [
 	<returnTypeC: #usqInt>
-	| header slotSize |
-	header := self longAt: oop.
-	slotSize := header >> self slotSizeHalfWordShift bitAnd: self slotSizeMask.
+	| halfHeader slotSize |
+	self flag: #endianness.
+	halfHeader := self longAt: oop + 4.
+	slotSize := halfHeader >> self slotSizeHalfWordShift bitAnd: self slotSizeMask.
 	^slotSize = self slotSizeMask
-		ifTrue: [self cCoerceSimple: (self longLongAt: oop - self baseHeaderSize) to: #usqInt]
+		ifTrue: [self longAt: oop - self baseHeaderSize] "overflow slots; (2^32)-1 slots are plenty"
 		ifFalse: [slotSize]
 ]
 
@@ -403,6 +506,11 @@ CogMemoryManager >> setHashBitsOf: objOop to: hash [
 	self assert: (hash between: 0 and: self identityHashHalfWordMask).
 	self longAt: objOop
 		put: ((self longAt: objOop) bitClear: self identityHashHalfWordMask) + hash
+]
+
+{ #category : #'header format' }
+CogMemoryManager >> slotSizeFullWordShift [
+	^56
 ]
 
 { #category : #'header format' }
@@ -416,6 +524,33 @@ CogMemoryManager >> slotSizeMask [
 		max 64-bit small obj size 254 * 8 =  2032 bytes
 		max 32-bit small obj size 254 * 4 =   1016 bytes"
 	^255
+]
+
+{ #category : #accessing }
+CogMemoryManager >> specialObjectsOop [
+	^specialObjectsOop
+]
+
+{ #category : #accessing }
+CogMemoryManager >> specialObjectsOop: anObject [
+	"For mapInterpreterOops"
+	specialObjectsOop := anObject
+]
+
+{ #category : #accessing }
+CogMemoryManager >> startOfMemory [
+	"Return the start of object memory.  This is immediately after the native code zone.
+	 N.B. the stack zone is alloca'ed. Use a macro so as not to punish the debug VM."
+	<cmacro: '() heapBase'>
+	<returnTypeC: #usqInt>
+	^coInterpreter ifNil: [startOfMemory] ifNotNil: [coInterpreter heapBase]
+]
+
+{ #category : #simulation }
+CogMemoryManager >> startOfMemory: value [
+	startOfMemory := value.
+	(freeStart isNil or: [freeStart < value]) ifTrue:
+		[freeStart := value]
 ]
 
 { #category : #'object access' }
@@ -432,6 +567,17 @@ CogMemoryManager >> storePointer: fieldIndex ofObject: oop withValue: valuePoint
 { #category : #'object access' }
 CogMemoryManager >> storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer [
 	^self subclassResponsibility
+]
+
+{ #category : #accessing }
+CogMemoryManager >> trueObject [
+	^trueObj
+]
+
+{ #category : #accessing }
+CogMemoryManager >> trueObject: anOop [
+	"For mapInterpreterOops"
+	trueObj := anOop
 ]
 
 { #category : #'class table' }
