@@ -48,10 +48,11 @@ CMM32LSBSimulator >> longAt: byteAddress put: a32BitValue [
 
 { #category : #'memory access' }
 CMM32LSBSimulator >> longLongAt: byteAddress [
+	"memory is a Bitmap, a 32-bit indexable array of bits"
 	| hiWord loWord |
 	byteAddress \\ 8 ~= 0 ifTrue: [self unalignedAccessError].
-	hiWord := memory at: byteAddress // 8 + 1.
-	loWord := memory at: byteAddress // 8 + 2.
+	loWord := memory at: byteAddress // 4 + 1.
+	hiWord := memory at: byteAddress // 4 + 2.
 	^hiWord = 0
 		ifTrue: [loWord]
 		ifFalse: [(hiWord bitShift: 32) + loWord]
@@ -59,10 +60,11 @@ CMM32LSBSimulator >> longLongAt: byteAddress [
 
 { #category : #'memory access' }
 CMM32LSBSimulator >> longLongAt: byteAddress put: a64BitValue [
+	"memory is a Bitmap, a 32-bit indexable array of bits"
 	byteAddress \\ 8 ~= 0 ifTrue: [self unalignedAccessError].
 	memory
-		at: byteAddress // 8 + 1 put: a64BitValue >> 32;
-		at: byteAddress // 8 + 2 put: (a64BitValue bitAnd: 16rffffffff).
+		at: byteAddress // 4 + 1 put: (a64BitValue bitAnd: 16rffffffff);
+		at: byteAddress // 4 + 2 put: a64BitValue >> 32.
 	^a64BitValue
 ]
 
