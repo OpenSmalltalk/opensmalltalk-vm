@@ -33,8 +33,10 @@ Class {
 		'oldHeap',
 		'newHeap',
 		'map',
+		'reverseMap',
 		'classToIndex',
-		'oldInterpreter'
+		'oldInterpreter',
+		'pastClassTable'
 	],
 	#pools : [
 		'VMObjectIndices'
@@ -52,13 +54,20 @@ SpurBootstrap >> allocateClassTable [
 					allocateSlots: tableRootSize
 					format: newHeap arrayFormat
 					classIndex: newHeap arrayClassIndexPun.
+	self assert: (newHeap rawSlotSizeOf: tableRoot) = tableRootSize.
+	self assert: (newHeap formatOf: tableRoot) = newHeap arrayFormat.
+	self assert: (newHeap classIndexOf: tableRoot) = newHeap arrayClassIndexPun.
 	newHeap classTableRootObj: tableRoot.
 	newHeap nilFieldsOf: tableRoot.
 	"first page is strong"
 	page := newHeap
-					allocateSlots: tableRootSize
+					allocateSlots: newHeap classTablePageSize
 					format: newHeap arrayFormat
 					classIndex: newHeap arrayClassIndexPun.
+	self assert: (newHeap rawSlotSizeOf: page) = newHeap classTablePageSize.
+	self assert: (newHeap formatOf: tableRoot) = newHeap arrayFormat.
+	self assert: (newHeap classIndexOf: tableRoot) = newHeap arrayClassIndexPun.
+	self assert: (newHeap objectAfter: tableRoot) = page.
 	newHeap nilFieldsOf: page.
 	newHeap storePointer: 0 ofObject: tableRoot withValue: page.
 	maxSize := classToIndex inject: 0 into: [:a :b| a max: b].
@@ -66,11 +75,16 @@ SpurBootstrap >> allocateClassTable [
 	2 to: numPages do:
 		[:i|
 		page := newHeap
-					allocateSlots: tableRootSize
+					allocateSlots: newHeap classTablePageSize
 					format: newHeap weakArrayFormat
 					classIndex: newHeap weakArrayClassIndexPun.
+		self assert: (newHeap rawSlotSizeOf: page) = newHeap classTablePageSize.
+		self assert: (newHeap formatOf: page) = newHeap weakArrayFormat.
+		self assert: (newHeap classIndexOf: page) = newHeap weakArrayClassIndexPun.
 		newHeap nilFieldsOf: page.
-		newHeap storePointer: i - 1 ofObject: tableRoot withValue: page]
+		newHeap storePointer: i - 1 ofObject: tableRoot withValue: page.
+		self assert: (newHeap objectAfter: (newHeap fetchPointer: i - 2 ofObject: tableRoot)) = page].
+	pastClassTable := newHeap freeStart.
 ]
 
 { #category : #bootstrap }
@@ -96,13 +110,14 @@ SpurBootstrap >> classTableSize [
 ]
 
 { #category : #bootstrap }
-SpurBootstrap >> clone: oldObj classIndex: classIndex [ 
-	map
-		at: oldObj
-		put: (newHeap
+SpurBootstrap >> clone: oldObj classIndex: classIndex [
+	| newObj |
+	newObj := newHeap
 				allocateSlots: (oldHeap fetchWordLengthOf: oldObj)
 				format: (self newFormatFor: oldObj)
-				classIndex: classIndex)
+				classIndex: classIndex.
+	reverseMap at: newObj put: oldObj.
+	^map at: oldObj put: newObj
 ]
 
 { #category : #bootstrap }
@@ -114,7 +129,10 @@ SpurBootstrap >> cloneNilTrueAndFalse [
 		do: [:obj :classIndex|
 			classToIndex at: (oldHeap fetchClassOfNonInt: obj) put: classIndex.
 			self clone: obj classIndex: classIndex].
-	newHeap nilObject: (map at: oldHeap nilObject). "needed for nilling objects etc"
+	newHeap
+		nilObject: (map at: oldHeap nilObject); "needed for nilling objects etc"
+		falseObject: (map at: oldHeap falseObject);
+		trueObject: (map at: oldHeap trueObject)
 ]
 
 { #category : #bootstrap }
@@ -128,7 +146,8 @@ SpurBootstrap >> cloneObjects [
 		 (oldObj ~= characterTable
 		 and: [oldClass ~= characterClass]) ifTrue:
 			[self clone: oldObj classIndex: (classToIndex at: oldClass)].
-		 oldObj := oldHeap objectAfter: oldObj]
+		 oldObj := oldHeap objectAfter: oldObj].
+	newHeap specialObjectsOop: (map at: oldHeap specialObjectsOop)
 ]
 
 { #category : #'class indices' }
@@ -314,9 +333,13 @@ SpurBootstrap >> on: imageName [
 	oldInterpreter openOn: imageName extraMemory: 0.
 	oldHeap := oldInterpreter objectMemory.
 	newHeap := CMM32LSBSimulator new.
-	newHeap allocateMemoryOfSize: oldHeap memory size * 5 / 4.
-	map := IdentityDictionary new: oldHeap memory size.
-	classToIndex := IdentityDictionary new: 1024
+	newHeap
+		allocateMemoryOfSize: (oldHeap youngStart * 5 / 4 roundUpTo: 8)
+		newSpaceSize: 1024 * 1024
+		codeSize: 1024 * 1024.
+	map := Dictionary new: oldHeap memory size // 4.
+	reverseMap := Dictionary new: oldHeap memory size // 4.
+	classToIndex := Dictionary new: 1024
 ]
 
 { #category : #bootstrap }
@@ -326,7 +349,21 @@ SpurBootstrap >> transform [
 	self allocateClassTable.
 	self cloneObjects.
 	self fillInObjects.
-	self fillInClassTable
+	self fillInClassTable.
+	self validate
+]
+
+{ #category : #bootstrap }
+SpurBootstrap >> validate [
+	| p i |
+	i := 0.
+	newHeap allObjectsDo:
+		[:o|
+		o >= pastClassTable ifTrue:
+			[self assert: (reverseMap includesKey: o)].
+		i := i + 1. p := o].
+	p class.
+	self assert: (i between: map size and: map size + 5) "+ 5 is room for classTable"
 ]
 
 { #category : #'word size' }
