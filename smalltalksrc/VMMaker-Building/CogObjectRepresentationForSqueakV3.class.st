@@ -8,6 +8,7 @@ Class {
 		'RootBitDigitLength'
 	],
 	#pools : [
+		'VMSqueakClassIndices',
 		'VMSqueakV3ObjectRepresentationConstants'
 	],
 	#category : #'VMMaker-JIT'
