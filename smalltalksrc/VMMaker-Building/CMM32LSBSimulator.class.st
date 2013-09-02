@@ -19,7 +19,7 @@ CMM32LSBSimulator >> headerForSlots: numSlots format: formatField classIndex: cl
 			| 5: format			|
 			| 2 bits				|
 			| 22: classIndex		| : LSB"
-	self assert: (numSlots between: 0 and: self slotSizeMask).
+	self assert: (numSlots between: 0 and: self numSlotsMask).
 	self assert: (formatField between: 0 and: 31).
 	self assert: (classIndex between: 0 and: 16r3fffff).
 	^super headerForSlots: numSlots format: formatField classIndex: classIndex
