@@ -1,5 +1,5 @@
 Class {
-	#name : #CogGenerationScavenger,
+	#name : #SpurGenerationScavenger,
 	#superclass : #VMClass,
 	#instVars : [
 		'coInterpreter',
@@ -14,7 +14,7 @@ Class {
 }
 
 { #category : #api }
-CogGenerationScavenger >> copyAndForward: survivor [
+SpurGenerationScavenger >> copyAndForward: survivor [
 	"copyAndForward: survivor copies a survivor object either to
 	 futureSurvivorSpace or, if it is to be promoted, to oldSpace.
 	 It leaves a forwarding pointer behind."
@@ -28,7 +28,7 @@ CogGenerationScavenger >> copyAndForward: survivor [
 ]
 
 { #category : #api }
-CogGenerationScavenger >> scavenge [
+SpurGenerationScavenger >> scavenge [
 	"The main routine, scavenge, scavenges young objects reachable from the roots (the stack zone
 	 and the rememberedTable).  It first scavenges the new objects immediately reachable from the
 	 stack zone, then those directly from old ones (all in the remembered table).  Then it scavenges
@@ -47,7 +47,7 @@ CogGenerationScavenger >> scavenge [
 ]
 
 { #category : #api }
-CogGenerationScavenger >> scavengeFutureSurvivorSpaceStartingAt: initialAddress [
+SpurGenerationScavenger >> scavengeFutureSurvivorSpaceStartingAt: initialAddress [
 	"scavengeFutureSurvivorSpaceStartingAt: does a depth-first traversal of the
 	 new objects starting at the one at the nth word of futureSurvivorSpace."
 	| ptr |
@@ -62,7 +62,7 @@ CogGenerationScavenger >> scavengeFutureSurvivorSpaceStartingAt: initialAddress 
 ]
 
 { #category : #api }
-CogGenerationScavenger >> scavengeLoop [
+SpurGenerationScavenger >> scavengeLoop [
 	"This is the inner loop of the main routine, scavenge.  It first scavenges the new objects immediately
 	 reachable from old ones. Then it scavenges those that are transitively reachable.  If this results in a
 	 promotion, the promotee gets remembered, and it first scavenges objects adjacent to the promotee,
@@ -90,7 +90,7 @@ CogGenerationScavenger >> scavengeLoop [
 ]
 
 { #category : #api }
-CogGenerationScavenger >> scavengeReferentsOf: referrer [
+SpurGenerationScavenger >> scavengeReferentsOf: referrer [
 	"scavengeReferentsOf: referrer inspects all the pointers in referrer.
 	 If any are new objects, it has them moved to FutureSurvivorSpace,
 	 and returns truth. If there are no new referents, it returns falsity."
@@ -114,7 +114,7 @@ CogGenerationScavenger >> scavengeReferentsOf: referrer [
 ]
 
 { #category : #api }
-CogGenerationScavenger >> scavengeRememberedSetStartingAt: n [
+SpurGenerationScavenger >> scavengeRememberedSetStartingAt: n [
 	"scavengeRememberedSetStartingAt: n traverses objects in the remembered
 	 set starting at the nth one.  If the object does not refer to any new objects, it
 	 is removed from the set. Otherwise, its new referents are scavenged."

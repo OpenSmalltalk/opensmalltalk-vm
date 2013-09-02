@@ -1,11 +1,11 @@
 Class {
-	#name : #CogMemoryManager32Bits,
-	#superclass : #CogMemoryManager,
+	#name : #Spur32BitMemoryManager,
+	#superclass : #SpurMemoryManager,
 	#category : #'VMMaker-MemoryManager'
 }
 
 { #category : #'object enumeration' }
-CogMemoryManager32Bits >> addressAfter: objOop [
+Spur32BitMemoryManager >> addressAfter: objOop [
 	"Answer the address immediately following an object."
 	| numSlots slotBytes |
 	numSlots := self numSlotsOf: objOop.
@@ -16,7 +16,7 @@ CogMemoryManager32Bits >> addressAfter: objOop [
 ]
 
 { #category : #initialization }
-CogMemoryManager32Bits >> adjustFieldsAndClassOf: oop by: offsetBytes [ 
+Spur32BitMemoryManager >> adjustFieldsAndClassOf: oop by: offsetBytes [ 
 	"Adjust all pointers in this object by the given offset."
 	| fieldAddr fieldOop |
 	<inline: true>
@@ -30,7 +30,7 @@ CogMemoryManager32Bits >> adjustFieldsAndClassOf: oop by: offsetBytes [
 ]
 
 { #category : #allocation }
-CogMemoryManager32Bits >> allocateSlots: numSlots format: formatField classIndex: classIndex [
+Spur32BitMemoryManager >> allocateSlots: numSlots format: formatField classIndex: classIndex [
 	| numBytes newObj |
 	"Object headers are 8 bytes in length if the slot size fits in the num slots field (max implies overflow),
 	 16 bytes otherwise (slot size in preceeding word).
@@ -67,7 +67,7 @@ CogMemoryManager32Bits >> allocateSlots: numSlots format: formatField classIndex
 ]
 
 { #category : #'object enumeration' }
-CogMemoryManager32Bits >> bytesInObject: objOop [
+Spur32BitMemoryManager >> bytesInObject: objOop [
 	"Answer the total number of bytes in an object including header and possible overflow size header."
 	| halfHeader headerNumSlots numSlots |
 	self flag: #endianness.
@@ -83,23 +83,23 @@ CogMemoryManager32Bits >> bytesInObject: objOop [
 ]
 
 { #category : #'header format' }
-CogMemoryManager32Bits >> bytesPerSlot [
+Spur32BitMemoryManager >> bytesPerSlot [
 	^4
 ]
 
 { #category : #'header access' }
-CogMemoryManager32Bits >> classIndexOf: objOop [
+Spur32BitMemoryManager >> classIndexOf: objOop [
 	self flag: #endianness.
 	^(self longAt: objOop) bitAnd: self classIndexMask
 ]
 
 { #category : #'object access' }
-CogMemoryManager32Bits >> fetchPointer: fieldIndex ofObject: objOop [
+Spur32BitMemoryManager >> fetchPointer: fieldIndex ofObject: objOop [
 	^self longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
 ]
 
 { #category : #'object access' }
-CogMemoryManager32Bits >> formatOf: objOop [
+Spur32BitMemoryManager >> formatOf: objOop [
 	"0 = 0 sized objects (UndefinedObject True False et al)
 	 1 = non-indexable objects with inst vars (Point et al)
 	 2 = indexable objects with no inst vars (Array et al)
@@ -117,7 +117,7 @@ CogMemoryManager32Bits >> formatOf: objOop [
 ]
 
 { #category : #'garbage collection' }
-CogMemoryManager32Bits >> initFreeChunkWithSlots: numSlots at: address [ 
+Spur32BitMemoryManager >> initFreeChunkWithSlots: numSlots at: address [ 
 	self flag: #endianness.
 	self longAt: address put: numSlots;
 		longAt: address + 4 put: self numSlotsMask << self numSlotsHalfShift;
@@ -127,17 +127,17 @@ CogMemoryManager32Bits >> initFreeChunkWithSlots: numSlots at: address [
 ]
 
 { #category : #'object testing' }
-CogMemoryManager32Bits >> isImmediate: oop [ 
+Spur32BitMemoryManager >> isImmediate: oop [ 
 	^(oop bitAnd: 3) ~= 0
 ]
 
 { #category : #'object access' }
-CogMemoryManager32Bits >> numTagBits [
+Spur32BitMemoryManager >> numTagBits [
 	^2
 ]
 
 { #category : #'object enumeration' }
-CogMemoryManager32Bits >> objectAfter: objOop [
+Spur32BitMemoryManager >> objectAfter: objOop [
 	"Object parsing.
 	1. all objects have at least a word following the header, for a forwarding pointer.
 	2. objects with an overflow size have a preceeing word with a saturated numSlots.  If the word
@@ -155,12 +155,12 @@ CogMemoryManager32Bits >> objectAfter: objOop [
 ]
 
 { #category : #'word size' }
-CogMemoryManager32Bits >> shiftForWord [
+Spur32BitMemoryManager >> shiftForWord [
 	^2
 ]
 
 { #category : #'object access' }
-CogMemoryManager32Bits >> storePointer: fieldIndex ofObject: oop withValue: valuePointer [
+Spur32BitMemoryManager >> storePointer: fieldIndex ofObject: oop withValue: valuePointer [
 	"Note must check here for stores of young objects into old ones."
 
 	(self oop: oop isLessThan: newSpaceLimit) ifFalse: "most stores into young objects"
@@ -174,13 +174,13 @@ CogMemoryManager32Bits >> storePointer: fieldIndex ofObject: oop withValue: valu
 ]
 
 { #category : #'object access' }
-CogMemoryManager32Bits >> storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer [
+Spur32BitMemoryManager >> storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer [
 	^self
 		longAt: oop + self baseHeaderSize + (fieldIndex << self shiftForWord)
 		put: valuePointer
 ]
 
 { #category : #'word size' }
-CogMemoryManager32Bits >> wordSize [
+Spur32BitMemoryManager >> wordSize [
 	^4
 ]
