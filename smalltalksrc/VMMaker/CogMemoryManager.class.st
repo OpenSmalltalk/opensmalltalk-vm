@@ -213,6 +213,55 @@ CogMemoryManager class >> initialize [
 	NumFreeLists := 65 "One for each size up to and including 64 slots. One for sizes > 64 slots."
 ]
 
+{ #category : #'garbage collection' }
+CogMemoryManager >> addToFreeList: freeChunk [
+	| chunkBytes childBytes parent child index |
+	chunkBytes := self bytesInObject: freeChunk.
+	index := chunkBytes / self wordSize.
+	index < NumFreeLists ifTrue:
+		[self storePointerUnchecked: 0 ofObject: freeChunk withValue: (freeLists at: index).
+		 freeLists at: index put: freeChunk.
+		 ^self].
+	self
+		storePointerUnchecked: self freeChunkNextIndex ofObject: freeChunk withValue: 0;
+		storePointerUnchecked: self freeChunkParentIndex ofObject: freeChunk withValue: 0;
+		storePointerUnchecked: self freeChunkSmallerIndex ofObject: freeChunk withValue: 0;
+		storePointerUnchecked: self freeChunkLargerIndex ofObject: freeChunk withValue: 0.
+	"Large chunk list organized as a tree, each node of which is a list of chunks of the same size.
+	 Beneath the node are smaller and larger blocks."
+	parent := 0.
+	child := freeLists at: 0.
+	[child ~= 0] whileTrue:
+		[childBytes := self bytesInObject: child.
+		 childBytes = chunkBytes ifTrue: "size match; add to list at node."
+			[self storePointerUnchecked: self freeChunkNextIndex
+					ofObject: freeChunk
+						withValue: (self fetchPointer: self freeChunkNextIndex ofObject: child);
+				storePointerUnchecked: self freeChunkNextIndex
+					ofObject: child
+						withValue: freeChunk.
+			 ^self].
+		 "walk down the tree"
+		 parent := child.
+		 child := self fetchPointer: (childBytes > chunkBytes
+										ifTrue: [self freeChunkSmallerIndex]
+										ifFalse: [self freeChunkLargerIndex])
+					ofObject: child].
+	parent = 0 ifTrue:
+		[self assert: (freeLists at: 0) = 0.
+		 freeLists at: 0 put: freeChunk.
+		 ^self].
+	"insert in tree"
+	self storePointerUnchecked: self freeChunkParentIndex
+			ofObject: freeChunk
+				withValue: parent.
+	 self storePointerUnchecked: (childBytes > chunkBytes
+									ifTrue: [self freeChunkSmallerIndex]
+									ifFalse: [self freeChunkLargerIndex])
+			ofObject: parent
+				withValue: freeChunk
+]
+
 { #category : #'object enumeration' }
 CogMemoryManager >> addressAfter: objOop [
 	"Answer the address immediately following an object."
@@ -324,18 +373,6 @@ CogMemoryManager >> baseHeaderSize [
 	"Object headers are 8 bytes in length if the slot size fits in the slot size field (max implies overflow),
 	 16 bytes otherwise (slot size in preceeding word)."
 	^8
-]
-
-{ #category : #'object access' }
-CogMemoryManager >> baseSlotSizeOf: oop [
-	<returnTypeC: #usqInt>
-	| halfHeader slotSize |
-	self flag: #endianness.
-	halfHeader := self longAt: oop + 4.
-	slotSize := halfHeader >> self slotSizeHalfShift bitAnd: self slotSizeMask.
-	^slotSize = self slotSizeMask
-		ifTrue: [self longAt: oop - self baseHeaderSize] "overflow slots; (2^32)-1 slots are plenty"
-		ifFalse: [slotSize]
 ]
 
 { #category : #'header format' }
@@ -494,6 +531,26 @@ CogMemoryManager >> formatShift [
 	^24
 ]
 
+{ #category : #'garbage collection' }
+CogMemoryManager >> freeChunkLargerIndex [
+	^3
+]
+
+{ #category : #'garbage collection' }
+CogMemoryManager >> freeChunkNextIndex [
+	^0
+]
+
+{ #category : #'garbage collection' }
+CogMemoryManager >> freeChunkParentIndex [
+	^1
+]
+
+{ #category : #'garbage collection' }
+CogMemoryManager >> freeChunkSmallerIndex [
+	^2
+]
+
 { #category : #accessing }
 CogMemoryManager >> freeStart [
 	^freeStart
@@ -516,7 +573,7 @@ CogMemoryManager >> headerForSlots: numSlots format: formatField classIndex: cla
 		isPinned
 		isImmutable
 	 leaving 2 unused bits."
-	^ (numSlots << self slotSizeFullShift)
+	^ (numSlots << self numSlotsFullShift)
 	+ (formatField << self formatShift)
 	+ classIndex
 ]
@@ -532,13 +589,24 @@ CogMemoryManager >> indexablePointersFormat [
 ]
 
 { #category : #'garbage collection' }
+CogMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
+	| numSlots |
+	self assert: numBytes \\ self allocationUnit = 0.
+	numSlots := numBytes >> self shiftForWord
+				- (numBytes >= (self numSlotsMask << self shiftForWord)
+					ifTrue: [self baseHeaderSize + self baseHeaderSize / self wordSize]
+					ifFalse: [self baseHeaderSize / self wordSize]).
+	^self initFreeChunkWithSlots: numSlots at: address
+]
+
+{ #category : #'garbage collection' }
 CogMemoryManager >> initFreeChunkWithSlots: numSlots at: address [ 
 	^self subclassResponsibility
 ]
 
 { #category : #initialization }
 CogMemoryManager >> initialize [
-	freeLists := Array new: NumFreeLists. "gets an extra element in C"
+	freeLists := CArrayAccessor on: (Array new: NumFreeLists withAll: 0)
 ]
 
 { #category : #initialization }
@@ -596,15 +664,16 @@ CogMemoryManager >> initializeOldSpaceFirstFree: startOfFreeOldSpace [
 	<var: 'startOfFreeOldSpace' type: #usqLong>
 	| freeOldStart freeChunk |
 	<var: 'freeOldStart' type: #usqLong>
-	1 to: NumFreeLists do:
-		[:i| freeLists at: i put: nil].
+	0 to: NumFreeLists - 1 do:
+		[:i| freeLists at: i put: 0].
 	freeOldStart := startOfFreeOldSpace.
 	[endOfMemory - freeOldStart >= (2 raisedTo: 32)] whileTrue:
 		[freeChunk := self initFreeChunkWithSlots: (2 raisedTo: 32) / self wordSize at: freeOldStart.
 		self addToFreeList: freeChunk.
 		freeOldStart := self addressAfter: freeChunk].
-	freeChunk := self initFreeChunkWithSlots: endOfMemory - freeOldStart / self wordSize at: freeOldStart.
-	self addToFreeList: freeChunk
+	freeChunk := self initFreeChunkWithBytes: endOfMemory - freeOldStart at: freeOldStart.
+	self addToFreeList: freeChunk.
+	self assert: (self addressAfter: freeChunk) = endOfMemory
 ]
 
 { #category : #simulation }
@@ -643,7 +712,7 @@ CogMemoryManager >> lastPointerFormat [
 ]
 
 { #category : #'object enumeration' }
-CogMemoryManager >> lastPointerOf: oop [ 
+CogMemoryManager >> lastPointerOf: obj [ 
 	"Answer the byte offset of the last pointer field of the given object.
 	 Works with CompiledMethods, as well as ordinary objects."
 	<api>
@@ -651,25 +720,25 @@ CogMemoryManager >> lastPointerOf: oop [
 	<asmLabel: false>
 	| fmt header contextSize numLiterals |
 	<var: 'header' type: #usqLong>
-	header := self baseHeader: oop.
+	header := self baseHeader: obj.
 	fmt := self formatOfHeader: header.
 	fmt <= self lastPointerFormat ifTrue:
 		[(fmt = self indexablePointersFormat
 		  and: [self isContextHeader: header]) ifTrue:
 			["contexts end at the stack pointer"
-			contextSize := coInterpreter fetchStackPointerOf: oop.
+			contextSize := coInterpreter fetchStackPointerOf: obj.
 			^CtxtTempFrameStart + contextSize * BytesPerOop].
-		^(self baseSlotSizeOf: oop) * BytesPerOop  "all pointers"].
+		^(self numSlotsOf: obj) * BytesPerOop  "all pointers"].
 	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes"
-	numLiterals := coInterpreter literalCountOf: oop.
+	numLiterals := coInterpreter literalCountOf: obj.
 	^numLiterals + LiteralStart * BytesPerOop
 ]
 
 { #category : #'primitive support' }
 CogMemoryManager >> nilFieldsOf: obj [ 
-	0 to: (self baseSlotSizeOf: obj) - 1 do:
+	0 to: (self numSlotsOf: obj) - 1 do:
 		[:i|
 		self storePointerUnchecked: i ofObject: obj withValue: nilObj]
 ]
@@ -683,6 +752,36 @@ CogMemoryManager >> nilObject [
 CogMemoryManager >> nilObject: anOop [
 	"For mapInterpreterOops"
 	nilObj := anOop
+]
+
+{ #category : #'header format' }
+CogMemoryManager >> numSlotsFullShift [
+	^56
+]
+
+{ #category : #'header format' }
+CogMemoryManager >> numSlotsHalfShift [
+	^24
+]
+
+{ #category : #'header format' }
+CogMemoryManager >> numSlotsMask [
+	"8-bit slot count
+		max 64-bit small obj size 254 * 8 =  2032 bytes
+		max 32-bit small obj size 254 * 4 =   1016 bytes"
+	^255
+]
+
+{ #category : #'object access' }
+CogMemoryManager >> numSlotsOf: objOop [
+	<returnTypeC: #usqInt>
+	| halfHeader numSlots |
+	self flag: #endianness.
+	halfHeader := self longAt: objOop + 4.
+	numSlots := halfHeader >> self numSlotsHalfShift bitAnd: self numSlotsMask.
+	^numSlots = self numSlotsMask
+		ifTrue: [self longAt: objOop - self baseHeaderSize] "overflow slots; (2^32)-1 slots are plenty"
+		ifFalse: [numSlots]
 ]
 
 { #category : #'object access' }
@@ -710,24 +809,6 @@ CogMemoryManager >> setHashBitsOf: objOop to: hash [
 	self assert: (hash between: 0 and: self identityHashHalfWordMask).
 	self longAt: objOop
 		put: ((self longAt: objOop) bitClear: self identityHashHalfWordMask) + hash
-]
-
-{ #category : #'header format' }
-CogMemoryManager >> slotSizeFullShift [
-	^56
-]
-
-{ #category : #'header format' }
-CogMemoryManager >> slotSizeHalfShift [
-	^24
-]
-
-{ #category : #'header format' }
-CogMemoryManager >> slotSizeMask [
-	"8-bit slot size:
-		max 64-bit small obj size 254 * 8 =  2032 bytes
-		max 32-bit small obj size 254 * 4 =   1016 bytes"
-	^255
 ]
 
 { #category : #accessing }
