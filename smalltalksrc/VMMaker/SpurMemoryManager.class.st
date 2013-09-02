@@ -1,7 +1,7 @@
 "
-CogMemoryManager is currently a place-holder for the design of the new Cog VM's object representation and garbage collector.  The goals for the GC are
+SpurMemoryManager is a new object representation and garbage collector for the Cog VM's .  The goals for the memory manager are
 
-- efficient object representation a la Eliot Miranda's VisualWorks 64-bit object representation that uses a 64-bit header, eliminating direct class references so that all objects refer to their classes indirectly.  Instead the header contains a constant class index, in a field smaller than a full pointer, These class indices are used in inline and first-level method caches, hence they do not have to be updated on GC (although they do have to be traced to be able to GC classes).  Classes are held in a sparse weak table.  The class table needs only to be indexed by an instance's class index in class hierarchy search, in the class primitive, and in tracing live objects in the heap.  The additional header space is allocated to a much expanded identity hash field, reducing hash efficiency problems in identity collections due to the extremely small (11 bit) hash field in the old Squeak GC.  The identity hash field is also a key element of the class index scheme.  A class's identity hash is its index into the class table, so to create an instance of a class one merely copies its identity hash into the class index field of the new instance.  This implies that when classes gain their identity hash they are entered into the class table and their identity hash is that of a previously unused index in the table.  It also implies that there is a maximum number of classes in the table.  At least for a few years 64k classes should be enough.  A class is entered into the class table in the following operations:
+- efficient object representation a la Eliot Miranda's VisualWorks 64-bit object representation that uses a 64-bit header, eliminating direct class references so that all objects refer to their classes indirectly.  Instead the header contains a constant class index, in a field smaller than a full pointer, These class indices are used in inline and first-level method caches, hence they do not have to be updated on GC (although they do have to be traced to be able to GC classes).  Classes are held in a sparse weak table.  The class table needs only to be indexed by an instance's class index in class hierarchy search, in the class primitive, and in tracing live objects in the heap.  The additional header space is allocated to a much expanded identity hash field, reducing hash efficiency problems in identity collections due to the extremely small (11 bit) hash field in the old Squeak GC.  The identity hash field is also a key element of the class index scheme.  A class's identity hash is its index into the class table, so to create an instance of a class one merely copies its identity hash into the class index field of the new instance.  This implies that when classes gain their identity hash they are entered into the class table and their identity hash is that of a previously unused index in the table.  It also implies that there is a maximum number of classes in the table.  The classIndex field could be as narrow as 16 bits (for efficient access); at least for a few years 64k classes should be enough.  But currently we make it the same as the identityHash field, 22 bits, or 4M values.  A class is entered into the class table in the following operations:
 	behaviorHash
 	adoptInstance
 	instantiate
@@ -11,7 +11,7 @@ CogMemoryManager is currently a place-holder for the design of the new Cog VM's 
 			enter replacement in class table
 behaviorHash is a special version of identityHash that must be implemented in the image by any object that can function as a class (i.e. Behavior).
 
-- more immediate classes.  An immediate Character class would speed up String accessing, especially for WideString, since no instatiation needs to be done on at:put: and no dereference need be done on at:.  In a 32-bit system tag checking is complex since it is thought important to retain 31-bit SmallIntegers.  Hence, as in current Squeak, the least significant bit set implies a SmallInteger, but Characters would likely have a tag pattern of xxx10.  Hence masking with 11 results in two values for SmallInteger, xxx01 and xxx11 (for details see In-line cache probe for immediates below).  30-bit characters are more than adequate for Unicode.  In a 64-bit system we can use the full three bits and usefully implement an immediate Float.  As in VisualWorks a functional representation takes three bits away from the exponent.  Rotating to put the sign bit in the least significant non-tag bit makes expanding and contracting the 8-bit exponent to the 11-bit IEEE double exponent easy ad makes comparing negative and positive zero easier (an immediate Float is zero if its unsigned 64-bits are < 16).  So the representation looks like
+- more immediate classes.  An immediate Character class would speed up String accessing, especially for WideString, since no instatiation needs to be done on at:put: and no dereference need be done on at:.  In a 32-bit system tag checking is complex since it is thought important to retain 31-bit SmallIntegers.  Hence, as in current Squeak, the least significant bit set implies a SmallInteger, but Characters would likely have a tag pattern of xxx10.  Hence masking with 11 results in two values for SmallInteger, xxx01 and xxx11 (for details see In-line cache probe for immediates below).  30-bit characters are more than adequate for Unicode.  In a 64-bit system we can use the full three bits and usefully implement an immediate Float.  As in VisualWorks a functional representation takes three bits away from the exponent.  Rotating to put the sign bit in the least significant non-tag bit makes expanding and contracting the 8-bit exponent to the 11-bit IEEE double exponent easy and makes comparing negative and positive zero easier (an immediate Float is zero if its unsigned 64-bits are < 16).  So the representation looks like
 	| 8 bit exponent | 52 bit mantissa | sign bit | 3 tag bits |
 For details see ""60-bit immediate Floats"" below.
 
@@ -176,10 +176,11 @@ If weak then when the class table loses references, PICs containing freed classe
 The second approach is faster; the common case is scanning the class table, the uncommon case is freeing classes.  The second approach is better; in-line caches do not prevent reclamation of classes.
 "
 Class {
-	#name : #CogMemoryManager,
+	#name : #SpurMemoryManager,
 	#superclass : #CogClass,
 	#instVars : [
 		'coInterpreter',
+		'scavenger',
 		'startOfMemory',
 		'memory',
 		'freeStart',
@@ -190,6 +191,7 @@ Class {
 		'trueObj',
 		'specialObjectsOop',
 		'classTableRootObj',
+		'classTableFirstPage',
 		'endOfMemory',
 		'freeLists',
 		'freeListMask',
@@ -202,19 +204,159 @@ Class {
 	#pools : [
 		'VMBasicConstants',
 		'VMObjectIndices',
+		'VMSqueakClassIndices',
 		'VMSqueakV3BytecodeConstants'
 	],
 	#category : #'VMMaker-MemoryManager'
 }
 
+{ #category : #initialization }
+SpurMemoryManager class >> initBytesPerWord: nBytes [
+
+	BytesPerWord := nBytes.
+	ShiftForWord := (BytesPerWord log: 2) rounded.
+	"The following is necessary to avoid confusing the compiler with shifts that are larger than the width of the type on which they operate.  In gcc, such shifts cause incorrect code to be generated."
+	BytesPerWord = 8
+		ifTrue:					"64-bit VM"
+			[Byte0Mask := 16r00000000000000FF.	Byte0Shift := 0.
+			 Byte1Mask := 16r000000000000FF00.	Byte1Shift := 8.
+			 Byte2Mask := 16r0000000000FF0000.	Byte2Shift := 16.
+			 Byte3Mask := 16r00000000FF000000.	Byte3Shift := 24.
+			 Byte4Mask := 16r000000FF00000000.	Byte4Shift := 32.
+			 Byte5Mask := 16r0000FF0000000000.	Byte5Shift := 40.
+			 Byte6Mask := 16r00FF000000000000.	Byte6Shift := 48.
+			 Byte7Mask := 16rFF00000000000000.	Byte7Shift := 56.
+			 Bytes3to0Mask := 16r00000000FFFFFFFF.
+			 Bytes7to4Mask := 16rFFFFFFFF00000000]
+		ifFalse:					"32-bit VM"
+			[Byte0Mask := 16r00000000000000FF.	Byte0Shift := 0.
+			 Byte1Mask := 16r000000000000FF00.	Byte1Shift := 8.
+			 Byte2Mask := 16r0000000000FF0000.	Byte2Shift := 16.
+			 Byte3Mask := 16r00000000FF000000.	Byte3Shift := 24.
+			 Byte4Mask := nil.							Byte4Shift := 0.	"unused"
+			 Byte5Mask := nil.							Byte5Shift := 0.	"unused"
+			 Byte6Mask := nil.							Byte6Shift := 0.	"unused"
+			 Byte7Mask := nil.							Byte7Shift := 0.	"unused"
+			 Bytes3to0Mask := nil.											"unused"
+			 Bytes7to4Mask := nil											"unused"].
+	Byte1ShiftNegated := Byte1Shift negated.
+	Byte3ShiftNegated := Byte3Shift negated.
+	Byte4ShiftNegated := Byte4Shift negated.
+	Byte5ShiftNegated := Byte5Shift negated.
+	Byte7ShiftNegated := Byte7Shift negated.
+	"N.B.  This is *not* output when generating the interpreter file.
+	 It is left to the various sqConfig.h files to define correctly."
+	VMBIGENDIAN := Smalltalk endianness == #big
+]
+
 { #category : #'class initialization' }
-CogMemoryManager class >> initialize [
+SpurMemoryManager class >> initialize [
 	"CogObjectMemory initialize"
 	NumFreeLists := 65 "One for each size up to and including 64 slots. One for sizes > 64 slots."
 ]
 
+{ #category : #'class initialization' }
+SpurMemoryManager class >> initializeCompactClassIndices [
+	"Reuse the compact class indices to name known classIndices.
+	 This helps reduce the churn in the interpreters."
+	"c.f. SpurBootstrap>>defineKnownClassIndices"
+	ClassLargeNegativeIntegerCompactIndex := 32.
+	ClassLargePositiveIntegerCompactIndex := 33.
+	ClassFloatCompactIndex := 34.
+
+	ClassMessageCompactIndex := 35.
+	ClassMethodContextCompactIndex := 36.
+	ClassBlockClosureCompactIndex := 37.
+
+	ClassByteArrayCompactIndex := 50.
+	ClassArrayCompactIndex := 51.
+	ClassByteStringCompactIndex := 52.
+	ClassBitmapCompactIndex := 53
+]
+
+{ #category : #initialization }
+SpurMemoryManager class >> initializeSpecialObjectIndices [
+	"Initialize indices into specialObjects array."
+
+	NilObject := 0.
+	FalseObject := 1.
+	TrueObject := 2.
+	SchedulerAssociation := 3.
+	ClassBitmap := 4.
+	ClassInteger := 5.
+	ClassByteString := ClassString := 6. "N.B.  Actually class ByteString"
+	ClassArray := 7.
+	"SmalltalkDictionary := 8."  "Do not delete!"
+	ClassFloat := 9.
+	ClassMethodContext := 10.
+	"ClassBlockContext := 11. unused by the VM"
+	ClassPoint := 12.
+	ClassLargePositiveInteger := 13.
+	TheDisplay := 14.
+	ClassMessage := 15.
+	"ClassCompiledMethod := 16. unused by the VM"
+	TheLowSpaceSemaphore := 17.
+	ClassSemaphore := 18.
+	ClassCharacter := 19.
+	SelectorDoesNotUnderstand := 20.
+	SelectorCannotReturn := 21.
+	ProcessSignalingLowSpace := 22.	"was TheInputSemaphore"
+	SpecialSelectors := 23.
+	CharacterTable := nil.	"Must be unused by the VM"
+	SelectorMustBeBoolean := 25.
+	ClassByteArray := 26.
+	"ClassProcess := 27. unused"
+	CompactClasses := 28.
+	TheTimerSemaphore := 29.
+	TheInterruptSemaphore := 30.
+	SelectorCannotInterpret := 34.
+	"Was MethodContextProto := 35."
+	ClassBlockClosure := 36.
+	"Was BlockContextProto := 37."
+	ExternalObjectsArray := 38.
+	ClassMutex := 39.
+	"Was: ClassTranslatedMethod := 40."
+	ProcessInExternalCodeTag := 40.
+	TheFinalizationSemaphore := 41.
+	ClassLargeNegativeInteger := 42.
+
+	ClassExternalAddress := 43.
+	ClassExternalStructure := 44.
+	ClassExternalData := 45.
+	ClassExternalFunction := 46.
+	ClassExternalLibrary := 47.
+
+	SelectorAboutToReturn := 48.
+	SelectorRunWithIn := 49.
+
+	SelectorAttemptToAssign := 50.
+	"PrimErrTableIndex := 51. in Interpreter class>>initializePrimitiveErrorCodes"
+	ClassAlien := 52.
+	SelectorInvokeCallback := 53.
+	ClassUnsafeAlien := 54.
+
+	ClassWeakFinalizer := 55.
+
+	ForeignCallbackProcess := 56.
+
+	SelectorUnknownBytecode := 57.
+	SelectorCounterTripped := 58
+]
+
+{ #category : #'class initialization' }
+SpurMemoryManager class >> initializeWithOptions: optionsDictionary [
+	"SpurMemoryManager initializeWithOptions: Dictionary new"
+
+	self initBytesPerWord: (optionsDictionary at: #BytesPerWord ifAbsent: [4]).
+	BytesPerOop := optionsDictionary at: #BytesPerOop ifAbsent: [BytesPerWord].
+
+	self initializeSpecialObjectIndices.
+	self initializeCompactClassIndices.
+	self initializePrimitiveErrorCodes.
+]
+
 { #category : #'garbage collection' }
-CogMemoryManager >> addToFreeList: freeChunk [
+SpurMemoryManager >> addToFreeList: freeChunk [
 	| chunkBytes childBytes parent child index |
 	chunkBytes := self bytesInObject: freeChunk.
 	index := chunkBytes / self wordSize.
@@ -263,13 +405,13 @@ CogMemoryManager >> addToFreeList: freeChunk [
 ]
 
 { #category : #'object enumeration' }
-CogMemoryManager >> addressAfter: objOop [
+SpurMemoryManager >> addressAfter: objOop [
 	"Answer the address immediately following an object."
 	^self subclassResponsibility
 ]
 
 { #category : #initialization }
-CogMemoryManager >> adjustAllOopsBy: bytesToShift [ 
+SpurMemoryManager >> adjustAllOopsBy: bytesToShift [ 
 	"Adjust all oop references by the given number of bytes. This 
 	is done just after reading in an image when the new base 
 	address of the object heap is different from the base address 
@@ -287,13 +429,13 @@ CogMemoryManager >> adjustAllOopsBy: bytesToShift [
 ]
 
 { #category : #initialization }
-CogMemoryManager >> adjustFieldsAndClassOf: oop by: offsetBytes [ 
+SpurMemoryManager >> adjustFieldsAndClassOf: oop by: offsetBytes [ 
 	"Adjust all pointers in this object by the given offset."
 	self subclassResponsibility
 ]
 
 { #category : #'debug support' }
-CogMemoryManager >> allObjectsDo: aBlock [
+SpurMemoryManager >> allObjectsDo: aBlock [
 	<doNotGenerate>
 	| prevObj prevPrevObj objOop |
 	prevPrevObj := prevObj := nil.
@@ -310,7 +452,7 @@ CogMemoryManager >> allObjectsDo: aBlock [
 ]
 
 { #category : #simulation }
-CogMemoryManager >> allocateMemoryOfSize: limit [
+SpurMemoryManager >> allocateMemoryOfSize: limit [
 	<doNotGenerate>
 	memory := (self endianness == #little
 					ifTrue: [LittleEndianBitmap]
@@ -320,7 +462,7 @@ CogMemoryManager >> allocateMemoryOfSize: limit [
 ]
 
 { #category : #simulation }
-CogMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceBytes codeSize: codeBytes [
+SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceBytes codeSize: codeBytes [
 	<doNotGenerate>
 	self assert: (memoryBytes \\ self allocationUnit = 0
 				and: [newSpaceBytes \\ self allocationUnit = 0
@@ -338,18 +480,18 @@ CogMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceByte
 ]
 
 { #category : #allocation }
-CogMemoryManager >> allocateSlots: numSlots format: formatField classIndex: classIndex [
+SpurMemoryManager >> allocateSlots: numSlots format: formatField classIndex: classIndex [
 	self subclassResponsibility
 ]
 
 { #category : #allocation }
-CogMemoryManager >> allocationUnit [
+SpurMemoryManager >> allocationUnit [
 	"All objects are a multiple of 8 bytes in length"
 	^8
 ]
 
 { #category : #'class table' }
-CogMemoryManager >> arrayClassIndexPun [
+SpurMemoryManager >> arrayClassIndexPun [
 	"Class puns are class indices not used by any class.  There is an entry
 	 for the pun that refers to the notional class of objects with this class
 	 index.  But because the index doesn't match the class it won't show up
@@ -359,88 +501,108 @@ CogMemoryManager >> arrayClassIndexPun [
 ]
 
 { #category : #'header format' }
-CogMemoryManager >> arrayFormat [
+SpurMemoryManager >> arrayFormat [
 	^2
 ]
 
 { #category : #'header access' }
-CogMemoryManager >> baseHeader: obj [
+SpurMemoryManager >> baseHeader: obj [
 	^self longLongAt: obj
 ]
 
 { #category : #'header format' }
-CogMemoryManager >> baseHeaderSize [
+SpurMemoryManager >> baseHeaderSize [
 	"Object headers are 8 bytes in length if the slot size fits in the slot size field (max implies overflow),
 	 16 bytes otherwise (slot size in preceeding word)."
 	^8
 ]
 
 { #category : #'header format' }
-CogMemoryManager >> bytesPerSlot [
+SpurMemoryManager >> bytesPerSlot [
 	^self subclassResponsibility
 ]
 
 { #category : #'object access' }
-CogMemoryManager >> characterObjectOf: characterCode [ 
+SpurMemoryManager >> characterObjectOf: characterCode [ 
 	^characterCode << self numTagBits + self characterTag
 ]
 
 { #category : #'object access' }
-CogMemoryManager >> characterTag [
+SpurMemoryManager >> characterTag [
 	^2
 ]
 
+{ #category : #initialization }
+SpurMemoryManager >> checkCompactIndex: classIndex isClass: specialIndex named: name [
+	"Check that a class the VM assumes is compact has the right index."
+	<inline: true> "macrofication of the name arg in invalidCompactClassError only works if this method is inlined so the name is a string literal not a parameter"
+	(classIndex ~= 0
+	 and: [(self splObj: specialIndex) ~= (self knownClassAtIndex: classIndex)]) ifTrue:
+		[self invalidCompactClassError: name]
+]
+
+{ #category : #'class table' }
+SpurMemoryManager >> classAtIndex: classIndex [
+	| majorIndex minorIndex page |
+	majorIndex := classIndex >> self classTableMajorIndexShift.
+	minorIndex := classIndex bitAnd: self classTableMinorIndexMask.
+	self assert: (majorIndex between: 0 and: (self numSlotsOf: classTableRootObj) - 1).
+	page := self fetchPointer: majorIndex ofObject: classTableRootObj.
+	^self fetchPointer: minorIndex ofObject: page
+]
+
 { #category : #'header format' }
-CogMemoryManager >> classIndexMask [
+SpurMemoryManager >> classIndexMask [
 	"22-bit class mask => ~ 4M classes"
 	^16r3fffff
 ]
 
 { #category : #'header access' }
-CogMemoryManager >> classIndexOf: objOop [
+SpurMemoryManager >> classIndexOf: objOop [
 	^self subclassResponsibility
 ]
 
 { #category : #'class table' }
-CogMemoryManager >> classTableMajorIndexShift [
+SpurMemoryManager >> classTableMajorIndexShift [
 	"1024 entries per page (2^10); 22 bit classIndex implies 2^12 pages"
 	^10
 ]
 
 { #category : #'class table' }
-CogMemoryManager >> classTableMinorIndexMask [
+SpurMemoryManager >> classTableMinorIndexMask [
 	"1024 entries per page (2^10); 22 bit classIndex implies 2^12 pages"
 	"self basicNew classTableMinorIndexMask"
 	^1 << self classTableMajorIndexShift - 1
 ]
 
 { #category : #'class table' }
-CogMemoryManager >> classTablePageSize [
+SpurMemoryManager >> classTablePageSize [
 	"1024 entries per page (2^10); 22 bit classIndex implies 2^12 pages"
 	"self basicNew classTablePageSize"
 	^1 << self classTableMajorIndexShift
 ]
 
 { #category : #accessing }
-CogMemoryManager >> classTableRootObj [
+SpurMemoryManager >> classTableRootObj [
 	"For mapInterpreterOops & bootstrap"
 	^classTableRootObj
 ]
 
 { #category : #accessing }
-CogMemoryManager >> classTableRootObj: anOop [
+SpurMemoryManager >> classTableRootObj: anOop [
 	"For mapInterpreterOops"
-	classTableRootObj := anOop
+	classTableRootObj := anOop.
+	classTableFirstPage := self fetchPointer: 0 ofObject: classTableRootObj
 ]
 
 { #category : #simulation }
-CogMemoryManager >> coInterpreter: aCoInterpreter [
+SpurMemoryManager >> coInterpreter: aCoInterpreter [
 	<doNotGenerate>
 	coInterpreter := aCoInterpreter
 ]
 
 { #category : #'class table' }
-CogMemoryManager >> ensureBehaviorHash: aBehavior [
+SpurMemoryManager >> ensureBehaviorHash: aBehavior [
 	| newHash err |
 	self assert: (self isIntegerObject: aBehavior) not.
 	(newHash := self hashBitsOf: aBehavior) = 0 ifTrue:
@@ -451,48 +613,48 @@ CogMemoryManager >> ensureBehaviorHash: aBehavior [
 ]
 
 { #category : #'class table' }
-CogMemoryManager >> enterIntoClassTable: aBehavior [
+SpurMemoryManager >> enterIntoClassTable: aBehavior [
 	"Enter aBehavior into the class table and answer 0.  Otherwise answer a primitive failure code."
 	self shouldBeImplemented
 ]
 
 { #category : #accessing }
-CogMemoryManager >> falseObject [
+SpurMemoryManager >> falseObject [
 	^falseObj
 ]
 
 { #category : #accessing }
-CogMemoryManager >> falseObject: anOop [
+SpurMemoryManager >> falseObject: anOop [
 	"For mapInterpreterOops"
 	falseObj := anOop
 ]
 
 { #category : #'object access' }
-CogMemoryManager >> fetchLong32: fieldIndex ofObject: oop [
+SpurMemoryManager >> fetchLong32: fieldIndex ofObject: oop [
 	"index by 32-bit units, and return a 32-bit value. Intended to replace fetchWord:ofObject:"
 
 	^self long32At: oop + self baseHeaderSize + (fieldIndex << 2)
 ]
 
 { #category : #'header format' }
-CogMemoryManager >> firstCompiledMethodFormat [
+SpurMemoryManager >> firstCompiledMethodFormat [
 	^24
 ]
 
 { #category : #'object enumeration' }
-CogMemoryManager >> firstObject [
+SpurMemoryManager >> firstObject [
 	"Return the first object or free chunk in the heap."
 
 	^nilObj
 ]
 
 { #category : #'header format' }
-CogMemoryManager >> formatMask [
+SpurMemoryManager >> formatMask [
 	^16r1f
 ]
 
 { #category : #'object access' }
-CogMemoryManager >> formatOf: objOop [
+SpurMemoryManager >> formatOf: objOop [
 	"0 = 0 sized objects (UndefinedObject True False et al)
 	 1 = non-indexable objects with inst vars (Point et al)
 	 2 = indexable objects with no inst vars (Array et al)
@@ -509,7 +671,7 @@ CogMemoryManager >> formatOf: objOop [
 ]
 
 { #category : #'object access' }
-CogMemoryManager >> formatOfHeader: header [
+SpurMemoryManager >> formatOfHeader: header [
 	<var: 'header' type: #usqLong>
 	"0 = 0 sized objects (UndefinedObject True False et al)
 	 1 = non-indexable objects with inst vars (Point et al)
@@ -527,37 +689,37 @@ CogMemoryManager >> formatOfHeader: header [
 ]
 
 { #category : #'header format' }
-CogMemoryManager >> formatShift [
+SpurMemoryManager >> formatShift [
 	^24
 ]
 
 { #category : #'garbage collection' }
-CogMemoryManager >> freeChunkLargerIndex [
+SpurMemoryManager >> freeChunkLargerIndex [
 	^3
 ]
 
 { #category : #'garbage collection' }
-CogMemoryManager >> freeChunkNextIndex [
+SpurMemoryManager >> freeChunkNextIndex [
 	^0
 ]
 
 { #category : #'garbage collection' }
-CogMemoryManager >> freeChunkParentIndex [
+SpurMemoryManager >> freeChunkParentIndex [
 	^1
 ]
 
 { #category : #'garbage collection' }
-CogMemoryManager >> freeChunkSmallerIndex [
+SpurMemoryManager >> freeChunkSmallerIndex [
 	^2
 ]
 
 { #category : #accessing }
-CogMemoryManager >> freeStart [
+SpurMemoryManager >> freeStart [
 	^freeStart
 ]
 
 { #category : #'header format' }
-CogMemoryManager >> headerForSlots: numSlots format: formatField classIndex: classIndex [ 
+SpurMemoryManager >> headerForSlots: numSlots format: formatField classIndex: classIndex [ 
 	"The header format in LSB is
 	 MSB:	| 8: slotSize			| (on a byte boundary)
 			| 2 bits				|
@@ -579,17 +741,17 @@ CogMemoryManager >> headerForSlots: numSlots format: formatField classIndex: cla
 ]
 
 { #category : #'header format' }
-CogMemoryManager >> identityHashHalfWordMask [
+SpurMemoryManager >> identityHashHalfWordMask [
 	^16r3fffff
 ]
 
 { #category : #'header format' }
-CogMemoryManager >> indexablePointersFormat [
+SpurMemoryManager >> indexablePointersFormat [
 	^3
 ]
 
 { #category : #'garbage collection' }
-CogMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
+SpurMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
 	| numSlots |
 	self assert: numBytes \\ self allocationUnit = 0.
 	numSlots := numBytes >> self shiftForWord
@@ -600,17 +762,17 @@ CogMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
 ]
 
 { #category : #'garbage collection' }
-CogMemoryManager >> initFreeChunkWithSlots: numSlots at: address [ 
+SpurMemoryManager >> initFreeChunkWithSlots: numSlots at: address [ 
 	^self subclassResponsibility
 ]
 
 { #category : #initialization }
-CogMemoryManager >> initialize [
+SpurMemoryManager >> initialize [
 	freeLists := CArrayAccessor on: (Array new: NumFreeLists withAll: 0)
 ]
 
 { #category : #initialization }
-CogMemoryManager >> initializeObjectMemory: bytesToShift [
+SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	"Initialize object memory variables at startup time. Assume endOfMemory is initially set (by the image-reading code) to the end of the last object in the image. Initialization redefines endOfMemory to be the end of the object allocation area based on the total available memory, but reserving some space for forwarding blocks."
 	"Assume: image reader initializes the following variables:
 		memory
@@ -660,7 +822,7 @@ CogMemoryManager >> initializeObjectMemory: bytesToShift [
 ]
 
 { #category : #'garbage collection' }
-CogMemoryManager >> initializeOldSpaceFirstFree: startOfFreeOldSpace [
+SpurMemoryManager >> initializeOldSpaceFirstFree: startOfFreeOldSpace [
 	<var: 'startOfFreeOldSpace' type: #usqLong>
 	| freeOldStart freeChunk |
 	<var: 'freeOldStart' type: #usqLong>
@@ -677,7 +839,7 @@ CogMemoryManager >> initializeOldSpaceFirstFree: startOfFreeOldSpace [
 ]
 
 { #category : #simulation }
-CogMemoryManager >> initializePostBootstrap [
+SpurMemoryManager >> initializePostBootstrap [
 	"The heap has just been bootstrapped into a modified newSpace occupying all of memory above newSPace (and the codeZone).
 	 Put things back to some kind of normalicy."
 	endOfOldSpace := freeStart.
@@ -685,34 +847,40 @@ CogMemoryManager >> initializePostBootstrap [
 ]
 
 { #category : #'object testing' }
-CogMemoryManager >> isCompiledMethod: objOop [
+SpurMemoryManager >> isCompiledMethod: objOop [
     "Answer whether the argument object is of compiled method format"
 	<api>
     ^(self formatOf: objOop) >= 24
 ]
 
 { #category : #'header access' }
-CogMemoryManager >> isFreeObject: objOop [
+SpurMemoryManager >> isFreeObject: objOop [
 	^(self classIndexOf: objOop) = 0
 ]
 
 { #category : #'object testing' }
-CogMemoryManager >> isImmediate: oop [ 
+SpurMemoryManager >> isImmediate: oop [ 
 	^self subclassResponsibility
 ]
 
 { #category : #'object testing' }
-CogMemoryManager >> isPointersNonImm: objOop [ 
+SpurMemoryManager >> isPointersNonImm: objOop [ 
 	^(self formatOf: objOop) <= 5
 ]
 
+{ #category : #'class table' }
+SpurMemoryManager >> knownClassAtIndex: classIndex [
+	self assert: (classIndex between: 1 and: self classTablePageSize).
+	^self fetchPointer: classIndex ofObject: classTableFirstPage
+]
+
 { #category : #'header format' }
-CogMemoryManager >> lastPointerFormat [
+SpurMemoryManager >> lastPointerFormat [
 	^5
 ]
 
 { #category : #'object enumeration' }
-CogMemoryManager >> lastPointerOf: obj [ 
+SpurMemoryManager >> lastPointerOf: obj [ 
 	"Answer the byte offset of the last pointer field of the given object.
 	 Works with CompiledMethods, as well as ordinary objects."
 	<api>
@@ -737,35 +905,35 @@ CogMemoryManager >> lastPointerOf: obj [
 ]
 
 { #category : #'primitive support' }
-CogMemoryManager >> nilFieldsOf: obj [ 
+SpurMemoryManager >> nilFieldsOf: obj [ 
 	0 to: (self numSlotsOf: obj) - 1 do:
 		[:i|
 		self storePointerUnchecked: i ofObject: obj withValue: nilObj]
 ]
 
 { #category : #accessing }
-CogMemoryManager >> nilObject [
+SpurMemoryManager >> nilObject [
 	^nilObj
 ]
 
 { #category : #accessing }
-CogMemoryManager >> nilObject: anOop [
+SpurMemoryManager >> nilObject: anOop [
 	"For mapInterpreterOops"
 	nilObj := anOop
 ]
 
 { #category : #'header format' }
-CogMemoryManager >> numSlotsFullShift [
+SpurMemoryManager >> numSlotsFullShift [
 	^56
 ]
 
 { #category : #'header format' }
-CogMemoryManager >> numSlotsHalfShift [
+SpurMemoryManager >> numSlotsHalfShift [
 	^24
 ]
 
 { #category : #'header format' }
-CogMemoryManager >> numSlotsMask [
+SpurMemoryManager >> numSlotsMask [
 	"8-bit slot count
 		max 64-bit small obj size 254 * 8 =  2032 bytes
 		max 32-bit small obj size 254 * 4 =   1016 bytes"
@@ -773,7 +941,7 @@ CogMemoryManager >> numSlotsMask [
 ]
 
 { #category : #'object access' }
-CogMemoryManager >> numSlotsOf: objOop [
+SpurMemoryManager >> numSlotsOf: objOop [
 	<returnTypeC: #usqInt>
 	| halfHeader numSlots |
 	self flag: #endianness.
@@ -785,12 +953,12 @@ CogMemoryManager >> numSlotsOf: objOop [
 ]
 
 { #category : #'object access' }
-CogMemoryManager >> numTagBits [
+SpurMemoryManager >> numTagBits [
 	^self subclassResponsibility
 ]
 
 { #category : #'object enumeration' }
-CogMemoryManager >> objectAfter: objOop [
+SpurMemoryManager >> objectAfter: objOop [
 	"Object parsing.
 	1. all objects have at least a word following the header, for a forwarding pointer.
 	2. objects with an overflow size have a preceeing word with a saturated slotSize.  If the word following
@@ -800,30 +968,30 @@ CogMemoryManager >> objectAfter: objOop [
 ]
 
 { #category : #'header format' }
-CogMemoryManager >> overflowSlotsMask [
+SpurMemoryManager >> overflowSlotsMask [
 	^self subclassResponsibility
 ]
 
 { #category : #'header access' }
-CogMemoryManager >> setHashBitsOf: objOop to: hash [
+SpurMemoryManager >> setHashBitsOf: objOop to: hash [
 	self assert: (hash between: 0 and: self identityHashHalfWordMask).
 	self longAt: objOop
 		put: ((self longAt: objOop) bitClear: self identityHashHalfWordMask) + hash
 ]
 
 { #category : #accessing }
-CogMemoryManager >> specialObjectsOop [
+SpurMemoryManager >> specialObjectsOop [
 	^specialObjectsOop
 ]
 
 { #category : #accessing }
-CogMemoryManager >> specialObjectsOop: anObject [
+SpurMemoryManager >> specialObjectsOop: anObject [
 	"For mapInterpreterOops"
 	specialObjectsOop := anObject
 ]
 
 { #category : #'interpreter access' }
-CogMemoryManager >> splObj: index [
+SpurMemoryManager >> splObj: index [
 	<api>
 	<inline: true>
 	"Return one of the objects in the specialObjectsArray"
@@ -831,7 +999,7 @@ CogMemoryManager >> splObj: index [
 ]
 
 { #category : #accessing }
-CogMemoryManager >> startOfMemory [
+SpurMemoryManager >> startOfMemory [
 	"Return the start of object memory.  This is immediately after the native code zone.
 	 N.B. the stack zone is alloca'ed. Use a macro so as not to punish the debug VM."
 	<cmacro: '() heapBase'>
@@ -840,41 +1008,41 @@ CogMemoryManager >> startOfMemory [
 ]
 
 { #category : #simulation }
-CogMemoryManager >> startOfMemory: value [
+SpurMemoryManager >> startOfMemory: value [
 	startOfMemory := value.
 	(freeStart isNil or: [freeStart < value]) ifTrue:
 		[freeStart := value]
 ]
 
 { #category : #'object access' }
-CogMemoryManager >> storeLong32: fieldIndex ofObject: obj withValue: valueWord [
+SpurMemoryManager >> storeLong32: fieldIndex ofObject: obj withValue: valueWord [
 	^self long32At: obj + self baseHeaderSize + (fieldIndex << 2) put: valueWord
 ]
 
 { #category : #'object access' }
-CogMemoryManager >> storePointer: fieldIndex ofObject: oop withValue: valuePointer [
+SpurMemoryManager >> storePointer: fieldIndex ofObject: oop withValue: valuePointer [
 	"Note must check here for stores of young objects into old ones."
 	^self subclassResponsibility
 ]
 
 { #category : #'object access' }
-CogMemoryManager >> storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer [
+SpurMemoryManager >> storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer [
 	^self subclassResponsibility
 ]
 
 { #category : #accessing }
-CogMemoryManager >> trueObject [
+SpurMemoryManager >> trueObject [
 	^trueObj
 ]
 
 { #category : #accessing }
-CogMemoryManager >> trueObject: anOop [
+SpurMemoryManager >> trueObject: anOop [
 	"For mapInterpreterOops"
 	trueObj := anOop
 ]
 
 { #category : #'class table' }
-CogMemoryManager >> weakArrayClassIndexPun [
+SpurMemoryManager >> weakArrayClassIndexPun [
 	"Class puns are class indices not used by any class.  There is an entry
 	 for the pun that refers to the notional class of objects with this class
 	 index.  But because the index doesn't match the class it won't show up
@@ -884,6 +1052,6 @@ CogMemoryManager >> weakArrayClassIndexPun [
 ]
 
 { #category : #'header format' }
-CogMemoryManager >> weakArrayFormat [
+SpurMemoryManager >> weakArrayFormat [
 	^4
 ]

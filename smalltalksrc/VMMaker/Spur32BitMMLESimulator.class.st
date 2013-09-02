@@ -1,16 +1,16 @@
 Class {
-	#name : #CMM32LSBSimulator,
-	#superclass : #CogMemoryManager32Bits,
+	#name : #Spur32BitMMLESimulator,
+	#superclass : #Spur32BitMemoryManager,
 	#category : #'VMMaker-MemoryManagerSimulation'
 }
 
 { #category : #'memory access' }
-CMM32LSBSimulator >> endianness [
+Spur32BitMMLESimulator >> endianness [
 	^#little
 ]
 
 { #category : #'header format' }
-CMM32LSBSimulator >> headerForSlots: numSlots format: formatField classIndex: classIndex [
+Spur32BitMMLESimulator >> headerForSlots: numSlots format: formatField classIndex: classIndex [
 	"The header format in LSB is
 	 MSB:	| 2 bits				|
 			| 22: identityHash	|
@@ -26,28 +26,28 @@ CMM32LSBSimulator >> headerForSlots: numSlots format: formatField classIndex: cl
 ]
 
 { #category : #'memory access' }
-CMM32LSBSimulator >> long32At: byteAddress put: a32BitValue [
+Spur32BitMMLESimulator >> long32At: byteAddress put: a32BitValue [
 	"Store the 32-bit value at byteAddress which must be 0 mod 4."
 
 	^self longAt: byteAddress put: a32BitValue
 ]
 
 { #category : #'memory access' }
-CMM32LSBSimulator >> longAt: byteAddress [
+Spur32BitMMLESimulator >> longAt: byteAddress [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 	byteAddress \\ 4 ~= 0 ifTrue: [self unalignedAccessError].
 	^memory at: byteAddress // 4 + 1
 ]
 
 { #category : #'memory access' }
-CMM32LSBSimulator >> longAt: byteAddress put: a32BitValue [
+Spur32BitMMLESimulator >> longAt: byteAddress put: a32BitValue [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 	byteAddress \\ 4 ~= 0 ifTrue: [self unalignedAccessError].
 	^memory at: byteAddress // 4 + 1 put: a32BitValue
 ]
 
 { #category : #'memory access' }
-CMM32LSBSimulator >> longLongAt: byteAddress [
+Spur32BitMMLESimulator >> longLongAt: byteAddress [
 	"memory is a Bitmap, a 32-bit indexable array of bits"
 	| hiWord loWord |
 	byteAddress \\ 8 ~= 0 ifTrue: [self unalignedAccessError].
@@ -59,7 +59,7 @@ CMM32LSBSimulator >> longLongAt: byteAddress [
 ]
 
 { #category : #'memory access' }
-CMM32LSBSimulator >> longLongAt: byteAddress put: a64BitValue [
+Spur32BitMMLESimulator >> longLongAt: byteAddress put: a64BitValue [
 	"memory is a Bitmap, a 32-bit indexable array of bits"
 	byteAddress \\ 8 ~= 0 ifTrue: [self unalignedAccessError].
 	memory
@@ -69,6 +69,6 @@ CMM32LSBSimulator >> longLongAt: byteAddress put: a64BitValue [
 ]
 
 { #category : #'memory access' }
-CMM32LSBSimulator >> unalignedAccessError [
+Spur32BitMMLESimulator >> unalignedAccessError [
 	^self error: 'unaligned access'
 ]

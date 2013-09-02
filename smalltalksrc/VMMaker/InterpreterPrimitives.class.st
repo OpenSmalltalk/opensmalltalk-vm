@@ -68,6 +68,7 @@ Class {
 		'VMBasicConstants',
 		'VMMethodCacheConstants',
 		'VMObjectIndices',
+		'VMSqueakClassIndices',
 		'VMSqueakV3BytecodeConstants',
 		'VMSqueakV3ObjectRepresentationConstants',
 		'VMStackFrameOffsets'
