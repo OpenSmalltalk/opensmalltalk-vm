@@ -2366,12 +2366,6 @@ CoInterpreter >> compilationBreakpointFor: selectorOop [
 		inSmalltalk: [self halt: 'Compilation of ', breakSelector]
 ]
 
-{ #category : #initialization }
-CoInterpreter >> computeStackZoneSize [
-	^numStackPages * ((self sizeof: InterpreterStackPage) + self stackPageByteSize)
-	 + stackPages extraStackBytes
-]
-
 { #category : #'frame access' }
 CoInterpreter >> contextInstructionPointer: theIP frame: theFP [
 	"Answer a value to store in the InstructionPointer index of a context object for theIP and theFP.
@@ -3628,10 +3622,8 @@ CoInterpreter >> initStackPagesAndInterpret [
 	stackPageBytes := self stackPageByteSize.
 	stackPagesBytes := self computeStackZoneSize.
 	theStackMemory := self
-						cCode: [self alloca: stackPagesBytes]
-						inSmalltalk:
-							[stackPages := self stackPagesClass new.
-							 stackPages initializeWithByteSize: stackPagesBytes for: self].
+							cCode: [self alloca: stackPagesBytes]
+							inSmalltalk: [stackPages initializeWithByteSize: stackPagesBytes for: self].
 	self cCode: [self me: theStackMemory ms: 0 et: stackPagesBytes].
 	self sqMakeMemoryNotExecutableFrom: objectMemory startOfMemory asUnsignedInteger
 		To: objectMemory memoryLimit asUnsignedInteger.

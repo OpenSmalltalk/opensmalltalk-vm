@@ -140,7 +140,6 @@ InterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots pag
 	self cCode: ''
 		inSmalltalk:
 			[self assert: stackMemory size = stackSlots.
-			 self assert: stackMemory size - self extraStackBytes \\ slotsPerPage = 0.
 			 self assert: stackMemory == theStackPages].
 	stackMemory := theStackPages. "For initialization in the C code."
 	self cCode: '' inSmalltalk: [pageSizeInSlots := slotsPerPage].
