@@ -652,7 +652,7 @@ ObjectMemory >> adjustFieldsAndClassOf: oop by: offsetBytes [
 		whileTrue: [fieldOop := self longAt: fieldAddr.
 			(self isIntegerObject: fieldOop)
 				ifFalse: [self longAt: fieldAddr put: fieldOop + offsetBytes].
-			fieldAddr := fieldAddr - BytesPerWord].
+			fieldAddr := fieldAddr - BytesPerOop].
 	(self headerType: oop) ~= HeaderTypeShort
 		ifTrue: ["adjust class header if not a compact class"
 			classHeader := self longAt: oop - BytesPerWord.
