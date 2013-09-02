@@ -7,11 +7,11 @@ Class {
 { #category : #'object enumeration' }
 CogMemoryManager32Bits >> addressAfter: objOop [
 	"Answer the address immediately following an object."
-	| rawSlotSize slotBytes |
-	rawSlotSize := self baseSlotSizeOf: objOop.
-	slotBytes := rawSlotSize = 0
+	| numSlots slotBytes |
+	numSlots := self numSlotsOf: objOop.
+	slotBytes := numSlots = 0
 					ifTrue: [self allocationUnit]
-					ifFalse: [rawSlotSize + (rawSlotSize bitAnd: 1) << self shiftForWord].
+					ifFalse: [numSlots + (numSlots bitAnd: 1) << self shiftForWord].
 	^objOop + self baseHeaderSize + slotBytes
 ]
 
@@ -32,11 +32,11 @@ CogMemoryManager32Bits >> adjustFieldsAndClassOf: oop by: offsetBytes [
 { #category : #allocation }
 CogMemoryManager32Bits >> allocateSlots: numSlots format: formatField classIndex: classIndex [
 	| numBytes newObj |
-	"Object headers are 8 bytes in length if the slot size fits in the slot size field (max implies overflow),
+	"Object headers are 8 bytes in length if the slot size fits in the num slots field (max implies overflow),
 	 16 bytes otherwise (slot size in preceeding word).
 	 Objects always have at least one slot, for the forwarding pointer,
 	 and are multiples of 8 bytes in length."
-	numSlots >= self slotSizeMask
+	numSlots >= self numSlotsMask
 		ifTrue:
 			[newObj := freeStart + self baseHeaderSize.
 			 numBytes := self baseHeaderSize + self baseHeaderSize "double header"
@@ -52,18 +52,34 @@ CogMemoryManager32Bits >> allocateSlots: numSlots format: formatField classIndex
 		[freeStart + numBytes > newSpaceLimit ifTrue:
 			[^self allocateSlotsInOldSpace: numSlots format: formatField classIndex: classIndex].
 		 self scheduleScavenge].
-	numSlots >= self slotSizeMask
+	numSlots >= self numSlotsMask
 		ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
 			[self flag: #endianness.
 			 self longAt: freeStart put: numSlots.
-			 self longAt: freeStart + 4 put: self slotSizeMask << self slotSizeHalfShift.
-			 self longLongAt: newObj put: (self headerForSlots: self slotSizeMask format: formatField classIndex: classIndex)]
+			 self longAt: freeStart + 4 put: self numSlotsMask << self numSlotsHalfShift.
+			 self longLongAt: newObj put: (self headerForSlots: self numSlotsMask format: formatField classIndex: classIndex)]
 		ifFalse:
 			[self longLongAt: newObj put: (self headerForSlots: numSlots format: formatField classIndex: classIndex)].
 	self assert: numBytes \\ self allocationUnit = 0.
 	self assert: newObj \\ self allocationUnit = 0.
 	freeStart := freeStart + numBytes.
 	^newObj
+]
+
+{ #category : #'object enumeration' }
+CogMemoryManager32Bits >> bytesInObject: objOop [
+	"Answer the total number of bytes in an object including header and possible overflow size header."
+	| halfHeader headerNumSlots numSlots |
+	self flag: #endianness.
+	halfHeader := self longAt: objOop + 4.
+	headerNumSlots := halfHeader >> self numSlotsHalfShift bitAnd: self numSlotsMask.
+	numSlots := headerNumSlots = self numSlotsMask
+					ifTrue: [self longAt: objOop - self baseHeaderSize]
+					ifFalse: [numSlots = 0 ifTrue: [1] ifFalse: [numSlots]].
+	^numSlots + (numSlots bitAnd: 1) << self shiftForWord
+	+ (headerNumSlots = self numSlotsMask
+		ifTrue: [self baseHeaderSize + self baseHeaderSize]
+		ifFalse: [self baseHeaderSize])
 ]
 
 { #category : #'header format' }
@@ -104,9 +120,9 @@ CogMemoryManager32Bits >> formatOf: objOop [
 CogMemoryManager32Bits >> initFreeChunkWithSlots: numSlots at: address [ 
 	self flag: #endianness.
 	self longAt: address put: numSlots;
-		longAt: address + 4 put: self slotSizeMask << self slotSizeHalfShift;
+		longAt: address + 4 put: self numSlotsMask << self numSlotsHalfShift;
 		longAt: address + 8 put: 0; "0's classIndex; 0 = classIndex of free chunks"
-		longAt: address + 12 put: self slotSizeMask << self slotSizeHalfShift.
+		longAt: address + 12 put: self numSlotsMask << self numSlotsHalfShift.
 	^address + 8
 ]
 
@@ -124,16 +140,16 @@ CogMemoryManager32Bits >> numTagBits [
 CogMemoryManager32Bits >> objectAfter: objOop [
 	"Object parsing.
 	1. all objects have at least a word following the header, for a forwarding pointer.
-	2. objects with an overflow size have a preceeing word with a saturated slotSize.  If the word following
-	    an object doesn't have a saturated size field it must be a single-header object.  If the word following
-	   does have a saturated slotSize it must be the overflow size word."
+	2. objects with an overflow size have a preceeing word with a saturated numSlots.  If the word
+	   following an object doesn't have a saturated numSlots field it must be a single-header object.
+	   If the word following does have a saturated numSlots it must be the overflow size word."
 	| followingWordAddress followingWord |
 	followingWordAddress := self addressAfter: objOop.
 	followingWordAddress >= freeStart ifTrue:
 		[^freeStart].
 	self flag: #endianness.
 	followingWord := self longAt: followingWordAddress + 4.
-	^followingWord >> self slotSizeHalfShift = self slotSizeMask
+	^followingWord >> self numSlotsHalfShift = self numSlotsMask
 		ifTrue: [followingWordAddress + self baseHeaderSize]
 		ifFalse: [followingWordAddress]
 ]
