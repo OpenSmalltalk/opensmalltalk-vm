@@ -4,6 +4,31 @@ Class {
 	#category : #'VMMaker-MemoryManager'
 }
 
+{ #category : #'object enumeration' }
+CogMemoryManager64Bits >> addressAfter: objOop [
+	"Answer the address immediately following an object."
+	| rawSlotSize slotBytes |
+	rawSlotSize := self baseSlotSizeOf: objOop.
+	slotBytes := rawSlotSize = 0
+					ifTrue: [self allocationUnit]
+					ifFalse: [rawSlotSize << self shiftForWord].
+	^objOop + self baseHeaderSize + slotBytes
+]
+
+{ #category : #initialization }
+CogMemoryManager64Bits >> adjustFieldsAndClassOf: oop by: offsetBytes [ 
+	"Adjust all pointers in this object by the given offset."
+	| fieldAddr fieldOop |
+	<inline: true>
+	<asmLabel: false>
+	fieldAddr := oop + (self lastPointerOf: oop).
+	[self oop: fieldAddr isGreaterThan: oop] whileTrue:
+		[fieldOop := self longAt: fieldAddr.
+		 (self isIntegerObject: fieldOop) ifFalse:
+			[self longLongAt: fieldAddr put: fieldOop + offsetBytes].
+		 fieldAddr := fieldAddr - BytesPerWord]
+]
+
 { #category : #allocation }
 CogMemoryManager64Bits >> allocateSlots: numSlots format: formatField classIndex: classIndex [
 	| numBytes newObj |
@@ -33,7 +58,7 @@ CogMemoryManager64Bits >> allocateSlots: numSlots format: formatField classIndex
 		ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
 			[self flag: #endianness.
 			 self longAt: freeStart put: numSlots.
-			 self longAt: freeStart + 4 put: self slotSizeMask << self slotSizeHalfWordShift.
+			 self longAt: freeStart + 4 put: self slotSizeMask << self slotSizeHalfShift.
 			 self longLongAt: newObj put: (self headerForSlots: self slotSizeMask format: formatField classIndex: classIndex)]
 		ifFalse:
 			[self longLongAt: newObj put: (self headerForSlots: numSlots format: formatField classIndex: classIndex)].
@@ -73,6 +98,14 @@ CogMemoryManager64Bits >> formatOf: objOop [
 	^(self longLongAt: objOop) >> self formatShift bitAnd: self formatMask
 ]
 
+{ #category : #'garbage collection' }
+CogMemoryManager64Bits >> initFreeChunkWithSlots: numSlots at: address [ 
+	self flag: #endianness.
+	self longAt: address put: self slotSizeMask << self slotSizeFullShift + numSlots;
+		longAt: address + 8 put: self slotSizeMask << self slotSizeFullShift. "0's classIndex; 0 = classIndex of free chunks"
+	^address + 8
+]
+
 { #category : #'object testing' }
 CogMemoryManager64Bits >> isImmediate: oop [ 
 	^(oop bitAnd: 7) ~= 0
@@ -92,12 +125,12 @@ CogMemoryManager64Bits >> objectAfter: objOop [
 	    an object doesn't have a saturated size field it must be a single-header object.  If the word following
 	   does have a saturated slotSize it must be the overflow size word."
 	| followingWordAddress followingWord |
-	followingWordAddress := objOop
-							+ self baseHeaderSize
-							+ ((self rawSlotSizeOf: objOop) << self shiftForWord max: self allocationUnit).
+	followingWordAddress := self addressAfter: objOop.
+	followingWordAddress >= freeStart ifTrue:
+		[^freeStart].
 	self flag: #endianness.
 	followingWord := self longAt: followingWordAddress + 4.
-	^followingWord >> self slotSizeHalfWordShift = self slotSizeMask
+	^followingWord >> self slotSizeHalfShift = self slotSizeMask
 		ifTrue: [followingWordAddress + self baseHeaderSize]
 		ifFalse: [followingWordAddress]
 ]

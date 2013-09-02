@@ -189,10 +189,59 @@ Class {
 		'falseObj',
 		'trueObj',
 		'specialObjectsOop',
-		'classTableRootObj'
+		'classTableRootObj',
+		'endOfMemory',
+		'freeLists',
+		'freeListMask',
+		'endOfOldSpace',
+		'newSpaceStart'
+	],
+	#classVars : [
+		'NumFreeLists'
+	],
+	#pools : [
+		'VMBasicConstants',
+		'VMObjectIndices',
+		'VMSqueakV3BytecodeConstants'
 	],
 	#category : #'VMMaker-MemoryManager'
 }
+
+{ #category : #'class initialization' }
+CogMemoryManager class >> initialize [
+	"CogObjectMemory initialize"
+	NumFreeLists := 65 "One for each size up to and including 64 slots. One for sizes > 64 slots."
+]
+
+{ #category : #'object enumeration' }
+CogMemoryManager >> addressAfter: objOop [
+	"Answer the address immediately following an object."
+	^self subclassResponsibility
+]
+
+{ #category : #initialization }
+CogMemoryManager >> adjustAllOopsBy: bytesToShift [ 
+	"Adjust all oop references by the given number of bytes. This 
+	is done just after reading in an image when the new base 
+	address of the object heap is different from the base address 
+	in the image."
+	"di 11/18/2000 - return number of objects found"
+
+	| obj |
+	<inline: false>
+	bytesToShift ~= 0 ifTrue:
+		[obj := self firstObject.
+		 [self oop: obj isLessThan: freeStart] whileTrue:
+			[(self isFreeObject: obj) ifFalse:
+				[self adjustFieldsAndClassOf: obj by: bytesToShift].
+			 obj := self objectAfter: obj]]
+]
+
+{ #category : #initialization }
+CogMemoryManager >> adjustFieldsAndClassOf: oop by: offsetBytes [ 
+	"Adjust all pointers in this object by the given offset."
+	self subclassResponsibility
+]
 
 { #category : #'debug support' }
 CogMemoryManager >> allObjectsDo: aBlock [
@@ -231,8 +280,10 @@ CogMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceByte
 					ifTrue: [LittleEndianBitmap]
 					ifFalse: [Bitmap]) new: (memoryBytes + newSpaceBytes + codeBytes) // 4.
 	startOfMemory := codeBytes.
+	endOfMemory := memoryBytes + newSpaceBytes + codeBytes.
 	"leave newSpace empty for the bootstrap"
 	freeStart := newSpaceBytes + startOfMemory.
+	newSpaceStart := startOfMemory.
 	newSpaceLimit := newSpaceBytes + startOfMemory.
 	scavengeThreshold := memory size * 4 "Bitmap is a 4-byte per word array"
 ]
@@ -263,11 +314,28 @@ CogMemoryManager >> arrayFormat [
 	^2
 ]
 
+{ #category : #'header access' }
+CogMemoryManager >> baseHeader: obj [
+	^self longLongAt: obj
+]
+
 { #category : #'header format' }
 CogMemoryManager >> baseHeaderSize [
 	"Object headers are 8 bytes in length if the slot size fits in the slot size field (max implies overflow),
 	 16 bytes otherwise (slot size in preceeding word)."
 	^8
+]
+
+{ #category : #'object access' }
+CogMemoryManager >> baseSlotSizeOf: oop [
+	<returnTypeC: #usqInt>
+	| halfHeader slotSize |
+	self flag: #endianness.
+	halfHeader := self longAt: oop + 4.
+	slotSize := halfHeader >> self slotSizeHalfShift bitAnd: self slotSizeMask.
+	^slotSize = self slotSizeMask
+		ifTrue: [self longAt: oop - self baseHeaderSize] "overflow slots; (2^32)-1 slots are plenty"
+		ifFalse: [slotSize]
 ]
 
 { #category : #'header format' }
@@ -328,6 +396,12 @@ CogMemoryManager >> classTableRootObj: anOop [
 	classTableRootObj := anOop
 ]
 
+{ #category : #simulation }
+CogMemoryManager >> coInterpreter: aCoInterpreter [
+	<doNotGenerate>
+	coInterpreter := aCoInterpreter
+]
+
 { #category : #'class table' }
 CogMemoryManager >> ensureBehaviorHash: aBehavior [
 	| newHash err |
@@ -363,6 +437,11 @@ CogMemoryManager >> fetchLong32: fieldIndex ofObject: oop [
 	^self long32At: oop + self baseHeaderSize + (fieldIndex << 2)
 ]
 
+{ #category : #'header format' }
+CogMemoryManager >> firstCompiledMethodFormat [
+	^24
+]
+
 { #category : #'object enumeration' }
 CogMemoryManager >> firstObject [
 	"Return the first object or free chunk in the heap."
@@ -392,6 +471,24 @@ CogMemoryManager >> formatOf: objOop [
 	^self subclassResponsibility
 ]
 
+{ #category : #'object access' }
+CogMemoryManager >> formatOfHeader: header [
+	<var: 'header' type: #usqLong>
+	"0 = 0 sized objects (UndefinedObject True False et al)
+	 1 = non-indexable objects with inst vars (Point et al)
+	 2 = indexable objects with no inst vars (Array et al)
+	 3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+	 4 = weak indexable objects with inst vars (WeakArray et al)
+	 5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+	 6,7,8 unused
+	 9 (?) 64-bit indexable
+	 10 - 11 32-bit indexable
+	 12 - 15 16-bit indexable
+	 16 - 23 byte indexable
+	 24 - 31 compiled method"
+	^header >> self formatShift bitAnd: self formatMask
+]
+
 { #category : #'header format' }
 CogMemoryManager >> formatShift [
 	^24
@@ -419,7 +516,7 @@ CogMemoryManager >> headerForSlots: numSlots format: formatField classIndex: cla
 		isPinned
 		isImmutable
 	 leaving 2 unused bits."
-	^ (numSlots << self slotSizeFullWordShift)
+	^ (numSlots << self slotSizeFullShift)
 	+ (formatField << self formatShift)
 	+ classIndex
 ]
@@ -427,6 +524,95 @@ CogMemoryManager >> headerForSlots: numSlots format: formatField classIndex: cla
 { #category : #'header format' }
 CogMemoryManager >> identityHashHalfWordMask [
 	^16r3fffff
+]
+
+{ #category : #'header format' }
+CogMemoryManager >> indexablePointersFormat [
+	^3
+]
+
+{ #category : #'garbage collection' }
+CogMemoryManager >> initFreeChunkWithSlots: numSlots at: address [ 
+	^self subclassResponsibility
+]
+
+{ #category : #initialization }
+CogMemoryManager >> initialize [
+	freeLists := Array new: NumFreeLists. "gets an extra element in C"
+]
+
+{ #category : #initialization }
+CogMemoryManager >> initializeObjectMemory: bytesToShift [
+	"Initialize object memory variables at startup time. Assume endOfMemory is initially set (by the image-reading code) to the end of the last object in the image. Initialization redefines endOfMemory to be the end of the object allocation area based on the total available memory, but reserving some space for forwarding blocks."
+	"Assume: image reader initializes the following variables:
+		memory
+		memoryLimit
+		specialObjectsOop
+		lastHash
+	"
+	<inline: false>
+	"image may be at a different address; adjust oops for new location"
+	self adjustAllOopsBy: bytesToShift.
+
+	self initializeOldSpaceFirstFree: endOfOldSpace. "initializes endOfMemory, freeStart"
+
+	specialObjectsOop := specialObjectsOop + bytesToShift.
+
+	"heavily used special objects"
+	nilObj		:= self splObj: NilObject.
+	falseObj	:= self splObj: FalseObject.
+	trueObj		:= self splObj: TrueObject.
+
+	"rootTableCount := 0.
+	rootTableOverflowed := false.
+	lowSpaceThreshold := 0.
+	signalLowSpace := false.
+	compStart := 0.
+	compEnd := 0.
+	fwdTableNext := 0.
+	fwdTableLast := 0.
+	remapBufferCount := 0.
+	tenuringThreshold := 2000.  ""tenure all suriving objects if survivor count is over this threshold""
+	growHeadroom := 4*1024*1024. ""four megabytes of headroom when growing""
+	shrinkThreshold := 8*1024*1024. ""eight megabytes of free space before shrinking""
+
+	""garbage collection statistics""
+	statFullGCs := 0.
+	statFullGCUsecs := 0.
+	statIncrGCs := 0.
+	statIncrGCUsecs := 0.
+	statTenures := 0.
+	statRootTableOverflows := 0.
+	statGrowMemory := 0.
+	statShrinkMemory := 0.
+	forceTenureFlag := 0.
+	gcBiasToGrow := 0.
+	gcBiasToGrowGCLimit := 0.
+	extraRootCount := 0."
+]
+
+{ #category : #'garbage collection' }
+CogMemoryManager >> initializeOldSpaceFirstFree: startOfFreeOldSpace [
+	<var: 'startOfFreeOldSpace' type: #usqLong>
+	| freeOldStart freeChunk |
+	<var: 'freeOldStart' type: #usqLong>
+	1 to: NumFreeLists do:
+		[:i| freeLists at: i put: nil].
+	freeOldStart := startOfFreeOldSpace.
+	[endOfMemory - freeOldStart >= (2 raisedTo: 32)] whileTrue:
+		[freeChunk := self initFreeChunkWithSlots: (2 raisedTo: 32) / self wordSize at: freeOldStart.
+		self addToFreeList: freeChunk.
+		freeOldStart := self addressAfter: freeChunk].
+	freeChunk := self initFreeChunkWithSlots: endOfMemory - freeOldStart / self wordSize at: freeOldStart.
+	self addToFreeList: freeChunk
+]
+
+{ #category : #simulation }
+CogMemoryManager >> initializePostBootstrap [
+	"The heap has just been bootstrapped into a modified newSpace occupying all of memory above newSPace (and the codeZone).
+	 Put things back to some kind of normalicy."
+	endOfOldSpace := freeStart.
+	freeStart := newSpaceStart
 ]
 
 { #category : #'object testing' }
@@ -451,9 +637,39 @@ CogMemoryManager >> isPointersNonImm: objOop [
 	^(self formatOf: objOop) <= 5
 ]
 
+{ #category : #'header format' }
+CogMemoryManager >> lastPointerFormat [
+	^5
+]
+
+{ #category : #'object enumeration' }
+CogMemoryManager >> lastPointerOf: oop [ 
+	"Answer the byte offset of the last pointer field of the given object.
+	 Works with CompiledMethods, as well as ordinary objects."
+	<api>
+	<inline: true>
+	<asmLabel: false>
+	| fmt header contextSize numLiterals |
+	<var: 'header' type: #usqLong>
+	header := self baseHeader: oop.
+	fmt := self formatOfHeader: header.
+	fmt <= self lastPointerFormat ifTrue:
+		[(fmt = self indexablePointersFormat
+		  and: [self isContextHeader: header]) ifTrue:
+			["contexts end at the stack pointer"
+			contextSize := coInterpreter fetchStackPointerOf: oop.
+			^CtxtTempFrameStart + contextSize * BytesPerOop].
+		^(self baseSlotSizeOf: oop) * BytesPerOop  "all pointers"].
+	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
+
+	"CompiledMethod: contains both pointers and bytes"
+	numLiterals := coInterpreter literalCountOf: oop.
+	^numLiterals + LiteralStart * BytesPerOop
+]
+
 { #category : #'primitive support' }
 CogMemoryManager >> nilFieldsOf: obj [ 
-	0 to: (self rawSlotSizeOf: obj) - 1 do:
+	0 to: (self baseSlotSizeOf: obj) - 1 do:
 		[:i|
 		self storePointerUnchecked: i ofObject: obj withValue: nilObj]
 ]
@@ -489,18 +705,6 @@ CogMemoryManager >> overflowSlotsMask [
 	^self subclassResponsibility
 ]
 
-{ #category : #'object access' }
-CogMemoryManager >> rawSlotSizeOf: oop [
-	<returnTypeC: #usqInt>
-	| halfHeader slotSize |
-	self flag: #endianness.
-	halfHeader := self longAt: oop + 4.
-	slotSize := halfHeader >> self slotSizeHalfWordShift bitAnd: self slotSizeMask.
-	^slotSize = self slotSizeMask
-		ifTrue: [self longAt: oop - self baseHeaderSize] "overflow slots; (2^32)-1 slots are plenty"
-		ifFalse: [slotSize]
-]
-
 { #category : #'header access' }
 CogMemoryManager >> setHashBitsOf: objOop to: hash [
 	self assert: (hash between: 0 and: self identityHashHalfWordMask).
@@ -509,12 +713,12 @@ CogMemoryManager >> setHashBitsOf: objOop to: hash [
 ]
 
 { #category : #'header format' }
-CogMemoryManager >> slotSizeFullWordShift [
+CogMemoryManager >> slotSizeFullShift [
 	^56
 ]
 
 { #category : #'header format' }
-CogMemoryManager >> slotSizeHalfWordShift [
+CogMemoryManager >> slotSizeHalfShift [
 	^24
 ]
 
@@ -535,6 +739,14 @@ CogMemoryManager >> specialObjectsOop [
 CogMemoryManager >> specialObjectsOop: anObject [
 	"For mapInterpreterOops"
 	specialObjectsOop := anObject
+]
+
+{ #category : #'interpreter access' }
+CogMemoryManager >> splObj: index [
+	<api>
+	<inline: true>
+	"Return one of the objects in the specialObjectsArray"
+	^self fetchPointer: index ofObject: specialObjectsOop
 ]
 
 { #category : #accessing }
