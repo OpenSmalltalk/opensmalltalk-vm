@@ -57,7 +57,7 @@ SpurBootstrap >> allocateClassTable [
 					allocateSlots: tableRootSize
 					format: newHeap arrayFormat
 					classIndex: newHeap arrayClassIndexPun.
-	self assert: (newHeap baseSlotSizeOf: tableRoot) = tableRootSize.
+	self assert: (newHeap numSlotsOf: tableRoot) = tableRootSize.
 	self assert: (newHeap formatOf: tableRoot) = newHeap arrayFormat.
 	self assert: (newHeap classIndexOf: tableRoot) = newHeap arrayClassIndexPun.
 	newHeap classTableRootObj: tableRoot.
@@ -67,7 +67,7 @@ SpurBootstrap >> allocateClassTable [
 					allocateSlots: newHeap classTablePageSize
 					format: newHeap arrayFormat
 					classIndex: newHeap arrayClassIndexPun.
-	self assert: (newHeap baseSlotSizeOf: page) = newHeap classTablePageSize.
+	self assert: (newHeap numSlotsOf: page) = newHeap classTablePageSize.
 	self assert: (newHeap formatOf: tableRoot) = newHeap arrayFormat.
 	self assert: (newHeap classIndexOf: tableRoot) = newHeap arrayClassIndexPun.
 	self assert: (newHeap objectAfter: tableRoot) = page.
@@ -81,7 +81,7 @@ SpurBootstrap >> allocateClassTable [
 					allocateSlots: newHeap classTablePageSize
 					format: newHeap weakArrayFormat
 					classIndex: newHeap weakArrayClassIndexPun.
-		self assert: (newHeap baseSlotSizeOf: page) = newHeap classTablePageSize.
+		self assert: (newHeap numSlotsOf: page) = newHeap classTablePageSize.
 		self assert: (newHeap formatOf: page) = newHeap weakArrayFormat.
 		self assert: (newHeap classIndexOf: page) = newHeap weakArrayClassIndexPun.
 		newHeap nilFieldsOf: page.
