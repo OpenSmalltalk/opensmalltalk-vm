@@ -60,7 +60,6 @@ SpurBootstrap >> allocateClassTable [
 	self assert: (newHeap numSlotsOf: tableRoot) = tableRootSize.
 	self assert: (newHeap formatOf: tableRoot) = newHeap arrayFormat.
 	self assert: (newHeap classIndexOf: tableRoot) = newHeap arrayClassIndexPun.
-	newHeap classTableRootObj: tableRoot.
 	newHeap nilFieldsOf: tableRoot.
 	"first page is strong"
 	page := newHeap
@@ -73,6 +72,7 @@ SpurBootstrap >> allocateClassTable [
 	self assert: (newHeap objectAfter: tableRoot) = page.
 	newHeap nilFieldsOf: page.
 	newHeap storePointer: 0 ofObject: tableRoot withValue: page.
+	newHeap classTableRootObj: tableRoot.
 	maxSize := classToIndex inject: 0 into: [:a :b| a max: b].
 	numPages := (maxSize + newHeap classTableMinorIndexMask / newHeap classTablePageSize) truncated.
 	2 to: numPages do:
@@ -166,6 +166,7 @@ SpurBootstrap >> defineKnownClassIndices [
 	classMessage := oldHeap splObj: (VMObjectIndices bindingOf: #ClassMessage) value.
 	classMethodContext := oldHeap splObj: (VMObjectIndices bindingOf: #ClassMethodContext) value.
 	classBlockClosure := oldHeap splObj: (VMObjectIndices bindingOf: #ClassBlockClosure) value.
+	"c.f. CogMemoryManager class>>intializeCompactClassIndices"
 	classToIndex
 		at: oldHeap classSmallInteger put: 1; "N.B. must fill-in index 3 manually"
 		at: oldHeap classCharacter put: 2;
@@ -284,6 +285,7 @@ SpurBootstrap >> firstOrdinaryClassIndex [
 { #category : #testing }
 SpurBootstrap >> launch [
 	| sim |
+	SpurMemoryManager initializeWithOptions: Dictionary new.
 	sim := StackInterpreterSimulator new.
 	sim instVarNamed: #objectMemory put: newHeap.
 	newHeap coInterpreter: sim.
@@ -346,7 +348,7 @@ SpurBootstrap >> on: imageName [
 	oldInterpreter := StackInterpreterSimulator new.
 	oldInterpreter openOn: imageName extraMemory: 0.
 	oldHeap := oldInterpreter objectMemory.
-	newHeap := CMM32LSBSimulator new.
+	newHeap := Spur32BitMMLESimulator new.
 	newHeap
 		allocateMemoryOfSize: (oldHeap youngStart * 5 / 4 roundUpTo: 8)
 		newSpaceSize: 1024 * 1024
