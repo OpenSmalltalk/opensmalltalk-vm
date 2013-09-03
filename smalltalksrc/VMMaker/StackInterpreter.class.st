@@ -670,7 +670,6 @@ StackInterpreter class >> initializeClassIndices [
 { #category : #initialization }
 StackInterpreter class >> initializeContextIndices [
 	"Class MethodContext"
-	| contextFixedSizePlusHeader |
 	SenderIndex := 0.
 	InstructionPointerIndex := 1.
 	StackPointerIndex := 2.
@@ -679,18 +678,21 @@ StackInterpreter class >> initializeContextIndices [
 	ReceiverIndex := 5.
 	CtxtTempFrameStart := 6.
 
+	SmallContextSlots := CtxtTempFrameStart + 16.  "16 indexable fields"
+	"Large contexts have 56 indexable fields.  Max with single header word of ObjectMemory [but not SpurMemoryManager ;-)]."
+	LargeContextSlots := CtxtTempFrameStart + 56.
+	
+	"Including the header size in these sizes is problematic for multiple memory managers,
+	 so we don't use them, except LargeContextSize for asserts.  Set small to nil for error checking."
+	SmallContextSize := nil.
+	LargeContextSize := LargeContextSlots + 1 * BytesPerOop.
+
 	"Class BlockClosure"
 	ClosureOuterContextIndex := 0.
 	ClosureStartPCIndex := 1.
 	ClosureNumArgsIndex := 2.
 	ClosureFirstCopiedValueIndex := 3.
-	ClosureCopiedValuesIndex := 3.
-
-	contextFixedSizePlusHeader := CtxtTempFrameStart + 1.
-	SmallContextSize := contextFixedSizePlusHeader + 16 * BytesPerWord.  "16 indexable fields"
-	"Large contexts have 56 indexable fields.  Max with single header word."
-	"However note that in 64 bits, for now, large contexts have 3-word headers"
-	LargeContextSize := contextFixedSizePlusHeader + 56 * BytesPerWord
+	ClosureCopiedValuesIndex := 3
 ]
 
 { #category : #initialization }
@@ -6493,7 +6495,7 @@ StackInterpreter >> interpreterAllocationReserveBytes [
 	| maxUsedBytesPerPage maxFramesPerPage |
 	maxUsedBytesPerPage := self stackPageFrameBytes + self stackLimitOffset.
 	maxFramesPerPage := maxUsedBytesPerPage / BytesPerWord // FrameSlots.
-	^maxFramesPerPage * LargeContextSize * numStackPages
+	^maxFramesPerPage * LargeContextSlots * BytesPerOop * numStackPages
 ]
 
 { #category : #'plugin support' }
@@ -7644,11 +7646,14 @@ StackInterpreter >> marryFrame: theFP SP: theSP copyTemps: copyTemps [
 	 initialized with a subset of the frame's state that references the frame.
 	 For the default closure implementation we do not need to copy temps.
 	 Different closure implementations may require temps to be copied."
-	| theContext methodHeader byteSize numArgs numStack closureOrNil numTemps |
+	| theContext methodHeader numSlots numArgs numStack closureOrNil numTemps |
 	<inline: true>
 	<var: #theFP type: #'char *'>
 	<var: #theSP type: #'char *'>
 	self assert: (self frameHasContext: theFP) not.
+
+	"The SP is expected to be pointing at the last oop on the stack, not at the pc"
+	self assert: (objectMemory addressCouldBeOop: (stackPages longAt: theSP)).
 
 	methodHeader := self headerOf: (self frameMethod: theFP).
 	"Decide how much of the stack to preserve in widowed contexts.  Preserving too much
@@ -7664,11 +7669,11 @@ StackInterpreter >> marryFrame: theFP SP: theSP copyTemps: copyTemps [
 						ifTrue: [self pushedReceiverOrClosureOfFrame: theFP]
 						ifFalse: [objectMemory nilObject].
 
-	byteSize := (methodHeader bitAnd: LargeContextBit) ~= 0
-					ifTrue: [LargeContextSize]
-					ifFalse: [SmallContextSize].
-	theContext := objectMemory eeInstantiateMethodContextByteSize: byteSize.
-	self assert: numStack + ReceiverIndex << ShiftForWord + BaseHeaderSize <= byteSize. 
+	numSlots := (methodHeader bitAnd: LargeContextBit) ~= 0
+					ifTrue: [LargeContextSlots]
+					ifFalse: [SmallContextSlots].
+	theContext := objectMemory eeInstantiateMethodContextSlots: numSlots.
+	self assert: numStack + ReceiverIndex <= numSlots. 
 	"Mark context as married by setting its sender to the frame pointer plus SmallInteger
 	 tags and the InstructionPointer to the saved fp (which ensures correct alignment
 	 w.r.t. the frame when we check for validity)"
@@ -8500,7 +8505,7 @@ StackInterpreter >> primitiveObject: actualReceiver perform: selector withArgume
 	"Check if number of arguments is reasonable; MaxNumArgs isn't available
 	 so just use LargeContextSize"
 	arraySize := objectMemory fetchWordLengthOf: argumentArray.
-	arraySize > (LargeContextSize / BytesPerWord) ifTrue:
+	arraySize > LargeContextSlots ifTrue:
 		[^self primitiveFailFor: PrimErrBadNumArgs].
 
 	performArgCount := argumentCount.
@@ -10210,8 +10215,8 @@ StackInterpreter >> roomToPushNArgs: n [
 	| cntxSize |
 	self assert: method = (stackPages longAt: framePointer + FoxMethod).
 	cntxSize := ((self headerOf: method) bitAnd: LargeContextBit) ~= 0
-					ifTrue: [LargeContextSize / BytesPerWord - ReceiverIndex]
-					ifFalse: [SmallContextSize / BytesPerWord - ReceiverIndex].
+					ifTrue: [LargeContextSlots - ReceiverIndex]
+					ifFalse: [SmallContextSlots - ReceiverIndex].
 	^self stackPointerIndex + n <= cntxSize
 ]
 
@@ -11589,7 +11594,7 @@ StackInterpreter >> transferTo: newProc [
 	self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer.
 	sched := self schedulerPointer.
 	oldProc := objectMemory fetchPointer: ActiveProcessIndex ofObject: sched.
-	activeContext := self ensureFrameIsMarried: framePointer SP: stackPointer.
+	activeContext := self ensureFrameIsMarried: framePointer SP: stackPointer + BytesPerWord.
 	objectMemory storePointer: SuspendedContextIndex ofObject: oldProc withValue: activeContext.
 	objectMemory storePointer: ActiveProcessIndex ofObject: sched withValue: newProc.
 	objectMemory storePointerUnchecked: MyListIndex ofObject: newProc withValue: objectMemory nilObject.

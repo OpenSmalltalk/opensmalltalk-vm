@@ -3931,7 +3931,7 @@ CoInterpreter >> interpreterAllocationReserveBytes [
 	| maxUsedBytesPerPage maxFramesPerPage |
 	maxUsedBytesPerPage := self stackPageFrameBytes + self stackLimitOffset.
 	maxFramesPerPage := maxUsedBytesPerPage / BytesPerWord // MFrameSlots.
-	^maxFramesPerPage * LargeContextSize * numStackPages
+	^maxFramesPerPage * LargeContextSlots * BytesPerOop * numStackPages
 ]
 
 { #category : #'internal interpreter access' }
@@ -4553,13 +4553,16 @@ CoInterpreter >> marryFrame: theFP SP: theSP copyTemps: copyTemps [
 
 	Override to set the ``has context'' flag appropriately for both machine code and interpreter frames
 	and to streamline the machine code/interpreter differences.."
-	| theContext methodFieldOrObj closureOrNil rcvr byteSize numArgs numStack numTemps |
+	| theContext methodFieldOrObj closureOrNil rcvr numSlots numArgs numStack numTemps |
 	<inline: true>
 	<var: #theFP type: #'char *'>
 	<var: #theSP type: #'char *'>
 	<var: #cogMethod type: #'CogMethod *'>
 	self assert: (self frameHasContext: theFP) not.
 	self assert: (self isBaseFrame: theFP) not. "base frames must aready be married for cannotReturn: processing"
+
+	"The SP is expected to be pointing at the last oop on the stack, not at the pc"
+	self assert: (objectMemory addressCouldBeOop: (objectMemory longAt: theSP)).
 
 	"Decide how much of the stack to preserve in widowed contexts.  Preserving too much
 	 state will potentially hold onto garbage.  Holding onto too little may mean that a dead
@@ -4582,24 +4585,24 @@ CoInterpreter >> marryFrame: theFP SP: theSP copyTemps: copyTemps [
 				ifFalse:
 					[cogMethod := (self cCoerceSimple: cogMethod to: #'CogBlockMethod *') cmHomeMethod.
 					 closureOrNil := self frameStackedReceiver: theFP numArgs: numArgs].
-			 byteSize := (cogMethod methodHeader bitAnd: LargeContextBit) ~= 0
-							ifTrue: [LargeContextSize]
-							ifFalse: [SmallContextSize].
+			 numSlots := (cogMethod methodHeader bitAnd: LargeContextBit) ~= 0
+							ifTrue: [LargeContextSlots]
+							ifFalse: [SmallContextSlots].
 			 methodFieldOrObj := cogMethod methodObject.
 			 rcvr := self mframeReceiver: theFP.
 			 numStack := self stackPointerIndexForMFrame: theFP WithSP: theSP numArgs: numArgs]
 		ifFalse:
 			[self setIFrameHasContext: theFP.
 			 numArgs := self iframeNumArgs: theFP.
-			 byteSize := ((self headerOf: methodFieldOrObj) bitAnd: LargeContextBit) ~= 0
-							ifTrue: [LargeContextSize]
-							ifFalse: [SmallContextSize].
+			 numSlots := ((self headerOf: methodFieldOrObj) bitAnd: LargeContextBit) ~= 0
+							ifTrue: [LargeContextSlots]
+							ifFalse: [SmallContextSlots].
 			 closureOrNil := (self iframeIsBlockActivation: theFP)
 								ifTrue: [self frameStackedReceiver: theFP numArgs: numArgs]
 								ifFalse: [objectMemory nilObject].
 			 rcvr := self iframeReceiver: theFP.
 			 numStack := self stackPointerIndexForIFrame: theFP WithSP: theSP numArgs: numArgs].
-	theContext := objectMemory eeInstantiateMethodContextByteSize: byteSize.
+	theContext := objectMemory eeInstantiateMethodContextSlots: numSlots.
 	self setFrameContext: theFP to: theContext.
 	"Mark context as married by setting its sender to the frame pointer plus SmallInteger
 	 tags and the InstructionPointer to the saved fp (which ensures correct alignment
@@ -5956,8 +5959,8 @@ CoInterpreter >> roomToPushNArgs: n [
 		ifTrue: [methodHeader := (self mframeHomeMethod: framePointer) methodHeader]
 		ifFalse: [methodHeader := self headerOf: (self iframeMethod: framePointer)].
 	cntxSize := (methodHeader bitAnd: LargeContextBit) ~= 0
-					ifTrue: [LargeContextSize / BytesPerWord - ReceiverIndex]
-					ifFalse: [SmallContextSize / BytesPerWord - ReceiverIndex].
+					ifTrue: [LargeContextSlots - ReceiverIndex]
+					ifFalse: [SmallContextSlots - ReceiverIndex].
 	^self stackPointerIndex + n <= cntxSize
 ]
 
@@ -6409,7 +6412,7 @@ CoInterpreter >> transferTo: newProc from: sourceCode [
 	instructionPointer := 0.
 	sched := self schedulerPointer.
 	oldProc := objectMemory fetchPointer: ActiveProcessIndex ofObject: sched.
-	activeContext := self ensureFrameIsMarried: framePointer SP: stackPointer.
+	activeContext := self ensureFrameIsMarried: framePointer SP: stackPointer + BytesPerWord.
 	objectMemory storePointer: SuspendedContextIndex ofObject: oldProc withValue: activeContext.
 	objectMemory storePointer: ActiveProcessIndex ofObject: sched withValue: newProc.
 	objectMemory storePointerUnchecked: MyListIndex ofObject: newProc withValue: objectMemory nilObject.

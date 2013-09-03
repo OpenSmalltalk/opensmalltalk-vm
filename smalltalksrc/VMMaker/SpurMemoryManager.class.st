@@ -774,6 +774,13 @@ SpurMemoryManager >> freeStart [
 	^freeStart
 ]
 
+{ #category : #'object testing' }
+SpurMemoryManager >> goodContextSize: oop [
+	| numSlots |
+	numSlots := self numSlotsOf: oop.
+	^numSlots = SmallContextSlots or: [numSlots = LargeContextSlots]
+]
+
 { #category : #'header access' }
 SpurMemoryManager >> hashBitsOf: objOop [
 	self flag: #endianness.
@@ -916,12 +923,12 @@ SpurMemoryManager >> integerObjectOf: value [
 	"Convert the integer value, assumed to be in SmallInteger range, into a tagged SmallInteger object.
 	 In C, use a shift and an add to set the tag bit.
 	 In Smalltalk we have to work harder because the simulator works with strictly positive bit patterns."
+	^self subclassResponsibility
+]
 
-	^self
-		cCode: [(value << 1) + 1]
-		inSmalltalk: [value >= 0
-						ifTrue: [(value << 1) + 1]
-						ifFalse: [((16r80000000 + value) << 1) + 1]]
+{ #category : #immediates }
+SpurMemoryManager >> integerValueOf: oop [
+	^self subclassResponsibility
 ]
 
 { #category : #'object testing' }
@@ -952,6 +959,13 @@ SpurMemoryManager >> isFreeObject: objOop [
 { #category : #'object testing' }
 SpurMemoryManager >> isImmediate: oop [ 
 	^self subclassResponsibility
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isIntegerObject: oop [
+	(#(makeBaseFrameFor: quickFetchInteger:ofObject:) includes: thisContext sender method selector) ifFalse:
+		[self halt].
+	^(oop bitAnd: 1) ~= 0
 ]
 
 { #category : #'object testing' }

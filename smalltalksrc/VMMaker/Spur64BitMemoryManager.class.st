@@ -127,6 +127,30 @@ Spur64BitMemoryManager >> initFreeChunkWithSlots: numSlots at: address [
 	^address + 8
 ]
 
+{ #category : #immediates }
+Spur64BitMemoryManager >> integerObjectOf: value [
+	"Convert the integer value, assumed to be in SmallInteger range, into a tagged SmallInteger object.
+	 In C, use a shift and an add to set the tag bit.
+	 In Smalltalk we have to work harder because the simulator works with strictly positive bit patterns."
+
+	^self
+		cCode: [value << self numTagBits + 1]
+		inSmalltalk: [value << self numTagBits
+					+ (value >= 0
+						ifTrue: [1]
+						ifFalse: [16r8000000000000001])]
+]
+
+{ #category : #immediates }
+Spur64BitMemoryManager >> integerValueOf: oop [
+	"Translator produces 'oop >> 1'"
+	^(oop bitShift: -63) = 1 "tests top bit"
+		ifTrue: "negative"
+			[((oop bitShift: self numTagBits negated) bitAnd: 16r3FFFFFFFFFFFFFFF) - 16r3FFFFFFFFFFFFFFF - 1  "Faster than -16r4000000000000000 (a LgInt)"]
+		ifFalse: "positive"
+			[oop bitShift: self numTagBits negated]
+]
+
 { #category : #'object testing' }
 Spur64BitMemoryManager >> isImmediate: oop [ 
 	^(oop bitAnd: 7) ~= 0
