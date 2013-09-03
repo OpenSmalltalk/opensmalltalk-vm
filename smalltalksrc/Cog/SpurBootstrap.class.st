@@ -285,9 +285,7 @@ SpurBootstrap >> firstOrdinaryClassIndex [
 { #category : #testing }
 SpurBootstrap >> launch [
 	| sim |
-	SpurMemoryManager initializeWithOptions: Dictionary new.
-	sim := StackInterpreterSimulator new.
-	sim instVarNamed: #objectMemory put: newHeap.
+	sim := StackInterpreterSimulator onObjectMemory: newHeap.
 	newHeap coInterpreter: sim.
 	newHeap initializePostBootstrap.
 	sim initializeInterpreter: 0.
