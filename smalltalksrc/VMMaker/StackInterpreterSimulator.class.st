@@ -5,13 +5,15 @@ To see the thing actually run, you could (after backing up this image and change
 
 	(StackInterpreterSimulator new openOn: Smalltalk imageName) test
 
+	((StackInterpreterSimulator newWithOptions: #(NewspeakVM true MULTIPLEBYTECODESETS true))
+		openOn: 'ns101.image') test
+
 and be patient both to wait for things to happen, and to accept various things that may go wrong depending on how large or unusual your image may be.  We usually do this with a small and simple benchmark image.
 
 Here's an example of what Eliot uses to launch the simulator in a window.  The bottom-right window has a menu packed with useful stuff:
 
 | vm |
-StackInterpreter initializeWithOptions: (Dictionary newFromPairs: #()).
-vm := StackInterpreterSimulator new.
+vm := StackInterpreterSimulator newWithOptions: #().
 vm openOn: '/Users/eliot/Squeak/Squeak4.4/trunk44.image'.
 vm setBreakSelector: #&.
 vm openAsMorph; run
@@ -47,13 +49,46 @@ Class {
 	#category : #'VMMaker-InterpreterSimulation'
 }
 
+{ #category : #'class initialization' }
+StackInterpreterSimulator class >> initializeWithOptions: optionsDictionaryOrArray objectMemoryClass: objectMemoryClassOrNil [
+	"The relevant ObjectMemory and Interpreter classes must be initialized in order.
+	 This happens notionally every time we start the simulator,
+	 but in fact happens when ever we instantiate a simulator."
+	| optionsDictionary |
+	optionsDictionary := optionsDictionaryOrArray isArray
+							ifTrue: [Dictionary newFromPairs: optionsDictionaryOrArray]
+							ifFalse: [optionsDictionaryOrArray].
+	(objectMemoryClassOrNil ifNil: [self objectMemoryClass])
+		initializeWithOptions: optionsDictionary.
+
+	StackInterpreter initializeWithOptions: optionsDictionary
+]
+
 { #category : #'instance creation' }
 StackInterpreterSimulator class >> new [
-	^ self == StackInterpreterSimulator
-		ifTrue: [SmalltalkImage current endianness == #big
-				ifTrue: [self notYetImplemented"StackInterpreterSimulatorMSB new"]
-				ifFalse: [StackInterpreterSimulatorLSB new]]
-		ifFalse: [super new]
+	^self onObjectMemory: nil options: #()
+]
+
+{ #category : #'instance creation' }
+StackInterpreterSimulator class >> newWithOptions: optionsDictionaryOrArray [
+	^self onObjectMemory: nil options: optionsDictionaryOrArray
+]
+
+{ #category : #'instance creation' }
+StackInterpreterSimulator class >> onObjectMemory: anObjectMemory [
+	^self onObjectMemory: anObjectMemory options: #()
+]
+
+{ #category : #'instance creation' }
+StackInterpreterSimulator class >> onObjectMemory: anObjectMemory options: optionsDictionaryOrArray [
+	^self == StackInterpreterSimulator
+		ifTrue:
+			[self initializeWithOptions: optionsDictionaryOrArray
+				objectMemoryClass: (anObjectMemory ifNotNil: [anObjectMemory class]).
+			 SmalltalkImage current endianness == #big
+				ifTrue: [self notYetImplemented"StackInterpreterSimulatorMSB onObjectMemory: anObjectMemory"]
+				ifFalse: [StackInterpreterSimulatorLSB onObjectMemory: anObjectMemory]]
+		ifFalse: [super basicNew objectMemory: anObjectMemory; initialize]
 ]
 
 { #category : #'debug support' }
@@ -536,20 +571,8 @@ StackInterpreterSimulator >> initialize [
 	 Smalltalk Arrays for variables that will be declared as statically-allocated
 	 global arrays in the translated code."
 
-	| objectMemoryClass |
-
-	"initialize class variables"
-	objectMemory ifNotNil:
-		[^self halt].
-
-	objectMemoryClass := self class objectMemoryClass.
-
-	objectMemoryClass initBytesPerWord: objectMemoryClass bytesPerWord.
-	objectMemoryClass initialize.
-	StackInterpreter initialize.
-
-	super initialize.
-	objectMemory := objectMemoryClass simulatorClass new.
+	objectMemory ifNil:
+		[objectMemory := self class objectMemoryClass simulatorClass new].
 	objectMemory coInterpreter: self.
 
 	"Note: we must initialize ConstMinusOne differently for simulation,

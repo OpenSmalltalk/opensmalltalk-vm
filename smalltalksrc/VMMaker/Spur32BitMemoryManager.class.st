@@ -4,6 +4,11 @@ Class {
 	#category : #'VMMaker-MemoryManager'
 }
 
+{ #category : #'word size' }
+Spur32BitMemoryManager class >> bytesPerWord [
+	^4
+]
+
 { #category : #'object enumeration' }
 Spur32BitMemoryManager >> addressAfter: objOop [
 	"Answer the address immediately following an object."

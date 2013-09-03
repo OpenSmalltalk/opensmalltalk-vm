@@ -9,11 +9,9 @@ and be patient both to wait for things to happen, and to accept various things t
 
 Here's an example to launch the simulator in a window.  The bottom-right window has a menu packed with useful stuff:
 
-| opts |
-CoInterpreter initializeWithOptions: (opts := Dictionary newFromPairs: #(Cogit StackToRegisterMappingCogit)).
-CogVMSimulator chooseAndInitCogitClassWithOpts: opts.
-CogVMSimulator new
+(CogVMSimulator newWithOptions: #(Cogit StackToRegisterMappingCogit))
 	desiredNumStackPages: 8;
+	openOn: '/Users/eliot/Cog/startreader.image';
 	openAsMorph;
 	run
 
@@ -85,13 +83,71 @@ CogVMSimulator class >> chooseAndInitCogitClassWithOpts: opts [
 	(CoInterpreter classPool at: #CogitClass put: (classOrSymbol)) initializeWithOptions: opts
 ]
 
+{ #category : #'class initialization' }
+CogVMSimulator class >> initializeWithOptions: optionsDictionaryOrArray objectMemoryClass: objectMemoryClassOrNil [
+	"The relevant ObjectMemory, Interpreter and Cogit classes must be initialized in order.
+	 This happens notionally every time we start the simulator,
+	 but in fact happens when ever we instantiate a simulator."
+	| optionsDictionary cogitClassOrName |
+	optionsDictionary := optionsDictionaryOrArray isArray
+							ifTrue: [Dictionary newFromPairs: optionsDictionaryOrArray]
+							ifFalse: [optionsDictionaryOrArray].
+	(objectMemoryClassOrNil ifNil: [self objectMemoryClass])
+		initializeWithOptions: optionsDictionary.
+
+	((optionsDictionary at: #COGMTVM ifAbsent: [false])
+			ifTrue: [CoInterpreterMT]
+			ifFalse: [CoInterpreter])
+		initializeWithOptions: optionsDictionary.
+
+	(optionsDictionary includesKey: #Cogit) ifTrue:
+		[cogitClassOrName := optionsDictionary at: #Cogit.
+		 cogitClassOrName isSymbol ifTrue:
+			[cogitClassOrName := Smalltalk classNamed: cogitClassOrName].
+		CoInterpreter classPool at: #CogitClass put: cogitClassOrName].
+
+	(self cogitClass withAllSuperclasses copyUpTo: Cogit) reverseDo:
+		[:c| c initializeWithOptions: optionsDictionary]
+]
+
 { #category : #'instance creation' }
 CogVMSimulator class >> new [
+	^self onObjectMemory: nil cogit: nil options: #()
+]
+
+{ #category : #'instance creation' }
+CogVMSimulator class >> newWithOptions: optionsDictionaryOrArray [
+	^self onObjectMemory: nil cogit: nil options: optionsDictionaryOrArray
+]
+
+{ #category : #'instance creation' }
+CogVMSimulator class >> onObjectMemory: anObjectMemory [
+	^self onObjectMemory: anObjectMemory cogit: nil options: #()
+]
+
+{ #category : #'instance creation' }
+CogVMSimulator class >> onObjectMemory: anObjectMemory cogit: aCogit [
+	^self onObjectMemory: anObjectMemory cogit: aCogit options: #()
+]
+
+{ #category : #'instance creation' }
+CogVMSimulator class >> onObjectMemory: anObjectMemory cogit: aCogit options: optionsDictionaryOrArray [
 	^self == CogVMSimulator
-		ifTrue: [SmalltalkImage current endianness == #big
+		ifTrue:
+			[self initializeWithOptions: optionsDictionaryOrArray
+				objectMemoryClass: (anObjectMemory ifNotNil: [anObjectMemory class]).
+			 SmalltalkImage current endianness == #big
 				ifTrue: [self notYetImplemented]
-				ifFalse: [CogVMSimulatorLSB new]]
-		ifFalse: [super new]
+				ifFalse: [CogVMSimulatorLSB onObjectMemory: anObjectMemory cogit: aCogit options: optionsDictionaryOrArray]]
+		ifFalse:
+			[| sim |
+			sim := self basicNew.
+			sim objectMemory: anObjectMemory.
+			sim cogit: aCogit.
+			sim initialize.
+			COGMTVM ifTrue: "Set via options"
+				[sim initializeThreadSupport; initialize].
+			sim]
 ]
 
 { #category : #'debug support' }
@@ -1148,30 +1204,21 @@ CogVMSimulator >> initialEnterSmalltalkExecutive [
 
 { #category : #initialization }
 CogVMSimulator >> initialize [
-	"Initialize the StackInterpreterSimulator when running the interpreter
-	 inside Smalltalk. The primary responsibility of this method is to allocate
-	 Smalltalk Arrays for variables that will be declared as statically-allocated
-	 global arrays in the translated code."
+	"Initialize the CogVMSimulator when running the interpreter inside Smalltalk.  The
+	 primary responsibility of this method is to allocate Smalltalk Arrays for variables
+	 that will be declared as statically-allocated global arrays in the translated code."
 
-	| objectMemoryClass |
+	objectMemory ifNil:
+		[objectMemory := self class objectMemoryClass simulatorClass new].
+	cogit ifNil:
+		[cogit := self class cogitClass new setInterpreter: self].
+	objectMemory coInterpreter: self cogit: cogit.
 
-	"initialize class variables"
-	objectMemory ifNotNil:
-		[^self halt].
-
-	objectMemoryClass := self class objectMemoryClass.
-
-	objectMemoryClass initBytesPerWord: objectMemoryClass bytesPerWord.
-	((Smalltalk classNamed: #CoInterpreterMT) ifNil: [CoInterpreter] ifNotNil: [:cimt| cimt])  initialize.
-	(self class cogitClass withAllSuperclasses copyUpThrough: Cogit) reverseDo:
-		[:c| c initialize].
-
-	super initialize.
-	objectMemory := objectMemoryClass simulatorClass new.
-	cogit := self class cogitClass new setInterpreter: self.
 	cogit numRegArgs > 0 ifTrue:
 		[debugStackDepthDictionary := Dictionary new].
-	objectMemory coInterpreter: self cogit: cogit.
+
+	cogThreadManager ifNotNil:
+		[super initialize].
 
 	"Note: we must initialize ConstMinusOne & HasBeenReturnedFromMCPC differently
 	 for simulation, due to the fact that the simulator works only with +ve 32-bit values"

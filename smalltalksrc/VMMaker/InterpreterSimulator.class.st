@@ -461,16 +461,10 @@ InterpreterSimulator >> incrementalGC [
 
 { #category : #initialization }
 InterpreterSimulator >> initialize [
-
 	"Initialize the InterpreterSimulator when running the interpreter inside
 	Smalltalk. The primary responsibility of this method is to allocate
 	Smalltalk Arrays for variables that will be declared as statically-allocated
 	global arrays in the translated code."
-
-	"initialize class variables"
-	ObjectMemory initBytesPerWord: self bytesPerWord.
-	ObjectMemory initialize.
-	Interpreter initialize.
 
 	"Note: we must initialize ConstMinusOne differently for simulation,
 		due to the fact that the simulator works only with +ve 32-bit values"

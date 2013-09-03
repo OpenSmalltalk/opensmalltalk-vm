@@ -1147,7 +1147,6 @@ StackInterpreter class >> initializeStreamIndices [
 StackInterpreter class >> initializeWithOptions: optionsDictionary [
 	"StackInterpreter initializeWithOptions: Dictionary new"
 
-	NewObjectMemory initializeWithOptions: optionsDictionary.  "initialize ObjectMemory constants"
 	self initializeMiscConstantsWith: optionsDictionary. "must preceed other initialization."
 	self initializeAssociationIndex.
 	self initializeBytecodeTable.
@@ -8032,6 +8031,12 @@ StackInterpreter >> objectArg: index [
 StackInterpreter >> objectMemory [
 	<doNotGenerate>
 	^objectMemory
+]
+
+{ #category : #initialization }
+StackInterpreter >> objectMemory: anObjectMemory [
+	<doNotGenerate>
+	objectMemory := anObjectMemory
 ]
 
 { #category : #'debug support' }
