@@ -173,8 +173,8 @@ SpurBootstrap >> defineKnownClassIndices [
 		"at: oldHeap classSmallInteger put: 3" "N.B. must fill-in index 3 manually"
 		"leave room for up to 15 tagged classes"
 		"leave room for up to 16 puns"
-		at: oldHeap classLargePositiveInteger put: 32;
-		at: oldHeap classLargeNegativeInteger put: 33;
+		at: oldHeap classLargeNegativeInteger put: 32;
+		at: oldHeap classLargePositiveInteger put: 33;
 		at: oldHeap classFloat put: 34;
 
 		at: "oldHeap" classMessage put: 35;
@@ -260,17 +260,20 @@ SpurBootstrap >> fillInObjects [
 
 { #category : #bootstrap }
 SpurBootstrap >> fillInPointerObject: newObj from: oldObj [
-	0 to: (oldHeap lastPointerOf: oldObj) >> 4 - 1 do:
+	0 to: (oldHeap lastPointerOf: oldObj) / oldHeap bytesPerWord - 1 do:
 		[:i| | oldValue newValue |
 		oldValue := oldHeap fetchPointer: i ofObject: oldObj.
 		newValue := (oldHeap isIntegerObject: oldValue)
 						ifTrue: [oldValue]
 						ifFalse:
 							[map at: oldValue ifAbsent:
-								[self assert: (oldHeap fetchClassOfNonInt: oldValue) = oldHeap classCharacter.
-								 newHeap characterObjectOf:
-									(oldHeap integerValueOf:
-										(oldHeap fetchPointer: CharacterValueIndex ofObject: oldValue))]].
+								[oldValue = oldHeap characterTable
+									ifTrue: [newHeap nilObject]
+									ifFalse:
+										[self assert: (oldHeap fetchClassOfNonInt: oldValue) = oldHeap classCharacter.
+										 newHeap characterObjectOf:
+											(oldHeap integerValueOf:
+												(oldHeap fetchPointer: CharacterValueIndex ofObject: oldValue))]]].
 		newHeap
 			storePointerUnchecked: i
 			ofObject: newObj
