@@ -11,7 +11,9 @@ Class {
 		'CtxtTempFrameStart',
 		'LargeContextBit',
 		'LargeContextSize',
-		'SmallContextSize'
+		'LargeContextSlots',
+		'SmallContextSize',
+		'SmallContextSlots'
 	],
 	#pools : [
 		'VMBasicConstants'
