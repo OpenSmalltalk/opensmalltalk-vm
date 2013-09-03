@@ -196,7 +196,10 @@ Class {
 		'freeLists',
 		'freeListMask',
 		'endOfOldSpace',
-		'newSpaceStart'
+		'newSpaceStart',
+		'checkForLeaks',
+		'needGCFlag',
+		'heapMap'
 	],
 	#classVars : [
 		'NumFreeLists'
@@ -271,6 +274,7 @@ SpurMemoryManager class >> initializeCompactClassIndices [
 
 	ClassMessageCompactIndex := 35.
 	ClassMethodContextCompactIndex := 36.
+	ClassBlockContextCompactIndex := 0.
 	ClassBlockClosureCompactIndex := 37.
 
 	ClassByteArrayCompactIndex := 50.
@@ -550,12 +554,12 @@ SpurMemoryManager >> checkCompactIndex: classIndex isClass: specialIndex named: 
 
 { #category : #'class table' }
 SpurMemoryManager >> classAtIndex: classIndex [
-	| majorIndex minorIndex page |
-	majorIndex := classIndex >> self classTableMajorIndexShift.
-	minorIndex := classIndex bitAnd: self classTableMinorIndexMask.
-	self assert: (majorIndex between: 0 and: (self numSlotsOf: classTableRootObj) - 1).
-	page := self fetchPointer: majorIndex ofObject: classTableRootObj.
-	^self fetchPointer: minorIndex ofObject: page
+	| classTablePage |
+	classTablePage := self fetchPointer: classIndex >> self classTableMajorIndexShift
+							ofObject: classTableRootObj.
+	^self
+		fetchPointer: (classIndex bitAnd: self classTableMinorIndexMask)
+		ofObject: classTablePage
 ]
 
 { #category : #'header format' }
@@ -608,6 +612,11 @@ SpurMemoryManager >> coInterpreter: aCoInterpreter [
 	coInterpreter := aCoInterpreter
 ]
 
+{ #category : #'class membership' }
+SpurMemoryManager >> compactIndexOfClass: objOop [
+	^self hashBitsOf: objOop
+]
+
 { #category : #'class table' }
 SpurMemoryManager >> ensureBehaviorHash: aBehavior [
 	| newHash err |
@@ -637,6 +646,13 @@ SpurMemoryManager >> falseObject: anOop [
 ]
 
 { #category : #'object access' }
+SpurMemoryManager >> fetchClassOfNonInt: objOop [ 
+	| classIndex |
+	classIndex := self classIndexOf: objOop.
+	^self classAtIndex: classIndex
+]
+
+{ #category : #'object access' }
 SpurMemoryManager >> fetchLong32: fieldIndex ofObject: oop [
 	"index by 32-bit units, and return a 32-bit value. Intended to replace fetchWord:ofObject:"
 
@@ -644,8 +660,24 @@ SpurMemoryManager >> fetchLong32: fieldIndex ofObject: oop [
 ]
 
 { #category : #'header format' }
+SpurMemoryManager >> firstByteFormat [
+	^16
+]
+
+{ #category : #'header format' }
 SpurMemoryManager >> firstCompiledMethodFormat [
 	^24
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> firstFixedField: objOop [
+	<returnTypeC: #'void *'>
+	^ self pointerForOop: objOop + self baseHeaderSize
+]
+
+{ #category : #'header format' }
+SpurMemoryManager >> firstLongFormat [
+	^10
 ]
 
 { #category : #'object enumeration' }
@@ -656,7 +688,24 @@ SpurMemoryManager >> firstObject [
 ]
 
 { #category : #'header format' }
+SpurMemoryManager >> firstShortFormat [
+	^12
+]
+
+{ #category : #'header format' }
 SpurMemoryManager >> formatMask [
+	"0 = 0 sized objects (UndefinedObject True False et al)
+	 1 = non-indexable objects with inst vars (Point et al)
+	 2 = indexable objects with no inst vars (Array et al)
+	 3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+	 4 = weak indexable objects with inst vars (WeakArray et al)
+	 5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+	 6,7,8 unused
+	 9 (?) 64-bit indexable
+	 10 - 11 32-bit indexable
+	 12 - 15 16-bit indexable
+	 16 - 23 byte indexable
+	 24 - 31 compiled method"
 	^16r1f
 ]
 
@@ -725,6 +774,12 @@ SpurMemoryManager >> freeStart [
 	^freeStart
 ]
 
+{ #category : #'header access' }
+SpurMemoryManager >> hashBitsOf: objOop [
+	self flag: #endianness.
+	^(self longAt: objOop) bitAnd: self identityHashHalfWordMask
+]
+
 { #category : #'header format' }
 SpurMemoryManager >> headerForSlots: numSlots format: formatField classIndex: classIndex [ 
 	"The header format in LSB is
@@ -775,7 +830,10 @@ SpurMemoryManager >> initFreeChunkWithSlots: numSlots at: address [
 
 { #category : #initialization }
 SpurMemoryManager >> initialize [
-	freeLists := CArrayAccessor on: (Array new: NumFreeLists withAll: 0)
+	freeLists := CArrayAccessor on: (Array new: NumFreeLists withAll: 0).
+	checkForLeaks := 0.
+	needGCFlag := false.
+	heapMap := self wordSize = 4 ifTrue: [CogCheck32BitHeapMap new]
 ]
 
 { #category : #initialization }
@@ -867,6 +925,19 @@ SpurMemoryManager >> integerObjectOf: value [
 ]
 
 { #category : #'object testing' }
+SpurMemoryManager >> isBytes: oop [
+	"Answer true if the argument contains indexable bytes. See comment in formatOf:"
+	"Note: Includes CompiledMethods."
+	^(self isNonImmediate: oop) and: [self isBytesNonImm: oop]
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isBytesNonImm: objOop [
+	"Answer true if the argument contains indexable bytes. See comment in formatOf:"
+	^(self formatOf: objOop) >= self firstByteFormat
+]
+
+{ #category : #'object testing' }
 SpurMemoryManager >> isCompiledMethod: objOop [
     "Answer whether the argument object is of compiled method format"
 	<api>
@@ -880,6 +951,11 @@ SpurMemoryManager >> isFreeObject: objOop [
 
 { #category : #'object testing' }
 SpurMemoryManager >> isImmediate: oop [ 
+	^self subclassResponsibility
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isNonImmediate: oop [ 
 	^self subclassResponsibility
 ]
 
@@ -922,6 +998,47 @@ SpurMemoryManager >> lastPointerOf: obj [
 	"CompiledMethod: contains both pointers and bytes"
 	numLiterals := coInterpreter literalCountOf: obj.
 	^numLiterals + LiteralStart * BytesPerOop
+]
+
+{ #category : #'debug support' }
+SpurMemoryManager >> leakCheckFullGC [
+	<api>
+	^(checkForLeaks bitAnd: 1) ~= 0
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> lengthOf: objOop [
+	"Answer the number of indexable bytes or words in the given object.
+	 For a CompiledMethod, the size of the method header (in bytes) should be subtracted from the result."
+
+	<api>
+	| header |
+	<var: #header type: #usqLong>
+	<inline: true>
+	<asmLabel: false> 
+	header := self baseHeader: objOop.
+	^self lengthOf: objOop baseHeader: header format: (self formatOfHeader: header)
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> lengthOf: objOop baseHeader: header format: fmt [ 
+	<var: #header type: #usqLong>
+	"Compatibility; does not really suit the Spur format.
+	 Answer the number of indexable bytes or words in the given object.
+	 For a CompiledMethod, the size of the method header (in bytes) should
+	 be subtracted from the result of this method."
+	| numSlots |
+	<inline: true>
+	<asmLabel: false> 
+	numSlots := self numSlotsOf: objOop.
+	fmt <= self sixtyFourBitIndexableFormat ifTrue:
+		[^numSlots].
+	fmt >= self firstByteFormat ifTrue: "bytes, including CompiledMethod"
+		[^numSlots << self shiftForWord - (fmt bitAnd: 7)].
+	fmt >= self firstShortFormat ifTrue:
+		[^numSlots << (self shiftForWord - 1) - (fmt bitAnd: 3)].
+	"fmt >= self firstLongFormat"
+	^numSlots << (self shiftForWord - 1) - (fmt bitAnd: 1)
 ]
 
 { #category : #'primitive support' }
@@ -997,6 +1114,20 @@ SpurMemoryManager >> setHashBitsOf: objOop to: hash [
 	self assert: (hash between: 0 and: self identityHashHalfWordMask).
 	self longAt: objOop
 		put: ((self longAt: objOop) bitClear: self identityHashHalfWordMask) + hash
+]
+
+{ #category : #'header format' }
+SpurMemoryManager >> sixtyFourBitIndexableFormat [
+	^9
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> sizeBitsOf: objOop [
+	"Answer the number of bytes in the given object, including its base header, rounded up to an integral number of words.
+	 Hence, were it not for the fact that zero-sized objects have at least room for a forwarding pointer,
+	 objOop + (self sizeBitsOf: objOop) is the address immediately following objOop."
+	"Note: byte indexable objects need to have low bits subtracted from this size to find the address beyond the last byte."
+	^(self numSlotsOf: objOop) << self shiftForWord + self baseHeaderSize
 ]
 
 { #category : #accessing }

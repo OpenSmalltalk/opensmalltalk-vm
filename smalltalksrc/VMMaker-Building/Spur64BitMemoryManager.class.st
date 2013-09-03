@@ -132,6 +132,11 @@ Spur64BitMemoryManager >> isImmediate: oop [
 	^(oop bitAnd: 7) ~= 0
 ]
 
+{ #category : #'object testing' }
+Spur64BitMemoryManager >> isNonImmediate: oop [ 
+	^(oop bitAnd: 7) = 0
+]
+
 { #category : #'object access' }
 Spur64BitMemoryManager >> numTagBits [
 	"4th bit reserved for object alignment, which could imply e.g. what space the object is in."
