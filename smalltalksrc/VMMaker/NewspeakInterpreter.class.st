@@ -388,10 +388,14 @@ NewspeakInterpreter class >> initializeCompactClassIndices [
 	ClassLargeNegativeIntegerCompactIndex := 0. "Currently PseudoContext class"
 	ClassLargePositiveIntegerCompactIndex := 5.
 	ClassFloatCompactIndex := 6.
-	ClassBlockClosureCompactIndex := 0 "12". "Prospective.  Currently TranslatedMethod class"
+	ClassBlockClosureCompactIndex := 0 "12". "Prospective.  May still be TranslatedMethod class"
 	ClassByteStringCompactIndex := 11.
 	ClassBlockContextCompactIndex := 13.
-	ClassMethodContextCompactIndex := 14
+	ClassMethodContextCompactIndex := 14.
+
+	ClassByteArrayCompactIndex := 0.
+	ClassMessageCompactIndex := 0.
+	ClassBitmapCompactIndex := 0
 ]
 
 { #category : #initialization }

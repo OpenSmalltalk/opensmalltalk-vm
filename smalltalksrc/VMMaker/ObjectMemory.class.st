@@ -260,10 +260,14 @@ ObjectMemory class >> initializeCompactClassIndices [
 	ClassLargeNegativeIntegerCompactIndex := 4. "Was PseudoContext class"
 	ClassLargePositiveIntegerCompactIndex := 5.
 	ClassFloatCompactIndex := 6.
-	ClassBlockClosureCompactIndex := 0 "12". "Prospective.  Currently TranslatedMethod class"
+	ClassBlockClosureCompactIndex := 0 "12". "Prospective.  May still be TranslatedMethod class"
 	ClassByteStringCompactIndex := 11.
 	ClassBlockContextCompactIndex := 13.
-	ClassMethodContextCompactIndex := 14
+	ClassMethodContextCompactIndex := 14.
+
+	ClassByteArrayCompactIndex := 0.
+	ClassMessageCompactIndex := 0.
+	ClassBitmapCompactIndex := 0
 ]
 
 { #category : #initialization }
@@ -2741,6 +2745,11 @@ ObjectMemory >> isFreeObject: oop [
 ]
 
 { #category : #'interpreter access' }
+ObjectMemory >> isImmediate: anOop [
+	^self isIntegerObject: anOop
+]
+
+{ #category : #'interpreter access' }
 ObjectMemory >> isImmediateCharacter: objectPointer [
 
 	^false
@@ -2805,6 +2814,11 @@ ObjectMemory >> isMethodContextHeader: aHeader [
 	<inline: true>
 	"c.f. {BlockContext. MethodContext. PseudoContext} collect: [:class| class -> class indexIfCompact]"
 	^(self compactClassIndexOfHeader: aHeader) = ClassMethodContextCompactIndex
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> isNonImmediate: anOop [
+	^self isNonIntegerObject: anOop
 ]
 
 { #category : #'interpreter access' }

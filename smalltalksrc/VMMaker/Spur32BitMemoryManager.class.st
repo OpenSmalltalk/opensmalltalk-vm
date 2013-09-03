@@ -136,6 +136,11 @@ Spur32BitMemoryManager >> isImmediate: oop [
 	^(oop bitAnd: 3) ~= 0
 ]
 
+{ #category : #'object testing' }
+Spur32BitMemoryManager >> isNonImmediate: oop [ 
+	^(oop bitAnd: 3) = 0
+]
+
 { #category : #'object access' }
 Spur32BitMemoryManager >> numTagBits [
 	^2

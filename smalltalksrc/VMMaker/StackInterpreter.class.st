@@ -6651,7 +6651,7 @@ StackInterpreter >> isReadMediatedContextInstVarIndex: index [
 
 { #category : #'frame access' }
 StackInterpreter >> isSingleContext: aContext [
-	^objectMemory isNonIntegerObject: (objectMemory fetchPointer: SenderIndex ofObject: aContext)
+	^objectMemory isNonImmediate: (objectMemory fetchPointer: SenderIndex ofObject: aContext)
 ]
 
 { #category : #'frame access' }
