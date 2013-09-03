@@ -210,6 +210,11 @@ Class {
 	#category : #'VMMaker-MemoryManager'
 }
 
+{ #category : #'word size' }
+SpurMemoryManager class >> bytesPerWord [
+	^self subclassResponsibility
+]
+
 { #category : #initialization }
 SpurMemoryManager class >> initBytesPerWord: nBytes [
 
@@ -347,7 +352,9 @@ SpurMemoryManager class >> initializeSpecialObjectIndices [
 SpurMemoryManager class >> initializeWithOptions: optionsDictionary [
 	"SpurMemoryManager initializeWithOptions: Dictionary new"
 
-	self initBytesPerWord: (optionsDictionary at: #BytesPerWord ifAbsent: [4]).
+	self initBytesPerWord: (self == SpurMemoryManager
+								ifTrue: [optionsDictionary at: #BytesPerWord ifAbsent: [4]]
+								ifFalse: [self bytesPerWord]).
 	BytesPerOop := optionsDictionary at: #BytesPerOop ifAbsent: [BytesPerWord].
 
 	self initializeSpecialObjectIndices.
@@ -844,6 +851,19 @@ SpurMemoryManager >> initializePostBootstrap [
 	 Put things back to some kind of normalicy."
 	endOfOldSpace := freeStart.
 	freeStart := newSpaceStart
+]
+
+{ #category : #immediates }
+SpurMemoryManager >> integerObjectOf: value [
+	"Convert the integer value, assumed to be in SmallInteger range, into a tagged SmallInteger object.
+	 In C, use a shift and an add to set the tag bit.
+	 In Smalltalk we have to work harder because the simulator works with strictly positive bit patterns."
+
+	^self
+		cCode: [(value << 1) + 1]
+		inSmalltalk: [value >= 0
+						ifTrue: [(value << 1) + 1]
+						ifFalse: [((16r80000000 + value) << 1) + 1]]
 ]
 
 { #category : #'object testing' }
