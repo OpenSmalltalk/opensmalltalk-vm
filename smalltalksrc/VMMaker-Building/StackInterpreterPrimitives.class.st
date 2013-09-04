@@ -157,7 +157,7 @@ StackInterpreterPrimitives >> pathTo: goal using: stack followWeak: followWeak [
 									ifTrue: [self fieldOrSenderFP: index ofContext: current]
 									ifFalse: [objectMemory fetchPointer: index ofObject: current]]
 							ifFalse:
-								[objectMemory fetchClassOfNonInt: current]].
+								[objectMemory fetchClassOfNonImm: current]].
 		 (stackPages couldBeFramePointer: next)
 			ifTrue: [self assert: (self isFrame: next onPage: (stackPages stackPageFor: next))]
 			ifFalse: [self assert: (self checkOkayOop: next)].
@@ -375,7 +375,7 @@ StackInterpreterPrimitives >> primitiveCopyObject [
 	((objectMemory isContextNonInt: rcvr)
 	 or: [objectMemory isContextNonInt: arg]) ifTrue:
 		[^self primitiveFail].
-	(objectMemory fetchClassOfNonInt: rcvr) = (objectMemory fetchClassOfNonInt: arg) ifFalse:
+	(objectMemory fetchClassOfNonImm: rcvr) = (objectMemory fetchClassOfNonImm: arg) ifFalse:
 		[^self primitiveFail].
 	length := objectMemory lengthOf: rcvr.
 	length = (objectMemory lengthOf: arg) ifFalse:
@@ -882,7 +882,7 @@ StackInterpreterPrimitives >> primitiveLongRunningPrimitiveSemaphore [
 		ifTrue:
 			[longRunningPrimitiveCheckSemaphore := nil]
 		ifFalse:
-			[(objectMemory fetchClassOfNonInt: sema) = (objectMemory splObj: ClassSemaphore) ifFalse:
+			[(objectMemory fetchClassOfNonImm: sema) = (objectMemory splObj: ClassSemaphore) ifFalse:
 				[^self primitiveFail].
 			 longRunningPrimitiveCheckSemaphore := sema].
 	self voidLongRunningPrimitive: 'install'.
@@ -1008,7 +1008,7 @@ StackInterpreterPrimitives >> primitiveSignalAtMilliseconds [
 	 or: [objectMemory isIntegerObject: sema]) ifTrue:
 		[self primitiveFail.
 		 ^nil].
-	(objectMemory fetchClassOfNonInt: sema) = (objectMemory splObj: ClassSemaphore)
+	(objectMemory fetchClassOfNonImm: sema) = (objectMemory splObj: ClassSemaphore)
 		ifTrue:
 			[objectMemory splObj: TheTimerSemaphore put: sema.
 			deltaMsecs := msecs - (self ioMSecs bitAnd: MillisecondClockMask).
@@ -1038,7 +1038,7 @@ StackInterpreterPrimitives >> primitiveSignalAtUTCMicroseconds [
 	 or: [objectMemory isIntegerObject: sema]) ifTrue:
 		[self primitiveFail.
 		 ^nil].
-	(objectMemory fetchClassOfNonInt: sema) = (objectMemory splObj: ClassSemaphore)
+	(objectMemory fetchClassOfNonImm: sema) = (objectMemory splObj: ClassSemaphore)
 		ifTrue:
 			[objectMemory splObj: TheTimerSemaphore put: sema.
 			nextWakeupUsecs := usecs]

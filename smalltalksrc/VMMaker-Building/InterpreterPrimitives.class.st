@@ -819,7 +819,7 @@ InterpreterPrimitives >> primitiveChangeClass [
 	arg := self stackObjectValue: 0.
 	rcvr := self stackObjectValue: 1.
 	self successful ifFalse:[^nil].
-	argClass := objectMemory fetchClassOfNonInt: arg.
+	argClass := objectMemory fetchClassOfNonImm: arg.
 	err := objectMemory changeClassOf: rcvr to: argClass.
 	err = 0
 		ifTrue: ["Flush at cache because rcvr's class has changed."
@@ -1086,7 +1086,7 @@ InterpreterPrimitives >> primitiveCopyObject [
 	self failed ifTrue:[^nil].
 	(objectMemory isPointers: rcvr) ifFalse:
 		[^self primitiveFail].
-	(objectMemory fetchClassOfNonInt: rcvr) = (objectMemory fetchClassOfNonInt: arg) ifFalse:
+	(objectMemory fetchClassOfNonImm: rcvr) = (objectMemory fetchClassOfNonImm: arg) ifFalse:
 		[^self primitiveFail].
 	length := objectMemory lengthOf: rcvr.
 	length = (objectMemory lengthOf: arg) ifFalse:
@@ -2372,16 +2372,12 @@ InterpreterPrimitives >> primitiveNewWithArg [
 
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveNextInstance [
-	| object classPointer subsequentObject |
+	| object subsequentObject |
 	object := self stackTop.
-	(objectMemory isIntegerObject: object) ifFalse:
-		[classPointer := objectMemory fetchClassOfNonInt: object.
-		subsequentObject := objectMemory objectAfter: object.
-		[self oop: subsequentObject isLessThan: objectMemory freeStart] whileTrue:
-			[((objectMemory isFreeObject: subsequentObject) not
-			  and: [(objectMemory fetchClassOfNonInt: subsequentObject) = classPointer]) ifTrue:
-				[^self pop: argumentCount+1 thenPush: subsequentObject].
-			 subsequentObject := objectMemory objectAfter: subsequentObject]].
+	(objectMemory isImmediate: object) ifFalse:
+		[subsequentObject := objectMemory instanceAfter: object.
+		 subsequentObject ifNotNil:
+			[^self pop: argumentCount+1 thenPush: subsequentObject]].
 	self primitiveFail
 ]
 
@@ -3157,8 +3153,8 @@ InterpreterPrimitives >> primitiveStopVMProfiling [
 	self successful ifFalse:
 		[^nil].
 	"Both args must be either nil or arrays.  If they're arrays and the wrong size we incorrectly stop profiling."
-	((vmHistArrayOrNil = objectMemory nilObject or: [(objectMemory fetchClassOfNonInt: vmHistArrayOrNil) = (objectMemory splObj: ClassArray)])
-	 and: [(objectMemory fetchClassOfNonInt: vmHistArrayOrNil) = (objectMemory fetchClassOfNonInt: easHistArrayOrNil)]) ifFalse:
+	((vmHistArrayOrNil = objectMemory nilObject or: [(objectMemory fetchClassOfNonImm: vmHistArrayOrNil) = (objectMemory splObj: ClassArray)])
+	 and: [(objectMemory fetchClassOfNonImm: vmHistArrayOrNil) = (objectMemory fetchClassOfNonImm: easHistArrayOrNil)]) ifFalse:
 		[^self primitiveFail].
 	self cCode: 'ioControlProfile(0,&vmHist,&vmBins,&easHist,&easBins)'
 		inSmalltalk: [vmHist := vmBins := easHist := easBins := 0].

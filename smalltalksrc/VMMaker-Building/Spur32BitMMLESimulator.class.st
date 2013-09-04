@@ -18,6 +18,14 @@ Spur32BitMMLESimulator >> byteAt: byteAddress [
 ]
 
 { #category : #'memory access' }
+Spur32BitMMLESimulator >> byteAtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address."
+
+	^self byteAt: pointer
+]
+
+{ #category : #'memory access' }
 Spur32BitMMLESimulator >> endianness [
 	^#little
 ]
