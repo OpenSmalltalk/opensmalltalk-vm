@@ -13,7 +13,7 @@ Class {
 		'objHash',
 		'slotSize'
 	],
-	#category : #'VMMaker-MemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #'class initialization' }

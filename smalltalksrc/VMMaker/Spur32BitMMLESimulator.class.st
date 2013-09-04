@@ -1,7 +1,7 @@
 Class {
 	#name : #Spur32BitMMLESimulator,
 	#superclass : #Spur32BitMemoryManager,
-	#category : #'VMMaker-MemoryManagerSimulation'
+	#category : #'VMMaker-SpurMemoryManagerSimulation'
 }
 
 { #category : #'memory access' }
@@ -32,9 +32,9 @@ Spur32BitMMLESimulator >> headerForSlots: numSlots format: formatField classInde
 			| 5: format			|
 			| 2 bits				|
 			| 22: classIndex		| : LSB"
-	self assert: (numSlots between: 0 and: self numSlotsMask).
-	self assert: (formatField between: 0 and: 31).
-	self assert: (classIndex between: 0 and: 16r3fffff).
+	self assert: (numSlots bitAnd: self numSlotsMask) = numSlots.
+	self assert: (formatField bitAnd: self formatMask) = formatField.
+	self assert: (classIndex bitAnd: self classIndexMask) = classIndex.
 	^super headerForSlots: numSlots format: formatField classIndex: classIndex
 ]
 
