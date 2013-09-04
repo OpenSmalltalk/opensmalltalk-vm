@@ -2733,6 +2733,12 @@ ObjectMemory >> isContextHeader: aHeader [
 ]
 
 { #category : #contexts }
+ObjectMemory >> isContextNonImm: oop [
+	<inline: true>
+	^self isContextHeader: (self baseHeader: oop)
+]
+
+{ #category : #contexts }
 ObjectMemory >> isContextNonInt: oop [
 	<inline: true>
 	^self isContextHeader: (self baseHeader: oop)
