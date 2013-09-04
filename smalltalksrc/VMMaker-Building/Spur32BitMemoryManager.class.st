@@ -1,7 +1,7 @@
 Class {
 	#name : #Spur32BitMemoryManager,
 	#superclass : #SpurMemoryManager,
-	#category : #'VMMaker-MemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #'word size' }
@@ -54,7 +54,7 @@ Spur32BitMemoryManager >> allocateSlots: numSlots format: formatField classIndex
 							ifFalse: [numSlots + (numSlots bitAnd: 1) * self bytesPerSlot])]. "roundTo allocationUnit"
 	self assert: numBytes \\ self allocationUnit = 0.
 	freeStart + numBytes > scavengeThreshold ifTrue:
-		[freeStart + numBytes > newSpaceLimit ifTrue:
+		[freeStart + numBytes > scavenger eden limit ifTrue:
 			[^self allocateSlotsInOldSpace: numSlots format: formatField classIndex: classIndex].
 		 self scheduleScavenge].
 	numSlots >= self numSlotsMask
@@ -170,7 +170,7 @@ Spur32BitMemoryManager >> numTagBits [
 ]
 
 { #category : #'object enumeration' }
-Spur32BitMemoryManager >> objectAfter: objOop [
+Spur32BitMemoryManager >> objectAfter: objOop limit: limit [
 	"Object parsing.
 	1. all objects have at least a word following the header, for a forwarding pointer.
 	2. objects with an overflow size have a preceeing word with a saturated numSlots.  If the word
@@ -178,8 +178,8 @@ Spur32BitMemoryManager >> objectAfter: objOop [
 	   If the word following does have a saturated numSlots it must be the overflow size word."
 	| followingWordAddress followingWord |
 	followingWordAddress := self addressAfter: objOop.
-	followingWordAddress >= freeStart ifTrue:
-		[^freeStart].
+	followingWordAddress >= limit ifTrue:
+		[^limit].
 	self flag: #endianness.
 	followingWord := self longAt: followingWordAddress + 4.
 	^followingWord >> self numSlotsHalfShift = self numSlotsMask
@@ -193,16 +193,16 @@ Spur32BitMemoryManager >> shiftForWord [
 ]
 
 { #category : #'object access' }
-Spur32BitMemoryManager >> storePointer: fieldIndex ofObject: oop withValue: valuePointer [
+Spur32BitMemoryManager >> storePointer: fieldIndex ofObject: objOop withValue: valuePointer [
 	"Note must check here for stores of young objects into old ones."
 
-	(self oop: oop isLessThan: newSpaceLimit) ifFalse: "most stores into young objects"
+	(self isYoung: objOop) ifFalse: "most stores into young objects"
 		[(self isImmediate: valuePointer) ifFalse:
-			[(self oop: valuePointer isLessThan: newSpaceLimit) ifTrue:
-				[self possibleRootStoreInto: oop value: valuePointer]]].
+			[(self isYoung: valuePointer) ifTrue:
+				[self possibleRootStoreInto: objOop value: valuePointer]]].
 
 	^self
-		longAt: oop + self baseHeaderSize + (fieldIndex << self shiftForWord)
+		longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
 		put: valuePointer
 ]
 

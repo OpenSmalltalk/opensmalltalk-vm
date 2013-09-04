@@ -5,20 +5,20 @@ Class {
 		'coInterpreter',
 		'manager',
 		'memory',
+		'eden',
 		'futureSpace',
 		'pastSpace',
 		'rememberedSet',
 		'rememberedSetSize'
 	],
-	#category : #'VMMaker-MemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
-{ #category : #api }
+{ #category : #scavenger }
 SpurGenerationScavenger >> copyAndForward: survivor [
 	"copyAndForward: survivor copies a survivor object either to
 	 futureSurvivorSpace or, if it is to be promoted, to oldSpace.
 	 It leaves a forwarding pointer behind."
-	<var: #survivor type: #'object *'>
 	| newLocation |
 	newLocation := (self shouldBeTenured: survivor)
 						ifTrue: [self copyToOldSpace: survivor]
@@ -27,7 +27,62 @@ SpurGenerationScavenger >> copyAndForward: survivor [
 			
 ]
 
-{ #category : #api }
+{ #category : #accessing }
+SpurGenerationScavenger >> eden [
+	<returnTypeC: #'SpurNewSpaceSpace *'>
+	^self addressOf: eden
+]
+
+{ #category : #accessing }
+SpurGenerationScavenger >> futureSpace [
+	<returnTypeC: #'SpurNewSpaceSpace *'>
+	^self addressOf: futureSpace
+]
+
+{ #category : #initialization }
+SpurGenerationScavenger >> initPastSpaceForObjectEnumeration [
+	"For SuurMemoryManager allNewSpaceObjectsDo: fill pastSpace with
+	 a single empty object."
+	| objOop |
+	manager initFreeChunkWithBytes: pastSpace limit - pastSpace start at: pastSpace start.
+	objOop := manager objectStartingAt: pastSpace start.
+	self assert: (manager addressAfter: objOop) = pastSpace limit
+]
+
+{ #category : #initialization }
+SpurGenerationScavenger >> manager: aSpurMemoryManager memory: memoryArray newSpaceStart: startAddress newSpaceBytes: totalBytes edenBytes: requestedEdenBytes [ 
+	| edenBytes edenLimit edenStart survivorBytes |
+	manager := aSpurMemoryManager.
+	memory := memoryArray.
+	edenBytes := requestedEdenBytes.
+	edenStart := startAddress.
+	survivorBytes := totalBytes - edenBytes // 2 truncateTo: manager allocationUnit.
+	edenBytes := totalBytes - survivorBytes - survivorBytes truncateTo: manager allocationUnit.
+	edenLimit := edenStart + edenBytes roundUpTo: manager allocationUnit.
+	self assert: totalBytes - (edenLimit - edenStart) - survivorBytes - survivorBytes < manager allocationUnit.
+	eden := SpurNewSpaceSpace new.
+	pastSpace := SpurNewSpaceSpace new.
+	futureSpace := SpurNewSpaceSpace new.
+	eden start: edenStart limit: edenLimit.
+	pastSpace start: edenLimit limit: edenLimit + survivorBytes.
+	futureSpace start: pastSpace limit limit: pastSpace limit + survivorBytes.
+	self assert: futureSpace limit <= (startAddress + totalBytes).
+	self assert: eden start \\ manager allocationUnit
+				+ (eden limit \\ manager allocationUnit) = 0.
+	self assert: pastSpace start \\ manager allocationUnit
+				+ (pastSpace limit \\ manager allocationUnit) = 0.
+	self assert: futureSpace start \\ manager allocationUnit
+				+ (futureSpace limit \\ manager allocationUnit) = 0.
+	self initPastSpaceForObjectEnumeration
+]
+
+{ #category : #accessing }
+SpurGenerationScavenger >> pastSpace [
+	<returnTypeC: #'SpurNewSpaceSpace *'>
+	^self addressOf: pastSpace
+]
+
+{ #category : #scavenger }
 SpurGenerationScavenger >> scavenge [
 	"The main routine, scavenge, scavenges young objects reachable from the roots (the stack zone
 	 and the rememberedTable).  It first scavenges the new objects immediately reachable from the
@@ -46,22 +101,20 @@ SpurGenerationScavenger >> scavenge [
 	self exchange: pastSpace with: futureSpace
 ]
 
-{ #category : #api }
+{ #category : #scavenger }
 SpurGenerationScavenger >> scavengeFutureSurvivorSpaceStartingAt: initialAddress [
 	"scavengeFutureSurvivorSpaceStartingAt: does a depth-first traversal of the
-	 new objects starting at the one at the nth word of futureSurvivorSpace."
+	 new objects starting at the one at initialAddress in futureSurvivorSpace."
 	| ptr |
-	<var: #ptr type: #'char *'>
 	ptr := initialAddress.
 	[ptr < futureSpace limit] whileTrue:
 		[| obj |
-		 obj := manager objectAt: ptr.
-		 ptr := ptr + (manager byteLengthOf: obj).
-		 self cCoerceSimple: (self scavengeReferentsOf: obj)
-			to: #void]
+		 obj := manager objectStartingAt: ptr.
+		 ptr := manager addressAfter: obj.
+		 self cCoerceSimple: (self scavengeReferentsOf: obj) to: #void]
 ]
 
-{ #category : #api }
+{ #category : #scavenger }
 SpurGenerationScavenger >> scavengeLoop [
 	"This is the inner loop of the main routine, scavenge.  It first scavenges the new objects immediately
 	 reachable from old ones. Then it scavenges those that are transitively reachable.  If this results in a
@@ -89,22 +142,23 @@ SpurGenerationScavenger >> scavengeLoop [
 	 previousFutureSurvivorSpaceLimit := futureSpace size] repeat
 ]
 
-{ #category : #api }
+{ #category : #scavenger }
 SpurGenerationScavenger >> scavengeReferentsOf: referrer [
 	"scavengeReferentsOf: referrer inspects all the pointers in referrer.
 	 If any are new objects, it has them moved to FutureSurvivorSpace,
 	 and returns truth. If there are no new referents, it returns falsity."
 	<var: #referrer type: #'object *'>
-	| foundNewReferent referent |
-	referrer isPointers ifFalse:
-		[^self].
+	| foundNewReferent |
+	"referrer isPointers ifFalse:
+		[^false]."
 	foundNewReferent := false.
-	0 to: (manager lengthOf: referrer) do:
-		[:i|
+	0 to: (manager numPointerSlotsOf: referrer) do:
+		[:i| | referent |
 		referent := manager fetchPointer: i ofObject: referrer.
-		(manager isYoung: referent) ifTrue:
+		((manager isNonImmediate: referent)
+		 and: [manager isYoung: referent]) ifTrue:
 			[foundNewReferent := true.
-			 referent isForwarded ifFalse:
+			 (manager isForwarded: referent) ifFalse:
 				[self copyAndForward: referent].
 			 manager
 				storePointerUnchecked: i
@@ -113,7 +167,7 @@ SpurGenerationScavenger >> scavengeReferentsOf: referrer [
 	^foundNewReferent
 ]
 
-{ #category : #api }
+{ #category : #scavenger }
 SpurGenerationScavenger >> scavengeRememberedSetStartingAt: n [
 	"scavengeRememberedSetStartingAt: n traverses objects in the remembered
 	 set starting at the nth one.  If the object does not refer to any new objects, it
