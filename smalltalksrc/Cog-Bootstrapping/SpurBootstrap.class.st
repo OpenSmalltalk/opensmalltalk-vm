@@ -69,7 +69,7 @@ SpurBootstrap >> allocateClassTable [
 	self assert: (newHeap numSlotsOf: page) = newHeap classTablePageSize.
 	self assert: (newHeap formatOf: tableRoot) = newHeap arrayFormat.
 	self assert: (newHeap classIndexOf: tableRoot) = newHeap arrayClassIndexPun.
-	self assert: (newHeap objectAfter: tableRoot) = page.
+	self assert: (newHeap objectAfter: tableRoot limit: newHeap freeStart) = page.
 	newHeap nilFieldsOf: page.
 	newHeap storePointer: 0 ofObject: tableRoot withValue: page.
 	newHeap classTableRootObj: tableRoot.
@@ -86,8 +86,18 @@ SpurBootstrap >> allocateClassTable [
 		self assert: (newHeap classIndexOf: page) = newHeap weakArrayClassIndexPun.
 		newHeap nilFieldsOf: page.
 		newHeap storePointer: i - 1 ofObject: tableRoot withValue: page.
-		self assert: (newHeap objectAfter: (newHeap fetchPointer: i - 2 ofObject: tableRoot)) = page].
+		self assert: (newHeap objectAfter: (newHeap fetchPointer: i - 2 ofObject: tableRoot)  limit: newHeap freeStart) = page].
 	pastClassTable := newHeap freeStart.
+]
+
+{ #category : #bootstrap }
+SpurBootstrap >> bootstrapImage [
+	self cloneNilTrueAndFalse.
+	self buildClassMap.
+	self allocateClassTable.
+	self cloneObjects.
+	self fillInObjects.
+	self fillInClassTable
 ]
 
 { #category : #bootstrap }
@@ -290,7 +300,6 @@ SpurBootstrap >> launch [
 	| sim |
 	sim := StackInterpreterSimulator onObjectMemory: newHeap.
 	newHeap coInterpreter: sim.
-	newHeap initializePostBootstrap.
 	sim initializeInterpreter: 0.
 	sim run
 ]
@@ -361,12 +370,8 @@ SpurBootstrap >> on: imageName [
 
 { #category : #bootstrap }
 SpurBootstrap >> transform [
-	self cloneNilTrueAndFalse.
-	self buildClassMap.
-	self allocateClassTable.
-	self cloneObjects.
-	self fillInObjects.
-	self fillInClassTable.
+	self bootstrapImage.
+	newHeap initializePostBootstrap.
 	self validate
 ]
 
