@@ -184,6 +184,7 @@ Class {
 		'startOfMemory',
 		'memory',
 		'freeStart',
+		'freeOldSpaceStart',
 		'scavengeThreshold',
 		'newSpaceLimit',
 		'nilObj',
@@ -195,7 +196,6 @@ Class {
 		'endOfMemory',
 		'freeLists',
 		'freeListMask',
-		'endOfOldSpace',
 		'newSpaceStart',
 		'checkForLeaks',
 		'needGCFlag',
@@ -210,7 +210,7 @@ Class {
 		'VMSqueakClassIndices',
 		'VMSqueakV3BytecodeConstants'
 	],
-	#category : #'VMMaker-MemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #'word size' }
@@ -421,19 +421,27 @@ SpurMemoryManager >> addressAfter: objOop [
 	^self subclassResponsibility
 ]
 
+{ #category : #'debug support' }
+SpurMemoryManager >> addressCouldBeObj: address [ 
+	^(address bitAnd: self baseHeaderSize - 1) = 0
+	  and: [(self isInOldSpace: address)
+		or: [(self isInEden: address)
+		or: [self isInSurvivorSpace: address]]]
+]
+
 { #category : #initialization }
 SpurMemoryManager >> adjustAllOopsBy: bytesToShift [ 
 	"Adjust all oop references by the given number of bytes. This 
 	is done just after reading in an image when the new base 
 	address of the object heap is different from the base address 
 	in the image."
-	"di 11/18/2000 - return number of objects found"
 
 	| obj |
 	<inline: false>
 	bytesToShift ~= 0 ifTrue:
-		[obj := self firstObject.
-		 [self oop: obj isLessThan: freeStart] whileTrue:
+		[self assert: self newSpaceIsEmpty.
+		 obj := self firstObject.
+		 [self oop: obj isLessThan: freeOldSpaceStart] whileTrue:
 			[(self isFreeObject: obj) ifFalse:
 				[self adjustFieldsAndClassOf: obj by: bytesToShift].
 			 obj := self objectAfter: obj]]
@@ -445,35 +453,60 @@ SpurMemoryManager >> adjustFieldsAndClassOf: oop by: offsetBytes [
 	self subclassResponsibility
 ]
 
-{ #category : #'debug support' }
+{ #category : #'object enumeration' }
+SpurMemoryManager >> allNewSpaceObjectsDo: aBlock [
+	| prevObj prevPrevObj objOop limit |
+	prevPrevObj := prevObj := nil.
+	"After a scavenge eden is empty, futureSpace is empty, and all newSpace objects are
+	  in pastSpace.  Objects are allocated in eden.  So enumerate only eden and pastSpace."
+	objOop := self objectStartingAt: scavenger eden start.
+	[objOop < freeStart] whileTrue:
+		[(self isFreeObject: objOop) ifFalse:
+			[aBlock value: objOop].
+		 prevPrevObj := prevObj.
+		 prevObj := objOop.
+		 objOop := self objectAfter: objOop limit: freeStart].
+	objOop := self objectStartingAt: scavenger pastSpace start.
+	limit := scavenger pastSpace limit.
+	[objOop < limit] whileTrue:
+		[(self isFreeObject: objOop) ifFalse:
+			[aBlock value: objOop].
+		 prevPrevObj := prevObj.
+		 prevObj := objOop.
+		 objOop := self objectAfter: objOop limit: limit].
+	prevPrevObj class.
+	prevObj class
+]
+
+{ #category : #'object enumeration' }
 SpurMemoryManager >> allObjectsDo: aBlock [
+	self allOldSpaceObjectsDo: aBlock.
+	self allNewSpaceObjectsDo: aBlock
+]
+
+{ #category : #'object enumeration' }
+SpurMemoryManager >> allOldSpaceObjectsDo: aBlock [
 	<doNotGenerate>
 	| prevObj prevPrevObj objOop |
 	prevPrevObj := prevObj := nil.
 	objOop := self firstObject.
 	[self assert: objOop \\ self allocationUnit = 0.
-	 objOop < freeStart] whileTrue:
+	 objOop < freeOldSpaceStart] whileTrue:
 		[(self isFreeObject: objOop) ifFalse:
 			[aBlock value: objOop].
 		 prevPrevObj := prevObj.
 		 prevObj := objOop.
-		 objOop := self objectAfter: objOop].
+		 objOop := self objectAfter: objOop limit: freeOldSpaceStart].
 	prevPrevObj class.
 	prevObj class
 ]
 
 { #category : #simulation }
-SpurMemoryManager >> allocateMemoryOfSize: limit [
-	<doNotGenerate>
-	memory := (self endianness == #little
-					ifTrue: [LittleEndianBitmap]
-					ifFalse: [Bitmap]) new: (limit roundUpTo: 8).
-	freeStart := startOfMemory := 0.
-	scavengeThreshold := newSpaceLimit := memory size * 4 "Bitmap is a 4-byte per word array"
-]
-
-{ #category : #simulation }
 SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceBytes codeSize: codeBytes [
+	"Intialize the receiver for bootsraping an image.
+	 Set up a large oldSpace and an empty newSpace and set-up freeStart and scavengeThreshold
+	 to allocate in oldSpace.  Later on (in initializePostBootstrap) freeStart and scavengeThreshold
+	 will be set to sane values."
 	<doNotGenerate>
 	self assert: (memoryBytes \\ self allocationUnit = 0
 				and: [newSpaceBytes \\ self allocationUnit = 0
@@ -487,7 +520,13 @@ SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceByt
 	freeStart := newSpaceBytes + startOfMemory.
 	newSpaceStart := startOfMemory.
 	newSpaceLimit := newSpaceBytes + startOfMemory.
-	scavengeThreshold := memory size * 4 "Bitmap is a 4-byte per word array"
+	scavengeThreshold := memory size * 4. "Bitmap is a 4-byte per word array"
+	scavenger := SpurGenerationScavenger new
+					manager: self
+					memory: memory
+					newSpaceStart: newSpaceStart
+					newSpaceBytes: newSpaceBytes
+					edenBytes: newSpaceBytes * 5 // 7 "David's paper uses 140Kb eden + 2 x 28kb survivor spaces :-)"
 ]
 
 { #category : #allocation }
@@ -526,6 +565,25 @@ SpurMemoryManager >> baseHeaderSize [
 	"Object headers are 8 bytes in length if the slot size fits in the slot size field (max implies overflow),
 	 16 bytes otherwise (slot size in preceeding word)."
 	^8
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> byteLengthOf: objOop [ 
+	"Answer the number of indexable bytes in the given object.
+	 Does not adjuect contexts by stackPointer."
+	| fmt numBytes |
+	<inline: true>
+	<asmLabel: false>
+	fmt := self formatOf: objOop.
+	numBytes := (self numSlotsOf: objOop) << self shiftForWord.
+	fmt <= self sixtyFourBitIndexableFormat ifTrue:
+		[^numBytes].
+	fmt >= self firstByteFormat ifTrue: "bytes, including CompiledMethod"
+		[^numBytes - (fmt bitAnd: 7)].
+	fmt >= self firstShortFormat ifTrue:
+		[^numBytes - ((fmt bitAnd: 3) << 1)].
+	"fmt >= self firstLongFormat"
+	^numBytes - ((fmt bitAnd: 1) << 2)
 ]
 
 { #category : #'header format' }
@@ -856,7 +914,7 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	"image may be at a different address; adjust oops for new location"
 	self adjustAllOopsBy: bytesToShift.
 
-	self initializeOldSpaceFirstFree: endOfOldSpace. "initializes endOfMemory, freeStart"
+	self initializeOldSpaceFirstFree: freeOldSpaceStart. "initializes endOfMemory, freeStart"
 
 	specialObjectsOop := specialObjectsOop + bytesToShift.
 
@@ -914,8 +972,8 @@ SpurMemoryManager >> initializeOldSpaceFirstFree: startOfFreeOldSpace [
 SpurMemoryManager >> initializePostBootstrap [
 	"The heap has just been bootstrapped into a modified newSpace occupying all of memory above newSPace (and the codeZone).
 	 Put things back to some kind of normalicy."
-	endOfOldSpace := freeStart.
-	freeStart := newSpaceStart
+	freeOldSpaceStart := freeStart.
+	freeStart := scavenger eden start
 ]
 
 { #category : #immediates }
@@ -951,9 +1009,37 @@ SpurMemoryManager >> isCompiledMethod: objOop [
     ^(self formatOf: objOop) >= 24
 ]
 
-{ #category : #'header access' }
+{ #category : #'object testing' }
+SpurMemoryManager >> isContext: oop [
+	<inline: true>
+	^(self isNonImmediate: oop)
+	   and: [(self classIndexOf: oop) = ClassMethodContextCompactIndex]
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isContextNonImm: oop [
+	<inline: true>
+	^(self classIndexOf: oop) = ClassMethodContextCompactIndex
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isForwarded: objOop [
+	^(self classIndexOf: objOop) = self isForwardedClassIndexPun
+]
+
+{ #category : #'class table' }
+SpurMemoryManager >> isForwardedClassIndexPun [
+	^1
+]
+
+{ #category : #'class table' }
+SpurMemoryManager >> isFreeClassIndexPun [
+	^0
+]
+
+{ #category : #'object testing' }
 SpurMemoryManager >> isFreeObject: objOop [
-	^(self classIndexOf: objOop) = 0
+	^(self classIndexOf: objOop) = self isFreeClassIndexPun
 ]
 
 { #category : #'object testing' }
@@ -963,7 +1049,9 @@ SpurMemoryManager >> isImmediate: oop [
 
 { #category : #'object testing' }
 SpurMemoryManager >> isIntegerObject: oop [
-	(#(makeBaseFrameFor: quickFetchInteger:ofObject:) includes: thisContext sender method selector) ifFalse:
+	(#(	makeBaseFrameFor:
+		quickFetchInteger:ofObject:
+		frameOfMarriedContext:) includes: thisContext sender method selector) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
@@ -978,6 +1066,11 @@ SpurMemoryManager >> isPointersNonImm: objOop [
 	^(self formatOf: objOop) <= 5
 ]
 
+{ #category : #'object testing' }
+SpurMemoryManager >> isYoung: objOop [
+	^self oop: objOop isLessThan: newSpaceLimit
+]
+
 { #category : #'class table' }
 SpurMemoryManager >> knownClassAtIndex: classIndex [
 	self assert: (classIndex between: 1 and: self classTablePageSize).
@@ -990,27 +1083,25 @@ SpurMemoryManager >> lastPointerFormat [
 ]
 
 { #category : #'object enumeration' }
-SpurMemoryManager >> lastPointerOf: obj [ 
+SpurMemoryManager >> lastPointerOf: objOop [ 
 	"Answer the byte offset of the last pointer field of the given object.
 	 Works with CompiledMethods, as well as ordinary objects."
 	<api>
 	<inline: true>
 	<asmLabel: false>
-	| fmt header contextSize numLiterals |
-	<var: 'header' type: #usqLong>
-	header := self baseHeader: obj.
-	fmt := self formatOfHeader: header.
+	| fmt contextSize numLiterals |
+	fmt := self formatOf: objOop.
 	fmt <= self lastPointerFormat ifTrue:
 		[(fmt = self indexablePointersFormat
-		  and: [self isContextHeader: header]) ifTrue:
+		  and: [self isContextNonImm: objOop]) ifTrue:
 			["contexts end at the stack pointer"
-			contextSize := coInterpreter fetchStackPointerOf: obj.
+			contextSize := coInterpreter fetchStackPointerOf: objOop.
 			^CtxtTempFrameStart + contextSize * BytesPerOop].
-		^(self numSlotsOf: obj) * BytesPerOop  "all pointers"].
+		^(self numSlotsOf: objOop) * BytesPerOop  "all pointers"].
 	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes"
-	numLiterals := coInterpreter literalCountOf: obj.
+	numLiterals := coInterpreter literalCountOf: objOop.
 	^numLiterals + LiteralStart * BytesPerOop
 ]
 
@@ -1073,6 +1164,29 @@ SpurMemoryManager >> nilObject: anOop [
 	nilObj := anOop
 ]
 
+{ #category : #'object enumeration' }
+SpurMemoryManager >> numPointerSlotsOf: objOop [
+	"Answer the number of pointer fields in the given object.
+	 Works with CompiledMethods, as well as ordinary objects."
+	<api>
+	<inline: true>
+	<asmLabel: false>
+	| fmt contextSize numLiterals |
+	fmt := self formatOf: objOop.
+	fmt <= self lastPointerFormat ifTrue:
+		[(fmt = self indexablePointersFormat
+		  and: [self isContextNonImm: objOop]) ifTrue:
+			["contexts end at the stack pointer"
+			contextSize := coInterpreter fetchStackPointerOf: objOop.
+			^CtxtTempFrameStart + contextSize].
+		^self numSlotsOf: objOop  "all pointers"].
+	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
+
+	"CompiledMethod: contains both pointers and bytes"
+	numLiterals := coInterpreter literalCountOf: objOop.
+	^numLiterals + LiteralStart
+]
+
 { #category : #'header format' }
 SpurMemoryManager >> numSlotsFullShift [
 	^56
@@ -1116,6 +1230,20 @@ SpurMemoryManager >> objectAfter: objOop [
 	    an object doesn't have a saturated size field it must be a single-header object.  If the word following
 	   does have a saturated slotSize it must be the overflow size word."
 	^self subclassResponsibility
+]
+
+{ #category : #'object enumeration' }
+SpurMemoryManager >> objectStartingAt: address [
+	"For enumerating objects find the header of the first object in a space.
+	 If the object starts with an overflow size field it will start at the next allocationUnit.
+	 c.f. numSlotsOf:"
+	| halfHeader numSlots |
+	self flag: #endianness.
+	halfHeader := self longAt: address + 4.
+	numSlots := halfHeader >> self numSlotsHalfShift bitAnd: self numSlotsMask.
+	^numSlots = self numSlotsMask
+		ifTrue: [address + self baseHeaderSize]
+		ifFalse: [address]
 ]
 
 { #category : #'header format' }
