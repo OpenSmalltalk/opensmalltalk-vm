@@ -999,7 +999,7 @@ CoInterpreter >> bytecodePrimAt [
 	 and: [objectMemory isIntegerObject: index]) ifTrue:
 		[atIx := rcvr bitAnd: AtCacheMask.  "Index into atCache = 4N, for N = 0 ... 7"
 		(atCache at: atIx+AtCacheOop) ~= rcvr ifTrue:
-			[lkupClass := objectMemory fetchClassOfNonInt: rcvr.
+			[lkupClass := objectMemory fetchClassOfNonImm: rcvr.
 			 messageSelector := self specialSelector: 16.
 			 (self lookupInMethodCacheSel: messageSelector class: lkupClass) ifFalse:
 				[argumentCount := 1.
@@ -1040,7 +1040,7 @@ CoInterpreter >> bytecodePrimAtPut [
 	 and: [objectMemory isIntegerObject: index]) ifTrue:
 		[atIx := (rcvr bitAnd: AtCacheMask) + AtPutBase.  "Index into atPutCache"
 		 (atCache at: atIx+AtCacheOop) ~= rcvr ifTrue:
-			[lkupClass := objectMemory fetchClassOfNonInt: rcvr.
+			[lkupClass := objectMemory fetchClassOfNonImm: rcvr.
 			 messageSelector := self specialSelector: 17.
 			 (self lookupInMethodCacheSel: messageSelector class: lkupClass) ifFalse:
 				[argumentCount := 2.
@@ -1998,7 +1998,7 @@ CoInterpreter >> checkOkayFields: oop [
 	(objectMemory checkOkayOop: oop) ifFalse: [ ^false ].
 	(self checkOopHasOkayClass: oop) ifFalse: [ ^false ].
 	((objectMemory isPointersNonInt: oop) or: [objectMemory isCompiledMethod: oop]) ifFalse: [ ^true ].
-	hasYoung := objectMemory isYoung: (objectMemory fetchClassOfNonInt: oop).
+	hasYoung := objectMemory isYoung: (objectMemory fetchClassOfNonImm: oop).
 	(objectMemory isCompiledMethod: oop)
 		ifTrue:
 			[i := (self literalCountOf: oop) + LiteralStart - 1]
@@ -5325,7 +5325,7 @@ CoInterpreter >> printFrame: theFP WithSP: theSP [
 		 rcvrOrClosure := self pushedReceiverOrClosureOfFrame: theFP.
 		 ((objectMemory isNonIntegerObject: rcvrOrClosure)
 		 and: [(objectMemory addressCouldBeObj: rcvrOrClosure)
-		 and: [(objectMemory fetchClassOfNonInt: rcvrOrClosure) = (objectMemory splObj: ClassBlockClosure)]])
+		 and: [(objectMemory fetchClassOfNonImm: rcvrOrClosure) = (objectMemory splObj: ClassBlockClosure)]])
 			ifTrue: [numTemps := numArgs + (self stSizeOf: rcvrOrClosure)]
 			ifFalse: [numTemps := 0]].
 	self shortPrintFrame: theFP.

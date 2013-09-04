@@ -2042,7 +2042,7 @@ NewspeakInterpreter >> bytecodePrimValue [
 	self initPrimCall.
 	argumentCount := 0.
 	(self isNonIntegerObject: maybeBlock) ifTrue:
-		[rcvrClass := self fetchClassOfNonInt: maybeBlock.
+		[rcvrClass := self fetchClassOfNonImm: maybeBlock.
 		 rcvrClass = (self splObj: ClassBlockClosure)
 			ifTrue:
 				[self externalizeIPandSP.
@@ -2070,7 +2070,7 @@ NewspeakInterpreter >> bytecodePrimValueWithArg [
 	self initPrimCall.
 	argumentCount := 1.
 	(self isNonIntegerObject: maybeBlock) ifTrue:
-		[rcvrClass := self fetchClassOfNonInt: maybeBlock.
+		[rcvrClass := self fetchClassOfNonImm: maybeBlock.
 		 rcvrClass = (self splObj: ClassBlockClosure)
 			ifTrue:
 				[self externalizeIPandSP.
@@ -2357,7 +2357,7 @@ NewspeakInterpreter >> commonAt: stringy [
 	Therefore we must determine that the message is #at: (not, eg, #basicAt:),
 	and that the send is not a super-send, before using the at-cache."
 	(messageSelector = (self specialSelector: 16)
-		and: [lkupClass = (self fetchClassOfNonInt: rcvr)])
+		and: [lkupClass = (self fetchClassOfNonImm: rcvr)])
 		ifTrue:
 		["OK -- look in the at-cache"
 		atIx := rcvr bitAnd: AtCacheMask.  "Index into atCache = 4N, for N = 0 ... 7"
@@ -2398,7 +2398,7 @@ NewspeakInterpreter >> commonAtPut: stringy [
 	Therefore we must determine that the message is #at:Put: (not, eg, #basicAt:Put:),
 	and that the send is not a super-send, before using the at-cache."
 	(messageSelector = (self specialSelector: 17)
-	  and: [lkupClass = (self fetchClassOfNonInt: rcvr)])
+	  and: [lkupClass = (self fetchClassOfNonImm: rcvr)])
 		ifTrue:
 		["OK -- look in the at-cache"
 		atIx := (rcvr bitAnd: AtCacheMask) + AtPutBase.  "Index into atPutCache"
@@ -2685,7 +2685,7 @@ NewspeakInterpreter >> dbgFloatValueOf: oop [
 	<var: #result type: #double>
 	self flag: #Dan.  "None of the float stuff has been converted for 64 bits"
 	((self isNonIntegerObject: oop)
-	and: [(self fetchClassOfNonInt: oop) = (self splObj: ClassFloat)]) ifTrue:
+	and: [(self fetchClassOfNonImm: oop) = (self splObj: ClassFloat)]) ifTrue:
 		[self cCode: '' inSmalltalk: [result := Float new: 2].
 		 self fetchFloatAt: oop + BaseHeaderSize into: result.
 		 ^result].
@@ -2799,7 +2799,7 @@ NewspeakInterpreter >> doSignalSemaphoreWithIndex: index [
 	semaphoreClass := self splObj: ClassSemaphore.
 	sema := self fetchPointer: index - 1 ofObject: xArray. "Note: semaphore indices are 1-based"
 	^(self isNonIntegerObject: sema)
-	   and: [(self fetchClassOfNonInt: sema) = semaphoreClass
+	   and: [(self fetchClassOfNonImm: sema) = semaphoreClass
 	   and: [self synchronousSignal: sema]]
 ]
 
@@ -3682,7 +3682,7 @@ NewspeakInterpreter >> initializeExtraClassInstVarIndices [
 	classNameIndex := 6. "default"
 	thisClassIndex := 5. "default"
 	classArrayObj := self splObj: ClassArray.
-	classArrayClass := self fetchClassOfNonInt: classArrayObj.
+	classArrayClass := self fetchClassOfNonImm: classArrayObj.
 	metaclassSizeBits := self sizeBitsOf: classArrayClass.	"determine actual (Metaclass instSize * 4)"
 	InstanceSpecificationIndex + 1 to: (self lengthOf: classArrayClass) do:
 		[:i|
@@ -4134,7 +4134,7 @@ NewspeakInterpreter >> isEmptyList: aLinkedList [
 { #category : #'internal interpreter access' }
 NewspeakInterpreter >> isFloatObject: oop [
 	^(self isNonIntegerObject: oop)
-	  and: [(self fetchClassOfNonInt: oop) = self classFloat]
+	  and: [(self fetchClassOfNonImm: oop) = self classFloat]
 ]
 
 { #category : #'compiled methods' }
@@ -5656,7 +5656,7 @@ NewspeakInterpreter >> primitiveChangeClass [
 	arg := self stackObjectValue: 0.
 	rcvr := self stackObjectValue: 1.
 	self successful ifFalse:[^nil].
-	argClass := self fetchClassOfNonInt: arg.
+	argClass := self fetchClassOfNonImm: arg.
 	err := self changeClassOf: rcvr to: argClass.
 	err = 0
 		ifTrue: ["Flush at cache because rcvr's class has changed."
@@ -8805,7 +8805,7 @@ NewspeakInterpreter >> printAllStacks [
 	semaphoreClass := self classSemaphore.
 	oop := self firstObject.
 	[self oop: oop isLessThan: freeBlock] whileTrue:
-		[classObj := self fetchClassOfNonInt: oop.
+		[classObj := self fetchClassOfNonImm: oop.
 		 (classObj = semaphoreClass) ifTrue:
 			[self printProcsOnList: oop].
 		 oop := self objectAfter: oop].
@@ -9002,7 +9002,7 @@ NewspeakInterpreter >> printOop: oop [
 		[self print: ' free chunk of size '; printNum: (self sizeOfFree: oop); cr.
 		 ^nil].
 	self print: ': a(n) '.
-	self printNameOfClass: (cls := self fetchClassOfNonInt: oop) count: 5.
+	self printNameOfClass: (cls := self fetchClassOfNonImm: oop) count: 5.
 	cls = (self splObj: ClassFloat) ifTrue:
 		[self cr; printFloat: (self dbgFloatValueOf: oop); cr.
 		 ^nil].
@@ -9867,7 +9867,7 @@ NewspeakInterpreter >> sendInvokeCallback: thunkPtr Stack: stackPtr Registers: r
 	self pushRemappableOop: (self positive32BitIntegerFor: stackPtr).
 	self pushRemappableOop: (self positive32BitIntegerFor: thunkPtr).
 	receiver := self splObj: ClassAlien.
-	lkupClass := self fetchClassOfNonInt: receiver.
+	lkupClass := self fetchClassOfNonImm: receiver.
 	messageSelector := self splObj: SelectorInvokeCallback.
 	(self lookupInMethodCacheSel: messageSelector class: lkupClass) ifFalse:
 	 	[(self lookupMethodNoMNUEtcInClass: lkupClass) ifFalse:
@@ -9899,7 +9899,7 @@ NewspeakInterpreter >> sendInvokeCallbackContext: vmCallbackContext [
 	<var: #vmCallbackContext type: #'VMCallbackContext *'>
 	| relativeSP |
 	receiver := self splObj: ClassAlien.
-	lkupClass := self fetchClassOfNonInt: receiver.
+	lkupClass := self fetchClassOfNonImm: receiver.
 	messageSelector := self splObj: SelectorInvokeCallback.
 	(self lookupInMethodCacheSel: messageSelector class: lkupClass) ifFalse:
 	 	[(self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:

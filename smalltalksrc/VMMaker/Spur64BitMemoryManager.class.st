@@ -151,16 +151,6 @@ Spur64BitMemoryManager >> integerValueOf: oop [
 			[oop bitShift: self numTagBits negated]
 ]
 
-{ #category : #'object testing' }
-Spur64BitMemoryManager >> isImmediate: oop [ 
-	^(oop bitAnd: 7) ~= 0
-]
-
-{ #category : #'object testing' }
-Spur64BitMemoryManager >> isNonImmediate: oop [ 
-	^(oop bitAnd: 7) = 0
-]
-
 { #category : #'object access' }
 Spur64BitMemoryManager >> numTagBits [
 	"4th bit reserved for object alignment, which could imply e.g. what space the object is in."
@@ -209,6 +199,11 @@ Spur64BitMemoryManager >> storePointerUnchecked: fieldIndex ofObject: oop withVa
 	^self
 		longLongAt: oop + self baseHeaderSize + (fieldIndex << self shiftForWord)
 		put: valuePointer
+]
+
+{ #category : #'word size' }
+Spur64BitMemoryManager >> tagMask [
+	^7
 ]
 
 { #category : #'word size' }
