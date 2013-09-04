@@ -111,7 +111,7 @@ SpurBootstrap >> buildClassMap [
 	classTableIndex := newHeap classTablePageSize.
 	oldHeap allObjectsDo:
 		[:oldObj| | oldClass |
-		 oldClass := oldHeap fetchClassOfNonInt: oldObj.
+		 oldClass := oldHeap fetchClassOfNonImm: oldObj.
 		 (classes includes: oldClass) ifFalse:
 			[classes add: oldClass.
 			 classToIndex at: oldClass put: (classTableIndex := classTableIndex + 1)]]
@@ -140,7 +140,7 @@ SpurBootstrap >> cloneNilTrueAndFalse [
 		oldHeap trueObject. }
 		with: (self firstOrdinaryClassIndex to: self firstOrdinaryClassIndex + 2)
 		do: [:obj :classIndex|
-			classToIndex at: (oldHeap fetchClassOfNonInt: obj) put: classIndex.
+			classToIndex at: (oldHeap fetchClassOfNonImm: obj) put: classIndex.
 			self clone: obj classIndex: classIndex].
 	newHeap
 		nilObject: (map at: oldHeap nilObject); "needed for nilling objects etc"
@@ -155,7 +155,7 @@ SpurBootstrap >> cloneObjects [
 	characterTable := oldHeap characterTable.
 	oldObj := oldHeap objectAfter: oldHeap trueObject.
 	[oldObj < oldHeap freeStart] whileTrue:
-		[oldClass := oldHeap fetchClassOfNonInt: oldObj.
+		[oldClass := oldHeap fetchClassOfNonImm: oldObj.
 		 (oldObj ~= characterTable
 		 and: [oldClass ~= characterClass]) ifTrue:
 			[self clone: oldObj classIndex: (classToIndex at: oldClass)].
@@ -280,7 +280,7 @@ SpurBootstrap >> fillInPointerObject: newObj from: oldObj [
 								[oldValue = oldHeap characterTable
 									ifTrue: [newHeap nilObject]
 									ifFalse:
-										[self assert: (oldHeap fetchClassOfNonInt: oldValue) = oldHeap classCharacter.
+										[self assert: (oldHeap fetchClassOfNonImm: oldValue) = oldHeap classCharacter.
 										 newHeap characterObjectOf:
 											(oldHeap integerValueOf:
 												(oldHeap fetchPointer: CharacterValueIndex ofObject: oldValue))]]].
