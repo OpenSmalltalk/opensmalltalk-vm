@@ -1872,7 +1872,7 @@ Interpreter >> bytecodePrimValue [
 	argumentCount := 0.
 	successFlag := true.
 	(self isNonIntegerObject: maybeBlock) ifTrue:
-		[rcvrClass := self fetchClassOfNonInt: maybeBlock.
+		[rcvrClass := self fetchClassOfNonImm: maybeBlock.
 		 rcvrClass = (self splObj: ClassBlockClosure)
 			ifTrue:
 				[self externalizeIPandSP.
@@ -1900,7 +1900,7 @@ Interpreter >> bytecodePrimValueWithArg [
 	argumentCount := 1.
 	successFlag := true.
 	(self isNonIntegerObject: maybeBlock) ifTrue:
-		[rcvrClass := self fetchClassOfNonInt: maybeBlock.
+		[rcvrClass := self fetchClassOfNonImm: maybeBlock.
 		 rcvrClass = (self splObj: ClassBlockClosure)
 			ifTrue:
 				[self externalizeIPandSP.
@@ -2273,7 +2273,7 @@ Interpreter >> commonAt: stringy [
 	Therefore we must determine that the message is #at: (not, eg, #basicAt:),
 	and that the send is not a super-send, before using the at-cache."
 	(messageSelector = (self specialSelector: 16)
-		and: [lkupClass = (self fetchClassOfNonInt: rcvr)])
+		and: [lkupClass = (self fetchClassOfNonImm: rcvr)])
 		ifTrue:
 		["OK -- look in the at-cache"
 		atIx := rcvr bitAnd: AtCacheMask.  "Index into atCache = 4N, for N = 0 ... 7"
@@ -2309,7 +2309,7 @@ Interpreter >> commonAtPut: stringy [
 	Therefore we must determine that the message is #at:Put: (not, eg, #basicAt:Put:),
 	and that the send is not a super-send, before using the at-cache."
 	(messageSelector = (self specialSelector: 17)
-		and: [lkupClass = (self fetchClassOfNonInt: rcvr)])
+		and: [lkupClass = (self fetchClassOfNonImm: rcvr)])
 		ifTrue:
 		["OK -- look in the at-cache"
 		atIx := (rcvr bitAnd: AtCacheMask) + AtPutBase.  "Index into atPutCache"
@@ -3351,7 +3351,7 @@ Interpreter >> initializeInterpreter: bytesToShift [
 	self initializeObjectMemory: bytesToShift.
 	self initCompilerHooks.
 	self checkAssumedCompactClasses.
-	metaclassSizeBits := self sizeBitsOf: (self fetchClassOfNonInt: (self splObj: ClassArray)).	"determine actual (Metaclass instSize * 4)"
+	metaclassSizeBits := self sizeBitsOf: (self fetchClassOfNonImm: (self splObj: ClassArray)).	"determine actual (Metaclass instSize * 4)"
 	activeContext := nilObj.
 	theHomeContext := nilObj.
 	method := nilObj.
@@ -3784,7 +3784,7 @@ Interpreter >> isEmptyList: aLinkedList [
 { #category : #'plugin primitive support' }
 Interpreter >> isFloatObject: oop [
 	^(self isNonIntegerObject: oop)
-	  and: [(self fetchClassOfNonInt: oop) = self classFloat]
+	  and: [(self fetchClassOfNonImm: oop) = self classFloat]
 ]
 
 { #category : #'compiled methods' }
@@ -5039,7 +5039,7 @@ Interpreter >> primitiveChangeClass [
 	arg := self stackObjectValue: 0.
 	rcvr := self stackObjectValue: 1.
 	self successful ifFalse:[^nil].
-	argClass := self fetchClassOfNonInt: arg.
+	argClass := self fetchClassOfNonImm: arg.
 	err := self changeClassOf: rcvr to: argClass.
 	err = 0
 		ifTrue: ["Flush at cache because rcvr's class has changed."
@@ -7803,8 +7803,8 @@ Interpreter >> primitiveStopVMProfiling [
 	successFlag ifFalse:
 		[^nil].
 	"Both args must be either nil or arrays.  If they're arrays and the wrong size we incorrectly stop profiling."
-	((vmHistArrayOrNil = nilObj or: [(self fetchClassOfNonInt: vmHistArrayOrNil) = (self splObj: ClassArray)])
-	 and: [(self fetchClassOfNonInt: vmHistArrayOrNil) = (self fetchClassOfNonInt: easHistArrayOrNil)]) ifFalse:
+	((vmHistArrayOrNil = nilObj or: [(self fetchClassOfNonImm: vmHistArrayOrNil) = (self splObj: ClassArray)])
+	 and: [(self fetchClassOfNonImm: vmHistArrayOrNil) = (self fetchClassOfNonImm: easHistArrayOrNil)]) ifFalse:
 		[^self primitiveFail].
 	self cCode: 'ioControlProfile(0,&vmHist,&vmBins,&easHist,&easBins)'
 		inSmalltalk: [vmHist := vmBins := easHist := easBins := 0].
@@ -9283,7 +9283,7 @@ Interpreter >> sendInvokeCallback: thunkPtr Stack: stackPtr Registers: regsPtr J
 	self pushRemappableOop: (self positive32BitIntegerFor: stackPtr).
 	self pushRemappableOop: (self positive32BitIntegerFor: thunkPtr).
 	receiver := self splObj: ClassAlien.
-	lkupClass := self fetchClassOfNonInt: receiver.
+	lkupClass := self fetchClassOfNonImm: receiver.
 	messageSelector := self splObj: SelectorInvokeCallback.
 	(self lookupInMethodCacheSel: messageSelector class: lkupClass) ifFalse:
 	 	[(self lookupMethodNoMNUEtcInClass: lkupClass) ifFalse:
@@ -9548,7 +9548,7 @@ Interpreter >> signed64BitValueOf: oop [
 	<returnTypeC: #sqLong>
 	<var: #value type: #sqLong>
 	(self isIntegerObject: oop) ifTrue: [^self cCoerce: (self integerValueOf: oop) to: #sqLong].
-	largeClass := self fetchClassOfNonInt: oop.
+	largeClass := self fetchClassOfNonImm: oop.
 	largeClass = self classLargePositiveInteger
 		ifTrue:[negative := false]
 		ifFalse:[largeClass = self classLargeNegativeInteger

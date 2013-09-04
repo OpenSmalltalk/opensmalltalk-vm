@@ -154,16 +154,6 @@ Spur32BitMemoryManager >> integerValueOf: oop [
 			[oop bitShift: -1]
 ]
 
-{ #category : #'object testing' }
-Spur32BitMemoryManager >> isImmediate: oop [ 
-	^(oop bitAnd: 3) ~= 0
-]
-
-{ #category : #'object testing' }
-Spur32BitMemoryManager >> isNonImmediate: oop [ 
-	^(oop bitAnd: 3) = 0
-]
-
 { #category : #'object access' }
 Spur32BitMemoryManager >> numTagBits [
 	^2
@@ -211,6 +201,11 @@ Spur32BitMemoryManager >> storePointerUnchecked: fieldIndex ofObject: oop withVa
 	^self
 		longAt: oop + self baseHeaderSize + (fieldIndex << self shiftForWord)
 		put: valuePointer
+]
+
+{ #category : #'word size' }
+Spur32BitMemoryManager >> tagMask [
+	^3
 ]
 
 { #category : #'word size' }

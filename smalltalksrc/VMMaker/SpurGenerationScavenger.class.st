@@ -147,9 +147,8 @@ SpurGenerationScavenger >> scavengeReferentsOf: referrer [
 	"scavengeReferentsOf: referrer inspects all the pointers in referrer.
 	 If any are new objects, it has them moved to FutureSurvivorSpace,
 	 and returns truth. If there are no new referents, it returns falsity."
-	<var: #referrer type: #'object *'>
 	| foundNewReferent |
-	"referrer isPointers ifFalse:
+	"manager isPointersNonImm: referrer) ifFalse:
 		[^false]."
 	foundNewReferent := false.
 	0 to: (manager numPointerSlotsOf: referrer) do:
@@ -182,7 +181,7 @@ SpurGenerationScavenger >> scavengeRememberedSetStartingAt: n [
 				[rememberedSet at: destIndex put: referree.
 				 destIndex := destIndex + 1]
 			ifFalse:
-				[referree isRemembered: false].
+				[manager setIsRememberedOf: referree to: false].
 		 sourceIndex := sourceIndex + 1].
 	rememberedSetSize := destIndex
 ]

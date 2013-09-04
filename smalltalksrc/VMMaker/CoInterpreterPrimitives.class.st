@@ -62,7 +62,7 @@ CoInterpreterPrimitives >> pathTo: goal using: stack followWeak: followWeak [
 									ifTrue: [self fieldOrSenderFP: index ofContext: current]
 									ifFalse: [objectMemory fetchPointer: index ofObject: current]]
 							ifFalse:
-								[objectMemory fetchClassOfNonInt: current]].
+								[objectMemory fetchClassOfNonImm: current]].
 		 (stackPages couldBeFramePointer: next)
 			ifTrue: [self assert: (self isFrame: (self cCoerceSimple: next to: #'char *')
 										onPage: (stackPages stackPageFor: (self cCoerceSimple: next to: #'char *')))]
@@ -328,7 +328,7 @@ CoInterpreterPrimitives >> primitiveLongRunningPrimitiveSemaphore [
 			 longRunningPrimitiveCheckSemaphore := nil]
 		ifFalse:
 			[flushState := longRunningPrimitiveCheckSemaphore isNil.
-			 (objectMemory fetchClassOfNonInt: sema) = (objectMemory splObj: ClassSemaphore) ifFalse:
+			 (objectMemory fetchClassOfNonImm: sema) = (objectMemory splObj: ClassSemaphore) ifFalse:
 				[^self primitiveFail].
 			 longRunningPrimitiveCheckSemaphore := sema].
 	"If we've switched checking on or off we must void machine code
@@ -341,7 +341,7 @@ CoInterpreterPrimitives >> primitiveLongRunningPrimitiveSemaphore [
 		 self marryContextInNewStackPageAndInitializeInterpreterRegisters: activeContext.
 		 self assert: (((self stackValue: 0) = objectMemory nilObject and: [longRunningPrimitiveCheckSemaphore isNil])
 				  or: [(self stackValue: 0) = longRunningPrimitiveCheckSemaphore
-					  and: [(objectMemory fetchClassOfNonInt: sema) = (objectMemory splObj: ClassSemaphore)]])].
+					  and: [(objectMemory fetchClassOfNonImm: sema) = (objectMemory splObj: ClassSemaphore)]])].
 	self voidLongRunningPrimitive: 'install'.
 	self pop: 1.
 	flushState ifTrue:
@@ -467,7 +467,7 @@ CoInterpreterPrimitives >> primitiveProfileSemaphore [
 			[flushState := profileSemaphore ~= objectMemory nilObject]
 		ifFalse:
 			[flushState := profileSemaphore = objectMemory nilObject.
-			 (objectMemory fetchClassOfNonInt: sema) = (objectMemory splObj: ClassSemaphore) ifFalse:
+			 (objectMemory fetchClassOfNonImm: sema) = (objectMemory splObj: ClassSemaphore) ifFalse:
 				[^self primitiveFail]].
 	profileSemaphore := sema.
 	"If we've switched profiling on or off we must void machine code
@@ -480,7 +480,7 @@ CoInterpreterPrimitives >> primitiveProfileSemaphore [
 		 self marryContextInNewStackPageAndInitializeInterpreterRegisters: activeContext.
 		 self assert: (((self stackValue: 0) = objectMemory nilObject and: [profileSemaphore = objectMemory nilObject])
 				  or: [(self stackValue: 0) = profileSemaphore
-					  and: [(objectMemory fetchClassOfNonInt: sema) = (objectMemory splObj: ClassSemaphore)]])].
+					  and: [(objectMemory fetchClassOfNonImm: sema) = (objectMemory splObj: ClassSemaphore)]])].
 	profileProcess := profileMethod := objectMemory nilObject.
 	self pop: 1.
 	flushState ifTrue:

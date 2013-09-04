@@ -1710,9 +1710,9 @@ StackInterpreter >> addressCouldBeClassObj: maybeClassObj [
 	"Answer if maybeClassObj looks like a class object"
 	<inline: false>
 	^(objectMemory addressCouldBeObj: maybeClassObj)
-	  and: [((objectMemory isPointersNonInt: maybeClassObj) and: [(objectMemory lengthOf: maybeClassObj) >= 3])
-	  and: [(objectMemory isPointersNonInt: (objectMemory fetchPointer: SuperclassIndex ofObject: maybeClassObj))
-	  and: [(objectMemory isPointersNonInt: (objectMemory fetchPointer: MethodDictionaryIndex ofObject: maybeClassObj))
+	  and: [((objectMemory isPointersNonImm: maybeClassObj) and: [(objectMemory lengthOf: maybeClassObj) >= (InstanceSpecificationIndex+1)])
+	  and: [(objectMemory isPointersNonImm: (objectMemory fetchPointer: SuperclassIndex ofObject: maybeClassObj))
+	  and: [(objectMemory isPointersNonImm: (objectMemory fetchPointer: MethodDictionaryIndex ofObject: maybeClassObj))
 	  and: [(objectMemory isIntegerObject: (objectMemory fetchPointer: InstanceSpecificationIndex ofObject: maybeClassObj))]]]]
 ]
 
@@ -3120,7 +3120,7 @@ StackInterpreter >> checkOkayFields: oop [
 	(objectMemory checkOkayOop: oop) ifFalse: [ ^false ].
 	(self checkOopHasOkayClass: oop) ifFalse: [ ^false ].
 	((objectMemory isPointersNonInt: oop) or: [objectMemory isCompiledMethod: oop]) ifFalse: [ ^true ].
-	hasYoung := objectMemory isYoung: (objectMemory fetchClassOfNonInt: oop).
+	hasYoung := objectMemory isYoung: (objectMemory fetchClassOfNonImm: oop).
 	(objectMemory isCompiledMethod: oop)
 		ifTrue:
 			[i := (self literalCountOf: oop) + LiteralStart - 1]
@@ -3240,7 +3240,7 @@ StackInterpreter >> checkOopHasOkayClass: obj [
 
 	(objectMemory checkOkayOop: obj) ifFalse:
 		[^false].
-	objClass := self cCoerce: (objectMemory fetchClassOfNonInt: obj) to: #usqInt.
+	objClass := self cCoerce: (objectMemory fetchClassOfNonImm: obj) to: #usqInt.
 
 	(objectMemory isIntegerObject: objClass) ifTrue:
 		[self print: 'obj '; printHex: obj; print: ' a SmallInteger is not a valid class or behavior'; cr. ^false].
@@ -3418,7 +3418,7 @@ StackInterpreter >> commonAt: stringy [
 	Therefore we must determine that the message is #at: (not, eg, #basicAt:),
 	and that the send is not a super-send, before using the at-cache."
 	(messageSelector = (self specialSelector: 16)
-	 and: [lkupClass = (objectMemory fetchClassOfNonInt: rcvr)])
+	 and: [lkupClass = (objectMemory fetchClassOfNonImm: rcvr)])
 		ifTrue:
 		["OK -- look in the at-cache"
 		atIx := rcvr bitAnd: AtCacheMask.  "Index into atCache = 4N, for N = 0 ... 7"
@@ -3462,7 +3462,7 @@ StackInterpreter >> commonAtPut: stringy [
 	Therefore we must determine that the message is #at:Put: (not, eg, #basicAt:Put:),
 	and that the send is not a super-send, before using the at-cache."
 	(messageSelector = (self specialSelector: 17)
-		and: [lkupClass = (objectMemory fetchClassOfNonInt: rcvr)])
+		and: [lkupClass = (objectMemory fetchClassOfNonImm: rcvr)])
 		ifTrue:
 		["OK -- look in the at-cache"
 		atIx := (rcvr bitAnd: AtCacheMask) + AtPutBase.  "Index into atPutCache"
@@ -3881,7 +3881,7 @@ StackInterpreter >> dbgFloatValueOf: oop [
 	<var: #result type: #double>
 	self flag: #Dan.  "None of the float stuff has been converted for 64 bits"
 	((objectMemory isNonIntegerObject: oop)
-	and: [(objectMemory fetchClassOfNonInt: oop) = (objectMemory splObj: ClassFloat)]) ifTrue:
+	and: [(objectMemory fetchClassOfNonImm: oop) = (objectMemory splObj: ClassFloat)]) ifTrue:
 		[self cCode: '' inSmalltalk: [result := Float new: 2].
 		 objectMemory fetchFloatAt: oop + BaseHeaderSize into: result.
 		 ^result].
@@ -4094,7 +4094,7 @@ StackInterpreter >> doSignalSemaphoreWithIndex: index [
 	semaphoreClass := objectMemory splObj: ClassSemaphore.
 	sema := objectMemory fetchPointer: index - 1 ofObject: xArray. "Note: semaphore indices are 1-based"
 	^(objectMemory isNonIntegerObject: sema)
-	   and: [(objectMemory fetchClassOfNonInt: sema) = semaphoreClass
+	   and: [(objectMemory fetchClassOfNonImm: sema) = semaphoreClass
 	   and: [self synchronousSignal: sema]]
 ]
 
@@ -4945,7 +4945,7 @@ StackInterpreter >> findApplicationOfTargetMixin: targetMixin startingAtBehavior
 	[mixinOrMixinApplication = objectMemory nilObject
 	 or: [mixinOrMixinApplication = targetMixin
 	 or: [(mixin := objectMemory fetchPointer: MixinIndex ofObject: mixinOrMixinApplication) = targetMixin
-	 or: [(objectMemory fetchClassOfNonInt: mixin) = targetMixin]]]] whileFalse:
+	 or: [(objectMemory fetchClassOfNonImm: mixin) = targetMixin]]]] whileFalse:
 		[mixinOrMixinApplication := objectMemory fetchPointer: SuperclassIndex ofObject: mixinOrMixinApplication].
 	^mixinOrMixinApplication
 ]
@@ -5013,7 +5013,7 @@ StackInterpreter >> findClassOfMethod: meth forReceiver: rcvr [
 			rclass ~= objectMemory nilObject ifTrue:
 				[^rclass]]].
 	((objectMemory addressCouldBeObj: meth)
-	 and: [self isCompiledMethod: meth]) ifFalse:
+	 and: [objectMemory isCompiledMethod: meth]) ifFalse:
 		[^objectMemory nilObject].
 	^self findClassContainingMethod: meth startingAt: (self methodClassOf: meth)
 ]
@@ -6077,7 +6077,7 @@ StackInterpreter >> initializeExtraClassInstVarIndices [
 	 via classNameOf:is: (evil but a reality we have to accept)."
 	| classArrayObj classArrayClass |
 	classArrayObj := objectMemory splObj: ClassArray.
-	classArrayClass := objectMemory fetchClassOfNonInt: classArrayObj.
+	classArrayClass := objectMemory fetchClassOfNonImm: classArrayObj.
 	metaclassSizeBits := objectMemory sizeBitsOf: classArrayClass.	"determine actual (Metaclass instSize * 4)"
 	thisClassIndex := 5. "default"
 	InstanceSpecificationIndex + 1 to: (objectMemory lengthOf: classArrayClass) do:
@@ -6578,7 +6578,7 @@ StackInterpreter >> isFloatObject: oop [
 	^(objectMemory isNonIntegerObject: oop)
 	   and: [ClassFloatCompactIndex ~= 0
 			ifTrue: [(objectMemory compactClassIndexOf: oop) = ClassFloatCompactIndex]
-			ifFalse: [(objectMemory fetchClassOfNonInt: oop) = objectMemory classFloat]]
+			ifFalse: [(objectMemory fetchClassOfNonImm: oop) = objectMemory classFloat]]
 ]
 
 { #category : #'object format' }
@@ -6892,12 +6892,12 @@ StackInterpreter >> longJumpIfTrue [
 StackInterpreter >> longPrintOop: oop [
 	<api>
 	| class fmt lastIndex startIP bytecodesPerLine column |
-	((objectMemory isIntegerObject: oop)
-	 or: [(oop between: objectMemory startOfMemory and: objectMemory freeStart) not
-	 or: [(oop bitAnd: (BytesPerWord - 1)) ~= 0
+	((objectMemory isImmediate: oop)
+	 or: [(objectMemory addressCouldBeObj: oop) not
+	 or: [(oop bitAnd: objectMemory allocationUnit - 1) ~= 0
 	 or: [(objectMemory isFreeObject: oop)]]]) ifTrue:
 		[^self printOop: oop].
-	class := objectMemory fetchClassOfNonInt: oop.
+	class := objectMemory fetchClassOfNonImm: oop.
 	self printHex: oop;
 		print: ': a(n) '; printNameOfClass: class count: 5;
 		print: ' ('; printHex: class; print: ')'.
@@ -8621,7 +8621,7 @@ StackInterpreter >> printActivationNameForMethod: aMethod startClass: startClass
 		ifFalse: [self print: 'INVALID SELECTOR'].
 	(methodSel = (objectMemory splObj: SelectorDoesNotUnderstand)
 	and: [(objectMemory addressCouldBeObj: maybeMessage)
-	and: [(objectMemory fetchClassOfNonInt: maybeMessage) = (objectMemory splObj: ClassMessage)]]) ifTrue:
+	and: [(objectMemory fetchClassOfNonImm: maybeMessage) = (objectMemory splObj: ClassMessage)]]) ifTrue:
 		["print arg message selector"
 		methodSel := objectMemory fetchPointer: MessageSelectorIndex ofObject: maybeMessage.
 		self print: ' '.
@@ -8673,7 +8673,7 @@ StackInterpreter >> printAllStacks [
 	mutexClass := objectMemory classMutex.
 	oop := objectMemory firstObject.
 	[self oop: oop isLessThan: objectMemory freeStart] whileTrue:
-		[classObj := objectMemory fetchClassOfNonInt: oop.
+		[classObj := objectMemory fetchClassOfNonImm: oop.
 		 (classObj = semaphoreClass
 		  or: [classObj = mutexClass]) ifTrue:
 			[self printProcsOnList: oop].
@@ -9094,26 +9094,19 @@ StackInterpreter >> printNum: n [
 StackInterpreter >> printOop: oop [
 	| cls fmt lastIndex startIP bytecodesPerLine column |
 	<inline: false>
-	self printHex: oop.
 	(objectMemory isImmediate: oop) ifTrue:
-		[(objectMemory isImmediateCharacter: oop) ifTrue:
-			[^self
-				cCode: 'printf("=$%ld ($%c)\n", (long)characterValueOf(oop), (long)characterValueOf(oop))'
-				inSmalltalk: [self print: (self shortPrint: oop); cr]].
-		 ^self
-			cCode: 'printf("=%ld\n", (long)integerValueOf(oop))'
-			inSmalltalk: [self print: (self shortPrint: oop); cr]].
-	(oop between: objectMemory startOfMemory and: objectMemory freeStart) ifFalse:
-		[self print: ' is not on the heap'; cr.
-		 ^nil].
-	(oop bitAnd: (BytesPerWord - 1)) ~= 0 ifTrue:
-		[self print: ' is misaligned'; cr.
+		[^self shortPrintOop: oop].
+	self printHex: oop.
+	(objectMemory addressCouldBeObj: oop) ifFalse:
+		[self print: ((oop bitAnd: objectMemory allocationUnit - 1) ~= 0
+						ifTrue: [' is misaligned']
+						ifFalse: [' is not on the heap']); cr.
 		 ^nil].
 	(objectMemory isFreeObject: oop) ifTrue:
 		[self print: ' is a free chunk of size '; printNum: (objectMemory sizeOfFree: oop); cr.
 		 ^nil].
 	self print: ': a(n) '.
-	self printNameOfClass: (cls := objectMemory fetchClassOfNonInt: oop) count: 5.
+	self printNameOfClass: (cls := objectMemory fetchClassOfNonImm: oop) count: 5.
 	cls = (objectMemory splObj: ClassFloat) ifTrue:
 		[self cr; printFloat: (self dbgFloatValueOf: oop); cr.
 		 ^nil].
@@ -9193,22 +9186,31 @@ StackInterpreter >> printOopShortInner: oop [
 	| classOop name nameLen |
 	<var: #name type: #'char *'>
 	<inline: true>
-	(objectMemory isIntegerObject: oop) ifTrue:
-		[self printNum: (objectMemory integerValueOf: oop);
+	(objectMemory isImmediate: oop) ifTrue:
+		[(objectMemory isImmediateCharacter: oop) ifTrue:
+			[self
+				cCode: 'printf("$%c(%ld)", (long)characterValueOf(oop), (long)characterValueOf(oop))'
+				inSmalltalk:
+					[self printChar: $$;
+						printChar: (objectMemory characterValueOf: oop);
+						printChar: $(;
+						printHex: (objectMemory integerValueOf: oop);
+						printChar: $)].
+			 ^nil].
+		self printNum: (objectMemory integerValueOf: oop);
 			printChar: $(;
 			printHex: (objectMemory integerValueOf: oop);
 			printChar: $).
 		 ^nil].
-	(oop between: objectMemory startOfMemory and: objectMemory freeStart) ifFalse:
-		[self printHex: oop; print: ' is not on the heap'.
-		 ^nil].
-	(oop bitAnd: (BytesPerWord - 1)) ~= 0 ifTrue:
-		[self printHex: oop; print: ' is misaligned'.
+	(objectMemory addressCouldBeObj: oop) ifFalse:
+		[self print: ((oop bitAnd: objectMemory allocationUnit - 1) ~= 0
+						ifTrue: [' is misaligned']
+						ifFalse: [' is not on the heap']); cr.
 		 ^nil].
 	(self isFloatObject: oop) ifTrue:
 		[self printFloat: (self dbgFloatValueOf: oop).
 		 ^nil].
-	classOop := objectMemory fetchClassOfNonInt: oop.
+	classOop := objectMemory fetchClassOfNonImm: oop.
 	(objectMemory addressCouldBeObj: classOop) ifFalse:
 		[self print: 'a ??'. ^nil].
 	(objectMemory sizeBitsOf: classOop) = metaclassSizeBits ifTrue:
@@ -9234,7 +9236,7 @@ StackInterpreter >> printOopShortInner: oop [
 		inSmalltalk: [self print: 'a(n) '; print: name].
 	"Try to spot association-like things; they're all subclasses of LookupKey"
 	((objectMemory instanceSizeOf: classOop) = (ValueIndex + 1)
-	 and: [(self superclassOf: classOop) = (self superclassOf: (objectMemory fetchClassOfNonInt: (objectMemory splObj: SchedulerAssociation)))
+	 and: [(self superclassOf: classOop) = (self superclassOf: (objectMemory fetchClassOfNonImm: (objectMemory splObj: SchedulerAssociation)))
 	 and: [objectMemory isBytes: (objectMemory fetchPointer: KeyIndex ofObject: oop)]]) ifTrue:
 		[self space;
 			printOopShort: (objectMemory fetchPointer: KeyIndex ofObject: oop);
@@ -9350,14 +9352,14 @@ StackInterpreter >> printStackPagesInUse [
 StackInterpreter >> printStringOf: oop [
 	| fmt len cnt max i |
 	<inline: false>
-	(objectMemory isIntegerObject: oop) ifTrue:
+	(objectMemory isImmediate: oop) ifTrue:
 		[^nil].
 	(oop between: objectMemory startOfMemory and: objectMemory freeStart) ifFalse:
 		[^nil].
 	(oop bitAnd: (BytesPerOop - 1)) ~= 0 ifTrue:
 		[^nil].
 	fmt := objectMemory formatOf: oop.
-	fmt < 8 ifTrue: [^nil].
+	fmt < objectMemory firstByteFormat ifTrue: [^nil].
 
 	cnt := (max := 128) min: (len := objectMemory lengthOf: oop).
 	i := 0.
@@ -10269,7 +10271,7 @@ StackInterpreter >> sendInvokeCallback: thunkPtr Stack: stackPtr Registers: regs
 	 and are converted to integer objects on the way."
 	<export: true>
 	self flag: #obsolete.
-	lkupClass := self fetchClassOfNonInt: (self splObj: ClassAlien).
+	lkupClass := self fetchClassOfNonImm: (self splObj: ClassAlien).
 	messageSelector := self splObj: SelectorInvokeCallback.
 	argumentCount := 4.
 	(self lookupInMethodCacheSel: messageSelector class: lkupClass) ifFalse:
@@ -10304,7 +10306,7 @@ StackInterpreter >> sendInvokeCallbackContext: vmCallbackContext [
 	 The arguments are raw C addresses and are converted to integer objects on the way."
 	<export: true>
 	<var: #vmCallbackContext type: #'VMCallbackContext *'>
-	lkupClass := self fetchClassOfNonInt: (self splObj: ClassAlien).
+	lkupClass := self fetchClassOfNonImm: (self splObj: ClassAlien).
 	messageSelector := self splObj: SelectorInvokeCallback.
 	(self lookupInMethodCacheSel: messageSelector class: lkupClass) ifFalse:
 	 	[(self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:
@@ -10658,8 +10660,14 @@ StackInterpreter >> shortPrintFramesInPage: thePage [
 StackInterpreter >> shortPrintOop: oop [
 	<inline: false>
 	self printHex: oop.
-	(objectMemory isIntegerObject: oop) ifTrue:
-		[^self cCode: 'printf("=%ld\n", (long)integerValueOf(oop))' inSmalltalk: [self print: (self shortPrint: oop); cr]].
+	(objectMemory isImmediate: oop) ifTrue:
+		[(objectMemory isImmediateCharacter: oop) ifTrue:
+			[^self
+				cCode: 'printf("=$%ld ($%c)\n", (long)characterValueOf(oop), (long)characterValueOf(oop))'
+				inSmalltalk: [self print: (self shortPrint: oop); cr]].
+		 ^self
+			cCode: 'printf("=%ld\n", (long)integerValueOf(oop))'
+			inSmalltalk: [self print: (self shortPrint: oop); cr]].
 	(oop between: objectMemory startOfMemory and: objectMemory freeStart) ifFalse:
 		[self printHex: oop; print: ' is not on the heap'; cr.
 		 ^nil].
