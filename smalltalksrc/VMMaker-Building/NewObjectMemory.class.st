@@ -1801,7 +1801,7 @@ NewObjectMemory >> lookupAddress: address [
 	and: [(size between: 1 and: 64)
 	and: [Scanner isLiteralSymbol: (string := (0 to: size - 1) collect: [:i| Character value: (self fetchByte: i ofObject: address)])]]) ifTrue:
 		[^'#', (ByteString withAll: string)].
-	class := self fetchClassOfNonInt: address.
+	class := self fetchClassOfNonImm: address.
 	((self addressCouldBeObj: class)
 	 and: [(self headerType: class) ~= HeaderTypeShort]) ifFalse:
 		[^nil].
@@ -2090,7 +2090,7 @@ NewObjectMemory >> oopHasAcceptableClass: signedOop [
 	oop := self cCoerce: signedOop to: #usqInt.
 	(self addressCouldBeObj: oop) ifFalse: [^ false].
 
-	oopClass := self cCoerce: (self fetchClassOfNonInt: oop) to: #usqInt.
+	oopClass := self cCoerce: (self fetchClassOfNonImm: oop) to: #usqInt.
 	(self addressCouldBeObj: oopClass) ifFalse: [^ false].
 	(oopClass + (self sizeBitsOf: oopClass)) <= freeStart ifFalse: [^ false].
 

@@ -429,6 +429,12 @@ SpurMemoryManager >> addressCouldBeObj: address [
 		or: [self isInSurvivorSpace: address]]]
 ]
 
+{ #category : #'object testing' }
+SpurMemoryManager >> addressCouldBeOop: address [ 
+	^(self isImmediate: address)
+	  or: [self addressCouldBeObj: address]
+]
+
 { #category : #initialization }
 SpurMemoryManager >> adjustAllOopsBy: bytesToShift [ 
 	"Adjust all oop references by the given number of bytes. This 
@@ -704,7 +710,15 @@ SpurMemoryManager >> falseObject: anOop [
 ]
 
 { #category : #'object access' }
-SpurMemoryManager >> fetchClassOfNonInt: objOop [ 
+SpurMemoryManager >> fetchClassOf: oop [ 
+	| tagBits |
+	(tagBits := oop bitAnd: self tagMask) = 0 ifTrue:
+		[^self fetchPointer: tagBits ofObject: classTableFirstPage].
+	^self classAtIndex: (self classIndexOf: oop)
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> fetchClassOfNonImm: objOop [ 
 	| classIndex |
 	classIndex := self classIndexOf: objOop.
 	^self classAtIndex: classIndex
@@ -715,6 +729,14 @@ SpurMemoryManager >> fetchLong32: fieldIndex ofObject: oop [
 	"index by 32-bit units, and return a 32-bit value. Intended to replace fetchWord:ofObject:"
 
 	^self long32At: oop + self baseHeaderSize + (fieldIndex << 2)
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> fetchWordLengthOf: objOop [
+	"NOTE: this gives size appropriate for fetchPointer: n, but not in general for, eg, fetchLong32, etc.
+	 Unlike lengthOf: this does not adjust the length of a context
+	 by the stackPointer and so can be used e.g. by cloneContext:"
+	^self numSlotsOf: objOop
 ]
 
 { #category : #'header format' }
@@ -1044,25 +1066,41 @@ SpurMemoryManager >> isFreeObject: objOop [
 
 { #category : #'object testing' }
 SpurMemoryManager >> isImmediate: oop [ 
-	^self subclassResponsibility
+	^(oop bitAnd: self tagMask) ~= 0
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isInOldSpace: address [ 
+	^address between: newSpaceLimit and: freeOldSpaceStart
 ]
 
 { #category : #'object testing' }
 SpurMemoryManager >> isIntegerObject: oop [
 	(#(	makeBaseFrameFor:
 		quickFetchInteger:ofObject:
-		frameOfMarriedContext:) includes: thisContext sender method selector) ifFalse:
+		frameOfMarriedContext:
+		addressCouldBeClassObj:
+		isMarriedOrWidowedContext:) includes: thisContext sender method selector) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
 
 { #category : #'object testing' }
 SpurMemoryManager >> isNonImmediate: oop [ 
-	^self subclassResponsibility
+	^(oop bitAnd: self tagMask) = 0
 ]
 
 { #category : #'object testing' }
-SpurMemoryManager >> isPointersNonImm: objOop [ 
+SpurMemoryManager >> isOopCompiledMethod: oop [ 
+    "Answer whether the oop is an object of compiled method format"
+	<api>
+    ^(self isNonImmediate: oop)
+	 and: [(self formatOf: oop) >= self firstCompiledMethodFormat]
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isPointersNonImm: objOop [
+	"Answer if the argument has only fields that can hold oops. See comment in formatOf:"
 	^(self formatOf: objOop) <= 5
 ]
 
@@ -1295,9 +1333,10 @@ SpurMemoryManager >> splObj: index [
 SpurMemoryManager >> startOfMemory [
 	"Return the start of object memory.  This is immediately after the native code zone.
 	 N.B. the stack zone is alloca'ed. Use a macro so as not to punish the debug VM."
-	<cmacro: '() heapBase'>
+	<cmacro: '() heapBase'> "This is for CoInterpreter, not StackInterpreter"
 	<returnTypeC: #usqInt>
-	^coInterpreter ifNil: [startOfMemory] ifNotNil: [coInterpreter heapBase]
+	self flag: #fixme.
+	^startOfMemory
 ]
 
 { #category : #simulation }

@@ -747,6 +747,11 @@ ObjectMemory >> allocateMemoryOfSize: limit [
 					ifFalse: [Bitmap]) new: memoryLimit // 4
 ]
 
+{ #category : #allocation }
+ObjectMemory >> allocationUnit [
+	^BytesPerWord
+]
+
 { #category : #contexts }
 ObjectMemory >> badContextSize: oop [
 	^(self byteLengthOf: oop) ~= (SmallContextSize-BaseHeaderSize)
@@ -1657,7 +1662,7 @@ ObjectMemory >> fetchClassOf: oop [
 ]
 
 { #category : #'interpreter access' }
-ObjectMemory >> fetchClassOfNonInt: oop [ 
+ObjectMemory >> fetchClassOfNonImm: oop [ 
 	| ccIndex |
 	<inline: true>
 	<asmLabel: false>
@@ -1742,6 +1747,11 @@ ObjectMemory >> firstAccessibleObject [
 	^nil
 ]
 
+{ #category : #'header access' }
+ObjectMemory >> firstByteFormat [
+	^8
+]
+
 { #category : #'object format' }
 ObjectMemory >> firstFixedField: oop [
 
@@ -1785,7 +1795,7 @@ ObjectMemory >> fixedFieldsOf: oop format: fmt length: wordLength [
 	fmt < 2 ifTrue: [^wordLength].  "fixed fields only (zero or more)"
 	
 	"fmt = 3 or 4: mixture of fixed and indexable fields, so must look at class format word"
-	class := self fetchClassOfNonInt: oop.
+	class := self fetchClassOfNonImm: oop.
 	classFormat := self formatOfClass: class.
 	^(classFormat >> 11 bitAnd: 16rC0) + (classFormat >> 2 bitAnd: 16r3F) - 1
 ]
@@ -2468,19 +2478,19 @@ ObjectMemory >> instSpecOfClass: classPointer [
 	^self formatOfHeader: (self formatOfClass: classPointer)
 ]
 
-{ #category : #'object enumeration' }
-ObjectMemory >> instanceAfter: objectPointer [ 
-	"Support for instance enumeration. Return the next instance 
-	of the class of the given object, or nilObj if the enumeration 
-	is complete."
-	| classPointer thisObj thisClass |
-	classPointer := self fetchClassOfNonInt: objectPointer.
-	thisObj := self accessibleObjectAfter: objectPointer.
-	[thisObj = nil] whileFalse:
-		[thisClass := self fetchClassOfNonInt: thisObj.
-		 thisClass = classPointer ifTrue: [^ thisObj].
-		 thisObj := self accessibleObjectAfter: thisObj].
-	^ nilObj
+{ #category : #'primitive support' }
+ObjectMemory >> instanceAfter: objOop [
+	"Answer the next instance of objOop's class in the canonical enumeration order,
+	 if it exists, otherwise answer nil."
+	| classPointer subsequentObject |
+	classPointer := self fetchClassOfNonImm: objOop.
+	subsequentObject := self objectAfter: objOop.
+	[self oop: subsequentObject isLessThan: self freeStart] whileTrue:
+		[((self isFreeObject: subsequentObject) not
+		  and: [(self fetchClassOfNonImm: subsequentObject) = classPointer]) ifTrue:
+			[^subsequentObject].
+		 subsequentObject := self objectAfter: subsequentObject].
+	^nil
 ]
 
 { #category : #'interpreter access' }
@@ -2880,6 +2890,13 @@ ObjectMemory >> isPointers: oop [
 	"Answer true if the argument has only fields that can hold oops. See comment in formatOf:"
 
 	^(self isNonIntegerObject: oop) and:[self isPointersNonInt: oop]
+]
+
+{ #category : #'header access' }
+ObjectMemory >> isPointersNonImm: objOop [
+	"Answer if the argument has only fields that can hold oops. See comment in formatOf:"
+
+	^(self formatOf: objOop) <= 4
 ]
 
 { #category : #'header access' }
@@ -3362,7 +3379,7 @@ ObjectMemory >> nonWeakFieldsOf: oop [
 	self assert: (self isWeakNonInt: oop).
 
 	"fmt = 3 or 4: mixture of fixed and indexable fields, so must look at class format word"
-	class := self fetchClassOfNonInt: oop.
+	class := self fetchClassOfNonImm: oop.
 	classFormat := self formatOfClass: class.
 	^(classFormat >> 11 bitAnd: 16rC0) + (classFormat >> 2 bitAnd: 16r3F) - 1
 ]
@@ -3584,7 +3601,7 @@ ObjectMemory >> oopHasAcceptableClass: signedOop [
 	oop := self cCoerce: signedOop to: #usqInt.
 	(self addressCouldBeObj: oop) ifFalse: [^ false].
 
-	oopClass := self cCoerce: (self fetchClassOfNonInt: oop) to: #usqInt.
+	oopClass := self cCoerce: (self fetchClassOfNonImm: oop) to: #usqInt.
 	(self addressCouldBeObj: oopClass) ifFalse: [^ false].
 	(oopClass + (self sizeBitsOf: oopClass)) < freeBlock ifFalse: [^ false].
 
@@ -3709,7 +3726,7 @@ ObjectMemory >> printInstancesOf: aClassOop [
 	<api>
 	oop := self firstAccessibleObject.
 	[oop = nil] whileFalse:
-		[(self fetchClassOfNonInt: oop) = aClassOop ifTrue:
+		[(self fetchClassOfNonImm: oop) = aClassOop ifTrue:
 			[self printHex: oop; cr].
 		 oop := self accessibleObjectAfter: oop]
 ]
