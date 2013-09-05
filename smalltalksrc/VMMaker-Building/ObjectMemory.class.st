@@ -635,6 +635,17 @@ ObjectMemory >> adjustFieldsAndClassOf: oop by: offsetBytes [
 			self longAt: oop - BytesPerWord put: (newClassOop bitOr: (classHeader bitAnd: TypeMask))]
 ]
 
+{ #category : #'object enumeration' }
+ObjectMemory >> allObjectsDo: aBlock [
+	<inline: true>
+	| oop |
+	oop := self firstObject.
+	[oop < freeBlock] whileTrue:
+		[(self isFreeObject: oop) ifFalse:
+			[aBlock value: oop].
+		 oop := self objectAfterWhileForwarding: oop]
+]
+
 { #category : #become }
 ObjectMemory >> allYoung: array1 and: array2 [ 
 	"Return true if all the oops in both arrays, and the arrays 

@@ -1720,12 +1720,11 @@ StackInterpreter >> addressCouldBeClassObj: maybeClassObj [
 { #category : #'debug support' }
 StackInterpreter >> allAccessibleObjectsOkay [
 	"Ensure that all accessible objects in the heap are okay."
-	| ok oop |
+	| ok |
 	ok := true.
-	oop := objectMemory firstAccessibleObject.
-	[oop = nil] whileFalse:
-		[ok := ok & (self okayFields: oop).
-		oop := objectMemory accessibleObjectAfter: oop].
+	objectMemory allObjectsDo:
+		[:oop|
+		ok := ok & (self okayFields: oop)].
 	^ok
 ]
 
@@ -2803,12 +2802,10 @@ StackInterpreter >> characterForAscii: ascii [  "Arg must lie in range 0-255!"
 StackInterpreter >> checkAllAccessibleObjectsOkay [
 	"Ensure that all accessible objects in the heap are okay."
 	<api>
-	| ok oop |
+	| ok |
 	ok := true.
-	oop := objectMemory firstAccessibleObject.
-	[oop = nil] whileFalse:
-		[ok := ok & (self checkOkayFields: oop).
-		oop := objectMemory accessibleObjectAfter: oop].
+	objectMemory allObjectsDo:
+		[:oop| ok := ok & (self checkOkayFields: oop)].
 	^ok
 ]
 
@@ -9205,14 +9202,11 @@ StackInterpreter >> printOopShortInner: oop [
 	<inline: true>
 	(objectMemory isImmediate: oop) ifTrue:
 		[(objectMemory isImmediateCharacter: oop) ifTrue:
-			[self
-				cCode: 'printf("$%c(%ld)", (long)characterValueOf(oop), (long)characterValueOf(oop))'
-				inSmalltalk:
-					[self printChar: $$;
-						printChar: (objectMemory characterValueOf: oop);
-						printChar: $(;
-						printHex: (objectMemory integerValueOf: oop);
-						printChar: $)].
+			[self printChar: $$;
+				printChar: (objectMemory characterValueOf: oop);
+				printChar: $(;
+				printHex: (objectMemory integerValueOf: oop);
+				printChar: $).
 			 ^nil].
 		self printNum: (objectMemory integerValueOf: oop);
 			printChar: $(;
@@ -9249,8 +9243,8 @@ StackInterpreter >> printOopShortInner: oop [
 	(nameLen = 9 and: [(self str: name n: 'Character' cmp: 9) not]) ifTrue:
 		[self printChar: $$; printChar: (objectMemory integerValueOf: (objectMemory fetchPointer: 0 ofObject: oop)).
 		 ^nil].
-	self cCode: [self prin: 'a(n) %.*s' t: nameLen f: name]
-		inSmalltalk: [self print: 'a(n) '; print: name].
+	self print: 'a(n) '.
+	1 to: nameLen do: [:i| self printChar: (name at: i)].
 	"Try to spot association-like things; they're all subclasses of LookupKey"
 	((objectMemory instanceSizeOf: classOop) = (ValueIndex + 1)
 	 and: [(self superclassOf: classOop) = (self superclassOf: (objectMemory fetchClassOfNonImm: (objectMemory splObj: SchedulerAssociation)))
