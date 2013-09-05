@@ -39,7 +39,7 @@ Class {
 		'reverseMap',
 		'classToIndex',
 		'oldInterpreter',
-		'pastClassTable'
+		'lastClassTablePage'
 	],
 	#pools : [
 		'VMObjectIndices'
@@ -69,7 +69,8 @@ SpurBootstrap >> allocateClassTable [
 	self assert: (newHeap numSlotsOf: page) = newHeap classTablePageSize.
 	self assert: (newHeap formatOf: tableRoot) = newHeap arrayFormat.
 	self assert: (newHeap classIndexOf: tableRoot) = newHeap arrayClassIndexPun.
-	self assert: (newHeap objectAfter: tableRoot limit: newHeap freeStart) = page.
+	self assert: (newHeap objectAfter: tableRoot limit: newHeap freeStart) = page..
+	lastClassTablePage := page.
 	newHeap nilFieldsOf: page.
 	newHeap storePointer: 0 ofObject: tableRoot withValue: page.
 	newHeap classTableRootObj: tableRoot.
@@ -86,8 +87,8 @@ SpurBootstrap >> allocateClassTable [
 		self assert: (newHeap classIndexOf: page) = newHeap weakArrayClassIndexPun.
 		newHeap nilFieldsOf: page.
 		newHeap storePointer: i - 1 ofObject: tableRoot withValue: page.
-		self assert: (newHeap objectAfter: (newHeap fetchPointer: i - 2 ofObject: tableRoot)  limit: newHeap freeStart) = page].
-	pastClassTable := newHeap freeStart.
+		self assert: (newHeap objectAfter: (newHeap fetchPointer: i - 2 ofObject: tableRoot)  limit: newHeap freeStart) = page.
+		lastClassTablePage := page]
 ]
 
 { #category : #bootstrap }
@@ -108,10 +109,11 @@ SpurBootstrap >> buildClassMap [
 	| classes classTableIndex |
 	self defineKnownClassIndices.
 	classes := classToIndex keys asSet.
-	classTableIndex := newHeap classTablePageSize.
+	classTableIndex := classToIndex inject: 0 into: [:a :b| a max: b].
 	oldHeap allObjectsDo:
 		[:oldObj| | oldClass |
 		 oldClass := oldHeap fetchClassOfNonImm: oldObj.
+		 self assert: (oldHeap isPointersNonImm: oldClass).
 		 (classes includes: oldClass) ifFalse:
 			[classes add: oldClass.
 			 classToIndex at: oldClass put: (classTableIndex := classTableIndex + 1)]]
@@ -176,7 +178,10 @@ SpurBootstrap >> defineKnownClassIndices [
 	classMessage := oldHeap splObj: (VMObjectIndices bindingOf: #ClassMessage) value.
 	classMethodContext := oldHeap splObj: (VMObjectIndices bindingOf: #ClassMethodContext) value.
 	classBlockClosure := oldHeap splObj: (VMObjectIndices bindingOf: #ClassBlockClosure) value.
-	"c.f. CogMemoryManager class>>intializeCompactClassIndices"
+	"c.f. CogMemoryManager class>>intializeCompactClassIndices".
+	classToIndex keysDo:
+		[:oldClass|
+		self assert: (oldInterpreter addressCouldBeClassObj: oldClass)].
 	classToIndex
 		at: oldHeap classSmallInteger put: 1; "N.B. must fill-in index 3 manually"
 		at: oldHeap classCharacter put: 2;
@@ -206,7 +211,10 @@ SpurBootstrap >> defineKnownClassIndices [
 		at: oldHeap classExternalLibrary put: 131;
 		at: oldHeap classExternalStructure put: 132;
 		at: oldHeap classAlien put: 133;
-		at: oldHeap classUnsafeAlien put: 133
+		at: oldHeap classUnsafeAlien put: 134.
+	classToIndex keysDo:
+		[:oldClass|
+		self assert: (oldInterpreter addressCouldBeClassObj: oldClass)]
 ]
 
 { #category : #bootstrap }
@@ -215,6 +223,7 @@ SpurBootstrap >> fillInClassTable [
 	classToIndex keysAndValuesDo:
 		[:oldClass :index| | newClass page |
 		newClass := map at: oldClass.
+		self assert: (newHeap isPointersNonImm: newClass).
 		newHeap setHashBitsOf: newClass to: index.
 		page := newHeap
 					fetchPointer: index >> newHeap classTableMajorIndexShift
@@ -222,7 +231,8 @@ SpurBootstrap >> fillInClassTable [
 		newHeap
 			storePointer: (index bitAnd: newHeap classTableMinorIndexMask)
 			ofObject: page
-			withValue: newClass].
+			withValue: newClass.
+		self assert: (newHeap classAtIndex: index) = newClass].
 	firstPage := newHeap
 					fetchPointer: 0
 					ofObject: newHeap classTableRootObj.
@@ -301,6 +311,10 @@ SpurBootstrap >> launch [
 	sim := StackInterpreterSimulator onObjectMemory: newHeap.
 	newHeap coInterpreter: sim.
 	sim initializeInterpreter: 0.
+	sim
+		ensureDebugAtEachStepBlock;
+		instVarNamed: 'printBytecodeAtEachStep' put: true;
+		instVarNamed: 'methodDictLinearSearchLimit' put: SmallInteger maxVal. "for now"
 	sim run
 ]
 
@@ -377,15 +391,41 @@ SpurBootstrap >> transform [
 
 { #category : #bootstrap }
 SpurBootstrap >> validate [
-	| p i |
-	i := 0.
+	| p n duplicates maxClassIndex |
+	self assert: (reverseMap at: newHeap specialObjectsOop) = oldHeap specialObjectsOop.
+	self assert: (map at: oldHeap specialObjectsOop) = newHeap specialObjectsOop.
+	self assert: (reverseMap at: newHeap classTableRootObj ifAbsent: []) isNil.
+
+	duplicates := { 3. newHeap arrayClassIndexPun. newHeap weakArrayClassIndexPun }.
+	maxClassIndex := classToIndex inject: 0 into: [:a :b| a max: b].
+	self assert: ((0 to: maxClassIndex) select:
+					[:idx| | classObj |
+					(classObj := newHeap classAtIndex: idx) ~= newHeap nilObject
+					and: [(newHeap classIndexOf: classObj) = (newHeap hashBitsOf: classObj)]]) isEmpty.
+	0 to: maxClassIndex do:
+		[:index| | classObj |
+		(classObj := newHeap classAtIndex: index) = newHeap nilObject
+			ifTrue:
+				[self assert: (classToIndex keyAtValue: index ifAbsent: []) isNil]
+			ifFalse:
+				[self assert: (newHeap classIndexOf: classObj) ~= (newHeap hashBitsOf: classObj).
+				(duplicates includes: index) ifFalse:
+					[self assert: (newHeap hashBitsOf: classObj) = index]]].
+	classToIndex keysAndValuesDo:
+		[:oldClass :idx|
+		self assert: (newHeap hashBitsOf: (map at: oldClass)) = idx. 
+		self assert: oldClass = (reverseMap at: (newHeap classAtIndex: idx))].
+	n := 0.
 	newHeap allObjectsDo:
 		[:o|
-		o >= pastClassTable ifTrue:
-			[self assert: (reverseMap includesKey: o)].
-		i := i + 1. p := o].
+		(o <= newHeap trueObject
+		 or: [o > lastClassTablePage]) ifTrue:
+			[self assert: (reverseMap includesKey: o).
+			 self assert: (newHeap fetchClassOfNonImm: o) = (map at: (oldHeap fetchClassOfNonImm: (reverseMap at: o)))].
+		n := n + 1.
+		p := o].
 	p class.
-	self assert: (i between: map size and: map size + 5) "+ 5 is room for classTable"
+	self assert: (n between: map size and: map size + 5) "+ 5 is room for classTable"
 ]
 
 { #category : #'word size' }
