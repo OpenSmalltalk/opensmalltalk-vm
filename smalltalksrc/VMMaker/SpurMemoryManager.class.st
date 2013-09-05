@@ -469,6 +469,7 @@ SpurMemoryManager >> adjustFieldsAndClassOf: oop by: offsetBytes [
 
 { #category : #'object enumeration' }
 SpurMemoryManager >> allNewSpaceObjectsDo: aBlock [
+	<inline: true>
 	| prevObj prevPrevObj objOop limit |
 	prevPrevObj := prevObj := nil.
 	"After a scavenge eden is empty, futureSpace is empty, and all newSpace objects are
@@ -494,13 +495,14 @@ SpurMemoryManager >> allNewSpaceObjectsDo: aBlock [
 
 { #category : #'object enumeration' }
 SpurMemoryManager >> allObjectsDo: aBlock [
+	<inline: true>
 	self allOldSpaceObjectsDo: aBlock.
 	self allNewSpaceObjectsDo: aBlock
 ]
 
 { #category : #'object enumeration' }
 SpurMemoryManager >> allOldSpaceObjectsDo: aBlock [
-	<doNotGenerate>
+	<inline: true>
 	| prevObj prevPrevObj objOop |
 	prevPrevObj := prevObj := nil.
 	objOop := self firstObject.
