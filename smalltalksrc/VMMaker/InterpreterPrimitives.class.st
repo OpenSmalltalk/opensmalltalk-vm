@@ -512,6 +512,20 @@ InterpreterPrimitives >> primitiveArrayBecomeOneWayCopyHash [
 		ifFalse: [self primitiveFailFor: ec]
 ]
 
+{ #category : #'object access primitives' }
+InterpreterPrimitives >> primitiveAsCharacter [
+	| characterCode characterObject |
+	characterCode := self stackTop.
+	((objectMemory isIntegerObject: characterCode)
+	and: [characterCode := objectMemory integerValueOf: characterCode.
+		objectMemory isInRangeCharacterCode: characterCode]) ifFalse:
+		[^self primitiveFailFor: (argumentCount = 0
+									ifTrue: [PrimErrBadReceiver]
+									ifFalse: [PrimErrBadArgument])].
+	characterObject := self characterForAscii: characterCode.
+	self pop: argumentCount + 1 thenPush: characterObject
+]
+
 { #category : #'arithmetic float primitives' }
 InterpreterPrimitives >> primitiveAsFloat [
 	| arg |
@@ -827,6 +841,17 @@ InterpreterPrimitives >> primitiveChangeClass [
 				self pop: self methodArgumentCount]
 		ifFalse: [self primitiveFailFor: err].
 	^nil
+]
+
+{ #category : #'object access primitives' }
+InterpreterPrimitives >> primitiveCharacterValue [
+	| characterCode characterObject |
+	characterObject := self stackTop.
+	characterCode := CharacterTable
+						ifNil: [objectMemory integerObjectOf: (objectMemory characterValueOf: characterObject)]
+						ifNotNil: [objectMemory fetchPointer: CharacterValueIndex ofObject: characterObject].
+	"the Character must be the receiver for safety"
+	self pop: 1 thenPush: characterCode
 ]
 
 { #category : #'object access primitives' }
