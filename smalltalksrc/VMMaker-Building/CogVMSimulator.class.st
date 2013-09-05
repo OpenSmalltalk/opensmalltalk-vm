@@ -156,17 +156,6 @@ CogVMSimulator >> CFramePointer [
 ]
 
 { #category : #'debug support' }
-CogVMSimulator >> allObjectsDo: objBlock [
-
-	| oop |
-	oop := objectMemory firstObject.
-	[oop < objectMemory freeStart] whileTrue:
-		[(objectMemory isFreeObject: oop) ifFalse:
-			[objBlock value: oop].
-		 oop := objectMemory objectAfter: oop]
-]
-
-{ #category : #'debug support' }
 CogVMSimulator >> allObjectsSelect: objBlock [
 	"self allObjectsSelect: [:oop | (self baseHeader: oop) = 1234]"
 
@@ -3332,7 +3321,7 @@ CogVMSimulator >> testBreakCount: breakCount printSends: shouldPrintSends printF
 
 { #category : #testing }
 CogVMSimulator >> testPCMapping [
-	self allObjectsDo:
+	objectMemory allObjectsDo:
 		[:o|
 		((objectMemory isCompiledMethod: o)
 		 and: [self methodShouldBeCogged: o]) ifTrue:

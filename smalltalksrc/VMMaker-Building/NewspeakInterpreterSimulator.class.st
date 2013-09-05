@@ -41,18 +41,6 @@ NewspeakInterpreterSimulator class >> new [
 ]
 
 { #category : #'debug support' }
-NewspeakInterpreterSimulator >> allObjectsDo: objBlock [
-
-	| oop |
-	oop := self firstObject.
-	[oop < endOfMemory] whileTrue:
-			[(self isFreeObject: oop)
-				ifFalse: [objBlock value: oop].
-			oop := self objectAfter: oop].
-
-]
-
-{ #category : #'debug support' }
 NewspeakInterpreterSimulator >> allObjectsSelect: objBlock [
 	"self allObjectsSelect: [:oop | (self baseHeader: oop) = 1234]"
 
