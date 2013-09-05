@@ -2812,6 +2812,11 @@ ObjectMemory >> isInMemory: address [
 ]
 
 { #category : #'interpreter access' }
+ObjectMemory >> isInRangeCharacterCode: characterCode [
+	^characterCode >= 0 and: [characterCode <= 255]
+]
+
+{ #category : #'interpreter access' }
 ObjectMemory >> isIntegerObject: objectPointer [
 
 	^ (objectPointer bitAnd: 1) > 0
