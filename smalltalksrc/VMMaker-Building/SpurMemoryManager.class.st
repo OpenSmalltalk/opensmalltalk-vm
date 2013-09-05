@@ -617,6 +617,12 @@ SpurMemoryManager >> characterTag [
 	^2
 ]
 
+{ #category : #immediates }
+SpurMemoryManager >> characterValueOf: oop [
+	"Immediate characters are unsigned"
+	^(self cCoerceSimple: oop to: #'unsigned long') >> self numTagBits
+]
+
 { #category : #initialization }
 SpurMemoryManager >> checkCompactIndex: classIndex isClass: specialIndex named: name [
 	"Check that a class the VM assumes is compact has the right index."
@@ -1147,6 +1153,11 @@ SpurMemoryManager >> isImmediateCharacter: oop [
 { #category : #'object testing' }
 SpurMemoryManager >> isInOldSpace: address [ 
 	^address between: newSpaceLimit and: freeOldSpaceStart
+]
+
+{ #category : #immediates }
+SpurMemoryManager >> isInRangeCharacterCode: characterCode [
+	^characterCode >= 0 and: [characterCode < (2 raisedTo: 30)]
 ]
 
 { #category : #'object testing' }

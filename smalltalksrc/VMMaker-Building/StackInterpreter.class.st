@@ -992,10 +992,10 @@ StackInterpreter class >> initializePrimitiveTable [
 		(168 primitiveCopyObject)
 		(169 primitiveNotIdentical)
 
-		"Sound Primitives (170-199) - NO LONGER INDEXED"
-		(170 174 primitiveFail)
-
-		"CogMemoryManager primitives"
+		"SpurMemoryManager primitives"
+		(170 primitiveAsCharacter)
+		(171 primitiveCharacterValue)
+		(172 174 primitiveFail)
 		(175 primitiveBehaviorHash)
 		(176 primitiveMaxIdentityHash)
 		(177 184 primitiveFail)
@@ -2793,9 +2793,11 @@ StackInterpreter >> capturePendingFinalizationSignals [
 ]
 
 { #category : #'indexing primitive support' }
-StackInterpreter >> characterForAscii: ascii [  "Arg must lie in range 0-255!"
+StackInterpreter >> characterForAscii: ascii [  "Above ObjectMemory, arg must lie in range 0-255!"
 	<inline: true>
-	^ objectMemory fetchPointer: ascii ofObject: (objectMemory splObj: CharacterTable)
+	^CharacterTable
+		ifNil: [objectMemory characterObjectOf: ascii]
+		ifNotNil: [objectMemory fetchPointer: ascii ofObject: objectMemory characterTable]
 ]
 
 { #category : #'debug support' }
