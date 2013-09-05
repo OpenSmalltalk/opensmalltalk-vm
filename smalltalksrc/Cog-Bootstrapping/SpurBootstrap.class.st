@@ -47,10 +47,169 @@ Class {
 	#category : #'Cog-Bootstrapping'
 }
 
+{ #category : #'method prototypes' }
+SpurBootstrap class >> BehaviorPROTOTYPEidentityHash [
+	"Answer a SmallInteger whose value is related to the receiver's identity.
+	This method must not be overridden.
+	Primitive. Fails if the receiver is not a Behavior. Essential.
+	See Object documentation whatIsAPrimitive.
+
+	Do not override."
+
+	<primitive: 175>
+	self primitiveFailed
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> BehaviorPROTOTYPEinstSize [
+	"Answer the number of named instance variables
+	(as opposed to indexed variables) of the receiver.
+	 Above Cog Spur the class format is
+		<5 bits inst spec><16 bits inst size>"
+	^format bitAnd: 16rFFFF
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> BehaviorPROTOTYPEisBits [
+	"Answer whether the receiver contains just bits (not pointers).
+	 Above Cog Spur the class format is
+		<5 bits inst spec><16 bits inst size>
+	 where the 5-bit inst spec is
+		 0 = 0 sized objects (UndefinedObject True False et al)
+		 1 = non-indexable objects with inst vars (Point et al)
+		 2 = indexable objects with no inst vars (Array et al)
+		 3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+		 4 = weak indexable objects with inst vars (WeakArray et al)
+		 5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+		 6,7,8 unused
+		 9 (?) 64-bit indexable
+		 10 - 11 32-bit indexable
+		 12 - 15 16-bit indexable
+		 16 - 23 byte indexable
+		 24 - 31 compiled method"
+	^self instSpec >= 9
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> BehaviorPROTOTYPEisBytes [
+	"Answer whether the receiver has 8-bit instance variables.
+	 Above Cog Spur the class format is
+		<5 bits inst spec><16 bits inst size>
+	 where the 5-bit inst spec is
+		 0 = 0 sized objects (UndefinedObject True False et al)
+		 1 = non-indexable objects with inst vars (Point et al)
+		 2 = indexable objects with no inst vars (Array et al)
+		 3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+		 4 = weak indexable objects with inst vars (WeakArray et al)
+		 5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+		 6,7,8 unused
+		 9 (?) 64-bit indexable
+		 10 - 11 32-bit indexable
+		 12 - 15 16-bit indexable
+		 16 - 23 byte indexable
+		 24 - 31 compiled method"
+	^self instSpec >= 16
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> BehaviorPROTOTYPEisVariable [
+	"Answer whether the receiver has indexable variables.
+	 Above Cog Spur the class format is
+		<5 bits inst spec><16 bits inst size>
+	 where the 5-bit inst spec is
+		 0 = 0 sized objects (UndefinedObject True False et al)
+		 1 = non-indexable objects with inst vars (Point et al)
+		 2 = indexable objects with no inst vars (Array et al)
+		 3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+		 4 = weak indexable objects with inst vars (WeakArray et al)
+		 5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+		 6,7,8 unused
+		 9 (?) 64-bit indexable
+		 10 - 11 32-bit indexable
+		 12 - 15 16-bit indexable
+		 16 - 23 byte indexable
+		 24 - 31 compiled method"
+	| instSpec |
+	instSpec := self instSpec.
+	^instSpec >= 2 and: [instSpec ~= 5]
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> CharacterPROTOTYPEasciiValue [
+	<primitive: 171>
+	^self primitiveFailed
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> CharacterclassPROTOTYPEvalue: anInteger [
+	<primitive: 170>
+	^self primitiveFailed
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> ClassBuilderPROTOTYPEformat: nInstVars variable: isVar words: isWords pointers: isPointers weak: isWeak [
+	"Compute the format for the given instance specfication.
+	 Above Cog Spur the class format is
+		<5 bits inst spec><16 bits inst size>
+	 where the 5-bit inst spec is
+		 0 = 0 sized objects (UndefinedObject True False et al)
+		 1 = non-indexable objects with inst vars (Point et al)
+		 2 = indexable objects with no inst vars (Array et al)
+		 3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+		 4 = weak indexable objects with inst vars (WeakArray et al)
+		 5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+		 6,7,8 unused
+		 9 (?) 64-bit indexable
+		 10 - 11 32-bit indexable
+		 12 - 15 16-bit indexable
+		 16 - 23 byte indexable
+		 24 - 31 compiled method"
+	| instSpec |
+	instSpec := isWeak
+					ifTrue: [4]
+					ifFalse:
+						[isPointers
+							ifTrue:
+								[isVar
+									ifTrue: [nInstVars > 0 ifTrue: [3] ifFalse: [2]]
+									ifFalse: [nInstVars > 0 ifTrue: [1] ifFalse: [0]]]
+							ifFalse: [isWords ifTrue: [12] ifFalse: [16]]].
+	^instSpec << 16 + nInstVars
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> ProtoObjectPROTOTYPEscaledIdentityHash [
+	"For identityHash values returned by primitive 75, answer
+	 such values times 2^18.  Otherwise, match the existing
+	 identityHash implementation"
+
+	^self identityHash * 256 "bitShift: 8"
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> SmallIntegerPROTOTYPEasCharacter [
+	<primitive: 170>
+	^self primitiveFailed
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> SmalltalkImagePROTOTYPEmaxIdentityHash [
+	"Answer the maximum identityHash value supported by the VM."
+	<primitive: 176>
+	^self primitiveFailed
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> SystemDictionaryPROTOTYPEmaxIdentityHash [
+	"Answer the maximum identityHash value supported by the VM."
+	<primitive: 176>
+	^self primitiveFailed
+]
+
 { #category : #bootstrap }
 SpurBootstrap >> allocateClassTable [
 	"Allocate the root of the classTable plus enough pages to accomodate all classes in
-	 the classToIndex map.  Don;t fill in the entries yet; the classes have yet to be cloned."
+	 the classToIndex map.  Don't fill in the entries yet; the classes have yet to be cloned."
 	| tableRootSize tableRoot page maxSize numPages |
 	tableRootSize := self classTableSize / newHeap classTablePageSize.
 	tableRoot := newHeap
@@ -69,7 +228,7 @@ SpurBootstrap >> allocateClassTable [
 	self assert: (newHeap numSlotsOf: page) = newHeap classTablePageSize.
 	self assert: (newHeap formatOf: tableRoot) = newHeap arrayFormat.
 	self assert: (newHeap classIndexOf: tableRoot) = newHeap arrayClassIndexPun.
-	self assert: (newHeap objectAfter: tableRoot limit: newHeap freeStart) = page..
+	self assert: (newHeap objectAfter: tableRoot limit: newHeap freeStart) = page.
 	lastClassTablePage := page.
 	newHeap nilFieldsOf: page.
 	newHeap storePointer: 0 ofObject: tableRoot withValue: page.
@@ -297,7 +456,12 @@ SpurBootstrap >> fillInPointerObject: newObj from: oldObj [
 		newHeap
 			storePointerUnchecked: i
 			ofObject: newObj
-			withValue: newValue]
+			withValue: newValue].
+	(classToIndex includesKey: oldObj) ifTrue:
+		[newHeap
+			storePointerUnchecked: InstanceSpecificationIndex
+			ofObject: newObj
+			withValue: (self newClassFormatFor: oldObj)]
 ]
 
 { #category : #'class indices' }
@@ -316,6 +480,18 @@ SpurBootstrap >> launch [
 		instVarNamed: 'printBytecodeAtEachStep' put: true;
 		instVarNamed: 'methodDictLinearSearchLimit' put: SmallInteger maxVal. "for now"
 	sim run
+]
+
+{ #category : #bootstrap }
+SpurBootstrap >> newClassFormatFor: oldClassObj [
+	"OLD: 		<2 bits=instSize//64><5 bits=cClass><4 bits=instSpec><6 bits=instSize\\64><1 bit=0>
+	 NEW: 		<5 bits inst spec><16 bits inst size>"
+	| oldFormat instSize newInstSpec |
+	oldFormat := oldHeap formatOfClass: oldClassObj. "N.B. SmallInteger with tag bit cleared"
+	oldFormat := oldFormat >> 1.
+	instSize := ((oldFormat bitShift: -10) bitAnd: 16rC0) + ((oldFormat bitShift: -1) bitAnd: 16r3F) - 1.
+	newInstSpec := #(0 1 2 3 4 5 6 7 16 16 16 16 24 24 24 24) at: ((oldFormat bitShift: -7) bitAnd: 16rF) + 1.
+	^newHeap integerObjectOf: newInstSpec << 16 + instSize
 ]
 
 { #category : #bootstrap }
