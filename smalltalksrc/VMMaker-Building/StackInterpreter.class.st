@@ -44,6 +44,7 @@ Class {
 		'methodCache',
 		'atCache',
 		'lkupClass',
+		'methodDictLinearSearchLimit',
 		'highestRunnableProcessPriority',
 		'nextWakeupUsecs',
 		'nextPollUsecs',
@@ -6112,6 +6113,7 @@ StackInterpreter >> initializeInterpreter: bytesToShift [
 	messageSelector := objectMemory nilObject.
 	newMethod := objectMemory nilObject.
 	lkupClass := objectMemory nilObject.
+	methodDictLinearSearchLimit := 8.
 	self flushMethodCache.
 	self flushAtCache.
 	self initialCleanup.
@@ -7099,14 +7101,28 @@ StackInterpreter >> lookupMethodInClass: class [
 
 { #category : #'message sending' }
 StackInterpreter >> lookupMethodInDictionary: dictionary [ 
-	"This method lookup tolerates integers as Dictionary keys to suoport
+	"This method lookup tolerates integers as Dictionary keys to support
 	 execution of images in which Symbols have been compacted out."
 	| length index mask wrapAround nextSelector methodArray |
 	<inline: true>
 	<asmLabel: false>
 	length := objectMemory fetchWordLengthOf: dictionary.
 	mask := length - SelectorStart - 1.
-	index := SelectorStart + (mask bitAnd: ((objectMemory isIntegerObject: messageSelector)
+	"Use linear search on small dictionaries; its cheaper.
+	 Also the limit can be set to force linear search of all dictionaries, which supports the
+	 booting of images that need rehashing (e.g. because a tracer has generated an image
+	 with different hashes but hasn't rehashed it yet.)"
+	mask <= methodDictLinearSearchLimit ifTrue:
+		[index := 0.
+		 [index <= mask] whileTrue:
+			[nextSelector := objectMemory fetchPointer: index ofObject: dictionary.
+			 nextSelector = messageSelector ifTrue:
+				[methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: dictionary.
+				 newMethod := objectMemory fetchPointer: index - SelectorStart ofObject: methodArray.
+				^true].
+		 index := index + 1].
+		 ^false].
+	index := SelectorStart + (mask bitAnd: ((objectMemory isImmediate: messageSelector)
 												ifTrue: [objectMemory integerValueOf: messageSelector]
 												ifFalse: [objectMemory hashBitsOf: messageSelector])).
 
@@ -7126,6 +7142,7 @@ StackInterpreter >> lookupMethodInDictionary: dictionary [
 			[wrapAround ifTrue: [^false].
 			 wrapAround := true.
 			 index := SelectorStart]].
+	
 	^false "for Slang"
 ]
 
@@ -9077,7 +9094,7 @@ StackInterpreter >> printNameOfClass: classOop count: cnt [
 	<inline: false>
 	(classOop = 0 or: [cnt <= 0]) ifTrue: [^self print: 'bad class'].
 	((objectMemory sizeBitsOf: classOop) = metaclassSizeBits
-	  and: [metaclassSizeBits > (thisClassIndex * BytesPerWord)])	"(Metaclass instSize * 4)"
+	  and: [metaclassSizeBits > (thisClassIndex * BytesPerOop)])	"(Metaclass instSize * 4)"
 		ifTrue: [self printNameOfClass: (objectMemory fetchPointer: thisClassIndex ofObject: classOop) count: cnt - 1.
 				self print: ' class']
 		ifFalse: [self printStringOf: (objectMemory fetchPointer: classNameIndex ofObject: classOop)]
@@ -9354,9 +9371,7 @@ StackInterpreter >> printStringOf: oop [
 	<inline: false>
 	(objectMemory isImmediate: oop) ifTrue:
 		[^nil].
-	(oop between: objectMemory startOfMemory and: objectMemory freeStart) ifFalse:
-		[^nil].
-	(oop bitAnd: (BytesPerOop - 1)) ~= 0 ifTrue:
+	(objectMemory addressCouldBeObj: oop) ifFalse:
 		[^nil].
 	fmt := objectMemory formatOf: oop.
 	fmt < objectMemory firstByteFormat ifTrue: [^nil].
@@ -10668,11 +10683,10 @@ StackInterpreter >> shortPrintOop: oop [
 		 ^self
 			cCode: 'printf("=%ld\n", (long)integerValueOf(oop))'
 			inSmalltalk: [self print: (self shortPrint: oop); cr]].
-	(oop between: objectMemory startOfMemory and: objectMemory freeStart) ifFalse:
-		[self printHex: oop; print: ' is not on the heap'; cr.
-		 ^nil].
-	(oop bitAnd: (BytesPerWord - 1)) ~= 0 ifTrue:
-		[self printHex: oop; print: ' is misaligned'; cr.
+	(objectMemory addressCouldBeObj: oop) ifFalse:
+		[self print: ((oop bitAnd: objectMemory allocationUnit - 1) ~= 0
+						ifTrue: [' is misaligned']
+						ifFalse: [' is not on the heap']); cr.
 		 ^nil].
 	self print: ': a(n) '.
 	self printNameOfClass: (objectMemory fetchClassOf: oop) count: 5.
