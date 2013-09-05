@@ -38,18 +38,6 @@ InterpreterSimulator class >> new [
 ]
 
 { #category : #'debug support' }
-InterpreterSimulator >> allObjectsDo: objBlock [
-
-	| oop |
-	oop := self firstObject.
-	[oop < endOfMemory] whileTrue:
-			[(self isFreeObject: oop)
-				ifFalse: [objBlock value: oop].
-			oop := self objectAfter: oop].
-
-]
-
-{ #category : #'debug support' }
 InterpreterSimulator >> allObjectsSelect: objBlock [
 	"self allObjectsSelect: [:oop | (self baseHeader: oop) = 1234]"
 

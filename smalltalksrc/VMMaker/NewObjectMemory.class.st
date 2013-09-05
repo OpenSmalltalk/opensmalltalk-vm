@@ -154,9 +154,9 @@ NewObjectMemory >> adjustAllOopsBy: bytesToShift [
 	^totalObjects
 ]
 
-{ #category : #'debug support' }
+{ #category : #'object enumeration' }
 NewObjectMemory >> allObjectsDo: aBlock [
-	<doNotGenerate>
+	<inline: true>
 	| oop |
 	oop := self firstObject.
 	[oop < freeStart] whileTrue:

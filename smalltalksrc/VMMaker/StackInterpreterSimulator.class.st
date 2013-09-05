@@ -92,18 +92,6 @@ StackInterpreterSimulator class >> onObjectMemory: anObjectMemory options: optio
 ]
 
 { #category : #'debug support' }
-StackInterpreterSimulator >> allObjectsDo: objBlock [
-
-	| oop |
-	oop := objectMemory firstObject.
-	[oop < objectMemory endOfMemory] whileTrue:
-			[(objectMemory isFreeObject: oop)
-				ifFalse: [objBlock value: oop].
-			oop := objectMemory objectAfter: oop].
-
-]
-
-{ #category : #'debug support' }
 StackInterpreterSimulator >> allObjectsSelect: objBlock [
 	"self allObjectsSelect: [:oop | (self baseHeader: oop) = 1234]"
 
