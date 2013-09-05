@@ -1,5 +1,5 @@
 "
-SpurMemoryManager is a new object representation and garbage collector for the Cog VM's .  The goals for the memory manager are
+SpurMemoryManager is a new object representation and garbage collector for the Cog VM's.  Spur is dedicated to Andreas Raab, friend and colleague.  I miss you, Andreas.  The goal for Spur is an overall improvement in Cog of -50% (twice as fast) for memory-intensive benchmarks.  The objectives for the Spur memory manager are
 
 - efficient object representation a la Eliot Miranda's VisualWorks 64-bit object representation that uses a 64-bit header, eliminating direct class references so that all objects refer to their classes indirectly.  Instead the header contains a constant class index, in a field smaller than a full pointer, These class indices are used in inline and first-level method caches, hence they do not have to be updated on GC (although they do have to be traced to be able to GC classes).  Classes are held in a sparse weak table.  The class table needs only to be indexed by an instance's class index in class hierarchy search, in the class primitive, and in tracing live objects in the heap.  The additional header space is allocated to a much expanded identity hash field, reducing hash efficiency problems in identity collections due to the extremely small (11 bit) hash field in the old Squeak GC.  The identity hash field is also a key element of the class index scheme.  A class's identity hash is its index into the class table, so to create an instance of a class one merely copies its identity hash into the class index field of the new instance.  This implies that when classes gain their identity hash they are entered into the class table and their identity hash is that of a previously unused index in the table.  It also implies that there is a maximum number of classes in the table.  The classIndex field could be as narrow as 16 bits (for efficient access); at least for a few years 64k classes should be enough.  But currently we make it the same as the identityHash field, 22 bits, or 4M values.  A class is entered into the class table in the following operations:
 	behaviorHash
@@ -283,6 +283,13 @@ SpurMemoryManager class >> initializeCompactClassIndices [
 	ClassBitmapCompactIndex := 53
 ]
 
+{ #category : #'class initialization' }
+SpurMemoryManager class >> initializeObjectHeaderConstants [
+
+	BytesPerWord ifNil: [BytesPerWord := 4].  "May get called on fileIn, so supply default"
+	BaseHeaderSize := 8 "Alas so much of the VM uses BaseheaderSize explicitly we don't (yet) make it a message."
+]
+
 { #category : #initialization }
 SpurMemoryManager class >> initializeSpecialObjectIndices [
 	"Initialize indices into specialObjects array."
@@ -364,6 +371,7 @@ SpurMemoryManager class >> initializeWithOptions: optionsDictionary [
 	self initializeSpecialObjectIndices.
 	self initializeCompactClassIndices.
 	self initializePrimitiveErrorCodes.
+	self initializeObjectHeaderConstants
 ]
 
 { #category : #'garbage collection' }
@@ -710,9 +718,15 @@ SpurMemoryManager >> falseObject: anOop [
 ]
 
 { #category : #'object access' }
+SpurMemoryManager >> fetchByte: byteIndex ofObject: objOop [
+	<api>
+	^self byteAt: objOop + self baseHeaderSize + byteIndex
+]
+
+{ #category : #'object access' }
 SpurMemoryManager >> fetchClassOf: oop [ 
 	| tagBits |
-	(tagBits := oop bitAnd: self tagMask) = 0 ifTrue:
+	(tagBits := oop bitAnd: self tagMask) ~= 0 ifTrue:
 		[^self fetchPointer: tagBits ofObject: classTableFirstPage].
 	^self classAtIndex: (self classIndexOf: oop)
 ]
@@ -770,6 +784,25 @@ SpurMemoryManager >> firstObject [
 { #category : #'header format' }
 SpurMemoryManager >> firstShortFormat [
 	^12
+]
+
+{ #category : #'object format' }
+SpurMemoryManager >> fixedFieldsOf: objOop format: fmt length: wordLength [
+"
+	NOTE: This code supports the backward-compatible extension to 8 bits of instSize.
+	When we revise the image format, it should become...
+	^ (classFormat >> 2 bitAnd: 16rFF) - 1
+"
+	| class classFormat |
+	<inline: true>
+	<asmLabel: false>
+	((fmt > 4) or: [fmt = 2]) ifTrue: [^0].  "indexable fields only"
+	fmt < 2 ifTrue: [^wordLength].  "fixed fields only (zero or more)"
+	self flag: #fixme. "Must munge class formats now..."
+	"fmt = 3 or 4: mixture of fixed and indexable fields, so must look at class format word"
+	class := self fetchClassOfNonImm: objOop.
+	classFormat := self formatOfClass: class.
+	^(classFormat >> 11 bitAnd: 16rC0) + (classFormat >> 2 bitAnd: 16r3F) - 1
 ]
 
 { #category : #'header format' }
@@ -864,13 +897,13 @@ SpurMemoryManager >> goodContextSize: oop [
 { #category : #'header access' }
 SpurMemoryManager >> hashBitsOf: objOop [
 	self flag: #endianness.
-	^(self longAt: objOop) bitAnd: self identityHashHalfWordMask
+	^(self longAt: objOop + 4) bitAnd: self identityHashHalfWordMask
 ]
 
 { #category : #'header format' }
 SpurMemoryManager >> headerForSlots: numSlots format: formatField classIndex: classIndex [ 
 	"The header format in LSB is
-	 MSB:	| 8: slotSize			| (on a byte boundary)
+	 MSB:	| 8: numSlots		| (on a byte boundary)
 			| 2 bits				|
 			| 22: identityHash	| (on a word boundary)
 			| 3 bits				|
@@ -884,6 +917,7 @@ SpurMemoryManager >> headerForSlots: numSlots format: formatField classIndex: cl
 		isPinned
 		isImmutable
 	 leaving 2 unused bits."
+	<returnTypeC: #usqLong>
 	^ (numSlots << self numSlotsFullShift)
 	+ (formatField << self formatShift)
 	+ classIndex
@@ -1011,6 +1045,20 @@ SpurMemoryManager >> integerValueOf: oop [
 	^self subclassResponsibility
 ]
 
+{ #category : #'object access' }
+SpurMemoryManager >> is: oop instanceOf: classOop compactClassIndex: compactClassIndex [
+	"Answer if oop is an instance of the given class. If the class has a (non-zero)
+	 compactClassIndex use that to speed up the check.  N.B. Inlining should
+	 result in classOop not being accessed if oop's compact class index and
+	 compactClassIndex are non-zero."
+
+	<inline: true>
+	(self isImmediate: oop) ifTrue:
+		[^false].
+
+	^self isClassOfNonImm: oop equalTo: classOop compactClassIndex: compactClassIndex
+]
+
 { #category : #'object testing' }
 SpurMemoryManager >> isBytes: oop [
 	"Answer true if the argument contains indexable bytes. See comment in formatOf:"
@@ -1022,6 +1070,26 @@ SpurMemoryManager >> isBytes: oop [
 SpurMemoryManager >> isBytesNonImm: objOop [
 	"Answer true if the argument contains indexable bytes. See comment in formatOf:"
 	^(self formatOf: objOop) >= self firstByteFormat
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> isClassOfNonImm: oop equalTo: classOop compactClassIndex: knownClassIndex [
+	"Answer if the given (non-immediate) object is an instance of the given class
+	 that may have a knownClassIndex (if knownClassIndex is non-zero).  This method
+	 is misnamed given SPur's architecture (where all objects have ``compact'' class indices)
+	 but is so-named for compatibility with ObjectMemory.
+	 N.B. Inlining and/or compiler optimization should result in classOop not being
+	 accessed if knownClassIndex is non-zero."
+
+	| ccIndex |
+	<inline: true>
+	<asmLabel: false>
+	self assert: (self isImmediate: oop) not.
+
+	ccIndex := self classIndexOf: oop.
+	knownClassIndex ~= 0 ifTrue:
+		[^knownClassIndex = ccIndex].
+	^classOop = (self classAtIndex: ccIndex)
 ]
 
 { #category : #'object testing' }
@@ -1070,6 +1138,11 @@ SpurMemoryManager >> isImmediate: oop [
 ]
 
 { #category : #'object testing' }
+SpurMemoryManager >> isImmediateCharacter: oop [
+	^(oop bitAnd: self tagMask) = 2
+]
+
+{ #category : #'object testing' }
 SpurMemoryManager >> isInOldSpace: address [ 
 	^address between: newSpaceLimit and: freeOldSpaceStart
 ]
@@ -1080,7 +1153,8 @@ SpurMemoryManager >> isIntegerObject: oop [
 		quickFetchInteger:ofObject:
 		frameOfMarriedContext:
 		addressCouldBeClassObj:
-		isMarriedOrWidowedContext:) includes: thisContext sender method selector) ifFalse:
+		isMarriedOrWidowedContext:
+		shortPrint:) includes: thisContext sender method selector) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
@@ -1291,9 +1365,10 @@ SpurMemoryManager >> overflowSlotsMask [
 
 { #category : #'header access' }
 SpurMemoryManager >> setHashBitsOf: objOop to: hash [
+	self flag: #endianness.
 	self assert: (hash between: 0 and: self identityHashHalfWordMask).
-	self longAt: objOop
-		put: ((self longAt: objOop) bitClear: self identityHashHalfWordMask) + hash
+	self longAt: objOop + 4
+		put: ((self longAt: objOop + 4) bitClear: self identityHashHalfWordMask) + hash
 ]
 
 { #category : #'header format' }

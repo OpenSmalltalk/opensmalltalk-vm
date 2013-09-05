@@ -1850,20 +1850,21 @@ StackInterpreterSimulator >> shortPrint: oop [
 		(objectMemory isIntegerObject: oop) ifTrue: [^ '=' , (objectMemory integerValueOf: oop) printString , 
 			' (' , (objectMemory integerValueOf: oop) hex , ')'].
 		^'= UNKNOWN IMMEDIATE', ' (' , (objectMemory integerValueOf: oop) hex , ')'].
-	(oop between: objectMemory startOfMemory and: objectMemory freeStart) ifFalse:
-		[^' is not on the heap'].
-	(oop bitAnd: (BytesPerWord - 1)) ~= 0 ifTrue:
-		[^' is misaligned'].
-	classOop := objectMemory fetchClassOf: oop.
-	(objectMemory sizeBitsOf: classOop) = metaclassSizeBits ifTrue: [
-		^ 'class ' , (self nameOfClass: oop)].
+	(objectMemory addressCouldBeObj: oop) ifFalse:
+		[^(oop bitAnd: objectMemory allocationUnit - 1) ~= 0
+			ifTrue: [' is misaligned']
+			ifFalse: [' is not on the heap']].
+	classOop := objectMemory fetchClassOfNonImm: oop.
+	(objectMemory sizeBitsOf: classOop) = metaclassSizeBits ifTrue:
+		[^'class ' , (self nameOfClass: oop)].
 	name := self nameOfClass: classOop.
 	name size = 0 ifTrue: [name := '??'].
 	name = 'String' ifTrue: [^ (self stringOf: oop) printString].
 	name = 'ByteString' ifTrue: [^ (self stringOf: oop) printString].
 	name = 'Symbol' ifTrue: [^ '#' , (self stringOf: oop)].
 	name = 'ByteSymbol' ifTrue: [^ '#' , (self stringOf: oop)].
-	name = 'Character' ifTrue: [^ '=' , (Character value: (objectMemory integerValueOf: 
+	name = 'Character' ifTrue: "SpurMemoryManager has immediate Characters; ObjectMemory does not"
+		[^ '=' , (Character value: (objectMemory integerValueOf: 
 				(objectMemory fetchPointer: 0 ofObject: oop))) printString].
 	name = 'UndefinedObject' ifTrue: [^ 'nil'].
 	name = 'False' ifTrue: [^ 'false'].
