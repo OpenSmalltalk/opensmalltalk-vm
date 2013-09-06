@@ -39,13 +39,129 @@ Class {
 		'reverseMap',
 		'classToIndex',
 		'oldInterpreter',
-		'lastClassTablePage'
+		'lastClassTablePage',
+		'symbolMap'
 	],
 	#pools : [
 		'VMObjectIndices'
 	],
 	#category : #'Cog-Bootstrapping'
 }
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> BehaviorPROTOTYPEbasicNew [
+	"Primitive. Answer an instance of the receiver (which is a class) with no 
+	 indexable variables. Fail if the class is indexable. Essential. See Object 
+	 documentation whatIsAPrimitive.
+	
+	 If the primitive fails because space is low then the scavenger
+	 will run before the method is activated.  Check arguments and
+	 retry via failingBasicNew: if they're OK."
+
+	<primitive: 70>
+	self isVariable ifTrue: [^self basicNew: 0].
+	"space must have been low, and the scavenger must have run.
+	 retry after the scavenge."
+	^self failingBasicNew
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> BehaviorPROTOTYPEbasicNew: sizeRequested [ 
+	"Primitive. Answer an instance of this class with the number of indexable
+	 variables specified by the argument, sizeRequested.  Fail if this class is not
+	 indexable or if the argument is not a positive Integer, or if there is not
+	 enough memory available. Essential. See Object documentation whatIsAPrimitive.
+	
+	 If the primitive fails because space is low then the scavenger will run before the
+	 method is activated.  Check arguments and retry via failingBasicNew: if they're OK."
+
+	<primitive: 71>
+	self isVariable ifFalse:
+		[self error: self printString, ' cannot have variable sized instances'].
+	(sizeRequested isInteger and: [sizeRequested >= 0]) ifTrue:
+		["arg okay; space must have been low, and the scavenger must have run.
+		  retry after the scavenge"
+		^self failingBasicNew: sizeRequested].
+	self primitiveFailed
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> BehaviorPROTOTYPEhandleFailingBasicNew [
+	"This basicNew gets sent after basicNew has failed and allowed a
+	 scavenging garbage collection to occur.  The scavenging collection
+	 will have happened as the VM is activating the (failing) basicNew.
+	 If failingBasicNew fails then the scavenge failed to reclaim sufficient
+	 space and a global garbage collection is required.
+
+	 Primitive. Answer an instance of this class with the number of indexable
+	 variables specified by the argument, sizeRequested.  Fail if this class is not
+	 indexable or if the argument is not a positive Integer, or if there is not
+	 enough memory available. Essential. See Object documentation whatIsAPrimitive."
+
+	<primitive: 70>
+	self isVariable ifTrue: [^self basicNew: 0].
+	Smalltalk garbageCollect.
+	^self failingFailingBasicNew "retry after global garbage collect"
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> BehaviorPROTOTYPEhandleFailingBasicNew: sizeRequested [
+	"This basicNew: gets sent after basicNew: has failed and allowed a
+	 scavenging garbage collection to occur.  The scavenging collection
+	 will have happened as the VM is activating the (failing) basicNew:.
+	 If failingBasicNew: fails then the scavenge failed to reclaim sufficient
+	 space and a global garbage collection is required.
+
+	 Primitive. Answer an instance of this class with the number of indexable
+	 variables specified by the argument, sizeRequested.  Fail if this class is not
+	 indexable or if the argument is not a positive Integer, or if there is not
+	 enough memory available. Essential. See Object documentation whatIsAPrimitive."
+
+	<primitive: 71>
+	self isVariable ifFalse:
+		[self error: self printString, ' cannot have variable sized instances'].
+	(sizeRequested isInteger and: [sizeRequested >= 0]) ifTrue:
+		[Smalltalk garbageCollect.
+		^self failingFailingBasicNew: sizeRequested  "retry after global garbage collect"].
+	self primitiveFailed
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> BehaviorPROTOTYPEhandleFailingFailingBasicNew [
+	"This basicNew gets sent after failingBasicNew: has sent Smalltalk garbageCollect.
+	 If this fails then the system really is low on space.
+
+	 Primitive. Answer an instance of this class with the number of indexable
+	 variables specified by the argument, sizeRequested.  Fail if this class is not
+	 indexable or if the argument is not a positive Integer, or if there is not
+	 enough memory available. Essential. See Object documentation whatIsAPrimitive."
+
+	<primitive: 70>
+	self isVariable ifTrue: [^self basicNew: 0].
+	"space must be low"
+	OutOfMemory signal.
+	^self basicNew  "retry if user proceeds"
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> BehaviorPROTOTYPEhandleFailingFailingBasicNew: sizeRequested [
+	"This basicNew: gets sent after failingBasicNew: has sent Smalltalk garbageCollect.
+	 If that fails the system really is low on space.
+
+	 Primitive. Answer an instance of this class with the number of indexable
+	 variables specified by the argument, sizeRequested.  Fail if this class is not
+	 indexable or if the argument is not a positive Integer, or if there is not
+	 enough memory available. Essential. See Object documentation whatIsAPrimitive."
+
+	<primitive: 71>
+	self isVariable ifFalse:
+		[self error: self printString, ' cannot have variable sized instances'].
+	(sizeRequested isInteger and: [sizeRequested >= 0]) ifTrue:
+		["arg okay; space must be low."
+		OutOfMemory signal.
+		^self basicNew: sizeRequested  "retry if user proceeds"].
+	self primitiveFailed
+]
 
 { #category : #'method prototypes' }
 SpurBootstrap class >> BehaviorPROTOTYPEidentityHash [
@@ -174,7 +290,7 @@ SpurBootstrap class >> ClassBuilderPROTOTYPEformat: nInstVars variable: isVar wo
 									ifTrue: [nInstVars > 0 ifTrue: [3] ifFalse: [2]]
 									ifFalse: [nInstVars > 0 ifTrue: [1] ifFalse: [0]]]
 							ifFalse: [isWords ifTrue: [12] ifFalse: [16]]].
-	^instSpec << 16 + nInstVars
+	^(instSpec bitShift: 16) + nInstVars
 ]
 
 { #category : #'method prototypes' }
@@ -206,7 +322,20 @@ SpurBootstrap class >> SystemDictionaryPROTOTYPEmaxIdentityHash [
 	^self primitiveFailed
 ]
 
-{ #category : #bootstrap }
+{ #category : #'method prototypes' }
+SpurBootstrap >> allPrototypeMethodSymbols [
+	"self basicNew allPrototypeMethodSymbols"
+	| symbols |
+	symbols := Set new.
+	(SpurBootstrap class organization listAtCategoryNamed: #'method prototypes') do:
+		[:protoSelector| | method |
+		method := SpurBootstrap class >> protoSelector.
+		symbols add: (self selectorForPrototypeMethod: method).
+		symbols addAll: (method literals select: [:l| l isSymbol and: [l ~~ protoSelector]])].
+	^symbols
+]
+
+{ #category : #'bootstrap image' }
 SpurBootstrap >> allocateClassTable [
 	"Allocate the root of the classTable plus enough pages to accomodate all classes in
 	 the classToIndex map.  Don't fill in the entries yet; the classes have yet to be cloned."
@@ -250,7 +379,7 @@ SpurBootstrap >> allocateClassTable [
 		lastClassTablePage := page]
 ]
 
-{ #category : #bootstrap }
+{ #category : #'bootstrap image' }
 SpurBootstrap >> bootstrapImage [
 	self cloneNilTrueAndFalse.
 	self buildClassMap.
@@ -260,7 +389,7 @@ SpurBootstrap >> bootstrapImage [
 	self fillInClassTable
 ]
 
-{ #category : #bootstrap }
+{ #category : #'bootstrap image' }
 SpurBootstrap >> buildClassMap [
 	"enumerate all objects asking isBehavior:?  (class == Metaclass or class class == Metaclass) doesn't work for Newspeak"
 	"Build a map from all classes in oldHeap to a class index.
@@ -278,12 +407,19 @@ SpurBootstrap >> buildClassMap [
 			 classToIndex at: oldClass put: (classTableIndex := classTableIndex + 1)]]
 ]
 
+{ #category : #'method prototypes' }
+SpurBootstrap >> classNameForPrototypeMethod: protoMethod [
+	| protoSelector |
+	protoSelector := protoMethod selector.
+	^(protoSelector first: (protoSelector indexOfSubCollection: 'PROTOTYPE') - 1) asSymbol
+]
+
 { #category : #'class indices' }
 SpurBootstrap >> classTableSize [
 	^newHeap classIndexMask + 1
 ]
 
-{ #category : #bootstrap }
+{ #category : #'bootstrap image' }
 SpurBootstrap >> clone: oldObj classIndex: classIndex [
 	| newObj |
 	newObj := newHeap
@@ -294,7 +430,7 @@ SpurBootstrap >> clone: oldObj classIndex: classIndex [
 	^map at: oldObj put: newObj
 ]
 
-{ #category : #bootstrap }
+{ #category : #'bootstrap image' }
 SpurBootstrap >> cloneNilTrueAndFalse [
 	{	oldHeap nilObject.
 		oldHeap falseObject.
@@ -309,7 +445,7 @@ SpurBootstrap >> cloneNilTrueAndFalse [
 		trueObject: (map at: oldHeap trueObject)
 ]
 
-{ #category : #bootstrap }
+{ #category : #'bootstrap image' }
 SpurBootstrap >> cloneObjects [
 	| characterClass characterTable oldObj oldClass |
 	characterClass := oldHeap classCharacter.
@@ -376,7 +512,7 @@ SpurBootstrap >> defineKnownClassIndices [
 		self assert: (oldInterpreter addressCouldBeClassObj: oldClass)]
 ]
 
-{ #category : #bootstrap }
+{ #category : #'bootstrap image' }
 SpurBootstrap >> fillInClassTable [
 	| firstPage classWeakArray |
 	classToIndex keysAndValuesDo:
@@ -417,13 +553,13 @@ SpurBootstrap >> fillInClassTable [
 				withValue: (map at: classWeakArray)
 ]
 
-{ #category : #bootstrap }
+{ #category : #'bootstrap image' }
 SpurBootstrap >> fillInCompiledMethod: newObj from: oldObj [
 	self fillInBitsObject: newObj from: oldObj.
 	self fillInPointerObject: newObj from: oldObj
 ]
 
-{ #category : #bootstrap }
+{ #category : #'bootstrap image' }
 SpurBootstrap >> fillInObjects [
 	oldHeap allObjectsDo:
 		[:oldObj|
@@ -437,7 +573,7 @@ SpurBootstrap >> fillInObjects [
 						ifFalse: [self fillInBitsObject: newObj from: oldObj]]]]
 ]
 
-{ #category : #bootstrap }
+{ #category : #'bootstrap image' }
 SpurBootstrap >> fillInPointerObject: newObj from: oldObj [
 	0 to: (oldHeap lastPointerOf: oldObj) / oldHeap bytesPerWord - 1 do:
 		[:i| | oldValue newValue |
@@ -464,9 +600,85 @@ SpurBootstrap >> fillInPointerObject: newObj from: oldObj [
 			withValue: (self newClassFormatFor: oldObj)]
 ]
 
+{ #category : #'bootstrap methods' }
+SpurBootstrap >> findSymbol: aString [
+	"Find the Symbol equal to aString in oldHeap."
+	| symbolClass |
+	symbolClass := self symbolClass.
+	oldHeap allObjectsDo:
+		[:o|
+		(symbolClass = (oldHeap fetchClassOfNonImm: o)
+		 and: [(oldHeap byteLengthOf: o) = aString size
+		 and: [aString = (oldHeap stringOf: o)]]) ifTrue:
+			[^o]].
+	^nil
+]
+
 { #category : #'class indices' }
 SpurBootstrap >> firstOrdinaryClassIndex [
 	^newHeap classTablePageSize
+]
+
+{ #category : #'bootstrap methods' }
+SpurBootstrap >> installModifiedMethods [
+	"Install all the methods in the class-side method prototypes protocol in the relevant classes
+	 in the new image.  First use the simulator to get the image to intern all symbols and add
+	 dummy methods under new selectors.  With that done we can manually replace the relevant
+	 methods with the prototypes, mapping selectors and global variables as required."
+	self internAllSymbols.
+	self addDummyMethods.
+	self addInstallMethods.
+	self modifyCharacterMethods
+]
+
+{ #category : #'bootstrap methods' }
+SpurBootstrap >> internAllSymbols [
+	"Ensure that all symbols in the method prototypes are interned so that later we can install them.
+	 Do this by interpreting Symbol intern: 'aSymbol' for each symbol.  Make sure the execution state
+	 has not advanced when doing so, and restore the image to the state it has on snapshot."
+	| internSym savedpc initialContext finalContext |
+	symbolMap := Dictionary new.
+	internSym := self findSymbol: #intern:.
+	oldInterpreter
+		initStackPages;
+		loadInitialContext;
+		internalizeIPandSP.
+	initialContext := oldInterpreter frameContext: oldInterpreter localFP.
+	savedpc := oldInterpreter localIP.
+	"oldInterpreter printHeadFrame."
+	self allPrototypeMethodSymbols do:
+		[:sym| | string fp |
+		(self findSymbol: sym)
+			ifNotNil: [:imageSym| symbolMap at: sym put: imageSym]
+			ifNil:
+				[Transcript cr; nextPutAll: 'interning '; nextPutAll: sym; flush.
+				string := oldHeap instantiateClass: (oldHeap splObj: ClassByteString) indexableSize: sym size.
+				1 to: sym size do:
+					[:i| oldHeap storeByte: i - 1 ofObject: string withValue: (sym at: i) asInteger].
+				"Interpret Symbol intern: sym to ... intern it :-)"
+				oldInterpreter
+					internalPush: self symbolClass;
+					internalPush: string;
+					argumentCount: 1;
+					messageSelector: internSym.
+				fp := oldInterpreter localFP.
+				oldInterpreter normalSend.
+				[fp = oldInterpreter localFP] whileFalse:
+					[oldInterpreter singleStep].
+				symbolMap at: sym put: oldInterpreter internalPopStack.
+				self assert: oldInterpreter localIP - 1 = savedpc.
+				oldInterpreter localIP: savedpc]].
+	symbolMap keysAndValuesDo:
+		[:sym :imageSym|
+		self assert: sym = (oldHeap stringOf: imageSym)].
+	"oldInterpreter printHeadFrame."
+	oldInterpreter
+		internalPush: oldInterpreter localIP;
+		externalizeIPandSP.
+	"now undo the execution state"
+	finalContext := oldInterpreter voidVMStateForSnapshot.
+	self assert: initialContext = finalContext.
+	self assert: oldInterpreter localIP = savedpc
 ]
 
 { #category : #testing }
@@ -482,7 +694,7 @@ SpurBootstrap >> launch [
 	sim run
 ]
 
-{ #category : #bootstrap }
+{ #category : #'bootstrap image' }
 SpurBootstrap >> newClassFormatFor: oldClassObj [
 	"OLD: 		<2 bits=instSize//64><5 bits=cClass><4 bits=instSpec><6 bits=instSize\\64><1 bit=0>
 	 NEW: 		<5 bits inst spec><16 bits inst size>"
@@ -494,7 +706,7 @@ SpurBootstrap >> newClassFormatFor: oldClassObj [
 	^newHeap integerObjectOf: newInstSpec << 16 + instSize
 ]
 
-{ #category : #bootstrap }
+{ #category : #'bootstrap image' }
 SpurBootstrap >> newFormatFor: oldObj [
 	"OLD:
 	 0	no fields
@@ -558,14 +770,30 @@ SpurBootstrap >> on: imageName [
 	classToIndex := Dictionary new: 1024
 ]
 
-{ #category : #bootstrap }
+{ #category : #'method prototypes' }
+SpurBootstrap >> selectorForPrototypeMethod: protoMethod [
+	| protoSelector |
+	protoSelector := protoMethod selector.
+	^(protoSelector last: protoSelector size
+						- (protoSelector indexOfSubCollection: 'PROTOTYPE')
+						- 'PROTOTYPE' size
+						+ 1) asSymbol
+]
+
+{ #category : #'bootstrap methods' }
+SpurBootstrap >> symbolClass [
+	^oldHeap fetchClassOfNonImm: (oldHeap splObj: SelectorDoesNotUnderstand)
+]
+
+{ #category : #'bootstrap image' }
 SpurBootstrap >> transform [
+	self installModifiedMethods.
 	self bootstrapImage.
 	newHeap initializePostBootstrap.
 	self validate
 ]
 
-{ #category : #bootstrap }
+{ #category : #'bootstrap image' }
 SpurBootstrap >> validate [
 	| p n duplicates maxClassIndex |
 	self assert: (reverseMap at: newHeap specialObjectsOop) = oldHeap specialObjectsOop.
