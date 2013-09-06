@@ -105,6 +105,11 @@ StackInterpreterSimulator >> allObjectsSelect: objBlock [
 	^ selected
 ]
 
+{ #category : #'spur bootstrap' }
+StackInterpreterSimulator >> argumentCount: n [
+	argumentCount := n
+]
+
 { #category : #'return bytecodes' }
 StackInterpreterSimulator >> baseFrameReturn [
 	| contextToReturnTo |
@@ -935,6 +940,21 @@ StackInterpreterSimulator >> loadNewPlugin: pluginString [
 	^pluginList last
 ]
 
+{ #category : #'spur bootstrap' }
+StackInterpreterSimulator >> localFP [
+	^localFP
+]
+
+{ #category : #'spur bootstrap' }
+StackInterpreterSimulator >> localIP [
+	^localIP
+]
+
+{ #category : #'spur bootstrap' }
+StackInterpreterSimulator >> localIP: pc [
+	localIP := pc
+]
+
 { #category : #testing }
 StackInterpreterSimulator >> logOfBytesVerify: nBytes fromFileNamed: fileName fromStart: loggingStart [
 	"Verify a questionable interpreter against a successful run"
@@ -1109,6 +1129,11 @@ StackInterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize
 		ifFalse: [ objectMemory storePointerUnchecked: 3 ofObject: results withValue: objectMemory falseObject ].
 	objectMemory storePointerUnchecked: 4 ofObject: results withValue: (objectMemory integerObjectOf: fileSize).
 	^ results
+]
+
+{ #category : #'spur bootstrap' }
+StackInterpreterSimulator >> messageSelector: s [
+	messageSelector := s
 ]
 
 { #category : #'simulation only' }
@@ -1920,6 +1945,13 @@ StackInterpreterSimulator >> signalSemaphoreWithIndex: index [
 		at: index
 		put: (externalSemaphoreSignalRequests at: index) + 1.
 	^true
+]
+
+{ #category : #testing }
+StackInterpreterSimulator >> singleStep [
+	self assertValidExecutionPointers.
+	self dispatchOn: currentBytecode in: BytecodeTable.
+	self incrementByteCount
 ]
 
 { #category : #'debug printing' }
