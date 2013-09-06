@@ -251,6 +251,12 @@ SpurBootstrap class >> BehaviorPROTOTYPEisVariable [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrap class >> CharacterPROTOTYPEasInteger [
+	<primitive: 171>
+	^self primitiveFailed
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrap class >> CharacterPROTOTYPEasciiValue [
 	<primitive: 171>
 	^self primitiveFailed
@@ -296,7 +302,7 @@ SpurBootstrap class >> ClassBuilderPROTOTYPEformat: nInstVars variable: isVar wo
 { #category : #'method prototypes' }
 SpurBootstrap class >> ProtoObjectPROTOTYPEscaledIdentityHash [
 	"For identityHash values returned by primitive 75, answer
-	 such values times 2^18.  Otherwise, match the existing
+	 such values times 2^8.  Otherwise, match the existing
 	 identityHash implementation"
 
 	^self identityHash * 256 "bitShift: 8"
@@ -320,6 +326,43 @@ SpurBootstrap class >> SystemDictionaryPROTOTYPEmaxIdentityHash [
 	"Answer the maximum identityHash value supported by the VM."
 	<primitive: 176>
 	^self primitiveFailed
+]
+
+{ #category : #'bootstrap methods' }
+SpurBootstrap >> addNewMethods [
+	"Get the simulator to add fake methods for all missing methods so that when we install
+	 the prototypes we can assign directly to the method dictionaries since by this time the
+	 system could well be inconsistent and broken by the changes."
+	| cmaiaSym basSym |
+	cmaiaSym := self findSymbol: #compiledMethodAt:ifAbsent:.
+	basSym := self findSymbol: #basicAddSelector:withMethod:.
+	self allPrototypeClassNames do:
+		[:sym| | class |
+		class := self findClassNamed: (symbolMap at: sym).
+		self prototypeClassNameSelectorMethodDo:
+			[:className :selector :method|
+			className = sym ifTrue:
+				["probe method dictionary of the class for each method, installing a dummy if not found."
+				[Transcript cr; nextPutAll: 'checking for '; nextPutAll: selector; flush.
+				 (self interpreterObject: class
+						perform: cmaiaSym
+						withArguments: {symbolMap at: selector. oldHeap nilObject}) = oldHeap nilObject ifTrue:
+					["no method.  install the real thing now"
+					 self interpreterObject: class
+						perform: basSym
+						withArguments: {symbolMap at: selector. self installableMethodFor: method}]]]]]
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap >> allPrototypeClassNames [
+	"self basicNew allPrototypeClassNames"
+	| symbols |
+	symbols := Set new.
+	(SpurBootstrap class organization listAtCategoryNamed: #'method prototypes') do:
+		[:protoSelector| | method |
+		method := SpurBootstrap class >> protoSelector.
+		symbols add: (self classNameForPrototypeMethod: method)].
+	^symbols
 ]
 
 { #category : #'method prototypes' }
@@ -625,29 +668,23 @@ SpurBootstrap >> installModifiedMethods [
 	 in the new image.  First use the simulator to get the image to intern all symbols and add
 	 dummy methods under new selectors.  With that done we can manually replace the relevant
 	 methods with the prototypes, mapping selectors and global variables as required."
-	self internAllSymbols.
-	self addDummyMethods.
-	self addInstallMethods.
+	self withExecutableInterpreterDo:
+		[self internAllSymbols.
+		 self addNewMethods.
+		 self replaceMethods].
 	self modifyCharacterMethods
 ]
 
 { #category : #'bootstrap methods' }
 SpurBootstrap >> internAllSymbols [
 	"Ensure that all symbols in the method prototypes are interned so that later we can install them.
-	 Do this by interpreting Symbol intern: 'aSymbol' for each symbol.  Make sure the execution state
-	 has not advanced when doing so, and restore the image to the state it has on snapshot."
-	| internSym savedpc initialContext finalContext |
+	 Enter them into the map, this system's symbol -> oldHeap's version.
+	 Do this by interpreting Symbol intern: 'aSymbol' for each symbol."
+	| internSym |
 	symbolMap := Dictionary new.
 	internSym := self findSymbol: #intern:.
-	oldInterpreter
-		initStackPages;
-		loadInitialContext;
-		internalizeIPandSP.
-	initialContext := oldInterpreter frameContext: oldInterpreter localFP.
-	savedpc := oldInterpreter localIP.
-	"oldInterpreter printHeadFrame."
 	self allPrototypeMethodSymbols do:
-		[:sym| | string fp |
+		[:sym| | string |
 		(self findSymbol: sym)
 			ifNotNil: [:imageSym| symbolMap at: sym put: imageSym]
 			ifNil:
@@ -656,29 +693,35 @@ SpurBootstrap >> internAllSymbols [
 				1 to: sym size do:
 					[:i| oldHeap storeByte: i - 1 ofObject: string withValue: (sym at: i) asInteger].
 				"Interpret Symbol intern: sym to ... intern it :-)"
-				oldInterpreter
-					internalPush: self symbolClass;
-					internalPush: string;
-					argumentCount: 1;
-					messageSelector: internSym.
-				fp := oldInterpreter localFP.
-				oldInterpreter normalSend.
-				[fp = oldInterpreter localFP] whileFalse:
-					[oldInterpreter singleStep].
-				symbolMap at: sym put: oldInterpreter internalPopStack.
-				self assert: oldInterpreter localIP - 1 = savedpc.
-				oldInterpreter localIP: savedpc]].
+				symbolMap
+					at: sym
+					put: (self interpreterObject: self symbolClass
+							perform: internSym
+							withArguments: {string})]].
 	symbolMap keysAndValuesDo:
 		[:sym :imageSym|
-		self assert: sym = (oldHeap stringOf: imageSym)].
-	"oldInterpreter printHeadFrame."
+		self assert: sym = (oldHeap stringOf: imageSym)]
+]
+
+{ #category : #'bootstrap methods' }
+SpurBootstrap >> interpreterObject: receiver perform: selector withArguments: arguments [
+	"Interpret an expression in oldHeap using oldInterpreter.
+	 Answer the result."
+	| fp savedpc result |
+	savedpc := oldInterpreter localIP.
+	oldInterpreter internalPush: receiver.
+	arguments do: [:arg| oldInterpreter internalPush: arg].
 	oldInterpreter
-		internalPush: oldInterpreter localIP;
-		externalizeIPandSP.
-	"now undo the execution state"
-	finalContext := oldInterpreter voidVMStateForSnapshot.
-	self assert: initialContext = finalContext.
-	self assert: oldInterpreter localIP = savedpc
+		argumentCount: arguments size;
+		messageSelector: selector.
+	fp := oldInterpreter localFP.
+	oldInterpreter normalSend.
+	[fp = oldInterpreter localFP] whileFalse:
+		[oldInterpreter singleStep].
+	result := oldInterpreter internalPopStack.
+	self assert: oldInterpreter localIP - 1 = savedpc.
+	oldInterpreter localIP: savedpc.
+	^result
 ]
 
 { #category : #testing }
@@ -771,6 +814,18 @@ SpurBootstrap >> on: imageName [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrap >> prototypeClassNameSelectorMethodDo: trinaryBlock [
+	"Evaluate aBlock with class name, method and selector."
+	(SpurBootstrap class organization listAtCategoryNamed: #'method prototypes') do:
+		[:protoSelector| | method |
+		method := SpurBootstrap class >> protoSelector.
+		trinaryBlock
+			value: (self classNameForPrototypeMethod: method)
+			value: (self selectorForPrototypeMethod: method)
+			value: method]
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrap >> selectorForPrototypeMethod: protoMethod [
 	| protoSelector |
 	protoSelector := protoMethod selector.
@@ -830,6 +885,29 @@ SpurBootstrap >> validate [
 		p := o].
 	p class.
 	self assert: (n between: map size and: map size + 5) "+ 5 is room for classTable"
+]
+
+{ #category : #'bootstrap methods' }
+SpurBootstrap >> withExecutableInterpreterDo: aBlock [
+	"With the oldInterpreter ready to execute code, evaluate aBlock,
+	 then return the interpreter (and the heap) to the ``just snapshotted'' state."
+	| savedpc initialContext finalContext |
+	oldInterpreter
+		initStackPages;
+		loadInitialContext;
+		internalizeIPandSP.
+	initialContext := oldInterpreter frameContext: oldInterpreter localFP.
+	savedpc := oldInterpreter localIP.
+	"oldInterpreter printHeadFrame."
+	aBlock value.
+	"oldInterpreter printHeadFrame."
+	oldInterpreter
+		internalPush: oldInterpreter localIP;
+		externalizeIPandSP.
+	"now undo the execution state"
+	finalContext := oldInterpreter voidVMStateForSnapshot.
+	self assert: initialContext = finalContext.
+	self assert: oldInterpreter localIP = savedpc
 ]
 
 { #category : #'word size' }
