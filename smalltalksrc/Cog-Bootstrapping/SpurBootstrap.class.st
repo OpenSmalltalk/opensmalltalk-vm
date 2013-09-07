@@ -56,7 +56,8 @@ Class {
 		'oldInterpreter',
 		'lastClassTablePage',
 		'symbolMap',
-		'methodClasses'
+		'methodClasses',
+		'installedPrototypes'
 	],
 	#pools : [
 		'VMObjectIndices'
@@ -379,7 +380,8 @@ SpurBootstrap >> addNewMethods [
 											   self installableMethodFor: method
 												selector: selector
 												className: className
-												isMeta: isMeta}]
+												isMeta: isMeta}.
+						installedPrototypes add: method selector]
 					ifFalse: "existing method; collect the methodClassAssociation; its needed later"
 						[methodClasses add: (oldInterpreter methodClassAssociationOf: methodOrNil)]]]]
 ]
@@ -731,6 +733,15 @@ SpurBootstrap >> firstOrdinaryClassIndex [
 ]
 
 { #category : #'bootstrap methods' }
+SpurBootstrap >> indexOfSelector: selectorOop in: methodDict [
+	SelectorStart to: (oldHeap fetchWordLengthOf: methodDict) - 1 do:
+		[:i|
+		(oldHeap fetchPointer: i ofObject: methodDict) = selectorOop ifTrue:
+			[^i]].
+	self error: 'could not find selector in method dict'
+]
+
+{ #category : #'bootstrap methods' }
 SpurBootstrap >> installModifiedMethods [
 	"Install all the methods in the class-side method prototypes protocol in the relevant classes
 	 in the new image.  First use the simulator to get the image to intern all symbols and add
@@ -738,6 +749,7 @@ SpurBootstrap >> installModifiedMethods [
 	 methods with the prototypes, mapping selectors and global variables as required."
 	symbolMap := Dictionary new.
 	methodClasses := Set new.
+	installedPrototypes := Set new.
 	self withExecutableInterpreterDo:
 		[self internAllSymbols.
 		 self addNewMethods.
@@ -850,6 +862,11 @@ SpurBootstrap >> methodClassForClassName: classNameSymbol isMeta: isMeta [
 	self error: 'could not find methodClassAssociation for ', classNameSymbol, (isMeta ifTrue: [' class'] ifFalse:[''])
 ]
 
+{ #category : #'bootstrap methods' }
+SpurBootstrap >> modifyCharacterMethods [
+	self shouldBeImplemented
+]
+
 { #category : #'bootstrap image' }
 SpurBootstrap >> newClassFormatFor: oldClassObj [
 	"OLD: 		<2 bits=instSize//64><5 bits=cClass><4 bits=instSpec><6 bits=instSize\\64><1 bit=0>
@@ -943,6 +960,33 @@ SpurBootstrap >> prototypeClassNameMetaSelectorMethodDo: quaternaryBlock [
 			value: isMeta
 			value: (self selectorForPrototypeMethod: method)
 			value: method]
+]
+
+{ #category : #'bootstrap methods' }
+SpurBootstrap >> replaceMethods [
+	"Replace all the modified method prototypes."
+	self allPrototypeClassNamesDo:
+		[:sym :symIsMeta| | class |
+		class := self findClassNamed: (symbolMap at: sym).
+		symIsMeta ifTrue: [class := oldHeap fetchClassOfNonImm: class].
+		self prototypeClassNameMetaSelectorMethodDo:
+			[:className :isMeta :selector :method| | replacement methodDict index |
+			(className = sym
+			 and: [symIsMeta = isMeta]) ifTrue:
+				[(installedPrototypes includes: method selector) ifFalse:
+					["probe method dictionary of the class for each method, installing a dummy if not found."
+					Transcript cr; nextPutAll: 'replacing '; nextPutAll: selector; flush.
+					replacement := self installableMethodFor: method
+										selector: selector
+										className: className
+										isMeta: isMeta.
+					methodDict := oldHeap fetchPointer: MethodDictionaryIndex ofObject: class.
+					index := self indexOfSelector: (symbolMap at: selector) in: methodDict.
+					oldHeap
+						storePointer: index - SelectorStart
+						ofObject: (oldHeap fetchPointer: MethodArrayIndex ofObject: methodDict)
+						withValue: replacement.
+					installedPrototypes add: method selector]]]]
 ]
 
 { #category : #'method prototypes' }
