@@ -1,5 +1,5 @@
 "
-SpurBootstrap bootstraps an image in CogMemoryManager format from a Squeak V3 + closures format.
+SpurBootstrap bootstraps an image in SpurMemoryManager format from a Squeak V3 + closures format.
 
 e.g.
 	(SpurBootstrap32 new on: '/Users/eliot/Cog/startreader.image')
@@ -7,14 +7,24 @@ e.g.
 		launch
 
 Instance Variables
-	classToIndex:		<Dictionary>
-	map:		<Dictionary>
-	newHeap:		<CogMemoryManager>
-	oldHeap:		<NewObjectMemory>
-	oldInterpreter:		<StackInterpreterSimulator>
+	classToIndex:			<Dictionary>
+	lastClassTablePage:	<Integer>
+	map:					<Dictionary>
+	methodClasses:		<Set>
+	newHeap:				<SpurMemoryManager>
+	oldHeap:				<NewObjectMemory>
+	oldInterpreter:			<StackInterpreterSimulator>
+	reverseMap:			<Dictionary>
+	symbolMap:				<Dictionary>
 
 classToIndex
 	- oldClass to new classIndex map
+
+lastClassTablePage
+	- oop in newHeap of last classTable page.  U<sed in validation to filter-out class table.
+
+methodClasses
+	- cache of methodClassAssociations for classes in which modified methods are installed
 
 map
 	- oldObject to newObject map
@@ -28,6 +38,11 @@ oldHeap
 oldInterpreter
 	- the interpreter associated with oldHeap, needed for a hack to grab WeakArray
 
+reverseMap
+	- newObject to oldObject map
+
+symbolMap
+	- symbol toi symbol oop in oldHeap, used to map prototype methdos to methods in oldHeap
 "
 Class {
 	#name : #SpurBootstrap,
@@ -887,7 +902,10 @@ SpurBootstrap >> on: imageName [
 
 { #category : #'method prototypes' }
 SpurBootstrap >> prototypeClassNameMetaSelectorMethodDo: quaternaryBlock [
-	"Evaluate aBlock with class name, class is meta, method and selector."
+	"Evaluate aBlock with class name, class is meta, method and selector.
+	 For now find methods in class-side category #'method prototypes'.
+	 Scheme could be extended to have different protocols for different
+	 Squeak/Pharo versions."
 	(SpurBootstrap class organization listAtCategoryNamed: #'method prototypes') do:
 		[:protoSelector| | method className isMeta |
 		method := SpurBootstrap class >> protoSelector.
