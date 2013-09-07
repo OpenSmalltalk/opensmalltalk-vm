@@ -350,6 +350,8 @@ SpurBootstrap >> addNewMethods [
 	| cmaiaSym basSym |
 	cmaiaSym := self findSymbol: #compiledMethodAt:ifAbsent:.
 	basSym := self findSymbol: #basicAddSelector:withMethod:.
+	basSym ifNil:
+		[basSym := self findSymbol: #addSelectorSilently:withMethod:].
 	self allPrototypeClassNamesDo:
 		[:sym :symIsMeta| | class |
 		class := self findClassNamed: (symbolMap at: sym).
@@ -684,6 +686,32 @@ SpurBootstrap >> findClassNamed: symbolOop [
 ]
 
 { #category : #'bootstrap methods' }
+SpurBootstrap >> findLiteral: aLiteral [
+	| symbolOop smalltalk array |
+	aLiteral isString ifTrue:
+		[^self stringFor: aLiteral].
+	self assert: aLiteral isVariableBinding.
+	symbolOop := self findSymbol: aLiteral key.
+	smalltalk := oldHeap splObj: 8.
+	array := oldHeap fetchPointer: 1 ofObject: smalltalk.
+	self assert: (oldHeap isArray: array).
+	0 to: (oldHeap fetchWordLengthOf: array) - 1 do:
+		[:i| | bindingOrNil |
+		bindingOrNil := oldHeap fetchPointer: i ofObject: array.
+		(bindingOrNil ~= oldHeap nilObject
+		 and: [symbolOop = (oldHeap fetchPointer: KeyIndex ofObject: bindingOrNil)
+		 and: [aLiteral key == #Smalltalk
+				ifTrue:
+					[(oldHeap fetchPointer: ValueIndex ofObject: bindingOrNil) = smalltalk]
+				ifFalse:
+					[oldInterpreter
+						classNameOf: (oldHeap fetchPointer: ValueIndex ofObject: bindingOrNil)
+						Is: aLiteral key]]]) ifTrue:
+			[^bindingOrNil]].
+	self error: 'couldn''t find literal ', aLiteral printString
+]
+
+{ #category : #'bootstrap methods' }
 SpurBootstrap >> findSymbol: aString [
 	"Find the Symbol equal to aString in oldHeap."
 	| symbolClass |
@@ -732,9 +760,11 @@ SpurBootstrap >> installableMethodFor: aCompiledMethod selector: selector classN
 	1 to: sourcelessMethod numLiterals - 1 do:
 		[:i| | literal |
 		literal := sourcelessMethod literalAt: i.
+		literal isMethodProperties ifTrue:
+			[literal := selector].
 		literal := literal isInteger
 					ifTrue: [oldHeap integerObjectOf: literal]
-					ifFalse: [symbolMap at: literal].
+					ifFalse: [symbolMap at: literal ifAbsent: [self findLiteral: literal]].
 		oldHeap storePointer: i ofObject: newMethod withValue: literal].
 	methodClass := self methodClassForClassName: className isMeta: isMeta.
 	oldHeap storePointer: sourcelessMethod numLiterals ofObject: newMethod withValue: methodClass.
@@ -752,20 +782,16 @@ SpurBootstrap >> internAllSymbols [
 	| internSym |
 	internSym := self findSymbol: #intern:.
 	self allPrototypeMethodSymbols do:
-		[:sym| | string |
+		[:sym|
 		(self findSymbol: sym)
 			ifNotNil: [:imageSym| symbolMap at: sym put: imageSym]
-			ifNil:
-				[Transcript cr; nextPutAll: 'interning '; nextPutAll: sym; flush.
-				string := oldHeap instantiateClass: (oldHeap splObj: ClassByteString) indexableSize: sym size.
-				1 to: sym size do:
-					[:i| oldHeap storeByte: i - 1 ofObject: string withValue: (sym at: i) asInteger].
+			ifNil:[Transcript cr; nextPutAll: 'interning '; nextPutAll: sym; flush.
 				"Interpret Symbol intern: sym to ... intern it :-)"
 				symbolMap
 					at: sym
 					put: (self interpreterObject: self symbolClass
 							perform: internSym
-							withArguments: {string})]].
+							withArguments: {self stringFor: sym})]].
 	symbolMap keysAndValuesDo:
 		[:sym :imageSym|
 		self assert: sym = (oldHeap stringOf: imageSym)]
@@ -808,7 +834,7 @@ SpurBootstrap >> launch [
 { #category : #'bootstrap methods' }
 SpurBootstrap >> methodClassForClassName: classNameSymbol isMeta: isMeta [ 
 	| class |
-	class := self findClassNamed: classNameSymbol.
+	class := self findClassNamed: (symbolMap at: classNameSymbol).
 	isMeta ifTrue: [class := oldHeap fetchClassOfNonImm: class].
 	methodClasses do:
 		[:mca|
@@ -927,6 +953,16 @@ SpurBootstrap >> selectorForPrototypeMethod: protoMethod [
 						- (protoSelector indexOfSubCollection: 'PROTOTYPE')
 						- 'PROTOTYPE' size
 						+ 1) asSymbol
+]
+
+{ #category : #'bootstrap methods' }
+SpurBootstrap >> stringFor: aString [
+	| string |
+	string := oldHeap instantiateClass: (oldHeap splObj: ClassByteString) indexableSize: aString size.
+	1 to: aString size do:
+		[:i| oldHeap storeByte: i - 1 ofObject: string withValue: (aString at: i) asInteger].
+	^string
+
 ]
 
 { #category : #'bootstrap methods' }
