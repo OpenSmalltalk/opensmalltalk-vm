@@ -40,7 +40,8 @@ Class {
 		'classToIndex',
 		'oldInterpreter',
 		'lastClassTablePage',
-		'symbolMap'
+		'symbolMap',
+		'methodClasses'
 	],
 	#pools : [
 		'VMObjectIndices'
@@ -330,39 +331,51 @@ SpurBootstrap class >> SystemDictionaryPROTOTYPEmaxIdentityHash [
 
 { #category : #'bootstrap methods' }
 SpurBootstrap >> addNewMethods [
-	"Get the simulator to add fake methods for all missing methods so that when we install
-	 the prototypes we can assign directly to the method dictionaries since by this time the
-	 system could well be inconsistent and broken by the changes."
+	"Get the simulator to add any and all missing methods immediately."
 	| cmaiaSym basSym |
 	cmaiaSym := self findSymbol: #compiledMethodAt:ifAbsent:.
 	basSym := self findSymbol: #basicAddSelector:withMethod:.
-	self allPrototypeClassNames do:
-		[:sym| | class |
+	self allPrototypeClassNamesDo:
+		[:sym :symIsMeta| | class |
 		class := self findClassNamed: (symbolMap at: sym).
-		self prototypeClassNameSelectorMethodDo:
-			[:className :selector :method|
-			className = sym ifTrue:
+		symIsMeta ifTrue: [class := oldHeap fetchClassOfNonImm: class].
+		self prototypeClassNameMetaSelectorMethodDo:
+			[:className :isMeta :selector :method| | methodOrNil |
+			(className = sym
+			 and: [symIsMeta = isMeta]) ifTrue:
 				["probe method dictionary of the class for each method, installing a dummy if not found."
-				[Transcript cr; nextPutAll: 'checking for '; nextPutAll: selector; flush.
-				 (self interpreterObject: class
-						perform: cmaiaSym
-						withArguments: {symbolMap at: selector. oldHeap nilObject}) = oldHeap nilObject ifTrue:
-					["no method.  install the real thing now"
-					 self interpreterObject: class
-						perform: basSym
-						withArguments: {symbolMap at: selector. self installableMethodFor: method}]]]]]
+				Transcript cr; nextPutAll: 'checking for '; nextPutAll: selector; flush.
+				 methodOrNil := self interpreterObject: class
+									perform: cmaiaSym
+									withArguments: {symbolMap at: selector. oldHeap nilObject}.
+				 methodOrNil = oldHeap nilObject
+					ifTrue: "no method.  install the real thing now"
+						[Transcript
+							cr;
+							nextPutAll: 'installing ';
+							nextPutAll: className;
+							nextPutAll: (isMeta ifTrue: [' class>>'] ifFalse: ['>>']);
+							store: selector; flush.
+						 self interpreterObject: class
+							perform: basSym
+							withArguments: { symbolMap at: selector.
+											   self installableMethodFor: method
+												selector: selector
+												className: className
+												isMeta: isMeta}]
+					ifFalse: "existing method; collect the methodClassAssociation; its needed later"
+						[methodClasses add: (oldInterpreter methodClassAssociationOf: methodOrNil)]]]]
 ]
 
 { #category : #'method prototypes' }
-SpurBootstrap >> allPrototypeClassNames [
+SpurBootstrap >> allPrototypeClassNamesDo: aBlock [
 	"self basicNew allPrototypeClassNames"
-	| symbols |
-	symbols := Set new.
-	(SpurBootstrap class organization listAtCategoryNamed: #'method prototypes') do:
-		[:protoSelector| | method |
-		method := SpurBootstrap class >> protoSelector.
-		symbols add: (self classNameForPrototypeMethod: method)].
-	^symbols
+	| pairs |
+	pairs := Set new.
+	self prototypeClassNameMetaSelectorMethodDo:
+		[:className :isMeta :selector :method |
+		pairs add: {className. isMeta}].
+	pairs do: [:pair| aBlock value: pair first value: pair last]
 ]
 
 { #category : #'method prototypes' }
@@ -370,11 +383,12 @@ SpurBootstrap >> allPrototypeMethodSymbols [
 	"self basicNew allPrototypeMethodSymbols"
 	| symbols |
 	symbols := Set new.
-	(SpurBootstrap class organization listAtCategoryNamed: #'method prototypes') do:
-		[:protoSelector| | method |
-		method := SpurBootstrap class >> protoSelector.
-		symbols add: (self selectorForPrototypeMethod: method).
-		symbols addAll: (method literals select: [:l| l isSymbol and: [l ~~ protoSelector]])].
+	self prototypeClassNameMetaSelectorMethodDo:
+		[:className :isMeta :selector :method |
+		symbols
+			add: className;
+			add: selector;
+			addAll: (method literals select: [:l| l isSymbol and: [l ~~ method selector]])].
 	^symbols
 ]
 
@@ -644,6 +658,17 @@ SpurBootstrap >> fillInPointerObject: newObj from: oldObj [
 ]
 
 { #category : #'bootstrap methods' }
+SpurBootstrap >> findClassNamed: symbolOop [ 
+	oldHeap allObjectsDo:
+		[:o|
+		((oldHeap isPointersNonImm: o)
+		 and: [(oldInterpreter addressCouldBeClassObj: o)
+		 and: [(oldHeap fetchPointer: oldInterpreter classNameIndex ofObject: o) = symbolOop]]) ifTrue:
+			[^o]].
+	^nil
+]
+
+{ #category : #'bootstrap methods' }
 SpurBootstrap >> findSymbol: aString [
 	"Find the Symbol equal to aString in oldHeap."
 	| symbolClass |
@@ -668,6 +693,8 @@ SpurBootstrap >> installModifiedMethods [
 	 in the new image.  First use the simulator to get the image to intern all symbols and add
 	 dummy methods under new selectors.  With that done we can manually replace the relevant
 	 methods with the prototypes, mapping selectors and global variables as required."
+	symbolMap := Dictionary new.
+	methodClasses := Set new.
 	self withExecutableInterpreterDo:
 		[self internAllSymbols.
 		 self addNewMethods.
@@ -676,12 +703,38 @@ SpurBootstrap >> installModifiedMethods [
 ]
 
 { #category : #'bootstrap methods' }
+SpurBootstrap >> installableMethodFor: aCompiledMethod selector: selector className: className isMeta: isMeta [
+	| compiledMethodClass sourcelessMethod bytes newMethod methodClass |
+	compiledMethodClass := self findClassNamed: (self findSymbol: #CompiledMethod).
+	sourcelessMethod := aCompiledMethod copyWithTempsFromMethodNode: aCompiledMethod methodNode.
+	sourcelessMethod selector: selector.
+	bytes := sourcelessMethod size - sourcelessMethod initialPC + 1.
+	newMethod := self
+					interpreterObject: compiledMethodClass
+					perform: (self findSymbol: #newMethod:header:)
+					withArguments: { oldHeap integerObjectOf: bytes.
+									   oldHeap integerObjectOf: sourcelessMethod header }.
+	1 to: sourcelessMethod numLiterals - 1 do:
+		[:i| | literal |
+		literal := sourcelessMethod literalAt: i.
+		literal := literal isInteger
+					ifTrue: [oldHeap integerObjectOf: literal]
+					ifFalse: [symbolMap at: literal].
+		oldHeap storePointer: i ofObject: newMethod withValue: literal].
+	methodClass := self methodClassForClassName: className isMeta: isMeta.
+	oldHeap storePointer: sourcelessMethod numLiterals ofObject: newMethod withValue: methodClass.
+	sourcelessMethod initialPC to: sourcelessMethod size do:
+		[:i|
+		oldHeap storeByte: i - 1 ofObject: newMethod withValue: (sourcelessMethod byteAt: i)].
+	^newMethod
+]
+
+{ #category : #'bootstrap methods' }
 SpurBootstrap >> internAllSymbols [
 	"Ensure that all symbols in the method prototypes are interned so that later we can install them.
 	 Enter them into the map, this system's symbol -> oldHeap's version.
 	 Do this by interpreting Symbol intern: 'aSymbol' for each symbol."
 	| internSym |
-	symbolMap := Dictionary new.
 	internSym := self findSymbol: #intern:.
 	self allPrototypeMethodSymbols do:
 		[:sym| | string |
@@ -735,6 +788,25 @@ SpurBootstrap >> launch [
 		instVarNamed: 'printBytecodeAtEachStep' put: true;
 		instVarNamed: 'methodDictLinearSearchLimit' put: SmallInteger maxVal. "for now"
 	sim run
+]
+
+{ #category : #'bootstrap methods' }
+SpurBootstrap >> methodClassForClassName: classNameSymbol isMeta: isMeta [ 
+	| class |
+	class := self findClassNamed: classNameSymbol.
+	isMeta ifTrue: [class := oldHeap fetchClassOfNonImm: class].
+	methodClasses do:
+		[:mca|
+		class = (oldHeap fetchPointer: ValueIndex ofObject: mca) ifTrue:
+			[^mca]].
+	oldHeap allObjectsDo:
+		[:o| | methodClassAssociation |
+		(oldHeap isCompiledMethod: o) ifTrue:
+			[methodClassAssociation := oldInterpreter methodClassAssociationOf: o.
+			 class == (oldHeap fetchPointer: ValueIndex ofObject: methodClassAssociation) ifTrue:
+				[methodClasses add: methodClassAssociation.
+				 ^methodClassAssociation]]].
+	self error: 'could not find methodClassAssociation for ', classNameSymbol, (isMeta ifTrue: [' class'] ifFalse:[''])
 ]
 
 { #category : #'bootstrap image' }
@@ -814,13 +886,17 @@ SpurBootstrap >> on: imageName [
 ]
 
 { #category : #'method prototypes' }
-SpurBootstrap >> prototypeClassNameSelectorMethodDo: trinaryBlock [
-	"Evaluate aBlock with class name, method and selector."
+SpurBootstrap >> prototypeClassNameMetaSelectorMethodDo: quaternaryBlock [
+	"Evaluate aBlock with class name, class is meta, method and selector."
 	(SpurBootstrap class organization listAtCategoryNamed: #'method prototypes') do:
-		[:protoSelector| | method |
+		[:protoSelector| | method className isMeta |
 		method := SpurBootstrap class >> protoSelector.
-		trinaryBlock
-			value: (self classNameForPrototypeMethod: method)
+		className := self classNameForPrototypeMethod: method.
+		(isMeta := className endsWith: 'class') ifTrue:
+			[className := (className allButLast: 5) asSymbol].
+		quaternaryBlock
+			value: className
+			value: isMeta
 			value: (self selectorForPrototypeMethod: method)
 			value: method]
 ]
