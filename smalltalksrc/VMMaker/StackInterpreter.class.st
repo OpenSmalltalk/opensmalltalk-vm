@@ -1712,8 +1712,8 @@ StackInterpreter >> addressCouldBeClassObj: maybeClassObj [
 	<inline: false>
 	^(objectMemory addressCouldBeObj: maybeClassObj)
 	  and: [((objectMemory isPointersNonImm: maybeClassObj) and: [(objectMemory lengthOf: maybeClassObj) >= (InstanceSpecificationIndex+1)])
-	  and: [(objectMemory isPointersNonImm: (objectMemory fetchPointer: SuperclassIndex ofObject: maybeClassObj))
-	  and: [(objectMemory isPointersNonImm: (objectMemory fetchPointer: MethodDictionaryIndex ofObject: maybeClassObj))
+	  and: [(objectMemory isPointers: (objectMemory fetchPointer: SuperclassIndex ofObject: maybeClassObj))
+	  and: [(objectMemory isPointers: (objectMemory fetchPointer: MethodDictionaryIndex ofObject: maybeClassObj))
 	  and: [(objectMemory isIntegerObject: (objectMemory fetchPointer: InstanceSpecificationIndex ofObject: maybeClassObj))]]]]
 ]
 
@@ -3342,6 +3342,12 @@ StackInterpreter >> checkedIntegerValueOf: intOop [
 	(objectMemory isIntegerObject: intOop)
 		ifTrue: [ ^ objectMemory integerValueOf: intOop ]
 		ifFalse: [ self primitiveFail. ^ 0 ]
+]
+
+{ #category : #simulation }
+StackInterpreter >> classNameIndex [
+	<doNotGenerate>
+	^classNameIndex
 ]
 
 { #category : #'plugin primitive support' }
