@@ -2098,12 +2098,6 @@ CoInterpreter >> checkStackIntegrity [
 	^ok
 ]
 
-{ #category : #simulation }
-CoInterpreter >> classNameIndex [
-	<doNotGenerate>
-	^classNameIndex
-]
-
 { #category : #'process primitive support' }
 CoInterpreter >> clearCogCompiledCodeCompactionCalledFor [
 	"For in-image tests"
