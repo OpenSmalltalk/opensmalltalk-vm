@@ -667,6 +667,11 @@ SpurMemoryManager >> classIndexOf: objOop [
 ]
 
 { #category : #'class table' }
+SpurMemoryManager >> classIsItselfClassIndexPun [
+	^4
+]
+
+{ #category : #'class table' }
 SpurMemoryManager >> classTableMajorIndexShift [
 	"1024 entries per page (2^10); 22 bit classIndex implies 2^12 pages"
 	^10
@@ -745,17 +750,19 @@ SpurMemoryManager >> fetchByte: byteIndex ofObject: objOop [
 ]
 
 { #category : #'object access' }
-SpurMemoryManager >> fetchClassOf: oop [ 
+SpurMemoryManager >> fetchClassOf: oop [
 	| tagBits |
 	(tagBits := oop bitAnd: self tagMask) ~= 0 ifTrue:
 		[^self fetchPointer: tagBits ofObject: classTableFirstPage].
-	^self classAtIndex: (self classIndexOf: oop)
+	^self fetchClassOfNonImm: oop
 ]
 
 { #category : #'object access' }
-SpurMemoryManager >> fetchClassOfNonImm: objOop [ 
+SpurMemoryManager >> fetchClassOfNonImm: objOop [
 	| classIndex |
 	classIndex := self classIndexOf: objOop.
+	classIndex = self classIsItselfClassIndexPun ifTrue:
+		[^objOop].
 	^self classAtIndex: classIndex
 ]
 
@@ -1135,22 +1142,22 @@ SpurMemoryManager >> isContextNonImm: oop [
 
 { #category : #'object testing' }
 SpurMemoryManager >> isForwarded: objOop [
-	^(self classIndexOf: objOop) = self isForwardedClassIndexPun
+	^(self classIndexOf: objOop) = self isForwardedObjectClassIndexPun
 ]
 
 { #category : #'class table' }
-SpurMemoryManager >> isForwardedClassIndexPun [
+SpurMemoryManager >> isForwardedObjectClassIndexPun [
 	^1
-]
-
-{ #category : #'class table' }
-SpurMemoryManager >> isFreeClassIndexPun [
-	^0
 ]
 
 { #category : #'object testing' }
 SpurMemoryManager >> isFreeObject: objOop [
-	^(self classIndexOf: objOop) = self isFreeClassIndexPun
+	^(self classIndexOf: objOop) = self isFreeObjectClassIndexPun
+]
+
+{ #category : #'class table' }
+SpurMemoryManager >> isFreeObjectClassIndexPun [
+	^0
 ]
 
 { #category : #'object testing' }
@@ -1202,6 +1209,11 @@ SpurMemoryManager >> isOopCompiledMethod: oop [
 SpurMemoryManager >> isPointersNonImm: objOop [
 	"Answer if the argument has only fields that can hold oops. See comment in formatOf:"
 	^(self formatOf: objOop) <= 5
+]
+
+{ #category : #'class table' }
+SpurMemoryManager >> isSegmentSpanningFakeObjectPun [
+	^3
 ]
 
 { #category : #'object testing' }
