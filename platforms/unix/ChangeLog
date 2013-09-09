@@ -1,3 +1,8 @@
+2013-09-09  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* cmake/configure (svnversion): Look for evidence of checked out
+	sources in both "squeak/trunk/platforms" and "squeak/trunk".
+
 2013-08-19  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* doc/README.FastBitBlt: Added instructions for compiling on ARM

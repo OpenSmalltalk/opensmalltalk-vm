@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Last edited: 2013-08-11 23:16:05 by piumarta on emilia
+# Last edited: 2013-09-09 13:29:13 by piumarta on emilia
 
 RELEASE_TAG=""
 
@@ -91,7 +91,7 @@ fi
 
 vmmversion="`tr '\015 ' '\012\012' < \"${interp_h}\" | sed '1,/VMMaker/d;q'`"
 
-if test -d "${unix}/../.svn"; then
+if test -d "${unix}/../.svn" -o -d "${unix}/../../.svn"; then
     svnversion=`svn info "${unix}/ChangeLog" | fgrep Revision: | awk '{print $2}'`
     echo "${svnversion}" > "${unix}/svnversion"
 else
