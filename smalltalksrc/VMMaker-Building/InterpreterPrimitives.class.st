@@ -167,19 +167,6 @@ InterpreterPrimitives >> isInstanceOfClassByteString: oop [
 ]
 
 { #category : #'primitive support' }
-InterpreterPrimitives >> isInstanceOfClassCharacter: oop [
-	<inline: true>
-	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
-	 (because is:instanceOf:compactClassIndex: has an inline: pragma) the
-	 phrase (objectMemory splObj: ClassCharacter) is expanded in-place
-	 and is _not_ evaluated if oop has a non-zero CompactClassIndex."
-	^objectMemory
-		is: oop
-		instanceOf: (objectMemory splObj: ClassCharacter) 
-		compactClassIndex: 0
-]
-
-{ #category : #'primitive support' }
 InterpreterPrimitives >> isInstanceOfClassFloat: oop [
 	<inline: true>
 	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
@@ -317,10 +304,16 @@ InterpreterPrimitives >> positive32BitValueOf: oop [
 	The object may be either a positive SmallInteger or a four-byte LargePositiveInteger."
 
 	| value ok |
-	(objectMemory isIntegerObject: oop) ifTrue:
-		[value := objectMemory integerValueOf: oop.
-		value < 0 ifTrue: [self primitiveFail. value := 0].
-		^value].
+	(objectMemory isIntegerObject: oop)
+		ifTrue:
+			[value := objectMemory integerValueOf: oop.
+			value < 0 ifTrue: [self primitiveFail. value := 0].
+			^value]
+		ifFalse:
+			[(objectMemory hasSpurMemoryManagerAPI
+			  and: [objectMemory isImmediate: oop]) ifTrue:
+				[self primitiveFail.
+				 ^0]].
 
 	ok := objectMemory isClassOfNonImm: oop
 			equalTo: (objectMemory splObj: ClassLargePositiveInteger)
@@ -2399,13 +2392,20 @@ InterpreterPrimitives >> primitiveNewWithArg [
 	size := self positive32BitValueOf: self stackTop.
 	(self successful and: [size >= 0])
 		ifTrue:
-			[spaceOkay := objectMemory sufficientSpaceToInstantiate: (self stackValue: 1) indexableSize: size.
-			 spaceOkay ifTrue:
-					[self
-						pop: argumentCount + 1
-						thenPush: (objectMemory instantiateClass: (self stackValue: 1) indexableSize: size)]
+			[objectMemory hasSpurMemoryManagerAPI
+				ifTrue:
+					[(objectMemory instantiateClass: (self stackValue: 1) indexableSize: size)
+						ifNotNil: [:obj| self pop: argumentCount + 1 thenPush: obj]
+						ifNil: [self primitiveFailFor: PrimErrNoMemory]]
 				ifFalse:
-					[self primitiveFailFor: PrimErrNoMemory]]
+					[spaceOkay := objectMemory sufficientSpaceToInstantiate: (self stackValue: 1) indexableSize: size.
+					 spaceOkay
+						ifTrue:
+							[self
+								pop: argumentCount + 1
+								thenPush: (objectMemory instantiateClass: (self stackValue: 1) indexableSize: size)]
+						ifFalse:
+							[self primitiveFailFor: PrimErrNoMemory]]]
 		ifFalse:
 			[self primitiveFailFor: PrimErrBadArgument]
 ]
@@ -3113,7 +3113,8 @@ InterpreterPrimitives >> primitiveSize [
 		(fmt := objectMemory formatOfHeader: hdr) < 2]) "This is not an indexable object"
 		ifTrue:
 			[^self primitiveFailFor: PrimErrBadReceiver].
-	(fmt = 3 and: [objectMemory isContextHeader: hdr]) ifTrue:
+	(fmt = objectMemory indexablePointersFormat
+	 and: [objectMemory isContextHeader: hdr]) ifTrue:
 		[^self primitiveContextSize].
 	totalLength := objectMemory lengthOf: rcvr baseHeader: hdr format: fmt.
 	fixedFields := objectMemory fixedFieldsOf: rcvr format: fmt length: totalLength.

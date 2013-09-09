@@ -3640,24 +3640,24 @@ StackInterpreter >> commonVariable: rcvr at: index cacheIndex: atIx [
 	((self oop: index isGreaterThanOrEqualTo: 1)
 	 and: [self oop: index isLessThanOrEqualTo: stSize]) ifTrue:
 		[fmt := atCache at: atIx+AtCacheFmt.
-		 fmt <= 4 ifTrue:
+		 fmt <= objectMemory weakArrayFormat ifTrue:
 			[self assert: (objectMemory isContextNonInt: rcvr) not.
 			 fixedFields := atCache at: atIx+AtCacheFixedFields.
 			 ^objectMemory fetchPointer: index + fixedFields - 1 ofObject: rcvr].
-		 fmt < 8 ifTrue:  "Bitmap"
+		 fmt < objectMemory firstByteFormat ifTrue:  "Bitmap"
 			[result := objectMemory fetchLong32: index - 1 ofObject: rcvr.
 			 ^self positive32BitIntegerFor: result].
-		 fmt >= 16  "Note fmt >= 16 is an artificial flag for strings"
+		 fmt >= objectMemory firstStringyFakeFormat  "Note fmt >= firstStringyFormat is an artificial flag for strings"
 			ifTrue: "String"
 				[^self characterForAscii: (objectMemory fetchByte: index - 1 ofObject: rcvr)]
 			ifFalse:
-				[(fmt < 12 "ByteArray"
+				[(fmt < objectMemory firstCompiledMethodFormat "ByteArray"
 				  or: [index >= (self firstByteIndexOfMethod: rcvr) "CompiledMethod"]) ifTrue:
 					[^objectMemory integerObjectOf: (objectMemory fetchByte: index - 1 ofObject: rcvr)]]].
 
-	^self primitiveFailFor: ((objectMemory formatOf: rcvr) <= 1
-								ifTrue: [PrimErrBadReceiver]
-								ifFalse: [PrimErrBadIndex])
+	^self primitiveFailFor: ((objectMemory isIndexable: rcvr)
+								ifFalse: [PrimErrBadReceiver]
+								ifTrue: [PrimErrBadIndex])
 ]
 
 { #category : #'indexing primitive support' }
@@ -3669,21 +3669,23 @@ StackInterpreter >> commonVariable: rcvr at: index put: value cacheIndex: atIx [
 	((self oop: index isGreaterThanOrEqualTo: 1)
 	  and: [self oop: index isLessThanOrEqualTo: stSize]) ifTrue:
 		[fmt := atCache at: atIx+AtCacheFmt.
-		fmt <= 4 ifTrue:
+		fmt <= objectMemory weakArrayFormat ifTrue:
 			[self assert: (objectMemory isContextNonInt: rcvr) not.
 			 fixedFields := atCache at: atIx+AtCacheFixedFields.
 			 ^objectMemory storePointer: index + fixedFields - 1 ofObject: rcvr withValue: value].
-		fmt < 8 ifTrue:  "Bitmap"
+		fmt < objectMemory firstByteFormat ifTrue:  "Bitmap"
 			[valToPut := self positive32BitValueOf: value.
-			self successful ifTrue: [objectMemory storeLong32: index - 1 ofObject: rcvr withValue: valToPut].
-			^nil].
-		fmt >= 16  "Note fmt >= 16 is an artificial flag for strings"
-			ifTrue: [isCharacter := self isInstanceOfClassCharacter: value.
+			 self successful ifTrue:
+				[objectMemory storeLong32: index - 1 ofObject: rcvr withValue: valToPut.
+				^nil].
+			 ^self primitiveFailFor: PrimErrBadArgument].
+		fmt >= objectMemory firstStringyFakeFormat  "Note fmt >= firstStringyFormat is an artificial flag for strings"
+			ifTrue: [isCharacter := objectMemory isCharacterObject: value.
 					isCharacter ifFalse:
 						[^self primitiveFailFor: PrimErrBadArgument].
 					valToPut := objectMemory fetchPointer: CharacterValueIndex ofObject: value]
 			ifFalse:
-				[(fmt >= 12 and: [index < (self firstByteIndexOfMethod: rcvr)]) ifTrue: "CompiledMethod"
+				[(fmt >= objectMemory firstCompiledMethodFormat and: [index < (self firstByteIndexOfMethod: rcvr)]) ifTrue: "CompiledMethod"
 					[^self primitiveFailFor: PrimErrBadIndex].
 				valToPut := value].
 		(objectMemory isIntegerObject: valToPut) ifTrue:
@@ -3691,9 +3693,9 @@ StackInterpreter >> commonVariable: rcvr at: index put: value cacheIndex: atIx [
 			((valToPut >= 0) and: [valToPut <= 255]) ifFalse: [^self primitiveFailFor: PrimErrBadArgument].
 			^objectMemory storeByte: index - 1 ofObject: rcvr withValue: valToPut]].
 
-	^self primitiveFailFor: ((objectMemory formatOf: rcvr) <= 1
-								ifTrue: [PrimErrBadReceiver]
-								ifFalse: [PrimErrBadIndex])
+	^self primitiveFailFor: ((objectMemory isIndexable: rcvr)
+								ifFalse: [PrimErrBadReceiver]
+								ifTrue: [PrimErrBadIndex])
 ]
 
 { #category : #'arithmetic primitive support' }
@@ -6209,7 +6211,7 @@ StackInterpreter >> install: rcvr inAtCache: cache at: atIx string: stringy [
 
 	hdr := objectMemory baseHeader: rcvr.
 	fmt := objectMemory formatOfHeader: hdr.
-	(fmt = 3 and: [objectMemory isContextHeader: hdr]) ifTrue:
+	(fmt = objectMemory indexablePointersFormat and: [objectMemory isContextHeader: hdr]) ifTrue:
 		["Contexts must not be put in the atCache, since their size is not constant"
 		self primitiveFailFor: PrimErrBadReceiver.
 		^false].
@@ -6218,7 +6220,7 @@ StackInterpreter >> install: rcvr inAtCache: cache at: atIx string: stringy [
 
 	cache at: atIx+AtCacheOop put: rcvr.
 	cache at: atIx+AtCacheFmt put: (stringy
-										ifTrue: [fmt + 16]  "special flag for strings"
+										ifTrue: [fmt + objectMemory firstStringyFakeFormat]  "special flag for strings"
 										ifFalse: [fmt]).
 	cache at: atIx+AtCacheFixedFields put: fixedFields.
 	cache at: atIx+AtCacheSize put: totalLength - fixedFields.
@@ -6554,11 +6556,6 @@ StackInterpreter >> isFloatObject: oop [
 	   and: [ClassFloatCompactIndex ~= 0
 			ifTrue: [(objectMemory compactClassIndexOf: oop) = ClassFloatCompactIndex]
 			ifFalse: [(objectMemory fetchClassOfNonImm: oop) = objectMemory classFloat]]
-]
-
-{ #category : #'object format' }
-StackInterpreter >> isIndexable: oop [
-	^(objectMemory formatOf: oop) >= 2
 ]
 
 { #category : #'frame access' }
@@ -10940,7 +10937,8 @@ StackInterpreter >> snapshotCleanUp [
 			[header := self longAt: oop.
 			 fmt := objectMemory formatOfHeader: header.
 			 "Clean out context"
-			 (fmt = 3 and: [objectMemory isContextHeader: header]) ifTrue:
+			 (fmt = objectMemory indexablePointersFormat
+			  and: [objectMemory isContextHeader: header]) ifTrue:
 				["All contexts have been divorced. Bereave remaining widows."
 				 (self isMarriedOrWidowedContext: oop) ifTrue:
 					[self markContextAsDead: oop].
@@ -10948,12 +10946,11 @@ StackInterpreter >> snapshotCleanUp [
 				 (objectMemory lastPointerOf: oop) + BytesPerWord
 				 to: sz - BaseHeaderSize by: BytesPerWord
 				 do: [:i | self longAt: oop + i put: objectMemory nilObject]].
-			 "Clean out external functions"
-			 fmt >= 12 ifTrue:
-				["This is a compiled method"
+			 "Clean out external functions from compiled methods"
+			 fmt >= objectMemory firstCompiledMethodFormat ifTrue:
+				["Its primitiveExternalCall"
 				 (self primitiveIndexOf: oop) = PrimitiveExternalCallIndex ifTrue:
-					["Its primitiveExternalCall"
-					 self flushExternalPrimitiveOf: oop]]].
+					[self flushExternalPrimitiveOf: oop]]].
 			oop := objectMemory objectAfter: oop].
 	objectMemory clearRootsTable
 ]
@@ -10985,7 +10982,8 @@ StackInterpreter >> stObject: array at: index [
 	fmt := objectMemory formatOfHeader: hdr.
 	totalLength := objectMemory lengthOf: array baseHeader: hdr format: fmt.
 	fixedFields := objectMemory fixedFieldsOf: array format: fmt length: totalLength.
-	(fmt = 3 and: [objectMemory isContextHeader: hdr])
+	(fmt = objectMemory indexablePointersFormat
+	 and: [objectMemory isContextHeader: hdr])
 		ifTrue:
 			[stSize := self stackPointerForMaybeMarriedContext: array.
 			((self oop: index isGreaterThanOrEqualTo: 1)
@@ -11009,7 +11007,7 @@ StackInterpreter >> stObject: array at: index put: value [
 	fmt := objectMemory formatOfHeader: hdr.
 	totalLength := objectMemory lengthOf: array baseHeader: hdr format: fmt.
 	fixedFields := objectMemory fixedFieldsOf: array format: fmt length: totalLength.
-	(fmt = 3
+	(fmt = objectMemory indexablePointersFormat
 	 and: [objectMemory isContextHeader: hdr])
 		ifTrue:
 			[stSize := self stackPointerForMaybeMarriedContext: array.
@@ -11036,7 +11034,8 @@ StackInterpreter >> stSizeOf: oop [
 	fmt := objectMemory formatOfHeader: hdr.
 	totalLength := objectMemory lengthOf: oop baseHeader: hdr format: fmt.
 	fixedFields := objectMemory fixedFieldsOf: oop format: fmt length: totalLength.
-	fmt = 3 ifTrue: [self assert: (objectMemory isContextHeader: hdr) not].
+	fmt = objectMemory indexablePointersFormat ifTrue:
+		[self assert: (objectMemory isContextHeader: hdr) not].
 	^totalLength - fixedFields
 ]
 
