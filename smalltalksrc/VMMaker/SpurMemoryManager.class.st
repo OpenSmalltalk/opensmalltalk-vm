@@ -1261,9 +1261,18 @@ SpurMemoryManager >> isIntegerObject: oop [
 		frameOfMarriedContext:
 		addressCouldBeClassObj:
 		isMarriedOrWidowedContext:
-		shortPrint:) includes: thisContext sender method selector) ifFalse:
+		shortPrint:
+		bytecodePrimAt
+		commonAt:
+		loadFloatOrIntFrom:) includes: thisContext sender method selector) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
+]
+
+{ #category : #'interpreter access' }
+SpurMemoryManager >> isIntegerValue: intValue [
+	"Answer if the given value can be represented as a Smalltalk integer value."
+	^self subclassResponsibility
 ]
 
 { #category : #'object testing' }
