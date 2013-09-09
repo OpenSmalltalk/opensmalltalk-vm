@@ -106,7 +106,7 @@ CurrentImageCoInterpreterFacade >> canContextSwitchIfActivating: method header: 
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> characterTable [
-	^self oopForObject: Character characterTable
+	^self subclassResponsibility
 ]
 
 { #category : #accessing }
@@ -161,11 +161,6 @@ CurrentImageCoInterpreterFacade >> compactClassFieldWidth [
 	^objectMemory compactClassFieldWidth
 ]
 
-{ #category : #accessing }
-CurrentImageCoInterpreterFacade >> compactClassTable [
-	^self oopForObject: Smalltalk compactClassesArray
-]
-
 { #category : #'debug support' }
 CurrentImageCoInterpreterFacade >> compilationBreak: aString point: length [ 
 	^self
@@ -218,8 +213,8 @@ CurrentImageCoInterpreterFacade >> fetchPointer: index ofObject: anOop [
 ]
 
 { #category : #accessing }
-CurrentImageCoInterpreterFacade >> formatOfClass: classOop [ 
-	^(self objectForOop: classOop) format << 1
+CurrentImageCoInterpreterFacade >> formatOfClass: classOop [
+	^self subclassResponsibility
 ]
 
 { #category : #accessing }
@@ -525,7 +520,7 @@ CurrentImageCoInterpreterFacade >> objectMemory [
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> objectRepresentationClass [
-	^CogObjectRepresentationForSqueakV3
+	^self subclassResponsibility
 ]
 
 { #category : #'object map' }
@@ -735,5 +730,5 @@ CurrentImageCoInterpreterFacade >> unalignedLongAt: index [
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> youngStartAddress [
-	^16r4E5E400
+	^self subclassResponsibility
 ]

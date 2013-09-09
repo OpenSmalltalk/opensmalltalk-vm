@@ -3118,7 +3118,7 @@ StackInterpreter >> checkOkayFields: oop [
 	(oop = nil or: [oop = 0]) ifTrue: [ ^true ]. "?? eem 1/16/2013"
 	(objectMemory isIntegerObject: oop) ifTrue: [ ^true ].
 	(objectMemory checkOkayOop: oop) ifFalse: [ ^false ].
-	(self checkOopHasOkayClass: oop) ifFalse: [ ^false ].
+	(objectMemory checkOopHasOkayClass: oop) ifFalse: [ ^false ].
 	((objectMemory isPointersNonInt: oop) or: [objectMemory isCompiledMethod: oop]) ifFalse: [ ^true ].
 	hasYoung := objectMemory isYoung: (objectMemory fetchClassOfNonImm: oop).
 	(objectMemory isCompiledMethod: oop)
@@ -3224,39 +3224,6 @@ StackInterpreter >> checkOkayStackZone: writeBack [
 			[ok := ok & (self checkOkayStackPage: thePage)]].
 
 	^ok
-]
-
-{ #category : #'debug support' }
-StackInterpreter >> checkOopHasOkayClass: obj [
-	"Attempt to verify that the given obj has a reasonable behavior. The class must be a
-	 valid, non-integer oop and must not be nilObj. It must be a pointers object with three
-	 or more fields. Finally, the instance specification field of the behavior must match that
-	 of the instance. If OK answer true.  If  not, print reason and answer false."
-
-	<api>
-	<var: #oop type: #usqInt>
-	| objClass formatMask behaviorFormatBits objFormatBits |
-	<var: #oopClass type: #usqInt>
-
-	(objectMemory checkOkayOop: obj) ifFalse:
-		[^false].
-	objClass := self cCoerce: (objectMemory fetchClassOfNonImm: obj) to: #usqInt.
-
-	(objectMemory isIntegerObject: objClass) ifTrue:
-		[self print: 'obj '; printHex: obj; print: ' a SmallInteger is not a valid class or behavior'; cr. ^false].
-	(objectMemory okayOop: objClass) ifFalse:
-		[self print: 'obj '; printHex: obj; print: ' class obj is not ok'; cr. ^false].
-	((objectMemory isPointersNonInt: objClass) and: [(objectMemory lengthOf: objClass) >= 3]) ifFalse:
-		[self print: 'obj '; printHex: obj; print: ' a class (behavior) must be a pointers object of size >= 3'; cr. ^false].
-	formatMask := (objectMemory isBytes: obj)
-						ifTrue: [16rC00]  "ignore extra bytes size bits"
-						ifFalse: [16rF00].
-
-	behaviorFormatBits := (objectMemory formatOfClass: objClass) bitAnd: formatMask.
-	objFormatBits := (objectMemory baseHeader: obj) bitAnd: formatMask.
-	behaviorFormatBits = objFormatBits ifFalse:
-		[self print: 'obj '; printHex: obj; print: ' and its class (behavior) formats differ'; cr. ^false].
-	^true
 ]
 
 { #category : #'process primitive support' }
@@ -8075,7 +8042,7 @@ StackInterpreter >> okayFields: oop [
 	(oop = nil or: [oop = 0]) ifTrue: [ ^true ].
 	(objectMemory isIntegerObject: oop) ifTrue: [ ^true ].
 	(objectMemory okayOop: oop) ifFalse: [ ^false ].
-	(self oopHasOkayClass: oop) ifFalse: [ ^false ].
+	(objectMemory oopHasOkayClass: oop) ifFalse: [ ^false ].
 	((objectMemory isPointersNonInt: oop) or: [objectMemory isCompiledMethod: oop]) ifFalse: [ ^true ].
 	(objectMemory isCompiledMethod: oop)
 		ifTrue:
@@ -8121,35 +8088,6 @@ StackInterpreter >> okayInterpreterObjects [
 		].
 	].
 	self okayStackZone.
-]
-
-{ #category : #'debug support' }
-StackInterpreter >> oopHasOkayClass: signedOop [
-	"Attempt to verify that the given oop has a reasonable behavior. The class must be a valid, non-integer oop and must not be nilObj. It must be a pointers object with three or more fields. Finally, the instance specification field of the behavior must match that of the instance."
-
-	| oop oopClass formatMask behaviorFormatBits oopFormatBits |
-	<var: #oop type: #usqInt>
-	<var: #oopClass type: #usqInt>
-
-	oop := self cCoerce: signedOop to: #usqInt.
-	objectMemory okayOop: oop.
-	oopClass := self cCoerce: (objectMemory fetchClassOf: oop) to: #usqInt.
-
-	(objectMemory isIntegerObject: oopClass)
-		ifTrue: [ self error: 'a SmallInteger is not a valid class or behavior'. ^false ].
-	(objectMemory okayOop: oopClass)
-		ifFalse: [ self error: 'class oop is not ok'. ^false ].
-	((objectMemory isPointersNonInt: oopClass) and: [(objectMemory lengthOf: oopClass) >= 3])
-		ifFalse: [ self error: 'a class (behavior) must be a pointers object of size >= 3'. ^false ].
-	(objectMemory isBytes: oop)
-		ifTrue: [ formatMask := 16rC00 ]  "ignore extra bytes size bits"
-		ifFalse: [ formatMask := 16rF00 ].
-
-	behaviorFormatBits := (objectMemory formatOfClass: oopClass) bitAnd: formatMask.
-	oopFormatBits := (objectMemory baseHeader: oop) bitAnd: formatMask.
-	behaviorFormatBits = oopFormatBits
-		ifFalse: [ self error: 'object and its class (behavior) formats differ'. ^false ].
-	^true
 ]
 
 { #category : #'internal interpreter access' }
