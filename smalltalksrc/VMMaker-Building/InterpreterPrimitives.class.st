@@ -3108,7 +3108,7 @@ InterpreterPrimitives >> primitiveSine [
 InterpreterPrimitives >> primitiveSize [
 	| rcvr hdr fmt fixedFields totalLength |
 	rcvr := self stackTop.
-	((objectMemory isIntegerObject: rcvr) "Integers are not indexable"
+	((objectMemory isImmediate: rcvr) "Integers are not indexable"
 	 or: [hdr := objectMemory baseHeader: rcvr.
 		(fmt := objectMemory formatOfHeader: hdr) < 2]) "This is not an indexable object"
 		ifTrue:
