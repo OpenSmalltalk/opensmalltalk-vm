@@ -73,7 +73,8 @@ SpurGenerationScavenger >> manager: aSpurMemoryManager memory: memoryArray newSp
 				+ (pastSpace limit \\ manager allocationUnit) = 0.
 	self assert: futureSpace start \\ manager allocationUnit
 				+ (futureSpace limit \\ manager allocationUnit) = 0.
-	self initPastSpaceForObjectEnumeration
+	self initPastSpaceForObjectEnumeration.
+	manager initSpaceForAllocationCheck: eden
 ]
 
 { #category : #accessing }
