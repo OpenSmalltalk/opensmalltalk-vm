@@ -127,6 +127,42 @@ Spur64BitMemoryManager >> initFreeChunkWithSlots: numSlots at: address [
 	^address + 8
 ]
 
+{ #category : #allocation }
+Spur64BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
+	| instSpec classFormat numSlots classIndex newObj fillValue |
+	classFormat := self formatOfClass: classObj.
+	instSpec := self instSpecOfClassFormat: classFormat.
+	fillValue := 0.
+	instSpec caseOf: {
+		[self indexablePointersFormat]	->
+			[numSlots := (self fixedFieldsOfClassFormat: classFormat) + nElements.
+			 fillValue := nilObj].
+		[self sixtyFourBitIndexableFormat]	->
+			[numSlots := nElements].
+		[self firstLongFormat]	->
+			[numSlots := nElements + 1 // 2.
+			 instSpec := instSpec + (nElements bitAnd: 1)].
+		[self firstShortFormat]	->
+			[numSlots := nElements + 3 // 4.
+			 instSpec := instSpec + (nElements bitAnd: 3)].
+		[self firstByteFormat]	->
+			[numSlots := nElements + 7 // 8.
+			 instSpec := instSpec + (nElements bitAnd: 7)].
+		[self firstCompiledMethodFormat]	->
+			[numSlots := nElements + 7 // 8.
+			 instSpec := instSpec + (nElements bitAnd: 7)] }
+		otherwise: [^nil]. "non-indexable"
+	classIndex := self hashBitsOf: classObj.
+	classIndex = 0 ifTrue:
+		[(self enterIntoClassTable: classObj) ifFalse:
+			[^nil].
+		classIndex := self hashBitsOf: classObj].
+	newObj := self allocateSlots: numSlots format: instSpec classIndex: classIndex.
+	newObj ifNotNil:
+		[self fillObj: newObj numSlots: numSlots with: fillValue].
+	^newObj
+]
+
 { #category : #immediates }
 Spur64BitMemoryManager >> integerObjectOf: value [
 	"Convert the integer value, assumed to be in SmallInteger range, into a tagged SmallInteger object.

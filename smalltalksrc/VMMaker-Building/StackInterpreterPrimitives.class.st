@@ -812,7 +812,7 @@ StackInterpreterPrimitives >> primitiveInstVarAt [
 	fixedFields := objectMemory fixedFieldsOf: rcvr format: fmt length: totalLength.
 	(index >= 1 and: [index <= fixedFields]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
-	(fmt = 3
+	(fmt = objectMemory indexablePointersFormat
 	 and: [objectMemory isContextHeader: hdr])
 		ifTrue: [value := self externalInstVar: index - 1 ofContext: rcvr]
 		ifFalse: [value := self subscript: rcvr with: index format: fmt].
@@ -833,7 +833,7 @@ StackInterpreterPrimitives >> primitiveInstVarAtPut [
 	fixedFields := objectMemory fixedFieldsOf: rcvr format: fmt length: totalLength.
 	(index >= 1 and: [index <= fixedFields]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
-	(fmt = 3
+	(fmt = objectMemory indexablePointersFormat
 	 and: [objectMemory isContextHeader: hdr])
 		ifTrue: [self externalInstVar: index - 1 ofContext: rcvr put: newValue]
 		ifFalse: [self subscript: rcvr with: index storing: newValue format: fmt].
@@ -903,9 +903,9 @@ StackInterpreterPrimitives >> primitiveObjectPointsTo [
 	"Inlined version of lastPointerOf: for speed in determining if rcvr is a context."
 	header := objectMemory baseHeader: rcvr.
 	fmt := objectMemory formatOfHeader: header.
-	fmt <= 4
+	(objectMemory isPointersFormat: fmt)
 		ifTrue:
-			[(fmt = 3
+			[(fmt = objectMemory indexablePointersFormat
 			  and: [objectMemory isContextHeader: header]) 
 				ifTrue:
 	 				[(self isMarriedOrWidowedContext: rcvr) ifTrue:
@@ -920,7 +920,7 @@ StackInterpreterPrimitives >> primitiveObjectPointsTo [
 				ifFalse:
 					[lastField := (objectMemory sizeBitsOfSafe: rcvr) - BaseHeaderSize]]
 		ifFalse:
-			[fmt < 12 "no pointers" ifTrue:
+			[fmt < objectMemory firstCompiledMethodFormat "no pointers" ifTrue:
 				[^self pop: 2 thenPushBool: false].
 			"CompiledMethod: contains both pointers and bytes:"
 			methodHeader := self headerOf: rcvr.

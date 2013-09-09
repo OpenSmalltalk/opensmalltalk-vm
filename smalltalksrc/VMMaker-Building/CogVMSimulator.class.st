@@ -2131,7 +2131,9 @@ CogVMSimulator >> objectBefore: addr [
 CogVMSimulator >> openAsMorph [
 	"Open a morphic view on this simulation."
 	| localImageName borderWidth theWindow |
-	localImageName := FileDirectory default localNameFor: imageName.
+	localImageName := imageName
+							ifNotNil: [FileDirectory default localNameFor: imageName]
+							ifNil: [' synthetic image'].
 	theWindow := (SystemWindow labelled: 'Simulation of ', localImageName) model: self.
 
 	theWindow addMorph: (displayView := ImageMorph new image: displayForm)

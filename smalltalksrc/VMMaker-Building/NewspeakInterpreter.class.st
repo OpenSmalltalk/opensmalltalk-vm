@@ -4152,11 +4152,6 @@ NewspeakInterpreter >> isHandlerMarked: aContext [
 
 ]
 
-{ #category : #'object format' }
-NewspeakInterpreter >> isIndexable: oop [
-	^(self formatOf: oop) >= 2
-]
-
 { #category : #'internal interpreter access' }
 NewspeakInterpreter >> isMethodContext: oop [
 	<inline: true>
