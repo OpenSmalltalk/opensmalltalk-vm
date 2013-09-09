@@ -1248,6 +1248,39 @@ ObjectMemory >> checkOkayYoungReferrer: obj [
 
 ]
 
+{ #category : #'debug support' }
+ObjectMemory >> checkOopHasOkayClass: obj [
+	"Attempt to verify that the given obj has a reasonable behavior. The class must be a
+	 valid, non-integer oop and must not be nilObj. It must be a pointers object with three
+	 or more fields. Finally, the instance specification field of the behavior must match that
+	 of the instance. If OK answer true.  If  not, print reason and answer false."
+
+	<api>
+	<var: #oop type: #usqInt>
+	| objClass formatMask behaviorFormatBits objFormatBits |
+	<var: #oopClass type: #usqInt>
+
+	(self checkOkayOop: obj) ifFalse:
+		[^false].
+	objClass := self cCoerce: (self fetchClassOfNonImm: obj) to: #usqInt.
+
+	(self isIntegerObject: objClass) ifTrue:
+		[self print: 'obj '; printHex: obj; print: ' a SmallInteger is not a valid class or behavior'; cr. ^false].
+	(self okayOop: objClass) ifFalse:
+		[self print: 'obj '; printHex: obj; print: ' class obj is not ok'; cr. ^false].
+	((self isPointersNonInt: objClass) and: [(self lengthOf: objClass) >= 3]) ifFalse:
+		[self print: 'obj '; printHex: obj; print: ' a class (behavior) must be a pointers object of size >= 3'; cr. ^false].
+	formatMask := (self isBytes: obj)
+						ifTrue: [16rC00]  "ignore extra bytes size bits"
+						ifFalse: [16rF00].
+
+	behaviorFormatBits := (self formatOfClass: objClass) bitAnd: formatMask.
+	objFormatBits := (self baseHeader: obj) bitAnd: formatMask.
+	behaviorFormatBits = objFormatBits ifFalse:
+		[self print: 'obj '; printHex: obj; print: ' and its class (behavior) formats differ'; cr. ^false].
+	^true
+]
+
 { #category : #'memory access' }
 ObjectMemory >> checkOopIntegrity: obj named: name [
 	<inline: false>
@@ -2096,6 +2129,11 @@ ObjectMemory >> growObjectMemory: delta [
 	limit = memoryLimit ifFalse:
 		[self setMemoryLimit: limit - 24. "remove a tad for safety"
 		 self initializeMemoryFirstFree: freeBlock]
+]
+
+{ #category : #'api characterization' }
+ObjectMemory >> hasSpurMemoryManagerAPI [
+	^false
 ]
 
 { #category : #'header access' }
@@ -3631,6 +3669,35 @@ ObjectMemory >> oopHasAcceptableClass: signedOop [
 	oopFormatBits := (self baseHeader: oop) bitAnd: formatMask.
 	behaviorFormatBits = oopFormatBits ifFalse: [^ false].
 	^ true
+]
+
+{ #category : #'debug support' }
+ObjectMemory >> oopHasOkayClass: signedOop [
+	"Attempt to verify that the given oop has a reasonable behavior. The class must be a valid, non-integer oop and must not be nilObj. It must be a pointers object with three or more fields. Finally, the instance specification field of the behavior must match that of the instance."
+
+	| oop oopClass formatMask behaviorFormatBits oopFormatBits |
+	<var: #oop type: #usqInt>
+	<var: #oopClass type: #usqInt>
+
+	oop := self cCoerce: signedOop to: #usqInt.
+	self okayOop: oop.
+	oopClass := self cCoerce: (self fetchClassOf: oop) to: #usqInt.
+
+	(self isIntegerObject: oopClass)
+		ifTrue: [ self error: 'a SmallInteger is not a valid class or behavior'. ^false ].
+	(self okayOop: oopClass)
+		ifFalse: [ self error: 'class oop is not ok'. ^false ].
+	((self isPointersNonInt: oopClass) and: [(self lengthOf: oopClass) >= 3])
+		ifFalse: [ self error: 'a class (behavior) must be a pointers object of size >= 3'. ^false ].
+	(self isBytes: oop)
+		ifTrue: [ formatMask := 16rC00 ]  "ignore extra bytes size bits"
+		ifFalse: [ formatMask := 16rF00 ].
+
+	behaviorFormatBits := (self formatOfClass: oopClass) bitAnd: formatMask.
+	oopFormatBits := (self baseHeader: oop) bitAnd: formatMask.
+	behaviorFormatBits = oopFormatBits
+		ifFalse: [ self error: 'object and its class (behavior) formats differ'. ^false ].
+	^true
 ]
 
 { #category : #'interpreter access' }

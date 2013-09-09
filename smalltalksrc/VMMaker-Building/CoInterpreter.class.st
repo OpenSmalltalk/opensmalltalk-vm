@@ -1996,7 +1996,7 @@ CoInterpreter >> checkOkayFields: oop [
 	(oop = nil or: [oop = 0]) ifTrue: [ ^true ]. "?? eem 1/16/2013"
 	(objectMemory isIntegerObject: oop) ifTrue: [ ^true ].
 	(objectMemory checkOkayOop: oop) ifFalse: [ ^false ].
-	(self checkOopHasOkayClass: oop) ifFalse: [ ^false ].
+	(objectMemory checkOopHasOkayClass: oop) ifFalse: [ ^false ].
 	((objectMemory isPointersNonInt: oop) or: [objectMemory isCompiledMethod: oop]) ifFalse: [ ^true ].
 	hasYoung := objectMemory isYoung: (objectMemory fetchClassOfNonImm: oop).
 	(objectMemory isCompiledMethod: oop)
