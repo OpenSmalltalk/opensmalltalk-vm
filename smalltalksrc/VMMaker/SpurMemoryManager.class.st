@@ -389,6 +389,18 @@ SpurMemoryManager class >> initializeWithOptions: optionsDictionary [
 	self initializeObjectHeaderConstants
 ]
 
+{ #category : #'simulation only' }
+SpurMemoryManager class >> vmProxyMajorVersion [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^StackInterpreter vmProxyMajorVersion
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager class >> vmProxyMinorVersion [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^StackInterpreter vmProxyMinorVersion
+]
+
 { #category : #'garbage collection' }
 SpurMemoryManager >> addToFreeList: freeChunk [
 	| chunkBytes childBytes parent child index |
@@ -834,6 +846,13 @@ SpurMemoryManager >> firstShortFormat [
 	^12
 ]
 
+{ #category : #'header format' }
+SpurMemoryManager >> firstStringyFakeFormat [
+	"A fake format for the interpreter used to mark indexable strings in
+	 the interpreter's at cache.  This is larger than any format."
+	^32
+]
+
 { #category : #'object format' }
 SpurMemoryManager >> fixedFieldsFieldWidth [
 	^16
@@ -844,7 +863,7 @@ SpurMemoryManager >> fixedFieldsOf: objOop format: fmt length: wordLength [
 	| class |
 	<inline: true>
 	<asmLabel: false>
-	(fmt > self ephemeronFormat or: [fmt = 2]) ifTrue: [^0].  "indexable fields only"
+	(fmt > self lastPointerFormat or: [fmt = 2]) ifTrue: [^0].  "indexable fields only"
 	fmt < 2 ifTrue: [^wordLength].  "fixed fields only (zero or more)"
 	class := self fetchClassOfNonImm: objOop.
 	^self fixedFieldsOfClassFormat: (self formatOfClass: class)
@@ -1128,6 +1147,11 @@ SpurMemoryManager >> instantiateClass: classObj [
 	^newObj
 ]
 
+{ #category : #allocation }
+SpurMemoryManager >> instantiateClass: classObj indexableSize: nElements [
+	^self subclassResponsibility
+]
+
 { #category : #immediates }
 SpurMemoryManager >> integerObjectOf: value [
 	"Convert the integer value, assumed to be in SmallInteger range, into a tagged SmallInteger object.
@@ -1156,6 +1180,18 @@ SpurMemoryManager >> is: oop instanceOf: classOop compactClassIndex: compactClas
 ]
 
 { #category : #'object testing' }
+SpurMemoryManager >> isArray: oop [
+	"Answer true if this is an indexable object with pointer elements, e.g., an array"
+	^(self isNonImmediate: oop) and: [self isArrayNonImm: oop]
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isArrayNonImm: oop [
+	"Answer true if this is an indexable object with pointer elements, e.g., an array"
+	^ (self formatOf: oop) = self arrayFormat
+]
+
+{ #category : #'object testing' }
 SpurMemoryManager >> isBytes: oop [
 	"Answer true if the argument contains indexable bytes. See comment in formatOf:"
 	"Note: Includes CompiledMethods."
@@ -1166,6 +1202,11 @@ SpurMemoryManager >> isBytes: oop [
 SpurMemoryManager >> isBytesNonImm: objOop [
 	"Answer true if the argument contains indexable bytes. See comment in formatOf:"
 	^(self formatOf: objOop) >= self firstByteFormat
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isCharacterObject: oop [
+	^(oop bitAnd: self tagMask) = self characterTag
 ]
 
 { #category : #'object access' }
@@ -1245,6 +1286,12 @@ SpurMemoryManager >> isImmediateCharacter: oop [
 ]
 
 { #category : #'object testing' }
+SpurMemoryManager >> isInEden: objOop [
+	^objOop >= scavenger eden start
+	  and: [objOop < scavenger eden limit]
+]
+
+{ #category : #'object testing' }
 SpurMemoryManager >> isInOldSpace: address [ 
 	^address between: newSpaceLimit and: freeOldSpaceStart
 ]
@@ -1252,6 +1299,16 @@ SpurMemoryManager >> isInOldSpace: address [
 { #category : #immediates }
 SpurMemoryManager >> isInRangeCharacterCode: characterCode [
 	^characterCode >= 0 and: [characterCode < (2 raisedTo: 30)]
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isIndexable: objOop [
+	^(self formatOf: objOop) >= self sixtyFourBitIndexableFormat
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isIndexableFormat: format [
+	^format >= self sixtyFourBitIndexableFormat
 ]
 
 { #category : #'object testing' }
@@ -1264,7 +1321,10 @@ SpurMemoryManager >> isIntegerObject: oop [
 		shortPrint:
 		bytecodePrimAt
 		commonAt:
-		loadFloatOrIntFrom:) includes: thisContext sender method selector) ifFalse:
+		loadFloatOrIntFrom:
+		positive32BitValueOf:
+		primitiveExternalCall
+		checkedIntegerValueOf:) includes: thisContext sender method selector) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
@@ -1289,9 +1349,21 @@ SpurMemoryManager >> isOopCompiledMethod: oop [
 ]
 
 { #category : #'object testing' }
+SpurMemoryManager >> isPointers: oop [
+	"Answer if the argument has only fields that can hold oops. See comment in formatOf:"
+
+	^(self isNonImmediate: oop) and: [self isPointersNonImm: oop]
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isPointersFormat: format [
+	^format <= self lastPointerFormat
+]
+
+{ #category : #'object testing' }
 SpurMemoryManager >> isPointersNonImm: objOop [
 	"Answer if the argument has only fields that can hold oops. See comment in formatOf:"
-	^(self formatOf: objOop) <= 5
+	^(self formatOf: objOop) <= self lastPointerFormat
 ]
 
 { #category : #'class table' }
@@ -1509,6 +1581,11 @@ SpurMemoryManager >> sizeBitsOf: objOop [
 	 objOop + (self sizeBitsOf: objOop) is the address immediately following objOop."
 	"Note: byte indexable objects need to have low bits subtracted from this size to find the address beyond the last byte."
 	^(self numSlotsOf: objOop) << self shiftForWord + self baseHeaderSize
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> sizeBitsOfSafe: objOop [
+	^self sizeBitsOf: objOop
 ]
 
 { #category : #accessing }

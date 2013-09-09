@@ -1796,6 +1796,11 @@ ObjectMemory >> firstByteFormat [
 	^8
 ]
 
+{ #category : #'header access' }
+ObjectMemory >> firstCompiledMethodFormat [
+	^12
+]
+
 { #category : #'object format' }
 ObjectMemory >> firstFixedField: oop [
 
@@ -1823,6 +1828,13 @@ ObjectMemory >> firstObject [
 	"Return the first object or free chunk in the heap."
 
 	^ self oopFromChunk: self startOfMemory
+]
+
+{ #category : #'header access' }
+ObjectMemory >> firstStringyFakeFormat [
+	"A fake format for the interpreter used to mark indexable strings in
+	 the interpreter's at cache.  This is larger than any format."
+	^16
 ]
 
 { #category : #'object format' }
@@ -2367,6 +2379,11 @@ ObjectMemory >> incrementalGC [
 	weDidGrow ifTrue: [self biasToGrowCheckGCLimit]
 ]
 
+{ #category : #'header access' }
+ObjectMemory >> indexablePointersFormat [
+	^3
+]
+
 { #category : #'gc -- compaction' }
 ObjectMemory >> initForwardBlock: fwdBlock mapping: oop to: newOop withBackPtr: backFlag [ 
 	"Initialize the given forwarding block to map oop to newOop, 
@@ -2725,6 +2742,19 @@ ObjectMemory >> isBytesNonInt: oop [
 	^ (self formatOf: oop)  >= 8
 ]
 
+{ #category : #'interpreter access' }
+ObjectMemory >> isCharacterObject: oop [
+	<inline: true>
+	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
+	 (because is:instanceOf:compactClassIndex: has an inline: pragma) the
+	 phrase (self splObj: ClassCharacter) is expanded in-place
+	 and is _not_ evaluated if oop has a non-zero CompactClassIndex."
+	^self
+		is: oop
+		instanceOf: (self splObj: ClassCharacter) 
+		compactClassIndex: 0
+]
+
 { #category : #'header access' }
 ObjectMemory >> isClassOfNonImm: oop equalTo: classOop [
 	"Answer if the given (non-immediate) object is an instance of the given class."
@@ -2852,6 +2882,11 @@ ObjectMemory >> isInMemory: address [
 { #category : #'interpreter access' }
 ObjectMemory >> isInRangeCharacterCode: characterCode [
 	^characterCode >= 0 and: [characterCode <= 255]
+]
+
+{ #category : #'object format' }
+ObjectMemory >> isIndexable: oop [
+	^(self formatOf: oop) >= 2
 ]
 
 { #category : #'interpreter access' }
@@ -5054,6 +5089,11 @@ ObjectMemory >> vmEndianness [
 	 Alas this has to remain for backward compatibility."
 
 	^VMBIGENDIAN ifTrue: [1] ifFalse: [0]
+]
+
+{ #category : #'header access' }
+ObjectMemory >> weakArrayFormat [
+	^4
 ]
 
 { #category : #finalization }
