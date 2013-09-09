@@ -215,6 +215,7 @@ Class {
 		'heapMap'
 	],
 	#classVars : [
+		'CheckObjectOverwrite',
 		'NumFreeLists'
 	],
 	#pools : [
@@ -273,7 +274,8 @@ SpurMemoryManager class >> initBytesPerWord: nBytes [
 { #category : #'class initialization' }
 SpurMemoryManager class >> initialize [
 	"CogObjectMemory initialize"
-	NumFreeLists := 65 "One for each size up to and including 64 slots. One for sizes > 64 slots."
+	NumFreeLists := 65. "One for each size up to and including 64 slots. One for sizes > 64 slots."
+	CheckObjectOverwrite := true
 ]
 
 { #category : #'class initialization' }
@@ -645,6 +647,14 @@ SpurMemoryManager >> checkCompactIndex: classIndex isClass: specialIndex named: 
 		[self invalidCompactClassError: name]
 ]
 
+{ #category : #allocation }
+SpurMemoryManager >> checkForLastObjectOverwrite [
+	<doNotGenerate>
+	self assert: (freeStart >= scavengeThreshold
+				or: [CheckObjectOverwrite not
+		  		or: [(self longAt: freeStart) = freeStart]])
+]
+
 { #category : #'class table' }
 SpurMemoryManager >> classAtIndex: classIndex [
 	| classTablePage |
@@ -732,6 +742,11 @@ SpurMemoryManager >> enterIntoClassTable: aBehavior [
 	self shouldBeImplemented
 ]
 
+{ #category : #'header format' }
+SpurMemoryManager >> ephemeronFormat [
+	^5
+]
+
 { #category : #accessing }
 SpurMemoryManager >> falseObject [
 	^falseObj
@@ -781,6 +796,11 @@ SpurMemoryManager >> fetchWordLengthOf: objOop [
 	^self numSlotsOf: objOop
 ]
 
+{ #category : #allocation }
+SpurMemoryManager >> fillObj: objOop numSlots: numSlots with: fillValue [
+	self subclassResponsibility
+]
+
 { #category : #'header format' }
 SpurMemoryManager >> firstByteFormat [
 	^16
@@ -815,22 +835,29 @@ SpurMemoryManager >> firstShortFormat [
 ]
 
 { #category : #'object format' }
+SpurMemoryManager >> fixedFieldsFieldWidth [
+	^16
+]
+
+{ #category : #'object format' }
 SpurMemoryManager >> fixedFieldsOf: objOop format: fmt length: wordLength [
-"
-	NOTE: This code supports the backward-compatible extension to 8 bits of instSize.
-	When we revise the image format, it should become...
-	^ (classFormat >> 2 bitAnd: 16rFF) - 1
-"
-	| class classFormat |
+	| class |
 	<inline: true>
 	<asmLabel: false>
-	((fmt > 4) or: [fmt = 2]) ifTrue: [^0].  "indexable fields only"
+	(fmt > self ephemeronFormat or: [fmt = 2]) ifTrue: [^0].  "indexable fields only"
 	fmt < 2 ifTrue: [^wordLength].  "fixed fields only (zero or more)"
-	self flag: #fixme. "Must munge class formats now..."
-	"fmt = 3 or 4: mixture of fixed and indexable fields, so must look at class format word"
 	class := self fetchClassOfNonImm: objOop.
-	classFormat := self formatOfClass: class.
-	^(classFormat >> 11 bitAnd: 16rC0) + (classFormat >> 2 bitAnd: 16r3F) - 1
+	^self fixedFieldsOfClassFormat: (self formatOfClass: class)
+]
+
+{ #category : #'object format' }
+SpurMemoryManager >> fixedFieldsOfClassFormat: classFormat [
+	^classFormat bitAnd: self fixedFieldsOfClassFormatMask
+]
+
+{ #category : #'object format' }
+SpurMemoryManager >> fixedFieldsOfClassFormatMask [
+	^1 << self fixedFieldsFieldWidth - 1
 ]
 
 { #category : #'header format' }
@@ -865,6 +892,13 @@ SpurMemoryManager >> formatOf: objOop [
 	 16 - 23 byte indexable
 	 24 - 31 compiled method"
 	^self subclassResponsibility
+]
+
+{ #category : #'object format' }
+SpurMemoryManager >> formatOfClass: classPointer [
+	<api>
+	<inline: true>
+	^self integerValueOf: (self fetchPointer: InstanceSpecificationIndex ofObject: classPointer)
 ]
 
 { #category : #'object access' }
@@ -922,6 +956,11 @@ SpurMemoryManager >> goodContextSize: oop [
 	^numSlots = SmallContextSlots or: [numSlots = LargeContextSlots]
 ]
 
+{ #category : #'api characterization' }
+SpurMemoryManager >> hasSpurMemoryManagerAPI [
+	^true
+]
+
 { #category : #'header access' }
 SpurMemoryManager >> hashBitsOf: objOop [
 	self flag: #endianness.
@@ -975,6 +1014,11 @@ SpurMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
 { #category : #'garbage collection' }
 SpurMemoryManager >> initFreeChunkWithSlots: numSlots at: address [ 
 	^self subclassResponsibility
+]
+
+{ #category : #allocation }
+SpurMemoryManager >> initSpaceForAllocationCheck: aNewSpace [
+	self subclassResponsibility
 ]
 
 { #category : #initialization }
@@ -1060,6 +1104,30 @@ SpurMemoryManager >> initializePostBootstrap [
 	freeStart := scavenger eden start
 ]
 
+{ #category : #'object format' }
+SpurMemoryManager >> instSpecOfClassFormat: classFormat [
+	^classFormat >> self fixedFieldsFieldWidth bitAnd: self formatMask
+]
+
+{ #category : #allocation }
+SpurMemoryManager >> instantiateClass: classObj [
+	| instSpec classFormat numSlots classIndex newObj |
+	classFormat := self formatOfClass: classObj.
+	instSpec := self instSpecOfClassFormat: classFormat.
+	(self isFixedSizePointerFormat: instSpec) ifFalse:
+		[^nil].
+	classIndex := self hashBitsOf: classObj.
+	classIndex = 0 ifTrue:
+		[(self enterIntoClassTable: classObj) ifFalse:
+			[^nil].
+		classIndex := self hashBitsOf: classObj].
+	numSlots := self fixedFieldsOfClassFormat: classFormat.
+	newObj := self allocateSlots: numSlots format: instSpec classIndex: classIndex.
+	newObj ifNotNil:
+		[self fillObj: newObj numSlots: numSlots with: nilObj].
+	^newObj
+]
+
 { #category : #immediates }
 SpurMemoryManager >> integerObjectOf: value [
 	"Convert the integer value, assumed to be in SmallInteger range, into a tagged SmallInteger object.
@@ -1138,6 +1206,12 @@ SpurMemoryManager >> isContext: oop [
 SpurMemoryManager >> isContextNonImm: oop [
 	<inline: true>
 	^(self classIndexOf: oop) = ClassMethodContextCompactIndex
+]
+
+{ #category : #'header format' }
+SpurMemoryManager >> isFixedSizePointerFormat: format [
+	^format <= self nonIndexablePointerFormat
+	  or: [format = self ephemeronFormat]
 ]
 
 { #category : #'object testing' }
@@ -1314,6 +1388,11 @@ SpurMemoryManager >> nilObject: anOop [
 	nilObj := anOop
 ]
 
+{ #category : #'header format' }
+SpurMemoryManager >> nonIndexablePointerFormat [
+	^2
+]
+
 { #category : #'object enumeration' }
 SpurMemoryManager >> numPointerSlotsOf: objOop [
 	"Answer the number of pointer fields in the given object.
@@ -1473,6 +1552,11 @@ SpurMemoryManager >> storePointer: fieldIndex ofObject: oop withValue: valuePoin
 { #category : #'object access' }
 SpurMemoryManager >> storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer [
 	^self subclassResponsibility
+]
+
+{ #category : #allocation }
+SpurMemoryManager >> sufficientSpaceToInstantiate: classObj indexableSize: indexableFields [
+	self shouldNotImplement
 ]
 
 { #category : #accessing }

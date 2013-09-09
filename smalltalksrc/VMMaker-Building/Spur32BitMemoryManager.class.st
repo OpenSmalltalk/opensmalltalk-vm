@@ -103,6 +103,16 @@ Spur32BitMemoryManager >> fetchPointer: fieldIndex ofObject: objOop [
 	^self longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
 ]
 
+{ #category : #allocation }
+Spur32BitMemoryManager >> fillObj: objOop numSlots: numSlots with: fillValue [
+	objOop + self baseHeaderSize
+		to: objOop + self baseHeaderSize + (numSlots * 4)
+		by: self allocationUnit
+		do: [:p|
+			self longAt: p put: fillValue;
+				longAt: p + 4 put: fillValue]
+]
+
 { #category : #'object access' }
 Spur32BitMemoryManager >> formatOf: objOop [
 	"0 = 0 sized objects (UndefinedObject True False et al)
@@ -129,6 +139,15 @@ Spur32BitMemoryManager >> initFreeChunkWithSlots: numSlots at: address [
 		longAt: address + 8 put: 0; "0's classIndex; 0 = classIndex of free chunks"
 		longAt: address + 12 put: self numSlotsMask << self numSlotsHalfShift.
 	^address + 8
+]
+
+{ #category : #allocation }
+Spur32BitMemoryManager >> initSpaceForAllocationCheck: aNewSpace [
+	CheckObjectOverwrite ifTrue:
+		[aNewSpace start
+			to: aNewSpace limit
+			by: self wordSize
+			do: [:p| self longAt: p put: p]]
 ]
 
 { #category : #immediates }
