@@ -3802,11 +3802,6 @@ Interpreter >> isHandlerMarked: aContext [
 
 ]
 
-{ #category : #'object format' }
-Interpreter >> isIndexable: oop [
-	^(self formatOf: oop) >= 2
-]
-
 { #category : #'compiled methods' }
 Interpreter >> isUnwindMarked: aContext [
 	"Is this a MethodContext whose meth has a primitive number of 198?"
