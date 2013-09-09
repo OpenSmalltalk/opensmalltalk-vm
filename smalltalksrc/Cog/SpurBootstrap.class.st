@@ -59,6 +59,9 @@ Class {
 		'methodClasses',
 		'installedPrototypes'
 	],
+	#classVars : [
+		'TransformedImage'
+	],
 	#pools : [
 		'VMObjectIndices'
 	],
@@ -872,15 +875,25 @@ SpurBootstrap >> interpreterObject: receiver perform: selector withArguments: ar
 
 { #category : #testing }
 SpurBootstrap >> launch [
+	self launch: newHeap
+]
+
+{ #category : #testing }
+SpurBootstrap >> launch: heap [
 	| sim |
-	sim := StackInterpreterSimulator onObjectMemory: newHeap.
-	newHeap coInterpreter: sim.
+	sim := StackInterpreterSimulator onObjectMemory: heap.
+	heap coInterpreter: sim.
 	sim initializeInterpreter: 0.
 	sim
-		ensureDebugAtEachStepBlock;
-		instVarNamed: 'printBytecodeAtEachStep' put: true;
+		instVarNamed: 'printSends' put: true;
+		instVarNamed: 'printReturns' put: true;
 		instVarNamed: 'methodDictLinearSearchLimit' put: SmallInteger maxVal. "for now"
 	sim run
+]
+
+{ #category : #testing }
+SpurBootstrap >> launchSaved [
+	self launch: TransformedImage veryDeepCopy
 ]
 
 { #category : #'bootstrap methods' }
@@ -933,7 +946,7 @@ SpurBootstrap >> newClassFormatFor: oldClassObj [
 	oldFormat := oldHeap formatOfClass: oldClassObj. "N.B. SmallInteger with tag bit cleared"
 	oldFormat := oldFormat >> 1.
 	instSize := ((oldFormat bitShift: -10) bitAnd: 16rC0) + ((oldFormat bitShift: -1) bitAnd: 16r3F) - 1.
-	newInstSpec := #(0 1 2 3 4 5 6 7 16 16 16 16 24 24 24 24) at: ((oldFormat bitShift: -7) bitAnd: 16rF) + 1.
+	newInstSpec := #(0 1 2 3 4 nil 10 9 16 16 16 16 24 24 24 24) at: ((oldFormat bitShift: -7) bitAnd: 16rF) + 1.
 	^newHeap integerObjectOf: newInstSpec << 16 + instSize
 ]
 
@@ -1086,6 +1099,11 @@ SpurBootstrap >> replacementForCharacterMethod: characterMethodOop [
 		selector: clone selector
 		className: #Character
 		isMeta: false
+]
+
+{ #category : #'development support' }
+SpurBootstrap >> saveTransformedImage [
+	TransformedImage := newHeap veryDeepCopy
 ]
 
 { #category : #'method prototypes' }
