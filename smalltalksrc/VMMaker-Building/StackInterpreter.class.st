@@ -2080,7 +2080,7 @@ StackInterpreter >> bytecodePrimAt [
 	| index rcvr result atIx |
 	index := self internalStackTop.
 	rcvr := self internalStackValue: 1.
-	((objectMemory isIntegerObject: rcvr) not
+	((objectMemory isImmediate: rcvr) not
 	 and: [objectMemory isIntegerObject: index]) ifTrue:
 		[atIx := rcvr bitAnd: AtCacheMask.  "Index into atCache = 4N, for N = 0 ... 7"
 		(atCache at: atIx+AtCacheOop) = rcvr ifTrue:
@@ -3379,7 +3379,7 @@ StackInterpreter >> commonAt: stringy [
 	| index rcvr atIx result |
 	self initPrimCall.
 	rcvr := self stackValue: 1.
-	(objectMemory isNonIntegerObject: rcvr) ifFalse:
+	(objectMemory isImmediate: rcvr) ifTrue:
 		[^self primitiveFailFor: PrimErrInappropriate].
 	index := self stackTop.
 	"No need to test for large positive integers here.  No object has 1g elements"
@@ -3827,18 +3827,19 @@ StackInterpreter >> createActualMessageTo: lookupClass [
 	 This can then be presented as the argument of e.g. #doesNotUnderstand:"
 	| argumentArray message |
 	<inline: false> "This is a useful break-point"
-	self assert: ((objectMemory isIntegerObject: messageSelector) or: [objectMemory addressCouldBeObj: messageSelector]).
+	self assert: ((objectMemory isImmediate: messageSelector) or: [objectMemory addressCouldBeObj: messageSelector]).
 	argumentArray := objectMemory eeInstantiateClass: (objectMemory splObj: ClassArray) indexableSize: argumentCount.
 	message := objectMemory eeInstantiateClass: (objectMemory splObj: ClassMessage) indexableSize: 0.
 
 	"Since the array is new can use unchecked stores."
 	(argumentCount - 1) * BytesPerWord to: 0 by: BytesPerWord negated do:
 		[:i|
-		self longAt:  argumentArray + BaseHeaderSize + i put: self popStack].
+		self longAt:  argumentArray + objectMemory baseHeaderSize + i put: self popStack].
 	"Since message is new can use unchecked stores."
-	objectMemory storePointerUnchecked: MessageSelectorIndex ofObject: message withValue: messageSelector.
-	objectMemory storePointerUnchecked: MessageArgumentsIndex ofObject: message withValue: argumentArray.
-	objectMemory storePointerUnchecked: MessageLookupClassIndex ofObject: message withValue: lookupClass.
+	objectMemory
+		storePointerUnchecked: MessageSelectorIndex ofObject: message withValue: messageSelector;
+		storePointerUnchecked: MessageArgumentsIndex ofObject: message withValue: argumentArray;
+		storePointerUnchecked: MessageLookupClassIndex ofObject: message withValue: lookupClass.
 
 	self push: message.
 
@@ -11243,9 +11244,7 @@ StackInterpreter >> storeAndPopReceiverVariableBytecode [
 	| rcvr top |
 	rcvr := self receiver.
 	top := self internalStackTop.
-	(self oop: rcvr isLessThan: objectMemory youngStart) ifTrue:
-		[objectMemory possibleRootStoreInto: rcvr value: top].
-	objectMemory storePointerUnchecked: (currentBytecode bitAnd: 7) ofObject: rcvr withValue: top.
+	objectMemory storePointer: (currentBytecode bitAnd: 7) ofObject: rcvr withValue: top.
 	self fetchNextBytecode.
 	self internalPop: 1
 ]
