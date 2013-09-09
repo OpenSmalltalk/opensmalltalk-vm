@@ -362,7 +362,7 @@ SpurBootstrap >> addNewMethods [
 			(className = sym
 			 and: [symIsMeta = isMeta]) ifTrue:
 				["probe method dictionary of the class for each method, installing a dummy if not found."
-				Transcript cr; nextPutAll: 'checking for '; nextPutAll: selector; flush.
+				 "Transcript cr; nextPutAll: 'checking for '; nextPutAll: selector; flush."
 				 methodOrNil := self interpreterObject: class
 									perform: cmaiaSym
 									withArguments: {symbolMap at: selector. oldHeap nilObject}.
@@ -373,7 +373,8 @@ SpurBootstrap >> addNewMethods [
 							nextPutAll: 'installing ';
 							nextPutAll: className;
 							nextPutAll: (isMeta ifTrue: [' class>>'] ifFalse: ['>>']);
-							store: selector; flush.
+							store: selector;
+							flush.
 						 self interpreterObject: class
 							perform: basSym
 							withArguments: { symbolMap at: selector.
@@ -457,6 +458,7 @@ SpurBootstrap >> allocateClassTable [
 
 { #category : #'bootstrap image' }
 SpurBootstrap >> bootstrapImage [
+	Transcript cr; nextPutAll: 'transforming image'; flush.
 	self cloneNilTrueAndFalse.
 	self buildClassMap.
 	self allocateClassTable.
@@ -504,6 +506,38 @@ SpurBootstrap >> clone: oldObj classIndex: classIndex [
 				classIndex: classIndex.
 	reverseMap at: newObj put: oldObj.
 	^map at: oldObj put: newObj
+]
+
+{ #category : #'bootstrap methods' }
+SpurBootstrap >> cloneMethodProxy: proxy [ "<VMCompiledMethodProxy>"
+	| bytes newMethod |
+	bytes := proxy size - proxy initialPC + 1.
+	newMethod := CompiledMethod
+						newMethod: bytes
+						header: proxy header.
+	false
+		ifTrue:
+			[1 to: proxy numLiterals - 2 do:
+				[:i| | literal |
+				literal := (proxy literalAt: i) oop.
+				literal := (oldHeap isIntegerObject: literal)
+							ifTrue: [oldHeap integerValueOf: literal]
+							ifFalse: ['literal', i printString].
+				newMethod literalAt: i put: literal].
+			newMethod
+				literalAt: proxy numLiterals - 1
+					put: (oldHeap stringOf: (proxy literalAt: proxy numLiterals - 1) oop) asSymbol;
+				literalAt: proxy numLiterals
+					put: (Smalltalk bindingOf: #Character)]
+		ifFalse:
+			[1 to: proxy numLiterals - 1 do:
+				[:i| newMethod literalAt: i put: (proxy literalAt: i)].
+			newMethod
+				literalAt: proxy numLiterals
+				put: (Smalltalk bindingOf: #Character)].
+	proxy initialPC to: proxy size do:
+		[:i| newMethod at: i put: (proxy at: i)].
+	^newMethod
 ]
 
 { #category : #'bootstrap image' }
@@ -761,8 +795,10 @@ SpurBootstrap >> installModifiedMethods [
 SpurBootstrap >> installableMethodFor: aCompiledMethod selector: selector className: className isMeta: isMeta [
 	| compiledMethodClass sourcelessMethod bytes newMethod methodClass |
 	compiledMethodClass := self findClassNamed: (self findSymbol: #CompiledMethod).
-	sourcelessMethod := aCompiledMethod copyWithTempsFromMethodNode: aCompiledMethod methodNode.
-	sourcelessMethod selector: selector.
+	"the prototypes hve source pointers.  the Character methods to be replaced don't."
+	sourcelessMethod := aCompiledMethod trailer hasSourcePointer
+							ifTrue: [aCompiledMethod copyWithTempsFromMethodNode: aCompiledMethod methodNode]
+							ifFalse: [aCompiledMethod].
 	bytes := sourcelessMethod size - sourcelessMethod initialPC + 1.
 	newMethod := self
 					interpreterObject: compiledMethodClass
@@ -770,14 +806,18 @@ SpurBootstrap >> installableMethodFor: aCompiledMethod selector: selector classN
 					withArguments: { oldHeap integerObjectOf: bytes.
 									   oldHeap integerObjectOf: sourcelessMethod header }.
 	1 to: sourcelessMethod numLiterals - 1 do:
-		[:i| | literal |
+		[:i| | literal oop |
 		literal := sourcelessMethod literalAt: i.
 		literal isMethodProperties ifTrue:
 			[literal := selector].
-		literal := literal isInteger
-					ifTrue: [oldHeap integerObjectOf: literal]
-					ifFalse: [symbolMap at: literal ifAbsent: [self findLiteral: literal]].
-		oldHeap storePointer: i ofObject: newMethod withValue: literal].
+		oop := (literal isLiteral or: [literal isVariableBinding])
+					ifTrue:
+						[literal isInteger
+							ifTrue: [oldHeap integerObjectOf: literal]
+							ifFalse: [symbolMap at: literal ifAbsent: [self findLiteral: literal]]]
+					ifFalse: "should be a VMObjectProxy"
+						[literal oop].
+		oldHeap storePointer: i ofObject: newMethod withValue: oop].
 	methodClass := self methodClassForClassName: className isMeta: isMeta.
 	oldHeap storePointer: sourcelessMethod numLiterals ofObject: newMethod withValue: methodClass.
 	sourcelessMethod initialPC to: sourcelessMethod size do:
@@ -864,7 +904,25 @@ SpurBootstrap >> methodClassForClassName: classNameSymbol isMeta: isMeta [
 
 { #category : #'bootstrap methods' }
 SpurBootstrap >> modifyCharacterMethods [
-	self shouldBeImplemented
+	| cc md mda |
+	cc := oldHeap classCharacter.
+	md := oldHeap fetchPointer: MethodDictionaryIndex ofObject: cc.
+	mda := oldHeap fetchPointer: MethodArrayIndex ofObject: md..
+	0 to: (oldHeap fetchWordLengthOf: mda) - 1 do:
+		[:i| | method |
+		method := oldHeap fetchPointer: i ofObject: mda.
+		method ~= oldHeap nilObject ifTrue:
+			[(self replacementForCharacterMethod: method) ifNotNil:
+				[:replacement|
+				Transcript
+					cr;
+					nextPutAll: 'replacing Character>>#';
+					nextPutAll: (oldHeap stringOf: (oldHeap fetchPointer: i + SelectorStart ofObject: md));
+					flush. 
+				oldHeap
+					storePointer: i
+					ofObject: mda
+					withValue: replacement]]]
 ]
 
 { #category : #'bootstrap image' }
@@ -975,7 +1033,13 @@ SpurBootstrap >> replaceMethods [
 			 and: [symIsMeta = isMeta]) ifTrue:
 				[(installedPrototypes includes: method selector) ifFalse:
 					["probe method dictionary of the class for each method, installing a dummy if not found."
-					Transcript cr; nextPutAll: 'replacing '; nextPutAll: selector; flush.
+					Transcript
+						cr;
+						nextPutAll: 'replacing ';
+						nextPutAll: className;
+						nextPutAll: (isMeta ifTrue: [' class>>'] ifFalse: ['>>']);
+						store: selector;
+						flush.
 					replacement := self installableMethodFor: method
 										selector: selector
 										className: className
@@ -987,6 +1051,41 @@ SpurBootstrap >> replaceMethods [
 						ofObject: (oldHeap fetchPointer: MethodArrayIndex ofObject: methodDict)
 						withValue: replacement.
 					installedPrototypes add: method selector]]]]
+]
+
+{ #category : #'bootstrap methods' }
+SpurBootstrap >> replacementForCharacterMethod: characterMethodOop [
+	"Answer a replacement method for the argument if it refers
+	 to Character's old inst var value.  Otherwise answer nil."
+	| proxy clone assembly newInsts |
+	proxy := VMCompiledMethodProxy new
+				for: characterMethodOop
+				coInterpreter: oldInterpreter
+				objectMemory: oldHeap.
+	clone := self cloneMethodProxy: proxy.
+	clone dropSourcePointer.
+	clone hasInstVarRef ifFalse:
+		[^nil].
+	assembly := BytecodeDisassembler new disassemble: clone.
+	assembly literals: (assembly literals allButLast: 2), {symbolMap at: #asInteger}, (assembly literals last: 2).
+		"Do this by looking for index of pushReceiverVariable: and replacing it by pushSelf, send asInteger"
+	newInsts := (assembly instructions piecesCutWhere:
+					[:msgOrLabelAssoc :nextInst|
+					 msgOrLabelAssoc isVariableBinding not
+					 and: [msgOrLabelAssoc selector == #pushReceiverVariable:]]) fold:
+				[:a :b|
+				 a allButLast,
+				 {	Message selector: #pushReceiver.
+					Message
+						selector: #send:super:numArgs:
+						arguments: {symbolMap at: #asInteger. false. 0}},
+				 b].
+	assembly instructions: newInsts.
+	^self
+		installableMethodFor: assembly assemble
+		selector: clone selector
+		className: #Character
+		isMeta: false
 ]
 
 { #category : #'method prototypes' }
