@@ -118,15 +118,15 @@ NewObjectMemorySimulator >> firstIndexableField: oop [
 	<returnTypeC: #'void *'>
 	hdr := self baseHeader: oop.
 	fmt := self formatOfHeader: hdr.
-	fmt <= 4 ifTrue: "<= 4 pointer"
+	fmt <= self lastPointerFormat ifTrue:
 		["pointer; may need to delve into the class format word"
 		totalLength := self lengthOf: oop baseHeader: hdr format: fmt.
 		fixedFields := self fixedFieldsOf: oop format: fmt length: totalLength.
 		^self cCoerce: (self pointerForOop: oop + BaseHeaderSize + (fixedFields << ShiftForWord)) to: 'oop *'].
 	^self
 		cCoerce: (self pointerForOop: oop + BaseHeaderSize)
-		to: (fmt < 8
-				ifTrue: [fmt = 6
+		to: (fmt < self firstByteFormat
+				ifTrue: [fmt = self firstLongFormat
 						ifTrue: ["32 bit field objects" 'int *']
 						ifFalse: ["full word objects (bits)" 'oop *']]
 				ifFalse: ["byte objects (including CompiledMethod" 'char *'])
@@ -521,7 +521,7 @@ NewObjectMemorySimulator >> storePointer: index ofObject: oop withValue: valuePo
 	self assert: oop >= self startOfMemory.
 	hdr := self baseHeader: oop.
 	fmt := self formatOfHeader: hdr.
-	self assert: ((fmt <= 4 or: [fmt >= 12])
+	self assert: ((fmt <= self lastPointerFormat or: [fmt >= self firstCompiledMethodFormat])
 				and: [index >= 0 and: [index < (self lengthOf: oop baseHeader: hdr format: fmt)]]).
 	^super storePointer: index ofObject: oop withValue: valuePointer
 ]
@@ -533,7 +533,7 @@ NewObjectMemorySimulator >> storePointerUnchecked: index ofObject: oop withValue
 	self assert: oop >= self startOfMemory.
 	hdr := self baseHeader: oop.
 	fmt := self formatOfHeader: hdr.
-	self assert: ((fmt <= 4 or: [fmt >= 12])
+	self assert: ((fmt <= self lastPointerFormat or: [fmt >= self firstCompiledMethodFormat])
 				and: [index >= 0 and: [index < (self lengthOf: oop baseHeader: hdr format: fmt)]]).
 	^super storePointerUnchecked: index ofObject: oop withValue: valuePointer
 ]
