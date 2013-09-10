@@ -9,7 +9,9 @@ Class {
 		'futureSpace',
 		'pastSpace',
 		'rememberedSet',
-		'rememberedSetSize'
+		'rememberedSetSize',
+		'tenuringThreshold',
+		'tenuringProportion'
 	],
 	#classVars : [
 		'RememberedSetLimit',
@@ -35,7 +37,6 @@ SpurGenerationScavenger >> copyAndForward: survivor [
 						ifTrue: [self copyToOldSpace: survivor]
 						ifFalse: [self copyToFutureSpace: survivor].
 	manager forward: survivor to: newLocation
-			
 ]
 
 { #category : #accessing }
@@ -63,7 +64,8 @@ SpurGenerationScavenger >> initPastSpaceForObjectEnumeration [
 { #category : #initialization }
 SpurGenerationScavenger >> initialize [
 	rememberedSet := CArrayAccessor on: (Array new: RememberedSetLimit).
-	rememberedSetSize := 0
+	rememberedSetSize := 0.
+	tenuringThreshold := 0
 ]
 
 { #category : #initialization }
@@ -127,7 +129,8 @@ SpurGenerationScavenger >> scavenge [
 
 	coInterpreter scavengeStacks.
 	self scavengeLoop.
-	self exchange: pastSpace with: futureSpace
+	self exchange: pastSpace with: futureSpace.
+	self computeTenuringThreshold
 ]
 
 { #category : #scavenger }
@@ -213,4 +216,34 @@ SpurGenerationScavenger >> scavengeRememberedSetStartingAt: n [
 				[manager setIsRememberedOf: referree to: false].
 		 sourceIndex := sourceIndex + 1].
 	rememberedSetSize := destIndex
+]
+
+{ #category : #accessing }
+SpurGenerationScavenger >> scavengerTenuringThreshold [ "(Slang flattens so need unique selectors)"
+	<returnTypeC: #float>
+	^tenuringThreshold >= pastSpace start
+		ifTrue: [(tenuringThreshold - pastSpace start) asFloat / (pastSpace limit - pastSpace start)]
+		ifFalse: [0]
+]
+
+{ #category : #accessing }
+SpurGenerationScavenger >> scavengerTenuringThreshold: aProportion [ "(Slang flattens so need unique selectors)"
+	<var: 'aProportion' type: #float>
+	tenuringProportion := aProportion.
+	tenuringThreshold := aProportion = 0.0
+							ifTrue: [0]
+							ifFalse: [((pastSpace limit - pastSpace start) * aProportion) rounded + pastSpace start]
+]
+
+{ #category : #scavenger }
+SpurGenerationScavenger >> shouldBeTenured: survivor [
+	"Answer if an object should be tenured.  Use the tenuringThreshold to decide.
+	 If the survivors (measured in bytes) are above some fraction of the survivor
+	 space then objects below the threshold (older objects, since allocation grows
+	 upwards and hence new objects are later than old) are scavenged.  Otherwise,
+	 the threshold is set to 0 and no objects are tenured.  See e.g.
+	 An adaptive tenuring policy for generation scavengers, David Ungar & Frank Jackson.
+	 ACM TOPLAS, Volume 14 Issue 1, Jan. 1992, pp 1 - 27."
+
+	^survivor < tenuringThreshold
 ]
