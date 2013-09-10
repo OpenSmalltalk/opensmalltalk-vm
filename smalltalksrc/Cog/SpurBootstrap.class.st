@@ -693,7 +693,7 @@ SpurBootstrap >> fillInPointerObject: newObj from: oldObj [
 	"Fill-in a newObj with appropriately mapped contents from oldObj.
 	 Filter-out the character table and the compact classes array.
 	 Map character objects to immediate characters."
-	0 to: (oldHeap lastPointerOf: oldObj) / oldHeap bytesPerWord - 1 do:
+	0 to: (oldHeap lastPointerOf: oldObj) / oldHeap wordSize - 1 do:
 		[:i| | oldValue newValue |
 		oldValue := oldHeap fetchPointer: i ofObject: oldObj.
 		newValue := (oldHeap isIntegerObject: oldValue)
