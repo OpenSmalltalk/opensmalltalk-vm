@@ -187,6 +187,13 @@ Spur64BitMemoryManager >> integerValueOf: oop [
 			[oop bitShift: self numTagBits negated]
 ]
 
+{ #category : #'header access' }
+Spur64BitMemoryManager >> isWordsNonImm: objOop [
+	"Answer if the argument contains only indexable words (no oops). See comment in formatOf:"
+
+	^(self formatOf: objOop) between: self firstLongFormat and: self firstLongFormat + 1
+]
+
 { #category : #'header format' }
 Spur64BitMemoryManager >> longFormatForNumBytes: numBytes [
 	"Answer firstLongFormat with the odd bit set if numBytes is an odd number of 4-byte units."

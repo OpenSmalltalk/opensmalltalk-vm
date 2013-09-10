@@ -212,7 +212,8 @@ Class {
 		'newSpaceStart',
 		'checkForLeaks',
 		'needGCFlag',
-		'heapMap'
+		'heapMap',
+		'signalLowSpace'
 	],
 	#classVars : [
 		'CheckObjectOverwrite',
@@ -381,7 +382,9 @@ SpurMemoryManager class >> initializeWithOptions: optionsDictionary [
 	self initializeSpecialObjectIndices.
 	self initializeCompactClassIndices.
 	self initializePrimitiveErrorCodes.
-	self initializeObjectHeaderConstants
+	self initializeObjectHeaderConstants.
+
+	SpurGenerationScavenger initialize
 ]
 
 { #category : #'simulation only' }
@@ -660,6 +663,13 @@ SpurMemoryManager >> characterValueOf: oop [
 	^(self cCoerceSimple: oop to: #'unsigned long') >> self numTagBits
 ]
 
+{ #category : #'debug support' }
+SpurMemoryManager >> cheapAddressCouldBeObj: address [ 
+	^(address bitAnd: self baseHeaderSize - 1) = 0
+	  and: [address >= scavenger eden start
+	  and: [address <= freeOldSpaceStart]]
+]
+
 { #category : #initialization }
 SpurMemoryManager >> checkCompactIndex: classIndex isClass: specialIndex named: name [
 	"Check that a class the VM assumes is compact has the right index."
@@ -745,6 +755,21 @@ SpurMemoryManager >> coInterpreter: aCoInterpreter [
 { #category : #'class membership' }
 SpurMemoryManager >> compactIndexOfClass: objOop [
 	^self hashBitsOf: objOop
+]
+
+{ #category : #allocation }
+SpurMemoryManager >> eeInstantiateClassIndex: knownClassIndex format: objFormat numSlots: numSlots [
+	"Instantiate an instance of a compact class.  ee stands for execution engine and
+	 implies that this allocation will *NOT* cause a GC.  N.B. the instantiated object
+	 IS NOT FILLED and must be completed before returning it to Smalltalk. Since this
+	 call is used in routines that do just that we are safe.  Break this rule and die in GC."
+	<inline: true>
+	self assert: (numSlots > 0 and: [knownClassIndex ~= 0]).
+	self assert: (objFormat < self firstByteFormat
+					ifTrue: [objFormat]
+					ifFalse: [objFormat bitAnd: self byteFormatMask])
+				= (self instSpecOfClass: (self knownClassAtIndex: knownClassIndex)).
+	^self allocateSlots: numSlots format: objFormat classIndex: knownClassIndex
 ]
 
 { #category : #'class table' }
@@ -1002,14 +1027,14 @@ SpurMemoryManager >> headerForSlots: numSlots format: formatField classIndex: cl
 	 MSB:	| 8: numSlots		| (on a byte boundary)
 			| 2 bits				|
 			| 22: identityHash	| (on a word boundary)
-			| 3 bits				|
+			| 3 bits				|	(msb <-> lsb = ?,?,isRemembered
 			| 5: format			| (on a byte boundary)
 			| 2 bits				|
 			| 22: classIndex		| (on a word boundary) : LSB
 	 The remaining bits (7) need to be used for
 		isGrey
 		isMarked
-		isRemembered
+		isRemembered (bit 29)
 		isPinned
 		isImmutable
 	 leaving 2 unused bits."
@@ -1054,7 +1079,7 @@ SpurMemoryManager >> initSpaceForAllocationCheck: aNewSpace [
 SpurMemoryManager >> initialize [
 	freeLists := CArrayAccessor on: (Array new: NumFreeLists withAll: 0).
 	checkForLeaks := 0.
-	needGCFlag := false.
+	needGCFlag := signalLowSpace := false.
 	heapMap := self wordSize = 4 ifTrue: [CogCheck32BitHeapMap new]
 ]
 
@@ -1131,6 +1156,13 @@ SpurMemoryManager >> initializePostBootstrap [
 	 Put things back to some kind of normalicy."
 	freeOldSpaceStart := freeStart.
 	freeStart := scavenger eden start
+]
+
+{ #category : #'object format' }
+SpurMemoryManager >> instSpecOfClass: classPointer [
+	"This is the same as the field stored in every object header"
+
+	^self instSpecOfClassFormat: (self formatOfClass: classPointer)
 ]
 
 { #category : #'object format' }
@@ -1323,6 +1355,8 @@ SpurMemoryManager >> isIndexableFormat: format [
 
 { #category : #'object testing' }
 SpurMemoryManager >> isIntegerObject: oop [
+	"This list records the valid senders of isIntegerObject: as we replace uses of
+	  isIntegerObject: by isImmediate: where appropriate."
 	(#(	makeBaseFrameFor:
 		quickFetchInteger:ofObject:
 		frameOfMarriedContext:
@@ -1334,7 +1368,9 @@ SpurMemoryManager >> isIntegerObject: oop [
 		loadFloatOrIntFrom:
 		positive32BitValueOf:
 		primitiveExternalCall
-		checkedIntegerValueOf:) includes: thisContext sender method selector) ifFalse:
+		checkedIntegerValueOf:
+		bytecodePrimAtPut
+		commonAtPut:) includes: thisContext sender method selector) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
@@ -1348,6 +1384,15 @@ SpurMemoryManager >> isIntegerValue: intValue [
 { #category : #'object testing' }
 SpurMemoryManager >> isNonImmediate: oop [ 
 	^(oop bitAnd: self tagMask) = 0
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isNonIntegerObject: oop [
+	"This list records the valid senders of isNonIntegerObject: as we replace uses of
+	  isNonIntegerObject: by isNonImmediate: where appropriate."
+	(#() includes: thisContext sender method selector) ifFalse:
+		[self halt].
+	^(oop bitAnd: 1) = 0
 ]
 
 { #category : #'object testing' }
@@ -1376,9 +1421,30 @@ SpurMemoryManager >> isPointersNonImm: objOop [
 	^(self formatOf: objOop) <= self lastPointerFormat
 ]
 
+{ #category : #'header access' }
+SpurMemoryManager >> isRemembered: objOop [
+	self flag: #endianness.
+	^((self longAt: objOop) >> self rememberedBitShift bitAnd: 1) ~= 0
+]
+
 { #category : #'class table' }
 SpurMemoryManager >> isSegmentSpanningFakeObjectPun [
 	^3
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isWords: oop [
+	"Answer if the argument contains only indexable words (no oops). See comment in formatOf:"
+
+	^(self isNonImmediate: oop)
+	  and: [self isWordsNonImm: oop]
+]
+
+{ #category : #'header access' }
+SpurMemoryManager >> isWordsNonImm: objOop [
+	"Answer if the argument contains only indexable words (no oops). See comment in formatOf:"
+
+	^self subclassResponsibility
 ]
 
 { #category : #'object testing' }
@@ -1464,6 +1530,11 @@ SpurMemoryManager >> lengthOf: objOop baseHeader: header format: fmt [
 { #category : #'header format' }
 SpurMemoryManager >> longFormatForNumBytes: numBytes [
 	^self subclassResponsibility
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> needGCFlag [
+	^needGCFlag
 ]
 
 { #category : #'primitive support' }
@@ -1576,12 +1647,41 @@ SpurMemoryManager >> overflowSlotsMask [
 	^self subclassResponsibility
 ]
 
+{ #category : #'store check' }
+SpurMemoryManager >> possibleRootStoreInto: destObj value: valueOop [
+	(#(	storePointer:ofObject:withValue:) includes: thisContext sender method selector) ifFalse:
+		[self halt].
+	(self isRemembered: destObj) ifFalse:
+		[scavenger remember: destObj.
+		 self setIsRememberedOf: destObj to: true]
+]
+
+{ #category : #'header format' }
+SpurMemoryManager >> rememberedBitShift [
+	"lsb of 3-bit field above format (little endian)"
+	^29
+]
+
 { #category : #'header access' }
 SpurMemoryManager >> setHashBitsOf: objOop to: hash [
 	self flag: #endianness.
 	self assert: (hash between: 0 and: self identityHashHalfWordMask).
 	self longAt: objOop + 4
 		put: ((self longAt: objOop + 4) bitClear: self identityHashHalfWordMask) + hash
+]
+
+{ #category : #'header access' }
+SpurMemoryManager >> setIsRememberedOf: objOop to: aBoolean [
+	self flag: #endianness.
+	self longAt: objOop
+		put: (aBoolean
+				ifTrue: [(self longAt: objOop) bitOr: 1 << self rememberedBitShift]
+				ifFalse: [(self longAt: objOop) bitAnd: (1 << self rememberedBitShift) bitInvert32])
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> signalLowSpace [
+	^signalLowSpace
 ]
 
 { #category : #'header format' }
@@ -1637,6 +1737,11 @@ SpurMemoryManager >> startOfMemory: value [
 	startOfMemory := value.
 	(freeStart isNil or: [freeStart < value]) ifTrue:
 		[freeStart := value]
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> storeByte: byteIndex ofObject: oop withValue: valueByte [
+	^self byteAt: oop + BaseHeaderSize + byteIndex put: valueByte
 ]
 
 { #category : #'object access' }
