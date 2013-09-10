@@ -1365,12 +1365,6 @@ StackInterpreterSimulator >> primStringtranslatefromtotable [
 	^ self primitiveFail
 ]
 
-{ #category : #'debugging traps' }
-StackInterpreterSimulator >> primitiveBeCursor [
-	self halt.
-	^super primitiveBeCursor
-]
-
 { #category : #'I/O primitives' }
 StackInterpreterSimulator >> primitiveBeDisplay [
 	"Extended to create a scratch Form for use by showDisplayBits."
