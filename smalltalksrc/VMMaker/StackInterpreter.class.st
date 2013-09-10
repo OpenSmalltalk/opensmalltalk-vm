@@ -1230,36 +1230,6 @@ StackInterpreter class >> objectMemoryClass [
 ]
 
 { #category : #translation }
-StackInterpreter class >> patchInterp: fileName [
-	"Interpreter patchInterp: 'Squeak VM PPC'"
-	"This will patch out the unneccesary range check (a compare
-	 and branch) in the inner interpreter dispatch loop."
-	"NOTE: You must edit in the Interpeter file name, and the
-	 number of instructions (delta) to count back to find the compare
-	 and branch that we want to get rid of."
-
-	| delta f code len remnant i |
-	delta := 6.
-	f := FileStream fileNamed: fileName.
-	f binary.
-	code := Bitmap new: (len := f size) // 4.
-	f nextInto: code.
-	remnant := f next: len - (code size * 4).
-	i := 0.
-	["Look for a BCTR instruction"
-	(i := code indexOf: 16r4E800420 startingAt: i + 1 ifAbsent: [0]) > 0] whileTrue:
-		["Look for a CMPLWI FF, 6 instrs back"
-	       ((code at: i - delta) bitAnd: 16rFFE0FFFF) = 16r280000FF ifTrue:
-			["Copy dispatch instrs back over the compare"
-			self inform: 'Patching at ', i hex.
-			0 to: delta - 2 do: [ :j |
-				code at: (i - delta) + j put: (code at: (i - delta) + j + 2)]]].
-	f position: 0; nextPutAll: code; nextPutAll: remnant.
-	f close.
-
-]
-
-{ #category : #translation }
 StackInterpreter class >> patchInterpGCCPPC: fileName [
 	"Interpreter patchInterpGCCPPC: 'Squeak copy 1'"
 	"This will patch out the unneccesary range check (a compare
@@ -7085,10 +7055,10 @@ StackInterpreter >> lookupMethodInDictionary: dictionary [
 	mask <= methodDictLinearSearchLimit ifTrue:
 		[index := 0.
 		 [index <= mask] whileTrue:
-			[nextSelector := objectMemory fetchPointer: index ofObject: dictionary.
+			[nextSelector := objectMemory fetchPointer: index + SelectorStart ofObject: dictionary.
 			 nextSelector = messageSelector ifTrue:
 				[methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: dictionary.
-				 newMethod := objectMemory fetchPointer: index - SelectorStart ofObject: methodArray.
+				 newMethod := objectMemory fetchPointer: index ofObject: methodArray.
 				^true].
 		 index := index + 1].
 		 ^false].
@@ -11376,15 +11346,14 @@ StackInterpreter >> subscript: array with: index format: fmt [
 
 	<inline: true>
 	<asmLabel: false> "If labelled icc duplicates when inlining stObject:at:"
-	fmt <= 4 ifTrue: [  "pointer type objects"
-		^ objectMemory fetchPointer: index - 1 ofObject: array].
-	fmt < 8 ifTrue: [  "long-word type objects"
-		^ self positive32BitIntegerFor:
+	fmt <= objectMemory lastPointerFormat ifTrue:
+		[^objectMemory fetchPointer: index - 1 ofObject: array].
+	fmt >= objectMemory firstByteFormat ifTrue:
+		[^objectMemory integerObjectOf:
+			(objectMemory fetchByte: index - 1 ofObject: array)].
+	"long-word type objects"
+	^self positive32BitIntegerFor:
 			(objectMemory fetchLong32: index - 1 ofObject: array)
-	] ifFalse: [  "byte-type objects"
-		^ objectMemory integerObjectOf:
-			(objectMemory fetchByte: index - 1 ofObject: array)
-	].
 ]
 
 { #category : #'indexing primitive support' }
@@ -11392,28 +11361,32 @@ StackInterpreter >> subscript: array with: index storing: oopToStore format: fmt
 	"Note: This method assumes that the index is within bounds!"
 	| valueToStore |
 	<inline: true>
-	fmt <= 4
-		ifTrue: ["pointer type objects"
-			objectMemory storePointer: index - 1 ofObject: array
+	fmt <= objectMemory lastPointerFormat
+		ifTrue:
+			[objectMemory
+				storePointer: index - 1
+				ofObject: array
 				withValue: oopToStore]
-		ifFalse: [fmt < 8
-				ifTrue: ["long-word type objects"
-					valueToStore := self positive32BitValueOf: oopToStore.
-					self successful
-						ifTrue: [objectMemory storeLong32: index - 1 ofObject: array
-									withValue: valueToStore]]
-				ifFalse: ["byte-type objects"
-					(objectMemory isIntegerObject: oopToStore)
-						ifFalse: [self success: false].
-					valueToStore := objectMemory integerValueOf: oopToStore.
-					(valueToStore >= 0
-							and: [valueToStore <= 255])
-						ifFalse: [self success: false].
-					self successful
-						ifTrue: [objectMemory
-								storeByte: index - 1
-								ofObject: array
-								withValue: valueToStore]]]
+		ifFalse:
+			[fmt >= objectMemory firstByteFormat
+				ifTrue:
+					[(objectMemory isIntegerObject: oopToStore) ifFalse:
+						[primFailCode := PrimErrBadIndex].
+					 valueToStore := objectMemory integerValueOf: oopToStore.
+					 (valueToStore >= 0 and: [valueToStore <= 255]) ifFalse:
+						[primFailCode := PrimErrBadArgument].
+					self successful ifTrue:
+						[objectMemory
+							storeByte: index - 1
+							ofObject: array
+							withValue: valueToStore]]
+				ifFalse: "long-word type objects"
+					[valueToStore := self positive32BitValueOf: oopToStore.
+					self successful ifTrue:
+						[objectMemory
+							storeLong32: index - 1
+							ofObject: array
+							withValue: valueToStore]]]
 ]
 
 { #category : #'message sending' }
@@ -11601,13 +11574,13 @@ StackInterpreter >> updateObjectsPostByteSwapFrom: startOop to: stopAddr [
 	[self oop: oop isLessThan: stopAddr] whileTrue:
 		[(objectMemory isFreeObject: oop) ifFalse:
 			[fmt := objectMemory formatOf: oop.
-			 fmt >= 8 ifTrue: "oop contains bytes"
+			 fmt >= self firstByteFormat ifTrue: "oop contains bytes"
 				[wordAddr := oop + BaseHeaderSize.
-				fmt >= 12 ifTrue: "compiled method; start after methodHeader and literals"
+				fmt >= self firstCompiledMethodFormat ifTrue: "compiled method; start after methodHeader and literals"
 					[methodHeader := self longAt: oop + BaseHeaderSize.
 					 wordAddr := wordAddr + BytesPerWord + ((methodHeader >> 10 bitAnd: 255) * BytesPerWord)].
 				objectMemory reverseBytesFrom: wordAddr to: oop + (objectMemory sizeBitsOf: oop)].
-			 fmt = 6 ifTrue: "Bitmap, Float etc"
+			 fmt = self firstLongFormat ifTrue: "Bitmap, Float etc"
 				[(swapFloatWords
 				  and: [(objectMemory compactClassIndexOf: oop) = ClassFloatCompactIndex])
 					ifTrue:

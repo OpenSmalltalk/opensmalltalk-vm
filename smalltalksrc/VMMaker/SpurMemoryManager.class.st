@@ -610,6 +610,11 @@ SpurMemoryManager >> baseHeaderSize [
 	^8
 ]
 
+{ #category : #'header format' }
+SpurMemoryManager >> byteFormatMask [
+	^16r18
+]
+
 { #category : #'object access' }
 SpurMemoryManager >> byteLengthOf: objOop [ 
 	"Answer the number of indexable bytes in the given object.
