@@ -752,6 +752,11 @@ SpurMemoryManager >> coInterpreter: aCoInterpreter [
 	coInterpreter := aCoInterpreter
 ]
 
+{ #category : #'object access' }
+SpurMemoryManager >> compactClassIndexOf: objOop [
+	^self classIndexOf: objOop
+]
+
 { #category : #'class membership' }
 SpurMemoryManager >> compactIndexOfClass: objOop [
 	^self hashBitsOf: objOop
@@ -1170,6 +1175,16 @@ SpurMemoryManager >> instSpecOfClassFormat: classFormat [
 	^classFormat >> self fixedFieldsFieldWidth bitAnd: self formatMask
 ]
 
+{ #category : #'interpreter access' }
+SpurMemoryManager >> instanceSizeOf: classObj [
+	<api>
+	"Answer the number of slots in a class.  For example the instanceSizeOf: 
+	 ClassPoint is 2, for the x & y slots. The instance size of non-pointer classes is 0."
+	self assert: (coInterpreter addressCouldBeClassObj: classObj).
+
+	^(self formatOfClass: classObj) bitAnd: self fixedFieldsOfClassFormatMask
+]
+
 { #category : #allocation }
 SpurMemoryManager >> instantiateClass: classObj [
 	| instSpec classFormat numSlots classIndex newObj |
@@ -1370,7 +1385,8 @@ SpurMemoryManager >> isIntegerObject: oop [
 		primitiveExternalCall
 		checkedIntegerValueOf:
 		bytecodePrimAtPut
-		commonAtPut:) includes: thisContext sender method selector) ifFalse:
+		commonAtPut:
+		primitiveVMParameter) includes: thisContext sender method selector) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
@@ -1524,7 +1540,7 @@ SpurMemoryManager >> lengthOf: objOop baseHeader: header format: fmt [
 	fmt >= self firstShortFormat ifTrue:
 		[^numSlots << (self shiftForWord - 1) - (fmt bitAnd: 3)].
 	"fmt >= self firstLongFormat"
-	^numSlots << (self shiftForWord - 1) - (fmt bitAnd: 1)
+	^numSlots << (self shiftForWord - 2) - (fmt bitAnd: 1)
 ]
 
 { #category : #'header format' }
@@ -1654,6 +1670,13 @@ SpurMemoryManager >> possibleRootStoreInto: destObj value: valueOop [
 	(self isRemembered: destObj) ifFalse:
 		[scavenger remember: destObj.
 		 self setIsRememberedOf: destObj to: true]
+]
+
+{ #category : #'debug printing' }
+SpurMemoryManager >> printHeaderTypeOf: objOop [
+	coInterpreter print: ((self numSlotsOf: objOop) >= self numSlotsMask
+							ifTrue: ['8 byte header']
+							ifFalse: ['16 byte header'])
 ]
 
 { #category : #'header format' }
