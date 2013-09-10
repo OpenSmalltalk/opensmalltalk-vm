@@ -102,6 +102,11 @@ SpurGenerationScavenger >> pastSpace [
 	^self addressOf: pastSpace
 ]
 
+{ #category : #accessing }
+SpurGenerationScavenger >> pastSpaceBytes [
+	^pastSpace limit - pastSpace start
+]
+
 { #category : #'store check' }
 SpurGenerationScavenger >> remember: objOop [
 	rememberedSetSize < RememberedSetLimit

@@ -842,7 +842,7 @@ NewObjectMemory >> eeInstantiateClassIndex: compactClassIndex format: objFormat 
 	| hash header1 header2 byteSize header3 hdrSize |
 	<inline: false>
 	"cannot have a negative indexable field count"
-	self assert: (numSlots > 0 and: [compactClassIndex ~= 0]).
+	self assert: (numSlots >= 0 and: [compactClassIndex ~= 0]).
 	self assert: (objFormat < self firstByteFormat
 					ifTrue: [objFormat]
 					ifFalse: [objFormat bitAnd: self byteFormatMask])
