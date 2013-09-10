@@ -1324,7 +1324,7 @@ CoInterpreter >> ceCheckProfileTick [
 CoInterpreter >> ceContext: maybeContext instVar: slotIndex [
 	<api>
 	| result |
-	(objectMemory isContextNonInt: maybeContext)
+	(objectMemory isContextNonImm: maybeContext)
 		ifTrue:
 			[instructionPointer := self popStack.
 			 result := self externalInstVar: slotIndex ofContext: maybeContext.
@@ -1339,7 +1339,7 @@ CoInterpreter >> ceContext: maybeMarriedContext instVar: slotIndex value: anOop 
 	"genStorePop:MaybeContextReceiverVariable: filters out unmarried contexts
 	 but not arbitrary objects in subclasses.  It answers maybeMarriedContext so
 	 that the StackToRegisterMappingCogit can keep ReceiverResultReg live."
-	(objectMemory isContextNonInt: maybeMarriedContext)
+	(objectMemory isContextNonImm: maybeMarriedContext)
 		ifTrue:
 			[self assert: (self isMarriedOrWidowedContext: maybeMarriedContext).
 			 instructionPointer := self popStack.
@@ -2639,7 +2639,7 @@ CoInterpreter >> ensureAllContextsHaveBytecodePCsOrAreBereaved [
 	oop := objectMemory firstObject.
 	[oop < objectMemory freeStart] whileTrue:
 		[((objectMemory isFreeObject: oop) not
-		   and: [objectMemory isContextNonInt: oop]) ifTrue:
+		   and: [objectMemory isContextNonImm: oop]) ifTrue:
 			[(self isMarriedOrWidowedContext: oop)
 				ifTrue: "The stack pages have already been discarded.  Any remaining married contexts are actually widows."
 					[self markContextAsDead: oop]
@@ -2661,7 +2661,7 @@ CoInterpreter >> ensureAllContextsWithMethodHaveBytecodePCs: methodObj [
 	oop := objectMemory firstObject.
 	[oop < objectMemory freeStart] whileTrue:
 		[((objectMemory isFreeObject: oop) not
-		  and: [(objectMemory isContextNonInt: oop)
+		  and: [(objectMemory isContextNonImm: oop)
 		  and: [(objectMemory fetchPointer: MethodIndex ofObject: oop) = methodObj]]) ifTrue:
 			[(self isMarriedOrWidowedContext: oop)
 				ifTrue:
