@@ -158,6 +158,9 @@ Spur32BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 	instSpec := self instSpecOfClassFormat: classFormat.
 	fillValue := 0.
 	instSpec caseOf: {
+		[self arrayFormat]	->
+			[numSlots := nElements.
+			 fillValue := nilObj].
 		[self indexablePointersFormat]	->
 			[numSlots := (self fixedFieldsOfClassFormat: classFormat) + nElements.
 			 fillValue := nilObj].

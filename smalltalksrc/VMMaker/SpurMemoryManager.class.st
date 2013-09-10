@@ -1380,12 +1380,16 @@ SpurMemoryManager >> isInSurvivorSpace: objOop [
 
 { #category : #'object testing' }
 SpurMemoryManager >> isIndexable: objOop [
-	^(self formatOf: objOop) >= self sixtyFourBitIndexableFormat
+	| fmt |
+	fmt := self formatOf: objOop.
+	^self isIndexableFormat: fmt
 ]
 
 { #category : #'object testing' }
 SpurMemoryManager >> isIndexableFormat: format [
-	^format >= self sixtyFourBitIndexableFormat
+	^format >= self arrayFormat
+	  and: [format <= self indexablePointersFormat
+			or: [format >= self sixtyFourBitIndexableFormat]]
 ]
 
 { #category : #'object testing' }
