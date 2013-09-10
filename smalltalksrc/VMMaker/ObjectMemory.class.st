@@ -141,13 +141,6 @@ ObjectMemory class >> baseHeaderSize [
 	^BaseHeaderSize
 ]
 
-{ #category : #accessing }
-ObjectMemory class >> bytesPerWord [
-	"Answer the width of an object pointer, in bytes."
-
-	^BytesPerWord
-]
-
 { #category : #translation }
 ObjectMemory class >> declareCAsOop: arrayOfVariableNames in: aCCodeGenerator [
 	"Declare the variables in arrayOfVariableNames with type representing position in object memory."
@@ -461,6 +454,13 @@ ObjectMemory class >> unsignedLongLongSuffix [
 	"Answer the suffix that should be appended to unsigned integer literals in generated code."
 
 	^'ULL'
+]
+
+{ #category : #accessing }
+ObjectMemory class >> wordSize [
+	"Answer the width of an object pointer, in bytes."
+
+	^BytesPerWord
 ]
 
 { #category : #'gc -- mark and sweep' }
@@ -891,6 +891,11 @@ ObjectMemory >> booleanObjectOf: bool [
 ]
 
 { #category : #'header access' }
+ObjectMemory >> byteFormatForNumBytes: numBytes [
+	^self firstByteFormat + (numBytes bitAnd: 3)
+]
+
+{ #category : #'header access' }
 ObjectMemory >> byteFormatMask [
 	^16rC
 ]
@@ -988,13 +993,6 @@ ObjectMemory >> byteSwapped: w [
 ObjectMemory >> bytesLeft: includingSwap [
 	^(self sizeOfFree: freeBlock) "already commited"
 		+ (self sqMemoryExtraBytesLeft: includingSwap).
-]
-
-{ #category : #initialization }
-ObjectMemory >> bytesPerWord [
-	"Answer the size of an object pointer in bytes."
-
-	^BytesPerWord
 ]
 
 { #category : #'interpreter access' }
@@ -3333,6 +3331,13 @@ ObjectMemory >> loadImageSegmentFrom: segmentWordArray outPointers: outPointerAr
 	^self oopFromChunk: segmentWordArray + BaseHeaderSize + BytesPerWord
 ]
 
+{ #category : #'header access' }
+ObjectMemory >> longFormatForNumBytes: numBytes [
+	"In ObjectMemory the odd bits for 32-bit indexable objects, needed in the 64-bit VM, is
+	 not stored in the format field."
+	^self firstLongFormat
+]
+
 { #category : #accessing }
 ObjectMemory >> lowSpaceThreshold [
 	^lowSpaceThreshold
@@ -5157,4 +5162,11 @@ ObjectMemory >> weakFinalizerCheck: oop [
 		 self storePointer: 1 ofObject: oop withValue: listItemOop. 
 		 self storePointer: 0 ofObject: listOop withValue: oop]
 
+]
+
+{ #category : #initialization }
+ObjectMemory >> wordSize [
+	"Answer the size of an object pointer in bytes."
+
+	^4
 ]

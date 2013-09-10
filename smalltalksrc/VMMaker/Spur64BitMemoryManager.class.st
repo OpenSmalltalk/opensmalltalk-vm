@@ -5,7 +5,7 @@ Class {
 }
 
 { #category : #'word size' }
-Spur64BitMemoryManager class >> bytesPerWord [
+Spur64BitMemoryManager class >> wordSize [
 	^8
 ]
 
@@ -185,6 +185,12 @@ Spur64BitMemoryManager >> integerValueOf: oop [
 			[((oop bitShift: self numTagBits negated) bitAnd: 16r3FFFFFFFFFFFFFFF) - 16r3FFFFFFFFFFFFFFF - 1  "Faster than -16r4000000000000000 (a LgInt)"]
 		ifFalse: "positive"
 			[oop bitShift: self numTagBits negated]
+]
+
+{ #category : #'header format' }
+Spur64BitMemoryManager >> longFormatForNumBytes: numBytes [
+	"Answer firstLongFormat with the odd bit set if numBytes is an odd number of 4-byte units."
+	^self firstLongFormat + (numBytes >> 2 bitAnd: 1)
 ]
 
 { #category : #'object access' }

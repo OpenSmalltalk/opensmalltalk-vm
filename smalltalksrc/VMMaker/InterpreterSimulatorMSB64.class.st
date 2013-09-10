@@ -13,13 +13,6 @@ InterpreterSimulatorMSB64 >> byteSwapped: w [
 ]
 
 { #category : #'memory access' }
-InterpreterSimulatorMSB64 >> bytesPerWord [
-	"overridden for 64-bit images..."
-
-	^ 8
-]
-
-{ #category : #'memory access' }
 InterpreterSimulatorMSB64 >> long32At: byteAddress [
 	"Return the 32-bit word at byteAddress which must be 0 mod 4."
 
@@ -47,4 +40,11 @@ InterpreterSimulatorMSB64 >> longAt: byteAddress put: a64BitValue [
 	super longAt: byteAddress put: (a64BitValue bitShift: -32).
 	super longAt: byteAddress + 4 put: (a64BitValue bitAnd: 16rFFFFFFFF).
 	^ a64BitValue
+]
+
+{ #category : #'memory access' }
+InterpreterSimulatorMSB64 >> wordSize [
+	"overridden for 64-bit images..."
+
+	^8
 ]

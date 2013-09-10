@@ -651,12 +651,6 @@ VMMaker >> buildCodeGeneratorForInterpreter: getAPIMethods [
 	^cg
 ]
 
-{ #category : #initialize }
-VMMaker >> bytesPerWord [
-	"Return the bytes in a word for the chosen 32bit/64bit pointer setup chosen"
-	^is64BitVM ifTrue:[8] ifFalse:[4]
-]
-
 { #category : #'plugin lists' }
 VMMaker >> canSupportPlugin: pluginClassName [ 
 	"see if this plugin needs any external files and if so, check to see if 
@@ -709,7 +703,7 @@ VMMaker >> configurationInfo [
 		platformName.
 		makeRelative value: self sourceDirectory pathName.
 		makeRelative value: self platformRootDirectory pathName.
-		self bytesPerWord.
+		self wordSize.
 		isRelative value: self sourceDirectory pathName.
 		isRelative value: self platformRootDirectory pathName.
 		self interpreterClassName
@@ -1058,7 +1052,7 @@ VMMaker >> generateInterpreterFile [
 	cg removeUnneededBuiltins.
 	self interpreterClass preGenerationHook: cg.
 
-	vmHeaderContents := cg vmHeaderContentsWithBytesPerWord: self bytesPerWord.
+	vmHeaderContents := cg vmHeaderContentsWithBytesPerWord: self wordSize.
 	(cg needToGenerateHeader: self interpreterHeaderName file: self interpreterHeaderPath contents: vmHeaderContents) ifTrue:
 		[cg storeHeaderOnFile: self interpreterHeaderPath contents: vmHeaderContents].
 	cg storeCodeOnFile: (self sourceFilePathFor: self interpreterClass sourceFileName) doInlining: self doInlining.
@@ -1753,4 +1747,10 @@ VMMaker >> validatePlugin:	plName in: listOfPlugins [
 VMMaker >> vmBitnessString [
 	"Return a string of 32 or 64 depending on the is64BitVM valuse"
 	^is64BitVM ifTrue:['64'] ifFalse:['32']
+]
+
+{ #category : #initialize }
+VMMaker >> wordSize [
+	"Return the bytes in a word for the chosen 32bit/64bit pointer setup chosen"
+	^is64BitVM ifTrue:[8] ifFalse:[4]
 ]

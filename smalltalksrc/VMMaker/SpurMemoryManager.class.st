@@ -227,11 +227,6 @@ Class {
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
-{ #category : #'word size' }
-SpurMemoryManager class >> bytesPerWord [
-	^self subclassResponsibility
-]
-
 { #category : #initialization }
 SpurMemoryManager class >> initBytesPerWord: nBytes [
 
@@ -380,7 +375,7 @@ SpurMemoryManager class >> initializeWithOptions: optionsDictionary [
 
 	self initBytesPerWord: (self == SpurMemoryManager
 								ifTrue: [optionsDictionary at: #BytesPerWord ifAbsent: [4]]
-								ifFalse: [self bytesPerWord]).
+								ifFalse: [self wordSize]).
 	BytesPerOop := optionsDictionary at: #BytesPerOop ifAbsent: [BytesPerWord].
 
 	self initializeSpecialObjectIndices.
@@ -399,6 +394,11 @@ SpurMemoryManager class >> vmProxyMajorVersion [
 SpurMemoryManager class >> vmProxyMinorVersion [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^StackInterpreter vmProxyMinorVersion
+]
+
+{ #category : #'word size' }
+SpurMemoryManager class >> wordSize [
+	^self subclassResponsibility
 ]
 
 { #category : #'garbage collection' }
@@ -608,6 +608,11 @@ SpurMemoryManager >> baseHeaderSize [
 	"Object headers are 8 bytes in length if the slot size fits in the slot size field (max implies overflow),
 	 16 bytes otherwise (slot size in preceeding word)."
 	^8
+]
+
+{ #category : #'header format' }
+SpurMemoryManager >> byteFormatForNumBytes: numBytes [
+	^self firstByteFormat + (numBytes bitAnd: self wordSize - 1)
 ]
 
 { #category : #'header format' }
@@ -1454,6 +1459,11 @@ SpurMemoryManager >> lengthOf: objOop baseHeader: header format: fmt [
 		[^numSlots << (self shiftForWord - 1) - (fmt bitAnd: 3)].
 	"fmt >= self firstLongFormat"
 	^numSlots << (self shiftForWord - 1) - (fmt bitAnd: 1)
+]
+
+{ #category : #'header format' }
+SpurMemoryManager >> longFormatForNumBytes: numBytes [
+	^self subclassResponsibility
 ]
 
 { #category : #'primitive support' }
