@@ -1874,7 +1874,7 @@ ObjectMemory >> formatOf: oop [
         3      both fixed and indexable fields (all containing pointers)
         4      both fixed and indexable weak fields (all containing pointers).
 
-        5      unused
+        5      unused (reserved for ephemerons?)
         6      indexable word fields only (no pointers)
         7      indexable long (64-bit) fields (only in 64-bit images)
  
@@ -2982,10 +2982,15 @@ ObjectMemory >> isPointers: oop [
 ]
 
 { #category : #'header access' }
+ObjectMemory >> isPointersFormat: format [
+	^format <= self lastPointerFormat
+]
+
+{ #category : #'header access' }
 ObjectMemory >> isPointersNonImm: objOop [
 	"Answer if the argument has only fields that can hold oops. See comment in formatOf:"
 
-	^(self formatOf: objOop) <= 4
+	^(self formatOf: objOop) <= self lastPointerFormat
 ]
 
 { #category : #'header access' }
@@ -3065,6 +3070,11 @@ ObjectMemory >> lastHash [
 { #category : #accessing }
 ObjectMemory >> lastHash: aValue [
 	^lastHash := aValue
+]
+
+{ #category : #'header access' }
+ObjectMemory >> lastPointerFormat [
+	^5
 ]
 
 { #category : #'object enumeration' }
