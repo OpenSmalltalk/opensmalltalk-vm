@@ -2082,7 +2082,7 @@ StackInterpreter >> bytecodePrimAtPut [
 	value := self internalStackTop.
 	index := self internalStackValue: 1.
 	rcvr := self internalStackValue: 2.
-	((objectMemory isIntegerObject: rcvr) not
+	((objectMemory isImmediate: rcvr) not
 	 and: [objectMemory isIntegerObject: index]) ifTrue:
 		[atIx := (rcvr bitAnd: AtCacheMask) + AtPutBase.  "Index into atPutCache"
 		 (atCache at: atIx+AtCacheOop) = rcvr ifTrue:
@@ -3409,7 +3409,7 @@ StackInterpreter >> commonAtPut: stringy [
 	value := self stackTop.
 	self initPrimCall.
 	rcvr := self stackValue: 2.
-	(objectMemory isNonIntegerObject: rcvr) ifFalse:
+	(objectMemory isNonImmediate: rcvr) ifFalse:
 		[^self primitiveFailFor: PrimErrInappropriate].
 	index := self stackValue: 1.
 	"No need to test for large positive integers here.  No object has 1g elements"
