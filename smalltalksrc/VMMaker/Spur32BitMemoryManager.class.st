@@ -221,6 +221,13 @@ Spur32BitMemoryManager >> isIntegerValue: intValue [
 		inSmalltalk: [intValue >= 16r-40000000 and: [intValue <= 16r3FFFFFFF]]
 ]
 
+{ #category : #'header access' }
+Spur32BitMemoryManager >> isWordsNonImm: objOop [
+	"Answer if the argument contains only indexable words (no oops). See comment in formatOf:"
+
+	^(self formatOf: objOop) = self firstLongFormat
+]
+
 { #category : #'header format' }
 Spur32BitMemoryManager >> longFormatForNumBytes: numBytes [
 	^self firstLongFormat

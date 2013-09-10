@@ -11,8 +11,19 @@ Class {
 		'rememberedSet',
 		'rememberedSetSize'
 	],
+	#classVars : [
+		'RememberedSetLimit',
+		'RememberedSetRedZone'
+	],
 	#category : #'VMMaker-SpurMemoryManager'
 }
+
+{ #category : #'class initialization' }
+SpurGenerationScavenger class >> initialize [
+	"SpurGenerationScavenger initialize"
+	RememberedSetLimit := 4096.
+	RememberedSetRedZone := 1024 * 3
+]
 
 { #category : #scavenger }
 SpurGenerationScavenger >> copyAndForward: survivor [
@@ -50,6 +61,12 @@ SpurGenerationScavenger >> initPastSpaceForObjectEnumeration [
 ]
 
 { #category : #initialization }
+SpurGenerationScavenger >> initialize [
+	rememberedSet := CArrayAccessor on: (Array new: RememberedSetLimit).
+	rememberedSetSize := 0
+]
+
+{ #category : #initialization }
 SpurGenerationScavenger >> manager: aSpurMemoryManager memory: memoryArray newSpaceStart: startAddress newSpaceBytes: totalBytes edenBytes: requestedEdenBytes [ 
 	| edenBytes edenLimit edenStart survivorBytes |
 	manager := aSpurMemoryManager.
@@ -81,6 +98,17 @@ SpurGenerationScavenger >> manager: aSpurMemoryManager memory: memoryArray newSp
 SpurGenerationScavenger >> pastSpace [
 	<returnTypeC: #'SpurNewSpaceSpace *'>
 	^self addressOf: pastSpace
+]
+
+{ #category : #'store check' }
+SpurGenerationScavenger >> remember: objOop [
+	rememberedSetSize < RememberedSetLimit
+		ifTrue:
+			[rememberedSet at: rememberedSetSize put: objOop.
+			 (rememberedSetSize := rememberedSetSize + 1) >= RememberedSetRedZone ifTrue:
+				[manager scheduleScavenge]]
+		ifFalse:
+			[self error: 'remembered set overflow' "for now"]
 ]
 
 { #category : #scavenger }

@@ -18,6 +18,23 @@ Spur32BitMMLESimulator >> byteAt: byteAddress [
 ]
 
 { #category : #'memory access' }
+Spur32BitMMLESimulator >> byteAt: byteAddress put: byte [
+	| lowBits long longAddress |
+	lowBits := byteAddress bitAnd: 3.
+	longAddress := byteAddress - lowBits.
+	long := self longAt: longAddress.
+	long := (lowBits caseOf: {
+		[0] -> [ (long bitAnd: 16rFFFFFF00) bitOr: byte ].
+		[1] -> [ (long bitAnd: 16rFFFF00FF) bitOr: (byte bitShift: 8) ].
+		[2] -> [ (long bitAnd: 16rFF00FFFF) bitOr: (byte bitShift: 16)  ].
+		[3] -> [ (long bitAnd: 16r00FFFFFF) bitOr: (byte bitShift: 24)  ]
+	}).
+	self assert: (self cheapAddressCouldBeObj: longAddress).
+	self longAt: longAddress put: long.
+	^byte
+]
+
+{ #category : #'memory access' }
 Spur32BitMMLESimulator >> byteAtPointer: pointer [
 	"This gets implemented by Macros in C, where its types will also be checked.
 	 pointer is a raw address."
@@ -44,6 +61,13 @@ Spur32BitMMLESimulator >> headerForSlots: numSlots format: formatField classInde
 	self assert: (formatField bitAnd: self formatMask) = formatField.
 	self assert: (classIndex bitAnd: self classIndexMask) = classIndex.
 	^super headerForSlots: numSlots format: formatField classIndex: classIndex
+]
+
+{ #category : #'memory access' }
+Spur32BitMMLESimulator >> long32At: byteAddress [
+	"Answer the 32-bit word at byteAddress which must be 0 mod 4."
+
+	^self longAt: byteAddress
 ]
 
 { #category : #'memory access' }
