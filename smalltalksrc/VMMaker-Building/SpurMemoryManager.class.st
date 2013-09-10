@@ -762,6 +762,11 @@ SpurMemoryManager >> compactIndexOfClass: objOop [
 	^self hashBitsOf: objOop
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> edenBytes [
+	^scavenger eden limit - scavenger eden start
+]
+
 { #category : #allocation }
 SpurMemoryManager >> eeInstantiateClassIndex: knownClassIndex format: objFormat numSlots: numSlots [
 	"Instantiate an instance of a compact class.  ee stands for execution engine and
@@ -775,6 +780,15 @@ SpurMemoryManager >> eeInstantiateClassIndex: knownClassIndex format: objFormat 
 					ifFalse: [objFormat bitAnd: self byteFormatMask])
 				= (self instSpecOfClass: (self knownClassAtIndex: knownClassIndex)).
 	^self allocateSlots: numSlots format: objFormat classIndex: knownClassIndex
+]
+
+{ #category : #allocation }
+SpurMemoryManager >> eeInstantiateMethodContextSlots: numSlots [
+	<inline: true>
+	^self
+		allocateSlots: numSlots
+		format: self indexablePointersFormat
+		classIndex: ClassMethodContextCompactIndex
 ]
 
 { #category : #'class table' }
@@ -1685,6 +1699,12 @@ SpurMemoryManager >> rememberedBitShift [
 	^29
 ]
 
+{ #category : #'debug support' }
+SpurMemoryManager >> scavenger [
+	<doNotGenerate>
+	^scavenger
+]
+
 { #category : #'header access' }
 SpurMemoryManager >> setHashBitsOf: objOop to: hash [
 	self flag: #endianness.
@@ -1786,6 +1806,25 @@ SpurMemoryManager >> storePointerUnchecked: fieldIndex ofObject: oop withValue: 
 { #category : #allocation }
 SpurMemoryManager >> sufficientSpaceToInstantiate: classObj indexableSize: indexableFields [
 	self shouldNotImplement
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> tenuringThreshold [
+	"In the scavenger the tenuring threshold is effectively a number of bytes of objects,
+	 accessed as a proportion of pastSpace from 0 to 1.   In the Squeak image the tenuring
+	 threshold is an object count. Marry the two notions  by multiplying the proportion by
+	 the size of pastSpace and dividing by the average object size, as derived from observation."
+	| averageObjectSize |
+	averageObjectSize := 8 * self wordSize.
+	^scavenger scavengerTenuringThreshold * (scavenger pastSpace limit - scavenger pastSpace start) // averageObjectSize
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> tenuringThreshold: threshold [
+	"c.f. tenuringThreshold"
+	scavenger scavengerTenuringThreshold:
+		(threshold * 8 * self wordSize) asFloat
+		/ (scavenger pastSpace limit - scavenger pastSpace start) asFloat
 ]
 
 { #category : #accessing }

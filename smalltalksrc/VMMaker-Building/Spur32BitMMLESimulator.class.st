@@ -47,6 +47,12 @@ Spur32BitMMLESimulator >> endianness [
 	^#little
 ]
 
+{ #category : #'as yet unclassified' }
+Spur32BitMMLESimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
+	aFloat at: 2 put: (self long32At: floatBitsAddress).
+	aFloat at: 1 put: (self long32At: floatBitsAddress+4)
+]
+
 { #category : #'header format' }
 Spur32BitMMLESimulator >> headerForSlots: numSlots format: formatField classIndex: classIndex [
 	"The header format in LSB is
@@ -111,6 +117,12 @@ Spur32BitMMLESimulator >> longLongAt: byteAddress put: a64BitValue [
 		at: byteAddress // 4 + 1 put: (a64BitValue bitAnd: 16rffffffff);
 		at: byteAddress // 4 + 2 put: a64BitValue >> 32.
 	^a64BitValue
+]
+
+{ #category : #'as yet unclassified' }
+Spur32BitMMLESimulator >> storeFloatAt: floatBitsAddress from: aFloat [
+	self long32At: floatBitsAddress put: (aFloat at: 2).
+	self long32At: floatBitsAddress+4 put: (aFloat at: 1)
 ]
 
 { #category : #'memory access' }
