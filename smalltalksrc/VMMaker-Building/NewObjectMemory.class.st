@@ -201,7 +201,7 @@ NewObjectMemory >> allocate: byteSize headerSize: hdrSize h1: baseHeader h2: cla
 	"clear new object"
 	doFill ifTrue:
 		[| fillWord end i |
-		 fillWord := format <= 4
+		 fillWord := format <= self lastPointerFormat
 						ifTrue: [nilObj] "if pointers, fill with nil oop"
 						ifFalse: [0].
 		 end := newObj + byteSize.
@@ -697,7 +697,7 @@ NewObjectMemory >> eeAllocate: byteSize headerSize: hdrSize h1: baseHeader h2: c
 	"clear new object"
 	doFill ifTrue:
 		[| fillWord end i |
-		 fillWord := format <= 4
+		 fillWord := format <= self lastPointerFormat
 					ifTrue: [nilObj] "if pointers, fill with nil oop"
 					ifFalse: [0].
 		 end := newObj + byteSize.
@@ -741,37 +741,34 @@ NewObjectMemory >> eeInstantiateAndInitializeClass: classPointer indexableSize: 
 	byteSize := byteSize << (ShiftForWord-2).
 	format := self formatOfHeader: classFormat.
 	self flag: #sizeLowBits.
-	format < 8
+	format < self firstByteFormat
 		ifTrue:
-			[format = 6
-				ifTrue: ["long32 bitmaps"
-					bm1 := BytesPerWord-1.
+			[format = self firstLongFormat
+				ifTrue: "long32 bitmaps"
+					[bm1 := BytesPerWord-1.
 					byteSize := byteSize + (size * 4) + bm1 bitAnd: LongSizeMask. "round up"
 					binc := bm1 - ((size * 4) + bm1 bitAnd: bm1). "odd bytes"
 					"extra low bit (4) for 64-bit VM goes in 4-bit (betw hdr bits and sizeBits)"
 					header1 := header1 bitOr: (binc bitAnd: 4)]
-				ifFalse: [byteSize := byteSize + (size * BytesPerWord) "Arrays and 64-bit bitmaps"]
-			]
+				ifFalse: "Arrays and 64-bit bitmaps"
+					[byteSize := byteSize + (size * BytesPerWord)]]
 		ifFalse:
 			["Strings and Methods"
 			bm1 := BytesPerWord-1.
 			byteSize := byteSize + size + bm1 bitAnd: LongSizeMask. "round up"
 			binc := bm1 - (size + bm1 bitAnd: bm1). "odd bytes"
 			"low bits of byte size go in format field"
-			header1 := header1 bitOr: (binc bitAnd: 3) << 8.
+			header1 := header1 bitOr: (binc bitAnd: 3) << self instFormatFieldLSB.
 			"extra low bit (4) for 64-bit VM goes in 4-bit (betw hdr bits and sizeBits)"
 			header1 := header1 bitOr: (binc bitAnd: 4)].
 	byteSize > 255
-		ifTrue: ["requires size header word"
-			header3 := byteSize.
+		ifTrue: "requires size header word"
+			[header3 := byteSize.
 			header1 := header1]
 		ifFalse: [header1 := header1 bitOr: byteSize].
-	header3 > 0
-		ifTrue: ["requires full header"
-			hdrSize := 3]
-		ifFalse: [cClass = 0
-				ifTrue: [hdrSize := 2]
-				ifFalse: [hdrSize := 1]].
+	hdrSize := header3 > 0
+					ifTrue: [3] "requires full header"
+					ifFalse: [cClass = 0 ifTrue: [2] ifFalse: [1]].
 	^self eeAllocate: byteSize headerSize: hdrSize h1: header1 h2: header2 h3: header3 doFill: true format: format
 ]
 
@@ -804,57 +801,35 @@ NewObjectMemory >> eeInstantiateClass: classPointer indexableSize: size [
 	byteSize := byteSize << (ShiftForWord-2).
 	format := self formatOfHeader: classFormat.
 	self flag: #sizeLowBits.
-	format < 8
+	format < self firstByteFormat
 		ifTrue:
-			[format = 6
-				ifTrue: ["long32 bitmaps"
-					bm1 := BytesPerWord-1.
+			[format = self firstLongFormat
+				ifTrue: "long32 bitmaps"
+					[bm1 := BytesPerWord-1.
 					byteSize := byteSize + (size * 4) + bm1 bitAnd: LongSizeMask. "round up"
 					binc := bm1 - ((size * 4) + bm1 bitAnd: bm1). "odd bytes"
 					"extra low bit (4) for 64-bit VM goes in 4-bit (betw hdr bits and sizeBits)"
 					header1 := header1 bitOr: (binc bitAnd: 4)]
-				ifFalse: [byteSize := byteSize + (size * BytesPerWord) "Arrays and 64-bit bitmaps"]
-			]
+				ifFalse: "Arrays and 64-bit bitmaps"
+					[byteSize := byteSize + (size * BytesPerWord)]]
 		ifFalse:
 			["Strings and Methods"
 			bm1 := BytesPerWord-1.
 			byteSize := byteSize + size + bm1 bitAnd: LongSizeMask. "round up"
 			binc := bm1 - (size + bm1 bitAnd: bm1). "odd bytes"
 			"low bits of byte size go in format field"
-			header1 := header1 bitOr: (binc bitAnd: 3) << 8.
+			header1 := header1 bitOr: (binc bitAnd: 3) << self instFormatFieldLSB.
 			"extra low bit (4) for 64-bit VM goes in 4-bit (betw hdr bits and sizeBits)"
 			header1 := header1 bitOr: (binc bitAnd: 4)].
 	byteSize > 255
-		ifTrue: ["requires size header word"
-			header3 := byteSize.
+		ifTrue: "requires size header word"
+			[header3 := byteSize.
 			header1 := header1]
 		ifFalse: [header1 := header1 bitOr: byteSize].
-	header3 > 0
-		ifTrue: ["requires full header"
-			hdrSize := 3]
-		ifFalse: [cClass = 0
-				ifTrue: [hdrSize := 2]
-				ifFalse: [hdrSize := 1]].
+	hdrSize := header3 > 0
+					ifTrue: [3] "requires full header"
+					ifFalse: [cClass = 0 ifTrue: [2] ifFalse: [1]].
 	^self eeAllocate: byteSize headerSize: hdrSize h1: header1 h2: header2 h3: header3
-]
-
-{ #category : #'interpreter access' }
-NewObjectMemory >> eeInstantiateMethodContextByteSize: sizeInBytes [ 
-	"This version of instantiateClass assumes that the total object 
-	 size is under 256 bytes, the limit for objects with only one or 
-	 two header words. Note that the size is specified in bytes 
-	 and should include four bytes for the base header word.
-	 Will *not* cause a GC."
-	| hash header1 |
-	self assert: (sizeInBytes = SmallContextSize or: [sizeInBytes = LargeContextSize]).
-	self assert: sizeInBytes <= SizeMask.
-	hash := self newObjectHash.
-	header1 := (hash bitAnd: HashMaskUnshifted) << HashBitsOffset bitOr: self formatOfMethodContextMinusSize.
-	self assert: (header1 bitAnd: CompactClassMask) > 0. "contexts must be compact"
-	self assert: (header1 bitAnd: SizeMask) = 0.
-	"OR size into header1.  Must not do this if size > SizeMask"
-	header1 := header1 + sizeInBytes.
-	^self eeAllocate: sizeInBytes headerSize: 1 h1: header1 h2: nil h3: nil
 ]
 
 { #category : #'interpreter access' }
@@ -973,7 +948,7 @@ NewObjectMemory >> firstValidIndexOfIndexableObject: obj withFormat: fmt [
 	 with the given format.  This is 1 for all objects except compiled methods
 	 where the first index is beyond the last literal.
 	 Used for safer bounds-checking on methods."
-	^fmt >= 12
+	^fmt >= self firstCompiledMethodFormat
 		ifTrue: [coInterpreter firstByteIndexOfMethod: obj]
 		ifFalse: [1]
 ]
@@ -983,7 +958,7 @@ NewObjectMemory >> formatOfMethodContext [
 	"Answer the class format word for MethodContext which is used to instantiate
 	 contexts without needing to fetch it from the class MethodContext itself."
 	^(ClassMethodContextCompactIndex << 12)
-	+ (3 << 8) "Pointers+Variable"
+	+ (self indexablePointersFormat << self instFormatFieldLSB) "Pointers+Variable"
 	+ (CtxtTempFrameStart + (BaseHeaderSize / BytesPerWord) << 2)
 ]
 
@@ -992,7 +967,7 @@ NewObjectMemory >> formatOfMethodContextMinusSize [
 	"Answer the class format word for MethodContext which is used to instantiate
 	 contexts without needing to fetch it from the class MethodContext itself."
 	^(ClassMethodContextCompactIndex << 12)
-	+ (3 << 8) "Pointers+Variable"
+	+ (self indexablePointersFormat << self instFormatFieldLSB) "Pointers+Variable"
 ]
 
 { #category : #become }
@@ -1536,14 +1511,14 @@ NewObjectMemory >> lastPointerOf: oop [
 	| fmt header contextSize numLiterals |
 	header := self baseHeader: oop.
 	fmt := self formatOfHeader: header.
-	fmt <= 4 ifTrue:
-		[(fmt = 3
+	fmt <= self lastPointerFormat ifTrue:
+		[(fmt = self indexablePointersFormat
 		  and: [self isContextHeader: header]) ifTrue:
 			["contexts end at the stack pointer"
 			contextSize := coInterpreter fetchStackPointerOf: oop.
 			^CtxtTempFrameStart + contextSize * BytesPerOop].
 		^(self sizeBitsOfSafe: oop) - BaseHeaderSize  "all pointers"].
-	fmt < 12 ifTrue: [^0]. "no pointers"
+	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes"
 	numLiterals := coInterpreter literalCountOf: oop.
@@ -1563,9 +1538,9 @@ NewObjectMemory >> lastPointerOf: oop recordWeakRoot: recordWeakRoot [ "<Boolean
 	<asmLabel: false>
 	header := self baseHeader: oop.
 	fmt := self formatOfHeader: header.
-	fmt <= 4 ifTrue:
-		[fmt >= 3 ifTrue:
-			[fmt = 4 ifTrue:
+	fmt <= self lastPointerFormat ifTrue:
+		[fmt >= self indexablePointersFormat ifTrue:
+			[fmt = self lastPointerFormat ifTrue:
 				[(recordWeakRoot and: [weakRootCount >= 0]) ifTrue:
 					["And remember as weak root"
 					 (weakRootCount := weakRootCount + 1) <= WeakRootTableSize ifFalse:
@@ -1583,7 +1558,7 @@ NewObjectMemory >> lastPointerOf: oop recordWeakRoot: recordWeakRoot [ "<Boolean
 				 ^CtxtTempFrameStart + contextSize * BytesPerOop]].
 		 sz := self sizeBitsOfSafe: oop.
 		 ^sz - BaseHeaderSize  "all pointers" ].
-	fmt < 12 ifTrue: [^0]. "no pointers"
+	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes"
 	numFields := coInterpreter literalCountOf: oop. "so literalCountOf: may be inlined"
@@ -1598,8 +1573,8 @@ NewObjectMemory >> lastPointerWhileForwarding: oop [
 	<inline: true>
 	header := self headerWhileForwardingOf: oop.
 	fmt := self formatOfHeader: header.
-	fmt <= 4 ifTrue:
-		[(fmt = 3
+	fmt <= self lastPointerFormat ifTrue:
+		[(fmt = self indexablePointersFormat
 		  and: [self isContextHeader: header]) ifTrue:
 			["contexts end at the stack pointer"
 			 contextSize := coInterpreter nacFetchStackPointerOf: oop.
@@ -1610,7 +1585,7 @@ NewObjectMemory >> lastPointerWhileForwarding: oop [
 					ifTrue: [(self sizeHeader: oop) bitAnd: AllButTypeMask]
 					ifFalse: [header bitAnd: SizeMask].
 		 ^size - BaseHeaderSize].
-	fmt < 12 ifTrue: [^0]. "no pointers"
+	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
 	"CompiledMethod: contains both pointers and bytes"
 	self assert: (header bitAnd: MarkBit) = 0.
 	numLiterals := coInterpreter literalCountOf: oop.
@@ -2922,9 +2897,8 @@ NewObjectMemory >> validate: oop [
 		cc = 0 ifTrue: [self halt]].
 	fmt = 5 ifTrue: [self halt].
 	fmt = 7 ifTrue: [self halt].
-	fmt >= 12 ifTrue:
-		["CompiledMethod -- check for integer header"
-		(self isIntegerObject: (self longAt: oop + BytesPerWord)) ifFalse: [self halt]].
+	fmt >= self firstCompiledMethodFormat ifTrue: "must have integer header"
+		[(self isIntegerObject: (self longAt: oop + BytesPerWord)) ifFalse: [self halt]].
 ]
 
 { #category : #'image segment in/out' }
@@ -2948,7 +2922,7 @@ NewObjectMemory >> wordSwapFloatsFrom: startOop to: stopAddr [
 	oop := startOop.
 	[self oop: oop isLessThan: stopAddr] whileTrue:
 		[(self isFreeObject: oop) ifFalse:
-			[((self formatOf: oop) = 6
+			[((self formatOf: oop) = self firstLongFormat
 			 and: [(self compactClassIndexOf: oop) = ClassFloatCompactIndex]) ifTrue:
 				[temp := self longAt: oop + BaseHeaderSize.
 				 self longAt: oop + BaseHeaderSize put: (self longAt: oop + BaseHeaderSize + 4).

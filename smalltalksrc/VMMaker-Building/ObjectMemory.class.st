@@ -697,7 +697,7 @@ ObjectMemory >> allocate: byteSize headerSize: hdrSize h1: baseHeader h2: classO
 	"clear new object"
 	doFill ifTrue:
 		[| fillWord end i |
-		 fillWord := format <= 4
+		 fillWord := format <= self lastPointerFormat
 					ifTrue: [nilObj] "if pointers, fill with nil oop"
 					ifFalse: [0].
 		 end := newObj + byteSize.
@@ -763,6 +763,11 @@ ObjectMemory >> allocationUnit [
 	^BytesPerWord
 ]
 
+{ #category : #'header access' }
+ObjectMemory >> arrayFormat [
+	^2
+]
+
 { #category : #contexts }
 ObjectMemory >> badContextSize: oop [
 	^(self byteLengthOf: oop) ~= (SmallContextSize-BaseHeaderSize)
@@ -779,6 +784,11 @@ ObjectMemory >> baseHeader: oop [
 ObjectMemory >> baseHeader: oop put: aWord [
 
 	^ self longAt: oop put: aWord
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> baseHeaderSize [
+	^BaseHeaderSize
 ]
 
 { #category : #'garbage collection' }
@@ -880,6 +890,11 @@ ObjectMemory >> booleanObjectOf: bool [
 	^bool ifTrue: [trueObj] ifFalse: [falseObj]
 ]
 
+{ #category : #'header access' }
+ObjectMemory >> byteFormatMask [
+	^16rC
+]
+
 { #category : #'indexing primitive support' }
 ObjectMemory >> byteLengthOf: obj [
 	"Return the number of indexable bytes in the given object.
@@ -892,7 +907,7 @@ ObjectMemory >> byteLengthOf: obj [
 			ifTrue: [(self sizeHeader: obj) bitAnd: AllButTypeMask]
 			ifFalse: [header bitAnd: SizeMask].
 	fmt := self formatOfHeader: header.
-	^fmt < 8
+	^fmt < self firstByteFormat
 		ifTrue: [(sz - BaseHeaderSize)]  "words"
 		ifFalse: [(sz - BaseHeaderSize) - (fmt bitAnd: 3)]  "bytes"
 ]
@@ -908,7 +923,7 @@ ObjectMemory >> byteSizeOf: oop [
 				ifTrue: [(self sizeHeader: oop) bitAnd: LongSizeMask]
 				ifFalse: [header bitAnd: SizeMask].
 	size := size - (header bitAnd: Size4Bit).
-	^format < 8
+	^format < self firstByteFormat
 		ifTrue: [ size - BaseHeaderSize "32-bit longs"]
 		ifFalse: [ (size - BaseHeaderSize) - (format bitAnd: 3) "bytes"]
 ]
@@ -926,13 +941,13 @@ ObjectMemory >> byteSwapByteObjectsFrom: startOop to: stopAddr flipFloatsIf: fli
 	[self oop: oop isLessThan: stopAddr] whileTrue:
 		[(self isFreeObject: oop) ifFalse:
 			[fmt := self formatOf: oop.
-			fmt >= 8 ifTrue:
+			fmt >= self firstByteFormat ifTrue:
 				["oop contains bytes; unswap"
 				wordAddr := oop + BaseHeaderSize.
-				fmt >= 12 ifTrue: "compiled method; start after methodHeader and literals"
+				fmt >= self firstCompiledMethodFormat ifTrue: "compiled method; start after methodHeader and literals"
 					[wordAddr := wordAddr + ((self literalCountOf: oop) + LiteralStart * BytesPerOop)].
 				self reverseBytesFrom: wordAddr to: oop + (self sizeBitsOf: oop)].
-			fmt = 6  ifTrue: "Bitmap, Float etc"
+			fmt = self firstLongFormat  ifTrue: "Bitmap, Float etc"
 				[(self compactClassIndexOf: oop) = ClassFloatCompactIndex
 					ifTrue:
 						[flipFloatWords ifTrue:
@@ -1005,19 +1020,19 @@ ObjectMemory >> changeClassOf: rcvr to: argClass [
 	rcvrHdr := self baseHeader: rcvr.
 	rcvrFormat := self formatOfHeader: rcvrHdr.
 	"If the receiver is a byte object we need to clear the number of odd bytes from the format."
-	rcvrFormat > 8 ifTrue:
+	rcvrFormat > self firstByteFormat ifTrue:
 		[rcvrFormat := rcvrFormat bitAnd: 16rC].
 	argFormat = rcvrFormat ifFalse:
 		[^PrimErrInappropriate]. "no way"
 
 	"For fixed field classes, the sizes must match.
 	Note: argClassInstByteSize-4 because base header is included in class size."
-	argFormat < 2
+	argFormat < self arrayFormat
 		ifTrue:
 			[(argClassInstByteSize - BaseHeaderSize) ~= (self byteLengthOf: rcvr) ifTrue:
 				[^PrimErrBadReceiver]]
 		ifFalse:
-			[argFormat = 3 ifTrue: "For indexable plus fixed fields the receiver must be at least big enough."
+			[argFormat = self indexablePointersFormat ifTrue: "For indexable plus fixed fields the receiver must be at least big enough."
 				[(argClassInstByteSize - BaseHeaderSize) > (self byteLengthOf: rcvr) ifTrue:
 					[^PrimErrBadReceiver]]].
 
@@ -1099,10 +1114,10 @@ ObjectMemory >> checkHeapIntegrity [
 						[self print: 'object leak in '; printHex: obj; print: ' class = '; printHex: fieldOop; cr.
 						 ok := false]].
 				 fmt := self formatOfHeader: hdr.
-				 (fmt <= 4 "pointers" or: [fmt >= 12 "compiled method"]) ifTrue:
-					[fmt >= 12
+				 (fmt <= self lastPointerFormat or: [fmt >= self firstCompiledMethodFormat]) ifTrue:
+					[fmt >= self firstCompiledMethodFormat
 						ifTrue: [fi := (self literalCountOf: obj) + LiteralStart]
-						ifFalse: [(fmt = 3 and: [self isContextHeader: hdr])
+						ifFalse: [(fmt = self indexablePointersFormat and: [self isContextHeader: hdr])
 									ifTrue: [fi := CtxtTempFrameStart + (self fetchStackPointerOf: obj)]
 									ifFalse: [fi := self lengthOf: obj]].
 					[(fi := fi - 1) >= 0] whileTrue:
@@ -1815,12 +1830,17 @@ ObjectMemory >> firstIndexableField: oop [
 	<returnTypeC: #'void *'>
 	hdr := self baseHeader: oop.
 	fmt := self formatOfHeader: hdr.
-	fmt <= 4 ifTrue: "<= 4 pointer"
+	fmt <= self lastPointerFormat ifTrue:
 		["pointer; may need to delve into the class format word"
 		totalLength := self lengthOf: oop baseHeader: hdr format: fmt.
 		fixedFields := self fixedFieldsOf: oop format: fmt length: totalLength.
 		^self pointerForOop: oop + BaseHeaderSize + (fixedFields << ShiftForWord)].
 	^self pointerForOop: oop + BaseHeaderSize
+]
+
+{ #category : #'header access' }
+ObjectMemory >> firstLongFormat [
+	^6
 ]
 
 { #category : #'object enumeration' }
@@ -1847,7 +1867,7 @@ ObjectMemory >> fixedFieldsOf: oop format: fmt length: wordLength [
 	| class classFormat |
 	<inline: true>
 	<asmLabel: false>
-	((fmt > 4) or: [fmt = 2]) ifTrue: [^0].  "indexable fields only"
+	((fmt > self lastPointerFormat) or: [fmt = self arrayFormat]) ifTrue: [^0].  "indexable fields only"
 	fmt < 2 ifTrue: [^wordLength].  "fixed fields only (zero or more)"
 	
 	"fmt = 3 or 4: mixture of fixed and indexable fields, so must look at class format word"
@@ -1884,7 +1904,7 @@ ObjectMemory >> formatOf: oop [
                    followed by indexable bytes (same interpretation of low 2 bits as above)
 "
 	<inline: true>
-	^((self baseHeader: oop) >> 8) bitAnd: 16rF
+	^((self baseHeader: oop) >> self instFormatFieldLSB) bitAnd: 16rF
 ]
 
 { #category : #'object format' }
@@ -1918,7 +1938,7 @@ ObjectMemory >> formatOfHeader: header [
                    followed by indexable bytes (same interpretation of low 2 bits as above)
 "
 	<inline: true>
-	^header >> 8 bitAnd: 16rF
+	^header >> self instFormatFieldLSB bitAnd: 16rF
 ]
 
 { #category : #'image segment in/out' }
@@ -2576,7 +2596,7 @@ ObjectMemory >> instanceSizeOf: classObj [
 ]
 
 { #category : #'interpreter access' }
-ObjectMemory >> instantiateClass: classPointer indexableSize: size [ 
+ObjectMemory >> instantiateClass: classPointer indexableSize: size [
 	"NOTE: This method supports the backward-compatible split instSize field of the 
 	class format word. The sizeHiBits will go away and other shifts change by 2 
 	when the split fields get merged in an (incompatible) image change."
@@ -2598,23 +2618,24 @@ ObjectMemory >> instantiateClass: classPointer indexableSize: size [
 	byteSize := byteSize << (ShiftForWord-2).
 	format := self formatOfHeader: classFormat.
 	self flag: #sizeLowBits.
-	format < 8
+	format < self firstByteFormat
 		ifTrue:
-			[format = 6
-				ifTrue: ["long32 bitmaps"
-					bm1 := BytesPerWord-1.
+			[format = self firstLongFormat
+				ifTrue: "long32 bitmaps"
+					[bm1 := BytesPerWord-1.
 					byteSize := byteSize + (size * 4) + bm1 bitAnd: LongSizeMask. "round up"
 					binc := bm1 - ((size * 4) + bm1 bitAnd: bm1). "odd bytes"
 					"extra low bit (4) for 64-bit VM goes in 4-bit (betw hdr bits and sizeBits)"
 					header1 := header1 bitOr: (binc bitAnd: 4)]
-				ifFalse: [byteSize := byteSize + (size * BytesPerWord) "Arrays and 64-bit bitmaps"]]
+				ifFalse: "Arrays and 64-bit bitmaps"
+					[byteSize := byteSize + (size * BytesPerWord)]]
 		ifFalse:
 			["Strings and Methods"
 			bm1 := BytesPerWord-1.
 			byteSize := byteSize + size + bm1 bitAnd: LongSizeMask. "round up"
 			binc := bm1 - (size + bm1 bitAnd: bm1). "odd bytes"
 			"low bits of byte size go in format field"
-			header1 := header1 bitOr: (binc bitAnd: 3) << 8.
+			header1 := header1 bitOr: (binc bitAnd: 3) << self instFormatFieldLSB.
 			"extra low bit (4) for 64-bit VM goes in 4-bit (betw hdr bits and sizeBits)"
 			header1 := header1 bitOr: (binc bitAnd: 4)].
 	byteSize > 255 "requires size header word/full header"
@@ -2739,7 +2760,7 @@ ObjectMemory >> isBytesNonInt: oop [
 	"Answer true if the argument contains indexable bytes. See comment in formatOf:"
 	"Note: Includes CompiledMethods."
 
-	^ (self formatOf: oop)  >= 8
+	^(self formatOf: oop)  >= self firstByteFormat
 ]
 
 { #category : #'interpreter access' }
@@ -2798,13 +2819,13 @@ ObjectMemory >> isClassOfNonImm: oop equalTo: classOop compactClassIndex: compac
 ObjectMemory >> isCompiledMethod: oop [
     "Answer whether the argument object is of compiled method format"
 	<api>
-    ^(self formatOf: oop) >= 12
+    ^(self formatOf: oop) >= self firstCompiledMethodFormat
 ]
 
 { #category : #'interpreter access' }
 ObjectMemory >> isCompiledMethodHeader: objHeader [
     "Answer whether the argument header has compiled method format"
-    ^(self formatOfHeader: objHeader) >= 12
+    ^(self formatOfHeader: objHeader) >= self firstCompiledMethodFormat
 ]
 
 { #category : #contexts }
@@ -2817,8 +2838,8 @@ ObjectMemory >> isContext: oop [
 ObjectMemory >> isContextHeader: aHeader [
 	<inline: true>
 	"c.f. {BlockContext. MethodContext. PseudoContext} collect: [:class| class -> class indexIfCompact]"
-	^ ((aHeader >> 12) bitAnd: 16r1F) = 13			"BlockContext"
-		or: [((aHeader >> 12) bitAnd: 16r1F) = 14]	"MethodContext"
+	^(self compactClassIndexOf: aHeader) = 13			"BlockContext"
+		or: [(self compactClassIndexOf: aHeader) = 14]		"MethodContext"
 ]
 
 { #category : #contexts }
@@ -2955,9 +2976,10 @@ ObjectMemory >> isObjectForwarded: oop [
 
 { #category : #'interpreter access' }
 ObjectMemory >> isOopCompiledMethod: oop [
-    "Answer whether the oop is an object of compiled method format"
+	"Answer whether the oop is an object of compiled method format"
 	<api>
-    ^(self isNonIntegerObject: oop) and: [(self formatOf: oop) >= 12]
+	^(self isNonIntegerObject: oop)
+	 and: [(self formatOf: oop) >= self firstCompiledMethodFormat]
 ]
 
 { #category : #'header access' }
@@ -2995,9 +3017,9 @@ ObjectMemory >> isPointersNonImm: objOop [
 
 { #category : #'header access' }
 ObjectMemory >> isPointersNonInt: oop [
-	"Answer true if the argument has only fields that can hold oops. See comment in formatOf:"
+	"Answer if the argument has only fields that can hold oops. See comment in formatOf:"
 
-	^ (self formatOf: oop) <= 4
+	^(self formatOf: oop) <= self lastPointerFormat
 ]
 
 { #category : #'header access' }
@@ -3008,8 +3030,8 @@ ObjectMemory >> isWeak: oop [
 
 { #category : #'header access' }
 ObjectMemory >> isWeakNonInt: oop [
-	"Answer true if the argument has only weak fields that can hold oops. See comment in formatOf:"
-	^ (self formatOf: oop) = 4
+	"Answer if the argument has only weak fields that can hold oops. See comment in formatOf:"
+	^(self formatOf: oop) = self lastPointerFormat
 ]
 
 { #category : #'header access' }
@@ -3023,7 +3045,7 @@ ObjectMemory >> isWords: oop [
 ObjectMemory >> isWordsNonInt: oop [
 	"Answer true if the argument contains only indexable words (no oops). See comment in formatOf:"
 
-	^ (self formatOf: oop) = 6
+	^ (self formatOf: oop) = self firstLongFormat
 ]
 
 { #category : #'header access' }
@@ -3040,7 +3062,9 @@ ObjectMemory >> isWordsOrBytesNonInt: oop [
 
 	| fmt |
 	fmt := self formatOf: oop.
-	^ fmt = 6 or: [(fmt >= 8) and: [fmt <= 11]]
+	^fmt = self firstLongFormat
+	  or: [fmt >= self firstByteFormat
+		  and: [fmt < self firstCompiledMethodFormat]]
 ]
 
 { #category : #'interpreter access' }
@@ -3074,7 +3098,9 @@ ObjectMemory >> lastHash: aValue [
 
 { #category : #'header access' }
 ObjectMemory >> lastPointerFormat [
-	^5
+	"N.B. 5 is unused and could be used for ephemerons.
+		7 is unused and could be used for 64-bit indexable."
+	^4
 ]
 
 { #category : #'object enumeration' }
@@ -3088,17 +3114,19 @@ ObjectMemory >> lastPointerOf: oop [
 	| fmt sz methodHeader header contextSize |
 	header := self baseHeader: oop.
 	fmt := self formatOfHeader: header.
-	fmt <= 4 ifTrue: [(fmt = 3 and: [self isContextHeader: header])
+	fmt <= self lastPointerFormat ifTrue:
+		[(fmt = self indexablePointersFormat
+		  and: [self isContextHeader: header])
 					ifTrue: ["contexts end at the stack pointer"
 						contextSize := self fetchStackPointerOf: oop.
 						^ CtxtTempFrameStart + contextSize * BytesPerWord].
 				sz := self sizeBitsOfSafe: oop.
-				^ sz - BaseHeaderSize  "all pointers"].
-	fmt < 12 ifTrue: [^ 0]. "no pointers"
+				^sz - BaseHeaderSize "all pointers"].
+	fmt < self firstCompiledMethodFormat ifTrue: [^ 0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes:"
 	methodHeader := self longAt: oop + BaseHeaderSize.
-	^ (methodHeader >> 10 bitAnd: 255) + LiteralStart * BytesPerWord
+	^(methodHeader >> 10 bitAnd: 255) + LiteralStart * BytesPerWord
 ]
 
 { #category : #'gc -- mark and sweep' }
@@ -3107,13 +3135,13 @@ ObjectMemory >> lastPointerOf: oop recordWeakRoot: recordWeakRoot [ "<Boolean>"
 	 Works with CompiledMethods, as well as ordinary objects. 
 	 Can be used even when the type bits are not correct.
 	 This is a version of lastPointerOf: for markAndTrace:."
-	| fmt sz header contextSize |
+	| fmt sz header contextSize numLiterals |
 	<inline: true>
 	header := self baseHeader: oop.
 	fmt := self formatOfHeader: header.
-	fmt <= 4 ifTrue:
-		[fmt >= 3 ifTrue:
-			[fmt = 4 ifTrue:
+	fmt <= self lastPointerFormat ifTrue:
+		[fmt >= self indexablePointersFormat ifTrue:
+			[fmt = self lastPointerFormat ifTrue:
 				[(recordWeakRoot and: [weakRootCount >= 0]) ifTrue:
 					["And remember as weak root"
 					 (weakRootCount := weakRootCount + 1) <= WeakRootTableSize ifFalse:
@@ -3127,11 +3155,12 @@ ObjectMemory >> lastPointerOf: oop recordWeakRoot: recordWeakRoot [ "<Boolean>"
 				 contextSize := self fetchStackPointerOf: oop.
 				 ^CtxtTempFrameStart + contextSize * BytesPerOop]].
 		 sz := self sizeBitsOfSafe: oop.
-		 ^sz - BaseHeaderSize  "all pointers" ].
-	fmt < 12 ifTrue: [^0]. "no pointers"
+		 ^sz - BaseHeaderSize  "all pointers"].
+	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes:"
-	^(self literalCountOf: oop) + LiteralStart * BytesPerOop
+	numLiterals := self literalCountOf: oop.
+	^numLiterals + LiteralStart * BytesPerOop
 ]
 
 { #category : #'gc -- compaction' }
@@ -3142,19 +3171,19 @@ ObjectMemory >> lastPointerWhileForwarding: oop [
 	<inline: true>
 	header := self headerWhileForwardingOf: oop.
 	fmt := self formatOfHeader: header.
-	fmt <= 4 ifTrue:
-		[(fmt = 3
+	fmt <= self lastPointerFormat ifTrue:
+		[(fmt = self indexablePointersFormat
 		  and: [self isContextHeader: header]) ifTrue:
 			["contexts end at the stack pointer"
 			contextSize := self nacFetchStackPointerOf: oop.
 			self assert: ReceiverIndex + contextSize < (self lengthOf: oop baseHeader: header format: fmt).
-			^ CtxtTempFrameStart + contextSize * BytesPerWord].
+			^CtxtTempFrameStart + contextSize * BytesPerWord].
 		"do sizeBitsOf: using the header we obtained"
 		(header bitAnd: TypeMask) = HeaderTypeSizeAndClass
 			ifTrue: [size := (self sizeHeader: oop) bitAnd: AllButTypeMask]
 			ifFalse: [size := header bitAnd: SizeMask].
-		^ size - BaseHeaderSize].
-	fmt < 12 ifTrue: [^ 0]. "no pointers"
+		^size - BaseHeaderSize].
+	fmt < self firstCompiledMethodFormat ifTrue: [^ 0]. "no pointers"
 	methodHeader := self longAt: oop + BaseHeaderSize.
 	^(self literalCountOfHeader: methodHeader) * BytesPerWord + BaseHeaderSize
 ]
@@ -3182,11 +3211,11 @@ ObjectMemory >> lengthOf: oop baseHeader: hdr format: fmt [
 		ifTrue: [ sz := (self sizeHeader: oop) bitAnd: LongSizeMask ]
 		ifFalse: [ sz := (hdr bitAnd: SizeMask)].
 	sz := sz - (hdr bitAnd: Size4Bit).
-	fmt <= 4
+	fmt <= self lastPointerFormat
 		ifTrue: [ ^ (sz - BaseHeaderSize) >> ShiftForWord "words"].
-	fmt < 8
-		ifTrue: [ ^ (sz - BaseHeaderSize) >> 2 "32-bit longs"]
-		ifFalse: [ ^ (sz - BaseHeaderSize) - (fmt bitAnd: 3) "bytes"]
+	^fmt < self firstByteFormat
+		ifTrue: [(sz - BaseHeaderSize) >> 2 "32-bit longs"]
+		ifFalse: [(sz - BaseHeaderSize) - (fmt bitAnd: 3) "bytes"]
 ]
 
 { #category : #'image segment in/out' }
@@ -4215,7 +4244,7 @@ ObjectMemory >> safePrintStringOf: oop [
 		[^nil].
 	header := self headerWhileForwardingOf: oop.
 	fmt := self formatOfHeader: header.
-	fmt < 8 ifTrue: [ ^nil ].
+	fmt < self firstByteFormat ifTrue: [^nil].
 
 	cnt := 100 min: (self lengthOf: oop baseHeader: header format: fmt).
 	i := 0.
@@ -4805,12 +4834,12 @@ ObjectMemory >> sufficientSpaceToInstantiate: classOop indexableSize: size [
 	<var: #size type: #usqInt>
 	| format allocSize |
 	<inline: true>
-	(format := self instSpecOfClass: classOop) < 8
+	(format := self instSpecOfClass: classOop) < self firstByteFormat
 		ifTrue:
 			["indexable fields are words or pointers"
 			size ~= 0 ifTrue:
 				["fail if attempting to call new: on non-indexable class"
-				 format < 2 ifTrue:
+				 format < self arrayFormat ifTrue:
 					[^false].
 				 "fail if attempting to allocate over 2 Gb, since this overflows 32-bit arithmetic"
 				 size >> (LongSizeNumBits - BytesPerWord) > 0 ifTrue:
@@ -5072,9 +5101,8 @@ ObjectMemory >> validate: oop [
 		cc = 0 ifTrue: [self halt]].
 	fmt = 5 ifTrue: [self halt].
 	fmt = 7 ifTrue: [self halt].
-	fmt >= 12 ifTrue:
-		["CompiledMethod -- check for integer header"
-		(self isIntegerObject: (self longAt: oop + BytesPerWord)) ifFalse: [self halt]].
+	fmt >= self firstCompiledMethodFormat ifTrue: "must have integer header"
+		[(self isIntegerObject: (self longAt: oop + BytesPerWord)) ifFalse: [self halt]].
 ]
 
 { #category : #'image segment in/out' }
