@@ -217,7 +217,7 @@ StackInterpreterPrimitives >> primitiveClone [
 		ifTrue:
 			[newCopy := rcvr]
 		ifFalse:
-			[(objectMemory isContextNonInt: rcvr)
+			[(objectMemory isContextNonImm: rcvr)
 				ifTrue:
 					[newCopy := self cloneContext: rcvr]
 				ifFalse:
@@ -372,8 +372,8 @@ StackInterpreterPrimitives >> primitiveCopyObject [
 	self failed ifTrue:[^nil].
 	(objectMemory isPointers: rcvr) ifFalse:
 		[^self primitiveFail].
-	((objectMemory isContextNonInt: rcvr)
-	 or: [objectMemory isContextNonInt: arg]) ifTrue:
+	((objectMemory isContextNonImm: rcvr)
+	 or: [objectMemory isContextNonImm: arg]) ifTrue:
 		[^self primitiveFail].
 	(objectMemory fetchClassOfNonImm: rcvr) = (objectMemory fetchClassOfNonImm: arg) ifFalse:
 		[^self primitiveFail].

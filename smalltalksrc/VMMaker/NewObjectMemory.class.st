@@ -1783,7 +1783,7 @@ NewObjectMemory >> longPrintReferencesTo: anOop [
 				ifTrue:
 					[i := (self literalCountOf: oop) + LiteralStart]
 				ifFalse:
-					[(self isContextNonInt: oop)
+					[(self isContextNonImm: oop)
 						ifTrue: [i := CtxtTempFrameStart + (coInterpreter fetchStackPointerOf: oop)]
 						ifFalse: [i := self lengthOf: oop]].
 			[(i := i - 1) >= 0] whileTrue:
@@ -1980,7 +1980,7 @@ NewObjectMemory >> numReferencesTo: anOop [
 				ifTrue:
 					[i := (self literalCountOf: oop) + LiteralStart]
 				ifFalse:
-					[(self isContextNonInt: oop)
+					[(self isContextNonImm: oop)
 						ifTrue: [i := CtxtTempFrameStart + (coInterpreter fetchStackPointerOf: oop)]
 						ifFalse: [i := self lengthOf: oop]].
 			[(i := i - 1) >= 0] whileTrue:
@@ -2247,7 +2247,7 @@ NewObjectMemory >> printReferencesTo: anOop [
 				ifTrue:
 					[i := (self literalCountOf: oop) + LiteralStart]
 				ifFalse:
-					[(self isContextNonInt: oop)
+					[(self isContextNonImm: oop)
 						ifTrue: [i := CtxtTempFrameStart + (coInterpreter fetchStackPointerOf: oop)]
 						ifFalse: [i := self lengthOf: oop]].
 			[(i := i - 1) >= 0] whileTrue:
@@ -2271,7 +2271,7 @@ NewObjectMemory >> printWronglySizedContexts: printContexts [
 	<api>
 	oop := self firstAccessibleObject.
 	[oop = nil] whileFalse:
-		[((self isContextNonInt: oop)
+		[((self isContextNonImm: oop)
 		   and: [self badContextSize: oop]) ifTrue:
 			[self printHex: oop; space; printNum: (self byteLengthOf: oop); cr.
 			 printContexts ifTrue:
