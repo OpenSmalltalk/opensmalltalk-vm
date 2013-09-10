@@ -2846,12 +2846,6 @@ ObjectMemory >> isContextNonImm: oop [
 	^self isContextHeader: (self baseHeader: oop)
 ]
 
-{ #category : #contexts }
-ObjectMemory >> isContextNonInt: oop [
-	<inline: true>
-	^self isContextHeader: (self baseHeader: oop)
-]
-
 { #category : #'header access' }
 ObjectMemory >> isFreeObject: oop [
 
@@ -3922,7 +3916,7 @@ ObjectMemory >> printReferencesTo: anOop [
 				ifTrue:
 					[i := (self literalCountOf: oop) + LiteralStart]
 				ifFalse:
-					[(self isContextNonInt: oop)
+					[(self isContextNonImm: oop)
 						ifTrue: [i := CtxtTempFrameStart + (self fetchStackPointerOf: oop)]
 						ifFalse: [i := self lengthOf: oop]].
 			[(i := i - 1) >= 0] whileTrue:
@@ -3939,7 +3933,7 @@ ObjectMemory >> printWronglySizedContexts [
 	<api>
 	oop := self firstAccessibleObject.
 	[oop = nil] whileFalse:
-		[((self isContextNonInt: oop)
+		[((self isContextNonImm: oop)
 		   and: [self badContextSize: oop]) ifTrue:
 			[self printHex: oop; space; printNum: (self byteLengthOf: oop); cr].
 		 oop := self accessibleObjectAfter: oop]

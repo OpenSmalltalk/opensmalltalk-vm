@@ -1893,7 +1893,7 @@ StackInterpreter >> bereaveAllMarriedContexts [
 	oop := objectMemory firstObject.
 	[oop < objectMemory freeStart] whileTrue:
 		[((objectMemory isFreeObject: oop) not
-		   and: [(objectMemory isContextNonInt: oop)
+		   and: [(objectMemory isContextNonImm: oop)
 		   and: [self isMarriedOrWidowedContext: oop]]) ifTrue:
 			[self markContextAsDead: oop].
 		 oop := objectMemory objectAfter: oop]
@@ -3384,7 +3384,7 @@ StackInterpreter >> commonAt: stringy [
 		(atCache at: atIx+AtCacheOop) = rcvr ifFalse:
 			["Rcvr not in cache.  Attempt to install it..."
 			(self install: rcvr inAtCache: atCache at: atIx string: stringy) ifFalse:
-				[self assert: (objectMemory isContextNonInt: rcvr).
+				[self assert: (objectMemory isContextNonImm: rcvr).
 				self initPrimCall.
 				^self primitiveContextAt]].
 		self successful ifTrue:
@@ -3428,7 +3428,7 @@ StackInterpreter >> commonAtPut: stringy [
 		(atCache at: atIx+AtCacheOop) = rcvr ifFalse:
 			["Rcvr not in cache.  Attempt to install it..."
 			(self install: rcvr inAtCache: atCache at: atIx string: stringy) ifFalse:
-				[self assert: (objectMemory isContextNonInt: rcvr).
+				[self assert: (objectMemory isContextNonImm: rcvr).
 				self initPrimCall.
 				^self primitiveContextAtPut]].
 		self successful ifTrue:
@@ -3627,7 +3627,7 @@ StackInterpreter >> commonVariable: rcvr at: index cacheIndex: atIx [
 	 and: [self oop: index isLessThanOrEqualTo: stSize]) ifTrue:
 		[fmt := atCache at: atIx+AtCacheFmt.
 		 fmt <= objectMemory weakArrayFormat ifTrue:
-			[self assert: (objectMemory isContextNonInt: rcvr) not.
+			[self assert: (objectMemory isContextNonImm: rcvr) not.
 			 fixedFields := atCache at: atIx+AtCacheFixedFields.
 			 ^objectMemory fetchPointer: index + fixedFields - 1 ofObject: rcvr].
 		 fmt < objectMemory firstByteFormat ifTrue:  "Bitmap"
@@ -3656,7 +3656,7 @@ StackInterpreter >> commonVariable: rcvr at: index put: value cacheIndex: atIx [
 	  and: [self oop: index isLessThanOrEqualTo: stSize]) ifTrue:
 		[fmt := atCache at: atIx+AtCacheFmt.
 		fmt <= objectMemory weakArrayFormat ifTrue:
-			[self assert: (objectMemory isContextNonInt: rcvr) not.
+			[self assert: (objectMemory isContextNonImm: rcvr) not.
 			 fixedFields := atCache at: atIx+AtCacheFixedFields.
 			 ^objectMemory storePointer: index + fixedFields - 1 ofObject: rcvr withValue: value].
 		fmt < objectMemory firstByteFormat ifTrue:  "Bitmap"
@@ -9557,7 +9557,7 @@ StackInterpreter >> pushMaybeContextReceiverVariable: fieldIndex [
 	<inline: true>
 	rcvr := self receiver.
 	((self isReadMediatedContextInstVarIndex: fieldIndex)
-	and: [objectMemory isContextNonInt: rcvr])
+	and: [objectMemory isContextNonImm: rcvr])
 		ifTrue:
 			[self internalPush: (self instVar: fieldIndex ofContext: rcvr)]
 		ifFalse:
@@ -11268,7 +11268,7 @@ StackInterpreter >> storeMaybeContextReceiverVariable: fieldIndex withValue: anO
 	| rcvr |
 	rcvr := self receiver.
 	((self isWriteMediatedContextInstVarIndex: fieldIndex)
-	and: [(objectMemory isContextNonInt: rcvr)
+	and: [(objectMemory isContextNonImm: rcvr)
 	and: [self isMarriedOrWidowedContext: rcvr]])
 		ifTrue:
 			[self instVar: fieldIndex ofContext: rcvr put: anObject]
