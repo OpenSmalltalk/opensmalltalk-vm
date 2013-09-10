@@ -560,14 +560,16 @@ SpurBootstrap >> cloneNilTrueAndFalse [
 
 { #category : #'bootstrap image' }
 SpurBootstrap >> cloneObjects [
-	| characterClass characterTable oldObj oldClass |
+	| characterClass characterTable compactClasses oldObj oldClass |
 	characterClass := oldHeap classCharacter.
 	characterTable := oldHeap characterTable.
+	compactClasses := oldHeap splObj: CompactClasses.
 	oldObj := oldHeap objectAfter: oldHeap trueObject.
 	[oldObj < oldHeap freeStart] whileTrue:
 		[oldClass := oldHeap fetchClassOfNonImm: oldObj.
 		 (oldObj ~= characterTable
-		 and: [oldClass ~= characterClass]) ifTrue:
+		 and: [oldObj ~= compactClasses
+		 and: [oldClass ~= characterClass]]) ifTrue:
 			[self clone: oldObj classIndex: (classToIndex at: oldClass)].
 		 oldObj := oldHeap objectAfter: oldObj].
 	newHeap specialObjectsOop: (map at: oldHeap specialObjectsOop)
@@ -688,6 +690,9 @@ SpurBootstrap >> fillInObjects [
 
 { #category : #'bootstrap image' }
 SpurBootstrap >> fillInPointerObject: newObj from: oldObj [
+	"Fill-in a newObj with appropriately mapped contents from oldObj.
+	 Filter-out the character table and the compact classes array.
+	 Map character objects to immediate characters."
 	0 to: (oldHeap lastPointerOf: oldObj) / oldHeap bytesPerWord - 1 do:
 		[:i| | oldValue newValue |
 		oldValue := oldHeap fetchPointer: i ofObject: oldObj.
@@ -695,7 +700,9 @@ SpurBootstrap >> fillInPointerObject: newObj from: oldObj [
 						ifTrue: [oldValue]
 						ifFalse:
 							[map at: oldValue ifAbsent:
-								[oldValue = oldHeap characterTable
+								[(oldValue = oldHeap characterTable
+								
+								   or: [oldValue = (oldHeap splObj: CompactClasses)])
 									ifTrue: [newHeap nilObject]
 									ifFalse:
 										[self assert: (oldHeap fetchClassOfNonImm: oldValue) = oldHeap classCharacter.
