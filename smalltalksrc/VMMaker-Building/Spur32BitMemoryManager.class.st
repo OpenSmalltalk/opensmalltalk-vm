@@ -5,7 +5,7 @@ Class {
 }
 
 { #category : #'word size' }
-Spur32BitMemoryManager class >> bytesPerWord [
+Spur32BitMemoryManager class >> wordSize [
 	^4
 ]
 
@@ -219,6 +219,11 @@ Spur32BitMemoryManager >> isIntegerValue: intValue [
 	^self
 		cCode: [(intValue bitXor: (intValue << 1)) >= 0]
 		inSmalltalk: [intValue >= 16r-40000000 and: [intValue <= 16r3FFFFFFF]]
+]
+
+{ #category : #'header format' }
+Spur32BitMemoryManager >> longFormatForNumBytes: numBytes [
+	^self firstLongFormat
 ]
 
 { #category : #'object access' }

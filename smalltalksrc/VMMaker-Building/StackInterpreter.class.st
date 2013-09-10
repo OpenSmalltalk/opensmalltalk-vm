@@ -1738,6 +1738,7 @@ StackInterpreter >> argumentCountOf: methodPointer [
 { #category : #'internal interpreter access' }
 StackInterpreter >> argumentCountOfClosure: closurePointer [
 	<api> "for Cogit"
+	<inline: true>
 	^self quickFetchInteger: ClosureNumArgsIndex ofObject: closurePointer
 ]
 
@@ -3311,13 +3312,21 @@ StackInterpreter >> closureIn: context numArgs: numArgs instructionPointer: init
 	<inline: true>
 	"numCopied should be zero for nil"
 	numCopied := objectMemory fetchWordLengthOf: copiedValues.
-	newClosure := objectMemory
-					eeInstantiateSmallClass: (objectMemory splObj: ClassBlockClosure)
-					sizeInBytes: (BytesPerWord * (ClosureFirstCopiedValueIndex + numCopied)) + BaseHeaderSize.
+	ClassBlockClosureCompactIndex ~= 0
+		ifTrue:
+			[newClosure := objectMemory
+								eeInstantiateClassIndex: ClassBlockClosureCompactIndex
+								format: objectMemory indexablePointersFormat
+								numSlots: ClosureFirstCopiedValueIndex + numCopied]
+		ifFalse:
+			[newClosure := objectMemory
+								eeInstantiateSmallClass: (objectMemory splObj: ClassBlockClosure)
+								sizeInBytes: (BytesPerWord * (ClosureFirstCopiedValueIndex + numCopied)) + BaseHeaderSize].
 	"Assume: have just allocated a new closure; it must be young. Thus, can use unchecked stores."
-	objectMemory storePointerUnchecked: ClosureOuterContextIndex ofObject: newClosure withValue: context.
-	objectMemory storePointerUnchecked: ClosureStartPCIndex ofObject: newClosure withValue: (objectMemory integerObjectOf: initialIP).
-	objectMemory storePointerUnchecked: ClosureNumArgsIndex ofObject: newClosure withValue: (objectMemory integerObjectOf: numArgs).
+	objectMemory
+		storePointerUnchecked: ClosureOuterContextIndex ofObject: newClosure withValue: context;
+		storePointerUnchecked: ClosureStartPCIndex ofObject: newClosure withValue: (objectMemory integerObjectOf: initialIP);
+		storePointerUnchecked: ClosureNumArgsIndex ofObject: newClosure withValue: (objectMemory integerObjectOf: numArgs).
 	0 to: numCopied - 1 do:
 		[:i|
 		objectMemory storePointerUnchecked: i + ClosureFirstCopiedValueIndex
@@ -3330,10 +3339,17 @@ StackInterpreter >> closureIn: context numArgs: numArgs instructionPointer: init
 StackInterpreter >> closureIn: context numArgs: numArgs instructionPointer: initialIP numCopiedValues: numCopied [
 	| newClosure |
 	<inline: true>
-	self assert: (BytesPerWord * (ClosureFirstCopiedValueIndex + numCopied)) + BaseHeaderSize <= 252.
-	newClosure := objectMemory
-					eeInstantiateSmallClass: (objectMemory splObj: ClassBlockClosure)
-					sizeInBytes: (BytesPerWord * (ClosureFirstCopiedValueIndex + numCopied)) + BaseHeaderSize.
+	ClassBlockClosureCompactIndex ~= 0
+		ifTrue:
+			[newClosure := objectMemory
+								eeInstantiateClassIndex: ClassBlockClosureCompactIndex
+								format: objectMemory indexablePointersFormat
+								numSlots: ClosureFirstCopiedValueIndex + numCopied]
+		ifFalse:
+			[self assert: (BytesPerWord * (ClosureFirstCopiedValueIndex + numCopied)) + BaseHeaderSize <= 252.
+			 newClosure := objectMemory
+								eeInstantiateSmallClass: (objectMemory splObj: ClassBlockClosure)
+								sizeInBytes: (BytesPerWord * (ClosureFirstCopiedValueIndex + numCopied)) + BaseHeaderSize].
 	"Assume: have just allocated a new closure; it must be young. Thus, can use unchecked stores."
 	objectMemory storePointerUnchecked: ClosureOuterContextIndex ofObject: newClosure withValue: context.
 	objectMemory storePointerUnchecked: ClosureStartPCIndex ofObject: newClosure withValue: (objectMemory integerObjectOf: initialIP).
@@ -5206,11 +5222,12 @@ StackInterpreter >> floatObjectOf: aFloat [
 	| newFloatObj |
 	<inline: false>
 	<var: #aFloat type: #double>
-	self flag: #Dan.
-	newFloatObj := objectMemory eeInstantiateSmallClass: (objectMemory splObj: ClassFloat) sizeInBytes: 8+BaseHeaderSize.
-	objectMemory storeFloatAt: newFloatObj + BaseHeaderSize from: aFloat.
-	^ newFloatObj.
-
+	newFloatObj := objectMemory
+						eeInstantiateClassIndex: ClassFloatCompactIndex
+						format: objectMemory firstLongFormat
+						numSlots: 8 / objectMemory wordSize.
+	objectMemory storeFloatAt: newFloatObj + objectMemory baseHeaderSize from: aFloat.
+	^newFloatObj
 ]
 
 { #category : #utilities }
@@ -8166,27 +8183,21 @@ StackInterpreter >> popStackBytecode [
 
 { #category : #'primitive support' }
 StackInterpreter >> positive32BitIntegerFor: integerValue [
-
 	| newLargeInteger |
-	"Note - integerValue is interpreted as POSITIVE, eg, as the result of
-		Bitmap>at:, or integer>bitAnd:."
-	integerValue >= 0
-		ifTrue: [(objectMemory isIntegerValue: integerValue)
-					ifTrue: [^ objectMemory integerObjectOf: integerValue]].
+	"Note - integerValue is interpreted as POSITIVE, eg, as the result of Bitmap>at:, or integer>bitAnd:."
+	(integerValue >= 0
+	 and: [objectMemory isIntegerValue: integerValue]) ifTrue:
+		[^objectMemory integerObjectOf: integerValue].
 
-	self cppIf: BytesPerWord = 4
-		ifTrue: "Faster instantiateSmallClass: currently only works with integral word size."
-			[newLargeInteger := objectMemory
-									eeInstantiateSmallClass: (objectMemory splObj: ClassLargePositiveInteger)
-									sizeInBytes: BaseHeaderSize + 4]
-		ifFalse: "Cant use instantiateSmallClass: due to integral word requirement."
-			[newLargeInteger := objectMemory
-									eeInstantiateClass: (objectMemory splObj: ClassLargePositiveInteger)
-									indexableSize: 4].
-	objectMemory storeByte: 3 ofObject: newLargeInteger withValue: ((integerValue >> 24) bitAnd: 16rFF).
-	objectMemory storeByte: 2 ofObject: newLargeInteger withValue: ((integerValue >> 16) bitAnd: 16rFF).
-	objectMemory storeByte: 1 ofObject: newLargeInteger withValue: ((integerValue >> 8) bitAnd: 16rFF).
-	objectMemory storeByte: 0 ofObject: newLargeInteger withValue: (integerValue bitAnd: 16rFF).
+	newLargeInteger := objectMemory
+							eeInstantiateClassIndex: ClassLargePositiveIntegerCompactIndex
+							format: (objectMemory byteFormatForNumBytes: 4)
+							numSlots: 1.
+	objectMemory
+		storeByte: 3 ofObject: newLargeInteger withValue: (integerValue >> 24 bitAnd: 16rFF);
+		storeByte: 2 ofObject: newLargeInteger withValue: (integerValue >> 16 bitAnd: 16rFF);
+		storeByte: 1 ofObject: newLargeInteger withValue: (integerValue >>   8 bitAnd: 16rFF);
+		storeByte: 0 ofObject: newLargeInteger withValue: (integerValue ">> 0" bitAnd: 16rFF).
 	^newLargeInteger
 ]
 

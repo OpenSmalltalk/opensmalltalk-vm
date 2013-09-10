@@ -1298,7 +1298,9 @@ CCodeGenerator >> generateBitXor: msgNode on: aStream indent: level [
 
 { #category : #'C translation' }
 CCodeGenerator >> generateBytesPerWord: msgNode on: aStream indent: level [
-	"Generate the C code for this message onto the given stream."
+	"Generate the C code for this message onto the given stream.
+	 Would prefer to use WordSize than BytesPerWord (shorter) but e.g.
+	 mpegtype.h has a parameter named WordSize."
 
 	aStream nextPutAll: 'BytesPerWord'
 ]
@@ -2512,6 +2514,7 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#touch:						#generateTouch:on:indent:
 
 	#bytesPerWord 			#generateBytesPerWord:on:indent:
+	#wordSize		 			#generateBytesPerWord:on:indent:
 	#baseHeaderSize			#generateBaseHeaderSize:on:indent:
 	
 	#sharedCodeNamed:inCase:		#generateSharedCodeDirective:on:indent:
