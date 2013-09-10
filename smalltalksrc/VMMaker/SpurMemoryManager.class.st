@@ -1373,6 +1373,12 @@ SpurMemoryManager >> isInRangeCharacterCode: characterCode [
 ]
 
 { #category : #'object testing' }
+SpurMemoryManager >> isInSurvivorSpace: objOop [
+	^objOop >= scavenger pastSpace start
+	  and: [objOop < scavenger pastSpace limit]
+]
+
+{ #category : #'object testing' }
 SpurMemoryManager >> isIndexable: objOop [
 	^(self formatOf: objOop) >= self sixtyFourBitIndexableFormat
 ]
@@ -1400,7 +1406,8 @@ SpurMemoryManager >> isIntegerObject: oop [
 		checkedIntegerValueOf:
 		bytecodePrimAtPut
 		commonAtPut:
-		primitiveVMParameter) includes: thisContext sender method selector) ifFalse:
+		primitiveVMParameter
+		checkIsStillMarriedContext:currentFP:) includes: thisContext sender method selector) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
@@ -1816,7 +1823,7 @@ SpurMemoryManager >> tenuringThreshold [
 	 the size of pastSpace and dividing by the average object size, as derived from observation."
 	| averageObjectSize |
 	averageObjectSize := 8 * self wordSize.
-	^scavenger scavengerTenuringThreshold * (scavenger pastSpace limit - scavenger pastSpace start) // averageObjectSize
+	^scavenger scavengerTenuringThreshold * scavenger pastSpaceBytes // averageObjectSize
 ]
 
 { #category : #accessing }
@@ -1824,7 +1831,7 @@ SpurMemoryManager >> tenuringThreshold: threshold [
 	"c.f. tenuringThreshold"
 	scavenger scavengerTenuringThreshold:
 		(threshold * 8 * self wordSize) asFloat
-		/ (scavenger pastSpace limit - scavenger pastSpace start) asFloat
+		/ scavenger pastSpaceBytes asFloat
 ]
 
 { #category : #accessing }
