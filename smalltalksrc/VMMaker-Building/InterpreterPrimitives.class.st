@@ -552,7 +552,7 @@ InterpreterPrimitives >> primitiveBeCursor [
 	argumentCount = 1 ifTrue: [
 		cursorObj := self stackValue: 1.
 		maskObj := self stackTop].
-	self success: (argumentCount < 2).
+	self success: argumentCount < 2.
 
 	self success: ((objectMemory isPointers: cursorObj) and: [(objectMemory lengthOf: cursorObj) >= 5]).
 	self successful ifTrue: [
@@ -586,12 +586,12 @@ InterpreterPrimitives >> primitiveBeCursor [
 				self success: ((offsetX >= -16) and: [offsetX <= 0]).
 				self success: ((offsetY >= -16) and: [offsetY <= 0]).
 				self success: ((objectMemory isWords: bitsObj) and: [(objectMemory lengthOf: bitsObj) = 16]).
-				cursorBitsIndex := bitsObj + BaseHeaderSize.
+				cursorBitsIndex := bitsObj + objectMemory baseHeaderSize.
 				self cCode: '' inSmalltalk:
 					[ourCursor := Cursor
 						extent: extentX @ extentY
 						fromArray: ((1 to: 16) collect: [:i |
-							((objectMemory fetchLong32: i-1 ofObject: bitsObj) >> (BytesPerWord*8 - 16)) bitAnd: 16rFFFF])
+							((objectMemory fetchLong32: i-1 ofObject: bitsObj) >> (objectMemory wordSize*8 - 16)) bitAnd: 16rFFFF])
 						offset: offsetX  @ offsetY]]].
 
 	argumentCount = 1 ifTrue: [
@@ -605,7 +605,7 @@ InterpreterPrimitives >> primitiveBeCursor [
 		self successful ifTrue: [
 			self success: ((extentX = 16) and: [extentY = 16 and: [depth = 1]]).
 			self success: ((objectMemory isWords: bitsObj) and: [(objectMemory lengthOf: bitsObj) = 16]).
-			maskBitsIndex := bitsObj + BaseHeaderSize]].
+			maskBitsIndex := bitsObj + objectMemory baseHeaderSize]].
 
 	self successful ifTrue: [
 		argumentCount = 0
