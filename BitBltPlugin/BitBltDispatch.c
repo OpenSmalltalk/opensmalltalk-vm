@@ -37,7 +37,7 @@
 #include "BitBltInternal.h"
 
 /** Define this to enable profiling */
-//#define PROFILING
+#define PROFILING
 
 #ifdef PROFILING
 #include <stdio.h>
