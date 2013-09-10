@@ -3064,7 +3064,7 @@ StackInterpreter >> checkIsStillMarriedContext: aContext currentFP: currentFP [
 				ifTrue: [currentFP]
 				ifFalse: [thePage headFP].
 	^theFP >= limitFP
-	   and: [(objectMemory isNonIntegerObject: (self frameCallerFP: theFP) asInteger)
+	   and: [(objectMemory isNonImmediate: (self frameCallerFP: theFP) asInteger)
 	   and: [(self withSmallIntegerTags: (self frameCallerFP: theFP))
 			= (objectMemory fetchPointer: InstructionPointerIndex ofObject: aContext)
 	   and: [(self frameMethodObject: theFP)
@@ -9572,7 +9572,10 @@ StackInterpreter >> pushNewArrayBytecode [
 	size := size bitAnd: 127.
 	self fetchNextBytecode.
 	self externalizeIPandSP.
-	array := objectMemory eeInstantiateClass: (objectMemory splObj: ClassArray) indexableSize: size.
+	array := objectMemory
+				eeInstantiateClassIndex: ClassArrayCompactIndex
+				format: objectMemory arrayFormat
+				numSlots: size.
 	self internalizeIPandSP.
 	popValues
 		ifTrue:
@@ -10606,7 +10609,7 @@ StackInterpreter >> shortPrintOop: oop [
 						ifFalse: [' is not on the heap']); cr.
 		 ^nil].
 	self print: ': a(n) '.
-	self printNameOfClass: (objectMemory fetchClassOf: oop) count: 5.
+	self printNameOfClass: (objectMemory fetchClassOfNonImm: oop) count: 5.
 	self cr
 ]
 
