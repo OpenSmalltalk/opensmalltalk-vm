@@ -5,13 +5,6 @@ Class {
 }
 
 { #category : #'memory access' }
-InterpreterSimulatorLSB64 >> bytesPerWord [
-	"overridden for 64-bit images..."
-
-	^ 8
-]
-
-{ #category : #'memory access' }
 InterpreterSimulatorLSB64 >> long32At: byteAddress [
 
 	"Return the 32-bit word at byteAddress which must be 0 mod 4."
@@ -42,4 +35,11 @@ InterpreterSimulatorLSB64 >> long32At: byteAddress put: a32BitValue [
 		self longAt: longAddress
 				put: ((long64 bitAnd: 16rFFFFFFFF) bitOr: (a32BitValue bitShift: 32))
 		]
+]
+
+{ #category : #'memory access' }
+InterpreterSimulatorLSB64 >> wordSize [
+	"overridden for 64-bit images..."
+
+	^8
 ]
