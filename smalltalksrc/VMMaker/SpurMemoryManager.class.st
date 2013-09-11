@@ -318,6 +318,7 @@ Class {
 	],
 	#classVars : [
 		'CheckObjectOverwrite',
+		'FirstValidClassIndex',
 		'NumFreeLists'
 	],
 	#pools : [
@@ -380,6 +381,7 @@ SpurMemoryManager class >> initializeCompactClassIndices [
 	"Reuse the compact class indices to name known classIndices.
 	 This helps reduce the churn in the interpreters."
 	"c.f. SpurBootstrap>>defineKnownClassIndices"
+	FirstValidClassIndex :=
 	ClassLargeNegativeIntegerCompactIndex := 32.
 	ClassLargePositiveIntegerCompactIndex := 33.
 	ClassFloatCompactIndex := 34.
@@ -776,6 +778,12 @@ SpurMemoryManager >> byteLengthOf: objOop [
 	^numBytes - ((fmt bitAnd: 1) << 2)
 ]
 
+{ #category : #'object enumeration' }
+SpurMemoryManager >> bytesInObject: objOop [
+	"Answer the total number of bytes in an object including header and possible overflow size header."
+	self subclassResponsibility
+]
+
 { #category : #'header format' }
 SpurMemoryManager >> bytesPerSlot [
 	^self subclassResponsibility
@@ -831,6 +839,11 @@ SpurMemoryManager >> classAtIndex: classIndex [
 	^self
 		fetchPointer: (classIndex bitAnd: self classTableMinorIndexMask)
 		ofObject: classTablePage
+]
+
+{ #category : #'interpreter access' }
+SpurMemoryManager >> classForClassTag: classIndex [
+	^self classAtIndex: classIndex
 ]
 
 { #category : #'header format' }
@@ -908,6 +921,13 @@ SpurMemoryManager >> classTableRootObj: anOop [
 	"For mapInterpreterOops"
 	classTableRootObj := anOop.
 	classTableFirstPage := self fetchPointer: 0 ofObject: classTableRootObj
+]
+
+{ #category : #'interpreter access' }
+SpurMemoryManager >> classTagForClass: classObj [
+	"Answer the classObj's identityHash to use as a tag in the first-level method lookup cache."
+	self assert: (self rawHashBitsOf: classObj) ~= 0.
+	^self rawHashBitsOf: classObj
 ]
 
 { #category : #allocation }
@@ -1092,7 +1112,22 @@ SpurMemoryManager >> fetchClassOfNonImm: objOop [
 	classIndex := self classIndexOf: objOop.
 	classIndex = self classIsItselfClassIndexPun ifTrue:
 		[^objOop].
+	self assert: classIndex >= FirstValidClassIndex.
 	^self classAtIndex: classIndex
+]
+
+{ #category : #'interpreter access' }
+SpurMemoryManager >> fetchClassTagOf: oop [
+	| tagBits |
+	(tagBits := oop bitAnd: self tagMask) ~= 0 ifTrue:
+		[^(tagBits bitAnd: 1) ~= 0 ifTrue: [1] ifFalse: [tagBits]].
+	^self classIndexOf: oop
+]
+
+{ #category : #'interpreter access' }
+SpurMemoryManager >> fetchClassTagOfNonImm: obj [
+	"In Spur an object's classIndex is the tag in all method caches."
+	^self classIndexOf: obj
 ]
 
 { #category : #'object access' }
@@ -1790,7 +1825,8 @@ SpurMemoryManager >> isIntegerObject: oop [
 		commonAtPut:
 		primitiveVMParameter
 		checkIsStillMarriedContext:currentFP:
-		displayBitsOf:Left:Top:Right:Bottom:) includes: thisContext sender method selector) ifFalse:
+		displayBitsOf:Left:Top:Right:Bottom:
+		fetchStackPointerOf:) includes: thisContext sender method selector) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
@@ -2052,6 +2088,21 @@ SpurMemoryManager >> numSlotsMask [
 
 { #category : #'object access' }
 SpurMemoryManager >> numSlotsOf: objOop [
+	<returnTypeC: #usqInt>
+	| halfHeader numSlots |
+	self flag: #endianness.
+	"numSlotsOf: should not be applied to free or forwarded objects."
+	self assert: (self classIndexOf: objOop) > self isForwardedObjectClassIndexPun.
+	halfHeader := self longAt: objOop + 4.
+	numSlots := halfHeader >> self numSlotsHalfShift bitAnd: self numSlotsMask.
+	^numSlots = self numSlotsMask
+		ifTrue: [self longAt: objOop - self baseHeaderSize] "overflow slots; (2^32)-1 slots are plenty"
+		ifFalse: [numSlots]
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> numSlotsOfAny: objOop [
+	"A private internal version of numSlotsOf: that is happy to be applied to free or forwarded objects."
 	<returnTypeC: #usqInt>
 	| halfHeader numSlots |
 	self flag: #endianness.

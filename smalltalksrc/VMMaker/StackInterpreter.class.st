@@ -11,15 +11,15 @@ NOTE:  Here follows a list of things to be borne in mind when working on this co
 
 1.  There are a number of things that should be done the next time we plan to release a completely incompatible image format.  These include unifying the instanceSize field of the class format word -- see instantiateClass:indexableSize:, and unifying the bits of the method primitive index (if we decide we need more than 512, after all) -- see primitiveIndexOf:.  Also, contexts should be given a special format code (see next item).
 
-2.  There are several fast checks for contexts (see isContextHeader: and isMethodContextHeader:) which will fail if the compact class indices of BlockContext or MethodContext change.  This is necessary because the oops may change during a compaction when the oops are being adjusted.  It's important to be aware of this when writing a new image using the SystemTracer.  A better solution would be to reserve one of the format codes for Contexts only.
+2.  There are several fast checks for contexts (see isContextHeader: and isMethodContextHeader:) which will fail if the compact class indices of BlockContext or MethodContext change.  This is necessary because the oops may change during a compaction when the oops are being adjusted.  It's important to be aware of this when writing a new image using the SystemTracer.  A better solution would be to reserve one of the format codes for Contexts only.  An even better solution is to eliminate compact classes altogether (see 6.).
 
-3.  We have made normal files tolerant to size and positions up to 32 bits.  This has not been done for async files, since they are still experimental.  The code in size, at: and at:put: should work with sizes and indices up to 31 bits, although I have not tested it (di 12/98); it might or might not work with 32-bit sizes.
+3.  We have made normal files tolerant to size and positions up to 32 bits.  This has not been done for async files, since they are still experimental.  The code in size, at: and at:put: should work with sizes and indices up to 31 bits, although I have not tested it (di 12/98); it might or might not work with 32-bit sizes. [Late news, the support has been extended to 64-bit file sizes].
 
 4.  Note that 0 is used in a couple of places as an impossible oop.  This should be changed to a constant that really is impossible (or perhaps there is code somewhere that guarantees it --if so it should be put in this comment).  The places include the method cache and the at cache.
 
-5. Moving to a 2 bit immediate tag and having immediate Characters is a good choice for Unicode and the JIT
+5. Moving to a 2 bit immediate tag and having immediate Characters is a good choice for Unicode and the JIT.  We can still have 31-bit SmallIntegers by allowing two tag patterns for SmallInteger.
 
-6.  If Eliot Miranda's 2 word header scheme is acceptable in terms of footprint (we estimate about a 10% increase in image size with about 35 reclaimed by better representation of CompiledMethod - loss of MethodProperties) then the in-line cache for the JIT is simplified, class access is faster and header access is the same in 32-bit and full 64-bit images.
+6.  If Eliot Miranda's 2 word header scheme is acceptable in terms of footprint (we estimate about a 10% increase in image size with about 35 reclaimed by better representation of CompiledMethod - loss of MethodProperties) then the in-line cache for the JIT is simplified, class access is faster and header access is the same in 32-bit and full 64-bit images.  [Late breaking news, the 2-word header scheme is more compact, by over 2%].  See SpurMemorymanager's class comment.
 "
 Class {
 	#name : #StackInterpreter,
@@ -43,6 +43,7 @@ Class {
 		'primitiveFunctionPointer',
 		'methodCache',
 		'atCache',
+		'lkupClassTag',
 		'lkupClass',
 		'methodDictLinearSearchLimit',
 		'highestRunnableProcessPriority',
@@ -1640,7 +1641,7 @@ StackInterpreter >> addNewMethodToCache: class [
 		(methodCache at: probe + MethodCacheSelector) = 0 ifTrue:
 			["Found an empty entry -- use it"
 			methodCache at: probe + MethodCacheSelector put: messageSelector.
-			methodCache at: probe + MethodCacheClass put: class.
+			methodCache at: probe + MethodCacheClass put: (objectMemory classTagForClass: class).
 			methodCache at: probe + MethodCacheMethod put: newMethod.
 			methodCache at: probe + MethodCachePrimFunction put: (self cCoerce: primitiveFunctionPointer to: #long).
 			lastMethodCacheProbeWrite := probe. "this for primitiveExternalMethod"
@@ -3128,7 +3129,8 @@ StackInterpreter >> checkOkayInterpreterObjects: writeBack [
 		oopOrZero := methodCache at: i + MethodCacheSelector.
 		oopOrZero = 0 ifFalse:
 			[ok := ok & (self checkOkayFields: (methodCache at: i + MethodCacheSelector)).
-			ok := ok & (self checkOkayFields: (methodCache at: i + MethodCacheClass)).
+			objectMemory hasSpurMemoryManagerAPI ifFalse:
+				[ok := ok & (self checkOkayFields: (methodCache at: i + MethodCacheClass))].
 			ok := ok & (self checkOkayFields: (methodCache at: i + MethodCacheMethod))]].
 	1 to: objectMemory remapBufferCount do:
 		[ :i |
@@ -3612,8 +3614,8 @@ StackInterpreter >> commonSendAbsentImplicit [
 							mixin: (self methodClassOf: method)
 							implementing: messageSelector.
 	self shuffleArgumentsAndStoreAbsentReceiver: implicitReceiver.
-	lkupClass := objectMemory fetchClassOf: implicitReceiver.
-	self assert: lkupClass ~= objectMemory nilObject.
+	lkupClassTag := objectMemory fetchClassTagOf: implicitReceiver.
+	self assert: lkupClassTag ~= objectMemory nilObject.
 	self commonSend
 ]
 
@@ -4144,7 +4146,7 @@ StackInterpreter >> dynamicSuperSendBytecode [
 	mixinApplication := self 
 		findApplicationOfTargetMixin: mClassMixin
 		startingAtBehavior: (objectMemory fetchClassOf: rcvr).
-	lkupClass := self superclassOf: mixinApplication.
+	lkupClassTag := objectMemory classTagForClass: (self superclassOf: mixinApplication).
 	self commonSend
 ]
 
@@ -4441,7 +4443,7 @@ StackInterpreter >> extSendAbsentDynamicSuperBytecode [
 	mixinApplication := self 
 							findApplicationOfTargetMixin: mClassMixin
 							startingAtBehavior: (objectMemory fetchClassOf: self receiver).
-	lkupClass := self superclassOf: mixinApplication.
+	lkupClassTag := objectMemory classTagForClass: (self superclassOf: mixinApplication).
 	self commonSend
 ]
 
@@ -4467,8 +4469,8 @@ StackInterpreter >> extSendBytecode [
 	argumentCount := (byte bitAnd: 7) + (extB << 3).
 	extB := 0.
 	rcvr := self internalStackValue: argumentCount.
-	lkupClass := objectMemory fetchClassOf: rcvr.
-	self assert: lkupClass ~= objectMemory nilObject.
+	lkupClassTag := objectMemory fetchClassTagOf: rcvr.
+	self assert: lkupClassTag ~= objectMemory nilObject.
 	self commonSend
 ]
 
@@ -5077,15 +5079,16 @@ StackInterpreter >> findMethodWithPrimitive: primitive FromFP: startFP UpToConte
 ]
 
 { #category : #'message sending' }
-StackInterpreter >> findNewMethodInClass: class [ 
+StackInterpreter >> findNewMethodInClassTag: classTag [
 	"Find the compiled method to be run when the current 
 	messageSelector is sent to the given class, setting the values 
 	of 'newMethod' and 'primitiveIndex'."
-	| ok |
+	| ok class |
 	<inline: false>
-	ok := self lookupInMethodCacheSel: messageSelector class: class.
+	ok := self lookupInMethodCacheSel: messageSelector classTag: classTag.
 	ok ifFalse: "entry was not found in the cache; look it up the hard way "
-		[self lookupMethodInClass: class.
+		[class := objectMemory classForClassTag: classTag.
+		 self lookupMethodInClass: class.
 		 self addNewMethodToCache: class]
 ]
 
@@ -6395,12 +6398,13 @@ StackInterpreter >> internalFindNewMethod [
 	"Find the compiled method to be run when the current messageSelector is sent to the class 'lkupClass', setting the values of 'newMethod' and 'primitiveIndex'."
 	| ok | 
 	<inline: true>
-	ok := self lookupInMethodCacheSel: messageSelector class: lkupClass.
+	ok := self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag.
 	ok ifFalse: "entry was not found in the cache; look it up the hard way"
-		[self externalizeIPandSP.
-		self lookupMethodInClass: lkupClass.
-		self internalizeIPandSP.
-		self addNewMethodToCache: lkupClass]
+		[lkupClass := objectMemory classForClassTag: lkupClassTag.
+		 self externalizeIPandSP.
+		 self lookupMethodInClass: lkupClass.
+		 self internalizeIPandSP.
+		 self addNewMethodToCache: lkupClass]
 ]
 
 { #category : #'return bytecodes' }
@@ -7024,42 +7028,48 @@ StackInterpreter >> longUnconditionalJump [
 ]
 
 { #category : #'method lookup cache' }
-StackInterpreter >> lookupInMethodCacheSel: selector class: class [
-	"This method implements a simple method lookup cache. If an entry for the given selector and class is found in the cache, set the values of 'newMethod' and 'primitiveFunctionPointer' and return true. Otherwise, return false."
-	"About the re-probe scheme: The hash is the low bits of the XOR of two large addresses, minus their useless lowest two bits. If a probe doesn't get a hit, the hash is shifted right one bit to compute the next probe, introducing a new randomish bit. The cache is probed CacheProbeMax times before giving up."
-	"WARNING: Since the hash computation is based on the object addresses of the class and selector, we must rehash or flush when compacting storage. We've chosen to flush, since that also saves the trouble of updating the addresses of the objects in the cache."
+StackInterpreter >> lookupInMethodCacheSel: selector classTag: classTag [
+	"This method implements a simple method lookup cache.  If an entry for the given selector and classTag is
+	 found in the cache, set the values of 'newMethod' and 'primitiveFunctionPointer' and answer true. Otherwise,
+	 answer false."
+	"About the re-probe scheme: The hash is the low bits of the XOR of two large addresses, minus their useless
+	 lowest two bits. If a probe doesn't get a hit, the hash is shifted right one bit to compute the next probe,
+	 introducing a new randomish bit. The cache is probed CacheProbeMax times before giving up."
+	"WARNING: Since the hash computation is based on the object addresses of the class and selector, we must
+	 rehash or flush when compacting storage. We've chosen to flush, since that also saves the trouble of updating
+	 the addresses of the objects in the cache."
+	"classTag is either a class object, if using NewObjectMemory, or a classIndex, if using SpurMemoryManager."
 
 	| hash probe |
 	<inline: true>
 	<asmLabel: false>
-	hash := selector bitXor: class.  "shift drops two low-order zeros from addresses"
+	hash := selector bitXor: classTag.  "shift drops two low-order zeros from addresses"
 
 	probe := hash bitAnd: MethodCacheMask.  "first probe"
 	(((methodCache at: probe + MethodCacheSelector) = selector) and:
-		 [(methodCache at: probe + MethodCacheClass) = class]) ifTrue:
+		 [(methodCache at: probe + MethodCacheClass) = classTag]) ifTrue:
 			[newMethod := methodCache at: probe + MethodCacheMethod.
 			primitiveFunctionPointer := self cCoerceSimple: (methodCache at: probe + MethodCachePrimFunction)
 											to: #'void (*)()'.
-			^ true	"found entry in cache; done"].
+			^true	"found entry in cache; done"].
 
 	probe := (hash >> 1) bitAnd: MethodCacheMask.  "second probe"
 	(((methodCache at: probe + MethodCacheSelector) = selector) and:
-		 [(methodCache at: probe + MethodCacheClass) = class]) ifTrue:
+		 [(methodCache at: probe + MethodCacheClass) = classTag]) ifTrue:
 			[newMethod := methodCache at: probe + MethodCacheMethod.
 			primitiveFunctionPointer := self cCoerceSimple: (methodCache at: probe + MethodCachePrimFunction)
 											to: #'void (*)()'.
-			^ true	"found entry in cache; done"].
+			^true	"found entry in cache; done"].
 
 	probe := (hash >> 2) bitAnd: MethodCacheMask.
 	(((methodCache at: probe + MethodCacheSelector) = selector) and:
-		 [(methodCache at: probe + MethodCacheClass) = class]) ifTrue:
+		 [(methodCache at: probe + MethodCacheClass) = classTag]) ifTrue:
 			[newMethod := methodCache at: probe + MethodCacheMethod.
 			primitiveFunctionPointer := self cCoerceSimple: (methodCache at: probe + MethodCachePrimFunction)
 											to: #'void (*)()'.
-			^ true	"found entry in cache; done"].
+			^true	"found entry in cache; done"].
 
-	^ false
-
+	^false
 ]
 
 { #category : #'message sending' }
@@ -8061,8 +8071,8 @@ StackInterpreter >> normalSend [
 	<sharedCodeNamed: 'normalSend' inCase: #singleExtendedSendBytecode>
 	| rcvr |
 	rcvr := self internalStackValue: argumentCount.
-	lkupClass := objectMemory fetchClassOf: rcvr.
-	self assert: lkupClass ~= objectMemory nilObject.
+	lkupClassTag := objectMemory fetchClassTagOf: rcvr.
+	self assert: lkupClassTag ~= objectMemory nilObject.
 	self commonSend
 ]
 
@@ -8538,7 +8548,7 @@ StackInterpreter >> primitiveObject: actualReceiver perform: selector withArgume
 		receiver: actualReceiver.
 	self printSends ifTrue:
 		[self printActivationNameForSelector: messageSelector startClass: lookupClass; cr].
-	self findNewMethodInClass: lookupClass.
+	self findNewMethodInClassTag: (objectMemory classTagForClass: lookupClass).
 
 	"Only test CompiledMethods for argument count - any other objects playacting as CMs will have to take their chances"
 	((objectMemory isOopCompiledMethod: newMethod)
@@ -10291,11 +10301,12 @@ StackInterpreter >> sendInvokeCallback: thunkPtr Stack: stackPtr Registers: regs
 	 and are converted to integer objects on the way."
 	<export: true>
 	self flag: #obsolete.
-	lkupClass := self fetchClassOfNonImm: (self splObj: ClassAlien).
+	lkupClassTag := self fetchClassTagOfNonImm: (self splObj: ClassAlien).
 	messageSelector := self splObj: SelectorInvokeCallback.
 	argumentCount := 4.
-	(self lookupInMethodCacheSel: messageSelector class: lkupClass) ifFalse:
-	 	[(self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:
+	(self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifFalse:
+	 	[lkupClass := objectMemory classForClassTag: lkupClassTag.
+		(self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:
 			[^false]].
 	((self argumentCountOf: newMethod) = 4
 	and: [primitiveFunctionPointer = 0]) ifFalse:
@@ -10326,10 +10337,11 @@ StackInterpreter >> sendInvokeCallbackContext: vmCallbackContext [
 	 The arguments are raw C addresses and are converted to integer objects on the way."
 	<export: true>
 	<var: #vmCallbackContext type: #'VMCallbackContext *'>
-	lkupClass := self fetchClassOfNonImm: (self splObj: ClassAlien).
+	lkupClassTag := self fetchClassTagOfNonImm: (self splObj: ClassAlien).
 	messageSelector := self splObj: SelectorInvokeCallback.
-	(self lookupInMethodCacheSel: messageSelector class: lkupClass) ifFalse:
-	 	[(self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:
+	(self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifFalse:
+	 	[lkupClass := objectMemory classForClassTag: lkupClassTag.
+		(self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:
 			[^false]].
 	primitiveFunctionPointer ~= 0 ifTrue:
 		[^false].
@@ -10366,8 +10378,8 @@ StackInterpreter >> sendLiteralSelector0ArgsBytecode [
 	messageSelector := self literal: (currentBytecode bitAnd: 16rF).
 	argumentCount := 0.
 	rcvr := self internalStackValue: 0.
-	lkupClass := objectMemory fetchClassOf: rcvr.
-	self assert: lkupClass ~= objectMemory nilObject.
+	lkupClassTag := objectMemory fetchClassTagOf: rcvr.
+	self assert: lkupClassTag ~= objectMemory nilObject.
 	self commonSend
 ]
 
@@ -10378,8 +10390,8 @@ StackInterpreter >> sendLiteralSelector1ArgBytecode [
 	messageSelector := self literal: (currentBytecode bitAnd: 16rF).
 	argumentCount := 1.
 	rcvr := self internalStackValue: 1.
-	lkupClass := objectMemory fetchClassOf: rcvr.
-	self assert: lkupClass ~= objectMemory nilObject.
+	lkupClassTag := objectMemory fetchClassTagOf: rcvr.
+	self assert: lkupClassTag ~= objectMemory nilObject.
 	self commonSend
 ]
 
@@ -10390,8 +10402,8 @@ StackInterpreter >> sendLiteralSelector2ArgsBytecode [
 	messageSelector := self literal: (currentBytecode bitAnd: 16rF).
 	argumentCount := 2.
 	rcvr := self internalStackValue: 2.
-	lkupClass := objectMemory fetchClassOf: rcvr.
-	self assert: lkupClass ~= objectMemory nilObject.
+	lkupClassTag := objectMemory fetchClassTagOf: rcvr.
+	self assert: lkupClassTag ~= objectMemory nilObject.
 	self commonSend
 ]
 
@@ -11503,8 +11515,8 @@ StackInterpreter >> superclassSend [
 	 the receiver and arguments have been pushed onto the stack,"
 	"Note: This method is inlined into the interpreter dispatch loop."
 	<sharedCodeNamed: 'commonSupersend' inCase: #singleExtendedSuperBytecode>
-	lkupClass := self superclassOf: (self methodClassOf: method).
-	self assert: lkupClass ~= objectMemory nilObject.
+	lkupClassTag := objectMemory classTagForClass: (self superclassOf: (self methodClassOf: method)).
+	self assert: lkupClassTag ~= objectMemory nilObject.
 	self commonSend
 ]
 

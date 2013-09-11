@@ -1956,7 +1956,7 @@ InterpreterPrimitives >> primitiveInvokeObjectAsMethod [
 		run: originalSelector with: arguments in: aReceiver.
 	"
 	<returnTypeC: #void>
-	| runReceiver runArgs lookupClass |
+	| runReceiver runArgs lookupClassTag |
 	runArgs := objectMemory eeInstantiateClass: (objectMemory splObj: ClassArray) indexableSize: argumentCount.
 	argumentCount - 1 to: 0 by: -1  do:
 		[:i| objectMemory storePointerUnchecked: i ofObject: runArgs withValue: self popStack].
@@ -1972,8 +1972,8 @@ InterpreterPrimitives >> primitiveInvokeObjectAsMethod [
 
 	messageSelector := objectMemory splObj: SelectorRunWithIn.
 	argumentCount := 3.
-	lookupClass := objectMemory fetchClassOf: newMethod.
-	self findNewMethodInClass: lookupClass.
+	lookupClassTag := objectMemory fetchClassTagOf: newMethod.
+	self findNewMethodInClassTag: lookupClassTag.
 	self executeNewMethod.  "Recursive xeq affects successFlag"
 	self initPrimCall
 ]

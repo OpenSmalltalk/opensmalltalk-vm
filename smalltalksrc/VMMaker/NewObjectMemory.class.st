@@ -560,6 +560,27 @@ NewObjectMemory >> classFloatCompactIndex [
 	^ClassFloatCompactIndex
 ]
 
+{ #category : #'interpreter access' }
+NewObjectMemory >> classForClassTag: classObj [
+	"Compatibility with SpurObjectMemory.  In ObjectMemory there is no distinction between a
+	 classTag in the first-level method cache and a class itself."
+	^classObj
+]
+
+{ #category : #'interpreter access' }
+NewObjectMemory >> classTagForClass: classObj [
+	"Compatibility with SpurObjectMemory.  In ObjectMemory there is no distinction between a
+	 classTag in the first-level method cache and a class itself."
+	^classObj
+]
+
+{ #category : #'interpreter access' }
+NewObjectMemory >> classTagForSpecialObjectsIndex: splObjIndex compactClassIndex: compactClassIndex [
+	"For compatibility with Spur.  Answer the class tag to use to lookup a method in the
+	 first-;evel method lookup cache."
+	^self splObj: splObjIndex
+]
+
 { #category : #'object enumeration' }
 NewObjectMemory >> clearLeakMapAndMapAccessibleObjects [
 	"Perform an integrity/leak check using the heapMap.  Set a bit at each object's header."
@@ -923,6 +944,20 @@ NewObjectMemory >> eek [
 NewObjectMemory >> falseObject: anOop [
 	"For mapInterpreterOops"
 	falseObj := anOop
+]
+
+{ #category : #'interpreter access' }
+NewObjectMemory >> fetchClassTagOf: oop [
+	"Compatibility with SpurObjectMemory.  In ObjectMemory there is no distinction between a
+	 classTag in the first-level method cache and a class itself."
+	^self fetchClassOf: oop
+]
+
+{ #category : #'interpreter access' }
+NewObjectMemory >> fetchClassTagOfNonImm: oop [
+	"Compatibility with SpurObjectMemory.  In ObjectMemory there is no distinction between a
+	 classTag in the first-level method cache and a class itself."
+	^self fetchClassOfNonImm: oop
 ]
 
 { #category : #'debug support' }

@@ -924,7 +924,7 @@ CogVMSimulator >> filterPerformOf: selector to: receiver [
 ]
 
 { #category : #testing }
-CogVMSimulator >> findNewMethodInClass: class [
+CogVMSimulator >> findNewMethodInClassTag: classTag [
 "
 	| cName |
 	traceOn ifTrue:
@@ -950,7 +950,7 @@ CogVMSimulator >> findNewMethodInClass: class [
 		messageQueue == nil ifTrue: [messageQueue := OrderedCollection new].
 		messageQueue addLast: (self stringOf: messageSelector)].
 "
-	super findNewMethodInClass: class.
+	^super findNewMethodInClassTag: classTag
 ]
 
 { #category : #'memory access' }

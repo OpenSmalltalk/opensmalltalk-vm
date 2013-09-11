@@ -199,6 +199,12 @@ CogObjectRepresentationForSqueakV3 >> genGetClassObjectOf: instReg into: destReg
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genGetClassTagOf: instReg into: destReg scratchReg: scratchReg [
+	"Compatibility with SpurObjectRepresentation/purMemorymanager."
+	^self genGetClassObjectOf: instReg into: destReg scratchReg: scratchReg
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genGetCompactClassIndexNonIntOf: instReg into: destReg [
 	"Fetch the instance's compact class index into destReg."
 	"Get header word in scratchReg"
