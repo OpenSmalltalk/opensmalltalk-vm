@@ -313,7 +313,8 @@ Class {
 		'signalLowSpace',
 		'checkForLeaks',
 		'needGCFlag',
-		'heapMap'
+		'heapMap',
+		'becommedPointerObjects'
 	],
 	#classVars : [
 		'CheckObjectOverwrite',
@@ -510,14 +511,14 @@ SpurMemoryManager >> addToFreeList: freeChunk [
 	chunkBytes := self bytesInObject: freeChunk.
 	index := chunkBytes / self wordSize.
 	index < NumFreeLists ifTrue:
-		[self storePointerUnchecked: 0 ofObject: freeChunk withValue: (freeLists at: index).
+		[self storePointer: 0 ofForwardedOrFreeObject: freeChunk withValue: (freeLists at: index).
 		 freeLists at: index put: freeChunk.
 		 ^self].
 	self
-		storePointerUnchecked: self freeChunkNextIndex ofObject: freeChunk withValue: 0;
-		storePointerUnchecked: self freeChunkParentIndex ofObject: freeChunk withValue: 0;
-		storePointerUnchecked: self freeChunkSmallerIndex ofObject: freeChunk withValue: 0;
-		storePointerUnchecked: self freeChunkLargerIndex ofObject: freeChunk withValue: 0.
+		storePointer: self freeChunkNextIndex ofForwardedOrFreeObject: freeChunk withValue: 0;
+		storePointer: self freeChunkParentIndex ofForwardedOrFreeObject: freeChunk withValue: 0;
+		storePointer: self freeChunkSmallerIndex ofForwardedOrFreeObject: freeChunk withValue: 0;
+		storePointer: self freeChunkLargerIndex ofForwardedOrFreeObject: freeChunk withValue: 0.
 	"Large chunk list organized as a tree, each node of which is a list of chunks of the same size.
 	 Beneath the node are smaller and larger blocks."
 	parent := 0.
@@ -712,6 +713,40 @@ SpurMemoryManager >> baseHeaderSize [
 	^8
 ]
 
+{ #category : #become }
+SpurMemoryManager >> become: array1 with: array2 twoWay: twoWayFlag copyHash: copyHashFlag [
+	"All references to each object in array1 are swapped with all references to the
+	 corresponding object in array2. That is, all pointers to one object are replaced
+	 with with pointers to the other. The arguments must be arrays of the same length. 
+	 Answers PrimNoErr if the primitive succeeds, otherwise a relevant error code."
+	"Implementation: Uses lazy forwarding to defer updating references until message send."
+
+	self leakCheckBecome ifTrue:
+		[self runLeakCheckerForFullGC: true].
+	(self isArray: array1) ifFalse:
+		[^PrimErrBadReceiver].
+	((self isArray: array2)
+	 and: [(self numSlotsOf: array1) = (self numSlotsOf: array2)]) ifFalse:
+		[^PrimErrBadArgument].
+	(twoWayFlag or: [copyHashFlag])
+		ifTrue: [(self containOnlyOops: array1 and: array2) ifFalse: [^PrimErrInappropriate]]
+		ifFalse: [(self containOnlyOops: array1) ifFalse: [^PrimErrInappropriate]].
+
+	coInterpreter preBecomeAction.
+	twoWayFlag
+		ifTrue:
+			[self innerBecomeObjectsIn: array1 with: array2 twoWay: twoWayFlag copyHash: copyHashFlag]
+		ifFalse:
+			[self innerBecomeObjectsIn: array1 to: array2 twoWay: twoWayFlag copyHash: copyHashFlag].
+	coInterpreter postBecomeAction: becommedPointerObjects.
+	becommedPointerObjects := false.
+
+	self leakCheckBecome ifTrue:
+		[self runLeakCheckerForFullGC: true].
+
+	^PrimNoErr "success"
+]
+
 { #category : #'header format' }
 SpurMemoryManager >> byteFormatForNumBytes: numBytes [
 	^self firstByteFormat + (numBytes bitAnd: self wordSize - 1)
@@ -791,6 +826,8 @@ SpurMemoryManager >> classAtIndex: classIndex [
 	| classTablePage |
 	classTablePage := self fetchPointer: classIndex >> self classTableMajorIndexShift
 							ofObject: classTableRootObj.
+	classTablePage = nilObj ifTrue:
+		[^nil].
 	^self
 		fetchPointer: (classIndex bitAnd: self classTableMinorIndexMask)
 		ofObject: classTablePage
@@ -873,6 +910,24 @@ SpurMemoryManager >> classTableRootObj: anOop [
 	classTableFirstPage := self fetchPointer: 0 ofObject: classTableRootObj
 ]
 
+{ #category : #allocation }
+SpurMemoryManager >> clone: objOop [
+	| numSlots newObj |
+	numSlots := self numSlotsOf: objOop.
+	newObj := self allocateSlots: (self numSlotsOf: objOop)
+					format: (self formatOf: objOop)
+					classIndex: (self classIndexOf: objOop).
+	0 to: numSlots - 1 do:
+		[:i|
+		self storePointerUnchecked: i
+			ofObject: newObj
+			withValue: (self fetchPointer: i ofObject: objOop)].
+	(self isRemembered: objOop) ifTrue:
+		[scavenger remember: objOop.
+		 self setIsRememberedOf: objOop to: true].
+	^newObj
+]
+
 { #category : #simulation }
 SpurMemoryManager >> coInterpreter: aCoInterpreter [
 	<doNotGenerate>
@@ -888,6 +943,69 @@ SpurMemoryManager >> compactClassIndexOf: objOop [
 SpurMemoryManager >> compactIndexOfClass: objOop [
 	self assert: (self rawHashBitsOf: objOop) ~= 0.
 	^self rawHashBitsOf: objOop
+]
+
+{ #category : #become }
+SpurMemoryManager >> containOnlyOops: array [
+	"Answer if the array contains only non-immediates. You can't become: immediates!"
+	| fieldOffset containsPointerObjs oop |
+	fieldOffset := self lastPointerOf: array.
+	containsPointerObjs := false.
+	"same size as array2"
+	[fieldOffset >= self baseHeaderSize] whileTrue:
+		[oop := self longAt: array + fieldOffset.
+		 (self isImmediate: oop) ifTrue: [^false].
+		 (self isForwarded: oop) ifTrue:
+			[oop := self followForwarded: oop.
+			 self longAt: array + fieldOffset put: oop].
+		 (self isPointersNonImm: oop) ifTrue:
+			[containsPointerObjs := true].
+		 fieldOffset := fieldOffset - BytesPerOop].
+	"only set becommedPointerObjects after checking all args."
+	containsPointerObjs ifTrue:
+		[becommedPointerObjects := true].
+	^true
+]
+
+{ #category : #become }
+SpurMemoryManager >> containOnlyOops: array1 and: array2 [
+	"Answer if neither array contains only non-immediates. You can't become: immediates!"
+	| fieldOffset containsPointerObjs oop |
+	fieldOffset := self lastPointerOf: array1.
+	containsPointerObjs := false.
+	"same size as array2"
+	[fieldOffset >= self baseHeaderSize] whileTrue:
+		[oop := self longAt: array1 + fieldOffset.
+		 (self isImmediate: oop) ifTrue: [^false].
+		 (self isForwarded: oop) ifTrue:
+			[oop := self followForwarded: oop.
+			 self longAt: array1 + fieldOffset put: oop].
+		 (self isPointersNonImm: oop) ifTrue:
+			[containsPointerObjs := true].
+		 oop := self longAt: array2 + fieldOffset.
+		 (self isImmediate: oop) ifTrue: [^false].
+		 (self isForwarded: oop) ifTrue:
+			[oop := self followForwarded: oop.
+			 self longAt: array2 + fieldOffset put: oop].
+		 (self isPointersNonImm: oop) ifTrue:
+			[containsPointerObjs := true].
+		 fieldOffset := fieldOffset - BytesPerOop].
+	"only set becommedPointerObjects after checking all args."
+	containsPointerObjs ifTrue:
+		[becommedPointerObjects := true].
+	^true
+]
+
+{ #category : #become }
+SpurMemoryManager >> doBecome: obj1 with: obj2 copyHash: copyHashFlag [
+	((self isClassInClassTable: obj1)
+	 or: [self isClassInClassTable: obj1]) ifTrue:
+		[self halt].
+	(self numSlotsOf: obj1) = (self numSlotsOf: obj2)
+		ifTrue:
+			[self inPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag]
+		ifFalse:
+			[self outOfPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag]
 ]
 
 { #category : #accessing }
@@ -1074,6 +1192,22 @@ SpurMemoryManager >> fixedFieldsOfClassFormatMask [
 	^1 << self fixedFieldsFieldWidth - 1
 ]
 
+{ #category : #become }
+SpurMemoryManager >> followForwarded: objOop [
+	| referent |
+	self assert: (self isForwarded: objOop).
+	referent := self fetchPointer: 0 ofForwardedOrFreeObject: objOop.
+	self assert: (self isForwarded: referent) not.
+	^referent
+]
+
+{ #category : #become }
+SpurMemoryManager >> followMaybeForwarded: objOop [
+	^(self isForwarded: objOop)
+		ifTrue: [self followForwarded: objOop]
+		ifFalse: [objOop]
+]
+
 { #category : #'header format' }
 SpurMemoryManager >> formatMask [
 	"0 = 0 sized objects (UndefinedObject True False et al)
@@ -1099,7 +1233,9 @@ SpurMemoryManager >> formatOf: objOop [
 	 3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
 	 4 = weak indexable objects with inst vars (WeakArray et al)
 	 5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
-	 6,7,8 unused
+	 6 unused, reserved for exotic pointer objects?
+	 7 Forwarded Object, 1st field is pointer, rest of fields are ignored
+	 8 unused, reserved for exotic non-pointer objects?
 	 9 (?) 64-bit indexable
 	 10 - 11 32-bit indexable
 	 12 - 15 16-bit indexable
@@ -1138,24 +1274,47 @@ SpurMemoryManager >> formatShift [
 	^24
 ]
 
+{ #category : #become }
+SpurMemoryManager >> forward: obj1 to: obj2 [
+	self setFormatOf: obj1 to: self forwardedFormat.
+	self setClassIndexOf: obj1 to: self isForwardedObjectClassIndexPun.
+	self storePointer: 0 ofForwardedOrFreeObject: obj1 withValue: obj2
+]
+
+{ #category : #'header format' }
+SpurMemoryManager >> forwardedFormat [
+	"A special format used by the GC to follow only the first pointer."
+	^7
+]
+
 { #category : #'garbage collection' }
 SpurMemoryManager >> freeChunkLargerIndex [
-	^3
+	"for organizing the tree of large free chunks."
+	^4
+]
+
+{ #category : #'garbage collection' }
+SpurMemoryManager >> freeChunkNextAddressIndex [
+	"for sorting free chunks in memory order"
+	^1
 ]
 
 { #category : #'garbage collection' }
 SpurMemoryManager >> freeChunkNextIndex [
+	"for linking objecs on each free list"
 	^0
 ]
 
 { #category : #'garbage collection' }
 SpurMemoryManager >> freeChunkParentIndex [
-	^1
+	"for organizing the tree of large free chunks."
+	^2
 ]
 
 { #category : #'garbage collection' }
 SpurMemoryManager >> freeChunkSmallerIndex [
-	^2
+	"for organizing the tree of large free chunks."
+	^3
 ]
 
 { #category : #accessing }
@@ -1217,6 +1376,40 @@ SpurMemoryManager >> identityHashHalfWordMask [
 	^16r3fffff
 ]
 
+{ #category : #become }
+SpurMemoryManager >> inPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag [
+	| headerTemp temp |
+	<var: 'headerTemp' type: #usqLong>
+	self assert: (self numSlotsOf: obj1) = (self numSlotsOf: obj2).
+	(self isRemembered: obj1)
+		ifTrue:
+			[(self isRemembered: obj1) ifFalse:
+				[scavenger
+					replace: obj1
+					inRememberedTableWith: obj2]]
+		ifFalse:
+			[(self isRemembered: obj2) ifTrue:
+				[scavenger
+					replace: obj2
+					inRememberedTableWith: obj1]].
+	headerTemp := self longLongAt: obj1.
+	self longLongAt: obj1 put: (self longLongAt: obj2).
+	self longLongAt: obj2 put: headerTemp.
+	copyHashFlag ifFalse: "undo hash copy"
+		[temp := self rawHashBitsOf: obj1.
+		 self setHashBitsOf: obj1 to: (self rawHashBitsOf: obj2).
+		 self setHashBitsOf: obj2 to: temp].
+	0 to: (self numSlotsOf: obj1) - 1 do:
+		[:i|
+		temp := self fetchPointer: i ofObject: obj1.
+		self storePointerUnchecked: i
+			ofObject: obj1
+			withValue: (self fetchPointer: i ofObject: obj2).
+		self storePointerUnchecked: i
+			ofObject: obj2
+			withValue: temp]
+]
+
 { #category : #'header format' }
 SpurMemoryManager >> indexablePointersFormat [
 	^3
@@ -1247,7 +1440,7 @@ SpurMemoryManager >> initSpaceForAllocationCheck: aNewSpace [
 SpurMemoryManager >> initialize [
 	freeLists := CArrayAccessor on: (Array new: NumFreeLists withAll: 0).
 	checkForLeaks := 0.
-	needGCFlag := signalLowSpace := false.
+	needGCFlag := signalLowSpace := becommedPointerObjects := false.
 	heapMap := self wordSize = 4 ifTrue: [CogCheck32BitHeapMap new]
 ]
 
@@ -1324,6 +1517,28 @@ SpurMemoryManager >> initializePostBootstrap [
 	 Put things back to some kind of normalicy."
 	freeOldSpaceStart := freeStart.
 	freeStart := scavenger eden start
+]
+
+{ #category : #become }
+SpurMemoryManager >> innerBecomeObjectsIn: array1 to: array2 twoWay: twoWayFlag copyHash: copyHashFlag [
+	| fieldOffset |
+	fieldOffset := self lastPointerOf: array1.
+	[fieldOffset >= self baseHeaderSize] whileTrue:
+		[self become: (self longAt: array1 + fieldOffset)
+			to: (self longAt: array2 + fieldOffset)
+			copyHash: copyHashFlag.
+		fieldOffset := fieldOffset - BytesPerOop]
+]
+
+{ #category : #become }
+SpurMemoryManager >> innerBecomeObjectsIn: array1 with: array2 twoWay: twoWayFlag copyHash: copyHashFlag [
+	| fieldOffset |
+	fieldOffset := self lastPointerOf: array1.
+	[fieldOffset >= self baseHeaderSize] whileTrue:
+		[self doBecome: (self longAt: array1 + fieldOffset)
+			with: (self longAt: array2 + fieldOffset)
+			copyHash: copyHashFlag.
+		fieldOffset := fieldOffset - BytesPerOop]
 ]
 
 { #category : #'object format' }
@@ -1426,6 +1641,15 @@ SpurMemoryManager >> isBytesNonImm: objOop [
 { #category : #'object testing' }
 SpurMemoryManager >> isCharacterObject: oop [
 	^(oop bitAnd: self tagMask) = self characterTag
+]
+
+{ #category : #become }
+SpurMemoryManager >> isClassInClassTable: objOop [
+	| hash |
+	hash := self rawHashBitsOf: objOop.
+	hash = 0 ifTrue:
+		[false].
+	^(self classAtIndex: hash) = objOop
 ]
 
 { #category : #'object access' }
@@ -1684,12 +1908,18 @@ SpurMemoryManager >> lastPointerOf: objOop [
 			["contexts end at the stack pointer"
 			contextSize := coInterpreter fetchStackPointerOf: objOop.
 			^CtxtTempFrameStart + contextSize * BytesPerOop].
-		^(self numSlotsOf: objOop) * BytesPerOop  "all pointers"].
+		^(self numSlotsOf: objOop) - 1 * BytesPerOop + self baseHeaderSize  "all pointers"].
 	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes"
 	numLiterals := coInterpreter literalCountOf: objOop.
-	^numLiterals + LiteralStart * BytesPerOop
+	^numLiterals + LiteralStart - 1 * BytesPerOop + self baseHeaderSize
+]
+
+{ #category : #'debug support' }
+SpurMemoryManager >> leakCheckBecome [
+	<api>
+	^(checkForLeaks bitAnd: 4) ~= 0
 ]
 
 { #category : #'debug support' }
@@ -1861,6 +2091,29 @@ SpurMemoryManager >> objectStartingAt: address [
 		ifFalse: [address]
 ]
 
+{ #category : #become }
+SpurMemoryManager >> outOfPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag [
+	"Allocate two new objects, n1 & n2.  Copy the contents appropriately. Convert
+	 obj1 and obj2 into forwarding objects pointing to n2 and n1 respectively"
+	| clone1 clone2 |
+	clone1 := (self isContextNonImm: obj1)
+				ifTrue: [coInterpreter cloneContext: obj1]
+				ifFalse: [self clone: obj1].
+	clone2 := (self isContextNonImm: obj2)
+				ifTrue: [coInterpreter cloneContext: obj2]
+				ifFalse: [self clone: obj2].
+	copyHashFlag
+		ifTrue:
+			[self setHashBitsOf: clone1 to: (self rawHashBitsOf: obj2).
+			 self setHashBitsOf: clone2 to: (self rawHashBitsOf: obj1)]
+		ifFalse:
+			[self setHashBitsOf: clone1 to: (self rawHashBitsOf: obj1).
+			 self setHashBitsOf: clone2 to: (self rawHashBitsOf: obj2)].
+	self
+		forward: obj1 to: clone2;
+		forward: obj2 to: clone1
+]
+
 { #category : #'header format' }
 SpurMemoryManager >> overflowSlotsMask [
 	^self subclassResponsibility
@@ -1898,6 +2151,36 @@ SpurMemoryManager >> rememberedBitShift [
 SpurMemoryManager >> scavenger [
 	<doNotGenerate>
 	^scavenger
+]
+
+{ #category : #'header access' }
+SpurMemoryManager >> setClassIndexOf: objOop to: classIndex [
+	self flag: #endianness.
+	self longAt: objOop
+		put: ((self longAt: objOop) bitAnd: self classIndexMask bitInvert32)
+			+ classIndex
+]
+
+{ #category : #'header access' }
+SpurMemoryManager >> setFormatOf: objOop to: format [
+	"0 = 0 sized objects (UndefinedObject True False et al)
+	 1 = non-indexable objects with inst vars (Point et al)
+	 2 = indexable objects with no inst vars (Array et al)
+	 3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+	 4 = weak indexable objects with inst vars (WeakArray et al)
+	 5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+	 6 unused, reserved for exotic pointer objects?
+	 7 Forwarded Object, 1st field is pointer, rest of fields are ignored
+	 8 unused, reserved for exotic non-pointer objects?
+	 9 (?) 64-bit indexable
+	 10 - 11 32-bit indexable
+	 12 - 15 16-bit indexable
+	 16 - 23 byte indexable
+	 24 - 31 compiled method"
+	self flag: #endianness.
+	self longAt: objOop
+		put: ((self longAt: objOop) bitAnd: (self formatMask << self formatShift) bitInvert32)
+			+ (format << self formatShift)
 ]
 
 { #category : #'header access' }
@@ -1994,7 +2277,7 @@ SpurMemoryManager >> storePointer: fieldIndex ofObject: oop withValue: valuePoin
 ]
 
 { #category : #'object access' }
-SpurMemoryManager >> storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer [
+SpurMemoryManager >> storePointerUnchecked: fieldIndex ofObject: objOop withValue: valuePointer [
 	^self subclassResponsibility
 ]
 
