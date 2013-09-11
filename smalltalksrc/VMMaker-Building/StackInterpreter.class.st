@@ -3671,15 +3671,22 @@ StackInterpreter >> commonVariable: rcvr at: index put: value cacheIndex: atIx [
 			ifTrue: [isCharacter := objectMemory isCharacterObject: value.
 					isCharacter ifFalse:
 						[^self primitiveFailFor: PrimErrBadArgument].
-					valToPut := objectMemory fetchPointer: CharacterValueIndex ofObject: value]
+					objectMemory hasSpurMemoryManagerAPI
+						ifTrue: [valToPut := objectMemory characterValueOf: value]
+						ifFalse:
+							[valToPut := objectMemory fetchPointer: CharacterValueIndex ofObject: value.
+							 valToPut := (objectMemory isIntegerObject: valToPut)
+											ifTrue: [objectMemory integerValueOf: valToPut]
+											ifFalse: [-1]]]
 			ifFalse:
-				[(fmt >= objectMemory firstCompiledMethodFormat and: [index < (self firstByteIndexOfMethod: rcvr)]) ifTrue: "CompiledMethod"
+				[(fmt >= objectMemory firstCompiledMethodFormat
+				  and: [index < (self firstByteIndexOfMethod: rcvr)]) ifTrue:
 					[^self primitiveFailFor: PrimErrBadIndex].
-				valToPut := value].
-		(objectMemory isIntegerObject: valToPut) ifTrue:
-			[valToPut := objectMemory integerValueOf: valToPut.
-			((valToPut >= 0) and: [valToPut <= 255]) ifFalse: [^self primitiveFailFor: PrimErrBadArgument].
-			^objectMemory storeByte: index - 1 ofObject: rcvr withValue: valToPut]].
+				valToPut := (objectMemory isIntegerObject: value)
+								ifTrue: [objectMemory integerValueOf: value]
+								ifFalse: [-1]].
+		((valToPut >= 0) and: [valToPut <= 255]) ifFalse: [^self primitiveFailFor: PrimErrBadArgument].
+		^objectMemory storeByte: index - 1 ofObject: rcvr withValue: valToPut].
 
 	^self primitiveFailFor: ((objectMemory isIndexable: rcvr)
 								ifFalse: [PrimErrBadReceiver]
@@ -6953,6 +6960,7 @@ StackInterpreter >> longPrintOop: oop [
 	fmt > objectMemory lastPointerFormat ifTrue:
 		[self print: ' nbytes '; printNum: (objectMemory byteLengthOf: oop)].
 	objectMemory printHeaderTypeOf: oop.
+	self print: ' hash '; printHex: (objectMemory rawHashBitsOf: oop).
 	self cr.
 	(fmt between: objectMemory firstLongFormat and: objectMemory firstCompiledMethodFormat - 1) ifTrue:
 		[^self].
@@ -11527,7 +11535,10 @@ StackInterpreter >> superclassSend [
 	 the receiver and arguments have been pushed onto the stack,"
 	"Note: This method is inlined into the interpreter dispatch loop."
 	<sharedCodeNamed: 'commonSupersend' inCase: #singleExtendedSuperBytecode>
-	lkupClassTag := objectMemory classTagForClass: (self superclassOf: (self methodClassOf: method)).
+	| superclass |
+	superclass := self superclassOf: (self methodClassOf: method).
+	objectMemory ensureBehaviorHash: superclass.
+	lkupClassTag := objectMemory classTagForClass: superclass.
 	self assert: lkupClassTag ~= objectMemory nilObject.
 	self commonSend
 ]

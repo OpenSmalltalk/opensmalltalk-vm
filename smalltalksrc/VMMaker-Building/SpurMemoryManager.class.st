@@ -1079,7 +1079,37 @@ SpurMemoryManager >> ensureBehaviorHash: aBehavior [
 { #category : #'class table' }
 SpurMemoryManager >> enterIntoClassTable: aBehavior [
 	"Enter aBehavior into the class table and answer 0.  Otherwise answer a primitive failure code."
-	self shouldBeImplemented
+	| initialMajorIndex majorIndex minorIndex page |
+	majorIndex := classTableIndex >> self classTableMajorIndexShift.
+	initialMajorIndex := majorIndex.
+	"classTableIndex should never index the first page; it's reserved for known classes"
+	self assert: initialMajorIndex > 0.
+	minorIndex := classTableIndex bitAnd: self classTableMinorIndexMask.
+
+	[page := self fetchPointer: majorIndex ofObject: classTableRootObj.
+	 page = nilObj ifTrue:
+		[page := self allocateSlots: self classTablePageSize
+					format: self arrayFormat
+					classIndex: self arrayClassIndexPun.
+		 page ifNil:
+			[^PrimErrNoMemory].
+		 self storePointer: majorIndex
+			ofObject: classTableRootObj
+			withValue: page.
+		 minorIndex := 0].
+	 minorIndex to: self classTablePageSize - 1 do:
+		[:i|
+		(self fetchPointer: i ofObject: page) = nilObj ifTrue:
+			[classTableIndex := majorIndex << self classTableMajorIndexShift + i.
+			 self storePointer: i
+				ofObject: page
+				withValue: aBehavior.
+			 self setHashBitsOf: aBehavior to: classTableIndex.
+			 self assert: (self classAtIndex: (self rawHashBitsOf: aBehavior)) = aBehavior.
+			 ^0]].
+	 majorIndex := (majorIndex + 1 bitAnd: self classIndexMask) max: 1.
+	 majorIndex = initialMajorIndex ifTrue: "wrapped; table full"
+		[^PrimErrLimitExceeded]] repeat
 ]
 
 { #category : #'header format' }
@@ -1832,7 +1862,9 @@ SpurMemoryManager >> isIntegerObject: oop [
 		primitiveVMParameter
 		checkIsStillMarriedContext:currentFP:
 		displayBitsOf:Left:Top:Right:Bottom:
-		fetchStackPointerOf:) includes: thisContext sender method selector) ifFalse:
+		fetchStackPointerOf:
+		primitiveContextAt
+		primitiveContextAtPut) includes: thisContext sender method selector) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
@@ -2188,8 +2220,8 @@ SpurMemoryManager >> possibleRootStoreInto: destObj value: valueOop [
 { #category : #'debug printing' }
 SpurMemoryManager >> printHeaderTypeOf: objOop [
 	coInterpreter print: ((self numSlotsOf: objOop) >= self numSlotsMask
-							ifTrue: ['8 byte header']
-							ifFalse: ['16 byte header'])
+							ifTrue: [' 8 byte header']
+							ifFalse: [' 16 byte header'])
 ]
 
 { #category : #'header access' }
