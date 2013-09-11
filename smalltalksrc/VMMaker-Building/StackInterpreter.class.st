@@ -3928,7 +3928,8 @@ StackInterpreter >> displayBitsOf: aForm Left: l Top: t Right: r Bottom: b [
 				showSurfaceFn = 0 ifTrue: [^self success: false]].
 			self cCode:'((sqInt (*)(sqInt, sqInt, sqInt, sqInt, sqInt))showSurfaceFn)(surfaceHandle, left, top, right-left, bottom-top)'.
 		] ifFalse: [
-			dispBitsIndex := dispBits + BaseHeaderSize.  "index in memory byte array"
+			self assert: (objectMemory isNonImmediate: dispBits).
+			dispBitsIndex := dispBits + objectMemory baseHeaderSize.  "index in memory byte array"
 			self cCode: 'ioShowDisplay(dispBitsIndex, w, h, d, left, right, top, bottom)'
 				inSmalltalk: [self showDisplayBits: dispBitsIndex 
 								w: w h: h d: d

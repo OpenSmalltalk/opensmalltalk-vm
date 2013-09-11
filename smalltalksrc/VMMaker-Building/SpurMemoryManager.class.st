@@ -1,5 +1,104 @@
 "
-SpurMemoryManager is a new object representation and garbage collector for the Cog VM's.  Spur is dedicated to Andreas Raab, friend and colleague.  I miss you, Andreas.  The goal for Spur is an overall improvement in Cog of -50% (twice as fast) for memory-intensive benchmarks.  The objectives for the Spur memory manager are
+SpurMemoryManager is a new object representation and garbage collector for the Cog VM's.  Spur is dedicated to Andreas Raab, friend and colleague.  I miss you, Andreas.  The goal for Spur is an overall improvement in Cog of -50% (twice as fast) for memory-intensive benchmarks.  
+
+An intensive design sketch is included below after the instance variable descriptions.
+
+Instance Variables
+	checkForLeaks:				<Boolean>
+	classTableFirstPage:		<Integer oop>
+	classTableIndex:			<Integer>
+	classTableRootObj:			<Integer oop>
+	coInterpreter:				<StackInterpreter|CoInterpreter>
+	endOfMemory:				<Integer address>
+	falseObj:					<Integer oop>
+	freeListMask:				<Integer (64-bit)>
+	freeLists:					<CArrayAccessor on: (Array new: 64)>
+	freeOldSpaceStart:			<Integer address>
+	freeStart:					<Integer address>
+	heapMap:					<CogCheck32BitHeapMap>
+	lastHash:					<Integer>
+	memory:					<Bitmap|LittleEndianBitmap>
+	needGCFlag:				<Boolean>
+	newSpaceLimit:				<Integer address>
+	nilObj:						<Integer oop>
+	scavengeThreshold:		<Integer address>
+	scavenger:					<SourGenerationScavenger>
+	signalLowSpace:			<Boolean>
+	specialObjectsOop:		<Integer oop>
+	startOfMemory:				<Integer address>
+	trueObj:					<Integer oop>
+
+checkForLeaks
+	- a set of flags determining when to run leak checks on the heap's contents
+
+classTableFirstPage
+	- the first page of the class table which contains all classes known to the VM at known indices
+
+classTableIndex
+	- the last known used index in the class table, used to limit the search for empty slots
+
+classTableRootObj
+	- the root page of the class table. its elements are pages containing classes.
+
+coInterpreter
+	- the VM interpreter using this heap
+
+endOfMemory
+	- the address past the last oldSpace segment
+
+falseObj
+	- the oop of the false object
+
+freeListMask
+	- a bitmap of flags with a 1 set whereever the freeLists has a non-empty entry, used to limit the search for free chunks
+
+freeLists
+	- an array of list heads of free chunks of each size (in allocationUnits).  the 0'th element is the head of a tree of free chunks of size > 63 slots.
+
+freeOldSpaceStart
+	- the last used address in oldSPace.  The space between freeOldSpaceStart and endOfMemory can be used for oldSPace allocations.
+
+freeStart
+	- the last used address in eden.  this is where new objects are allocated if there is room in eden.
+
+heapMap
+	- a bitmap used to check for leaks. a bit is set in the map at each object's header.  every pointer in the heap should point to the header of an object
+
+lastHash
+	- the last object hash value.  a pseudo-randome number generator.
+
+memory
+	- in the Simulator this is the single oldSpace segment that contains the codeZone, newSpace and oldSpace.  In C it is effectively the base address of used memory.
+
+needGCFlag
+	- a boolean flag set if a scavenge is needed
+
+newSpaceLimit
+	- the last address in newSpace (the last address in eden)
+
+nilObj
+	- the oop of the nil object
+
+scavengeThreshold
+	- a tidemark in eden. needGCFlag is set if a newSpace allocation pushes freeStart past scavengethreshold
+
+scavenger
+	- the generation scavenger that collects objects in newSpace
+
+signalLowSpace
+	- a boolean flag set if the lowSpaceSemaphore should be signalled
+
+specialObjectsOop
+	- the oop of the specialObjectsArray object
+
+startOfMemory
+	- the first address in newSpace (the first address in either pastSpace or futureSpace)
+
+trueObj
+	- the oop of the false object
+
+
+The design objectives for the Spur memory manager are
 
 - efficient object representation a la Eliot Miranda's VisualWorks 64-bit object representation that uses a 64-bit header, eliminating direct class references so that all objects refer to their classes indirectly.  Instead the header contains a constant class index, in a field smaller than a full pointer, These class indices are used in inline and first-level method caches, hence they do not have to be updated on GC (although they do have to be traced to be able to GC classes).  Classes are held in a sparse weak table.  The class table needs only to be indexed by an instance's class index in class hierarchy search, in the class primitive, and in tracing live objects in the heap.  The additional header space is allocated to a much expanded identity hash field, reducing hash efficiency problems in identity collections due to the extremely small (11 bit) hash field in the old Squeak GC.  The identity hash field is also a key element of the class index scheme.  A class's identity hash is its index into the class table, so to create an instance of a class one merely copies its identity hash into the class index field of the new instance.  This implies that when classes gain their identity hash they are entered into the class table and their identity hash is that of a previously unused index in the table.  It also implies that there is a maximum number of classes in the table.  The classIndex field could be as narrow as 16 bits (for efficient access); at least for a few years 64k classes should be enough.  But currently we make it the same as the identityHash field, 22 bits, or 4M values.  A class is entered into the class table in the following operations:
 	behaviorHash
@@ -194,7 +293,6 @@ Class {
 	#instVars : [
 		'coInterpreter',
 		'scavenger',
-		'startOfMemory',
 		'memory',
 		'freeStart',
 		'freeOldSpaceStart',
@@ -206,14 +304,16 @@ Class {
 		'specialObjectsOop',
 		'classTableRootObj',
 		'classTableFirstPage',
+		'classTableIndex',
+		'startOfMemory',
 		'endOfMemory',
 		'freeLists',
 		'freeListMask',
-		'newSpaceStart',
+		'lastHash',
+		'signalLowSpace',
 		'checkForLeaks',
 		'needGCFlag',
-		'heapMap',
-		'signalLowSpace'
+		'heapMap'
 	],
 	#classVars : [
 		'CheckObjectOverwrite',
@@ -564,13 +664,12 @@ SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceByt
 	endOfMemory := memoryBytes + newSpaceBytes + codeBytes.
 	"leave newSpace empty for the bootstrap"
 	freeStart := newSpaceBytes + startOfMemory.
-	newSpaceStart := startOfMemory.
 	newSpaceLimit := newSpaceBytes + startOfMemory.
 	scavengeThreshold := memory size * 4. "Bitmap is a 4-byte per word array"
 	scavenger := SpurGenerationScavenger new
 					manager: self
 					memory: memory
-					newSpaceStart: newSpaceStart
+					newSpaceStart: startOfMemory
 					newSpaceBytes: newSpaceBytes
 					edenBytes: newSpaceBytes * 5 // 7 "David's paper uses 140Kb eden + 2 x 28kb survivor spaces :-)"
 ]
@@ -708,9 +807,25 @@ SpurMemoryManager >> classIndexOf: objOop [
 	^self subclassResponsibility
 ]
 
+{ #category : #'header access' }
+SpurMemoryManager >> classIndexOfHeader: aHeader [
+	<inline: true>
+	^aHeader bitAnd: self classIndexMask
+]
+
 { #category : #'class table' }
 SpurMemoryManager >> classIsItselfClassIndexPun [
 	^4
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> classTableIndex [
+	^classTableIndex
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> classTableIndex: n [
+	classTableIndex := n
 ]
 
 { #category : #'class table' }
@@ -724,6 +839,18 @@ SpurMemoryManager >> classTableMinorIndexMask [
 	"1024 entries per page (2^10); 22 bit classIndex implies 2^12 pages"
 	"self basicNew classTableMinorIndexMask"
 	^1 << self classTableMajorIndexShift - 1
+]
+
+{ #category : #'object enumeration' }
+SpurMemoryManager >> classTableObjectsDo: aBlock [
+	0 to: (self numSlotsOf: classTableRootObj) - 1 do:
+		[:i| | page |
+		page := self fetchPointer: i ofObject: classTableRootObj.
+		0 to: (self numSlotsOf: page) - 1 do:
+			[:j| | classOrNil |
+			classOrNil := self fetchPointer: j ofObject: page.
+			classOrNil ~= nilObj ifTrue:
+				[aBlock value: classOrNil]]]
 ]
 
 { #category : #'class table' }
@@ -759,7 +886,8 @@ SpurMemoryManager >> compactClassIndexOf: objOop [
 
 { #category : #'class membership' }
 SpurMemoryManager >> compactIndexOfClass: objOop [
-	^self hashBitsOf: objOop
+	self assert: (self rawHashBitsOf: objOop) ~= 0.
+	^self rawHashBitsOf: objOop
 ]
 
 { #category : #accessing }
@@ -794,11 +922,13 @@ SpurMemoryManager >> eeInstantiateMethodContextSlots: numSlots [
 { #category : #'class table' }
 SpurMemoryManager >> ensureBehaviorHash: aBehavior [
 	| newHash err |
-	self assert: (self isIntegerObject: aBehavior) not.
-	(newHash := self hashBitsOf: aBehavior) = 0 ifTrue:
+	<inline: true>
+	self assert: (self isImmediate: aBehavior) not.
+	(newHash := self rawHashBitsOf: aBehavior) = 0 ifTrue:
 		[(err := self enterIntoClassTable: aBehavior) ~= 0 ifTrue:
 			[^err negated].
-		 newHash := self hashBitsOf: aBehavior].
+		 newHash := self rawHashBitsOf: aBehavior.
+		 self assert: (self classAtIndex: newHash) = aBehavior].
 	^newHash
 ]
 
@@ -905,6 +1035,17 @@ SpurMemoryManager >> firstStringyFakeFormat [
 	"A fake format for the interpreter used to mark indexable strings in
 	 the interpreter's at cache.  This is larger than any format."
 	^32
+]
+
+{ #category : #'indexing primitive support' }
+SpurMemoryManager >> firstValidIndexOfIndexableObject: obj withFormat: fmt [
+	"Answer the one-relative index of the first valid index in an indexbale object
+	 with the given format.  This is 1 for all objects except compiled methods
+	 where the first index is beyond the last literal.
+	 Used for safer bounds-checking on methods."
+	^fmt >= self firstCompiledMethodFormat
+		ifTrue: [coInterpreter firstByteIndexOfMethod: obj]
+		ifFalse: [1]
 ]
 
 { #category : #'object format' }
@@ -1036,8 +1177,16 @@ SpurMemoryManager >> hasSpurMemoryManagerAPI [
 
 { #category : #'header access' }
 SpurMemoryManager >> hashBitsOf: objOop [
-	self flag: #endianness.
-	^(self longAt: objOop + 4) bitAnd: self identityHashHalfWordMask
+	| hash |
+	hash := self rawHashBitsOf: objOop.
+	hash = 0 ifTrue:
+		["would like to assert
+			self assert: (coInterpreter addressCouldBeClassObj: objOop) not
+		  but instance-specific behaviors that are instances of themselves may
+		  fail this test."
+		 hash := self newObjectHash.
+		 self setHashBitsOf: objOop to: (hash bitAnd: self identityHashHalfWordMask)].
+	^hash
 ]
 
 { #category : #'header format' }
@@ -1206,11 +1355,10 @@ SpurMemoryManager >> instantiateClass: classObj [
 	instSpec := self instSpecOfClassFormat: classFormat.
 	(self isFixedSizePointerFormat: instSpec) ifFalse:
 		[^nil].
-	classIndex := self hashBitsOf: classObj.
-	classIndex = 0 ifTrue:
-		[(self enterIntoClassTable: classObj) ifFalse:
-			[^nil].
-		classIndex := self hashBitsOf: classObj].
+	classIndex := self ensureBehaviorHash: classObj.
+	classIndex < 0 ifTrue:
+		[coInterpreter primitiveFailFor: classIndex negated.
+		 ^nil].
 	numSlots := self fixedFieldsOfClassFormat: classFormat.
 	newObj := self allocateSlots: numSlots format: instSpec classIndex: classIndex.
 	newObj ifNotNil:
@@ -1314,6 +1462,12 @@ SpurMemoryManager >> isContext: oop [
 	   and: [(self classIndexOf: oop) = ClassMethodContextCompactIndex]
 ]
 
+{ #category : #'header access' }
+SpurMemoryManager >> isContextHeader: aHeader [
+	<inline: true>
+	^(self classIndexOfHeader: aHeader) = ClassMethodContextCompactIndex
+]
+
 { #category : #'object testing' }
 SpurMemoryManager >> isContextNonImm: oop [
 	<inline: true>
@@ -1411,7 +1565,8 @@ SpurMemoryManager >> isIntegerObject: oop [
 		bytecodePrimAtPut
 		commonAtPut:
 		primitiveVMParameter
-		checkIsStillMarriedContext:currentFP:) includes: thisContext sender method selector) ifFalse:
+		checkIsStillMarriedContext:currentFP:
+		displayBitsOf:Left:Top:Right:Bottom:) includes: thisContext sender method selector) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
@@ -1499,6 +1654,16 @@ SpurMemoryManager >> knownClassAtIndex: classIndex [
 	^self fetchPointer: classIndex ofObject: classTableFirstPage
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> lastHash [
+	^lastHash
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> lastHash: seed [
+	lastHash := seed
+]
+
 { #category : #'header format' }
 SpurMemoryManager >> lastPointerFormat [
 	^5
@@ -1574,8 +1739,21 @@ SpurMemoryManager >> longFormatForNumBytes: numBytes [
 ]
 
 { #category : #accessing }
+SpurMemoryManager >> memory [
+	^memory
+]
+
+{ #category : #accessing }
 SpurMemoryManager >> needGCFlag [
 	^needGCFlag
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> newObjectHash [
+	"Use simple algorithm by D.H. Lehmer from 1951, for now."
+	lastHash := lastHash * 16807 "7 raisedTo: 5" \\ 16r7ffffffd "(2 raisedTo: 31) - 1".
+	self assert: lastHash ~= 0.
+	^lastHash
 ]
 
 { #category : #'primitive support' }
@@ -1702,6 +1880,12 @@ SpurMemoryManager >> printHeaderTypeOf: objOop [
 	coInterpreter print: ((self numSlotsOf: objOop) >= self numSlotsMask
 							ifTrue: ['8 byte header']
 							ifFalse: ['16 byte header'])
+]
+
+{ #category : #'header access' }
+SpurMemoryManager >> rawHashBitsOf: objOop [
+	self flag: #endianness.
+	^(self longAt: objOop + 4) bitAnd: self identityHashHalfWordMask
 ]
 
 { #category : #'header format' }
