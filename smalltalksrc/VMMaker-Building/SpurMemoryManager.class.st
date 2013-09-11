@@ -930,6 +930,12 @@ SpurMemoryManager >> classTagForClass: classObj [
 	^self rawHashBitsOf: classObj
 ]
 
+{ #category : #'interpreter access' }
+SpurMemoryManager >> classTagForSpecialObjectsIndex: splObjIndex compactClassIndex: compactClassIndex [
+	"Answer the compactClassIndex to use as a tag in the first-level method lookup cache."
+	^compactClassIndex
+]
+
 { #category : #allocation }
 SpurMemoryManager >> clone: objOop [
 	| numSlots newObj |
