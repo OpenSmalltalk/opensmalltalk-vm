@@ -999,9 +999,9 @@ CoInterpreter >> bytecodePrimAt [
 	 and: [objectMemory isIntegerObject: index]) ifTrue:
 		[atIx := rcvr bitAnd: AtCacheMask.  "Index into atCache = 4N, for N = 0 ... 7"
 		(atCache at: atIx+AtCacheOop) ~= rcvr ifTrue:
-			[lkupClass := objectMemory fetchClassOfNonImm: rcvr.
+			[lkupClassTag := objectMemory fetchClassTagOfNonImm: rcvr.
 			 messageSelector := self specialSelector: 16.
-			 (self lookupInMethodCacheSel: messageSelector class: lkupClass) ifFalse:
+			 (self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifFalse:
 				[argumentCount := 1.
 				 ^self commonSend].
 			 primitiveFunctionPointer == #primitiveAt
@@ -1040,9 +1040,9 @@ CoInterpreter >> bytecodePrimAtPut [
 	 and: [objectMemory isIntegerObject: index]) ifTrue:
 		[atIx := (rcvr bitAnd: AtCacheMask) + AtPutBase.  "Index into atPutCache"
 		 (atCache at: atIx+AtCacheOop) ~= rcvr ifTrue:
-			[lkupClass := objectMemory fetchClassOfNonImm: rcvr.
+			[lkupClassTag := objectMemory fetchClassTagOfNonImm: rcvr.
 			 messageSelector := self specialSelector: 17.
-			 (self lookupInMethodCacheSel: messageSelector class: lkupClass) ifFalse:
+			 (self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifFalse:
 				[argumentCount := 2.
 				 ^self commonSend].
 			 primitiveFunctionPointer == #primitiveAtPut
@@ -1362,9 +1362,12 @@ CoInterpreter >> ceCounterTripped: condition [
 		[cogit resetCountersIn: (self mframeHomeMethod: framePointer).
 		 ^condition].
 	
-	lkupClass := self splObj: ClassMethodContext.
-	(self lookupInMethodCacheSel: counterTrippedSelector class: lkupClass) ifFalse:
+	lkupClassTag := objectMemory
+					classTagForSpecialObjectsIndex: ClassMethodContext
+					compactClassIndex: ClassMethodContextCompactIndex.
+	(self lookupInMethodCacheSel: counterTrippedSelector classTag: lkupClassTag) ifFalse:
 	 	[messageSelector := counterTrippedSelector.
+		 lkupClass := objectMemory classTagForClass: lkupClassTag.
 		 (self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:
 			[cogit resetCountersIn: (self mframeHomeMethod: framePointer).
 			 ^condition]].
@@ -1422,15 +1425,16 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 	"We set the messageSelector and lkupClass for executeMethod below since things
 	 like the at cache read messageSelector and lkupClass and so they cannot be left stale."
 	messageSelector := selector.
-	lkupClass := self superclassOf: mixinApplication.
+	lkupClassTag := objectMemory classTagForClass: (self superclassOf: mixinApplication).
 	argumentCount := numArgs.
-	(self lookupInMethodCacheSel: selector class: lkupClass)
+	(self lookupInMethodCacheSel: selector classTag: lkupClassTag)
 		ifTrue:"check for coggability because method is in the cache"
 			[self
 				ifAppropriateCompileToNativeCode: newMethod
 				selector: selector]
 		ifFalse:
-			[(errSelIdx := self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:
+			[lkupClass := objectMemory classTagForClass: lkupClassTag.
+			(errSelIdx := self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:
 				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: lkupClass.
 				self assert: false "NOTREACHED"]].
 	"Method found and has a cog method.  Attempt to link to it."
@@ -1700,7 +1704,7 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 	Continue execution via either executeMethod or interpretMethodFromMachineCode:
 	depending on whether the target method is cogged or not."
 	<api>
-	| class canLinkCacheTag errSelIdx cogMethod |
+	| classTag canLinkCacheTag errSelIdx cogMethod |
 	<inline: false>
 	<var: #cogMethod type: #'CogMethod *'>
 	<var: #newCogMethod type: #'CogMethod *'>
@@ -1712,21 +1716,22 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 		point: (objectMemory lengthOf: selector)
 		receiver: rcvr.
 	superNormalBar = 0
-		ifTrue: [class := objectMemory fetchClassOf: rcvr]
-		ifFalse: [class := self superclassOf: (self methodClassOf: (self frameMethodObject: framePointer))].
-	canLinkCacheTag := (objectMemory isYoungObject: class) not or: [cogit canLinkToYoungClasses].
+		ifTrue: [classTag := objectMemory fetchClassTagOf: rcvr]
+		ifFalse: [classTag := objectMemory classTagForClass: (self superclassOf: (self methodClassOf: (self frameMethodObject: framePointer)))].
+	canLinkCacheTag := objectMemory hasSpurMemoryManagerAPI
+						or: [(objectMemory isYoungObject: classTag) not or: [cogit canLinkToYoungClasses]].
 	"We set the messageSelector and lkupClass for executeMethod below since things
 	 like the at cache read messageSelector and lkupClass and so they cannot be left stale."
 	messageSelector := selector.
-	lkupClass := class.
+	lkupClass := objectMemory classForClassTag: classTag.
 	argumentCount := numArgs.
-	(self lookupInMethodCacheSel: selector class: class)
+	(self lookupInMethodCacheSel: selector classTag: classTag)
 		ifTrue:"check for coggability because method is in the cache"
 			[self
 				ifAppropriateCompileToNativeCode: newMethod
 				selector: selector]
 		ifFalse:
-			[(errSelIdx := self lookupMethodNoMNUEtcInClass: class) ~= 0 ifTrue:
+			[(errSelIdx := self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:
 				[(canLinkCacheTag
 				  and: [errSelIdx = SelectorDoesNotUnderstand
 				  and: [(cogMethod := cogit cogMNUPICSelector: messageSelector
@@ -1741,7 +1746,7 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 									ifTrue: [cogit entryOffset]
 									ifFalse: [cogit noCheckEntryOffset])
 							receiver: rcvr].
-				self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: class.
+				self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: lkupClass.
 				self assert: false "NOTREACHED"]].
 	"Method found and has a cog method.  Attempt to link to it.  The receiver's class may be young.
 	 If the Cogit can't store young classes in inline caches we can link to an open PIC instead."
@@ -1788,7 +1793,7 @@ CoInterpreter >> ceSendAbort: selector to: rcvr numArgs: numArgs [
 	 Continue execution via either executeMethod or interpretMethodFromMachineCode:
 	 depending on whether the target method is cogged or not."
 	<api>
-	| class errSelIdx |
+	| classTag errSelIdx |
 	<inline: false>
 	"self printExternalHeadFrame"
 	"self printStringOf: selector"
@@ -1801,15 +1806,16 @@ CoInterpreter >> ceSendAbort: selector to: rcvr numArgs: numArgs [
 	"We set the messageSelector and lkupClass for executeMethod below since things
 	 like the at cache read messageSelector and lkupClass and so they cannot be left stale."
 	messageSelector := selector.
-	lkupClass := class := objectMemory fetchClassOf: rcvr.
-	(self lookupInMethodCacheSel: selector class: class)
+	classTag := objectMemory fetchClassTagOf: rcvr.
+	lkupClass := objectMemory classForClassTag: classTag.
+	(self lookupInMethodCacheSel: selector classTag: classTag)
 		ifTrue:"check for coggability because method is in the cache"
 			[self
 				ifAppropriateCompileToNativeCode: newMethod
 				selector: selector]
 		ifFalse:
-			[(errSelIdx := self lookupMethodNoMNUEtcInClass: class) ~= 0 ifTrue:
-				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: class.
+			[(errSelIdx := self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:
+				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: lkupClass.
 				"NOTREACHED"
 				self assert: false]].
 	instructionPointer := self popStack.
@@ -1827,26 +1833,26 @@ CoInterpreter >> ceSendFromInLineCacheMiss: oPIC [
 	 or to continue when PIC creation has failed (e.g. because we're out of code space)."
 	<api>
 	<var: #oPIC type: #'CogMethod *'>
-	| numArgs rcvr class errSelIdx |
+	| numArgs rcvr classTag errSelIdx |
 	"self printFrame: stackPage headFP WithSP: stackPage headSP"
 	"self printStringOf: selector"
 	numArgs := oPIC cmNumArgs.
 	rcvr := self stackValue: numArgs + 1. "skip return pc"
 	self assert: ((objectMemory isIntegerObject: rcvr) or: [objectMemory addressCouldBeObj: rcvr]).
-	class := objectMemory fetchClassOf: rcvr.
+	classTag := objectMemory fetchClassTagOf: rcvr.
 	argumentCount := numArgs.
 	"We set the messageSelector and lkupClass for executeMethod below since things
 	 like the at cache read messageSelectorand lkupClass and so they cannot be left stale."
 	messageSelector := oPIC selector.
-	lkupClass := class.
-	(self lookupInMethodCacheSel: oPIC selector class: class)
+	lkupClass := objectMemory classForClassTag: classTag.
+	(self lookupInMethodCacheSel: oPIC selector classTag: classTag)
 		ifTrue:"check for coggability because method is in the cache"
 			[self
 				ifAppropriateCompileToNativeCode: newMethod
 				selector: oPIC selector]
 		ifFalse:
-			[(errSelIdx := self lookupMethodNoMNUEtcInClass: class) ~= 0 ifTrue:
-				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: class.
+			[(errSelIdx := self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:
+				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: lkupClass.
 				"NOTREACHED"
 				self assert: false]].
 	instructionPointer := self popStack.
@@ -3122,16 +3128,17 @@ CoInterpreter >> fastLogPrim: aSelector [
 ]
 
 { #category : #'message sending' }
-CoInterpreter >> findNewMethodInClass: class [ 
+CoInterpreter >> findNewMethodInClassTag: classTag [
 	"Find the compiled method to be run when the current messageSelector is
-	 sent to the given class, setting the values of newMethod and primitiveIndex."
-	| ok |
+	 sent to the given classTag, setting the values of newMethod and primitiveIndex."
+	| ok class |
 	<inline: false>
-	ok := self lookupInMethodCacheSel: messageSelector class: class.
+	ok := self lookupInMethodCacheSel: messageSelector classTag: classTag.
 	ok	ifTrue:
 			[self ifAppropriateCompileToNativeCode: newMethod selector: messageSelector]
 		ifFalse:
 			["entry was not found in the cache; look it up the hard way "
+			 class := objectMemory classForClassTag: classTag.
 			 self lookupMethodInClass: class.
 			 self addNewMethodToCache: class]
 ]
@@ -3429,7 +3436,7 @@ CoInterpreter >> handleMNU: selectorIndex InMachineCodeTo: rcvr classForMessage:
 	instructionPointer := self popStack.
 	self createActualMessageTo: classForMessage.
 	messageSelector := objectMemory splObj: selectorIndex.
-	(self lookupInMethodCacheSel: messageSelector class: lkupClass)
+	(self lookupInMethodCacheSel: messageSelector classTag: (objectMemory classTagForClass: lkupClass))
 		ifTrue:"check for coggability because method is in the cache"
 			[self
 				ifAppropriateCompileToNativeCode: newMethod
@@ -3821,11 +3828,12 @@ CoInterpreter >> internalFindNewMethod [
 	 sent to the given class, setting the values of newMethod and primitiveIndex."
 	| ok |
 	<inline: true>
-	ok := self lookupInMethodCacheSel: messageSelector class: lkupClass.
+	ok := self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag.
 	ok	ifTrue:
 			[self ifAppropriateCompileToNativeCode: newMethod selector: messageSelector]
 		ifFalse:
 			["entry was not found in the cache; look it up the hard way"
+			lkupClass := objectMemory classForClassTag: lkupClassTag.
 			self externalizeIPandSP.
 			self lookupMethodInClass: lkupClass.
 			self internalizeIPandSP.
@@ -4087,13 +4095,13 @@ CoInterpreter >> lookup: selector receiver: rcvr [
 	<api>
 	"Lookup selector in rcvr, without doing MNU processing, and answer either a
 	 method or nil if the message was not understood.  Used to populate closed PICs."
-	| class erridx |
+	| classTag erridx |
 	"self printFrame: stackPage headFP WithSP: stackPage headSP"
 	"self printStringOf: selector"
-	class := objectMemory fetchClassOf: rcvr.
-	(self lookupInMethodCacheSel: selector class: class) ifFalse:
+	classTag := objectMemory fetchClassTagOf: rcvr.
+	(self lookupInMethodCacheSel: selector classTag: classTag) ifFalse:
 		[messageSelector := selector.
-		 (erridx := self lookupMethodNoMNUEtcInClass: class) ~= 0 ifTrue:
+		 (erridx := self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
 			[^erridx]].
 	^newMethod
 ]

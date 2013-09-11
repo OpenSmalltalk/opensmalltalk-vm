@@ -76,6 +76,8 @@ Spur64BitMemoryManager >> bytesInObject: objOop [
 	"Answer the total number of bytes in an object including header and possible overflow size header."
 	| halfHeader headerNumSlots numSlots |
 	self flag: #endianness.
+	"numSlotsOf: should not be applied to free or forwarded objects."
+	self assert: (self classIndexOf: objOop) > self isForwardedObjectClassIndexPun.
 	halfHeader := self longAt: objOop + 4.
 	headerNumSlots := halfHeader >> self numSlotsHalfShift bitAnd: self numSlotsMask.
 	numSlots := headerNumSlots = self numSlotsMask
