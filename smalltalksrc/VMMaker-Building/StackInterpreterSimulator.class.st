@@ -1525,6 +1525,14 @@ StackInterpreterSimulator >> primitiveMousePoint [
 				self push: (self makePointwithxValue: relPt x yValue: relPt y)]
 ]
 
+{ #category : #'debugging traps' }
+StackInterpreterSimulator >> primitiveNewWithArg [
+	"(objectMemory hasSpurMemoryManagerAPI
+	 and: [self classNameOf: (self stackValue: 1) Is: 'MethodDictionary']) ifTrue:
+		[self halt]."
+	^super primitiveNewWithArg
+]
+
 { #category : #'I/O primitives' }
 StackInterpreterSimulator >> primitiveScreenSize [
 	| size |
