@@ -1575,20 +1575,20 @@ ObjectMemory >> containOnlyMutableOops: array1 and: array2 [
 
 { #category : #become }
 ObjectMemory >> containOnlyOops: array [
-	"Return true if the array contains a small integer. You 
+	"Answer if the array does not contain a small integer. You 
 	  can't become: SmallIntegers!"
 	| fieldOffset |
 	fieldOffset := self lastPointerOf: array.
 	"same size as array2"
 	[fieldOffset >= BaseHeaderSize] whileTrue:
 		[(self isIntegerObject: (self longAt: array + fieldOffset)) ifTrue: [^ false].
-		 fieldOffset := fieldOffset - BytesPerWord].
+		 fieldOffset := fieldOffset - BytesPerOop].
 	^true
 ]
 
 { #category : #become }
 ObjectMemory >> containOnlyOops: array1 and: array2 [ 
-	"Return true if neither array contains a small integer. You 
+	"Answer if neither array contains a small integer. You 
 	can't become: integers!"
 	| fieldOffset |
 	fieldOffset := self lastPointerOf: array1.
@@ -1596,7 +1596,7 @@ ObjectMemory >> containOnlyOops: array1 and: array2 [
 	[fieldOffset >= BaseHeaderSize]
 		whileTrue: [(self isIntegerObject: (self longAt: array1 + fieldOffset)) ifTrue: [^ false].
 			(self isIntegerObject: (self longAt: array2 + fieldOffset)) ifTrue: [^ false].
-			fieldOffset := fieldOffset - BytesPerWord].
+			fieldOffset := fieldOffset - BytesPerOop].
 	^ true
 ]
 
@@ -2844,6 +2844,14 @@ ObjectMemory >> isContextHeader: aHeader [
 ObjectMemory >> isContextNonImm: oop [
 	<inline: true>
 	^self isContextHeader: (self baseHeader: oop)
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> isForwarded: oop [
+	"Compatibility wth SpurMemoryManager.  In ObjectMemory, no forwarding pointers
+	 are visible to the VM."
+	<inline: true>
+	^false
 ]
 
 { #category : #'header access' }

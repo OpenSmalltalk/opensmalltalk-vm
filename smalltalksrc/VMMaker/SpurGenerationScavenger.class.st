@@ -148,6 +148,8 @@ SpurGenerationScavenger >> scavengeFutureSurvivorSpaceStartingAt: initialAddress
 		[| obj |
 		 obj := manager objectStartingAt: ptr.
 		 ptr := manager addressAfter: obj.
+		 (manager isForwarded: obj) ifTrue:
+			[obj := manager followForwarded: obj].
 		 self cCoerceSimple: (self scavengeReferentsOf: obj) to: #void]
 ]
 
@@ -185,12 +187,15 @@ SpurGenerationScavenger >> scavengeReferentsOf: referrer [
 	 If any are new objects, it has them moved to FutureSurvivorSpace,
 	 and returns truth. If there are no new referents, it returns falsity."
 	| foundNewReferent |
+	"callers follow forwarding pointers from become:"
+	self assert: (manager isForwarded: referrer) not.
 	"manager isPointersNonImm: referrer) ifFalse:
 		[^false]."
 	foundNewReferent := false.
 	0 to: (manager numPointerSlotsOf: referrer) do:
 		[:i| | referent |
 		referent := manager fetchPointer: i ofObject: referrer.
+		self flag: 'should we follow forwarded objects in oldSpace?'.
 		((manager isNonImmediate: referent)
 		 and: [manager isYoung: referent]) ifTrue:
 			[foundNewReferent := true.
@@ -213,6 +218,9 @@ SpurGenerationScavenger >> scavengeRememberedSetStartingAt: n [
 	[sourceIndex < rememberedSetSize] whileTrue:
 		[| referree |
 		referree := rememberedSet at: sourceIndex.
+		(manager isForwarded: referree) ifTrue:
+			[referree := manager followForwarded: referree.
+			 rememberedSet at: destIndex put: referree].
 		(self scavengeReferentsOf: referree)
 			ifTrue:
 				[rememberedSet at: destIndex put: referree.

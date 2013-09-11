@@ -4330,7 +4330,7 @@ CoInterpreter >> mapStackPages [
 					 theSP := theSP + BytesPerWord].
 			[self assert: (thePage addressIsInPage: theFP).
 			 self assert: (thePage addressIsInPage: theSP).
-			 self assert: (theIPPtr = 0 or: [thePage addressIsInPage: theFP]).
+			 self assert: (theIPPtr = 0 or: [thePage addressIsInPage: theIPPtr]).
 			 frameRcvrOffset := self frameReceiverOffset: theFP.
 	 		  [theSP <= frameRcvrOffset] whileTrue:
 				[oop := stackPages longAt: theSP.
@@ -5070,8 +5070,10 @@ CoInterpreter >> objectIsOld: anObject [
 ]
 
 { #category : #'object memory support' }
-CoInterpreter >> postBecomeAction [
+CoInterpreter >> postBecomeAction: updateReceiversInStackZone [
 	"Clear the gcMode var and let the Cogit do its post GC checks."
+	super postBecomeAction: updateReceiversInStackZone.
+
 	cogit cogitPostGCAction: gcMode.
 
 	lastCoggableInterpretedBlockMethod := lastUncoggableInterpretedBlockMethod := nil.

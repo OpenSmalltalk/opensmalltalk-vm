@@ -5335,6 +5335,79 @@ StackInterpreter >> flushMethodCacheFrom: memStart to: memEnd [
 	1 to: AtCacheTotalSize do: [:i | atCache at: i put: 0]
 ]
 
+{ #category : #'object memory support' }
+StackInterpreter >> followForwardingPointersInStackZone [
+	"Spur's become: is lazy, turning the becommed object into a forwarding object to the other.
+	 The read-barrier is minimised by arranging that forwarding pointers will fail a method cache probe,
+	 since notionally objects' internals are accessed only via sending messages to them (the exception
+	 is primitives that access the internals of the non-receiver argument(s)..
+	 To avoid a read barrier on bytecode, literal and inst var fetch we scan the receivers and methods
+	 in the stack zone and follow any forwarded ones.  This is of course way cheaper than scanning all
+	 of memory as in the old become."
+	| theIPPtr |
+	<inline: false>
+	<var: #thePage type: #'StackPage *'>
+	<var: #theSP type: #'char *'>
+	<var: #theFP type: #'char *'>
+	<var: #callerFP type: #'char *'>
+	<var: #theIPPtr type: #'char *'>
+
+	(objectMemory isForwarded: method) ifTrue:
+		[theIPPtr := instructionPointer - method.
+		 method := objectMemory followForwarded: method.
+		 instructionPointer := method + theIPPtr].
+	(objectMemory isForwarded: newMethod) ifTrue:
+		[newMethod := objectMemory followForwarded: newMethod].
+
+	"Need to write back the frame pointers unless all pages are free (as in snapshot)"
+	self assert: stackPage ~= 0.
+	self externalWriteBackHeadFramePointers.
+	0 to: numStackPages - 1 do:
+		[:i| | thePage theSP theFP callerFP theIP oop |
+		thePage := stackPages stackPageAt: i.
+		thePage isFree ifFalse:
+			[theSP := thePage headSP.
+			 theFP := thePage  headFP.
+			 "Skip the instruction pointer on top of stack of inactive pages."
+			 thePage = stackPage
+				ifTrue: [theIPPtr := 0]
+				ifFalse:
+					[theIPPtr := theSP.
+					 theSP := theSP + BytesPerWord].
+			 [self assert: (thePage addressIsInPage: theFP).
+			  self assert: (theIPPtr = 0 or: [thePage addressIsInPage: theIPPtr]).
+			  oop := stackPages longAt: theFP + FoxReceiver.
+			  ((objectMemory isNonImmediate: oop)
+			   and: [(objectMemory isForwarded: oop)]) ifTrue:
+				[stackPages
+					longAt: theFP + FoxReceiver
+					put: (objectMemory followForwarded: oop)].
+			  theIP := theFP + (self frameStackedReceiverOffset: theFP). "reuse theIP; its just an offset here"
+			  oop := stackPages longAt: theIP.
+			  ((objectMemory isNonImmediate: oop)
+			   and: [(objectMemory isForwarded: oop)]) ifTrue:
+				[stackPages
+					longAt: theIP
+					put: (objectMemory followForwarded: oop)].
+			  ((self frameHasContext: theFP)
+			   and: [(objectMemory isForwarded: (self frameContext: theFP))]) ifTrue:
+				[stackPages
+					longAt: theFP + FoxThisContext
+					put: (objectMemory followForwarded: (self frameContext: theFP))].
+			  (objectMemory isForwarded: (self frameMethod: theFP)) ifTrue:
+				[theIPPtr ~= 0 ifTrue:
+					[self assert: (stackPages longAt: theIPPtr) > (self frameMethod: theFP).
+					 theIP := (stackPages longAt: theIPPtr) - (self frameMethod: theFP)].
+				stackPages
+					longAt: theFP + FoxMethod
+					put: (objectMemory followForwarded: (self frameMethod: theFP)).
+			 	 theIPPtr ~= 0 ifTrue:
+					[stackPages longAt: theIPPtr put: theIP + (self frameMethod: theFP)]].
+			  (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
+				[theIPPtr := theFP + FoxCallerSavedIP.
+				 theFP := callerFP]]]
+]
+
 { #category : #'process primitive support' }
 StackInterpreter >> forceInterruptCheck [
 	"Force an interrupt check ASAP.
@@ -6853,20 +6926,23 @@ StackInterpreter >> longPrintOop: oop [
 	((objectMemory isImmediate: oop)
 	 or: [(objectMemory addressCouldBeObj: oop) not
 	 or: [(oop bitAnd: objectMemory allocationUnit - 1) ~= 0
-	 or: [(objectMemory isFreeObject: oop)]]]) ifTrue:
+	 or: [(objectMemory isFreeObject: oop)
+	 or: [objectMemory isForwarded: oop]]]]) ifTrue:
 		[^self printOop: oop].
 	class := objectMemory fetchClassOfNonImm: oop.
 	self printHex: oop;
 		print: ': a(n) '; printNameOfClass: class count: 5;
 		print: ' ('; printHex: class; print: ')'.
 	fmt := objectMemory formatOf: oop.
-	fmt > 4 ifTrue:
+	fmt > objectMemory lastPointerFormat ifTrue:
 		[self print: ' nbytes '; printNum: (objectMemory byteLengthOf: oop)].
 	objectMemory printHeaderTypeOf: oop.
 	self cr.
-	(fmt between: 5 and: 11) ifTrue:
+	(fmt between: objectMemory firstLongFormat and: objectMemory firstCompiledMethodFormat - 1) ifTrue:
 		[^self].
-	lastIndex := 256 min: (startIP := (objectMemory lastPointerOf: oop) / BytesPerWord).
+	"this is nonsense.  apologies."
+	startIP := (objectMemory lastPointerOf: oop) + BytesPerOop - objectMemory baseHeaderSize / BytesPerOop.
+	lastIndex := 256 min: startIP.
 	lastIndex > 0 ifTrue:
 		[1 to: lastIndex do:
 			[:i| | fieldOop |
@@ -7312,7 +7388,7 @@ StackInterpreter >> mapStackPages [
 					 theSP := theSP + BytesPerWord].
 			[self assert: (thePage addressIsInPage: theFP).
 			 self assert: (thePage addressIsInPage: theSP).
-			 self assert: (theIPPtr = 0 or: [thePage addressIsInPage: theFP]).
+			 self assert: (theIPPtr = 0 or: [thePage addressIsInPage: theIPPtr]).
 			 [theSP <= (theFP + FoxReceiver)] whileTrue:
 				[oop := stackPages longAt: theSP.
 				 (objectMemory isIntegerObject: oop) ifFalse:
@@ -8226,8 +8302,9 @@ StackInterpreter >> positive64BitIntegerFor: integerValue [
 ]
 
 { #category : #'object memory support' }
-StackInterpreter >> postBecomeAction [
-	"This is a noop in the StackInterpreter"
+StackInterpreter >> postBecomeAction: updateReceiversInStackZone [
+	updateReceiversInStackZone ifTrue:
+		[self followForwardingPointersInStackZone]
 ]
 
 { #category : #'object memory support' }
@@ -9043,16 +9120,21 @@ StackInterpreter >> printOop: oop [
 	(objectMemory isFreeObject: oop) ifTrue:
 		[self print: ' is a free chunk of size '; printNum: (objectMemory sizeOfFree: oop); cr.
 		 ^nil].
+	(objectMemory isForwarded: oop) ifTrue:
+		[self
+			print: ' is a forwarded object to '; printHex: (objectMemory followForwarded: oop);
+			print: ' of slot size '; printNum: (objectMemory numSlotsOf: oop); cr.
+		 ^nil].
 	self print: ': a(n) '.
 	self printNameOfClass: (cls := objectMemory fetchClassOfNonImm: oop) count: 5.
 	cls = (objectMemory splObj: ClassFloat) ifTrue:
 		[self cr; printFloat: (self dbgFloatValueOf: oop); cr.
 		 ^nil].
 	fmt := objectMemory formatOf: oop.
-	fmt > 4 ifTrue:
+	fmt > objectMemory lastPointerFormat ifTrue:
 		[self print: ' nbytes '; printNum: (objectMemory byteLengthOf: oop)].
 	self cr.
-	(fmt > 4 and: [fmt < 12]) ifTrue:
+	(fmt between: objectMemory firstLongFormat and: objectMemory firstCompiledMethodFormat - 1) ifTrue:
 		["This will answer false if splObj: ClassAlien is nilObject"
 		 (self is: oop KindOfClass: (objectMemory splObj: ClassAlien)) ifTrue:
 			[self print: ' datasize '; printNum: (self sizeOfAlienData: oop).
@@ -9076,7 +9158,9 @@ StackInterpreter >> printOop: oop [
 					[self cr]].
 			^nil].
 		^self printStringOf: oop; cr].
-	lastIndex := 64 min: (startIP := (objectMemory lastPointerOf: oop) / BytesPerWord).
+	"this is nonsense.  apologies."
+	startIP := (objectMemory lastPointerOf: oop) + BytesPerOop - objectMemory baseHeaderSize / BytesPerOop.
+	lastIndex := 256 min: startIP.
 	lastIndex > 0 ifTrue:
 		[1 to: lastIndex do:
 			[:index|
@@ -10609,6 +10693,9 @@ StackInterpreter >> shortPrintOop: oop [
 						ifTrue: [' is misaligned']
 						ifFalse: [' is not on the heap']); cr.
 		 ^nil].
+	((objectMemory isFreeObject: oop)
+	 or: [objectMemory isForwarded: oop]) ifTrue:
+		[^self printOop: oop].
 	self print: ': a(n) '.
 	self printNameOfClass: (objectMemory fetchClassOfNonImm: oop) count: 5.
 	self cr
@@ -11680,8 +11767,8 @@ StackInterpreter >> validInstructionPointer: theInstrPointer inMethod: aMethod f
 										+ (self sizeOfCallPrimitiveBytecode: methodHeader) - 1)]])
 					not]]]
 		ifFalse: "-1 for pre-increment in fetchNextBytecode"
-			[theInstrPointer >= (aMethod + (objectMemory lastPointerOf: aMethod) + BaseHeaderSize - 1)
-			 and: [theInstrPointer < (aMethod + (objectMemory byteLengthOf: aMethod) + BaseHeaderSize - 1)]]
+			[theInstrPointer >= (aMethod + (objectMemory lastPointerOf: aMethod))
+			 and: [theInstrPointer < (aMethod + (objectMemory byteLengthOf: aMethod) + objectMemory baseHeaderSize - 1)]]
 ]
 
 { #category : #'stack pages' }
