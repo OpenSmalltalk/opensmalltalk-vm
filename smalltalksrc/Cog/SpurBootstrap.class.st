@@ -6,6 +6,11 @@ e.g.
 		transform;
 		launch
 
+Bootstrap issues:
+- should it implement a deterministic Symbol identityHash? This means set a Symbol's identityHash at instance creation time
+  based on its string hash so that e.g. MethodDIctionary instances have a deterministic order and don't need to be rehashed on load.
+- should it collapse ContextPart and MethodContext down onto Context (and perhaps eliminate BlockContext)?
+
 Instance Variables
 	classToIndex:			<Dictionary>
 	lastClassTablePage:	<Integer>
@@ -57,7 +62,8 @@ Class {
 		'lastClassTablePage',
 		'symbolMap',
 		'methodClasses',
-		'installedPrototypes'
+		'installedPrototypes',
+		'rehashSym'
 	],
 	#classVars : [
 		'TransformedImage'
@@ -283,6 +289,12 @@ SpurBootstrap class >> CharacterPROTOTYPEasciiValue [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrap class >> CharacterPROTOTYPEidentityHash [
+	<primitive: 171>
+	^self primitiveFailed
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrap class >> CharacterclassPROTOTYPEvalue: anInteger [
 	<primitive: 170>
 	^self primitiveFailed
@@ -394,7 +406,8 @@ SpurBootstrap >> addNewMethods [
 			 and: [symIsMeta = isMeta]) ifTrue:
 				["probe method dictionary of the class for each method, installing a dummy if not found."
 				 "Transcript cr; nextPutAll: 'checking for '; nextPutAll: selector; flush."
-				 methodOrNil := self interpreterObject: class
+				 methodOrNil := self interpreter: oldInterpreter
+									object: class
 									perform: cmaiaSym
 									withArguments: {symbolMap at: selector. oldHeap nilObject}.
 				 methodOrNil = oldHeap nilObject
@@ -406,7 +419,8 @@ SpurBootstrap >> addNewMethods [
 							nextPutAll: (isMeta ifTrue: [' class>>'] ifFalse: ['>>']);
 							store: selector;
 							flush.
-						 self interpreterObject: class
+						 self interpreter: oldInterpreter
+							object: class
 							perform: basSym
 							withArguments: { symbolMap at: selector.
 											   self installableMethodFor: method
@@ -496,7 +510,7 @@ SpurBootstrap >> bootstrapImage [
 	self cloneObjects.
 	self fillInObjects.
 	self fillInClassTable.
-	Transcript nextPutAll: 'done.'; flush.
+	newHeap initializePostBootstrap
 ]
 
 { #category : #'bootstrap image' }
@@ -601,7 +615,9 @@ SpurBootstrap >> cloneObjects [
 		 and: [oldClass ~= characterClass]]) ifTrue:
 			[self clone: oldObj classIndex: (classToIndex at: oldClass)].
 		 oldObj := oldHeap objectAfter: oldObj].
-	newHeap specialObjectsOop: (map at: oldHeap specialObjectsOop)
+	newHeap
+		specialObjectsOop: (map at: oldHeap specialObjectsOop);
+		lastHash: oldHeap lastHash
 ]
 
 { #category : #'class indices' }
@@ -658,9 +674,11 @@ SpurBootstrap >> defineKnownClassIndices [
 
 { #category : #'bootstrap image' }
 SpurBootstrap >> fillInClassTable [
-	| firstPage classWeakArray |
+	| firstPage classWeakArray maxIndex |
+	maxIndex := 0.
 	classToIndex keysAndValuesDo:
 		[:oldClass :index| | newClass page |
+		maxIndex := maxIndex max: index.
 		newClass := map at: oldClass.
 		self assert: (newHeap isPointersNonImm: newClass).
 		newHeap setHashBitsOf: newClass to: index.
@@ -694,7 +712,9 @@ SpurBootstrap >> fillInClassTable [
 				withValue: (map at: oldHeap classArray);
 		storePointer: newHeap weakArrayClassIndexPun
 			ofObject: firstPage
-				withValue: (map at: classWeakArray)
+				withValue: (map at: classWeakArray).
+
+	newHeap classTableIndex: maxIndex
 ]
 
 { #category : #'bootstrap image' }
@@ -825,10 +845,10 @@ SpurBootstrap >> installModifiedMethods [
 	symbolMap := Dictionary new.
 	methodClasses := Set new.
 	installedPrototypes := Set new.
-	self withExecutableInterpreterDo:
-		[self internAllSymbols.
-		 self addNewMethods.
-		 self replaceMethods].
+	self withExecutableInterpreter: oldInterpreter
+		do: [self internAllSymbols.
+			 self addNewMethods.
+			 self replaceMethods].
 	self modifyCharacterMethods
 ]
 
@@ -842,7 +862,8 @@ SpurBootstrap >> installableMethodFor: aCompiledMethod selector: selector classN
 							ifFalse: [aCompiledMethod].
 	bytes := sourcelessMethod size - sourcelessMethod initialPC + 1.
 	newMethod := self
-					interpreterObject: compiledMethodClass
+					interpreter: oldInterpreter
+					object: compiledMethodClass
 					perform: (self findSymbol: #newMethod:header:)
 					withArguments: { oldHeap integerObjectOf: bytes.
 									   oldHeap integerObjectOf: sourcelessMethod header }.
@@ -882,7 +903,8 @@ SpurBootstrap >> internAllSymbols [
 				"Interpret Symbol intern: sym to ... intern it :-)"
 				symbolMap
 					at: sym
-					put: (self interpreterObject: self symbolClass
+					put: (self interpreter: oldInterpreter
+							object: self symbolClass
 							perform: internSym
 							withArguments: {self stringFor: sym})]].
 	symbolMap keysAndValuesDo:
@@ -891,23 +913,23 @@ SpurBootstrap >> internAllSymbols [
 ]
 
 { #category : #'bootstrap methods' }
-SpurBootstrap >> interpreterObject: receiver perform: selector withArguments: arguments [
+SpurBootstrap >> interpreter: sim object: receiver perform: selector withArguments: arguments [
 	"Interpret an expression in oldHeap using oldInterpreter.
 	 Answer the result."
 	| fp savedpc result |
-	savedpc := oldInterpreter localIP.
-	oldInterpreter internalPush: receiver.
-	arguments do: [:arg| oldInterpreter internalPush: arg].
-	oldInterpreter
+	savedpc := sim localIP.
+	sim internalPush: receiver.
+	arguments do: [:arg| sim internalPush: arg].
+	sim
 		argumentCount: arguments size;
 		messageSelector: selector.
-	fp := oldInterpreter localFP.
-	oldInterpreter normalSend.
-	[fp = oldInterpreter localFP] whileFalse:
-		[oldInterpreter singleStep].
-	result := oldInterpreter internalPopStack.
-	self assert: oldInterpreter localIP - 1 = savedpc.
-	oldInterpreter localIP: savedpc.
+	fp := sim localFP.
+	sim normalSend.
+	[fp = sim localFP] whileFalse:
+		[sim singleStep].
+	result := sim internalPopStack.
+	self assert: sim localIP - 1 = savedpc.
+	sim localIP: savedpc.
 	^result
 ]
 
@@ -1071,6 +1093,48 @@ SpurBootstrap >> prototypeClassNameMetaSelectorMethodDo: quaternaryBlock [
 			value: method]
 ]
 
+{ #category : #'bootstrap image' }
+SpurBootstrap >> rehashImage [
+	"Rehash all collections in newHeap.
+	 Find out which classes implement rehash, entering a 1 against their classIndex in rehashFlags.
+	 Enumerate all objects, rehashing those whose class has a bit set in rehashFlags."
+	| n sim rehashFlags |
+	sim := StackInterpreterSimulator onObjectMemory: newHeap.
+	newHeap coInterpreter: sim.
+	sim initializeInterpreter: 0.
+	sim instVarNamed: 'methodDictLinearSearchLimit' put: SmallInteger maxVal.
+	rehashFlags := ByteArray new: newHeap classTableIndex + 7 // 8.
+	n := 0.
+	newHeap classTableObjectsDo:
+		[:class| | classIndex |
+		sim messageSelector: (map at: rehashSym).
+		"Lookup rehash but don't be fooled by ProtoObject>>rehash, which is just ^self."
+		((sim lookupMethodNoMNUEtcInClass: class) = 0
+		 and: [(sim isQuickPrimitiveIndex: (sim primitiveIndexOf: (sim instVarNamed: 'newMethod'))) not]) ifTrue:
+			[n := n + 1.
+			 classIndex := newHeap rawHashBitsOf: class.
+			 rehashFlags
+				at: classIndex >> 3 + 1
+				put: ((rehashFlags at: classIndex >> 3 + 1)
+						bitOr: (1 << (classIndex bitAnd: 7)))]].
+	Transcript cr; print: n; nextPutAll: ' classes understand rehash. rehashing instances...'; flush.
+	self withExecutableInterpreter: sim
+		do: [newHeap allObjectsDo:
+				[:o| | classIndex |
+				classIndex := newHeap classIndexOf: o.
+				((rehashFlags at: classIndex >> 3 + 1) anyMask: 1 << (classIndex bitAnd: 7)) ifTrue:
+					[Transcript nextPut: $.; flush.
+					 self interpreter: sim
+						object: o
+						perform: (map at: rehashSym)
+						withArguments: #()]]]
+]
+
+{ #category : #'bootstrap image' }
+SpurBootstrap >> rememberRehashSymbol [
+	rehashSym := self findSymbol: #rehash
+]
+
 { #category : #'bootstrap methods' }
 SpurBootstrap >> replaceMethods [
 	"Replace all the modified method prototypes."
@@ -1171,10 +1235,12 @@ SpurBootstrap >> symbolClass [
 
 { #category : #'bootstrap image' }
 SpurBootstrap >> transform [
+	self rememberRehashSymbol.
 	self installModifiedMethods.
 	self bootstrapImage.
-	newHeap initializePostBootstrap.
-	self validate
+	self validate.
+	self rehashImage.
+	Transcript nextPutAll: 'done.'; flush.
 ]
 
 { #category : #'bootstrap image' }
@@ -1189,19 +1255,19 @@ SpurBootstrap >> validate [
 	self assert: ((0 to: maxClassIndex) select:
 					[:idx| | classObj |
 					(classObj := newHeap classAtIndex: idx) ~= newHeap nilObject
-					and: [(newHeap classIndexOf: classObj) = (newHeap hashBitsOf: classObj)]]) isEmpty.
+					and: [(newHeap classIndexOf: classObj) = (newHeap rawHashBitsOf: classObj)]]) isEmpty.
 	0 to: maxClassIndex do:
 		[:index| | classObj |
 		(classObj := newHeap classAtIndex: index) = newHeap nilObject
 			ifTrue:
 				[self assert: (classToIndex keyAtValue: index ifAbsent: []) isNil]
 			ifFalse:
-				[self assert: (newHeap classIndexOf: classObj) ~= (newHeap hashBitsOf: classObj).
+				[self assert: (newHeap classIndexOf: classObj) ~= (newHeap rawHashBitsOf: classObj).
 				(duplicates includes: index) ifFalse:
-					[self assert: (newHeap hashBitsOf: classObj) = index]]].
+					[self assert: (newHeap rawHashBitsOf: classObj) = index]]].
 	classToIndex keysAndValuesDo:
 		[:oldClass :idx|
-		self assert: (newHeap hashBitsOf: (map at: oldClass)) = idx. 
+		self assert: (newHeap rawHashBitsOf: (map at: oldClass)) = idx. 
 		self assert: oldClass = (reverseMap at: (newHeap classAtIndex: idx))].
 	n := 0.
 	newHeap allObjectsDo:
@@ -1217,26 +1283,26 @@ SpurBootstrap >> validate [
 ]
 
 { #category : #'bootstrap methods' }
-SpurBootstrap >> withExecutableInterpreterDo: aBlock [
+SpurBootstrap >> withExecutableInterpreter: sim do: aBlock [
 	"With the oldInterpreter ready to execute code, evaluate aBlock,
 	 then return the interpreter (and the heap) to the ``just snapshotted'' state."
 	| savedpc initialContext finalContext |
-	oldInterpreter
+	sim
 		initStackPages;
 		loadInitialContext;
 		internalizeIPandSP.
-	initialContext := oldInterpreter frameContext: oldInterpreter localFP.
-	savedpc := oldInterpreter localIP.
-	"oldInterpreter printHeadFrame."
+	initialContext := sim frameContext: sim localFP.
+	savedpc := sim localIP.
+	"sim printHeadFrame."
 	aBlock value.
-	"oldInterpreter printHeadFrame."
-	oldInterpreter
-		internalPush: oldInterpreter localIP;
+	"sim printHeadFrame."
+	sim
+		internalPush: sim localIP;
 		externalizeIPandSP.
 	"now undo the execution state"
-	finalContext := oldInterpreter voidVMStateForSnapshot.
+	finalContext := sim voidVMStateForSnapshot.
 	self assert: initialContext = finalContext.
-	self assert: oldInterpreter localIP = savedpc
+	self assert: sim localIP = savedpc
 ]
 
 { #category : #'word size' }
