@@ -640,7 +640,8 @@ InterpreterPrimitives >> primitiveBeep [
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveBehaviorHash [
 	| hashOrError |
-	self assert: (objectMemory isIntegerObject: self stackTop) not.
+	self assert: ((objectMemory isNonImmediate: self stackTop)
+				 and: [self addressCouldBeClassObj: self stackTop]).
 	hashOrError := objectMemory ensureBehaviorHash: self stackTop.
 	hashOrError >= 0
 		ifTrue: [self pop: 1 thenPushInteger: hashOrError]
@@ -1769,7 +1770,7 @@ InterpreterPrimitives >> primitiveIdentical [
 InterpreterPrimitives >> primitiveIdentityHash [
 	| thisReceiver |
 	thisReceiver := self stackTop.
-	(objectMemory isIntegerObject: thisReceiver)
+	(objectMemory isImmediate: thisReceiver)
 		ifTrue: [self primitiveFail]
 		ifFalse: [self pop: argumentCount + 1
 					thenPushInteger: (objectMemory hashBitsOf: thisReceiver)]

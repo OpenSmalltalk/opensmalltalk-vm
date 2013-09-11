@@ -70,21 +70,21 @@ SpurGenerationScavenger >> initialize [
 
 { #category : #initialization }
 SpurGenerationScavenger >> manager: aSpurMemoryManager memory: memoryArray newSpaceStart: startAddress newSpaceBytes: totalBytes edenBytes: requestedEdenBytes [ 
-	| edenBytes edenLimit edenStart survivorBytes |
+	| edenBytes survivorBytes |
 	manager := aSpurMemoryManager.
 	memory := memoryArray.
 	edenBytes := requestedEdenBytes.
-	edenStart := startAddress.
 	survivorBytes := totalBytes - edenBytes // 2 truncateTo: manager allocationUnit.
 	edenBytes := totalBytes - survivorBytes - survivorBytes truncateTo: manager allocationUnit.
-	edenLimit := edenStart + edenBytes roundUpTo: manager allocationUnit.
-	self assert: totalBytes - (edenLimit - edenStart) - survivorBytes - survivorBytes < manager allocationUnit.
-	eden := SpurNewSpaceSpace new.
+	self assert: totalBytes - edenBytes - survivorBytes - survivorBytes < manager allocationUnit.
+	"for tenuring we require older objects below younger objects.  since allocation
+	 grows up this means that the survivor spaces must preceed eden."
 	pastSpace := SpurNewSpaceSpace new.
 	futureSpace := SpurNewSpaceSpace new.
-	eden start: edenStart limit: edenLimit.
-	pastSpace start: edenLimit limit: edenLimit + survivorBytes.
+	eden := SpurNewSpaceSpace new.
+	pastSpace start: startAddress limit: startAddress + survivorBytes.
 	futureSpace start: pastSpace limit limit: pastSpace limit + survivorBytes.
+	eden start: futureSpace limit limit: futureSpace limit + edenBytes.
 	self assert: futureSpace limit <= (startAddress + totalBytes).
 	self assert: eden start \\ manager allocationUnit
 				+ (eden limit \\ manager allocationUnit) = 0.

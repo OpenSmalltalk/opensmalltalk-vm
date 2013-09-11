@@ -178,11 +178,10 @@ Spur32BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 			[numSlots := nElements + 3 // 4.
 			 instSpec := instSpec + (nElements bitAnd: 3)] }
 		otherwise: [^nil]. "non-indexable"
-	classIndex := self hashBitsOf: classObj.
-	classIndex = 0 ifTrue:
-		[(self enterIntoClassTable: classObj) ifFalse:
-			[^nil].
-		classIndex := self hashBitsOf: classObj].
+	classIndex := self ensureBehaviorHash: classObj.
+	classIndex < 0 ifTrue:
+		[coInterpreter primitiveFailFor: classIndex negated.
+		 ^nil].
 	newObj := self allocateSlots: numSlots format: instSpec classIndex: classIndex.
 	newObj ifNotNil:
 		[self fillObj: newObj numSlots: numSlots with: fillValue].
