@@ -2314,6 +2314,12 @@ NewObjectMemory >> printWronglySizedContexts: printContexts [
 		 oop := self accessibleObjectAfter: oop]
 ]
 
+{ #category : #'header access' }
+NewObjectMemory >> rawHashBitsOf: objOop [
+	"Compatibility with Spur."
+	^self hashBitsOf: objOop
+]
+
 { #category : #become }
 NewObjectMemory >> restoreHeaderOf: obj to: objHeader [
 	super restoreHeaderOf: obj to: objHeader.
