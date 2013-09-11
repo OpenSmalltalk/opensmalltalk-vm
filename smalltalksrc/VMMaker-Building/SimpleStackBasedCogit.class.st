@@ -893,10 +893,10 @@ SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 	self compilePICProlog: numArgs.
 	self AlignmentNops: (BytesPerWord max: 8).
 	entry := self Label.
-	objectRepresentation genGetClassObjectOf: ReceiverResultReg into: ClassReg scratchReg: TempReg.
+	objectRepresentation genGetClassTagOf: ReceiverResultReg into: ClassReg scratchReg: TempReg.
 
 	"Do first of three probes.  See CoInterpreter>>lookupInMethodCacheSel:class:"
-	self flag: #lookupInMethodCacheSel:class:. "so this method shows up as a sender of lookupInMethodCacheSel:class:"
+	self flag: #lookupInMethodCacheSel:classTag:. "so this method shows up as a sender of lookupInMethodCacheSel:classTag:"
 	self MoveR: ClassReg R: SendNumArgsReg.
 	self annotate: (self XorCw: selector R: ClassReg) objRef: selector.
 	self LogicalShiftLeftCq: ShiftForWord R: ClassReg.
