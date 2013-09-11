@@ -433,7 +433,7 @@ StackInterpreterSimulator >> fetchByte [
 ]
 
 { #category : #testing }
-StackInterpreterSimulator >> findNewMethodInClass: class [
+StackInterpreterSimulator >> findNewMethodInClassTag: classTag [
 "
 	| cName |
 	traceOn ifTrue:
@@ -459,7 +459,7 @@ StackInterpreterSimulator >> findNewMethodInClass: class [
 		messageQueue == nil ifTrue: [messageQueue := OrderedCollection new].
 		messageQueue addLast: (self stringOf: messageSelector)].
 "
-	super findNewMethodInClass: class.
+	^super findNewMethodInClassTag: classTag
 ]
 
 { #category : #'memory access' }
@@ -1870,6 +1870,11 @@ StackInterpreterSimulator >> shortPrint: oop [
 		[^(oop bitAnd: objectMemory allocationUnit - 1) ~= 0
 			ifTrue: [' is misaligned']
 			ifFalse: [' is not on the heap']].
+	(objectMemory isFreeObject: oop) ifTrue:
+		[^' is a free chunk of size ', (objectMemory sizeOfFree: oop) printString].
+	(objectMemory isForwarded: oop) ifTrue:
+		[^' is a forwarded object to ', (objectMemory followForwarded: oop) hex,
+			' of slot size ', (objectMemory numSlotsOfAny: oop) printString].
 	classOop := objectMemory fetchClassOfNonImm: oop.
 	(objectMemory sizeBitsOf: classOop) = metaclassSizeBits ifTrue:
 		[^'class ' , (self nameOfClass: oop)].

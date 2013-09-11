@@ -937,7 +937,7 @@ StackInterpreterPrimitives >> primitiveObjectPointsTo [
 { #category : #'control primitives' }
 StackInterpreterPrimitives >> primitivePerform [
 	<returnTypeC: #void>
-	| performSelector newReceiver lookupClass performMethod |
+	| performSelector newReceiver lookupClassTag performMethod |
 	performSelector := messageSelector.
 	performMethod := newMethod.
 	messageSelector := self stackValue: argumentCount - 1.
@@ -954,13 +954,14 @@ StackInterpreterPrimitives >> primitivePerform [
 			longAt: stackPointer + (i * BytesPerWord)
 			put: (stackPages longAt: stackPointer + ((i - 1) * BytesPerWord))].
 	self pop: 1.
-	lookupClass := objectMemory fetchClassOf: newReceiver.
+	lookupClassTag := objectMemory fetchClassTagOf: newReceiver.
 	self sendBreak: messageSelector + BaseHeaderSize
 		point: (objectMemory lengthOf: messageSelector)
 		receiver: newReceiver.
 	self printSends ifTrue:
-		[self printActivationNameForSelector: messageSelector startClass: lookupClass; cr].
-	self findNewMethodInClass: lookupClass.
+		[self printActivationNameForSelector: messageSelector
+			startClass: (objectMemory classForClassTag: lookupClassTag); cr].
+	self findNewMethodInClassTag: lookupClassTag.
 
 	"Only test CompiledMethods for argument count - other objects will have to take their chances"
 	((objectMemory isOopCompiledMethod: newMethod)
