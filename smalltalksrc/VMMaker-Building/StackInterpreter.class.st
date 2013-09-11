@@ -1650,7 +1650,7 @@ StackInterpreter >> addNewMethodToCache: class [
 	"OK, we failed to find an entry -- install at the first slot..."
 	probe := hash bitAnd: MethodCacheMask.  "first probe"
 	methodCache at: probe + MethodCacheSelector put: messageSelector.
-	methodCache at: probe + MethodCacheClass put: class.
+	methodCache at: probe + MethodCacheClass put: (objectMemory classTagForClass: class).
 	methodCache at: probe + MethodCacheMethod put: newMethod.
 	methodCache at: probe + MethodCachePrimFunction put: (self cCoerce: primitiveFunctionPointer to: #long).
 	lastMethodCacheProbeWrite := probe. "this for primitiveExternalMethod"
@@ -5088,6 +5088,12 @@ StackInterpreter >> findNewMethodInClassTag: classTag [
 	ok := self lookupInMethodCacheSel: messageSelector classTag: classTag.
 	ok ifFalse: "entry was not found in the cache; look it up the hard way "
 		[class := objectMemory classForClassTag: classTag.
+		 objectMemory hasSpurMemoryManagerAPI ifTrue:
+		 	[| oop |
+			 oop := self stackValue: argumentCount.
+			 ((objectMemory isNonImmediate: oop)
+			  and: [objectMemory isForwarded: oop]) ifTrue:
+				[self stackValue: argumentCount put: (objectMemory followForwarded: oop)]].
 		 self lookupMethodInClass: class.
 		 self addNewMethodToCache: class]
 ]
@@ -6401,6 +6407,12 @@ StackInterpreter >> internalFindNewMethod [
 	ok := self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag.
 	ok ifFalse: "entry was not found in the cache; look it up the hard way"
 		[lkupClass := objectMemory classForClassTag: lkupClassTag.
+		 objectMemory hasSpurMemoryManagerAPI ifTrue:
+			[| oop |
+			 oop := self internalStackValue: argumentCount.
+			 ((objectMemory isNonImmediate: oop)
+			  and: [objectMemory isForwarded: oop]) ifTrue:
+				[self internalStackValue: argumentCount put: (objectMemory followForwarded: oop)]].
 		 self externalizeIPandSP.
 		 self lookupMethodInClass: lkupClass.
 		 self internalizeIPandSP.

@@ -1420,21 +1420,21 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 							startingAtBehavior: (objectMemory fetchClassOf: rcvr).
 	self assert: (objectMemory lengthOf: mixinApplication) > (InstanceSpecificationIndex + 1).
 	lkupClass := self superclassOf: mixinApplication.
-	class := objectMemory fetchClassOf: rcvr.
+	lkupClassTag := self classTagForClass: lkupClass.
+	class := objectMemory fetchClassOf: rcvr. "what about the read barrier??"
 	canLinkCacheTag := (objectMemory isYoungObject: class) not or: [cogit canLinkToYoungClasses].
 	"We set the messageSelector and lkupClass for executeMethod below since things
 	 like the at cache read messageSelector and lkupClass and so they cannot be left stale."
 	messageSelector := selector.
-	lkupClassTag := objectMemory classTagForClass: (self superclassOf: mixinApplication).
+	lkupClass := self superclassOf: mixinApplication.
 	argumentCount := numArgs.
-	(self lookupInMethodCacheSel: selector classTag: lkupClassTag)
+	(self lookupInMethodCacheSel: selector classTag: (objectMemory classTagForClass: lkupClass))
 		ifTrue:"check for coggability because method is in the cache"
 			[self
 				ifAppropriateCompileToNativeCode: newMethod
 				selector: selector]
 		ifFalse:
-			[lkupClass := objectMemory classTagForClass: lkupClassTag.
-			(errSelIdx := self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:
+			[(errSelIdx := self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:
 				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: lkupClass.
 				self assert: false "NOTREACHED"]].
 	"Method found and has a cog method.  Attempt to link to it."
@@ -1842,7 +1842,7 @@ CoInterpreter >> ceSendFromInLineCacheMiss: oPIC [
 	classTag := objectMemory fetchClassTagOf: rcvr.
 	argumentCount := numArgs.
 	"We set the messageSelector and lkupClass for executeMethod below since things
-	 like the at cache read messageSelectorand lkupClass and so they cannot be left stale."
+	 like the at cache read messageSelector and lkupClass and so they cannot be left stale."
 	messageSelector := oPIC selector.
 	lkupClass := objectMemory classForClassTag: classTag.
 	(self lookupInMethodCacheSel: oPIC selector classTag: classTag)
@@ -3139,6 +3139,12 @@ CoInterpreter >> findNewMethodInClassTag: classTag [
 		ifFalse:
 			["entry was not found in the cache; look it up the hard way "
 			 class := objectMemory classForClassTag: classTag.
+			 objectMemory hasSpurMemoryManagerAPI ifTrue:
+			 	[| oop |
+				 oop := self stackValue: argumentCount.
+				 ((objectMemory isNonImmediate: oop)
+				  and: [objectMemory isForwarded: oop]) ifTrue:
+					[self stackValue: argumentCount put: (objectMemory followForwarded: oop)]].
 			 self lookupMethodInClass: class.
 			 self addNewMethodToCache: class]
 ]
@@ -3834,6 +3840,12 @@ CoInterpreter >> internalFindNewMethod [
 		ifFalse:
 			["entry was not found in the cache; look it up the hard way"
 			lkupClass := objectMemory classForClassTag: lkupClassTag.
+			objectMemory hasSpurMemoryManagerAPI ifTrue:
+				[| oop |
+				 oop := self internalStackValue: argumentCount.
+				 ((objectMemory isNonImmediate: oop)
+				  and: [objectMemory isForwarded: oop]) ifTrue:
+					[self internalStackValue: argumentCount put: (objectMemory followForwarded: oop)]].
 			self externalizeIPandSP.
 			self lookupMethodInClass: lkupClass.
 			self internalizeIPandSP.
