@@ -472,8 +472,6 @@ StackInterpreterPrimitives >> primitiveDoNamedPrimitiveWithArgs [
 	argumentCount := arraySize.
 	1 to: arraySize do:
 		[:index| self push: (objectMemory fetchPointer: index - 1 ofObject: argumentArray)].
-	"Run the primitive (sets primFailCode)"
-	lkupClass := objectMemory nilObject.
 	self callExternalPrimitive: addr.
 	ctxtRcvr  := objectMemory popRemappableOop.
 	methodArg := objectMemory popRemappableOop.
@@ -526,7 +524,6 @@ StackInterpreterPrimitives >> primitiveDoPrimitiveWithArgs [
 	 popRemappableOop: wouldn't occur, potentially overflowing the remap buffer.  While recursion
 	 could occur (nil tryPrimitive: 118 withArgs: #(111 #())) it counts as shooting oneself in the foot."
 	tempOop := argumentArray. "prim might alloc/gc"
-	lkupClass := objectMemory nilObject.
 	"Run the primitive (sets primFailCode)"
 	self slowPrimitiveResponse.
 	self successful ifFalse: "If primitive failed, then restore state for failure code"
@@ -552,9 +549,6 @@ StackInterpreterPrimitives >> primitiveExecuteMethod [
 	primitiveIndex := self primitiveIndexOf: newMethod.
 	primitiveFunctionPointer := self functionPointerFor: primitiveIndex inClass: nil.
 	argumentCount := argumentCount - 1.
-	"We set the messageSelector for executeMethod below since things
-	 like the at cache read messageSelector and so it cannot be left stale."
-	messageSelector := objectMemory nilObject.
 	self executeNewMethod.
 	"Recursive xeq affects primErrorCode"
 	self initPrimCall
@@ -590,9 +584,6 @@ StackInterpreterPrimitives >> primitiveExecuteMethodArgsArray [
 	primitiveIndex := self primitiveIndexOf: newMethod.
 	primitiveFunctionPointer := self functionPointerFor: primitiveIndex inClass: nil.
 	argumentCount := argCnt.
-	"We set the messageSelector for executeMethod below since things
-	 like the at cache read messageSelector and so it cannot be left stale."
-	messageSelector := objectMemory nilObject.
 	self executeNewMethod.
 	"Recursive xeq affects primErrorCode"
 	self initPrimCall
@@ -937,8 +928,7 @@ StackInterpreterPrimitives >> primitiveObjectPointsTo [
 { #category : #'control primitives' }
 StackInterpreterPrimitives >> primitivePerform [
 	<returnTypeC: #void>
-	| performSelector newReceiver lookupClassTag performMethod |
-	performSelector := messageSelector.
+	| newReceiver lookupClassTag performMethod |
 	performMethod := newMethod.
 	messageSelector := self stackValue: argumentCount - 1.
 	newReceiver := self stackValue: argumentCount.
@@ -975,7 +965,6 @@ StackInterpreterPrimitives >> primitivePerform [
 		stackPages longAt: stackPointer + (argumentCount * BytesPerWord) put: messageSelector.
 		argumentCount := argumentCount + 1.
 		newMethod := performMethod.
-		messageSelector := performSelector.
 		^self primitiveFail].
 
 	self executeNewMethod.
