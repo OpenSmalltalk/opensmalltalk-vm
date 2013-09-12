@@ -984,87 +984,6 @@ CoInterpreter >> bytecodePCFor: theIP cogMethod: cogMethod startBcpc: startBcpc 
 	^cogit bytecodePCFor: mcpc startBcpc: startBcpc in: cogMethodForIP
 ]
 
-{ #category : #'common selector sends' }
-CoInterpreter >> bytecodePrimAt [
-	"BytecodePrimAt will only succeed if the receiver is in the atCache.
-	 Otherwise it will fail so that the more general primitiveAt will put it in the
-	 cache after validating that message lookup results in a primitive response.
-	 Override to insert in the at: cache here.  This is necessary since once there
-	 is a compiled at: primitive method (which doesn't use the at: cache) the only
-	 way something can get installed in the atCache is here."
-	| index rcvr result atIx |
-	index := self internalStackTop.
-	rcvr := self internalStackValue: 1.
-	((objectMemory isIntegerObject: rcvr) not
-	 and: [objectMemory isIntegerObject: index]) ifTrue:
-		[atIx := rcvr bitAnd: AtCacheMask.  "Index into atCache = 4N, for N = 0 ... 7"
-		(atCache at: atIx+AtCacheOop) ~= rcvr ifTrue:
-			[lkupClassTag := objectMemory fetchClassTagOfNonImm: rcvr.
-			 messageSelector := self specialSelector: 16.
-			 (self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifFalse:
-				[argumentCount := 1.
-				 ^self commonSend].
-			 primitiveFunctionPointer == #primitiveAt
-				ifTrue: [self install: rcvr inAtCache: atCache at: atIx string: false]
-				ifFalse:
-					[primitiveFunctionPointer == #primitiveStringAt
-						ifTrue: [self install: rcvr inAtCache: atCache at: atIx string: true]
-						ifFalse:
-							[argumentCount := 1.
-							 ^self commonSend]]].
-		 self successful ifTrue:
-			[result := self commonVariable: rcvr at: (objectMemory integerValueOf: index) cacheIndex: atIx].
-		 self successful ifTrue:
-			[self fetchNextBytecode.
-			 ^self internalPop: 2 thenPush: result].
-		 self initPrimCall].
-
-	messageSelector := self specialSelector: 16.
-	argumentCount := 1.
-	self normalSend
-]
-
-{ #category : #'common selector sends' }
-CoInterpreter >> bytecodePrimAtPut [
-	"BytecodePrimAtPut will only succeed if the receiver is in the atCache.
-	Otherwise it will fail so that the more general primitiveAtPut will put it in the
-	cache after validating that message lookup results in a primitive response.
-	 Override to insert in the atCache here.  This is necessary since once there
-	 is a compiled at:[put:] primitive method (which doesn't use the at: cache) the
-	 only way something can get installed in the atCache is here."
-	| index rcvr atIx value |
-	value := self internalStackTop.
-	index := self internalStackValue: 1.
-	rcvr := self internalStackValue: 2.
-	((objectMemory isIntegerObject: rcvr) not
-	 and: [objectMemory isIntegerObject: index]) ifTrue:
-		[atIx := (rcvr bitAnd: AtCacheMask) + AtPutBase.  "Index into atPutCache"
-		 (atCache at: atIx+AtCacheOop) ~= rcvr ifTrue:
-			[lkupClassTag := objectMemory fetchClassTagOfNonImm: rcvr.
-			 messageSelector := self specialSelector: 17.
-			 (self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifFalse:
-				[argumentCount := 2.
-				 ^self commonSend].
-			 primitiveFunctionPointer == #primitiveAtPut
-				ifTrue: [self install: rcvr inAtCache: atCache at: atIx string: false]
-				ifFalse:
-					[primitiveFunctionPointer == #primitiveStringAtPut
-						ifTrue: [self install: rcvr inAtCache: atCache at: atIx string: true]
-						ifFalse:
-							[argumentCount := 2.
-							 ^self commonSend]]].
-		 self successful ifTrue:
-			[self commonVariable: rcvr at: (objectMemory integerValueOf: index) put: value cacheIndex: atIx].
-		 self successful ifTrue:
-			[self fetchNextBytecode.
-			 ^self internalPop: 3 thenPush: value].
-		 self initPrimCall].
-
-	messageSelector := self specialSelector: 17.
-	argumentCount := 2.
-	self normalSend
-]
-
 { #category : #'cog jit support' }
 CoInterpreter >> callForCogCompiledCodeCompaction [
 	<api>
@@ -1355,20 +1274,19 @@ CoInterpreter >> ceCounterTripped: condition [
 	<api>
 	<option: #SistaStackToRegisterMappingCogit>
 	"Send e.g. thisContext conditionalBranchCounterTrippedOn: boolean."
-	| context counterTrippedSelector |
+	| context counterTrippedSelector classTag |
 	counterTrippedSelector := objectMemory maybeSplObj: SelectorCounterTripped.
 	(counterTrippedSelector isNil
 	or: [counterTrippedSelector = objectMemory nilObject]) ifTrue:
 		[cogit resetCountersIn: (self mframeHomeMethod: framePointer).
 		 ^condition].
 	
-	lkupClassTag := objectMemory
+	classTag := objectMemory
 					classTagForSpecialObjectsIndex: ClassMethodContext
 					compactClassIndex: ClassMethodContextCompactIndex.
-	(self lookupInMethodCacheSel: counterTrippedSelector classTag: lkupClassTag) ifFalse:
+	(self lookupInMethodCacheSel: counterTrippedSelector classTag: classTag) ifFalse:
 	 	[messageSelector := counterTrippedSelector.
-		 lkupClass := objectMemory classTagForClass: lkupClassTag.
-		 (self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:
+		 (self lookupMethodNoMNUEtcInClass: (objectMemory classTagForClass: classTag)) ~= 0 ifTrue:
 			[cogit resetCountersIn: (self mframeHomeMethod: framePointer).
 			 ^condition]].
 
@@ -1381,7 +1299,7 @@ CoInterpreter >> ceCounterTripped: condition [
 	context := self ensureFrameIsMarried: framePointer SP: stackPointer.
 	self push: context.
 	self push: condition.
-	self ifAppropriateCompileToNativeCode: newMethod selector: messageSelector.
+	self ifAppropriateCompileToNativeCode: newMethod selector: counterTrippedSelector.
 	self activateNewMethod.
 	"not reached"
 	^true
@@ -1403,7 +1321,7 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 	depending on whether the target method is cogged or not."
 	<api>
 	<option: #NewspeakVM>
-	| class canLinkCacheTag errSelIdx cogMethod mClassMixin mixinApplication |
+	| class classTag canLinkCacheTag errSelIdx cogMethod mClassMixin mixinApplication |
 	<inline: false>
 	<var: #cogMethod type: #'CogMethod *'>
 	<var: #newCogMethod type: #'CogMethod *'>
@@ -1419,23 +1337,19 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 							findApplicationOfTargetMixin: mClassMixin
 							startingAtBehavior: (objectMemory fetchClassOf: rcvr).
 	self assert: (objectMemory lengthOf: mixinApplication) > (InstanceSpecificationIndex + 1).
-	lkupClass := self superclassOf: mixinApplication.
-	lkupClassTag := self classTagForClass: lkupClass.
+	classTag := self classTagForClass: (self superclassOf: mixinApplication).
 	class := objectMemory fetchClassOf: rcvr. "what about the read barrier??"
 	canLinkCacheTag := (objectMemory isYoungObject: class) not or: [cogit canLinkToYoungClasses].
-	"We set the messageSelector and lkupClass for executeMethod below since things
-	 like the at cache read messageSelector and lkupClass and so they cannot be left stale."
-	messageSelector := selector.
-	lkupClass := self superclassOf: mixinApplication.
 	argumentCount := numArgs.
-	(self lookupInMethodCacheSel: selector classTag: (objectMemory classTagForClass: lkupClass))
+	(self lookupInMethodCacheSel: selector classTag: classTag)
 		ifTrue:"check for coggability because method is in the cache"
 			[self
 				ifAppropriateCompileToNativeCode: newMethod
 				selector: selector]
 		ifFalse:
-			[(errSelIdx := self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:
-				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: lkupClass.
+			[messageSelector := selector.
+			 (errSelIdx := self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
+				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: (objectMemory classForClassTag: classTag).
 				self assert: false "NOTREACHED"]].
 	"Method found and has a cog method.  Attempt to link to it."
 	(self maybeMethodHasCogMethod: newMethod) ifTrue:
@@ -1532,8 +1446,9 @@ CoInterpreter >> ceMNUFromPICMNUMethod: aMethodObj receiver: rcvr [
 		primitiveIndex := self primitiveIndexOf: aMethodObj.
 		primitiveFunctionPointer := self functionPointerFor: primitiveIndex inClass: objectMemory nilObject.
 		^self interpretMethodFromMachineCode].
-	lkupClass := objectMemory fetchClassOf: rcvr.
-	self handleMNU: SelectorDoesNotUnderstand InMachineCodeTo: rcvr classForMessage: lkupClass.
+	self handleMNU: SelectorDoesNotUnderstand
+		InMachineCodeTo: rcvr
+		classForMessage: (objectMemory fetchClassOf: rcvr).
 	"NOTREACHED"
 	self assert: false
 ]
@@ -1720,10 +1635,6 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 		ifFalse: [classTag := objectMemory classTagForClass: (self superclassOf: (self methodClassOf: (self frameMethodObject: framePointer)))].
 	canLinkCacheTag := objectMemory hasSpurMemoryManagerAPI
 						or: [(objectMemory isYoungObject: classTag) not or: [cogit canLinkToYoungClasses]].
-	"We set the messageSelector and lkupClass for executeMethod below since things
-	 like the at cache read messageSelector and lkupClass and so they cannot be left stale."
-	messageSelector := selector.
-	lkupClass := objectMemory classForClassTag: classTag.
 	argumentCount := numArgs.
 	(self lookupInMethodCacheSel: selector classTag: classTag)
 		ifTrue:"check for coggability because method is in the cache"
@@ -1731,7 +1642,8 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 				ifAppropriateCompileToNativeCode: newMethod
 				selector: selector]
 		ifFalse:
-			[(errSelIdx := self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:
+			[messageSelector := selector.
+			 (errSelIdx := self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
 				[(canLinkCacheTag
 				  and: [errSelIdx = SelectorDoesNotUnderstand
 				  and: [(cogMethod := cogit cogMNUPICSelector: messageSelector
@@ -1746,7 +1658,9 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 									ifTrue: [cogit entryOffset]
 									ifFalse: [cogit noCheckEntryOffset])
 							receiver: rcvr].
-				self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: lkupClass.
+				self handleMNU: errSelIdx
+					InMachineCodeTo: rcvr
+					classForMessage: (objectMemory classForClassTag: classTag).
 				self assert: false "NOTREACHED"]].
 	"Method found and has a cog method.  Attempt to link to it.  The receiver's class may be young.
 	 If the Cogit can't store young classes in inline caches we can link to an open PIC instead."
@@ -1803,19 +1717,16 @@ CoInterpreter >> ceSendAbort: selector to: rcvr numArgs: numArgs [
 		point: (objectMemory lengthOf: selector)
 		receiver: rcvr.
 	argumentCount := numArgs.
-	"We set the messageSelector and lkupClass for executeMethod below since things
-	 like the at cache read messageSelector and lkupClass and so they cannot be left stale."
-	messageSelector := selector.
 	classTag := objectMemory fetchClassTagOf: rcvr.
-	lkupClass := objectMemory classForClassTag: classTag.
 	(self lookupInMethodCacheSel: selector classTag: classTag)
 		ifTrue:"check for coggability because method is in the cache"
 			[self
 				ifAppropriateCompileToNativeCode: newMethod
 				selector: selector]
 		ifFalse:
-			[(errSelIdx := self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:
-				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: lkupClass.
+			[messageSelector := selector.
+			 (errSelIdx := self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
+				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: (objectMemory classForClassTag: classTag).
 				"NOTREACHED"
 				self assert: false]].
 	instructionPointer := self popStack.
@@ -1841,18 +1752,15 @@ CoInterpreter >> ceSendFromInLineCacheMiss: oPIC [
 	self assert: ((objectMemory isIntegerObject: rcvr) or: [objectMemory addressCouldBeObj: rcvr]).
 	classTag := objectMemory fetchClassTagOf: rcvr.
 	argumentCount := numArgs.
-	"We set the messageSelector and lkupClass for executeMethod below since things
-	 like the at cache read messageSelector and lkupClass and so they cannot be left stale."
-	messageSelector := oPIC selector.
-	lkupClass := objectMemory classForClassTag: classTag.
 	(self lookupInMethodCacheSel: oPIC selector classTag: classTag)
 		ifTrue:"check for coggability because method is in the cache"
 			[self
 				ifAppropriateCompileToNativeCode: newMethod
 				selector: oPIC selector]
 		ifFalse:
-			[(errSelIdx := self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:
-				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: lkupClass.
+			[messageSelector := oPIC selector.
+			 (errSelIdx := self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
+				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: (objectMemory classForClassTag: classTag).
 				"NOTREACHED"
 				self assert: false]].
 	instructionPointer := self popStack.
@@ -1893,7 +1801,7 @@ CoInterpreter >> ceStackOverflow: contextSwitchIfNotNil [
 	self assert: cesoRetAddr - cogit abortOffset = (self asCogHomeMethod: cogMethod) asInteger.
 	instructionPointer := cogMethod asInteger + cogMethod stackCheckOffset.
 	self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: false line: #'__LINE__'.
-	method := newMethod := messageSelector := lkupClass := objectMemory nilObject.
+	method := newMethod := messageSelector := objectMemory nilObject.
 	switched := self handleStackOverflowOrEventAllowContextSwitch: contextSwitchIfNotNil ~= 0.
 	self returnToExecutive: false postContextSwitch: switched.
 	self error: 'should not be reached'
@@ -3434,8 +3342,9 @@ CoInterpreter >> getImageHeaderFlags [
 
 { #category : #'message sending' }
 CoInterpreter >> handleMNU: selectorIndex InMachineCodeTo: rcvr classForMessage: classForMessage [
-	"A message send from either an open PIC or an unlinked send has
-	 not been understood.  Execute the relevant resulting MNU method."
+	"A message send from either an open PIC or an unlinked send has not  been
+	 understood.  Create a message and execute the relevant resulting MNU method.
+	 messageSelector is an implicit argument (yuck)."
 	| errSelIdx classForThisMessage |
 	<var: #cogMethod type: #'CogMethod *'>
 	self assert: ((objectMemory isIntegerObject: rcvr) or: [objectMemory addressCouldBeObj: rcvr]).
@@ -4419,18 +4328,19 @@ CoInterpreter >> mapTraceLogs [
 CoInterpreter >> mapVMRegisters [
 	"Map the oops in the interpreter's vm ``registers'' to their new values 
 	 during garbage collection or a become: operation."
-	"Assume: All traced variables contain valid oops."
+	"Assume: All traced variables contain valid oops.
+	 N.B. Don't trace messageSelector and lkupClass; these are ephemeral, live
+	 only during message lookup and because createActualMessageTo will not
+	 cause a GC these cannot change during message lookup."
 	| mapInstructionPointer |
 	"i.e. interpreter instructionPointer in method as opposed to machine code?"
 	(mapInstructionPointer := instructionPointer > method) ifTrue:
 		[instructionPointer := instructionPointer - method]. "*rel to method"
-	method := (objectMemory remap: method).
+	method := objectMemory remap: method.
 	mapInstructionPointer ifTrue:
 		[instructionPointer := instructionPointer + method]. "*rel to method"
-	messageSelector := objectMemory remap: messageSelector.
-	(objectMemory isIntegerObject: newMethod) ifFalse:
-		[newMethod := objectMemory remap: newMethod].
-	lkupClass := objectMemory remap: lkupClass
+	(objectMemory isImmediate: newMethod) ifFalse:
+		[newMethod := objectMemory remap: newMethod]
 ]
 
 { #category : #'cog jit support' }
@@ -4693,12 +4603,6 @@ CoInterpreter >> maybeTraceStackOverflow [
 			source: ((self isMachineCodeFrame: framePointer)
 						ifTrue: [TraceIsFromMachineCode]
 						ifFalse: [TraceIsFromInterpreter])]
-]
-
-{ #category : #'cog jit support' }
-CoInterpreter >> messageSelector: oop [
-	<doNotGenerate>
-	messageSelector := oop
 ]
 
 { #category : #'cog jit support' }
