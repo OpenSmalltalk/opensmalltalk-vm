@@ -1126,6 +1126,7 @@ StackInterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize
 
 { #category : #'spur bootstrap' }
 StackInterpreterSimulator >> messageSelector: s [
+	"For e.g. SpurBootstrap"
 	messageSelector := s
 ]
 
@@ -1365,6 +1366,13 @@ StackInterpreterSimulator >> primStringtranslatefromtotable [
 	^ self primitiveFail
 ]
 
+{ #category : #'indexing primitives' }
+StackInterpreterSimulator >> primitiveAtPut [
+	16r1510B8 = (self stackValue: 2) ifTrue:
+		[self halt].
+	^super primitiveAtPut
+]
+
 { #category : #'I/O primitives' }
 StackInterpreterSimulator >> primitiveBeDisplay [
 	"Extended to create a scratch Form for use by showDisplayBits."
@@ -1450,6 +1458,18 @@ StackInterpreterSimulator >> primitiveDirectoryLookup [
 StackInterpreterSimulator >> primitiveDoPrimitiveWithArgs [
 	NewspeakVM ifFalse: [self halt].
 	^super primitiveDoPrimitiveWithArgs
+]
+
+{ #category : #'control primitives' }
+StackInterpreterSimulator >> primitiveExecuteMethod [
+	self halt.
+	^super primitiveExecuteMethod
+]
+
+{ #category : #'control primitives' }
+StackInterpreterSimulator >> primitiveExecuteMethodArgsArray [
+	self halt.
+	^super primitiveExecuteMethodArgsArray
 ]
 
 { #category : #'debugging traps' }

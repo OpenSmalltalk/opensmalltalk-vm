@@ -1766,10 +1766,12 @@ StackInterpreter >> arrayValueOf: arrayOop [
 StackInterpreter >> asciiOfCharacter: characterObj [  "Returns an integer object"
 
 	<inline: false>
-	self assertClassOf: characterObj is: (objectMemory splObj: ClassCharacter).
-	self successful
-		ifTrue: [^ objectMemory fetchPointer: CharacterValueIndex ofObject: characterObj]
-		ifFalse: [^ ConstZero]  "in case some code needs an int"
+	(objectMemory isCharacterObject: characterObj) ifTrue:
+		[^CharacterTable
+			ifNil: [objectMemory integerObjectOfCharacterObject: characterObj]
+			ifNotNil: [objectMemory fetchPointer: CharacterValueIndex ofObject: characterObj]].
+	self primitiveFailFor: PrimErrBadArgument.
+	^ConstZero  "in case some code needs an int"
 ]
 
 { #category : #utilities }
@@ -2047,20 +2049,37 @@ StackInterpreter >> bytecodePrimAdd [
 { #category : #'common selector sends' }
 StackInterpreter >> bytecodePrimAt [
 	"BytecodePrimAt will only succeed if the receiver is in the atCache.
-	Otherwise it will fail so that the more general primitiveAt will put it in the
-	cache after validating that message lookup results in a primitive response."
+	 Otherwise it will fail so that the more general primitiveAt will put it in the
+	 cache after validating that message lookup results in a primitive response.
+	 Override to insert in the at: cache here.  This is necessary since once there
+	 is a compiled at: primitive method (which doesn't use the at: cache) the only
+	 way something can get installed in the atCache is here."
 	| index rcvr result atIx |
 	index := self internalStackTop.
 	rcvr := self internalStackValue: 1.
-	((objectMemory isImmediate: rcvr) not
+	((objectMemory isIntegerObject: rcvr) not
 	 and: [objectMemory isIntegerObject: index]) ifTrue:
 		[atIx := rcvr bitAnd: AtCacheMask.  "Index into atCache = 4N, for N = 0 ... 7"
-		(atCache at: atIx+AtCacheOop) = rcvr ifTrue:
-			[result := self commonVariable: rcvr at: (objectMemory integerValueOf: index) cacheIndex: atIx.
-			 self successful ifTrue:
-				[self fetchNextBytecode.
-				^self internalPop: 2 thenPush: result].
-			 self initPrimCall]].
+		(atCache at: atIx+AtCacheOop) ~= rcvr ifTrue:
+			[lkupClassTag := objectMemory fetchClassTagOfNonImm: rcvr.
+			 messageSelector := self specialSelector: 16.
+			 (self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifFalse:
+				[argumentCount := 1.
+				 ^self commonSend].
+			 primitiveFunctionPointer == #primitiveAt
+				ifTrue: [self install: rcvr inAtCache: atCache at: atIx string: false]
+				ifFalse:
+					[primitiveFunctionPointer == #primitiveStringAt
+						ifTrue: [self install: rcvr inAtCache: atCache at: atIx string: true]
+						ifFalse:
+							[argumentCount := 1.
+							 ^self commonSend]]].
+		 self successful ifTrue:
+			[result := self commonVariable: rcvr at: (objectMemory integerValueOf: index) cacheIndex: atIx].
+		 self successful ifTrue:
+			[self fetchNextBytecode.
+			 ^self internalPop: 2 thenPush: result].
+		 self initPrimCall].
 
 	messageSelector := self specialSelector: 16.
 	argumentCount := 1.
@@ -2078,20 +2097,37 @@ StackInterpreter >> bytecodePrimAtEnd [
 StackInterpreter >> bytecodePrimAtPut [
 	"BytecodePrimAtPut will only succeed if the receiver is in the atCache.
 	Otherwise it will fail so that the more general primitiveAtPut will put it in the
-	cache after validating that message lookup results in a primitive response."
+	cache after validating that message lookup results in a primitive response.
+	 Override to insert in the atCache here.  This is necessary since once there
+	 is a compiled at:[put:] primitive method (which doesn't use the at: cache) the
+	 only way something can get installed in the atCache is here."
 	| index rcvr atIx value |
 	value := self internalStackTop.
 	index := self internalStackValue: 1.
 	rcvr := self internalStackValue: 2.
-	((objectMemory isImmediate: rcvr) not
+	((objectMemory isIntegerObject: rcvr) not
 	 and: [objectMemory isIntegerObject: index]) ifTrue:
 		[atIx := (rcvr bitAnd: AtCacheMask) + AtPutBase.  "Index into atPutCache"
-		 (atCache at: atIx+AtCacheOop) = rcvr ifTrue:
-			[self commonVariable: rcvr at: (objectMemory integerValueOf: index) put: value cacheIndex: atIx.
-			 self successful ifTrue:
-				[self fetchNextBytecode.
-				 ^self internalPop: 3 thenPush: value].
-			 self initPrimCall]].
+		 (atCache at: atIx+AtCacheOop) ~= rcvr ifTrue:
+			[lkupClassTag := objectMemory fetchClassTagOfNonImm: rcvr.
+			 messageSelector := self specialSelector: 17.
+			 (self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifFalse:
+				[argumentCount := 2.
+				 ^self commonSend].
+			 primitiveFunctionPointer == #primitiveAtPut
+				ifTrue: [self install: rcvr inAtCache: atCache at: atIx string: false]
+				ifFalse:
+					[primitiveFunctionPointer == #primitiveStringAtPut
+						ifTrue: [self install: rcvr inAtCache: atCache at: atIx string: true]
+						ifFalse:
+							[argumentCount := 2.
+							 ^self commonSend]]].
+		 self successful ifTrue:
+			[self commonVariable: rcvr at: (objectMemory integerValueOf: index) put: value cacheIndex: atIx].
+		 self successful ifTrue:
+			[self fetchNextBytecode.
+			 ^self internalPop: 3 thenPush: value].
+		 self initPrimCall].
 
 	messageSelector := self specialSelector: 17.
 	argumentCount := 2.
@@ -3362,9 +3398,12 @@ StackInterpreter >> closureIn: context numArgs: numArgs instructionPointer: init
 { #category : #'indexing primitive support' }
 StackInterpreter >> commonAt: stringy [
 	"This code is called if the receiver responds primitively to at:.
-	 If this is so, it will be installed in the atCache so that subsequent calls of at:
-	 or next may be handled immediately in bytecode primitive routines."
-	| index rcvr atIx result |
+	 N.B. this does *not* use the at cache, instead inlining stObject:at:.
+	 Using the at cache here would require that callers set messageSelector
+	 and lkupClass and that is onerous and error-prone, and in any case,
+	 inlining produces much better performance than using the at cache here."
+	| index rcvr result |
+	<inline: true> "to get it inlined in primitiveAt and primitiveStringAt"
 	self initPrimCall.
 	rcvr := self stackValue: 1.
 	(objectMemory isImmediate: rcvr) ifTrue:
@@ -3374,40 +3413,21 @@ StackInterpreter >> commonAt: stringy [
 	(objectMemory isIntegerObject: index) ifFalse:
 		[^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
-
-	"NOTE:  The at-cache, since it is specific to the non-super response to #at:.
-	Therefore we must determine that the message is #at: (not, eg, #basicAt:),
-	and that the send is not a super-send, before using the at-cache."
-	(messageSelector = (self specialSelector: 16)
-	 and: [lkupClass = (objectMemory fetchClassOfNonImm: rcvr)])
-		ifTrue:
-		["OK -- look in the at-cache"
-		atIx := rcvr bitAnd: AtCacheMask.  "Index into atCache = 4N, for N = 0 ... 7"
-		(atCache at: atIx+AtCacheOop) = rcvr ifFalse:
-			["Rcvr not in cache.  Attempt to install it..."
-			(self install: rcvr inAtCache: atCache at: atIx string: stringy) ifFalse:
-				[self assert: (objectMemory isContextNonImm: rcvr).
-				self initPrimCall.
-				^self primitiveContextAt]].
-		self successful ifTrue:
-			[result := self commonVariable: rcvr at: index cacheIndex: atIx].
-		self successful ifTrue:
-			[^ self pop: argumentCount+1 thenPush: result]].
-
-	"The slow but sure way..."
-	self initPrimCall.
 	result := self stObject: rcvr at: index.
 	self successful ifTrue:
 		[stringy ifTrue: [result := self characterForAscii: (objectMemory integerValueOf: result)].
-		^ self pop: argumentCount+1 thenPush: result]
+		^self pop: argumentCount+1 thenPush: result]
 ]
 
 { #category : #'indexing primitive support' }
 StackInterpreter >> commonAtPut: stringy [
 	"This code is called if the receiver responds primitively to at:Put:.
-	If this is so, it will be installed in the atPutCache so that subsequent calls of at:
-	or  next may be handled immediately in bytecode primitive routines."
-	| value index rcvr atIx |
+	 N.B. this does *not* use the at cache, instead inlining stObject:at:put:.
+	 Using the at cache here would require that callers set messageSelector
+	 and lkupClass and that is onerous and error-prone, and in any case,
+	 inlining produces much better performance than using the at cache here."
+	| value index rcvr |
+	<inline: true> "to get it inlined in primitiveAtPut and primitiveStringAtPut"
 	value := self stackTop.
 	self initPrimCall.
 	rcvr := self stackValue: 2.
@@ -3418,33 +3438,11 @@ StackInterpreter >> commonAtPut: stringy [
 	(objectMemory isIntegerObject: index) ifFalse:
 		[^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
-
-	"NOTE:  The atPut-cache, since it is specific to the non-super response to #at:Put:.
-	Therefore we must determine that the message is #at:Put: (not, eg, #basicAt:Put:),
-	and that the send is not a super-send, before using the at-cache."
-	(messageSelector = (self specialSelector: 17)
-		and: [lkupClass = (objectMemory fetchClassOfNonImm: rcvr)])
-		ifTrue:
-		["OK -- look in the at-cache"
-		atIx := (rcvr bitAnd: AtCacheMask) + AtPutBase.  "Index into atPutCache"
-		(atCache at: atIx+AtCacheOop) = rcvr ifFalse:
-			["Rcvr not in cache.  Attempt to install it..."
-			(self install: rcvr inAtCache: atCache at: atIx string: stringy) ifFalse:
-				[self assert: (objectMemory isContextNonImm: rcvr).
-				self initPrimCall.
-				^self primitiveContextAtPut]].
-		self successful ifTrue:
-			[self commonVariable: rcvr at: index put: value cacheIndex: atIx].
-		self successful ifTrue:
-			[^ self pop: argumentCount+1 thenPush: value]].
-
-	"The slow but sure way..."
-	self initPrimCall.
 	stringy
 		ifTrue: [self stObject: rcvr at: index put: (self asciiOfCharacter: value)]
 		ifFalse: [self stObject: rcvr at: index put: value].
 	self successful ifTrue:
-		[^ self pop: argumentCount+1 thenPush: value]
+		[^self pop: argumentCount+1 thenPush: value]
 ]
 
 { #category : #'return bytecodes' }
@@ -6159,12 +6157,9 @@ StackInterpreter >> initializeInterpreter: bytesToShift [
 	stackLimit := 0. "This is also the initialization flag for the stack system."
 	stackPage := overflowedPage := 0.
 	extraFramesToMoveOnOverflow := 0.
-	method := objectMemory nilObject.
+	method := newMethod := objectMemory nilObject.
 	self cCode: [self cppIf: MULTIPLEBYTECODESETS ifTrue: [bytecodeSetSelector := 0]]
 		inSmalltalk: [bytecodeSetSelector := 0].
-	messageSelector := objectMemory nilObject.
-	newMethod := objectMemory nilObject.
-	lkupClass := objectMemory nilObject.
 	methodDictLinearSearchLimit := 8.
 	self flushMethodCache.
 	self flushAtCache.
@@ -6284,21 +6279,26 @@ StackInterpreter >> install: rcvr inAtCache: cache at: atIx string: stringy [
 	"Attempt to install the oop of this object in the given cache (at or atPut),
 	 along with its size, format and fixedSize. Answer if this was successful."
 	| hdr fmt totalLength fixedFields |
+	<inline: true>
 	<var: #cache type: 'sqInt *'>
 
 	hdr := objectMemory baseHeader: rcvr.
 	fmt := objectMemory formatOfHeader: hdr.
-	(fmt = objectMemory indexablePointersFormat and: [objectMemory isContextHeader: hdr]) ifTrue:
-		["Contexts must not be put in the atCache, since their size is not constant"
-		self primitiveFailFor: PrimErrBadReceiver.
-		^false].
-	totalLength := objectMemory lengthOf: rcvr baseHeader: hdr format: fmt.
-	fixedFields := objectMemory fixedFieldsOf: rcvr format: fmt length: totalLength.
+	stringy
+		ifTrue:
+			[totalLength := objectMemory lengthOf: rcvr baseHeader: hdr format: fmt.
+			 fixedFields := 0.
+			 fmt := fmt + objectMemory firstStringyFakeFormat]  "special flag for strings"
+		ifFalse:
+			[(fmt = objectMemory indexablePointersFormat and: [objectMemory isContextHeader: hdr]) ifTrue:
+				["Contexts must not be put in the atCache, since their size is not constant"
+				self primitiveFailFor: PrimErrBadReceiver.
+				^false].
+			 totalLength := objectMemory lengthOf: rcvr baseHeader: hdr format: fmt.
+			 fixedFields := objectMemory fixedFieldsOf: rcvr format: fmt length: totalLength].
 
 	cache at: atIx+AtCacheOop put: rcvr.
-	cache at: atIx+AtCacheFmt put: (stringy
-										ifTrue: [fmt + objectMemory firstStringyFakeFormat]  "special flag for strings"
-										ifFalse: [fmt]).
+	cache at: atIx+AtCacheFmt put: fmt.
 	cache at: atIx+AtCacheFixedFields put: fixedFields.
 	cache at: atIx+AtCacheSize put: totalLength - fixedFields.
 	^true
@@ -7456,15 +7456,15 @@ StackInterpreter >> mapTraceLogs [
 StackInterpreter >> mapVMRegisters [
 	"Map the oops in the interpreter's vm ``registers'' to their new values 
 	during garbage collection or a become: operation."
-	"Assume: All traced variables contain valid oops."
+	"Assume: All traced variables contain valid oops.
+	 N.B. Don't trace messageSelector and lkupClass; these are ephemeral, live
+	 only during message lookup and because createActualMessageTo will not
+	 cause a GC these cannot change during message lookup."
 	instructionPointer := instructionPointer - method. "*rel to method"
-	method := (objectMemory remap: method).
+	method := objectMemory remap: method.
 	instructionPointer := instructionPointer + method. "*rel to method"
-	(objectMemory isIntegerObject: messageSelector) ifFalse:
-		[messageSelector := objectMemory remap: messageSelector].
-	(objectMemory isIntegerObject: newMethod) ifFalse:
-		[newMethod := objectMemory remap: newMethod].
-	lkupClass := objectMemory remap: lkupClass
+	(objectMemory isImmediate: newMethod) ifFalse:
+		[newMethod := objectMemory remap: newMethod]
 ]
 
 { #category : #'object memory support' }
@@ -7504,7 +7504,10 @@ StackInterpreter >> markAndTraceAndMaybeFreeStackPages: fullGCFlag [
 { #category : #'object memory support' }
 StackInterpreter >> markAndTraceInterpreterOops: fullGCFlag [
 	"Mark and trace all oops in the interpreter's state."
-	"Assume: All traced variables contain valid oops."
+	"Assume: All traced variables contain valid oops.
+	 N.B. Don't trace messageSelector and lkupClass; these are ephemeral, live
+	 only during message lookup and because createActualMessageTo will not
+	 cause a GC these cannot change during message lookup."
 	| oop |
 	"Must mark stack pages first to initialize the per-page trace
 	 flags for full garbage collect before any subsequent tracing."
@@ -7512,11 +7515,8 @@ StackInterpreter >> markAndTraceInterpreterOops: fullGCFlag [
 	self markAndTraceTraceLog.
 	self markAndTracePrimTraceLog.
 	objectMemory markAndTrace: objectMemory specialObjectsOop. "also covers nilObj, trueObj, falseObj, and compact classes"
-	(objectMemory isIntegerObject: messageSelector) ifFalse:
-		[objectMemory markAndTrace: messageSelector].
-	(objectMemory isIntegerObject: newMethod) ifFalse:
-		[objectMemory markAndTrace: newMethod.
-	objectMemory markAndTrace: lkupClass].
+	(objectMemory isImmediate: newMethod) ifFalse:
+		[objectMemory markAndTrace: newMethod].
 	self traceProfileState.
 	tempOop = 0 ifFalse: [objectMemory markAndTrace: tempOop].
 
@@ -8619,7 +8619,9 @@ StackInterpreter >> printActivationNameFor: aMethod receiver: anObject isBlock: 
 					 self print: '('.
 					 self printNameOfClass: methClass count: 5.
 					 self print: ')']]
-		ifFalse: [self print: 'INVALID RECEIVER'].
+		ifFalse:
+			[self cCode: '' inSmalltalk: [self halt].
+			 self print: 'INVALID RECEIVER'].
 	self print: '>'.
 	(objectMemory addressCouldBeOop: methodSel)
 		ifTrue:
@@ -10320,13 +10322,12 @@ StackInterpreter >> sendInvokeCallback: thunkPtr Stack: stackPtr Registers: regs
 	 to Alien class with the supplied args.  The arguments are raw C addresses
 	 and are converted to integer objects on the way."
 	<export: true>
-	self flag: #obsolete.
-	lkupClassTag := self fetchClassTagOfNonImm: (self splObj: ClassAlien).
+	| classTag |
+	classTag := self fetchClassTagOfNonImm: (self splObj: ClassAlien).
 	messageSelector := self splObj: SelectorInvokeCallback.
 	argumentCount := 4.
-	(self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifFalse:
-	 	[lkupClass := objectMemory classForClassTag: lkupClassTag.
-		(self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:
+	(self lookupInMethodCacheSel: messageSelector classTag: classTag) ifFalse:
+	 	[(self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
 			[^false]].
 	((self argumentCountOf: newMethod) = 4
 	and: [primitiveFunctionPointer = 0]) ifFalse:
@@ -10357,11 +10358,11 @@ StackInterpreter >> sendInvokeCallbackContext: vmCallbackContext [
 	 The arguments are raw C addresses and are converted to integer objects on the way."
 	<export: true>
 	<var: #vmCallbackContext type: #'VMCallbackContext *'>
-	lkupClassTag := self fetchClassTagOfNonImm: (self splObj: ClassAlien).
+	| classTag |
+	classTag := self fetchClassTagOfNonImm: (self splObj: ClassAlien).
 	messageSelector := self splObj: SelectorInvokeCallback.
-	(self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifFalse:
-	 	[lkupClass := objectMemory classForClassTag: lkupClassTag.
-		(self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:
+	(self lookupInMethodCacheSel: messageSelector classTag: classTag) ifFalse:
+	 	[(self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
 			[^false]].
 	primitiveFunctionPointer ~= 0 ifTrue:
 		[^false].
@@ -10691,7 +10692,8 @@ StackInterpreter >> shortPrintFrameAndCallers: theFP [
 	<var: #theFP type: #'char *'>
 	(stackPages couldBeFramePointer: theFP) ifFalse: [^nil].
 	self shortPrintFrame: theFP.
-	self shortPrintFrameAndCallers: (self frameCallerFP: theFP)
+	(self isBaseFrame: theFP) ifFalse:
+		[self shortPrintFrameAndCallers: (self frameCallerFP: theFP)]
 ]
 
 { #category : #'debug printing' }
@@ -11079,7 +11081,7 @@ StackInterpreter >> stObject: array at: index [
 	"Return what ST would return for <obj> at: index."
 
 	| hdr fmt totalLength fixedFields stSize |
-	<inline: false>
+	<inline: true>
 	hdr := objectMemory baseHeader: array.
 	fmt := objectMemory formatOfHeader: hdr.
 	totalLength := objectMemory lengthOf: array baseHeader: hdr format: fmt.
@@ -11104,7 +11106,7 @@ StackInterpreter >> stObject: array at: index [
 StackInterpreter >> stObject: array at: index put: value [
 	"Do what ST would return for <obj> at: index put: value."
 	| hdr fmt totalLength fixedFields stSize |
-	<inline: false>
+	<inline: true>
 	hdr := objectMemory baseHeader: array.
 	fmt := objectMemory formatOfHeader: hdr.
 	totalLength := objectMemory lengthOf: array baseHeader: hdr format: fmt.

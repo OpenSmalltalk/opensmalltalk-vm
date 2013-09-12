@@ -806,9 +806,16 @@ SpurMemoryManager >> characterValueOf: oop [
 ]
 
 { #category : #'debug support' }
+SpurMemoryManager >> cheapAddressCouldBeInHeap: address [ 
+	^(address bitAnd: self wordSize - 1) = 0
+	  and: [address >= startOfMemory
+	  and: [address <= freeOldSpaceStart]]
+]
+
+{ #category : #'debug support' }
 SpurMemoryManager >> cheapAddressCouldBeObj: address [ 
 	^(address bitAnd: self baseHeaderSize - 1) = 0
-	  and: [address >= scavenger eden start
+	  and: [address >= startOfMemory
 	  and: [address <= freeOldSpaceStart]]
 ]
 
@@ -1666,6 +1673,12 @@ SpurMemoryManager >> integerObjectOf: value [
 ]
 
 { #category : #immediates }
+SpurMemoryManager >> integerObjectOfCharacterObject: oop [
+	"Immediate characters are unsigned"
+	^(self cCoerceSimple: oop to: #'unsigned long') >> 1
+]
+
+{ #category : #immediates }
 SpurMemoryManager >> integerValueOf: oop [
 	^self subclassResponsibility
 ]
@@ -1721,6 +1734,11 @@ SpurMemoryManager >> isClassInClassTable: objOop [
 	hash = 0 ifTrue:
 		[false].
 	^(self classAtIndex: hash) = objOop
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isClassOfNonImm: objOop equalTo: classOop [
+	self shouldBeImplemented
 ]
 
 { #category : #'object access' }
@@ -1864,7 +1882,8 @@ SpurMemoryManager >> isIntegerObject: oop [
 		displayBitsOf:Left:Top:Right:Bottom:
 		fetchStackPointerOf:
 		primitiveContextAt
-		primitiveContextAtPut) includes: thisContext sender method selector) ifFalse:
+		primitiveContextAtPut
+		subscript:with:storing:format:) includes: thisContext sender method selector) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
