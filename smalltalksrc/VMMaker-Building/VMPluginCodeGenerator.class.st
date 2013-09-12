@@ -125,7 +125,7 @@ VMPluginCodeGenerator >> emitCTypesOn: aStream [
 	(self structClassesForTranslationClasses: { pluginClass }) do:
 		[:structClass|
 		(structClass isAbstract not
-		 and: [vmClass shouldGenerateTypedefFor: structClass]) ifTrue:
+		 and: [pluginClass shouldGenerateTypedefFor: structClass]) ifTrue:
 			[structClass printTypedefOn: aStream.
 			 aStream cr; cr]]
 ]
