@@ -633,7 +633,7 @@ SpurBootstrap >> defineKnownClassIndices [
 	classMessage := oldHeap splObj: (VMObjectIndices bindingOf: #ClassMessage) value.
 	classMethodContext := oldHeap splObj: (VMObjectIndices bindingOf: #ClassMethodContext) value.
 	classBlockClosure := oldHeap splObj: (VMObjectIndices bindingOf: #ClassBlockClosure) value.
-	"c.f. CogMemoryManager class>>intializeCompactClassIndices".
+	"c.f. SpurMemoryManager class>>intializeCompactClassIndices".
 	classToIndex keysDo:
 		[:oldClass|
 		self assert: (oldInterpreter addressCouldBeClassObj: oldClass)].
@@ -926,7 +926,8 @@ SpurBootstrap >> interpreter: sim object: receiver perform: selector withArgumen
 	fp := sim localFP.
 	sim normalSend.
 	[fp = sim localFP] whileFalse:
-		[sim singleStep].
+		[sim byteCount = 3976273 ifTrue: [self halt].
+		 sim singleStep].
 	result := sim internalPopStack.
 	self assert: sim localIP - 1 = savedpc.
 	sim localIP: savedpc.
@@ -1103,6 +1104,12 @@ SpurBootstrap >> rehashImage [
 	newHeap coInterpreter: sim.
 	sim initializeInterpreter: 0.
 	sim instVarNamed: 'methodDictLinearSearchLimit' put: SmallInteger maxVal.
+
+	newHeap
+		setHashBitsOf: newHeap nilObject to: 1;
+		setHashBitsOf: newHeap falseObject to: 2;
+		setHashBitsOf: newHeap trueObject to: 3.
+
 	rehashFlags := ByteArray new: newHeap classTableIndex + 7 // 8.
 	n := 0.
 	newHeap classTableObjectsDo:
@@ -1119,7 +1126,8 @@ SpurBootstrap >> rehashImage [
 						bitOr: (1 << (classIndex bitAnd: 7)))]].
 	Transcript cr; print: n; nextPutAll: ' classes understand rehash. rehashing instances...'; flush.
 	self withExecutableInterpreter: sim
-		do: [newHeap allObjectsDo:
+		do: "don't rehash twice (actually without limit), so don't rehash any new objects created."
+			[newHeap allExistingObjectsDo:
 				[:o| | classIndex |
 				classIndex := newHeap classIndexOf: o.
 				((rehashFlags at: classIndex >> 3 + 1) anyMask: 1 << (classIndex bitAnd: 7)) ifTrue:
@@ -1240,6 +1248,7 @@ SpurBootstrap >> transform [
 	self bootstrapImage.
 	self validate.
 	self rehashImage.
+	self followForwardingPointers.
 	Transcript nextPutAll: 'done.'; flush.
 ]
 
@@ -1252,19 +1261,21 @@ SpurBootstrap >> validate [
 
 	duplicates := { 3. newHeap arrayClassIndexPun. newHeap weakArrayClassIndexPun }.
 	maxClassIndex := classToIndex inject: 0 into: [:a :b| a max: b].
-	self assert: ((0 to: maxClassIndex) select:
+	self assert: ((newHeap arrayClassIndexPun to: maxClassIndex) select:
 					[:idx| | classObj |
 					(classObj := newHeap classAtIndex: idx) ~= newHeap nilObject
 					and: [(newHeap classIndexOf: classObj) = (newHeap rawHashBitsOf: classObj)]]) isEmpty.
 	0 to: maxClassIndex do:
 		[:index| | classObj |
-		(classObj := newHeap classAtIndex: index) = newHeap nilObject
-			ifTrue:
-				[self assert: (classToIndex keyAtValue: index ifAbsent: []) isNil]
-			ifFalse:
-				[self assert: (newHeap classIndexOf: classObj) ~= (newHeap rawHashBitsOf: classObj).
-				(duplicates includes: index) ifFalse:
-					[self assert: (newHeap rawHashBitsOf: classObj) = index]]].
+		(index <= newHeap tagMask
+		 and: [index > newHeap isForwardedObjectClassIndexPun]) ifTrue:
+			[(classObj := newHeap classAtIndex: index) = newHeap nilObject
+				ifTrue:
+					[self assert: (classToIndex keyAtValue: index ifAbsent: []) isNil]
+				ifFalse:
+					[self assert: (newHeap classIndexOf: classObj) ~= (newHeap rawHashBitsOf: classObj).
+					(duplicates includes: index) ifFalse:
+						[self assert: (newHeap rawHashBitsOf: classObj) = index]]]].
 	classToIndex keysAndValuesDo:
 		[:oldClass :idx|
 		self assert: (newHeap rawHashBitsOf: (map at: oldClass)) = idx. 
