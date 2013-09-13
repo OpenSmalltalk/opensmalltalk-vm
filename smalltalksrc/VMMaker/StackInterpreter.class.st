@@ -133,6 +133,7 @@ Class {
 		'VMBasicConstants',
 		'VMMethodCacheConstants',
 		'VMObjectIndices',
+		'VMSpurObjectRepresentationConstants',
 		'VMSqueakClassIndices',
 		'VMSqueakV3BytecodeConstants',
 		'VMSqueakV3ObjectRepresentationConstants',
@@ -1682,10 +1683,7 @@ StackInterpreter >> addressCouldBeClassObj: maybeClassObj [
 	"Answer if maybeClassObj looks like a class object"
 	<inline: false>
 	^(objectMemory addressCouldBeObj: maybeClassObj)
-	  and: [((objectMemory isPointersNonImm: maybeClassObj) and: [(objectMemory lengthOf: maybeClassObj) >= (InstanceSpecificationIndex+1)])
-	  and: [(objectMemory isPointers: (objectMemory fetchPointer: SuperclassIndex ofObject: maybeClassObj))
-	  and: [(objectMemory isPointers: (objectMemory fetchPointer: MethodDictionaryIndex ofObject: maybeClassObj))
-	  and: [(objectMemory isIntegerObject: (objectMemory fetchPointer: InstanceSpecificationIndex ofObject: maybeClassObj))]]]]
+	  and: [self objCouldBeClassObj: maybeClassObj]
 ]
 
 { #category : #'debug support' }
@@ -2057,7 +2055,7 @@ StackInterpreter >> bytecodePrimAt [
 	| index rcvr result atIx |
 	index := self internalStackTop.
 	rcvr := self internalStackValue: 1.
-	((objectMemory isIntegerObject: rcvr) not
+	((objectMemory isNonImmediate: rcvr)
 	 and: [objectMemory isIntegerObject: index]) ifTrue:
 		[atIx := rcvr bitAnd: AtCacheMask.  "Index into atCache = 4N, for N = 0 ... 7"
 		(atCache at: atIx+AtCacheOop) ~= rcvr ifTrue:
@@ -2105,7 +2103,7 @@ StackInterpreter >> bytecodePrimAtPut [
 	value := self internalStackTop.
 	index := self internalStackValue: 1.
 	rcvr := self internalStackValue: 2.
-	((objectMemory isIntegerObject: rcvr) not
+	((objectMemory isNonImmediate: rcvr)
 	 and: [objectMemory isIntegerObject: index]) ifTrue:
 		[atIx := (rcvr bitAnd: AtCacheMask) + AtPutBase.  "Index into atPutCache"
 		 (atCache at: atIx+AtCacheOop) ~= rcvr ifTrue:
@@ -4976,7 +4974,8 @@ StackInterpreter >> findClassForSelector: aSelector lookupClass: startClass do: 
 { #category : #'debug support' }
 StackInterpreter >> findClassOfMethod: meth forReceiver: rcvr [
 	| rclass |
-	(objectMemory addressCouldBeOop: rcvr) ifTrue:
+	((objectMemory addressCouldBeOop: rcvr)
+	and: [(objectMemory isOopForwarded: rcvr) not]) ifTrue:
 		[rclass := objectMemory fetchClassOf: rcvr.
 		 (self addressCouldBeClassObj: rclass) ifTrue:
 			[rclass := self findClassContainingMethod: meth startingAt: rclass.
@@ -5092,13 +5091,7 @@ StackInterpreter >> findNewMethodInClassTag: classTag [
 	<inline: false>
 	ok := self lookupInMethodCacheSel: messageSelector classTag: classTag.
 	ok ifFalse: "entry was not found in the cache; look it up the hard way "
-		[class := objectMemory classForClassTag: classTag.
-		 objectMemory hasSpurMemoryManagerAPI ifTrue:
-		 	[| oop |
-			 oop := self stackValue: argumentCount.
-			 ((objectMemory isNonImmediate: oop)
-			  and: [objectMemory isForwarded: oop]) ifTrue:
-				[self stackValue: argumentCount put: (objectMemory followForwarded: oop)]].
+		[class := self sendFaultFor: classTag.
 		 self lookupMethodInClass: class.
 		 self addNewMethodToCache: class]
 ]
@@ -5349,8 +5342,34 @@ StackInterpreter >> flushMethodCacheFrom: memStart to: memEnd [
 	1 to: AtCacheTotalSize do: [:i | atCache at: i put: 0]
 ]
 
+{ #category : #'lazy become' }
+StackInterpreter >> followForwardedFrameContents: theFP stackPointer: theSP [
+	"follow pointers in the current stack frame up to theSP."
+	<var: #theFP type: #'char *'>
+	<var: #theSP type: #'char *'>
+	theFP + (self frameStackedReceiverOffset: theFP)
+		to: theFP + FoxCallerSavedIP + BytesPerWord
+		by: BytesPerWord
+		do: [:ptr| | oop |
+			oop := stackPages longAt: ptr.
+			((objectMemory isNonImmediate: oop)
+			 and: [objectMemory isForwarded: oop]) ifTrue:
+				[stackPages longAt: ptr put: (objectMemory followForwarded: oop)]].
+	theSP
+		to: theFP + FoxReceiver
+		by: BytesPerWord
+		do: [:ptr| | oop |
+			oop := stackPages longAt: ptr.
+			((objectMemory isNonImmediate: oop)
+			 and: [objectMemory isForwarded: oop]) ifTrue:
+				[stackPages longAt: ptr put: (objectMemory followForwarded: oop)]].
+	self assert: (objectMemory isForwarded: (self frameMethod: theFP)) not.
+	(self frameHasContext: theFP) ifTrue:
+		[self assert: (objectMemory isForwarded: (self frameContext: theFP)) not]
+]
+
 { #category : #'object memory support' }
-StackInterpreter >> followForwardingPointersInStackZone [
+StackInterpreter >> followForwardingPointersInStackZone: becomeEffectsFlags [
 	"Spur's become: is lazy, turning the becommed object into a forwarding object to the other.
 	 The read-barrier is minimised by arranging that forwarding pointers will fail a method cache probe,
 	 since notionally objects' internals are accessed only via sending messages to them (the exception
@@ -5366,12 +5385,15 @@ StackInterpreter >> followForwardingPointersInStackZone [
 	<var: #callerFP type: #'char *'>
 	<var: #theIPPtr type: #'char *'>
 
-	(objectMemory isForwarded: method) ifTrue:
-		[theIPPtr := instructionPointer - method.
-		 method := objectMemory followForwarded: method.
-		 instructionPointer := method + theIPPtr].
-	(objectMemory isForwarded: newMethod) ifTrue:
-		[newMethod := objectMemory followForwarded: newMethod].
+	"NEEDS MORE THOUGHT!  WHAT ABOUT methodClassAssociation etc
+	 examine becomeEffectsFlags"
+	(becomeEffectsFlags anyMask: BecameCompiledMethodFlag) ifTrue:
+		[(objectMemory isForwarded: method) ifTrue:
+			[theIPPtr := instructionPointer - method.
+			 method := objectMemory followForwarded: method.
+			 instructionPointer := method + theIPPtr].
+		(objectMemory isForwarded: newMethod) ifTrue:
+			[newMethod := objectMemory followForwarded: newMethod]].
 
 	"Need to write back the frame pointers unless all pages are free (as in snapshot)"
 	self assert: stackPage ~= 0.
@@ -6413,14 +6435,8 @@ StackInterpreter >> internalFindNewMethod [
 	<inline: true>
 	ok := self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag.
 	ok ifFalse: "entry was not found in the cache; look it up the hard way"
-		[lkupClass := objectMemory classForClassTag: lkupClassTag.
-		 objectMemory hasSpurMemoryManagerAPI ifTrue:
-			[| oop |
-			 oop := self internalStackValue: argumentCount.
-			 ((objectMemory isNonImmediate: oop)
-			  and: [objectMemory isForwarded: oop]) ifTrue:
-				[self internalStackValue: argumentCount put: (objectMemory followForwarded: oop)]].
-		 self externalizeIPandSP.
+		[self externalizeIPandSP.
+		 lkupClass := self sendFaultFor: lkupClassTag.
 		 self lookupMethodInClass: lkupClass.
 		 self internalizeIPandSP.
 		 self addNewMethodToCache: lkupClass]
@@ -8101,6 +8117,17 @@ StackInterpreter >> numStkPages [
 	^numStackPages
 ]
 
+{ #category : #'debug support' }
+StackInterpreter >> objCouldBeClassObj: objOop [
+	"Answer if objOop looks like a class object"
+	<inline: false>
+	^(objectMemory isPointersNonImm: objOop)
+	  and: [(objectMemory numSlotsOf: objOop) >= (InstanceSpecificationIndex+1)
+	  and: [(objectMemory isPointers: (objectMemory fetchPointer: SuperclassIndex ofObject: objOop))
+	  and: [(objectMemory isPointers: (objectMemory fetchPointer: MethodDictionaryIndex ofObject: objOop))
+	  and: [(objectMemory isIntegerObject: (objectMemory fetchPointer: InstanceSpecificationIndex ofObject: objOop))]]]]
+]
+
 { #category : #'plugin primitive support' }
 StackInterpreter >> objectArg: index [
 	"Like #stackObjectValue: but access method arguments left-to-right"
@@ -8332,9 +8359,9 @@ StackInterpreter >> positive64BitIntegerFor: integerValue [
 ]
 
 { #category : #'object memory support' }
-StackInterpreter >> postBecomeAction: updateReceiversInStackZone [
-	updateReceiversInStackZone ifTrue:
-		[self followForwardingPointersInStackZone]
+StackInterpreter >> postBecomeAction: becomeEffectsFlags [
+	becomeEffectsFlags ~= 0 ifTrue:
+		[self followForwardingPointersInStackZone: becomeEffectsFlags]
 ]
 
 { #category : #'object memory support' }
@@ -8610,7 +8637,8 @@ StackInterpreter >> printActivationNameFor: aMethod receiver: anObject isBlock: 
 	methClass := self findClassOfMethod: aMethod forReceiver: anObject.
 	methodSel := self findSelectorOfMethod: aMethod.
 	((objectMemory addressCouldBeOop: anObject)
-	 and: [self addressCouldBeClassObj: (classObj := objectMemory fetchClassOf: anObject)])
+	 and: [(objectMemory isForwarded: anObject) not
+	 and: [self addressCouldBeClassObj: (classObj := objectMemory fetchClassOf: anObject)]])
 		ifTrue:
 			[classObj = methClass
 				ifTrue: [self printNameOfClass: methClass count: 5]
@@ -9155,7 +9183,7 @@ StackInterpreter >> printOop: oop [
 	(objectMemory isForwarded: oop) ifTrue:
 		[self
 			print: ' is a forwarded object to '; printHex: (objectMemory followForwarded: oop);
-			print: ' of slot size '; printNum: (objectMemory numSlotsOf: oop); cr.
+			print: ' of slot size '; printNum: (objectMemory numSlotsOfAny: oop); cr.
 		 ^nil].
 	self print: ': a(n) '.
 	self printNameOfClass: (cls := objectMemory fetchClassOfNonImm: oop) count: 5.
@@ -10314,6 +10342,28 @@ StackInterpreter >> sendAbsentImplicit0ArgsBytecode [
 	messageSelector := self literal: (currentBytecode bitAnd: 16rF).
 	argumentCount := 0.
 	self commonSendAbsentImplicit
+]
+
+{ #category : #'message sending' }
+StackInterpreter >> sendFaultFor: classTag [
+	"Handle a send fault that may be due to a send to a forwarded object.
+	 Unforward the receiver on the stack and answer its actual class."
+	| rcvr |
+	(objectMemory isForwardedClassTag: classTag) ifFalse:
+		[^objectMemory classForClassTag: classTag].
+
+	rcvr := self stackValue: argumentCount.
+	"should *not* be a super send, so te receiver should be forwarded."
+	self assert: (objectMemory isOopForwarded: rcvr).
+	rcvr := objectMemory followForwarded: rcvr.
+	self stackValue: argumentCount put: rcvr.
+	self followForwardedFrameContents: framePointer
+		stackPointer: stackPointer + (argumentCount + 1 * BytesPerWord). "don't repeat effort"
+	(objectMemory isPointers: (self frameReceiver: framePointer)) ifTrue:
+		[objectMemory
+			followForwardedObjectFields: (self frameReceiver: framePointer)
+			toDepth: 0].
+	^objectMemory fetchClassOf: rcvr
 ]
 
 { #category : #'callback support' }

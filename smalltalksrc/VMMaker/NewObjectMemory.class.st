@@ -343,7 +343,7 @@ NewObjectMemory >> become: array1 with: array2 twoWay: twoWayFlag copyHash: copy
 	twoWayFlag
 		ifTrue: [self restoreHeadersAfterBecoming: array1 with: array2]
 		ifFalse: [self restoreHeadersAfterForwardBecome: copyHashFlag].
-	coInterpreter postBecomeAction: false.
+	coInterpreter postBecomeAction: 0.
 
 	self initializeMemoryFirstFree: freeStart. "re-initialize memory used for forwarding table"
 	self leakCheckBecome ifTrue:

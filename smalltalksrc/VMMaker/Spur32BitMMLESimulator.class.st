@@ -53,6 +53,14 @@ Spur32BitMMLESimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
 	aFloat at: 1 put: (self long32At: floatBitsAddress+4)
 ]
 
+{ #category : #become }
+Spur32BitMMLESimulator >> forward: obj1 to: obj2 [
+	"(obj1 = 16r150CD8 or: [obj1 = 16r1510B8
+	 or: [obj2 = 16r150CD8 or: [obj2 = 16r1510B8]]]) ifTrue:
+		[self halt]."
+	^super forward: obj1 to: obj2
+]
+
 { #category : #'header format' }
 Spur32BitMMLESimulator >> headerForSlots: numSlots format: formatField classIndex: classIndex [
 	"The header format in LSB is
