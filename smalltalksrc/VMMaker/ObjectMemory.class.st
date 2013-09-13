@@ -2853,6 +2853,14 @@ ObjectMemory >> isForwarded: oop [
 	^false
 ]
 
+{ #category : #'interpreter access' }
+ObjectMemory >> isForwardedClassTag: classTag [
+	"Compatibility wth SpurMemoryManager.  In ObjectMemory, no forwarding pointers
+	 are visible to the VM."
+	<inline: true>
+	^false
+]
+
 { #category : #'header access' }
 ObjectMemory >> isFreeObject: oop [
 
@@ -2979,6 +2987,14 @@ ObjectMemory >> isOopCompiledMethod: oop [
 	<api>
 	^(self isNonIntegerObject: oop)
 	 and: [(self formatOf: oop) >= self firstCompiledMethodFormat]
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> isOopForwarded: oop [
+	"Compatibility wth SpurMemoryManager.  In ObjectMemory, no forwarding pointers
+	 are visible to the VM."
+	<inline: true>
+	^false
 ]
 
 { #category : #'header access' }
