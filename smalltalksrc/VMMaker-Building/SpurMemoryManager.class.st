@@ -56,7 +56,7 @@ freeLists
 	- an array of list heads of free chunks of each size (in allocationUnits).  the 0'th element is the head of a tree of free chunks of size > 63 slots.
 
 freeOldSpaceStart
-	- the last used address in oldSPace.  The space between freeOldSpaceStart and endOfMemory can be used for oldSPace allocations.
+	- the last used address in oldSpace.  The space between freeOldSpaceStart and endOfMemory can be used for oldSpace allocations.
 
 freeStart
 	- the last used address in eden.  this is where new objects are allocated if there is room in eden.
@@ -191,7 +191,7 @@ A segmented oldSpace is useful.  It allows growing oldSpace incrementally, addin
 
 Lazy become & the become read barrier.
 
-As described earlier the basic idea behind lazy become is to use corpses (forwarding objects) that are followed lazily during GC and inline cache miss.  However, a lazy scheme would appear to require a read barrier to avoid accessing the coirpse and mak sure wel follow the forwarding pointer.  Without hardware support read barriers have poor performance, so we must restrict the read barrier as much as possible.  The main goal is to avoid having to scan all of the heap to fix up pointers, as is done with ObjectMemory.  We're happy to do some scanning of a small subset oif the heap, but become: cannot scale to large heaps if it must scan the entire heap.  Objects with named inst vars and CompiledMethods are accessed extensively by the interpreter and jitted code.  We must avoid as m,uch checking of such accesses as possible; We judge an explicit read barrier on all accesses far too expensive.  The accesses the VM makes which notionally require a read barrier are:
+As described earlier the basic idea behind lazy become is to use corpses (forwarding objects) that are followed lazily during GC and inline cache miss.  However, a lazy scheme would appear to require a read barrier to avoid accessing the coirpse and mak sure wel follow the forwarding pointer.  Without hardware support read barriers have poor performance, so we must restrict the read barrier as much as possible.  The main goal is to avoid having to scan all of the heap to fix up pointers, as is done with ObjectMemory.  We're happy to do some scanning of a small subset oif the heap, but become: cannot scale to large heaps if it must scan the entire heap.  Objects with named inst vars and CompiledMethods are accessed extensively by the interpreter and jitted code.  We must avoid as much checking of such accesses as possible; We judge an explicit read barrier on all accesses far too expensive.  The accesses the VM makes which notionally require a read barrier are:
 - inst vars of thisContext, including stack contents (the receiver of a message and its arguments), which in Cog are the fields of the current stack frame, and the sender chain during (possibly non-local) return
 - named inst vars of the receiver
 - literals of the current method, in particular variable bindings (a.k.a. literal variables which are global associations), including the methodClass association.
@@ -207,12 +207,12 @@ We avoid a read barrier on access to receiver inst vars by scanning the stack zo
 Amd of course, all of the scavenger, the incremental scan-mark-compactor and the global garbage collector follow and eliminate forwarding pointers as part of their object graph traversals.
 
 This means explicit read barriers in
-- push.store/pop literal variable
+- push/store/pop literal variable
 - return (accessing the sender context, its inst vars, and the method class association of its method)
 - primitives that inspect the class and/or state of their arguments, excepting immediates.  e.g. in at:put: (almost) no checks are required because the receiver will have been caught by the message send trap, the index is a SmallInteger and the argument is either an immediate Character (in String>>at:put:) or a possibly forwarded object stored into an array; i.e. the argument's state is inspected only if it is an immediate (the exception is 64-bit indexable and 32-bit indexable floats & bitmaps which could take LargeIntegers whose contents are copied into the relevant field).  But e.g. in beCursor extensive checks are required because the primitive inspects a couple of form instances, and a point that are sub-state of the Cursor object.
 
 One approach would be an explicit call in the primitive, made convenient via providing something like ensureNoForwardingPointersIn: obj toDepth: n, which in beCursor's case would look like interpreter ensureNoForwardingPointersIn: cursorObj toDepth: 3 (the offset point of the mask form).
-Another approach would be to put an explicit read barrier in store/fetchPointer:ofObject:[withValue:] et al, but provide an additional api (e.g. store/fetchPointer:ofNonForwardedObject:[withValue:] et al) and use it in the VM's internals.  The former approach is erro-prone, but the latter approach is potentially ugly, touching nearly all of the core VM code.  It would appear that one of these two approaches must be chosen.
+Another approach would be to put an explicit read barrier in store/fetchPointer:ofObject:[withValue:] et al, but provide an additional api (e.g. store/fetchPointer:ofNonForwardedObject:[withValue:] et al) and use it in the VM's internals.  The former approach is error-prone, but the latter approach is potentially ugly, touching nearly all of the core VM code.  It would appear that one of these two approaches must be chosen.
 
 61-bit immediate Floats
 Representation for immediate doubles, only used in the 64-bit implementation. Immediate doubles have the same 52 bit mantissa as IEEE double-precision  floating-point, but only have 8 bits of exponent.  So they occupy just less than the middle 1/8th of the double range.  They overlap the normal single-precision floats which also have 8 bit exponents, but exclude the single-precision denormals (exponent-127) and the single-precsion NaNs (exponent +127).  +/- zero is just a pair of values with both exponent and mantissa 0. 
@@ -250,6 +250,9 @@ Total Number of Classes and Instance-specific Behaviours
 While the class index header field has advantages (saving significant header space, especially in 64-bits, providing a non-moving cache tag for inline caches, small constants for instantiating well-known classes instead of having to fetch them from a table such as the specialObjectsArray) it has the downside of limiting the number of classes.  For Smalltalk programs 2^20 to 2^24 classes is adequate for some time to come, but for prototype languages such as JavaScript this is clearly inadequate, and we woud like to support the ability to host prototype languages within Squeak. There is a solution in the form of ""auto-instances"", an idea of Claus Gittinger's.  The idea is to represent prototypes as behaviors that are instances of themselves.  In a classical Smalltalk system a Behavior is an object with the minimal amount of state to function as a class, and in Smalltalk-80 this state is the three instance variables of Behavior, superclass, methodDict and format, which are the only fields in a Behavior that are known to the virtual machine.  A prototype can therefore have its own behavior and inherit from other prototypes or classes, and have sub-prototypes derived from it if a) its first three instance variables are also superclass, methodDict, and format, and b) it is an instance of itself (one can create such objects in a normal Smalltalk system by creating an Array with the desired layout and using a change class primitive to change the class of the Array to itself).  The same effect can be achieved in a VM with class indexes by reserving one class index to indicate that the object is an instance of itself, hence not requiring the object be entered into the class table and in the code that derives the class of an object, requiring one simple test answering the object itself instead of indexing the class table.  There would probably need to be an auto-instantiation primitive that takes a behavior (or prototype) and an instance variable count and answers a new auto-instance with as many instance variables as the sum of the behavior (or prototype) and the instance variable count.  Using this scheme there can be as many auto-instances as available address space allows while retaining the benefits of class indices.
 
 This scheme has obvious implications for the inline cache since all prototypes end up having the same inline cache tag.  Either the inline cache check checks for the auto-instance class tag and substitutes the receiver, or the cacheing machinery refuses to add the auto-instance class tag to any inline cache and failure path code checks for the special case.  Note that in V8 failing monomorphic sends are patched to open PICs (megamorphic sends); V8 does not use closed PICs due to the rationale that polymorphism is high in JavaScript.
+
+Miscellanea
+One obvious optimization to images is to add image (de)compression to image loading and snapshot.  The image header remains unchanged but its contents could be compressed, compressing either on snapshot, if requested, or off-line via a special-purpose tool.
 
 Issues:
 In-line cache probe for immediates
@@ -338,7 +341,7 @@ Class {
 		'checkForLeaks',
 		'needGCFlag',
 		'heapMap',
-		'becommedPointerObjects'
+		'becomeEffectsFlags'
 	],
 	#classVars : [
 		'CheckObjectOverwrite',
@@ -348,6 +351,7 @@ Class {
 	#pools : [
 		'VMBasicConstants',
 		'VMObjectIndices',
+		'VMSpurObjectRepresentationConstants',
 		'VMSqueakClassIndices',
 		'VMSqueakV3BytecodeConstants'
 	],
@@ -498,6 +502,14 @@ SpurMemoryManager class >> initializeSpecialObjectIndices [
 ]
 
 { #category : #'class initialization' }
+SpurMemoryManager class >> initializeSpurObjectRepresentationConstants [
+	"SpurMemoryManager initializeSpurObjectRepresentationConstants"
+	BecameClassFlag := 1.
+	BecameCompiledMethodFlag := 2.
+	BecamePointerObjectFlag := 4
+]
+
+{ #category : #'class initialization' }
 SpurMemoryManager class >> initializeWithOptions: optionsDictionary [
 	"SpurMemoryManager initializeWithOptions: Dictionary new"
 
@@ -506,6 +518,7 @@ SpurMemoryManager class >> initializeWithOptions: optionsDictionary [
 								ifFalse: [self wordSize]).
 	BytesPerOop := optionsDictionary at: #BytesPerOop ifAbsent: [BytesPerWord].
 
+	self initializeSpurObjectRepresentationConstants.
 	self initializeSpecialObjectIndices.
 	self initializeCompactClassIndices.
 	self initializePrimitiveErrorCodes.
@@ -625,7 +638,65 @@ SpurMemoryManager >> adjustFieldsAndClassOf: oop by: offsetBytes [
 ]
 
 { #category : #'object enumeration' }
+SpurMemoryManager >> allExistingNewSpaceObjectsDo: aBlock [
+	<inline: true>
+	| prevObj prevPrevObj objOop limit |
+	prevPrevObj := prevObj := nil.
+	"After a scavenge eden is empty, futureSpace is empty, and all newSpace objects are
+	  in pastSpace.  Objects are allocated in eden.  So enumerate only eden and pastSpace."
+	objOop := self objectStartingAt: scavenger eden start.
+	limit := freeStart.
+	[objOop < limit] whileTrue:
+		[(self isFreeObject: objOop) ifFalse:
+			[aBlock value: objOop].
+		 prevPrevObj := prevObj.
+		 prevObj := objOop.
+		 objOop := self objectAfter: objOop limit: freeStart].
+	objOop := self objectStartingAt: scavenger pastSpace start.
+	limit := scavenger pastSpace limit.
+	[objOop < limit] whileTrue:
+		[(self isFreeObject: objOop) ifFalse:
+			[aBlock value: objOop].
+		 prevPrevObj := prevObj.
+		 prevObj := objOop.
+		 objOop := self objectAfter: objOop limit: limit].
+	prevPrevObj class.
+	prevObj class
+]
+
+{ #category : #'object enumeration' }
+SpurMemoryManager >> allExistingObjectsDo: aBlock [
+	"Enumerate all objects, excluding any objects created
+	 during the execution of allExistingObjectsDo:."
+	<inline: true>
+	self allExistingOldSpaceObjectsDo: aBlock.
+	self allExistingNewSpaceObjectsDo: aBlock
+]
+
+{ #category : #'object enumeration' }
+SpurMemoryManager >> allExistingOldSpaceObjectsDo: aBlock [
+	"Enumerate all old space objects, excluding any objects created
+	 during the execution of allExistingOldSpaceObjectsDo:."
+	<inline: true>
+	| oldSpaceLimit prevObj prevPrevObj objOop |
+	prevPrevObj := prevObj := nil.
+	objOop := self firstObject.
+	oldSpaceLimit := freeOldSpaceStart.
+	[self assert: objOop \\ self allocationUnit = 0.
+	 objOop < oldSpaceLimit] whileTrue:
+		[(self isFreeObject: objOop) ifFalse:
+			[aBlock value: objOop].
+		 prevPrevObj := prevObj.
+		 prevObj := objOop.
+		 objOop := self objectAfter: objOop limit: freeOldSpaceStart].
+	prevPrevObj class.
+	prevObj class
+]
+
+{ #category : #'object enumeration' }
 SpurMemoryManager >> allNewSpaceObjectsDo: aBlock [
+	"Enumerate all new space objects, excluding any objects created
+	 during the execution of allNewSpaceObjectsDo:."
 	<inline: true>
 	| prevObj prevPrevObj objOop limit |
 	prevPrevObj := prevObj := nil.
@@ -739,7 +810,7 @@ SpurMemoryManager >> baseHeaderSize [
 	^8
 ]
 
-{ #category : #become }
+{ #category : #'become api' }
 SpurMemoryManager >> become: array1 with: array2 twoWay: twoWayFlag copyHash: copyHashFlag [
 	"All references to each object in array1 are swapped with all references to the
 	 corresponding object in array2. That is, all pointers to one object are replaced
@@ -747,6 +818,7 @@ SpurMemoryManager >> become: array1 with: array2 twoWay: twoWayFlag copyHash: co
 	 Answers PrimNoErr if the primitive succeeds, otherwise a relevant error code."
 	"Implementation: Uses lazy forwarding to defer updating references until message send."
 
+	self assert: becomeEffectsFlags = 0.
 	self leakCheckBecome ifTrue:
 		[self runLeakCheckerForFullGC: true].
 	(self isArray: array1) ifFalse:
@@ -764,13 +836,38 @@ SpurMemoryManager >> become: array1 with: array2 twoWay: twoWayFlag copyHash: co
 			[self innerBecomeObjectsIn: array1 with: array2 twoWay: twoWayFlag copyHash: copyHashFlag]
 		ifFalse:
 			[self innerBecomeObjectsIn: array1 to: array2 twoWay: twoWayFlag copyHash: copyHashFlag].
-	coInterpreter postBecomeAction: becommedPointerObjects.
-	becommedPointerObjects := false.
+	self postBecomeScanClassTable.
+	coInterpreter postBecomeAction: becomeEffectsFlags.
+	becomeEffectsFlags := 0.
 
 	self leakCheckBecome ifTrue:
 		[self runLeakCheckerForFullGC: true].
 
 	^PrimNoErr "success"
+]
+
+{ #category : #'become implementation' }
+SpurMemoryManager >> becomeEffectFlagsFor: objOop [
+	"Answer the appropriate become effect flags for objOop, or 0 if none.
+	 The effect flags affect how much work is done after the become in
+	 following forwarding pointers."
+	<inline: false>
+	^(self isPointersNonImm: objOop)
+		ifTrue:
+			[| hash |
+			 (hash := self rawHashBitsOf: objOop) = 0
+				ifTrue: "Can't identify an abstract class by the class table; it may not be there-in."
+					[(coInterpreter objCouldBeClassObj: objOop)
+						ifTrue: [BecamePointerObjectFlag + BecameClassFlag]
+						ifFalse: [BecamePointerObjectFlag]]
+				ifFalse: "if an object has a hash and it's a class it must be in the table."
+					[(self classAtIndex: hash) = objOop
+						ifTrue: [BecamePointerObjectFlag + BecameClassFlag]
+						ifFalse: [BecamePointerObjectFlag]]]
+		ifFalse:
+			[(self isCompiledMethod: objOop)
+				ifTrue: [BecameCompiledMethodFlag]
+				ifFalse: [0]]
 ]
 
 { #category : #'header format' }
@@ -863,6 +960,7 @@ SpurMemoryManager >> checkForLastObjectOverwrite [
 { #category : #'class table' }
 SpurMemoryManager >> classAtIndex: classIndex [
 	| classTablePage |
+	self assert: (classIndex <= self tagMask or: [classIndex >= self arrayClassIndexPun]).
 	classTablePage := self fetchPointer: classIndex >> self classTableMajorIndexShift
 							ofObject: classTableRootObj.
 	classTablePage = nilObj ifTrue:
@@ -1002,12 +1100,12 @@ SpurMemoryManager >> compactIndexOfClass: objOop [
 	^self rawHashBitsOf: objOop
 ]
 
-{ #category : #become }
+{ #category : #'become implementation' }
 SpurMemoryManager >> containOnlyOops: array [
 	"Answer if the array contains only non-immediates. You can't become: immediates!"
-	| fieldOffset containsPointerObjs oop |
+	| fieldOffset effectsFlags oop |
 	fieldOffset := self lastPointerOf: array.
-	containsPointerObjs := false.
+	effectsFlags := 0.
 	"same size as array2"
 	[fieldOffset >= self baseHeaderSize] whileTrue:
 		[oop := self longAt: array + fieldOffset.
@@ -1015,21 +1113,19 @@ SpurMemoryManager >> containOnlyOops: array [
 		 (self isForwarded: oop) ifTrue:
 			[oop := self followForwarded: oop.
 			 self longAt: array + fieldOffset put: oop].
-		 (self isPointersNonImm: oop) ifTrue:
-			[containsPointerObjs := true].
+		 effectsFlags := effectsFlags bitOr: (self becomeEffectFlagsFor: oop).
 		 fieldOffset := fieldOffset - BytesPerOop].
-	"only set becommedPointerObjects after checking all args."
-	containsPointerObjs ifTrue:
-		[becommedPointerObjects := true].
+	"only set flags after checking all args."
+	becomeEffectsFlags := effectsFlags.
 	^true
 ]
 
-{ #category : #become }
+{ #category : #'become implementation' }
 SpurMemoryManager >> containOnlyOops: array1 and: array2 [
 	"Answer if neither array contains only non-immediates. You can't become: immediates!"
-	| fieldOffset containsPointerObjs oop |
+	| fieldOffset effectsFlags oop |
 	fieldOffset := self lastPointerOf: array1.
-	containsPointerObjs := false.
+	effectsFlags := 0.
 	"same size as array2"
 	[fieldOffset >= self baseHeaderSize] whileTrue:
 		[oop := self longAt: array1 + fieldOffset.
@@ -1037,23 +1133,20 @@ SpurMemoryManager >> containOnlyOops: array1 and: array2 [
 		 (self isForwarded: oop) ifTrue:
 			[oop := self followForwarded: oop.
 			 self longAt: array1 + fieldOffset put: oop].
-		 (self isPointersNonImm: oop) ifTrue:
-			[containsPointerObjs := true].
+		 effectsFlags := effectsFlags bitOr: (self becomeEffectFlagsFor: oop).
 		 oop := self longAt: array2 + fieldOffset.
 		 (self isImmediate: oop) ifTrue: [^false].
 		 (self isForwarded: oop) ifTrue:
 			[oop := self followForwarded: oop.
 			 self longAt: array2 + fieldOffset put: oop].
-		 (self isPointersNonImm: oop) ifTrue:
-			[containsPointerObjs := true].
+		 effectsFlags := effectsFlags bitOr: (self becomeEffectFlagsFor: oop).
 		 fieldOffset := fieldOffset - BytesPerOop].
-	"only set becommedPointerObjects after checking all args."
-	containsPointerObjs ifTrue:
-		[becommedPointerObjects := true].
+	"only set flags after checking all args."
+	becomeEffectsFlags := effectsFlags.
 	^true
 ]
 
-{ #category : #become }
+{ #category : #'become implementation' }
 SpurMemoryManager >> doBecome: obj1 with: obj2 copyHash: copyHashFlag [
 	((self isClassInClassTable: obj1)
 	 or: [self isClassInClassTable: obj1]) ifTrue:
@@ -1294,7 +1387,7 @@ SpurMemoryManager >> fixedFieldsOfClassFormatMask [
 	^1 << self fixedFieldsFieldWidth - 1
 ]
 
-{ #category : #become }
+{ #category : #'become api' }
 SpurMemoryManager >> followForwarded: objOop [
 	| referent |
 	self assert: (self isForwarded: objOop).
@@ -1303,7 +1396,25 @@ SpurMemoryManager >> followForwarded: objOop [
 	^referent
 ]
 
-{ #category : #become }
+{ #category : #'become api' }
+SpurMemoryManager >> followForwardedObjectFields: objOop toDepth: depth [
+	"follow pointers in the object to depth.
+	 How to avoid cyclic structures?? A temproary mark bit?"
+	| oop |
+	depth < 0 ifTrue:
+		[^self].
+	self assert: (self isPointers: objOop).
+	0 to: (self numSlotsOf: objOop) - 1 do:
+		[:i|
+		oop := self fetchPointer: i ofObject: objOop.
+		((self isNonImmediate: oop)
+		 and: [self isForwarded: oop]) ifTrue:
+			[oop := self followForwarded: oop.
+			self storePointer: i ofObject: objOop withValue: oop].
+		self followForwardedObjectFields: objOop toDepth: depth - 1]
+]
+
+{ #category : #'become implementation' }
 SpurMemoryManager >> followMaybeForwarded: objOop [
 	^(self isForwarded: objOop)
 		ifTrue: [self followForwarded: objOop]
@@ -1376,7 +1487,7 @@ SpurMemoryManager >> formatShift [
 	^24
 ]
 
-{ #category : #become }
+{ #category : #'become implementation' }
 SpurMemoryManager >> forward: obj1 to: obj2 [
 	self setFormatOf: obj1 to: self forwardedFormat.
 	self setClassIndexOf: obj1 to: self isForwardedObjectClassIndexPun.
@@ -1478,7 +1589,7 @@ SpurMemoryManager >> identityHashHalfWordMask [
 	^16r3fffff
 ]
 
-{ #category : #become }
+{ #category : #'become implementation' }
 SpurMemoryManager >> inPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag [
 	| headerTemp temp |
 	<var: 'headerTemp' type: #usqLong>
@@ -1542,7 +1653,8 @@ SpurMemoryManager >> initSpaceForAllocationCheck: aNewSpace [
 SpurMemoryManager >> initialize [
 	freeLists := CArrayAccessor on: (Array new: NumFreeLists withAll: 0).
 	checkForLeaks := 0.
-	needGCFlag := signalLowSpace := becommedPointerObjects := false.
+	needGCFlag := signalLowSpace := false.
+	becomeEffectsFlags := 0.
 	heapMap := self wordSize = 4 ifTrue: [CogCheck32BitHeapMap new]
 ]
 
@@ -1621,18 +1733,18 @@ SpurMemoryManager >> initializePostBootstrap [
 	freeStart := scavenger eden start
 ]
 
-{ #category : #become }
+{ #category : #'become implementation' }
 SpurMemoryManager >> innerBecomeObjectsIn: array1 to: array2 twoWay: twoWayFlag copyHash: copyHashFlag [
 	| fieldOffset |
 	fieldOffset := self lastPointerOf: array1.
 	[fieldOffset >= self baseHeaderSize] whileTrue:
-		[self become: (self longAt: array1 + fieldOffset)
+		[self doBecome: (self longAt: array1 + fieldOffset)
 			to: (self longAt: array2 + fieldOffset)
 			copyHash: copyHashFlag.
 		fieldOffset := fieldOffset - BytesPerOop]
 ]
 
-{ #category : #become }
+{ #category : #'become implementation' }
 SpurMemoryManager >> innerBecomeObjectsIn: array1 with: array2 twoWay: twoWayFlag copyHash: copyHashFlag [
 	| fieldOffset |
 	fieldOffset := self lastPointerOf: array1.
@@ -1751,7 +1863,7 @@ SpurMemoryManager >> isCharacterObject: oop [
 	^(oop bitAnd: self tagMask) = self characterTag
 ]
 
-{ #category : #become }
+{ #category : #'become implementation' }
 SpurMemoryManager >> isClassInClassTable: objOop [
 	| hash |
 	hash := self rawHashBitsOf: objOop.
@@ -1823,8 +1935,13 @@ SpurMemoryManager >> isForwarded: objOop [
 ]
 
 { #category : #'class table' }
+SpurMemoryManager >> isForwardedClassTag: classIndex [
+	^classIndex = self isForwardedObjectClassIndexPun
+]
+
+{ #category : #'class table' }
 SpurMemoryManager >> isForwardedObjectClassIndexPun [
-	^1
+	^8 "Not to be confused with that of any immediate class"
 ]
 
 { #category : #'object testing' }
@@ -1890,11 +2007,13 @@ SpurMemoryManager >> isIntegerObject: oop [
 	(#(	makeBaseFrameFor:
 		quickFetchInteger:ofObject:
 		frameOfMarriedContext:
-		addressCouldBeClassObj:
+		objCouldBeClassObj:
 		isMarriedOrWidowedContext:
 		shortPrint:
 		bytecodePrimAt
+		bytecodePrimAtPut
 		commonAt:
+		commonAtPut:
 		loadFloatOrIntFrom:
 		positive32BitValueOf:
 		primitiveExternalCall
@@ -1938,6 +2057,12 @@ SpurMemoryManager >> isOopCompiledMethod: oop [
 	<api>
     ^(self isNonImmediate: oop)
 	 and: [(self formatOf: oop) >= self firstCompiledMethodFormat]
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isOopForwarded: oop [
+	^(self isNonImmediate: oop)
+	  and: [(self classIndexOf: oop) = self isForwardedObjectClassIndexPun]
 ]
 
 { #category : #'object testing' }
@@ -2223,7 +2348,7 @@ SpurMemoryManager >> objectStartingAt: address [
 		ifFalse: [address]
 ]
 
-{ #category : #become }
+{ #category : #'become implementation' }
 SpurMemoryManager >> outOfPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag [
 	"Allocate two new objects, n1 & n2.  Copy the contents appropriately. Convert
 	 obj1 and obj2 into forwarding objects pointing to n2 and n1 respectively"
@@ -2260,6 +2385,24 @@ SpurMemoryManager >> possibleRootStoreInto: destObj value: valueOop [
 		 self setIsRememberedOf: destObj to: true]
 ]
 
+{ #category : #'become implementation' }
+SpurMemoryManager >> postBecomeScanClassTable [
+	"Scan the class table post-become (iff a pointer object was becommed)"
+	(becomeEffectsFlags anyMask: BecamePointerObjectFlag) ifFalse: [^self].
+	
+	0 to: (self numSlotsOf: classTableRootObj) - 1 do:
+		[:i| | page |
+		page := self fetchPointer: i ofObject: classTableRootObj.
+		0 to: (self numSlotsOf: page) - 1 do:
+			[:j| | classOrNil |
+			classOrNil := self fetchPointer: j ofObject: page.
+			classOrNil ~= nilObj ifTrue:
+				[(self isForwarded: classOrNil) ifTrue:
+					[classOrNil := self followForwarded: classOrNil.
+					 self storePointer: j ofObject: page withValue: classOrNil].
+				 self scanClassPostBecome: classOrNil]]]
+]
+
 { #category : #'debug printing' }
 SpurMemoryManager >> printHeaderTypeOf: objOop [
 	coInterpreter print: ((self numSlotsOf: objOop) >= self numSlotsMask
@@ -2277,6 +2420,33 @@ SpurMemoryManager >> rawHashBitsOf: objOop [
 SpurMemoryManager >> rememberedBitShift [
 	"lsb of 3-bit field above format (little endian)"
 	^29
+]
+
+{ #category : #'become implementation' }
+SpurMemoryManager >> scanClassPostBecome: classObj [
+	"Scan a class in the class table post-become.  Make sure the superclass
+	 chain contains no forwarding pointers, and that the method dictionaries
+	 are not forwarded either."
+
+	| obj |
+	self assert: (self rawHashBitsOf: nilObj) ~= 0.
+
+	obj := self fetchPointer: MethodDictionaryIndex ofObject: classObj.
+	self assert: (self isNonImmediate: obj).
+	(self isForwarded: obj) ifTrue:
+		[obj := self followForwarded: obj.
+		 self storePointer: MethodDictionaryIndex ofObject: classObj withValue: obj].
+
+	obj := self fetchPointer: SuperclassIndex ofObject: classObj.
+	self assert: (self isNonImmediate: obj).
+	(self isForwarded: obj) ifTrue:
+		[obj := self followForwarded: obj.
+		 self storePointer: SuperclassIndex ofObject: classObj withValue: obj].
+
+	"If the superclass has an identityHash then either it is nil, or is in the class table.
+	 Tail recurse."
+	(self rawHashBitsOf: obj) = 0 ifTrue:
+		[self scanClassPostBecome: obj]
 ]
 
 { #category : #'debug support' }
