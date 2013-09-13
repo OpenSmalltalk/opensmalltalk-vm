@@ -1298,7 +1298,8 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		63	total milliseconds in compiled code compactions since startup (read-only; Cog only; otherwise nil)
 		64	the number of methods that currently have jitted machine-code
 		65	whether the VM supports MULTIPLE_BYTECODE_SETS or not.
-		66 - 69 reserved for more Cog-related info
+		66	the byte size of a stack page
+		67 - 69 reserved for more Cog-related info
 		70	the vmProxyMajorVersion (the interpreterProxy VM_MAJOR_VERSION)
 		71	the vmProxyMinorVersion (the interpreterProxy VM_MINOR_VERSION)
 	Note: Thanks to Ian Piumarta for this primitive."
@@ -1363,7 +1364,8 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		objectMemory storePointerUnchecked: 62	ofObject: result withValue: self getCodeCompactionMSecs.
 		objectMemory storePointerUnchecked: 63	ofObject: result withValue: self getCogMethodCount.
 		objectMemory storePointerUnchecked: 64	ofObject: result withValue: (objectMemory booleanObjectOf: MULTIPLEBYTECODESETS).
-		65 to: 68 do: "reserved for more Cog-related info"
+		objectMemory storePointerUnchecked: 65	ofObject: result withValue: (objectMemory integerObjectOf: self stackPageByteSize).
+		66 to: 68 do: "reserved for more Cog-related info"
 			[:i | objectMemory storePointerUnchecked: i ofObject: result withValue: objectMemory nilObject].
 		objectMemory
 			storePointerUnchecked: 69
@@ -1435,7 +1437,8 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		arg = 63	ifTrue: [result := self getCodeCompactionMSecs].
 		arg = 64	ifTrue: [result := self getCogMethodCount].
 		arg = 65	ifTrue: [result := objectMemory booleanObjectOf: MULTIPLEBYTECODESETS].
-		"(arg between: 66 and: 69) ifTrue: [result := objectMemory nilObject]." "reserved for more Cog-related info"
+		arg = 66	ifTrue: [result := objectMemory integerObjectOf: self stackPageByteSize].
+		"(arg between: 67 and: 69) ifTrue: [result := objectMemory nilObject]." "reserved for more Cog-related info"
 		arg = 70 ifTrue: [result := self integerObjectOf: (self cCode: 'VM_PROXY_MAJOR' inSmalltalk: [self class vmProxyMajorVersion])].
 		arg = 71 ifTrue: [result := self integerObjectOf: (self cCode: 'VM_PROXY_MINOR' inSmalltalk: [self class vmProxyMinorVersion])].
 

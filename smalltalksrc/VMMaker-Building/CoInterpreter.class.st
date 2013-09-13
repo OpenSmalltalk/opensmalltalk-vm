@@ -4994,9 +4994,9 @@ CoInterpreter >> objectIsOld: anObject [
 ]
 
 { #category : #'object memory support' }
-CoInterpreter >> postBecomeAction: updateReceiversInStackZone [
+CoInterpreter >> postBecomeAction: becomeEffectsFlags [
 	"Clear the gcMode var and let the Cogit do its post GC checks."
-	super postBecomeAction: updateReceiversInStackZone.
+	super postBecomeAction: becomeEffectsFlags.
 
 	cogit cogitPostGCAction: gcMode.
 
