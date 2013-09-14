@@ -698,6 +698,11 @@ CogObjectRepresentationForSqueakV3 >> remapCacheTag: cacheTag [
 ]
 
 { #category : #'garbage collection' }
+CogObjectRepresentationForSqueakV3 >> remapObj: oop [
+	^objectMemory remap: oop
+]
+
+{ #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> remapOop: oop [
 	^(objectMemory isIntegerObject: oop)
 		ifTrue: [oop]
