@@ -63,6 +63,7 @@ Class {
 		'symbolMap',
 		'methodClasses',
 		'installedPrototypes',
+		'sizeSym',
 		'rehashSym'
 	],
 	#classVars : [
@@ -926,8 +927,7 @@ SpurBootstrap >> interpreter: sim object: receiver perform: selector withArgumen
 	fp := sim localFP.
 	sim normalSend.
 	[fp = sim localFP] whileFalse:
-		[sim byteCount = 3976273 ifTrue: [self halt].
-		 sim singleStep].
+		[sim singleStep].
 	result := sim internalPopStack.
 	self assert: sim localIP - 1 = savedpc.
 	sim localIP: savedpc.
@@ -1125,22 +1125,29 @@ SpurBootstrap >> rehashImage [
 				put: ((rehashFlags at: classIndex >> 3 + 1)
 						bitOr: (1 << (classIndex bitAnd: 7)))]].
 	Transcript cr; print: n; nextPutAll: ' classes understand rehash. rehashing instances...'; flush.
+	n := 0.
 	self withExecutableInterpreter: sim
 		do: "don't rehash twice (actually without limit), so don't rehash any new objects created."
 			[newHeap allExistingObjectsDo:
 				[:o| | classIndex |
 				classIndex := newHeap classIndexOf: o.
 				((rehashFlags at: classIndex >> 3 + 1) anyMask: 1 << (classIndex bitAnd: 7)) ifTrue:
-					[Transcript nextPut: $.; flush.
-					 self interpreter: sim
-						object: o
-						perform: (map at: rehashSym)
-						withArguments: #()]]]
+					[n := n + 1.
+					 Transcript nextPut: $.; flush.
+					 (self interpreter: sim
+							object: o
+							perform: (map at: sizeSym)
+							withArguments: #()) ~= (newHeap integerObjectOf: 0) ifTrue:
+						[self interpreter: sim
+							object: o
+							perform: (map at: rehashSym)
+							withArguments: #()]]]]
 ]
 
 { #category : #'bootstrap image' }
 SpurBootstrap >> rememberRehashSymbol [
-	rehashSym := self findSymbol: #rehash
+	rehashSym := self findSymbol: #rehash.
+	sizeSym := self findSymbol: #size
 ]
 
 { #category : #'bootstrap methods' }
