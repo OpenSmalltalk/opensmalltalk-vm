@@ -1730,7 +1730,8 @@ SpurMemoryManager >> initializePostBootstrap [
 	"The heap has just been bootstrapped into a modified newSpace occupying all of memory above newSPace (and the codeZone).
 	 Put things back to some kind of normalicy."
 	freeOldSpaceStart := freeStart.
-	freeStart := scavenger eden start
+	freeStart := scavenger eden start.
+	scavengeThreshold := scavenger eden limit - (scavenger edenBytes / 64)
 ]
 
 { #category : #'become implementation' }
@@ -2455,6 +2456,12 @@ SpurMemoryManager >> scavenger [
 	^scavenger
 ]
 
+{ #category : #'garbage collection' }
+SpurMemoryManager >> scheduleScavenge [
+	needGCFlag := true.
+	coInterpreter forceInterruptCheck
+]
+
 { #category : #'header access' }
 SpurMemoryManager >> setClassIndexOf: objOop to: classIndex [
 	self flag: #endianness.
@@ -2581,6 +2588,15 @@ SpurMemoryManager >> storePointer: fieldIndex ofObject: oop withValue: valuePoin
 { #category : #'object access' }
 SpurMemoryManager >> storePointerUnchecked: fieldIndex ofObject: objOop withValue: valuePointer [
 	^self subclassResponsibility
+]
+
+{ #category : #'garbage collection' }
+SpurMemoryManager >> sufficientSpaceAfterGC: numBytes [
+	"This is ObjectMemoiry's funky entry-point into its incremental GC,
+	 which is a stop-the-world a young generation reclaimer.  In Spur
+	 we run the scavenger."
+	self assert: numBytes = 0.
+	scavenger scavenge
 ]
 
 { #category : #allocation }

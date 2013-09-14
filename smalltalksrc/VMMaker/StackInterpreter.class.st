@@ -10308,6 +10308,34 @@ StackInterpreter >> saveCStackStateForCallbackContext: vmCallbackContext [
 	"this is a no-op for the Stack VM"
 ]
 
+{ #category : #'garbage collection' }
+StackInterpreter >> scavengeVMState [
+	"Scavenge all VM state.  We piggy-back off the ObjectMemory map
+	 routines which are run after its maskAndTrace routines.  But here remap:
+	 actually means scavenge."
+	| oop |
+	self mapStackPages.
+	self mapMachineCode.
+	self mapTraceLogs.
+	self mapVMRegisters.
+	self mapProfileState.
+	tempOop ~= 0 ifTrue:
+		[tempOop := objectMemory remap: tempOop].
+	1 to: objectMemory remapBufferCount do: [:i | 
+		oop := objectMemory remapBuffer at: i.
+		(objectMemory isIntegerObject: oop) ifFalse:
+			[objectMemory remapBuffer at: i put: (objectMemory remap: oop)]].
+
+	"Callback support - trace suspended callback list"
+	1 to: jmpDepth do:[:i|
+		oop := suspendedCallbacks at: i.
+		(objectMemory isIntegerObject: oop) ifFalse:
+			[suspendedCallbacks at: i put: (objectMemory remap: oop)].
+		oop := suspendedMethods at: i.
+		(objectMemory isIntegerObject: oop) ifFalse:
+			[suspendedMethods at: i put: (objectMemory remap: oop)]]
+]
+
 { #category : #'process primitive support' }
 StackInterpreter >> schedulerPointer [
 

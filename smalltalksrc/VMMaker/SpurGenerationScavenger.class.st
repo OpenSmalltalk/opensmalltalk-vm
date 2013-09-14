@@ -46,6 +46,11 @@ SpurGenerationScavenger >> eden [
 ]
 
 { #category : #accessing }
+SpurGenerationScavenger >> edenBytes [
+	^eden limit - eden start
+]
+
+{ #category : #accessing }
 SpurGenerationScavenger >> futureSpace [
 	<returnTypeC: #'SpurNewSpaceSpace *'>
 	^self addressOf: futureSpace
@@ -132,7 +137,7 @@ SpurGenerationScavenger >> scavenge [
 	 and previousFutureSurvivorSpaceSize variables ensure that no object is scanned twice, as well as
 	 detecting closure.  If this were not true, some pointers might get forwarded twice."
 
-	coInterpreter scavengeStacks.
+	coInterpreter scavengeVMState.
 	self scavengeLoop.
 	self exchange: pastSpace with: futureSpace.
 	self computeTenuringThreshold

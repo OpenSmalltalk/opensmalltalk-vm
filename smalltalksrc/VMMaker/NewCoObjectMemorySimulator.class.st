@@ -147,12 +147,6 @@ NewCoObjectMemorySimulator >> floatValueOf: obj [
 	^coInterpreter floatValueOf: obj
 ]
 
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> forceInterruptCheck [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter forceInterruptCheck
-]
-
 { #category : #'debug support' }
 NewCoObjectMemorySimulator >> fullGC [
 	self halt.

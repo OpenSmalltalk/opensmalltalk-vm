@@ -2428,9 +2428,8 @@ NewObjectMemory >> scavengeThreshold [
 
 { #category : #'garbage collection' }
 NewObjectMemory >> scheduleIncrementalGC [
-	<api>
 	needGCFlag := true.
-	self forceInterruptCheck
+	coInterpreter forceInterruptCheck
 ]
 
 { #category : #'debug support' }
