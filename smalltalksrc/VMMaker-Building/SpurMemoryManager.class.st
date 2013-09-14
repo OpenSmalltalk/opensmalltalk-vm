@@ -1086,7 +1086,8 @@ SpurMemoryManager >> clone: objOop [
 { #category : #simulation }
 SpurMemoryManager >> coInterpreter: aCoInterpreter [
 	<doNotGenerate>
-	coInterpreter := aCoInterpreter
+	coInterpreter := aCoInterpreter.
+	scavenger coInterpreter: aCoInterpreter
 ]
 
 { #category : #'object access' }
@@ -2417,6 +2418,12 @@ SpurMemoryManager >> rawHashBitsOf: objOop [
 	^(self longAt: objOop + 4) bitAnd: self identityHashHalfWordMask
 ]
 
+{ #category : #'generation scavenging' }
+SpurMemoryManager >> remapObj: objOop [
+	<inline: false>
+	^self followForwarded: objOop
+]
+
 { #category : #'header format' }
 SpurMemoryManager >> rememberedBitShift [
 	"lsb of 3-bit field above format (little endian)"
@@ -2456,7 +2463,7 @@ SpurMemoryManager >> scavenger [
 	^scavenger
 ]
 
-{ #category : #'garbage collection' }
+{ #category : #'generation scavenging' }
 SpurMemoryManager >> scheduleScavenge [
 	needGCFlag := true.
 	coInterpreter forceInterruptCheck
@@ -2507,6 +2514,20 @@ SpurMemoryManager >> setIsRememberedOf: objOop to: aBoolean [
 		put: (aBoolean
 				ifTrue: [(self longAt: objOop) bitOr: 1 << self rememberedBitShift]
 				ifFalse: [(self longAt: objOop) bitAnd: (1 << self rememberedBitShift) bitInvert32])
+]
+
+{ #category : #'generation scavenging' }
+SpurMemoryManager >> shouldRemapObj: objOop [
+	^self isForwarded: objOop
+]
+
+{ #category : #'generation scavenging' }
+SpurMemoryManager >> shouldRemapOop: oop [
+	<api>
+	"Answer if the oop should be remapped"
+	<inline: true>
+	^(self isNonImmediate: oop)
+	   and: [self isForwarded: oop]
 ]
 
 { #category : #accessing }
@@ -2590,7 +2611,7 @@ SpurMemoryManager >> storePointerUnchecked: fieldIndex ofObject: objOop withValu
 	^self subclassResponsibility
 ]
 
-{ #category : #'garbage collection' }
+{ #category : #'generation scavenging' }
 SpurMemoryManager >> sufficientSpaceAfterGC: numBytes [
 	"This is ObjectMemoiry's funky entry-point into its incremental GC,
 	 which is a stop-the-world a young generation reclaimer.  In Spur
