@@ -4226,8 +4226,8 @@ CoInterpreter >> mapPrimTraceLog [
 	0 to: limit do:
 		[:i| | selector |
 		selector := primTraceLog at: i.
-		(objectMemory isIntegerObject: selector) ifFalse:
-			[primTraceLog at: i put: (objectMemory remap: selector)]]
+		(objectMemory shouldRemapOop: selector) ifTrue:
+			[primTraceLog at: i put: (objectMemory remapObj: selector)]]
 ]
 
 { #category : #'object memory support' }
@@ -4263,37 +4263,39 @@ CoInterpreter >> mapStackPages [
 			 frameRcvrOffset := self frameReceiverOffset: theFP.
 	 		  [theSP <= frameRcvrOffset] whileTrue:
 				[oop := stackPages longAt: theSP.
-				 (objectMemory isIntegerObject: oop) ifFalse:
-					[stackPages longAt: theSP put: (objectMemory remap: oop)].
+				 (objectMemory shouldRemapOop: oop) ifTrue:
+					[stackPages longAt: theSP put: (objectMemory remapObj: oop)].
 				 theSP := theSP + BytesPerWord].
-			 (self frameHasContext: theFP) ifTrue:
+			 ((self frameHasContext: theFP)
+			  and: [objectMemory shouldRemapObj: (self frameContext: theFP)]) ifTrue:
 				[stackPages
 					longAt: theFP + FoxThisContext
-					put: (objectMemory remap: (self frameContext: theFP))].
+					put: (objectMemory remapObj: (self frameContext: theFP))].
 			(self isMachineCodeFrame: theFP) ifFalse:
-				[theIPPtr ~= 0 ifTrue:
-					[theIP := stackPages longAt: theIPPtr.
-					 theIP = cogit ceReturnToInterpreterPC
-						ifTrue:
-							[self assert: (self iframeSavedIP: theFP) > (self iframeMethod: theFP).
-							 theIPPtr := theFP + FoxIFSavedIP.
-							 theIP := stackPages longAt: theIPPtr]
-						ifFalse:
-							[self assert: theIP > (self iframeMethod: theFP)].
-					 theIP := theIP - (self iframeMethod: theFP)].
-				 stackPages
-					longAt: theFP + FoxMethod
-					put: (objectMemory remap: (self iframeMethod: theFP)).
-				 theIPPtr ~= 0 ifTrue:
-					[stackPages longAt: theIPPtr put: theIP + (self iframeMethod: theFP)]].
+				[(objectMemory shouldRemapObj: (self iframeMethod: theFP)) ifTrue:
+					[theIPPtr ~= 0 ifTrue:
+						[theIP := stackPages longAt: theIPPtr.
+						 theIP = cogit ceReturnToInterpreterPC
+							ifTrue:
+								[self assert: (self iframeSavedIP: theFP) > (self iframeMethod: theFP).
+								 theIPPtr := theFP + FoxIFSavedIP.
+								 theIP := stackPages longAt: theIPPtr]
+							ifFalse:
+								[self assert: theIP > (self iframeMethod: theFP)].
+						 theIP := theIP - (self iframeMethod: theFP)].
+					 stackPages
+						longAt: theFP + FoxMethod
+						put: (objectMemory remapObj: (self iframeMethod: theFP)).
+					 theIPPtr ~= 0 ifTrue:
+						[stackPages longAt: theIPPtr put: theIP + (self iframeMethod: theFP)]]].
 			 (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
 				[theSP := (theIPPtr := theFP + FoxCallerSavedIP) + BytesPerWord.
 				 theFP := callerFP].
 			 theSP := theFP + FoxCallerSavedIP + BytesPerWord.
 			 [theSP <= thePage baseAddress] whileTrue:
 				[oop := stackPages longAt: theSP.
-				 (objectMemory isIntegerObject: oop) ifFalse:
-					[stackPages longAt: theSP put: (objectMemory remap: oop)].
+				 (objectMemory shouldRemapOop: oop) ifTrue:
+					[stackPages longAt: theSP put: (objectMemory remapObj: oop)].
 				 theSP := theSP + BytesPerWord]]]
 ]
 
@@ -4311,11 +4313,11 @@ CoInterpreter >> mapTraceLog [
 	0 to: limit by: 3 do:
 		[:i| | intOrClass selectorOrMethod |
 		intOrClass := traceLog at: i.
-		(objectMemory isIntegerObject: intOrClass) ifFalse:
-			[traceLog at: i put: (objectMemory remap: intOrClass)].
+		(objectMemory shouldRemapOop: intOrClass) ifTrue:
+			[traceLog at: i put: (objectMemory remapObj: intOrClass)].
 		selectorOrMethod := traceLog at: i + 1.
-		(objectMemory isIntegerObject: selectorOrMethod) ifFalse:
-			[traceLog at: i + 1 put: (objectMemory remap: selectorOrMethod)]]
+		(objectMemory shouldRemapOop: selectorOrMethod) ifTrue:
+			[traceLog at: i + 1 put: (objectMemory remapObj: selectorOrMethod)]]
 ]
 
 { #category : #'debug support' }
@@ -4333,13 +4335,14 @@ CoInterpreter >> mapVMRegisters [
 	 only during message lookup and because createActualMessageTo will not
 	 cause a GC these cannot change during message lookup."
 	| mapInstructionPointer |
-	"i.e. interpreter instructionPointer in method as opposed to machine code?"
-	(mapInstructionPointer := instructionPointer > method) ifTrue:
-		[instructionPointer := instructionPointer - method]. "*rel to method"
-	method := objectMemory remap: method.
-	mapInstructionPointer ifTrue:
-		[instructionPointer := instructionPointer + method]. "*rel to method"
-	(objectMemory isImmediate: newMethod) ifFalse:
+	(objectMemory shouldRemapObj: method) ifTrue:
+		["i.e. interpreter instructionPointer in method as opposed to machine code?"
+		(mapInstructionPointer := instructionPointer > method) ifTrue:
+			[instructionPointer := instructionPointer - method]. "*rel to method"
+		method := objectMemory remapObj: method.
+		mapInstructionPointer ifTrue:
+			[instructionPointer := instructionPointer + method]]. "*rel to method"
+	(objectMemory shouldRemapOop: newMethod) ifFalse: "maybe oop due to object-as-method"
 		[newMethod := objectMemory remap: newMethod]
 ]
 

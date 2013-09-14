@@ -7353,34 +7353,15 @@ We know both will be integers so no value nor root checking is needed"
 { #category : #'object memory support' }
 StackInterpreter >> mapInterpreterOops [
 	"Map all oops in the interpreter's state to their new values 
-	during garbage collection or a become: operation."
+	 during garbage collection or a become: operation."
 	"Assume: All traced variables contain valid oops."
-	| oop |
-	objectMemory nilObject: (objectMemory remap: objectMemory nilObject).
-	objectMemory falseObject: (objectMemory remap: objectMemory falseObject).
-	objectMemory trueObject: (objectMemory remap: objectMemory trueObject).
-	objectMemory specialObjectsOop: (objectMemory remap: objectMemory specialObjectsOop).
 	self mapStackPages.
 	self mapMachineCode.
 	self mapTraceLogs.
 	self mapVMRegisters.
 	self mapProfileState.
-	tempOop = 0 ifFalse: [tempOop := objectMemory remap: tempOop].
-	1 to: objectMemory remapBufferCount do: [:i | 
-			oop := objectMemory remapBuffer at: i.
-			(objectMemory isIntegerObject: oop)
-				ifFalse: [objectMemory remapBuffer at: i put: (objectMemory remap: oop)]].
-
-	"Callback support - trace suspended callback list"
-	1 to: jmpDepth do:[:i|
-		oop := suspendedCallbacks at: i.
-		(objectMemory isIntegerObject: oop) 
-			ifFalse:[suspendedCallbacks at: i put: (objectMemory remap: oop)].
-		oop := suspendedMethods at: i.
-		(objectMemory isIntegerObject: oop) 
-			ifFalse:[suspendedMethods at: i put: (objectMemory remap: oop)].
-	].
-
+	self remapCallbackState.
+	tempOop = 0 ifFalse: [tempOop := objectMemory remap: tempOop]
 ]
 
 { #category : #'object memory support' }
@@ -7390,23 +7371,28 @@ StackInterpreter >> mapMachineCode [
 
 { #category : #'object memory support' }
 StackInterpreter >> mapProfileState [
-	profileProcess := objectMemory remap: profileProcess.
-	profileMethod := objectMemory remap: profileMethod.
-	profileSemaphore := objectMemory remap: profileSemaphore.
+	(objectMemory shouldRemapObj: profileProcess) ifTrue:
+		[profileProcess := objectMemory remapObj: profileProcess].
+	(objectMemory shouldRemapObj: profileMethod) ifTrue:
+		[profileMethod := objectMemory remapObj: profileProcess].
+	(objectMemory shouldRemapObj: profileSemaphore) ifTrue:
+		[profileSemaphore := objectMemory remapObj: profileSemaphore].
 	"The longRunningPrimitiveCheckMethod (LRPCM) is sampled in an interrupt.  Be very careful with it.
 	  If longRunningPrimitiveCheckSequenceNumber (LRPCSN) = statCheckForEvents then LRPCM has
 	  been recenty sampled and could be mapped or not, but it must be newMethod and we can simply
 	  copy newMethod.  If LRPCSN ~= statCheckForEvents then LRPCM must be some extant object and
 	  needs to be remapped."
 	self sqLowLevelMFence.
-	longRunningPrimitiveCheckMethod ~= nil ifTrue:
-		[longRunningPrimitiveCheckMethod :=
-			longRunningPrimitiveCheckSequenceNumber = statCheckForEvents
-				ifTrue: [newMethod]
-				ifFalse: [self remap: longRunningPrimitiveCheckMethod].
+	longRunningPrimitiveCheckMethod ifNotNil:
+		[longRunningPrimitiveCheckSequenceNumber = statCheckForEvents
+			ifTrue: [longRunningPrimitiveCheckMethod := newMethod]
+			ifFalse:
+				[(objectMemory shouldRemapObj: longRunningPrimitiveCheckMethod) ifTrue:
+					[longRunningPrimitiveCheckMethod := self remapObj: longRunningPrimitiveCheckMethod]].
 		 self sqLowLevelMFence].
-	longRunningPrimitiveCheckSemaphore ~= nil ifTrue:
-		[longRunningPrimitiveCheckSemaphore := objectMemory remap: longRunningPrimitiveCheckSemaphore]
+	longRunningPrimitiveCheckSemaphore ifNotNil:
+		[(objectMemory shouldRemapObj: longRunningPrimitiveCheckSemaphore) ifTrue:
+			[longRunningPrimitiveCheckSemaphore := objectMemory remapObj: longRunningPrimitiveCheckSemaphore]]
 ]
 
 { #category : #'object memory support' }
@@ -7437,29 +7423,31 @@ StackInterpreter >> mapStackPages [
 			 self assert: (theIPPtr = 0 or: [thePage addressIsInPage: theIPPtr]).
 			 [theSP <= (theFP + FoxReceiver)] whileTrue:
 				[oop := stackPages longAt: theSP.
-				 (objectMemory isIntegerObject: oop) ifFalse:
-					[stackPages longAt: theSP put: (objectMemory remap: oop)].
+				 (objectMemory shouldRemapOop: oop) ifTrue:
+					[stackPages longAt: theSP put: (objectMemory remapObj: oop)].
 				 theSP := theSP + BytesPerWord].
-			 (self frameHasContext: theFP) ifTrue:
+			 ((self frameHasContext: theFP)
+			  and: [objectMemory shouldRemapObj: (self frameContext: theFP)]) ifTrue:
 				[stackPages
 					longAt: theFP + FoxThisContext
-					put: (objectMemory remap: (self frameContext: theFP))].
-			 theIPPtr ~= 0 ifTrue:
-				[self assert: (stackPages longAt: theIPPtr) > (self frameMethod: theFP).
-				 theIP := (stackPages longAt: theIPPtr) - (self frameMethod: theFP)].
-			 stackPages
-				longAt: theFP + FoxMethod
-				put: (objectMemory remap: (self frameMethod: theFP)).
-			 theIPPtr ~= 0 ifTrue:
-				[stackPages longAt: theIPPtr put: theIP + (self frameMethod: theFP)].
+					put: (objectMemory remapObj: (self frameContext: theFP))].
+			 (objectMemory shouldRemapObj: (self frameMethod: theFP)) ifTrue:
+				[theIPPtr ~= 0 ifTrue:
+					[self assert: (stackPages longAt: theIPPtr) > (self frameMethod: theFP).
+					 theIP := (stackPages longAt: theIPPtr) - (self frameMethod: theFP)].
+				 stackPages
+					longAt: theFP + FoxMethod
+					put: (objectMemory remapObj: (self frameMethod: theFP)).
+				 theIPPtr ~= 0 ifTrue:
+					[stackPages longAt: theIPPtr put: theIP + (self frameMethod: theFP)]].
 			 (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
 				[theSP := (theIPPtr := theFP + FoxCallerSavedIP) + BytesPerWord.
 				 theFP := callerFP].
 			 theSP := theFP + FoxCallerContext. "a.k.a. FoxCallerSavedIP"
 			 [theSP <= thePage baseAddress] whileTrue:
 				[oop := stackPages longAt: theSP.
-				 (objectMemory isIntegerObject: oop) ifFalse:
-					[stackPages longAt: theSP put: (objectMemory remap: oop)].
+				 (objectMemory shouldRemapOop: oop) ifTrue:
+					[stackPages longAt: theSP put: (objectMemory remapObj: oop)].
 				 theSP := theSP + BytesPerWord]]]
 ]
 
@@ -7476,11 +7464,12 @@ StackInterpreter >> mapVMRegisters [
 	 N.B. Don't trace messageSelector and lkupClass; these are ephemeral, live
 	 only during message lookup and because createActualMessageTo will not
 	 cause a GC these cannot change during message lookup."
-	instructionPointer := instructionPointer - method. "*rel to method"
-	method := objectMemory remap: method.
-	instructionPointer := instructionPointer + method. "*rel to method"
-	(objectMemory isImmediate: newMethod) ifFalse:
-		[newMethod := objectMemory remap: newMethod]
+	(objectMemory shouldRemapObj: method) ifTrue:
+		[instructionPointer := instructionPointer - method. "*rel to method"
+		 method := objectMemory remapObj: method.
+		 instructionPointer := instructionPointer + method]. "*rel to method"
+	(objectMemory shouldRemapOop: newMethod) ifTrue: "maybe oop due to object-as-method"
+		[newMethod := objectMemory remapObj: newMethod]
 ]
 
 { #category : #'object memory support' }
@@ -10025,6 +10014,19 @@ StackInterpreter >> reestablishContextPriorToCallback: callbackContext [
 	^true
 ]
 
+{ #category : #'object memory support' }
+StackInterpreter >> remapCallbackState [
+	"Callback support - trace suspended callback list"
+	1 to: jmpDepth do:
+		[:i| | oop |
+		oop := suspendedCallbacks at: i.
+		(objectMemory shouldRemapOop: oop) ifTrue:
+			[suspendedCallbacks at: i put: (objectMemory remapObj: oop)].
+		oop := suspendedMethods at: i.
+		(objectMemory shouldRemapObj: oop) ifTrue:
+			[suspendedMethods at: i put: (objectMemory remapObj: oop)]]
+]
+
 { #category : #'process primitive support' }
 StackInterpreter >> removeFirstLinkOfList: aList [ 
 	"Remove the first process from the given linked list."
@@ -10306,34 +10308,6 @@ StackInterpreter >> roomToPushNArgs: n [
 StackInterpreter >> saveCStackStateForCallbackContext: vmCallbackContext [
 	<var: #vmCallbackContext type: #'VMCallbackContext *'>
 	"this is a no-op for the Stack VM"
-]
-
-{ #category : #'garbage collection' }
-StackInterpreter >> scavengeVMState [
-	"Scavenge all VM state.  We piggy-back off the ObjectMemory map
-	 routines which are run after its maskAndTrace routines.  But here remap:
-	 actually means scavenge."
-	| oop |
-	self mapStackPages.
-	self mapMachineCode.
-	self mapTraceLogs.
-	self mapVMRegisters.
-	self mapProfileState.
-	tempOop ~= 0 ifTrue:
-		[tempOop := objectMemory remap: tempOop].
-	1 to: objectMemory remapBufferCount do: [:i | 
-		oop := objectMemory remapBuffer at: i.
-		(objectMemory isIntegerObject: oop) ifFalse:
-			[objectMemory remapBuffer at: i put: (objectMemory remap: oop)]].
-
-	"Callback support - trace suspended callback list"
-	1 to: jmpDepth do:[:i|
-		oop := suspendedCallbacks at: i.
-		(objectMemory isIntegerObject: oop) ifFalse:
-			[suspendedCallbacks at: i put: (objectMemory remap: oop)].
-		oop := suspendedMethods at: i.
-		(objectMemory isIntegerObject: oop) ifFalse:
-			[suspendedMethods at: i put: (objectMemory remap: oop)]]
 ]
 
 { #category : #'process primitive support' }

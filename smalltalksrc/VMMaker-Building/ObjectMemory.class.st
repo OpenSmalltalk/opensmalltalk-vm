@@ -3386,16 +3386,23 @@ ObjectMemory >> lowestFreeAfter: chunk [
 
 { #category : #'gc -- compaction' }
 ObjectMemory >> mapPointersInObjectsFrom: memStart to: memEnd [
-	"Use the forwarding table to update the pointers of all non-free objects in the given range of memory. Also remap pointers in root objects which may contains pointers into the given memory range, and don't forget to flush the method cache based on the range"
-	| oop |
+	"Use the forwarding table to update the pointers of all non-free objects in the given range of memory.
+	 Also remap pointers in root objects which may contains pointers into the given memory range, and
+	 don't forget to flush the method cache based on the range."
 	<inline: false>
+	(self shouldRemapObj: nilObj) ifTrue:
+		[nilObj := self remapObj: nilObj].
+	(self shouldRemapObj: falseObj) ifTrue:
+		[falseObj := self remapObj: falseObj].
+	(self shouldRemapObj: trueObj) ifTrue:
+		[trueObj := self remapObj: trueObj].
+	(self shouldRemapObj: specialObjectsOop) ifTrue:
+		[specialObjectsOop := self remapObj: specialObjectsOop].
 	"update interpreter variables"
-	self mapInterpreterOops.
-	1 to: extraRootCount do:[:i |
-		oop := (extraRoots at: i) at: 0.
-		((self isIntegerObject: oop) or: [self isFreeObject: oop]) ifFalse:
-			[(extraRoots at: i) at: 0 put: (self remap: oop)]].
-	self flushMethodCacheFrom: memStart to: memEnd.
+	self
+		mapInterpreterOops;
+		flushMethodCacheFrom: memStart to: memEnd.
+	self remapRemapBufferAndExtraRoots.
 	self updatePointersInRootObjectsFrom: memStart to: memEnd.
 	self updatePointersInRangeFrom: memStart to: memEnd.
 
@@ -4047,6 +4054,30 @@ ObjectMemory >> remapFieldsAndClassOf: oop [
 ]
 
 { #category : #'gc -- compaction' }
+ObjectMemory >> remapObj: obj [
+	<api>
+	"Map the given oop to its new value during a compaction or become: operation."
+	<inline: false>
+	^self remappedObj: obj
+]
+
+{ #category : #'gc -- compaction' }
+ObjectMemory >> remapRemapBufferAndExtraRoots [
+	| oop |
+	1 to: remapBufferCount do:
+		[:i |
+		oop := remapBuffer at: i.
+		(self shouldRemapOop: oop) ifFalse:
+			[remapBuffer at: i put: (self remapObj: oop)]].
+	1 to: extraRootCount do:
+		[:i |
+		oop := (extraRoots at: i) at: 0.
+		((self isIntegerObject: oop) or: [self isFreeObject: oop]) ifFalse:
+			[(self shouldRemapObj: oop) ifTrue:
+				[(extraRoots at: i) at: 0 put: (self remapObj: oop)]]]
+]
+
+{ #category : #'gc -- compaction' }
 ObjectMemory >> remappedObj: forwardedObj [
 	"Answer the given forwardedOop's target value
 	 during a compaction or become: operation."
@@ -4326,6 +4357,23 @@ ObjectMemory >> shorten: obj toIndexableSize: nSlots [
 		[HeaderTypeShort] ->
 			[self longAt: obj put: ((hdr bitClear: SizeMask) bitOr: (hdr bitAnd: SizeMask) - deltaBytes)] }.
 	^obj
+]
+
+{ #category : #'gc -- compaction' }
+ObjectMemory >> shouldRemapObj: oop [
+	<api>
+	"Answer if the oop should be remapped"
+	<inline: true>
+	^self isObjectForwarded: oop
+]
+
+{ #category : #'gc -- compaction' }
+ObjectMemory >> shouldRemapOop: oop [
+	<api>
+	"Answer if the oop should be remapped"
+	<inline: true>
+	^(self isNonIntegerObject: oop)
+	  and: [self isObjectForwarded: oop]
 ]
 
 { #category : #allocation }
