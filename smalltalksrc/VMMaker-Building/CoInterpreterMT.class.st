@@ -1249,6 +1249,14 @@ CoInterpreterMT >> returnToSchedulingLoopAndReleaseVMOrWakeThread: vmThread sour
 	self siglong: savedReenterInterpreter jmp: ReturnToThreadSchedulingLoop
 ]
 
+{ #category : #'garbage collection' }
+CoInterpreterMT >> scavengeVMState [
+	"Scavenge all VM state.  We piggy-back off the ObjectMemory map
+	 routines which are run after its maskAndTrace routines.  But here remap:
+	 actually means scavenge."
+	self shouldBeImplemented
+]
+
 { #category : #'callback support' }
 CoInterpreterMT >> sendInvokeCallbackContext: vmCallbackContext [
 	"Override to add sanity assertions."
