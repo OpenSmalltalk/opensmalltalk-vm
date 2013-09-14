@@ -691,47 +691,23 @@ CoInterpreterMT >> loadInitialContext [
 { #category : #'object memory support' }
 CoInterpreterMT >> mapInterpreterOops [
 	"Map all oops in the interpreter's state to their new values 
-	during garbage collection or a become: operation."
+	 during garbage collection or a become: operation."
 	"Assume: All traced variables contain valid oops."
-	| oop |
 	<var: #vmThread type: #'CogVMThread *'>
-	objectMemory nilObject: (objectMemory remap: objectMemory nilObject).
-	objectMemory falseObject: (objectMemory remap: objectMemory falseObject).
-	objectMemory trueObject: (objectMemory remap: objectMemory trueObject).
-	objectMemory specialObjectsOop: (objectMemory remap: objectMemory specialObjectsOop).
-	self mapStackPages.
-	self mapMachineCode.
-	self mapTraceLogs.
-	self mapVMRegisters.
-	self mapProfileState.
-	tempOop = 0 ifFalse: [tempOop := self remap: tempOop].
-	1 to: objectMemory remapBufferCount do:
-		[:i|
-		oop := objectMemory remapBuffer at: i.
-		(objectMemory isIntegerObject: oop) ifFalse:
-			[objectMemory remapBuffer at: i put: (objectMemory remap: oop)]].
-
-	"Callback support - trace suspended callback list - will be made per-thread soon"
-	1 to: jmpDepth do:
-		[:i|
-		oop := suspendedCallbacks at: i.
-		(objectMemory isIntegerObject: oop) ifFalse:
-			[suspendedCallbacks at: i put: (objectMemory remap: oop)].
-		oop := suspendedMethods at: i.
-		(objectMemory isIntegerObject: oop) ifFalse:
-			[suspendedMethods at: i put: (objectMemory remap: oop)]].
+	super mapInterpreterOops.
 
 	"Per-thread state; trace each thread's own newMethod and stack of awol processes."
 	1 to: cogThreadManager getNumThreads do:
 		[:i| | vmThread |
 		vmThread := cogThreadManager vmThreadAt: i.
-		vmThread state notNil ifTrue:
-			[vmThread newMethodOrNull notNil ifTrue:
-				[vmThread newMethodOrNull: (objectMemory remap: vmThread newMethodOrNull)].
+		vmThread state ifNotNil:
+			[(vmThread newMethodOrNull notNil
+			 and: [objectMemory shouldRemapOop: vmThread newMethodOrNull]) ifTrue:
+				[vmThread newMethodOrNull: (objectMemory remapObj: vmThread newMethodOrNull)].
 			 0 to: vmThread awolProcIndex - 1 do:
 				[:j|
-				vmThread awolProcesses at: j put: (objectMemory remap: (vmThread awolProcesses at: j))]]]
-
+				(objectMemory shouldRemapOop: (vmThread awolProcesses at: j)) ifTrue:
+					[vmThread awolProcesses at: j put: (objectMemory remap: (vmThread awolProcesses at: j))]]]]
 ]
 
 { #category : #'object memory support' }
@@ -1247,14 +1223,6 @@ CoInterpreterMT >> returnToSchedulingLoopAndReleaseVMOrWakeThread: vmThread sour
 		ifNil: [cogThreadManager releaseVM].
 	"2 implies returning to the threadSchedulingLoop."
 	self siglong: savedReenterInterpreter jmp: ReturnToThreadSchedulingLoop
-]
-
-{ #category : #'garbage collection' }
-CoInterpreterMT >> scavengeVMState [
-	"Scavenge all VM state.  We piggy-back off the ObjectMemory map
-	 routines which are run after its maskAndTrace routines.  But here remap:
-	 actually means scavenge."
-	self shouldBeImplemented
 ]
 
 { #category : #'callback support' }

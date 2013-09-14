@@ -27,6 +27,11 @@ SpurGenerationScavenger class >> initialize [
 	RememberedSetRedZone := 1024 * 3
 ]
 
+{ #category : #accessing }
+SpurGenerationScavenger >> coInterpreter: aCoInterpreter [
+	coInterpreter := aCoInterpreter
+]
+
 { #category : #scavenger }
 SpurGenerationScavenger >> copyAndForward: survivor [
 	"copyAndForward: survivor copies a survivor object either to
@@ -137,7 +142,6 @@ SpurGenerationScavenger >> scavenge [
 	 and previousFutureSurvivorSpaceSize variables ensure that no object is scanned twice, as well as
 	 detecting closure.  If this were not true, some pointers might get forwarded twice."
 
-	coInterpreter scavengeVMState.
 	self scavengeLoop.
 	self exchange: pastSpace with: futureSpace.
 	self computeTenuringThreshold
@@ -170,14 +174,18 @@ SpurGenerationScavenger >> scavengeLoop [
 	 and previousFutureSurvivorSpaceLimit variables ensure that no object is scanned twice, as well as
 	 detecting closure.  If this were not true, some pointers might get forwarded twice."
 
-	| previousRememberedSetSize previousFutureSurvivorSpaceLimit |
+	| firstTime previousRememberedSetSize previousFutureSurvivorSpaceLimit |
+	self assert: futureSpace limit = futureSpace start. "future space should be empty at the start"
 	previousRememberedSetSize := 0.
 	previousFutureSurvivorSpaceLimit := futureSpace limit.
-	self assert: futureSpace limit = futureSpace start.
 	[self scavengeRememberedSetStartingAt: previousRememberedSetSize.
 	 previousFutureSurvivorSpaceLimit = futureSpace limit ifTrue:
 		[^self].
-		
+
+	firstTime ifTrue:
+		[coInterpreter mapInterpreterOops.
+		 firstTime := false].
+
 	 previousRememberedSetSize := rememberedSetSize.
 	 self scavengeFutureSurvivorSpaceStartingAt: previousFutureSurvivorSpaceLimit.
 	 previousFutureSurvivorSpaceLimit = rememberedSetSize ifTrue:
