@@ -948,6 +948,11 @@ StackInterpreterSimulator >> localIP: pc [
 	localIP := pc
 ]
 
+{ #category : #'spur bootstrap' }
+StackInterpreterSimulator >> localSP [
+	^localSP
+]
+
 { #category : #testing }
 StackInterpreterSimulator >> logOfBytesVerify: nBytes fromFileNamed: fileName fromStart: loggingStart [
 	"Verify a questionable interpreter against a successful run"

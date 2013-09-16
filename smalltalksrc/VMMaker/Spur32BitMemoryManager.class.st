@@ -154,7 +154,7 @@ Spur32BitMemoryManager >> initFreeChunkWithSlots: numSlots at: address [
 Spur32BitMemoryManager >> initSpaceForAllocationCheck: aNewSpace [
 	CheckObjectOverwrite ifTrue:
 		[aNewSpace start
-			to: aNewSpace limit
+			to: aNewSpace limit - 1
 			by: self wordSize
 			do: [:p| self longAt: p put: p]]
 ]
