@@ -600,10 +600,12 @@ SpurMemoryManager >> addressAfter: objOop [
 ]
 
 { #category : #'debug support' }
-SpurMemoryManager >> addressCouldBeObj: address [ 
+SpurMemoryManager >> addressCouldBeObj: address [
+	self flag: #temporary. "include futureSpace for now (while debugging the scavenger)"
 	^(address bitAnd: self baseHeaderSize - 1) = 0
 	  and: [(self isInOldSpace: address)
-		or: [(self isInEden: address)
+		or: [(address between: startOfMemory and: newSpaceLimit)
+		or: (self isInEden: address)
 		or: [self isInSurvivorSpace: address]]]
 ]
 
@@ -766,7 +768,6 @@ SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceByt
 	scavengeThreshold := memory size * 4. "Bitmap is a 4-byte per word array"
 	scavenger := SpurGenerationScavenger new
 					manager: self
-					memory: memory
 					newSpaceStart: startOfMemory
 					newSpaceBytes: newSpaceBytes
 					edenBytes: newSpaceBytes * 5 // 7 "David's paper uses 140Kb eden + 2 x 28kb survivor spaces :-)"
@@ -2006,7 +2007,9 @@ SpurMemoryManager >> isIndexableFormat: format [
 SpurMemoryManager >> isIntegerObject: oop [
 	"This list records the valid senders of isIntegerObject: as we replace uses of
 	  isIntegerObject: by isImmediate: where appropriate."
-	(#(	makeBaseFrameFor:
+	(#(	DoIt
+		DoItIn:
+		makeBaseFrameFor:
 		quickFetchInteger:ofObject:
 		frameOfMarriedContext:
 		objCouldBeClassObj:
@@ -2028,7 +2031,8 @@ SpurMemoryManager >> isIntegerObject: oop [
 		fetchStackPointerOf:
 		primitiveContextAt
 		primitiveContextAtPut
-		subscript:with:storing:format:) includes: thisContext sender method selector) ifFalse:
+		subscript:with:storing:format:
+		printContext:) includes: thisContext sender method selector) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
@@ -2212,6 +2216,13 @@ SpurMemoryManager >> longFormatForNumBytes: numBytes [
 	^self subclassResponsibility
 ]
 
+{ #category : #simulation }
+SpurMemoryManager >> mem: destAddress cp: sourceAddress y: bytes [
+	"For SpurGenerationScavenger>>copyToFutureSpace:bytes:"
+	<doNotGenerate>
+	^self mem: destAddress mo: sourceAddress ve: bytes
+]
+
 { #category : #accessing }
 SpurMemoryManager >> memory [
 	^memory
@@ -2350,6 +2361,16 @@ SpurMemoryManager >> objectStartingAt: address [
 		ifFalse: [address]
 ]
 
+{ #category : #'object enumeration' }
+SpurMemoryManager >> oopOfObjectStartingAt: address [
+	"Answer the oop of the memory chunk starting at address, which is either the address
+	 of the overflow size word, or objOop itself, depending on the size of the object."
+	self flag: #endianness.
+	^(self longAt: address) >> self numSlotsHalfShift = self numSlotsMask
+		ifTrue: [address + self baseHeaderSize]
+		ifFalse: [address]
+]
+
 { #category : #'become implementation' }
 SpurMemoryManager >> outOfPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag [
 	"Allocate two new objects, n1 & n2.  Copy the contents appropriately. Convert
@@ -2418,10 +2439,20 @@ SpurMemoryManager >> rawHashBitsOf: objOop [
 	^(self longAt: objOop + 4) bitAnd: self identityHashHalfWordMask
 ]
 
+{ #category : #'garbage collection' }
+SpurMemoryManager >> remap: oop [
+	self shouldNotImplement
+]
+
 { #category : #'generation scavenging' }
 SpurMemoryManager >> remapObj: objOop [
+	"Scavenge objOop.  Answer the new location of objOop.  Call should have been guarded by
+	 a send of shouldRemapOop: or shouldScavengeObj:.. The method is called remapObj: for
+	 compatibility with ObjectMemory."
 	<inline: false>
-	^self followForwarded: objOop
+	(self isForwarded: objOop) ifTrue:
+		[^self followForwarded: objOop].
+	^scavenger copyAndForward: objOop
 ]
 
 { #category : #'header format' }
@@ -2518,16 +2549,19 @@ SpurMemoryManager >> setIsRememberedOf: objOop to: aBoolean [
 
 { #category : #'generation scavenging' }
 SpurMemoryManager >> shouldRemapObj: objOop [
-	^self isForwarded: objOop
+	"Answer if the obj should be scavenged. The method is called
+	 shouldRemapObj: for compatibility with ObjectMemory."
+	^self isYoung: objOop
 ]
 
 { #category : #'generation scavenging' }
 SpurMemoryManager >> shouldRemapOop: oop [
 	<api>
-	"Answer if the oop should be remapped"
+	"Answer if the oop should be scavenged.. The method is called
+	 shouldRemapOop: for compatibility with ObjectMemory."
 	<inline: true>
 	^(self isNonImmediate: oop)
-	   and: [self isForwarded: oop]
+	   and: [self shouldRemapObj: oop]
 ]
 
 { #category : #accessing }
@@ -2590,6 +2624,15 @@ SpurMemoryManager >> startOfMemory: value [
 		[freeStart := value]
 ]
 
+{ #category : #'object enumeration' }
+SpurMemoryManager >> startOfObject: objOop [
+	"Answer the start of objOop, which is either the address of the overflow size word,
+	 or objOop itself, depending on the size of the object."
+	^(self numSlotsOf: objOop) >= self numSlotsMask
+		ifTrue: [objOop - self baseHeaderSize]
+		ifFalse: [objOop]
+]
+
 { #category : #'object access' }
 SpurMemoryManager >> storeByte: byteIndex ofObject: oop withValue: valueByte [
 	^self byteAt: oop + BaseHeaderSize + byteIndex put: valueByte
@@ -2613,11 +2656,16 @@ SpurMemoryManager >> storePointerUnchecked: fieldIndex ofObject: objOop withValu
 
 { #category : #'generation scavenging' }
 SpurMemoryManager >> sufficientSpaceAfterGC: numBytes [
-	"This is ObjectMemoiry's funky entry-point into its incremental GC,
+	"This is ObjectMemory's funky entry-point into its incremental GC,
 	 which is a stop-the-world a young generation reclaimer.  In Spur
 	 we run the scavenger."
+	self halt.
 	self assert: numBytes = 0.
-	scavenger scavenge
+	needGCFlag := false.
+	scavenger scavenge.
+	freeStart := scavenger eden start.
+	self initSpaceForAllocationCheck: scavenger eden.
+	^true
 ]
 
 { #category : #allocation }
