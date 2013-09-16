@@ -28,6 +28,7 @@ CogClass >> cCoerceSimple: value to: cTypeString [
 		[#'char *']									->	[value].
 		[#'sqInt *']									->	[value].
 		[#'void *']									->	[value].
+		[#void]										->	[value].
 		[#'void (*)()']								->	[value].
 		[#'void (*)(void)']							->	[value].
 		[#'unsigned long (*)(void)']					->	[value].

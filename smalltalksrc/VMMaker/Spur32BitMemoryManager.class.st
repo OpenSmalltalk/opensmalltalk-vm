@@ -80,7 +80,7 @@ Spur32BitMemoryManager >> bytesInObject: objOop [
 	headerNumSlots := halfHeader >> self numSlotsHalfShift bitAnd: self numSlotsMask.
 	numSlots := headerNumSlots = self numSlotsMask
 					ifTrue: [self longAt: objOop - self baseHeaderSize]
-					ifFalse: [numSlots = 0 ifTrue: [1] ifFalse: [numSlots]].
+					ifFalse: [headerNumSlots = 0 ifTrue: [1] ifFalse: [headerNumSlots]].
 	^numSlots + (numSlots bitAnd: 1) << self shiftForWord
 	+ (headerNumSlots = self numSlotsMask
 		ifTrue: [self baseHeaderSize + self baseHeaderSize]
