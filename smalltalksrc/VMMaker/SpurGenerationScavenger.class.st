@@ -129,6 +129,15 @@ SpurGenerationScavenger >> initialize [
 	tenuringProportion := 0.9
 ]
 
+{ #category : #'store check' }
+SpurGenerationScavenger >> isInRememberedTable: objOop [
+	0 to: rememberedSetSize - 1 do:
+		[:i|
+		(rememberedSet at: i) = objOop ifTrue:
+			[^true]].
+	^false
+]
+
 { #category : #initialization }
 SpurGenerationScavenger >> manager: aSpurMemoryManager newSpaceStart: startAddress newSpaceBytes: totalBytes edenBytes: requestedEdenBytes [ 
 	| edenBytes survivorBytes |
