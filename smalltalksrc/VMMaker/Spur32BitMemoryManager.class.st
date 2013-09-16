@@ -92,6 +92,114 @@ Spur32BitMemoryManager >> bytesPerSlot [
 	^4
 ]
 
+{ #category : #'debug support' }
+Spur32BitMemoryManager >> checkHeapIntegrity [
+	"Perform an integrity/leak check using the heapMap.  Assume
+	 clearLeakMapAndMapAccessibleObjects has set a bit at each
+	 object's header.  Scan all objects in the heap checking that every
+	 pointer points to a header.  Scan the rootTable, remapBuffer and
+	 extraRootTable checking that every entry is a pointer to a header.
+	 Check that the number of roots is correct and that all rootTable
+	 entries have their rootBit set. Answer if all checks pass."
+	| ok numRememberedRootsInHeap |
+	<inline: false>
+	ok := true.
+	numRememberedRootsInHeap := 0.
+	self allObjectsDo:
+		[:obj| | fieldOop classIndex classOop |
+		(self isFreeObject: obj) ifFalse:
+			[(self isRemembered: obj) ifTrue:
+				[numRememberedRootsInHeap := numRememberedRootsInHeap + 1].
+			 (self isForwarded: obj)
+				ifTrue:
+					[fieldOop := self fetchPointer: 0 ofForwardedOrFreeObject: obj.
+					 (heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
+						[coInterpreter print: 'object leak in forwarder '; printHex: obj; print: ' to unmapped '; printHex: fieldOop; cr.
+						 self eek.
+						 ok := false]]
+				ifFalse:
+					[classOop := self classAtIndex: (classIndex := self classIndexOf: obj).
+					 (classOop isNil or: [classOop = nilObj]) ifTrue:
+						[coInterpreter print: 'object leak in '; printHex: obj; print: ' invalid class index '; printHex: classIndex; print: ' -> '; printHex: classOop; cr.
+						 self eek.
+						 ok := false].
+					 0 to: (self lastPointerOf: obj) by: BytesPerOop do:
+						[:ptr|
+						 fieldOop := self longAt: ptr.
+						 (self isNonImmediate: fieldOop) ifTrue:
+							[| fi |
+							 fi := ptr - (obj + self baseHeaderSize).
+							 (fieldOop bitAnd: self wordSize - 1) ~= 0
+								ifTrue:
+									[coInterpreter print: 'misaligned oop in '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; cr.
+									 self eek.
+									 ok := false]
+								ifFalse:
+									[(heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
+										[coInterpreter print: 'object leak in '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; cr.
+										 self eek.
+										 ok := false]]]]]]].
+	numRememberedRootsInHeap ~= scavenger rememberedSetSize ifTrue:
+		[coInterpreter
+			print: 'root count mismatch. #heap roots ';
+			printNum: numRememberedRootsInHeap;
+			print: '; #roots ';
+			printNum: scavenger rememberedSetSize;
+			cr.
+		"But the system copes with overflow..."
+		self flag: 'no support for remembered set overflow yet'.
+		"ok := rootTableOverflowed and: [needGCFlag]"].
+	scavenger rememberedSetWithIndexDo:
+		[:obj :i|
+		(obj bitAnd: self wordSize - 1) ~= 0
+			ifTrue:
+				[coInterpreter print: 'misaligned oop in rootTable @ '; printNum: i; print: ' = '; printHex: obj; cr.
+				 self eek.
+				 ok := false]
+			ifFalse:
+				[(heapMap heapMapAtWord: (self pointerForOop: obj)) = 0
+					ifTrue:
+						[coInterpreter print: 'object leak in rootTable @ '; printNum: i; print: ' = '; printHex: obj; cr.
+						 self eek.
+						 ok := false]
+					ifFalse:
+						[(self isYoung: obj) ifTrue:
+							[coInterpreter print: 'non-root in rootTable @ '; printNum: i; print: ' = '; printHex: obj; cr.
+							 self eek.
+							 ok := false]]]].
+	self flag: 'no support for remap buffer yet'.
+	"1 to: remapBufferCount do:
+		[:ri|
+		obj := remapBuffer at: ri.
+		(obj bitAnd: self wordSize - 1) ~= 0
+			ifTrue:
+				[coInterpreter print: 'misaligned remapRoot @ '; printNum: ri; print: ' = '; printHex: obj; cr.
+				 self eek.
+				 ok := false]
+			ifFalse:
+				[(heapMap heapMapAtWord: (self pointerForOop: obj)) = 0
+					ifTrue:
+						[coInterpreter print: 'object leak in remapRoots @ '; printNum: ri; print: ' = '; printHex: obj; cr.
+						 self eek.
+						 ok := false]]]."
+	self flag: 'no support for extraRoots yet'.
+	"1 to: extraRootCount do:
+		[:ri|
+		obj := (extraRoots at: ri) at: 0.
+		(obj bitAnd: self wordSize - 1) ~= 0
+			ifTrue:
+				[coInterpreter print: 'misaligned extraRoot @ '; printNum: ri; print: ' => '; printHex: obj; cr.
+				 self eek.
+				 ok := false]
+			ifFalse:
+				[(heapMap heapMapAtWord: (self pointerForOop: obj)) = 0
+					ifTrue:
+						[coInterpreter print: 'object leak in extraRoots @ '; printNum: ri; print: ' => '; printHex: obj; cr.
+						 self eek.
+						 ok := false]]]."
+	^ok
+]
+
 { #category : #'header access' }
 Spur32BitMemoryManager >> classIndexOf: objOop [
 	self flag: #endianness.
@@ -100,6 +208,11 @@ Spur32BitMemoryManager >> classIndexOf: objOop [
 
 { #category : #'heap management' }
 Spur32BitMemoryManager >> fetchPointer: fieldIndex ofForwardedOrFreeObject: objOop [
+	^self longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
+]
+
+{ #category : #'heap management' }
+Spur32BitMemoryManager >> fetchPointer: fieldIndex ofMaybeForwardedObject: objOop [
 	^self longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
 ]
 
@@ -266,6 +379,16 @@ Spur32BitMemoryManager >> objectAfter: objOop limit: limit [
 		ifFalse: [followingWordAddress]
 ]
 
+{ #category : #'debug printing' }
+Spur32BitMemoryManager >> printMemoryFrom: start to: end [
+	<doNotGenerate>
+	| address |
+	address := start bitAnd: (BytesPerWord - 1) bitInvert.
+	[address < end] whileTrue:
+		[coInterpreter printHex: address; printChar: $:; space; printHex: (self longAt: address); cr.
+		 address := address + BytesPerWord]
+]
+
 { #category : #'word size' }
 Spur32BitMemoryManager >> shiftForWord [
 	^2
@@ -273,6 +396,11 @@ Spur32BitMemoryManager >> shiftForWord [
 
 { #category : #'heap management' }
 Spur32BitMemoryManager >> storePointer: fieldIndex ofForwardedOrFreeObject: objOop withValue: valuePointer [
+
+	(self isForwarded: objOop) ifTrue:
+		[(self isYoung: objOop) ifFalse: "most stores into young objects"
+			[((self isNonImmediate: valuePointer) and: [self isYoung: valuePointer]) ifTrue:
+				[self possibleRootStoreInto: objOop value: valuePointer]]].
 
 	^self
 		longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
@@ -289,6 +417,13 @@ Spur32BitMemoryManager >> storePointer: fieldIndex ofObject: objOop withValue: v
 			[(self isYoung: valuePointer) ifTrue:
 				[self possibleRootStoreInto: objOop value: valuePointer]]].
 
+	^self
+		longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
+		put: valuePointer
+]
+
+{ #category : #'object access' }
+Spur32BitMemoryManager >> storePointerUnchecked: fieldIndex ofMaybeForwardedObject: objOop withValue: valuePointer [
 	^self
 		longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
 		put: valuePointer

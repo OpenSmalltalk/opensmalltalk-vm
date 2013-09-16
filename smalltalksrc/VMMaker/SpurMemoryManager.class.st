@@ -341,7 +341,18 @@ Class {
 		'checkForLeaks',
 		'needGCFlag',
 		'heapMap',
-		'becomeEffectsFlags'
+		'becomeEffectsFlags',
+		'pastSpaceStart',
+		'gcStartUsecs',
+		'statScavenges',
+		'statGCEndUsecs',
+		'statIGCDeltaUsecs',
+		'statIncrGCUsecs',
+		'statScavengeGCUsecs',
+		'statFullGCUsecs',
+		'statSGCDeltaUsecs',
+		'statFGCDeltaUsecs',
+		'scavengeInProgress'
 	],
 	#classVars : [
 		'CheckObjectOverwrite',
@@ -544,7 +555,7 @@ SpurMemoryManager class >> wordSize [
 	^self subclassResponsibility
 ]
 
-{ #category : #'garbage collection' }
+{ #category : #'free space' }
 SpurMemoryManager >> addToFreeList: freeChunk [
 	| chunkBytes childBytes parent child index |
 	chunkBytes := self bytesInObject: freeChunk.
@@ -604,12 +615,12 @@ SpurMemoryManager >> addressCouldBeObj: address [
 	self flag: #temporary. "include futureSpace for now (while debugging the scavenger)"
 	^(address bitAnd: self baseHeaderSize - 1) = 0
 	  and: [(self isInOldSpace: address)
-		or: [(address between: startOfMemory and: newSpaceLimit)
 		or: (self isInEden: address)
-		or: [self isInSurvivorSpace: address]]]
+		or: [(self isInSurvivorSpace: address)
+		or: [scavengeInProgress and: [self isInFutureSpace: address]]]]
 ]
 
-{ #category : #'object testing' }
+{ #category : #'debug support' }
 SpurMemoryManager >> addressCouldBeOop: address [ 
 	^(self isImmediate: address)
 	  or: [self addressCouldBeObj: address]
@@ -655,7 +666,7 @@ SpurMemoryManager >> allExistingNewSpaceObjectsDo: aBlock [
 		 prevObj := objOop.
 		 objOop := self objectAfter: objOop limit: freeStart].
 	objOop := self objectStartingAt: scavenger pastSpace start.
-	limit := scavenger pastSpace limit.
+	limit := pastSpaceStart.
 	[objOop < limit] whileTrue:
 		[(self isFreeObject: objOop) ifFalse:
 			[aBlock value: objOop].
@@ -712,7 +723,7 @@ SpurMemoryManager >> allNewSpaceObjectsDo: aBlock [
 		 prevObj := objOop.
 		 objOop := self objectAfter: objOop limit: freeStart].
 	objOop := self objectStartingAt: scavenger pastSpace start.
-	limit := scavenger pastSpace limit.
+	limit := pastSpaceStart.
 	[objOop < limit] whileTrue:
 		[(self isFreeObject: objOop) ifFalse:
 			[aBlock value: objOop].
@@ -829,14 +840,16 @@ SpurMemoryManager >> become: array1 with: array2 twoWay: twoWayFlag copyHash: co
 		[^PrimErrBadArgument].
 	(twoWayFlag or: [copyHashFlag])
 		ifTrue: [(self containOnlyOops: array1 and: array2) ifFalse: [^PrimErrInappropriate]]
-		ifFalse: [(self containOnlyOops: array1) ifFalse: [^PrimErrInappropriate]].
+		ifFalse:
+			[(self containOnlyOops: array1) ifFalse: [^PrimErrInappropriate].
+			 self followForwardedObjectFields: array2 toDepth: 0].
 
 	coInterpreter preBecomeAction.
 	twoWayFlag
 		ifTrue:
-			[self innerBecomeObjectsIn: array1 with: array2 twoWay: twoWayFlag copyHash: copyHashFlag]
+			[self innerBecomeObjectsIn: array1 with: array2 copyHash: copyHashFlag]
 		ifFalse:
-			[self innerBecomeObjectsIn: array1 to: array2 twoWay: twoWayFlag copyHash: copyHashFlag].
+			[self innerBecomeObjectsIn: array1 to: array2 copyHash: copyHashFlag].
 	self postBecomeScanClassTable.
 	coInterpreter postBecomeAction: becomeEffectsFlags.
 	becomeEffectsFlags := 0.
@@ -958,6 +971,38 @@ SpurMemoryManager >> checkForLastObjectOverwrite [
 		  		or: [(self longAt: freeStart) = freeStart]])
 ]
 
+{ #category : #'debug support' }
+SpurMemoryManager >> checkHeapIntegrity [
+	"Perform an integrity/leak check using the heapMap.  Assume
+	 clearLeakMapAndMapAccessibleObjects has set a bit at each
+	 object's header.  Scan all objects in the heap checking that every
+	 pointer points to a header.  Scan the rootTable, remapBuffer and
+	 extraRootTable checking that every entry is a pointer to a header.
+	 Check that the number of roots is correct and that all rootTable
+	 entries have their rootBit set. Answer if all checks pass."
+	self subclassResponsibility
+]
+
+{ #category : #'debug support' }
+SpurMemoryManager >> checkOopIntegrity: obj named: name [
+	<inline: false>
+	<var: #name type: #'char *'>
+	(heapMap heapMapAtWord: (self pointerForOop: obj)) ~= 0 ifTrue:
+		[^true].
+	coInterpreter print: name; print: ' leak '; printHex: obj; cr.
+	^false
+]
+
+{ #category : #'debug support' }
+SpurMemoryManager >> checkOopIntegrity: obj named: name index: i [
+	<inline: false>
+	<var: #name type: #'char *'>
+	(heapMap heapMapAtWord: (self pointerForOop: obj)) ~= 0 ifTrue:
+		[^true].
+	coInterpreter print: name; print: ' leak @ '; printNum: i; print: ' = '; printHex: obj; cr.
+	^false
+]
+
 { #category : #'class table' }
 SpurMemoryManager >> classAtIndex: classIndex [
 	| classTablePage |
@@ -1066,6 +1111,15 @@ SpurMemoryManager >> classTagForSpecialObjectsIndex: splObjIndex compactClassInd
 	^compactClassIndex
 ]
 
+{ #category : #'debug support' }
+SpurMemoryManager >> clearLeakMapAndMapAccessibleObjects [
+	"Perform an integrity/leak check using the heapMap.  Set a bit at each object's header."
+	<inline: false>
+	heapMap clearHeapMap.
+	self allObjectsDo:
+		[:oop| heapMap heapMapAtWord: (self pointerForOop: oop) Put: 1]
+]
+
 { #category : #allocation }
 SpurMemoryManager >> clone: objOop [
 	| numSlots newObj |
@@ -1074,7 +1128,11 @@ SpurMemoryManager >> clone: objOop [
 					format: (self formatOf: objOop)
 					classIndex: (self classIndexOf: objOop).
 	0 to: numSlots - 1 do:
-		[:i|
+		[:i| | oop |
+		oop := self fetchPointer: i ofObject: objOop.
+		((self isNonImmediate: oop)
+		 and: [self isForwarded: oop]) ifTrue:
+			[oop := self followForwarded: oop].
 		self storePointerUnchecked: i
 			ofObject: newObj
 			withValue: (self fetchPointer: i ofObject: objOop)].
@@ -1189,6 +1247,11 @@ SpurMemoryManager >> eeInstantiateMethodContextSlots: numSlots [
 		classIndex: ClassMethodContextCompactIndex
 ]
 
+{ #category : #'debug support' }
+SpurMemoryManager >> eek [
+	<inline: true>
+]
+
 { #category : #'class table' }
 SpurMemoryManager >> ensureBehaviorHash: aBehavior [
 	| newHash err |
@@ -1232,6 +1295,9 @@ SpurMemoryManager >> enterIntoClassTable: aBehavior [
 				withValue: aBehavior.
 			 self setHashBitsOf: aBehavior to: classTableIndex.
 			 self assert: (self classAtIndex: (self rawHashBitsOf: aBehavior)) = aBehavior.
+			 "now fault-in method lookup chain."
+			 self scanClassPostBecome: aBehavior
+				effects: BecamePointerObjectFlag+BecameCompiledMethodFlag.
 			 ^0]].
 	 majorIndex := (majorIndex + 1 bitAnd: self classIndexMask) max: 1.
 	 majorIndex = initialMajorIndex ifTrue: "wrapped; table full"
@@ -1403,8 +1469,6 @@ SpurMemoryManager >> followForwardedObjectFields: objOop toDepth: depth [
 	"follow pointers in the object to depth.
 	 How to avoid cyclic structures?? A temproary mark bit?"
 	| oop |
-	depth < 0 ifTrue:
-		[^self].
 	self assert: (self isPointers: objOop).
 	0 to: (self numSlotsOf: objOop) - 1 do:
 		[:i|
@@ -1413,7 +1477,8 @@ SpurMemoryManager >> followForwardedObjectFields: objOop toDepth: depth [
 		 and: [self isForwarded: oop]) ifTrue:
 			[oop := self followForwarded: oop.
 			self storePointer: i ofObject: objOop withValue: oop].
-		self followForwardedObjectFields: objOop toDepth: depth - 1]
+		depth > 0 ifTrue:
+			[self followForwardedObjectFields: objOop toDepth: depth - 1]]
 ]
 
 { #category : #'become implementation' }
@@ -1502,34 +1567,40 @@ SpurMemoryManager >> forwardedFormat [
 	^7
 ]
 
-{ #category : #'garbage collection' }
+{ #category : #'free space' }
 SpurMemoryManager >> freeChunkLargerIndex [
 	"for organizing the tree of large free chunks."
 	^4
 ]
 
-{ #category : #'garbage collection' }
+{ #category : #'free space' }
 SpurMemoryManager >> freeChunkNextAddressIndex [
 	"for sorting free chunks in memory order"
 	^1
 ]
 
-{ #category : #'garbage collection' }
+{ #category : #'free space' }
 SpurMemoryManager >> freeChunkNextIndex [
 	"for linking objecs on each free list"
 	^0
 ]
 
-{ #category : #'garbage collection' }
+{ #category : #'free space' }
 SpurMemoryManager >> freeChunkParentIndex [
 	"for organizing the tree of large free chunks."
 	^2
 ]
 
-{ #category : #'garbage collection' }
+{ #category : #'free space' }
 SpurMemoryManager >> freeChunkSmallerIndex [
 	"for organizing the tree of large free chunks."
 	^3
+]
+
+{ #category : #'free space' }
+SpurMemoryManager >> freeSize [
+	self flag: #temporary.
+	^0
 ]
 
 { #category : #accessing }
@@ -1586,6 +1657,11 @@ SpurMemoryManager >> headerForSlots: numSlots format: formatField classIndex: cl
 	+ classIndex
 ]
 
+{ #category : #'debug support' }
+SpurMemoryManager >> heapMap [
+	^heapMap
+]
+
 { #category : #'header format' }
 SpurMemoryManager >> identityHashHalfWordMask [
 	^16r3fffff
@@ -1630,7 +1706,7 @@ SpurMemoryManager >> indexablePointersFormat [
 	^3
 ]
 
-{ #category : #'garbage collection' }
+{ #category : #'free space' }
 SpurMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
 	| numSlots |
 	self assert: numBytes \\ self allocationUnit = 0.
@@ -1641,7 +1717,7 @@ SpurMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
 	^self initFreeChunkWithSlots: numSlots at: address
 ]
 
-{ #category : #'garbage collection' }
+{ #category : #'free space' }
 SpurMemoryManager >> initFreeChunkWithSlots: numSlots at: address [ 
 	^self subclassResponsibility
 ]
@@ -1655,9 +1731,12 @@ SpurMemoryManager >> initSpaceForAllocationCheck: aNewSpace [
 SpurMemoryManager >> initialize [
 	freeLists := CArrayAccessor on: (Array new: NumFreeLists withAll: 0).
 	checkForLeaks := 0.
-	needGCFlag := signalLowSpace := false.
+	needGCFlag := signalLowSpace := scavengeInProgress := false.
 	becomeEffectsFlags := 0.
-	heapMap := self wordSize = 4 ifTrue: [CogCheck32BitHeapMap new]
+	heapMap := self wordSize = 4 ifTrue: [CogCheck32BitHeapMap new].
+	statScavenges := 0.
+	statScavengeGCUsecs := statIncrGCUsecs := statFullGCUsecs := 0.
+	statSGCDeltaUsecs := statIGCDeltaUsecs := statFGCDeltaUsecs := 0
 ]
 
 { #category : #initialization }
@@ -1710,7 +1789,7 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	extraRootCount := 0."
 ]
 
-{ #category : #'garbage collection' }
+{ #category : #'free space' }
 SpurMemoryManager >> initializeOldSpaceFirstFree: startOfFreeOldSpace [
 	<var: 'startOfFreeOldSpace' type: #usqLong>
 	| freeOldStart freeChunk |
@@ -1733,29 +1812,38 @@ SpurMemoryManager >> initializePostBootstrap [
 	 Put things back to some kind of normalicy."
 	freeOldSpaceStart := freeStart.
 	freeStart := scavenger eden start.
+	pastSpaceStart := scavenger pastSpace start.
 	scavengeThreshold := scavenger eden limit - (scavenger edenBytes / 64)
 ]
 
 { #category : #'become implementation' }
-SpurMemoryManager >> innerBecomeObjectsIn: array1 to: array2 twoWay: twoWayFlag copyHash: copyHashFlag [
-	| fieldOffset |
-	fieldOffset := self lastPointerOf: array1.
-	[fieldOffset >= self baseHeaderSize] whileTrue:
-		[self doBecome: (self longAt: array1 + fieldOffset)
-			to: (self longAt: array2 + fieldOffset)
-			copyHash: copyHashFlag.
-		fieldOffset := fieldOffset - BytesPerOop]
+SpurMemoryManager >> innerBecomeObjectsIn: array1 to: array2 copyHash: copyHashFlag [
+	"Inner loop of one-way become."
+	0 to: (self numSlotsOf: array1) - 1 do:
+		[:i| | obj1 obj2 |
+		obj1 := self fetchPointer: i ofObject: array1.
+		obj2 := self fetchPointer: i ofObject: array2.
+		self doBecome: obj1 with: obj2 copyHash: copyHashFlag.
+		(self isForwarded: obj1) ifTrue:
+			[obj1 := self followForwarded: obj1.
+			 self storePointer: i ofObject: array1 withValue: obj1].
+		self assert: (self isForwarded: obj2) not]
 ]
 
 { #category : #'become implementation' }
-SpurMemoryManager >> innerBecomeObjectsIn: array1 with: array2 twoWay: twoWayFlag copyHash: copyHashFlag [
-	| fieldOffset |
-	fieldOffset := self lastPointerOf: array1.
-	[fieldOffset >= self baseHeaderSize] whileTrue:
-		[self doBecome: (self longAt: array1 + fieldOffset)
-			with: (self longAt: array2 + fieldOffset)
-			copyHash: copyHashFlag.
-		fieldOffset := fieldOffset - BytesPerOop]
+SpurMemoryManager >> innerBecomeObjectsIn: array1 with: array2 copyHash: copyHashFlag [
+	"Inner loop of two-way become."
+	0 to: (self numSlotsOf: array1) - 1 do:
+		[:i| | obj1 obj2 |
+		obj1 := self fetchPointer: i ofObject: array1.
+		obj2 := self fetchPointer: i ofObject: array2.
+		self doBecome: obj1 with: obj2 copyHash: copyHashFlag.
+		(self isForwarded: obj1) ifTrue:
+			[obj1 := self followForwarded: obj1.
+			 self storePointer: i ofObject: array1 withValue: obj1].
+		(self isForwarded: obj2) ifTrue:
+			[obj2 := self followForwarded: obj2.
+			 self storePointer: i ofObject: array2 withValue: obj2]]
 ]
 
 { #category : #'object format' }
@@ -1970,13 +2058,13 @@ SpurMemoryManager >> isImmediateCharacter: oop [
 { #category : #'object testing' }
 SpurMemoryManager >> isInEden: objOop [
 	^objOop >= scavenger eden start
-	  and: [objOop < scavenger eden limit]
+	  and: [objOop < freeStart]
 ]
 
 { #category : #'object testing' }
 SpurMemoryManager >> isInFutureSpace: objOop [
 	^objOop >= scavenger futureSpace start
-	  and: [objOop < scavenger futureSpace limit]
+	  and: [objOop < scavenger futureSurvivorStart]
 ]
 
 { #category : #'object testing' }
@@ -1992,7 +2080,7 @@ SpurMemoryManager >> isInRangeCharacterCode: characterCode [
 { #category : #'object testing' }
 SpurMemoryManager >> isInSurvivorSpace: objOop [
 	^objOop >= scavenger pastSpace start
-	  and: [objOop < scavenger pastSpace limit]
+	  and: [objOop < pastSpaceStart]
 ]
 
 { #category : #'object testing' }
@@ -2058,7 +2146,7 @@ SpurMemoryManager >> isNonImmediate: oop [
 SpurMemoryManager >> isNonIntegerObject: oop [
 	"This list records the valid senders of isNonIntegerObject: as we replace uses of
 	  isNonIntegerObject: by isNonImmediate: where appropriate."
-	(#() includes: thisContext sender method selector) ifFalse:
+	(#(reverseDisplayFrom:to:) includes: thisContext sender method selector) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) = 0
 ]
@@ -2156,6 +2244,7 @@ SpurMemoryManager >> lastPointerOf: objOop [
 	<asmLabel: false>
 	| fmt contextSize numLiterals |
 	fmt := self formatOf: objOop.
+	self assert: fmt ~= self forwardedFormat.
 	fmt <= self lastPointerFormat ifTrue:
 		[(fmt = self indexablePointersFormat
 		  and: [self isContextNonImm: objOop]) ifTrue:
@@ -2180,6 +2269,18 @@ SpurMemoryManager >> leakCheckBecome [
 SpurMemoryManager >> leakCheckFullGC [
 	<api>
 	^(checkForLeaks bitAnd: 1) ~= 0
+]
+
+{ #category : #'debug support' }
+SpurMemoryManager >> leakCheckIncrementalGC [
+	<api>
+	^(checkForLeaks bitAnd: 8) ~= 0
+]
+
+{ #category : #'debug support' }
+SpurMemoryManager >> leakCheckScavenge [
+	<api>
+	^(checkForLeaks bitAnd: 2) ~= 0
 ]
 
 { #category : #'object access' }
@@ -2286,6 +2387,7 @@ SpurMemoryManager >> numPointerSlotsOf: objOop [
 			contextSize := coInterpreter fetchStackPointerOf: objOop.
 			^CtxtTempFrameStart + contextSize].
 		^self numSlotsOf: objOop  "all pointers"].
+	fmt = self forwardedFormat ifTrue: [^1].
 	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes"
@@ -2407,7 +2509,8 @@ SpurMemoryManager >> overflowSlotsMask [
 
 { #category : #'store check' }
 SpurMemoryManager >> possibleRootStoreInto: destObj value: valueOop [
-	(#(	storePointer:ofObject:withValue:) includes: thisContext sender method selector) ifFalse:
+	(#(	storePointer:ofObject:withValue:
+		storePointer:ofForwardedOrFreeObject:withValue:) includes: thisContext sender method selector) ifFalse:
 		[self halt].
 	(self isRemembered: destObj) ifFalse:
 		[scavenger remember: destObj.
@@ -2416,8 +2519,8 @@ SpurMemoryManager >> possibleRootStoreInto: destObj value: valueOop [
 
 { #category : #'become implementation' }
 SpurMemoryManager >> postBecomeScanClassTable [
-	"Scan the class table post-become (iff a pointer object was becommed)"
-	(becomeEffectsFlags anyMask: BecamePointerObjectFlag) ifFalse: [^self].
+	"Scan the class table post-become (iff a pointer object or compiled method was becommed)"
+	(becomeEffectsFlags anyMask: BecamePointerObjectFlag+BecameCompiledMethodFlag) ifFalse: [^self].
 	
 	0 to: (self numSlotsOf: classTableRootObj) - 1 do:
 		[:i| | page |
@@ -2429,7 +2532,7 @@ SpurMemoryManager >> postBecomeScanClassTable [
 				[(self isForwarded: classOrNil) ifTrue:
 					[classOrNil := self followForwarded: classOrNil.
 					 self storePointer: j ofObject: page withValue: classOrNil].
-				 self scanClassPostBecome: classOrNil]]]
+				 self scanClassPostBecome: classOrNil effects: becomeEffectsFlags]]]
 ]
 
 { #category : #'debug printing' }
@@ -2437,6 +2540,36 @@ SpurMemoryManager >> printHeaderTypeOf: objOop [
 	coInterpreter print: ((self numSlotsOf: objOop) >= self numSlotsMask
 							ifTrue: [' 8 byte header']
 							ifFalse: [' 16 byte header'])
+]
+
+{ #category : #'debug printing' }
+SpurMemoryManager >> printMemoryFrom: start to: end [
+	self subclassResponsibility
+]
+
+{ #category : #'debug printing' }
+SpurMemoryManager >> printReferencesTo: anOop [
+	"Scan the heap printing the oops of any and all objects that refer to anOop"
+	<api>
+	self allObjectsDo:
+		[:obj| | i |
+		((self isPointersNonImm: obj) or: [self isCompiledMethod: obj])
+			ifTrue:
+				[(self isCompiledMethod: obj)
+					ifTrue:
+						[i := (coInterpreter literalCountOf: obj) + LiteralStart]
+					ifFalse:
+						[(self isContextNonImm: obj)
+							ifTrue: [i := CtxtTempFrameStart + (coInterpreter fetchStackPointerOf: obj)]
+							ifFalse: [i := self lengthOf: obj]].
+				[(i := i - 1) >= 0] whileTrue:
+					[anOop = (self fetchPointer: i ofObject: obj) ifTrue:
+						[coInterpreter printHex: obj; print: ' @ '; printNum: i; space; printOopShort: obj; cr.
+						 i := 0]]]
+			ifFalse:
+				[((self isForwarded: obj)
+				 and: [(self fetchPointer: 0 ofForwardedOrFreeObject: obj) = anOop]) ifTrue:
+					[coInterpreter printHex: obj; print: ' => '; printHex: anOop; cr]]]
 ]
 
 { #category : #'header access' }
@@ -2475,31 +2608,67 @@ SpurMemoryManager >> rememberedBitShift [
 	^29
 ]
 
+{ #category : #'debug support' }
+SpurMemoryManager >> runLeakCheckerForFullGC: fullGCFlag [
+	<inline: false>
+	(fullGCFlag
+			ifTrue: [self leakCheckFullGC]
+			ifFalse: [self leakCheckScavenge]) ifTrue:
+		[fullGCFlag
+			ifTrue: [coInterpreter reverseDisplayFrom: 0 to: 7]
+			ifFalse: [coInterpreter reverseDisplayFrom: 8 to: 15].
+		 self clearLeakMapAndMapAccessibleObjects.
+		 self assert: self checkHeapIntegrity.
+		 self assert: coInterpreter checkInterpreterIntegrity.
+		 self assert: coInterpreter checkStackIntegrity.
+		 self assert: (coInterpreter checkCodeIntegrity: fullGCFlag)]
+]
+
 { #category : #'become implementation' }
-SpurMemoryManager >> scanClassPostBecome: classObj [
+SpurMemoryManager >> scanClassPostBecome: startClassObj effects: becomeEffects [
 	"Scan a class in the class table post-become.  Make sure the superclass
 	 chain contains no forwarding pointers, and that the method dictionaries
-	 are not forwarded either."
+	 are not forwarded either, and that methoidClassAssociations in methods
+	 are not followed either."
 
-	| obj |
+	| classObj obj obj2 |
+	"Algorithm depend on this to terminate loop at root of superclass chain."
 	self assert: (self rawHashBitsOf: nilObj) ~= 0.
+	self assert: (becomeEffects anyMask: BecamePointerObjectFlag+BecameCompiledMethodFlag). "otherwise why bother?"
+	classObj := startClassObj.
 
-	obj := self fetchPointer: MethodDictionaryIndex ofObject: classObj.
-	self assert: (self isNonImmediate: obj).
-	(self isForwarded: obj) ifTrue:
+	[obj := self fetchPointer: MethodDictionaryIndex ofObject: classObj.
+	 self assert: (self isNonImmediate: obj).
+	 (self isForwarded: obj) ifTrue:
 		[obj := self followForwarded: obj.
 		 self storePointer: MethodDictionaryIndex ofObject: classObj withValue: obj].
+	 obj2 := self fetchPointer: MethodArrayIndex ofObject: obj.
+	 self assert: (self isNonImmediate: obj2).
+	 (self isForwarded: obj2) ifTrue:
+		[obj2 := self followForwarded: obj2.
+		 self storePointer: MethodArrayIndex ofObject: obj withValue: obj2].
+	 "Only need to follow pointers in MethodArray if we've became any compiled methods..."
+	 (becomeEffects anyMask: BecameCompiledMethodFlag) ifTrue:
+		[self followForwardedObjectFields: obj2 toDepth: 0].
+	 "But the methodClassAssociations there-in need to be followed if we've done any pointer becomes."
+	 (becomeEffects anyMask: BecamePointerObjectFlag) ifTrue:
+		[0 to: (self numSlotsOf: obj2) - 1 do:
+			[:i|
+			obj := self fetchPointer: i ofObject: obj2.
+			(self isOopCompiledMethod: obj2) ifTrue:
+				[coInterpreter followNecessaryForwardingInMethod: obj2]]].
 
-	obj := self fetchPointer: SuperclassIndex ofObject: classObj.
-	self assert: (self isNonImmediate: obj).
-	(self isForwarded: obj) ifTrue:
+	 obj := self fetchPointer: SuperclassIndex ofObject: classObj.
+	 self assert: (self isNonImmediate: obj).
+	 (self isForwarded: obj) ifTrue:
 		[obj := self followForwarded: obj.
 		 self storePointer: SuperclassIndex ofObject: classObj withValue: obj].
 
 	"If the superclass has an identityHash then either it is nil, or is in the class table.
 	 Tail recurse."
-	(self rawHashBitsOf: obj) = 0 ifTrue:
-		[self scanClassPostBecome: obj]
+	(self rawHashBitsOf: obj) = 0] whileTrue:
+		["effectively self scanClassPostBecome: obj"
+		 classObj := obj]
 ]
 
 { #category : #'debug support' }
@@ -2512,6 +2681,17 @@ SpurMemoryManager >> scavenger [
 SpurMemoryManager >> scheduleScavenge [
 	needGCFlag := true.
 	coInterpreter forceInterruptCheck
+]
+
+{ #category : #'debug support' }
+SpurMemoryManager >> setCheckForLeaks: anInteger [
+	" 0 = do nothing.
+	  1 = check for leaks on fullGC.
+	  2 = check for leaks on scavenger.
+	  4 = check for leaks on become
+	  8 = check for leaks on truly incremental.
+	15 = check for leaks on all four."
+	checkForLeaks := anInteger
 ]
 
 { #category : #'header access' }
@@ -2577,6 +2757,12 @@ SpurMemoryManager >> shouldRemapOop: oop [
 	<inline: true>
 	^(self isNonImmediate: oop)
 	   and: [self shouldRemapObj: oop]
+]
+
+{ #category : #'free space' }
+SpurMemoryManager >> shrinkThreshold [
+	self flag: #temporary.
+	^SmallInteger maxVal
 ]
 
 { #category : #accessing }
@@ -2676,10 +2862,32 @@ SpurMemoryManager >> sufficientSpaceAfterGC: numBytes [
 	 we run the scavenger."
 	self halt.
 	self assert: numBytes = 0.
+
+	self runLeakCheckerForFullGC: false.
+	coInterpreter preGCAction: GCModeIncr.
 	needGCFlag := false.
-	scavenger scavenge.
+
+
+	gcStartUsecs := coInterpreter ioUTCMicrosecondsNow.
+
+	scavengeInProgress := true.
+	pastSpaceStart := scavenger scavenge.
+	self assert: (self
+					oop: pastSpaceStart
+					isGreaterThanOrEqualTo: scavenger pastSpace start
+					andLessThan: scavenger pastSpace limit).
 	freeStart := scavenger eden start.
 	self initSpaceForAllocationCheck: scavenger eden.
+	scavengeInProgress := false.
+
+	statScavenges := statScavenges + 1.
+	statGCEndUsecs := coInterpreter ioUTCMicrosecondsNow.
+	statSGCDeltaUsecs := statGCEndUsecs - gcStartUsecs.
+	statScavengeGCUsecs := statScavengeGCUsecs + statSGCDeltaUsecs.
+
+	coInterpreter postGCAction.
+	self runLeakCheckerForFullGC: false.
+
 	^true
 ]
 

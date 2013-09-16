@@ -98,9 +98,17 @@ SpurGenerationScavenger >> futureSpace [
 	^self addressOf: futureSpace
 ]
 
+{ #category : #accessing }
+SpurGenerationScavenger >> futureSurvivorStart [
+	^futureSurvivorStart
+]
+
 { #category : #initialization }
 SpurGenerationScavenger >> initFutureSpaceStart [
-	futureSurvivorStart := futureSpace start
+	| oldStart |
+	oldStart := futureSurvivorStart.
+	futureSurvivorStart := futureSpace start.
+	^oldStart
 ]
 
 { #category : #initialization }
@@ -176,6 +184,17 @@ SpurGenerationScavenger >> remember: objOop [
 			[self error: 'remembered set overflow' "for now"]
 ]
 
+{ #category : #accessing }
+SpurGenerationScavenger >> rememberedSetSize [
+	^rememberedSetSize
+]
+
+{ #category : #'debug support' }
+SpurGenerationScavenger >> rememberedSetWithIndexDo: aBlock [
+	0 to: rememberedSetSize - 1 do:
+		[:i| aBlock value: (rememberedSet at: i) value: i]
+]
+
 { #category : #scavenger }
 SpurGenerationScavenger >> scavenge [
 	"The main routine, scavenge, scavenges young objects reachable from the roots (the stack zone
@@ -188,12 +207,14 @@ SpurGenerationScavenger >> scavenge [
 
 	 Notice that each pointer in a live object is inspected once and only once.  The previousRememberedSetSize
 	 and previousFutureSurvivorSpaceSize variables ensure that no object is scanned twice, as well as
-	 detecting closure.  If this were not true, some pointers might get forwarded twice."
+	 detecting closure.  If this were not true, some pointers might get forwarded twice.
+
+	 Answer the limit of pastSpace, to allow the memory manager to bounds check survivors."
 
 	self scavengeLoop.
 	self computeTenuringThreshold.
 	self exchangeSurvivorSpaces.
-	self initFutureSpaceStart
+	^self initFutureSpaceStart
 ]
 
 { #category : #scavenger }
@@ -246,26 +267,33 @@ SpurGenerationScavenger >> scavengeReferentsOf: referrer [
 	 If any are new objects, it has them moved to FutureSurvivorSpace,
 	 and answers truth. If there are no new referents, it answers falsity."
 	| foundNewReferent |
-	"callers follow forwarding pointers from become:"
-	self assert: (manager isForwarded: referrer) not.
-	"manager isPointersNonImm: referrer) ifFalse:
-		[^false]."
+	"forwarding objects should be followed by callers,
+	 unless the forwarder is a root in the remembered table."
+	self assert: ((manager isForwarded: referrer) not
+				or: [manager isRemembered: referrer]).
 	foundNewReferent := false.
 	0 to: (manager numPointerSlotsOf: referrer) - 1 do:
 		[:i| | referent newLocation |
-		referent := manager fetchPointer: i ofObject: referrer.
+		referent := manager fetchPointer: i ofMaybeForwardedObject: referrer.
 		(manager isNonImmediate: referent) ifTrue:
-			[(manager isYoung: referent)
+			["a forwarding pointer could be because of become: or scavenging."
+			 referent := (manager isForwarded: referent)
+								ifTrue: [manager followForwarded: referent]
+								ifFalse: [referent].
+			 (manager isYoung: referent)
 				ifTrue:
 					[foundNewReferent := true.
-					 (manager isForwarded: referent)
-						ifTrue: [newLocation := manager followForwarded: referent]
-						ifFalse: [newLocation := self copyAndForward: referent].
-					 manager storePointerUnchecked: i ofObject: referrer withValue: newLocation]
+					 "if target is already in future space forwarding pointer was due to a become:."
+					 (manager isInFutureSpace: referent)
+						ifTrue: [newLocation := referent]
+						ifFalse:
+							[(manager isForwarded: referent)
+								ifTrue: [self halt. "can this even happen?"
+									newLocation := manager followForwarded: referent]
+								ifFalse: [newLocation := self copyAndForward: referent]].
+					 manager storePointerUnchecked: i ofMaybeForwardedObject: referrer withValue: newLocation]
 				ifFalse:
-					[(manager isForwarded: referent) ifTrue:
-						[newLocation := manager followForwarded: referent.
-						 manager storePointerUnchecked: i ofObject: referrer withValue: newLocation]]]].
+					[manager storePointerUnchecked: i ofMaybeForwardedObject: referrer withValue: referent]]].
 	^foundNewReferent
 ]
 
@@ -278,10 +306,9 @@ SpurGenerationScavenger >> scavengeRememberedSetStartingAt: n [
 	sourceIndex := destIndex := n.
 	[sourceIndex < rememberedSetSize] whileTrue:
 		[| referree |
+		"*Don't* follow forwarding pointers here. oldSpace objects may refer
+		 to these roots, and so they can't be removed in the scavenge."
 		referree := rememberedSet at: sourceIndex.
-		(manager isForwarded: referree) ifTrue:
-			[referree := manager followForwarded: referree.
-			 rememberedSet at: destIndex put: referree].
 		(self scavengeReferentsOf: referree)
 			ifTrue:
 				[rememberedSet at: destIndex put: referree.
