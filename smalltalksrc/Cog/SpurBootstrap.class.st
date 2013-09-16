@@ -1075,6 +1075,7 @@ SpurBootstrap >> on: imageName [
 		allocateMemoryOfSize: (oldHeap youngStart * 5 / 4 roundUpTo: 8)
 		newSpaceSize: 1024 * 1024
 		codeSize: 1024 * 1024.
+		newHeap setCheckForLeaks: 15 - 4. "don't check become"
 	map := Dictionary new: oldHeap memory size // 4.
 	reverseMap := Dictionary new: oldHeap memory size // 4.
 	classToIndex := Dictionary new: 1024
