@@ -1974,6 +1974,12 @@ SpurMemoryManager >> isInEden: objOop [
 ]
 
 { #category : #'object testing' }
+SpurMemoryManager >> isInFutureSpace: objOop [
+	^objOop >= scavenger futureSpace start
+	  and: [objOop < scavenger futureSpace limit]
+]
+
+{ #category : #'object testing' }
 SpurMemoryManager >> isInOldSpace: address [ 
 	^address between: newSpaceLimit and: freeOldSpaceStart
 ]
@@ -2446,13 +2452,21 @@ SpurMemoryManager >> remap: oop [
 
 { #category : #'generation scavenging' }
 SpurMemoryManager >> remapObj: objOop [
-	"Scavenge objOop.  Answer the new location of objOop.  Call should have been guarded by
-	 a send of shouldRemapOop: or shouldScavengeObj:.. The method is called remapObj: for
-	 compatibility with ObjectMemory."
+	"Scavenge or simply follow objOop.  Answer the new location of objOop.  The
+	 send should have been guarded by a send of shouldRemapOop: or shouldScavengeObj:.
+	 The method is called remapObj: for compatibility with ObjectMemory."
 	<inline: false>
-	(self isForwarded: objOop) ifTrue:
-		[^self followForwarded: objOop].
-	^scavenger copyAndForward: objOop
+	| resolvedObj |
+	(self isForwarded: objOop)
+		ifTrue:
+			[resolvedObj := self followForwarded: objOop.
+			(self isYoung: resolvedObj) ifFalse: "a becommed object whose target is in old space"
+				[^resolvedObj].
+			(self isInFutureSpace: resolvedObj) ifTrue: "already scavenged"
+				[^resolvedObj]]
+		ifFalse:
+			[resolvedObj := objOop].
+	^scavenger copyAndForward: resolvedObj
 ]
 
 { #category : #'header format' }
@@ -2549,9 +2563,10 @@ SpurMemoryManager >> setIsRememberedOf: objOop to: aBoolean [
 
 { #category : #'generation scavenging' }
 SpurMemoryManager >> shouldRemapObj: objOop [
-	"Answer if the obj should be scavenged. The method is called
+	"Answer if the obj should be scavenged (or simply followed). The method is called
 	 shouldRemapObj: for compatibility with ObjectMemory."
-	^self isYoung: objOop
+	^(self isForwarded: objOop)
+	  or: [self isYoung: objOop]
 ]
 
 { #category : #'generation scavenging' }
