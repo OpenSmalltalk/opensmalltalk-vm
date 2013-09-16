@@ -1293,7 +1293,7 @@ ObjectMemory >> checkOopHasOkayClass: obj [
 	^true
 ]
 
-{ #category : #'memory access' }
+{ #category : #'debug support' }
 ObjectMemory >> checkOopIntegrity: obj named: name [
 	<inline: false>
 	<var: #name type: #'char *'>
@@ -1303,7 +1303,7 @@ ObjectMemory >> checkOopIntegrity: obj named: name [
 	^false
 ]
 
-{ #category : #'memory access' }
+{ #category : #'debug support' }
 ObjectMemory >> checkOopIntegrity: obj named: name index: i [
 	<inline: false>
 	<var: #name type: #'char *'>
@@ -1458,7 +1458,7 @@ ObjectMemory >> classUnsafeAlien [
 	^self splObj: ClassUnsafeAlien
 ]
 
-{ #category : #'memory access' }
+{ #category : #'debug support' }
 ObjectMemory >> clearLeakMapAndMapAccessibleObjects [
 	"Perform an integrity/leak check using the heapMap.  Set a bit at each object's header."
 	| oop |

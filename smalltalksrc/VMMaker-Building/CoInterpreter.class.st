@@ -4239,9 +4239,6 @@ CoInterpreter >> mapStackPages [
 	<var: #frameRcvrOffset type: #'char *'>
 	<var: #callerFP type: #'char *'>
 	<var: #theIPPtr type: #'char *'>
-	"Need to write back the frame pointers unless all pages are free (as in snapshot)"
-	stackPage ~= 0 ifTrue:
-		[self externalWriteBackHeadFramePointers].
 	0 to: numStackPages - 1 do:
 		[:i| | thePage theSP theFP frameRcvrOffset callerFP theIPPtr theIP oop |
 		thePage := stackPages stackPageAt: i.

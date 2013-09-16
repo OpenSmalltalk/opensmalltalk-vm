@@ -4,6 +4,16 @@ Class {
 	#category : #'VMMaker-SpurMemoryManagerSimulation'
 }
 
+{ #category : #'become api' }
+Spur32BitMMLESimulator >> become: array1 with: array2 twoWay: twoWayFlag copyHash: copyHashFlag [
+
+	"(thisContext findContextSuchThat: [:c| c selector == #rehashImage]) ifNotNil:
+		[:ctxt|
+		(((ctxt tempAt: 4) at: 1) = 108
+		 and: [(ctxt tempAt: 2) byteCount = 553985]) ifTrue: [self halt]]."
+	^super become: array1 with: array2 twoWay: twoWayFlag copyHash: copyHashFlag
+]
+
 { #category : #'memory access' }
 Spur32BitMMLESimulator >> byteAt: byteAddress [
 	| lowBits long |
@@ -40,6 +50,11 @@ Spur32BitMMLESimulator >> byteAtPointer: pointer [
 	 pointer is a raw address."
 
 	^self byteAt: pointer
+]
+
+{ #category : #'debug support' }
+Spur32BitMMLESimulator >> eek [
+	self halt
 ]
 
 { #category : #'memory access' }
