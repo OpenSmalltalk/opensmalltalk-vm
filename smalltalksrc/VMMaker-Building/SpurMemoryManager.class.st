@@ -1340,7 +1340,7 @@ SpurMemoryManager >> fetchClassOfNonImm: objOop [
 	classIndex := self classIndexOf: objOop.
 	classIndex = self classIsItselfClassIndexPun ifTrue:
 		[^objOop].
-	self assert: classIndex >= FirstValidClassIndex.
+	self assert: classIndex >= self arrayClassIndexPun.
 	^self classAtIndex: classIndex
 ]
 
@@ -1669,36 +1669,45 @@ SpurMemoryManager >> identityHashHalfWordMask [
 
 { #category : #'become implementation' }
 SpurMemoryManager >> inPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag [
-	| headerTemp temp |
+	"Do become in place by swapping object contents."
+	| headerTemp temp1 temp2 o1HasYoung o2HasYoung |
 	<var: 'headerTemp' type: #usqLong>
 	self assert: (self numSlotsOf: obj1) = (self numSlotsOf: obj2).
-	(self isRemembered: obj1)
-		ifTrue:
-			[(self isRemembered: obj1) ifFalse:
-				[scavenger
-					replace: obj1
-					inRememberedTableWith: obj2]]
-		ifFalse:
-			[(self isRemembered: obj2) ifTrue:
-				[scavenger
-					replace: obj2
-					inRememberedTableWith: obj1]].
+	"swap headers, but swapping headers swaps remembered bits;
+	 these need to be unswapped."
+	temp1 := self isRemembered: obj1.
+	temp2 := self isRemembered: obj2.
 	headerTemp := self longLongAt: obj1.
 	self longLongAt: obj1 put: (self longLongAt: obj2).
 	self longLongAt: obj2 put: headerTemp.
-	copyHashFlag ifFalse: "undo hash copy"
-		[temp := self rawHashBitsOf: obj1.
+	self setIsRememberedOf: obj1 to: temp1.
+	self setIsRememberedOf: obj2 to: temp2.
+	"swapping headers swaps hash; if !copyHashFlagundo hash copy"
+	copyHashFlag ifFalse:
+		[temp1 := self rawHashBitsOf: obj1.
 		 self setHashBitsOf: obj1 to: (self rawHashBitsOf: obj2).
-		 self setHashBitsOf: obj2 to: temp].
+		 self setHashBitsOf: obj2 to: temp1].
+	o1HasYoung := o2HasYoung := false.
 	0 to: (self numSlotsOf: obj1) - 1 do:
 		[:i|
-		temp := self fetchPointer: i ofObject: obj1.
+		temp1 := self fetchPointer: i ofObject: obj1.
+		temp2 := self fetchPointer: i ofObject: obj2.
 		self storePointerUnchecked: i
 			ofObject: obj1
-			withValue: (self fetchPointer: i ofObject: obj2).
+			withValue: temp2.
 		self storePointerUnchecked: i
 			ofObject: obj2
-			withValue: temp]
+			withValue: temp1.
+		((self isNonImmediate: temp2) and: [self isYoung: temp2]) ifTrue:
+			[o1HasYoung := true].
+		((self isNonImmediate: temp1) and: [self isYoung: temp1]) ifTrue:
+			[o2HasYoung := true]].
+	(self isYoung: obj1) ifFalse:
+		[o1HasYoung ifTrue:
+			[self possibleRootStoreInto: obj1]].
+	(self isYoung: obj2) ifFalse:
+		[o2HasYoung ifTrue:
+			[self possibleRootStoreInto: obj2]]
 ]
 
 { #category : #'header format' }
@@ -2508,9 +2517,10 @@ SpurMemoryManager >> overflowSlotsMask [
 ]
 
 { #category : #'store check' }
-SpurMemoryManager >> possibleRootStoreInto: destObj value: valueOop [
+SpurMemoryManager >> possibleRootStoreInto: destObj [
 	(#(	storePointer:ofObject:withValue:
-		storePointer:ofForwardedOrFreeObject:withValue:) includes: thisContext sender method selector) ifFalse:
+		storePointer:ofForwardedOrFreeObject:withValue:
+		inPlaceBecome:and:copyHashFlag:) includes: thisContext sender method selector) ifFalse:
 		[self halt].
 	(self isRemembered: destObj) ifFalse:
 		[scavenger remember: destObj.
