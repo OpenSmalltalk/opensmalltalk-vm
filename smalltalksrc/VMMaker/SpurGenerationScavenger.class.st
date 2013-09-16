@@ -1,13 +1,13 @@
 Class {
 	#name : #SpurGenerationScavenger,
-	#superclass : #VMClass,
+	#superclass : #CogClass,
 	#instVars : [
 		'coInterpreter',
 		'manager',
-		'memory',
 		'eden',
 		'futureSpace',
 		'pastSpace',
+		'futureSurvivorStart',
 		'rememberedSet',
 		'rememberedSetSize',
 		'tenuringThreshold',
@@ -33,15 +33,44 @@ SpurGenerationScavenger >> coInterpreter: aCoInterpreter [
 ]
 
 { #category : #scavenger }
+SpurGenerationScavenger >> computeTenuringThreshold [
+	| fractionSurvived |
+	<var: 'fractionSurvived' type: #float>
+	fractionSurvived := (futureSurvivorStart - futureSpace start) asFloat
+						/ (futureSpace limit - futureSpace start).
+	tenuringThreshold := fractionSurvived > 0.9
+							ifTrue: [((pastSpace limit - pastSpace start) * tenuringProportion) rounded + pastSpace start]
+							ifFalse: [0]
+]
+
+{ #category : #scavenger }
 SpurGenerationScavenger >> copyAndForward: survivor [
 	"copyAndForward: survivor copies a survivor object either to
 	 futureSurvivorSpace or, if it is to be promoted, to oldSpace.
 	 It leaves a forwarding pointer behind."
-	| newLocation |
-	newLocation := (self shouldBeTenured: survivor)
-						ifTrue: [self copyToOldSpace: survivor]
-						ifFalse: [self copyToFutureSpace: survivor].
-	manager forward: survivor to: newLocation
+	<inline: true>
+	| bytesInObject newLocation |
+	bytesInObject := manager bytesInObject: survivor.
+	newLocation := ((self shouldBeTenured: survivor)
+					  or: [futureSurvivorStart + bytesInObject > futureSpace limit])
+						ifTrue: [self copyToOldSpace: survivor bytes: bytesInObject]
+						ifFalse: [self copyToFutureSpace: survivor bytes: bytesInObject].
+	manager forward: survivor to: newLocation.
+	^newLocation
+]
+
+{ #category : #scavenger }
+SpurGenerationScavenger >> copyToFutureSpace: survivor bytes: bytesInObject [
+	"Copy survivor to futureSpace.  Assume it will fit (checked by sender).
+	 Answer the new oop of the object (it may have an overflow size field)."
+	<inline: true>
+	| startOfSurvivor newStart |
+	self assert: futureSurvivorStart + bytesInObject <= futureSpace limit.
+	startOfSurvivor := manager startOfObject: survivor.
+	newStart := futureSurvivorStart.
+	futureSurvivorStart := futureSurvivorStart + bytesInObject.
+	manager mem: newStart cp: startOfSurvivor y: bytesInObject.
+	^newStart + (survivor - startOfSurvivor)
 ]
 
 { #category : #accessing }
@@ -55,10 +84,23 @@ SpurGenerationScavenger >> edenBytes [
 	^eden limit - eden start
 ]
 
+{ #category : #scavenger }
+SpurGenerationScavenger >> exchangeSurvivorSpaces [
+	| temp |
+	temp := pastSpace.
+	pastSpace := futureSpace.
+	futureSpace := temp
+]
+
 { #category : #accessing }
 SpurGenerationScavenger >> futureSpace [
 	<returnTypeC: #'SpurNewSpaceSpace *'>
 	^self addressOf: futureSpace
+]
+
+{ #category : #initialization }
+SpurGenerationScavenger >> initFutureSpaceStart [
+	futureSurvivorStart := futureSpace start
 ]
 
 { #category : #initialization }
@@ -75,26 +117,30 @@ SpurGenerationScavenger >> initPastSpaceForObjectEnumeration [
 SpurGenerationScavenger >> initialize [
 	rememberedSet := CArrayAccessor on: (Array new: RememberedSetLimit).
 	rememberedSetSize := 0.
-	tenuringThreshold := 0
+	tenuringThreshold := 0.
+	tenuringProportion := 0.9
 ]
 
 { #category : #initialization }
-SpurGenerationScavenger >> manager: aSpurMemoryManager memory: memoryArray newSpaceStart: startAddress newSpaceBytes: totalBytes edenBytes: requestedEdenBytes [ 
+SpurGenerationScavenger >> manager: aSpurMemoryManager newSpaceStart: startAddress newSpaceBytes: totalBytes edenBytes: requestedEdenBytes [ 
 	| edenBytes survivorBytes |
 	manager := aSpurMemoryManager.
-	memory := memoryArray.
+
 	edenBytes := requestedEdenBytes.
 	survivorBytes := totalBytes - edenBytes // 2 truncateTo: manager allocationUnit.
 	edenBytes := totalBytes - survivorBytes - survivorBytes truncateTo: manager allocationUnit.
 	self assert: totalBytes - edenBytes - survivorBytes - survivorBytes < manager allocationUnit.
+
 	"for tenuring we require older objects below younger objects.  since allocation
 	 grows up this means that the survivor spaces must preceed eden."
 	pastSpace := SpurNewSpaceSpace new.
 	futureSpace := SpurNewSpaceSpace new.
 	eden := SpurNewSpaceSpace new.
+
 	pastSpace start: startAddress limit: startAddress + survivorBytes.
 	futureSpace start: pastSpace limit limit: pastSpace limit + survivorBytes.
 	eden start: futureSpace limit limit: futureSpace limit + edenBytes.
+
 	self assert: futureSpace limit <= (startAddress + totalBytes).
 	self assert: eden start \\ manager allocationUnit
 				+ (eden limit \\ manager allocationUnit) = 0.
@@ -102,6 +148,8 @@ SpurGenerationScavenger >> manager: aSpurMemoryManager memory: memoryArray newSp
 				+ (pastSpace limit \\ manager allocationUnit) = 0.
 	self assert: futureSpace start \\ manager allocationUnit
 				+ (futureSpace limit \\ manager allocationUnit) = 0.
+
+	self initFutureSpaceStart.
 	self initPastSpaceForObjectEnumeration.
 	manager initSpaceForAllocationCheck: eden
 ]
@@ -143,22 +191,20 @@ SpurGenerationScavenger >> scavenge [
 	 detecting closure.  If this were not true, some pointers might get forwarded twice."
 
 	self scavengeLoop.
-	self exchange: pastSpace with: futureSpace.
-	self computeTenuringThreshold
+	self computeTenuringThreshold.
+	self exchangeSurvivorSpaces.
+	self initFutureSpaceStart
 ]
 
 { #category : #scavenger }
 SpurGenerationScavenger >> scavengeFutureSurvivorSpaceStartingAt: initialAddress [
 	"scavengeFutureSurvivorSpaceStartingAt: does a depth-first traversal of the
 	 new objects starting at the one at initialAddress in futureSurvivorSpace."
-	| ptr |
+	| ptr obj |
 	ptr := initialAddress.
-	[ptr < futureSpace limit] whileTrue:
-		[| obj |
-		 obj := manager objectStartingAt: ptr.
+	[ptr < futureSurvivorStart] whileTrue:
+		[obj := manager objectStartingAt: ptr.
 		 ptr := manager addressAfter: obj.
-		 (manager isForwarded: obj) ifTrue:
-			[obj := manager followForwarded: obj].
 		 self cCoerceSimple: (self scavengeReferentsOf: obj) to: #void]
 ]
 
@@ -174,50 +220,52 @@ SpurGenerationScavenger >> scavengeLoop [
 	 and previousFutureSurvivorSpaceLimit variables ensure that no object is scanned twice, as well as
 	 detecting closure.  If this were not true, some pointers might get forwarded twice."
 
-	| firstTime previousRememberedSetSize previousFutureSurvivorSpaceLimit |
-	self assert: futureSpace limit = futureSpace start. "future space should be empty at the start"
+	| firstTime previousRememberedSetSize previousFutureSurvivorStart |
+	self assert: futureSurvivorStart = futureSpace start. "future space should be empty at the start"
+	firstTime := true.
 	previousRememberedSetSize := 0.
-	previousFutureSurvivorSpaceLimit := futureSpace limit.
+	previousFutureSurvivorStart := futureSurvivorStart.
 	[self scavengeRememberedSetStartingAt: previousRememberedSetSize.
-	 previousFutureSurvivorSpaceLimit = futureSpace limit ifTrue:
+	 previousFutureSurvivorStart = futureSurvivorStart ifTrue:
 		[^self].
+	 previousRememberedSetSize := rememberedSetSize.
 
 	firstTime ifTrue:
 		[coInterpreter mapInterpreterOops.
 		 firstTime := false].
-
-	 previousRememberedSetSize := rememberedSetSize.
-	 self scavengeFutureSurvivorSpaceStartingAt: previousFutureSurvivorSpaceLimit.
-	 previousFutureSurvivorSpaceLimit = rememberedSetSize ifTrue:
+	 self scavengeFutureSurvivorSpaceStartingAt: previousFutureSurvivorStart.
+	 previousFutureSurvivorStart = rememberedSetSize ifTrue:
 		[^self].
 
-	 previousFutureSurvivorSpaceLimit := futureSpace size] repeat
+	 previousFutureSurvivorStart := futureSurvivorStart] repeat
 ]
 
 { #category : #scavenger }
 SpurGenerationScavenger >> scavengeReferentsOf: referrer [
 	"scavengeReferentsOf: referrer inspects all the pointers in referrer.
 	 If any are new objects, it has them moved to FutureSurvivorSpace,
-	 and returns truth. If there are no new referents, it returns falsity."
+	 and answers truth. If there are no new referents, it answers falsity."
 	| foundNewReferent |
 	"callers follow forwarding pointers from become:"
 	self assert: (manager isForwarded: referrer) not.
 	"manager isPointersNonImm: referrer) ifFalse:
 		[^false]."
 	foundNewReferent := false.
-	0 to: (manager numPointerSlotsOf: referrer) do:
-		[:i| | referent |
+	0 to: (manager numPointerSlotsOf: referrer) - 1 do:
+		[:i| | referent newLocation |
 		referent := manager fetchPointer: i ofObject: referrer.
-		self flag: 'should we follow forwarded objects in oldSpace?'.
-		((manager isNonImmediate: referent)
-		 and: [manager isYoung: referent]) ifTrue:
-			[foundNewReferent := true.
-			 (manager isForwarded: referent) ifFalse:
-				[self copyAndForward: referent].
-			 manager
-				storePointerUnchecked: i
-				ofObject: referrer
-				withValue: (manager forwardingPointerOf: referent)]].
+		(manager isNonImmediate: referent) ifTrue:
+			[(manager isYoung: referent)
+				ifTrue:
+					[foundNewReferent := true.
+					 (manager isForwarded: referent)
+						ifTrue: [newLocation := manager followForwarded: referent]
+						ifFalse: [newLocation := self copyAndForward: referent].
+					 manager storePointerUnchecked: i ofObject: referrer withValue: newLocation]
+				ifFalse:
+					[(manager isForwarded: referent) ifTrue:
+						[newLocation := manager followForwarded: referent.
+						 manager storePointerUnchecked: i ofObject: referrer withValue: newLocation]]]].
 	^foundNewReferent
 ]
 
