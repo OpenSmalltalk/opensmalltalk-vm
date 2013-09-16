@@ -67,6 +67,7 @@ Class {
 		'rehashSym'
 	],
 	#classVars : [
+		'NewInterpreter',
 		'TransformedImage'
 	],
 	#pools : [
@@ -917,8 +918,9 @@ SpurBootstrap >> internAllSymbols [
 SpurBootstrap >> interpreter: sim object: receiver perform: selector withArguments: arguments [
 	"Interpret an expression in oldHeap using oldInterpreter.
 	 Answer the result."
-	| fp savedpc result |
+	| fp savedpc savedsp result |
 	savedpc := sim localIP.
+	savedsp := sim localSP.
 	sim internalPush: receiver.
 	arguments do: [:arg| sim internalPush: arg].
 	sim
@@ -929,6 +931,7 @@ SpurBootstrap >> interpreter: sim object: receiver perform: selector withArgumen
 	[fp = sim localFP] whileFalse:
 		[sim singleStep].
 	result := sim internalPopStack.
+	self assert: savedsp = sim localSP.
 	self assert: sim localIP - 1 = savedpc.
 	sim localIP: savedpc.
 	^result
@@ -944,7 +947,9 @@ SpurBootstrap >> launch: heap [
 	| sim |
 	sim := StackInterpreterSimulator onObjectMemory: heap.
 	heap coInterpreter: sim.
-	sim initializeInterpreter: 0.
+	sim
+		initializeInterpreter: 0;
+		transcript: Transcript. "deep copy copies this"
 	sim
 		instVarNamed: 'printSends' put: true;
 		instVarNamed: 'printReturns' put: true;
@@ -1132,8 +1137,8 @@ SpurBootstrap >> rehashImage [
 				[:o| | classIndex |
 				classIndex := newHeap classIndexOf: o.
 				((rehashFlags at: classIndex >> 3 + 1) anyMask: 1 << (classIndex bitAnd: 7)) ifTrue:
-					[n := n + 1.
-					 Transcript nextPut: $.; flush.
+					[(n := n + 1) \\ 8 = 0 ifTrue:
+					 	[Transcript nextPut: $.; flush].
 					 (self interpreter: sim
 							object: o
 							perform: (map at: sizeSym)
@@ -1220,7 +1225,15 @@ SpurBootstrap >> replacementForCharacterMethod: characterMethodOop [
 
 { #category : #'development support' }
 SpurBootstrap >> saveTransformedImage [
+	newHeap coInterpreter: nil.
 	TransformedImage := newHeap veryDeepCopy
+]
+
+{ #category : #'bootstrap image' }
+SpurBootstrap >> scavengeImage [
+	"Scavenge the image to get it into a simpler state."
+	newHeap coInterpreter voidVMStateForSnapshot.
+	newHeap sufficientSpaceAfterGC: 0
 ]
 
 { #category : #'method prototypes' }
@@ -1255,6 +1268,7 @@ SpurBootstrap >> transform [
 	self bootstrapImage.
 	self validate.
 	self rehashImage.
+	self scavengeImage.
 	self followForwardingPointers.
 	Transcript nextPutAll: 'done.'; flush.
 ]
