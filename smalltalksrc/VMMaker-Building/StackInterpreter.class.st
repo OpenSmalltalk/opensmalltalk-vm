@@ -7361,7 +7361,9 @@ StackInterpreter >> mapInterpreterOops [
 	self mapVMRegisters.
 	self mapProfileState.
 	self remapCallbackState.
-	tempOop = 0 ifFalse: [tempOop := objectMemory remap: tempOop]
+	(tempOop ~= 0
+	 and: [objectMemory shouldRemapOop: tempOop]) ifTrue:
+		[tempOop := objectMemory remapObj: tempOop]
 ]
 
 { #category : #'object memory support' }
