@@ -106,29 +106,36 @@ Spur32BitMemoryManager >> checkHeapIntegrity [
 	ok := true.
 	numRememberedRootsInHeap := 0.
 	self allObjectsDo:
-		[:obj| | fieldOop classIndex classOop |
+		[:obj| | containsYoung fieldOop classIndex classOop |
 		(self isFreeObject: obj) ifFalse:
-			[(self isRemembered: obj) ifTrue:
-				[numRememberedRootsInHeap := numRememberedRootsInHeap + 1].
+			[containsYoung := false.
+			 (self isRemembered: obj) ifTrue:
+				[numRememberedRootsInHeap := numRememberedRootsInHeap + 1.
+				 (scavenger isInRememberedTable: obj) ifFalse:
+					[coInterpreter print: 'remembered object '; printHex: obj; print: ' is not in remembered table'; cr.
+					 self eek.
+					 ok := false]].
 			 (self isForwarded: obj)
 				ifTrue:
 					[fieldOop := self fetchPointer: 0 ofForwardedOrFreeObject: obj.
 					 (heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
 						[coInterpreter print: 'object leak in forwarder '; printHex: obj; print: ' to unmapped '; printHex: fieldOop; cr.
 						 self eek.
-						 ok := false]]
+						 ok := false].
+					 (self isYoung: fieldOop) ifTrue:
+						[containsYoung := true]]
 				ifFalse:
 					[classOop := self classAtIndex: (classIndex := self classIndexOf: obj).
 					 (classOop isNil or: [classOop = nilObj]) ifTrue:
 						[coInterpreter print: 'object leak in '; printHex: obj; print: ' invalid class index '; printHex: classIndex; print: ' -> '; printHex: classOop; cr.
 						 self eek.
 						 ok := false].
-					 0 to: (self lastPointerOf: obj) by: BytesPerOop do:
+					 self baseHeaderSize to: (self lastPointerOf: obj) by: BytesPerOop do:
 						[:ptr|
-						 fieldOop := self longAt: ptr.
+						 fieldOop := self longAt: obj + ptr.
 						 (self isNonImmediate: fieldOop) ifTrue:
 							[| fi |
-							 fi := ptr - (obj + self baseHeaderSize).
+							 fi := ptr - self baseHeaderSize / self wordSize.
 							 (fieldOop bitAnd: self wordSize - 1) ~= 0
 								ifTrue:
 									[coInterpreter print: 'misaligned oop in '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; cr.
@@ -138,7 +145,14 @@ Spur32BitMemoryManager >> checkHeapIntegrity [
 									[(heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
 										[coInterpreter print: 'object leak in '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; cr.
 										 self eek.
-										 ok := false]]]]]]].
+										 ok := false].
+									 (self isYoung: fieldOop) ifTrue:
+										[containsYoung := true]]]]].
+					(containsYoung and: [(self isYoung: obj) not]) ifTrue:
+						[(self isRemembered: obj) ifFalse:
+							[coInterpreter print: 'unremembered object '; printHex: obj; print: ' contains young oop(s)'; cr.
+							 self eek.
+							 ok := false]]]].
 	numRememberedRootsInHeap ~= scavenger rememberedSetSize ifTrue:
 		[coInterpreter
 			print: 'root count mismatch. #heap roots ';
@@ -400,7 +414,7 @@ Spur32BitMemoryManager >> storePointer: fieldIndex ofForwardedOrFreeObject: objO
 	(self isForwarded: objOop) ifTrue:
 		[(self isYoung: objOop) ifFalse: "most stores into young objects"
 			[((self isNonImmediate: valuePointer) and: [self isYoung: valuePointer]) ifTrue:
-				[self possibleRootStoreInto: objOop value: valuePointer]]].
+				[self possibleRootStoreInto: objOop]]].
 
 	^self
 		longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
@@ -415,7 +429,7 @@ Spur32BitMemoryManager >> storePointer: fieldIndex ofObject: objOop withValue: v
 	(self isYoung: objOop) ifFalse: "most stores into young objects"
 		[(self isImmediate: valuePointer) ifFalse:
 			[(self isYoung: valuePointer) ifTrue:
-				[self possibleRootStoreInto: objOop value: valuePointer]]].
+				[self possibleRootStoreInto: objOop]]].
 
 	^self
 		longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)

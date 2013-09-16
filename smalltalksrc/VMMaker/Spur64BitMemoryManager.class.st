@@ -244,7 +244,7 @@ Spur64BitMemoryManager >> storePointer: fieldIndex ofObject: objOop withValue: v
 	(self isYoung: objOop) ifFalse: "most stores into young objects"
 		[(self isImmediate: valuePointer) ifFalse:
 			[(self isYoung: valuePointer) ifTrue:
-				[self possibleRootStoreInto: objOop value: valuePointer]]].
+				[self possibleRootStoreInto: objOop]]].
 
 	^self
 		longLongAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
