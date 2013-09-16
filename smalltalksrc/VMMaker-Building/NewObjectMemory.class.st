@@ -579,7 +579,7 @@ NewObjectMemory >> classTagForSpecialObjectsIndex: splObjIndex compactClassIndex
 	^self splObj: splObjIndex
 ]
 
-{ #category : #'object enumeration' }
+{ #category : #'debug support' }
 NewObjectMemory >> clearLeakMapAndMapAccessibleObjects [
 	"Perform an integrity/leak check using the heapMap.  Set a bit at each object's header."
 	| obj sz nextHeader |
@@ -1342,7 +1342,7 @@ NewObjectMemory >> incrementalGC [
 		 statRootTableOverflows := statRootTableOverflows + 1.
 		 ^self fullGC].
 	self runLeakCheckerForFullGC: false.
-	self preGCAction: GCModeIncr.
+	coInterpreter preGCAction: GCModeIncr.
 	needGCFlag := false.
 	gcStartUsecs := self ioUTCMicrosecondsNow.
 	statSweepCount := statMarkCount := statMkFwdCount := statCompMoveCount := 0.
@@ -1382,7 +1382,7 @@ NewObjectMemory >> incrementalGC [
 			[self biasToGrow.
 			 weDidGrow := true].
 		youngStart := freeStart].
-	self postGCAction.
+	coInterpreter postGCAction.
 	
 	self runLeakCheckerForFullGC: false.
 	weDidGrow ifTrue:
@@ -2369,20 +2369,20 @@ NewObjectMemory >> rightType: headerWord [
 				ifFalse: [HeaderTypeShort]]
 ]
 
-{ #category : #'garbage collection' }
+{ #category : #'debug support' }
 NewObjectMemory >> runLeakCheckerForFullGC: fullGCFlag [
 	<inline: false>
 	(fullGCFlag
 			ifTrue: [self leakCheckFullGC]
 			ifFalse: [self leakCheckIncrementalGC]) ifTrue:
 		[fullGCFlag
-			ifTrue: [self reverseDisplayFrom: 0 to: 7]
-			ifFalse: [self reverseDisplayFrom: 8 to: 15].
+			ifTrue: [coInterpreter reverseDisplayFrom: 0 to: 7]
+			ifFalse: [coInterpreter reverseDisplayFrom: 8 to: 15].
 		 self clearLeakMapAndMapAccessibleObjects.
 		 self assert: self checkHeapIntegrity.
-		 self assert: self checkInterpreterIntegrity.
-		 self assert: self checkStackIntegrity.
-		 self assert: (self checkCodeIntegrity: fullGCFlag).
+		 self assert: coInterpreter checkInterpreterIntegrity.
+		 self assert: coInterpreter checkStackIntegrity.
+		 self assert: (coInterpreter checkCodeIntegrity: fullGCFlag).
 		 self validate "simulation only"]
 ]
 
