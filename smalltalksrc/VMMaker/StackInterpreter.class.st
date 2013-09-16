@@ -3050,7 +3050,7 @@ StackInterpreter >> checkInterpreterIntegrity [
 	ok := true.
 	(objectMemory checkOopIntegrity: objectMemory specialObjectsOop named: 'specialObjectsOop')ifFalse:
 		[ok := false].
-	(objectMemory isIntegerObject: messageSelector) ifFalse:
+	(objectMemory isNonImmediate: messageSelector) ifTrue:
 		[(objectMemory checkOopIntegrity: messageSelector named: 'messageSelector')ifFalse:
 			[ok := false]].
 	(objectMemory checkOopIntegrity: newMethod named: 'newMethod')ifFalse:
@@ -3276,14 +3276,14 @@ StackInterpreter >> checkStackIntegrity [
 				[theSP := theSP + BytesPerWord].
 			 [[theSP <= (theFP + FoxReceiver)] whileTrue:
 				[oop := stackPages longAt: theSP.
-				 ((objectMemory isNonIntegerObject: oop) 
+				 ((objectMemory isNonImmediate: oop) 
 				   and: [(self heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
 					[self printFrameThing: 'object leak in frame temp' at: theSP; cr.
 					 ok := false].
 				 theSP := theSP + BytesPerWord].
 			 (self frameHasContext: theFP) ifTrue:
 				[oop := self frameContext: theFP.
-				 ((objectMemory isIntegerObject: oop) 
+				 ((objectMemory isImmediate: oop) 
 				   or: [(self heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
 					[self printFrameThing: 'object leak in frame ctxt' at: theFP + FoxThisContext; cr.
 					 ok := false].
@@ -3291,7 +3291,7 @@ StackInterpreter >> checkStackIntegrity [
 					[self printFrameThing: 'frame ctxt should be context' at: theFP + FoxThisContext; cr.
 					 ok := false]].
 			 oop := self frameMethod: theFP.
-			 ((objectMemory isIntegerObject: oop) 
+			 ((objectMemory isImmediate: oop) 
 			   or: [(self heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
 				[self printFrameThing: 'object leak in frame mthd' at: theFP + FoxMethod; cr.
 				 ok := false].
@@ -3301,7 +3301,7 @@ StackInterpreter >> checkStackIntegrity [
 			 theSP := theFP + FoxCallerContext "a.k.a. FoxCallerSavedIP".
 			 [theSP <= thePage baseAddress] whileTrue:
 				[oop := stackPages longAt: theSP.
-				 ((objectMemory isNonIntegerObject: oop) 
+				 ((objectMemory isNonImmediate: oop) 
 				   and: [(self heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
 					[self printFrameThing: 'object leak in frame arg' at: theSP; cr.
 					 ok := false].
@@ -5385,8 +5385,6 @@ StackInterpreter >> followForwardingPointersInStackZone: becomeEffectsFlags [
 	<var: #callerFP type: #'char *'>
 	<var: #theIPPtr type: #'char *'>
 
-	"NEEDS MORE THOUGHT!  WHAT ABOUT methodClassAssociation etc
-	 examine becomeEffectsFlags"
 	(becomeEffectsFlags anyMask: BecameCompiledMethodFlag) ifTrue:
 		[(objectMemory isForwarded: method) ifTrue:
 			[theIPPtr := instructionPointer - method.
@@ -5395,9 +5393,7 @@ StackInterpreter >> followForwardingPointersInStackZone: becomeEffectsFlags [
 		(objectMemory isForwarded: newMethod) ifTrue:
 			[newMethod := objectMemory followForwarded: newMethod]].
 
-	"Need to write back the frame pointers unless all pages are free (as in snapshot)"
 	self assert: stackPage ~= 0.
-	self externalWriteBackHeadFramePointers.
 	0 to: numStackPages - 1 do:
 		[:i| | thePage theSP theFP callerFP theIP oop |
 		thePage := stackPages stackPageAt: i.
@@ -5439,9 +5435,26 @@ StackInterpreter >> followForwardingPointersInStackZone: becomeEffectsFlags [
 					put: (objectMemory followForwarded: (self frameMethod: theFP)).
 			 	 theIPPtr ~= 0 ifTrue:
 					[stackPages longAt: theIPPtr put: theIP + (self frameMethod: theFP)]].
+			  self followNecessaryForwardingInMethod: (self frameMethod: theFP).
 			  (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
 				[theIPPtr := theFP + FoxCallerSavedIP.
 				 theFP := callerFP]]]
+]
+
+{ #category : #'lazy become' }
+StackInterpreter >> followNecessaryForwardingInMethod: methodObj [
+	"To avoid any chance of a forwarded object during super sends we follow the
+	 methodClassAssociation.  The forwarded object send fault only copes with
+	 normal sends to instances."
+	| assoc classObj |
+	assoc := self methodClassAssociationOf: methodObj.
+	(objectMemory isForwarded: assoc) ifTrue:
+		[assoc := objectMemory followForwarded: assoc.
+		 self setMethodClassAssociationOf: methodObj to: assoc].
+	classObj := objectMemory fetchPointer: ValueIndex ofObject: assoc.
+	(objectMemory isForwarded: classObj) ifTrue:
+		[classObj := objectMemory followForwarded: assoc.
+		 objectMemory storePointer: ValueIndex ofObject: assoc withValue: classObj]
 ]
 
 { #category : #'process primitive support' }
@@ -6976,7 +6989,7 @@ StackInterpreter >> longPrintOop: oop [
 	fmt > objectMemory lastPointerFormat ifTrue:
 		[self print: ' nbytes '; printNum: (objectMemory byteLengthOf: oop)].
 	objectMemory printHeaderTypeOf: oop.
-	self print: ' hash '; printHex: (objectMemory rawHashBitsOf: oop).
+	self print: ', hash '; printHex: (objectMemory rawHashBitsOf: oop).
 	self cr.
 	(fmt between: objectMemory firstLongFormat and: objectMemory firstCompiledMethodFormat - 1) ifTrue:
 		[^self].
@@ -7405,9 +7418,6 @@ StackInterpreter >> mapStackPages [
 	<var: #theFP type: #'char *'>
 	<var: #callerFP type: #'char *'>
 	<var: #theIPPtr type: #'char *'>
-	"Need to write back the frame pointers unless all pages are free (as in snapshot)"
-	stackPage ~= 0 ifTrue:
-		[self externalWriteBackHeadFramePointers].
 	0 to: numStackPages - 1 do:
 		[:i| | thePage theSP theFP callerFP theIPPtr theIP oop |
 		thePage := stackPages stackPageAt: i.
@@ -10263,9 +10273,9 @@ StackInterpreter >> reverseDisplayFrom: startIndex to: endIndex [
 	((objectMemory isPointers: displayObj) and: [(objectMemory lengthOf: displayObj) >= 4]) ifFalse: [^ nil].
 	w := objectMemory fetchPointer: 1 ofObject: displayObj.
 	displayBits := objectMemory fetchPointer: 0 ofObject: displayObj.
-	((objectMemory isIntegerObject: displayBits)
+	((objectMemory isImmediate: displayBits)
 	or: [(objectMemory isNonIntegerObject: w)
-	or: [objectMemory isPointersNonInt: displayBits]]) ifTrue: [^ nil].
+	or: [objectMemory isPointersNonImm: displayBits]]) ifTrue: [^ nil].
 	wordStartIndex := startIndex * 4.
 	wordEndIndex := endIndex * 4 min: (objectMemory sizeBitsOf: displayBits).
 	displayBits := displayBits + BaseHeaderSize.
@@ -10607,6 +10617,14 @@ StackInterpreter >> setMethod: aMethodObj methodHeader: methodHeader [
 		ifTrue: [bytecodeSetSelector := (self headerIndicatesAlternateBytecodeSet: methodHeader)
 											ifTrue: [256]
 											ifFalse: [0]]
+]
+
+{ #category : #'compiled methods' }
+StackInterpreter >> setMethodClassAssociationOf: methodPointer to: anObject [
+	objectMemory
+		storePointer: (self literalCountOf: methodPointer) + LiteralStart - 1
+		ofObject: methodPointer
+		withValue: anObject
 ]
 
 { #category : #'plugin primitive support' }

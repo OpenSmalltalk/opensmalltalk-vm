@@ -539,6 +539,11 @@ StackInterpreterSimulator >> headerStart: oop [
 	^ (objectMemory extraHeaderBytes: oop) negated
 ]
 
+{ #category : #'debug support' }
+StackInterpreterSimulator >> heapMapAtWord: address [
+	^objectMemory heapMap heapMapAtWord: address
+]
+
 { #category : #'interpreter shell' }
 StackInterpreterSimulator >> incrementByteCount [
 	(byteCount := byteCount + 1) = breakCount ifTrue:
