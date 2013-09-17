@@ -3246,9 +3246,8 @@ ObjectMemory >> lengthOf: oop baseHeader: hdr format: fmt [
 ObjectMemory >> lengthOfMaybeImmediate: oop [
 	"for the message send breakpoint; selectors can be immediates."
 	<inline: false>
-	^(self isImmediate: oop)
-		ifTrue: [oop]
-		ifFalse: [self lengthOf: oop]
+	(self isImmediate: oop) ifTrue: [^0].
+	^self lengthOf: oop
 ]
 
 { #category : #'image segment in/out' }

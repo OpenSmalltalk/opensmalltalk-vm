@@ -2462,9 +2462,8 @@ SpurMemoryManager >> lengthOf: objOop baseHeader: header format: fmt [
 SpurMemoryManager >> lengthOfMaybeImmediate: oop [
 	"for the message send breakpoint; selectors can be immediates."
 	<inline: false>
-	^(self isImmediate: oop)
-		ifTrue: [oop]
-		ifFalse: [self lengthOf: oop]
+	(self isImmediate: oop) ifTrue: [^0].
+	^self lengthOf: oop
 ]
 
 { #category : #'header format' }
