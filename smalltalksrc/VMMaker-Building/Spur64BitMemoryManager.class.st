@@ -145,6 +145,9 @@ Spur64BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 		[self indexablePointersFormat]	->
 			[numSlots := (self fixedFieldsOfClassFormat: classFormat) + nElements.
 			 fillValue := nilObj].
+		[self weakArrayFormat]	->
+			[numSlots := nElements.
+			 fillValue := nilObj].
 		[self sixtyFourBitIndexableFormat]	->
 			[numSlots := nElements].
 		[self firstLongFormat]	->

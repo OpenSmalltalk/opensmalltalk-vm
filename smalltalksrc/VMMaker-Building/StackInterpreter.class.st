@@ -3953,7 +3953,7 @@ StackInterpreter >> divorceAllFrames [
 		aPage := stackPages stackPageAt: i.
 		(stackPages isFree: aPage) ifFalse:
 			[self divorceFramesIn: aPage]].
-	stackPage := 0.
+	self zeroStackPage.
 	^activeContext
 ]
 
@@ -8635,7 +8635,7 @@ StackInterpreter >> printActivationNameFor: aMethod receiver: anObject isBlock: 
 	methClass := self findClassOfMethod: aMethod forReceiver: anObject.
 	methodSel := self findSelectorOfMethod: aMethod.
 	((objectMemory addressCouldBeOop: anObject)
-	 and: [(objectMemory isForwarded: anObject) not
+	 and: [(objectMemory isOopForwarded: anObject) not
 	 and: [self addressCouldBeClassObj: (classObj := objectMemory fetchClassOf: anObject)]])
 		ifTrue:
 			[classObj = methClass
@@ -10673,6 +10673,7 @@ StackInterpreter >> setStackPageAndLimit: thePage [
 	<inline: true>
 	<asmLabel: false>
 	<var: #thePage type: #'StackPage *'>
+	self assert: thePage ~= 0.
 	stackPage := thePage.
 	stackLimit ~= (self cCoerceSimple: -1 signedIntToLong to: #'char *') ifTrue:
 		[stackLimit := stackPage stackLimit].
@@ -12070,4 +12071,11 @@ StackInterpreter >> writeImageFileIO: imageBytes [
 	self touch: memStart.
 	self cCode: 'sqImageFileClose(f)'
 
+]
+
+{ #category : #'stack pages' }
+StackInterpreter >> zeroStackPage [
+	"In its own method as a debugging hook."
+	<inline: true>
+	stackPage := 0
 ]
