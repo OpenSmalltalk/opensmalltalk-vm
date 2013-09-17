@@ -1329,9 +1329,7 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 	"self printStringOf: selector"
 	cogit assertCStackWellAligned.
 	self assert: ((objectMemory isIntegerObject: rcvr) or: [objectMemory addressCouldBeObj: rcvr]).
-	self sendBreak: selector + BaseHeaderSize
-		point: (objectMemory lengthOf: selector)
-		receiver: rcvr.
+	self sendBreakpoint: selector receiver: rcvr.
 	mClassMixin := self mMethodClass.
 	mixinApplication := self 
 							findApplicationOfTargetMixin: mClassMixin
@@ -1627,9 +1625,7 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 	"self printStringOf: selector"
 	cogit assertCStackWellAligned.
 	self assert: ((objectMemory isIntegerObject: rcvr) or: [objectMemory addressCouldBeObj: rcvr]).
-	self sendBreak: selector + BaseHeaderSize
-		point: (objectMemory lengthOf: selector)
-		receiver: rcvr.
+	self sendBreakpoint: selector receiver: rcvr.
 	superNormalBar = 0
 		ifTrue: [classTag := objectMemory fetchClassTagOf: rcvr]
 		ifFalse: [classTag := objectMemory classTagForClass: (self superclassOf: (self methodClassOf: (self frameMethodObject: framePointer)))].
@@ -1713,9 +1709,7 @@ CoInterpreter >> ceSendAbort: selector to: rcvr numArgs: numArgs [
 	"self printStringOf: selector"
 	cogit assertCStackWellAligned.
 	self assert: ((objectMemory isIntegerObject: rcvr) or: [objectMemory addressCouldBeObj: rcvr]).
-	self sendBreak: selector + BaseHeaderSize
-		point: (objectMemory lengthOf: selector)
-		receiver: rcvr.
+	self sendBreakpoint: selector receiver: rcvr.
 	argumentCount := numArgs.
 	classTag := objectMemory fetchClassTagOf: rcvr.
 	(self lookupInMethodCacheSel: selector classTag: classTag)
@@ -1841,9 +1835,7 @@ CoInterpreter >> ceTraceLinkedSend: theReceiver [
 			isBlock: false
 			firstTemporary: nil;
 			cr].
-	self sendBreak: cogMethod selector + BaseHeaderSize
-		point: (objectMemory lengthOf: cogMethod selector)
-		receiver: theReceiver
+	self sendBreakpoint: cogMethod selector receiver: theReceiver
 ]
 
 { #category : #trampolines }
@@ -2233,9 +2225,7 @@ CoInterpreter >> commonSend [
 	the receiver and arguments have been pushed onto the stack,"
 	"Note: This method is inlined into the interpreter dispatch loop."
 	<sharedCodeNamed: 'commonSend' inCase: #singleExtendedSendBytecode>
-	self sendBreak: messageSelector + BaseHeaderSize
-		point: (objectMemory lengthOf: messageSelector)
-		receiver: (self internalStackValue: argumentCount).
+	self sendBreakpoint: messageSelector receiver: (self internalStackValue: argumentCount).
 	cogit recordSendTrace ifTrue:
 		[self recordTrace: lkupClass thing: messageSelector source: TraceIsFromInterpreter.
 		cogit printOnTrace ifTrue:
@@ -3515,9 +3505,7 @@ CoInterpreter >> implicitReceiverFor: rcvr mixin: mixin implementing: selector [
 	<api>
 	<option: #NewspeakVM>
 	cogit breakOnImplicitReceiver ifTrue:
-		[self sendBreak: selector + BaseHeaderSize
-			point: (objectMemory lengthOf: selector)
-			receiver: nil].
+		[self sendBreakpoint: selector receiver: nil].
 	^super implicitReceiverFor: rcvr mixin: mixin implementing: selector
 ]
 
