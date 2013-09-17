@@ -838,7 +838,7 @@ CoInterpreterPrimitives >> primitiveVoidVMStateForMethod [
 				 instructionPointer := self popStack.
 				 self assert: methodObj = self stackTop]
 			ifFalse:
-				[stackPage := 0. "to avoid assert in marryContextInNewStackPageAndInitializeInterpreterRegisters:"
+				[self zeroStackPage. "to avoid assert in marryContextInNewStackPageAndInitializeInterpreterRegisters:"
 				 self marryContextInNewStackPageAndInitializeInterpreterRegisters: activeContext.
 				 self popStack. "pop bogus machine-code instructionPointer"
 				 self assert: methodObj = self stackTop.
