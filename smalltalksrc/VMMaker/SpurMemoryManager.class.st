@@ -790,7 +790,7 @@ SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceByt
 SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 	"Answer a chunk of oldSpace from the free lists, if available,
 	 otherwise answer nil.  N.B.  the chunk is simply a pointer, it has
-	 no valid header.  The caler *must* fill in the header correctly."
+	 no valid header.  The caller *must* fill in the header correctly."
 	| index chunk nextIndex nodeBytes parent child smaller larger |
 	index := chunkBytes / self allocationUnit.
 	index < NumFreeLists ifTrue:
