@@ -8119,12 +8119,22 @@ StackInterpreter >> numStkPages [
 
 { #category : #'debug support' }
 StackInterpreter >> objCouldBeClassObj: objOop [
-	"Answer if objOop looks like a class object"
+	"Answer if objOop looks like a class object.  WIth Spur be lenient if the object doesn't
+	 yet have a hash (i.e. is not yet in the classTable), and accept forwarding pointers."
 	<inline: false>
+	| field |
 	^(objectMemory isPointersNonImm: objOop)
 	  and: [(objectMemory numSlotsOf: objOop) >= (InstanceSpecificationIndex+1)
-	  and: [(objectMemory isPointers: (objectMemory fetchPointer: SuperclassIndex ofObject: objOop))
-	  and: [(objectMemory isPointers: (objectMemory fetchPointer: MethodDictionaryIndex ofObject: objOop))
+	  and: [field := objectMemory fetchPointer: SuperclassIndex ofObject: objOop.
+			((objectMemory isPointers: field)
+			or: [(objectMemory rawHashBitsOf: objOop) = 0
+				and: [(objectMemory isOopForwarded: field)
+				and: [objectMemory isPointers: (objectMemory followForwarded: field)]]])
+	  and: [field := objectMemory fetchPointer: MethodDictionaryIndex ofObject: objOop.
+			((objectMemory isPointers: field)
+			or: [(objectMemory rawHashBitsOf: objOop) = 0
+				and: [(objectMemory isOopForwarded: field)
+				and: [objectMemory isPointers: (objectMemory followForwarded: field)]]])
 	  and: [(objectMemory isIntegerObject: (objectMemory fetchPointer: InstanceSpecificationIndex ofObject: objOop))]]]]
 ]
 

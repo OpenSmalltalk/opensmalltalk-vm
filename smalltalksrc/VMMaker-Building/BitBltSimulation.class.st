@@ -887,7 +887,7 @@ BitBltSimulation >> alphaSourceBlendBits8 [
 					ifFalse:[srcShift := srcShift - 8.
 							dstMask := (dstMask >> 8) bitOr: 16rFF000000].
 			] ifFalse:[
-				srcShift = 32
+				srcShift = 24
 					ifTrue:[dstIndex := dstIndex + 4.
 							srcShift := 0.
 							dstMask := 16rFFFFFF00]
