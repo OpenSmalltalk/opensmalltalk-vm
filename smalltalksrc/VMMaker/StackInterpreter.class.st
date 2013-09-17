@@ -3585,9 +3585,7 @@ StackInterpreter >> commonSend [
 	the receiver and arguments have been pushed onto the stack,"
 	"Note: This method is inlined into the interpreter dispatch loop."
 	<sharedCodeNamed: 'commonSend' inCase: #singleExtendedSendBytecode>
-	self sendBreak: messageSelector + BaseHeaderSize
-		point: (objectMemory lengthOf: messageSelector)
-		receiver: (self internalStackValue: argumentCount).
+	self sendBreakpoint: messageSelector receiver: (self internalStackValue: argumentCount).
 	self printSends ifTrue:
 		[self printActivationNameForSelector: messageSelector startClass: lkupClass; cr].
 	self internalFindNewMethod.
@@ -7172,9 +7170,7 @@ StackInterpreter >> lookupMethodInClass: class [
 				-- raise exception #cannotInterpret:."
 			self createActualMessageTo: class.
 			messageSelector := objectMemory splObj: SelectorCannotInterpret.
-			self sendBreak: messageSelector + BaseHeaderSize
-				point: (objectMemory lengthOf: messageSelector)
-				receiver: nil.
+			self sendBreakpoint: messageSelector receiver: nil.
 			^self lookupMethodInClass: (self superclassOf: currentClass)].
 		found := self lookupMethodInDictionary: dictionary.
 		found ifTrue: [^currentClass].
@@ -8594,9 +8590,7 @@ StackInterpreter >> primitiveObject: actualReceiver perform: selector withArgume
 		[:index| self push: (objectMemory fetchPointer: index - 1 ofObject: argumentArray)].
 	argumentCount := arraySize.
 	messageSelector := selector.
-	self sendBreak: messageSelector + BaseHeaderSize
-		point: (objectMemory lengthOf: messageSelector)
-		receiver: actualReceiver.
+	self sendBreakpoint: messageSelector receiver: actualReceiver.
 	self printSends ifTrue:
 		[self printActivationNameForSelector: messageSelector startClass: lookupClass; cr].
 	self findNewMethodInClassTag: (objectMemory classTagForClass: lookupClass).
@@ -10359,6 +10353,14 @@ StackInterpreter >> sendAbsentImplicit0ArgsBytecode [
 	messageSelector := self literal: (currentBytecode bitAnd: 16rF).
 	argumentCount := 0.
 	self commonSendAbsentImplicit
+]
+
+{ #category : #'debug support' }
+StackInterpreter >> sendBreakpoint: selector receiver: receiver [
+	<inline: true>
+	self sendBreak: (objectMemory firstFixedFieldOfMaybeImmediate: selector)
+		point: (objectMemory lengthOfMaybeImmediate: selector)
+		receiver: receiver
 ]
 
 { #category : #'message sending' }

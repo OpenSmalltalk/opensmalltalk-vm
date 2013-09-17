@@ -2485,9 +2485,7 @@ NewspeakInterpreter >> commonSend [
 	"Note: This method is inlined into the interpreter dispatch loop."
 	<sharedCodeNamed: 'commonSend' inCase: #singleExtendedSendBytecode>
 	self fastLogSend: messageSelector.
-	self sendBreak: messageSelector + BaseHeaderSize
-		point: (self lengthOf: messageSelector)
-		receiver: (self internalStackValue: argumentCount).
+	self sendBreakpoint: messageSelector receiver: (self internalStackValue: argumentCount).
 	self internalFindNewMethod.
 	self internalExecuteNewMethod.
 	self fetchNextBytecode
@@ -4409,9 +4407,7 @@ NewspeakInterpreter >> lookupMethodInClass: class [
 			currentClass := self popRemappableOop.
 			messageSelector := self splObj: SelectorCannotInterpret.
 			self fastLogSend: messageSelector.
-			self sendBreak: messageSelector + BaseHeaderSize
-				point: (self lengthOf: messageSelector)
-				receiver: nil.
+			self sendBreakpoint: messageSelector receiver: nil.
 			^ self lookupMethodInClass: (self superclassOf: currentClass)].
 		found := self lookupMethodInDictionary: dictionary.
 		found ifTrue: [^currentClass].
@@ -7524,9 +7520,7 @@ NewspeakInterpreter >> primitivePerform [
 		ofObject: activeContext.
 	self pop: 1.
 	lookupClass := self fetchClassOf: newReceiver.
-	self sendBreak: messageSelector + BaseHeaderSize
-		point: (self lengthOf: messageSelector)
-		receiver: newReceiver.
+	self sendBreakpoint: messageSelector receiver: newReceiver.
 	self findNewMethodInClass: lookupClass.
 
 	"Only test CompiledMethods for argument count - other objects will have to take their chances"
@@ -7585,9 +7579,7 @@ NewspeakInterpreter >> primitivePerformAt: lookupClass [
 	argumentCount := arraySize.
 
 	self fastLogSend: messageSelector.
-	self sendBreak: messageSelector + BaseHeaderSize
-		point: (self lengthOf: messageSelector)
-		receiver: receiver.
+	self sendBreakpoint: messageSelector receiver: receiver.
 	self findNewMethodInClass: lookupClass.
 
 	"Only test CompiledMethods for argument count - any other objects playacting as CMs will have to take their chances"

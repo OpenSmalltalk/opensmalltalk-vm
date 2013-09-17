@@ -1394,6 +1394,15 @@ SpurMemoryManager >> firstFixedField: objOop [
 	^ self pointerForOop: objOop + self baseHeaderSize
 ]
 
+{ #category : #'debug support' }
+SpurMemoryManager >> firstFixedFieldOfMaybeImmediate: oop [
+	"for the message send breakpoint; selectors can be immediates."
+	<inline: false>
+	^(self isImmediate: oop)
+		ifTrue: [oop]
+		ifFalse: [self firstFixedField: oop]
+]
+
 { #category : #'header format' }
 SpurMemoryManager >> firstLongFormat [
 	^10
@@ -2325,6 +2334,15 @@ SpurMemoryManager >> lengthOf: objOop baseHeader: header format: fmt [
 		[^numSlots << (self shiftForWord - 1) - (fmt bitAnd: 3)].
 	"fmt >= self firstLongFormat"
 	^numSlots << (self shiftForWord - 2) - (fmt bitAnd: 1)
+]
+
+{ #category : #'debug support' }
+SpurMemoryManager >> lengthOfMaybeImmediate: oop [
+	"for the message send breakpoint; selectors can be immediates."
+	<inline: false>
+	^(self isImmediate: oop)
+		ifTrue: [oop]
+		ifFalse: [self lengthOf: oop]
 ]
 
 { #category : #'header format' }
