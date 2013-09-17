@@ -71,6 +71,25 @@ Spur32BitMemoryManager >> allocateSlots: numSlots format: formatField classIndex
 	^newObj
 ]
 
+{ #category : #allocation }
+Spur32BitMemoryManager >> allocateSlotsInOldSpace: numSlots format: formatField classIndex: classIndex [
+	| bytes freeChunk chunk |
+	bytes := self objectBytesForSlots: numSlots.
+	freeChunk := self allocateOldSpaceChunkOfBytes: bytes.
+	freeChunk ifNil:
+		[^nil].
+	chunk := self startOfFreeChunk: freeChunk.
+	numSlots >= self numSlotsMask ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
+		[self flag: #endianness.
+		 self longAt: chunk put: numSlots.
+		 self longAt: chunk + 4 put: self numSlotsMask << self numSlotsHalfShift.
+		 self longLongAt: chunk + self baseHeaderSize
+			put: (self headerForSlots: self numSlotsMask format: formatField classIndex: classIndex).
+		 ^chunk + self baseHeaderSize].
+	self longLongAt: chunk put: (self headerForSlots: numSlots format: formatField classIndex: classIndex).
+	^chunk
+]
+
 { #category : #'object enumeration' }
 Spur32BitMemoryManager >> bytesInObject: objOop [
 	"Answer the total number of bytes in an object including header and possible overflow size header."
@@ -376,21 +395,13 @@ Spur32BitMemoryManager >> numTagBits [
 ]
 
 { #category : #'object enumeration' }
-Spur32BitMemoryManager >> objectAfter: objOop limit: limit [
-	"Object parsing.
-	1. all objects have at least a word following the header, for a forwarding pointer.
-	2. objects with an overflow size have a preceeing word with a saturated numSlots.  If the word
-	   following an object doesn't have a saturated numSlots field it must be a single-header object.
-	   If the word following does have a saturated numSlots it must be the overflow size word."
-	| followingWordAddress followingWord |
-	followingWordAddress := self addressAfter: objOop.
-	followingWordAddress >= limit ifTrue:
-		[^limit].
-	self flag: #endianness.
-	followingWord := self longAt: followingWordAddress + 4.
-	^followingWord >> self numSlotsHalfShift = self numSlotsMask
-		ifTrue: [followingWordAddress + self baseHeaderSize]
-		ifFalse: [followingWordAddress]
+Spur32BitMemoryManager >> objectBytesForSlots: numSlots [
+	"Answer the total number of bytes in an object with the given
+	 number of slots, including header and possible overflow size header."
+	^numSlots + (numSlots bitAnd: 1) << self shiftForWord
+	+ (numSlots >= self numSlotsMask
+		ifTrue: [self baseHeaderSize + self baseHeaderSize]
+		ifFalse: [self baseHeaderSize])
 ]
 
 { #category : #'debug printing' }

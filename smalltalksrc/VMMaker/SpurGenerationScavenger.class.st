@@ -53,7 +53,7 @@ SpurGenerationScavenger >> copyAndForward: survivor [
 	bytesInObject := manager bytesInObject: survivor.
 	newLocation := ((self shouldBeTenured: survivor)
 					  or: [futureSurvivorStart + bytesInObject > futureSpace limit])
-						ifTrue: [self copyToOldSpace: survivor bytes: bytesInObject]
+						ifTrue: [self copyToOldSpace: survivor]
 						ifFalse: [self copyToFutureSpace: survivor bytes: bytesInObject].
 	manager forward: survivor to: newLocation.
 	^newLocation
@@ -71,6 +71,28 @@ SpurGenerationScavenger >> copyToFutureSpace: survivor bytes: bytesInObject [
 	futureSurvivorStart := futureSurvivorStart + bytesInObject.
 	manager mem: newStart cp: startOfSurvivor y: bytesInObject.
 	^newStart + (survivor - startOfSurvivor)
+]
+
+{ #category : #scavenger }
+SpurGenerationScavenger >> copyToOldSpace: survivor [
+	"Copy survivor to oldSpace.  Answer the new oop of the object."
+	<inline: true>
+	| numSlots newOop |
+	self flag: 'why not just pass header??'.
+	numSlots := manager numSlotsOf: survivor.
+	newOop := manager
+					allocateSlotsInOldSpace: numSlots
+					format: (manager formatOf: survivor)
+					classIndex: (manager classIndexOf: survivor).
+	newOop ifNil:
+		[self error: 'out of memory'].
+	manager
+		mem: newOop + manager baseHeaderSize
+		cp: survivor + manager baseHeaderSize
+		y: numSlots * manager wordSize.
+	self remember: newOop.
+	manager setIsRememberedOf: newOop to: true.
+	^newOop
 ]
 
 { #category : #accessing }
