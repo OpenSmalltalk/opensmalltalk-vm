@@ -850,8 +850,8 @@ SpurBootstrap >> installModifiedMethods [
 	self withExecutableInterpreter: oldInterpreter
 		do: [self internAllSymbols.
 			 self addNewMethods.
-			 self replaceMethods].
-	self modifyCharacterMethods
+			 self replaceMethods.
+			 self modifyCharacterMethods]
 ]
 
 { #category : #'bootstrap methods' }
@@ -918,7 +918,7 @@ SpurBootstrap >> internAllSymbols [
 SpurBootstrap >> interpreter: sim object: receiver perform: selector withArguments: arguments [
 	"Interpret an expression in oldHeap using oldInterpreter.
 	 Answer the result."
-	| fp savedpc savedsp result |
+	| fp savedpc savedsp result startByteCount |
 	savedpc := sim localIP.
 	savedsp := sim localSP.
 	sim internalPush: receiver.
@@ -927,8 +927,14 @@ SpurBootstrap >> interpreter: sim object: receiver perform: selector withArgumen
 		argumentCount: arguments size;
 		messageSelector: selector.
 	fp := sim localFP.
+	startByteCount := sim byteCount.
+	"sim byteCount = 66849 ifTrue: [self halt]."
 	sim normalSend.
-	[fp = sim localFP] whileFalse:
+	sim incrementByteCount. "otherwise, send is not counted"
+	["sim byteCount = 66849 ifTrue: [self halt]."
+	 "(sim byteCount > 7508930 and: [sim localFP = -16r27894]) ifTrue:
+		[self halt]."
+	 fp = sim localFP] whileFalse:
 		[sim singleStep].
 	result := sim internalPopStack.
 	self assert: savedsp = sim localSP.
@@ -1140,6 +1146,7 @@ SpurBootstrap >> rehashImage [
 				((rehashFlags at: classIndex >> 3 + 1) anyMask: 1 << (classIndex bitAnd: 7)) ifTrue:
 					[(n := n + 1) \\ 8 = 0 ifTrue:
 					 	[Transcript nextPut: $.; flush].
+					 "2845 = n ifTrue: [self halt]."
 					 (self interpreter: sim
 							object: o
 							perform: (map at: sizeSym)
@@ -1193,17 +1200,23 @@ SpurBootstrap >> replaceMethods [
 SpurBootstrap >> replacementForCharacterMethod: characterMethodOop [
 	"Answer a replacement method for the argument if it refers
 	 to Character's old inst var value.  Otherwise answer nil."
-	| proxy clone assembly newInsts |
+	| proxy asIntegerProxy clone assembly newInsts newMethod |
+	(oldHeap stringOf: (oldHeap longAt: characterMethodOop + (oldHeap lastPointerOf: characterMethodOop) - 4)) = 'isOctetCharacter' ifTrue:
+		[self halt].
 	proxy := VMCompiledMethodProxy new
 				for: characterMethodOop
 				coInterpreter: oldInterpreter
 				objectMemory: oldHeap.
 	clone := self cloneMethodProxy: proxy.
-	clone dropSourcePointer.
 	clone hasInstVarRef ifFalse:
 		[^nil].
+	clone setSourcePointer: 0.
+	asIntegerProxy := VMObjectProxy new
+							for: (symbolMap at: #asInteger)
+							coInterpreter: oldInterpreter
+							objectMemory: oldHeap.
 	assembly := BytecodeDisassembler new disassemble: clone.
-	assembly literals: (assembly literals allButLast: 2), {symbolMap at: #asInteger}, (assembly literals last: 2).
+	assembly literals: (assembly literals allButLast: 2), {asIntegerProxy}, (assembly literals last: 2).
 		"Do this by looking for index of pushReceiverVariable: and replacing it by pushSelf, send asInteger"
 	newInsts := (assembly instructions piecesCutWhere:
 					[:msgOrLabelAssoc :nextInst|
@@ -1214,11 +1227,12 @@ SpurBootstrap >> replacementForCharacterMethod: characterMethodOop [
 				 {	Message selector: #pushReceiver.
 					Message
 						selector: #send:super:numArgs:
-						arguments: {symbolMap at: #asInteger. false. 0}},
+						arguments: {asIntegerProxy. false. 0}},
 				 b].
 	assembly instructions: newInsts.
+	newMethod := assembly assemble.
 	^self
-		installableMethodFor: assembly assemble
+		installableMethodFor: newMethod
 		selector: clone selector
 		className: #Character
 		isMeta: false
