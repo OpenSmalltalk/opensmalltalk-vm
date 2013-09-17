@@ -1891,9 +1891,11 @@ StackInterpreterSimulator >> sendBreak: selectorString point: selectorLength rec
 StackInterpreterSimulator >> shortPrint: oop [
 	| name classOop |
 	(objectMemory isImmediate: oop) ifTrue:
-		[(objectMemory isImmediateCharacter: oop) ifTrue: [^ '=$' , (objectMemory integerValueOf: oop) printString , 
-			' (' , (String with: (Character value: (objectMemory integerValueOf: oop))) , ')'].
-		(objectMemory isIntegerObject: oop) ifTrue: [^ '=' , (objectMemory integerValueOf: oop) printString , 
+		[(objectMemory isImmediateCharacter: oop) ifTrue:
+			[^ '=$' , (objectMemory characterValueOf: oop) printString , 
+			' (' , (String with: (Character value: (objectMemory characterValueOf: oop))) , ')'].
+		(objectMemory isIntegerObject: oop) ifTrue:
+			[^ '=' , (objectMemory integerValueOf: oop) printString , 
 			' (' , (objectMemory integerValueOf: oop) hex , ')'].
 		^'= UNKNOWN IMMEDIATE', ' (' , (objectMemory integerValueOf: oop) hex , ')'].
 	(objectMemory addressCouldBeObj: oop) ifFalse:
@@ -2022,6 +2024,11 @@ StackInterpreterSimulator >> sqShrinkMemory: oldLimit By: delta [
 	transcript show: 'shrink memory from ', oldLimit printString, ' by ', delta printString, ' remember it doesn''t actually shrink in simulation'; cr.
 
 	^ oldLimit
+]
+
+{ #category : #'spur bootstrap' }
+StackInterpreterSimulator >> stackPage [
+	^stackPage
 ]
 
 { #category : #'simulation only' }
