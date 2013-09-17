@@ -559,9 +559,11 @@ SpurMemoryManager class >> wordSize [
 SpurMemoryManager >> addToFreeList: freeChunk [
 	| chunkBytes childBytes parent child index |
 	chunkBytes := self bytesInObject: freeChunk.
-	index := chunkBytes / self wordSize.
+	index := chunkBytes / self allocationUnit.
 	index < NumFreeLists ifTrue:
-		[self storePointer: 0 ofForwardedOrFreeObject: freeChunk withValue: (freeLists at: index).
+		[self storePointer: self freeChunkNextIndex
+			ofForwardedOrFreeObject: freeChunk
+			withValue: (freeLists at: index).
 		 freeLists at: index put: freeChunk.
 		 ^self].
 	self
@@ -772,7 +774,7 @@ SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceByt
 					ifTrue: [LittleEndianBitmap]
 					ifFalse: [Bitmap]) new: (memoryBytes + newSpaceBytes + codeBytes) // 4.
 	startOfMemory := codeBytes.
-	endOfMemory := memoryBytes + newSpaceBytes + codeBytes.
+	endOfMemory := freeOldSpaceStart := memoryBytes + newSpaceBytes + codeBytes.
 	"leave newSpace empty for the bootstrap"
 	freeStart := newSpaceBytes + startOfMemory.
 	newSpaceLimit := newSpaceBytes + startOfMemory.
@@ -784,8 +786,119 @@ SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceByt
 					edenBytes: newSpaceBytes * 5 // 7 "David's paper uses 140Kb eden + 2 x 28kb survivor spaces :-)"
 ]
 
+{ #category : #'free space' }
+SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
+	"Answer a chunk of oldSpace from the free lists, if available,
+	 otherwise answer nil.  N.B.  the chunk is simply a pointer, it has
+	 no valid header.  The caler *must* fill in the header correctly."
+	| index chunk nextIndex nodeBytes parent child smaller larger |
+	index := chunkBytes / self allocationUnit.
+	index < NumFreeLists ifTrue:
+		[(chunk := freeLists at: index) ~= 0 ifTrue:
+			[^self unlinkFreeChunk: chunk atIndex: index].
+		 "first search for free chunks of a multiple of chunkBytes in size"
+		 nextIndex := index.
+		 [(nextIndex := nextIndex + index) < NumFreeLists] whileTrue:
+			[(chunk := freeLists at: index) ~= 0 ifTrue:
+				[self unlinkFreeChunk: chunk atIndex: index.
+				 self assert: (self bytesInObject: chunk) = index * self allocationUnit.
+				 self freeChunkWithBytes: index * self allocationUnit - chunkBytes
+					at: (self startOfFreeChunk: chunk) + chunkBytes.
+				^chunk]].
+		 "now get desperate and use the first that'll fit"
+		 nextIndex := index.
+		 [(nextIndex := nextIndex + 1) < NumFreeLists] whileTrue:
+			[(chunk := freeLists at: index) ~= 0 ifTrue:
+				[self unlinkFreeChunk: chunk atIndex: index.
+				 self assert: (self bytesInObject: chunk) = index * self allocationUnit.
+				 self freeChunkWithBytes: index * self allocationUnit - chunkBytes
+					at: (self startOfFreeChunk: chunk) + chunkBytes.
+				^chunk]]].
+
+	"Large chunk, or no space on small free lists.  Search the large chunk list.
+	 Large chunk list organized as a tree, each node of which is a list of chunks
+	 of the same size. Beneath the node are smaller and larger blocks."
+	parent := 0.
+	child := freeLists at: 0.
+	[child ~= 0] whileTrue:
+		[nodeBytes := self bytesInObject: child.
+		 parent := child.
+		 nodeBytes = chunkBytes
+			ifTrue: "size match; try to remove from list at node."
+				[chunk := self fetchPointer: self freeChunkNextIndex
+								ofForwardedOrFreeObject: child.
+				 chunk ~= 0 ifTrue:
+					[self storePointer: self freeChunkNextIndex
+						ofForwardedOrFreeObject: child
+						withValue: (self fetchPointer: self freeChunkNextIndex
+										ofForwardedOrFreeObject: chunk).
+					 ^chunk].
+				 child := 0] "break out of loop to remove interior node"
+			ifFalse:"walk down the tree"
+				[child := self fetchPointer: (nodeBytes > chunkBytes
+												ifTrue: [self freeChunkSmallerIndex]
+												ifFalse: [self freeChunkLargerIndex])
+								ofObject: child]].
+	parent = 0 ifTrue:
+		[self halt].
+	"self printFreeChunk: parent"
+	self assert: (self bytesInObject: parent) = nodeBytes.
+	"attempt to remove from list"
+	chunk := self fetchPointer: self freeChunkNextIndex
+					ofForwardedOrFreeObject: parent.
+	chunk ~= 0 ifTrue:
+		[self storePointer: self freeChunkNextIndex
+			ofForwardedOrFreeObject: parent
+			withValue: (self fetchPointer: self freeChunkNextIndex
+							ofForwardedOrFreeObject: chunk).
+		 chunkBytes ~= nodeBytes ifTrue:
+			[self freeChunkWithBytes: nodeBytes - chunkBytes
+					at: (self startOfFreeChunk: chunk) + chunkBytes].
+		 ^chunk].
+	"no list; remove an interior node"
+	chunk := parent.
+	parent := self fetchPointer: self freeChunkParentIndex ofForwardedOrFreeObject: chunk.
+	"no parent; stitch the subnodes back into the root"
+	parent = 0 ifTrue:
+		[smaller := self fetchPointer: self freeChunkSmallerIndex ofForwardedOrFreeObject: chunk.
+		 larger := self fetchPointer: self freeChunkLargerIndex ofForwardedOrFreeObject: chunk.
+		 smaller = 0
+			ifTrue: [freeLists at: 0 put: larger]
+			ifFalse:
+				[freeLists at: 0 put: smaller.
+				 larger ~= 0 ifTrue:
+					[self addFreeSubTree: larger]].
+		 chunkBytes ~= nodeBytes ifTrue:
+			[self freeChunkWithBytes: nodeBytes - chunkBytes
+					at: (self startOfFreeChunk: chunk) + chunkBytes].
+		 ^chunk].
+	"remove node from tree; reorder tree simply.  two cases (which have mirrors, for four total):
+	 case 1. interior node has one child, P = parent, N = node, S = subtree (mirrored for large vs small)
+			___				  ___
+			| P |				  | P |
+		    _/_				_/_
+		    | N |		=>		| S |
+		 _/_
+		 | S |"
+	self halt.
+	"case 2: interior node has two children, , P = parent, N = node, L = smaller, left subtree, R = larger, right subtree.
+	 add the left subtree to the bottom left of the right subtree (mirrored for large vs small) 
+			___				  ___
+			| P |				  | P |
+		    _/_				_/_
+		    | N |		=>		| R |
+		 _/_  _\_		    _/_
+		 | L | | R |		    | L |"
+	self halt
+]
+
 { #category : #allocation }
 SpurMemoryManager >> allocateSlots: numSlots format: formatField classIndex: classIndex [
+	self subclassResponsibility
+]
+
+{ #category : #allocation }
+SpurMemoryManager >> allocateSlotsInOldSpace: numSlots format: formatField classIndex: classIndex [
 	self subclassResponsibility
 ]
 
@@ -897,7 +1010,7 @@ SpurMemoryManager >> byteFormatMask [
 { #category : #'object access' }
 SpurMemoryManager >> byteLengthOf: objOop [ 
 	"Answer the number of indexable bytes in the given object.
-	 Does not adjuect contexts by stackPointer."
+	 Does not adjust contexts by stackPointer."
 	| fmt numBytes |
 	<inline: true>
 	<asmLabel: false>
@@ -1607,6 +1720,14 @@ SpurMemoryManager >> freeChunkSmallerIndex [
 ]
 
 { #category : #'free space' }
+SpurMemoryManager >> freeChunkWithBytes: bytes at: address [
+	<inline: true>
+	| freeChunk |
+	freeChunk := self initFreeChunkWithBytes: bytes at: address.
+	self addToFreeList: freeChunk.
+]
+
+{ #category : #'free space' }
 SpurMemoryManager >> freeSize [
 	self flag: #temporary.
 	^0
@@ -1821,13 +1942,14 @@ SpurMemoryManager >> initializeOldSpaceFirstFree: startOfFreeOldSpace [
 		freeOldStart := self addressAfter: freeChunk].
 	freeChunk := self initFreeChunkWithBytes: endOfMemory - freeOldStart at: freeOldStart.
 	self addToFreeList: freeChunk.
-	self assert: (self addressAfter: freeChunk) = endOfMemory
+	self assert: (self addressAfter: freeChunk) = endOfMemory.
+	freeOldSpaceStart := endOfMemory
 ]
 
 { #category : #simulation }
 SpurMemoryManager >> initializePostBootstrap [
-	"The heap has just been bootstrapped into a modified newSpace occupying all of memory above newSPace (and the codeZone).
-	 Put things back to some kind of normalicy."
+	"The heap has just been bootstrapped into a modified newSpace occupying all of memory
+	 above newSpace (and the codeZone). Put things back to some kind of normalcy."
 	freeOldSpaceStart := freeStart.
 	freeStart := scavenger eden start.
 	pastSpaceStart := scavenger pastSpace start.
@@ -2479,7 +2601,57 @@ SpurMemoryManager >> objectAfter: objOop [
 	2. objects with an overflow size have a preceeing word with a saturated slotSize.  If the word following
 	    an object doesn't have a saturated size field it must be a single-header object.  If the word following
 	   does have a saturated slotSize it must be the overflow size word."
-	^self subclassResponsibility
+	objOop < newSpaceLimit ifTrue:
+		[(self isInEden: objOop) ifTrue:
+			[^self objectAfter: objOop limit: freeStart].
+		 (self isInSurvivorSpace: objOop) ifTrue:
+			[^self objectAfter: objOop limit: pastSpaceStart].
+		 ^self objectAfter: objOop limit: scavenger futureSurvivorStart].
+	^self objectAfter: objOop limit: freeOldSpaceStart
+]
+
+{ #category : #'object enumeration' }
+SpurMemoryManager >> objectAfter: objOop limit: limit [
+	"Object parsing.
+	1. all objects have at least a word following the header, for a forwarding pointer.
+	2. objects with an overflow size have a preceeing word with a saturated numSlots.  If the word
+	   following an object doesn't have a saturated numSlots field it must be a single-header object.
+	   If the word following does have a saturated numSlots it must be the overflow size word."
+	| followingWordAddress followingWord |
+	followingWordAddress := self addressAfter: objOop.
+	followingWordAddress >= limit ifTrue:
+		[^limit].
+	self flag: #endianness.
+	followingWord := self longAt: followingWordAddress + 4.
+	^followingWord >> self numSlotsHalfShift = self numSlotsMask
+		ifTrue: [followingWordAddress + self baseHeaderSize]
+		ifFalse: [followingWordAddress]
+]
+
+{ #category : #'object enumeration' }
+SpurMemoryManager >> objectBefore: objOop [
+	| prev |
+	prev := nil.
+	objOop < newSpaceLimit ifTrue:
+		[self allNewSpaceObjectsDo:
+			[:o|
+			 o >= objOop ifTrue:
+				[^prev].
+			 prev := o].
+		 ^prev].
+	self allOldSpaceObjectsDo:
+		[:o|
+		 o >= objOop ifTrue:
+			[^prev].
+		 prev := o].
+	^prev
+]
+
+{ #category : #'object enumeration' }
+SpurMemoryManager >> objectBytesForSlots: numSlots [
+	"Answer the total number of bytes in an object with the given
+	 number of slots, including header and possible overflow size header."
+	self subclassResponsibility
 ]
 
 { #category : #'object enumeration' }
@@ -2561,6 +2733,27 @@ SpurMemoryManager >> postBecomeScanClassTable [
 					[classOrNil := self followForwarded: classOrNil.
 					 self storePointer: j ofObject: page withValue: classOrNil].
 				 self scanClassPostBecome: classOrNil effects: becomeEffectsFlags]]]
+]
+
+{ #category : #'debug printing' }
+SpurMemoryManager >> printFreeChunk: freeChunk [
+	<doNotGenerate>
+	| numBytes |
+	numBytes := self bytesInObject: freeChunk.
+	coInterpreter
+		print: 'freeChunk @ '; printHexPtr: freeChunk;
+		print: ' bytes '; printNum: numBytes;
+		print: ' next '; print: (self fetchPointer: self freeChunkNextIndex
+										ofForwardedOrFreeObject: freeChunk) hex.
+	numBytes / self allocationUnit > NumFreeLists ifTrue:
+		[coInterpreter
+			print: ' ^ '; print: (self fetchPointer: self freeChunkParentIndex
+										ofForwardedOrFreeObject: freeChunk) hex;
+			print: ' < '; print: (self fetchPointer: self freeChunkSmallerIndex
+										ofForwardedOrFreeObject: freeChunk) hex;
+			print: ' > '; print: (self fetchPointer: self freeChunkLargerIndex
+										ofForwardedOrFreeObject: freeChunk) hex].
+	coInterpreter cr
 ]
 
 { #category : #'debug printing' }
@@ -2836,6 +3029,11 @@ SpurMemoryManager >> splObj: index [
 	^self fetchPointer: index ofObject: specialObjectsOop
 ]
 
+{ #category : #'free space' }
+SpurMemoryManager >> startOfFreeChunk: freeChunk [
+	^freeChunk - self baseHeaderSize
+]
+
 { #category : #accessing }
 SpurMemoryManager >> startOfMemory [
 	"Return the start of object memory.  This is immediately after the native code zone.
@@ -2903,7 +3101,7 @@ SpurMemoryManager >> sufficientSpaceAfterGC: numBytes [
 	self assert: (self
 					oop: pastSpaceStart
 					isGreaterThanOrEqualTo: scavenger pastSpace start
-					andLessThan: scavenger pastSpace limit).
+					andLessThanOrEqualTo: scavenger pastSpace limit).
 	freeStart := scavenger eden start.
 	self initSpaceForAllocationCheck: scavenger eden.
 	scavengeInProgress := false.
@@ -2952,6 +3150,19 @@ SpurMemoryManager >> trueObject [
 SpurMemoryManager >> trueObject: anOop [
 	"For mapInterpreterOops"
 	trueObj := anOop
+]
+
+{ #category : #'free space' }
+SpurMemoryManager >> unlinkFreeChunk: chunk atIndex: index [
+	<inline: true>
+	self assert: ((self bytesInObject: chunk) = index * self allocationUnit
+				and: [index > 1 "a.k.a. (self bytesInObject: chunk) > self allocationUnit"]).
+	freeLists
+		at: index
+		put: (self
+				fetchPointer: self freeChunkNextIndex
+				ofForwardedOrFreeObject: chunk).
+	^chunk
 ]
 
 { #category : #'class table' }
