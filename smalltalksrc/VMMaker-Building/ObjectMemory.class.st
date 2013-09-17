@@ -1820,6 +1820,15 @@ ObjectMemory >> firstFixedField: oop [
 	^ self pointerForOop: oop + BaseHeaderSize
 ]
 
+{ #category : #'debug support' }
+ObjectMemory >> firstFixedFieldOfMaybeImmediate: oop [
+	"for the message send breakpoint; selectors can be immediates."
+	<inline: false>
+	^(self isImmediate: oop)
+		ifTrue: [oop]
+		ifFalse: [self firstFixedField: oop]
+]
+
 { #category : #'object format' }
 ObjectMemory >> firstIndexableField: oop [
 	"NOTE: overridden in various simulator subclasses to add coercion to CArray, so please duplicate any changes"
@@ -3231,6 +3240,15 @@ ObjectMemory >> lengthOf: oop baseHeader: hdr format: fmt [
 	^fmt < self firstByteFormat
 		ifTrue: [(sz - BaseHeaderSize) >> 2 "32-bit longs"]
 		ifFalse: [(sz - BaseHeaderSize) - (fmt bitAnd: 3) "bytes"]
+]
+
+{ #category : #'debug support' }
+ObjectMemory >> lengthOfMaybeImmediate: oop [
+	"for the message send breakpoint; selectors can be immediates."
+	<inline: false>
+	^(self isImmediate: oop)
+		ifTrue: [oop]
+		ifFalse: [self lengthOf: oop]
 ]
 
 { #category : #'image segment in/out' }
