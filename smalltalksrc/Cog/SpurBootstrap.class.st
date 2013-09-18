@@ -492,12 +492,12 @@ SpurBootstrap >> allocateClassTable [
 		[:i|
 		page := newHeap
 					allocateSlots: newHeap classTablePageSize
-					format: newHeap weakArrayFormat
-					classIndex: newHeap weakArrayClassIndexPun.
+					format: newHeap arrayFormat
+					classIndex: newHeap arrayClassIndexPun.
 		self assert: (newHeap numSlotsOf: page) = newHeap classTablePageSize.
-		self assert: (newHeap formatOf: page) = newHeap weakArrayFormat.
-		self assert: (newHeap classIndexOf: page) = newHeap weakArrayClassIndexPun.
-		newHeap nilFieldsOf: page.
+		self assert: (newHeap formatOf: page) = newHeap arrayFormat.
+		self assert: (newHeap classIndexOf: page) = newHeap arrayClassIndexPun.
+		newHeap fillObj: page numSlots: newHeap classTablePageSize with: newHeap nilObject.
 		newHeap storePointer: i - 1 ofObject: tableRoot withValue: page.
 		self assert: (newHeap objectAfter: (newHeap fetchPointer: i - 2 ofObject: tableRoot)  limit: newHeap freeStart) = page.
 		lastClassTablePage := page]
@@ -676,7 +676,7 @@ SpurBootstrap >> defineKnownClassIndices [
 
 { #category : #'bootstrap image' }
 SpurBootstrap >> fillInClassTable [
-	| firstPage classWeakArray maxIndex |
+	| firstPage maxIndex |
 	maxIndex := 0.
 	classToIndex keysAndValuesDo:
 		[:oldClass :index| | newClass page |
@@ -695,10 +695,6 @@ SpurBootstrap >> fillInClassTable [
 	firstPage := newHeap
 					fetchPointer: 0
 					ofObject: newHeap classTableRootObj.
-	classWeakArray := classToIndex keys detect:
-							[:oldClass|
-							(oldHeap instSpecOfClass: oldClass) = 4
-							and: [oldInterpreter classNameOf: oldClass Is: 'WeakArray']].
 	newHeap
 		storePointer: 1
 			ofObject: firstPage
@@ -712,9 +708,9 @@ SpurBootstrap >> fillInClassTable [
 		storePointer: newHeap arrayClassIndexPun
 			ofObject: firstPage
 				withValue: (map at: oldHeap classArray);
-		storePointer: newHeap weakArrayClassIndexPun
+		storePointer: newHeap arrayClassIndexPun
 			ofObject: firstPage
-				withValue: (map at: classWeakArray).
+				withValue: (map at: oldHeap classArray).
 
 	newHeap classTableIndex: maxIndex
 ]
@@ -1139,18 +1135,23 @@ SpurBootstrap >> rehashImage [
 	Transcript cr; print: n; nextPutAll: ' classes understand rehash. rehashing instances...'; flush.
 	n := 0.
 	self withExecutableInterpreter: sim
-		do: "don't rehash twice (actually without limit), so don't rehash any new objects created."
-			[newHeap allExistingObjectsDo:
+		do: [sim setBreakSelector: 'error:'.
+			 "don't rehash twice (actually without limit), so don't rehash any new objects created."
+			 newHeap allExistingOldSpaceObjectsDo:
 				[:o| | classIndex |
 				classIndex := newHeap classIndexOf: o.
 				((rehashFlags at: classIndex >> 3 + 1) anyMask: 1 << (classIndex bitAnd: 7)) ifTrue:
 					[(n := n + 1) \\ 8 = 0 ifTrue:
 					 	[Transcript nextPut: $.; flush].
 					 "2845 = n ifTrue: [self halt]."
-					 (self interpreter: sim
+					 "Rehash an object if its size is > 0.
+					  Symbol implements rehash, but doesn't understand size, so don't send size to classes.
+					  Don't rehash empty collections; they may be large for a reason and rehashing will shrink them."
+					 ((sim addressCouldBeClassObj: o)
+					   or: [(self interpreter: sim
 							object: o
 							perform: (map at: sizeSym)
-							withArguments: #()) ~= (newHeap integerObjectOf: 0) ifTrue:
+							withArguments: #()) ~= (newHeap integerObjectOf: 0)]) ifTrue:
 						[self interpreter: sim
 							object: o
 							perform: (map at: rehashSym)
@@ -1201,8 +1202,8 @@ SpurBootstrap >> replacementForCharacterMethod: characterMethodOop [
 	"Answer a replacement method for the argument if it refers
 	 to Character's old inst var value.  Otherwise answer nil."
 	| proxy asIntegerProxy clone assembly newInsts newMethod |
-	(oldHeap stringOf: (oldHeap longAt: characterMethodOop + (oldHeap lastPointerOf: characterMethodOop) - 4)) = 'isOctetCharacter' ifTrue:
-		[self halt].
+	"(oldHeap stringOf: (oldHeap longAt: characterMethodOop + (oldHeap lastPointerOf: characterMethodOop) - 4)) = 'isOctetCharacter' ifTrue:
+		[self halt]."
 	proxy := VMCompiledMethodProxy new
 				for: characterMethodOop
 				coInterpreter: oldInterpreter
