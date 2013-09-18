@@ -291,6 +291,12 @@ SpurBootstrap class >> CharacterPROTOTYPEasciiValue [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrap class >> CharacterPROTOTYPEhash [
+	<primitive: 171>
+	^self primitiveFailed
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrap class >> CharacterPROTOTYPEidentityHash [
 	<primitive: 171>
 	^self primitiveFailed
@@ -825,6 +831,21 @@ SpurBootstrap >> firstOrdinaryClassIndex [
 	^newHeap classTablePageSize
 ]
 
+{ #category : #'bootstrap image' }
+SpurBootstrap >> followForwardingPointers [
+	newHeap allObjectsDo:
+		[:o|
+		(newHeap isForwarded: o) ifFalse:
+			[0 to: (newHeap numPointerSlotsOf: o) - 1 do:
+				[:i| | field |
+				field := newHeap fetchPointer: i ofObject: o.
+				(newHeap isOopForwarded: field) ifTrue:
+					[newHeap
+						storePointer: i
+						ofObject: o
+						withValue: (newHeap followForwarded: field)]]]]
+]
+
 { #category : #'bootstrap methods' }
 SpurBootstrap >> indexOfSelector: selectorOop in: methodDict [
 	SelectorStart to: (oldHeap fetchWordLengthOf: methodDict) - 1 do:
@@ -1145,13 +1166,14 @@ SpurBootstrap >> rehashImage [
 					 	[Transcript nextPut: $.; flush].
 					 "2845 = n ifTrue: [self halt]."
 					 "Rehash an object if its size is > 0.
-					  Symbol implements rehash, but doesn't understand size, so don't send size to classes.
+					  Symbol implements rehash, but let's not waste time rehashing it; in Squeak
+					  up to 2013 symbols are kept in a set which will get reashed anyway..
 					  Don't rehash empty collections; they may be large for a reason and rehashing will shrink them."
 					 ((sim addressCouldBeClassObj: o)
 					   or: [(self interpreter: sim
 							object: o
 							perform: (map at: sizeSym)
-							withArguments: #()) ~= (newHeap integerObjectOf: 0)]) ifTrue:
+							withArguments: #()) = (newHeap integerObjectOf: 0)]) ifFalse:
 						[self interpreter: sim
 							object: o
 							perform: (map at: rehashSym)
@@ -1209,6 +1231,8 @@ SpurBootstrap >> replacementForCharacterMethod: characterMethodOop [
 				coInterpreter: oldInterpreter
 				objectMemory: oldHeap.
 	clone := self cloneMethodProxy: proxy.
+	"Quick methods accessing value should have been replaced."
+	clone isReturnField ifTrue: [self halt].
 	clone hasInstVarRef ifFalse:
 		[^nil].
 	clone setSourcePointer: 0.
@@ -1249,7 +1273,7 @@ SpurBootstrap >> saveTransformedImage [
 SpurBootstrap >> scavengeImage [
 	"Scavenge the image to get it into a simpler state."
 	newHeap coInterpreter voidVMStateForSnapshot.
-	newHeap sufficientSpaceAfterGC: 0
+	newHeap flushNewSpace
 ]
 
 { #category : #'method prototypes' }
@@ -1284,8 +1308,8 @@ SpurBootstrap >> transform [
 	self bootstrapImage.
 	self validate.
 	self rehashImage.
-	self scavengeImage.
 	self followForwardingPointers.
+	self scavengeImage.
 	Transcript nextPutAll: 'done.'; flush.
 ]
 
