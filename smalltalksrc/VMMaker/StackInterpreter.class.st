@@ -3946,7 +3946,8 @@ StackInterpreter >> divorceAllFrames [
 	| activeContext |
 	<inline: false>
 	<var: #aPage type: #'StackPage *'>
-	self externalWriteBackHeadFramePointers.
+	stackPage ~= 0 ifTrue:
+		[self externalWriteBackHeadFramePointers].
 	activeContext := self ensureFrameIsMarried: framePointer SP: stackPointer.
 	0 to: numStackPages - 1 do:
 		[:i| | aPage |
@@ -12085,7 +12086,11 @@ StackInterpreter >> writeImageFileIO: imageBytes [
 
 { #category : #'stack pages' }
 StackInterpreter >> zeroStackPage [
-	"In its own method as a debugging hook."
+	"In its own method as a debugging hook.
+	 Frame pointers should have been written back already."
 	<inline: true>
+	self assert: (stackPage = 0
+				or: [stackPage headFP = framePointer
+					and: [stackPage headSP = stackPointer]]).
 	stackPage := 0
 ]
