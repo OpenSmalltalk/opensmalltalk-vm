@@ -23,8 +23,8 @@ Class {
 { #category : #'class initialization' }
 SpurGenerationScavenger class >> initialize [
 	"SpurGenerationScavenger initialize"
-	RememberedSetLimit := 4096.
-	RememberedSetRedZone := 1024 * 3
+	RememberedSetLimit := 16384.
+	RememberedSetRedZone := RememberedSetLimit - (RememberedSetLimit // 2)
 ]
 
 { #category : #accessing }
@@ -123,6 +123,11 @@ SpurGenerationScavenger >> futureSpace [
 { #category : #accessing }
 SpurGenerationScavenger >> futureSurvivorStart [
 	^futureSurvivorStart
+]
+
+{ #category : #accessing }
+SpurGenerationScavenger >> getRawTenuringThreshold [
+	^tenuringThreshold
 ]
 
 { #category : #initialization }
@@ -313,8 +318,7 @@ SpurGenerationScavenger >> scavengeReferentsOf: referrer [
 								ifFalse: [referent].
 			 (manager isYoung: referent)
 				ifTrue:
-					[foundNewReferent := true.
-					 "if target is already in future space forwarding pointer was due to a become:."
+					["if target is already in future space forwarding pointer was due to a become:."
 					 (manager isInFutureSpace: referent)
 						ifTrue: [newLocation := referent]
 						ifFalse:
@@ -322,6 +326,8 @@ SpurGenerationScavenger >> scavengeReferentsOf: referrer [
 								ifTrue: [self halt. "can this even happen?"
 									newLocation := manager followForwarded: referent]
 								ifFalse: [newLocation := self copyAndForward: referent]].
+					 (manager isYoung: newLocation) ifTrue:
+						[foundNewReferent := true].
 					 manager storePointerUnchecked: i ofMaybeForwardedObject: referrer withValue: newLocation]
 				ifFalse:
 					[manager storePointerUnchecked: i ofMaybeForwardedObject: referrer withValue: referent]]].
@@ -365,6 +371,11 @@ SpurGenerationScavenger >> scavengerTenuringThreshold: aProportion [ "(Slang fla
 	tenuringThreshold := aProportion = 0.0
 							ifTrue: [0]
 							ifFalse: [((pastSpace limit - pastSpace start) * aProportion) rounded + pastSpace start]
+]
+
+{ #category : #accessing }
+SpurGenerationScavenger >> setRawTenuringThreshold: threshold [
+	tenuringThreshold := threshold
 ]
 
 { #category : #scavenger }
