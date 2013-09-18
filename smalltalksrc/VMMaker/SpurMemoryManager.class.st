@@ -558,7 +558,7 @@ SpurMemoryManager class >> wordSize [
 { #category : #'free space' }
 SpurMemoryManager >> addToFreeList: freeChunk [
 	| chunkBytes childBytes parent child index |
-	coInterpreter transcript ensureCr. coInterpreter print: 'freeing '. self printFreeChunk: freeChunk.
+	"coInterpreter transcript ensureCr. coInterpreter print: 'freeing '. self printFreeChunk: freeChunk."
 	chunkBytes := self bytesInObject: freeChunk.
 	index := chunkBytes / self allocationUnit.
 	index < NumFreeLists ifTrue:
@@ -685,8 +685,8 @@ SpurMemoryManager >> allExistingObjectsDo: aBlock [
 	"Enumerate all objects, excluding any objects created
 	 during the execution of allExistingObjectsDo:."
 	<inline: true>
-	self allExistingOldSpaceObjectsDo: aBlock.
-	self allExistingNewSpaceObjectsDo: aBlock
+	self allExistingNewSpaceObjectsDo: aBlock.
+	self allExistingOldSpaceObjectsDo: aBlock
 ]
 
 { #category : #'object enumeration' }
@@ -740,8 +740,8 @@ SpurMemoryManager >> allNewSpaceObjectsDo: aBlock [
 { #category : #'object enumeration' }
 SpurMemoryManager >> allObjectsDo: aBlock [
 	<inline: true>
-	self allOldSpaceObjectsDo: aBlock.
-	self allNewSpaceObjectsDo: aBlock
+	self allNewSpaceObjectsDo: aBlock.
+	self allOldSpaceObjectsDo: aBlock
 ]
 
 { #category : #'object enumeration' }
@@ -874,10 +874,10 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 				[freeLists at: 0 put: smaller.
 				 larger ~= 0 ifTrue:
 					[self addFreeSubTree: larger]].
-		 coInterpreter transcript ensureCr.
+		"coInterpreter transcript ensureCr.
 		 coInterpreter print: 'new free tree root '.
 		 (freeLists at: 0) = 0 ifTrue: [coInterpreter print: '0'] ifFalse: [self printFreeChunk: (freeLists at: 0)].
-		 coInterpreter cr.
+		 coInterpreter cr."
 		 chunkBytes ~= nodeBytes ifTrue:
 			[self freeChunkWithBytes: nodeBytes - chunkBytes
 					at: (self startOfFreeChunk: chunk) + chunkBytes].
@@ -1005,6 +1005,12 @@ SpurMemoryManager >> becomeEffectFlagsFor: objOop [
 			[(self isCompiledMethod: objOop)
 				ifTrue: [BecameCompiledMethodFlag]
 				ifFalse: [0]]
+]
+
+{ #category : #'primitive support' }
+SpurMemoryManager >> booleanObjectOf: bool [
+	<inline: true>
+	^bool ifTrue: [trueObj] ifFalse: [falseObj]
 ]
 
 { #category : #'header format' }
@@ -1250,19 +1256,34 @@ SpurMemoryManager >> clone: objOop [
 	newObj := self allocateSlots: (self numSlotsOf: objOop)
 					format: (self formatOf: objOop)
 					classIndex: (self classIndexOf: objOop).
-	0 to: numSlots - 1 do:
-		[:i| | oop |
-		oop := self fetchPointer: i ofObject: objOop.
-		((self isNonImmediate: oop)
-		 and: [self isForwarded: oop]) ifTrue:
-			[oop := self followForwarded: oop].
-		self storePointerUnchecked: i
-			ofObject: newObj
-			withValue: (self fetchPointer: i ofObject: objOop)].
-	(self isRemembered: objOop) ifTrue:
-		[scavenger remember: objOop.
-		 self setIsRememberedOf: objOop to: true].
+	(self isPointersNonImm: objOop)
+		ifTrue:
+			[0 to: numSlots - 1 do:
+				[:i| | oop |
+				oop := self fetchPointer: i ofObject: objOop.
+				((self isNonImmediate: oop)
+				 and: [self isForwarded: oop]) ifTrue:
+					[oop := self followForwarded: oop].
+				self storePointerUnchecked: i
+					ofObject: newObj
+					withValue: oop].
+			((self isRemembered: objOop)
+			 and: [self isYoung: newObj]) ifTrue:
+				[scavenger remember: objOop.
+				 self setIsRememberedOf: objOop to: true]]
+		ifFalse:
+			[0 to: numSlots - 1 do:
+				[:i|
+				self storePointerUnchecked: i
+					ofObject: newObj
+					withValue: (self fetchPointer: i ofObject: objOop)]].
 	^newObj
+]
+
+{ #category : #simulation }
+SpurMemoryManager >> coInterpreter [
+	<doNotGenerate>
+	^coInterpreter
 ]
 
 { #category : #simulation }
@@ -1603,12 +1624,35 @@ SpurMemoryManager >> fixedFieldsOfClassFormatMask [
 	^1 << self fixedFieldsFieldWidth - 1
 ]
 
+{ #category : #'generation scavenging' }
+SpurMemoryManager >> flushNewSpace [
+	| savedTenuringThreshold |
+	savedTenuringThreshold := scavenger getRawTenuringThreshold.
+	scavenger setRawTenuringThreshold: newSpaceLimit.
+	self sufficientSpaceAfterGC: 0.
+	scavenger setRawTenuringThreshold: savedTenuringThreshold.
+	self assert: scavenger rememberedSetSize = 0.
+	self assert: pastSpaceStart = scavenger pastSpace start.
+	self assert: freeStart = scavenger eden start
+]
+
 { #category : #'become api' }
 SpurMemoryManager >> followForwarded: objOop [
+	"Follow a forwarding pointer.  Alas we cannot prevent forwarders to forwarders
+	 being created by lazy become.  Consider the following example by Igor Stasenk:
+		array := { a. b. c }.
+		- array at: 1 points to &a. array at: 2 points to &b. array at: 3 points to &c Ó
+		a becomeForward: b
+		- array at: 1 still points to &a. array at: 2 still points to &b. array at: 3 still points to &c
+		b becomeForward: c.
+		- array at: 1 still points to &a. array at: 2 still points to &b. array at: 3 still points to &c
+		- when accessing array first one has to follow a forwarding chain:
+		&a -> &b -> c"
 	| referent |
 	self assert: (self isForwarded: objOop).
 	referent := self fetchPointer: 0 ofMaybeForwardedObject: objOop.
-	self assert: (self isForwarded: referent) not.
+	[(self isForwarded: referent)] whileTrue:
+		[referent := self fetchPointer: 0 ofMaybeForwardedObject: referent].
 	^referent
 ]
 
@@ -1892,6 +1936,20 @@ SpurMemoryManager >> initSpaceForAllocationCheck: aNewSpace [
 	self subclassResponsibility
 ]
 
+{ #category : #'object enumeration' }
+SpurMemoryManager >> initialInstanceOf: classObj [
+	<inline: false>
+	| classIndex |
+	classIndex := self rawHashBitsOf: classObj.
+	classIndex = 0 ifTrue:
+		[^nil].
+	self allObjectsDo:
+		[:objOop|
+		classIndex = (self classIndexOf: objOop) ifTrue:
+			[^objOop]].
+	^nil
+]
+
 { #category : #initialization }
 SpurMemoryManager >> initialize [
 	freeLists := CArrayAccessor on: (Array new: NumFreeLists withAll: 0).
@@ -2023,6 +2081,35 @@ SpurMemoryManager >> instSpecOfClass: classPointer [
 { #category : #'object format' }
 SpurMemoryManager >> instSpecOfClassFormat: classFormat [
 	^classFormat >> self fixedFieldsFieldWidth bitAnd: self formatMask
+]
+
+{ #category : #'object enumeration' }
+SpurMemoryManager >> instanceAfter: objOop [
+	| actualObj classIndex |
+	actualObj := objOop.
+	classIndex := self classIndexOf: objOop.
+	(self isInEden: objOop) ifTrue:
+		[actualObj := self objectAfter: actualObj limit: freeStart.
+		[objOop < freeStart] whileTrue:
+			[classIndex = (self classIndexOf: actualObj) ifTrue:
+				[^actualObj].
+		 actualObj := self objectAfter: objOop limit: freeStart].
+		 actualObj := pastSpaceStart > scavenger pastSpace start
+						ifTrue: [self objectStartingAt: scavenger pastSpace start]
+						ifFalse: [nilObj]].
+	(self isInSurvivorSpace: actualObj) ifTrue:
+		[actualObj := self objectAfter: actualObj limit: pastSpaceStart.
+		[objOop < pastSpaceStart] whileTrue:
+			[classIndex = (self classIndexOf: actualObj) ifTrue:
+				[^actualObj].
+		 actualObj := self objectAfter: objOop limit: pastSpaceStart].
+		 actualObj := nilObj].
+	actualObj := self objectAfter: actualObj limit: freeOldSpaceStart.
+	[objOop < freeOldSpaceStart] whileTrue:
+		[classIndex = (self classIndexOf: actualObj) ifTrue:
+			[^actualObj].
+		 actualObj := self objectAfter: objOop limit: freeOldSpaceStart].
+	^nil
 ]
 
 { #category : #'interpreter access' }
@@ -2293,7 +2380,9 @@ SpurMemoryManager >> isIntegerObject: oop [
 		primitiveContextAt
 		primitiveContextAtPut
 		subscript:with:storing:format:
-		printContext:) includes: thisContext sender method selector) ifFalse:
+		printContext:
+		compare31or32Bits:equal:
+		signed64BitValueOf:) includes: thisContext sender method selector) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
@@ -3124,13 +3213,12 @@ SpurMemoryManager >> sufficientSpaceAfterGC: numBytes [
 	"This is ObjectMemory's funky entry-point into its incremental GC,
 	 which is a stop-the-world a young generation reclaimer.  In Spur
 	 we run the scavenger."
-	self halt.
 	self assert: numBytes = 0.
+	"coInterpreter printCallStackFP: coInterpreter framePointer"
 
 	self runLeakCheckerForFullGC: false.
 	coInterpreter preGCAction: GCModeIncr.
 	needGCFlag := false.
-
 
 	gcStartUsecs := coInterpreter ioUTCMicrosecondsNow.
 
