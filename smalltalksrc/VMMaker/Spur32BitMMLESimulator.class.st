@@ -62,7 +62,7 @@ Spur32BitMMLESimulator >> endianness [
 	^#little
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'float primitives' }
 Spur32BitMMLESimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
 	aFloat at: 2 put: (self long32At: floatBitsAddress).
 	aFloat at: 1 put: (self long32At: floatBitsAddress+4)
@@ -142,7 +142,7 @@ Spur32BitMMLESimulator >> longLongAt: byteAddress put: a64BitValue [
 	^a64BitValue
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'float primitives' }
 Spur32BitMMLESimulator >> storeFloatAt: floatBitsAddress from: aFloat [
 	self long32At: floatBitsAddress put: (aFloat at: 2).
 	self long32At: floatBitsAddress+4 put: (aFloat at: 1)
