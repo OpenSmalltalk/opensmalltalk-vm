@@ -487,6 +487,11 @@ StackInterpreterSimulator >> frameOfMarriedContext: aContext [
 	^self withoutSmallIntegerTags: senderOop
 ]
 
+{ #category : #'spur bootstrap' }
+StackInterpreterSimulator >> framePointer [
+	^framePointer
+]
+
 { #category : #'I/O primitives' }
 StackInterpreterSimulator >> fullDisplay [
 	| primFailCodeValue |
@@ -1990,6 +1995,7 @@ StackInterpreterSimulator >> signalSemaphoreWithIndex: index [
 { #category : #testing }
 StackInterpreterSimulator >> singleStep [
 	self assertValidExecutionPointers.
+	atEachStepBlock value. "N.B. may be nil"
 	self dispatchOn: currentBytecode in: BytecodeTable.
 	self incrementByteCount
 ]
