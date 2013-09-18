@@ -136,7 +136,7 @@ Spur32BitMemoryManager >> checkHeapIntegrity [
 					 ok := false]].
 			 (self isForwarded: obj)
 				ifTrue:
-					[fieldOop := self fetchPointer: 0 ofForwardedOrFreeObject: obj.
+					[fieldOop := self fetchPointer: 0 ofMaybeForwardedObject: obj.
 					 (heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
 						[coInterpreter print: 'object leak in forwarder '; printHex: obj; print: ' to unmapped '; printHex: fieldOop; cr.
 						 self eek.
@@ -240,7 +240,7 @@ Spur32BitMemoryManager >> classIndexOf: objOop [
 ]
 
 { #category : #'heap management' }
-Spur32BitMemoryManager >> fetchPointer: fieldIndex ofForwardedOrFreeObject: objOop [
+Spur32BitMemoryManager >> fetchPointer: fieldIndex ofFreeChunk: objOop [
 	^self longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
 ]
 
@@ -330,10 +330,10 @@ Spur32BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 			 instSpec := instSpec + (nElements bitAnd: 1)].
 		[self firstByteFormat]	->
 			[numSlots := nElements + 3 // 4.
-			 instSpec := instSpec + (nElements bitAnd: 3)].
+			 instSpec := instSpec + (4 - nElements bitAnd: 3)].
 		[self firstCompiledMethodFormat]	->
 			[numSlots := nElements + 3 // 4.
-			 instSpec := instSpec + (nElements bitAnd: 3)] }
+			 instSpec := instSpec + (4 - nElements bitAnd: 3)] }
 		otherwise: [^nil]. "non-indexable"
 	classIndex := self ensureBehaviorHash: classObj.
 	classIndex < 0 ifTrue:
@@ -423,12 +423,24 @@ Spur32BitMemoryManager >> shiftForWord [
 ]
 
 { #category : #'heap management' }
-Spur32BitMemoryManager >> storePointer: fieldIndex ofForwardedOrFreeObject: objOop withValue: valuePointer [
+Spur32BitMemoryManager >> storePointer: fieldIndex ofForwarder: objOop withValue: valuePointer [
 
-	(self isForwarded: objOop) ifTrue:
-		[(self isYoung: objOop) ifFalse: "most stores into young objects"
-			[((self isNonImmediate: valuePointer) and: [self isYoung: valuePointer]) ifTrue:
-				[self possibleRootStoreInto: objOop]]].
+	self assert: (self isForwarded: objOop).
+	self assert: (self isOopForwarded: valuePointer) not.
+
+	(self isYoung: objOop) ifFalse: "most stores into young objects"
+		[((self isNonImmediate: valuePointer) and: [self isYoung: valuePointer]) ifTrue:
+			[self possibleRootStoreInto: objOop]].
+
+	^self
+		longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
+		put: valuePointer
+]
+
+{ #category : #'heap management' }
+Spur32BitMemoryManager >> storePointer: fieldIndex ofFreeChunk: objOop withValue: valuePointer [
+
+	self assert: (self isFreeObject: objOop).
 
 	^self
 		longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)

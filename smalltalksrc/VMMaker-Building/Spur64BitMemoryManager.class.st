@@ -155,13 +155,13 @@ Spur64BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 			 instSpec := instSpec + (nElements bitAnd: 1)].
 		[self firstShortFormat]	->
 			[numSlots := nElements + 3 // 4.
-			 instSpec := instSpec + (nElements bitAnd: 3)].
+			 instSpec := instSpec + (4 - nElements bitAnd: 3)].
 		[self firstByteFormat]	->
 			[numSlots := nElements + 7 // 8.
-			 instSpec := instSpec + (nElements bitAnd: 7)].
+			 instSpec := instSpec + (8 - nElements bitAnd: 7)].
 		[self firstCompiledMethodFormat]	->
 			[numSlots := nElements + 7 // 8.
-			 instSpec := instSpec + (nElements bitAnd: 7)] }
+			 instSpec := instSpec + (8 - nElements bitAnd: 7)] }
 		otherwise: [^nil]. "non-indexable"
 	classIndex := self ensureBehaviorHash: classObj.
 	classIndex < 0 ifTrue:
