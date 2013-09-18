@@ -8122,9 +8122,9 @@ NewspeakInterpreter >> primitiveSomeInstance [
 	| class instance |
 	class := self stackTop.
 	instance := self initialInstanceOf: class.
-	instance = nilObj
-		ifTrue: [self primitiveFail]
-		ifFalse: [self pop: argumentCount+1 thenPush: instance]
+	instance
+		ifNil: [self primitiveFail]
+		ifNotNil: [self pop: argumentCount+1 thenPush: instance]
 ]
 
 { #category : #'object access primitives' }
