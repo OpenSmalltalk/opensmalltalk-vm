@@ -11285,9 +11285,9 @@ StackInterpreter >> stackObjectValue: offset [
 	"In the StackInterpreter stacks grow down."
 	| oop |
 	oop := stackPages longAt: stackPointer + (offset * BytesPerWord).
-	(objectMemory isIntegerObject: oop) ifTrue: [self primitiveFail. ^ nil].
-	^ oop
-
+	(objectMemory isImmediate: oop) ifTrue:
+		[self primitiveFail. ^ nil].
+	^oop
 ]
 
 { #category : #'stack pages' }

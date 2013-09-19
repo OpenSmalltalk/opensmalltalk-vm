@@ -14,6 +14,12 @@ Spur32BitMMLESimulator >> become: array1 with: array2 twoWay: twoWayFlag copyHas
 	^super become: array1 with: array2 twoWay: twoWayFlag copyHash: copyHashFlag
 ]
 
+{ #category : #'C library simulation' }
+Spur32BitMMLESimulator >> booleanValueOf: obj [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter booleanValueOf: obj
+]
+
 { #category : #'memory access' }
 Spur32BitMMLESimulator >> byteAt: byteAddress [
 	| lowBits long |
@@ -52,6 +58,16 @@ Spur32BitMMLESimulator >> byteAtPointer: pointer [
 	^self byteAt: pointer
 ]
 
+{ #category : #'memory access' }
+Spur32BitMMLESimulator >> cCoerce: value to: cTypeString [
+	"Type coercion. For translation a cast will be emmitted. When running in Smalltalk
+	 answer a suitable wrapper for correct indexing."
+
+	^value
+		ifNil: [value]
+		ifNotNil: [value coerceTo: cTypeString sim: self]
+]
+
 { #category : #'debug support' }
 Spur32BitMMLESimulator >> eek [
 	self halt
@@ -62,10 +78,51 @@ Spur32BitMMLESimulator >> endianness [
 	^#little
 ]
 
+{ #category : #'simulation only' }
+Spur32BitMMLESimulator >> failed [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter failed
+]
+
 { #category : #'float primitives' }
 Spur32BitMMLESimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
 	aFloat at: 2 put: (self long32At: floatBitsAddress).
 	aFloat at: 1 put: (self long32At: floatBitsAddress+4)
+]
+
+{ #category : #'object format' }
+Spur32BitMMLESimulator >> firstIndexableField: objOop [
+	"NOTE: overridden from SpurMemoryManager to add coercion to CArray, so please duplicate any changes.
+	 There are only two important cases, both for objects with named inst vars, i.e. formats 2,3 & 5.
+	 The first indexable field for formats 2 & 5 is the slot count (by convention, even though that's off the end
+	 of the object).  For 3 we must go to the class."
+	| fmt classFormat |
+	<returnTypeC: #'void *'>
+	fmt := self formatOf: objOop.
+	fmt <= self lastPointerFormat ifTrue: "pointer; may need to delve into the class format word"
+		[fmt = self indexablePointersFormat ifTrue:
+			[classFormat := self formatOfClass: (self fetchClassOfNonImm: objOop).
+			 ^self cCoerce: (self pointerForOop: objOop
+												+ self baseHeaderSize
+												+ ((self fixedFieldsOfClassFormat: classFormat) << self wordSize))
+					to: #'oop *'].
+		^self cCoerce: (self pointerForOop: objOop
+											+ self baseHeaderSize
+											+ ((self numSlotsOf: objOop) << self wordSize))
+				to: #'oop *'].
+	"All bit objects, and indeed CompiledMethod, though this is a non-no, start at 0"
+	self assert: (fmt >= self sixtyFourBitIndexableFormat and: [fmt < self firstCompiledMethodFormat]).
+	^self
+		cCoerce: (self pointerForOop: objOop + self baseHeaderSize)
+		to: (fmt < self firstByteFormat
+				ifTrue:
+					[fmt = self sixtyFourBitIndexableFormat
+						ifTrue: ["64 bit field objects" #'long long *']
+						ifFalse:
+							[fmt < self firstShortFormat
+								ifTrue: ["32 bit field objects" #'int *']
+								ifFalse: ["16-bit field objects" #'short *']]]
+				ifFalse: ["byte objects (including CompiledMethod" #'char *'])
 ]
 
 { #category : #become }
@@ -90,6 +147,12 @@ Spur32BitMMLESimulator >> headerForSlots: numSlots format: formatField classInde
 	self assert: (formatField bitAnd: self formatMask) = formatField.
 	self assert: (classIndex bitAnd: self classIndexMask) = classIndex.
 	^super headerForSlots: numSlots format: formatField classIndex: classIndex
+]
+
+{ #category : #'simulation only' }
+Spur32BitMMLESimulator >> is: oop KindOf: classNameString [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter is: oop KindOf: classNameString
 ]
 
 { #category : #'memory access' }
@@ -142,10 +205,34 @@ Spur32BitMMLESimulator >> longLongAt: byteAddress put: a64BitValue [
 	^a64BitValue
 ]
 
+{ #category : #'simulation only' }
+Spur32BitMMLESimulator >> methodArgumentCount [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter methodArgumentCount
+]
+
+{ #category : #'simulation only' }
+Spur32BitMMLESimulator >> pop: nItems thenPush: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter pop: nItems thenPush: oop
+]
+
+{ #category : #'simulation only' }
+Spur32BitMMLESimulator >> stackValue: offset [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter stackValue: offset
+]
+
 { #category : #'float primitives' }
 Spur32BitMMLESimulator >> storeFloatAt: floatBitsAddress from: aFloat [
 	self long32At: floatBitsAddress put: (aFloat at: 2).
 	self long32At: floatBitsAddress+4 put: (aFloat at: 1)
+]
+
+{ #category : #'simulation only' }
+Spur32BitMMLESimulator >> success: boolean [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter success: boolean
 ]
 
 { #category : #'memory access' }

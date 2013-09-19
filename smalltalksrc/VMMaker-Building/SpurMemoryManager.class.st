@@ -352,7 +352,9 @@ Class {
 		'statFullGCUsecs',
 		'statSGCDeltaUsecs',
 		'statFGCDeltaUsecs',
-		'scavengeInProgress'
+		'scavengeInProgress',
+		'statIncrGCs',
+		'statFullGCs'
 	],
 	#classVars : [
 		'CheckObjectOverwrite',
@@ -1172,6 +1174,16 @@ SpurMemoryManager >> classIsItselfClassIndexPun [
 	^4
 ]
 
+{ #category : #'plugin support' }
+SpurMemoryManager >> classLargeNegativeInteger [
+	^self knownClassAtIndex: ClassLargeNegativeIntegerCompactIndex
+]
+
+{ #category : #'plugin support' }
+SpurMemoryManager >> classLargePositiveInteger [
+	^self knownClassAtIndex: ClassLargePositiveIntegerCompactIndex
+]
+
 { #category : #accessing }
 SpurMemoryManager >> classTableIndex [
 	^classTableIndex
@@ -1563,6 +1575,29 @@ SpurMemoryManager >> firstFixedFieldOfMaybeImmediate: oop [
 		ifFalse: [self firstFixedField: oop]
 ]
 
+{ #category : #'object format' }
+SpurMemoryManager >> firstIndexableField: objOop [
+	"NOTE: overridden in various simulator subclasses to add coercion to CArray, so please duplicate any changes.
+	 There are only two important cases, both for objects with named inst vars, i.e. formats 2,3 & 5.
+	 The first indexable field for formats 2 & 5 is the slot count (by convention, even though that's off the end
+	 of the object).  For 3 we must go to the class."
+	| fmt classFormat |
+	<returnTypeC: #'void *'>
+	fmt := self formatOf: objOop.
+	fmt <= self lastPointerFormat ifTrue: "pointer; may need to delve into the class format word"
+		[fmt = self indexablePointersFormat ifTrue:
+			[classFormat := self formatOfClass: (self fetchClassOfNonImm: objOop).
+			 ^self pointerForOop: objOop
+								+ self baseHeaderSize
+								+ ((self fixedFieldsOfClassFormat: classFormat) << self wordSize)].
+		^self pointerForOop: objOop
+							+ self baseHeaderSize
+							+ ((self numSlotsOf: objOop) << self wordSize)].
+	"All bit objects, and indeed CompiledMethod, though this is a non-no, start at 0"
+	self assert: fmt < self firstCompiledMethodFormat.
+	^self pointerForOop: objOop + self baseHeaderSize
+]
+
 { #category : #'header format' }
 SpurMemoryManager >> firstLongFormat [
 	^10
@@ -1639,7 +1674,7 @@ SpurMemoryManager >> flushNewSpace [
 { #category : #'become api' }
 SpurMemoryManager >> followForwarded: objOop [
 	"Follow a forwarding pointer.  Alas we cannot prevent forwarders to forwarders
-	 being created by lazy become.  Consider the following example by Igor Stasenk:
+	 being created by lazy become.  Consider the following example by Igor Stasenko:
 		array := { a. b. c }.
 		- array at: 1 points to &a. array at: 2 points to &b. array at: 3 points to &c Ó
 		a becomeForward: b
@@ -1651,7 +1686,7 @@ SpurMemoryManager >> followForwarded: objOop [
 	| referent |
 	self assert: (self isForwarded: objOop).
 	referent := self fetchPointer: 0 ofMaybeForwardedObject: objOop.
-	[(self isForwarded: referent)] whileTrue:
+	[(self isOopForwarded: referent)] whileTrue:
 		[referent := self fetchPointer: 0 ofMaybeForwardedObject: referent].
 	^referent
 ]
@@ -1795,6 +1830,7 @@ SpurMemoryManager >> freeChunkWithBytes: bytes at: address [
 	| freeChunk |
 	freeChunk := self initFreeChunkWithBytes: bytes at: address.
 	self addToFreeList: freeChunk.
+	^freeChunk
 ]
 
 { #category : #'free space' }
@@ -1917,17 +1953,7 @@ SpurMemoryManager >> indexablePointersFormat [
 
 { #category : #'free space' }
 SpurMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
-	| numSlots |
-	self assert: numBytes \\ self allocationUnit = 0.
-	numSlots := numBytes >> self shiftForWord
-				- (numBytes >= (self numSlotsMask << self shiftForWord)
-					ifTrue: [self baseHeaderSize + self baseHeaderSize / self wordSize]
-					ifFalse: [self baseHeaderSize / self wordSize]).
-	^self initFreeChunkWithSlots: numSlots at: address
-]
-
-{ #category : #'free space' }
-SpurMemoryManager >> initFreeChunkWithSlots: numSlots at: address [ 
+	<var: #numBytes type: #usqLong>
 	^self subclassResponsibility
 ]
 
@@ -1958,7 +1984,7 @@ SpurMemoryManager >> initialize [
 	needGCFlag := signalLowSpace := scavengeInProgress := false.
 	becomeEffectsFlags := 0.
 	heapMap := self wordSize = 4 ifTrue: [CogCheck32BitHeapMap new].
-	statScavenges := 0.
+	statScavenges := statIncrGCs := statFullGCs := 0.
 	statScavengeGCUsecs := statIncrGCUsecs := statFullGCUsecs := 0.
 	statSGCDeltaUsecs := statIGCDeltaUsecs := statFGCDeltaUsecs := 0
 ]
@@ -2018,16 +2044,14 @@ SpurMemoryManager >> initializeOldSpaceFirstFree: startOfFreeOldSpace [
 	<var: 'startOfFreeOldSpace' type: #usqLong>
 	| freeOldStart freeChunk |
 	<var: 'freeOldStart' type: #usqLong>
-	0 to: NumFreeLists - 1 do:
-		[:i| freeLists at: i put: 0].
 	freeOldStart := startOfFreeOldSpace.
 	[endOfMemory - freeOldStart >= (2 raisedTo: 32)] whileTrue:
-		[freeChunk := self initFreeChunkWithSlots: (2 raisedTo: 32) / self wordSize at: freeOldStart.
-		self addToFreeList: freeChunk.
-		freeOldStart := self addressAfter: freeChunk].
-	freeChunk := self initFreeChunkWithBytes: endOfMemory - freeOldStart at: freeOldStart.
-	self addToFreeList: freeChunk.
-	self assert: (self addressAfter: freeChunk) = endOfMemory.
+		[freeChunk := self freeChunkWithBytes: (2 raisedTo: 32) at: freeOldStart.
+		freeOldStart := freeOldStart + (2 raisedTo: 32).
+		self assert: freeOldStart = (self addressAfter: freeChunk)].
+	freeOldStart < endOfMemory ifTrue:
+		[freeChunk := self freeChunkWithBytes: endOfMemory - freeOldStart at: freeOldStart.
+		 self assert: (self addressAfter: freeChunk) = endOfMemory].
 	freeOldSpaceStart := endOfMemory
 ]
 
@@ -2048,7 +2072,7 @@ SpurMemoryManager >> innerBecomeObjectsIn: array1 to: array2 copyHash: copyHashF
 		[:i| | obj1 obj2 |
 		obj1 := self fetchPointer: i ofObject: array1.
 		obj2 := self fetchPointer: i ofObject: array2.
-		self doBecome: obj1 with: obj2 copyHash: copyHashFlag.
+		self doBecome: obj1 to: obj2 copyHash: copyHashFlag.
 		(self isForwarded: obj1) ifTrue:
 			[obj1 := self followForwarded: obj1.
 			 self storePointer: i ofObject: array1 withValue: obj1].
@@ -2382,7 +2406,11 @@ SpurMemoryManager >> isIntegerObject: oop [
 		subscript:with:storing:format:
 		printContext:
 		compare31or32Bits:equal:
-		signed64BitValueOf:) includes: thisContext sender method selector) ifFalse:
+		signed64BitValueOf:
+		primDigitMultiply:negative:
+		digitLength:
+		isNegativeIntegerValueOf:
+		magnitude64BitValueOf:) includes: thisContext sender method selector) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
@@ -2541,16 +2569,14 @@ SpurMemoryManager >> leakCheckScavenge [
 
 { #category : #'object access' }
 SpurMemoryManager >> lengthOf: objOop [
-	"Answer the number of indexable bytes or words in the given object.
-	 For a CompiledMethod, the size of the method header (in bytes) should be subtracted from the result."
+	"Answer the number of indexable units in the given object.
+	 For a CompiledMethod, the size of the method header (in bytes) should
+	 be subtracted from the result."
 
 	<api>
-	| header |
-	<var: #header type: #usqLong>
 	<inline: true>
-	<asmLabel: false> 
-	header := self baseHeader: objOop.
-	^self lengthOf: objOop baseHeader: header format: (self formatOfHeader: header)
+	<asmLabel: false>
+	^self lengthOf: objOop format: (self formatOf: objOop)
 ]
 
 { #category : #'object access' }
@@ -2560,6 +2586,14 @@ SpurMemoryManager >> lengthOf: objOop baseHeader: header format: fmt [
 	 Answer the number of indexable bytes or words in the given object.
 	 For a CompiledMethod, the size of the method header (in bytes) should
 	 be subtracted from the result of this method."
+	^self lengthOf: objOop format: fmt
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> lengthOf: objOop format: fmt [
+	"Answer the number of indexable units in the given object.
+	 For a CompiledMethod, the size of the method header (in bytes)
+	 should be subtracted from the result of this method."
 	| numSlots |
 	<inline: true>
 	<asmLabel: false> 
@@ -3125,6 +3159,17 @@ SpurMemoryManager >> sizeBitsOfSafe: objOop [
 	^self sizeBitsOf: objOop
 ]
 
+{ #category : #'object access' }
+SpurMemoryManager >> slotSizeOf: oop [
+	"*DO NOT CONFUSE THIS WITH numSlotsOf:.
+	 This is an ObjectMemory compatibility method with quesitonable semantics.
+	 Answers the number of slots in the receiver.
+	 If the receiver is a byte object, return the number of bytes.
+	 Otherwise return the number of words."
+	(self isImmediate: oop) ifTrue: [^0].
+	^self lengthOf: oop
+]
+
 { #category : #accessing }
 SpurMemoryManager >> specialObjectsOop [
 	^specialObjectsOop
@@ -3173,6 +3218,11 @@ SpurMemoryManager >> startOfObject: objOop [
 	^(self numSlotsOf: objOop) >= self numSlotsMask
 		ifTrue: [objOop - self baseHeaderSize]
 		ifFalse: [objOop]
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> statNumGCs [
+	^statScavenges + statIncrGCs + statFullGCs
 ]
 
 { #category : #'object access' }
