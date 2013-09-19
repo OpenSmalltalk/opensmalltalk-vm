@@ -67,7 +67,8 @@ Class {
 		'rehashSym'
 	],
 	#classVars : [
-		'NewInterpreter',
+		'ImageHeaderFlags',
+		'ImageName',
 		'TransformedImage'
 	],
 	#pools : [
@@ -990,27 +991,30 @@ SpurBootstrap >> interpreter: sim object: receiver perform: selector withArgumen
 
 { #category : #testing }
 SpurBootstrap >> launch [
-	self launch: newHeap
+	self launch: newHeap headerFlags: oldInterpreter getImageHeaderFlags
 ]
 
 { #category : #testing }
-SpurBootstrap >> launch: heap [
+SpurBootstrap >> launch: heap headerFlags: headerFlags [
 	| sim |
 	sim := StackInterpreterSimulator onObjectMemory: heap.
 	heap coInterpreter: sim.
 	sim
 		initializeInterpreter: 0;
+		setImageHeaderFlagsFrom: headerFlags;
+		imageName: ImageName;
+		openAsMorph;
 		transcript: Transcript. "deep copy copies this"
-	sim
+	"sim
 		instVarNamed: 'printSends' put: true;
 		instVarNamed: 'printReturns' put: true;
-		instVarNamed: 'methodDictLinearSearchLimit' put: SmallInteger maxVal. "for now"
+		instVarNamed: 'methodDictLinearSearchLimit' put: SmallInteger maxVal." "for now"
 	sim run
 ]
 
 { #category : #testing }
 SpurBootstrap >> launchSaved [
-	self launch: TransformedImage veryDeepCopy
+	self launch: TransformedImage veryDeepCopy headerFlags: ImageHeaderFlags
 ]
 
 { #category : #'bootstrap methods' }
@@ -1296,6 +1300,8 @@ SpurBootstrap >> replacementForCharacterMethod: characterMethodOop [
 
 { #category : #'development support' }
 SpurBootstrap >> saveTransformedImage [
+	ImageHeaderFlags := oldInterpreter getImageHeaderFlags.
+	ImageName := oldInterpreter imageName.
 	newHeap coInterpreter: nil.
 	TransformedImage := newHeap veryDeepCopy
 ]
