@@ -4612,6 +4612,11 @@ ObjectMemory >> statMkFwdCount [
 ]
 
 { #category : #accessing }
+ObjectMemory >> statNumGCs [
+	^statIncrGCs + statFullGCs
+]
+
+{ #category : #accessing }
 ObjectMemory >> statRootTableCount [
 	^statRootTableCount
 ]

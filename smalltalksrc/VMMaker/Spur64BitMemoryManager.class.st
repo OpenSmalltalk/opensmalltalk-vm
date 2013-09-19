@@ -125,11 +125,23 @@ Spur64BitMemoryManager >> formatOf: objOop [
 ]
 
 { #category : #'garbage collection' }
-Spur64BitMemoryManager >> initFreeChunkWithSlots: numSlots at: address [ 
+Spur64BitMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
+	<var: #numBytes type: #usqLong>
+	| numSlots |
+	"must have room for a header (single or double) plus the next free pointer"
+	self assert: (numBytes \\ self allocationUnit = 0
+				 and: [numBytes >= (self baseHeaderSize + self wordSize)]).
 	self flag: #endianness.
-	self longAt: address put: self numSlotsMask << self numSlotsFullShift + numSlots;
-		longAt: address + 8 put: self numSlotsMask << self numSlotsFullShift. "0's classIndex; 0 = classIndex of free chunks"
-	^address + 8
+	"double header"
+	numBytes >= (self numSlotsMask << self shiftForWord) ifTrue:
+		[numSlots := numBytes - self baseHeaderSize - self baseHeaderSize >> self shiftForWord.
+		 self longLongAt: address put: self numSlotsMask << self numSlotsFullShift + numSlots;
+			longLongAt: address + 8 put: self numSlotsMask << self numSlotsFullShift. "0's classIndex; 0 = classIndex of free chunks"
+		^address + 8].
+	"single header"
+	numSlots := numBytes - self baseHeaderSize >> self shiftForWord.
+	self longLongAt: address put: numSlots << self numSlotsFullShift. "0's classIndex; 0 = classIndex of free chunks"
+	^address
 ]
 
 { #category : #allocation }
