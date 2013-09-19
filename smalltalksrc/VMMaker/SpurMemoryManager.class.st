@@ -549,7 +549,7 @@ SpurMemoryManager class >> vmProxyMajorVersion [
 { #category : #'simulation only' }
 SpurMemoryManager class >> vmProxyMinorVersion [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^StackInterpreter vmProxyMinorVersion
+	^StackInterpreter vmProxyMinorVersion max: 13
 ]
 
 { #category : #'word size' }
@@ -1042,6 +1042,23 @@ SpurMemoryManager >> byteLengthOf: objOop [
 		[^numBytes - ((fmt bitAnd: 3) << 1)].
 	"fmt >= self firstLongFormat"
 	^numBytes - ((fmt bitAnd: 1) << 2)
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> byteSizeOf: oop [
+	<api>
+	| format |
+	(self isImmediate: oop) ifTrue: [^0].
+	format := self formatOf: oop.
+	format < self sixtyFourBitIndexableFormat ifTrue:
+		[^(self numSlotsOf: oop) << self shiftForWord].
+	format >= self firstByteFormat ifTrue:
+		[^(self numSlotsOf: oop) << self shiftForWord - (format bitAnd: 7)].
+	format >= self firstShortFormat ifTrue:
+		[^(self numSlotsOf: oop) << self shiftForWord - ((format bitAnd: 3) << 1)].
+	format >= self firstLongFormat ifTrue:
+		[^(self numSlotsOf: oop) << self shiftForWord - ((format bitAnd: 1) << 2)].
+	^(self numSlotsOf: oop) << self shiftForWord
 ]
 
 { #category : #'object enumeration' }
@@ -2199,6 +2216,12 @@ SpurMemoryManager >> integerValueOf: oop [
 	^self subclassResponsibility
 ]
 
+{ #category : #simulation }
+SpurMemoryManager >> interpreter [
+	<doNotGenerate>
+	^coInterpreter
+]
+
 { #category : #'object access' }
 SpurMemoryManager >> is: oop instanceOf: classOop compactClassIndex: compactClassIndex [
 	"Answer if oop is an instance of the given class. If the class has a (non-zero)
@@ -2422,7 +2445,11 @@ SpurMemoryManager >> isIntegerObject: oop [
 		digitLength:
 		isNegativeIntegerValueOf:
 		magnitude64BitValueOf:
-		primitiveMakePoint) includes: thisContext sender method selector) ifFalse:
+		primitiveMakePoint
+		primitiveAsCharacter
+		primitiveInputSemaphore
+		baseFrameReturn
+		primitiveExternalCall) includes: thisContext sender method selector) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]

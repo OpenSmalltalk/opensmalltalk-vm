@@ -14,7 +14,7 @@ Spur32BitMMLESimulator >> become: array1 with: array2 twoWay: twoWayFlag copyHas
 	^super become: array1 with: array2 twoWay: twoWayFlag copyHash: copyHashFlag
 ]
 
-{ #category : #'C library simulation' }
+{ #category : #'simulation only' }
 Spur32BitMMLESimulator >> booleanValueOf: obj [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter booleanValueOf: obj
@@ -150,9 +150,9 @@ Spur32BitMMLESimulator >> headerForSlots: numSlots format: formatField classInde
 ]
 
 { #category : #'simulation only' }
-Spur32BitMMLESimulator >> is: oop KindOf: classNameString [
+Spur32BitMMLESimulator >> ioLoadFunction: functionString From: pluginString [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter is: oop KindOf: classNameString
+	^coInterpreter ioLoadFunction: functionString From: pluginString
 ]
 
 { #category : #'memory access' }
@@ -203,12 +203,6 @@ Spur32BitMMLESimulator >> longLongAt: byteAddress put: a64BitValue [
 		at: byteAddress // 4 + 1 put: (a64BitValue bitAnd: 16rffffffff);
 		at: byteAddress // 4 + 2 put: a64BitValue >> 32.
 	^a64BitValue
-]
-
-{ #category : #'simulation only' }
-Spur32BitMMLESimulator >> methodArgumentCount [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter methodArgumentCount
 ]
 
 { #category : #'simulation only' }

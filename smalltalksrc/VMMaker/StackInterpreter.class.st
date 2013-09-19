@@ -5092,7 +5092,12 @@ StackInterpreter >> findNewMethodInClassTag: classTag [
 	<inline: false>
 	ok := self lookupInMethodCacheSel: messageSelector classTag: classTag.
 	ok ifFalse: "entry was not found in the cache; look it up the hard way "
-		[class := self sendFaultFor: classTag.
+		[(objectMemory isForwardedClassTag: lkupClassTag) ifTrue:
+			[lkupClassTag := self handleForwardedSendFaultFor: lkupClassTag.
+			ok := self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag.
+			ok ifTrue:
+				[^nil]].
+		 class := objectMemory classForClassTag: classTag.
 		 self lookupMethodInClass: class.
 		 self addNewMethodToCache: class]
 ]
@@ -5824,6 +5829,28 @@ StackInterpreter >> getThisSessionID [
 ]
 
 { #category : #'message sending' }
+StackInterpreter >> handleForwardedSendFaultFor: classTag [
+	"Handle a send fault that may be due to a send to a forwarded object.
+	 Unforward the receiver on the stack and answer its actual class."
+	| rcvr |
+	(objectMemory isForwardedClassTag: classTag) ifFalse:
+		[^classTag].
+
+	rcvr := self stackValue: argumentCount.
+	"should *not* be a super send, so te receiver should be forwarded."
+	self assert: (objectMemory isOopForwarded: rcvr).
+	rcvr := objectMemory followForwarded: rcvr.
+	self stackValue: argumentCount put: rcvr.
+	self followForwardedFrameContents: framePointer
+		stackPointer: stackPointer + (argumentCount + 1 * BytesPerWord). "don't repeat effort"
+	(objectMemory isPointers: (self frameReceiver: framePointer)) ifTrue:
+		[objectMemory
+			followForwardedObjectFields: (self frameReceiver: framePointer)
+			toDepth: 0].
+	^objectMemory fetchClassTagOf: rcvr
+]
+
+{ #category : #'message sending' }
 StackInterpreter >> handleStackOverflow [
 	"Check for stack overflow, moving frames to another stack if so."
 	| newPage theFP callerFP overflowLimitAddress overflowCount |
@@ -6009,8 +6036,9 @@ StackInterpreter >> ifValidWriteBackStack: theCFP Pointers: theCSP Save: savedFP
 { #category : #'frame access' }
 StackInterpreter >> iframeInstructionPointerForIndex: ip method: aMethod [
 	"Answer the instruction pointer for use in an interpreter frame (a pointer to a bytecode)."
-	self assert: (ip between: (objectMemory lastPointerOf: aMethod) and: (objectMemory lengthOf: aMethod)).
-	^aMethod + ip + BaseHeaderSize - 2
+	self assert: (ip between: (objectMemory lastPointerOf: aMethod) - 1
+					and: (objectMemory lengthOf: aMethod)).
+	^aMethod + ip + objectMemory baseHeaderSize - 2
 ]
 
 { #category : #'frame access' }
@@ -6450,7 +6478,12 @@ StackInterpreter >> internalFindNewMethod [
 	ok := self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag.
 	ok ifFalse: "entry was not found in the cache; look it up the hard way"
 		[self externalizeIPandSP.
-		 lkupClass := self sendFaultFor: lkupClassTag.
+		 (objectMemory isForwardedClassTag: lkupClassTag) ifTrue:
+			[lkupClassTag := self handleForwardedSendFaultFor: lkupClassTag.
+			ok := self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag.
+			ok ifTrue:
+				[^nil]].
+		 lkupClass := objectMemory classForClassTag: lkupClassTag.
 		 self lookupMethodInClass: lkupClass.
 		 self internalizeIPandSP.
 		 self addNewMethodToCache: lkupClass]
@@ -10371,28 +10404,6 @@ StackInterpreter >> sendBreakpoint: selector receiver: receiver [
 	self sendBreak: (objectMemory firstFixedFieldOfMaybeImmediate: selector)
 		point: (objectMemory lengthOfMaybeImmediate: selector)
 		receiver: receiver
-]
-
-{ #category : #'message sending' }
-StackInterpreter >> sendFaultFor: classTag [
-	"Handle a send fault that may be due to a send to a forwarded object.
-	 Unforward the receiver on the stack and answer its actual class."
-	| rcvr |
-	(objectMemory isForwardedClassTag: classTag) ifFalse:
-		[^objectMemory classForClassTag: classTag].
-
-	rcvr := self stackValue: argumentCount.
-	"should *not* be a super send, so te receiver should be forwarded."
-	self assert: (objectMemory isOopForwarded: rcvr).
-	rcvr := objectMemory followForwarded: rcvr.
-	self stackValue: argumentCount put: rcvr.
-	self followForwardedFrameContents: framePointer
-		stackPointer: stackPointer + (argumentCount + 1 * BytesPerWord). "don't repeat effort"
-	(objectMemory isPointers: (self frameReceiver: framePointer)) ifTrue:
-		[objectMemory
-			followForwardedObjectFields: (self frameReceiver: framePointer)
-			toDepth: 0].
-	^objectMemory fetchClassOf: rcvr
 ]
 
 { #category : #'callback support' }
