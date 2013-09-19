@@ -60,7 +60,7 @@ Class {
 		'classToIndex',
 		'oldInterpreter',
 		'lastClassTablePage',
-		'symbolMap',
+		'literalMap',
 		'methodClasses',
 		'installedPrototypes',
 		'sizeSym',
@@ -406,7 +406,7 @@ SpurBootstrap >> addNewMethods [
 		[basSym := self findSymbol: #addSelectorSilently:withMethod:].
 	self allPrototypeClassNamesDo:
 		[:sym :symIsMeta| | class |
-		class := self findClassNamed: (symbolMap at: sym).
+		class := self findClassNamed: (literalMap at: sym).
 		symIsMeta ifTrue: [class := oldHeap fetchClassOfNonImm: class].
 		self prototypeClassNameMetaSelectorMethodDo:
 			[:className :isMeta :selector :method| | methodOrNil |
@@ -417,7 +417,7 @@ SpurBootstrap >> addNewMethods [
 				 methodOrNil := self interpreter: oldInterpreter
 									object: class
 									perform: cmaiaSym
-									withArguments: {symbolMap at: selector. oldHeap nilObject}.
+									withArguments: {literalMap at: selector. oldHeap nilObject}.
 				 methodOrNil = oldHeap nilObject
 					ifTrue: "no method.  install the real thing now"
 						[Transcript
@@ -430,7 +430,7 @@ SpurBootstrap >> addNewMethods [
 						 self interpreter: oldInterpreter
 							object: class
 							perform: basSym
-							withArguments: { symbolMap at: selector.
+							withArguments: { literalMap at: selector.
 											   self installableMethodFor: method
 												selector: selector
 												className: className
@@ -660,21 +660,27 @@ SpurBootstrap >> defineKnownClassIndices [
 		at: "oldHeap" classBlockClosure put: 37;
 
 		at: oldHeap classSemaphore put: 48;
-		at: oldHeap classMutex put: 49;
+		"at: oldHeap classMutex put: 49; see below"
 
 		at: oldHeap classByteArray put: 50;
 		at: oldHeap classArray put: 51;
 		at: oldHeap classString put: 52;
 		at: oldHeap classBitmap put: 53;
-		at: oldHeap classPoint put: 54;
+		at: oldHeap classPoint put: 54.
 
-		at: oldHeap classExternalAddress put: 128;
-		at: oldHeap classExternalData put: 129;
-		at: oldHeap classExternalFunction put: 130;
-		at: oldHeap classExternalLibrary put: 131;
-		at: oldHeap classExternalStructure put: 132;
-		at: oldHeap classAlien put: 133;
-		at: oldHeap classUnsafeAlien put: 134.
+	{{oldHeap classMutex. 49}.
+	 {oldHeap classExternalAddress. 128}.
+	 {oldHeap classExternalData. 129}.
+	 {oldHeap classExternalFunction. 130}.
+	 {oldHeap classExternalLibrary. 131}.
+	 {oldHeap classExternalStructure. 132}.
+	 {oldHeap classAlien. 133}.
+	 {oldHeap classUnsafeAlien. 134}}
+		do: [:pair|
+			[:oop :index|
+			oop ~= oldHeap nilObject ifTrue:
+				[classToIndex at: oop put: index]] valueWithArguments: pair].
+
 	classToIndex keysDo:
 		[:oldClass|
 		self assert: (oldInterpreter addressCouldBeClassObj: oldClass)]
@@ -813,6 +819,30 @@ SpurBootstrap >> findLiteral: aLiteral [
 ]
 
 { #category : #'bootstrap methods' }
+SpurBootstrap >> findRequiredGlobals [
+	"Look for the necessary gobal bindings in the prototype methods in the old image.
+	 This has to be done early by sending bindingOf: to Smalltalk."
+	| globals bindingOf |
+	globals := Set new.
+	self prototypeClassNameMetaSelectorMethodDo:
+		[:c :m :s :method|
+		globals addAll: (method literals select: [:l|
+										l isVariableBinding
+										and: [l key isSymbol
+										and: [(Smalltalk bindingOf: l key) == l]]])].
+	bindingOf := self findSymbol: #bindingOf:.
+	self withExecutableInterpreter: oldInterpreter
+		do:	[globals do:
+				[:global|
+				literalMap
+					at: global
+					put: (self interpreter: oldInterpreter
+							object: (oldHeap splObj: 8) "Smalltalk"
+							perform: bindingOf
+							withArguments: {self findSymbol: global key})]]
+]
+
+{ #category : #'bootstrap methods' }
 SpurBootstrap >> findSymbol: aString [
 	"Find the Symbol equal to aString in oldHeap."
 	| symbolClass |
@@ -861,9 +891,6 @@ SpurBootstrap >> installModifiedMethods [
 	 in the new image.  First use the simulator to get the image to intern all symbols and add
 	 dummy methods under new selectors.  With that done we can manually replace the relevant
 	 methods with the prototypes, mapping selectors and global variables as required."
-	symbolMap := Dictionary new.
-	methodClasses := Set new.
-	installedPrototypes := Set new.
 	self withExecutableInterpreter: oldInterpreter
 		do: [self internAllSymbols.
 			 self addNewMethods.
@@ -895,7 +922,7 @@ SpurBootstrap >> installableMethodFor: aCompiledMethod selector: selector classN
 					ifTrue:
 						[literal isInteger
 							ifTrue: [oldHeap integerObjectOf: literal]
-							ifFalse: [symbolMap at: literal ifAbsent: [self findLiteral: literal]]]
+							ifFalse: [literalMap at: literal ifAbsent: [self findLiteral: literal]]]
 					ifFalse: "should be a VMObjectProxy"
 						[literal oop].
 		oldHeap storePointer: i ofObject: newMethod withValue: oop].
@@ -917,18 +944,19 @@ SpurBootstrap >> internAllSymbols [
 	self allPrototypeMethodSymbols do:
 		[:sym|
 		(self findSymbol: sym)
-			ifNotNil: [:imageSym| symbolMap at: sym put: imageSym]
+			ifNotNil: [:imageSym| literalMap at: sym put: imageSym]
 			ifNil:[Transcript cr; nextPutAll: 'interning '; nextPutAll: sym; flush.
 				"Interpret Symbol intern: sym to ... intern it :-)"
-				symbolMap
+				literalMap
 					at: sym
 					put: (self interpreter: oldInterpreter
 							object: self symbolClass
 							perform: internSym
 							withArguments: {self stringFor: sym})]].
-	symbolMap keysAndValuesDo:
-		[:sym :imageSym|
-		self assert: sym = (oldHeap stringOf: imageSym)]
+	literalMap keysAndValuesDo:
+		[:symOrGlobal :imageSymOrGlobal|
+		symOrGlobal isSymbol ifTrue:
+			[self assert: symOrGlobal = (oldHeap stringOf: imageSymOrGlobal)]]
 ]
 
 { #category : #'bootstrap methods' }
@@ -988,7 +1016,7 @@ SpurBootstrap >> launchSaved [
 { #category : #'bootstrap methods' }
 SpurBootstrap >> methodClassForClassName: classNameSymbol isMeta: isMeta [ 
 	| class |
-	class := self findClassNamed: (symbolMap at: classNameSymbol).
+	class := self findClassNamed: (literalMap at: classNameSymbol).
 	isMeta ifTrue: [class := oldHeap fetchClassOfNonImm: class].
 	methodClasses do:
 		[:mca|
@@ -1101,7 +1129,10 @@ SpurBootstrap >> on: imageName [
 		newHeap setCheckForLeaks: 15 - 4. "don't check become"
 	map := Dictionary new: oldHeap memory size // 4.
 	reverseMap := Dictionary new: oldHeap memory size // 4.
-	classToIndex := Dictionary new: 1024
+	classToIndex := Dictionary new: 1024.
+	literalMap := IdentityDictionary new.
+	methodClasses := Set new.
+	installedPrototypes := Set new
 ]
 
 { #category : #'method prototypes' }
@@ -1191,7 +1222,7 @@ SpurBootstrap >> replaceMethods [
 	"Replace all the modified method prototypes."
 	self allPrototypeClassNamesDo:
 		[:sym :symIsMeta| | class |
-		class := self findClassNamed: (symbolMap at: sym).
+		class := self findClassNamed: (literalMap at: sym).
 		symIsMeta ifTrue: [class := oldHeap fetchClassOfNonImm: class].
 		self prototypeClassNameMetaSelectorMethodDo:
 			[:className :isMeta :selector :method| | replacement methodDict index |
@@ -1211,7 +1242,7 @@ SpurBootstrap >> replaceMethods [
 										className: className
 										isMeta: isMeta.
 					methodDict := oldHeap fetchPointer: MethodDictionaryIndex ofObject: class.
-					index := self indexOfSelector: (symbolMap at: selector) in: methodDict.
+					index := self indexOfSelector: (literalMap at: selector) in: methodDict.
 					oldHeap
 						storePointer: index - SelectorStart
 						ofObject: (oldHeap fetchPointer: MethodArrayIndex ofObject: methodDict)
@@ -1237,7 +1268,7 @@ SpurBootstrap >> replacementForCharacterMethod: characterMethodOop [
 		[^nil].
 	clone setSourcePointer: 0.
 	asIntegerProxy := VMObjectProxy new
-							for: (symbolMap at: #asInteger)
+							for: (literalMap at: #asInteger)
 							coInterpreter: oldInterpreter
 							objectMemory: oldHeap.
 	assembly := BytecodeDisassembler new disassemble: clone.
@@ -1304,6 +1335,7 @@ SpurBootstrap >> symbolClass [
 { #category : #'bootstrap image' }
 SpurBootstrap >> transform [
 	self rememberRehashSymbol.
+	self findRequiredGlobals.
 	self installModifiedMethods.
 	self bootstrapImage.
 	self validate.
