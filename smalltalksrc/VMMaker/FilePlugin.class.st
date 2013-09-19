@@ -251,11 +251,21 @@ FilePlugin >> primitiveDirectoryDelimitor [
 	| ascii |
 	<export: true>
 	ascii := self asciiDirectoryDelimiter.
-	((ascii >= 0) and: [ascii <= 255]) ifFalse:
-		[^interpreterProxy primitiveFail].
-	interpreterProxy
-		pop: 1
-		thenPush: (interpreterProxy fetchPointer: ascii ofObject: (interpreterProxy characterTable))
+	interpreterProxy minorVersion >= 13
+		ifTrue:
+			[interpreterProxy
+				pop: 1
+				thenPush: (interpreterProxy characterObjectOf: ascii)]
+		ifFalse:
+			[(ascii >= 0 and: [ascii <= 255])
+				ifTrue:
+					[interpreterProxy
+						pop: 1
+						thenPush: (interpreterProxy
+										fetchPointer: ascii
+										ofObject: interpreterProxy characterTable)]
+				ifFalse:
+					[interpreterProxy primitiveFail]]
 ]
 
 { #category : #'directory primitives' }
