@@ -549,6 +549,16 @@ StackInterpreterSimulator >> heapMapAtWord: address [
 	^objectMemory heapMap heapMapAtWord: address
 ]
 
+{ #category : #'spur bootstrap' }
+StackInterpreterSimulator >> imageName [
+	^imageName
+]
+
+{ #category : #'spur bootstrap' }
+StackInterpreterSimulator >> imageName: aString [
+	imageName := aString
+]
+
 { #category : #'interpreter shell' }
 StackInterpreterSimulator >> incrementByteCount [
 	(byteCount := byteCount + 1) = breakCount ifTrue:
