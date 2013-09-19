@@ -993,7 +993,7 @@ StackInterpreterPrimitives >> primitiveSignalAtMilliseconds [
 	sema := self stackValue: 1.
 	msecs := self positive32BitValueOf: msecsObj.
 	(self failed
-	 or: [objectMemory isIntegerObject: sema]) ifTrue:
+	 or: [objectMemory isImmediate: sema]) ifTrue:
 		[self primitiveFail.
 		 ^nil].
 	(objectMemory fetchClassOfNonImm: sema) = (objectMemory splObj: ClassSemaphore)

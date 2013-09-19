@@ -96,13 +96,6 @@ VMClass class >> emitExportPragma [
 	^false
 ]
 
-{ #category : #'api version' }
-VMClass class >> emitInterpreterProxyVersionOn: aStream [ 
-	aStream
-		nextPutAll: '#define VM_PROXY_MAJOR '; print: self vmProxyMajorVersion; cr;
-		nextPutAll: '#define VM_PROXY_MINOR '; print: self vmProxyMinorVersion; cr; cr
-]
-
 { #category : #translation }
 VMClass class >> exportAPISelectors: options [
 	^self exportAPISelectorsFor: self
