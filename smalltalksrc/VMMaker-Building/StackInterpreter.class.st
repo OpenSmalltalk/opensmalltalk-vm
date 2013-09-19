@@ -3357,7 +3357,7 @@ StackInterpreter >> closureIn: context numArgs: numArgs instructionPointer: init
 		ifFalse:
 			[newClosure := objectMemory
 								eeInstantiateSmallClass: (objectMemory splObj: ClassBlockClosure)
-								sizeInBytes: (BytesPerWord * (ClosureFirstCopiedValueIndex + numCopied)) + BaseHeaderSize].
+								numSlots: ClosureFirstCopiedValueIndex + numCopied].
 	"Assume: have just allocated a new closure; it must be young. Thus, can use unchecked stores."
 	objectMemory
 		storePointerUnchecked: ClosureOuterContextIndex ofObject: newClosure withValue: context;
@@ -3382,10 +3382,9 @@ StackInterpreter >> closureIn: context numArgs: numArgs instructionPointer: init
 								format: objectMemory indexablePointersFormat
 								numSlots: ClosureFirstCopiedValueIndex + numCopied]
 		ifFalse:
-			[self assert: (BytesPerWord * (ClosureFirstCopiedValueIndex + numCopied)) + BaseHeaderSize <= 252.
-			 newClosure := objectMemory
+			[newClosure := objectMemory
 								eeInstantiateSmallClass: (objectMemory splObj: ClassBlockClosure)
-								sizeInBytes: (BytesPerWord * (ClosureFirstCopiedValueIndex + numCopied)) + BaseHeaderSize].
+								numSlots: ClosureFirstCopiedValueIndex + numCopied].
 	"Assume: have just allocated a new closure; it must be young. Thus, can use unchecked stores."
 	objectMemory storePointerUnchecked: ClosureOuterContextIndex ofObject: newClosure withValue: context.
 	objectMemory storePointerUnchecked: ClosureStartPCIndex ofObject: newClosure withValue: (objectMemory integerObjectOf: initialIP).
@@ -7354,13 +7353,13 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 
 { #category : #utilities }
 StackInterpreter >> makePointwithxValue: xValue yValue: yValue [
-"make a Point xValue@yValue.
-We know both will be integers so no value nor root checking is needed"
+	"make a Point xValue@yValue.
+	 We know both will be integers so no value nor root checking is needed"
 	| pointResult |
-	pointResult := objectMemory eeInstantiateSmallClass: (objectMemory splObj: ClassPoint) sizeInBytes: 3*BytesPerWord.
+	pointResult := objectMemory eeInstantiateSmallClass: (objectMemory splObj: ClassPoint) numSlots: YIndex + 1.
 	objectMemory storePointerUnchecked: XIndex ofObject: pointResult withValue: (objectMemory integerObjectOf: xValue).
 	objectMemory storePointerUnchecked: YIndex ofObject: pointResult withValue: (objectMemory integerObjectOf: yValue).
-	^ pointResult
+	^pointResult
 ]
 
 { #category : #'object memory support' }
