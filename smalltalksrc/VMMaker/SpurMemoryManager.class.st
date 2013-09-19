@@ -1403,6 +1403,17 @@ SpurMemoryManager >> eeInstantiateMethodContextSlots: numSlots [
 		classIndex: ClassMethodContextCompactIndex
 ]
 
+{ #category : #allocation }
+SpurMemoryManager >> eeInstantiateSmallClass: classObj numSlots: numSlots [
+	| classIndex |
+	<inline: true>
+	classIndex := self ensureBehaviorHash: classObj.
+	^self
+		eeInstantiateClassIndex: classIndex
+		format: (self instSpecOfClass: classObj)
+		numSlots: numSlots
+]
+
 { #category : #'debug support' }
 SpurMemoryManager >> eek [
 	<inline: true>
@@ -2243,7 +2254,7 @@ SpurMemoryManager >> isClassInClassTable: objOop [
 
 { #category : #'object testing' }
 SpurMemoryManager >> isClassOfNonImm: objOop equalTo: classOop [
-	self shouldBeImplemented
+	^(self classIndexOf: objOop) = (self rawHashBitsOf: classOop)
 ]
 
 { #category : #'object access' }
@@ -2410,7 +2421,8 @@ SpurMemoryManager >> isIntegerObject: oop [
 		primDigitMultiply:negative:
 		digitLength:
 		isNegativeIntegerValueOf:
-		magnitude64BitValueOf:) includes: thisContext sender method selector) ifFalse:
+		magnitude64BitValueOf:
+		primitiveMakePoint) includes: thisContext sender method selector) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
@@ -3187,6 +3199,12 @@ SpurMemoryManager >> splObj: index [
 	<inline: true>
 	"Return one of the objects in the specialObjectsArray"
 	^self fetchPointer: index ofObject: specialObjectsOop
+]
+
+{ #category : #'interpreter access' }
+SpurMemoryManager >> splObj: index put: anObject [
+	"Set one of the objects in the SpecialObjectsArray"
+	self storePointer: index ofObject: specialObjectsOop withValue: anObject
 ]
 
 { #category : #'free space' }
