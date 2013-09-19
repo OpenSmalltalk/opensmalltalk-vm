@@ -3,12 +3,14 @@ Help for Squeak
 
 What is this?
 -------------
-This is the RISC OS port of Squeak 3.9, a public domain Smalltalk system.
+This is the RISC OS port of Squeak 4.4, a public domain Smalltalk system.
 Updates, patches etc are available from:
 	http://www.rowledge.org/tim/squeak
-as and when I can make time to produce then. The main website for the Squeak project is:
+as and when I can make time to produce them.
+
+The main website for the Squeak project is:
 	http://www.squeak.org
-and I suggest you take a look there.
+and I suggest you take a look there for news, discussion forums and links.
 
 Information herein
 ------------------
@@ -21,7 +23,7 @@ Information herein
 
 What is Smalltalk?
 ------------------
-Smalltalk is the original object oriented programming language and environment from which most OSs have learnt about windowing, pixel displays, menus and so on. You will need to read about Smalltalk to make best use of it, since it is likely to be quite unfamiliar to you at first.
+Smalltalk is the original object oriented programming language and environment from which most OSs have learnt about windowing, pixel displays, menus and so on. You will need to read about Smalltalk to make best use of it, since it is likely to be quite unfamiliar to you at first. See below for some links.
 
 Be warned, the user interface is not quite like RISC OS; in particular:-
 a) the right hand mouse button is NOT used as 'adjust', but to operate on the window currently active; thus serving many of the functions of the window icons under RISC OS.
@@ -67,21 +69,22 @@ In print there are a number of good sources, some of which you might find on the
 Oddities and Known problems with this release
 =============================================
 
-File naming is a problem. Squeak is ported to many machines and far too many people make bad assumptions about the permissable form of file names. RISC OS is the only popular OS to have problems with long filenames (in pre-RISC OS 4 systems), '.' used for filename extensions etc. This shouldn't be a problem in an object oriented system, since we should be able to catch bad behaviour and correct the file names, but there are many places currently in the system where something like  'fred the great.text' is used as a filename.
+File naming can be a problem. Squeak is ported to many machines and far too many people make bad assumptions about the permissable form of file names and how they are constructed. This shouldn't be a problem in an object oriented system, since we should be able to catch bad behaviour and correct the file names, but there are many places currently in the system where something like  'fred the great.text' is used as a filename.
 To get around this problem, I have made Squeak accept Unix style filenames, ie use a '/' as the directory separator and '.' for filename extensions. This is a minor inconvenience in that you have to remember the change from normal RISC OS practice, but we are all getting used to URLs anyway, so it should not be too painful. It does at least save most of the filename troubles with Squeak code.
 
 At various times Squeak expects to be able to open a file for read/write and read-only at the same time. RISC OS doesn't support this and so I have had to implement a way to fake it. So far this seems reliable but let me know of problems.
 
-No iconbar menu yet. However, you can bring the Squeak window to the front by clicking on the Squeak iconbar icon.
+There is no iconbar menu yet. However, you can bring the Squeak window to the front by clicking on the Squeak iconbar icon. I'm not really sure what we would put in an iconbar menu, anyway.
 
-Hotkeys don't work quite like in RISC OS. Again, since Squeak was first created on a Mac, it is rather biased towards the Mac keyboard layout and shortcuts. Mac's have both a 'cmd' key and a 'ctl' key (and the 'option' key of course but won't worry about that for now) and RPCs have 'ctl' and 'alt' keys. Sadly, we can't map one to the other in a simple way since there are no keypress events generated for most alt-keys. So to get around this I have separated out the left and right ctl keys.  The LEFT one is used for 'ctl' (think controL) and the RIGHT for 'cmd' (think commanD => dexter => right). There are still some confusions beyond this in that there are shift-cmd hotkeys available in Squeak, but the ctl key can be used to access them as well.
-New for 3.7 is a commandline option to swap these two in case you find it more convenient. Add the flag '-swapMeta' to the final line of the !Run file.
+Hotkeys don't work quite like in RISC OS. Again, since Squeak was first created on a Mac, it is rather biased towards the Mac keyboard layout and shortcuts. Mac's have both a 'cmd' key and a 'ctl' key (and the 'option' key of course but won't worry about that for now) and RISC OS  understands 'ctl' and 'alt' keys. Sadly, we can't map one to the other in a simple way since there are no keypress events generated for most alt-keys. So to get around this I have separated out the left and right ctl keys.  The LEFT one is used for 'ctl' (think controL) and the RIGHT for 'cmd' (think commanD => dexter => right). There are still some confusions beyond this in that there are shift-cmd hotkeys available in Squeak, but the ctl key can be used to access them as well.
+There is a commandline option to swap these two in case you find it more convenient. Add the flag '-swapMeta' to the final line of the !Run file. If you don't know what a !run file is, don't worry about it for now.
 
-There is a help window that describes the available hotkeys (use the screen menu, choose 'help...' then 'command key help') that should give you some assistance in understanding things. The ctl-<, ctl-= and cmd-shift-+ actions don't work because RiscOS doesn't generate keypress event for those keys.
+There is a Squeak help window that describes the available hotkeys (use the Squeak screen menu, choose 'help...' then 'command key help') that should give you some assistance in understanding things. The ctl-<, ctl-= and cmd-shift-+ actions don't work because RiscOS doesn't generate keypress event for those keys.
 
-Sound is not hooked up yet. Serial ports neither. Nor MIDI. Bummer. Volunteer to help fix this!
+Sound suport has been added as of the 4.0 release; Squeak has had sound since 1996 but I didn't get around to adding it for RISC OS until recently.
+Serial ports are not supported. Nor MIDI. Bummer. Volunteer to help fix this!
 
-Window resizing - as in the RISC OS window holding all the Squeak windows - is a little non-standard. To resize the window, hold down a ctrl key and press the SELECT mouse button in the bottom right corner (within 15 pixels) and drag to the new size. It will take a moment for the display to catch up with the change so don't worry.
+Window resizing - as in resizing the RISC OS window holding all the Squeak windows - is a little non-standard. To resize the window, hold down a ctrl key and press the SELECT mouse button in the bottom right corner (within 15 pixels) and drag to the new size. It will take a moment for the display to catch up with the change so don't worry.
 
 Quitting Squeak. Normally one uses the main World Menu and chooses 'quit', 'save and quit' or whatever. If you have a problem and the system is not responding you can also close the Squeak window the normal way and 'accept' in the resulting confirmation dialogue.
 

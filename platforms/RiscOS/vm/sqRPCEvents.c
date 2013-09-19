@@ -981,7 +981,7 @@ sqInt ioGetNextEvent(sqInputEvent *evt) {
 	};
 #endif
 	if (iebEmptyP()) {
-		HandleEvents();
+		HandleEventsNotTooOften();
 		forceInterruptCheck(); /* handleevents can take a while */
 	}
 	if (iebEmptyP()) return false;
@@ -1013,7 +1013,7 @@ sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds) {
  */
 	//PRINTF(("\\t relinq %d\n", microSeconds));
 	/* HandleEventsWithWait(microSeconds);   */
-	HandleEvents();
+	HandleEventsNotTooOften();
 	forceInterruptCheck();
 	return microSeconds;
 }
@@ -1025,7 +1025,7 @@ sqInt ioProcessEvents(void) {
  * the image is up to. We don't force an interrupt check here because we're
  * in the middle of one already
  */
-	HandleEvents();
+	HandleEventsNotTooOften();
 	return true;
 }
 
