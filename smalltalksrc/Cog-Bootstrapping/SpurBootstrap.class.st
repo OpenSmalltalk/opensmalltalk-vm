@@ -629,6 +629,19 @@ SpurBootstrap >> cloneObjects [
 		lastHash: oldHeap lastHash
 ]
 
+{ #category : #'bootstrap image' }
+SpurBootstrap >> compactImage [
+	| firstFree lastUsed |
+	newHeap allHeapEntitiesDo:
+		[:o|
+		(newHeap isFreeObject: o)
+			ifTrue: [firstFree ifNil: [firstFree := o]]
+			ifFalse: [lastUsed := o]].
+	lastUsed < firstFree ifTrue: "nothing to do"
+		[^self].
+	self halt
+]
+
 { #category : #'class indices' }
 SpurBootstrap >> defineKnownClassIndices [
 	"The classTable is laid out
@@ -877,6 +890,28 @@ SpurBootstrap >> followForwardingPointers [
 						withValue: (newHeap followForwarded: field)]]]]
 ]
 
+{ #category : #'bootstrap image' }
+SpurBootstrap >> freeForwarders [
+	"Check that all forwarders have been followed.  Then free them."
+	| numForwarders numFreed |
+	numForwarders := numFreed := 0.
+	newHeap allObjectsDo:
+		[:o|
+		(newHeap isForwarded: o)
+			ifTrue: [numForwarders := numForwarders + 1]
+			ifFalse:
+				[0 to: (newHeap numPointerSlotsOf: o) - 1 do:
+					[:i|
+					self assert: (newHeap isOopForwarded: (newHeap fetchPointer: i ofObject: o)) not]]].
+	Transcript nextPutAll: 'freeing '; print: numForwarders; nextPutAll: ' forwarders'; cr; flush.
+	newHeap allObjectsDo:
+		[:o|
+		(newHeap isForwarded: o) ifTrue:
+			[numFreed := numFreed + 1.
+			 newHeap freeObject: o]].
+	self assert: numFreed = numForwarders
+]
+
 { #category : #'bootstrap methods' }
 SpurBootstrap >> indexOfSelector: selectorOop in: methodDict [
 	SelectorStart to: (oldHeap fetchWordLengthOf: methodDict) - 1 do:
@@ -1010,7 +1045,10 @@ SpurBootstrap >> launch: heap headerFlags: headerFlags [
 		instVarNamed: 'printSends' put: true;
 		instVarNamed: 'printReturns' put: true;
 		instVarNamed: 'methodDictLinearSearchLimit' put: SmallInteger maxVal." "for now"
-	heap setCheckForLeaks: 15.
+	heap
+		setCheckForLeaks: 15;
+		runLeakCheckerForFullGC: true.
+
 	sim halt; run
 ]
 
@@ -1129,10 +1167,10 @@ SpurBootstrap >> on: imageName [
 	oldHeap := oldInterpreter objectMemory.
 	newHeap := Spur32BitMMLESimulator new.
 	newHeap
-		allocateMemoryOfSize: (oldHeap youngStart * 5 / 4 roundUpTo: 8)
+		allocateMemoryOfSize: (oldHeap youngStart * 3 / 2 roundUpTo: 1024 * 1024)
 		newSpaceSize: 1024 * 1024
 		codeSize: 1024 * 1024.
-	newHeap setCheckForLeaks: 15 - 4. "don't check become"
+	newHeap setCheckForLeaks: 15 - 4. "don't check become; soooo many rehashes in bootstrap"
 	map := Dictionary new: oldHeap memory size // 4.
 	reverseMap := Dictionary new: oldHeap memory size // 4.
 	classToIndex := Dictionary new: 1024.
@@ -1268,7 +1306,11 @@ SpurBootstrap >> replacementForCharacterMethod: characterMethodOop [
 				coInterpreter: oldInterpreter
 				objectMemory: oldHeap.
 	clone := self cloneMethodProxy: proxy.
-	"Quick methods accessing value should have been replaced."
+	"Quick methods accessing value should have been replaced.  The halt will fire if there
+	 is a missing prototype for such a method on the class side of SpurBootstrap.  The
+	 relevant Character prototypes there so far are Character>>asInteger, Character>>
+	 asciiValue, Character>>hash & Character>>identityHash.  Conceivably the bootstrap
+	 could be applied to an image that has others; hence the halt."
 	clone isReturnField ifTrue: [self halt].
 	clone hasInstVarRef ifFalse:
 		[^nil].
@@ -1350,6 +1392,8 @@ SpurBootstrap >> transform [
 	self rehashImage.
 	self followForwardingPointers.
 	self scavengeImage.
+	self freeForwarders.
+	self compactImage.
 	Transcript nextPutAll: 'done.'; flush.
 ]
 
