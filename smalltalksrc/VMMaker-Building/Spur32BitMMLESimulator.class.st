@@ -90,6 +90,12 @@ Spur32BitMMLESimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
 	aFloat at: 1 put: (self long32At: floatBitsAddress+4)
 ]
 
+{ #category : #'simulation only' }
+Spur32BitMMLESimulator >> fetchInteger: fieldIndex ofObject: objectPointer [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter fetchInteger: fieldIndex ofObject: objectPointer
+]
+
 { #category : #'object format' }
 Spur32BitMMLESimulator >> firstIndexableField: objOop [
 	"NOTE: overridden from SpurMemoryManager to add coercion to CArray, so please duplicate any changes.
@@ -236,9 +242,32 @@ Spur32BitMMLESimulator >> pop: nItems thenPush: oop [
 ]
 
 { #category : #'simulation only' }
+Spur32BitMMLESimulator >> primitiveFail [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter primitiveFail
+]
+
+{ #category : #'simulation only' }
 Spur32BitMMLESimulator >> pushBool: trueOrFalse [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter pushBool: trueOrFalse
+]
+
+{ #category : #'memory access' }
+Spur32BitMMLESimulator >> shortAt: byteAddress [
+    "Return the half-word at byteAddress which must be even."
+	| lowBits long |
+	lowBits := byteAddress bitAnd: 2.
+	long := self longAt: byteAddress - lowBits.
+	^ lowBits = 2
+		ifTrue: [ long bitShift: -16 ]
+		ifFalse: [ long bitAnd: 16rFFFF ]
+]
+
+{ #category : #'simulation only' }
+Spur32BitMMLESimulator >> showDisplayBits: aForm Left: l Top: t Right: r Bottom: b [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter showDisplayBits: aForm Left: l Top: t Right: r Bottom: b
 ]
 
 { #category : #'simulation only' }
@@ -257,6 +286,12 @@ Spur32BitMMLESimulator >> storeFloatAt: floatBitsAddress from: aFloat [
 Spur32BitMMLESimulator >> success: boolean [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter success: boolean
+]
+
+{ #category : #'simulation only' }
+Spur32BitMMLESimulator >> transcript [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter transcript
 ]
 
 { #category : #'memory access' }
