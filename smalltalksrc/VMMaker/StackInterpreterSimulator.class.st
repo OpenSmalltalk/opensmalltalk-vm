@@ -95,14 +95,12 @@ StackInterpreterSimulator class >> onObjectMemory: anObjectMemory options: optio
 StackInterpreterSimulator >> allObjectsSelect: objBlock [
 	"self allObjectsSelect: [:oop | (self baseHeader: oop) = 1234]"
 
-	| oop selected |
-	oop := objectMemory firstObject.
+	| selected |
 	selected := OrderedCollection new.
-	[oop < objectMemory endOfMemory] whileTrue:
-			[(objectMemory isFreeObject: oop)
-				ifFalse: [(objBlock value: oop) ifTrue: [selected addLast: oop]].
-			oop := objectMemory objectAfter: oop].
-	^ selected
+	objectMemory allObjectsDo:
+		[:obj|
+		(objBlock value: obj) ifTrue: [selected addLast: obj]].
+	^selected
 ]
 
 { #category : #'spur bootstrap' }
@@ -194,6 +192,13 @@ StackInterpreterSimulator >> callExternalPrimitive: mapIndex [
 { #category : #'debug support' }
 StackInterpreterSimulator >> charsOfLong: long [
 	^self subclassResponsibility
+]
+
+{ #category : #'object memory support' }
+StackInterpreterSimulator >> checkStackIntegrity [
+	"Override to deal with incomplete initialization."
+	stackPages ifNil: [^true].
+	^super checkStackIntegrity
 ]
 
 { #category : #'debug support' }

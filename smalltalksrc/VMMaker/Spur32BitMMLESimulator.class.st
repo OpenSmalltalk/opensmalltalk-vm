@@ -100,7 +100,7 @@ Spur32BitMMLESimulator >> firstIndexableField: objOop [
 	<returnTypeC: #'void *'>
 	fmt := self formatOf: objOop.
 	fmt <= self lastPointerFormat ifTrue: "pointer; may need to delve into the class format word"
-		[fmt = self indexablePointersFormat ifTrue:
+		[(fmt between: self indexablePointersFormat and: self weakArrayFormat) ifTrue:
 			[classFormat := self formatOfClass: (self fetchClassOfNonImm: objOop).
 			 ^self cCoerce: (self pointerForOop: objOop
 												+ self baseHeaderSize
@@ -207,10 +207,10 @@ Spur32BitMMLESimulator >> longLongAt: byteAddress [
 Spur32BitMMLESimulator >> longLongAt: byteAddress put: a64BitValue [
 	"memory is a Bitmap, a 32-bit indexable array of bits"
 	byteAddress \\ 8 ~= 0 ifTrue: [self unalignedAccessError].
-	((byteAddress = 16r120DBDC or: [byteAddress = 16r120DBD8])
+	"((byteAddress = 16r120DBDC or: [byteAddress = 16r120DBD8])
 	 and: [a64BitValue >> 32 = 16r16000000
 		or: [(a64BitValue bitAnd: 16rffffffff) = 16r16000000]]) ifTrue:
-			[self halt].
+			[self halt]."
 	memory
 		at: byteAddress // 4 + 1 put: (a64BitValue bitAnd: 16rffffffff);
 		at: byteAddress // 4 + 2 put: a64BitValue >> 32.
@@ -233,6 +233,12 @@ Spur32BitMMLESimulator >> pop: nItems [
 Spur32BitMMLESimulator >> pop: nItems thenPush: oop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter pop: nItems thenPush: oop
+]
+
+{ #category : #'simulation only' }
+Spur32BitMMLESimulator >> pushBool: trueOrFalse [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter pushBool: trueOrFalse
 ]
 
 { #category : #'simulation only' }

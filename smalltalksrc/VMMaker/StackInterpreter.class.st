@@ -1889,15 +1889,12 @@ StackInterpreter >> bereaveAllMarriedContexts [
 	 that the snapshot contains only single contexts.  This allows the test for being
 	 married to avoid checking for a context's frame pointer being in bounds.
 	 Thanks to Greg Nuyens for this idea."
-	| oop |
 	<asmLabel: false>
-	oop := objectMemory firstObject.
-	[oop < objectMemory freeStart] whileTrue:
-		[((objectMemory isFreeObject: oop) not
-		   and: [(objectMemory isContextNonImm: oop)
-		   and: [self isMarriedOrWidowedContext: oop]]) ifTrue:
-			[self markContextAsDead: oop].
-		 oop := objectMemory objectAfter: oop]
+	objectMemory allObjectsDo:
+		[:obj|
+		((objectMemory isContextNonImm: obj)
+		  and: [self isMarriedOrWidowedContext: obj]) ifTrue:
+			[self markContextAsDead: obj]]
 ]
 
 { #category : #utilities }
@@ -3050,13 +3047,15 @@ StackInterpreter >> checkInterpreterIntegrity [
 	ok := true.
 	(objectMemory checkOopIntegrity: objectMemory specialObjectsOop named: 'specialObjectsOop')ifFalse:
 		[ok := false].
+	"No longer check messageSelector; it is ephemeral, not living beyond message lookup.
 	(objectMemory isNonImmediate: messageSelector) ifTrue:
 		[(objectMemory checkOopIntegrity: messageSelector named: 'messageSelector')ifFalse:
-			[ok := false]].
+			[ok := false]]."
 	(objectMemory checkOopIntegrity: newMethod named: 'newMethod')ifFalse:
 		[ok := false].
+	"No longer check lkupClass; it is ephemeral, not living beyond message lookup.
 	(objectMemory checkOopIntegrity: lkupClass named: 'lkupClass')ifFalse:
-		[ok := false].
+		[ok := false]."
 	(objectMemory checkOopIntegrity: profileProcess named: 'profileProcess')ifFalse:
 		[ok := false].
 	(objectMemory checkOopIntegrity: profileMethod named: 'profileMethod')ifFalse:
@@ -3753,18 +3752,15 @@ StackInterpreter >> convertFloatsToPlatformOrderFrom: startOop to: stopAddr [
 	 after blindly byte-swapping the entire image. For compiled 
 	 methods, byte-swap only their bytecodes part.
 	 Ensure floats are in platform-order."
-	| oop temp |
 	objectMemory vmEndianness = imageFloatsBigEndian ifTrue:
 		[^nil].
 	self assert: ClassFloatCompactIndex ~= 0.
-	oop := startOop.
-	[self oop: oop isLessThan: stopAddr] whileTrue:
-		[(objectMemory isFreeObject: oop) ifFalse:
-			[(objectMemory compactClassIndexOf: oop) = ClassFloatCompactIndex ifTrue:
-				[temp := self longAt: oop + BaseHeaderSize.
-				 self longAt: oop + BaseHeaderSize put: (self longAt: oop + BaseHeaderSize + 4).
-				 self longAt: oop + BaseHeaderSize + 4 put: temp]].
-		 oop := objectMemory objectAfter: oop]
+	objectMemory allObjectsDo:
+		[:obj| | temp |
+		(objectMemory compactClassIndexOf: obj) = ClassFloatCompactIndex ifTrue:
+			[temp := self longAt: obj + BaseHeaderSize.
+			 self longAt: obj + BaseHeaderSize put: (self longAt: obj + BaseHeaderSize + 4).
+			 self longAt: obj + BaseHeaderSize + 4 put: temp]]
 ]
 
 { #category : #'internal interpreter access' }
@@ -7015,10 +7011,11 @@ StackInterpreter >> longPrintOop: oop [
 		print: ': a(n) '; printNameOfClass: class count: 5;
 		print: ' ('; printHex: class; print: ')'.
 	fmt := objectMemory formatOf: oop.
+	self print: ' format '; printHex: fmt.
 	fmt > objectMemory lastPointerFormat ifTrue:
 		[self print: ' nbytes '; printNum: (objectMemory byteLengthOf: oop)].
 	objectMemory printHeaderTypeOf: oop.
-	self print: ', hash '; printHex: (objectMemory rawHashBitsOf: oop).
+	self print: ' hash '; printHex: (objectMemory rawHashBitsOf: oop).
 	self cr.
 	(fmt between: objectMemory firstLongFormat and: objectMemory firstCompiledMethodFormat - 1) ifTrue:
 		[^self].
@@ -11072,11 +11069,7 @@ StackInterpreter >> snapshot: embedded [
 
 	objectMemory pushRemappableOop: activeContext.
 
-	"compact memory and compute the size of the memory actually in use"
-	objectMemory incrementalGC.
-
-	"maximimize space for forwarding table"
-	objectMemory fullGC.
+	"garbage collect, bereave contexts and flush external methods."
 	self snapshotCleanUp.
 
 	"Nothing moves from here on so it is safe to grab the activeContext again."
@@ -11119,7 +11112,7 @@ StackInterpreter >> snapshot: embedded [
 
 { #category : #'image save/restore' }
 StackInterpreter >> snapshotCleanUp [
-	"Clean up right before saving an image, sweeping memory and:
+	"Clean up right before saving an image, garbage collecting, sweeping memory and:
 	* nilling out all fields of contexts above the stack pointer. 
 	* flushing external primitives 
 	* clearing the root bit of any object in the root table
@@ -11128,29 +11121,38 @@ StackInterpreter >> snapshotCleanUp [
 	 exist) we can maintain the invariant that a married or widowed context's frame
 	 reference (in its sender field) must point into the stack pages since no married or
 	 widowed contexts are present from older runs of the system."
-	| oop header fmt sz |
-	oop := objectMemory firstObject.
-	[self oop: oop isLessThan: objectMemory freeStart] whileTrue:
-		[(objectMemory isFreeObject: oop) ifFalse:
-			[header := self longAt: oop.
-			 fmt := objectMemory formatOfHeader: header.
-			 "Clean out context"
-			 (fmt = objectMemory indexablePointersFormat
-			  and: [objectMemory isContextHeader: header]) ifTrue:
-				["All contexts have been divorced. Bereave remaining widows."
-				 (self isMarriedOrWidowedContext: oop) ifTrue:
-					[self markContextAsDead: oop].
-				 sz := objectMemory sizeBitsOf: oop.
-				 (objectMemory lastPointerOf: oop) + BytesPerWord
-				 to: sz - BaseHeaderSize by: BytesPerWord
-				 do: [:i | self longAt: oop + i put: objectMemory nilObject]].
-			 "Clean out external functions from compiled methods"
-			 fmt >= objectMemory firstCompiledMethodFormat ifTrue:
-				["Its primitiveExternalCall"
-				 (self primitiveIndexOf: oop) = PrimitiveExternalCallIndex ifTrue:
-					[self flushExternalPrimitiveOf: oop]]].
-			oop := objectMemory objectAfter: oop].
-	objectMemory clearRootsTable
+
+	objectMemory hasSpurMemoryManagerAPI
+		ifTrue: [objectMemory flushNewSpace]
+		ifFalse: [objectMemory incrementalGC]	"compact memory and compute the size of the memory actually in use"
+
+	"maximimize space for forwarding table"
+	objectMemory fullGC.
+
+	objectMemory allObjectsDo:
+		[:obj| | header fmt sz |
+		 header := self longAt: obj.
+		 fmt := objectMemory formatOfHeader: header.
+		 "Clean out context"
+		 (fmt = objectMemory indexablePointersFormat
+		  and: [objectMemory isContextHeader: header]) ifTrue:
+			["All contexts have been divorced. Bereave remaining widows."
+			 (self isMarriedOrWidowedContext: obj) ifTrue:
+				[self markContextAsDead: obj].
+			 "Fill slots beyond top of stack with nil"
+			 (self fetchStackPointerOf: obj) to: (objectMemory numSlotsOf: obj) do:
+				[:i | objectMemory
+						storePointerUnchecked: i + CtxtTempFrameStart
+						ofObject: obj
+						withValue: objectMemory nilObject]].
+		 "Clean out external functions from compiled methods"
+		 fmt >= objectMemory firstCompiledMethodFormat ifTrue:
+			["Its primitiveExternalCall"
+			 (self primitiveIndexOf: obj) = PrimitiveExternalCallIndex ifTrue:
+				[self flushExternalPrimitiveOf: obj]]].
+
+	objectMemory hasSpurMemoryManagerAPI ifFalse:
+		[objectMemory clearRootsTable]
 ]
 
 { #category : #'debug printing' }
