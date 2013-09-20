@@ -1835,7 +1835,7 @@ BalloonEngineBase >> loadWordTransformFrom: transformOop into: destPtr length: n
 BalloonEngineBase >> loadWorkBufferFrom: wbOop [
 	"Load the working buffer from the given oop"
 	<inline: false>
-	(interpreterProxy isIntegerObject: wbOop) ifTrue:[^GEFWorkBufferIsInteger].
+	(interpreterProxy isImmediate: wbOop) ifTrue:[^GEFWorkBufferIsInteger].
 	(interpreterProxy isWords: wbOop) ifFalse:[^GEFWorkBufferIsPointers].
 	(interpreterProxy slotSizeOf: wbOop) < GWMinimalSize ifTrue:[^GEFWorkBufferTooSmall].
 	self workBufferPut: wbOop.
@@ -3104,7 +3104,7 @@ BalloonEngineBase >> quickLoadEngineFrom: engineOop [
 	<inline: false>
 	| failCode |
 	interpreterProxy failed ifTrue:[^GEFAlreadyFailed].
-	(interpreterProxy isIntegerObject: engineOop) ifTrue:[^GEFEngineIsInteger].
+	(interpreterProxy isImmediate: engineOop) ifTrue:[^GEFEngineIsInteger].
 	(interpreterProxy isPointers: engineOop) ifFalse:[^GEFEngineIsWords].
 	(interpreterProxy slotSizeOf: engineOop) < BEBalloonEngineSize ifTrue:[^GEFEngineTooSmall].
 	engine := engineOop.
