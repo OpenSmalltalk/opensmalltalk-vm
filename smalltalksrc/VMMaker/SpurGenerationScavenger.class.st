@@ -287,11 +287,12 @@ SpurGenerationScavenger >> scavengeLoop [
 		[^self].
 	 previousRememberedSetSize := rememberedSetSize.
 
-	firstTime ifTrue:
+	 firstTime ifTrue:
 		[coInterpreter mapInterpreterOops.
 		 firstTime := false].
+
 	 self scavengeFutureSurvivorSpaceStartingAt: previousFutureSurvivorStart.
-	 previousFutureSurvivorStart = rememberedSetSize ifTrue:
+	 previousRememberedSetSize = rememberedSetSize ifTrue:
 		[^self].
 
 	 previousFutureSurvivorStart := futureSurvivorStart] repeat
