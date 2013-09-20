@@ -122,11 +122,11 @@ Spur32BitMemoryManager >> checkHeapIntegrity [
 	 extraRootTable checking that every entry is a pointer to a header.
 	 Check that the number of roots is correct and that all rootTable
 	 entries have their rootBit set. Answer if all checks pass."
-	| ok numRememberedRootsInHeap |
+	| prevObj prevPrevObj ok numRememberedRootsInHeap |
 	<inline: false>
 	ok := true.
 	numRememberedRootsInHeap := 0.
-	self allObjectsDo:
+	self allHeapEntitiesDo:
 		[:obj| | containsYoung fieldOop classIndex classOop |
 		(self isFreeObject: obj) ifFalse:
 			[containsYoung := false.
@@ -173,7 +173,9 @@ Spur32BitMemoryManager >> checkHeapIntegrity [
 						[(self isRemembered: obj) ifFalse:
 							[coInterpreter print: 'unremembered object '; printHex: obj; print: ' contains young oop(s)'; cr.
 							 self eek.
-							 ok := false]]]].
+							 ok := false]]].
+		prevPrevObj := prevObj.
+		prevObj := obj].
 	numRememberedRootsInHeap ~= scavenger rememberedSetSize ifTrue:
 		[coInterpreter
 			print: 'root count mismatch. #heap roots ';
@@ -334,7 +336,7 @@ Spur32BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 			[numSlots := (self fixedFieldsOfClassFormat: classFormat) + nElements.
 			 fillValue := nilObj].
 		[self weakArrayFormat]	->
-			[numSlots := nElements.
+			[numSlots := (self fixedFieldsOfClassFormat: classFormat) + nElements.
 			 fillValue := nilObj].
 		[self sixtyFourBitIndexableFormat]	->
 			[numSlots := nElements * 2].
