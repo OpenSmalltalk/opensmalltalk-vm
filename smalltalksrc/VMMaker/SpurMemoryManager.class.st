@@ -1229,7 +1229,12 @@ SpurMemoryManager >> classAtIndex: classIndex [
 		ofObject: classTablePage
 ]
 
-{ #category : #'interpreter access' }
+{ #category : #'plugin support' }
+SpurMemoryManager >> classBitmap [
+	^self splObj: ClassBitmap
+]
+
+{ #category : #'plugin support' }
 SpurMemoryManager >> classByteArray [
 	"a.k.a. self fetchPointer: ClassByteArrayCompactIndex ofObject: classTableFirstPage"
 	^self splObj: ClassByteArray
@@ -1270,6 +1275,11 @@ SpurMemoryManager >> classLargeNegativeInteger [
 { #category : #'plugin support' }
 SpurMemoryManager >> classLargePositiveInteger [
 	^self knownClassAtIndex: ClassLargePositiveIntegerCompactIndex
+]
+
+{ #category : #'plugin support' }
+SpurMemoryManager >> classPoint [
+	^self splObj: ClassPoint
 ]
 
 { #category : #accessing }
@@ -2542,7 +2552,11 @@ SpurMemoryManager >> isIntegerObject: oop [
 		loadBitBltDestForm
 		fetchIntOrFloat:ofObject:ifNil:
 		fetchIntOrFloat:ofObject:
-		loadBitBltSourceForm) includes: sel) ifFalse:
+		loadBitBltSourceForm
+		loadPoint:from:
+		primDigitAdd:
+		primDigitSubtract:
+		positive64BitValueOf:) includes: sel) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
