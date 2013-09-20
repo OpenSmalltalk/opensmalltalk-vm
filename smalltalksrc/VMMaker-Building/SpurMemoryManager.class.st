@@ -712,6 +712,39 @@ SpurMemoryManager >> allExistingOldSpaceObjectsDo: aBlock [
 ]
 
 { #category : #'object enumeration' }
+SpurMemoryManager >> allHeapEntitiesDo: aBlock [
+	<inline: true>
+	self allNewSpaceEntitiesDo: aBlock.
+	self allOldSpaceEntitiesDo: aBlock
+]
+
+{ #category : #'object enumeration' }
+SpurMemoryManager >> allNewSpaceEntitiesDo: aBlock [
+	"Enumerate all new space objects, including free objects,
+	 excluding any objects created during the ennumeration."
+	<inline: true>
+	| prevObj prevPrevObj objOop limit |
+	prevPrevObj := prevObj := nil.
+	"After a scavenge eden is empty, futureSpace is empty, and all newSpace objects are
+	  in pastSpace.  Objects are allocated in eden.  So enumerate only eden and pastSpace."
+	objOop := self objectStartingAt: scavenger eden start.
+	[objOop < freeStart] whileTrue:
+		[aBlock value: objOop.
+		 prevPrevObj := prevObj.
+		 prevObj := objOop.
+		 objOop := self objectAfter: objOop limit: freeStart].
+	objOop := self objectStartingAt: scavenger pastSpace start.
+	limit := pastSpaceStart.
+	[objOop < limit] whileTrue:
+		[aBlock value: objOop.
+		 prevPrevObj := prevObj.
+		 prevObj := objOop.
+		 objOop := self objectAfter: objOop limit: limit].
+	prevPrevObj class.
+	prevObj class
+]
+
+{ #category : #'object enumeration' }
 SpurMemoryManager >> allNewSpaceObjectsDo: aBlock [
 	"Enumerate all new space objects, excluding any objects created
 	 during the execution of allNewSpaceObjectsDo:."
@@ -744,6 +777,22 @@ SpurMemoryManager >> allObjectsDo: aBlock [
 	<inline: true>
 	self allNewSpaceObjectsDo: aBlock.
 	self allOldSpaceObjectsDo: aBlock
+]
+
+{ #category : #'object enumeration' }
+SpurMemoryManager >> allOldSpaceEntitiesDo: aBlock [
+	<inline: true>
+	| prevObj prevPrevObj objOop |
+	prevPrevObj := prevObj := nil.
+	objOop := self firstObject.
+	[self assert: objOop \\ self allocationUnit = 0.
+	 objOop < freeOldSpaceStart] whileTrue:
+		[aBlock value: objOop.
+		 prevPrevObj := prevObj.
+		 prevObj := objOop.
+		 objOop := self objectAfter: objOop limit: freeOldSpaceStart].
+	prevPrevObj class.
+	prevObj class
 ]
 
 { #category : #'object enumeration' }
@@ -1464,7 +1513,7 @@ SpurMemoryManager >> enterIntoClassTable: aBehavior [
 
 	[page := self fetchPointer: majorIndex ofObject: classTableRootObj.
 	 page = nilObj ifTrue:
-		[page := self allocateSlots: self classTablePageSize
+		[page := self allocateSlotsInOldSpace: self classTablePageSize
 					format: self arrayFormat
 					classIndex: self arrayClassIndexPun.
 		 page ifNil:
@@ -1616,7 +1665,7 @@ SpurMemoryManager >> firstIndexableField: objOop [
 	<returnTypeC: #'void *'>
 	fmt := self formatOf: objOop.
 	fmt <= self lastPointerFormat ifTrue: "pointer; may need to delve into the class format word"
-		[fmt = self indexablePointersFormat ifTrue:
+		[(fmt between: self indexablePointersFormat and: self weakArrayFormat) ifTrue:
 			[classFormat := self formatOfClass: (self fetchClassOfNonImm: objOop).
 			 ^self pointerForOop: objOop
 								+ self baseHeaderSize
@@ -1862,6 +1911,11 @@ SpurMemoryManager >> freeChunkWithBytes: bytes at: address [
 	freeChunk := self initFreeChunkWithBytes: bytes at: address.
 	self addToFreeList: freeChunk.
 	^freeChunk
+]
+
+{ #category : #'free space' }
+SpurMemoryManager >> freeObject: objOop [
+	^self freeChunkWithBytes: (self bytesInObject: objOop) at: (self startOfObject: objOop)
 ]
 
 { #category : #'free space' }
@@ -2408,7 +2462,7 @@ SpurMemoryManager >> isIndexable: objOop [
 { #category : #'object testing' }
 SpurMemoryManager >> isIndexableFormat: format [
 	^format >= self arrayFormat
-	  and: [format <= self indexablePointersFormat
+	  and: [format <= self weakArrayFormat
 			or: [format >= self sixtyFourBitIndexableFormat]]
 ]
 
@@ -2416,8 +2470,11 @@ SpurMemoryManager >> isIndexableFormat: format [
 SpurMemoryManager >> isIntegerObject: oop [
 	"This list records the valid senders of isIntegerObject: as we replace uses of
 	  isIntegerObject: by isImmediate: where appropriate."
+	| sel |
+	sel := thisContext sender method selector.
 	(#(	DoIt
 		DoItIn:
+		on:do: "from the debugger"
 		makeBaseFrameFor:
 		quickFetchInteger:ofObject:
 		frameOfMarriedContext:
@@ -2454,7 +2511,9 @@ SpurMemoryManager >> isIntegerObject: oop [
 		baseFrameReturn
 		primitiveExternalCall
 		primDigitCompare:
-		isLiveContext:) includes: thisContext sender method selector) ifFalse:
+		isLiveContext:
+		numPointerSlotsOf:
+		fileValueOf:) includes: sel) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]

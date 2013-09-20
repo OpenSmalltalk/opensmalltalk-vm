@@ -448,6 +448,13 @@ CogVMSimulator >> checkForEventsMayContextSwitch: mayContextSwitch [
 		inSuperclass: (cogThreadManager ifNil: [CoInterpreterPrimitives] ifNotNil: [CoInterpreterMT])
 ]
 
+{ #category : #'object memory support' }
+CogVMSimulator >> checkStackIntegrity [
+	"Override to deal with incomplete initialization."
+	stackPages ifNil: [^true].
+	^super checkStackIntegrity
+]
+
 { #category : #'multi-threading simulation switch' }
 CogVMSimulator >> checkVMOwnershipFromHeartbeat [
 	"This method includes or excludes CoInterpreterMT methods as required.
