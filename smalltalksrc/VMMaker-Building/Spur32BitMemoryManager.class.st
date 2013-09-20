@@ -73,12 +73,13 @@ Spur32BitMemoryManager >> allocateSlots: numSlots format: formatField classIndex
 
 { #category : #allocation }
 Spur32BitMemoryManager >> allocateSlotsInOldSpace: numSlots format: formatField classIndex: classIndex [
-	| bytes freeChunk chunk |
+	"Answer the oop of a chunk of space in oldSpace with numSlots slots.  The header
+	 will have been filled-in but not the contents."
+	| bytes chunk |
 	bytes := self objectBytesForSlots: numSlots.
-	freeChunk := self allocateOldSpaceChunkOfBytes: bytes.
-	freeChunk ifNil:
+	chunk := self allocateOldSpaceChunkOfBytes: bytes.
+	chunk ifNil:
 		[^nil].
-	chunk := self startOfFreeChunk: freeChunk.
 	numSlots >= self numSlotsMask ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
 		[self flag: #endianness.
 		 self longAt: chunk put: numSlots.

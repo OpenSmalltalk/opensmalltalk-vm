@@ -798,17 +798,19 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 	index := chunkBytes / self allocationUnit.
 	(index < NumFreeLists and: [1 << index >= freeListsMask]) ifTrue:
 		[(chunk := freeLists at: index) ~= 0 ifTrue:
-			[^self unlinkFreeChunk: chunk atIndex: index].
+			[self assert: chunk = (self startOfObject: chunk).
+			^self unlinkFreeChunk: chunk atIndex: index].
 		 "first search for free chunks of a multiple of chunkBytes in size"
 		 nextIndex := index.
 		 [1 << index >= freeListsMask
 		  and: [(nextIndex := nextIndex + index) < NumFreeLists]] whileTrue:
 			[((freeListsMask anyMask: 1 << index)
 			 and: [(chunk := freeLists at: index) ~= 0]) ifTrue:
-				[self unlinkFreeChunk: chunk atIndex: index.
+				[self assert: chunk = (self startOfObject: chunk).
+				 self unlinkFreeChunk: chunk atIndex: index.
 				 self assert: (self bytesInObject: chunk) = index * self allocationUnit.
 				 self freeChunkWithBytes: index * self allocationUnit - chunkBytes
-					at: (self startOfFreeChunk: chunk) + chunkBytes.
+					at: (self startOfObject: chunk) + chunkBytes.
 				^chunk]].
 		 "now get desperate and use the first that'll fit"
 		 nextIndex := index.
@@ -816,10 +818,11 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 		  and: [(nextIndex := nextIndex + 1) < NumFreeLists]] whileTrue:
 			[(freeListsMask anyMask: 1 << index) ifTrue:
 				[(chunk := freeLists at: index) ~= 0 ifTrue:
-					[self unlinkFreeChunk: chunk atIndex: index.
+					[self assert: chunk = (self startOfObject: chunk).
+					 self unlinkFreeChunk: chunk atIndex: index.
 					 self assert: (self bytesInObject: chunk) = index * self allocationUnit.
 					 self freeChunkWithBytes: index * self allocationUnit - chunkBytes
-						at: (self startOfFreeChunk: chunk) + chunkBytes.
+						at: (self startOfObject: chunk) + chunkBytes.
 					^chunk].
 				 freeListsMask := freeListsMask - (1 << index)]]].
 
@@ -861,8 +864,8 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 							ofFreeChunk: chunk).
 		 chunkBytes ~= nodeBytes ifTrue:
 			[self freeChunkWithBytes: nodeBytes - chunkBytes
-					at: (self startOfFreeChunk: chunk) + chunkBytes].
-		 ^chunk].
+					at: (self startOfObject: chunk) + chunkBytes].
+		 ^self startOfObject: chunk].
 	"no list; remove an interior node"
 	chunk := parent.
 	parent := self fetchPointer: self freeChunkParentIndex ofFreeChunk: chunk.
@@ -882,8 +885,8 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 		 coInterpreter cr."
 		 chunkBytes ~= nodeBytes ifTrue:
 			[self freeChunkWithBytes: nodeBytes - chunkBytes
-					at: (self startOfFreeChunk: chunk) + chunkBytes].
-		 ^chunk].
+					at: (self startOfObject: chunk) + chunkBytes].
+		 ^self startOfObject: chunk].
 	"remove node from tree; reorder tree simply.  two cases (which have mirrors, for four total):
 	 case 1. interior node has one child, P = parent, N = node, S = subtree (mirrored for large vs small)
 			___				  ___
@@ -2449,7 +2452,9 @@ SpurMemoryManager >> isIntegerObject: oop [
 		primitiveAsCharacter
 		primitiveInputSemaphore
 		baseFrameReturn
-		primitiveExternalCall) includes: thisContext sender method selector) ifFalse:
+		primitiveExternalCall
+		primDigitCompare:
+		isLiveContext:) includes: thisContext sender method selector) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
@@ -3234,11 +3239,6 @@ SpurMemoryManager >> splObj: index put: anObject [
 	self storePointer: index ofObject: specialObjectsOop withValue: anObject
 ]
 
-{ #category : #'free space' }
-SpurMemoryManager >> startOfFreeChunk: freeChunk [
-	^freeChunk - self baseHeaderSize
-]
-
 { #category : #accessing }
 SpurMemoryManager >> startOfMemory [
 	"Return the start of object memory.  This is immediately after the native code zone.
@@ -3259,8 +3259,9 @@ SpurMemoryManager >> startOfMemory: value [
 { #category : #'object enumeration' }
 SpurMemoryManager >> startOfObject: objOop [
 	"Answer the start of objOop, which is either the address of the overflow size word,
-	 or objOop itself, depending on the size of the object."
-	^(self numSlotsOf: objOop) >= self numSlotsMask
+	 or objOop itself, depending on the size of the object.  This may be applied to
+	 any kind of object, normal, forwarders or free chunks."
+	^(self numSlotsOfAny: objOop) >= self numSlotsMask
 		ifTrue: [objOop - self baseHeaderSize]
 		ifFalse: [objOop]
 ]
