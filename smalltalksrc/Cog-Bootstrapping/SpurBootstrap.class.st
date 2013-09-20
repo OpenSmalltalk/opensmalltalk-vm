@@ -64,7 +64,8 @@ Class {
 		'methodClasses',
 		'installedPrototypes',
 		'sizeSym',
-		'rehashSym'
+		'rehashSym',
+		'classMetaclass'
 	],
 	#classVars : [
 		'ImageHeaderFlags',
@@ -91,7 +92,7 @@ SpurBootstrap class >> BehaviorPROTOTYPEbasicNew [
 	self isVariable ifTrue: [^self basicNew: 0].
 	"space must have been low, and the scavenger must have run.
 	 retry after the scavenge."
-	^self failingBasicNew
+	^self handleFailingBasicNew
 ]
 
 { #category : #'method prototypes' }
@@ -110,7 +111,7 @@ SpurBootstrap class >> BehaviorPROTOTYPEbasicNew: sizeRequested [
 	(sizeRequested isInteger and: [sizeRequested >= 0]) ifTrue:
 		["arg okay; space must have been low, and the scavenger must have run.
 		  retry after the scavenge"
-		^self failingBasicNew: sizeRequested].
+		^self handleFailingBasicNew: sizeRequested].
 	self primitiveFailed
 ]
 
@@ -786,7 +787,7 @@ SpurBootstrap >> fillInPointerObject: newObj from: oldObj [
 			storePointerUnchecked: i
 			ofObject: newObj
 			withValue: newValue].
-	(classToIndex includesKey: oldObj) ifTrue:
+	(self isOldObjABehavior: oldObj) ifTrue:
 		[newHeap
 			storePointerUnchecked: InstanceSpecificationIndex
 			ofObject: newObj
@@ -832,10 +833,11 @@ SpurBootstrap >> findLiteral: aLiteral [
 	self error: 'couldn''t find literal ', aLiteral printString
 ]
 
-{ #category : #'bootstrap methods' }
+{ #category : #'bootstrap image' }
 SpurBootstrap >> findRequiredGlobals [
 	"Look for the necessary gobal bindings in the prototype methods in the old image.
-	 This has to be done early by sending bindingOf: to Smalltalk."
+	 This has to be done early by sending bindingOf: to Smalltalk.  Also find out
+	 Metaclass, needed for identofying classes."
 	| globals bindingOf |
 	globals := Set new.
 	self prototypeClassNameMetaSelectorMethodDo:
@@ -853,7 +855,9 @@ SpurBootstrap >> findRequiredGlobals [
 					put: (self interpreter: oldInterpreter
 							object: (oldHeap splObj: 8) "Smalltalk"
 							perform: bindingOf
-							withArguments: {self findSymbol: global key})]]
+							withArguments: {self findSymbol: global key})]].
+
+	classMetaclass := oldHeap fetchClassOfNonImm: (oldHeap fetchClassOfNonImm: oldHeap classArray)
 ]
 
 { #category : #'bootstrap methods' }
@@ -903,7 +907,7 @@ SpurBootstrap >> freeForwarders [
 				[0 to: (newHeap numPointerSlotsOf: o) - 1 do:
 					[:i|
 					self assert: (newHeap isOopForwarded: (newHeap fetchPointer: i ofObject: o)) not]]].
-	Transcript nextPutAll: 'freeing '; print: numForwarders; nextPutAll: ' forwarders'; cr; flush.
+	Transcript ensureCr;  nextPutAll: 'freeing '; print: numForwarders; nextPutAll: ' forwarders'; cr; flush.
 	newHeap allObjectsDo:
 		[:o|
 		(newHeap isForwarded: o) ifTrue:
@@ -1022,6 +1026,16 @@ SpurBootstrap >> interpreter: sim object: receiver perform: selector withArgumen
 	self assert: sim localIP - 1 = savedpc.
 	sim localIP: savedpc.
 	^result
+]
+
+{ #category : #'bootstrap image' }
+SpurBootstrap >> isOldObjABehavior: oldObj [
+	| oldObjClass oldObjClassClass |
+	^(classToIndex includesKey: oldObj)
+	or: [oldObjClass := oldHeap fetchClassOfNonImm: oldObj.
+		oldObjClassClass := oldHeap fetchClassOfNonImm: oldObjClass.
+		oldObjClass = classMetaclass
+		or: [oldObjClassClass = classMetaclass]]
 ]
 
 { #category : #testing }
