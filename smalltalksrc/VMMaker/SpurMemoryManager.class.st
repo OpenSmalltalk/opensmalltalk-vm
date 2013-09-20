@@ -354,12 +354,15 @@ Class {
 		'statFGCDeltaUsecs',
 		'scavengeInProgress',
 		'statIncrGCs',
-		'statFullGCs'
+		'statFullGCs',
+		'remapBuffer',
+		'remapBufferCount'
 	],
 	#classVars : [
 		'CheckObjectOverwrite',
 		'FirstValidClassIndex',
-		'NumFreeLists'
+		'NumFreeLists',
+		'RemapBufferSize'
 	],
 	#pools : [
 		'VMBasicConstants',
@@ -414,7 +417,11 @@ SpurMemoryManager class >> initBytesPerWord: nBytes [
 SpurMemoryManager class >> initialize [
 	"CogObjectMemory initialize"
 	NumFreeLists := 65. "One for each size up to and including 64 slots. One for sizes > 64 slots."
-	CheckObjectOverwrite := true
+	CheckObjectOverwrite := true.
+
+	"The remap buffer support is for compatibility; Spur doesn't GC during allocation.
+	 Eventually this should die."
+	RemapBufferSize := 25
 ]
 
 { #category : #'class initialization' }
@@ -1203,6 +1210,12 @@ SpurMemoryManager >> checkOopIntegrity: obj named: name index: i [
 	^false
 ]
 
+{ #category : #'plugin support' }
+SpurMemoryManager >> classArray [
+	"a.k.a. self fetchPointer: ClassArrayCompactIndex ofObject: classTableFirstPage"
+	^self splObj: ClassArray
+]
+
 { #category : #'class table' }
 SpurMemoryManager >> classAtIndex: classIndex [
 	| classTablePage |
@@ -1214,6 +1227,12 @@ SpurMemoryManager >> classAtIndex: classIndex [
 	^self
 		fetchPointer: (classIndex bitAnd: self classTableMinorIndexMask)
 		ofObject: classTablePage
+]
+
+{ #category : #'interpreter access' }
+SpurMemoryManager >> classByteArray [
+	"a.k.a. self fetchPointer: ClassByteArrayCompactIndex ofObject: classTableFirstPage"
+	^self splObj: ClassByteArray
 ]
 
 { #category : #'interpreter access' }
@@ -2063,15 +2082,21 @@ SpurMemoryManager >> initialInstanceOf: classObj [
 
 { #category : #initialization }
 SpurMemoryManager >> initialize [
+	"We can put all initializatins that set something to 0 or to false here.
+	 In C all global variables are initialized to 0, and 0 is false."
 	freeLists := CArrayAccessor on: (Array new: NumFreeLists withAll: 0).
+	remapBuffer := Array new: RemapBufferSize.
+	remapBufferCount := 0.
 	freeListsMask := 0.
 	checkForLeaks := 0.
 	needGCFlag := signalLowSpace := scavengeInProgress := false.
 	becomeEffectsFlags := 0.
-	heapMap := self wordSize = 4 ifTrue: [CogCheck32BitHeapMap new].
 	statScavenges := statIncrGCs := statFullGCs := 0.
 	statScavengeGCUsecs := statIncrGCUsecs := statFullGCUsecs := 0.
-	statSGCDeltaUsecs := statIGCDeltaUsecs := statFGCDeltaUsecs := 0
+	statSGCDeltaUsecs := statIGCDeltaUsecs := statFGCDeltaUsecs := 0.
+
+	"We can also initialize here anything that is only for simulation."
+	heapMap := self wordSize = 4 ifTrue: [CogCheck32BitHeapMap new]
 ]
 
 { #category : #initialization }
@@ -2513,7 +2538,11 @@ SpurMemoryManager >> isIntegerObject: oop [
 		primDigitCompare:
 		isLiveContext:
 		numPointerSlotsOf:
-		fileValueOf:) includes: sel) ifFalse:
+		fileValueOf:
+		loadBitBltDestForm
+		fetchIntOrFloat:ofObject:ifNil:
+		fetchIntOrFloat:ofObject:
+		loadBitBltSourceForm) includes: sel) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
@@ -2594,6 +2623,17 @@ SpurMemoryManager >> isWordsNonImm: objOop [
 	"Answer if the argument contains only indexable words (no oops). See comment in formatOf:"
 
 	^self subclassResponsibility
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isWordsOrBytes: oop [
+	^(self isNonImmediate: oop)
+	  and: [self isWordsOrBytesNonImm: oop]
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isWordsOrBytesNonImm: objOop [
+	^(self formatOf: objOop) > self lastPointerFormat
 ]
 
 { #category : #'object testing' }
@@ -2958,6 +2998,18 @@ SpurMemoryManager >> overflowSlotsMask [
 	^self subclassResponsibility
 ]
 
+{ #category : #'interpreter access' }
+SpurMemoryManager >> popRemappableOop [
+	"Pop and return the possibly remapped object from the remap buffer.
+	 We support this excessence for compatibility with ObjectMemory.
+	 Spur doesn't GC during allocation."
+	<api>
+	| oop |
+	oop := remapBuffer at: remapBufferCount.
+	remapBufferCount := remapBufferCount - 1.
+	^oop
+]
+
 { #category : #'store check' }
 SpurMemoryManager >> possibleRootStoreInto: destObj [
 	(#(	storePointer:ofObject:withValue:
@@ -3045,6 +3097,20 @@ SpurMemoryManager >> printReferencesTo: anOop [
 					[coInterpreter printHex: obj; print: ' => '; printHex: anOop; cr]]]
 ]
 
+{ #category : #'interpreter access' }
+SpurMemoryManager >> pushRemappableOop: oop [
+	"Record the given object in a the remap buffer. Objects in this buffer are remapped
+	 when a compaction occurs. This facility is used by the interpreter to ensure that
+	 objects in temporary variables are properly remapped.
+	 We support this excessence for compatibility with ObjectMemory.
+	 Spur doesn't GC during allocation."
+	<api>
+	self assert: (self addressCouldBeOop: oop).
+	remapBuffer at: (remapBufferCount := remapBufferCount + 1) put: oop.
+	remapBufferCount <= RemapBufferSize ifFalse:
+		[self error: 'remapBuffer overflow']
+]
+
 { #category : #'header access' }
 SpurMemoryManager >> rawHashBitsOf: objOop [
 	self flag: #endianness.
@@ -3054,6 +3120,13 @@ SpurMemoryManager >> rawHashBitsOf: objOop [
 { #category : #'garbage collection' }
 SpurMemoryManager >> remap: oop [
 	self shouldNotImplement
+]
+
+{ #category : #'interpreter access' }
+SpurMemoryManager >> remapBuffer [
+	"We support this excessence for compatibility with ObjectMemory.
+	 Spur doesn't GC during allocation."
+	^remapBuffer
 ]
 
 { #category : #'generation scavenging' }
@@ -3369,6 +3442,7 @@ SpurMemoryManager >> sufficientSpaceAfterGC: numBytes [
 	 which is a stop-the-world a young generation reclaimer.  In Spur
 	 we run the scavenger."
 	self assert: numBytes = 0.
+	self assert: remapBufferCount = 0.
 	"coInterpreter printCallStackFP: coInterpreter framePointer"
 
 	self runLeakCheckerForFullGC: false.
@@ -3420,6 +3494,15 @@ SpurMemoryManager >> tenuringThreshold: threshold [
 	scavenger scavengerTenuringThreshold:
 		(threshold * 8 * self wordSize) asFloat
 		/ scavenger pastSpaceBytes asFloat
+]
+
+{ #category : #'interpreter access' }
+SpurMemoryManager >> topRemappableOop [
+	<api>
+	"Answers the top of the remappable oop stack. Useful when writing loops.
+	 We support this excessence for compatibility with ObjectMemory.
+	 Spur doesn't GC during allocation."
+	^remapBuffer at: remapBufferCount
 ]
 
 { #category : #accessing }
