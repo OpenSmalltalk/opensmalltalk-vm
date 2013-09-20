@@ -626,7 +626,7 @@ FilePlugin >> primitiveFileSetPosition [
 	<var: 'file' type: 'SQFile *'>
 	<var: 'newPosition' type: 'squeakFileOffsetType'>
 	<export: true>
-	(interpreterProxy isIntegerObject: (interpreterProxy stackValue: 0)) ifFalse:
+	(interpreterProxy isImmediate: (interpreterProxy stackValue: 0)) ifFalse:
 		[sz := self cCode: 'sizeof(squeakFileOffsetType)'.
 		(interpreterProxy byteSizeOf: (interpreterProxy stackValue: 0)) > sz 
 			ifTrue: [^interpreterProxy primitiveFail]].

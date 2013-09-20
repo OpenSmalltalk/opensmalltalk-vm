@@ -242,15 +242,57 @@ Spur32BitMMLESimulator >> pop: nItems thenPush: oop [
 ]
 
 { #category : #'simulation only' }
+Spur32BitMMLESimulator >> positive32BitIntegerFor: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter positive32BitIntegerFor: integerValue
+]
+
+{ #category : #'simulation only' }
+Spur32BitMMLESimulator >> positive32BitValueOf: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter positive32BitValueOf: oop
+]
+
+{ #category : #'simulation only' }
+Spur32BitMMLESimulator >> positive64BitIntegerFor: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter positive64BitIntegerFor: integerValue
+]
+
+{ #category : #'simulation only' }
+Spur32BitMMLESimulator >> positive64BitValueOf: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter positive64BitValueOf: oop
+]
+
+{ #category : #'simulation only' }
 Spur32BitMMLESimulator >> primitiveFail [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter primitiveFail
 ]
 
 { #category : #'simulation only' }
+Spur32BitMMLESimulator >> primitiveFailureCode [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter primitiveFailureCode
+]
+
+{ #category : #'simulation only' }
+Spur32BitMMLESimulator >> push: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter push: oop
+]
+
+{ #category : #'simulation only' }
 Spur32BitMMLESimulator >> pushBool: trueOrFalse [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter pushBool: trueOrFalse
+]
+
+{ #category : #'simulation only' }
+Spur32BitMMLESimulator >> pushInteger: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter pushInteger: integerValue
 ]
 
 { #category : #'memory access' }
@@ -271,6 +313,18 @@ Spur32BitMMLESimulator >> showDisplayBits: aForm Left: l Top: t Right: r Bottom:
 ]
 
 { #category : #'simulation only' }
+Spur32BitMMLESimulator >> stackIntegerValue: offset [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter stackIntegerValue: offset
+]
+
+{ #category : #'simulation only' }
+Spur32BitMMLESimulator >> stackObjectValue: offset [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter stackObjectValue: offset
+]
+
+{ #category : #'simulation only' }
 Spur32BitMMLESimulator >> stackValue: offset [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter stackValue: offset
@@ -280,6 +334,12 @@ Spur32BitMMLESimulator >> stackValue: offset [
 Spur32BitMMLESimulator >> storeFloatAt: floatBitsAddress from: aFloat [
 	self long32At: floatBitsAddress put: (aFloat at: 2).
 	self long32At: floatBitsAddress+4 put: (aFloat at: 1)
+]
+
+{ #category : #'simulation only' }
+Spur32BitMMLESimulator >> stringOf: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter stringOf: oop
 ]
 
 { #category : #'simulation only' }
