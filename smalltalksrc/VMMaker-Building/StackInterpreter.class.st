@@ -7012,8 +7012,12 @@ StackInterpreter >> longPrintOop: oop [
 		print: ' ('; printHex: class; print: ')'.
 	fmt := objectMemory formatOf: oop.
 	self print: ' format '; printHexnp: fmt.
-	fmt > objectMemory lastPointerFormat ifTrue:
-		[self print: ' nbytes '; printNum: (objectMemory byteLengthOf: oop)].
+	fmt > objectMemory lastPointerFormat
+		ifTrue: [self print: ' nbytes '; printNum: (objectMemory byteLengthOf: oop)]
+		ifFalse: [(objectMemory isIndexableFormat: fmt) ifTrue:
+					[| len |
+					len := objectMemory lengthOf: oop.
+					self print: ' size '; printNum: len - (objectMemory fixedFieldsOf: oop format: fmt length: len)]].
 	objectMemory printHeaderTypeOf: oop.
 	self print: ' hash '; printHexnp: (objectMemory rawHashBitsOf: oop).
 	self cr.
@@ -7029,7 +7033,8 @@ StackInterpreter >> longPrintOop: oop [
 			self space; printNum: i - 1; space; printHex: fieldOop; space.
 			(i = 1 and: [objectMemory isCompiledMethod: oop])
 				ifTrue: [self printMethodHeaderOop: fieldOop]
-				ifFalse: [self printOopShort: fieldOop].
+				ifFalse: [self cCode: [self printOopShort: fieldOop]
+							inSmalltalk: [self print: (self shortPrint: fieldOop)]].
 			self cr]].
 	(objectMemory isCompiledMethod: oop)
 		ifFalse:

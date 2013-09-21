@@ -1524,6 +1524,17 @@ StackInterpreterSimulator >> primitiveGetAttribute [
 		self push: s]
 ]
 
+{ #category : #'debugging traps' }
+StackInterpreterSimulator >> primitiveIdentityHash [
+	| oop |
+	oop := self stackTop.
+	((objectMemory isBytes: oop)
+	and: [(objectMemory lengthOf: oop) = 'smallSelect' size
+	and: [(self stringOf: oop) = 'smallSelect']]) ifTrue:
+		[self halt].
+	^super primitiveIdentityHash
+]
+
 { #category : #'file primitives' }
 StackInterpreterSimulator >> primitiveImageName [
 	"Note: For now, this only implements getting, not setting, the image file name."
