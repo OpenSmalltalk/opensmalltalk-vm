@@ -2556,7 +2556,9 @@ SpurMemoryManager >> isIntegerObject: oop [
 		loadPoint:from:
 		primDigitAdd:
 		primDigitSubtract:
-		positive64BitValueOf:) includes: sel) ifFalse:
+		positive64BitValueOf:
+		digitBitLogic:with:opIndex:
+		signed32BitValueOf:) includes: sel) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
