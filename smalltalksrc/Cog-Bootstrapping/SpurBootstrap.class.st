@@ -416,7 +416,7 @@ SpurBootstrap class >> SmalltalkImagePROTOTYPEsetGCParameters [
 	| proportion edenSize survivorSize averageObjectSize numObjects |
 	proportion := 0.9. "tenure when 90% of pastSpace is full"
 	edenSize := SmalltalkImage current vmParameterAt: 44.
-	survivorSize := edenSize / 5.0. "David's paper uses 140Kb eden + 2 x 28kb survivor spaces; Spur does the same :-)"
+	survivorSize := edenSize / 5.0. "David's paper uses 140Kb eden + 2 x 28kb survivor spaces; Spur uses the same ratios :-)"
 	averageObjectSize := 8 * self wordSize. "a good approximation"
 	numObjects := (proportion * survivorSize / averageObjectSize) rounded.
 	SmalltalkImage current vmParameterAt: 6 put: numObjects  "tenure when more than this many objects survive the GC"
@@ -437,7 +437,7 @@ SpurBootstrap class >> SystemDictionaryPROTOTYPEsetGCParameters [
 	| proportion edenSize survivorSize averageObjectSize numObjects |
 	proportion := 0.9. "tenure when 90% of pastSpace is full"
 	edenSize := SmalltalkImage current vmParameterAt: 44.
-	survivorSize := edenSize / 5.0. "David's paper uses 140Kb eden + 2 x 28kb survivor spaces; Spur does the same :-)"
+	survivorSize := edenSize / 5.0. "David's paper uses 140Kb eden + 2 x 28kb survivor spaces; Spur uses the same ratios :-)"
 	averageObjectSize := 8 * self wordSize. "a good approximation"
 	numObjects := (proportion * survivorSize / averageObjectSize) rounded.
 	SmalltalkImage current vmParameterAt: 6 put: numObjects  "tenure when more than this many objects survive the GC"
