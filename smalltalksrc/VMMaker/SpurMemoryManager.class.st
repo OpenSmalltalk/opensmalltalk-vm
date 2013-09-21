@@ -1979,8 +1979,8 @@ SpurMemoryManager >> hashBitsOf: objOop [
 			self assert: (coInterpreter addressCouldBeClassObj: objOop) not
 		  but instance-specific behaviors that are instances of themselves may
 		  fail this test."
-		 hash := self newObjectHash.
-		 self setHashBitsOf: objOop to: (hash bitAnd: self identityHashHalfWordMask)].
+		 hash := self newObjectHash bitAnd: self identityHashHalfWordMask.
+		 self setHashBitsOf: objOop to: hash].
 	^hash
 ]
 
