@@ -7011,11 +7011,11 @@ StackInterpreter >> longPrintOop: oop [
 		print: ': a(n) '; printNameOfClass: class count: 5;
 		print: ' ('; printHex: class; print: ')'.
 	fmt := objectMemory formatOf: oop.
-	self print: ' format '; printHex: fmt.
+	self print: ' format '; printHexnp: fmt.
 	fmt > objectMemory lastPointerFormat ifTrue:
 		[self print: ' nbytes '; printNum: (objectMemory byteLengthOf: oop)].
 	objectMemory printHeaderTypeOf: oop.
-	self print: ' hash '; printHex: (objectMemory rawHashBitsOf: oop).
+	self print: ' hash '; printHexnp: (objectMemory rawHashBitsOf: oop).
 	self cr.
 	(fmt between: objectMemory firstLongFormat and: objectMemory firstCompiledMethodFormat - 1) ifTrue:
 		[^self].
@@ -8824,20 +8824,22 @@ StackInterpreter >> printCallStackFP: theFP [
 ]
 
 { #category : #'debug printing' }
-StackInterpreter >> printCallStackOf: aContextOrProcess [
+StackInterpreter >> printCallStackOf: aContextOrProcessOrFrame [
 	<api>
 	| context |
 	<inline: false>
 	<var: #theFP type: #'char *'>
-	((objectMemory isContext: aContextOrProcess) not
-	and: [(objectMemory lengthOf: aContextOrProcess) > MyListIndex
+	(stackPages couldBeFramePointer: aContextOrProcessOrFrame) ifTrue:
+		[^self printCallStackFP: (self cCoerceSimple: aContextOrProcessOrFrame to: #'char *')].
+	((objectMemory isContext: aContextOrProcessOrFrame) not
+	and: [(objectMemory lengthOf: aContextOrProcessOrFrame) > MyListIndex
 	and: [objectMemory isContext: (objectMemory
 									fetchPointer: SuspendedContextIndex
-									ofObject: aContextOrProcess)]]) ifTrue:
+									ofObject: aContextOrProcessOrFrame)]]) ifTrue:
 		[^self printCallStackOf: (objectMemory
 									fetchPointer: SuspendedContextIndex
-									ofObject: aContextOrProcess)].
-	context := aContextOrProcess.
+									ofObject: aContextOrProcessOrFrame)].
+	context := aContextOrProcessOrFrame.
 	[context = objectMemory nilObject] whileFalse:
 		[(self isMarriedOrWidowedContext: context)
 			ifTrue:
@@ -9145,6 +9147,12 @@ StackInterpreter >> printHexPtr: p [
 ]
 
 { #category : #'debug printing' }
+StackInterpreter >> printHexnp: n [
+	"Print n in hex,  in the form '0x1234', unpadded"
+	self print: '0x%x' f: n
+]
+
+{ #category : #'debug printing' }
 StackInterpreter >> printMethodDictionary: dictionary [
 	<api>
 	| methodArray |
@@ -9391,6 +9399,18 @@ StackInterpreter >> printProcsOnList: procList [
 { #category : #'debug printing' }
 StackInterpreter >> printSends [
 	^false
+]
+
+{ #category : #'debug printing' }
+StackInterpreter >> printStackCallStack [
+	<doNotGenerate>
+	| theFP context |
+	theFP := localFP.
+	[context := self shortReversePrintFrameAndCallers: theFP.
+	 ((self isMarriedOrWidowedContext: context)
+	  and: [self checkIsStillMarriedContext: context currentFP: localFP]) ifFalse:
+		[^nil].
+	 theFP := self frameOfMarriedContext: context] repeat
 ]
 
 { #category : #'debug printing' }
