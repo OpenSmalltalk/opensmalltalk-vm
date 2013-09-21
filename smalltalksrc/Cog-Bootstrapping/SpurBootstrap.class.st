@@ -216,6 +216,26 @@ SpurBootstrap class >> BehaviorPROTOTYPEinstSize [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrap class >> BehaviorPROTOTYPEinstSpec [
+	"Answer the instance specification part of the format that defines what kind of object
+	 an instance of the receiver is.  The formats are0 = 0 sized objects (UndefinedObject True False et al)
+		1 = non-indexable objects with inst vars (Point et al)
+		2 = indexable objects with no inst vars (Array et al)
+		3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+		4 = weak indexable objects with inst vars (WeakArray et al)
+		5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+		6 unused, reserved for exotic pointer objects?
+		7 reserved by the VM
+		8 unused, reserved for exotic non-pointer objects?
+		9 (?) 64-bit indexable
+		10 - 11 32-bit indexable
+		12 - 15 16-bit indexable
+		16 - 23 byte indexable
+		24 - 31 compiled method"
+	^(format bitShift: -16) bitAnd: 16r1F
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrap class >> BehaviorPROTOTYPEisBits [
 	"Answer whether the receiver contains just bits (not pointers).
 	 Above Cog Spur the class format is
@@ -293,6 +313,21 @@ SpurBootstrap class >> CharacterPROTOTYPEasciiValue [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrap class >> CharacterPROTOTYPEclone [
+	^self
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> CharacterPROTOTYPEcopy [
+	^self
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> CharacterPROTOTYPEdeepCopy [
+	^self
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrap class >> CharacterPROTOTYPEhash [
 	<primitive: 171>
 	^self primitiveFailed
@@ -302,6 +337,16 @@ SpurBootstrap class >> CharacterPROTOTYPEhash [
 SpurBootstrap class >> CharacterPROTOTYPEidentityHash [
 	<primitive: 171>
 	^self primitiveFailed
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> CharacterPROTOTYPEshallowCopy [
+	^self
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> CharacterPROTOTYPEveryDeepCopyWith: deepCopier [
+	^self
 ]
 
 { #category : #'method prototypes' }
@@ -1449,7 +1494,11 @@ SpurBootstrap >> validate [
 		n := n + 1.
 		p := o].
 	p class.
-	self assert: (n between: map size and: map size + 5) "+ 5 is room for classTable"
+	self assert: (n between: map size and: map size + 5). "+ 5 is room for classTable"
+
+	"check some class properties to ensure the format changes are correct"
+	self assert: (newHeap fixedFieldsOfClassFormat: (newHeap formatOfClass: newHeap classArray)) = 0.
+	self assert: (newHeap instSpecOfClassFormat: (newHeap formatOfClass: newHeap classArray)) = newHeap arrayFormat
 ]
 
 { #category : #'bootstrap methods' }
