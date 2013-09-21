@@ -155,6 +155,11 @@ Spur32BitMMLESimulator >> headerForSlots: numSlots format: formatField classInde
 	^super headerForSlots: numSlots format: formatField classIndex: classIndex
 ]
 
+{ #category : #'memory access' }
+Spur32BitMMLESimulator >> intAt: byteAddress put: a32BitValue [
+	^self longAt: byteAddress put: (a32BitValue bitAnd: 16rFFFFFFFF)
+]
+
 { #category : #'simulation only' }
 Spur32BitMMLESimulator >> ioLoadFunction: functionString From: pluginString [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
@@ -334,6 +339,12 @@ Spur32BitMMLESimulator >> stackValue: offset [
 Spur32BitMMLESimulator >> storeFloatAt: floatBitsAddress from: aFloat [
 	self long32At: floatBitsAddress put: (aFloat at: 2).
 	self long32At: floatBitsAddress+4 put: (aFloat at: 1)
+]
+
+{ #category : #'simulation only' }
+Spur32BitMMLESimulator >> storeInteger: fieldIndex ofObject: objectPointer withValue: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter storeInteger: fieldIndex ofObject: objectPointer withValue: integerValue
 ]
 
 { #category : #'simulation only' }
