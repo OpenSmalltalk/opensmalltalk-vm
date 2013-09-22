@@ -1703,6 +1703,15 @@ SpurMemoryManager >> fillObj: objOop numSlots: numSlots with: fillValue [
 	self subclassResponsibility
 ]
 
+{ #category : #'object enumeration' }
+SpurMemoryManager >> firstAccessibleObject [
+	<inline: false>
+	self assert: nilObj = newSpaceLimit.
+	"flush newSpace to settle the enumeration."
+	self flushNewSpace.
+	^nilObj
+]
+
 { #category : #'header format' }
 SpurMemoryManager >> firstByteFormat [
 	^16
@@ -1817,7 +1826,7 @@ SpurMemoryManager >> flushNewSpace [
 	| savedTenuringThreshold |
 	savedTenuringThreshold := scavenger getRawTenuringThreshold.
 	scavenger setRawTenuringThreshold: newSpaceLimit.
-	self sufficientSpaceAfterGC: 0.
+	self scavengingGC.
 	scavenger setRawTenuringThreshold: savedTenuringThreshold.
 	self assert: scavenger rememberedSetSize = 0.
 	self assert: pastSpaceStart = scavenger pastSpace start.
@@ -2129,6 +2138,8 @@ SpurMemoryManager >> initialInstanceOf: classObj [
 	classIndex := self rawHashBitsOf: classObj.
 	classIndex = 0 ifTrue:
 		[^nil].
+	"flush newSpace to settle the enumeration."
+	self flushNewSpace.
 	self allObjectsDo:
 		[:objOop|
 		classIndex = (self classIndexOf: objOop) ifTrue:
