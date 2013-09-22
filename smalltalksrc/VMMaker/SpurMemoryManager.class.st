@@ -356,7 +356,9 @@ Class {
 		'statIncrGCs',
 		'statFullGCs',
 		'remapBuffer',
-		'remapBufferCount'
+		'remapBufferCount',
+		'lowSpaceThreshold',
+		'totalFreeOldSpace'
 	],
 	#classVars : [
 		'CheckObjectOverwrite',
@@ -851,6 +853,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 	 otherwise answer nil.  N.B.  the chunk is simply a pointer, it has
 	 no valid header.  The caller *must* fill in the header correctly."
 	| index chunk nextIndex nodeBytes parent child smaller larger |
+	totalFreeOldSpace := totalFreeOldSpace - chunkBytes. "be optimistic (& don't wait for the write)"
 	index := chunkBytes / self allocationUnit.
 	(index < NumFreeLists and: [1 << index >= freeListsMask]) ifTrue:
 		[(chunk := freeLists at: index) ~= 0 ifTrue:
@@ -907,7 +910,9 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 												ifFalse: [self freeChunkLargerIndex])
 								ofFreeChunk: child]].
 	parent = 0 ifTrue:
-		[self halt].
+		[totalFreeOldSpace := totalFreeOldSpace + chunkBytes. "optimism was unfounded"
+		 self halt].
+
 	"self printFreeChunk: parent"
 	self assert: (self bytesInObject: parent) = nodeBytes.
 	"attempt to remove from list"
@@ -1120,10 +1125,39 @@ SpurMemoryManager >> byteSizeOf: oop [
 	^(self numSlotsOf: oop) << self shiftForWord
 ]
 
+{ #category : #'free space' }
+SpurMemoryManager >> bytesInFreeTree: freeNode [
+	| freeBytes bytesInObject next |
+	freeNode = 0 ifTrue: [^0].
+	freeBytes := 0.
+	bytesInObject := self bytesInObject: freeNode.
+	self assert: bytesInObject / self allocationUnit >= NumFreeLists.
+	next := freeNode.
+	[next ~= 0] whileTrue:
+		[freeBytes := freeBytes + bytesInObject.
+		 self assert: bytesInObject = (self bytesInObject: next).
+		 next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: next].
+	^freeBytes
+	+ (self bytesInFreeTree: (self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: next))
+	+ (self bytesInFreeTree: (self fetchPointer: self freeChunkLargerIndex ofFreeChunk: next))
+]
+
 { #category : #'object enumeration' }
 SpurMemoryManager >> bytesInObject: objOop [
 	"Answer the total number of bytes in an object including header and possible overflow size header."
 	self subclassResponsibility
+]
+
+{ #category : #'free space' }
+SpurMemoryManager >> bytesLeft: includeSwapSpace [
+	"Answer the amount of available free space. If includeSwapSpace is true, include
+	 possibly available swap space. If includeSwapSpace is false, include possibly available
+	 physical memory. For a report on the largest free block currently availabe within
+	 Squeak memory but not counting extra memory use #primBytesLeft."
+	^totalFreeOldSpace
+	+ (scavenger eden limit - freeStart)
+	+ (scavenger pastSpace limit - pastSpaceStart)
+	+ (scavenger futureSpace limit - scavenger futureSpace limit)
 ]
 
 { #category : #'header format' }
@@ -1278,8 +1312,18 @@ SpurMemoryManager >> classLargePositiveInteger [
 ]
 
 { #category : #'plugin support' }
+SpurMemoryManager >> classMutex [
+	^self splObj: ClassMutex
+]
+
+{ #category : #'plugin support' }
 SpurMemoryManager >> classPoint [
 	^self splObj: ClassPoint
+]
+
+{ #category : #'plugin support' }
+SpurMemoryManager >> classSemaphore [
+	^self splObj: ClassSemaphore
 ]
 
 { #category : #accessing }
@@ -1944,13 +1988,15 @@ SpurMemoryManager >> freeChunkWithBytes: bytes at: address [
 
 { #category : #'free space' }
 SpurMemoryManager >> freeObject: objOop [
-	^self freeChunkWithBytes: (self bytesInObject: objOop) at: (self startOfObject: objOop)
+	| bytes |
+	bytes := self bytesInObject: objOop.
+	totalFreeOldSpace := totalFreeOldSpace + bytes.
+	^self freeChunkWithBytes: bytes at: (self startOfObject: objOop)
 ]
 
 { #category : #'free space' }
 SpurMemoryManager >> freeSize [
-	self flag: #temporary.
-	^0
+	^totalFreeOldSpace
 ]
 
 { #category : #accessing }
@@ -2097,7 +2143,7 @@ SpurMemoryManager >> initialize [
 	freeLists := CArrayAccessor on: (Array new: NumFreeLists withAll: 0).
 	remapBuffer := Array new: RemapBufferSize.
 	remapBufferCount := 0.
-	freeListsMask := 0.
+	freeListsMask := totalFreeOldSpace := lowSpaceThreshold := 0.
 	checkForLeaks := 0.
 	needGCFlag := signalLowSpace := scavengeInProgress := false.
 	becomeEffectsFlags := 0.
@@ -2172,7 +2218,8 @@ SpurMemoryManager >> initializeOldSpaceFirstFree: startOfFreeOldSpace [
 	freeOldStart < endOfMemory ifTrue:
 		[freeChunk := self freeChunkWithBytes: endOfMemory - freeOldStart at: freeOldStart.
 		 self assert: (self addressAfter: freeChunk) = endOfMemory].
-	freeOldSpaceStart := endOfMemory
+	freeOldSpaceStart := endOfMemory.
+	self assert: totalFreeOldSpace = self totalFreeListBytes
 ]
 
 { #category : #simulation }
@@ -2780,6 +2827,14 @@ SpurMemoryManager >> longFormatForNumBytes: numBytes [
 	^self subclassResponsibility
 ]
 
+{ #category : #'free space' }
+SpurMemoryManager >> lowSpaceThreshold: threshold [
+	lowSpaceThreshold := threshold.
+	totalFreeOldSpace < threshold ifTrue:
+		[self growOldSpaceByAtLeast: threshold - totalFreeOldSpace].
+	self assert: totalFreeOldSpace >= lowSpaceThreshold
+]
+
 { #category : #simulation }
 SpurMemoryManager >> mem: destAddress cp: sourceAddress y: bytes [
 	"For SpurGenerationScavenger>>copyToFutureSpace:bytes:"
@@ -3240,6 +3295,41 @@ SpurMemoryManager >> scavenger [
 ]
 
 { #category : #'generation scavenging' }
+SpurMemoryManager >> scavengingGC [
+	"Run the scavenger."
+
+	self assert: remapBufferCount = 0.
+	self assert: self totalFreeListBytes = totalFreeOldSpace.
+	"coInterpreter printCallStackFP: coInterpreter framePointer"
+
+	self runLeakCheckerForFullGC: false.
+	coInterpreter preGCAction: GCModeIncr.
+	needGCFlag := false.
+
+	gcStartUsecs := coInterpreter ioUTCMicrosecondsNow.
+
+	scavengeInProgress := true.
+	pastSpaceStart := scavenger scavenge.
+	self assert: (self
+					oop: pastSpaceStart
+					isGreaterThanOrEqualTo: scavenger pastSpace start
+					andLessThanOrEqualTo: scavenger pastSpace limit).
+	freeStart := scavenger eden start.
+	self initSpaceForAllocationCheck: scavenger eden.
+	scavengeInProgress := false.
+
+	statScavenges := statScavenges + 1.
+	statGCEndUsecs := coInterpreter ioUTCMicrosecondsNow.
+	statSGCDeltaUsecs := statGCEndUsecs - gcStartUsecs.
+	statScavengeGCUsecs := statScavengeGCUsecs + statSGCDeltaUsecs.
+
+	coInterpreter postGCAction.
+	self runLeakCheckerForFullGC: false.
+
+	self assert: self totalFreeListBytes = totalFreeOldSpace
+]
+
+{ #category : #'generation scavenging' }
 SpurMemoryManager >> scheduleScavenge [
 	needGCFlag := true.
 	coInterpreter forceInterruptCheck
@@ -3456,35 +3546,13 @@ SpurMemoryManager >> storePointerUnchecked: fieldIndex ofObject: objOop withValu
 SpurMemoryManager >> sufficientSpaceAfterGC: numBytes [
 	"This is ObjectMemory's funky entry-point into its incremental GC,
 	 which is a stop-the-world a young generation reclaimer.  In Spur
-	 we run the scavenger."
+	 we run the scavenger.  Answer if space is not low."
+
 	self assert: numBytes = 0.
-	self assert: remapBufferCount = 0.
-	"coInterpreter printCallStackFP: coInterpreter framePointer"
-
-	self runLeakCheckerForFullGC: false.
-	coInterpreter preGCAction: GCModeIncr.
-	needGCFlag := false.
-
-	gcStartUsecs := coInterpreter ioUTCMicrosecondsNow.
-
-	scavengeInProgress := true.
-	pastSpaceStart := scavenger scavenge.
-	self assert: (self
-					oop: pastSpaceStart
-					isGreaterThanOrEqualTo: scavenger pastSpace start
-					andLessThanOrEqualTo: scavenger pastSpace limit).
-	freeStart := scavenger eden start.
-	self initSpaceForAllocationCheck: scavenger eden.
-	scavengeInProgress := false.
-
-	statScavenges := statScavenges + 1.
-	statGCEndUsecs := coInterpreter ioUTCMicrosecondsNow.
-	statSGCDeltaUsecs := statGCEndUsecs - gcStartUsecs.
-	statScavengeGCUsecs := statScavengeGCUsecs + statSGCDeltaUsecs.
-
-	coInterpreter postGCAction.
-	self runLeakCheckerForFullGC: false.
-
+	self scavengingGC.
+	lowSpaceThreshold > totalFreeOldSpace ifTrue: "space is low"
+		[lowSpaceThreshold := 0. "avoid signalling low space twice"
+		 ^false].
 	^true
 ]
 
@@ -3519,6 +3587,21 @@ SpurMemoryManager >> topRemappableOop [
 	 We support this excessence for compatibility with ObjectMemory.
 	 Spur doesn't GC during allocation."
 	^remapBuffer at: remapBufferCount
+]
+
+{ #category : #'free space' }
+SpurMemoryManager >> totalFreeListBytes [
+	| freeBytes bytesInObject obj |
+	freeBytes := 0.
+	1 to: NumFreeLists - 1 do:
+		[:i| 
+		bytesInObject := i * self allocationUnit.
+		obj := freeLists at: i.
+		[obj ~= 0] whileTrue:
+			[freeBytes := freeBytes + bytesInObject.
+			 self assert: bytesInObject = (self bytesInObject: obj).
+			 obj := self fetchPointer: self freeChunkNextIndex ofFreeChunk: obj]].
+	^freeBytes + (self bytesInFreeTree: (freeLists at: 0))
 ]
 
 { #category : #accessing }

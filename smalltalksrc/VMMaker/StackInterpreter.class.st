@@ -6027,7 +6027,7 @@ StackInterpreter >> ifValidWriteBackStack: theCFP Pointers: theCSP Save: savedFP
 { #category : #'frame access' }
 StackInterpreter >> iframeInstructionPointerForIndex: ip method: aMethod [
 	"Answer the instruction pointer for use in an interpreter frame (a pointer to a bytecode)."
-	self assert: (ip between: (objectMemory lastPointerOf: aMethod) - 1
+	self assert: (ip between: (((LiteralStart + (self literalCountOf: aMethod)) * BytesPerOop)) + 1
 					and: (objectMemory lengthOf: aMethod)).
 	^aMethod + ip + objectMemory baseHeaderSize - 2
 ]
@@ -6173,7 +6173,9 @@ StackInterpreter >> initialCleanup [
 { #category : #'compiled methods' }
 StackInterpreter >> initialPCForHeader: methodHeader method: theMethod [
 	<api>
-	^theMethod + ((LiteralStart + (self literalCountOfHeader: methodHeader)) * BytesPerWord) + BaseHeaderSize
+	^theMethod
+	+ ((LiteralStart + (self literalCountOfHeader: methodHeader)) * BytesPerOop)
+	+ objectMemory baseHeaderSize
 ]
 
 { #category : #initialization }

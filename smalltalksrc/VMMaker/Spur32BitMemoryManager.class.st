@@ -54,9 +54,9 @@ Spur32BitMemoryManager >> allocateSlots: numSlots format: formatField classIndex
 							ifFalse: [numSlots + (numSlots bitAnd: 1) * self bytesPerSlot])]. "roundTo allocationUnit"
 	self assert: numBytes \\ self allocationUnit = 0.
 	freeStart + numBytes > scavengeThreshold ifTrue:
-		[freeStart + numBytes > scavenger eden limit ifTrue:
-			[^self allocateSlotsInOldSpace: numSlots format: formatField classIndex: classIndex].
-		 self scheduleScavenge].
+		[needGCFlag ifFalse: [self scheduleScavenge].
+		 freeStart + numBytes > scavenger eden limit ifTrue:
+			[^self allocateSlotsInOldSpace: numSlots format: formatField classIndex: classIndex]].
 	numSlots >= self numSlotsMask
 		ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
 			[self flag: #endianness.
