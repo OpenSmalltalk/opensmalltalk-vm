@@ -863,13 +863,13 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 	| index chunk nextIndex nodeBytes parent child smaller larger |
 	totalFreeOldSpace := totalFreeOldSpace - chunkBytes. "be optimistic (& don't wait for the write)"
 	index := chunkBytes / self allocationUnit.
-	(index < NumFreeLists and: [1 << index >= freeListsMask]) ifTrue:
+	(index < NumFreeLists and: [1 << index <= freeListsMask]) ifTrue:
 		[(chunk := freeLists at: index) ~= 0 ifTrue:
 			[self assert: chunk = (self startOfObject: chunk).
 			^self unlinkFreeChunk: chunk atIndex: index].
 		 "first search for free chunks of a multiple of chunkBytes in size"
 		 nextIndex := index.
-		 [1 << index >= freeListsMask
+		 [1 << index <= freeListsMask
 		  and: [(nextIndex := nextIndex + index) < NumFreeLists]] whileTrue:
 			[((freeListsMask anyMask: 1 << index)
 			 and: [(chunk := freeLists at: index) ~= 0]) ifTrue:
@@ -2424,27 +2424,27 @@ SpurMemoryManager >> instanceAfter: objOop [
 	| actualObj classIndex |
 	actualObj := objOop.
 	classIndex := self classIndexOf: objOop.
+
 	(self isInEden: objOop) ifTrue:
-		[actualObj := self objectAfter: actualObj limit: freeStart.
-		[objOop < freeStart] whileTrue:
+		[[actualObj := self objectAfter: actualObj limit: freeStart.
+		  actualObj < freeStart] whileTrue:
 			[classIndex = (self classIndexOf: actualObj) ifTrue:
-				[^actualObj].
-		 actualObj := self objectAfter: objOop limit: freeStart].
+				[^actualObj]].
 		 actualObj := pastSpaceStart > scavenger pastSpace start
 						ifTrue: [self objectStartingAt: scavenger pastSpace start]
 						ifFalse: [nilObj]].
+
 	(self isInSurvivorSpace: actualObj) ifTrue:
-		[actualObj := self objectAfter: actualObj limit: pastSpaceStart.
-		[objOop < pastSpaceStart] whileTrue:
+		[[actualObj := self objectAfter: actualObj limit: pastSpaceStart.
+		  actualObj < pastSpaceStart] whileTrue:
 			[classIndex = (self classIndexOf: actualObj) ifTrue:
-				[^actualObj].
-		 actualObj := self objectAfter: objOop limit: pastSpaceStart].
+				[^actualObj]].
 		 actualObj := nilObj].
-	actualObj := self objectAfter: actualObj limit: freeOldSpaceStart.
-	[objOop < freeOldSpaceStart] whileTrue:
+
+	[actualObj := self objectAfter: actualObj limit: freeOldSpaceStart.
+	 actualObj < freeOldSpaceStart] whileTrue:
 		[classIndex = (self classIndexOf: actualObj) ifTrue:
-			[^actualObj].
-		 actualObj := self objectAfter: objOop limit: freeOldSpaceStart].
+			[^actualObj]].
 	^nil
 ]
 
@@ -2750,7 +2750,9 @@ SpurMemoryManager >> isIntegerObject: oop [
 		primDigitSubtract:
 		positive64BitValueOf:
 		digitBitLogic:with:opIndex:
-		signed32BitValueOf:) includes: sel) ifFalse:
+		signed32BitValueOf:
+		isNormalized:
+		primDigitDiv:negative:) includes: sel) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
@@ -3119,15 +3121,7 @@ SpurMemoryManager >> objectAfter: objOop limit: limit [
 	2. objects with an overflow size have a preceeing word with a saturated numSlots.  If the word
 	   following an object doesn't have a saturated numSlots field it must be a single-header object.
 	   If the word following does have a saturated numSlots it must be the overflow size word."
-	| followingWordAddress followingWord |
-	followingWordAddress := self addressAfter: objOop.
-	followingWordAddress >= limit ifTrue:
-		[^limit].
-	self flag: #endianness.
-	followingWord := self longAt: followingWordAddress + 4.
-	^followingWord >> self numSlotsHalfShift = self numSlotsMask
-		ifTrue: [followingWordAddress + self baseHeaderSize]
-		ifFalse: [followingWordAddress]
+	^self subclassResponsibility
 ]
 
 { #category : #'object enumeration' }
