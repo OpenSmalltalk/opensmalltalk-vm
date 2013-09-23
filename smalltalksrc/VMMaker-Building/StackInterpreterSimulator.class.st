@@ -254,6 +254,25 @@ StackInterpreterSimulator >> clipboardWrite: sz From: actualDataAddress At: igno
 	Clipboard clipboardText: (self stringOf: actualDataAddress - BaseHeaderSize)
 ]
 
+{ #category : #'debug support' }
+StackInterpreterSimulator >> cloneSimulation [
+	| savedDisplayView savedDisplayForm savedQuitBlock savedTranscript |
+	savedDisplayView := displayView. displayView := nil.
+	savedDisplayForm := displayForm. displayForm = nil.
+	savedQuitBlock := quitBlock. quitBlock := nil.
+	savedTranscript := transcript. transcript := nil.
+
+	[| clone window |
+	 clone := self veryDeepCopy.
+	 window := clone openAsMorph.
+	 window setLabel: 'Clone of ', (savedDisplayView containingWindow label allButFirst: 'Simulation of ' size)]
+		ensure:
+			[displayView := savedDisplayView.
+			 displayForm = savedDisplayForm.
+			 quitBlock := savedQuitBlock.
+			 transcript := savedTranscript]
+]
+
 { #category : #initialization }
 StackInterpreterSimulator >> close [  "close any files that ST may have opened"
 	(self loadNewPlugin: 'FilePlugin') ifNotNil:
@@ -1239,7 +1258,8 @@ StackInterpreterSimulator >> openAsMorph [
 	window openInWorldExtent: (self desiredDisplayExtent
 								+ (2 * window borderWidth)
 								+ (0@window labelHeight)
-								* (1@(1/0.8))) rounded
+								* (1@(1/0.8))) rounded.
+	^window
 ]
 
 { #category : #UI }
@@ -1806,14 +1826,12 @@ StackInterpreterSimulator >> rewriteMethodCacheEntryForExternalPrimitiveToFuncti
 { #category : #testing }
 StackInterpreterSimulator >> run [
 	"Just run"
-	quitBlock := [| topWindow |
-				  
-				   (displayView notNil
-				   and: [topWindow := displayView outermostMorphThat:
-									[:m| m isSystemWindow and: [World submorphs includes: m]].
-						topWindow notNil
-				   and: [UIManager default confirm: 'close?']]) ifTrue:
-					[topWindow delete].
+	quitBlock := [displayView ifNotNil:
+				   [displayView containingWindow ifNotNil:
+					[:topWindow|
+					((World submorphs includes: topWindow)
+					 and: [UIManager default confirm: 'close?']) ifTrue:
+						[topWindow delete]]].
 				  ^self].
 	self initStackPages.
 	self loadInitialContext.
@@ -1885,14 +1903,12 @@ StackInterpreterSimulator >> runForNBytes: nBytecodes [
 { #category : #testing }
 StackInterpreterSimulator >> runWithBreakCount: theBreakCount [
 	"Just run, halting when byteCount is reached"
-	quitBlock := [| topWindow |
-				  
-				   (displayView notNil
-				   and: [topWindow := displayView outermostMorphThat:
-									[:m| m isSystemWindow and: [World submorphs includes: m]].
-						topWindow notNil
-				   and: [UIManager default confirm: 'close?']]) ifTrue:
-					[topWindow delete].
+	quitBlock := [displayView ifNotNil:
+				   [displayView containingWindow ifNotNil:
+					[:topWindow|
+					((World submorphs includes: topWindow)
+					 and: [UIManager default confirm: 'close?']) ifTrue:
+						[topWindow delete]]].
 				  ^self].
 	breakCount := theBreakCount.
 	self initStackPages.
@@ -2324,6 +2340,7 @@ StackInterpreterSimulator >> updateStateOfSpouseContextForFrame: theFP WithSP: t
 StackInterpreterSimulator >> utilitiesMenu: aMenuMorph [
 	aMenuMorph
 		add: 'toggle transcript' action: #toggleTranscript;
+		add: 'clone VM' action: #cloneSimulation;
 		addLine;
 		add: 'print ext head frame' action: #printExternalHeadFrame;
 		add: 'print int head frame' action: #printHeadFrame;
