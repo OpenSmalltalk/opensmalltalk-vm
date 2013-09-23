@@ -1039,7 +1039,8 @@ NewspeakInterpreterSimulator >> openAsMorph [
 	window openInWorldExtent: (self desiredDisplayExtent
 								+ (2 * window borderWidth)
 								+ (0@window labelHeight)
-								* (1@(1/0.8))) rounded
+								* (1@(1/0.8))) rounded.
+	^window
 ]
 
 { #category : #UI }
