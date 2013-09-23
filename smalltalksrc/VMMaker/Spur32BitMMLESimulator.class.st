@@ -300,6 +300,13 @@ Spur32BitMMLESimulator >> pushInteger: integerValue [
 	^coInterpreter pushInteger: integerValue
 ]
 
+{ #category : #'generation scavenging' }
+Spur32BitMMLESimulator >> scavengingGC [
+	"Run the scavenger."
+	self halt: (statScavenges + 1) printString, (#('st' 'nd' 'rd') at: (statScavenges + 1) \\ 10 ifAbsent: 'th'), ' scavenge'.
+	^super scavengingGC
+]
+
 { #category : #'memory access' }
 Spur32BitMMLESimulator >> shortAt: byteAddress [
     "Return the half-word at byteAddress which must be even."
