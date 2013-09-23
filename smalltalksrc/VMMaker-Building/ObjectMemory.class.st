@@ -2926,6 +2926,13 @@ ObjectMemory >> isIndexable: oop [
 	^(self formatOf: oop) >= 2
 ]
 
+{ #category : #'header access' }
+ObjectMemory >> isIndexableFormat: format [
+	^format >= self arrayFormat
+	  and: [format <= self weakArrayFormat
+			or: [format >= self firstLongFormat]]
+]
+
 { #category : #'interpreter access' }
 ObjectMemory >> isIntegerObject: objectPointer [
 
@@ -3363,13 +3370,6 @@ ObjectMemory >> loadImageSegmentFrom: segmentWordArray outPointers: outPointerAr
 	"and return the roots array which was first in the segment"
 	DoAssertionChecks ifTrue: [self verifyCleanHeaders].
 	^self oopFromChunk: segmentWordArray + BaseHeaderSize + BytesPerWord
-]
-
-{ #category : #'header access' }
-ObjectMemory >> longFormatForNumBytes: numBytes [
-	"In ObjectMemory the odd bits for 32-bit indexable objects, needed in the 64-bit VM, is
-	 not stored in the format field."
-	^self firstLongFormat
 ]
 
 { #category : #accessing }
@@ -4072,7 +4072,6 @@ ObjectMemory >> remapFieldsAndClassOf: oop [
 
 { #category : #'gc -- compaction' }
 ObjectMemory >> remapObj: obj [
-	<api>
 	"Map the given oop to its new value during a compaction or become: operation."
 	<inline: false>
 	^self remappedObj: obj
