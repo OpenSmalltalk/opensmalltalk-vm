@@ -2137,21 +2137,21 @@ CogVMSimulator >> objectBefore: addr [
 { #category : #UI }
 CogVMSimulator >> openAsMorph [
 	"Open a morphic view on this simulation."
-	| localImageName borderWidth theWindow |
+	| localImageName borderWidth window |
 	localImageName := imageName
 							ifNotNil: [FileDirectory default localNameFor: imageName]
 							ifNil: [' synthetic image'].
-	theWindow := (SystemWindow labelled: 'Simulation of ', localImageName) model: self.
+	window := (SystemWindow labelled: 'Simulation of ', localImageName) model: self.
 
-	theWindow addMorph: (displayView := ImageMorph new image: displayForm)
+	window addMorph: (displayView := ImageMorph new image: displayForm)
 		frame: (0@0 corner: 1@0.8).
 
 	transcript := TranscriptStream on: (String new: 10000).
-	theWindow addMorph: (PluggableTextMorph
+	window addMorph: (PluggableTextMorph
 							on: transcript text: nil accept: nil
 							readSelection: nil menu: #codePaneMenu:shifted:)
 			frame: (0@0.8 corner: 0.7@1).
-	theWindow addMorph: (PluggableTextMorph on: self
+	window addMorph: (PluggableTextMorph on: self
 						text: #byteCountText accept: nil
 						readSelection: nil menu: #utilitiesMenu:) hideScrollBarsIndefinitely
 			frame: (0.7@0.8 corner: 1@1).
@@ -2159,11 +2159,12 @@ CogVMSimulator >> openAsMorph [
 	borderWidth := [SystemWindow borderWidth] "Squeak 4.1"
 						on: MessageNotUnderstood
 						do: [:ex| 0]. "3.8"
-	borderWidth := borderWidth + theWindow borderWidth.
-	theWindow openInWorldExtent: (self desiredDisplayExtent
+	borderWidth := borderWidth + window borderWidth.
+	window openInWorldExtent: (self desiredDisplayExtent
 								+ (2 * borderWidth)
-								+ (0@theWindow labelHeight)
-								* (1@(1/0.8))) rounded
+								+ (0@window labelHeight)
+								* (1@(1/0.8))) rounded.
+	^window
 ]
 
 { #category : #UI }
@@ -2950,14 +2951,12 @@ CogVMSimulator >> rumpCStackSize [
 { #category : #testing }
 CogVMSimulator >> run [
 	"Just run"
-	quitBlock := [| topWindow |
-				  
-				   (displayView notNil
-				   and: [topWindow := displayView outermostMorphThat:
-									[:m| m isSystemWindow and: [World submorphs includes: m]].
-						topWindow notNil
-				   and: [UIManager default confirm: 'close?']]) ifTrue:
-					[topWindow delete].
+	quitBlock := [displayView ifNotNil:
+				   [displayView containingWindow ifNotNil:
+					[:topWindow|
+					((World submorphs includes: topWindow)
+					 and: [UIManager default confirm: 'close?']) ifTrue:
+						[topWindow delete]]].
 				  ^self].
 	self initStackPages.
 	self loadInitialContext.
@@ -2967,10 +2966,12 @@ CogVMSimulator >> run [
 { #category : #testing }
 CogVMSimulator >> runWithBreakCount: theBreakCount [
 	"Just run, halting when byteCount is reached"
-	quitBlock := [(displayView notNil
-				   and: [UIManager default confirm: 'close?']) ifTrue:
-					[(displayView outermostMorphThat: [:m| m isSystemWindow]) ifNotNil:
-						[:topWindow| topWindow delete]].
+	quitBlock := [displayView ifNotNil:
+				   [displayView containingWindow ifNotNil:
+					[:topWindow|
+					((World submorphs includes: topWindow)
+					 and: [UIManager default confirm: 'close?']) ifTrue:
+						[topWindow delete]]].
 				  ^self].
 	breakCount := theBreakCount.
 	self initStackPages.

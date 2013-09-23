@@ -988,7 +988,8 @@ InterpreterSimulator >> openAsMorph [
 						text: #byteCountText accept: nil) hideScrollBarsIndefinitely
 		frame: (0.7@0.8 corner: 1@1).
 
-	window openInWorld
+	window openInWorld.
+	^window
 ]
 
 { #category : #initialization }
