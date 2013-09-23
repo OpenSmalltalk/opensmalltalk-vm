@@ -13,25 +13,11 @@ Spur64BitMemoryManager class >> wordSize [
 Spur64BitMemoryManager >> addressAfter: objOop [
 	"Answer the address immediately following an object."
 	| numSlots slotBytes |
-	numSlots := self numSlotsOf: objOop.
+	numSlots := self numSlotsOfAny: objOop.
 	slotBytes := numSlots = 0
 					ifTrue: [self allocationUnit]
 					ifFalse: [numSlots << self shiftForWord].
 	^objOop + self baseHeaderSize + slotBytes
-]
-
-{ #category : #initialization }
-Spur64BitMemoryManager >> adjustFieldsAndClassOf: oop by: offsetBytes [ 
-	"Adjust all pointers in this object by the given offset."
-	| fieldAddr fieldOop |
-	<inline: true>
-	<asmLabel: false>
-	fieldAddr := oop + (self lastPointerOf: oop).
-	[self oop: fieldAddr isGreaterThan: oop] whileTrue:
-		[fieldOop := self longAt: fieldAddr.
-		 (self isIntegerObject: fieldOop) ifFalse:
-			[self longLongAt: fieldAddr put: fieldOop + offsetBytes].
-		 fieldAddr := fieldAddr - BytesPerWord]
 ]
 
 { #category : #allocation }
@@ -67,22 +53,42 @@ Spur64BitMemoryManager >> allocateSlots: numSlots format: formatField classIndex
 			 self longLongAt: newObj put: (self headerForSlots: self numSlotsMask format: formatField classIndex: classIndex)]
 		ifFalse:
 			[self longLongAt: newObj put: (self headerForSlots: numSlots format: formatField classIndex: classIndex)].
-		freeStart := freeStart + numBytes.
+	self assert: numBytes \\ self allocationUnit = 0.
+	self assert: newObj \\ self allocationUnit = 0.
+	freeStart := freeStart + numBytes.
 	^newObj
+]
+
+{ #category : #allocation }
+Spur64BitMemoryManager >> allocateSlotsInOldSpace: numSlots format: formatField classIndex: classIndex [
+	"Answer the oop of a chunk of space in oldSpace with numSlots slots.  The header
+	 will have been filled-in but not the contents."
+	| bytes chunk |
+	bytes := self objectBytesForSlots: numSlots.
+	chunk := self allocateOldSpaceChunkOfBytes: bytes.
+	chunk ifNil:
+		[^nil].
+	numSlots >= self numSlotsMask ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
+		[self longAt: chunk
+			put: numSlots + (self numSlotsMask << self numSlotsFullShift).
+		 self longAt: chunk + self baseHeaderSize
+			put: (self headerForSlots: self numSlotsMask format: formatField classIndex: classIndex).
+		 ^chunk + self baseHeaderSize].
+	self longAt: chunk
+		put: (self headerForSlots: numSlots format: formatField classIndex: classIndex).
+	^chunk
 ]
 
 { #category : #'object enumeration' }
 Spur64BitMemoryManager >> bytesInObject: objOop [
 	"Answer the total number of bytes in an object including header and possible overflow size header."
-	| halfHeader headerNumSlots numSlots |
+	| header headerNumSlots numSlots |
 	self flag: #endianness.
-	"numSlotsOf: should not be applied to free or forwarded objects."
-	self assert: (self classIndexOf: objOop) > self isForwardedObjectClassIndexPun.
-	halfHeader := self longAt: objOop + 4.
-	headerNumSlots := halfHeader >> self numSlotsHalfShift bitAnd: self numSlotsMask.
+	header := self longAt: objOop.
+	headerNumSlots := header >> self numSlotsFullShift bitAnd: self numSlotsMask.
 	numSlots := headerNumSlots = self numSlotsMask
-					ifTrue: [self longAt: objOop - self baseHeaderSize]
-					ifFalse: [numSlots = 0 ifTrue: [1] ifFalse: [numSlots]].
+					ifTrue: [header bitAnd: 16rFFFFFFFFFFFFFF]
+					ifFalse: [headerNumSlots = 0 ifTrue: [1] ifFalse: [headerNumSlots]].
 	^numSlots << self shiftForWord
 	+ (headerNumSlots = self numSlotsMask
 		ifTrue: [self baseHeaderSize + self baseHeaderSize]
@@ -94,36 +100,6 @@ Spur64BitMemoryManager >> bytesPerSlot [
 	^8
 ]
 
-{ #category : #'header access' }
-Spur64BitMemoryManager >> classIndexOf: objOop [
-	^(self longLongAt: objOop) bitAnd: self classIndexMask
-]
-
-{ #category : #'object access' }
-Spur64BitMemoryManager >> fetchPointer: fieldIndex ofObject: objOop [
-	self assert: (self isForwarded: objOop) not.
-	^self longLongAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
-]
-
-{ #category : #'object access' }
-Spur64BitMemoryManager >> formatOf: objOop [
-	"0 = 0 sized objects (UndefinedObject True False et al)
-	 1 = non-indexable objects with inst vars (Point et al)
-	 2 = indexable objects with no inst vars (Array et al)
-	 3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
-	 4 = weak indexable objects with inst vars (WeakArray et al)
-	 5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
-	 6 unused, reserved for exotic pointer objects?
-	 7 Forwarded Object, 1st field is pointer, rest of fields are ignored
-	 8 unused, reserved for exotic non-pointer objects?
-	 9 (?) 64-bit indexable
-	 10 - 11 32-bit indexable
-	 12 - 15 16-bit indexable
-	 16 - 23 byte indexable
-	 24 - 31 compiled method"
-	^(self longLongAt: objOop) >> self formatShift bitAnd: self formatMask
-]
-
 { #category : #'garbage collection' }
 Spur64BitMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
 	<var: #numBytes type: #usqLong>
@@ -131,16 +107,15 @@ Spur64BitMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
 	"must have room for a header (single or double) plus the next free pointer"
 	self assert: (numBytes \\ self allocationUnit = 0
 				 and: [numBytes >= (self baseHeaderSize + self wordSize)]).
-	self flag: #endianness.
 	"double header"
 	numBytes >= (self numSlotsMask << self shiftForWord) ifTrue:
 		[numSlots := numBytes - self baseHeaderSize - self baseHeaderSize >> self shiftForWord.
-		 self longLongAt: address put: self numSlotsMask << self numSlotsFullShift + numSlots;
-			longLongAt: address + 8 put: self numSlotsMask << self numSlotsFullShift. "0's classIndex; 0 = classIndex of free chunks"
+		 self longAt: address put: self numSlotsMask << self numSlotsFullShift + numSlots;
+			longAt: address + 8 put: self numSlotsMask << self numSlotsFullShift. "0's classIndex; 0 = classIndex of free chunks"
 		^address + 8].
 	"single header"
 	numSlots := numBytes - self baseHeaderSize >> self shiftForWord.
-	self longLongAt: address put: numSlots << self numSlotsFullShift. "0's classIndex; 0 = classIndex of free chunks"
+	self longAt: address put: numSlots << self numSlotsFullShift. "0's classIndex; 0 = classIndex of free chunks"
 	^address
 ]
 
@@ -216,12 +191,6 @@ Spur64BitMemoryManager >> isWordsNonImm: objOop [
 	^(self formatOf: objOop) between: self firstLongFormat and: self firstLongFormat + 1
 ]
 
-{ #category : #'header format' }
-Spur64BitMemoryManager >> longFormatForNumBytes: numBytes [
-	"Answer firstLongFormat with the odd bit set if numBytes is an odd number of 4-byte units."
-	^self firstLongFormat + (numBytes >> 2 bitAnd: 1)
-]
-
 { #category : #'object access' }
 Spur64BitMemoryManager >> numTagBits [
 	"4th bit reserved for object alignment, which could imply e.g. what space the object is in."
@@ -238,32 +207,54 @@ Spur64BitMemoryManager >> objectBytesForSlots: numSlots [
 		ifFalse: [self baseHeaderSize])
 ]
 
+{ #category : #'header access' }
+Spur64BitMemoryManager >> setClassIndexOf: objOop to: classIndex [
+	self assert: (classIndex between: 0 and: self classIndexMask).
+	self longAt: objOop
+		put: ((self longAt: objOop) bitAnd: self classIndexMask bitInvert64)
+			+ classIndex
+]
+
+{ #category : #'header access' }
+Spur64BitMemoryManager >> setFormatOf: objOop to: format [
+	"0 = 0 sized objects (UndefinedObject True False et al)
+	 1 = non-indexable objects with inst vars (Point et al)
+	 2 = indexable objects with no inst vars (Array et al)
+	 3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+	 4 = weak indexable objects with inst vars (WeakArray et al)
+	 5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+	 6 unused, reserved for exotic pointer objects?
+	 7 Forwarded Object, 1st field is pointer, rest of fields are ignored
+	 8 unused, reserved for exotic non-pointer objects?
+	 9 (?) 64-bit indexable
+	 10 - 11 32-bit indexable
+	 12 - 15 16-bit indexable
+	 16 - 23 byte indexable
+	 24 - 31 compiled method"
+	self assert: (format between: 0 and: self formatMask).
+	objOop
+		put: ((self longAt: objOop) bitAnd: (self formatMask << self formatShift) bitInvert64)
+			+ (format << self formatShift)
+]
+
+{ #category : #'header access' }
+Spur64BitMemoryManager >> setHashBitsOf: objOop to: hash [
+	self assert: (hash between: 0 and: self identityHashFullWordMask).
+	self longAt: objOop
+		put: ((self longAt: objOop) bitClear: self identityHashFullWordMask) + hash
+]
+
+{ #category : #'header access' }
+Spur64BitMemoryManager >> setIsRememberedOf: objOop to: aBoolean [
+	self longAt: objOop
+		put: (aBoolean
+				ifTrue: [(self longAt: objOop) bitOr: 1 << self rememberedBitShift]
+				ifFalse: [(self longAt: objOop) bitAnd: (1 << self rememberedBitShift) bitInvert64])
+]
+
 { #category : #'word size' }
 Spur64BitMemoryManager >> shiftForWord [
 	^3
-]
-
-{ #category : #'object access' }
-Spur64BitMemoryManager >> storePointer: fieldIndex ofObject: objOop withValue: valuePointer [
-	"Note must check here for stores of young objects into old ones."
-	self assert: (self isForwarded: objOop) not.
-
-	(self isYoung: objOop) ifFalse: "most stores into young objects"
-		[(self isImmediate: valuePointer) ifFalse:
-			[(self isYoung: valuePointer) ifTrue:
-				[self possibleRootStoreInto: objOop]]].
-
-	^self
-		longLongAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
-		put: valuePointer
-]
-
-{ #category : #'object access' }
-Spur64BitMemoryManager >> storePointerUnchecked: fieldIndex ofObject: objOop withValue: valuePointer [
-	self assert: (self isForwarded: objOop) not.
-	^self
-		longLongAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
-		put: valuePointer
 ]
 
 { #category : #'word size' }
