@@ -358,8 +358,7 @@ VMMaker class >> generateNewspeakStackVM [
 { #category : #configurations }
 VMMaker class >> generateSqueakCogSistaVM [
 	^VMMaker
-		generate: (Smalltalk at: ([:choices| choices at: (UIManager default chooseFrom: choices) ifAbsent: [^self]]
-									value: #(CoInterpreter CoInterpreterMT)))
+		generate: CoInterpreter
 		and: SistaStackToRegisterMappingCogit
 		to: (FileDirectory default pathFromURI: 'oscogvm/sistasrc')
 		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')

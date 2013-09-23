@@ -404,11 +404,6 @@ Spur32BitMemoryManager >> isWordsNonImm: objOop [
 	^(self formatOf: objOop) = self firstLongFormat
 ]
 
-{ #category : #'header format' }
-Spur32BitMemoryManager >> longFormatForNumBytes: numBytes [
-	^self firstLongFormat
-]
-
 { #category : #'object access' }
 Spur32BitMemoryManager >> numTagBits [
 	^2

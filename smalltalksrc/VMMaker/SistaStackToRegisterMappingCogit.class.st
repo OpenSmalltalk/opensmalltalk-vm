@@ -68,7 +68,7 @@ SistaStackToRegisterMappingCogit >> allocateCounters [
 } while (0)'>
 	counters := CArrayAccessor on:
 					((1 to: numCounters) collect:
-						[:ign| CogAbstractInstruction new])
+						[:ign| backEnd class new])
 ]
 
 { #category : #'method map' }
@@ -177,6 +177,7 @@ SistaStackToRegisterMappingCogit >> disassembleMethod: surrogateOrAddress on: aS
 SistaStackToRegisterMappingCogit >> fillInCounters: nCounters atEndAddress: endAddress [
 	endAddress - (nCounters * CounterBytes)
 		to: endAddress - CounterBytes
+		by: CounterBytes
 		do: [:address|
 			objectMemory
 				long32At: address
@@ -544,9 +545,7 @@ SistaStackToRegisterMappingCogit >> initializeCounters [
 SistaStackToRegisterMappingCogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg [
 	"Machine-code <-> bytecode pc mapping support.  Evaluate functionSymbol
 	 for each mcpc, bcpc pair in the map until the function returns non-zero,
-	 answering that result, or 0 if it fails to.  This works only for frameful methods.
-
-	 Override to add the descriptor as the first argument to function."
+	 answering that result, or 0 if it fails to.  This works only for frameful methods."
 	<var: #cogMethod type: #'CogBlockMethod *'>
 	<var: #functionSymbol declareC: 'sqInt (*functionSymbol)(BytecodeDescriptor * desc, char *mcpc, sqInt bcpc, void *arg)'>
 	<var: #arg type: #'void *'>
@@ -633,13 +632,15 @@ SistaStackToRegisterMappingCogit >> mapFor: cogMethod bcpc: startbcpc performUnt
 					result := self perform: functionSymbol
 									with: descriptor
 									with: (self cCoerceSimple: mcpc to: #'char *')
-									with: ((self isBackwardBranch: descriptor at: bcpc exts: nExts in: aMethodObj)
+									with: ((descriptor isBranch
+										   and: [self isBackwardBranch: descriptor at: bcpc exts: nExts in: aMethodObj])
 											ifTrue: [bcpc]
 											ifFalse: [bcpc + descriptor numBytes])
 									with: arg.
 					 result ~= 0 ifTrue:
 						[^result].
-					 bcpc := nextBcpc].
+					 bcpc := nextBcpc.
+					 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]].
 				annotation = IsAbsPCReference ifTrue:
 					[prevMapAbsPCMcpc := mcpc]]
 			ifFalse:
