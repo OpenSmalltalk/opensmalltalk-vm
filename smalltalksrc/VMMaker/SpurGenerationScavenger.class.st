@@ -283,15 +283,16 @@ SpurGenerationScavenger >> scavengeLoop [
 	previousRememberedSetSize := 0.
 	previousFutureSurvivorStart := futureSurvivorStart.
 	[self scavengeRememberedSetStartingAt: previousRememberedSetSize.
+	 firstTime ifTrue:
+		[coInterpreter mapInterpreterOops.
+		 firstTime := false].
+	 "northing more copied and forwarded to scavenge so scavenge is done."
 	 previousFutureSurvivorStart = futureSurvivorStart ifTrue:
 		[^self].
 	 previousRememberedSetSize := rememberedSetSize.
 
-	 firstTime ifTrue:
-		[coInterpreter mapInterpreterOops.
-		 firstTime := false].
-
 	 self scavengeFutureSurvivorSpaceStartingAt: previousFutureSurvivorStart.
+	 "no more roots created to scavenge, so scavenge is done."
 	 previousRememberedSetSize = rememberedSetSize ifTrue:
 		[^self].
 
