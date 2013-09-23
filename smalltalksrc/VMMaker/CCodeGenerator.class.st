@@ -190,10 +190,10 @@ CCodeGenerator >> addMethodFor: aClass selector: selector [
 			[^nil].
 		(aClass bindingOf: key) ifNotNil:
 			[:binding|
-			binding value ifFalse: [^nil]].
+			binding value == false ifTrue: [^nil]].
 		(VMBasicConstants bindingOf: key) ifNotNil:
 			[:binding|
-			binding value ifFalse: [^nil]]].
+			binding value == false ifTrue: [^nil]]].
 	tmethod := self addMethod: (self compileToTMethodSelector: selector in: aClass).
 	"If the method has a macro then add the macro.  But keep the method
 	 for analysis purposes (e.g. its variable accesses)."

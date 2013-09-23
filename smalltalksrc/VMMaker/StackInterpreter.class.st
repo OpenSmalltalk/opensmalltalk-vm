@@ -5423,15 +5423,18 @@ StackInterpreter >> followForwardingPointersInStackZone: becomeEffectsFlags [
 				[stackPages
 					longAt: theFP + FoxThisContext
 					put: (objectMemory followForwarded: (self frameContext: theFP))].
-			  (objectMemory isForwarded: (self frameMethod: theFP)) ifTrue:
-				[theIPPtr ~= 0 ifTrue:
+			  oop := self frameMethod: theFP.
+			  (objectMemory isForwarded: oop) ifTrue:
+				[| delta |
+				 theIPPtr ~= 0 ifTrue:
 					[self assert: (stackPages longAt: theIPPtr) > (self frameMethod: theFP).
-					 theIP := (stackPages longAt: theIPPtr) - (self frameMethod: theFP)].
+					 delta := (objectMemory followForwarded: oop) - oop.
+					 stackPages
+						longAt: theIPPtr
+						put: (stackPages longAt: theIPPtr) + delta].
 				stackPages
 					longAt: theFP + FoxMethod
-					put: (objectMemory followForwarded: (self frameMethod: theFP)).
-			 	 theIPPtr ~= 0 ifTrue:
-					[stackPages longAt: theIPPtr put: theIP + (self frameMethod: theFP)]].
+					put: (objectMemory followForwarded: oop)].
 			  self followNecessaryForwardingInMethod: (self frameMethod: theFP).
 			  (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
 				[theIPPtr := theFP + FoxCallerSavedIP.
@@ -8154,19 +8157,19 @@ StackInterpreter >> objCouldBeClassObj: objOop [
 	"Answer if objOop looks like a class object.  WIth Spur be lenient if the object doesn't
 	 yet have a hash (i.e. is not yet in the classTable), and accept forwarding pointers."
 	<inline: false>
-	| field |
+	| fieldOop |
 	^(objectMemory isPointersNonImm: objOop)
 	  and: [(objectMemory numSlotsOf: objOop) >= (InstanceSpecificationIndex+1)
-	  and: [field := objectMemory fetchPointer: SuperclassIndex ofObject: objOop.
-			((objectMemory isPointers: field)
+	  and: [fieldOop := objectMemory fetchPointer: SuperclassIndex ofObject: objOop.
+			((objectMemory isPointers: fieldOop)
 			or: [(objectMemory rawHashBitsOf: objOop) = 0
-				and: [(objectMemory isOopForwarded: field)
-				and: [objectMemory isPointers: (objectMemory followForwarded: field)]]])
-	  and: [field := objectMemory fetchPointer: MethodDictionaryIndex ofObject: objOop.
-			((objectMemory isPointers: field)
+				and: [(objectMemory isOopForwarded: fieldOop)
+				and: [objectMemory isPointers: (objectMemory followForwarded: fieldOop)]]])
+	  and: [fieldOop := objectMemory fetchPointer: MethodDictionaryIndex ofObject: objOop.
+			((objectMemory isPointers: fieldOop)
 			or: [(objectMemory rawHashBitsOf: objOop) = 0
-				and: [(objectMemory isOopForwarded: field)
-				and: [objectMemory isPointers: (objectMemory followForwarded: field)]]])
+				and: [(objectMemory isOopForwarded: fieldOop)
+				and: [objectMemory isPointers: (objectMemory followForwarded: fieldOop)]]])
 	  and: [(objectMemory isIntegerObject: (objectMemory fetchPointer: InstanceSpecificationIndex ofObject: objOop))]]]]
 ]
 
@@ -11078,7 +11081,7 @@ StackInterpreter >> snapshot: embedded [
 	| activeContext activeProc dataSize rcvr setMacType stackIndex |
 	<var: #setMacType type: 'void *'>
 
-	"For nowe the stack munging below doesn't deal with more than omne argument.
+	"For now the stack munging below doesn't deal with more than one argument.
 	 It can, and should."
 	argumentCount ~= 0 ifTrue:
 		[^self primitiveFailFor: PrimErrBadNumArgs].
@@ -11105,8 +11108,7 @@ StackInterpreter >> snapshot: embedded [
 	dataSize := objectMemory freeStart - objectMemory startOfMemory. "Assume all objects are below the start of the free block"
 	self successful ifTrue:
 		["Without contexts or stacks simulate
-			rcvr := self popStack.
-			''pop rcvr''
+			rcvr := self popStack. ''pop rcvr''
 			self push: trueObj.
 		  to arrange that the snapshot resumes with true.  N.B. stackIndex is one-relative."
 		stackIndex := self quickFetchInteger: StackPointerIndex ofObject: activeContext.
@@ -11151,7 +11153,7 @@ StackInterpreter >> snapshotCleanUp [
 
 	objectMemory hasSpurMemoryManagerAPI
 		ifTrue: [objectMemory flushNewSpace]
-		ifFalse: [objectMemory incrementalGC]	"compact memory and compute the size of the memory actually in use"
+		ifFalse: [objectMemory incrementalGC].	"compact memory and compute the size of the memory actually in use"
 
 	"maximimize space for forwarding table"
 	objectMemory fullGC.
