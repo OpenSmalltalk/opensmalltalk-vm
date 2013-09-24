@@ -1,3 +1,64 @@
+"
+SpurGenerationScavenger is an implementation of David Ungar's Generation Scavenging garbage collection algorithm.  See
+	Generation Scavenging, A Non-disruptive, High-Performance Storage Reclamation Algorithm
+	David Ungar
+	Proceeding
+	SDE 1 Proceedings of the first ACM SIGSOFT/SIGPLAN software engineering symposium on Practical software development environments
+	Pages 157 - 167 
+	ACM New York, NY, USA ©1984 
+	ISBN:0-89791-131-8
+
+Also relevant are
+	An adaptive tenuring policy for generation scavengers
+	David Ungar & Frank Jackson
+	ACM Transactions on Programming Languages and Systems (TOPLAS) TOPLAS Homepage archive
+	Volume 14 Issue 1, Jan. 1992 
+	Pages 1 - 27 
+	ACM New York, NY, USA
+
+Instance Variables
+	coInterpreter:			<StackInterpreterSimulator|CogVMSimulator>
+	eden:					<SpurNewSpaceSpace>
+	futureSpace:			<SpurNewSpaceSpace>
+	futureSurvivorStart:		<Integer address>
+	manager:				<SpurMemoryManager|Spur32BitMMLESimulator et al>
+	pastSpace:				<SpurNewSpaceSpace>
+	rememberedSet:		<CArrayAccessor on: Array>
+	rememberedSetSize:	<Integer>
+	tenuringProportion:		<Float>
+	tenuringThreshold:		<Integer address>
+
+coInterpreter
+	- the interpreter/vm, in this context, the mutator
+
+eden
+	- the space containing newly created objects
+
+futureSpace
+	- the space to which surviving objects are copied during a scavenge
+
+futureSurvivorStart
+	- the allocation pointer into futureSpace
+
+manager
+	- the Spur memory manager
+
+pastSpace
+	- the space surviving objects live in until the next scavenge
+
+rememberedSet
+	- the root old space objects that refer to objects in new space; a scavenge starts form these roots and the interpreter's stack
+
+rememberedSetSize
+	- the size of the remembered set, also the first unused index in the rememberedSet
+
+tenuringProportion
+	- the amount of pastSpace below which the system will not tenure unless futureSpace fills up, and above which it will eagerly tenure
+
+tenuringThreshold
+	- the pointer into pastSpace below which objects will be tenured
+
+"
 Class {
 	#name : #SpurGenerationScavenger,
 	#superclass : #CogClass,
