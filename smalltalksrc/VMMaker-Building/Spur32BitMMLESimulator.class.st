@@ -131,12 +131,32 @@ Spur32BitMMLESimulator >> firstIndexableField: objOop [
 				ifFalse: ["byte objects (including CompiledMethod" #'char *'])
 ]
 
+{ #category : #'simulation only' }
+Spur32BitMMLESimulator >> floatValueOf: obj [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter floatValueOf: obj
+]
+
 { #category : #become }
 Spur32BitMMLESimulator >> forward: obj1 to: obj2 [
 	"(obj1 = 16r150CD8 or: [obj1 = 16r1510B8
 	 or: [obj2 = 16r150CD8 or: [obj2 = 16r1510B8]]]) ifTrue:
 		[self halt]."
 	^super forward: obj1 to: obj2
+]
+
+{ #category : #'memory access' }
+Spur32BitMMLESimulator >> halfWordHighInLong32: long32 [
+	"Used by Balloon"
+
+	^long32 bitAnd: 16rFFFF
+]
+
+{ #category : #'memory access' }
+Spur32BitMMLESimulator >> halfWordLowInLong32: long32 [
+	"Used by Balloon"
+
+	^long32 bitShift: -16
 ]
 
 { #category : #'header format' }
@@ -170,6 +190,12 @@ Spur32BitMMLESimulator >> ioLoadFunction: functionString From: pluginString [
 Spur32BitMMLESimulator >> is: oop KindOf: classNameString [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter is: oop KindOf: classNameString
+]
+
+{ #category : #'simulation only' }
+Spur32BitMMLESimulator >> isFloatObject: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter isFloatObject: oop
 ]
 
 { #category : #'memory access' }
@@ -293,6 +319,12 @@ Spur32BitMMLESimulator >> pushBool: trueOrFalse [
 ]
 
 { #category : #'simulation only' }
+Spur32BitMMLESimulator >> pushFloat: f [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter pushFloat: f
+]
+
+{ #category : #'simulation only' }
 Spur32BitMMLESimulator >> pushInteger: integerValue [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter pushInteger: integerValue
@@ -326,6 +358,12 @@ Spur32BitMMLESimulator >> showDisplayBits: aForm Left: l Top: t Right: r Bottom:
 Spur32BitMMLESimulator >> stObject: objOop at: indexOop put: valueOop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter stObject: objOop at: indexOop put: valueOop
+]
+
+{ #category : #'simulation only' }
+Spur32BitMMLESimulator >> stackFloatValue: offset [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter stackFloatValue: offset
 ]
 
 { #category : #'simulation only' }
