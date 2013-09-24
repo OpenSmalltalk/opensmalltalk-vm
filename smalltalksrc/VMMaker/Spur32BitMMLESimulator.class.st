@@ -222,7 +222,7 @@ Spur32BitMMLESimulator >> longAt: byteAddress [
 { #category : #'memory access' }
 Spur32BitMMLESimulator >> longAt: byteAddress put: a32BitValue [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
-	"(byteAddress = 16r11D8240 and: [a32BitValue = 16r1D8368]) ifTrue:
+	"(byteAddress = 16r1614CB8 and: [a32BitValue = 16rA000035]) ifTrue:
 		[self halt]."
 	byteAddress \\ 4 ~= 0 ifTrue: [self unalignedAccessError].
 	^memory at: byteAddress // 4 + 1 put: a32BitValue
@@ -242,13 +242,10 @@ Spur32BitMMLESimulator >> longLongAt: byteAddress [
 
 { #category : #'memory access' }
 Spur32BitMMLESimulator >> longLongAt: byteAddress put: a64BitValue [
-	"memory is a Bitmap, a 32-bit indexable array of bits"
 	byteAddress \\ 8 ~= 0 ifTrue: [self unalignedAccessError].
-	"(byteAddress = 16r11D8240 and: [(a64BitValue bitAnd: 16rffffffff) = 16r1D8368]) ifTrue:
-		[self halt]."
-	memory
-		at: byteAddress // 4 + 1 put: (a64BitValue bitAnd: 16rffffffff);
-		at: byteAddress // 4 + 2 put: a64BitValue >> 32.
+	self
+		longAt: byteAddress put: (a64BitValue bitAnd: 16rffffffff);
+		longAt: byteAddress + 4 put: a64BitValue >> 32.
 	^a64BitValue
 ]
 
