@@ -41,7 +41,7 @@ Spur32BitMemoryManager >> allocateSlots: numSlots format: formatField classIndex
 	freeStart + numBytes > scavengeThreshold ifTrue:
 		[needGCFlag ifFalse: [self scheduleScavenge].
 		 freeStart + numBytes > scavenger eden limit ifTrue:
-			[^self allocateSlotsInOldSpace: numSlots format: formatField classIndex: classIndex]].
+			[^self allocateSlotsInOldSpace: numSlots bytes: numBytes format: formatField classIndex: classIndex]].
 	numSlots >= self numSlotsMask
 		ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
 			[self flag: #endianness.
@@ -57,13 +57,12 @@ Spur32BitMemoryManager >> allocateSlots: numSlots format: formatField classIndex
 ]
 
 { #category : #allocation }
-Spur32BitMemoryManager >> allocateSlotsInOldSpace: numSlots format: formatField classIndex: classIndex [
+Spur32BitMemoryManager >> allocateSlotsInOldSpace: numSlots bytes: totalBytes format: formatField classIndex: classIndex [
 	"Answer the oop of a chunk of space in oldSpace with numSlots slots.  The header
 	 will have been filled-in but not the contents."
-	| bytes chunk |
-	bytes := self objectBytesForSlots: numSlots.
-	chunk := self allocateOldSpaceChunkOfBytes: bytes.
-	self assert: totalFreeOldSpace = self totalFreeListBytes.
+	| chunk |
+	chunk := self allocateOldSpaceChunkOfBytes: totalBytes.
+	self checkFreeSpace.
 	chunk ifNil:
 		[^nil].
 	numSlots >= self numSlotsMask ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
@@ -151,7 +150,12 @@ Spur32BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 		[self firstCompiledMethodFormat]	->
 			[numSlots := nElements + 3 // 4.
 			 instSpec := instSpec + (4 - nElements bitAnd: 3)] }
-		otherwise: [^nil]. "non-indexable"
+		otherwise: ["some Squeak images include funky fixed subclasses of abstract variable
+					 superclasses. e.g. DirectoryEntry as a subclass of ArrayedCollection.
+					 Allow fixed classes to be instantiated here iff nElements = 0."
+					 numSlots := self fixedFieldsOfClassFormat: classFormat.
+					 nElements ~= 0 ifTrue:
+						[^nil]]. "non-indexable"
 	classIndex := self ensureBehaviorHash: classObj.
 	classIndex < 0 ifTrue:
 		[coInterpreter primitiveFailFor: classIndex negated.

@@ -44,7 +44,7 @@ Spur64BitMemoryManager >> allocateSlots: numSlots format: formatField classIndex
 	freeStart + numBytes > scavengeThreshold ifTrue:
 		[needGCFlag ifFalse: [self scheduleScavenge].
 		 freeStart + numBytes > scavenger eden limit ifTrue:
-			[^self allocateSlotsInOldSpace: numSlots format: formatField classIndex: classIndex]].
+			[^self allocateSlotsInOldSpace: numSlots bytes: numBytes format: formatField classIndex: classIndex]].
 	numSlots >= self numSlotsMask
 		ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
 			[self flag: #endianness.
@@ -60,12 +60,11 @@ Spur64BitMemoryManager >> allocateSlots: numSlots format: formatField classIndex
 ]
 
 { #category : #allocation }
-Spur64BitMemoryManager >> allocateSlotsInOldSpace: numSlots format: formatField classIndex: classIndex [
+Spur64BitMemoryManager >> allocateSlotsInOldSpace: numSlots bytes: totalBytes format: formatField classIndex: classIndex [
 	"Answer the oop of a chunk of space in oldSpace with numSlots slots.  The header
 	 will have been filled-in but not the contents."
-	| bytes chunk |
-	bytes := self objectBytesForSlots: numSlots.
-	chunk := self allocateOldSpaceChunkOfBytes: bytes.
+	| chunk |
+	chunk := self allocateOldSpaceChunkOfBytes: totalBytes.
 	chunk ifNil:
 		[^nil].
 	numSlots >= self numSlotsMask ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
