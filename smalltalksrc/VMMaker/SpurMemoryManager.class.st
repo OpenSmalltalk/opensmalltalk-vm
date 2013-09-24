@@ -1681,6 +1681,11 @@ SpurMemoryManager >> eek [
 	<inline: true>
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> endOfMemory [
+	^endOfMemory
+]
+
 { #category : #'class table' }
 SpurMemoryManager >> ensureBehaviorHash: aBehavior [
 	| newHash err |
