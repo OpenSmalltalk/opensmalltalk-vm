@@ -63,6 +63,7 @@ Spur32BitMemoryManager >> allocateSlotsInOldSpace: numSlots format: formatField 
 	| bytes chunk |
 	bytes := self objectBytesForSlots: numSlots.
 	chunk := self allocateOldSpaceChunkOfBytes: bytes.
+	self assert: totalFreeOldSpace = self totalFreeListBytes.
 	chunk ifNil:
 		[^nil].
 	numSlots >= self numSlotsMask ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
