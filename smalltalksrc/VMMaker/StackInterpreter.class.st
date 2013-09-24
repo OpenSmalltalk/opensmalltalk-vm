@@ -9150,10 +9150,18 @@ StackInterpreter >> printHex: n [
 
 { #category : #'debug printing' }
 StackInterpreter >> printHexPtr: p [
-	"Print p in hex, passed to 10 characters in the form '    0x1234'"
+	"Print p in hex, padded to 10 characters in the form '    0x1234'"
 	<inline: true>
 	<var: #p type: #'void *'>
 	self printHex: (self oopForPointer: p)
+]
+
+{ #category : #'debug printing' }
+StackInterpreter >> printHexPtrnp: p [
+	"Print p in hex, unpadded, in the form '0x1234'"
+	<inline: true>
+	<var: #p type: #'void *'>
+	self printHexnp: (self oopForPointer: p)
 ]
 
 { #category : #'debug printing' }

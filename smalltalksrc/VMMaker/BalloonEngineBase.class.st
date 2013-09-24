@@ -1810,7 +1810,7 @@ BalloonEngineBase >> loadTransformFrom: transformOop into: destPtr length: n [
 	<inline: false>
 	<var: #destPtr type:'float *'>
 	transformOop = interpreterProxy nilObject ifTrue:[^false].
-	(interpreterProxy isIntegerObject: transformOop)
+	(interpreterProxy isImmediate: transformOop)
 		ifTrue:[^interpreterProxy primitiveFail].
 	(interpreterProxy slotSizeOf: transformOop) = n 
 		ifFalse:[^interpreterProxy primitiveFail].
