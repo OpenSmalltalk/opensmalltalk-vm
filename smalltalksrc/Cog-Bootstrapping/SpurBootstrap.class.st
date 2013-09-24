@@ -55,6 +55,8 @@ Class {
 	#instVars : [
 		'oldHeap',
 		'newHeap',
+		'oldHeapSize',
+		'newHeapSize',
 		'map',
 		'reverseMap',
 		'classToIndex',
@@ -218,7 +220,8 @@ SpurBootstrap class >> BehaviorPROTOTYPEinstSize [
 { #category : #'method prototypes' }
 SpurBootstrap class >> BehaviorPROTOTYPEinstSpec [
 	"Answer the instance specification part of the format that defines what kind of object
-	 an instance of the receiver is.  The formats are0 = 0 sized objects (UndefinedObject True False et al)
+	 an instance of the receiver is.  The formats are
+		0 = 0 sized objects (UndefinedObject True False et al)
 		1 = non-indexable objects with inst vars (Point et al)
 		2 = indexable objects with no inst vars (Array et al)
 		3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
@@ -558,6 +561,8 @@ SpurBootstrap >> allocateClassTable [
 
 { #category : #'bootstrap image' }
 SpurBootstrap >> bootstrapImage [
+	oldHeap fullGC.
+	oldHeapSize := oldHeap freeStart.
 	Transcript cr; nextPutAll: 'transforming image...'; flush.
 	self cloneNilTrueAndFalse.
 	self buildClassMap.
@@ -565,6 +570,7 @@ SpurBootstrap >> bootstrapImage [
 	self cloneObjects.
 	self fillInObjects.
 	self fillInClassTable.
+	newHeapSize := newHeap freeStart.
 	newHeap initializePostBootstrap
 ]
 
@@ -1445,6 +1451,7 @@ SpurBootstrap >> symbolClass [
 
 { #category : #'bootstrap image' }
 SpurBootstrap >> transform [
+	| change |
 	self rememberRehashSymbol.
 	self findRequiredGlobals.
 	self installModifiedMethods.
@@ -1455,7 +1462,21 @@ SpurBootstrap >> transform [
 	self scavengeImage.
 	self freeForwarders.
 	self compactImage.
-	Transcript nextPutAll: 'done.'; flush.
+	change := newHeapSize - oldHeapSize / oldHeapSize.
+	Transcript
+		nextPutAll: 'done.'; cr;
+		nextPutAll: 'old heap size: '; print: oldHeapSize; cr;
+		nextPutAll: 'initial new heap size: '; print: newHeapSize; cr;
+		nextPutAll: 'change: '; print: (change * 100.0 roundTo: 0.01); nextPut: $%; cr;
+		flush.
+	newHeapSize := newHeap endOfMemory
+					- newHeap scavenger eden limit
+					- newHeap totalFreeListBytes.
+	change := newHeapSize - oldHeapSize / oldHeapSize.
+	Transcript
+		nextPutAll: 'final new heap size: '; print: newHeapSize; cr;
+		nextPutAll: 'change: '; print: (change * 100.0 roundTo: 0.01); nextPut: $%; cr;
+		flush.
 ]
 
 { #category : #'bootstrap image' }
