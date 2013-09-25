@@ -1689,7 +1689,7 @@ SpurMemoryManager >> eeInstantiateClassIndex: knownClassIndex format: objFormat 
 	 call is used in routines that do just that we are safe.  Break this rule and die in GC.
 	 Result is guaranteed to be young."
 	<inline: true>
-	self assert: (numSlots > 0 and: [knownClassIndex ~= 0]).
+	self assert: (numSlots >= 0 and: [knownClassIndex ~= 0]).
 	self assert: (objFormat < self firstByteFormat
 					ifTrue: [objFormat]
 					ifFalse: [objFormat bitAnd: self byteFormatMask])
@@ -2811,7 +2811,8 @@ SpurMemoryManager >> isIntegerObject: oop [
 		signed32BitValueOf:
 		isNormalized:
 		primDigitDiv:negative:
-		bytesOrInt:growTo:) includes: sel) ifFalse:
+		bytesOrInt:growTo:
+		primitiveNewMethod) includes: sel) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
@@ -2831,7 +2832,8 @@ SpurMemoryManager >> isNonImmediate: oop [
 SpurMemoryManager >> isNonIntegerObject: oop [
 	"This list records the valid senders of isNonIntegerObject: as we replace uses of
 	  isNonIntegerObject: by isNonImmediate: where appropriate."
-	(#(reverseDisplayFrom:to:) includes: thisContext sender method selector) ifFalse:
+	(#(	reverseDisplayFrom:to:
+		primitiveObjectAtPut) includes: thisContext sender method selector) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) = 0
 ]
