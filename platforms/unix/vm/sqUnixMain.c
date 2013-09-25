@@ -786,6 +786,8 @@ static void outOfMemory(void)
 /* Print an error message, possibly a stack trace, do /not/ exit.
  * Allows e.g. writing to a log file and stderr.
  */
+static void printRegisterState(ucontext_t *uap);
+
 static void
 reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 {
@@ -800,6 +802,7 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 	printf("%s\n\n", getVersionInfo(1));
 
 #if !defined(NOEXECINFO)
+	printRegisterState(uap);
 	printf("C stack backtrace:\n");
 	fflush(stdout); /* backtrace_symbols_fd uses unbuffered i/o */
 	depth = backtrace(addrs, BACKTRACE_DEPTH);
@@ -864,6 +867,27 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 #endif
 	printf("\n\t(%s)\n", msg);
 	fflush(stdout);
+}
+
+/* Attempt to dump the registers to stdout.  Only do so if we know how. */
+static void
+printRegisterState(ucontext_t *uap)
+{
+#if __linux__ && __i386__
+	gregset_t *regs = &uap->uc_mcontext.gregs;
+	printf(	"eax 0x%8x ebx 0x%8x ecx 0x%8x edx 0x%8x\n"
+			"edi 0x%8x esi 0x%8x ebp 0x%8x esp 0x%8x\n",
+			regs[REG_EAX], regs[REG_EBX], regs[REG_ECX], regs[REG_EDX],
+			regs[REG_EDI], regs[REG_EDI], regs[REG_EBP], regs[REG_ESP]);
+#elif __FreeBSD__ && __i386__
+	struct mcontext *regs = &uap->uc_mcontext;
+	printf(	"eax 0x%8x ebx 0x%8x ecx 0x%8x edx 0x%8x\n"
+			"edi 0x%8x esi 0x%8x ebp 0x%8x esp 0x%8x\n",
+			regs->mc_eax, regs->mc_ebx, regs->mc_ecx, regs->mc_edx,
+			regs->mc_edi, regs->mc_edi, regs->mc_ebp, regs->mc_esp);
+#else
+	printf("don't know how to derive register state from a ucontext_t on this platform\n");
+#endif
 }
 
 int blockOnError = 0; /* to allow attaching gdb on fatal error */

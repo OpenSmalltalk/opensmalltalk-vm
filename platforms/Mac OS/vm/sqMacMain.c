@@ -161,6 +161,8 @@ char *getVersionInfo(int verbose);
 /* Print an error message, possibly a stack trace, do /not/ exit.
  * Allows e.g. writing to a log file and stderr.
  */
+static void printRegisterState(ucontext_t *uap);
+
 static void
 reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 {
@@ -175,6 +177,7 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 	printf("%s\n\n", getVersionInfo(1));
 
 #if !defined(NOEXECINFO)
+	printRegisterState(uap);
 	printf("C stack backtrace:\n");
 	fflush(stdout); /* backtrace_symbols_fd uses unbuffered i/o */
 	depth = backtrace(addrs, BACKTRACE_DEPTH);
@@ -246,6 +249,27 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 	fflush(stdout);
 }
 
+/* Attempt to dump the registers to stdout.  Only do so if we know how. */
+static void
+printRegisterState(ucontext_t *uap)
+{
+#if __DARWIN_UNIX03 && __APPLE__ && __MACH__ && __i386__
+	_STRUCT_X86_THREAD_STATE32 *regs = &uap->uc_mcontext->__ss;
+	printf(	"eax 0x%8x ebx 0x%8x ecx 0x%8x edx 0x%8x\n"
+			"edi 0x%8x esi 0x%8x ebp 0x%8x esp 0x%8x\n",
+			regs->__eax, regs->__ebx, regs->__ecx, regs->__edx,
+			regs->__edi, regs->__edi, regs->__ebp, regs->__esp);
+#elif __APPLE__ && __MACH__ && __i386__
+	_STRUCT_X86_THREAD_STATE32 *regs = &uap->uc_mcontext->ss;
+	printf(	"eax 0x%8x ebx 0x%8x ecx 0x%8x edx 0x%8x\n"
+			"edi 0x%8x esi 0x%8x ebp 0x%8x esp 0x%8x\n",
+			regs->eax, regs->ebx, regs->ecx, regs->edx,
+			regs->edi, regs->edi, regs->ebp, regs->esp);
+#else
+	printf("don't know how to derive register state from a ucontext_t on this platform\n");
+#endif
+}
+
 int blockOnError = 0; /* to allow attaching gdb on fatal error */
 
 static void
@@ -276,8 +300,10 @@ static char vmLogDirA[PATH_MAX+1];
 static void
 getCrashDumpFilenameInto(char *buf)
 {
-	strcpy(buf,vmLogDirA);
-	vmLogDirA[0] && strcat(buf, "/");
+	if (vmLogDirA[0]) {
+		strcpy(buf,vmLogDirA);
+		strcat(buf, "/");
+	}
 	strcat(buf, "crash.dmp");
 }
 
