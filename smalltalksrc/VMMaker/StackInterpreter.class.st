@@ -3814,11 +3814,26 @@ StackInterpreter >> createActualMessageTo: lookupClass [
 	| argumentArray message |
 	<inline: false> "This is a useful break-point"
 	self assert: ((objectMemory isImmediate: messageSelector) or: [objectMemory addressCouldBeObj: messageSelector]).
-	argumentArray := objectMemory eeInstantiateClass: (objectMemory splObj: ClassArray) indexableSize: argumentCount.
-	message := objectMemory eeInstantiateClass: (objectMemory splObj: ClassMessage) indexableSize: 0.
+	objectMemory hasSpurMemoryManagerAPI
+		ifTrue:
+			[argumentArray := objectMemory
+								eeInstantiateClassIndex: ClassArrayCompactIndex
+								format: objectMemory arrayFormat
+								numSlots: argumentCount.
+			 message := objectMemory
+								eeInstantiateClassIndex: ClassMessageCompactIndex
+								format: objectMemory nonIndexablePointerFormat
+								numSlots: MessageLookupClassIndex + 1]
+		ifFalse:
+			[argumentArray := objectMemory
+								eeInstantiateClass: (objectMemory splObj: ClassArray)
+								indexableSize: argumentCount.
+			 message := objectMemory
+								eeInstantiateClass: (objectMemory splObj: ClassMessage)
+								indexableSize: 0].
 
 	"Since the array is new can use unchecked stores."
-	(argumentCount - 1) * BytesPerWord to: 0 by: BytesPerWord negated do:
+	(argumentCount - 1) * BytesPerOop to: 0 by: BytesPerOop negated do:
 		[:i|
 		self longAt:  argumentArray + objectMemory baseHeaderSize + i put: self popStack].
 	"Since message is new can use unchecked stores."
@@ -10842,7 +10857,7 @@ StackInterpreter >> shortPrintFramesInPage: thePage [
 { #category : #'debug printing' }
 StackInterpreter >> shortPrintOop: oop [
 	<inline: false>
-	self printHex: oop.
+	self printHexnp: oop.
 	(objectMemory isImmediate: oop) ifTrue:
 		[(objectMemory isImmediateCharacter: oop) ifTrue:
 			[^self
