@@ -856,6 +856,11 @@ SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceByt
 					edenBytes: newSpaceBytes * 5 // 7 "David's paper uses 140Kb eden + 2 x 28kb survivor spaces :-)"
 ]
 
+{ #category : #allocation }
+SpurMemoryManager >> allocateNewSpaceSlots: numSlots format: formatField classIndex: classIndex [
+	self subclassResponsibility
+]
+
 { #category : #'free space' }
 SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 	"Answer a chunk of oldSpace from the free lists, if available,
@@ -882,8 +887,11 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 				 self freeChunkWithBytes: index * self allocationUnit - chunkBytes
 					at: (self startOfObject: chunk) + chunkBytes.
 				^chunk]].
-		 "now get desperate and use the first that'll fit"
-		 index := initialIndex.
+		 "now get desperate and use the first that'll fit.
+		  Note that because the minimum free size is 16 bytes (2 * allocationUnit), to
+		  leave room for the forwarding pointer/next free link, we can only break chunks
+		  that are at least 16 bytes larger, hence start at initialIndex + 2."
+		 index := initialIndex + 1.
 		 [(index := index + 1) < NumFreeLists
 		  and: [1 << index <= freeListsMask]] whileTrue:
 			[(freeListsMask anyMask: 1 << index) ifTrue:
@@ -1673,32 +1681,44 @@ SpurMemoryManager >> edenBytes [
 	^scavenger eden limit - scavenger eden start
 ]
 
-{ #category : #allocation }
+{ #category : #instantiation }
 SpurMemoryManager >> eeInstantiateClassIndex: knownClassIndex format: objFormat numSlots: numSlots [
 	"Instantiate an instance of a compact class.  ee stands for execution engine and
 	 implies that this allocation will *NOT* cause a GC.  N.B. the instantiated object
 	 IS NOT FILLED and must be completed before returning it to Smalltalk. Since this
-	 call is used in routines that do just that we are safe.  Break this rule and die in GC."
+	 call is used in routines that do just that we are safe.  Break this rule and die in GC.
+	 Result is guaranteed to be young."
 	<inline: true>
 	self assert: (numSlots > 0 and: [knownClassIndex ~= 0]).
 	self assert: (objFormat < self firstByteFormat
 					ifTrue: [objFormat]
 					ifFalse: [objFormat bitAnd: self byteFormatMask])
 				= (self instSpecOfClass: (self knownClassAtIndex: knownClassIndex)).
-	^self allocateSlots: numSlots format: objFormat classIndex: knownClassIndex
+	^self allocateNewSpaceSlots: numSlots format: objFormat classIndex: knownClassIndex
 ]
 
-{ #category : #allocation }
+{ #category : #instantiation }
 SpurMemoryManager >> eeInstantiateMethodContextSlots: numSlots [
+	"Allocate a new MethodContext.  ee stands for execution engine and
+	 implies that this allocation will *NOT* cause a GC.  N.B. the instantiated object
+	 IS NOT FILLED and must be completed before returning it to Smalltalk. Since this
+	 call is used in routines that do just that we are safe.  Break this rule and die in GC.
+	 Result is guaranteed to be young."
+	<inline: true>
 	<inline: true>
 	^self
-		allocateSlots: numSlots
+		allocateNewSpaceSlots: numSlots
 		format: self indexablePointersFormat
 		classIndex: ClassMethodContextCompactIndex
 ]
 
-{ #category : #allocation }
+{ #category : #instantiation }
 SpurMemoryManager >> eeInstantiateSmallClass: classObj numSlots: numSlots [
+	"Instantiate an instance of a class, with only a few slots.  ee stands for execution
+	 engine and implies that this allocation will *NOT* cause a GC.  N.B. the instantiated
+	 object IS NOT FILLED and must be completed before returning it to Smalltalk. Since
+	 this call is used in routines that do just that we are safe.  Break this rule and die in GC.
+	 Result is guaranteed to be young."
 	| classIndex |
 	<inline: true>
 	classIndex := self ensureBehaviorHash: classObj.
@@ -1734,6 +1754,7 @@ SpurMemoryManager >> ensureBehaviorHash: aBehavior [
 { #category : #'class table' }
 SpurMemoryManager >> enterIntoClassTable: aBehavior [
 	"Enter aBehavior into the class table and answer 0.  Otherwise answer a primitive failure code."
+	<inline: false>
 	| initialMajorIndex majorIndex minorIndex page |
 	majorIndex := classTableIndex >> self classTableMajorIndexShift.
 	initialMajorIndex := majorIndex.
@@ -2495,7 +2516,7 @@ SpurMemoryManager >> instanceSizeOf: classObj [
 	^(self formatOfClass: classObj) bitAnd: self fixedFieldsOfClassFormatMask
 ]
 
-{ #category : #allocation }
+{ #category : #instantiation }
 SpurMemoryManager >> instantiateClass: classObj [
 	| instSpec classFormat numSlots classIndex newObj |
 	classFormat := self formatOfClass: classObj.
@@ -2513,7 +2534,7 @@ SpurMemoryManager >> instantiateClass: classObj [
 	^newObj
 ]
 
-{ #category : #allocation }
+{ #category : #instantiation }
 SpurMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 	^self subclassResponsibility
 ]
@@ -2789,7 +2810,8 @@ SpurMemoryManager >> isIntegerObject: oop [
 		digitBitLogic:with:opIndex:
 		signed32BitValueOf:
 		isNormalized:
-		primDigitDiv:negative:) includes: sel) ifFalse:
+		primDigitDiv:negative:
+		bytesOrInt:growTo:) includes: sel) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
@@ -3058,7 +3080,7 @@ SpurMemoryManager >> nilObject: anOop [
 
 { #category : #'header format' }
 SpurMemoryManager >> nonIndexablePointerFormat [
-	^2
+	^1
 ]
 
 { #category : #'object enumeration' }

@@ -330,7 +330,9 @@ Spur32BitMMLESimulator >> pushInteger: integerValue [
 { #category : #'generation scavenging' }
 Spur32BitMMLESimulator >> scavengingGC [
 	"Run the scavenger."
-	self halt: (statScavenges + 1) printString, (#('st' 'nd' 'rd') at: (statScavenges + 1) \\ 10 ifAbsent: 'th'), ' scavenge'.
+	self halt: (statScavenges + 1) printString, ((statScavenges between: 9 and: 19)
+													ifTrue: ['th']
+													ifFalse: [#('st' 'nd' 'rd') at: (statScavenges + 1) \\ 10 ifAbsent: 'th']), ' scavenge'.
 	^super scavengingGC
 ]
 

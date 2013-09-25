@@ -856,7 +856,8 @@ NewObjectMemory >> eeInstantiateClassIndex: compactClassIndex format: objFormat 
 	"Instantiate an instance of a compact class.  ee stands for execution engine and
 	 implies that this allocation will *NOT* cause a GC.  N.B. the instantiated object
 	 IS NOT FILLED and must be completed before returning it to Smalltalk. Since this
-	 call is used in routines that do just that we are safe.  Break this rule and die in GC."
+	 call is used in routines that do just that we are safe.  Break this rule and die in GC.
+	 Result is guaranteed to be young."
 	<api>
 	| hash header1 header2 byteSize header3 hdrSize |
 	<inline: false>
@@ -894,7 +895,7 @@ NewObjectMemory >> eeInstantiateMethodContextSlots: numSlots [
 	 size is under 256 bytes, the limit for objects with only one or 
 	 two header words. Note that the size is specified in bytes 
 	 and should include four bytes for the base header word.
-	 Will *not* cause a GC."
+	 Will *not* cause a GC. Result is guaranteed to be young."
 	| sizeInBytes hash header1 |
 	self assert: (numSlots = SmallContextSlots or: [numSlots = LargeContextSlots]).
 	sizeInBytes := numSlots * BytesPerOop + BaseHeaderSize.
@@ -910,14 +911,13 @@ NewObjectMemory >> eeInstantiateMethodContextSlots: numSlots [
 
 { #category : #'interpreter access' }
 NewObjectMemory >> eeInstantiateSmallClass: classPointer numSlots: numSlots [
-	"This version of instantiateClass assumes that the total object
-	 size is under 256 bytes, the limit for objects with only one or
-	 two header words. 
+	"This version of instantiateClass assumes that the total object size is under
+	 256 bytes, the limit for objects with only one or two header words. 
 	 NOTE this code will only work for sizes that are an integral number of words
-		(like not a 32-bit LargeInteger in a 64-bit system).
-	 Will *not* cause a GC.
+		(hence not a 32-bit LargeInteger in a 64-bit system).
 	 Note that the created small object IS NOT FILLED and must be completed before returning it to Squeak.
-	 Since this call is used in routines that do just that we are safe. Break this rule and die."
+	 Since this call is used in routines that do just that we are safe. Break this rule and die in GC.
+	 Will *not* cause a GC. Result is guaranteed to be young."
 
 	| sizeInBytes hash header1 header2 hdrSize |
 	sizeInBytes := numSlots << ShiftForWord + BaseHeaderSize.
