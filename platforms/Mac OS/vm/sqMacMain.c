@@ -161,13 +161,14 @@ char *getVersionInfo(int verbose);
 /* Print an error message, possibly a stack trace, do /not/ exit.
  * Allows e.g. writing to a log file and stderr.
  */
-static void printRegisterState(ucontext_t *uap);
+static void *printRegisterState(ucontext_t *uap);
 
 static void
 reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 {
 #if !defined(NOEXECINFO)
-	void *addrs[BACKTRACE_DEPTH];
+	void *addrs[BACKTRACE_DEPTH+1];
+	void *pc;
 	int depth;
 #endif
 	/* flag prevents recursive error when trying to print a broken stack */
@@ -177,16 +178,18 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 	printf("%s\n\n", getVersionInfo(1));
 
 #if !defined(NOEXECINFO)
-	printRegisterState(uap);
-	printf("C stack backtrace:\n");
-	fflush(stdout); /* backtrace_symbols_fd uses unbuffered i/o */
-	depth = backtrace(addrs, BACKTRACE_DEPTH);
+	printf("C stack backtrace & registers:\n");
+	pc = printRegisterState(uap);
+	depth = backtrace(addrs + 1, BACKTRACE_DEPTH);
+	addrs[0] = pc;
 # if 0 /* Mac OS's backtrace_symbols_fd prints NULL byte droppings each line */
-	backtrace_symbols_fd(addrs, depth, fileno(stdout));
+	fflush(stdout); /* backtrace_symbols_fd uses unbuffered i/o */
+	backtrace_symbols_fd(addrs, depth + 1, fileno(stdout));
 # else
 	{ int i; char **strings;
-	  strings = backtrace_symbols(addrs, depth);
-	  for (i = 0; i < depth; i++)
+	  strings = backtrace_symbols(addrs, depth + 1);
+	  printf("(%s)\n", strings[0]);
+	  for (i = 1; i < depth; i++)
 		printf("%s\n", strings[i]);
 	}
 # endif
@@ -250,23 +253,30 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 }
 
 /* Attempt to dump the registers to stdout.  Only do so if we know how. */
-static void
+static void *
 printRegisterState(ucontext_t *uap)
 {
 #if __DARWIN_UNIX03 && __APPLE__ && __MACH__ && __i386__
 	_STRUCT_X86_THREAD_STATE32 *regs = &uap->uc_mcontext->__ss;
-	printf(	"eax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
-			"edi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n",
+	printf(	"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
+			"\tedi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n"
+			"\teip 0x%08x\n",
 			regs->__eax, regs->__ebx, regs->__ecx, regs->__edx,
-			regs->__edi, regs->__edi, regs->__ebp, regs->__esp);
+			regs->__edi, regs->__edi, regs->__ebp, regs->__esp,
+			regs->__eip);
+	return regs->__eip;
 #elif __APPLE__ && __MACH__ && __i386__
 	_STRUCT_X86_THREAD_STATE32 *regs = &uap->uc_mcontext->ss;
-	printf(	"eax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
-			"edi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n",
+	printf(	"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
+			"\tedi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n"
+			"\teip 0x%08x\n",
 			regs->eax, regs->ebx, regs->ecx, regs->edx,
-			regs->edi, regs->edi, regs->ebp, regs->esp);
+			regs->edi, regs->edi, regs->ebp, regs->esp,
+			regs->eip);
+	return regs->eip;
 #else
 	printf("don't know how to derive register state from a ucontext_t on this platform\n");
+	return 0;
 #endif
 }
 

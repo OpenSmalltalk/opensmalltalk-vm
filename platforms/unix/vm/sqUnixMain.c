@@ -786,13 +786,14 @@ static void outOfMemory(void)
 /* Print an error message, possibly a stack trace, do /not/ exit.
  * Allows e.g. writing to a log file and stderr.
  */
-static void printRegisterState(ucontext_t *uap);
+static void *printRegisterState(ucontext_t *uap);
 
 static void
 reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 {
 #if !defined(NOEXECINFO)
 	void *addrs[BACKTRACE_DEPTH];
+	void *pc;
 	int depth;
 #endif
 	/* flag prevents recursive error when trying to print a broken stack */
@@ -802,11 +803,13 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 	printf("%s\n\n", getVersionInfo(1));
 
 #if !defined(NOEXECINFO)
-	printRegisterState(uap);
-	printf("C stack backtrace:\n");
+	printf("C stack backtrace & registers:\n");
+	pc = printRegisterState(uap);
+	depth = backtrace(addrs + 1, BACKTRACE_DEPTH);
+	addrs[0] = pc;
+	putchar('*'); /* indicate where pc is */
 	fflush(stdout); /* backtrace_symbols_fd uses unbuffered i/o */
-	depth = backtrace(addrs, BACKTRACE_DEPTH);
-	backtrace_symbols_fd(addrs, depth, fileno(stdout));
+	backtrace_symbols_fd(addrs, depth + 1, fileno(stdout));
 #endif
 
 	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
@@ -870,23 +873,30 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 }
 
 /* Attempt to dump the registers to stdout.  Only do so if we know how. */
-static void
+static void *
 printRegisterState(ucontext_t *uap)
 {
 #if __linux__ && __i386__
 	gregset_t *regs = &uap->uc_mcontext.gregs;
-	printf(	"eax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
-			"edi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n",
+	printf(	"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
+			"\tedi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n"
+			"\teip 0x%08x\n",
 			regs[REG_EAX], regs[REG_EBX], regs[REG_ECX], regs[REG_EDX],
-			regs[REG_EDI], regs[REG_EDI], regs[REG_EBP], regs[REG_ESP]);
+			regs[REG_EDI], regs[REG_EDI], regs[REG_EBP], regs[REG_ESP],
+			regs[REG_EIP]);
+	return regs[REG_EIP];
 #elif __FreeBSD__ && __i386__
 	struct mcontext *regs = &uap->uc_mcontext;
-	printf(	"eax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
-			"edi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n",
+	printf(	"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
+			"\tedi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n"
+			"\teip 0x%08x\n",
 			regs->mc_eax, regs->mc_ebx, regs->mc_ecx, regs->mc_edx,
-			regs->mc_edi, regs->mc_edi, regs->mc_ebp, regs->mc_esp);
+			regs->mc_edi, regs->mc_edi, regs->mc_ebp, regs->mc_esp,
+			regs->mc_eip);
+	return regs->mc_eip;
 #else
 	printf("don't know how to derive register state from a ucontext_t on this platform\n");
+	return 0;
 #endif
 }
 
