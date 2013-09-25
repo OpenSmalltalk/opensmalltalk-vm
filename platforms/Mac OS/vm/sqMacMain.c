@@ -255,14 +255,14 @@ printRegisterState(ucontext_t *uap)
 {
 #if __DARWIN_UNIX03 && __APPLE__ && __MACH__ && __i386__
 	_STRUCT_X86_THREAD_STATE32 *regs = &uap->uc_mcontext->__ss;
-	printf(	"eax 0x%8x ebx 0x%8x ecx 0x%8x edx 0x%8x\n"
-			"edi 0x%8x esi 0x%8x ebp 0x%8x esp 0x%8x\n",
+	printf(	"eax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
+			"edi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n",
 			regs->__eax, regs->__ebx, regs->__ecx, regs->__edx,
 			regs->__edi, regs->__edi, regs->__ebp, regs->__esp);
 #elif __APPLE__ && __MACH__ && __i386__
 	_STRUCT_X86_THREAD_STATE32 *regs = &uap->uc_mcontext->ss;
-	printf(	"eax 0x%8x ebx 0x%8x ecx 0x%8x edx 0x%8x\n"
-			"edi 0x%8x esi 0x%8x ebp 0x%8x esp 0x%8x\n",
+	printf(	"eax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
+			"edi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n",
 			regs->eax, regs->ebx, regs->ecx, regs->edx,
 			regs->edi, regs->edi, regs->ebp, regs->esp);
 #else

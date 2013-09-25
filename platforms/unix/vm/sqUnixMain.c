@@ -875,14 +875,14 @@ printRegisterState(ucontext_t *uap)
 {
 #if __linux__ && __i386__
 	gregset_t *regs = &uap->uc_mcontext.gregs;
-	printf(	"eax 0x%8x ebx 0x%8x ecx 0x%8x edx 0x%8x\n"
-			"edi 0x%8x esi 0x%8x ebp 0x%8x esp 0x%8x\n",
+	printf(	"eax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
+			"edi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n",
 			regs[REG_EAX], regs[REG_EBX], regs[REG_ECX], regs[REG_EDX],
 			regs[REG_EDI], regs[REG_EDI], regs[REG_EBP], regs[REG_ESP]);
 #elif __FreeBSD__ && __i386__
 	struct mcontext *regs = &uap->uc_mcontext;
-	printf(	"eax 0x%8x ebx 0x%8x ecx 0x%8x edx 0x%8x\n"
-			"edi 0x%8x esi 0x%8x ebp 0x%8x esp 0x%8x\n",
+	printf(	"eax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
+			"edi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n",
 			regs->mc_eax, regs->mc_ebx, regs->mc_ecx, regs->mc_edx,
 			regs->mc_edi, regs->mc_edi, regs->mc_ebp, regs->mc_esp);
 #else
