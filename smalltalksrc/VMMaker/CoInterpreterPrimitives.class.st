@@ -376,30 +376,6 @@ CoInterpreterPrimitives >> primitiveMinimumUnusedHeadroom [
 	self methodReturnValue: (self integerObjectOf: self minimumUnusedHeadroom)
 ]
 
-{ #category : #'indexing primitives' }
-CoInterpreterPrimitives >> primitiveNoAtCacheAt [
-
-	self noAtCacheCommonAt: false.
-]
-
-{ #category : #'indexing primitives' }
-CoInterpreterPrimitives >> primitiveNoAtCacheAtPut [
-
-	self noAtCacheCommonAtPut: false.
-]
-
-{ #category : #'indexing primitives' }
-CoInterpreterPrimitives >> primitiveNoAtCacheStringAt [
-
-	self noAtCacheCommonAt: true.
-]
-
-{ #category : #'indexing primitives' }
-CoInterpreterPrimitives >> primitiveNoAtCacheStringAtPut [
-
-	self noAtCacheCommonAtPut: true.
-]
-
 { #category : #'object access primitives' }
 CoInterpreterPrimitives >> primitiveObjectAt [
 "Defined for CompiledMethods only"

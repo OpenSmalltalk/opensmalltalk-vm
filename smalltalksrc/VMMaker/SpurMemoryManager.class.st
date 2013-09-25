@@ -1011,6 +1011,13 @@ SpurMemoryManager >> allocateSlots: numSlots format: formatField classIndex: cla
 ]
 
 { #category : #allocation }
+SpurMemoryManager >> allocateSlotsInOldSpace: numSlots bytes: totalBytes format: formatField classIndex: classIndex [
+	"Answer the oop of a chunk of space in oldSpace with numSlots slots.  The header
+	 will have been filled-in but not the contents."
+	^self subclassResponsibility
+]
+
+{ #category : #allocation }
 SpurMemoryManager >> allocateSlotsInOldSpace: numSlots format: formatField classIndex: classIndex [
 	<inline: true>
 	^self
@@ -3790,6 +3797,11 @@ SpurMemoryManager >> sufficientSpaceToInstantiate: classObj indexableSize: index
 	self shouldNotImplement
 ]
 
+{ #category : #'word size' }
+SpurMemoryManager >> tagMask [
+	^self subclassResponsibility
+]
+
 { #category : #accessing }
 SpurMemoryManager >> tenuringThreshold [
 	"In the scavenger the tenuring threshold is effectively a number of bytes of objects,
@@ -3871,4 +3883,11 @@ SpurMemoryManager >> weakArrayClassIndexPun [
 { #category : #'header format' }
 SpurMemoryManager >> weakArrayFormat [
 	^4
+]
+
+{ #category : #'word size' }
+SpurMemoryManager >> wordSize [
+	"Answer the manager's word size, whjich is the size of an oop, and which
+	 is assumed to be equivslent to the underlying machine's word size."
+	^self subclassResponsibility
 ]

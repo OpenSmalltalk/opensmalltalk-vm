@@ -3339,14 +3339,6 @@ CoInterpreter >> functionPointerForCompiledMethod: methodObj primitiveIndex: pri
 	| functionPointer |
 	<var: #functionPointer declareC: #'void (*functionPointer)(void)'>
 	functionPointer := self functionPointerFor: primIndex inClass: nil.
-	functionPointer == #primitiveAt ifTrue:
-		[^#primitiveNoAtCacheAt].
-	functionPointer == #primitiveAtPut ifTrue:
-		[^#primitiveNoAtCacheAtPut].
-	functionPointer == #primitiveStringAt ifTrue:
-		[^#primitiveNoAtCacheStringAt].
-	functionPointer == #primitiveStringAtPut ifTrue:
-		[^#primitiveNoAtCacheStringAtPut].
 	functionPointer == #primitiveCalloutToFFI ifTrue:
 		[^self functionForPrimitiveCallout].
 	functionPointer == #primitiveExternalCall ifTrue:
@@ -5016,52 +5008,6 @@ CoInterpreter >> noAssertHeaderOf: methodPointer [
 	^(self isCogMethodReference: methodHeader)
 		ifTrue: [(self cCoerceSimple: methodHeader to: #'CogMethod *') methodHeader]
 		ifFalse: [methodHeader]
-]
-
-{ #category : #'indexing primitive support' }
-CoInterpreter >> noAtCacheCommonAt: stringy [
-	"This code is called if the receiver responds primitively to at:.
-	 The cogit can implement at: & at:put: quickly in machine code, and needs a backup
-	 that provides error codes.  But it does not want the at cache so it does not have to
-	 waste time assigning messageSelector and lkupClass."
-	| index rcvr result |
-	self initPrimCall.
-	rcvr := self stackValue: 1.
-	(objectMemory isNonIntegerObject: rcvr) ifFalse:
-		[^self primitiveFailFor: PrimErrInappropriate].
-	index := self stackTop.
-	"No need to test for large positive integers here.  No object has 1g elements"
-	(objectMemory isIntegerObject: index) ifFalse:
-		[^self primitiveFailFor: PrimErrBadArgument].
-	index := objectMemory integerValueOf: index.
-	result := self stObject: rcvr at: index.
-	self successful ifTrue:
-		[stringy ifTrue: [result := self characterForAscii: (objectMemory integerValueOf: result)].
-		^ self pop: argumentCount+1 thenPush: result]
-]
-
-{ #category : #'indexing primitive support' }
-CoInterpreter >> noAtCacheCommonAtPut: stringy [
-	"This code is called if the receiver responds primitively to at:Put:.
-	 The cogit can implement at: & at:put: quickly in machine code, and needs a backup
-	 that provides error codes.  But it does not want the at cache so it does not have to
-	 waste time assigning messageSelector and lkupClass."
-	| value index rcvr |
-	value := self stackTop.
-	self initPrimCall.
-	rcvr := self stackValue: 2.
-	(objectMemory isNonIntegerObject: rcvr) ifFalse:
-		[^self primitiveFailFor: PrimErrInappropriate].
-	index := self stackValue: 1.
-	"No need to test for large positive integers here.  No object has 1g elements"
-	(objectMemory isIntegerObject: index) ifFalse:
-		[^self primitiveFailFor: PrimErrBadArgument].
-	index := objectMemory integerValueOf: index.
-	stringy
-		ifTrue: [self stObject: rcvr at: index put: (self asciiOfCharacter: value)]
-		ifFalse: [self stObject: rcvr at: index put: value].
-	self successful ifTrue:
-		[^ self pop: argumentCount+1 thenPush: value]
 ]
 
 { #category : #'cog jit support' }
