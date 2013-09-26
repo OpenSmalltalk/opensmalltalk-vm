@@ -3585,7 +3585,7 @@ StackInterpreter >> commonSend [
 	<sharedCodeNamed: 'commonSend' inCase: #singleExtendedSendBytecode>
 	self sendBreakpoint: messageSelector receiver: (self internalStackValue: argumentCount).
 	self printSends ifTrue:
-		[self printActivationNameForSelector: messageSelector startClass: lkupClass; cr].
+		[self printActivationNameForSelector: messageSelector startClass: (objectMemory classForClassTag: lkupClassTag); cr].
 	self internalFindNewMethod.
 	self internalExecuteNewMethod.
 	self fetchNextBytecode
@@ -6989,9 +6989,7 @@ StackInterpreter >> loadInitialContext [
 	<inline: false>
 	| activeProc activeContext |
 	self cCode: [] inSmalltalk: [self initExtensions].
-	objectMemory leakCheckFullGC ifTrue:
-		[objectMemory clearLeakMapAndMapAccessibleObjects.
-		 self assert: objectMemory checkHeapIntegrity].
+	objectMemory runLeakCheckerForFullGC: true.
 	activeProc := self activeProcess.
 	activeContext := objectMemory fetchPointer: SuspendedContextIndex ofObject: activeProc.
 	self marryContextInNewStackPageAndInitializeInterpreterRegisters: activeContext

@@ -470,7 +470,7 @@ InterpreterSimulator >> initialize [
 	semaphoresToSignalB := Array new: SemaphoresToSignalSize.
 	externalPrimitiveTable := CArrayAccessor on: (Array new: MaxExternalPrimitiveTableSize).
 	primitiveTable := self class primitiveTable.
-	pluginList := #().
+	pluginList := {'' -> self }.
 	mappedPluginEntries := #().
 
 	"initialize InterpreterSimulator variables used for debugging"

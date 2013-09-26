@@ -15,6 +15,7 @@ Class {
 		'pages'
 	],
 	#classVars : [
+		'ByteShift',
 		'NumPages',
 		'PageMask',
 		'PageShift',
@@ -30,9 +31,10 @@ CogCheck32BitHeapMap class >> initialize [
 	wordSize := 4. "4 bytes per bit in the map"
 	bitsPerByte := 8.
 	NumPages := 256.
-	PageShift := -24. "32 - (NumPages log: 2)"
+	PageShift := -24. "(32 - (NumPages log: 2)) negated asInteger"
 	PageSize := 2 << 32 / wordSize / NumPages / bitsPerByte.
-	PageMask := PageSize - 1
+	PageMask := PageSize - 1.
+	ByteShift := -5 "1 bit per 4 bytes, 8 bits per byte = 32 bytes of address space per map byte"
 ]
 
 { #category : #accessing }
@@ -42,7 +44,7 @@ CogCheck32BitHeapMap >> bitIndex: address [
 
 { #category : #accessing }
 CogCheck32BitHeapMap >> byteIndex: address [ 
-	^((address bitShift: -2) bitAnd: PageMask) + 1
+	^((address bitShift: ByteShift) bitAnd: PageMask) + 1
 ]
 
 { #category : #accessing }
@@ -86,7 +88,7 @@ CogCheck32BitHeapMap >> initialize [
 ]
 
 { #category : #accessing }
-CogCheck32BitHeapMap >> pageIndex: address [ 
+CogCheck32BitHeapMap >> pageIndex: address [
 	^(address bitShift: PageShift) + 1 "32 - (pageSize log: 2)"
 ]
 

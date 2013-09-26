@@ -5010,12 +5010,6 @@ CoInterpreter >> noAssertHeaderOf: methodPointer [
 		ifFalse: [methodHeader]
 ]
 
-{ #category : #'cog jit support' }
-CoInterpreter >> objectIsOld: anObject [
-	<api>
-	^self oop: anObject isLessThan: objectMemory youngStart
-]
-
 { #category : #'object memory support' }
 CoInterpreter >> postBecomeAction: becomeEffectsFlags [
 	"Clear the gcMode var and let the Cogit do its post GC checks."

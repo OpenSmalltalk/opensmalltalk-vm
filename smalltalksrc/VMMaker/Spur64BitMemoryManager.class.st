@@ -138,6 +138,16 @@ Spur64BitMemoryManager >> bytesPerSlot [
 	^8
 ]
 
+{ #category : #instantiation }
+Spur64BitMemoryManager >> fillObj: objOop numSlots: numSlots with: fillValue [
+	self assert: (objOop + self baseHeaderSize + (numSlots * self bytesPerOop) - 1)
+				< (self addressAfter: objOop).
+	objOop + self baseHeaderSize
+		to: objOop + self baseHeaderSize + (numSlots * self bytesPerOop) - 1
+		by: self allocationUnit
+		do: [:p| self longAt: p put: fillValue]
+]
+
 { #category : #'garbage collection' }
 Spur64BitMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
 	<var: #numBytes type: #usqLong>
@@ -157,7 +167,7 @@ Spur64BitMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
 	^address
 ]
 
-{ #category : #allocation }
+{ #category : #instantiation }
 Spur64BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 	| instSpec classFormat numSlots classIndex newObj fillValue |
 	classFormat := self formatOfClass: classObj.
@@ -187,7 +197,12 @@ Spur64BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 		[self firstCompiledMethodFormat]	->
 			[numSlots := nElements + 7 // 8.
 			 instSpec := instSpec + (8 - nElements bitAnd: 7)] }
-		otherwise: [^nil]. "non-indexable"
+		otherwise: ["some Squeak images include funky fixed subclasses of abstract variable
+					 superclasses. e.g. DirectoryEntry as a subclass of ArrayedCollection.
+					 Allow fixed classes to be instantiated here iff nElements = 0."
+					 (nElements ~= 0 or: [instSpec >= self sixtyFourBitIndexableFormat]) ifTrue:
+						[^nil].
+					 numSlots := self fixedFieldsOfClassFormat: classFormat]. "non-indexable"
 	classIndex := self ensureBehaviorHash: classObj.
 	classIndex < 0 ifTrue:
 		[coInterpreter primitiveFailFor: classIndex negated.
