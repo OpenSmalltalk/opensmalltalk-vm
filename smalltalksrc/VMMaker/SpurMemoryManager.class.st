@@ -2038,6 +2038,11 @@ SpurMemoryManager >> fixedFieldsOf: objOop format: fmt length: wordLength [
 ]
 
 { #category : #'object format' }
+SpurMemoryManager >> fixedFieldsOfClass: objOop [
+	^self fixedFieldsOfClassFormat: (self formatOfClass: objOop)
+]
+
+{ #category : #'object format' }
 SpurMemoryManager >> fixedFieldsOfClassFormat: classFormat [
 	^classFormat bitAnd: self fixedFieldsOfClassFormatMask
 ]
@@ -2101,6 +2106,12 @@ SpurMemoryManager >> followMaybeForwarded: objOop [
 	^(self isForwarded: objOop)
 		ifTrue: [self followForwarded: objOop]
 		ifFalse: [objOop]
+]
+
+{ #category : #'header format' }
+SpurMemoryManager >> formatFieldWidthShift [
+	"The format field contains 5 bits."
+	^5
 ]
 
 { #category : #'header format' }
@@ -2249,6 +2260,17 @@ SpurMemoryManager >> goodContextSize: oop [
 { #category : #'api characterization' }
 SpurMemoryManager >> hasSpurMemoryManagerAPI [
 	^true
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> hasYoungReferents: objOop [
+	0 to: (self numPointerSlotsOf: objOop) - 1 do:
+		[:i| | oop |
+		oop := self fetchPointer: i ofObject: objOop.
+		((self isNonImmediate: oop)
+		 and: [self isYoung: oop]) ifTrue:
+			[^true]].
+	^false
 ]
 
 { #category : #'header access' }
@@ -2938,6 +2960,11 @@ SpurMemoryManager >> isValidFreeObject: objOop [
 ]
 
 { #category : #'object testing' }
+SpurMemoryManager >> isWeakNonImm: objOop [
+	^(self formatOf: objOop) = self weakArrayFormat
+]
+
+{ #category : #'object testing' }
 SpurMemoryManager >> isWords: oop [
 	"Answer if the argument contains only indexable words (no oops). See comment in formatOf:"
 
@@ -3142,7 +3169,7 @@ SpurMemoryManager >> nonIndexablePointerFormat [
 	^1
 ]
 
-{ #category : #'object enumeration' }
+{ #category : #'object access' }
 SpurMemoryManager >> numPointerSlotsOf: objOop [
 	"Answer the number of pointer fields in the given object.
 	 Works with CompiledMethods, as well as ordinary objects."
@@ -3209,6 +3236,32 @@ SpurMemoryManager >> numSlotsOfAny: objOop [
 	^numSlots = self numSlotsMask
 		ifTrue: [self longAt: objOop - self baseHeaderSize] "overflow slots; (2^32)-1 slots are plenty"
 		ifFalse: [numSlots]
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> numStrongSlotsOf: objOop [
+	"Answer the number of strong pointer fields in the given object.
+	 Works with CompiledMethods, as well as ordinary objects."
+	<api>
+	<inline: true>
+	<asmLabel: false>
+	| fmt contextSize numLiterals |
+	fmt := self formatOf: objOop.
+	fmt <= self lastPointerFormat ifTrue:
+		[fmt = self weakArrayFormat ifTrue:
+			[^self fixedFieldsOfClass: (self fetchClassOfNonImm: objOop)].
+		 (fmt = self indexablePointersFormat
+		  and: [self isContextNonImm: objOop]) ifTrue:
+			["contexts end at the stack pointer"
+			contextSize := coInterpreter fetchStackPointerOf: objOop.
+			^CtxtTempFrameStart + contextSize].
+		^self numSlotsOf: objOop  "all pointers"].
+	fmt = self forwardedFormat ifTrue: [^1].
+	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
+
+	"CompiledMethod: contains both pointers and bytes"
+	numLiterals := coInterpreter literalCountOf: objOop.
+	^numLiterals + LiteralStart
 ]
 
 { #category : #'object access' }

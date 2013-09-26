@@ -71,6 +71,8 @@ Class {
 		'futureSurvivorStart',
 		'rememberedSet',
 		'rememberedSetSize',
+		'weakList',
+		'ephemeronList',
 		'tenuringThreshold',
 		'tenuringProportion'
 	],
@@ -86,6 +88,27 @@ SpurGenerationScavenger class >> initialize [
 	"SpurGenerationScavenger initialize"
 	RememberedSetLimit := 16384.
 	RememberedSetRedZone := RememberedSetLimit - (RememberedSetLimit // 2)
+]
+
+{ #category : #'weakness and ephemerality' }
+SpurGenerationScavenger >> addToWeakList: weakCorpse [
+	"weakCorpse is the corpse of a weak array that was copied and forwarded.
+	 Later on its surviving copy must be scanned to nil weak references.
+	 Thread the corpse onto the weakList.  Later, the weakList can be followed, and
+	 the forwarding pointer followed to locate the survivor.  Use the identityHash
+	 and format fields to construct a 27 bit offset through non-future newSpace and
+	 use this to implement the list. 27 bits is 2 ^ 27 slots, or at least 0.5Gb, big enough
+	 for any newSpace size for the near future."
+	| weakListIndex |
+	self assert: (manager isYoung: weakCorpse).
+	weakListIndex := weakList ifNil: 0.
+	manager
+		setHashBitsOf: weakCorpse
+			to: weakListIndex >> manager formatFieldWidthShift;
+		setFormatOf: weakCorpse
+			to: (weakListIndex bitAnd: manager formatMask).
+	weakList := weakCorpse - manager startOfMemory >> manager shiftForWord.
+	self assert: (self firstCorpse: weakList) = weakCorpse
 ]
 
 { #category : #accessing }
@@ -108,9 +131,10 @@ SpurGenerationScavenger >> computeTenuringThreshold [
 SpurGenerationScavenger >> copyAndForward: survivor [
 	"copyAndForward: survivor copies a survivor object either to
 	 futureSurvivorSpace or, if it is to be promoted, to oldSpace.
-	 It leaves a forwarding pointer behind."
+	 It leaves a forwarding pointer behind.  If the object is weak
+	 then corpse is threaded onto the weakList for later treatment."
 	<inline: true>
-	| bytesInObject newLocation hash |
+	| bytesInObject newLocation hash isWeak |
 	bytesInObject := manager bytesInObject: survivor.
 	newLocation := ((self shouldBeTenured: survivor)
 					  or: [futureSurvivorStart + bytesInObject > futureSpace limit])
@@ -119,7 +143,12 @@ SpurGenerationScavenger >> copyAndForward: survivor [
 	hash := manager rawHashBitsOf: survivor.
 	hash ~= 0 ifTrue:
 		[manager setHashBitsOf: newLocation to: hash].
+	"Alas forward:to: smashes the format field and so destroys the weakness
+	 property.  Test it before forwarding."
+	isWeak := manager isWeakNonImm: survivor.
 	manager forward: survivor to: newLocation.
+	isWeak ifTrue:
+		[self addToWeakList: survivor].
 	^newLocation
 ]
 
@@ -178,6 +207,15 @@ SpurGenerationScavenger >> exchangeSurvivorSpaces [
 	futureSpace := temp
 ]
 
+{ #category : #'weakness and ephemerality' }
+SpurGenerationScavenger >> firstCorpse: headOfCorpseList [
+	"Use the identityHash and format fields to construct a 27 bit offset through
+	 non-future newSpace and use this to implement lists of corpses for weak
+	 array and ephemeron processing. 27 bits is 2 ^ 27 slots, or at least 0.5Gb;
+	 big enough for any newSpace size for the near future."
+	^headOfCorpseList << manager shiftForWord + manager startOfMemory
+]
+
 { #category : #accessing }
 SpurGenerationScavenger >> futureSpace [
 	<returnTypeC: #'SpurNewSpaceSpace *'>
@@ -219,6 +257,16 @@ SpurGenerationScavenger >> isInRememberedTable: objOop [
 	^false
 ]
 
+{ #category : #'weakness and ephemerality' }
+SpurGenerationScavenger >> isScavengeSurvivor: oop [
+	"Answer whether the oop has survived a scavenge.  This is equivalent to
+	 	^(manager isImmediate: oop)
+		  or: [((manager isInEden: oop) or: [(manager isInPastSpace: oop)]) not]"
+	^(manager isImmediate: oop)
+	  or: [(manager isYoung: oop) not
+	  or: [(manager isInFutureSpace: oop)]]
+]
+
 { #category : #initialization }
 SpurGenerationScavenger >> manager: aSpurMemoryManager newSpaceStart: startAddress newSpaceBytes: totalBytes edenBytes: requestedEdenBytes [ 
 	| edenBytes survivorBytes |
@@ -251,6 +299,21 @@ SpurGenerationScavenger >> manager: aSpurMemoryManager newSpaceStart: startAddre
 	manager initSpaceForAllocationCheck: eden
 ]
 
+{ #category : #'weakness and ephemerality' }
+SpurGenerationScavenger >> nextCorpseOrNil: weakCorpse [
+	"weakCorpse is the corpse of a weak array that has been added to the weakList.
+	 Answer the next object on the list, or nil if none.
+	 Use the identityHash and format fields to construct a 27 bit offset through
+	 non-future newSpace and use this to implement the list. 27 bits is 2 ^ 27 slots,
+	 or at least 0.5Gb, big enough for any newSpace size for the near future."
+	| weakListIndex |
+	self assert: (manager isYoung: weakCorpse).
+	weakListIndex := (manager rawHashBitsOf: weakCorpse) << manager formatFieldWidthShift
+						+ (manager formatOf: weakCorpse).
+	^weakListIndex ~= 0 ifTrue:
+		[weakListIndex << manager shiftForWord + manager startOfMemory]
+]
+
 { #category : #accessing }
 SpurGenerationScavenger >> pastSpace [
 	<returnTypeC: #'SpurNewSpaceSpace *'>
@@ -260,6 +323,73 @@ SpurGenerationScavenger >> pastSpace [
 { #category : #accessing }
 SpurGenerationScavenger >> pastSpaceBytes [
 	^pastSpace limit - pastSpace start
+]
+
+{ #category : #'weakness and ephemerality' }
+SpurGenerationScavenger >> processEphemeronList [
+	"There are ephemerons to be scavenged. Scavenge them
+	  and fire any whose keys are still in pastSpace and/or eden."
+	^self shouldBeImplemented
+]
+
+{ #category : #'weakness and ephemerality' }
+SpurGenerationScavenger >> processWeakSurvivor: weakObj [
+	"Process a weak survivor on the weakList.  Those of its fields
+	 which have not survived the scavenge should be nilled, and if any
+	 are, the coInterpreter should be informed via signalFinalization:."
+	| weakObjShouldMourn |
+	weakObjShouldMourn := false.
+	(manager numStrongSlotsOf: weakObj)
+		to: (manager numSlotsOf: weakObj) - 1
+		do: [:i| | referent |
+			referent := manager fetchPointer: i ofObject: weakObj.
+			"Referent could be forwarded due to scavenging or a become:, don't assume."
+			((manager isNonImmediate: referent)
+			and: [manager isForwarded: referent]) ifTrue:
+				[referent := manager followForwarded: referent.
+				 (self isScavengeSurvivor: referent) ifTrue:
+					[manager storePointer: i ofObject: weakObj withValue: referent]].
+			(self isScavengeSurvivor: referent)
+				ifFalse:
+					[weakObjShouldMourn := true.
+					 manager
+						storePointerUnchecked: i
+						ofObject: weakObj
+						withValue: manager nilObject]
+				ifTrue:
+					[self assert: referent = (manager fetchPointer: i ofObject: weakObj)]].
+	weakObjShouldMourn ifTrue:
+		[coInterpreter signalFinalization: weakObj]
+]
+
+{ #category : #'weakness and ephemerality' }
+SpurGenerationScavenger >> processWeaklings [
+	"Go through the remembered set and the weak list, nilling
+	 references to any objects that didn't survive the scavenge."
+	| i rootObj weakCorpse weakObj |
+	i := 0.
+	[i < rememberedSetSize] whileTrue:
+		[rootObj := rememberedSet at: i.
+		(manager isWeakNonImm: rootObj)
+			ifTrue:
+				[self processWeakSurvivor: rootObj.
+				 "If no more referents, remove by overwriting with the last element in the set."
+				 (manager hasYoungReferents: rootObj)
+					ifFalse:
+						[manager setIsRememberedOf: rootObj to: false.
+						 i + 1 < rememberedSetSize ifTrue:
+							[rememberedSet at: i put: (rememberedSet at: rememberedSetSize - 1)].
+						 rememberedSetSize := rememberedSetSize - 1]
+					ifTrue: [i := i + 1]]
+			ifFalse: [i := i + 1]].
+	weakList ifNotNil:
+		[weakCorpse := self firstCorpse: weakList.
+		 [weakCorpse notNil] whileTrue:
+			[self assert: (manager isForwarded: weakCorpse).
+			 weakObj := manager followForwarded: weakCorpse.
+			 self processWeakSurvivor: weakObj.
+			 weakCorpse := self nextCorpseOrNil: weakCorpse].
+		weakList := nil]
 ]
 
 { #category : #'store check' }
@@ -303,6 +433,7 @@ SpurGenerationScavenger >> scavenge [
 	 Answer the limit of pastSpace, to allow the memory manager to bounds check survivors."
 
 	self scavengeLoop.
+	self processWeaklings.
 	self computeTenuringThreshold.
 	self exchangeSurvivorSpaces.
 	^self initFutureSpaceStart
@@ -330,10 +461,19 @@ SpurGenerationScavenger >> scavengeLoop [
 
 	 Notice that each pointer in a live object is inspected once and only once.  The previousRememberedSetSize
 	 and previousFutureSurvivorSpaceLimit variables ensure that no object is scanned twice, as well as
-	 detecting closure.  If this were not true, some pointers might get forwarded twice."
+	 detecting closure.  If this were not true, some pointers might get forwarded twice.
+
+	 An extension of the algorithm presented in David's original paper is to handle weak arrays and ephemerons.
+	 Weak arrays should not have their weak referents scavenged unless there are strong references to them.
+	 Ephemerons should fire if their key is not reachable other than from ephemerons and weak arrays.
+	 Handle this by maintaining a list for weak arrays and a list for ephemerons, which allow scavenging these
+	 objects once all other objects in new space have been scavenged, hence allowing the scavenger to
+	 detect which referents in new space of weak arrays are dead and of ephemeron keys are only live due to
+	 ephemerons."
 
 	| firstTime previousRememberedSetSize previousFutureSurvivorStart |
 	self assert: futureSurvivorStart = futureSpace start. "future space should be empty at the start"
+	weakList := ephemeronList := nil.
 	firstTime := true.
 	previousRememberedSetSize := 0.
 	previousFutureSurvivorStart := futureSurvivorStart.
@@ -345,29 +485,36 @@ SpurGenerationScavenger >> scavengeLoop [
 	 "nothing more copied and forwarded (or remembered by mapInterpreterOops)
 	  to scavenge so scavenge is done."
 	 (previousRememberedSetSize = rememberedSetSize
-	  and: [previousFutureSurvivorStart = futureSurvivorStart]) ifTrue:
+	  and: [previousFutureSurvivorStart = futureSurvivorStart
+	  and: [ephemeronList isNil]]) ifTrue:
 		[^self].
 
 	 self scavengeFutureSurvivorSpaceStartingAt: previousFutureSurvivorStart.
 	 "no more roots created to scavenge, so scavenge is done."
-	 previousRememberedSetSize = rememberedSetSize ifTrue:
+	 (previousRememberedSetSize = rememberedSetSize
+	  and: [ephemeronList isNil]) ifTrue:
 		[^self].
 
-	 previousFutureSurvivorStart := futureSurvivorStart] repeat
+	 previousFutureSurvivorStart := futureSurvivorStart.
+	 ephemeronList notNil ifTrue:
+		[self processEphemeronList]] repeat
 ]
 
 { #category : #scavenger }
 SpurGenerationScavenger >> scavengeReferentsOf: referrer [
 	"scavengeReferentsOf: referrer inspects all the pointers in referrer.
 	 If any are new objects, it has them moved to FutureSurvivorSpace,
-	 and answers truth. If there are no new referents, it answers falsity."
+	 and answers truth. If there are no new referents, it answers falsity.
+	 To handle weak arrays only scavenge string slots and answer true
+	 if the referrer is weak, so that it won't be removed from the
+	 remembered set until later."
 	| foundNewReferent |
 	"forwarding objects should be followed by callers,
 	 unless the forwarder is a root in the remembered table."
 	self assert: ((manager isForwarded: referrer) not
 				or: [manager isRemembered: referrer]).
 	foundNewReferent := false.
-	0 to: (manager numPointerSlotsOf: referrer) - 1 do:
+	0 to: (manager numStrongSlotsOf: referrer) - 1 do:
 		[:i| | referent newLocation |
 		referent := manager fetchPointer: i ofMaybeForwardedObject: referrer.
 		(manager isNonImmediate: referent) ifTrue:
@@ -390,7 +537,7 @@ SpurGenerationScavenger >> scavengeReferentsOf: referrer [
 					 manager storePointerUnchecked: i ofMaybeForwardedObject: referrer withValue: newLocation]
 				ifFalse:
 					[manager storePointerUnchecked: i ofMaybeForwardedObject: referrer withValue: referent]]].
-	^foundNewReferent
+	^foundNewReferent or: [manager isWeakNonImm: referrer]
 ]
 
 { #category : #scavenger }
