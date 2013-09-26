@@ -2813,7 +2813,7 @@ NewObjectMemory >> sweepPhase [
 					the compaction start"
 					self longAt: oop put: (oopHeader bitAnd: AllButMarkBit).
 					"<-- Finalization support: Check if we're running about a weak class -->"
-					(self isWeakNonInt: oop) ifTrue: [self finalizeReference: oop].
+					(self isWeakNonImm: oop) ifTrue: [self finalizeReference: oop].
 					entriesAvailable > 0
 						ifTrue: [entriesAvailable := entriesAvailable - 1]
 						ifFalse: ["start compaction at the last free chunk before this object"
@@ -2885,7 +2885,7 @@ NewObjectMemory >> sweepPhaseForFullGC [
 					the compaction start"
 					self longAt: oop put: (oopHeader bitAnd: AllButMarkBit).
 					"<-- Finalization support: Check if we're running about a weak class -->"
-					(self isWeakNonInt: oop) ifTrue: [self finalizeReference: oop].
+					(self isWeakNonImm: oop) ifTrue: [self finalizeReference: oop].
 					freeChunk ~= nil
 						ifTrue: ["record the size of the last free chunk"
 							self longAt: freeChunk put: ((freeChunkSize bitAnd: LongSizeMask) bitOr: HeaderTypeFree).
