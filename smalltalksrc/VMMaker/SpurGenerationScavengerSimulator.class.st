@@ -10,8 +10,8 @@ Class {
 { #category : #scavenger }
 SpurGenerationScavengerSimulator >> copyAndForward: survivor [
 	| newLocation |
+	"(#(16r167280 16r19A670) includes: survivor) ifTrue: [self halt]."
 	true ifTrue: [^super copyAndForward: survivor.].
-	"(#(16r13BC78 16r13BD68 16r1ED780 16r1FC558) includes: survivor) ifTrue: [self halt]."
 	newLocation := super copyAndForward: survivor.
 	comeFroms at: newLocation put: survivor.
 	"((manager isContextNonImm: newLocation)
