@@ -173,7 +173,7 @@ StackInterpreterPrimitives >> pathTo: goal using: stack followWeak: followWeak [
 				ifFalse:
 					[(objectMemory isMarked: next) not
 					  and: [((objectMemory isPointers: next) or: [objectMemory isCompiledMethod: next])
-					  and: [followWeak or: [(objectMemory isWeakNonInt: next) not]]]]])
+					  and: [followWeak or: [(objectMemory isWeakNonImm: next) not]]]]])
 			ifTrue:
 				[stackp + 2 > stackSize ifTrue:
 					[self assert: freeStartAtStart = objectMemory freeStart.
