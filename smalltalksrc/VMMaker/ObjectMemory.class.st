@@ -3056,13 +3056,13 @@ ObjectMemory >> isPointersNonInt: oop [
 { #category : #'header access' }
 ObjectMemory >> isWeak: oop [
 	"Answer true if the argument has only weak fields that can hold oops. See comment in formatOf:"
-	^(self isNonIntegerObject: oop) and:[self isWeakNonInt: oop]
+	^(self isNonIntegerObject: oop) and: [self isWeakNonImm: oop]
 ]
 
 { #category : #'header access' }
-ObjectMemory >> isWeakNonInt: oop [
+ObjectMemory >> isWeakNonImm: oop [
 	"Answer if the argument has only weak fields that can hold oops. See comment in formatOf:"
-	^(self formatOf: oop) = self lastPointerFormat
+	^(self formatOf: oop) = self weakArrayFormat
 ]
 
 { #category : #'header access' }
@@ -3550,7 +3550,7 @@ ObjectMemory >> nonWeakFieldsOf: oop [
 	the format of the oop (e.g. format = 4) and thus don't need the length."
 	| class classFormat |
 
-	self assert: (self isWeakNonInt: oop).
+	self assert: (self isWeakNonImm: oop).
 
 	"fmt = 3 or 4: mixture of fixed and indexable fields, so must look at class format word"
 	class := self fetchClassOfNonImm: oop.
@@ -5002,7 +5002,7 @@ ObjectMemory >> sweepPhase [
 					the compaction start"
 					self longAt: oop put: (oopHeader bitAnd: AllButMarkBit).
 					"<-- Finalization support: Check if we're running about a weak class -->"
-					(self isWeakNonInt: oop) ifTrue: [self finalizeReference: oop].
+					(self isWeakNonImm: oop) ifTrue: [self finalizeReference: oop].
 					entriesAvailable > 0
 						ifTrue: [entriesAvailable := entriesAvailable - 1]
 						ifFalse: ["start compaction at the last free chunk before this object"
