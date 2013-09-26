@@ -1233,7 +1233,7 @@ CogVMSimulator >> initialize [
 	externalPrimitiveTable := CArrayAccessor on: (Array new: MaxExternalPrimitiveTableSize).
 	externalPrimitiveTableFirstFreeIndex := 0.
 	primitiveTable := self class primitiveTable copy.
-	pluginList := #().
+	pluginList := {'' -> self }.
 	mappedPluginEntries := OrderedCollection new.
 	desiredNumStackPages := desiredEdenBytes := desiredCogCodeSize := 0.
 	"This is initialized on loading the image, but convenient for testing stack page values..."

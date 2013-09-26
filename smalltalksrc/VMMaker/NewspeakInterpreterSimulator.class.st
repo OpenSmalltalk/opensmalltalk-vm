@@ -518,7 +518,7 @@ NewspeakInterpreterSimulator >> initialize [
 	gcSemaphoreIndex := 0.
 	externalPrimitiveTable := CArrayAccessor on: (Array new: MaxExternalPrimitiveTableSize).
 	primitiveTable := self class primitiveTable.
-	pluginList := #().
+	pluginList := {'' -> self }.
 	mappedPluginEntries := #().
 	primTraceLog := CArrayAccessor on: (Array new: 256 withAll: 0).
 	sendTraceLog := CArrayAccessor on: (Array new: 256 withAll: 0).
