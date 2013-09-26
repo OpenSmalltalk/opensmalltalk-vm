@@ -203,16 +203,6 @@ SpurGenerationScavenger >> initFutureSpaceStart [
 ]
 
 { #category : #initialization }
-SpurGenerationScavenger >> initPastSpaceForObjectEnumeration [
-	"For SuurMemoryManager allNewSpaceObjectsDo: fill pastSpace with
-	 a single empty object."
-	| objOop |
-	manager initFreeChunkWithBytes: pastSpace limit - pastSpace start at: pastSpace start.
-	objOop := manager objectStartingAt: pastSpace start.
-	self assert: (manager addressAfter: objOop) = pastSpace limit
-]
-
-{ #category : #initialization }
 SpurGenerationScavenger >> initialize [
 	rememberedSet := CArrayAccessor on: (Array new: RememberedSetLimit).
 	rememberedSetSize := 0.
@@ -258,7 +248,6 @@ SpurGenerationScavenger >> manager: aSpurMemoryManager newSpaceStart: startAddre
 				+ (futureSpace limit \\ manager allocationUnit) = 0.
 
 	self initFutureSpaceStart.
-	self initPastSpaceForObjectEnumeration.
 	manager initSpaceForAllocationCheck: eden
 ]
 
@@ -275,6 +264,8 @@ SpurGenerationScavenger >> pastSpaceBytes [
 
 { #category : #'store check' }
 SpurGenerationScavenger >> remember: objOop [
+	self assert: ((manager isNonImmediate: objOop)
+				and: [(manager isYoung: objOop) not]).
 	rememberedSetSize < RememberedSetLimit
 		ifTrue:
 			[rememberedSet at: rememberedSetSize put: objOop.
