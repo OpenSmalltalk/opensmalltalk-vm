@@ -20,6 +20,14 @@ SpurGenerationScavengerSimulator >> copyAndForward: survivor [
 	^newLocation
 ]
 
+{ #category : #'store check' }
+SpurGenerationScavengerSimulator >> remember: objOop [
+	(rememberedSetSize > 0
+	 and: [(rememberedSet at: rememberedSetSize - 1) = objOop]) ifTrue:
+		[self halt].
+	^super remember: objOop
+]
+
 { #category : #scavenger }
 SpurGenerationScavengerSimulator >> scavenge [
 	comeFroms := Dictionary new.
