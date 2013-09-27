@@ -5220,6 +5220,11 @@ StackInterpreter >> findUnwindThroughContext: homeContext [
 	^ctxtOrNilOrZero
 ]
 
+{ #category : #finalization }
+StackInterpreter >> fireEphemeron: ephemeron [
+	self shouldBeImplemented
+]
+
 { #category : #'compiled methods' }
 StackInterpreter >> firstByteIndexOfMethod: methodObj [
 	"Answer the one-relative index of the first bytecode in methodObj.
