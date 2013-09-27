@@ -2731,6 +2731,12 @@ SpurMemoryManager >> isContextNonImm: oop [
 	^(self classIndexOf: oop) = ClassMethodContextCompactIndex
 ]
 
+{ #category : #'object testing' }
+SpurMemoryManager >> isEphemeron: objOop [
+	self assert: (self isNonImmediate: objOop).
+	^(self formatOf: objOop) = self ephemeronFormat
+]
+
 { #category : #'header format' }
 SpurMemoryManager >> isFixedSizePointerFormat: format [
 	^format <= self nonIndexablePointerFormat
@@ -2993,6 +2999,13 @@ SpurMemoryManager >> isWordsOrBytesNonImm: objOop [
 { #category : #'object testing' }
 SpurMemoryManager >> isYoung: objOop [
 	^self oop: objOop isLessThan: newSpaceLimit
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> keyOfEphemeron: objOop [
+	"Answer the object the ephemeron guards.  This is its first element."
+	self assert: ((self isNonImmediate: objOop) and: [self isEphemeron: objOop]).
+	^self fetchPointer: 0 ofObject: objOop
 ]
 
 { #category : #'class table' }
