@@ -2945,6 +2945,12 @@ SpurMemoryManager >> isRemembered: objOop [
 	^((self longAt: objOop) >> self rememberedBitShift bitAnd: 1) ~= 0
 ]
 
+{ #category : #'generation scavenging' }
+SpurMemoryManager >> isScavengeSurvivor: oop [
+	<doNotGenerate>
+	^scavenger isScavengeSurvivor: oop
+]
+
 { #category : #'class table' }
 SpurMemoryManager >> isSegmentSpanningFakeObjectPun [
 	^3
@@ -3182,6 +3188,13 @@ SpurMemoryManager >> nonIndexablePointerFormat [
 	^1
 ]
 
+{ #category : #'object format' }
+SpurMemoryManager >> numFixedSlotsOf: objOop [
+	<inline: true>
+	<asmLabel: false>
+	^self fixedFieldsOfClassFormat: (self formatOfClass: (self fetchClassOfNonImm: objOop))
+]
+
 { #category : #'object access' }
 SpurMemoryManager >> numPointerSlotsOf: objOop [
 	"Answer the number of pointer fields in the given object.
@@ -3269,6 +3282,40 @@ SpurMemoryManager >> numStrongSlotsOf: objOop [
 			contextSize := coInterpreter fetchStackPointerOf: objOop.
 			^CtxtTempFrameStart + contextSize].
 		^self numSlotsOf: objOop  "all pointers"].
+	fmt = self forwardedFormat ifTrue: [^1].
+	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
+
+	"CompiledMethod: contains both pointers and bytes"
+	numLiterals := coInterpreter literalCountOf: objOop.
+	^numLiterals + LiteralStart
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> numStrongSlotsOf: objOop ephemeronInactiveIf: criterion [
+	"Answer the number of strong pointer fields in the given object.
+	 Works with CompiledMethods, as well as ordinary objects."
+	<api>
+	<var: 'criterion' declareC: 'int (*criterion)(sqInt key)'>
+	<inline: true>
+	<asmLabel: false>
+	| fmt numSlots  contextSize numLiterals |
+	fmt := self formatOf: objOop.
+	fmt <= self lastPointerFormat ifTrue:
+		[numSlots := self numSlotsOf: objOop.
+		 fmt <= self arrayFormat ifTrue:
+			[^numSlots].
+		 fmt = self indexablePointersFormat ifTrue:
+			[(self isContextNonImm: objOop) ifTrue:
+				["contexts end at the stack pointer"
+				contextSize := coInterpreter fetchStackPointerOf: objOop.
+				^CtxtTempFrameStart + contextSize].
+			 ^numSlots].
+		 fmt = self weakArrayFormat ifTrue:
+			[^self fixedFieldsOfClass: (self fetchClassOfNonImm: objOop)].
+		 self assert: fmt = self ephemeronFormat.
+		 ^(self perform: criterion with: (self keyOfEphemeron: objOop))
+			ifTrue: [numSlots]
+			ifFalse: [0]].
 	fmt = self forwardedFormat ifTrue: [^1].
 	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
 
