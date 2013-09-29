@@ -142,7 +142,7 @@ SpurGenerationScavenger >> computeTenuringThreshold [
 	fractionSurvived := (futureSurvivorStart - futureSpace start) asFloat
 						/ (futureSpace limit - futureSpace start).
 	tenuringThreshold := fractionSurvived > 0.9
-							ifTrue: [((pastSpace limit - pastSpace start) * tenuringProportion) rounded + pastSpace start]
+							ifTrue: [((pastSpace limit - pastSpace start) * (1.0 - tenuringProportion)) rounded + pastSpace start]
 							ifFalse: [0]
 ]
 
@@ -321,6 +321,16 @@ SpurGenerationScavenger >> futureSpace [
 	^self addressOf: futureSpace
 ]
 
+{ #category : #'debug support' }
+SpurGenerationScavenger >> futureSpaceObjectsDo: aBlock [
+	| obj |
+	futureSurvivorStart > futureSpace start ifTrue:
+		[obj := manager objectStartingAt: futureSpace start.
+		 [obj < futureSurvivorStart] whileTrue:
+			[aBlock value: obj.
+			 obj := manager objectAfter: obj limit: futureSurvivorStart]]
+]
+
 { #category : #accessing }
 SpurGenerationScavenger >> futureSurvivorStart [
 	^futureSurvivorStart
@@ -347,6 +357,17 @@ SpurGenerationScavenger >> initialize [
 	tenuringProportion := 0.9
 ]
 
+{ #category : #'weakness and ephemerality' }
+SpurGenerationScavenger >> is: oop onWeaklingList: listHead [
+	| corpse |
+	corpse := self firstCorpse: listHead.
+	[corpse notNil] whileTrue:
+		[oop = (manager followForwarded: corpse) ifTrue:
+			[^true].
+		 corpse := self nextCorpseOrNil: corpse].
+	^false
+]
+
 { #category : #'store check' }
 SpurGenerationScavenger >> isInRememberedTable: objOop [
 	0 to: rememberedSetSize - 1 do:
@@ -359,11 +380,22 @@ SpurGenerationScavenger >> isInRememberedTable: objOop [
 { #category : #'weakness and ephemerality' }
 SpurGenerationScavenger >> isScavengeSurvivor: oop [
 	"Answer whether the oop has survived a scavenge.  This is equivalent to
-	 	^(manager isImmediate: oop)
-		  or: [((manager isInEden: oop) or: [(manager isInPastSpace: oop)]) not]"
-	^(manager isImmediate: oop)
-	  or: [(manager isYoung: oop) not
-	  or: [(manager isInFutureSpace: oop)]]
+		| target |
+		(manager isImmediate: oop) ifTrue:
+			[^true].
+		target := (manager isForwarded: oop)
+					ifTrue: [manager followForwarded: oop]
+					ifFalse: [oop].
+	 	^((manager isInEden: target)
+		  or: [(manager isInPastSpace: target)]) not"
+	| target |
+	(manager isImmediate: oop) ifTrue:
+		[^true].
+	target := (manager isForwarded: oop)
+				ifTrue: [manager followForwarded: oop]
+				ifFalse: [oop].
+	^(manager isYoung: target) not
+	  or: [manager isInFutureSpace: target]
 ]
 
 { #category : #initialization }
@@ -423,13 +455,10 @@ SpurGenerationScavenger >> nextCorpseOrNil: weakCorpse [
 SpurGenerationScavenger >> noUnfiredEphemeronsAtEndOfRememberedSet [
 	"For assert checking only."
 	numRememberedEphemerons to: rememberedSetSize - 1 do:
-		[:i| | referrer key |
+		[:i| | referrer |
 		referrer := rememberedSet at: i.
 		(manager isEphemeron: referrer) ifTrue:
-			[key := manager keyOfEphemeron: referrer.
-			 (manager isForwarded: key) ifTrue:
-				[key := manager followForwarded: key].
-			(self isScavengeSurvivor: key) ifFalse:
+			[(self isScavengeSurvivor: (manager keyOfEphemeron: referrer)) ifFalse:
 				[^false]]].
 	^true
 ]
@@ -443,6 +472,19 @@ SpurGenerationScavenger >> pastSpace [
 { #category : #accessing }
 SpurGenerationScavenger >> pastSpaceBytes [
 	^pastSpace limit - pastSpace start
+]
+
+{ #category : #'debug support' }
+SpurGenerationScavenger >> printWeaklingList: listHead [
+	"Print the objects on either the weakList or the ephemeronList."
+	| corpse |
+	corpse := self firstCorpse: listHead.
+	corpse ifNil:
+		[coInterpreter print: 'empty'; cr.
+		 ^self].
+	[corpse notNil] whileTrue:
+		[coInterpreter printHexnp: corpse; print: ' -> '; shortPrintOop: (manager followForwarded: corpse).
+		 corpse := self nextCorpseOrNil: corpse]
 ]
 
 { #category : #'weakness and ephemerality' }
@@ -472,7 +514,7 @@ SpurGenerationScavenger >> processWeakSurvivor: weakObj [
 	 are, the coInterpreter should be informed via signalFinalization:."
 	| weakObjShouldMourn |
 	weakObjShouldMourn := false.
-	(manager numStrongSlotsOf: weakObj)
+	(manager numFixedSlotsOf: weakObj)
 		to: (manager numSlotsOf: weakObj) - 1
 		do: [:i| | referent |
 			referent := manager fetchPointer: i ofObject: weakObj.
@@ -654,14 +696,11 @@ SpurGenerationScavenger >> scavengeReferentsOf: referrer [
 				or: [manager isRemembered: referrer]).
 	"unscanned ephemerons should be scanned later."
 	self assert: ((manager isEphemeron: referrer) not
-				or: [| key |
-					key := manager keyOfEphemeron: referrer.
-					(manager isForwarded: key) ifTrue:
-						[key := manager followForwarded: key].
-					self isScavengeSurvivor: key]).
+				or: [(self isScavengeSurvivor: (manager keyOfEphemeron: referrer))
+				or: [self is: referrer onWeaklingList: ephemeronList]]).
 	foundNewReferent := false.
-	0 to: (manager numStrongSlotsOf: referrer) - 1 do:
-		[:i| | referent newLocation |
+	0 to: (manager numStrongSlotsOf: referrer ephemeronInactiveIf: #isScavengeSurvivor:) - 1
+	   do: [:i| | referent newLocation |
 		referent := manager fetchPointer: i ofMaybeForwardedObject: referrer.
 		(manager isNonImmediate: referent) ifTrue:
 			["a forwarding pointer could be because of become: or scavenging."
@@ -729,16 +768,13 @@ SpurGenerationScavenger >> scavengeUnfiredEphemeronsInRememberedSet [
 	 Scavenge any with unfired (live) keys, removing them from the
 	 unscavenged ephemerons, and from the set if they no longer refer
 	 to new objects, and answer if any with unfired keys were found."
-	| unfiredEphemeronsScavenged i referrer key hasNewReferents |
+	| unfiredEphemeronsScavenged i referrer hasNewReferents |
 	unfiredEphemeronsScavenged := false.
 	i := 0.
 	[i < numRememberedEphemerons] whileTrue:
 		[referrer := rememberedSet at: i.
 		 self assert: (manager isEphemeron: referrer).
-		 key := manager keyOfEphemeron: referrer.
-		 (manager isOopForwarded: key) ifTrue:
-			[key := manager followForwarded: key].
-		 (self isScavengeSurvivor: key)
+		 (self isScavengeSurvivor: (manager keyOfEphemeron: referrer))
 			ifTrue:
 				[unfiredEphemeronsScavenged := true.
 				 hasNewReferents := self scavengeReferentsOf: referrer.
@@ -777,15 +813,12 @@ SpurGenerationScavenger >> scavengeUnfiredEphemeronsOnEphemeronList [
 	unfiredEphemeronsScavenged := false.
 	corpseOffset := ephemeronList.
 	[corpseOffset ~= 0] whileTrue:
-		[| ephemeronCorpse ephemeron nextCorpseOffset key |
+		[| ephemeronCorpse ephemeron nextCorpseOffset  |
 		 ephemeronCorpse := self corpseForCorpseOffset: corpseOffset.
 		 self assert: (manager isForwarded: ephemeronCorpse).
 		 ephemeron := manager followForwarded: ephemeronCorpse.
 		 nextCorpseOffset := self nextCorpseOffset: ephemeronCorpse.
-		 key := manager keyOfEphemeron: ephemeron.
-		 (manager isOopForwarded: key) ifTrue:
-			[key := manager followForwarded: key].
-		 (self isScavengeSurvivor: key)
+		 (self isScavengeSurvivor: (manager keyOfEphemeron: ephemeron))
 			ifTrue:
 				[corpseOffset = ephemeronList
 					ifTrue: [ephemeronList := nextCorpseOffset ~= 0 ifTrue: [nextCorpseOffset]]
@@ -812,7 +845,7 @@ SpurGenerationScavenger >> scavengerTenuringThreshold: aProportion [ "(Slang fla
 	tenuringProportion := aProportion.
 	tenuringThreshold := aProportion = 0.0
 							ifTrue: [0]
-							ifFalse: [((pastSpace limit - pastSpace start) * aProportion) rounded + pastSpace start]
+							ifFalse: [((pastSpace limit - pastSpace start) * (1.0 - aProportion)) rounded + pastSpace start]
 ]
 
 { #category : #'weakness and ephemerality' }
