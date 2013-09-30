@@ -285,9 +285,9 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSqueakV3PlusClosures [
 ]
 
 { #category : #'class initialization' }
-SimpleStackBasedCogit class >> initializeMiscConstantsWith: optionsDictionary [
-	super initializeMiscConstantsWith: optionsDictionary.
-	MaxLiteralCountForCompile := optionsDictionary at: #MaxLiteralCountForCompile ifAbsent: [60].
+SimpleStackBasedCogit class >> initializeMiscConstants [
+	super initializeMiscConstants.
+	MaxLiteralCountForCompile := initializationOptions at: #MaxLiteralCountForCompile ifAbsent: [60].
 	NumTrampolines := NewspeakVM
 							ifTrue: [46]
 							ifFalse: [38]

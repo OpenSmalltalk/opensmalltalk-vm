@@ -1512,7 +1512,7 @@ StackInterpreterSimulator >> primitiveDoPrimitiveWithArgs [
 
 { #category : #'control primitives' }
 StackInterpreterSimulator >> primitiveExecuteMethod [
-	self halt.
+	self halt: thisContext selector.
 	^super primitiveExecuteMethod
 ]
 

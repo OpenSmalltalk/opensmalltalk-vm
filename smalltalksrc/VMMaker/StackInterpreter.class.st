@@ -254,6 +254,11 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator var: #nextProfileTick type: #sqLong
 ]
 
+{ #category : #'accessing class hierarchy' }
+StackInterpreter class >> defaultObjectMemoryClass [
+	^NewObjectMemory
+]
+
 { #category : #translation }
 StackInterpreter class >> exportAPISelectors: options [
 	| omExports |
@@ -776,9 +781,9 @@ StackInterpreter class >> initializeMethodIndices [
 ]
 
 { #category : #initialization }
-StackInterpreter class >> initializeMiscConstantsWith: optionsDictionary [
+StackInterpreter class >> initializeMiscConstants [
 
-	super initializeMiscConstantsWith: optionsDictionary.
+	super initializeMiscConstants.
 	STACKVM := true.
 
 	DumpStackOnLowSpace := 0.
@@ -1152,7 +1157,8 @@ StackInterpreter class >> initializeStreamIndices [
 StackInterpreter class >> initializeWithOptions: optionsDictionary [
 	"StackInterpreter initializeWithOptions: Dictionary new"
 
-	self initializeMiscConstantsWith: optionsDictionary. "must preceed other initialization."
+	super initializeWithOptions: optionsDictionary.
+	self initializeMiscConstants. "must preceed other initialization."
 	self initializeAssociationIndex.
 	self initializeBytecodeTable.
 	self initializeCaches.
@@ -1224,11 +1230,6 @@ StackInterpreter class >> namesOfVariablesToLocalize [
 { #category : #translation }
 StackInterpreter class >> needsCogit [
 	^false
-]
-
-{ #category : #'accessing class hierarchy' }
-StackInterpreter class >> objectMemoryClass [
-	^NewObjectMemory
 ]
 
 { #category : #translation }
