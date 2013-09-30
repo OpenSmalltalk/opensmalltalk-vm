@@ -3750,6 +3750,11 @@ SpurMemoryManager >> setIsRememberedOf: objOop to: aBoolean [
 ]
 
 { #category : #'word size' }
+SpurMemoryManager >> shiftForAllocationUnit [
+	^3
+]
+
+{ #category : #'word size' }
 SpurMemoryManager >> shiftForWord [
 	^self subclassResponsibility
 ]

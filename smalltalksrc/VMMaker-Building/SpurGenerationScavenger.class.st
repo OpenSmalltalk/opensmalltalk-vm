@@ -21,20 +21,29 @@ and
 	Pages 176-183 
 	ACM New York, NY, USA ©1997
 
+See text below the variable definitions and explanation below for a full explanation of weak and ephemeron processing.
+
 Instance Variables
-	coInterpreter:			<StackInterpreterSimulator|CogVMSimulator>
-	eden:					<SpurNewSpaceSpace>
-	futureSpace:			<SpurNewSpaceSpace>
-	futureSurvivorStart:		<Integer address>
-	manager:				<SpurMemoryManager|Spur32BitMMLESimulator et al>
-	pastSpace:				<SpurNewSpaceSpace>
-	rememberedSet:		<CArrayAccessor on: Array>
-	rememberedSetSize:	<Integer>
-	tenuringProportion:		<Float>
-	tenuringThreshold:		<Integer address>
+	coInterpreter:					<StackInterpreterSimulator|CogVMSimulator>
+	eden:							<SpurNewSpaceSpace>
+	ephemeronList:					<Integer|nil>
+	futureSpace:					<SpurNewSpaceSpace>
+	futureSurvivorStart:				<Integer address>
+	manager:						<SpurMemoryManager|Spur32BitMMLESimulator et al>
+	numRememberedEphemerons:	<Integer>
+	pastSpace:						<SpurNewSpaceSpace>
+	previousRememberedSetSize:	<Integer>
+	rememberedSet:				<CArrayAccessor on: Array>
+	rememberedSetSize:			<Integer>
+	tenuringProportion:				<Float>
+	tenuringThreshold:				<Integer address>
+	weakList:						<Integer|nil>
 
 coInterpreter
 	- the interpreter/vm, in this context, the mutator
+
+manager
+	- the Spur memory manager
 
 eden
 	- the space containing newly created objects
@@ -45,9 +54,6 @@ futureSpace
 futureSurvivorStart
 	- the allocation pointer into futureSpace
 
-manager
-	- the Spur memory manager
-
 pastSpace
 	- the space surviving objects live in until the next scavenge
 
@@ -57,12 +63,36 @@ rememberedSet
 rememberedSetSize
 	- the size of the remembered set, also the first unused index in the rememberedSet
 
+previousRememberedSetSize:
+	- the size of the remembered set before scavenging objects in future space.
+
+numRememberedEphemerons
+	- the number of unscavenged ephemerons at the front of the rememberedSet.
+
+ephemeronList
+	- the head of the list of corpses of unscavenged ephemerons reached in the current phase
+
+weakList
+	- the head of the list of corpses of weak arrays reached during the scavenge.
+
 tenuringProportion
 	- the amount of pastSpace below which the system will not tenure unless futureSpace fills up, and above which it will eagerly tenure
 
 tenuringThreshold
 	- the pointer into pastSpace below which objects will be tenured
 
+Weakness and Ephemerality in the Scavenger.
+Weak arrays should not hold onto their referents (except from their strong fileds, their named inst vars).  Ephemerons are objects that implement instance-based finalization; attaching an ephemeron to an object keeps that object alive and causes the ephemeron to ""fire"" when the object is only reachable from the ephemeron (or other ephemerons & weak arrays).  They are a special kind of Associations that detect when their keys are about to die, i.e. when an ephemeron's key is not reachable from the roots except from weak arrays and other ephemerons with about-to-die keys.  Note that if an ephemeron's key is not about to die then references from the rest of the ephemeron can indeed prevent ephemeron keys from dying.
+
+The scavenger is concerned with collecting objects in new space, therefore it ony deals with weak arrays and ephemerons that are either in the remembered set or in new space.  By deferring scanning these objects until other reachable objects have been scavenged, the scavenger can detect dead or dying references.
+
+Weak Array Processing
+In the case of weak arrays this is simple.  The scavenger refuses to scavenge the referents of weak arrays in scavengeReferentsOf: until the entire scavenge is over.  It then scans the weak arrays in the remembered set and in future space and nils all fields in them that are referring to unforwarded objects in eden and past space, because these objects have not survived the scavenge.  The root weak arrays remaining to be scavenged are in the remembered table.  Surviving weak arrays in future space are collected on a list.  The list is threaded through the corpses of weak arrays in eden and/or past space.  weakList holds the slot offset of the first weak array found in eden and/or past space.  The next offset is stored in the weak array corpse's identityHash and format fields (22 bits & 5 bits of allocationUnits, for a max new space size of 2^28 bytes, 256Mb).  The list is threaded throguh corpses, but the surviving arrays are pointed to by the corpses' forwarding pointers.
+
+Ephemeron Processing
+The case of ephemerons is a little more complicated because an ephemeron's key should survive.  The scavenger is cyclical.  It scavenges the remembered set, which may copy and forward surviving objects in past and/or eden spaces to future space.  It then scavenges those promoted objects in future space until no more are promoted, which may in turn remember more objects.  The cycles continue until no more objects get promoted to future space and no more objects get remembered.  At this point all surviving objecta are in futureSpace.
+
+So if the scavenger does not scan ephemerons in the remembered set or in future space until the scavenger finishes cycling, it can detect ephemerons whose keys are about to die because these will be unforwarded objects in eden and/or past space.  Ephemerons encountered in the remembered set are either processed like ordinary objects if their keys have been promoted to futureSpace, or are moved to the front of the rememberedSet (because, dear reader, it is a sequence) if their keys have not been promoted.  Ephemerons encountered in scavengeReferentsOf: are either scanned like normal objects if their keys have been promoted, or added to the ephemeronList, organized identically to the weakList, if their keys are yet to be promoted.  Since references from other ephemerons with surviving keys to ephemeron keys can and should prevent the ephemerons whose keys they are from firing the scavenger does not fire ephemerons unless all unscavenged ephemerons have unscavenged keys.  So the unscavenged ephemerons (the will be at the beginning of the remembered set and on the ephemeronList) are scanned and any that have promoted keys are scavenged.  But if no unscavenged ephemerons have surviving keys then all the unscavenged ephemerons are fired and then scavenged.  This in turn may remember more objects and promote more objects to future space, and encounter more unscavenged ephemerons.  So the scavenger continues until no more objects are remembered, no more objects are promoted to future space and no more unscavenged ephemerons exist.
 "
 Class {
 	#name : #SpurGenerationScavenger,
@@ -110,7 +140,7 @@ SpurGenerationScavenger >> addToEphemeronList: ephemeronCorpse [
 
 	ephemeronListOffset := ephemeronList ifNil: 0.
 	self setCorpseOffsetOf: ephemeronCorpse to: ephemeronListOffset.
-	ephemeronList := ephemeronCorpse - manager startOfMemory >> manager shiftForWord.
+	ephemeronList := self corpseOffsetOf: ephemeronCorpse.
 	self assert: (self firstCorpse: ephemeronList) = ephemeronCorpse
 ]
 
@@ -126,7 +156,7 @@ SpurGenerationScavenger >> addToWeakList: weakCorpse [
 
 	weakListOffset := weakList ifNil: 0.
 	self setCorpseOffsetOf: weakCorpse to: weakListOffset.
-	weakList := weakCorpse - manager startOfMemory >> manager shiftForWord.
+	weakList := self corpseOffsetOf: weakCorpse.
 	self assert: (self firstCorpse: weakList) = weakCorpse
 ]
 
@@ -217,10 +247,20 @@ SpurGenerationScavenger >> copyToOldSpace: survivor [
 { #category : #'weakness and ephemerality' }
 SpurGenerationScavenger >> corpseForCorpseOffset: corpseOffset [
 	"Use the identityHash and format fields to construct a 27 bit offset through
-	 non-future newSpace and use this to implement lists of corpses for weak
-	 array and ephemeron processing. 27 bits is 2 ^ 27 slots, or at least 0.5Gb;
-	 big enough for any newSpace size for the near future."
-	^corpseOffset << manager shiftForWord + manager startOfMemory
+	 non-future newSpace and use this to implement lists for weak array and
+	 ephemeron processing.  27 bits of 8 byte allocationUnits units is 2 ^ 30 bytes
+	 or 1Gb, big enough for newSpace for a good few years yet."
+	^corpseOffset << manager shiftForAllocationUnit + manager startOfMemory
+]
+
+{ #category : #'weakness and ephemerality' }
+SpurGenerationScavenger >> corpseOffsetOf: corpse [
+	"Answer the offset of the corpse in newSpace as a multiple of allocationUnits.
+	 Use the identityHash and format fields to construct a 27 bit offset through
+	 non-future newSpace and use this to implement lists for weak array and
+	 ephemeron processing.  27 bits of 8 byte allocationUnits units is 2 ^ 30
+	 bytes or 1Gb, big enough for newSpace for a good few years yet."
+	^corpse - manager startOfMemory >> manager shiftForAllocationUnit.
 ]
 
 { #category : #accessing }
@@ -308,10 +348,6 @@ SpurGenerationScavenger >> fireEphemeronsOnEphemeronList [
 
 { #category : #'weakness and ephemerality' }
 SpurGenerationScavenger >> firstCorpse: headOfCorpseList [
-	"Use the identityHash and format fields to construct a 27 bit offset through
-	 non-future newSpace and use this to implement lists of corpses for weak
-	 array and ephemeron processing. 27 bits is 2 ^ 27 slots, or at least 0.5Gb;
-	 big enough for any newSpace size for the near future."
 	^self corpseForCorpseOffset: headOfCorpseList
 ]
 
@@ -434,21 +470,22 @@ SpurGenerationScavenger >> manager: aSpurMemoryManager newSpaceStart: startAddre
 SpurGenerationScavenger >> nextCorpseOffset: corpse [
 	"Answer the offset of the next corpse to corpse, which is zero if none.
 	 Use the identityHash and format fields to construct a 27 bit offset through
-	 non-future newSpace and use this to implement the list. 27 bits is 2 ^ 27 slots,
-	 or at least 0.5Gb, big enough for any newSpace size for the near future."
+	 non-future newSpace and use this to implement lists for weak array and
+	 ephemeron processing.  27 bits of 8 byte allocationUnits units is 2 ^ 30 bytes
+	 or 1Gb, big enough for newSpace for a good few years yet."
 	^(manager rawHashBitsOf: corpse) << manager formatFieldWidthShift
 	 + (manager formatOf: corpse)
 ]
 
 { #category : #'weakness and ephemerality' }
-SpurGenerationScavenger >> nextCorpseOrNil: weakCorpse [
-	"weakCorpse is the corpse of a weak array that has been added to the weakList.
+SpurGenerationScavenger >> nextCorpseOrNil: corpse [
+	"corpse is the corpse of a weak array that has been added to the weakList.
 	 Answer the next object on the list, or nil if none."
-	| weakListOffset |
-	self assert: (manager isYoung: weakCorpse).
-	weakListOffset := self nextCorpseOffset: weakCorpse.
-	^weakListOffset ~= 0 ifTrue:
-		[weakListOffset << manager shiftForWord + manager startOfMemory]
+	| listOffset |
+	self assert: (manager isYoung: corpse).
+	listOffset := self nextCorpseOffset: corpse.
+	^listOffset ~= 0 ifTrue:
+		[self corpseForCorpseOffset: listOffset]
 ]
 
 { #category : #'weakness and ephemerality' }
@@ -489,19 +526,17 @@ SpurGenerationScavenger >> printWeaklingList: listHead [
 
 { #category : #'weakness and ephemerality' }
 SpurGenerationScavenger >> processEphemerons [
-	"There are ephemerons to be scavenged. Scavenge them
-	 and fire any whose keys are still in pastSpace and/or eden.
-	 The ephemerons in this cycle can only be fired if all the
-	 ephemerons in this cycle are firable, because references
-	 to ephemeron keys from unfired ephemerons should prevent
-	 the ephemerons with those keys from firing.  So scavenge
-	 ephemerons with surviving keys, and only if none are found,
-	 fire ephemerons with unreferenced keys, and scavenge them."
+	"There are ephemerons to be scavenged.  Scavenge them and fire any whose keys are
+	 still in pastSpace and/or eden.  The unscavenged ephemerons in this cycle can only be
+	 fired if all the unscavenged ephemerons in this cycle are firable, because references
+	 to ephemeron keys from unfired ephemerons should prevent the ephemerons with
+	 those keys from firing.  So scavenge ephemerons with surviving keys, and only if none
+	 are found, fire ephemerons with unreferenced keys, and scavenge them.   Read the
+	 class comment for a more in-depth description of the algorithm."
 	| unfiredEphemeronsScavenged |
 	unfiredEphemeronsScavenged := self scavengeUnfiredEphemeronsInRememberedSet.
 	self scavengeUnfiredEphemeronsOnEphemeronList ifTrue:
 		[unfiredEphemeronsScavenged := true].
-	"If no unfired ephemerons were scavenged, then all ephemerons in this cycle can be fired."
 	unfiredEphemeronsScavenged ifFalse:
 		[self fireEphemeronsInRememberedSet.
 		 self fireEphemeronsOnEphemeronList]
@@ -539,8 +574,9 @@ SpurGenerationScavenger >> processWeakSurvivor: weakObj [
 
 { #category : #'weakness and ephemerality' }
 SpurGenerationScavenger >> processWeaklings [
-	"Go through the remembered set and the weak list, nilling
-	 references to any objects that didn't survive the scavenge."
+	"Go through the remembered set and the weak list, nilling references to
+	 any objects that didn't survive the scavenge. Read the class comment
+	 for a more in-depth description of the algorithm."
 	| i rootObj weakCorpse weakObj |
 	i := 0.
 	[i < rememberedSetSize] whileTrue:
@@ -594,16 +630,13 @@ SpurGenerationScavenger >> rememberedSetWithIndexDo: aBlock [
 { #category : #scavenger }
 SpurGenerationScavenger >> scavenge [
 	"The main routine, scavenge, scavenges young objects reachable from the roots (the stack zone
-	 and the rememberedTable).  It first scavenges the new objects immediately reachable from the
-	 stack zone, then those directly from old ones (all in the remembered table).  Then it scavenges
-	 those that are transitively reachable.  If this results in a promotion, the promotee gets remembered,
-	 and it first scavenges objects adjacent to the promotee, then scavenges the ones reachable from
-	 the promoted.  This loop continues until no more reachable objects are left.  At that point,
-	 pastSurvivorSpace is exchanged with futureSurvivorSpace.
-
-	 Notice that each pointer in a live object is inspected once and only once.  The previousRememberedSetSize
-	 and previousFutureSurvivorSpaceSize variables ensure that no object is scanned twice, as well as
-	 detecting closure.  If this were not true, some pointers might get forwarded twice.
+	 and the rememberedTable).  It first scavenges the new objects immediately reachable from old
+	 ones (all in the remembered table), then the stack zone.  Then it scavenges those that are
+	 transitively reachable.  If this results in a promotion, the promotee gets remembered, and it first
+	 scavenges objects adjacent to the promotee, then scavenges the ones reachable from the
+	 promoted.  This loop continues until no more reachable objects are left.  At that point,
+	 pastSurvivorSpace is exchanged with futureSurvivorSpace.  Then any sdurviving weakArrays and
+	 weakArrays in the remembered set can be processed and their dead elements nilled.
 
 	 Answer the limit of pastSpace, to allow the memory manager to bounds check survivors."
 
@@ -644,7 +677,7 @@ SpurGenerationScavenger >> scavengeLoop [
 	 Handle this by maintaining a list for weak arrays and a list for ephemerons, which allow scavenging these
 	 objects once all other objects in new space have been scavenged, hence allowing the scavenger to
 	 detect which referents in new space of weak arrays are dead and of ephemeron keys are only live due to
-	 ephemerons."
+	 ephemerons.  Read the class comment for a more in-depth description of the algorithm."
 
 	| previousFutureSurvivorStart firstTime |
 	self assert: futureSurvivorStart = futureSpace start. "future space should be empty at the start"
@@ -669,16 +702,17 @@ SpurGenerationScavenger >> scavengeLoop [
 		[^self].
 
 	 self scavengeFutureSurvivorSpaceStartingAt: previousFutureSurvivorStart.
-	 "if no more roots created to scavenge, and no ephemerons to process, scavenge is done."
-	 (previousRememberedSetSize = rememberedSetSize
-	  and: [numRememberedEphemerons = 0
-	  and: [ephemeronList isNil]]) ifTrue:
-		[^self].
-
 	 previousFutureSurvivorStart := futureSurvivorStart.
-	 (numRememberedEphemerons > 0
-	  or: [ephemeronList notNil]) ifTrue:
-		[self processEphemerons]] repeat
+
+	 "no more roots created to scavenge..."
+	 previousRememberedSetSize = rememberedSetSize ifTrue:
+		[(numRememberedEphemerons = 0
+		  and: [ephemeronList isNil]) ifTrue:
+			[^self]. "no ephemerons to process, scavenge is done."
+
+		 "all reachable objects in this cycle have been promoted to futureSpace.
+		  ephemerons can now be processed."
+		 self processEphemerons]] repeat
 ]
 
 { #category : #scavenger }
@@ -851,9 +885,9 @@ SpurGenerationScavenger >> scavengerTenuringThreshold: aProportion [ "(Slang fla
 { #category : #'weakness and ephemerality' }
 SpurGenerationScavenger >> setCorpseOffsetOf: corpse to: offset [
 	"Set the offset of the corpse's next corpse to offset.  Use the identityHash
-	 and format fields to construct a 27 bit offset through non-future newSpace and
-	 use this to implement the list. 27 bits is 2 ^ 27 slots, or at least 0.5Gb, big enough
-	 for any newSpace size for the near future."
+	 and format fields to construct a 27 bit offset through non-future newSpace
+	 and use this to implement the list.  27 bits of 8 byte allocationUnits units is
+	 2 ^ 30 bytes or 1Gb, big enough for newSpace for a good few years yet."
 	manager
 		setHashBitsOf: corpse
 			to: offset >> manager formatFieldWidthShift;
