@@ -4,6 +4,11 @@ Class {
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
+{ #category : #'simulation only' }
+Spur32BitMemoryManager class >> simulatorClass [
+	^Spur32BitMMLESimulator
+]
+
 { #category : #'word size' }
 Spur32BitMemoryManager class >> wordSize [
 	^4

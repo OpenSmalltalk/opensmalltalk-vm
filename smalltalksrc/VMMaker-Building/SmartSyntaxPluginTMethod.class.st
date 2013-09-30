@@ -15,17 +15,6 @@ Class {
 	#category : #'VMMaker-SmartSyntaxPlugins'
 }
 
-{ #category : #'as yet unclassified' }
-SmartSyntaxPluginTMethod class >> fromContext: aContext primitive: aString parameters: aClassList receiver: aClass [
-
-	^super new 
-		fromContext: aContext 
-		primitive: aString 
-		parameters: aClassList 
-		receiver: aClass
-
-]
-
 { #category : #accessing }
 SmartSyntaxPluginTMethod >> args: anInteger [
 
@@ -423,14 +412,6 @@ SmartSyntaxPluginTMethod >> recordDeclarations [
 				 returnType := stmt args last value]].
 		 isDeclaration ifFalse: [newStatements add: stmt]].
 	parseTree setStatements: newStatements asArray
-]
-
-{ #category : #transforming }
-SmartSyntaxPluginTMethod >> replaceArraySizeMessages [
-	"Replace sends of the message 'size' with calls to sizeOfSTArrayFromCPrimitive. Specialised version for generating primitives outside a plugin"
-
-	super replaceSizeMessages
-
 ]
 
 { #category : #transforming }
