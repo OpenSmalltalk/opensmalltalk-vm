@@ -12,7 +12,8 @@ Class {
 		'VMObjectIndices'
 	],
 	#classInstVars : [
-		'timeStamp'
+		'timeStamp',
+		'initializationOptions'
 	],
 	#category : #'VMMaker-Support'
 }
@@ -90,6 +91,12 @@ VMClass class >> defaultIntegerBaseInDebugger [
 	^DefaultBase
 ]
 
+{ #category : #'accessing class hierarchy' }
+VMClass class >> defaultObjectMemoryClass [
+	"Default for all-in-one VMs where the interpreter inherits from the object memory."
+	^nil
+]
+
 { #category : #translation }
 VMClass class >> emitExportPragma [	
 	"#pragma export -- seems only to have been for CodeWarrior on Mac."
@@ -120,7 +127,12 @@ VMClass class >> implicitReturnTypeFor: aSelector [
 ]
 
 { #category : #initialization }
-VMClass class >> initializeMiscConstantsWith: optionsDictionary [
+VMClass class >> initializationOptions: optionsDictionary [
+	initializationOptions := optionsDictionary
+]
+
+{ #category : #initialization }
+VMClass class >> initializeMiscConstants [
 	"Falsify the `what type of VM is this?' flags that are defined in the various interp.h files,
 	 or in the case of VMBIGENDIAN the various sqConfig.h files.
 	 Subclass implementations need to include a super initializeMiscConstantsWith:."
@@ -128,18 +140,18 @@ VMClass class >> initializeMiscConstantsWith: optionsDictionary [
 	VMBIGENDIAN class. "Mention this for the benefit of CCodeGenerator>>emitCConstantsOn:"
 	self isInterpreterClass ifTrue:
 		[STACKVM := COGVM := COGMTVM := false].
-	NewspeakVM := optionsDictionary at: #NewspeakVM ifAbsent: [false].
-	MULTIPLEBYTECODESETS := optionsDictionary at: #MULTIPLEBYTECODESETS ifAbsent: [false].
+	NewspeakVM := initializationOptions at: #NewspeakVM ifAbsent: [false].
+	MULTIPLEBYTECODESETS := initializationOptions at: #MULTIPLEBYTECODESETS ifAbsent: [false].
 	"N.B.  Not yet implemented."
-	IMMUTABILITY := optionsDictionary at: #IMMUTABILITY ifAbsent: [false].
+	IMMUTABILITY := initializationOptions at: #IMMUTABILITY ifAbsent: [false].
 
 	"These for scripts etc... Usually they should get set by an Interpreter class's initializeMiscConstantsWith:"
-	(optionsDictionary includesKey: #STACKVM) ifTrue:
-		[STACKVM := optionsDictionary at: #STACKVM].
-	(optionsDictionary includesKey: #COGVM) ifTrue:
-		[COGVM := optionsDictionary at: #COGVM].
-	(optionsDictionary includesKey: #COGMTVM) ifTrue:
-		[COGMTVM := optionsDictionary at: #COGMTVM]
+	(initializationOptions includesKey: #STACKVM) ifTrue:
+		[STACKVM := initializationOptions at: #STACKVM].
+	(initializationOptions includesKey: #COGVM) ifTrue:
+		[COGVM := initializationOptions at: #COGVM].
+	(initializationOptions includesKey: #COGMTVM) ifTrue:
+		[COGMTVM := initializationOptions at: #COGMTVM]
 ]
 
 { #category : #initialization }
@@ -176,6 +188,9 @@ VMClass class >> initializePrimitiveErrorCodes [
 VMClass class >> initializeWithOptions: optionsDictionary [
 	"Initialize the receiver, typically initializing class variables. Initialize any class variables
 	 whose names occur in optionsDictionary with the corresponding values there-in."
+	(self withAllSuperclasses copyUpThrough: VMClass) do:
+		[:class|
+		class initializationOptions: optionsDictionary]
 ]
 
 { #category : #translation }
@@ -225,8 +240,11 @@ VMClass class >> noteCompilationOf: aSelector meta: isMeta [
 
 { #category : #'accessing class hierarchy' }
 VMClass class >> objectMemoryClass [
-	"Default for all-in-one VMs where the interpreter inherits from the object memory."
-	^nil
+	initializationOptions ifNil:
+		[^self defaultObjectMemoryClass].
+	^Smalltalk at: (initializationOptions
+					at: #ObjectMemory
+					ifAbsent: [^self defaultObjectMemoryClass])
 ]
 
 { #category : #utilities }

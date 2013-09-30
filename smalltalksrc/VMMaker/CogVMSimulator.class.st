@@ -2533,13 +2533,13 @@ CogVMSimulator >> primitiveDoPrimitiveWithArgs [
 
 { #category : #'debugging traps' }
 CogVMSimulator >> primitiveExecuteMethod [
-	self halt.
+	self halt: thisContext selector.
 	^super primitiveExecuteMethod
 ]
 
 { #category : #'control primitives' }
 CogVMSimulator >> primitiveExecuteMethodArgsArray [
-	self halt.
+	self halt: thisContext selector.
 	^super primitiveExecuteMethodArgsArray
 ]
 

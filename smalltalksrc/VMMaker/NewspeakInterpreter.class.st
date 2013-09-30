@@ -445,11 +445,11 @@ NewspeakInterpreter class >> initializeMethodIndices [
 ]
 
 { #category : #initialization }
-NewspeakInterpreter class >> initializeMiscConstantsWith: optionsDictionary [
+NewspeakInterpreter class >> initializeMiscConstants [
 
-	super initializeMiscConstantsWith: optionsDictionary.
+	super initializeMiscConstants.
 	NewspeakVM := true.
-	IMMUTABILITY := optionsDictionary at: #IMMUTABILITY ifAbsent: [true].
+	IMMUTABILITY := initializationOptions at: #IMMUTABILITY ifAbsent: [true].
 
 	PrimitiveExternalCallIndex := 117. "Primitive index for #primitiveExternalCall"
 	MillisecondClockMask := 16r1FFFFFFF.
@@ -829,7 +829,7 @@ NewspeakInterpreter class >> initializeWithOptions: optionsDictionary [
 	"NewspeakInterpreter initializeWithOptions: Dictionary new"
 
 	super initializeWithOptions: optionsDictionary.  "initialize ObjectMemory constants"
-	self initializeMiscConstantsWith: optionsDictionary. "must preceed other initialization."
+	self initializeMiscConstants. "must preceed other initialization."
 	self initializeAssociationIndex.
 	self initializeBytecodeTable.
 	self initializeCaches.

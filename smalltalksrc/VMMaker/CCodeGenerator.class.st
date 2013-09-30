@@ -764,7 +764,7 @@ CCodeGenerator >> emitCConstantsOn: aStream [
 	unused := constants keys asSet.
 	"Don't generate any defines for the externally defined constants,
 	 STACKVM, COGVM, COGMTVM et al, unless they're actually used."
-	(VMClass class>>#initializeMiscConstantsWith:) literalsDo:
+	(VMClass class>>#initializeMiscConstants) literalsDo:
 		[:lit|
 		(lit isVariableBinding and: [lit key isString]) ifTrue:
 			[unused add: lit key]].
