@@ -5095,17 +5095,22 @@ StackInterpreter >> findMethodWithPrimitive: primitive FromFP: startFP UpToConte
 ]
 
 { #category : #'message sending' }
-StackInterpreter >> findNewMethodInClassTag: classTag [
+StackInterpreter >> findNewMethodInClassTag: classTagArg [
 	"Find the compiled method to be run when the current 
 	messageSelector is sent to the given class, setting the values 
 	of 'newMethod' and 'primitiveIndex'."
-	| ok class |
+	| ok class classTag |
 	<inline: false>
-	ok := self lookupInMethodCacheSel: messageSelector classTag: classTag.
+	ok := self lookupInMethodCacheSel: messageSelector classTag: classTagArg.
 	ok ifFalse: "entry was not found in the cache; look it up the hard way "
-		[(objectMemory isForwardedClassTag: lkupClassTag) ifTrue:
-			[lkupClassTag := self handleForwardedSendFaultFor: lkupClassTag.
-			ok := self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag.
+		[classTag := classTagArg.
+		 ((objectMemory isOopForwarded: messageSelector)
+		  or: [objectMemory isForwardedClassTag: classTag]) ifTrue:
+			[(objectMemory isOopForwarded: messageSelector) ifTrue:
+				[messageSelector := self handleForwardedSelectorFaultFor: messageSelector].
+			 (objectMemory isForwardedClassTag: classTag) ifTrue:
+				[classTag := self handleForwardedSendFaultFor: classTag].
+			ok := self lookupInMethodCacheSel: messageSelector classTag: classTag.
 			ok ifTrue:
 				[^nil]].
 		 class := objectMemory classForClassTag: classTag.
@@ -5843,6 +5848,21 @@ StackInterpreter >> getThisSessionID [
 ]
 
 { #category : #'message sending' }
+StackInterpreter >> handleForwardedSelectorFaultFor: selectorOop [
+	"Handle a send fault that is due to a send using a forwarded selector.
+	 Unforward the selector and follow the current method and special
+	 selectors array to unforward the source of the forwarded selector."
+	self assert: (objectMemory isOopForwarded: selectorOop).
+
+	objectMemory
+		followForwardedObjectFields: method
+			toDepth: 0;
+		followForwardedObjectFields: (objectMemory splObj: SpecialSelectors)
+			toDepth: 0.
+	^objectMemory followForwarded: selectorOop
+]
+
+{ #category : #'message sending' }
 StackInterpreter >> handleForwardedSendFaultFor: classTag [
 	"Handle a send fault that may be due to a send to a forwarded object.
 	 Unforward the receiver on the stack and answer its actual class."
@@ -6494,8 +6514,12 @@ StackInterpreter >> internalFindNewMethod [
 	ok := self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag.
 	ok ifFalse: "entry was not found in the cache; look it up the hard way"
 		[self externalizeIPandSP.
-		 (objectMemory isForwardedClassTag: lkupClassTag) ifTrue:
-			[lkupClassTag := self handleForwardedSendFaultFor: lkupClassTag.
+		 ((objectMemory isOopForwarded: messageSelector)
+		  or: [objectMemory isForwardedClassTag: lkupClassTag]) ifTrue:
+			[(objectMemory isOopForwarded: messageSelector) ifTrue:
+				[messageSelector := self handleForwardedSelectorFaultFor: messageSelector].
+			 (objectMemory isForwardedClassTag: lkupClassTag) ifTrue:
+				[lkupClassTag := self handleForwardedSendFaultFor: lkupClassTag].
 			ok := self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag.
 			ok ifTrue:
 				[^nil]].
