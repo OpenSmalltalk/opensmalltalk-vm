@@ -708,6 +708,21 @@ Cogit class >> initializeAnnotationConstants [
 ]
 
 { #category : #'class initialization' }
+Cogit class >> initializeBytecodeTable [
+	"SimpleStackBasedCogit initializeBytecodeTableWith: Dictionary new"
+	"StackToRegisterMappingCogit initializeBytecodeTableWith: Dictionary new"
+
+	(initializationOptions at: #bytecodeTableInitializer ifAbsent: nil) ifNotNil:
+		[:initalizer| ^self perform: initalizer].
+
+	NewspeakVM ifTrue:
+		[^MULTIPLEBYTECODESETS
+			ifTrue: [self initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid]
+			ifFalse: [self initializeBytecodeTableForNewspeakV3PlusClosures]].
+	^self initializeBytecodeTableForSqueakV3PlusClosures
+]
+
+{ #category : #'class initialization' }
 Cogit class >> initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid [
 	"SimpleStackBasedCogit initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid"
 	"StackToRegisterMappingCogit initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid"
@@ -721,21 +736,6 @@ Cogit class >> initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid 
 	self initializeBytecodeTableForNewspeakV3PlusClosures.
 	v3Table := generatorTable.
 	generatorTable := CArrayAccessor on: v3Table object, v4Table object
-]
-
-{ #category : #'class initialization' }
-Cogit class >> initializeBytecodeTableWith: optionsDictionary [
-	"SimpleStackBasedCogit initializeBytecodeTableWith: Dictionary new"
-	"StackToRegisterMappingCogit initializeBytecodeTableWith: Dictionary new"
-
-	(optionsDictionary at: #bytecodeTableInitializer ifAbsent: nil) ifNotNil:
-		[:initalizer| ^self perform: initalizer].
-
-	NewspeakVM ifTrue:
-		[^MULTIPLEBYTECODESETS
-			ifTrue: [self initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid]
-			ifFalse: [self initializeBytecodeTableForNewspeakV3PlusClosures]].
-	^self initializeBytecodeTableForSqueakV3PlusClosures
 ]
 
 { #category : #'class initialization' }
@@ -754,17 +754,17 @@ Cogit class >> initializeErrorCodes [
 ]
 
 { #category : #'class initialization' }
-Cogit class >> initializeMiscConstantsWith: optionsDictionary [
-	super initializeMiscConstantsWith: optionsDictionary.
-	Debug := optionsDictionary at: #Debug ifAbsent: [false].
-	(optionsDictionary includesKey: #EagerInstructionDecoration)
+Cogit class >> initializeMiscConstants [
+	super initializeMiscConstants.
+	Debug := initializationOptions at: #Debug ifAbsent: [false].
+	(initializationOptions includesKey: #EagerInstructionDecoration)
 		ifTrue:
-			[EagerInstructionDecoration := optionsDictionary at: #EagerInstructionDecoration]
+			[EagerInstructionDecoration := initializationOptions at: #EagerInstructionDecoration]
 		ifFalse:
 			[EagerInstructionDecoration isNil ifTrue:
 				[EagerInstructionDecoration := false]]. "speeds up single stepping but could lose fidelity"
 
-	ProcessorClass := (optionsDictionary at: #ISA ifAbsent: [#IA32]) caseOf: {
+	ProcessorClass := (initializationOptions at: #ISA ifAbsent: [#IA32]) caseOf: {
 							[#IA32] 	->	[BochsIA32Alien].
 							[#ARMv5]	->	[GdbARMAlien]. }.
 	"we special-case 0, 1 & 2 argument sends, N is numArgs >= 3"
@@ -787,11 +787,12 @@ Cogit class >> initializePrimitiveTable [
 { #category : #'class initialization' }
 Cogit class >> initializeWithOptions: optionsDictionary [
 
-	self initializeMiscConstantsWith: optionsDictionary. "must preceed other initialization."
+	super initializeWithOptions: optionsDictionary.
+	self initializeMiscConstants. "must preceed other initialization."
 	self initializeErrorCodes.
 	self initializeCogMethodConstants.
 	self initializeAnnotationConstants.
-	self initializeBytecodeTableWith: optionsDictionary.
+	self initializeBytecodeTable.
 	self initializePrimitiveTable
 ]
 

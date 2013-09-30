@@ -508,8 +508,8 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 ]
 
 { #category : #'class initialization' }
-StackToRegisterMappingCogit class >> initializeMiscConstantsWith: optionsDictionary [
-	super initializeMiscConstantsWith: optionsDictionary.
+StackToRegisterMappingCogit class >> initializeMiscConstants [
+	super initializeMiscConstants.
 	NumTrampolines := NewspeakVM
 							ifTrue: [58]
 							ifFalse: [50]

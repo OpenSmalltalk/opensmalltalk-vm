@@ -53,9 +53,9 @@ CoInterpreterMT class >> declareCVarsIn: aCCodeGenerator [
 ]
 
 { #category : #initialization }
-CoInterpreterMT class >> initializeMiscConstantsWith: optionsDictionary [
+CoInterpreterMT class >> initializeMiscConstants [
 
-	super initializeMiscConstantsWith: optionsDictionary.
+	super initializeMiscConstants.
 	COGMTVM := true.
 
 	ReturnToThreadSchedulingLoop := 2. "setjmp/longjmp code."

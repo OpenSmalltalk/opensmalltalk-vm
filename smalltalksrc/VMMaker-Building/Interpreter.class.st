@@ -422,11 +422,11 @@ Interpreter class >> initializeMethodIndices [
 ]
 
 { #category : #initialization }
-Interpreter class >> initializeMiscConstantsWith: optionsDictionary [
+Interpreter class >> initializeMiscConstants [
 
-	super initializeMiscConstantsWith: optionsDictionary.
+	super initializeMiscConstants.
 
-	DoBalanceChecks := optionsDictionary at: #DoBalanceChecks ifAbsent: [false]. "generate stack balance checks"
+	DoBalanceChecks := initializationOptions at: #DoBalanceChecks ifAbsent: [false]. "generate stack balance checks"
 	SemaphoresToSignalSize := 500.
 	PrimitiveExternalCallIndex := 117. "Primitive index for #primitiveExternalCall"
 	MillisecondClockMask := 16r1FFFFFFF.
@@ -786,7 +786,7 @@ Interpreter class >> initializeWithOptions: optionsDictionary [
 	"Interpreter initializeWithOptions: Dictionary new"
 
 	super initializeWithOptions: optionsDictionary.  "initialize ObjectMemory constants"
-	self initializeMiscConstantsWith: optionsDictionary. "must preceed other initialization."
+	self initializeMiscConstants. "must preceed other initialization."
 	self initializeAssociationIndex.
 	self initializeBytecodeTable.
 	self initializeCaches.

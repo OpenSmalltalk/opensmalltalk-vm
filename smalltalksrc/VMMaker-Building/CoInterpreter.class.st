@@ -139,6 +139,11 @@ CoInterpreter class >> declareCVarsIn: aCCodeGenerator [
 					type: 'char *')
 ]
 
+{ #category : #'accessing class hierarchy' }
+CoInterpreter class >> defaultObjectMemoryClass [
+	^NewCoObjectMemory
+]
+
 { #category : #translation }
 CoInterpreter class >> exportAPISelectors: options [
 	"Yes this is a mess.  When all exportAPI methods are marked with the <api> pragma
@@ -239,9 +244,9 @@ CoInterpreter class >> initializeFrameIndices [
 ]
 
 { #category : #initialization }
-CoInterpreter class >> initializeMiscConstantsWith: optionsDictionary [
+CoInterpreter class >> initializeMiscConstants [
 
-	super initializeMiscConstantsWith: optionsDictionary.
+	super initializeMiscConstants.
 	COGVM := true.
 
 	MinBackwardJumpCountForCompile := 10.
@@ -419,11 +424,6 @@ CoInterpreter class >> mustBeGlobal: var [
 { #category : #translation }
 CoInterpreter class >> needsCogit [
 	^true
-]
-
-{ #category : #'accessing class hierarchy' }
-CoInterpreter class >> objectMemoryClass [
-	^NewCoObjectMemory
 ]
 
 { #category : #translation }
