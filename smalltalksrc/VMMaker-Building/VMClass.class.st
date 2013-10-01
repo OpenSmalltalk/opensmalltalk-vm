@@ -185,9 +185,13 @@ VMClass class >> initializePrimitiveErrorCodes [
 ]
 
 { #category : #initialization }
-VMClass class >> initializeWithOptions: optionsDictionary [
+VMClass class >> initializeWithOptions: optionsDictionaryOrArray [
 	"Initialize the receiver, typically initializing class variables. Initialize any class variables
 	 whose names occur in optionsDictionary with the corresponding values there-in."
+	| optionsDictionary |
+	optionsDictionary := optionsDictionaryOrArray isArray
+							ifTrue: [Dictionary newFromPairs: optionsDictionaryOrArray]
+							ifFalse: [optionsDictionaryOrArray].
 	(self withAllSuperclasses copyUpThrough: VMClass) do:
 		[:class|
 		class initializationOptions: optionsDictionary]

@@ -88,26 +88,26 @@ CogVMSimulator class >> initializeWithOptions: optionsDictionaryOrArray objectMe
 	"The relevant ObjectMemory, Interpreter and Cogit classes must be initialized in order.
 	 This happens notionally every time we start the simulator,
 	 but in fact happens when ever we instantiate a simulator."
-	| optionsDictionary cogitClassOrName |
-	optionsDictionary := optionsDictionaryOrArray isArray
+	| cogitClassOrName |
+	initializationOptions := optionsDictionaryOrArray isArray
 							ifTrue: [Dictionary newFromPairs: optionsDictionaryOrArray]
 							ifFalse: [optionsDictionaryOrArray].
 	(objectMemoryClassOrNil ifNil: [self objectMemoryClass])
-		initializeWithOptions: optionsDictionary.
+		initializeWithOptions: initializationOptions.
 
-	((optionsDictionary at: #COGMTVM ifAbsent: [false])
+	((initializationOptions at: #COGMTVM ifAbsent: [false])
 			ifTrue: [CoInterpreterMT]
 			ifFalse: [CoInterpreter])
-		initializeWithOptions: optionsDictionary.
+		initializeWithOptions: initializationOptions.
 
-	(optionsDictionary includesKey: #Cogit) ifTrue:
-		[cogitClassOrName := optionsDictionary at: #Cogit.
+	(initializationOptions includesKey: #Cogit) ifTrue:
+		[cogitClassOrName := initializationOptions at: #Cogit.
 		 cogitClassOrName isSymbol ifTrue:
 			[cogitClassOrName := Smalltalk classNamed: cogitClassOrName].
 		CoInterpreter classPool at: #CogitClass put: cogitClassOrName].
 
 	(self cogitClass withAllSuperclasses copyUpTo: Cogit) reverseDo:
-		[:c| c initializeWithOptions: optionsDictionary]
+		[:c| c initializeWithOptions: initializationOptions]
 ]
 
 { #category : #'instance creation' }
@@ -141,6 +141,7 @@ CogVMSimulator class >> onObjectMemory: anObjectMemory cogit: aCogit options: op
 				ifFalse: [CogVMSimulatorLSB onObjectMemory: anObjectMemory cogit: aCogit options: optionsDictionaryOrArray]]
 		ifFalse:
 			[| sim |
+			self initializeWithOptions: optionsDictionaryOrArray.
 			sim := self basicNew.
 			sim objectMemory: anObjectMemory.
 			sim cogit: aCogit.
@@ -452,6 +453,7 @@ CogVMSimulator >> checkForEventsMayContextSwitch: mayContextSwitch [
 CogVMSimulator >> checkStackIntegrity [
 	"Override to deal with incomplete initialization."
 	stackPages ifNil: [^true].
+	stackPages pages ifNil: [^true].
 	^super checkStackIntegrity
 ]
 
@@ -1131,6 +1133,11 @@ CogVMSimulator >> iframeNumArgs: theFP [
 CogVMSimulator >> iframeSavedIP: theFP [
 	self assert: (self isMachineCodeFrame: theFP) not.
 	^super iframeSavedIP: theFP
+]
+
+{ #category : #'spur bootstrap' }
+CogVMSimulator >> imageName: aString [
+	imageName := aString
 ]
 
 { #category : #'multi-threading simulation switch' }
@@ -2805,6 +2812,13 @@ CogVMSimulator >> printHex: anInteger [
 ]
 
 { #category : #'debug printing' }
+CogVMSimulator >> printHexnp: anInteger [
+
+	traceOn ifTrue:
+		[transcript nextPutAll: (anInteger storeStringBase: 16)]
+]
+
+{ #category : #'debug printing' }
 CogVMSimulator >> printLCS [
 	self printCallStackFP: localFP
 ]
@@ -2932,7 +2946,12 @@ CogVMSimulator >> rewriteMethodCacheEntryForExternalPrimitiveToFunction: localPr
 
 { #category : #'rump c stack' }
 CogVMSimulator >> rumpCStackAddress [
-	^heapBase - BytesPerWord
+	| alignment alignedHeapBase |
+	alignment := 64. "byte alignment for stack frames; IA32 requires 16 bytes."
+	alignedHeapBase := heapBase bitAnd: alignment negated.
+	^alignedHeapBase = heapBase
+		ifTrue: [heapBase - alignment]
+		ifFalse: [alignedHeapBase]
 ]
 
 { #category : #'rump c stack' }
@@ -3054,34 +3073,47 @@ CogVMSimulator >> setOwnerIndexOfProcess: aProcess to: anIndex bind: bind [
 { #category : #'debug support' }
 CogVMSimulator >> shortPrint: oop [
 	| name classOop |
-	(objectMemory isIntegerObject: oop) ifTrue: [^ '=' , (objectMemory integerValueOf: oop) printString , 
-		' (' , (objectMemory integerValueOf: oop) hex , ')'].
-	(oop between: objectMemory startOfMemory and: objectMemory freeStart) ifFalse:
-		[^' is not on the heap'].
-	(oop bitAnd: (BytesPerWord - 1)) ~= 0 ifTrue:
-		[^' is misaligned'].
-	classOop := objectMemory fetchClassOf: oop.
-	(objectMemory sizeBitsOf: classOop) = metaclassSizeBits ifTrue: [
-		^ 'class ' , (self nameOfClass: oop)].
+	(objectMemory isImmediate: oop) ifTrue:
+		[(objectMemory isImmediateCharacter: oop) ifTrue:
+			[^ '=$' , (objectMemory characterValueOf: oop) printString , 
+			' (' , (String with: (Character value: (objectMemory characterValueOf: oop))) , ')'].
+		(objectMemory isIntegerObject: oop) ifTrue:
+			[^ '=' , (objectMemory integerValueOf: oop) printString , 
+			' (' , (objectMemory integerValueOf: oop) hex , ')'].
+		^'= UNKNOWN IMMEDIATE', ' (' , (objectMemory integerValueOf: oop) hex , ')'].
+	(objectMemory addressCouldBeObj: oop) ifFalse:
+		[^(oop bitAnd: objectMemory allocationUnit - 1) ~= 0
+			ifTrue: [' is misaligned']
+			ifFalse: [' is not on the heap']].
+	(objectMemory isFreeObject: oop) ifTrue:
+		[^' is a free chunk of size ', (objectMemory sizeOfFree: oop) printString].
+	(objectMemory isForwarded: oop) ifTrue:
+		[^' is a forwarded object to ', (objectMemory followForwarded: oop) hex,
+			' of slot size ', (objectMemory numSlotsOfAny: oop) printString].
+	classOop := objectMemory fetchClassOfNonImm: oop.
+	(objectMemory sizeBitsOf: classOop) = metaclassSizeBits ifTrue:
+		[^'class ' , (self nameOfClass: oop)].
 	name := self nameOfClass: classOop.
 	name size = 0 ifTrue: [name := '??'].
 	name = 'String' ifTrue: [^ (self stringOf: oop) printString].
 	name = 'ByteString' ifTrue: [^ (self stringOf: oop) printString].
 	name = 'Symbol' ifTrue: [^ '#' , (self stringOf: oop)].
 	name = 'ByteSymbol' ifTrue: [^ '#' , (self stringOf: oop)].
-	name = 'Character' ifTrue: [^ '=' , (Character value: (objectMemory integerValueOf: 
+	name = 'Character' ifTrue: "SpurMemoryManager has immediate Characters; ObjectMemory does not"
+		[^ '=' , (Character value: (objectMemory integerValueOf: 
 				(objectMemory fetchPointer: 0 ofObject: oop))) printString].
 	name = 'UndefinedObject' ifTrue: [^ 'nil'].
 	name = 'False' ifTrue: [^ 'false'].
 	name = 'True' ifTrue: [^ 'true'].
 	name = 'Float' ifTrue: [^ '=' , (self dbgFloatValueOf: oop) printString].
-	name = 'Association' ifTrue: [^ '(' ,
-				(self shortPrint: (self longAt: oop + BaseHeaderSize)) ,
-				' -> ' ,
-				(self longAt: oop + BaseHeaderSize + BytesPerWord) hex8 , ')'].
-	('AEIOU' includes: name first)
-		ifTrue: [^ 'an ' , name]
-		ifFalse: [^ 'a ' , name]
+	name = 'Association' ifTrue:
+		[^ '(' ,
+		(self shortPrint: (self longAt: oop + BaseHeaderSize)) ,
+		' -> ' ,
+		(self longAt: oop + BaseHeaderSize + BytesPerWord) hex8 , ')'].
+	^('AEIOU' includes: name first)
+		ifTrue: ['an ' , name]
+		ifFalse: ['a ' , name]
 ]
 
 { #category : #'debug printing' }

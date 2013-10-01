@@ -911,4 +911,5 @@ SpurGenerationScavenger >> shouldBeTenured: survivor [
 	 ACM TOPLAS, Volume 14 Issue 1, Jan. 1992, pp 1 - 27."
 
 	^survivor < tenuringThreshold
+	  and: [survivor >= manager startOfMemory] "exclude methods in the method zone"
 ]

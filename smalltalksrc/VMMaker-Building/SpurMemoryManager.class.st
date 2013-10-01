@@ -376,6 +376,12 @@ Class {
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
+{ #category : #accessing }
+SpurMemoryManager class >> baseHeaderSize [
+	"For CogBlockMethod class>>instVarNamesAndTypesForTranslationDo:"
+	^8
+]
+
 { #category : #initialization }
 SpurMemoryManager class >> initBytesPerWord: nBytes [
 
@@ -535,6 +541,7 @@ SpurMemoryManager class >> initializeSpurObjectRepresentationConstants [
 SpurMemoryManager class >> initializeWithOptions: optionsDictionary [
 	"SpurMemoryManager initializeWithOptions: Dictionary new"
 
+	super initializeWithOptions: optionsDictionary.
 	self initBytesPerWord: (self == SpurMemoryManager
 								ifTrue: [optionsDictionary at: #BytesPerWord ifAbsent: [4]]
 								ifFalse: [self wordSize]).
@@ -547,6 +554,11 @@ SpurMemoryManager class >> initializeWithOptions: optionsDictionary [
 	self initializeObjectHeaderConstants.
 
 	SpurGenerationScavenger initialize
+]
+
+{ #category : #accessing }
+SpurMemoryManager class >> objectRepresentationClass [
+	^self subclassResponsibility
 ]
 
 { #category : #'simulation only' }
@@ -857,7 +869,7 @@ SpurMemoryManager >> allOldSpaceObjectsDo: aBlock [
 ]
 
 { #category : #simulation }
-SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceBytes codeSize: codeBytes [
+SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceBytes stackSize: stackBytes codeSize: codeBytes [
 	"Intialize the receiver for bootsraping an image.
 	 Set up a large oldSpace and an empty newSpace and set-up freeStart and scavengeThreshold
 	 to allocate in oldSpace.  Later on (in initializePostBootstrap) freeStart and scavengeThreshold
@@ -868,9 +880,9 @@ SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceByt
 				and: [codeBytes \\ self allocationUnit = 0]]).
 	memory := (self endianness == #little
 					ifTrue: [LittleEndianBitmap]
-					ifFalse: [Bitmap]) new: (memoryBytes + newSpaceBytes + codeBytes) // 4.
-	startOfMemory := codeBytes.
-	endOfMemory := freeOldSpaceStart := memoryBytes + newSpaceBytes + codeBytes.
+					ifFalse: [Bitmap]) new: (memoryBytes + newSpaceBytes + codeBytes + stackBytes) // 4.
+	startOfMemory := codeBytes + stackBytes.
+	endOfMemory := freeOldSpaceStart := memoryBytes + newSpaceBytes + codeBytes + stackBytes.
 	"leave newSpace empty for the bootstrap"
 	freeStart := newSpaceBytes + startOfMemory.
 	newSpaceLimit := newSpaceBytes + startOfMemory.
@@ -1166,6 +1178,13 @@ SpurMemoryManager >> booleanObjectOf: bool [
 	^bool ifTrue: [trueObj] ifFalse: [falseObj]
 ]
 
+{ #category : #'simulation only' }
+SpurMemoryManager >> booleanValueOf: obj [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter booleanValueOf: obj
+]
+
 { #category : #'header format' }
 SpurMemoryManager >> byteFormatForNumBytes: numBytes [
 	^self firstByteFormat + (numBytes bitAnd: self wordSize - 1)
@@ -1254,6 +1273,16 @@ SpurMemoryManager >> bytesPerSlot [
 	^self subclassResponsibility
 ]
 
+{ #category : #'memory access' }
+SpurMemoryManager >> cCoerce: value to: cTypeString [
+	"Type coercion. For translation a cast will be emmitted. When running in Smalltalk
+	  answer a suitable wrapper for correct indexing."
+
+	^value
+		ifNil: [value]
+		ifNotNil: [value coerceTo: cTypeString sim: self]
+]
+
 { #category : #'object access' }
 SpurMemoryManager >> characterObjectOf: characterCode [ 
 	^characterCode << self numTagBits + self characterTag
@@ -1273,15 +1302,8 @@ SpurMemoryManager >> characterValueOf: oop [
 { #category : #'debug support' }
 SpurMemoryManager >> cheapAddressCouldBeInHeap: address [ 
 	^(address bitAnd: self wordSize - 1) = 0
-	  and: [address >= startOfMemory
-	  and: [address <= freeOldSpaceStart]]
-]
-
-{ #category : #'debug support' }
-SpurMemoryManager >> cheapAddressCouldBeObj: address [ 
-	^(address bitAnd: self baseHeaderSize - 1) = 0
-	  and: [address >= startOfMemory
-	  and: [address <= freeOldSpaceStart]]
+	  and: [(self oop: address isGreaterThanOrEqualTo: startOfMemory)
+	  and: [self oop: address isLessThan: freeOldSpaceStart]]
 ]
 
 { #category : #initialization }
@@ -1844,6 +1866,13 @@ SpurMemoryManager >> ephemeronFormat [
 	^5
 ]
 
+{ #category : #'simulation only' }
+SpurMemoryManager >> failed [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter failed
+]
+
 { #category : #accessing }
 SpurMemoryManager >> falseObject [
 	^falseObj
@@ -1891,6 +1920,13 @@ SpurMemoryManager >> fetchClassTagOf: oop [
 SpurMemoryManager >> fetchClassTagOfNonImm: obj [
 	"In Spur an object's classIndex is the tag in all method caches."
 	^self classIndexOf: obj
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> fetchInteger: fieldIndex ofObject: objectPointer [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter fetchInteger: fieldIndex ofObject: objectPointer
 ]
 
 { #category : #'object access' }
@@ -2050,6 +2086,13 @@ SpurMemoryManager >> fixedFieldsOfClassFormat: classFormat [
 { #category : #'object format' }
 SpurMemoryManager >> fixedFieldsOfClassFormatMask [
 	^1 << self fixedFieldsFieldWidth - 1
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> floatValueOf: obj [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter floatValueOf: obj
 ]
 
 { #category : #'generation scavenging' }
@@ -2627,6 +2670,20 @@ SpurMemoryManager >> interpreter [
 	^coInterpreter
 ]
 
+{ #category : #'simulation only' }
+SpurMemoryManager >> ioLoadFunction: functionString From: pluginString [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter ioLoadFunction: functionString From: pluginString
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> is: oop KindOf: classNameString [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter is: oop KindOf: classNameString
+]
+
 { #category : #'object access' }
 SpurMemoryManager >> is: oop instanceOf: classOop compactClassIndex: compactClassIndex [
 	"Answer if oop is an instance of the given class. If the class has a (non-zero)
@@ -2713,6 +2770,12 @@ SpurMemoryManager >> isCompiledMethod: objOop [
 ]
 
 { #category : #'object testing' }
+SpurMemoryManager >> isCompiledMethodHeader: objHeader [
+    "Answer whether the argument header has compiled method format"
+    ^(self formatOfHeader: objHeader) >= self firstCompiledMethodFormat
+]
+
+{ #category : #'object testing' }
 SpurMemoryManager >> isContext: oop [
 	<inline: true>
 	^(self isNonImmediate: oop)
@@ -2741,6 +2804,13 @@ SpurMemoryManager >> isEphemeron: objOop [
 SpurMemoryManager >> isFixedSizePointerFormat: format [
 	^format <= self nonIndexablePointerFormat
 	  or: [format = self ephemeronFormat]
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> isFloatObject: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter isFloatObject: oop
 ]
 
 { #category : #'object testing' }
@@ -2881,7 +2951,11 @@ SpurMemoryManager >> isIntegerObject: oop [
 		isNormalized:
 		primDigitDiv:negative:
 		bytesOrInt:growTo:
-		primitiveNewMethod) includes: sel) ifFalse:
+		primitiveNewMethod
+		isCogMethodReference:
+		functionForPrimitiveExternalCall:
+		genSpecialSelectorArithmetic
+		genSpecialSelectorComparison) includes: sel) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
@@ -2903,7 +2977,8 @@ SpurMemoryManager >> isNonIntegerObject: oop [
 	  isNonIntegerObject: by isNonImmediate: where appropriate."
 	(#(	on:do: "from the dbeugger"
 		reverseDisplayFrom:to:
-		primitiveObjectAtPut) includes: thisContext sender method selector) ifFalse:
+		primitiveObjectAtPut
+		isCogMethodReference:) includes: thisContext sender method selector) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) = 0
 ]
@@ -3132,6 +3207,49 @@ SpurMemoryManager >> lengthOfMaybeImmediate: oop [
 	^self lengthOf: oop
 ]
 
+{ #category : #'simulation only' }
+SpurMemoryManager >> lookupAddress: address [
+	"If address appears to be that of a Symbol or a few well-known objects (such as classes) answer it, otherwise answer nil.
+	 For code disassembly"
+	<doNotGenerate>
+	| fmt size string class classSize maybeThisClass classNameIndex thisClassIndex |
+	(self addressCouldBeObj: address) ifFalse:
+		[^nil].
+	fmt := self formatOf: address.
+	size := self lengthOf: address baseHeader: (self baseHeader: address) format: fmt.
+	size = 0 ifTrue:
+		[^address caseOf: { [nilObj] -> ['nil']. [trueObj] -> ['true']. [falseObj] -> ['false'] } otherwise: []].
+	((fmt between: self firstByteFormat and: self firstCompiledMethodFormat - 1) "indexable byte fields"
+	and: [(size between: 1 and: 64)
+	and: [Scanner isLiteralSymbol: (string := (0 to: size - 1) collect: [:i| Character value: (self fetchByte: i ofObject: address)])]]) ifTrue:
+		[^'#', (ByteString withAll: string)].
+	class := self fetchClassOfNonImm: address.
+	(class isNil or: [class = nilObj]) ifTrue:
+		[^nil].
+	"address is either a class or a metaclass, or an instance of a class or invalid.  determine which."
+	classNameIndex := coInterpreter classNameIndex.
+	thisClassIndex := coInterpreter thisClassIndex.
+	((classSize := self numSlotsOf: class) <= (classNameIndex max: thisClassIndex)
+	 or: [classSize > 255]) ifTrue:
+		[^nil].
+	"Address could be a class or a metaclass"
+	(fmt = 1 and: [size >= classNameIndex]) ifTrue:
+		["Is address a class? If so class's thisClass is address."
+		 (self lookupAddress: (self fetchPointer: classNameIndex ofObject: address)) ifNotNil:
+			[:maybeClassName|
+			(self fetchPointer: thisClassIndex ofObject: class) = address ifTrue:
+				[^maybeClassName allButFirst]].
+		"Is address a Metaclass?  If so class's name is Metaclass and address's thisClass holds the class name"
+		((self isBytes: (self fetchPointer: classNameIndex ofObject: class))
+		 and: [(self lookupAddress: (self fetchPointer: classNameIndex ofObject: class)) = '#Metaclass'
+		 and: [size >= thisClassIndex]]) ifTrue:
+			[maybeThisClass := self fetchPointer: thisClassIndex ofObject: address.
+			(self lookupAddress: (self fetchPointer: classNameIndex ofObject: maybeThisClass)) ifNotNil:
+				[:maybeThisClassName| ^maybeThisClassName allButFirst, ' class']]].
+	^(self lookupAddress: (self fetchPointer: classNameIndex ofObject: class)) ifNotNil:
+		[:maybeClassName| 'a(n) ', maybeClassName allButFirst]
+]
+
 { #category : #'free space' }
 SpurMemoryManager >> lowSpaceThreshold: threshold [
 	lowSpaceThreshold := threshold.
@@ -3153,6 +3271,18 @@ SpurMemoryManager >> memory [
 ]
 
 { #category : #accessing }
+SpurMemoryManager >> memory: aValue [
+	^memory := aValue
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> methodArgumentCount [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter methodArgumentCount
+]
+
+{ #category : #accessing }
 SpurMemoryManager >> needGCFlag [
 	^needGCFlag
 ]
@@ -3163,6 +3293,17 @@ SpurMemoryManager >> newObjectHash [
 	lastHash := lastHash * 16807 "7 raisedTo: 5" \\ 16r7ffffffd "(2 raisedTo: 31) - 1".
 	self assert: lastHash ~= 0.
 	^lastHash
+]
+
+{ #category : #'generation scavenging' }
+SpurMemoryManager >> newSpaceIsEmpty [
+	^freeStart = scavenger eden start
+	  and: [pastSpaceStart = scavenger pastSpace start]
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> newSpaceLimit [
+	^newSpaceLimit
 ]
 
 { #category : #'primitive support' }
@@ -3262,32 +3403,6 @@ SpurMemoryManager >> numSlotsOfAny: objOop [
 	^numSlots = self numSlotsMask
 		ifTrue: [self longAt: objOop - self baseHeaderSize] "overflow slots; (2^32)-1 slots are plenty"
 		ifFalse: [numSlots]
-]
-
-{ #category : #'object access' }
-SpurMemoryManager >> numStrongSlotsOf: objOop [
-	"Answer the number of strong pointer fields in the given object.
-	 Works with CompiledMethods, as well as ordinary objects."
-	<api>
-	<inline: true>
-	<asmLabel: false>
-	| fmt contextSize numLiterals |
-	fmt := self formatOf: objOop.
-	fmt <= self lastPointerFormat ifTrue:
-		[fmt = self weakArrayFormat ifTrue:
-			[^self fixedFieldsOfClass: (self fetchClassOfNonImm: objOop)].
-		 (fmt = self indexablePointersFormat
-		  and: [self isContextNonImm: objOop]) ifTrue:
-			["contexts end at the stack pointer"
-			contextSize := coInterpreter fetchStackPointerOf: objOop.
-			^CtxtTempFrameStart + contextSize].
-		^self numSlotsOf: objOop  "all pointers"].
-	fmt = self forwardedFormat ifTrue: [^1].
-	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
-
-	"CompiledMethod: contains both pointers and bytes"
-	numLiterals := coInterpreter literalCountOf: objOop.
-	^numLiterals + LiteralStart
 ]
 
 { #category : #'object access' }
@@ -3433,6 +3548,20 @@ SpurMemoryManager >> overflowSlotsMask [
 	^self subclassResponsibility
 ]
 
+{ #category : #'simulation only' }
+SpurMemoryManager >> pop: nItems [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter pop: nItems
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> pop: nItems thenPush: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter pop: nItems thenPush: oop
+]
+
 { #category : #'interpreter access' }
 SpurMemoryManager >> popRemappableOop [
 	"Pop and return the possibly remapped object from the remap buffer.
@@ -3443,6 +3572,34 @@ SpurMemoryManager >> popRemappableOop [
 	oop := remapBuffer at: remapBufferCount.
 	remapBufferCount := remapBufferCount - 1.
 	^oop
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> positive32BitIntegerFor: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter positive32BitIntegerFor: integerValue
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> positive32BitValueOf: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter positive32BitValueOf: oop
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> positive64BitIntegerFor: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter positive64BitIntegerFor: integerValue
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> positive64BitValueOf: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter positive64BitValueOf: oop
 ]
 
 { #category : #'store check' }
@@ -3472,6 +3629,20 @@ SpurMemoryManager >> postBecomeScanClassTable [
 					[classOrNil := self followForwarded: classOrNil.
 					 self storePointer: j ofObject: page withValue: classOrNil].
 				 self scanClassPostBecome: classOrNil effects: becomeEffectsFlags]]]
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> primitiveFail [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter primitiveFail
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> primitiveFailureCode [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter primitiveFailureCode
 ]
 
 { #category : #'debug printing' }
@@ -3535,6 +3706,34 @@ SpurMemoryManager >> printReferencesTo: anOop [
 				[((self isForwarded: obj)
 				 and: [(self fetchPointer: 0 ofMaybeForwardedObject: obj) = anOop]) ifTrue:
 					[coInterpreter printHex: obj; print: ' => '; printHex: anOop; cr]]]
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> push: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter push: oop
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> pushBool: trueOrFalse [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter pushBool: trueOrFalse
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> pushFloat: f [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter pushFloat: f
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> pushInteger: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter pushInteger: integerValue
 ]
 
 { #category : #'interpreter access' }
@@ -3777,6 +3976,13 @@ SpurMemoryManager >> shouldRemapOop: oop [
 	   and: [self shouldRemapObj: oop]
 ]
 
+{ #category : #'simulation only' }
+SpurMemoryManager >> showDisplayBits: aForm Left: l Top: t Right: r Bottom: b [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter showDisplayBits: aForm Left: l Top: t Right: r Bottom: b
+]
+
 { #category : #'free space' }
 SpurMemoryManager >> shrinkThreshold [
 	self flag: #temporary.
@@ -3851,6 +4057,41 @@ SpurMemoryManager >> splObj: index put: anObject [
 	self storePointer: index ofObject: specialObjectsOop withValue: anObject
 ]
 
+{ #category : #'simulation only' }
+SpurMemoryManager >> stObject: objOop at: indexOop put: valueOop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter stObject: objOop at: indexOop put: valueOop
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> stackFloatValue: offset [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter stackFloatValue: offset
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> stackIntegerValue: offset [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter stackIntegerValue: offset
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> stackObjectValue: offset [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter stackObjectValue: offset
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> stackValue: offset [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter stackValue: offset
+]
+
 { #category : #accessing }
 SpurMemoryManager >> startOfMemory [
 	"Return the start of object memory.  This is immediately after the native code zone.
@@ -3891,6 +4132,13 @@ SpurMemoryManager >> statScavenges [
 { #category : #'object access' }
 SpurMemoryManager >> storeByte: byteIndex ofObject: oop withValue: valueByte [
 	^self byteAt: oop + self baseHeaderSize + byteIndex put: valueByte
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> storeInteger: fieldIndex ofObject: objectPointer withValue: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter storeInteger: fieldIndex ofObject: objectPointer withValue: integerValue
 ]
 
 { #category : #'object access' }
@@ -3952,6 +4200,20 @@ SpurMemoryManager >> storePointerUnchecked: fieldIndex ofObject: objOop withValu
 	^self
 		longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
 		put: valuePointer
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> stringOf: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter stringOf: oop
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> success: boolean [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter success: boolean
 ]
 
 { #category : #'generation scavenging' }
@@ -4020,6 +4282,13 @@ SpurMemoryManager >> totalFreeListBytes [
 			 self assert: (self isValidFreeObject: obj).
 			 obj := self fetchPointer: self freeChunkNextIndex ofFreeChunk: obj]].
 	^freeBytes + (self bytesInFreeTree: (freeLists at: 0))
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> transcript [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter transcript
 ]
 
 { #category : #accessing }

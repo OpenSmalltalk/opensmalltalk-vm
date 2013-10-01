@@ -1,11 +1,11 @@
 Class {
-	#name : #Spur32BitMMLESimulator,
-	#superclass : #Spur32BitMemoryManager,
+	#name : #Spur32BitMMLECoSimulator,
+	#superclass : #Spur32BitCoMemoryManager,
 	#category : #'VMMaker-SpurMemoryManagerSimulation'
 }
 
 { #category : #'memory access' }
-Spur32BitMMLESimulator >> byteAt: byteAddress [
+Spur32BitMMLECoSimulator >> byteAt: byteAddress [
 	| lowBits long |
 	lowBits := byteAddress bitAnd: 3.
 	long := self longAt: byteAddress - lowBits.
@@ -18,7 +18,7 @@ Spur32BitMMLESimulator >> byteAt: byteAddress [
 ]
 
 { #category : #'memory access' }
-Spur32BitMMLESimulator >> byteAt: byteAddress put: byte [
+Spur32BitMMLECoSimulator >> byteAt: byteAddress put: byte [
 	| lowBits long longAddress |
 	lowBits := byteAddress bitAnd: 3.
 	longAddress := byteAddress - lowBits.
@@ -34,31 +34,38 @@ Spur32BitMMLESimulator >> byteAt: byteAddress put: byte [
 ]
 
 { #category : #'memory access' }
-Spur32BitMMLESimulator >> byteAtPointer: pointer [
+Spur32BitMMLECoSimulator >> byteAtPointer: pointer [
 	"This gets implemented by Macros in C, where its types will also be checked.
 	 pointer is a raw address."
 
 	^self byteAt: pointer
 ]
 
+{ #category : #initialization }
+Spur32BitMMLECoSimulator >> coInterpreter: aCoInterpreter cogit: aCogit [
+	coInterpreter := aCoInterpreter.
+	cogit := aCogit.
+	scavenger coInterpreter: aCoInterpreter
+]
+
 { #category : #'debug support' }
-Spur32BitMMLESimulator >> eek [
+Spur32BitMMLECoSimulator >> eek [
 	self halt
 ]
 
 { #category : #'memory access' }
-Spur32BitMMLESimulator >> endianness [
+Spur32BitMMLECoSimulator >> endianness [
 	^#little
 ]
 
 { #category : #'float primitives' }
-Spur32BitMMLESimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
+Spur32BitMMLECoSimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
 	aFloat at: 2 put: (self long32At: floatBitsAddress).
 	aFloat at: 1 put: (self long32At: floatBitsAddress+4)
 ]
 
 { #category : #'object format' }
-Spur32BitMMLESimulator >> firstIndexableField: objOop [
+Spur32BitMMLECoSimulator >> firstIndexableField: objOop [
 	"NOTE: overridden from SpurMemoryManager to add coercion to CArray, so please duplicate any changes.
 	 There are only two important cases, both for objects with named inst vars, i.e. formats 2,3 & 5.
 	 The first indexable field for formats 2 & 5 is the slot count (by convention, even though that's off the end
@@ -93,21 +100,21 @@ Spur32BitMMLESimulator >> firstIndexableField: objOop [
 ]
 
 { #category : #'memory access' }
-Spur32BitMMLESimulator >> halfWordHighInLong32: long32 [
+Spur32BitMMLECoSimulator >> halfWordHighInLong32: long32 [
 	"Used by Balloon"
 
 	^long32 bitAnd: 16rFFFF
 ]
 
 { #category : #'memory access' }
-Spur32BitMMLESimulator >> halfWordLowInLong32: long32 [
+Spur32BitMMLECoSimulator >> halfWordLowInLong32: long32 [
 	"Used by Balloon"
 
 	^long32 bitShift: -16
 ]
 
 { #category : #'header format' }
-Spur32BitMMLESimulator >> headerForSlots: numSlots format: formatField classIndex: classIndex [
+Spur32BitMMLECoSimulator >> headerForSlots: numSlots format: formatField classIndex: classIndex [
 	"The header format in LSB is
 	 MSB:	| 2 bits				|
 			| 22: identityHash	|
@@ -123,33 +130,33 @@ Spur32BitMMLESimulator >> headerForSlots: numSlots format: formatField classInde
 ]
 
 { #category : #'memory access' }
-Spur32BitMMLESimulator >> intAt: byteAddress put: a32BitValue [
+Spur32BitMMLECoSimulator >> intAt: byteAddress put: a32BitValue [
 	^self longAt: byteAddress put: (a32BitValue bitAnd: 16rFFFFFFFF)
 ]
 
 { #category : #'memory access' }
-Spur32BitMMLESimulator >> long32At: byteAddress [
+Spur32BitMMLECoSimulator >> long32At: byteAddress [
 	"Answer the 32-bit word at byteAddress which must be 0 mod 4."
 
 	^self longAt: byteAddress
 ]
 
 { #category : #'memory access' }
-Spur32BitMMLESimulator >> long32At: byteAddress put: a32BitValue [
+Spur32BitMMLECoSimulator >> long32At: byteAddress put: a32BitValue [
 	"Store the 32-bit value at byteAddress which must be 0 mod 4."
 
 	^self longAt: byteAddress put: a32BitValue
 ]
 
 { #category : #'memory access' }
-Spur32BitMMLESimulator >> longAt: byteAddress [
+Spur32BitMMLECoSimulator >> longAt: byteAddress [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 	byteAddress \\ 4 ~= 0 ifTrue: [self unalignedAccessError].
 	^memory at: byteAddress // 4 + 1
 ]
 
 { #category : #'memory access' }
-Spur32BitMMLESimulator >> longAt: byteAddress put: a32BitValue [
+Spur32BitMMLECoSimulator >> longAt: byteAddress put: a32BitValue [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 	"(byteAddress = 16r1614CB8 and: [a32BitValue = 16rA000035]) ifTrue:
 		[self halt]."
@@ -158,7 +165,7 @@ Spur32BitMMLESimulator >> longAt: byteAddress put: a32BitValue [
 ]
 
 { #category : #'memory access' }
-Spur32BitMMLESimulator >> longLongAt: byteAddress [
+Spur32BitMMLECoSimulator >> longLongAt: byteAddress [
 	"memory is a Bitmap, a 32-bit indexable array of bits"
 	| hiWord loWord |
 	byteAddress \\ 8 ~= 0 ifTrue: [self unalignedAccessError].
@@ -170,7 +177,7 @@ Spur32BitMMLESimulator >> longLongAt: byteAddress [
 ]
 
 { #category : #'memory access' }
-Spur32BitMMLESimulator >> longLongAt: byteAddress put: a64BitValue [
+Spur32BitMMLECoSimulator >> longLongAt: byteAddress put: a64BitValue [
 	byteAddress \\ 8 ~= 0 ifTrue: [self unalignedAccessError].
 	self
 		longAt: byteAddress put: (a64BitValue bitAnd: 16rffffffff);
@@ -179,7 +186,7 @@ Spur32BitMMLESimulator >> longLongAt: byteAddress put: a64BitValue [
 ]
 
 { #category : #'generation scavenging' }
-Spur32BitMMLESimulator >> scavengingGC [
+Spur32BitMMLECoSimulator >> scavengingGC [
 	"Run the scavenger."
 	self halt: (statScavenges + 1) printString, ((statScavenges between: 9 and: 19)
 													ifTrue: ['th']
@@ -188,7 +195,7 @@ Spur32BitMMLESimulator >> scavengingGC [
 ]
 
 { #category : #'memory access' }
-Spur32BitMMLESimulator >> shortAt: byteAddress [
+Spur32BitMMLECoSimulator >> shortAt: byteAddress [
     "Return the half-word at byteAddress which must be even."
 	| lowBits long |
 	lowBits := byteAddress bitAnd: 2.
@@ -199,7 +206,7 @@ Spur32BitMMLESimulator >> shortAt: byteAddress [
 ]
 
 { #category : #'float primitives' }
-Spur32BitMMLESimulator >> storeFloatAt: floatBitsAddress from: aFloat [
+Spur32BitMMLECoSimulator >> storeFloatAt: floatBitsAddress from: aFloat [
 	self long32At: floatBitsAddress put: (aFloat at: 2).
 	self long32At: floatBitsAddress+4 put: (aFloat at: 1)
 ]
