@@ -200,8 +200,13 @@ CogObjectRepresentationForSqueakV3 >> genGetClassObjectOf: instReg into: destReg
 
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genGetClassTagOf: instReg into: destReg scratchReg: scratchReg [
-	"Compatibility with SpurObjectRepresentation/purMemorymanager."
-	^self genGetClassObjectOf: instReg into: destReg scratchReg: scratchReg
+	"Compatibility with SpurObjectRepresentation/SpurMemoryManager."
+	| entryLabel |
+	<var: #entryLabel type: #'AbstractInstruction *'>
+	cogit AlignmentNops: (BytesPerWord max: 8).
+	entryLabel := cogit Label.
+	self genGetClassObjectOf: instReg into: destReg scratchReg: scratchReg.
+	^entryLabel
 ]
 
 { #category : #'compile abstract instructions' }
@@ -531,7 +536,7 @@ CogObjectRepresentationForSqueakV3 >> genShiftAwaySmallIntegerTagsInScratchReg: 
 
 { #category : #initialization }
 CogObjectRepresentationForSqueakV3 >> genStoreCheckTrampoline [
-	"Call noteAsRoot: with the object stored into"
+	"Call ceStoreCheck: with the object stored into"
 	^cogit
 		genTrampolineFor: #ceStoreCheck:
 		called: 'ceStoreCheckTrampoline'
@@ -604,9 +609,12 @@ CogObjectRepresentationForSqueakV3 >> getInlineCacheClassTagFrom: sourceReg into
 	 the compact class index shifted by log: 2 word size for objects with compact classes
 	 (1 * 4 to: 31 * 4 by: 4), or the class.  These ranges cannot overlap because the heap
 	 (and hence the lowest class object) is beyond the machine code zone."
-	| jumpIsInt jumpCompact |
+	| entryLabel jumpIsInt jumpCompact |
+	<var: #entryLabel type: #'AbstractInstruction *'>
 	<var: #jumpIsInt type: #'AbstractInstruction *'>
 	<var: #jumpCompact type: #'AbstractInstruction *'>
+	cogit AlignmentNops: (BytesPerWord max: 8).
+	entryLabel := cogit Label.
 	cogit MoveR: sourceReg R: destReg.
 	cogit AndCq: 1 R: destReg.
 	jumpIsInt := cogit JumpNonZero: 0.
@@ -622,7 +630,7 @@ CogObjectRepresentationForSqueakV3 >> getInlineCacheClassTagFrom: sourceReg into
 	 mix signed and unsigned offsets."
 	cogit AndCq: AllButTypeMask signedIntFromLong R: destReg.
 	jumpCompact jmpTarget: (jumpIsInt jmpTarget: cogit Label).
-	^0
+	^entryLabel
 ]
 
 { #category : #'garbage collection' }

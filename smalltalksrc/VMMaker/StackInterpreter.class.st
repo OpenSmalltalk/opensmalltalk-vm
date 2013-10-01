@@ -11511,7 +11511,7 @@ StackInterpreter >> stackValue: offset put: oop [
 StackInterpreter >> startPCOfMethod: aCompiledMethod [
 	<api>
 	"Zero-relative version of CompiledMethod>>startpc."
-	^objectMemory lastPointerOf: aCompiledMethod
+	^(self literalCountOf: aCompiledMethod) + LiteralStart * objectMemory bytesPerOop
 ]
 
 { #category : #'stack bytecodes' }

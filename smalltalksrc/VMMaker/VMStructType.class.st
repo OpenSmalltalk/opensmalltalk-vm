@@ -23,10 +23,14 @@ VMStructType class >> alignedByteSizeOf: objectSymbolOrClass forClient: aVMClass
 
 { #category : #'code generation' }
 VMStructType class >> checkGenerateFieldAccessors: fieldSpecs bitPosition: firstBitPosition in: surrogateClass [
-	| bitPosition alignedByteSize |
+	| bitPosition alignedByteSize currentOffset code |
 	bitPosition := firstBitPosition.
 	fieldSpecs do:
-		[:spec| | code |
+		[:spec|
+		"reset the bitPosition if the offset expression changes."
+		currentOffset ~= (self offsetForInstVar: spec first) ifTrue:
+			[bitPosition := firstBitPosition.
+			 currentOffset := self offsetForInstVar: spec first].
 		"If the accessor is already defined in a superclass don't redefine it in the subclass.
 		 We assume it is correctly defined in the superclass."
 		(spec first ~= #unused
@@ -50,12 +54,12 @@ VMStructType class >> checkGenerateFieldAccessors: fieldSpecs bitPosition: first
 		bitPosition := bitPosition + spec second].
 	alignedByteSize := bitPosition / 8.
 	self assert: alignedByteSize isInteger.
-	alignedByteSize ~= surrogateClass alignedByteSize ifTrue:
-		[surrogateClass class
-			compile: 'alignedByteSize'
-					, (String with: Character cr with: Character tab with: $^)
-					, alignedByteSize printString
-			classified: #accessing]
+	code := 'alignedByteSize'
+			, (String with: Character cr with: Character tab with: $^)
+			, alignedByteSize printString,
+			(currentOffset ifNil: [''] ifNotNil: [' + self ', currentOffset]).
+	code ~= (surrogateClass class sourceCodeAt: #alignedByteSize) asString ifTrue:
+		[surrogateClass class compile: code classified: #accessing]
 ]
 
 { #category : #'code generation' }
@@ -144,6 +148,8 @@ VMStructType class >> getter: getter bitPosition: bitPosition bitWidth: bitWidth
 							at: endByte - startByte + 1
 							ifAbsent: ['LongLong']);
 		  nextPutAll: 'At: address + '; print: startByte + 1.
+		(self offsetForInstVar: getter) ifNotNil:
+			[:offsetExpr| s nextPutAll: ' + '; nextPutAll: offsetExpr].
 		shift ~= 0 ifTrue:
 			[s nextPutAll: ') bitShift: -'; print: shift].
 		alignedPowerOf2 ifFalse:
@@ -219,6 +225,12 @@ VMStructType class >> needsTypeTag [
 	^false
 
 	"VMStructType allSubclasses select: [:sc| sc needsTypeTag]"
+]
+
+{ #category : #'code generation' }
+VMStructType class >> offsetForInstVar: instVarName [
+	"Hack to offset accesses to variables by certain values."
+	^nil
 ]
 
 { #category : #translation }
@@ -318,6 +330,8 @@ VMStructType class >> setter: getter bitPosition: bitPosition bitWidth: bitWidth
 							at: endByte - startByte + 1
 							ifAbsent: ['LongLong'])
 					, 'At: address + '.
+		(self offsetForInstVar: getter) ifNotNil:
+			[:offsetExpr| accessor := accessor, offsetExpr, ' + '].
 		mask := #(16rFF 16rFFFF 16rFFFFFFFF 16rFFFFFFFF)
 						at: endByte - startByte + 1
 						ifAbsent: [(2 raisedTo: 64) - 1].
@@ -328,8 +342,8 @@ VMStructType class >> setter: getter bitPosition: bitPosition bitWidth: bitWidth
 		alignedPowerOf2 ifTrue:
 			[s nextPut: $^].
 		s nextPutAll: 'memory';
-		  crtab: 2; nextPutAll: accessor; print: startByte + 1;
-		  crtab: 2; nextPutAll: 'put: '.
+		  crtab: 2; nextPutAll: accessor; print: startByte + 1.
+		s crtab: 2; nextPutAll: 'put: '.
 		typeOrNil ifNotNil:
 			[s nextPut: $(].
 		alignedPowerOf2 ifFalse:

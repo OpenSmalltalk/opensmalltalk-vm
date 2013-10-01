@@ -49,6 +49,11 @@ CogBlockMethod class >> alignedByteSizeOf: anObject forClient: aVMClass [
 	^aVMClass cogit cogBlockMethodSurrogateClass alignedByteSize
 ]
 
+{ #category : #'accessing class hierarchy' }
+CogBlockMethod class >> defaultObjectMemoryClass [
+	^NewObjectMemory
+]
+
 { #category : #'class initialization' }
 CogBlockMethod class >> initialize [
 	"CogBlockMethod initialize"
@@ -73,7 +78,8 @@ CogBlockMethod class >> initialize [
 
 { #category : #translation }
 CogBlockMethod class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
-	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in a CogMethod or CogBlockMethod struct."
+	"enumerate aBinaryBlock with the names and C type strings for the
+	 inst vars to include in a CogMethod or CogBlockMethod struct."
 
 	self allInstVarNames do:
 		[:ivn|
@@ -85,6 +91,9 @@ CogBlockMethod class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 				[aBinaryBlock
 					value: ivn
 					value: (ivn caseOf: {
+								['objectHeader']			-> [self objectMemoryClass baseHeaderSize = 8
+																ifTrue: [#sqLong]
+																ifFalse: [#sqInt]].
 								['cmNumArgs']				-> [#(unsigned ' : 8')]. "SqueakV3 needs only 5 bits"
 								['cmType']					-> [#(unsigned ' : 3')].
 								['cmRefersToYoung']		-> [#(unsigned #Boolean ' : 1')].
@@ -97,7 +106,7 @@ CogBlockMethod class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 								['blockEntryOffset']			-> [#'unsigned short'].
 								['homeOffset']				-> [#'unsigned short'].
 								['startpc']					-> [#'unsigned short'].
-								['padToWord']				-> [#(#BytesPerWord 8 'unsigned int')].
+								['padToWord']				-> [#(#BaseHeaderSize 8 'unsigned int')].
 								['nextMethod']				-> ['struct _CogMethod *']} "see NewspeakCogMethod"
 							otherwise:
 								[#sqInt])]]
@@ -108,6 +117,14 @@ CogBlockMethod class >> isAccessor: aSelector [
 	"Answer if aSelector is simply an accessor method for one of our fields."
 	^(#(cPICNumCases cPICNumCases: nextOpenPIC nextOpenPIC:) includes: aSelector)
 	  or: [super isAccessor: aSelector]
+]
+
+{ #category : #'code generation' }
+CogBlockMethod class >> offsetForInstVar: instVarName [
+	"Hack to offset accesses to variables by certain values.  The inst vars following
+	 the objectHeader must be offset by the baseHeaderSize."
+	^(#('objectHeader' 'homeOffset' 'startpc' 'padToWord') includes: instVarName) ifFalse:
+		['baseHeaderSize']
 ]
 
 { #category : #accessing }

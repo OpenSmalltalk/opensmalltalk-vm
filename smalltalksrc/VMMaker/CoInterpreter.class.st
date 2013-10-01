@@ -726,7 +726,7 @@ CoInterpreter >> assertValidExecutionPointe: lip r: lifp s: lisp imbar: inInterp
 	<var: #lip type: #usqInt>
 	<var: #lifp type: #'char *'>
 	<var: #lisp type: #'char *'>
-	| methodField cogMethod savedIP  |
+	| methodField cogMethod theIP  |
 	<var: #cogMethod type: #'CogMethod *'>
 	self assert: stackPage = (stackPages stackPageFor: lifp) l: ln.
 	self assert: stackPage = stackPages mostRecentlyUsedPage l: ln.
@@ -743,18 +743,13 @@ CoInterpreter >> assertValidExecutionPointe: lip r: lifp s: lisp imbar: inInterp
 			 self assert: method = methodField l: ln.
 			 self cppIf: MULTIPLEBYTECODESETS
 				ifTrue: [self assert: (self methodUsesAlternateBytecodeSet: method) = (bytecodeSetSelector = 256) l: ln].
-			 ((self asserta: methodField asUnsignedInteger > objectMemory startOfMemory l: ln)
-			   and: [self asserta: methodField asUnsignedInteger < objectMemory freeStart l: ln]) ifTrue:
-				[lip = cogit ceReturnToInterpreterPC
-					ifTrue:
-						[savedIP := self iframeSavedIP: lifp.
-						 self assert: (savedIP >= (methodField + (objectMemory lastPointerOf: methodField) + BaseHeaderSize - 1)
-								  and: [savedIP < (methodField + (objectMemory byteLengthOf: methodField) + BaseHeaderSize)])
-							l: ln]
-					ifFalse:
-						[self assert: (lip >= (methodField + (objectMemory lastPointerOf: methodField) + BaseHeaderSize - 1)
-								  and: [lip < (methodField + (objectMemory byteLengthOf: methodField) + BaseHeaderSize)])
-							l: ln]].
+			 (self asserta: (objectMemory cheapAddressCouldBeInHeap: methodField) l: ln) ifTrue:
+				[theIP := lip = cogit ceReturnToInterpreterPC
+							ifTrue: [self iframeSavedIP: lifp]
+							ifFalse: [lip].
+				 self assert: (theIP >= (methodField + (objectMemory lastPointerOf: methodField))
+							  and: [theIP < (methodField + (objectMemory byteLengthOf: methodField) + objectMemory baseHeaderSize - 1)])
+					l: ln].
 			 self assert: ((self iframeIsBlockActivation: lifp)
 					or: [(self pushedReceiverOrClosureOfFrame: lifp) = (self iframeReceiver: lifp)])
 				l: ln]
@@ -861,8 +856,8 @@ CoInterpreter >> assertValidStackedInstructionPointersIn: aStackPage line: ln [
 				[self assert: theIP = cogit ceReturnToInterpreterPC l: ln].
 			 theIP = cogit ceReturnToInterpreterPC ifTrue:
 				[theIP := self iframeSavedIP: theFP].
-			 self assert: (theIP >= (methodObj + (objectMemory lastPointerOf: methodObj) + BaseHeaderSize - 1)
-						  and: [theIP < (methodObj + (objectMemory byteLengthOf: methodObj) + BaseHeaderSize)])
+			 self assert: (theIP >= (methodObj + (objectMemory lastPointerOf: methodObj))
+						  and: [theIP < (methodObj + (objectMemory byteLengthOf: methodObj) + objectMemory baseHeaderSize - 1)])
 				l: ln.
 			 prevFrameWasCogged := false].
 	 theIP := (stackPages longAt: theFP + FoxCallerSavedIP) asUnsignedInteger.
@@ -1328,7 +1323,7 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 	"self printExternalHeadFrame"
 	"self printStringOf: selector"
 	cogit assertCStackWellAligned.
-	self assert: ((objectMemory isIntegerObject: rcvr) or: [objectMemory addressCouldBeObj: rcvr]).
+	self assert: (objectMemory addressCouldBeOop: rcvr).
 	self sendBreakpoint: selector receiver: rcvr.
 	mClassMixin := self mMethodClass.
 	mixinApplication := self 
@@ -1583,7 +1578,7 @@ CoInterpreter >> ceReturnToInterpreter: anOop [
 	 The machine code has executed a return instruction when the return address
 	 is set to ceReturnToInterpreterPC.  Return the result and switch to the interpreter."
 	<api>
-	self assert: ((objectMemory isIntegerObject: anOop) or: [objectMemory addressCouldBeObj: anOop]).
+	self assert: (objectMemory addressCouldBeOop: anOop).
 	self flag: 'are you really sure setStackPageAndLimit: is needed?'.
 	"I think you're only doing this for the markStackPageMostRecentlyUsed:
 	 and that's probably not needed either"
@@ -1624,7 +1619,7 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 	"self printExternalHeadFrame"
 	"self printStringOf: selector"
 	cogit assertCStackWellAligned.
-	self assert: ((objectMemory isIntegerObject: rcvr) or: [objectMemory addressCouldBeObj: rcvr]).
+	self assert: (objectMemory addressCouldBeOop: rcvr).
 	self sendBreakpoint: selector receiver: rcvr.
 	superNormalBar = 0
 		ifTrue: [classTag := objectMemory fetchClassTagOf: rcvr]
@@ -1708,7 +1703,7 @@ CoInterpreter >> ceSendAbort: selector to: rcvr numArgs: numArgs [
 	"self printExternalHeadFrame"
 	"self printStringOf: selector"
 	cogit assertCStackWellAligned.
-	self assert: ((objectMemory isIntegerObject: rcvr) or: [objectMemory addressCouldBeObj: rcvr]).
+	self assert: (objectMemory addressCouldBeOop: rcvr).
 	self sendBreakpoint: selector receiver: rcvr.
 	argumentCount := numArgs.
 	classTag := objectMemory fetchClassTagOf: rcvr.
@@ -1743,7 +1738,7 @@ CoInterpreter >> ceSendFromInLineCacheMiss: oPIC [
 	"self printStringOf: selector"
 	numArgs := oPIC cmNumArgs.
 	rcvr := self stackValue: numArgs + 1. "skip return pc"
-	self assert: ((objectMemory isIntegerObject: rcvr) or: [objectMemory addressCouldBeObj: rcvr]).
+	self assert: (objectMemory addressCouldBeOop: rcvr).
 	classTag := objectMemory fetchClassTagOf: rcvr.
 	argumentCount := numArgs.
 	(self lookupInMethodCacheSel: oPIC selector classTag: classTag)
@@ -2025,7 +2020,7 @@ CoInterpreter >> cogMethodOf: aMethodOop [
 	<returnTypeC: #'CogMethod *'>
 	| methodHeader |
 	methodHeader := self rawHeaderOf: aMethodOop.
-	self assert: ((objectMemory isNonIntegerObject: methodHeader)
+	self assert: ((objectMemory isNonImmediate: methodHeader)
 				and: [methodHeader asUnsignedInteger < objectMemory startOfMemory]).
 	^self cCoerceSimple: methodHeader to: #'CogMethod *'
 ]
@@ -4659,7 +4654,7 @@ CoInterpreter >> maybeFlagMethodAsInterpreted: aMethod [
 
 { #category : #'compiled methods' }
 CoInterpreter >> maybeMethodHasCogMethod: anOop [
-	^(objectMemory isNonIntegerObject: anOop)
+	^(objectMemory isNonImmediate: anOop)
 	  and: [(objectMemory isCompiledMethod: anOop)
 	  and: [self isCogMethodReference: (self rawHeaderOf: anOop)]]
 ]
@@ -4684,7 +4679,7 @@ CoInterpreter >> methodCacheAddress [
 { #category : #'compiled methods' }
 CoInterpreter >> methodHasCogMethod: aMethodOop [
 	<api>
-	self assert: (objectMemory isNonIntegerObject: aMethodOop).
+	self assert: (objectMemory isNonImmediate: aMethodOop).
 	^self isCogMethodReference: (self rawHeaderOf: aMethodOop)
 ]
 
@@ -6169,7 +6164,7 @@ CoInterpreter >> startPCOfClosure: aBlockClosure [
 CoInterpreter >> startPCOfMethodHeader: aCompiledMethodHeader [
 	<api>
 	"Zero-relative version of CompiledMethod>>startpc."
-	^(self literalCountOfHeader: aCompiledMethodHeader) * BytesPerWord + BaseHeaderSize
+	^(self literalCountOfHeader: aCompiledMethodHeader) + LiteralStart * objectMemory bytesPerOop
 ]
 
 { #category : #'cog jit support' }
@@ -6177,11 +6172,11 @@ CoInterpreter >> startPCOrNilOfLiteral: lit in: aMethodObj [
 	"Answer the startPC of lit if it is a (clean) block in aMethodObj, oitherwise answer nil."
 	<api>
 	| outerContext |
-	(objectMemory isIntegerObject: lit) ifTrue:
+	(objectMemory isImmediate: lit) ifTrue:
 		[^nil].
 	(objectMemory lastPointerOf: lit) <= ClosureCopiedValuesIndex ifTrue:
 		[^nil].
-	(objectMemory isArrayNonInt: lit) ifTrue:
+	(objectMemory isArrayNonImm: lit) ifTrue:
 		[^nil].
 	outerContext := objectMemory fetchPointer: ClosureOuterContextIndex ofObject: lit.
 	(objectMemory isContext: outerContext) ifFalse:
@@ -6388,10 +6383,10 @@ CoInterpreter >> updateStackZoneReferencesToCompiledCodePreCompaction [
 							   and: [theIP < (theMethod asUnsignedInteger + theMethod blockSize)])]) ifTrue:
 					[stackPages
 						longAt: theIPPtr
-						put: theIP + theMethod objectHeader signedIntFromLong].
+						put: theIP + theMethod objectHeader].
 				 stackPages
 					longAt: theFP + FoxMethod
-					put: theMethodField + theMethod objectHeader signedIntFromLong].
+					put: theMethodField + theMethod objectHeader].
 			 (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
 				[theIPPtr := theFP + FoxCallerSavedIP.
 				 theFP := callerFP]]]

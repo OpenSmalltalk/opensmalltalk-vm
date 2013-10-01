@@ -119,18 +119,6 @@ CogBlockMethodSurrogate64 >> homeOffset: aValue [
 ]
 
 { #category : #accessing }
-CogBlockMethodSurrogate64 >> padToWord [
-	^memory unsignedLongAt: address + 5
-]
-
-{ #category : #accessing }
-CogBlockMethodSurrogate64 >> padToWord: aValue [
-	^memory
-		unsignedLongAt: address + 5
-		put: aValue
-]
-
-{ #category : #accessing }
 CogBlockMethodSurrogate64 >> stackCheckOffset [
 	^((memory unsignedShortAt: address + 11) bitShift: -4) bitAnd: 16rFFF
 ]

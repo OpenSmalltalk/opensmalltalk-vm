@@ -4,6 +4,11 @@ Class {
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
+{ #category : #accessing }
+Spur64BitMemoryManager class >> objectRepresentationClass [
+	^CogObjectRepresentationFor64BitSpur
+]
+
 { #category : #'word size' }
 Spur64BitMemoryManager class >> wordSize [
 	^8
@@ -148,7 +153,7 @@ Spur64BitMemoryManager >> fillObj: objOop numSlots: numSlots with: fillValue [
 		do: [:p| self longAt: p put: fillValue]
 ]
 
-{ #category : #'garbage collection' }
+{ #category : #'free space' }
 Spur64BitMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
 	<var: #numBytes type: #usqLong>
 	| numSlots |
@@ -276,6 +281,11 @@ Spur64BitMemoryManager >> objectBytesForSlots: numSlots [
 	+ (numSlots >= self numSlotsMask
 		ifTrue: [self baseHeaderSize + self baseHeaderSize]
 		ifFalse: [self baseHeaderSize])
+]
+
+{ #category : #simulation }
+Spur64BitMemoryManager >> objectRepresentationClass [
+	^CogObjectRepresentationFor64BitSpur
 ]
 
 { #category : #'header access' }
