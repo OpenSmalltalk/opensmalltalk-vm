@@ -1878,7 +1878,7 @@ Cogit >> addCogMethodsToHeapMap [
 	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
 	[cogMethod < methodZone limitZony] whileTrue:
 		[cogMethod cmType = CMMethod ifTrue:
-			[self heapMapAtWord: cogMethod Put: 1].
+			[coInterpreter heapMapAtWord: cogMethod Put: 1].
 		cogMethod := methodZone methodAfter: cogMethod]
 ]
 
@@ -2693,11 +2693,18 @@ Cogit >> checkIfValidObjectRef: annotation pc: mcpc cogMethod: cogMethod [
 			[self print: 'object ref leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
 			^1]].
 	(self isSendAnnotation: annotation) ifTrue:
-		[| cacheTag |
-		 cacheTag := backEnd inlineCacheTagAt: mcpc asInteger.
-		 (objectRepresentation checkValidInlineCacheTag: cacheTag) ifFalse:
-			[self print: 'cache tag/selector leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
-			^1]].
+		[| entryPoint selectorOrCacheTag |
+		 entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
+		 selectorOrCacheTag := backEnd inlineCacheTagAt: mcpc asInteger.
+		 entryPoint > methodZoneBase
+			ifTrue: "linked send, cacheTag is a cacheTag"
+				[(objectRepresentation checkValidInlineCacheTag: selectorOrCacheTag) ifFalse:
+					[self print: 'cache tag leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
+					^1]]
+			ifFalse: "unlinked send; cacheTag is a selector"
+				[(objectRepresentation checkValidObjectReference: selectorOrCacheTag) ifFalse:
+					[self print: 'selector leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
+					^1]]].
 	^0 "keep scanning"
 ]
 
@@ -3497,7 +3504,8 @@ Cogit >> compileBlockEntry: blockStart [
 	 followed by either a frame build, if a frame is required, or nothing.  The CogMethodHeader's
 	 objectHeader field is a back pointer to the method, but this can't be filled in until code generation."
 	<var: #blockStart type: #'BlockStart *'>
-	self AlignmentNops: (self sizeof: CogBlockMethod).
+	"Block method headers must be aligned on the correct boundary, just like non-block method headers."
+	self AlignmentNops: (methodZone roundUpLength: 1).
 	blockStart fakeHeader: self Label.
 	(self sizeof: CogBlockMethod) caseOf:
 		{ [2 * BytesPerWord]	"ObjectMemory"

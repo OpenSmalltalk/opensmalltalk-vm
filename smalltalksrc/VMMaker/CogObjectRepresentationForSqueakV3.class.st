@@ -518,11 +518,6 @@ CogObjectRepresentationForSqueakV3 >> genRemoveSmallIntegerTagsInScratchReg: scr
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genSSPushSlot: index reg: baseReg [
-	^cogit ssPushBase: baseReg offset: (self slotOffsetOfInstVarIndex: index)
-]
-
-{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genSetSmallIntegerTagsIn: scratchReg [ 
 	cogit OrCq: 1 R: scratchReg.
 	^0

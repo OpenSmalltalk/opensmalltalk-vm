@@ -1449,7 +1449,17 @@ CoInterpreter >> ceMNUFromPICMNUMethod: aMethodObj receiver: rcvr [
 { #category : #trampolines }
 CoInterpreter >> ceNewArraySlotSize: slotSize [
 	<api>
-	^objectMemory eeInstantiateAndInitializeClass: (objectMemory splObj: ClassArray) indexableSize: slotSize
+	objectMemory hasSpurMemoryManagerAPI ifTrue:
+		[| obj |
+		 obj := objectMemory
+					eeInstantiateClassIndex: ClassArrayCompactIndex
+					format: objectMemory arrayFormat
+					numSlots: slotSize.
+		objectMemory fillObj: obj numSlots: slotSize with: objectMemory nilObject.
+		^obj].
+	^objectMemory
+		eeInstantiateAndInitializeClass: (objectMemory splObj: ClassArray)
+		indexableSize: slotSize
 ]
 
 { #category : #trampolines }
@@ -1958,14 +1968,14 @@ CoInterpreter >> checkStackIntegrity [
 			 [frameRcvrOffset := self frameReceiverOffset: theFP.
 			  [theSP <= frameRcvrOffset] whileTrue:
 				[oop := stackPages longAt: theSP.
-				 ((objectMemory isNonIntegerObject: oop) 
+				 ((objectMemory isNonImmediate: oop) 
 				   and: [(self heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
 					[self printFrameThing: 'object leak in frame temp' at: theSP; cr.
 					 ok := false].
 				 theSP := theSP + BytesPerWord].
 			 (self frameHasContext: theFP) ifTrue:
 				[oop := self frameContext: theFP.
-				 ((objectMemory isIntegerObject: oop) 
+				 ((objectMemory isImmediate: oop) 
 				   or: [(self heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
 					[self printFrameThing: 'object leak in frame ctxt' at: theFP + FoxThisContext; cr.
 					 ok := false].
@@ -1981,7 +1991,7 @@ CoInterpreter >> checkStackIntegrity [
 						 ok := false]]
 				ifFalse:
 					[oop := self iframeMethod: theFP.
-					 ((objectMemory isIntegerObject: oop) 
+					 ((objectMemory isImmediate: oop) 
 					   or: [(self heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
 						[self printFrameThing: 'object leak in iframe mthd' at: theFP + FoxMethod; cr.
 						 ok := false]].
@@ -1991,7 +2001,7 @@ CoInterpreter >> checkStackIntegrity [
 			 theSP := theFP + FoxCallerSavedIP + BytesPerWord.
 			 [theSP <= thePage baseAddress] whileTrue:
 				[oop := stackPages longAt: theSP.
-				 ((objectMemory isNonIntegerObject: oop) 
+				 ((objectMemory isNonImmediate: oop) 
 				   and: [(self heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
 					[self printFrameThing: 'object leak in frame arg' at: theSP; cr.
 					 ok := false].
@@ -4403,8 +4413,8 @@ CoInterpreter >> mapVMRegisters [
 		method := objectMemory remapObj: method.
 		mapInstructionPointer ifTrue:
 			[instructionPointer := instructionPointer + method]]. "*rel to method"
-	(objectMemory shouldRemapOop: newMethod) ifFalse: "maybe oop due to object-as-method"
-		[newMethod := objectMemory remap: newMethod]
+	(objectMemory shouldRemapOop: newMethod) ifTrue: "maybe oop due to object-as-method"
+		[newMethod := objectMemory remapObj: newMethod]
 ]
 
 { #category : #'cog jit support' }
