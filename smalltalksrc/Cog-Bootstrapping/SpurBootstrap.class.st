@@ -691,6 +691,17 @@ SpurBootstrap >> cloneObjects [
 		lastHash: oldHeap lastHash
 ]
 
+{ #category : #testing }
+SpurBootstrap >> coHeapFrom: aSpur32BitMMLESimulator [
+	| coHeap |
+	coHeap := Spur32BitMMLECoSimulator new.
+	aSpur32BitMMLESimulator class allInstVarNames do:
+		[:ivn|
+		coHeap instVarNamed: ivn put: (aSpur32BitMMLESimulator instVarNamed: ivn)].
+	coHeap scavenger instVarNamed: 'manager' put: coHeap.
+	^coHeap
+]
+
 { #category : #'bootstrap image' }
 SpurBootstrap >> compactImage [
 	| firstFree lastUsed |
@@ -1101,16 +1112,28 @@ SpurBootstrap >> isOldObjABehavior: oldObj [
 
 { #category : #testing }
 SpurBootstrap >> launch [
-	self launch: newHeap headerFlags: oldInterpreter getImageHeaderFlags
+	self launch: newHeap
+		simulatorClass: StackInterpreterSimulator
+		headerFlags: oldInterpreter getImageHeaderFlags
 ]
 
 { #category : #testing }
-SpurBootstrap >> launch: heap headerFlags: headerFlags [
+SpurBootstrap >> launch: heap simulatorClass: simulatorClass headerFlags: headerFlags [
 	| sim |
-	sim := StackInterpreterSimulator onObjectMemory: heap.
+	sim := simulatorClass onObjectMemory: heap.
 	heap coInterpreter: sim.
+	(sim class allInstVarNames includes: 'cogCodeSize')
+		ifTrue:
+			[sim
+				initializeInterpreter: 0;
+				instVarNamed: 'heapBase' put: heap startOfMemory;
+				instVarNamed: 'numStackPages' put: 8;
+				instVarNamed: 'cogCodeSize' put: 1024*1024;
+				moveMethodCacheToMemoryAt: sim cogCodeSize + sim computeStackZoneSize;
+			 	initializeCodeGenerator]
+		ifFalse:
+			[sim initializeInterpreter: 0].
 	sim
-		initializeInterpreter: 0;
 		setImageHeaderFlagsFrom: headerFlags;
 		imageName: ImageName;
 		flushExternalPrimitives;
@@ -1129,7 +1152,16 @@ SpurBootstrap >> launch: heap headerFlags: headerFlags [
 
 { #category : #testing }
 SpurBootstrap >> launchSaved [
-	self launch: TransformedImage veryDeepCopy headerFlags: ImageHeaderFlags
+	self launch: TransformedImage veryDeepCopy
+		simulatorClass: StackInterpreterSimulator
+		headerFlags: ImageHeaderFlags
+]
+
+{ #category : #testing }
+SpurBootstrap >> launchSavedWithJIT [
+	self launch: (self coHeapFrom: TransformedImage veryDeepCopy)
+		simulatorClass: CogVMSimulator
+		headerFlags: ImageHeaderFlags
 ]
 
 { #category : #'bootstrap methods' }
@@ -1244,6 +1276,7 @@ SpurBootstrap >> on: imageName [
 	newHeap
 		allocateMemoryOfSize: (oldHeap youngStart * 3 / 2 roundUpTo: 1024 * 1024)
 		newSpaceSize: 1024 * 1024
+		stackSize: 1024 * 1024
 		codeSize: 1024 * 1024.
 	newHeap setCheckForLeaks: 15 - 4. "don't check become; soooo many rehashes in bootstrap"
 	map := Dictionary new: oldHeap memory size // 4.
