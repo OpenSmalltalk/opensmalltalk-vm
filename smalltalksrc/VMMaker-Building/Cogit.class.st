@@ -786,7 +786,9 @@ Cogit class >> initializePrimitiveTable [
 
 { #category : #'class initialization' }
 Cogit class >> initializeWithOptions: optionsDictionary [
-
+	CogMethodSurrogate withAllSubclassesDo:
+		[:cmsClass|
+		cmsClass initializationOptions: optionsDictionary].
 	super initializeWithOptions: optionsDictionary.
 	self initializeMiscConstants. "must preceed other initialization."
 	self initializeErrorCodes.
@@ -3013,7 +3015,7 @@ Cogit >> cogBlockMethodSurrogateAt: address [
 	self assert: (address bitAnd: BytesPerWord - 1) = 0.
 	^cogBlockMethodSurrogateClass new
 		at: address
-		memory: objectMemory memory
+		objectMemory: objectMemory
 		cogit: self
 ]
 
@@ -3218,7 +3220,7 @@ Cogit >> cogMethodDoesntLookKosher: cogMethod [
 			[^22].
 		
 		 "Check the nextOpenPIC link unless we're compacting"
-		 cogMethod objectHeader signedIntFromLong >= 0 ifTrue:
+		 cogMethod objectHeader >= 0 ifTrue:
 			[(cogMethod methodObject ~= 0
 			 and: [cogMethod methodObject < methodZoneBase
 				   or: [cogMethod methodObject > (methodZone freeStart - openPICSize)
@@ -3260,7 +3262,7 @@ Cogit >> cogMethodSurrogateAt: address [
 	self assert: (address bitAnd: BytesPerWord - 1) = 0.
 	^cogMethodSurrogateClass new
 		at: address
-		memory: objectMemory memory
+		objectMemory: objectMemory
 		cogit: self
 ]
 
@@ -3496,10 +3498,16 @@ Cogit >> compileBlockEntry: blockStart [
 	 objectHeader field is a back pointer to the method, but this can't be filled in until code generation."
 	<var: #blockStart type: #'BlockStart *'>
 	self AlignmentNops: (self sizeof: CogBlockMethod).
-	self assert: (self sizeof: CogBlockMethod) = (2 * BytesPerWord).
 	blockStart fakeHeader: self Label.
-	self Fill32: 0. "gets filled in later with the homeOffset and startpc"
-	self Fill32: 0. "gets filled in later with numArgs et al"
+	(self sizeof: CogBlockMethod) caseOf:
+		{ [2 * BytesPerWord]	"ObjectMemory"
+			->	[self Fill32: 0.		"gets filled in later with the homeOffset and startpc"
+				 self Fill32: 0].		"gets filled in later with numArgs et al"
+		   [3 * BytesPerWord]	"Spur"
+			->	[self Fill32: 0.		"gets filled in later with the homeOffset and startpc"
+				 self Fill32: 0.		"is left fallow"
+				 self Fill32: 0].		"gets filled in later with numArgs et al"
+		}.
 	blockStart entryLabel: self Label.
 	needsFrame
 		ifTrue:
@@ -3564,9 +3572,7 @@ Cogit >> compileCPIC: cPIC Case0: case0CogMethod Case1Method: case1Method tag: c
 Cogit >> compileCPICEntry [
 	<returnTypeC: #'AbstractInstruction *'>
 	"Compile the cache tag computation and the first comparison.  Answer the address of that comparison."
-	self AlignmentNops: (BytesPerWord max: 8).
-	entry := self Label.
-	objectRepresentation getInlineCacheClassTagFrom: ReceiverResultReg into: TempReg.
+	entry := objectRepresentation getInlineCacheClassTagFrom: ReceiverResultReg into: TempReg.
 	self CmpR: ClassReg R: TempReg.
 	^self JumpNonZero: 0
 ]
@@ -3659,13 +3665,11 @@ Cogit >> compileEntry [
 	 can distinguish normal and super sends (super sends bind to the noCheckEntry).
 	 In Newspeak we also need to distinguish dynSuperSends from normal and super
 	 and so bind a the preceeding nop (on x86 there happens to be one anyway)."
-	self cppIf: NewspeakVM
-		ifTrue: "1st nop differentiates dynSuperEntry from no-check entry if using nextMethod"
-			[self Nop. 
-			dynSuperEntry := self Nop].
-	self AlignmentNops: (BytesPerWord max: 8).
-	entry := self Label.
-	objectRepresentation getInlineCacheClassTagFrom: ReceiverResultReg into: TempReg.
+
+	self cppIf: NewspeakVM ifTrue:
+		[self Nop. "1st nop differentiates dynSuperEntry from no-check entry if using nextMethod"
+		 dynSuperEntry := self Nop].
+	entry := objectRepresentation getInlineCacheClassTagFrom: ReceiverResultReg into: TempReg.
 	self CmpR: ClassReg R: TempReg.
 	self JumpNonZero: sendMissCall.
 	noCheckEntry := self Label.
@@ -7388,7 +7392,7 @@ Cogit >> relativeLabelForPC: pc [
 Cogit >> relocateCallsAndSelfReferencesInMethod: cogMethod [
 	<var: #cogMethod type: #'CogMethod *'>
 	| delta |
-	delta := cogMethod objectHeader signedIntFromLong.
+	delta := cogMethod objectHeader.
 	backEnd relocateCallBeforeReturnPC: cogMethod asInteger + missOffset by: delta negated.
 	self mapFor: cogMethod
 		performUntil: #relocateIfCallOrMethodReference:mcpc:delta:
@@ -7400,7 +7404,7 @@ Cogit >> relocateCallsInClosedPIC: cPIC [
 	<var: #cPIC type: #'CogMethod *'>
 	| delta pc entryPoint targetMethod |
 	<var: #targetMethod type: #'CogMethod *'>
-	delta := cPIC objectHeader signedIntFromLong.
+	delta := cPIC objectHeader.
 	self assert: (backEnd callTargetFromReturnAddress: cPIC asInteger + missOffset)
 					= (self picAbortTrampolineFor: cPIC cmNumArgs).
 	backEnd relocateCallBeforeReturnPC: cPIC asInteger + missOffset by: delta negated.
@@ -7416,7 +7420,7 @@ Cogit >> relocateCallsInClosedPIC: cPIC [
 			 self assert: targetMethod cmType = CMMethod.
 			 backEnd
 				relocateJumpBeforeFollowingAddress: pc
-				by: (delta - targetMethod objectHeader signedIntFromLong) negated].
+				by: (delta - targetMethod objectHeader) negated].
 		pc := pc + cPICCaseSize].
 	self assert: cPIC cPICNumCases > 0.
 	pc := pc - cPICCaseSize.
@@ -7445,7 +7449,7 @@ Cogit >> relocateIfCallOrMethodReference: annotation mcpc: mcpc delta: delta [
 		 targetMethod cmType = CMMethod ifTrue: "send target not freed; just relocate."
 			[backEnd
 				relocateCallBeforeReturnPC: mcpc asInteger
-				by: (delta - targetMethod objectHeader signedIntFromLong) negated.
+				by: (delta - targetMethod objectHeader) negated.
 			 ^0].
 		"Target was freed; map back to an unlinked send; but include this method's reocation"
 		 unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).

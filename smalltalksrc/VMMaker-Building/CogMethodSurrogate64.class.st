@@ -90,11 +90,6 @@ CogMethodSurrogate64 >> methodObject: aValue [
 ]
 
 { #category : #accessing }
-CogMethodSurrogate64 >> objectHeader [
-	^memory unsignedLongLongAt: address + 1
-]
-
-{ #category : #accessing }
 CogMethodSurrogate64 >> objectHeader: aValue [
 	^memory
 		unsignedLongLongAt: address + 1

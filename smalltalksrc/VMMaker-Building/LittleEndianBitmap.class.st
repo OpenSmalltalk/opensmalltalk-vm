@@ -52,6 +52,11 @@ LittleEndianBitmap >> byteAt: byteAddress put: byte [
 ]
 
 { #category : #accessing }
+LittleEndianBitmap >> longAt: byteIndex [
+	^self longAt: byteIndex bigEndian: false
+]
+
+{ #category : #accessing }
 LittleEndianBitmap >> longAt: byteIndex bigEndian: bigEndian [
 	"Compatibility with the ByteArray method of the same name."
 	| lowBits wordIndex value word0 word1 |
@@ -127,6 +132,18 @@ LittleEndianBitmap >> longAt: byteIndex put: aValue bigEndian: bigEndian [
 		bm at: 2 put: 16rAAAAAAAA.
 		bm longAt: ba put: 16r01020304 bigEndian: true.
 		{ (bm at: 1) hex. (bm at: 2) hex }]"
+]
+
+{ #category : #accessing }
+LittleEndianBitmap >> longLongAt: byteAddress [
+	"memory is a Bitmap, a 32-bit indexable array of bits"
+	| hiWord loWord |
+	byteAddress - 1 \\ 8 ~= 0 ifTrue: [self unalignedAccessError].
+	loWord := self at: byteAddress - 1 // 4 + 1.
+	hiWord := self at: byteAddress - 1 // 4 + 2.
+	^hiWord = 0
+		ifTrue: [loWord]
+		ifFalse: [(hiWord signedIntFromLong bitShift: 32) + loWord]
 ]
 
 { #category : #accessing }

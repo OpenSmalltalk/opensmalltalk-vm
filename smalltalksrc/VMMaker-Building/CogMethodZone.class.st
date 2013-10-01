@@ -469,7 +469,7 @@ CogMethodZone >> planCompaction [
 			ifTrue: [delta := delta - cogMethod blockSize]
 			ifFalse:
 				[self assert: (cogit cogMethodDoesntLookKosher: cogMethod) = 0.
-				 cogMethod objectHeader: delta signedIntToLong].
+				 cogMethod objectHeader: delta].
 		 cogMethod := self methodAfter: cogMethod]
 ]
 
@@ -577,7 +577,7 @@ CogMethodZone >> relocateAndPruneYoungReferrers [
 	 and: [(cogMethod := coInterpreter cCoerceSimple: (objectMemory longAt: next) to: #'CogMethod *') cmType ~= CMFree
 	 and: [cogMethod cmRefersToYoung]]] whileTrue:
 		[cogMethod objectHeader ~= 0 ifTrue:
-			[coInterpreter longAt: next put: cogMethod asInteger + cogMethod objectHeader signedIntFromLong].
+			[coInterpreter longAt: next put: cogMethod asInteger + cogMethod objectHeader].
 		 dest := next].
 	self assert: dest >= youngReferrers.
 	source := dest - BytesPerWord.
@@ -587,7 +587,7 @@ CogMethodZone >> relocateAndPruneYoungReferrers [
 		  and: [cogMethod cmRefersToYoung]) ifTrue:
 			[self assert: source < (dest - BytesPerWord).
 			 cogMethod objectHeader ~= 0 ifTrue:
-				[cogMethod := coInterpreter cCoerceSimple: cogMethod asInteger + cogMethod objectHeader signedIntFromLong
+				[cogMethod := coInterpreter cCoerceSimple: cogMethod asInteger + cogMethod objectHeader
 									to: #'CogMethod *'].
 			 objectMemory longAt: (dest := dest - BytesPerWord) put: cogMethod asInteger].
 		 source := source - BytesPerWord].

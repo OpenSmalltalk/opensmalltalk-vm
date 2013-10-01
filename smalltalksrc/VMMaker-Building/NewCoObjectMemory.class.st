@@ -29,6 +29,13 @@ NewCoObjectMemory >> ceStoreCheck: anOop [
 ]
 
 { #category : #'debug support' }
+NewCoObjectMemory >> cheapAddressCouldBeInHeap: address [ 
+	^(address bitAnd: self wordSize - 1) = 0
+	  and: [(self oop: address isGreaterThanOrEqualTo: self startOfMemory)
+	  and: [self oop: address isLessThan: freeStart]]
+]
+
+{ #category : #'debug support' }
 NewCoObjectMemory >> clearLeakMapAndMapAccessibleObjects [
 	"Perform an integrity/leak check using the heapMap.  Set a bit at each object's header.
 	 Override to set a bit at each Cog method"
