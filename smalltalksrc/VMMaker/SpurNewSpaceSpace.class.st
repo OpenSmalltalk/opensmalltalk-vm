@@ -13,6 +13,11 @@ SpurNewSpaceSpace >> limit [
 	^limit
 ]
 
+{ #category : #accessing }
+SpurNewSpaceSpace >> limit: n [
+	limit := n
+]
+
 { #category : #printing }
 SpurNewSpaceSpace >> printOn: aStream. [
 	super printOn: aStream.
@@ -23,6 +28,11 @@ SpurNewSpaceSpace >> printOn: aStream. [
 { #category : #accessing }
 SpurNewSpaceSpace >> start [
 	^start
+]
+
+{ #category : #accessing }
+SpurNewSpaceSpace >> start: n [
+	start := n
 ]
 
 { #category : #initialization }

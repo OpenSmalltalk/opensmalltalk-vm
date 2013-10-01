@@ -2745,11 +2745,11 @@ ObjectMemory >> is: oop instanceOf: classOop compactClassIndex: compactClassInde
 { #category : #'header access' }
 ObjectMemory >> isArray: oop [
 	"Answer true if this is an indexable object with pointer elements, e.g., an array"
-	^(self isNonIntegerObject: oop) and:[self isArrayNonInt: oop]
+	^(self isNonIntegerObject: oop) and:[self isArrayNonImm: oop]
 ]
 
 { #category : #'header access' }
-ObjectMemory >> isArrayNonInt: oop [
+ObjectMemory >> isArrayNonImm: oop [
 	"Answer true if this is an indexable object with pointer elements, e.g., an array"
 	^ (self formatOf: oop) = 2
 ]

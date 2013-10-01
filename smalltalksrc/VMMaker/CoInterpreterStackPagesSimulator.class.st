@@ -8,6 +8,11 @@ Class {
 }
 
 { #category : #accessing }
+CoInterpreterStackPagesSimulator >> pages [
+	^pages
+]
+
+{ #category : #accessing }
 CoInterpreterStackPagesSimulator >> surrogateAtAddress: anAddress [ 
 	^pageMap at: anAddress
 ]

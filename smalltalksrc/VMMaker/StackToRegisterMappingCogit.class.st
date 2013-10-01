@@ -1279,9 +1279,7 @@ StackToRegisterMappingCogit >> compileOpenPIC: selector numArgs: numArgs [
 	<var: #itsAHit type: #'AbstractInstruction *'>
 	<var: #jumpBCMethod type: #'AbstractInstruction *'>
 	self compilePICProlog: numArgs.
-	self AlignmentNops: (BytesPerWord max: 8).
-	entry := self Label.
-	objectRepresentation genGetClassTagOf: ReceiverResultReg into: ClassReg scratchReg: TempReg.
+	entry := objectRepresentation genGetClassTagOf: ReceiverResultReg into: ClassReg scratchReg: TempReg.
 
 	"Do first of three probes.  See CoInterpreter>>lookupInMethodCacheSel:classTag:"
 	self flag: #lookupInMethodCacheSel:classTag:. "so this method shows up as a sender of lookupInMethodCacheSel:class:"

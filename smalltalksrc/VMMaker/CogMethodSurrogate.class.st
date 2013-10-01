@@ -1,9 +1,10 @@
 Class {
 	#name : #CogMethodSurrogate,
-	#superclass : #Object,
+	#superclass : #VMClass,
 	#instVars : [
 		'address',
 		'memory',
+		'baseHeaderSize',
 		'cogit'
 	],
 	#category : #'VMMaker-JITSimulation'
@@ -12,6 +13,16 @@ Class {
 { #category : #accessing }
 CogMethodSurrogate class >> alignedByteSizeOf: anObject forClient: aVMClass [
 	^self alignedByteSize
+]
+
+{ #category : #accessing }
+CogMethodSurrogate class >> baseHeaderSize [
+	^self objectMemoryClass baseHeaderSize
+]
+
+{ #category : #'accessing class hierarchy' }
+CogMethodSurrogate class >> defaultObjectMemoryClass [
+	^NewCoObjectMemory
 ]
 
 { #category : #arithmetic }
@@ -73,9 +84,10 @@ CogMethodSurrogate >> asUnsignedInteger [
 ]
 
 { #category : #'instance initialization' }
-CogMethodSurrogate >> at: anAddress memory: aBitmap cogit: aCogit [
+CogMethodSurrogate >> at: anAddress objectMemory: objectMemory cogit: aCogit [
 	address := anAddress.
-	memory := aBitmap.
+	memory := objectMemory memory.
+	baseHeaderSize := objectMemory baseHeaderSize.
 	cogit := aCogit
 ]
 
@@ -105,6 +117,20 @@ CogMethodSurrogate >> nextOpenPIC [
 { #category : #accessing }
 CogMethodSurrogate >> nextOpenPIC: cogMethodSurrogateOrNil [
 	^self methodObject: (cogMethodSurrogateOrNil ifNil: [0] ifNotNil: [cogMethodSurrogateOrNil asUnsignedInteger])
+]
+
+{ #category : #accessing }
+CogMethodSurrogate >> objectHeader [
+	^baseHeaderSize = 8
+		ifTrue: [memory longLongAt: address + 1]
+		ifFalse: [memory longAt: address + 1]
+]
+
+{ #category : #accessing }
+CogMethodSurrogate >> objectHeader: aValue [
+	^baseHeaderSize = 8
+		ifTrue: [memory longLongAt: address + 1 put: aValue]
+		ifFalse: [memory longAt: address + 1 put: aValue]
 ]
 
 { #category : #printing }

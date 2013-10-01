@@ -4,6 +4,11 @@ Class {
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
+{ #category : #accessing }
+Spur32BitMemoryManager class >> objectRepresentationClass [
+	^CogObjectRepresentationFor32BitSpur
+]
+
 { #category : #'simulation only' }
 Spur32BitMemoryManager class >> simulatorClass [
 	^Spur32BitMMLESimulator
@@ -294,6 +299,11 @@ Spur32BitMemoryManager >> objectBytesForSlots: numSlots [
 	+ (numSlots >= self numSlotsMask
 		ifTrue: [self baseHeaderSize + self baseHeaderSize]
 		ifFalse: [self baseHeaderSize])
+]
+
+{ #category : #simulation }
+Spur32BitMemoryManager >> objectRepresentationClass [
+	^CogObjectRepresentationFor32BitSpur
 ]
 
 { #category : #'header access' }
