@@ -1105,6 +1105,16 @@ CogVMSimulator >> headerStart: oop [
 	^ (objectMemory extraHeaderBytes: oop) negated
 ]
 
+{ #category : #'debug support' }
+CogVMSimulator >> heapMapAtWord: address [
+	^objectMemory heapMap heapMapAtWord: address asUnsignedInteger
+]
+
+{ #category : #'debug support' }
+CogVMSimulator >> heapMapAtWord: address Put: aBit [
+	^objectMemory heapMap heapMapAtWord: address asUnsignedInteger Put: aBit
+]
+
 { #category : #'debugging traps' }
 CogVMSimulator >> ifAppropriateCompileToNativeCode: aMethodObject selector: selector [
 	enableCog ifTrue:
@@ -3491,6 +3501,7 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'long print mc/cog frame & callers' action: [self printFrameAndCallers: cogit processor fp SP: cogit processor sp];
 		add: 'print frame...' action: [(self promptHex: 'print frame') ifNotNil: [:fp| self printFrame: fp]];
 		add: 'print call stack' action: #printCallStack;
+		add: 'print stack call stack' action: #printStackCallStack;
 		add: 'print call stack of...' action: [(self promptHex: 'context or process oop') ifNotNil: [:obj| self printCallStackOf: obj]];
 		add: 'print all stacks' action: #printAllStacks;
 		addLine;

@@ -24,6 +24,18 @@ CogObjectRepresentationFor32BitSpur >> genJumpSmallIntegerInScratchReg: aRegiste
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationFor32BitSpur >> genRemoveSmallIntegerTagsInScratchReg: scratchReg [
+	cogit SubCq: 1 R: scratchReg.
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor32BitSpur >> genSetSmallIntegerTagsIn: scratchReg [
+	cogit OrCq: 1 R: scratchReg.
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationFor32BitSpur >> getInlineCacheClassTagFrom: sourceReg into: destReg [
 	"Extract the inline cache tag for the object in sourceReg into destReg. The inline
 	 cache tag for a given object is the value loaded in inline caches to distinguish objects

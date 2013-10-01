@@ -5193,9 +5193,14 @@ StackInterpreter >> findSelectorAndClassForMethod: meth lookupClass: startClass 
 ]
 
 { #category : #'debug support' }
-StackInterpreter >> findSelectorOfMethod: meth [
-	| classObj classDict classDictSize methodArray i |
-	(objectMemory addressCouldBeObj: meth) ifFalse:
+StackInterpreter >> findSelectorOfMethod: methArg [
+	| meth classObj classDict classDictSize methodArray i |
+	(objectMemory addressCouldBeObj: methArg) ifFalse:
+		[^objectMemory nilObject].
+	meth := (objectMemory isForwarded: methArg)
+				ifTrue: [objectMemory followForwarded: methArg]
+				ifFalse: [methArg].
+	 (objectMemory isOopCompiledMethod: meth) ifFalse:
 		[^objectMemory nilObject].
 	classObj := self methodClassOf: meth.
 	(self addressCouldBeClassObj: classObj) ifTrue:
