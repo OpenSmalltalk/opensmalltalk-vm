@@ -139,7 +139,7 @@ CoInterpreterPrimitives >> primitiveClone [
 
 	| rcvr newCopy objHeader |
 	rcvr := self stackTop.
-	(objectMemory isIntegerObject: rcvr)
+	(objectMemory isImmediate: rcvr)
 		ifTrue: [newCopy := rcvr]
 		ifFalse:
 			[objHeader := objectMemory baseHeader: rcvr.

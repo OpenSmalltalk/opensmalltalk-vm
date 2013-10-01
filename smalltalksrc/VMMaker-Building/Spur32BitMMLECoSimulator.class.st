@@ -129,6 +129,11 @@ Spur32BitMMLECoSimulator >> headerForSlots: numSlots format: formatField classIn
 	^super headerForSlots: numSlots format: formatField classIndex: classIndex
 ]
 
+{ #category : #'debug support' }
+Spur32BitMMLECoSimulator >> heapMapAtWord: address [
+	^heapMap heapMapAtWord: address
+]
+
 { #category : #'memory access' }
 Spur32BitMMLECoSimulator >> intAt: byteAddress put: a32BitValue [
 	^self longAt: byteAddress put: (a32BitValue bitAnd: 16rFFFFFFFF)

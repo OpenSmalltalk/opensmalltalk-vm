@@ -1382,7 +1382,8 @@ SpurMemoryManager >> checkHeapIntegrity [
 										[coInterpreter print: 'object leak in '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; cr.
 										 self eek.
 										 ok := false].
-									 (self isYoung: fieldOop) ifTrue:
+									 "don't be misled by CogMethods; they appear to be young, but they're not"
+									 ((self isYoung: fieldOop) and: [fieldOop >= startOfMemory]) ifTrue:
 										[containsYoung := true]]]]].
 					(containsYoung and: [(self isYoung: obj) not]) ifTrue:
 						[(self isRemembered: obj) ifFalse:
@@ -2955,7 +2956,9 @@ SpurMemoryManager >> isIntegerObject: oop [
 		isCogMethodReference:
 		functionForPrimitiveExternalCall:
 		genSpecialSelectorArithmetic
-		genSpecialSelectorComparison) includes: sel) ifFalse:
+		genSpecialSelectorComparison
+		ensureContextHasBytecodePC:
+		instVar:ofContext:) includes: sel) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]

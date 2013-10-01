@@ -2499,7 +2499,8 @@ StackToRegisterMappingCogit >> genPushReceiverBytecode [
 StackToRegisterMappingCogit >> genPushReceiverVariable: index [
 	<inline: false>
 	self ensureReceiverResultRegContainsSelf.
-	^objectRepresentation genSSPushSlot: index reg: ReceiverResultReg
+	^self ssPushBase: ReceiverResultReg
+			offset: (objectRepresentation slotOffsetOfInstVarIndex: index)
 ]
 
 { #category : #'compile abstract instructions' }
