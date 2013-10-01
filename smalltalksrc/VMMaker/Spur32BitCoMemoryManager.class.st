@@ -24,6 +24,14 @@ Spur32BitCoMemoryManager >> ceStoreCheck: anOop [
 	^anOop
 ]
 
+{ #category : #'debug support' }
+Spur32BitCoMemoryManager >> clearLeakMapAndMapAccessibleObjects [
+	"Perform an integrity/leak check using the heapMap.  Set a bit at each object's header.
+	 Override to set a bit at each Cog method"
+	super clearLeakMapAndMapAccessibleObjects.
+	cogit addCogMethodsToHeapMap
+]
+
 { #category : #'garbage collection' }
 Spur32BitCoMemoryManager >> headerWhileForwardingOf: aCompiledMethodObjOop [
 	"Answer the header of the argument even though
@@ -31,6 +39,14 @@ Spur32BitCoMemoryManager >> headerWhileForwardingOf: aCompiledMethodObjOop [
 	 (which shouldn't happen with Spur)."
 	self assert: (self isForwarded: aCompiledMethodObjOop) not.
 	^self baseHeader: aCompiledMethodObjOop
+]
+
+{ #category : #'trampoline support' }
+Spur32BitCoMemoryManager >> newSpaceLimitAddress [
+	<api>
+	<returnTypeC: #usqInt>
+	^self cCode: [(self addressOf: newSpaceLimit) asUnsignedInteger]
+		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #newSpaceLimit in: self]
 ]
 
 { #category : #'garbage collection' }
