@@ -157,6 +157,11 @@ CogVMSimulator >> CFramePointer [
 ]
 
 { #category : #'debug support' }
+CogVMSimulator >> CStackPointer [
+	^self longAt: self inMemoryCStackPointerAddress
+]
+
+{ #category : #'debug support' }
 CogVMSimulator >> allObjectsSelect: objBlock [
 	"self allObjectsSelect: [:oop | (self baseHeader: oop) = 1234]"
 
@@ -2042,6 +2047,11 @@ CogVMSimulator >> maybeCheckStackDepth: delta sp: sp pc: mcpc [
 { #category : #accessing }
 CogVMSimulator >> memory [
 	^objectMemory memory
+]
+
+{ #category : #'spur bootstrap' }
+CogVMSimulator >> methodCache [
+	^methodCache
 ]
 
 { #category : #'simulation only' }
