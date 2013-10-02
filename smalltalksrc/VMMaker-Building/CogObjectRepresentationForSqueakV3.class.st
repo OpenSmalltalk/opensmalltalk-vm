@@ -264,7 +264,7 @@ CogObjectRepresentationForSqueakV3 >> genGetSizeOf: sourceReg into: destReg form
 	 fixed fields in formatReg.  Used by primitiveSize, primitiveAt, and primitiveAtPut"
 	<returnTypeC: #'AbstractInstruction *'>
 	| jumpNotIndexable jumpIsContext jumpShortHeader jumpSkip
-	  jumpFmtLe4 jumpFmtIs2 jmpFmtGe8 jumpGotByteSize jumpGotWordSize |
+	  jumpFmtLeWeakArray jumpFmtIsArray jmpFmtGeFirstByte jumpGotByteSize jumpGotWordSize |
 	<inline: true>
 	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
 	"and one wonders why Squeak V1 through V3 are slow..."
@@ -272,9 +272,9 @@ CogObjectRepresentationForSqueakV3 >> genGetSizeOf: sourceReg into: destReg form
 	<var: #jumpIsContext type: #'AbstractInstruction *'>
 	<var: #jumpShortHeader type: #'AbstractInstruction *'>
 	<var: #jumpSkip type: #'AbstractInstruction *'>
-	<var: #jumpFmtLe4 type: #'AbstractInstruction *'>
-	<var: #jumpFmtIs2 type: #'AbstractInstruction *'>
-	<var: #jmpFmtGe8 type: #'AbstractInstruction *'>
+	<var: #jumpFmtLeWeakArray type: #'AbstractInstruction *'>
+	<var: #jumpFmtIsArray type: #'AbstractInstruction *'>
+	<var: #jmpFmtGeFirstByte type: #'AbstractInstruction *'>
 	<var: #jumpGotByteSize type: #'AbstractInstruction *'>
 	<var: #jumpGotWordSize type: #'AbstractInstruction *'>
 	cogit
@@ -282,7 +282,7 @@ CogObjectRepresentationForSqueakV3 >> genGetSizeOf: sourceReg into: destReg form
 		MoveR: formatReg R: destReg;
 		LogicalShiftRightCq: objectMemory instFormatFieldLSB R: formatReg;
 		AndCq: self instFormatFieldMask R: formatReg;		"formatReg := self formatOfHeader: destReg"
-		CmpCq: 2 R: formatReg.
+		CmpCq: objectMemory arrayFormat R: formatReg.
 	jumpNotIndexable := cogit JumpLess: 0.
 	cogit
 		MoveR: destReg R: scratchReg;
@@ -302,24 +302,24 @@ CogObjectRepresentationForSqueakV3 >> genGetSizeOf: sourceReg into: destReg form
 	jumpSkip :=  cogit Jump: 0.
 	jumpShortHeader jmpTarget: (cogit AndCq: SizeMask R: destReg).	"hdr bitAnd: SizeMask"
 	jumpSkip jmpTarget: (cogit SubCq: BaseHeaderSize R: destReg). "sz - BaseheaderSize for all three arms"
-	cogit CmpCq: 4 R: formatReg.	"fmt <= 4"
-	jumpFmtLe4 := cogit JumpLessOrEqual: 0.
-	cogit CmpCq: 8 R: formatReg.
-	jmpFmtGe8 := cogit JumpLess: 0.
+	cogit CmpCq: objectMemory weakArrayFormat R: formatReg.	"fmt <= 4"
+	jumpFmtLeWeakArray := cogit JumpLessOrEqual: 0.
+	cogit CmpCq: objectMemory firstByteFormat R: formatReg.
+	jmpFmtGeFirstByte := cogit JumpLess: 0.
 	cogit
 		AndCq: 3 R: formatReg;	"(sz - BaseHeaderSize) - (fmt bitAnd: 3) bytes"
 		SubR: formatReg R: destReg.
 	jumpGotByteSize := cogit Jump: 0.
-	jmpFmtGe8 jmpTarget: (cogit LogicalShiftRightCq: 2 R: destReg). "(sz - BaseHeaderSize) >> 2 32-bit longs"
+	jmpFmtGeFirstByte jmpTarget: (cogit LogicalShiftRightCq: 2 R: destReg). "(sz - BaseHeaderSize) >> 2 32-bit longs"
 	jumpGotWordSize := cogit Jump: 0.
-	jumpFmtLe4 jmpTarget: cogit Label.
+	jumpFmtLeWeakArray jmpTarget: cogit Label.
 	cogit
 		LogicalShiftRightCq: ShiftForWord R: destReg; "(sz - BaseHeaderSize) >> ShiftForWord words"
-		CmpCq: 2 R: formatReg.
-	jumpFmtIs2 := cogit JumpZero: 0.
+		CmpCq: objectMemory arrayFormat R: formatReg.
+	jumpFmtIsArray := cogit JumpZero: 0.
 	self genGetFixedFieldsOfPointerNonInt: sourceReg into: formatReg scratchReg: scratchReg.
 	cogit SubR: formatReg R: destReg.
-	jumpFmtIs2 jmpTarget:
+	jumpFmtIsArray jmpTarget:
 	(jumpGotWordSize jmpTarget:
 	(jumpGotByteSize jmpTarget:
 		cogit Label)).
@@ -413,13 +413,13 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
 
 { #category : #'primitive generators' }
 CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveSize: retNoffset [
-	| jumpNotSI jumpNotIndexable jumpIsContext |
+	| jumpSI jumpNotIndexable jumpIsContext |
 	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpNotIndexable type: #'AbstractInstruction *'>
 	<var: #jumpIsContext type: #'AbstractInstruction *'>
 	cogit MoveR: ReceiverResultReg R: TempReg.
-	jumpNotSI := self genJumpSmallIntegerInScratchReg: TempReg.
+	jumpSI := self genJumpSmallIntegerInScratchReg: TempReg.
 	self
 		genGetSizeOf: ReceiverResultReg
 		into: ClassReg
@@ -430,7 +430,7 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveSize: retNoffset [
 	cogit MoveR: ClassReg R: ReceiverResultReg.
 	self flag: 'currently caller pushes result'.
 	cogit RetN: retNoffset.
-	jumpNotSI jmpTarget: (jumpNotIndexable jmpTarget: (jumpIsContext jmpTarget: cogit Label)).
+	jumpSI jmpTarget: (jumpNotIndexable jmpTarget: (jumpIsContext jmpTarget: cogit Label)).
 	^0
 ]
 

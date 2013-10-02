@@ -2978,7 +2978,6 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 	<var: #cogMethod type: #'CogMethod *'>
 	self assert: ((coInterpreter methodHasCogMethod: aMethodObj) not
 				or: [(self noAssertMethodClassAssociationOf: aMethodObj) = objectMemory nilObject]).
-	aSelectorOop = (coInterpreter specialSelector: 16) ifTrue: [self halt].
 	"coInterpreter stringOf: aSelectorOop"
 	coInterpreter
 		compilationBreak: aSelectorOop
