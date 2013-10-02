@@ -639,6 +639,7 @@ SpurMemoryManager >> addressAfter: objOop [
 
 { #category : #'debug support' }
 SpurMemoryManager >> addressCouldBeObj: address [
+	<api>
 	self flag: #temporary. "include futureSpace for now (while debugging the scavenger)"
 	^(address bitAnd: self baseHeaderSize - 1) = 0
 	  and: [(self isInOldSpace: address)
@@ -2958,7 +2959,10 @@ SpurMemoryManager >> isIntegerObject: oop [
 		genSpecialSelectorArithmetic
 		genSpecialSelectorComparison
 		ensureContextHasBytecodePC:
-		instVar:ofContext:) includes: sel) ifFalse:
+		instVar:ofContext:
+		ceBaseFrameReturn:
+		inlineCacheTagForInstance:
+		primitiveObjectAtPut) includes: sel) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]

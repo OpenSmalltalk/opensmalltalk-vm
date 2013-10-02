@@ -529,16 +529,6 @@ CogObjectRepresentationForSqueakV3 >> genShiftAwaySmallIntegerTagsInScratchReg: 
 	^0
 ]
 
-{ #category : #initialization }
-CogObjectRepresentationForSqueakV3 >> genStoreCheckTrampoline [
-	"Call ceStoreCheck: with the object stored into"
-	^cogit
-		genTrampolineFor: #ceStoreCheck:
-		called: 'ceStoreCheckTrampoline'
-		arg: ReceiverResultReg
-		result: cogit returnRegForStoreCheck
-]
-
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genStoreImmediateInSourceReg: sourceReg slotIndex: index destReg: destReg [
 	cogit MoveR: sourceReg Mw: index * BytesPerWord + BaseHeaderSize r: destReg.
@@ -581,7 +571,7 @@ CogObjectRepresentationForSqueakV3 >> genStoreSourceReg: sourceReg slotIndex: in
 	jmpAlreadyRoot := cogit JumpNonZero: 0.
 	"Root bit is not set.  Call store check to insert dest into root table."
 	self assert: destReg == ReceiverResultReg.
-	cogit CallRT: cogit ceStoreCheckTrampoline.
+	cogit CallRT: ceStoreCheckTrampoline.
 	jmpImmediate jmpTarget:
 	(jmpDestYoung jmpTarget:
 	(jmpSourceOld jmpTarget:

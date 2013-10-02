@@ -7216,7 +7216,7 @@ StackInterpreter >> lookupMethodFor: selector InDictionary: dictionary [
 	<asmLabel: false>
 	length := objectMemory fetchWordLengthOf: dictionary.
 	mask := length - SelectorStart - 1.
-	index := SelectorStart + (mask bitAnd: ((objectMemory isIntegerObject: selector)
+	index := SelectorStart + (mask bitAnd: ((objectMemory isImmediate: selector)
 												ifTrue: [objectMemory integerValueOf: selector]
 												ifFalse: [objectMemory hashBitsOf: selector])).
 
