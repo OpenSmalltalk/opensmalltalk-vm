@@ -207,6 +207,11 @@ CogObjectRepresentationForSpur >> inlineCacheTagIsYoung: anInteger [
 	^false
 ]
 
+{ #category : #testing }
+CogObjectRepresentationForSpur >> isHashSetOnInstanceCreation [
+	^false
+]
+
 { #category : #'object representation' }
 CogObjectRepresentationForSpur >> isImmediate: oop [
 	^objectMemory isImmediate: oop

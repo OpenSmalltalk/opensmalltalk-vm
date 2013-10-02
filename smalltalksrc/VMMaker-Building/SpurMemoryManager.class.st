@@ -1475,6 +1475,12 @@ SpurMemoryManager >> checkOopIntegrity: obj named: name index: i [
 	^false
 ]
 
+{ #category : #'simulation only' }
+SpurMemoryManager >> checkedIntegerValueOf: intOop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter checkedIntegerValueOf: intOop
+]
+
 { #category : #'plugin support' }
 SpurMemoryManager >> classArray [
 	"a.k.a. self fetchPointer: ClassArrayCompactIndex ofObject: classTableFirstPage"
@@ -1615,8 +1621,8 @@ SpurMemoryManager >> classTableRootObj: anOop [
 { #category : #'interpreter access' }
 SpurMemoryManager >> classTagForClass: classObj [
 	"Answer the classObj's identityHash to use as a tag in the first-level method lookup cache."
-	self assert: (self rawHashBitsOf: classObj) ~= 0.
-	^self rawHashBitsOf: classObj
+	self assert: (coInterpreter addressCouldBeClassObj: classObj).
+	^self ensureBehaviorHash: classObj
 ]
 
 { #category : #'interpreter access' }
@@ -2963,7 +2969,8 @@ SpurMemoryManager >> isIntegerObject: oop [
 		ceBaseFrameReturn:
 		inlineCacheTagForInstance:
 		primitiveObjectAtPut
-		commonVariable:at:put:cacheIndex:) includes: sel) ifFalse:
+		commonVariable:at:put:cacheIndex:
+		primDigitBitShiftMagnitude:) includes: sel) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]

@@ -1283,8 +1283,7 @@ CoInterpreter >> ceCounterTripped: condition [
 	 	[messageSelector := counterTrippedSelector.
 		 (self lookupMethodNoMNUEtcInClass: (objectMemory classTagForClass: classTag)) ~= 0 ifTrue:
 			[cogit resetCountersIn: (self mframeHomeMethod: framePointer).
-			 ^condition].
-		 self addNewMethodToCache: (objectMemory classForClassTag: classTag)].
+			 ^condition]].
 
 	(primitiveFunctionPointer ~= 0
 	or: [(self argumentCountOf: newMethod) ~= 1]) ifTrue:
@@ -1344,8 +1343,7 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 			[messageSelector := selector.
 			 (errSelIdx := self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
 				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: (objectMemory classForClassTag: classTag).
-				self assert: false "NOTREACHED"].
-			 self addNewMethodToCache: (objectMemory classForClassTag: classTag)].
+				self assert: false "NOTREACHED"]].
 	"Method found and has a cog method.  Attempt to link to it."
 	(self maybeMethodHasCogMethod: newMethod) ifTrue:
 		[cogMethod := self cogMethodOf: newMethod.
@@ -1664,8 +1662,7 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 				self handleMNU: errSelIdx
 					InMachineCodeTo: rcvr
 					classForMessage: (objectMemory classForClassTag: classTag).
-				self assert: false "NOTREACHED"].
-			self addNewMethodToCache: (objectMemory classForClassTag: classTag)].
+				self assert: false "NOTREACHED"]].
 	"Method found and has a cog method.  Attempt to link to it.  The receiver's class may be young.
 	 If the Cogit can't store young classes in inline caches we can link to an open PIC instead."
 	(self maybeMethodHasCogMethod: newMethod) ifTrue:
@@ -1730,8 +1727,7 @@ CoInterpreter >> ceSendAbort: selector to: rcvr numArgs: numArgs [
 			 (errSelIdx := self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
 				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: (objectMemory classForClassTag: classTag).
 				"NOTREACHED"
-				self assert: false].
-			 self addNewMethodToCache: (objectMemory classForClassTag: classTag)].
+				self assert: false]].
 	instructionPointer := self popStack.
 	(self maybeMethodHasCogMethod: newMethod) ifTrue:
 		[self executeNewMethod.
@@ -1765,8 +1761,7 @@ CoInterpreter >> ceSendFromInLineCacheMiss: oPIC [
 			 (errSelIdx := self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
 				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: (objectMemory classForClassTag: classTag).
 				"NOTREACHED"
-				self assert: false].
-			 self addNewMethodToCache: (objectMemory classForClassTag: classTag)].
+				self assert: false]].
 	instructionPointer := self popStack.
 	(self maybeMethodHasCogMethod: newMethod) ifTrue:
 		[self executeNewMethod.
