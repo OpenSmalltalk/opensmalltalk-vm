@@ -2206,14 +2206,19 @@ StackToRegisterMappingCogit >> genPrimitiveFloatSquareRoot [
 
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveIdentityHash [
-	| jumpSI |
+	| jumpSI jumpNotSet |
 	<var: #jumpSI type: #'AbstractInstruction *'>
 	self MoveR: ReceiverResultReg R: ClassReg.
 	jumpSI := objectRepresentation genJumpSmallIntegerInScratchReg: ClassReg.
-	objectRepresentation genGetHashFieldNonIntOf: ReceiverResultReg asSmallIntegerInto: TempReg.
+	objectRepresentation genGetHashFieldNonImmOf: ReceiverResultReg asSmallIntegerInto: TempReg.
+	objectRepresentation isHashSetOnInstanceCreation ifFalse:
+		[self CmpCq: 0 R: TempReg.
+		 jumpNotSet := self JumpZero: 0].
 	self MoveR: TempReg R: ReceiverResultReg.
 	self RetN: 0.
 	jumpSI jmpTarget: self Label.
+	objectRepresentation isHashSetOnInstanceCreation ifFalse:
+		[jumpNotSet jmpTarget: jumpSI getJmpTarget].
 	^0
 ]
 
