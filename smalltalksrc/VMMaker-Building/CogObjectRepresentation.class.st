@@ -6,7 +6,8 @@ Class {
 	#superclass : #CogClass,
 	#instVars : [
 		'cogit',
-		'objectMemory'
+		'objectMemory',
+		'ceStoreCheckTrampoline'
 	],
 	#pools : [
 		'CogMethodConstants',
@@ -31,6 +32,15 @@ CogObjectRepresentation class >> implicitReturnTypeFor: aSelector [
 { #category : #translation }
 CogObjectRepresentation class >> typeForSelf [
 	^#implicit
+]
+
+{ #category : #initialization }
+CogObjectRepresentation >> generateObjectRepresentationTrampolines [
+	ceStoreCheckTrampoline := cogit
+									genTrampolineFor: #ceStoreCheck:
+									called: 'ceStoreCheckTrampoline'
+									arg: ReceiverResultReg
+									result: cogit returnRegForStoreCheck
 ]
 
 { #category : #initialization }
