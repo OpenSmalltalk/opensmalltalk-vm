@@ -43,6 +43,16 @@ CogObjectRepresentation >> generateObjectRepresentationTrampolines [
 									result: cogit returnRegForStoreCheck
 ]
 
+{ #category : #testing }
+CogObjectRepresentation >> isHashSetOnInstanceCreation [
+	self subclassResponsibility
+]
+
+{ #category : #testing }
+CogObjectRepresentation >> isSmallIntegerTagNonZero [
+	self subclassResponsibility
+]
+
 { #category : #initialization }
 CogObjectRepresentation >> setCogit: aCogit [
 	<doNotGenerate>
