@@ -196,7 +196,6 @@ Class {
 		'cePICAbortTrampoline',
 		'ceCheckForInterruptTrampoline',
 		'ceCPICMissTrampoline',
-		'ceStoreCheckTrampoline',
 		'ceReturnToInterpreterTrampoline',
 		'ceBaseFrameReturnTrampoline',
 		'ceSendMustBeBooleanAddTrueTrampoline',
@@ -2169,6 +2168,13 @@ Cogit >> bcpcsAndDescriptorsFor: aMethod do: trinaryBlock [
 		 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]]
 ]
 
+{ #category : #accessing }
+Cogit >> blockAlignment [
+	<cmacro: '(self) 8'>
+	self assert: (methodZone roundUpLength: 1) = 8.
+	^8
+]
+
 { #category : #'method map' }
 Cogit >> blockCreationBytecodeSizeForHeader: methodHeader [
 	<inline: true>
@@ -2660,12 +2666,6 @@ Cogit >> ceSICMiss: receiver [
 		andCacheTag: (backEnd inlineCacheTagAt: outerReturn).
 	"NOTREACHED"
 	^nil
-]
-
-{ #category : #accessing }
-Cogit >> ceStoreCheckTrampoline [
-	<cmacro: '() ceStoreCheckTrampoline'>
-	^ceStoreCheckTrampoline
 ]
 
 { #category : #debugging }
@@ -3504,8 +3504,7 @@ Cogit >> compileBlockEntry: blockStart [
 	 followed by either a frame build, if a frame is required, or nothing.  The CogMethodHeader's
 	 objectHeader field is a back pointer to the method, but this can't be filled in until code generation."
 	<var: #blockStart type: #'BlockStart *'>
-	"Block method headers must be aligned on the correct boundary, just like non-block method headers."
-	self AlignmentNops: (methodZone roundUpLength: 1).
+	self AlignmentNops: self blockAlignment.
 	blockStart fakeHeader: self Label.
 	(self sizeof: CogBlockMethod) caseOf:
 		{ [2 * BytesPerWord]	"ObjectMemory"
@@ -5256,6 +5255,7 @@ Cogit >> generateOpenPICPrototype [
 { #category : #initialization }
 Cogit >> generateRunTimeTrampolines [
 	"Generate the run-time entries at the base of the native code zone and update the base."
+	
 	ceSendMustBeBooleanAddFalseTrampoline := self genMustBeBooleanTrampolineFor: objectMemory falseObject
 														called: 'ceSendMustBeBooleanAddFalseTrampoline'.
 	ceSendMustBeBooleanAddTrueTrampoline := self genMustBeBooleanTrampolineFor: objectMemory trueObject
@@ -5274,7 +5274,6 @@ Cogit >> generateRunTimeTrampolines [
 										arg: SendNumArgsReg
 										result: ReceiverResultReg.
 	ceCheckForInterruptTrampoline := self genCheckForInterruptsTrampoline.
-	ceStoreCheckTrampoline := objectRepresentation genStoreCheckTrampoline.
 	ceFetchContextInstVarTrampoline := self genTrampolineFor: #ceContext:instVar:
 											called: 'ceFetchContextInstVarTrampoline'
 											arg: ReceiverResultReg
@@ -5387,6 +5386,7 @@ Cogit >> generateTrampolines [
 	hasYoungReferent := false.
 	self generateSendTrampolines.
 	self generateMissAbortTrampolines.
+	objectRepresentation generateObjectRepresentationTrampolines.
 	self generateRunTimeTrampolines.
 	self cppIf: NewspeakVM ifTrue: 	[self generateNewspeakRuntime].
 	self generateEnilopmarts.

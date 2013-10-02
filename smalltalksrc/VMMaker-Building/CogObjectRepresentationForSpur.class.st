@@ -1,6 +1,9 @@
 Class {
 	#name : #CogObjectRepresentationForSpur,
 	#superclass : #CogObjectRepresentation,
+	#instVars : [
+		'ceClassAtIndexTrampoline'
+	],
 	#category : #'VMMaker-JIT'
 }
 
@@ -14,6 +17,40 @@ CogObjectRepresentationForSpur >> checkValidInlineCacheTag: classIndexOrTagPatte
 CogObjectRepresentationForSpur >> checkValidObjectReference: anOop [
 	^(objectMemory isImmediate: anOop)
 	   or: [(objectMemory heapMapAtWord: (self pointerForOop: anOop)) ~= 0]
+]
+
+{ #category : #'debug support' }
+CogObjectRepresentationForSpur >> couldBeObject: oop [
+	^objectMemory addressCouldBeObj: oop
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genGetClassObjectOf: instReg into: destReg scratchReg: scratchReg [
+	"Fetch the instance's class into destReg."
+	| jumpIsImm jumpNotForwarded loop |
+	<var: #jumpIsImm type: #'AbstractInstruction *'>
+	<var: #jumpNotForwarded type: #'AbstractInstruction *'>
+	<var: #loop type: #'AbstractInstruction *'>
+	loop := cogit MoveR: instReg R: scratchReg.
+	cogit AndCq: objectMemory tagMask R: scratchReg.
+	jumpIsImm := cogit JumpNonZero: 0.
+	self flag: #endianness.
+	"Get least significant half of header word in destReg"
+	cogit MoveMw: 0 r: instReg R: scratchReg.
+	"mask off class index"
+	cogit AndCq: objectMemory classIndexMask R: scratchReg.
+	"if it is forwarded..."
+	cogit CmpCq: objectMemory isForwardedObjectClassIndexPun R: scratchReg.
+	jumpNotForwarded := cogit JumpNonZero: 0.
+	"...follow the forwarding pointer and loop to fetch its classIndex"
+	cogit MoveMw: objectMemory baseHeaderSize r: instReg R: instReg.
+	cogit Jump: loop.
+	jumpNotForwarded jmpTarget: (jumpIsImm jmpTarget: cogit Label).
+	scratchReg ~= TempReg ifTrue:
+		[cogit MoveR: scratchReg R: TempReg].
+	cogit CallRT: ceClassAtIndexTrampoline.
+	destReg ~= TempReg ifTrue:
+		[cogit MoveR: TempReg R: destReg]
 ]
 
 { #category : #'compile abstract instructions' }
@@ -33,16 +70,6 @@ CogObjectRepresentationForSpur >> genRemoveSmallIntegerTagsInScratchReg: scratch
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genSetSmallIntegerTagsIn: scratchReg [
 	self subclassResponsibility
-]
-
-{ #category : #initialization }
-CogObjectRepresentationForSpur >> genStoreCheckTrampoline [
-	"Call ceStoreCheck: with the object stored into"
-	^cogit
-		genTrampolineFor: #ceStoreCheck:
-		called: 'ceStoreCheckTrampoline'
-		arg: ReceiverResultReg
-		result: cogit returnRegForStoreCheck
 ]
 
 { #category : #'compile abstract instructions' }
@@ -89,13 +116,31 @@ CogObjectRepresentationForSpur >> genStoreSourceReg: sourceReg slotIndex: index 
 	jmpAlreadyRemembered := cogit JumpNonZero: 0.
 	"Remembered bit is not set.  Call store check to insert dest into remembered table."
 	self assert: destReg == ReceiverResultReg.
-	cogit CallRT: cogit ceStoreCheckTrampoline.
+	cogit CallRT: ceStoreCheckTrampoline.
 	jmpImmediate jmpTarget:
 	(jmpDestYoung jmpTarget:
 	(jmpSourceOld jmpTarget:
 	(jmpAlreadyRemembered jmpTarget:
 		cogit Label))).
 	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genStoreSourceReg: sourceReg slotIndex: index intoNewObjectInDestReg: destReg [
+	cogit MoveR: sourceReg
+		   Mw: index * objectMemory wordSize + objectMemory baseHeaderSize
+		   r: destReg.
+	^0
+]
+
+{ #category : #initialization }
+CogObjectRepresentationForSpur >> generateObjectRepresentationTrampolines [
+	super generateObjectRepresentationTrampolines.
+	ceClassAtIndexTrampoline := cogit
+									genTrampolineFor: #ceClassAtIndex:
+									called: 'ceClassAtIndexTrampoline'
+									arg: TempReg
+									result: TempReg
 ]
 
 { #category : #'compile abstract instructions' }

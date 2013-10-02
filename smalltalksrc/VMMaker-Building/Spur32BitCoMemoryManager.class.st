@@ -11,6 +11,15 @@ Class {
 }
 
 { #category : #trampolines }
+Spur32BitCoMemoryManager >> ceClassAtIndex: classIndex [
+	<api>
+	| result |
+	result := self classAtIndex: classIndex.
+	self assert: (coInterpreter addressCouldBeClassObj: result).
+	^result
+]
+
+{ #category : #trampolines }
 Spur32BitCoMemoryManager >> ceStoreCheck: anOop [
 	<api>
 	"Do the store check.  Answer the argument for the benefit of the code generator;

@@ -966,7 +966,7 @@ CoInterpreter >> bytecodePCFor: theIP cogMethod: cogMethod startBcpc: startBcpc 
 	self assert: theIP < 0.
 	(theIP signedBitShift: -16) < -1 "See contextInstructionPointer:frame:"
 		ifTrue:
-			[cogMethodForIP := self cCoerceSimple: cogMethod asInteger - ((theIP signedBitShift: -16) * (cogit sizeof: CogBlockMethod))
+			[cogMethodForIP := self cCoerceSimple: cogMethod asInteger - ((theIP signedBitShift: -16) * cogit blockAlignment)
 									to: #'CogBlockMethod *'.
 			 self assert: cogMethodForIP cmType = CMBlock.
 			 self assert: cogMethodForIP cmHomeMethod = cogMethod.
@@ -1418,7 +1418,7 @@ CoInterpreter >> ceMNUFromPICMNUMethod: aMethodObj receiver: rcvr [
 	<api>
 	| cPIC primitiveIndex |
 	<var: #cPIC type: #'CogMethod *'>
-	self assert: ((objectMemory isIntegerObject: rcvr) or: [objectMemory addressCouldBeObj: rcvr]).
+	self assert: (objectMemory addressCouldBeOop: rcvr).
 	self assert: (aMethodObj = 0
 				or: [(objectMemory addressCouldBeObj: aMethodObj)
 					and: [objectMemory isOopCompiledMethod: aMethodObj]]).
@@ -2533,7 +2533,7 @@ CoInterpreter >> encodedNativePCOf: mcpc cogMethod: cogMethod [
 	cogMethod cmType = CMMethod ifTrue:
 		[^objectMemory integerObjectOf: cogMethod asInteger - mcpc].
 	homeMethod := cogMethod cmHomeMethod.
-	blockOffset := homeMethod asInteger - cogMethod asInteger / (cogit sizeof: CogBlockMethod).
+	blockOffset := homeMethod asInteger - cogMethod asInteger / cogit blockAlignment.
 	^objectMemory integerObjectOf: ((blockOffset bitShift: 16) bitOr: (cogMethod asInteger - mcpc bitAnd: 16rFFFF))
 ]
 
@@ -3423,7 +3423,7 @@ CoInterpreter >> handleMNU: selectorIndex InMachineCodeTo: rcvr classForMessage:
 	 messageSelector is an implicit argument (yuck)."
 	| errSelIdx classForThisMessage |
 	<var: #cogMethod type: #'CogMethod *'>
-	self assert: ((objectMemory isIntegerObject: rcvr) or: [objectMemory addressCouldBeObj: rcvr]).
+	self assert: (objectMemory addressCouldBeOop: rcvr).
 	instructionPointer := self popStack.
 	self createActualMessageTo: classForMessage.
 	messageSelector := objectMemory splObj: selectorIndex.
@@ -4215,7 +4215,7 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 							 theIP := cogit ceCannotResumePC]
 						ifFalse:
 							[self assert: (theIP signedBitShift: -16) < -1. "See contextInstructionPointer:frame:"
-							 theMethod := theMethod - ((theIP signedBitShift: -16) * (cogit sizeof: CogBlockMethod)).
+							 theMethod := theMethod - ((theIP signedBitShift: -16) * cogit blockAlignment).
 							 theIP := theMethod - theIP signedIntFromShort].
 					 stackPages
 						longAt: (pointer := pointer - BytesPerWord)
