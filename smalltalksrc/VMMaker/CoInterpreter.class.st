@@ -3821,15 +3821,18 @@ CoInterpreter >> internalFindNewMethod [
 	ok	ifTrue:
 			[self ifAppropriateCompileToNativeCode: newMethod selector: messageSelector]
 		ifFalse:
-			["entry was not found in the cache; look it up the hard way"
-			lkupClass := objectMemory classForClassTag: lkupClassTag.
-			objectMemory hasSpurMemoryManagerAPI ifTrue:
-				[| oop |
-				 oop := self internalStackValue: argumentCount.
-				 ((objectMemory isNonImmediate: oop)
-				  and: [objectMemory isForwarded: oop]) ifTrue:
-					[self internalStackValue: argumentCount put: (objectMemory followForwarded: oop)]].
-			self externalizeIPandSP.
+			[self externalizeIPandSP.
+			 ((objectMemory isOopForwarded: messageSelector)
+			  or: [objectMemory isForwardedClassTag: lkupClassTag]) ifTrue:
+				[(objectMemory isOopForwarded: messageSelector) ifTrue:
+					[messageSelector := self handleForwardedSelectorFaultFor: messageSelector].
+				 (objectMemory isForwardedClassTag: lkupClassTag) ifTrue:
+					[lkupClassTag := self handleForwardedSendFaultFor: lkupClassTag].
+				ok := self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag.
+				ok ifTrue:
+					[self ifAppropriateCompileToNativeCode: newMethod selector: messageSelector.
+					^nil]].
+			 lkupClass := objectMemory classForClassTag: lkupClassTag.
 			self lookupMethodInClass: lkupClass.
 			self internalizeIPandSP.
 			self addNewMethodToCache: lkupClass]
