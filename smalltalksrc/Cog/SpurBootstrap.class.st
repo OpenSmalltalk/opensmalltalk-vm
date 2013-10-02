@@ -1119,17 +1119,18 @@ SpurBootstrap >> launch [
 
 { #category : #testing }
 SpurBootstrap >> launch: heap simulatorClass: simulatorClass headerFlags: headerFlags [
-	| sim |
+	| sim methodCacheSize |
 	sim := simulatorClass onObjectMemory: heap.
 	heap coInterpreter: sim.
 	(sim class allInstVarNames includes: 'cogCodeSize')
 		ifTrue:
-			[sim
-				initializeInterpreter: 0;
-				instVarNamed: 'heapBase' put: heap startOfMemory;
+			[sim initializeInterpreter: 0.
+			 methodCacheSize := sim methodCache size * heap wordSize.
+			 sim instVarNamed: 'heapBase' put: heap startOfMemory;
 				instVarNamed: 'numStackPages' put: 8;
 				instVarNamed: 'cogCodeSize' put: 1024*1024;
 				moveMethodCacheToMemoryAt: sim cogCodeSize + sim computeStackZoneSize;
+				movePrimTraceLogToMemoryAt: sim cogCodeSize + sim computeStackZoneSize + methodCacheSize;
 			 	initializeCodeGenerator]
 		ifFalse:
 			[sim initializeInterpreter: 0].
