@@ -2170,6 +2170,8 @@ Cogit >> bcpcsAndDescriptorsFor: aMethod do: trinaryBlock [
 
 { #category : #accessing }
 Cogit >> blockAlignment [
+	"Block method headers must be aligned on the correct boundary, just like non-block method headers.
+	 This is because the CoInterpreter encodes flags in the least significant three bits of the method field."
 	<cmacro: '(self) 8'>
 	self assert: (methodZone roundUpLength: 1) = 8.
 	^8
@@ -2976,6 +2978,7 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 	<var: #cogMethod type: #'CogMethod *'>
 	self assert: ((coInterpreter methodHasCogMethod: aMethodObj) not
 				or: [(self noAssertMethodClassAssociationOf: aMethodObj) = objectMemory nilObject]).
+	aSelectorOop = (coInterpreter specialSelector: 16) ifTrue: [self halt].
 	"coInterpreter stringOf: aSelectorOop"
 	coInterpreter
 		compilationBreak: aSelectorOop

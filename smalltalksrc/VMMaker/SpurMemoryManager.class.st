@@ -2962,7 +2962,8 @@ SpurMemoryManager >> isIntegerObject: oop [
 		instVar:ofContext:
 		ceBaseFrameReturn:
 		inlineCacheTagForInstance:
-		primitiveObjectAtPut) includes: sel) ifFalse:
+		primitiveObjectAtPut
+		commonVariable:at:put:cacheIndex:) includes: sel) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
@@ -3878,7 +3879,11 @@ SpurMemoryManager >> scavengingGC [
 	"coInterpreter printCallStackFP: coInterpreter framePointer"
 
 	self runLeakCheckerForFullGC: false.
-	coInterpreter preGCAction: GCModeIncr.
+	coInterpreter
+		preGCAction: GCModeIncr;
+		"would prefer this to be in mapInterpreterOops, but
+		 compatibility with ObjectMemory dictates it goes here."
+		flushMethodCacheFrom: startOfMemory to: newSpaceLimit.
 	needGCFlag := false.
 
 	gcStartUsecs := coInterpreter ioUTCMicrosecondsNow.

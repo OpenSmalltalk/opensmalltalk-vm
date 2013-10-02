@@ -1617,7 +1617,7 @@ StackInterpreter >> addLastLink: proc toList: aList [
 ]
 
 { #category : #'method lookup cache' }
-StackInterpreter >> addNewMethodToCache: class [
+StackInterpreter >> addNewMethodToCache: classObj [
 	"Add the given entry to the method cache.
 	The policy is as follows:
 		Look for an empty entry anywhere in the reprobe chain.
@@ -1630,11 +1630,11 @@ StackInterpreter >> addNewMethodToCache: class [
 			Also, flushing is good when reprobe chains are getting full."
 	| probe hash primitiveIndex |
 	<inline: false>
-	hash := messageSelector bitXor: class.  "drop low-order zeros from addresses"
+	hash := messageSelector bitXor: (objectMemory classTagForClass: classObj).  "drop low-order zeros from addresses (if classObj not classTag)"
 	(objectMemory isOopCompiledMethod: newMethod)
 		ifTrue:
 			[primitiveIndex := self primitiveIndexOf: newMethod.
-			 primitiveFunctionPointer := self functionPointerFor: primitiveIndex inClass: class]
+			 primitiveFunctionPointer := self functionPointerFor: primitiveIndex inClass: classObj]
 		ifFalse:
 			[primitiveFunctionPointer := #primitiveInvokeObjectAsMethod].
 
@@ -1643,7 +1643,7 @@ StackInterpreter >> addNewMethodToCache: class [
 		(methodCache at: probe + MethodCacheSelector) = 0 ifTrue:
 			["Found an empty entry -- use it"
 			methodCache at: probe + MethodCacheSelector put: messageSelector.
-			methodCache at: probe + MethodCacheClass put: (objectMemory classTagForClass: class).
+			methodCache at: probe + MethodCacheClass put: (objectMemory classTagForClass: classObj).
 			methodCache at: probe + MethodCacheMethod put: newMethod.
 			methodCache at: probe + MethodCachePrimFunction put: (self cCoerce: primitiveFunctionPointer to: #long).
 			lastMethodCacheProbeWrite := probe. "this for primitiveExternalMethod"
@@ -1652,7 +1652,7 @@ StackInterpreter >> addNewMethodToCache: class [
 	"OK, we failed to find an entry -- install at the first slot..."
 	probe := hash bitAnd: MethodCacheMask.  "first probe"
 	methodCache at: probe + MethodCacheSelector put: messageSelector.
-	methodCache at: probe + MethodCacheClass put: (objectMemory classTagForClass: class).
+	methodCache at: probe + MethodCacheClass put: (objectMemory classTagForClass: classObj).
 	methodCache at: probe + MethodCacheMethod put: newMethod.
 	methodCache at: probe + MethodCachePrimFunction put: (self cCoerce: primitiveFunctionPointer to: #long).
 	lastMethodCacheProbeWrite := probe. "this for primitiveExternalMethod"
@@ -3661,16 +3661,17 @@ StackInterpreter >> commonVariable: rcvr at: index put: value cacheIndex: atIx [
 				^nil].
 			 ^self primitiveFailFor: PrimErrBadArgument].
 		fmt >= objectMemory firstStringyFakeFormat  "Note fmt >= firstStringyFormat is an artificial flag for strings"
-			ifTrue: [isCharacter := objectMemory isCharacterObject: value.
-					isCharacter ifFalse:
-						[^self primitiveFailFor: PrimErrBadArgument].
-					objectMemory hasSpurMemoryManagerAPI
-						ifTrue: [valToPut := objectMemory characterValueOf: value]
-						ifFalse:
-							[valToPut := objectMemory fetchPointer: CharacterValueIndex ofObject: value.
-							 valToPut := (objectMemory isIntegerObject: valToPut)
-											ifTrue: [objectMemory integerValueOf: valToPut]
-											ifFalse: [-1]]]
+			ifTrue:
+				[isCharacter := objectMemory isCharacterObject: value.
+				 isCharacter ifFalse:
+					[^self primitiveFailFor: PrimErrBadArgument].
+				 objectMemory hasSpurMemoryManagerAPI
+					ifTrue: [valToPut := objectMemory characterValueOf: value]
+					ifFalse:
+						[valToPut := objectMemory fetchPointer: CharacterValueIndex ofObject: value.
+						 valToPut := (objectMemory isIntegerObject: valToPut)
+										ifTrue: [objectMemory integerValueOf: valToPut]
+										ifFalse: [-1]]]
 			ifFalse:
 				[(fmt >= objectMemory firstCompiledMethodFormat
 				  and: [index < (self firstByteIndexOfMethod: rcvr)]) ifTrue:
@@ -5367,7 +5368,7 @@ StackInterpreter >> flushMethodCacheFrom: memStart to: memEnd [
 										and: [self oop: (methodCache at: probe + MethodCacheMethod) isLessThan: memEnd]])
 						ifTrue: [methodCache at: probe + MethodCacheSelector put: 0]].
 			probe := probe + MethodCacheEntrySize].
-	1 to: AtCacheTotalSize do: [:i | atCache at: i put: 0]
+	self flushAtCache
 ]
 
 { #category : #'lazy become' }
@@ -6387,7 +6388,7 @@ StackInterpreter >> install: rcvr inAtCache: cache at: atIx string: stringy [
 	| hdr fmt totalLength fixedFields |
 	<inline: true>
 	<var: #cache type: 'sqInt *'>
-
+	self assert: (objectMemory isContext: rcvr) not.
 	hdr := objectMemory baseHeader: rcvr.
 	fmt := objectMemory formatOfHeader: hdr.
 	stringy
@@ -8857,6 +8858,21 @@ StackInterpreter >> printAllStacks [
 ]
 
 { #category : #'debug printing' }
+StackInterpreter >> printAtCache [
+	0 to: AtCacheTotalSize - 1 by: 4 do:
+		[:i | | obj sz fmt fixed |
+		obj := atCache at: i + AtCacheOop.
+		sz := atCache at: i + AtCacheSize.
+		fmt := atCache at: i + AtCacheFmt.
+		fixed := atCache at: i + AtCacheFixedFields.
+		(objectMemory addressCouldBeObj: obj) ifTrue:
+			[self transcript ensureCr.
+			 self print: i; tab; print: (i < AtPutBase ifTrue: ['at   '] ifFalse: ['put ']);
+				tab; printNum: sz; tab; printNum: fmt; tab; printNum: fixed; tab;
+				shortPrintOop: obj]]
+]
+
+{ #category : #'debug printing' }
 StackInterpreter >> printCallStack [
 	<inline: false>
 	framePointer = nil
@@ -9216,6 +9232,34 @@ StackInterpreter >> printHexPtrnp: p [
 StackInterpreter >> printHexnp: n [
 	"Print n in hex,  in the form '0x1234', unpadded"
 	self print: '0x%x' f: n
+]
+
+{ #category : #'debug printing' }
+StackInterpreter >> printMethodCache [
+	0 to: MethodCacheSize - 1 by: MethodCacheEntrySize do:
+		[:i | | s c m p |
+		s := methodCache at: i + MethodCacheSelector.
+		c := methodCache at: i + MethodCacheClass.
+		m := methodCache at: i + MethodCacheMethod.
+		p := methodCache at: i + MethodCachePrimFunction.
+		((objectMemory addressCouldBeOop: s)
+		 and: [c ~= 0
+		 and: [(self addressCouldBeClassObj: c)
+			or: [self addressCouldBeClassObj: (objectMemory classForClassTag: c)]]]) ifTrue:
+			[self transcript ensureCr.
+			 self print: i; cr; tab.
+			 (objectMemory isBytesNonImm: s)
+				ifTrue: [self printHex: s; space; print: (self stringOf: s); cr]
+				ifFalse: [self shortPrintOop: s].
+			 self tab.
+			 (self addressCouldBeClassObj: c)
+				ifTrue: [self shortPrintOop: c]
+				ifFalse: [self printNum: c; space; shortPrintOop: (objectMemory classForClassTag: c)].
+			self tab; shortPrintOop: m; tab.
+			p isSymbol
+				ifTrue: [self print: p]
+				ifFalse: [self printNum: p].
+			self cr]]
 ]
 
 { #category : #'debug printing' }
