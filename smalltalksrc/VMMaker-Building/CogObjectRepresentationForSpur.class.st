@@ -4,6 +4,9 @@ Class {
 	#instVars : [
 		'ceClassAtIndexTrampoline'
 	],
+	#pools : [
+		'VMSqueakClassIndices'
+	],
 	#category : #'VMMaker-JIT'
 }
 
@@ -51,6 +54,36 @@ CogObjectRepresentationForSpur >> genGetClassObjectOf: instReg into: destReg scr
 	cogit CallRT: ceClassAtIndexTrampoline.
 	destReg ~= TempReg ifTrue:
 		[cogit MoveR: TempReg R: destReg]
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genInnerPrimitiveSize: retNoffset [
+	| jumpImm jumpNotIndexable jumpIsContext |
+	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
+	<var: #jumpImm type: #'AbstractInstruction *'>
+	<var: #jumpNotIndexable type: #'AbstractInstruction *'>
+	<var: #jumpIsContext type: #'AbstractInstruction *'>
+	cogit MoveR: ReceiverResultReg R: TempReg.
+	jumpImm := self genJumpImmediateInScratchReg: TempReg.
+	self
+		genGetSizeOf: ReceiverResultReg
+		into: ClassReg
+		formatReg: SendNumArgsReg
+		scratchReg: TempReg
+		abortJumpsInto: [:jnx :jic| jumpNotIndexable := jnx. jumpIsContext := jic].
+	self genConvertIntegerToSmallIntegerInScratchReg: ClassReg.
+	cogit MoveR: ClassReg R: ReceiverResultReg.
+	self flag: 'currently caller pushes result'.
+	cogit RetN: retNoffset.
+	jumpImm jmpTarget: (jumpNotIndexable jmpTarget: (jumpIsContext jmpTarget: cogit Label)).
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genJumpImmediateInScratchReg: aRegister [
+	<returnTypeC: #'AbstractInstruction *'>
+	cogit AndCq: objectMemory tagMask R: aRegister.
+	^cogit JumpNonZero: 0
 ]
 
 { #category : #'compile abstract instructions' }

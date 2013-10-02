@@ -5,8 +5,122 @@ Class {
 }
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationFor32BitSpur >> genConvertIntegerToSmallIntegerInScratchReg: scratchReg [
+	cogit LogicalShiftLeftCq: 1 R: scratchReg.
+	cogit AddCq: 1 R: scratchReg.
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor32BitSpur >> genConvertSmallIntegerToIntegerInScratchReg: scratchReg [
+	cogit ArithmeticShiftRightCq: 1 R: scratchReg.
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationFor32BitSpur >> genGetClassTagOf: instReg into: destReg scratchReg: scratchReg [
 	^self getInlineCacheClassTagFrom: instReg into: destReg
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor32BitSpur >> genGetSizeOf: sourceReg into: destReg formatReg: formatReg scratchReg: scratchReg abortJumpsInto: aBinaryBlock [
+	"Get the size of the non-immediate object in sourceReg into destReg using formatReg
+	 and scratchReg as temps.  None of these registers can overlap.  Supply the jumps
+	 taken if the object in sourceReg is not indexable, or if the object in sourceReg is a
+	 context.. Hack: If the object has a pointer format other than 2 leave the number of
+	 fixed fields in formatReg.  Used by primitiveSize, primitiveAt, and primitiveAtPut"
+	<returnTypeC: #'AbstractInstruction *'>
+	| jumpNotIndexable jumpSmallSize
+	  jumpBytesDone jumpShortsDone jumpArrayDone jump32BitLongsDone
+	  jumpIsBytes jumpHasFixedFields jumpIsShorts jumpIsContext  |
+	<inline: true>
+	"c.f. StackInterpreter>>stSizeOf: SpurMemoryManager>>lengthOf:format: fixedFieldsOf:format:length:"
+	<var: #jumpIsBytes type: #'AbstractInstruction *'>
+	<var: #jumpIsShorts type: #'AbstractInstruction *'>
+	<var: #jumpSmallSize type: #'AbstractInstruction *'>
+	<var: #jumpIsContext type: #'AbstractInstruction *'>
+	<var: #jumpArrayDone type: #'AbstractInstruction *'>
+	<var: #jumpNotIndexable type: #'AbstractInstruction *'>
+	<var: #jumpHasFixedFields type: #'AbstractInstruction *'>
+	<var: #jump32BitLongsDone type: #'AbstractInstruction *'>
+
+	cogit
+		MoveMw: 0 r: sourceReg R: formatReg;				"formatReg := least significant half of self baseHeader: receiver"
+		MoveR: formatReg R: scratchReg;
+		LogicalShiftRightCq: objectMemory formatShift R: formatReg;
+		AndCq: objectMemory formatMask R: formatReg.	"formatReg := self formatOfHeader: destReg"
+
+	"get numSlots into destReg."
+	cogit MoveMb: 7 r: sourceReg R: destReg. "MSB of header"
+	cogit CmpCq: objectMemory numSlotsMask R: destReg.
+	jumpSmallSize := cogit JumpLess: 0.
+	cogit MoveMw: -8 r: sourceReg R: destReg. "LSW of overflow size header"
+
+	"dispatch on format in a combination of highest dynamic frequency order first and convenience.
+		  0 = 0 sized objects (UndefinedObject True False et al)
+		  1 = non-indexable objects with inst vars (Point et al)
+		  2 = indexable objects with no inst vars (Array et al)
+		  3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+		  4 = weak indexable objects with inst vars (WeakArray et al)
+		  5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+		  6 unused, reserved for exotic pointer objects?
+		  7 Forwarded Object, 1st field is pointer, rest of fields are ignored
+		  8 unused, reserved for exotic non-pointer objects?
+		  9 (?) 64-bit indexable
+		10 - 11 32-bit indexable
+		12 - 15 16-bit indexable
+		16 - 23 byte indexable
+		24 - 31 compiled method"
+	jumpSmallSize jmpTarget:
+					(cogit CmpCq: objectMemory firstByteFormat R: formatReg).
+	jumpIsBytes := cogit JumpGreaterOrEqual: 0.
+					cogit CmpCq: objectMemory arrayFormat R: formatReg.
+	jumpArrayDone := cogit JumpZero: 0.
+	jumpNotIndexable := cogit JumpLess: 0.
+					cogit CmpCq: objectMemory weakArrayFormat R: formatReg.
+	jumpHasFixedFields := cogit JumpLessOrEqual: 0.
+					cogit CmpCq: objectMemory firstShortFormat R: formatReg.
+	jumpIsShorts := cogit JumpGreaterOrEqual: 0.
+					cogit CmpCq: objectMemory firstLongFormat R: formatReg.
+	jump32BitLongsDone := cogit JumpGreaterOrEqual: 0.
+	"For now ignore 64-bit indexability."
+	jumpNotIndexable jmpTarget: cogit Label.
+	jumpNotIndexable := cogit Jump: 0.
+
+	jumpIsBytes jmpTarget:
+		(cogit LogicalShiftLeftCq: objectMemory shiftForWord R: destReg).
+		cogit AndCq: objectMemory wordSize - 1 R: formatReg.
+		cogit SubR: formatReg R: destReg.
+	jumpBytesDone := cogit Jump: 0.
+
+	jumpIsShorts jmpTarget:
+		(cogit LogicalShiftLeftCq: objectMemory shiftForWord - 1 R: destReg).
+		cogit AndCq: 1 R: formatReg.
+		cogit SubR: formatReg R: destReg.
+	jumpShortsDone := cogit Jump: 0.
+
+	jumpHasFixedFields jmpTarget:
+		(cogit AndCq: objectMemory classIndexMask R: scratchReg).
+	cogit CmpCq: ClassMethodContextCompactIndex R: scratchReg.
+	jumpIsContext := cogit JumpZero: 0.
+	scratchReg ~= TempReg ifTrue:
+		[cogit MoveR: scratchReg R: TempReg].
+	self flag: 'sometime soon we could inline the class fetch; it is only two indirections'.
+	cogit CallRT: ceClassAtIndexTrampoline.
+	scratchReg ~= TempReg ifTrue:
+		[cogit MoveR: TempReg R: scratchReg].
+	self genLoadSlot: InstanceSpecificationIndex sourceReg: scratchReg destReg: formatReg.
+	self genConvertSmallIntegerToIntegerInScratchReg: formatReg.
+	cogit
+		AndCq: objectMemory fixedFieldsOfClassFormatMask R: formatReg;
+		SubR: formatReg R: destReg.
+
+	jumpArrayDone jmpTarget:
+	(jump32BitLongsDone jmpTarget:
+	(jumpShortsDone jmpTarget:
+	(jumpBytesDone jmpTarget:
+		cogit Label))).
+	aBinaryBlock value: jumpNotIndexable value: jumpIsContext
 ]
 
 { #category : #'compile abstract instructions' }
