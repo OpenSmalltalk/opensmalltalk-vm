@@ -10540,7 +10540,8 @@ StackInterpreter >> sendInvokeCallback: thunkPtr Stack: stackPtr Registers: regs
 	argumentCount := 4.
 	(self lookupInMethodCacheSel: messageSelector classTag: classTag) ifFalse:
 	 	[(self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
-			[^false]].
+			[^false].
+		 self addNewMethodToCache: (objectMemory classForClassTag: classTag)].
 	((self argumentCountOf: newMethod) = 4
 	and: [primitiveFunctionPointer = 0]) ifFalse:
 		[^false].
@@ -10575,7 +10576,8 @@ StackInterpreter >> sendInvokeCallbackContext: vmCallbackContext [
 	messageSelector := self splObj: SelectorInvokeCallback.
 	(self lookupInMethodCacheSel: messageSelector classTag: classTag) ifFalse:
 	 	[(self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
-			[^false]].
+			[^false].
+		 self addNewMethodToCache: (objectMemory classForClassTag: classTag)].
 	primitiveFunctionPointer ~= 0 ifTrue:
 		[^false].
 	self saveCStackStateForCallbackContext: vmCallbackContext.
