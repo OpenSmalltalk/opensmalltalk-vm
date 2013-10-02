@@ -28,6 +28,17 @@ CogObjectRepresentationFor32BitSpur >> genGetClassTagOf: instReg into: destReg s
 	^self getInlineCacheClassTagFrom: instReg into: destReg
 ]
 
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor32BitSpur >> genGetHashFieldNonImmOf: instReg asSmallIntegerInto: destReg [
+	"Fetch the instance's identity hash into destReg, encoded as a SmallInteger."
+	"Get header word in scratchReg"
+	cogit MoveMw: 4 r: instReg R: destReg.
+	"Shift and mask the field leaving room for the SmallInteger tag."
+	cogit AndCq: objectMemory identityHashHalfWordMask R: destReg.
+	self genConvertIntegerToSmallIntegerInScratchReg: destReg.
+	^0
+]
+
 { #category : #'primitive generators' }
 CogObjectRepresentationFor32BitSpur >> genGetSizeOf: sourceReg into: destReg formatReg: formatReg scratchReg: scratchReg abortJumpsInto: aBinaryBlock [
 	"Get the size of the non-immediate object in sourceReg into destReg using formatReg

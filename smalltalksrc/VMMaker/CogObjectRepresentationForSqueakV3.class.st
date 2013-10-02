@@ -66,7 +66,7 @@ CogObjectRepresentationForSqueakV3 >> classForInlineCacheTag: inlineCacheTag [
 	^objectMemory compactClassAt: inlineCacheTag >> ShiftForWord
 ]
 
-{ #category : #'compile abstract instructions' }
+{ #category : #'object representation' }
 CogObjectRepresentationForSqueakV3 >> compactClassFieldMask [
 	"This is the mask for the field when shifted into the least significant bits"
 	<inline: true>
@@ -243,7 +243,7 @@ CogObjectRepresentationForSqueakV3 >> genGetFixedFieldsOfPointerNonInt: instReg 
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genGetHashFieldNonIntOf: instReg asSmallIntegerInto: destReg [
+CogObjectRepresentationForSqueakV3 >> genGetHashFieldNonImmOf: instReg asSmallIntegerInto: destReg [
 	"Fetch the instance's identity hash into destReg, encoded as a SmallInteger."
 	"Get header word in scratchReg"
 	cogit MoveMw: 0 r: instReg R: destReg.
@@ -641,11 +641,16 @@ CogObjectRepresentationForSqueakV3 >> inlineCacheTagIsYoung: cacheTag [
 	^objectMemory isYoung: cacheTag
 ]
 
-{ #category : #'compile abstract instructions' }
+{ #category : #'object representation' }
 CogObjectRepresentationForSqueakV3 >> instFormatFieldMask [
 	"This is the mask for the field when shifted into the least significant bits"
 	<inline: true>
 	^(1 << objectMemory instFormatFieldWidth) - 1
+]
+
+{ #category : #testing }
+CogObjectRepresentationForSqueakV3 >> isHashSetOnInstanceCreation [
+	^true
 ]
 
 { #category : #'object representation' }
@@ -673,12 +678,12 @@ CogObjectRepresentationForSqueakV3 >> markAndTraceLiteralIfYoung: literal [
 		 objectMemory markAndTrace: literal]
 ]
 
-{ #category : #'compile abstract instructions' }
+{ #category : #'object representation' }
 CogObjectRepresentationForSqueakV3 >> numSmallIntegerBits [
 	^31
 ]
 
-{ #category : #'compile abstract instructions' }
+{ #category : #'object representation' }
 CogObjectRepresentationForSqueakV3 >> numSmallIntegerTagBits [
 	^1
 ]
