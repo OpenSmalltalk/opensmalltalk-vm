@@ -2074,10 +2074,15 @@ StackToRegisterMappingCogit >> genPrimitiveClass [
 			[methodOrBlockNumArgs > 0 ifTrue:
 				[self MoveMw: BytesPerWord r: SPReg R: ReceiverResultReg].
 			reg := ReceiverResultReg].
-	objectRepresentation
-		genGetClassObjectOf: reg
-		into: ReceiverResultReg
-		scratchReg: TempReg.
+	(objectRepresentation
+			genGetClassObjectOf: reg
+			into: ReceiverResultReg
+			scratchReg: TempReg) = BadRegisterSet ifTrue:
+		[objectRepresentation
+			genGetClassObjectOf: reg
+			into: ClassReg
+			scratchReg: TempReg.
+		 self MoveR: ClassReg R: ReceiverResultReg].
 	self RetN: 0.
 	^0
 ]
@@ -2208,11 +2213,12 @@ StackToRegisterMappingCogit >> genPrimitiveFloatSquareRoot [
 StackToRegisterMappingCogit >> genPrimitiveIdentityHash [
 	| jumpSI jumpNotSet |
 	<var: #jumpSI type: #'AbstractInstruction *'>
+	<var: #jumpNotSet type: #'AbstractInstruction *'>
 	self MoveR: ReceiverResultReg R: ClassReg.
 	jumpSI := objectRepresentation genJumpSmallIntegerInScratchReg: ClassReg.
 	objectRepresentation genGetHashFieldNonImmOf: ReceiverResultReg asSmallIntegerInto: TempReg.
 	objectRepresentation isHashSetOnInstanceCreation ifFalse:
-		[self CmpCq: 0 R: TempReg.
+		[self CmpCq: ConstZero R: TempReg.
 		 jumpNotSet := self JumpZero: 0].
 	self MoveR: TempReg R: ReceiverResultReg.
 	self RetN: 0.
@@ -3786,27 +3792,6 @@ StackToRegisterMappingCogit >> printSimStack [
 StackToRegisterMappingCogit >> pushNilSize: aMethodObj [
 	<inline: true>
 	^self perform: pushNilSizeFunction with: aMethodObj
-]
-
-{ #category : #'simulation stack' }
-StackToRegisterMappingCogit >> registerMaskFor: reg [
-	"Answer a bit mask identifying the symbolic register.
-	 Registers are negative numbers."
-	^1 << (1 - reg)
-]
-
-{ #category : #'simulation stack' }
-StackToRegisterMappingCogit >> registerMaskFor: reg1 and: reg2 [
-	"Answer a bit mask identifying the symbolic registers.
-	 Registers are negative numbers."
-	^1 << (1 - reg1) bitOr: 1 << (1 - reg2)
-]
-
-{ #category : #'simulation stack' }
-StackToRegisterMappingCogit >> registerMaskFor: reg1 and: reg2 and: reg3 [
-	"Answer a bit mask identifying the symbolic registers.
-	 Registers are negative numbers."
-	^(1 << (1 - reg1) bitOr: 1 << (1 - reg2)) bitOr: 1 << (1 - reg3)
 ]
 
 { #category : #'compile abstract instructions' }
