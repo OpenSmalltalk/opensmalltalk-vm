@@ -109,13 +109,18 @@ Class {
 		'previousRememberedSetSize',
 		'weakList',
 		'ephemeronList',
+		'tenuringCriterion',
 		'tenuringThreshold',
+		'tenuringClassIndex',
 		'tenuringProportion',
 		'numRememberedEphemerons'
 	],
 	#classVars : [
 		'RememberedSetLimit',
 		'RememberedSetRedZone'
+	],
+	#pools : [
+		'SpurMemoryManagementConstants'
 	],
 	#category : #'VMMaker-SpurMemoryManager'
 }
@@ -124,7 +129,10 @@ Class {
 SpurGenerationScavenger class >> initialize [
 	"SpurGenerationScavenger initialize"
 	RememberedSetLimit := 16384.
-	RememberedSetRedZone := RememberedSetLimit - (RememberedSetLimit // 2)
+	RememberedSetRedZone := RememberedSetLimit - (RememberedSetLimit // 2).
+
+	TenureByAge := 1.
+	TenureByClass := 2
 ]
 
 { #category : #'weakness and ephemerality' }
@@ -910,6 +918,31 @@ SpurGenerationScavenger >> shouldBeTenured: survivor [
 	 An adaptive tenuring policy for generation scavengers, David Ungar & Frank Jackson.
 	 ACM TOPLAS, Volume 14 Issue 1, Jan. 1992, pp 1 - 27."
 
-	^survivor < tenuringThreshold
-	  and: [survivor >= manager startOfMemory] "exclude methods in the method zone"
+	^tenuringCriterion caseOf: {
+		[TenureByAge]	->
+			[survivor < tenuringThreshold
+			 and: [survivor >= manager startOfMemory]]. "exclude methods in the method zone"
+		[TenureByClass] ->
+			[(manager classIndexOf: survivor) = tenuringClassIndex
+			 and: [survivor >= manager startOfMemory]] "exclude methods in the method zone"}
+]
+
+{ #category : #accessing }
+SpurGenerationScavenger >> tenuringClassIndex [
+	^tenuringClassIndex
+]
+
+{ #category : #accessing }
+SpurGenerationScavenger >> tenuringClassIndex: anInteger [
+	tenuringClassIndex := anInteger
+]
+
+{ #category : #accessing }
+SpurGenerationScavenger >> tenuringCriterion [
+	^tenuringCriterion
+]
+
+{ #category : #accessing }
+SpurGenerationScavenger >> tenuringCriterion: anInteger [
+	tenuringCriterion := anInteger
 ]
