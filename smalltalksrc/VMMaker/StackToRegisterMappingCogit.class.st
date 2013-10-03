@@ -1563,9 +1563,7 @@ StackToRegisterMappingCogit >> genDoubleArithmetic: arithmeticOperator preOpChec
 	self ConvertR: ClassReg Rd: DPFPReg1.
 	self Jump: doOp.
 	jumpFailAlloc jmpTarget: self Label.
-	self compileInterpreterPrimitive: (coInterpreter
-										functionPointerForCompiledMethod: methodObj
-										primitiveIndex: primitiveIndex).
+	self compileFallbackToInterpreterPrimitive.
 	jumpFailClass jmpTarget: self Label.
 	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
 		[jumpNonInt jmpTarget: jumpFailClass getJmpTarget].
@@ -1940,10 +1938,7 @@ StackToRegisterMappingCogit >> genPrimitiveAsFloat [
 	self MoveR: SendNumArgsReg R: ReceiverResultReg.
 	self RetN: 0.
 	jumpFailAlloc jmpTarget: self Label.
-	self compileInterpreterPrimitive: (coInterpreter
-										functionPointerForCompiledMethod: methodObj
-										primitiveIndex: primitiveIndex).
-	^0
+	^self compileFallbackToInterpreterPrimitive
 ]
 
 { #category : #'primitive generators' }
@@ -1952,9 +1947,7 @@ StackToRegisterMappingCogit >> genPrimitiveAt [
 	self assert: self numRegArgs >= 1.
 	(r := objectRepresentation genInnerPrimitiveAt: 0) < 0 ifTrue:
 		[^r].
-	^self compileInterpreterPrimitive: (coInterpreter
-											functionPointerForCompiledMethod: methodObj
-											primitiveIndex: primitiveIndex)
+	^self compileFallbackToInterpreterPrimitive
 ]
 
 { #category : #'primitive generators' }
@@ -2195,10 +2188,7 @@ StackToRegisterMappingCogit >> genPrimitiveFloatSquareRoot [
 	self MoveR: SendNumArgsReg R: ReceiverResultReg.
 	self RetN: 0.
 	jumpFailAlloc jmpTarget: self Label.
-	self compileInterpreterPrimitive: (coInterpreter
-										functionPointerForCompiledMethod: methodObj
-										primitiveIndex: primitiveIndex).
-	^0
+	^self compileFallbackToInterpreterPrimitive
 ]
 
 { #category : #'primitive generators' }
@@ -2234,9 +2224,7 @@ StackToRegisterMappingCogit >> genPrimitiveIdentityHash [
 	self RetN: 0.
 	objectRepresentation isHashSetOnInstanceCreation ifFalse:
 		[jumpNotSet jmpTarget: self Label.
-		 self compileInterpreterPrimitive: (coInterpreter
-											functionPointerForCompiledMethod: methodObj
-											primitiveIndex: primitiveIndex)].
+		 self compileFallbackToInterpreterPrimitive].
 	jumpSI jmpTarget: self Label.
 	^0
 ]
@@ -2296,6 +2284,14 @@ StackToRegisterMappingCogit >> genPrimitiveMultiply [
 ]
 
 { #category : #'primitive generators' }
+StackToRegisterMappingCogit >> genPrimitiveNew [
+	| r |
+	(r := objectRepresentation genInnerPrimitiveNew: 0) < 0 ifTrue:
+		[^r].
+	^self compileFallbackToInterpreterPrimitive
+]
+
+{ #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveNotIdentical [
 	"Receiver and arg in registers.
 	 Stack looks like
@@ -2346,9 +2342,7 @@ StackToRegisterMappingCogit >> genPrimitiveSize [
 	| r |
 	(r := objectRepresentation genInnerPrimitiveSize: 0) < 0 ifTrue:
 		[^r].
-	^self compileInterpreterPrimitive: (coInterpreter
-											functionPointerForCompiledMethod: methodObj
-											primitiveIndex: primitiveIndex)
+	^self compileFallbackToInterpreterPrimitive
 ]
 
 { #category : #'primitive generators' }
@@ -2357,9 +2351,7 @@ StackToRegisterMappingCogit >> genPrimitiveStringAt [
 	self assert: self numRegArgs >= 1.
 	(r := objectRepresentation genInnerPrimitiveStringAt: 0) < 0 ifTrue:
 		[^r].
-	^self compileInterpreterPrimitive: (coInterpreter
-											functionPointerForCompiledMethod: methodObj
-											primitiveIndex: primitiveIndex)
+	^self compileFallbackToInterpreterPrimitive
 ]
 
 { #category : #'primitive generators' }

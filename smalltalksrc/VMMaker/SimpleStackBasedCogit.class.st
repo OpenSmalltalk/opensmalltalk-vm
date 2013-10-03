@@ -303,17 +303,17 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueakV3 [
 	#(	"Integer Primitives (0-19)"
 		(1 genPrimitiveAdd				1)
 		(2 genPrimitiveSubtract			1)
-		(3 genPrimitiveLessThan			1)
+		(3 genPrimitiveLessThan		1)
 		(4 genPrimitiveGreaterThan		1)
 		(5 genPrimitiveLessOrEqual		1)
 		(6 genPrimitiveGreaterOrEqual	1)
-		(7 genPrimitiveEqual				1)
-		(8 genPrimitiveNotEqual			1)
+		(7 genPrimitiveEqual			1)
+		(8 genPrimitiveNotEqual		1)
 		(9 genPrimitiveMultiply			1	processorHasMultiply:)
 		(10 genPrimitiveDivide			1	processorHasDivQuoRem:)
-		(11 genPrimitiveMod				1	processorHasDivQuoRem:)
+		(11 genPrimitiveMod			1	processorHasDivQuoRem:)
 		(12 genPrimitiveDiv				1	processorHasDivQuoRem:)
-		(13 genPrimitiveQuo				1	processorHasDivQuoRem:)
+		(13 genPrimitiveQuo			1	processorHasDivQuoRem:)
 		(14 genPrimitiveBitAnd			1)
 		(15 genPrimitiveBitOr			1)
 		(16 genPrimitiveBitXor			1)
@@ -379,21 +379,21 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueakV3 [
 		"StorageManagement Primitives (68-79)"
 		"(68 primitiveObjectAt)"
 		"(69 primitiveObjectAtPut)"
-		(70 primitiveNew				0			objectRepresentationImplementsNew:)
-		(71 primitiveNewWithArg		1			objectRepresentationImplementsNewWithArg:)
-		"(72 primitiveArrayBecomeOneWay)"	"Blue Book: primitiveBecome"
+		(70 genPrimitiveNew			0			objectRepresentationImplementsNew:)
+		(71 genPrimitiveNewWithArg	1			objectRepresentationImplementsNewWithArg:)
+		"(72 primitiveArrayBecomeOneWay)"		"Blue Book: primitiveBecome"
 		"(73 primitiveInstVarAt)"
 		"(74 primitiveInstVarAtPut)"
 		(75 genPrimitiveIdentityHash	0)
 		"(76 primitiveStoreStackp)"					"Blue Book: primitiveAsObject"
 		"(77 primitiveSomeInstance)"
 		"(78 primitiveNextInstance)"
-		(79 primitiveNewMethod		2			objectRepresentationImplementsNewMethod:)
+		(79 genPrimitiveNewMethod	2			objectRepresentationImplementsNewMethod:)
 
 		"Control Primitives (80-89)"
-		"(80 primitiveFail)"					"Blue Book: primitiveBlockCopy"
-		"(81 primitiveFail)"					"Blue Book: primitiveValue"
-		"(82 primitiveFail)"					"Blue Book: primitiveValueWithArgs"
+		"(80 primitiveFail)"							"Blue Book: primitiveBlockCopy"
+		"(81 primitiveFail)"							"Blue Book: primitiveValue"
+		"(82 primitiveFail)"							"Blue Book: primitiveValueWithArgs"
 		"(83 primitivePerform)"
 		"(84 primitivePerformWithArgs)"
 		"(85 primitiveSignal)"
@@ -652,6 +652,14 @@ SimpleStackBasedCogit >> compileBlockFramelessEntry: blockStart [
 		genLoadSlot: ReceiverIndex
 			sourceReg: TempReg
 				destReg: ReceiverResultReg
+]
+
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> compileFallbackToInterpreterPrimitive [
+	<inline: false>
+	^self compileInterpreterPrimitive: (coInterpreter
+											functionPointerForCompiledMethod: methodObj
+											primitiveIndex: primitiveIndex)
 ]
 
 { #category : #'compile abstract instructions' }
@@ -1117,9 +1125,7 @@ SimpleStackBasedCogit >> genDoubleArithmetic: arithmeticOperator preOpCheck: pre
 	self ConvertR: ClassReg Rd: DPFPReg1.
 	self Jump: doOp.
 	jumpFailAlloc jmpTarget: self Label.
-	self compileInterpreterPrimitive: (coInterpreter
-										functionPointerForCompiledMethod: methodObj
-										primitiveIndex: primitiveIndex).
+	self compileFallbackToInterpreterPrimitive.
 	fail := self Label.
 	jumpFailClass jmpTarget: fail.
 	preOpCheckOrNil ifNotNil:
@@ -1734,10 +1740,7 @@ SimpleStackBasedCogit >> genPrimitiveAsFloat [
 	self flag: 'currently caller pushes result'.
 	self RetN: BytesPerWord.
 	jumpFailAlloc jmpTarget: self Label.
-	self compileInterpreterPrimitive: (coInterpreter
-										functionPointerForCompiledMethod: methodObj
-										primitiveIndex: primitiveIndex).
-	^0
+	^self compileFallbackToInterpreterPrimitive
 ]
 
 { #category : #'primitive generators' }
@@ -1746,9 +1749,7 @@ SimpleStackBasedCogit >> genPrimitiveAt [
 	self MoveMw: BytesPerWord r: SPReg R: Arg0Reg.
 	(r := objectRepresentation genInnerPrimitiveAt: BytesPerWord * 2) < 0 ifTrue:
 		[^r].
-	^self compileInterpreterPrimitive: (coInterpreter
-											functionPointerForCompiledMethod: methodObj
-											primitiveIndex: primitiveIndex)
+	^self compileFallbackToInterpreterPrimitive
 ]
 
 { #category : #'primitive generators' }
@@ -2068,10 +2069,7 @@ SimpleStackBasedCogit >> genPrimitiveFloatSquareRoot [
 	self flag: 'currently caller pushes result'.
 	self RetN: BytesPerWord.
 	jumpFailAlloc jmpTarget: self Label.
-	self compileInterpreterPrimitive: (coInterpreter
-										functionPointerForCompiledMethod: methodObj
-										primitiveIndex: primitiveIndex).
-	^0
+	^self compileFallbackToInterpreterPrimitive
 ]
 
 { #category : #'primitive generators' }
@@ -2126,9 +2124,7 @@ SimpleStackBasedCogit >> genPrimitiveIdentityHash [
 	self RetN: BytesPerWord.
 	objectRepresentation isHashSetOnInstanceCreation ifFalse:
 		[jumpNotSet jmpTarget: self Label.
-		 self compileInterpreterPrimitive: (coInterpreter
-											functionPointerForCompiledMethod: methodObj
-											primitiveIndex: primitiveIndex)].
+		 self compileFallbackToInterpreterPrimitive].
 	jumpSI jmpTarget: self Label.
 	^0
 ]
@@ -2200,6 +2196,14 @@ SimpleStackBasedCogit >> genPrimitiveMultiply [
 ]
 
 { #category : #'primitive generators' }
+SimpleStackBasedCogit >> genPrimitiveNew [
+	| r |
+	(r := objectRepresentation genInnerPrimitiveNew: BytesPerWord) < 0 ifTrue:
+		[^r].
+	^self compileFallbackToInterpreterPrimitive
+]
+
+{ #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveNotEqual [
 	^self genSmallIntegerComparison: JumpNonZero
 ]
@@ -2259,9 +2263,7 @@ SimpleStackBasedCogit >> genPrimitiveSize [
 	| r |
 	(r := objectRepresentation genInnerPrimitiveSize: BytesPerWord) < 0 ifTrue:
 		[^r].
-	^self compileInterpreterPrimitive: (coInterpreter
-											functionPointerForCompiledMethod: methodObj
-											primitiveIndex: primitiveIndex)
+	^self compileFallbackToInterpreterPrimitive
 ]
 
 { #category : #'primitive generators' }
@@ -2270,9 +2272,7 @@ SimpleStackBasedCogit >> genPrimitiveStringAt [
 	self MoveMw: BytesPerWord r: SPReg R: Arg0Reg.
 	(r := objectRepresentation genInnerPrimitiveStringAt: BytesPerWord * 2) < 0 ifTrue:
 		[^r].
-	^self compileInterpreterPrimitive: (coInterpreter
-											functionPointerForCompiledMethod: methodObj
-											primitiveIndex: primitiveIndex)
+	^self compileFallbackToInterpreterPrimitive
 ]
 
 { #category : #'primitive generators' }
