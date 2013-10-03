@@ -1094,7 +1094,7 @@ SpurMemoryManager >> arrayClassIndexPun [
 	^16
 ]
 
-{ #category : #'header format' }
+{ #category : #'header formats' }
 SpurMemoryManager >> arrayFormat [
 	^2
 ]
@@ -1882,7 +1882,7 @@ SpurMemoryManager >> enterIntoClassTable: aBehavior [
 		[^PrimErrLimitExceeded]] repeat
 ]
 
-{ #category : #'header format' }
+{ #category : #'header formats' }
 SpurMemoryManager >> ephemeronFormat [
 	^5
 ]
@@ -1995,12 +1995,12 @@ SpurMemoryManager >> firstAccessibleObject [
 	^nilObj
 ]
 
-{ #category : #'header format' }
+{ #category : #'header formats' }
 SpurMemoryManager >> firstByteFormat [
 	^16
 ]
 
-{ #category : #'header format' }
+{ #category : #'header formats' }
 SpurMemoryManager >> firstCompiledMethodFormat [
 	^24
 ]
@@ -2043,7 +2043,7 @@ SpurMemoryManager >> firstIndexableField: objOop [
 	^self pointerForOop: objOop + self baseHeaderSize
 ]
 
-{ #category : #'header format' }
+{ #category : #'header formats' }
 SpurMemoryManager >> firstLongFormat [
 	^10
 ]
@@ -2055,12 +2055,12 @@ SpurMemoryManager >> firstObject [
 	^nilObj
 ]
 
-{ #category : #'header format' }
+{ #category : #'header formats' }
 SpurMemoryManager >> firstShortFormat [
 	^12
 ]
 
-{ #category : #'header format' }
+{ #category : #'header formats' }
 SpurMemoryManager >> firstStringyFakeFormat [
 	"A fake format for the interpreter used to mark indexable strings in
 	 the interpreter's at cache.  This is larger than any format."
@@ -2251,7 +2251,7 @@ SpurMemoryManager >> forward: obj1 to: obj2 [
 	self storePointer: 0 ofForwarder: obj1 withValue: obj2
 ]
 
-{ #category : #'header format' }
+{ #category : #'header formats' }
 SpurMemoryManager >> forwardedFormat [
 	"A special format used by the GC to follow only the first pointer."
 	^7
@@ -2429,7 +2429,7 @@ SpurMemoryManager >> inPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag [
 			[self possibleRootStoreInto: obj2]]
 ]
 
-{ #category : #'header format' }
+{ #category : #'header formats' }
 SpurMemoryManager >> indexablePointersFormat [
 	^3
 ]
@@ -3136,7 +3136,7 @@ SpurMemoryManager >> lastHash: seed [
 	lastHash := seed
 ]
 
-{ #category : #'header format' }
+{ #category : #'header formats' }
 SpurMemoryManager >> lastPointerFormat [
 	^5
 ]
@@ -3363,7 +3363,7 @@ SpurMemoryManager >> nilObject: anOop [
 	nilObj := anOop
 ]
 
-{ #category : #'header format' }
+{ #category : #'header formats' }
 SpurMemoryManager >> nonIndexablePointerFormat [
 	^1
 ]
@@ -4046,7 +4046,7 @@ SpurMemoryManager >> signalLowSpace [
 	^signalLowSpace
 ]
 
-{ #category : #'header format' }
+{ #category : #'header formats' }
 SpurMemoryManager >> sixtyFourBitIndexableFormat [
 	^9
 ]
@@ -4377,7 +4377,7 @@ SpurMemoryManager >> weakArrayClassIndexPun [
 	^17
 ]
 
-{ #category : #'header format' }
+{ #category : #'header formats' }
 SpurMemoryManager >> weakArrayFormat [
 	^4
 ]

@@ -143,6 +143,16 @@ CogObjectRepresentationForSpur >> genGetDoubleValueOf: srcReg into: destFPReg [
 ]
 
 { #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genInnerPrimitiveNew: retNoffset [
+	"Implement primitiveNew for convenient cases:
+	- the receiver has a hash
+	- the receiver is fixed size
+	- the result fits in eden"
+
+	self subclassResponsibility
+]
+
+{ #category : #'primitive generators' }
 CogObjectRepresentationForSpur >> genInnerPrimitiveSize: retNoffset [
 	| jumpImm jumpNotIndexable jumpIsContext |
 	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
