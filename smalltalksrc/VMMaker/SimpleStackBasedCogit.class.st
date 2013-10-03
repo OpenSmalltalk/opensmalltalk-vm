@@ -1082,18 +1082,19 @@ SimpleStackBasedCogit >> genDoubleArithmetic: arithmeticOperator preOpCheck: pre
 		arg
 		return address"
 	<var: #preOpCheckOrNil declareC: 'AbstractInstruction *(*preOpCheckOrNil)(int rcvrReg, int argReg)'>
-	| jumpFailClass jumpFailAlloc jumpFailCheck jumpSmallInt doOp fail |
+	| jumpFailClass jumpFailAlloc jumpFailCheck jumpImmediate jumpNonInt doOp fail |
 	<var: #jumpFailClass type: #'AbstractInstruction *'>
 	<var: #jumpFailAlloc type: #'AbstractInstruction *'>
-	<var: #jumpSmallInt type: #'AbstractInstruction *'>
+	<var: #jumpNonInt type: #'AbstractInstruction *'>
+	<var: #jumpImmediate type: #'AbstractInstruction *'>
 	<var: #jumpFailCheck type: #'AbstractInstruction *'>
 	<var: #doOp type: #'AbstractInstruction *'>
 	<var: #fail type: #'AbstractInstruction *'>
 	self MoveMw: BytesPerWord r: SPReg R: TempReg.
 	objectRepresentation genGetDoubleValueOf: ReceiverResultReg into: DPFPReg0.
 	self MoveR: TempReg R: ClassReg.
-	jumpSmallInt := objectRepresentation genJumpSmallIntegerInScratchReg: TempReg.
-	objectRepresentation genGetCompactClassIndexNonIntOf: ClassReg into: SendNumArgsReg.
+	jumpImmediate := objectRepresentation genJumpImmediateInScratchReg: TempReg.
+	objectRepresentation genGetCompactClassIndexNonImmOf: ClassReg into: SendNumArgsReg.
 	self CmpCq: objectMemory classFloatCompactIndex R: SendNumArgsReg.
 	jumpFailClass := self JumpNonZero: 0.
 	objectRepresentation genGetDoubleValueOf: ClassReg into: DPFPReg1.
@@ -1109,7 +1110,9 @@ SimpleStackBasedCogit >> genDoubleArithmetic: arithmeticOperator preOpCheck: pre
 	self MoveR: SendNumArgsReg R: ReceiverResultReg.
 	self flag: 'currently caller pushes result'.
 	self RetN: BytesPerWord * 2.
-	jumpSmallInt jmpTarget: self Label.
+	jumpImmediate jmpTarget: self Label.
+	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
+		[jumpNonInt := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg].
 	objectRepresentation genConvertSmallIntegerToIntegerInScratchReg: ClassReg.
 	self ConvertR: ClassReg Rd: DPFPReg1.
 	self Jump: doOp.
@@ -1118,9 +1121,11 @@ SimpleStackBasedCogit >> genDoubleArithmetic: arithmeticOperator preOpCheck: pre
 										functionPointerForCompiledMethod: methodObj
 										primitiveIndex: primitiveIndex).
 	fail := self Label.
-	jumpFailClass jmpTarget: self Label.
+	jumpFailClass jmpTarget: fail.
 	preOpCheckOrNil ifNotNil:
 		[jumpFailCheck jmpTarget: fail].
+	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
+		[jumpNonInt jmpTarget: fail].
 	^0
 ]
 
@@ -1131,16 +1136,18 @@ SimpleStackBasedCogit >> genDoubleComparison: jumpOpcodeGenerator invert: invert
 		arg
 		return address"
 	<var: #jumpOpcodeGenerator declareC: 'AbstractInstruction *(*jumpOpcodeGenerator)(void *)'>
-	| jumpFail jumpSmallInt jumpCond compare |
-	<var: #jumpFail type: #'AbstractInstruction *'>
-	<var: #jumpSmallInt type: #'AbstractInstruction *'>
+	| jumpFail jumpImmediate jumpNonInt jumpCond compare |
+	<var: #jumpImmediate type: #'AbstractInstruction *'>
+	<var: #jumpNonInt type: #'AbstractInstruction *'>
 	<var: #jumpCond type: #'AbstractInstruction *'>
 	<var: #compare type: #'AbstractInstruction *'>
+	<var: #jumpFail type: #'AbstractInstruction *'>
+
 	self MoveMw: BytesPerWord r: SPReg R: TempReg.
 	objectRepresentation genGetDoubleValueOf: ReceiverResultReg into: DPFPReg0.
 	self MoveR: TempReg R: ClassReg.
-	jumpSmallInt := objectRepresentation genJumpSmallIntegerInScratchReg: TempReg.
-	objectRepresentation genGetCompactClassIndexNonIntOf: ClassReg into: SendNumArgsReg.
+	jumpImmediate := objectRepresentation genJumpImmediateInScratchReg: TempReg.
+	objectRepresentation genGetCompactClassIndexNonImmOf: ClassReg into: SendNumArgsReg.
 	self CmpCq: objectMemory classFloatCompactIndex R: SendNumArgsReg.
 	jumpFail := self JumpNonZero: 0.
 	objectRepresentation genGetDoubleValueOf: ClassReg into: DPFPReg1.
@@ -1155,11 +1162,15 @@ SimpleStackBasedCogit >> genDoubleComparison: jumpOpcodeGenerator invert: invert
 	jumpCond jmpTarget: (self annotate: (self MoveCw: objectMemory trueObject R: ReceiverResultReg)
 							objRef: objectMemory trueObject).
 	self RetN: BytesPerWord * 2.
-	jumpSmallInt jmpTarget: self Label.
+	jumpImmediate jmpTarget: self Label.
+	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
+		[jumpNonInt := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg].
 	objectRepresentation genConvertSmallIntegerToIntegerInScratchReg: ClassReg.
 	self ConvertR: ClassReg Rd: DPFPReg1.
 	self Jump: compare.
 	jumpFail jmpTarget: self Label.
+	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
+		[jumpNonInt jmpTarget: jumpFail getJmpTarget].
 	^0
 ]
 
@@ -2113,9 +2124,12 @@ SimpleStackBasedCogit >> genPrimitiveIdentityHash [
 	self MoveR: TempReg R: ReceiverResultReg.
 	self flag: 'currently caller pushes result'.
 	self RetN: BytesPerWord.
-	jumpSI jmpTarget: self Label.
 	objectRepresentation isHashSetOnInstanceCreation ifFalse:
-		[jumpNotSet jmpTarget: jumpSI getJmpTarget].
+		[jumpNotSet jmpTarget: self Label.
+		 self compileInterpreterPrimitive: (coInterpreter
+											functionPointerForCompiledMethod: methodObj
+											primitiveIndex: primitiveIndex)].
+	jumpSI jmpTarget: self Label.
 	^0
 ]
 

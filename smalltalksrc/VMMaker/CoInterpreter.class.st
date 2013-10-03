@@ -1888,11 +1888,11 @@ CoInterpreter >> checkLogIntegrity [
 	0 to: limit by: 3 do:
 		[:i| | oop |
 		oop := traceLog at: i.
-		(objectMemory isIntegerObject: oop) ifFalse:
+		(objectMemory isImmediate: oop) ifFalse:
 			[(objectMemory checkOopIntegrity: oop named: 'traceLog' index: i) ifFalse:
 				[ok := false]].
 		oop := traceLog at: i + 1.
-		(objectMemory isIntegerObject: oop) ifFalse:
+		(objectMemory isImmediate: oop) ifFalse:
 			[(objectMemory checkOopIntegrity: oop named: 'traceLog' index: i + 1) ifFalse:
 				[ok := false]]].
 	^ok
@@ -2232,9 +2232,12 @@ CoInterpreter >> commonSend [
 	<sharedCodeNamed: 'commonSend' inCase: #singleExtendedSendBytecode>
 	self sendBreakpoint: messageSelector receiver: (self internalStackValue: argumentCount).
 	cogit recordSendTrace ifTrue:
-		[self recordTrace: lkupClass thing: messageSelector source: TraceIsFromInterpreter.
+		[self recordTrace: (objectMemory classForClassTag: lkupClassTag)
+			thing: messageSelector
+			source: TraceIsFromInterpreter.
 		cogit printOnTrace ifTrue:
-			[self printActivationNameForSelector: messageSelector startClass: lkupClass; cr]].
+			[self printActivationNameForSelector: messageSelector
+				startClass: (objectMemory classForClassTag: lkupClassTag); cr]].
 	self internalFindNewMethod.
 	self internalExecuteNewMethod.
 	self fetchNextBytecode
@@ -5177,7 +5180,7 @@ CoInterpreter >> primitivePropertyFlags: primIndex [
 CoInterpreter >> printCogMethod: cogMethod [
 	<api>
 	<var: #cogMethod type: #'CogMethod *'>
-	| address |
+	| address primitive |
 	self cCode: ''
 		inSmalltalk:
 			[self transcript ensureCr.
@@ -5189,7 +5192,11 @@ CoInterpreter >> printCogMethod: cogMethod [
 		printHex: address + cogMethod blockSize.
 	cogMethod cmType = CMMethod ifTrue:
 		[self print: ': method: ';
-			printHex: cogMethod methodObject].
+			printHex: cogMethod methodObject.
+		 primitive := self primitiveIndexOfMethod: cogMethod methodObject
+							header: cogMethod methodHeader.
+		 primitive ~= 0 ifTrue:
+			[self print: ' prim '; printNum: primitive]].
 	cogMethod cmType = CMBlock ifTrue:
 		[self print: ': block home: ';
 			printHex: (self cCoerceSimple: cogMethod to: #'CogBlockMethod *') cmHomeMethod asUnsignedInteger].
@@ -5451,7 +5458,7 @@ CoInterpreter >> printPrimLogEntryAt: i [
 	<inline: false>
 	| intOrSelector |
 	intOrSelector := primTraceLog at: i.
-	(objectMemory isIntegerObject: intOrSelector)
+	(objectMemory isImmediate: intOrSelector)
 		ifTrue:
 			[ intOrSelector = TraceIncrementalGC ifTrue:
 				[self print: '**IncrementalGC**'. ^nil].

@@ -218,7 +218,9 @@ Spur32BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 	classIndex < 0 ifTrue:
 		[coInterpreter primitiveFailFor: classIndex negated.
 		 ^nil].
-	newObj := self allocateSlots: numSlots format: instSpec classIndex: classIndex.
+	numSlots > self maxSlotsForNewSpaceAlloc
+		ifTrue: [newObj := self allocateSlotsInOldSpace: numSlots format: instSpec classIndex: classIndex]
+		ifFalse: [newObj := self allocateSlots: numSlots format: instSpec classIndex: classIndex].
 	newObj ifNotNil:
 		[self fillObj: newObj numSlots: numSlots with: fillValue].
 	^newObj
