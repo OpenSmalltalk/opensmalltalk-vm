@@ -2182,24 +2182,6 @@ StackToRegisterMappingCogit >> genPrimitiveDivide [
 ]
 
 { #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveEquivalent [
-	"Receiver and arg in registers.
-	 Stack looks like
-		return address"
-	| jumpFalse |
-	<var: #jumpFalse type: #'AbstractInstruction *'>
-	self CmpR: Arg0Reg R: ReceiverResultReg.
-	jumpFalse := self JumpNonZero: 0.
-	self annotate: (self MoveCw: objectMemory trueObject R: ReceiverResultReg)
-		objRef: objectMemory trueObject.
-	self RetN: 0.
-	jumpFalse jmpTarget: (self annotate: (self MoveCw: objectMemory falseObject R: ReceiverResultReg)
-								objRef: objectMemory falseObject).
-	self RetN: 0.
-	^0
-]
-
-{ #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveFloatSquareRoot [
 	| jumpFailAlloc |
 	<var: #jumpFailAlloc type: #'AbstractInstruction *'>
@@ -2216,6 +2198,24 @@ StackToRegisterMappingCogit >> genPrimitiveFloatSquareRoot [
 	self compileInterpreterPrimitive: (coInterpreter
 										functionPointerForCompiledMethod: methodObj
 										primitiveIndex: primitiveIndex).
+	^0
+]
+
+{ #category : #'primitive generators' }
+StackToRegisterMappingCogit >> genPrimitiveIdentical [
+	"Receiver and arg in registers.
+	 Stack looks like
+		return address"
+	| jumpFalse |
+	<var: #jumpFalse type: #'AbstractInstruction *'>
+	self CmpR: Arg0Reg R: ReceiverResultReg.
+	jumpFalse := self JumpNonZero: 0.
+	self annotate: (self MoveCw: objectMemory trueObject R: ReceiverResultReg)
+		objRef: objectMemory trueObject.
+	self RetN: 0.
+	jumpFalse jmpTarget: (self annotate: (self MoveCw: objectMemory falseObject R: ReceiverResultReg)
+								objRef: objectMemory falseObject).
+	self RetN: 0.
 	^0
 ]
 
@@ -2296,7 +2296,7 @@ StackToRegisterMappingCogit >> genPrimitiveMultiply [
 ]
 
 { #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveNotEquivalent [
+StackToRegisterMappingCogit >> genPrimitiveNotIdentical [
 	"Receiver and arg in registers.
 	 Stack looks like
 		return address"

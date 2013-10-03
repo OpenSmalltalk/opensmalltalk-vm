@@ -267,6 +267,11 @@ CogObjectRepresentationForSpur >> hasValidHeaderPostGC: cogMethod [
 	^cogMethod objectHeader = objectMemory nullHeaderForMachineCodeMethod
 ]
 
+{ #category : #initialization }
+CogObjectRepresentationForSpur >> implementsNew [
+	^true
+]
+
 { #category : #'in-line cacheing' }
 CogObjectRepresentationForSpur >> inlineCacheTagForInstance: oop [
 	"c.f. getInlineCacheClassTagFrom:into:"
