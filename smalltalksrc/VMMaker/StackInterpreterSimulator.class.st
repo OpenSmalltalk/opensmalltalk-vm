@@ -2346,6 +2346,7 @@ StackInterpreterSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'print all stacks' action: #printAllStacks;
 		add: 'write back local ptrs' action: [stackPointer := localSP. framePointer := localFP. instructionPointer := localIP.
 											self writeBackHeadFramePointers];
+		add: 'print prim trace log' action: #dumpPrimTraceLog;
 		addLine;
 		add: 'print oop...' action: [(self promptHex: 'print oop') ifNotNil: [:oop| self printOop: oop]];
 		add: 'long print oop...' action: [(self promptHex: 'print oop') ifNotNil: [:oop| self longPrintOop: oop]];
