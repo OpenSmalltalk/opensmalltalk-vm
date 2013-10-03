@@ -1977,13 +1977,12 @@ StackInterpreterSimulator >> shortPrint: oop [
 	name = 'False' ifTrue: [^ 'false'].
 	name = 'True' ifTrue: [^ 'true'].
 	name = 'Float' ifTrue: [^ '=' , (self dbgFloatValueOf: oop) printString].
-	name = 'Association' ifTrue: [^ '(' ,
-				(self shortPrint: (self longAt: oop + BaseHeaderSize)) ,
-				' -> ' ,
-				(self longAt: oop + BaseHeaderSize + BytesPerWord) hex8 , ')'].
-	('AEIOU' includes: name first)
-		ifTrue: [^ 'an ' , name]
-		ifFalse: [^ 'a ' , name]
+	(#('Association' 'ReadOnlyVariableBinding' 'VariableBinding') includes: name) ifTrue:
+		[^ '(' ,
+		(self shortPrint: (self longAt: oop + BaseHeaderSize)) ,
+		' -> ' ,
+		(self longAt: oop + BaseHeaderSize + BytesPerWord) hex8 , ')'].
+	^(('AEIOU' includes: name first) ifTrue: ['an '] ifFalse: ['a ']), name
 ]
 
 { #category : #'debug printing' }
