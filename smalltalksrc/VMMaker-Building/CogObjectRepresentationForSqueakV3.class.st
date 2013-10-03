@@ -127,6 +127,9 @@ CogObjectRepresentationForSqueakV3 >> genConvertSmallIntegerToIntegerInScratchRe
 
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genFetchIndexRegister: indexReg from: tableObj into: destReg [
+	"indexReg contains the 1-relative index of an element in tableObj.
+	 Since BaseHeaderSize = BytesPerOop we can use it as a
+	 zero-relative index from the beginning of the object."
 	self assert: indexReg ~= destReg.
 	cogit annotate: (cogit MoveCw: tableObj R: destReg) objRef: tableObj.
 	cogit MoveXwr: indexReg R: destReg R: destReg.
@@ -210,7 +213,7 @@ CogObjectRepresentationForSqueakV3 >> genGetClassTagOf: instReg into: destReg sc
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genGetCompactClassIndexNonIntOf: instReg into: destReg [
+CogObjectRepresentationForSqueakV3 >> genGetCompactClassIndexNonImmOf: instReg into: destReg [
 	"Fetch the instance's compact class index into destReg."
 	"Get header word in scratchReg"
 	cogit MoveMw: 0 r: instReg R: destReg.
@@ -491,6 +494,11 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveStringAt: retNOffset [
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genJumpImmediateInScratchReg: aRegister [
+	^self genJumpSmallIntegerInScratchReg: aRegister
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genJumpNotSmallIntegerInScratchReg: aRegister [
 	<returnTypeC: #'AbstractInstruction *'>
 	cogit AndCq: 1 R: aRegister.
@@ -718,4 +726,9 @@ CogObjectRepresentationForSqueakV3 >> shouldAnnotateObjectReference: anOop [
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> slotOffsetOfInstVarIndex: index [
 	^index * BytesPerWord + BaseHeaderSize
+]
+
+{ #category : #testing }
+CogObjectRepresentationForSqueakV3 >> smallIntegerIsOnlyImmediateType [
+	^true
 ]

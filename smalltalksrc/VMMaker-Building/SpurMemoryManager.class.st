@@ -1511,6 +1511,12 @@ SpurMemoryManager >> classByteArray [
 	^self splObj: ClassByteArray
 ]
 
+{ #category : #'cog jit support' }
+SpurMemoryManager >> classFloatCompactIndex [
+	<api>
+	^ClassFloatCompactIndex
+]
+
 { #category : #'interpreter access' }
 SpurMemoryManager >> classForClassTag: classIndex [
 	^self classAtIndex: classIndex
@@ -1644,9 +1650,16 @@ SpurMemoryManager >> clearLeakMapAndMapAccessibleObjects [
 SpurMemoryManager >> clone: objOop [
 	| numSlots newObj |
 	numSlots := self numSlotsOf: objOop.
-	newObj := self allocateSlots: (self numSlotsOf: objOop)
-					format: (self formatOf: objOop)
-					classIndex: (self classIndexOf: objOop).
+	
+	numSlots > self maxSlotsForNewSpaceAlloc
+		ifTrue:
+			[newObj := self allocateSlotsInOldSpace: numSlots
+							format: (self formatOf: objOop)
+							classIndex: (self classIndexOf: objOop)]
+		ifFalse:
+			[newObj := self allocateSlots: numSlots
+							format: (self formatOf: objOop)
+							classIndex: (self classIndexOf: objOop)].
 	(self isPointersNonImm: objOop)
 		ifTrue:
 			[0 to: numSlots - 1 do:
@@ -2298,6 +2311,8 @@ SpurMemoryManager >> freeSize [
 
 { #category : #accessing }
 SpurMemoryManager >> freeStart [
+	(#(Cogit SimpleStackBasedCogit StackToregisterMappingCogit) includes: thisContext sender class name) ifTrue:
+		[self halt].
 	^freeStart
 ]
 
@@ -3274,6 +3289,14 @@ SpurMemoryManager >> lowSpaceThreshold: threshold [
 	self assert: totalFreeOldSpace >= lowSpaceThreshold
 ]
 
+{ #category : #instantiation }
+SpurMemoryManager >> maxSlotsForNewSpaceAlloc [
+	"Almost entirely arbitrary, but we dont want 1Mb bitmaps allocated in eden.
+	 But this choice means no check for numSlots > maxSlotsForNewSpaceAlloc
+	 for non-variable allocations."
+	^self fixedFieldsOfClassFormatMask
+]
+
 { #category : #simulation }
 SpurMemoryManager >> mem: destAddress cp: sourceAddress y: bytes [
 	"For SpurGenerationScavenger>>copyToFutureSpace:bytes:"
@@ -3685,8 +3708,8 @@ SpurMemoryManager >> printFreeChunk: freeChunk [
 { #category : #'debug printing' }
 SpurMemoryManager >> printHeaderTypeOf: objOop [
 	coInterpreter print: ((self numSlotsOf: objOop) >= self numSlotsMask
-							ifTrue: [' 8 byte header']
-							ifFalse: [' 16 byte header'])
+							ifTrue: [' 16 byte header']
+							ifFalse: [' 8 byte header'])
 ]
 
 { #category : #'debug printing' }
@@ -3823,6 +3846,15 @@ SpurMemoryManager >> runLeakCheckerForFullGC: fullGCFlag [
 		 self assert: coInterpreter checkInterpreterIntegrity.
 		 self assert: coInterpreter checkStackIntegrity.
 		 self assert: (coInterpreter checkCodeIntegrity: fullGCFlag)]
+]
+
+{ #category : #'debug printing' }
+SpurMemoryManager >> safePrintStringOf: oop [
+	| target |
+	target := (self isOopForwarded: oop)
+				ifTrue: [self followForwarded: oop]
+				ifFalse: [oop].
+	^coInterpreter printStringOf: target
 ]
 
 { #category : #'become implementation' }

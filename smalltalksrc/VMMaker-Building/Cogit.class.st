@@ -152,6 +152,7 @@ Class {
 		'missOffset',
 		'entryPointMask',
 		'checkedEntryAlignment',
+		'uncheckedEntryAlignment',
 		'cmEntryOffset',
 		'entry',
 		'cmNoCheckEntryOffset',
@@ -2716,24 +2717,30 @@ Cogit >> checkEnoughOpcodes [
 { #category : #'garbage collection' }
 Cogit >> checkIfValidObjectRef: annotation pc: mcpc cogMethod: cogMethod [
 	<var: #mcpc type: #'char *'>
+	<var: #sendTable type: #'sqInt *'>
 	annotation = IsObjectReference ifTrue:
 		[| literal |
 		 literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
 		 (objectRepresentation checkValidObjectReference: literal) ifFalse:
-			[self print: 'object ref leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
+			[coInterpreter print: 'object ref leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
 			^1]].
 	(self isSendAnnotation: annotation) ifTrue:
-		[| entryPoint selectorOrCacheTag |
+		[| entryPoint selectorOrCacheTag offset sendTable |
 		 entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
+		 self
+			offsetAndSendTableFor: entryPoint
+			annotation: annotation
+			into: [:off :table| offset := off. sendTable := table].
 		 selectorOrCacheTag := backEnd inlineCacheTagAt: mcpc asInteger.
-		 entryPoint > methodZoneBase
-			ifTrue: "linked send, cacheTag is a cacheTag"
+		 (entryPoint > methodZoneBase
+		  and: [offset ~= cmNoCheckEntryOffset])
+			ifTrue: "linked non-super send, cacheTag is a cacheTag"
 				[(objectRepresentation checkValidInlineCacheTag: selectorOrCacheTag) ifFalse:
-					[self print: 'cache tag leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
+					[coInterpreter print: 'cache tag leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
 					^1]]
-			ifFalse: "unlinked send; cacheTag is a selector"
+			ifFalse: "unlinked send or super send; cacheTag is a selector"
 				[(objectRepresentation checkValidObjectReference: selectorOrCacheTag) ifFalse:
-					[self print: 'selector leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
+					[coInterpreter print: 'selector leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
 					^1]]].
 	^0 "keep scanning"
 ]
@@ -2788,19 +2795,19 @@ Cogit >> checkIntegrityOfObjectReferencesInCode: fullGCFlag [
 		[cogMethod cmType ~= CMFree ifTrue:
 			[cogMethod cmRefersToYoung ifTrue:
 				[(count := methodZone occurrencesInYoungReferrers: cogMethod) ~= 1 ifTrue:
-					[self print: 'young referrer CM '; printHex: cogMethod asInteger.
+					[coInterpreter print: 'young referrer CM '; printHex: cogMethod asInteger.
 					 count = 0
-						ifTrue: [self print: ' is not in youngReferrers'; cr]
-						ifFalse: [self print: ' is in youngReferrers '; printNum: count; print: ' times!'; cr].
+						ifTrue: [coInterpreter print: ' is not in youngReferrers'; cr]
+						ifFalse: [coInterpreter print: ' is in youngReferrers '; printNum: count; print: ' times!'; cr].
 					 ok := false]].
 			 (objectRepresentation checkValidObjectReference: cogMethod selector) ifFalse:
-				[self print: 'object leak in CM '; printHex: cogMethod asInteger; print: ' selector'; cr.
+				[coInterpreter print: 'object leak in CM '; printHex: cogMethod asInteger; print: ' selector'; cr.
 				 ok := false].
 			 cogMethod cmType = CMMethod
 				ifTrue:
 					[self assert: cogMethod objectHeader = objectMemory nullHeaderForMachineCodeMethod.
 					 (objectRepresentation checkValidObjectReference: cogMethod methodObject) ifFalse:
-						[self print: 'object leak in CM '; printHex: cogMethod asInteger; print: ' methodObject'; cr.
+						[coInterpreter print: 'object leak in CM '; printHex: cogMethod asInteger; print: ' methodObject'; cr.
 						 ok := false].
 					 (self mapFor: cogMethod
 						 performUntil: #checkIfValidObjectRef:pc:cogMethod:
@@ -2810,7 +2817,7 @@ Cogit >> checkIntegrityOfObjectReferencesInCode: fullGCFlag [
 						[(((objectMemory isYoung: cogMethod methodObject)
 						    or: [objectMemory isYoung: cogMethod selector])
 						   and: [cogMethod cmRefersToYoung not]) ifTrue:
-							[self print: 'CM '; printHex: cogMethod asInteger; print: ' refers to young but not marked as such'; cr.
+							[coInterpreter print: 'CM '; printHex: cogMethod asInteger; print: ' refers to young but not marked as such'; cr.
 							 ok := false]]]
 				ifFalse:
 					[cogMethod cmType = CMClosedPIC
@@ -3893,13 +3900,14 @@ Cogit >> computeEntryOffsets [
 	entryPointMask >= (methodZone roundUpLength: 1) ifTrue:
 		[self error: 'cannot differentiate checked and unchecked entry-points with current cog method alignment'].
 	checkedEntryAlignment := cmEntryOffset bitAnd: entryPointMask.
-	self assert: checkedEntryAlignment ~= (cmNoCheckEntryOffset bitAnd: entryPointMask).
+	uncheckedEntryAlignment := cmNoCheckEntryOffset bitAnd: entryPointMask.
+	self assert: checkedEntryAlignment ~= uncheckedEntryAlignment.
 	self cppIf: NewspeakVM
 		ifTrue:
 			[cmDynSuperEntryOffset := dynSuperEntry address - methodZoneBase.
 			 dynSuperEntryAlignment := cmDynSuperEntryOffset bitAnd: entryPointMask.
-			self assert: (cmDynSuperEntryOffset bitAnd: entryPointMask) ~= (cmEntryOffset bitAnd: entryPointMask).
-			self assert: (cmDynSuperEntryOffset bitAnd: entryPointMask) ~= (cmNoCheckEntryOffset bitAnd: entryPointMask)]
+			self assert: dynSuperEntryAlignment ~= checkedEntryAlignment.
+			self assert: dynSuperEntryAlignment ~= uncheckedEntryAlignment]
 ]
 
 { #category : #'generate machine code' }
@@ -7825,12 +7833,13 @@ Cogit >> sendTrace [
 Cogit >> sendTrace: aBooleanOrInteger [
 	<doNotGenerate>
 	"traceFlags is a set of flags.
-	 1 => print trace (if somethigg below is selected)
+	 1 => print trace (if something below is selected)
 	 2 => trace sends
 	 4 => trace block activations
 	 8 => trace interpreter primitives
 	 16 => trace events (context switches, GCs, etc)
-	 32 => send breakpoint on implicit receiver (Newspeak VM only)"
+	 32 => trace stack overflow
+	 64 => send breakpoint on implicit receiver (Newspeak VM only)"
 	traceFlags := aBooleanOrInteger isInteger
 							ifTrue: [aBooleanOrInteger]
 							ifFalse: [aBooleanOrInteger ifTrue: [6] ifFalse: [0]]
