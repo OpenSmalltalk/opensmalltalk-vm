@@ -6992,6 +6992,21 @@ Cogit >> objectRepresentation [
 	^objectRepresentation
 ]
 
+{ #category : #initialization }
+Cogit >> objectRepresentationImplementsNew: primitiveIndex [
+	^objectRepresentation implementsNew
+]
+
+{ #category : #initialization }
+Cogit >> objectRepresentationImplementsNewMethod: primitiveIndex [
+	^objectRepresentation implementsNewMethod
+]
+
+{ #category : #initialization }
+Cogit >> objectRepresentationImplementsNewWithArg: primitiveIndex [
+	^objectRepresentation implementsNewWithArg
+]
+
 { #category : #'simulation only' }
 Cogit >> offset: aClass of: fieldSymbol [
 	"This is implemented by stddef's offsetof macro."
