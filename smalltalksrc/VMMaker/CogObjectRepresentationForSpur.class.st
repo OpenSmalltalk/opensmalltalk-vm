@@ -28,7 +28,7 @@ CogObjectRepresentationForSpur >> couldBeObject: oop [
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genConvertIntegerToCharacterInScratchReg: reg [
 	cogit
-		LogicalShiftRightCq: objectMemory numTagBits R: reg;
+		LogicalShiftLeftCq: objectMemory numTagBits R: reg;
 		AddCq: objectMemory characterTag R: reg.
 	^0
 ]
