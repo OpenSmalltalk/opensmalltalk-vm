@@ -1131,6 +1131,7 @@ SpurBootstrap >> launch: heap simulatorClass: simulatorClass headerFlags: header
 				instVarNamed: 'cogCodeSize' put: 1024*1024;
 				moveMethodCacheToMemoryAt: sim cogCodeSize + sim computeStackZoneSize;
 				movePrimTraceLogToMemoryAt: sim cogCodeSize + sim computeStackZoneSize + methodCacheSize;
+				"sendTrace: 1+ 2 + 8 + 16;"
 			 	initializeCodeGenerator]
 		ifFalse:
 			[sim initializeInterpreter: 0].
