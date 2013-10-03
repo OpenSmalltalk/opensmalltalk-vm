@@ -43,6 +43,21 @@ CogObjectRepresentation >> generateObjectRepresentationTrampolines [
 									result: cogit returnRegForStoreCheck
 ]
 
+{ #category : #initialization }
+CogObjectRepresentation >> implementsNew [
+	^false
+]
+
+{ #category : #initialization }
+CogObjectRepresentation >> implementsNewMethod [
+	^false
+]
+
+{ #category : #initialization }
+CogObjectRepresentation >> implementsNewWithArg [
+	^false
+]
+
 { #category : #testing }
 CogObjectRepresentation >> isHashSetOnInstanceCreation [
 	self subclassResponsibility

@@ -379,7 +379,7 @@ StackInterpreter class >> initializeBytecodeTableForNewspeakV3PlusClosures [
 		(195 bytecodePrimNext)
 		(196 bytecodePrimNextPut)
 		(197 bytecodePrimAtEnd)
-		(198 bytecodePrimEquivalent)
+		(198 bytecodePrimIdentical)
 		(199 bytecodePrimClass)
 		(200 bytecodePrimSpecialSelector24)
 		(201 bytecodePrimValue)
@@ -448,7 +448,7 @@ StackInterpreter class >> initializeBytecodeTableForNewspeakV4 [
 		( 99	 bytecodePrimNext)
 		(100	 bytecodePrimNextPut)
 		(101	 bytecodePrimAtEnd)
-		(102	 bytecodePrimEquivalentV4) "for booleanCheatV4:"
+		(102	 bytecodePrimIdenticalV4) "for booleanCheatV4:"
 		(103	 bytecodePrimClass)
 		(104	 bytecodePrimSpecialSelector24) "was blockCopy:"
 		(105	 bytecodePrimValue)
@@ -600,7 +600,7 @@ StackInterpreter class >> initializeBytecodeTableForSqueakV3PlusClosures [
 		(195 bytecodePrimNext)
 		(196 bytecodePrimNextPut)
 		(197 bytecodePrimAtEnd)
-		(198 bytecodePrimEquivalent)
+		(198 bytecodePrimIdentical)
 		(199 bytecodePrimClass)
 		(200 bytecodePrimSpecialSelector24)
 		(201 bytecodePrimValue)
@@ -2262,30 +2262,6 @@ StackInterpreter >> bytecodePrimEqualV4 [
 ]
 
 { #category : #'common selector sends' }
-StackInterpreter >> bytecodePrimEquivalent [
-	| rcvr arg |
-	rcvr := self internalStackValue: 1.
-	(objectMemory isOopForwarded: rcvr) ifTrue:
-		[rcvr := self handleSpecialSelectorSendFaultFor: rcvr].
-	arg := self internalStackValue: 0.
-	(objectMemory isOopForwarded: arg) ifTrue:
-		[arg := self handleSpecialSelectorSendFaultFor: arg].
-	self booleanCheat: rcvr = arg
-]
-
-{ #category : #'common selector sends' }
-StackInterpreter >> bytecodePrimEquivalentV4 [
-	| rcvr arg |
-	rcvr := self internalStackValue: 1.
-	arg := self internalStackValue: 0.
-	(objectMemory isOopForwarded: rcvr) ifTrue:
-		[rcvr := self handleSpecialSelectorSendFaultFor: rcvr].
-	(objectMemory isOopForwarded: arg) ifTrue:
-		[arg := self handleSpecialSelectorSendFaultFor: arg].
-	self booleanCheatV4: rcvr = arg
-]
-
-{ #category : #'common selector sends' }
 StackInterpreter >> bytecodePrimGreaterOrEqual [
 	| rcvr arg aBool |
 	rcvr := self internalStackValue: 1.
@@ -2363,6 +2339,30 @@ StackInterpreter >> bytecodePrimGreaterThanV4 [
 	messageSelector := self specialSelector: 3.
 	argumentCount := 1.
 	self normalSend
+]
+
+{ #category : #'common selector sends' }
+StackInterpreter >> bytecodePrimIdentical [
+	| rcvr arg |
+	rcvr := self internalStackValue: 1.
+	(objectMemory isOopForwarded: rcvr) ifTrue:
+		[rcvr := self handleSpecialSelectorSendFaultFor: rcvr].
+	arg := self internalStackValue: 0.
+	(objectMemory isOopForwarded: arg) ifTrue:
+		[arg := self handleSpecialSelectorSendFaultFor: arg].
+	self booleanCheat: rcvr = arg
+]
+
+{ #category : #'common selector sends' }
+StackInterpreter >> bytecodePrimIdenticalV4 [
+	| rcvr arg |
+	rcvr := self internalStackValue: 1.
+	arg := self internalStackValue: 0.
+	(objectMemory isOopForwarded: rcvr) ifTrue:
+		[rcvr := self handleSpecialSelectorSendFaultFor: rcvr].
+	(objectMemory isOopForwarded: arg) ifTrue:
+		[arg := self handleSpecialSelectorSendFaultFor: arg].
+	self booleanCheatV4: rcvr = arg
 ]
 
 { #category : #'common selector sends' }

@@ -344,17 +344,17 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueakV3 [
 		"Float Primitives (38-59)"
 		"(38 primitiveFloatAt)"
 		"(39 primitiveFloatAtPut)"
-		(40 genPrimitiveAsFloat				0	processorHasDoublePrecisionFloatingPointSupport:)
+		(40 genPrimitiveAsFloat					0	processorHasDoublePrecisionFloatingPointSupport:)
 		(41 genPrimitiveFloatAdd				1	processorHasDoublePrecisionFloatingPointSupport:)
-		(42 genPrimitiveFloatSubtract		1	processorHasDoublePrecisionFloatingPointSupport:)
-		(43 genPrimitiveFloatLessThan		1	processorHasDoublePrecisionFloatingPointSupport:)
-		(44 genPrimitiveFloatGreaterThan	1	processorHasDoublePrecisionFloatingPointSupport:)
+		(42 genPrimitiveFloatSubtract			1	processorHasDoublePrecisionFloatingPointSupport:)
+		(43 genPrimitiveFloatLessThan			1	processorHasDoublePrecisionFloatingPointSupport:)
+		(44 genPrimitiveFloatGreaterThan		1	processorHasDoublePrecisionFloatingPointSupport:)
 		(45 genPrimitiveFloatLessOrEqual		1	processorHasDoublePrecisionFloatingPointSupport:)
 		(46 genPrimitiveFloatGreaterOrEqual	1	processorHasDoublePrecisionFloatingPointSupport:)
-		(47 genPrimitiveFloatEqual			1	processorHasDoublePrecisionFloatingPointSupport:)
-		(48 genPrimitiveFloatNotEqual		1	processorHasDoublePrecisionFloatingPointSupport:)
+		(47 genPrimitiveFloatEqual				1	processorHasDoublePrecisionFloatingPointSupport:)
+		(48 genPrimitiveFloatNotEqual			1	processorHasDoublePrecisionFloatingPointSupport:)
 		(49 genPrimitiveFloatMultiply			1	processorHasDoublePrecisionFloatingPointSupport:)
-		(50 genPrimitiveFloatDivide			1	processorHasDoublePrecisionFloatingPointSupport:)
+		(50 genPrimitiveFloatDivide				1	processorHasDoublePrecisionFloatingPointSupport:)
 		"(51 primitiveTruncated)"
 		"(52 primitiveFractionalPart)"
 		"(53 primitiveExponent)"
@@ -366,7 +366,7 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueakV3 [
 		"(59 primitiveExp)"
 
 		"Subscript and Stream Primitives (60-67)"
-		(60 genPrimitiveAt		1)
+		(60 genPrimitiveAt			1)
 		"(61 primitiveAtPut)"
 		(62 genPrimitiveSize		0)
 		(63 genPrimitiveStringAt	1)
@@ -379,8 +379,8 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueakV3 [
 		"StorageManagement Primitives (68-79)"
 		"(68 primitiveObjectAt)"
 		"(69 primitiveObjectAtPut)"
-		"(70 primitiveNew)"
-		"(71 primitiveNewWithArg)"
+		(70 primitiveNew				0			objectRepresentationImplementsNew:)
+		(71 primitiveNewWithArg		1			objectRepresentationImplementsNewWithArg:)
 		"(72 primitiveArrayBecomeOneWay)"	"Blue Book: primitiveBecome"
 		"(73 primitiveInstVarAt)"
 		"(74 primitiveInstVarAtPut)"
@@ -388,7 +388,7 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueakV3 [
 		"(76 primitiveStoreStackp)"					"Blue Book: primitiveAsObject"
 		"(77 primitiveSomeInstance)"
 		"(78 primitiveNextInstance)"
-		"(79 primitiveNewMethod)"
+		(79 primitiveNewMethod		2			objectRepresentationImplementsNewMethod:)
 
 		"Control Primitives (80-89)"
 		"(80 primitiveFail)"					"Blue Book: primitiveBlockCopy"
@@ -405,7 +405,7 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueakV3 [
 		"Input/Output Primitives (90-109); We won't compile any of these"
 
 		"System Primitives (110-119)"
-		(110 genPrimitiveEquivalent 1)
+		(110 genPrimitiveIdentical 1)
 		(111 genPrimitiveClass)
 		"(112 primitiveBytesLeft)"
 		"(113 primitiveQuit)"
@@ -425,7 +425,7 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueakV3 [
 		"Squeak Miscellaneous Primitives (128-149); We won't compile any of these"
 
 		"File Primitives (150-169) - NO LONGER INDEXED; We won't compile any of these"
-		(169 genPrimitiveNotEquivalent 1)
+		(169 genPrimitiveNotIdentical 1)
 
 		"Sound Primitives (170-199) - NO LONGER INDEXED; We won't compile any of these"
 
@@ -449,11 +449,11 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueakV3 [
 
 		"new closure primitives (were Networking primitives)"
 		"(200 primitiveClosureCopyWithCopiedValues)"
-		(201 genPrimitiveClosureValue) "value"
-		(202 genPrimitiveClosureValue) "value:"
-		(203 genPrimitiveClosureValue) "value:value:"
-		(204 genPrimitiveClosureValue) "value:value:value:"
-		(205 genPrimitiveClosureValue) "value:value:value:value:"
+		(201 genPrimitiveClosureValue	0) "value"
+		(202 genPrimitiveClosureValue	1) "value:"
+		(203 genPrimitiveClosureValue	2) "value:value:"
+		(204 genPrimitiveClosureValue	3) "value:value:value:"
+		(205 genPrimitiveClosureValue	4) "value:value:value:value:"
 		"(206 genPrimitiveClosureValueWithArgs)" "valueWithArguments:"
 
 		"(207 209 primitiveFail)"	"reserved for Cog primitives"
@@ -467,8 +467,8 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueakV3 [
 
 		"(220 primitiveFail)"		"reserved for Cog primitives"
 
-		(221 genPrimitiveClosureValue) "valueNoContextSwitch"
-		(222 genPrimitiveClosureValue) "valueNoContextSwitch:"
+		(221 genPrimitiveClosureValue	0) "valueNoContextSwitch"
+		(222 genPrimitiveClosureValue	1) "valueNoContextSwitch:"
 
 		"(223 229 primitiveFail)"	"reserved for Cog primitives"
 	)
@@ -2006,27 +2006,6 @@ SimpleStackBasedCogit >> genPrimitiveEqual [
 ]
 
 { #category : #'primitive generators' }
-SimpleStackBasedCogit >> genPrimitiveEquivalent [
-	"Stack looks like
-		receiver (also in ResultReceiverReg)
-		arg
-		return address"
-	| jumpFalse |
-	<var: #jumpFalse type: #'AbstractInstruction *'>
-	self MoveMw: BytesPerWord r: SPReg R: TempReg.
-	self CmpR: TempReg R: ReceiverResultReg.
-	jumpFalse := self JumpNonZero: 0.
-	self annotate: (self MoveCw: objectMemory trueObject R: ReceiverResultReg)
-		objRef: objectMemory trueObject.
-	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord * 2.
-	jumpFalse jmpTarget: (self annotate: (self MoveCw: objectMemory falseObject R: ReceiverResultReg)
-								objRef: objectMemory falseObject).
-	self RetN: BytesPerWord * 2.
-	^0
-]
-
-{ #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveFloatAdd [
 	^self genDoubleArithmetic: AddRdRd preOpCheck: nil
 ]
@@ -2108,6 +2087,27 @@ SimpleStackBasedCogit >> genPrimitiveGreaterOrEqual [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveGreaterThan [
 	^self genSmallIntegerComparison: JumpGreater
+]
+
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> genPrimitiveIdentical [
+	"Stack looks like
+		receiver (also in ResultReceiverReg)
+		arg
+		return address"
+	| jumpFalse |
+	<var: #jumpFalse type: #'AbstractInstruction *'>
+	self MoveMw: BytesPerWord r: SPReg R: TempReg.
+	self CmpR: TempReg R: ReceiverResultReg.
+	jumpFalse := self JumpNonZero: 0.
+	self annotate: (self MoveCw: objectMemory trueObject R: ReceiverResultReg)
+		objRef: objectMemory trueObject.
+	self flag: 'currently caller pushes result'.
+	self RetN: BytesPerWord * 2.
+	jumpFalse jmpTarget: (self annotate: (self MoveCw: objectMemory falseObject R: ReceiverResultReg)
+								objRef: objectMemory falseObject).
+	self RetN: BytesPerWord * 2.
+	^0
 ]
 
 { #category : #'primitive generators' }
@@ -2205,7 +2205,7 @@ SimpleStackBasedCogit >> genPrimitiveNotEqual [
 ]
 
 { #category : #'primitive generators' }
-SimpleStackBasedCogit >> genPrimitiveNotEquivalent [
+SimpleStackBasedCogit >> genPrimitiveNotIdentical [
 	"Stack looks like
 		receiver (also in ResultReceiverReg)
 		arg
