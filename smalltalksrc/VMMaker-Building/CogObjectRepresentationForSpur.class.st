@@ -1,10 +1,8 @@
 Class {
 	#name : #CogObjectRepresentationForSpur,
 	#superclass : #CogObjectRepresentation,
-	#instVars : [
-		'ceClassAtIndexTrampoline'
-	],
 	#pools : [
+		'CogCompilationConstants',
 		'VMSqueakClassIndices'
 	],
 	#category : #'VMMaker-JIT'
@@ -28,12 +26,22 @@ CogObjectRepresentationForSpur >> couldBeObject: oop [
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genConvertIntegerToCharacterInScratchReg: reg [
+	cogit
+		LogicalShiftRightCq: objectMemory numTagBits R: reg;
+		AddCq: objectMemory characterTag R: reg.
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genGetClassObjectOf: instReg into: destReg scratchReg: scratchReg [
 	"Fetch the instance's class into destReg."
 	| jumpIsImm jumpNotForwarded loop |
 	<var: #jumpIsImm type: #'AbstractInstruction *'>
 	<var: #jumpNotForwarded type: #'AbstractInstruction *'>
 	<var: #loop type: #'AbstractInstruction *'>
+	instReg = destReg ifTrue:
+		[^BadRegisterSet].
 	loop := cogit MoveR: instReg R: scratchReg.
 	cogit AndCq: objectMemory tagMask R: scratchReg.
 	jumpIsImm := cogit JumpNonZero: 0.
@@ -49,11 +57,34 @@ CogObjectRepresentationForSpur >> genGetClassObjectOf: instReg into: destReg scr
 	cogit MoveMw: objectMemory baseHeaderSize r: instReg R: instReg.
 	cogit Jump: loop.
 	jumpNotForwarded jmpTarget: (jumpIsImm jmpTarget: cogit Label).
-	scratchReg ~= TempReg ifTrue:
-		[cogit MoveR: scratchReg R: TempReg].
-	cogit CallRT: ceClassAtIndexTrampoline.
-	destReg ~= TempReg ifTrue:
-		[cogit MoveR: TempReg R: destReg]
+	cogit MoveR: scratchReg R: destReg.
+	cogit PushR: instReg.
+	self genGetClassObjectOfClassIndex: destReg into: instReg scratchReg: TempReg.
+	cogit MoveR: instReg R: destReg.
+	cogit PopR: instReg.
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genGetClassObjectOfClassIndex: instReg into: destReg scratchReg: scratchReg [
+	"Fetch the class object whose index is in instReg into destReg.
+	 It is non-obvious, but the Cogit assumes loading a class does not involve
+	 a runtime call, so do not call classAtIndex:"
+	self assert: instReg ~= destReg.
+	self assert: instReg ~= scratchReg.
+	self assert: destReg ~= scratchReg.
+	cogit
+		MoveR: instReg R: scratchReg;
+		LogicalShiftRightCq: objectMemory classTableMajorIndexShift R: scratchReg;
+		LogicalShiftLeftCq: objectMemory shiftForWord R: scratchReg..
+	self assert: (self shouldAnnotateObjectReference: objectMemory classTableRootObj) not.
+	cogit
+		MoveMw: objectMemory classTableRootObj + objectMemory baseHeaderSize r: scratchReg R: destReg;
+		MoveR: instReg R: scratchReg;
+		AndCq: objectMemory classTableMinorIndexMask R: scratchReg;
+		AddCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: scratchReg;
+		MoveXwr: scratchReg R: destReg R: destReg..
+	^0
 ]
 
 { #category : #'primitive generators' }
@@ -73,7 +104,6 @@ CogObjectRepresentationForSpur >> genInnerPrimitiveSize: retNoffset [
 		abortJumpsInto: [:jnx :jic| jumpNotIndexable := jnx. jumpIsContext := jic].
 	self genConvertIntegerToSmallIntegerInScratchReg: ClassReg.
 	cogit MoveR: ClassReg R: ReceiverResultReg.
-	self flag: 'currently caller pushes result'.
 	cogit RetN: retNoffset.
 	jumpImm jmpTarget: (jumpNotIndexable jmpTarget: (jumpIsContext jmpTarget: cogit Label)).
 	^0
@@ -144,6 +174,7 @@ CogObjectRepresentationForSpur >> genStoreSourceReg: sourceReg slotIndex: index 
 									ifTrue: [objectMemory baseHeaderSize - 1 - (objectMemory rememberedBitShift // 8)]
 									ifFalse:[objectMemory rememberedBitShift // 8].
 	mask := 1 << (objectMemory rememberedBitShift \\ 8).
+	"N.B. MoveMb:r:R: does not zero other bits"
 	cogit MoveMb: rememberedBitByteOffset r: destReg R: scratchReg.
 	cogit AndCq: mask R: scratchReg.
 	jmpAlreadyRemembered := cogit JumpNonZero: 0.
@@ -164,16 +195,6 @@ CogObjectRepresentationForSpur >> genStoreSourceReg: sourceReg slotIndex: index 
 		   Mw: index * objectMemory wordSize + objectMemory baseHeaderSize
 		   r: destReg.
 	^0
-]
-
-{ #category : #initialization }
-CogObjectRepresentationForSpur >> generateObjectRepresentationTrampolines [
-	super generateObjectRepresentationTrampolines.
-	ceClassAtIndexTrampoline := cogit
-									genTrampolineFor: #ceClassAtIndex:
-									called: 'ceClassAtIndexTrampoline'
-									arg: TempReg
-									result: TempReg
 ]
 
 { #category : #'compile abstract instructions' }
@@ -222,11 +243,17 @@ CogObjectRepresentationForSpur >> isSmallIntegerTagNonZero [
 	^true
 ]
 
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> jumpNotCharacterUnsignedValueInRegister: reg [
+	cogit CmpCq: 16r3FFFFFFF R: reg.
+	^cogit JumpAbove: 0
+]
+
 { #category : #'garbage collection' }
 CogObjectRepresentationForSpur >> shouldAnnotateObjectReference: anOop [
-	"Objects in newSpace or oldSPace except nil, true & false need to be annotated."
+	"Objects in newSpace or oldSpace except nil, true, false & classTableRootObj need to be annotated."
 	^(objectMemory isNonImmediate: anOop)
-	  and: [(self oop: anOop isGreaterThan: objectMemory trueObject)
+	  and: [(self oop: anOop isGreaterThan: objectMemory classTableRootObj)
 		or: [self oop: anOop isLessThan: objectMemory nilObject]]
 ]
 

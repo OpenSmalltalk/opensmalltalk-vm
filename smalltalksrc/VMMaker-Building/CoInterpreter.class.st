@@ -5268,7 +5268,7 @@ CoInterpreter >> printFrame: theFP WithSP: theSP [
 	(self frameIsBlockActivation: theFP) ifTrue:
 		[| rcvrOrClosure |
 		 rcvrOrClosure := self pushedReceiverOrClosureOfFrame: theFP.
-		 ((objectMemory isNonIntegerObject: rcvrOrClosure)
+		 ((objectMemory isNonImmediate: rcvrOrClosure)
 		 and: [(objectMemory addressCouldBeObj: rcvrOrClosure)
 		 and: [(objectMemory fetchClassOfNonImm: rcvrOrClosure) = (objectMemory splObj: ClassBlockClosure)]])
 			ifTrue: [numTemps := numArgs + (self stSizeOf: rcvrOrClosure)]
@@ -5833,7 +5833,7 @@ CoInterpreter >> returnToExecutive: inInterpreter postContextSwitch: switchedCon
 				 (instructionPointer ~= (cogMethod asInteger + cogMethod stackCheckOffset)
 				  and: [cogit isSendReturnPC: instructionPointer])
 					ifTrue:
-						[self assert: ((objectMemory isIntegerObject: self stackTop) or: [objectMemory addressCouldBeObj: self stackTop]).
+						[self assert: (objectMemory addressCouldBeOop: self stackTop).
 						 retValue := self popStack]
 					ifFalse:
 						[retValue := self mframeReceiver: framePointer]]

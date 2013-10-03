@@ -367,8 +367,8 @@ CogVMSimulator >> ceNonLocalReturn: returnValue [
 CogVMSimulator >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArgs [
 	"self stringOf: selector"
 	"self printOop: rcvr"
-	(superNormalBar ~= 0 and: [(self stringOf: selector) = #bitShift:]) ifTrue:
-		[self halt].
+	"(superNormalBar ~= 0 and: [(self stringOf: selector) = #bitShift:]) ifTrue:
+		[self halt]."
 	self logSend: selector.
 	cogit assertCStackWellAligned.
 	self maybeCheckStackDepth: numArgs + 1 sp: stackPointer pc: (stackPages longAt: stackPointer).
@@ -3128,14 +3128,12 @@ CogVMSimulator >> shortPrint: oop [
 	name = 'False' ifTrue: [^ 'false'].
 	name = 'True' ifTrue: [^ 'true'].
 	name = 'Float' ifTrue: [^ '=' , (self dbgFloatValueOf: oop) printString].
-	name = 'Association' ifTrue:
+	(#('Association' 'ReadOnlyVariableBinding' 'VariableBinding') includes: name) ifTrue:
 		[^ '(' ,
 		(self shortPrint: (self longAt: oop + BaseHeaderSize)) ,
 		' -> ' ,
 		(self longAt: oop + BaseHeaderSize + BytesPerWord) hex8 , ')'].
-	^('AEIOU' includes: name first)
-		ifTrue: ['an ' , name]
-		ifFalse: ['a ' , name]
+	^(('AEIOU' includes: name first) ifTrue: ['an '] ifFalse: ['a ']), name
 ]
 
 { #category : #'debug printing' }

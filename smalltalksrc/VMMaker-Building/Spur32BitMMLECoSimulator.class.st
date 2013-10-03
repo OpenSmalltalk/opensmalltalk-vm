@@ -41,6 +41,11 @@ Spur32BitMMLECoSimulator >> byteAtPointer: pointer [
 	^self byteAt: pointer
 ]
 
+{ #category : #'debug support' }
+Spur32BitMMLECoSimulator >> classTableFirstPage [
+	^classTableFirstPage
+]
+
 { #category : #initialization }
 Spur32BitMMLECoSimulator >> coInterpreter: aCoInterpreter cogit: aCogit [
 	coInterpreter := aCoInterpreter.

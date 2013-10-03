@@ -2,6 +2,7 @@ Class {
 	#name : #CogCompilationConstants,
 	#superclass : #SharedPool,
 	#classVars : [
+		'BadRegisterSet',
 		'SSBaseOffset',
 		'SSConstant',
 		'SSIllegal',
