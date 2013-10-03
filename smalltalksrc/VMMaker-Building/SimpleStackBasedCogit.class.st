@@ -1435,7 +1435,7 @@ SimpleStackBasedCogit >> genFastPrimTraceUsing: r1 and: r2 [
 	"Suport for compileInterpreterPrimitive.  Generate inline code so as to record the primitive
 	 trace as fast as possible."
 	self MoveCq: 0 R: TempReg.
-	self MoveCq: 0 R: r2.
+	self MoveCq: 0 R: r2. "N.B. MoveMb:r:R: does not zero other bits"
 	self MoveMb: coInterpreter primTraceLogIndexAddress r: TempReg R: r2.
 	self MoveR: r2 R: r1.
 	self AddCq: 1 R: r1.
@@ -1864,7 +1864,15 @@ SimpleStackBasedCogit >> genPrimitiveClass [
 	"Stack looks like
 		receiver (also in ReceiverResultReg)
 		return address"
-	objectRepresentation genGetClassObjectOf: ReceiverResultReg into: ReceiverResultReg scratchReg: TempReg.
+	(objectRepresentation
+			genGetClassObjectOf: ReceiverResultReg
+			into: ReceiverResultReg
+			scratchReg: TempReg) = BadRegisterSet ifTrue:
+		[objectRepresentation
+			genGetClassObjectOf: ReceiverResultReg
+			into: ClassReg
+			scratchReg: TempReg.
+		 self MoveR: ClassReg R: ReceiverResultReg]..
 	self flag: 'currently caller pushes result'.
 	self RetN: BytesPerWord.
 	^0
@@ -2093,15 +2101,21 @@ SimpleStackBasedCogit >> genPrimitiveGreaterThan [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveIdentityHash [
-	| jumpSI |
+	| jumpSI jumpNotSet |
 	<var: #jumpSI type: #'AbstractInstruction *'>
+	<var: #jumpNotSet type: #'AbstractInstruction *'>
 	self MoveR: ReceiverResultReg R: ClassReg.
 	jumpSI := objectRepresentation genJumpSmallIntegerInScratchReg: ClassReg.
 	objectRepresentation genGetHashFieldNonImmOf: ReceiverResultReg asSmallIntegerInto: TempReg.
+	objectRepresentation isHashSetOnInstanceCreation ifFalse:
+		[self CmpCq: ConstZero R: TempReg.
+		 jumpNotSet := self JumpZero: 0].
 	self MoveR: TempReg R: ReceiverResultReg.
 	self flag: 'currently caller pushes result'.
 	self RetN: BytesPerWord.
 	jumpSI jmpTarget: self Label.
+	objectRepresentation isHashSetOnInstanceCreation ifFalse:
+		[jumpNotSet jmpTarget: jumpSI getJmpTarget].
 	^0
 ]
 
@@ -3084,27 +3098,6 @@ SimpleStackBasedCogit >> recordCallOffsetIn: cogMethod of: callLabelArg [
 	(offsetTable at: cogMethod cmNumArgs) isNil
 		ifTrue: [offsetTable at: cogMethod cmNumArgs put: offset]
 		ifFalse: [self assert: (offsetTable at: cogMethod cmNumArgs) = offset]
-]
-
-{ #category : #'simulation stack' }
-SimpleStackBasedCogit >> registerMaskFor: reg [
-	"Dummy implementation for CogFooCompiler>callerSavedRegisterMask
-	 which doesn't get pruned due to Slang limitations."
-	^0
-]
-
-{ #category : #'simulation stack' }
-SimpleStackBasedCogit >> registerMaskFor: reg and: reg2 [
-	"Dummy implementation for CogFooCompiler>callerSavedRegisterMask
-	 which doesn't get pruned due to Slang limitations."
-	^0
-]
-
-{ #category : #'simulation stack' }
-SimpleStackBasedCogit >> registerMaskFor: reg1 and: reg2 and: reg3 [
-	"Dummy implementation for CogFooCompiler>callerSavedRegisterMask
-	 which doesn't get pruned due to Slang limitations."
-	^0
 ]
 
 { #category : #trampolines }

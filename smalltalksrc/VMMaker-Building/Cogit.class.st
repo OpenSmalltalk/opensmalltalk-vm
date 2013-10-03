@@ -278,6 +278,7 @@ Class {
 		'YoungSelectorInPIC'
 	],
 	#pools : [
+		'CogCompilationConstants',
 		'CogMethodConstants',
 		'CogRTLOpcodes',
 		'VMBasicConstants',
@@ -744,12 +745,15 @@ Cogit class >> initializeCogMethodConstants [
 
 { #category : #'class initialization' }
 Cogit class >> initializeErrorCodes [
+	"External errors, returned to or from cog:selector:"
 	NotFullyInitialized := -1.
 	InsufficientCodeSpace := -2.
 	MethodTooBig := -4.
 	YoungSelectorInPIC := -5.
 	EncounteredUnknownBytecode := -6.
-	MaxNegativeErrorCode := EncounteredUnknownBytecode
+	MaxNegativeErrorCode := EncounteredUnknownBytecode.
+	"Internal errors returned by generator routines to other generator routines"
+	BadRegisterSet := 1
 ]
 
 { #category : #'class initialization' }
@@ -1189,6 +1193,30 @@ Cogit >> CallNewspeakSend: callTarget [
 Cogit >> CallRT: callTarget [
 	<returnTypeC: #'AbstractInstruction *'>
 	^self annotateCall: (self Call: callTarget)
+]
+
+{ #category : #'compile abstract instructions' }
+Cogit >> CallRT: callTarget registersToBeSavedMask: registersToBeSaved [
+	<returnTypeC: #'AbstractInstruction *'>
+	| callerSavedRegsToBeSaved lastInst |
+	<var: 'lastInst' type: #'AbstractInstruction *'>
+	callerSavedRegsToBeSaved := backEnd callerSavedRegisterMask bitAnd: registersToBeSaved.
+
+	GPRegMax to: GPRegMin by: -1 do:
+		[:reg|
+		(reg ~= TempReg
+		 and: [callerSavedRegsToBeSaved anyMask: (self registerMaskFor: reg)]) ifTrue:
+			[self PushR: reg]].
+	
+	lastInst := self CallRT: callTarget.
+
+	GPRegMin to: GPRegMax do:
+		[:reg|
+		(reg ~= TempReg
+		 and: [callerSavedRegsToBeSaved anyMask: (self registerMaskFor: reg)]) ifTrue:
+			[lastInst := self PopR: reg]].
+
+	^lastInst
 ]
 
 { #category : #'method map' }
@@ -7387,6 +7415,34 @@ Cogit >> recordSendTrace [
 	^(traceFlags bitAnd: 2) ~= 0
 ]
 
+{ #category : #'register management' }
+Cogit >> registerMaskFor: reg [
+	"Answer a bit mask identifying the symbolic register.
+	 Registers are negative numbers."
+	^1 << (1 - reg)
+]
+
+{ #category : #'register management' }
+Cogit >> registerMaskFor: reg1 and: reg2 [
+	"Answer a bit mask identifying the symbolic registers.
+	 Registers are negative numbers."
+	^1 << (1 - reg1) bitOr: 1 << (1 - reg2)
+]
+
+{ #category : #'register management' }
+Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 [
+	"Answer a bit mask identifying the symbolic registers.
+	 Registers are negative numbers."
+	^(1 << (1 - reg1) bitOr: 1 << (1 - reg2)) bitOr: 1 << (1 - reg3)
+]
+
+{ #category : #'register management' }
+Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 [
+	"Answer a bit mask identifying the symbolic registers.
+	 Registers are negative numbers."
+	^((1 << (1 - reg1) bitOr: 1 << (1 - reg2)) bitOr: 1 << (1 - reg3)) bitOr: 1 << (1 - reg4)
+]
+
 { #category : #disassembly }
 Cogit >> relativeLabelForPC: pc [ 
 	<doNotGenerate>
@@ -7931,7 +7987,9 @@ Cogit >> simulateCogCodeAt: address [ "<Integer>"
 			[processor printRegistersOn: coInterpreter transcript].
 		  self recordLastInstruction.
 		  printInstructions ifTrue:
-			[coInterpreter transcript nextPutAll: lastNInstructions last; cr; flush].
+			[coInterpreter transcript nextPutAll: lastNInstructions last; cr.
+			 printRegisters ifTrue: [coInterpreter transcript cr].
+			 coInterpreter transcript flush].
 		  (breakPC isInteger
 			ifTrue:
 				[processor pc = breakPC

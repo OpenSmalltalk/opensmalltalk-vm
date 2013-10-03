@@ -428,7 +428,6 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveSize: retNoffset [
 		abortJumpsInto: [:jnx :jic| jumpNotIndexable := jnx. jumpIsContext := jic].
 	self genConvertIntegerToSmallIntegerInScratchReg: ClassReg.
 	cogit MoveR: ClassReg R: ReceiverResultReg.
-	self flag: 'currently caller pushes result'.
 	cogit RetN: retNoffset.
 	jumpSI jmpTarget: (jumpNotIndexable jmpTarget: (jumpIsContext jmpTarget: cogit Label)).
 	^0
@@ -566,6 +565,7 @@ CogObjectRepresentationForSqueakV3 >> genStoreSourceReg: sourceReg slotIndex: in
 	mask := RootBitDigitLength > 1
 				ifTrue: [RootBit >> (RootBitDigitLength - 1 * 8)]
 				ifFalse: [RootBit].
+	"N.B. MoveMb:r:R: does not zero other bits"
 	cogit MoveMb: rootBitByteOffset r: destReg R: scratchReg.
 	cogit AndCq: mask R: scratchReg.
 	jmpAlreadyRoot := cogit JumpNonZero: 0.

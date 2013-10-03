@@ -2970,7 +2970,8 @@ SpurMemoryManager >> isIntegerObject: oop [
 		inlineCacheTagForInstance:
 		primitiveObjectAtPut
 		commonVariable:at:put:cacheIndex:
-		primDigitBitShiftMagnitude:) includes: sel) ifFalse:
+		primDigitBitShiftMagnitude:
+		externalInstVar:ofContext:) includes: sel) ifFalse:
 		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
