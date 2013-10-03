@@ -367,6 +367,7 @@ Class {
 		'RemapBufferSize'
 	],
 	#pools : [
+		'SpurMemoryManagementConstants',
 		'VMBasicConstants',
 		'VMObjectIndices',
 		'VMSpurObjectRepresentationConstants',
@@ -1887,6 +1888,17 @@ SpurMemoryManager >> ephemeronFormat [
 	^5
 ]
 
+{ #category : #'debug support' }
+SpurMemoryManager >> existInstancesInNewSpaceOf: classObj [
+	| classIndex |
+	classIndex := self rawHashBitsOf: classObj.
+	self allNewSpaceObjectsDo:
+		[:obj|
+		(self classIndexOf: obj) = classIndex ifTrue:
+			[^true]].
+	^false
+]
+
 { #category : #'simulation only' }
 SpurMemoryManager >> failed [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
@@ -2121,11 +2133,22 @@ SpurMemoryManager >> flushNewSpace [
 	| savedTenuringThreshold |
 	savedTenuringThreshold := scavenger getRawTenuringThreshold.
 	scavenger setRawTenuringThreshold: newSpaceLimit.
-	self scavengingGC.
+	self scavengingGCTenuringIf: TenureByAge.
 	scavenger setRawTenuringThreshold: savedTenuringThreshold.
 	self assert: scavenger rememberedSetSize = 0.
 	self assert: pastSpaceStart = scavenger pastSpace start.
 	self assert: freeStart = scavenger eden start
+]
+
+{ #category : #'generation scavenging' }
+SpurMemoryManager >> flushNewSpaceInstancesOf: aClass [
+	| classIndex |
+	classIndex := self rawHashBitsOf: aClass.
+	classIndex = 0 ifTrue: "no instances; nothing to do"
+		[^self].
+	scavenger tenuringClassIndex: classIndex.
+	self scavengingGCTenuringIf: TenureByClass.
+	self assert: (self existInstancesInNewSpaceOf: aClass) not
 ]
 
 { #category : #'become api' }
@@ -2456,8 +2479,8 @@ SpurMemoryManager >> initialInstanceOf: classObj [
 	classIndex := self rawHashBitsOf: classObj.
 	classIndex = 0 ifTrue:
 		[^nil].
-	"flush newSpace to settle the enumeration."
-	self flushNewSpace.
+	"flush instances in newSpace to settle the enumeration."
+	self flushNewSpaceInstancesOf: classObj..
 	self allObjectsDo:
 		[:objOop|
 		classIndex = (self classIndexOf: objOop) ifTrue:
@@ -3914,6 +3937,13 @@ SpurMemoryManager >> scavenger [
 SpurMemoryManager >> scavengingGC [
 	"Run the scavenger."
 
+	self scavengingGCTenuringIf: TenureByAge
+]
+
+{ #category : #'generation scavenging' }
+SpurMemoryManager >> scavengingGCTenuringIf: tenuringCriterion [
+	"Run the scavenger."
+
 	self assert: remapBufferCount = 0.
 	self checkFreeSpace.
 	"coInterpreter printCallStackFP: coInterpreter framePointer"
@@ -3929,6 +3959,7 @@ SpurMemoryManager >> scavengingGC [
 	gcStartUsecs := coInterpreter ioUTCMicrosecondsNow.
 
 	scavengeInProgress := true.
+	scavenger tenuringCriterion: tenuringCriterion.
 	pastSpaceStart := scavenger scavenge.
 	self assert: (self
 					oop: pastSpaceStart
@@ -4275,7 +4306,7 @@ SpurMemoryManager >> sufficientSpaceAfterGC: numBytes [
 	 we run the scavenger.  Answer if space is not low."
 
 	self assert: numBytes = 0.
-	self scavengingGC.
+	self scavengingGCTenuringIf: TenureByAge.
 	lowSpaceThreshold > totalFreeOldSpace ifTrue: "space is low"
 		[lowSpaceThreshold := 0. "avoid signalling low space twice"
 		 ^false].
