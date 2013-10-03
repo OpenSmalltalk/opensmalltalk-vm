@@ -41,6 +41,19 @@ Spur32BitCoMemoryManager >> clearLeakMapAndMapAccessibleObjects [
 	cogit addCogMethodsToHeapMap
 ]
 
+{ #category : #'cog jit support' }
+Spur32BitCoMemoryManager >> freeStart: aValue [
+	^freeStart := aValue
+]
+
+{ #category : #'trampoline support' }
+Spur32BitCoMemoryManager >> freeStartAddress [
+	<api>
+	<returnTypeC: #usqInt>
+	^self cCode: [(self addressOf: freeStart) asUnsignedInteger]
+		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #freeStart in: self]
+]
+
 { #category : #'garbage collection' }
 Spur32BitCoMemoryManager >> headerWhileForwardingOf: aCompiledMethodObjOop [
 	"Answer the header of the argument even though
@@ -62,4 +75,17 @@ Spur32BitCoMemoryManager >> newSpaceLimitAddress [
 Spur32BitCoMemoryManager >> nullHeaderForMachineCodeMethod [
 	<api>
 	^self firstLongFormat << self formatShift + ClassBitmapCompactIndex
+]
+
+{ #category : #'cog jit support' }
+Spur32BitCoMemoryManager >> scavengeThreshold [
+	^scavengeThreshold
+]
+
+{ #category : #'trampoline support' }
+Spur32BitCoMemoryManager >> scavengeThresholdAddress [
+	<api>
+	<returnTypeC: #usqInt>
+	^self cCode: [(self addressOf: scavengeThreshold) asUnsignedInteger]
+		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #scavengeThreshold in: self]
 ]

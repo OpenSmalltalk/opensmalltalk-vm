@@ -25,11 +25,54 @@ CogObjectRepresentationForSpur >> couldBeObject: oop [
 	^objectMemory addressCouldBeObj: oop
 ]
 
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genAllocFloatValue: dpreg into: resultReg scratchReg: scratch1 scratchReg: scratch2 [
+	<returnTypeC: #'AbstractInstruction *'>
+	| allocSize newFloatHeader jumpFail |
+	<var: #jumpFail type: #'AbstractInstruction *'>
+	allocSize := objectMemory baseHeaderSize + (objectMemory sizeof: #double).
+	newFloatHeader := objectMemory
+							headerForSlots: (self sizeof: #double) / objectMemory wordSize
+							format: objectMemory firstLongFormat
+							classIndex: objectMemory classFloatCompactIndex.
+	cogit MoveAw: objectMemory freeStartAddress R: resultReg.
+	cogit MoveAw: objectMemory scavengeThresholdAddress R: scratch2.
+	cogit LoadEffectiveAddressMw: allocSize r: resultReg R: scratch1.
+	cogit CmpR: scratch2 R: scratch1.
+	jumpFail := cogit JumpAboveOrEqual: 0.
+	cogit MoveR: scratch1 Aw: objectMemory freeStartAddress.
+	cogit MoveCq: newFloatHeader R: scratch2.
+	objectMemory wordSize = objectMemory baseHeaderSize
+		ifTrue: [cogit MoveR: scratch2 Mw: 0 r: resultReg]
+		ifFalse:
+			[self flag: #endianness.
+			 cogit MoveCq: 0 R: scratch1.
+			 cogit MoveR: scratch2 Mw: 0 r: resultReg.
+			 cogit MoveR: scratch1 Mw: objectMemory wordSize r: resultReg.].
+	cogit MoveRd: dpreg M64: objectMemory baseHeaderSize r: resultReg.
+	^jumpFail
+]
+
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genConvertIntegerToCharacterInScratchReg: reg [
 	cogit
 		LogicalShiftLeftCq: objectMemory numTagBits R: reg;
 		AddCq: objectMemory characterTag R: reg.
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genFetchIndexRegister: indexReg from: tableObj into: destReg [
+	"indexReg contains the 1-relative index of an element in tableObj."
+	self subclassResponsibility
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genGetClassIndexOfNonImm: sourceReg into: destReg [
+	"Fetch the instance's class index into destReg."
+
+	cogit MoveMw: 0 r: sourceReg R: destReg.
+	cogit AndCq: objectMemory classIndexMask R: destReg.
 	^0
 ]
 
@@ -84,6 +127,18 @@ CogObjectRepresentationForSpur >> genGetClassObjectOfClassIndex: instReg into: d
 		AndCq: objectMemory classTableMinorIndexMask R: scratchReg;
 		AddCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: scratchReg;
 		MoveXwr: scratchReg R: destReg R: destReg..
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genGetCompactClassIndexNonImmOf: instReg into: destReg [
+	"Fetch the instance's class index into destReg."
+	^self genGetClassIndexOfNonImm: instReg into: destReg
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genGetDoubleValueOf: srcReg into: destFPReg [ 
+	cogit MoveM64: objectMemory baseHeaderSize r: srcReg Rd: destFPReg.
 	^0
 ]
 
@@ -260,4 +315,9 @@ CogObjectRepresentationForSpur >> shouldAnnotateObjectReference: anOop [
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> slotOffsetOfInstVarIndex: index [
 	^index * objectMemory wordSize + objectMemory baseHeaderSize
+]
+
+{ #category : #testing }
+CogObjectRepresentationForSpur >> smallIntegerIsOnlyImmediateType [
+	^false
 ]

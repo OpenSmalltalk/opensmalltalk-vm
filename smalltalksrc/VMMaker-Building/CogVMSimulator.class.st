@@ -414,20 +414,12 @@ CogVMSimulator >> ceTraceBlockActivation [
 
 { #category : #'debug support' }
 CogVMSimulator >> ceTraceLinkedSend: theReceiver [
-	| cogMethod delta |
 	(sendCount := sendCount + 1) \\ 500 = 0 ifTrue:
 		[self changed: #byteCountText].
 	cogit printOnTrace ifTrue:
 		[transcript print: byteCount; nextPut: $/; print: sendCount; space].
 	cogit assertCStackWellAligned.
 	super ceTraceLinkedSend: theReceiver.
-	cogMethod := cogit cogBlockMethodSurrogateAt: (self stackTop - cogit traceLinkedSendOffset).
-	cogMethod stackCheckOffset > 0 ifTrue:
-		[delta := (cogMethod cmType = CMMethod
-				   and: [cogMethod cmNumArgs > cogit numRegArgs])
-					ifTrue: [cogMethod cmNumArgs + 1]
-					ifFalse: [0].
-		 self maybeCheckStackDepth: delta sp: stackPointer + BytesPerWord pc: (stackPages longAt: stackPointer)]. "skip return address for ceTraceLinkedSend call."
 	^#continue
 ]
 
@@ -1559,7 +1551,7 @@ CogVMSimulator >> ioMSecs [
 	"NOT.  Actually, we want something a lot slower and, for exact debugging,
 	something more repeatable than real time.  I have an idea: use the byteCount... (di 7/1/2004 13:55)"
 
-	^self ioUTCMicroseconds // 1000 bitAnd: MillisecondClockMask
+	^self microsecondsToMilliseconds: self ioUTCMicroseconds
 	
 "At 20k bytecodes per second, this gives us about 200 ticks per second, or about 1/5 of what you'd expect for the real time clock.  This should still service events at one or two per second"
 ]
@@ -1579,10 +1571,15 @@ CogVMSimulator >> ioProcessEvents [
 { #category : #'I/O primitives support' }
 CogVMSimulator >> ioRelinquishProcessorForMicroseconds: microseconds [
 	"In the simulator give an indication that we're idling and check for input.
+	 If called from machine code then increment the byte count since the clock
+	 is derived from it and the clock will not advance otherwise.
 	 If we're simulating threading we're in difficulties.  We need a UI process
 	 (to run activities such as fill-in-the-blanks) but we also need an independent
 	 thread of control to run this VM thread.  So we need to fork a new UI process."
 	Display reverse: (0@0 extent: 16@16).
+	instructionPointer >= objectMemory startOfMemory ifFalse:
+		[byteCount := byteCount + microseconds - 1.
+		 self incrementByteCount].
 	Sensor peekEvent ifNotNil:
 		[self forceInterruptCheck].
 	Processor activeProcess == Project uiProcess ifTrue:
@@ -2639,6 +2636,15 @@ CogVMSimulator >> primitiveMousePoint [
 				self push: (self makePointwithxValue: relPt x yValue: relPt y)]
 ]
 
+{ #category : #'debugging traps' }
+CogVMSimulator >> primitiveNewWithArg [
+	"(objectMemory hasSpurMemoryManagerAPI
+	 and: [self classNameOf: (self stackValue: 1) Is: 'Bitmap']) ifTrue:
+		[self printExternalHeadFrame.
+		 self halt]."
+	^super primitiveNewWithArg
+]
+
 { #category : #'control primitives' }
 CogVMSimulator >> primitiveObject: actualReceiver perform: selector withArguments: argumentArray lookedUpIn: lookupClass [
 	"Override to allow simulator to filter start-up items to avoid as-yet unsimulatable plugins."
@@ -2711,6 +2717,17 @@ CogVMSimulator >> primitiveScreenSize [
 	| size |
 	size := self desiredDisplayExtent min: 800@640.
 	self pop: 1 thenPush: (self makePointwithxValue: size x yValue: size y)
+]
+
+{ #category : #'system control primitives' }
+CogVMSimulator >> primitiveSignalAtMilliseconds [
+	super primitiveSignalAtMilliseconds.
+	self successful ifTrue:
+		[Transcript
+			cr; nextPutAll: thisContext selector;
+			nextPutAll: ' now '; nextPutAll: self ioUTCMicroseconds hex;
+			nextPutAll: ' wakeup '; nextPutAll: nextWakeupUsecs hex;
+			nextPutAll: ' wakeup - now '; print: self ioUTCMicroseconds - nextWakeupUsecs; flush]
 ]
 
 { #category : #'debugging traps' }
@@ -3532,6 +3549,7 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 		addLine;
 		add: 'print cog methods' target: cogMethodZone action: #printCogMethods;
 		add: 'print trampoline table' target: cogit action: #printTrampolineTable;
+		add: 'print prim trace log' action: #dumpPrimTraceLog;
 		add: 'report recent instructions' target: cogit action: #reportLastNInstructions;
 		add: 'set break pc...' action: [(self promptHex: 'break pc') ifNotNil: [:bpc| cogit breakPC: bpc]];
 		add: (cogit singleStep

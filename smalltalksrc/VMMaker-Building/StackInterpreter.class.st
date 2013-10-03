@@ -2176,6 +2176,8 @@ StackInterpreter >> bytecodePrimBitShift [
 StackInterpreter >> bytecodePrimClass [
 	| rcvr |
 	rcvr := self internalStackTop.
+	(objectMemory isOopForwarded: rcvr) ifTrue:
+		[rcvr := self handleSpecialSelectorSendFaultFor: rcvr].
 	self internalStackTopPut: (objectMemory fetchClassOf: rcvr).
 	self fetchNextBytecode
 ]
@@ -2261,20 +2263,26 @@ StackInterpreter >> bytecodePrimEqualV4 [
 
 { #category : #'common selector sends' }
 StackInterpreter >> bytecodePrimEquivalent [
-
 	| rcvr arg |
 	rcvr := self internalStackValue: 1.
+	(objectMemory isOopForwarded: rcvr) ifTrue:
+		[rcvr := self handleSpecialSelectorSendFaultFor: rcvr].
 	arg := self internalStackValue: 0.
-	self booleanCheat: rcvr = arg.
+	(objectMemory isOopForwarded: arg) ifTrue:
+		[arg := self handleSpecialSelectorSendFaultFor: arg].
+	self booleanCheat: rcvr = arg
 ]
 
 { #category : #'common selector sends' }
 StackInterpreter >> bytecodePrimEquivalentV4 [
-
 	| rcvr arg |
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
-	self booleanCheatV4: rcvr = arg.
+	(objectMemory isOopForwarded: rcvr) ifTrue:
+		[rcvr := self handleSpecialSelectorSendFaultFor: rcvr].
+	(objectMemory isOopForwarded: arg) ifTrue:
+		[arg := self handleSpecialSelectorSendFaultFor: arg].
+	self booleanCheatV4: rcvr = arg
 ]
 
 { #category : #'common selector sends' }
@@ -5874,11 +5882,11 @@ StackInterpreter >> handleForwardedSendFaultFor: classTag [
 	"Handle a send fault that may be due to a send to a forwarded object.
 	 Unforward the receiver on the stack and answer its actual class."
 	| rcvr |
-	(objectMemory isForwardedClassTag: classTag) ifFalse:
-		[^classTag].
+	<inline: false>
+	self assert: (objectMemory isForwardedClassTag: classTag).
 
 	rcvr := self stackValue: argumentCount.
-	"should *not* be a super send, so te receiver should be forwarded."
+	"should *not* be a super send, so the receiver should be forwarded."
 	self assert: (objectMemory isOopForwarded: rcvr).
 	rcvr := objectMemory followForwarded: rcvr.
 	self stackValue: argumentCount put: rcvr.
@@ -5889,6 +5897,30 @@ StackInterpreter >> handleForwardedSendFaultFor: classTag [
 			followForwardedObjectFields: (self frameReceiver: framePointer)
 			toDepth: 0].
 	^objectMemory fetchClassTagOf: rcvr
+]
+
+{ #category : #'message sending' }
+StackInterpreter >> handleSpecialSelectorSendFaultFor: obj [
+	<inline: true>
+	^self handleSpecialSelectorSendFaultFor: obj fp: localFP sp: localSP
+]
+
+{ #category : #'message sending' }
+StackInterpreter >> handleSpecialSelectorSendFaultFor: obj fp: theFP sp: theSP [
+	"Handle a special send fault that may be due to a special selector
+	 send accessing a forwarded object.
+	 Unforward the object on the stack and in inst vars and answer its target."
+	<inline: false>
+	<var: #fp type: #'char *'>
+	<var: #sp type: #'char *'>
+	self assert: (objectMemory isOopForwarded: obj).
+
+	self followForwardedFrameContents: theFP stackPointer: theSP.
+	(objectMemory isPointers: (self frameReceiver: theFP)) ifTrue:
+		[objectMemory
+			followForwardedObjectFields: (self frameReceiver: theFP)
+			toDepth: 0].
+	^objectMemory followForwarded: obj
 ]
 
 { #category : #'message sending' }
@@ -6683,7 +6715,7 @@ Note the resolveAliases flag - this is an awful artefact of OSX and Apples demen
 { #category : #'primitive support' }
 StackInterpreter >> ioLocalMicroseconds [
 	<doNotGenerate>
-	^Time localMicrosecondClock
+	^self ioUTCMicroseconds + (1000000 * DateAndTime localOffset asSeconds)
 ]
 
 { #category : #'system control primitives' }

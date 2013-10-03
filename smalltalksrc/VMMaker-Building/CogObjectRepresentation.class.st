@@ -61,3 +61,8 @@ CogObjectRepresentation >> setCogit: aCogit [
 						ifTrue: [aCogit coInterpreter]
 						ifFalse: [aCogit coInterpreter objectMemory]
 ]
+
+{ #category : #testing }
+CogObjectRepresentation >> smallIntegerIsOnlyImmediateType [
+	self subclassResponsibility
+]
