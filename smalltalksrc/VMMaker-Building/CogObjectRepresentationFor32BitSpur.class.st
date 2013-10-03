@@ -51,6 +51,14 @@ CogObjectRepresentationFor32BitSpur >> genGetHashFieldNonImmOf: instReg asSmallI
 	^0
 ]
 
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor32BitSpur >> genGetHashFieldNonImmOf: instReg into: destReg [
+	"Fetch the instance's identity hash into destReg, unencoded."
+	cogit MoveMw: 4 r: instReg R: destReg.
+	cogit AndCq: objectMemory identityHashHalfWordMask R: destReg.
+	^0
+]
+
 { #category : #'primitive generators' }
 CogObjectRepresentationFor32BitSpur >> genGetSizeOf: sourceReg into: destReg formatReg: formatReg scratchReg: scratchReg abortJumpsInto: aBinaryBlock [
 	"Get the size of the non-immediate object in sourceReg into destReg using formatReg
@@ -315,6 +323,100 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAt: retNoffset [
 	self genConvertIntegerToSmallIntegerInScratchReg: Arg0Reg.
 
 	(jumpBadIndex jmpTarget: (jumpImmediate jmpTarget: cogit Label)).
+
+	^0
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveNew: retNoffset [
+	"Implement primitiveNew for convenient cases:
+	- the receiver has a hash
+	- the receiver is fixed size (excluding ephemerons to save instructions & miniscule time)
+	- single word header/num slots < numSlotsMask
+	- the result fits in eden"
+
+	| halfHeaderReg instSpecReg
+	  jumpUnhashed jumpVariableOrEphemeron jumpNoSpace jumpTooBig jumpHasSlots fillLoop skip |
+	<var: 'skip' type: #'AbstractInstruction *'>
+	<var: 'fillLoop' type: #'AbstractInstruction *'>
+	<var: 'jumpTooBig' type: #'AbstractInstruction *'>
+	<var: 'jumpHasSlots' type: #'AbstractInstruction *'>
+	<var: 'jumpNoSpace' type: #'AbstractInstruction *'>
+	<var: 'jumpUnhashed' type: #'AbstractInstruction *'>
+	<var: 'jumpVariableOrEphemeron' type: #'AbstractInstruction *'>
+
+	"half header will contain classIndex (class's hash) and format, then fixed size and eventually nilObject"
+	halfHeaderReg := SendNumArgsReg.
+	"inst spec will hold class's instance specification and then byte size and finally numSlots half of header"
+	instSpecReg := ClassReg.
+
+	"get freeStart as early as possible so as not to wait later..."
+	cogit MoveAw: objectMemory freeStartAddress R: Arg1Reg.
+	"get class's hash & fail if 0"
+	self genGetHashFieldNonImmOf: ReceiverResultReg into: halfHeaderReg.
+	jumpUnhashed := cogit JumpZero: 0.
+	"get class's format inst var for both inst spec (format field) and num fixed fields"
+	self genLoadSlot: InstanceSpecificationIndex sourceReg: ReceiverResultReg destReg: TempReg.
+	self genConvertSmallIntegerToIntegerInScratchReg: TempReg.
+	cogit MoveR: TempReg R: instSpecReg.
+	cogit LogicalShiftRightCq: objectMemory fixedFieldsFieldWidth R: TempReg.
+	cogit AndCq: objectMemory formatMask R: TempReg.
+	cogit AndCq: objectMemory fixedFieldsOfClassFormatMask R: instSpecReg.
+	"fail if not fixed or if ephemeron (rare beasts so save the cycles)"
+	cogit CmpCq: objectMemory nonIndexablePointerFormat R: TempReg.
+	jumpVariableOrEphemeron := cogit JumpAbove: 0.
+	cogit CmpCq: objectMemory numSlotsMask R: instSpecReg.
+	jumpTooBig := cogit JumpAboveOrEqual: 0.
+	"Add format to classIndex/format half header; other word contains numSlots"
+	cogit LogicalShiftLeftCq: objectMemory formatShift R: TempReg.
+	cogit AddR: TempReg R: halfHeaderReg.
+	"write half header now; it frees halfHeaderReg"
+	cogit MoveR: halfHeaderReg Mw: 0 r: Arg1Reg.
+	"save unrounded numSlots for header"
+	cogit MoveR: instSpecReg R: halfHeaderReg.
+	"compute byte size; remember 0-sized objects still need 1 slot & allocation is
+	 rounded up to 8 bytes."
+	cogit CmpCq: 0 R: instSpecReg.
+	jumpHasSlots := cogit JumpNonZero: 0.
+	cogit MoveCq: objectMemory baseHeaderSize * 2 R: instSpecReg.
+	skip := cogit Jump: 0.
+	"round up to allocationUnit"
+	jumpHasSlots jmpTarget:
+	(cogit MoveR: instSpecReg R: TempReg).
+	cogit AndCq: 1 R: TempReg.
+	cogit AddR: TempReg R: instSpecReg.
+	cogit AddCq: objectMemory baseHeaderSize / objectMemory wordSize R: instSpecReg.
+	cogit LogicalShiftLeftCq: objectMemory shiftForWord R: instSpecReg.
+	skip jmpTarget: "get scavengeThreshold (have freeStart already)"
+	(cogit MoveAw: objectMemory scavengeThresholdAddress R: TempReg).
+	"shift halfHeaderReg to put numSlots in correct place"
+	cogit LogicalShiftLeftCq: objectMemory numSlotsHalfShift R: halfHeaderReg.
+	"check if allocation fits"
+	cogit SubR: Arg1Reg R: TempReg.
+	cogit CmpR: TempReg R: instSpecReg.
+	jumpNoSpace := cogit JumpAbove: 0.
+	"get result, increment freeStart and write it back. Arg1Reg holds new freeStart, the limit of the object"
+	cogit MoveR: Arg1Reg R: ReceiverResultReg.
+	cogit AddR: instSpecReg R: Arg1Reg.
+	cogit MoveR: Arg1Reg Aw: objectMemory freeStartAddress.
+	"write other half of header (numSlots/identityHash)"
+	cogit MoveR: halfHeaderReg Mw: 4 r: ReceiverResultReg.
+	"now fill"
+	cogit LoadEffectiveAddressMw: objectMemory baseHeaderSize r: ReceiverResultReg R: instSpecReg.
+	cogit MoveCq: objectMemory nilObject R: halfHeaderReg.
+	"at least two words; so can make this a [fill 2 words. reached limit?] whileFalse"
+	fillLoop := 
+	cogit MoveR: halfHeaderReg Mw: 0 r: instSpecReg.
+	cogit MoveR: halfHeaderReg Mw: 4 r: instSpecReg.
+	cogit AddCq: 8 R: instSpecReg.
+	cogit CmpR: Arg1Reg R: instSpecReg.
+	cogit JumpBelow: fillLoop.
+	cogit RetN: retNoffset.
+
+	jumpUnhashed jmpTarget:
+	(jumpVariableOrEphemeron jmpTarget:
+	(jumpTooBig jmpTarget:
+	(jumpNoSpace jmpTarget: cogit Label))).
 
 	^0
 ]
