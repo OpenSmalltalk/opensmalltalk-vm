@@ -422,6 +422,167 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveNew: retNoffset [
 ]
 
 { #category : #'primitive generators' }
+CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveNewWithArg: retNoffset [
+	"Implement primitiveNewWithArg for convenient cases:
+	- the receiver has a hash
+	- the receiver is variable and not compiled method
+	- single word header/num slots < numSlotsMask
+	- the result fits in eden
+	See superclass method for dynamic frequencies of formats.
+	For the moment we implement only arrayFormat, firstByteFormat & firstLongFormat"
+
+	| halfHeaderReg instSpecReg maxSlots
+	  jumpArrayTooBig jumpByteTooBig jumpLongTooBig
+	  jumpArrayFormat jumpByteFormat jumpBytePrepDone jumpLongPrepDone
+	  jumpUnhashed jumpNElementsNonInt jumpFailCuzFixed jumpNoSpace jumpHasSlots fillLoop skip |
+	<var: 'skip' type: #'AbstractInstruction *'>
+	<var: 'fillLoop' type: #'AbstractInstruction *'>	
+	<var: 'jumpHasSlots' type: #'AbstractInstruction *'>
+	<var: 'jumpNoSpace' type: #'AbstractInstruction *'>
+	<var: 'jumpUnhashed' type: #'AbstractInstruction *'>
+	<var: 'jumpByteFormat' type: #'AbstractInstruction *'>
+	<var: 'jumpByteTooBig' type: #'AbstractInstruction *'>
+	<var: 'jumpLongTooBig' type: #'AbstractInstruction *'>
+	<var: 'jumpArrayFormat' type: #'AbstractInstruction *'>
+	<var: 'jumpArrayTooBig' type: #'AbstractInstruction *'>
+	<var: 'jumpFailCuzFixed' type: #'AbstractInstruction *'>
+	<var: 'jumpBytePrepDone' type: #'AbstractInstruction *'>
+	<var: 'jumpLongPrepDone' type: #'AbstractInstruction *'>
+	<var: 'jumpNElementsNonInt' type: #'AbstractInstruction *'>
+
+	"half header will contain classIndex (class's hash) and format, and eventually fill value"
+	halfHeaderReg := SendNumArgsReg.
+	"inst spec will hold class's instance specification and then byte size and finally numSlots half of header"
+	instSpecReg := ClassReg.
+	"The max slots we'll allocate here are those for a single header"
+	maxSlots := objectMemory numSlotsMask - 1.
+
+	"get freeStart as early as possible so as not to wait later..."
+	cogit MoveAw: objectMemory freeStartAddress R: Arg1Reg.
+	"get class's hash & fail if 0"
+	self genGetHashFieldNonImmOf: ReceiverResultReg into: halfHeaderReg.
+	jumpUnhashed := cogit JumpZero: 0.
+	"get index and fail if not a +ve integer"
+	cogit MoveR: Arg0Reg R: TempReg.
+	jumpNElementsNonInt := self genJumpNotSmallIntegerInScratchReg: TempReg.
+	"get class's format inst var for inst spec (format field)"
+	self genLoadSlot: InstanceSpecificationIndex sourceReg: ReceiverResultReg destReg: instSpecReg.
+	cogit LogicalShiftRightCq: objectMemory fixedFieldsFieldWidth + self numSmallIntegerTagBits R: instSpecReg.
+	cogit AndCq: objectMemory formatMask R: instSpecReg.
+	"Add format to classIndex/format half header now"
+	cogit MoveR: instSpecReg R: TempReg.
+	cogit LogicalShiftLeftCq: objectMemory formatShift R: TempReg.
+	cogit AddR: TempReg R: halfHeaderReg.
+	"get integer value of num fields in TempReg now"
+	cogit MoveR: Arg0Reg R: TempReg.
+	self genConvertSmallIntegerToIntegerInScratchReg: TempReg.
+	"dispatch on format, failing if not variable or if compiled method"
+	cogit CmpCq: objectMemory arrayFormat R: instSpecReg.
+	jumpArrayFormat := cogit JumpZero: 0.
+	cogit CmpCq: objectMemory firstByteFormat R: instSpecReg.
+	jumpByteFormat := cogit JumpZero: 0.
+	cogit CmpCq: objectMemory firstLongFormat R: instSpecReg.
+	jumpFailCuzFixed := cogit JumpNonZero: 0.
+
+	cogit CmpCq: (objectMemory integerObjectOf: maxSlots) R: Arg0Reg.
+	jumpLongTooBig := cogit JumpAbove: 0.
+	"save num elements/slot size to instSpecReg"
+	cogit MoveR: TempReg R: instSpecReg.
+	"push fill value"
+	cogit MoveCq: 0 R: TempReg.
+	cogit PushR: TempReg.
+	jumpLongPrepDone := cogit Jump: 0. "go allocate"
+
+	jumpByteFormat jmpTarget:
+	(cogit CmpCq: (objectMemory integerObjectOf: maxSlots * objectMemory wordSize) R: Arg0Reg).
+	jumpByteTooBig := cogit JumpAbove: 0.
+	"save num elements to instSpecReg"
+	cogit MoveR: TempReg R: instSpecReg.
+	"compute odd bits and add into halfHeaderReg; oddBits := 4 - nElements bitAnd: 3"
+	cogit MoveCq: objectMemory wordSize R: TempReg.
+	cogit SubR: instSpecReg R: TempReg.
+	cogit AndCq: objectMemory wordSize - 1 R: TempReg.
+	cogit LogicalShiftLeftCq: objectMemory formatShift R: TempReg.
+	cogit AddR: TempReg R: halfHeaderReg.
+	"round up num elements to numSlots in instSpecReg"
+	cogit AddCq: objectMemory wordSize - 1 R: instSpecReg.
+	cogit LogicalShiftRightCq: objectMemory shiftForWord R: instSpecReg.
+	"push fill value"
+	cogit MoveCq: 0 R: TempReg.
+	cogit PushR: TempReg.
+	jumpBytePrepDone := cogit Jump: 0. "go allocate"
+
+	jumpArrayFormat jmpTarget:
+		(cogit CmpCq: (objectMemory integerObjectOf: maxSlots) R: Arg0Reg).
+	jumpArrayTooBig := cogit JumpAbove: 0.
+	"save num elements/slot size to instSpecReg"
+	cogit MoveR: TempReg R: instSpecReg.
+	"push fill value"
+	cogit MoveCw: objectMemory nilObject R: TempReg.
+	cogit PushR: TempReg.
+	"fall through to allocate"
+
+	jumpBytePrepDone jmpTarget:
+	(jumpLongPrepDone jmpTarget: cogit Label).
+
+	"write half header now; it frees halfHeaderReg"
+	cogit MoveR: halfHeaderReg Mw: 0 r: Arg1Reg.
+	"save numSlots to halfHeaderReg"
+	cogit MoveR: instSpecReg R: halfHeaderReg.
+	"compute byte size; remember 0-sized objects still need 1 slot & allocation is
+	 rounded up to 8 bytes."
+	cogit CmpCq: 0 R: instSpecReg.
+	jumpHasSlots := cogit JumpNonZero: 0.
+	cogit MoveCq: objectMemory baseHeaderSize * 2 R: instSpecReg.
+	skip := cogit Jump: 0.
+	"round up to allocationUnit"
+	jumpHasSlots jmpTarget:
+	(cogit MoveR: instSpecReg R: TempReg).
+	cogit AndCq: 1 R: TempReg.
+	cogit AddR: TempReg R: instSpecReg.
+	cogit AddCq: objectMemory baseHeaderSize / objectMemory wordSize R: instSpecReg.
+	cogit LogicalShiftLeftCq: objectMemory shiftForWord R: instSpecReg.
+	skip jmpTarget: "get scavengeThreshold (have freeStart already)"
+	(cogit MoveAw: objectMemory scavengeThresholdAddress R: TempReg).
+	"shift halfHeaderReg to put numSlots in correct place"
+	cogit LogicalShiftLeftCq: objectMemory numSlotsHalfShift R: halfHeaderReg.
+	"check if allocation fits"
+	cogit SubR: Arg1Reg R: TempReg.
+	cogit CmpR: TempReg R: instSpecReg.
+	jumpNoSpace := cogit JumpAbove: 0.
+	"get result, increment freeStart and write it back. Arg1Reg holds new freeStart, the limit of the object"
+	cogit MoveR: Arg1Reg R: ReceiverResultReg.
+	cogit AddR: instSpecReg R: Arg1Reg.
+	cogit MoveR: Arg1Reg Aw: objectMemory freeStartAddress.
+	"write other half of header (numSlots/0 identityHash)"
+	cogit MoveR: halfHeaderReg Mw: 4 r: ReceiverResultReg.
+	"now fill"
+	cogit PopR: halfHeaderReg.
+	cogit LoadEffectiveAddressMw: objectMemory baseHeaderSize r: ReceiverResultReg R: instSpecReg.
+	"at least two words; so can make this a [fill 2 words. reached limit?] whileFalse"
+	fillLoop := 
+	cogit MoveR: halfHeaderReg Mw: 0 r: instSpecReg.
+	cogit MoveR: halfHeaderReg Mw: 4 r: instSpecReg.
+	cogit AddCq: 8 R: instSpecReg.
+	cogit CmpR: Arg1Reg R: instSpecReg.
+	cogit JumpBelow: fillLoop.
+	cogit RetN: retNoffset.
+
+	"pop discarded fill value & fall through to failure"
+	jumpNoSpace jmpTarget: (cogit PopR: TempReg).
+
+	jumpUnhashed jmpTarget:
+	(jumpFailCuzFixed jmpTarget:
+	(jumpArrayTooBig jmpTarget:
+	(jumpByteTooBig jmpTarget:
+	(jumpLongTooBig jmpTarget:
+	(jumpNoSpace jmpTarget:
+	(jumpNElementsNonInt jmpTarget: cogit Label)))))).
+
+	^0
+]
+
+{ #category : #'primitive generators' }
 CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAt: retNoffset [
 	"Implement the guts of primitiveStringAt; dispatch on size"
 	<returnTypeC: #'AbstractInstruction *'>
@@ -610,4 +771,9 @@ CogObjectRepresentationFor32BitSpur >> jumpNotSmallIntegerUnsignedValueInRegiste
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationFor32BitSpur >> numSmallIntegerBits [
 	^31
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor32BitSpur >> numSmallIntegerTagBits [
+	^1
 ]

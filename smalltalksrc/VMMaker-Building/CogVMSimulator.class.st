@@ -3531,6 +3531,10 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'print stack call stack' action: #printStackCallStack;
 		add: 'print call stack of...' action: [(self promptHex: 'context or process oop') ifNotNil: [:obj| self printCallStackOf: obj]];
 		add: 'print all stacks' action: #printAllStacks;
+		add: 'write back local ptrs' action: [stackPointer := localSP. framePointer := localFP. instructionPointer := localIP.
+											self writeBackHeadFramePointers];
+		add: 'write back mc ptrs' action: [stackPointer := cogit processor sp. framePointer := cogit processor fp. instructionPointer := cogit processor eip.
+											self writeBackHeadFramePointers];
 		addLine;
 		add: 'print registers' action: [cogit processor printRegistersOn: transcript];
 		add: 'disassemble method/trampoline...' action: [(self promptHex: 'pc') ifNotNil: [:pc| cogit disassembleCodeAt: pc]];

@@ -2206,6 +2206,14 @@ SimpleStackBasedCogit >> genPrimitiveNew [
 ]
 
 { #category : #'primitive generators' }
+SimpleStackBasedCogit >> genPrimitiveNewWithArg [
+	| r |
+	(r := objectRepresentation genInnerPrimitiveNewWithArg: BytesPerWord) < 0 ifTrue:
+		[^r].
+	^self compileFallbackToInterpreterPrimitive
+]
+
+{ #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveNotEqual [
 	^self genSmallIntegerComparison: JumpNonZero
 ]

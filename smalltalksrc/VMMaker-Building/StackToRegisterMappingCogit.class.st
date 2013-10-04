@@ -2294,6 +2294,14 @@ StackToRegisterMappingCogit >> genPrimitiveNew [
 ]
 
 { #category : #'primitive generators' }
+StackToRegisterMappingCogit >> genPrimitiveNewWithArg [
+	| r |
+	(r := objectRepresentation genInnerPrimitiveNewWithArg: 0) < 0 ifTrue:
+		[^r].
+	^self compileFallbackToInterpreterPrimitive
+]
+
+{ #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveNotIdentical [
 	"Receiver and arg in registers.
 	 Stack looks like
