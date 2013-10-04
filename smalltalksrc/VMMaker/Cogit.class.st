@@ -5240,7 +5240,11 @@ Cogit >> generateNewspeakRuntime [
 	 Generate the class fetch and cache probe inline for speed. Smashes Arg0Reg and caller-saved regs."
 	opcodeIndex := 0.
 	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
-	objectRepresentation genGetClassObjectOf: ReceiverResultReg into: ClassReg scratchReg: TempReg.
+	objectRepresentation
+		genGetClassObjectOf: ReceiverResultReg
+		into: ClassReg
+		scratchReg: TempReg
+		instRegIsReceiver: true. "don't follow forwarding pointer here"
 	self MoveMw: 0 r: SPReg R: TempReg.
 	self MoveMw: backEnd jumpShortByteSize r: TempReg R: Arg1Reg.
 	self CmpR: ClassReg R: Arg1Reg.

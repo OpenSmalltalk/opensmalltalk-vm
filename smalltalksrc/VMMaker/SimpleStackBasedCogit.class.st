@@ -1879,11 +1879,13 @@ SimpleStackBasedCogit >> genPrimitiveClass [
 	(objectRepresentation
 			genGetClassObjectOf: ReceiverResultReg
 			into: ReceiverResultReg
-			scratchReg: TempReg) = BadRegisterSet ifTrue:
+			scratchReg: TempReg
+			instRegIsReceiver: methodOrBlockNumArgs = 0) = BadRegisterSet ifTrue:
 		[objectRepresentation
 			genGetClassObjectOf: ReceiverResultReg
 			into: ClassReg
-			scratchReg: TempReg.
+			scratchReg: TempReg
+			instRegIsReceiver: methodOrBlockNumArgs = 0.
 		 self MoveR: ClassReg R: ReceiverResultReg]..
 	self flag: 'currently caller pushes result'.
 	self RetN: BytesPerWord.
@@ -2812,7 +2814,11 @@ SimpleStackBasedCogit >> genSmallIntegerComparison: jumpOpcode [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSpecialSelectorClass [
 	self MoveMw: 0 r: SPReg R: SendNumArgsReg.
-	objectRepresentation genGetClassObjectOf: SendNumArgsReg into: ClassReg scratchReg: TempReg.
+	objectRepresentation
+		genGetClassObjectOf: SendNumArgsReg
+		into: ClassReg
+		scratchReg: TempReg
+		instRegIsReceiver: false.
 	self MoveR: ClassReg Mw: 0 r: SPReg.
 	^0
 ]

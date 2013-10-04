@@ -2467,7 +2467,7 @@ StackInterpreterSimulator >> writeImageFileIO: numberOfBytesToWrite [
 			[self primitiveFail.
 			 ^nil].
 		file binary.
-	
+
 		{
 			self imageFormatVersion.
 			headerSize.
@@ -2476,12 +2476,12 @@ StackInterpreterSimulator >> writeImageFileIO: numberOfBytesToWrite [
 			(objectMemory specialObjectsOop).
 			(objectMemory lastHash).
 			self ioScreenSize.
-			fullScreenFlag.
+			self getImageHeaderFlags.
 			extraVMMemory
 		}
 			do: [:long | self putLong: long toFile: file].
 
-		{	desiredNumStackPages. 	self unknownShortOrCodeSizeInKs } do:
+		{	desiredNumStackPages. self unknownShortOrCodeSizeInKs } do:
 			[:short| self putShort: short toFile: file].
 
 		self putLong: desiredEdenBytes toFile: file.
