@@ -165,11 +165,13 @@ CogObjectRepresentationForSqueakV3 >> genGetClassFormatOfNonInt: instReg into: d
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genGetClassObjectOf: instReg into: destReg scratchReg: scratchReg [
+CogObjectRepresentationForSqueakV3 >> genGetClassObjectOf: instReg into: destReg scratchReg: scratchReg instRegIsReceiver: instRegIsReceiver [
 	"Fetch the instance's class into destReg.  This is almost identical
 	 to genGetClassFormatOfNonInt:into:scratchReg: but because we
 	 put the fetch of SmallInteger between the then and the else for 
-	 compact class/non-compact class we cannot easily share code."
+	 compact class/non-compact class we cannot easily share code.
+	 instRegIsReceiver is ignored.  It is for Spur compatibility where
+	 objects may be forwarded."
 	| jumpIsInt jumpCompact jumpGotClass jumpGotClass2 |
 	<var: #jumpIsInt type: #'AbstractInstruction *'>
 	<var: #jumpCompact type: #'AbstractInstruction *'>
@@ -208,7 +210,7 @@ CogObjectRepresentationForSqueakV3 >> genGetClassTagOf: instReg into: destReg sc
 	<var: #entryLabel type: #'AbstractInstruction *'>
 	cogit AlignmentNops: (BytesPerWord max: 8).
 	entryLabel := cogit Label.
-	self genGetClassObjectOf: instReg into: destReg scratchReg: scratchReg.
+	self genGetClassObjectOf: instReg into: destReg scratchReg: scratchReg instRegIsReceiver: nil.
 	^entryLabel
 ]
 
