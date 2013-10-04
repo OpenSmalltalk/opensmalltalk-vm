@@ -5210,7 +5210,7 @@ Cogit >> generateMapAt: addressOrNull start: startAddress [
 
 { #category : #initialization }
 Cogit >> generateMissAbortTrampolines [
-	"Generate the run-time entries for the various method and PIC entry misses and aborts..
+	"Generate the run-time entries for the various method and PIC entry misses and aborts.
 	 Read the class-side method trampolines for documentation on the various trampolines"
 
 	self subclassResponsibility
@@ -6259,7 +6259,7 @@ Cogit >> mapObjectReferencesInMachineCodeForBecome [
 		[self assert: hasYoungObj not.
 		 cogMethod cmType ~= CMFree ifTrue:
 			[self assert: (self cogMethodDoesntLookKosher: cogMethod) = 0.
-			 cogMethod selector: (objectRepresentation remapOop: cogMethod selector)..
+			 cogMethod selector: (objectRepresentation remapOop: cogMethod selector).
 			 cogMethod cmType = CMClosedPIC
 				ifTrue:
 					[((objectMemory isYoung: cogMethod selector)
