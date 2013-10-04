@@ -128,7 +128,7 @@ CogObjectRepresentationForSpur >> genGetClassObjectOfClassIndex: instReg into: d
 		MoveR: instReg R: scratchReg;
 		AndCq: objectMemory classTableMinorIndexMask R: scratchReg;
 		AddCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: scratchReg;
-		MoveXwr: scratchReg R: destReg R: destReg..
+		MoveXwr: scratchReg R: destReg R: destReg.
 	^0
 ]
 
@@ -148,8 +148,29 @@ CogObjectRepresentationForSpur >> genGetDoubleValueOf: srcReg into: destFPReg [
 CogObjectRepresentationForSpur >> genInnerPrimitiveNew: retNoffset [
 	"Implement primitiveNew for convenient cases:
 	- the receiver has a hash
-	- the receiver is fixed size
+	- the receiver is fixed size (excluding ephemerons to save instructions & miniscule time)
+	- single word header/num slots < numSlotsMask
 	- the result fits in eden"
+
+	self subclassResponsibility
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genInnerPrimitiveNewWithArg: retNoffset [
+	"Implement primitiveNewWithArg for convenient cases:
+	- the receiver has a hash
+	- the receiver is variable and not compiled method
+	- single word header/num slots < numSlotsMask
+	- the result fits in eden
+
+	Here are some dynamic frequencies of class formats in the interpreter doing startUp
+	and recompiling ArrayedCollection in a Squeak4.1 image:
+		{3251->#arrayFormat.		(Array)
+		 1685->#firstByteFormat.	(ByteString, LargePositiveInteger, very few ByteArray)
+		 1533->#firstLongFormat.	(Bitmaps, Floats, MatrixTransform2x3, WordArray)
+		 110->#weakArrayFormat.	(WeakArray, WeakMessageSend)
+		 35->#indexablePointersFormat.	(MethodContext)
+		 5->#nonIndexablePointerFormat	(DirectoryEntry)}"
 
 	self subclassResponsibility
 ]
@@ -281,6 +302,11 @@ CogObjectRepresentationForSpur >> hasValidHeaderPostGC: cogMethod [
 
 { #category : #initialization }
 CogObjectRepresentationForSpur >> implementsNew [
+	^true
+]
+
+{ #category : #initialization }
+CogObjectRepresentationForSpur >> implementsNewWithArg [
 	^true
 ]
 
