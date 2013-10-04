@@ -64,8 +64,8 @@ NewspeakInterpreterSimulatorMSB >> putLong: n toFile: f [
 
 	f
 		nextPut: (n bitShift: -24);
-		nextPut: ((n bitAnd: 16rFF0000) bitShift: -16);
-		nextPut: ((n bitAnd: 16rFF00) bitShift: -8);
+		nextPut: ((n bitShift: -16) bitAnd: 16rFF);
+		nextPut: ((n bitShift: -8) bitAnd: 16rFF);
 		nextPut: (n bitAnd: 16rFF).
 
 	self success: true
