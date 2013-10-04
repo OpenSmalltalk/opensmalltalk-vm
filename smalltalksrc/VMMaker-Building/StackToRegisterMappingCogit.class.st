@@ -2080,11 +2080,13 @@ StackToRegisterMappingCogit >> genPrimitiveClass [
 	(objectRepresentation
 			genGetClassObjectOf: reg
 			into: ReceiverResultReg
-			scratchReg: TempReg) = BadRegisterSet ifTrue:
+			scratchReg: TempReg
+			instRegIsReceiver: methodOrBlockNumArgs = 0) = BadRegisterSet ifTrue:
 		[objectRepresentation
 			genGetClassObjectOf: reg
 			into: ClassReg
-			scratchReg: TempReg.
+			scratchReg: TempReg
+			instRegIsReceiver: methodOrBlockNumArgs = 0.
 		 self MoveR: ClassReg R: ReceiverResultReg].
 	self RetN: 0.
 	^0
@@ -2859,7 +2861,11 @@ StackToRegisterMappingCogit >> genSpecialSelectorClass [
 		ifFalse: [self ssAllocateRequiredReg: ClassReg].
 	self ssPush: 1.
 	self ssTop popToReg: topReg.
-	objectRepresentation genGetClassObjectOf: topReg into: ClassReg scratchReg: TempReg.
+	objectRepresentation
+		genGetClassObjectOf: topReg
+		into: ClassReg
+		scratchReg: TempReg
+		instRegIsReceiver: false.
 	^self ssPop: 1; ssPushRegister: ClassReg
 ]
 

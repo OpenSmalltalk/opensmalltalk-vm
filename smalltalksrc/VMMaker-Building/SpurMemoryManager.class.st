@@ -3269,6 +3269,8 @@ SpurMemoryManager >> lookupAddress: address [
 	| fmt size string class classSize maybeThisClass classNameIndex thisClassIndex |
 	(self addressCouldBeObj: address) ifFalse:
 		[^nil].
+	address - self baseHeaderSize = classTableRootObj ifTrue:
+		[^'(classTableRoot+baseHeaderSize)'].
 	fmt := self formatOf: address.
 	size := self lengthOf: address baseHeader: (self baseHeader: address) format: fmt.
 	size = 0 ifTrue:
