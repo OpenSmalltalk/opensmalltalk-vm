@@ -865,7 +865,7 @@ CoInterpreterMT >> ownVM: threadIndexAndFlags [
 			 self assert: (range includes: vmThread cFramePointer)].
 	cogit setCStackPointer: vmThread cStackPointer.
 	cogit setCFramePointer: vmThread cFramePointer.
-	self assert: newMethod ~~ nil..
+	self assert: newMethod ~~ nil.
 	cogit recordEventTrace ifTrue:
 		[self recordTrace: TraceOwnVM thing: ConstTwo source: 0].
 	^threadIndexAndFlags bitAnd: OwnVMForeignThreadFlag

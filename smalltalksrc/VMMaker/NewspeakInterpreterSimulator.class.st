@@ -956,7 +956,7 @@ NewspeakInterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize
 	self pushRemappableOop:
 		(self instantiateClass: (self splObj: ClassArray) indexableSize: 5).
 	self pushRemappableOop:
-		(self instantiateClass: (self splObj: ClassByteString) indexableSize: entryNameSize)..
+		(self instantiateClass: (self splObj: ClassByteString) indexableSize: entryNameSize).
 	self pushRemappableOop: (self positive32BitIntegerFor: createDate).
 	self pushRemappableOop: (self positive32BitIntegerFor: modifiedDate).
 

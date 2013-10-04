@@ -16,6 +16,9 @@ Class {
 		'objectMemory',
 		'bcpc'
 	],
+	#classVars : [
+		'NumOperands'
+	],
 	#pools : [
 		'CogRTLOpcodes'
 	],
@@ -39,6 +42,11 @@ CogAbstractInstruction class >> for: aCogit [
 	^self new cogit: aCogit
 ]
 
+{ #category : #'class initialization' }
+CogAbstractInstruction class >> initialize [
+	NumOperands := 3
+]
+
 { #category : #translation }
 CogAbstractInstruction class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in an AbstractInstruction struct."
@@ -56,7 +64,7 @@ CogAbstractInstruction class >> instVarNamesAndTypesForTranslationDo: aBinaryBlo
 				value: (ivn caseOf: {
 							['address']			-> ['unsigned long'].
 							['machineCode']	-> [{'unsigned char'. '[', machineCodeBytes printString, ']'}].
-							['operands']		-> [#('unsigned long' '[3]')].
+							['operands']		-> [{'unsigned long'. '[', NumOperands, ']'}].
 							['dependent']		-> ['struct _AbstractInstruction *']}
 						otherwise:
 							[#char])]]
@@ -492,7 +500,7 @@ CogAbstractInstruction >> hasPCDependentInstructions [
 CogAbstractInstruction >> initialize [
 	"This method intializes the Smalltalk instance.  The C instance is merely a struct and doesn't need initialization."
 	<doNotGenerate>
-	operands := CArrayAccessor on: (Array new: 3).
+	operands := CArrayAccessor on: (Array new: NumOperands).
 	machineCode := CArrayAccessor on: (ByteArray new: self machineCodeBytes)
 ]
 

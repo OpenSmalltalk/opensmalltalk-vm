@@ -896,7 +896,7 @@ StackToRegisterMappingCogit class >> stackToRegisterMapping [
 	the 1 is still valid after the control flow join for (expr ifTrue: [v1] ifFalse: [v2]).  So at a conditional
 	branch we record simStackPtr in the target fixup and only void types between it and the
 	simStackPtr at the join point.  This type voiding operation is called merge:.  For now we simply throw
-	away all type info but would like to implement the baove scheme soon..
+	away all type info but would like to implement the baove scheme soon.
 
 	 We can determine the stack depth at a conditional branch (if), but how do we determine the stack
 	 depth following an unconditional jump (else)?  There are essentially three cases
@@ -3278,7 +3278,7 @@ StackToRegisterMappingCogit >> generateEnilopmarts [
 
 { #category : #initialization }
 StackToRegisterMappingCogit >> generateMissAbortTrampolines [
-	"Generate the run-time entries for the various method and PIC entry misses and aborts..
+	"Generate the run-time entries for the various method and PIC entry misses and aborts.
 	 Read the class-side method trampolines for documentation on the various trampolines"
 
 	"Slang needs these apparently superfluous asSymbol sends."

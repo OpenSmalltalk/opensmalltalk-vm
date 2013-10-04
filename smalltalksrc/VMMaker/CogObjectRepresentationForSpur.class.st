@@ -121,7 +121,7 @@ CogObjectRepresentationForSpur >> genGetClassObjectOfClassIndex: instReg into: d
 	cogit
 		MoveR: instReg R: scratchReg;
 		LogicalShiftRightCq: objectMemory classTableMajorIndexShift R: scratchReg;
-		LogicalShiftLeftCq: objectMemory shiftForWord R: scratchReg..
+		LogicalShiftLeftCq: objectMemory shiftForWord R: scratchReg.
 	self assert: (self shouldAnnotateObjectReference: objectMemory classTableRootObj) not.
 	cogit
 		MoveMw: objectMemory classTableRootObj + objectMemory baseHeaderSize r: scratchReg R: destReg;

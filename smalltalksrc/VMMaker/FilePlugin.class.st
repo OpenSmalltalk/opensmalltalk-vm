@@ -154,7 +154,7 @@ FilePlugin >> makeDirEntryName: entryName size: entryNameSize
 	interpreterProxy pushRemappableOop:
 		(interpreterProxy instantiateClass: (interpreterProxy classArray) indexableSize: 5).
 	interpreterProxy pushRemappableOop:
-		(interpreterProxy instantiateClass: (interpreterProxy classString) indexableSize: entryNameSize)..
+		(interpreterProxy instantiateClass: (interpreterProxy classString) indexableSize: entryNameSize).
 	interpreterProxy pushRemappableOop: 
 		(interpreterProxy positive32BitIntegerFor: createDate).
 	interpreterProxy pushRemappableOop: 

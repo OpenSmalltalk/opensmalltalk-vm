@@ -2480,7 +2480,7 @@ SpurMemoryManager >> initialInstanceOf: classObj [
 	classIndex = 0 ifTrue:
 		[^nil].
 	"flush instances in newSpace to settle the enumeration."
-	self flushNewSpaceInstancesOf: classObj..
+	self flushNewSpaceInstancesOf: classObj.
 	self allObjectsDo:
 		[:objOop|
 		classIndex = (self classIndexOf: objOop) ifTrue:
