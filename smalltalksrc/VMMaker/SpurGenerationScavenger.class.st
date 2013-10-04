@@ -347,7 +347,7 @@ SpurGenerationScavenger >> fireEphemeronsOnEphemeronList [
 	[ephemeronCorpse notNil] whileTrue:
 		[self assert: (manager isForwarded: ephemeronCorpse).
 		 ephemeron := manager followForwarded: ephemeronCorpse.
-		 self assert: (self isScavengeSurvivor: (manager keyOfEphemeron: ephemeron)) not..
+		 self assert: (self isScavengeSurvivor: (manager keyOfEphemeron: ephemeron)) not.
 		 coInterpreter fireEphemeron: ephemeron.
 		 self copyAndForward: (manager keyOfEphemeron: ephemeron).
 		 self cCoerceSimple: (self scavengeReferentsOf: ephemeron) to: #void.

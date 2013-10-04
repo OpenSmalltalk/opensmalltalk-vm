@@ -5530,7 +5530,7 @@ NewspeakInterpreter >> primitiveByteArrayNByteIIntegerAtPut [
 				value >= (1 << (8*byteSize)) ifTrue:[^self primitiveFail].
 			].
 			(self isOopImmutable: rcvr) ifTrue:
-				[^self primitiveFailFor: PrimErrNoModification]..
+				[^self primitiveFailFor: PrimErrNoModification].
 			"short/byte"
 			byteSize = 1 
 				ifTrue:[self byteAt: addr put: value]
