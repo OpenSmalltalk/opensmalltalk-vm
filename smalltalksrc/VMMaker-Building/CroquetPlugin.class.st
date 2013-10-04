@@ -552,7 +552,7 @@ CroquetPlugin >> primitiveOrthoNormInverseMatrix [
 	dst at: 8 put: (src at: 2). 	dst at: 9 put: (src at: 6). 	"dst at: 10 put: (src at: 10)."
 
 	"Compute inverse translation vector"
-	x := src at: 3..
+	x := src at: 3.
 	y := src at: 7.
 	z := src at: 11.
 	rx := (x * (dst at: 0)) + (y * (dst at: 1)) + (z * (dst at: 2)).

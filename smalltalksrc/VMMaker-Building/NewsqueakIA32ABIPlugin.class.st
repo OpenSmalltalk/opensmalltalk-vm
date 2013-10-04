@@ -634,7 +634,7 @@ NewsqueakIA32ABIPlugin >> primReturnFromContextThrough [
 			ifFalse: [^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 		[interpreterProxy signalNoResume: (interpreterProxy stackValue: 2)] whileFalse].
 	vmCallbackReturnValue := self cCoerceSimple: (self startOfData: (interpreterProxy stackValue: mac))
-									to: #'VMCallbackReturnValue *'..
+									to: #'VMCallbackReturnValue *'.
 	self cCode: "C needs a typedef for structs to be assigned, but that implies a struct class for just one assignment."
 		[self mem: (self addressOf: vmCallbackContext rvs)
 			cp: (self addressOf: vmCallbackReturnValue crvrvs)

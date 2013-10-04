@@ -1886,7 +1886,7 @@ SimpleStackBasedCogit >> genPrimitiveClass [
 			into: ClassReg
 			scratchReg: TempReg
 			instRegIsReceiver: methodOrBlockNumArgs = 0.
-		 self MoveR: ClassReg R: ReceiverResultReg]..
+		 self MoveR: ClassReg R: ReceiverResultReg].
 	self flag: 'currently caller pushes result'.
 	self RetN: BytesPerWord.
 	^0
