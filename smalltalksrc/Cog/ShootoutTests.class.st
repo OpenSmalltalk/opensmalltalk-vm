@@ -1,7 +1,7 @@
 Class {
 	#name : #ShootoutTests,
 	#superclass : #Object,
-	#category : #'Cog-Benchmarks'
+	#category : #'Cog-Benchmarks-Shootout'
 }
 
 { #category : #platform }
