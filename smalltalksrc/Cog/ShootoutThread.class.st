@@ -9,7 +9,7 @@ Class {
 		'done',
 		'output'
 	],
-	#category : #'Cog-Benchmarks'
+	#category : #'Cog-Benchmarks-Shootout'
 }
 
 { #category : #'instance creation' }

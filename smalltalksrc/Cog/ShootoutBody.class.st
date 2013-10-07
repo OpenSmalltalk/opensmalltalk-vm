@@ -10,7 +10,7 @@ Class {
 		'vz',
 		'mass'
 	],
-	#category : #'Cog-Benchmarks'
+	#category : #'Cog-Benchmarks-Shootout'
 }
 
 { #category : #constants }

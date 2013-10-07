@@ -1,11 +1,11 @@
 Extension { #name : #Stream }
 
-{ #category : #'*Cog-Benchmarks-platform' }
+{ #category : #'*Cog-Benchmarks-Shootout-Shootout-Shootout-platform' }
 Stream >> nl [
    self nextPut: Character lf
 ]
 
-{ #category : #'*Cog-Benchmarks-platform' }
+{ #category : #'*Cog-Benchmarks-Shootout-Shootout-Shootout-platform' }
 Stream >> print: number digits: decimalPlaces [
    | precision rounded |
    decimalPlaces <= 0 ifTrue: [^ number rounded printString].
@@ -15,7 +15,7 @@ Stream >> print: number digits: decimalPlaces [
       ((rounded asScaledDecimal: decimalPlaces) printString copyUpTo: $s)
 ]
 
-{ #category : #'*Cog-Benchmarks-platform' }
+{ #category : #'*Cog-Benchmarks-Shootout-Shootout-Shootout-platform' }
 Stream >> print: number paddedTo: width [
    self nextPutAll: (number printStringLength: width padded: false)
 ]

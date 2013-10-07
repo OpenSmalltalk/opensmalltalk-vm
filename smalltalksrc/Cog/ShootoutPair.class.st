@@ -6,7 +6,7 @@ Class {
 		'me',
 		'sema'
 	],
-	#category : #'Cog-Benchmarks'
+	#category : #'Cog-Benchmarks-Shootout'
 }
 
 { #category : #'instance creation' }
