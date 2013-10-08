@@ -570,11 +570,33 @@ SpurBootstrap >> allocateClassTable [
 ]
 
 { #category : #'bootstrap image' }
+SpurBootstrap >> allocateFreeLists [
+	"Allocate the freeLists array."
+	| freeListsOop |
+	freeListsOop := newHeap
+						allocateSlots: newHeap numFreeLists
+						format: (newHeap wordSize = 4
+									ifTrue: [newHeap firstLongFormat]
+									ifFalse: [newHeap sixtyFourBitIndexableFormat])
+						classIndex: (newHeap wordSize = 4
+									ifTrue: [newHeap thirtyTwoBitLongsClassIndexPun]
+									ifFalse: [newHeap sixtyFourBitLongsClassIndexPun]).
+	self assert: (newHeap objectAfter: newHeap trueObject) = freeListsOop.
+	0 to: newHeap numFreeLists - 1 do:
+		[:i|
+		newHeap
+			storePointerUnchecked: freeListsOop
+			ofObject: freeListsOop
+			withValue: 0]
+]
+
+{ #category : #'bootstrap image' }
 SpurBootstrap >> bootstrapImage [
 	oldHeap fullGC.
 	oldHeapSize := oldHeap freeStart.
 	Transcript cr; nextPutAll: 'transforming image...'; flush.
 	self cloneNilTrueAndFalse.
+	self allocateFreeLists.
 	self buildClassMap.
 	self allocateClassTable.
 	self cloneObjects.
@@ -1562,7 +1584,7 @@ SpurBootstrap >> validate [
 		n := n + 1.
 		p := o].
 	p class.
-	self assert: (n between: map size and: map size + 5). "+ 5 is room for classTable"
+	self assert: (n between: map size and: map size + 6). "+ 6 is room for freelists & classTable"
 
 	"check some class properties to ensure the format changes are correct"
 	self assert: (newHeap fixedFieldsOfClassFormat: (newHeap formatOfClass: newHeap classArray)) = 0.
