@@ -575,12 +575,8 @@ SpurBootstrap >> allocateFreeLists [
 	| freeListsOop |
 	freeListsOop := newHeap
 						allocateSlots: newHeap numFreeLists
-						format: (newHeap wordSize = 4
-									ifTrue: [newHeap firstLongFormat]
-									ifFalse: [newHeap sixtyFourBitIndexableFormat])
-						classIndex: (newHeap wordSize = 4
-									ifTrue: [newHeap thirtyTwoBitLongsClassIndexPun]
-									ifFalse: [newHeap sixtyFourBitLongsClassIndexPun]).
+						format: newHeap wordIndexableFormat
+						classIndex: newHeap wordSizeClassIndexPun.
 	self assert: (newHeap objectAfter: newHeap trueObject) = freeListsOop.
 	0 to: newHeap numFreeLists - 1 do:
 		[:i|
@@ -1622,4 +1618,29 @@ SpurBootstrap >> wordSize [
 { #category : #'word size' }
 SpurBootstrap >> wordSizeMask [
 	^self subclassResponsibility
+]
+
+{ #category : #testing }
+SpurBootstrap >> writeSnapshotOfTransformedImage [
+	"The bootstrapped image typically contains a few big free chunks and one huge free chunk.
+	 Test snapshot writing and loading by turning the largest non-huge chunks into segment bridges
+	 and saving."
+	| heap sizes counts barriers sim |
+	heap := TransformedImage veryDeepCopy.
+	sim := StackInterpreterSimulator onObjectMemory: heap.
+	heap coInterpreter: sim.
+	sim initializeInterpreter: 0.
+	sizes := Bag new.
+	heap allObjectsInFreeTree: (heap freeLists at: 0) do:
+		[:f|
+		sizes add: (heap bytesInObject: f)].
+	counts := sizes sortedCounts.
+	self assert: counts last key = 1. "1 huge chunk"
+	self assert: ((counts at: counts size - 1) key > 2
+				and: [(counts at: counts size - 1) value > 1024]).
+	barriers := (1 to: (counts at: counts size - 1) key) collect:
+					[:ign| heap allocateOldSpaceChunkOfExactlyBytes: (counts at: counts size - 1) value].
+	heap segmentManager initializeFromFreeChunks: (barriers sort collect: [:b| heap objectStartingAt: b]).
+	sim imageName: 'spur.image'.
+	sim writeImageFileIO: heap 
 ]
