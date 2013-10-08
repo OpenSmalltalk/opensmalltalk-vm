@@ -727,9 +727,10 @@ CogObjectRepresentationFor32BitSpur >> genShiftAwaySmallIntegerTagsInScratchReg:
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationFor32BitSpur >> getInlineCacheClassTagFrom: sourceReg into: destReg [
 	"Extract the inline cache tag for the object in sourceReg into destReg. The inline
-	 cache tag for a given object is the value loaded in inline caches to distinguish objects
-	 of different classes.  In Spur this is either the tags for immediates, (with 1 & 3 collapsed
-	 to 1 for SmallIntegers), or the receiver's classIndex.  Generate something like this:
+	 cache tag for a given object is the value loaded in inline caches to distinguish
+	 objects of different classes.  In Spur this is either the tags for immediates, (with
+	 1 & 3 collapsed to 1 for SmallIntegers, and 2 collapsed to 0 for Characters), or
+	 the receiver's classIndex.  Generate something like this:
 		Limm:
 			andl $0x1, rDest
 			j Lcmp
@@ -737,7 +738,7 @@ CogObjectRepresentationFor32BitSpur >> getInlineCacheClassTagFrom: sourceReg int
 			movl rSource, rDest
 			andl $0x3, rDest
 			jnz Limm
-			movl 0x4(%edx), rDest
+			movl 0(%edx), rDest
 			andl $0x3fffff, rDest
 		Lcmp
 	"
