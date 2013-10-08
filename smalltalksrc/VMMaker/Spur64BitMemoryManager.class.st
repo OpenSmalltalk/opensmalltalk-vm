@@ -126,9 +126,10 @@ Spur64BitMemoryManager >> allocateSlotsInOldSpace: numSlots bytes: totalBytes fo
 Spur64BitMemoryManager >> bytesInObject: objOop [
 	"Answer the total number of bytes in an object including header and possible overflow size header."
 	| header headerNumSlots numSlots |
+	<var: 'header' type: #usqLong>
 	self flag: #endianness.
 	header := self longAt: objOop.
-	headerNumSlots := header >> self numSlotsFullShift bitAnd: self numSlotsMask.
+	headerNumSlots := header >> self numSlotsFullShift.
 	numSlots := headerNumSlots = self numSlotsMask
 					ifTrue: [header bitAnd: 16rFFFFFFFFFFFFFF]
 					ifFalse: [headerNumSlots = 0 ifTrue: [1] ifFalse: [headerNumSlots]].
@@ -252,6 +253,19 @@ Spur64BitMemoryManager >> isWordsNonImm: objOop [
 ]
 
 { #category : #'object access' }
+Spur64BitMemoryManager >> numSlotsOf: objOop [
+	<returnTypeC: #usqLong>
+	| numSlots |
+	self flag: #endianness.
+	"numSlotsOf: should not be applied to free or forwarded objects."
+	self assert: (self classIndexOf: objOop) > self isForwardedObjectClassIndexPun.
+	numSlots := self rawNumSlotsOf: objOop..
+	^numSlots = self numSlotsMask	"overflow slots; (2^56)-1 slots are plenty"
+		ifTrue: [((self longAt: objOop - self baseHeaderSize) << 8) asUnsignedLong >> 8]
+		ifFalse: [numSlots]
+]
+
+{ #category : #'object access' }
 Spur64BitMemoryManager >> numTagBits [
 	"4th bit reserved for object alignment, which could imply e.g. what space the object is in."
 	^3
@@ -290,6 +304,12 @@ Spur64BitMemoryManager >> objectRepresentationClass [
 	^CogObjectRepresentationFor64BitSpur
 ]
 
+{ #category : #'object access' }
+Spur64BitMemoryManager >> rawNumSlotsOf: objOop [
+	<returnTypeC: #usqLong>
+	^(self longAt: objOop) asUnsignedLong >> self numSlotsFullShift
+]
+
 { #category : #'header access' }
 Spur64BitMemoryManager >> setClassIndexOf: objOop to: classIndex [
 	self assert: (classIndex between: 0 and: self classIndexMask).
@@ -325,6 +345,14 @@ Spur64BitMemoryManager >> setHashBitsOf: objOop to: hash [
 	self assert: (hash between: 0 and: self identityHashFullWordMask).
 	self longAt: objOop
 		put: ((self longAt: objOop) bitClear: self identityHashFullWordMask) + hash
+]
+
+{ #category : #'header access' }
+Spur64BitMemoryManager >> setIsPinnedOf: objOop to: aBoolean [
+	self longAt: objOop
+		put: (aBoolean
+				ifTrue: [(self longAt: objOop) bitOr: 1 << self pinnedBitShift]
+				ifFalse: [(self longAt: objOop) bitAnd: (1 << self pinnedBitShift) bitInvert64])
 ]
 
 { #category : #'header access' }
