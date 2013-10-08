@@ -359,7 +359,8 @@ Class {
 		'remapBufferCount',
 		'lowSpaceThreshold',
 		'totalFreeOldSpace',
-		'sortedFreeChunks'
+		'sortedFreeChunks',
+		'segmentManager'
 	],
 	#classVars : [
 		'CheckObjectOverwrite',
@@ -892,12 +893,14 @@ SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceByt
 	 to allocate in oldSpace.  Later on (in initializePostBootstrap) freeStart and scavengeThreshold
 	 will be set to sane values."
 	<doNotGenerate>
+	| endBridgeBytes |
 	self assert: (memoryBytes \\ self allocationUnit = 0
 				and: [newSpaceBytes \\ self allocationUnit = 0
 				and: [codeBytes \\ self allocationUnit = 0]]).
+	endBridgeBytes := 2 * self baseHeaderSize.
 	memory := (self endianness == #little
 					ifTrue: [LittleEndianBitmap]
-					ifFalse: [Bitmap]) new: (memoryBytes + newSpaceBytes + codeBytes + stackBytes) // 4.
+					ifFalse: [Bitmap]) new: (memoryBytes + newSpaceBytes + codeBytes + stackBytes + endBridgeBytes) // 4.
 	startOfMemory := codeBytes + stackBytes.
 	endOfMemory := freeOldSpaceStart := memoryBytes + newSpaceBytes + codeBytes + stackBytes.
 	"leave newSpace empty for the bootstrap"
@@ -1087,17 +1090,17 @@ SpurMemoryManager >> allocateOldSpaceChunkOfExactlyBytes: chunkBytes [
 	"Answer a chunk of oldSpace from the free lists, if one of this size
 	 is available, otherwise answer nil.  N.B.  the chunk is simply a pointer,
 	 it has no valid header.  The caller *must* fill in the header correctly."
-	| initialIndex chunk nodeBytes parent child smaller larger |
+	| initialIndex node nodeBytes parent child smaller larger |
 	"for debugging:" "totalFreeOldSpace := self totalFreeListBytes"
 
 	initialIndex := chunkBytes / self allocationUnit.
 	initialIndex < self numFreeLists ifTrue:
 		[(1 << initialIndex <= freeListsMask
-		 and: [(chunk := freeLists at: initialIndex) ~= 0]) ifTrue:
-			[self assert: chunk = (self startOfObject: chunk).
-			 self assert: (self isValidFreeObject: chunk).
+		 and: [(node := freeLists at: initialIndex) ~= 0]) ifTrue:
+			[self assert: node = (self startOfObject: node).
+			 self assert: (self isValidFreeObject: node).
 			totalFreeOldSpace := totalFreeOldSpace - chunkBytes.
-			^self unlinkFreeChunk: chunk atIndex: initialIndex].
+			^self unlinkFreeChunk: node atIndex: initialIndex].
 		 ^nil].
 
 	"Large chunk.  Search the large chunk list.
@@ -1105,7 +1108,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfExactlyBytes: chunkBytes [
 	 chunks of the same size. Beneath the node are smaller and larger
 	 blocks.  When the search ends parent should hold the first chunk of
 	 the same size as chunkBytes, or 0 if none."
-	parent := chunk := 0.
+	node := 0.
 	child := freeLists at: 0.
 	[child ~= 0] whileTrue:
 		[| childBytes |
@@ -1113,35 +1116,36 @@ SpurMemoryManager >> allocateOldSpaceChunkOfExactlyBytes: chunkBytes [
 		 childBytes := self bytesInObject: child.
 		 childBytes = chunkBytes
 			ifTrue: "size match; try to remove from list at node."
-				[chunk := self fetchPointer: self freeChunkNextIndex
+				[node := self fetchPointer: self freeChunkNextIndex
 								ofFreeChunk: child.
-				 chunk ~= 0 ifTrue:
-					[self assert: (self isValidFreeObject: chunk).
+				 node ~= 0 ifTrue:
+					[self assert: (self isValidFreeObject: node).
 					 self storePointer: self freeChunkNextIndex
 						ofFreeChunk: child
 						withValue: (self fetchPointer: self freeChunkNextIndex
-										ofFreeChunk: chunk).
+										ofFreeChunk: node).
 					 totalFreeOldSpace := totalFreeOldSpace - chunkBytes.
-					 ^self startOfObject: chunk].
+					 ^self startOfObject: node].
+				 node := child.
+				 nodeBytes := childBytes.
 				 child := 0] "break out of loop to remove interior node"
 			ifFalse:
 				[childBytes < chunkBytes
 					ifTrue: "walk down the tree"
 						[child := self fetchPointer: self freeChunkLargerIndex ofFreeChunk: child]
 					ifFalse:
-						[parent := child.
-						 nodeBytes := childBytes.
+						[nodeBytes := childBytes.
 						 child := self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: child]]].
 	"if no chunk, there was no exact fit"
-	chunk = 0 ifTrue:
+	node = 0 ifTrue:
 		[^nil].
 
 	"self printFreeChunk: parent"
 	self assert: nodeBytes = chunkBytes.
-	self assert: (self bytesInObject: parent) = chunkBytes.
+	self assert: (self bytesInObject: node) = chunkBytes.
 
 	"can't be a list; would have removed and returned it above."
-	self assert: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: parent) = 0.
+	self assert: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: node) = 0.
 
 	"no list; remove an interior node; reorder tree simply.  two cases (which have mirrors, for four total):
 	 case 1. interior node has one child, P = parent, N = node, S = subtree (mirrored for large vs small)
@@ -1161,10 +1165,9 @@ SpurMemoryManager >> allocateOldSpaceChunkOfExactlyBytes: chunkBytes [
 		 _/_  _\_		    _/_
 		 | L | | R |		    | L |"
 
-	chunk := parent.
-	smaller := self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: chunk.
-	larger := self fetchPointer: self freeChunkLargerIndex ofFreeChunk: chunk.
-	parent := self fetchPointer: self freeChunkParentIndex ofFreeChunk: chunk.
+	smaller := self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: node.
+	larger := self fetchPointer: self freeChunkLargerIndex ofFreeChunk: node.
+	parent := self fetchPointer: self freeChunkParentIndex ofFreeChunk: node.
 	parent = 0
 		ifTrue: "no parent; stitch the subnodes back into the root"
 			[smaller = 0
@@ -1178,7 +1181,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfExactlyBytes: chunkBytes [
 						[self addFreeSubTree: larger]]]
 		ifFalse: "parent; stitch back into appropriate side of parent."
 			[smaller = 0
-				ifTrue: [self storePointer: (chunk = (self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: parent)
+				ifTrue: [self storePointer: (node = (self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: parent)
 											ifTrue: [self freeChunkSmallerIndex]
 											ifFalse: [self freeChunkLargerIndex])
 							ofFreeChunk: parent
@@ -1187,7 +1190,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfExactlyBytes: chunkBytes [
 							ofObject: larger
 							withValue: parent]
 				ifFalse:
-					[self storePointer: (chunk = (self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: parent)
+					[self storePointer: (node = (self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: parent)
 											ifTrue: [self freeChunkSmallerIndex]
 											ifFalse: [self freeChunkLargerIndex])
 						ofFreeChunk: parent
@@ -1197,7 +1200,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfExactlyBytes: chunkBytes [
 						withValue: parent.
 					 larger ~= 0 ifTrue:
 						[self addFreeSubTree: larger]]].
-	^self startOfObject: chunk
+	^self startOfObject: node
 ]
 
 { #category : #allocation }
@@ -1228,7 +1231,7 @@ SpurMemoryManager >> allocationUnit [
 	^8
 ]
 
-{ #category : #'class table' }
+{ #category : #'class table puns' }
 SpurMemoryManager >> arrayClassIndexPun [
 	"Class puns are class indices not used by any class.  There is an entry
 	 for the pun that refers to the notional class of objects with this class
@@ -1735,7 +1738,7 @@ SpurMemoryManager >> classIndexOfHeader: aHeader [
 	^aHeader bitAnd: self classIndexMask
 ]
 
-{ #category : #'class table' }
+{ #category : #'class table puns' }
 SpurMemoryManager >> classIsItselfClassIndexPun [
 	^4
 ]
@@ -2715,6 +2718,12 @@ SpurMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
 	^self subclassResponsibility
 ]
 
+{ #category : #segments }
+SpurMemoryManager >> initSegmentBridgeWithBytes: numBytes at: address [
+	<var: #numBytes type: #usqLong>
+	^self subclassResponsibility
+]
+
 { #category : #allocation }
 SpurMemoryManager >> initSpaceForAllocationCheck: aNewSpace [
 	CheckObjectOverwrite ifTrue:
@@ -2742,7 +2751,7 @@ SpurMemoryManager >> initialInstanceOf: classObj [
 
 { #category : #initialization }
 SpurMemoryManager >> initialize [
-	"We can put all initializatins that set something to 0 or to false here.
+	"We can put all initializations that set something to 0 or to false here.
 	 In C all global variables are initialized to 0, and 0 is false."
 	remapBuffer := Array new: RemapBufferSize.
 	remapBufferCount := 0.
@@ -2753,6 +2762,9 @@ SpurMemoryManager >> initialize [
 	statScavenges := statIncrGCs := statFullGCs := 0.
 	statScavengeGCUsecs := statIncrGCUsecs := statFullGCUsecs := 0.
 	statSGCDeltaUsecs := statIGCDeltaUsecs := statFGCDeltaUsecs := 0.
+
+	"we can initialize things that are virtual in C."
+	segmentManager := SpurSegmentManager new manager: self; yourself.
 
 	"We can also initialize here anything that is only for simulation."
 	heapMap := self wordSize = 4 ifTrue: [CogCheck32BitHeapMap new]
@@ -2822,7 +2834,8 @@ SpurMemoryManager >> initializeOldSpaceFirstFree: startOfFreeOldSpace [
 	<var: 'startOfFreeOldSpace' type: #usqLong>
 	| freeOldStart freeChunk |
 	<var: 'freeOldStart' type: #usqLong>
-	
+
+	self initSegmentBridgeWithBytes: 2 * self baseHeaderSize at: endOfMemory.
 	endOfMemory > startOfFreeOldSpace ifTrue:
 		[totalFreeOldSpace := totalFreeOldSpace + (endOfMemory - startOfFreeOldSpace).
 		 freeOldStart := startOfFreeOldSpace.
@@ -3139,7 +3152,7 @@ SpurMemoryManager >> isFreeObject: objOop [
 	^(self classIndexOf: objOop) = self isFreeObjectClassIndexPun
 ]
 
-{ #category : #'class table' }
+{ #category : #'class table puns' }
 SpurMemoryManager >> isFreeObjectClassIndexPun [
 	^0
 ]
@@ -3345,9 +3358,10 @@ SpurMemoryManager >> isScavengeSurvivor: oop [
 	^scavenger isScavengeSurvivor: oop
 ]
 
-{ #category : #'class table' }
-SpurMemoryManager >> isSegmentSpanningFakeObjectPun [
-	^3
+{ #category : #segments }
+SpurMemoryManager >> isSegmentBridge: objOop [
+	"Maybe this should be in SpurSegmentManager only"
+	^(self classIndexOf: objOop) = self segmentBridgePun
 ]
 
 { #category : #'free space' }
@@ -3363,6 +3377,14 @@ SpurMemoryManager >> isValidFreeObject: objOop [
 				    or: [self isFreeObject: chunk])
 			  and: [(chunk := (self fetchPointer: self freeChunkLargerIndex ofFreeChunk: objOop)) = 0
 				    or: [self isFreeObject: chunk]]]]]]
+]
+
+{ #category : #segments }
+SpurMemoryManager >> isValidSegmentBridge: objOop [
+	"Maybe this should be in SpurSegmentManager only"
+	^(self addressCouldBeObj: objOop)
+	 and: [(self isSegmentBridge: objOop)
+	 and: [self hasOverflowHeader: objOop]]
 ]
 
 { #category : #'object testing' }
@@ -4275,6 +4297,16 @@ SpurMemoryManager >> scheduleScavenge [
 	coInterpreter forceInterruptCheck
 ]
 
+{ #category : #'class table puns' }
+SpurMemoryManager >> segmentBridgePun [
+	^3
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> segmentManager [
+	^segmentManager
+]
+
 { #category : #'debug support' }
 SpurMemoryManager >> setCheckForLeaks: anInteger [
 	" 0 = do nothing.
@@ -4376,7 +4408,7 @@ SpurMemoryManager >> sixtyFourBitIndexableFormat [
 	^9
 ]
 
-{ #category : #'class table' }
+{ #category : #'class table puns' }
 SpurMemoryManager >> sixtyFourBitLongsClassIndexPun [
 	"Class puns are class indices not used by any class.  There may be
 	 an entry for the pun that refers to the notional class of objects with
@@ -4740,7 +4772,7 @@ SpurMemoryManager >> tenuringThreshold: threshold [
 		/ scavenger pastSpaceBytes asFloat
 ]
 
-{ #category : #'class table' }
+{ #category : #'class table puns' }
 SpurMemoryManager >> thirtyTwoBitLongsClassIndexPun [
 	"Class puns are class indices not used by any class.  There may be
 	 an entry for the pun that refers to the notional class of objects with
@@ -4806,7 +4838,7 @@ SpurMemoryManager >> unlinkFreeChunk: chunk atIndex: index [
 	^chunk
 ]
 
-{ #category : #'class table' }
+{ #category : #'class table puns' }
 SpurMemoryManager >> weakArrayClassIndexPun [
 	"Class puns are class indices not used by any class.  There is an entry
 	 for the pun that refers to the notional class of objects with this class
@@ -4821,9 +4853,20 @@ SpurMemoryManager >> weakArrayFormat [
 	^4
 ]
 
+{ #category : #'header formats' }
+SpurMemoryManager >> wordIndexableFormat [
+	"Either firstLongFormat or sixtyFourBitIndexableFormat"
+	^self subclassResponsibility
+]
+
 { #category : #'word size' }
 SpurMemoryManager >> wordSize [
 	"Answer the manager's word size, whjich is the size of an oop, and which
 	 is assumed to be equivslent to the underlying machine's word size."
+	^self subclassResponsibility
+]
+
+{ #category : #'class table puns' }
+SpurMemoryManager >> wordSizeClassIndexPun [
 	^self subclassResponsibility
 ]

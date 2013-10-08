@@ -3755,7 +3755,7 @@ StackInterpreter >> contextInstructionPointer: theIP frame: theFP [
 ]
 
 { #category : #'image save/restore' }
-StackInterpreter >> convertFloatsToPlatformOrderFrom: startOop to: stopAddr [ 
+StackInterpreter >> convertFloatsToPlatformOrder [
 	"Byte-swap the words of all bytes objects in a range of the 
 	 image, including Strings, ByteArrays, and CompiledMethods.
 	 This returns these objects to their original byte ordering 
@@ -4237,7 +4237,7 @@ StackInterpreter >> ensureImageFormatIsUpToDate: swapBytes [
 	<inline: false>
 	swapBytes
 		ifTrue: [self reverseBytesInImage]
-		ifFalse: [self convertFloatsToPlatformOrderFrom: objectMemory firstObject to: objectMemory freeStart]
+		ifFalse: [self convertFloatsToPlatformOrder]
 ]
 
 { #category : #'callback support' }

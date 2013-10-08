@@ -29,3 +29,32 @@ Class {
 	],
 	#category : #'VMMaker-SpurMemoryManager'
 }
+
+{ #category : #'simulation only' }
+SpurSegmentManager >> initializeFromFreeChunks: freeChunks [
+	"For testing, create a set of segments using the freeChunks as bridges."
+	numSegments := freeChunks size.
+	freeChunks do:
+		[:f|
+		manager initSegmentBridgeWithBytes: (manager bytesInObject: f) at: (manager startOfObject: f).
+		self assert: (manager isSegmentBridge: f)].
+	segments := (1 to: numSegments) collect:
+					[:i| | start |
+					start := i = 1
+								ifTrue: [manager newSpaceLimit]
+								ifFalse: [manager addressAfter: (freeChunks at: i - 1)].
+					SpurSegmentInfo new
+						start: start;
+						segSize: (freeChunks at: i) + manager baseHeaderSize - start;
+						yourself].
+	segments := CArrayAccessor on: segments.
+	freeChunks do:
+		[:bridge| self assert: (manager isValidSegmentBridge: bridge)]
+]
+
+{ #category : #initialization }
+SpurSegmentManager >> manager: aSpurMemoryManager [
+	manager := aSpurMemoryManager.
+	numSegments ifNil:
+		[numSegments := 0]
+]
