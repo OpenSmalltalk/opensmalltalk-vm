@@ -4083,7 +4083,7 @@ ObjectMemory >> remapRemapBufferAndExtraRoots [
 	1 to: remapBufferCount do:
 		[:i |
 		oop := remapBuffer at: i.
-		(self shouldRemapOop: oop) ifFalse:
+		(self shouldRemapOop: oop) ifTrue:
 			[remapBuffer at: i put: (self remapObj: oop)]].
 	1 to: extraRootCount do:
 		[:i |
