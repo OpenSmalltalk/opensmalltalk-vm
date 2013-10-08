@@ -1223,12 +1223,12 @@ StackInterpreterSimulator >> nextShortFrom: aStream swap: swapFlag [
 
 { #category : #testing }
 StackInterpreterSimulator >> objectBefore: addr [
-	| oop prev |
-	oop := objectMemory firstObject.
-	[oop < objectMemory endOfMemory] whileTrue:
-		[prev := oop.  "look here if debugging prev obj overlapping this one"
-		oop := objectMemory objectAfter: oop.
-		oop >= addr ifTrue: [^ prev]].
+	| prev |
+	objectMemory allObjectsDo:
+		[:oop|
+		"look here if debugging prev obj overlapping this one"
+		oop >= addr ifTrue: [^prev].
+		prev := oop].
 	^0
 ]
 

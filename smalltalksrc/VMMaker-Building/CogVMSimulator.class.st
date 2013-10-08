@@ -165,13 +165,10 @@ CogVMSimulator >> CStackPointer [
 CogVMSimulator >> allObjectsSelect: objBlock [
 	"self allObjectsSelect: [:oop | (self baseHeader: oop) = 1234]"
 
-	| oop selected |
-	oop := objectMemory firstObject.
+	| selected |
 	selected := OrderedCollection new.
-	[oop < objectMemory endOfMemory] whileTrue:
-			[(objectMemory isFreeObject: oop)
-				ifFalse: [(objBlock value: oop) ifTrue: [selected addLast: oop]].
-			oop := objectMemory objectAfter: oop].
+	objectMemory allObjectsDo:
+		[:oop| (objBlock value: oop) ifTrue: [selected addLast: oop]].
 	^ selected
 ]
 
@@ -2151,12 +2148,12 @@ CogVMSimulator >> numStackPages [
 
 { #category : #testing }
 CogVMSimulator >> objectBefore: addr [
-	| oop prev |
-	oop := objectMemory firstObject.
-	[oop < objectMemory endOfMemory] whileTrue:
-		[prev := oop.  "look here if debugging prev obj overlapping this one"
-		oop := objectMemory objectAfter: oop.
-		oop >= addr ifTrue: [^ prev]].
+	| prev |
+	objectMemory allObjectsDo:
+		[:oop|
+		"look here if debugging prev obj overlapping this one"
+		oop >= addr ifTrue: [^prev].
+		prev := oop].
 	^0
 ]
 

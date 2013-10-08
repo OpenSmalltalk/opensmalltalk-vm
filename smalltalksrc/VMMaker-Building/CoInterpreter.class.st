@@ -2547,41 +2547,36 @@ CoInterpreter >> ensureAllContextsHaveBytecodePCsOrAreBereaved [
 	 This allows the being married test to avoid checking for a context's frame pointer being in bounds
 	 since all frame pointers must have been created in the current system and so be in bounds.
 	 Thanks to Greg Nuyens for this idea."
-	| oop decodedIP |
-	oop := objectMemory firstObject.
-	[oop < objectMemory freeStart] whileTrue:
-		[((objectMemory isFreeObject: oop) not
-		   and: [objectMemory isContextNonImm: oop]) ifTrue:
+	objectMemory allObjectsDo:
+		[:oop|
+		 (objectMemory isContextNonImm: oop) ifTrue:
 			[(self isMarriedOrWidowedContext: oop)
 				ifTrue: "The stack pages have already been discarded.  Any remaining married contexts are actually widows."
 					[self markContextAsDead: oop]
 				ifFalse:
-					[decodedIP := objectMemory fetchPointer: InstructionPointerIndex ofObject: oop.
+					[| decodedIP |
+					decodedIP := objectMemory fetchPointer: InstructionPointerIndex ofObject: oop.
 					((objectMemory isIntegerObject: decodedIP)
 					 and: [decodedIP signedIntFromLong < 0]) ifTrue:
 						[decodedIP := self mustMapMachineCodePC: (objectMemory integerValueOf: decodedIP)
 											context: oop.
-						 objectMemory storePointerUnchecked: InstructionPointerIndex ofObject: oop withValue: decodedIP]]].
-		 oop := objectMemory objectAfter: oop]
+						 objectMemory storePointerUnchecked: InstructionPointerIndex ofObject: oop withValue: decodedIP]]]]
 ]
 
 { #category : #'frame access' }
 CoInterpreter >> ensureAllContextsWithMethodHaveBytecodePCs: methodObj [
 	"Map all native pcs to bytecoded pcs in all contexts on methodObj.
 	 Used to implement primitiveVoidVMStateForMethod."
-	| oop |
-	oop := objectMemory firstObject.
-	[oop < objectMemory freeStart] whileTrue:
-		[((objectMemory isFreeObject: oop) not
-		  and: [(objectMemory isContextNonImm: oop)
-		  and: [(objectMemory fetchPointer: MethodIndex ofObject: oop) = methodObj]]) ifTrue:
+	objectMemory allObjectsDo:
+		[:oop|
+		 ((objectMemory isContextNonImm: oop)
+		  and: [(objectMemory fetchPointer: MethodIndex ofObject: oop) = methodObj]) ifTrue:
 			[(self isMarriedOrWidowedContext: oop)
 				ifTrue:
 					[(self checkIsStillMarriedContext: oop currentFP: stackPage headFP) ifTrue:
 						[self assert: (self isMachineCodeFrame: (self frameOfMarriedContext: oop)) not]]
 				ifFalse:
-					[self ensureContextHasBytecodePC: oop]].
-		 oop := objectMemory objectAfter: oop]
+					[self ensureContextHasBytecodePC: oop]]]
 ]
 
 { #category : #'frame access' }
