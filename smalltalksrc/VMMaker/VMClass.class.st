@@ -181,7 +181,8 @@ VMClass class >> initializePrimitiveErrorCodes [
 	PrimErrBadMethod		:= pet indexOf: #'bad method' ifAbsent: 12.
 	PrimErrNamedInternal	:= pet indexOf: #'internal error in named primitive machinery' ifAbsent: 13.
 	PrimErrObjectMayMove	:= pet indexOf: #'object may move' ifAbsent: 14.
-	PrimErrLimitExceeded	:= pet indexOf: #'resource limit exceeded' ifAbsent: 15
+	PrimErrLimitExceeded	:= pet indexOf: #'resource limit exceeded' ifAbsent: 15.
+	PrimErrObjectIsPinned	:= pet indexOf: #'object is pinned' ifAbsent: 16
 ]
 
 { #category : #initialization }

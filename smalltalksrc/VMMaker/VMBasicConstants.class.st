@@ -61,6 +61,7 @@ Class {
 		'PrimErrNoMemory',
 		'PrimErrNoModification',
 		'PrimErrNotFound',
+		'PrimErrObjectIsPinned',
 		'PrimErrObjectMayMove',
 		'PrimErrUnsupported',
 		'PrimNoErr',
