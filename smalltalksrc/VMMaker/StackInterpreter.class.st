@@ -8862,7 +8862,7 @@ StackInterpreter >> printActivationNameForSelector: aSelector startClass: startC
 StackInterpreter >> printAllStacks [
 	"Print all the stacks of all running processes, including those that are currently suspended."
 	<api>
-	| oop classObj proc semaphoreClass mutexClass schedLists p processList |
+	| classObj proc semaphoreClass mutexClass schedLists p processList |
 	<inline: false>
 	proc := self activeProcess.
 	self printNameOfClass: (objectMemory fetchClassOf: proc) count: 5; space; printHex: proc.
@@ -8870,13 +8870,12 @@ StackInterpreter >> printAllStacks [
 	self printCallStackFP: framePointer. "first the current activation"
 	semaphoreClass := objectMemory classSemaphore.
 	mutexClass := objectMemory classMutex.
-	oop := objectMemory firstObject.
-	[self oop: oop isLessThan: objectMemory freeStart] whileTrue:
-		[classObj := objectMemory fetchClassOfNonImm: oop.
+	objectMemory allObjectsDo:
+		[:oop|
+		classObj := objectMemory fetchClassOfNonImm: oop.
 		 (classObj = semaphoreClass
 		  or: [classObj = mutexClass]) ifTrue:
-			[self printProcsOnList: oop].
-		 oop := objectMemory objectAfter: oop].
+			[self printProcsOnList: oop]].
 	schedLists := objectMemory fetchPointer: ProcessListsIndex ofObject: self schedulerPointer.
 	p := highestRunnableProcessPriority = 0
 			ifTrue: [objectMemory fetchWordLengthOf: schedLists]
@@ -10450,9 +10449,9 @@ StackInterpreter >> reverseBytesInImage [
 	"First, byte-swap every word in the image. This fixes objects headers."
 	objectMemory reverseBytesFrom: objectMemory startOfMemory to: objectMemory freeStart.
 
-	"Second, return the bytes of bytes-type objects to their orginal order, and perform any
-	 other format conversions."
-	self updateObjectsPostByteSwapFrom: objectMemory firstObject to: objectMemory freeStart
+	"Second, return the bytes of bytes-type objects to their
+	 orginal order, and perform any other format conversions."
+	self updateObjectsPostByteSwap
 ]
 
 { #category : #'I/O primitive support' }
@@ -11954,38 +11953,34 @@ StackInterpreter >> unknownShortOrCodeSizeInKs [
 ]
 
 { #category : #'image save/restore' }
-StackInterpreter >> updateObjectsPostByteSwapFrom: startOop to: stopAddr [ 
-	"Byte-swap the words of all bytes objects in a range of the 
-	 image, including Strings, ByteArrays, and CompiledMethods.
-	 This returns these objects to their original byte ordering 
-	 after blindly byte-swapping the entire image. For compiled 
-	 methods, byte-swap only their bytecodes part.
-	 Ensure floats are in platform-order."
-	| oop fmt wordAddr methodHeader swapFloatWords temp |
+StackInterpreter >> updateObjectsPostByteSwap [
+	"Byte-swap the words of all bytes objects in the image, including Strings, ByteArrays,
+	 and CompiledMethods. This returns these objects to their original byte ordering
+	 after blindly byte-swapping the entire image. For compiled  methods, byte-swap
+	 only their bytecodes part. Ensure floats are in platform-order."
+	| swapFloatWords |
 	swapFloatWords := objectMemory vmEndianness ~= imageFloatsBigEndian.
 	self assert: ClassFloatCompactIndex ~= 0.
-	oop := startOop.
-	[self oop: oop isLessThan: stopAddr] whileTrue:
-		[(objectMemory isFreeObject: oop) ifFalse:
-			[fmt := objectMemory formatOf: oop.
-			 fmt >= self firstByteFormat ifTrue: "oop contains bytes"
-				[wordAddr := oop + BaseHeaderSize.
-				fmt >= self firstCompiledMethodFormat ifTrue: "compiled method; start after methodHeader and literals"
-					[methodHeader := self longAt: oop + BaseHeaderSize.
-					 wordAddr := wordAddr + BytesPerWord + ((methodHeader >> 10 bitAnd: 255) * BytesPerWord)].
-				objectMemory reverseBytesFrom: wordAddr to: oop + (objectMemory sizeBitsOf: oop)].
-			 fmt = self firstLongFormat ifTrue: "Bitmap, Float etc"
-				[(swapFloatWords
-				  and: [(objectMemory compactClassIndexOf: oop) = ClassFloatCompactIndex])
-					ifTrue:
-						[temp := self longAt: oop + BaseHeaderSize.
-						 self longAt: oop + BaseHeaderSize put: (self longAt: oop + BaseHeaderSize + 4).
-						 self longAt: oop + BaseHeaderSize + 4 put: temp]
-					ifFalse:
-						[BytesPerWord = 8 ifTrue: "Object contains 32-bit half-words packed into 64-bit machine words."
-							[wordAddr := oop + BaseHeaderSize.
-							 objectMemory reverseWordsFrom: wordAddr to: oop + (objectMemory sizeBitsOf: oop)]]]].
-			oop := objectMemory objectAfter: oop]
+	objectMemory allObjectsDo:
+		[:oop| | fmt wordAddr methodHeader temp |
+		fmt := objectMemory formatOf: oop.
+		 fmt >= self firstByteFormat ifTrue: "oop contains bytes"
+			[wordAddr := oop + BaseHeaderSize.
+			fmt >= self firstCompiledMethodFormat ifTrue: "compiled method; start after methodHeader and literals"
+				[methodHeader := self longAt: oop + BaseHeaderSize.
+				 wordAddr := wordAddr + (((self literalCountOfHeader: methodHeader) + LiteralStart) * BytesPerWord)].
+			objectMemory reverseBytesFrom: wordAddr to: oop + (objectMemory sizeBitsOf: oop)].
+		 fmt = self firstLongFormat ifTrue: "Bitmap, Float etc"
+			[(swapFloatWords
+			  and: [(objectMemory compactClassIndexOf: oop) = ClassFloatCompactIndex])
+				ifTrue:
+					[temp := self longAt: oop + BaseHeaderSize.
+					 self longAt: oop + BaseHeaderSize put: (self longAt: oop + BaseHeaderSize + 4).
+					 self longAt: oop + BaseHeaderSize + 4 put: temp]
+				ifFalse:
+					[BytesPerWord = 8 ifTrue: "Object contains 32-bit half-words packed into 64-bit machine words."
+						[wordAddr := oop + BaseHeaderSize.
+						 objectMemory reverseWordsFrom: wordAddr to: oop + (objectMemory sizeBitsOf: oop)]]]]
 ]
 
 { #category : #'frame access' }
