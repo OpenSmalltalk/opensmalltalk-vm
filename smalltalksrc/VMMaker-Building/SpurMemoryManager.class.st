@@ -364,7 +364,6 @@ Class {
 	#classVars : [
 		'CheckObjectOverwrite',
 		'FirstValidClassIndex',
-		'NumFreeLists',
 		'RemapBufferSize'
 	],
 	#pools : [
@@ -426,7 +425,6 @@ SpurMemoryManager class >> initBytesPerWord: nBytes [
 { #category : #'class initialization' }
 SpurMemoryManager class >> initialize [
 	"CogObjectMemory initialize"
-	NumFreeLists := 65. "One for each size up to and including 64 slots. One for sizes > 64 slots."
 	CheckObjectOverwrite := true.
 
 	"The remap buffer support is for compatibility; Spur doesn't GC during allocation.
@@ -587,7 +585,7 @@ SpurMemoryManager >> addToFreeList: freeChunk bytes: chunkBytes [
 	self assert: (self isFreeObject: freeChunk).
 	self assert: chunkBytes = (self bytesInObject: freeChunk).
 	index := chunkBytes / self allocationUnit.
-	index < NumFreeLists ifTrue:
+	index < self numFreeLists ifTrue:
 		[self storePointer: self freeChunkNextIndex ofFreeChunk: freeChunk withValue: (freeLists at: index).
 		 freeLists at: index put: freeChunk.
 		 freeListsMask := freeListsMask bitOr: 1 << index.
@@ -757,7 +755,7 @@ SpurMemoryManager >> allFreeObjects [
 { #category : #'free space' }
 SpurMemoryManager >> allFreeObjectsDo: aBlock [
 	| obj |
-	1 to: NumFreeLists - 1 do:
+	1 to: self numFreeLists - 1 do:
 		[:i|
 		obj := freeLists at: i.
 		[obj ~= 0] whileTrue:
@@ -928,7 +926,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 	"for debugging:" "totalFreeOldSpace := self totalFreeListBytes"
 	totalFreeOldSpace := totalFreeOldSpace - chunkBytes. "be optimistic (& don't wait for the write)"
 	initialIndex := chunkBytes / self allocationUnit.
-	(initialIndex < NumFreeLists and: [1 << initialIndex <= freeListsMask]) ifTrue:
+	(initialIndex < self numFreeLists and: [1 << initialIndex <= freeListsMask]) ifTrue:
 		[(freeListsMask anyMask: 1 << initialIndex) ifTrue:
 			[(chunk := freeLists at: initialIndex) ~= 0 ifTrue:
 				[self assert: chunk = (self startOfObject: chunk).
@@ -937,7 +935,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 			 freeListsMask := freeListsMask - (1 << initialIndex)].
 		 "first search for free chunks of a multiple of chunkBytes in size"
 		 index := initialIndex.
-		 [(index := index + index) < NumFreeLists
+		 [(index := index + index) < self numFreeLists
 		  and: [1 << index <= freeListsMask]] whileTrue:
 			[((freeListsMask anyMask: 1 << index)
 			 and: [(chunk := freeLists at: index) ~= 0]) ifTrue:
@@ -953,7 +951,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 		  leave room for the forwarding pointer/next free link, we can only break chunks
 		  that are at least 16 bytes larger, hence start at initialIndex + 2."
 		 index := initialIndex + 1.
-		 [(index := index + 1) < NumFreeLists
+		 [(index := index + 1) < self numFreeLists
 		  and: [1 << index <= freeListsMask]] whileTrue:
 			[(freeListsMask anyMask: 1 << index) ifTrue:
 				[(chunk := freeLists at: index) ~= 0 ifTrue:
@@ -1093,7 +1091,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfExactlyBytes: chunkBytes [
 	"for debugging:" "totalFreeOldSpace := self totalFreeListBytes"
 
 	initialIndex := chunkBytes / self allocationUnit.
-	initialIndex < NumFreeLists ifTrue:
+	initialIndex < self numFreeLists ifTrue:
 		[(1 << initialIndex <= freeListsMask
 		 and: [(chunk := freeLists at: initialIndex) ~= 0]) ifTrue:
 			[self assert: chunk = (self startOfObject: chunk).
@@ -1355,7 +1353,7 @@ SpurMemoryManager >> bestFitCompact [
 
 { #category : #'debug support' }
 SpurMemoryManager >> bitsSetInFreeSpaceMaskForAllFreeLists [
-	0 to: NumFreeLists - 1 do:
+	0 to: self numFreeLists - 1 do:
 		[:i|
 		((freeLists at: i) ~= 0
 		 and: [1 << i noMask: freeListsMask]) ifTrue:
@@ -1428,7 +1426,7 @@ SpurMemoryManager >> bytesInFreeTree: freeNode [
 	freeNode = 0 ifTrue: [^0].
 	freeBytes := 0.
 	bytesInObject := self bytesInObject: freeNode.
-	self assert: bytesInObject / self allocationUnit >= NumFreeLists.
+	self assert: bytesInObject / self allocationUnit >= self numFreeLists.
 	listNode := freeNode.
 	[listNode ~= 0] whileTrue:
 		["self printFreeChunk: listNode"
@@ -1554,7 +1552,8 @@ SpurMemoryManager >> checkHeapIntegrity [
 						[containsYoung := true]]
 				ifFalse:
 					[classOop := self classAtIndex: (classIndex := self classIndexOf: obj).
-					 (classOop isNil or: [classOop = nilObj]) ifTrue:
+					 ((classOop isNil or: [classOop = nilObj])
+					  and: [obj ~= self freeListsObject]) ifTrue:
 						[coInterpreter print: 'object leak in '; printHex: obj; print: ' invalid class index '; printHex: classIndex; print: ' -> '; print: (classOop ifNil: ['nil'] ifNotNil: ['nilObj']); cr.
 						 self eek.
 						 ok := false].
@@ -1714,6 +1713,12 @@ SpurMemoryManager >> classForClassTag: classIndex [
 ]
 
 { #category : #'header format' }
+SpurMemoryManager >> classIndexFieldWidth [
+	"22-bit class mask => ~ 4M classes"
+	^22
+]
+
+{ #category : #'header format' }
 SpurMemoryManager >> classIndexMask [
 	"22-bit class mask => ~ 4M classes"
 	^16r3fffff
@@ -1812,7 +1817,9 @@ SpurMemoryManager >> classTableRootObj [
 SpurMemoryManager >> classTableRootObj: anOop [
 	"For mapInterpreterOops"
 	classTableRootObj := anOop.
-	classTableFirstPage := self fetchPointer: 0 ofObject: classTableRootObj
+	classTableFirstPage := self fetchPointer: 0 ofObject: classTableRootObj.
+	self assert: (self numSlotsOf: classTableRootObj) = (1 << (self classIndexFieldWidth - self classTableMajorIndexShift)).
+	self assert: (self numSlotsOf: classTableFirstPage) - 1 = self classTableMinorIndexMask
 ]
 
 { #category : #'interpreter access' }
@@ -2551,6 +2558,11 @@ SpurMemoryManager >> freeChunkWithBytes: bytes at: address [
 ]
 
 { #category : #'free space' }
+SpurMemoryManager >> freeListsObject [
+	^self objectAfter: trueObj
+]
+
+{ #category : #'free space' }
 SpurMemoryManager >> freeObject: objOop [
 	| bytes |
 	bytes := self bytesInObject: objOop.
@@ -2732,7 +2744,6 @@ SpurMemoryManager >> initialInstanceOf: classObj [
 SpurMemoryManager >> initialize [
 	"We can put all initializatins that set something to 0 or to false here.
 	 In C all global variables are initialized to 0, and 0 is false."
-	freeLists := CArrayAccessor on: (Array new: NumFreeLists withAll: 0).
 	remapBuffer := Array new: RemapBufferSize.
 	remapBufferCount := 0.
 	freeListsMask := totalFreeOldSpace := lowSpaceThreshold := 0.
@@ -2757,10 +2768,9 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 		lastHash
 	"
 	<inline: false>
+	| freeListObj |
 	"image may be at a different address; adjust oops for new location"
 	self adjustAllOopsBy: bytesToShift.
-
-	self initializeOldSpaceFirstFree: freeOldSpaceStart. "initializes endOfMemory, freeStart"
 
 	specialObjectsOop := specialObjectsOop + bytesToShift.
 
@@ -2769,14 +2779,24 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	falseObj	:= self splObj: FalseObject.
 	trueObj		:= self splObj: TrueObject.
 
-	"rootTableCount := 0.
-	rootTableOverflowed := false.
-	lowSpaceThreshold := 0.
+	"In Cog we insist that nil, true & false are next to each other (Cogit generates tighter
+	 conditional branch code as a result).  In addition, Spur places the free lists and
+	 class table root page immediately following them."
+	self assert: nilObj = newSpaceLimit.
+	self assert: falseObj = (self objectAfter: nilObj).
+	self assert: trueObj = (self objectAfter: falseObj).
+	freeListObj := self objectAfter: trueObj.
+	self assert: (self numSlotsOf: freeListObj) = self numFreeLists.
+	self assert: (self formatOf: freeListObj) = (self wordSize = 4
+													ifTrue: [self firstLongFormat]
+													ifFalse: [self sixtyFourBitIndexableFormat]).
+	freeLists := self firstIndexableField: freeListObj.
+	self classTableRootObj: (self objectAfter: freeListObj).
+
+	self initializeOldSpaceFirstFree: freeOldSpaceStart. "initializes endOfMemory, freeStart"
+
+	"lowSpaceThreshold := 0.
 	signalLowSpace := false.
-	compStart := 0.
-	compEnd := 0.
-	fwdTableNext := 0.
-	fwdTableLast := 0.
 	remapBufferCount := 0.
 	tenuringThreshold := 2000.  ""tenure all suriving objects if survivor count is over this threshold""
 	growHeadroom := 4*1024*1024. ""four megabytes of headroom when growing""
@@ -3336,7 +3356,7 @@ SpurMemoryManager >> isValidFreeObject: objOop [
 	^(self isFreeObject: objOop)
 	  and: [((chunk := (self fetchPointer: self freeChunkNextIndex ofFreeChunk: objOop)) = 0
 		   or: [self isFreeObject: chunk])
-	  and: [(self bytesInObject: objOop) / self allocationUnit < NumFreeLists
+	  and: [(self bytesInObject: objOop) / self allocationUnit < self numFreeLists
 		    or: [((chunk := (self fetchPointer: self freeChunkParentIndex ofFreeChunk: objOop)) = 0
 			   or: [self isFreeObject: chunk])
 			  and: [((chunk := (self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: objOop)) = 0
@@ -3565,7 +3585,7 @@ SpurMemoryManager >> lowestFreeChunkAssumingSortedFreeSpace [
 	lowest := sortedFreeChunks = 0
 				ifTrue: [endOfMemory]
 				ifFalse: [sortedFreeChunks].
-	1 to: NumFreeLists - 1 do:
+	1 to: self numFreeLists - 1 do:
 		[:i| | chunk |
 		chunk := freeLists at: i.
 		(chunk ~= 0 and: [chunk < lowest]) ifTrue:
@@ -3657,6 +3677,14 @@ SpurMemoryManager >> numFixedSlotsOf: objOop [
 	<inline: true>
 	<asmLabel: false>
 	^self fixedFieldsOfClassFormat: (self formatOfClass: (self fetchClassOfNonImm: objOop))
+]
+
+{ #category : #'free space' }
+SpurMemoryManager >> numFreeLists [
+	"Answer the number of free lists.  We use freeListsMask, a bitmap, to avoid
+	 reading empty list heads.  This hsould fit in a machine word to end up in a
+	 register during free chunk allocation."
+	^self subclassResponsibility
 ]
 
 { #category : #'object access' }
@@ -3972,7 +4000,7 @@ SpurMemoryManager >> printFreeChunk: freeChunk [
 		print: ' bytes '; printNum: numBytes;
 		print: ' next '; printHexPtrnp: (self fetchPointer: self freeChunkNextIndex
 											ofFreeChunk: freeChunk).
-	numBytes / self allocationUnit > NumFreeLists ifTrue:
+	numBytes / self allocationUnit > self numFreeLists ifTrue:
 		[coInterpreter
 			print: ' ^ '; printHexPtrnp: (self fetchPointer: self freeChunkParentIndex
 											ofFreeChunk: freeChunk);
@@ -4348,6 +4376,16 @@ SpurMemoryManager >> sixtyFourBitIndexableFormat [
 	^9
 ]
 
+{ #category : #'class table' }
+SpurMemoryManager >> sixtyFourBitLongsClassIndexPun [
+	"Class puns are class indices not used by any class.  There may be
+	 an entry for the pun that refers to the notional class of objects with
+	 this class index.  But because the index doesn't match the class it
+	 won't show up in allInstances, hence hiding the object with a pun as
+	 its class index. The puns occupy indices 16 through 31."
+	^19
+]
+
 { #category : #'object access' }
 SpurMemoryManager >> sizeBitsOf: objOop [
 	"Answer the number of bytes in the given object, including its base header, rounded up to an integral number of words.
@@ -4436,7 +4474,7 @@ SpurMemoryManager >> sortFreeSpace [
 	 freeChunkNextAddressIndex from low to high, with the head in sortedFreeChunks."
 
 	self checkFreeSpace.
-	1 to: NumFreeLists - 1 do:
+	1 to: self numFreeLists - 1 do:
 		[:i| self sortFreeListAt: i].
 	sortedFreeChunks := 0.
 	self allObjectsInFreeTree: (freeLists at: 0) do:
@@ -4702,6 +4740,16 @@ SpurMemoryManager >> tenuringThreshold: threshold [
 		/ scavenger pastSpaceBytes asFloat
 ]
 
+{ #category : #'class table' }
+SpurMemoryManager >> thirtyTwoBitLongsClassIndexPun [
+	"Class puns are class indices not used by any class.  There may be
+	 an entry for the pun that refers to the notional class of objects with
+	 this class index.  But because the index doesn't match the class it
+	 won't show up in allInstances, hence hiding the object with a pun as
+	 its class index. The puns occupy indices 16 through 31."
+	^18
+]
+
 { #category : #'interpreter access' }
 SpurMemoryManager >> topRemappableOop [
 	<api>
@@ -4715,7 +4763,7 @@ SpurMemoryManager >> topRemappableOop [
 SpurMemoryManager >> totalFreeListBytes [
 	| freeBytes bytesInObject obj |
 	freeBytes := 0.
-	1 to: NumFreeLists - 1 do:
+	1 to: self numFreeLists - 1 do:
 		[:i| 
 		bytesInObject := i * self allocationUnit.
 		obj := freeLists at: i.

@@ -266,6 +266,14 @@ Spur32BitMemoryManager >> isWordsNonImm: objOop [
 	^(self formatOf: objOop) = self firstLongFormat
 ]
 
+{ #category : #'free space' }
+Spur32BitMemoryManager >> numFreeLists [
+	"Answer the number of free lists.  We use freeListsMask, a bitmap, to avoid
+	 reading empty list heads.  This hsould fit in a machine word to end up in a
+	 register during free chunk allocation."
+	^32
+]
+
 { #category : #'object access' }
 Spur32BitMemoryManager >> numSlotsOf: objOop [
 	<returnTypeC: #usqInt>
