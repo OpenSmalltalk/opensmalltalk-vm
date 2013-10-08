@@ -173,6 +173,22 @@ Spur64BitMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
 	^address
 ]
 
+{ #category : #segments }
+Spur64BitMemoryManager >> initSegmentBridgeWithBytes: numBytes at: address [
+	| numSlots |
+	<var: #numBytes type: #usqLong>
+	self assert: (numBytes >= (self baseHeaderSize + self baseHeaderSize)
+			and: [numBytes \\ self allocationUnit = 0]).
+	numSlots := numBytes - self baseHeaderSize - self baseHeaderSize >> self shiftForWord.
+	self longAt: address
+			put: self numSlotsMask << self numSlotsFullShift + numSlots;
+		longAt: address + self baseHeaderSize
+			put: (self numSlotsMask << self numSlotsFullShift)
+				+ (1 << self pinnedBitShift)
+				+ (self wordIndexableFormat << self formatShift)
+				+ self segmentBridgePun
+]
+
 { #category : #instantiation }
 Spur64BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 	| instSpec classFormat numSlots classIndex newObj fillValue |
@@ -381,7 +397,17 @@ Spur64BitMemoryManager >> tagMask [
 	^7
 ]
 
+{ #category : #'header formats' }
+Spur64BitMemoryManager >> wordIndexableFormat [
+	^self sixtyFourBitIndexableFormat
+]
+
 { #category : #'word size' }
 Spur64BitMemoryManager >> wordSize [
 	^8
+]
+
+{ #category : #'class table' }
+Spur64BitMemoryManager >> wordSizeClassIndexPun [
+	^self sixtyFourBitLongsClassIndexPun
 ]
