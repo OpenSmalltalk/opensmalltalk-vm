@@ -92,6 +92,11 @@ Spur32BitMMLESimulator >> firstIndexableField: objOop [
 				ifFalse: ["byte objects (including CompiledMethod" #'char *'])
 ]
 
+{ #category : #'spur bootstrap' }
+Spur32BitMMLESimulator >> freeLists [
+	^freeLists
+]
+
 { #category : #'memory access' }
 Spur32BitMMLESimulator >> halfWordHighInLong32: long32 [
 	"Used by Balloon"
