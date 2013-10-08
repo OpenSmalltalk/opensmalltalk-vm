@@ -177,6 +177,23 @@ Spur32BitMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
 	^address
 ]
 
+{ #category : #segments }
+Spur32BitMemoryManager >> initSegmentBridgeWithBytes: numBytes at: address [
+	<var: #numBytes type: #usqLong>
+	| numSlots |
+	"must have room for a double header"
+	self assert: (numBytes \\ self allocationUnit = 0
+				 and: [numBytes >= (self baseHeaderSize + self baseHeaderSize)]).
+	self flag: #endianness.
+	numSlots := numBytes - self baseHeaderSize - self baseHeaderSize >> self shiftForWord.
+	self longAt: address put: numSlots;
+		longAt: address + 4 put: self numSlotsMask << self numSlotsHalfShift;
+		longAt: address + 8 put: (1 << self pinnedBitShift)
+								+ (self wordIndexableFormat << self formatShift)
+								+ self segmentBridgePun;
+			longAt: address + 12 put: self numSlotsMask << self numSlotsHalfShift
+]
+
 { #category : #instantiation }
 Spur32BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 	| instSpec classFormat numSlots classIndex newObj fillValue |
@@ -403,7 +420,17 @@ Spur32BitMemoryManager >> tagMask [
 	^3
 ]
 
+{ #category : #'header formats' }
+Spur32BitMemoryManager >> wordIndexableFormat [
+	^self firstLongFormat
+]
+
 { #category : #'word size' }
 Spur32BitMemoryManager >> wordSize [
 	^4
+]
+
+{ #category : #'class table' }
+Spur32BitMemoryManager >> wordSizeClassIndexPun [
+	^self thirtyTwoBitLongsClassIndexPun
 ]
