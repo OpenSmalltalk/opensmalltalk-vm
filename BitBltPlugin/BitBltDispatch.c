@@ -37,7 +37,7 @@
 #include "BitBltInternal.h"
 
 /** Define this to enable profiling */
-#define PROFILING
+//#define PROFILING
 
 #ifdef PROFILING
 #include <stdio.h>
@@ -418,12 +418,13 @@ void copyBitsDispatch(operation_t *op)
 		storedCombinationRule = op->combinationRule;
 		storedFlags = flags;
 		storedFunc = lookupFastPath(op->combinationRule, flags);
-		if (storedFunc == NULL)
+		if (storedFunc == NULL) {
 			/* Unsupported case 8 */
 #ifdef PROFILING
 			profile_unrecorded_cases[8]++;
 #endif
 			storedFunc = copyBitsFallback;
+		}
 	}
 #ifdef PROFILING
 	uint32_t before = gettime();

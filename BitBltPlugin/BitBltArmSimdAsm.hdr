@@ -22,11 +22,6 @@
 ; SOFTWARE.
 ;
 
-; NOTE- older versions of ASASM had a bug which required a workaround in 
-; the macros SEL, UADD8, USUB8 & USUB16. This work-around is NOT present
-; in this version. You must make sure to use an asasm dated post 2013-08-01
-; or version 6495
-
       [ :LNOT: :DEF: DebugData
         GBLL    DebugData
       ]
@@ -162,23 +157,23 @@ PrintAtStartOfLine SETL "$fmt" :RIGHT: 1 = "\n"
  ; Assume asasm, which is lacking a number of key opcodes
 
         MACRO
-$label  SEL$cond $Rd, $Rn, $Rm
-$label  DCI     :CC_ENCODING:"$cond" :OR: &06800FB0 :OR: (:RCONST:$Rn :SHL: 16) :OR: (:RCONST:$Rd :SHL: 12) :OR: (:RCONST:$Rm :SHL: 0)
+$label  SEL     $Rd, $Rn, $Rm
+$label  DCI     &E6800FB0 :OR: (:RCONST:$Rn :SHL: 16) :OR: (:RCONST:$Rd :SHL: 12) :OR: (:RCONST:$Rm :SHL: 0)
         MEND
 
         MACRO
-$label  UADD8$cond $Rd, $Rn, $Rm
-$label  DCI     :CC_ENCODING:"$cond" :OR: &06500F90 :OR: (:RCONST:$Rn :SHL: 16) :OR: (:RCONST:$Rd :SHL: 12) :OR: (:RCONST:$Rm :SHL: 0)
+$label  UADD8   $Rd, $Rn, $Rm
+$label  DCI     &E6500F90 :OR: (:RCONST:$Rn :SHL: 16) :OR: (:RCONST:$Rd :SHL: 12) :OR: (:RCONST:$Rm :SHL: 0)
         MEND
 
         MACRO
-$label  USUB8$cond $Rd, $Rn, $Rm
-$label  DCI     :CC_ENCODING:"$cond" :OR: &06500FF0 :OR: (:RCONST:$Rn :SHL: 16) :OR: (:RCONST:$Rd :SHL: 12) :OR: (:RCONST:$Rm :SHL: 0)
+$label  USUB8   $Rd, $Rn, $Rm
+$label  DCI     &E6500FF0 :OR: (:RCONST:$Rn :SHL: 16) :OR: (:RCONST:$Rd :SHL: 12) :OR: (:RCONST:$Rm :SHL: 0)
         MEND
 
         MACRO
-$label  USUB16$cond $Rd, $Rn, $Rm
-$label  DCI     :CC_ENCODING:"$cond" :OR: &06500F70 :OR: (:RCONST:$Rn :SHL: 16) :OR: (:RCONST:$Rd :SHL: 12) :OR: (:RCONST:$Rm :SHL: 0)
+$label  USUB16  $Rd, $Rn, $Rm
+$label  DCI     &E6500F70 :OR: (:RCONST:$Rn :SHL: 16) :OR: (:RCONST:$Rd :SHL: 12) :OR: (:RCONST:$Rm :SHL: 0)
         MEND
 
         MACRO
