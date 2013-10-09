@@ -523,11 +523,6 @@ CogVMSimulator >> close [  "close any files that ST may have opened"
 ]
 
 { #category : #'simulation only' }
-CogVMSimulator >> cogCodeSize [
-	^cogCodeSize
-]
-
-{ #category : #'simulation only' }
 CogVMSimulator >> cogit [
 	^cogit
 ]
@@ -2252,7 +2247,7 @@ CogVMSimulator >> openOn: fileName [
 
 { #category : #initialization }
 CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
-	"InterpreterSimulator new openOn: 'clone.im' extraMemory: 100000"
+	"CogVMSimulator new openOn: 'clone.im' extraMemory: 100000"
 
 	| f version headerSize count heapSize oldBaseAddr bytesToShift swapBytes hdrNumStackPages
 	 hdrEdenBytes hdrCogCodeSize stackZoneSize methodCacheSize headerFlags primTraceLogSize |
@@ -2269,7 +2264,7 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 					ifTrue: [swapBytes := true]
 					ifFalse: [self error: 'incomaptible image format']].
 	headerSize := self nextLongFrom: f swap: swapBytes.
-	heapSize := self nextLongFrom: f swap: swapBytes.  "first unused location in heap"
+	heapSize := self nextLongFrom: f swap: swapBytes.  "length of heap in file"
 	oldBaseAddr := self nextLongFrom: f swap: swapBytes.  "object memory base address of image"
 	objectMemory specialObjectsOop: (self nextLongFrom: f swap: swapBytes).
 	objectMemory lastHash: (self nextLongFrom: f swap: swapBytes).  "Should be loaded from, and saved to the image header"
@@ -2317,11 +2312,14 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 				+ methodCacheSize
 				+ primTraceLogSize
 				+ self rumpCStackSize.
-	objectMemory setMemoryLimit:   heapBase
+	objectMemory
+		setHeapBase: heapBase
+		memoryLimit:  heapBase
 						+ heapSize
 						+ objectMemory edenBytes
 						+ self interpreterAllocationReserveBytes
-						+ extraBytes.
+						+ extraBytes
+		endOfMemory: heapBase + heapSize.
 
 	objectMemory initialize.
 	self assert: cogCodeSize \\ 4 = 0.
@@ -2336,15 +2334,15 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 	count ~= (heapSize // 4) ifTrue: [self halt].
 	]
 		ensure: [f close].
-	objectMemory setEndOfMemory: heapBase + heapSize.
 	self moveMethodCacheToMemoryAt: cogCodeSize + stackZoneSize.
 	self movePrimTraceLogToMemoryAt: cogCodeSize + stackZoneSize + methodCacheSize.
 
 	self ensureImageFormatIsUpToDate: swapBytes.
 
 	bytesToShift := objectMemory startOfMemory - oldBaseAddr.  "adjust pointers for zero base address"
-	Utilities informUser: 'Relocating object pointers...'
-				during: [self initializeInterpreter: bytesToShift].
+	Utilities
+		informUser: 'Relocating object pointers...'
+		during: [self initializeInterpreter: bytesToShift].
 	self initializeCodeGenerator
 ]
 

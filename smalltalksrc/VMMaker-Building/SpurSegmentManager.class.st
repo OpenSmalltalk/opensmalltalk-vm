@@ -87,12 +87,12 @@ SpurSegmentManager >> writeImageToFile: aBinaryStream [
 { #category : #snapshot }
 SpurSegmentManager >> writeSegment: aSpurSegmentInfo toFile: aBinaryStream [
 	<var: 'aSpurSegmentInfo' type: 'SpurSegmentInfo *'>
-	<var: 'aSpurSegmentInfo' type: #'FILE *'>
+	<var: 'aBinaryStream' type: #'FILE *'>
 	^self cCode:
 			[self
 				sq: aSpurSegmentInfo start
-				Image: aSpurSegmentInfo segSize
-				File: 1
+				Image: 1
+				File: aSpurSegmentInfo segSize
 				Write: aBinaryStream]
 		inSmalltalk:
 			[aBinaryStream

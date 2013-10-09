@@ -682,13 +682,13 @@ CoInterpreter >> activateNewMethod [
 ]
 
 { #category : #'method lookup cache' }
-CoInterpreter >> addNewMethodToCache: class [
+CoInterpreter >> addNewMethodToCache: classObj [
 	"Override to refuse to cache other than compiled methods.
 	 This protects open PICs against having to test for compiled methods."
 	(objectMemory isOopCompiledMethod: newMethod) ifFalse:
 		[primitiveFunctionPointer := #primitiveInvokeObjectAsMethod.
 		^self].
-	super addNewMethodToCache: class
+	super addNewMethodToCache: classObj
 ]
 
 { #category : #'cog jit support' }
@@ -2024,6 +2024,11 @@ CoInterpreter >> clearTraceLog [
 		traceLog at: i put: 0]
 ]
 
+{ #category : #accessing }
+CoInterpreter >> cogCodeSize [
+	^cogCodeSize
+]
+
 { #category : #'compiled methods' }
 CoInterpreter >> cogMethodOf: aMethodOop [
 	<api>
@@ -3070,6 +3075,32 @@ CoInterpreter >> flushMethodCache [
 	1 to: MethodCacheSize do: [ :i | methodCache at: i put: 0 ].
 	lastMethodCacheProbeWrite := 0. "this for primitiveExternalMethod"
 	cogit unlinkAllSends
+]
+
+{ #category : #'lazy become' }
+CoInterpreter >> followForwardedFrameContents: theFP stackPointer: theSP [
+	"follow pointers in the current stack frame up to theSP."
+	<var: #theFP type: #'char *'>
+	<var: #theSP type: #'char *'>
+	theFP + (self frameStackedReceiverOffset: theFP)
+		to: theFP + FoxCallerSavedIP + BytesPerWord
+		by: BytesPerWord
+		do: [:ptr| | oop |
+			oop := stackPages longAt: ptr.
+			((objectMemory isNonImmediate: oop)
+			 and: [objectMemory isForwarded: oop]) ifTrue:
+				[stackPages longAt: ptr put: (objectMemory followForwarded: oop)]].
+	theSP
+		to: (self frameReceiverOffset: theFP)
+		by: BytesPerWord
+		do: [:ptr| | oop |
+			oop := stackPages longAt: ptr.
+			((objectMemory isNonImmediate: oop)
+			 and: [objectMemory isForwarded: oop]) ifTrue:
+				[stackPages longAt: ptr put: (objectMemory followForwarded: oop)]].
+	self assert: (objectMemory isForwarded: (self frameMethod: theFP)) not.
+	(self frameHasContext: theFP) ifTrue:
+		[self assert: (objectMemory isForwarded: (self frameContext: theFP)) not]
 ]
 
 { #category : #'object memory support' }
@@ -5654,13 +5685,15 @@ CoInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imag
 								allocateMemory: heapSize
 								minimum: minimumMemory
 								imageFile: f
-								headerSize: headerSize) asUnsignedInteger.	
+								headerSize: headerSize) asUnsignedInteger.
 	
 	objectMemory memory = nil ifTrue: [self insufficientMemoryAvailableError].
 	heapBase := objectMemory memory + cogCodeSize.
 	self assert: objectMemory startOfMemory = heapBase.
-	objectMemory setMemoryLimit: objectMemory memory + heapSize - 24.  "decrease memoryLimit a tad for safety"
-	objectMemory setEndOfMemory: heapBase + dataSize.
+	objectMemory
+		setHeapBase: heapBase
+		memoryLimit: objectMemory memory + heapSize - 24  "decrease memoryLimit a tad for safety (?!?!? eem eem 10/9/2013 15:15)"
+		endOfMemory: heapBase + dataSize.
 
 	"position file after the header"
 	self sqImageFile: f Seek: headerStart + headerSize.

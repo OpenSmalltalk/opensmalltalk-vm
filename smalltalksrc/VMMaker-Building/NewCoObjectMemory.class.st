@@ -10,6 +10,11 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
+{ #category : #'accessing class hierarchy' }
+NewCoObjectMemory class >> objectRepresentationClass [
+	^CogObjectRepresentationForSqueakV3
+]
+
 { #category : #simulation }
 NewCoObjectMemory class >> simulatorClass [
 	^NewCoObjectMemorySimulator
