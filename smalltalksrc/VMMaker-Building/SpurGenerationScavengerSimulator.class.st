@@ -20,6 +20,13 @@ SpurGenerationScavengerSimulator >> copyAndForward: survivor [
 	^newLocation
 ]
 
+{ #category : #initialization }
+SpurGenerationScavengerSimulator >> manager: aSpurNBitMMXEndianSimulator [
+	manager := aSpurNBitMMXEndianSimulator.
+	aSpurNBitMMXEndianSimulator coInterpreter ifNotNil:
+		[:coint| coInterpreter := coint]
+]
+
 { #category : #'store check' }
 SpurGenerationScavengerSimulator >> remember: objOop [
 	(rememberedSetSize > 0

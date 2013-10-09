@@ -94,7 +94,10 @@ CCodeGenerator >> addClass: aClass [
 	"ikp..."
 	self addPoolVarsFor: aClass.
 	(aClass inheritsFrom: VMStructType) ifFalse:
-		[variables addAll: aClass instVarNames].
+		[variables addAll: (vmClass
+							ifNil: [aClass instVarNames]
+							ifNotNil: [aClass instVarNames reject:
+										[:ivn| vmClass isNonArgumentImplicitReceiverVariableName: ivn]])].
 	self retainMethods: (aClass requiredMethodNames: self options).
 	
 	'Adding Class ' , aClass name , '...'
@@ -161,8 +164,10 @@ CCodeGenerator >> addMethod: aTMethod [
 	 Only allow duplicate definitions for struct accessors, since we don't actually
 	 generate code for these methods and hence the conflict doesn't matter."
 
-	(methods at:  aTMethod selector ifAbsent: []) ifNotNil:
+	(methods at: aTMethod selector ifAbsent: []) ifNotNil:
 		[:conflict |
+		aTMethod compiledMethod isSubclassResponsibility ifTrue:
+			[^nil].
 		(conflict isStructAccessor
 		 and: [aTMethod isStructAccessor
 		 and: [conflict compiledMethod decompileString = aTMethod compiledMethod decompileString]]) ifTrue:
@@ -183,17 +188,20 @@ CCodeGenerator >> addMethodFor: aClass selector: selector [
 	"process optional methods by interpreting the argument to the option: pragma as either
 	 a Cogit class name or a class variable name or a variable name in VMBasicConstants."
 	(method pragmaAt: #option:) ifNotNil:
-		[:pragma| | key |
+		[:pragma| | key vmMaker |
 		key := pragma argumentAt: 1.
+		vmMaker := VMClass getVMMaker.
 		((Cogit withAllSubclasses anySatisfy: [:c| c name = key])
-		and: [VMClass getVMMaker cogitClassName ~= key]) ifTrue:
+		and: [vmMaker cogitClassName ~= key]) ifTrue:
 			[^nil].
 		(aClass bindingOf: key) ifNotNil:
 			[:binding|
 			binding value == false ifTrue: [^nil]].
 		(VMBasicConstants bindingOf: key) ifNotNil:
 			[:binding|
-			binding value == false ifTrue: [^nil]]].
+			binding value == false ifTrue: [^nil]].
+		(vmMaker options at: key ifAbsent: []) ifNotNil:
+			[:option| option == false ifTrue: [^nil]]].
 	tmethod := self addMethod: (self compileToTMethodSelector: selector in: aClass).
 	"If the method has a macro then add the macro.  But keep the method
 	 for analysis purposes (e.g. its variable accesses)."
@@ -454,11 +462,12 @@ CCodeGenerator >> checkClassForNameConflicts: aClass [
 
 	"check for method name collisions"
 	aClass selectors do:
-		[:sel |
+		[:sel | | meth |
 		((methods includesKey: sel)
 		and: [(aClass isStructClass and: [(aClass isAccessor: sel)
 				and: [(methods at: sel) isStructAccessor]]) not
-		and: [((aClass compiledMethodAt: sel) pragmaAt: #doNotGenerate) isNil]]) ifTrue:
+		and: [((meth := aClass compiledMethodAt: sel) pragmaAt: #doNotGenerate) isNil
+		and: [meth isSubclassResponsibility not]]]) ifTrue:
 			[self error: 'Method ', sel, ' was defined in a previously added class.']]
 ]
 
@@ -2532,6 +2541,7 @@ CCodeGenerator >> initializeCTranslationDictionary [
 
 	#shouldNotImplement				#generateSmalltalkMetaError:on:indent:
 	#shouldBeImplemented			#generateSmalltalkMetaError:on:indent:
+	#subclassResponsibility			#generateSmalltalkMetaError:on:indent:
 	).
 
 	1 to: pairs size by: 2 do: [:i |

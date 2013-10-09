@@ -54,14 +54,13 @@ StackInterpreterSimulator class >> initializeWithOptions: optionsDictionaryOrArr
 	"The relevant ObjectMemory and Interpreter classes must be initialized in order.
 	 This happens notionally every time we start the simulator,
 	 but in fact happens when ever we instantiate a simulator."
-	| optionsDictionary |
-	optionsDictionary := optionsDictionaryOrArray isArray
+	initializationOptions := optionsDictionaryOrArray isArray
 							ifTrue: [Dictionary newFromPairs: optionsDictionaryOrArray]
 							ifFalse: [optionsDictionaryOrArray].
 	(objectMemoryClassOrNil ifNil: [self objectMemoryClass])
-		initializeWithOptions: optionsDictionary.
+		initializeWithOptions: initializationOptions.
 
-	StackInterpreter initializeWithOptions: optionsDictionary
+	self initializeWithOptions: initializationOptions
 ]
 
 { #category : #'instance creation' }
@@ -81,13 +80,18 @@ StackInterpreterSimulator class >> onObjectMemory: anObjectMemory [
 
 { #category : #'instance creation' }
 StackInterpreterSimulator class >> onObjectMemory: anObjectMemory options: optionsDictionaryOrArray [
+	| simulatorClass |
 	^self == StackInterpreterSimulator
 		ifTrue:
-			[self initializeWithOptions: optionsDictionaryOrArray
+			[simulatorClass := SmalltalkImage current endianness == #big
+								ifTrue: [self notYetImplemented"StackInterpreterSimulatorMSB"]
+								ifFalse: [StackInterpreterSimulatorLSB].
+			simulatorClass initializeWithOptions: optionsDictionaryOrArray
 				objectMemoryClass: (anObjectMemory ifNotNil: [anObjectMemory class]).
-			 SmalltalkImage current endianness == #big
-				ifTrue: [self notYetImplemented"StackInterpreterSimulatorMSB onObjectMemory: anObjectMemory"]
-				ifFalse: [StackInterpreterSimulatorLSB onObjectMemory: anObjectMemory]]
+			 simulatorClass
+				onObjectMemory: (anObjectMemory ifNil:
+										[self objectMemoryClass simulatorClass new])
+				options: optionsDictionaryOrArray]
 		ifFalse: [super basicNew objectMemory: anObjectMemory; initialize]
 ]
 
@@ -1325,8 +1329,8 @@ StackInterpreterSimulator >> openOn: fileName [
 StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 	"StackInterpreterSimulator new openOn: 'clone.im' extraMemory: 100000"
 
-	| f version headerSize count oldBaseAddr bytesToShift swapBytes
-	  hdrNumStackPages hdrEdenBytes headerFlags |
+	| f version headerSize dataSize count oldBaseAddr bytesToShift swapBytes
+	  hdrNumStackPages hdrEdenBytes headerFlags heapBase |
 	"open image file and read the header"
 
 	["begin ensure block..."
@@ -1340,7 +1344,7 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 					ifTrue: [swapBytes := true]
 					ifFalse: [self error: 'incomaptible image format']].
 	headerSize := self nextLongFrom: f swap: swapBytes.
-	objectMemory setEndOfMemory: (self nextLongFrom: f swap: swapBytes).  "first unused location in heap"
+	dataSize := self nextLongFrom: f swap: swapBytes.  "length of heap in file"
 	oldBaseAddr := self nextLongFrom: f swap: swapBytes.  "object memory base address of image"
 	objectMemory specialObjectsOop: (self nextLongFrom: f swap: swapBytes).
 	objectMemory lastHash: (self nextLongFrom: f swap: swapBytes).  "Should be loaded from, and saved to the image header"
@@ -1368,19 +1372,22 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 							ifFalse: [hdrEdenBytes]).
 	desiredEdenBytes := hdrEdenBytes.
 	"allocate interpreter memory"
-	objectMemory setMemoryLimit: objectMemory endOfMemory + extraBytes + objectMemory edenBytes + self interpreterAllocationReserveBytes.
+	heapBase := objectMemory startOfMemory.
+	objectMemory
+		setHeapBase: heapBase
+		memoryLimit: heapBase + dataSize + extraBytes + objectMemory edenBytes + self interpreterAllocationReserveBytes
+		endOfMemory: heapBase + dataSize.
+	objectMemory memory: (Bitmap new: objectMemory memoryLimit // 4).
 
 	"read in the image in bulk, then swap the bytes if necessary"
 	f position: headerSize.
-	objectMemory memory: (Bitmap new: objectMemory memoryLimit // 4).
-	count := f readInto: objectMemory memory startingAt: 1 count: objectMemory endOfMemory // 4.
+	count := f readInto: objectMemory memory startingAt: 1 count: dataSize // 4.
 	count ~= (objectMemory endOfMemory // 4) ifTrue: [self halt].
 	]
 		ensure: [f close].
 
 	self ensureImageFormatIsUpToDate: swapBytes.
 
-	objectMemory initialize.
 	bytesToShift := objectMemory startOfMemory - oldBaseAddr.  "adjust pointers for zero base address"
 	Utilities informUser: 'Relocating object pointers...'
 				during: [self initializeInterpreter: bytesToShift].
@@ -2185,9 +2192,7 @@ StackInterpreterSimulator >> startInSender [
 
 { #category : #initialization }
 StackInterpreterSimulator >> startOfMemory [
-	"Return the start of object memory."
-
-	^ 0
+	self shouldNotImplement
 ]
 
 { #category : #'debug support' }

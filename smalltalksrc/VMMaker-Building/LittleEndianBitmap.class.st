@@ -183,6 +183,15 @@ LittleEndianBitmap >> longLongAt: byteAddress [
 ]
 
 { #category : #accessing }
+LittleEndianBitmap >> longLongAt: byteAddress put: a64BitValue [
+	byteAddress - 1 \\ 8 ~= 0 ifTrue: [self unalignedAccessError].
+	self
+		longAt: byteAddress put: (a64BitValue bitAnd: 16rffffffff);
+		longAt: byteAddress + 4 put: a64BitValue >> 32.
+	^a64BitValue
+]
+
+{ #category : #accessing }
 LittleEndianBitmap >> unsignedByteAt: byteAddress [
 	"Extract a byte from a Bitmap (little-endian version)"
 	| lowBits |

@@ -975,7 +975,7 @@ SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceByt
 					manager: self
 					newSpaceStart: startOfMemory
 					newSpaceBytes: newSpaceBytes
-					edenBytes: newSpaceBytes * 5 // 7 "David's paper uses 140Kb eden + 2 x 28kb survivor spaces :-)"
+					edenBytes: newSpaceBytes * self scavengerDenominator - self numSurvivorSpaces // self scavengerDenominator
 ]
 
 { #category : #allocation }
@@ -1307,6 +1307,7 @@ SpurMemoryManager >> arrayClassIndexPun [
 
 { #category : #'header formats' }
 SpurMemoryManager >> arrayFormat [
+	<api>
 	^2
 ]
 
@@ -1966,7 +1967,8 @@ SpurMemoryManager >> coInterpreter [
 SpurMemoryManager >> coInterpreter: aCoInterpreter [
 	<doNotGenerate>
 	coInterpreter := aCoInterpreter.
-	scavenger coInterpreter: aCoInterpreter
+	scavenger ifNotNil:
+		[scavenger coInterpreter: aCoInterpreter]
 ]
 
 { #category : #'object access' }
@@ -2033,6 +2035,13 @@ SpurMemoryManager >> containsOnlyValidBecomeObjects: array1 and: array2 [
 	^0
 ]
 
+{ #category : #snapshot }
+SpurMemoryManager >> defaultEdenBytes [
+	^2 * 1024 * 1024
+	+ (coInterpreter interpreterAllocationReserveBytes
+	    * self scavengerDenominator + self numSurvivorSpaces // self scavengerDenominator)
+]
+
 { #category : #'become implementation' }
 SpurMemoryManager >> doBecome: obj1 with: obj2 copyHash: copyHashFlag [
 	((self isClassInClassTable: obj1)
@@ -2047,7 +2056,19 @@ SpurMemoryManager >> doBecome: obj1 with: obj2 copyHash: copyHashFlag [
 
 { #category : #accessing }
 SpurMemoryManager >> edenBytes [
+	"during snapshot load newSpaceLimit holds newSpace size temporarily."
+	scavenger eden limit ifNil:
+		[| newSpaceBytes |
+		 newSpaceBytes := newSpaceLimit - coInterpreter interpreterAllocationReserveBytes.
+		 ^newSpaceBytes * self scavengerDenominator - self numSurvivorSpaces // self scavengerDenominator
+			roundTo: self allocationUnit].
+	"once initialized we can query the actual beast."
 	^scavenger eden limit - scavenger eden start
+]
+
+{ #category : #snapshot }
+SpurMemoryManager >> edenBytes: edenBytes [
+	newSpaceLimit := edenBytes
 ]
 
 { #category : #instantiation }
@@ -2321,11 +2342,13 @@ SpurMemoryManager >> firstAccessibleObject [
 
 { #category : #'header formats' }
 SpurMemoryManager >> firstByteFormat [
+	<api>
 	^16
 ]
 
 { #category : #'header formats' }
 SpurMemoryManager >> firstCompiledMethodFormat [
+	<api>
 	^24
 ]
 
@@ -2369,6 +2392,7 @@ SpurMemoryManager >> firstIndexableField: objOop [
 
 { #category : #'header formats' }
 SpurMemoryManager >> firstLongFormat [
+	<api>
 	^10
 ]
 
@@ -2791,6 +2815,7 @@ SpurMemoryManager >> inPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag [
 
 { #category : #'header formats' }
 SpurMemoryManager >> indexablePointersFormat [
+	<api>
 	^3
 ]
 
@@ -2846,6 +2871,7 @@ SpurMemoryManager >> initialize [
 	statSGCDeltaUsecs := statIGCDeltaUsecs := statFGCDeltaUsecs := 0.
 
 	"we can initialize things that are virtual in C."
+	scavenger := SpurGenerationScavengerSimulator new manager: self; yourself.
 	segmentManager := SpurSegmentManager new manager: self; yourself.
 
 	"We can also initialize here anything that is only for simulation."
@@ -3722,6 +3748,11 @@ SpurMemoryManager >> memory: aValue [
 	^memory := aValue
 ]
 
+{ #category : #snapshot }
+SpurMemoryManager >> memoryLimit [
+	^endOfMemory
+]
+
 { #category : #'simulation only' }
 SpurMemoryManager >> methodArgumentCount [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
@@ -3882,6 +3913,12 @@ SpurMemoryManager >> numStrongSlotsOf: objOop ephemeronInactiveIf: criterion [
 	"CompiledMethod: contains both pointers and bytes"
 	numLiterals := coInterpreter literalCountOf: objOop.
 	^numLiterals + LiteralStart
+]
+
+{ #category : #scavenger }
+SpurMemoryManager >> numSurvivorSpaces [
+	"there are two survivor spaces, futureSPace & pastSpace."
+	^2
 ]
 
 { #category : #'object access' }
@@ -4324,6 +4361,14 @@ SpurMemoryManager >> scanClassPostBecome: startClassObj effects: becomeEffects [
 SpurMemoryManager >> scavenger [
 	<doNotGenerate>
 	^scavenger
+]
+
+{ #category : #scavenger }
+SpurMemoryManager >> scavengerDenominator [
+	"David's paper uses 140Kb eden + 2 x 28kb survivor spaces,
+	 which is 5 7ths for eden and 1 7th each for the survivor spaces.
+	 So express scavenger sizes in 7ths"
+	^7
 ]
 
 { #category : #'generation scavenging' }
@@ -4920,6 +4965,12 @@ SpurMemoryManager >> unlinkFreeChunk: chunk atIndex: index [
 	^chunk
 ]
 
+{ #category : #'memory access' }
+SpurMemoryManager >> vmEndianness [
+	"1 = big, 0 = little"
+	^self subclassResponsibility
+]
+
 { #category : #'class table puns' }
 SpurMemoryManager >> weakArrayClassIndexPun [
 	"Class puns are class indices not used by any class.  There is an entry
@@ -4932,6 +4983,7 @@ SpurMemoryManager >> weakArrayClassIndexPun [
 
 { #category : #'header formats' }
 SpurMemoryManager >> weakArrayFormat [
+	<api>
 	^4
 ]
 

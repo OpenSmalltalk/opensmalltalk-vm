@@ -208,3 +208,9 @@ Spur32BitMMLESimulator >> storeFloatAt: floatBitsAddress from: aFloat [
 	self long32At: floatBitsAddress put: (aFloat at: 2).
 	self long32At: floatBitsAddress+4 put: (aFloat at: 1)
 ]
+
+{ #category : #'memory access' }
+Spur32BitMMLESimulator >> vmEndianness [
+	"1 = big, 0 = little"
+	^0
+]

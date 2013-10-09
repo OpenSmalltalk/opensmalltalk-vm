@@ -10,6 +10,11 @@ Class {
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
+{ #category : #'accessing class hierarchy' }
+Spur32BitCoMemoryManager class >> objectRepresentationClass [
+	^CogObjectRepresentationFor32BitSpur
+]
+
 { #category : #trampolines }
 Spur32BitCoMemoryManager >> ceClassAtIndex: classIndex [
 	<api>
@@ -39,6 +44,23 @@ Spur32BitCoMemoryManager >> clearLeakMapAndMapAccessibleObjects [
 	 Override to set a bit at each Cog method"
 	super clearLeakMapAndMapAccessibleObjects.
 	cogit addCogMethodsToHeapMap
+]
+
+{ #category : #accessing }
+Spur32BitCoMemoryManager >> edenBytes [
+	"during snapshot load newSpaceLimit holds newSpace size + cogCodeSize temporarily."
+	scavenger eden limit ifNil:
+		[| newSpaceBytes |
+		 newSpaceBytes := newSpaceLimit - coInterpreter cogCodeSize - coInterpreter interpreterAllocationReserveBytes.
+		 ^newSpaceBytes * self scavengerDenominator - self numSurvivorSpaces // self scavengerDenominator
+			roundTo: self allocationUnit].
+	"once initialized we can query the actual beast."
+	^scavenger eden limit - scavenger eden start
+]
+
+{ #category : #snapshot }
+Spur32BitCoMemoryManager >> edenBytes: edenBytes [
+	newSpaceLimit := edenBytes + coInterpreter cogCodeSize
 ]
 
 { #category : #'cog jit support' }

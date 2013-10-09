@@ -5,6 +5,11 @@ Class {
 }
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacadeForSqueakV3ObjectRepresentation class >> objectRepresentationClass [
+	^CogObjectRepresentationForSqueakV3
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacadeForSqueakV3ObjectRepresentation >> characterTable [
 	^self oopForObject: Character characterTable
 ]
@@ -12,11 +17,6 @@ CurrentImageCoInterpreterFacadeForSqueakV3ObjectRepresentation >> characterTable
 { #category : #accessing }
 CurrentImageCoInterpreterFacadeForSqueakV3ObjectRepresentation >> formatOfClass: classOop [ 
 	^(self objectForOop: classOop) format << 1
-]
-
-{ #category : #accessing }
-CurrentImageCoInterpreterFacadeForSqueakV3ObjectRepresentation >> objectRepresentationClass [
-	^CogObjectRepresentationForSqueakV3
 ]
 
 { #category : #accessing }

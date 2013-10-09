@@ -395,6 +395,9 @@ SpurGenerationScavenger >> initFutureSpaceStart [
 
 { #category : #initialization }
 SpurGenerationScavenger >> initialize [
+	pastSpace := SpurNewSpaceSpace new.
+	futureSpace := SpurNewSpaceSpace new.
+	eden := SpurNewSpaceSpace new.
 	rememberedSet := CArrayAccessor on: (Array new: RememberedSetLimit).
 	rememberedSetSize := 0.
 	tenuringThreshold := 0.
@@ -454,9 +457,6 @@ SpurGenerationScavenger >> manager: aSpurMemoryManager newSpaceStart: startAddre
 
 	"for tenuring we require older objects below younger objects.  since allocation
 	 grows up this means that the survivor spaces must preceed eden."
-	pastSpace := SpurNewSpaceSpace new.
-	futureSpace := SpurNewSpaceSpace new.
-	eden := SpurNewSpaceSpace new.
 
 	pastSpace start: startAddress limit: startAddress + survivorBytes.
 	futureSpace start: pastSpace limit limit: pastSpace limit + survivorBytes.

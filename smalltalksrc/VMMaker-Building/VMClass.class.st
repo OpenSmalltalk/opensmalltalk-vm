@@ -141,6 +141,13 @@ VMClass class >> initializeMiscConstants [
 	self isInterpreterClass ifTrue:
 		[STACKVM := COGVM := COGMTVM := false].
 	NewspeakVM := initializationOptions at: #NewspeakVM ifAbsent: [false].
+	initializationOptions
+		at: #Spur
+		put: ((initializationOptions at: #ObjectMemory ifAbsent: [])
+				ifNil: [false]
+				ifNotNil:
+					[:objMemClassName|
+					(Smalltalk at: objMemClassName) inheritsFrom: SpurMemoryManager]).
 	MULTIPLEBYTECODESETS := initializationOptions at: #MULTIPLEBYTECODESETS ifAbsent: [false].
 	"N.B.  Not yet implemented."
 	IMMUTABILITY := initializationOptions at: #IMMUTABILITY ifAbsent: [false].
@@ -250,6 +257,11 @@ VMClass class >> objectMemoryClass [
 	^Smalltalk at: (initializationOptions
 					at: #ObjectMemory
 					ifAbsent: [^self defaultObjectMemoryClass])
+]
+
+{ #category : #'accessing class hierarchy' }
+VMClass class >> objectRepresentationClass [
+	^self objectMemoryClass objectRepresentationClass
 ]
 
 { #category : #utilities }
@@ -602,6 +614,12 @@ VMClass >> minorVersion [
 VMClass >> numElementsIn: anArray [
 	<cmacro: '(anArray) (sizeof(anArray)/sizeof(anArray[0]))'>
 	^anArray size
+]
+
+{ #category : #accessing }
+VMClass >> objectRepresentationClass [
+	<doNotGenerate>
+	^self class objectRepresentationClass
 ]
 
 { #category : #'oop comparison' }

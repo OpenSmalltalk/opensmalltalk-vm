@@ -17,8 +17,9 @@ Class {
 
 { #category : #translation }
 SimpleStackBasedCogit class >> ancilliaryClasses: options [
-	"hard-wired for now"
-	^(super ancilliaryClasses: options), { CogObjectRepresentationForSqueakV3 }
+	initializationOptions ifNil:
+		[initializationOptions := options].
+	^(super ancilliaryClasses: options), (self objectRepresentationClass withAllSuperclasses copyUpThrough: CogObjectRepresentation)
 ]
 
 { #category : #documentation }
@@ -2201,6 +2202,14 @@ SimpleStackBasedCogit >> genPrimitiveMultiply [
 SimpleStackBasedCogit >> genPrimitiveNew [
 	| r |
 	(r := objectRepresentation genInnerPrimitiveNew: BytesPerWord) < 0 ifTrue:
+		[^r].
+	^self compileFallbackToInterpreterPrimitive
+]
+
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> genPrimitiveNewMethod [
+	| r |
+	(r := objectRepresentation genInnerPrimitiveNewMethod: 2 * BytesPerWord) < 0 ifTrue:
 		[^r].
 	^self compileFallbackToInterpreterPrimitive
 ]
