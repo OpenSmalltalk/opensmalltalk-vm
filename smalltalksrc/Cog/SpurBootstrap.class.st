@@ -1642,5 +1642,5 @@ SpurBootstrap >> writeSnapshotOfTransformedImage [
 					[:ign| heap allocateOldSpaceChunkOfExactlyBytes: (counts at: counts size - 1) value].
 	heap segmentManager initializeFromFreeChunks: (barriers sort collect: [:b| heap objectStartingAt: b]).
 	sim imageName: 'spur.image'.
-	sim writeImageFileIO: heap 
+	sim writeImageFileIO
 ]
