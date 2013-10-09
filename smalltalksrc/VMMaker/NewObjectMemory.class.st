@@ -2073,12 +2073,6 @@ NewObjectMemory >> objectAfter: oop [
 	^self oopFromChunk: oop + sz
 ]
 
-{ #category : #'cog jit support' }
-NewObjectMemory >> objectRepresentationClass [
-	<doNotGenerate>
-	^CogObjectRepresentationForSqueakV3
-]
-
 { #category : #'debug support' }
 NewObjectMemory >> okayOop: signedOop [
 	"Verify that the given oop is legitimate. Check address, header, and size but not class."
@@ -2367,6 +2361,11 @@ NewObjectMemory >> restoreHeadersFrom: firstIn to: lastIn from: hdrBaseIn and: f
 		[(self isFreeObject: oop) ifFalse:
 			[self longAt: oop put: ((self longAt: oop) bitAnd: AllButMarkBit)].
 		oop := self objectAfter: oop]
+]
+
+{ #category : #snapshot }
+NewObjectMemory >> reverseBytesInMemory [
+	self reverseBytesFrom: self startOfMemory to: freeStart
 ]
 
 { #category : #'header access' }

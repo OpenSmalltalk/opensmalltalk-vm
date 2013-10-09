@@ -4233,7 +4233,7 @@ StackInterpreter >> ensureFrameIsMarried: theFP SP: theSP [
 
 { #category : #'image save/restore' }
 StackInterpreter >> ensureImageFormatIsUpToDate: swapBytes [
-	"Ensure the image data has been updayed to suit the current VM."
+	"Ensure the image data has been updated to suit the current VM."
 	<inline: false>
 	swapBytes
 		ifTrue: [self reverseBytesInImage]
@@ -10068,10 +10068,10 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 	"This code is based on C code by Ian Piumarta and Smalltalk code by Tim Rowledge. Many thanks to both of you!!"
 
 	| swapBytes headerStart headerSize dataSize oldBaseAddr hdrNumStackPages
-	  minimumMemory memStart bytesRead bytesToShift heapSize hdrEdenBytes
+	  minimumMemory heapBase bytesRead bytesToShift heapSize hdrEdenBytes
 	  headerFlags hdrMaxExtSemTabSize |
 	<var: #f type: 'sqImageFile '>
-	<var: #memStart type: 'usqInt'>
+	<var: #heapBase type: 'usqInt'>
 	<var: #desiredHeapSize type: 'usqInt'>
 	<var: #headerStart type: 'squeakFileOffsetType '>
 	<var: #dataSize type: 'size_t '>
@@ -10133,9 +10133,11 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 								headerSize: headerSize) asUnsignedInteger.
 	objectMemory memory = nil ifTrue: [self insufficientMemoryAvailableError].
 
-	memStart := objectMemory startOfMemory.
-	objectMemory setMemoryLimit: (memStart + heapSize) - 24.  "decrease memoryLimit a tad for safety"
-	objectMemory setEndOfMemory: memStart + dataSize.
+	heapBase := objectMemory startOfMemory.
+	objectMemory
+		setHeapBase: heapBase
+		memoryLimit: (heapBase + heapSize) - 24  "decrease memoryLimit a tad for safety"
+		endOfMemory: heapBase + dataSize.
 
 	"position file after the header"
 	self sqImageFile: f Seek: headerStart + headerSize.
@@ -10147,10 +10149,9 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 	self ensureImageFormatIsUpToDate: swapBytes.
 
 	"compute difference between old and new memory base addresses"
-	bytesToShift := memStart - oldBaseAddr.
+	bytesToShift := heapBase - oldBaseAddr.
 	self initializeInterpreter: bytesToShift.  "adjusts all oops to new location"
 	^dataSize
-
 ]
 
 { #category : #'image save/restore' }
@@ -10452,7 +10453,7 @@ StackInterpreter >> reverseBytesInImage [
 	"Byte-swap all words in memory after reading in the entire image file with bulk read. Contributed by Tim Rowledge."
 
 	"First, byte-swap every word in the image. This fixes objects headers."
-	objectMemory reverseBytesFrom: objectMemory startOfMemory to: objectMemory freeStart.
+	objectMemory reverseBytesInMemory.
 
 	"Second, return the bytes of bytes-type objects to their
 	 orginal order, and perform any other format conversions."
@@ -12238,9 +12239,9 @@ StackInterpreter >> writeImageFileIO [
 	objectMemory hasSpurMemoryManagerAPI
 		ifTrue:
 			[self putLong: objectMemory firstSegmentBytes toFile: f."Pad the rest of the header."
-			 3 timesRepeat: [self putLong: 0 toFile: f]]
+			 1 to: 3 do: [:i| self putLong: 0 toFile: f]]
 		ifFalse:
-			[1 to: 4 do: [:i | self putLong: 0 toFile: f]].  "fill remaining header words with zeros"
+			[1 to: 4 do: [:i| self putLong: 0 toFile: f]].  "fill remaining header words with zeros"
 	self successful ifFalse: [
 		"file write or seek failure"
 		self cCode: 'sqImageFileClose(f)'.
@@ -12256,7 +12257,10 @@ StackInterpreter >> writeImageFileIO [
 		ifFalse:
 			[| memStart |
 			memStart := objectMemory baseAddressOfImage.
-			bytesWritten := self cCode: 'sqImageFileWrite(pointerForOop(memStart), sizeof(unsigned char), imageBytes, f)'.
+			bytesWritten := self sq: (self pointerForOop: memStart)
+								Image: (self sizeof: #char)
+								File: objectMemory imageSizeToWrite
+								Write: f.
 	self touch: memStart].
 	self success: bytesWritten = objectMemory imageSizeToWrite.
 	self cCode: 'sqImageFileClose(f)'

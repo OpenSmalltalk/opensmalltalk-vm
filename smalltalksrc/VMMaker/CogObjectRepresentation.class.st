@@ -34,6 +34,24 @@ CogObjectRepresentation class >> typeForSelf [
 	^#implicit
 ]
 
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genInnerPrimitiveNew: retNoffset [
+	self subclassResponsibility.
+	^0
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genInnerPrimitiveNewMethod: retNoffset [
+	self subclassResponsibility.
+	^0
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genInnerPrimitiveNewWithArg: retNoffset [
+	self subclassResponsibility.
+	^0
+]
+
 { #category : #initialization }
 CogObjectRepresentation >> generateObjectRepresentationTrampolines [
 	ceStoreCheckTrampoline := cogit

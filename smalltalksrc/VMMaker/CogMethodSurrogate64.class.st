@@ -29,7 +29,7 @@ Class {
 
 { #category : #accessing }
 CogMethodSurrogate64 class >> alignedByteSize [
-	^40
+	^32 + self baseHeaderSize
 ]
 
 { #category : #accessing }
@@ -45,60 +45,60 @@ CogMethodSurrogate64 class >> offsetOf: aByteSymbol [
 
 { #category : #accessing }
 CogMethodSurrogate64 >> blockEntryOffset [
-	^memory unsignedShortAt: address + 15
+	^memory unsignedShortAt: address + 7 + baseHeaderSize
 ]
 
 { #category : #accessing }
 CogMethodSurrogate64 >> blockEntryOffset: aValue [
 	^memory
-		unsignedShortAt: address + 15
+		unsignedShortAt: address + baseHeaderSize + 7
 		put: aValue
 ]
 
 { #category : #accessing }
 CogMethodSurrogate64 >> blockSize [
-	^memory unsignedShortAt: address + 13
+	^memory unsignedShortAt: address + 5 + baseHeaderSize
 ]
 
 { #category : #accessing }
 CogMethodSurrogate64 >> blockSize: aValue [
 	^memory
-		unsignedShortAt: address + 13
+		unsignedShortAt: address + baseHeaderSize + 5
 		put: aValue
 ]
 
 { #category : #accessing }
 CogMethodSurrogate64 >> methodHeader [
-	^memory unsignedLongLongAt: address + 25
+	^memory unsignedLongLongAt: address + 17 + baseHeaderSize
 ]
 
 { #category : #accessing }
 CogMethodSurrogate64 >> methodHeader: aValue [
 	^memory
-		unsignedLongLongAt: address + 25
+		unsignedLongLongAt: address + baseHeaderSize + 17
 		put: aValue
 ]
 
 { #category : #accessing }
 CogMethodSurrogate64 >> methodObject [
-	^memory unsignedLongLongAt: address + 17
+	^memory unsignedLongLongAt: address + 9 + baseHeaderSize
 ]
 
 { #category : #accessing }
 CogMethodSurrogate64 >> methodObject: aValue [
 	^memory
-		unsignedLongLongAt: address + 17
+		unsignedLongLongAt: address + baseHeaderSize + 9
 		put: aValue
 ]
 
 { #category : #accessing }
 CogMethodSurrogate64 >> selector [
-	^memory unsignedLongLongAt: address + 33
+	^memory unsignedLongLongAt: address + 25 + baseHeaderSize
 ]
 
 { #category : #accessing }
 CogMethodSurrogate64 >> selector: aValue [
 	^memory
-		unsignedLongLongAt: address + 33
+		unsignedLongLongAt: address + baseHeaderSize + 25
 		put: aValue
 ]

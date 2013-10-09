@@ -19,6 +19,11 @@ Class {
 	#category : #'VMMaker-Support'
 }
 
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade class >> objectRepresentationClass [
+	^self subclassResponsibility
+]
+
 { #category : #labels }
 CurrentImageCoInterpreterFacade >> addLabel: l [
 	(variables includesKey: l) ifFalse:
@@ -516,11 +521,6 @@ CurrentImageCoInterpreterFacade >> objectForOop: anOop [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> objectMemory [
 	^self
-]
-
-{ #category : #accessing }
-CurrentImageCoInterpreterFacade >> objectRepresentationClass [
-	^self subclassResponsibility
 ]
 
 { #category : #'object map' }

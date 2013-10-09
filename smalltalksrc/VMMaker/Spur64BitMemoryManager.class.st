@@ -4,11 +4,6 @@ Class {
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
-{ #category : #accessing }
-Spur64BitMemoryManager class >> objectRepresentationClass [
-	^CogObjectRepresentationFor64BitSpur
-]
-
 { #category : #'word size' }
 Spur64BitMemoryManager class >> wordSize [
 	^8
@@ -321,11 +316,6 @@ Spur64BitMemoryManager >> objectBytesForSlots: numSlots [
 	+ (numSlots >= self numSlotsMask
 		ifTrue: [self baseHeaderSize + self baseHeaderSize]
 		ifFalse: [self baseHeaderSize])
-]
-
-{ #category : #simulation }
-Spur64BitMemoryManager >> objectRepresentationClass [
-	^CogObjectRepresentationFor64BitSpur
 ]
 
 { #category : #'object access' }
