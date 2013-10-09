@@ -1629,7 +1629,8 @@ SpurBootstrap >> writeSnapshotOfTransformedImage [
 	heap := TransformedImage veryDeepCopy.
 	sim := StackInterpreterSimulator onObjectMemory: heap.
 	heap coInterpreter: sim.
-	sim initializeInterpreter: 0.
+	sim initializeInterpreter: 0;
+		setImageHeaderFlagsFrom: ImageHeaderFlags.
 	sizes := Bag new.
 	heap allObjectsInFreeTree: (heap freeLists at: 0) do:
 		[:f|
