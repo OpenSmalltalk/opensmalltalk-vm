@@ -2533,7 +2533,7 @@ StackInterpreterSimulator >> writeImageFileIO [
 			objectMemory lastHash.
 			self ioScreenSize.
 			self getImageHeaderFlags.
-			extraVMMemory
+			extraVMMemory ifNil: [0]
 		}
 			do: [:long | self putLong: long toFile: file].
 

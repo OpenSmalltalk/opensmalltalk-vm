@@ -22,6 +22,14 @@ SpurSegmentInfo class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 							ifFalse: [#usqInt])]
 ]
 
+{ #category : #printing }
+SpurSegmentInfo >> printOn: aStream [
+	super printOn: aStream.
+	self class instVarNames do:
+		[:name|
+		aStream space; nextPutAll: name; space; print: (self instVarNamed: name)]
+]
+
 { #category : #accessing }
 SpurSegmentInfo >> segSize [
 	"Answer the value of segSize"

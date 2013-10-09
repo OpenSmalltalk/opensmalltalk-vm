@@ -6310,17 +6310,18 @@ StackInterpreter >> initializeInterpreter: bytesToShift [
 	profileMethod := objectMemory nilObject.
 	nextPollUsecs := 0.
 	nextWakeupUsecs := 0.
-	tempOop := 0.
+	tempOop := theUnknownShort := 0.
 	interruptKeycode := 2094. "cmd-. as used for Mac but no other OS"
 	interruptPending := false.
 	inIOProcessEvents := 0.
+	fullScreenFlag := 0.
 	deferDisplayUpdates := false.
 	pendingFinalizationSignals := statPendingFinalizationSignals := 0.
 	globalSessionID := 0.
-	[globalSessionID = 0]
-		whileTrue: [globalSessionID := self
-						cCode: 'time(NULL) + ioMSecs()'
-						inSmalltalk: [(Random new next * SmallInteger maxVal) asInteger]].
+	[globalSessionID = 0] whileTrue:
+		[globalSessionID := self
+							cCode: [(self time: #NULL) + self ioMSecs]
+							inSmalltalk: [(Random new next * SmallInteger maxVal) asInteger]].
 	jmpDepth := 0.
 	longRunningPrimitiveStartUsecs :=
 	longRunningPrimitiveStopUsecs := 0.
