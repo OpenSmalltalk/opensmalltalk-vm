@@ -14,6 +14,8 @@ ImageFormatTest >> testAsInteger [
 	self assert: (ImageFormat fromInteger: 6504) asInteger = 6504.
 	self assert: (ImageFormat fromInteger: 68000) asInteger = 68000.
 	self assert: (ImageFormat fromInteger: 68002) asInteger = 68002.
+	self assert: (ImageFormat fromInteger: 6521) asInteger = 6521.
+	self assert: (ImageFormat fromInteger: 68019) asInteger = 68019.
 	
 ]
 
@@ -104,6 +106,23 @@ ImageFormatTest >> testFormat6505 [
 ]
 
 { #category : #testing }
+ImageFormatTest >> testFormat6521 [
+
+	| spur |
+	spur := ImageFormat fromInteger: 6521.
+	self assert: spur asInteger = 6521.
+	self assert: (ImageFormat wordSize: 4 spur: true) asInteger = 6521.
+	self assert: (ImageFormat fromInteger: 6521) asInteger = 6521.
+	self assert: spur wordSize = 4.
+	self assert: spur requiresClosureSupport.
+	self assert: spur requiresNativeFloatWordOrder.
+	self assert: spur is32Bit.
+	self deny: spur is64Bit.
+	self assert: spur requiresSpurSupport.
+	self assert: (ImageFormat fromInteger: 6521) asInteger = 6521
+]
+
+{ #category : #testing }
 ImageFormatTest >> testFormat68000 [
 
 	| closures64 |
@@ -153,12 +172,32 @@ ImageFormatTest >> testFormat68003 [
 ]
 
 { #category : #testing }
+ImageFormatTest >> testFormat68019 [
+
+	| spur |
+	spur := ImageFormat fromInteger: 68019.
+	self assert: spur asInteger = 68019.
+	self assert: (ImageFormat wordSize: 8 spur: true) asInteger = 68019.
+	self assert: (ImageFormat fromInteger: 68019) asInteger = 68019.
+	self assert: spur wordSize = 8.
+	self assert: spur requiresClosureSupport.
+	self assert: spur requiresNativeFloatWordOrder.
+	self deny: spur is32Bit.
+	self assert: spur is64Bit.
+	self assert: spur requiresSpurSupport.
+	self assert: (ImageFormat fromInteger: 68019) asInteger = 68019
+]
+
+{ #category : #testing }
 ImageFormatTest >> testIs32Bit [
 
 	self assert: (ImageFormat wordSize: 4) is32Bit.
 	self assert: (ImageFormat new fromInteger: 6504) is32Bit.
 	self deny: (ImageFormat wordSize: 8) is32Bit.
 	self deny: (ImageFormat new fromInteger: 68002) is32Bit.
+	self deny: (ImageFormat fromInteger: 6521) is64Bit.
+	self assert: (ImageFormat new fromInteger: 68019) is64Bit.
+
 ]
 
 { #category : #testing }
@@ -168,6 +207,9 @@ ImageFormatTest >> testIs64Bit [
 	self deny: (ImageFormat new fromInteger: 6504) is64Bit.
 	self assert: (ImageFormat wordSize: 8) is64Bit.
 	self assert: (ImageFormat new fromInteger: 68002) is64Bit.
+	self deny: (ImageFormat fromInteger: 6521) is64Bit.
+	self assert: (ImageFormat new fromInteger: 68019) is64Bit.
+
 ]
 
 { #category : #testing }
@@ -188,6 +230,8 @@ ImageFormatTest >> testIsValidVersionNumber [
 	self assert: (ImageFormat wordSize: 8 closures: true) isValidVersionNumber.
 	self assert: (ImageFormat fromInteger: 6502) isValidVersionNumber.
 	self assert: (ImageFormat fromInteger: (6502 bitAt: 31 put: 0)) isValidVersionNumber.
+	self assert: (ImageFormat fromInteger: 6521) isValidVersionNumber.
+	self assert: (ImageFormat fromInteger: 68019) isValidVersionNumber.
 
 
 ]
@@ -234,6 +278,8 @@ ImageFormatTest >> testRequiresNativeFloatWordOrder [
 	v setCogSupportRequirement: true.
 	self assert: v asInteger = 6505.
 	self assert: v requiresNativeFloatWordOrder.
+	v setSpurSupportRequirement: true.
+	self assert: v asInteger = 6521.
 
 	v := ImageFormat wordSize: 8.
 	self deny: v requiresNativeFloatWordOrder.
@@ -243,6 +289,8 @@ ImageFormatTest >> testRequiresNativeFloatWordOrder [
 	v setCogSupportRequirement: true.
 	self assert: v asInteger = 68003.
 	self assert: v requiresNativeFloatWordOrder.
+	v setSpurSupportRequirement: true.
+	self assert: v asInteger = 68019.
 	
 	self deny: (ImageFormat wordSize: 4 cog: false) requiresNativeFloatWordOrder.
 	self deny: (ImageFormat wordSize: 4 cog: false) requiresClosureSupport.
@@ -252,5 +300,9 @@ ImageFormatTest >> testRequiresNativeFloatWordOrder [
 	self assert: (ImageFormat wordSize: 4 cog: true) requiresClosureSupport.
 	self assert: (ImageFormat wordSize: 8 cog: true) requiresNativeFloatWordOrder.
 	self assert: (ImageFormat wordSize: 8 cog: true) requiresClosureSupport.
+	self assert: (ImageFormat fromInteger: 6521) requiresNativeFloatWordOrder.
+	self assert: (ImageFormat fromInteger: 6521) requiresClosureSupport.
+	self assert: (ImageFormat fromInteger: 68019) requiresNativeFloatWordOrder.
+	self assert: (ImageFormat fromInteger: 68019) requiresClosureSupport.
 
 ]

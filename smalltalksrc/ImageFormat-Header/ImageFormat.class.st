@@ -14,7 +14,8 @@ Class {
 	#instVars : [
 		'wordSize',
 		'requiresClosureSupport',
-		'requiresNativeFloatWordOrder'
+		'requiresNativeFloatWordOrder',
+		'requiresSpurSupport'
 	],
 	#classVars : [
 		'BaseVersionMask',
@@ -22,7 +23,8 @@ Class {
 		'CapabilitiesBitsMask',
 		'KnownVersionNumbers',
 		'PlatformByteOrderBit',
-		'ReservedBitsMask'
+		'ReservedBitsMask',
+		'SpurObjectBit'
 	],
 	#category : #'ImageFormat-Header'
 }
@@ -44,7 +46,7 @@ ImageFormat class >> allVersionNumberByteArrays [
 	^byteArrays
 ]
 
-{ #category : #'image formats' }
+{ #category : #'initialize-release' }
 ImageFormat class >> availableBits [
 	"Bits available for use as capability bits. Reserve high order bit as the
 	extension bit, to be set true if additional bits are required in the future."
@@ -98,7 +100,7 @@ ImageFormat class >> bitAssignments [
 	bits at: 2 put: 'used in base version numbers'.
 	bits at: 3 put: 'used in base version numbers'.
 	bits at: 4 put: 'used in base version numbers'.
-	bits at: 5 put: nil.	"unassigned bit available for future image formats"
+	bits at: 5 put: 'the Spur object format bit'.
 	bits at: 6 put: 'used in base version numbers'.
 	bits at: 7 put: 'used in base version numbers'.
 	bits at: 8 put: 'used in base version numbers'.
@@ -152,7 +154,8 @@ ImageFormat class >> capabilitiesBitsMask [
 	
 	"ImageFormat capabilitiesBitsMask printStringBase: 2"
 
-	^PlatformByteOrderBit "only one so far"
+	^ (0 bitAt: PlatformByteOrderBit put: 1)
+		bitAt: SpurObjectBit put: 1
 
 ]
 
@@ -300,6 +303,7 @@ ImageFormat class >> initialize [
 	"ImageFormat initialize"
 
 	PlatformByteOrderBit := 1.
+	SpurObjectBit := 5.
 	BaseVersionNumbers := self baseVersionNumbers.
 	BaseVersionMask := self baseVersionMask.
 	CapabilitiesBitsMask := self capabilitiesBitsMask.
@@ -317,7 +321,9 @@ ImageFormat class >> knownVersionNumbers [
 	^ self baseVersionNumbers, "the original four variants"
 		{
 			6505 .	"Cog and StackVM"
-			68003	"Cog and StackVM running 64-bit image"
+			68003 .	"Cog and StackVM running 64-bit image"
+			6521 .	"Spur 32 bit object memory"
+			68019 .	"Spur 64 bit object memory"
 				" ... add others here as bits are allocated to represent requirements of other image formats"
 		}
 
@@ -407,6 +413,17 @@ ImageFormat class >> wordSize: bytesPerWord cog: cogRequired [
 
 ]
 
+{ #category : #'instance creation' }
+ImageFormat class >> wordSize: bytesPerWord spur: spurRequired [
+	"Answer a Spur image format, or default to Cog if Spur is not specified"
+
+	^(self wordSize: bytesPerWord)
+		setClosureSupportRequirement: true;
+		setCogSupportRequirement: true;
+		setSpurSupportRequirement: spurRequired
+
+]
+
 { #category : #converting }
 ImageFormat >> asInteger [
 	"Answer an integer representation of this image format suitable for storage
@@ -419,6 +436,7 @@ ImageFormat >> asInteger [
 		ifFalse: [68000].
 	self requiresClosureSupport ifTrue: [val := val + 2].
 	self requiresNativeFloatWordOrder ifTrue: [val := val + 1].
+	self requiresSpurSupport ifTrue: [val := val + 2r10000].
 	^val
 
 ]
@@ -469,6 +487,13 @@ ImageFormat >> fromInteger: anInteger [
 			requiresClosureSupport
 				ifFalse: [self error: 'Images requiring platform byte order also require closure support (Cog)'].
 			capabilitiesBits := capabilitiesBits bitAt: PlatformByteOrderBit put: 0].
+	(capabilitiesBits bitAt: SpurObjectBit) = 1
+		ifTrue: [requiresSpurSupport := true.
+			requiresClosureSupport
+				ifFalse: [self error: 'Images requiring Spur also require closure support'].
+			requiresNativeFloatWordOrder
+				ifFalse: [self error: 'Images requiring Spur also require native float word order support'].
+			capabilitiesBits := capabilitiesBits bitAt: SpurObjectBit put: 0].
 	"add additional capability bit handling here"
 	capabilitiesBits == 0
 		ifFalse: [self error: 'invalid format number ', anInteger printString]
@@ -479,7 +504,8 @@ ImageFormat >> fromInteger: anInteger [
 { #category : #'initialize-release' }
 ImageFormat >> initialize [
 	requiresClosureSupport := false.
-	requiresNativeFloatWordOrder := false
+	requiresNativeFloatWordOrder := false.
+	requiresSpurSupport := false
 ]
 
 { #category : #testing }
@@ -515,6 +541,8 @@ ImageFormat >> printDescriptionOn: stream [
 		self requiresNativeFloatWordOrder
 			ifTrue: [stream nextPutAll: 'float words stored in native platform order']
 			ifFalse: [stream nextPutAll: 'no native platform float word order requirement'].
+		self requiresSpurSupport
+			ifTrue: [stream nextPutAll: ' using Spur object format'].
 		stream nextPutAll: ' (';
 			nextPutAll: self asInteger asString;
 			nextPut: $).
@@ -540,6 +568,12 @@ ImageFormat >> requiresClosureSupport [
 ImageFormat >> requiresNativeFloatWordOrder [
 	"True if this image requires a Cog VM (stack VM possibly including a Cog jitter)"
 	^requiresNativeFloatWordOrder
+]
+
+{ #category : #testing }
+ImageFormat >> requiresSpurSupport [
+	"True if this image uses the Spur object format."
+	^requiresSpurSupport
 ]
 
 { #category : #'initialize-release' }
@@ -574,6 +608,16 @@ ImageFormat >> setNativeFloatWordOrderRequirement: aBoolean [
 	The StackInterpreter and Cog make use of this for performance reasons."
 
 	requiresNativeFloatWordOrder := aBoolean
+
+]
+
+{ #category : #'initialize-release' }
+ImageFormat >> setSpurSupportRequirement: aBoolean [
+	"If true, the image expects the virtual machine to be able to provide support
+	for the Spur object format. If false, the image does not require this support,
+	although the virtual machine is free to provide it."
+
+	requiresSpurSupport := aBoolean
 
 ]
 
