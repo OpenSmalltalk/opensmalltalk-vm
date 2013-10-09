@@ -436,6 +436,11 @@ ObjectMemory class >> mustBeGlobal: var [
 	^'memory' = var
 ]
 
+{ #category : #'accessing class hierarchy' }
+ObjectMemory class >> objectRepresentationClass [
+	^self subclassResponsibility
+]
+
 { #category : #translation }
 ObjectMemory class >> requiredMethodNames: options [
 	"return the list of method names that should be retained for export or other support reasons"
@@ -762,8 +767,9 @@ ObjectMemory >> allocationUnit [
 	^BytesPerWord
 ]
 
-{ #category : #'header access' }
+{ #category : #'header formats' }
 ObjectMemory >> arrayFormat [
+	<api>
 	^2
 ]
 
@@ -1803,13 +1809,15 @@ ObjectMemory >> firstAccessibleObject [
 	^nil
 ]
 
-{ #category : #'header access' }
+{ #category : #'header formats' }
 ObjectMemory >> firstByteFormat [
+	<api>
 	^8
 ]
 
-{ #category : #'header access' }
+{ #category : #'header formats' }
 ObjectMemory >> firstCompiledMethodFormat [
+	<api>
 	^12
 ]
 
@@ -1844,8 +1852,9 @@ ObjectMemory >> firstIndexableField: oop [
 	^self pointerForOop: oop + BaseHeaderSize
 ]
 
-{ #category : #'header access' }
+{ #category : #'header formats' }
 ObjectMemory >> firstLongFormat [
+	<api>
 	^6
 ]
 
@@ -1856,7 +1865,7 @@ ObjectMemory >> firstObject [
 	^ self oopFromChunk: self startOfMemory
 ]
 
-{ #category : #'header access' }
+{ #category : #'header formats' }
 ObjectMemory >> firstStringyFakeFormat [
 	"A fake format for the interpreter used to mark indexable strings in
 	 the interpreter's at cache.  This is larger than any format."
@@ -1880,6 +1889,18 @@ ObjectMemory >> fixedFieldsOf: oop format: fmt length: wordLength [
 	class := self fetchClassOfNonImm: oop.
 	classFormat := self formatOfClass: class.
 	^(classFormat >> 11 bitAnd: 16rC0) + (classFormat >> 2 bitAnd: 16r3F) - 1
+]
+
+{ #category : #'spur compatibility' }
+ObjectMemory >> followForwarded: objOop [
+	<inline: false>
+	self shouldNotImplement.
+	^0
+]
+
+{ #category : #'spur compatibility' }
+ObjectMemory >> followForwardedObjectFields: objOop toDepth: depth [
+	self shouldNotImplement
 ]
 
 { #category : #accessing }
@@ -2405,8 +2426,9 @@ ObjectMemory >> incrementalGC [
 	weDidGrow ifTrue: [self biasToGrowCheckGCLimit]
 ]
 
-{ #category : #'header access' }
+{ #category : #'header formats' }
 ObjectMemory >> indexablePointersFormat [
+	<api>
 	^3
 ]
 
@@ -4339,6 +4361,12 @@ ObjectMemory >> setHashBitsOf: oop to: hash [
 ]
 
 { #category : #initialization }
+ObjectMemory >> setHeapBase: ignored memoryLimit: memLimit endOfMemory: memEnd [
+	self setMemoryLimit: memLimit.
+	self setEndOfMemory: memEnd
+]
+
+{ #category : #initialization }
 ObjectMemory >> setMemoryLimit: newMemoryLimit [
 	self assert: (newMemoryLimit bitAnd: BytesPerWord - 1) = 0.
 	memoryLimit := newMemoryLimit
@@ -5220,8 +5248,9 @@ ObjectMemory >> vmEndianness [
 	^VMBIGENDIAN ifTrue: [1] ifFalse: [0]
 ]
 
-{ #category : #'header access' }
+{ #category : #'header formats' }
 ObjectMemory >> weakArrayFormat [
+	<api>
 	^4
 ]
 

@@ -545,6 +545,11 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator addSelectorTranslation: #halt: to: 'haltmsg'
 ]
 
+{ #category : #accessing }
+Cogit class >> defaultObjectMemoryClass [
+	^NewCoObjectMemory
+]
+
 { #category : #translation }
 Cogit class >> doInlining [
 	"inline only those methods that are marked with <inline: true>"
@@ -790,9 +795,11 @@ Cogit class >> initializePrimitiveTable [
 
 { #category : #'class initialization' }
 Cogit class >> initializeWithOptions: optionsDictionary [
-	CogMethodSurrogate withAllSubclassesDo:
-		[:cmsClass|
-		cmsClass initializationOptions: optionsDictionary].
+	self withAllSubclasses,
+	CogMethod withAllSubclasses,
+	CogMethodSurrogate withAllSubclasses
+		do: [:class|
+			class initializationOptions: optionsDictionary].
 	super initializeWithOptions: optionsDictionary.
 	self initializeMiscConstants. "must preceed other initialization."
 	self initializeErrorCodes.
@@ -2201,6 +2208,7 @@ Cogit >> bcpcsAndDescriptorsFor: aMethod do: trinaryBlock [
 Cogit >> blockAlignment [
 	"Block method headers must be aligned on the correct boundary, just like non-block method headers.
 	 This is because the CoInterpreter encodes flags in the least significant three bits of the method field."
+	<api>
 	<cmacro: '(self) 8'>
 	self assert: (methodZone roundUpLength: 1) = 8.
 	^8
@@ -6997,17 +7005,17 @@ Cogit >> objectRepresentation [
 ]
 
 { #category : #initialization }
-Cogit >> objectRepresentationImplementsNew: primitiveIndex [
+Cogit >> objectRepresentationImplementsNew: primIndex [
 	^objectRepresentation implementsNew
 ]
 
 { #category : #initialization }
-Cogit >> objectRepresentationImplementsNewMethod: primitiveIndex [
+Cogit >> objectRepresentationImplementsNewMethod: primIndex [
 	^objectRepresentation implementsNewMethod
 ]
 
 { #category : #initialization }
-Cogit >> objectRepresentationImplementsNewWithArg: primitiveIndex [
+Cogit >> objectRepresentationImplementsNewWithArg: primIndex [
 	^objectRepresentation implementsNewWithArg
 ]
 
