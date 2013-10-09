@@ -173,7 +173,7 @@ SecurityPlugin >> secCanRenameFile: fileName OfSize: fileNameSize [
 { #category : #'exported functions' }
 SecurityPlugin >> secCanRenameImage [
 	<export: true>
-	^self cCode: 'ioCanRenameImage()'
+	^self cCode: [self ioCanRenameImage] inSmalltalk: [true]
 ]
 
 { #category : #'exported functions' }

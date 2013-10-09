@@ -1792,8 +1792,11 @@ InterpreterPrimitives >> primitiveImageName [
 		"If the security plugin can be loaded, use it to check for rename permission.
 		If not, assume it's ok"
 		sCRIfn := self ioLoadFunction: 'secCanRenameImage' From: 'SecurityPlugin'.
-		sCRIfn ~= 0 ifTrue:[okToRename := self cCode:' ((sqInt (*)(void))sCRIfn)()'.
-			okToRename ifFalse:[^self primitiveFail]].
+		sCRIfn ~= 0 ifTrue:
+			[okToRename := self cCode: '((sqInt (*)(void))sCRIfn)()'
+								inSmalltalk: [self dispatchMappedPluginEntry: sCRIfn].
+			okToRename ifFalse:
+				[^self primitiveFail]].
 		s := self stackTop.
 		self assertClassOf: s is: (objectMemory splObj: ClassByteString).
 		self successful ifTrue: [

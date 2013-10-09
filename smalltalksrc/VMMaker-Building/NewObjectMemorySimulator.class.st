@@ -157,6 +157,11 @@ NewObjectMemorySimulator >> halfWordLowInLong32: long32 [
 	^self subclassResponsibility
 ]
 
+{ #category : #'heap map' }
+NewObjectMemorySimulator >> heapMapAtWord: address [
+	^heapMap heapMapAtWord: address
+]
+
 { #category : #'debug support' }
 NewObjectMemorySimulator >> incrementalGC [
 	coInterpreter transcript cr; nextPutAll: 'incrementalGC ('; print: coInterpreter byteCount; space; print: freeStart; nextPut: $); flush.
@@ -527,8 +532,9 @@ NewObjectMemorySimulator >> storePointerUnchecked: index ofObject: oop withValue
 	self assert: oop >= self startOfMemory.
 	hdr := self baseHeader: oop.
 	fmt := self formatOfHeader: hdr.
-	self assert: ((fmt <= self lastPointerFormat or: [fmt >= self firstCompiledMethodFormat])
-				and: [index >= 0 and: [index < (self lengthOf: oop baseHeader: hdr format: fmt)]]).
+	thisContext sender selector ~~ #snapshotCleanUp ifTrue:
+		[self assert: ((fmt <= self lastPointerFormat or: [fmt >= self firstCompiledMethodFormat])
+					and: [index >= 0 and: [index < (self lengthOf: oop baseHeader: hdr format: fmt)]])].
 	^super storePointerUnchecked: index ofObject: oop withValue: valuePointer
 ]
 
