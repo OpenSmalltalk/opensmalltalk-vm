@@ -315,6 +315,12 @@ NewObjectMemory >> allocateInterpreterChunk: byteSize [
 	^nil
 ]
 
+{ #category : #snapshot }
+NewObjectMemory >> baseAddressOfImage [
+	"Answer the base address of the image data written to a sapshot."
+	^self startOfMemory
+]
+
 { #category : #become }
 NewObjectMemory >> become: array1 with: array2 twoWay: twoWayFlag copyHash: copyHashFlag [
 	"All references to each object in array1 are swapped with all references to the corresponding object in array2. That is, all pointers to one object are replaced with with pointers to the other. The arguments must be arrays of the same length. 
@@ -1196,6 +1202,13 @@ NewObjectMemory >> imageSegmentVersion [
 	wholeWord := self longAt: (self splObj: SelectorDoesNotUnderstand) + BaseHeaderSize.
 		"first data word, 'does' "
 	^coInterpreter imageFormatVersion bitOr: (wholeWord bitAnd: 16rFF000000)
+]
+
+{ #category : #snapshot }
+NewObjectMemory >> imageSizeToWrite [
+	"Answer the number of bytes that will be written to
+	 the image file in a snapshot, excluding the header."
+	^freeStart - self startOfMemory
 ]
 
 { #category : #accessing }

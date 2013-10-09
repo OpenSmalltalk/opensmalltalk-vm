@@ -11209,8 +11209,8 @@ StackInterpreter >> slowPrimitiveResponse [
 { #category : #'image save/restore' }
 StackInterpreter >> snapshot: embedded [ 
 	"update state of active context"
-	| activeContext activeProc dataSize rcvr setMacType stackIndex |
-	<var: #setMacType type: 'void *'>
+	| activeContext activeProc rcvr setMacType stackIndex |
+	<var: #setMacType type: #'void *'>
 
 	"For now the stack munging below doesn't deal with more than one argument.
 	 It can, and should."
@@ -11236,7 +11236,6 @@ StackInterpreter >> snapshot: embedded [
 	"Nothing moves from here on so it is safe to grab the activeContext again."
 	activeContext := objectMemory popRemappableOop.
 
-	dataSize := objectMemory freeStart - objectMemory startOfMemory. "Assume all objects are below the start of the free block"
 	self successful ifTrue:
 		["Without contexts or stacks simulate
 			rcvr := self popStack. ''pop rcvr''
@@ -11249,7 +11248,7 @@ StackInterpreter >> snapshot: embedded [
 			ofObject: activeContext
 			withValue: objectMemory trueObject.
 		"now attempt to write the snapshot file"
-		self writeImageFileIO: dataSize.
+		self writeImageFileIO.
 		(self successful and: [embedded not]) ifTrue:
 			["set Mac file type and creator; this is a noop on other platforms"
 			setMacType := self ioLoadFunction: 'setMacFileTypeAndCreator' From: 'FilePlugin'.
@@ -11300,9 +11299,11 @@ StackInterpreter >> snapshotCleanUp [
 			 (self isMarriedOrWidowedContext: obj) ifTrue:
 				[self markContextAsDead: obj].
 			 "Fill slots beyond top of stack with nil"
-			 (self fetchStackPointerOf: obj) to: (objectMemory numSlotsOf: obj) do:
-				[:i | objectMemory
-						storePointerUnchecked: i + CtxtTempFrameStart
+			 (self fetchStackPointerOf: obj) + CtxtTempFrameStart
+				to: (objectMemory numSlotsOf: obj) - 1
+				do: [:i |
+					objectMemory
+						storePointerUnchecked: i
 						ofObject: obj
 						withValue: objectMemory nilObject]].
 		 "Clean out external functions from compiled methods"
@@ -12188,9 +12189,9 @@ StackInterpreter >> writeImageFile: imageBytes [
 ]
 
 { #category : #'image save/restore' }
-StackInterpreter >> writeImageFileIO: imageBytes [
+StackInterpreter >> writeImageFileIO [
 
-	| headerStart headerSize f bytesWritten sCWIfn okToWrite memStart |
+	| headerStart headerSize f bytesWritten sCWIfn okToWrite |
 	<var: #f type: 'sqImageFile'>
 	<var: #headerStart type: 'squeakFileOffsetType '>
 	<var: #sCWIfn type: 'void *'>
@@ -12217,8 +12218,8 @@ StackInterpreter >> writeImageFileIO: imageBytes [
 
 	self putLong: self imageFormatVersion toFile: f.
 	self putLong: headerSize toFile: f.
-	self putLong: imageBytes toFile: f.
-	self putLong: objectMemory startOfMemory toFile: f.
+	self putLong: objectMemory imageSizeToWrite toFile: f.
+	self putLong: objectMemory baseAddressOfImage toFile: f.
 	self putLong: objectMemory specialObjectsOop toFile: f.
 	self putLong: objectMemory newObjectHash toFile: f.
 	self putLong: self ioScreenSize toFile: f.
@@ -12229,7 +12230,12 @@ StackInterpreter >> writeImageFileIO: imageBytes [
 	self putLong: desiredEdenBytes toFile: f.
 	self putShort: (maxExtSemTabSizeSet ifTrue: [self ioGetMaxExtSemTableSize] ifFalse: [0]) toFile: f.
 	self putShort: 0 toFile: f.
-	1 to: 4 do: [:i | self putLong: 0 toFile: f].  "fill remaining header words with zeros"
+	objectMemory hasSpurMemoryManagerAPI
+		ifTrue:
+			[self putLong: objectMemory firstSegmentBytes toFile: f."Pad the rest of the header."
+			 3 timesRepeat: [self putLong: 0 toFile: f]]
+		ifFalse:
+			[1 to: 4 do: [:i | self putLong: 0 toFile: f]].  "fill remaining header words with zeros"
 	self successful ifFalse: [
 		"file write or seek failure"
 		self cCode: 'sqImageFileClose(f)'.
@@ -12239,10 +12245,15 @@ StackInterpreter >> writeImageFileIO: imageBytes [
 	self sqImageFile: f Seek: headerStart + headerSize.
 
 	"write the image data"
-	memStart := objectMemory startOfMemory.
-	bytesWritten := self cCode: 'sqImageFileWrite(pointerForOop(memStart), sizeof(unsigned char), imageBytes, f)'.
-	self success: bytesWritten = imageBytes.
-	self touch: memStart.
+	objectMemory hasSpurMemoryManagerAPI
+		ifTrue:
+			[bytesWritten := objectMemory segmentManager writeImageToFile: f]
+		ifFalse:
+			[| memStart |
+			memStart := objectMemory baseAddressOfImage.
+			bytesWritten := self cCode: 'sqImageFileWrite(pointerForOop(memStart), sizeof(unsigned char), imageBytes, f)'.
+	self touch: memStart].
+	self success: bytesWritten = objectMemory imageSizeToWrite.
 	self cCode: 'sqImageFileClose(f)'
 
 ]

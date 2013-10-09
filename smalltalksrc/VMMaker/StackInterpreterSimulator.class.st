@@ -329,6 +329,12 @@ StackInterpreterSimulator >> disableBooleanCheat: aBoolean [
 	disableBooleanCheat := aBoolean
 ]
 
+{ #category : #'plugin primitive support' }
+StackInterpreterSimulator >> dispatchMappedPluginEntry: n [ 
+	^(mappedPluginEntries at: n) first
+		perform: (mappedPluginEntries at: n) second
+]
+
 { #category : #'interpreter shell' }
 StackInterpreterSimulator >> dispatchOn: anInteger in: selectorArray [
 	"Simulate a case statement via selector table lookup.
@@ -581,6 +587,32 @@ StackInterpreterSimulator >> imageName [
 { #category : #'spur bootstrap' }
 StackInterpreterSimulator >> imageName: aString [
 	imageName := aString
+]
+
+{ #category : #'file primitives' }
+StackInterpreterSimulator >> imageNameGet: p Length: sz [
+	1 to: sz  do:
+		[:i |
+		objectMemory
+			byteAt:  p + i - 1
+			put: (imageName at: i) asInteger]
+]
+
+{ #category : #'file primitives' }
+StackInterpreterSimulator >> imageNamePut: p Length: sz [
+	| newName |
+	newName := ByteString new: sz.
+	1 to: sz  do:
+		[:i |
+		newName
+			at: i
+			put: (Character value: (objectMemory byteAt: p + i - 1))].
+	imageName := newName
+]
+
+{ #category : #'file primitives' }
+StackInterpreterSimulator >> imageNameSize [
+	^imageName size
 ]
 
 { #category : #'interpreter shell' }
@@ -1555,20 +1587,6 @@ StackInterpreterSimulator >> primitiveIdentityHash [
 	^super primitiveIdentityHash
 ]
 
-{ #category : #'file primitives' }
-StackInterpreterSimulator >> primitiveImageName [
-	"Note: For now, this only implements getting, not setting, the image file name."
-	| result imageNameSize |
-	self pop: 1.
-	imageNameSize := imageName size.
-	result := objectMemory instantiateClass: (objectMemory splObj: ClassByteString)
-				   indexableSize: imageNameSize.
-	1 to: imageNameSize do:
-		[:i | objectMemory storeByte: i-1 ofObject: result
-			withValue: (imageName at: i) asciiValue].
-	self push: result.
-]
-
 { #category : #'I/O primitives' }
 StackInterpreterSimulator >> primitiveKbdNext [
 
@@ -2493,27 +2511,26 @@ StackInterpreterSimulator >> writeEnableMemory [
 ]
 
 { #category : #'image save/restore' }
-StackInterpreterSimulator >> writeImageFileIO: numberOfBytesToWrite [
-	"Actually emit the first numberOfBytesToWrite object memory bytes onto the snapshot."
+StackInterpreterSimulator >> writeImageFileIO [
+	"Write the image to a file as an image snapshot."
 
 	| headerSize file |
 	BytesPerWord = 4 ifFalse: [self error: 'Not rewritten for 64 bits yet'].
 	headerSize := 64.
 
+	(file := FileStream fileNamed: imageName) ifNil:
+		[self primitiveFail.
+		 ^nil].
 	[
-		file := FileStream fileNamed: imageName.
-		file == nil ifTrue:
-			[self primitiveFail.
-			 ^nil].
 		file binary.
 
 		{
 			self imageFormatVersion.
 			headerSize.
-			numberOfBytesToWrite.
-			objectMemory startOfMemory.
-			(objectMemory specialObjectsOop).
-			(objectMemory lastHash).
+			objectMemory imageSizeToWrite.
+			objectMemory baseAddressOfImage.
+			objectMemory specialObjectsOop.
+			objectMemory lastHash.
 			self ioScreenSize.
 			self getImageHeaderFlags.
 			extraVMMemory
@@ -2528,19 +2545,30 @@ StackInterpreterSimulator >> writeImageFileIO: numberOfBytesToWrite [
 		{	maxExtSemTabSizeSet ifTrue: [self ioGetMaxExtSemTableSize] ifFalse: [0]. 0 } do:
 			[:short| self putShort: short toFile: file].
 
-		"Pad the rest of the header."
-		4 timesRepeat: [self putLong: 0 toFile: file].
-	
-		"Position the file after the header."
-		file position: headerSize.
-	
-		"Write the object memory."
-		objectMemory startOfMemory // 4 + 1
-			to: numberOfBytesToWrite // 4
-			do: [:index |
-				self
-					putLong: (objectMemory memory at: index)
-					toFile: file].
+		objectMemory hasSpurMemoryManagerAPI
+			ifTrue:
+				[| bytesWritten |
+				 self putLong: objectMemory firstSegmentBytes toFile: file."Pad the rest of the header."
+				 3 timesRepeat: [self putLong: 0 toFile: file].
+
+				"Position the file after the header."
+				file position: headerSize.
+				bytesWritten := objectMemory segmentManager writeImageToFile: file.
+				self assert: bytesWritten = objectMemory imageSizeToWrite]
+			ifFalse:
+				["Pad the rest of the header."
+				4 timesRepeat: [self putLong: 0 toFile: file].
+
+				"Position the file after the header."
+				file position: headerSize.
+
+				"Write the object memory."
+				objectMemory baseAddressOfImage // 4 + 1
+					to: objectMemory baseAddressOfImage + objectMemory imageSizeToWrite // 4
+					do: [:index |
+						self
+							putLong: (objectMemory memory at: index)
+							toFile: file]].
 	
 		self success: true
 	]
