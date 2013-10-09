@@ -30,6 +30,11 @@ Class {
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
+{ #category : #snapshot }
+SpurSegmentManager >> firstSegmentBytes [
+	^(segments at: 0) segSize
+]
+
 { #category : #'simulation only' }
 SpurSegmentManager >> initializeFromFreeChunks: freeChunks [
 	"For testing, create a set of segments using the freeChunks as bridges."
@@ -57,4 +62,42 @@ SpurSegmentManager >> manager: aSpurMemoryManager [
 	manager := aSpurMemoryManager.
 	numSegments ifNil:
 		[numSegments := 0]
+]
+
+{ #category : #snapshot }
+SpurSegmentManager >> totalBytesInSegments [
+	| total |
+	total := 0.
+	0 to: numSegments - 1 do:
+		[:i|
+		total := total + (segments at: i) segSize].
+	^total
+]
+
+{ #category : #snapshot }
+SpurSegmentManager >> writeImageToFile: aBinaryStream [
+	| total |
+	total := 0.
+	0 to: numSegments - 1 do:
+		[:i|
+		total := total + (self writeSegment: (segments at: i) toFile: aBinaryStream)].
+	^total
+]
+
+{ #category : #snapshot }
+SpurSegmentManager >> writeSegment: aSpurSegmentInfo toFile: aBinaryStream [
+	<var: 'aSpurSegmentInfo' type: 'SpurSegmentInfo *'>
+	<var: 'aSpurSegmentInfo' type: #'FILE *'>
+	^self cCode:
+			[self
+				sq: aSpurSegmentInfo start
+				Image: aSpurSegmentInfo segSize
+				File: 1
+				Write: aBinaryStream]
+		inSmalltalk:
+			[aBinaryStream
+				next: aSpurSegmentInfo segSize / 4
+				putAll: manager memory
+				startingAt: aSpurSegmentInfo start / 4 + 1.
+			 aSpurSegmentInfo segSize]
 ]
