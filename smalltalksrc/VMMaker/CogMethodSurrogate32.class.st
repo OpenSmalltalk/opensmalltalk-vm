@@ -92,13 +92,6 @@ CogMethodSurrogate32 >> methodObject: aValue [
 ]
 
 { #category : #accessing }
-CogMethodSurrogate32 >> objectHeader: aValue [
-	^memory
-		unsignedLongAt: address + 1
-		put: aValue
-]
-
-{ #category : #accessing }
 CogMethodSurrogate32 >> selector [
 	^memory unsignedLongAt: address + 17 + baseHeaderSize
 ]
