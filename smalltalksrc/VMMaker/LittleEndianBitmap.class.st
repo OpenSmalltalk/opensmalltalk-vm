@@ -38,7 +38,8 @@ LittleEndianBitmap >> byteAt: byteAddress [
 
 { #category : #accessing }
 LittleEndianBitmap >> byteAt: byteAddress put: byte [
-	"Insert a byte into a Bitmap (little-endian version).  N.B. SIgnedness will be lost since byteAt: ansers non-negative values."
+	"Insert a byte into a Bitmap (little-endian version).  N.B. Signedness will be lost since byteAt: answers non-negative values.
+	 We can add a signedByteAt: if needed."
 	| value longWord shift lowBits longAddr |
 	(byte < 0 or:[byte > 255]) ifTrue:[^self errorImproperStore].
 	value := byte < 0

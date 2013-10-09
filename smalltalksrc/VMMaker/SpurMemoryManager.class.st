@@ -4,30 +4,53 @@ SpurMemoryManager is a new object representation and garbage collector for the C
 An intensive design sketch is included below after the instance variable descriptions.
 
 Instance Variables
+	becomeEffectsFlags		<Integer>
 	checkForLeaks:				<Boolean>
 	classTableFirstPage:		<Integer oop>
 	classTableIndex:			<Integer>
 	classTableRootObj:			<Integer oop>
-	coInterpreter:				<StackInterpreter|CoInterpreter>
+	coInterpreter:				<StackInterpreter|CoInterpreter (StackInterpreterSimulator|CogVMSimulator)>
 	endOfMemory:				<Integer address>
 	falseObj:					<Integer oop>
-	freeListMask:				<Integer (64-bit)>
-	freeLists:					<CArrayAccessor on: (Array new: 64)>
+	freeLists:					<CArray on: memory>
+	freeListMask:				<Integer>
 	freeOldSpaceStart:			<Integer address>
 	freeStart:					<Integer address>
+	gcStartUsecs:				<Integer>
 	heapMap:					<CogCheck32BitHeapMap>
 	lastHash:					<Integer>
+	lowSpaceThreshold:		<Integer address>
 	memory:					<Bitmap|LittleEndianBitmap>
 	needGCFlag:				<Boolean>
 	newSpaceLimit:				<Integer address>
 	nilObj:						<Integer oop>
+	pastSpaceStart:			<Integer address>
+	remapBuffer:				<CArrayAccessor on: (Array new: 25)>
+	remapBufferCount:			<Integer>
+	scavengeInProgress:		<Boolean>
 	scavengeThreshold:		<Integer address>
 	scavenger:					<SourGenerationScavenger>
+	segmentManager:			<SpurSegmentManager>
 	signalLowSpace:			<Boolean>
+	sortedFreeChunks			<Integer address|nil>
 	specialObjectsOop:		<Integer oop>
 	startOfMemory:				<Integer address>
+	statFGCDeltaUsecs:		<Integer>
+	statFullGCUsecs:			<Integer>
+	statFullGCs:					<Integer>
+	statGCEndUsecs:			<Integer>
+	statIGCDeltaUsecs:			<Integer>
+	statIncrGCUsecs:			<Integer>
+	statIncrGCs:				<Integer>
+	statSGCDeltaUsecs:		<Integer>
+	statScavengeGCUsecs:		<Integer>
+	statScavenges:				<Integer>
+	totalFreeOldSpace:			<Integer>
 	trueObj:					<Integer oop>
 
+becomeEffectsFlags
+	- a set of flags to limit the work done during become; one of BecameCompiledMethodFlag, BecamePointerObjectFlag
+	
 checkForLeaks
 	- a set of flags determining when to run leak checks on the heap's contents
 
@@ -39,6 +62,7 @@ classTableIndex
 
 classTableRootObj
 	- the root page of the class table. its elements are pages containing classes.
+	  Must be the fifth object in oldSpace.
 
 coInterpreter
 	- the VM interpreter using this heap
@@ -47,25 +71,34 @@ endOfMemory
 	- the address past the last oldSpace segment
 
 falseObj
-	- the oop of the false object
+	- the oop of the false object; must be the second object in oldSpace
+
+freeLists
+	- an array of list heads of free chunks of each size (in allocationUnits).  the 0'th element
+	  is the head of a tree of free chunks of size > 63 slots in 64-bits or 31 slots in 32-bits.
+	  freeLists is the firstIndexableField of the fourth object in oldSpace.
 
 freeListMask
 	- a bitmap of flags with a 1 set whereever the freeLists has a non-empty entry, used to limit the search for free chunks
 
-freeLists
-	- an array of list heads of free chunks of each size (in allocationUnits).  the 0'th element is the head of a tree of free chunks of size > 63 slots.
-
 freeOldSpaceStart
 	- the last used address in oldSpace.  The space between freeOldSpaceStart and endOfMemory can be used for oldSpace allocations.
+	  Given freeLists this probably isn't useful and shoud be discarded in favouf of endOfMemory.
 
 freeStart
 	- the last used address in eden.  this is where new objects are allocated if there is room in eden.
+
+gcStartUsecs
+	- the time in microseconds of the start of the most recent gc, used to compute the duration of a gc.
 
 heapMap
 	- a bitmap used to check for leaks. a bit is set in the map at each object's header.  every pointer in the heap should point to the header of an object
 
 lastHash
 	- the last object hash value.  a pseudo-randome number generator.
+
+lowSpaceThreshold
+	- the ammount of free memory below which the low space condition should be signalled.
 
 memory
 	- in the Simulator this is the single oldSpace segment that contains the codeZone, newSpace and oldSpace.  In C it is effectively the base address of used memory.
@@ -77,16 +110,38 @@ newSpaceLimit
 	- the last address in newSpace (the last address in eden)
 
 nilObj
-	- the oop of the nil object
+	- the oop of the nil object; must be the first object in oldSpace
+
+pastSpaceStart
+	- the address past the last object in pastSpace, used to enumerate objects in newSpace.
+
+remampBuffer:
+	- an Array of objects used to implement pushRemappableOop: et al for compatibility with ObjectMemory.
+	  Its functionality isnt needed because Spur will never GC during allocation.  But it muts be present and
+	  correct, otherwise many primitives that use pushRemappableOop: et al would have to be rewritten.
+
+remapBufferCount:
+	- the index of the last used entry in remampBuffer
+
+scavengeInProgress
+	- flag indicating what it says it does
 
 scavengeThreshold
-	- a tidemark in eden. needGCFlag is set if a newSpace allocation pushes freeStart past scavengethreshold
+	- a tidemark in eden.  needGCFlag is set if a newSpace allocation pushes freeStart past scavengeThreshold
 
 scavenger
 	- the generation scavenger that collects objects in newSpace
 
+segmentManager
+	- the object that manages oldSpace segments.  Segments are largely invisible to the memory manager because
+	  the gaps between segments are hidden by bridge objects.
+
 signalLowSpace
 	- a boolean flag set if the lowSpaceSemaphore should be signalled
+
+sortedFreeChunks
+	- the head of a list of large free chunks in address order, low to high,
+	  sorted through the freeChunkNextAddressIndex field, used in compaction.
 
 specialObjectsOop
 	- the oop of the specialObjectsArray object
@@ -94,8 +149,16 @@ specialObjectsOop
 startOfMemory
 	- the first address in newSpace (the first address in either pastSpace or futureSpace)
 
+statFGCDeltaUsecs, statFullGCUsecs, statGCEndUsecs, statIGCDeltaUsecs, statIncrGCUsecs, statIncrGCs, statSGCDeltaUsecs, statScavengeGCUsecs, statScavenges
+	- various statistics
+
+totalFreeOldSpace
+	- the total free space on the free lists
+	
 trueObj
-	- the oop of the false object
+	- the oop of the false object; must be the third object in oldSpace
+
+
 
 Design
 The design objectives for the Spur memory manager are
@@ -320,6 +383,7 @@ Class {
 	#instVars : [
 		'coInterpreter',
 		'scavenger',
+		'segmentManager',
 		'memory',
 		'freeStart',
 		'freeOldSpaceStart',
@@ -359,8 +423,7 @@ Class {
 		'remapBufferCount',
 		'lowSpaceThreshold',
 		'totalFreeOldSpace',
-		'sortedFreeChunks',
-		'segmentManager'
+		'sortedFreeChunks'
 	],
 	#classVars : [
 		'CheckObjectOverwrite',
@@ -533,9 +596,10 @@ SpurMemoryManager class >> initializeSpecialObjectIndices [
 { #category : #'class initialization' }
 SpurMemoryManager class >> initializeSpurObjectRepresentationConstants [
 	"SpurMemoryManager initializeSpurObjectRepresentationConstants"
-	BecameClassFlag := 1.
+	BecamePointerObjectFlag := 1.
 	BecameCompiledMethodFlag := 2.
-	BecamePointerObjectFlag := 4
+	"BecameClassFlag := 4" "this turns out not to be actionable"
+
 ]
 
 { #category : #'class initialization' }
@@ -1246,6 +1310,11 @@ SpurMemoryManager >> arrayFormat [
 	^2
 ]
 
+{ #category : #snapshot }
+SpurMemoryManager >> baseAddressOfImage [
+	^newSpaceLimit
+]
+
 { #category : #'header access' }
 SpurMemoryManager >> baseHeader: obj [
 	^self longLongAt: obj
@@ -1306,16 +1375,18 @@ SpurMemoryManager >> becomeEffectFlagsFor: objOop [
 	<inline: false>
 	^(self isPointersNonImm: objOop)
 		ifTrue:
-			[| hash |
+			[BecamePointerObjectFlag
+			"older code that identified class objects, but it isn't helpful:"
+			"| hash |
 			 (hash := self rawHashBitsOf: objOop) = 0
-				ifTrue: "Can't identify an abstract class by the class table; it may not be there-in."
+				ifTrue: ""Can't identify an abstract class by the class table; it may not be there-in.""
 					[(coInterpreter objCouldBeClassObj: objOop)
 						ifTrue: [BecamePointerObjectFlag + BecameClassFlag]
 						ifFalse: [BecamePointerObjectFlag]]
-				ifFalse: "if an object has a hash and it's a class it must be in the table."
+				ifFalse: ""if an object has a hash and it's a class it must be in the table.""
 					[(self classAtIndex: hash) = objOop
 						ifTrue: [BecamePointerObjectFlag + BecameClassFlag]
-						ifFalse: [BecamePointerObjectFlag]]]
+						ifFalse: [BecamePointerObjectFlag]]"]
 		ifFalse:
 			[(self isCompiledMethod: objOop)
 				ifTrue: [BecameCompiledMethodFlag]
@@ -2308,6 +2379,12 @@ SpurMemoryManager >> firstObject [
 	^nilObj
 ]
 
+{ #category : #snapshot }
+SpurMemoryManager >> firstSegmentBytes [
+	<doNotGenerate>
+	^segmentManager firstSegmentBytes
+]
+
 { #category : #'header formats' }
 SpurMemoryManager >> firstShortFormat [
 	^12
@@ -2662,6 +2739,11 @@ SpurMemoryManager >> heapMap [
 { #category : #'header format' }
 SpurMemoryManager >> identityHashHalfWordMask [
 	^16r3fffff
+]
+
+{ #category : #snapshot }
+SpurMemoryManager >> imageSizeToWrite [
+	^segmentManager totalBytesInSegments
 ]
 
 { #category : #'become implementation' }
