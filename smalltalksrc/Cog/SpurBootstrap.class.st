@@ -1643,9 +1643,13 @@ SpurBootstrap >> writeSnapshotOfTransformedImage [
 				and: [(counts at: counts size - 1) value > 1024]).
 	barriers := (1 to: (counts at: counts size - 1) key) collect:
 					[:ign| heap allocateOldSpaceChunkOfExactlyBytes: (counts at: counts size - 1) value].
-	heap segmentManager initializeFromFreeChunks:
-		(barriers sort collect: [:b| heap objectStartingAt: b]),
-		{ last }.
+	barriers := barriers, {heap allocateOldSpaceChunkOfExactlyBytes: (heap bytesInObject: last)}.
+	heap setEndOfMemory: barriers last.
+	heap allOldSpaceEntitiesDo: [:e| last := e].
+	self assert: (heap addressAfter: last) = barriers last.
+	heap checkFreeSpace.
+	heap runLeakCheckerForFullGC: true.
+	heap segmentManager initializeFromFreeChunks: (barriers sort collect: [:b| heap objectStartingAt: b]).
 	sim imageName: 'spur.image'.
 	sim writeImageFileIO
 ]
