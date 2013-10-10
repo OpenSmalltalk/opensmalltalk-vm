@@ -122,6 +122,12 @@ NewCoObjectMemory >> growObjectMemory: delta [
 		 coInterpreter sqMakeMemoryNotExecutableFrom: self startOfMemory To: memoryLimit]
 ]
 
+{ #category : #'image save/restore' }
+NewCoObjectMemory >> memoryBaseForImageRead [
+	"Answer the address to read the image into."
+	^coInterpreter heapBase
+]
+
 { #category : #'gc -- compaction' }
 NewCoObjectMemory >> nullHeaderForMachineCodeMethod [
 	<api>
