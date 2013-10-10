@@ -9338,6 +9338,9 @@ StackInterpreter >> printMethodHeaderOop: anOop [
 StackInterpreter >> printNameOfClass: classOop count: cnt [
 	"Details: The count argument is used to avoid a possible infinite recursion if classOop is a corrupted object."
 	<inline: false>
+	classNameIndex ifNil:
+		[self print: '??nil cnidx??'.
+		 ^self].
 	(classOop isNil or: [classOop = 0 or: [cnt <= 0]]) ifTrue: [^self print: 'bad class'].
 	((objectMemory sizeBitsOf: classOop) = metaclassSizeBits
 	  and: [metaclassSizeBits > (thisClassIndex * BytesPerOop)])	"(Metaclass instSize * 4)"
@@ -10149,11 +10152,7 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 	self sqImageFile: f Seek: headerStart + headerSize.
 
 	"read in the image in bulk, then swap the bytes if necessary"
-	bytesRead := self 
-					sq: (self pointerForOop: objectMemory memoryBaseForImageRead)
-					Image: (self sizeof: #char)
-					File: dataSize
-					Read: f.
+	bytesRead := objectMemory readHeapFromImageFile: f dataBytes: dataSize.
 	bytesRead ~= dataSize ifTrue: [self unableToReadImageError].
 
 	self ensureImageFormatIsUpToDate: swapBytes.

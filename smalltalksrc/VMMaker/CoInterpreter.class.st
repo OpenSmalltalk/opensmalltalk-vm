@@ -5700,11 +5700,7 @@ CoInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imag
 	self sqImageFile: f Seek: headerStart + headerSize.
 
 	"read in the image in bulk, then swap the bytes if necessary"
-	bytesRead := self
-					sq: (self pointerForOop: objectMemory memoryBaseForImageRead)
-					Image: (self sizeof: #char)
-					File: dataSize
-					Read: f.
+	bytesRead := objectMemory readHeapFromImageFile: f dataBytes: dataSize.
 	bytesRead ~= dataSize ifTrue: [self unableToReadImageError].
 
 	self ensureImageFormatIsUpToDate: swapBytes.
