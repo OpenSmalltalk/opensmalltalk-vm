@@ -95,6 +95,7 @@ Class {
 		'statProcessSwitch',
 		'statIOProcessEvents',
 		'theUnknownShort',
+		'the2ndUnknownShort',
 		'imageFloatsBigEndian',
 		'maxExtSemTabSizeSet',
 		'lastMethodCacheProbeWrite',
@@ -10069,7 +10070,7 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 
 	| swapBytes headerStart headerSize dataSize oldBaseAddr hdrNumStackPages
 	  minimumMemory heapBase bytesRead bytesToShift heapSize hdrEdenBytes
-	  headerFlags hdrMaxExtSemTabSize |
+	  headerFlags hdrMaxExtSemTabSize firstSegSize |
 	<var: #f type: 'sqImageFile '>
 	<var: #heapBase type: 'usqInt'>
 	<var: #desiredHeapSize type: 'usqInt'>
@@ -10087,9 +10088,9 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 	objectMemory specialObjectsOop: (self getLongFromFile: f swap: swapBytes).
 	objectMemory lastHash: (self getLongFromFile: f swap: swapBytes). "N.B.  not used."
 	savedWindowSize	:= self getLongFromFile: f swap: swapBytes.
-	headerFlags			:= self getLongFromFile: f swap: swapBytes.
+	headerFlags		:= self getLongFromFile: f swap: swapBytes.
 	self setImageHeaderFlagsFrom: headerFlags.
-	extraVMMemory		:= self getLongFromFile: f swap: swapBytes.
+	extraVMMemory	:= self getLongFromFile: f swap: swapBytes.
 	hdrNumStackPages	:= self getShortFromFile: f swap: swapBytes.
 	"4 stack pages is small.  Should be able to run with as few as
 	 three. 4 should be comfortable but slow.  8 is a reasonable
@@ -10104,7 +10105,7 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 									ifFalse: [hdrNumStackPages]].
 	desiredNumStackPages := hdrNumStackPages.
 	"pad to word boundary.  This slot can be used for anything else that will fit in 16 bits.
-	 Preserve it to be polite to images run on Cog."
+	 It is used for the cog code size in Cog.  Preserve it to be polite to other VMs."
 	theUnknownShort	:= self getShortFromFile: f swap: swapBytes.
 	hdrEdenBytes		:= self getLongFromFile: f swap: swapBytes.
 	objectMemory edenBytes: (desiredEdenBytes ~= 0
@@ -10117,11 +10118,16 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 	hdrMaxExtSemTabSize := self getShortFromFile: f swap: swapBytes.
 	hdrMaxExtSemTabSize ~= 0 ifTrue:
 		[self setMaxExtSemSizeTo: hdrMaxExtSemTabSize].
+	"pad to word boundary.  This slot can be used for anything else that will fit in 16 bits.
+	 Preserve it to be polite to other VMs."
+	the2ndUnknownShort	:= self getShortFromFile: f swap: swapBytes.
+	firstSegSize := self nextLongFrom: f swap: swapBytes.
+	objectMemory firstSegmentSize: firstSegSize.
 	"decrease Squeak object heap to leave extra memory for the VM"
 	heapSize := self cCode: 'reserveExtraCHeapBytes(desiredHeapSize, extraVMMemory)'.
 
 	"compare memory requirements with availability".
-	minimumMemory := dataSize + objectMemory edenBytes + self interpreterAllocationReserveBytes.
+	minimumMemory := dataSize + objectMemory newSpaceBytes + self interpreterAllocationReserveBytes.
 	heapSize < minimumMemory ifTrue:
 		[self insufficientMemorySpecifiedError].
 
@@ -10143,13 +10149,17 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 	self sqImageFile: f Seek: headerStart + headerSize.
 
 	"read in the image in bulk, then swap the bytes if necessary"
-	bytesRead := self cCode: 'sqImageFileRead(pointerForOop(memory), sizeof(unsigned char), dataSize, f)'.
+	bytesRead := self 
+					sq: (self pointerForOop: objectMemory memoryBaseForImageRead)
+					Image: (self sizeof: #char)
+					File: dataSize
+					Read: f.
 	bytesRead ~= dataSize ifTrue: [self unableToReadImageError].
 
 	self ensureImageFormatIsUpToDate: swapBytes.
 
 	"compute difference between old and new memory base addresses"
-	bytesToShift := heapBase - oldBaseAddr.
+	bytesToShift := objectMemory memoryBaseForImageRead - oldBaseAddr.
 	self initializeInterpreter: bytesToShift.  "adjusts all oops to new location"
 	^dataSize
 ]
@@ -12235,7 +12245,7 @@ StackInterpreter >> writeImageFileIO [
 	self putShort: self unknownShortOrCodeSizeInKs toFile: f.
 	self putLong: desiredEdenBytes toFile: f.
 	self putShort: (maxExtSemTabSizeSet ifTrue: [self ioGetMaxExtSemTableSize] ifFalse: [0]) toFile: f.
-	self putShort: 0 toFile: f.
+	self putShort: the2ndUnknownShort toFile: f.
 	objectMemory hasSpurMemoryManagerAPI
 		ifTrue:
 			[self putLong: objectMemory firstSegmentBytes toFile: f."Pad the rest of the header."

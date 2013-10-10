@@ -272,19 +272,6 @@ Spur64BitMemoryManager >> numFreeLists [
 ]
 
 { #category : #'object access' }
-Spur64BitMemoryManager >> numSlotsOf: objOop [
-	<returnTypeC: #usqLong>
-	| numSlots |
-	self flag: #endianness.
-	"numSlotsOf: should not be applied to free or forwarded objects."
-	self assert: (self classIndexOf: objOop) > self isForwardedObjectClassIndexPun.
-	numSlots := self rawNumSlotsOf: objOop..
-	^numSlots = self numSlotsMask	"overflow slots; (2^56)-1 slots are plenty"
-		ifTrue: [((self longAt: objOop - self baseHeaderSize) << 8) asUnsignedLong >> 8]
-		ifFalse: [numSlots]
-]
-
-{ #category : #'object access' }
 Spur64BitMemoryManager >> numTagBits [
 	"4th bit reserved for object alignment, which could imply e.g. what space the object is in."
 	^3
@@ -322,6 +309,25 @@ Spur64BitMemoryManager >> objectBytesForSlots: numSlots [
 Spur64BitMemoryManager >> rawNumSlotsOf: objOop [
 	<returnTypeC: #usqLong>
 	^(self longAt: objOop) asUnsignedLong >> self numSlotsFullShift
+]
+
+{ #category : #'object access' }
+Spur64BitMemoryManager >> rawOverflowSlotsOf: objOop [
+	<returnTypeC: #usqLong>
+	<inline: true>
+	self flag: #endianness.
+	^((self longAt: objOop - self baseHeaderSize) << 8) asUnsignedLong >> 8
+]
+
+{ #category : #segments }
+Spur64BitMemoryManager >> reInitSegmentBridge: bridgeOop [
+	"On image write the segment manager replaces the header of the bridge
+	 with the size of the following segment.  This method restores that header."
+	self longAt: bridgeOop
+			put: (self numSlotsMask << self numSlotsFullShift)
+				+ (1 << self pinnedBitShift)
+				+ (self wordIndexableFormat << self formatShift)
+				+ self segmentBridgePun
 ]
 
 { #category : #'header access' }

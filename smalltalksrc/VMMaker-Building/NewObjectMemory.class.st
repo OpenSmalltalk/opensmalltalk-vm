@@ -1978,6 +1978,11 @@ NewObjectMemory >> newObjectHash [
 	^freeStart >> ShiftForWord
 ]
 
+{ #category : #accessing }
+NewObjectMemory >> newSpaceBytes [
+	^self edenBytes
+]
+
 { #category : #'primitive support' }
 NewObjectMemory >> nilFieldsOf: arrayObj [ 
 	0 to: (self lengthOf: arrayObj) - 1 do:

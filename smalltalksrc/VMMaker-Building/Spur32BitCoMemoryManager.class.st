@@ -46,18 +46,6 @@ Spur32BitCoMemoryManager >> clearLeakMapAndMapAccessibleObjects [
 	cogit addCogMethodsToHeapMap
 ]
 
-{ #category : #accessing }
-Spur32BitCoMemoryManager >> edenBytes [
-	"during snapshot load newSpaceLimit holds newSpace size + cogCodeSize temporarily."
-	scavenger eden limit ifNil:
-		[| newSpaceBytes |
-		 newSpaceBytes := newSpaceLimit - coInterpreter cogCodeSize - coInterpreter interpreterAllocationReserveBytes.
-		 ^newSpaceBytes * self scavengerDenominator - self numSurvivorSpaces // self scavengerDenominator
-			roundTo: self allocationUnit].
-	"once initialized we can query the actual beast."
-	^scavenger eden limit - scavenger eden start
-]
-
 { #category : #snapshot }
 Spur32BitCoMemoryManager >> edenBytes: edenBytes [
 	newSpaceLimit := edenBytes + coInterpreter cogCodeSize
@@ -83,6 +71,12 @@ Spur32BitCoMemoryManager >> headerWhileForwardingOf: aCompiledMethodObjOop [
 	 (which shouldn't happen with Spur)."
 	self assert: (self isForwarded: aCompiledMethodObjOop) not.
 	^self baseHeader: aCompiledMethodObjOop
+]
+
+{ #category : #accessing }
+Spur32BitCoMemoryManager >> newSpaceBytes [
+	"during snapshot load newSpaceLimit holds newSpace size + cogCodeSize temporarily."
+	^newSpaceLimit - coInterpreter cogCodeSize - coInterpreter interpreterAllocationReserveBytes
 ]
 
 { #category : #'trampoline support' }

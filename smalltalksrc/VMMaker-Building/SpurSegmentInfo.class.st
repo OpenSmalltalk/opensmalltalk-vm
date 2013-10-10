@@ -26,8 +26,11 @@ SpurSegmentInfo class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 SpurSegmentInfo >> printOn: aStream [
 	super printOn: aStream.
 	self class instVarNames do:
-		[:name|
-		aStream space; nextPutAll: name; space; print: (self instVarNamed: name)]
+		[:name| | iv |
+		iv := self instVarNamed: name.
+		aStream space; nextPutAll: name; space; print: iv.
+		iv isInteger ifTrue:
+			[aStream nextPut: $/.  iv storeOn: aStream base: 16]]
 ]
 
 { #category : #accessing }

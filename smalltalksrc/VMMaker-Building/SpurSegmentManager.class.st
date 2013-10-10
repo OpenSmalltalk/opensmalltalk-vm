@@ -25,14 +25,59 @@ Class {
 	#instVars : [
 		'manager',
 		'numSegments',
-		'segments'
+		'segments',
+		'firstSegmentSize',
+		'numSegmentsAllocated'
 	],
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #snapshot }
+SpurSegmentManager >> collapseSegmentsPostSwizzle [
+	"The image has been loaded, old segments reconstructed, and the
+	  loaded image swizzled into a single contiguous segment.  Collapse
+	 the segments, and free the old bridges."
+	| bridge |
+	firstSegmentSize ifNil: "true when used by SpurBootstrap to transform an image"
+		[^self].
+
+	numSegmentsAllocated := numSegments.
+	numSegments := 0.
+	"segment sizes include the two-header-word bridge at the end of each segment."
+	bridge := firstSegmentSize + manager newSpaceLimit - manager baseHeaderSize.
+	1 to: numSegmentsAllocated - 1 do:
+		[:i|
+		 manager
+			freeChunkWithBytes: 2 * manager baseHeaderSize
+			at: bridge - manager baseHeaderSize.
+		 bridge := bridge + (segments at: i) segSize].
+	"now bridge is pointing to last bridge in loaded image.  free the bridge, add a
+	 bridge at the end of memory, and cut back end of memory to before the bridge."
+	manager
+		freeChunkWithBytes: 2 * manager baseHeaderSize
+		at: bridge - manager baseHeaderSize.
+	"now update the segment to reflect the coallesced segments"
+	numSegments := 1.
+	(segments at: 0)
+		start: manager newSpaceLimit;
+		segSize: manager endOfMemory.
+	"finally plant a bridge at the end of the coallesced segment and cut back the
+	 manager's ntion of the end of memory to immediately before the bridge."
+	bridge := manager endOfMemory - (2 * manager baseHeaderSize).
+	manager
+		initSegmentBridgeWithBytes: 2 * manager baseHeaderSize at: bridge;
+		setEndOfMemory: bridge
+]
+
+{ #category : #snapshot }
 SpurSegmentManager >> firstSegmentBytes [
 	^(segments at: 0) segSize
+]
+
+{ #category : #initialization }
+SpurSegmentManager >> firstSegmentSize: firstSegSize [
+	"Remember firstSegSize for subsequent image segment parsing."
+	firstSegmentSize := firstSegSize
 ]
 
 { #category : #'simulation only' }
@@ -44,13 +89,15 @@ SpurSegmentManager >> initializeFromFreeChunks: freeChunks [
 		manager initSegmentBridgeWithBytes: (manager bytesInObject: f) at: (manager startOfObject: f).
 		self assert: (manager isSegmentBridge: f)].
 	segments := (1 to: numSegments) collect:
-					[:i| | start |
+					[:i| | bridge start size |
+					bridge := freeChunks at: i.
 					start := i = 1
 								ifTrue: [manager newSpaceLimit]
 								ifFalse: [manager addressAfter: (freeChunks at: i - 1)].
+					size := bridge + manager baseHeaderSize - start.
 					SpurSegmentInfo new
 						start: start;
-						segSize: (freeChunks at: i) + manager baseHeaderSize - start;
+						segSize: size;
 						yourself].
 	segments := CArrayAccessor on: segments.
 	freeChunks do:
@@ -62,6 +109,64 @@ SpurSegmentManager >> manager: aSpurMemoryManager [
 	manager := aSpurMemoryManager.
 	numSegments ifNil:
 		[numSegments := 0]
+]
+
+{ #category : #accessing }
+SpurSegmentManager >> numSegments [
+	^numSegments
+]
+
+{ #category : #snapshot }
+SpurSegmentManager >> parseSegmentsInNewlyLoadedImage: firstSegmentShift [
+	"Skip through the bridge objects, counting the number of segments.
+	 Then allocate the segment info and scan again, computing the swizzle
+	 ammounts for each segment."
+	| bridge nextSegmentSize oldBase newBase segInfo bridgeSpan |
+	<var: 'segInfo' type: 'SpurSegmentInfo *'>
+	firstSegmentSize ifNil: "true when used by SpurBootstrap to transform an image"
+		[^self].
+
+	numSegments := 0.
+	"segment sizes include the two-header-word bridge at the end of each segment."
+	bridge := firstSegmentSize + manager newSpaceLimit - manager baseHeaderSize.
+	[numSegments := numSegments + 1.
+	 nextSegmentSize := manager longLongAt: bridge.
+	 nextSegmentSize ~= 0] whileTrue:
+		[bridge := bridge + nextSegmentSize].
+	segments := self
+					cCode: [self c: numSegments alloc: (self sizeof: SpurSegmentInfo)]
+					inSmalltalk: [CArrayAccessor on: ((1 to: numSegments) collect: [:i| SpurSegmentInfo new])].
+
+	numSegments := 0.
+	oldBase := manager newSpaceLimit - firstSegmentShift.
+	newBase := manager newSpaceLimit.
+	nextSegmentSize := firstSegmentSize.
+	bridge := firstSegmentSize + manager newSpaceLimit - manager baseHeaderSize.
+	[segInfo := self addressOf: (segments at: numSegments).
+	 segInfo
+		start: oldBase;
+		segSize: nextSegmentSize;
+		swizzle: newBase - oldBase.
+	 numSegments := numSegments + 1.
+	 bridgeSpan := manager bytesPerSlot * (manager rawOverflowSlotsOf: bridge).
+	 oldBase := oldBase + nextSegmentSize + bridgeSpan.
+	 newBase := newBase + nextSegmentSize.
+	 nextSegmentSize := manager longLongAt: bridge.
+	 nextSegmentSize ~= 0] whileTrue:
+		[bridge := bridge + nextSegmentSize].
+	"newBase should point just past the last bridge."
+	self assert: (manager longLongAt: newBase - manager baseHeaderSize) = 0.
+	"set freeOldSpaceStart now for adjustAllOopsBy:"
+	manager setFreeOldSpaceStart: newBase
+]
+
+{ #category : #snapshot }
+SpurSegmentManager >> swizzleObj: objOop [
+	1 to: numSegments - 1 do:
+		[:i|
+		objOop < (segments at: i) start ifTrue:
+			[^objOop + (segments at: i - 1) swizzle]].
+	^objOop + (segments at: numSegments - 1) swizzle
 ]
 
 { #category : #snapshot }
@@ -78,26 +183,41 @@ SpurSegmentManager >> totalBytesInSegments [
 SpurSegmentManager >> writeImageToFile: aBinaryStream [
 	| total |
 	total := 0.
+	firstSegmentSize ifNotNil:
+		[self assert: firstSegmentSize = (segments at: 0) segSize].
 	0 to: numSegments - 1 do:
-		[:i|
-		total := total + (self writeSegment: (segments at: i) toFile: aBinaryStream)].
+		[:i| | nextSegSize |
+		nextSegSize := i = (numSegments - 1)
+							ifTrue: [0]
+							ifFalse: [(segments at: i + 1) segSize].
+		total := total + (self writeSegment: (segments at: i)
+							nextSegmentSize: nextSegSize
+							toFile: aBinaryStream)].
 	^total
 ]
 
 { #category : #snapshot }
-SpurSegmentManager >> writeSegment: aSpurSegmentInfo toFile: aBinaryStream [
+SpurSegmentManager >> writeSegment: aSpurSegmentInfo nextSegmentSize: nextSegSize toFile: aBinaryStream [
 	<var: 'aSpurSegmentInfo' type: 'SpurSegmentInfo *'>
 	<var: 'aBinaryStream' type: #'FILE *'>
-	^self cCode:
-			[self
-				sq: aSpurSegmentInfo start
-				Image: 1
-				File: aSpurSegmentInfo segSize
-				Write: aBinaryStream]
-		inSmalltalk:
-			[aBinaryStream
-				next: aSpurSegmentInfo segSize / 4
-				putAll: manager memory
-				startingAt: aSpurSegmentInfo start / 4 + 1.
-			 aSpurSegmentInfo segSize]
+	| bridge savedHeader nWritten |
+	<var: 'savedHeader' type: #usqLong>
+	bridge := aSpurSegmentInfo start + aSpurSegmentInfo segSize - manager baseHeaderSize.
+	self assert: (manager isValidSegmentBridge: bridge).
+	savedHeader := manager longLongAt: bridge.
+	manager longLongAt: bridge put: nextSegSize.
+	nWritten := self cCode:
+						[self
+							sq: aSpurSegmentInfo start
+							Image: 1
+							File: aSpurSegmentInfo segSize
+							Write: aBinaryStream]
+					inSmalltalk:
+						[aBinaryStream
+							next: aSpurSegmentInfo segSize / 4
+							putAll: manager memory
+							startingAt: aSpurSegmentInfo start / 4 + 1.
+						 aSpurSegmentInfo segSize].
+	manager longLongAt: bridge put: savedHeader.
+	^nWritten
 ]

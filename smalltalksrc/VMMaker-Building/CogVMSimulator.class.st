@@ -1069,6 +1069,13 @@ CogVMSimulator >> functionPointerForCompiledMethod: methodObj primitiveIndex: pr
 	^self mapFunctionToAddress: (super functionPointerForCompiledMethod: methodObj primitiveIndex: primIndex)
 ]
 
+{ #category : #initialization }
+CogVMSimulator >> getLongFromFile: aStream swap: swapFlag [
+	^swapFlag 
+		ifTrue: [objectMemory byteSwapped: (self nextLongFrom: aStream)]
+		ifFalse: [self nextLongFrom: aStream]
+]
+
 { #category : #'multi-threading simulation switch' }
 CogVMSimulator >> getMaxWaitingPriority [
 	"This method includes or excludes CoInterpreterMT methods as required.
@@ -1077,6 +1084,15 @@ CogVMSimulator >> getMaxWaitingPriority [
 	^self perform: #getMaxWaitingPriority
 		withArguments: {}
 		inSuperclass: (cogThreadManager ifNil: [CoInterpreterPrimitives] ifNotNil: [CoInterpreterMT])
+]
+
+{ #category : #'image save/restore' }
+CogVMSimulator >> getShortFromFile: aFile swap: swapFlag [
+	| aShort |
+	aShort := self nextShortFrom: aFile.
+	^swapFlag 
+		ifTrue: [(aShort bitShift: -8) + ((aShort bitAnd: 16rFF) bitShift: 8)]
+		ifFalse: [aShort]
 ]
 
 { #category : #'memory access' }
@@ -2147,25 +2163,9 @@ CogVMSimulator >> nextLongFrom: aStream [
 ]
 
 { #category : #initialization }
-CogVMSimulator >> nextLongFrom: aStream swap: swapFlag [
-	swapFlag 
-		ifTrue: [^ objectMemory byteSwapped: (self nextLongFrom: aStream)]
-		ifFalse: [^ self nextLongFrom: aStream]
-]
-
-{ #category : #initialization }
 CogVMSimulator >> nextShortFrom: aStream [
 	"Read a 16-bit quantity from the given (binary) stream."
 	^self subclassResponsibility
-]
-
-{ #category : #initialization }
-CogVMSimulator >> nextShortFrom: aStream swap: swapFlag [
-	| aShort |
-	aShort := self nextShortFrom: aStream.
-	^swapFlag 
-		ifTrue: [(aShort bitShift: -8) + ((aShort bitAnd: 16rFF) bitShift: 8)]
-		ifFalse: [aShort]
 ]
 
 { #category : #'test support' }
@@ -2250,7 +2250,7 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 	"CogVMSimulator new openOn: 'clone.im' extraMemory: 100000"
 
 	| f version headerSize count heapSize oldBaseAddr bytesToShift swapBytes hdrNumStackPages
-	 hdrEdenBytes hdrCogCodeSize stackZoneSize methodCacheSize headerFlags primTraceLogSize |
+	 hdrEdenBytes hdrCogCodeSize stackZoneSize methodCacheSize headerFlags primTraceLogSize firstSegSize hdrMaxExtSemTabSize |
 	"open image file and read the header"
 
 	["begin ensure block..."
@@ -2263,17 +2263,17 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 		ifFalse: [(version := objectMemory byteSwapped: version) = self imageFormatVersion
 					ifTrue: [swapBytes := true]
 					ifFalse: [self error: 'incomaptible image format']].
-	headerSize := self nextLongFrom: f swap: swapBytes.
-	heapSize := self nextLongFrom: f swap: swapBytes.  "length of heap in file"
-	oldBaseAddr := self nextLongFrom: f swap: swapBytes.  "object memory base address of image"
-	objectMemory specialObjectsOop: (self nextLongFrom: f swap: swapBytes).
-	objectMemory lastHash: (self nextLongFrom: f swap: swapBytes).  "Should be loaded from, and saved to the image header"
+	headerSize := self getLongFromFile: f swap: swapBytes.
+	heapSize := self getLongFromFile: f swap: swapBytes.  "length of heap in file"
+	oldBaseAddr := self getLongFromFile: f swap: swapBytes.  "object memory base address of image"
+	objectMemory specialObjectsOop: (self getLongFromFile: f swap: swapBytes).
+	objectMemory lastHash: (self getLongFromFile: f swap: swapBytes).  "Should be loaded from, and saved to the image header"
 
-	savedWindowSize	:= self nextLongFrom: f swap: swapBytes.
-	headerFlags			:= self nextLongFrom: f swap: swapBytes.
+	savedWindowSize	:= self getLongFromFile: f swap: swapBytes.
+	headerFlags		:= self getLongFromFile: f swap: swapBytes.
 	self setImageHeaderFlagsFrom: headerFlags.
-	extraVMMemory		:= self nextLongFrom: f swap: swapBytes.
-	hdrNumStackPages	:= self nextShortFrom: f swap: swapBytes.
+	extraVMMemory	:= self getLongFromFile: f swap: swapBytes.
+	hdrNumStackPages	:= self getShortFromFile: f swap: swapBytes.
 	"4 stack pages is small.  Should be able to run with as few as
 	 three. 4 should be comfortable but slow.  8 is a reasonable
 	 default. Can be changed via vmParameterAt: 43 put: n"
@@ -2293,7 +2293,8 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 									ifTrue: [self defaultCogCodeSize]
 									ifFalse: [hdrCogCodeSize]].
 	desiredCogCodeSize := hdrCogCodeSize.
-	hdrEdenBytes	:= self nextLongFrom: f swap: swapBytes.
+	self assert: f position = 40.
+	hdrEdenBytes	:= self getLongFromFile: f swap: swapBytes.
 	objectMemory edenBytes: (desiredEdenBytes ~= 0
 						ifTrue: [desiredEdenBytes]
 						ifFalse:
@@ -2301,6 +2302,15 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 									ifTrue: [objectMemory defaultEdenBytes]
 									ifFalse: [hdrEdenBytes]]).
 	desiredEdenBytes := hdrEdenBytes.
+	hdrMaxExtSemTabSize := self getShortFromFile: f swap: swapBytes.
+	hdrMaxExtSemTabSize ~= 0 ifTrue:
+		[self setMaxExtSemSizeTo: hdrMaxExtSemTabSize].
+	"pad to word boundary.  This slot can be used for anything else that will fit in 16 bits.
+	 Preserve it to be polite to other VMs."
+	the2ndUnknownShort	:= self getShortFromFile: f swap: swapBytes.
+	self assert: f position = 48.
+	firstSegSize := self getLongFromFile: f swap: swapBytes.
+	objectMemory firstSegmentSize: firstSegSize.
 	"For Open PICs to be able to probe the method cache during
 	 simulation the methodCache must be relocated to memory."
 	methodCacheSize := methodCache size * BytesPerWord.
@@ -2316,7 +2326,7 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 		setHeapBase: heapBase
 		memoryLimit:  heapBase
 						+ heapSize
-						+ objectMemory edenBytes
+						+ objectMemory newSpaceBytes
 						+ self interpreterAllocationReserveBytes
 						+ extraBytes
 		endOfMemory: heapBase + heapSize.
@@ -2330,7 +2340,9 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 	objectMemory memory: ((cogit processor endianness == #little
 					ifTrue: [LittleEndianBitmap]
 					ifFalse: [Bitmap]) new: objectMemory memoryLimit // 4).
-	count := f readInto: objectMemory memory startingAt: heapBase // 4 + 1 count: heapSize // 4.
+	count := f	readInto: objectMemory memory
+				startingAt: objectMemory memoryBaseForImageRead // 4 + 1
+				count: heapSize // 4.
 	count ~= (heapSize // 4) ifTrue: [self halt].
 	]
 		ensure: [f close].
@@ -2339,7 +2351,7 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 
 	self ensureImageFormatIsUpToDate: swapBytes.
 
-	bytesToShift := objectMemory startOfMemory - oldBaseAddr.  "adjust pointers for zero base address"
+	bytesToShift := objectMemory memoryBaseForImageRead - oldBaseAddr.  "adjust pointers for zero base address"
 	Utilities
 		informUser: 'Relocating object pointers...'
 		during: [self initializeInterpreter: bytesToShift].
