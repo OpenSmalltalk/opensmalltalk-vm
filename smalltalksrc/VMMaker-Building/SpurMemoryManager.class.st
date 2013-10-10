@@ -719,7 +719,7 @@ SpurMemoryManager >> addressCouldBeOop: address [
 	  or: [self addressCouldBeObj: address]
 ]
 
-{ #category : #initialization }
+{ #category : #snapshot }
 SpurMemoryManager >> adjustAllOopsBy: bytesToShift [
 	"Adjust all oop references by the given number of bytes. This is
 	 done just after reading in an image when the new base address
@@ -1251,6 +1251,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfExactlyBytes: chunkBytes [
 						withValue: parent.
 					 larger ~= 0 ifTrue:
 						[self addFreeSubTree: larger]]].
+	totalFreeOldSpace := totalFreeOldSpace - chunkBytes.
 	^self startOfObject: node
 ]
 
@@ -1434,6 +1435,11 @@ SpurMemoryManager >> booleanValueOf: obj [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	<doNotGenerate>
 	^coInterpreter booleanValueOf: obj
+]
+
+{ #category : #segments }
+SpurMemoryManager >> bridgeSize [
+	^2 * self baseHeaderSize
 ]
 
 { #category : #'header format' }
@@ -2875,6 +2881,30 @@ SpurMemoryManager >> initialize [
 	heapMap := self wordSize = 4 ifTrue: [CogCheck32BitHeapMap new]
 ]
 
+{ #category : #snapshot }
+SpurMemoryManager >> initializeFreeSpacePostLoad: freeListObj [
+	"Reinitialize the free list info.  The freeLists object needs to be swizzled
+	 because its neither a free, nor a pointer object.  Free objects have already
+	 been swizzled in adjustAllOopsBy:"
+	
+	self assert: (self numSlotsOf: freeListObj) = self numFreeLists.
+	self assert: (self formatOf: freeListObj) = (self wordSize = 4
+													ifTrue: [self firstLongFormat]
+													ifFalse: [self sixtyFourBitIndexableFormat]).
+
+	segmentManager numSegments = 0 ifTrue: "true in Spur image bootstrap"
+		[^self].
+	self halt.
+	freeLists := self firstIndexableField: freeListObj.
+	0 to: self numFreeLists - 1 do:
+		[:i|
+		(freeLists at: i) ~= 0 ifTrue:
+			[freeListsMask := freeListsMask bitOr: (1 << i).
+			 segmentManager numSegments > 0 ifTrue:
+				[freeLists at: i put: (segmentManager swizzleObj: (freeLists at: i))]]].
+	totalFreeOldSpace := self totalFreeListBytes
+]
+
 { #category : #initialization }
 SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	"Initialize object memory variables at startup time. Assume endOfMemory is initially set (by the image-reading code) to the end of the last object in the image. Initialization redefines endOfMemory to be the end of the object allocation area based on the total available memory, but reserving some space for forwarding blocks."
@@ -2886,13 +2916,15 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	"
 	<inline: false>
 	| freeListObj |
-	segmentManager parseSegmentsInNewlyLoadedImage: bytesToShift.
+	segmentManager adjustSegmentSwizzlesBy: bytesToShift.
 	"image may be at a different address; adjust oops for new location"
 	self adjustAllOopsBy: bytesToShift.
 
 	segmentManager numSegments > 0 "false if Spur image bootstrap"
 		ifTrue: [specialObjectsOop := segmentManager swizzleObj: specialObjectsOop]
 		ifFalse: [self assert: bytesToShift = 0].
+
+	segmentManager collapseSegmentsPostSwizzle.
 
 	"heavily used special objects"
 	nilObj		:= self splObj: NilObject.
@@ -2906,18 +2938,9 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	self assert: falseObj = (self objectAfter: nilObj).
 	self assert: trueObj = (self objectAfter: falseObj).
 	freeListObj := self objectAfter: trueObj.
-	self assert: (self numSlotsOf: freeListObj) = self numFreeLists.
-	self assert: (self formatOf: freeListObj) = (self wordSize = 4
-													ifTrue: [self firstLongFormat]
-													ifFalse: [self sixtyFourBitIndexableFormat]).
-	freeLists := self firstIndexableField: freeListObj.
-	0 to: self numFreeLists - 1 do:
-		[:i|
-		(freeLists at: i) ~= 0 ifTrue:
-			[freeLists at: i put: (segmentManager swizzleObj: (freeLists at: i))]].
 	self classTableRootObj: (self objectAfter: freeListObj).
+	self initializeFreeSpacePostLoad: freeListObj.
 .
-	segmentManager collapseSegmentsPostSwizzle.
 	self initializeOldSpaceFirstFree: freeOldSpaceStart. "initializes endOfMemory, freeStart"
 
 	"lowSpaceThreshold := 0.
@@ -4270,6 +4293,14 @@ SpurMemoryManager >> reInitSegmentBridge: bridgeOop [
 	^self subclassResponsibility
 ]
 
+{ #category : #snapshot }
+SpurMemoryManager >> readHeapFromImageFile: f dataBytes: numBytes [
+	"Read numBytes of image data from f into memory at memoryBaseForImageRead.
+	 Answer the number of bytes written."
+	<doNotGenerate>
+	^segmentManager readHeapFromImageFile: f dataBytes: numBytes
+]
+
 { #category : #'garbage collection' }
 SpurMemoryManager >> remap: oop [
 	self shouldNotImplement
@@ -4474,8 +4505,11 @@ SpurMemoryManager >> setClassIndexOf: objOop to: classIndex [
 
 { #category : #snapshot }
 SpurMemoryManager >> setEndOfMemory: newEndOfMemory [
-	"Set by the segment manager after swizzling the image."
-	endOfMemory := newEndOfMemory
+	"Set by the segment manager after swizzling the image,
+	 and by the SpurBootstrap on writing out the transformed image."
+	endOfMemory := newEndOfMemory.
+	freeOldSpaceStart > newEndOfMemory ifTrue:
+		[freeOldSpaceStart := newEndOfMemory]
 ]
 
 { #category : #'header access' }
@@ -4929,7 +4963,7 @@ SpurMemoryManager >> sufficientSpaceToInstantiate: classObj indexableSize: index
 	self shouldNotImplement
 ]
 
-{ #category : #initialization }
+{ #category : #snapshot }
 SpurMemoryManager >> swizzleFieldsOfFreeChunk: chunk [
 	<inline: true>
 	0 to: ((self bytesInObject: chunk) / self allocationUnit > self numFreeLists
@@ -4943,7 +4977,7 @@ SpurMemoryManager >> swizzleFieldsOfFreeChunk: chunk [
 				withValue: (segmentManager swizzleObj: field)]]
 ]
 
-{ #category : #initialization }
+{ #category : #snapshot }
 SpurMemoryManager >> swizzleFieldsOfObject: oop [
 	| fieldAddr fieldOop |
 	<inline: true>
@@ -5008,8 +5042,8 @@ SpurMemoryManager >> totalFreeListBytes [
 		obj := freeLists at: i.
 		[obj ~= 0] whileTrue:
 			[freeBytes := freeBytes + bytesInObject.
-			 self assert: bytesInObject = (self bytesInObject: obj).
 			 self assert: (self isValidFreeObject: obj).
+			 self assert: bytesInObject = (self bytesInObject: obj).
 			 obj := self fetchPointer: self freeChunkNextIndex ofFreeChunk: obj]].
 	^freeBytes + (self bytesInFreeTree: (freeLists at: 0))
 ]

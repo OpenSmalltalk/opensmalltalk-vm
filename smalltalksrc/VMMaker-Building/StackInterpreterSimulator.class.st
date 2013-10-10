@@ -1239,6 +1239,7 @@ StackInterpreterSimulator >> methodForContext: aContextOop [
 
 { #category : #'debug support' }
 StackInterpreterSimulator >> nameOfClass: classOop [
+	classNameIndex ifNil: [^'??nil cnidx??'].
 	(objectMemory sizeBitsOf: classOop) = metaclassSizeBits ifTrue:
 		[^(self nameOfClass:
 				(objectMemory fetchPointer: thisClassIndex ofObject: classOop)) , ' class'].
@@ -1391,10 +1392,8 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 
 	"read in the image in bulk, then swap the bytes if necessary"
 	f position: headerSize.
-	count := f	readInto: objectMemory memory
-				startingAt: objectMemory memoryBaseForImageRead // 4 + 1
-				count: dataSize // 4.
-	count ~= (dataSize // 4) ifTrue: [self halt].
+	count := objectMemory readHeapFromImageFile: f dataBytes: dataSize.
+	count ~= dataSize ifTrue: [self halt].
 	]
 		ensure: [f close].
 
