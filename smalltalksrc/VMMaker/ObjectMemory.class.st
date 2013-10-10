@@ -1645,11 +1645,6 @@ ObjectMemory >> endOfMemory [
 	^endOfMemory
 ]
 
-{ #category : #accessing }
-ObjectMemory >> endOfMemory: aValue [
-	^endOfMemory := aValue
-]
-
 { #category : #'header access' }
 ObjectMemory >> ensureBehaviorHash: oop [
 
@@ -1863,6 +1858,11 @@ ObjectMemory >> firstObject [
 	"Return the first object or free chunk in the heap."
 
 	^ self oopFromChunk: self startOfMemory
+]
+
+{ #category : #'image save/restore' }
+ObjectMemory >> firstSegmentSize: firstSegSize [
+	"Ignored; this is for Spur's segmented image"
 ]
 
 { #category : #'header formats' }
@@ -3536,6 +3536,12 @@ ObjectMemory >> memory [
 { #category : #accessing }
 ObjectMemory >> memory: aValue [
 	^memory := aValue
+]
+
+{ #category : #'image save/restore' }
+ObjectMemory >> memoryBaseForImageRead [
+	"Answer the address to read the image into."
+	^memory
 ]
 
 { #category : #accessing }

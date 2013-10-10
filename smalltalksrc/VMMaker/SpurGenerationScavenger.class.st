@@ -446,9 +446,13 @@ SpurGenerationScavenger >> isScavengeSurvivor: oop [
 ]
 
 { #category : #initialization }
-SpurGenerationScavenger >> manager: aSpurMemoryManager newSpaceStart: startAddress newSpaceBytes: totalBytes edenBytes: requestedEdenBytes [ 
+SpurGenerationScavenger >> manager: aSpurMemoryManager newSpaceStart: startAddress newSpaceBytes: totalBytes edenBytes: requestedEdenBytes [ 	self manager: aSpurMemoryManager.
+	self newSpaceStart: startAddress newSpaceBytes: totalBytes edenBytes: requestedEdenBytes
+]
+
+{ #category : #initialization }
+SpurGenerationScavenger >> newSpaceStart: startAddress newSpaceBytes: totalBytes edenBytes: requestedEdenBytes [ 
 	| edenBytes survivorBytes |
-	manager := aSpurMemoryManager.
 
 	edenBytes := requestedEdenBytes.
 	survivorBytes := totalBytes - edenBytes // 2 truncateTo: manager allocationUnit.
