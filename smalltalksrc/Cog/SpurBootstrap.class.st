@@ -1650,6 +1650,8 @@ SpurBootstrap >> writeSnapshotOfTransformedImage [
 	heap checkFreeSpace.
 	heap runLeakCheckerForFullGC: true.
 	heap segmentManager initializeFromFreeChunks: (barriers sort collect: [:b| heap objectStartingAt: b]).
+	heap checkFreeSpace.
+	heap runLeakCheckerForFullGC: true.
 	sim imageName: 'spur.image'.
 	sim writeImageFileIO
 ]
