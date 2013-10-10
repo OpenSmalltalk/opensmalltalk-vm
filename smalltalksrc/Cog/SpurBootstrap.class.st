@@ -1625,12 +1625,14 @@ SpurBootstrap >> writeSnapshotOfTransformedImage [
 	"The bootstrapped image typically contains a few big free chunks and one huge free chunk.
 	 Test snapshot writing and loading by turning the largest non-huge chunks into segment bridges
 	 and saving."
-	| heap sizes counts barriers sim |
+	| last heap sizes counts barriers sim |
 	heap := TransformedImage veryDeepCopy.
 	sim := StackInterpreterSimulator onObjectMemory: heap.
 	heap coInterpreter: sim.
 	sim initializeInterpreter: 0;
 		setImageHeaderFlagsFrom: ImageHeaderFlags.
+	heap allOldSpaceEntitiesDo: [:e| last := e].
+	self assert: (heap isFreeObject: last).
 	sizes := Bag new.
 	heap allObjectsInFreeTree: (heap freeLists at: 0) do:
 		[:f|
@@ -1641,7 +1643,9 @@ SpurBootstrap >> writeSnapshotOfTransformedImage [
 				and: [(counts at: counts size - 1) value > 1024]).
 	barriers := (1 to: (counts at: counts size - 1) key) collect:
 					[:ign| heap allocateOldSpaceChunkOfExactlyBytes: (counts at: counts size - 1) value].
-	heap segmentManager initializeFromFreeChunks: (barriers sort collect: [:b| heap objectStartingAt: b]).
+	heap segmentManager initializeFromFreeChunks:
+		(barriers sort collect: [:b| heap objectStartingAt: b]),
+		{ last }.
 	sim imageName: 'spur.image'.
 	sim writeImageFileIO
 ]
