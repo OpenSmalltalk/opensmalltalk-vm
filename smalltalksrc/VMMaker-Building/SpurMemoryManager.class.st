@@ -720,35 +720,22 @@ SpurMemoryManager >> addressCouldBeOop: address [
 ]
 
 { #category : #initialization }
-SpurMemoryManager >> adjustAllOopsBy: bytesToShift [ 
-	"Adjust all oop references by the given number of bytes. This 
-	is done just after reading in an image when the new base 
-	address of the object heap is different from the base address 
-	in the image."
+SpurMemoryManager >> adjustAllOopsBy: bytesToShift [
+	"Adjust all oop references by the given number of bytes. This is
+	 done just after reading in an image when the new base address
+	 of the object heap is different from the base address in the image,
+	 or when loading multiple segments that have been coallesced."
 
 	| obj |
-	<inline: false>
-	bytesToShift ~= 0 ifTrue:
+	(bytesToShift ~= 0
+	 or: [segmentManager numSegments > 1]) ifTrue:
 		[self assert: self newSpaceIsEmpty.
-		 obj := self firstObject.
+		 obj := self objectStartingAt: newSpaceLimit.
 		 [self oop: obj isLessThan: freeOldSpaceStart] whileTrue:
-			[(self isFreeObject: obj) ifFalse:
-				[self adjustFieldsAndClassOf: obj by: bytesToShift].
+			[(self isFreeObject: obj)
+				ifTrue: [self swizzleFieldsOfFreeChunk: obj]
+				ifFalse: [self swizzleFieldsOfObject: obj].
 			 obj := self objectAfter: obj]]
-]
-
-{ #category : #initialization }
-SpurMemoryManager >> adjustFieldsAndClassOf: oop by: offsetBytes [ 
-	"Adjust all pointers in this object by the given offset."
-	| fieldAddr fieldOop |
-	<inline: true>
-	<asmLabel: false>
-	fieldAddr := oop + (self lastPointerOf: oop).
-	[self oop: fieldAddr isGreaterThanOrEqualTo: oop + self baseHeaderSize] whileTrue:
-		[fieldOop := self longAt: fieldAddr.
-		 (self isNonImmediate: fieldOop) ifTrue:
-			[self longAt: fieldAddr put: fieldOop + offsetBytes].
-		 fieldAddr := fieldAddr - BytesPerOop]
 ]
 
 { #category : #'object enumeration' }
@@ -2056,14 +2043,8 @@ SpurMemoryManager >> doBecome: obj1 with: obj2 copyHash: copyHashFlag [
 
 { #category : #accessing }
 SpurMemoryManager >> edenBytes [
-	"during snapshot load newSpaceLimit holds newSpace size temporarily."
-	scavenger eden limit ifNil:
-		[| newSpaceBytes |
-		 newSpaceBytes := newSpaceLimit - coInterpreter interpreterAllocationReserveBytes.
-		 ^newSpaceBytes * self scavengerDenominator - self numSurvivorSpaces // self scavengerDenominator
-			roundTo: self allocationUnit].
-	"once initialized we can query the actual beast."
-	^scavenger eden limit - scavenger eden start
+	<doNotGenerate>
+	^scavenger edenBytes
 ]
 
 { #category : #snapshot }
@@ -2409,6 +2390,14 @@ SpurMemoryManager >> firstSegmentBytes [
 	^segmentManager firstSegmentBytes
 ]
 
+{ #category : #snapshot }
+SpurMemoryManager >> firstSegmentSize: firstSegmentSize [
+	<doNotGenerate>
+	"even an empty segment needs a bridge ;-)"
+	self assert: firstSegmentSize >= (2 * self baseHeaderSize).
+	segmentManager firstSegmentSize: firstSegmentSize
+]
+
 { #category : #'header formats' }
 SpurMemoryManager >> firstShortFormat [
 	^12
@@ -2674,6 +2663,11 @@ SpurMemoryManager >> freeObject: objOop [
 	^self freeChunkWithBytes: bytes at: (self startOfObject: objOop)
 ]
 
+{ #category : #snapshot }
+SpurMemoryManager >> freeOldSpaceStart [
+	^freeOldSpaceStart
+]
+
 { #category : #'free space' }
 SpurMemoryManager >> freeSize [
 	^totalFreeOldSpace
@@ -2767,6 +2761,8 @@ SpurMemoryManager >> identityHashHalfWordMask [
 
 { #category : #snapshot }
 SpurMemoryManager >> imageSizeToWrite [
+	"when asked, newSpace should be empty."
+	self assert: self newSpaceIsEmpty.
 	^segmentManager totalBytesInSegments
 ]
 
@@ -2833,11 +2829,12 @@ SpurMemoryManager >> initSegmentBridgeWithBytes: numBytes at: address [
 
 { #category : #allocation }
 SpurMemoryManager >> initSpaceForAllocationCheck: aNewSpace [
-	CheckObjectOverwrite ifTrue:
-		[aNewSpace start
-			to: aNewSpace limit - 1
-			by: self wordSize
-			do: [:p| self longAt: p put: p]]
+	memory ifNotNil:
+		[CheckObjectOverwrite ifTrue:
+			[aNewSpace start
+				to: aNewSpace limit - 1
+				by: self wordSize
+				do: [:p| self longAt: p put: p]]]
 ]
 
 { #category : #'object enumeration' }
@@ -2889,10 +2886,13 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	"
 	<inline: false>
 	| freeListObj |
+	segmentManager parseSegmentsInNewlyLoadedImage: bytesToShift.
 	"image may be at a different address; adjust oops for new location"
 	self adjustAllOopsBy: bytesToShift.
 
-	specialObjectsOop := specialObjectsOop + bytesToShift.
+	segmentManager numSegments > 0 "false if Spur image bootstrap"
+		ifTrue: [specialObjectsOop := segmentManager swizzleObj: specialObjectsOop]
+		ifFalse: [self assert: bytesToShift = 0].
 
 	"heavily used special objects"
 	nilObj		:= self splObj: NilObject.
@@ -2911,8 +2911,13 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 													ifTrue: [self firstLongFormat]
 													ifFalse: [self sixtyFourBitIndexableFormat]).
 	freeLists := self firstIndexableField: freeListObj.
+	0 to: self numFreeLists - 1 do:
+		[:i|
+		(freeLists at: i) ~= 0 ifTrue:
+			[freeLists at: i put: (segmentManager swizzleObj: (freeLists at: i))]].
 	self classTableRootObj: (self objectAfter: freeListObj).
-
+.
+	segmentManager collapseSegmentsPostSwizzle.
 	self initializeOldSpaceFirstFree: freeOldSpaceStart. "initializes endOfMemory, freeStart"
 
 	"lowSpaceThreshold := 0.
@@ -2942,8 +2947,7 @@ SpurMemoryManager >> initializeOldSpaceFirstFree: startOfFreeOldSpace [
 	<var: 'startOfFreeOldSpace' type: #usqLong>
 	| freeOldStart freeChunk |
 	<var: 'freeOldStart' type: #usqLong>
-
-	self initSegmentBridgeWithBytes: 2 * self baseHeaderSize at: endOfMemory.
+	
 	endOfMemory > startOfFreeOldSpace ifTrue:
 		[totalFreeOldSpace := totalFreeOldSpace + (endOfMemory - startOfFreeOldSpace).
 		 freeOldStart := startOfFreeOldSpace.
@@ -3740,12 +3744,19 @@ SpurMemoryManager >> mem: destAddress cp: sourceAddress y: bytes [
 
 { #category : #accessing }
 SpurMemoryManager >> memory [
+	<cmacro: '() memory'>
 	^memory
 ]
 
 { #category : #accessing }
 SpurMemoryManager >> memory: aValue [
 	^memory := aValue
+]
+
+{ #category : #snapshot }
+SpurMemoryManager >> memoryBaseForImageRead [
+	"Answer the address to read the image into."
+	^newSpaceLimit
 ]
 
 { #category : #snapshot }
@@ -3771,6 +3782,12 @@ SpurMemoryManager >> newObjectHash [
 	lastHash := lastHash * 16807 "7 raisedTo: 5" \\ 16r7ffffffd "(2 raisedTo: 31) - 1".
 	self assert: lastHash ~= 0.
 	^lastHash
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> newSpaceBytes [
+	"during snapshot load newSpaceLimit holds newSpace size temporarily."
+	^newSpaceLimit - coInterpreter interpreterAllocationReserveBytes
 ]
 
 { #category : #'generation scavenging' }
@@ -3867,7 +3884,14 @@ SpurMemoryManager >> numSlotsMask [
 { #category : #'object access' }
 SpurMemoryManager >> numSlotsOf: objOop [
 	<returnTypeC: #usqInt>
-	^self subclassResponsibility
+	| numSlots |
+	self flag: #endianness.
+	"numSlotsOf: should not be applied to free or forwarded objects."
+	self assert: (self classIndexOf: objOop) > self isForwardedObjectClassIndexPun.
+	numSlots := self rawNumSlotsOf: objOop..
+	^numSlots = self numSlotsMask	"overflow slots; (2^32)-1 slots are plenty"
+		ifTrue: [self rawOverflowSlotsOf: objOop]
+		ifFalse: [numSlots]
 ]
 
 { #category : #'object access' }
@@ -3877,7 +3901,7 @@ SpurMemoryManager >> numSlotsOfAny: objOop [
 	| numSlots |
 	numSlots := self rawNumSlotsOf: objOop..
 	^numSlots = self numSlotsMask
-		ifTrue: [self longAt: objOop - self baseHeaderSize] "overflow slots; (2^32)-1 slots are plenty"
+		ifTrue: [self rawOverflowSlotsOf: objOop] "overflow slots; (2^32)-1 slots are plenty"
 		ifFalse: [numSlots]
 ]
 
@@ -3990,16 +4014,6 @@ SpurMemoryManager >> objectStartingAt: address [
 		ifFalse: [address]
 ]
 
-{ #category : #'object enumeration' }
-SpurMemoryManager >> oopOfObjectStartingAt: address [
-	"Answer the oop of the memory chunk starting at address, which is either the address
-	 of the overflow size word, or objOop itself, depending on the size of the object."
-	self flag: #endianness.
-	^(self longAt: address) >> self numSlotsHalfShift = self numSlotsMask
-		ifTrue: [address + self baseHeaderSize]
-		ifFalse: [address]
-]
-
 { #category : #'become implementation' }
 SpurMemoryManager >> outOfPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag [
 	"Allocate two new objects, n1 & n2.  Copy the contents appropriately. Convert
@@ -4021,11 +4035,6 @@ SpurMemoryManager >> outOfPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag
 	self
 		forward: obj1 to: clone2;
 		forward: obj2 to: clone1
-]
-
-{ #category : #'header format' }
-SpurMemoryManager >> overflowSlotsMask [
-	^self subclassResponsibility
 ]
 
 { #category : #'header format' }
@@ -4248,6 +4257,19 @@ SpurMemoryManager >> rawNumSlotsOf: objOop [
 	^self subclassResponsibility
 ]
 
+{ #category : #'object access' }
+SpurMemoryManager >> rawOverflowSlotsOf: objOop [
+	<returnTypeC: #usqInt>
+	self subclassResponsibility
+]
+
+{ #category : #segments }
+SpurMemoryManager >> reInitSegmentBridge: bridgeOop [
+	"On image write the segment manager replaces the header of the bridge
+	 with the size of the following segment.  This method restores that header."
+	^self subclassResponsibility
+]
+
 { #category : #'garbage collection' }
 SpurMemoryManager >> remap: oop [
 	self shouldNotImplement
@@ -4450,6 +4472,12 @@ SpurMemoryManager >> setClassIndexOf: objOop to: classIndex [
 	self subclassResponsibility
 ]
 
+{ #category : #snapshot }
+SpurMemoryManager >> setEndOfMemory: newEndOfMemory [
+	"Set by the segment manager after swizzling the image."
+	endOfMemory := newEndOfMemory
+]
+
 { #category : #'header access' }
 SpurMemoryManager >> setFormatOf: objOop to: format [
 	"0 = 0 sized objects (UndefinedObject True False et al)
@@ -4469,9 +4497,35 @@ SpurMemoryManager >> setFormatOf: objOop to: format [
 	self subclassResponsibility
 ]
 
+{ #category : #snapshot }
+SpurMemoryManager >> setFreeOldSpaceStart: freeStart [
+	"Set by the segment manager on parsing the image."
+	freeOldSpaceStart := freeStart
+]
+
 { #category : #'header access' }
 SpurMemoryManager >> setHashBitsOf: objOop to: hash [
 	self subclassResponsibility
+]
+
+{ #category : #snapshot }
+SpurMemoryManager >> setHeapBase: heapBase memoryLimit: memLimit endOfMemory: memEnd [
+	Transcript
+		cr; nextPutAll: 'heapBase: '; print: heapBase; nextPut: $/; nextPutAll: heapBase hex;
+		nextPutAll: ' memLimit '; print: memLimit; nextPut: $/; nextPutAll: memLimit hex;
+		nextPutAll: ' memEnd '; print: memEnd; nextPut: $/; nextPutAll: memEnd hex; cr; flush.
+	newSpaceLimit := heapBase
+					 + self newSpaceBytes
+					 + coInterpreter interpreterAllocationReserveBytes.
+	freeOldSpaceStart := memEnd.
+	endOfMemory := memLimit.
+	scavenger
+		newSpaceStart: heapBase
+		newSpaceBytes: newSpaceLimit - heapBase
+		edenBytes: newSpaceLimit - heapBase
+				   * (self scavengerDenominator - self numSurvivorSpaces) // self scavengerDenominator.
+	freeStart := scavenger eden start.
+	pastSpaceStart := scavenger pastSpace start
 ]
 
 { #category : #'header access' }
@@ -4739,7 +4793,7 @@ SpurMemoryManager >> startOfMemory [
 	<cmacro: '() heapBase'> "This is for CoInterpreter, not StackInterpreter"
 	<returnTypeC: #usqInt>
 	self flag: #fixme.
-	^startOfMemory
+	^startOfMemory ifNil: [0]
 ]
 
 { #category : #simulation }
@@ -4873,6 +4927,32 @@ SpurMemoryManager >> sufficientSpaceAfterGC: numBytes [
 { #category : #allocation }
 SpurMemoryManager >> sufficientSpaceToInstantiate: classObj indexableSize: indexableFields [
 	self shouldNotImplement
+]
+
+{ #category : #initialization }
+SpurMemoryManager >> swizzleFieldsOfFreeChunk: chunk [
+	<inline: true>
+	0 to: ((self bytesInObject: chunk) / self allocationUnit > self numFreeLists
+			ifTrue: [self freeChunkLargerIndex]
+			ifFalse: [self freeChunkNextIndex])
+	   do: [:index| | field |
+		field := self fetchPointer: index ofFreeChunk: chunk.
+		field ~= 0 ifTrue:
+			[self storePointer: index
+				ofFreeChunk: chunk
+				withValue: (segmentManager swizzleObj: field)]]
+]
+
+{ #category : #initialization }
+SpurMemoryManager >> swizzleFieldsOfObject: oop [
+	| fieldAddr fieldOop |
+	<inline: true>
+	fieldAddr := oop + (self lastPointerOf: oop).
+	[self oop: fieldAddr isGreaterThanOrEqualTo: oop + self baseHeaderSize] whileTrue:
+		[fieldOop := self longAt: fieldAddr.
+		 (self isNonImmediate: fieldOop) ifTrue:
+			[self longAt: fieldAddr put: (segmentManager swizzleObj: fieldOop)].
+		 fieldAddr := fieldAddr - BytesPerOop]
 ]
 
 { #category : #'word size' }

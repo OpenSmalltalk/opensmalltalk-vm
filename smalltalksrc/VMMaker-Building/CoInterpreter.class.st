@@ -5610,7 +5610,7 @@ CoInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imag
 
 	| swapBytes headerStart headerSize dataSize oldBaseAddr
 	  minimumMemory heapSize bytesRead bytesToShift
-	  hdrNumStackPages hdrEdenBytes hdrCogCodeSize headerFlags hdrMaxExtSemTabSize |
+	  hdrNumStackPages hdrEdenBytes hdrCogCodeSize headerFlags hdrMaxExtSemTabSize firstSegSize |
 	<var: #f type: 'sqImageFile '>
 	<var: #memStart type: 'usqInt'>
 	<var: #desiredHeapSize type: 'usqInt'>
@@ -5663,11 +5663,16 @@ CoInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imag
 	hdrMaxExtSemTabSize := self getShortFromFile: f swap: swapBytes.
 	hdrMaxExtSemTabSize ~= 0 ifTrue:
 		[self setMaxExtSemSizeTo: hdrMaxExtSemTabSize].
+	"pad to word boundary.  This slot can be used for anything else that will fit in 16 bits.
+	 Preserve it to be polite to other VMs."
+	the2ndUnknownShort	:= self getShortFromFile: f swap: swapBytes.
+	firstSegSize := self nextLongFrom: f swap: swapBytes.
+	objectMemory firstSegmentSize: firstSegSize.
 
 	"compare memory requirements with availability"
 	minimumMemory := cogCodeSize "no need to include the stackZone; this is alloca'ed"
 						+ dataSize
-						+ objectMemory edenBytes
+						+ objectMemory newSpaceBytes
 						+ self interpreterAllocationReserveBytes.
 	heapSize             :=  cogCodeSize "no need to include the stackZone; this is alloca'ed"
 						+ desiredHeapSize
@@ -5677,10 +5682,6 @@ CoInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imag
 		[self insufficientMemorySpecifiedError].
 
 	"allocate a contiguous block of memory for the Squeak heap and ancilliary data structures"
-	"N.B. If the platform needs to it will redefine this macro to make heapSize
-	 an in/out parameter and assign the ammount actually allocated into heapSize.
-	 See e.g. platforms/Mac OS/vm/sqPlatformSpecific.h.  (I *hate* this. eem 7/23/2009)"
-	"objectMemory memory: (self cCode: 'sqAllocateMemory(minimumMemory, heapSize)').  "
 	objectMemory memory: (self
 								allocateMemory: heapSize
 								minimum: minimumMemory
@@ -5699,13 +5700,17 @@ CoInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imag
 	self sqImageFile: f Seek: headerStart + headerSize.
 
 	"read in the image in bulk, then swap the bytes if necessary"
-	bytesRead := self cCode: 'sqImageFileRead(pointerForOop(heapBase), sizeof(unsigned char), dataSize, f)'.
+	bytesRead := self
+					sq: (self pointerForOop: objectMemory memoryBaseForImageRead)
+					Image: (self sizeof: #char)
+					File: dataSize
+					Read: f.
 	bytesRead ~= dataSize ifTrue: [self unableToReadImageError].
 
 	self ensureImageFormatIsUpToDate: swapBytes.
 
 	"compute difference between old and new memory base addresses"
-	bytesToShift := heapBase - oldBaseAddr.
+	bytesToShift := objectMemory memoryBaseForImageRead - oldBaseAddr.
 	self initializeInterpreter: bytesToShift.  "adjusts all oops to new location"
 	self initializeCodeGenerator.
 	^dataSize

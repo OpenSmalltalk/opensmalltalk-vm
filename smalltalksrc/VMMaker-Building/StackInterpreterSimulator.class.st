@@ -562,6 +562,22 @@ StackInterpreterSimulator >> getErrorObjectFromPrimFailCode [
 	^super getErrorObjectFromPrimFailCode
 ]
 
+{ #category : #initialization }
+StackInterpreterSimulator >> getLongFromFile: aStream swap: swapFlag [
+	^swapFlag 
+		ifTrue: [objectMemory byteSwapped: (self nextLongFrom: aStream)]
+		ifFalse: [self nextLongFrom: aStream]
+]
+
+{ #category : #'image save/restore' }
+StackInterpreterSimulator >> getShortFromFile: aFile swap: swapFlag [
+	| aShort |
+	aShort := self nextShortFrom: aFile.
+	^swapFlag 
+		ifTrue: [(aShort bitShift: -8) + ((aShort bitAnd: 16rFF) bitShift: 8)]
+		ifFalse: [aShort]
+]
+
 { #category : #'memory access' }
 StackInterpreterSimulator >> halfWordHighInLong32: long32 [
 	^self subclassResponsibility
@@ -1236,25 +1252,9 @@ StackInterpreterSimulator >> nextLongFrom: aStream [
 ]
 
 { #category : #initialization }
-StackInterpreterSimulator >> nextLongFrom: aStream swap: swapFlag [
-	swapFlag 
-		ifTrue: [^ objectMemory byteSwapped: (self nextLongFrom: aStream)]
-		ifFalse: [^ self nextLongFrom: aStream]
-]
-
-{ #category : #initialization }
 StackInterpreterSimulator >> nextShortFrom: aStream [
 	"Read a 16-bit quantity from the given (binary) stream."
 	^self subclassResponsibility
-]
-
-{ #category : #initialization }
-StackInterpreterSimulator >> nextShortFrom: aStream swap: swapFlag [
-	| aShort |
-	aShort := self nextShortFrom: aStream.
-	^swapFlag 
-		ifTrue: [(aShort bitShift: -8) + ((aShort bitAnd: 16rFF) bitShift: 8)]
-		ifFalse: [aShort]
 ]
 
 { #category : #testing }
@@ -1330,7 +1330,7 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 	"StackInterpreterSimulator new openOn: 'clone.im' extraMemory: 100000"
 
 	| f version headerSize dataSize count oldBaseAddr bytesToShift swapBytes
-	  hdrNumStackPages hdrEdenBytes headerFlags heapBase |
+	  hdrNumStackPages hdrEdenBytes headerFlags heapBase firstSegSize hdrMaxExtSemTabSize |
 	"open image file and read the header"
 
 	["begin ensure block..."
@@ -1343,17 +1343,17 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 		ifFalse: [(version := objectMemory byteSwapped: version) = self imageFormatVersion
 					ifTrue: [swapBytes := true]
 					ifFalse: [self error: 'incomaptible image format']].
-	headerSize := self nextLongFrom: f swap: swapBytes.
-	dataSize := self nextLongFrom: f swap: swapBytes.  "length of heap in file"
-	oldBaseAddr := self nextLongFrom: f swap: swapBytes.  "object memory base address of image"
-	objectMemory specialObjectsOop: (self nextLongFrom: f swap: swapBytes).
-	objectMemory lastHash: (self nextLongFrom: f swap: swapBytes).  "Should be loaded from, and saved to the image header"
+	headerSize := self getLongFromFile: f swap: swapBytes.
+	dataSize := self getLongFromFile: f swap: swapBytes.  "length of heap in file"
+	oldBaseAddr := self getLongFromFile: f swap: swapBytes.  "object memory base address of image"
+	objectMemory specialObjectsOop: (self getLongFromFile: f swap: swapBytes).
+	objectMemory lastHash: (self getLongFromFile: f swap: swapBytes).  "Should be loaded from, and saved to the image header"
 
-	savedWindowSize	:= self nextLongFrom: f swap: swapBytes.
-	headerFlags			:= self nextLongFrom: f swap: swapBytes.
+	savedWindowSize	:= self getLongFromFile: f swap: swapBytes.
+	headerFlags		:= self getLongFromFile: f swap: swapBytes.
 	self setImageHeaderFlagsFrom: headerFlags.
-	extraVMMemory		:= self nextLongFrom: f swap: swapBytes.
-	hdrNumStackPages	:= self nextShortFrom: f swap: swapBytes.
+	extraVMMemory	:= self getLongFromFile: f swap: swapBytes.
+	hdrNumStackPages	:= self getShortFromFile: f swap: swapBytes.
 	"4 stack pages is small.  Should be able to run with as few as
 	 three. 4 should be comfortable but slow.  8 is a reasonable
 	 default. Can be changed via vmParameterAt: 43 put: n"
@@ -1364,31 +1364,43 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 									ifFalse: [hdrNumStackPages]].
 	desiredNumStackPages := hdrNumStackPages.
 	"pad to word boundary.  This slot can be used for anything else that will fit in 16 bits.
-	 Preserve it to be polite to images run on Cog."
+	 It is used for the cog code size in Cog.  Preserve it to be polite to other VMs."
 	theUnknownShort	:= self getShortFromFile: f swap: swapBytes.
-	hdrEdenBytes		:= self nextLongFrom: f swap: swapBytes.
+	self assert: f position = 40.
+	hdrEdenBytes		:= self getLongFromFile: f swap: swapBytes.
 	objectMemory edenBytes: (hdrEdenBytes = 0
 							ifTrue: [objectMemory defaultEdenBytes]
 							ifFalse: [hdrEdenBytes]).
 	desiredEdenBytes := hdrEdenBytes.
+	hdrMaxExtSemTabSize := self getShortFromFile: f swap: swapBytes.
+	hdrMaxExtSemTabSize ~= 0 ifTrue:
+		[self setMaxExtSemSizeTo: hdrMaxExtSemTabSize].
+	"pad to word boundary.  This slot can be used for anything else that will fit in 16 bits.
+	 Preserve it to be polite to other VMs."
+	the2ndUnknownShort	:= self getShortFromFile: f swap: swapBytes.
+	self assert: f position = 48.
+	firstSegSize := self getLongFromFile: f swap: swapBytes.
+	objectMemory firstSegmentSize: firstSegSize.
 	"allocate interpreter memory"
 	heapBase := objectMemory startOfMemory.
 	objectMemory
 		setHeapBase: heapBase
-		memoryLimit: heapBase + dataSize + extraBytes + objectMemory edenBytes + self interpreterAllocationReserveBytes
+		memoryLimit: heapBase + dataSize + extraBytes + objectMemory newSpaceBytes + self interpreterAllocationReserveBytes
 		endOfMemory: heapBase + dataSize.
 	objectMemory memory: (Bitmap new: objectMemory memoryLimit // 4).
 
 	"read in the image in bulk, then swap the bytes if necessary"
 	f position: headerSize.
-	count := f readInto: objectMemory memory startingAt: 1 count: dataSize // 4.
-	count ~= (objectMemory endOfMemory // 4) ifTrue: [self halt].
+	count := f	readInto: objectMemory memory
+				startingAt: objectMemory memoryBaseForImageRead // 4 + 1
+				count: dataSize // 4.
+	count ~= (dataSize // 4) ifTrue: [self halt].
 	]
 		ensure: [f close].
 
 	self ensureImageFormatIsUpToDate: swapBytes.
 
-	bytesToShift := objectMemory startOfMemory - oldBaseAddr.  "adjust pointers for zero base address"
+	bytesToShift := objectMemory memoryBaseForImageRead - oldBaseAddr.  "adjust pointers for zero base address"
 	Utilities informUser: 'Relocating object pointers...'
 				during: [self initializeInterpreter: bytesToShift].
 
