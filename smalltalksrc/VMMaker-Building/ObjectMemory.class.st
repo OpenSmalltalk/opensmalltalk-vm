@@ -4024,6 +4024,23 @@ ObjectMemory >> pushRemappableOop: oop [
 		[self error: 'remapBuffer overflow'].
 ]
 
+{ #category : #'image save/restore' }
+ObjectMemory >> readHeapFromImageFile: f dataBytes: numBytes [
+	"Read numBytes of image data from f into memory at memoryBaseForImageRead.
+	 Answer the number of bytes written."
+	^self cCode:
+			[self
+				sq: (self pointerForOop: self memoryBaseForImageRead)
+				Image: (self sizeof: #char)
+				File: numBytes
+				Read: f]
+		inSmalltalk:
+			[(f	readInto: memory
+				startingAt: self memoryBaseForImageRead // 4 + 1
+				count: numBytes // 4)
+			 * 4]
+]
+
 { #category : #'gc -- compaction' }
 ObjectMemory >> remap: oop [
 	<api>

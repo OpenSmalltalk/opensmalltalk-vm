@@ -261,6 +261,12 @@ NewObjectMemorySimulator >> markAndTraceOrFreeMachineCode: fullGCFlag [
 	^coInterpreter markAndTraceOrFreeMachineCode: fullGCFlag
 ]
 
+{ #category : #'image save/restore' }
+NewObjectMemorySimulator >> memoryBaseForImageRead [
+	"Answer the address to read the image into."
+	^0
+]
+
 { #category : #'simulation only' }
 NewObjectMemorySimulator >> methodArgumentCount [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
