@@ -2340,10 +2340,8 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 	objectMemory memory: ((cogit processor endianness == #little
 					ifTrue: [LittleEndianBitmap]
 					ifFalse: [Bitmap]) new: objectMemory memoryLimit // 4).
-	count := f	readInto: objectMemory memory
-				startingAt: objectMemory memoryBaseForImageRead // 4 + 1
-				count: heapSize // 4.
-	count ~= (heapSize // 4) ifTrue: [self halt].
+	count := objectMemory readHeapFromImageFile: f dataBytes: heapSize.
+	count ~= heapSize ifTrue: [self halt].
 	]
 		ensure: [f close].
 	self moveMethodCacheToMemoryAt: cogCodeSize + stackZoneSize.
