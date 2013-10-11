@@ -72,6 +72,7 @@ Class {
 	#classVars : [
 		'ImageHeaderFlags',
 		'ImageName',
+		'ImageScreenSize',
 		'TransformedImage'
 	],
 	#pools : [
@@ -1473,6 +1474,7 @@ SpurBootstrap >> replacementForCharacterMethod: characterMethodOop [
 { #category : #'development support' }
 SpurBootstrap >> saveTransformedImage [
 	ImageHeaderFlags := oldInterpreter getImageHeaderFlags.
+	ImageScreenSize := oldInterpreter savedWindowSize.
 	ImageName := oldInterpreter imageName.
 	newHeap coInterpreter: nil.
 	(newHeap class allInstVarNames select: [:ivn| ivn beginsWith: 'stat']) do:
@@ -1630,7 +1632,8 @@ SpurBootstrap >> writeSnapshotOfTransformedImage [
 	sim := StackInterpreterSimulator onObjectMemory: heap.
 	heap coInterpreter: sim.
 	sim initializeInterpreter: 0;
-		setImageHeaderFlagsFrom: ImageHeaderFlags.
+		setImageHeaderFlagsFrom: ImageHeaderFlags;
+		setDisplayForm: (Form extent: ImageScreenSize >> 16 @ (ImageScreenSize bitAnd: 16rFFFF)).
 	heap allOldSpaceEntitiesDo: [:e| last := e].
 	self assert: (heap isFreeObject: last).
 	sizes := Bag new.
