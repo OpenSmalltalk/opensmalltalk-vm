@@ -305,6 +305,15 @@ SpurBootstrap class >> BehaviorPROTOTYPEisVariable [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrap class >> CharacterPROTOTYPEDollarEquals: aCharacter [ 
+	"Primitive. Answer if the receiver and the argument are the
+	 same object (have the same object pointer). Optional. See
+	 Object documentation whatIsAPrimitive."
+	<primitive: 110>
+	^self == aCharacter
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrap class >> CharacterPROTOTYPEasInteger [
 	<primitive: 171>
 	^self primitiveFailed
@@ -1165,7 +1174,7 @@ SpurBootstrap >> launch: heap simulatorClass: simulatorClass headerFlags: header
 		instVarNamed: 'printReturns' put: true;
 		instVarNamed: 'methodDictLinearSearchLimit' put: SmallInteger maxVal." "for now"
 	heap
-		setCheckForLeaks: 15;
+		setCheckForLeaks: 0;
 		runLeakCheckerForFullGC: true.
 
 	sim halt; run
@@ -1299,7 +1308,7 @@ SpurBootstrap >> on: imageName [
 		newSpaceSize: 1024 * 1024
 		stackSize: 1024 * 1024
 		codeSize: 1024 * 1024.
-	newHeap setCheckForLeaks: 15 - 4. "don't check become; soooo many rehashes in bootstrap"
+	newHeap setCheckForLeaks: 15 - 6. "don't check become; or newSpace; soooo many rehashes in bootstrap"
 	map := Dictionary new: oldHeap memory size // 4.
 	reverseMap := Dictionary new: oldHeap memory size // 4.
 	classToIndex := Dictionary new: 1024.
@@ -1493,10 +1502,14 @@ SpurBootstrap >> scavengeImage [
 SpurBootstrap >> selectorForPrototypeMethod: protoMethod [
 	| protoSelector |
 	protoSelector := protoMethod selector.
-	^(protoSelector last: protoSelector size
+	protoSelector := protoSelector last: protoSelector size
 						- (protoSelector indexOfSubCollection: 'PROTOTYPE')
 						- 'PROTOTYPE' size
-						+ 1) asSymbol
+						+ 1.
+	(protoSelector beginsWith: 'Dollar') ifTrue:
+		[protoSelector := (Dictionary newFromPairs: #('DollarEquals:' #=))
+							at: protoSelector].
+	^protoSelector asSymbol
 ]
 
 { #category : #'bootstrap methods' }
@@ -1655,6 +1668,7 @@ SpurBootstrap >> writeSnapshotOfTransformedImage [
 	heap segmentManager initializeFromFreeChunks: (barriers sort collect: [:b| heap objectStartingAt: b]).
 	heap checkFreeSpace.
 	heap runLeakCheckerForFullGC: true.
+	sim bereaveAndNormalizeContextsAndFlushExternalPrimitives.
 	sim imageName: 'spur.image'.
 	sim writeImageFileIO
 ]
