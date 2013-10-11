@@ -1899,6 +1899,41 @@ StackInterpreter >> bereaveAllMarriedContexts [
 			[self markContextAsDead: obj]]
 ]
 
+{ #category : #'image save/restore' }
+StackInterpreter >> bereaveAndNormalizeContextsAndFlushExternalPrimitives [
+	"Clean up right before saving an image, sweeping memory and:
+	* nilling out all fields of contexts above the stack pointer
+	* bereaving widowed contexts. 
+	* flushing external primitives.
+	 By ensuring that all contexts are single in a snapshot (i.e. that no married contexts
+	 exist) we can maintain the invariant that a married or widowed context's frame
+	 reference (in its sender field) must point into the stack pages since no married or
+	 widowed contexts are present from older runs of the system."
+	objectMemory allObjectsDo:
+		[:obj| | header fmt sz |
+		 header := self longAt: obj.
+		 fmt := objectMemory formatOfHeader: header.
+		 "Clean out context"
+		 (fmt = objectMemory indexablePointersFormat
+		  and: [objectMemory isContextHeader: header]) ifTrue:
+			["All contexts have been divorced. Bereave remaining widows."
+			 (self isMarriedOrWidowedContext: obj) ifTrue:
+				[self markContextAsDead: obj].
+			 "Fill slots beyond top of stack with nil"
+			 (self fetchStackPointerOf: obj) + CtxtTempFrameStart
+				to: (objectMemory numSlotsOf: obj) - 1
+				do: [:i |
+					objectMemory
+						storePointerUnchecked: i
+						ofObject: obj
+						withValue: objectMemory nilObject]].
+		 "Clean out external functions from compiled methods"
+		 fmt >= objectMemory firstCompiledMethodFormat ifTrue:
+			["Its primitiveExternalCall"
+			 (self primitiveIndexOf: obj) = PrimitiveExternalCallIndex ifTrue:
+				[self flushExternalPrimitiveOf: obj]]].
+]
+
 { #category : #utilities }
 StackInterpreter >> booleanCheat: cond [
 	"cheat the interpreter out of the pleasure of handling the next bytecode IFF it is a jump-on-boolean. Which it is, often enough when the current bytecode is something like bytecodePrimEqual"
@@ -11287,10 +11322,10 @@ StackInterpreter >> snapshot: embedded [
 { #category : #'image save/restore' }
 StackInterpreter >> snapshotCleanUp [
 	"Clean up right before saving an image, garbage collecting, sweeping memory and:
-	* nilling out all fields of contexts above the stack pointer. 
-	* flushing external primitives 
-	* clearing the root bit of any object in the root table
-	* bereaving widowed contexts.
+	* nilling out all fields of contexts above the stack pointer.
+	* flushing external primitives
+	* bereaving widowed contexts
+	* clearing the root bit of any object in the root table.
 	 By ensuring that all contexts are single in a snapshot (i.e. that no married contexts
 	 exist) we can maintain the invariant that a married or widowed context's frame
 	 reference (in its sender field) must point into the stack pages since no married or
@@ -11303,29 +11338,7 @@ StackInterpreter >> snapshotCleanUp [
 	"maximimize space for forwarding table"
 	objectMemory fullGC.
 
-	objectMemory allObjectsDo:
-		[:obj| | header fmt sz |
-		 header := self longAt: obj.
-		 fmt := objectMemory formatOfHeader: header.
-		 "Clean out context"
-		 (fmt = objectMemory indexablePointersFormat
-		  and: [objectMemory isContextHeader: header]) ifTrue:
-			["All contexts have been divorced. Bereave remaining widows."
-			 (self isMarriedOrWidowedContext: obj) ifTrue:
-				[self markContextAsDead: obj].
-			 "Fill slots beyond top of stack with nil"
-			 (self fetchStackPointerOf: obj) + CtxtTempFrameStart
-				to: (objectMemory numSlotsOf: obj) - 1
-				do: [:i |
-					objectMemory
-						storePointerUnchecked: i
-						ofObject: obj
-						withValue: objectMemory nilObject]].
-		 "Clean out external functions from compiled methods"
-		 fmt >= objectMemory firstCompiledMethodFormat ifTrue:
-			["Its primitiveExternalCall"
-			 (self primitiveIndexOf: obj) = PrimitiveExternalCallIndex ifTrue:
-				[self flushExternalPrimitiveOf: obj]]].
+	self bereaveAndNormalizeContextsAndFlushExternalPrimitives.
 
 	objectMemory hasSpurMemoryManagerAPI ifFalse:
 		[objectMemory clearRootsTable]

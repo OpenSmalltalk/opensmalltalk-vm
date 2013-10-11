@@ -1553,7 +1553,7 @@ SpurMemoryManager >> characterTag [
 { #category : #immediates }
 SpurMemoryManager >> characterValueOf: oop [
 	"Immediate characters are unsigned"
-	^(self cCoerceSimple: oop to: #'unsigned long') >> self numTagBits
+	^oop asUnsignedInteger >> self numTagBits
 ]
 
 { #category : #'debug support' }
@@ -1883,11 +1883,18 @@ SpurMemoryManager >> classTableRootObj [
 
 { #category : #accessing }
 SpurMemoryManager >> classTableRootObj: anOop [
-	"For mapInterpreterOops"
 	classTableRootObj := anOop.
 	classTableFirstPage := self fetchPointer: 0 ofObject: classTableRootObj.
 	self assert: (self numSlotsOf: classTableRootObj) = (1 << (self classIndexFieldWidth - self classTableMajorIndexShift)).
-	self assert: (self numSlotsOf: classTableFirstPage) - 1 = self classTableMinorIndexMask
+	self assert: (self numSlotsOf: classTableFirstPage) - 1 = self classTableMinorIndexMask.
+	"set classTableIndex to the start of the last used page"
+	2 to: (self numSlotsOf: classTableRootObj) - 1 do:
+		[:i|
+		(self fetchPointer: i ofObject: classTableRootObj) = nilObj ifTrue:
+			[classTableIndex := i << self classTableMajorIndexShift.
+			 ^self]].
+	"no unused pages; set it to the start of the second page."
+	classTableIndex := 1 << self classTableMajorIndexShift
 ]
 
 { #category : #'interpreter access' }
@@ -2316,6 +2323,21 @@ SpurMemoryManager >> fetchWordLengthOf: objOop [
 { #category : #instantiation }
 SpurMemoryManager >> fillObj: objOop numSlots: numSlots with: fillValue [
 	self subclassResponsibility
+]
+
+{ #category : #'debug support' }
+SpurMemoryManager >> findString: aCString [
+	"Print the oops of all string-like things that have the same characters as aCString"
+	<api>
+	<var: #aCString type: #'char *'>
+	| cssz |
+	cssz := self strlen: aCString.
+	self allObjectsDo:
+		[:obj|
+		 ((self isBytesNonImm: obj)
+		  and: [(self lengthOf: obj) = cssz
+		  and: [(self str: aCString n: (self pointerForOop: obj + BaseHeaderSize) cmp: cssz) = 0]]) ifTrue:
+			[coInterpreter printHex: obj; space; printOopShort: obj; cr]]
 ]
 
 { #category : #'object enumeration' }
@@ -2892,17 +2914,28 @@ SpurMemoryManager >> initializeFreeSpacePostLoad: freeListObj [
 													ifTrue: [self firstLongFormat]
 													ifFalse: [self sixtyFourBitIndexableFormat]).
 
-	segmentManager numSegments = 0 ifTrue: "true in Spur image bootstrap"
-		[^self].
-	self halt.
 	freeLists := self firstIndexableField: freeListObj.
 	0 to: self numFreeLists - 1 do:
 		[:i|
 		(freeLists at: i) ~= 0 ifTrue:
 			[freeListsMask := freeListsMask bitOr: (1 << i).
-			 segmentManager numSegments > 0 ifTrue:
+			 segmentManager numSegments > 0 ifTrue: "false in Spur image bootstrap"
 				[freeLists at: i put: (segmentManager swizzleObj: (freeLists at: i))]]].
 	totalFreeOldSpace := self totalFreeListBytes
+]
+
+{ #category : #'generation scavenging' }
+SpurMemoryManager >> initializeNewSpaceVariables [
+	startOfMemory ifNotNil: "true in bootstrap"
+		[^self].
+	freeStart := scavenger eden start.
+	pastSpaceStart := scavenger pastSpace start.
+	scavengeThreshold := scavenger eden limit
+							- (scavenger edenBytes / 64)
+							- coInterpreter interpreterAllocationReserveBytes.
+	startOfMemory := scavenger pastSpace start min: scavenger futureSpace start.
+	self assert: startOfMemory < scavenger eden start.
+	self initSpaceForAllocationCheck: scavenger eden
 ]
 
 { #category : #initialization }
@@ -2916,7 +2949,6 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	"
 	<inline: false>
 	| freeListObj |
-	self halt.
 	segmentManager adjustSegmentSwizzlesBy: bytesToShift.
 	"image may be at a different address; adjust oops for new location"
 	self adjustAllOopsBy: bytesToShift.
@@ -2941,7 +2973,8 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	self initializeFreeSpacePostLoad: freeListObj.
 
 	segmentManager collapseSegmentsPostSwizzle.
-.
+
+	self initializeNewSpaceVariables.
 	self initializeOldSpaceFirstFree: freeOldSpaceStart. "initializes endOfMemory, freeStart"
 
 	"lowSpaceThreshold := 0.
@@ -3612,6 +3645,27 @@ SpurMemoryManager >> lastPointerOf: objOop [
 	^numLiterals + LiteralStart - 1 * BytesPerOop + self baseHeaderSize
 ]
 
+{ #category : #snapshot }
+SpurMemoryManager >> lastPointerOfWhileSwizzling: objOop [ 
+	"Answer the byte offset of the last pointer field of the given object.
+	 Works with CompiledMethods, as well as ordinary objects.
+	 Does not examine the stack pointer of contexts to be sure to swizzle
+	 the nils that fill contexts on snapshot."
+	<api>
+	<inline: true>
+	<asmLabel: false>
+	| fmt numLiterals |
+	fmt := self formatOf: objOop.
+	self assert: fmt ~= self forwardedFormat.
+	fmt <= self lastPointerFormat ifTrue:
+		[^(self numSlotsOf: objOop) - 1 * BytesPerOop + self baseHeaderSize  "all pointers"].
+	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
+
+	"CompiledMethod: contains both pointers and bytes"
+	numLiterals := coInterpreter literalCountOf: objOop.
+	^numLiterals + LiteralStart - 1 * BytesPerOop + self baseHeaderSize
+]
+
 { #category : #'debug support' }
 SpurMemoryManager >> leakCheckBecome [
 	<api>
@@ -3631,7 +3685,7 @@ SpurMemoryManager >> leakCheckIncrementalGC [
 ]
 
 { #category : #'debug support' }
-SpurMemoryManager >> leakCheckScavenge [
+SpurMemoryManager >> leakCheckNewSpaceGC [
 	<api>
 	^(checkForLeaks bitAnd: 2) ~= 0
 ]
@@ -4345,7 +4399,7 @@ SpurMemoryManager >> runLeakCheckerForFullGC: fullGCFlag [
 	<inline: false>
 	(fullGCFlag
 			ifTrue: [self leakCheckFullGC]
-			ifFalse: [self leakCheckScavenge]) ifTrue:
+			ifFalse: [self leakCheckNewSpaceGC]) ifTrue:
 		[fullGCFlag
 			ifTrue: [coInterpreter reverseDisplayFrom: 0 to: 7]
 			ifFalse: [coInterpreter reverseDisplayFrom: 8 to: 15].
@@ -4438,6 +4492,8 @@ SpurMemoryManager >> scavengingGCTenuringIf: tenuringCriterion [
 	"Run the scavenger."
 
 	self assert: remapBufferCount = 0.
+	self assert: (segmentManager numSegments = 0 "true in the spur image bootstrap"
+				or: [scavenger eden limit - freeStart > coInterpreter interpreterAllocationReserveBytes]).
 	self checkFreeSpace.
 	"coInterpreter printCallStackFP: coInterpreter framePointer"
 
@@ -4546,10 +4602,10 @@ SpurMemoryManager >> setHashBitsOf: objOop to: hash [
 
 { #category : #snapshot }
 SpurMemoryManager >> setHeapBase: heapBase memoryLimit: memLimit endOfMemory: memEnd [
-	Transcript
+	"Transcript
 		cr; nextPutAll: 'heapBase: '; print: heapBase; nextPut: $/; nextPutAll: heapBase hex;
 		nextPutAll: ' memLimit '; print: memLimit; nextPut: $/; nextPutAll: memLimit hex;
-		nextPutAll: ' memEnd '; print: memEnd; nextPut: $/; nextPutAll: memEnd hex; cr; flush.
+		nextPutAll: ' memEnd '; print: memEnd; nextPut: $/; nextPutAll: memEnd hex; cr; flush."
 	newSpaceLimit := heapBase
 					 + self newSpaceBytes
 					 + coInterpreter interpreterAllocationReserveBytes.
@@ -4983,7 +5039,7 @@ SpurMemoryManager >> swizzleFieldsOfFreeChunk: chunk [
 SpurMemoryManager >> swizzleFieldsOfObject: oop [
 	| fieldAddr fieldOop |
 	<inline: true>
-	fieldAddr := oop + (self lastPointerOf: oop).
+	fieldAddr := oop + (self lastPointerOfWhileSwizzling: oop).
 	[self oop: fieldAddr isGreaterThanOrEqualTo: oop + self baseHeaderSize] whileTrue:
 		[fieldOop := self longAt: fieldAddr.
 		 (self isNonImmediate: fieldOop) ifTrue:
