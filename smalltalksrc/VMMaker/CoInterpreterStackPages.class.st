@@ -133,7 +133,7 @@ CoInterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots p
 	self cCode: []
 		inSmalltalk:
 			[self assert: objectMemory startOfMemory - coInterpreter cogCodeSize - coInterpreter methodCacheSize - coInterpreter primTraceLogSize - coInterpreter rumpCStackSize
-					= (stackSlots * BytesPerWord)].
+					= (stackSlots * BytesPerWord roundUpTo: objectMemory allocationUnit)].
 	structStackPageSize := coInterpreter sizeof: InterpreterStackPage.
 	bytesPerPage := slotsPerPage * BytesPerWord.
 	numPages := coInterpreter numStkPages.

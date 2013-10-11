@@ -9,7 +9,7 @@ BraceNode >> asTranslatorNodeIn: aTMethod [
 		and: [elem selector key = #->
 		and: [elem receiver isBlockNode
 		and: [elem arguments first isBlockNode
-		and: [elem receiver isPotentialCCaseLabel]]]]]).
+		and: [elem receiver isPotentialCCaseLabelIn: aTMethod]]]]]).
 	^TBraceCaseNode new
 		caseLabels: (elements collect: [:elem| elem receiver asTranslatorNodeIn: aTMethod]);
 		cases: (elements collect: [:elem| elem arguments first asTranslatorNodeIn: aTMethod]);
