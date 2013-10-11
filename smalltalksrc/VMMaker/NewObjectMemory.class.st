@@ -2390,7 +2390,7 @@ NewObjectMemory >> runLeakCheckerForFullGC: fullGCFlag [
 	<inline: false>
 	(fullGCFlag
 			ifTrue: [self leakCheckFullGC]
-			ifFalse: [self leakCheckIncrementalGC]) ifTrue:
+			ifFalse: [self leakCheckNewSpaceGC]) ifTrue:
 		[fullGCFlag
 			ifTrue: [coInterpreter reverseDisplayFrom: 0 to: 7]
 			ifFalse: [coInterpreter reverseDisplayFrom: 8 to: 15].

@@ -6441,11 +6441,11 @@ Cogit >> mapStartFor: cogMethod [
 ]
 
 { #category : #'jit - api' }
-Cogit >> markAndTraceMachineCodeForIncrementalGC [
+Cogit >> markAndTraceMachineCodeForNewSpaceGC [
 	"Free any methods that refer to unmarked objects, unlinking sends to freed methods."
 	| pointer cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
-	objectMemory leakCheckIncrementalGC ifTrue:
+	objectMemory leakCheckNewSpaceGC ifTrue:
 		[self assert: self allMachineCodeObjectReferencesValid].
 	codeModified := false.
 	pointer := methodZone youngReferrers.
@@ -6493,7 +6493,7 @@ Cogit >> markAndTraceObjectsOrFreeMachineCode: inFullGC [
 	<api>
 	inFullGC
 		ifTrue: [self markAndTraceOrFreeMachineCodeForFullGC]
-		ifFalse: [self markAndTraceMachineCodeForIncrementalGC]
+		ifFalse: [self markAndTraceMachineCodeForNewSpaceGC]
 ]
 
 { #category : #'garbage collection' }

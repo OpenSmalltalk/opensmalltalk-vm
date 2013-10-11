@@ -2220,21 +2220,25 @@ CogVMSimulator >> openAsMorph [
 { #category : #UI }
 CogVMSimulator >> openAsMorphNoTranscript [
 	"Open a morphic view on this simulation."
-	| localImageName theWindow |
+	| localImageName borderWidth window |
 	localImageName := FileDirectory default localNameFor: imageName.
-	theWindow := (SystemWindow labelled: 'Simulation of ' , localImageName) model: self.
+	window := (SystemWindow labelled: 'Simulation of ' , localImageName) model: self.
 
-	theWindow addMorph: (displayView := ImageMorph new image: displayForm)
+	window addMorph: (displayView := ImageMorph new image: displayForm)
 		frame: (0@0 corner: 1@0.95).
 
-	theWindow addMorph: (PluggableTextMorph on: self
+	window addMorph: (PluggableTextMorph on: self
 						text: #byteCountText accept: nil
 						readSelection: nil menu: #utilitiesMenu:) hideScrollBarsIndefinitely
 		frame: (0@0.95 corner: 1@1).
 
-	theWindow openInWorldExtent: (self desiredDisplayExtent
-								+ (2 * theWindow borderWidth)
-								+ (0@theWindow labelHeight)
+	borderWidth := [SystemWindow borderWidth] "Squeak 4.1"
+						on: MessageNotUnderstood
+						do: [:ex| 0]. "3.8"
+	borderWidth := borderWidth + window borderWidth.
+	window openInWorldExtent: (self desiredDisplayExtent
+								+ (2 * borderWidth)
+								+ (0@window labelHeight)
 								* (1@(1/0.95))) rounded
 ]
 
@@ -3060,6 +3064,11 @@ CogVMSimulator >> runWithBreakCount: theBreakCount [
 	self initialEnterSmalltalkExecutive
 ]
 
+{ #category : #'I/O primitives' }
+CogVMSimulator >> savedWindowSize [
+	^savedWindowSize ifNil: [0]
+]
+
 { #category : #'debugging traps' }
 CogVMSimulator >> sendBreak: selectorString point: selectorLength receiver: receiverOrNil [
 	"self shortPrintFrameAndCallers: localFP"
@@ -3180,6 +3189,12 @@ CogVMSimulator >> shortPrint: oop [
 CogVMSimulator >> shortPrintContext: aContext [
 	transcript ensureCr.
 	^super shortPrintContext: aContext
+]
+
+{ #category : #'debug printing' }
+CogVMSimulator >> shortPrintFrame: theFP [
+	self transcript ensureCr.
+	^super shortPrintFrame: theFP
 ]
 
 { #category : #'I/O primitives' }
