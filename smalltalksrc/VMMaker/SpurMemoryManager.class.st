@@ -441,6 +441,12 @@ Class {
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
+{ #category : #translation }
+SpurMemoryManager class >> additionalHeadersDo: aBinaryBlock [
+	"Evaluate aBinaryBlock with the names and contents of
+	 any additional header files that need to be generated."
+]
+
 { #category : #accessing }
 SpurMemoryManager class >> baseHeaderSize [
 	"For CogBlockMethod class>>instVarNamesAndTypesForTranslationDo:"
@@ -3416,13 +3422,6 @@ SpurMemoryManager >> isNonImmediate: oop [
 
 { #category : #'object testing' }
 SpurMemoryManager >> isNonIntegerObject: oop [
-	"This list records the valid senders of isNonIntegerObject: as we replace uses of
-	  isNonIntegerObject: by isNonImmediate: where appropriate."
-	(#(	on:do: "from the dbeugger"
-		reverseDisplayFrom:to:
-		primitiveObjectAtPut
-		isCogMethodReference:) includes: thisContext sender method selector) ifFalse:
-		[self halt].
 	^(oop bitAnd: 1) = 0
 ]
 
