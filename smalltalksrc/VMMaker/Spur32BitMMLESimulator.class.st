@@ -210,6 +210,18 @@ Spur32BitMMLESimulator >> isIntegerObject: oop [
 	^super isIntegerObject: oop
 ]
 
+{ #category : #'object testing' }
+Spur32BitMMLESimulator >> isNonIntegerObject: oop [
+	"This list records the valid senders of isNonIntegerObject: as we replace uses of
+	  isNonIntegerObject: by isNonImmediate: where appropriate."
+	(#(	on:do: "from the dbeugger"
+		reverseDisplayFrom:to:
+		primitiveObjectAtPut
+		isCogMethodReference:) includes: thisContext sender method selector) ifFalse:
+		[self halt].
+	^super isNonIntegerObject: oop
+]
+
 { #category : #'memory access' }
 Spur32BitMMLESimulator >> long32At: byteAddress [
 	"Answer the 32-bit word at byteAddress which must be 0 mod 4."
