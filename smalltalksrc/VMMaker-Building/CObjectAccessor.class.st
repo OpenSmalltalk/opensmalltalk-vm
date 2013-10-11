@@ -96,6 +96,11 @@ CObjectAccessor >> coerceTo: cTypeString sim: interpreterSimulator [
 	^ self
 ]
 
+{ #category : #accessing }
+CObjectAccessor >> first [
+	^self at: 0
+]
+
 { #category : #private }
 CObjectAccessor >> getObject [
 	^object
