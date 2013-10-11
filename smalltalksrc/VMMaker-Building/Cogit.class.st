@@ -2741,7 +2741,9 @@ Cogit >> checkIfValidObjectRef: annotation pc: mcpc cogMethod: cogMethod [
 			into: [:off :table| offset := off. sendTable := table].
 		 selectorOrCacheTag := backEnd inlineCacheTagAt: mcpc asInteger.
 		 (entryPoint > methodZoneBase
-		  and: [offset ~= cmNoCheckEntryOffset])
+		  and: [offset ~= cmNoCheckEntryOffset
+		  and: [(self cCoerceSimple: entryPoint + offset to: #'CogMethod *') cmType ~= CMOpenPIC
+				or: [(objectRepresentation couldBeObject: selectorOrCacheTag) not]]])
 			ifTrue: "linked non-super send, cacheTag is a cacheTag"
 				[(objectRepresentation checkValidInlineCacheTag: selectorOrCacheTag) ifFalse:
 					[coInterpreter print: 'cache tag leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.

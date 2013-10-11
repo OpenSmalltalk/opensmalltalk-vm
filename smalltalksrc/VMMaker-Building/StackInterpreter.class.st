@@ -5442,7 +5442,7 @@ StackInterpreter >> followForwardedFrameContents: theFP stackPointer: theSP [
 ]
 
 { #category : #'object memory support' }
-StackInterpreter >> followForwardingPointersInStackZone: becomeEffectsFlags [
+StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 	"Spur's become: is lazy, turning the becommed object into a forwarding object to the other.
 	 The read-barrier is minimised by arranging that forwarding pointers will fail a method cache probe,
 	 since notionally objects' internals are accessed only via sending messages to them (the exception
@@ -5458,7 +5458,7 @@ StackInterpreter >> followForwardingPointersInStackZone: becomeEffectsFlags [
 	<var: #callerFP type: #'char *'>
 	<var: #theIPPtr type: #'char *'>
 
-	(becomeEffectsFlags anyMask: BecameCompiledMethodFlag) ifTrue:
+	(theBecomeEffectsFlags anyMask: BecameCompiledMethodFlag) ifTrue:
 		[(objectMemory isForwarded: method) ifTrue:
 			[theIPPtr := instructionPointer - method.
 			 method := objectMemory followForwarded: method.
@@ -8314,6 +8314,7 @@ StackInterpreter >> objectMemory [
 { #category : #initialization }
 StackInterpreter >> objectMemory: anObjectMemory [
 	<doNotGenerate>
+	objectMemory ifNotNil: [self halt].
 	objectMemory := anObjectMemory
 ]
 
@@ -8526,9 +8527,9 @@ StackInterpreter >> positive64BitIntegerFor: integerValue [
 ]
 
 { #category : #'object memory support' }
-StackInterpreter >> postBecomeAction: becomeEffectsFlags [
-	becomeEffectsFlags ~= 0 ifTrue:
-		[self followForwardingPointersInStackZone: becomeEffectsFlags]
+StackInterpreter >> postBecomeAction: theBecomeEffectsFlags [
+	theBecomeEffectsFlags ~= 0 ifTrue:
+		[self followForwardingPointersInStackZone: theBecomeEffectsFlags]
 ]
 
 { #category : #'object memory support' }

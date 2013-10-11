@@ -95,6 +95,8 @@ CogVMSimulator class >> initializeWithOptions: optionsDictionaryOrArray objectMe
 	(objectMemoryClassOrNil ifNil: [self objectMemoryClass])
 		initializeWithOptions: initializationOptions.
 
+	self initializeWithOptions: initializationOptions.
+
 	((initializationOptions at: #COGMTVM ifAbsent: [false])
 			ifTrue: [CoInterpreterMT]
 			ifFalse: [CoInterpreter])
@@ -132,16 +134,22 @@ CogVMSimulator class >> onObjectMemory: anObjectMemory cogit: aCogit [
 
 { #category : #'instance creation' }
 CogVMSimulator class >> onObjectMemory: anObjectMemory cogit: aCogit options: optionsDictionaryOrArray [
+	| simulatorClass |
 	^self == CogVMSimulator
 		ifTrue:
-			[self initializeWithOptions: optionsDictionaryOrArray
-				objectMemoryClass: (anObjectMemory ifNotNil: [anObjectMemory class]).
-			 SmalltalkImage current endianness == #big
+			[simulatorClass := SmalltalkImage current endianness == #big
 				ifTrue: [self notYetImplemented]
-				ifFalse: [CogVMSimulatorLSB onObjectMemory: anObjectMemory cogit: aCogit options: optionsDictionaryOrArray]]
+				ifFalse: [CogVMSimulatorLSB].
+			simulatorClass
+				initializeWithOptions: optionsDictionaryOrArray
+				objectMemoryClass: (anObjectMemory ifNotNil: [anObjectMemory class]).
+			 simulatorClass
+				onObjectMemory: (anObjectMemory ifNil:
+										[self objectMemoryClass simulatorClass new])
+				cogit: aCogit
+				options: optionsDictionaryOrArray]
 		ifFalse:
 			[| sim |
-			self initializeWithOptions: optionsDictionaryOrArray.
 			sim := self basicNew.
 			sim objectMemory: anObjectMemory.
 			sim cogit: aCogit.
@@ -2321,11 +2329,11 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 	primTraceLogSize := primTraceLog size * BytesPerWord.
 	"allocate interpreter memory. This list is in address order, low to high.
 	 In the actual VM the stack zone exists on the C stack."
-	heapBase := cogCodeSize
+	heapBase := (cogCodeSize
 				+ stackZoneSize
 				+ methodCacheSize
 				+ primTraceLogSize
-				+ self rumpCStackSize.
+				+ self rumpCStackSize) roundUpTo: objectMemory allocationUnit.
 	objectMemory
 		setHeapBase: heapBase
 		memoryLimit:  heapBase
@@ -2335,7 +2343,6 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 						+ extraBytes
 		endOfMemory: heapBase + heapSize.
 
-	objectMemory initialize.
 	self assert: cogCodeSize \\ 4 = 0.
 	self assert: objectMemory memoryLimit \\ 4 = 0.
 	self assert: self rumpCStackSize \\ 4 = 0.
