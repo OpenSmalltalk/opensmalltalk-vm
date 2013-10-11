@@ -104,6 +104,13 @@ Spur32BitMMLECoSimulator >> firstIndexableField: objOop [
 				ifFalse: ["byte objects (including CompiledMethod" #'char *'])
 ]
 
+{ #category : #accessing }
+Spur32BitMMLECoSimulator >> freeStart [
+	(#(Cogit SimpleStackBasedCogit StackToRegisterMappingCogit) includes: thisContext sender class name) ifTrue:
+		[self halt].
+	^super freeStart
+]
+
 { #category : #'memory access' }
 Spur32BitMMLECoSimulator >> halfWordHighInLong32: long32 [
 	"Used by Balloon"
@@ -198,9 +205,9 @@ Spur32BitMMLECoSimulator >> longLongAt: byteAddress put: a64BitValue [
 { #category : #'generation scavenging' }
 Spur32BitMMLECoSimulator >> scavengingGCTenuringIf: tenuringCriterion [
 	"Run the scavenger."
-	self halt: (statScavenges + 1) printString, ((statScavenges between: 9 and: 19)
+	"self halt: (statScavenges + 1) printString, ((statScavenges between: 9 and: 19)
 													ifTrue: ['th']
-													ifFalse: [#('st' 'nd' 'rd') at: (statScavenges + 1) \\ 10 ifAbsent: 'th']), ' scavenge'.
+													ifFalse: [#('st' 'nd' 'rd') at: (statScavenges + 1) \\ 10 ifAbsent: 'th']), ' scavenge'."
 	^super scavengingGCTenuringIf: tenuringCriterion
 ]
 

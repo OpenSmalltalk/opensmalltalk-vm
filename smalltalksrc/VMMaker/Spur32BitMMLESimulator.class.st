@@ -132,6 +132,84 @@ Spur32BitMMLESimulator >> intAt: byteAddress put: a32BitValue [
 	^self longAt: byteAddress put: (a32BitValue bitAnd: 16rFFFFFFFF)
 ]
 
+{ #category : #'object testing' }
+Spur32BitMMLESimulator >> isIntegerObject: oop [
+	"This list records the valid senders of isIntegerObject: as we replace uses of
+	  isIntegerObject: by isImmediate: where appropriate."
+	| sel |
+	sel := thisContext sender method selector.
+	(#(	DoIt
+		DoItIn:
+		on:do: "from the debugger"
+		makeBaseFrameFor:
+		quickFetchInteger:ofObject:
+		frameOfMarriedContext:
+		objCouldBeClassObj:
+		isMarriedOrWidowedContext:
+		shortPrint:
+		bytecodePrimAt
+		bytecodePrimAtPut
+		commonAt:
+		commonAtPut:
+		loadFloatOrIntFrom:
+		positive32BitValueOf:
+		primitiveExternalCall
+		checkedIntegerValueOf:
+		bytecodePrimAtPut
+		commonAtPut:
+		primitiveVMParameter
+		checkIsStillMarriedContext:currentFP:
+		displayBitsOf:Left:Top:Right:Bottom:
+		fetchStackPointerOf:
+		primitiveContextAt
+		primitiveContextAtPut
+		subscript:with:storing:format:
+		printContext:
+		compare31or32Bits:equal:
+		signed64BitValueOf:
+		primDigitMultiply:negative:
+		digitLength:
+		isNegativeIntegerValueOf:
+		magnitude64BitValueOf:
+		primitiveMakePoint
+		primitiveAsCharacter
+		primitiveInputSemaphore
+		baseFrameReturn
+		primitiveExternalCall
+		primDigitCompare:
+		isLiveContext:
+		numPointerSlotsOf:
+		fileValueOf:
+		loadBitBltDestForm
+		fetchIntOrFloat:ofObject:ifNil:
+		fetchIntOrFloat:ofObject:
+		loadBitBltSourceForm
+		loadPoint:from:
+		primDigitAdd:
+		primDigitSubtract:
+		positive64BitValueOf:
+		digitBitLogic:with:opIndex:
+		signed32BitValueOf:
+		isNormalized:
+		primDigitDiv:negative:
+		bytesOrInt:growTo:
+		primitiveNewMethod
+		isCogMethodReference:
+		functionForPrimitiveExternalCall:
+		genSpecialSelectorArithmetic
+		genSpecialSelectorComparison
+		ensureContextHasBytecodePC:
+		instVar:ofContext:
+		ceBaseFrameReturn:
+		inlineCacheTagForInstance:
+		primitiveObjectAtPut
+		commonVariable:at:put:cacheIndex:
+		primDigitBitShiftMagnitude:
+		externalInstVar:ofContext:) includes: sel) ifFalse:
+		[self halt].
+	^super isIntegerObject: oop
+]
+
 { #category : #'memory access' }
 Spur32BitMMLESimulator >> long32At: byteAddress [
 	"Answer the 32-bit word at byteAddress which must be 0 mod 4."

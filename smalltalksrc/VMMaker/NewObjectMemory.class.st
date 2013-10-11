@@ -1692,6 +1692,12 @@ NewObjectMemory >> leakCheckIncrementalGC [
 	^(checkForLeaks bitAnd: 2) ~= 0
 ]
 
+{ #category : #'debug support' }
+NewObjectMemory >> leakCheckNewSpaceGC [
+	<api>
+	^(checkForLeaks bitAnd: 2) ~= 0
+]
+
 { #category : #'image segment in/out' }
 NewObjectMemory >> loadImageSegmentFrom: segmentWordArray outPointers: outPointerArray [
 	"This primitive is called from Squeak as...
