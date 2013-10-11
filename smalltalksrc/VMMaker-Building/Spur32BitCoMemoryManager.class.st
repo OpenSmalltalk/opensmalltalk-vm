@@ -15,6 +15,11 @@ Spur32BitCoMemoryManager class >> objectRepresentationClass [
 	^CogObjectRepresentationFor32BitSpur
 ]
 
+{ #category : #'simulation only' }
+Spur32BitCoMemoryManager class >> simulatorClass [
+	^Spur32BitMMLECoSimulator
+]
+
 { #category : #trampolines }
 Spur32BitCoMemoryManager >> ceClassAtIndex: classIndex [
 	<api>

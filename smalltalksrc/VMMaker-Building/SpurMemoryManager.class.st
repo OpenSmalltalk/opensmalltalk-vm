@@ -447,7 +447,7 @@ SpurMemoryManager class >> baseHeaderSize [
 	^8
 ]
 
-{ #category : #initialization }
+{ #category : #'class initialization' }
 SpurMemoryManager class >> initBytesPerWord: nBytes [
 
 	BytesPerWord := nBytes.
@@ -524,7 +524,7 @@ SpurMemoryManager class >> initializeObjectHeaderConstants [
 	BaseHeaderSize := 8 "Alas so much of the VM uses BaseheaderSize explicitly we don't (yet) make it a message."
 ]
 
-{ #category : #initialization }
+{ #category : #'class initialization' }
 SpurMemoryManager class >> initializeSpecialObjectIndices [
 	"Initialize indices into specialObjects array."
 
@@ -621,9 +621,30 @@ SpurMemoryManager class >> initializeWithOptions: optionsDictionary [
 	SpurGenerationScavenger initialize
 ]
 
+{ #category : #translation }
+SpurMemoryManager class >> isNonArgumentImplicitReceiverVariableName: aString [
+	^#('self' 'coInterpreter' 'manager' 'scavenger' 'segmentManager') includes: aString
+]
+
+{ #category : #translation }
+SpurMemoryManager class >> mustBeGlobal: var [
+	"Answer if a variable must be global and exported.  Used for inst vars that are accessed from VM support code."
+
+	^'checkForLeaks' = var
+]
+
 { #category : #accessing }
 SpurMemoryManager class >> objectRepresentationClass [
 	^self subclassResponsibility
+]
+
+{ #category : #translation }
+SpurMemoryManager class >> prepareToBeAddedToCodeGenerator: aCodeGen [
+	"Remove the superclass methods we override."
+	self selectors do:
+		[:sel|
+		 (superclass whichClassIncludesSelector: sel) ifNotNil:
+			[aCodeGen removeMethodForSelector: sel]]
 ]
 
 { #category : #'simulation only' }
@@ -1735,6 +1756,7 @@ SpurMemoryManager >> checkOopIntegrity: obj named: name index: i [
 
 { #category : #'simulation only' }
 SpurMemoryManager >> checkedIntegerValueOf: intOop [
+	<doNotGenerate>
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter checkedIntegerValueOf: intOop
 ]
@@ -2703,8 +2725,6 @@ SpurMemoryManager >> freeSize [
 
 { #category : #accessing }
 SpurMemoryManager >> freeStart [
-	(#(Cogit SimpleStackBasedCogit StackToregisterMappingCogit) includes: thisContext sender class name) ifTrue:
-		[self halt].
 	^freeStart
 ]
 
@@ -3380,79 +3400,6 @@ SpurMemoryManager >> isIndexableFormat: format [
 
 { #category : #'object testing' }
 SpurMemoryManager >> isIntegerObject: oop [
-	"This list records the valid senders of isIntegerObject: as we replace uses of
-	  isIntegerObject: by isImmediate: where appropriate."
-	| sel |
-	sel := thisContext sender method selector.
-	(#(	DoIt
-		DoItIn:
-		on:do: "from the debugger"
-		makeBaseFrameFor:
-		quickFetchInteger:ofObject:
-		frameOfMarriedContext:
-		objCouldBeClassObj:
-		isMarriedOrWidowedContext:
-		shortPrint:
-		bytecodePrimAt
-		bytecodePrimAtPut
-		commonAt:
-		commonAtPut:
-		loadFloatOrIntFrom:
-		positive32BitValueOf:
-		primitiveExternalCall
-		checkedIntegerValueOf:
-		bytecodePrimAtPut
-		commonAtPut:
-		primitiveVMParameter
-		checkIsStillMarriedContext:currentFP:
-		displayBitsOf:Left:Top:Right:Bottom:
-		fetchStackPointerOf:
-		primitiveContextAt
-		primitiveContextAtPut
-		subscript:with:storing:format:
-		printContext:
-		compare31or32Bits:equal:
-		signed64BitValueOf:
-		primDigitMultiply:negative:
-		digitLength:
-		isNegativeIntegerValueOf:
-		magnitude64BitValueOf:
-		primitiveMakePoint
-		primitiveAsCharacter
-		primitiveInputSemaphore
-		baseFrameReturn
-		primitiveExternalCall
-		primDigitCompare:
-		isLiveContext:
-		numPointerSlotsOf:
-		fileValueOf:
-		loadBitBltDestForm
-		fetchIntOrFloat:ofObject:ifNil:
-		fetchIntOrFloat:ofObject:
-		loadBitBltSourceForm
-		loadPoint:from:
-		primDigitAdd:
-		primDigitSubtract:
-		positive64BitValueOf:
-		digitBitLogic:with:opIndex:
-		signed32BitValueOf:
-		isNormalized:
-		primDigitDiv:negative:
-		bytesOrInt:growTo:
-		primitiveNewMethod
-		isCogMethodReference:
-		functionForPrimitiveExternalCall:
-		genSpecialSelectorArithmetic
-		genSpecialSelectorComparison
-		ensureContextHasBytecodePC:
-		instVar:ofContext:
-		ceBaseFrameReturn:
-		inlineCacheTagForInstance:
-		primitiveObjectAtPut
-		commonVariable:at:put:cacheIndex:
-		primDigitBitShiftMagnitude:
-		externalInstVar:ofContext:) includes: sel) ifFalse:
-		[self halt].
 	^(oop bitAnd: 1) ~= 0
 ]
 
@@ -4178,10 +4125,6 @@ SpurMemoryManager >> positive64BitValueOf: oop [
 
 { #category : #'store check' }
 SpurMemoryManager >> possibleRootStoreInto: destObj [
-	(#(	storePointer:ofObject:withValue:
-		storePointer:ofForwarder:withValue:
-		inPlaceBecome:and:copyHashFlag:) includes: thisContext sender method selector) ifFalse:
-		[self halt].
 	(self isRemembered: destObj) ifFalse:
 		[scavenger remember: destObj.
 		 self setIsRememberedOf: destObj to: true]
@@ -4590,9 +4533,9 @@ SpurMemoryManager >> setFormatOf: objOop to: format [
 ]
 
 { #category : #snapshot }
-SpurMemoryManager >> setFreeOldSpaceStart: freeStart [
+SpurMemoryManager >> setFreeOldSpaceStart: newFreeOldSpaceStart [
 	"Set by the segment manager on parsing the image."
-	freeOldSpaceStart := freeStart
+	freeOldSpaceStart := newFreeOldSpaceStart
 ]
 
 { #category : #'header access' }
