@@ -27,7 +27,8 @@ Class {
 		'numSegments',
 		'numSegInfos',
 		'segments',
-		'firstSegmentSize'
+		'firstSegmentSize',
+		'canSwizzle'
 	],
 	#category : #'VMMaker-SpurMemoryManager'
 }
@@ -43,7 +44,8 @@ SpurSegmentManager >> adjustSegmentSwizzlesBy: firstSegmentShift [
 		 segInfo := self addressOf: (segments at: i).
 		 segInfo
 			start: segInfo start + oldBaseAddr;
-			swizzle: segInfo swizzle  - oldBaseAddr"+ firstSegmentShift"]
+			swizzle: segInfo swizzle - oldBaseAddr].
+	canSwizzle := true
 ]
 
 { #category : #private }
@@ -77,6 +79,7 @@ SpurSegmentManager >> collapseSegmentsPostSwizzle [
 	  loaded image swizzled into a single contiguous segment.  Collapse
 	  the segments intio one."
 	| bridge |
+	canSwizzle := false.
 	firstSegmentSize ifNil: "true when used by SpurBootstrap to transform an image"
 		[^self].
 
@@ -105,7 +108,8 @@ SpurSegmentManager >> firstSegmentSize: firstSegSize [
 
 { #category : #initialization }
 SpurSegmentManager >> initialize [
-	numSegments := numSegInfos := 0
+	numSegments := numSegInfos := 0.
+	canSwizzle := false
 ]
 
 { #category : #'simulation only' }
@@ -201,11 +205,12 @@ SpurSegmentManager >> readHeapFromImageFile: f dataBytes: numBytes [
 
 { #category : #snapshot }
 SpurSegmentManager >> swizzleObj: objOop [
-	1 to: numSegments - 1 do:
+	self assert: canSwizzle.
+	numSegments - 1 to: 1 by: -1 do:
 		[:i|
-		objOop < (segments at: i) start ifTrue:
-			[^objOop + (segments at: i - 1) swizzle]].
-	^objOop + (segments at: numSegments - 1) swizzle
+		objOop >= (segments at: i) start ifTrue:
+			[^objOop + (segments at: i) swizzle]].
+	^objOop + (segments at: 0) swizzle
 ]
 
 { #category : #snapshot }
