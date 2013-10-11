@@ -2916,6 +2916,7 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	"
 	<inline: false>
 	| freeListObj |
+	self halt.
 	segmentManager adjustSegmentSwizzlesBy: bytesToShift.
 	"image may be at a different address; adjust oops for new location"
 	self adjustAllOopsBy: bytesToShift.
@@ -2923,8 +2924,6 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	segmentManager numSegments > 0 "false if Spur image bootstrap"
 		ifTrue: [specialObjectsOop := segmentManager swizzleObj: specialObjectsOop]
 		ifFalse: [self assert: bytesToShift = 0].
-
-	segmentManager collapseSegmentsPostSwizzle.
 
 	"heavily used special objects"
 	nilObj		:= self splObj: NilObject.
@@ -2940,6 +2939,8 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	freeListObj := self objectAfter: trueObj.
 	self classTableRootObj: (self objectAfter: freeListObj).
 	self initializeFreeSpacePostLoad: freeListObj.
+
+	segmentManager collapseSegmentsPostSwizzle.
 .
 	self initializeOldSpaceFirstFree: freeOldSpaceStart. "initializes endOfMemory, freeStart"
 
@@ -3502,7 +3503,8 @@ SpurMemoryManager >> isSegmentBridge: objOop [
 { #category : #'free space' }
 SpurMemoryManager >> isValidFreeObject: objOop [
 	| chunk |
-	^(self isFreeObject: objOop)
+	^(self addressCouldBeObj: objOop)
+	  and: [(self isFreeObject: objOop)
 	  and: [((chunk := (self fetchPointer: self freeChunkNextIndex ofFreeChunk: objOop)) = 0
 		   or: [self isFreeObject: chunk])
 	  and: [(self bytesInObject: objOop) / self allocationUnit < self numFreeLists
@@ -3511,7 +3513,7 @@ SpurMemoryManager >> isValidFreeObject: objOop [
 			  and: [((chunk := (self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: objOop)) = 0
 				    or: [self isFreeObject: chunk])
 			  and: [(chunk := (self fetchPointer: self freeChunkLargerIndex ofFreeChunk: objOop)) = 0
-				    or: [self isFreeObject: chunk]]]]]]
+				    or: [self isFreeObject: chunk]]]]]]]
 ]
 
 { #category : #segments }
@@ -5068,9 +5070,11 @@ SpurMemoryManager >> trueObject: anOop [
 
 { #category : #'free space' }
 SpurMemoryManager >> unlinkFreeChunk: chunk atIndex: index [
+	"Unlink and answer a small chunk from one of the fixed size freeLists"
 	<inline: true>
 	self assert: ((self bytesInObject: chunk) = (index * self allocationUnit)
-				and: [index > 1 "a.k.a. (self bytesInObject: chunk) > self allocationUnit"]).
+				and: [index > 1 "a.k.a. (self bytesInObject: chunk) > self allocationUnit"
+				and: [(self startOfObject: chunk) = chunk]]).
 	freeLists
 		at: index
 		put: (self
