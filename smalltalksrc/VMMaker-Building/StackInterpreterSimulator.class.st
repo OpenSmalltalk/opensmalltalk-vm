@@ -1272,7 +1272,7 @@ StackInterpreterSimulator >> objectBefore: addr [
 { #category : #UI }
 StackInterpreterSimulator >> openAsMorph [
 	"Open a morphic view on this simulation."
-	| window localImageName |
+	| localImageName borderWidth window |
 	localImageName := imageName
 							ifNotNil: [FileDirectory default localNameFor: imageName]
 							ifNil: [' synthetic image'].
@@ -1286,14 +1286,17 @@ StackInterpreterSimulator >> openAsMorph [
 							on: transcript text: nil accept: nil
 							readSelection: nil menu: #codePaneMenu:shifted:)
 			frame: (0@0.8 corner: 0.7@1).
-
 	window addMorph: (PluggableTextMorph on: self
 						text: #byteCountText accept: nil
 						readSelection: nil menu: #utilitiesMenu:) hideScrollBarsIndefinitely
 			frame: (0.7@0.8 corner: 1@1).
 
+	borderWidth := [SystemWindow borderWidth] "Squeak 4.1"
+						on: MessageNotUnderstood
+						do: [:ex| 0]. "3.8"
+	borderWidth := borderWidth + window borderWidth.
 	window openInWorldExtent: (self desiredDisplayExtent
-								+ (2 * window borderWidth)
+								+ (2 * borderWidth)
 								+ (0@window labelHeight)
 								* (1@(1/0.8))) rounded.
 	^window
@@ -1302,7 +1305,7 @@ StackInterpreterSimulator >> openAsMorph [
 { #category : #UI }
 StackInterpreterSimulator >> openAsMorphNoTranscript [
 	"Open a morphic view on this simulation."
-	| window localImageName |
+	| localImageName borderWidth window |
 	localImageName := FileDirectory default localNameFor: imageName.
 	window := (SystemWindow labelled: 'Simulation of ' , localImageName) model: self.
 
@@ -1310,11 +1313,16 @@ StackInterpreterSimulator >> openAsMorphNoTranscript [
 		frame: (0@0 corner: 1@0.95).
 
 	window addMorph: (PluggableTextMorph on: self
-						text: #byteCountText accept: nil) hideScrollBarsIndefinitely
+						text: #byteCountText accept: nil
+						readSelection: nil menu: #utilitiesMenu:) hideScrollBarsIndefinitely
 		frame: (0@0.95 corner: 1@1).
 
+	borderWidth := [SystemWindow borderWidth] "Squeak 4.1"
+						on: MessageNotUnderstood
+						do: [:ex| 0]. "3.8"
+	borderWidth := borderWidth + window borderWidth.
 	window openInWorldExtent: (self desiredDisplayExtent
-								+ (2 * window borderWidth)
+								+ (2 * borderWidth)
 								+ (0@window labelHeight)
 								* (1@(1/0.95))) rounded
 ]
@@ -1999,6 +2007,11 @@ StackInterpreterSimulator >> runWithBreakCount: theBreakCount [
 	self externalizeIPandSP
 ]
 
+{ #category : #'I/O primitives' }
+StackInterpreterSimulator >> savedWindowSize [
+	^savedWindowSize ifNil: [0]
+]
+
 { #category : #'debugging traps' }
 StackInterpreterSimulator >> sendBreak: selectorString point: selectorLength receiver: receiverOrNil [
 	"self shortPrintFrameAndCallers: localFP"
@@ -2014,6 +2027,11 @@ StackInterpreterSimulator >> sendBreak: selectorString point: selectorLength rec
 										ifNotNil: [' to ', (self shortPrint: receiverOrNil)]
 										ifNil: [''])]]
 				ifFalse: [i := 0]]]
+]
+
+{ #category : #'spur bootstrap' }
+StackInterpreterSimulator >> setDisplayForm: aForm [
+	displayForm := aForm
 ]
 
 { #category : #'debug support' }
@@ -2064,6 +2082,12 @@ StackInterpreterSimulator >> shortPrint: oop [
 StackInterpreterSimulator >> shortPrintContext: aContext [
 	transcript ensureCr.
 	^super shortPrintContext: aContext
+]
+
+{ #category : #'debug printing' }
+StackInterpreterSimulator >> shortPrintFrame: theFP [
+	self transcript ensureCr.
+	^super shortPrintFrame: theFP
 ]
 
 { #category : #'I/O primitives' }
