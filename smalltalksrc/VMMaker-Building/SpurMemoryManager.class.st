@@ -413,22 +413,32 @@ Class {
 		'pastSpaceStart',
 		'shrinkThreshold',
 		'gcStartUsecs',
-		'statScavenges',
-		'statGCEndUsecs',
-		'statIGCDeltaUsecs',
-		'statIncrGCUsecs',
-		'statScavengeGCUsecs',
-		'statFullGCUsecs',
-		'statSGCDeltaUsecs',
-		'statFGCDeltaUsecs',
 		'scavengeInProgress',
-		'statIncrGCs',
-		'statFullGCs',
 		'remapBuffer',
 		'remapBufferCount',
 		'lowSpaceThreshold',
 		'totalFreeOldSpace',
-		'sortedFreeChunks'
+		'sortedFreeChunks',
+		'statFGCDeltaUsecs',
+		'statFullGCUsecs',
+		'statFullGCs',
+		'statGCEndUsecs',
+		'statGrowMemory',
+		'statIGCDeltaUsecs',
+		'statIncrGCUsecs',
+		'statIncrGCs',
+		'statMarkCount',
+		'statMkFwdCount',
+		'statRootTableCount',
+		'statRootTableOverflows',
+		'statSGCDeltaUsecs',
+		'statScavengeGCUsecs',
+		'statScavenges',
+		'statShrinkMemory',
+		'statSpecialMarkCount',
+		'statSurvivorCount',
+		'statSweepCount',
+		'statTenures'
 	],
 	#classVars : [
 		'CheckObjectOverwrite',
@@ -691,6 +701,21 @@ SpurMemoryManager class >> vmProxyMinorVersion [
 { #category : #'word size' }
 SpurMemoryManager class >> wordSize [
 	^self subclassResponsibility
+]
+
+{ #category : #'object enumeration' }
+SpurMemoryManager >> accessibleObjectAfter: objOop [
+	"Answer the accessible object following the given object or 
+	free chunk in the heap. Return nil when heap is exhausted.
+	 This is for primitiveNextObject subsequent to primtiiveSomeObject."
+	<inline: false>
+	| objAfter |
+	objAfter := objOop.
+	[objAfter := self objectAfter: objAfter limit: freeOldSpaceStart.
+	 objAfter = freeOldSpaceStart ifTrue:
+		[^nil].
+	 (self isNormalObject: objAfter) ifTrue:
+		[^objAfter]] repeat
 ]
 
 { #category : #'free space' }
@@ -1550,6 +1575,11 @@ SpurMemoryManager >> byteSizeOf: oop [
 	^(self numSlotsOf: oop) << self shiftForWord
 ]
 
+{ #category : #snapshot }
+SpurMemoryManager >> byteSwapped: w [
+	self subclassResponsibility
+]
+
 { #category : #'free space' }
 SpurMemoryManager >> bytesInFreeTree: freeNode [
 	| freeBytes bytesInObj listNode |
@@ -1631,6 +1661,7 @@ SpurMemoryManager >> characterTag [
 { #category : #immediates }
 SpurMemoryManager >> characterValueOf: oop [
 	"Immediate characters are unsigned"
+	<api>
 	^oop asUnsignedInteger >> self numTagBits
 ]
 
@@ -1884,6 +1915,11 @@ SpurMemoryManager >> classByteArray [
 	^self splObj: ClassByteArray
 ]
 
+{ #category : #'plugin support' }
+SpurMemoryManager >> classCharacter [
+	^self splObj: ClassCharacter
+]
+
 { #category : #accessing }
 SpurMemoryManager >> classExternalAddress [
 	^self splObj: ClassExternalAddress
@@ -1902,6 +1938,16 @@ SpurMemoryManager >> classExternalFunction [
 { #category : #accessing }
 SpurMemoryManager >> classExternalLibrary [
 	^self splObj: ClassExternalLibrary
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> classExternalStructure [
+	^self splObj: ClassExternalStructure
+]
+
+{ #category : #'plugin support' }
+SpurMemoryManager >> classFloat [
+	^self splObj: ClassFloat
 ]
 
 { #category : #'cog jit support' }
@@ -1978,6 +2024,11 @@ SpurMemoryManager >> classPoint [
 { #category : #'plugin support' }
 SpurMemoryManager >> classSemaphore [
 	^self splObj: ClassSemaphore
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> classSmallInteger [
+	^self splObj: ClassInteger
 ]
 
 { #category : #accessing }
@@ -2197,6 +2248,11 @@ SpurMemoryManager >> defaultEdenBytes [
 	^2 * 1024 * 1024
 	+ (coInterpreter interpreterAllocationReserveBytes
 	    * self scavengerDenominator + self numSurvivorSpaces // self scavengerDenominator)
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> displayObject [
+	^self splObj: TheDisplay
 ]
 
 { #category : #'become implementation' }
@@ -3069,8 +3125,10 @@ SpurMemoryManager >> initialize [
 	needGCFlag := signalLowSpace := scavengeInProgress := false.
 	becomeEffectsFlags := 0.
 	statScavenges := statIncrGCs := statFullGCs := 0.
-	statScavengeGCUsecs := statIncrGCUsecs := statFullGCUsecs := 0.
+	statScavengeGCUsecs := statIncrGCUsecs := statFullGCUsecs := statGCEndUsecs := 0.
 	statSGCDeltaUsecs := statIGCDeltaUsecs := statFGCDeltaUsecs := 0.
+	statGrowMemory := statShrinkMemory := statRootTableCount := statTenures := statSurvivorCount := 0.
+	statRootTableOverflows := statSweepCount := statMarkCount := statSpecialMarkCount := statMkFwdCount := 0.
 	self flag: #temporary.
 	shrinkThreshold := 16r10000000. "something huge for now"
 
@@ -3393,9 +3451,16 @@ SpurMemoryManager >> isBytesNonImm: objOop [
 	^(self formatOf: objOop) >= self firstByteFormat
 ]
 
-{ #category : #'object testing' }
+{ #category : #immediates }
 SpurMemoryManager >> isCharacterObject: oop [
-	^(oop bitAnd: self tagMask) = self characterTag
+	<api>
+	^self isImmediateCharacter: oop
+]
+
+{ #category : #immediates }
+SpurMemoryManager >> isCharacterValue: anInteger [
+	<api>
+	^self isInRangeCharacterCode: anInteger
 ]
 
 { #category : #'become implementation' }
@@ -3493,7 +3558,7 @@ SpurMemoryManager >> isForwardedClassTag: classIndex [
 	^classIndex = self isForwardedObjectClassIndexPun
 ]
 
-{ #category : #'class table' }
+{ #category : #'class table puns' }
 SpurMemoryManager >> isForwardedObjectClassIndexPun [
 	^8 "Not to be confused with that of any immediate class"
 ]
@@ -3595,6 +3660,11 @@ SpurMemoryManager >> isNonIntegerObject: oop [
 	^(oop bitAnd: 1) = 0
 ]
 
+{ #category : #'object enumeration' }
+SpurMemoryManager >> isNormalObject: objOop [
+	^(self classIndexOf: objOop) > self lastClassIndexPun
+]
+
 { #category : #'object testing' }
 SpurMemoryManager >> isOopCompiledMethod: oop [ 
     "Answer whether the oop is an object of compiled method format"
@@ -3674,6 +3744,12 @@ SpurMemoryManager >> isValidSegmentBridge: objOop [
 ]
 
 { #category : #'object testing' }
+SpurMemoryManager >> isWeak: oop [
+	"Answer if the argument has only weak fields that can hold oops. See comment in formatOf:"
+	^(self isNonImmediate: oop) and: [self isWeakNonImm: oop]
+]
+
+{ #category : #'object testing' }
 SpurMemoryManager >> isWeakNonImm: objOop [
 	^(self formatOf: objOop) = self weakArrayFormat
 ]
@@ -3720,6 +3796,16 @@ SpurMemoryManager >> keyOfEphemeron: objOop [
 SpurMemoryManager >> knownClassAtIndex: classIndex [
 	self assert: (classIndex between: 1 and: self classTablePageSize).
 	^self fetchPointer: classIndex ofObject: classTableFirstPage
+]
+
+{ #category : #'class table puns' }
+SpurMemoryManager >> lastClassIndexPun [
+	"Class puns are class indices not used by any class.  There is an entry
+	 for the pun that refers to the notional class of objects with this class
+	 index.  But because the index doesn't match the class it won't show up
+	 in allInstances, hence hiding the object with a pun as its class index.
+	 The puns occupy indices 16 through 31."
+	^31
 ]
 
 { #category : #accessing }
@@ -4240,6 +4326,13 @@ SpurMemoryManager >> objectStartingAt: address [
 		ifFalse: [address]
 ]
 
+{ #category : #'plugin support' }
+SpurMemoryManager >> obsoleteDontUseThisFetchWord: fieldIndex ofObject: oop [
+	"This message is deprecated but supported for a while via a tweak to sqVirtualMachine.[ch] Use fetchLong32, fetchLong64 or fetchPointer instead for new code"
+	<api>
+	^self fetchLong32: fieldIndex ofObject: oop
+]
+
 { #category : #accessing }
 SpurMemoryManager >> oldSpaceSize [
 	^segmentManager totalBytesInSegments
@@ -4542,6 +4635,26 @@ SpurMemoryManager >> rememberedBitShift [
 	^29
 ]
 
+{ #category : #snapshot }
+SpurMemoryManager >> reverseBytesFrom: startAddr to: stopAddr [
+	"Byte-swap the given range of memory (not inclusive of stopAddr!)."
+	| addr |
+	addr := startAddr.
+	[self oop: addr isLessThan: stopAddr] whileTrue:
+		[self longAt: addr put: (self byteSwapped: (self longAt: addr)).
+		addr := addr + BytesPerWord]
+]
+
+{ #category : #snapshot }
+SpurMemoryManager >> reverseBytesInMemory [
+	self reverseBytesFrom: newSpaceLimit to: freeOldSpaceStart
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> rootTableCount [
+	^scavenger rememberedSetSize
+]
+
 { #category : #'debug support' }
 SpurMemoryManager >> runLeakCheckerForFullGC: fullGCFlag [
 	<inline: false>
@@ -4669,6 +4782,7 @@ SpurMemoryManager >> scavengingGCTenuringIf: tenuringCriterion [
 	statGCEndUsecs := coInterpreter ioUTCMicrosecondsNow.
 	statSGCDeltaUsecs := statGCEndUsecs - gcStartUsecs.
 	statScavengeGCUsecs := statScavengeGCUsecs + statSGCDeltaUsecs.
+	statRootTableCount := scavenger rememberedSetSize.
 
 	coInterpreter postGCAction.
 	self runLeakCheckerForFullGC: false.
@@ -5066,6 +5180,11 @@ SpurMemoryManager >> statCompMoveCount [
 ]
 
 { #category : #accessing }
+SpurMemoryManager >> statFGCDeltaUsecs [
+	^statFGCDeltaUsecs
+]
+
+{ #category : #accessing }
 SpurMemoryManager >> statFullGCUsecs [
 	^statFullGCUsecs
 ]
@@ -5073,6 +5192,16 @@ SpurMemoryManager >> statFullGCUsecs [
 { #category : #accessing }
 SpurMemoryManager >> statFullGCs [
 	^statFullGCs
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> statGCEndUsecs [
+	^statGCEndUsecs
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> statGrowMemory [
+	^statGrowMemory
 ]
 
 { #category : #accessing }
@@ -5091,18 +5220,68 @@ SpurMemoryManager >> statIncrGCs [
 ]
 
 { #category : #accessing }
+SpurMemoryManager >> statMarkCount [
+	^statMarkCount
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> statMkFwdCount [
+	^statMkFwdCount
+]
+
+{ #category : #accessing }
 SpurMemoryManager >> statNumGCs [
 	^statScavenges + statIncrGCs + statFullGCs
 ]
 
 { #category : #accessing }
 SpurMemoryManager >> statRootTableCount [
-	^scavenger rememberedSetSize
+	^statRootTableCount
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> statRootTableOverflows [
+	^statRootTableOverflows
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> statSGCDeltaUsecs [
+	^statSGCDeltaUsecs
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> statScavengeGCUsecs [
+	^statScavengeGCUsecs
 ]
 
 { #category : #accessing }
 SpurMemoryManager >> statScavenges [
 	^statScavenges
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> statShrinkMemory [
+	^statShrinkMemory
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> statSpecialMarkCount [
+	^statSpecialMarkCount
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> statSurvivorCount [
+	^statSurvivorCount
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> statSweepCount [
+	^statSweepCount
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> statTenures [
+	^statTenures
 ]
 
 { #category : #'object access' }
@@ -5316,7 +5495,7 @@ SpurMemoryManager >> totalFreeListBytes [
 
 { #category : #accessing }
 SpurMemoryManager >> totalMemorySize [
-	^scavenger newSpaceCapacity + segmentManager totalSegmentSize
+	^scavenger newSpaceCapacity + segmentManager totalBytesInSegments
 ]
 
 { #category : #'simulation only' }

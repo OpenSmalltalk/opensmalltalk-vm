@@ -120,6 +120,17 @@ Spur32BitMemoryManager >> allocateSlotsInOldSpace: numSlots bytes: totalBytes fo
 	^chunk
 ]
 
+{ #category : #snapshot }
+Spur32BitMemoryManager >> byteSwapped: w [
+	"Answer the given integer with its bytes in the reverse order."
+	<api>
+	<returnTypeC: #sqInt>
+	^  ((w bitShift: Byte3ShiftNegated) bitAnd: Byte0Mask)
+	 + ((w bitShift: Byte1ShiftNegated) bitAnd: Byte1Mask)
+	 + ((w bitShift: Byte1Shift             ) bitAnd: Byte2Mask)
+	 + ((w bitShift: Byte3Shift             ) bitAnd: Byte3Mask)
+]
+
 { #category : #'object enumeration' }
 Spur32BitMemoryManager >> bytesInObject: objOop [
 	"Answer the total number of bytes in an object including header and possible overflow size header."

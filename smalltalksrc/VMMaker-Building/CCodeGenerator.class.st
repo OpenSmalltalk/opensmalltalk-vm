@@ -2002,6 +2002,15 @@ CCodeGenerator >> generateNegated: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
+CCodeGenerator >> generateNoMask: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	aStream nextPut: $(.
+	self generateBitAnd: msgNode on: aStream indent: level.
+	aStream nextPutAll: ') == 0'
+]
+
+{ #category : #'C translation' }
 CCodeGenerator >> generateNot: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
@@ -2103,6 +2112,15 @@ CCodeGenerator >> generateRepeat: msgNode on: aStream indent: level [
 	level timesRepeat: [ aStream tab ].
 	aStream nextPutAll: '}'
 
+]
+
+{ #category : #'C translation' }
+CCodeGenerator >> generateRounded: msgNode on: aStream indent: level [
+	"Generate the C code for rounded onto the given stream."
+
+	aStream nextPutAll: 'round('.
+	self emitCExpression: msgNode receiver on: aStream.
+	aStream nextPut: $)
 ]
 
 { #category : #'C translation' }
@@ -2496,6 +2514,7 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#bitInvert32		#generateBitInvert32:on:indent:
 	#bitClear:			#generateBitClear:on:indent:
 	#truncateTo:		#generateTruncateTo:on:indent:
+	#rounded			#generateRounded:on:indent:
 
 	#<				#generateLessThan:on:indent:
 	#<=			#generateLessThanOrEqual:on:indent:
@@ -2557,6 +2576,7 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#asSymbol					#generateAsSymbol:on:indent:
 	#flag:						#generateFlag:on:indent:
 	#anyMask:					#generateBitAnd:on:indent:
+	#noMask:					#generateNoMask:on:indent:
 	#raisedTo:					#generateRaisedTo:on:indent:
 	#touch:						#generateTouch:on:indent:
 

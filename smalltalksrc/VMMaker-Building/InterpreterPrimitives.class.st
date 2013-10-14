@@ -2029,6 +2029,7 @@ InterpreterPrimitives >> primitiveIsYoung [
 	"Primitive. Answer whether the argument to the primitive resides in young space."
 	| oop |
 	<export: true>
+	<option: #SqueakV3ObjectMemory> "for now..."
 	oop := self stackObjectValue: 0.
 	self successful ifTrue:
 		[self pop: argumentCount + 1 thenPushBool: (self oop: oop isGreaterThanOrEqualTo: objectMemory youngStart)]
@@ -2570,6 +2571,7 @@ InterpreterPrimitives >> primitivePathToUsing [
 	 the current context"
 	| err path |
 	<export: true>
+	<option: #SqueakV3ObjectMemory> "for now..."
 	self externalWriteBackHeadFramePointers.
 	err := self pathTo: (self stackValue: 2) using: (self stackValue: 1) followWeak: self stackTop = objectMemory trueObject.
 	err ~= 0 ifTrue:
@@ -2976,6 +2978,7 @@ InterpreterPrimitives >> primitiveSetGCBiasToGrow [
 	"Primitive. Indicate if the GC logic should have bias to grow"
 	| flag |
 	<export: true>
+	<option: #SqueakV3ObjectMemory> "for now..."
 	flag := self stackIntegerValue: 0.
 	self successful ifTrue:[
 		objectMemory gcBiasToGrow: flag.
@@ -2988,6 +2991,7 @@ InterpreterPrimitives >> primitiveSetGCBiasToGrowGCLimit [
 	"Primitive. If the GC logic has  bias to grow, set growth limit"
 	| value |
 	<export: true>
+	<option: #SqueakV3ObjectMemory> "for now..."
 	value := self stackIntegerValue: 0.
 	self successful ifTrue:
 		[objectMemory gcBiasToGrowGCLimit: value.
