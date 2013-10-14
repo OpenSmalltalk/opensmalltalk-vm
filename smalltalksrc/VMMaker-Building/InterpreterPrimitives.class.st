@@ -2805,6 +2805,7 @@ InterpreterPrimitives >> primitiveRootTable [
 	The primitive can cause GC itself and if so the return value may
 	be inaccurate - in this case one should guard the read operation
 	by looking at the gc counter statistics."
+	<option: #SqueakV3ObjectMemory>
 	self pop: argumentCount + 1 thenPush: objectMemory rootTableObject
 ]
 
@@ -2817,8 +2818,9 @@ InterpreterPrimitives >> primitiveRootTableAt [
 		[root := Smalltalk rootTableAt: index.
 		root == nil] whileFalse:[index := index + 1].
 	"
-	| index |
 	<export: true>
+	<option: #SqueakV3ObjectMemory>
+	| index |
 	index := self stackIntegerValue: 0.
 	self success: (index > 0 and:[index <= objectMemory rootTableCount]).
 	self successful ifTrue:[

@@ -33,6 +33,16 @@ Class {
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
+{ #category : #translation }
+SpurSegmentManager class >> declareCVarsIn: aCCodeGenerator [
+	aCCodeGenerator var: #segments type: #'SpurSegmentInfo *'
+]
+
+{ #category : #translation }
+SpurSegmentManager class >> isNonArgumentImplicitReceiverVariableName: instVarName [
+	^instVarName = 'manager'
+]
+
 { #category : #snapshot }
 SpurSegmentManager >> adjustSegmentSwizzlesBy: firstSegmentShift [
 	"Adjust swizzles by firstSegmentShift."
@@ -43,7 +53,7 @@ SpurSegmentManager >> adjustSegmentSwizzlesBy: firstSegmentShift [
 		[:i| | segInfo |
 		 segInfo := self addressOf: (segments at: i).
 		 segInfo
-			start: segInfo start + oldBaseAddr;
+			segStart: segInfo segStart + oldBaseAddr;
 			swizzle: segInfo swizzle - oldBaseAddr].
 	canSwizzle := true
 ]
@@ -84,8 +94,8 @@ SpurSegmentManager >> collapseSegmentsPostSwizzle [
 		[^self].
 
 	numSegments := 1.
-	(segments at: 0)
-		start: manager newSpaceLimit;
+	(self addressOf: (segments at: 0))
+		segStart: manager newSpaceLimit;
 		segSize: manager endOfMemory.
 	"finally plant a bridge at the end of the coallesced segment and cut back the
 	 manager's ntion of the end of memory to immediately before the bridge."
@@ -143,6 +153,7 @@ SpurSegmentManager >> manager: aSpurMemoryManager [
 
 { #category : #accessing }
 SpurSegmentManager >> numSegments [
+	<cmacro: '() GIV(numSegments)'>
 	^numSegments
 ]
 
@@ -180,7 +191,7 @@ SpurSegmentManager >> readHeapFromImageFile: f dataBytes: numBytes [
 	bridge := firstSegmentSize + manager newSpaceLimit - manager baseHeaderSize.
 	[segInfo := self addressOf: (segments at: numSegments).
 	 segInfo
-		start: oldBase;					"N.B. still must be adjusted by oldBaseAddr."
+		segStart: oldBase;					"N.B. still must be adjusted by oldBaseAddr."
 		segSize: nextSegmentSize;
 		swizzle: newBase - oldBase.	"N.B. still must be adjusted by oldBaseAddr."
 	 bytesRead := self readHeapFrom: f at: newBase dataBytes: nextSegmentSize.
@@ -205,10 +216,11 @@ SpurSegmentManager >> readHeapFromImageFile: f dataBytes: numBytes [
 
 { #category : #snapshot }
 SpurSegmentManager >> swizzleObj: objOop [
+	<inline: false>
 	self assert: canSwizzle.
 	numSegments - 1 to: 1 by: -1 do:
 		[:i|
-		objOop >= (segments at: i) start ifTrue:
+		objOop >= (segments at: i) segStart ifTrue:
 			[^objOop + (segments at: i) swizzle]].
 	^objOop + (segments at: 0) swizzle
 ]
@@ -234,7 +246,7 @@ SpurSegmentManager >> writeImageToFile: aBinaryStream [
 		nextSegSize := i = (numSegments - 1)
 							ifTrue: [0]
 							ifFalse: [(segments at: i + 1) segSize].
-		total := total + (self writeSegment: (segments at: i)
+		total := total + (self writeSegment: (self addressOf: (segments at: i))
 							nextSegmentSize: nextSegSize
 							toFile: aBinaryStream)].
 	^total
@@ -242,18 +254,18 @@ SpurSegmentManager >> writeImageToFile: aBinaryStream [
 
 { #category : #snapshot }
 SpurSegmentManager >> writeSegment: aSpurSegmentInfo nextSegmentSize: nextSegSize toFile: aBinaryStream [
-	<var: 'aSpurSegmentInfo' type: 'SpurSegmentInfo *'>
+	<var: 'aSpurSegmentInfo' type: #'SpurSegmentInfo *'>
 	<var: 'aBinaryStream' type: #'FILE *'>
 	| bridge savedHeader nWritten |
 	<var: 'savedHeader' type: #usqLong>
-	bridge := aSpurSegmentInfo start + aSpurSegmentInfo segSize - manager baseHeaderSize.
+	bridge := aSpurSegmentInfo segStart + aSpurSegmentInfo segSize - manager baseHeaderSize.
 	"last seg may be beyond endOfMemory/freeOldSpaceStart"
 	self assert: ((manager isValidSegmentBridge: bridge) or: [nextSegSize = 0]).
 	savedHeader := manager longLongAt: bridge.
 	manager longLongAt: bridge put: nextSegSize.
 	nWritten := self cCode:
 						[self
-							sq: aSpurSegmentInfo start
+							sq: aSpurSegmentInfo segStart
 							Image: 1
 							File: aSpurSegmentInfo segSize
 							Write: aBinaryStream]
@@ -261,7 +273,7 @@ SpurSegmentManager >> writeSegment: aSpurSegmentInfo nextSegmentSize: nextSegSiz
 						[aBinaryStream
 							next: aSpurSegmentInfo segSize / 4
 							putAll: manager memory
-							startingAt: aSpurSegmentInfo start / 4 + 1.
+							startingAt: aSpurSegmentInfo segStart / 4 + 1.
 						 aSpurSegmentInfo segSize].
 	manager longLongAt: bridge put: savedHeader.
 	^nWritten

@@ -614,8 +614,7 @@ VMMaker >> buildCodeGeneratorForCogit: getAPIMethods [
 	cogitClasses addFirst: VMClass.
 	cogitClasses addAllLast: ((self cogitClass ancilliaryClasses: optionsDictionary) reject: [:class| class isStructClass]).
 	cogitClasses do: [:cgc| cg addClass: cgc].
-	(cg structClassesForTranslationClasses: cogitClasses) do:
-		[:structClass| cg addStructClass: structClass].
+	cg addStructClasses: (cg structClassesForTranslationClasses: cogitClasses).
 
 	getAPIMethods ifTrue:
 		[apicg := self buildCodeGeneratorForInterpreter: false.
@@ -638,7 +637,10 @@ VMMaker >> buildCodeGeneratorForInterpreter: getAPIMethods [
 	| cg interpreterClass interpreterClasses apicg |
 	interpreterClasses := OrderedCollection new.
 
-	(cg := self createCodeGenerator) vmClass: (interpreterClass := self interpreterClass).
+	interpreterClass := self interpreterClass.
+	interpreterClass initializeWithOptions: optionsDictionary.
+
+	(cg := self createCodeGenerator) vmClass: interpreterClass.
 
 	[interpreterClass ~~ VMClass] whileTrue:
 		[interpreterClasses addFirst: interpreterClass.
@@ -652,11 +654,10 @@ VMMaker >> buildCodeGeneratorForInterpreter: getAPIMethods [
 			 interpreterClass := interpreterClass superclass]].
 
 	interpreterClasses addFirst: VMClass.
-	interpreterClasses addAllLast: (((self interpreterClass ancilliaryClasses: optionsDictionary) reject: [:class| class isStructClass]) copyWithout: cg vmClass objectMemoryClass).
+	interpreterClasses addAllLast: (cg nonStructClassesForTranslationClasses: interpreterClasses).
 	(cg structClassesForTranslationClasses: interpreterClasses) do:
-		[:structClass|
-		structClass initialize.
-		cg addStructClass: structClass].
+		[:structClass| structClass initialize].
+	cg addStructClasses: (cg structClassesForTranslationClasses: interpreterClasses).
 
 	interpreterClasses do:
 		[:ic|
