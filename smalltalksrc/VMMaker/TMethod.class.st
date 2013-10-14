@@ -1287,7 +1287,7 @@ TMethod >> newCascadeTempFor: aTParseNode [
 	aTParseNode isLeaf ifFalse:
 		[declarations
 			at: varNode name
-			put: [:tm :cg| tm halt; determineTypeFor: aTParseNode in: cg]].
+			put: [:tm :cg| tm determineTypeFor: aTParseNode in: cg]].
 	^varNode
 ]
 
