@@ -401,11 +401,11 @@ ObjectMemory class >> initializeWithOptions: optionsDictionary [
 	DoAssertionChecks := optionsDictionary at: #DoAssertionChecks ifAbsent: [false].
 	DoExpensiveAssertionChecks := optionsDictionary at: #DoExpensiveAssertionChecks ifAbsent: [false].
 
+	self initializeObjectHeaderConstants. "Initializes BaseHeaderSize so do early"
 	self initializeImmediates.
 	self initializeSpecialObjectIndices.
 	self initializeCompactClassIndices.
 	self initializePrimitiveErrorCodes.
-	self initializeObjectHeaderConstants.
 
 	NilContext := 1.  "the oop for the integer 0; used to mark the end of context lists"
 
@@ -2535,6 +2535,8 @@ ObjectMemory >> initializeObjectMemory: bytesToShift [
 	"
 	"di 11/18/2000 fix slow full GC"
 	<inline: false>
+	"Catch mis-initializations leading to bad translations to C"
+	self assert: BaseHeaderSize = BytesPerWord.
 
 	"set the start of the young object space"
 	youngStart := endOfMemory.

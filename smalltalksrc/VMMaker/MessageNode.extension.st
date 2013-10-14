@@ -29,6 +29,14 @@ MessageNode >> asTranslatorNodeIn: aTMethod [
 				  args second.
 				  args third. "add the limit var as a hidden extra argument; we may need it later"
 				  TVariableNode new setName: arguments first key}].
+	(sel == #ifTrue:ifFalse: and: [arguments first isJust: NodeNil]) ifTrue:
+		[sel := #ifFalse:. args := {args last}].
+	(sel == #ifTrue:ifFalse: and: [arguments last isJust: NodeNil]) ifTrue:
+		[sel := #ifTrue:. args := {args first}].
+	(sel == #ifFalse:ifTrue: and: [arguments first isJust: NodeNil]) ifTrue:
+		[sel := #ifTrue:. args := {args last}].
+	(sel == #ifFalse:ifTrue: and: [arguments last isJust: NodeNil]) ifTrue:
+		[sel := #ifTrue:. args := {args first}].
 	((sel = #ifFalse: or: [sel = #or:])
 	 and: [arguments size = 2 and: [(arguments at: 2) notNil]]) ifTrue:
 		["Restore argument block that got moved by transformOr: or transformIfFalse:"

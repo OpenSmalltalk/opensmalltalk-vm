@@ -869,17 +869,24 @@ InterpreterPrimitives >> primitiveClipboardText [
 	string containing the current clipboard contents."
 	| s sz |
 	argumentCount = 1
-		ifTrue: [s := self stackTop.
-			(objectMemory isBytes: s) ifFalse: [^ self primitiveFail].
-			self successful
-				ifTrue: [sz := self stSizeOf: s.
-					self clipboardWrite: sz From: s + BaseHeaderSize At: 0.
-					self pop: 1]]
-		ifFalse: [sz := self clipboardSize.
-			(objectMemory sufficientSpaceToAllocate: sz) ifFalse:[^self primitiveFail].
-			s := objectMemory instantiateClass: (objectMemory splObj: ClassByteString) indexableSize: sz.
-			self clipboardRead: sz Into: s + BaseHeaderSize At: 0.
-			self pop: 1 thenPush: s]
+		ifTrue:
+			[s := self stackTop.
+			 (objectMemory isBytes: s) ifFalse: [^ self primitiveFail].
+			 self successful ifTrue:
+				[sz := objectMemory byteLengthOf: s.
+				 self clipboardWrite: sz From: s + objectMemory baseHeaderSize At: 0.
+				 self pop: 1]]
+		ifFalse:
+			[sz := self clipboardSize.
+			 objectMemory hasSpurMemoryManagerAPI
+				ifTrue:
+					[s := objectMemory allocateBytes: sz classIndex: ClassByteStringCompactIndex.
+					 s ifNil: [^self primitiveFail]]
+				ifFalse:
+					[(objectMemory sufficientSpaceToAllocate: sz) ifFalse: [^self primitiveFail].
+					 s := objectMemory instantiateClass: (objectMemory splObj: ClassByteString) indexableSize: sz].
+			 self clipboardRead: sz Into: s + objectMemory baseHeaderSize At: 0.
+			 self pop: 1 thenPush: s]
 ]
 
 { #category : #'system control primitives' }
@@ -1594,7 +1601,8 @@ InterpreterPrimitives >> primitiveFullGC [
 
 	objectMemory fullGCLock > 0 ifTrue:
 		[^self primitiveFailFor: PrimErrInappropriate].
-	objectMemory incrementalGC.  "maximimize space for forwarding table"
+	objectMemory hasSpurMemoryManagerAPI ifFalse:
+		[objectMemory incrementalGC].  "maximimize space for forwarding table"
 	objectMemory fullGC.
 	self pop: 1 thenPushInteger: (objectMemory bytesLeft: true).
 ]
@@ -1966,7 +1974,14 @@ InterpreterPrimitives >> primitiveInvokeObjectAsMethod [
 	"
 	<returnTypeC: #void>
 	| runReceiver runArgs lookupClassTag |
-	runArgs := objectMemory eeInstantiateClass: (objectMemory splObj: ClassArray) indexableSize: argumentCount.
+	runArgs := objectMemory hasSpurMemoryManagerAPI
+					ifTrue: [objectMemory
+								eeInstantiateClassIndex: ClassArrayCompactIndex
+								format: objectMemory arrayFormat
+								numSlots: argumentCount]
+					ifFalse: [objectMemory
+								eeInstantiateClass: (objectMemory splObj: ClassArray)
+								indexableSize: argumentCount].
 	argumentCount - 1 to: 0 by: -1  do:
 		[:i| objectMemory storePointerUnchecked: i ofObject: runArgs withValue: self popStack].
 
@@ -1992,6 +2007,7 @@ InterpreterPrimitives >> primitiveIsRoot [
 	"Primitive. Answer whether the argument to the primitive is a root for young space"
 	| oop |
 	<export: true>
+	<option: #SqueakV3ObjectMemory>
 	oop := self stackObjectValue: 0.
 	self successful ifTrue:
 		[self
