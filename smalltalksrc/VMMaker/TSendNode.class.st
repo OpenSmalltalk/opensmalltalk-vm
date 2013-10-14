@@ -104,11 +104,15 @@ TSendNode >> emitCCodeAsExpressionOn: aStream level: level generator: aCodeGen [
 TSendNode >> emitCCodeAsFieldReferenceOn: aStream level: level generator: aCodeGen [
 	"If appropriate, translate this message send as a pointer dereference"
 
+	| parenCount |
 	(self isStructSend: aCodeGen) ifFalse:
 		[^false].
 
-	aStream nextPut: $(.
+	parenCount := receiver isSend ifTrue: [2] ifFalse: [1].
+	aStream next: parenCount put: $(.
 	receiver  emitCCodeAsExpressionOn: aStream level: 0 generator: aCodeGen.
+	parenCount > 1 ifTrue:
+		[aStream nextPut: $)].
 	(receiver structTargetKind: aCodeGen) caseOf: {
 		[#pointer] -> [aStream nextPut: $-; nextPut: $>].
 		[#struct] -> [aStream nextPut: $.] }.
@@ -265,6 +269,15 @@ TSendNode >> nodesDo: aBlock [
 ]
 
 { #category : #enumerating }
+TSendNode >> nodesDo: aBlock parent: parent [
+	"Apply aBlock to all nodes in the receiver with each node's parent.
+	 N.B. This is assumed to be bottom-up, leaves first."
+	receiver nodesDo: aBlock parent: self.
+	arguments do: [:arg| arg nodesDo: aBlock parent: self].
+	aBlock value: self value: parent
+]
+
+{ #category : #enumerating }
 TSendNode >> nodesDo: aBlock unless: cautionaryBlock [
 
 	(cautionaryBlock value: self) ifTrue: [^self].
@@ -397,6 +410,21 @@ TSendNode >> structTargetKind: aCodeGen [
 	selector == #cCoerceSimple:to: ifTrue:
 		[^(VMStructType isTypePointerToStruct: arguments last value) ifTrue:
 			[#pointer]].
+
+	selector == #at: ifTrue:
+		[receiver isVariable ifTrue:
+			[(aCodeGen typeOfVariable: receiver name) ifNotNil:
+				[:type| | derefType |
+				 type last = $* ifFalse:
+					[^receiver structTargetKind: aCodeGen].
+				 (Smalltalk classNamed: (aCodeGen
+											extractTypeFor: receiver name
+											fromDeclaration: type allButLast)) ifNotNil:
+					[:class|
+					class isStructClass ifTrue:
+						[^#struct]]]].
+		(receiver structTargetKind: aCodeGen) ifNotNil:
+			[:kind| ^kind]].
 
 	^(aCodeGen selectorReturnsPointerToStruct: selector) ifTrue:
 		[#pointer]

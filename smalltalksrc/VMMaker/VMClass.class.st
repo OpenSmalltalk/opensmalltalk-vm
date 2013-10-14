@@ -57,6 +57,22 @@ VMClass class >> declareC: arrayOfVariableNames as: aCType in: aCCodeGenerator [
 ]
 
 { #category : #translation }
+VMClass class >> declareCAsOop: arrayOfVariableNames in: aCCodeGenerator [
+	"Declare the variables in arrayOfVariableNames with type representing position in object memory."
+
+	arrayOfVariableNames do:
+		[:varName| aCCodeGenerator var: varName type: #usqInt]
+]
+
+{ #category : #translation }
+VMClass class >> declareCAsUSqLong: arrayOfVariableNames in: aCCodeGenerator [
+	"Declare the variables in arrayOfVariableNames with type representing position in object memory."
+
+	arrayOfVariableNames do:
+		[:varName| aCCodeGenerator var: varName type: #usqLong]
+]
+
+{ #category : #translation }
 VMClass class >> declareCVarsIn: aCCodeGenerator [ 
 	"Declare any additional variables and/or add type declarations for existing variables."
 ]
@@ -137,17 +153,23 @@ VMClass class >> initializeMiscConstants [
 	 or in the case of VMBIGENDIAN the various sqConfig.h files.
 	 Subclass implementations need to include a super initializeMiscConstantsWith:."
 
+	| omc |
 	VMBIGENDIAN class. "Mention this for the benefit of CCodeGenerator>>emitCConstantsOn:"
 	self isInterpreterClass ifTrue:
 		[STACKVM := COGVM := COGMTVM := false].
-	NewspeakVM := initializationOptions at: #NewspeakVM ifAbsent: [false].
+
+	omc := initializationOptions at: #ObjectMemory ifAbsent: nil.
 	initializationOptions
-		at: #Spur
-		put: ((initializationOptions at: #ObjectMemory ifAbsent: [])
-				ifNil: [false]
-				ifNotNil:
-					[:objMemClassName|
-					(Smalltalk at: objMemClassName) inheritsFrom: SpurMemoryManager]).
+		at: #SqueakV3ObjectMemory	"the good ole default"
+			put: (omc
+					ifNil: [true]
+					ifNotNil: [(Smalltalk at: omc) inheritsFrom: ObjectMemory]);
+		at: #SpurObjectMemory		"the new condender"
+			put: (omc
+					ifNil: [false]
+					ifNotNil: [(Smalltalk at: omc) inheritsFrom: SpurMemoryManager]).
+
+	NewspeakVM := initializationOptions at: #NewspeakVM ifAbsent: [false].
 	MULTIPLEBYTECODESETS := initializationOptions at: #MULTIPLEBYTECODESETS ifAbsent: [false].
 	"N.B.  Not yet implemented."
 	IMMUTABILITY := initializationOptions at: #IMMUTABILITY ifAbsent: [false].
@@ -340,7 +362,7 @@ VMClass class >> requiredMethodNames: options [
 { #category : #translation }
 VMClass class >> shouldGenerateTypedefFor: aStructClass [
 	"Hack to work-around multiple definitions.  Sometimes a type has been defined in an include."
-	^true
+	^aStructClass ~~ VMCallbackContext
 ]
 
 { #category : #translation }

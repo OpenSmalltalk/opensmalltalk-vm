@@ -27,6 +27,8 @@ Spur32BitMemoryManager >> addressAfter: objOop [
 
 { #category : #allocation }
 Spur32BitMemoryManager >> allocateNewSpaceSlots: numSlots format: formatField classIndex: classIndex [
+	"Allocate an object with numSlots in newSpace.  This is for the `ee' execution engine allocations,
+	 and must be satisfied.  If no memory is available, abort."
 	| numBytes newObj |
 	"Object headers are 8 bytes in length if the slot size fits in the num slots field (max implies overflow),
 	 16 bytes otherwise (num slots in preceeding word).
@@ -46,7 +48,8 @@ Spur32BitMemoryManager >> allocateNewSpaceSlots: numSlots format: formatField cl
 	freeStart + numBytes > scavengeThreshold ifTrue:
 		[needGCFlag ifFalse: [self scheduleScavenge].
 		 freeStart + numBytes > scavenger eden limit ifTrue:
-			[^self error: 'no room in eden for allocateNewSpaceSlots:format:classIndex:']].
+			[self error: 'no room in eden for allocateNewSpaceSlots:format:classIndex:'.
+			 ^0]].
 	numSlots >= self numSlotsMask
 		ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
 			[self flag: #endianness.

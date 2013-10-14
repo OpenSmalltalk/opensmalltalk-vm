@@ -106,7 +106,7 @@ RiscOSVMMaker >> needsToRegenerateInterpreterFile [
 
 	| tStamp fstat |
 	tStamp := (self interpreterClass withAllSuperclasses copyUpTo: ObjectMemory superclass),
-				self interpreterClass ancilliaryClasses
+				(self interpreterClass ancilliaryClasses: self options)
 					inject: 0 into: [:tS :cl| tS max: cl timeStamp].
 
 	"don't translate if the file is newer than my timeStamp"

@@ -1989,6 +1989,11 @@ NewObjectMemory >> newSpaceBytes [
 	^self edenBytes
 ]
 
+{ #category : #accessing }
+NewObjectMemory >> newSpaceSize [
+	^freeStart - self startOfMemory
+]
+
 { #category : #'primitive support' }
 NewObjectMemory >> nilFieldsOf: arrayObj [ 
 	0 to: (self lengthOf: arrayObj) - 1 do:

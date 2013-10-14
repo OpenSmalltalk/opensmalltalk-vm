@@ -144,20 +144,20 @@ StackInterpreterPrimitives >> pathTo: goal using: stack followWeak: followWeak [
 	index := objectMemory lengthOf: current.
 	stackp := 0.
 	[[(index := index - 1) >= -1] whileTrue:
-		[next := (stackPages couldBeFramePointer: current)
-					ifTrue:
-						[index >= 0
-							ifTrue: [self field: index ofFrame: current]
+		[(stackPages couldBeFramePointer: current)
+			ifTrue:
+				[next := index >= 0
+							ifTrue: [self field: index ofFrame: (self cCoerceSimple: current to: #'char *')]
 							ifFalse: [objectMemory nilObject]]
-					ifFalse:
-						[index >= 0
-							ifTrue:
-								[hdr := objectMemory baseHeader: current.
-								 (objectMemory isContextHeader: hdr)
+			ifFalse:
+				[index >= 0
+					ifTrue:
+						[hdr := objectMemory baseHeader: current.
+						next := (objectMemory isContextHeader: hdr)
 									ifTrue: [self fieldOrSenderFP: index ofContext: current]
 									ifFalse: [objectMemory fetchPointer: index ofObject: current]]
-							ifFalse:
-								[objectMemory fetchClassOfNonImm: current]].
+					ifFalse:
+						[next := objectMemory fetchClassOfNonImm: current]].
 		 (stackPages couldBeFramePointer: next)
 			ifTrue: [self assert: (self isFrame: next onPage: (stackPages stackPageFor: next))]
 			ifFalse: [self assert: (self checkOkayOop: next)].
@@ -888,7 +888,7 @@ StackInterpreterPrimitives >> primitiveMakeEphemeron [
 	 TEMPORARY. For testing ephemeron handling in the VM only.
 	 Ephemerons should be instantiated from a suitable class."
 	<export: true>
-	<option: #Spur>
+	<option: #SpurObjectMemory>
 	((objectMemory isNonImmediate: self stackTop)
 	 and: [objectMemory isFixedSizePointerFormat: (objectMemory formatOf: self stackTop)]) ifFalse:
 		[^self primitiveFailFor: (argumentCount = 0
@@ -1322,14 +1322,13 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		71	the vmProxyMinorVersion (the interpreterProxy VM_MINOR_VERSION)
 	Note: Thanks to Ian Piumarta for this primitive."
 
-	| mem paramsArraySize result arg index |
-	mem := objectMemory startOfMemory.
+	| paramsArraySize result arg index |
 	paramsArraySize := 71.
 	argumentCount = 0 ifTrue:
 		[result := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: paramsArraySize.
-		objectMemory storePointerUnchecked: 0	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory youngStart - mem).
-		objectMemory storePointerUnchecked: 1	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory freeStart - mem).
-		objectMemory storePointerUnchecked: 2	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory endOfMemory - mem).
+		objectMemory storePointerUnchecked: 0	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory newSpaceSize).
+		objectMemory storePointerUnchecked: 1	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory oldSpaceSize).
+		objectMemory storePointerUnchecked: 2	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory totalMemorySize).
 		objectMemory storePointerUnchecked: 3	ofObject: result withValue: objectMemory nilObject "was allocationCount".
 		objectMemory storePointerUnchecked: 4	ofObject: result withValue: objectMemory nilObject "allocationsBetweenGCs".
 		objectMemory storePointerUnchecked: 5	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory tenuringThreshold).
@@ -1403,9 +1402,9 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 	argumentCount = 1 ifTrue:	 "read VM parameter"
 		[(arg < 1 or: [arg > paramsArraySize]) ifTrue: [^self primitiveFailFor: PrimErrBadIndex].
 		result := objectMemory nilObject.
-		arg = 1		ifTrue: [result := objectMemory integerObjectOf: objectMemory youngStart - mem].
-		arg = 2		ifTrue: [result := objectMemory integerObjectOf: objectMemory freeStart - mem].
-		arg = 3		ifTrue: [result := objectMemory integerObjectOf: objectMemory endOfMemory - mem].
+		arg = 1		ifTrue: [result := objectMemory integerObjectOf: objectMemory newSpaceSize].
+		arg = 2		ifTrue: [result := objectMemory integerObjectOf: objectMemory oldSpaceSize].
+		arg = 3		ifTrue: [result := objectMemory integerObjectOf: objectMemory totalMemorySize].
 		arg = 4		ifTrue: [result := objectMemory nilObject "was allocationCount"].
 		arg = 5		ifTrue: [result := objectMemory nilObject "was allocationsBetweenGCs"].
 		arg = 6		ifTrue: [result := objectMemory integerObjectOf: objectMemory tenuringThreshold].

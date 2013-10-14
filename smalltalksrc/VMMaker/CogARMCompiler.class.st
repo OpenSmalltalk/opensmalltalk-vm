@@ -1150,7 +1150,7 @@ CogARMCompiler >> isCallPreceedingReturnPC: mcpc [
 { #category : #testing }
 CogARMCompiler >> isPCDependent [
 	"Answer if the receiver is a pc-dependent instruction."
-	^self isJump or: [opcode = AlignmentNops] or: [opcode = Call]
+	^self isJump or: [opcode = AlignmentNops or: [opcode = Call]]
 ]
 
 { #category : #testing }
