@@ -7,6 +7,7 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'vmClass',
+		'structClasses',
 		'translationDict',
 		'asArgumentTranslationDict',
 		'inlineList',
@@ -182,6 +183,8 @@ CCodeGenerator >> addMethodFor: aClass selector: selector [
 	 or nil if it shouldn't be translated."
 
 	| method tmethod |
+	selector == #initialize ifTrue:
+		[^nil].
 	method := aClass compiledMethodAt: selector.
 	(method pragmaAt: #doNotGenerate) ifNotNil:
 		[^nil].
@@ -298,6 +301,14 @@ CCodeGenerator >> addStructClass: aClass [
 	aClass declareCVarsIn: self
 ]
 
+{ #category : #accessing }
+CCodeGenerator >> addStructClasses: classes [
+	"Add the struct classes and save them for emitCTypesOn: later."
+	structClasses := classes.
+	structClasses do:
+		[:structClass| self addStructClass: structClass]
+]
+
 { #category : #utilities }
 CCodeGenerator >> addStructMethodFor: aClass selector: selector [ 
 	"Add the given struct method to the code base and answer its translation
@@ -389,11 +400,17 @@ CCodeGenerator >> cLiteralFor: anObject [
 	anObject isNumber
 		ifTrue:
 			[anObject isInteger ifTrue:
-				[^anObject > 16rFFFFFFFF
-						ifTrue: [anObject printString , ObjectMemory unsignedLongLongSuffix]
+				[| printString |
+				 printString := (anObject > 0
+								and: [(anObject >> anObject lowBit + 1) isPowerOfTwo
+								and: [anObject highBit - anObject lowBit >= 4]])
+									ifTrue: ['0x', (anObject printStringBase: 16)]
+									ifFalse: [anObject printString].
+				^anObject > 16rFFFFFFFF
+						ifTrue: [printString, ObjectMemory unsignedLongLongSuffix]
 						ifFalse: [anObject < 16r7FFFFFFF
-							ifTrue: [anObject printString]
-							ifFalse: [anObject printString , ObjectMemory unsignedIntegerSuffix]]].
+							ifTrue: [printString]
+							ifFalse: [printString, ObjectMemory unsignedIntegerSuffix]]].
 			anObject isFloat ifTrue:
 				[^anObject printString]]
 		ifFalse:
@@ -919,8 +936,8 @@ CCodeGenerator >> emitCTestBlock: aBlockNode on: aStream indent: level [
 { #category : #'C code generator' }
 CCodeGenerator >> emitCTypesOn: aStream [ 
 	"Store local type declarations on the given stream."
-	vmClass ifNotNil:
-		[(self structClassesForTranslationClasses: { vmClass }) do:
+	structClasses ifNotNil:
+		[structClasses do:
 			[:structClass|
 			(structClass isAbstract not
 			 and: [vmClass shouldGenerateTypedefFor: structClass]) ifTrue:
@@ -2307,17 +2324,24 @@ CCodeGenerator >> generateTouch: msgNode on: aStream indent: level [
 CCodeGenerator >> generateValue: aTSendNode on: aStream indent: level [
 	"Reduce [:formal ... :formalN| body ] value: actual ... value: actualN
 	 to body with formals substituted for by actuals."
-	| substitution substitutionDict |
+	| substitution substitutionDict newLabels |
 	self assert: aTSendNode receiver isStmtList.
 	self assert: aTSendNode receiver args size = aTSendNode args size.
 	substitution := aTSendNode receiver copy.
+	substitution renameLabelsForInliningInto: currentMethod.
 	substitutionDict := Dictionary new: aTSendNode args size * 2.
 	aTSendNode receiver args with: aTSendNode args do:
 		[ :argName :exprNode |
 		substitutionDict at: argName put: exprNode].
 	substitution
 		bindVariablesIn: substitutionDict;
-		emitCCodeOn: aStream level: level generator: self
+		emitCCodeOn: aStream level: level generator: self.
+	newLabels := Set withAll: currentMethod labels.
+	substitution nodesDo:
+		[:node| node isLabel ifTrue: [node label ifNotNil: [:label| newLabels add: label]]].
+	"now add the new labels so that a subsequent inline of
+	 the same block will be renamed with different labels."
+	currentMethod labels: newLabels
 ]
 
 { #category : #'C translation' }
@@ -2883,6 +2907,28 @@ CCodeGenerator >> nilOrBooleanConstantReceiverOf: sendNode [
 
 ]
 
+{ #category : #utilities }
+CCodeGenerator >> nonStructClassesForTranslationClasses: classes [
+	"Answer in superclass order (any superclass precedes any subclass)
+	 the ancilliaryClasses that are not struct classes for all the given classes."
+	| nonStructClasses |
+	nonStructClasses := OrderedCollection new.
+	classes do:
+		[:aTranslationClass|
+		([aTranslationClass ancilliaryClasses: self options]
+				on: MessageNotUnderstood
+				do: [:ex|
+					ex message selector == #ancilliaryClasses:
+						ifTrue: [#()]
+						ifFalse: [ex pass]]) do:
+			[:class|
+			(class isStructClass
+			 or: [(nonStructClasses includes: class)
+			 or: [classes includes: class]]) ifFalse:
+				[nonStructClasses addLast: class]]].
+	^ChangeSet superclassOrder: nonStructClasses
+]
+
 { #category : #accessing }
 CCodeGenerator >> options [
 	^optionsDictionary
@@ -3416,6 +3462,18 @@ CCodeGenerator >> storeHeaderOnFile: fileName contents: contents [
 		ensure: [aStream close]
 ]
 
+{ #category : #accessing }
+CCodeGenerator >> structClasses [
+	^structClasses
+]
+
+{ #category : #accessing }
+CCodeGenerator >> structClasses: classes [
+	structClasses := classes.
+	structClasses do:
+		[:structClass| self addStructClass: structClass]
+]
+
 { #category : #utilities }
 CCodeGenerator >> structClassesForTranslationClasses: classes [
 	"Answer in superclass order (any superclass precedes any subclass)
@@ -3579,13 +3637,13 @@ CCodeGenerator >> variableOfType: variableType acceptsValueOfType: expressionTyp
 							or: [self isIntegralCType: expressionType]]]]]]]]
 ]
 
-{ #category : #public }
+{ #category : #accessing }
 CCodeGenerator >> vmClass [
-	"Answer the interpreter classs if any.  This is nil other than for the core VM."
+	"Answer the interpreter class if any.  This is nil other than for the core VM."
 	^vmClass
 ]
 
-{ #category : #public }
+{ #category : #accessing }
 CCodeGenerator >> vmClass: aClass [
 	"Set the interpreter class if any.  This is nil other than for the core VM."
 	vmClass := aClass

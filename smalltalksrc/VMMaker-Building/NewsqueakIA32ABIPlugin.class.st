@@ -58,12 +58,6 @@ NewsqueakIA32ABIPlugin class >> prepareToBeAddedToCodeGenerator: aCodeGen [
 	aCodeGen removeMethodForSelector: #setInterpreter:
 ]
 
-{ #category : #translation }
-NewsqueakIA32ABIPlugin class >> shouldGenerateTypedefFor: aStructClass [
-	"Hack to work-around mutliple definitions.  Sometimes a type has been defined in an include."
-	^aStructClass ~~ VMCallbackContext
-]
-
 { #category : #'simulation only' }
 NewsqueakIA32ABIPlugin class >> simulatorClass [
 	^NewspeakVM ifTrue: [NewsqueakIA32ABIPluginSimulator]

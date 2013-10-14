@@ -137,11 +137,27 @@ TStmtListNode >> nodesDo: aBlock [
 ]
 
 { #category : #enumerating }
+TStmtListNode >> nodesDo: aBlock parent: parent [
+	"Apply aBlock to all nodes in the receiver with each node's parent.
+	 N.B. This is assumed to be bottom-up, leaves first."
+	statements do: [:s| s nodesDo: aBlock parent: self.].	
+	aBlock value: self value: parent
+]
+
+{ #category : #enumerating }
 TStmtListNode >> nodesDo: aBlock unless: cautionaryBlock [
 
 	(cautionaryBlock value: self) ifTrue: [^self].
 	statements do: [ :s | s nodesDo: aBlock unless: cautionaryBlock ].	
 	aBlock value: self
+]
+
+{ #category : #enumerating }
+TStmtListNode >> nodesDo: aBlock value: parent [
+	"Apply aBlock to all nodes in the receiver with each node's parent.
+	 N.B. This is assumed to be bottom-up, leaves first."
+	statements do: [:s| s nodesDo: aBlock parent: self.].	
+	aBlock value: self value: parent
 ]
 
 { #category : #copying }
@@ -189,6 +205,19 @@ TStmtListNode >> removeAssertions [
 		]
 	].
 	self setStatements: newStatements asArray
+]
+
+{ #category : #'inlining support' }
+TStmtListNode >> renameLabelsForInliningInto: aTMethod [
+	"TMethod already has a method for this; hijack it..."
+	| labels |
+	labels := OrderedCollection new.
+	self nodesDo:
+		[:node| node isLabel ifTrue: [labels add: node label]].
+	TMethod new
+		parseTree: self;
+		labels: labels;
+		renameLabelsForInliningInto: aTMethod
 ]
 
 { #category : #transformations }

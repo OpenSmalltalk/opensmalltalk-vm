@@ -2,7 +2,7 @@ Class {
 	#name : #SpurSegmentInfo,
 	#superclass : #VMStructType,
 	#instVars : [
-		'start',
+		'segStart',
 		'segSize',
 		'swizzle'
 	],
@@ -24,6 +24,7 @@ SpurSegmentInfo class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 
 { #category : #printing }
 SpurSegmentInfo >> printOn: aStream [
+	<doNotGenerate>
 	super printOn: aStream.
 	self class instVarNames do:
 		[:name| | iv |
@@ -48,17 +49,17 @@ SpurSegmentInfo >> segSize: anObject [
 ]
 
 { #category : #accessing }
-SpurSegmentInfo >> start [
-	"Answer the value of start"
+SpurSegmentInfo >> segStart [
+	"Answer the value of segStart"
 
-	^ start
+	^ segStart
 ]
 
 { #category : #accessing }
-SpurSegmentInfo >> start: anObject [
-	"Set the value of start"
+SpurSegmentInfo >> segStart: anObject [
+	"Set the value of segStart"
 
-	^start := anObject
+	^segStart := anObject
 ]
 
 { #category : #accessing }
