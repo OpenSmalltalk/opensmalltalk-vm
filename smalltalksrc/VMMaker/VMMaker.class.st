@@ -600,7 +600,7 @@ VMMaker >> buildCodeGeneratorForCogit: getAPIMethods [
 	cg := self createCogitCodeGenerator.
 
 	cg vmClass: (cogitClass := self cogitClass).
-	{ cogitClass. self interpreterClass } do:
+	{ cogitClass. self interpreterClass. self interpreterClass objectMemoryClass } do:
 		[:cgc|
 		(cgc respondsTo: #initializeWithOptions:)
 			ifTrue: [cgc initializeWithOptions: optionsDictionary]
@@ -655,15 +655,16 @@ VMMaker >> buildCodeGeneratorForInterpreter: getAPIMethods [
 
 	interpreterClasses addFirst: VMClass.
 	interpreterClasses addAllLast: (cg nonStructClassesForTranslationClasses: interpreterClasses).
-	(cg structClassesForTranslationClasses: interpreterClasses) do:
-		[:structClass| structClass initialize].
-	cg addStructClasses: (cg structClassesForTranslationClasses: interpreterClasses).
 
 	interpreterClasses do:
 		[:ic|
 		(ic respondsTo: #initializeWithOptions:)
 			ifTrue: [ic initializeWithOptions: optionsDictionary]
 			ifFalse: [ic initialize]].
+	(cg structClassesForTranslationClasses: interpreterClasses) do:
+		[:structClass| structClass initialize].
+
+	cg addStructClasses: (cg structClassesForTranslationClasses: interpreterClasses).
 
 	interpreterClasses do: [:ic| cg addClass: ic].
 

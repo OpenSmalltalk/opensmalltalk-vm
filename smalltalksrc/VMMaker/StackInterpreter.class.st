@@ -3165,7 +3165,7 @@ StackInterpreter >> checkOkayFields: oop [
 	(objectMemory isIntegerObject: oop) ifTrue: [ ^true ].
 	(objectMemory checkOkayOop: oop) ifFalse: [ ^false ].
 	(objectMemory checkOopHasOkayClass: oop) ifFalse: [ ^false ].
-	((objectMemory isPointersNonInt: oop) or: [objectMemory isCompiledMethod: oop]) ifFalse: [ ^true ].
+	((objectMemory isPointersNonImm: oop) or: [objectMemory isCompiledMethod: oop]) ifFalse: [ ^true ].
 	hasYoung := objectMemory isYoung: (objectMemory fetchClassOfNonImm: oop).
 	(objectMemory isCompiledMethod: oop)
 		ifTrue:
@@ -8324,7 +8324,7 @@ StackInterpreter >> okayFields: oop [
 	(objectMemory isIntegerObject: oop) ifTrue: [ ^true ].
 	(objectMemory okayOop: oop) ifFalse: [ ^false ].
 	(objectMemory oopHasOkayClass: oop) ifFalse: [ ^false ].
-	((objectMemory isPointersNonInt: oop) or: [objectMemory isCompiledMethod: oop]) ifFalse: [ ^true ].
+	((objectMemory isPointersNonImm: oop) or: [objectMemory isCompiledMethod: oop]) ifFalse: [ ^true ].
 	(objectMemory isCompiledMethod: oop)
 		ifTrue:
 			[i := (self literalCountOf: oop) + LiteralStart - 1]
@@ -10156,7 +10156,7 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 	"pad to word boundary.  This slot can be used for anything else that will fit in 16 bits.
 	 Preserve it to be polite to other VMs."
 	the2ndUnknownShort	:= self getShortFromFile: f swap: swapBytes.
-	firstSegSize := self nextLongFrom: f swap: swapBytes.
+	firstSegSize := self getLongFromFile: f swap: swapBytes.
 	objectMemory firstSegmentSize: firstSegSize.
 	"decrease Squeak object heap to leave extra memory for the VM"
 	heapSize := self cCode: 'reserveExtraCHeapBytes(desiredHeapSize, extraVMMemory)'.
@@ -11109,14 +11109,23 @@ StackInterpreter >> signed32BitIntegerFor: integerValue [
 	"Return a full 32 bit integer object for the given integer value"
 	| newLargeInteger value largeClass |
 	<inline: false>
-	(objectMemory isIntegerValue: integerValue)
-		ifTrue: [^ objectMemory integerObjectOf: integerValue].
-	integerValue < 0
-		ifTrue:[	largeClass := objectMemory classLargeNegativeInteger.
-				value := 0 - integerValue]
-		ifFalse:[	largeClass := objectMemory classLargePositiveInteger.
-				value := integerValue].
-	newLargeInteger := objectMemory eeInstantiateClass: largeClass indexableSize: 4.
+	(objectMemory isIntegerValue: integerValue) ifTrue:
+		[^objectMemory integerObjectOf: integerValue].
+	 objectMemory hasSpurMemoryManagerAPI
+		ifTrue:
+			[integerValue < 0
+				ifTrue: [largeClass := ClassLargeNegativeIntegerCompactIndex.
+						value := 0 - integerValue]
+				ifFalse: [largeClass := ClassLargePositiveIntegerCompactIndex.
+						value := integerValue].
+			objectMemory allocateBytes: 4 classIndex: largeClass]
+		ifFalse:
+			[integerValue < 0
+				ifTrue: [largeClass := objectMemory classLargeNegativeInteger.
+						value := 0 - integerValue]
+				ifFalse: [largeClass := objectMemory classLargePositiveInteger.
+						value := integerValue].
+			newLargeInteger := objectMemory eeInstantiateClass: largeClass indexableSize: 4].
 	objectMemory storeByte: 3 ofObject: newLargeInteger withValue: ((value >> 24) bitAnd: 16rFF).
 	objectMemory storeByte: 2 ofObject: newLargeInteger withValue: ((value >> 16) bitAnd: 16rFF).
 	objectMemory storeByte: 1 ofObject: newLargeInteger withValue: ((value >> 8) bitAnd: 16rFF).

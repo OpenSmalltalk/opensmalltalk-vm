@@ -411,21 +411,27 @@ TSendNode >> structTargetKind: aCodeGen [
 		[^(VMStructType isTypePointerToStruct: arguments last value) ifTrue:
 			[#pointer]].
 
+	selector == #addressOf: ifTrue:
+		[^#pointer].
+
 	selector == #at: ifTrue:
 		[receiver isVariable ifTrue:
 			[(aCodeGen typeOfVariable: receiver name) ifNotNil:
 				[:type| | derefType |
 				 type last = $* ifFalse:
 					[^receiver structTargetKind: aCodeGen].
-				 (Smalltalk classNamed: (aCodeGen
+				 (VMStructType isTypeStruct: (aCodeGen
 											extractTypeFor: receiver name
-											fromDeclaration: type allButLast)) ifNotNil:
-					[:class|
-					class isStructClass ifTrue:
-						[^#struct]]]].
+											fromDeclaration: type allButLast)) ifTrue:
+						[^#struct]]].
 		(receiver structTargetKind: aCodeGen) ifNotNil:
 			[:kind| ^kind]].
 
-	^(aCodeGen selectorReturnsPointerToStruct: selector) ifTrue:
-		[#pointer]
+	(aCodeGen selectorReturnsPointerToStruct: selector) ifTrue:
+		[^#pointer].
+
+	(aCodeGen selectorReturnsStruct: selector) ifTrue:
+		[^#struct].
+
+	^nil
 ]

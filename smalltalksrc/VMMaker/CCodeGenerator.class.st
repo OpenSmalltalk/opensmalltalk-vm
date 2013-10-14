@@ -191,20 +191,21 @@ CCodeGenerator >> addMethodFor: aClass selector: selector [
 	"process optional methods by interpreting the argument to the option: pragma as either
 	 a Cogit class name or a class variable name or a variable name in VMBasicConstants."
 	(method pragmaAt: #option:) ifNotNil:
-		[:pragma| | key vmMaker |
+		[:pragma| | key |
 		key := pragma argumentAt: 1.
-		vmMaker := VMClass getVMMaker.
-		((Cogit withAllSubclasses anySatisfy: [:c| c name = key])
-		and: [vmMaker cogitClassName ~= key]) ifTrue:
-			[^nil].
+		VMClass getVMMaker ifNotNil:
+			[:vmMaker|
+			((Cogit withAllSubclasses anySatisfy: [:c| c name = key])
+			and: [vmMaker cogitClassName ~= key]) ifTrue:
+				[^nil].
+			(vmMaker options at: key ifAbsent: []) ifNotNil:
+				[:option| option == false ifTrue: [^nil]]].
 		(aClass bindingOf: key) ifNotNil:
 			[:binding|
 			binding value == false ifTrue: [^nil]].
 		(VMBasicConstants bindingOf: key) ifNotNil:
 			[:binding|
-			binding value == false ifTrue: [^nil]].
-		(vmMaker options at: key ifAbsent: []) ifNotNil:
-			[:option| option == false ifTrue: [^nil]]].
+			binding value == false ifTrue: [^nil]]].
 	tmethod := self addMethod: (self compileToTMethodSelector: selector in: aClass).
 	"If the method has a macro then add the macro.  But keep the method
 	 for analysis purposes (e.g. its variable accesses)."
@@ -2321,6 +2322,18 @@ CCodeGenerator >> generateTouch: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
+CCodeGenerator >> generateTruncateTo: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	self assert: msgNode args first isConstant.
+	self assert: msgNode args first value isInteger.
+	self assert: msgNode args first value isPowerOfTwo.
+	aStream nextPut: $(.
+	self emitCExpression: msgNode receiver on: aStream.
+	aStream nextPutAll: ' & ~'; print: msgNode args first value - 1; nextPut: $)
+]
+
+{ #category : #'C translation' }
 CCodeGenerator >> generateValue: aTSendNode on: aStream indent: level [
 	"Reduce [:formal ... :formalN| body ] value: actual ... value: actualN
 	 to body with formals substituted for by actuals."
@@ -2482,6 +2495,7 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#signedBitShift:	#generateSignedBitShift:on:indent:
 	#bitInvert32		#generateBitInvert32:on:indent:
 	#bitClear:			#generateBitClear:on:indent:
+	#truncateTo:		#generateTruncateTo:on:indent:
 
 	#<				#generateLessThan:on:indent:
 	#<=			#generateLessThanOrEqual:on:indent:
@@ -3383,6 +3397,17 @@ CCodeGenerator >> selectorReturnsPointerToStruct: selector [ "<Symbol>"
 						[apiMethods ifNotNil:
 							[apiMethods at: selector ifAbsent: []]]) notNil
 	  and: [VMStructType isTypePointerToStruct: tMethod returnType]
+]
+
+{ #category : #'C code generator' }
+CCodeGenerator >> selectorReturnsStruct: selector [ "<Symbol>"
+	| tMethod |
+	^(tMethod := methods
+					at: selector
+					ifAbsent:
+						[apiMethods ifNotNil:
+							[apiMethods at: selector ifAbsent: []]]) notNil
+	  and: [VMStructType isTypeStruct: tMethod returnType]
 ]
 
 { #category : #utilities }

@@ -775,7 +775,8 @@ StackInterpreterPrimitives >> primitiveFullGC [
 	objectMemory fullGCLock > 0 ifTrue:
 		[^self primitiveFailFor: PrimErrInappropriate].
 	self externalWriteBackHeadFramePointers.
-	objectMemory incrementalGC.  "maximimize space for forwarding table"
+	objectMemory hasSpurMemoryManagerAPI ifFalse:
+		[objectMemory incrementalGC].  "maximimize space for forwarding table"
 	objectMemory fullGC.
 	self pop: 1 thenPushInteger: (objectMemory bytesLeft: true).
 ]
