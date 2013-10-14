@@ -1352,11 +1352,8 @@ TMethod >> postCopy [
 TMethod >> prepareMethodIn: aCodeGen [
 	"Record sends of builtin operators, map sends of the special selector dispatchOn:in:
 	 with case statement nodes, and map sends of caseOf:[otherwise:] to switch statements.
-	 Note: Only replaces top-level sends of dispatchOn:in: et al and caseOf:[otherwise:].
-	 These must be top-level statements; they cannot appear in expressions.
 	 As a hack also update the types of variables introduced to implement cascades correctly.
 	 This has to be done at the same time as this is done, so why not piggy back here?"
-	| replacements |
 	extraVariableNumber ifNotNil:
 		[declarations keysAndValuesDo:
 			[:varName :decl|
@@ -1365,10 +1362,9 @@ TMethod >> prepareMethodIn: aCodeGen [
 				 locals add: varName.
 				 self declarationAt: varName
 					put: (decl value: self value: aCodeGen), ' ', varName]]].
-	replacements := IdentityDictionary new.
 	aCodeGen
 		pushScope: declarations
-		while:
+		while:"N.B.  nodesWithParentsDo: is bottom-up, hence replacement is destructive and conserved."
 			[parseTree nodesWithParentsDo:
 				[:node :parent|
 				 node isSend ifTrue:
@@ -1390,14 +1386,9 @@ TMethod >> prepareMethodIn: aCodeGen [
 										[node arguments: node args allButLast]]]
 						ifFalse:
 							[(CaseStatements includes: node selector) ifTrue:
-								[replacements at: node put: (self buildCaseStmt: node)].
+								[parent replaceNodesIn: (Dictionary newFromPairs: { node. self buildCaseStmt: node})].
 							 (#(caseOf: #caseOf:otherwise:) includes: node selector) ifTrue:
-								[replacements at: node put: (self buildSwitchStmt: node parent: parent)]]].
-				 ((node isAssignment or: [node isReturn])
-				  and: [node expression isSwitch]) ifTrue:
-					[replacements at: node put: (self transformSwitchExpression: node)]]].
-	replacements isEmpty ifFalse:
-		[parseTree := parseTree replaceNodesIn: replacements]
+								[parent replaceNodesIn: (Dictionary newFromPairs: { node. self buildSwitchStmt: node parent: parent })]]]]]
 ]
 
 { #category : #'primitive compilation' }
