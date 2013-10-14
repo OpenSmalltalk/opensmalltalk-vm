@@ -146,6 +146,17 @@ SpurSegmentManager >> initializeFromFreeChunks: freeChunks [
 		[:bridge| self assert: (manager isValidSegmentBridge: bridge)]
 ]
 
+{ #category : #testing }
+SpurSegmentManager >> isInSegments: address [
+	0 to: numSegments - 1 do:
+		[:i|
+		address < (segments at: i) segStart ifTrue:
+			[^false].
+		address < ((segments at: i) segStart + (segments at: i) segSize) ifTrue:
+			[^true]].
+	^false
+]
+
 { #category : #initialization }
 SpurSegmentManager >> manager: aSpurMemoryManager [
 	manager := aSpurMemoryManager

@@ -641,11 +641,11 @@ SpurMemoryManager class >> initializeWithOptions: optionsDictionary [
 								ifFalse: [self wordSize]).
 	BytesPerOop := optionsDictionary at: #BytesPerOop ifAbsent: [BytesPerWord].
 
+	self initializeObjectHeaderConstants. "Initializes BaseHeaderSize so do early"
 	self initializeSpurObjectRepresentationConstants.
 	self initializeSpecialObjectIndices.
 	self initializeCompactClassIndices.
 	self initializePrimitiveErrorCodes.
-	self initializeObjectHeaderConstants.
 
 	SpurGenerationScavenger initialize
 ]
@@ -984,6 +984,19 @@ SpurMemoryManager >> allOldSpaceObjectsFrom: initialObject do: aBlock [
 		 objOop := self objectAfter: objOop limit: freeOldSpaceStart].
 	self touch: prevPrevObj.
 	self touch: prevObj
+]
+
+{ #category : #allocation }
+SpurMemoryManager >> allocateBytes: numBytes classIndex: classIndex [
+	"Allocate an object of numBytes.  Answer nil if no available memory.
+	 classIndex must be that of a byte class (e.g. ByteString).
+	 The object is *NOT FILLED*."
+	self assert: (coInterpreter addressCouldBeClassObj: (self classAtIndex: classIndex)).
+	self assert: (self instSpecOfClass: (self classAtIndex: classIndex)) = self firstByteFormat.
+	^self
+		allocateSlots: (numBytes + self wordSize - 1 // self wordSize)
+		format: self firstByteFormat + (self wordSize - numBytes bitAnd: self wordSize - 1)
+		classIndex: classIndex
 ]
 
 { #category : #simulation }
@@ -1589,9 +1602,25 @@ SpurMemoryManager >> cCoerce: value to: cTypeString [
 		ifNotNil: [value coerceTo: cTypeString sim: self]
 ]
 
+{ #category : #'interpreter access' }
+SpurMemoryManager >> changeClassOf: rcvr to: argClass [
+	"Attempt to change the class of the receiver to the argument given that the
+	 format of the receiver matches the format of the argument.  If successful,
+	 answer 0, otherwise answer an error code indicating the reason for failure. 
+	 Fail if the format of the receiver is incompatible with the format of the argument,
+	 or if the argument is a fixed class and the receiver's size differs from the size
+	 that an instance of the argument should have."
+	self subclassResponsibility
+]
+
 { #category : #'object access' }
 SpurMemoryManager >> characterObjectOf: characterCode [ 
 	^characterCode << self numTagBits + self characterTag
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> characterTable [
+	self shouldNotImplement
 ]
 
 { #category : #'object access' }
@@ -1763,6 +1792,37 @@ SpurMemoryManager >> checkHeapIntegrity [
 ]
 
 { #category : #'debug support' }
+SpurMemoryManager >> checkOopHasOkayClass: obj [
+	"Attempt to verify that the given obj has a reasonable behavior. The class must be a
+	 valid, non-integer oop and must not be nilObj. It must be a pointers object with three
+	 or more fields. Finally, the instance specification field of the behavior must match that
+	 of the instance. If OK answer true.  If  not, print reason and answer false."
+
+	<api>
+	<var: #oop type: #usqInt>
+	| objClass objFormat |
+	<var: #oopClass type: #usqInt>
+
+	(self checkOkayOop: obj) ifFalse:
+		[^false].
+	objClass := self cCoerce: (self fetchClassOfNonImm: obj) to: #usqInt.
+
+	(self isImmediate: objClass) ifTrue:
+		[self print: 'obj '; printHex: obj; print: ' an immediate is not a valid class or behavior'; cr. ^false].
+	(self okayOop: objClass) ifFalse:
+		[self print: 'obj '; printHex: obj; print: ' class obj is not ok'; cr. ^false].
+	((self isPointersNonImm: objClass) and: [(self numSlotsOf: objClass) >= 3]) ifFalse:
+		[self print: 'obj '; printHex: obj; print: ' a class (behavior) must be a pointers object of size >= 3'; cr. ^false].
+	objFormat := (self isBytes: obj)
+						ifTrue: [(self formatOf: obj) bitClear: 7]  "ignore extra bytes size bits"
+						ifFalse: [self formatOf: obj].
+
+	(self instSpecOfClass: objClass) ~= objFormat ifTrue:
+		[self print: 'obj '; printHex: obj; print: ' and its class (behavior) formats differ'; cr. ^false].
+	^true
+]
+
+{ #category : #'debug support' }
 SpurMemoryManager >> checkOopIntegrity: obj named: name [
 	<inline: false>
 	<var: #name type: #'char *'>
@@ -1787,6 +1847,11 @@ SpurMemoryManager >> checkedIntegerValueOf: intOop [
 	<doNotGenerate>
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter checkedIntegerValueOf: intOop
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> classAlien [
+	^self splObj: ClassAlien
 ]
 
 { #category : #'plugin support' }
@@ -1819,6 +1884,26 @@ SpurMemoryManager >> classByteArray [
 	^self splObj: ClassByteArray
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> classExternalAddress [
+	^self splObj: ClassExternalAddress
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> classExternalData [
+	^self splObj: ClassExternalData
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> classExternalFunction [
+	^self splObj: ClassExternalFunction
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> classExternalLibrary [
+	^self splObj: ClassExternalLibrary
+]
+
 { #category : #'cog jit support' }
 SpurMemoryManager >> classFloatCompactIndex [
 	<api>
@@ -1828,6 +1913,18 @@ SpurMemoryManager >> classFloatCompactIndex [
 { #category : #'interpreter access' }
 SpurMemoryManager >> classForClassTag: classIndex [
 	^self classAtIndex: classIndex
+]
+
+{ #category : #'header format' }
+SpurMemoryManager >> classFormatForInstanceFormat: aFormat [
+	"Clear any odd bits from the format so that it matches its class's format"
+	aFormat < self firstLongFormat ifTrue:
+		[^aFormat].
+	aFormat >= self firstByteFormat ifTrue:
+		[^aFormat bitAnd: -8].
+	^aFormat >= self firstShortFormat
+		ifTrue: [aFormat bitAnd: -4]
+		ifFalse: [aFormat bitAnd: -2]
 ]
 
 { #category : #'header format' }
@@ -1881,6 +1978,11 @@ SpurMemoryManager >> classPoint [
 { #category : #'plugin support' }
 SpurMemoryManager >> classSemaphore [
 	^self splObj: ClassSemaphore
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> classString [
+	^self splObj: ClassByteString
 ]
 
 { #category : #accessing }
@@ -1958,6 +2060,11 @@ SpurMemoryManager >> classTagForClass: classObj [
 SpurMemoryManager >> classTagForSpecialObjectsIndex: splObjIndex compactClassIndex: compactClassIndex [
 	"Answer the compactClassIndex to use as a tag in the first-level method lookup cache."
 	^compactClassIndex
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> classUnsafeAlien [
+	^self splObj: ClassUnsafeAlien
 ]
 
 { #category : #'debug support' }
@@ -2766,6 +2873,12 @@ SpurMemoryManager >> freeStart [
 	^freeStart
 ]
 
+{ #category : #'garbage collection' }
+SpurMemoryManager >> fullGCLock [
+	"Spur never has a need to lock GC because it does not move pinned objects."
+	^0
+]
+
 { #category : #'object testing' }
 SpurMemoryManager >> goodContextSize: oop [
 	| numSlots |
@@ -2895,6 +3008,11 @@ SpurMemoryManager >> inPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag [
 			[self possibleRootStoreInto: obj2]]
 ]
 
+{ #category : #'garbage collection' }
+SpurMemoryManager >> incrementalGC [
+	self shouldNotImplement
+]
+
 { #category : #'header formats' }
 SpurMemoryManager >> indexablePointersFormat [
 	<api>
@@ -3010,6 +3128,9 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	"
 	<inline: false>
 	| freeListObj |
+	"Catch mis-initializations leading to bad translations to C"
+	self assert: BaseHeaderSize = self baseHeaderSize.
+
 	segmentManager adjustSegmentSwizzlesBy: bytesToShift.
 	"image may be at a different address; adjust oops for new location"
 	self adjustAllOopsBy: bytesToShift.
@@ -3409,6 +3530,14 @@ SpurMemoryManager >> isInFutureSpace: objOop [
 	  and: [objOop < scavenger futureSurvivorStart]
 ]
 
+{ #category : #'plugin support' }
+SpurMemoryManager >> isInMemory: address [ 
+	"Return true if the given address is in ST object memory"
+	^(self oop: address isGreaterThanOrEqualTo: startOfMemory)
+		and: [(self oop: address isLessThan: newSpaceLimit)
+			or: [segmentManager isInSegments: address]]
+]
+
 { #category : #'object testing' }
 SpurMemoryManager >> isInNewSpace: objOop [
 	^objOop >= startOfMemory
@@ -3726,6 +3855,16 @@ SpurMemoryManager >> lengthOfMaybeImmediate: oop [
 	^self lengthOf: oop
 ]
 
+{ #category : #'primitive support' }
+SpurMemoryManager >> loadImageSegmentFrom: segmentWordArray outPointers: outPointerArray [
+	"This primitive is called from Squeak as...
+		<imageSegment> loadSegmentFrom: aWordArray outPointers: anArray."
+
+"This primitive will load a binary image segment created by primitiveStoreImageSegment.  It expects the outPointer array to be of the proper size, and the wordArray to be well formed.  It will return as its value the original array of roots, and the erstwhile segmentWordArray will have been truncated to a size of zero.  If this primitive should fail, the segmentWordArray will, sadly, have been reduced to an unrecognizable and unusable jumble.  But what more could you have done with it anyway?"
+
+	^PrimErrUnsupported
+]
+
 { #category : #'simulation only' }
 SpurMemoryManager >> lookupAddress: address [
 	"If address appears to be that of a Symbol or a few well-known objects (such as classes) answer it, otherwise answer nil.
@@ -3793,12 +3932,25 @@ SpurMemoryManager >> lowestFreeChunkAssumingSortedFreeSpace [
 	^lowest
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> maxIdentityHash [
+	^self identityHashHalfWordMask
+]
+
 { #category : #instantiation }
 SpurMemoryManager >> maxSlotsForNewSpaceAlloc [
 	"Almost entirely arbitrary, but we dont want 1Mb bitmaps allocated in eden.
 	 But this choice means no check for numSlots > maxSlotsForNewSpaceAlloc
 	 for non-variable allocations."
 	^self fixedFieldsOfClassFormatMask
+]
+
+{ #category : #'interpreter access' }
+SpurMemoryManager >> maybeSplObj: index [
+	<api>
+	"Answer one of the objects in the SpecialObjectsArray, if in range, otherwise answer nil."
+	^index < (self numSlotsOf: specialObjectsOop) ifTrue:
+		[self fetchPointer: index ofObject: specialObjectsOop]
 ]
 
 { #category : #simulation }
@@ -4088,6 +4240,11 @@ SpurMemoryManager >> objectStartingAt: address [
 		ifFalse: [address]
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> oldSpaceSize [
+	^segmentManager totalBytesInSegments
+]
+
 { #category : #'become implementation' }
 SpurMemoryManager >> outOfPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag [
 	"Allocate two new objects, n1 & n2.  Copy the contents appropriately. Convert
@@ -4194,6 +4351,12 @@ SpurMemoryManager >> postBecomeScanClassTable [
 					[classOrNil := self followForwarded: classOrNil.
 					 self storePointer: j ofObject: page withValue: classOrNil].
 				 self scanClassPostBecome: classOrNil effects: becomeEffectsFlags]]]
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> primitiveErrorTable [
+	<api>
+	^self splObj: PrimErrTableIndex
 ]
 
 { #category : #'simulation only' }
@@ -4897,6 +5060,12 @@ SpurMemoryManager >> startOfObject: objOop [
 ]
 
 { #category : #accessing }
+SpurMemoryManager >> statCompMoveCount [
+	"Spur never compacts by moving"
+	^0
+]
+
+{ #category : #accessing }
 SpurMemoryManager >> statFullGCUsecs [
 	^statFullGCUsecs
 ]
@@ -4927,6 +5096,11 @@ SpurMemoryManager >> statNumGCs [
 ]
 
 { #category : #accessing }
+SpurMemoryManager >> statRootTableCount [
+	^scavenger rememberedSetSize
+]
+
+{ #category : #accessing }
 SpurMemoryManager >> statScavenges [
 	^statScavenges
 ]
@@ -4934,6 +5108,24 @@ SpurMemoryManager >> statScavenges [
 { #category : #'object access' }
 SpurMemoryManager >> storeByte: byteIndex ofObject: oop withValue: valueByte [
 	^self byteAt: oop + self baseHeaderSize + byteIndex put: valueByte
+]
+
+{ #category : #'primitive support' }
+SpurMemoryManager >> storeImageSegmentInto: segmentWordArray outPointers: outPointerArray roots: arrayOfRoots [
+	"This primitive is called from Squeak as...
+		<imageSegment> storeSegmentFor: arrayOfRoots into: aWordArray outPointers: anArray."
+
+"This primitive will store a binary image segment (in the same format as the Squeak image file) of the receiver and every object in its proper tree of subParts (ie, that is not refered to from anywhere else outside the tree).  All pointers from within the tree to objects outside the tree will be copied into the array of outpointers.  In their place in the image segment will be an oop equal to the offset in the outPointer array (the first would be 4). but with the high bit set."
+
+"The primitive expects the array and wordArray to be more than adequately long.  In this case it returns normally, and truncates the two arrays to exactly the right size.  To simplify truncation, both incoming arrays are required to be 256 bytes or more long (ie with 3-word headers).  If either array is too small, the primitive will fail, but in no other case.
+
+During operation of the primitive, it is necessary to convert from both internal and external oops to their mapped values.  To make this fast, the headers of the original objects in question are replaced by the mapped values (and this is noted by adding the forbidden XX header type).  Tables are kept of both kinds of oops, as well as of the original headers for restoration.
+
+To be specific, there are two similar two-part tables, the outpointer array, and one in the upper fifth of the segmentWordArray.  Each grows oops from the bottom up, and preserved headers from halfway up.
+
+In case of either success or failure, the headers must be restored.  In the event of primitive failure, the table of outpointers must also be nilled out (since the garbage in the high half will not have been discarded."
+
+	^PrimErrUnsupported
 ]
 
 { #category : #'simulation only' }

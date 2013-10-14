@@ -1909,7 +1909,7 @@ CoInterpreter >> checkOkayFields: oop [
 	(objectMemory isIntegerObject: oop) ifTrue: [ ^true ].
 	(objectMemory checkOkayOop: oop) ifFalse: [ ^false ].
 	(objectMemory checkOopHasOkayClass: oop) ifFalse: [ ^false ].
-	((objectMemory isPointersNonInt: oop) or: [objectMemory isCompiledMethod: oop]) ifFalse: [ ^true ].
+	((objectMemory isPointersNonImm: oop) or: [objectMemory isCompiledMethod: oop]) ifFalse: [ ^true ].
 	hasYoung := objectMemory isYoung: (objectMemory fetchClassOfNonImm: oop).
 	(objectMemory isCompiledMethod: oop)
 		ifTrue:
@@ -5667,7 +5667,7 @@ CoInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imag
 	"pad to word boundary.  This slot can be used for anything else that will fit in 16 bits.
 	 Preserve it to be polite to other VMs."
 	the2ndUnknownShort	:= self getShortFromFile: f swap: swapBytes.
-	firstSegSize := self nextLongFrom: f swap: swapBytes.
+	firstSegSize := self getLongFromFile: f swap: swapBytes.
 	objectMemory firstSegmentSize: firstSegSize.
 
 	"compare memory requirements with availability"
