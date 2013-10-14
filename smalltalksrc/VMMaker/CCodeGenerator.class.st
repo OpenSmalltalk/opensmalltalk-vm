@@ -2593,6 +2593,46 @@ CCodeGenerator >> initializeCTranslationDictionary [
 ]
 
 { #category : #inlining }
+CCodeGenerator >> initializerForInstVar: varName in: aClass [
+	| instVarIndex |
+	instVarIndex := aClass instVarIndexFor: varName ifAbsent: [^nil].
+	aClass selectorsAndMethodsDo:
+		[:s :m| | tmeth |
+		((s beginsWith: 'initialize')
+		 and: [m writesField: instVarIndex]) ifTrue:
+			[tmeth := m methodNode asTranslationMethodOfClass: TMethod.
+			 tmeth parseTree nodesDo:
+				[:node| | exprOrAssignment |
+				(node isAssignment
+				 and: [node variable name = varName]) ifTrue:
+					[exprOrAssignment := node.
+					 [exprOrAssignment isAssignment] whileTrue:
+						[exprOrAssignment := exprOrAssignment expression].
+					 ^exprOrAssignment]]]].
+	^nil
+]
+
+{ #category : #inlining }
+CCodeGenerator >> initializerForInstVar: varName inStartClass: aClass [
+	| allClasses sizeBefore |
+	(aClass inheritsFrom: VMClass) ifFalse:
+		[^false].
+	allClasses := (aClass withAllSuperclasses copyUpTo: VMClass) asSet.
+	[sizeBefore := allClasses size.
+	 allClasses copy do:
+		[:class|
+		(class ancilliaryClasses: optionsDictionary) do:
+			[:ancilliary|
+			allClasses addAll: (ancilliary withAllSuperclasses copyUpTo: VMClass)]].
+	 sizeBefore ~= allClasses size] whileTrue.
+	allClasses do:
+		[:class|
+		(self initializerForInstVar: varName in: class) ifNotNil:
+			[:initializer| ^initializer]].
+	^nil
+]
+
+{ #category : #inlining }
 CCodeGenerator >> inlineDispatchesInMethodNamed: selector localizingVars: varsList [
 	"Inline dispatches (case statements) in the method with the given name."
 
@@ -2718,18 +2758,23 @@ CCodeGenerator >> localizeGlobalVariables [
 
 	"move any suitable global to be local to the single method using it"
 	candidates keysAndValuesDo:
-		[:key :targets | 
+		[:key :targets |
 		targets do:
-			[:name | | procedure |
+			[:name | | procedure newDeclaration |
 			procedure := methods at: name.
 			procedure isRealMethod ifTrue:
 				[logger notNil ifTrue:
 					[logger ensureCr; show: key, ' localised to ', name; cr].
 				elected add: (procedure locals add: key).
-				variableDeclarations at: key ifPresent:
-					[:v |
-					procedure declarationAt: key put: v.
-					variableDeclarations removeKey: key]]]].
+				newDeclaration := variableDeclarations at: key ifAbsent: ['sqInt ', key].
+				(self initializerForInstVar: key inStartClass: (methods at: name) definingClass) ifNotNil:
+					[:initializerNode|
+					newDeclaration := String streamContents:
+											[:s|
+											 s nextPutAll: newDeclaration; nextPutAll: ' = '.
+											 initializerNode emitCCodeOn: s level: 0 generator: self]].
+				procedure declarationAt: key put: newDeclaration.
+				variableDeclarations removeKey: key ifAbsent: []]]].
 	elected do: [:ea| (variables includes: ea) ifTrue: [self checkDeleteVariable: ea]].
 	variables removeAllFoundIn: elected
 ]
