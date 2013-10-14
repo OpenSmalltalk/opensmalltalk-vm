@@ -109,8 +109,8 @@ Class {
 		'previousRememberedSetSize',
 		'weakList',
 		'ephemeronList',
-		'tenuringCriterion',
-		'tenuringThreshold',
+		'tenureCriterion',
+		'tenureThreshold',
 		'tenuringClassIndex',
 		'tenuringProportion',
 		'numRememberedEphemerons'
@@ -125,6 +125,15 @@ Class {
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
+{ #category : #translation }
+SpurGenerationScavenger class >> declareCVarsIn: aCCodeGenerator [
+	#(eden futureSpace pastSpace) do:
+		[:var| aCCodeGenerator var: var type: #SpurNewSpaceSpace].
+	aCCodeGenerator
+		var: #rememberedSet
+		declareC: 'sqInt rememberedSet[RememberedSetLimit + 1 /* ', (RememberedSetLimit + 1) printString, ' */]'
+]
+
 { #category : #'class initialization' }
 SpurGenerationScavenger class >> initialize [
 	"SpurGenerationScavenger initialize"
@@ -135,12 +144,18 @@ SpurGenerationScavenger class >> initialize [
 	TenureByClass := 2
 ]
 
+{ #category : #translation }
+SpurGenerationScavenger class >> isNonArgumentImplicitReceiverVariableName: instVarName [
+	^#('self' 'coInterpreter' 'manager') includes: instVarName
+]
+
 { #category : #'weakness and ephemerality' }
 SpurGenerationScavenger >> addToEphemeronList: ephemeronCorpse [
 	"ephemeronCorpse is the corpse of an ephemeron that was copied and forwarded.
 	 Later on its surviving copy must be scanned to nil weak references.
 	 Thread the corpse onto the weakList.  Later, the weakList can be followed, and
 	 the forwarding pointer followed to locate the survivor."
+	<inline: false>
 	| ephemeronListOffset |
 	self assert: (manager isYoung: ephemeronCorpse).
 	self assert: (manager isForwarded: ephemeronCorpse).
@@ -158,6 +173,7 @@ SpurGenerationScavenger >> addToWeakList: weakCorpse [
 	 Later on its surviving copy must be scanned to nil weak references.
 	 Thread the corpse onto the weakList.  Later, the weakList can be followed, and
 	 the forwarding pointer followed to locate the survivor."
+	<inline: false>
 	| weakListOffset |
 	self assert: (manager isYoung: weakCorpse).
 	self assert: (manager isForwarded: weakCorpse).
@@ -183,7 +199,7 @@ SpurGenerationScavenger >> computeTenuringThreshold [
 							ifFalse:
 								[(futureSurvivorStart - futureSpace start) asFloat
 									/ (futureSpace limit - futureSpace start)].
-	tenuringThreshold := fractionSurvived > 0.9
+	tenureThreshold := fractionSurvived > 0.9
 							ifTrue: [((pastSpace limit - pastSpace start) * (1.0 - tenuringProportion)) rounded + pastSpace start]
 							ifFalse: [0]
 ]
@@ -194,20 +210,21 @@ SpurGenerationScavenger >> copyAndForward: survivor [
 	 futureSurvivorSpace or, if it is to be promoted, to oldSpace.
 	 It leaves a forwarding pointer behind.  If the object is weak
 	 then corpse is threaded onto the weakList for later treatment."
-	<inline: true>
-	| bytesInObject newLocation hash |
-	bytesInObject := manager bytesInObject: survivor.
+	<inline: false>
+	| bytesInObj newLocation hash |
+	self assert: survivor >= manager startOfMemory. "cog methods should be excluded."
+	bytesInObj := manager bytesInObject: survivor.
 	"Must remember hash before copying because threading
 	 on to the weak & ephemeron lists smashes the hash field."
 	hash := manager rawHashBitsOf: survivor.
 	((self shouldBeTenured: survivor)
-	 or: [futureSurvivorStart + bytesInObject > futureSpace limit])
+	 or: [futureSurvivorStart + bytesInObj > futureSpace limit])
 		ifTrue:
 			[newLocation := self copyToOldSpace: survivor.
-			 manager forward: survivor to: newLocation]
+			 manager forwardSurvivor: survivor to: newLocation]
 		ifFalse:
-			[newLocation := self copyToFutureSpace: survivor bytes: bytesInObject.
-			 manager forward: survivor to: newLocation.
+			[newLocation := self copyToFutureSpace: survivor bytes: bytesInObj.
+			 manager forwardSurvivor: survivor to: newLocation.
 			 "if weak or ephemeron add to the relevant lists if newLocation is young.  If
 			  old, newLocation will be remembered and dealt with in the rememberedSet."
 			 (manager isWeakNonImm: newLocation) ifTrue:
@@ -277,8 +294,9 @@ SpurGenerationScavenger >> corpseOffsetOf: corpse [
 
 { #category : #accessing }
 SpurGenerationScavenger >> eden [
-	<returnTypeC: #'SpurNewSpaceSpace *'>
-	^self addressOf: eden
+	<returnTypeC: #SpurNewSpaceSpace>
+	<cmacro: '() GIV(eden)'>
+	^eden
 ]
 
 { #category : #accessing }
@@ -289,6 +307,7 @@ SpurGenerationScavenger >> edenBytes [
 { #category : #scavenger }
 SpurGenerationScavenger >> exchangeSurvivorSpaces [
 	| temp |
+	<var: #temp type: #SpurNewSpaceSpace>
 	temp := pastSpace.
 	pastSpace := futureSpace.
 	futureSpace := temp
@@ -365,8 +384,9 @@ SpurGenerationScavenger >> firstCorpse: headOfCorpseList [
 
 { #category : #accessing }
 SpurGenerationScavenger >> futureSpace [
-	<returnTypeC: #'SpurNewSpaceSpace *'>
-	^self addressOf: futureSpace
+	<returnTypeC: #SpurNewSpaceSpace>
+	<cmacro: '() GIV(futureSpace)'>
+	^futureSpace
 ]
 
 { #category : #'debug support' }
@@ -386,7 +406,7 @@ SpurGenerationScavenger >> futureSurvivorStart [
 
 { #category : #accessing }
 SpurGenerationScavenger >> getRawTenuringThreshold [
-	^tenuringThreshold
+	^tenureThreshold
 ]
 
 { #category : #initialization }
@@ -404,7 +424,7 @@ SpurGenerationScavenger >> initialize [
 	eden := SpurNewSpaceSpace new.
 	rememberedSet := CArrayAccessor on: (Array new: RememberedSetLimit).
 	rememberedSetSize := 0.
-	tenuringThreshold := 0.
+	tenureThreshold := 0.
 	tenuringProportion := 0.9
 ]
 
@@ -442,9 +462,9 @@ SpurGenerationScavenger >> isScavengeSurvivor: oop [
 	| target |
 	(manager isImmediate: oop) ifTrue:
 		[^true].
-	target := (manager isForwarded: oop)
-				ifTrue: [manager followForwarded: oop]
-				ifFalse: [oop].
+	(manager isForwarded: oop)
+		ifTrue: [target := manager followForwarded: oop]
+		ifFalse: [target := oop].
 	^(manager isYoung: target) not
 	  or: [manager isInFutureSpace: target]
 ]
@@ -452,6 +472,11 @@ SpurGenerationScavenger >> isScavengeSurvivor: oop [
 { #category : #initialization }
 SpurGenerationScavenger >> manager: aSpurMemoryManager newSpaceStart: startAddress newSpaceBytes: totalBytes edenBytes: requestedEdenBytes [ 	self manager: aSpurMemoryManager.
 	self newSpaceStart: startAddress newSpaceBytes: totalBytes edenBytes: requestedEdenBytes
+]
+
+{ #category : #accessing }
+SpurGenerationScavenger >> newSpaceCapacity [
+	^eden limit - (futureSpace start min: pastSpace start)
 ]
 
 { #category : #initialization }
@@ -466,9 +491,9 @@ SpurGenerationScavenger >> newSpaceStart: startAddress newSpaceBytes: totalBytes
 	"for tenuring we require older objects below younger objects.  since allocation
 	 grows up this means that the survivor spaces must preceed eden."
 
-	pastSpace start: startAddress limit: startAddress + survivorBytes.
-	futureSpace start: pastSpace limit limit: pastSpace limit + survivorBytes.
-	eden start: futureSpace limit limit: futureSpace limit + edenBytes.
+	pastSpace start: startAddress; limit: startAddress + survivorBytes.
+	futureSpace start: pastSpace limit; limit: pastSpace limit + survivorBytes.
+	eden start: futureSpace limit; limit: futureSpace limit + edenBytes.
 
 	self assert: futureSpace limit <= (startAddress + totalBytes).
 	self assert: eden start \\ manager allocationUnit
@@ -479,7 +504,7 @@ SpurGenerationScavenger >> newSpaceStart: startAddress newSpaceBytes: totalBytes
 				+ (futureSpace limit \\ manager allocationUnit) = 0.
 
 	self initFutureSpaceStart.
-	manager initSpaceForAllocationCheck: eden
+	manager initSpaceForAllocationCheck: (self addressOf: eden)
 ]
 
 { #category : #'weakness and ephemerality' }
@@ -518,8 +543,9 @@ SpurGenerationScavenger >> noUnfiredEphemeronsAtEndOfRememberedSet [
 
 { #category : #accessing }
 SpurGenerationScavenger >> pastSpace [
-	<returnTypeC: #'SpurNewSpaceSpace *'>
-	^self addressOf: pastSpace
+	<returnTypeC: #SpurNewSpaceSpace>
+	<cmacro: '() GIV(pastSpace)'>
+	^pastSpace
 ]
 
 { #category : #accessing }
@@ -634,6 +660,7 @@ SpurGenerationScavenger >> remember: objOop [
 
 { #category : #accessing }
 SpurGenerationScavenger >> rememberedSetSize [
+	<cmacro: '() GIV(rememberedSetSize)'>
 	^rememberedSetSize
 ]
 
@@ -644,18 +671,21 @@ SpurGenerationScavenger >> rememberedSetWithIndexDo: aBlock [
 ]
 
 { #category : #scavenger }
-SpurGenerationScavenger >> scavenge [
+SpurGenerationScavenger >> scavenge: tenuringCriterion [
 	"The main routine, scavenge, scavenges young objects reachable from the roots (the stack zone
 	 and the rememberedTable).  It first scavenges the new objects immediately reachable from old
 	 ones (all in the remembered table), then the stack zone.  Then it scavenges those that are
 	 transitively reachable.  If this results in a promotion, the promotee gets remembered, and it first
 	 scavenges objects adjacent to the promotee, then scavenges the ones reachable from the
 	 promoted.  This loop continues until no more reachable objects are left.  At that point,
-	 pastSurvivorSpace is exchanged with futureSurvivorSpace.  Then any sdurviving weakArrays and
+	 pastSurvivorSpace is exchanged with futureSurvivorSpace.  Then any surviving weakArrays and
 	 weakArrays in the remembered set can be processed and their dead elements nilled.
 
-	 Answer the limit of pastSpace, to allow the memory manager to bounds check survivors."
+	 By default promotion (tenuring) is based on age and ammount of objects scavenged.  But
+	 tenuring can be based on e.g. a particular class.  The argument selects the tenuring criterion.
 
+	 Answer the limit of pastSpace, to allow the memory manager to bounds check survivors."
+	tenureCriterion := tenuringCriterion.
 	self scavengeLoop.
 	self processWeaklings.
 	self computeTenuringThreshold.
@@ -733,12 +763,11 @@ SpurGenerationScavenger >> scavengeLoop [
 
 { #category : #scavenger }
 SpurGenerationScavenger >> scavengeReferentsOf: referrer [
-	"scavengeReferentsOf: referrer inspects all the pointers in referrer.
-	 If any are new objects, it has them moved to FutureSurvivorSpace,
-	 and answers truth. If there are no new referents, it answers falsity.
-	 To handle weak arrays only scavenge string slots and answer true
-	 if the referrer is weak, so that it won't be removed from the
-	 remembered set until later."
+	"scavengeReferentsOf: referrer inspects all the pointers in referrer.  If
+	 any are new objects, it has them moved to FutureSurvivorSpace, and
+	 answers truth. If there are no new referents, it answers falsity. To handle
+	 weak arrays, if the referrer is weak only scavenge strong slots and answer
+	 true so that it won't be removed from the remembered set until later."
 	| foundNewReferent |
 	"forwarding objects should be followed by callers,
 	 unless the forwarder is a root in the remembered table."
@@ -754,10 +783,10 @@ SpurGenerationScavenger >> scavengeReferentsOf: referrer [
 		referent := manager fetchPointer: i ofMaybeForwardedObject: referrer.
 		(manager isNonImmediate: referent) ifTrue:
 			["a forwarding pointer could be because of become: or scavenging."
-			 referent := (manager isForwarded: referent)
-								ifTrue: [manager followForwarded: referent]
-								ifFalse: [referent].
-			 (manager isYoung: referent)
+			 (manager isForwarded: referent) ifTrue:
+				[referent := manager followForwarded: referent].
+			 ((manager isNonImmediate: referent)
+			  and: [manager isYoung: referent])
 				ifTrue:
 					["if target is already in future space forwarding pointer was due to a become:."
 					 (manager isInFutureSpace: referent)
@@ -884,8 +913,8 @@ SpurGenerationScavenger >> scavengeUnfiredEphemeronsOnEphemeronList [
 { #category : #accessing }
 SpurGenerationScavenger >> scavengerTenuringThreshold [ "(Slang flattens so need unique selectors)"
 	<returnTypeC: #float>
-	^tenuringThreshold >= pastSpace start
-		ifTrue: [(tenuringThreshold - pastSpace start) asFloat / (pastSpace limit - pastSpace start)]
+	^tenureThreshold >= pastSpace start
+		ifTrue: [(tenureThreshold - pastSpace start) asFloat / (pastSpace limit - pastSpace start)]
 		ifFalse: [0]
 ]
 
@@ -893,7 +922,7 @@ SpurGenerationScavenger >> scavengerTenuringThreshold [ "(Slang flattens so need
 SpurGenerationScavenger >> scavengerTenuringThreshold: aProportion [ "(Slang flattens so need unique selectors)"
 	<var: 'aProportion' type: #float>
 	tenuringProportion := aProportion.
-	tenuringThreshold := aProportion = 0.0
+	tenureThreshold := aProportion = 0.0
 							ifTrue: [0]
 							ifFalse: [((pastSpace limit - pastSpace start) * (1.0 - aProportion)) rounded + pastSpace start]
 ]
@@ -913,7 +942,7 @@ SpurGenerationScavenger >> setCorpseOffsetOf: corpse to: offset [
 
 { #category : #accessing }
 SpurGenerationScavenger >> setRawTenuringThreshold: threshold [
-	tenuringThreshold := threshold
+	tenureThreshold := threshold
 ]
 
 { #category : #scavenger }
@@ -926,13 +955,13 @@ SpurGenerationScavenger >> shouldBeTenured: survivor [
 	 An adaptive tenuring policy for generation scavengers, David Ungar & Frank Jackson.
 	 ACM TOPLAS, Volume 14 Issue 1, Jan. 1992, pp 1 - 27."
 
-	^tenuringCriterion caseOf: {
-		[TenureByAge]	->
-			[survivor < tenuringThreshold
-			 and: [survivor >= manager startOfMemory]]. "exclude methods in the method zone"
-		[TenureByClass] ->
-			[(manager classIndexOf: survivor) = tenuringClassIndex
-			 and: [survivor >= manager startOfMemory]] "exclude methods in the method zone"}
+	^tenureCriterion
+		caseOf: {
+			[TenureByAge]	->
+				[survivor < tenureThreshold]. 
+			[TenureByClass] ->
+				[(manager classIndexOf: survivor) = tenuringClassIndex] }
+		otherwise: [false]
 ]
 
 { #category : #accessing }
@@ -943,14 +972,4 @@ SpurGenerationScavenger >> tenuringClassIndex [
 { #category : #accessing }
 SpurGenerationScavenger >> tenuringClassIndex: anInteger [
 	tenuringClassIndex := anInteger
-]
-
-{ #category : #accessing }
-SpurGenerationScavenger >> tenuringCriterion [
-	^tenuringCriterion
-]
-
-{ #category : #accessing }
-SpurGenerationScavenger >> tenuringCriterion: anInteger [
-	tenuringCriterion := anInteger
 ]

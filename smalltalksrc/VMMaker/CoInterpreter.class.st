@@ -449,7 +449,8 @@ CoInterpreter class >> prepareToBeAddedToCodeGenerator: aCodeGen [
 { #category : #translation }
 CoInterpreter class >> shouldGenerateTypedefFor: aStructClass [
 	"Hack to work-around multiple definitions.  Sometimes a type has been defined in an include."
-	^({ CogBlockMethod. CogMethod. NewspeakCogMethod. SistaCogMethod. VMCallbackContext } includes: aStructClass) not
+	^(super shouldGenerateTypedefFor: aStructClass)
+	  and: [Cogit shouldGenerateTypedefFor: aStructClass]
 ]
 
 { #category : #translation }
@@ -475,7 +476,7 @@ CoInterpreter class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord [
 		nextPutAll: '#define COGVM 1'; cr;
 		nextPutAll: '#if !defined(COGMTVM)'; cr;
 		nextPutAll: '#	define COGMTVM 0'; cr;
-		nextPutAll: '#endif'; cr; cr
+		nextPutAll: '#endif'; cr
 ]
 
 { #category : #'message sending' }

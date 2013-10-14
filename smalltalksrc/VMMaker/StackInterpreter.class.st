@@ -248,9 +248,8 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		var: #breakSelectorLength
 		declareC: 'sqInt breakSelectorLength = -1'.
 
-	self declareC: #(nextPollUsecs nextWakeupUsecs longRunningPrimitiveGCUsecs
-					longRunningPrimitiveStartUsecs longRunningPrimitiveStopUsecs)
-		as: #usqLong
+	self declareCAsUSqLong: #(nextPollUsecs nextWakeupUsecs longRunningPrimitiveGCUsecs
+								longRunningPrimitiveStartUsecs longRunningPrimitiveStopUsecs)
 		in: aCCodeGenerator.
 	aCCodeGenerator var: #nextProfileTick type: #sqLong
 ]
@@ -1185,7 +1184,8 @@ StackInterpreter class >> isInterpreterClass [
 
 { #category : #translation }
 StackInterpreter class >> isNonArgumentImplicitReceiverVariableName: aString [
-	^#('self' 'stackPages' 'interpreter' 'objectMemory' 'coInterpreter' 'heapMap') includes: aString
+	^(#('self' 'stackPages' 'interpreter' 'coInterpreter' 'objectMemory') includes: aString)
+	  or: [self objectMemoryClass isNonArgumentImplicitReceiverVariableName: aString]
 ]
 
 { #category : #benchmarks }
@@ -1421,12 +1421,6 @@ StackInterpreter class >> requiredMethodNames: options [
 ]
 
 { #category : #translation }
-StackInterpreter class >> shouldGenerateTypedefFor: aStructClass [
-	"Hack to work-around mutliple definitions.  Sometimes a type has been defined in an include."
-	^aStructClass ~~ VMCallbackContext
-]
-
-{ #category : #translation }
 StackInterpreter class >> sourceFileName [
 	^'interp.c'
 ]
@@ -1503,7 +1497,9 @@ StackInterpreter class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord [
 		[aStream nextPutAll: '#define IMMUTABILITY 1'; cr].
 	NewspeakVM | IMMUTABILITY ifTrue:
 		[aStream cr].
-	aStream nextPutAll: '#define STACKVM 1'; cr; cr
+	aStream nextPutAll: '#define STACKVM 1'; cr.
+	(initializationOptions at: #SpurObjectMemory ifAbsent: false) ifTrue:
+		[aStream nextPutAll: '#define SPURVM 1'; cr]
 ]
 
 { #category : #'debug support' }
@@ -5242,9 +5238,9 @@ StackInterpreter >> findSelectorOfMethod: methArg [
 	| meth classObj classDict classDictSize methodArray i |
 	(objectMemory addressCouldBeObj: methArg) ifFalse:
 		[^objectMemory nilObject].
-	meth := (objectMemory isForwarded: methArg)
-				ifTrue: [objectMemory followForwarded: methArg]
-				ifFalse: [methArg].
+	(objectMemory isForwarded: methArg)
+		ifTrue: [meth := objectMemory followForwarded: methArg]
+		ifFalse: [meth := methArg].
 	 (objectMemory isOopCompiledMethod: meth) ifFalse:
 		[^objectMemory nilObject].
 	classObj := self methodClassOf: meth.

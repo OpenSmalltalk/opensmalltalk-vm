@@ -22,7 +22,7 @@ Class {
 		'canAsmLabel',
 		'mustAsmLabel',
 		'properties',
-		'cascadeVariableNumber'
+		'extraVariableNumber'
 	],
 	#classVars : [
 		'CaseStatements'
@@ -196,18 +196,16 @@ TMethod >> buildCaseStmt: aSendNode [
 ]
 
 { #category : #transformations }
-TMethod >> buildSwitchStmt: aSendNode [
+TMethod >> buildSwitchStmt: aSendNode parent: parentNode [
 	"Build a switch statement node for the given send of caseOf: or caseOf:otherwise:."
-
-	^TSwitchStmtNode new
-		expression: aSendNode receiver
-		cases: aSendNode args first
-		otherwiseOrNil: (aSendNode args at: 2 ifAbsent: [nil])
-]
-
-{ #category : #transformations }
-TMethod >> cascadeVariableNumber [
-	^cascadeVariableNumber
+	| switch |
+	switch := TSwitchStmtNode new
+				expression: aSendNode receiver
+				cases: aSendNode args first
+				otherwiseOrNil: (aSendNode args at: 2 ifAbsent: [nil]).
+	(aSendNode receiver isVariable or: [parentNode isStmtList]) ifFalse:
+		[switch switchVariable: (locals add: (self extraVariableName: 'switch'))].
+	^switch
 ]
 
 { #category : #inlining }
@@ -355,13 +353,26 @@ TMethod >> definingClass: aClass [
 ]
 
 { #category : #'C code generation' }
-TMethod >> determineTypeFor: aTParseNode in: aCCodeGenerator [
-	aTParseNode isSend ifTrue:
-		[^(aCCodeGenerator methodNamed: aTParseNode selector)
+TMethod >> determineTypeFor: aNode in: aCodeGen [
+	aNode isSend ifTrue:
+		[aNode selector == #addressOf: ifTrue:
+			[^(self determineTypeFor: aNode args first in: aCodeGen)
+				ifNil: [#sqInt]
+				ifNotNil: [:type| type, (type last isLetter ifTrue: [' *'] ifFalse: ['*'])]].
+		(aNode selector == #at:
+		 and: [aNode receiver isVariable]) ifTrue:
+			[(aCodeGen typeOfVariable: aNode receiver name) ifNotNil:
+				[:type|
+				^type last = $*
+					ifTrue: [aCodeGen
+								extractTypeFor: aNode receiver name
+								fromDeclaration: type allButLast]
+					ifFalse: [type]]].
+		^(aCodeGen methodNamed: aNode selector)
 			ifNil: [#sqInt]
 			ifNotNil: [:method| method returnType]].
-	aTParseNode isAssignment ifTrue:
-		[^self determineTypeFor: aTParseNode expression in: aCCodeGenerator].
+	aNode isAssignment ifTrue:
+		[^self determineTypeFor: aNode expression in: aCodeGen].
 	self error: 'don''t know how to extract return type from this kind of node'
 ]
 
@@ -586,6 +597,19 @@ TMethod >> export [
 
 	^ export
 
+]
+
+{ #category : #initialization }
+TMethod >> extraVariableName: root [
+	extraVariableNumber := extraVariableNumber
+								ifNil: [0]
+								ifNotNil: [extraVariableNumber + 1].
+	^root, extraVariableNumber printString
+]
+
+{ #category : #transformations }
+TMethod >> extraVariableNumber [
+	^extraVariableNumber
 ]
 
 { #category : #transformations }
@@ -1200,6 +1224,14 @@ TMethod >> labels [
 ]
 
 { #category : #accessing }
+TMethod >> labels: aCollection [
+
+	labels := aCollection isSequenceable
+				ifTrue: [aCollection asOrderedCollection]
+				ifFalse: [aCollection asSortedCollection asOrderedCollection]
+]
+
+{ #category : #accessing }
 TMethod >> locals [
 	"The local variables of this method."
 
@@ -1251,14 +1283,11 @@ TMethod >> mustAsmLabel: aBoolean [
 { #category : #initialization }
 TMethod >> newCascadeTempFor: aTParseNode [
 	| varNode |
-	cascadeVariableNumber := cascadeVariableNumber
-								ifNil: [0]
-								ifNotNil: [cascadeVariableNumber + 1].
-	varNode := TVariableNode new setName: 'cascade', cascadeVariableNumber printString.
+	varNode := TVariableNode new setName: (self extraVariableName: 'cascade').
 	aTParseNode isLeaf ifFalse:
 		[declarations
 			at: varNode name
-			put: [:tm :cg| tm determineTypeFor: aTParseNode in: cg]].
+			put: [:tm :cg| tm halt; determineTypeFor: aTParseNode in: cg]].
 	^varNode
 ]
 
@@ -1326,9 +1355,9 @@ TMethod >> prepareMethodIn: aCodeGen [
 	 Note: Only replaces top-level sends of dispatchOn:in: et al and caseOf:[otherwise:].
 	 These must be top-level statements; they cannot appear in expressions.
 	 As a hack also update the types of variables introduced to implement cascades correctly.
-	 This has to be done at teh same time as this is done, so why not piggy back here?"
-	| replacements |.
-	cascadeVariableNumber ifNotNil:
+	 This has to be done at the same time as this is done, so why not piggy back here?"
+	| replacements |
+	extraVariableNumber ifNotNil:
 		[declarations keysAndValuesDo:
 			[:varName :decl|
 			decl isBlock ifTrue:
@@ -1340,8 +1369,8 @@ TMethod >> prepareMethodIn: aCodeGen [
 	aCodeGen
 		pushScope: declarations
 		while:
-			[parseTree nodesDo:
-				[:node|
+			[parseTree nodesWithParentsDo:
+				[:node :parent|
 				 node isSend ifTrue:
 					[(aCodeGen isBuiltinSelector: node selector)
 						ifTrue:
@@ -1363,7 +1392,7 @@ TMethod >> prepareMethodIn: aCodeGen [
 							[(CaseStatements includes: node selector) ifTrue:
 								[replacements at: node put: (self buildCaseStmt: node)].
 							 (#(caseOf: #caseOf:otherwise:) includes: node selector) ifTrue:
-								[replacements at: node put: (self buildSwitchStmt: node)]]].
+								[replacements at: node put: (self buildSwitchStmt: node parent: parent)]]].
 				 ((node isAssignment or: [node isReturn])
 				  and: [node expression isSwitch]) ifTrue:
 					[replacements at: node put: (self transformSwitchExpression: node)]]].
@@ -1969,9 +1998,9 @@ TMethod >> superExpansionNodeFor: aSelector args: argumentNodes [
 				comment := comment
 								ifNil: [superComment]
 								ifNotNil: [superComment, comment]].
-			superTMethod cascadeVariableNumber ifNotNil:
+			superTMethod extraVariableNumber ifNotNil:
 				[:scvn|
-				cascadeVariableNumber := cascadeVariableNumber ifNil: [scvn] ifNotNil: [:cvn| cvn + scvn]].
+				extraVariableNumber := extraVariableNumber ifNil: [scvn] ifNotNil: [:cvn| cvn + scvn]].
 			superTMethod elideAnyFinalReturn.
 			^superTMethod parseTree]
 ]

@@ -271,11 +271,25 @@ TParseNode >> nodesDo: aBlock [
 ]
 
 { #category : #enumerating }
+TParseNode >> nodesDo: aBlock parent: parent [
+	"Apply aBlock to all nodes in the receiver with each node's parent.
+	 N.B. This is assumed to be bottom-up, leaves first."
+	self subclassResponsibility
+]
+
+{ #category : #enumerating }
 TParseNode >> nodesDo: aBlock unless: cautionaryBlock [
 	"Evaluate aBlock for all nodes in  the tree except those for which cautionaryBlock
 	 answers true or are children of those for which cautionaryBlock answers true."
 	(cautionaryBlock value: self) ifFalse:
 		[aBlock value: self]
+]
+
+{ #category : #enumerating }
+TParseNode >> nodesWithParentsDo: aBlock [
+	"Apply aBlock to all nodes in the receiver with each node's parent.
+	 N.B. This is assumed to be bottom-up, leaves first."
+	self nodesDo: aBlock parent: nil
 ]
 
 { #category : #enumerating }

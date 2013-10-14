@@ -49,20 +49,20 @@ CoInterpreterPrimitives >> pathTo: goal using: stack followWeak: followWeak [
 	index := objectMemory lengthOf: current.
 	stackp := 0.
 	[[(index := index - 1) >= -1] whileTrue:
-		[next := (stackPages couldBeFramePointer: current)
-					ifTrue:
-						[index >= 0
+		[(stackPages couldBeFramePointer: current)
+			ifTrue:
+				[next := index >= 0
 							ifTrue: [self field: index ofFrame: (self cCoerceSimple: current to: #'char *')]
 							ifFalse: [objectMemory nilObject]]
-					ifFalse:
-						[index >= 0
-							ifTrue:
-								[hdr := objectMemory baseHeader: current.
-								 (objectMemory isContextHeader: hdr)
+			ifFalse:
+				[index >= 0
+					ifTrue:
+						[hdr := objectMemory baseHeader: current.
+						next := (objectMemory isContextHeader: hdr)
 									ifTrue: [self fieldOrSenderFP: index ofContext: current]
 									ifFalse: [objectMemory fetchPointer: index ofObject: current]]
-							ifFalse:
-								[objectMemory fetchClassOfNonImm: current]].
+					ifFalse:
+						[next := objectMemory fetchClassOfNonImm: current]].
 		 (stackPages couldBeFramePointer: next)
 			ifTrue: [self assert: (self isFrame: (self cCoerceSimple: next to: #'char *')
 										onPage: (stackPages stackPageFor: (self cCoerceSimple: next to: #'char *')))]

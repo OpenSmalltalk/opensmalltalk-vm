@@ -32,6 +32,7 @@ Instance Variables
 	scavenger:					<SourGenerationScavenger>
 	segmentManager:			<SpurSegmentManager>
 	signalLowSpace:			<Boolean>
+	shrinkThreshold			<Integer>
 	sortedFreeChunks			<Integer address|nil>
 	specialObjectsOop:		<Integer oop>
 	startOfMemory:				<Integer address>
@@ -135,6 +136,9 @@ scavenger
 segmentManager
 	- the object that manages oldSpace segments.  Segments are largely invisible to the memory manager because
 	  the gaps between segments are hidden by bridge objects.
+
+shrinkThreshold
+	- the amount of free oldSpace above which the manager should attempt to give memory back to the OS.
 
 signalLowSpace
 	- a boolean flag set if the lowSpaceSemaphore should be signalled
@@ -407,6 +411,7 @@ Class {
 		'heapMap',
 		'becomeEffectsFlags',
 		'pastSpaceStart',
+		'shrinkThreshold',
 		'gcStartUsecs',
 		'statScavenges',
 		'statGCEndUsecs',
@@ -447,10 +452,28 @@ SpurMemoryManager class >> additionalHeadersDo: aBinaryBlock [
 	 any additional header files that need to be generated."
 ]
 
+{ #category : #translation }
+SpurMemoryManager class >> ancilliaryClasses: options [
+	^{	SpurGenerationScavenger. SpurNewSpaceSpace.
+		SpurSegmentManager. SpurSegmentInfo }
+]
+
 { #category : #accessing }
 SpurMemoryManager class >> baseHeaderSize [
 	"For CogBlockMethod class>>instVarNamesAndTypesForTranslationDo:"
 	^8
+]
+
+{ #category : #translation }
+SpurMemoryManager class >> declareCVarsIn: aCCodeGenerator [
+	self declareCAsOop: #(memory freeStart scavengeThreshold newSpaceLimit lowSpaceThreshold freeOldSpaceStart endOfMemory sortedFreeChunks)
+		in: aCCodeGenerator.
+	self declareCAsUSqLong: (self allInstVarNames select: [:ivn| ivn endsWith: 'Usecs'])
+		in: aCCodeGenerator.
+	aCCodeGenerator var: #freeLists declareC: #'sqInt *freeLists'.
+	aCCodeGenerator
+		var: #remapBuffer
+		declareC: 'sqInt remapBuffer[RemapBufferSize + 1 /* ', (RemapBufferSize + 1) printString, ' */]'
 ]
 
 { #category : #'class initialization' }
@@ -629,7 +652,7 @@ SpurMemoryManager class >> initializeWithOptions: optionsDictionary [
 
 { #category : #translation }
 SpurMemoryManager class >> isNonArgumentImplicitReceiverVariableName: aString [
-	^#('self' 'coInterpreter' 'manager' 'scavenger' 'segmentManager') includes: aString
+	^#('self' 'coInterpreter' 'manager' 'scavenger' 'segmentManager' 'heapMap') includes: aString
 ]
 
 { #category : #translation }
@@ -732,12 +755,11 @@ SpurMemoryManager >> addressAfter: objOop [
 { #category : #'debug support' }
 SpurMemoryManager >> addressCouldBeObj: address [
 	<api>
-	self flag: #temporary. "include futureSpace for now (while debugging the scavenger)"
 	^(address bitAnd: self baseHeaderSize - 1) = 0
 	  and: [(self isInOldSpace: address)
-		or: (self isInEden: address)
+		or: [(self isInEden: address)
 		or: [(self isInSurvivorSpace: address)
-		or: [scavengeInProgress and: [self isInFutureSpace: address]]]]
+		"or: [scavengeInProgress and: [self isInFutureSpace: address]"]]]
 ]
 
 { #category : #'debug support' }
@@ -788,8 +810,8 @@ SpurMemoryManager >> allExistingNewSpaceObjectsDo: aBlock [
 		 prevPrevObj := prevObj.
 		 prevObj := objOop.
 		 objOop := self objectAfter: objOop limit: limit].
-	prevPrevObj class.
-	prevObj class
+	self touch: prevPrevObj.
+	self touch: prevObj
 ]
 
 { #category : #'object enumeration' }
@@ -817,8 +839,8 @@ SpurMemoryManager >> allExistingOldSpaceObjectsDo: aBlock [
 		 prevPrevObj := prevObj.
 		 prevObj := objOop.
 		 objOop := self objectAfter: objOop limit: freeOldSpaceStart].
-	prevPrevObj class.
-	prevObj class
+	self touch: prevPrevObj.
+	self touch: prevObj
 ]
 
 { #category : #'free space' }
@@ -872,8 +894,8 @@ SpurMemoryManager >> allNewSpaceEntitiesDo: aBlock [
 		 prevPrevObj := prevObj.
 		 prevObj := objOop.
 		 objOop := self objectAfter: objOop limit: limit].
-	prevPrevObj class.
-	prevObj class
+	self touch: prevPrevObj.
+	self touch: prevObj
 ]
 
 { #category : #'object enumeration' }
@@ -900,8 +922,8 @@ SpurMemoryManager >> allNewSpaceObjectsDo: aBlock [
 		 prevPrevObj := prevObj.
 		 prevObj := objOop.
 		 objOop := self objectAfter: objOop limit: limit].
-	prevPrevObj class.
-	prevObj class
+	self touch: prevPrevObj.
+	self touch: prevObj
 ]
 
 { #category : #'object enumeration' }
@@ -937,8 +959,8 @@ SpurMemoryManager >> allOldSpaceEntitiesDo: aBlock [
 		 prevPrevObj := prevObj.
 		 prevObj := objOop.
 		 objOop := self objectAfter: objOop limit: freeOldSpaceStart].
-	prevPrevObj class.
-	prevObj class
+	self touch: prevPrevObj.
+	self touch: prevObj
 ]
 
 { #category : #'object enumeration' }
@@ -960,8 +982,8 @@ SpurMemoryManager >> allOldSpaceObjectsFrom: initialObject do: aBlock [
 		 prevPrevObj := prevObj.
 		 prevObj := objOop.
 		 objOop := self objectAfter: objOop limit: freeOldSpaceStart].
-	prevPrevObj class.
-	prevObj class
+	self touch: prevPrevObj.
+	self touch: prevObj
 ]
 
 { #category : #simulation }
@@ -1517,17 +1539,17 @@ SpurMemoryManager >> byteSizeOf: oop [
 
 { #category : #'free space' }
 SpurMemoryManager >> bytesInFreeTree: freeNode [
-	| freeBytes bytesInObject listNode |
+	| freeBytes bytesInObj listNode |
 	freeNode = 0 ifTrue: [^0].
 	freeBytes := 0.
-	bytesInObject := self bytesInObject: freeNode.
-	self assert: bytesInObject / self allocationUnit >= self numFreeLists.
+	bytesInObj := self bytesInObject: freeNode.
+	self assert: bytesInObj / self allocationUnit >= self numFreeLists.
 	listNode := freeNode.
 	[listNode ~= 0] whileTrue:
 		["self printFreeChunk: listNode"
 		 self assert: (self isValidFreeObject: listNode).
-		 freeBytes := freeBytes + bytesInObject.
-		 self assert: bytesInObject = (self bytesInObject: listNode).
+		 freeBytes := freeBytes + bytesInObj.
+		 self assert: bytesInObj = (self bytesInObject: listNode).
 		 listNode := self fetchPointer: self freeChunkNextIndex ofFreeChunk: listNode].
 	^freeBytes
 	+ (self bytesInFreeTree: (self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: freeNode))
@@ -2661,6 +2683,14 @@ SpurMemoryManager >> forward: obj1 to: obj2 [
 	self storePointer: 0 ofForwarder: obj1 withValue: obj2
 ]
 
+{ #category : #'become implementation' }
+SpurMemoryManager >> forwardSurvivor: obj1 to: obj2 [
+	self assert: (self isInNewSpace: obj1).
+	self storePointerUnchecked: 0 ofObject: obj1 withValue: obj2.
+	self setFormatOf: obj1 to: self forwardedFormat.
+	self setClassIndexOf: obj1 to: self isForwardedObjectClassIndexPun
+]
+
 { #category : #'header formats' }
 SpurMemoryManager >> forwardedFormat [
 	"A special format used by the GC to follow only the first pointer."
@@ -2699,7 +2729,7 @@ SpurMemoryManager >> freeChunkSmallerIndex [
 
 { #category : #'free space' }
 SpurMemoryManager >> freeChunkWithBytes: bytes at: address [
-	<inline: true>
+	<inline: false>
 	| freeChunk |
 	freeChunk := self initFreeChunkWithBytes: bytes at: address.
 	self addToFreeList: freeChunk bytes: bytes.
@@ -2731,6 +2761,8 @@ SpurMemoryManager >> freeSize [
 
 { #category : #accessing }
 SpurMemoryManager >> freeStart [
+	"This is a horrible hack and only works because C macros are generated after Interpreter variables."
+	<cmacro: '() GIV(freeStart)'>
 	^freeStart
 ]
 
@@ -2883,6 +2915,7 @@ SpurMemoryManager >> initSegmentBridgeWithBytes: numBytes at: address [
 
 { #category : #allocation }
 SpurMemoryManager >> initSpaceForAllocationCheck: aNewSpace [
+	<var: 'aNewSpace' type: #'SpurNewSpaceSpace *'>
 	memory ifNotNil:
 		[CheckObjectOverwrite ifTrue:
 			[aNewSpace start
@@ -2920,6 +2953,8 @@ SpurMemoryManager >> initialize [
 	statScavenges := statIncrGCs := statFullGCs := 0.
 	statScavengeGCUsecs := statIncrGCUsecs := statFullGCUsecs := 0.
 	statSGCDeltaUsecs := statIGCDeltaUsecs := statFGCDeltaUsecs := 0.
+	self flag: #temporary.
+	shrinkThreshold := 16r10000000. "something huge for now"
 
 	"we can initialize things that are virtual in C."
 	scavenger := SpurGenerationScavengerSimulator new manager: self; yourself.
@@ -2961,7 +2996,7 @@ SpurMemoryManager >> initializeNewSpaceVariables [
 							- coInterpreter interpreterAllocationReserveBytes.
 	startOfMemory := scavenger pastSpace start min: scavenger futureSpace start.
 	self assert: startOfMemory < scavenger eden start.
-	self initSpaceForAllocationCheck: scavenger eden
+	self initSpaceForAllocationCheck: (self addressOf: scavenger eden)
 ]
 
 { #category : #initialization }
@@ -3372,6 +3407,12 @@ SpurMemoryManager >> isInEden: objOop [
 SpurMemoryManager >> isInFutureSpace: objOop [
 	^objOop >= scavenger futureSpace start
 	  and: [objOop < scavenger futureSurvivorStart]
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isInNewSpace: objOop [
+	^objOop >= startOfMemory
+	  and: [objOop < newSpaceLimit]
 ]
 
 { #category : #'object testing' }
@@ -3823,7 +3864,14 @@ SpurMemoryManager >> newSpaceIsEmpty [
 
 { #category : #accessing }
 SpurMemoryManager >> newSpaceLimit [
+	<cmacro: '() GIV(newSpaceLimit)'>
 	^newSpaceLimit
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> newSpaceSize [
+	^(freeStart - scavenger eden start)
+	 + (pastSpaceStart - scavenger pastSpace start)
 ]
 
 { #category : #'primitive support' }
@@ -3982,6 +4030,7 @@ SpurMemoryManager >> objectAfter: objOop [
 	2. objects with an overflow size have a preceeing word with a saturated slotSize.  If the word following
 	    an object doesn't have a saturated size field it must be a single-header object.  If the word following
 	   does have a saturated slotSize it must be the overflow size word."
+	<inline: false>
 	objOop < newSpaceLimit ifTrue:
 		[(self isInEden: objOop) ifTrue:
 			[^self objectAfter: objOop limit: freeStart].
@@ -4205,23 +4254,11 @@ SpurMemoryManager >> printReferencesTo: anOop [
 	<api>
 	self allObjectsDo:
 		[:obj| | i |
-		((self isPointersNonImm: obj) or: [self isCompiledMethod: obj])
-			ifTrue:
-				[(self isCompiledMethod: obj)
-					ifTrue:
-						[i := (coInterpreter literalCountOf: obj) + LiteralStart]
-					ifFalse:
-						[(self isContextNonImm: obj)
-							ifTrue: [i := CtxtTempFrameStart + (coInterpreter fetchStackPointerOf: obj)]
-							ifFalse: [i := self lengthOf: obj]].
-				[(i := i - 1) >= 0] whileTrue:
-					[anOop = (self fetchPointer: i ofObject: obj) ifTrue:
-						[coInterpreter printHex: obj; print: ' @ '; printNum: i; space; printOopShort: obj; cr.
-						 i := 0]]]
-			ifFalse:
-				[((self isForwarded: obj)
-				 and: [(self fetchPointer: 0 ofMaybeForwardedObject: obj) = anOop]) ifTrue:
-					[coInterpreter printHex: obj; print: ' => '; printHex: anOop; cr]]]
+		 i := self numPointerSlotsOf: obj.
+		 [(i := i - 1) >= 0] whileTrue:
+			[anOop = (self fetchPointer: i ofObject: obj) ifTrue:
+				[coInterpreter printHex: obj; print: ' @ '; printNum: i; space; printOopShort: obj; cr.
+				 i := 0]]]
 ]
 
 { #category : #'simulation only' }
@@ -4311,6 +4348,11 @@ SpurMemoryManager >> remapBuffer [
 	^remapBuffer
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> remapBufferCount [
+	^remapBufferCount
+]
+
 { #category : #'generation scavenging' }
 SpurMemoryManager >> remapObj: objOop [
 	"Scavenge or simply follow objOop.  Answer the new location of objOop.  The
@@ -4318,6 +4360,7 @@ SpurMemoryManager >> remapObj: objOop [
 	 The method is called remapObj: for compatibility with ObjectMemory."
 	<inline: false>
 	| resolvedObj |
+	self assert: (self shouldRemapOop: objOop).
 	(self isForwarded: objOop)
 		ifTrue:
 			[resolvedObj := self followForwarded: objOop.
@@ -4450,14 +4493,13 @@ SpurMemoryManager >> scavengingGCTenuringIf: tenuringCriterion [
 	gcStartUsecs := coInterpreter ioUTCMicrosecondsNow.
 
 	scavengeInProgress := true.
-	scavenger tenuringCriterion: tenuringCriterion.
-	pastSpaceStart := scavenger scavenge.
+	pastSpaceStart := scavenger scavenge: tenuringCriterion.
 	self assert: (self
 					oop: pastSpaceStart
 					isGreaterThanOrEqualTo: scavenger pastSpace start
 					andLessThanOrEqualTo: scavenger pastSpace limit).
 	freeStart := scavenger eden start.
-	self initSpaceForAllocationCheck: scavenger eden.
+	self initSpaceForAllocationCheck: (self addressOf: scavenger eden).
 	scavengeInProgress := false.
 
 	statScavenges := statScavenges + 1.
@@ -4609,13 +4651,22 @@ SpurMemoryManager >> showDisplayBits: aForm Left: l Top: t Right: r Bottom: b [
 
 { #category : #'free space' }
 SpurMemoryManager >> shrinkThreshold [
-	self flag: #temporary.
-	^SmallInteger maxVal
+	^shrinkThreshold
+]
+
+{ #category : #'free space' }
+SpurMemoryManager >> shrinkThreshold: aValue [
+	shrinkThreshold := aValue
 ]
 
 { #category : #accessing }
 SpurMemoryManager >> signalLowSpace [
 	^signalLowSpace
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> signalLowSpace: aValue [
+	^signalLowSpace := aValue
 ]
 
 { #category : #'header formats' }
@@ -4822,11 +4873,9 @@ SpurMemoryManager >> stackValue: offset [
 
 { #category : #accessing }
 SpurMemoryManager >> startOfMemory [
-	"Return the start of object memory.  This is immediately after the native code zone.
-	 N.B. the stack zone is alloca'ed. Use a macro so as not to punish the debug VM."
-	<cmacro: '() heapBase'> "This is for CoInterpreter, not StackInterpreter"
+	"Return the start of object memory.  This is immediately after the native code zone."
 	<returnTypeC: #usqInt>
-	self flag: #fixme.
+	<cmacro: '() GIV(startOfMemory)'>
 	^startOfMemory ifNil: [0]
 ]
 
@@ -4845,6 +4894,31 @@ SpurMemoryManager >> startOfObject: objOop [
 	^(self numSlotsOfAny: objOop) >= self numSlotsMask
 		ifTrue: [objOop - self baseHeaderSize]
 		ifFalse: [objOop]
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> statFullGCUsecs [
+	^statFullGCUsecs
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> statFullGCs [
+	^statFullGCs
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> statIGCDeltaUsecs [
+	^statIGCDeltaUsecs
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> statIncrGCUsecs [
+	^statIncrGCUsecs
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> statIncrGCs [
+	^statIncrGCs
 ]
 
 { #category : #accessing }
@@ -5034,18 +5108,23 @@ SpurMemoryManager >> topRemappableOop [
 
 { #category : #'free space' }
 SpurMemoryManager >> totalFreeListBytes [
-	| freeBytes bytesInObject obj |
+	| freeBytes bytesInObj obj |
 	freeBytes := 0.
 	1 to: self numFreeLists - 1 do:
 		[:i| 
-		bytesInObject := i * self allocationUnit.
+		bytesInObj := i * self allocationUnit.
 		obj := freeLists at: i.
 		[obj ~= 0] whileTrue:
-			[freeBytes := freeBytes + bytesInObject.
+			[freeBytes := freeBytes + bytesInObj.
 			 self assert: (self isValidFreeObject: obj).
-			 self assert: bytesInObject = (self bytesInObject: obj).
+			 self assert: bytesInObj = (self bytesInObject: obj).
 			 obj := self fetchPointer: self freeChunkNextIndex ofFreeChunk: obj]].
 	^freeBytes + (self bytesInFreeTree: (freeLists at: 0))
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> totalMemorySize [
+	^scavenger newSpaceCapacity + segmentManager totalSegmentSize
 ]
 
 { #category : #'simulation only' }
@@ -5083,6 +5162,7 @@ SpurMemoryManager >> unlinkFreeChunk: chunk atIndex: index [
 
 { #category : #'memory access' }
 SpurMemoryManager >> vmEndianness [
+	<cmacro: '() VMBIGENDIAN'>
 	"1 = big, 0 = little"
 	^self subclassResponsibility
 ]

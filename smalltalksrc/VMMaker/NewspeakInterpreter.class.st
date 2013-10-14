@@ -1043,12 +1043,6 @@ NewspeakInterpreter class >> requiredMethodNames: options [
 ]
 
 { #category : #translation }
-NewspeakInterpreter class >> shouldGenerateTypedefFor: aStructClass [
-	"Hack to work-around mutliple definitions.  Sometimes a type has been defined in an include."
-	^aStructClass ~~ VMCallbackContext
-]
-
-{ #category : #translation }
 NewspeakInterpreter class >> sourceFileName [
 	^'interp.c'
 ]

@@ -8,6 +8,12 @@ Class {
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
+{ #category : #translation }
+SpurNewSpaceSpace class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
+	self instVarNames do:
+		[:ivn| aBinaryBlock value: ivn value: #usqInt]
+]
+
 { #category : #accessing }
 SpurNewSpaceSpace >> limit [
 	^limit
@@ -19,7 +25,8 @@ SpurNewSpaceSpace >> limit: n [
 ]
 
 { #category : #printing }
-SpurNewSpaceSpace >> printOn: aStream. [
+SpurNewSpaceSpace >> printOn: aStream [
+	<doNotGenerate>
 	super printOn: aStream.
 	(start notNil and: [limit notNil]) ifTrue:
 		[aStream nextPutAll: ' start: '; nextPutAll: start hex; nextPutAll: ' limit: '; nextPutAll: limit hex]
@@ -33,10 +40,4 @@ SpurNewSpaceSpace >> start [
 { #category : #accessing }
 SpurNewSpaceSpace >> start: n [
 	start := n
-]
-
-{ #category : #initialization }
-SpurNewSpaceSpace >> start: startAddress limit: limitAddress [
-	start := startAddress.
-	limit := limitAddress
 ]

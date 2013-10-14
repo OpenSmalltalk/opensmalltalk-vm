@@ -184,8 +184,7 @@ ObjectMemory class >> declareCVarsIn: aCCodeGenerator [
 		in: aCCodeGenerator.
 	aCCodeGenerator
 		var: #headerTypeBytes type: 'const sqInt' array: HeaderTypeExtraBytes.
-	self declareC: #(gcStartUsecs statFullGCUsecs statIncrGCUsecs statIGCDeltaUsecs)
-		as: #usqLong
+	self declareCAsUSqLong: #(gcStartUsecs statFullGCUsecs statIncrGCUsecs statIGCDeltaUsecs)
 		in: aCCodeGenerator
 ]
 
@@ -3564,6 +3563,11 @@ ObjectMemory >> newObjectHash [
 
 ]
 
+{ #category : #accessing }
+ObjectMemory >> newSpaceSize [
+	^freeBlock - self startOfMemory
+]
+
 { #category : #'interpreter access' }
 ObjectMemory >> nilObject [
 	<api>
@@ -3781,6 +3785,11 @@ xxx"
 		ifTrue: [ self error: 'root bit is set in a young object'. ^false ].
 	^true
 
+]
+
+{ #category : #accessing }
+ObjectMemory >> oldSpaceSize [
+	^youngStart - self startOfMemory
 ]
 
 { #category : #'oop/chunk conversion' }
@@ -5099,6 +5108,11 @@ ObjectMemory >> topRemappableOop [
 	<api>
 	"Returns the top of the remappable oop. Useful when writing loops."
 	^remapBuffer at: remapBufferCount
+]
+
+{ #category : #accessing }
+ObjectMemory >> totalMemorySize [
+	^endOfMemory - self startOfMemory
 ]
 
 { #category : #utilities }
