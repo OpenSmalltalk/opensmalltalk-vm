@@ -358,6 +358,11 @@ Spur64BitMemoryManager >> integerValueOf: oop [
 ]
 
 { #category : #'header access' }
+Spur64BitMemoryManager >> isMarked: objOop [
+	^((self longAt: objOop) >> self markedBitFullShift bitAnd: 1) ~= 0
+]
+
+{ #category : #'object testing' }
 Spur64BitMemoryManager >> isWordsNonImm: objOop [
 	"Answer if the argument contains only indexable words (no oops). See comment in formatOf:"
 
@@ -466,6 +471,30 @@ Spur64BitMemoryManager >> setHashBitsOf: objOop to: hash [
 	self assert: (hash between: 0 and: self identityHashFullWordMask).
 	self longAt: objOop
 		put: ((self longAt: objOop) bitClear: self identityHashFullWordMask) + hash
+]
+
+{ #category : #'header access' }
+Spur64BitMemoryManager >> setIsGreyOf: objOop to: aBoolean [
+	self longAt: objOop
+		put: (aBoolean
+				ifTrue: [(self longAt: objOop) bitOr: 1 << self greyBitShift]
+				ifFalse: [(self longAt: objOop) bitAnd: (1 << self greyBitShift) bitInvert64])
+]
+
+{ #category : #'header access' }
+Spur64BitMemoryManager >> setIsImmutableOf: objOop to: aBoolean [
+	self longAt: objOop
+		put: (aBoolean
+				ifTrue: [(self longAt: objOop) bitOr: 1 << self immutableBitShift]
+				ifFalse: [(self longAt: objOop) bitAnd: (1 << self immutableBitShift) bitInvert64])
+]
+
+{ #category : #'header access' }
+Spur64BitMemoryManager >> setIsMarkedOf: objOop to: aBoolean [
+	self longAt: objOop
+		put: (aBoolean
+				ifTrue: [(self longAt: objOop) bitOr: 1 << self markedBitFullShift]
+				ifFalse: [(self longAt: objOop) bitAnd: (1 << self markedBitFullShift) bitInvert64])
 ]
 
 { #category : #'header access' }

@@ -719,6 +719,32 @@ SpurMemoryManager >> accessibleObjectAfter: objOop [
 ]
 
 { #category : #'free space' }
+SpurMemoryManager >> addFreeSubTree: freeTree [
+	"Add a freeChunk sub tree back into the large free chunk tree.
+	 This is for allocateOldSpaceChunkOf[Exactly]Bytes:."
+	<returnTypeC: #void>
+	| slotsInArg treeNode slotsInNode subNode |
+	slotsInArg := self numSlotsOfAny: freeTree.
+	self assert: slotsInArg / (self allocationUnit / self wordSize) >= self numFreeLists.
+	treeNode := freeLists at: 0.
+	self assert: treeNode ~= 0.
+	[slotsInNode := self numSlotsOfAny: treeNode.
+	 self assert: slotsInArg ~= slotsInNode.
+	 slotsInNode > slotsInArg
+		ifTrue:
+			[subNode := self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: treeNode.
+			 subNode = 0 ifTrue:
+				[self storePointer: self freeChunkSmallerIndex ofFreeChunk: treeNode withValue: freeTree.
+				 ^self]]
+		ifFalse:
+			[subNode := self fetchPointer: self freeChunkLargerIndex ofFreeChunk: treeNode.
+			 subNode = 0 ifTrue:
+				[self storePointer: self freeChunkLargerIndex ofFreeChunk: treeNode withValue: freeTree.
+				 ^self]].
+	 treeNode := subNode] repeat
+]
+
+{ #category : #'free space' }
 SpurMemoryManager >> addToFreeList: freeChunk bytes: chunkBytes [
 	| childBytes parent child index |
 	"coInterpreter transcript ensureCr. coInterpreter print: 'freeing '. self printFreeChunk: freeChunk."
@@ -785,6 +811,15 @@ SpurMemoryManager >> addressCouldBeObj: address [
 		or: [(self isInEden: address)
 		or: [(self isInSurvivorSpace: address)
 		"or: [scavengeInProgress and: [self isInFutureSpace: address]"]]]
+]
+
+{ #category : #'debug support' }
+SpurMemoryManager >> addressCouldBeObjWhileScavenging: address [
+	^(address bitAnd: self baseHeaderSize - 1) = 0
+	  and: [(self isInOldSpace: address)
+		or: [(self isInEden: address)
+		or: [(self isInSurvivorSpace: address)
+		or: [scavengeInProgress and: [self isInFutureSpace: address]]]]]
 ]
 
 { #category : #'debug support' }
@@ -1403,6 +1438,12 @@ SpurMemoryManager >> baseHeaderSize [
 	^8
 ]
 
+{ #category : #'plugin support' }
+SpurMemoryManager >> become: array1 with: array2 [
+	<api>
+	^self become: array1 with: array2 twoWay: true copyHash: true
+]
+
 { #category : #'become api' }
 SpurMemoryManager >> become: array1 with: array2 twoWay: twoWayFlag copyHash: copyHashFlag [
 	"All references to each object in array1 are swapped with all references to the
@@ -1714,7 +1755,7 @@ SpurMemoryManager >> checkHeapIntegrity [
 			[containsYoung := false.
 			 (self isRemembered: obj) ifTrue:
 				[numRememberedRootsInHeap := numRememberedRootsInHeap + 1.
-				 (scavenger isInRememberedTable: obj) ifFalse:
+				 (scavenger isInRememberedSet: obj) ifFalse:
 					[coInterpreter print: 'remembered object '; printHex: obj; print: ' is not in remembered table'; cr.
 					 self eek.
 					 ok := false]].
@@ -1823,6 +1864,68 @@ SpurMemoryManager >> checkHeapIntegrity [
 ]
 
 { #category : #'debug support' }
+SpurMemoryManager >> checkOkayOop: oop [
+	"Verify that the given oop is legitimate. Check address, header, and size but not class.
+	 Answer true if OK.  Otherwise print reason and answer false."
+	<api>
+	<var: #oop type: #usqInt>
+	| classIndex fmt unusedBits unusedBitsInYoungObjects |
+
+	"address and size checks"
+	(self isImmediate: oop) ifTrue: [^true].
+	(self addressCouldBeObjWhileScavenging: oop) ifFalse:
+		[self print: 'oop '; printHex: oop; print: ' is not a valid address'. ^false].
+
+	(self addressAfter: oop) <= freeOldSpaceStart ifFalse:
+		[self print: 'oop '; printHex: oop; print: ' size would make it extend beyond the end of memory'. ^false].
+
+	"header type checks"
+	(classIndex := self classIndexOf: oop) >= self firstClassIndexPun ifFalse:
+		[self print: 'oop '; printHex: oop; print: ' is a free chunk, or bridge, not an object'. ^false].
+	((self rawNumSlotsOf: oop) = self numSlotsMask
+	 and: [(self rawNumSlotsOf: oop) - self baseHeaderSize ~= self numSlotsMask]) ifTrue:
+		[self print: 'oop '; printHex: oop; print: ' header has overflow header word, but overflow word does not have a saturated numSlots field'. ^false].
+
+	"format check"
+	fmt := self formatOf: oop.
+	(fmt = 6) | (fmt = 8) ifTrue:
+		[self print: 'oop '; printHex: oop; print: ' has an unknown format type'. ^false].
+	(fmt = self forwardedFormat) ~= (classIndex = self isForwardedObjectClassIndexPun) ifTrue:
+		[self print: 'oop '; printHex: oop; print: ' has mismached format/classIndex fields; only one of them is the isForwarded value'. ^false].
+
+	"specific header bit checks"
+	unusedBits := (1 << self classIndexFieldWidth)
+				   | (1 << (self identityHashFieldWidth + 32)).
+	((self longLongAt: oop) bitAnd: unusedBits) ~= 0 ifTrue:
+		[self print: 'oop '; printHex: oop; print: ' has some unused header bits set; should be zero'. ^false].
+
+	unusedBitsInYoungObjects := self newSpaceRefCountMask.
+	((self longAt: oop) bitAnd: unusedBitsInYoungObjects) ~= 0 ifTrue:
+		[self print: 'oop '; printHex: oop; print: ' has some header bits unused in young objects set; should be zero'. ^false].
+	^true
+]
+
+{ #category : #'debug support' }
+SpurMemoryManager >> checkOkayYoungReferrer: obj [
+	"Verify that the given obj is a valid youngReferrer. Check remembered is set and
+	 is in remembered set.  Answer true if OK.  Otherwise print reason and answer false.
+	 Assumes the object contains young references."
+
+	(self oop: obj isLessThan: newSpaceLimit) ifTrue:
+		[^true].
+
+	(self isRemembered: obj) ifFalse:
+		[ self print: 'remembered bit is not set in '; printHex: obj; cr. ^false ].
+
+	(scavenger isInRememberedSet: obj) ifTrue: [^true].
+
+	self printHex: obj; print: ' has remembered bit set but is not in remembered set'; cr.
+
+	^false
+
+]
+
+{ #category : #'debug support' }
 SpurMemoryManager >> checkOopHasOkayClass: obj [
 	"Attempt to verify that the given obj has a reasonable behavior. The class must be a
 	 valid, non-integer oop and must not be nilObj. It must be a pointers object with three
@@ -1878,6 +1981,16 @@ SpurMemoryManager >> checkedIntegerValueOf: intOop [
 	<doNotGenerate>
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter checkedIntegerValueOf: intOop
+]
+
+{ #category : #'memory access' }
+SpurMemoryManager >> checkedLongAt: byteAddress [
+	"Assumes zero-based array indexing."
+	<api>
+	(self addressCouldBeObj: byteAddress) ifFalse:
+		[self warning: 'checkedLongAt bad address'.
+		 coInterpreter primitiveFail].
+	^self longAt: byteAddress
 ]
 
 { #category : #accessing }
@@ -2568,6 +2681,16 @@ SpurMemoryManager >> firstByteFormat [
 	^16
 ]
 
+{ #category : #'class table puns' }
+SpurMemoryManager >> firstClassIndexPun [
+	"Class puns are class indices not used by any class.  There is an entry
+	 for the pun that refers to the notional class of objects with this class
+	 index.  But because the index doesn't match the class it won't show up
+	 in allInstances, hence hiding the object with a pun as its class index.
+	 The puns occupy indices 16 through 31."
+	^16
+]
+
 { #category : #'header formats' }
 SpurMemoryManager >> firstCompiledMethodFormat [
 	<api>
@@ -2818,19 +2941,21 @@ SpurMemoryManager >> formatOfClass: classPointer [
 
 { #category : #'object access' }
 SpurMemoryManager >> formatOfHeader: header [
-	<var: 'header' type: #usqLong>
 	"0 = 0 sized objects (UndefinedObject True False et al)
 	 1 = non-indexable objects with inst vars (Point et al)
 	 2 = indexable objects with no inst vars (Array et al)
 	 3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
 	 4 = weak indexable objects with inst vars (WeakArray et al)
 	 5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
-	 6,7,8 unused
+	 6 unused, reserved for exotic pointer objects?
+	 7 Forwarded Object, 1st field is pointer, rest of fields are ignored
+	 8 unused, reserved for exotic non-pointer objects?
 	 9 (?) 64-bit indexable
 	 10 - 11 32-bit indexable
 	 12 - 15 16-bit indexable
 	 16 - 23 byte indexable
 	 24 - 31 compiled method"
+	<var: 'header' type: #usqLong>
 	^header >> self formatShift bitAnd: self formatMask
 ]
 
@@ -2935,11 +3060,22 @@ SpurMemoryManager >> fullGCLock [
 	^0
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> gcStartUsecs [
+	^gcStartUsecs
+]
+
 { #category : #'object testing' }
 SpurMemoryManager >> goodContextSize: oop [
 	| numSlots |
 	numSlots := self numSlotsOf: oop.
 	^numSlots = SmallContextSlots or: [numSlots = LargeContextSlots]
+]
+
+{ #category : #'header format' }
+SpurMemoryManager >> greyBitShift [
+	"bit 2 of 3-bit field above format (little endian)"
+	^31
 ]
 
 { #category : #'header access' }
@@ -2981,19 +3117,20 @@ SpurMemoryManager >> hashBitsOf: objOop [
 SpurMemoryManager >> headerForSlots: numSlots format: formatField classIndex: classIndex [
 	"The header format in LSB is
 	 MSB:	| 8: numSlots		| (on a byte boundary)
-			| 2 bits				|
+			| 2 bits				|	(msb,lsb = {isMarked,?})
 			| 22: identityHash	| (on a word boundary)
-			| 3 bits				|	(msb <-> lsb = ?,isPinned,isRemembered
+			| 3 bits				|	(msb <-> lsb = {isGrey,isPinned,isRemembered}
 			| 5: format			| (on a byte boundary)
-			| 2 bits				|
+			| 2 bits				|	(msb,lsb = {isImmutable,?})
 			| 22: classIndex		| (on a word boundary) : LSB
-	 The remaining bits (7) need to be used for
-		isGrey
-		isMarked
+	 The remaining bits (7) are used for
+		isImmutable	(bit 23)
 		isRemembered	(bit 29)
 		isPinned		(bit 30)
-		isImmutable
-	 leaving 2 unused bits.  The three bit field containing isPinned, isRemembered
+		isGrey			(bit 31)
+		isMarked		(bit 55)
+	 leaving 2 unused bits, each next to a 22-bit field, allowing those fields to be
+	 expanded to 23 bits..  The three bit field { isGrey, isPinned, isRemembered }
 	 is for bits that are never set in young objects.  This allows the remembered
 	 table to be pruned when full by using these bits as a reference count of
 	 newSpace objects from the remembered table. Objects with a high count
@@ -3010,6 +3147,11 @@ SpurMemoryManager >> heapMap [
 ]
 
 { #category : #'header format' }
+SpurMemoryManager >> identityHashFieldWidth [
+	^22
+]
+
+{ #category : #'header format' }
 SpurMemoryManager >> identityHashHalfWordMask [
 	^16r3fffff
 ]
@@ -3019,6 +3161,12 @@ SpurMemoryManager >> imageSizeToWrite [
 	"when asked, newSpace should be empty."
 	self assert: self newSpaceIsEmpty.
 	^segmentManager totalBytesInSegments
+]
+
+{ #category : #'header format' }
+SpurMemoryManager >> immutableBitShift [
+	"bit 1 of 2-bit field above classIndex (little endian)"
+	^23
 ]
 
 { #category : #'become implementation' }
@@ -3573,6 +3721,11 @@ SpurMemoryManager >> isFreeObjectClassIndexPun [
 	^0
 ]
 
+{ #category : #'header access' }
+SpurMemoryManager >> isGrey: objOop [
+	^((self longAt: objOop) >> self greyBitShift bitAnd: 1) ~= 0
+]
+
 { #category : #'object testing' }
 SpurMemoryManager >> isImmediate: oop [ 
 	^(oop bitAnd: self tagMask) ~= 0
@@ -3581,6 +3734,11 @@ SpurMemoryManager >> isImmediate: oop [
 { #category : #'object testing' }
 SpurMemoryManager >> isImmediateCharacter: oop [
 	^(oop bitAnd: self tagMask) = 2
+]
+
+{ #category : #'header access' }
+SpurMemoryManager >> isImmutable: objOop [
+	^((self longAt: objOop) >> self immutableBitShift bitAnd: 1) ~= 0
 ]
 
 { #category : #'object testing' }
@@ -3650,6 +3808,11 @@ SpurMemoryManager >> isIntegerValue: intValue [
 	^self subclassResponsibility
 ]
 
+{ #category : #'header access' }
+SpurMemoryManager >> isMarked: objOop [
+	self subclassResponsibility
+]
+
 { #category : #'object testing' }
 SpurMemoryManager >> isNonImmediate: oop [ 
 	^(oop bitAnd: self tagMask) = 0
@@ -3677,6 +3840,20 @@ SpurMemoryManager >> isOopCompiledMethod: oop [
 SpurMemoryManager >> isOopForwarded: oop [
 	^(self isNonImmediate: oop)
 	  and: [(self classIndexOf: oop) = self isForwardedObjectClassIndexPun]
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isOopImmutable: oop [
+	<api>
+	^(self isImmediate: oop)
+	  or: [self isImmutable: oop]
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isOopMutable: oop [
+	<api>
+	^(self isNonImmediate: oop)
+	  and: [(self isImmutable: oop) not]
 ]
 
 { #category : #'header access' }
@@ -3762,7 +3939,7 @@ SpurMemoryManager >> isWords: oop [
 	  and: [self isWordsNonImm: oop]
 ]
 
-{ #category : #'header access' }
+{ #category : #'object testing' }
 SpurMemoryManager >> isWordsNonImm: objOop [
 	"Answer if the argument contains only indexable words (no oops). See comment in formatOf:"
 
@@ -4018,6 +4195,18 @@ SpurMemoryManager >> lowestFreeChunkAssumingSortedFreeSpace [
 	^lowest
 ]
 
+{ #category : #'header format' }
+SpurMemoryManager >> markedBitFullShift [
+	"bit 1 of 2-bit field above identityHash (little endian)"
+	^55
+]
+
+{ #category : #'header format' }
+SpurMemoryManager >> markedBitHalfShift [
+	"bit 1 of 2-bit field above identityHash (little endian)"
+	^23
+]
+
 { #category : #accessing }
 SpurMemoryManager >> maxIdentityHash [
 	^self identityHashHalfWordMask
@@ -4104,6 +4293,18 @@ SpurMemoryManager >> newSpaceIsEmpty [
 SpurMemoryManager >> newSpaceLimit [
 	<cmacro: '() GIV(newSpaceLimit)'>
 	^newSpaceLimit
+]
+
+{ #category : #'generation scavenging' }
+SpurMemoryManager >> newSpaceRefCountMask [
+	"The three bit field { isGrey, isPinned, isRemembered } is for bits
+	 that are never set in young objects.  This allows the remembered
+	 table to be pruned when full by using these bits as a reference
+	 count of newSpace objects from the remembered table. Objects
+	 with a high count should be tenured to prune the remembered table."
+	^ (1 << self greyBitShift)
+	 | (1 << self pinnedBitShift)
+	 | (1 << self rememberedBitShift)
 ]
 
 { #category : #accessing }
@@ -4331,6 +4532,51 @@ SpurMemoryManager >> obsoleteDontUseThisFetchWord: fieldIndex ofObject: oop [
 	"This message is deprecated but supported for a while via a tweak to sqVirtualMachine.[ch] Use fetchLong32, fetchLong64 or fetchPointer instead for new code"
 	<api>
 	^self fetchLong32: fieldIndex ofObject: oop
+]
+
+{ #category : #'debug support' }
+SpurMemoryManager >> okayOop: signedOop [
+	"Verify that the given oop is legitimate. Check address, header, and size but not class."
+
+	| oop classIndex fmt unusedBits unusedBitsInYoungObjects |
+	<var: #oop type: #usqInt>
+	oop := self cCoerce: signedOop to: #usqInt.
+
+	"address and size checks"
+	(self isImmediate: oop) ifTrue: [^true].
+	(self addressCouldBeObjWhileScavenging: oop) ifFalse:
+		[self error: 'oop is not a valid address'. ^false].
+
+	(self addressAfter: oop) <= freeOldSpaceStart ifFalse:
+		[self error: 'oop size would make it extend beyond the end of memory'. ^false].
+
+	"header type checks"
+	(classIndex := self classIndexOf: oop) >= self firstClassIndexPun ifFalse:
+		[self error: 'oop is a free chunk, or bridge, not an object'. ^false].
+	((self rawNumSlotsOf: oop) = self numSlotsMask
+	 and: [(self rawNumSlotsOf: oop) - self baseHeaderSize ~= self numSlotsMask]) ifTrue:
+		[self error: 'oop header has overflow header word, but overflow word does not have a saturated numSlots field'. ^false].
+
+	"format check"
+	fmt := self formatOf: oop.
+	(fmt = 6) | (fmt = 8) ifTrue:
+		[self error: 'oop has an unknown format type'. ^false].
+	(fmt = self forwardedFormat) ~= (classIndex = self isForwardedObjectClassIndexPun) ifTrue:
+		[self error: 'oop has mismached format/classIndex fields; only one of them is the isForwarded value'. ^false].
+
+	"specific header bit checks"
+	unusedBits := (1 << self classIndexFieldWidth)
+				   | (1 << (self identityHashFieldWidth + 32)).
+	((self longLongAt: oop) bitAnd: unusedBits) ~= 0 ifTrue:
+		[self error: 'some unused header bits are set; should be zero'. ^false].
+
+	unusedBitsInYoungObjects := (1 << self greyBitShift)
+								   | (1 << self pinnedBitShift)
+								   | (1 << self rememberedBitShift).
+	((self longAt: oop) bitAnd: unusedBitsInYoungObjects) ~= 0 ifTrue:
+		[self error: 'some header bits unused in young objects are set; should be zero'. ^false].
+	^true
+
 ]
 
 { #category : #accessing }
@@ -4879,6 +5125,21 @@ SpurMemoryManager >> setHeapBase: heapBase memoryLimit: memLimit endOfMemory: me
 				   * (self scavengerDenominator - self numSurvivorSpaces) // self scavengerDenominator.
 	freeStart := scavenger eden start.
 	pastSpaceStart := scavenger pastSpace start
+]
+
+{ #category : #'header access' }
+SpurMemoryManager >> setIsGreyOf: objOop to: aBoolean [
+	self subclassResponsibility
+]
+
+{ #category : #'header access' }
+SpurMemoryManager >> setIsImmutableOf: objOop to: aBoolean [
+	self subclassResponsibility
+]
+
+{ #category : #'header access' }
+SpurMemoryManager >> setIsMarkedOf: objOop to: aBoolean [
+	self subclassResponsibility
 ]
 
 { #category : #'header access' }
