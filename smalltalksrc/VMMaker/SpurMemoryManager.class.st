@@ -438,10 +438,13 @@ Class {
 		'statSpecialMarkCount',
 		'statSurvivorCount',
 		'statSweepCount',
-		'statTenures'
+		'statTenures',
+		'extraRootCount',
+		'extraRoots'
 	],
 	#classVars : [
 		'CheckObjectOverwrite',
+		'ExtraRootsSize',
 		'FirstValidClassIndex',
 		'RemapBufferSize'
 	],
@@ -483,7 +486,10 @@ SpurMemoryManager class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator var: #freeLists declareC: #'sqInt *freeLists'.
 	aCCodeGenerator
 		var: #remapBuffer
-		declareC: 'sqInt remapBuffer[RemapBufferSize + 1 /* ', (RemapBufferSize + 1) printString, ' */]'
+		declareC: 'sqInt remapBuffer[RemapBufferSize + 1 /* ', (RemapBufferSize + 1) printString, ' */]'.
+	aCCodeGenerator
+		var: #extraRoots
+		declareC: 'sqInt* extraRoots[ExtraRootSize + 1 /* ', (ExtraRootsSize + 1) printString, ' */]'.
 ]
 
 { #category : #'class initialization' }
@@ -532,7 +538,10 @@ SpurMemoryManager class >> initialize [
 
 	"The remap buffer support is for compatibility; Spur doesn't GC during allocation.
 	 Eventually this should die."
-	RemapBufferSize := 25
+	RemapBufferSize := 25.
+
+	"Extra roots are for plugin support."
+	ExtraRootsSize := 2048 "max. # of external roots"
 ]
 
 { #category : #'class initialization' }
@@ -742,6 +751,16 @@ SpurMemoryManager >> addFreeSubTree: freeTree [
 				[self storePointer: self freeChunkLargerIndex ofFreeChunk: treeNode withValue: freeTree.
 				 ^self]].
 	 treeNode := subNode] repeat
+]
+
+{ #category : #'plugin support' }
+SpurMemoryManager >> addGCRoot: varLoc [
+	"Add the given variable location to the extra roots table."
+	<api>
+	<var: #varLoc type: #'sqInt *'>
+	extraRootCount >= ExtraRootsSize ifTrue: [^false]. "out of space"
+	extraRoots at: (extraRootCount := extraRootCount + 1) put: varLoc.
+	^true
 ]
 
 { #category : #'free space' }
@@ -1816,7 +1835,7 @@ SpurMemoryManager >> checkHeapIntegrity [
 		[:obj :i|
 		(obj bitAnd: self wordSize - 1) ~= 0
 			ifTrue:
-				[coInterpreter print: 'misaligned oop in rootTable @ '; printNum: i; print: ' = '; printHex: obj; cr.
+				[coInterpreter print: 'misaligned oop in remembered set @ '; printNum: i; print: ' = '; printHex: obj; cr.
 				 self eek.
 				 ok := false]
 			ifFalse:
@@ -1830,9 +1849,8 @@ SpurMemoryManager >> checkHeapIntegrity [
 							[coInterpreter print: 'non-root in remembered set @ '; printNum: i; print: ' = '; printHex: obj; cr.
 							 self eek.
 							 ok := false]]]].
-	self flag: 'no support for remap buffer yet'.
-	"1 to: remapBufferCount do:
-		[:ri|
+	1 to: remapBufferCount do:
+		[:ri| | obj |
 		obj := remapBuffer at: ri.
 		(obj bitAnd: self wordSize - 1) ~= 0
 			ifTrue:
@@ -1840,14 +1858,12 @@ SpurMemoryManager >> checkHeapIntegrity [
 				 self eek.
 				 ok := false]
 			ifFalse:
-				[(heapMap heapMapAtWord: (self pointerForOop: obj)) = 0
-					ifTrue:
-						[coInterpreter print: 'object leak in remapRoots @ '; printNum: ri; print: ' = '; printHex: obj; cr.
-						 self eek.
-						 ok := false]]]."
-	self flag: 'no support for extraRoots yet'.
-	"1 to: extraRootCount do:
-		[:ri|
+				[(heapMap heapMapAtWord: (self pointerForOop: obj)) = 0 ifTrue:
+					[coInterpreter print: 'object leak in remapRoots @ '; printNum: ri; print: ' = '; printHex: obj; cr.
+					 self eek.
+					 ok := false]]].
+	1 to: extraRootCount do:
+		[:ri| | obj |
 		obj := (extraRoots at: ri) at: 0.
 		(obj bitAnd: self wordSize - 1) ~= 0
 			ifTrue:
@@ -1855,11 +1871,10 @@ SpurMemoryManager >> checkHeapIntegrity [
 				 self eek.
 				 ok := false]
 			ifFalse:
-				[(heapMap heapMapAtWord: (self pointerForOop: obj)) = 0
-					ifTrue:
-						[coInterpreter print: 'object leak in extraRoots @ '; printNum: ri; print: ' => '; printHex: obj; cr.
-						 self eek.
-						 ok := false]]]."
+				[(heapMap heapMapAtWord: (self pointerForOop: obj)) = 0 ifTrue:
+					[coInterpreter print: 'object leak in extraRoots @ '; printNum: ri; print: ' => '; printHex: obj; cr.
+					 self eek.
+					 ok := false]]].
 	^ok
 ]
 
@@ -2366,6 +2381,18 @@ SpurMemoryManager >> defaultEdenBytes [
 { #category : #accessing }
 SpurMemoryManager >> displayObject [
 	^self splObj: TheDisplay
+]
+
+{ #category : #'become implementation' }
+SpurMemoryManager >> doBecome: obj1 to: obj2 copyHash: copyHashFlag [
+	| hashBits |
+	self forward: obj1 to: obj2.
+	copyHashFlag ifTrue:
+		[hashBits := self rawHashBitsOf: obj2.
+		 "silently refuse to change the hash of classes; this shouldn't happen anyway."
+		 (self classAtIndex: hashBits) ~= obj2 ifTrue:
+			[hashBits := self rawHashBitsOf: obj1.
+			 self setHashBitsOf: obj2 to: hashBits]]
 ]
 
 { #category : #'become implementation' }
@@ -3267,7 +3294,7 @@ SpurMemoryManager >> initialize [
 	"We can put all initializations that set something to 0 or to false here.
 	 In C all global variables are initialized to 0, and 0 is false."
 	remapBuffer := Array new: RemapBufferSize.
-	remapBufferCount := 0.
+	remapBufferCount := extraRoots := 0. "see below"
 	freeListsMask := totalFreeOldSpace := lowSpaceThreshold := 0.
 	checkForLeaks := 0.
 	needGCFlag := signalLowSpace := scavengeInProgress := false.
@@ -3285,7 +3312,9 @@ SpurMemoryManager >> initialize [
 	segmentManager := SpurSegmentManager new manager: self; yourself.
 
 	"We can also initialize here anything that is only for simulation."
-	heapMap := self wordSize = 4 ifTrue: [CogCheck32BitHeapMap new]
+	heapMap := self wordSize = 4 ifTrue: [CogCheck32BitHeapMap new].
+
+	"N.B. We *don't* initialize extraRoots because we don't simulate it."
 ]
 
 { #category : #snapshot }
@@ -4195,6 +4224,17 @@ SpurMemoryManager >> lowestFreeChunkAssumingSortedFreeSpace [
 	^lowest
 ]
 
+{ #category : #'garbage collection' }
+SpurMemoryManager >> mapExtraRoots [
+	self assert: remapBufferCount = 0.
+	1 to: extraRootCount do:
+		[:i | | oop |
+		oop := (extraRoots at: i) at: 0.
+		((self isImmediateObject: oop) or: [self isFreeObject: oop]) ifFalse:
+			[(self shouldRemapObj: oop) ifTrue:
+				[(extraRoots at: i) at: 0 put: (self remapObj: oop)]]]
+]
+
 { #category : #'header format' }
 SpurMemoryManager >> markedBitFullShift [
 	"bit 1 of 2-bit field above identityHash (little endian)"
@@ -4879,6 +4919,20 @@ SpurMemoryManager >> remapObj: objOop [
 SpurMemoryManager >> rememberedBitShift [
 	"bit 0 of 3-bit field above format (little endian)"
 	^29
+]
+
+{ #category : #'plugin support' }
+SpurMemoryManager >> removeGCRoot: varLoc [
+	"Remove the given variable location to the extra roots table."
+	<api>
+	<var: #varLoc type: #'sqInt *'>
+	1 to: extraRootCount do:
+		[:i|
+		varLoc = (extraRoots at: i) ifTrue: "swap varLoc with last entry"
+			[extraRoots at: i put: (extraRoots at: extraRootCount).
+			 extraRootCount := extraRootCount - 1.
+			 ^true]].
+	^false "not found"
 ]
 
 { #category : #snapshot }

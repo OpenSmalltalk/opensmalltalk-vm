@@ -738,6 +738,7 @@ SpurGenerationScavenger >> scavengeLoop [
 	 previousRememberedSetSize := rememberedSetSize.
 	 firstTime ifTrue:
 		[coInterpreter mapInterpreterOops.
+		 manager mapExtraRoots.
 		 firstTime := false].
 	 "if nothing more copied and forwarded (or remembered by mapInterpreterOops)
 	  to scavenge, and no ephemerons to process, scavenge is done."
