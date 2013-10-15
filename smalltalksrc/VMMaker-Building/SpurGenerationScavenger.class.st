@@ -440,7 +440,7 @@ SpurGenerationScavenger >> is: oop onWeaklingList: listHead [
 ]
 
 { #category : #'store check' }
-SpurGenerationScavenger >> isInRememberedTable: objOop [
+SpurGenerationScavenger >> isInRememberedSet: objOop [
 	0 to: rememberedSetSize - 1 do:
 		[:i|
 		(rememberedSet at: i) = objOop ifTrue:
