@@ -167,6 +167,7 @@ sqInt success(sqInt);
 
 sqInt ioBeep(void);
 sqInt ioExit(void);
+sqInt ioExitWithErrorCode(int);
 sqInt ioForceDisplayUpdate(void);
 sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth,
 		  double hScale, double vScale, sqInt landscapeFlag);
