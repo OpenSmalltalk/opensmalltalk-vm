@@ -1,11 +1,12 @@
 "
 SpurMemoryManager is a new object representation and garbage collector for the Cog VM's.  Spur is dedicated to Andreas Raab, friend and colleague.  I miss you, Andreas.  The goal for Spur is an overall improvement in Cog of -50% (twice as fast) for memory-intensive benchmarks.  
 
-An intensive design sketch is included below after the instance variable descriptions.
+A detailed design sketch is included below after the instance variable descriptions.
 
 Instance Variables
 	becomeEffectsFlags		<Integer>
 	checkForLeaks:				<Boolean>
+	classTableBitmap			<CArrayAccessor on: ByteArray>
 	classTableFirstPage:		<Integer oop>
 	classTableIndex:			<Integer>
 	classTableRootObj:			<Integer oop>
@@ -24,8 +25,9 @@ Instance Variables
 	needGCFlag:				<Boolean>
 	newSpaceLimit:				<Integer address>
 	nilObj:						<Integer oop>
+	numClassTablePages:		<Integer>
 	pastSpaceStart:			<Integer address>
-	remapBuffer:				<CArrayAccessor on: (Array new: 25)>
+	remapBuffer:				<CArrayAccessor on: (Array new: RemapBufferSize)>
 	remapBufferCount:			<Integer>
 	scavengeInProgress:		<Boolean>
 	scavengeThreshold:		<Integer address>
@@ -40,12 +42,22 @@ Instance Variables
 	statFullGCUsecs:			<Integer>
 	statFullGCs:					<Integer>
 	statGCEndUsecs:			<Integer>
+	statGrowMemory:			<Integer>
 	statIGCDeltaUsecs:			<Integer>
 	statIncrGCUsecs:			<Integer>
 	statIncrGCs:				<Integer>
+	statMarkCount:				<Integer>
+	statMkFwdCount:			<Integer>
+	statRootTableCount:		<Integer>
+	statRootTableOverflows:	<Integer>
 	statSGCDeltaUsecs:		<Integer>
 	statScavengeGCUsecs:		<Integer>
 	statScavenges:				<Integer>
+	statShrinkMemory:			<Integer>
+	statSpecialMarkCount:		<Integer>
+	statSurvivorCount:			<Integer>
+	statSweepCount:			<Integer>
+	statTenures:				<Integer>
 	totalFreeOldSpace:			<Integer>
 	trueObj:					<Integer oop>
 
@@ -54,6 +66,9 @@ becomeEffectsFlags
 	
 checkForLeaks
 	- a set of flags determining when to run leak checks on the heap's contents
+
+classTableBitmap
+	- a bitmap used to mark used classTable entries (i.e. marks classIndices, not class objects), used to reclaim unused entries.
 
 classTableFirstPage
 	- the first page of the class table which contains all classes known to the VM at known indices
@@ -113,6 +128,9 @@ newSpaceLimit
 nilObj
 	- the oop of the nil object; must be the first object in oldSpace
 
+numClassTablePages:
+	- the number of used pages in the classTable
+
 pastSpaceStart
 	- the address past the last object in pastSpace, used to enumerate objects in newSpace.
 
@@ -153,7 +171,7 @@ specialObjectsOop
 startOfMemory
 	- the first address in newSpace (the first address in either pastSpace or futureSpace)
 
-statFGCDeltaUsecs, statFullGCUsecs, statGCEndUsecs, statIGCDeltaUsecs, statIncrGCUsecs, statIncrGCs, statSGCDeltaUsecs, statScavengeGCUsecs, statScavenges
+statFGCDeltaUsecs statFullGCUsecs statFullGCs statGCEndUsecs statGrowMemory statIGCDeltaUsecs statIncrGCUsecs statIncrGCs statMarkCount statMkFwdCount statRootTableCount statRootTableOverflows statSGCDeltaUsecs statScavengeGCUsecs statScavenges statShrinkMemory statSpecialMarkCount statSurvivorCount statSweepCount statTenures
 	- various statistics
 
 totalFreeOldSpace
@@ -163,6 +181,14 @@ trueObj
 	- the oop of the false object; must be the third object in oldSpace
 
 
+Invariants (far from an exhaustive list; I'm adding to this as they arise; please prompt me to add undocumented ones):
+
+On image load no object contains a forwarding pointer, and the image contains no forwarders. True because
+a) the SpurBootstrap eliminates forwarders before saving its transformed image
+b) snapshot does a fullGC which will follow forwarding pointers.
+This is checked with an assert in swizzleFieldsOfObject:/lastPointerOfWhileSwizzling:.
+
+classTableIndex ranges from classTablePageSize to classTableMask, since the first page is reserved for system classes, and the VM won't assign classes there-in.
 
 Design
 The design objectives for the Spur memory manager are
@@ -194,7 +220,7 @@ For details see ""60-bit immediate Floats"" below.
 	- the starts of all spaces are aligned on 8-byte boundaries
 	- object allocation rounds up the requested size to a multiple of 8 bytes
 	- the overflow size field is also 8 bytes
-We shall probably keep the minimum object size at 16 bytes so that there is always room for a forwarding pointer.  But this implies that we will need to implement an 8-byte filler to fill holes between objects > 16 bytes whose length mod 16 bytes is 8 bytes and following pinned objects.  We can do this using a special class index, e.g. 1, so that the method that answers the size of an object looks like, e.g.
+We shall probably keep the minimum object size at 16 bytes so that there is always room for a forwarding pointer.  But this implies either that we round object lengths up to units of 16 bytes (current choice) or that we need to implement an 8-byte filler to fill holes between objects > 16 bytes whose length mod 16 bytes is 8 bytes and following pinned objects.  We can do this using a special class index, e.g. 1, so that the method that answers the size of an object looks like, e.g.
 	chunkSizeOf: oop
 		<var: #oop type: #'object *'>
 		^object classIndex = 1
@@ -213,7 +239,7 @@ We shall probably keep the minimum object size at 16 bytes so that there is alwa
 					ifTrue: [0]
 					ifFalse: [OverflowSizeBytes])
 
-Note that the size field of an object (its slot size) reflects the logical size of the object e.g. 0-element array => 0 slot size, 1-element array => 1 slot size). The memory manager rounds up the slot size as appropriate, e.g. (sef roundUp: (self slotSizeOf: obj) * 4 to: 8) min: 8.
+Note that the size field of an object (its slot size) reflects the logical size of the object e.g. 0-element array => 0 slot size, 1-element array => 1 slot size). The memory manager rounds up the slot size as appropriate, e.g. (self roundUp: (self slotSizeOf: obj) * 4 to: 8) min: 8.
 
 Heap growth and shrinkage will be handled by allocating and deallocating heap segments from/to the OS via e.g. memory-mapping.  This technique allows space to be released back to the OS by unmapping empty segments.  See ""Segmented Old Space"" below).
 
@@ -223,7 +249,7 @@ To provide apparent pinning in new space we rely on lazy become.  Since most pin
 
 To provide pinning in old space, large objects are implicitly pinned (because it is expensive to move large objects and, because they are both large and relatively rare, they contribute little to overall fragmentation - as in aggregates, small objects can be used to fill-in the spaces between karge objects).  Hence, objects above a particular size are automatically allocated in old space, rather than new space.  Small objects are pinned as per objects in new space, by asserting the pin bit, which will be set automaticaly when allocating a large object.  As a last resort, or by programmer control (the fullGC primitive) old space is collected via mark-sweep (mark-compact) and so the mark phase must build the list of pinned objects around which the sweep/compact phase must carefully step.
 
-Free space in old space is organized by a free list/free tree as in Eliot's VisualWorks 5i old space allocator.  There are 64 free lists, indices 1 through 63 holding blocks of space of that size, index 0 holding a semi-balanced ordered tree of free blocks, each node being the head of the list of free blocks of that size.  At the start of the mark phase the free list is thrown away and the sweep phase coallesces free space and steps over pinned objects as it proceeds.  We can reuse the forwarding pointer compaction scheme used in the old collector.  Incremental collections merely move unmarked objects to the free lists (as well as nilling weak pointers in weak arrays and scheduling them for finalization).  The occupancy of the free lists is represented by a bitmap in a 64-bit integer so that an allocation of size 63 or less can know whether there exists a free chunk of that size, but more importantly can know whether a free chunk larger than it exists in the fixed size free lists without having to search all larger free list heads.
+Free space in old space is organized by a number of free lists and a free tree .  There are 32 or 64 free lists, depending on word size, indices 1 through wordSize - 1 holding blocks of space of the index * allocationUnit, index 0 holding a semi-balanced ordered tree of free blocks, each node being the head of the list of free blocks of that size.  At the start of the mark phase the free list is thrown away and the sweep phase coallesces free space and steps over pinned objects as it proceeds.  We can reuse the forwarding pointer compaction scheme used in the old collector.  Incremental collections merely move unmarked objects to the free lists (as well as nilling weak pointers in weak arrays and scheduling them for finalization).  The occupancy of the free lists is represented by a bitmap in an integer so that an allocation of size wordSize - 1 or less can know whether there exists a free chunk of that size, but more importantly can know whether a free chunk larger than it exists in the fixed size free lists without having to search all larger free list heads.
 
 Incremental Old Space Collection
 The incremental collector (a la Dijkstra's three colour algorithm) collects old space via an amount of tracing being hung off scavenges and/or old space allocations at an adaptive rate that keeps full garbage collections to a minimum.  [N.B. Not sure how to do this yet.  The incremental collector needs to complete a pass often enough to reclaim objects, but infrequent enough not to waste time.  So some form of feedback should work.  In VisualWorks tracing is broken into quanta or work where image-level code determines the size of a quantum based on how fast the machine is, and how big the heap is.  This code could easily live in the VM, controllable through vmParameterAt:put:.  An alternative would be to use the heartbeat to bound quanta by time.  But in any case some amount of incremental collection would be done on old space allocation and scavenging, the ammount being chosen to keep pause times acceptably short, and at a rate to reclaim old space before a full GC is required, i.e. at a rate proportional to the growth in old space]. The incemental collector is a state machine, being either marking, nilling weak pointers, or freeing.  If nilling weak pointers is not done atomically then there must be a read barrier in weak array at: so that reading from an old space weak array that is holding stale un-nilled references to unmarked objects.  Tricks such as including the weak bit in bounds calculations can make this cheap for non-weak arrays.  Alternatively nilling weak pointers can be made an atomic part of incremental collection, which can be made cheaper by maintaining the set of weak arrays (e.g. on a list).  Note that the incremental collector also follows (and eliminates) forwarding pointers as it scans.
@@ -311,7 +337,7 @@ b) raw conversion between double and quadword must (at least in the source) move
 
 
 Heap Walking
-In heap walking the memory manager needs to be able to detect the start of the next object.  This is complicated by the short and long header formats, short being for objects with 254 slots or less, long being for objects with 255 slots or more.  The class index field can be used to mark special objects.  In particular the tagged class indices 1 through 7, which correspond to objects with tag bits 1 through 7 (SmallInteger = 1, 3, 5, 7, Character = e.g. 2, and SmallFloat = e.g. 4) never occur in the class index fields of normal objects.  So if the size doubleword uses all bits other than the class field (44 bits is an adequate maximum size of 2^46 bytes, ~ 10^14 bytes) then size doubleword s can be marked by using one of the tag class indexes in its class field.  To identify the next object the VM fetches the doubleword immediately following the current object (object bodies being rounded up to 8 bytes in the 32-bit VM).  If the doubleword's class index field is the size doubleword class index pun, e.g. 1, then it is a size field and the object header is the doubleword following that, and the object's slots start after that.  if not, the object header is that doubleword and the object's slots follow that.
+In heap walking the memory manager needs to be able to detect the start of the next object.  This is complicated by the short and long header formats, short being for objects with 254 slots or less, long being for objects with 255 slots or more.  Since an object that has an overflow header must have 255 as its header slot count we can use this as the marker.  The overflow header word also has a numSlots field, set to 255.  The remainder of the overflow size field is used for the object's slot size, the least significant word in 32-bits (for 2^34 bytes, more than the address space), the remaining 56 bits in 64-bits (for 2^59 bytes, which we hope is big enough for bridge objects).  So if the word following an object contains 255 in its numSlots field, it must be the overflow size word of an object with a double header, and the word after that is the header, also with a saturated numSlots field.
 
 Total Number of Classes and Instance-specific Behaviours
 While the class index header field has advantages (saving significant header space, especially in 64-bits, providing a non-moving cache tag for inline caches, small constants for instantiating well-known classes instead of having to fetch them from a table such as the specialObjectsArray) it has the downside of limiting the number of classes.  For Smalltalk programs 2^20 to 2^24 classes is adequate for some time to come, but for prototype languages such as JavaScript this is clearly inadequate, and we woud like to support the ability to host prototype languages within Squeak. There is a solution in the form of ""auto-instances"", an idea of Claus Gittinger's.  The idea is to represent prototypes as behaviors that are instances of themselves.  In a classical Smalltalk system a Behavior is an object with the minimal amount of state to function as a class, and in Smalltalk-80 this state is the three instance variables of Behavior, superclass, methodDict and format, which are the only fields in a Behavior that are known to the virtual machine.  A prototype can therefore have its own behavior and inherit from other prototypes or classes, and have sub-prototypes derived from it if a) its first three instance variables are also superclass, methodDict, and format, and b) it is an instance of itself (one can create such objects in a normal Smalltalk system by creating an Array with the desired layout and using a change class primitive to change the class of the Array to itself).  The same effect can be achieved in a VM with class indexes by reserving one class index to indicate that the object is an instance of itself, hence not requiring the object be entered into the class table and in the code that derives the class of an object, requiring one simple test answering the object itself instead of indexing the class table.  There would probably need to be an auto-instantiation primitive that takes a behavior (or prototype) and an instance variable count and answers a new auto-instance with as many instance variables as the sum of the behavior (or prototype) and the instance variable count.  Using this scheme there can be as many auto-instances as available address space allows while retaining the benefits of class indices.
@@ -319,28 +345,12 @@ While the class index header field has advantages (saving significant header spa
 This scheme has obvious implications for the inline cache since all prototypes end up having the same inline cache tag.  Either the inline cache check checks for the auto-instance class tag and substitutes the receiver, or the cacheing machinery refuses to add the auto-instance class tag to any inline cache and failure path code checks for the special case.  Note that in V8 failing monomorphic sends are patched to open PICs (megamorphic sends); V8 does not use closed PICs due to the rationale that polymorphism is high in JavaScript.
 
 Miscellanea
-One obvious optimization to images is to add image (de)compression to image loading and snapshot.  The image header remains unchanged but its contents could be compressed, compressing either on snapshot, if requested, or off-line via a special-purpose tool.
-
-Issues:
 In-line cache probe for immediates
 We would like to keep 31-bit SmallIntegers for the 32-bit system.  Lots of code could be impacted by a change to 30-bit SmallIntegers.  If so, then 
 	isImmediate: oop	^(oop bitAnd: 3) ~= 0
 	isSmallInteger: oop	^(oop bitAnd: 1) ~= 0
 	isCharacter: oop	^(oop bitAnd: 2) = 2
-If the in-line cache contains 0 for Characters then the in-line cache code (in x86 machine code) could read
-	Lentry:
-		movl %edx, %eax	# copy receiver to temp
-		andl $0x3, %eax	# test for immediate receiver
-		jz Lnon-imm
-		andl $0x1, %eax	# map immediate receiver to cache tag, SmallInteger => 1, Character => 0
-		j Lcmp
-	Lnon-imm:
-		movl 0x4(%edx), %eax # move header word containing class index to %eax
-		andl $0xfffff, %eax		# mask off class index (shift may be faster and/or shorter)
-	Lcmp:
-		cmpl %ecx, %eax		# compact in-line cache to receiver's cache tag
-		jnz Lmiss
-or, for a branch-free common-case,
+If the in-line cache contains 0 for Characters then the in-line cache code (in x86 machine code) reads as follows, for a branch-free common-case:
 	Limm:
 		andl $0x1, %eax
 		j Lcmp
@@ -348,34 +358,33 @@ or, for a branch-free common-case,
 		movl %edx, %eax
 		andl $0x3, %eax
 		jnz Limm
-		movl 0x4(%edx), %eax
-		andl $0xfffff, %eax
+		movl 0(%edx), %eax
+		andl $0x3fffff, %eax
 	Lcmp:
 		cmpl %ecx, %eax
 		jnz Lmiss
 
 64-Bit sizes:
-How do we avoid the Size4Bit for 64-bits?  The format word encodes the number of odd bytes, but currently has only 4 bits and hence only supports odd bytes of 0 - 3.  We need odd bytes of 0 - 7.  But I don't like the separate Size4Bit.  Best to change the VI code and have a 5 bit format?  We lose one bit but save two bits (isEphemeron and isWeak (or three, if isPointers)) for a net gain of one (or two)
+We extend the original Squeak 4-bit format field to 5 bits, providing space for 3 odd bits for byte objects (2 for short objects & 1 for 32-bit long objects).  Object sizes are slots, and byte (and short and 32-bit) lengths are computed by subtracting the odd bits from the shifted slot length.  Keeping the format field saves bits because it subsumes the isWeak,isEphemeron,isPointer bits that would be necessary otherwise.  The format field is organized as follows:
+	 0 = 0 sized objects (UndefinedObject True False et al)
+	 1 = non-indexable objects with inst vars (Point et al)
+	 2 = indexable objects with no inst vars (Array et al)
+	 3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+	 4 = weak indexable objects with inst vars (WeakArray et al)
+	 5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+	 6 unused, reserved for exotic pointer objects?  e.g. contexts?
+	 7 Forwarded Object, 1st field is pointer, rest of fields are ignored
+	 8 unused, reserved for exotic non-pointer objects?
+	 9 64-bit indexable
+	10 - 11 32-bit indexable	(11 unused in 32 bits)
+	12 - 15 16-bit indexable	(14 & 15 unused in 32-bits)
+	16 - 23 byte indexable		(20-23 unused in 32-bits)
+	24 - 31 compiled method	(28-21 unused in 32-bits)
 
-Further, keep Squeak's format idea or go for separate bits?  For 64-bits we need a 5 bit format field.  This contrasts with isPointers, isWeak, isEphemeron, 3 odd size bits (or byte size)..  format field is quite economical.
 
-Hence I think format needs to be made a 5 bit field with room for 4 bits of odd bytes for 64-bit images.  So then
+One obvious optimization to images is to add image (de)compression to image loading and snapshot.  The image header remains unchanged but its contents could be compressed, compressing either on snapshot, if requested, or off-line via a special-purpose tool.
 
-0 = 0 sized objects (UndefinedObject True False et al)
-1 = non-indexable objects with inst vars (Point et al)
-2 = indexable objects with no inst vars (Array et al)
-3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
-4 = weak indexable objects with inst vars (WeakArray et al)
-5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
-
-and here it gets messy, we need 8 CompiledMethod values, 8 byte values, 4 16-bit values, 2 32-bit values and a 64-bit value, = 23 values, 23 + 5 = 30, so there may be room.
-
-9 (?) 64-bit indexable
-10 - 11 32-bit indexable
-12 - 15 16-bit indexable
-16 - 23 byte indexable
-24 - 31 compiled method
-
+Issues:
 Are class indices in inline caches strong references to classes or weak references?
 If strong then they must be scanned during GC and the methodZone must be flushed on fullGC to reclaim all classes (this looks to be a bug in the V3 Cogit).
 If weak then when the class table loses references, PICs containing freed classes must be freed and then sends to freed PICs or containing freed clases must be unlinked.
@@ -400,6 +409,8 @@ Class {
 		'classTableRootObj',
 		'classTableFirstPage',
 		'classTableIndex',
+		'numClassTablePages',
+		'classTableBitmap',
 		'startOfMemory',
 		'endOfMemory',
 		'freeLists',
@@ -416,6 +427,8 @@ Class {
 		'scavengeInProgress',
 		'remapBuffer',
 		'remapBufferCount',
+		'extraRootCount',
+		'extraRoots',
 		'lowSpaceThreshold',
 		'totalFreeOldSpace',
 		'sortedFreeChunks',
@@ -438,11 +451,10 @@ Class {
 		'statSpecialMarkCount',
 		'statSurvivorCount',
 		'statSweepCount',
-		'statTenures',
-		'extraRootCount',
-		'extraRoots'
+		'statTenures'
 	],
 	#classVars : [
+		'BitsPerByte',
 		'CheckObjectOverwrite',
 		'ExtraRootsSize',
 		'FirstValidClassIndex',
@@ -477,19 +489,28 @@ SpurMemoryManager class >> baseHeaderSize [
 	^8
 ]
 
+{ #category : #accessing }
+SpurMemoryManager class >> classTableBitmapBytes [
+	"Max size of the classTableBitmap.  A liottle too large to contemplate allocating statically."
+	^1 << (self basicNew classIndexFieldWidth - (BitsPerByte log: 2) asInteger)
+]
+
 { #category : #translation }
 SpurMemoryManager class >> declareCVarsIn: aCCodeGenerator [
-	self declareCAsOop: #(memory freeStart scavengeThreshold newSpaceLimit lowSpaceThreshold freeOldSpaceStart endOfMemory sortedFreeChunks)
+	self declareCAsOop: #(	memory freeStart scavengeThreshold newSpaceLimit pastSpaceStart
+							lowSpaceThreshold freeOldSpaceStart endOfMemory sortedFreeChunks)
 		in: aCCodeGenerator.
 	self declareCAsUSqLong: (self allInstVarNames select: [:ivn| ivn endsWith: 'Usecs'])
 		in: aCCodeGenerator.
-	aCCodeGenerator var: #freeLists declareC: #'sqInt *freeLists'.
+	aCCodeGenerator
+		var: #freeLists type: #'sqInt *';
+		var: #classTableBitmap type: #'unsigned char *'.
 	aCCodeGenerator
 		var: #remapBuffer
 		declareC: 'sqInt remapBuffer[RemapBufferSize + 1 /* ', (RemapBufferSize + 1) printString, ' */]'.
 	aCCodeGenerator
 		var: #extraRoots
-		declareC: 'sqInt* extraRoots[ExtraRootSize + 1 /* ', (ExtraRootsSize + 1) printString, ' */]'.
+		declareC: 'sqInt *extraRoots[ExtraRootsSize + 1 /* ', (ExtraRootsSize + 1) printString, ' */]'.
 ]
 
 { #category : #'class initialization' }
@@ -533,7 +554,9 @@ SpurMemoryManager class >> initBytesPerWord: nBytes [
 
 { #category : #'class initialization' }
 SpurMemoryManager class >> initialize [
-	"CogObjectMemory initialize"
+	BitsPerByte := 8.
+
+	"SpurMemoryManager initialize"
 	CheckObjectOverwrite := true.
 
 	"The remap buffer support is for compatibility; Spur doesn't GC during allocation.
@@ -852,18 +875,31 @@ SpurMemoryManager >> adjustAllOopsBy: bytesToShift [
 	"Adjust all oop references by the given number of bytes. This is
 	 done just after reading in an image when the new base address
 	 of the object heap is different from the base address in the image,
-	 or when loading multiple segments that have been coallesced."
+	 or when loading multiple segments that have been coallesced.  Also
+	 set bits in the classTableBitmap corresponding to used classes."
 
 	| obj |
+	self countNumClassPagesPreSwizzle: bytesToShift;
+		ensureAdequateClassTableBitmap.
 	(bytesToShift ~= 0
-	 or: [segmentManager numSegments > 1]) ifTrue:
-		[self assert: self newSpaceIsEmpty.
-		 obj := self objectStartingAt: newSpaceLimit.
-		 [self oop: obj isLessThan: freeOldSpaceStart] whileTrue:
-			[(self isFreeObject: obj)
-				ifTrue: [self swizzleFieldsOfFreeChunk: obj]
-				ifFalse: [self swizzleFieldsOfObject: obj].
-			 obj := self objectAfter: obj]]
+	 or: [segmentManager numSegments > 1])
+		ifTrue:
+			[self assert: self newSpaceIsEmpty.
+			 obj := self objectStartingAt: newSpaceLimit.
+			 [self oop: obj isLessThan: freeOldSpaceStart] whileTrue:
+				[(self isFreeObject: obj)
+					ifTrue: [self swizzleFieldsOfFreeChunk: obj]
+					ifFalse:
+						[self inClassTableBitmapSet: (self classIndexOf: obj).
+						 self swizzleFieldsOfObject: obj].
+				 obj := self objectAfter: obj]]
+		ifFalse:
+			[self assert: self newSpaceIsEmpty.
+			 obj := self objectStartingAt: newSpaceLimit.
+			 [self oop: obj isLessThan: freeOldSpaceStart] whileTrue:
+				[(self isFreeObject: obj) ifFalse:
+					[self inClassTableBitmapSet: (self classIndexOf: obj)].
+				 obj := self objectAfter: obj]]
 ]
 
 { #category : #'object enumeration' }
@@ -1195,7 +1231,6 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 						 child := self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: child]]].
 	parent = 0 ifTrue:
 		[totalFreeOldSpace := totalFreeOldSpace + chunkBytes. "optimism was unfounded"
-		 self halt.
 		 ^nil].
 
 	"self printFreeChunk: parent"
@@ -2212,20 +2247,29 @@ SpurMemoryManager >> classTableRootObj [
 	^classTableRootObj
 ]
 
-{ #category : #accessing }
+{ #category : #'class table' }
 SpurMemoryManager >> classTableRootObj: anOop [
 	classTableRootObj := anOop.
 	classTableFirstPage := self fetchPointer: 0 ofObject: classTableRootObj.
-	self assert: (self numSlotsOf: classTableRootObj) = (1 << (self classIndexFieldWidth - self classTableMajorIndexShift)).
+	self assert: (self numSlotsOf: classTableRootObj) = self classTableRootSlots.
 	self assert: (self numSlotsOf: classTableFirstPage) - 1 = self classTableMinorIndexMask.
-	"set classTableIndex to the start of the last used page"
-	2 to: (self numSlotsOf: classTableRootObj) - 1 do:
+	"Set classTableIndex to the start of the last used page (excepting first page).
+	 Set numClassTablePages to the number of used pages."
+	numClassTablePages := self numSlotsOf: classTableRootObj.
+	2 to: numClassTablePages - 1 do:
 		[:i|
 		(self fetchPointer: i ofObject: classTableRootObj) = nilObj ifTrue:
-			[classTableIndex := i << self classTableMajorIndexShift.
+			[numClassTablePages := i.
+			 classTableIndex := (numClassTablePages - 1 max: 1) << self classTableMajorIndexShift.
 			 ^self]].
 	"no unused pages; set it to the start of the second page."
 	classTableIndex := 1 << self classTableMajorIndexShift
+]
+
+{ #category : #'class table' }
+SpurMemoryManager >> classTableRootSlots [
+	"Answer the number of slots in the root of the class table."
+	^1 << (self classIndexFieldWidth - self classTableMajorIndexShift)
 ]
 
 { #category : #'interpreter access' }
@@ -2371,6 +2415,33 @@ SpurMemoryManager >> containsOnlyValidBecomeObjects: array1 and: array2 [
 	^0
 ]
 
+{ #category : #'class table' }
+SpurMemoryManager >> countNumClassPagesPreSwizzle: bytesToShift [
+	"Compute the used size of the class table before swizzling.  Needed to
+	 initialize the classTableBitmap which is populated during adjustAllOopsBy:"
+	<returnTypeC: #void>
+	| firstObj classTableRoot nilObjPreSwizzle |
+	firstObj := self objectStartingAt: newSpaceLimit. "a.k.a. nilObj"
+	"first five objects are nilObj, falseObj, trueObj, freeListsObj, classTableRootObj"
+	classTableRoot := self objectAfter:
+							(self objectAfter:
+									(self objectAfter:
+											(self objectAfter: firstObj
+												limit: freeOldSpaceStart)
+										limit: freeOldSpaceStart)
+								limit: freeOldSpaceStart)
+							limit: freeOldSpaceStart.
+	nilObjPreSwizzle := newSpaceLimit - bytesToShift.
+	numClassTablePages := self numSlotsOf: classTableRoot.
+	self assert: numClassTablePages = self classTableRootSlots.
+	2 to: numClassTablePages - 1 do:
+		[:i|
+		(self fetchPointer: i ofObject: classTableRoot) = nilObjPreSwizzle ifTrue:
+			[numClassTablePages := i.
+			 ^self]]
+	
+]
+
 { #category : #snapshot }
 SpurMemoryManager >> defaultEdenBytes [
 	^2 * 1024 * 1024
@@ -2397,8 +2468,8 @@ SpurMemoryManager >> doBecome: obj1 to: obj2 copyHash: copyHashFlag [
 
 { #category : #'become implementation' }
 SpurMemoryManager >> doBecome: obj1 with: obj2 copyHash: copyHashFlag [
-	((self isClassInClassTable: obj1)
-	 or: [self isClassInClassTable: obj1]) ifTrue:
+	((self isInClassTable: obj1)
+	 or: [self isInClassTable: obj1]) ifTrue:
 		[self halt].
 	(self numSlotsOf: obj1) = (self numSlotsOf: obj2)
 		ifTrue:
@@ -2476,6 +2547,27 @@ SpurMemoryManager >> endOfMemory [
 ]
 
 { #category : #'class table' }
+SpurMemoryManager >> ensureAdequateClassTableBitmap [
+	"The classTableBitmap is used to reclaim unused and/or duplicate entries
+	 in the classTable.  As such it is notionally 2^(22 - 3) bytes big, or 512k,
+	 a little too large to be comfortable allocating statically (especially on small
+	 machines).  So make it big enough for the max classTableIndex's base 2 ceiling."
+	<inline: false>
+	| requiredSize |
+	requiredSize := (1 << numClassTablePages highBit)
+					* (self classTablePageSize / BitsPerByte).
+	self cCode:
+			[classTableBitmap ifNotNil:
+				[self free: classTableBitmap].
+			 classTableBitmap := self malloc: requiredSize.
+			 classTableBitmap ifNil:
+				[self error: 'could not allocate classTableBitmap'].
+			 self me: classTableBitmap ms: 0 et: requiredSize]
+		inSmalltalk:
+			[classTableBitmap := CArrayAccessor on: (ByteArray new: requiredSize)]
+]
+
+{ #category : #'class table' }
 SpurMemoryManager >> ensureBehaviorHash: aBehavior [
 	| newHash err |
 	<inline: true>
@@ -2510,6 +2602,7 @@ SpurMemoryManager >> enterIntoClassTable: aBehavior [
 		 self storePointer: majorIndex
 			ofObject: classTableRootObj
 			withValue: page.
+		 numClassTablePages := numClassTablePages + 1.
 		 minorIndex := 0].
 	 minorIndex to: self classTablePageSize - 1 do:
 		[:i|
@@ -2523,6 +2616,7 @@ SpurMemoryManager >> enterIntoClassTable: aBehavior [
 			 "now fault-in method lookup chain."
 			 self scanClassPostBecome: aBehavior
 				effects: BecamePointerObjectFlag+BecameCompiledMethodFlag.
+			 self ensureAdequateClassTableBitmap.
 			 ^0]].
 	 majorIndex := (majorIndex + 1 bitAnd: self classIndexMask) max: 1.
 	 majorIndex = initialMajorIndex ifTrue: "wrapped; table full"
@@ -2577,6 +2671,66 @@ SpurMemoryManager >> existInstancesInNewSpaceOf: classObj [
 		(self classIndexOf: obj) = classIndex ifTrue:
 			[^true]].
 	^false
+]
+
+{ #category : #'class table' }
+SpurMemoryManager >> expungeDuplicateClasses [
+	"Bits have been set in the classTableBitmap corresponding to
+	 used classes.  Any class in the class table that does not have a
+	 bit set has no instances with that class index.  However, becomeForward:
+	 can create duplicate entries, and these duplicate entries
+		a) won't have a bit set on load (because there are no forwarders on load),
+		b) wont match their identityHash.
+	 So expunge duplicates by eliminating unmarked entries that don't occur at
+	 their identityHash."
+	1 to: numClassTablePages - 1 do:
+		[:i| | classTablePage |
+		"optimize scan by only scanning bitmap in regions that have pages."
+		classTablePage := self fetchPointer: i ofObject: classTableRootObj.
+		classTablePage ~= nilObj ifTrue:
+			[i << self classTableMajorIndexShift
+				to: i << self classTableMajorIndexShift + self classTableMinorIndexMask
+				by: 8
+				do: [:majorBitIndex| | byteIndex byte classIndex classOrNil |
+					"optimize scan by scanning a byte of indices (8 indices) at a time"
+					byteIndex := majorBitIndex / BitsPerByte.
+					byte := classTableBitmap at: byteIndex.
+					byte ~= 255 ifTrue:
+						[0 to: 7 do:
+							[:minorBitIndex|
+							(byte noMask: 1 << minorBitIndex) ifTrue:
+								[classIndex := majorBitIndex + minorBitIndex.
+								 classOrNil := self fetchPointer: (classIndex bitAnd: self classTableMinorIndexMask)
+												   ofObject: classTablePage.
+								 self assert: (self classAtIndex: classIndex) = classOrNil.
+								 "only remove a class if it is at a duplicate entry"
+								 (classOrNil ~= nilObj
+								  and: [(self rawHashBitsOf: classOrNil) ~= classIndex]) ifTrue:
+									[self storePointerUnchecked: (classIndex bitAnd: self classTableMinorIndexMask)
+										ofObject: classTablePage
+										withValue: nilObj.
+									 "but it should still be in the table at its correct index."
+									 self assert: ((self classAtIndex: (self rawHashBitsOf: classOrNil)) = classOrNil)]]]]]]]
+]
+
+{ #category : #'class table' }
+SpurMemoryManager >> expungeFromClassTable: aBehavior [
+	"Remove aBehavior from the class table."
+	<inline: false>
+	| classIndex majorIndex minorIndex classTablePage |
+	self assert: (self isInClassTable: aBehavior).
+	classIndex := self rawHashBitsOf: aBehavior.
+	majorIndex := classIndex >> self classTableMajorIndexShift.
+	minorIndex := classIndex bitAnd: self classTableMinorIndexMask.
+	classTablePage := self fetchPointer: majorIndex ofObject: classTableRootObj.
+	self assert: classTablePage ~= classTableFirstPage.
+	self assert: (self numSlotsOf: classTablePage) = self classTablePageSize.
+	self assert: (self fetchPointer: minorIndex ofObject: classTablePage) = aBehavior.
+	self storePointerUnchecked: minorIndex ofObject: classTablePage withValue: nilObj.
+	"If the removed class is before the classTableIndex, set the
+	 classTableIndex to point to the empty slot so as to reuse it asap."
+	classIndex < classTableIndex ifTrue:
+		[classTableIndex := classIndex]
 ]
 
 { #category : #'simulation only' }
@@ -2952,10 +3106,10 @@ SpurMemoryManager >> formatOf: objOop [
 	 7 Forwarded Object, 1st field is pointer, rest of fields are ignored
 	 8 unused, reserved for exotic non-pointer objects?
 	 9 (?) 64-bit indexable
-	 10 - 11 32-bit indexable
-	 12 - 15 16-bit indexable
-	 16 - 23 byte indexable
-	 24 - 31 compiled method"
+	 10 - 11 32-bit indexable	(11 unused in 32 bits)
+	 12 - 15 16-bit indexable	(14 & 15 unused in 32-bits)
+	 16 - 23 byte indexable		(20-23 unused in 32-bits)
+	 24 - 31 compiled method	(28-21 unused in 32-bits)"
 	^(self longAt: objOop) >> self formatShift bitAnd: self formatMask
 ]
 
@@ -3196,6 +3350,17 @@ SpurMemoryManager >> immutableBitShift [
 	^23
 ]
 
+{ #category : #'class table' }
+SpurMemoryManager >> inClassTableBitmapSet: classIndex [
+	| bit majorIndex |
+	self assert: (classIndex >= 0 and: [classIndex <= self classIndexMask]).
+	majorIndex := classIndex // BitsPerByte.
+	bit := 1 << (classIndex bitAnd: BitsPerByte - 1).
+	classTableBitmap
+		at: majorIndex
+		put: ((classTableBitmap at: majorIndex) bitOr: bit)
+]
+
 { #category : #'become implementation' }
 SpurMemoryManager >> inPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag [
 	"Do become in place by swapping object contents."
@@ -3294,7 +3459,7 @@ SpurMemoryManager >> initialize [
 	"We can put all initializations that set something to 0 or to false here.
 	 In C all global variables are initialized to 0, and 0 is false."
 	remapBuffer := Array new: RemapBufferSize.
-	remapBufferCount := extraRoots := 0. "see below"
+	remapBufferCount := extraRootCount := 0. "see below"
 	freeListsMask := totalFreeOldSpace := lowSpaceThreshold := 0.
 	checkForLeaks := 0.
 	needGCFlag := signalLowSpace := scavengeInProgress := false.
@@ -3386,7 +3551,7 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	self assert: falseObj = (self objectAfter: nilObj).
 	self assert: trueObj = (self objectAfter: falseObj).
 	freeListObj := self objectAfter: trueObj.
-	self classTableRootObj: (self objectAfter: freeListObj).
+	self reInitializeClassTablePostLoad: (self objectAfter: freeListObj).
 	self initializeFreeSpacePostLoad: freeListObj.
 
 	segmentManager collapseSegmentsPostSwizzle.
@@ -3640,15 +3805,6 @@ SpurMemoryManager >> isCharacterValue: anInteger [
 	^self isInRangeCharacterCode: anInteger
 ]
 
-{ #category : #'become implementation' }
-SpurMemoryManager >> isClassInClassTable: objOop [
-	| hash |
-	hash := self rawHashBitsOf: objOop.
-	hash = 0 ifTrue:
-		[false].
-	^(self classAtIndex: hash) = objOop
-]
-
 { #category : #'object testing' }
 SpurMemoryManager >> isClassOfNonImm: objOop equalTo: classOop [
 	^(self classIndexOf: objOop) = (self rawHashBitsOf: classOop)
@@ -3768,6 +3924,15 @@ SpurMemoryManager >> isImmediateCharacter: oop [
 { #category : #'header access' }
 SpurMemoryManager >> isImmutable: objOop [
 	^((self longAt: objOop) >> self immutableBitShift bitAnd: 1) ~= 0
+]
+
+{ #category : #'become implementation' }
+SpurMemoryManager >> isInClassTable: objOop [
+	| hash |
+	hash := self rawHashBitsOf: objOop.
+	hash = 0 ifTrue:
+		[false].
+	^(self classAtIndex: hash) = objOop
 ]
 
 { #category : #'object testing' }
@@ -4058,7 +4223,9 @@ SpurMemoryManager >> lastPointerOfWhileSwizzling: objOop [
 	"Answer the byte offset of the last pointer field of the given object.
 	 Works with CompiledMethods, as well as ordinary objects.
 	 Does not examine the stack pointer of contexts to be sure to swizzle
-	 the nils that fill contexts on snapshot."
+	 the nils that fill contexts on snapshot.
+	 It is invariant that on image load no object contains a forwarding pointer,
+	 and the image contains no forwarders (see class comment)."
 	<api>
 	<inline: true>
 	<asmLabel: false>
@@ -4230,7 +4397,7 @@ SpurMemoryManager >> mapExtraRoots [
 	1 to: extraRootCount do:
 		[:i | | oop |
 		oop := (extraRoots at: i) at: 0.
-		((self isImmediateObject: oop) or: [self isFreeObject: oop]) ifFalse:
+		((self isImmediate: oop) or: [self isFreeObject: oop]) ifFalse:
 			[(self shouldRemapObj: oop) ifTrue:
 				[(extraRoots at: i) at: 0 put: (self remapObj: oop)]]]
 ]
@@ -4716,7 +4883,12 @@ SpurMemoryManager >> possibleRootStoreInto: destObj [
 
 { #category : #'become implementation' }
 SpurMemoryManager >> postBecomeScanClassTable [
-	"Scan the class table post-become (iff a pointer object or compiled method was becommed)"
+	"Scan the class table post-become (iff a pointer object or compiled method was becommed).
+	 Note that one-way become can cause duplications in the class table.
+	 When can these be eliminated?  We use the classtableBitmap to mark  classTable entries
+	 (not the classes themselves, since marking a class doesn't help in knowing if its index is used).
+	 On image load, and during incrememtal scan-mark and full GC, classIndices are marked.
+	 We can somehow avoid following classes from the classTable until after this mark phase."
 	(becomeEffectsFlags anyMask: BecamePointerObjectFlag+BecameCompiledMethodFlag) ifFalse: [^self].
 	
 	0 to: (self numSlotsOf: classTableRootObj) - 1 do:
@@ -4868,6 +5040,12 @@ SpurMemoryManager >> reInitSegmentBridge: bridgeOop [
 	"On image write the segment manager replaces the header of the bridge
 	 with the size of the following segment.  This method restores that header."
 	^self subclassResponsibility
+]
+
+{ #category : #'class table' }
+SpurMemoryManager >> reInitializeClassTablePostLoad: classTableRoot [
+	self classTableRootObj: classTableRoot.
+	self expungeDuplicateClasses
 ]
 
 { #category : #snapshot }
@@ -5754,6 +5932,13 @@ SpurMemoryManager >> tagMask [
 	^self subclassResponsibility
 ]
 
+{ #category : #'plugin support' }
+SpurMemoryManager >> tenuringIncrementalGC [
+	"Do an incremental GC that tenures all surviving young objects to old space."
+	<api>
+	self flushNewSpace
+]
+
 { #category : #accessing }
 SpurMemoryManager >> tenuringThreshold [
 	"In the scavenger the tenuring threshold is effectively a number of bytes of objects,
@@ -5848,9 +6033,9 @@ SpurMemoryManager >> unlinkFreeChunk: chunk atIndex: index [
 
 { #category : #'memory access' }
 SpurMemoryManager >> vmEndianness [
-	<cmacro: '() VMBIGENDIAN'>
+	<api>
 	"1 = big, 0 = little"
-	^self subclassResponsibility
+	^self cCode: [VMBIGENDIAN] inSmalltalk: [self subclassResponsibility]
 ]
 
 { #category : #'class table puns' }
