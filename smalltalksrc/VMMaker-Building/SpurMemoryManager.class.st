@@ -1525,7 +1525,7 @@ SpurMemoryManager >> become: array1 with: array2 twoWay: twoWayFlag copyHash: co
 	coInterpreter preBecomeAction.
 	twoWayFlag
 		ifTrue:
-			[self innerBecomeObjectsIn: array1 with: array2 copyHash: copyHashFlag]
+			[self innerBecomeObjectsIn: array1 and: array2 copyHash: copyHashFlag]
 		ifFalse:
 			[self innerBecomeObjectsIn: array1 to: array2 copyHash: copyHashFlag].
 	self postBecomeScanClassTable.
@@ -2067,6 +2067,22 @@ SpurMemoryManager >> classAtIndex: classIndex [
 		ofObject: classTablePage
 ]
 
+{ #category : #'class table' }
+SpurMemoryManager >> classAtIndex: classIndex put: objOop [
+	"for become & GC of classes"
+	| classTablePage |
+	self assert: (classIndex <= self tagMask or: [classIndex >= self arrayClassIndexPun]).
+	self assert: (objOop = nilObj or: [(self rawHashBitsOf: objOop) = classIndex]).
+	classTablePage := self fetchPointer: classIndex >> self classTableMajorIndexShift
+							ofObject: classTableRootObj.
+	classTablePage = nilObj ifTrue:
+		[self error: 'attempt to add class to empty page'].
+	^self
+		storePointer: (classIndex bitAnd: self classTableMinorIndexMask)
+		ofObject: classTablePage
+		withValue: objOop
+]
+
 { #category : #'plugin support' }
 SpurMemoryManager >> classBitmap [
 	^self splObj: ClassBitmap
@@ -2455,6 +2471,53 @@ SpurMemoryManager >> displayObject [
 ]
 
 { #category : #'become implementation' }
+SpurMemoryManager >> doBecome: obj1 and: obj2 copyHash: copyHashFlag [
+	"Inner dispatch for two-way become"
+	<returnTypeC: #void>
+	| o1ClassIndex o2ClassIndex |
+	copyHashFlag ifFalse:
+		["in-lined
+			clasIndex := (self isInClassTable: obj) ifTrue: [self rawHashBitsOf: obj] ifFalse: [0]
+		 for speed."
+		 o1ClassIndex := self rawHashBitsOf: obj1.
+		 (o1ClassIndex ~= 0 and: [(self classAtIndex: o1ClassIndex) ~= obj1]) ifTrue:
+			[o1ClassIndex := 0].
+		 o2ClassIndex := self rawHashBitsOf: obj2.
+		 (o2ClassIndex ~= 0 and: [(self classAtIndex: o2ClassIndex) ~= obj2]) ifTrue:
+			[o2ClassIndex := 0]].
+	(self numSlotsOf: obj1) = (self numSlotsOf: obj2)
+		ifTrue:
+			[self inPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag]
+		ifFalse:
+			[self outOfPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag].
+	"if copyHashFlag then nothing changes, since hashes were also swapped."
+	copyHashFlag ifTrue:
+		[^self].
+	"if copyHash is false then the classTable entries must be updated."
+	o1ClassIndex ~= 0
+		ifTrue:
+			[o2ClassIndex ~= 0
+				ifTrue: "both were in the table; just swap entries"
+					[| tmp |
+					 tmp := self classAtIndex: o1ClassIndex.
+					 self classAtIndex: o1ClassIndex put: obj2.
+					 self classAtIndex: o2ClassIndex put: tmp]
+				ifFalse: "o2 wasn't in the table; put it there"
+					[| newObj2 |
+					 newObj2 := self followForwarded: obj2.
+					 self assert: (self rawHashBitsOf: newObj2) = 0.
+					 self setHashBitsOf: newObj2 to: o1ClassIndex.
+					 self classAtIndex: o1ClassIndex put: newObj2]]
+		ifFalse:
+			[o2ClassIndex ~= 0 ifTrue:
+				[| newObj1 |
+				 newObj1 := self followForwarded: obj1.
+				 self assert: (self rawHashBitsOf: newObj1) = 0.
+				 self setHashBitsOf: newObj1 to: o2ClassIndex.
+				 self classAtIndex: o2ClassIndex put: newObj1]]
+]
+
+{ #category : #'become implementation' }
 SpurMemoryManager >> doBecome: obj1 to: obj2 copyHash: copyHashFlag [
 	| hashBits |
 	self forward: obj1 to: obj2.
@@ -2464,18 +2527,6 @@ SpurMemoryManager >> doBecome: obj1 to: obj2 copyHash: copyHashFlag [
 		 (self classAtIndex: hashBits) ~= obj2 ifTrue:
 			[hashBits := self rawHashBitsOf: obj1.
 			 self setHashBitsOf: obj2 to: hashBits]]
-]
-
-{ #category : #'become implementation' }
-SpurMemoryManager >> doBecome: obj1 with: obj2 copyHash: copyHashFlag [
-	((self isInClassTable: obj1)
-	 or: [self isInClassTable: obj1]) ifTrue:
-		[self halt].
-	(self numSlotsOf: obj1) = (self numSlotsOf: obj2)
-		ifTrue:
-			[self inPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag]
-		ifFalse:
-			[self outOfPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag]
 ]
 
 { #category : #accessing }
@@ -3376,7 +3427,7 @@ SpurMemoryManager >> inPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag [
 	self longLongAt: obj2 put: headerTemp.
 	self setIsRememberedOf: obj1 to: temp1.
 	self setIsRememberedOf: obj2 to: temp2.
-	"swapping headers swaps hash; if !copyHashFlagundo hash copy"
+	"swapping headers swaps hash; if !copyHashFlag undo hash copy"
 	copyHashFlag ifFalse:
 		[temp1 := self rawHashBitsOf: obj1.
 		 self setHashBitsOf: obj1 to: (self rawHashBitsOf: obj2).
@@ -3612,6 +3663,22 @@ SpurMemoryManager >> initializePostBootstrap [
 ]
 
 { #category : #'become implementation' }
+SpurMemoryManager >> innerBecomeObjectsIn: array1 and: array2 copyHash: copyHashFlag [
+	"Inner loop of two-way become."
+	0 to: (self numSlotsOf: array1) - 1 do:
+		[:i| | obj1 obj2 |
+		obj1 := self fetchPointer: i ofObject: array1.
+		obj2 := self fetchPointer: i ofObject: array2.
+		self doBecome: obj1 and: obj2 copyHash: copyHashFlag.
+		(self isForwarded: obj1) ifTrue:
+			[obj1 := self followForwarded: obj1.
+			 self storePointer: i ofObject: array1 withValue: obj1].
+		(self isForwarded: obj2) ifTrue:
+			[obj2 := self followForwarded: obj2.
+			 self storePointer: i ofObject: array2 withValue: obj2]]
+]
+
+{ #category : #'become implementation' }
 SpurMemoryManager >> innerBecomeObjectsIn: array1 to: array2 copyHash: copyHashFlag [
 	"Inner loop of one-way become."
 	0 to: (self numSlotsOf: array1) - 1 do:
@@ -3623,22 +3690,6 @@ SpurMemoryManager >> innerBecomeObjectsIn: array1 to: array2 copyHash: copyHashF
 			[obj1 := self followForwarded: obj1.
 			 self storePointer: i ofObject: array1 withValue: obj1].
 		self assert: (self isForwarded: obj2) not]
-]
-
-{ #category : #'become implementation' }
-SpurMemoryManager >> innerBecomeObjectsIn: array1 with: array2 copyHash: copyHashFlag [
-	"Inner loop of two-way become."
-	0 to: (self numSlotsOf: array1) - 1 do:
-		[:i| | obj1 obj2 |
-		obj1 := self fetchPointer: i ofObject: array1.
-		obj2 := self fetchPointer: i ofObject: array2.
-		self doBecome: obj1 with: obj2 copyHash: copyHashFlag.
-		(self isForwarded: obj1) ifTrue:
-			[obj1 := self followForwarded: obj1.
-			 self storePointer: i ofObject: array1 withValue: obj1].
-		(self isForwarded: obj2) ifTrue:
-			[obj2 := self followForwarded: obj2.
-			 self storePointer: i ofObject: array2 withValue: obj2]]
 ]
 
 { #category : #'object format' }
@@ -3926,7 +3977,7 @@ SpurMemoryManager >> isImmutable: objOop [
 	^((self longAt: objOop) >> self immutableBitShift bitAnd: 1) ~= 0
 ]
 
-{ #category : #'become implementation' }
+{ #category : #'class table' }
 SpurMemoryManager >> isInClassTable: objOop [
 	| hash |
 	hash := self rawHashBitsOf: objOop.
