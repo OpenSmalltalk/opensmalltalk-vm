@@ -366,6 +366,12 @@ Spur32BitMemoryManager >> isIntegerValue: intValue [
 ]
 
 { #category : #'header access' }
+Spur32BitMemoryManager >> isMarked: objOop [
+	self flag: #endianness.
+	^((self longAt: objOop + 4) >> self markedBitHalfShift bitAnd: 1) ~= 0
+]
+
+{ #category : #'object testing' }
 Spur32BitMemoryManager >> isWordsNonImm: objOop [
 	"Answer if the argument contains only indexable words (no oops). See comment in formatOf:"
 
@@ -480,6 +486,33 @@ Spur32BitMemoryManager >> setHashBitsOf: objOop to: hash [
 	self assert: (hash between: 0 and: self identityHashHalfWordMask).
 	self longAt: objOop + 4
 		put: ((self longAt: objOop + 4) bitClear: self identityHashHalfWordMask) + hash
+]
+
+{ #category : #'header access' }
+Spur32BitMemoryManager >> setIsGreyOf: objOop to: aBoolean [
+	self flag: #endianness.
+	self longAt: objOop
+		put: (aBoolean
+				ifTrue: [(self longAt: objOop) bitOr: 1 << self greyBitShift]
+				ifFalse: [(self longAt: objOop) bitAnd: (1 << self greyBitShift) bitInvert32])
+]
+
+{ #category : #'header access' }
+Spur32BitMemoryManager >> setIsImmutableOf: objOop to: aBoolean [
+	self flag: #endianness.
+	self longAt: objOop
+		put: (aBoolean
+				ifTrue: [(self longAt: objOop) bitOr: 1 << self immutableBitShift]
+				ifFalse: [(self longAt: objOop) bitAnd: (1 << self immutableBitShift) bitInvert32])
+]
+
+{ #category : #'header access' }
+Spur32BitMemoryManager >> setIsMarkedOf: objOop to: aBoolean [
+	self flag: #endianness.
+	self longAt: objOop + 4
+		put: (aBoolean
+				ifTrue: [(self longAt: objOop) bitOr: 1 << self markedBitHalfShift]
+				ifFalse: [(self longAt: objOop) bitAnd: (1 << self markedBitHalfShift) bitInvert32])
 ]
 
 { #category : #'header access' }
