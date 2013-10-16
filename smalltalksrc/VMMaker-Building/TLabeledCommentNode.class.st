@@ -28,7 +28,8 @@ TLabeledCommentNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 	aStream nextPutAll: '/* '.
 	aStream nextPutAll: comment.
 	aStream nextPutAll: ' */'.
-	asmLabel notNil ifTrue:
+	(asmLabel notNil "only output labels in the interpret function."
+	 and: [aCodeGen currentMethod selector == #interpret]) ifTrue:
 		[aStream crtab: level.
 		 aCodeGen outputAsmLabel: asmLabel on: aStream]
 ]
