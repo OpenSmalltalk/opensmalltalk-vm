@@ -133,8 +133,9 @@ SpurBootstrap class >> BehaviorPROTOTYPEhandleFailingBasicNew [
 
 	<primitive: 70>
 	self isVariable ifTrue: [^self basicNew: 0].
-	Smalltalk garbageCollect.
-	^self failingFailingBasicNew "retry after global garbage collect"
+	Smalltalk garbageCollect < 1048576 ifTrue:
+		[Smalltalk growMemoryByAtLeast: 1048576].
+	^self handleFailingFailingBasicNew "retry after global garbage collect"
 ]
 
 { #category : #'method prototypes' }
@@ -142,8 +143,8 @@ SpurBootstrap class >> BehaviorPROTOTYPEhandleFailingBasicNew: sizeRequested [
 	"This basicNew: gets sent after basicNew: has failed and allowed a
 	 scavenging garbage collection to occur.  The scavenging collection
 	 will have happened as the VM is activating the (failing) basicNew:.
-	 If failingBasicNew: fails then the scavenge failed to reclaim sufficient
-	 space and a global garbage collection is required.
+	 If handleFailingBasicNew: fails then the scavenge failed to reclaim
+	 sufficient space and a global garbage collection is required.
 
 	 Primitive. Answer an instance of this class with the number of indexable
 	 variables specified by the argument, sizeRequested.  Fail if this class is not
@@ -154,8 +155,9 @@ SpurBootstrap class >> BehaviorPROTOTYPEhandleFailingBasicNew: sizeRequested [
 	self isVariable ifFalse:
 		[self error: self printString, ' cannot have variable sized instances'].
 	(sizeRequested isInteger and: [sizeRequested >= 0]) ifTrue:
-		[Smalltalk garbageCollect.
-		^self failingFailingBasicNew: sizeRequested  "retry after global garbage collect"].
+		[Smalltalk garbageCollect < sizeRequested ifTrue:
+			[Smalltalk growMemoryByAtLeast: sizeRequested].
+		^self handleFailingFailingBasicNew: sizeRequested  "retry after global garbage collect and possible grow"].
 	self primitiveFailed
 ]
 
@@ -425,6 +427,14 @@ SpurBootstrap class >> SmallIntegerPROTOTYPEasCharacter [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrap class >> SmalltalkImagePROTOTYPEgrowMemoryByAtLeast: numBytes [
+	"Grow memory by at least the requested number of bytes.
+	 Fail if no memory is available."
+	<primitive: 180>
+	^self primitiveFailed
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrap class >> SmalltalkImagePROTOTYPEmaxIdentityHash [
 	"Answer the maximum identityHash value supported by the VM."
 	<primitive: 176>
@@ -443,6 +453,14 @@ SpurBootstrap class >> SmalltalkImagePROTOTYPEsetGCParameters [
 	averageObjectSize := 8 * self wordSize. "a good approximation"
 	numObjects := (proportion * survivorSize / averageObjectSize) rounded.
 	SmalltalkImage current vmParameterAt: 6 put: numObjects  "tenure when more than this many objects survive the GC"
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> SystemDictionaryPROTOTYPEgrowMemoryByAtLeast: numBytes [
+	"Grow memory by at least the requested number of bytes.
+	 Fail if no memory is available."
+	<primitive: 180>
+	^self primitiveFailed
 ]
 
 { #category : #'method prototypes' }
@@ -1352,7 +1370,7 @@ SpurBootstrap >> rehashImage [
 		setHashBitsOf: newHeap falseObject to: 2;
 		setHashBitsOf: newHeap trueObject to: 3.
 
-	rehashFlags := ByteArray new: newHeap classTableIndex + 7 // 8.
+	rehashFlags := ByteArray new: newHeap numClassTablePages * newHeap classTablePageSize.
 	n := 0.
 	newHeap classTableObjectsDo:
 		[:class| | classIndex |
