@@ -1747,6 +1747,19 @@ InterpreterPrimitives >> primitiveGreaterThanLargeIntegers [
 		[self pop: 2 thenPushBool: integerRcvr > integerArg]
 ]
 
+{ #category : #'memory space primitives' }
+InterpreterPrimitives >> primitiveGrowMemoryByAtLeast [
+	<option: #SpurObjectMemory>
+	| ammount |
+	ammount := self stackTop.
+	(objectMemory isIntegerObject: ammount) ifFalse:
+		[^self primitiveFailFor: PrimErrBadArgument].
+	self halt.
+	(objectMemory growOldSpaceByAtLeast: (objectMemory integerValueOf: ammount))
+		ifNil: [self primitiveFailFor: PrimErrNoMemory]
+		ifNotNil: [:segSize| self pop: 1 thenPushInteger: segSize]
+]
+
 { #category : #'system control primitives' }
 InterpreterPrimitives >> primitiveHeartbeatFrequency [
 	"Answer the heartbeat frequency in beats per second.  If the argument is true, reset the frequency measure."

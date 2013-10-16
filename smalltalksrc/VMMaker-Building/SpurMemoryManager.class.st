@@ -422,6 +422,7 @@ Class {
 		'heapMap',
 		'becomeEffectsFlags',
 		'pastSpaceStart',
+		'growHeadroom',
 		'shrinkThreshold',
 		'gcStartUsecs',
 		'scavengeInProgress',
@@ -748,6 +749,12 @@ SpurMemoryManager >> accessibleObjectAfter: objOop [
 		[^nil].
 	 (self isNormalObject: objAfter) ifTrue:
 		[^objAfter]] repeat
+]
+
+{ #category : #'free space' }
+SpurMemoryManager >> addFreeChunkWithBytes: bytes at: address [
+	self freeChunkWithBytes: bytes at: address.
+	totalFreeOldSpace := totalFreeOldSpace + bytes
 ]
 
 { #category : #'free space' }
@@ -1710,6 +1717,14 @@ SpurMemoryManager >> bytesLeft: includeSwapSpace [
 	+ (scavenger eden limit - freeStart)
 	+ (scavenger pastSpace limit - pastSpaceStart)
 	+ (scavenger futureSpace limit - scavenger futureSpace limit)
+	- coInterpreter interpreterAllocationReserveBytes
+]
+
+{ #category : #'free space' }
+SpurMemoryManager >> bytesLeftInOldSpace [
+	"Answer the amount of available free old space.  Used by primitiveFullGC
+	 to answer the current available memory."
+	^totalFreeOldSpace
 ]
 
 { #category : #'header format' }
@@ -3310,6 +3325,30 @@ SpurMemoryManager >> greyBitShift [
 	^31
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> growHeadroom [
+	^growHeadroom
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> growHeadroom: aValue [
+	^growHeadroom := aValue
+]
+
+{ #category : #'growing/shrinking memory' }
+SpurMemoryManager >> growOldSpaceByAtLeast: minAmmount [
+	"Attempt to grow memory by at least minAmmount.
+	 Answer the size of the new segment, or nil if the attempt failed."
+	| ammount |
+	<var: #segInfo type: #'SpurSegmentInfo *'>
+	statGrowMemory := statGrowMemory + 1.
+	ammount := minAmmount max: growHeadroom.
+	^(segmentManager addSegmentOfSize: ammount) ifNotNil:
+		[:segInfo|
+		 freeOldSpaceStart :=
+		 endOfMemory := segInfo segStart + segInfo segSize - self bridgeSize]
+]
+
 { #category : #'header access' }
 SpurMemoryManager >> hasOverflowHeader: objOop [
 	^(self rawNumSlotsOf: objOop) = self numSlotsMask
@@ -3520,8 +3559,6 @@ SpurMemoryManager >> initialize [
 	statSGCDeltaUsecs := statIGCDeltaUsecs := statFGCDeltaUsecs := 0.
 	statGrowMemory := statShrinkMemory := statRootTableCount := statTenures := statSurvivorCount := 0.
 	statRootTableOverflows := statSweepCount := statMarkCount := statSpecialMarkCount := statMkFwdCount := 0.
-	self flag: #temporary.
-	shrinkThreshold := 16r10000000. "something huge for now"
 
 	"we can initialize things that are virtual in C."
 	scavenger := SpurGenerationScavengerSimulator new manager: self; yourself.
@@ -3610,26 +3647,9 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	self initializeNewSpaceVariables.
 	self initializeOldSpaceFirstFree: freeOldSpaceStart. "initializes endOfMemory, freeStart"
 
-	"lowSpaceThreshold := 0.
-	signalLowSpace := false.
-	remapBufferCount := 0.
-	tenuringThreshold := 2000.  ""tenure all suriving objects if survivor count is over this threshold""
-	growHeadroom := 4*1024*1024. ""four megabytes of headroom when growing""
-	shrinkThreshold := 8*1024*1024. ""eight megabytes of free space before shrinking""
-
-	""garbage collection statistics""
-	statFullGCs := 0.
-	statFullGCUsecs := 0.
-	statIncrGCs := 0.
-	statIncrGCUsecs := 0.
-	statTenures := 0.
-	statRootTableOverflows := 0.
-	statGrowMemory := 0.
-	statShrinkMemory := 0.
-	forceTenureFlag := 0.
-	gcBiasToGrow := 0.
-	gcBiasToGrowGCLimit := 0.
-	extraRootCount := 0."
+	"These defaults should depend on machine size; e.g. too small on a powerful laptop, too big on a Pi."
+	growHeadroom := 8*1024*1024.		"headroom when growing"
+	shrinkThreshold := 16*1024*1024.		"free space before shrinking"
 ]
 
 { #category : #'free space' }
@@ -5470,6 +5490,12 @@ SpurMemoryManager >> showDisplayBits: aForm Left: l Top: t Right: r Bottom: b [
 	^coInterpreter showDisplayBits: aForm Left: l Top: t Right: r Bottom: b
 ]
 
+{ #category : #'growing/shrinking memory' }
+SpurMemoryManager >> shrinkObjectMemory: delta [ 
+	"Attempt to shrink the object memory by the given delta amount."
+	self shouldBeImplemented
+]
+
 { #category : #'free space' }
 SpurMemoryManager >> shrinkThreshold [
 	^shrinkThreshold
@@ -5655,6 +5681,21 @@ SpurMemoryManager >> splObj: index [
 SpurMemoryManager >> splObj: index put: anObject [
 	"Set one of the objects in the SpecialObjectsArray"
 	self storePointer: index ofObject: specialObjectsOop withValue: anObject
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> sqAllocateMemorySegmentOfSize: segmentSize Above: minAddress AllocatedSizeInto: allocSizePtrOrBlock [
+	<doNotGenerate>
+	"Simulate heap growth by growing memory by segmentSize + 1Meg.
+	 1Meg will be the distance between segments to be bridged."
+	| oneMeg newMemory start |
+	oneMeg := 1024 * 1024.
+	start := memory size * 4 + oneMeg.
+	newMemory := memory class new: memory size + (segmentSize + oneMeg / 4).
+	newMemory replaceFrom: 1 to: memory size with: memory startingAt: 1.
+	memory := newMemory.
+	allocSizePtrOrBlock value: segmentSize.
+	^start
 ]
 
 { #category : #'simulation only' }

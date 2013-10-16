@@ -43,6 +43,42 @@ SpurSegmentManager class >> isNonArgumentImplicitReceiverVariableName: instVarNa
 	^instVarName = 'manager'
 ]
 
+{ #category : #'growing/shrinking memory' }
+SpurSegmentManager >> addSegmentOfSize: ammount [
+	<returnTypeC: #'SpurSegmentInfo *'>
+	| allocatedSize |
+	<var: #oldSeg type: #'SpurSegmentInfo *'>
+	<var: #newSeg type: #'SpurSegmentInfo *'>
+	numSegments = numSegInfos ifTrue:
+		[self allocateOrExtendSegmentInfos].
+	self assert: numSegments < numSegInfos.
+	(manager "sent to the manager so that the simulator can increase memory to simulate a new segment"
+			sqAllocateMemorySegmentOfSize: ammount
+			Above: manager newSpaceLimit
+			AllocatedSizeInto: (self cCode: [self addressOf: allocatedSize]
+									inSmalltalk: [[:sz| allocatedSize := sz]])) ifNotNil:
+		[:segAddress| | newSeg oldSeg segEnd bridgeSpan clifton |
+		 oldSeg  := self addressOf: (segments at: numSegments - 1).
+		 newSeg := self addressOf: (segments at: numSegments).
+		 numSegments := numSegments + 1.
+		 newSeg
+			segStart: segAddress;
+			segSize: allocatedSize.
+		 segEnd := oldSeg segStart + oldSeg segSize.
+		 bridgeSpan := segAddress - segEnd + manager bridgeSize.
+		 clifton := segEnd - manager bridgeSize. "clifton is where the Avon bridge begins..."
+		 "the old bridge should be the terminator."
+		 self assert: (manager numSlotsOfAny: (manager objectStartingAt: clifton)) = 0.
+		 manager initSegmentBridgeWithBytes: bridgeSpan at: clifton.
+		 "the bridge should get us to the next segment"
+		 self assert: (manager addressAfter: (manager objectStartingAt: clifton)) = newSeg segStart.
+		 "and add the new free chunk to the free list"
+		 manager addFreeChunkWithBytes: allocatedSize - manager bridgeSize at: newSeg segStart.
+		 self assert: (manager addressAfter: (manager objectStartingAt: newSeg segStart)) = (newSeg segStart + newSeg segSize - manager bridgeSize).
+		 ^newSeg].
+	^nil
+]
+
 { #category : #snapshot }
 SpurSegmentManager >> adjustSegmentSwizzlesBy: firstSegmentShift [
 	"Adjust swizzles by firstSegmentShift."
@@ -96,9 +132,9 @@ SpurSegmentManager >> collapseSegmentsPostSwizzle [
 	numSegments := 1.
 	(self addressOf: (segments at: 0))
 		segStart: manager newSpaceLimit;
-		segSize: manager endOfMemory.
+		segSize: manager endOfMemory - manager newSpaceLimit.
 	"finally plant a bridge at the end of the coallesced segment and cut back the
-	 manager's ntion of the end of memory to immediately before the bridge."
+	 manager's notion of the end of memory to immediately before the bridge."
 	bridge := manager endOfMemory - manager bridgeSize.
 	manager
 		initSegmentBridgeWithBytes: manager bridgeSize at: bridge;
@@ -138,7 +174,7 @@ SpurSegmentManager >> initializeFromFreeChunks: freeChunks [
 								ifFalse: [manager addressAfter: (freeChunks at: i - 1)].
 					size := bridge + manager baseHeaderSize - start.
 					SpurSegmentInfo new
-						start: start;
+						segStart: start;
 						segSize: size;
 						yourself].
 	segments := CArrayAccessor on: segments.
@@ -242,7 +278,7 @@ SpurSegmentManager >> totalBytesInSegments [
 	total := 0.
 	0 to: numSegments - 1 do:
 		[:i|
-		total := total + (segments at: i) segSize - manager bridgeSize].
+		total := total + (segments at: i) segSize].
 	^total
 ]
 

@@ -788,17 +788,13 @@ SpurGenerationScavenger >> scavengeReferentsOf: referrer [
 				[referent := manager followForwarded: referent].
 			 ((manager isNonImmediate: referent)
 			  and: [manager isYoung: referent])
-				ifTrue:
-					["if target is already in future space forwarding pointer was due to a become:."
-					 (manager isInFutureSpace: referent)
-						ifTrue: [newLocation := referent]
+				ifTrue: "if target is already in future space forwarding pointer was due to a become:."
+					[(manager isInFutureSpace: referent)
+						ifTrue: [newLocation := referent. foundNewReferent := true]
 						ifFalse:
-							[(manager isForwarded: referent)
-								ifTrue: [self halt. "can this even happen?"
-									newLocation := manager followForwarded: referent]
-								ifFalse: [newLocation := self copyAndForward: referent]].
-					 (manager isYoung: newLocation) ifTrue:
-						[foundNewReferent := true].
+							[newLocation := self copyAndForward: referent.
+							 (manager isYoung: newLocation) ifTrue:
+								[foundNewReferent := true]].
 					 manager storePointerUnchecked: i ofMaybeForwardedObject: referrer withValue: newLocation]
 				ifFalse:
 					[manager storePointerUnchecked: i ofMaybeForwardedObject: referrer withValue: referent]]].
