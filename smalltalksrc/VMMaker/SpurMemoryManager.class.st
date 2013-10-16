@@ -1482,6 +1482,16 @@ SpurMemoryManager >> arrayFormat [
 	^2
 ]
 
+{ #category : #'growing/shrinking memory' }
+SpurMemoryManager >> assimilateNewSegment: segInfo [
+	"Update after adding a segment.
+	 Here we set freeOldSpaceStart & endOfMemory if required."
+	<var: #segInfo type: #'SpurSegmentInfo *'>
+	segInfo segStart >= endOfMemory ifTrue:
+		[freeOldSpaceStart :=
+		 endOfMemory := segInfo segStart + segInfo segSize - self bridgeSize]
+]
+
 { #category : #snapshot }
 SpurMemoryManager >> baseAddressOfImage [
 	^newSpaceLimit
@@ -3341,12 +3351,18 @@ SpurMemoryManager >> growOldSpaceByAtLeast: minAmmount [
 	 Answer the size of the new segment, or nil if the attempt failed."
 	| ammount |
 	<var: #segInfo type: #'SpurSegmentInfo *'>
+	"statGrowMemory counts attempts, not successes."
 	statGrowMemory := statGrowMemory + 1.
-	ammount := minAmmount max: growHeadroom.
+	"we need to include overhead for a new object header plus the segment bridge."
+	ammount := minAmmount + (self baseHeaderSize * 2 + self bridgeSize).
+	"round up to the nearest power of two."
+	ammount := 1 << (ammount - 1) highBit.
+	"and grow by at least growHeadroom."
+	ammount := ammount max: growHeadroom.
 	^(segmentManager addSegmentOfSize: ammount) ifNotNil:
 		[:segInfo|
-		 freeOldSpaceStart :=
-		 endOfMemory := segInfo segStart + segInfo segSize - self bridgeSize]
+		 self assimilateNewSegment: segInfo.
+		 segInfo segSize]
 ]
 
 { #category : #'header access' }
