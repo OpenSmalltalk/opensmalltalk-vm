@@ -47,34 +47,26 @@ SpurSegmentManager class >> isNonArgumentImplicitReceiverVariableName: instVarNa
 SpurSegmentManager >> addSegmentOfSize: ammount [
 	<returnTypeC: #'SpurSegmentInfo *'>
 	| allocatedSize |
-	<var: #oldSeg type: #'SpurSegmentInfo *'>
 	<var: #newSeg type: #'SpurSegmentInfo *'>
-	numSegments = numSegInfos ifTrue:
-		[self allocateOrExtendSegmentInfos].
-	self assert: numSegments < numSegInfos.
 	(manager "sent to the manager so that the simulator can increase memory to simulate a new segment"
 			sqAllocateMemorySegmentOfSize: ammount
 			Above: manager newSpaceLimit
 			AllocatedSizeInto: (self cCode: [self addressOf: allocatedSize]
 									inSmalltalk: [[:sz| allocatedSize := sz]])) ifNotNil:
-		[:segAddress| | newSeg oldSeg segEnd bridgeSpan clifton |
-		 oldSeg  := self addressOf: (segments at: numSegments - 1).
-		 newSeg := self addressOf: (segments at: numSegments).
-		 numSegments := numSegments + 1.
+		[:segAddress| | newSegIndex newSeg |
+		 newSegIndex := self insertSegmentFor: segAddress.
+		 newSeg := self addressOf: (segments at: newSegIndex).
 		 newSeg
 			segStart: segAddress;
 			segSize: allocatedSize.
-		 segEnd := oldSeg segStart + oldSeg segSize.
-		 bridgeSpan := segAddress - segEnd + manager bridgeSize.
-		 clifton := segEnd - manager bridgeSize. "clifton is where the Avon bridge begins..."
-		 "the old bridge should be the terminator."
-		 self assert: (manager numSlotsOfAny: (manager objectStartingAt: clifton)) = 0.
-		 manager initSegmentBridgeWithBytes: bridgeSpan at: clifton.
-		 "the bridge should get us to the next segment"
-		 self assert: (manager addressAfter: (manager objectStartingAt: clifton)) = newSeg segStart.
-		 "and add the new free chunk to the free list"
+		 self bridgeFrom: (self addressOf: (segments at: newSegIndex - 1)) to: newSeg.
+		 self bridgeFrom: newSeg to: (newSegIndex = (numSegments - 1) ifFalse:
+										[self addressOf: (segments at: newSegIndex + 1)]).
+		 "and add the new free chunk to the free list; done here
+		  instead of in assimilateNewSegment: for the assert"
 		 manager addFreeChunkWithBytes: allocatedSize - manager bridgeSize at: newSeg segStart.
-		 self assert: (manager addressAfter: (manager objectStartingAt: newSeg segStart)) = (newSeg segStart + newSeg segSize - manager bridgeSize).
+		 self assert: (manager addressAfter: (manager objectStartingAt: newSeg segStart))
+					= (newSeg segStart + newSeg segSize - manager bridgeSize).
 		 ^newSeg].
 	^nil
 ]
@@ -97,6 +89,7 @@ SpurSegmentManager >> adjustSegmentSwizzlesBy: firstSegmentShift [
 { #category : #private }
 SpurSegmentManager >> allocateOrExtendSegmentInfos [
 	"Increase the number of allocated segInfos by 16."
+	<returnTypeC: #void>
 	| newNumSegs |
 	numSegInfos = 0 ifTrue:
 		[numSegInfos := 16.
@@ -117,6 +110,25 @@ SpurSegmentManager >> allocateOrExtendSegmentInfos [
 			ms: 0
 			et: newNumSegs - numSegInfos * (self sizeof: SpurSegmentInfo)].
 	numSegInfos := newNumSegs
+]
+
+{ #category : #'growing/shrinking memory' }
+SpurSegmentManager >> bridgeFrom: aSegment to: nextSegmentOrNil [
+	"Create a bridge from aSegment to the next segment,
+	 or create a terminating bridge if there is no next segment."
+	<var: #aSegment type: #'SpurSegmentInfo *'>
+	<var: #nextSegmentOrNil type: #'SpurSegmentInfo *'>
+	| segEnd clifton bridgeSpan |
+	segEnd := aSegment segStart + aSegment segSize.
+	clifton := segEnd - manager bridgeSize. "clifton is where the Avon bridge begins..."
+	bridgeSpan := nextSegmentOrNil
+					ifNil: [manager bridgeSize]
+					ifNotNil: [nextSegmentOrNil segStart - segEnd + manager bridgeSize].
+	manager initSegmentBridgeWithBytes: bridgeSpan at: clifton.
+	"the revised bridge should get us to the new segment"
+	self assert: (nextSegmentOrNil isNil
+				 or: [(manager addressAfter: (manager objectStartingAt: clifton)) = nextSegmentOrNil segStart])
+
 ]
 
 { #category : #snapshot }
@@ -180,6 +192,28 @@ SpurSegmentManager >> initializeFromFreeChunks: freeChunks [
 	segments := CArrayAccessor on: segments.
 	freeChunks allButLast do:
 		[:bridge| self assert: (manager isValidSegmentBridge: bridge)]
+]
+
+{ #category : #'growing/shrinking memory' }
+SpurSegmentManager >> insertSegmentFor: segAddress [
+	"Reserve a new segInfo for segAddress.  If segAddress
+	 is in the middle of the existing segments, shuffle them
+	 up to make room. Answer the new segment's index."
+	| segIndex lastSegIndex |
+	self assert: segAddress > ((segments at: 0) segStart + (segments at: 0) segSize).
+	numSegments = numSegInfos ifTrue:
+		[self allocateOrExtendSegmentInfos].
+	self assert: numSegments < numSegInfos.
+	segIndex := lastSegIndex := numSegments - 1.
+	numSegments := numSegments + 1.
+	[segAddress > ((segments at: segIndex) segStart
+					+ (segments at: segIndex) segSize) ifTrue:
+		[segIndex := segIndex + 1.
+		 lastSegIndex to: segIndex by: -1 do:
+			[:idx| segments at: idx + 1 put: (segments at: idx)].
+		 ^segIndex].
+	 segIndex := segIndex - 1]
+		repeat
 ]
 
 { #category : #testing }

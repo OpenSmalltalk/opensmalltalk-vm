@@ -20,6 +20,16 @@ Spur32BitCoMemoryManager class >> simulatorClass [
 	^Spur32BitMMLECoSimulator
 ]
 
+{ #category : #'growing/shrinking memory' }
+Spur32BitCoMemoryManager >> assimilateNewSegment: segInfo [
+	"Update after adding a segment.
+	 Here we make sure the new segment is not executable."
+	<var: #segInfo type: #'SpurSegmentInfo *'>
+	coInterpreter
+		sqMakeMemoryNotExecutableFrom: segInfo segStart
+		To: segInfo segStart + segInfo segSize
+]
+
 { #category : #trampolines }
 Spur32BitCoMemoryManager >> ceClassAtIndex: classIndex [
 	<api>
@@ -67,23 +77,6 @@ Spur32BitCoMemoryManager >> freeStartAddress [
 	<returnTypeC: #usqInt>
 	^self cCode: [(self addressOf: freeStart) asUnsignedInteger]
 		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #freeStart in: self]
-]
-
-{ #category : #'growing/shrinking memory' }
-Spur32BitCoMemoryManager >> growOldSpaceByAtLeast: minAmmount [
-	"Attempt to grow memory by at least minAmmount.
-	 Answer the size of the new segment, or nil if the attempt failed.
-	 Override to remove execute permission from the new segment."
-	| ammount |
-	<var: #segInfo type: #'SpurSegmentInfo *'>
-	statGrowMemory := statGrowMemory + 1.
-	ammount := minAmmount max: growHeadroom.
-	^(segmentManager addSegmentOfSize: ammount) ifNotNil:
-		[:segInfo|
-		 freeOldSpaceStart :=
-		 endOfMemory := segInfo segStart + segInfo segSize - self bridgeSize.
-		 coInterpreter sqMakeMemoryNotExecutableFrom: segInfo segStart To: segInfo segStart + segInfo segSize.
-		 segInfo segSize]
 ]
 
 { #category : #'garbage collection' }
