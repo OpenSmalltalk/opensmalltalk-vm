@@ -1754,10 +1754,9 @@ InterpreterPrimitives >> primitiveGrowMemoryByAtLeast [
 	ammount := self stackTop.
 	(objectMemory isIntegerObject: ammount) ifFalse:
 		[^self primitiveFailFor: PrimErrBadArgument].
-	self halt.
 	(objectMemory growOldSpaceByAtLeast: (objectMemory integerValueOf: ammount))
 		ifNil: [self primitiveFailFor: PrimErrNoMemory]
-		ifNotNil: [:segSize| self pop: 1 thenPushInteger: segSize]
+		ifNotNil: [:segSize| self pop: 2 thenPushInteger: segSize]
 ]
 
 { #category : #'system control primitives' }
