@@ -69,6 +69,23 @@ Spur32BitCoMemoryManager >> freeStartAddress [
 		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #freeStart in: self]
 ]
 
+{ #category : #'growing/shrinking memory' }
+Spur32BitCoMemoryManager >> growOldSpaceByAtLeast: minAmmount [
+	"Attempt to grow memory by at least minAmmount.
+	 Answer the size of the new segment, or nil if the attempt failed.
+	 Override to remove execute permission from the new segment."
+	| ammount |
+	<var: #segInfo type: #'SpurSegmentInfo *'>
+	statGrowMemory := statGrowMemory + 1.
+	ammount := minAmmount max: growHeadroom.
+	^(segmentManager addSegmentOfSize: ammount) ifNotNil:
+		[:segInfo|
+		 freeOldSpaceStart :=
+		 endOfMemory := segInfo segStart + segInfo segSize - self bridgeSize.
+		 coInterpreter sqMakeMemoryNotExecutableFrom: segInfo segStart To: segInfo segStart + segInfo segSize.
+		 segInfo segSize]
+]
+
 { #category : #'garbage collection' }
 Spur32BitCoMemoryManager >> headerWhileForwardingOf: aCompiledMethodObjOop [
 	"Answer the header of the argument even though

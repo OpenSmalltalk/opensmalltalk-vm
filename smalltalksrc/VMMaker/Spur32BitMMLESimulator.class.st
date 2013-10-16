@@ -205,7 +205,8 @@ Spur32BitMMLESimulator >> isIntegerObject: oop [
 		primitiveObjectAtPut
 		commonVariable:at:put:cacheIndex:
 		primDigitBitShiftMagnitude:
-		externalInstVar:ofContext:) includes: sel) ifFalse:
+		externalInstVar:ofContext:
+		primitiveGrowMemoryByAtLeast) includes: sel) ifFalse:
 		[self halt].
 	^super isIntegerObject: oop
 ]
@@ -271,6 +272,11 @@ Spur32BitMMLESimulator >> longLongAt: byteAddress put: a64BitValue [
 		longAt: byteAddress put: (a64BitValue bitAnd: 16rffffffff);
 		longAt: byteAddress + 4 put: a64BitValue >> 32.
 	^a64BitValue
+]
+
+{ #category : #'spur bootstrap' }
+Spur32BitMMLESimulator >> numClassTablePages [
+	^numClassTablePages
 ]
 
 { #category : #'generation scavenging' }

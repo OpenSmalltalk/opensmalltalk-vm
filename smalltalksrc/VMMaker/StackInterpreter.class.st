@@ -1005,7 +1005,9 @@ StackInterpreter class >> initializePrimitiveTable [
 		(172 174 primitiveFail)
 		(175 primitiveBehaviorHash)
 		(176 primitiveMaxIdentityHash)
-		(177 184 primitiveFail)
+		(177 179 primitiveFail)
+		(180 primitiveGrowMemoryByAtLeast)
+		(181 184 primitiveFail)
 
 		"CriticalSection primitives"
 		(185 primitiveExitCriticalSection) "similar to signal hence index = signal + 100"
