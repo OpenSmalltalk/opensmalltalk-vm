@@ -583,13 +583,12 @@ SpurBootstrap >> allPrototypeMethodSymbols [
 SpurBootstrap >> allocateClassTable [
 	"Allocate the root of the classTable plus enough pages to accomodate all classes in
 	 the classToIndex map.  Don't fill in the entries yet; the classes have yet to be cloned."
-	| tableRootSize tableRoot page maxSize numPages |
-	tableRootSize := self classTableSize / newHeap classTablePageSize.
+	| tableRoot page maxSize numPages |
 	tableRoot := newHeap
-					allocateSlots: tableRootSize
+					allocateSlots: newHeap classTableRootSlots + newHeap hiddenRootSlots
 					format: newHeap arrayFormat
 					classIndex: newHeap arrayClassIndexPun.
-	self assert: (newHeap numSlotsOf: tableRoot) = tableRootSize.
+	self assert: (newHeap numSlotsOf: tableRoot) = (newHeap classTableRootSlots + newHeap hiddenRootSlots).
 	self assert: (newHeap formatOf: tableRoot) = newHeap arrayFormat.
 	self assert: (newHeap classIndexOf: tableRoot) = newHeap arrayClassIndexPun.
 	newHeap nilFieldsOf: tableRoot.
@@ -605,7 +604,7 @@ SpurBootstrap >> allocateClassTable [
 	lastClassTablePage := page.
 	newHeap nilFieldsOf: page.
 	newHeap storePointer: 0 ofObject: tableRoot withValue: page.
-	newHeap classTableRootObj: tableRoot.
+	newHeap hiddenRootsObj: tableRoot.
 	maxSize := classToIndex inject: 0 into: [:a :b| a max: b].
 	numPages := (maxSize + newHeap classTableMinorIndexMask / newHeap classTablePageSize) truncated.
 	2 to: numPages do:
