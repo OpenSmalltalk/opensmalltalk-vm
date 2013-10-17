@@ -375,7 +375,7 @@ ObjectMemory class >> initializeSpecialObjectIndices [
 	SelectorRunWithIn := 49.
 
 	SelectorAttemptToAssign := 50.
-	"PrimErrTableIndex := 51. in Interpreter class>>initializePrimitiveErrorCodes"
+	"PrimErrTableIndex := 51. in VMClass class>>initializePrimitiveErrorCodes"
 	ClassAlien := 52.
 	SelectorInvokeCallback := 53.
 	ClassUnsafeAlien := 54.

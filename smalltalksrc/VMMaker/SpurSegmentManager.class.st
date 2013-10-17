@@ -50,7 +50,7 @@ SpurSegmentManager >> addSegmentOfSize: ammount [
 	<var: #newSeg type: #'SpurSegmentInfo *'>
 	(manager "sent to the manager so that the simulator can increase memory to simulate a new segment"
 			sqAllocateMemorySegmentOfSize: ammount
-			Above: manager newSpaceLimit
+			Above: (segments at: 0) segStart + (segments at: 0) segSize
 			AllocatedSizeInto: (self cCode: [self addressOf: allocatedSize]
 									inSmalltalk: [[:sz| allocatedSize := sz]])) ifNotNil:
 		[:segAddress| | newSegIndex newSeg |

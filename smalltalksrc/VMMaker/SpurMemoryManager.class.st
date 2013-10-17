@@ -9,7 +9,6 @@ Instance Variables
 	classTableBitmap			<CArrayAccessor on: ByteArray>
 	classTableFirstPage:		<Integer oop>
 	classTableIndex:			<Integer>
-	classTableRootObj:			<Integer oop>
 	coInterpreter:				<StackInterpreter|CoInterpreter (StackInterpreterSimulator|CogVMSimulator)>
 	endOfMemory:				<Integer address>
 	falseObj:					<Integer oop>
@@ -19,6 +18,7 @@ Instance Variables
 	freeStart:					<Integer address>
 	gcStartUsecs:				<Integer>
 	heapMap:					<CogCheck32BitHeapMap>
+	hiddenRootsObj:			<Integer oop>
 	lastHash:					<Integer>
 	lowSpaceThreshold:		<Integer address>
 	memory:					<Bitmap|LittleEndianBitmap>
@@ -76,10 +76,6 @@ classTableFirstPage
 classTableIndex
 	- the last known used index in the class table, used to limit the search for empty slots
 
-classTableRootObj
-	- the root page of the class table. its elements are pages containing classes.
-	  Must be the fifth object in oldSpace.
-
 coInterpreter
 	- the VM interpreter using this heap
 
@@ -109,6 +105,11 @@ gcStartUsecs
 
 heapMap
 	- a bitmap used to check for leaks. a bit is set in the map at each object's header.  every pointer in the heap should point to the header of an object
+
+hiddenRootsObj
+	- the root page of the class table and some other toos (e.g. the ephemeron queue). its first
+	  numClassTablePages elements are pages containing classes. Remaining slots hold other
+	  roots the VM needs.  Must be the fifth object in oldSpace.
 
 lastHash
 	- the last object hash value.  a pseudo-randome number generator.
@@ -406,7 +407,7 @@ Class {
 		'falseObj',
 		'trueObj',
 		'specialObjectsOop',
-		'classTableRootObj',
+		'hiddenRootsObj',
 		'classTableFirstPage',
 		'classTableIndex',
 		'numClassTablePages',
@@ -652,7 +653,7 @@ SpurMemoryManager class >> initializeSpecialObjectIndices [
 	SelectorRunWithIn := 49.
 
 	SelectorAttemptToAssign := 50.
-	"PrimErrTableIndex := 51. in Interpreter class>>initializePrimitiveErrorCodes"
+	"PrimErrTableIndex := 51. in VMClass class>>initializePrimitiveErrorCodes"
 	ClassAlien := 52.
 	SelectorInvokeCallback := 53.
 	ClassUnsafeAlien := 54.
@@ -1121,7 +1122,7 @@ SpurMemoryManager >> allocateBytes: numBytes classIndex: classIndex [
 		classIndex: classIndex
 ]
 
-{ #category : #simulation }
+{ #category : #'spur bootstrap' }
 SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceBytes stackSize: stackBytes codeSize: codeBytes [
 	"Intialize the receiver for bootsraping an image.
 	 Set up a large oldSpace and an empty newSpace and set-up freeStart and scavengeThreshold
@@ -1293,14 +1294,16 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 						[self addFreeSubTree: larger]]]
 		ifFalse: "parent; stitch back into appropriate side of parent."
 			[smaller = 0
-				ifTrue: [self storePointer: (chunk = (self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: parent)
-											ifTrue: [self freeChunkSmallerIndex]
-											ifFalse: [self freeChunkLargerIndex])
+				ifTrue:
+					[self storePointer: (chunk = (self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: parent)
+										ifTrue: [self freeChunkSmallerIndex]
+										ifFalse: [self freeChunkLargerIndex])
 							ofFreeChunk: parent
 							withValue: larger.
-						self storePointer: self freeChunkParentIndex
-							ofObject: larger
-							withValue: parent]
+					 larger ~= 0 ifTrue:
+						[self storePointer: self freeChunkParentIndex
+							ofFreeChunk: larger
+							withValue: parent]]
 				ifFalse:
 					[self storePointer: (chunk = (self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: parent)
 											ifTrue: [self freeChunkSmallerIndex]
@@ -1308,7 +1311,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 						ofFreeChunk: parent
 						withValue: smaller.
 					 self storePointer: self freeChunkParentIndex
-						ofObject: smaller
+						ofFreeChunk: smaller
 						withValue: parent.
 					 larger ~= 0 ifTrue:
 						[self addFreeSubTree: larger]]].
@@ -2084,7 +2087,7 @@ SpurMemoryManager >> classAtIndex: classIndex [
 	| classTablePage |
 	self assert: (classIndex <= self tagMask or: [classIndex >= self arrayClassIndexPun]).
 	classTablePage := self fetchPointer: classIndex >> self classTableMajorIndexShift
-							ofObject: classTableRootObj.
+							ofObject: hiddenRootsObj.
 	classTablePage = nilObj ifTrue:
 		[^nil].
 	^self
@@ -2099,7 +2102,7 @@ SpurMemoryManager >> classAtIndex: classIndex put: objOop [
 	self assert: (classIndex <= self tagMask or: [classIndex >= self arrayClassIndexPun]).
 	self assert: (objOop = nilObj or: [(self rawHashBitsOf: objOop) = classIndex]).
 	classTablePage := self fetchPointer: classIndex >> self classTableMajorIndexShift
-							ofObject: classTableRootObj.
+							ofObject: hiddenRootsObj.
 	classTablePage = nilObj ifTrue:
 		[self error: 'attempt to add class to empty page'].
 	^self
@@ -2245,7 +2248,7 @@ SpurMemoryManager >> classTableIndex [
 	^classTableIndex
 ]
 
-{ #category : #accessing }
+{ #category : #'spur bootstrap' }
 SpurMemoryManager >> classTableIndex: n [
 	classTableIndex := n
 ]
@@ -2263,11 +2266,13 @@ SpurMemoryManager >> classTableMinorIndexMask [
 	^1 << self classTableMajorIndexShift - 1
 ]
 
-{ #category : #'object enumeration' }
+{ #category : #'spur bootstrap' }
 SpurMemoryManager >> classTableObjectsDo: aBlock [
-	0 to: (self numSlotsOf: classTableRootObj) - 1 do:
+	"for the bootstrap..."
+	<doNotGenerate>
+	0 to: self classTableRootSlots - 1 do:
 		[:i| | page |
-		page := self fetchPointer: i ofObject: classTableRootObj.
+		page := self fetchPointer: i ofObject: hiddenRootsObj.
 		0 to: (self numSlotsOf: page) - 1 do:
 			[:j| | classOrNil |
 			classOrNil := self fetchPointer: j ofObject: page.
@@ -2284,32 +2289,13 @@ SpurMemoryManager >> classTablePageSize [
 
 { #category : #accessing }
 SpurMemoryManager >> classTableRootObj [
-	"For mapInterpreterOops & bootstrap"
-	^classTableRootObj
-]
-
-{ #category : #'class table' }
-SpurMemoryManager >> classTableRootObj: anOop [
-	classTableRootObj := anOop.
-	classTableFirstPage := self fetchPointer: 0 ofObject: classTableRootObj.
-	self assert: (self numSlotsOf: classTableRootObj) = self classTableRootSlots.
-	self assert: (self numSlotsOf: classTableFirstPage) - 1 = self classTableMinorIndexMask.
-	"Set classTableIndex to the start of the last used page (excepting first page).
-	 Set numClassTablePages to the number of used pages."
-	numClassTablePages := self numSlotsOf: classTableRootObj.
-	2 to: numClassTablePages - 1 do:
-		[:i|
-		(self fetchPointer: i ofObject: classTableRootObj) = nilObj ifTrue:
-			[numClassTablePages := i.
-			 classTableIndex := (numClassTablePages - 1 max: 1) << self classTableMajorIndexShift.
-			 ^self]].
-	"no unused pages; set it to the start of the second page."
-	classTableIndex := 1 << self classTableMajorIndexShift
+	"For Cogit & bootstrap"
+	^hiddenRootsObj
 ]
 
 { #category : #'class table' }
 SpurMemoryManager >> classTableRootSlots [
-	"Answer the number of slots in the root of the class table."
+	"Answer the number of slots for class table pages in the hidden root object."
 	^1 << (self classIndexFieldWidth - self classTableMajorIndexShift)
 ]
 
@@ -2474,7 +2460,7 @@ SpurMemoryManager >> countNumClassPagesPreSwizzle: bytesToShift [
 							limit: freeOldSpaceStart.
 	nilObjPreSwizzle := newSpaceLimit - bytesToShift.
 	numClassTablePages := self numSlotsOf: classTableRoot.
-	self assert: numClassTablePages = self classTableRootSlots.
+	self assert: numClassTablePages = (self classTableRootSlots + self hiddenRootSlots).
 	2 to: numClassTablePages - 1 do:
 		[:i|
 		(self fetchPointer: i ofObject: classTableRoot) = nilObjPreSwizzle ifTrue:
@@ -2667,7 +2653,7 @@ SpurMemoryManager >> enterIntoClassTable: aBehavior [
 	self assert: initialMajorIndex > 0.
 	minorIndex := classTableIndex bitAnd: self classTableMinorIndexMask.
 
-	[page := self fetchPointer: majorIndex ofObject: classTableRootObj.
+	[page := self fetchPointer: majorIndex ofObject: hiddenRootsObj.
 	 page = nilObj ifTrue:
 		[page := self allocateSlotsInOldSpace: self classTablePageSize
 					format: self arrayFormat
@@ -2676,7 +2662,7 @@ SpurMemoryManager >> enterIntoClassTable: aBehavior [
 			[^PrimErrNoMemory].
 		 self fillObj: page numSlots: self classTablePageSize with: nilObj.
 		 self storePointer: majorIndex
-			ofObject: classTableRootObj
+			ofObject: hiddenRootsObj
 			withValue: page.
 		 numClassTablePages := numClassTablePages + 1.
 		 minorIndex := 0].
@@ -2702,6 +2688,18 @@ SpurMemoryManager >> enterIntoClassTable: aBehavior [
 { #category : #'header formats' }
 SpurMemoryManager >> ephemeronFormat [
 	^5
+]
+
+{ #category : #'garbage collection' }
+SpurMemoryManager >> ephemeronQueue [
+	"The ephemeron queue is the first hidden root after the class table pages."
+	^self fetchPointer: self numClassTablePages ofObject: hiddenRootsObj
+]
+
+{ #category : #'garbage collection' }
+SpurMemoryManager >> ephemeronQueue: anObject [
+	"The ephemeron queue is the first hidden root after the class table pages."
+	self storePointer: self numClassTablePages ofObject: hiddenRootsObj withValue: anObject
 ]
 
 { #category : #compaction }
@@ -2762,7 +2760,7 @@ SpurMemoryManager >> expungeDuplicateClasses [
 	1 to: numClassTablePages - 1 do:
 		[:i| | classTablePage |
 		"optimize scan by only scanning bitmap in regions that have pages."
-		classTablePage := self fetchPointer: i ofObject: classTableRootObj.
+		classTablePage := self fetchPointer: i ofObject: hiddenRootsObj.
 		classTablePage ~= nilObj ifTrue:
 			[i << self classTableMajorIndexShift
 				to: i << self classTableMajorIndexShift + self classTableMinorIndexMask
@@ -2798,7 +2796,7 @@ SpurMemoryManager >> expungeFromClassTable: aBehavior [
 	classIndex := self rawHashBitsOf: aBehavior.
 	majorIndex := classIndex >> self classTableMajorIndexShift.
 	minorIndex := classIndex bitAnd: self classTableMinorIndexMask.
-	classTablePage := self fetchPointer: majorIndex ofObject: classTableRootObj.
+	classTablePage := self fetchPointer: majorIndex ofObject: hiddenRootsObj.
 	self assert: classTablePage ~= classTableFirstPage.
 	self assert: (self numSlotsOf: classTablePage) = self classTablePageSize.
 	self assert: (self fetchPointer: minorIndex ofObject: classTablePage) = aBehavior.
@@ -3433,6 +3431,34 @@ SpurMemoryManager >> heapMap [
 	^heapMap
 ]
 
+{ #category : #'class table' }
+SpurMemoryManager >> hiddenRootSlots [
+	"Answer the number of extra root slots in the root of the hidden root object."
+	^8
+]
+
+{ #category : #'class table' }
+SpurMemoryManager >> hiddenRootsObj: anOop [
+	hiddenRootsObj := anOop.
+	classTableFirstPage := self fetchPointer: 0 ofObject: hiddenRootsObj.
+	self assert: (self numSlotsOf: hiddenRootsObj) = (self classTableRootSlots + self hiddenRootSlots).
+	self assert: (self numSlotsOf: classTableFirstPage) - 1 = self classTableMinorIndexMask.
+	self cCode: [self assert: self validClassTableRootPages]
+		inSmalltalk: [numClassTablePages ifNotNil:
+						[self assert: self validClassTableRootPages]]..
+	"Set classTableIndex to the start of the last used page (excepting first page).
+	 Set numClassTablePages to the number of used pages."
+	numClassTablePages := self classTableRootSlots.
+	2 to: numClassTablePages - 1 do:
+		[:i|
+		(self fetchPointer: i ofObject: hiddenRootsObj) = nilObj ifTrue:
+			[numClassTablePages := i.
+			 classTableIndex := (numClassTablePages - 1 max: 1) << self classTableMajorIndexShift.
+			 ^self]].
+	"no unused pages; set it to the start of the second page."
+	classTableIndex := 1 << self classTableMajorIndexShift
+]
+
 { #category : #'header format' }
 SpurMemoryManager >> identityHashFieldWidth [
 	^22
@@ -3688,7 +3714,7 @@ SpurMemoryManager >> initializeOldSpaceFirstFree: startOfFreeOldSpace [
 	self checkFreeSpace
 ]
 
-{ #category : #simulation }
+{ #category : #'spur bootstrap' }
 SpurMemoryManager >> initializePostBootstrap [
 	"The heap has just been bootstrapped into a modified newSpace occupying all of memory
 	 above newSpace (and the codeZone). Put things back to some kind of normalcy."
@@ -4419,8 +4445,8 @@ SpurMemoryManager >> lookupAddress: address [
 	| fmt size string class classSize maybeThisClass classNameIndex thisClassIndex |
 	(self addressCouldBeObj: address) ifFalse:
 		[^nil].
-	address - self baseHeaderSize = classTableRootObj ifTrue:
-		[^'(classTableRoot+baseHeaderSize)'].
+	address - self baseHeaderSize = hiddenRootsObj ifTrue:
+		[^'(hiddenRootsObj+baseHeaderSize)'].
 	fmt := self formatOf: address.
 	size := self lengthOf: address baseHeader: (self baseHeader: address) format: fmt.
 	size = 0 ifTrue:
@@ -4976,11 +5002,14 @@ SpurMemoryManager >> postBecomeScanClassTable [
 	 (not the classes themselves, since marking a class doesn't help in knowing if its index is used).
 	 On image load, and during incrememtal scan-mark and full GC, classIndices are marked.
 	 We can somehow avoid following classes from the classTable until after this mark phase."
+
+	self assert: self validClassTableRootPages.
+
 	(becomeEffectsFlags anyMask: BecamePointerObjectFlag+BecameCompiledMethodFlag) ifFalse: [^self].
 	
-	0 to: (self numSlotsOf: classTableRootObj) - 1 do:
+	0 to: numClassTablePages - 1 do:
 		[:i| | page |
-		page := self fetchPointer: i ofObject: classTableRootObj.
+		page := self fetchPointer: i ofObject: hiddenRootsObj.
 		0 to: (self numSlotsOf: page) - 1 do:
 			[:j| | classOrNil |
 			classOrNil := self fetchPointer: j ofObject: page.
@@ -5130,8 +5159,8 @@ SpurMemoryManager >> reInitSegmentBridge: bridgeOop [
 ]
 
 { #category : #'class table' }
-SpurMemoryManager >> reInitializeClassTablePostLoad: classTableRoot [
-	self classTableRootObj: classTableRoot.
+SpurMemoryManager >> reInitializeClassTablePostLoad: hiddenRoots [
+	self hiddenRootsObj: hiddenRoots.
 	self expungeDuplicateClasses
 ]
 
@@ -5292,7 +5321,7 @@ SpurMemoryManager >> scanClassPostBecome: startClassObj effects: becomeEffects [
 		 classObj := obj]
 ]
 
-{ #category : #'debug support' }
+{ #category : #'spur bootstrap' }
 SpurMemoryManager >> scavenger [
 	<doNotGenerate>
 	^scavenger
@@ -5371,7 +5400,7 @@ SpurMemoryManager >> segmentManager [
 	^segmentManager
 ]
 
-{ #category : #'debug support' }
+{ #category : #'spur bootstrap' }
 SpurMemoryManager >> setCheckForLeaks: anInteger [
 	" 0 = do nothing.
 	  1 = check for leaks on fullGC.
@@ -6137,6 +6166,28 @@ SpurMemoryManager >> unlinkFreeChunk: chunk atIndex: index [
 				fetchPointer: self freeChunkNextIndex
 				ofFreeChunk: chunk).
 	^chunk
+]
+
+{ #category : #'class table' }
+SpurMemoryManager >> validClassTableRootPages [
+	"Answer if numClassTablePages is correct."
+
+	"is it in range?"
+	(numClassTablePages > 1 and: [numClassTablePages <= self classTableRootSlots]) ifFalse:
+		[^false].
+	"are all pages the right size?"
+	0 to: numClassTablePages - 1 do:
+		[:i| | obj |
+		 obj := self fetchPointer: i ofObject: hiddenRootsObj.
+		 ((self addressCouldBeObj: obj)
+		  and: [(self numSlotsOf: obj) = self classTablePageSize]) ifFalse:
+			[^false]].
+	"are all entries beyond numClassTablePages nil?"
+	numClassTablePages to: self classTableRootSlots - 1 do:
+		[:i|
+		(self fetchPointer: i ofObject: hiddenRootsObj) ~= nilObj ifTrue:
+			[^false]].
+	^true
 ]
 
 { #category : #'memory access' }
