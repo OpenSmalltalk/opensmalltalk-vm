@@ -21,6 +21,7 @@ Instance Variables
 	hiddenRootsObj:			<Integer oop>
 	lastHash:					<Integer>
 	lowSpaceThreshold:		<Integer address>
+	marking:					<Boolean>
 	memory:					<Bitmap|LittleEndianBitmap>
 	needGCFlag:				<Boolean>
 	newSpaceLimit:				<Integer address>
@@ -116,6 +117,9 @@ lastHash
 
 lowSpaceThreshold
 	- the ammount of free memory below which the low space condition should be signalled.
+
+marking
+	- a flag set and cleared in markAccessibleObjects to allow ensureRoomOnObjStackAtIndex: to know whether to mark a new obj stack page or not.
 
 memory
 	- in the Simulator this is the single oldSpace segment that contains the codeZone, newSpace and oldSpace.  In C it is effectively the base address of used memory.
@@ -427,6 +431,7 @@ Class {
 		'shrinkThreshold',
 		'gcStartUsecs',
 		'scavengeInProgress',
+		'marking',
 		'remapBuffer',
 		'remapBufferCount',
 		'extraRootCount',
@@ -453,13 +458,22 @@ Class {
 		'statSpecialMarkCount',
 		'statSurvivorCount',
 		'statSweepCount',
-		'statTenures'
+		'statTenures',
+		'unscannedEphemerons'
 	],
 	#classVars : [
 		'BitsPerByte',
 		'CheckObjectOverwrite',
+		'EphemeronQueueRootIndex',
 		'ExtraRootsSize',
 		'FirstValidClassIndex',
+		'MarkStackRootIndex',
+		'ObjStackFixedSlots',
+		'ObjStackFreex',
+		'ObjStackLimit',
+		'ObjStackNextx',
+		'ObjStackPageSlots',
+		'ObjStackTopx',
 		'RemapBufferSize'
 	],
 	#pools : [
@@ -482,7 +496,8 @@ SpurMemoryManager class >> additionalHeadersDo: aBinaryBlock [
 { #category : #translation }
 SpurMemoryManager class >> ancilliaryClasses: options [
 	^{	SpurGenerationScavenger. SpurNewSpaceSpace.
-		SpurSegmentManager. SpurSegmentInfo }
+		SpurSegmentManager. SpurSegmentInfo.
+		SpurContiguousObjStack }
 ]
 
 { #category : #accessing }
@@ -506,7 +521,8 @@ SpurMemoryManager class >> declareCVarsIn: aCCodeGenerator [
 		in: aCCodeGenerator.
 	aCCodeGenerator
 		var: #freeLists type: #'sqInt *';
-		var: #classTableBitmap type: #'unsigned char *'.
+		var: #classTableBitmap type: #'unsigned char *';
+		var: #unscannedEphemerons type: #SpurContiguousObjStack.
 	aCCodeGenerator
 		var: #remapBuffer
 		declareC: 'sqInt remapBuffer[RemapBufferSize + 1 /* ', (RemapBufferSize + 1) printString, ' */]'.
@@ -556,9 +572,26 @@ SpurMemoryManager class >> initBytesPerWord: nBytes [
 
 { #category : #'class initialization' }
 SpurMemoryManager class >> initialize [
+	"SpurMemoryManager initialize"
 	BitsPerByte := 8.
 
-	"SpurMemoryManager initialize"
+	"An obj stack is a stack of objects stored in a hidden root slot, such as
+	 the markStack or the ephemeronQueue.  It is a linked list of segments,
+	 with the hot end at the head of the list.  It is a word object.  The stack
+	 pointer is in ObjStackTopx and 0 means empty.  The list goes through
+	 ObjStackNextx. We don't want to shrink objStacks, since they're used
+	 in GC and its good to keep their memory around.  So unused pages
+	 created by popping emptying pages are kept on the ObjStackFreex list."
+	ObjStackPageSlots := 4092. "+ double header = 16k bytes per page in 32-bits"
+	ObjStackFixedSlots := 3.
+	ObjStackTopx := 0.
+	ObjStackFreex := 1.
+	ObjStackNextx := 2.
+	ObjStackLimit := ObjStackPageSlots - ObjStackFixedSlots.
+	"There are currently two obj stacks, the mark stack and the ephemeron queue."
+	MarkStackRootIndex := self basicNew classTableRootSlots.
+	EphemeronQueueRootIndex := MarkStackRootIndex + 1.
+
 	CheckObjectOverwrite := true.
 
 	"The remap buffer support is for compatibility; Spur doesn't GC during allocation.
@@ -2629,6 +2662,12 @@ SpurMemoryManager >> ensureAdequateClassTableBitmap [
 			[classTableBitmap := CArrayAccessor on: (ByteArray new: requiredSize)]
 ]
 
+{ #category : #'gc - incremental' }
+SpurMemoryManager >> ensureAllMarkBitsAreZero [
+	"If the incremental collector is running mark bits may be set; stop it and clear them if necessary."
+	self shouldBeImplemented
+]
+
 { #category : #'class table' }
 SpurMemoryManager >> ensureBehaviorHash: aBehavior [
 	| newHash err |
@@ -2640,6 +2679,39 @@ SpurMemoryManager >> ensureBehaviorHash: aBehavior [
 		 newHash := self rawHashBitsOf: aBehavior.
 		 self assert: (self classAtIndex: newHash) = aBehavior].
 	^newHash
+]
+
+{ #category : #'obj stacks' }
+SpurMemoryManager >> ensureRoomOnObjStackAtIndex: objStackRootIndex [
+	"An obj stack is a stack of objects stored in a hidden root slot, such as
+	 the markStack or the ephemeronQueue.  It is a linked list of segments,
+	 with the hot end at the head of the list.  It is a word object.  The stack
+	 pointer is in ObjStackTopx and 0 means empty.  The list goes through
+	 ObjStackNextx. We don't want to shrink objStacks, since they're used
+	 in GC and its good to keep their memory around.  So unused pages
+	 created by popping emptying pages are kept on the ObjStackFreex list."
+	| stackOrNil freeOrNewPage |
+	stackOrNil := self fetchPointer: objStackRootIndex ofObject: hiddenRootsObj.
+	(stackOrNil = nilObj
+	 or: [(self fetchPointer: ObjStackTopx ofObject: stackOrNil) >= ObjStackLimit]) ifTrue:
+		[freeOrNewPage := self fetchPointer: ObjStackFreex ofObject: stackOrNil.
+		 freeOrNewPage ~= 0
+			ifTrue: "the free page list is always on the new page."
+				[self storePointerUnchecked: ObjStackFreex ofObject: stackOrNil withValue: 0]
+			ifFalse:
+				[freeOrNewPage := self allocateSlotsInOldSpace: ObjStackPageSlots
+										format: self wordIndexableFormat
+										classIndex: self wordSizeClassIndexPun.
+				 freeOrNewPage ifNil: [self error: 'no memory to allocate or extend obj stack'].
+				 self storePointerUnchecked: ObjStackFreex ofObject: freeOrNewPage withValue: 0].
+		marking ifTrue: [self setIsMarkedOf: freeOrNewPage to: true].
+		self storePointerUnchecked: ObjStackNextx ofObject: freeOrNewPage withValue: stackOrNil;
+			storePointerUnchecked: ObjStackTopx ofObject: freeOrNewPage withValue: 0;
+			storePointerUnchecked: objStackRootIndex ofObject: hiddenRootsObj withValue: freeOrNewPage.
+		self assert: (self isValidObjStackAt: objStackRootIndex).
+		^freeOrNewPage].
+	self assert: (self isValidObjStackAt: objStackRootIndex).
+	^stackOrNil
 ]
 
 { #category : #'class table' }
@@ -2690,16 +2762,14 @@ SpurMemoryManager >> ephemeronFormat [
 	^5
 ]
 
-{ #category : #'garbage collection' }
+{ #category : #'gc - global' }
 SpurMemoryManager >> ephemeronQueue [
-	"The ephemeron queue is the first hidden root after the class table pages."
-	^self fetchPointer: self numClassTablePages ofObject: hiddenRootsObj
+	^self fetchPointer: EphemeronQueueRootIndex ofObject: hiddenRootsObj
 ]
 
-{ #category : #'garbage collection' }
+{ #category : #'gc - global' }
 SpurMemoryManager >> ephemeronQueue: anObject [
-	"The ephemeron queue is the first hidden root after the class table pages."
-	self storePointer: self numClassTablePages ofObject: hiddenRootsObj withValue: anObject
+	self storePointer: EphemeronQueueRootIndex ofObject: hiddenRootsObj withValue: anObject
 ]
 
 { #category : #compaction }
@@ -2906,6 +2976,20 @@ SpurMemoryManager >> fillObj: objOop numSlots: numSlots with: fillValue [
 	self subclassResponsibility
 ]
 
+{ #category : #'free space' }
+SpurMemoryManager >> findLargestFreeChunk [
+	"Answer, but do not remove, the largest free chunk in the free lists."
+	| treeNode childNode |
+	treeNode := freeLists at: 0.
+	treeNode = 0 ifTrue:
+		[^nil].
+	[self assert: (self isValidFreeObject: treeNode).
+	 childNode := self fetchPointer: self freeChunkLargerIndex ofFreeChunk: treeNode.
+	 childNode ~= 0] whileTrue:
+		[treeNode := childNode].
+	^treeNode
+]
+
 { #category : #'debug support' }
 SpurMemoryManager >> findString: aCString [
 	"Print the oops of all string-like things that have the same characters as aCString"
@@ -3078,7 +3162,7 @@ SpurMemoryManager >> floatValueOf: obj [
 	^coInterpreter floatValueOf: obj
 ]
 
-{ #category : #'generation scavenging' }
+{ #category : #'gc - scavenging' }
 SpurMemoryManager >> flushNewSpace [
 	| savedTenuringThreshold |
 	savedTenuringThreshold := scavenger getRawTenuringThreshold.
@@ -3090,7 +3174,7 @@ SpurMemoryManager >> flushNewSpace [
 	self assert: freeStart = scavenger eden start
 ]
 
-{ #category : #'generation scavenging' }
+{ #category : #'gc - scavenging' }
 SpurMemoryManager >> flushNewSpaceInstancesOf: aClass [
 	| classIndex |
 	classIndex := self rawHashBitsOf: aClass.
@@ -3309,7 +3393,12 @@ SpurMemoryManager >> freeStart [
 	^freeStart
 ]
 
-{ #category : #'garbage collection' }
+{ #category : #'gc - global' }
+SpurMemoryManager >> fullGC [
+	^self globalGarbageCollect
+]
+
+{ #category : #'gc - global' }
 SpurMemoryManager >> fullGCLock [
 	"Spur never has a need to lock GC because it does not move pinned objects."
 	^0
@@ -3318,6 +3407,13 @@ SpurMemoryManager >> fullGCLock [
 { #category : #accessing }
 SpurMemoryManager >> gcStartUsecs [
 	^gcStartUsecs
+]
+
+{ #category : #'gc - global' }
+SpurMemoryManager >> globalGarbageCollect [
+	self markObjects.
+	self freeUnmarkedObjects.
+	self exactFitCompact
 ]
 
 { #category : #'object testing' }
@@ -3440,12 +3536,11 @@ SpurMemoryManager >> hiddenRootSlots [
 { #category : #'class table' }
 SpurMemoryManager >> hiddenRootsObj: anOop [
 	hiddenRootsObj := anOop.
-	classTableFirstPage := self fetchPointer: 0 ofObject: hiddenRootsObj.
-	self assert: (self numSlotsOf: hiddenRootsObj) = (self classTableRootSlots + self hiddenRootSlots).
-	self assert: (self numSlotsOf: classTableFirstPage) - 1 = self classTableMinorIndexMask.
 	self cCode: [self assert: self validClassTableRootPages]
 		inSmalltalk: [numClassTablePages ifNotNil:
 						[self assert: self validClassTableRootPages]]..
+	classTableFirstPage := self fetchPointer: 0 ofObject: hiddenRootsObj.
+	self assert: (self numSlotsOf: classTableFirstPage) - 1 = self classTableMinorIndexMask.
 	"Set classTableIndex to the start of the last used page (excepting first page).
 	 Set numClassTablePages to the number of used pages."
 	numClassTablePages := self classTableRootSlots.
@@ -3536,7 +3631,7 @@ SpurMemoryManager >> inPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag [
 			[self possibleRootStoreInto: obj2]]
 ]
 
-{ #category : #'garbage collection' }
+{ #category : #'gc - global' }
 SpurMemoryManager >> incrementalGC [
 	self shouldNotImplement
 ]
@@ -3594,13 +3689,16 @@ SpurMemoryManager >> initialize [
 	remapBufferCount := extraRootCount := 0. "see below"
 	freeListsMask := totalFreeOldSpace := lowSpaceThreshold := 0.
 	checkForLeaks := 0.
-	needGCFlag := signalLowSpace := scavengeInProgress := false.
+	needGCFlag := signalLowSpace := scavengeInProgress := marking := false.
 	becomeEffectsFlags := 0.
 	statScavenges := statIncrGCs := statFullGCs := 0.
 	statScavengeGCUsecs := statIncrGCUsecs := statFullGCUsecs := statGCEndUsecs := 0.
 	statSGCDeltaUsecs := statIGCDeltaUsecs := statFGCDeltaUsecs := 0.
 	statGrowMemory := statShrinkMemory := statRootTableCount := statTenures := statSurvivorCount := 0.
 	statRootTableOverflows := statSweepCount := statMarkCount := statSpecialMarkCount := statMkFwdCount := 0.
+
+	"We can initialize things that are allocated but are lazily initialized."
+	unscannedEphemerons := SpurContiguousObjStack new.
 
 	"we can initialize things that are virtual in C."
 	scavenger := SpurGenerationScavengerSimulator new manager: self; yourself.
@@ -3633,7 +3731,12 @@ SpurMemoryManager >> initializeFreeSpacePostLoad: freeListObj [
 	totalFreeOldSpace := self totalFreeListBytes
 ]
 
-{ #category : #'generation scavenging' }
+{ #category : #'gc - global' }
+SpurMemoryManager >> initializeMarkStack [
+	self ensureRoomOnObjStackAtIndex: MarkStackRootIndex
+]
+
+{ #category : #'gc - scavenging' }
 SpurMemoryManager >> initializeNewSpaceVariables [
 	startOfMemory ifNotNil: "true in bootstrap"
 		[^self].
@@ -3683,6 +3786,8 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	freeListObj := self objectAfter: trueObj.
 	self reInitializeClassTablePostLoad: (self objectAfter: freeListObj).
 	self initializeFreeSpacePostLoad: freeListObj.
+	self swizzleObjStack: MarkStackRootIndex.
+	self swizzleObjStack: EphemeronQueueRootIndex.
 
 	segmentManager collapseSegmentsPostSwizzle.
 
@@ -3722,6 +3827,27 @@ SpurMemoryManager >> initializePostBootstrap [
 	freeStart := scavenger eden start.
 	pastSpaceStart := scavenger pastSpace start.
 	scavengeThreshold := scavenger eden limit - (scavenger edenBytes / 64)
+]
+
+{ #category : #'gc - global' }
+SpurMemoryManager >> initializeUnscannedEphemerons [
+	"Initialize unscannedEphemerons to use the largest free chunk
+	 or unused eden space, which ever is the larger."
+	
+	| largestFree sizeOfUnusedEden |
+	largestFree := self findLargestFreeChunk.
+	sizeOfUnusedEden := scavenger eden limit - freeStart.
+	(largestFree notNil
+	 and: [(self numSlotsOfAny: largestFree) > (sizeOfUnusedEden / self wordSize)])
+		ifTrue:
+			[unscannedEphemerons
+				start: largestFree + self baseHeaderSize;
+				limit: (self addressAfter: largestFree)]
+		ifFalse:
+			[unscannedEphemerons
+				start: freeStart;
+				limit: scavenger eden limit].
+	unscannedEphemerons top: unscannedEphemerons start
 ]
 
 { #category : #'become implementation' }
@@ -4191,7 +4317,7 @@ SpurMemoryManager >> isRemembered: objOop [
 	^((self longAt: objOop) >> self rememberedBitShift bitAnd: 1) ~= 0
 ]
 
-{ #category : #'generation scavenging' }
+{ #category : #'gc - scavenging' }
 SpurMemoryManager >> isScavengeSurvivor: oop [
 	<doNotGenerate>
 	^scavenger isScavengeSurvivor: oop
@@ -4217,6 +4343,33 @@ SpurMemoryManager >> isValidFreeObject: objOop [
 				    or: [self isFreeObject: chunk])
 			  and: [(chunk := (self fetchPointer: self freeChunkLargerIndex ofFreeChunk: objOop)) = 0
 				    or: [self isFreeObject: chunk]]]]]]]
+]
+
+{ #category : #'obj stacks' }
+SpurMemoryManager >> isValidObjStackAt: objStackRootIndex [
+	"Answer if the obj stack at objStackRootIndex is valid."
+	| stackOrNil |
+	stackOrNil := self fetchPointer: objStackRootIndex ofObject: hiddenRootsObj.
+	^stackOrNil = nilObj
+	  or: [self isValidObjStackPage: stackOrNil firstPage: true]
+]
+
+{ #category : #'obj stacks' }
+SpurMemoryManager >> isValidObjStackPage: objStackPage firstPage: isFirstPage [
+	"Answer if the obj stack at stackRootIndex is valid."
+	| freeOrNextPage index |
+	<inline: false>
+	(self numSlotsOfAny: objStackPage) ~= ObjStackPageSlots ifTrue: [^false].
+	freeOrNextPage := self fetchPointer: ObjStackFreex ofObject: objStackPage.
+	freeOrNextPage ~= 0 ifTrue:
+		[isFirstPage ifFalse: [^false].
+		 (self isValidObjStackPage: freeOrNextPage firstPage: false) ifFalse:
+			[^false]].
+	index := self fetchPointer: ObjStackTopx ofObject: objStackPage.
+	(index between: 0 and: ObjStackLimit) ifFalse: [^false].
+	freeOrNextPage := self fetchPointer: ObjStackNextx ofObject: objStackPage.
+	^freeOrNextPage = 0
+	  or: [self isValidObjStackPage: objStackPage firstPage: false]
 ]
 
 { #category : #segments }
@@ -4504,7 +4657,7 @@ SpurMemoryManager >> lowestFreeChunkAssumingSortedFreeSpace [
 	^lowest
 ]
 
-{ #category : #'garbage collection' }
+{ #category : #'gc - global' }
 SpurMemoryManager >> mapExtraRoots [
 	self assert: remapBufferCount = 0.
 	1 to: extraRootCount do:
@@ -4513,6 +4666,125 @@ SpurMemoryManager >> mapExtraRoots [
 		((self isImmediate: oop) or: [self isFreeObject: oop]) ifFalse:
 			[(self shouldRemapObj: oop) ifTrue:
 				[(extraRoots at: i) at: 0 put: (self remapObj: oop)]]]
+]
+
+{ #category : #'gc - global' }
+SpurMemoryManager >> markAccessibleObjects [
+	self assert: self validClassTableRootPages.
+	marking := true.
+	self markAndTraceObjStack: self markStack andContents: false.
+	self assert: self validClassTableRootPages.
+	self markAndTraceObjStack: self ephemeronQueue andContents: true.
+	self assert: self validClassTableRootPages.
+	self markAndTrace: hiddenRootsObj.
+	self markAndTrace: self specialObjectsOop.
+	coInterpreter markAndTraceInterpreterOops: true.
+	self markAndFireEphemerons.
+	marking := false
+]
+
+{ #category : #'gc - global' }
+SpurMemoryManager >> markAndTrace: objOop [
+	"Mark the argument, and all objects reachable from it, and any remaining objects on the mark stack."
+	<returnTypeC: #void>
+	| objToScan index key |
+	self assert: (self isNonImmediate: objOop).
+	(self isMarked: objOop) ifTrue:
+		[^nil].
+	"self setIsMarkedOf: objOop to: false" "for debugging"
+	self setIsMarkedOf: objOop to: true.
+	((self isEphemeron: objOop)
+	 and: [(self isNonImmediate: (key := self keyOfEphemeron: objOop))
+	 and: [(self isMarked: key) not
+	 and: [self pushOnUnscannedEphemeronStack: objOop]]]) ifTrue:
+		[^self].
+
+	"Now scan the object, and any remaining objects on the mark stack."
+	objToScan := objOop.
+	index := 0.
+	"It is a bad idea to scan big objects early in the mark phase; pushing all their
+	 referents onto the mark stack is inviting overflow.  Instead, defer until later."
+	[| numSlots |
+	 numSlots := self numStrongSlotsOf: objToScan ephemeronInactiveIf: nil.
+	 numSlots > self traceImmediatelySlotLimit ifTrue:
+		[(self swapLargeObject: objToScan
+			   ofSlots: numSlots
+			   withSmallerOnObjStackAt: MarkStackRootIndex) ifNotNil:
+			[:top|
+			 (self isImmediate: top)
+				ifTrue: "index,large object pair"
+					[index := self integerValueOf: top.
+					 objToScan := self popObjStackAt: MarkStackRootIndex]
+				ifFalse:
+					[objToScan := top]]].
+	 self assert: (index between: 0 and: (self numStrongSlotsOf: objToScan  ephemeronInactiveIf: nil) - 1).
+	 "The opportunity here is to scan a large object only so far, and push it back on the
+	  stack when the stack appears full.  But for the moment we don't code this; it's tricky."
+	 [index < numSlots] whileTrue:
+		[| field |
+		 field := self fetchPointer: index ofObject: objToScan.
+		 ((self isImmediate: field) or: [self isMarked: field]) ifFalse:
+			[self setIsMarkedOf: field to: true.
+			 ((self isEphemeron: field)
+			  and: [(self isNonImmediate: (key := self keyOfEphemeron: field))
+			  and: [(self isMarked: key) not
+			  and: [self pushOnUnscannedEphemeronStack: field]]]) ifFalse:
+				[self push: field onObjStackAt: MarkStackRootIndex]].
+		 index := index + 1].
+	 objToScan := self popObjStackAt: MarkStackRootIndex.
+	 objToScan ifNil: [^self].
+	 (self isImmediate: objToScan)
+		ifTrue:
+			[index := self integerValueOf: objToScan.
+			 objToScan := self popObjStackAt: MarkStackRootIndex]
+		ifFalse:
+			[index := 0]] repeat
+]
+
+{ #category : #'obj stacks' }
+SpurMemoryManager >> markAndTraceObjStack: stackOrNil andContents: markAndTraceContents [
+	"An obj stack is a stack of objects stored in a hidden root slot, such
+	 as the markStack or the ephemeronQueue.  It is a linked list of
+	 segments, with the hot end at the head of the list.  It is a word object.
+	 The stack pointer is in ObjStackTopx and 0 means empty."
+	<returnTypeC: #void>
+	| index field |
+	stackOrNil = nilObj ifTrue:
+		[^self].
+	self assert: (self numSlotsOfAny: stackOrNil) = ObjStackPageSlots.
+	field := self fetchPointer: ObjStackNextx ofObject: stackOrNil.
+	self markAndTraceObjStack: field andContents: markAndTraceContents.
+	markAndTraceContents ifFalse:
+		[^self].
+	"There are two fixed slots in an obj stack, and a Topx of 0 indicates empty, so
+	  if there were 4 slots in an oop stack, full would be 2, and the last 0-rel index is 3.
+	  Hence the last index is topx + fixed slots - 1, or topx + ObjStackNextx"
+	index := (self fetchPointer: ObjStackTopx ofObject: stackOrNil) + ObjStackNextx.
+	[index > ObjStackNextx] whileTrue:
+		[field := self fetchPointer: index ofObject: stackOrNil.
+		 (self isImmediate: field) ifFalse:
+			[self markAndTrace: field].
+		 index := index - 1]
+]
+
+{ #category : #'gc - global' }
+SpurMemoryManager >> markObjects [
+	"Mark all accessible objects."
+	"If the incremental collector is running mark bits may be set; stop it and clear them if necessary."
+	self ensureAllMarkBitsAreZero.
+	self initializeUnscannedEphemerons.
+	self initializeMarkStack.
+	self markAccessibleObjects
+]
+
+{ #category : #'gc - global' }
+SpurMemoryManager >> markStack [
+	^self fetchPointer: MarkStackRootIndex ofObject: hiddenRootsObj
+]
+
+{ #category : #'gc - global' }
+SpurMemoryManager >> markStack: anObject [
+	self storePointer: MarkStackRootIndex ofObject: hiddenRootsObj withValue: anObject
 ]
 
 { #category : #'header format' }
@@ -4603,7 +4875,7 @@ SpurMemoryManager >> newSpaceBytes [
 	^newSpaceLimit - coInterpreter interpreterAllocationReserveBytes
 ]
 
-{ #category : #'generation scavenging' }
+{ #category : #'gc - scavenging' }
 SpurMemoryManager >> newSpaceIsEmpty [
 	^freeStart = scavenger eden start
 	  and: [pastSpaceStart = scavenger pastSpace start]
@@ -4615,7 +4887,7 @@ SpurMemoryManager >> newSpaceLimit [
 	^newSpaceLimit
 ]
 
-{ #category : #'generation scavenging' }
+{ #category : #'gc - scavenging' }
 SpurMemoryManager >> newSpaceRefCountMask [
 	"The three bit field { isGrey, isPinned, isRemembered } is for bits
 	 that are never set in young objects.  This allows the remembered
@@ -4760,7 +5032,7 @@ SpurMemoryManager >> numStrongSlotsOf: objOop ephemeronInactiveIf: criterion [
 		 fmt = self weakArrayFormat ifTrue:
 			[^self fixedFieldsOfClass: (self fetchClassOfNonImm: objOop)].
 		 self assert: fmt = self ephemeronFormat.
-		 ^(self perform: criterion with: (self keyOfEphemeron: objOop))
+		 ^(criterion isNil or: [self perform: criterion with: (self keyOfEphemeron: objOop)])
 			ifTrue: [numSlots]
 			ifFalse: [0]].
 	fmt = self forwardedFormat ifTrue: [^1].
@@ -4947,6 +5219,11 @@ SpurMemoryManager >> pop: nItems thenPush: oop [
 	^coInterpreter pop: nItems thenPush: oop
 ]
 
+{ #category : #'obj stacks' }
+SpurMemoryManager >> popObjStackAt: objStackRootIndex [ 
+	self shouldBeImplemented
+]
+
 { #category : #'interpreter access' }
 SpurMemoryManager >> popRemappableOop [
 	"Pop and return the possibly remapped object from the remap buffer.
@@ -5098,6 +5375,17 @@ SpurMemoryManager >> push: oop [
 	^coInterpreter push: oop
 ]
 
+{ #category : #'obj stacks' }
+SpurMemoryManager >> push: objOop onObjStackAt: objStackRootIndex [ 
+	| page numEntries |
+	page := self ensureRoomOnObjStackAtIndex: objStackRootIndex.
+	numEntries := self fetchPointer: ObjStackTopx ofObject: page.
+	self assert: numEntries < ObjStackLimit.
+	numEntries := numEntries + 1.
+	self storePointerUnchecked: numEntries + ObjStackNextx ofObject: page withValue: objOop;
+		storePointerUnchecked: ObjStackTopx ofObject: page withValue: numEntries
+]
+
 { #category : #'simulation only' }
 SpurMemoryManager >> pushBool: trueOrFalse [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
@@ -5119,6 +5407,20 @@ SpurMemoryManager >> pushInteger: integerValue [
 	^coInterpreter pushInteger: integerValue
 ]
 
+{ #category : #'weakness and ephemerality' }
+SpurMemoryManager >> pushOnUnscannedEphemeronStack: anEphemeron [
+	"Attempt to push anEphemeron on the unscanned ephemerons stack
+	 and answer if the attempt succeeded.  Note that the ephemeron
+	 stack overflowing isn't a disaster; it simply means treating the
+	 ephemeron as strong in this GC cycle."
+	self assert: (self isEphemeron: anEphemeron).
+	unscannedEphemerons top >= unscannedEphemerons limit ifTrue:
+		[^false].
+	self longAt: unscannedEphemerons top put: anEphemeron.
+	unscannedEphemerons top: unscannedEphemerons top + self wordSize.
+	^true
+]
+
 { #category : #'interpreter access' }
 SpurMemoryManager >> pushRemappableOop: oop [
 	"Record the given object in a the remap buffer. Objects in this buffer are remapped
@@ -5131,6 +5433,13 @@ SpurMemoryManager >> pushRemappableOop: oop [
 	remapBuffer at: (remapBufferCount := remapBufferCount + 1) put: oop.
 	remapBufferCount <= RemapBufferSize ifFalse:
 		[self error: 'remapBuffer overflow']
+]
+
+{ #category : #'weakness and ephemerality' }
+SpurMemoryManager >> queueEphemeron: anEphemeron [
+	self assert: ((self isNonImmediate: anEphemeron)
+				and: [(self formatOf: anEphemeron) = self ephemeronFormat]).
+	self push: anEphemeron onObjStackAt: EphemeronQueueRootIndex
 ]
 
 { #category : #'header access' }
@@ -5172,7 +5481,7 @@ SpurMemoryManager >> readHeapFromImageFile: f dataBytes: numBytes [
 	^segmentManager readHeapFromImageFile: f dataBytes: numBytes
 ]
 
-{ #category : #'garbage collection' }
+{ #category : #'gc - global' }
 SpurMemoryManager >> remap: oop [
 	self shouldNotImplement
 ]
@@ -5189,7 +5498,7 @@ SpurMemoryManager >> remapBufferCount [
 	^remapBufferCount
 ]
 
-{ #category : #'generation scavenging' }
+{ #category : #'gc - scavenging' }
 SpurMemoryManager >> remapObj: objOop [
 	"Scavenge or simply follow objOop.  Answer the new location of objOop.  The
 	 send should have been guarded by a send of shouldRemapOop: or shouldScavengeObj:.
@@ -5335,14 +5644,14 @@ SpurMemoryManager >> scavengerDenominator [
 	^7
 ]
 
-{ #category : #'generation scavenging' }
+{ #category : #'gc - scavenging' }
 SpurMemoryManager >> scavengingGC [
 	"Run the scavenger."
 
 	self scavengingGCTenuringIf: TenureByAge
 ]
 
-{ #category : #'generation scavenging' }
+{ #category : #'gc - scavenging' }
 SpurMemoryManager >> scavengingGCTenuringIf: tenuringCriterion [
 	"Run the scavenger."
 
@@ -5384,7 +5693,7 @@ SpurMemoryManager >> scavengingGCTenuringIf: tenuringCriterion [
 	self checkFreeSpace
 ]
 
-{ #category : #'generation scavenging' }
+{ #category : #'gc - scavenging' }
 SpurMemoryManager >> scheduleScavenge [
 	needGCFlag := true.
 	coInterpreter forceInterruptCheck
@@ -5510,7 +5819,7 @@ SpurMemoryManager >> shiftForWord [
 	^self subclassResponsibility
 ]
 
-{ #category : #'generation scavenging' }
+{ #category : #'gc - scavenging' }
 SpurMemoryManager >> shouldRemapObj: objOop [
 	"Answer if the obj should be scavenged (or simply followed). The method is called
 	 shouldRemapObj: for compatibility with ObjectMemory."
@@ -5518,7 +5827,7 @@ SpurMemoryManager >> shouldRemapObj: objOop [
 	  or: [self isYoung: objOop]
 ]
 
-{ #category : #'generation scavenging' }
+{ #category : #'gc - scavenging' }
 SpurMemoryManager >> shouldRemapOop: oop [
 	<api>
 	"Answer if the oop should be scavenged.. The method is called
@@ -5778,6 +6087,26 @@ SpurMemoryManager >> stackValue: offset [
 	^coInterpreter stackValue: offset
 ]
 
+{ #category : #'obj stacks' }
+SpurMemoryManager >> stackValue: offset ofObjStack: objStackPage [
+	| numEntries nextPage |
+	self assert: offset >= 0.
+	numEntries := self fetchPointer: ObjStackTopx ofObject: objStackPage.
+	offset < numEntries ifTrue:
+		[^self fetchPointer: ObjStackTopx + offset ofObject: objStackPage].
+	nextPage := self fetchPointer: ObjStackNextx ofObject: objStackPage.
+	nextPage = 0 ifTrue:
+		[^nil].
+	^self stackValue: offset - numEntries ofObjStack: nextPage
+]
+
+{ #category : #'obj stacks' }
+SpurMemoryManager >> stackValue: offset ofObjStackAt: objStackRootIndex [ 
+	^self
+		stackValue: offset
+		ofObjStack: (self fetchPointer: objStackRootIndex ofObject: hiddenRootsObj)
+]
+
 { #category : #accessing }
 SpurMemoryManager >> startOfMemory [
 	"Return the start of object memory.  This is immediately after the native code zone."
@@ -6019,7 +6348,7 @@ SpurMemoryManager >> success: boolean [
 	^coInterpreter success: boolean
 ]
 
-{ #category : #'generation scavenging' }
+{ #category : #'gc - scavenging' }
 SpurMemoryManager >> sufficientSpaceAfterGC: numBytes [
 	"This is ObjectMemory's funky entry-point into its incremental GC,
 	 which is a stop-the-world a young generation reclaimer.  In Spur
@@ -6036,6 +6365,28 @@ SpurMemoryManager >> sufficientSpaceAfterGC: numBytes [
 { #category : #allocation }
 SpurMemoryManager >> sufficientSpaceToInstantiate: classObj indexableSize: indexableFields [
 	self shouldNotImplement
+]
+
+{ #category : #'obj stacks' }
+SpurMemoryManager >> swapLargeObject: objOop ofSlots: numStrongSlots withSmallerOnObjStackAt: objStackRootIndex [
+	"Assuming objOop is large, answer a smaller object, if it is available, otherwise answer nil."
+	| objStackPage top topObj |
+	objStackPage := self fetchPointer: objStackRootIndex ofObject: hiddenRootsObj.
+	top := self stackValue: 0 ofObjStack: objStackPage.
+	top ifNil: [^nil].
+	(self isImmediate: top) ifTrue: "index,large obj pair on top. is it smaller?"
+		[(self integerValueOf: top) >= numStrongSlots ifTrue:
+			[^nil]. "no. go with the one we've already got"
+		 "yes. push 0, objOop, answer index, leaving large obj on top to be popped."
+		 topObj := self stackValue: 1 ofObjStack: objStackPage.
+		 self stackValue: 0 ofObjStackAt: objStackRootIndex put: ConstZero.
+		 self stackValue: 1 ofObjStackAt: objStackRootIndex put: objOop.
+		 self push: topObj onObjStackAt: objStackRootIndex.
+		 ^top].
+	"push numStrongSlots, objOop and answer top"
+	self stackValue: 0 ofObjStackAt: objStackRootIndex put: objOop.
+	self push: ConstZero onObjStackAt: objStackRootIndex.
+	^top
 ]
 
 { #category : #snapshot }
@@ -6062,6 +6413,34 @@ SpurMemoryManager >> swizzleFieldsOfObject: oop [
 		 (self isNonImmediate: fieldOop) ifTrue:
 			[self longAt: fieldAddr put: (segmentManager swizzleObj: fieldOop)].
 		 fieldAddr := fieldAddr - BytesPerOop]
+]
+
+{ #category : #'obj stacks' }
+SpurMemoryManager >> swizzleObjStack: objStackRootIndex [
+	<returnTypeC: #void>
+	"On load, swizzle the pointers in an obj stack."
+	| firstPage stackOrNil index field |
+	firstPage := stackOrNil := self fetchPointer: objStackRootIndex ofObject: hiddenRootsObj.
+	stackOrNil = nilObj ifTrue:
+		[^self].
+	[self assert: (self numSlotsOfAny: stackOrNil) = ObjStackPageSlots.
+	 "There are three fixed slots in an obj stack, and a Topx of 0 indicates empty, so
+	   if there were 5 slots in an oop stack, full would be 2, and the last 0-rel index is 4.
+	   Hence the last index is topx + fixed slots - 1, or topx + ObjStackNextx"
+	 index := (self fetchPointer: ObjStackTopx ofObject: stackOrNil) + ObjStackNextx.
+	 [field := self fetchPointer: index ofObject: stackOrNil.
+	  (self isImmediate: field) ifFalse:
+		[field := segmentManager swizzleObj: field.
+		 self storePointerUnchecked: ObjStackNextx ofObject: stackOrNil withValue: field].
+	  (index := index - 1) > ObjStackTopx] whileTrue.
+	 (stackOrNil := field) ~= 0] whileTrue.
+	[stackOrNil := self fetchPointer: ObjStackFreex ofObject: firstPage.
+	 stackOrNil ~= 0] whileTrue:
+		[field := segmentManager swizzleObj: stackOrNil.
+		 self storePointerUnchecked: ObjStackFreex ofObject: firstPage withValue: field.
+		 firstPage := stackOrNil].
+	self assert: (self isValidObjStackAt: objStackRootIndex)
+	
 ]
 
 { #category : #'word size' }
@@ -6135,6 +6514,13 @@ SpurMemoryManager >> totalMemorySize [
 	^scavenger newSpaceCapacity + segmentManager totalBytesInSegments
 ]
 
+{ #category : #'gc - global' }
+SpurMemoryManager >> traceImmediatelySlotLimit [
+	"Arbitrary level at which to defer tracing large objects until later.
+	 The average slot size of Smalltalk objects is typically near 8."
+	^16
+]
+
 { #category : #'simulation only' }
 SpurMemoryManager >> transcript [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
@@ -6170,7 +6556,11 @@ SpurMemoryManager >> unlinkFreeChunk: chunk atIndex: index [
 
 { #category : #'class table' }
 SpurMemoryManager >> validClassTableRootPages [
-	"Answer if numClassTablePages is correct."
+	"Answer if hiddenRootsObj is of the right size with the
+	 expected contents, and if numClassTablePages is correct."
+
+	(self numSlotsOf: hiddenRootsObj) = (self classTableRootSlots + self hiddenRootSlots) ifFalse:
+		[^false].
 
 	"is it in range?"
 	(numClassTablePages > 1 and: [numClassTablePages <= self classTableRootSlots]) ifFalse:

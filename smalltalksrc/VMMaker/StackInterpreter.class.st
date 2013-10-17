@@ -5276,7 +5276,9 @@ StackInterpreter >> findUnwindThroughContext: homeContext [
 
 { #category : #finalization }
 StackInterpreter >> fireEphemeron: ephemeron [
-	self shouldBeImplemented
+	<option: #SpurObjectMemory>
+	objectMemory queueEphemeron: ephemeron.
+	self forceInterruptCheck
 ]
 
 { #category : #'compiled methods' }
