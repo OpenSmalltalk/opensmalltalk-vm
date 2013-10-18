@@ -1020,9 +1020,10 @@ TMethod >> inlineableFunctionCall: aNode in: aCodeGen [
 	self maybeBreakFor: aNode in: aCodeGen.
 	^aNode isSend
 	and: [(m := aCodeGen methodNamed: aNode selector) notNil  "nil if builtin or external function"
+	and: [m ~~ self
 	and: [m isFunctional
 	and: [(aCodeGen mayInline: m selector)
-	and: [aNode args allSatisfy: [ :a | self isSubstitutableNode: a intoMethod: m in: aCodeGen]]]]]
+	and: [aNode args allSatisfy: [ :a | self isSubstitutableNode: a intoMethod: m in: aCodeGen]]]]]]
 ]
 
 { #category : #inlining }
@@ -1033,7 +1034,7 @@ TMethod >> inlineableSend: aNode in: aCodeGen [
 	self maybeBreakFor: aNode in: aCodeGen.
 	aNode isSend ifFalse: [ ^false ].
 	m := aCodeGen methodNamed: aNode selector.  "nil if builtin or external function"
-	^(m ~= nil) and: [m isComplete and: [aCodeGen mayInline: m selector]]
+	^m ~= nil and: [m ~~ self and: [m isComplete and: [aCodeGen mayInline: m selector]]]
 ]
 
 { #category : #'primitive compilation' }
