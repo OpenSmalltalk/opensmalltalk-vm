@@ -2158,9 +2158,14 @@ CogVMSimulator >> movePrimTraceLogToMemoryAt: address [
 
 { #category : #'debug support' }
 CogVMSimulator >> nameOfClass: classOop [
-	(objectMemory sizeBitsOf: classOop) = metaclassSizeBits ifTrue:
+	| numSlots |
+	classNameIndex ifNil: [^'??nil cnidx??'].
+	numSlots := objectMemory numSlotsOf: classOop.
+	numSlots = metaclassNumSlots ifTrue:
 		[^(self nameOfClass:
 				(objectMemory fetchPointer: thisClassIndex ofObject: classOop)) , ' class'].
+	numSlots <= classNameIndex ifTrue:
+		[^'bad class'].
 	^self stringOf: (objectMemory fetchPointer: classNameIndex ofObject: classOop)
 ]
 
@@ -3169,7 +3174,7 @@ CogVMSimulator >> shortPrint: oop [
 		[^' is a forwarded object to ', (objectMemory followForwarded: oop) hex,
 			' of slot size ', (objectMemory numSlotsOfAny: oop) printString].
 	classOop := objectMemory fetchClassOfNonImm: oop.
-	(objectMemory sizeBitsOf: classOop) = metaclassSizeBits ifTrue:
+	(objectMemory numSlotsOf: classOop) = metaclassNumSlots ifTrue:
 		[^'class ' , (self nameOfClass: oop)].
 	name := self nameOfClass: classOop.
 	name size = 0 ifTrue: [name := '??'].
