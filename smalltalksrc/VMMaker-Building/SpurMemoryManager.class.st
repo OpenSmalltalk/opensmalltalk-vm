@@ -6328,19 +6328,6 @@ SpurMemoryManager >> stackValue: offset ofObjStack: objStackPage [
 	^self stackValue: offset - topx ofObjStack: nextPage
 ]
 
-{ #category : #'obj stacks' }
-SpurMemoryManager >> stackValue: offset ofObjStack: objStackPage put: aValue [
-	| topx nextPage |
-	self assert: offset >= 0.
-	topx := self fetchPointer: ObjStackTopx ofObject: objStackPage.
-	offset < topx ifTrue:
-		[^self storePointer: ObjStackTopx + offset ofObjStack: objStackPage withValue: aValue].
-	nextPage := self fetchPointer: ObjStackNextx ofObject: objStackPage.
-	nextPage = 0 ifTrue:
-		[self error: 'no such element on obj stack'].
-	^self stackValue: offset - topx ofObjStack: nextPage put: aValue
-]
-
 { #category : #accessing }
 SpurMemoryManager >> startOfMemory [
 	"Return the start of object memory.  This is immediately after the native code zone."
