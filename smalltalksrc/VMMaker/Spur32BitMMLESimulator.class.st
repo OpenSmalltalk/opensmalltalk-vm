@@ -57,6 +57,13 @@ Spur32BitMMLESimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
 	aFloat at: 1 put: (self long32At: floatBitsAddress+4)
 ]
 
+{ #category : #'object access' }
+Spur32BitMMLESimulator >> fetchPointer: fieldIndex ofObject: objOop [
+	self assert: (self isForwarded: objOop) not.
+	self assert: (fieldIndex >= 0 and: [fieldIndex < (self numSlotsOfAny: objOop)]).
+	^super fetchPointer: fieldIndex ofObject: objOop
+]
+
 { #category : #'object format' }
 Spur32BitMMLESimulator >> firstIndexableField: objOop [
 	"NOTE: overridden from SpurMemoryManager to add coercion to CArray, so please duplicate any changes.

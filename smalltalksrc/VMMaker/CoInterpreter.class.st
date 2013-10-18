@@ -4494,7 +4494,7 @@ CoInterpreter >> markAndTracePrimTraceLog [
 	0 to: limit do:
 		[:i| | selector |
 		selector := primTraceLog at: i.
-		(objectMemory isIntegerObject: selector) ifFalse:
+		(objectMemory isImmediate: selector) ifFalse:
 			[objectMemory markAndTrace: selector]]
 ]
 
@@ -4516,7 +4516,7 @@ CoInterpreter >> markAndTraceStackPage: thePage [
 	[frameRcvrOffset := self frameReceiverOffset: theFP.
 	 [theSP <= frameRcvrOffset] whileTrue:
 		[oop := stackPages longAt: theSP.
-		 (objectMemory isIntegerObject: oop) ifFalse:
+		 (objectMemory isImmediate: oop) ifFalse:
 			[objectMemory markAndTrace: oop].
 		 theSP := theSP + BytesPerWord].
 	(self frameHasContext: theFP) ifTrue:
@@ -4531,7 +4531,7 @@ CoInterpreter >> markAndTraceStackPage: thePage [
 	theSP := theFP + FoxCallerSavedIP + BytesPerWord. "caller ip is ceBaseReturnPC"
 	[theSP <= thePage baseAddress] whileTrue:
 		[oop := stackPages longAt: theSP.
-		 (objectMemory isIntegerObject: oop) ifFalse:
+		 (objectMemory isImmediate: oop) ifFalse:
 			[objectMemory markAndTrace: oop].
 		 theSP := theSP + BytesPerWord]
 ]
@@ -4550,10 +4550,10 @@ CoInterpreter >> markAndTraceTraceLog [
 	0 to: limit by: 3 do:
 		[:i| | oop |
 		oop := traceLog at: i.
-		(objectMemory isIntegerObject: oop) ifFalse:
+		(objectMemory isImmediate: oop) ifFalse:
 			[objectMemory markAndTrace: oop].
 		oop := traceLog at: i + 1.
-		(objectMemory isIntegerObject: oop) ifFalse:
+		(objectMemory isImmediate: oop) ifFalse:
 			[objectMemory markAndTrace: oop]]
 ]
 
@@ -5619,7 +5619,7 @@ CoInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imag
 	<var: #dataSize type: 'size_t '>
 	<var: #imageOffset type: 'squeakFileOffsetType '>
 
-	metaclassSizeBits := 6 * BytesPerWord.	"guess (Metaclass instSize * BPW)"
+	metaclassNumSlots := 6.	"guess Metaclass instSize"
 	swapBytes := self checkImageVersionFrom: f startingAt: imageOffset.
 	headerStart := (self sqImageFilePosition: f) - BytesPerWord.  "record header start position"
 

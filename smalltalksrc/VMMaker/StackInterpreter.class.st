@@ -75,7 +75,7 @@ Class {
 		'desiredEdenBytes',
 		'classNameIndex',
 		'thisClassIndex',
-		'metaclassSizeBits',
+		'metaclassNumSlots',
 		'interruptCheckChain',
 		'suppressHeartbeatFlag',
 		'breakSelector',
@@ -6302,13 +6302,13 @@ StackInterpreter >> initialPCForHeader: methodHeader method: theMethod [
 
 { #category : #initialization }
 StackInterpreter >> initializeExtraClassInstVarIndices [
-	"Initialize metaclassSizeBits and thisClassIndex which are used in debug printing, and
+	"Initialize metaclassNumSlots and thisClassIndex which are used in debug printing, and
 	 classNameIndex which is used not only for debug printing but for is:KindOf: & is:MemberOf:
 	 via classNameOf:is: (evil but a reality we have to accept)."
 	| classArrayObj classArrayClass |
 	classArrayObj := objectMemory splObj: ClassArray.
 	classArrayClass := objectMemory fetchClassOfNonImm: classArrayObj.
-	metaclassSizeBits := objectMemory sizeBitsOf: classArrayClass.	"determine actual (Metaclass instSize * 4)"
+	metaclassNumSlots := objectMemory numSlotsOf: classArrayClass.	"determine actual Metaclass instSize"
 	thisClassIndex := 5. "default"
 	InstanceSpecificationIndex + 1 to: (objectMemory lengthOf: classArrayClass) do:
 		[:i|
@@ -7019,8 +7019,12 @@ StackInterpreter >> justActivateNewMethod [
 { #category : #'debug printing' }
 StackInterpreter >> lengthOfNameOfClass: classOop [
 	<inline: false>
-	(objectMemory sizeBitsOf: classOop) = metaclassSizeBits ifTrue:
+	| numSlots |
+	numSlots := objectMemory numSlotsOf: classOop.
+	numSlots = metaclassNumSlots ifTrue:
 		[^self lengthOfNameOfClass: (objectMemory fetchPointer: thisClassIndex ofObject: classOop)].
+	numSlots <= classNameIndex ifTrue:
+		[^0].
 	^objectMemory lengthOf: (objectMemory fetchPointer: classNameIndex ofObject: classOop)
 ]
 
@@ -8166,8 +8170,12 @@ StackInterpreter >> nameOfClass: classOop [
 	 Use e.g. classIsMeta: to avoid being fooled."
 	<inline: false>
 	<returnTypeC: 'char *'>
-	(objectMemory sizeBitsOf: classOop) = metaclassSizeBits ifTrue:
+	| numSlots |
+	numSlots := objectMemory numSlotsOf: classOop.
+	numSlots = metaclassNumSlots ifTrue:
 		[^self nameOfClass: (objectMemory fetchPointer: thisClassIndex ofObject: classOop)].
+	numSlots <= classNameIndex ifTrue:
+		[^'bad class'].
 	^objectMemory firstFixedField: (objectMemory fetchPointer: classNameIndex ofObject: classOop)
 ]
 
@@ -9374,15 +9382,21 @@ StackInterpreter >> printMethodHeaderOop: anOop [
 StackInterpreter >> printNameOfClass: classOop count: cnt [
 	"Details: The count argument is used to avoid a possible infinite recursion if classOop is a corrupted object."
 	<inline: false>
+	| numSlots |
 	classNameIndex ifNil:
 		[self print: '??nil cnidx??'.
 		 ^self].
 	(classOop isNil or: [classOop = 0 or: [cnt <= 0]]) ifTrue: [^self print: 'bad class'].
-	((objectMemory sizeBitsOf: classOop) = metaclassSizeBits
-	  and: [metaclassSizeBits > (thisClassIndex * BytesPerOop)])	"(Metaclass instSize * 4)"
+	numSlots := objectMemory numSlotsOf: classOop.
+	(numSlots = metaclassNumSlots
+	 and: [metaclassNumSlots > thisClassIndex])
 		ifTrue: [self printNameOfClass: (objectMemory fetchPointer: thisClassIndex ofObject: classOop) count: cnt - 1.
 				self print: ' class']
-		ifFalse: [self printStringOf: (objectMemory fetchPointer: classNameIndex ofObject: classOop)]
+		ifFalse:
+			[numSlots <= classNameIndex
+				ifTrue: [self print: 'bad class']
+				ifFalse:
+					[self printStringOf: (objectMemory fetchPointer: classNameIndex ofObject: classOop)]]
 ]
 
 { #category : #'debug printing' }
@@ -9519,7 +9533,7 @@ StackInterpreter >> printOopShortInner: oop [
 	classOop := objectMemory fetchClassOfNonImm: oop.
 	(objectMemory addressCouldBeObj: classOop) ifFalse:
 		[self print: 'a ??'. ^nil].
-	(objectMemory sizeBitsOf: classOop) = metaclassSizeBits ifTrue:
+	(objectMemory numSlotsOf: classOop) = metaclassNumSlots ifTrue:
 		[self printNameOfClass: oop count: 5.
 		 ^nil].
 	oop = objectMemory nilObject ifTrue: [self print: 'nil'. ^nil].
@@ -10117,7 +10131,7 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 	<var: #dataSize type: 'size_t '>
 	<var: #imageOffset type: 'squeakFileOffsetType '>
 
-	metaclassSizeBits := 6 * BytesPerWord.	"guess (Metaclass instSize * BPW)"
+	metaclassNumSlots := 6.	"guess Metaclass instSize"
 	swapBytes := self checkImageVersionFrom: f startingAt: imageOffset.
 	headerStart := (self sqImageFilePosition: f) - BytesPerWord.  "record header start position"
 
