@@ -1239,10 +1239,14 @@ StackInterpreterSimulator >> methodForContext: aContextOop [
 
 { #category : #'debug support' }
 StackInterpreterSimulator >> nameOfClass: classOop [
+	| numSlots |
 	classNameIndex ifNil: [^'??nil cnidx??'].
-	(objectMemory sizeBitsOf: classOop) = metaclassSizeBits ifTrue:
+	numSlots := objectMemory numSlotsOf: classOop.
+	numSlots = metaclassNumSlots ifTrue:
 		[^(self nameOfClass:
 				(objectMemory fetchPointer: thisClassIndex ofObject: classOop)) , ' class'].
+	numSlots <= classNameIndex ifTrue:
+		[^'bad class'].
 	^self stringOf: (objectMemory fetchPointer: classNameIndex ofObject: classOop)
 ]
 
@@ -2055,7 +2059,7 @@ StackInterpreterSimulator >> shortPrint: oop [
 		[^' is a forwarded object to ', (objectMemory followForwarded: oop) hex,
 			' of slot size ', (objectMemory numSlotsOfAny: oop) printString].
 	classOop := objectMemory fetchClassOfNonImm: oop.
-	(objectMemory sizeBitsOf: classOop) = metaclassSizeBits ifTrue:
+	(objectMemory numSlotsOf: classOop) = metaclassNumSlots ifTrue:
 		[^'class ' , (self nameOfClass: oop)].
 	name := self nameOfClass: classOop.
 	name size = 0 ifTrue: [name := '??'].
