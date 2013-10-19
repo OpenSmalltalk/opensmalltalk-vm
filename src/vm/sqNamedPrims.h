@@ -1,4 +1,4 @@
-/* Smalltalk from Squeak4.3 with VMMaker 4.12.6 translated as C source on 29 August 2013 11:38:40 pm */
+/* Smalltalk from Squeak4.3 with VMMaker 4.12.7 translated as C source on 19 October 2013 3:01:12 pm */
 /* This is an automatically generated table of all builtin modules in the VM */
 
 extern sqExport vm_exports[];
