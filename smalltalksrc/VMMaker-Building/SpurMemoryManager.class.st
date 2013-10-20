@@ -3406,6 +3406,17 @@ SpurMemoryManager >> freeSize [
 	^totalFreeOldSpace
 ]
 
+{ #category : #'free space' }
+SpurMemoryManager >> freeSmallObject: objOop [
+	| bytes index |
+	bytes := self bytesInObject: objOop.
+	index := bytes / self allocationUnit.
+	self assert: index < self numFreeLists.
+	self setFree: objOop. 
+	self storePointer: self freeChunkNextIndex ofFreeChunk: objOop withValue: (freeLists at: index).
+	freeLists at: index put: objOop.
+]
+
 { #category : #accessing }
 SpurMemoryManager >> freeStart [
 	"This is a horrible hack and only works because C macros are generated after Interpreter variables."
@@ -3454,13 +3465,16 @@ SpurMemoryManager >> freeTreeNodesDo: aBlock [
 
 { #category : #'gc - global' }
 SpurMemoryManager >> freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoallesceFreeSpace [
+	"Sweep all of old space, freeing unmarked objects, nilling the unmarked slots of weaklings,
+	 coallescing free chunks, and sorting free space.  Small free chunks are sorted in address
+	 order on each small list head.  Large free chunks are sorted on the sortedFreeChunks list."
+	| lastLargeFree |
 	self checkFreeSpace.
 	scavenger forgetUnmarkedRememberedObjects.
-	"for coallescing, specifically detatchLargeFreeObject: below, link large chunks to their tree nodes."
-	self buildPrevLinksForLargeFreeChunks.
 	self checkFreeSpace.
-	"for sorting free space throw away the small list heads, rebuilding them below.".
-	self resetSmallFreeListHeads.
+	"for sorting free space throw away the list heads, rebuilding them for small free chunks below."
+	self resetFreeListHeads.
+	sortedFreeChunks := lastLargeFree := 0.
 	self allOldSpaceEntitiesForCoallescingDo:
 		[:o|
 		(self isMarked: o)
@@ -3474,19 +3488,26 @@ SpurMemoryManager >> freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoalle
 				 self assert: (self isRemembered: o) not. "scavenger should have cleared this above"
 				 here := o.
 				 next := self objectAfter: here limit: endOfMemory.
-				 (self isMarked: next)
-					ifTrue: "common case"
-						[(self isLargeFreeObject: o) ifFalse:
-							[self sortedFreeObject: o]]
-					ifFalse: "coallescing; rare case"
-						[self assert: (self isRemembered: o) not.
-						 (self isLargeFreeObject: o) ifTrue:
-							[self detatchLargeFreeObject: o].
-						 [statCoallesces := statCoallesces + 1.
-						  here := self coallesce: here and: next.
-						  next := self objectAfter: here limit: endOfMemory.
-						  next = endOfMemory or: [self isMarked: next]] whileFalse.
-						 self sortedFreeObject: here]]].
+				 (self isMarked: next) ifFalse: "coallescing; rare case"
+					[self assert: (self isRemembered: o) not.
+					 [statCoallesces := statCoallesces + 1.
+					  here := self coallesce: here and: next.
+					  next := self objectAfter: here limit: endOfMemory.
+					  next = endOfMemory or: [self isMarked: next]] whileFalse].
+				 (self isLargeFreeObject: here)
+					ifTrue:
+						[lastLargeFree = 0
+							ifTrue: [sortedFreeChunks := here]
+							ifFalse:
+								[self setFree: here.
+								 self storePointer: self freeChunkNextAddressIndex ofFreeChunk: lastLargeFree withValue: here].
+						 lastLargeFree := here]
+					ifFalse:
+						[self freeSmallObject: here]]].
+	lastLargeFree ~= 0 ifTrue:
+		[self storePointer: self freeChunkNextAddressIndex ofFreeChunk: lastLargeFree withValue: 0].
+	totalFreeOldSpace := self reverseSmallListHeads.
+	totalFreeOldSpace := totalFreeOldSpace + self rebuildFreeTreeFromSortedFreeChunks.
 	self checkFreeSpace
 ]
 
@@ -4359,8 +4380,7 @@ SpurMemoryManager >> isIntegerValue: intValue [
 
 { #category : #'free space' }
 SpurMemoryManager >> isLargeFreeObject: objOop [
-	^(self isFreeObject: objOop)
-	  and: [(self bytesInObject: objOop)  / self allocationUnit >= self numFreeLists]
+	^(self bytesInObject: objOop)  / self allocationUnit >= self numFreeLists
 ]
 
 { #category : #'header access' }
@@ -5811,6 +5831,12 @@ SpurMemoryManager >> removeGCRoot: varLoc [
 ]
 
 { #category : #'free space' }
+SpurMemoryManager >> resetFreeListHeads [
+	0 to: self numFreeLists - 1 do:
+		[:i| freeLists at: i put: 0]
+]
+
+{ #category : #'free space' }
 SpurMemoryManager >> resetSmallFreeListHeads [
 	1 to: self numFreeLists - 1 do:
 		[:i| freeLists at: i put: 0]
@@ -5829,6 +5855,28 @@ SpurMemoryManager >> reverseBytesFrom: startAddr to: stopAddr [
 { #category : #snapshot }
 SpurMemoryManager >> reverseBytesInMemory [
 	self reverseBytesFrom: newSpaceLimit to: freeOldSpaceStart
+]
+
+{ #category : #'free space' }
+SpurMemoryManager >> reverseSmallListHeads [
+	"After freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoallesceFreeSpace
+	 all small free chunks will be on the free lists in reverse address order.  Reverse each list,
+	 summing the ammount of space.  Answer the sum of bytes of free space on these small lists."
+	| total |
+	total := 0.
+	1 to: self numFreeLists - 1 do:
+		[:i| | bytes node prev next |
+		 bytes := i * self allocationUnit.
+		 node := freeLists at: i.
+		 prev := 0.
+		 [node ~= 0] whileTrue:
+			[next := self fetchPointer: self freeChunkNextIndex ofObject: node.
+			 self storePointer: self freeChunkNextIndex ofFreeChunk: node withValue: prev.
+			 prev := node.
+			 node := next.
+			 total := total + bytes].
+		 freeLists at: i put: node].
+	^total
 ]
 
 { #category : #accessing }
@@ -6029,6 +6077,12 @@ SpurMemoryManager >> setFormatOf: objOop to: format [
 	 16 - 23 byte indexable
 	 24 - 31 compiled method"
 	self subclassResponsibility
+]
+
+{ #category : #'free space' }
+SpurMemoryManager >> setFree: objOop [
+	"turn the object into a free chunk, zeroing classIndex, format, isGrey,isPinned,isRemembered,isImmutable & ?."
+	self long32At: objOop put: 0
 ]
 
 { #category : #snapshot }
