@@ -87,6 +87,8 @@
  3.8.21b1	Jan 14th, 2009 JMM fix issue with mmap allocation, only allow explicitly to avoid mmap problems on nfs
  4.0.1b1	Apr 9th, 2009 JMM add logic for etoys on a stick
  4.2.1b1	Aug 19th, 2009 JMM add gSqueakResourceDirectoryName
+
+ -------   Oct 19th, 2013 dtl add ioExitWithErrorCode(int ec)
 */
 
 
@@ -326,7 +328,13 @@ int main(int argc, char **argv, char **envp) {
     return 0;
 }
 
-int ioExit(void) {
+sqInt ioExit(void)
+{
+    return ioExitWithErrorCode(0);
+}
+
+sqInt ioExitWithErrorCode(int ec)
+{
     UnloadScrap();
     ioShutdownAllModules();
 	if (!gSqueakHeadless || gSqueakBrowserWasHeadlessButMadeFullScreen) 

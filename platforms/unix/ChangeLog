@@ -1,5 +1,7 @@
 2013-10-20  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
+	* vm/sqUnixMain.c (ioExitWithErrorCode): Added.
+
 	* plugins/SqueakSSL/sqUnixOpenSSL.c: Fix memory leaks (thanks to
 	Levente Uzonyl).
 
