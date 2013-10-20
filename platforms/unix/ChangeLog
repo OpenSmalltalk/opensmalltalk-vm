@@ -1,3 +1,8 @@
+2013-10-20  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* plugins/SqueakSSL/sqUnixOpenSSL.c: Fix memory leaks (thanks to
+	Levente Uzonyl).
+
 2013-09-09  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* cmake/configure (svnversion): Look for evidence of checked out
