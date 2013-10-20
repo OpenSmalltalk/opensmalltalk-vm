@@ -86,6 +86,28 @@ SpurSegmentManager >> adjustSegmentSwizzlesBy: firstSegmentShift [
 	canSwizzle := true
 ]
 
+{ #category : #'debug support' }
+SpurSegmentManager >> allBridgesMarked [
+	0 to: numSegments - 1 do:
+		[:i| | bridgeObj |
+		 bridgeObj := (segments at: i) segStart
+					 + (segments at: i) segSize
+					 - manager baseHeaderSize.
+		 self assert: (manager isSegmentBridge: bridgeObj).
+		 (manager isMarked: bridgeObj) ifFalse:
+			[^false]].
+	^true
+
+	"for debugging:"
+	"(0 to: numSegments - 1) select:
+		[:i| | bridgeObj |
+		 bridgeObj := (segments at: i) segStart
+					 + (segments at: i) segSize
+					 - manager baseHeaderSize.
+		 self assert: (manager isSegmentBridge: bridgeObj).
+		 manager isMarked: bridgeObj]"
+]
+
 { #category : #private }
 SpurSegmentManager >> allocateOrExtendSegmentInfos [
 	"Increase the number of allocated segInfos by 16."
@@ -142,12 +164,15 @@ SpurSegmentManager >> collapseSegmentsPostSwizzle [
 		[^self].
 
 	numSegments := 1.
-	(self addressOf: (segments at: 0))
+	(segments at: 0)
 		segStart: manager newSpaceLimit;
 		segSize: manager endOfMemory - manager newSpaceLimit.
 	"finally plant a bridge at the end of the coallesced segment and cut back the
 	 manager's notion of the end of memory to immediately before the bridge."
 	bridge := manager endOfMemory - manager bridgeSize.
+	self assert: bridge = ((segments at: 0) segStart
+						  + (segments at: 0) segSize
+						  -  (manager bridgeSize)).
 	manager
 		initSegmentBridgeWithBytes: manager bridgeSize at: bridge;
 		setEndOfMemory: bridge

@@ -281,6 +281,7 @@ Spur64BitMemoryManager >> initSegmentBridgeWithBytes: numBytes at: address [
 		longAt: address + self baseHeaderSize
 			put: (self numSlotsMask << self numSlotsFullShift)
 				+ (1 << self pinnedBitShift)
+				+ (1 << self markedBitFullShift)
 				+ (self wordIndexableFormat << self formatShift)
 				+ self segmentBridgePun
 ]
@@ -423,17 +424,6 @@ Spur64BitMemoryManager >> rawOverflowSlotsOf: objOop [
 	<inline: true>
 	self flag: #endianness.
 	^((self longAt: objOop - self baseHeaderSize) << 8) asUnsignedLong >> 8
-]
-
-{ #category : #segments }
-Spur64BitMemoryManager >> reInitSegmentBridge: bridgeOop [
-	"On image write the segment manager replaces the header of the bridge
-	 with the size of the following segment.  This method restores that header."
-	self longAt: bridgeOop
-			put: (self numSlotsMask << self numSlotsFullShift)
-				+ (1 << self pinnedBitShift)
-				+ (self wordIndexableFormat << self formatShift)
-				+ self segmentBridgePun
 ]
 
 { #category : #'header access' }
