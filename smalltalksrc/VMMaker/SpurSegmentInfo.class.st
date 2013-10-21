@@ -4,7 +4,8 @@ Class {
 	#instVars : [
 		'segStart',
 		'segSize',
-		'swizzle'
+		'swizzle',
+		'containsPinned'
 	],
 	#category : #'VMMaker-SpurMemoryManager'
 }
@@ -22,6 +23,26 @@ SpurSegmentInfo class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 							ifFalse: [#usqInt])]
 ]
 
+{ #category : #accessing }
+SpurSegmentInfo >> containsPinned [
+	"Answer the value of containsPinned"
+
+	^ containsPinned
+]
+
+{ #category : #accessing }
+SpurSegmentInfo >> containsPinned: anObject [
+	"Set the value of containsPinned"
+
+	^containsPinned := anObject
+]
+
+{ #category : #initialization }
+SpurSegmentInfo >> initialize [
+	segSize := segStart := swizzle := 0.
+	containsPinned := false
+]
+
 { #category : #printing }
 SpurSegmentInfo >> printOn: aStream [
 	<doNotGenerate>
@@ -30,7 +51,7 @@ SpurSegmentInfo >> printOn: aStream [
 		[:name| | iv |
 		iv := self instVarNamed: name.
 		aStream space; nextPutAll: name; space; print: iv.
-		iv isInteger ifTrue:
+		(iv isInteger and: [iv ~= 0]) ifTrue:
 			[aStream nextPut: $/.  iv storeOn: aStream base: 16]]
 ]
 
