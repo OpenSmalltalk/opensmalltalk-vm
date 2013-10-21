@@ -232,7 +232,7 @@ Spur32BitMemoryManager >> changeClassOf: rcvr to: argClass [
 ]
 
 { #category : #'gc - global' }
-Spur32BitMemoryManager >> coallesce: obj1 and: obj2 [
+Spur32BitMemoryManager >> coalesce: obj1 and: obj2 [
 	| header1NumSlots header2NumSlots obj2slots newNumSlots |
 	header1NumSlots := self rawNumSlotsOf: obj1.
 	header2NumSlots := self rawNumSlotsOf: obj2.
