@@ -3,7 +3,7 @@ Instances of SpurSegmentManager manage oldSpace, which is organized as a sequenc
 
 When an image is written to a snapshot file the second word of the header of the bridge at the end of each segment is replaced by the size of the following segment, the segments are written to the file, and the second word of each bridge is restored.  Hence the length of each segment is derived from the bridge at the end of the preceeding segment.  The length of the first segment is stored in the image header as firstSegmentBytes.  The start of each segment is also derived from the bridge as a delta from the start of the previous segment.  The start of The first segment is stored in the image header as startOfMemory.
 
-On load all segments are read into one single segment, eliminating the bridge objects, and computing the swizzle distance for each segment, based on where the segments were in memory when the image file was written, and where the coallesced segment ends up on load.  Then the segment is traversed, swizzling pointers by selecting the relevant swizzle for each oop's segment.
+On load all segments are read into one single segment, eliminating the bridge objects, and computing the swizzle distance for each segment, based on where the segments were in memory when the image file was written, and where the coalesced segment ends up on load.  Then the segment is traversed, swizzling pointers by selecting the relevant swizzle for each oop's segment.
 
 Instance Variables
 	numSegments:		<Integer>
@@ -169,7 +169,7 @@ SpurSegmentManager >> collapseSegmentsPostSwizzle [
 	(segments at: 0)
 		segStart: manager newSpaceLimit;
 		segSize: manager endOfMemory - manager newSpaceLimit.
-	"finally plant a bridge at the end of the coallesced segment and cut back the
+	"finally plant a bridge at the end of the coalesced segment and cut back the
 	 manager's notion of the end of memory to immediately before the bridge."
 	bridge := manager endOfMemory - manager bridgeSize.
 	self assert: bridge = ((segments at: 0) segStart
