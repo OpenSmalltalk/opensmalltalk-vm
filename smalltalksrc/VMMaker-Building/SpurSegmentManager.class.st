@@ -28,7 +28,9 @@ Class {
 		'numSegInfos',
 		'segments',
 		'firstSegmentSize',
-		'canSwizzle'
+		'canSwizzle',
+		'sweepIndex',
+		'preferredPinningSegment'
 	],
 	#category : #'VMMaker-SpurMemoryManager'
 }
@@ -257,10 +259,28 @@ SpurSegmentManager >> manager: aSpurMemoryManager [
 	manager := aSpurMemoryManager
 ]
 
+{ #category : #pinning }
+SpurSegmentManager >> notePinned: objOop [
+	"Let the segmentManager mark which segments contain pinned objects"
+	self assert: (manager isPinned: objOop).
+	(manager isSegmentBridge: objOop) ifFalse:
+		[[(segments at: sweepIndex) segStart + (segments at: sweepIndex) segSize < objOop] whileTrue:
+			[sweepIndex := sweepIndex + 1].
+		 (segments at: sweepIndex) containsPinned: true]
+]
+
 { #category : #accessing }
 SpurSegmentManager >> numSegments [
 	<cmacro: '() GIV(numSegments)'>
 	^numSegments
+]
+
+{ #category : #pinning }
+SpurSegmentManager >> prepareForGlobalSweep [
+	"Let the segmentManager mark which segments contain pinned objects via notePinned:"
+	sweepIndex := 0.
+	0 to: numSegments - 1 do:
+		[:i| (segments at: i) containsPinned: false]
 ]
 
 { #category : #private }

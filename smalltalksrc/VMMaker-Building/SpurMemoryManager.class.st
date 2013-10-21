@@ -441,6 +441,7 @@ Class {
 		'lowSpaceThreshold',
 		'totalFreeOldSpace',
 		'sortedFreeChunks',
+		'highestObjects',
 		'statCoallesces',
 		'statFGCDeltaUsecs',
 		'statFullGCUsecs',
@@ -840,7 +841,7 @@ SpurMemoryManager >> addToFreeList: freeChunk bytes: chunkBytes [
 	"Add freeChunk to the relevant freeList.
 	 For the benefit of sortedFreeObject:, if freeChunk is large, answer the treeNode it
 	 is added to, if it is added to the next list of a freeTreeNode, otherwise answer 0."
-	| childBytes parent child index |
+	| index |
 	"coInterpreter transcript ensureCr. coInterpreter print: 'freeing '. self printFreeChunk: freeChunk."
 	self assert: (self isFreeObject: freeChunk).
 	self assert: chunkBytes = (self bytesInObject: freeChunk).
@@ -850,6 +851,18 @@ SpurMemoryManager >> addToFreeList: freeChunk bytes: chunkBytes [
 		 freeLists at: index put: freeChunk.
 		 freeListsMask := freeListsMask bitOr: 1 << index.
 		 ^0].
+
+	^self addToFreeTree: freeChunk bytes: chunkBytes
+]
+
+{ #category : #'free space' }
+SpurMemoryManager >> addToFreeTree: freeChunk bytes: chunkBytes [
+	"Add freeChunk to the large free chunk tree.
+	 For the benefit of sortedFreeObject:, answer the treeNode it is added
+	 to, if it is added to the next list of a freeTreeNode, otherwise answer 0."
+	| childBytes parent child |
+	self assert: chunkBytes = (self bytesInObject: freeChunk).
+	self assert: chunkBytes / self allocationUnit >= self numFreeLists.
 
 	self
 		storePointer: self freeChunkNextIndex ofFreeChunk: freeChunk withValue: 0;
@@ -1699,25 +1712,6 @@ SpurMemoryManager >> byteSizeOf: oop [
 { #category : #snapshot }
 SpurMemoryManager >> byteSwapped: w [
 	self subclassResponsibility
-]
-
-{ #category : #'free space' }
-SpurMemoryManager >> bytesInFreeTree: freeNode [
-	| freeBytes bytesInObj listNode |
-	freeNode = 0 ifTrue: [^0].
-	freeBytes := 0.
-	bytesInObj := self bytesInObject: freeNode.
-	self assert: bytesInObj / self allocationUnit >= self numFreeLists.
-	listNode := freeNode.
-	[listNode ~= 0] whileTrue:
-		["self printFreeChunk: listNode"
-		 self assert: (self isValidFreeObject: listNode).
-		 freeBytes := freeBytes + bytesInObj.
-		 self assert: bytesInObj = (self bytesInObject: listNode).
-		 listNode := self fetchPointer: self freeChunkNextIndex ofFreeChunk: listNode].
-	^freeBytes
-	+ (self bytesInFreeTree: (self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: freeNode))
-	+ (self bytesInFreeTree: (self fetchPointer: self freeChunkLargerIndex ofFreeChunk: freeNode))
 ]
 
 { #category : #'object enumeration' }
@@ -3467,13 +3461,21 @@ SpurMemoryManager >> freeTreeNodesDo: aBlock [
 SpurMemoryManager >> freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoallesceFreeSpace [
 	"Sweep all of old space, freeing unmarked objects, nilling the unmarked slots of weaklings,
 	 coallescing free chunks, and sorting free space.  Small free chunks are sorted in address
-	 order on each small list head.  Large free chunks are sorted on the sortedFreeChunks list."
-	| lastLargeFree |
+	 order on each small list head.  Large free chunks are sorted on the sortedFreeChunks list.
+	 Record the highest N objects in highestObjects, for the first cycle of exactFitCompact.
+	 Let the segmentManager mark which segments contain pinned objects via notePinned:"
+	| lastLargeFree highestObjectsWraps |
 	self checkFreeSpace.
 	scavenger forgetUnmarkedRememberedObjects.
-	self checkFreeSpace.
+	segmentManager prepareForGlobalSweep."for notePinned:"
 	"for sorting free space throw away the list heads, rebuilding them for small free chunks below."
 	self resetFreeListHeads.
+	highestObjects
+		top: freeStart;
+		start: freeStart;
+		limit: scavenger eden limit.
+	highestObjectsWraps := 0.
+	self assert: highestObjects limit - highestObjects start // self wordSize >= 1024.
 	sortedFreeChunks := lastLargeFree := 0.
 	self allOldSpaceEntitiesForCoallescingDo:
 		[:o|
@@ -3482,7 +3484,14 @@ SpurMemoryManager >> freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoalle
 				[self setIsMarkedOf: o to: false.
 				 ((self isWeakNonImm: o)
 				 and: [self nilUnmarkedWeaklingSlots: o]) ifTrue:
-					[coInterpreter signalFinalization: o]]
+					[coInterpreter signalFinalization: o].
+				 (self isPinned: o) ifTrue:
+					[segmentManager notePinned: o].
+				 lastLargeFree ~= 0 ifTrue:
+					[self longAt: highestObjects top put: o.
+					 (highestObjects top: (highestObjects top + self wordSize)) >= highestObjects limit ifTrue:
+						[highestObjects top: highestObjects start.
+						 highestObjectsWraps := highestObjectsWraps + 1]]]
 			ifFalse: "unmarked; two cases, an unreachable object or a free chunk."
 				[| here next |
 				 self assert: (self isRemembered: o) not. "scavenger should have cleared this above"
@@ -3508,7 +3517,8 @@ SpurMemoryManager >> freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoalle
 		[self storePointer: self freeChunkNextAddressIndex ofFreeChunk: lastLargeFree withValue: 0].
 	totalFreeOldSpace := self reverseSmallListHeads.
 	totalFreeOldSpace := totalFreeOldSpace + self rebuildFreeTreeFromSortedFreeChunks.
-	self checkFreeSpace
+	self checkFreeSpace.
+	self touch: highestObjectsWraps
 ]
 
 { #category : #'gc - global' }
@@ -3830,6 +3840,7 @@ SpurMemoryManager >> initialize [
 
 	"We can initialize things that are allocated but are lazily initialized."
 	unscannedEphemerons := SpurContiguousObjStack new.
+	highestObjects := SpurContiguousObjStack new.
 
 	"we can initialize things that are virtual in C."
 	scavenger := SpurGenerationScavengerSimulator new manager: self; yourself.
@@ -5773,6 +5784,22 @@ SpurMemoryManager >> readHeapFromImageFile: f dataBytes: numBytes [
 	^segmentManager readHeapFromImageFile: f dataBytes: numBytes
 ]
 
+{ #category : #'free space' }
+SpurMemoryManager >> rebuildFreeTreeFromSortedFreeChunks [
+	"post sweep and pre compact, rebuild the large
+	 free chunk tree from the sortedFreeChunks list."
+	| freeChunk bytes totalBytes |
+	freeChunk := sortedFreeChunks.
+	totalBytes := 0.
+	[freeChunk ~= 0] whileTrue:
+		[bytes := self bytesInObject: freeChunk.
+		 totalBytes := totalBytes + bytes.
+		 self addToFreeTree: freeChunk bytes: bytes.
+		 freeChunk := self fetchPointer: self freeChunkNextAddressIndex
+							ofObject: freeChunk].
+	^totalBytes
+]
+
 { #category : #'gc - global' }
 SpurMemoryManager >> remap: oop [
 	self shouldNotImplement
@@ -5836,12 +5863,6 @@ SpurMemoryManager >> resetFreeListHeads [
 		[:i| freeLists at: i put: 0]
 ]
 
-{ #category : #'free space' }
-SpurMemoryManager >> resetSmallFreeListHeads [
-	1 to: self numFreeLists - 1 do:
-		[:i| freeLists at: i put: 0]
-]
-
 { #category : #snapshot }
 SpurMemoryManager >> reverseBytesFrom: startAddr to: stopAddr [
 	"Byte-swap the given range of memory (not inclusive of stopAddr!)."
@@ -5864,18 +5885,22 @@ SpurMemoryManager >> reverseSmallListHeads [
 	 summing the ammount of space.  Answer the sum of bytes of free space on these small lists."
 	| total |
 	total := 0.
+	freeListsMask := 0.
 	1 to: self numFreeLists - 1 do:
 		[:i| | bytes node prev next |
 		 bytes := i * self allocationUnit.
 		 node := freeLists at: i.
-		 prev := 0.
-		 [node ~= 0] whileTrue:
-			[next := self fetchPointer: self freeChunkNextIndex ofObject: node.
-			 self storePointer: self freeChunkNextIndex ofFreeChunk: node withValue: prev.
-			 prev := node.
-			 node := next.
-			 total := total + bytes].
-		 freeLists at: i put: node].
+		 node ~= 0 ifTrue:
+			[self assert: (self bytesInObject: node) = bytes.
+			 freeListsMask := freeListsMask + (1 << i).
+			 prev := 0.
+			 [node ~= 0] whileTrue:
+				[next := self fetchPointer: self freeChunkNextIndex ofObject: node.
+				 self storePointer: self freeChunkNextIndex ofFreeChunk: node withValue: prev.
+				 prev := node.
+				 node := next.
+				 total := total + bytes].
+			 freeLists at: i put: prev]].
 	^total
 ]
 
@@ -6824,18 +6849,30 @@ SpurMemoryManager >> topRemappableOop [
 
 { #category : #'free space' }
 SpurMemoryManager >> totalFreeListBytes [
-	| freeBytes bytesInObj obj |
-	freeBytes := 0.
+	| totalFreeBytes bytesInChunk listNode |
+	totalFreeBytes := 0.
 	1 to: self numFreeLists - 1 do:
 		[:i| 
-		bytesInObj := i * self allocationUnit.
-		obj := freeLists at: i.
-		[obj ~= 0] whileTrue:
-			[freeBytes := freeBytes + bytesInObj.
-			 self assert: (self isValidFreeObject: obj).
-			 self assert: bytesInObj = (self bytesInObject: obj).
-			 obj := self fetchPointer: self freeChunkNextIndex ofFreeChunk: obj]].
-	^freeBytes + (self bytesInFreeTree: (freeLists at: 0))
+		bytesInChunk := i * self allocationUnit.
+		listNode := freeLists at: i.
+		[listNode ~= 0] whileTrue:
+			[totalFreeBytes := totalFreeBytes + bytesInChunk.
+			 self assert: (self isValidFreeObject: listNode).
+			 self assert: bytesInChunk = (self bytesInObject: listNode).
+			 listNode := self fetchPointer: self freeChunkNextIndex ofFreeChunk: listNode]].
+
+	self freeTreeNodesDo:
+		[:treeNode|
+		 bytesInChunk := self bytesInObject: treeNode.
+		 self assert: bytesInChunk / self allocationUnit >= self numFreeLists.
+		 listNode := treeNode.
+		 [listNode ~= 0] whileTrue:
+			["self printFreeChunk: listNode"
+			 self assert: (self isValidFreeObject: listNode).
+			 totalFreeBytes := totalFreeBytes + bytesInChunk.
+			 self assert: bytesInChunk = (self bytesInObject: listNode).
+			 listNode := self fetchPointer: self freeChunkNextIndex ofFreeChunk: listNode]].
+	^totalFreeBytes
 ]
 
 { #category : #accessing }
