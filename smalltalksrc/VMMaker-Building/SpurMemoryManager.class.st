@@ -254,7 +254,7 @@ To provide apparent pinning in new space we rely on lazy become.  Since most pin
 
 To provide pinning in old space, large objects are implicitly pinned (because it is expensive to move large objects and, because they are both large and relatively rare, they contribute little to overall fragmentation - as in aggregates, small objects can be used to fill-in the spaces between karge objects).  Hence, objects above a particular size are automatically allocated in old space, rather than new space.  Small objects are pinned as per objects in new space, by asserting the pin bit, which will be set automaticaly when allocating a large object.  As a last resort, or by programmer control (the fullGC primitive) old space is collected via mark-sweep (mark-compact) and so the mark phase must build the list of pinned objects around which the sweep/compact phase must carefully step.
 
-Free space in old space is organized by a number of free lists and a free tree .  There are 32 or 64 free lists, depending on word size, indices 1 through wordSize - 1 holding blocks of space of the index * allocationUnit, index 0 holding a semi-balanced ordered tree of free blocks, each node being the head of the list of free blocks of that size.  At the start of the mark phase the free list is thrown away and the sweep phase coallesces free space and steps over pinned objects as it proceeds.  We can reuse the forwarding pointer compaction scheme used in the old collector.  Incremental collections merely move unmarked objects to the free lists (as well as nilling weak pointers in weak arrays and scheduling them for finalization).  The occupancy of the free lists is represented by a bitmap in an integer so that an allocation of size wordSize - 1 or less can know whether there exists a free chunk of that size, but more importantly can know whether a free chunk larger than it exists in the fixed size free lists without having to search all larger free list heads.
+Free space in old space is organized by a number of free lists and a free tree .  There are 32 or 64 free lists, depending on word size, indices 1 through wordSize - 1 holding blocks of space of the index * allocationUnit, index 0 holding a semi-balanced ordered tree of free blocks, each node being the head of the list of free blocks of that size.  At the start of the mark phase the free list is thrown away and the sweep phase coalesces free space and steps over pinned objects as it proceeds.  We can reuse the forwarding pointer compaction scheme used in the old collector.  Incremental collections merely move unmarked objects to the free lists (as well as nilling weak pointers in weak arrays and scheduling them for finalization).  The occupancy of the free lists is represented by a bitmap in an integer so that an allocation of size wordSize - 1 or less can know whether there exists a free chunk of that size, but more importantly can know whether a free chunk larger than it exists in the fixed size free lists without having to search all larger free list heads.
 
 Incremental Old Space Collection
 The incremental collector (a la Dijkstra's three colour algorithm) collects old space via an amount of tracing being hung off scavenges and/or old space allocations at an adaptive rate that keeps full garbage collections to a minimum.  [N.B. Not sure how to do this yet.  The incremental collector needs to complete a pass often enough to reclaim objects, but infrequent enough not to waste time.  So some form of feedback should work.  In VisualWorks tracing is broken into quanta or work where image-level code determines the size of a quantum based on how fast the machine is, and how big the heap is.  This code could easily live in the VM, controllable through vmParameterAt:put:.  An alternative would be to use the heartbeat to bound quanta by time.  But in any case some amount of incremental collection would be done on old space allocation and scavenging, the ammount being chosen to keep pause times acceptably short, and at a rate to reclaim old space before a full GC is required, i.e. at a rate proportional to the growth in old space]. The incemental collector is a state machine, being either marking, nilling weak pointers, or freeing.  If nilling weak pointers is not done atomically then there must be a read barrier in weak array at: so that reading from an old space weak array that is holding stale un-nilled references to unmarked objects.  Tricks such as including the weak bit in bounds calculations can make this cheap for non-weak arrays.  Alternatively nilling weak pointers can be made an atomic part of incremental collection, which can be made cheaper by maintaining the set of weak arrays (e.g. on a list).  Note that the incremental collector also follows (and eliminates) forwarding pointers as it scans.
@@ -442,7 +442,7 @@ Class {
 		'totalFreeOldSpace',
 		'sortedFreeChunks',
 		'highestObjects',
-		'statCoallesces',
+		'statCoalesces',
 		'statFGCDeltaUsecs',
 		'statFullGCUsecs',
 		'statFullGCs',
@@ -942,7 +942,7 @@ SpurMemoryManager >> adjustAllOopsBy: bytesToShift [
 	"Adjust all oop references by the given number of bytes. This is
 	 done just after reading in an image when the new base address
 	 of the object heap is different from the base address in the image,
-	 or when loading multiple segments that have been coallesced.  Also
+	 or when loading multiple segments that have been coalesced.  Also
 	 set bits in the classTableBitmap corresponding to used classes."
 
 	| obj |
@@ -1142,7 +1142,8 @@ SpurMemoryManager >> allObjectsInFreeTreeDo: aBlock [
 		 next := freeTreeNode.
 		 [aBlock value: next.
 		  next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: next.
-		  next ~= 0] whileTrue]
+		  next ~= 0] whileTrue.
+		 freeTreeNode]
 ]
 
 { #category : #'object enumeration' }
@@ -1162,7 +1163,7 @@ SpurMemoryManager >> allOldSpaceEntitiesDo: aBlock [
 ]
 
 { #category : #'object enumeration' }
-SpurMemoryManager >> allOldSpaceEntitiesForCoallescingDo: aBlock [
+SpurMemoryManager >> allOldSpaceEntitiesForCoalescingDo: aBlock [
 	<inline: true>
 	| prevObj prevPrevObj objOop rawNumSlots rawNumSlotsAfter |
 	prevPrevObj := prevObj := nil.
@@ -1171,7 +1172,7 @@ SpurMemoryManager >> allOldSpaceEntitiesForCoallescingDo: aBlock [
 	 objOop < freeOldSpaceStart] whileTrue:
 		[rawNumSlots := self rawNumSlotsOf: objOop.
 		 aBlock value: objOop.
-		 "If the number of slot changes coallescing changed an object from a single to a double header."
+		 "If the number of slot changes coalescing changed an object from a single to a double header."
 		 rawNumSlotsAfter := self rawNumSlotsOf: objOop.
 		 (rawNumSlotsAfter ~= rawNumSlots
 		  and: [rawNumSlotsAfter = self numSlotsMask]) ifTrue:
@@ -1590,12 +1591,8 @@ SpurMemoryManager >> becomeEffectFlagsFor: objOop [
 
 { #category : #compaction }
 SpurMemoryManager >> bestFitCompact [
-	"Compact all of memory using best-fit.
-	 Sort free space, find the first free chunk. Scan objects following
-	 the first free chunk and for each, look for a free chunk of the exact
-	 size, copy the object's contents into the free chunk, and forward
-	 the object to its new, lower location.  If any didn't fit exactly do a
-	 second pass using best fit."
+	"Compact all of memory using best-fit, assuming free space is sorted
+	 and that the highest objects are recorded in highestObjects."
 
 	| firstFailedFit |
 	firstFailedFit := self exactFitCompact.
@@ -1606,7 +1603,7 @@ SpurMemoryManager >> bestFitCompact [
 			((self isForwarded: o)
 			 or: [self isPinned: o]) ifFalse:
 				[b := self bytesInObject: o.
-				(self allocateOldSpaceChunkOfBytes: b) ifNotNil:
+				(self allocateOldSpaceChunkOfBytes: b suchThat: [:f| f < o]) ifNotNil:
 					[:f|
 					self mem: f
 						cp: o
@@ -1646,21 +1643,6 @@ SpurMemoryManager >> booleanValueOf: obj [
 { #category : #segments }
 SpurMemoryManager >> bridgeSize [
 	^2 * self baseHeaderSize
-]
-
-{ #category : #'free space' }
-SpurMemoryManager >> buildPrevLinksForLargeFreeChunks [
-	| prevTreeNode |
-	prevTreeNode := 0.
-	self freeTreeNodesDo:
-		[:freeTreeNode| | next prev |
-		"freeTreeNodesDo: is supposed to be an in-order traversal from smaller to larger..."
-		self assert: (prevTreeNode = 0 or: [(self numSlotsOfAny: prevTreeNode) < (self numSlotsOfAny: freeTreeNode)]).
-		self storePointer: self freeChunkPrevIndex ofFreeChunk: freeTreeNode withValue: 0.
-		prev := freeTreeNode.
-		[(next := self fetchPointer: self freeChunkNextIndex ofObject: prev) ~= 0] whileTrue:
-			[self storePointer: self freeChunkPrevIndex ofFreeChunk: next withValue: prev.
-			 prev := next]]
 ]
 
 { #category : #'header format' }
@@ -2379,7 +2361,7 @@ SpurMemoryManager >> coInterpreter: aCoInterpreter [
 ]
 
 { #category : #'gc - global' }
-SpurMemoryManager >> coallesce: obj1 and: obj2 [
+SpurMemoryManager >> coalesce: obj1 and: obj2 [
 	self subclassResponsibility
 ]
 
@@ -2482,7 +2464,7 @@ SpurMemoryManager >> defaultEdenBytes [
 ]
 
 { #category : #'free space' }
-SpurMemoryManager >> detatchLargeFreeObject: freeChunk [
+SpurMemoryManager >> detachLargeFreeObject: freeChunk [
 	| prev next |
 	prev := self fetchPointer: self freeChunkPrevIndex ofObject: freeChunk.
 	next := self fetchPointer: self freeChunkNextIndex ofObject: freeChunk.
@@ -2768,15 +2750,10 @@ SpurMemoryManager >> ephemeronQueue: anObject [
 
 { #category : #compaction }
 SpurMemoryManager >> exactFitCompact [
-	"Compact all of memory using exact-fit.
-	 Sort free space, find the first free chunk. Scan objects following
-	 the first free chunk and for each, look for a free chunk of the right
-	 size, copy the object's contents into the free chunk, and forward
-	 the object to its new, lower location.  Answer the first object that
-	 failed to fit (for bestFitCompacts convenience), if there's free space."
+	"Compact all of memory using exact-fit, assuming free space is sorted
+	 and that the highest objects are recorded in highestObjects."
 
 	| firstFailedFit |
-	self sortFreeSpace.
 	firstFailedFit := 0.
 	totalFreeOldSpace = 0 ifTrue: [^0].
 	self allOldSpaceObjectsFrom: self lowestFreeChunkAssumingSortedFreeSpace
@@ -2784,7 +2761,7 @@ SpurMemoryManager >> exactFitCompact [
 			((self isForwarded: o)
 			 or: [self isPinned: o]) ifFalse:
 				[b := self bytesInObject: o.
-				(self allocateOldSpaceChunkOfExactlyBytes: b)
+				(self allocateOldSpaceChunkOfExactlyBytes: b suchThat: [:f| f < o])
 					ifNil: [firstFailedFit = 0 ifTrue: [firstFailedFit := o]]
 					ifNotNil:
 						[:f|
@@ -3421,11 +3398,15 @@ SpurMemoryManager >> freeStart [
 { #category : #'free space' }
 SpurMemoryManager >> freeTreeNodesDo: aBlock [
 	"Enumerate all nodes in the free tree (in order, smaller to larger),
-	 bit *not* including the next nodes of the same size off each tree node.
+	 but *not* including the next nodes of the same size off each tree node.
 	 This is an iterative version so that the block argument can be
 	 inlined by Slang. The trick to an iterative binary tree application is
 	 to apply the function on the way back up when returning from a
-	 particular direction, in this case up from the larger child."
+	 particular direction, in this case up from the larger child.
+
+	 N.B For the convenience of rebuildFreeTreeFromSortedFreeChunks
+	 aBlock *MUST* answer the freeTreeNode it was invoked with, or
+	 its replacement if it was replaced by aBlock."
 	<inline: true>
 	| treeNode cameFrom |
 	treeNode := freeLists at: 0.
@@ -3442,7 +3423,7 @@ SpurMemoryManager >> freeTreeNodesDo: aBlock [
 			ifTrue: [cameFrom = smallChild]
 			ifFalse: [cameFrom = largeChild]])
 		ifTrue:
-			[aBlock value: treeNode.
+			[treeNode := aBlock value: treeNode.
 			 "and since we've applied we must move on up"
 			 cameFrom := treeNode.
 			 treeNode := self fetchPointer: self freeChunkParentIndex ofFreeChunk: treeNode]
@@ -3458,9 +3439,9 @@ SpurMemoryManager >> freeTreeNodesDo: aBlock [
 ]
 
 { #category : #'gc - global' }
-SpurMemoryManager >> freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoallesceFreeSpace [
+SpurMemoryManager >> freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoalesceFreeSpace [
 	"Sweep all of old space, freeing unmarked objects, nilling the unmarked slots of weaklings,
-	 coallescing free chunks, and sorting free space.  Small free chunks are sorted in address
+	 coalescing free chunks, and sorting free space.  Small free chunks are sorted in address
 	 order on each small list head.  Large free chunks are sorted on the sortedFreeChunks list.
 	 Record the highest N objects in highestObjects, for the first cycle of exactFitCompact.
 	 Let the segmentManager mark which segments contain pinned objects via notePinned:"
@@ -3477,7 +3458,7 @@ SpurMemoryManager >> freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoalle
 	highestObjectsWraps := 0.
 	self assert: highestObjects limit - highestObjects start // self wordSize >= 1024.
 	sortedFreeChunks := lastLargeFree := 0.
-	self allOldSpaceEntitiesForCoallescingDo:
+	self allOldSpaceEntitiesForCoalescingDo:
 		[:o|
 		(self isMarked: o)
 			ifTrue:
@@ -3497,10 +3478,10 @@ SpurMemoryManager >> freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoalle
 				 self assert: (self isRemembered: o) not. "scavenger should have cleared this above"
 				 here := o.
 				 next := self objectAfter: here limit: endOfMemory.
-				 (self isMarked: next) ifFalse: "coallescing; rare case"
+				 (self isMarked: next) ifFalse: "coalescing; rare case"
 					[self assert: (self isRemembered: o) not.
-					 [statCoallesces := statCoallesces + 1.
-					  here := self coallesce: here and: next.
+					 [statCoalesces := statCoalesces + 1.
+					  here := self coalesce: here and: next.
 					  next := self objectAfter: here limit: endOfMemory.
 					  next = endOfMemory or: [self isMarked: next]] whileFalse].
 				 (self isLargeFreeObject: here)
@@ -3540,8 +3521,8 @@ SpurMemoryManager >> gcStartUsecs [
 { #category : #'gc - global' }
 SpurMemoryManager >> globalGarbageCollect [
 	self markObjects.
-	self freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoallesceFreeSpace.
-	self exactFitCompact
+	self freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoalesceFreeSpace.
+	self bestFitCompact
 ]
 
 { #category : #'object testing' }
@@ -3716,6 +3697,32 @@ SpurMemoryManager >> inClassTableBitmapSet: classIndex [
 		put: ((classTableBitmap at: majorIndex) bitOr: bit)
 ]
 
+{ #category : #'free space' }
+SpurMemoryManager >> inFreeTreeReplace: treeNode with: newNode [
+	| relative |
+	"copy parent, smaller, larger"
+	self freeChunkParentIndex to: self freeChunkLargerIndex do:
+		[:i|
+		self storePointer: i ofFreeChunk: newNode withValue: (self fetchPointer: i ofObject: treeNode)].
+	"replace link from parent to treeNode with link to newNode."
+	relative := self fetchPointer: self freeChunkParentIndex ofObject: treeNode.
+	relative = 0
+		ifTrue:
+			[freeLists at: 0 put: newNode]
+		ifFalse:
+			[self storePointer: (treeNode = (self fetchPointer: self freeChunkSmallerIndex ofObject: relative)
+									ifTrue: [self freeChunkSmallerIndex]
+									ifFalse: [self freeChunkLargerIndex])
+				ofFreeChunk: relative
+				withValue: newNode].
+	"replace parent links in children"
+	self freeChunkSmallerIndex to: self freeChunkLargerIndex do:
+		[:i|
+		relative := self fetchPointer: i ofObject: treeNode.
+		relative ~= 0 ifTrue:
+			[self storePointer: self freeChunkParentIndex ofFreeChunk: relative withValue: newNode]]
+]
+
 { #category : #'become implementation' }
 SpurMemoryManager >> inPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag [
 	"Do become in place by swapping object contents."
@@ -3836,7 +3843,7 @@ SpurMemoryManager >> initialize [
 	statSGCDeltaUsecs := statIGCDeltaUsecs := statFGCDeltaUsecs := 0.
 	statGrowMemory := statShrinkMemory := statRootTableCount := statTenures := statSurvivorCount := 0.
 	statRootTableOverflows := statSweepCount := statMarkCount := statSpecialMarkCount := statMkFwdCount := 0.
-	statCoallesces := 0.
+	statCoalesces := 0.
 
 	"We can initialize things that are allocated but are lazily initialized."
 	unscannedEphemerons := SpurContiguousObjStack new.
@@ -5786,9 +5793,11 @@ SpurMemoryManager >> readHeapFromImageFile: f dataBytes: numBytes [
 
 { #category : #'free space' }
 SpurMemoryManager >> rebuildFreeTreeFromSortedFreeChunks [
-	"post sweep and pre compact, rebuild the large
-	 free chunk tree from the sortedFreeChunks list."
+	"post sweep and pre compact, rebuild the large free chunk tree from the
+	 sortedFreeChunks list, such that the lists are ordered from low to high address."
 	| freeChunk bytes totalBytes |
+	"first add all the chunks to the tree.  This will result in almost address-sorted lists.
+	 We will need to reorder the lists."
 	freeChunk := sortedFreeChunks.
 	totalBytes := 0.
 	[freeChunk ~= 0] whileTrue:
@@ -5797,6 +5806,11 @@ SpurMemoryManager >> rebuildFreeTreeFromSortedFreeChunks [
 		 self addToFreeTree: freeChunk bytes: bytes.
 		 freeChunk := self fetchPointer: self freeChunkNextAddressIndex
 							ofObject: freeChunk].
+	"now reorder the lists to ensure they're in address order, apart from the list head, which should be highest."
+	self freeTreeNodesDo:
+		[:treeNode| | newTreeNode |
+		newTreeNode := self reorderReversedTreeList: treeNode.
+		newTreeNode].
 	^totalBytes
 ]
 
@@ -5858,6 +5872,32 @@ SpurMemoryManager >> removeGCRoot: varLoc [
 ]
 
 { #category : #'free space' }
+SpurMemoryManager >> reorderReversedTreeList: treeNode [
+	"Once the freeTree has been rebuilt from the sortedFreeChunks list
+	 each list will be in a weird order, the list in reverse order, high to low,
+	 but the tree node, because it is inserted first, will be the lowest address.
+	 Reverse the list so it is sorted low to high, but make the highest address
+	 node the first, as this will be allocated from last."
+	| first next node prev |
+	"first becomes the new head, as this is the last one we want to allocate and we allocate from the list first."
+	first := self fetchPointer: self freeChunkNextIndex ofObject: treeNode.
+	"no next node, so no change"
+	first = 0 ifTrue:
+		[^treeNode].
+	node := self fetchPointer: self freeChunkNextIndex ofObject: first.
+	self storePointer: self freeChunkNextIndex ofFreeChunk: first withValue: treeNode.
+	self inFreeTreeReplace: treeNode with: first.
+	prev := 0.
+	[node ~= 0] whileTrue:
+		[next := self fetchPointer: self freeChunkNextIndex ofObject: node.
+		 self storePointer: self freeChunkNextIndex ofFreeChunk: node withValue: prev.
+		 prev := node.
+		 node := next].
+	self storePointer: self freeChunkNextIndex ofFreeChunk: treeNode withValue: prev.
+	^first
+]
+
+{ #category : #'free space' }
 SpurMemoryManager >> resetFreeListHeads [
 	0 to: self numFreeLists - 1 do:
 		[:i| freeLists at: i put: 0]
@@ -5880,7 +5920,7 @@ SpurMemoryManager >> reverseBytesInMemory [
 
 { #category : #'free space' }
 SpurMemoryManager >> reverseSmallListHeads [
-	"After freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoallesceFreeSpace
+	"After freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoalesceFreeSpace
 	 all small free chunks will be on the free lists in reverse address order.  Reverse each list,
 	 summing the ammount of space.  Answer the sum of bytes of free space on these small lists."
 	| total |
@@ -6871,7 +6911,8 @@ SpurMemoryManager >> totalFreeListBytes [
 			 self assert: (self isValidFreeObject: listNode).
 			 totalFreeBytes := totalFreeBytes + bytesInChunk.
 			 self assert: bytesInChunk = (self bytesInObject: listNode).
-			 listNode := self fetchPointer: self freeChunkNextIndex ofFreeChunk: listNode]].
+			 listNode := self fetchPointer: self freeChunkNextIndex ofFreeChunk: listNode].
+		 treeNode].
 	^totalFreeBytes
 ]
 
