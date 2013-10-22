@@ -528,6 +528,7 @@ SpurMemoryManager class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
 		var: #freeLists type: #'sqInt *';
 		var: #classTableBitmap type: #'unsigned char *';
+		var: #highestObjects type: #SpurContiguousObjStack;
 		var: #unscannedEphemerons type: #SpurContiguousObjStack.
 	aCCodeGenerator
 		var: #remapBuffer
@@ -1469,6 +1470,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfExactlyBytes: chunkBytes suchThat: a
 	 is available, otherwise answer nil.  N.B.  the chunk is simply a pointer,
 	 it has no valid header.  The caller *must* fill in the header correctly."
 	| initialIndex node nodeBytes child |
+	<inline: true> "must inline for acceptanceBlock"
 	"for debugging:" "totalFreeOldSpace := self totalFreeListBytes"
 
 	initialIndex := chunkBytes / self allocationUnit.
@@ -6876,7 +6878,6 @@ SpurMemoryManager >> swizzleFieldsOfObject: oop [
 
 { #category : #'obj stacks' }
 SpurMemoryManager >> swizzleObjStackAt: objStackRootIndex [
-	<returnTypeC: #void>
 	"On load, swizzle the pointers in an obj stack. Answer the obj stack's oop."
 	| firstPage stackOrNil index field |
 	firstPage := stackOrNil := self fetchPointer: objStackRootIndex ofObject: hiddenRootsObj.
@@ -6900,8 +6901,8 @@ SpurMemoryManager >> swizzleObjStackAt: objStackRootIndex [
 		[field := segmentManager swizzleObj: stackOrNil.
 		 self storePointer: ObjStackFreex ofObjStack: firstPage withValue: field.
 		 firstPage := stackOrNil].
-	self assert: (self isValidObjStackAt: objStackRootIndex)
-	
+	self assert: (self isValidObjStackAt: objStackRootIndex).
+	^self fetchPointer: objStackRootIndex ofObject: hiddenRootsObj
 ]
 
 { #category : #'word size' }

@@ -10,7 +10,7 @@ Class {
 
 { #category : #translation }
 SpurNewSpaceSpace class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
-	self instVarNames do:
+	self allInstVarNames do:
 		[:ivn| aBinaryBlock value: ivn value: #usqInt]
 ]
 
