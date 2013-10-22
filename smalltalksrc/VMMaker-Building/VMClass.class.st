@@ -430,6 +430,19 @@ VMClass >> alloca: size [
 ]
 
 { #category : #'C library simulation' }
+VMClass >> asString: aStringOrStringIndex [
+	"aStringOrStringIndex is either a string or an address in the heap.
+	 Create a String of the requested length form the bytes in the
+	 heap starting at stringIndex."
+	<doNotGenerate>
+	| sz |
+	aStringOrStringIndex isString ifTrue:
+		[^aStringOrStringIndex].
+	sz := self strlen: aStringOrStringIndex.
+	^self st: (ByteString new: sz) rn: aStringOrStringIndex cpy: sz
+]
+
+{ #category : #'C library simulation' }
 VMClass >> asString: stringIndex size: stringSize [
 	"stringIndex is an address in the heap.  Create a String of the requested length
 	form the bytes in the heap starting at stringIndex."
@@ -839,6 +852,13 @@ VMClass >> storeSingleFloatAtPointer: pointer from: aFloat [
 	<doNotGenerate>
 
 	^self storeSingleFloatAt: pointer from: aFloat
+]
+
+{ #category : #'C library simulation' }
+VMClass >> str: aString cat: bString [
+	<doNotGenerate>
+	"implementation of strcat(3)"
+	^(self asString: aString), (self asString: bString)
 ]
 
 { #category : #'C library simulation' }
