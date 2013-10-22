@@ -171,12 +171,11 @@ TStmtListNode >> postCopy [
 TStmtListNode >> printOn: aStream level: level [
 
 	aStream nextPut: $[.
-	arguments size > 0 ifTrue: [
-		arguments do: [ :arg | aStream nextPutAll: ' :', arg ].
-		aStream nextPutAll: ' | '.
-	].
+	(arguments notNil and: [arguments notEmpty]) ifTrue:
+		[arguments do: [ :arg | aStream nextPutAll: ' :'; nextPutAll: arg].
+		 aStream nextPutAll: ' | '].
 	self printStatementsOn: aStream level: level.
-	aStream nextPut: $].
+	aStream nextPut: $]
 ]
 
 { #category : #printing }
