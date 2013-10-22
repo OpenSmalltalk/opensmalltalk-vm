@@ -12,6 +12,7 @@ Instance Variables
 	coInterpreter:				<StackInterpreter|CoInterpreter (StackInterpreterSimulator|CogVMSimulator)>
 	endOfMemory:				<Integer address>
 	falseObj:					<Integer oop>
+	firstFreeChunk				<Integer address|nil>
 	freeLists:					<CArray on: memory>
 	freeListMask:				<Integer>
 	freeOldSpaceStart:			<Integer address>
@@ -36,7 +37,6 @@ Instance Variables
 	segmentManager:			<SpurSegmentManager>
 	signalLowSpace:			<Boolean>
 	shrinkThreshold			<Integer>
-	sortedFreeChunks			<Integer address|nil>
 	specialObjectsOop:		<Integer oop>
 	startOfMemory:				<Integer address>
 	statFGCDeltaUsecs:		<Integer>
@@ -85,6 +85,9 @@ endOfMemory
 
 falseObj
 	- the oop of the false object; must be the second object in oldSpace
+
+firstFreeChunk
+	- the free chunk at the lowest address discovered during global gc's sweep through the heap.  used in compaction.
 
 freeLists
 	- an array of list heads of free chunks of each size (in allocationUnits).  the 0'th element
@@ -165,10 +168,6 @@ shrinkThreshold
 
 signalLowSpace
 	- a boolean flag set if the lowSpaceSemaphore should be signalled
-
-sortedFreeChunks
-	- the head of a list of large free chunks in address order, low to high,
-	  sorted through the freeChunkNextAddressIndex field, used in compaction.
 
 specialObjectsOop
 	- the oop of the specialObjectsArray object
@@ -440,7 +439,7 @@ Class {
 		'extraRoots',
 		'lowSpaceThreshold',
 		'totalFreeOldSpace',
-		'sortedFreeChunks',
+		'firstFreeChunk',
 		'highestObjects',
 		'statCoalesces',
 		'statFGCDeltaUsecs',
@@ -817,11 +816,13 @@ SpurMemoryManager >> addFreeSubTree: freeTree [
 			[subNode := self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: treeNode.
 			 subNode = 0 ifTrue:
 				[self storePointer: self freeChunkSmallerIndex ofFreeChunk: treeNode withValue: freeTree.
+				 self storePointer: self freeChunkParentIndex ofFreeChunk: freeTree withValue: treeNode.
 				 ^self]]
 		ifFalse:
 			[subNode := self fetchPointer: self freeChunkLargerIndex ofFreeChunk: treeNode.
 			 subNode = 0 ifTrue:
 				[self storePointer: self freeChunkLargerIndex ofFreeChunk: treeNode withValue: freeTree.
+				 self storePointer: self freeChunkParentIndex ofFreeChunk: freeTree withValue: treeNode.
 				 ^self]].
 	 treeNode := subNode] repeat
 ]
@@ -1186,6 +1187,22 @@ SpurMemoryManager >> allOldSpaceEntitiesForCoalescingDo: aBlock [
 ]
 
 { #category : #'object enumeration' }
+SpurMemoryManager >> allOldSpaceEntitiesFrom: initialObject do: aBlock [
+	<inline: true>
+	| prevObj prevPrevObj objOop |
+	prevPrevObj := prevObj := nil.
+	objOop := initialObject.
+	[self assert: objOop \\ self allocationUnit = 0.
+	 objOop < freeOldSpaceStart] whileTrue:
+		[aBlock value: objOop.
+		 prevPrevObj := prevObj.
+		 prevObj := objOop.
+		 objOop := self objectAfter: objOop limit: freeOldSpaceStart].
+	self touch: prevPrevObj.
+	self touch: prevObj
+]
+
+{ #category : #'object enumeration' }
 SpurMemoryManager >> allOldSpaceObjectsDo: aBlock [
 	<inline: true>
 	self allOldSpaceObjectsFrom: self firstObject do: aBlock
@@ -1446,6 +1463,77 @@ SpurMemoryManager >> allocateOldSpaceChunkOfExactlyBytes: chunkBytes [
 	^self startOfObject: node
 ]
 
+{ #category : #'free space' }
+SpurMemoryManager >> allocateOldSpaceChunkOfExactlyBytes: chunkBytes suchThat: acceptanceBlock [
+	"Answer a chunk of oldSpace from the free lists, if one of this size
+	 is available, otherwise answer nil.  N.B.  the chunk is simply a pointer,
+	 it has no valid header.  The caller *must* fill in the header correctly."
+	| initialIndex node nodeBytes child |
+	"for debugging:" "totalFreeOldSpace := self totalFreeListBytes"
+
+	initialIndex := chunkBytes / self allocationUnit.
+	initialIndex < self numFreeLists ifTrue:
+		[(1 << initialIndex <= freeListsMask
+		 and: [(node := freeLists at: initialIndex) ~= 0
+		 and: [acceptanceBlock value: node]]) ifTrue:
+			[self assert: node = (self startOfObject: node).
+			 self assert: (self isValidFreeObject: node).
+			totalFreeOldSpace := totalFreeOldSpace - chunkBytes.
+			^self unlinkFreeChunk: node atIndex: initialIndex].
+		 ^nil].
+
+	"Large chunk.  Search the large chunk list.
+	 Large chunk list organized as a tree, each node of which is a list of
+	 chunks of the same size. Beneath the node are smaller and larger
+	 blocks.  When the search ends parent should hold the first chunk of
+	 the same size as chunkBytes, or 0 if none."
+	node := 0.
+	child := freeLists at: 0.
+	[child ~= 0] whileTrue:
+		[| childBytes |
+		 self assert: (self isValidFreeObject: child).
+		 childBytes := self bytesInObject: child.
+		 childBytes = chunkBytes
+			ifTrue: "size match; try to remove from list at node."
+				[node := self fetchPointer: self freeChunkNextIndex
+								ofFreeChunk: child.
+				 (node ~= 0 and: [acceptanceBlock value: node]) ifTrue:
+					[self assert: (self isValidFreeObject: node).
+					 self storePointer: self freeChunkNextIndex
+						ofFreeChunk: child
+						withValue: (self fetchPointer: self freeChunkNextIndex
+										ofFreeChunk: node).
+					 totalFreeOldSpace := totalFreeOldSpace - chunkBytes.
+					 ^self startOfObject: node].
+				 node := child.
+				 nodeBytes := childBytes.
+				 child := 0] "break out of loop to remove interior node"
+			ifFalse:
+				[childBytes < chunkBytes
+					ifTrue: "walk down the tree"
+						[child := self fetchPointer: self freeChunkLargerIndex ofFreeChunk: child]
+					ifFalse:
+						[nodeBytes := childBytes.
+						 child := self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: child]]].
+	"if no chunk, there was no exact fit"
+	(node ~= 0 and: [acceptanceBlock value: node]) ifFalse:
+		[^nil].
+
+	"self printFreeChunk: parent"
+	self assert: nodeBytes = chunkBytes.
+	self assert: (self bytesInObject: node) = chunkBytes.
+
+	"can't be a list; would have removed and returned it above."
+	self assert: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: node) = 0.
+
+	"no list; remove the interior node"
+	"N.B. This will fail when we try to remove the head node and there are still next links,
+	  which is possible given acceptanceBlock but does not occur in current use."
+	self unlinkSolitaryFreeTreeNode: node.
+	totalFreeOldSpace := totalFreeOldSpace - chunkBytes.
+	^self startOfObject: node
+]
+
 { #category : #allocation }
 SpurMemoryManager >> allocateSlots: numSlots format: formatField classIndex: classIndex [
 	self subclassResponsibility
@@ -1594,7 +1682,8 @@ SpurMemoryManager >> bestFitCompact [
 	"Compact all of memory using best-fit, assuming free space is sorted
 	 and that the highest objects are recorded in highestObjects."
 
-	| firstFailedFit |
+	| freePriorToExactFit firstFailedFit |
+	freePriorToExactFit := totalFreeOldSpace.
 	firstFailedFit := self exactFitCompact.
 	firstFailedFit = 0 ifTrue:
 		[^self]. "either no free space, no high objects, or no misfits."
@@ -1835,7 +1924,7 @@ SpurMemoryManager >> checkHeapIntegrity [
 				ifFalse:
 					[classOop := self classAtIndex: (classIndex := self classIndexOf: obj).
 					 ((classOop isNil or: [classOop = nilObj])
-					  and: [obj ~= self freeListsObject]) ifTrue:
+					  and: [(self isHiddenObj: obj) not]) ifTrue:
 						[coInterpreter print: 'object leak in '; printHex: obj; print: ' invalid class index '; printHex: classIndex; print: ' -> '; print: (classOop ifNil: ['nil'] ifNotNil: ['nilObj']); cr.
 						 self eek.
 						 ok := false].
@@ -2685,7 +2774,7 @@ SpurMemoryManager >> ensureRoomOnObjStackAt: objStackRootIndex [
 			storePointer: objStackRootIndex ofObject: hiddenRootsObj withValue: freeOrNewPage.
 		self assert: (self isValidObjStackAt: objStackRootIndex).
 		"Added a new page; now update and answer the relevant cached first page."
-		^self updateRootOfObjStack: objStackRootIndex with:freeOrNewPage].
+		^self updateRootOfObjStack: objStackRootIndex with: freeOrNewPage].
 	self assert: (self isValidObjStackAt: objStackRootIndex).
 	^stackOrNil
 ]
@@ -2753,26 +2842,34 @@ SpurMemoryManager >> exactFitCompact [
 	"Compact all of memory using exact-fit, assuming free space is sorted
 	 and that the highest objects are recorded in highestObjects."
 
-	| firstFailedFit |
+	| firstFailedFit top o |
+	<var: #top type: #unsigned>
 	firstFailedFit := 0.
 	totalFreeOldSpace = 0 ifTrue: [^0].
-	self allOldSpaceObjectsFrom: self lowestFreeChunkAssumingSortedFreeSpace
-		do: [:o| | b |
-			((self isForwarded: o)
-			 or: [self isPinned: o]) ifFalse:
-				[b := self bytesInObject: o.
-				(self allocateOldSpaceChunkOfExactlyBytes: b suchThat: [:f| f < o])
-					ifNil: [firstFailedFit = 0 ifTrue: [firstFailedFit := o]]
-					ifNotNil:
-						[:f|
-						self mem: f
-							cp: o
-							y: ((self hasOverflowHeader: o)
-									ifTrue: [b - self baseHeaderSize]
-									ifFalse: [b]).
-						(self isRemembered: o) ifTrue:
-							[scavenger remember: f].
-						self forward: o to: f]]].
+	top := highestObjects top.
+	[[top := top - self wordSize.
+	  top < highestObjects start ifTrue:
+		[top := highestObjects limit].
+	  top ~= highestObjects top and: [(o := self longAt: top) > firstFreeChunk]] whileTrue:
+		[| b |
+		 ((self isForwarded: o)
+		 or: [self isPinned: o]) ifFalse:
+			[b := self bytesInObject: o.
+			(self allocateOldSpaceChunkOfExactlyBytes: b suchThat: [:f| f < o])
+				ifNil: [firstFailedFit = 0 ifTrue: [firstFailedFit := o]]
+				ifNotNil:
+					[:f|
+					self mem: f
+						cp: o
+						y: ((self hasOverflowHeader: o)
+								ifTrue: [b - self baseHeaderSize]
+								ifFalse: [b]).
+					"wait until the next scavenge to unremember o"
+					(self isRemembered: o) ifTrue:
+						[scavenger remember: f].
+					self forward: o to: f]]].
+	 top = highestObjects top and: [o > firstFreeChunk]] whileTrue:
+		[self fillHighestObjectsFrom: firstFreeChunk upTo: o].
 	self checkFreeSpace.
 	^firstFailedFit
 ]
@@ -3445,7 +3542,7 @@ SpurMemoryManager >> freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoales
 	 order on each small list head.  Large free chunks are sorted on the sortedFreeChunks list.
 	 Record the highest N objects in highestObjects, for the first cycle of exactFitCompact.
 	 Let the segmentManager mark which segments contain pinned objects via notePinned:"
-	| lastLargeFree highestObjectsWraps |
+	| lastLargeFree highestObjectsWraps sortedFreeChunks |
 	self checkFreeSpace.
 	scavenger forgetUnmarkedRememberedObjects.
 	segmentManager prepareForGlobalSweep."for notePinned:"
@@ -3457,7 +3554,7 @@ SpurMemoryManager >> freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoales
 		limit: scavenger eden limit.
 	highestObjectsWraps := 0.
 	self assert: highestObjects limit - highestObjects start // self wordSize >= 1024.
-	sortedFreeChunks := lastLargeFree := 0.
+	firstFreeChunk := sortedFreeChunks := lastLargeFree := 0.
 	self allOldSpaceEntitiesForCoalescingDo:
 		[:o|
 		(self isMarked: o)
@@ -3484,6 +3581,8 @@ SpurMemoryManager >> freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoales
 					  here := self coalesce: here and: next.
 					  next := self objectAfter: here limit: endOfMemory.
 					  next = endOfMemory or: [self isMarked: next]] whileFalse].
+				 firstFreeChunk = 0 ifTrue:
+					[firstFreeChunk := here].
 				 (self isLargeFreeObject: here)
 					ifTrue:
 						[lastLargeFree = 0
@@ -3497,7 +3596,7 @@ SpurMemoryManager >> freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoales
 	lastLargeFree ~= 0 ifTrue:
 		[self storePointer: self freeChunkNextAddressIndex ofFreeChunk: lastLargeFree withValue: 0].
 	totalFreeOldSpace := self reverseSmallListHeads.
-	totalFreeOldSpace := totalFreeOldSpace + self rebuildFreeTreeFromSortedFreeChunks.
+	totalFreeOldSpace := totalFreeOldSpace + (self rebuildFreeTreeFrom: sortedFreeChunks).
 	self checkFreeSpace.
 	self touch: highestObjectsWraps
 ]
@@ -3520,9 +3619,13 @@ SpurMemoryManager >> gcStartUsecs [
 
 { #category : #'gc - global' }
 SpurMemoryManager >> globalGarbageCollect [
+	self runLeakCheckerForFullGC: true.
 	self markObjects.
+	self runLeakCheckerForFullGC: true.
 	self freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoalesceFreeSpace.
-	self bestFitCompact
+	self runLeakCheckerForFullGC: true.
+	self bestFitCompact.
+	self runLeakCheckerForFullGC: true
 ]
 
 { #category : #'object testing' }
@@ -3699,28 +3802,31 @@ SpurMemoryManager >> inClassTableBitmapSet: classIndex [
 
 { #category : #'free space' }
 SpurMemoryManager >> inFreeTreeReplace: treeNode with: newNode [
+	"Part of reorderReversedTreeList:.  Switch treeNode with newNode in
+	 the tree, but do nothing to the list linked through freeChunkNextIndex."
 	| relative |
 	"copy parent, smaller, larger"
 	self freeChunkParentIndex to: self freeChunkLargerIndex do:
 		[:i|
-		self storePointer: i ofFreeChunk: newNode withValue: (self fetchPointer: i ofObject: treeNode)].
-	"replace link from parent to treeNode with link to newNode."
-	relative := self fetchPointer: self freeChunkParentIndex ofObject: treeNode.
-	relative = 0
-		ifTrue:
-			[freeLists at: 0 put: newNode]
-		ifFalse:
-			[self storePointer: (treeNode = (self fetchPointer: self freeChunkSmallerIndex ofObject: relative)
-									ifTrue: [self freeChunkSmallerIndex]
-									ifFalse: [self freeChunkLargerIndex])
-				ofFreeChunk: relative
-				withValue: newNode].
-	"replace parent links in children"
-	self freeChunkSmallerIndex to: self freeChunkLargerIndex do:
-		[:i|
 		relative := self fetchPointer: i ofObject: treeNode.
-		relative ~= 0 ifTrue:
-			[self storePointer: self freeChunkParentIndex ofFreeChunk: relative withValue: newNode]]
+		i = self freeChunkParentIndex
+			ifTrue:
+				[relative = 0
+					ifTrue: "update root to point to newNode"
+						[self assert: (freeLists at: 0) = treeNode.
+						 freeLists at: 0 put: newNode]
+					ifFalse: "replace link from parent to treeNode with link to newNode."
+						[self storePointer: (treeNode = (self fetchPointer: self freeChunkSmallerIndex ofObject: relative)
+												ifTrue: [self freeChunkSmallerIndex]
+												ifFalse: [self freeChunkLargerIndex])
+							ofFreeChunk: relative
+							withValue: newNode]]
+			ifFalse:
+				[relative ~= 0 ifTrue:
+					[self assert: (self fetchPointer: self freeChunkParentIndex ofObject: relative) = treeNode.
+					 self storePointer: self freeChunkParentIndex ofFreeChunk: relative withValue: newNode]].
+		self storePointer: i ofFreeChunk: newNode withValue: relative.
+		self storePointer: i ofFreeChunk: treeNode withValue: 0]
 ]
 
 { #category : #'become implementation' }
@@ -4305,6 +4411,13 @@ SpurMemoryManager >> isGrey: objOop [
 	^((self longAt: objOop) >> self greyBitShift bitAnd: 1) ~= 0
 ]
 
+{ #category : #'debug support' }
+SpurMemoryManager >> isHiddenObj: objOop [
+	^objOop =  self freeListsObject
+	  or: [(self numSlotsOfAny: objOop) = ObjStackPageSlots
+		and: [self isValidObjStackPage: objOop myIndex: (self fetchPointer: ObjStackMyx ofObject: objOop)]]
+]
+
 { #category : #'object testing' }
 SpurMemoryManager >> isImmediate: oop [ 
 	^(oop bitAnd: self tagMask) ~= 0
@@ -4527,13 +4640,40 @@ SpurMemoryManager >> isValidObjStackAt: objStackRootIndex [
 ]
 
 { #category : #'obj stacks' }
+SpurMemoryManager >> isValidObjStackPage: objStackPage myIndex: myx [
+	"Just check the page itself."
+	<inline: false>
+	(self classIndexOf: objStackPage) = self wordSizeClassIndexPun ifFalse:
+		[objStackInvalidBecause := 'wong class index'.
+		 ^false].
+	(self formatOf: objStackPage) = self wordIndexableFormat ifFalse:
+		[objStackInvalidBecause := 'wong format'.
+		 ^false].
+	(self numSlotsOfAny: objStackPage) = ObjStackPageSlots ifFalse:
+		[objStackInvalidBecause := 'wong num slots'.
+		 ^false].
+	myx = (self fetchPointer: ObjStackMyx ofObject: objStackPage) ifFalse:
+		[objStackInvalidBecause := 'wong myx'.
+		 ^false].
+	^true
+]
+
+{ #category : #'obj stacks' }
 SpurMemoryManager >> isValidObjStackPage: objStackPage myIndex: myx firstPage: isFirstPage [
 	"Answer if the obj stack at stackRootIndex is valid."
 	| freeOrNextPage index |
 	<inline: false>
-	(self numSlotsOfAny: objStackPage) = ObjStackPageSlots ifFalse:
-		[objStackInvalidBecause := 'wong num slots'.
-		 ^false].
+	(self isValidObjStackPage: objStackPage myIndex: myx) ifFalse:
+		[^false].
+	freeOrNextPage := self fetchPointer: ObjStackFreex ofObject: objStackPage.
+	[freeOrNextPage ~= 0] whileTrue:
+		[isFirstPage ifFalse:
+			[objStackInvalidBecause := 'free page on other than first page'.
+			 ^false].
+		 (self isValidObjStackPage: freeOrNextPage myIndex: myx) ifFalse:
+			[objStackInvalidBecause := self str: objStackInvalidBecause cat: ', on next page'.
+			^false].
+		 freeOrNextPage := self fetchPointer: ObjStackFreex ofObject: freeOrNextPage].
 	isFirstPage ifTrue:
 		[(myx between: self classTableRootSlots and: self classTableRootSlots + self hiddenRootSlots - 1) ifFalse:
 			[objStackInvalidBecause := 'myx out of range'.
@@ -4541,17 +4681,6 @@ SpurMemoryManager >> isValidObjStackPage: objStackPage myIndex: myx firstPage: i
 		 (self fetchPointer: myx ofObject: hiddenRootsObj) = objStackPage ifFalse:
 			[objStackInvalidBecause := 'firstPage is not root'.
 			 ^false]].
-	myx = (self fetchPointer: ObjStackMyx ofObject: objStackPage) ifFalse:
-		[objStackInvalidBecause := 'wong myx'.
-		 ^false].
-	freeOrNextPage := self fetchPointer: ObjStackFreex ofObject: objStackPage.
-	freeOrNextPage ~= 0 ifTrue:
-		[isFirstPage ifFalse:
-			[objStackInvalidBecause := 'free page on other than first page'.
-			 ^false].
-		 (self isValidObjStackPage: freeOrNextPage myIndex: myx firstPage: false) ifFalse:
-			[objStackInvalidBecause := self str: objStackInvalidBecause cat: ' on next page'.
-			^false]].
 	index := self fetchPointer: ObjStackTopx ofObject: objStackPage.
 	(index between: 0 and: ObjStackLimit) ifFalse:
 		[objStackInvalidBecause := 'bad topx'.
@@ -4832,20 +4961,6 @@ SpurMemoryManager >> lowSpaceThreshold: threshold [
 	self assert: totalFreeOldSpace >= lowSpaceThreshold
 ]
 
-{ #category : #'free space' }
-SpurMemoryManager >> lowestFreeChunkAssumingSortedFreeSpace [
-	| lowest |
-	lowest := sortedFreeChunks = 0
-				ifTrue: [endOfMemory]
-				ifFalse: [sortedFreeChunks].
-	1 to: self numFreeLists - 1 do:
-		[:i| | chunk |
-		chunk := freeLists at: i.
-		(chunk ~= 0 and: [chunk < lowest]) ifTrue:
-			[lowest := chunk]].
-	^lowest
-]
-
 { #category : #'gc - global' }
 SpurMemoryManager >> mapExtraRoots [
 	self assert: remapBufferCount = 0.
@@ -4983,6 +5098,7 @@ SpurMemoryManager >> markAndTraceObjStack: stackOrNil andContents: markAndTraceC
 	 segments, with the hot end at the head of the list.  It is a word object.
 	 The stack pointer is in ObjStackTopx and 0 means empty."
 	<returnTypeC: #void>
+	<inline: false>
 	| index field |
 	stackOrNil = nilObj ifTrue:
 		[^self].
@@ -4990,6 +5106,10 @@ SpurMemoryManager >> markAndTraceObjStack: stackOrNil andContents: markAndTraceC
 	field := self fetchPointer: ObjStackNextx ofObject: stackOrNil.
 	field ~= 0 ifTrue:
 		[self markAndTraceObjStack: field andContents: markAndTraceContents].
+	field := stackOrNil.
+	[field := self fetchPointer: ObjStackFreex ofObject: stackOrNil.
+	 field ~= 0] whileTrue:
+		[self setIsMarkedOf: field to: true].
 	markAndTraceContents ifFalse:
 		[^self].
 	"There are four fixed slots in an obj stack, and a Topx of 0 indicates empty, so
@@ -5524,7 +5644,8 @@ SpurMemoryManager >> popObjStack: objStack [
 	self storePointer: ObjStackTopx ofObject: objStack withValue: topx.
 	(topx = 0
 	 and: [(nextPage := self fetchPointer: ObjStackNextx ofObject: objStack) ~= 0]) ifTrue:
-		[self storePointer: ObjStackFreex ofObject: nextPage withValue: objStack.
+		[self storePointer: ObjStackFreex ofObjStack: nextPage withValue: objStack.
+		 self storePointer: ObjStackNextx ofObjStack: objStack withValue: 0.
 		myx := self fetchPointer: ObjStackMyx ofObject: objStack.
 		self updateRootOfObjStack: myx with: nextPage].
 	^top
@@ -5688,7 +5809,10 @@ SpurMemoryManager >> push: objOop onObjStack: objStack [
 	self assert: (self isValidObjStack: objStack).
 	(self isImmediate: objOop) ifTrue:
 		[self assert: objStack = markStack.
-		 self assert: (self addressCouldBeObj: (self topOfObjStack: objStack))].
+		 self assert: (self addressCouldBeObj: (self topOfObjStack:
+						(0 = (self fetchPointer: ObjStackTopx ofObject: objStack)
+							ifTrue: [self fetchPointer: ObjStackNextx ofObject: objStack]
+							ifFalse: [objStack])))].
 	self cCode: [] "for debugging markAndTrace: set (MarkStackRecord := OrderedCollection new)"
 		inSmalltalk: [MarkStackRecord ifNotNil: [MarkStackRecord addLast: {#push. objOop}]].
 	topx := self fetchPointer: ObjStackTopx ofObject: objStack.
@@ -5697,8 +5821,8 @@ SpurMemoryManager >> push: objOop onObjStack: objStack [
 			[self push: objOop
 				onObjStack: (self ensureRoomOnObjStackAt: (self fetchPointer: ObjStackMyx ofObject: objStack))]
 		ifFalse:
-			[self storePointer: ObjStackFixedSlots + topx ofObject: objStack withValue: objOop.
-			 self storePointer: ObjStackTopx ofObject: objStack withValue: topx + 1].
+			[self storePointer: ObjStackFixedSlots + topx ofObjStack: objStack withValue: objOop.
+			 self storePointer: ObjStackTopx ofObjStack: objStack withValue: topx + 1].
 	^objOop
 ]
 
@@ -5792,7 +5916,7 @@ SpurMemoryManager >> readHeapFromImageFile: f dataBytes: numBytes [
 ]
 
 { #category : #'free space' }
-SpurMemoryManager >> rebuildFreeTreeFromSortedFreeChunks [
+SpurMemoryManager >> rebuildFreeTreeFrom: sortedFreeChunks [
 	"post sweep and pre compact, rebuild the large free chunk tree from the
 	 sortedFreeChunks list, such that the lists are ordered from low to high address."
 	| freeChunk bytes totalBytes |
@@ -6364,52 +6488,6 @@ SpurMemoryManager >> sortFreeListAt: i [
 ]
 
 { #category : #'free space' }
-SpurMemoryManager >> sortFreeSpace [
-	"Sort free space for best-fit compaction.  Sort the individual free lists so that
-	 the lowest address is at the head of each list.  Sort the large chunks through the
-	 freeChunkNextAddressIndex from low to high, with the head in sortedFreeChunks."
-
-	self checkFreeSpace.
-	1 to: self numFreeLists - 1 do:
-		[:i| self sortFreeListAt: i].
-	sortedFreeChunks := 0.
-	self allObjectsInFreeTreeDo:
-		[:f| | node prev |
-		node := sortedFreeChunks.
-		prev := 0.
-		[node ~= 0
-		 and: [node < f]] whileTrue:
-			[prev := node.
-			node := self fetchPointer: self freeChunkNextAddressIndex ofObject: node].
-		"insert the node into the sorted list"
-		self assert: (node = 0 or: [node > f]).
-		prev = 0
-			ifTrue:
-				[sortedFreeChunks := f]
-			ifFalse:
-				[self storePointer: self freeChunkNextAddressIndex
-					ofFreeChunk: prev
-					withValue: f].
-		self storePointer: self freeChunkNextAddressIndex
-			ofFreeChunk: f
-			withValue: node].
-	self assert: self sortedFreeChunksAreSorted.
-	self checkFreeSpace
-]
-
-{ #category : #'debug support' }
-SpurMemoryManager >> sortedFreeChunksAreSorted [
-	| chunk next |
-	chunk := sortedFreeChunks.
-	[chunk ~= 0] whileTrue:
-		[next := self fetchPointer: self freeChunkNextAddressIndex ofObject: chunk.
-		(next = 0 or: [next > chunk]) ifFalse:
-			[^false].
-		 chunk := next].
-	^true
-]
-
-{ #category : #'free space' }
 SpurMemoryManager >> sortedFreeObject: objOop [
 	self subclassResponsibility
 ]
@@ -6870,7 +6948,11 @@ SpurMemoryManager >> thirtyTwoBitLongsClassIndexPun [
 { #category : #'obj stacks' }
 SpurMemoryManager >> topOfObjStack: objStack [
 	| topx |
-	self assert: (self isValidObjStack: objStack).
+	"This assert is tricky.  push:onObjStack: may call topOfObjStack: just after pushing an
+	 empty page on the stack, and will ask if the second page is valid."
+	self assert: (self isValidObjStackPage: objStack
+					myIndex: (self fetchPointer: ObjStackMyx ofObject: objStack)
+					firstPage: (objStack = (self fetchPointer: (self fetchPointer: ObjStackMyx ofObject: objStack) ofObject: hiddenRootsObj))).
 	topx := self fetchPointer: ObjStackTopx ofObject: objStack.
 	topx = 0 ifTrue:
 		[self assert: (self fetchPointer: ObjStackNextx ofObject: objStack) = 0.
@@ -6990,6 +7072,7 @@ SpurMemoryManager >> unlinkFreeTreeNode: freeTreeNode withSiblings: next [
 SpurMemoryManager >> unlinkSolitaryFreeTreeNode: freeTreeNode [
 	"Unlink a freeTreeNode.  Assumes the node has no list (null next link)."
 	| parent smaller larger |
+	self assert: (self fetchPointer: self freeChunkNextIndex ofObject: freeTreeNode) = 0.
 
 	"case 1. interior node has one child, P = parent, N = node, S = subtree (mirrored for large vs small)
 			___				  ___
@@ -7047,10 +7130,13 @@ SpurMemoryManager >> unlinkSolitaryFreeTreeNode: freeTreeNode [
 
 { #category : #'obj stacks' }
 SpurMemoryManager >> updateRootOfObjStack: objStackRootIndex with: newRootPage [
-	self assert: (self isValidObjStack: newRootPage).
+	self storePointer: objStackRootIndex
+		ofObject: hiddenRootsObj
+		withValue: newRootPage.
 	objStackRootIndex caseOf: {
 		[MarkStackRootIndex]			->	[markStack := newRootPage].
 		[EphemeronQueueRootIndex]	->	[ephemeronQueue := newRootPage] }.
+	self assert: (self isValidObjStack: newRootPage).
 	^newRootPage
 ]
 
