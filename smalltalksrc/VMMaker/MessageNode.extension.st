@@ -7,22 +7,22 @@ MessageNode >> asTranslatorNodeIn: aTMethod [
 	On top of this, numArgs is needed due to the (truly grody) use of
 	arguments as a place to store the extra expressions needed to generate
 	code for in-line to:by:do:, etc.  see below, where it is used."
-	| rcvrOrNil sel args |
+	| rcvrOrNil sel args ifNotNilBlock |
 	rcvrOrNil := receiver ifNotNil: [receiver asTranslatorNodeIn: aTMethod].
 	(rcvrOrNil notNil
 	and: [rcvrOrNil isVariable
 	and: [rcvrOrNil name = 'super']]) ifTrue:
 		[^aTMethod superExpansionNodeFor: selector key args: arguments].
 	sel := selector isSymbol ifTrue: [selector] ifFalse: [selector key].
-	((sel = #cCode:inSmalltalk: "extracting here rather than in translation allows inlining in the block."
-	  or: [sel = #cCode:])
+	((sel == #cCode:inSmalltalk: "extracting here rather than in translation allows inlining in the block."
+	  or: [sel == #cCode:])
 	 and: [arguments first isBlockNode]) ifTrue:
 		[| block |
 		 ^(block := arguments first asTranslatorNodeIn: aTMethod) statements size = 1
 			ifTrue: [block statements first]
 			ifFalse: [block]].
 	args := (1 to: sel numArgs) collect:
-			[:i | (arguments at: i) asTranslatorNodeIn: aTMethod].
+				[:i | (arguments at: i) asTranslatorNodeIn: aTMethod].
 	(sel = #to:by:do: and: [arguments size = 7 and: [(arguments at: 7) notNil]]) ifTrue:
 		["Restore limit expr that got moved by transformToDo:"
 		 args := {(arguments at: 7) value asTranslatorNodeIn: aTMethod. 
@@ -37,12 +37,42 @@ MessageNode >> asTranslatorNodeIn: aTMethod [
 		[sel := #ifTrue:. args := {args last}].
 	(sel == #ifFalse:ifTrue: and: [arguments last isJust: NodeNil]) ifTrue:
 		[sel := #ifTrue:. args := {args first}].
-	((sel = #ifFalse: or: [sel = #or:])
+	((sel == #ifFalse: or: [sel == #or:])
 	 and: [arguments size = 2 and: [(arguments at: 2) notNil]]) ifTrue:
 		["Restore argument block that got moved by transformOr: or transformIfFalse:"
 		 args at: 1 put: ((arguments at: 2) asTranslatorNodeIn: aTMethod)].
+	"For the benefit of later passes, e.g. value: inlining,
+	 transform e ifNotNil: [:v| ...] into  v := e. v ifNotNil: [...],
+	 which in fact means transforming (v := e) ifTrue: [:v|...] into v := e. v ifTrue: [...]."
+	((sel == #ifTrue: or: [sel == #ifTrue:ifFalse: or: [sel == #ifFalse:ifTrue:]])
+	 and: [receiver notNil
+	 and: [receiver isAssignmentEqualsEqualsNil
+	 and: [(ifNotNilBlock := args detect: [:arg| arg isStmtList and: [arg args size = 1]] ifNone: []) notNil]]]) ifTrue:
+		[ifNotNilBlock setArguments: #().
+		 ^TStmtListNode new
+			setArguments: #()
+			statements:
+				{	receiver receiver asTranslatorNodeIn: aTMethod.
+					TSendNode new
+						setSelector: sel
+						receiver: (TSendNode new
+									setSelector: #==
+									receiver: (receiver receiver variable asTranslatorNodeIn: aTMethod)
+									arguments: {receiver arguments first asTranslatorNodeIn: aTMethod})
+						arguments: args }].
 	^TSendNode new
 		setSelector: sel
 		receiver: rcvrOrNil
 		arguments: args
+]
+
+{ #category : #'*VMMaker-C translation' }
+MessageNode >> isAssignmentEqualsEqualsNil [
+	"Answer if the receiver if of the form (v := e) == nil, which underlies e ifNotNil: [:v|...]"
+	^#== == (selector isSymbol ifTrue: [selector] ifFalse: [selector key])
+	  and: [receiver notNil
+	  and: [receiver isAssignmentNode
+	  and: [(arguments first isJust: NodeNil)
+		    or: [arguments first isVariableNode
+			    and: [arguments first key = 'nil']]]]]
 ]
