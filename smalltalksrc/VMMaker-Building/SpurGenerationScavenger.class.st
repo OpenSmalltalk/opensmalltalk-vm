@@ -360,6 +360,7 @@ SpurGenerationScavenger >> fireEphemeronsOnEphemeronList [
 	"There are ephemerons to be fired in the remembered set.
 	 Fire them and scavenge their keys.  Be careful since copyAndForward:
 	 can remember ephemerons (ephemerons pointing to ephemerons)."
+	<returnTypeC: #void>
 	| ephemeron ephemeronCorpse |
 	ephemeronList ifNil:
 		[^self].
@@ -499,19 +500,19 @@ SpurGenerationScavenger >> newSpaceCapacity [
 
 { #category : #initialization }
 SpurGenerationScavenger >> newSpaceStart: startAddress newSpaceBytes: totalBytes edenBytes: requestedEdenBytes [ 
-	| edenBytes survivorBytes |
+	| actualEdenBytes survivorBytes |
 
-	edenBytes := requestedEdenBytes.
-	survivorBytes := totalBytes - edenBytes // 2 truncateTo: manager allocationUnit.
-	edenBytes := totalBytes - survivorBytes - survivorBytes truncateTo: manager allocationUnit.
-	self assert: totalBytes - edenBytes - survivorBytes - survivorBytes < manager allocationUnit.
+	actualEdenBytes := requestedEdenBytes.
+	survivorBytes := totalBytes - actualEdenBytes // 2 truncateTo: manager allocationUnit.
+	actualEdenBytes := totalBytes - survivorBytes - survivorBytes truncateTo: manager allocationUnit.
+	self assert: totalBytes - actualEdenBytes - survivorBytes - survivorBytes < manager allocationUnit.
 
 	"for tenuring we require older objects below younger objects.  since allocation
 	 grows up this means that the survivor spaces must preceed eden."
 
 	pastSpace start: startAddress; limit: startAddress + survivorBytes.
 	futureSpace start: pastSpace limit; limit: pastSpace limit + survivorBytes.
-	eden start: futureSpace limit; limit: futureSpace limit + edenBytes.
+	eden start: futureSpace limit; limit: futureSpace limit + actualEdenBytes.
 
 	self assert: futureSpace limit <= (startAddress + totalBytes).
 	self assert: eden start \\ manager allocationUnit
@@ -665,6 +666,7 @@ SpurGenerationScavenger >> processWeaklings [
 
 { #category : #'store check' }
 SpurGenerationScavenger >> remember: objOop [
+	<inline: false>
 	self assert: ((manager isNonImmediate: objOop)
 				and: [(manager isYoung: objOop) not]).
 	rememberedSetSize < RememberedSetLimit
