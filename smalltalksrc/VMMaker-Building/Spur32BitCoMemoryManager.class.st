@@ -62,8 +62,8 @@ Spur32BitCoMemoryManager >> clearLeakMapAndMapAccessibleObjects [
 ]
 
 { #category : #snapshot }
-Spur32BitCoMemoryManager >> edenBytes: edenBytes [
-	newSpaceLimit := edenBytes + coInterpreter cogCodeSize
+Spur32BitCoMemoryManager >> edenBytes: bytes [
+	newSpaceLimit := bytes + coInterpreter cogCodeSize
 ]
 
 { #category : #'cog jit support' }

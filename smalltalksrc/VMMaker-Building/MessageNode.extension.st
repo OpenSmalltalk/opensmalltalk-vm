@@ -21,8 +21,9 @@ MessageNode >> asTranslatorNodeIn: aTMethod [
 		 ^(block := arguments first asTranslatorNodeIn: aTMethod) statements size = 1
 			ifTrue: [block statements first]
 			ifFalse: [block]].
-	args := (1 to: sel numArgs) collect:
-				[:i | (arguments at: i) asTranslatorNodeIn: aTMethod].
+	args := arguments
+				select: [:arg| arg notNil]
+				thenCollect: [:arg| arg asTranslatorNodeIn: aTMethod].
 	(sel = #to:by:do: and: [arguments size = 7 and: [(arguments at: 7) notNil]]) ifTrue:
 		["Restore limit expr that got moved by transformToDo:"
 		 args := {(arguments at: 7) value asTranslatorNodeIn: aTMethod. 
@@ -44,7 +45,7 @@ MessageNode >> asTranslatorNodeIn: aTMethod [
 	"For the benefit of later passes, e.g. value: inlining,
 	 transform e ifNotNil: [:v| ...] into  v := e. v ifNotNil: [...],
 	 which in fact means transforming (v := e) ifTrue: [:v|...] into v := e. v ifTrue: [...]."
-	((sel == #ifTrue: or: [sel == #ifTrue:ifFalse: or: [sel == #ifFalse:ifTrue:]])
+	((sel == #ifTrue: or: [sel == #ifFalse: or: [sel == #ifTrue:ifFalse: or: [sel == #ifFalse:ifTrue:]]])
 	 and: [receiver notNil
 	 and: [receiver isAssignmentEqualsEqualsNil
 	 and: [(ifNotNilBlock := args detect: [:arg| arg isStmtList and: [arg args size = 1]] ifNone: []) notNil]]]) ifTrue:

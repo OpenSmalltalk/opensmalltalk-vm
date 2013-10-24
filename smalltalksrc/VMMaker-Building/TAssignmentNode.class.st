@@ -213,11 +213,11 @@ TAssignmentNode >> setVariable: varNode expression: expressionNode [
 ]
 
 { #category : #testing }
-TAssignmentNode >> structTargetKind: aCodeGen [
+TAssignmentNode >> structTargetKindIn: aCodeGen [
 	"Answer if the recever evaluates to a struct or struct pointer
 	 and hence can be dereferenced using . or ->.  Answer any of
 	 #struct #pointer or nil"
-	^variable structTargetKind: aCodeGen
+	^variable structTargetKindIn: aCodeGen
 ]
 
 { #category : #accessing }

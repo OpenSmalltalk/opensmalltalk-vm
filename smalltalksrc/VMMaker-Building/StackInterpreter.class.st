@@ -4125,7 +4125,7 @@ StackInterpreter >> doubleExtendedDoAnythingBytecode [
 	Here we use 3 bits for the operation sub-type (opType),  and the remaining 5 bits for argument count where needed. 
 	The last byte give access to 256 instVars or literals. 
 	See also secondExtendedSendBytecode"
-	| byte2 byte3 opType top |
+	| byte2 byte3 opType top lit |
 	byte2 := self fetchByte.
 	byte3 := self fetchByte.
 	opType := byte2 >> 5.
@@ -4143,7 +4143,8 @@ StackInterpreter >> doubleExtendedDoAnythingBytecode [
 	opType = 4 ifTrue: [^self pushLiteralVariable: byte3].
 	top := self internalStackTop.
 	opType = 7 ifTrue:
-		[^objectMemory storePointer: ValueIndex ofObject: (self literal: byte3) withValue: top].
+		[lit := self literal: byte3.
+		 ^objectMemory storePointer: ValueIndex ofObject: lit withValue: top].
 	"opType = 5 is store; opType = 6 = storePop"
 	opType = 6 ifTrue:
 		[self internalPop: 1].
@@ -10617,11 +10618,11 @@ StackInterpreter >> sendAbsentImplicit0ArgsBytecode [
 ]
 
 { #category : #'debug support' }
-StackInterpreter >> sendBreakpoint: selector receiver: receiver [
+StackInterpreter >> sendBreakpoint: selector receiver: rcvr [
 	<inline: true>
 	self sendBreak: (objectMemory firstFixedFieldOfMaybeImmediate: selector)
 		point: (objectMemory lengthOfMaybeImmediate: selector)
-		receiver: receiver
+		receiver: rcvr
 ]
 
 { #category : #'callback support' }
