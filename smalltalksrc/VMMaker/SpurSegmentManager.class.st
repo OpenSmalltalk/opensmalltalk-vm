@@ -48,6 +48,7 @@ SpurSegmentManager class >> isNonArgumentImplicitReceiverVariableName: instVarNa
 { #category : #'growing/shrinking memory' }
 SpurSegmentManager >> addSegmentOfSize: ammount [
 	<returnTypeC: #'SpurSegmentInfo *'>
+	<inline: false>
 	| allocatedSize |
 	<var: #newSeg type: #'SpurSegmentInfo *'>
 	(manager "sent to the manager so that the simulator can increase memory to simulate a new segment"

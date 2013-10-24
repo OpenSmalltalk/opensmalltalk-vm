@@ -105,7 +105,7 @@ TSendNode >> emitCCodeAsFieldReferenceOn: aStream level: level generator: aCodeG
 	"If appropriate, translate this message send as a pointer dereference"
 
 	| parenCount |
-	(self isStructSend: aCodeGen) ifFalse:
+	(self isStructSendIn: aCodeGen) ifFalse:
 		[^false].
 
 	parenCount := receiver isSend ifTrue: [2] ifFalse: [1].
@@ -113,7 +113,7 @@ TSendNode >> emitCCodeAsFieldReferenceOn: aStream level: level generator: aCodeG
 	receiver  emitCCodeAsExpressionOn: aStream level: 0 generator: aCodeGen.
 	parenCount > 1 ifTrue:
 		[aStream nextPut: $)].
-	(receiver structTargetKind: aCodeGen) caseOf: {
+	(receiver structTargetKindIn: aCodeGen) caseOf: {
 		[#pointer] -> [aStream nextPut: $-; nextPut: $>].
 		[#struct] -> [aStream nextPut: $.] }.
 	aStream nextPutAll: (aCodeGen cFunctionNameFor: selector).
@@ -134,6 +134,7 @@ TSendNode >> emitCCodeAsFunctionCallOn: aStream level: level generator: aCodeGen
 	(aCodeGen messageReceiverIsInterpreterProxy: self) ifTrue:
 		[(aCodeGen noteUsedPluginFunction: selector) ifTrue:
 			[aStream nextPutAll: 'interpreterProxy->']].
+
 	"Translate this message send into a C function call."
 	aStream nextPutAll: (aCodeGen cFunctionNameFor: selector); nextPut: $(.
 	"Only include the receiver as the first argument in certain cases.
@@ -143,7 +144,9 @@ TSendNode >> emitCCodeAsFunctionCallOn: aStream level: level generator: aCodeGen
 		 If the variable is 'self' and the method being called is not in
 		 the method set (i.e. it is some external code), don't include it."
 	(self shouldExcludeReceiverAsFirstArgument: aCodeGen) ifFalse:
-		[receiver emitCCodeOn: aStream level: level generator: aCodeGen.
+		[(receiver structTargetKindIn: aCodeGen) == #struct ifTrue:
+			[aStream nextPut: $&].
+		 receiver emitCCodeOn: aStream level: level generator: aCodeGen.
 		 arguments isEmpty ifFalse:
 			[aStream nextPutAll: ', ']].
 	arguments
@@ -213,7 +216,7 @@ TSendNode >> isReturningIf [
 ]
 
 { #category : #'C code generation' }
-TSendNode >> isSelfReference: varNode [
+TSendNode >> isSelfReference: varNode in: aCodeGen [
 	^(varNode name beginsWith: 'self')
 	  and: [varNode name = 'self' or: [varNode name beginsWith: 'self_in_']]
 ]
@@ -224,8 +227,13 @@ TSendNode >> isSend [
 	^true
 ]
 
+{ #category : #'C code generation' }
+TSendNode >> isStructReference: varNode in: aCodeGen [
+	^(varNode structTargetKindIn: aCodeGen) notNil
+]
+
 { #category : #testing }
-TSendNode >> isStructSend: aCodeGen [
+TSendNode >> isStructSendIn: aCodeGen [
 	"Answer if the recever is a send of a structure accessor.
 	 This is tricky.  We want
 		foo bar => foo->bar
@@ -237,7 +245,7 @@ TSendNode >> isStructSend: aCodeGen [
 	 The tricky cases are self-sends within struct class methods.  Here we need to
 	 distinguish between self-sends of ordinary methods from self sends of accessors."
 	^arguments size <= 1
-	   and: [(receiver structTargetKind: aCodeGen) notNil
+	   and: [(receiver structTargetKindIn: aCodeGen) notNil
 	   and: [(aCodeGen methodNamed: selector)
 				ifNil: [false]
 				ifNotNil: [:method| method isStructAccessor]]]
@@ -380,12 +388,13 @@ TSendNode >> shouldExcludeReceiverAsFirstArgument: aCodeGen [
 	| m |
 	(receiver isSend
 	 and: [receiver receiver isVariable
-	 and: [self isSelfReference: receiver receiver]]) ifTrue:
+	 and: [(self isSelfReference: receiver receiver in: aCodeGen)
+		or: [self isStructReference: receiver receiver in: aCodeGen]]]) ifTrue:
 		[^aCodeGen isNonArgumentImplicitReceiverVariableName: receiver selector].
 
 	^receiver isVariable
 	    and: [(aCodeGen isNonArgumentImplicitReceiverVariableName: receiver name)
-		    or: [(self isSelfReference: receiver)
+		    or: [(self isSelfReference: receiver in: aCodeGen)
 			    and: [(m := aCodeGen methodNamed: selector) isNil
 					or: [m typeForSelf == #implicit]]]]
 ]
@@ -402,7 +411,7 @@ TSendNode >> shouldIncludeReceiverAsFirstArgument: aCodeGen [
 ]
 
 { #category : #testing }
-TSendNode >> structTargetKind: aCodeGen [
+TSendNode >> structTargetKindIn: aCodeGen [
 	"Answer if the recever evaluates to a struct or struct pointer
 	 and hence can be dereferenced using . or ->.  Answer any of
 	 #struct #pointer or nil.  Right now we don't need or support
@@ -419,12 +428,12 @@ TSendNode >> structTargetKind: aCodeGen [
 			[(aCodeGen typeOfVariable: receiver name) ifNotNil:
 				[:type| | derefType |
 				 type last = $* ifFalse:
-					[^receiver structTargetKind: aCodeGen].
+					[^receiver structTargetKindIn: aCodeGen].
 				 (VMStructType isTypeStruct: (aCodeGen
 											extractTypeFor: receiver name
 											fromDeclaration: type allButLast)) ifTrue:
 						[^#struct]]].
-		(receiver structTargetKind: aCodeGen) ifNotNil:
+		(receiver structTargetKindIn: aCodeGen) ifNotNil:
 			[:kind| ^kind]].
 
 	(aCodeGen selectorReturnsPointerToStruct: selector) ifTrue:

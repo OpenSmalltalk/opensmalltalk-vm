@@ -101,6 +101,33 @@ TMethod >> argAssignmentsFor: meth args: argList in: aCodeGen [
 	^stmtList
 ]
 
+{ #category : #inlining }
+TMethod >> argAssignmentsFor: meth send: aSendNode in: aCodeGen [
+	"Return a collection of assignment nodes that assign the given argument expressions to the formal parameter variables of the given method."
+	"Optimization: If the actual parameters are either constants or local variables in the target method (the receiver), substitute them directly into the body of meth. Note that global variables cannot be subsituted because the inlined method might depend on the exact ordering of side effects to the globals."
+
+	| stmtList substitutionDict argList |
+	stmtList := OrderedCollection new: 100.
+	substitutionDict := Dictionary new: 100.
+	argList := aSendNode args.
+	
+	meth args size > aSendNode args size ifTrue:
+		[self assert: (meth args first beginsWith: 'self_in_').
+		 argList := {aSendNode receiver}, aSendNode args].
+	meth args with: argList do:
+		[ :argName :exprNode |
+		(self isNode: exprNode substitutableFor: argName inMethod: meth in: aCodeGen)
+			ifTrue:
+				[substitutionDict at: argName put: exprNode.
+				 locals remove: argName]
+			ifFalse:
+				[stmtList add: (TAssignmentNode new
+								setVariable: (TVariableNode new setName: argName)
+								expression: exprNode copy)]].
+	meth parseTree: (meth parseTree bindVariablesIn: substitutionDict).
+	^stmtList
+]
+
 { #category : #'primitive compilation' }
 TMethod >> argConversionExprFor: varName stackIndex: stackIndex [ 
 	"Return the parse tree for an expression that fetches and converts the 
@@ -284,7 +311,7 @@ TMethod >> computePossibleSideEffectsInto: writtenToVars visited: visitedSelecto
 					[writtenToVars add: node variable name].
 			(node isSend
 			 and: [node isBuiltinOperator not
-			 and: [(node isStructSend: aCodeGen) not]]) ifTrue:
+			 and: [(node isStructSendIn: aCodeGen) not]]) ifTrue:
 				[(aCodeGen methodNamed: node selector) ifNotNil:
 					[:method|
 					 method
@@ -951,14 +978,17 @@ TMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar in:
 	 otherwise the assignee variable type must match the return type of the inlinee.  Return
 	 types are not propagated."
 
-	| sel meth exitLabel inlineStmts label exitType |
+	| sel meth methArgs exitLabel inlineStmts label exitType |
 	sel := aSendNode selector.
 	meth := aCodeGen methodNamed: sel.
+	methArgs := meth args.
 	"convenient for debugging..."
 	self maybeBreakFor: aSendNode in: aCodeGen.
-	meth args size = aSendNode args size ifFalse:
+	(methArgs notEmpty and: [methArgs first beginsWith: 'self_in_']) ifTrue:
+		[methArgs := methArgs allButFirst].
+	methArgs size = aSendNode args size ifFalse:
 		[^nil].
-	meth args with: aSendNode args do:
+	methArgs with: aSendNode args do:
 		[:formal :actual|
 		(actual isVariable
 		and: [(aCodeGen
@@ -990,7 +1020,7 @@ TMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar in:
 				ifFalse: [ exitLabel := nil ]]].
 	(inlineStmts := OrderedCollection new: 100)
 		add: (label := TLabeledCommentNode new setComment: 'begin ', sel);
-		addAll: (self argAssignmentsFor: meth args: aSendNode args in: aCodeGen);
+		addAll: (self argAssignmentsFor: meth send: aSendNode in: aCodeGen);
 		addAll: meth statements.  "method body"
 	"Vile hacks to prevent too many labels.  If the C compiler inlines functions it can duplicate
 	 labels and cause compilation to fail.  The second statement prevents us creating labels in
@@ -1381,7 +1411,7 @@ TMethod >> prepareMethodIn: aCodeGen [
 										[:subNode|
 										subNode isSend
 										and: [(aCodeGen isBuiltinSelector: subNode selector) not
-										and: [(subNode isStructSend: aCodeGen) not]]])
+										and: [(subNode isStructSendIn: aCodeGen) not]]])
 									ifTrue: [locals add: node args last name]
 									ifFalse:
 										[node arguments: node args allButLast]]]
@@ -2002,7 +2032,7 @@ TMethod >> transformToStructClassMethodFor: aCCodeGenerator [
 	"Transform this method so that it can be used on an instance of a struct class (VMStructType subclass).
 	 Convert inst var refs into field dereferences of self.  Add selfSelector as the first argument with the
 	 right struct type. As a complete hack to avoid breaking the inlinert don't use 'self' as the name for self
-	 as this causes surious type redefinitions ``somewhere'' in the inliner."
+	 as this causes serious type redefinitions ``somewhere'' in the inliner."
 	| replacements selfNode typeForSelf |
 	self isStructAccessor ifTrue:
 		[^returnType := definingClass returnTypeForAccessor: selector].
