@@ -334,19 +334,6 @@ CogMethodZone >> manageFrom: theStartAddress to: theLimitAddress [
 	methodCount := 0
 ]
 
-{ #category : #compaction }
-CogMethodZone >> mem: destAddress mo: sourceAddress ve: bytes [
-	<doNotGenerate>
-	| dst src  |
-	dst := destAddress asInteger.
-	src := sourceAddress asInteger.
-	"Emulate the c library memmove function"
-	self assert: bytes \\ 4 = 0.
-	0 to: bytes - 4 by: 4 do:
-		[:i|
-		objectMemory longAt: dst + i put: (objectMemory longAt: src + i)]
-]
-
 { #category : #accessing }
 CogMethodZone >> methodAfter: cogMethod [
 	<returnTypeC: #'CogMethod *'>

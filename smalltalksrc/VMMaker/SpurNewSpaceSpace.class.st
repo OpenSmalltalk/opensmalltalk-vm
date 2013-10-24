@@ -11,7 +11,9 @@ Class {
 { #category : #translation }
 SpurNewSpaceSpace class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 	self allInstVarNames do:
-		[:ivn| aBinaryBlock value: ivn value: #usqInt]
+		[:ivn|
+		(SpurMemoryManager isNonArgumentImplicitReceiverVariableName: ivn) ifFalse:
+			[aBinaryBlock value: ivn value: #usqInt]]
 ]
 
 { #category : #accessing }
