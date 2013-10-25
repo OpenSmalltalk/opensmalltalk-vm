@@ -786,6 +786,11 @@ StackInterpreter class >> initializeMiscConstants [
 	super initializeMiscConstants.
 	STACKVM := true.
 
+	GCModeFull := 1.
+	GCModeIncr := 2.
+	GCModeScavenge := 3.
+	GCModeBecome := 4.
+
 	DumpStackOnLowSpace := 0.
 	PrimitiveExternalCallIndex := 117. "Primitive index for #primitiveExternalCall"
 	MillisecondClockMask := 16r1FFFFFFF.
@@ -1450,13 +1455,14 @@ StackInterpreter class >> table: anArray from: specArray [
 				 contiguous := contiguous + ((spec at: 2) - (spec at: 1)) + 1]].
 	anArray doWithIndex:
 		[:entry :index|
-		(self whichClassIncludesSelector: entry) ifNotNil:
-			[:c| | m |
-			m := c >> entry.
-			(m pragmaAt: #option:) ifNotNil:
-				[:pragma|
-				(initializationOptions at: (pragma arguments first) ifAbsent: [true]) ifFalse:
-					[anArray at: index put: 0]]]]
+		entry isSymbol ifTrue:
+			[(self whichClassIncludesSelector: entry) ifNotNil:
+				[:c| | m |
+				m := c >> entry.
+				(m pragmaAt: #option:) ifNotNil:
+					[:pragma|
+					(initializationOptions at: (pragma arguments first) ifAbsent: [true]) ifFalse:
+						[anArray at: index put: 0]]]]]
 ]
 
 { #category : #translation }
@@ -1487,7 +1493,9 @@ StackInterpreter class >> vmProxyMajorVersion [
 StackInterpreter class >> vmProxyMinorVersion [
 	"Define the  VM_PROXY_MINOR version for this VM as used to
 	 define the api in platforms/Cross/vm/sqVirtualMachine.[ch]"
-	^12
+	^(initializationOptions at: #SpurObjectMemory ifAbsent: [false])
+		ifTrue: [13]
+		ifFalse: [12]
 ]
 
 { #category : #translation }
@@ -7335,7 +7343,7 @@ StackInterpreter >> lookupMethodFor: selector InDictionary: dictionary [
 StackInterpreter >> lookupMethodInClass: class [
 	| currentClass dictionary found |
 	<inline: false>
-	self assert: class ~= objectMemory nilObject.
+	self assert: (self addressCouldBeClassObj: class).
 	currentClass := class.
 	[currentClass ~= objectMemory nilObject]
 		whileTrue:
@@ -7542,6 +7550,7 @@ StackInterpreter >> mapInterpreterOops [
 	"Map all oops in the interpreter's state to their new values 
 	 during garbage collection or a become: operation."
 	"Assume: All traced variables contain valid oops."
+	<inline: false>
 	self mapStackPages.
 	self mapMachineCode.
 	self mapTraceLogs.
@@ -8555,15 +8564,16 @@ StackInterpreter >> postBecomeAction: theBecomeEffectsFlags [
 ]
 
 { #category : #'object memory support' }
-StackInterpreter >> postGCAction [
+StackInterpreter >> postGCAction: gcModeArg [
 	"Shrink free memory and signal the gc semaphore"
-	| freeSizeNow |
 
-	freeSizeNow := objectMemory freeSize.
-	(freeSizeNow > objectMemory shrinkThreshold
-	 and: [freeSizeNow > objectMemory growHeadroom]) ifTrue:
-		["Attempt to shrink memory after successfully reclaiming lots of memory"
-		 objectMemory shrinkObjectMemory: freeSizeNow - objectMemory growHeadroom].
+	(gcModeArg = GCModeFull or: [gcModeArg = GCModeIncr]) ifTrue:"but *not* become and *not* scavenge"
+		[| freeSizeNow |
+		 freeSizeNow := objectMemory freeSize.
+		 (freeSizeNow > objectMemory shrinkThreshold
+		  and: [freeSizeNow > objectMemory growHeadroom]) ifTrue:
+			["Attempt to shrink memory after successfully reclaiming lots of memory"
+			 objectMemory shrinkObjectMemory: freeSizeNow - objectMemory growHeadroom]].
 
 	self signalSemaphoreWithIndex: gcSemaphoreIndex
 ]

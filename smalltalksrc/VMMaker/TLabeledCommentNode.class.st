@@ -68,6 +68,11 @@ TLabeledCommentNode >> needsTrailingSemicolon [
 	^self isComment not
 ]
 
+{ #category : #enumerating }
+TLabeledCommentNode >> nodesDo: aBlock parent: parent [
+	aBlock value: self value: parent
+]
+
 { #category : #printing }
 TLabeledCommentNode >> printOn: aStream level: level [
 

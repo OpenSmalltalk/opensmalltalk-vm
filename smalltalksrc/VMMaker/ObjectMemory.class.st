@@ -2059,7 +2059,7 @@ ObjectMemory >> fullGC [
 	self capturePendingFinalizationSignals.
 
 	youngStart := freeBlock.  "reset the young object boundary"
-	self postGCAction.
+	self postGCAction: GCModeFull.
 	DoAssertionChecks ifTrue:
 		[self clearLeakMapAndMapAccessibleObjects.
 		 self checkHeapIntegrity.
@@ -2417,7 +2417,7 @@ ObjectMemory >> incrementalGC [
 				ifTrue: [self biasToGrow.
 						weDidGrow := true].
 			youngStart := freeBlock].
-	self postGCAction.
+	self postGCAction: GCModeIncr.
 	DoAssertionChecks ifTrue:
 		[self validate.
 		 self checkHeapIntegrity.
@@ -2902,6 +2902,7 @@ ObjectMemory >> isFreeObject: oop [
 
 { #category : #'interpreter access' }
 ObjectMemory >> isImmediate: anOop [
+	<api>
 	^self isIntegerObject: anOop
 ]
 

@@ -1125,7 +1125,7 @@ NewObjectMemory >> fullGC [
 	self capturePendingFinalizationSignals.
 
 	youngStart := freeStart.  "reset the young object boundary"
-	self postGCAction.
+	self postGCAction: GCModeFull.
 	self runLeakCheckerForFullGC: true
 ]
 
@@ -1394,7 +1394,7 @@ NewObjectMemory >> incrementalGC [
 			[self biasToGrow.
 			 weDidGrow := true].
 		youngStart := freeStart].
-	coInterpreter postGCAction.
+	coInterpreter postGCAction: GCModeIncr.
 	
 	self runLeakCheckerForFullGC: false.
 	weDidGrow ifTrue:

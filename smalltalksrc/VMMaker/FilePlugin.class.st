@@ -622,20 +622,19 @@ FilePlugin >> primitiveFileRename [
 
 { #category : #'file primitives' }
 FilePlugin >> primitiveFileSetPosition [
-	| newPosition file sz |
+	| newPosition file |
 	<var: 'file' type: 'SQFile *'>
 	<var: 'newPosition' type: 'squeakFileOffsetType'>
 	<export: true>
-	(interpreterProxy isImmediate: (interpreterProxy stackValue: 0)) ifFalse:
-		[sz := self cCode: 'sizeof(squeakFileOffsetType)'.
-		(interpreterProxy byteSizeOf: (interpreterProxy stackValue: 0)) > sz 
-			ifTrue: [^interpreterProxy primitiveFail]].
+	(interpreterProxy isIntegerObject: (interpreterProxy stackValue: 0)) ifFalse:
+		[(interpreterProxy byteSizeOf: (interpreterProxy stackValue: 0)) ~= (self sizeof: #squeakFileOffsetType) ifTrue:
+			[^interpreterProxy primitiveFail]].
 	newPosition := interpreterProxy positive64BitValueOf: (interpreterProxy stackValue: 0).
 	file := self fileValueOf: (interpreterProxy stackValue: 1).
-	interpreterProxy failed ifFalse:[
-		self sqFile: file SetPosition: newPosition ].
-	interpreterProxy failed ifFalse:[
-		interpreterProxy pop: 2 "pop position, file; leave rcvr on stack" ].
+	interpreterProxy failed ifFalse:
+		[self sqFile: file SetPosition: newPosition ].
+	interpreterProxy failed ifFalse:
+		[interpreterProxy pop: 2] "pop position, file; leave rcvr on stack"
 ]
 
 { #category : #'file primitives' }
