@@ -1123,14 +1123,13 @@ TMethod >> isFunctional [
 	 consists of a single return statement of an expression that contains
 	 no other returns.
 
-	 Answer false for methods with return types other than #sqInt to work
-	 around bugs in the inliner."
+	 Answer false for methods with return types other than the simple
+	 integer types to work around bugs in the inliner."
 
 	(parseTree statements size = 1 and:
 	 [parseTree statements last isReturn]) ifFalse: [ ^false ].
 	parseTree statements last expression nodesDo: [ :n | n isReturn ifTrue: [ ^false ]].
-	returnType = #sqInt ifFalse:[^false].
-	^true
+	^#(sqInt usqInt sqLong usqLong) includes: returnType
 ]
 
 { #category : #inlining }
@@ -1275,7 +1274,7 @@ TMethod >> maybeBreakFor: aNode in: aCodeGen [
 	and: [(aCodeGen breakSrcInlineSelector notNil or: [aCodeGen breakDestInlineSelector notNil])
 	and: [(aCodeGen breakSrcInlineSelector ifNil: [true] ifNotNil: [:srcSel| srcSel = aNode selector])
 	and: [aCodeGen breakDestInlineSelector ifNil: [true] ifNotNil: [:dstSel| dstSel = selector]]]]) ifTrue:
-		[self halt]
+		[self halt: selector]
 ]
 
 { #category : #inlining }

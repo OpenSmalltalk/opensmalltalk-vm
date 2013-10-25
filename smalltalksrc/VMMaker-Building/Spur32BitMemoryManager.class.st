@@ -277,6 +277,7 @@ Spur32BitMemoryManager >> coalesce: obj1 and: obj2 [
 
 { #category : #instantiation }
 Spur32BitMemoryManager >> fillObj: objOop numSlots: numSlots with: fillValue [
+	<inline: true>
 	self assert: (objOop + self baseHeaderSize + (numSlots * self bytesPerOop) - 1)
 				< (self addressAfter: objOop).
 	objOop + self baseHeaderSize
