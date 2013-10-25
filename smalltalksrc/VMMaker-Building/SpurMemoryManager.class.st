@@ -2335,7 +2335,10 @@ SpurMemoryManager >> checkedIntegerValueOf: intOop [
 SpurMemoryManager >> checkedLongAt: byteAddress [
 	"Assumes zero-based array indexing."
 	<api>
-	(self addressCouldBeObj: byteAddress) ifFalse:
+	(byteAddress asUnsignedInteger < self startOfMemory
+	 or: [byteAddress asUnsignedInteger > endOfMemory
+	 or: [byteAddress asUnsignedInteger > newSpaceLimit
+		and: [(segmentManager isInSegments: byteAddress asUnsignedInteger) not]]]) ifTrue:
 		[self warning: 'checkedLongAt bad address'.
 		 coInterpreter primitiveFail].
 	^self longAt: byteAddress
@@ -4022,7 +4025,8 @@ SpurMemoryManager >> headerForSlots: numSlots format: formatField classIndex: cl
 	 newSpace objects from the remembered table. Objects with a high count
 	 should be tenured to prune the remembered table."
 	<returnTypeC: #usqLong>
-	^ (numSlots << self numSlotsFullShift)
+	<inline: true>
+	^ ((self cCoerceSimple: numSlots to: #usqLong) << self numSlotsFullShift)
 	+ (formatField << self formatShift)
 	+ classIndex
 ]
@@ -7463,9 +7467,10 @@ SpurMemoryManager >> unlinkSolitaryFreeTreeNode: freeTreeNode [
 											ifFalse: [self freeChunkLargerIndex])
 							ofFreeChunk: parent
 							withValue: larger.
-						self storePointer: self freeChunkParentIndex
-							ofObject: larger
-							withValue: parent]
+						larger ~= 0 ifTrue:
+							[self storePointer: self freeChunkParentIndex
+								ofObject: larger
+								withValue: parent]]
 				ifFalse:
 					[self storePointer: (freeTreeNode = (self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: parent)
 											ifTrue: [self freeChunkSmallerIndex]

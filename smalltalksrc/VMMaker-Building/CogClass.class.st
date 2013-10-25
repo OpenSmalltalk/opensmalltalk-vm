@@ -22,6 +22,8 @@ CogClass >> cCoerceSimple: value to: cTypeString [
 	   {	[#'unsigned long']							->	[value].
 		[#sqInt]										->	[value].
 		[#usqInt]									->	[value].
+		[#sqLong]									->	[value].
+		[#usqLong]									->	[value].
 		[#'AbstractInstruction *']					->	[value].
 		[#'BytecodeFixup *']						->	[value].
 		[#'CogMethod *']							->	[value].

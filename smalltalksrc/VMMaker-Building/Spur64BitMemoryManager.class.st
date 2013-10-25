@@ -242,6 +242,7 @@ Spur64BitMemoryManager >> changeClassOf: rcvr to: argClass [
 
 { #category : #instantiation }
 Spur64BitMemoryManager >> fillObj: objOop numSlots: numSlots with: fillValue [
+	<inline: true>
 	self assert: (objOop + self baseHeaderSize + (numSlots * self bytesPerOop) - 1)
 				< (self addressAfter: objOop).
 	objOop + self baseHeaderSize
