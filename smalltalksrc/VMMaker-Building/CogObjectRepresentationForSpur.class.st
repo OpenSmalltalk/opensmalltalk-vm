@@ -332,11 +332,6 @@ CogObjectRepresentationForSpur >> isHashSetOnInstanceCreation [
 ]
 
 { #category : #'object representation' }
-CogObjectRepresentationForSpur >> isImmediate: oop [
-	^objectMemory isImmediate: oop
-]
-
-{ #category : #'object representation' }
 CogObjectRepresentationForSpur >> isSmallIntegerTagNonZero [
 	^true
 ]

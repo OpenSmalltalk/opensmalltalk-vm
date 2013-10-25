@@ -58,7 +58,6 @@ Instance Variables
 	statSpecialMarkCount:		<Integer>
 	statSurvivorCount:			<Integer>
 	statSweepCount:			<Integer>
-	statTenures:				<Integer>
 	totalFreeOldSpace:			<Integer>
 	trueObj:					<Integer oop>
 
@@ -175,7 +174,7 @@ specialObjectsOop
 startOfMemory
 	- the first address in newSpace (the first address in either pastSpace or futureSpace)
 
-statFGCDeltaUsecs statFullGCUsecs statFullGCs statGCEndUsecs statGrowMemory statIGCDeltaUsecs statIncrGCUsecs statIncrGCs statMarkCount statMkFwdCount statRootTableCount statRootTableOverflows statSGCDeltaUsecs statScavengeGCUsecs statScavenges statShrinkMemory statSpecialMarkCount statSurvivorCount statSweepCount statTenures
+statFGCDeltaUsecs statFullGCUsecs statFullGCs statGCEndUsecs statGrowMemory statIGCDeltaUsecs statIncrGCUsecs statIncrGCs statMarkCount statMkFwdCount statRootTableCount statRootTableOverflows statSGCDeltaUsecs statScavengeGCUsecs statScavenges statShrinkMemory statSpecialMarkCount statSurvivorCount statSweepCount
 	- various statistics
 
 totalFreeOldSpace
@@ -418,6 +417,8 @@ Class {
 		'startOfMemory',
 		'endOfMemory',
 		'ephemeronQueue',
+		'unscannedEphemerons',
+		'objStackInvalidBecause',
 		'markStack',
 		'freeLists',
 		'freeListsMask',
@@ -442,6 +443,7 @@ Class {
 		'firstFreeChunk',
 		'highestObjects',
 		'statCoalesces',
+		'statCompactPassCount',
 		'statFGCDeltaUsecs',
 		'statFullGCUsecs',
 		'statFullGCs',
@@ -451,7 +453,6 @@ Class {
 		'statIncrGCUsecs',
 		'statIncrGCs',
 		'statMarkCount',
-		'statMkFwdCount',
 		'statRootTableCount',
 		'statRootTableOverflows',
 		'statSGCDeltaUsecs',
@@ -459,11 +460,7 @@ Class {
 		'statScavenges',
 		'statShrinkMemory',
 		'statSpecialMarkCount',
-		'statSurvivorCount',
-		'statSweepCount',
-		'statTenures',
-		'unscannedEphemerons',
-		'objStackInvalidBecause'
+		'statSurvivorCount'
 	],
 	#classVars : [
 		'BitsPerByte',
@@ -916,11 +913,12 @@ SpurMemoryManager >> addressAfter: objOop [
 { #category : #'debug support' }
 SpurMemoryManager >> addressCouldBeObj: address [
 	<api>
+	<inline: false>
 	^(address bitAnd: self baseHeaderSize - 1) = 0
 	  and: [(self isInOldSpace: address)
 		or: [(self isInEden: address)
 		or: [(self isInSurvivorSpace: address)
-		"or: [scavengeInProgress and: [self isInFutureSpace: address]"]]]
+		or: [scavengeInProgress and: [self isInFutureSpace: address]]]]]
 ]
 
 { #category : #'debug support' }
@@ -1856,6 +1854,7 @@ SpurMemoryManager >> bestFitCompact [
 	self exactFitCompact.
 	highestObjects isEmpty ifTrue:
 		[^self]. "either no high objects, or no misfits."
+	statCompactPassCount := statCompactPassCount + 1.
 	highestObjects reverseDo:
 		[:o| | b |
 		 self assert: ((self isForwarded: o) or: [self isPinned: o]) not.
@@ -2037,7 +2036,8 @@ SpurMemoryManager >> changeClassOf: rcvr to: argClass [
 ]
 
 { #category : #'object access' }
-SpurMemoryManager >> characterObjectOf: characterCode [ 
+SpurMemoryManager >> characterObjectOf: characterCode [
+	<api>
 	^characterCode << self numTagBits + self characterTag
 ]
 
@@ -3090,7 +3090,8 @@ SpurMemoryManager >> exactFitCompact [
 	<var: #failures type: #usqInt>
 	totalFreeOldSpace = 0 ifTrue: [^0].
 	failures := highestObjects last + self wordSize.
-	[highestObjects from: failures - self wordSize reverseDo:
+	[statCompactPassCount := statCompactPassCount + 1.
+	 highestObjects from: failures - self wordSize reverseDo:
 		[:o| | b |
 		o < firstFreeChunk ifTrue:
 			[failures = (highestObjects last + self wordSize)
@@ -3672,6 +3673,7 @@ SpurMemoryManager >> forward: obj1 to: obj2 [
 { #category : #'become implementation' }
 SpurMemoryManager >> forwardSurvivor: obj1 to: obj2 [
 	self assert: (self isInNewSpace: obj1).
+	self assert: (self isInFutureSpace: obj2).
 	self storePointerUnchecked: 0 ofObject: obj1 withValue: obj2.
 	self setFormatOf: obj1 to: self forwardedFormat.
 	self setClassIndexOf: obj1 to: self isForwardedObjectClassIndexPun
@@ -3900,7 +3902,15 @@ SpurMemoryManager >> freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoales
 
 { #category : #'gc - global' }
 SpurMemoryManager >> fullGC [
-	^self globalGarbageCollect
+	needGCFlag := false.
+	gcStartUsecs := self ioUTCMicrosecondsNow.
+	statMarkCount := 0.
+	self preGCAction: GCModeFull.
+	self globalGarbageCollect.
+	self postGCAction: GCModeFull.
+	statFullGCs := statFullGCs + 1.
+	statGCEndUsecs := self ioUTCMicrosecondsNow.
+	statFullGCUsecs := statFullGCUsecs + (statGCEndUsecs - gcStartUsecs).
 ]
 
 { #category : #'gc - global' }
@@ -4244,9 +4254,8 @@ SpurMemoryManager >> initialize [
 	statScavenges := statIncrGCs := statFullGCs := 0.
 	statScavengeGCUsecs := statIncrGCUsecs := statFullGCUsecs := statGCEndUsecs := 0.
 	statSGCDeltaUsecs := statIGCDeltaUsecs := statFGCDeltaUsecs := 0.
-	statGrowMemory := statShrinkMemory := statRootTableCount := statTenures := statSurvivorCount := 0.
-	statRootTableOverflows := statSweepCount := statMarkCount := statSpecialMarkCount := statMkFwdCount := 0.
-	statCoalesces := 0.
+	statGrowMemory := statShrinkMemory := statRootTableCount := statSurvivorCount := 0.
+	statRootTableOverflows := statMarkCount := statSpecialMarkCount := statCompactPassCount := statCoalesces := 0.
 
 	"We can initialize things that are allocated but are lazily initialized."
 	unscannedEphemerons := SpurContiguousObjStack new.
@@ -4716,7 +4725,8 @@ SpurMemoryManager >> isHiddenObj: objOop [
 ]
 
 { #category : #'object testing' }
-SpurMemoryManager >> isImmediate: oop [ 
+SpurMemoryManager >> isImmediate: oop [
+	<api>
 	^(oop bitAnd: self tagMask) ~= 0
 ]
 
@@ -4741,14 +4751,18 @@ SpurMemoryManager >> isInClassTable: objOop [
 
 { #category : #'object testing' }
 SpurMemoryManager >> isInEden: objOop [
-	^objOop >= scavenger eden start
-	  and: [objOop < freeStart]
+	^self
+		oop: objOop
+		isGreaterThanOrEqualTo: scavenger eden start
+		andLessThan: freeStart
 ]
 
 { #category : #'object testing' }
-SpurMemoryManager >> isInFutureSpace: objOop [
-	^objOop >= scavenger futureSpace start
-	  and: [objOop < scavenger futureSurvivorStart]
+SpurMemoryManager >> isInFutureSpace: address [
+	^self
+		oop: address
+		isGreaterThanOrEqualTo: scavenger futureSpace start
+		andLessThan: scavenger futureSurvivorStart
 ]
 
 { #category : #'plugin support' }
@@ -4766,8 +4780,11 @@ SpurMemoryManager >> isInNewSpace: objOop [
 ]
 
 { #category : #'object testing' }
-SpurMemoryManager >> isInOldSpace: address [ 
-	^address between: newSpaceLimit and: freeOldSpaceStart
+SpurMemoryManager >> isInOldSpace: address [
+	^self
+		oop: address
+		isGreaterThanOrEqualTo: newSpaceLimit
+		andLessThan: freeOldSpaceStart
 ]
 
 { #category : #immediates }
@@ -4776,9 +4793,11 @@ SpurMemoryManager >> isInRangeCharacterCode: characterCode [
 ]
 
 { #category : #'object testing' }
-SpurMemoryManager >> isInSurvivorSpace: objOop [
-	^objOop >= scavenger pastSpace start
-	  and: [objOop < pastSpaceStart]
+SpurMemoryManager >> isInSurvivorSpace: address [
+	^self
+		oop: address
+		isGreaterThanOrEqualTo: scavenger pastSpace start
+		andLessThan: pastSpaceStart
 ]
 
 { #category : #'object testing' }
@@ -4861,6 +4880,7 @@ SpurMemoryManager >> isOopMutable: oop [
 
 { #category : #'header access' }
 SpurMemoryManager >> isPinned: objOop [
+	<api>
 	^((self longAt: objOop) >> self pinnedBitShift bitAnd: 1) ~= 0
 ]
 
@@ -5957,6 +5977,12 @@ SpurMemoryManager >> outOfPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag
 		forward: obj2 to: clone1
 ]
 
+{ #category : #'primitive support' }
+SpurMemoryManager >> pinObject: objOop [
+	<api>
+	self shouldBeImplemented
+]
+
 { #category : #'header format' }
 SpurMemoryManager >> pinnedBitShift [
 	"bit 1 of 3-bit field above format (little endian)"
@@ -6534,7 +6560,7 @@ SpurMemoryManager >> scavengingGCTenuringIf: tenuringCriterion [
 
 	self runLeakCheckerForFullGC: false.
 	coInterpreter
-		preGCAction: GCModeIncr;
+		preGCAction: GCModeScavenge;
 		"would prefer this to be in mapInterpreterOops, but
 		 compatibility with ObjectMemory dictates it goes here."
 		flushMethodCacheFrom: startOfMemory to: newSpaceLimit.
@@ -6558,7 +6584,7 @@ SpurMemoryManager >> scavengingGCTenuringIf: tenuringCriterion [
 	statScavengeGCUsecs := statScavengeGCUsecs + statSGCDeltaUsecs.
 	statRootTableCount := scavenger rememberedSetSize.
 
-	coInterpreter postGCAction.
+	coInterpreter postGCAction: GCModeScavenge.
 	self runLeakCheckerForFullGC: false.
 
 	self checkFreeSpace
@@ -6963,8 +6989,8 @@ SpurMemoryManager >> startOfObject: objOop [
 
 { #category : #accessing }
 SpurMemoryManager >> statCompMoveCount [
-	"Spur never compacts by moving"
-	^0
+	"Spur never compacts by moving; but it does make compaction passes."
+	^statCompactPassCount
 ]
 
 { #category : #accessing }
@@ -7014,7 +7040,7 @@ SpurMemoryManager >> statMarkCount [
 
 { #category : #accessing }
 SpurMemoryManager >> statMkFwdCount [
-	^statMkFwdCount
+	^0
 ]
 
 { #category : #accessing }
@@ -7064,12 +7090,13 @@ SpurMemoryManager >> statSurvivorCount [
 
 { #category : #accessing }
 SpurMemoryManager >> statSweepCount [
-	^statSweepCount
+	^0
 ]
 
 { #category : #accessing }
 SpurMemoryManager >> statTenures [
-	^statTenures
+	<doNotGenerate>
+	^scavenger statTenures
 ]
 
 { #category : #'object access' }

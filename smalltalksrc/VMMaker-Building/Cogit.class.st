@@ -2765,7 +2765,7 @@ Cogit >> checkIfValidObjectRefAndTarget: annotation pc: mcpc cogMethod: cogMetho
 		 (self asserta: (objectRepresentation checkValidObjectReference: literal)) ifFalse:
 			[^1].
 		((objectRepresentation couldBeObject: literal)
-		 and: [coInterpreter isReallyYoungObject: literal]) ifTrue:
+		 and: [objectMemory isReallyYoungObject: literal]) ifTrue:
 			[(self asserta: (self cCoerceSimple: cogMethod to: #'CogMethod *') cmRefersToYoung) ifFalse:
 				[^2]]].
 	(self isSendAnnotation: annotation) ifTrue:
@@ -6239,9 +6239,10 @@ Cogit >> mapObjectReferencesInMachineCode: gcMode [
 	<api>
 	"Update all references to objects in machine code."
 	gcMode caseOf: {
-		[GCModeIncr]		-> [self mapObjectReferencesInMachineCodeForIncrementalGC].
-		[GCModeFull]		-> [self mapObjectReferencesInMachineCodeForFullGC].
-		[GCModeBecome]	-> [self mapObjectReferencesInMachineCodeForBecome] }.
+		[GCModeScavenge]	-> [self mapObjectReferencesInMachineCodeForIncrementalGC].
+		[GCModeIncr]			-> [self mapObjectReferencesInMachineCodeForScavenge].
+		[GCModeFull]			-> [self mapObjectReferencesInMachineCodeForFullGC].
+		[GCModeBecome]		-> [self mapObjectReferencesInMachineCodeForBecome] }.
 
 	(self asserta: methodZone freeStart <= methodZone youngReferrers) ifFalse:
 		[self error: 'youngReferrers list overflowed']
