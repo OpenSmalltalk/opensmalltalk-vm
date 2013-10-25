@@ -202,6 +202,12 @@ TParseNode >> isLiteralArrayDeclaration [
 ]
 
 { #category : #testing }
+TParseNode >> isNonNullCCode [
+	"overridden in TSendNode"
+	^false
+]
+
+{ #category : #testing }
 TParseNode >> isReturn [
 
 	^false

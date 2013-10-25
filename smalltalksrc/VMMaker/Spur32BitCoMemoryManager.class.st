@@ -120,3 +120,12 @@ Spur32BitCoMemoryManager >> scavengeThresholdAddress [
 	^self cCode: [(self addressOf: scavengeThreshold) asUnsignedInteger]
 		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #scavengeThreshold in: self]
 ]
+
+{ #category : #accessing }
+Spur32BitCoMemoryManager >> startOfMemory [
+	"Return the start of object memory.  This is immediately after the native code zone.
+	 N.B. the stack zone is alloca'ed. Use a macro so as not to punish the debug VM."
+	<cmacro: '() heapBase'>
+	<returnTypeC: #usqInt>
+	^coInterpreter heapBase
+]

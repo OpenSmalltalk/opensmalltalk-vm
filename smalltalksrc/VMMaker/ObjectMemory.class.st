@@ -1899,6 +1899,7 @@ ObjectMemory >> followForwarded: objOop [
 
 { #category : #'spur compatibility' }
 ObjectMemory >> followForwardedObjectFields: objOop toDepth: depth [
+	<inline: false>
 	self shouldNotImplement
 ]
 
