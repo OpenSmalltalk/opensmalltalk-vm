@@ -8190,7 +8190,7 @@ StackInterpreter >> nameOfClass: classOop [
 		[^self nameOfClass: (objectMemory fetchPointer: thisClassIndex ofObject: classOop)].
 	numSlots <= classNameIndex ifTrue:
 		[^'bad class'].
-	^objectMemory firstFixedField: (objectMemory fetchPointer: classNameIndex ofObject: classOop)
+	^objectMemory firstIndexableField: (objectMemory fetchPointer: classNameIndex ofObject: classOop)
 ]
 
 { #category : #'stack pages' }
@@ -9567,7 +9567,7 @@ StackInterpreter >> printOopShortInner: oop [
 		[self printChar: $$; printChar: (objectMemory integerValueOf: (objectMemory fetchPointer: 0 ofObject: oop)).
 		 ^nil].
 	self print: 'a(n) '.
-	1 to: nameLen do: [:i| self printChar: (name at: i)].
+	0 to: nameLen - 1 do: [:i| self printChar: (name at: i)].
 	"Try to spot association-like things; they're all subclasses of LookupKey"
 	((objectMemory instanceSizeOf: classOop) = (ValueIndex + 1)
 	 and: [(self superclassOf: classOop) = (self superclassOf: (objectMemory fetchClassOfNonImm: (objectMemory splObj: SchedulerAssociation)))
