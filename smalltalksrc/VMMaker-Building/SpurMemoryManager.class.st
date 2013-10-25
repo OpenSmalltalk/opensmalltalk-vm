@@ -892,6 +892,7 @@ SpurMemoryManager >> addToFreeTree: freeChunk bytes: chunkBytes [
 		 freeLists at: 0 put: freeChunk.
 		 freeListsMask := freeListsMask bitOr: 1.
 		 ^0].
+	self assert: (freeListsMask anyMask: 1).
 	"insert in tree"
 	self storePointer: self freeChunkParentIndex
 			ofFreeChunk: freeChunk
@@ -1300,15 +1301,16 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 		 index := initialIndex.
 		 [(index := index + index) < self numFreeLists
 		  and: [1 << index <= freeListsMask]] whileTrue:
-			[((freeListsMask anyMask: 1 << index)
-			 and: [(chunk := freeLists at: index) ~= 0]) ifTrue:
-				[self assert: chunk = (self startOfObject: chunk).
-				 self assert: (self isValidFreeObject: chunk).
-				 self unlinkFreeChunk: chunk atIndex: index.
-				 self assert: (self bytesInObject: chunk) = (index * self allocationUnit).
-				 self freeChunkWithBytes: index * self allocationUnit - chunkBytes
-					at: (self startOfObject: chunk) + chunkBytes.
-				^chunk]].
+			[(freeListsMask anyMask: 1 << index) ifTrue:
+				[(chunk := freeLists at: index) ~= 0 ifTrue:
+					[self assert: chunk = (self startOfObject: chunk).
+					 self assert: (self isValidFreeObject: chunk).
+					 self unlinkFreeChunk: chunk atIndex: index.
+					 self assert: (self bytesInObject: chunk) = (index * self allocationUnit).
+					 self freeChunkWithBytes: index * self allocationUnit - chunkBytes
+						at: (self startOfObject: chunk) + chunkBytes.
+					^chunk].
+				 freeListsMask := freeListsMask - (1 << index)]].
 		 "now get desperate and use the first that'll fit.
 		  Note that because the minimum free size is 16 bytes (2 * allocationUnit), to
 		  leave room for the forwarding pointer/next free link, we can only break chunks
@@ -1407,7 +1409,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes suchThat: acceptan
 	(initialIndex < self numFreeLists and: [1 << initialIndex <= freeListsMask]) ifTrue:
 		[(freeListsMask anyMask: 1 << initialIndex) ifTrue:
 			[(node := freeLists at: initialIndex) = 0
-				ifTrue: [freeListsMask := freeListsMask - (1 << index)]
+				ifTrue: [freeListsMask := freeListsMask - (1 << initialIndex)]
 				ifFalse:
 					[prev := 0.
 					 [node ~= 0] whileTrue:
@@ -1416,9 +1418,10 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes suchThat: acceptan
 						 next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: node.
 						 (acceptanceBlock value: node) ifTrue:
 							[prev = 0
-								ifTrue: [freeLists at: index put: next]
+								ifTrue: [freeLists at: initialIndex put: next]
 								ifFalse: [self storePointer: self freeChunkNextIndex ofFreeChunk: prev withValue: next].
 							 ^node].
+						 prev := node.
 						 node := next]]].
 		 "first search for free chunks of a multiple of chunkBytes in size"
 		 index := initialIndex.
@@ -1440,14 +1443,8 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes suchThat: acceptan
 								 self freeChunkWithBytes: index * self allocationUnit - chunkBytes
 									at: (self startOfObject: node) + chunkBytes.
 								 ^node].
-							 node := next].
-						 self assert: node = (self startOfObject: node).
-						 self assert: (self isValidFreeObject: node).
-						 self unlinkFreeChunk: node atIndex: index.
-						 self assert: (self bytesInObject: node) = (index * self allocationUnit).
-						 self freeChunkWithBytes: index * self allocationUnit - chunkBytes
-							at: (self startOfObject: node) + chunkBytes.
-						^node]]].
+							 prev := node.
+							 node := next]]]].
 		 "now get desperate and use the first that'll fit.
 		  Note that because the minimum free size is 16 bytes (2 * allocationUnit), to
 		  leave room for the forwarding pointer/next free link, we can only break chunks
@@ -1471,14 +1468,8 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes suchThat: acceptan
 								 self freeChunkWithBytes: index * self allocationUnit - chunkBytes
 									at: (self startOfObject: node) + chunkBytes.
 								 ^node].
-							 node := next].
-						 self assert: node = (self startOfObject: node).
-						 self assert: (self isValidFreeObject: node).
-						 self unlinkFreeChunk: node atIndex: index.
-						 self assert: (self bytesInObject: node) = (index * self allocationUnit).
-						 self freeChunkWithBytes: index * self allocationUnit - chunkBytes
-							at: (self startOfObject: node) + chunkBytes.
-						^node]]]].
+							 prev := node.
+							 node := next]]]]].
 
 	"Large chunk, or no space on small free lists.  Search the large chunk list.
 	 Large chunk list organized as a tree, each node of which is a list of chunks
@@ -1488,6 +1479,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes suchThat: acceptan
 	 us from having to back-up when the acceptanceBlock filters-out all nodes
 	 of the right size, but there are nodes of the wrong size it does accept."
 	child := freeLists at: 0.
+	acceptedChunk := acceptedNode := 0.
 	[child ~= 0] whileTrue:
 		[| childBytes |
 		 self assert: (self isValidFreeObject: child).
@@ -1519,16 +1511,16 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes suchThat: acceptan
 						 "first search the list."
 						 [acceptedChunk := self fetchPointer: self freeChunkNextIndex
 													ofFreeChunk: acceptedChunk.
-						  acceptedChunk ~= 0 and: [acceptedNode = 0]] whileTrue:
-							[(acceptanceBlock value: acceptedChunk) ifTrue:
-								[acceptedNode := child].
+						  (acceptedChunk ~= 0 and: [acceptanceBlock value: acceptedChunk]) ifTrue:
+							[acceptedNode := child].
+						  acceptedChunk ~= 0 and: [acceptedNode = 0]] whileTrue.
 						 "nothing on the list; will the node do?  This prefers
 						  acceptable nodes higher up the tree over acceptable
 						  list elements further down, but we haven't got all day..."
 						 (acceptedNode = 0
 						  and: [acceptanceBlock value: child]) ifTrue:
 							[acceptedNode := child]].
-					 child := self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: child]]]].
+					 child := self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: child]]].
 	acceptedNode ~= 0 ifTrue:
 		[acceptedChunk ~= 0 ifTrue:
 			[self assert: (self bytesInObject: acceptedChunk) >= (chunkBytes + self allocationUnit).
@@ -1565,12 +1557,13 @@ SpurMemoryManager >> allocateOldSpaceChunkOfExactlyBytes: chunkBytes [
 
 	initialIndex := chunkBytes / self allocationUnit.
 	initialIndex < self numFreeLists ifTrue:
-		[(1 << initialIndex <= freeListsMask
-		 and: [(node := freeLists at: initialIndex) ~= 0]) ifTrue:
-			[self assert: node = (self startOfObject: node).
-			 self assert: (self isValidFreeObject: node).
-			totalFreeOldSpace := totalFreeOldSpace - chunkBytes.
-			^self unlinkFreeChunk: node atIndex: initialIndex].
+		[1 << initialIndex <= freeListsMask ifTrue:
+			[(node := freeLists at: initialIndex) ~= 0 ifTrue:
+				[self assert: node = (self startOfObject: node).
+				 self assert: (self isValidFreeObject: node).
+				 totalFreeOldSpace := totalFreeOldSpace - chunkBytes.
+				 ^self unlinkFreeChunk: node atIndex: initialIndex].
+			 freeListsMask := freeListsMask - (1 << initialIndex)].
 		 ^nil].
 
 	"Large chunk.  Search the large chunk list.
@@ -1850,8 +1843,10 @@ SpurMemoryManager >> bestFitCompact [
 	<returnTypeC: #void>
 	<inline: false>
 	| freePriorToExactFit |
+	self checkFreeSpace.
 	freePriorToExactFit := totalFreeOldSpace.
 	self exactFitCompact.
+	self checkFreeSpace.
 	highestObjects isEmpty ifTrue:
 		[^self]. "either no high objects, or no misfits."
 	statCompactPassCount := statCompactPassCount + 1.
@@ -1869,6 +1864,7 @@ SpurMemoryManager >> bestFitCompact [
 					(self isRemembered: o) ifTrue:
 						[scavenger remember: f].
 					self forward: o to: f]].
+	self checkFreeSpace.
 	self allOldSpaceObjectsFrom: firstFreeChunk
 		do: [:o| | b |
 			((self isForwarded: o)
@@ -1884,7 +1880,7 @@ SpurMemoryManager >> bestFitCompact [
 					(self isRemembered: o) ifTrue:
 						[scavenger remember: f].
 					self forward: o to: f]]].
-	self checkFreeSpace
+	self checkFreeSpace.
 	self touch: freePriorToExactFit
 ]
 
@@ -2904,6 +2900,12 @@ SpurMemoryManager >> eliminateAndFreeForwarders [
 	"As the final phase of global garbage collect, sweep
 	 the heap to follow forwarders, then free forwarders"
 	| lowestForwarded firstForwarded lastForwarded |
+	self assert: (self isForwarded: nilObj) not.
+	self assert: (self isForwarded: falseObj) not.
+	self assert: (self isForwarded: trueObj) not.
+	self assert: (self isForwarded: hiddenRootsObj) not.
+	(self isForwarded: specialObjectsOop) ifTrue:
+		[specialObjectsOop := self followForwarded: specialObjectsOop].
 	lowestForwarded := 0.
 	self allOldSpaceObjectsDo:
 		[:o|
@@ -2965,7 +2967,7 @@ SpurMemoryManager >> ensureAdequateClassTableBitmap [
 { #category : #'gc - incremental' }
 SpurMemoryManager >> ensureAllMarkBitsAreZero [
 	"If the incremental collector is running mark bits may be set; stop it and clear them if necessary."
-	self shouldBeImplemented
+	self flag: 'need to implement the inc GC first...'
 ]
 
 { #category : #'class table' }
@@ -3902,12 +3904,13 @@ SpurMemoryManager >> freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoales
 
 { #category : #'gc - global' }
 SpurMemoryManager >> fullGC [
+	<inline: false>
 	needGCFlag := false.
 	gcStartUsecs := self ioUTCMicrosecondsNow.
 	statMarkCount := 0.
-	self preGCAction: GCModeFull.
+	coInterpreter preGCAction: GCModeFull.
 	self globalGarbageCollect.
-	self postGCAction: GCModeFull.
+	coInterpreter postGCAction: GCModeFull.
 	statFullGCs := statFullGCs + 1.
 	statGCEndUsecs := self ioUTCMicrosecondsNow.
 	statFullGCUsecs := statFullGCUsecs + (statGCEndUsecs - gcStartUsecs).
@@ -4545,6 +4548,13 @@ SpurMemoryManager >> ioLoadFunction: functionString From: pluginString [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	<doNotGenerate>
 	^coInterpreter ioLoadFunction: functionString From: pluginString
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> ioUTCMicrosecondsNow [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter ioUTCMicrosecondsNow
 ]
 
 { #category : #'simulation only' }
@@ -6128,7 +6138,7 @@ SpurMemoryManager >> primitiveFailureCode [
 
 { #category : #'debug printing' }
 SpurMemoryManager >> printFreeChunk: freeChunk [
-	<doNotGenerate>
+	<api>
 	| numBytes |
 	numBytes := self bytesInObject: freeChunk.
 	coInterpreter
@@ -6839,7 +6849,7 @@ SpurMemoryManager >> sortFreeListAt: i [
 	next = 0 ifTrue:
 		[^self].
 	"detatch already sorted list"
-	self storePointer: self freeChunkNextIndex ofObject: list withValue: 0.
+	self storePointer: self freeChunkNextIndex ofFreeChunk: list withValue: 0.
 	list := next.
 	[list ~= 0] whileTrue:
 		[| node prev |
@@ -7496,7 +7506,7 @@ SpurMemoryManager >> unlinkSolitaryFreeTreeNode: freeTreeNode [
 							withValue: larger.
 						larger ~= 0 ifTrue:
 							[self storePointer: self freeChunkParentIndex
-								ofObject: larger
+								ofFreeChunk: larger
 								withValue: parent]]
 				ifFalse:
 					[self storePointer: (freeTreeNode = (self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: parent)
@@ -7505,7 +7515,7 @@ SpurMemoryManager >> unlinkSolitaryFreeTreeNode: freeTreeNode [
 						ofFreeChunk: parent
 						withValue: smaller.
 					 self storePointer: self freeChunkParentIndex
-						ofObject: smaller
+						ofFreeChunk: smaller
 						withValue: parent.
 					 larger ~= 0 ifTrue:
 						[self addFreeSubTree: larger]]]

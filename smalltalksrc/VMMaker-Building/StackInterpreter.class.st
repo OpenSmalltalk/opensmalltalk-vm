@@ -7761,7 +7761,7 @@ StackInterpreter >> markAndTraceStackPage: thePage [
 	[frameRcvrOffset := self frameReceiverOffset: theFP.
 	 [theSP <= frameRcvrOffset] whileTrue:
 		[oop := stackPages longAt: theSP.
-		 (objectMemory isIntegerObject: oop) ifFalse:
+		 (objectMemory isImmediate: oop) ifFalse:
 			[objectMemory markAndTrace: oop].
 		 theSP := theSP + BytesPerWord].
 	(self frameHasContext: theFP) ifTrue:
@@ -7774,7 +7774,7 @@ StackInterpreter >> markAndTraceStackPage: thePage [
 	theSP := theFP + FoxCallerSavedIP. "caller ip is frameCallerContext in a base frame"
 	[theSP <= thePage baseAddress] whileTrue:
 		[oop := stackPages longAt: theSP.
-		 (objectMemory isIntegerObject: oop) ifFalse:
+		 (objectMemory isImmediate: oop) ifFalse:
 			[objectMemory markAndTrace: oop].
 		 theSP := theSP + BytesPerWord]
 ]
