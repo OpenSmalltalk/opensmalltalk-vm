@@ -6934,10 +6934,10 @@ SpurMemoryManager >> stackValue: offset ofObjStack: objStackPage [
 
 { #category : #accessing }
 SpurMemoryManager >> startOfMemory [
-	"Return the start of object memory.  This is immediately after the native code zone."
+	"Return the start of object memory. Use a macro so as not to punish the debug VM."
+	<cmacro: '() memory'>
 	<returnTypeC: #usqInt>
-	<cmacro: '() GIV(startOfMemory)'>
-	^startOfMemory ifNil: [0]
+	^0
 ]
 
 { #category : #simulation }

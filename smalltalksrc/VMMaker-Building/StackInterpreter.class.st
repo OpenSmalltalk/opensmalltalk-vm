@@ -1447,7 +1447,16 @@ StackInterpreter class >> table: anArray from: specArray [
 			ifFalse:
 				[(spec at: 1) to: (spec at: 2) do:
 					[:i | anArray at: i + 1 put: ((spec at: 3) ifNil: [i] ifNotNil: [:sym| sym])].
-				 contiguous := contiguous + ((spec at: 2) - (spec at: 1)) + 1]]
+				 contiguous := contiguous + ((spec at: 2) - (spec at: 1)) + 1]].
+	anArray doWithIndex:
+		[:entry :index|
+		(self whichClassIncludesSelector: entry) ifNotNil:
+			[:c| | m |
+			m := c >> entry.
+			(m pragmaAt: #option:) ifNotNil:
+				[:pragma|
+				(initializationOptions at: (pragma arguments first) ifAbsent: [true]) ifFalse:
+					[anArray at: index put: 0]]]]
 ]
 
 { #category : #translation }
@@ -3041,6 +3050,7 @@ StackInterpreter >> checkImageVersionFrom: f startingAt: imageOffset [
 	"Read and verify the image file version number and return true if the the given image file needs to be byte-swapped. As a side effect, position the file stream just after the version number of the image header. This code prints a warning and does a hard-exit if it cannot find a valid version number."
 	"This code is based on C code by Ian Piumarta."
 
+	<inline: false>
 	| version firstVersion |
 	<var: #f type: 'sqImageFile '>
 	<var: #imageOffset type: 'squeakFileOffsetType '>
@@ -5904,6 +5914,7 @@ StackInterpreter >> handleForwardedSelectorFaultFor: selectorOop [
 	"Handle a send fault that is due to a send using a forwarded selector.
 	 Unforward the selector and follow the current method and special
 	 selectors array to unforward the source of the forwarded selector."
+	<inline: false>
 	self assert: (objectMemory isOopForwarded: selectorOop).
 
 	objectMemory
@@ -7131,17 +7142,19 @@ StackInterpreter >> longJumpIfTrue [
 { #category : #'debug printing' }
 StackInterpreter >> longPrintOop: oop [
 	<api>
-	| class fmt lastIndex startIP bytecodesPerLine column |
+	| fmt lastIndex startIP bytecodesPerLine column |
 	((objectMemory isImmediate: oop)
 	 or: [(objectMemory addressCouldBeObj: oop) not
 	 or: [(oop bitAnd: objectMemory allocationUnit - 1) ~= 0
 	 or: [(objectMemory isFreeObject: oop)
 	 or: [objectMemory isForwarded: oop]]]]) ifTrue:
 		[^self printOop: oop].
-	class := objectMemory fetchClassOfNonImm: oop.
-	self printHex: oop;
-		print: ': a(n) '; printNameOfClass: class count: 5;
-		print: ' ('; printHex: class; print: ')'.
+	self printHex: oop.
+	(objectMemory fetchClassOfNonImm: oop)
+		ifNil: [self print: ' has a nil class!!']
+		ifNotNil: [:class|
+			self print: ': a(n) '; printNameOfClass: class count: 5;
+				print: ' ('; printHex: class; print: ')'].
 	fmt := objectMemory formatOf: oop.
 	self print: ' format '; printHexnp: fmt.
 	fmt > objectMemory lastPointerFormat
@@ -10133,6 +10146,7 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 	<var: #imageOffset type: 'squeakFileOffsetType '>
 
 	metaclassNumSlots := 6.	"guess Metaclass instSize"
+	classNameIndex := 6.		"guess (Class instVarIndexFor: 'name' ifAbsent: []) - 1"
 	swapBytes := self checkImageVersionFrom: f startingAt: imageOffset.
 	headerStart := (self sqImageFilePosition: f) - BytesPerWord.  "record header start position"
 
@@ -10193,7 +10207,7 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 								headerSize: headerSize) asUnsignedInteger.
 	objectMemory memory = nil ifTrue: [self insufficientMemoryAvailableError].
 
-	heapBase := objectMemory startOfMemory.
+	heapBase := objectMemory memory.
 	objectMemory
 		setHeapBase: heapBase
 		memoryLimit: (heapBase + heapSize) - 24  "decrease memoryLimit a tad for safety"

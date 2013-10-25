@@ -76,7 +76,10 @@ SpurSegmentManager >> addSegmentOfSize: ammount [
 
 { #category : #snapshot }
 SpurSegmentManager >> adjustSegmentSwizzlesBy: firstSegmentShift [
-	"Adjust swizzles by firstSegmentShift."
+	"Adjust swizzles by firstSegmentShift.  Also computes segStarts as
+	 they were in the image when it was written, so that oops' segments
+	 can be determined and hence oops correctly swizzled."
+	<inline: false>
 	<var: 'segInfo' type: 'SpurSegmentInfo *'>
 	| oldBaseAddr |
 	oldBaseAddr := manager memoryBaseForImageRead - firstSegmentShift.
@@ -158,13 +161,13 @@ SpurSegmentManager >> bridgeFrom: aSegment to: nextSegmentOrNil [
 
 { #category : #snapshot }
 SpurSegmentManager >> collapseSegmentsPostSwizzle [
-	"The image has been loaded, old segments reconstructed, and the
-	  loaded image swizzled into a single contiguous segment.  Collapse
-	  the segments intio one."
+	"The image has been loaded, old segments reconstructed, and the heap
+	 swizzled into a single contiguous segment.  Collapse the segments into one."
+	<inline: false>
 	| bridge |
 	canSwizzle := false.
 	firstSegmentSize ifNil: "true when used by SpurBootstrap to transform an image"
-		[^self].
+		[^nil].
 
 	numSegments := 1.
 	(segments at: 0)
@@ -175,7 +178,7 @@ SpurSegmentManager >> collapseSegmentsPostSwizzle [
 	bridge := manager endOfMemory - manager bridgeSize.
 	self assert: bridge = ((segments at: 0) segStart
 						  + (segments at: 0) segSize
-						  -  (manager bridgeSize)).
+						  -  manager bridgeSize).
 	manager
 		initSegmentBridgeWithBytes: manager bridgeSize at: bridge;
 		setEndOfMemory: bridge
@@ -306,6 +309,7 @@ SpurSegmentManager >> readHeapFromImageFile: f dataBytes: numBytes [
 	 Answer the number of bytes written.  In addition, read each segment, build up the
 	 segment info, while eliminating the bridge objects that end each segment and
 	 give the size of the subsequent segment."
+	<inline: false>
 	| bytesRead totalBytesRead bridge nextSegmentSize oldBase newBase segInfo bridgeSpan |
 	<var: 'segInfo' type: 'SpurSegmentInfo *'>
 	self allocateOrExtendSegmentInfos.

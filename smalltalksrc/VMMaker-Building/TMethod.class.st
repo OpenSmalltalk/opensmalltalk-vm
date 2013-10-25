@@ -857,21 +857,11 @@ TMethod >> hasReturn [
 
 { #category : #utilities }
 TMethod >> hasUnrenamableCCode [
-	"Answer true if the receiver uses inlined C or complex C declarations,
-	 which are not currently renamed properly by the the inliner."
+	"Answer true if the receiver uses inlined C which
+	 is not currently renamed properly by the the inliner."
 
-	declarations keysAndValuesDo:
-		[:name :value|
-		((value endsWith: name)
-		 or: [value == #implicit]) ifFalse: 
-			[^true]].
-
-	parseTree nodesDo:
-		[:node|
-		(node isSend
-		 and: [node isNonNullCCode]) ifTrue:
-			[^true]].
-	^false
+	^parseTree anySatisfy:
+		[:node| node isNonNullCCode]
 ]
 
 { #category : #inlining }
@@ -1313,12 +1303,27 @@ TMethod >> mustAsmLabel: aBoolean [
 
 { #category : #initialization }
 TMethod >> newCascadeTempFor: aTParseNode [
-	| varNode |
-	varNode := TVariableNode new setName: (self extraVariableName: 'cascade').
+	| varName varNode |
+	varName := self extraVariableName: 'cascade'.
+	varNode := TVariableNode new setName: varName.
 	aTParseNode isLeaf ifFalse:
 		[declarations
-			at: varNode name
-			put: [:tm :cg| tm determineTypeFor: aTParseNode in: cg]].
+			at: varName
+			put: [:tm :cg| | type |
+				type := tm determineTypeFor: aTParseNode in: cg.
+				(VMStructType structTargetKindForType: type) == #struct ifTrue:
+					["can't copy structs into cascade temps; the struct is not updated.
+					  must change to a pointer."
+					type := type, ' *'.
+					parseTree nodesDo:
+						[:node|
+						(node isAssignment
+						 and: [node variable name = varName]) ifTrue:
+							[node setExpression: (TSendNode new
+													setSelector: #addressOf:
+													receiver: (TVariableNode new setName: 'self')
+													arguments: {node expression})]]].
+				type]].
 	^varNode
 ]
 
@@ -1758,21 +1763,22 @@ TMethod >> renameVariablesUsing: aDictionary [
 	"map declarations"
 	newDecls := declarations species new.
 	declarations keysAndValuesDo:
-		[ :oldName :decl|
+		[:oldName :decl|
 		(aDictionary at: oldName ifAbsent: nil)
-			ifNotNil: [:newName|
-					newDecls
-						at: newName
-						put: ((decl endsWith: oldName)
-								ifTrue: [(decl allButLast: oldName size), newName]
-								ifFalse:
-									[Transcript cr; show: 'suspicious renaming ', oldName, ' -> ', newName, ' ', decl, ' in ', selector.
-									 decl])]
-			ifNil: [ newDecls at: oldName put: decl ]].
+			ifNotNil:
+				[:newName| | index |
+				index := decl indexOfWord: oldName.
+				 newDecls
+					at: newName
+					put: (index ~= 0
+							ifTrue: [decl copyReplaceFrom: index to: index + oldName size - 1 with: newName]
+							ifFalse: [decl])]
+			ifNil: [newDecls at: oldName put: decl]].
 	self newDeclarations: newDecls.
 
 	"map variable names in parse tree"
-	parseTree nodesDo: [ :node |
+	parseTree nodesDo:
+		[ :node |
 		(node isVariable
 		and: [aDictionary includesKey: node name]) ifTrue:
 			[node setName: (aDictionary at: node name)].
