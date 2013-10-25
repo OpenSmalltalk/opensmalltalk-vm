@@ -412,7 +412,6 @@ VMStructType class >> structTargetKindForDeclaration: decl [
 
 { #category : #translation }
 VMStructType class >> structTargetKindForType: type [
-	| index |
 	StructTypeNameCache ifNil:
 		[StructTypeNameCache := Set new.
 		 self allSubclassesDo:
@@ -421,8 +420,9 @@ VMStructType class >> structTargetKindForType: type [
 	   and: [StructTypeNameCache anySatisfy:
 			[:structType|
 			(type beginsWith: structType)
-			and: [index > structType size]]]) ifTrue:
-		[(index := type indexOf: $*) > 0
+			and: [type size = structType size
+				or: [(type at: structType size + 1) isAlphaNumeric not]]]]) ifTrue:
+		[(type includes: $*)
 			ifTrue: [#pointer]
 			ifFalse: [#struct]]
 ]
