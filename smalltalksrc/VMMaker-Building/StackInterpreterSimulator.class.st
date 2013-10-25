@@ -2059,6 +2059,7 @@ StackInterpreterSimulator >> shortPrint: oop [
 		[^' is a forwarded object to ', (objectMemory followForwarded: oop) hex,
 			' of slot size ', (objectMemory numSlotsOfAny: oop) printString].
 	classOop := objectMemory fetchClassOfNonImm: oop.
+	classOop ifNil: [^' has a nil class!!'].
 	(objectMemory numSlotsOf: classOop) = metaclassNumSlots ifTrue:
 		[^'class ' , (self nameOfClass: oop)].
 	name := self nameOfClass: classOop.

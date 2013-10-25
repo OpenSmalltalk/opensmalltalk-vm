@@ -206,6 +206,12 @@ TAssignmentNode >> replaceNodesIn: aDictionary [
 ]
 
 { #category : #accessing }
+TAssignmentNode >> setExpression: expressionNode [
+
+	expression := expressionNode
+]
+
+{ #category : #accessing }
 TAssignmentNode >> setVariable: varNode expression: expressionNode [
 
 	variable := varNode.
