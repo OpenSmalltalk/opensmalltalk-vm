@@ -213,7 +213,8 @@ Spur32BitMMLESimulator >> isIntegerObject: oop [
 		commonVariable:at:put:cacheIndex:
 		primDigitBitShiftMagnitude:
 		externalInstVar:ofContext:
-		primitiveGrowMemoryByAtLeast) includes: sel) ifFalse:
+		primitiveGrowMemoryByAtLeast
+		primitiveFileSetPosition) includes: sel) ifFalse:
 		[self halt].
 	^super isIntegerObject: oop
 ]
