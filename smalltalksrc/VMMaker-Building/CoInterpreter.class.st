@@ -259,10 +259,6 @@ CoInterpreter class >> initializeMiscConstants [
 
 	ReturnToInterpreter := 1. "setjmp/longjmp code."
 
-	GCModeFull := 1.
-	GCModeIncr := 2.
-	GCModeBecome := 3.
-
 	PrimTraceLogSize := 256. "Room for 256 selectors.  Must be 256 because we use a byte to hold the index"
 	TraceBufferSize := 256 * 3. "Room for 256 events"
 	TraceContextSwitch := self objectMemoryClass basicNew integerObjectOf: 1.
@@ -399,6 +395,11 @@ CoInterpreter class >> interpreterMachineCodeTransitions [
 	 a primitive whether the primitive call is from machine code, as it should be; it isn't a
 	 concern of the primitive.  Hence KISS says ``no machine-code invocation of primitives
 	 from the interpreter''."
+]
+
+{ #category : #translation }
+CoInterpreter class >> isAcceptableAncilliaryClass: aClass [
+	^aClass ~~ InterpreterStackPages
 ]
 
 { #category : #translation }
@@ -3381,6 +3382,11 @@ CoInterpreter >> functionPointerForCompiledMethod: methodObj primitiveIndex: pri
 	^functionPointer
 ]
 
+{ #category : #'object memory support' }
+CoInterpreter >> gcMode [
+	^gcMode
+]
+
 { #category : #'internal interpreter access' }
 CoInterpreter >> getCodeCompactionCount [
 	<cmacro: '() integerObjectOf(GIV(statCodeCompactionCount))'>
@@ -3993,14 +3999,6 @@ CoInterpreter >> isMachineCodeFrame: theFP [
 { #category : #'debug support' }
 CoInterpreter >> isMachineCodeIP: anInstrPointer [
 	^anInstrPointer < objectMemory startOfMemory
-]
-
-{ #category : #'cog jit support' }
-CoInterpreter >> isReallyYoungObject: obj [
-	<api>
-	"For machine code assertion checking.  Answer true if not in a fullGC and obj is young."
-	^gcMode ~= GCModeFull
-	  and: [self oop: obj isGreaterThanOrEqualTo: objectMemory youngStart]
 ]
 
 { #category : #simulation }
@@ -5061,22 +5059,12 @@ CoInterpreter >> postBecomeAction: theBecomeEffectsFlags [
 ]
 
 { #category : #'object memory support' }
-CoInterpreter >> postGCAction [
-	"Shrink free memory, signal the gc semaphore and let the Cogit do its post GC thang"
-	| freeSizeNow |
-
-	freeSizeNow := objectMemory freeSize.
-	(freeSizeNow > objectMemory shrinkThreshold
-	 and: [freeSizeNow > objectMemory growHeadroom]) ifTrue:
-		["Attempt to shrink memory after successfully reclaiming lots of memory"
-		 objectMemory shrinkObjectMemory: freeSizeNow - objectMemory growHeadroom].
-
-	cogit cogitPostGCAction: gcMode.
-
-	self signalSemaphoreWithIndex: gcSemaphoreIndex.
-
+CoInterpreter >> postGCAction: gcModeArg [
+	"Attempt to shrink free memory, signal the gc semaphore and let the Cogit do its post GC thang"
+	self assert: gcModeArg = gcMode.
+	super postGCAction: gcModeArg.
+	cogit cogitPostGCAction: gcModeArg.
 	lastCoggableInterpretedBlockMethod := lastUncoggableInterpretedBlockMethod := nil.
-
 	gcMode := 0
 ]
 

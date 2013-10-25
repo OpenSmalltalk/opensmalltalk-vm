@@ -4541,7 +4541,7 @@ Interpreter >> positive64BitValueOf: oop [
 ]
 
 { #category : #'object memory support' }
-Interpreter >> postGCAction [
+Interpreter >> postGCAction: gcModeArg [
 	"Mark the active and home contexts as roots if old. This 
 	allows the interpreter to use storePointerUnchecked to 
 	store into them."

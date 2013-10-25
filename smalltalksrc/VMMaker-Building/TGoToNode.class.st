@@ -32,6 +32,11 @@ TGoToNode >> label [
 	^label
 ]
 
+{ #category : #enumerating }
+TGoToNode >> nodesDo: aBlock parent: parent [
+	aBlock value: self value: parent
+]
+
 { #category : #printing }
 TGoToNode >> printOn: aStream level: level [
 
