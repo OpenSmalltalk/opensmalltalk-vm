@@ -113,7 +113,8 @@ Class {
 		'tenureThreshold',
 		'tenuringClassIndex',
 		'tenuringProportion',
-		'numRememberedEphemerons'
+		'numRememberedEphemerons',
+		'statTenures'
 	],
 	#classVars : [
 		'RememberedSetLimit',
@@ -157,8 +158,6 @@ SpurGenerationScavenger >> addToEphemeronList: ephemeronCorpse [
 	 the forwarding pointer followed to locate the survivor."
 	<inline: false>
 	| ephemeronListOffset |
-	self assert: (manager isYoung: ephemeronCorpse).
-	self assert: (manager isForwarded: ephemeronCorpse).
 	self assert: (self isScavengeSurvivor: (manager keyOfEphemeron: (manager followForwarded: ephemeronCorpse))) not.
 
 	ephemeronListOffset := ephemeronList ifNil: 0.
@@ -175,8 +174,6 @@ SpurGenerationScavenger >> addToWeakList: weakCorpse [
 	 the forwarding pointer followed to locate the survivor."
 	<inline: false>
 	| weakListOffset |
-	self assert: (manager isYoung: weakCorpse).
-	self assert: (manager isForwarded: weakCorpse).
 
 	weakListOffset := weakList ifNil: 0.
 	self setCorpseOffsetOf: weakCorpse to: weakListOffset.
@@ -256,6 +253,7 @@ SpurGenerationScavenger >> copyToOldSpace: survivor [
 	"Copy survivor to oldSpace.  Answer the new oop of the object."
 	<inline: true>
 	| numSlots newOop |
+	statTenures := statTenures + 1.
 	self flag: 'why not just pass header??'.
 	numSlots := manager numSlotsOf: survivor.
 	newOop := manager
@@ -444,7 +442,7 @@ SpurGenerationScavenger >> initialize [
 	rememberedSet := CArrayAccessor on: (Array new: RememberedSetLimit).
 	rememberedSetSize := 0.
 	tenureThreshold := 0.
-	tenuringProportion := 0.9
+	statTenures := 0
 ]
 
 { #category : #'weakness and ephemerality' }
@@ -523,7 +521,9 @@ SpurGenerationScavenger >> newSpaceStart: startAddress newSpaceBytes: totalBytes
 				+ (futureSpace limit \\ manager allocationUnit) = 0.
 
 	self initFutureSpaceStart.
-	manager initSpaceForAllocationCheck: (self addressOf: eden)
+	manager initSpaceForAllocationCheck: (self addressOf: eden).
+
+	tenuringProportion := 0.9
 ]
 
 { #category : #'weakness and ephemerality' }
@@ -594,6 +594,7 @@ SpurGenerationScavenger >> processEphemerons [
 	 those keys from firing.  So scavenge ephemerons with surviving keys, and only if none
 	 are found, fire ephemerons with unreferenced keys, and scavenge them.   Read the
 	 class comment for a more in-depth description of the algorithm."
+	<inline: false>
 	| unfiredEphemeronsScavenged |
 	unfiredEphemeronsScavenged := self scavengeUnfiredEphemeronsInRememberedSet.
 	self scavengeUnfiredEphemeronsOnEphemeronList ifTrue:
@@ -638,6 +639,7 @@ SpurGenerationScavenger >> processWeaklings [
 	"Go through the remembered set and the weak list, nilling references to
 	 any objects that didn't survive the scavenge. Read the class comment
 	 for a more in-depth description of the algorithm."
+	<inline: false>
 	| i rootObj weakCorpse weakObj |
 	i := 0.
 	[i < rememberedSetSize] whileTrue:
@@ -717,6 +719,7 @@ SpurGenerationScavenger >> scavenge: tenuringCriterion [
 SpurGenerationScavenger >> scavengeFutureSurvivorSpaceStartingAt: initialAddress [
 	"scavengeFutureSurvivorSpaceStartingAt: does a depth-first traversal of the
 	 new objects starting at the one at initialAddress in futureSurvivorSpace."
+	<inline: false>
 	| ptr obj |
 	ptr := initialAddress.
 	[ptr < futureSurvivorStart] whileTrue:
@@ -744,7 +747,8 @@ SpurGenerationScavenger >> scavengeLoop [
 	 objects once all other objects in new space have been scavenged, hence allowing the scavenger to
 	 detect which referents in new space of weak arrays are dead and of ephemeron keys are only live due to
 	 ephemerons.  Read the class comment for a more in-depth description of the algorithm."
-
+	<inline: false>
+	<returnTypeC: #void>
 	| previousFutureSurvivorStart firstTime |
 	self assert: futureSurvivorStart = futureSpace start. "future space should be empty at the start"
 
@@ -829,6 +833,7 @@ SpurGenerationScavenger >> scavengeRememberedSetStartingAt: n [
 	 scavenging ephemerons until after a complete scavenge has been performed,
 	 so that triggered ephemerons can be fired.  Move them to the front of the set
 	 and count them in numRememberedEphemerons for later scanning."
+	<inline: false>
 	| destIndex sourceIndex referrer |
 	sourceIndex := destIndex := n.
 	[sourceIndex < rememberedSetSize] whileTrue:
@@ -950,6 +955,9 @@ SpurGenerationScavenger >> setCorpseOffsetOf: corpse to: offset [
 	 and format fields to construct a 27 bit offset through non-future newSpace
 	 and use this to implement the list.  27 bits of 8 byte allocationUnits units is
 	 2 ^ 30 bytes or 1Gb, big enough for newSpace for a good few years yet."
+
+	self assert: (manager isYoung: corpse).
+	self assert: (manager isForwarded: corpse).
 	manager
 		setHashBitsOf: corpse
 			to: offset >> manager formatFieldWidthShift;
@@ -979,6 +987,11 @@ SpurGenerationScavenger >> shouldBeTenured: survivor [
 			[TenureByClass] ->
 				[(manager classIndexOf: survivor) = tenuringClassIndex] }
 		otherwise: [false]
+]
+
+{ #category : #accessing }
+SpurGenerationScavenger >> statTenures [
+	^statTenures
 ]
 
 { #category : #accessing }

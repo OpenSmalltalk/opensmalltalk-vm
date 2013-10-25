@@ -1554,11 +1554,10 @@ CCodeGenerator >> generateIfNil: msgNode on: aStream indent: level [
 	(self isNilConstantReceiverOf: msgNode)
 		ifFalse:
 			[aStream nextPutAll: 'if (!('.
-			msgNode receiver emitCCodeAsExpressionOn: aStream level: level + 1 generator: self.
-			aStream nextPutAll: ')) {'; cr.
-			msgNode args last emitCCodeOn: aStream level: level + 1 generator: self.
-			level timesRepeat: [aStream tab].
-			aStream nextPut: $}]
+			 msgNode receiver emitCCodeAsExpressionOn: aStream level: level + 1 generator: self.
+			 aStream nextPutAll: ')) {'; cr.
+			 msgNode args last emitCCodeOn: aStream level: level + 1 generator: self.
+			 aStream tab: level; nextPut: $}]
 		ifTrue:
 			[msgNode args first emitCCodeOn: aStream level: level generator: self]
 ]
@@ -1571,9 +1570,13 @@ CCodeGenerator >> generateIfNilAsArgument: msgNode on: aStream indent: level [
 		ifFalse:
 			[aStream nextPutAll: '(!('.
 			 msgNode receiver emitCCodeAsArgumentOn: aStream level: 0 generator: self.
-			aStream nextPut: $); crtab: level + 1; nextPut: $?; space.
-			msgNode args last emitCCodeAsArgumentOn: aStream level: level + 2 generator: self.
-			aStream crtab: level + 1; nextPutAll: ': 0)']
+			 aStream nextPut: $); crtab: level + 1; nextPut: $?; space.
+			 msgNode args last emitCCodeAsArgumentOn: aStream level: level + 2 generator: self.
+			 aStream crtab: level + 1; nextPut: $:; space.
+			 msgNode receiver emitCCodeAsArgumentOn: aStream level: 0 generator: self.
+			 msgNode receiver isLeaf ifFalse:
+				[logger cr; nextPutAll: 'sending ifNil: to non-leaf in '; nextPutAll: currentMethod selector].
+			 aStream nextPut: $)]
 		ifTrue:
 			[msgNode args first emitCCodeAsArgumentOn: aStream level: level generator: self]
 ]
@@ -3029,10 +3032,11 @@ CCodeGenerator >> nonStructClassesForTranslationClasses: classes [
 						ifTrue: [#()]
 						ifFalse: [ex pass]]) do:
 			[:class|
-			(class isStructClass
-			 or: [(nonStructClasses includes: class)
-			 or: [classes includes: class]]) ifFalse:
-				[nonStructClasses addLast: class]]].
+			(vmClass isNil or: [vmClass isAcceptableAncilliaryClass: class]) ifTrue:
+				[(class isStructClass
+				 or: [(nonStructClasses includes: class)
+				 or: [classes includes: class]]) ifFalse:
+					[nonStructClasses addLast: class]]]].
 	^ChangeSet superclassOrder: nonStructClasses
 ]
 
@@ -3608,7 +3612,8 @@ CCodeGenerator >> structClassesForTranslationClasses: classes [
 						ifFalse: [ex pass]]) do:
 			[:class|
 			(class isStructClass
-			 and: [(structClasses includes: class) not]) ifTrue:
+			 and: [(vmClass isNil or: [vmClass isAcceptableAncilliaryClass: class])
+			 and: [(structClasses includes: class) not]]) ifTrue:
 				[structClasses addLast: class]]].
 	^ChangeSet superclassOrder: structClasses
 ]

@@ -45,6 +45,7 @@ Class {
 		'GCModeBecome',
 		'GCModeFull',
 		'GCModeIncr',
+		'GCModeScavenge',
 		'IMMUTABILITY',
 		'MULTIPLEBYTECODESETS',
 		'NewspeakVM',

@@ -1279,8 +1279,8 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		6	survivor count tenuring threshold (read-write)
 		7	full GCs since startup (read-only)
 		8	total milliseconds in full GCs since startup (read-only)
-		9	incremental GCs since startup (read-only)
-		10	total milliseconds in incremental GCs since startup (read-only)
+		9	incremental GCs (SqueakV3) or scavenges (Spur) since startup (read-only)
+		10	total milliseconds in incremental GCs (SqueakV3) or scavenges (Spur) since startup (read-only)
 		11	tenures of surving objects since startup (read-only)
 		12-20 specific to ikp's JITTER VM
 		21	root table size (read-only)
@@ -1341,8 +1341,18 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		objectMemory storePointerUnchecked: 5	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory tenuringThreshold).
 		objectMemory storePointerUnchecked: 6	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statFullGCs).
 		objectMemory storePointerUnchecked: 7	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statFullGCUsecs + 500 // 1000).
-		objectMemory storePointerUnchecked: 8	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statIncrGCs).
-		objectMemory storePointerUnchecked: 9	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statIncrGCUsecs + 500 // 1000).
+		objectMemory
+			storePointerUnchecked: 8
+			ofObject: result
+			withValue: (objectMemory integerObjectOf: (objectMemory hasSpurMemoryManagerAPI
+															ifTrue: [objectMemory statScavenges]
+															ifFalse: [objectMemory statIncrGCs])).
+		objectMemory
+			storePointerUnchecked: 9
+			ofObject: result
+			withValue: (objectMemory integerObjectOf: (objectMemory hasSpurMemoryManagerAPI
+															ifTrue: [objectMemory statScavengeGCUsecs]
+															ifFalse: [objectMemory statIncrGCUsecs]) + 500 // 1000).
 		objectMemory storePointerUnchecked: 10	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statTenures).
 		"JITTER VM info"
 		11 to: 19 do:
@@ -1417,8 +1427,12 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		arg = 6		ifTrue: [result := objectMemory integerObjectOf: objectMemory tenuringThreshold].
 		arg = 7		ifTrue: [result := objectMemory integerObjectOf: objectMemory statFullGCs].
 		arg = 8		ifTrue: [result := objectMemory integerObjectOf: objectMemory statFullGCUsecs + 500 // 1000].
-		arg = 9		ifTrue: [result := objectMemory integerObjectOf: objectMemory statIncrGCs].
-		arg = 10	ifTrue: [result := objectMemory integerObjectOf: objectMemory statIncrGCUsecs + 500 // 1000].
+		arg = 9		ifTrue: [result := objectMemory integerObjectOf: (objectMemory hasSpurMemoryManagerAPI
+																		ifTrue: [objectMemory statScavenges]
+																		ifFalse: [objectMemory statIncrGCs])].
+		arg = 10	ifTrue: [result := objectMemory integerObjectOf: (objectMemory hasSpurMemoryManagerAPI
+																		ifTrue: [objectMemory statScavengeGCUsecs]
+																		ifFalse: [objectMemory statIncrGCUsecs]) + 500 // 1000].
 		arg = 11	ifTrue: [result := objectMemory integerObjectOf: objectMemory statTenures].
 		(arg between: 12 and: 20) ifTrue: [result := ConstZero]. "JITTER VM info"
 		arg = 21	ifTrue: [result := objectMemory integerObjectOf: objectMemory rootTableCount].

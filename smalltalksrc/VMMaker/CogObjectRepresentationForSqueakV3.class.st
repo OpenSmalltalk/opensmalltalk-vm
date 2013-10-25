@@ -664,11 +664,6 @@ CogObjectRepresentationForSqueakV3 >> isHashSetOnInstanceCreation [
 ]
 
 { #category : #'object representation' }
-CogObjectRepresentationForSqueakV3 >> isImmediate: anOop [
-	^objectMemory isIntegerObject: anOop
-]
-
-{ #category : #'object representation' }
 CogObjectRepresentationForSqueakV3 >> isSmallIntegerTagNonZero [
 	^true
 ]

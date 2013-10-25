@@ -354,9 +354,9 @@ NewCoObjectMemorySimulator >> positive64BitValueOf: oop [
 ]
 
 { #category : #'simulation only' }
-NewCoObjectMemorySimulator >> postGCAction [
+NewCoObjectMemorySimulator >> postGCAction: gcMode [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter postGCAction
+	^coInterpreter postGCAction: gcMode
 ]
 
 { #category : #'simulation only' }

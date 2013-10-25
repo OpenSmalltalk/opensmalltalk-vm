@@ -82,6 +82,12 @@ CogObjectRepresentation >> isHashSetOnInstanceCreation [
 ]
 
 { #category : #testing }
+CogObjectRepresentation >> isImmediate: oop [
+	<doNotGenerate>
+	^objectMemory isImmediate: oop
+]
+
+{ #category : #testing }
 CogObjectRepresentation >> isSmallIntegerTagNonZero [
 	self subclassResponsibility
 ]
