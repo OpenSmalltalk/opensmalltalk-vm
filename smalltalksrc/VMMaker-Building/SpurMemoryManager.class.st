@@ -2711,9 +2711,9 @@ SpurMemoryManager >> copyAndForward: objOop withBytes: bytes toFreeChunk: freeCh
 	startOfObj := self startOfObject: objOop.
 	self mem: freeChunk cp: startOfObj y: bytes.
 	freeObj := freeChunk + (objOop - startOfObj).
-	"wait until the next scavenge to unremember o"
-	(self isRemembered: objOop) ifTrue:
-		[scavenger remember: freeObj].
+	"leave it to followRememberedForwarders to remember..."
+	"(self isRemembered: objOop) ifTrue:
+		[scavenger remember: freeObj]."
 	self forward: objOop to: freeObj
 ]
 
@@ -2833,6 +2833,21 @@ SpurMemoryManager >> doBecome: obj1 to: obj2 copyHash: copyHashFlag [
 			 self setHashBitsOf: obj2 to: hashBits]]
 ]
 
+{ #category : #'gc - scavenging' }
+SpurMemoryManager >> doScavenge: tenuringCriterion [
+	"The inner shell for scavenge, abstrascted out so globalGarbageCollect can use it."
+
+	scavengeInProgress := true.
+	pastSpaceStart := scavenger scavenge: tenuringCriterion.
+	self assert: (self
+					oop: pastSpaceStart
+					isGreaterThanOrEqualTo: scavenger pastSpace start
+					andLessThanOrEqualTo: scavenger pastSpace limit).
+	freeStart := scavenger eden start.
+	self initSpaceForAllocationCheck: (self addressOf: scavenger eden).
+	scavengeInProgress := false
+]
+
 { #category : #accessing }
 SpurMemoryManager >> edenBytes [
 	<doNotGenerate>
@@ -2907,7 +2922,10 @@ SpurMemoryManager >> eliminateAndFreeForwarders [
 	self assert: (self isForwarded: hiddenRootsObj) not.
 	(self isForwarded: specialObjectsOop) ifTrue:
 		[specialObjectsOop := self followForwarded: specialObjectsOop].
+	scavenger followRememberedForwardersAndForgetFreeObjects.
+	self doScavenge: TenureByAge.
 	lowestForwarded := 0.
+	"sweep, following forwarders in all live objects, and finding the first forwarder."
 	self allOldSpaceObjectsDo:
 		[:o|
 		(self isForwarded: o)
@@ -2923,6 +2941,7 @@ SpurMemoryManager >> eliminateAndFreeForwarders [
 						 self assert: ((self isImmediate: f) or: [self isYoung: f]) not.
 						 self storePointerUnchecked: i ofObject: o withValue: f]]]].
 	firstForwarded := lastForwarded := 0.
+	"sweep from lowest forwarder, coalescing runs of forwarders."
 	self allOldSpaceObjectsFrom: lowestForwarded do:
 		[:o|
 		(self isForwarded: o)
@@ -5302,10 +5321,10 @@ SpurMemoryManager >> markAccessibleObjects [
 	self assert: self validClassTableRootPages.
 	self markAndTraceObjStack: self ephemeronQueue andContents: true.
 	self assert: self validClassTableRootPages.
+	coInterpreter markAndTraceInterpreterOops: true.
 	self markAndTrace: self freeListsObj.
 	self markAndTrace: hiddenRootsObj.
 	self markAndTrace: self specialObjectsOop.
-	coInterpreter markAndTraceInterpreterOops: true.
 	self markAndFireEphemerons.
 	marking := false
 ]
@@ -5335,7 +5354,8 @@ SpurMemoryManager >> markAllUnscannedEphemerons [
 SpurMemoryManager >> markAndFireEphemerons [
 	<returnTypeC: #void>
 	"After the initial scan-mark is complete ephemerons can be processed."
-	[self noUnscannedEphemerons ifTrue:
+	[coInterpreter markAndTraceUntracedReachableStackPages.
+	 self noUnscannedEphemerons ifTrue:
 		[^self].
 	 self markInactiveEphemerons ifFalse:
 		[self fireAllUnscannedEphemerons].
@@ -5805,9 +5825,10 @@ SpurMemoryManager >> numStrongSlotsOf: objOop ephemeronInactiveIf: criterion [
 			[^numSlots].
 		 fmt = self indexablePointersFormat ifTrue:
 			[(self isContextNonImm: objOop) ifTrue:
-				["contexts end at the stack pointer"
-				contextSize := coInterpreter fetchStackPointerOf: objOop.
-				^CtxtTempFrameStart + contextSize].
+				[coInterpreter setTraceFlagOnContextsFramesPageIfNeeded: objOop.
+				 "contexts end at the stack pointer"
+				 contextSize := coInterpreter fetchStackPointerOf: objOop.
+				 ^CtxtTempFrameStart + contextSize].
 			 ^numSlots].
 		 fmt = self weakArrayFormat ifTrue:
 			[^self fixedFieldsOfClass: (self fetchClassOfNonImm: objOop)].
@@ -6602,15 +6623,7 @@ SpurMemoryManager >> scavengingGCTenuringIf: tenuringCriterion [
 
 	gcStartUsecs := coInterpreter ioUTCMicrosecondsNow.
 
-	scavengeInProgress := true.
-	pastSpaceStart := scavenger scavenge: tenuringCriterion.
-	self assert: (self
-					oop: pastSpaceStart
-					isGreaterThanOrEqualTo: scavenger pastSpace start
-					andLessThanOrEqualTo: scavenger pastSpace limit).
-	freeStart := scavenger eden start.
-	self initSpaceForAllocationCheck: (self addressOf: scavenger eden).
-	scavengeInProgress := false.
+	self doScavenge: tenuringCriterion.
 
 	statScavenges := statScavenges + 1.
 	statGCEndUsecs := coInterpreter ioUTCMicrosecondsNow.

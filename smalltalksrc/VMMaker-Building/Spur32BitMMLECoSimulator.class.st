@@ -58,6 +58,12 @@ Spur32BitMMLECoSimulator >> eek [
 	self halt
 ]
 
+{ #category : #'gc - global' }
+Spur32BitMMLECoSimulator >> eliminateAndFreeForwarders [
+	coInterpreter transcript nextPutAll: 'eliminating forwarders...'; flush.
+	^super eliminateAndFreeForwarders
+]
+
 { #category : #'memory access' }
 Spur32BitMMLECoSimulator >> endianness [
 	^#little
@@ -116,6 +122,18 @@ Spur32BitMMLECoSimulator >> freeStart [
 	(#(Cogit SimpleStackBasedCogit StackToRegisterMappingCogit) includes: thisContext sender class name) ifTrue:
 		[self halt].
 	^super freeStart
+]
+
+{ #category : #'gc - global' }
+Spur32BitMMLECoSimulator >> freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoalesceFreeSpace [
+	coInterpreter transcript nextPutAll: 'sweeping...'; flush.
+	^super freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoalesceFreeSpace
+]
+
+{ #category : #'gc - global' }
+Spur32BitMMLECoSimulator >> globalGarbageCollect [
+	self halt.
+	^super globalGarbageCollect
 ]
 
 { #category : #'memory access' }
@@ -207,6 +225,12 @@ Spur32BitMMLECoSimulator >> longLongAt: byteAddress put: a64BitValue [
 		longAt: byteAddress put: (a64BitValue bitAnd: 16rffffffff);
 		longAt: byteAddress + 4 put: a64BitValue >> 32.
 	^a64BitValue
+]
+
+{ #category : #'gc - global' }
+Spur32BitMMLECoSimulator >> markObjects [
+	coInterpreter transcript nextPutAll: 'marking...'; flush.
+	^super markObjects
 ]
 
 { #category : #'generation scavenging' }

@@ -3338,32 +3338,32 @@ StackInterpreter >> checkStackIntegrity [
 				[oop := stackPages longAt: theSP.
 				 ((objectMemory isNonImmediate: oop) 
 				   and: [(self heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
-					[self printFrameThing: 'object leak in frame temp' at: theSP; cr.
+					[self printFrameThing: 'object leak in frame temp' andFrame: theFP at: theSP.
 					 ok := false].
 				 theSP := theSP + BytesPerWord].
 			 (self frameHasContext: theFP) ifTrue:
 				[oop := self frameContext: theFP.
 				 ((objectMemory isImmediate: oop) 
 				   or: [(self heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
-					[self printFrameThing: 'object leak in frame ctxt' at: theFP + FoxThisContext; cr.
+					[self printFrameThing: 'object leak in frame ctxt' andFrame: theFP at: theFP + FoxThisContext.
 					 ok := false].
 				 (objectMemory isContext: oop) ifFalse:
-					[self printFrameThing: 'frame ctxt should be context' at: theFP + FoxThisContext; cr.
+					[self printFrameThing: 'frame ctxt should be context' andFrame: theFP at: theFP + FoxThisContext.
 					 ok := false]].
 			 oop := self frameMethod: theFP.
 			 ((objectMemory isImmediate: oop) 
 			   or: [(self heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
-				[self printFrameThing: 'object leak in frame mthd' at: theFP + FoxMethod; cr.
+				[self printFrameThing: 'object leak in frame mthd' andFrame: theFP at: theFP + FoxMethod.
 				 ok := false].
 			 (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
 				[theSP := theFP + FoxCallerSavedIP + BytesPerWord.
 				 theFP := callerFP].
-			 theSP := theFP + FoxCallerContext "a.k.a. FoxCallerSavedIP".
+			 theSP := theFP + FoxCallerSavedIP + BytesPerWord.
 			 [theSP <= thePage baseAddress] whileTrue:
 				[oop := stackPages longAt: theSP.
 				 ((objectMemory isNonImmediate: oop) 
 				   and: [(self heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
-					[self printFrameThing: 'object leak in frame arg' at: theSP; cr.
+					[self printFrameThing: 'object leak in frame arg' andFrame: theFP at: theSP.
 					 ok := false].
 				 theSP := theSP + BytesPerWord]]].
 	^ok
@@ -5270,7 +5270,7 @@ StackInterpreter >> findSelectorOfMethod: methArg [
 		 classDictSize := objectMemory fetchWordLengthOf: classDict.
 		 methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: classDict.
 		 i := 0.
-		 [i <= (classDictSize - SelectorStart)] whileTrue:
+		 [i < (classDictSize - SelectorStart)] whileTrue:
 			[meth = (objectMemory fetchPointer: i ofObject: methodArray) ifTrue:
 				[^(objectMemory fetchPointer: i + SelectorStart ofObject: classDict)].
 				 i := i + 1]].
@@ -5741,6 +5741,22 @@ StackInterpreter >> frameStackedReceiverOffsetNumArgs: numArgs [
 	 itself.  See the diagram in StackInterpreter class>>initializeFrameIndices."
 	<inline: true>
 	^FoxCallerSavedIP + BytesPerWord + (numArgs << ShiftForWord)
+]
+
+{ #category : #'object memory support' }
+StackInterpreter >> freeUntracedStackPages [
+	"Free any untraced stack pages."
+	<var: #thePage type: #'StackPage *'>
+	<inline: false>
+
+	0 to: numStackPages - 1 do:
+		[:i| | thePage |
+		thePage := stackPages stackPageAt: i.
+		((stackPages isFree: thePage) not
+		 and: [thePage trace = 0]) ifTrue:
+			[self assert: (self noMarkedContextsOnPage: thePage).
+			 stackPages freeStackPage: thePage].
+		self assert: (thePage trace: -1) ~= 0] "Invalidate the trace state for assertion checks"
 ]
 
 { #category : #'I/O primitive support' }
@@ -7671,34 +7687,17 @@ StackInterpreter >> mapVMRegisters [
 StackInterpreter >> markAndTraceAndMaybeFreeStackPages: fullGCFlag [
 	"Read markAndTraceStackPages:'s comment.  Finish tracing to-be-traced pages.
 	 Then free any untraced pages."
-	| thePage foundToBeTracedPage |
 	<var: #thePage type: #'StackPage *'>
 	<inline: false>
 	fullGCFlag ifFalse:
 		[0 to: numStackPages - 1 do:
-			[:i|
+			[:i| | thePage |
 			thePage := stackPages stackPageAt: i.
 			self assert: (thePage trace: -1) ~= 0]. "Invalidate the trace state for assertion checks"
 		^nil].
-	[foundToBeTracedPage := false.
-	0 to: numStackPages - 1 do:
-		[:i|
-		thePage := stackPages stackPageAt: i.
-		((stackPages isFree: thePage) not
-		 and: [thePage trace = 1]) ifTrue:
-			[foundToBeTracedPage := true.
-			 thePage trace: 2.
-			 self markAndTraceStackPage: thePage]].
-	foundToBeTracedPage] whileTrue.
 
-	0 to: numStackPages - 1 do:
-		[:i|
-		thePage := stackPages stackPageAt: i.
-		((stackPages isFree: thePage) not
-		 and: [thePage trace = 0]) ifTrue:
-			[self assert: (self noMarkedContextsOnPage: thePage).
-			 stackPages freeStackPage: thePage].
-		self assert: (thePage trace: -1) ~= 0] "Invalidate the trace state for assertion checks"
+	self markAndTraceUntracedReachableStackPages.
+	self freeUntracedStackPages
 ]
 
 { #category : #'object memory support' }
@@ -7832,6 +7831,25 @@ StackInterpreter >> markAndTraceStackPages: fullGCFlag [
 { #category : #'object memory support' }
 StackInterpreter >> markAndTraceTraceLog [
 	"This is a no-op in the StackVM"
+]
+
+{ #category : #'object memory support' }
+StackInterpreter >> markAndTraceUntracedReachableStackPages [
+	"Trace any untraced pages"
+	| thePage foundToBeTracedPage |
+	<var: #thePage type: #'StackPage *'>
+	<inline: false>
+
+	[foundToBeTracedPage := false.
+	0 to: numStackPages - 1 do:
+		[:i|
+		thePage := stackPages stackPageAt: i.
+		((stackPages isFree: thePage) not
+		 and: [thePage trace = 1]) ifTrue:
+			[foundToBeTracedPage := true.
+			 thePage trace: 2.
+			 self markAndTraceStackPage: thePage]].
+	foundToBeTracedPage] whileTrue
 ]
 
 { #category : #'frame access' }
@@ -8838,8 +8856,8 @@ StackInterpreter >> printActivationNameFor: aMethod receiver: anObject isBlock: 
 	 and: [(objectMemory isOopForwarded: anObject) not
 	 and: [self addressCouldBeClassObj: (classObj := objectMemory fetchClassOf: anObject)]])
 		ifTrue:
-			[classObj = methClass
-				ifTrue: [self printNameOfClass: methClass count: 5]
+			[(classObj = methClass or: [methClass isNil "i.e. doits"])
+				ifTrue: [self printNameOfClass: classObj count: 5]
 				ifFalse:
 					[self printNameOfClass: classObj count: 5.
 					 self print: '('.
@@ -8857,7 +8875,7 @@ StackInterpreter >> printActivationNameFor: aMethod receiver: anObject isBlock: 
 		ifFalse: [self print: 'INVALID SELECTOR'].
 	(methodSel = (objectMemory splObj: SelectorDoesNotUnderstand)
 	and: [(objectMemory addressCouldBeObj: maybeMessage)
-	and: [(objectMemory fetchClassOf: maybeMessage) = (objectMemory splObj: ClassMessage)]]) ifTrue:
+	and: [(objectMemory fetchClassOfNonImm: maybeMessage) = (objectMemory splObj: ClassMessage)]]) ifTrue:
 		["print arg message selector"
 		methodSel := objectMemory fetchPointer: MessageSelectorIndex ofObject: maybeMessage.
 		self print: ' '.
@@ -9265,6 +9283,30 @@ StackInterpreter >> printFrameOop: name index: idx at: address [
 		printChar: $=;
 		printOopShort: it;
 		cr
+]
+
+{ #category : #'debug printing' }
+StackInterpreter >> printFrameThing: name andFrame: theFP at: address [
+	<var: #theFP type: #'char *'>
+	| it len |
+	<inline: false>
+	<var: #name type: #'char *'>
+	<var: #address type: #'char *'>
+	it := stackPages longAt: address.
+	self printHexPtr: address;
+		printChar: $:.
+	len := self strlen: name.
+	1 to: 12 - len do: [:i| self space].
+	self print: name;
+		print: ': ';
+		printHex: it.
+	it ~= 0 ifTrue:
+		[self printChar: $=.
+		 it = objectMemory nilObject
+			ifTrue: [self print: 'nil']
+			ifFalse:
+				[self printNum: it]].
+	self print: ' frame: '; printHex: theFP; cr
 ]
 
 { #category : #'debug printing' }
