@@ -1972,30 +1972,30 @@ CoInterpreter >> checkStackIntegrity [
 				[oop := stackPages longAt: theSP.
 				 ((objectMemory isNonImmediate: oop) 
 				   and: [(self heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
-					[self printFrameThing: 'object leak in frame temp' at: theSP; cr.
+					[self printFrameThing: 'object leak in frame temp' andFrame: theFP at: theSP.
 					 ok := false].
 				 theSP := theSP + BytesPerWord].
 			 (self frameHasContext: theFP) ifTrue:
 				[oop := self frameContext: theFP.
 				 ((objectMemory isImmediate: oop) 
 				   or: [(self heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
-					[self printFrameThing: 'object leak in frame ctxt' at: theFP + FoxThisContext; cr.
+					[self printFrameThing: 'object leak in frame ctxt' andFrame: theFP at: theFP + FoxThisContext.
 					 ok := false].
 				 (oop = objectMemory nilObject or: [objectMemory isContext: oop]) ifFalse:
-					[self printFrameThing: 'frame ctxt should be context' at: theFP + FoxThisContext; cr.
+					[self printFrameThing: 'frame ctxt should be context' andFrame: theFP at: theFP + FoxThisContext.
 					 ok := false]].
 			 (self isMachineCodeFrame: theFP)
 				ifTrue:
 					[| cogMethod |
 					 cogMethod := self mframeHomeMethod: theFP.
 					 (self heapMapAtWord: (self pointerForOop: cogMethod)) = 0 ifTrue:
-						[self printFrameThing: 'object leak in mframe mthd' at: theFP + FoxMethod; cr.
+						[self printFrameThing: 'object leak in mframe mthd' andFrame: theFP at: theFP + FoxMethod.
 						 ok := false]]
 				ifFalse:
 					[oop := self iframeMethod: theFP.
 					 ((objectMemory isImmediate: oop) 
 					   or: [(self heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
-						[self printFrameThing: 'object leak in iframe mthd' at: theFP + FoxMethod; cr.
+						[self printFrameThing: 'object leak in iframe mthd' andFrame: theFP at: theFP + FoxMethod.
 						 ok := false]].
 			 (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
 				[theSP := theFP + FoxCallerSavedIP + BytesPerWord.
@@ -2005,7 +2005,7 @@ CoInterpreter >> checkStackIntegrity [
 				[oop := stackPages longAt: theSP.
 				 ((objectMemory isNonImmediate: oop) 
 				   and: [(self heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
-					[self printFrameThing: 'object leak in frame arg' at: theSP; cr.
+					[self printFrameThing: 'object leak in frame arg' andFrame: theFP at: theSP.
 					 ok := false].
 				 theSP := theSP + BytesPerWord]]].
 	^ok

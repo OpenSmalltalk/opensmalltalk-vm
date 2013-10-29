@@ -4,6 +4,12 @@ Class {
 	#category : #'VMMaker-SpurMemoryManagerSimulation'
 }
 
+{ #category : #compaction }
+Spur32BitMMLESimulator >> bestFitCompact [
+	coInterpreter transcript nextPutAll: 'compacting...'; flush.
+	^super bestFitCompact
+]
+
 { #category : #'memory access' }
 Spur32BitMMLESimulator >> byteAt: byteAddress [
 	| lowBits long |
@@ -44,6 +50,12 @@ Spur32BitMMLESimulator >> byteAtPointer: pointer [
 { #category : #'debug support' }
 Spur32BitMMLESimulator >> eek [
 	self halt
+]
+
+{ #category : #'gc - global' }
+Spur32BitMMLESimulator >> eliminateAndFreeForwarders [
+	coInterpreter transcript nextPutAll: 'eliminating forwarders...'; flush.
+	^super eliminateAndFreeForwarders
 ]
 
 { #category : #'memory access' }
@@ -102,6 +114,12 @@ Spur32BitMMLESimulator >> firstIndexableField: objOop [
 { #category : #'spur bootstrap' }
 Spur32BitMMLESimulator >> freeLists [
 	^freeLists
+]
+
+{ #category : #'gc - global' }
+Spur32BitMMLESimulator >> freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoalesceFreeSpace [
+	coInterpreter transcript nextPutAll: 'sweeping...'; flush.
+	^super freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoalesceFreeSpace
 ]
 
 { #category : #'gc - global' }
@@ -286,6 +304,12 @@ Spur32BitMMLESimulator >> longLongAt: byteAddress put: a64BitValue [
 		longAt: byteAddress put: (a64BitValue bitAnd: 16rffffffff);
 		longAt: byteAddress + 4 put: a64BitValue >> 32.
 	^a64BitValue
+]
+
+{ #category : #'gc - global' }
+Spur32BitMMLESimulator >> markObjects [
+	coInterpreter transcript nextPutAll: 'marking...'; flush.
+	^super markObjects
 ]
 
 { #category : #'spur bootstrap' }
