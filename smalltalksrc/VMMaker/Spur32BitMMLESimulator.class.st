@@ -104,6 +104,12 @@ Spur32BitMMLESimulator >> freeLists [
 	^freeLists
 ]
 
+{ #category : #'gc - global' }
+Spur32BitMMLESimulator >> globalGarbageCollect [
+	self halt.
+	^super globalGarbageCollect
+]
+
 { #category : #'memory access' }
 Spur32BitMMLESimulator >> halfWordHighInLong32: long32 [
 	"Used by Balloon"
