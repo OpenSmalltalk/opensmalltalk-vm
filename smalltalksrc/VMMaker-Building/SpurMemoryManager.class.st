@@ -3089,44 +3089,44 @@ SpurMemoryManager >> exactFitCompact [
 
 	<returnTypeC: #void>
 	<inline: false>
-	| failures first |
-	<var: #failures type: #usqInt>
+	| misfits first |
+	<var: #misfits type: #usqInt>
 	totalFreeOldSpace = 0 ifTrue: [^0].
-	failures := highestObjects last + self wordSize.
+	misfits := highestObjects last + self wordSize.
 	[statCompactPassCount := statCompactPassCount + 1.
-	 highestObjects from: failures - self wordSize reverseDo:
+	 highestObjects from: misfits - self wordSize reverseDo:
 		[:o| | b |
 		o < firstFreeChunk ifTrue:
-			[failures = (highestObjects last + self wordSize)
+			[misfits = (highestObjects last + self wordSize)
 				ifTrue: [highestObjects resetAsEmpty]
-				ifFalse: [highestObjects first: failures].
+				ifFalse: [highestObjects first: misfits].
 			 ^self].
 		 ((self isForwarded: o) or: [self isPinned: o]) ifFalse:
 			[b := self bytesInObject: o.
 			 (self allocateOldSpaceChunkOfExactlyBytes: b suchThat: [:f| f < o])
 				ifNil:
-					[failures := failures - self wordSize.
-					 failures < highestObjects start ifTrue:
-						[failures := highestObjects limit].
-					 self longAt: failures put: o]
+					[misfits := misfits - self wordSize.
+					 misfits < highestObjects start ifTrue:
+						[misfits := highestObjects limit].
+					 self longAt: misfits put: o]
 				ifNotNil:
 					[:f| self copyAndForward: o withBytes: b toFreeChunk: f]]].
-	 "now highestObjects contains only failures, if any, from failures to last.
-	  set first to first failure and refill buffer. next cycle will add more failures.
+	 "now highestObjects contains only misfits, if any, from misfits to last.
+	  set first to first failure and refill buffer. next cycle will add more misfits.
 	  give up on exact-fit when half of the highest objects fail to fit."
 	 first := self longAt: highestObjects first.
 	 first > firstFreeChunk ifTrue:
 		[| highestObjBytes failureBytes savedLimit |
 		 highestObjBytes := highestObjects limit - highestObjects start.
-		 failureBytes := highestObjects last >= failures
-							ifTrue: [highestObjects last - failures]
-							ifFalse: [highestObjBytes - (failures - highestObjects last)].
+		 failureBytes := highestObjects last >= misfits
+							ifTrue: [highestObjects last - misfits]
+							ifFalse: [highestObjBytes - (misfits - highestObjects last)].
 		 failureBytes >= (highestObjBytes // 2) ifTrue:
-			[highestObjects first: failures.
+			[highestObjects first: misfits.
 			 ^self].
-		 savedLimit := self moveFailuresToTopOfHighestObjects: failures.
+		 savedLimit := self moveMisfitsToTopOfHighestObjects: misfits.
 		 self fillHighestObjectsWithMovableObjectsFrom: firstFreeChunk upTo: first.
-		 failures := self moveFailuresInHighestObjectsBack: savedLimit]] repeat
+		 misfits := self moveMisfitsInHighestObjectsBack: savedLimit]] repeat
 ]
 
 { #category : #'debug support' }
@@ -5558,58 +5558,58 @@ SpurMemoryManager >> methodArgumentCount [
 ]
 
 { #category : #compaction }
-SpurMemoryManager >> moveFailuresInHighestObjectsBack: savedLimit [
-	"After refilling highestObjects move any failures back to being
+SpurMemoryManager >> moveMisfitsInHighestObjectsBack: savedLimit [
+	"After refilling highestObjects move any misfits back to being
 	 adjacent with the new objects, reset the space's limit and
 	 answer the pointer to the lowest failure to resume the scan."
 
-	| newFailuresPosition |
+	| newMisfitsPosition |
 	savedLimit = highestObjects limit ifTrue:
 		[^highestObjects last].
-	"simple; we didnt fill all the way; just move failures down."
+	"simple; we didnt fill all the way; just move misfits down."
 	(highestObjects first = highestObjects start
 	 and: [highestObjects last < highestObjects limit]) ifTrue:
-		[newFailuresPosition := highestObjects limit.
-		 self mem: newFailuresPosition
+		[newMisfitsPosition := highestObjects limit.
+		 self mem: newMisfitsPosition
 			mo: highestObjects last + self wordSize
-			ve: savedLimit - newFailuresPosition.
+			ve: savedLimit - newMisfitsPosition.
 		 highestObjects limit: savedLimit.
-		 ^newFailuresPosition].
+		 ^newMisfitsPosition].
 	"tricky to do unless we have last - start's worth of free space.
 	 we *don't* want to rotate lots and lots of objects.  We could push
-	 failures onto the mark stack, if it is big enough.
-	 limit: | failures hi <-> lo | lowest candidates | highest candidates | : start
-	                                                      ^ last"
+	 misfits onto the mark stack, if it is big enough.
+	 limit: | misfits hi <-> lo | lowest candidates | highest candidates | : start
+	                                                                   ^ last"
 	self shouldBeImplemented.
-	^newFailuresPosition
+	^newMisfitsPosition
 ]
 
 { #category : #compaction }
-SpurMemoryManager >> moveFailuresToTopOfHighestObjects: failures [
+SpurMemoryManager >> moveMisfitsToTopOfHighestObjects: misfits [
 	"After a cycle of exact-fit compaction highestObjects may contain some
 	 number of mobile objects that fail to fit, and more objects may exist to
-	 move.  Move existing failures to top of highestObjects and temporarily
-	 shrink highestObjects to refill it without overwriting failues.  Answer the
-	 old limit. moveFailuresInHighestObjectsBack: will undo the change."
+	 move.  Move existing misfits to top of highestObjects and temporarily
+	 shrink highestObjects to refill it without overwriting misfits.  Answer the
+	 old limit. moveMisfitsInHighestObjectsBack: will undo the change."
 
 	| oldLimit bytesToMove |
 	oldLimit := highestObjects limit.
-	failures = (highestObjects last + self wordSize) ifTrue:
+	misfits = (highestObjects last + self wordSize) ifTrue:
 		[highestObjects resetAsEmpty.
 		 ^oldLimit].
-	failures <= highestObjects last ifTrue:
-		[bytesToMove := highestObjects last + self wordSize - failures.
+	misfits <= highestObjects last ifTrue:
+		[bytesToMove := highestObjects last + self wordSize - misfits.
 		 self mem: highestObjects limit - bytesToMove
-			mo: failures
+			mo: misfits
 			ve: bytesToMove.
-		 highestObjects limit: failures - self wordSize.
+		 highestObjects limit: misfits - self wordSize.
 		 ^oldLimit].
-	"failures wrapped; move in two stages to preserve ordering"
+	"misfits wrapped; move in two stages to preserve ordering"
 	bytesToMove := highestObjects last - highestObjects start.
-	self mem: failures - bytesToMove
-		mo: failures
-		ve: oldLimit - failures.
-	highestObjects limit: failures - bytesToMove.
+	self mem: misfits - bytesToMove
+		mo: misfits
+		ve: oldLimit - misfits.
+	highestObjects limit: misfits - bytesToMove.
 	self mem: oldLimit - bytesToMove
 		mo: highestObjects start
 		ve: bytesToMove.
