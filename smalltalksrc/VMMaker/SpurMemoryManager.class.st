@@ -1552,18 +1552,18 @@ SpurMemoryManager >> allocateOldSpaceChunkOfExactlyBytes: chunkBytes [
 	"Answer a chunk of oldSpace from the free lists, if one of this size
 	 is available, otherwise answer nil.  N.B.  the chunk is simply a pointer,
 	 it has no valid header.  The caller *must* fill in the header correctly."
-	| initialIndex node nodeBytes child |
+	| index node nodeBytes child |
 	"for debugging:" "totalFreeOldSpace := self totalFreeListBytes"
 
-	initialIndex := chunkBytes / self allocationUnit.
-	initialIndex < self numFreeLists ifTrue:
-		[1 << initialIndex <= freeListsMask ifTrue:
-			[(node := freeLists at: initialIndex) ~= 0 ifTrue:
+	index := chunkBytes / self allocationUnit.
+	index < self numFreeLists ifTrue:
+		[(freeListsMask anyMask: 1 << index) ifTrue:
+			[(node := freeLists at: index) ~= 0 ifTrue:
 				[self assert: node = (self startOfObject: node).
 				 self assert: (self isValidFreeObject: node).
 				 totalFreeOldSpace := totalFreeOldSpace - chunkBytes.
-				 ^self unlinkFreeChunk: node atIndex: initialIndex].
-			 freeListsMask := freeListsMask - (1 << initialIndex)].
+				 ^self unlinkFreeChunk: node atIndex: index].
+			 freeListsMask := freeListsMask - (1 << index)].
 		 ^nil].
 
 	"Large chunk.  Search the large chunk list.
@@ -1627,7 +1627,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfExactlyBytes: chunkBytes suchThat: a
 
 	index := chunkBytes / self allocationUnit.
 	index < self numFreeLists ifTrue:
-		[1 << index <= freeListsMask ifTrue:
+		[(freeListsMask anyMask: 1 << index) ifTrue:
 			[(node := freeLists at: index) = 0
 				ifTrue: [freeListsMask := freeListsMask - (1 << index)]
 				ifFalse:
@@ -1854,32 +1854,17 @@ SpurMemoryManager >> bestFitCompact [
 		[:o| | b |
 		 self assert: ((self isForwarded: o) or: [self isPinned: o]) not.
 		 b := self bytesInObject: o.
-				(self allocateOldSpaceChunkOfBytes: b suchThat: [:f| f < o]) ifNotNil:
-					[:f|
-					self mem: f
-						cp: o
-						y: ((self hasOverflowHeader: o)
-								ifTrue: [b - self baseHeaderSize]
-								ifFalse: [b]).
-					(self isRemembered: o) ifTrue:
-						[scavenger remember: f].
-					self forward: o to: f]].
+		 (self allocateOldSpaceChunkOfBytes: b suchThat: [:f| f < o]) ifNotNil:
+			[:f| self copyAndForward: o withBytes: b toFreeChunk: f]].
 	self checkFreeSpace.
+	self flag: 'this should perhaps be a loop, recharging highestObjects as per exactFitCompact, but for now we assume the number of misfits not in highestObjects is very small'.
 	self allOldSpaceObjectsFrom: firstFreeChunk
 		do: [:o| | b |
 			((self isForwarded: o)
 			 or: [self isPinned: o]) ifFalse:
 				[b := self bytesInObject: o.
-				(self allocateOldSpaceChunkOfBytes: b suchThat: [:f| f < o]) ifNotNil:
-					[:f|
-					self mem: f
-						cp: o
-						y: ((self hasOverflowHeader: o)
-								ifTrue: [b - self baseHeaderSize]
-								ifFalse: [b]).
-					(self isRemembered: o) ifTrue:
-						[scavenger remember: f].
-					self forward: o to: f]]].
+				 (self allocateOldSpaceChunkOfBytes: b suchThat: [:f| f < o]) ifNotNil:
+					[:f| self copyAndForward: o withBytes: b toFreeChunk: f]]].
 	self checkFreeSpace.
 	self touch: freePriorToExactFit
 ]
@@ -2716,6 +2701,22 @@ SpurMemoryManager >> containsOnlyValidBecomeObjects: array1 and: array2 [
 	^0
 ]
 
+{ #category : #compaction }
+SpurMemoryManager >> copyAndForward: objOop withBytes: bytes toFreeChunk: freeChunk [
+	"Copy and forward objOop to freeChunk, the inner operation in
+	 exact and best fit compact."
+
+	<inline: true>
+	| startOfObj freeObj |
+	startOfObj := self startOfObject: objOop.
+	self mem: freeChunk cp: startOfObj y: bytes.
+	freeObj := freeChunk + (objOop - startOfObj).
+	"wait until the next scavenge to unremember o"
+	(self isRemembered: objOop) ifTrue:
+		[scavenger remember: freeObj].
+	self forward: objOop to: freeObj
+]
+
 { #category : #'class table' }
 SpurMemoryManager >> countNumClassPagesPreSwizzle: bytesToShift [
 	"Compute the used size of the class table before swizzling.  Needed to
@@ -3109,16 +3110,7 @@ SpurMemoryManager >> exactFitCompact [
 						[failures := highestObjects limit].
 					 self longAt: failures put: o]
 				ifNotNil:
-					[:f|
-					self mem: f
-						cp: o
-						y: ((self hasOverflowHeader: o)
-								ifTrue: [b - self baseHeaderSize]
-								ifFalse: [b]).
-					"wait until the next scavenge to unremember o"
-					(self isRemembered: o) ifTrue:
-						[scavenger remember: f].
-					self forward: o to: f]]].
+					[:f| self copyAndForward: o withBytes: b toFreeChunk: f]]].
 	 "now highestObjects contains only failures, if any, from failures to last.
 	  set first to first failure and refill buffer. next cycle will add more failures.
 	  give up on exact-fit when half of the highest objects fail to fit."
@@ -6091,6 +6083,33 @@ SpurMemoryManager >> possibleRootStoreInto: destObj [
 ]
 
 { #category : #'become implementation' }
+SpurMemoryManager >> postBecomeOrCompactScanClassTable: effectsFlags [
+	"Scan the class table post-become (iff a pointer object or compiled method was becommed),
+	 or post-compact.
+	 Note that one-way become can cause duplications in the class table.
+	 When can these be eliminated?  We use the classTableBitmap to mark classTable entries
+	 (not the classes themselves, since marking a class doesn't help in knowing if its index is used).
+	 On image load, and during incrememtal scan-mark and full GC, classIndices are marked.
+	 We can somehow avoid following classes from the classTable until after this mark phase."
+
+	self assert: self validClassTableRootPages.
+
+	(effectsFlags anyMask: BecamePointerObjectFlag+BecameCompiledMethodFlag) ifFalse: [^self].
+	
+	0 to: numClassTablePages - 1 do:
+		[:i| | page |
+		page := self fetchPointer: i ofObject: hiddenRootsObj.
+		0 to: (self numSlotsOf: page) - 1 do:
+			[:j| | classOrNil |
+			classOrNil := self fetchPointer: j ofObject: page.
+			classOrNil ~= nilObj ifTrue:
+				[(self isForwarded: classOrNil) ifTrue:
+					[classOrNil := self followForwarded: classOrNil.
+					 self storePointer: j ofObject: page withValue: classOrNil].
+				 self scanClassPostBecome: classOrNil effects: effectsFlags]]]
+]
+
+{ #category : #'become implementation' }
 SpurMemoryManager >> postBecomeScanClassTable [
 	"Scan the class table post-become (iff a pointer object or compiled method was becommed).
 	 Note that one-way become can cause duplications in the class table.
@@ -6103,17 +6122,22 @@ SpurMemoryManager >> postBecomeScanClassTable [
 
 	(becomeEffectsFlags anyMask: BecamePointerObjectFlag+BecameCompiledMethodFlag) ifFalse: [^self].
 	
+	self postBecomeOrCompactScanClassTable: becomeEffectsFlags
+]
+
+{ #category : #'become implementation' }
+SpurMemoryManager >> postCompactScanClassTable [
+	"Scan the class table post-compact.  Ensure all pages and
+	 all classes are not forwarded."
+
 	0 to: numClassTablePages - 1 do:
 		[:i| | page |
 		page := self fetchPointer: i ofObject: hiddenRootsObj.
-		0 to: (self numSlotsOf: page) - 1 do:
-			[:j| | classOrNil |
-			classOrNil := self fetchPointer: j ofObject: page.
-			classOrNil ~= nilObj ifTrue:
-				[(self isForwarded: classOrNil) ifTrue:
-					[classOrNil := self followForwarded: classOrNil.
-					 self storePointer: j ofObject: page withValue: classOrNil].
-				 self scanClassPostBecome: classOrNil effects: becomeEffectsFlags]]]
+		(self isForwarded: page) ifTrue: "this check is for eliminateAndFreeForwarders"
+			[page := self followForwarded: page.
+			 self storePointer: i ofObject: hiddenRootsObj withValue: page]].
+	self assert: self validClassTableRootPages.	
+	self postBecomeOrCompactScanClassTable: BecamePointerObjectFlag
 ]
 
 { #category : #accessing }
