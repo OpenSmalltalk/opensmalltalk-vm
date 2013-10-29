@@ -2952,10 +2952,15 @@ SpurMemoryManager >> eliminateAndFreeForwarders [
 			ifFalse:
 				[firstForwarded ~= 0 ifTrue:
 					[| start bytes |
-					start := self startOfObject: firstForwarded.
-					bytes := (self addressAfter: lastForwarded) - start.
-					self addFreeChunkWithBytes: bytes at: start].
-				 firstForwarded := 0]]
+					 start := self startOfObject: firstForwarded.
+					 bytes := (self addressAfter: lastForwarded) - start.
+					 self addFreeChunkWithBytes: bytes at: start].
+				 firstForwarded := 0]].
+	firstForwarded ~= 0 ifTrue:
+		[| start bytes |
+		 start := self startOfObject: firstForwarded.
+		 bytes := (self addressAfter: lastForwarded) - start.
+		 self addFreeChunkWithBytes: bytes at: start].
 ]
 
 { #category : #accessing }
