@@ -125,9 +125,9 @@ Spur32BitMMLECoSimulator >> freeStart [
 ]
 
 { #category : #'gc - global' }
-Spur32BitMMLECoSimulator >> freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoalesceFreeSpace [
+Spur32BitMMLECoSimulator >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpace [
 	coInterpreter transcript nextPutAll: 'sweeping...'; flush.
-	^super freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoalesceFreeSpace
+	^super freeUnmarkedObjectsAndSortAndCoalesceFreeSpace
 ]
 
 { #category : #'gc - global' }
@@ -231,6 +231,12 @@ Spur32BitMMLECoSimulator >> longLongAt: byteAddress put: a64BitValue [
 Spur32BitMMLECoSimulator >> markObjects [
 	coInterpreter transcript nextPutAll: 'marking...'; flush.
 	^super markObjects
+]
+
+{ #category : #'gc - global' }
+Spur32BitMMLECoSimulator >> nilUnmarkedWeaklingSlots [
+	coInterpreter transcript nextPutAll: 'nilling...'; flush.
+	^super nilUnmarkedWeaklingSlots
 ]
 
 { #category : #'debug support' }
