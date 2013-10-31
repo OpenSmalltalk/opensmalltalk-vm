@@ -5503,7 +5503,8 @@ SpurMemoryManager >> markAndTraceWeaklingsFrom: startIndex [
 	^self objStack: weaklingStack from: startIndex do:
 		[:weakling|
 		 0 to: (self numStrongSlotsOf: weakling ephemeronInactiveIf: nil) - 1 do:
-			[:field|
+			[:i| | field |
+			field := self fetchPointer: i ofObject: weakling.
 			((self isImmediate: field) or: [self isMarked: field]) ifFalse:
 				[self markAndTrace: field]]]
 ]
@@ -5564,6 +5565,7 @@ SpurMemoryManager >> markWeaklingsAndMarkAndFireEphemerons [
 	 of the weaklings, and as ephemerons are processed ensure any newly
 	 reached weaklings are also traced."
 	| numTracedWeaklings |
+	<inline: false>
 	numTracedWeaklings := 0.
 	[coInterpreter markAndTraceUntracedReachableStackPages.
 	 numTracedWeaklings := self markAndTraceWeaklingsFrom: numTracedWeaklings.
@@ -5775,26 +5777,12 @@ SpurMemoryManager >> nilUnmarkedWeaklingSlots [
 	"Nil the unmarked slots in the weaklings on the
 	 weakling stack, finalizing those that lost references.
 	 Finally, empty the weaklingStack."
+	<inline: false>
 	self objStack: weaklingStack from: 0 do:
 		[:weakling|
-		(self nilUnmarkedWeaklingSlots: weakling) ifTrue:
+		(self nilUnmarkedWeaklingSlotsIn: weakling) ifTrue:
 			[coInterpreter signalFinalization: weakling]].
 	self emptyObjStack: weaklingStack
-]
-
-{ #category : #'weakness and ephemerality' }
-SpurMemoryManager >> nilUnmarkedWeaklingSlots: aWeakling [
-	"Nil the unmarked slots in aWeakling and
-	 answer if any unmarked slots were found."
-	| anyUnmarked |
-	anyUnmarked := false.
-	(self numStrongSlotsOf: aWeakling ephemeronInactiveIf: nil) to: (self numSlotsOf: aWeakling) - 1 do:
-		[:i| | oop |
-		oop := self fetchPointer: i ofObject: aWeakling.
-		((self isImmediate: oop) or: [self isMarked: oop]) ifFalse:
-			[self storePointerUnchecked: i ofObject: aWeakling withValue: nilObj.
-			 anyUnmarked := true]].
-	^anyUnmarked
 ]
 
 { #category : #'weakness and ephemerality' }
