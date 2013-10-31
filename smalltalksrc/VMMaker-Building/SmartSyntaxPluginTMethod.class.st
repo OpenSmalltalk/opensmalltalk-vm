@@ -349,14 +349,17 @@ SmartSyntaxPluginTMethod >> rcvrSpec [
 ]
 
 { #category : #transforming }
-SmartSyntaxPluginTMethod >> recordDeclarations [
+SmartSyntaxPluginTMethod >> recordDeclarationsIn: aCCodeGen [
 	"Record C type declarations of the forms
-
+		<returnTypeC: 'float'>
+		<var: #foo declareC: 'float foo'>
+		<var: #foo type:'float'>
+		<var: #foo as: Class>
+	 or the older, obsolete
 		self returnTypeC: 'float'.
 		self var: #foo declareC: 'float foo'
+		self var: #foo type:'float'.
 		self var: #foo as: Class
-		self var: #foo type: 'float'.
-
 	 and remove the declarations from the method body."
 
 	| newStatements |
@@ -364,22 +367,27 @@ SmartSyntaxPluginTMethod >> recordDeclarations [
 		[properties pragmas do:
 			[:pragma|
 			pragma keyword = #var:declareC: ifTrue:
-				[self declarationAt: pragma arguments first asString put: pragma arguments last].
+				[self checkedDeclarationAt: pragma arguments first asString
+					put: pragma arguments last
+					in: aCCodeGen].
 			pragma keyword = #var:type: ifTrue:
 				[| varName varType |
 				varName := pragma arguments first asString.
 				varType := pragma arguments last.
 				varType last = $* ifFalse: [varType := varType, ' '].
-				self declarationAt: varName put: varType, varName].
+				self checkedDeclarationAt: varName
+					put: varType, varName
+					in: aCCodeGen].
 			 pragma keyword = #var:as: ifTrue:
 				[| theClass |
 				 theClass := Smalltalk at: pragma arguments last name asSymbol ifAbsent: [nil].
 				 (theClass isKindOf: Behavior) ifFalse:
 					[^self error: 'declarator must be a Behavior'].
-				 self declarationAt: pragma arguments first value asString 
-					put: (theClass ccgDeclareCForVar: pragma arguments first asString)].
+				 self checkedDeclarationAt: pragma arguments first value asString 
+					put: (theClass ccgDeclareCForVar: pragma arguments first asString)
+					in: aCCodeGen].
 			pragma keyword = #returnTypeC: ifTrue:
-				[returnType := pragma arguments last].
+				[self returnType: pragma arguments last].
 			pragma keyword = #doNotGenerate: ifTrue:
 				[locals removeKey: pragma arguments last]].
 		^self].
@@ -449,7 +457,7 @@ SmartSyntaxPluginTMethod >> setSelector: sel definingClass: class args: argList 
 	self extractSharedCase.
 	isPrimitive := false.  "set to true only if you find a primtive direction."
 	suppressingFailureGuards := self extractSuppressFailureGuardDirective.
-	self recordDeclarations.
+	self recordDeclarationsIn: nil.
 	self extractPrimitiveDirectives.
 
 ]

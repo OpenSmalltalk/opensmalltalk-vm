@@ -1042,7 +1042,7 @@ CoInterpreter >> callbackEnter: callbackID [
 	"Save the previous CStackPointers and interpreter entry jmp_buf."
 	currentCStackPointer := cogit getCStackPointer.
 	currentCFramePointer := cogit getCFramePointer.
-	self mem: (self cCoerceSimple: savedReenterInterpreter to: #'void *')
+	self mem: savedReenterInterpreter asVoidPointer
 		cp: reenterInterpreter
 		y: (self sizeof: #'jmp_buf').
 	cogit assertCStackWellAligned.
@@ -3076,32 +3076,6 @@ CoInterpreter >> flushMethodCache [
 	1 to: MethodCacheSize do: [ :i | methodCache at: i put: 0 ].
 	lastMethodCacheProbeWrite := 0. "this for primitiveExternalMethod"
 	cogit unlinkAllSends
-]
-
-{ #category : #'lazy become' }
-CoInterpreter >> followForwardedFrameContents: theFP stackPointer: theSP [
-	"follow pointers in the current stack frame up to theSP."
-	<var: #theFP type: #'char *'>
-	<var: #theSP type: #'char *'>
-	theFP + (self frameStackedReceiverOffset: theFP)
-		to: theFP + FoxCallerSavedIP + BytesPerWord
-		by: BytesPerWord
-		do: [:ptr| | oop |
-			oop := stackPages longAt: ptr.
-			((objectMemory isNonImmediate: oop)
-			 and: [objectMemory isForwarded: oop]) ifTrue:
-				[stackPages longAt: ptr put: (objectMemory followForwarded: oop)]].
-	theSP
-		to: (self frameReceiverOffset: theFP)
-		by: BytesPerWord
-		do: [:ptr| | oop |
-			oop := stackPages longAt: ptr.
-			((objectMemory isNonImmediate: oop)
-			 and: [objectMemory isForwarded: oop]) ifTrue:
-				[stackPages longAt: ptr put: (objectMemory followForwarded: oop)]].
-	self assert: (objectMemory isForwarded: (self frameMethod: theFP)) not.
-	(self frameHasContext: theFP) ifTrue:
-		[self assert: (objectMemory isForwarded: (self frameContext: theFP)) not]
 ]
 
 { #category : #'object memory support' }
@@ -5755,7 +5729,7 @@ CoInterpreter >> restoreCStackStateForCallbackContext: vmCallbackContext [
 		setCStackPointer: vmCallbackContext savedCStackPointer;
 		setCFramePointer: vmCallbackContext savedCFramePointer.
 	self mem: reenterInterpreter
-		cp: (self cCoerceSimple: vmCallbackContext savedReenterInterpreter to: #'void *')
+		cp: vmCallbackContext savedReenterInterpreter asVoidPointer
 		y: (self sizeof: #'jmp_buf')
 ]
 
@@ -5940,7 +5914,7 @@ CoInterpreter >> saveCStackStateForCallbackContext: vmCallbackContext [
 	vmCallbackContext
 		savedCStackPointer: cogit getCStackPointer;
 		savedCFramePointer: cogit getCFramePointer.
-	self mem: (self cCoerceSimple: vmCallbackContext savedReenterInterpreter to: #'void *')
+	self mem: vmCallbackContext savedReenterInterpreter asVoidPointer
 		cp: reenterInterpreter
 		y: (self sizeof: #'jmp_buf')
 ]

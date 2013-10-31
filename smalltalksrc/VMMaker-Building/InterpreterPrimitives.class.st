@@ -1429,7 +1429,7 @@ InterpreterPrimitives >> primitiveFloatAtPut [
 	 a Float.  Map index 1 onto the most significant word and index 2
 	 onto the least significant word."
 	| rcvr index oopToStore valueToStore |
-	<var: #result type: #usqInt>
+	<var: #valueToStore type: #usqInt>
 	self initPrimCall.
 	oopToStore := self stackTop.
 	valueToStore := self positive32BitValueOf: oopToStore.

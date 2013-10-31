@@ -250,7 +250,7 @@ SpurGenerationScavenger >> copyToFutureSpace: survivor bytes: bytesInObject [
 	startOfSurvivor := manager startOfObject: survivor.
 	newStart := futureSurvivorStart.
 	futureSurvivorStart := futureSurvivorStart + bytesInObject.
-	manager mem: newStart cp: startOfSurvivor y: bytesInObject.
+	manager mem: newStart asVoidPointer cp: startOfSurvivor asVoidPointer y: bytesInObject.
 	^newStart + (survivor - startOfSurvivor)
 ]
 
@@ -269,8 +269,8 @@ SpurGenerationScavenger >> copyToOldSpace: survivor [
 	newOop ifNil:
 		[self error: 'out of memory'].
 	manager
-		mem: newOop + manager baseHeaderSize
-		cp: survivor + manager baseHeaderSize
+		mem: (newOop + manager baseHeaderSize) asVoidPointer
+		cp: (survivor + manager baseHeaderSize) asVoidPointer
 		y: numSlots * manager wordSize.
 	self remember: newOop.
 	manager setIsRememberedOf: newOop to: true.
