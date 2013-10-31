@@ -665,8 +665,6 @@ NewObjectMemory >> eeAllocate: byteSize headerSize: hdrSize h1: baseHeader h2: c
 	| newObj |
 	<inline: true>
 	<asmLabel: false>
-	<var: #i type: #usqInt>
-	<var: #end type: #usqInt>
 	newObj := self allocateInterpreterChunk: byteSize + (hdrSize - 1 * BytesPerWord).
 	newObj = 0 ifTrue: [^newObj].
 	hdrSize = 3 ifTrue:
