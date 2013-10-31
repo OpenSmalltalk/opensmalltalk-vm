@@ -5976,6 +5976,7 @@ SpurMemoryManager >> objStack: objStack from: start do: aBlock [
 	 This evaluates in top-of-stack-to-bottom order.  N.B. this is also stable
 	 if aBlock causes new elements to be added to the objStack, but
 	 unstable if aBlock causes elements to be removed."
+	<inline: true>
 	| size objStackPage numToEnumerate |
 	size := self fetchPointer: ObjStackTopx ofObject: objStack.
 	objStackPage := self fetchPointer: ObjStackNextx ofObject: objStack.
