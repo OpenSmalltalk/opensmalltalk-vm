@@ -1216,6 +1216,15 @@ CCodeGenerator >> generateAsUnsignedLong: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
+CCodeGenerator >> generateAsVoidPointer: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	aStream nextPutAll: '((void *)'.
+	self emitCExpression: msgNode receiver on: aStream.
+	aStream nextPut: $)
+]
+
+{ #category : #'C translation' }
 CCodeGenerator >> generateAt: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
@@ -2525,13 +2534,19 @@ CCodeGenerator >> inferTypesForImplicitlyTypedVariablesAndMethods [
 	 done here."
 
 	"Iterate over all methods, inferring #void return types, until we reach a fixed point."
+	| firstTime |
+	firstTime := true.
 	[| changedReturnType |
 	 changedReturnType := false.
 	 methods do:
 		[:m|
-		m inferTypesForImplicitlyTypedVariablesIn: self.
-		(m inferReturnTypeIn: self) ifTrue:
+		 firstTime ifTrue:
+			[m removeFinalSelfReturnIn: self. "must preceed recordDeclarationsIn: because it may set returnType"
+			 m recordDeclarationsIn: self].
+		 m inferTypesForImplicitlyTypedVariablesIn: self.
+		 (m inferReturnTypeIn: self) ifTrue:
 			[changedReturnType := true]].
+	 firstTime := false.
 	 changedReturnType] whileTrue.
 
 	"Type all as-yet-untyped methods as the default"
@@ -2657,6 +2672,7 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#asUnsignedInteger		#generateAsUnsignedInteger:on:indent:
 	#asLong					#generateAsLong:on:indent:
 	#asUnsignedLong			#generateAsUnsignedLong:on:indent:
+	#asVoidPointer				#generateAsVoidPointer:on:indent:
 	#asSymbol					#generateAsSymbol:on:indent:
 	#flag:						#generateFlag:on:indent:
 	#anyMask:					#generateBitAnd:on:indent:
@@ -3501,9 +3517,17 @@ CCodeGenerator >> returnTypeForSend: aTSendNode [
 		ifNil: [kernelReturnTypes
 				at: sel
 				ifAbsent:
-					[(#(cCoerce:to: cCoerceSimple:to:) includes: sel)
-						ifTrue: [aTSendNode args last value]
-						ifFalse: [#sqInt]]]
+					[^sel
+						caseOf: {
+						[#asVoidPointer]		->	[#'void *'].
+						[#asUnsignedInteger]	->	[#usqInt].
+						[#asLong]				->	[#long].
+						[#asUnsignedLong]		->	[#'unsigned long'].
+						[#signedIntToLong]		->	[#usqInt]. "c.f. generateSignedIntToLong:on:indent:"
+						[#signedIntToShort]	->	[#usqInt]. "c.f. generateSignedIntToShort:on:indent:"
+						[#cCoerce:to:]			->	[aTSendNode args last value].
+						[#cCoerceSimple:to:]	->	[aTSendNode args last value] }
+						otherwise: [#sqInt]]]
 		ifNotNil: [:m| m returnType]
 ]
 

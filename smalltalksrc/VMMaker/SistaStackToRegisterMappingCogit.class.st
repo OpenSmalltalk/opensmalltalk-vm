@@ -81,7 +81,7 @@ SistaStackToRegisterMappingCogit >> bytecodePCFor: mcpc startBcpc: startbcpc in:
 		mapFor: cogMethod
 		bcpc: startbcpc
 		performUntil: #find:Mcpc:Bcpc:MatchingMcpc:
-		arg: (self cCoerceSimple: mcpc to: #'void *')
+		arg: mcpc asVoidPointer
 ]
 
 { #category : #'compile abstract instructions' }
@@ -676,7 +676,7 @@ SistaStackToRegisterMappingCogit >> mcPCFor: bcpc startBcpc: startbcpc in: cogMe
 				mapFor: cogMethod
 				bcpc: startbcpc
 				performUntil: #find:Mcpc:Bcpc:MatchingBcpc:
-				arg: (self cCoerceSimple: bcpc to: #'void *').
+				arg: bcpc asVoidPointer.
 	^absPC ~= 0
 		ifTrue: [absPC asUnsignedInteger - cogMethod asUnsignedInteger]
 		ifFalse: [absPC]
@@ -731,7 +731,7 @@ SistaStackToRegisterMappingCogit >> picDataFor: cogMethod into: arrayObj [
 					mapFor: (self cCoerceSimple: cogMethod to: #'CogBlockMethod *')
 					bcpc: (coInterpreter startPCOfMethod: cogMethod methodObject)
 					performUntil: #picDataFor:Mcpc:Bcpc:Method:
-					arg: (self cCoerceSimple: cogMethod to: #'void *').
+					arg: cogMethod asVoidPointer.
 	errCode ~= 0 ifTrue:
 		[self assert: errCode = PrimErrNoMemory.
 		 ^-1].

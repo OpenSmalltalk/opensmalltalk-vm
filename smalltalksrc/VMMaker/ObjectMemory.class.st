@@ -1284,9 +1284,9 @@ ObjectMemory >> checkOopHasOkayClass: obj [
 	 of the instance. If OK answer true.  If  not, print reason and answer false."
 
 	<api>
-	<var: #oop type: #usqInt>
+	<var: #obj type: #usqInt>
 	| objClass formatMask behaviorFormatBits objFormatBits |
-	<var: #oopClass type: #usqInt>
+	<var: #objClass type: #usqInt>
 
 	(self checkOkayOop: obj) ifFalse:
 		[^false].
@@ -1838,7 +1838,7 @@ ObjectMemory >> firstFixedFieldOfMaybeImmediate: oop [
 	"for the message send breakpoint; selectors can be immediates."
 	<inline: false>
 	^(self isImmediate: oop)
-		ifTrue: [oop]
+		ifTrue: [oop asVoidPointer]
 		ifFalse: [self firstFixedField: oop]
 ]
 
