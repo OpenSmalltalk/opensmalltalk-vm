@@ -13,7 +13,8 @@ UnixVMMaker class >> isActiveVMMakerClassFor: platformName [
 { #category : #initialisation }
 UnixVMMaker >> createCodeGenerator [
 
-	^CCodeGeneratorGlobalStructure new initialize;
+	^CCodeGeneratorGlobalStructure new
+		vmMaker: self;
 		logger: logger;
 		yourself
 ]

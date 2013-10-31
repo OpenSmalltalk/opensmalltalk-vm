@@ -810,6 +810,11 @@ Cogit class >> initializeWithOptions: optionsDictionary [
 ]
 
 { #category : #translation }
+Cogit class >> isAcceptableAncilliaryClass: aClass [
+	^aClass ~~ CogSSBytecodeFixup
+]
+
+{ #category : #translation }
 Cogit class >> isCogitClass [
 	^true
 ]
@@ -6239,8 +6244,8 @@ Cogit >> mapObjectReferencesInMachineCode: gcMode [
 	<api>
 	"Update all references to objects in machine code."
 	gcMode caseOf: {
-		[GCModeScavenge]	-> [self mapObjectReferencesInMachineCodeForIncrementalGC].
-		[GCModeIncr]			-> [self mapObjectReferencesInMachineCodeForScavenge].
+		[GCModeScavenge]	-> [self mapObjectReferencesInMachineCodeForScavenge].
+		[GCModeIncr]			-> [self mapObjectReferencesInMachineCodeForIncrementalGC].
 		[GCModeFull]			-> [self mapObjectReferencesInMachineCodeForFullGC].
 		[GCModeBecome]		-> [self mapObjectReferencesInMachineCodeForBecome] }.
 
@@ -6418,6 +6423,11 @@ Cogit >> mapObjectReferencesInMachineCodeForIncrementalGC [
 	methodZone pruneYoungReferrers.
 	codeModified ifTrue: "After updating oops in inline caches we need to flush the icache."
 		[processor flushICacheFrom: methodZoneBase to: methodZone limitZony asInteger]
+]
+
+{ #category : #'garbage collection' }
+Cogit >> mapObjectReferencesInMachineCodeForScavenge [
+	self shouldBeImplemented
 ]
 
 { #category : #'simulation only' }
@@ -8593,7 +8603,7 @@ Cogit >> unlinkSendsOf: selector isMNUSelector: isMNUSelector [
 	 and: [cogMethod selector ~= selector]] whileTrue:
 		[cogMethod := methodZone methodAfter: cogMethod].
 	cogMethod >= methodZone limitZony ifTrue:
-		[^nil].
+		[^self].
 	codeModified := false.
 	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
 	[cogMethod < methodZone limitZony] whileTrue:

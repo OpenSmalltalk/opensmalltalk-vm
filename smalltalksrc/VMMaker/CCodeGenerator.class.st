@@ -18,6 +18,7 @@ Class {
 		'methods',
 		'macros',
 		'apiMethods',
+		'kernelReturnTypes',
 		'currentMethod',
 		'headerFiles',
 		'globalVariableUsage',
@@ -31,7 +32,8 @@ Class {
 		'selectorTranslations',
 		'optionsDictionary',
 		'breakSrcInlineSelector',
-		'breakDestInlineSelector'
+		'breakDestInlineSelector',
+		'vmMaker'
 	],
 	#classVars : [
 		'UseRightShiftForDivide'
@@ -188,24 +190,8 @@ CCodeGenerator >> addMethodFor: aClass selector: selector [
 	method := aClass compiledMethodAt: selector.
 	(method pragmaAt: #doNotGenerate) ifNotNil:
 		[^nil].
-	"process optional methods by interpreting the argument to the option: pragma as either
-	 a Cogit class name or a class variable name or a variable name in VMBasicConstants."
-	(method pragmaAt: #option:) ifNotNil:
-		[:pragma| | key |
-		key := pragma argumentAt: 1.
-		VMClass getVMMaker ifNotNil:
-			[:vmMaker|
-			((Cogit withAllSubclasses anySatisfy: [:c| c name = key])
-			and: [vmMaker cogitClassName ~= key]) ifTrue:
-				[^nil].
-			(vmMaker options at: key ifAbsent: []) ifNotNil:
-				[:option| option == false ifTrue: [^nil]]].
-		(aClass bindingOf: key) ifNotNil:
-			[:binding|
-			binding value == false ifTrue: [^nil]].
-		(VMBasicConstants bindingOf: key) ifNotNil:
-			[:binding|
-			binding value == false ifTrue: [^nil]]].
+	(self shouldIncludeMethodFor: aClass selector: selector) ifFalse:
+		[^nil].
 	tmethod := self addMethod: (self compileToTMethodSelector: selector in: aClass).
 	"If the method has a macro then add the macro.  But keep the method
 	 for analysis purposes (e.g. its variable accesses)."
@@ -602,6 +588,31 @@ CCodeGenerator >> compileToTMethodSelector: selector in: aClass [
 			asTranslationMethodOfClass: self translationMethodClass
 ]
 
+{ #category : #public }
+CCodeGenerator >> computeKernelReturnTypes [
+	^Dictionary newFromPairs:
+		#(oopAt: #sqInt oopAt:put: #sqInt
+			oopAtPointer: #sqInt oopAtPointer:put: #sqInt
+		 byteAt: #sqInt byteAt:put: #sqInt
+			byteAtPointer: #sqInt byteAtPointer:put: #sqInt
+		 shortAt: #sqInt shortAt:put: #sqInt
+			shortAtPointer: #sqInt shortAtPointer:put: #sqInt
+		 intAt: #sqInt intAt:put: #sqInt
+			intAtPointer: #sqInt intAtPointer:put: #sqInt
+		 longAt: #sqInt longAt:put: #sqInt
+			longAtPointer: #sqInt longAtPointer:put: #sqInt
+
+		 longLongAt: #sqLong longLongAt:put: #sqLong
+			longLongAtPointer: #sqLong longLongAtPointer:put: #sqLong
+		
+		 fetchFloatAt:into: #float storeFloatAt:from: #float
+			fetchFloatAtPointer:into: #float storeFloatAtPointer:from: #float
+		 fetchSingleFloatAt:into: #float storeSingleFloatAt:from: #float
+			fetchSingleFloatAtPointer:into: #float storeSingleFloatAtPointer:from: #float
+
+		 pointerForOop: #'char *' oopForPointer: #sqInt)
+]
+
 { #category : #accessing }
 CCodeGenerator >> currentMethod [
 	^currentMethod
@@ -725,8 +736,14 @@ CCodeGenerator >> emitCAPIExportHeaderOn: aStream [
 	"Store prototype declarations for all non-inlined methods on the given stream."
 	| api methodList |
 	api := (vmClass translationClass exportAPISelectors: self options).
-	methodList := api select: [:s| (methods includesKey: s) or: [(vmClass whichClassIncludesSelector: s) notNil]]
-					  thenCollect:
+	methodList := api
+					select:
+						[:s|
+						(methods includesKey: s)
+						or: [(vmClass whichClassIncludesSelector: s)
+								ifNil: [false]
+								ifNotNil: [:c|self shouldIncludeMethodFor: c selector: s]]]
+					thenCollect:
 						[:s|
 						methods
 							at: s
@@ -2485,6 +2502,45 @@ CCodeGenerator >> globalsAsSet [
 	^variables
 ]
 
+{ #category : #'type inference' }
+CCodeGenerator >> implicitReturnTypeFor: aSelector [
+	"Answer the default return type for mthods of the defining class of
+	 aSelector. Default to #sqInt if there is no method, or if the method's
+	 defining class doesn't understand implicitReturnTypeFor:."
+	| m |
+	m := methods at: aSelector ifAbsent: [^#sqInt].
+	^[m definingClass implicitReturnTypeFor: aSelector]
+		on: MessageNotUnderstood
+		do: [:ex|
+			ex message selector ~~ #implicitReturnTypeFor: ifTrue:
+				[ex pass].
+			#sqInt]
+]
+
+{ #category : #'type inference' }
+CCodeGenerator >> inferTypesForImplicitlyTypedVariablesAndMethods [
+	"Infer the return tupe and the types of untyped variables.
+	 As far as variables go, for now we try only to infer variables
+	 assigned the result of #longLongAt:, but much more could be
+	 done here."
+
+	"Iterate over all methods, inferring #void return types, until we reach a fixed point."
+	[| changedReturnType |
+	 changedReturnType := false.
+	 methods do:
+		[:m|
+		m inferTypesForImplicitlyTypedVariablesIn: self.
+		(m inferReturnTypeIn: self) ifTrue:
+			[changedReturnType := true]].
+	 changedReturnType] whileTrue.
+
+	"Type all as-yet-untyped methods as the default"
+	methods do:
+		[:m|
+		m returnType ifNil:
+			[m returnType: (self implicitReturnTypeFor: m selector)]]
+]
+
 { #category : #public }
 CCodeGenerator >> initialize [
 	translationDict := Dictionary new.
@@ -2493,6 +2549,7 @@ CCodeGenerator >> initialize [
 	variables := Set new: 100.
 	variableDeclarations := Dictionary new: 100.
 	methods := Dictionary new: 500.
+	kernelReturnTypes := self computeKernelReturnTypes.
 	macros := Dictionary new.
 	self initializeCTranslationDictionary.
 	headerFiles := OrderedCollection new.
@@ -2780,6 +2837,7 @@ CCodeGenerator >> isKernelSelector: sel [
 		 shortAt: shortAt:put: shortAtPointer: shortAtPointer:put:
 		 intAt: intAt:put: intAtPointer: intAtPointer:put:
 		 longAt: longAt:put: longAtPointer: longAtPointer:put:
+		 longLongAt: longLongAt:put: longLongAtPointer: longLongAtPointer:put:
 		 fetchFloatAt:into: storeFloatAt:from:
 				fetchFloatAtPointer:into: storeFloatAtPointer:from:
 		 fetchSingleFloatAt:into: storeSingleFloatAt:from:
@@ -3435,6 +3493,20 @@ CCodeGenerator >> returnPrefixFromVariable: aName [
 	^aName
 ]
 
+{ #category : #'type inference' }
+CCodeGenerator >> returnTypeForSend: aTSendNode [
+	"Answer the return type for a send.  Absent sends default to #sqInt."
+	| sel |
+	^(methods at: (sel := aTSendNode selector) ifAbsent: nil)
+		ifNil: [kernelReturnTypes
+				at: sel
+				ifAbsent:
+					[(#(cCoerce:to: cCoerceSimple:to:) includes: sel)
+						ifTrue: [aTSendNode args last value]
+						ifFalse: [#sqInt]]]
+		ifNotNil: [:m| m returnType]
+]
+
 { #category : #accessing }
 CCodeGenerator >> selectAPIMethods [
 	^methods select: [:m| m isAPIMethod]
@@ -3475,6 +3547,28 @@ CCodeGenerator >> shortMonticelloDescriptionForClass: aClass [
 				on: Error
 				do: [:ex| ^' ', Date today asString].
 	^mdesc copyFrom: 1 to: (mdesc indexOfSubCollection: ' uuid:') - 1
+]
+
+{ #category : #utilities }
+CCodeGenerator >> shouldIncludeMethodFor: aClass selector: selector [
+	"process optional methods by interpreting the argument to the option: pragma as either
+	 a Cogit class name or a class variable name or a variable name in VMBasicConstants."
+	(aClass >> selector pragmaAt: #option:) ifNotNil:
+		[:pragma| | key |
+		key := pragma argumentAt: 1.
+		vmMaker ifNotNil:
+			[((Cogit withAllSubclasses anySatisfy: [:c| c name = key])
+			and: [vmMaker cogitClassName ~= key]) ifTrue:
+				[^false].
+			(vmMaker options at: key ifAbsent: []) ifNotNil:
+				[:option| option == false ifTrue: [^false]]].
+		(aClass bindingOf: key) ifNotNil:
+			[:binding|
+			binding value == false ifTrue: [^false]].
+		(VMBasicConstants bindingOf: key) ifNotNil:
+			[:binding|
+			binding value == false ifTrue: [^false]]].
+	^true
 ]
 
 { #category : #inlining }
@@ -3600,8 +3694,8 @@ CCodeGenerator >> structClasses: classes [
 CCodeGenerator >> structClassesForTranslationClasses: classes [
 	"Answer in superclass order (any superclass precedes any subclass)
 	 the ancilliaryClasses that are struct classes for all the given classes."
-	| structClasses |
-	structClasses := OrderedCollection new.
+	| theStructClasses |
+	theStructClasses := OrderedCollection new.
 	classes do:
 		[:aTranslationClass|
 		([aTranslationClass ancilliaryClasses: self options]
@@ -3613,9 +3707,9 @@ CCodeGenerator >> structClassesForTranslationClasses: classes [
 			[:class|
 			(class isStructClass
 			 and: [(vmClass isNil or: [vmClass isAcceptableAncilliaryClass: class])
-			 and: [(structClasses includes: class) not]]) ifTrue:
-				[structClasses addLast: class]]].
-	^ChangeSet superclassOrder: structClasses
+			 and: [(theStructClasses includes: class) not]]) ifTrue:
+				[theStructClasses addLast: class]]].
+	^ChangeSet superclassOrder: theStructClasses
 ]
 
 { #category : #'C code generator' }
@@ -3779,6 +3873,16 @@ CCodeGenerator >> vmHeaderContentsWithBytesPerWord: bytesPerWord [
 	^ByteString streamContents:
 		[:tempStream|
 		vmClass writeVMHeaderTo: tempStream bytesPerWord: bytesPerWord]
+]
+
+{ #category : #accessing }
+CCodeGenerator >> vmMaker [
+	^vmMaker
+]
+
+{ #category : #accessing }
+CCodeGenerator >> vmMaker: aVMMaker [
+	vmMaker := aVMMaker
 ]
 
 { #category : #utilities }
