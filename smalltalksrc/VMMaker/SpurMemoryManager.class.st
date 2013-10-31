@@ -420,6 +420,7 @@ Class {
 		'unscannedEphemerons',
 		'objStackInvalidBecause',
 		'markStack',
+		'weaklingStack',
 		'freeLists',
 		'freeListsMask',
 		'lastHash',
@@ -477,7 +478,8 @@ Class {
 		'ObjStackNextx',
 		'ObjStackPageSlots',
 		'ObjStackTopx',
-		'RemapBufferSize'
+		'RemapBufferSize',
+		'WeaklingStackRootIndex'
 	],
 	#pools : [
 		'SpurMemoryManagementConstants',
@@ -604,9 +606,10 @@ SpurMemoryManager class >> initialize [
 	ObjStackNextx := 3.
 	ObjStackFixedSlots := 4.
 	ObjStackLimit := ObjStackPageSlots - ObjStackFixedSlots.
-	"There are currently two obj stacks, the mark stack and the ephemeron queue."
+	"There are currently three obj stacks, the mark stack, the weaklings and the ephemeron queue."
 	MarkStackRootIndex := self basicNew classTableRootSlots.
-	EphemeronQueueRootIndex := MarkStackRootIndex + 1.
+	WeaklingStackRootIndex := MarkStackRootIndex + 1.
+	EphemeronQueueRootIndex := MarkStackRootIndex + 2.
 
 	CheckObjectOverwrite := true.
 
@@ -729,6 +732,7 @@ SpurMemoryManager class >> initializeWithOptions: optionsDictionary [
 	"SpurMemoryManager initializeWithOptions: Dictionary new"
 
 	super initializeWithOptions: optionsDictionary.
+	self initialize.
 	self initBytesPerWord: (self == SpurMemoryManager
 								ifTrue: [optionsDictionary at: #BytesPerWord ifAbsent: [4]]
 								ifFalse: [self wordSize]).
@@ -2976,6 +2980,26 @@ SpurMemoryManager >> eliminateAndFreeForwarders [
 		 self addFreeChunkWithBytes: bytes at: start].
 ]
 
+{ #category : #'obj stacks' }
+SpurMemoryManager >> emptyObjStack: objStack [
+	"Remove all the entries on the stack.  Do so by setting Topx to 0
+	 on the first page, and adding all subsequent pages to the free list."
+	| nextPage nextNextPage |
+	self assert: (self isValidObjStack: objStack).
+	self storePointer: ObjStackTopx ofObject: objStack withValue: 0.
+	nextPage := self fetchPointer: ObjStackNextx ofObject: objStack.
+	[nextPage ~= 0] whileTrue:
+		[nextNextPage := self fetchPointer: ObjStackNextx ofObject: nextPage.
+		 self storePointer: ObjStackFreex
+			ofObjStack: nextPage
+			withValue: (self fetchPointer: ObjStackFreex ofObject: objStack).
+		 self storePointer: ObjStackNextx ofObjStack: nextPage withValue: 0.
+		 self storePointer: ObjStackFreex ofObjStack: objStack withValue: nextPage.
+		 nextPage := nextNextPage].
+	self storePointer: ObjStackNextx ofObjStack: objStack withValue: 0.
+	self assert: (self isValidObjStack: objStack)
+]
+
 { #category : #accessing }
 SpurMemoryManager >> endOfMemory [
 	^endOfMemory
@@ -3850,15 +3874,14 @@ SpurMemoryManager >> freeTreeNodesDo: aBlock [
 ]
 
 { #category : #'gc - global' }
-SpurMemoryManager >> freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoalesceFreeSpace [
-	"Sweep all of old space, freeing unmarked objects, nilling the unmarked slots of weaklings,
-	 coalescing free chunks, and sorting free space.
+SpurMemoryManager >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpace [
+	"Sweep all of old space, freeing unmarked objects, coalescing free chunks, and sorting free space.
 
 	 Small free chunks are sorted in address order on each small list head.  Large free chunks
 	 are sorted on the sortedFreeChunks list.  Record as many of the highest objects as there
 	 is room for in highestObjects, a circular buffer, for the use of exactFitCompact.  Use
-	 unused eden space for highestObjects.  If highestObjects does not wrap, store 0 at
-	 highestObjects last.  Record the lowest free object in firstFreeChunk.  Let the
+	 unused eden space for highestObjects.  If highestObjects does not wrap, store 0
+	 at highestObjects last.  Record the lowest free object in firstFreeChunk.  Let the
 	 segmentManager mark which segments contain pinned objects via notePinned:."
 
 	| lastLargeFree lastHighest highestObjectsWraps sortedFreeChunks |
@@ -3882,9 +3905,6 @@ SpurMemoryManager >> freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoales
 			ifTrue: "forwarders should have been followed in markAndTrace:"
 				[self assert: (self isForwarded: o) not.
 				 self setIsMarkedOf: o to: false.
-				 ((self isWeakNonImm: o)
-				  and: [self nilUnmarkedWeaklingSlots: o]) ifTrue:
-					[coInterpreter signalFinalization: o].
 				 (self isPinned: o) ifTrue:
 					[segmentManager notePinned: o].
 				 firstFreeChunk ~= 0 ifTrue:
@@ -3959,7 +3979,8 @@ SpurMemoryManager >> gcStartUsecs [
 SpurMemoryManager >> globalGarbageCollect [
 	self runLeakCheckerForFullGC: true.
 	self markObjects.
-	self freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoalesceFreeSpace.
+	self nilUnmarkedWeaklingSlots.
+	self freeUnmarkedObjectsAndSortAndCoalesceFreeSpace.
 	self bestFitCompact.
 	self eliminateAndFreeForwarders.
 	self runLeakCheckerForFullGC: true
@@ -4378,6 +4399,7 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	self reInitializeClassTablePostLoad: (self objectAfter: freeListObj).
 	self initializeFreeSpacePostLoad: freeListObj.
 	markStack := self swizzleObjStackAt: MarkStackRootIndex.
+	weaklingStack := self swizzleObjStackAt: WeaklingStackRootIndex.
 	ephemeronQueue := self swizzleObjStackAt: EphemeronQueueRootIndex.
 
 	segmentManager collapseSegmentsPostSwizzle.
@@ -4386,8 +4408,8 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	self initializeOldSpaceFirstFree: freeOldSpaceStart. "initializes endOfMemory, freeStart"
 
 	"These defaults should depend on machine size; e.g. too small on a powerful laptop, too big on a Pi."
-	growHeadroom := 8*1024*1024.		"headroom when growing"
-	shrinkThreshold := 16*1024*1024.		"free space before shrinking"
+	growHeadroom := 16*1024*1024.		"headroom when growing"
+	shrinkThreshold := 32*1024*1024.		"free space before shrinking"
 ]
 
 { #category : #'free space' }
@@ -4439,6 +4461,11 @@ SpurMemoryManager >> initializeUnscannedEphemerons [
 				start: freeStart;
 				limit: scavenger eden limit].
 	unscannedEphemerons top: unscannedEphemerons start
+]
+
+{ #category : #'gc - global' }
+SpurMemoryManager >> initializeWeaklingStack [
+	self ensureRoomOnObjStackAt: WeaklingStackRootIndex
 ]
 
 { #category : #'become implementation' }
@@ -4976,7 +5003,7 @@ SpurMemoryManager >> isValidFreeObject: objOop [
 SpurMemoryManager >> isValidObjStack: objStack [
 	"Answer if the obj stack at objStackRootIndex is valid."
 	((self addressCouldBeObj: objStack)
-	 and: [(self numSlotsOf: objStack) = ObjStackPageSlots]) ifFalse:
+	 and: [(self numSlotsOfAny: objStack) = ObjStackPageSlots]) ifFalse:
 		[objStackInvalidBecause := 'first page not obj or wrong size'.
 		 ^false].
 	^self isValidObjStackPage: objStack
@@ -5341,7 +5368,7 @@ SpurMemoryManager >> markAccessibleObjects [
 	self markAndTrace: self freeListsObj.
 	self markAndTrace: hiddenRootsObj.
 	self markAndTrace: self specialObjectsOop.
-	self markAndFireEphemerons.
+	self markWeaklingsAndMarkAndFireEphemerons.
 	marking := false
 ]
 
@@ -5364,18 +5391,6 @@ SpurMemoryManager >> markAllUnscannedEphemerons [
 			  ephemeron (which must have been newly added by markAndTrace:)."
 			 self longAt: ptr put: (self longAt: unscannedEphemerons top)].
 		ptr := ptr - self wordSize]
-]
-
-{ #category : #'gc - global' }
-SpurMemoryManager >> markAndFireEphemerons [
-	"After the initial scan-mark is complete ephemerons can be processed."
-	[coInterpreter markAndTraceUntracedReachableStackPages.
-	 self noUnscannedEphemerons ifTrue:
-		[^self].
-	 self markInactiveEphemerons ifFalse:
-		[self fireAllUnscannedEphemerons].
-	 self markAllUnscannedEphemerons]
-		repeat
 ]
 
 { #category : #'gc - global' }
@@ -5416,9 +5431,12 @@ SpurMemoryManager >> markAndTrace: objOop [
 				 ((self isImmediate: field)
 				  or: [self isMarked: field]) ifFalse:
 					[self setIsMarkedOf: field to: true.
-					 (self topOfObjStack: markStack) ~= objToScan ifTrue: 
-						[self push: objToScan onObjStack: markStack].
-					 self push: (self integerObjectOf: index) onObjStack: markStack.
+					 (self isWeakNonImm: objToScan)
+						ifTrue: [self push: field onObjStack: weaklingStack]
+						ifFalse:
+							[(self topOfObjStack: markStack) ~= objToScan ifTrue: 
+								[self push: objToScan onObjStack: markStack].
+							 self push: (self integerObjectOf: index) onObjStack: markStack].
 					 objToScan := field.
 					 index := -1]].
 			 index >= 0 ifTrue: "if loop terminated without finding an unmarked referent, switch to top of stack."
@@ -5436,10 +5454,13 @@ SpurMemoryManager >> markAndTrace: objOop [
 				 ((self isImmediate: field)
 				  or: [self isMarked: field]) ifFalse:
 					[self setIsMarkedOf: field to: true.
-					 self push: field onObjStack: markStack.
-					 numStrongSlots := self numStrongSlotsOf: field ephemeronInactiveIf: #inactiveOrFailedToDeferScan:.
-					 numStrongSlots > self traceImmediatelySlotLimit ifTrue:
-						[self push: (self integerObjectOf: numStrongSlots) onObjStack: markStack]]].
+					 (self isWeakNonImm: field)
+						ifTrue: [self push: field onObjStack: weaklingStack]
+						ifFalse:
+							[self push: field onObjStack: markStack.
+							 numStrongSlots := self numStrongSlotsOf: field ephemeronInactiveIf: #inactiveOrFailedToDeferScan:.
+							 numStrongSlots > self traceImmediatelySlotLimit ifTrue:
+								[self push: (self integerObjectOf: numStrongSlots) onObjStack: markStack]]]].
 			 objToScan := self popObjStack: markStack].
 	 objToScan notNil] whileTrue
 ]
@@ -5472,6 +5493,19 @@ SpurMemoryManager >> markAndTraceObjStack: stackOrNil andContents: markAndTraceC
 		 (self isImmediate: field) ifFalse:
 			[self markAndTrace: field].
 		 index := index - 1]
+]
+
+{ #category : #'weakness and ephemerality' }
+SpurMemoryManager >> markAndTraceWeaklingsFrom: startIndex [
+	"Mark weaklings on the weaklingStack, ignoring startIndex
+	 number of elements on the bottom of the stack.  Answer
+	 the size of the stack *before* the enumeration began."
+	^self objStack: weaklingStack from: startIndex do:
+		[:weakling|
+		 0 to: (self numStrongSlotsOf: weakling ephemeronInactiveIf: nil) - 1 do:
+			[:field|
+			((self isImmediate: field) or: [self isMarked: field]) ifFalse:
+				[self markAndTrace: field]]]
 ]
 
 { #category : #'weakness and ephemerality' }
@@ -5508,6 +5542,7 @@ SpurMemoryManager >> markObjects [
 	self ensureAllMarkBitsAreZero.
 	self initializeUnscannedEphemerons.
 	self initializeMarkStack.
+	self initializeWeaklingStack.
 	self markAccessibleObjects
 ]
 
@@ -5519,6 +5554,25 @@ SpurMemoryManager >> markStack [
 { #category : #'gc - global' }
 SpurMemoryManager >> markStack: anObject [
 	self storePointer: MarkStackRootIndex ofObject: hiddenRootsObj withValue: anObject
+]
+
+{ #category : #'gc - global' }
+SpurMemoryManager >> markWeaklingsAndMarkAndFireEphemerons [
+	"After the initial scan-mark is complete ephemerons can be processed.
+	 Weaklings have accumulated on the weaklingStack, but more may be
+	 uncovered during ephemeron processing.  So trace the strong slots
+	 of the weaklings, and as ephemerons are processed ensure any newly
+	 reached weaklings are also traced."
+	| numTracedWeaklings |
+	numTracedWeaklings := 0.
+	[coInterpreter markAndTraceUntracedReachableStackPages.
+	 numTracedWeaklings := self markAndTraceWeaklingsFrom: numTracedWeaklings.
+	 self noUnscannedEphemerons ifTrue:
+		[^self].
+	 self markInactiveEphemerons ifFalse:
+		[self fireAllUnscannedEphemerons].
+	 self markAllUnscannedEphemerons]
+		repeat
 ]
 
 { #category : #'header format' }
@@ -5717,6 +5771,18 @@ SpurMemoryManager >> nilObject: anOop [
 ]
 
 { #category : #'weakness and ephemerality' }
+SpurMemoryManager >> nilUnmarkedWeaklingSlots [
+	"Nil the unmarked slots in the weaklings on the
+	 weakling stack, finalizing those that lost references.
+	 Finally, empty the weaklingStack."
+	self objStack: weaklingStack from: 0 do:
+		[:weakling|
+		(self nilUnmarkedWeaklingSlots: weakling) ifTrue:
+			[coInterpreter signalFinalization: weakling]].
+	self emptyObjStack: weaklingStack
+]
+
+{ #category : #'weakness and ephemerality' }
 SpurMemoryManager >> nilUnmarkedWeaklingSlots: aWeakling [
 	"Nil the unmarked slots in aWeakling and
 	 answer if any unmarked slots were found."
@@ -5729,6 +5795,41 @@ SpurMemoryManager >> nilUnmarkedWeaklingSlots: aWeakling [
 			[self storePointerUnchecked: i ofObject: aWeakling withValue: nilObj.
 			 anyUnmarked := true]].
 	^anyUnmarked
+]
+
+{ #category : #'weakness and ephemerality' }
+SpurMemoryManager >> nilUnmarkedWeaklingSlotsIn: aWeakling [
+	"Nil the unmarked slots in aWeakling and
+	 answer if any unmarked slots were found."
+	| anyUnmarked |
+	anyUnmarked := false.
+	(self numStrongSlotsOf: aWeakling ephemeronInactiveIf: nil) to: (self numSlotsOf: aWeakling) - 1 do:
+		[:i| | oop |
+		oop := self fetchPointer: i ofObject: aWeakling.
+		((self isImmediate: oop) or: [self isMarked: oop]) ifFalse:
+			[self storePointerUnchecked: i ofObject: aWeakling withValue: nilObj.
+			 anyUnmarked := true]].
+	^anyUnmarked
+]
+
+{ #category : #'obj stacks' }
+SpurMemoryManager >> noCheckPush: objOop onObjStack: objStack [
+	"Push an element on an objStack.  Split from push:onObjStack: for testing."
+	| topx |
+	self assert: (self isValidObjStack: objStack).
+	self cCode: [] "for debugging markAndTrace: set (MarkStackRecord := OrderedCollection new)"
+		inSmalltalk:
+			[objStack = markStack ifTrue:
+				[MarkStackRecord ifNotNil: [MarkStackRecord addLast: {#push. objOop}]]].
+	topx := self fetchPointer: ObjStackTopx ofObject: objStack.
+	topx >= ObjStackLimit
+		ifTrue:
+			[self noCheckPush: objOop
+				onObjStack: (self ensureRoomOnObjStackAt: (self fetchPointer: ObjStackMyx ofObject: objStack))]
+		ifFalse:
+			[self storePointer: ObjStackFixedSlots + topx ofObjStack: objStack withValue: objOop.
+			 self storePointer: ObjStackTopx ofObjStack: objStack withValue: topx + 1].
+	^objOop
 ]
 
 { #category : #'weakness and ephemerality' }
@@ -5866,6 +5967,36 @@ SpurMemoryManager >> numSurvivorSpaces [
 { #category : #'object access' }
 SpurMemoryManager >> numTagBits [
 	^self subclassResponsibility
+]
+
+{ #category : #'obj stacks' }
+SpurMemoryManager >> objStack: objStack from: start do: aBlock [
+	"Evaluate aBlock with all elements from start (0-relative) in objStack.
+	 Answer the size of the stack *before* the enumeration commences.
+	 This evaluates in top-of-stack-to-bottom order.  N.B. this is also stable
+	 if aBlock causes new elements to be added to the objStack, but
+	 unstable if aBlock causes elements to be removed."
+	| size objStackPage numToEnumerate |
+	size := self fetchPointer: ObjStackTopx ofObject: objStack.
+	objStackPage := self fetchPointer: ObjStackNextx ofObject: objStack.
+	[objStackPage ~= 0] whileTrue:
+		[size := size + ObjStackLimit.
+		 self assert: (self fetchPointer: ObjStackTopx ofObject: objStackPage) = ObjStackLimit.
+		 objStackPage := self fetchPointer: ObjStackNextx ofObject: objStackPage].
+	numToEnumerate := size - start.
+	objStackPage := objStack.
+	[numToEnumerate > 0] whileTrue:
+		[| numOnThisPage numToEnumerateOnThisPage topIndex |
+		 numOnThisPage := self fetchPointer: ObjStackTopx ofObject: objStackPage.
+		 numToEnumerateOnThisPage := numToEnumerate min: numOnThisPage.
+		 topIndex := numOnThisPage + ObjStackFixedSlots - 1.
+		 topIndex
+			to: topIndex - numToEnumerateOnThisPage + 1
+			by: -1
+			do:	[:i| aBlock value: (self fetchPointer: i ofObject: objStackPage)].
+		 numToEnumerate := numToEnumerate - numToEnumerateOnThisPage.
+		 objStackPage := self fetchPointer: ObjStackNextx ofObject: objStackPage].
+	^size
 ]
 
 { #category : #'object enumeration' }
@@ -6065,8 +6196,8 @@ SpurMemoryManager >> popObjStack: objStack [
 	 and: [(nextPage := self fetchPointer: ObjStackNextx ofObject: objStack) ~= 0]) ifTrue:
 		[self storePointer: ObjStackFreex ofObjStack: nextPage withValue: objStack.
 		 self storePointer: ObjStackNextx ofObjStack: objStack withValue: 0.
-		myx := self fetchPointer: ObjStackMyx ofObject: objStack.
-		self updateRootOfObjStack: myx with: nextPage].
+		 myx := self fetchPointer: ObjStackMyx ofObject: objStack.
+		 self updateRootOfObjStack: myx with: nextPage].
 	^top
 ]
 
@@ -6254,26 +6385,19 @@ SpurMemoryManager >> push: oop [
 
 { #category : #'obj stacks' }
 SpurMemoryManager >> push: objOop onObjStack: objStack [
-	| topx |
 	self assert: (self addressCouldBeOop: objOop).
-	self assert: (self isValidObjStack: objStack).
-	(self isImmediate: objOop) ifTrue:
-		[self assert: objStack = markStack.
-		 self assert: (self addressCouldBeObj: (self topOfObjStack:
-						(0 = (self fetchPointer: ObjStackTopx ofObject: objStack)
-							ifTrue: [self fetchPointer: ObjStackNextx ofObject: objStack]
-							ifFalse: [objStack])))].
-	self cCode: [] "for debugging markAndTrace: set (MarkStackRecord := OrderedCollection new)"
-		inSmalltalk: [MarkStackRecord ifNotNil: [MarkStackRecord addLast: {#push. objOop}]].
-	topx := self fetchPointer: ObjStackTopx ofObject: objStack.
-	topx >= ObjStackLimit
+	(self isImmediate: objOop)
 		ifTrue:
-			[self push: objOop
-				onObjStack: (self ensureRoomOnObjStackAt: (self fetchPointer: ObjStackMyx ofObject: objStack))]
-		ifFalse:
-			[self storePointer: ObjStackFixedSlots + topx ofObjStack: objStack withValue: objOop.
-			 self storePointer: ObjStackTopx ofObjStack: objStack withValue: topx + 1].
-	^objOop
+			[self assert: objStack = markStack.
+			 self assert: (self addressCouldBeObj: (self topOfObjStack:
+							(0 = (self fetchPointer: ObjStackTopx ofObject: objStack)
+								ifTrue: [self fetchPointer: ObjStackNextx ofObject: objStack]
+								ifFalse: [objStack])))]
+		ifFalse: "There should be no weaklings on the mark stack."
+			[self assert: (objStack = markStack and: [self isWeakNonImm: objOop]) not.
+			"There should only be weaklings on the weaklingStack"
+			 self assert: (objStack ~= weaklingStack or: [self isWeakNonImm: objOop])].
+	^self noCheckPush: objOop onObjStack: objStack
 ]
 
 { #category : #'simulation only' }
@@ -7578,6 +7702,7 @@ SpurMemoryManager >> updateRootOfObjStack: objStackRootIndex with: newRootPage [
 		withValue: newRootPage.
 	objStackRootIndex caseOf: {
 		[MarkStackRootIndex]			->	[markStack := newRootPage].
+		[WeaklingStackRootIndex]		->	[weaklingStack := newRootPage].
 		[EphemeronQueueRootIndex]	->	[ephemeronQueue := newRootPage] }.
 	self assert: (self isValidObjStack: newRootPage).
 	^newRootPage

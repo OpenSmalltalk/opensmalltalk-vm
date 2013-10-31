@@ -5416,7 +5416,8 @@ StackInterpreter >> flushMethodCache [
 	"Flush the method cache. The method cache is flushed on every programming change and garbage collect."
 
 	1 to: MethodCacheSize do: [ :i | methodCache at: i put: 0 ].
-	lastMethodCacheProbeWrite := 0 "this for primitiveExternalMethod"
+	lastMethodCacheProbeWrite := 0. "this for primitiveExternalMethod"
+	self flushAtCache.
 ]
 
 { #category : #'method lookup cache' }
@@ -8634,7 +8635,10 @@ StackInterpreter >> preGCAction: gcModeArg [
 	<asmLabel: false>
 	"Need to write back the frame pointers unless all pages are free (as in snapshot)"
 	stackPage ~= 0 ifTrue:
-		[self externalWriteBackHeadFramePointers]
+		[self externalWriteBackHeadFramePointers].
+	(gcModeArg = GCModeFull
+	 and: [objectMemory hasSpurMemoryManagerAPI]) ifTrue:
+		[self flushMethodCache]
 ]
 
 { #category : #'I/O primitives' }

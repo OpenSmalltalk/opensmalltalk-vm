@@ -18,3 +18,9 @@ SpurGenerationScavengerSimulator >> remember: objOop [
 		[self halt].
 	^super remember: objOop
 ]
+
+{ #category : #scavenger }
+SpurGenerationScavengerSimulator >> scavenge: tenuringCriterion [
+	coInterpreter transcript nextPutAll: 'scavenging...'; flush.
+	^super scavenge: tenuringCriterion
+]
