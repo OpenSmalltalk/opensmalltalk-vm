@@ -2188,7 +2188,7 @@ CogIA32Compiler >> genDivR: abstractRegDivisor R: abstractRegDividend Quo: abstr
 					ifTrue: [self genDivR: rDivisor R: rUnused Quo: rQuotient Rem: rRemainder]
 					ifFalse: [self genDivR: rUnused R: rDividend Quo: rQuotient Rem: rRemainder].
 				cogit PopR: rUnused.
-				^nil].
+				^self].
 			  rUnused := rUnused + 1].
 		self error: 'couldn''t find unused register in genDivR:R:Quo:Rem:'].
 	"If either output does not include EAX or EDX we must save and restore EAX and/or EDX."
@@ -2357,7 +2357,7 @@ CogIA32Compiler >> generateLowLevelTryLock: vmOwnerLockAddress [
 		[cogit
 			MoveCq: 1 R: EAX;
 			RetN: 0.
-		 ^nil].
+		 ^self].
 	cogit
 		MoveCq: 1 R: EAX;
 		gen: MFENCE; "make the XCHG globally consistent"

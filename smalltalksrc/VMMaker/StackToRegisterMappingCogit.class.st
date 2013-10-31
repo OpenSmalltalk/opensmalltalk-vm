@@ -124,7 +124,7 @@ Class {
 
 { #category : #translation }
 StackToRegisterMappingCogit class >> ancilliaryClasses: options [
-	^((super ancilliaryClasses: options) copyWithout: CogBytecodeFixup),
+	^(super ancilliaryClasses: options),
 	  { CogSSBytecodeFixup. CogSimStackEntry. CogSSOptStatus }
 ]
 
@@ -538,6 +538,11 @@ StackToRegisterMappingCogit class >> initializeWithOptions: optionsDictionary [
 	self initializeSimStackConstants
 ]
 
+{ #category : #translation }
+StackToRegisterMappingCogit class >> isAcceptableAncilliaryClass: aClass [
+	^true
+]
+
 { #category : #accessing }
 StackToRegisterMappingCogit class >> isPushNilFunction [
 	"Answer the value of isPushNilFunction"
@@ -861,6 +866,13 @@ StackToRegisterMappingCogit class >> requiredMethodNames: options [
 		add: self isPushNilFunction;
 		add: self pushNilSizeFunction;
 		yourself
+]
+
+{ #category : #translation }
+StackToRegisterMappingCogit class >> shouldGenerateTypedefFor: aStructClass [
+	"Hack to work-around mutliple definitions.  Sometimes a type has been defined in an include."
+	^aStructClass ~~ CogBytecodeFixup "overridden by CogSSBytecodeFixup"
+	  and: [super shouldGenerateTypedefFor: aStructClass]
 ]
 
 { #category : #documentation }
@@ -1262,7 +1274,7 @@ StackToRegisterMappingCogit >> compileFrameBuild [
 	 Override to push the register receiver and register arguments, if any."
 	needsFrame ifFalse:
 		[self initSimStackForFramelessMethod: initialPC.
-		 ^self].
+		 ^0].
 	self genPushRegisterArgs.
 	super compileFrameBuild.
 	self initSimStackForFramefulMethod: initialPC

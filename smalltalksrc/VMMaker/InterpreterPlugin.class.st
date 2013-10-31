@@ -208,6 +208,7 @@ InterpreterPlugin class >> translateInDirectory: directory doInlining: inlineFla
 
 	self initialize.
 	cg := self buildCodeGeneratorUpTo: self.
+	cg inferTypesForImplicitlyTypedVariablesAndMethods.
 	cg storeCodeOnFile:  (directory fullNameFor: fname) doInlining: inlineFlag.
 	^cg exportedPrimitiveNames asArray
 ]

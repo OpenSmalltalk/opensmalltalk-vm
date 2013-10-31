@@ -96,9 +96,21 @@ InterpreterProxy >> callbackLeave: cbID [
 	^self notYetImplementedError
 ]
 
+{ #category : #'object access' }
+InterpreterProxy >> characterObjectOf: characterCode [
+	<option: #(atLeastVMProxyMajor:minor: 1 13)>
+	^StackInterpreter objectMemoryClass characterObjectOf: characterCode
+]
+
 { #category : #'special objects' }
 InterpreterProxy >> characterTable [
 	^Character characterTable
+]
+
+{ #category : #'object access' }
+InterpreterProxy >> characterValueOf: aCharacter [
+	<option: #(atLeastVMProxyMajor:minor: 1 13)>
+	^aCharacter asInteger
 ]
 
 { #category : #converting }
@@ -491,8 +503,26 @@ InterpreterProxy >> isBytes: oop [
 ]
 
 { #category : #testing }
+InterpreterProxy >> isCharacterObject: oop [
+	<option: #(atLeastVMProxyMajor:minor: 1 13)>
+	^oop isCharacter
+]
+
+{ #category : #testing }
+InterpreterProxy >> isCharacterValue: anInteger [
+	<option: #(atLeastVMProxyMajor:minor: 1 13)>
+	^(self isIntegerValue: anInteger) and: [anInteger >= 0]
+]
+
+{ #category : #testing }
 InterpreterProxy >> isFloatObject: oop [
 	^oop class == Float
+]
+
+{ #category : #testing }
+InterpreterProxy >> isImmediate: anObject [
+	<option: #(atLeastVMProxyMajor:minor: 1 13)>
+	^StackInterpreter objectMemoryClass isImmediate: anObject
 ]
 
 { #category : #'FFI support' }
@@ -532,6 +562,12 @@ InterpreterProxy >> isOopImmutable: anOop [
 InterpreterProxy >> isOopMutable: anOop [
 	<api>
 	^self notYetImplementedError
+]
+
+{ #category : #testing }
+InterpreterProxy >> isPinned: anObject [
+	<option: #(atLeastVMProxyMajor:minor: 1 13)>
+	^self shouldBeImplemented
 ]
 
 { #category : #testing }
@@ -663,6 +699,12 @@ InterpreterProxy >> ownVM: flags [
 	^self notYetImplementedError
 ]
 
+{ #category : #'object access' }
+InterpreterProxy >> pinObject: anObject [
+	<option: #(atLeastVMProxyMajor:minor: 1 13)>
+	^self shouldBeImplemented
+]
+
 { #category : #'stack access' }
 InterpreterProxy >> pop: nItems [
 	1 to: nItems do:[:i| stack removeLast].
@@ -729,6 +771,7 @@ InterpreterProxy >> primitiveErrorTable [
 
 { #category : #other }
 InterpreterProxy >> primitiveFail [
+	<returnTypeC: #sqInt>
 	"Set general (unspecified) primitive failure."
 	self primitiveFailFor: 1
 ]

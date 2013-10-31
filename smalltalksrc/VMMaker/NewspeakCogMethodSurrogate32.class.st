@@ -6,19 +6,19 @@ Class {
 
 { #category : #accessing }
 NewspeakCogMethodSurrogate32 class >> alignedByteSize [
-	^28
+	^24 + self baseHeaderSize
 ]
 
 { #category : #accessing }
 NewspeakCogMethodSurrogate32 >> nextMethod [
 	| v |
-	^(v := memory unsignedLongAt: address + 25) ~= 0 ifTrue:
+	^(v := memory unsignedLongAt: address + 21 + baseHeaderSize) ~= 0 ifTrue:
 		[cogit cCoerceSimple: v to: #'CogMethod *']
 ]
 
 { #category : #accessing }
 NewspeakCogMethodSurrogate32 >> nextMethod: aValue [
 	^memory
-		unsignedLongAt: address + 25
+		unsignedLongAt: address + baseHeaderSize + 21
 		put: ((aValue ifNotNil: [aValue asUnsignedInteger] ifNil: [0]))
 ]
