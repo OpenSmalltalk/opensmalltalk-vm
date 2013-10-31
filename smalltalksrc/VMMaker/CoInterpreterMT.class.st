@@ -1079,7 +1079,7 @@ CoInterpreterMT >> primitiveRelinquishProcessor [
 		[currentCStackPointer := cogit getCStackPointer.
 		 currentCFramePointer := cogit getCFramePointer.
 		 self cCode:
-			[self mem: (self cCoerceSimple: savedReenterInterpreter to: #'void *')
+			[self mem: savedReenterInterpreter asVoidPointer
 				cp: reenterInterpreter
 				y: (self sizeof: #'jmp_buf')].
 		 threadIndexAndFlags := self disownVM: DisownVMForProcessorRelinquish.
@@ -1217,7 +1217,7 @@ CoInterpreterMT >> returnToSchedulingLoopAndReleaseVMOrWakeThread: vmThread sour
 			 self assert: (range includes: cogit getCFramePointer)].
 	"We must use a copy of reenterInterpreter since we're giving up the VM to another vmThread."
 	self cCode:
-			[self mem: (self cCoerceSimple: savedReenterInterpreter to: #'void *')
+			[self mem: savedReenterInterpreter asVoidPointer
 				cp: reenterInterpreter
 				y: (self sizeof: #'jmp_buf')]
 		inSmalltalk:
