@@ -419,6 +419,7 @@ Class {
 		'ephemeronQueue',
 		'unscannedEphemerons',
 		'objStackInvalidBecause',
+		'invalidObjStackPage',
 		'markStack',
 		'weaklingStack',
 		'freeLists',
@@ -2939,6 +2940,7 @@ SpurMemoryManager >> eliminateAndFreeForwarders [
 	self assert: (self isForwarded: hiddenRootsObj) not.
 	(self isForwarded: specialObjectsOop) ifTrue:
 		[specialObjectsOop := self followForwarded: specialObjectsOop].
+	self followForwardedObjStacks.
 	scavenger followRememberedForwardersAndForgetFreeObjects.
 	self doScavenge: TenureByAge.
 	lowestForwarded := 0.
@@ -3063,21 +3065,22 @@ SpurMemoryManager >> ensureRoomOnObjStackAt: objStackRootIndex [
 								ifFalse: [self fetchPointer: ObjStackFreex ofObject: stackOrNil].
 		 freeOrNewPage ~= 0
 			ifTrue: "the free page list is always on the new page."
-				[self storePointer: ObjStackFreex ofObjStack: stackOrNil withValue: 0]
+				[self storePointer: ObjStackFreex ofObjStack: stackOrNil withValue: 0.
+				 self assert: (marking not or: [self isMarked: freeOrNewPage])]
 			ifFalse:
 				[freeOrNewPage := self allocateSlotsInOldSpace: ObjStackPageSlots
 										format: self wordIndexableFormat
 										classIndex: self wordSizeClassIndexPun.
 				 freeOrNewPage ifNil: [self error: 'no memory to allocate or extend obj stack'].
-				 self storePointer: ObjStackFreex ofObjStack: freeOrNewPage withValue: 0].
-		marking ifTrue: [self setIsMarkedOf: freeOrNewPage to: true].
-		self storePointer: ObjStackMyx ofObjStack: freeOrNewPage withValue: objStackRootIndex;
-			storePointer: ObjStackNextx ofObjStack: freeOrNewPage withValue: (stackOrNil = nilObj ifTrue: [0] ifFalse: [stackOrNil]);
-			storePointer: ObjStackTopx ofObjStack: freeOrNewPage withValue: 0;
-			storePointer: objStackRootIndex ofObject: hiddenRootsObj withValue: freeOrNewPage.
-		self assert: (self isValidObjStackAt: objStackRootIndex).
-		"Added a new page; now update and answer the relevant cached first page."
-		^self updateRootOfObjStack: objStackRootIndex with: freeOrNewPage].
+				 self storePointer: ObjStackFreex ofObjStack: freeOrNewPage withValue: 0..
+				 marking ifTrue: [self setIsMarkedOf: freeOrNewPage to: true]].
+		 self storePointer: ObjStackMyx ofObjStack: freeOrNewPage withValue: objStackRootIndex;
+			  storePointer: ObjStackNextx ofObjStack: freeOrNewPage withValue: (stackOrNil = nilObj ifTrue: [0] ifFalse: [stackOrNil]);
+			  storePointer: ObjStackTopx ofObjStack: freeOrNewPage withValue: 0;
+			  storePointer: objStackRootIndex ofObject: hiddenRootsObj withValue: freeOrNewPage.
+		 self assert: (self isValidObjStackAt: objStackRootIndex).
+		 "Added a new page; now update and answer the relevant cached first page."
+		 ^self updateRootOfObjStackAt: objStackRootIndex with: freeOrNewPage].
 	self assert: (self isValidObjStackAt: objStackRootIndex).
 	^stackOrNil
 ]
@@ -3128,16 +3131,6 @@ SpurMemoryManager >> enterIntoClassTable: aBehavior [
 { #category : #'header formats' }
 SpurMemoryManager >> ephemeronFormat [
 	^5
-]
-
-{ #category : #'gc - global' }
-SpurMemoryManager >> ephemeronQueue [
-	^self fetchPointer: EphemeronQueueRootIndex ofObject: hiddenRootsObj
-]
-
-{ #category : #'gc - global' }
-SpurMemoryManager >> ephemeronQueue: anObject [
-	self storePointer: EphemeronQueueRootIndex ofObject: hiddenRootsObj withValue: anObject
 ]
 
 { #category : #compaction }
@@ -3619,6 +3612,49 @@ SpurMemoryManager >> followForwarded: objOop [
 	^referent
 ]
 
+{ #category : #'obj stacks' }
+SpurMemoryManager >> followForwardedInObjStack: objStack atIndex: objStackRootIndex [
+	"Post-compact, follow forwarders in an obj stack."
+	| firstPage stackOrNil index field |
+	objStack = nilObj ifTrue:
+		[^objStack].
+	stackOrNil := objStack.
+	(self isForwarded: stackOrNil) ifTrue:
+		[stackOrNil := self followForwarded: stackOrNil.
+		 self updateRootOfObjStackAt: objStackRootIndex with: stackOrNil].
+	firstPage := stackOrNil.
+	[self assert: (self numSlotsOfAny: stackOrNil) = ObjStackPageSlots.
+	 self assert: (self fetchPointer: ObjStackMyx ofObject: stackOrNil) = objStackRootIndex.
+	 "There are four fixed slots in an obj stack, and a Topx of 0 indicates empty, so
+	   if there were 5 slots in an oop stack, full would be 2, and the last 0-rel index is 4.
+	   Hence the last index is topx + fixed slots - 1, or topx + ObjStackNextx"
+	 index := (self fetchPointer: ObjStackTopx ofObject: stackOrNil) + ObjStackNextx.
+	 "follow forwarded fields including ObjStackNextx and leave field containing the next link."
+	 [field := self fetchPointer: index ofObject: stackOrNil.
+	  (field ~= 0 and: [(self isNonImmediate: field) and: [self isForwarded: field]]) ifTrue:
+		[field := self followForwarded: field.
+		 self storePointer: index ofObjStack: stackOrNil withValue: field].
+	  (index := index - 1) > ObjStackFreex] whileTrue.
+	  self assert: field = (self fetchPointer: ObjStackNextx ofObject: stackOrNil).
+	 (stackOrNil := field) ~= 0] whileTrue.
+	[stackOrNil := self fetchPointer: ObjStackFreex ofObject: firstPage.
+	 stackOrNil ~= 0] whileTrue:
+		[(self isForwarded: stackOrNil) ifTrue:
+			[stackOrNil := self followForwarded: stackOrNil.
+			 self storePointer: ObjStackFreex ofObjStack: firstPage withValue: stackOrNil].
+		 firstPage := stackOrNil].
+	self assert: (self isValidObjStackAt: objStackRootIndex)
+]
+
+{ #category : #compaction }
+SpurMemoryManager >> followForwardedObjStacks [
+	"Compaction will move objStack pages as well as ordinary objects.
+	 So they need their slots followed."
+	self followForwardedInObjStack: markStack atIndex: MarkStackRootIndex.
+	self followForwardedInObjStack: weaklingStack atIndex: WeaklingStackRootIndex.
+	self followForwardedInObjStack: ephemeronQueue atIndex: EphemeronQueueRootIndex
+]
+
 { #category : #'become api' }
 SpurMemoryManager >> followForwardedObjectFields: objOop toDepth: depth [
 	"follow pointers in the object to depth.
@@ -3978,11 +4014,13 @@ SpurMemoryManager >> gcStartUsecs [
 { #category : #'gc - global' }
 SpurMemoryManager >> globalGarbageCollect [
 	self runLeakCheckerForFullGC: true.
+	self assert: self validObjStacks.
 	self markObjects.
 	self nilUnmarkedWeaklingSlots.
 	self freeUnmarkedObjectsAndSortAndCoalesceFreeSpace.
 	self bestFitCompact.
 	self eliminateAndFreeForwarders.
+	self assert: self validObjStacks.
 	self runLeakCheckerForFullGC: true
 ]
 
@@ -5005,6 +5043,7 @@ SpurMemoryManager >> isValidObjStack: objStack [
 	((self addressCouldBeObj: objStack)
 	 and: [(self numSlotsOfAny: objStack) = ObjStackPageSlots]) ifFalse:
 		[objStackInvalidBecause := 'first page not obj or wrong size'.
+		 invalidObjStackPage := objStack.
 		 ^false].
 	^self isValidObjStackPage: objStack
 		myIndex: (self fetchPointer: ObjStackMyx ofObject: objStack)
@@ -5026,15 +5065,23 @@ SpurMemoryManager >> isValidObjStackPage: objStackPage myIndex: myx [
 	<inline: false>
 	(self classIndexOf: objStackPage) = self wordSizeClassIndexPun ifFalse:
 		[objStackInvalidBecause := 'wong class index'.
+		 invalidObjStackPage := objStackPage.
 		 ^false].
 	(self formatOf: objStackPage) = self wordIndexableFormat ifFalse:
 		[objStackInvalidBecause := 'wong format'.
+		 invalidObjStackPage := objStackPage.
 		 ^false].
 	(self numSlotsOfAny: objStackPage) = ObjStackPageSlots ifFalse:
 		[objStackInvalidBecause := 'wong num slots'.
+		 invalidObjStackPage := objStackPage.
 		 ^false].
 	myx = (self fetchPointer: ObjStackMyx ofObject: objStackPage) ifFalse:
 		[objStackInvalidBecause := 'wong myx'.
+		 invalidObjStackPage := objStackPage.
+		 ^false].
+	(marking and: [(self isMarked: objStackPage) not]) ifTrue:
+		[objStackInvalidBecause := 'marking but page is unmarked'.
+		 invalidObjStackPage := objStackPage.
 		 ^false].
 	^true
 ]
@@ -5050,6 +5097,7 @@ SpurMemoryManager >> isValidObjStackPage: objStackPage myIndex: myx firstPage: i
 	[freeOrNextPage ~= 0] whileTrue:
 		[isFirstPage ifFalse:
 			[objStackInvalidBecause := 'free page on other than first page'.
+			 invalidObjStackPage := objStackPage.
 			 ^false].
 		 (self isValidObjStackPage: freeOrNextPage myIndex: myx) ifFalse:
 			[objStackInvalidBecause := self str: objStackInvalidBecause cat: ', on next page'.
@@ -5058,13 +5106,16 @@ SpurMemoryManager >> isValidObjStackPage: objStackPage myIndex: myx firstPage: i
 	isFirstPage ifTrue:
 		[(myx between: self classTableRootSlots and: self classTableRootSlots + self hiddenRootSlots - 1) ifFalse:
 			[objStackInvalidBecause := 'myx out of range'.
+			 invalidObjStackPage := objStackPage.
 			 ^false].
 		 (self fetchPointer: myx ofObject: hiddenRootsObj) = objStackPage ifFalse:
 			[objStackInvalidBecause := 'firstPage is not root'.
+			 invalidObjStackPage := objStackPage.
 			 ^false]].
 	index := self fetchPointer: ObjStackTopx ofObject: objStackPage.
 	(index between: 0 and: ObjStackLimit) ifFalse:
 		[objStackInvalidBecause := 'bad topx'.
+		 invalidObjStackPage := objStackPage.
 		 ^false].
 	freeOrNextPage := self fetchPointer: ObjStackNextx ofObject: objStackPage.
 	^freeOrNextPage = 0
@@ -5360,15 +5411,15 @@ SpurMemoryManager >> markAccessibleObjects [
 	marking := true.
 	self cCode: [] "for debugging markAndTrace: set (MarkStackRecord := OrderedCollection new)"
 		inSmalltalk: [MarkStackRecord ifNotNil: [MarkStackRecord resetTo: 1]].
-	self markAndTraceObjStack: self markStack andContents: false.
-	self assert: self validClassTableRootPages.
-	self markAndTraceObjStack: self ephemeronQueue andContents: true.
+	self markAndTraceObjStacks.
 	self assert: self validClassTableRootPages.
 	coInterpreter markAndTraceInterpreterOops: true.
 	self markAndTrace: self freeListsObj.
 	self markAndTrace: hiddenRootsObj.
 	self markAndTrace: self specialObjectsOop.
+	self assert: self validObjStacks.
 	self markWeaklingsAndMarkAndFireEphemerons.
+	self assert: self validObjStacks.
 	marking := false
 ]
 
@@ -5475,6 +5526,7 @@ SpurMemoryManager >> markAndTraceObjStack: stackOrNil andContents: markAndTraceC
 	| index field |
 	stackOrNil = nilObj ifTrue:
 		[^self].
+	self setIsMarkedOf: stackOrNil to: true.
 	self assert: (self numSlotsOfAny: stackOrNil) = ObjStackPageSlots.
 	field := self fetchPointer: ObjStackNextx ofObject: stackOrNil.
 	field ~= 0 ifTrue:
@@ -5493,6 +5545,13 @@ SpurMemoryManager >> markAndTraceObjStack: stackOrNil andContents: markAndTraceC
 		 (self isImmediate: field) ifFalse:
 			[self markAndTrace: field].
 		 index := index - 1]
+]
+
+{ #category : #'obj stacks' }
+SpurMemoryManager >> markAndTraceObjStacks [
+	self markAndTraceObjStack: markStack andContents: false.
+	self markAndTraceObjStack: weaklingStack andContents: false.
+	self markAndTraceObjStack: ephemeronQueue andContents: true
 ]
 
 { #category : #'weakness and ephemerality' }
@@ -5545,16 +5604,6 @@ SpurMemoryManager >> markObjects [
 	self initializeMarkStack.
 	self initializeWeaklingStack.
 	self markAccessibleObjects
-]
-
-{ #category : #'gc - global' }
-SpurMemoryManager >> markStack [
-	^self fetchPointer: MarkStackRootIndex ofObject: hiddenRootsObj
-]
-
-{ #category : #'gc - global' }
-SpurMemoryManager >> markStack: anObject [
-	self storePointer: MarkStackRootIndex ofObject: hiddenRootsObj withValue: anObject
 ]
 
 { #category : #'gc - global' }
@@ -5807,7 +5856,7 @@ SpurMemoryManager >> noCheckPush: objOop onObjStack: objStack [
 	self assert: (self isValidObjStack: objStack).
 	self cCode: [] "for debugging markAndTrace: set (MarkStackRecord := OrderedCollection new)"
 		inSmalltalk:
-			[objStack = markStack ifTrue:
+			[(self fetchPointer: ObjStackMyx ofObject: objStack) = MarkStackRootIndex ifTrue:
 				[MarkStackRecord ifNotNil: [MarkStackRecord addLast: {#push. objOop}]]].
 	topx := self fetchPointer: ObjStackTopx ofObject: objStack.
 	topx >= ObjStackLimit
@@ -6169,24 +6218,26 @@ SpurMemoryManager >> popObjStack: objStack [
 		[self assert: (self fetchPointer: ObjStackNextx ofObject: objStack) = 0.
 		 self cCode: [] "for debugging markAndTrace: set (MarkStackRecord := OrderedCollection new)"
 			inSmalltalk:
-				[MarkStackRecord ifNotNil:
-					[MarkStackRecord addLast: {#EMPTY. nil}]].
+				[(self fetchPointer: ObjStackMyx ofObject: objStack) = MarkStackRootIndex ifTrue:
+					[MarkStackRecord ifNotNil:
+						[MarkStackRecord addLast: {#EMPTY. nil}]]].
 		^nil].
 	topx := topx - 1.
 	top := self fetchPointer: topx + ObjStackFixedSlots ofObject: objStack.
 	self cCode: [] "for debugging markAndTrace: set (MarkStackRecord := OrderedCollection new)"
 		inSmalltalk:
-			[MarkStackRecord ifNotNil:
-				[(MarkStackRecord last first = #push and: [MarkStackRecord last last = top])
-					ifTrue: [MarkStackRecord removeLast]
-					ifFalse: [MarkStackRecord addLast: {#pop. top}]]].
+			[(self fetchPointer: ObjStackMyx ofObject: objStack) = MarkStackRootIndex ifTrue:
+				[MarkStackRecord ifNotNil:
+					[(MarkStackRecord last first = #push and: [MarkStackRecord last last = top])
+						ifTrue: [MarkStackRecord removeLast]
+						ifFalse: [MarkStackRecord addLast: {#pop. top}]]]].
 	self storePointer: ObjStackTopx ofObject: objStack withValue: topx.
 	(topx = 0
 	 and: [(nextPage := self fetchPointer: ObjStackNextx ofObject: objStack) ~= 0]) ifTrue:
 		[self storePointer: ObjStackFreex ofObjStack: nextPage withValue: objStack.
 		 self storePointer: ObjStackNextx ofObjStack: objStack withValue: 0.
 		 myx := self fetchPointer: ObjStackMyx ofObject: objStack.
-		 self updateRootOfObjStack: myx with: nextPage].
+		 self updateRootOfObjStackAt: myx with: nextPage].
 	^top
 ]
 
@@ -7334,11 +7385,25 @@ SpurMemoryManager >> storePointer: fieldIndex ofFreeChunk: objOop withValue: val
 ]
 
 { #category : #'object access' }
-SpurMemoryManager >> storePointer: fieldIndex ofObjStack: objOop withValue: valuePointer [
-	self assert: (self formatOf: objOop) = self wordIndexableFormat.
+SpurMemoryManager >> storePointer: fieldIndex ofObjStack: objStackPage withValue: thang [
+	self assert: (self formatOf: objStackPage) = self wordIndexableFormat.
+	self cCode: []
+		inSmalltalk:
+			[fieldIndex caseOf: {
+				[ObjStackTopx]		->	[self assert: (thang between: 0 and: ObjStackLimit)].
+				[ObjStackMyx]		->	[self assert: (thang between: MarkStackRootIndex and: EphemeronQueueRootIndex)].
+				[ObjStackFreex]	->	[self assert: (thang = 0
+														or: [(self addressCouldBeObj: thang)
+															and: [(self numSlotsOfAny: thang) = ObjStackPageSlots
+															and: [(self formatOf: thang) = self wordIndexableFormat]]])].
+				[ObjStackNextx]	->	[self assert: (thang = 0
+														or: [(self addressCouldBeObj: thang)
+															and: [(self numSlotsOfAny: thang) = ObjStackPageSlots
+															and: [(self formatOf: thang) = self wordIndexableFormat]]])]. }
+				otherwise: []].
 	^self
-		longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
-		put: valuePointer
+		longAt: objStackPage + self baseHeaderSize + (fieldIndex << self shiftForWord)
+		put: thang
 ]
 
 { #category : #'object access' }
@@ -7685,7 +7750,7 @@ SpurMemoryManager >> unlinkSolitaryFreeTreeNode: freeTreeNode [
 ]
 
 { #category : #'obj stacks' }
-SpurMemoryManager >> updateRootOfObjStack: objStackRootIndex with: newRootPage [
+SpurMemoryManager >> updateRootOfObjStackAt: objStackRootIndex with: newRootPage [
 	self storePointer: objStackRootIndex
 		ofObject: hiddenRootsObj
 		withValue: newRootPage.
@@ -7721,6 +7786,13 @@ SpurMemoryManager >> validClassTableRootPages [
 		(self fetchPointer: i ofObject: hiddenRootsObj) ~= nilObj ifTrue:
 			[^false]].
 	^true
+]
+
+{ #category : #'obj stacks' }
+SpurMemoryManager >> validObjStacks [
+	^(markStack = nilObj or: [self isValidObjStack: markStack])
+	  and: [(weaklingStack = nilObj or: [self isValidObjStack: weaklingStack])
+	  and: [ephemeronQueue = nilObj or: [self isValidObjStack: ephemeronQueue]]]
 ]
 
 { #category : #'memory access' }
