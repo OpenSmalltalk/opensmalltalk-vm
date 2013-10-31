@@ -135,6 +135,12 @@ SpurGenerationScavenger class >> declareCVarsIn: aCCodeGenerator [
 		declareC: 'sqInt rememberedSet[RememberedSetLimit + 1 /* ', (RememberedSetLimit + 1) printString, ' */]'
 ]
 
+{ #category : #translation }
+SpurGenerationScavenger class >> implicitReturnTypeFor: aSelector [
+	"Answer the return type for methods that don't have an explicit return."
+	^#void
+]
+
 { #category : #'class initialization' }
 SpurGenerationScavenger class >> initialize [
 	"SpurGenerationScavenger initialize"
@@ -358,7 +364,6 @@ SpurGenerationScavenger >> fireEphemeronsOnEphemeronList [
 	"There are ephemerons to be fired in the remembered set.
 	 Fire them and scavenge their keys.  Be careful since copyAndForward:
 	 can remember ephemerons (ephemerons pointing to ephemerons)."
-	<returnTypeC: #void>
 	| ephemeron ephemeronCorpse |
 	ephemeronList ifNil:
 		[^self].
@@ -768,7 +773,6 @@ SpurGenerationScavenger >> scavengeLoop [
 	 detect which referents in new space of weak arrays are dead and of ephemeron keys are only live due to
 	 ephemerons.  Read the class comment for a more in-depth description of the algorithm."
 	<inline: false>
-	<returnTypeC: #void>
 	| previousFutureSurvivorStart firstTime |
 	self assert: futureSurvivorStart = futureSpace start. "future space should be empty at the start"
 
@@ -777,6 +781,8 @@ SpurGenerationScavenger >> scavengeLoop [
 	firstTime := true.
 	previousRememberedSetSize := 0.
 	previousFutureSurvivorStart := futureSurvivorStart.
+
+	coInterpreter initStackPageGC.
 
 	[self scavengeRememberedSetStartingAt: previousRememberedSetSize.
 	 previousRememberedSetSize := rememberedSetSize.

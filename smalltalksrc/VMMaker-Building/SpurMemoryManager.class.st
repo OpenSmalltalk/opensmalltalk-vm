@@ -508,6 +508,11 @@ SpurMemoryManager class >> baseHeaderSize [
 	^8
 ]
 
+{ #category : #'simulation only' }
+SpurMemoryManager class >> characterObjectOf: characterCode [
+	^characterCode asCharacter
+]
+
 { #category : #accessing }
 SpurMemoryManager class >> classTableBitmapBytes [
 	"Max size of the classTableBitmap.  A liottle too large to contemplate allocating statically."
@@ -532,6 +537,12 @@ SpurMemoryManager class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
 		var: #extraRoots
 		declareC: 'sqInt *extraRoots[ExtraRootsSize + 1 /* ', (ExtraRootsSize + 1) printString, ' */]'.
+]
+
+{ #category : #translation }
+SpurMemoryManager class >> implicitReturnTypeFor: aSelector [
+	"Answer the return type for methods that don't have an explicit return."
+	^#void
 ]
 
 { #category : #'class initialization' }
@@ -732,6 +743,11 @@ SpurMemoryManager class >> initializeWithOptions: optionsDictionary [
 	SpurGenerationScavenger initialize
 ]
 
+{ #category : #'simulation only' }
+SpurMemoryManager class >> isImmediate: anObject [
+	self subclassResponsibility
+]
+
 { #category : #translation }
 SpurMemoryManager class >> isNonArgumentImplicitReceiverVariableName: aString [
 	^#('self' 'coInterpreter' 'manager' 'scavenger' 'segmentManager' 'heapMap') includes: aString
@@ -800,7 +816,6 @@ SpurMemoryManager >> addFreeChunkWithBytes: bytes at: address [
 SpurMemoryManager >> addFreeSubTree: freeTree [
 	"Add a freeChunk sub tree back into the large free chunk tree.
 	 This is for allocateOldSpaceChunkOf[Exactly]Bytes:."
-	<returnTypeC: #void>
 	| slotsInArg treeNode slotsInNode subNode |
 	slotsInArg := self numSlotsOfAny: freeTree.
 	self assert: slotsInArg / (self allocationUnit / self wordSize) >= self numFreeLists.
@@ -1840,7 +1855,6 @@ SpurMemoryManager >> bestFitCompact [
 	"Compact all of memory using best-fit, assuming free space is sorted
 	 and that the highest objects are recorded in highestObjects."
 
-	<returnTypeC: #void>
 	<inline: false>
 	| freePriorToExactFit |
 	self checkFreeSpace.
@@ -2199,6 +2213,7 @@ SpurMemoryManager >> checkOkayOop: oop [
 	<api>
 	<var: #oop type: #usqInt>
 	| classIndex fmt unusedBits unusedBitsInYoungObjects |
+	<var: #unusedBits type: #usqLong>
 
 	"address and size checks"
 	(self isImmediate: oop) ifTrue: [^true].
@@ -2721,7 +2736,6 @@ SpurMemoryManager >> copyAndForward: objOop withBytes: bytes toFreeChunk: freeCh
 SpurMemoryManager >> countNumClassPagesPreSwizzle: bytesToShift [
 	"Compute the used size of the class table before swizzling.  Needed to
 	 initialize the classTableBitmap which is populated during adjustAllOopsBy:"
-	<returnTypeC: #void>
 	| firstObj classTableRoot nilObjPreSwizzle |
 	firstObj := self objectStartingAt: newSpaceLimit. "a.k.a. nilObj"
 	"first five objects are nilObj, falseObj, trueObj, freeListsObj, classTableRootObj"
@@ -2777,7 +2791,6 @@ SpurMemoryManager >> displayObject [
 { #category : #'become implementation' }
 SpurMemoryManager >> doBecome: obj1 and: obj2 copyHash: copyHashFlag [
 	"Inner dispatch for two-way become"
-	<returnTypeC: #void>
 	| o1ClassIndex o2ClassIndex |
 	copyHashFlag ifFalse:
 		["in-lined
@@ -3111,11 +3124,10 @@ SpurMemoryManager >> exactFitCompact [
 	 forwarders will be done in a final pass.
 	 Leave the objects that don't fit exactly, and hence aren't moved, in highestObjects."
 
-	<returnTypeC: #void>
 	<inline: false>
 	| misfits first |
 	<var: #misfits type: #usqInt>
-	totalFreeOldSpace = 0 ifTrue: [^0].
+	totalFreeOldSpace = 0 ifTrue: [^self].
 	misfits := highestObjects last + self wordSize.
 	[statCompactPassCount := statCompactPassCount + 1.
 	 highestObjects from: misfits - self wordSize reverseDo:
@@ -3328,7 +3340,7 @@ SpurMemoryManager >> fillHighestObjectsWithMovableObjectsFrom: startObj upTo: li
 		[:o|
 		o >= limitObj ifTrue:
 			[highestObjects last: lastHighest.
-			 ^nil].
+			 ^self].
 		((self isForwarded: o) or: [self isPinned: o]) ifFalse:
 			[false "conceptually...: "
 				ifTrue: [highestObjects addLast: o]
@@ -4159,7 +4171,6 @@ SpurMemoryManager >> inFreeTreeReplace: treeNode with: newNode [
 SpurMemoryManager >> inPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag [
 	"Do become in place by swapping object contents."
 	| headerTemp temp1 temp2 o1HasYoung o2HasYoung |
-	<var: 'headerTemp' type: #usqLong>
 	self assert: (self numSlotsOf: obj1) = (self numSlotsOf: obj2).
 	"swap headers, but swapping headers swaps remembered bits;
 	 these need to be unswapped."
@@ -5357,7 +5368,6 @@ SpurMemoryManager >> markAllUnscannedEphemerons [
 
 { #category : #'gc - global' }
 SpurMemoryManager >> markAndFireEphemerons [
-	<returnTypeC: #void>
 	"After the initial scan-mark is complete ephemerons can be processed."
 	[coInterpreter markAndTraceUntracedReachableStackPages.
 	 self noUnscannedEphemerons ifTrue:
@@ -5372,7 +5382,6 @@ SpurMemoryManager >> markAndFireEphemerons [
 SpurMemoryManager >> markAndTrace: objOop [
 	"Mark the argument, and all objects reachable from it, and any remaining objects on the mark stack.
 	 Follow forwarding pointers in the scan."
-	<returnTypeC: #void>
 	| objToScan index field |
 	self assert: (self isNonImmediate: objOop).
 	"if markAndTrace: is to follow and eliminate forwarding pointers
@@ -5441,7 +5450,6 @@ SpurMemoryManager >> markAndTraceObjStack: stackOrNil andContents: markAndTraceC
 	 as the markStack or the ephemeronQueue.  It is a linked list of
 	 segments, with the hot end at the head of the list.  It is a word object.
 	 The stack pointer is in ObjStackTopx and 0 means empty."
-	<returnTypeC: #void>
 	<inline: false>
 	| index field |
 	stackOrNil = nilObj ifTrue:
@@ -5938,6 +5946,7 @@ SpurMemoryManager >> okayOop: signedOop [
 
 	| oop classIndex fmt unusedBits unusedBitsInYoungObjects |
 	<var: #oop type: #usqInt>
+	<var: #unusedBits type: #usqLong>
 	oop := self cCoerce: signedOop to: #usqInt.
 
 	"address and size checks"
@@ -6117,7 +6126,6 @@ SpurMemoryManager >> postBecomeOrCompactScanClassTable: effectsFlags [
 	 (not the classes themselves, since marking a class doesn't help in knowing if its index is used).
 	 On image load, and during incrememtal scan-mark and full GC, classIndices are marked.
 	 We can somehow avoid following classes from the classTable until after this mark phase."
-
 	self assert: self validClassTableRootPages.
 
 	(effectsFlags anyMask: BecamePointerObjectFlag+BecameCompiledMethodFlag) ifFalse: [^self].

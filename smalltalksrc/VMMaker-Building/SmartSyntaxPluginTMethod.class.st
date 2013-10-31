@@ -88,7 +88,7 @@ or an assignment of that expression to a local, and manipulate the state and par
 			 self fixUpReturns.
 			 self replaceSizeMessages.
 			 ^true]
-		ifFalse: [self removeFinalSelfReturn].
+		ifFalse: [self removeFinalSelfReturnIn: nil].
 	^false
 ]
 

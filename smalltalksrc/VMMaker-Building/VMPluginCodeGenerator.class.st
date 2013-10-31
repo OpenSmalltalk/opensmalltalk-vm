@@ -12,6 +12,32 @@ Class {
 	#category : #'VMMaker-Translation to C'
 }
 
+{ #category : #'C translation' }
+VMPluginCodeGenerator >> atLeastVMProxyMajor: major minor: minor [ 
+	^String streamContents:
+		[:s|
+		s	nextPutAll: 'VM_PROXY_MAJOR > '; print: major;
+			nextPutAll: ' || (VM_PROXY_MAJOR == '; print: major;
+			nextPutAll: ' && VM_PROXY_MINOR >= '; print: minor;
+			nextPutAll: ')']
+]
+
+{ #category : #utilities }
+VMPluginCodeGenerator >> compileToTMethodSelector: selector in: aClass [
+	"Compile a method to a TMethod"
+
+	| m |
+	m := (Compiler new
+			parse: (aClass sourceCodeAt: selector)
+			in: aClass
+			notifying: nil)
+				asTranslationMethodOfClass: self translationMethodClass.
+	m inferReturnTypeIn: self.
+	m returnType ifNil:
+		[m returnType: (self implicitReturnTypeFor: selector)].
+	^m
+]
+
 { #category : #inlining }
 VMPluginCodeGenerator >> doInlining: inlineFlag [
 "do inlining for a plugin"
@@ -158,6 +184,11 @@ void* ', pluginName,'_exports[][3] = {'.
 '
 ]
 
+{ #category : #'C translation' }
+VMPluginCodeGenerator >> emitIfdefForPluginFunctionOption: anArray on: aStream [ 
+	aStream nextPutAll: '#if '; nextPutAll: (self perform: anArray first withArguments: anArray allButFirst)
+]
+
 { #category : #public }
 VMPluginCodeGenerator >> generateCodeStringForPrimitives [
 "TPR - moved down from CCodeGenerator"
@@ -183,7 +214,10 @@ VMPluginCodeGenerator >> generateInterpreterProxyFunctionDeference: aNode on: aS
 	pluginsToClone do:
 		[:s| | cs |
 		cs := self cFunctionNameFor: s.
-		aStream crtab: anInteger; nextPutAll: cs; nextPutAll: ' = interpreterProxy->'; nextPutAll: cs; nextPut: $;].
+		self withOptionalVerbiageFor: s
+			on: aStream
+			do: [aStream crtab: anInteger; nextPutAll: cs; nextPutAll: ' = interpreterProxy->'; nextPutAll: cs; nextPut: $;]
+			ifOptionalDo: [aStream crtab: anInteger; nextPutAll: cs; nextPutAll: ' = 0;']].
 	aStream cr; nextPutAll: '#endif /* !defined(SQUEAK_BUILTIN_PLUGIN) */'.
 ]
 
@@ -284,14 +318,25 @@ VMPluginCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 				copyReplaceAll: functionName
 				with: '(*', functionName, ')').
 		aStream nextPut: $;; cr].
-	aStream nextPutAll: '#else /* !defined(SQUEAK_BUILTIN_PLUGIN) */'; cr.
+	aStream nextPutAll: '#else /* !defined(SQUEAK_BUILTIN_PLUGIN) */'.
 	pluginsToClone do:
-		[:selector|
-		aStream nextPutAll: 'extern '.
-		(self compileToTMethodSelector: selector in: InterpreterProxy)
-			static: false;
-			emitCFunctionPrototype: aStream generator: self.
-		aStream nextPut: $;; cr].
+		[:selector| | m |
+		m := self compileToTMethodSelector: selector in: InterpreterProxy.
+		self withOptionalVerbiageFor: selector
+			on: aStream
+			do: [aStream cr; nextPutAll: 'extern '.
+				m static: false; emitCFunctionPrototype: aStream generator: self.
+				aStream nextPut: $;]
+			ifOptionalDo:
+				[aStream cr; nextPutAll: '# define '.
+				 (TSendNode new
+					setSelector: selector
+						receiver: (TVariableNode new setName: 'interpreterProxy')
+							arguments: (m args collect: [:a| TVariableNode new setName: a]))
+					emitCCodeAsArgumentOn: aStream
+						level: 0
+							generator: self.
+				 aStream nextPutAll: ' 0']].
 	aStream cr; nextPutAll: 'extern'.
 	aStream cr; nextPutAll: '#endif'; cr
 ]
@@ -381,4 +426,19 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 
 	stream cr; crtab; nextPutAll:'return VM;'; cr; nextPutAll:'}'; cr.
 	stream close.
+]
+
+{ #category : #'C translation' }
+VMPluginCodeGenerator >> withOptionalVerbiageFor: selector on: aStream do: mainBlock ifOptionalDo: optionalBlock [
+	(InterpreterProxy >> selector pragmaAt: #option:)
+		ifNil:
+			[mainBlock value]
+		ifNotNil:
+			[:pragma|
+			 aStream cr.
+			 self emitIfdefForPluginFunctionOption: pragma arguments first on: aStream.
+			 mainBlock value.
+			 aStream cr; nextPutAll: '#else'.
+			 optionalBlock value.
+			 aStream cr; nextPutAll: '#endif']
 ]

@@ -1663,7 +1663,7 @@ StackInterpreter >> addNewMethodToCache: classObj [
 			methodCache at: probe + MethodCacheMethod put: newMethod.
 			methodCache at: probe + MethodCachePrimFunction put: (self cCoerce: primitiveFunctionPointer to: #long).
 			lastMethodCacheProbeWrite := probe. "this for primitiveExternalMethod"
-			^ nil]].
+			^self]].
 
 	"OK, we failed to find an entry -- install at the first slot..."
 	probe := hash bitAnd: MethodCacheMask.  "first probe"
@@ -4162,7 +4162,8 @@ StackInterpreter >> doubleExtendedDoAnythingBytecode [
 	top := self internalStackTop.
 	opType = 7 ifTrue:
 		[lit := self literal: byte3.
-		 ^objectMemory storePointer: ValueIndex ofObject: lit withValue: top].
+		 objectMemory storePointer: ValueIndex ofObject: lit withValue: top.
+		 ^self].
 	"opType = 5 is store; opType = 6 = storePop"
 	opType = 6 ifTrue:
 		[self internalPop: 1].
@@ -6270,6 +6271,32 @@ StackInterpreter >> initExtensions [
 	self cppIf: MULTIPLEBYTECODESETS ifTrue: [extA := extB := 0]
 ]
 
+{ #category : #'object memory support' }
+StackInterpreter >> initStackPageGC [
+	"GC of pages.  Throwing away all stack pages on full GC is simple but dangerous
+	 because it causes us to allocate lots of contexts immediately before a GC.
+	 Reclaiming pages whose top context is not referenced is poor because it would
+	 take N incrementalGCs to reclaim N unused pages.  Only the page whose top
+	 context is not referred to by the bottom context of any other page would be
+	 reclaimed.  Not until the next GC would the page whose top contect is the
+	 previously reclaimed page's base frame's bottom context be reclaimed.
+
+	 Better is to not mark stack pages until their contexts are encountered.  We can
+	 eagerly trace the active page and the page reachable from its bottom context
+	 if any, and so on.  Other pages can be marked when we encounter a married
+	 context."
+	<var: #thePage type: #'StackPage *'>
+	<inline: true>
+	"Need to write back the frame pointers unless all pages are free (as in snapshot)"
+	stackPage ~= 0 ifTrue:
+		[self externalWriteBackHeadFramePointers].
+
+	0 to: numStackPages - 1 do:
+		[:i| | thePage |
+		thePage := stackPages stackPageAt: i.
+		thePage trace: 0]
+]
+
 { #category : #initialization }
 StackInterpreter >> initStackPages [
 	"Initialize the stackPages.  This version is only for simulation
@@ -6525,7 +6552,7 @@ StackInterpreter >> integerArg: index [
 	"Like #stackIntegerValue: but access method arguments left-to-right"
 	| oop |
 	oop := self methodArg: index.
-	oop = 0 ifTrue:[^0.0]. "methodArg: failed"
+	oop = 0 ifTrue:[^0]. "methodArg: failed"
 	^self checkedIntegerValueOf: oop
 ]
 
@@ -7172,7 +7199,8 @@ StackInterpreter >> longPrintOop: oop [
 	 or: [(oop bitAnd: objectMemory allocationUnit - 1) ~= 0
 	 or: [(objectMemory isFreeObject: oop)
 	 or: [objectMemory isForwarded: oop]]]]) ifTrue:
-		[^self printOop: oop].
+		[self printOop: oop.
+		 ^self].
 	self printHex: oop.
 	(objectMemory fetchClassOfNonImm: oop)
 		ifNil: [self print: ' has a nil class!!']
@@ -7795,14 +7823,7 @@ StackInterpreter >> markAndTraceStackPages: fullGCFlag [
 	| thePage context |
 	<var: #thePage type: #'StackPage *'>
 	<inline: false>
-	"Need to write back the frame pointers unless all pages are free (as in snapshot)"
-	stackPage ~= 0 ifTrue:
-		[self externalWriteBackHeadFramePointers].
-
-	0 to: numStackPages - 1 do:
-		[:i|
-		thePage := stackPages stackPageAt: i.
-		thePage trace: 0].
+	self initStackPageGC.
 
 	"On an incremental GC simply consider all non-free stack pages to be roots."
 	fullGCFlag ifFalse:
@@ -8349,7 +8370,7 @@ StackInterpreter >> objectArg: index [
 	"Like #stackObjectValue: but access method arguments left-to-right"
 	| oop |
 	oop := self methodArg: index.
-	oop = 0 ifTrue:[^0.0]. "methodArg: failed"
+	oop = 0 ifTrue:[^0]. "methodArg: failed"
 	(objectMemory isIntegerObject: oop) ifTrue: [self primitiveFail. ^ nil].
 	^oop
 ]
@@ -9452,7 +9473,9 @@ StackInterpreter >> printNameOfClass: classOop count: cnt [
 	classNameIndex ifNil:
 		[self print: '??nil cnidx??'.
 		 ^self].
-	(classOop isNil or: [classOop = 0 or: [cnt <= 0]]) ifTrue: [^self print: 'bad class'].
+	(classOop isNil or: [classOop = 0 or: [cnt <= 0]]) ifTrue:
+		[self print: 'bad class'.
+		 ^self].
 	numSlots := objectMemory numSlotsOf: classOop.
 	(numSlots = metaclassNumSlots
 	 and: [metaclassNumSlots > thisClassIndex])

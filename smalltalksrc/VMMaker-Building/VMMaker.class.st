@@ -790,7 +790,8 @@ VMMaker >> couldNotOpenFile: fileName [
 { #category : #initialize }
 VMMaker >> createCodeGenerator [
 "set up a CCodeGenerator for this VMMaker"
-	^CCodeGenerator new initialize
+	^CCodeGenerator new
+		vmMaker: self;
 		logger: logger;
 		options: optionsDictionary;
 		yourself
@@ -798,7 +799,8 @@ VMMaker >> createCodeGenerator [
 
 { #category : #initialize }
 VMMaker >> createCogitCodeGenerator [
-	^CCodeGenerator new initialize
+	^CCodeGenerator new
+		vmMaker: self;
 		logger: logger;
 		options: optionsDictionary;
 		yourself
@@ -935,6 +937,9 @@ VMMaker >> generateCogitFile [
 	cogitClass := self cogitClass.
 	cg removeUnneededBuiltins.
 	cg vmClass preGenerationHook: cg.
+
+	cg inferTypesForImplicitlyTypedVariablesAndMethods.
+
 	cg storeCodeOnFile: (self sourceFilePathFor: cogitClass sourceFileName) doInlining: cogitClass doInlining.
 	cg vmClass additionalHeadersDo:
 		[:headerName :headerContents| | filePath |
@@ -1076,6 +1081,8 @@ VMMaker >> generateInterpreterFile [
 	self needsToRegenerateInterpreterFile ifFalse: [^nil].
 	cg removeUnneededBuiltins.
 	self interpreterClass preGenerationHook: cg.
+
+	cg inferTypesForImplicitlyTypedVariablesAndMethods.
 
 	vmHeaderContents := cg vmHeaderContentsWithBytesPerWord: self wordSize.
 	(cg needToGenerateHeader: self interpreterHeaderName file: self interpreterHeaderPath contents: vmHeaderContents) ifTrue:

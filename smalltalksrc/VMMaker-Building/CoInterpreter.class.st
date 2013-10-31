@@ -2034,7 +2034,6 @@ CoInterpreter >> cogCodeSize [
 { #category : #'compiled methods' }
 CoInterpreter >> cogMethodOf: aMethodOop [
 	<api>
-	<returnTypeC: #'CogMethod *'>
 	| methodHeader |
 	methodHeader := self rawHeaderOf: aMethodOop.
 	self assert: ((objectMemory isNonImmediate: methodHeader)
@@ -4760,7 +4759,6 @@ CoInterpreter >> mframeCogMethod: theFP [
 	"Answer the Cog method for a machine code frame.  This may be
 	 either a full CogMethod or merely a CogBlockMethod rump header."
 	<var: #theFP type: #'char *'>
-	<returnTypeC: #'CogBlockMethod *'>
 	^self cCoerceSimple: (self mframeMethod: theFP) to: #'CogBlockMethod *'
 ]
 
@@ -4810,6 +4808,7 @@ CoInterpreter >> mframeMethod: theFP [
 
 { #category : #'frame access' }
 CoInterpreter >> mframeNumArgs: theFP [
+	<returnTypeC: #sqInt>
 	^(self mframeCogMethod: theFP) cmNumArgs
 ]
 
