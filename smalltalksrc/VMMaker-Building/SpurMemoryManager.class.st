@@ -2277,9 +2277,9 @@ SpurMemoryManager >> checkOopHasOkayClass: obj [
 	 of the instance. If OK answer true.  If  not, print reason and answer false."
 
 	<api>
-	<var: #oop type: #usqInt>
+	<var: #obj type: #usqInt>
 	| objClass objFormat |
-	<var: #oopClass type: #usqInt>
+	<var: #objClass type: #usqInt>
 
 	(self checkOkayOop: obj) ifFalse:
 		[^false].
@@ -2724,7 +2724,7 @@ SpurMemoryManager >> copyAndForward: objOop withBytes: bytes toFreeChunk: freeCh
 	<inline: true>
 	| startOfObj freeObj |
 	startOfObj := self startOfObject: objOop.
-	self mem: freeChunk cp: startOfObj y: bytes.
+	self mem: freeChunk asVoidPointer cp: startOfObj asVoidPointer y: bytes.
 	freeObj := freeChunk + (objOop - startOfObj).
 	"leave it to followRememberedForwarders to remember..."
 	"(self isRemembered: objOop) ifTrue:
@@ -3437,7 +3437,7 @@ SpurMemoryManager >> firstFixedFieldOfMaybeImmediate: oop [
 	"for the message send breakpoint; selectors can be immediates."
 	<inline: false>
 	^(self isImmediate: oop)
-		ifTrue: [oop]
+		ifTrue: [oop asVoidPointer]
 		ifFalse: [self firstFixedField: oop]
 ]
 
@@ -5603,8 +5603,8 @@ SpurMemoryManager >> moveMisfitsInHighestObjectsBack: savedLimit [
 	(highestObjects first = highestObjects start
 	 and: [highestObjects last < highestObjects limit]) ifTrue:
 		[newMisfitsPosition := highestObjects limit.
-		 self mem: newMisfitsPosition
-			mo: highestObjects last + self wordSize
+		 self mem: newMisfitsPosition asVoidPointer
+			mo: (highestObjects last + self wordSize) asVoidPointer
 			ve: savedLimit - newMisfitsPosition.
 		 highestObjects limit: savedLimit.
 		 ^newMisfitsPosition].
@@ -5632,19 +5632,19 @@ SpurMemoryManager >> moveMisfitsToTopOfHighestObjects: misfits [
 		 ^oldLimit].
 	misfits <= highestObjects last ifTrue:
 		[bytesToMove := highestObjects last + self wordSize - misfits.
-		 self mem: highestObjects limit - bytesToMove
-			mo: misfits
+		 self mem: (highestObjects limit - bytesToMove) asVoidPointer
+			mo: misfits asVoidPointer
 			ve: bytesToMove.
 		 highestObjects limit: misfits - self wordSize.
 		 ^oldLimit].
 	"misfits wrapped; move in two stages to preserve ordering"
 	bytesToMove := highestObjects last - highestObjects start.
-	self mem: misfits - bytesToMove
-		mo: misfits
+	self mem: (misfits - bytesToMove) asVoidPointer
+		mo: misfits asVoidPointer
 		ve: oldLimit - misfits.
 	highestObjects limit: misfits - bytesToMove.
-	self mem: oldLimit - bytesToMove
-		mo: highestObjects start
+	self mem: (oldLimit - bytesToMove)  asVoidPointer
+		mo: highestObjects start asVoidPointer
 		ve: bytesToMove.
 	^oldLimit
 ]

@@ -57,13 +57,14 @@ SpurSegmentManager >> addSegmentOfSize: ammount [
 	<inline: false>
 	| allocatedSize |
 	<var: #newSeg type: #'SpurSegmentInfo *'>
+	<var: #segAddress type: #'void *'>
 	(manager "sent to the manager so that the simulator can increase memory to simulate a new segment"
 			sqAllocateMemorySegmentOfSize: ammount
-			Above: (segments at: 0) segStart + (segments at: 0) segSize
+			Above: ((segments at: 0) segStart + (segments at: 0) segSize) asVoidPointer
 			AllocatedSizeInto: (self cCode: [self addressOf: allocatedSize]
 									inSmalltalk: [[:sz| allocatedSize := sz]])) ifNotNil:
 		[:segAddress| | newSegIndex newSeg |
-		 newSegIndex := self insertSegmentFor: segAddress.
+		 newSegIndex := self insertSegmentFor: segAddress asUnsignedLong.
 		 newSeg := self addressOf: (segments at: newSegIndex).
 		 newSeg
 			segStart: segAddress;
@@ -132,7 +133,7 @@ SpurSegmentManager >> allocateOrExtendSegmentInfos [
 		 ^self].
 	newNumSegs := numSegInfos + 16.
 	segments := self
-						cCode: [self re: newNumSegs * (self sizeof: SpurSegmentInfo) alloc: segments]
+						cCode: [self re: segments alloc: newNumSegs * (self sizeof: SpurSegmentInfo)]
 						inSmalltalk: [CArrayAccessor on: segments object,
 									((numSegInfos to: newNumSegs) collect: [:i| SpurSegmentInfo new])].
 	self cCode:

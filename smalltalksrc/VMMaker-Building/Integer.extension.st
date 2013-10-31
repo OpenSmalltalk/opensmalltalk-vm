@@ -12,6 +12,11 @@ Integer >> asUnsignedInteger [
 ]
 
 { #category : #'*VMMaker-interpreter simulator' }
+Integer >> asVoidPointer [
+	^self
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
 Integer >> coerceTo: cTypeString sim: interpreter [
 
 	| unitSize |

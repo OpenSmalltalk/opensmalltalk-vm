@@ -1269,15 +1269,19 @@ StackInterpreter class >> patchInterpGCCPPC: fileName [
 ]
 
 { #category : #translation }
-StackInterpreter class >> preGenerationHook: aCCodeGenerator [
+StackInterpreter class >> preGenerationHook: aCCodeGen [
 	"Perform any last-minute changes to the code generator immediately
 	 before it performs code analysis and generation.  In this case, make
 	 all non-exported methods private."
 	| publicMethodNames |
-	publicMethodNames := (self requiredMethodNames: aCCodeGenerator options)
+	self primitiveTable do:
+		[:s|
+		(s isSymbol and: [s ~~ #primitiveFail]) ifTrue:
+			[(aCCodeGen methodNamed: s) returnType: #void]].
+	publicMethodNames := (self requiredMethodNames: aCCodeGen options)
 								copyWithoutAll: (self primitiveTable
 														copyWithout: #primitiveFail).
-	aCCodeGenerator selectorsAndMethodsDo:
+	aCCodeGen selectorsAndMethodsDo:
 		[:s :m|
 		(m export or: [publicMethodNames includes: s]) ifTrue:
 			[m static: false]]
@@ -5440,6 +5444,7 @@ StackInterpreter >> followForwardedFrameContents: theFP stackPointer: theSP [
 	"follow pointers in the current stack frame up to theSP."
 	<var: #theFP type: #'char *'>
 	<var: #theSP type: #'char *'>
+	<var: #ptr type: #'char *'>
 	theFP + (self frameStackedReceiverOffset: theFP)
 		to: theFP + FoxCallerSavedIP + BytesPerWord
 		by: BytesPerWord
@@ -5449,7 +5454,7 @@ StackInterpreter >> followForwardedFrameContents: theFP stackPointer: theSP [
 			 and: [objectMemory isForwarded: oop]) ifTrue:
 				[stackPages longAt: ptr put: (objectMemory followForwarded: oop)]].
 	theSP
-		to: theFP + FoxReceiver
+		to: (self frameReceiverOffset: theFP)
 		by: BytesPerWord
 		do: [:ptr| | oop |
 			oop := stackPages longAt: ptr.
@@ -5984,8 +5989,8 @@ StackInterpreter >> handleSpecialSelectorSendFaultFor: obj fp: theFP sp: theSP [
 	 send accessing a forwarded object.
 	 Unforward the object on the stack and in inst vars and answer its target."
 	<inline: false>
-	<var: #fp type: #'char *'>
-	<var: #sp type: #'char *'>
+	<var: #theFP type: #'char *'>
+	<var: #theSP type: #'char *'>
 	self assert: (objectMemory isOopForwarded: obj).
 
 	self followForwardedFrameContents: theFP stackPointer: theSP.
@@ -9046,7 +9051,6 @@ StackInterpreter >> printCallStackOf: aContextOrProcessOrFrame [
 	<api>
 	| context |
 	<inline: false>
-	<var: #theFP type: #'char *'>
 	(stackPages couldBeFramePointer: aContextOrProcessOrFrame) ifTrue:
 		[^self printCallStackFP: (self cCoerceSimple: aContextOrProcessOrFrame to: #'char *')].
 	((objectMemory isContext: aContextOrProcessOrFrame) not
@@ -12135,7 +12139,6 @@ StackInterpreter >> updateStateOfSpouseContextForFrame: theFP WithSP: theSP [
 	<var: #theFP type: #'char *'>
 	<var: #theSP type: #'char *'>
 	<var: #pointer type: #'char *'>
-	<var: #argsPointer type: #'char *'>
 	self assert: (self frameHasContext: theFP).
 	theContext := self frameContext: theFP.
 	self assert: (self frameReceiver: theFP)

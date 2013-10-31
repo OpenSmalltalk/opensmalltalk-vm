@@ -2379,7 +2379,7 @@ Cogit >> bytecodePCFor: mcpc startBcpc: startbcpc in: cogMethod [
 		mapFor: cogMethod
 		bcpc: startbcpc
 		performUntil: #findMcpc:Bcpc:MatchingMcpc:
-		arg: (self cCoerceSimple: mcpc to: #'void *')
+		arg: mcpc asVoidPointer
 ]
 
 { #category : #initialization }
@@ -3607,8 +3607,7 @@ Cogit >> compileCPIC: cPIC Case0: case0CogMethod Case1Method: case1Method tag: c
 	 and: [coInterpreter methodHasCogMethod: case1Method])
 		ifTrue:
 			[operand := 0.
-			 targetEntry := self cCoerceSimple: (coInterpreter cogMethodOf: case1Method) asInteger + cmNoCheckEntryOffset
-								to: #'void *']
+			 targetEntry := ((coInterpreter cogMethodOf: case1Method) asInteger + cmNoCheckEntryOffset) asVoidPointer]
 		ifFalse:
 			[self assert: (case1Method isNil or: [(objectMemory isYoung: case1Method) not]).
 			 operand := case1Method.
@@ -6819,7 +6818,7 @@ Cogit >> mcPCFor: bcpc startBcpc: startbcpc in: cogMethod [
 				mapFor: cogMethod
 				bcpc: startbcpc
 				performUntil: #findMcpc:Bcpc:MatchingBcpc:
-				arg: (self cCoerceSimple: bcpc to: #'void *').
+				arg: bcpc asVoidPointer.
 	^absPC ~= 0
 		ifTrue: [absPC asUnsignedInteger - cogMethod asUnsignedInteger]
 		ifFalse: [absPC]

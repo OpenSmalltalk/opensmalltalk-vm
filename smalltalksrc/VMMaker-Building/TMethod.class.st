@@ -49,6 +49,59 @@ TMethod >> addTypeForSelf [
 					ifFalse: [typeForSelf, ' self'])]
 ]
 
+{ #category : #'type inference' }
+TMethod >> addTypesFor: node to: typeSet in: aCodeGen [
+	| expr |
+	expr := node.
+	[expr isAssignment or: [expr isStmtList]] whileTrue:
+		[expr isAssignment ifTrue:
+			[expr := expr variable].
+		 expr isStmtList ifTrue:
+			[expr := expr statements last]].
+	expr isSend ifTrue:
+		[(#(ifTrue: ifFalse: ifTrue:ifFalse: ifFalse:ifTrue:) includes: expr selector) ifTrue:
+			[^expr args do:
+				[:block|
+				self addTypesFor: block to: typeSet in: aCodeGen]].
+		 (#(= ~= == ~~ < > <= >= anyMask: noMask:) includes: expr selector) ifTrue:
+			[^typeSet add: #sqInt].
+		 (#(+ - * / // \\ mod: quo: bitAnd: bitClear: bitOr: bitXor: bitShift:) includes: expr selector) ifTrue:
+			[| types |
+			 types := Set new.
+			 self addTypesFor: expr receiver to: types in: aCodeGen.
+			 (types size = 1 and: [types anyOne last = $*]) ifTrue: "pointer arithmetic"
+				[^typeSet add: types anyOne].
+			 self addTypesFor: expr args first to: types in: aCodeGen.
+			 types := self harmonizeSignedAndUnsignedTypesIn: types.
+			 types size = 2 ifTrue:
+				[(types includes: #double) ifTrue:
+					[^typeSet add: #double].
+				 (types includes: #float) ifTrue:
+					[^typeSet add: #float].
+				^self]. "don't know; leave unspecified."
+			^types notEmpty ifTrue:
+				[typeSet add: types anyOne]].
+		 ^(aCodeGen returnTypeForSend: expr) ifNotNil:
+			[:type| typeSet add: type]].
+	expr isVariable ifTrue:
+		[(aCodeGen typeOfVariable: expr name)
+			ifNotNil: [:type| typeSet add: type]
+			ifNil: [typeSet add: (expr name = 'self'
+										ifTrue: [#void]
+										ifFalse: [#sqInt])]].
+	expr isConstant ifTrue:
+		[| val |
+		 val := expr value.
+		 val isInteger ifTrue:
+			[typeSet add: ((val >= 0 ifTrue: [val] ifFalse: [-1 - val]) highBit <= 32
+									ifTrue: [#sqInt]
+									ifFalse: [#sqLong])].
+		 (#(nil true false) includes: val) ifTrue:
+			[typeSet add: #sqInt].
+		 val isFloat ifTrue:
+			[typeSet add: #float]]
+]
+
 { #category : #'inlining support' }
 TMethod >> addVarsDeclarationsAndLabelsOf: methodToBeInlined except: doNotRename [
 	"Prepare to inline the body of the given method into the receiver by making the args and locals of the argument to the receiver be locals of the receiver. Record any type declarations for these variables. Record labels. Assumes that the variables have already be renamed to avoid name clashes."
@@ -269,6 +322,17 @@ TMethod >> checkSuccessExpr [
 	expr := 'successFlag ifFalse: [^ nil ]'.
 	^ self statementsFor: expr varName: ''
 
+]
+
+{ #category : #accessing }
+TMethod >> checkedDeclarationAt: aVariableName put: aDeclaration in: aCCodeGen [
+	((args includes: aVariableName) or: [locals includes: aVariableName]) ifFalse:
+		[| msg |
+		 msg := definingClass name, '>>', selector, ' contains declaration for non-existent variable ', aVariableName.
+		 aCCodeGen
+			ifNotNil: [aCCodeGen logger show: msg; cr]
+			ifNil: [self error: msg]].
+	^self declarationAt: aVariableName  "<String>" put: aDeclaration
 ]
 
 { #category : #accessing }
@@ -884,7 +948,7 @@ TMethod >> hasUnrenamableCCode [
 TMethod >> inferReturnTypeFromReturnsIn: aCodeGen [
 	"Attempt to infer the return type of the receiver from returns in the parse tree."
 
-	returnType isNil ifTrue:"the initial default"
+	returnType ifNil: "the initial default"
 		[aCodeGen
 			pushScope: declarations
 			while:
@@ -894,31 +958,8 @@ TMethod >> inferReturnTypeFromReturnsIn: aCodeGen [
 				 parseTree nodesDo:
 					[:node|
 					node isReturn ifTrue:
-						[| expr |
-						 hasReturn := true.
-						 expr := node expression.
-						 expr isAssignment ifTrue:
-							[expr := expr variable].
-						 expr isSend ifTrue:
-							[(aCodeGen returnTypeForSend: expr) ifNotNil:
-								[:type| returnTypes add: type]].
-						 expr isVariable ifTrue:
-							[(aCodeGen typeOfVariable: expr name)
-								ifNotNil: [:type| returnTypes add: type]
-								ifNil: [returnTypes add: (expr name = 'self'
-															ifTrue: [#void]
-															ifFalse: [#sqInt])]].
-						 expr isConstant ifTrue:
-							[| val |
-							 val := expr value.
-							 val isInteger ifTrue:
-								[returnTypes add: ((val >= 0 ifTrue: [val] ifFalse: [-1 - val]) highBit <= 32
-														ifTrue: [#sqInt]
-														ifFalse: [#sqLong])].
-							 (val == true or: [val == false]) ifTrue:
-								[returnTypes add: #sqInt].
-							 val isFloat ifTrue:
-								[returnTypes add: #float]]]].
+						[hasReturn := true.
+						 self addTypesFor: node expression to: returnTypes in: aCodeGen]].
 				returnTypes remove: #implicit ifAbsent: [].
 				returnTypes := self harmonizeSignedAndUnsignedTypesIn: returnTypes.
 				hasReturn
@@ -937,8 +978,6 @@ TMethod >> inferReturnTypeIn: aCodeGen [
 
 	| existingReturnType |
 	existingReturnType := returnType.
-	self removeFinalSelfReturnIn: aCodeGen.	"must preceed recordDeclarations because this may set returnType"
-	self recordDeclarations.
 	self inferReturnTypeFromReturnsIn: aCodeGen.
 
 	"If the return type is now void, replace any and all ^expr with expr. ^self"
@@ -1699,13 +1738,15 @@ TMethod >> properties: anAdditionalMethodState [
 ]
 
 { #category : #transformations }
-TMethod >> recordDeclarations [
+TMethod >> recordDeclarationsIn: aCCodeGen [
 	"Record C type declarations of the forms
-
+		<returnTypeC: 'float'>
+		<var: #foo declareC: 'float foo'>
+		<var: #foo type:'float'>
+	 or the older, obsolete
 		self returnTypeC: 'float'.
 		self var: #foo declareC: 'float foo'
 		self var: #foo type:'float'.
-
 	 and remove the declarations from the method body."
 
 	| newStatements |
@@ -1713,13 +1754,17 @@ TMethod >> recordDeclarations [
 		[properties pragmas do:
 			[:pragma|
 			pragma keyword = #var:declareC: ifTrue:
-				[self declarationAt: pragma arguments first asString put: pragma arguments last].
+				[self checkedDeclarationAt: pragma arguments first asString
+					put: pragma arguments last
+					in: aCCodeGen].
 			pragma keyword = #var:type: ifTrue:
 				[| varName varType |
 				varName := pragma arguments first asString.
 				varType := pragma arguments last.
 				varType last = $* ifFalse: [varType := varType, ' '].
-				self declarationAt: varName put: varType, varName].
+				self checkedDeclarationAt: varName
+					put: varType, varName
+					in: aCCodeGen].
 			pragma keyword = #returnTypeC: ifTrue:
 				[self returnType: pragma arguments last].
 			pragma keyword = #doNotGenerate: ifTrue:
