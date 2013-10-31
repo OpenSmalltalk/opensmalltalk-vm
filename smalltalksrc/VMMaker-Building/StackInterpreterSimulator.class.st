@@ -664,7 +664,6 @@ StackInterpreterSimulator >> initialize [
 	methodCache := Array new: MethodCacheSize.
 	atCache := Array new: AtCacheTotalSize.
 	self flushMethodCache.
-	self flushAtCache.
 	gcSemaphoreIndex := 0.
 	externalSemaphoreSignalRequests := externalSemaphoreSignalResponses := #().
 	externalPrimitiveTable := CArrayAccessor on: (Array new: MaxExternalPrimitiveTableSize).
