@@ -317,6 +317,14 @@ Spur32BitMMLESimulator >> numClassTablePages [
 	^numClassTablePages
 ]
 
+{ #category : #'debug support' }
+Spur32BitMMLESimulator >> runLeakCheckerForFullGC: fullGCFlag [
+	(fullGCFlag
+			ifTrue: [self leakCheckFullGC]
+			ifFalse: [self leakCheckNewSpaceGC]) ifTrue:
+		[coInterpreter transcript nextPutAll: 'leak-checking...'; flush]
+]
+
 { #category : #'generation scavenging' }
 Spur32BitMMLESimulator >> scavengingGCTenuringIf: tenuringCriterion [
 	"Run the scavenger."

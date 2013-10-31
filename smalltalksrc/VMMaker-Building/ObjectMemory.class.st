@@ -141,6 +141,12 @@ ObjectMemory class >> baseHeaderSize [
 	^BaseHeaderSize
 ]
 
+{ #category : #'simulation only' }
+ObjectMemory class >> characterObjectOf: characterCode [
+	^(characterCode between: 0 and: 255) ifTrue:
+		[characterCode asCharacter]
+]
+
 { #category : #translation }
 ObjectMemory class >> declareCAsOop: arrayOfVariableNames in: aCCodeGenerator [
 	"Declare the variables in arrayOfVariableNames with type representing position in object memory."
@@ -421,6 +427,11 @@ ObjectMemory class >> initializeWithOptions: optionsDictionary [
 	Done := 4.
 
 	ExtraRootSize := 2048. "max. # of external roots"
+]
+
+{ #category : #'simulation only' }
+ObjectMemory class >> isImmediate: anObject [
+	^anObject class == SmallInteger
 ]
 
 { #category : #translation }
@@ -2726,7 +2737,7 @@ ObjectMemory >> integerObjectOf: value [
 	"Convert the integer value, assumed to be in SmallInteger range, into a tagged SmallInteger object.
 	 In C, use a shift and an add to set the tag bit.
 	 In Smalltalk we have to work harder because the simulator works with strictly positive bit patterns."
-
+	<returnTypeC: #sqInt>
 	^self
 		cCode: [(value << 1) + 1]
 		inSmalltalk: [value >= 0

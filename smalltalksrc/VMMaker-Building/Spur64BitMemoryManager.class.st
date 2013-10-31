@@ -4,6 +4,14 @@ Class {
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
+{ #category : #'simulation only' }
+Spur64BitMemoryManager class >> isImmediate: anObject [
+	self flag: 'The float range is close but probably wrong. Revisit when immediate floats are implemented'.
+	^anObject class == SmallInteger
+	  or: [anObject class == Character
+	  or: [anObject class == Float and: [anObject exponent between: -128 and: 127]]]
+]
+
 { #category : #'word size' }
 Spur64BitMemoryManager class >> wordSize [
 	^8
@@ -340,7 +348,7 @@ Spur64BitMemoryManager >> integerObjectOf: value [
 	"Convert the integer value, assumed to be in SmallInteger range, into a tagged SmallInteger object.
 	 In C, use a shift and an add to set the tag bit.
 	 In Smalltalk we have to work harder because the simulator works with strictly positive bit patterns."
-
+	<returnTypeC: #sqInt>
 	^self
 		cCode: [value << self numTagBits + 1]
 		inSmalltalk: [value << self numTagBits

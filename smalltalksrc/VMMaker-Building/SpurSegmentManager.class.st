@@ -41,6 +41,12 @@ SpurSegmentManager class >> declareCVarsIn: aCCodeGenerator [
 ]
 
 { #category : #translation }
+SpurSegmentManager class >> implicitReturnTypeFor: aSelector [
+	"Answer the return type for methods that don't have an explicit return."
+	^#void
+]
+
+{ #category : #translation }
 SpurSegmentManager class >> isNonArgumentImplicitReceiverVariableName: instVarName [
 	^instVarName = 'manager'
 ]
@@ -117,7 +123,6 @@ SpurSegmentManager >> allBridgesMarked [
 { #category : #private }
 SpurSegmentManager >> allocateOrExtendSegmentInfos [
 	"Increase the number of allocated segInfos by 16."
-	<returnTypeC: #void>
 	| newNumSegs |
 	numSegInfos = 0 ifTrue:
 		[numSegInfos := 16.
@@ -167,7 +172,7 @@ SpurSegmentManager >> collapseSegmentsPostSwizzle [
 	| bridge |
 	canSwizzle := false.
 	firstSegmentSize ifNil: "true when used by SpurBootstrap to transform an image"
-		[^nil].
+		[^self].
 
 	numSegments := 1.
 	(segments at: 0)

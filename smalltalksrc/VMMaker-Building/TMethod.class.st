@@ -408,10 +408,13 @@ TMethod >> elideAnyFinalReturn [
 	"For super expansions we need to eliminate any final return to prevent premature exit.
 	 Anything meaningful in the returned expression must be retained."
 
-	| stmtList lastStmt |
+	| stmtList expr |
 	stmtList := parseTree statements asOrderedCollection.
-	(lastStmt := stmtList last) isReturn ifTrue:
-		[stmtList at: stmtList size put: lastStmt expression.
+	stmtList last isReturn ifTrue:
+		[expr := stmtList last expression.
+		 (expr isVariable and: [expr name = 'self'])
+			ifTrue: [stmtList := stmtList allButLast]
+			ifFalse: [stmtList at: stmtList size put: expr].
 		parseTree setStatements: stmtList]
 ]
 
@@ -828,6 +831,19 @@ TMethod >> freeVariableReferences [
 	^refs
 ]
 
+{ #category : #'type inference' }
+TMethod >> harmonizeSignedAndUnsignedTypesIn: aSetOfTypes [
+	"Eliminate signed/unsigned conflicts in aSetOfTypes"
+	| sqs usqs |
+	sqs := aSetOfTypes select: [:t| t beginsWith: 'sq'].
+	usqs := aSetOfTypes select: [:t| t beginsWith: 'usq'].
+	^(sqs size + usqs size = aSetOfTypes size
+	   and: [sqs notEmpty
+	   and: [sqs allSatisfy: [:t| usqs includes: 'u', t]]])
+		ifTrue: [sqs]
+		ifFalse: [aSetOfTypes]
+]
+
 { #category : #utilities }
 TMethod >> hasMoreSendsThan: nSends [
 	"Answer the number of nodes in this method's parseTree (a rough measure of its size)."
@@ -862,6 +878,90 @@ TMethod >> hasUnrenamableCCode [
 
 	^parseTree anySatisfy:
 		[:node| node isNonNullCCode]
+]
+
+{ #category : #'type inference' }
+TMethod >> inferReturnTypeFromReturnsIn: aCodeGen [
+	"Attempt to infer the return type of the receiver from returns in the parse tree."
+
+	returnType isNil ifTrue:"the initial default"
+		[aCodeGen
+			pushScope: declarations
+			while:
+				[| hasReturn returnTypes |
+				 hasReturn := false.
+				 returnTypes := Set new.
+				 parseTree nodesDo:
+					[:node|
+					node isReturn ifTrue:
+						[| expr |
+						 hasReturn := true.
+						 expr := node expression.
+						 expr isAssignment ifTrue:
+							[expr := expr variable].
+						 expr isSend ifTrue:
+							[(aCodeGen returnTypeForSend: expr) ifNotNil:
+								[:type| returnTypes add: type]].
+						 expr isVariable ifTrue:
+							[(aCodeGen typeOfVariable: expr name)
+								ifNotNil: [:type| returnTypes add: type]
+								ifNil: [returnTypes add: (expr name = 'self'
+															ifTrue: [#void]
+															ifFalse: [#sqInt])]].
+						 expr isConstant ifTrue:
+							[| val |
+							 val := expr value.
+							 val isInteger ifTrue:
+								[returnTypes add: ((val >= 0 ifTrue: [val] ifFalse: [-1 - val]) highBit <= 32
+														ifTrue: [#sqInt]
+														ifFalse: [#sqLong])].
+							 (val == true or: [val == false]) ifTrue:
+								[returnTypes add: #sqInt].
+							 val isFloat ifTrue:
+								[returnTypes add: #float]]]].
+				returnTypes remove: #implicit ifAbsent: [].
+				returnTypes := self harmonizeSignedAndUnsignedTypesIn: returnTypes.
+				hasReturn
+					ifTrue:
+						[returnTypes size > 1 ifTrue:
+							[aCodeGen logger nextPutAll: 'conflicting return types', (String streamContents: [:s| returnTypes do: [:t| s space; nextPutAll: t]]), ' in ', selector; cr; flush].
+						 returnTypes size = 1 ifTrue:
+							[self returnType: returnTypes anyOne]]
+					ifFalse:
+						[self returnType: (aCodeGen implicitReturnTypeFor: selector)]]]
+]
+
+{ #category : #'type inference' }
+TMethod >> inferReturnTypeIn: aCodeGen [
+	"Attempt to infer the return type of the receiver and answer if it changed."
+
+	| existingReturnType |
+	existingReturnType := returnType.
+	self removeFinalSelfReturnIn: aCodeGen.	"must preceed recordDeclarations because this may set returnType"
+	self recordDeclarations.
+	self inferReturnTypeFromReturnsIn: aCodeGen.
+
+	"If the return type is now void, replace any and all ^expr with expr. ^self"
+	(existingReturnType ~= returnType and: [returnType = #void]) ifTrue:
+		[self transformVoidReturns].
+
+	^existingReturnType ~= returnType
+]
+
+{ #category : #'type inference' }
+TMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
+	parseTree nodesDo:
+		[:node| | var m |
+		(node isAssignment
+		 and: [(locals includes: (var := node variable name))
+		 and: [(declarations includesKey: var) not
+		 and: [node expression isSend
+		 and: [(m := aCodeGen methodNamed: node expression selector) notNil]]]]) ifTrue:
+			[(#(sqInt void nil) includes: m returnType) ifFalse:
+				["the $: is to map things like unsigned field : 3 to usqInt"
+				 declarations
+					at: var
+					put: ((m returnType includes: $:) ifTrue: [#usqInt] ifFalse: [m returnType]), ' ', var]]]
 ]
 
 { #category : #inlining }
@@ -1129,7 +1229,7 @@ TMethod >> isFunctional [
 	(parseTree statements size = 1 and:
 	 [parseTree statements last isReturn]) ifFalse: [ ^false ].
 	parseTree statements last expression nodesDo: [ :n | n isReturn ifTrue: [ ^false ]].
-	^#(sqInt usqInt sqLong usqLong) includes: returnType
+	^#(sqInt usqInt sqLong usqLong #'sqInt *') includes: returnType
 ]
 
 { #category : #inlining }
@@ -1621,7 +1721,7 @@ TMethod >> recordDeclarations [
 				varType last = $* ifFalse: [varType := varType, ' '].
 				self declarationAt: varName put: varType, varName].
 			pragma keyword = #returnTypeC: ifTrue:
-				[returnType := pragma arguments last].
+				[self returnType: pragma arguments last].
 			pragma keyword = #doNotGenerate: ifTrue:
 				[locals remove: pragma arguments last]].
 		^self].
@@ -1670,15 +1770,16 @@ TMethod >> removeAssertions [
 ]
 
 { #category : #transformations }
-TMethod >> removeFinalSelfReturn [
+TMethod >> removeFinalSelfReturnIn: aCodeGenOrNil [
 	"The Smalltalk parser automatically adds the statement '^self' to the end of methods
 	 without explicit returns.  This method removes such statements, since in most VMMaker
 	 classes (except struct classes) the generated code has no notion of 'self' anyway.
-	 If the statement is removed and no return type has yet been specified asnd the class
+	 If the statement is removed and no return type has yet been specified and the class
 	 specifies a default return type (e.g. #void) for methods that don't return, then set the
 	 return type accordingly."
 
 	| lastStmt |
+	parseTree statements isEmpty ifTrue: [^self].
 	((lastStmt := parseTree statements last) isReturn
 	 and: [lastStmt expression isVariable
 	 and: ['self' = lastStmt expression name]]) ifTrue:
@@ -1687,12 +1788,10 @@ TMethod >> removeFinalSelfReturn [
 		(tokens size < 2
 		 or: [(tokens last: 2) ~= #(#'^' 'self')]) ifTrue:
 			[parseTree setStatements: parseTree statements allButLast.
-			 returnType = #sqInt ifTrue:
-				[([definingClass implicitReturnTypeFor: selector]
-					on: MessageNotUnderstood
-					do: [:ex| nil]) ifNotNil:
-						[:defaultReturnType|
-						returnType := defaultReturnType]]]]
+			 (returnType isNil
+			  and: [aCodeGenOrNil notNil
+			  and: [parseTree noneSatisfy: [:node| node isReturn and: [node expression isVariable not or: [node expression name ~= 'self']]]]]) ifTrue:
+				[self returnType: (aCodeGenOrNil implicitReturnTypeFor: selector)]]]
 ]
 
 { #category : #utilities }
@@ -1861,7 +1960,6 @@ TMethod >> setSelector: sel definingClass: class args: argList locals: localList
 
 	selector := sel.
 	definingClass := class.
-	returnType := #sqInt. 	 "assume return type is long for now"
 	args := argList asOrderedCollection collect: [:arg | arg key].
 	locals := (localList collect: [:arg | arg key]) asSet.
 	declarations := Dictionary new.
@@ -1877,8 +1975,6 @@ TMethod >> setSelector: sel definingClass: class args: argList locals: localList
 	static := self extractStaticDirective.
 	canAsmLabel := self extractLabelDirective.
 	self extractSharedCase.
-	self removeFinalSelfReturn.	"must preceed recordDeclarations because this may set returnType"
-	self recordDeclarations.
 	globalStructureBuildMethodHasFoo := false
 ]
 
@@ -2065,6 +2161,26 @@ TMethod >> transformToStructClassMethodFor: aCCodeGenerator [
 	self assert: (typeForSelf notNil and: [typeForSelf ~~ #implicit]).
 	self declarationAt: (args addFirst: selfNode name)
 		put: (declarations removeKey: 'self'), '_in_', (aCCodeGenerator cFunctionNameFor: selector)
+]
+
+{ #category : #'type inference' }
+TMethod >> transformVoidReturns [
+	"Once the return type has been found or inferred to be #void,
+	 any occurrences of ^expr must be replaced with expr. ^self."
+	self assert: returnType == #void.
+	parseTree nodesWithParentsDo:
+		[:node :parent|
+		(node isReturn
+		 and: [node expression isVariable not
+			or: [node expression name ~= 'self']]) ifTrue:
+			[parent
+				replaceChild: node
+				with: (TStmtListNode new
+						setArguments: #()
+						statements: {node expression.
+									  TReturnNode new 
+										setExpression: (TVariableNode new setName: 'self')
+										yourself})]]
 ]
 
 { #category : #inlining }

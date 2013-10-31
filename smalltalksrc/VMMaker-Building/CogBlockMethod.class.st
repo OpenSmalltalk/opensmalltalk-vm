@@ -148,7 +148,6 @@ CogBlockMethod >> cPICNumCases: anObject [
 
 { #category : #accessing }
 CogBlockMethod >> cmHomeMethod [
-	<returnTypeC: #'CogMethod *'>
 	^self cCoerceSimple: self asUnsignedInteger - self homeOffset to: #'CogMethod *'
 ]
 

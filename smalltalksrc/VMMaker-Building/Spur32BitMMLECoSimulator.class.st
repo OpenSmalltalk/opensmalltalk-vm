@@ -233,6 +233,14 @@ Spur32BitMMLECoSimulator >> markObjects [
 	^super markObjects
 ]
 
+{ #category : #'debug support' }
+Spur32BitMMLECoSimulator >> runLeakCheckerForFullGC: fullGCFlag [
+	(fullGCFlag
+			ifTrue: [self leakCheckFullGC]
+			ifFalse: [self leakCheckNewSpaceGC]) ifTrue:
+		[coInterpreter transcript nextPutAll: 'leak-checking...'; flush]
+]
+
 { #category : #'generation scavenging' }
 Spur32BitMMLECoSimulator >> scavengingGCTenuringIf: tenuringCriterion [
 	"Run the scavenger."

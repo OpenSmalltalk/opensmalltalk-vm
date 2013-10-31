@@ -23,6 +23,20 @@ TParseNode >> allCalls [
 ]
 
 { #category : #enumerating }
+TParseNode >> allSatisfy: aBlock [
+	self nodesDo: [:n| (aBlock value: n) ifFalse: [^false]].
+	^true
+]
+
+{ #category : #enumerating }
+TParseNode >> allSatisfy: aBlock unless: cautionaryBlock [
+	self
+		nodesDo: [:n| (aBlock value: n) ifFalse: [^false]]
+		unless: cautionaryBlock.
+	^true
+]
+
+{ #category : #enumerating }
 TParseNode >> anySatisfy: aBlock [
 	self nodesDo: [:n| (aBlock value: n) ifTrue: [^true]].
 	^false

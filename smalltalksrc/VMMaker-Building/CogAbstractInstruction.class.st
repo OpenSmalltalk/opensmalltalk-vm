@@ -471,7 +471,6 @@ CogAbstractInstruction >> generateLowLevelUnlock: vmOwnerLockAddress [
 { #category : #accessing }
 CogAbstractInstruction >> getJmpTarget [
 	"Get the target of a jump instruction.  Jumps have the target in the first operand."
-	<returnTypeC: #'AbstractInstruction *'>
 	^cogit cCoerceSimple: (operands at: 0) to: #'AbstractInstruction *'
 ]
 
@@ -574,7 +573,6 @@ CogAbstractInstruction >> jumpShortByteSize [
 
 { #category : #'generate machine code' }
 CogAbstractInstruction >> jumpTargetAddress [
-	<returnTypeC: #'AbstractInstruction *'>
 	<inline: true> "Since it's an extraction from other methods."
 	| jumpTarget |
 	<var: #jumpTarget type: #'AbstractInstruction *'>
@@ -603,7 +601,6 @@ CogAbstractInstruction >> loadLiteralByteSize [
 
 { #category : #'generate machine code' }
 CogAbstractInstruction >> longJumpTargetAddress [
-	<returnTypeC: #'AbstractInstruction *'>
 	<inline: true> "Since it's an extraction from other methods."
 	"This needs to be digfferent from jumpTargetAddress because long jumps can
 	be to absolute addresses and hence we can't assert that the jump target is sane."
