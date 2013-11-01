@@ -365,6 +365,15 @@ VMClass class >> requiredMethodNames: options [
 ]
 
 { #category : #translation }
+VMClass class >> shouldGenerateDeadCode [
+	"Answer if the code generator should generate dead code, e.g. in false ifTrue: [dead] ifFalse: [live].
+	 This *may* be useful in debugging (see CCodeGenerator>>nilOrBooleanConstantReceiverOf: et al).
+	 But by default we answer false."
+
+	^false
+]
+
+{ #category : #translation }
 VMClass class >> shouldGenerateTypedefFor: aStructClass [
 	"Hack to work-around multiple definitions.  Sometimes a type has been defined in an include."
 	^aStructClass ~~ VMCallbackContext

@@ -86,7 +86,7 @@ TStmtListNode >> emitCCodeOn: aStream prependToEnd: aNodeOrNil level: level gene
 				[s emitCCodeOn: aStream prependToEnd: aNodeOrNil level: level generator: aCodeGen]
 			ifFalse:
 				[s emitCCodeOn: aStream level: level generator: aCodeGen].
-		(self endsWithCloseBracket: aStream) ifFalse:
+		(self stream: aStream endsWithAnyOf: '};') ifFalse:
 			[s needsTrailingSemicolon ifTrue:
 				[aStream nextPut: $;]].
 		aStream cr].
@@ -270,4 +270,28 @@ TStmtListNode >> shouldExpand [
 TStmtListNode >> statements [
 
 	^statements
+]
+
+{ #category : #testing }
+TStmtListNode >> stream: aStream endsWithAnyOf: characters [
+	"Answer if the given stream ends in any of the characters, ignoring whitespace."
+	| pos ch popped |
+	pos := aStream position.
+	aStream class = WriteStream ifTrue: "i.e. nested in StreamContents"
+		[[pos > 0] whileTrue:
+			[ch := aStream originalContents at: pos.
+			 ch isSeparator ifFalse:
+				[^characters includes: ch].
+			 pos := pos - 1].
+		 ^false].
+
+	popped := OrderedCollection new.
+	[pos > 0] whileTrue:
+		[ch := popped addFirst: (aStream position: pos - 1; peek).
+		 ch isSeparator ifFalse:
+			[aStream nextPutAll: popped.
+			 ^characters includes: ch].
+		 pos := pos - 1].
+	aStream nextPutAll: popped.
+	^false
 ]

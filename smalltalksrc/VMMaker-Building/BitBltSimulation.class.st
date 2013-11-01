@@ -2748,6 +2748,8 @@ BitBltSimulation >> primitiveDisplayString [
 	 ].
 	affectedL := left.
 	self showDisplayBits.
+	"store destX back"	
+	interpreterProxy storeInteger: BBDestXIndex ofObject: bbObj withValue: destX.
 	interpreterProxy pop: 6. "pop args, return rcvr"
 ]
 
