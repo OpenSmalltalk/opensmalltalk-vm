@@ -4179,11 +4179,11 @@ Cogit >> enterCogCodePopReceiver [
 	 for break-pointing when debugging in C."
 	<api>
 	<inline: false>
-	"(and this exists only to reference Debug)"
-	Debug ifFalse: [self error: 'what??'].
 	"This exists only for break-pointing."
-	self cCode: 'realCEEnterCogCodePopReceiverReg()'
-		inSmalltalk: [self ceEnterCogCodePopReceiverReg]
+	self cCode: [self realCEEnterCogCodePopReceiverReg]
+		inSmalltalk: [self ceEnterCogCodePopReceiverReg].
+	"(and this exists only to reference Debug)"
+	Debug ifFalse: [self error: 'what??']
 ]
 
 { #category : #debugging }
@@ -4192,10 +4192,8 @@ Cogit >> enterCogCodePopReceiverAndClassRegs [
 	 for break-pointing when debugging in C."
 	<api>
 	<inline: false>
-	"(and this exists only to reference Debug)"
-	Debug ifFalse: [self error: 'what??'].
 	"This exists only for break-pointing."
-	self cCode: 'realCEEnterCogCodePopReceiverAndClassRegs()'
+	self cCode: [self realCEEnterCogCodePopReceiverAndClassRegs]
 		inSmalltalk: [self ceEnterCogCodePopReceiverAndClassRegs]
 ]
 
