@@ -866,7 +866,6 @@ CogIA32Compiler >> concretizeConditionalJump: conditionCode [
 		Otherwise instructions must have a machineCodeSize which must be kept to."
 	<inline: true>
 	| offset |
-	<var: #jumpTarget type: #'AbstractInstruction *'>
 	offset := self computeJumpTargetOffsetPlus: 2.
 	(machineCodeSize = 0 "size not determined because no sizeJump pass; generating initial trampolines"
 		ifTrue: [self isQuick: offset]
@@ -2041,7 +2040,7 @@ CogIA32Compiler >> dispatchConcretize [
 	 This is the inner dispatch of concretizeAt: actualAddress which exists only
 	 to get around the branch size limits in the SqueakV3 (blue book derived)
 	 bytecode set."
-
+	<returnTypeC: #void>
 	opcode caseOf: {
 		"Noops & Pseudo Ops"
 		[Label]				-> [^self concretizeLabel].

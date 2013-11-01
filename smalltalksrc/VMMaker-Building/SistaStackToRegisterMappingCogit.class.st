@@ -458,11 +458,9 @@ SistaStackToRegisterMappingCogit >> generateCogMethod: selector [
 	 choose a smaller offset but must stick to the size set in the second pass.
 
 	 Override to add counters"
+	<returnTypeC: #'CogMethod *'>
 	| codeSize headerSize mapSize countersSize totalSize startAddress result method |
 	<var: #method type: #'CogMethod *'>
-	<var: #blockStart type: #'BlockStart *'>
-	<var: #headerReference type: #'AbstractInstruction *'>
-	<returnTypeC: #'CogMethod *'>
 	headerSize := self sizeof: CogMethod.
 	methodLabel address: headerSize negated.
 	self computeMaximumSizes.
