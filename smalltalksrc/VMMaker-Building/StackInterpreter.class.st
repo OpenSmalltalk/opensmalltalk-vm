@@ -10187,12 +10187,12 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 	| swapBytes headerStart headerSize dataSize oldBaseAddr hdrNumStackPages
 	  minimumMemory heapBase bytesRead bytesToShift heapSize hdrEdenBytes
 	  headerFlags hdrMaxExtSemTabSize firstSegSize |
-	<var: #f type: 'sqImageFile '>
-	<var: #heapBase type: 'usqInt'>
-	<var: #desiredHeapSize type: 'usqInt'>
-	<var: #headerStart type: 'squeakFileOffsetType '>
-	<var: #dataSize type: 'size_t '>
-	<var: #imageOffset type: 'squeakFileOffsetType '>
+	<var: #f type: #sqImageFile>
+	<var: #dataSize type: #'size_t'>
+	<var: #heapBase type: #usqInt>
+	<var: #desiredHeapSize type: #usqInt>
+	<var: #headerStart type: #squeakFileOffsetType>
+	<var: #imageOffset type: #squeakFileOffsetType>
 
 	metaclassNumSlots := 6.	"guess Metaclass instSize"
 	classNameIndex := 6.		"guess (Class instVarIndexFor: 'name' ifAbsent: []) - 1"

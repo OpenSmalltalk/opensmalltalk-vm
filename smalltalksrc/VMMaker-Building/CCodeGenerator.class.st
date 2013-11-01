@@ -3533,7 +3533,15 @@ CCodeGenerator >> returnTypeForSend: aTSendNode [
 						[#cCoerce:to:]			->	[aTSendNode args last value].
 						[#cCoerceSimple:to:]	->	[aTSendNode args last value] }
 						otherwise: [#sqInt]]]
-		ifNotNil: [:m| m returnType]
+		ifNotNil:
+			[:m|
+			m returnType ifNotNil:
+				[:type| "map fields to #usqInt"
+				((type beginsWith: 'unsigned')
+				 and: [(type includes: $:)
+				 and: [type last isDigit]])
+					ifTrue: [#usqInt]
+					ifFalse: [type]]]
 ]
 
 { #category : #accessing }

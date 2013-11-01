@@ -939,7 +939,7 @@ CogARMCompiler >> dispatchConcretize [
 	 This is the inner dispatch of concretizeAt: actualAddress which exists only
 	 to get around the branch size limits in the SqueakV3 (blue book derived)
 	 bytecode set."
-
+	<returnTypeC: #void>
 	opcode caseOf: {
 		"Noops & Pseudo Ops"
 		[Label]					-> [^self concretizeLabel].

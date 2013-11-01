@@ -420,7 +420,7 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
 CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveSize: retNoffset [
 	| jumpSI jumpNotIndexable jumpIsContext |
 	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
-	<var: #jumpNotSI type: #'AbstractInstruction *'>
+	<var: #jumpSI type: #'AbstractInstruction *'>
 	<var: #jumpNotIndexable type: #'AbstractInstruction *'>
 	<var: #jumpIsContext type: #'AbstractInstruction *'>
 	cogit MoveR: ReceiverResultReg R: TempReg.
