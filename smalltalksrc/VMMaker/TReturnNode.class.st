@@ -43,7 +43,7 @@ TReturnNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 		"If the function is void, don't say 'return x' instead say ' x; return' "
 		expression isLeaf ifFalse: [
 			expression emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen.	
-			aStream nextPutAll: ';'; space.
+			aStream nextPut: $;; crtab: level.
 		].
 		aStream nextPutAll: 'return'.
 	] ifFalse: [

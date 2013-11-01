@@ -899,6 +899,11 @@ TMethod >> freeVariableReferences [
 TMethod >> harmonizeSignedAndUnsignedTypesIn: aSetOfTypes [
 	"Eliminate signed/unsigned conflicts in aSetOfTypes"
 	| sqs usqs |
+	#(char short int #'unsigned char' #'unsigned short' #'unsigned int')
+		with: #(sqInt sqInt sqInt #usqInt #usqInt #usqInt)
+		do: [:type :replacement|
+			(aSetOfTypes includes: type) ifTrue:
+				[aSetOfTypes remove: type; add: replacement]].
 	sqs := aSetOfTypes select: [:t| t beginsWith: 'sq'].
 	usqs := aSetOfTypes select: [:t| t beginsWith: 'usq'].
 	^(sqs size + usqs size = aSetOfTypes size
@@ -965,7 +970,14 @@ TMethod >> inferReturnTypeFromReturnsIn: aCodeGen [
 				hasReturn
 					ifTrue:
 						[returnTypes size > 1 ifTrue:
-							[aCodeGen logger nextPutAll: 'conflicting return types', (String streamContents: [:s| returnTypes do: [:t| s space; nextPutAll: t]]), ' in ', selector; cr; flush].
+							[aCodeGen logger show:
+								(String streamContents:
+									[:s|
+									 s nextPutAll: 'conflicting return types '.
+									 returnTypes
+										do: [:t| s nextPutAll: t]
+										separatedBy: [s nextPutAll: ', '].
+									 s nextPutAll: ' in '; nextPutAll: selector; cr])].
 						 returnTypes size = 1 ifTrue:
 							[self returnType: returnTypes anyOne]]
 					ifFalse:

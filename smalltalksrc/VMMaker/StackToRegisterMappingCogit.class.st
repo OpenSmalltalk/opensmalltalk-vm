@@ -1888,9 +1888,8 @@ StackToRegisterMappingCogit >> genPICAbortTrampolineFor: numArgs [
 
 { #category : #initialization }
 StackToRegisterMappingCogit >> genPICMissTrampolineFor: numArgs [
-	| startAddress |
-	<var: #aString type: #'char *'>
 	<inline: false>
+	| startAddress |
 	startAddress := methodZoneBase.
 	opcodeIndex := 0.
 	"N.B. a closed PIC jumps to the miss routine, not calls it, so there is only one retpc on the stack."
@@ -2118,12 +2117,11 @@ StackToRegisterMappingCogit >> genPrimitiveClosureValue [
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveDiv [
 	| jumpNotSI jumpZero jumpExact jumpSameSign convert |
-	<var: #jumpNotSI type: #'AbstractInstruction *'>
+	<var: #convert type: #'AbstractInstruction *'>
 	<var: #jumpZero type: #'AbstractInstruction *'>
+	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpExact type: #'AbstractInstruction *'>
 	<var: #jumpSameSign type: #'AbstractInstruction *'>
-	<var: #jumpOverflow type: #'AbstractInstruction *'>
-	<var: #convert type: #'AbstractInstruction *'>
 	self MoveR: Arg0Reg R: TempReg.
 	self MoveR: Arg0Reg R: ClassReg.
 	self MoveR: Arg0Reg R: Arg1Reg.

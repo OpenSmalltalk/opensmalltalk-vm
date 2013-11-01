@@ -1932,12 +1932,11 @@ SimpleStackBasedCogit >> genPrimitiveClosureValue [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveDiv [
 	| jumpNotSI jumpZero jumpExact jumpSameSign convert |
-	<var: #jumpNotSI type: #'AbstractInstruction *'>
+	<var: #convert type: #'AbstractInstruction *'>
 	<var: #jumpZero type: #'AbstractInstruction *'>
+	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpExact type: #'AbstractInstruction *'>
 	<var: #jumpSameSign type: #'AbstractInstruction *'>
-	<var: #jumpOverflow type: #'AbstractInstruction *'>
-	<var: #convert type: #'AbstractInstruction *'>
 	self MoveMw: BytesPerWord r: SPReg R: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	self MoveR: TempReg R: Arg1Reg.
