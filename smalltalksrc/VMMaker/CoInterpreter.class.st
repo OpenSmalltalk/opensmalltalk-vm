@@ -1812,7 +1812,6 @@ CoInterpreter >> ceStackOverflow: contextSwitchIfNotNil [
 { #category : #'debug support' }
 CoInterpreter >> ceTraceBlockActivation [
 	<api>
-	<var: #cogMethod type: #'CogMethod *'>
 	cogit recordBlockTrace ifTrue:
 		[self recordTrace: TraceBlockActivation
 			thing: (self mframeHomeMethod: framePointer) methodObject
@@ -2360,7 +2359,6 @@ CoInterpreter >> convertToMachineCodeFrame: cogHomeMethod bcpc: bcpc [
 CoInterpreter >> createClosureNumArgs: numArgs numCopied: numCopied startpc: initialIP [
 	<api>
 	| context newClosure |
-	<var: #sp type: #'char *'>
 	self assert: (self isMachineCodeFrame: framePointer).
 	"Do *not* include the return pc or copied values in the stack contents;
 	 hence + ((1 + numCopied) * BytesPerWord)"
@@ -3430,7 +3428,6 @@ CoInterpreter >> handleMNU: selectorIndex InMachineCodeTo: rcvr classForMessage:
 	 understood.  Create a message and execute the relevant resulting MNU method.
 	 messageSelector is an implicit argument (yuck)."
 	| errSelIdx classForThisMessage |
-	<var: #cogMethod type: #'CogMethod *'>
 	self assert: (objectMemory addressCouldBeOop: rcvr).
 	instructionPointer := self popStack.
 	self createActualMessageTo: classForMessage.
@@ -5347,11 +5344,10 @@ CoInterpreter >> printFrameFlagsForFP: theFP [
 
 { #category : #'debug printing' }
 CoInterpreter >> printFrameMethodFor: theFP [
-	| address it homeMethod obj |
 	<inline: false>
+	| address it homeMethod obj |
 	<var: #theFP type: #'char *'>
 	<var: #address type: #'char *'>
-	<var: #cogMethod type: #'CogBlockMethod *'>
 	<var: #homeMethod type: #'CogMethod *'>
 
 	address := theFP + FoxMethod.
@@ -5572,12 +5568,11 @@ CoInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imag
 	| swapBytes headerStart headerSize dataSize oldBaseAddr
 	  minimumMemory heapSize bytesRead bytesToShift
 	  hdrNumStackPages hdrEdenBytes hdrCogCodeSize headerFlags hdrMaxExtSemTabSize firstSegSize |
-	<var: #f type: 'sqImageFile '>
-	<var: #memStart type: 'usqInt'>
-	<var: #desiredHeapSize type: 'usqInt'>
-	<var: #headerStart type: 'squeakFileOffsetType '>
-	<var: #dataSize type: 'size_t '>
-	<var: #imageOffset type: 'squeakFileOffsetType '>
+	<var: #f type: #sqImageFile>
+	<var: #dataSize type: #'size_t'>
+	<var: #desiredHeapSize type: #usqInt>
+	<var: #headerStart type: #squeakFileOffsetType>
+	<var: #imageOffset type: #squeakFileOffsetType>
 
 	metaclassNumSlots := 6.	"guess Metaclass instSize"
 	classNameIndex := 6.		"guess (Class instVarIndexFor: 'name' ifAbsent: []) - 1"

@@ -5066,11 +5066,9 @@ Cogit >> generateCogMethod: selector [
 	 sizes jumps based on the maxmimum sizes.  Then we make a pass
 	 that fixes up jumps.  When fixing up a jump the jump is not allowed to
 	 choose a smaller offset but must stick to the size set in the second pass."
+	<returnTypeC: #'CogMethod *'>
 	| codeSize headerSize mapSize totalSize startAddress result method |
 	<var: #method type: #'CogMethod *'>
-	<var: #blockStart type: #'BlockStart *'>
-	<var: #headerReference type: #'AbstractInstruction *'>
-	<returnTypeC: #'CogMethod *'>
 	headerSize := self sizeof: CogMethod.
 	methodLabel address: headerSize negated.
 	self computeMaximumSizes.
