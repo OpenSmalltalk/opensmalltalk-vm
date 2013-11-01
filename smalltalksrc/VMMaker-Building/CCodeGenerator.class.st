@@ -3083,16 +3083,26 @@ CCodeGenerator >> needToGenerateHeader: headerName file: interpHdrPath contents:
 ]
 
 { #category : #utilities }
-CCodeGenerator >> nilOrBooleanConstantReceiverOf: sendNode [
-	"Answer nil or the boolean constant that is the receiver of the given message send. Used to suppress conditional code when the condition is a translation-time constant."
+CCodeGenerator >> nilOrBooleanConstantReceiverOf: aNode [
+	"Answer nil or the boolean constant that is the receiver of the given message send.
+	 Used to suppress conditional code when the condition is a translation-time constant."
 
-	| rcvr val |
+	| rcvr |
 	generateDeadCode ifTrue:[^nil].
-	rcvr := sendNode receiver.
-	rcvr isConstant ifTrue: [
-		val := rcvr value.
-		((val == true) or: [val == false]) ifTrue: [^ val]].
-	^ nil
+	rcvr := aNode isSend ifTrue: [aNode receiver] ifFalse: [aNode].
+	(rcvr isConstant
+	 and: [#(true false) includes: rcvr value]) ifTrue:
+		[^rcvr value].
+	(rcvr isSend
+	 and: [(#(or: and:) includes: rcvr selector)
+	 and: [rcvr args last isStmtList
+	 and: [rcvr args last statements size = 1]]]) ifTrue:
+		[(self nilOrBooleanConstantReceiverOf: rcvr receiver) ifNotNil:
+			[:rcvrRcvr|
+			(self nilOrBooleanConstantReceiverOf: rcvr args last statements first) ifNotNil:
+				[:rcvrArg|
+				^rcvrRcvr perform: rcvr selector with: rcvrArg]]].
+	^nil
 
 ]
 
