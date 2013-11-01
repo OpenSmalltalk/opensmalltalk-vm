@@ -315,6 +315,13 @@ NewObjectMemory >> allocateInterpreterChunk: byteSize [
 	^nil
 ]
 
+{ #category : #contexts }
+NewObjectMemory >> badContextSize: oop [
+	| numSlots |
+	numSlots := self numSlotsOf: oop.
+	^numSlots ~= SmallContextSlots and: [numSlots ~= LargeContextSlots]
+]
+
 { #category : #snapshot }
 NewObjectMemory >> baseAddressOfImage [
 	"Answer the base address of the image data written to a sapshot."

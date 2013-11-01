@@ -2006,7 +2006,7 @@ SimpleStackBasedCogit >> genPrimitiveDivide [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveEqual [
-	^self genSmallIntegerComparison: JumpZero
+	^self genSmallIntegerComparison: JumpZero orDoubleComparison: #JumpFPEqual: asSymbol
 ]
 
 { #category : #'primitive generators' }
@@ -2082,12 +2082,12 @@ SimpleStackBasedCogit >> genPrimitiveFloatSubtract [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveGreaterOrEqual [
-	^self genSmallIntegerComparison: JumpGreaterOrEqual
+	^self genSmallIntegerComparison: JumpGreaterOrEqual orDoubleComparison: #JumpFPGreaterOrEqual: asSymbol
 ]
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveGreaterThan [
-	^self genSmallIntegerComparison: JumpGreater
+	^self genSmallIntegerComparison: JumpGreater orDoubleComparison: #JumpFPGreater: asSymbol
 ]
 
 { #category : #'primitive generators' }
@@ -2134,12 +2134,12 @@ SimpleStackBasedCogit >> genPrimitiveIdentityHash [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveLessOrEqual [
-	^self genSmallIntegerComparison: JumpLessOrEqual
+	^self genSmallIntegerComparison: JumpLessOrEqual orDoubleComparison: #JumpFPLessOrEqual: asSymbol
 ]
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveLessThan [
-	^self genSmallIntegerComparison: JumpLess
+	^self genSmallIntegerComparison: JumpLess orDoubleComparison: #JumpFPLess: asSymbol
 ]
 
 { #category : #'primitive generators' }
@@ -2224,7 +2224,7 @@ SimpleStackBasedCogit >> genPrimitiveNewWithArg [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveNotEqual [
-	^self genSmallIntegerComparison: JumpNonZero
+	^self genSmallIntegerComparison: JumpNonZero orDoubleComparison: #JumpFPNotEqual: asSymbol
 ]
 
 { #category : #'primitive generators' }
@@ -2824,6 +2824,56 @@ SimpleStackBasedCogit >> genSmallIntegerComparison: jumpOpcode [
 	jumpTrue jmpTarget: (self annotate: (self MoveCw: objectMemory trueObject R: ReceiverResultReg)
 						objRef: objectMemory trueObject).
 	self RetN: BytesPerWord * 2.
+	jumpFail jmpTarget: self Label.
+	^0
+]
+
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> genSmallIntegerComparison: jumpOpcode orDoubleComparison: jumpFPOpcodeGenerator [
+	"Stack looks like
+		receiver (also in ResultReceiverReg)
+		arg
+		return address"
+	| jumpDouble jumpFail jumpTrue jumpCond |
+	<var: #jumpFPOpcodeGenerator declareC: 'AbstractInstruction *(*jumpFPOpcodeGenerator)(void *)'>
+	<var: #jumpDouble type: #'AbstractInstruction *'>
+	<var: #jumpFail type: #'AbstractInstruction *'>
+	<var: #jumpTrue type: #'AbstractInstruction *'>
+	<var: #jumpCond type: #'AbstractInstruction *'>	
+	self MoveMw: BytesPerWord r: SPReg R: TempReg.
+	self MoveR: TempReg R: ClassReg.
+	jumpDouble := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
+	self CmpR: ClassReg R: ReceiverResultReg. "N.B. FLAGS := RRReg - ClassReg"
+	jumpTrue := self gen: jumpOpcode.
+	self annotate: (self MoveCw: objectMemory falseObject R: ReceiverResultReg)
+		objRef: objectMemory falseObject.
+	self flag: 'currently caller pushes result'.
+	self RetN: BytesPerWord * 2.
+	jumpTrue jmpTarget: (self annotate: (self MoveCw: objectMemory trueObject R: ReceiverResultReg)
+						objRef: objectMemory trueObject).
+	self RetN: BytesPerWord * 2.
+	
+	"Argument may be a Float : let us check or fail"
+	jumpDouble jmpTarget: self Label.
+	objectRepresentation genGetCompactClassIndexNonImmOf: ClassReg into: SendNumArgsReg.
+	self CmpCq: objectMemory classFloatCompactIndex R: SendNumArgsReg.
+	jumpFail := self JumpNonZero: 0.
+	
+	"It was a Float, so convert the receiver to double and perform the operation"
+	self MoveR: ReceiverResultReg R: TempReg.
+	objectRepresentation genConvertSmallIntegerToIntegerInScratchReg: TempReg.
+	self ConvertR: TempReg Rd: DPFPReg0.
+	objectRepresentation genGetDoubleValueOf: ClassReg into: DPFPReg1.
+	self CmpRd: DPFPReg1 Rd: DPFPReg0.
+	jumpCond := self perform: jumpFPOpcodeGenerator with: 0. "FP jumps are a little weird"
+	self annotate: (self MoveCw: objectMemory falseObject R: ReceiverResultReg)
+		objRef: objectMemory falseObject.
+	self flag: 'currently caller pushes result'.
+	self RetN: BytesPerWord * 2.
+	jumpCond jmpTarget: (self annotate: (self MoveCw: objectMemory trueObject R: ReceiverResultReg)
+							objRef: objectMemory trueObject).
+	self RetN: BytesPerWord * 2.
+
 	jumpFail jmpTarget: self Label.
 	^0
 ]

@@ -416,20 +416,15 @@ StackInterpreterPrimitives >> primitiveDoNamedPrimitiveWithArgs [
 	  spec addr primRcvr ctxtRcvr isArray |
 	<var: #addr declareC: 'void (*addr)()'>
 	argumentArray := self stackTop.
-	(objectMemory isArray: argumentArray) ifFalse:
+	methodArg := self stackValue: 2.
+	((objectMemory isArray: argumentArray)
+	 and: [objectMemory isOopCompiledMethod: methodArg]) ifFalse:
 		[^self primitiveFailFor: -2]. "invalid args"
 	arraySize := objectMemory fetchWordLengthOf: argumentArray.
-	self success: (self roomToPushNArgs: arraySize).
-
-	methodArg := self stackObjectValue: 2.
-	self successful ifFalse:
-		[^self primitiveFailFor: -2]. "invalid args"
-
-	(objectMemory isOopCompiledMethod: methodArg) ifFalse:
+	(self roomToPushNArgs: arraySize) ifFalse:
 		[^self primitiveFailFor: -2]. "invalid args"
 
 	methodHeader := self headerOf: methodArg.
-
 	(self literalCountOfHeader: methodHeader) > 2 ifFalse:
 		[^self primitiveFailFor: -3]. "invalid methodArg state"
 	spec := objectMemory fetchPointer: 1 "first literal" ofObject: methodArg.
