@@ -289,9 +289,16 @@ TStmtListNode >> stream: aStream endsWithAnyOf: characters [
 	[pos > 0] whileTrue:
 		[ch := popped addFirst: (aStream position: pos - 1; peek).
 		 ch isSeparator ifFalse:
-			[aStream nextPutAll: popped.
+			[popped notEmpty ifTrue: "it almost always is"
+				["*don't* use nextPutAll: to work around a bug in UTF8TextConverter
+				  >>nextPut:toStream: which avoids line-end conversion; sigh."
+				 popped do:
+					[:c| aStream nextPut: c]].
 			 ^characters includes: ch].
 		 pos := pos - 1].
-	aStream nextPutAll: popped.
+	"*don't* use nextPutAll: to work around a bug in UTF8TextConverter>>
+	 nextPut:toStream: which avoids line-end conversion; sigh."
+	popped do:
+		[:c| aStream nextPut: c].
 	^false
 ]
