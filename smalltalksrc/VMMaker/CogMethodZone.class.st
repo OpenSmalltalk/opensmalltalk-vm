@@ -170,7 +170,7 @@ CogMethodZone >> compactCompiledCode: objectHeaderValue [
 		 bytes := source blockSize.
 		 source cmType ~= CMFree ifTrue:
 			[methodCount := methodCount + 1.
-			 self mem: dest mo: source ve: bytes.
+			 objectMemory mem: dest mo: source ve: bytes.
 			 dest objectHeader: objectHeaderValue.
 			 dest cmType = CMMethod
 				ifTrue:
