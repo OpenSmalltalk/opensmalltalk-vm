@@ -5619,7 +5619,10 @@ SpurMemoryManager >> markWeaklingsAndMarkAndFireEphemerons [
 	[coInterpreter markAndTraceUntracedReachableStackPages.
 	 numTracedWeaklings := self markAndTraceWeaklingsFrom: numTracedWeaklings.
 	 self noUnscannedEphemerons ifTrue:
-		[^self].
+		[coInterpreter
+			markAndTraceUntracedReachableStackPages;
+			freeUntracedStackPages.
+		 ^self].
 	 self markInactiveEphemerons ifFalse:
 		[self fireAllUnscannedEphemerons].
 	 self markAllUnscannedEphemerons]
@@ -6388,9 +6391,15 @@ SpurMemoryManager >> printFreeChunk: freeChunk [
 
 { #category : #'debug printing' }
 SpurMemoryManager >> printHeaderTypeOf: objOop [
-	coInterpreter print: ((self numSlotsOf: objOop) >= self numSlotsMask
-							ifTrue: [' 16 byte header']
-							ifFalse: [' 8 byte header'])
+	coInterpreter
+		print: ((self numSlotsOf: objOop) >= self numSlotsMask
+					ifTrue: [' hdr16 ']
+					ifFalse: [' hdr8 ']);
+		printChar: ((self isImmutable: objOop) ifTrue: [$i] ifFalse: [$.]);
+		printChar: ((self isRemembered: objOop) ifTrue: [$r] ifFalse: [$.]);
+		printChar: ((self isPinned: objOop) ifTrue: [$p] ifFalse: [$.]);
+		printChar: ((self isMarked: objOop) ifTrue: [$m] ifFalse: [$.]);
+		printChar: ((self isGrey: objOop) ifTrue: [$g] ifFalse: [$.])
 ]
 
 { #category : #'debug printing' }

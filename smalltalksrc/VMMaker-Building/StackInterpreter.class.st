@@ -3477,7 +3477,7 @@ StackInterpreter >> commonAt: stringy [
 	result := self stObject: rcvr at: index.
 	self successful ifTrue:
 		[stringy ifTrue: [result := self characterForAscii: (objectMemory integerValueOf: result)].
-		^self pop: argumentCount+1 thenPush: result]
+		 self pop: argumentCount+1 thenPush: result]
 ]
 
 { #category : #'indexing primitive support' }
@@ -3503,7 +3503,7 @@ StackInterpreter >> commonAtPut: stringy [
 		ifTrue: [self stObject: rcvr at: index put: (self asciiOfCharacter: value)]
 		ifFalse: [self stObject: rcvr at: index put: value].
 	self successful ifTrue:
-		[^self pop: argumentCount+1 thenPush: value]
+		[self pop: argumentCount+1 thenPush: value]
 ]
 
 { #category : #'return bytecodes' }
@@ -3523,7 +3523,7 @@ StackInterpreter >> commonCallerReturn [
 	localFP := callersFPOrNull.
 	self setMethod: (self frameMethod: localFP).
 	self fetchNextBytecode.
-	^self internalStackTopPut: localReturnValue
+	self internalStackTopPut: localReturnValue
 ]
 
 { #category : #'return bytecodes' }
@@ -7224,7 +7224,9 @@ StackInterpreter >> longPrintOop: oop [
 	objectMemory printHeaderTypeOf: oop.
 	self print: ' hash '; printHexnp: (objectMemory rawHashBitsOf: oop).
 	self cr.
-	(fmt between: objectMemory firstLongFormat and: objectMemory firstCompiledMethodFormat - 1) ifTrue:
+	(fmt between: objectMemory firstByteFormat and: objectMemory firstCompiledMethodFormat - 1) ifTrue:
+		[^self printStringOf: oop; cr].
+	(fmt between: objectMemory firstLongFormat and: objectMemory firstByteFormat - 1) ifTrue:
 		[^self].
 	"this is nonsense.  apologies."
 	startIP := (objectMemory lastPointerOf: oop) + BytesPerOop - objectMemory baseHeaderSize / BytesPerOop.
@@ -8658,7 +8660,8 @@ StackInterpreter >> primitiveEventProcessingControl [
 			ifFalse:
 				[self stackTop = objectMemory falseObject
 					ifTrue: [inIOProcessEvents := -1]
-					ifFalse: [^self primitiveFailFor: PrimErrBadArgument]].
+					ifFalse: [self primitiveFailFor: PrimErrBadArgument.
+							^self]].
 		 ^self pop: 2 thenPushBool: enabled].
 	self primitiveFailFor: PrimErrBadNumArgs
 ]
@@ -8886,7 +8889,7 @@ StackInterpreter >> printActivationNameFor: aMethod receiver: anObject isBlock: 
 	 and: [(objectMemory isOopForwarded: anObject) not
 	 and: [self addressCouldBeClassObj: (classObj := objectMemory fetchClassOf: anObject)]])
 		ifTrue:
-			[(classObj = methClass or: [methClass isNil "i.e. doits"])
+			[(classObj = methClass or: [methClass isNil or: [methClass = objectMemory nilObject] "i.e. doits"])
 				ifTrue: [self printNameOfClass: classObj count: 5]
 				ifFalse:
 					[self printNameOfClass: classObj count: 5.
@@ -8900,45 +8903,8 @@ StackInterpreter >> printActivationNameFor: aMethod receiver: anObject isBlock: 
 	(objectMemory addressCouldBeOop: methodSel)
 		ifTrue:
 			[methodSel = objectMemory nilObject
-				ifTrue: [self print: '?']
+				ifTrue: [self print: '(nil)']
 				ifFalse: [self printStringOf: methodSel]]
-		ifFalse: [self print: 'INVALID SELECTOR'].
-	(methodSel = (objectMemory splObj: SelectorDoesNotUnderstand)
-	and: [(objectMemory addressCouldBeObj: maybeMessage)
-	and: [(objectMemory fetchClassOfNonImm: maybeMessage) = (objectMemory splObj: ClassMessage)]]) ifTrue:
-		["print arg message selector"
-		methodSel := objectMemory fetchPointer: MessageSelectorIndex ofObject: maybeMessage.
-		self print: ' '.
-		self printStringOf: methodSel]
-]
-
-{ #category : #'debug printing' }
-StackInterpreter >> printActivationNameForMethod: aMethod startClass: startClass isBlock: isBlock firstTemporary: maybeMessage [
-	| methClass methodSel |
-	<inline: false>
-	isBlock ifTrue:
-		[self print: '[] in '].
-	self findSelectorAndClassForMethod: aMethod
-		lookupClass: startClass
-		do: [:sel :class|
-			methodSel := sel.
-			methClass := class].
-	((self addressCouldBeOop: startClass) and: [methClass notNil])
-		ifTrue:
-			[startClass = methClass
-				ifTrue: [self printNameOfClass: methClass count: 5]
-				ifFalse:
-					[self printNameOfClass: startClass count: 5.
-					 self printChar: $(.
-					 self printNameOfClass: methClass count: 5.
-					 self printChar: $)]]
-		ifFalse: [self print: 'INVALID CLASS'].
-	self printChar: $>.
-	(objectMemory addressCouldBeOop: methodSel)
-		ifTrue:
-			[(objectMemory isBytes: methodSel)
-				ifTrue: [self printStringOf: methodSel]
-				ifFalse: [self printOopShort: methodSel]]
 		ifFalse: [self print: 'INVALID SELECTOR'].
 	(methodSel = (objectMemory splObj: SelectorDoesNotUnderstand)
 	and: [(objectMemory addressCouldBeObj: maybeMessage)
