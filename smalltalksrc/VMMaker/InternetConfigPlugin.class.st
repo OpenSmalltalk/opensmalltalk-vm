@@ -29,7 +29,6 @@ InternetConfigPlugin >> initialiseModule [
 InternetConfigPlugin >> primitiveGetMacintoshFileTypeAndCreatorFrom: aFileName [
 	| oop ptr keyLength creator |
 
-	<var: #aFile declareC: 'char aFile[256]'>
 	<var: #creator declareC: 'char creator[8]'>
 	<var: #ptr type: 'char *'>
 	self primitive: 'primitiveGetMacintoshFileTypeAndCreatorFrom'

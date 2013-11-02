@@ -927,7 +927,6 @@ LargeIntegersPlugin >> digitLength: oop [
 LargeIntegersPlugin >> digitMontgomery: firstLarge times: secondLarge modulo: thirdLarge mInvModB: mInv [
 
 	| firstLen secondLen thirdLen prod |
-	<var: #over type: 'unsigned char  '>
 	firstLen := self byteSizeOfBytes: firstLarge.
 	secondLen := self byteSizeOfBytes: secondLarge.
 	thirdLen := self byteSizeOfBytes: thirdLarge.
@@ -1626,7 +1625,6 @@ LargeIntegersPlugin >> primDigitSubtract: firstInteger with: secondInteger [
 LargeIntegersPlugin >> primGetModuleName [
 	"If calling this primitive fails, then C module does not exist."
 	| strLen strOop strPtr |
-	<var: #cString type: 'char *'>
 	<var: #strPtr type: 'char *'>
 	self debugCode: [self msg: 'primGetModuleName'].
 	self
@@ -1637,7 +1635,7 @@ LargeIntegersPlugin >> primGetModuleName [
 	strOop := interpreterProxy instantiateClass: interpreterProxy classString indexableSize: strLen.
 	strPtr := interpreterProxy firstIndexableField: strOop.
 	0 to: strLen - 1 do: [:i | strPtr at: i put: (self getModuleName at: i)].
-	^ strOop
+	^strOop
 ]
 
 { #category : #'Integer primitives' }

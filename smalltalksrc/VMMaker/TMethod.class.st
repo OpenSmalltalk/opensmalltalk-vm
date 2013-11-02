@@ -72,7 +72,7 @@ TMethod >> addTypesFor: node to: typeSet in: aCodeGen [
 			 (types size = 1 and: [types anyOne last = $*]) ifTrue: "pointer arithmetic"
 				[^typeSet add: types anyOne].
 			 self addTypesFor: expr args first to: types in: aCodeGen.
-			 types := self harmonizeSignedAndUnsignedTypesIn: types.
+			 types := aCodeGen harmonizeReturnTypesIn: types.
 			 types size = 2 ifTrue:
 				[(types includes: #double) ifTrue:
 					[^typeSet add: #double].
@@ -326,7 +326,9 @@ TMethod >> checkSuccessExpr [
 
 { #category : #accessing }
 TMethod >> checkedDeclarationAt: aVariableName put: aDeclaration in: aCCodeGen [
-	((args includes: aVariableName) or: [locals includes: aVariableName]) ifFalse:
+	((args includes: aVariableName)
+	 or: [(locals includes: aVariableName)
+	 or: [(definingClass instVarIndexFor: aVariableName asString ifAbsent: nil) notNil]]) ifFalse:
 		[| msg |
 		 msg := definingClass name, '>>', selector, ' contains declaration for non-existent variable ', aVariableName.
 		 aCCodeGen
@@ -966,7 +968,7 @@ TMethod >> inferReturnTypeFromReturnsIn: aCodeGen [
 						[hasReturn := true.
 						 self addTypesFor: node expression to: returnTypes in: aCodeGen]].
 				returnTypes remove: #implicit ifAbsent: [].
-				returnTypes := self harmonizeSignedAndUnsignedTypesIn: returnTypes.
+				returnTypes := aCodeGen harmonizeReturnTypesIn: returnTypes.
 				hasReturn
 					ifTrue:
 						[returnTypes size > 1 ifTrue:

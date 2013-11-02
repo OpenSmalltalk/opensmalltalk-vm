@@ -79,8 +79,6 @@ VMProfileLinuxSupportPlugin >> primitiveExecutableModules [
 	 The first element in each pair is the filename of the module.  The second element is either nil or
 	 the symlink's target, if the filename is a symlink."
 	<export: true>
-	<var: #name type: 'const char *'>
-	<var: #nameObjData type: #'char *'>
 	| resultObj |
 	numModules := 0.
 	self cCode: 'dl_iterate_phdr(countnummodules,0)' inSmalltalk: [0].
