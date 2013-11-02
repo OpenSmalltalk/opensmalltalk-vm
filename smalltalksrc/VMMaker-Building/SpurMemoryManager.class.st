@@ -1169,7 +1169,7 @@ SpurMemoryManager >> allObjectsInFreeTreeDo: aBlock [
 { #category : #'gc - global' }
 SpurMemoryManager >> allObjectsUnmarked [
 	self allObjectsDo:
-		[:o| (self isMarked: o) ifFalse: [^false]].
+		[:o| (self isMarked: o) ifTrue: [^false]].
 	^true
 ]
 
@@ -4029,6 +4029,7 @@ SpurMemoryManager >> globalGarbageCollect [
 	self bestFitCompact.
 	self eliminateAndFreeForwarders.
 	self assert: self validObjStacks.
+	self assert: self allObjectsUnmarked.
 	self runLeakCheckerForFullGC: true
 ]
 
