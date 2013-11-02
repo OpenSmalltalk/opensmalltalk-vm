@@ -2202,6 +2202,11 @@ StackInterpreterSimulator >> stackPage [
 ]
 
 { #category : #'simulation only' }
+StackInterpreterSimulator >> stackPages [
+	^stackPages
+]
+
+{ #category : #'simulation only' }
 StackInterpreterSimulator >> startInContextSuchThat: aBlock [
 	"Change the active process's suspendedContext to its sender, which short-cuts the
 	 initialization of the system.  This can be a short-cut to running code, e.g. when doing
