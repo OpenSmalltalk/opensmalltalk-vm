@@ -2512,6 +2512,24 @@ CCodeGenerator >> globalsAsSet [
 ]
 
 { #category : #'type inference' }
+CCodeGenerator >> harmonizeReturnTypesIn: aSetOfTypes [
+	"Eliminate signed/unsigned conflicts in aSetOfTypes"
+	| sqs usqs |
+	#(char short int #'unsigned char' #'unsigned short' #'unsigned int')
+		with: #(sqInt sqInt sqInt #usqInt #usqInt #usqInt)
+		do: [:type :replacement|
+			(aSetOfTypes includes: type) ifTrue:
+				[aSetOfTypes remove: type; add: replacement]].
+	sqs := aSetOfTypes select: [:t| t beginsWith: 'sq'].
+	usqs := aSetOfTypes select: [:t| t beginsWith: 'usq'].
+	^(sqs size + usqs size = aSetOfTypes size
+	   and: [sqs notEmpty
+	   and: [sqs allSatisfy: [:t| usqs includes: 'u', t]]])
+		ifTrue: [sqs]
+		ifFalse: [aSetOfTypes]
+]
+
+{ #category : #'type inference' }
 CCodeGenerator >> implicitReturnTypeFor: aSelector [
 	"Answer the default return type for mthods of the defining class of
 	 aSelector. Default to #sqInt if there is no method, or if the method's

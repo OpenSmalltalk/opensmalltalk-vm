@@ -24,7 +24,8 @@ VMPluginCodeGenerator >> atLeastVMProxyMajor: major minor: minor [
 
 { #category : #utilities }
 VMPluginCodeGenerator >> compileToTMethodSelector: selector in: aClass [
-	"Compile a method to a TMethod"
+	"Compile a method to a TMethod. Override to eagerly record declarations etc
+	 that happen in a later phase in the main VM's CCodeGenerator."
 
 	| m |
 	m := (Compiler new
@@ -32,6 +33,8 @@ VMPluginCodeGenerator >> compileToTMethodSelector: selector in: aClass [
 			in: aClass
 			notifying: nil)
 				asTranslationMethodOfClass: self translationMethodClass.
+	m removeFinalSelfReturnIn: self.
+	m recordDeclarationsIn: self.
 	m inferReturnTypeIn: self.
 	m returnType ifNil:
 		[m returnType: (self implicitReturnTypeFor: selector)].
@@ -219,6 +222,15 @@ VMPluginCodeGenerator >> generateInterpreterProxyFunctionDeference: aNode on: aS
 			do: [aStream crtab: anInteger; nextPutAll: cs; nextPutAll: ' = interpreterProxy->'; nextPutAll: cs; nextPut: $;]
 			ifOptionalDo: [aStream crtab: anInteger; nextPutAll: cs; nextPutAll: ' = 0;']].
 	aStream cr; nextPutAll: '#endif /* !defined(SQUEAK_BUILTIN_PLUGIN) */'.
+]
+
+{ #category : #'type inference' }
+VMPluginCodeGenerator >> harmonizeReturnTypesIn: aSetOfTypes [
+	"Eliminate signed/unsigned conflicts in aSetOfTypes.  Override to
+	 default to void if any one return type is void."
+	^(aSetOfTypes includes: #void)
+		ifTrue: [Set with: #void]
+		ifFalse: [super harmonizeReturnTypesIn: aSetOfTypes]
 ]
 
 { #category : #public }
