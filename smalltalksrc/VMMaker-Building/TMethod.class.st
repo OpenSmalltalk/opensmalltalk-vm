@@ -2082,7 +2082,9 @@ TMethod >> statementsFor: sourceText varName: varName [
 	self printTempsAndVar: varName on: s.
 	s nextPutAll: sourceText.
 	^ ((Compiler new parse: s contents in: Object notifying: nil)
-			asTranslationMethodOfClass: self class) statements
+			asTranslationMethodOfClass: self class)
+				removeFinalSelfReturnIn: nil;
+				statements
 
 ]
 

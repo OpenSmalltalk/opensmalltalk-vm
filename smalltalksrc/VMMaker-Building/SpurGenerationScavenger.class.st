@@ -1010,7 +1010,7 @@ SpurGenerationScavenger >> shouldBeTenured: survivor [
 		ACM TOPLAS, Volume 14 Issue 1, Jan. 1992, pp 1 - 27.
 
 	 The other policies are for special purposes."
-
+	<inline: false> "Slang limitations given this used in (... or: []) ifTrue:"
 	^tenureCriterion
 		caseOf: {
 			[TenureByAge]	->
