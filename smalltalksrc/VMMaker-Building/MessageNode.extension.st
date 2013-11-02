@@ -41,7 +41,16 @@ MessageNode >> asTranslatorNodeIn: aTMethod [
 	((sel == #ifFalse: or: [sel == #or:])
 	 and: [arguments size = 2 and: [(arguments at: 2) notNil]]) ifTrue:
 		["Restore argument block that got moved by transformOr: or transformIfFalse:"
-		 args at: 1 put: ((arguments at: 2) asTranslatorNodeIn: aTMethod)].
+		 args := {(arguments at: 2) asTranslatorNodeIn: aTMethod}].
+	(args size > sel numArgs and: [sel ~~ #to:by:do:]) ifTrue: "to:by:do: has iLimiT hidden in last arg"
+		["prune the extra blocks left by ifTrue:, ifFalse:, and: & or:"
+		 self assert: args size - sel numArgs = 1.
+		 self assert: (args last isStmtList
+					  and: [args last statements size = 1
+					  and: [(args last statements first isVariable
+							or: [args last statements first isConstant])
+					  and: [#('nil' true false) includes: args last statements first nameOrValue]]]).
+		 args := args first: sel numArgs].
 	"For the benefit of later passes, e.g. value: inlining,
 	 transform e ifNotNil: [:v| ...] into  v := e. v ifNotNil: [...],
 	 which in fact means transforming (v := e) ifTrue: [:v|...] into v := e. v ifTrue: [...]."

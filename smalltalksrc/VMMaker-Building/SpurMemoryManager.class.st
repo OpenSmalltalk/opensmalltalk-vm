@@ -1166,6 +1166,13 @@ SpurMemoryManager >> allObjectsInFreeTreeDo: aBlock [
 		 freeTreeNode]
 ]
 
+{ #category : #'gc - global' }
+SpurMemoryManager >> allObjectsUnmarked [
+	self allObjectsDo:
+		[:o| (self isMarked: o) ifFalse: [^false]].
+	^true
+]
+
 { #category : #'object enumeration' }
 SpurMemoryManager >> allOldSpaceEntitiesDo: aBlock [
 	<inline: true>
@@ -2942,7 +2949,7 @@ SpurMemoryManager >> eliminateAndFreeForwarders [
 		[specialObjectsOop := self followForwarded: specialObjectsOop].
 	self followForwardedObjStacks.
 	scavenger followRememberedForwardersAndForgetFreeObjects.
-	self doScavenge: TenureByAge.
+	self doScavenge: DontTenureButDoUnmark.
 	lowestForwarded := 0.
 	"sweep, following forwarders in all live objects, and finding the first forwarder."
 	self allOldSpaceObjectsDo:
@@ -3031,7 +3038,8 @@ SpurMemoryManager >> ensureAdequateClassTableBitmap [
 { #category : #'gc - incremental' }
 SpurMemoryManager >> ensureAllMarkBitsAreZero [
 	"If the incremental collector is running mark bits may be set; stop it and clear them if necessary."
-	self flag: 'need to implement the inc GC first...'
+	self flag: 'need to implement the inc GC first...'.
+	self assert: self allObjectsUnmarked
 ]
 
 { #category : #'class table' }

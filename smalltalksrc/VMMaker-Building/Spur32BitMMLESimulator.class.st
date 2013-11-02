@@ -340,6 +340,18 @@ Spur32BitMMLESimulator >> scavengingGCTenuringIf: tenuringCriterion [
 	^super scavengingGCTenuringIf: tenuringCriterion
 ]
 
+{ #category : #'header access' }
+Spur32BitMMLESimulator >> setIsMarkedOf: objOop to: aBoolean [
+	super setIsMarkedOf: objOop to: aBoolean.
+	(aBoolean
+	 and: [(self isContextNonImm: objOop)
+	 and: [(coInterpreter
+			checkIsStillMarriedContext: objOop
+			currentFP: coInterpreter framePointer)
+	 and: [(coInterpreter stackPages stackPageFor: (coInterpreter frameOfMarriedContext: objOop)) trace = 0]]]) ifTrue:
+		[self halt]
+]
+
 { #category : #'memory access' }
 Spur32BitMMLESimulator >> shortAt: byteAddress [
     "Return the half-word at byteAddress which must be even."
