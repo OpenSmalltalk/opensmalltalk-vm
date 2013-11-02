@@ -7843,7 +7843,8 @@ StackInterpreter >> markAndTraceStackPages: fullGCFlag [
 				 self markAndTraceStackPage: thePage]].
 		^nil].
 
-	"On a full GC only eagerly trace pages referenced from the active page."
+	"On a full GC only eagerly trace pages referenced from
+	 the base of the active page, i.e. on the active stack."
 	stackPage = 0 ifTrue: [^nil].
 	thePage := stackPage.
 	[thePage trace: 2.
@@ -7854,7 +7855,7 @@ StackInterpreter >> markAndTraceStackPages: fullGCFlag [
 	  and: [self isStillMarriedContext: context]]) ifTrue:
 		[thePage := stackPages stackPageFor:  (self frameOfMarriedContext: context).
 		 self assert: (stackPages isFree: thePage) not].
-	 thePage trace = 0] whileTrue
+	 thePage trace < 2] whileTrue
 ]
 
 { #category : #'object memory support' }
@@ -9333,6 +9334,19 @@ StackInterpreter >> printFramesInPage: thePage [
 	<inline: false>
 	<var: #thePage type: #'StackPage *'>
 	self printFrameAndCallers: thePage headFP SP: thePage headSP short: false
+]
+
+{ #category : #'debug printing' }
+StackInterpreter >> printFramesOnStackPageListInUse [
+	<export: true>
+	| page |
+	<inline: false>
+	<var: #page type: #'StackPage *'>
+	page := stackPages mostRecentlyUsedPage.
+	[(stackPages isFree: page) ifFalse:
+		[self printFramesInPage: page.
+		 self cr].
+	 (page := page prevPage) ~= stackPages mostRecentlyUsedPage] whileTrue
 ]
 
 { #category : #'debug printing' }
@@ -10992,6 +11006,7 @@ StackInterpreter >> setStackPageAndLimit: thePage [
 { #category : #'object memory support' }
 StackInterpreter >> setTraceFlagOnContextsFramesPageIfNeeded: aContext [
 	| thePage |
+	<inline: false>
 	<var: #thePage type: #'StackPage *'>
 	(self isStillMarriedContext: aContext) ifTrue:
 		[thePage := stackPages stackPageFor: (self frameOfMarriedContext: aContext).
@@ -11095,6 +11110,19 @@ StackInterpreter >> shortPrintFramesInPage: thePage [
 	<inline: false>
 	<var: #thePage type: #'StackPage *'>
 	self printFrameAndCallers: thePage headFP SP: thePage headSP short: true
+]
+
+{ #category : #'debug printing' }
+StackInterpreter >> shortPrintFramesOnStackPageListInUse [
+	<export: true>
+	| page |
+	<inline: false>
+	<var: #page type: #'StackPage *'>
+	page := stackPages mostRecentlyUsedPage.
+	[(stackPages isFree: page) ifFalse:
+		[self shortPrintFramesInPage: page.
+		 self cr].
+	 (page := page prevPage) ~= stackPages mostRecentlyUsedPage] whileTrue
 ]
 
 { #category : #'debug printing' }
