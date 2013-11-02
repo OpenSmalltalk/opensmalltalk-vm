@@ -5,12 +5,12 @@ BMPReadWriterPlugin \
 B2DPlugin \
 BitBltPlugin \
 DSAPrims \
+ZipPlugin \
 DropPlugin \
 FileCopyPlugin \
 FilePlugin \
 FloatArrayPlugin \
 FloatMathPlugin \
-ZipPlugin \
 JPEGReadWriter2Plugin \
 JPEGReaderPlugin \
 LargeIntegers \
