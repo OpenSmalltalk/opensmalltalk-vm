@@ -181,6 +181,15 @@ sqInt reestablishContextPriorToCallback(sqInt callbackContext); /* Alien FFI */
 sqInt sendInvokeCallbackContext(vmccp);
 sqInt returnAsThroughCallbackContext(int, vmccp, sqInt);
 #endif /* VM_PROXY_MINOR > 8 */
+#if VM_PROXY_MINOR > 12 /* Spur */
+sqInt isImmediate(sqInt oop);
+sqInt isCharacterObject(sqInt oop);
+sqInt isCharacterValue(int charCode);
+sqInt characterObjectOf(int charCode);
+sqInt characterValueOf(sqInt oop);
+sqInt isPinned(sqInt objOop);
+sqInt pinObject(sqInt objOop);
+#endif
 char *cStringOrNullFor(sqInt);
 
 void *ioLoadFunctionFrom(char *fnName, char *modName);
@@ -249,6 +258,19 @@ extern sqInt isYoung(sqInt);
 void addHighPriorityTickee(void (*ticker)(void), unsigned periodms);
 void addSynchronousTickee(void (*ticker)(void), unsigned periodms, unsigned roundms);
 
+#if SPURVM /* For now these are here; perhaps they're better in the VM. */
+static sqInt
+interceptFetchIntegerofObject(sqInt fieldIndex, sqInt objectPointer)
+{
+	if (fieldIndex == 0
+	 && isCharacterObject(objectPointer))
+		return characterValueOf(objectPointer);
+
+	return fetchIntegerofObject(fieldIndex, objectPointer);
+}
+#endif
+
+sqInt  fetchIntegerofObject(sqInt fieldIndex, sqInt objectPointer);
 struct VirtualMachine* sqGetInterpreterProxy(void)
 {
 	if(VM) return VM;
@@ -276,7 +298,11 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->fetchArrayofObject = fetchArrayofObject;
 	VM->fetchClassOf = fetchClassOf;
 	VM->fetchFloatofObject = fetchFloatofObject;
+#if SPURVM
+	VM->fetchIntegerofObject = interceptFetchIntegerofObject;
+#else
 	VM->fetchIntegerofObject = fetchIntegerofObject;
+#endif
 	VM->fetchPointerofObject = fetchPointerofObject;
 	VM->obsoleteDontUseThisFetchWordofObject = obsoleteDontUseThisFetchWordofObject;
 	VM->firstFixedField = firstFixedField;
@@ -469,6 +495,16 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->startOfAlienData = startOfAlienData;
 	VM->sizeOfAlienData = sizeOfAlienData;
 	VM->signalNoResume = signalNoResume;
+#endif
+
+#if VM_PROXY_MINOR > 12 /* Spur */
+	VM->isImmediate = isImmediate;
+	VM->characterObjectOf = characterObjectOf;
+	VM->characterValueOf = characterValueOf;
+	VM->isCharacterObject = isCharacterObject;
+	VM->isCharacterValue = isCharacterValue;
+	VM->isPinned = isPinned;
+	VM->pinObject = pinObject;
 #endif
 
 	return VM;

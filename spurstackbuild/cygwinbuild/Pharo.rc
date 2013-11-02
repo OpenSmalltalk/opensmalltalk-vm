@@ -1,0 +1,37 @@
+#ifdef _WIN32
+1                       ICON    DISCARDABLE     "Pharo.ico"
+2                       ICON    DISCARDABLE     "Pharo.ico"
+3                       ICON    DISCARDABLE     "Pharo.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+1 VERSIONINFO
+ FILEVERSION 1,0,15,0
+ PRODUCTVERSION 1,0,0,0
+ FILEFLAGSMASK 0x3fL
+ FILEFLAGS 0xaL
+ FILEOS 0x10001L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4"    // Lang=US English, CharSet=Windows Multilin
+        BEGIN
+            VALUE "CompanyName", "pharo-project.org\0"
+            VALUE "FileDescription", "Pharo Cog Virtual Machine 1.0.15\0"
+            VALUE "FileVersion", "3.11.3\0"
+            VALUE "LegalCopyright", "Copyright \251 1996-2010. All Rights Reserved.\0"
+            VALUE "ProductName", "Pharo\0"
+            VALUE "ProductVersion", "1.0.15\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1252
+    END
+END
+#endif

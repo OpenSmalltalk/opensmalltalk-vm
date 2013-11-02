@@ -77,6 +77,13 @@
 #define sqShrinkMemoryBy(oldLimit, delta)		oldLimit
 #define sqMemoryExtraBytesLeft(includingSwap)		0
 
+#if SPURVM
+/* Allocate a region of memory of al least sz bytes, at or above minAddr.
+ * If the attempt fails, answer null.  If the attempt succeeds, answer the
+ * start of the region and assign its size through asp.
+ */
+extern void *sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt sz, void *minAddr, sqInt *asp);
+#endif /* SPURVM */
 /* Platform-dependent memory size adjustment macro. */
 
 /* Note: This macro can be redefined to allows platforms with a
@@ -518,7 +525,7 @@ sqInt ioDisableImageWrite(void);
 
 /* Save/restore. */
 /* Read the image from the given file starting at the given image offset */
-sqInt readImageFromFileHeapSizeStartingAt(sqImageFile f, usqInt desiredHeapSize, squeakFileOffsetType imageOffset);
+size_t readImageFromFileHeapSizeStartingAt(sqImageFile f, usqInt desiredHeapSize, squeakFileOffsetType imageOffset);
 
 /* Clipboard (cut/copy/paste). */
 sqInt clipboardSize(void);

@@ -14,7 +14,11 @@
 
 #ifndef VM_PROXY_MINOR
 /* Increment the following number if you add functions at the end */
-# define VM_PROXY_MINOR 12
+# if SPURVM
+#	define VM_PROXY_MINOR 13
+# else
+#	define VM_PROXY_MINOR 12
+# endif
 #endif
 
 #include "sqMemoryAccess.h"
@@ -317,6 +321,16 @@ typedef struct VirtualMachine {
   void  *(*startOfAlienData)(sqInt);
   usqInt (*sizeOfAlienData)(sqInt);
   sqInt  (*signalNoResume)(sqInt);
+#endif
+
+#if VM_PROXY_MINOR > 12 /* Spur */
+  sqInt (*isImmediate)(sqInt objOop);
+  sqInt (*characterObjectOf)(int charCode);
+  sqInt (*characterValueOf)(sqInt objOop);
+  sqInt (*isCharacterObject)(sqInt objOop);
+  sqInt (*isCharacterValue)(int charCode);
+  sqInt (*isPinned)(sqInt objOop);
+  sqInt (*pinObject)(sqInt objOop);
 #endif
 } VirtualMachine;
 

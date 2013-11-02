@@ -1,0 +1,113 @@
+// !$*UTF8*$!
+{
+	08773EB400C6A1C4C0A80109 /* Project object */ = {
+		activeBuildConfigurationName = Development;
+		activeExecutable = 73CC4EF814F04A15004BFB52 /* Croquet */;
+		activeTarget = 941A3B2B09AA144000C9D25A /* Croquet */;
+		codeSenseManager = 73CC4F1914F04A24004BFB52 /* Code sense */;
+		executables = (
+			73CC4EF814F04A15004BFB52 /* Croquet */,
+		);
+		perUserDictionary = {
+			PBXConfiguration.PBXFileTableDataSource3.PBXFileTableDataSource = {
+				PBXFileTableDataSourceColumnSortingDirectionKey = "-1";
+				PBXFileTableDataSourceColumnSortingKey = PBXFileDataSource_Filename_ColumnID;
+				PBXFileTableDataSourceColumnWidthsKey = (
+					20,
+					341,
+					20,
+					48,
+					43,
+					43,
+					20,
+				);
+				PBXFileTableDataSourceColumnsKey = (
+					PBXFileDataSource_FiletypeID,
+					PBXFileDataSource_Filename_ColumnID,
+					PBXFileDataSource_Built_ColumnID,
+					PBXFileDataSource_ObjectSize_ColumnID,
+					PBXFileDataSource_Errors_ColumnID,
+					PBXFileDataSource_Warnings_ColumnID,
+					PBXFileDataSource_Target_ColumnID,
+				);
+			};
+			PBXPerProjectTemplateStateSaveDate = 351292546;
+			PBXWorkspaceStateSaveDate = 351292546;
+		};
+		perUserProjectItems = {
+			73C11FA414F04C91000F6868 /* PBXBookmark */ = 73C11FA414F04C91000F6868 /* PBXBookmark */;
+			73C11FA914F04C91000F6868 /* PBXTextBookmark */ = 73C11FA914F04C91000F6868 /* PBXTextBookmark */;
+		};
+		sourceControlManager = 73CC4F1814F04A24004BFB52 /* Source Control */;
+		userBuildSettings = {
+		};
+	};
+	73BC1BB90F576864003412C5 /* gcc3x-interp.c */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {3512, 490893}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 531}";
+		};
+	};
+	73C11FA414F04C91000F6868 /* PBXBookmark */ = {
+		isa = PBXBookmark;
+		fRef = 73BC1BB90F576864003412C5 /* gcc3x-interp.c */;
+	};
+	73C11FA914F04C91000F6868 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 73BC1BB90F576864003412C5 /* gcc3x-interp.c */;
+		name = "gcc3x-interp.c: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 531;
+		vrLoc = 0;
+	};
+	73CC4EF814F04A15004BFB52 /* Croquet */ = {
+		isa = PBXExecutable;
+		activeArgIndices = (
+		);
+		argumentStrings = (
+		);
+		autoAttachOnCrash = 1;
+		breakpointsEnabled = 0;
+		configStateDict = {
+		};
+		customDataFormattersEnabled = 1;
+		dataTipCustomDataFormattersEnabled = 1;
+		dataTipShowTypeColumn = 1;
+		dataTipSortType = 0;
+		debuggerPlugin = GDBDebugging;
+		disassemblyDisplayState = 0;
+		enableDebugStr = 1;
+		environmentEntries = (
+		);
+		executableSystemSymbolLevel = 0;
+		executableUserSymbolLevel = 0;
+		libgmallocEnabled = 0;
+		name = Croquet;
+		showTypeColumn = 0;
+		sourceDirectories = (
+		);
+	};
+	73CC4F1814F04A24004BFB52 /* Source Control */ = {
+		isa = PBXSourceControlManager;
+		fallbackIsa = XCSourceControlManager;
+		isSCMEnabled = 0;
+		scmConfiguration = {
+			repositoryNamesForRoots = {
+				"" = "";
+			};
+		};
+	};
+	73CC4F1914F04A24004BFB52 /* Code sense */ = {
+		isa = PBXCodeSenseManager;
+		indexTemplatePath = "";
+	};
+	941A3B2B09AA144000C9D25A /* Croquet */ = {
+		activeExec = 0;
+		executables = (
+			73CC4EF814F04A15004BFB52 /* Croquet */,
+		);
+	};
+}

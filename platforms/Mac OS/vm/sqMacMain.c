@@ -168,7 +168,6 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 {
 #if !defined(NOEXECINFO)
 	void *addrs[BACKTRACE_DEPTH+1];
-	void *pc;
 	int depth;
 #endif
 	/* flag prevents recursive error when trying to print a broken stack */
@@ -179,15 +178,18 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 
 #if !defined(NOEXECINFO)
 	printf("C stack backtrace & registers:\n");
-	pc = printRegisterState(uap);
-	depth = backtrace(addrs + 1, BACKTRACE_DEPTH);
-	addrs[0] = pc;
+	if (uap) {
+		addrs[0] = printRegisterState(uap);
+		depth = 1 + backtrace(addrs + 1, BACKTRACE_DEPTH);
+	}
+	else
+		depth = backtrace(addrs, BACKTRACE_DEPTH);
 # if 0 /* Mac OS's backtrace_symbols_fd prints NULL byte droppings each line */
 	fflush(stdout); /* backtrace_symbols_fd uses unbuffered i/o */
-	backtrace_symbols_fd(addrs, depth + 1, fileno(stdout));
+	backtrace_symbols_fd(addrs, depth, fileno(stdout));
 # else
 	{ int i; char **strings;
-	  strings = backtrace_symbols(addrs, depth + 1);
+	  strings = backtrace_symbols(addrs, depth);
 	  printf("(%s)\n", strings[0]);
 	  for (i = 1; i < depth; i++)
 		printf("%s\n", strings[i]);
@@ -551,7 +553,19 @@ main(int argc, char **argv, char **envp)
 		f = sqImageFileOpen(getImageName(), "rb");
  	}
 
+#if SPURVM
+  {	off_t here, size;
+
+	here = ftello(f);
+	if (fseek(f, 0, SEEK_END)) perror("fseek");
+	size = ftello(f);
+	if (fseek(f, here, SEEK_SET)) perror("fseek");
+	size = 1 << highBit(size-1);
+	readImageFromFileHeapSizeStartingAt(f, size + size / 4, 0);
+  }
+#else
 	readImageFromFileHeapSizeStartingAt(f, sqGetAvailableMemory(), 0);
+#endif
 	sqImageFileClose(f);
 
 	if (!gSqueakHeadless) {
@@ -991,8 +1005,6 @@ fetchPreferences() {
         gSqueakQuitOnQuitAppleEvent = CFBooleanGetValue(SqueakQuitOnQuitAppleEvent);
     else
         gSqueakQuitOnQuitAppleEvent = false;
-
-
 }
 
 void cocoInterfaceForTilda(CFStringRef aStringRef, char *buffer,int max_size) {

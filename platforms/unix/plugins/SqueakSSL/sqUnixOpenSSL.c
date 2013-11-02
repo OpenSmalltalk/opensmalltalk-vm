@@ -124,7 +124,14 @@ sqInt sqDestroySSL(sqInt handle) {
 	if(ssl == NULL) return 0;
 
 	if(ssl->ctx) SSL_CTX_free(ssl->ctx);
-	if(ssl->ssl) SSL_free(ssl->ssl);
+
+	if(ssl->ssl) { 
+		SSL_free(ssl->ssl); // This will also free bioRead and bioWrite
+	} else {
+		// SSL_new didn't get called, have to free bioRead and bioWrite manually
+		BIO_free_all(ssl->bioRead);
+		BIO_free_all(ssl->bioWrite);
+	}
 
 	if(ssl->certName) free(ssl->certName);
 	if(ssl->peerName) free(ssl->peerName);
@@ -394,6 +401,7 @@ sqInt sqSetStringPropertySSL(sqInt handle, int propID, char *propName, sqInt pro
 	switch(propID) {
 		case SQSSL_PROP_CERTNAME: ssl->certName = property; break;
 		default: 
+			if(property) free(property);
 			if(ssl->loglevel) printf("sqSetStringPropertySSL: Unknown property ID %d\n", propID);
 			return 0;
 	}

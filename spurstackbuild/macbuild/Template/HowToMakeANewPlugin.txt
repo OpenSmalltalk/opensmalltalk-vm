@@ -1,0 +1,19 @@
+How to build a new plugin:
+1. Start xcode, create a new "Carbon bundle" project
+2. Create the project under macbuild/MyPlugin
+3. Edit the project settings:
+   Header Search Path: /Developer/Headers/FlatCarbon
+4. Add the following files:
+   macbuild/src/vm/interp.h
+   platforms/Cross/vm/sqMemoryAccess.h
+   platforms/Cross/vm/sqVirtualMachine.h
+   platforms/Mac OS/vm/config.h
+   platforms/Mac OS/vm/sqConfig.h
+   platforms/Mac OS/vm/sqPlatformSpecific.h
+5. Add the files for your plugin from
+   platforms/Cross/MyPlugin
+   platforms/Mac OS/MyPlugin
+   macbuild/src/MyPlugin
+6. Cross your fingers and compile
+
+Alternatively, use the Template provided here.

@@ -1,0 +1,5 @@
+#ifdef _WIN32
+1                       ICON    DISCARDABLE     "Croquet.ico"
+2                       ICON    DISCARDABLE     "Croquet.ico"
+3                       ICON    DISCARDABLE     "Croquet.ico"
+#endif

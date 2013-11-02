@@ -2,15 +2,14 @@
  * 
  * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2006-04-06 09:47:39 by piumarta on emilia.local
+ * Last edited: 2013-10-14 12:23:39 by eliot on McStalker
  */
 
-/* Systematic use of the macros defined in this file within the
- * Interpreter, ObjectMemory and plugins will permit all four
- * combinations of 32/64-bit image and 32/64-bit host to compile and
- * run correctly.  (Code that uses explicit casts and/or integer
- * constants in arithmetic on object pointers will invariably fail in
- * at least one of the four possible combinations.)
+/* Systematic use of the macros defined in this file within the Interpreter,
+ * ObjectMemory and plugins will permit all four combinations of 32/64-bit
+ * image and 32/64-bit host to compile and run correctly.  (Code that uses
+ * explicit casts and/or integer constants in arithmetic on object pointers
+ * will invariably fail in at least one of the four possible combinations.)
  */
 
 #ifndef __sqMemoryAccess_h
@@ -77,11 +76,13 @@
   static inline sqInt shortAtPointer(char *ptr)			{ return (sqInt)(*((short *)ptr)); }
   static inline sqInt shortAtPointerput(char *ptr, int val)	{ return (sqInt)(*((short *)ptr)= (short)val); }
   static inline sqInt intAtPointer(char *ptr)			{ return (sqInt)(*((unsigned int *)ptr)); }
-  static inline sqInt intAtPointerput(char *ptr, int val)	{ return (sqInt)(*((unsigned int *)ptr)= (int)val); }
+  static inline sqInt intAtPointerput(char *ptr, int val)	{ return (sqInt)(*((unsigned int *)ptr)= val); }
   static inline sqInt longAtPointer(char *ptr)			{ return *(sqInt *)ptr; }
-  static inline sqInt longAtPointerput(char *ptr, sqInt val)	{ return *(sqInt *)ptr= (sqInt)val; }
+  static inline sqInt longAtPointerput(char *ptr, sqInt val)	{ return *(sqInt *)ptr= val; }
+  static inline sqLong longLongAtPointer(char *ptr)			{ return *(sqLong *)ptr; }
+  static inline sqLong longLongAtPointerput(char *ptr, sqLong val)	{ return *(sqLong *)ptr= val; }
   static inline sqInt oopAtPointer(char *ptr)			{ return *(sqInt *)ptr; }
-  static inline sqInt oopAtPointerput(char *ptr, sqInt val)	{ return (sqInt)(*(sqInt *)ptr= (sqInt)val); }
+  static inline sqInt oopAtPointerput(char *ptr, sqInt val)	{ return (sqInt)(*(sqInt *)ptr= val); }
 # if defined(sqMemoryBase) && !sqMemoryBase
   static inline char *pointerForOop(usqInt oop)			{ return (char *)oop; }
   static inline sqInt oopForPointer(char *ptr)			{ return (sqInt)ptr; }
@@ -97,20 +98,24 @@
   static inline sqInt intAtput(sqInt oop, int val)		{ return intAtPointerput(pointerForOop(oop), val); }
   static inline sqInt longAt(sqInt oop)				{ return longAtPointer(pointerForOop(oop)); }
   static inline sqInt longAtput(sqInt oop, sqInt val)		{ return longAtPointerput(pointerForOop(oop), val); }
+  static inline sqInt longLongAt(sqInt oop)				{ return longLongAtPointer(pointerForOop(oop)); }
+  static inline sqInt longLongAtput(sqInt oop, sqLong val)		{ return longLongAtPointerput(pointerForOop(oop), val); }
   static inline sqInt oopAt(sqInt oop)				{ return oopAtPointer(pointerForOop(oop)); }
   static inline sqInt oopAtput(sqInt oop, sqInt val)		{ return oopAtPointerput(pointerForOop(oop), val); }
 #else
   /* Use macros when static inline functions aren't efficient. */
-# define byteAtPointer(ptr)		((sqInt)(*((unsigned char *)(ptr))))
-# define byteAtPointerput(ptr, val)	((sqInt)(*((unsigned char *)(ptr))= (unsigned char)(val)))
+# define byteAtPointer(ptr)			((sqInt)(*((unsigned char *)(ptr))))
+# define byteAtPointerput(ptr,val)	((sqInt)(*((unsigned char *)(ptr))= (unsigned char)(val)))
 # define shortAtPointer(ptr)		((sqInt)(*((short *)(ptr))))
-# define shortAtPointerput(ptr, val)	((sqInt)(*((short *)(ptr))= (short)(val)))
-# define intAtPointer(ptr)		((sqInt)(*((int *)(ptr))))
-# define intAtPointerput(ptr, val)	((sqInt)(*((int *)(ptr))= (int)(val)))
-# define longAtPointer(ptr)		(*(sqInt *)(ptr))
-# define longAtPointerput(ptr, val)	(*(sqInt *)(ptr)= (sqInt)(val))
-# define oopAtPointer(ptr)		(*(sqInt *)(ptr))
-# define oopAtPointerput(ptr, val)	(*(sqInt *)(ptr)= (sqInt)(val))
+# define shortAtPointerput(ptr,val)	((sqInt)(*((short *)(ptr))= (short)(val)))
+# define intAtPointer(ptr)			((sqInt)(*((int *)(ptr))))
+# define intAtPointerput(ptr,val)	((sqInt)(*((int *)(ptr))= (int)(val)))
+# define longAtPointer(ptr)			(*(sqInt *)(ptr))
+# define longAtPointerput(ptr,val)	(*(sqInt *)(ptr)= (sqInt)(val))
+# define longLongAtPointer(ptr)			(*(sqLong *)(ptr))
+# define longLongAtPointerput(ptr,val)	(*(sqLong *)(ptr)= (sqLong)(val))
+# define oopAtPointer(ptr)			(*(sqInt *)(ptr))
+# define oopAtPointerput(ptr,val)	(*(sqInt *)(ptr)= (sqInt)(val))
 # if defined(sqMemoryBase) && !sqMemoryBase
 #  define pointerForOop(oop)		((char *)(oop))
 #  define oopForPointer(ptr)		((sqInt)(ptr))
@@ -118,16 +123,18 @@
 #  define pointerForOop(oop)		((char *)(sqMemoryBase + ((usqInt)(oop))))
 #  define oopForPointer(ptr)		((sqInt)(((char *)(ptr)) - (sqMemoryBase)))
 # endif
-# define byteAt(oop)			byteAtPointer(pointerForOop(oop))
-# define byteAtput(oop, val)		byteAtPointerput(pointerForOop(oop), (val))
-# define shortAt(oop)			shortAtPointer(pointerForOop(oop))
-# define shortAtput(oop, val)		shortAtPointerput(pointerForOop(oop), (val))
-# define longAt(oop)			longAtPointer(pointerForOop(oop))
-# define longAtput(oop, val)		longAtPointerput(pointerForOop(oop), (val))
-# define intAt(oop)			intAtPointer(pointerForOop(oop))
-# define intAtput(oop, val)		intAtPointerput(pointerForOop(oop), (val))
-# define oopAt(oop)			oopAtPointer(pointerForOop(oop))
-# define oopAtput(oop, val)		oopAtPointerput(pointerForOop(oop), (val))
+# define byteAt(oop)				byteAtPointer(pointerForOop(oop))
+# define byteAtput(oop,val)			byteAtPointerput(pointerForOop(oop), (val))
+# define shortAt(oop)				shortAtPointer(pointerForOop(oop))
+# define shortAtput(oop,val)		shortAtPointerput(pointerForOop(oop), (val))
+# define longAt(oop)				longAtPointer(pointerForOop(oop))
+# define longAtput(oop,val)			longAtPointerput(pointerForOop(oop), (val))
+# define longLongAt(oop)			longLongAtPointer(pointerForOop(oop))
+# define longLongAtput(oop,val)		longLongAtPointerput(pointerForOop(oop), (val))
+# define intAt(oop)					intAtPointer(pointerForOop(oop))
+# define intAtput(oop,val)			intAtPointerput(pointerForOop(oop), (val))
+# define oopAt(oop)					oopAtPointer(pointerForOop(oop))
+# define oopAtput(oop,val)			oopAtPointerput(pointerForOop(oop), (val))
 #endif
 
 #define long32At	intAt

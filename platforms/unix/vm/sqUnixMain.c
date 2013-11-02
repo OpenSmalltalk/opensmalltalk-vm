@@ -804,9 +804,12 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 
 #if !defined(NOEXECINFO)
 	printf("C stack backtrace & registers:\n");
-	pc = printRegisterState(uap);
-	depth = backtrace(addrs + 1, BACKTRACE_DEPTH);
-	addrs[0] = pc;
+	if (uap) {
+		addrs[0] = printRegisterState(uap);
+		depth = 1 + backtrace(addrs + 1, BACKTRACE_DEPTH);
+	}
+	else
+		depth = backtrace(addrs, BACKTRACE_DEPTH);
 	putchar('*'); /* indicate where pc is */
 	fflush(stdout); /* backtrace_symbols_fd uses unbuffered i/o */
 	backtrace_symbols_fd(addrs, depth + 1, fileno(stdout));
