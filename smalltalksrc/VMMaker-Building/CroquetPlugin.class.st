@@ -101,15 +101,15 @@ CroquetPlugin >> primitiveAdj3 [
 	<var: #c11 declareC: 'const int c11 = 0'>
 	<var: #c12 declareC: 'const int c12 = 1'>
 	<var: #c13 declareC: 'const int c13 = 2'>
-	<var: #c14 declareC: 'const int c14 = 3'>
+	"<var: #c14 declareC: 'const int c14 = 3'>"
 	<var: #c21 declareC: 'const int c21 = 4'>
 	<var: #c22 declareC: 'const int c22 = 5'>
 	<var: #c23 declareC: 'const int c23 = 6'>
-	<var: #c24 declareC: 'const int c24 = 7'>
+	"<var: #c24 declareC: 'const int c24 = 7'>"
 	<var: #c31 declareC: 'const int c31 = 8'>
 	<var: #c32 declareC: 'const int c32 = 9'>
 	<var: #c33 declareC: 'const int c33 = 10'>
-	<var: #c34 declareC: 'const int c34 = 11'>
+	"<var: #c34 declareC: 'const int c34 = 11'>"
 	<var: #src type: 'float *'>
 	<var: #dst type: 'float *'>
 	<var: #m11 type:  'double'>
@@ -189,8 +189,7 @@ CroquetPlugin >> primitiveAdj3 [
 	dst at: c23 put: (0.0 - ((m11 * m23) - (m13 * m21))).
 	dst at: c33 put: ((m11 * m22) - (m12 * m21)).
 	
-	interpreterProxy pop: argc + 1.
-	^interpreterProxy push: dstOop.
+	interpreterProxy pop: argc + 1 thenPush: dstOop
 
 ]
 

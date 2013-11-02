@@ -555,11 +555,10 @@ NewsqueakIA32ABIPlugin >> primMalloc [
 	(interpreterProxy failed
 	 or: [byteSize <= 0 "some mallocs can't deal with malloc(0) bytes"]) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	self cCode: 'addr = (sqInt)malloc(byteSize)'
-		inSmalltalk: [addr := self Cmalloc: byteSize].
+	addr := self cCode: [self malloc: byteSize] inSmalltalk: [Alien Cmalloc: byteSize].
 	addr = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoCMemory].
-	interpreterProxy methodReturnValue: (interpreterProxy positive32BitIntegerFor: addr)
+	interpreterProxy methodReturnValue: (interpreterProxy positive32BitIntegerFor: addr asUnsignedInteger)
 ]
 
 { #category : #'primitives-callbacks' }

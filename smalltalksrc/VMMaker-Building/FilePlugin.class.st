@@ -718,7 +718,6 @@ FilePlugin >> primitiveFileTruncate [
 FilePlugin >> primitiveFileWrite [
 	| count startIndex array file elementSize bytesWritten |
 	<var: 'file' type: 'SQFile *'>
-	<var: 'arrayIndex' type: 'char *'>
 	<var: 'count' type: 'size_t'>
 	<var: 'startIndex' type: 'size_t'>
 	<var: 'elementSize' type: 'size_t'>
