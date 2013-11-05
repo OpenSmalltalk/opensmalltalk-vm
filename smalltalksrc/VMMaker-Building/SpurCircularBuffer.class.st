@@ -27,12 +27,14 @@ Class {
 SpurCircularBuffer >> addLast: element [
 	| newLast |
 	newLast := last + manager wordSize.
-	newLast > limit ifTrue:
+	newLast >= limit ifTrue:
 		[newLast := start].
 	(newLast = first and: [last >= start]) ifTrue: "wrapped; bump first"
 		[(first := newLast + manager wordSize) >= limit ifTrue:
 			[first := start]].
 	last := newLast.
+	self assert: (first >= start and: [first < limit]).
+	self assert: (last >= start and: [last < limit]).
 	manager longAt: newLast put: element
 ]
 
@@ -56,10 +58,22 @@ SpurCircularBuffer >> from: initialPtr reverseDo: aBlock [
 	| ptr |
 	last >= start ifTrue:
 		[ptr := initialPtr.
-		 [aBlock value: (manager longAt: ptr).
-		  ptr = first ifTrue: [^nil].
-		  (ptr := ptr - manager wordSize) < start ifTrue:
-			[ptr := limit]] repeat].
+		 first <= last
+			ifTrue: "enum in first to last range, last to first"
+				[ptr >= first ifTrue:
+					[[aBlock value: (manager longAt: ptr).
+					  (ptr := ptr - manager wordSize) < first ifTrue:
+						[^nil]] repeat]]
+			ifFalse: "enum in start to last range, last to start"
+				[ptr <= last ifTrue:
+					[[ptr >= start] whileTrue:
+						[aBlock value: (manager longAt: ptr).
+						 ptr := ptr - manager wordSize].
+					 ptr := limit].
+				 "now enum in first to limit range, limit to first"
+				 [ptr >= first] whileTrue:
+					[aBlock value: (manager longAt: ptr).
+					 ptr := ptr - manager wordSize]]].
 	^nil
 ]
 
@@ -104,6 +118,16 @@ SpurCircularBuffer >> manager: anObject [
 	^manager := anObject
 ]
 
+{ #category : #printing }
+SpurCircularBuffer >> printOn: aStream [
+	<doNotGenerate>
+	super printOn: aStream.
+	first ifNotNil:
+		[aStream nextPutAll: ' first: '; nextPutAll: first hex].
+	last ifNotNil:
+		[aStream nextPutAll: ' last: '; nextPutAll: last hex]
+]
+
 { #category : #accessing }
 SpurCircularBuffer >> resetAsEmpty [
 	last := start - manager wordSize
@@ -114,7 +138,10 @@ SpurCircularBuffer >> reverseDo: aBlock [
 	| ptr |
 	last >= start ifTrue:
 		[ptr := last.
-		 [aBlock value: (manager longAt: ptr).
+		 [self assert: (first <= last
+						ifTrue: [first <= ptr and: [ptr <= last]]
+						ifFalse: [(start <= ptr and: [ptr <= last]) or: [first <= ptr and: [ptr < limit]]]).
+		  aBlock value: (manager longAt: ptr).
 		  ptr = first ifTrue: [^nil].
 		  (ptr := ptr - manager wordSize) < start ifTrue:
 			[ptr := limit]] repeat].
