@@ -72,7 +72,8 @@ Spur32BitMMLESimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
 { #category : #'object access' }
 Spur32BitMMLESimulator >> fetchPointer: fieldIndex ofObject: objOop [
 	self assert: (self isForwarded: objOop) not.
-	self assert: (fieldIndex >= 0 and: [fieldIndex < (self numSlotsOfAny: objOop)]).
+	self assert: (fieldIndex >= 0 and: [fieldIndex < (self numSlotsOfAny: objOop)
+				or: [fieldIndex = 0 "forwarders and free objs"]]).
 	^super fetchPointer: fieldIndex ofObject: objOop
 ]
 
@@ -343,13 +344,13 @@ Spur32BitMMLESimulator >> scavengingGCTenuringIf: tenuringCriterion [
 { #category : #'header access' }
 Spur32BitMMLESimulator >> setIsMarkedOf: objOop to: aBoolean [
 	super setIsMarkedOf: objOop to: aBoolean.
-	(aBoolean
+	"(aBoolean
 	 and: [(self isContextNonImm: objOop)
 	 and: [(coInterpreter
 			checkIsStillMarriedContext: objOop
 			currentFP: coInterpreter framePointer)
 	 and: [(coInterpreter stackPages stackPageFor: (coInterpreter frameOfMarriedContext: objOop)) trace = 0]]]) ifTrue:
-		[self halt]
+		[self halt]"
 ]
 
 { #category : #'memory access' }
