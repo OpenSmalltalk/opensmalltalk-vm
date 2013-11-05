@@ -3146,8 +3146,8 @@ SpurMemoryManager >> exactFitCompact [
 	"Compact all of memory above firstFreeChunk using exact-fit, assuming free
 	 space is sorted and that the highest objects are recorded in highestObjects.
 	 Note that we don't actually move; we merely copy and forward.  Eliminating
-	 forwarders will be done in a final pass.
-	 Leave the objects that don't fit exactly, and hence aren't moved, in highestObjects."
+	 forwarders will be done in a final pass.  Leave the objects that don't fit
+	 exactly (the misfits), and hence aren't moved, in highestObjects."
 
 	<inline: false>
 	| misfits first |
@@ -3168,7 +3168,7 @@ SpurMemoryManager >> exactFitCompact [
 				ifNil:
 					[misfits := misfits - self wordSize.
 					 misfits < highestObjects start ifTrue:
-						[misfits := highestObjects limit].
+						[misfits := highestObjects limit - self wordSize].
 					 self longAt: misfits put: o]
 				ifNotNil:
 					[:f| self copyAndForward: o withBytes: b toFreeChunk: f]]].
@@ -3668,7 +3668,7 @@ SpurMemoryManager >> followForwardedObjectFields: objOop toDepth: depth [
 	"follow pointers in the object to depth.
 	 How to avoid cyclic structures?? A temproary mark bit?"
 	| oop |
-	self assert: (self isPointers: objOop).
+	self assert: ((self isPointers: objOop) or: [self isOopCompiledMethod: objOop]).
 	0 to: (self numSlotsOf: objOop) - 1 do:
 		[:i|
 		oop := self fetchPointer: i ofObject: objOop.
@@ -3771,7 +3771,7 @@ SpurMemoryManager >> forward: obj1 to: obj2 [
 { #category : #'become implementation' }
 SpurMemoryManager >> forwardSurvivor: obj1 to: obj2 [
 	self assert: (self isInNewSpace: obj1).
-	self assert: (self isInFutureSpace: obj2).
+	self assert: ((self isInFutureSpace: obj2) or: (self isInOldSpace: obj2)).
 	self storePointerUnchecked: 0 ofObject: obj1 withValue: obj2.
 	self setFormatOf: obj1 to: self forwardedFormat.
 	self setClassIndexOf: obj1 to: self isForwardedObjectClassIndexPun
@@ -4027,6 +4027,7 @@ SpurMemoryManager >> globalGarbageCollect [
 	self nilUnmarkedWeaklingSlots.
 	self freeUnmarkedObjectsAndSortAndCoalesceFreeSpace.
 	self bestFitCompact.
+	self postCompactScanClassTable.
 	self eliminateAndFreeForwarders.
 	self assert: self validObjStacks.
 	self assert: self allObjectsUnmarked.
@@ -5491,14 +5492,15 @@ SpurMemoryManager >> markAndTrace: objOop [
 				 ((self isImmediate: field)
 				  or: [self isMarked: field]) ifFalse:
 					[self setIsMarkedOf: field to: true.
-					 (self isWeakNonImm: objToScan)
+					 (self isWeakNonImm: field)
 						ifTrue: [self push: field onObjStack: weaklingStack]
 						ifFalse:
-							[(self topOfObjStack: markStack) ~= objToScan ifTrue: 
-								[self push: objToScan onObjStack: markStack].
-							 self push: (self integerObjectOf: index) onObjStack: markStack].
-					 objToScan := field.
-					 index := -1]].
+							[index > 0 ifTrue:
+								[(self topOfObjStack: markStack) ~= objToScan ifTrue: 
+									[self push: objToScan onObjStack: markStack].
+								 self push: (self integerObjectOf: index) onObjStack: markStack.
+								 objToScan := field.
+								 index := -1]]]].
 			 index >= 0 ifTrue: "if loop terminated without finding an unmarked referent, switch to top of stack."
 				[objToScan := self popObjStack: markStack.
 				 objToScan = objOop ifTrue:
@@ -6316,6 +6318,7 @@ SpurMemoryManager >> postBecomeOrCompactScanClassTable: effectsFlags [
 	0 to: numClassTablePages - 1 do:
 		[:i| | page |
 		page := self fetchPointer: i ofObject: hiddenRootsObj.
+		self assert: (self isForwarded: page) not.
 		0 to: (self numSlotsOf: page) - 1 do:
 			[:j| | classOrNil |
 			classOrNil := self fetchPointer: j ofObject: page.
@@ -6354,7 +6357,7 @@ SpurMemoryManager >> postCompactScanClassTable [
 			[page := self followForwarded: page.
 			 self storePointer: i ofObject: hiddenRootsObj withValue: page]].
 	self assert: self validClassTableRootPages.	
-	self postBecomeOrCompactScanClassTable: BecamePointerObjectFlag
+	self postBecomeOrCompactScanClassTable: BecamePointerObjectFlag+BecameCompiledMethodFlag
 ]
 
 { #category : #accessing }
