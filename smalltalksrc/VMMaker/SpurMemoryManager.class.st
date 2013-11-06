@@ -517,6 +517,23 @@ SpurMemoryManager class >> characterObjectOf: characterCode [
 ]
 
 { #category : #accessing }
+SpurMemoryManager class >> classIndicesMap [
+	"self classIndicesMap"
+	| map |
+	map := Dictionary new.
+	self selectorsAndMethodsDo:
+		[:s :m| | mn |
+		(('*classindex*' match: s) or: ['*bridge*'match: s])
+		and: [mn := m methodNode block.
+			(mn statements size = 1
+			 and: [mn statements first expr isConstantNumber]) ifTrue:
+				[map at: mn statements first expr key put: s]]].
+	^map keys sort collect:
+		[:n|
+		{ n. map at: n }]
+]
+
+{ #category : #accessing }
 SpurMemoryManager class >> classTableBitmapBytes [
 	"Max size of the classTableBitmap.  A liottle too large to contemplate allocating statically."
 	^1 << (self basicNew classIndexFieldWidth - (BitsPerByte log: 2) asInteger)
@@ -766,6 +783,23 @@ SpurMemoryManager class >> mustBeGlobal: var [
 ]
 
 { #category : #accessing }
+SpurMemoryManager class >> objectFormatsMap [
+	"self objectFormatsMap"
+	| map |
+	map := Dictionary new.
+	self selectorsAndMethodsDo:
+		[:s :m| | mn |
+		('*format*' match: s)
+		and: [mn := m methodNode block.
+			(mn statements size = 1
+			 and: [mn statements first expr isConstantNumber]) ifTrue:
+				[map at: mn statements first expr key put: s]]].
+	^map keys sort collect:
+		[:n|
+		{ n. map at: n }]
+]
+
+{ #category : #accessing }
 SpurMemoryManager class >> objectRepresentationClass [
 	^self subclassResponsibility
 ]
@@ -999,7 +1033,7 @@ SpurMemoryManager >> allExistingNewSpaceObjectsDo: aBlock [
 	objOop := self objectStartingAt: scavenger eden start.
 	limit := freeStart.
 	[objOop < limit] whileTrue:
-		[(self isFreeObject: objOop) ifFalse:
+		[(self isEnumerableObject: objOop) ifTrue:
 			[aBlock value: objOop].
 		 prevPrevObj := prevObj.
 		 prevObj := objOop.
@@ -1036,7 +1070,7 @@ SpurMemoryManager >> allExistingOldSpaceObjectsDo: aBlock [
 	oldSpaceLimit := freeOldSpaceStart.
 	[self assert: objOop \\ self allocationUnit = 0.
 	 objOop < oldSpaceLimit] whileTrue:
-		[(self isFreeObject: objOop) ifFalse:
+		[(self isEnumerableObject: objOop) ifTrue:
 			[aBlock value: objOop].
 		 prevPrevObj := prevObj.
 		 prevObj := objOop.
@@ -1111,7 +1145,7 @@ SpurMemoryManager >> allNewSpaceObjectsDo: aBlock [
 	  in pastSpace.  Objects are allocated in eden.  So enumerate only eden and pastSpace."
 	objOop := self objectStartingAt: scavenger eden start.
 	[objOop < freeStart] whileTrue:
-		[(self isFreeObject: objOop) ifFalse:
+		[(self isEnumerableObject: objOop) ifTrue:
 			[aBlock value: objOop].
 		 prevPrevObj := prevObj.
 		 prevObj := objOop.
@@ -1119,7 +1153,7 @@ SpurMemoryManager >> allNewSpaceObjectsDo: aBlock [
 	objOop := self objectStartingAt: scavenger pastSpace start.
 	limit := pastSpaceStart.
 	[objOop < limit] whileTrue:
-		[(self isFreeObject: objOop) ifFalse:
+		[(self isEnumerableObject: objOop) ifTrue:
 			[aBlock value: objOop].
 		 prevPrevObj := prevObj.
 		 prevObj := objOop.
@@ -1236,13 +1270,15 @@ SpurMemoryManager >> allOldSpaceObjectsDo: aBlock [
 
 { #category : #'object enumeration' }
 SpurMemoryManager >> allOldSpaceObjectsFrom: initialObject do: aBlock [
+	"Enumerate all objects (i.e. exclude bridges, forwarders and free chunks)
+	 in oldSpace starting at initialObject."
 	<inline: true>
 	| prevObj prevPrevObj objOop |
 	prevPrevObj := prevObj := nil.
 	objOop := initialObject.
 	[self assert: objOop \\ self allocationUnit = 0.
 	 objOop < freeOldSpaceStart] whileTrue:
-		[(self isFreeObject: objOop) ifFalse:
+		[(self isEnumerableObject: objOop) ifTrue:
 			[aBlock value: objOop].
 		 prevPrevObj := prevObj.
 		 prevObj := objOop.
@@ -2486,7 +2522,12 @@ SpurMemoryManager >> classIndexOfHeader: aHeader [
 
 { #category : #'class table puns' }
 SpurMemoryManager >> classIsItselfClassIndexPun [
-	^4
+	"Class puns are class indices not used by any class.  There is an entry
+	 for the pun that refers to the notional class of objects with this class
+	 index.  But because the index doesn't match the class it won't show up
+	 in allInstances, hence hiding the object with a pun as its class index.
+	 The puns occupy indices 16 through 31."
+	^31
 ]
 
 { #category : #'plugin support' }
@@ -2941,6 +2982,7 @@ SpurMemoryManager >> eliminateAndFreeForwarders [
 	"As the final phase of global garbage collect, sweep
 	 the heap to follow forwarders, then free forwarders"
 	| lowestForwarded firstForwarded lastForwarded |
+	<inline: false>
 	self assert: (self isForwarded: nilObj) not.
 	self assert: (self isForwarded: falseObj) not.
 	self assert: (self isForwarded: trueObj) not.
@@ -3771,7 +3813,7 @@ SpurMemoryManager >> forward: obj1 to: obj2 [
 { #category : #'become implementation' }
 SpurMemoryManager >> forwardSurvivor: obj1 to: obj2 [
 	self assert: (self isInNewSpace: obj1).
-	self assert: ((self isInFutureSpace: obj2) or: (self isInOldSpace: obj2)).
+	self assert: ((self isInFutureSpace: obj2) or: [self isInOldSpace: obj2]).
 	self storePointerUnchecked: 0 ofObject: obj1 withValue: obj2.
 	self setFormatOf: obj1 to: self forwardedFormat.
 	self setClassIndexOf: obj1 to: self isForwardedObjectClassIndexPun
@@ -4027,7 +4069,6 @@ SpurMemoryManager >> globalGarbageCollect [
 	self nilUnmarkedWeaklingSlots.
 	self freeUnmarkedObjectsAndSortAndCoalesceFreeSpace.
 	self bestFitCompact.
-	self postCompactScanClassTable.
 	self eliminateAndFreeForwarders.
 	self assert: self validObjStacks.
 	self assert: self allObjectsUnmarked.
@@ -4780,6 +4821,13 @@ SpurMemoryManager >> isEmptyObjStack: objStack [
 	^0 = (self fetchPointer: ObjStackTopx ofObject: objStack)
 ]
 
+{ #category : #'object enumeration' }
+SpurMemoryManager >> isEnumerableObject: objOop [
+	"Answer if objOop should be included in an allObjects...Do: enumeration.
+	 Non-objects should be excluded; these are bridges and free chunks."
+	^(self classIndexOf: objOop) >= self isForwardedObjectClassIndexPun
+]
+
 { #category : #'object testing' }
 SpurMemoryManager >> isEphemeron: objOop [
 	self assert: (self isNonImmediate: objOop).
@@ -5012,6 +5060,12 @@ SpurMemoryManager >> isPointersFormat: format [
 SpurMemoryManager >> isPointersNonImm: objOop [
 	"Answer if the argument has only fields that can hold oops. See comment in formatOf:"
 	^(self formatOf: objOop) <= self lastPointerFormat
+]
+
+{ #category : #'header formats' }
+SpurMemoryManager >> isPureBitsFormat: format [
+	^format >= self sixtyFourBitIndexableFormat
+	  and: [format < self firstCompiledMethodFormat]
 ]
 
 { #category : #'header access' }
@@ -5350,6 +5404,32 @@ SpurMemoryManager >> loadImageSegmentFrom: segmentWordArray outPointers: outPoin
 	^PrimErrUnsupported
 ]
 
+{ #category : #'debug printing' }
+SpurMemoryManager >> longPrintReferencesTo: anOop [
+	"Scan the heap long printing the oops of any and all objects that refer to anOop"
+	| prntObj |
+	<api>
+	prntObj := false.
+	self allObjectsDo:
+		[:obj| | i |
+		((self isPointersNonImm: obj) or: [self isCompiledMethod: obj]) ifTrue:
+			[(self isCompiledMethod: obj)
+				ifTrue:
+					[i := (coInterpreter literalCountOf: obj) + LiteralStart]
+				ifFalse:
+					[(self isContextNonImm: obj)
+						ifTrue: [i := CtxtTempFrameStart + (coInterpreter fetchStackPointerOf: obj)]
+						ifFalse: [i := self numSlotsOf: obj]].
+			[(i := i - 1) >= 0] whileTrue:
+				[anOop = (self fetchPointer: i ofObject: obj) ifTrue:
+					[coInterpreter printHex: obj; print: ' @ '; printNum: i; cr.
+					 prntObj := true.
+					 i := 0]].
+			prntObj ifTrue:
+				[prntObj := false.
+				 coInterpreter longPrintOop: obj]]]
+]
+
 { #category : #'simulation only' }
 SpurMemoryManager >> lookupAddress: address [
 	"If address appears to be that of a Symbol or a few well-known objects (such as classes) answer it, otherwise answer nil.
@@ -5455,26 +5535,47 @@ SpurMemoryManager >> markAllUnscannedEphemerons [
 ]
 
 { #category : #'gc - global' }
+SpurMemoryManager >> markAndShouldScan: objOop [
+	"Mark the argument, and answer if its fields should be scanned now.
+	 Immediate objects don't need to be marked.
+	 Already marked objects have already been processed.
+	 Pure bits objects don't need scanning, although their class does.
+	 Weak objects should be pushed on the weakling stack.
+	 Anything else need scanning."
+	| format |
+	(self isImmediate: objOop) ifTrue:
+		[^false].
+	self assert: (self isForwarded: objOop) not.
+	(self isMarked: objOop) ifTrue:
+		[^false].
+	self setIsMarkedOf: objOop to: true.
+	format := self formatOf: objOop.
+	(self isPureBitsFormat: format) ifTrue: "avoid pushing non-pointer objects on the markStack"
+		[self markAndTraceClassOf: objOop.
+		 ^false].
+	format = self weakArrayFormat ifTrue: "push weaklings on the weakling stack to scan later"
+		[self push: objOop onObjStack: weaklingStack.
+		 ^false].
+	^true
+]
+
+{ #category : #'gc - global' }
 SpurMemoryManager >> markAndTrace: objOop [
 	"Mark the argument, and all objects reachable from it, and any remaining objects on the mark stack.
 	 Follow forwarding pointers in the scan."
-	| objToScan index field |
-	self assert: (self isNonImmediate: objOop).
+	| objToScan numStrongSlots index field |
+	(self markAndShouldScan: objOop) ifFalse:
+		[^self].
 	"if markAndTrace: is to follow and eliminate forwarding pointers
 	 in its scan it cannot be handed an r-value which is forwarded."
 	self assert: (self isForwarded: objOop) not.
-	(self isMarked: objOop) ifTrue:
-		[^self].
-	"self setIsMarkedOf: objOop to: false" "for debugging"
-	self setIsMarkedOf: objOop to: true.
 
 	"Now scan the object, and any remaining objects on the mark stack."
 	objToScan := objOop.
 	"To avoid overflowing the mark stack when we encounter large objects, we
 	 push the obj, then its numStrongSlots, and then index the object from the stack."
-	[| numStrongSlots |
-	 ((self isImmediate: objToScan)
-	 or: [numStrongSlots := self numStrongSlotsOf: objToScan ephemeronInactiveIf: #inactiveOrFailedToDeferScan:.
+	[((self isImmediate: objToScan)
+	  or: [numStrongSlots := self numStrongSlotsOf: objToScan ephemeronInactiveIf: #inactiveOrFailedToDeferScan:.
 		 numStrongSlots > self traceImmediatelySlotLimit])
 		ifTrue: "scanning a large object. scan until hitting an unmarked object, then switch to it, if any."
 			[(self isImmediate: objToScan)
@@ -5482,49 +5583,55 @@ SpurMemoryManager >> markAndTrace: objOop [
 					[index := self integerValueOf: objToScan.
 					 objToScan := self topOfObjStack: markStack]
 				ifFalse:
-					[index := numStrongSlots].
+					[index := numStrongSlots.
+					 self markAndTraceClassOf: objToScan].
 			 [index > 0] whileTrue:
 				[index := index - 1.
 				 field := self fetchPointer: index ofObject: objToScan.
 				 (self isOopForwarded: field) ifTrue:
 					[field := self followForwarded: field.
 					 self storePointerUnchecked: index ofObject: objToScan withValue: field].
-				 ((self isImmediate: field)
-				  or: [self isMarked: field]) ifFalse:
-					[self setIsMarkedOf: field to: true.
-					 (self isWeakNonImm: field)
-						ifTrue: [self push: field onObjStack: weaklingStack]
-						ifFalse:
-							[index > 0 ifTrue:
-								[(self topOfObjStack: markStack) ~= objToScan ifTrue: 
-									[self push: objToScan onObjStack: markStack].
-								 self push: (self integerObjectOf: index) onObjStack: markStack.
-								 objToScan := field.
-								 index := -1]]]].
+				 (self markAndShouldScan: field) ifTrue:
+					[index > 0 ifTrue:
+						[(self topOfObjStack: markStack) ~= objToScan ifTrue: 
+							[self push: objToScan onObjStack: markStack].
+						 self push: (self integerObjectOf: index) onObjStack: markStack].
+					 objToScan := field.
+					 index := -1]].
 			 index >= 0 ifTrue: "if loop terminated without finding an unmarked referent, switch to top of stack."
 				[objToScan := self popObjStack: markStack.
 				 objToScan = objOop ifTrue:
 					[objToScan := self popObjStack: markStack]]]
 		ifFalse: "scanning a small object. scan, marking, pushing unmarked referents, then switch to the top of the stack."
 			[index := numStrongSlots.
+			 self markAndTraceClassOf: objToScan.
 			 [index > 0] whileTrue:
 				[index := index - 1.
 				 field := self fetchPointer: index ofObject: objToScan.
 				 (self isOopForwarded: field) ifTrue:
 					[field := self followForwarded: field.
 					 self storePointerUnchecked: index ofObject: objToScan withValue: field].
-				 ((self isImmediate: field)
-				  or: [self isMarked: field]) ifFalse:
-					[self setIsMarkedOf: field to: true.
-					 (self isWeakNonImm: field)
-						ifTrue: [self push: field onObjStack: weaklingStack]
-						ifFalse:
-							[self push: field onObjStack: markStack.
-							 numStrongSlots := self numStrongSlotsOf: field ephemeronInactiveIf: #inactiveOrFailedToDeferScan:.
-							 numStrongSlots > self traceImmediatelySlotLimit ifTrue:
-								[self push: (self integerObjectOf: numStrongSlots) onObjStack: markStack]]]].
+				 (self markAndShouldScan: field) ifTrue:
+					[self push: field onObjStack: markStack.
+					 numStrongSlots := self numStrongSlotsOf: field ephemeronInactiveIf: #inactiveOrFailedToDeferScan:.
+					 numStrongSlots > self traceImmediatelySlotLimit ifTrue:
+						[self push: (self integerObjectOf: numStrongSlots) onObjStack: markStack]]].
 			 objToScan := self popObjStack: markStack].
 	 objToScan notNil] whileTrue
+]
+
+{ #category : #'gc - global' }
+SpurMemoryManager >> markAndTraceClassOf: objOop [
+	"Ensure the class of the argument is marked, pushing it on the markStack if not already marked.
+	 Also set the relevant bit in the classTableBitmap so that duplicate entries can be eliminated."
+	<inline: false>
+	| classIndex classObj |
+	classIndex := self classIndexOf: objOop.
+	self inClassTableBitmapSet: classIndex.
+	classObj := self classAtIndex: classIndex.
+	(self isMarked: classObj) ifFalse:
+		[self setIsMarkedOf: classObj to: true.
+		 self push: classObj onObjStack: markStack]
 ]
 
 { #category : #'obj stacks' }
@@ -5572,6 +5679,7 @@ SpurMemoryManager >> markAndTraceWeaklingsFrom: startIndex [
 	 the size of the stack *before* the enumeration began."
 	^self objStack: weaklingStack from: startIndex do:
 		[:weakling|
+		 self markAndTraceClassOf: weakling.
 		 0 to: (self numStrongSlotsOf: weakling ephemeronInactiveIf: nil) - 1 do:
 			[:i| | field |
 			field := self fetchPointer: i ofObject: weakling.
@@ -5611,10 +5719,12 @@ SpurMemoryManager >> markObjects [
 	"Mark all accessible objects."
 	"If the incremental collector is running mark bits may be set; stop it and clear them if necessary."
 	self ensureAllMarkBitsAreZero.
+	self ensureAdequateClassTableBitmap.
 	self initializeUnscannedEphemerons.
 	self initializeMarkStack.
 	self initializeWeaklingStack.
-	self markAccessibleObjects
+	self markAccessibleObjects.
+	self expungeDuplicateClasses
 ]
 
 { #category : #'gc - global' }
@@ -6432,7 +6542,7 @@ SpurMemoryManager >> printReferencesTo: anOop [
 		[:obj| | i |
 		 i := self numPointerSlotsOf: obj.
 		 [(i := i - 1) >= 0] whileTrue:
-			[anOop = (self fetchPointer: i ofObject: obj) ifTrue:
+			[anOop = (self fetchPointer: i ofMaybeForwardedObject: obj) ifTrue:
 				[coInterpreter printHex: obj; print: ' @ '; printNum: i; space; printOopShort: obj; cr.
 				 i := 0]]]
 ]

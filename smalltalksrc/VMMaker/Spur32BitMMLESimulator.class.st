@@ -308,6 +308,14 @@ Spur32BitMMLESimulator >> longLongAt: byteAddress put: a64BitValue [
 ]
 
 { #category : #'gc - global' }
+Spur32BitMMLESimulator >> markAndTrace: objOop [
+	"objOop = 16rB26020 ifTrue: [self halt].
+	objOop = 16rB25FD8 ifTrue: [self halt].
+	objOop = 16rB26010 ifTrue: [self halt]."
+	^super markAndTrace: objOop
+]
+
+{ #category : #'gc - global' }
 Spur32BitMMLESimulator >> markObjects [
 	coInterpreter transcript nextPutAll: 'marking...'; flush.
 	^super markObjects
@@ -343,6 +351,7 @@ Spur32BitMMLESimulator >> scavengingGCTenuringIf: tenuringCriterion [
 
 { #category : #'header access' }
 Spur32BitMMLESimulator >> setIsMarkedOf: objOop to: aBoolean [
+	"objOop = 16rB26020 ifTrue: [self halt]."
 	super setIsMarkedOf: objOop to: aBoolean.
 	"(aBoolean
 	 and: [(self isContextNonImm: objOop)

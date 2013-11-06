@@ -4147,7 +4147,7 @@ StackInterpreter >> doubleExtendedDoAnythingBytecode [
 	Here we use 3 bits for the operation sub-type (opType),  and the remaining 5 bits for argument count where needed. 
 	The last byte give access to 256 instVars or literals. 
 	See also secondExtendedSendBytecode"
-	| byte2 byte3 opType top lit |
+	| byte2 byte3 opType top |
 	byte2 := self fetchByte.
 	byte3 := self fetchByte.
 	opType := byte2 >> 5.
@@ -4165,13 +4165,11 @@ StackInterpreter >> doubleExtendedDoAnythingBytecode [
 	opType = 4 ifTrue: [^self pushLiteralVariable: byte3].
 	top := self internalStackTop.
 	opType = 7 ifTrue:
-		[lit := self literal: byte3.
-		 objectMemory storePointer: ValueIndex ofObject: lit withValue: top.
-		 ^self].
+		[^self storeLiteralVariable: byte3 withValue: top].
 	"opType = 5 is store; opType = 6 = storePop"
 	opType = 6 ifTrue:
 		[self internalPop: 1].
-	^self storeMaybeContextReceiverVariable: byte3 withValue: top
+	self storeMaybeContextReceiverVariable: byte3 withValue: top
 ]
 
 { #category : #initialization }
@@ -4583,12 +4581,11 @@ StackInterpreter >> extStoreAndPopReceiverVariableBytecode [
 { #category : #'stack bytecodes' }
 StackInterpreter >> extStoreLiteralVariableBytecode [
 	"233		11101001	i i i i i i i i	Store Literal Variable #iiiiiiii (+ Extend A * 256)"
-	| association variableIndex |
+	| variableIndex |
 	variableIndex := self fetchByte + (extA << 8).
 	self fetchNextBytecode.
 	extA := 0.
-	association := self literal: variableIndex.
-	objectMemory storePointer: ValueIndex ofObject: association withValue: self internalStackTop
+	self storeLiteralVariable: variableIndex withValue: self internalStackTop
 ]
 
 { #category : #'stack bytecodes' }
@@ -4638,7 +4635,7 @@ StackInterpreter >> extendedStoreAndPopBytecode [
 
 { #category : #'stack bytecodes' }
 StackInterpreter >> extendedStoreBytecode [
-	| descriptor variableType variableIndex association |
+	| descriptor variableType variableIndex |
 	<inline: true>
 	descriptor := self fetchByte.
 	self fetchNextBytecode.
@@ -4649,10 +4646,8 @@ StackInterpreter >> extendedStoreBytecode [
 	variableType = 1 ifTrue:
 		[^self temporary: variableIndex in: localFP put: self internalStackTop].
 	variableType = 3 ifTrue:
-		[association := self literal: variableIndex.
-		 ^objectMemory storePointer: ValueIndex ofObject: association withValue: self internalStackTop].
-	self error: 'illegal store'.
-	^nil
+		[^self storeLiteralVariable: variableIndex withValue: self internalStackTop].
+	self error: 'illegal store'
 ]
 
 { #category : #'frame access' }
@@ -5441,6 +5436,18 @@ StackInterpreter >> flushMethodCacheFrom: memStart to: memEnd [
 ]
 
 { #category : #'lazy become' }
+StackInterpreter >> followField: fieldIndex in: anObject [
+	"Make sure the oop at fieldIndex in anObject is not forwarded (follow the
+	 forwarder there-in if so).  Answer the (possibly followed) oop at fieldIndex."
+	| field |
+	field := objectMemory fetchPointer: fieldIndex ofObject: anObject.
+	(objectMemory isForwarded: field) ifTrue:
+		[field := objectMemory followForwarded: field.
+		 objectMemory storePointer: fieldIndex ofObject: anObject withValue: field].
+	^field
+]
+
+{ #category : #'lazy become' }
 StackInterpreter >> followForwardedFrameContents: theFP stackPointer: theSP [
 	"follow pointers in the current stack frame up to theSP."
 	<var: #theFP type: #'char *'>
@@ -5465,6 +5472,28 @@ StackInterpreter >> followForwardedFrameContents: theFP stackPointer: theSP [
 	self assert: (objectMemory isForwarded: (self frameMethod: theFP)) not.
 	(self frameHasContext: theFP) ifTrue:
 		[self assert: (objectMemory isForwarded: (self frameContext: theFP)) not]
+]
+
+{ #category : #'object memory support' }
+StackInterpreter >> followForwardingPointersInScheduler [
+	| schedAssoc sched procLists |
+	schedAssoc := objectMemory splObj: SchedulerAssociation.
+	"the GC follows pointers in the special objects array for us."
+	self assert: (objectMemory isForwarded: schedAssoc) not.
+
+	sched := self followField: ValueIndex in: schedAssoc.
+
+	procLists := self followField: ProcessListsIndex in: sched.
+
+	0 to: (objectMemory numSlotsOf: procLists) - 1 do:
+		[:i| | list first last next |
+		list := self followField: i in: procLists.
+		first := self followField: FirstLinkIndex in: list.
+		last := self followField: LastLinkIndex in: list.
+		[first ~= last] whileTrue:
+			[next := self followField: NextLinkIndex in: first.
+			 first := next]]
+
 ]
 
 { #category : #'object memory support' }
@@ -8092,13 +8121,17 @@ StackInterpreter >> methodClassOf: methodPointer [
 
 	^self cppIf: NewspeakVM
 		ifTrue:
-			[ | literal |
-			literal := self literal: (self literalCountOf: methodPointer) - 1 ofMethod: methodPointer.
-			literal = objectMemory nilObject
+			[| literal |
+			 literal := self literal: (self literalCountOf: methodPointer) - 1 ofMethod: methodPointer.
+			 self assert: (objectMemory isForwarded: literal) not.
+			 literal = objectMemory nilObject
 				ifTrue: [literal]
 				ifFalse: [objectMemory fetchPointer: ValueIndex ofObject: literal]]
 		ifFalse:
-			[objectMemory fetchPointer: ValueIndex ofObject: (self literal: (self literalCountOf: methodPointer) - 1 ofMethod: methodPointer)]
+			[| literal |
+			 literal := self literal: (self literalCountOf: methodPointer) - 1 ofMethod: methodPointer.
+			 self assert: (objectMemory isForwarded: literal) not.
+			 objectMemory fetchPointer: ValueIndex ofObject: literal]
 ]
 
 { #category : #'compiled methods' }
@@ -8608,7 +8641,8 @@ StackInterpreter >> positive64BitIntegerFor: integerValue [
 { #category : #'object memory support' }
 StackInterpreter >> postBecomeAction: theBecomeEffectsFlags [
 	theBecomeEffectsFlags ~= 0 ifTrue:
-		[self followForwardingPointersInStackZone: theBecomeEffectsFlags]
+		[self followForwardingPointersInStackZone: theBecomeEffectsFlags.
+		 self followForwardingPointersInScheduler]
 ]
 
 { #category : #'object memory support' }
@@ -9630,7 +9664,12 @@ StackInterpreter >> printOopShortInner: oop [
 		[self printChar: $$; printChar: (objectMemory integerValueOf: (objectMemory fetchPointer: 0 ofObject: oop)).
 		 ^nil].
 	self print: 'a(n) '.
-	0 to: nameLen - 1 do: [:i| self printChar: (name at: i)].
+	self
+		cCode: [0 to: nameLen - 1 do: [:i| self printChar: (name at: i)]]
+		inSmalltalk:
+			[name isString
+				ifTrue: [self print: name]
+				ifFalse: [0 to: nameLen - 1 do: [:i| self printChar: (name at: i)]]].
 	"Try to spot association-like things; they're all subclasses of LookupKey"
 	((objectMemory instanceSizeOf: classOop) = (ValueIndex + 1)
 	 and: [(self superclassOf: classOop) = (self superclassOf: (objectMemory fetchClassOfNonImm: (objectMemory splObj: SchedulerAssociation)))
@@ -10002,9 +10041,21 @@ StackInterpreter >> pushLiteralVariable16CasesBytecode [
 
 { #category : #'stack bytecodes' }
 StackInterpreter >> pushLiteralVariable: literalIndex [
-
-	self internalPush:
-		(objectMemory fetchPointer: ValueIndex ofObject: (self literal: literalIndex)).
+	objectMemory hasSpurMemoryManagerAPI
+		ifTrue:
+			[| litVar |
+			 "push/store/popLiteralVariable all fetch a literal, and either read or write the literal's value field.
+			  The fetch of the literal needs an explicit check (otherwise we would have to scan all literals in
+			  all methods in the stack zone, and the entire method on return, and global variables are relatively
+			  rare; in my work image 8.7% of literals are globals)."
+			 litVar := self literal: literalIndex.
+			 (objectMemory isForwarded: litVar) ifTrue:
+				[litVar := objectMemory followForwarded: litVar].
+			 self internalPush:
+				(objectMemory fetchPointer: ValueIndex ofObject: litVar)]
+		ifFalse:
+			[self internalPush:
+				(objectMemory fetchPointer: ValueIndex ofObject: (self literal: literalIndex))]
 ]
 
 { #category : #'stack bytecodes' }
@@ -11787,6 +11838,20 @@ StackInterpreter >> storeInteger: fieldIndex ofObject: objectPointer withValue: 
 					withValue: (objectMemory integerObjectOf: integerValue)]
 		ifFalse: [self primitiveFail].
 	^nil
+]
+
+{ #category : #'stack bytecodes' }
+StackInterpreter >> storeLiteralVariable: literalIndex withValue: anObject [
+	| litVar |
+	litVar := self literal: literalIndex.
+	"push/store/popLiteralVariable all fetch a literal, and either read or write the literal's value field.
+	 The fetch of the literal needs an explicit check (otherwise we would have to scan all literals in
+	 all methods in the stack zone, and the entire method on return, and global variables are relatively
+	 rare; in my work image 8.7% of literals are globals)."
+
+	(objectMemory isForwarded: litVar) ifTrue:
+		[litVar := objectMemory followForwarded: litVar].
+	objectMemory storePointer: ValueIndex ofObject: litVar withValue: anObject
 ]
 
 { #category : #'stack bytecodes' }
