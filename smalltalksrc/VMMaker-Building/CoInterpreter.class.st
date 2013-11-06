@@ -2901,7 +2901,7 @@ CoInterpreter >> executeNewMethod [
 { #category : #'stack bytecodes' }
 CoInterpreter >> extendedStoreBytecode [
 	"Override to use itemporary:in:put:"
-	| descriptor variableType variableIndex association |
+	| descriptor variableType variableIndex |
 	<inline: true>
 	descriptor := self fetchByte.
 	self fetchNextBytecode.
@@ -2912,10 +2912,8 @@ CoInterpreter >> extendedStoreBytecode [
 	variableType = 1 ifTrue:
 		[^self itemporary: variableIndex in: localFP put: self internalStackTop].
 	variableType = 3 ifTrue:
-		[association := self literal: variableIndex.
-		 ^objectMemory storePointer: ValueIndex ofObject: association withValue: self internalStackTop].
-	self error: 'illegal store'.
-	^nil
+		[^self storeLiteralVariable: variableIndex withValue: self internalStackTop].
+	self error: 'illegal store'
 ]
 
 { #category : #'return bytecodes' }
@@ -3995,7 +3993,7 @@ CoInterpreter >> itemporary: offset in: theFP put: valueOop [
 	| frameNumArgs |
 	<inline: true>
 	<var: #theFP type: #'char *'>
-	^offset < (frameNumArgs := self iframeNumArgs: theFP)
+	offset < (frameNumArgs := self iframeNumArgs: theFP)
 		ifTrue: [stackPages longAt: theFP + FoxCallerSavedIP + ((frameNumArgs - offset) * BytesPerWord) put: valueOop]
 		ifFalse: [stackPages longAt: theFP + FoxIFReceiver - BytesPerWord + ((frameNumArgs - offset) * BytesPerWord) put: valueOop]
 ]
