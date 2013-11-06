@@ -386,6 +386,9 @@ TSendNode >> shouldExcludeReceiverAsFirstArgument: aCodeGen [
 		 the method set (i.e. it is some external code), don't include it.
 		 If it is a struct send of something the vm says is an implicit variable, don't include it."
 	| m |
+	(aCodeGen isAssertSelector: selector) ifTrue:
+		[^true].
+
 	(receiver isSend
 	 and: [receiver receiver isVariable
 	 and: [(self isSelfReference: receiver receiver in: aCodeGen)

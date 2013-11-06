@@ -2257,7 +2257,12 @@ CogVMSimulator >> openAsMorphNoTranscript [
 
 { #category : #initialization }
 CogVMSimulator >> openOn: fileName [
-	"(InterpreterSimulator new openOn: 'clonex.image') test"
+	"(CogVMSimulator new openOn: 'clonex.image') test"
+	objectMemory hasSpurMemoryManagerAPI ifTrue:
+		[| fileSize potSize |
+		fileSize := (FileDirectory directoryEntryFor: fileName) fileSize.
+		potSize := 1 << (fileSize - 1) highBit.
+		^self openOn: fileName extraMemory: potSize / 4 + potSize - fileSize].
 
 	self openOn: fileName extraMemory: 2500000.
 ]
