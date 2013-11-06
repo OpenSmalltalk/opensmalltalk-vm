@@ -72,6 +72,7 @@ Spur64BitMemoryManager >> allocateNewSpaceSlots: numSlots format: formatField cl
 
 { #category : #allocation }
 Spur64BitMemoryManager >> allocateSlots: numSlots format: formatField classIndex: classIndex [
+	<inline: true>
 	| numBytes newObj |
 	"Object headers are 8 bytes in length if the slot size fits in the num slots field (max implies overflow),
 	 16 bytes otherwise (num slots in preceeding word).
@@ -113,6 +114,7 @@ Spur64BitMemoryManager >> allocateSlots: numSlots format: formatField classIndex
 Spur64BitMemoryManager >> allocateSlotsInOldSpace: numSlots bytes: totalBytes format: formatField classIndex: classIndex [
 	"Answer the oop of a chunk of space in oldSpace with numSlots slots.  The header
 	 will have been filled-in but not the contents."
+	<inline: false>
 	| chunk |
 	chunk := self allocateOldSpaceChunkOfBytes: totalBytes.
 	chunk ifNil:
