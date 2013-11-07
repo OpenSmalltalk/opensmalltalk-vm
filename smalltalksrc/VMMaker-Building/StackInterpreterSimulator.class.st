@@ -1358,7 +1358,8 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 	"StackInterpreterSimulator new openOn: 'clone.im' extraMemory: 100000"
 
 	| f version headerSize dataSize count oldBaseAddr bytesToShift swapBytes
-	  hdrNumStackPages hdrEdenBytes headerFlags heapBase firstSegSize hdrMaxExtSemTabSize |
+	  headerFlags heapBase firstSegSize heapSize
+	  hdrNumStackPages hdrEdenBytes hdrMaxExtSemTabSize |
 	"open image file and read the header"
 
 	["begin ensure block..."
@@ -1411,10 +1412,17 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 	objectMemory firstSegmentSize: firstSegSize.
 	"allocate interpreter memory"
 	heapBase := objectMemory startOfMemory.
+	heapSize := dataSize
+				+ extraBytes
+				+ objectMemory newSpaceBytes
+				+ self interpreterAllocationReserveBytes
+				+ (objectMemory hasSpurMemoryManagerAPI
+					ifTrue: [headerSize]
+					ifFalse: [0]).
 	objectMemory
 		setHeapBase: heapBase
-		memoryLimit: heapBase + dataSize + extraBytes + objectMemory newSpaceBytes + self interpreterAllocationReserveBytes
-		endOfMemory: heapBase + dataSize.
+		memoryLimit: heapBase + heapSize
+		endOfMemory: heapBase + dataSize. "bogus for Spur"
 	objectMemory memory: (Bitmap new: objectMemory memoryLimit // 4).
 
 	"read in the image in bulk, then swap the bytes if necessary"

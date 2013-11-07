@@ -10306,7 +10306,10 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 	firstSegSize := self getLongFromFile: f swap: swapBytes.
 	objectMemory firstSegmentSize: firstSegSize.
 	"decrease Squeak object heap to leave extra memory for the VM"
-	heapSize := self cCode: 'reserveExtraCHeapBytes(desiredHeapSize, extraVMMemory)'.
+	heapSize := desiredHeapSize
+				+ objectMemory newSpaceBytes
+				+ self interpreterAllocationReserveBytes.
+	heapSize := self reserveExtraCHeap: heapSize Bytes: extraVMMemory.
 
 	"compare memory requirements with availability".
 	minimumMemory := dataSize + objectMemory newSpaceBytes + self interpreterAllocationReserveBytes.
