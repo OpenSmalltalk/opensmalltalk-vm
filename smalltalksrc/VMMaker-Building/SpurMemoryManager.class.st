@@ -5501,11 +5501,10 @@ SpurMemoryManager >> markAccessibleObjects [
 	marking := true.
 	self cCode: [] "for debugging markAndTrace: set (MarkStackRecord := OrderedCollection new)"
 		inSmalltalk: [MarkStackRecord ifNotNil: [MarkStackRecord resetTo: 1]].
-	self markAndTraceObjStacks.
+	self markAndTraceHiddenRoots.
 	self assert: self validClassTableRootPages.
 	coInterpreter markAndTraceInterpreterOops: true.
 	self markAndTrace: self freeListsObj.
-	self markAndTrace: hiddenRootsObj.
 	self markAndTrace: self specialObjectsOop.
 	self assert: self validObjStacks.
 	self markWeaklingsAndMarkAndFireEphemerons.
@@ -5634,6 +5633,31 @@ SpurMemoryManager >> markAndTraceClassOf: objOop [
 		 self push: classObj onObjStack: markStack]
 ]
 
+{ #category : #'gc - global' }
+SpurMemoryManager >> markAndTraceHiddenRoots [
+	"The hidden roots hold both the class table pages and the obj stacks,
+	 and hence need special treatment.
+	 The obj stacks must be marked specially; their pages must be marked,
+	 but only the contents of the ephemeronQueue should be marked.
+	 If a class table page is weak we can mark and trace the hiddenRoots,
+	 which will not trace throguh class table opages because they are weak.
+	 But if class table pages are strong, we must mark the pages and *not*
+	 trace them so that only classes reachable from the true roots will be
+	 marked, and unreachable classes will be left unmarked."
+
+	self markAndTraceObjStack: markStack andContents: false.
+	self markAndTraceObjStack: weaklingStack andContents: false.
+	self markAndTraceObjStack: ephemeronQueue andContents: true.
+
+	(self isWeakNonImm: classTableFirstPage) ifTrue:
+		[^self markAndTrace: hiddenRootsObj].
+
+	self markAndTrace: classTableFirstPage.
+	1 to: numClassTablePages - 1 do:
+		[:i| self setIsMarkedOf: (self fetchPointer: i ofObject: hiddenRootsObj)
+				to: true]
+]
+
 { #category : #'obj stacks' }
 SpurMemoryManager >> markAndTraceObjStack: stackOrNil andContents: markAndTraceContents [
 	"An obj stack is a stack of objects stored in a hidden root slot, such
@@ -5663,13 +5687,6 @@ SpurMemoryManager >> markAndTraceObjStack: stackOrNil andContents: markAndTraceC
 		 (self isImmediate: field) ifFalse:
 			[self markAndTrace: field].
 		 index := index - 1]
-]
-
-{ #category : #'obj stacks' }
-SpurMemoryManager >> markAndTraceObjStacks [
-	self markAndTraceObjStack: markStack andContents: false.
-	self markAndTraceObjStack: weaklingStack andContents: false.
-	self markAndTraceObjStack: ephemeronQueue andContents: true
 ]
 
 { #category : #'weakness and ephemerality' }
