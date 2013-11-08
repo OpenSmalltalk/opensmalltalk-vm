@@ -35,6 +35,13 @@ CArray >> -= decrement [
 	ptrOffset := ptrOffset - decrement
 ]
 
+{ #category : #comparing }
+CArray >> = anObject [
+	^self species = anObject species
+	  and: [(1 to: self class instSize) allSatisfy:
+			[:i| (self instVarAt: i) = (anObject instVarAt: i)]]
+]
+
 { #category : #converting }
 CArray >> adaptToNumber: rcvr andSend: selector [
 
@@ -101,6 +108,11 @@ CArray >> floatAt: index [
 { #category : #accessing }
 CArray >> floatAt: index put: value [
 	^ self at: index put: value asIEEE32BitWord
+]
+
+{ #category : #comparing }
+CArray >> hash [
+	^interpreter hash bitXor: arrayBaseAddress + ptrOffset + unitSize
 ]
 
 { #category : #accessing }
