@@ -128,7 +128,11 @@ Class {
 		'MaxQuickPrimitiveIndex',
 		'MixinIndex',
 		'PrimitiveExternalCallIndex',
-		'PrimitiveTable'
+		'PrimitiveTable',
+		'StackPageReachedButUntraced',
+		'StackPageTraceInvalid',
+		'StackPageTraced',
+		'StackPageUnreached'
 	],
 	#pools : [
 		'VMBasicConstants',
@@ -790,6 +794,11 @@ StackInterpreter class >> initializeMiscConstants [
 	GCModeIncr := 2.
 	GCModeScavenge := 3.
 	GCModeBecome := 4.
+
+	StackPageTraceInvalid := -1.
+	StackPageUnreached := 0.
+	StackPageReachedButUntraced := 1.
+	StackPageTraced := 2.
 
 	DumpStackOnLowSpace := 0.
 	PrimitiveExternalCallIndex := 117. "Primitive index for #primitiveExternalCall"
@@ -5789,10 +5798,10 @@ StackInterpreter >> freeUntracedStackPages [
 		[:i| | thePage |
 		thePage := stackPages stackPageAt: i.
 		((stackPages isFree: thePage) not
-		 and: [thePage trace = 0]) ifTrue:
+		 and: [thePage trace = StackPageUnreached]) ifTrue:
 			[self assert: (self noMarkedContextsOnPage: thePage).
 			 stackPages freeStackPage: thePage].
-		self assert: (thePage trace: -1) ~= 0] "Invalidate the trace state for assertion checks"
+		self assert: (thePage trace: StackPageTraceInvalid) ~= 0] "Invalidate the trace state for assertion checks"
 ]
 
 { #category : #'I/O primitive support' }
@@ -6329,7 +6338,7 @@ StackInterpreter >> initStackPageGC [
 	0 to: numStackPages - 1 do:
 		[:i| | thePage |
 		thePage := stackPages stackPageAt: i.
-		thePage trace: 0]
+		thePage trace: StackPageUnreached]
 ]
 
 { #category : #initialization }
@@ -6470,6 +6479,12 @@ StackInterpreter >> initializeInterpreter: bytesToShift [
 	statProcessSwitch := 0.
 	statIOProcessEvents := 0.
 	statStackPageDivorce := 0
+]
+
+{ #category : #'stack pages' }
+StackInterpreter >> initializePageTraceToInvalid: aPage [
+	<var: #aPage type: #'StackPage *'>
+	aPage trace: StackPageTraceInvalid "for assert checking of the page tracing flags"
 ]
 
 { #category : #'frame access' }
@@ -7816,7 +7831,11 @@ StackInterpreter >> markAndTraceStackPage: thePage [
 	<var: #frameRcvrOffset type: #'char *'>
 	<var: #callerFP type: #'char *'>
 	<inline: false>
+
 	self assert: (stackPages isFree: thePage) not.
+	self assert: thePage trace ~= StackPageTraced.
+	thePage trace: StackPageTraced.
+
 	theSP := thePage headSP.
 	theFP := thePage  headFP.
 	"Skip the instruction pointer on top of stack of inactive pages."
@@ -7860,7 +7879,8 @@ StackInterpreter >> markAndTraceStackPages: fullGCFlag [
 	| thePage context |
 	<var: #thePage type: #'StackPage *'>
 	<inline: false>
-	self initStackPageGC.
+	objectMemory hasSpurMemoryManagerAPI ifFalse:
+		[self initStackPageGC].
 
 	"On an incremental GC simply consider all non-free stack pages to be roots."
 	fullGCFlag ifFalse:
@@ -7868,23 +7888,21 @@ StackInterpreter >> markAndTraceStackPages: fullGCFlag [
 			[:i|
 			thePage := stackPages stackPageAt: i.
 			(stackPages isFree: thePage) ifFalse:
-				[thePage trace: 2.
-				 self markAndTraceStackPage: thePage]].
+				[self markAndTraceStackPage: thePage]].
 		^nil].
 
 	"On a full GC only eagerly trace pages referenced from
 	 the base of the active page, i.e. on the active stack."
 	stackPage = 0 ifTrue: [^nil].
 	thePage := stackPage.
-	[thePage trace: 2.
-	 self markAndTraceStackPage: thePage.
+	[self markAndTraceStackPage: thePage.
 	 context := self frameCallerContext: thePage baseFP.
 	 ((objectMemory isContext: context)
 	  and: [(self isMarriedOrWidowedContext: context)
 	  and: [self isStillMarriedContext: context]]) ifTrue:
 		[thePage := stackPages stackPageFor:  (self frameOfMarriedContext: context).
 		 self assert: (stackPages isFree: thePage) not].
-	 thePage trace < 2] whileTrue
+	 thePage trace < StackPageTraced] whileTrue
 ]
 
 { #category : #'object memory support' }
@@ -7904,9 +7922,8 @@ StackInterpreter >> markAndTraceUntracedReachableStackPages [
 		[:i|
 		thePage := stackPages stackPageAt: i.
 		((stackPages isFree: thePage) not
-		 and: [thePage trace = 1]) ifTrue:
+		 and: [thePage trace = StackPageReachedButUntraced]) ifTrue:
 			[foundToBeTracedPage := true.
-			 thePage trace: 2.
 			 self markAndTraceStackPage: thePage]].
 	foundToBeTracedPage] whileTrue
 ]
@@ -9378,7 +9395,8 @@ StackInterpreter >> printFramesOnStackPageListInUse [
 	<var: #page type: #'StackPage *'>
 	page := stackPages mostRecentlyUsedPage.
 	[(stackPages isFree: page) ifFalse:
-		[self printFramesInPage: page.
+		[self print: 'page '; printHexnp: page; cr.
+		 self printFramesInPage: page.
 		 self cr].
 	 (page := page prevPage) ~= stackPages mostRecentlyUsedPage] whileTrue
 ]
@@ -11064,9 +11082,9 @@ StackInterpreter >> setTraceFlagOnContextsFramesPageIfNeeded: aContext [
 	<var: #thePage type: #'StackPage *'>
 	(self isStillMarriedContext: aContext) ifTrue:
 		[thePage := stackPages stackPageFor: (self frameOfMarriedContext: aContext).
-		 self assert: (thePage trace between: 0 and: 2).
-		 thePage trace = 0 ifTrue:
-			[thePage trace: 1]]
+		 self assert: (thePage trace between: StackPageUnreached and: StackPageTraced).
+		 thePage trace = StackPageUnreached ifTrue:
+			[thePage trace: StackPageReachedButUntraced]]
 ]
 
 { #category : #'jump bytecodes' }
@@ -11174,7 +11192,8 @@ StackInterpreter >> shortPrintFramesOnStackPageListInUse [
 	<var: #page type: #'StackPage *'>
 	page := stackPages mostRecentlyUsedPage.
 	[(stackPages isFree: page) ifFalse:
-		[self shortPrintFramesInPage: page.
+		[self print: 'page '; printHexnp: page; cr.
+		 self shortPrintFramesInPage: page.
 		 self cr].
 	 (page := page prevPage) ~= stackPages mostRecentlyUsedPage] whileTrue
 ]

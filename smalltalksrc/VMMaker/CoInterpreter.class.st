@@ -4472,7 +4472,11 @@ CoInterpreter >> markAndTraceStackPage: thePage [
 	<var: #frameRcvrOffset type: #'char *'>
 	<var: #callerFP type: #'char *'>
 	<inline: false>
+
 	self assert: (stackPages isFree: thePage) not.
+	self assert: thePage trace ~= StackPageTraced.
+	thePage trace: StackPageTraced.
+
 	theSP := thePage headSP.
 	theFP := thePage  headFP.
 	"Skip the instruction pointer on top of stack of inactive pages."

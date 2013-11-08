@@ -197,7 +197,7 @@ CoInterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots p
 							== (memIndex + slotsPerPage - 1).
 				 index < (numPages - 1) ifTrue:
 					[self assert: (self stackPageFor: page baseAddress + BytesPerWord) == (self stackPageAt: index + 1)]].
-		self assert: (page trace: -1) ~= 0 "for assert checking of the page tracing flags. -1 == invalid state"].
+		coInterpreter initializePageTraceToInvalid: page].
 
 	mostRecentlyUsedPage := self stackPageAt: 0.
 	page := mostRecentlyUsedPage.
