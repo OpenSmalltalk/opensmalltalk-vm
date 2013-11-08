@@ -4,12 +4,6 @@ Class {
 	#category : #'VMMaker-SpurMemoryManagerSimulation'
 }
 
-{ #category : #compaction }
-Spur32BitMMLESimulator >> bestFitCompact [
-	coInterpreter transcript nextPutAll: 'compacting...'; flush.
-	^super bestFitCompact
-]
-
 { #category : #'memory access' }
 Spur32BitMMLESimulator >> byteAt: byteAddress [
 	| lowBits long |
@@ -63,6 +57,12 @@ Spur32BitMMLESimulator >> endianness [
 	^#little
 ]
 
+{ #category : #compaction }
+Spur32BitMMLESimulator >> exactFitCompact [
+	coInterpreter transcript nextPutAll: 'ef compacting...'; flush.
+	^super exactFitCompact
+]
+
 { #category : #'float primitives' }
 Spur32BitMMLESimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
 	aFloat at: 2 put: (self long32At: floatBitsAddress).
@@ -75,6 +75,12 @@ Spur32BitMMLESimulator >> fetchPointer: fieldIndex ofObject: objOop [
 	self assert: (fieldIndex >= 0 and: [fieldIndex < (self numSlotsOfAny: objOop)
 				or: [fieldIndex = 0 "forwarders and free objs"]]).
 	^super fetchPointer: fieldIndex ofObject: objOop
+]
+
+{ #category : #compaction }
+Spur32BitMMLESimulator >> firstFitCompact [
+	coInterpreter transcript nextPutAll: 'ff compacting...'; flush.
+	^super firstFitCompact
 ]
 
 { #category : #'object format' }
@@ -281,6 +287,8 @@ Spur32BitMMLESimulator >> longAt: byteAddress [
 Spur32BitMMLESimulator >> longAt: byteAddress put: a32BitValue [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 	"(byteAddress = 16r1614CB8 and: [a32BitValue = 16rA000035]) ifTrue:
+		[self halt]."
+	"(byteAddress between: 16r33FBB8 and: 16r33FBCF) ifTrue:
 		[self halt]."
 	byteAddress \\ 4 ~= 0 ifTrue: [self unalignedAccessError].
 	^memory at: byteAddress // 4 + 1 put: a32BitValue
