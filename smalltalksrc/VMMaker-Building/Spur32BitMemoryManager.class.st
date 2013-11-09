@@ -305,9 +305,8 @@ Spur32BitMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
 				 and: [numBytes >= (self baseHeaderSize + self wordSize)]).
 	self flag: #endianness.
 	"double header"
-	numBytes >= ((self numSlotsMask << self shiftForWord) + self baseHeaderSize + self baseHeaderSize) ifTrue:
+	numBytes >= ((self numSlotsMask << self shiftForWord) + self baseHeaderSize) ifTrue:
 		[numSlots := numBytes - self baseHeaderSize - self baseHeaderSize >> self shiftForWord.
-		 self assert: numSlots >= self numSlotsMask.
 		 self longAt: address put: numSlots;
 			longAt: address + 4 put: self numSlotsMask << self numSlotsHalfShift;
 			longAt: address + 8 put: 0; "0's classIndex; 0 = classIndex of free chunks"
