@@ -130,6 +130,7 @@ SpurCircularBuffer >> printOn: aStream [
 
 { #category : #accessing }
 SpurCircularBuffer >> resetAsEmpty [
+	first := start.
 	last := start - manager wordSize
 ]
 

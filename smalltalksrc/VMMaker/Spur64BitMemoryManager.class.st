@@ -269,9 +269,8 @@ Spur64BitMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
 	self assert: (numBytes \\ self allocationUnit = 0
 				 and: [numBytes >= (self baseHeaderSize + self wordSize)]).
 	"double header"
-	numBytes >= ((self numSlotsMask << self shiftForWord) + self baseHeaderSize + self baseHeaderSize) ifTrue:
+	numBytes >= ((self numSlotsMask << self shiftForWord) + self baseHeaderSize) ifTrue:
 		[numSlots := numBytes - self baseHeaderSize - self baseHeaderSize >> self shiftForWord.
-		 self assert: numSlots >= self numSlotsMask.
 		 self longAt: address put: self numSlotsMask << self numSlotsFullShift + numSlots;
 			longAt: address + 8 put: self numSlotsMask << self numSlotsFullShift. "0's classIndex; 0 = classIndex of free chunks"
 		^address + 8].

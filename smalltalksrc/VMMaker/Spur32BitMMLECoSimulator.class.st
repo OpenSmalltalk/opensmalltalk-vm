@@ -240,11 +240,12 @@ Spur32BitMMLECoSimulator >> nilUnmarkedWeaklingSlots [
 ]
 
 { #category : #'debug support' }
-Spur32BitMMLECoSimulator >> runLeakCheckerForFullGC: fullGCFlag [
+Spur32BitMMLECoSimulator >> runLeakCheckerForFullGC: fullGCFlag excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs [
 	(fullGCFlag
 			ifTrue: [self leakCheckFullGC]
 			ifFalse: [self leakCheckNewSpaceGC]) ifTrue:
-		[coInterpreter transcript nextPutAll: 'leak-checking...'; flush]
+		[coInterpreter transcript nextPutAll: 'leak-checking...'; flush].
+	^super runLeakCheckerForFullGC: fullGCFlag excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs
 ]
 
 { #category : #'generation scavenging' }
