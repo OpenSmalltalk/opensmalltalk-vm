@@ -1980,8 +1980,14 @@ CoInterpreter >> checkStackIntegrity [
 				   or: [(self heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
 					[self printFrameThing: 'object leak in frame ctxt' andFrame: theFP at: theFP + FoxThisContext.
 					 ok := false].
-				 (oop = objectMemory nilObject or: [objectMemory isContext: oop]) ifFalse:
+				 (objectMemory isContext: oop) ifFalse:
 					[self printFrameThing: 'frame ctxt should be context' andFrame: theFP at: theFP + FoxThisContext.
+					 ok := false].
+				 ((objectMemory isContext: oop) and: [self isMarriedOrWidowedContext: oop]) ifFalse:
+					[self printFrameThing: 'frame ctxt should be married' andFrame: theFP at: theFP + FoxThisContext.
+					 ok := false].
+				 ((objectMemory isContext: oop) and: [(self frameOfMarriedContext: oop) = theFP]) ifFalse:
+					[self printFrameThing: 'frame ctxt should be married to this frame ' andFrame: theFP at: theFP + FoxThisContext.
 					 ok := false]].
 			 (self isMachineCodeFrame: theFP)
 				ifTrue:
@@ -4335,11 +4341,13 @@ CoInterpreter >> mapStackPages [
 				 (objectMemory shouldRemapOop: oop) ifTrue:
 					[stackPages longAt: theSP put: (objectMemory remapObj: oop)].
 				 theSP := theSP + BytesPerWord].
-			 ((self frameHasContext: theFP)
-			  and: [objectMemory shouldRemapObj: (self frameContext: theFP)]) ifTrue:
-				[stackPages
-					longAt: theFP + FoxThisContext
-					put: (objectMemory remapObj: (self frameContext: theFP))].
+			 (self frameHasContext: theFP) ifTrue:
+				[(objectMemory shouldRemapObj: (self frameContext: theFP)) ifTrue:
+					[stackPages
+						longAt: theFP + FoxThisContext
+						put: (objectMemory remapObj: (self frameContext: theFP))].
+				 self assert: ((self isMarriedOrWidowedContext: (self frameContext: theFP))
+							and: [(self frameOfMarriedContext: (self frameContext: theFP)) = theFP])].
 			(self isMachineCodeFrame: theFP) ifFalse:
 				[(objectMemory shouldRemapObj: (self iframeMethod: theFP)) ifTrue:
 					[theIPPtr ~= 0 ifTrue:

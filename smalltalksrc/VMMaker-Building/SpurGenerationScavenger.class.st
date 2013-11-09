@@ -144,7 +144,7 @@ SpurGenerationScavenger class >> implicitReturnTypeFor: aSelector [
 { #category : #'class initialization' }
 SpurGenerationScavenger class >> initialize [
 	"SpurGenerationScavenger initialize"
-	RememberedSetLimit := 16384.
+	RememberedSetLimit := 64 * 1024. "temporary; must move to heap"
 	RememberedSetRedZone := RememberedSetLimit - (RememberedSetLimit // 2).
 
 	TenureByAge := 1.
@@ -259,8 +259,8 @@ SpurGenerationScavenger >> copyToFutureSpace: survivor bytes: bytesInObject [
 SpurGenerationScavenger >> copyToOldSpace: survivor [
 	"Copy survivor to oldSpace.  Answer the new oop of the object."
 	<inline: true>
-	| numSlots newOop |
-	statTenures := statTenures + 1.
+	| nTenures numSlots newOop |
+	nTenures := statTenures.
 	self flag: 'why not just pass header??'.
 	numSlots := manager numSlotsOf: survivor.
 	newOop := manager
@@ -268,13 +268,20 @@ SpurGenerationScavenger >> copyToOldSpace: survivor [
 					format: (manager formatOf: survivor)
 					classIndex: (manager classIndexOf: survivor).
 	newOop ifNil:
-		[self error: 'out of memory'].
+		[manager growOldSpaceByAtLeast: 0. "grow by growHeadroom"
+		 newOop := manager
+					allocateSlotsInOldSpace: numSlots
+					format: (manager formatOf: survivor)
+					classIndex: (manager classIndexOf: survivor).
+		 newOop ifNil:
+			[self error: 'out of memory']].
 	manager
 		mem: (newOop + manager baseHeaderSize) asVoidPointer
 		cp: (survivor + manager baseHeaderSize) asVoidPointer
 		y: numSlots * manager wordSize.
 	self remember: newOop.
 	manager setIsRememberedOf: newOop to: true.
+	statTenures := nTenures + 1.
 	^newOop
 ]
 

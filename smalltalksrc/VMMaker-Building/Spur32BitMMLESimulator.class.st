@@ -341,11 +341,12 @@ Spur32BitMMLESimulator >> numClassTablePages [
 ]
 
 { #category : #'debug support' }
-Spur32BitMMLESimulator >> runLeakCheckerForFullGC: fullGCFlag [
+Spur32BitMMLESimulator >> runLeakCheckerForFullGC: fullGCFlag excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs [
 	(fullGCFlag
 			ifTrue: [self leakCheckFullGC]
 			ifFalse: [self leakCheckNewSpaceGC]) ifTrue:
-		[coInterpreter transcript nextPutAll: 'leak-checking...'; flush]
+		[coInterpreter transcript nextPutAll: 'leak-checking...'; flush].
+	^super runLeakCheckerForFullGC: fullGCFlag excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs
 ]
 
 { #category : #'generation scavenging' }
@@ -354,6 +355,9 @@ Spur32BitMMLESimulator >> scavengingGCTenuringIf: tenuringCriterion [
 	"self halt: (statScavenges + 1) printString, ((statScavenges between: 9 and: 19)
 													ifTrue: ['th']
 													ifFalse: [#('st' 'nd' 'rd') at: (statScavenges + 1) \\ 10 ifAbsent: 'th']), ' scavenge'."
+													
+	"statFullGCs > 0 ifTrue:
+		[self halt]."
 	^super scavengingGCTenuringIf: tenuringCriterion
 ]
 

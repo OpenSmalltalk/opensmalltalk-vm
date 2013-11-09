@@ -3156,30 +3156,32 @@ StackInterpreter >> checkInterpreterIntegrity [
 
 { #category : #'frame access' }
 StackInterpreter >> checkIsStillMarriedContext: aContext currentFP: currentFP [
-	"Another version of isWidowedContext:currentFP: for debugging.
+	"Another version of isWidowedContext: for debugging.
 	 This will not bereave a widowed context."
-	| thePage theFP limitFP |
+	| thePage theFP limitFP frameCtxt |
 	<inline: false>
 	<var: #currentFP type: #'char *'>
 	<var: #thePage type: #'StackPage *'>
 	<var: #theFP type: #'char *'>
 	<var: #limitFP type: #'char *'>
-	(objectMemory isIntegerObject: (objectMemory fetchPointer: SenderIndex ofObject: aContext)) ifFalse:
+	((objectMemory isContext: aContext)
+	 and: [self isMarriedOrWidowedContext: aContext]) ifFalse:
 		[^false].
 	theFP := self frameOfMarriedContext: aContext.
 	thePage := stackPages stackPageFor: theFP.
 	limitFP := (thePage = stackPage and: [currentFP notNil])
 				ifTrue: [currentFP]
 				ifFalse: [thePage headFP].
-	^theFP >= limitFP
-	   and: [(objectMemory isNonImmediate: (self frameCallerFP: theFP) asInteger)
-	   and: [(self withSmallIntegerTags: (self frameCallerFP: theFP))
+	(theFP >= limitFP
+	 and: [(objectMemory isNonImmediate: (self frameCallerFP: theFP) asInteger)
+	 and: [(self withSmallIntegerTags: (self frameCallerFP: theFP))
 			= (objectMemory fetchPointer: InstructionPointerIndex ofObject: aContext)
-	   and: [(self frameMethodObject: theFP)
-			= (objectMemory fetchPointer: MethodIndex ofObject: aContext)
-	   and: [(self frameHasContext: theFP)
-	   and: [(self frameContext: theFP) = aContext
-	   and: [objectMemory isContext: aContext]]]]]]
+	 and: [self frameHasContext: theFP]]]) ifFalse:
+		[^false].
+	frameCtxt := self frameContext: theFP.
+	(objectMemory isForwarded: frameCtxt) ifTrue:
+		[frameCtxt := objectMemory followForwarded: frameCtxt].
+	^frameCtxt = aContext
 ]
 
 { #category : #'object memory support' }
@@ -3362,6 +3364,14 @@ StackInterpreter >> checkStackIntegrity [
 					 ok := false].
 				 (objectMemory isContext: oop) ifFalse:
 					[self printFrameThing: 'frame ctxt should be context' andFrame: theFP at: theFP + FoxThisContext.
+					 ok := false].
+				 ((objectMemory isContext: oop) and: [self isMarriedOrWidowedContext: oop]) ifFalse:
+					[self printFrameThing: 'frame ctxt should be married' andFrame: theFP at: theFP + FoxThisContext.
+					 ok := false].
+				 ((objectMemory isContext: oop)
+				  and: [(self isMarriedOrWidowedContext: oop)
+				  and: [(self frameOfMarriedContext: oop) = theFP]]) ifFalse:
+					[self printFrameThing: 'frame ctxt should be married to this frame ' andFrame: theFP at: theFP + FoxThisContext.
 					 ok := false]].
 			 oop := self frameMethod: theFP.
 			 ((objectMemory isImmediate: oop) 
@@ -7016,9 +7026,9 @@ StackInterpreter >> isStillMarriedContext: aContext [
 
 { #category : #'frame access' }
 StackInterpreter >> isWidowedContext: aOnceMarriedContext [
-	"See if the argument is connected with a live frame or not.
+	"See if the argument is married to a live frame or not.
 	 If it is not, turn it into a bereaved single context."
-	| theFrame thePage shouldBeFrameCallerField |
+	| theFrame thePage shouldBeFrameCallerField frameCtxt |
 	<var: #theFrame type: #'char *'>
 	<var: #thePage type: #'StackPage *'>
 	<var: #shouldBeFrameCallerField type: #'char *'>
@@ -7031,15 +7041,17 @@ StackInterpreter >> isWidowedContext: aOnceMarriedContext [
 		["The frame pointer is within the bounds of a live page.
 		   Now check if it matches a frame."
 		 shouldBeFrameCallerField := self withoutSmallIntegerTags:
-										(objectMemory fetchPointer: InstructionPointerIndex
-											ofObject: aOnceMarriedContext).
+											(objectMemory
+												fetchPointer: InstructionPointerIndex
+												ofObject: aOnceMarriedContext).
 		 ((self frameCallerFP: theFrame) = shouldBeFrameCallerField
-		  and: [(self frameMethodObject: theFrame) = (objectMemory fetchPointer: MethodIndex
-													ofObject: aOnceMarriedContext)
-		  and: [(self frameHasContext: theFrame)
-		  and: [(self frameContext: theFrame) = aOnceMarriedContext]]]) ifTrue:
-			["It is still married!"
-			^false]].
+		  and: [self frameHasContext: theFrame]) ifTrue:
+			[frameCtxt := self frameContext: theFrame.
+			 (objectMemory isForwarded: frameCtxt) ifTrue:
+				[frameCtxt := objectMemory followForwarded: frameCtxt.
+				 self setFrameContext: theFrame to: frameCtxt].
+			 frameCtxt = aOnceMarriedContext ifTrue: "It is still married!"
+				[^false]]].
 	"It is out of range or doesn't match the frame's context.
 	 It is widowed. Time to wear black."
 	self markContextAsDead: aOnceMarriedContext.
@@ -7717,11 +7729,13 @@ StackInterpreter >> mapStackPages [
 				 (objectMemory shouldRemapOop: oop) ifTrue:
 					[stackPages longAt: theSP put: (objectMemory remapObj: oop)].
 				 theSP := theSP + BytesPerWord].
-			 ((self frameHasContext: theFP)
-			  and: [objectMemory shouldRemapObj: (self frameContext: theFP)]) ifTrue:
-				[stackPages
-					longAt: theFP + FoxThisContext
-					put: (objectMemory remapObj: (self frameContext: theFP))].
+			 (self frameHasContext: theFP) ifTrue:
+				[(objectMemory shouldRemapObj: (self frameContext: theFP)) ifTrue:
+					[stackPages
+						longAt: theFP + FoxThisContext
+						put: (objectMemory remapObj: (self frameContext: theFP))].
+				 self assert: ((self isMarriedOrWidowedContext: (self frameContext: theFP))
+							and: [(self frameOfMarriedContext: (self frameContext: theFP)) = theFP])].
 			 (objectMemory shouldRemapObj: (self frameMethod: theFP)) ifTrue:
 				[theIPPtr ~= 0 ifTrue:
 					[self assert: (stackPages longAt: theIPPtr) > (self frameMethod: theFP).
@@ -9395,7 +9409,7 @@ StackInterpreter >> printFramesOnStackPageListInUse [
 	<var: #page type: #'StackPage *'>
 	page := stackPages mostRecentlyUsedPage.
 	[(stackPages isFree: page) ifFalse:
-		[self print: 'page '; printHexnp: page; cr.
+		[self print: 'page '; printHexPtrnp: (self cCode: [page] inSmalltalk: [page baseAddress]); cr.
 		 self printFramesInPage: page.
 		 self cr].
 	 (page := page prevPage) ~= stackPages mostRecentlyUsedPage] whileTrue
@@ -11192,7 +11206,7 @@ StackInterpreter >> shortPrintFramesOnStackPageListInUse [
 	<var: #page type: #'StackPage *'>
 	page := stackPages mostRecentlyUsedPage.
 	[(stackPages isFree: page) ifFalse:
-		[self print: 'page '; printHexnp: page; cr.
+		[self print: 'page '; printHexPtrnp: (self cCode: [page] inSmalltalk: [page baseAddress]); cr.
 		 self shortPrintFramesInPage: page.
 		 self cr].
 	 (page := page prevPage) ~= stackPages mostRecentlyUsedPage] whileTrue

@@ -854,15 +854,17 @@ SpurMemoryManager >> addFreeChunkWithBytes: bytes at: address [
 { #category : #'free space' }
 SpurMemoryManager >> addFreeSubTree: freeTree [
 	"Add a freeChunk sub tree back into the large free chunk tree.
-	 This is for allocateOldSpaceChunkOf[Exactly]Bytes:."
-	| slotsInArg treeNode slotsInNode subNode |
-	slotsInArg := self numSlotsOfAny: freeTree.
-	self assert: slotsInArg / (self allocationUnit / self wordSize) >= self numFreeLists.
+	 This is for allocateOldSpaceChunkOf[Exactly]Bytes:[suchThat:]."
+	| bytesInArg treeNode bytesInNode subNode |
+	"N.B. *can't* use numSlotsOfAny: because of rounding up of odd slots
+	 and/or step in size at 1032 bytes in 32-bits or 2048 bytes in 64-bits."
+	bytesInArg := self bytesInObject: freeTree.
+	self assert: bytesInArg / (self allocationUnit / self wordSize) >= self numFreeLists.
 	treeNode := freeLists at: 0.
 	self assert: treeNode ~= 0.
-	[slotsInNode := self numSlotsOfAny: treeNode.
-	 self assert: slotsInArg ~= slotsInNode.
-	 slotsInNode > slotsInArg
+	[bytesInNode := self bytesInObject: treeNode.
+	 self assert: bytesInArg ~= bytesInNode.
+	 bytesInNode > bytesInArg
 		ifTrue:
 			[subNode := self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: treeNode.
 			 subNode = 0 ifTrue:
@@ -2084,7 +2086,7 @@ SpurMemoryManager >> checkFreeSpace [
 ]
 
 { #category : #'debug support' }
-SpurMemoryManager >> checkHeapIntegrity [
+SpurMemoryManager >> checkHeapIntegrity: excludeUnmarkedNewSpaceObjs [
 	"Perform an integrity/leak check using the heapMap.  Assume
 	 clearLeakMapAndMapAccessibleObjects has set a bit at each
 	 object's header.  Scan all objects in the heap checking that every
@@ -2092,13 +2094,14 @@ SpurMemoryManager >> checkHeapIntegrity [
 	 extraRootTable checking that every entry is a pointer to a header.
 	 Check that the number of roots is correct and that all rootTable
 	 entries have their rootBit set. Answer if all checks pass."
-	| prevObj prevPrevObj ok numRememberedRootsInHeap |
+	| ok numRememberedRootsInHeap |
 	<inline: false>
 	ok := true.
 	numRememberedRootsInHeap := 0.
 	self allHeapEntitiesDo:
 		[:obj| | containsYoung fieldOop classIndex classOop |
-		(self isFreeObject: obj) ifFalse:
+		((self isFreeObject: obj)
+		 or: [(self isYoung: obj) and: [(self isMarked: obj) not and: [excludeUnmarkedNewSpaceObjs]]]) ifFalse:
 			[containsYoung := false.
 			 (self isRemembered: obj) ifTrue:
 				[numRememberedRootsInHeap := numRememberedRootsInHeap + 1.
@@ -2145,9 +2148,7 @@ SpurMemoryManager >> checkHeapIntegrity [
 						[(self isRemembered: obj) ifFalse:
 							[coInterpreter print: 'unremembered object '; printHex: obj; print: ' contains young oop(s)'; cr.
 							 self eek.
-							 ok := false]]].
-		prevPrevObj := prevObj.
-		prevObj := obj].
+							 ok := false]]]].
 	numRememberedRootsInHeap ~= scavenger rememberedSetSize ifTrue:
 		[coInterpreter
 			print: 'root count mismatch. #heap roots ';
@@ -2227,7 +2228,7 @@ SpurMemoryManager >> checkOkayOop: oop [
 	(classIndex := self classIndexOf: oop) >= self firstClassIndexPun ifFalse:
 		[self print: 'oop '; printHex: oop; print: ' is a free chunk, or bridge, not an object'. ^false].
 	((self rawNumSlotsOf: oop) = self numSlotsMask
-	 and: [(self rawNumSlotsOf: oop) - self baseHeaderSize ~= self numSlotsMask]) ifTrue:
+	 and: [(self rawNumSlotsOf: oop - self baseHeaderSize) ~= self numSlotsMask]) ifTrue:
 		[self print: 'oop '; printHex: oop; print: ' header has overflow header word, but overflow word does not have a saturated numSlots field'. ^false].
 
 	"format check"
@@ -2235,7 +2236,7 @@ SpurMemoryManager >> checkOkayOop: oop [
 	(fmt = 6) | (fmt = 8) ifTrue:
 		[self print: 'oop '; printHex: oop; print: ' has an unknown format type'. ^false].
 	(fmt = self forwardedFormat) ~= (classIndex = self isForwardedObjectClassIndexPun) ifTrue:
-		[self print: 'oop '; printHex: oop; print: ' has mismached format/classIndex fields; only one of them is the isForwarded value'. ^false].
+		[self print: 'oop '; printHex: oop; print: ' has mis-matched format/classIndex fields; only one of them is the isForwarded value'. ^false].
 
 	"specific header bit checks"
 	unusedBits := (1 << self classIndexFieldWidth)
@@ -2969,12 +2970,17 @@ SpurMemoryManager >> eliminateAndFreeForwarders [
 	self assert: (self isForwarded: nilObj) not.
 	self assert: (self isForwarded: falseObj) not.
 	self assert: (self isForwarded: trueObj) not.
+	self assert: (self isForwarded: self freeListsObj) not.
 	self assert: (self isForwarded: hiddenRootsObj) not.
+	self assert: (self isForwarded: classTableFirstPage) not.
 	(self isForwarded: specialObjectsOop) ifTrue:
 		[specialObjectsOop := self followForwarded: specialObjectsOop].
+	"N.B. we don't have to explcitly do mapInterpreterOops
+	 since the scavenge below will do it."
 	self followForwardedObjStacks.
 	scavenger followRememberedForwardersAndForgetFreeObjects.
 	self doScavenge: DontTenureButDoUnmark.
+	self checkFreeSpace.
 	lowestForwarded := 0.
 	"sweep, following forwarders in all live objects, and finding the first forwarder."
 	self allOldSpaceObjectsDo:
@@ -2991,9 +2997,12 @@ SpurMemoryManager >> eliminateAndFreeForwarders [
 						[f := self followForwarded: f.
 						 self assert: ((self isImmediate: f) or: [self isYoung: f]) not.
 						 self storePointerUnchecked: i ofObject: o withValue: f]]]].
+	self checkFreeSpace.
 	firstForwarded := lastForwarded := 0.
-	"sweep from lowest forwarder, coalescing runs of forwarders."
-	self allOldSpaceObjectsFrom: lowestForwarded do:
+	"sweep from lowest forwarder, coalescing runs of forwarders. perhaps this should
+	 coalewsce free space and forwarders.  the previous loop could reprise the discarding
+	 of free space in freeUnmarkedObjectsAndSortAndCoalesceFreeSpace."
+	self allOldSpaceEntitiesFrom: lowestForwarded do:
 		[:o|
 		(self isForwarded: o)
 			ifTrue:
@@ -3012,6 +3021,7 @@ SpurMemoryManager >> eliminateAndFreeForwarders [
 		 start := self startOfObject: firstForwarded.
 		 bytes := (self addressAfter: lastForwarded) - start.
 		 self addFreeChunkWithBytes: bytes at: start].
+	self checkFreeSpace
 ]
 
 { #category : #'obj stacks' }
@@ -3389,6 +3399,7 @@ SpurMemoryManager >> fillHighestObjectsWithMovableObjectsFrom: startObj upTo: li
 	"Refill highestObjects with movable objects up to, but not including limitObj.
 	 c.f. the loop in freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoalesceFreeSpace."
 	| lastHighest highestObjectsWraps |
+	highestObjects resetAsEmpty.
 	lastHighest := highestObjects last.
 	highestObjectsWraps := 0.
 	self allOldSpaceObjectsFrom: startObj do:
@@ -4124,7 +4135,7 @@ SpurMemoryManager >> globalGarbageCollect [
 	self markObjects.
 	self nilUnmarkedWeaklingSlots.
 	self freeUnmarkedObjectsAndSortAndCoalesceFreeSpace.
-	self runLeakCheckerForFullGC: true.
+	self runLeakCheckerForFullGC: true excludeUnmarkedNewSpaceObjs: true.
 	self compact.
 	self eliminateAndFreeForwarders.
 	self assert: self validObjStacks.
@@ -5943,8 +5954,7 @@ SpurMemoryManager >> moveMisfitsToTopOfHighestObjects: misfits [
 	| oldLimit bytesToMove |
 	oldLimit := highestObjects limit.
 	misfits = (highestObjects last + self wordSize) ifTrue:
-		[highestObjects resetAsEmpty.
-		 ^oldLimit].
+		[^oldLimit].
 	misfits <= highestObjects last ifTrue:
 		[bytesToMove := highestObjects last + self wordSize - misfits.
 		 self mem: (highestObjects limit - bytesToMove) asVoidPointer
@@ -6340,7 +6350,7 @@ SpurMemoryManager >> okayOop: signedOop [
 	(classIndex := self classIndexOf: oop) >= self firstClassIndexPun ifFalse:
 		[self error: 'oop is a free chunk, or bridge, not an object'. ^false].
 	((self rawNumSlotsOf: oop) = self numSlotsMask
-	 and: [(self rawNumSlotsOf: oop) - self baseHeaderSize ~= self numSlotsMask]) ifTrue:
+	 and: [(self rawNumSlotsOf: oop - self baseHeaderSize) ~= self numSlotsMask]) ifTrue:
 		[self error: 'oop header has overflow header word, but overflow word does not have a saturated numSlots field'. ^false].
 
 	"format check"
@@ -6348,7 +6358,7 @@ SpurMemoryManager >> okayOop: signedOop [
 	(fmt = 6) | (fmt = 8) ifTrue:
 		[self error: 'oop has an unknown format type'. ^false].
 	(fmt = self forwardedFormat) ~= (classIndex = self isForwardedObjectClassIndexPun) ifTrue:
-		[self error: 'oop has mismached format/classIndex fields; only one of them is the isForwarded value'. ^false].
+		[self error: 'oop has mis-matched format/classIndex fields; only one of them is the isForwarded value'. ^false].
 
 	"specific header bit checks"
 	unusedBits := (1 << self classIndexFieldWidth)
@@ -6797,12 +6807,12 @@ SpurMemoryManager >> remapObj: objOop [
 	(self isForwarded: objOop)
 		ifTrue:
 			[resolvedObj := self followForwarded: objOop.
-			(self isYoung: resolvedObj) ifFalse: "a becommed object whose target is in old space"
-				[^resolvedObj].
 			(self isInFutureSpace: resolvedObj) ifTrue: "already scavenged"
 				[^resolvedObj]]
 		ifFalse:
 			[resolvedObj := objOop].
+	(self isYoung: resolvedObj) ifFalse: "a becommed or compacted object whose target is in old space"
+		[^resolvedObj].
 	^scavenger copyAndForward: resolvedObj
 ]
 
@@ -6906,6 +6916,11 @@ SpurMemoryManager >> rootTableCount [
 
 { #category : #'debug support' }
 SpurMemoryManager >> runLeakCheckerForFullGC: fullGCFlag [
+	^self runLeakCheckerForFullGC: fullGCFlag excludeUnmarkedNewSpaceObjs: false
+]
+
+{ #category : #'debug support' }
+SpurMemoryManager >> runLeakCheckerForFullGC: fullGCFlag excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs [
 	<inline: false>
 	(fullGCFlag
 			ifTrue: [self leakCheckFullGC]
@@ -6914,7 +6929,7 @@ SpurMemoryManager >> runLeakCheckerForFullGC: fullGCFlag [
 			ifTrue: [coInterpreter reverseDisplayFrom: 0 to: 7]
 			ifFalse: [coInterpreter reverseDisplayFrom: 8 to: 15].
 		 self clearLeakMapAndMapAccessibleObjects.
-		 self assert: self checkHeapIntegrity.
+		 self assert: (self checkHeapIntegrity: excludeUnmarkedNewSpaceObjs).
 		 self assert: coInterpreter checkInterpreterIntegrity.
 		 self assert: coInterpreter checkStackIntegrity.
 		 self assert: (coInterpreter checkCodeIntegrity: fullGCFlag)]
@@ -7245,10 +7260,10 @@ SpurMemoryManager >> sizeBitsOfSafe: objOop [
 
 { #category : #'free space' }
 SpurMemoryManager >> sizeOfFree: objOop [
-	"For compatibility with ObjectMemory, answer the size of a free chunk in bytes,
-	 ignoring the overflow header.  Do *not* use internally."
+	"For compatibility with ObjectMemory, answer the size of a free chunk in bytes.
+	 Do *not* use internally."
 	self assert: (self isFreeObject: objOop).
-	^self baseHeaderSize + (self wordSize * (self numSlotsOfAny: objOop))
+	^self bytesInObject: objOop
 ]
 
 { #category : #'object access' }
@@ -7420,10 +7435,10 @@ SpurMemoryManager >> startOfMemory: value [
 
 { #category : #'object enumeration' }
 SpurMemoryManager >> startOfObject: objOop [
-	"Answer the start of objOop, which is either the address of the overflow size word,
-	 or objOop itself, depending on the size of the object.  This may be applied to
-	 any kind of object, normal, forwarders or free chunks."
-	^(self numSlotsOfAny: objOop) >= self numSlotsMask
+	"Answer the start of objOop, which is either the address of the overflow
+	 size word, or objOop itself, depending on the size of the object.  This may
+	 be applied to any kind of object, normal, forwarders or free chunks."
+	^(self hasOverflowHeader: objOop)
 		ifTrue: [objOop - self baseHeaderSize]
 		ifFalse: [objOop]
 ]
@@ -7594,7 +7609,7 @@ SpurMemoryManager >> storePointer: fieldIndex ofForwarder: objOop withValue: val
 SpurMemoryManager >> storePointer: fieldIndex ofFreeChunk: objOop withValue: valuePointer [
 
 	self assert: (self isFreeObject: objOop).
-	self assert: (valuePointer = 0 or: [self isFreeObject: objOop]).
+	self assert: (valuePointer = 0 or: [self isFreeObject: valuePointer]).
 
 	^self
 		longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
@@ -7632,6 +7647,14 @@ SpurMemoryManager >> storePointer: fieldIndex ofObject: objOop withValue: valueP
 		[(self isImmediate: valuePointer) ifFalse:
 			[(self isYoung: valuePointer) ifTrue:
 				[self possibleRootStoreInto: objOop]]].
+
+	^self
+		longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
+		put: valuePointer
+]
+
+{ #category : #'heap management' }
+SpurMemoryManager >> storePointerNoAssert: fieldIndex ofFreeChunk: objOop withValue: valuePointer [
 
 	^self
 		longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
@@ -7695,7 +7718,7 @@ SpurMemoryManager >> swizzleFieldsOfFreeChunk: chunk [
 	   do: [:index| | field |
 		field := self fetchPointer: index ofFreeChunk: chunk.
 		field ~= 0 ifTrue:
-			[self storePointer: index
+			[self storePointerNoAssert: index
 				ofFreeChunk: chunk
 				withValue: (segmentManager swizzleObj: field)]]
 ]
@@ -7935,7 +7958,8 @@ SpurMemoryManager >> unlinkSolitaryFreeTreeNode: freeTreeNode [
 		ifTrue: "no parent; stitch the subnodes back into the root"
 			[smaller = 0
 				ifTrue:
-					[self storePointer: self freeChunkParentIndex ofFreeChunk: larger withValue: 0.
+					[larger ~= 0 ifTrue:
+						[self storePointer: self freeChunkParentIndex ofFreeChunk: larger withValue: 0].
 					 freeLists at: 0 put: larger]
 				ifFalse:
 					[self storePointer: self freeChunkParentIndex ofFreeChunk: smaller withValue: 0.
