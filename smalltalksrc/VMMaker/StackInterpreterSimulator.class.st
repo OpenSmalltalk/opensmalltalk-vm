@@ -1236,6 +1236,13 @@ StackInterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize
 	^ results
 ]
 
+{ #category : #'frame access' }
+StackInterpreterSimulator >> markContextAsDead: oop [
+	"(self withoutSmallIntegerTags: (objectMemory fetchPointer: SenderIndex ofObject: oop)) = -16r26824 ifTrue:
+		[self halt]."
+	^super markContextAsDead: oop
+]
+
 { #category : #'spur bootstrap' }
 StackInterpreterSimulator >> messageSelector: s [
 	"For e.g. SpurBootstrap"
