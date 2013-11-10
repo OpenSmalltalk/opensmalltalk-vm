@@ -1072,7 +1072,8 @@ SpurMemoryManager >> allExistingOldSpaceObjectsDo: aBlock [
 	oldSpaceLimit := freeOldSpaceStart.
 	[self assert: objOop \\ self allocationUnit = 0.
 	 objOop < oldSpaceLimit] whileTrue:
-		[(self isEnumerableObject: objOop) ifTrue:
+		[self assert: (self longLongAt: objOop) ~= 0.
+		 (self isEnumerableObject: objOop) ifTrue:
 			[aBlock value: objOop].
 		 prevPrevObj := prevObj.
 		 prevObj := objOop.
@@ -1112,8 +1113,7 @@ SpurMemoryManager >> allHeapEntitiesDo: aBlock [
 
 { #category : #'object enumeration' }
 SpurMemoryManager >> allNewSpaceEntitiesDo: aBlock [
-	"Enumerate all new space objects, including free objects,
-	 excluding any objects created during the ennumeration."
+	"Enumerate all new space objects, including free objects."
 	<inline: true>
 	| prevObj prevPrevObj objOop limit |
 	prevPrevObj := prevObj := nil.
@@ -1138,30 +1138,12 @@ SpurMemoryManager >> allNewSpaceEntitiesDo: aBlock [
 
 { #category : #'object enumeration' }
 SpurMemoryManager >> allNewSpaceObjectsDo: aBlock [
-	"Enumerate all new space objects, excluding any objects created
-	 during the execution of allNewSpaceObjectsDo:."
+	"Enumerate all new space objects, excluding free objects."
 	<inline: true>
-	| prevObj prevPrevObj objOop limit |
-	prevPrevObj := prevObj := nil.
-	"After a scavenge eden is empty, futureSpace is empty, and all newSpace objects are
-	  in pastSpace.  Objects are allocated in eden.  So enumerate only eden and pastSpace."
-	objOop := self objectStartingAt: scavenger eden start.
-	[objOop < freeStart] whileTrue:
-		[(self isEnumerableObject: objOop) ifTrue:
-			[aBlock value: objOop].
-		 prevPrevObj := prevObj.
-		 prevObj := objOop.
-		 objOop := self objectAfter: objOop limit: freeStart].
-	objOop := self objectStartingAt: scavenger pastSpace start.
-	limit := pastSpaceStart.
-	[objOop < limit] whileTrue:
-		[(self isEnumerableObject: objOop) ifTrue:
-			[aBlock value: objOop].
-		 prevPrevObj := prevObj.
-		 prevObj := objOop.
-		 objOop := self objectAfter: objOop limit: limit].
-	self touch: prevPrevObj.
-	self touch: prevObj
+	self allNewSpaceEntitiesDo:
+		[:objOop|
+		 (self isEnumerableObject: objOop) ifTrue:
+			[aBlock value: objOop]]
 ]
 
 { #category : #'object enumeration' }
@@ -1212,17 +1194,7 @@ SpurMemoryManager >> allObjectsUnmarked [
 { #category : #'object enumeration' }
 SpurMemoryManager >> allOldSpaceEntitiesDo: aBlock [
 	<inline: true>
-	| prevObj prevPrevObj objOop |
-	prevPrevObj := prevObj := nil.
-	objOop := self firstObject.
-	[self assert: objOop \\ self allocationUnit = 0.
-	 objOop < freeOldSpaceStart] whileTrue:
-		[aBlock value: objOop.
-		 prevPrevObj := prevObj.
-		 prevObj := objOop.
-		 objOop := self objectAfter: objOop limit: freeOldSpaceStart].
-	self touch: prevPrevObj.
-	self touch: prevObj
+	self allOldSpaceEntitiesFrom: self firstObject do: aBlock
 ]
 
 { #category : #'object enumeration' }
@@ -1233,7 +1205,8 @@ SpurMemoryManager >> allOldSpaceEntitiesForCoalescingDo: aBlock [
 	objOop := self firstObject.
 	[self assert: objOop \\ self allocationUnit = 0.
 	 objOop < freeOldSpaceStart] whileTrue:
-		[rawNumSlots := self rawNumSlotsOf: objOop.
+		[self assert: (self longLongAt: objOop) ~= 0.
+		 rawNumSlots := self rawNumSlotsOf: objOop.
 		 aBlock value: objOop.
 		 "If the number of slot changes coalescing changed an object from a single to a double header."
 		 rawNumSlotsAfter := self rawNumSlotsOf: objOop.
@@ -1256,7 +1229,8 @@ SpurMemoryManager >> allOldSpaceEntitiesFrom: initialObject do: aBlock [
 	objOop := initialObject.
 	[self assert: objOop \\ self allocationUnit = 0.
 	 objOop < freeOldSpaceStart] whileTrue:
-		[aBlock value: objOop.
+		[self assert: (self longLongAt: objOop) ~= 0.
+		 aBlock value: objOop.
 		 prevPrevObj := prevObj.
 		 prevObj := objOop.
 		 objOop := self objectAfter: objOop limit: freeOldSpaceStart].
@@ -1275,18 +1249,10 @@ SpurMemoryManager >> allOldSpaceObjectsFrom: initialObject do: aBlock [
 	"Enumerate all objects (i.e. exclude bridges, forwarders and free chunks)
 	 in oldSpace starting at initialObject."
 	<inline: true>
-	| prevObj prevPrevObj objOop |
-	prevPrevObj := prevObj := nil.
-	objOop := initialObject.
-	[self assert: objOop \\ self allocationUnit = 0.
-	 objOop < freeOldSpaceStart] whileTrue:
-		[(self isEnumerableObject: objOop) ifTrue:
-			[aBlock value: objOop].
-		 prevPrevObj := prevObj.
-		 prevObj := objOop.
-		 objOop := self objectAfter: objOop limit: freeOldSpaceStart].
-	self touch: prevPrevObj.
-	self touch: prevObj
+	self allOldSpaceEntitiesFrom: initialObject
+		do: [:objOop|
+			 (self isEnumerableObject: objOop) ifTrue:
+				[aBlock value: objOop]]
 ]
 
 { #category : #'weakness and ephemerality' }
