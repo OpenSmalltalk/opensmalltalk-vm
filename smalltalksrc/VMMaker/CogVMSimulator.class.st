@@ -2186,17 +2186,6 @@ CogVMSimulator >> numStackPages [
 	^numStackPages
 ]
 
-{ #category : #testing }
-CogVMSimulator >> objectBefore: addr [
-	| prev |
-	objectMemory allObjectsDo:
-		[:oop|
-		"look here if debugging prev obj overlapping this one"
-		oop >= addr ifTrue: [^prev].
-		prev := oop].
-	^0
-]
-
 { #category : #UI }
 CogVMSimulator >> openAsMorph [
 	"Open a morphic view on this simulation."
