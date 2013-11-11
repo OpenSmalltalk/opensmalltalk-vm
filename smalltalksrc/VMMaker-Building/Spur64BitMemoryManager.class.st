@@ -426,7 +426,8 @@ Spur64BitMemoryManager >> objectBytesForSlots: numSlots [
 
 { #category : #'object access' }
 Spur64BitMemoryManager >> rawNumSlotsOf: objOop [
-	<returnTypeC: #usqLong>
+	<returnTypeC: #usqInt>
+	<inline: true>
 	^(self longAt: objOop) asUnsignedLong >> self numSlotsFullShift
 ]
 
