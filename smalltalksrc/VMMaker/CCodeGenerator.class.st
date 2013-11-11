@@ -1500,7 +1500,7 @@ CCodeGenerator >> generateGreaterThanOrEqual: msgNode on: aStream indent: level 
 CCodeGenerator >> generateIfFalse: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	(self nilOrBooleanConstantReceiverOf: msgNode)
+	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
 		ifNil:
 			[aStream nextPutAll: 'if (!'.
 			msgNode receiver isLeaf ifFalse: [aStream nextPut: $(]. "grrrrr"
@@ -1520,7 +1520,7 @@ CCodeGenerator >> generateIfFalse: msgNode on: aStream indent: level [
 CCodeGenerator >> generateIfFalseAsArgument: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	(self nilOrBooleanConstantReceiverOf: msgNode)
+	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
 		ifNil:
 			[aStream nextPutAll: '(!('.
 			 msgNode receiver emitCCodeAsArgumentOn: aStream level: 0 generator: self.
@@ -1537,13 +1537,13 @@ CCodeGenerator >> generateIfFalseAsArgument: msgNode on: aStream indent: level [
 CCodeGenerator >> generateIfFalseIfTrue: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	(self nilOrBooleanConstantReceiverOf: msgNode)
+	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
 		ifNil:
 			[aStream nextPutAll: 'if ('.
 			msgNode receiver emitCCodeAsExpressionOn: aStream level: level generator: self.
 			aStream nextPutAll: ') {'; cr.
 			msgNode args last emitCCodeOn: aStream level: level + 1 generator: self.
-			aStream tab: level; nextPut: $}; cr; tab: level; nextPutAll: 'else {'; cr.
+			aStream tab: level; nextPut: $}; crtab: level; nextPutAll: 'else {'; cr.
 			msgNode args first emitCCodeOn: aStream level: level + 1 generator: self.
 			aStream tab: level; nextPut: $}]
 		ifNotNil:
@@ -1556,7 +1556,7 @@ CCodeGenerator >> generateIfFalseIfTrue: msgNode on: aStream indent: level [
 CCodeGenerator >> generateIfFalseIfTrueAsArgument: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	(self nilOrBooleanConstantReceiverOf: msgNode)
+	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
 		ifNil:
 			[aStream nextPut: $(.
 			msgNode receiver emitCCodeAsArgumentOn: aStream level: level generator: self.
@@ -1706,13 +1706,13 @@ CCodeGenerator >> generateIfNotNilIfNilAsArgument: msgNode on: aStream indent: l
 CCodeGenerator >> generateIfTrue: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	(self nilOrBooleanConstantReceiverOf: msgNode)
+	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
 		ifNil:
 			[aStream nextPutAll: 'if ('.
 			msgNode receiver emitCCodeAsExpressionOn: aStream level: level generator: self.
 			aStream nextPutAll: ') {'; cr.
 			msgNode args first emitCCodeOn: aStream level: level + 1 generator: self.
-			level timesRepeat: [ aStream tab ].
+			aStream tab: level.
 			aStream nextPut: $}]
 		ifNotNil:
 			[:const |
@@ -1724,7 +1724,7 @@ CCodeGenerator >> generateIfTrue: msgNode on: aStream indent: level [
 CCodeGenerator >> generateIfTrueAsArgument: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	(self nilOrBooleanConstantReceiverOf: msgNode)
+	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
 		ifNil:
 			[aStream nextPut: $(.
 			 msgNode receiver emitCCodeAsArgumentOn: aStream level: level generator: self.
@@ -1741,13 +1741,13 @@ CCodeGenerator >> generateIfTrueAsArgument: msgNode on: aStream indent: level [
 CCodeGenerator >> generateIfTrueIfFalse: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	(self nilOrBooleanConstantReceiverOf: msgNode)
+	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
 		ifNil:
 			[aStream nextPutAll: 'if ('.
 			msgNode receiver emitCCodeAsExpressionOn: aStream level: level generator: self.
 			aStream nextPutAll: ') {'; cr.
 			msgNode args first emitCCodeOn: aStream level: level + 1 generator: self.
-			aStream tab: level; nextPut: $}; cr; tab: level; nextPutAll: 'else {'; cr.
+			aStream tab: level; nextPut: $}; crtab: level; nextPutAll: 'else {'; cr.
 			msgNode args last emitCCodeOn: aStream level: level + 1 generator: self.
 			aStream tab: level; nextPut: $}]
 		ifNotNil:
@@ -1760,7 +1760,7 @@ CCodeGenerator >> generateIfTrueIfFalse: msgNode on: aStream indent: level [
 CCodeGenerator >> generateIfTrueIfFalseAsArgument: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	(self nilOrBooleanConstantReceiverOf: msgNode)
+	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
 		ifNil:
 			[aStream nextPut: $(.
 			msgNode receiver emitCCodeAsExpressionOn: aStream level: level generator: self.
@@ -3105,21 +3105,23 @@ CCodeGenerator >> nilOrBooleanConstantReceiverOf: aNode [
 	"Answer nil or the boolean constant that is the receiver of the given message send.
 	 Used to suppress conditional code when the condition is a translation-time constant."
 
-	| rcvr |
 	generateDeadCode ifTrue:[^nil].
-	rcvr := aNode isSend ifTrue: [aNode receiver] ifFalse: [aNode].
-	(rcvr isConstant
-	 and: [#(true false) includes: rcvr value]) ifTrue:
-		[^rcvr value].
-	(rcvr isSend
-	 and: [(#(or: and:) includes: rcvr selector)
-	 and: [rcvr args last isStmtList
-	 and: [rcvr args last statements size = 1]]]) ifTrue:
-		[(self nilOrBooleanConstantReceiverOf: rcvr receiver) ifNotNil:
-			[:rcvrRcvr|
-			(self nilOrBooleanConstantReceiverOf: rcvr args last statements first) ifNotNil:
-				[:rcvrArg|
-				^rcvrRcvr perform: rcvr selector with: rcvrArg]]].
+	(aNode isConstant
+	 and: [#(true false) includes: aNode value]) ifTrue:
+		[^aNode value].
+	aNode isSend ifTrue:
+		[((#(or: and:) includes: aNode selector)
+		 and: [aNode args last isStmtList
+		 and: [aNode args last statements size = 1]]) ifTrue:
+			[(self nilOrBooleanConstantReceiverOf: aNode receiver) ifNotNil:
+				[:rcvr|
+				(self nilOrBooleanConstantReceiverOf: aNode args last statements first) ifNotNil:
+					[:arg|
+					^rcvr perform: aNode selector with: [arg]]]].
+		 ((#(= ~= < > <= >=) includes: aNode selector)
+		  and: [(aNode receiver isConstant and: [aNode receiver value isInteger])
+		  and: [(aNode args first isConstant and: [aNode args first value isInteger])]]) ifTrue:
+			[^aNode receiver value perform: aNode selector with: aNode args first value]].
 	^nil
 
 ]

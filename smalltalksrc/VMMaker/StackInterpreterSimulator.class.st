@@ -1280,17 +1280,6 @@ StackInterpreterSimulator >> nextShortFrom: aStream [
 	^self subclassResponsibility
 ]
 
-{ #category : #testing }
-StackInterpreterSimulator >> objectBefore: addr [
-	| prev |
-	objectMemory allObjectsDo:
-		[:oop|
-		"look here if debugging prev obj overlapping this one"
-		oop >= addr ifTrue: [^prev].
-		prev := oop].
-	^0
-]
-
 { #category : #UI }
 StackInterpreterSimulator >> openAsMorph [
 	"Open a morphic view on this simulation."

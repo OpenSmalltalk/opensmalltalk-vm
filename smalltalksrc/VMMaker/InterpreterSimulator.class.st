@@ -956,17 +956,6 @@ InterpreterSimulator >> normalSend [
 	^ super normalSend
 ]
 
-{ #category : #testing }
-InterpreterSimulator >> objectBefore: addr [
-	| oop prev |
-	oop := self firstObject.
-	[oop < endOfMemory] whileTrue:
-		[prev := oop.  "look here if debugging prev obj overlapping this one"
-		oop := self objectAfter: oop.
-		oop >= addr ifTrue: [^ prev]].
-	^0
-]
-
 { #category : #UI }
 InterpreterSimulator >> openAsMorph [
 	"Open a morphic view on this simulation."
