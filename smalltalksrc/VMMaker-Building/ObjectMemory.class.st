@@ -148,14 +148,6 @@ ObjectMemory class >> characterObjectOf: characterCode [
 ]
 
 { #category : #translation }
-ObjectMemory class >> declareCAsOop: arrayOfVariableNames in: aCCodeGenerator [
-	"Declare the variables in arrayOfVariableNames with type representing position in object memory."
-
-	arrayOfVariableNames
-		do: [:varName | aCCodeGenerator var: varName type: 'usqInt']
-]
-
-{ #category : #translation }
 ObjectMemory class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
 		var: #memory

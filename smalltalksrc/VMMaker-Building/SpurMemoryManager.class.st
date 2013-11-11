@@ -547,6 +547,7 @@ SpurMemoryManager class >> declareCVarsIn: aCCodeGenerator [
 	self declareCAsUSqLong: (self allInstVarNames select: [:ivn| ivn endsWith: 'Usecs'])
 		in: aCCodeGenerator.
 	aCCodeGenerator
+		var: #freeListsMask type: #usqInt;
 		var: #freeLists type: #'sqInt *';
 		var: #classTableBitmap type: #'unsigned char *';
 		var: #highestObjects type: #SpurCircularBuffer;
@@ -6225,6 +6226,7 @@ SpurMemoryManager >> objStack: objStack from: start do: aBlock [
 
 { #category : #'object enumeration' }
 SpurMemoryManager >> objectAfter: objOop [
+	<api>
 	"Object parsing.
 	1. all objects have at least a word following the header, for a forwarding pointer.
 	2. objects with an overflow size have a preceeing word with a saturated slotSize.  If the word following
@@ -6252,6 +6254,7 @@ SpurMemoryManager >> objectAfter: objOop limit: limit [
 
 { #category : #'object enumeration' }
 SpurMemoryManager >> objectBefore: objOop [
+	<api>
 	| prev |
 	prev := nil.
 	objOop < newSpaceLimit ifTrue:
