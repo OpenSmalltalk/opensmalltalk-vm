@@ -358,3 +358,9 @@ TParseNode >> structTargetKindIn: aCodeGen [
 	 #struct #pointer or nil"
 	^nil
 ]
+
+{ #category : #accessing }
+TParseNode >> variableNameOrNil [
+	"Overridden in TAssignmentNode & TVariableNode to answer their variable name."
+	^nil
+]
