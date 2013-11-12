@@ -1,3 +1,24 @@
+2013-11-11  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* cmake/configure: Default generated source locations are next to
+	platforms, under platforms, or under platforms/unix.  Always
+	convert generated source path to absolute.  Pass default generated
+	source location to cmake via SRC.
+
+	* CMakeLists.txt: Set default generated source location from ${SRC}.
+
+	* cmake/PluginExternal.cmake, cmake/PluginInternal.cmake: Remove
+	src/vm/intplugins from source paths.
+
+	* cmake/Plugins.cmake: All (internal and external) generated
+	plugin source files are located under {src}/plugins.
+
+	* cmake/Plugins.cmake: Look for plugins.{int,ext,exc} in config
+	dir then in generated source dir.
+
+	* cmake/Plugins.cmake: Plugins listed in plugins.exc are removed
+	from plugins.int and plugins.ext.
+
 2013-10-20  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm/sqUnixMain.c (ioExitWithErrorCode): Added.
