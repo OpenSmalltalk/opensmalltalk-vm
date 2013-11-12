@@ -1004,7 +1004,17 @@ TMethod >> inferReturnTypeIn: aCodeGen [
 { #category : #'type inference' }
 TMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 	parseTree nodesDo:
-		[:node| | var m |
+		[:node| | type var m |
+		"If there is something of the form i >= 0, then i should be signed, not unsigned."
+		(node isSend
+		 and: [(locals includes: (var := node receiver variableNameOrNil))
+		 and: [(#(<= < >= >) includes: node selector)
+		 and: [node args first isConstant
+		 and: [node args first value = 0
+		 and: [(type := self typeFor: var in: aCodeGen) notNil
+		 and: [type first == $u]]]]]]) ifTrue:
+			[declarations at: var put: (declarations at: var) allButFirst].
+		"if an assignment of a known send, set the variable's type to the return type of the send."
 		(node isAssignment
 		 and: [(locals includes: (var := node variable name))
 		 and: [(declarations includesKey: var) not

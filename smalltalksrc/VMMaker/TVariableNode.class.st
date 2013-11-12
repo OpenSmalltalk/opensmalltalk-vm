@@ -82,3 +82,8 @@ TVariableNode >> structTargetKindIn: aCodeGen [
 	 #struct #pointer or nil"
 	^aCodeGen structTargetKindForVariableName: name
 ]
+
+{ #category : #accessing }
+TVariableNode >> variableNameOrNil [
+	^name
+]

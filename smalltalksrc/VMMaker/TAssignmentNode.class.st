@@ -231,3 +231,8 @@ TAssignmentNode >> variable [
 
 	^variable
 ]
+
+{ #category : #accessing }
+TAssignmentNode >> variableNameOrNil [
+	^variable variableNameOrNil
+]
