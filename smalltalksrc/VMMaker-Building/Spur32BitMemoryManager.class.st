@@ -288,8 +288,8 @@ Spur32BitMemoryManager >> coalesce: obj1 and: obj2 [
 { #category : #instantiation }
 Spur32BitMemoryManager >> fillObj: objOop numSlots: numSlots with: fillValue [
 	<inline: true>
-	self assert: (objOop + self baseHeaderSize + (numSlots * self bytesPerOop) - 1)
-				< (self addressAfter: objOop).
+	self assert: (self oop: objOop + self baseHeaderSize + (numSlots * self bytesPerOop) - 1
+					isLessThan: (self addressAfter: objOop)).
 	objOop + self baseHeaderSize
 		to: objOop + self baseHeaderSize + (numSlots * self wordSize) - 1
 		by: self allocationUnit
@@ -457,7 +457,7 @@ Spur32BitMemoryManager >> objectAfter: objOop limit: limit [
 	   If the word following does have a saturated numSlots it must be the overflow size word."
 	| followingWordAddress followingWord |
 	followingWordAddress := self addressAfter: objOop.
-	followingWordAddress >= limit ifTrue:
+	(self oop: followingWordAddress isGreaterThanOrEqualTo: limit) ifTrue:
 		[^limit].
 	self flag: #endianness.
 	followingWord := self longAt: followingWordAddress + 4.
