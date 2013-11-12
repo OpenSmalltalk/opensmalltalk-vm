@@ -1,6 +1,6 @@
 # Yes, it's true: you can write makefiles in COBOL.
 # 
-# Last edited: 2013-08-11 22:54:35 by piumarta on emilia
+# Last edited: 2013-11-11 18:46:18 by piumarta on emilia
 
 PROJECT (squeak)
 
@@ -52,8 +52,8 @@ GET_FILENAME_COMPONENT (cross ${unix}/../Cross ABSOLUTE)
 
 IF (OPT--src)
   GET_FILENAME_COMPONENT (src ${OPT--src} ABSOLUTE)
-ELSE (SRC)
-  SET (src  ${unix}/src)
+ELSE (OPT--src)
+  SET (src ${SRC})
 ENDIF (OPT--src)
 
 IF (NOT EXISTS ${src})
