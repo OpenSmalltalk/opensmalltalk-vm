@@ -5,7 +5,6 @@ INCLUDE_DIRECTORIES (${@plugin@_include_directories}
     ${src}/vm
     ${cross}/vm
     ${src}/plugins/@plugin@
-    ${src}/vm/intplugins/@plugin@
     ${unix}/vm
     ${unix}/plugins/@plugin@
     ${unix}/@plugin@
