@@ -60,7 +60,7 @@ SpurSegmentManager >> addSegmentOfSize: ammount [
 	<var: #segAddress type: #'void *'>
 	(manager "sent to the manager so that the simulator can increase memory to simulate a new segment"
 			sqAllocateMemorySegmentOfSize: ammount
-			Above: ((segments at: 0) segStart + (segments at: 0) segSize) asVoidPointer
+			Above: (segments at: 0) segLimit asVoidPointer
 			AllocatedSizeInto: (self cCode: [self addressOf: allocatedSize]
 									inSmalltalk: [[:sz| allocatedSize := sz]])) ifNotNil:
 		[:segAddress| | newSegIndex newSeg |
@@ -76,7 +76,7 @@ SpurSegmentManager >> addSegmentOfSize: ammount [
 		  instead of in assimilateNewSegment: for the assert"
 		 manager addFreeChunkWithBytes: allocatedSize - manager bridgeSize at: newSeg segStart.
 		 self assert: (manager addressAfter: (manager objectStartingAt: newSeg segStart))
-					= (newSeg segStart + newSeg segSize - manager bridgeSize).
+					= (newSeg segLimit - manager bridgeSize).
 		 ^newSeg].
 	^nil
 ]
@@ -103,9 +103,7 @@ SpurSegmentManager >> adjustSegmentSwizzlesBy: firstSegmentShift [
 SpurSegmentManager >> allBridgesMarked [
 	0 to: numSegments - 1 do:
 		[:i| | bridgeObj |
-		 bridgeObj := (segments at: i) segStart
-					 + (segments at: i) segSize
-					 - manager baseHeaderSize.
+		 bridgeObj := (segments at: i) segLimit - manager baseHeaderSize.
 		 self assert: (manager isSegmentBridge: bridgeObj).
 		 (manager isMarked: bridgeObj) ifFalse:
 			[^false]].
@@ -153,7 +151,7 @@ SpurSegmentManager >> bridgeFrom: aSegment to: nextSegmentOrNil [
 	<var: #aSegment type: #'SpurSegmentInfo *'>
 	<var: #nextSegmentOrNil type: #'SpurSegmentInfo *'>
 	| segEnd clifton bridgeSpan |
-	segEnd := aSegment segStart + aSegment segSize.
+	segEnd := aSegment segLimit.
 	clifton := segEnd - manager bridgeSize. "clifton is where the Avon bridge begins..."
 	bridgeSpan := nextSegmentOrNil
 					ifNil: [manager bridgeSize]
@@ -182,9 +180,7 @@ SpurSegmentManager >> collapseSegmentsPostSwizzle [
 	"finally plant a bridge at the end of the coalesced segment and cut back the
 	 manager's notion of the end of memory to immediately before the bridge."
 	bridge := manager endOfMemory - manager bridgeSize.
-	self assert: bridge = ((segments at: 0) segStart
-						  + (segments at: 0) segSize
-						  -  manager bridgeSize).
+	self assert: bridge = ((segments at: 0) segLimit - manager bridgeSize).
 	manager
 		initSegmentBridgeWithBytes: manager bridgeSize at: bridge;
 		setEndOfMemory: bridge
@@ -237,14 +233,13 @@ SpurSegmentManager >> insertSegmentFor: segAddress [
 	 is in the middle of the existing segments, shuffle them
 	 up to make room. Answer the new segment's index."
 	| segIndex lastSegIndex |
-	self assert: segAddress > ((segments at: 0) segStart + (segments at: 0) segSize).
+	self assert: segAddress > (segments at: 0) segLimit.
 	numSegments = numSegInfos ifTrue:
 		[self allocateOrExtendSegmentInfos].
 	self assert: numSegments < numSegInfos.
 	segIndex := lastSegIndex := numSegments - 1.
 	numSegments := numSegments + 1.
-	[segAddress > ((segments at: segIndex) segStart
-					+ (segments at: segIndex) segSize) ifTrue:
+	[segAddress > (segments at: segIndex) segLimit ifTrue:
 		[segIndex := segIndex + 1.
 		 lastSegIndex to: segIndex by: -1 do:
 			[:idx| segments at: idx + 1 put: (segments at: idx)].
@@ -260,7 +255,7 @@ SpurSegmentManager >> isInSegments: address [
 		[:i|
 		address < (segments at: i) segStart ifTrue:
 			[^false].
-		address < ((segments at: i) segStart + (segments at: i) segSize) ifTrue:
+		address < (segments at: i) segLimit ifTrue:
 			[^true]].
 	^false
 ]
@@ -274,10 +269,13 @@ SpurSegmentManager >> manager: aSpurMemoryManager [
 SpurSegmentManager >> notePinned: objOop [
 	"Let the segmentManager mark which segments contain pinned objects"
 	self assert: (manager isPinned: objOop).
-	(manager isSegmentBridge: objOop) ifFalse:
-		[[(segments at: sweepIndex) segStart + (segments at: sweepIndex) segSize < objOop] whileTrue:
-			[sweepIndex := sweepIndex + 1].
-		 (segments at: sweepIndex) containsPinned: true]
+	(manager isSegmentBridge: objOop)
+		ifTrue:
+			[manager setIsMarkedOf: objOop to: true]
+		ifFalse:
+			[[(segments at: sweepIndex) segLimit < objOop] whileTrue:
+				[sweepIndex := sweepIndex + 1].
+			 (segments at: sweepIndex) containsPinned: true]
 ]
 
 { #category : #accessing }
@@ -396,7 +394,7 @@ SpurSegmentManager >> writeSegment: aSpurSegmentInfo nextSegmentSize: nextSegSiz
 	<var: 'aBinaryStream' type: #'FILE *'>
 	| bridge savedHeader nWritten |
 	<var: 'savedHeader' type: #usqLong>
-	bridge := aSpurSegmentInfo segStart + aSpurSegmentInfo segSize - manager baseHeaderSize.
+	bridge := aSpurSegmentInfo segLimit - manager baseHeaderSize.
 	"last seg may be beyond endOfMemory/freeOldSpaceStart"
 	self assert: ((manager isValidSegmentBridge: bridge) or: [nextSegSize = 0]).
 	savedHeader := manager longLongAt: bridge.

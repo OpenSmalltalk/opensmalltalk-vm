@@ -56,6 +56,11 @@ SpurSegmentInfo >> printOn: aStream [
 ]
 
 { #category : #accessing }
+SpurSegmentInfo >> segLimit [
+	^segSize + segStart
+]
+
+{ #category : #accessing }
 SpurSegmentInfo >> segSize [
 	"Answer the value of segSize"
 

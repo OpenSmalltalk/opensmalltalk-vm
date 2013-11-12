@@ -25,9 +25,7 @@ Spur32BitCoMemoryManager >> assimilateNewSegment: segInfo [
 	"Update after adding a segment.
 	 Here we make sure the new segment is not executable."
 	<var: #segInfo type: #'SpurSegmentInfo *'>
-	coInterpreter
-		sqMakeMemoryNotExecutableFrom: segInfo segStart
-		To: segInfo segStart + segInfo segSize
+	coInterpreter sqMakeMemoryNotExecutableFrom: segInfo segStart To: segInfo segLimit
 ]
 
 { #category : #trampolines }
