@@ -1760,7 +1760,7 @@ SpurMemoryManager >> assimilateNewSegment: segInfo [
 	<var: #segInfo type: #'SpurSegmentInfo *'>
 	segInfo segStart >= endOfMemory ifTrue:
 		[freeOldSpaceStart :=
-		 endOfMemory := segInfo segStart + segInfo segSize - self bridgeSize]
+		 endOfMemory := segInfo segLimit - self bridgeSize]
 ]
 
 { #category : #snapshot }
@@ -4023,7 +4023,7 @@ SpurMemoryManager >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpace [
 		(self isMarked: o)
 			ifTrue: "forwarders should have been followed in markAndTrace:"
 				[self assert: (self isForwarded: o) not.
-				 self setIsMarkedOf: o to: false.
+				 self setIsMarkedOf: o to: false. "this will unmark bridges. undo the damage in notePinned:"
 				 (self isPinned: o) ifTrue:
 					[segmentManager notePinned: o].
 				 firstFreeChunk ~= 0 ifTrue:
@@ -7667,6 +7667,10 @@ SpurMemoryManager >> sufficientSpaceAfterGC: numBytes [
 
 	self assert: numBytes = 0.
 	self scavengingGCTenuringIf: TenureByAge.
+	[totalFreeOldSpace < growHeadroom
+	 and: [(self growOldSpaceByAtLeast: 0) notNil]] whileTrue:
+		[totalFreeOldSpace >= growHeadroom ifTrue:
+			[^true]].
 	lowSpaceThreshold > totalFreeOldSpace ifTrue: "space is low"
 		[lowSpaceThreshold := 0. "avoid signalling low space twice"
 		 ^false].

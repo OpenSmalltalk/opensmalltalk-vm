@@ -12,6 +12,12 @@ Integer >> asUnsignedInteger [
 ]
 
 { #category : #'*VMMaker-interpreter simulator' }
+Integer >> asUnsignedLong [
+	self assert: self >= 0.
+	^self
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
 Integer >> asVoidPointer [
 	^self
 ]
