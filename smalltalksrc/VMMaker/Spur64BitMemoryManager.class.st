@@ -255,8 +255,8 @@ Spur64BitMemoryManager >> changeClassOf: rcvr to: argClass [
 { #category : #instantiation }
 Spur64BitMemoryManager >> fillObj: objOop numSlots: numSlots with: fillValue [
 	<inline: true>
-	self assert: (objOop + self baseHeaderSize + (numSlots * self bytesPerOop) - 1)
-				< (self addressAfter: objOop).
+	self assert: (self oop: objOop + self baseHeaderSize + (numSlots * self bytesPerOop) - 1
+					isLessThan: (self addressAfter: objOop)).
 	objOop + self baseHeaderSize
 		to: objOop + self baseHeaderSize + (numSlots * self bytesPerOop) - 1
 		by: self allocationUnit
@@ -407,7 +407,7 @@ Spur64BitMemoryManager >> objectAfter: objOop limit: limit [
 	   If the word following does have a saturated numSlots it must be the overflow size word."
 	| followingWordAddress followingWord |
 	followingWordAddress := self addressAfter: objOop.
-	followingWordAddress >= limit ifTrue:
+	(self oop: followingWordAddress isGreaterThanOrEqualTo: limit) ifTrue:
 		[^limit].
 	self flag: #endianness.
 	followingWord := self longAt: followingWordAddress.

@@ -543,7 +543,7 @@ SpurMemoryManager class >> classTableBitmapBytes [
 { #category : #translation }
 SpurMemoryManager class >> declareCVarsIn: aCCodeGenerator [
 	self declareCAsOop: #(	memory freeStart scavengeThreshold newSpaceLimit pastSpaceStart
-							lowSpaceThreshold freeOldSpaceStart endOfMemory sortedFreeChunks)
+							lowSpaceThreshold freeOldSpaceStart startOfMemory endOfMemory sortedFreeChunks)
 		in: aCCodeGenerator.
 	self declareCAsUSqLong: (self allInstVarNames select: [:ivn| ivn endsWith: 'Usecs'])
 		in: aCCodeGenerator.
@@ -1036,7 +1036,7 @@ SpurMemoryManager >> allExistingNewSpaceObjectsDo: aBlock [
 	  in pastSpace.  Objects are allocated in eden.  So enumerate only eden and pastSpace."
 	objOop := self objectStartingAt: scavenger eden start.
 	limit := freeStart.
-	[objOop < limit] whileTrue:
+	[self oop: objOop isLessThan: limit] whileTrue:
 		[(self isEnumerableObject: objOop) ifTrue:
 			[aBlock value: objOop].
 		 prevPrevObj := prevObj.
@@ -1044,7 +1044,7 @@ SpurMemoryManager >> allExistingNewSpaceObjectsDo: aBlock [
 		 objOop := self objectAfter: objOop limit: freeStart].
 	objOop := self objectStartingAt: scavenger pastSpace start.
 	limit := pastSpaceStart.
-	[objOop < limit] whileTrue:
+	[self oop: objOop isLessThan: limit] whileTrue:
 		[(self isFreeObject: objOop) ifFalse:
 			[aBlock value: objOop].
 		 prevPrevObj := prevObj.
@@ -1073,7 +1073,7 @@ SpurMemoryManager >> allExistingOldSpaceObjectsDo: aBlock [
 	objOop := self firstObject.
 	oldSpaceLimit := freeOldSpaceStart.
 	[self assert: objOop \\ self allocationUnit = 0.
-	 objOop < oldSpaceLimit] whileTrue:
+	 self oop: objOop isLessThan: oldSpaceLimit] whileTrue:
 		[self assert: (self longLongAt: objOop) ~= 0.
 		 (self isEnumerableObject: objOop) ifTrue:
 			[aBlock value: objOop].
@@ -1122,14 +1122,14 @@ SpurMemoryManager >> allNewSpaceEntitiesDo: aBlock [
 	"After a scavenge eden is empty, futureSpace is empty, and all newSpace objects are
 	  in pastSpace.  Objects are allocated in eden.  So enumerate only eden and pastSpace."
 	objOop := self objectStartingAt: scavenger eden start.
-	[objOop < freeStart] whileTrue:
+	[self oop: objOop isLessThan: freeStart] whileTrue:
 		[aBlock value: objOop.
 		 prevPrevObj := prevObj.
 		 prevObj := objOop.
 		 objOop := self objectAfter: objOop limit: freeStart].
 	objOop := self objectStartingAt: scavenger pastSpace start.
 	limit := pastSpaceStart.
-	[objOop < limit] whileTrue:
+	[self oop: objOop isLessThan: limit] whileTrue:
 		[aBlock value: objOop.
 		 prevPrevObj := prevObj.
 		 prevObj := objOop.
@@ -1206,7 +1206,7 @@ SpurMemoryManager >> allOldSpaceEntitiesForCoalescingDo: aBlock [
 	prevPrevObj := prevObj := nil.
 	objOop := self firstObject.
 	[self assert: objOop \\ self allocationUnit = 0.
-	 objOop < freeOldSpaceStart] whileTrue:
+	 self oop: objOop isLessThan: freeOldSpaceStart] whileTrue:
 		[self assert: (self longLongAt: objOop) ~= 0.
 		 rawNumSlots := self rawNumSlotsOf: objOop.
 		 aBlock value: objOop.
@@ -1230,7 +1230,7 @@ SpurMemoryManager >> allOldSpaceEntitiesFrom: initialObject do: aBlock [
 	prevPrevObj := prevObj := nil.
 	objOop := initialObject.
 	[self assert: objOop \\ self allocationUnit = 0.
-	 objOop < freeOldSpaceStart] whileTrue:
+	 self oop: objOop isLessThan: freeOldSpaceStart] whileTrue:
 		[self assert: (self longLongAt: objOop) ~= 0.
 		 aBlock value: objOop.
 		 prevPrevObj := prevObj.
@@ -2112,7 +2112,8 @@ SpurMemoryManager >> checkHeapIntegrity: excludeUnmarkedNewSpaceObjs [
 										 self eek.
 										 ok := false].
 									 "don't be misled by CogMethods; they appear to be young, but they're not"
-									 ((self isYoung: fieldOop) and: [fieldOop >= startOfMemory]) ifTrue:
+									 ((self isYoung: fieldOop)
+									  and: [self oop: fieldOop isGreaterThanOrEqualTo: startOfMemory]) ifTrue:
 										[containsYoung := true]]]]].
 					(containsYoung and: [(self isYoung: obj) not]) ifTrue:
 						[(self isRemembered: obj) ifFalse:
@@ -2191,7 +2192,7 @@ SpurMemoryManager >> checkOkayOop: oop [
 	(self addressCouldBeObjWhileScavenging: oop) ifFalse:
 		[self print: 'oop '; printHex: oop; print: ' is not a valid address'. ^false].
 
-	(self addressAfter: oop) <= freeOldSpaceStart ifFalse:
+	(self oop: (self addressAfter: oop) isLessThanOrEqualTo: freeOldSpaceStart) ifFalse:
 		[self print: 'oop '; printHex: oop; print: ' size would make it extend beyond the end of memory'. ^false].
 
 	"header type checks"
@@ -3167,7 +3168,7 @@ SpurMemoryManager >> exactFitCompact [
 	[statCompactPassCount := statCompactPassCount + 1.
 	 highestObjects from: misfits - self wordSize reverseDo:
 		[:o| | b |
-		 self assert: o > firstFreeChunk.
+		 self assert: (self oop: o isGreaterThan: firstFreeChunk).
 		 ((self isForwarded: o) or: [self isPinned: o]) ifFalse:
 			[b := self bytesInObject: o.
 			 (self allocateOldSpaceChunkOfExactlyBytes: b suchThat: [:f| f < o])
@@ -3186,7 +3187,7 @@ SpurMemoryManager >> exactFitCompact [
 	  set first to first failure and refill buffer. next cycle will add more misfits.
 	  give up on exact-fit when half of the highest objects fail to fit."
 	first := self longAt: highestObjects first.
-	 self assert: first > firstFreeChunk.
+	 self assert: (self oop: first isGreaterThan: firstFreeChunk).
 	 nHighest := highestObjects usedSize.
 	 highestObjects first: misfits.
 	 nMisses := highestObjects usedSize.
@@ -3374,7 +3375,7 @@ SpurMemoryManager >> fillHighestObjectsWithMovableObjectsFrom: startObj upTo: li
 	highestObjectsWraps := 0.
 	self allOldSpaceObjectsFrom: startObj do:
 		[:o|
-		o >= limitObj ifTrue:
+		(self oop: o isGreaterThanOrEqualTo: limitObj) ifTrue:
 			[highestObjects last: lastHighest.
 			 ^self].
 		((self isForwarded: o) or: [self isPinned: o]) ifFalse:
@@ -3495,7 +3496,7 @@ SpurMemoryManager >> firstFitCompact [
 	[statCompactPassCount := statCompactPassCount + 1.
 	 highestObjects reverseDo:
 		[:o| | b |
-		 o <= firstFreeChunk ifTrue:
+		 (self oop: o isLessThanOrEqualTo: firstFreeChunk) ifTrue:
 			[coInterpreter print: 'firstFitCompact fits: '; printNum: nhits; print: ' misfits: '; printNum: nmisses; cr.
 			 ^self].
 		 ((self isForwarded: o) or: [self isPinned: o]) ifFalse:
@@ -3511,7 +3512,7 @@ SpurMemoryManager >> firstFitCompact [
 								  or: [(self addressAfter: (self objectStartingAt: f)) = lastSubdividedFreeChunk])]]].
 	 self checkFreeSpace.
 	 first := self longAt: highestObjects first.
-	 self assert: first > firstFreeChunk.
+	 self assert: (self oop: first isGreaterThan: firstFreeChunk).
 	 self findFirstFreeChunkPostCompactionPass.
 	 self fillHighestObjectsWithMovableObjectsFrom: firstFreeChunk upTo: first.
 	 highestObjects usedSize > 0] whileTrue.
@@ -4649,22 +4650,22 @@ SpurMemoryManager >> instanceAfter: objOop [
 
 	(self isInEden: objOop) ifTrue:
 		[[actualObj := self objectAfter: actualObj limit: freeStart.
-		  actualObj < freeStart] whileTrue:
+		  self oop: actualObj isLessThan: freeStart] whileTrue:
 			[classIndex = (self classIndexOf: actualObj) ifTrue:
 				[^actualObj]].
-		 actualObj := pastSpaceStart > scavenger pastSpace start
+		 actualObj := (self oop: pastSpaceStart isGreaterThan: scavenger pastSpace start)
 						ifTrue: [self objectStartingAt: scavenger pastSpace start]
 						ifFalse: [nilObj]].
 
 	(self isInSurvivorSpace: actualObj) ifTrue:
 		[[actualObj := self objectAfter: actualObj limit: pastSpaceStart.
-		  actualObj < pastSpaceStart] whileTrue:
+		  self oop: actualObj isLessThan: pastSpaceStart] whileTrue:
 			[classIndex = (self classIndexOf: actualObj) ifTrue:
 				[^actualObj]].
 		 actualObj := nilObj].
 
 	[actualObj := self objectAfter: actualObj limit: freeOldSpaceStart.
-	 actualObj < freeOldSpaceStart] whileTrue:
+	 self oop:actualObj isLessThan: freeOldSpaceStart] whileTrue:
 		[classIndex = (self classIndexOf: actualObj) ifTrue:
 			[^actualObj]].
 	^nil
@@ -4981,8 +4982,8 @@ SpurMemoryManager >> isInMemory: address [
 
 { #category : #'object testing' }
 SpurMemoryManager >> isInNewSpace: objOop [
-	^objOop >= startOfMemory
-	  and: [objOop < newSpaceLimit]
+	^(self oop: objOop isLessThan: newSpaceLimit)
+	  and: [self oop: objOop isGreaterThanOrEqualTo: startOfMemory]
 ]
 
 { #category : #'object testing' }
@@ -5691,7 +5692,7 @@ SpurMemoryManager >> markAndTraceHiddenRoots [
 	 The obj stacks must be marked specially; their pages must be marked,
 	 but only the contents of the ephemeronQueue should be marked.
 	 If a class table page is weak we can mark and trace the hiddenRoots,
-	 which will not trace throguh class table opages because they are weak.
+	 which will not trace through class table opages because they are weak.
 	 But if class table pages are strong, we must mark the pages and *not*
 	 trace them so that only classes reachable from the true roots will be
 	 marked, and unreachable classes will be left unmarked."
@@ -5929,7 +5930,7 @@ SpurMemoryManager >> moveMisfitsToTopOfHighestObjects: misfits [
 	oldLimit := highestObjects limit.
 	misfits = (highestObjects last + self wordSize) ifTrue:
 		[^oldLimit].
-	misfits <= highestObjects last ifTrue:
+	(self oop: misfits isLessThanOrEqualTo: highestObjects last) ifTrue:
 		[bytesToMove := highestObjects last + self wordSize - misfits.
 		 self mem: (highestObjects limit - bytesToMove) asVoidPointer
 			mo: misfits asVoidPointer
@@ -6240,7 +6241,7 @@ SpurMemoryManager >> objectAfter: objOop [
 	    an object doesn't have a saturated size field it must be a single-header object.  If the word following
 	   does have a saturated slotSize it must be the overflow size word."
 	<inline: false>
-	objOop < newSpaceLimit ifTrue:
+	(self oop: objOop isLessThan: newSpaceLimit) ifTrue:
 		[(self isInEden: objOop) ifTrue:
 			[^self objectAfter: objOop limit: freeStart].
 		 (self isInSurvivorSpace: objOop) ifTrue:
@@ -6264,16 +6265,16 @@ SpurMemoryManager >> objectBefore: objOop [
 	<api>
 	| prev |
 	prev := nil.
-	objOop < newSpaceLimit ifTrue:
+	(self oop: objOop isLessThan: newSpaceLimit) ifTrue:
 		[self allNewSpaceObjectsDo:
 			[:o|
-			 o >= objOop ifTrue:
+			 (self oop: o isGreaterThanOrEqualTo: objOop) ifTrue:
 				[^prev].
 			 prev := o].
 		 ^prev].
 	self allOldSpaceObjectsDo:
 		[:o|
-		 o >= objOop ifTrue:
+		 (self oop: o isGreaterThanOrEqualTo: objOop) ifTrue:
 			[^prev].
 		 prev := o].
 	^prev
@@ -6319,7 +6320,7 @@ SpurMemoryManager >> okayOop: signedOop [
 	(self addressCouldBeObjWhileScavenging: oop) ifFalse:
 		[self error: 'oop is not a valid address'. ^false].
 
-	(self addressAfter: oop) <= freeOldSpaceStart ifFalse:
+	(self oop: (self addressAfter: oop) isLessThanOrEqualTo: freeOldSpaceStart) ifFalse:
 		[self error: 'oop size would make it extend beyond the end of memory'. ^false].
 
 	"header type checks"
@@ -7281,7 +7282,7 @@ SpurMemoryManager >> sortFreeListAt: i [
 		 prev := 0. "prev node for insertion sort"
 		 node := head. "current node for insertion sort"
 		 [node ~= 0
-		  and: [node < list]] whileTrue:
+		  and: [self oop: node isLessThan: list]] whileTrue:
 			[prev := node.
 			 node := self fetchPointer: self freeChunkNextIndex ofObject: node].
 		 "insert the node into the sorted list"
@@ -7405,7 +7406,7 @@ SpurMemoryManager >> startOfMemory [
 { #category : #simulation }
 SpurMemoryManager >> startOfMemory: value [
 	startOfMemory := value.
-	(freeStart isNil or: [freeStart < value]) ifTrue:
+	(freeStart isNil or: [self oop: freeStart isLessThan: value]) ifTrue:
 		[freeStart := value]
 ]
 
