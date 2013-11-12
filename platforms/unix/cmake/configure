@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Last edited: 2013-09-09 13:29:13 by piumarta on emilia
+# Last edited: 2013-11-11 18:50:33 by piumarta on emilia
 
 RELEASE_TAG=""
 
@@ -40,7 +40,13 @@ config="`dirname \"$0\"`"
 unix="`dirname \"${config}\"`"
 guess=`"${config}"/config.guess`
 host=`"${config}"/config.sub ${guess}`
-src="${unix}/src"
+platforms="`dirname \"${unix}\"`"
+top="`dirname \"${platforms}\"`"
+src="${top}/src"
+
+if test ! -d "${src}"; then src="${platforms}/src"; fi
+if test ! -d "${src}"; then src="${unix}/src"; fi
+if test   -d "${src}"; then src="`(cd \"${src}\";  pwd)`"; fi
 
 stop=false
 cflags=""
@@ -63,12 +69,8 @@ while [ $# -gt 0 ]; do
     case "$1" in
 	--help)			help; exit 0;;
 	--debug-configure)	dump;;
-	--src=*)		rel="`echo \"$1\" | sed 's/\-\-src=//'`"
-				if test -d "${rel}"; then
-				    src="`(cd \"${rel}\";  pwd)`"
-				else
-				    src="${rel}"
-				fi
+	--src=*)		src="`echo \"$1\" | sed 's/\-\-src=//'`"
+				src="`(cd \"${rel}\";  pwd)`"
 				args="${args} -DOPT--src=${src}";;
 	--CFLAGS=*)		cflags="`echo \"$1\" | sed 's/\-\-CFLAGS=//'`";;
 	-CFLAGS=*)		cflags="`echo \"$1\" | sed 's/\-CFLAGS=//'`";;
@@ -109,7 +111,7 @@ echo "-- Configuring squeak ${VM_VERSION} for ${host}"
 echo "-- Using source directory ${src}"
 
 if test -n "${cflags}"; then
-    cmake "${unix}" -DVM_HOST="${host}" -DVM_VERSION="${VM_VERSION}" -DPLATFORM_SOURCE_VERSION="${PLATFORM_SOURCE_VERSION}" -DOPT--CMAKE_C_FLAGS="${cflags}" ${args}
+    cmake "${unix}" -DVM_HOST="${host}" -DVM_VERSION="${VM_VERSION}" -DPLATFORM_SOURCE_VERSION="${PLATFORM_SOURCE_VERSION}" -DSRC="${src}" -DOPT--CMAKE_C_FLAGS="${cflags}" ${args}
 else
-    cmake "${unix}" -DVM_HOST="${host}" -DVM_VERSION="${VM_VERSION}" -DPLATFORM_SOURCE_VERSION="${PLATFORM_SOURCE_VERSION}"                                  ${args}
+    cmake "${unix}" -DVM_HOST="${host}" -DVM_VERSION="${VM_VERSION}" -DPLATFORM_SOURCE_VERSION="${PLATFORM_SOURCE_VERSION}" -DSRC="${src}"                                  ${args}
 fi
