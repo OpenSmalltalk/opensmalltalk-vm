@@ -619,7 +619,10 @@ SpurBootstrap >> allocateClassTable [
 		newHeap fillObj: page numSlots: newHeap classTablePageSize with: newHeap nilObject.
 		newHeap storePointer: i - 1 ofObject: tableRoot withValue: page.
 		self assert: (newHeap objectAfter: (newHeap fetchPointer: i - 2 ofObject: tableRoot)  limit: newHeap freeStart) = page.
-		lastClassTablePage := page]
+		lastClassTablePage := page].
+	"and once again to recompute numClassTablePages post building the class table."
+	newHeap instVarNamed: 'numClassTablePages' put: nil.
+	newHeap hiddenRootsObj: tableRoot
 ]
 
 { #category : #'bootstrap image' }
