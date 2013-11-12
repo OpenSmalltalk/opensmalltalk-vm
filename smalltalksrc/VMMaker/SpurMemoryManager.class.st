@@ -424,6 +424,7 @@ Class {
 		'weaklingStack',
 		'freeLists',
 		'freeListsMask',
+		'lastSubdividedFreeChunk',
 		'lastHash',
 		'signalLowSpace',
 		'checkForLeaks',
@@ -1319,6 +1320,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 	 exact size does not exist.  N.B.  the chunk is simply a pointer, it
 	 has no valid header.  The caller *must* fill in the header correctly."
 	| initialIndex chunk index nodeBytes parent child |
+	self assert: (lastSubdividedFreeChunk := 0) = 0.
 	"for debugging:" "totalFreeOldSpace := self totalFreeListBytes"
 	totalFreeOldSpace := totalFreeOldSpace - chunkBytes. "be optimistic (& don't wait for the write)"
 	initialIndex := chunkBytes / self allocationUnit.
@@ -1435,6 +1437,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes suchThat: acceptan
 	 The caller *must* fill in the header correctly."
 	| initialIndex node next prev index child childBytes acceptedChunk acceptedNode |
 	<inline: true> "must inline for acceptanceBlock"
+	self assert: (lastSubdividedFreeChunk := 0) = 0.
 	"for debugging:" "totalFreeOldSpace := self totalFreeListBytes"
 	totalFreeOldSpace := totalFreeOldSpace - chunkBytes. "be optimistic (& don't wait for the write)"
 	initialIndex := chunkBytes / self allocationUnit.
@@ -3503,7 +3506,9 @@ SpurMemoryManager >> firstFitCompact [
 				ifNotNil:
 					[:f|
 					 nhits := nhits + 1.
-					 self copyAndForward: o withBytes: b toFreeChunk: f]]].
+					 self copyAndForward: o withBytes: b toFreeChunk: f.
+					 self assert: (lastSubdividedFreeChunk = 0
+								  or: [(self addressAfter: (self objectStartingAt: f)) = lastSubdividedFreeChunk])]]].
 	 self checkFreeSpace.
 	 first := self longAt: highestObjects first.
 	 self assert: first > firstFreeChunk.
@@ -3886,8 +3891,10 @@ SpurMemoryManager >> freeChunkSmallerIndex [
 SpurMemoryManager >> freeChunkWithBytes: bytes at: address [
 	<inline: false>
 	| freeChunk |
+	self assert: (lastSubdividedFreeChunk := address) ~= 0.
 	freeChunk := self initFreeChunkWithBytes: bytes at: address.
 	self addToFreeList: freeChunk bytes: bytes.
+	self assert: freeChunk = (self objectStartingAt: address).
 	^freeChunk
 ]
 
