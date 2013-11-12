@@ -1,14 +1,44 @@
 # Figure out which plugins to build and create a configuration for each.
 # 
-# Last edited: 2011-01-27 12:16:13 by piumarta on emilia.ipe.media.kyoto-u.ac.jp
+# Last edited: 2013-11-11 19:12:21 by piumarta on emilia
 
-FILE (STRINGS ${src}/plugins.int plugins_int)
+IF (EXISTS ${config}/plugins.int)
+  FILE (STRINGS ${config}/plugins.int plugins_int)
+ELSEIF (EXISTS ${src}/plugins.int)
+  FILE (STRINGS ${src}/plugins.int plugins_int)
+ELSE (EXISTS ${src}/plugins.int)
+  MESSAGE (FATAL_ERROR "Cannot find plugins.int in ${src} or ${config}")
+ENDIF (EXISTS ${config}/plugins.int)
+
 STRING (REGEX REPLACE ".*= (.*)" "\\1" plugins_int ${plugins_int})
 STRING (REPLACE " " ";" plugins_int ${plugins_int})
 
-FILE (STRINGS ${src}/plugins.ext plugins_ext)
+IF (EXISTS ${config}/plugins.ext)
+  FILE (STRINGS ${config}/plugins.ext plugins_ext)
+ELSEIF (EXISTS ${src}/plugins.ext)
+  FILE (STRINGS ${src}/plugins.ext plugins_ext)
+ELSE (EXISTS ${src}/plugins.ext)
+  MESSAGE (FATAL_ERROR "Cannot find plugins.ext in ${src} or ${config}")
+ENDIF (EXISTS ${config}/plugins.ext)
+
 STRING (REGEX REPLACE ".*= (.*)" "\\1" plugins_ext ${plugins_ext})
 STRING (REPLACE " " ";" plugins_ext ${plugins_ext})
+
+IF (EXISTS ${config}/plugins.exc)
+  FILE (STRINGS ${config}/plugins.exc plugins_exc)
+ELSEIF (EXISTS ${src}/plugins.exc)
+  FILE (STRINGS ${src}/plugins.exc plugins_exc)
+ENDIF (EXISTS ${config}/plugins.exc)
+
+IF (DEFINED plugins_exc)
+  STRING (REGEX REPLACE ".*= (.*)" "\\1" plugins_exc ${plugins_exc})
+  STRING (REPLACE " " ";" plugins_exc ${plugins_exc})
+  FOREACH (plugin ${plugins_exc})
+    MESSAGE ("!! excluding plugin ${plugin}")
+    LIST (REMOVE_ITEM plugins_int ${plugin})
+    LIST (REMOVE_ITEM plugins_ext ${plugin})
+  ENDFOREACH (plugin)
+ENDIF (DEFINED plugins_exc)
 
 FILE (GLOB plugins_vm RELATIVE ${unix} ${unix}/vm-*)
 
@@ -23,7 +53,7 @@ MACRO (INTERNAL_PLUGIN plugin)
   IF (DEFINED ${plugin}_sources)
     SET (plugin_sources ${${plugin}_sources})
   ELSE (DEFINED ${plugin}_sources)
-    FOREACH (dir ${src}/vm/intplugins ${cross}/plugins ${unix}/plugins)
+    FOREACH (dir ${src}/plugins ${cross}/plugins ${unix}/plugins)
       SET (tmp "")
       AUX_SOURCE_DIRECTORY (${dir}/${plugin} tmp)
       STRING_APPEND (plugin_sources "${tmp}")
@@ -99,7 +129,7 @@ MACRO (CONFIGURE_PLUGIN_LIST plugins_list)
     #MESSAGE ("-- plugin ${plugin}")
     IF (${plugins_list} STREQUAL "plugins_int")
       SET (plugin_target "vm")
-      SET (${plugin}_source_dir "${src}/vm/intplugins/${plugin}")
+      SET (${plugin}_source_dir "${src}/plugins/${plugin}")
     ELSE ()
       SET (plugin_target "${plugin}")
       SET (${plugin}_source_dir "${src}/plugins/${plugin}")
