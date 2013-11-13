@@ -3094,7 +3094,7 @@ CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 	<var: #theSP type: #'char *'>
 	<var: #theFP type: #'char *'>
 	<var: #callerFP type: #'char *'>
-	<var: #theIPPtr type: #'char *'>
+	<var: #theIPPtr type: #usqInt>
 
 	(theBecomeEffectsFlags anyMask: BecameCompiledMethodFlag) ifTrue:
 		[(objectMemory isForwarded: method) ifTrue:
@@ -3115,10 +3115,10 @@ CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 			 thePage = stackPage
 				ifTrue: [theIPPtr := 0]
 				ifFalse:
-					[theIPPtr := theSP.
+					[theIPPtr := theSP asUnsignedInteger.
 					 theSP := theSP + BytesPerWord].
 			 [self assert: (thePage addressIsInPage: theFP).
-			  self assert: (theIPPtr = 0 or: [thePage addressIsInPage: theIPPtr]).
+			  self assert: (theIPPtr = 0 or: [thePage addressIsInPage: theIPPtr asVoidPointer]).
 			  offset := theFP + (self frameStackedReceiverOffset: theFP).
 			  oop := stackPages longAt: offset.
 			  ((objectMemory isNonImmediate: oop)
@@ -3164,7 +3164,7 @@ CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 							put: (objectMemory followForwarded: oop)]].
 			  self followNecessaryForwardingInMethod: (self frameMethod: theFP).
 			  (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
-				[theIPPtr := theFP + FoxCallerSavedIP.
+				[theIPPtr := (theFP + FoxCallerSavedIP) asUnsignedInteger.
 				 theFP := callerFP]]]
 ]
 

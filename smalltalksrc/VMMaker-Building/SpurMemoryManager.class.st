@@ -551,6 +551,7 @@ SpurMemoryManager class >> declareCVarsIn: aCCodeGenerator [
 		var: #freeListsMask type: #usqInt;
 		var: #freeLists type: #'sqInt *';
 		var: #classTableBitmap type: #'unsigned char *';
+		var: #objStackInvalidBecause type: #'char *';
 		var: #highestObjects type: #SpurCircularBuffer;
 		var: #unscannedEphemerons type: #SpurContiguousObjStack.
 	aCCodeGenerator
@@ -558,7 +559,7 @@ SpurMemoryManager class >> declareCVarsIn: aCCodeGenerator [
 		declareC: 'sqInt remapBuffer[RemapBufferSize + 1 /* ', (RemapBufferSize + 1) printString, ' */]'.
 	aCCodeGenerator
 		var: #extraRoots
-		declareC: 'sqInt *extraRoots[ExtraRootsSize + 1 /* ', (ExtraRootsSize + 1) printString, ' */]'.
+		declareC: 'sqInt *extraRoots[ExtraRootsSize + 1 /* ', (ExtraRootsSize + 1) printString, ' */]'
 ]
 
 { #category : #translation }
@@ -2736,8 +2737,8 @@ SpurMemoryManager >> countMarkedAndUnmarkdObjects: printFlags [
 				[nu := nu + 1.
 				 (printFlags anyMask: 2) ifTrue:
 					[coInterpreter shortPrintOop: o]]].
-	self print: 'n marked: '; print: nm; cr.
-	self print: 'n unmarked: '; print: nu; cr
+	self print: 'n marked: '; printNum: nm; cr.
+	self print: 'n unmarked: '; printNum: nu; cr
 ]
 
 { #category : #'class table' }
@@ -5175,19 +5176,19 @@ SpurMemoryManager >> isValidObjStackPage: objStackPage myIndex: myx [
 	"Just check the page itself."
 	<inline: false>
 	(self classIndexOf: objStackPage) = self wordSizeClassIndexPun ifFalse:
-		[objStackInvalidBecause := 'wong class index'.
+		[objStackInvalidBecause := 'wrong class index'.
 		 invalidObjStackPage := objStackPage.
 		 ^false].
 	(self formatOf: objStackPage) = self wordIndexableFormat ifFalse:
-		[objStackInvalidBecause := 'wong format'.
+		[objStackInvalidBecause := 'wrong format'.
 		 invalidObjStackPage := objStackPage.
 		 ^false].
 	(self numSlotsOfAny: objStackPage) = ObjStackPageSlots ifFalse:
-		[objStackInvalidBecause := 'wong num slots'.
+		[objStackInvalidBecause := 'wrong num slots'.
 		 invalidObjStackPage := objStackPage.
 		 ^false].
 	myx = (self fetchPointer: ObjStackMyx ofObject: objStackPage) ifFalse:
-		[objStackInvalidBecause := 'wong myx'.
+		[objStackInvalidBecause := 'wrong myx'.
 		 invalidObjStackPage := objStackPage.
 		 ^false].
 	(marking and: [(self isMarked: objStackPage) not]) ifTrue:
