@@ -68,7 +68,7 @@ SpurSegmentManager >> addSegmentOfSize: ammount [
 		 newSegIndex := self insertSegmentFor: segAddress asUnsignedLong.
 		 newSeg := self addressOf: (segments at: newSegIndex).
 		 newSeg
-			segStart: segAddress;
+			segStart: segAddress asUnsignedLong;
 			segSize: allocatedSize.
 		 self bridgeFrom: (self addressOf: (segments at: newSegIndex - 1)) to: newSeg.
 		 self bridgeFrom: newSeg to: (newSegIndex = (numSegments - 1) ifFalse:
@@ -78,6 +78,14 @@ SpurSegmentManager >> addSegmentOfSize: ammount [
 		 manager addFreeChunkWithBytes: allocatedSize - manager bridgeSize at: newSeg segStart.
 		 self assert: (manager addressAfter: (manager objectStartingAt: newSeg segStart))
 					= (newSeg segLimit - manager bridgeSize).
+		 "test isInMemory:"
+		 0 to: numSegments - 1 do:
+			[:i|
+			self assert: (manager isInMemory: (segments at: i) segStart).
+			self assert: (manager isInMemory: (segments at: i) segLimit - manager wordSize).
+			self assert: (manager isInMemory: (segments at: i) segLimit) not.
+			(i between: 1 and: numSegments - 2) ifTrue:
+				[self assert: (manager isInMemory: (segments at: i) segStart - manager wordSize) not]].
 		 ^newSeg].
 	^nil
 ]
@@ -315,6 +323,7 @@ SpurSegmentManager >> readHeapFromImageFile: f dataBytes: numBytes [
 	 Answer the number of bytes written.  In addition, read each segment, build up the
 	 segment info, while eliminating the bridge objects that end each segment and
 	 give the size of the subsequent segment."
+	<var: #f type: #sqImageFile>
 	<inline: false>
 	| bytesRead totalBytesRead bridge nextSegmentSize oldBase newBase segInfo bridgeSpan |
 	<var: 'segInfo' type: 'SpurSegmentInfo *'>
@@ -402,7 +411,7 @@ SpurSegmentManager >> writeSegment: aSpurSegmentInfo nextSegmentSize: nextSegSiz
 	manager longLongAt: bridge put: nextSegSize.
 	nWritten := self cCode:
 						[self
-							sq: aSpurSegmentInfo segStart
+							sq: aSpurSegmentInfo segStart asVoidPointer
 							Image: 1
 							File: aSpurSegmentInfo segSize
 							Write: aBinaryStream]
