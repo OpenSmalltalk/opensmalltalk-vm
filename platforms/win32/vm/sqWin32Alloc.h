@@ -28,7 +28,5 @@ int sqGrowMemoryBy(int oldLimit, int delta);
 int sqShrinkMemoryBy(int oldLimit, int delta);
 int sqMemoryExtraBytesLeft(int includingSwap);
 
-void sqReleaseMemory(void);
-
 #endif /* NO_VIRTUAL_MEMORY */
 #endif /* __SQ_WIN32_ALLOC_H */

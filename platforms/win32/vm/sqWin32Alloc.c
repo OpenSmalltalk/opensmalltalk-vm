@@ -29,7 +29,7 @@
 #endif
 
 static LPSTR  pageBase;     /* base address of allocated memory */
-static DWORD  pageBits;     /* bit mask for the start of a memory page */
+static DWORD  pageMask;     /* bit mask for the start of a memory page */
 static DWORD  pageSize;     /* size of a memory page */
 static DWORD  nowReserved;  /* 'publicly' reserved virtual memory */
 static LPSTR  pageLimit;    /* upper limit of commited pages */
@@ -60,13 +60,13 @@ void *sqAllocateMemory(int minHeapSize, int desiredHeapSize)
   /* determine page boundaries */
   GetSystemInfo(&sysInfo);
   pageSize = sysInfo.dwPageSize;
-  pageBits = ~(pageSize - 1);
+  pageMask = ~(pageSize - 1);
 
   /* round the requested size up to the next page boundary */
-  nowReserved = (desiredHeapSize + pageSize) & pageBits;
+  nowReserved = (desiredHeapSize + pageSize) & pageMask;
 
   /* round the initial commited size up to the next page boundary */
-  initialCommit = (minHeapSize + pageSize) & pageBits;
+  initialCommit = (minHeapSize + pageSize) & pageMask;
 
   /* Here, we only reserve the maximum memory to be used
      It will later be committed during actual access */
@@ -107,7 +107,7 @@ int sqGrowMemoryBy(int oldLimit, int delta) {
   if(fShowAllocations) {
     warnPrintf("Growing memory by %d...", delta);
   }
-  delta = (delta + pageSize) & pageBits;
+  delta = (delta + pageSize) & pageMask;
   if(!VirtualAlloc(pageLimit, delta, MEM_COMMIT, PAGE_READWRITE)) {
     if(fShowAllocations) {
       warnPrintf("failed\n");
@@ -139,7 +139,7 @@ int sqShrinkMemoryBy(int oldLimit, int delta) {
     return oldLimit;
   }
 #endif
-  delta &= pageBits;
+  delta &= pageMask;
   if(!VirtualFree(pageLimit-delta, delta, MEM_DECOMMIT)) {
     if(fShowAllocations) {
       warnPrintf("failed\n");
@@ -176,16 +176,10 @@ int sqMemoryExtraBytesLeft(int includingSwap) {
   }
   return bytesLeft;
 }
-
-/************************************************************************/
-/* sqMemReleaseMemory: Release virtual memory                            */
-/************************************************************************/
-void sqReleaseMemory(void)
-{
-  /* Win32 will do that for us */
-}
-
 #endif /* NO_VIRTUAL_MEMORY */
+
+#define roundDownToPage(v) ((v)&pageMask)
+#define roundUpToPage(v) (((v)+pageSize-1)&pageMask)
 
 #if COGVM
 void
@@ -212,3 +206,42 @@ sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 		perror("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
 }
 #endif /* COGVM */
+
+#if SPURVM
+/* Allocate a region of memory of al least size bytes, at or above minAddress.
+ *  If the attempt fails, answer null.  If the attempt succeeds, answer the
+ * start of the region and assign its size through allocatedSizePointer.
+ */
+void *
+sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress, sqInt *allocatedSizePointer)
+{
+	void *alloc;
+	long bytes = roundUpToPage(size);
+
+	*allocatedSizePointer = bytes;
+	alloc = VirtualAlloc(0, bytes, MEM_COMMIT, PAGE_READWRITE);
+	if (!alloc) {
+		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
+					"Unable to VirtualAlloc committed memory (%d bytes requested)",
+					bytes);
+		return NULL;
+	}
+	if ((unsigned long)alloc >= (unsigned long)minAddress)
+		return alloc;
+	if (!VirtualFree(alloc, bytes, MEM_RELEASE))
+		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Warning:"),
+					"Unable to VirtualFree committed memory (%d bytes requested)",
+					bytes);
+	alloc = VirtualAlloc(0, bytes, MEM_COMMIT+MEM_TOP_DOWN, PAGE_READWRITE);
+	if ((unsigned long)alloc >= (unsigned long)minAddress)
+		return alloc;
+	if (!VirtualFree(alloc, bytes, MEM_RELEASE))
+		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Warning:"),
+					"Unable to VirtualFree committed memory (%d bytes requested)",
+					bytes);
+	sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
+				"Unable to VirtualAlloc committed memory at desired address (%d bytes requested at or above %p)",
+				bytes, minAddress);
+	return NULL;
+}
+#endif /* SPURVM */

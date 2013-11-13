@@ -1,0 +1,27 @@
+#!/bin/bash
+INSTALLDIR=sslinuxdbg
+if [ $# -ge 1 ]; then
+	case "$1" in
+	-*)	;;
+	*)	INSTALLDIR="$1"; shift
+	esac
+fi
+OPT=-O0
+
+echo -n "clean? "
+read a
+case $a in
+n|no|N|NO)	echo "ok but this isn't safe!!";;
+*)			rm config.h; test -f Makefile && make reallyclean
+esac
+test -f config.h || ../../../platforms/unix/config/configure --with-src=spurstacksrc \
+	--without-vm-display-fbdev --without-npsqueak \
+	CC="gcc -m32" \
+	CFLAGS="-g $OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DITIMER_HEARTBEAT=1 -DDEBUGVM=1 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer" \
+	LIBS="-lpthread -luuid" \
+	LDFLAGS=-Wl,-z,now
+../../../scripts/nukeversion
+rm -rf ../../../$INSTALLDIR
+# would prefer make install prefix=`readlink -f \`pwd\`/../../../$INSTALLDIR`
+# but older linux readlinks lack the -f flag
+make install prefix=`(cd ../../../;pwd)`/$INSTALLDIR

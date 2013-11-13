@@ -1188,9 +1188,6 @@ void __cdecl Cleanup(void)
       fclose(stdout);
       remove(stdoutName);
     }
-#ifndef NO_VIRTUAL_MEMORY
-  sqReleaseMemory();
-#endif
   OleUninitialize();
 }
 

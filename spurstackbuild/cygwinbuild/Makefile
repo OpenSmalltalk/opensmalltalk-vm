@@ -9,7 +9,7 @@
 CONFIGURATION=product
 
 # The name of the VM to build
-VM:=Croquet
+VM:=Squeak
 VM_NAME?=$(VM)
 
 # Is this a Croquet VM (defaults to OGL instead of D3D)?
@@ -35,7 +35,7 @@ BLDDIR:= $(BASEDIR)/$(BUILD)
 OBJDIR:= $(BLDDIR)/vm
 
 # N.B. PLATDIR *must* be a relative path, see -f../../$(shell ./eitheror ... below
-PLATDIR:=../platforms
+PLATDIR:=../../platforms
 CROSSDIR:=$(PLATDIR)/Cross/vm
 WIN32DIR:=$(PLATDIR)/win32/vm
 MAKERDIR:=$(VMSRCDIR)/vm
