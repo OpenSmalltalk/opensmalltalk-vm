@@ -4038,6 +4038,7 @@ ObjectMemory >> pushRemappableOop: oop [
 ObjectMemory >> readHeapFromImageFile: f dataBytes: numBytes [
 	"Read numBytes of image data from f into memory at memoryBaseForImageRead.
 	 Answer the number of bytes written."
+	<var: #f type: #sqImageFile>
 	^self cCode:
 			[self
 				sq: (self pointerForOop: self memoryBaseForImageRead)

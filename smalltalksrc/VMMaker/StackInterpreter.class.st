@@ -5530,7 +5530,7 @@ StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 	<var: #theSP type: #'char *'>
 	<var: #theFP type: #'char *'>
 	<var: #callerFP type: #'char *'>
-	<var: #theIPPtr type: #'char *'>
+	<var: #theIPPtr type: #usqInt>
 
 	(theBecomeEffectsFlags anyMask: BecameCompiledMethodFlag) ifTrue:
 		[(objectMemory isForwarded: method) ifTrue:
@@ -5551,17 +5551,17 @@ StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 			 thePage = stackPage
 				ifTrue: [theIPPtr := 0]
 				ifFalse:
-					[theIPPtr := theSP.
+					[theIPPtr := theSP asUnsignedInteger.
 					 theSP := theSP + BytesPerWord].
 			 [self assert: (thePage addressIsInPage: theFP).
-			  self assert: (theIPPtr = 0 or: [thePage addressIsInPage: theIPPtr]).
+			  self assert: (theIPPtr = 0 or: [thePage addressIsInPage: theIPPtr asVoidPointer]).
 			  oop := stackPages longAt: theFP + FoxReceiver.
 			  ((objectMemory isNonImmediate: oop)
 			   and: [(objectMemory isForwarded: oop)]) ifTrue:
 				[stackPages
 					longAt: theFP + FoxReceiver
 					put: (objectMemory followForwarded: oop)].
-			  theIP := theFP + (self frameStackedReceiverOffset: theFP). "reuse theIP; its just an offset here"
+			  theIP := (theFP + (self frameStackedReceiverOffset: theFP)) asUnsignedInteger. "reuse theIP; its just an offset here"
 			  oop := stackPages longAt: theIP.
 			  ((objectMemory isNonImmediate: oop)
 			   and: [(objectMemory isForwarded: oop)]) ifTrue:
@@ -5587,7 +5587,7 @@ StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 					put: (objectMemory followForwarded: oop)].
 			  self followNecessaryForwardingInMethod: (self frameMethod: theFP).
 			  (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
-				[theIPPtr := theFP + FoxCallerSavedIP.
+				[theIPPtr := (theFP + FoxCallerSavedIP) asUnsignedInteger.
 				 theFP := callerFP]]]
 ]
 
@@ -9367,7 +9367,7 @@ StackInterpreter >> printFrameThing: name andFrame: theFP at: address [
 			ifTrue: [self print: 'nil']
 			ifFalse:
 				[self printNum: it]].
-	self print: ' frame: '; printHex: theFP; cr
+	self print: ' frame: '; printHexPtr: theFP; cr
 ]
 
 { #category : #'debug printing' }
@@ -9752,13 +9752,22 @@ StackInterpreter >> printSends [
 { #category : #'debug printing' }
 StackInterpreter >> printStackCallStack [
 	<doNotGenerate>
+	self printStackCallStackOf: localFP
+]
+
+{ #category : #'debug printing' }
+StackInterpreter >> printStackCallStackOf: aFramePointer [
+	<var: #aFramePointer type: #'char *'>
+	<api>
 	| theFP context |
-	theFP := localFP.
+	<var: #theFP type: #'char *'>
+	theFP := aFramePointer.
 	[context := self shortReversePrintFrameAndCallers: theFP.
 	 ((self isMarriedOrWidowedContext: context)
-	  and: [self checkIsStillMarriedContext: context currentFP: localFP]) ifFalse:
-		[^nil].
-	 theFP := self frameOfMarriedContext: context] repeat
+	  and:
+		[theFP := self frameOfMarriedContext: context.
+		 self checkIsStillMarriedContext: context currentFP: theFP]) ifFalse:
+			[^nil]] repeat
 ]
 
 { #category : #'debug printing' }
@@ -11219,7 +11228,7 @@ StackInterpreter >> shortPrintOop: oop [
 	(objectMemory isImmediate: oop) ifTrue:
 		[(objectMemory isImmediateCharacter: oop) ifTrue:
 			[^self
-				cCode: 'printf("=$%ld ($%c)\n", (long)characterValueOf(oop), (long)characterValueOf(oop))'
+				cCode: 'printf("=$%ld ($%lc)\n", (long)characterValueOf(oop), (wint_t)characterValueOf(oop))'
 				inSmalltalk: [self print: (self shortPrint: oop); cr]].
 		 ^self
 			cCode: 'printf("=%ld\n", (long)integerValueOf(oop))'
