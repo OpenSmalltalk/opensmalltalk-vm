@@ -41,7 +41,7 @@ AC_DEFUN([AC_CHECK_VMM_DIR],[
   vmmcheck file -f ${vmmcfg}/plugins.int
   vmmcheck file -f ${vmmcfg}/plugins.ext
   vmmcheck dir  -d ${vmmdir}
-  vmmcheck dir  -d ${vmmdir}/plugins
+  vmmcheck dir  -d ${vmpdir}
   vmmcheck dir  -d ${vmmdir}/vm
   vmmcheck file -f ${vmmdir}/vm/interp.h
   vmmcheck file -f ${vmmdir}/vm/vmCallback.h

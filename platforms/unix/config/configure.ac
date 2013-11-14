@@ -28,7 +28,7 @@
 # 
 # Author: Ian.Piumarta@SqueakLand.org
 # 
-# Last edited: Tue Jan 26 11:51:29 PST 2010 by eliot
+# Last edited: Wed Nov 13 17:15:30 PST 2013 by eliot
 
 AC_INIT([config.h.in])
 
@@ -46,14 +46,29 @@ AC_ARG_WITH(src,
 
 vmmdir="${topdir}/${vmmsrc}"
 
+AC_ARG_WITH(plugins,
+[  --with-plugins=dir          generated plugins directory [default=src/plugins]],
+[ vmpsrc="${with_plugins}"],
+[ vmpsrc="src/plugins"])
+
+vmpdir="${topdir}/${vmpsrc}"
+
 if test ! -d "${topdir}/${vmmsrc}"; then
-  if test -d "${topdir}/platforms/unix/${vmmsrc}"; then
-    vmmdir="${topdir}/platforms/unix/${vmmsrc}"
+  if test -d "${topdir}/platforms/unix/${vmmsrc}/vm"; then
+    vmmdir="${topdir}/platforms/unix/${vmmsrc}/vm"
     AC_MSG_RESULT([using built-in src directory])
   fi
 fi
 
+if test ! -d "${topdir}/${vmpsrc}"; then
+  if test -d "${topdir}/platforms/unix/${vmpsrc}"; then
+    vmpdir="${topdir}/platforms/unix/${vmpsrc}"
+    AC_MSG_RESULT([using built-in pligins directory])
+  fi
+fi
+
 AC_MSG_RESULT(${vmmdir})
+AC_MSG_RESULT(${vmpdir})
 
 blddir=`pwd`
 
@@ -83,6 +98,7 @@ AC_CHECK_VMM_DIR
 AC_SUBST(topdir)
 AC_SUBST(cfgdir)
 AC_SUBST(vmmdir)
+AC_SUBST(vmpdir)
 AC_SUBST(vmmcfg)
 AC_SUBST(blddir)
 

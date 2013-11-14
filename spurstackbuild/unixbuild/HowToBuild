@@ -19,11 +19,11 @@ How to build the Newspeak VM on Unix
 3. Open a shell, cd into the spurstackbuild/unixbuild/bld directory and execute
    the mvm script.  This installs a VM in the sslinux  directory alongside
    spurstacksrc et al.  Alternatively you can configure your own VM, e.g. with
-     ../../../platforms/unix/config/configure --with-src=spurstacksrc CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DNO_VM_PROFILE=1 -DDEBUGVM=0" LIBS="-lpthread -luuid" LDFLAGS=-Wl,-z,now
+     ../../../platforms/unix/config/configure --with-src=spurstacksrc --with-plugins=src/plugins --disable-cogit CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DNO_VM_PROFILE=1 -DDEBUGVM=0" LIBS="-lpthread -luuid" LDFLAGS=-Wl,-z,now
      make install prefix=WhereYouWantTheVmToGo
 
 	N.B.  On Ubuntu *do not* supply "LIBS="-lpthread -luuid"", i.e. use
-     ../../../platforms/unix/config/configure --with-src=spurstacksrc CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DNO_VM_PROFILE=1 -DDEBUGVM=0" LDFLAGS=-Wl,-z,now
+     ../../../platforms/unix/config/configure --with-src=spurstacksrc --with-plugins=src/plugins --disable-cogit CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DNO_VM_PROFILE=1 -DDEBUGVM=0" LDFLAGS=-Wl,-z,now
 
 4. At the end of it you'll get a new VM in sslinux, or in the path provided
    via -prefix
@@ -33,7 +33,7 @@ N.B. The plugin set is defined by plugins.ext and plugins.int in the build dir.
 
 3a. For an assert-enabled VM use the astbld directory's mvm and find a vm in
     sslinuxast, or do
-     ../../../platforms/unix/config/configure --with-src=spurstacksrc CFLAGS="-g -O1 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNO_VM_PROFILE=1 -DDEBUGVM=0 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer" LIBS="-lpthread -luuid" LDFLAGS=-Wl,-z,now
+     ../../../platforms/unix/config/configure --with-src=spurstacksrc --with-plugins=src/plugins --disable-cogit CFLAGS="-g -O1 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNO_VM_PROFILE=1 -DDEBUGVM=0 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer" LIBS="-lpthread -luuid" LDFLAGS=-Wl,-z,now
 
 3b. For a full debug VM use the dbgbld's mvm and find a vm in sslinuxdbg,
     or do
@@ -45,7 +45,7 @@ provides the 32-bit compiler and the ia32-libs provides the 32-bit libraries.
 You'll also have to add the -m32 switch to all gcc & g++ invocations.  The
 easiest way to do this is to add CC="gcc -m32" & CXX="g++ -m32" to the configure
 script:
-     ../../../platforms/unix/config/configure CC="gcc -m32" CXX="g++ -m32" --with-src=spurstacksrc CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DNO_VM_PROFILE=1" LIBS="-lpthread -luuid"
+     ../../../platforms/unix/config/configure CC="gcc -m32" CXX="g++ -m32" --with-src=spurstacksrc --with-plugins=src/plugins --disable-cogit CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DNO_VM_PROFILE=1" LIBS="-lpthread -luuid"
 To run a 32-bit VM on a 64-bit OS, you'll also need the 32-bit libraries
 provided by the ia32-libs package.
 
@@ -57,7 +57,7 @@ provides the 32-bit compiler and the ia32-libs provides the 32-bit libraries.
 You'll also have to add the -m32 switch to all gcc & g++ invocations.  The
 easiest way to do this is to add CC="gcc -m32" & CXX="g++ -m32" to the configure
 script:
-     ../../platforms/unix/config/configure CC="gcc -m32" CXX="g++ -m32" --without-npsqueak CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS=-lpthread
+     ../../platforms/unix/config/configure CC="gcc -m32" CXX="g++ -m32" --without-npsqueak --with-src=spurstacksrc --with-plugins=src/plugins --disable-cogit CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS=-lpthread
 To run a 32-bit VM on a 64-bit OS, you'll also need the 32-bit libraries
 provided by the ia32-libs package.
 

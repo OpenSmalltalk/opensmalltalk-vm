@@ -219,6 +219,7 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 	long bytes = roundUpToPage(size);
 
 	*allocatedSizePointer = bytes;
+#if 0 /* It appears VirtualAlloc answers low memory by default. */
 	alloc = VirtualAlloc(0, bytes, MEM_COMMIT, PAGE_READWRITE);
 	if (!alloc) {
 		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
@@ -232,6 +233,7 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Warning:"),
 					"Unable to VirtualFree committed memory (%d bytes requested)",
 					bytes);
+#endif /* 0 */
 	alloc = VirtualAlloc(0, bytes, MEM_COMMIT+MEM_TOP_DOWN, PAGE_READWRITE);
 	if ((unsigned long)alloc >= (unsigned long)minAddress)
 		return alloc;

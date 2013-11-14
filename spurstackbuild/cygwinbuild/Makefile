@@ -201,6 +201,8 @@ debug:
 # Do make init to allow make -n to function.
 init:	$(OBJDIR) eitheror.exe mkNamedPrims.exe
 
+cleanall:	clean cleanmt cleanast cleanmtast cleandbg cleanmtdbg
+
 clean:
 	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe build
 
@@ -212,6 +214,9 @@ cleanast:
 
 cleanmtast:
 	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe buildmtast
+
+cleandbg:
+	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe builddbg
 
 cleanmtdbg:
 	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe buildmtdbg

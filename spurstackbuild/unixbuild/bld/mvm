@@ -18,7 +18,8 @@ case $a in
 n|no|N|NO)	echo "ok but this isn't safe!!";;
 *)			rm config.h; test -f Makefile && make reallyclean
 esac
-test -f config.h || ../../../platforms/unix/config/configure --with-src=spurstacksrc \
+test -f config.h || ../../../platforms/unix/config/configure \
+	--with-src=spurstacksrc --with-plugins=src/plugins --disable-cogit \
 	--without-vm-display-fbdev --without-npsqueak \
 	CC="gcc -m32" \
 	CFLAGS="-g $OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DITIMER_HEARTBEAT=1 -DDEBUGVM=0" \
