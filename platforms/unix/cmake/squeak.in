@@ -3,7 +3,7 @@
 # Launch squeakvm from the command line or a menu script, with a good
 # plugin path, text encodings and pulseaudio kludge
 # 
-# Last edited: 2012-09-17 09:06:59 by piumarta on linux64
+# Last edited: 2013-11-13 19:51:35 by piumarta on emilia
 
 PATH=/usr/bin:/bin
 
@@ -105,6 +105,8 @@ if test -x "${ck}" -a -f "${image}"; then
 	68003)	vms="${squeakvm64}"; plgdir="${plgd64}";;
 	*)	vms="${squeakvm}";;
     esac
+else
+    vms="${squeakvm}" # no image found, run default VM with args
 fi
 
 # find the vm and set the plugin path
@@ -115,7 +117,7 @@ if test -z "${vms}"; then
 fi
 
 for avm in ${vms}; do
-    echo CHECKING ${avm}
+    #echo CHECKING ${avm}
     if test -x "${plgdir}/${avm}"; then	# bin/squeak -> lib/squeak/x.y-z/squeakvm
 	vm="${plgdir}/${avm}"
 	plugins="${plgdir}"
