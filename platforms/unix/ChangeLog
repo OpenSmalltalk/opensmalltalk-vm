@@ -1,3 +1,16 @@
+2013-11-13  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* cmake/Plugins.cmake: Look for plugins.{int,ext,exc} in ${bld},
+	${config} and then ${src}.  Make parsing of their contents more
+	robust.
+
+	* cmake/configure: Fix handling of --src option.
+
+	* cmake/squeak.in: Disable debugging messages.  Run default VM
+	with any given args if image check fails.
+
+	* vm/build.cmake: Use ckformat.c from generated sources.
+
 2013-11-11  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* cmake/configure: Default generated source locations are next to
