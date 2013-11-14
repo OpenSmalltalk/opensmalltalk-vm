@@ -76,7 +76,7 @@ ADD_CUSTOM_TARGET (squeak.sh
 INSTALL (PROGRAMS ${bld}/squeak.sh DESTINATION bin)
 
 ADD_EXECUTABLE (ckformat
-  ${config}/ckformat.c
+  ${src}/ckformat.c
 )
 
 INSTALL (PROGRAMS ${bld}/ckformat DESTINATION ${plgdir})
