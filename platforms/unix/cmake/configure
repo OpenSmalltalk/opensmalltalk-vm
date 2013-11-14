@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Last edited: 2013-11-11 18:50:33 by piumarta on emilia
+# Last edited: 2013-11-13 19:46:57 by piumarta on emilia
 
 RELEASE_TAG=""
 
@@ -69,7 +69,7 @@ while [ $# -gt 0 ]; do
     case "$1" in
 	--help)			help; exit 0;;
 	--debug-configure)	dump;;
-	--src=*)		src="`echo \"$1\" | sed 's/\-\-src=//'`"
+	--src=*)		rel="`echo \"$1\" | sed 's/\-\-src=//'`"
 				src="`(cd \"${rel}\";  pwd)`"
 				args="${args} -DOPT--src=${src}";;
 	--CFLAGS=*)		cflags="`echo \"$1\" | sed 's/\-\-CFLAGS=//'`";;
@@ -86,7 +86,7 @@ interp_h="${src}/vm/interp.h"
 
 if test ! -f "${interp_h}"; then
     echo "problem locating generated source file: ${interp_h}"
-    echo "use --src=<directory> to locate sources relative to ${unix}"
+    echo "use --src=<directory> to locate sources relative to ${PWD}"
     echo "current value is: --src=\"${src}\""
     exit 1
 fi
