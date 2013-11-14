@@ -1,6 +1,6 @@
 # Figure out which plugins to build and create a configuration for each.
 # 
-# Last edited: 2013-11-13 19:43:20 by piumarta on emilia
+# Last edited: 2013-11-13 21:43:50 by piumarta on emilia
 
 IF (EXISTS ${bld}/plugins.int)
   FILE (STRINGS ${bld}/plugins.int plugins_int)
@@ -30,7 +30,7 @@ STRING (REPLACE " " ";" plugins_ext "${plugins_ext}")
 
 IF (EXISTS ${bld}/plugins.exc)
   FILE (STRINGS ${bld}/plugins.exc plugins_exc)
-IF (EXISTS ${config}/plugins.exc)
+ELSEIF (EXISTS ${config}/plugins.exc)
   FILE (STRINGS ${config}/plugins.exc plugins_exc)
 ELSEIF (EXISTS ${src}/plugins.exc)
   FILE (STRINGS ${src}/plugins.exc plugins_exc)
