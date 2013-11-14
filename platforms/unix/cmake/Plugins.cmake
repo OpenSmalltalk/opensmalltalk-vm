@@ -1,38 +1,44 @@
 # Figure out which plugins to build and create a configuration for each.
 # 
-# Last edited: 2013-11-11 19:12:21 by piumarta on emilia
+# Last edited: 2013-11-13 19:43:20 by piumarta on emilia
 
-IF (EXISTS ${config}/plugins.int)
+IF (EXISTS ${bld}/plugins.int)
+  FILE (STRINGS ${bld}/plugins.int plugins_int)
+ELSEIF (EXISTS ${config}/plugins.int)
   FILE (STRINGS ${config}/plugins.int plugins_int)
 ELSEIF (EXISTS ${src}/plugins.int)
   FILE (STRINGS ${src}/plugins.int plugins_int)
 ELSE (EXISTS ${src}/plugins.int)
-  MESSAGE (FATAL_ERROR "Cannot find plugins.int in ${src} or ${config}")
-ENDIF (EXISTS ${config}/plugins.int)
+  MESSAGE (FATAL_ERROR "Cannot find plugins.int in ${bld}, ${config} or ${src}")
+ENDIF (EXISTS ${bld}/plugins.int)
 
-STRING (REGEX REPLACE ".*= (.*)" "\\1" plugins_int ${plugins_int})
-STRING (REPLACE " " ";" plugins_int ${plugins_int})
+STRING (REGEX REPLACE ".*= *(.*)" "\\1" plugins_int ${plugins_int})
+STRING (REPLACE " " ";" plugins_int "${plugins_int}")
 
-IF (EXISTS ${config}/plugins.ext)
+IF (EXISTS ${bld}/plugins.ext)
+  FILE (STRINGS ${bld}/plugins.ext plugins_ext)
+ELSEIF (EXISTS ${config}/plugins.ext)
   FILE (STRINGS ${config}/plugins.ext plugins_ext)
 ELSEIF (EXISTS ${src}/plugins.ext)
   FILE (STRINGS ${src}/plugins.ext plugins_ext)
 ELSE (EXISTS ${src}/plugins.ext)
-  MESSAGE (FATAL_ERROR "Cannot find plugins.ext in ${src} or ${config}")
-ENDIF (EXISTS ${config}/plugins.ext)
+  MESSAGE (FATAL_ERROR "Cannot find plugins.ext in ${bld}, ${config} or ${src}")
+ENDIF (EXISTS ${bld}/plugins.ext)
 
-STRING (REGEX REPLACE ".*= (.*)" "\\1" plugins_ext ${plugins_ext})
-STRING (REPLACE " " ";" plugins_ext ${plugins_ext})
+STRING (REGEX REPLACE ".*= *(.*)" "\\1" plugins_ext ${plugins_ext})
+STRING (REPLACE " " ";" plugins_ext "${plugins_ext}")
 
+IF (EXISTS ${bld}/plugins.exc)
+  FILE (STRINGS ${bld}/plugins.exc plugins_exc)
 IF (EXISTS ${config}/plugins.exc)
   FILE (STRINGS ${config}/plugins.exc plugins_exc)
 ELSEIF (EXISTS ${src}/plugins.exc)
   FILE (STRINGS ${src}/plugins.exc plugins_exc)
-ENDIF (EXISTS ${config}/plugins.exc)
+ENDIF (EXISTS ${bld}/plugins.exc)
 
 IF (DEFINED plugins_exc)
-  STRING (REGEX REPLACE ".*= (.*)" "\\1" plugins_exc ${plugins_exc})
-  STRING (REPLACE " " ";" plugins_exc ${plugins_exc})
+  STRING (REGEX REPLACE ".*= *(.*)" "\\1" plugins_exc ${plugins_exc})
+  STRING (REPLACE " " ";" plugins_exc "${plugins_exc}")
   FOREACH (plugin ${plugins_exc})
     MESSAGE ("!! excluding plugin ${plugin}")
     LIST (REMOVE_ITEM plugins_int ${plugin})
