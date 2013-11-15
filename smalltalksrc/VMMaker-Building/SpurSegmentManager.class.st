@@ -177,22 +177,24 @@ SpurSegmentManager >> collapseSegmentsPostSwizzle [
 	"The image has been loaded, old segments reconstructed, and the heap
 	 swizzled into a single contiguous segment.  Collapse the segments into one."
 	<inline: false>
-	| bridge |
 	canSwizzle := false.
-	firstSegmentSize ifNil: "true when used by SpurBootstrap to transform an image"
-		[^self].
-
+	self cCode: []
+		inSmalltalk:
+			[segments ifNil:
+				[self allocateOrExtendSegmentInfos]].
 	numSegments := 1.
 	(segments at: 0)
 		segStart: manager newSpaceLimit;
-		segSize: manager endOfMemory - manager newSpaceLimit.
-	"finally plant a bridge at the end of the coalesced segment and cut back the
-	 manager's notion of the end of memory to immediately before the bridge."
-	bridge := manager endOfMemory - manager bridgeSize.
-	self assert: bridge = ((segments at: 0) segLimit - manager bridgeSize).
-	manager
-		initSegmentBridgeWithBytes: manager bridgeSize at: bridge;
-		setEndOfMemory: bridge
+		segSize: manager endOfMemory + manager bridgeSize - manager newSpaceLimit.
+	manager bootstrapping
+		ifTrue:
+			["finally plant a bridge at the end of the coalesced segment and cut back the
+			  manager's notion of the end of memory to immediately before the bridge."
+			 self assert: manager endOfMemory = ((segments at: 0) segLimit - manager bridgeSize).
+			 manager initSegmentBridgeWithBytes: manager bridgeSize at: manager endOfMemory]
+		ifFalse:
+			[self assert: (manager isValidSegmentBridge: manager endOfMemory).
+			 self assert: (manager numSlotsOfAny: manager endOfMemory) = 0]
 ]
 
 { #category : #snapshot }
@@ -204,6 +206,11 @@ SpurSegmentManager >> firstSegmentBytes [
 SpurSegmentManager >> firstSegmentSize: firstSegSize [
 	"Remember firstSegSize for subsequent image segment parsing."
 	firstSegmentSize := firstSegSize
+]
+
+{ #category : #'spur bootstrap' }
+SpurSegmentManager >> initForBootstrap [
+	self allocateOrExtendSegmentInfos
 ]
 
 { #category : #initialization }
@@ -360,6 +367,11 @@ SpurSegmentManager >> readHeapFromImageFile: f dataBytes: numBytes [
 	^totalBytesRead
 ]
 
+{ #category : #accessing }
+SpurSegmentManager >> segments [
+	^segments
+]
+
 { #category : #snapshot }
 SpurSegmentManager >> swizzleObj: objOop [
 	<inline: false>
@@ -385,6 +397,7 @@ SpurSegmentManager >> totalBytesInSegments [
 SpurSegmentManager >> writeImageToFile: aBinaryStream [
 	| total |
 	total := 0.
+	self assert: (segments at: numSegments - 1) segLimit - manager bridgeSize = manager endOfMemory.
 	firstSegmentSize ifNotNil:
 		[self assert: firstSegmentSize = (segments at: 0) segSize].
 	0 to: numSegments - 1 do:
