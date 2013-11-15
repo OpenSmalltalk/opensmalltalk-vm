@@ -1390,6 +1390,7 @@ SpurBootstrap >> rehashImage [
 	| n sim rehashFlags |
 	sim := StackInterpreterSimulator onObjectMemory: newHeap.
 	newHeap coInterpreter: sim.
+	sim bootstrapping: true.
 	sim initializeInterpreter: 0.
 	sim instVarNamed: 'methodDictLinearSearchLimit' put: SmallInteger maxVal.
 
@@ -1689,6 +1690,7 @@ SpurBootstrap >> writeSnapshotOfTransformedImage [
 	| last heap sizes counts barriers sim |
 	heap := TransformedImage veryDeepCopy.
 	sim := StackInterpreterSimulator onObjectMemory: heap.
+	sim bootstrapping: true.
 	heap coInterpreter: sim.
 	sim initializeInterpreter: 0;
 		setImageHeaderFlagsFrom: ImageHeaderFlags;
