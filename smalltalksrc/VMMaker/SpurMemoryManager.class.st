@@ -1288,16 +1288,14 @@ SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceByt
 	 to allocate in oldSpace.  Later on (in initializePostBootstrap) freeStart and scavengeThreshold
 	 will be set to sane values."
 	<doNotGenerate>
-	| endBridgeBytes |
 	self assert: (memoryBytes \\ self allocationUnit = 0
 				and: [newSpaceBytes \\ self allocationUnit = 0
 				and: [codeBytes \\ self allocationUnit = 0]]).
-	endBridgeBytes := 2 * self baseHeaderSize.
 	memory := (self endianness == #little
 					ifTrue: [LittleEndianBitmap]
-					ifFalse: [Bitmap]) new: (memoryBytes + newSpaceBytes + codeBytes + stackBytes + endBridgeBytes) // 4.
+					ifFalse: [Bitmap]) new: (memoryBytes + newSpaceBytes + codeBytes + stackBytes) // 4.
 	startOfMemory := codeBytes + stackBytes.
-	endOfMemory := freeOldSpaceStart := memoryBytes + newSpaceBytes + codeBytes + stackBytes.
+	endOfMemory := freeOldSpaceStart := memoryBytes + newSpaceBytes + codeBytes + stackBytes - self bridgeSize.
 	"leave newSpace empty for the bootstrap"
 	freeStart := newSpaceBytes + startOfMemory.
 	newSpaceLimit := newSpaceBytes + startOfMemory.
@@ -1877,6 +1875,11 @@ SpurMemoryManager >> booleanValueOf: obj [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	<doNotGenerate>
 	^coInterpreter booleanValueOf: obj
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> bootstrapping [
+	^false
 ]
 
 { #category : #segments }
@@ -3895,6 +3898,7 @@ SpurMemoryManager >> freeChunkWithBytes: bytes at: address [
 	| freeChunk |
 	self assert: (lastSubdividedFreeChunk := address) ~= 0.
 	freeChunk := self initFreeChunkWithBytes: bytes at: address.
+	self assert: (self isInMemory: (self addressAfter: freeChunk)).
 	self addToFreeList: freeChunk bytes: bytes.
 	self assert: freeChunk = (self objectStartingAt: address).
 	^freeChunk
@@ -4465,15 +4469,15 @@ SpurMemoryManager >> initializeFreeSpacePostLoad: freeListObj [
 	self assert: (self formatOf: freeListObj) = (self wordSize = 4
 													ifTrue: [self firstLongFormat]
 													ifFalse: [self sixtyFourBitIndexableFormat]).
-
 	freeLists := self firstIndexableField: freeListObj.
+	freeListsMask := 0.
 	0 to: self numFreeLists - 1 do:
 		[:i|
 		(freeLists at: i) ~= 0 ifTrue:
 			[freeListsMask := freeListsMask bitOr: (1 << i).
-			 segmentManager numSegments > 0 ifTrue: "false in Spur image bootstrap"
-				[freeLists at: i put: (segmentManager swizzleObj: (freeLists at: i))]]].
-	totalFreeOldSpace := self totalFreeListBytes
+			 freeLists at: i put: (segmentManager swizzleObj: (freeLists at: i))]].
+	totalFreeOldSpace := self totalFreeListBytes.
+	self checkFreeSpace
 ]
 
 { #category : #'gc - global' }
@@ -4512,10 +4516,7 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	segmentManager adjustSegmentSwizzlesBy: bytesToShift.
 	"image may be at a different address; adjust oops for new location"
 	self adjustAllOopsBy: bytesToShift.
-
-	segmentManager numSegments > 0 "false if Spur image bootstrap"
-		ifTrue: [specialObjectsOop := segmentManager swizzleObj: specialObjectsOop]
-		ifFalse: [self assert: bytesToShift = 0].
+	specialObjectsOop := segmentManager swizzleObj: specialObjectsOop.
 
 	"heavily used special objects"
 	nilObj		:= self splObj: NilObject.
@@ -4530,12 +4531,12 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	self assert: trueObj = (self objectAfter: falseObj).
 	freeListObj := self objectAfter: trueObj.
 	self reInitializeClassTablePostLoad: (self objectAfter: freeListObj).
-	self initializeFreeSpacePostLoad: freeListObj.
 	markStack := self swizzleObjStackAt: MarkStackRootIndex.
 	weaklingStack := self swizzleObjStackAt: WeaklingStackRootIndex.
 	ephemeronQueue := self swizzleObjStackAt: EphemeronQueueRootIndex.
 
 	segmentManager collapseSegmentsPostSwizzle.
+	self initializeFreeSpacePostLoad: freeListObj.
 
 	self initializeNewSpaceVariables.
 	self initializeOldSpaceFirstFree: freeOldSpaceStart. "initializes endOfMemory, freeStart"
@@ -5138,6 +5139,7 @@ SpurMemoryManager >> isValidFreeObject: objOop [
 	| chunk |
 	^(self addressCouldBeObj: objOop)
 	  and: [(self isFreeObject: objOop)
+	  and: [(self isInMemory: (self addressAfter: objOop))
 	  and: [((chunk := (self fetchPointer: self freeChunkNextIndex ofFreeChunk: objOop)) = 0
 		   or: [self isFreeObject: chunk])
 	  and: [(self bytesInObject: objOop) / self allocationUnit < self numFreeLists
@@ -5146,7 +5148,7 @@ SpurMemoryManager >> isValidFreeObject: objOop [
 			  and: [((chunk := (self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: objOop)) = 0
 				    or: [self isFreeObject: chunk])
 			  and: [(chunk := (self fetchPointer: self freeChunkLargerIndex ofFreeChunk: objOop)) = 0
-				    or: [self isFreeObject: chunk]]]]]]]
+				    or: [self isFreeObject: chunk]]]]]]]]
 ]
 
 { #category : #'obj stacks' }
@@ -5237,7 +5239,7 @@ SpurMemoryManager >> isValidObjStackPage: objStackPage myIndex: myx firstPage: i
 { #category : #segments }
 SpurMemoryManager >> isValidSegmentBridge: objOop [
 	"Maybe this should be in SpurSegmentManager only"
-	^(self addressCouldBeObj: objOop)
+	^(objOop = endOfMemory or: [self addressCouldBeObj: objOop])
 	 and: [(self isSegmentBridge: objOop)
 	 and: [self hasOverflowHeader: objOop]]
 ]
@@ -6995,8 +6997,7 @@ SpurMemoryManager >> scavengingGCTenuringIf: tenuringCriterion [
 	"Run the scavenger."
 
 	self assert: remapBufferCount = 0.
-	self assert: (segmentManager numSegments = 0 "true in the spur image bootstrap"
-				or: [scavenger eden limit - freeStart > coInterpreter interpreterAllocationReserveBytes]).
+	self assert: scavenger eden limit - freeStart > coInterpreter interpreterAllocationReserveBytes.
 	self checkFreeSpace.
 	"coInterpreter printCallStackFP: coInterpreter framePointer"
 
@@ -7107,6 +7108,7 @@ SpurMemoryManager >> setHeapBase: heapBase memoryLimit: memLimit endOfMemory: me
 		cr; nextPutAll: 'heapBase: '; print: heapBase; nextPut: $/; nextPutAll: heapBase hex;
 		nextPutAll: ' memLimit '; print: memLimit; nextPut: $/; nextPutAll: memLimit hex;
 		nextPutAll: ' memEnd '; print: memEnd; nextPut: $/; nextPutAll: memEnd hex; cr; flush."
+	startOfMemory := heapBase.
 	newSpaceLimit := heapBase
 					 + self newSpaceBytes
 					 + coInterpreter interpreterAllocationReserveBytes.

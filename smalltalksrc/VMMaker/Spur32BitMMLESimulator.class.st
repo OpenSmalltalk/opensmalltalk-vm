@@ -1,8 +1,22 @@
 Class {
 	#name : #Spur32BitMMLESimulator,
 	#superclass : #Spur32BitMemoryManager,
+	#instVars : [
+		'bootstrapping'
+	],
 	#category : #'VMMaker-SpurMemoryManagerSimulation'
 }
+
+{ #category : #accessing }
+Spur32BitMMLESimulator >> bootstrapping [
+	^bootstrapping
+]
+
+{ #category : #accessing }
+Spur32BitMMLESimulator >> bootstrapping: aBoolean [
+	bootstrapping := aBoolean.
+	segmentManager initForBootstrap
+]
 
 { #category : #'memory access' }
 Spur32BitMMLESimulator >> byteAt: byteAddress [
@@ -135,6 +149,15 @@ Spur32BitMMLESimulator >> globalGarbageCollect [
 	^super globalGarbageCollect
 ]
 
+{ #category : #'growing/shrinking memory' }
+Spur32BitMMLESimulator >> growOldSpaceByAtLeast: minAmmount [
+	"Attempt to grow memory by at least minAmmount.
+	 Answer the size of the new segment, or nil if the attempt failed.
+	 Override to not grow during the Spur image bootstrap."
+	^bootstrapping ifFalse:
+		[super growOldSpaceByAtLeast: minAmmount]
+]
+
 { #category : #'memory access' }
 Spur32BitMMLESimulator >> halfWordHighInLong32: long32 [
 	"Used by Balloon"
@@ -163,6 +186,12 @@ Spur32BitMMLESimulator >> headerForSlots: numSlots format: formatField classInde
 	self assert: (formatField bitAnd: self formatMask) = formatField.
 	self assert: (classIndex bitAnd: self classIndexMask) = classIndex.
 	^super headerForSlots: numSlots format: formatField classIndex: classIndex
+]
+
+{ #category : #initialization }
+Spur32BitMMLESimulator >> initialize [
+	super initialize.
+	bootstrapping := false
 ]
 
 { #category : #'memory access' }
@@ -327,6 +356,15 @@ Spur32BitMMLESimulator >> markAndTrace: objOop [
 Spur32BitMMLESimulator >> markObjects [
 	coInterpreter transcript nextPutAll: 'marking...'; flush.
 	^super markObjects
+]
+
+{ #category : #snapshot }
+Spur32BitMMLESimulator >> memoryBaseForImageRead [
+	"Answer the address to read the image into.  Override so that when bootstrapping,
+	 the segmentManager's segments are undisturbed in adjustSegmentSwizzlesBy:"
+	^bootstrapping
+		ifTrue: [0] 
+		ifFalse: [super memoryBaseForImageRead]
 ]
 
 { #category : #'gc - global' }
