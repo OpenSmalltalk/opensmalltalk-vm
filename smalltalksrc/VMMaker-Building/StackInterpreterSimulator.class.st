@@ -22,6 +22,7 @@ Class {
 	#name : #StackInterpreterSimulator,
 	#superclass : #StackInterpreterPrimitives,
 	#instVars : [
+		'bootstrapping',
 		'byteCount',
 		'breakCount',
 		'sendCount',
@@ -132,6 +133,18 @@ StackInterpreterSimulator >> booleanCheat: cond [
 								ifFalse: [objectMemory falseObject]).
 				self fetchNextBytecode]
 		ifFalse: [super booleanCheat: cond]
+]
+
+{ #category : #'spur bootstrap' }
+StackInterpreterSimulator >> bootstrapping [
+	^bootstrapping
+]
+
+{ #category : #'spur bootstrap' }
+StackInterpreterSimulator >> bootstrapping: aBoolean [
+	bootstrapping := aBoolean.
+	objectMemory ifNotNil:
+		[objectMemory bootstrapping: aBoolean]
 ]
 
 { #category : #'interpreter shell' }
@@ -653,6 +666,8 @@ StackInterpreterSimulator >> initialize [
 	 Smalltalk Arrays for variables that will be declared as statically-allocated
 	 global arrays in the translated code."
 
+	bootstrapping := false.
+
 	objectMemory ifNil:
 		[objectMemory := self class objectMemoryClass simulatorClass new].
 	objectMemory coInterpreter: self.
@@ -774,6 +789,13 @@ StackInterpreterSimulator >> internalFindNewMethod [
 StackInterpreterSimulator >> internalMustBeBoolean [
 	self halt.
 	^super internalMustBeBoolean
+]
+
+{ #category : #'stack pages' }
+StackInterpreterSimulator >> interpreterAllocationReserveBytes [
+	^bootstrapping
+		ifTrue: [0]
+		ifFalse: [super interpreterAllocationReserveBytes]
 ]
 
 { #category : #'interpreter shell' }
