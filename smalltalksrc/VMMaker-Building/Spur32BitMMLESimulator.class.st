@@ -315,7 +315,7 @@ Spur32BitMMLESimulator >> longAt: byteAddress [
 { #category : #'memory access' }
 Spur32BitMMLESimulator >> longAt: byteAddress put: a32BitValue [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
-	"(byteAddress = 16r1614CB8 and: [a32BitValue = 16rA000035]) ifTrue:
+	"(byteAddress = 16r183FB00 and: [a32BitValue = 16r3FFFFC]) ifTrue:
 		[self halt]."
 	"(byteAddress between: 16r33FBB8 and: 16r33FBCF) ifTrue:
 		[self halt]."
