@@ -1606,7 +1606,7 @@ SpurBootstrap >> transform [
 
 { #category : #'bootstrap image' }
 SpurBootstrap >> validate [
-	| p n duplicates maxClassIndex |
+	| p n duplicates maxClassIndex savedEndOfMemory |
 	self assert: (reverseMap at: newHeap specialObjectsOop) = oldHeap specialObjectsOop.
 	self assert: (map at: oldHeap specialObjectsOop) = newHeap specialObjectsOop.
 	self assert: (reverseMap at: newHeap classTableRootObj ifAbsent: []) isNil.
@@ -1633,6 +1633,8 @@ SpurBootstrap >> validate [
 		self assert: (newHeap rawHashBitsOf: (map at: oldClass)) = idx. 
 		self assert: oldClass = (reverseMap at: (newHeap classAtIndex: idx))].
 	n := 0.
+	savedEndOfMemory := newHeap endOfMemory.
+	newHeap setEndOfMemory: newHeap freeOldSpaceStart.
 	newHeap allObjectsDo:
 		[:o|
 		(o <= newHeap trueObject
@@ -1641,7 +1643,8 @@ SpurBootstrap >> validate [
 			 self assert: (newHeap fetchClassOfNonImm: o) = (map at: (oldHeap fetchClassOfNonImm: (reverseMap at: o)))].
 		n := n + 1.
 		p := o].
-	p class.
+	newHeap setEndOfMemory: savedEndOfMemory.
+	self touch: p.
 	self assert: (n between: map size and: map size + 6). "+ 6 is room for freelists & classTable"
 
 	"check some class properties to ensure the format changes are correct"
@@ -1687,7 +1690,7 @@ SpurBootstrap >> writeSnapshotOfTransformedImage [
 	"The bootstrapped image typically contains a few big free chunks and one huge free chunk.
 	 Test snapshot writing and loading by turning the largest non-huge chunks into segment bridges
 	 and saving."
-	| last heap sizes counts barriers sim |
+	| penultimate ultimate heap sizes counts barriers sim |
 	heap := TransformedImage veryDeepCopy.
 	sim := StackInterpreterSimulator onObjectMemory: heap.
 	sim bootstrapping: true.
@@ -1695,8 +1698,9 @@ SpurBootstrap >> writeSnapshotOfTransformedImage [
 	sim initializeInterpreter: 0;
 		setImageHeaderFlagsFrom: ImageHeaderFlags;
 		setDisplayForm: (Form extent: ImageScreenSize >> 16 @ (ImageScreenSize bitAnd: 16rFFFF)).
-	heap allOldSpaceEntitiesDo: [:e| last := e].
-	self assert: (heap isFreeObject: last).
+	heap allOldSpaceEntitiesDo: [:e| penultimate := ultimate. ultimate := e].
+	self assert: (heap isFreeObject: penultimate).
+	self assert: (heap isSegmentBridge: ultimate).
 	sizes := Bag new.
 	heap allObjectsInFreeTree: (heap freeLists at: 0) do:
 		[:f|
@@ -1707,10 +1711,10 @@ SpurBootstrap >> writeSnapshotOfTransformedImage [
 				and: [(counts at: counts size - 1) value > 1024]).
 	barriers := (1 to: (counts at: counts size - 1) key) collect:
 					[:ign| heap allocateOldSpaceChunkOfExactlyBytes: (counts at: counts size - 1) value].
-	barriers := barriers, {heap allocateOldSpaceChunkOfExactlyBytes: (heap bytesInObject: last)}.
+	barriers := barriers, {heap allocateOldSpaceChunkOfExactlyBytes: (heap bytesInObject: penultimate)}.
 	heap setEndOfMemory: barriers last.
-	heap allOldSpaceEntitiesDo: [:e| last := e].
-	self assert: (heap addressAfter: last) = barriers last.
+	heap allOldSpaceEntitiesDo: [:e| penultimate := ultimate. ultimate := e].
+	self assert: (heap addressAfter: ultimate) = barriers last.
 	heap checkFreeSpace.
 	heap runLeakCheckerForFullGC: true.
 	heap segmentManager initializeFromFreeChunks: (barriers sort collect: [:b| heap objectStartingAt: b]).
