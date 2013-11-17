@@ -165,7 +165,6 @@ CogObjectRepresentationFor32BitSpur >> genGetSizeOf: sourceReg into: destReg for
 { #category : #'primitive generators' }
 CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAt: retNoffset [
 	"Implement the guts of primitiveAt; dispatch on size"
-	<returnTypeC: #'AbstractInstruction *'>
 	| formatReg jumpNotIndexable jumpSmallSize jumpImmediate jumpBadIndex
 	  jumpBytesDone jumpShortsDone jumpWordsDone jumpFixedFieldsDone
 	  jumpIsBytes jumpIsShorts jumpIsWords jumpWordTooBig jumpIsArray jumpHasFixedFields jumpIsContext
@@ -585,7 +584,6 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveNewWithArg: retNoffset [
 { #category : #'primitive generators' }
 CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAt: retNoffset [
 	"Implement the guts of primitiveStringAt; dispatch on size"
-	<returnTypeC: #'AbstractInstruction *'>
 	| formatReg jumpNotIndexable jumpSmallSize jumpBadIndex done
 	  jumpIsBytes jumpIsShorts jumpIsWords jumpWordTooBig
 	  jumpBytesOutOfBounds jumpShortsOutOfBounds jumpWordsOutOfBounds |

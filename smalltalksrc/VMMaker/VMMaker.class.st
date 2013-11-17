@@ -401,6 +401,20 @@ VMMaker class >> generateSqueakCogVM [
 ]
 
 { #category : #configurations }
+VMMaker class >> generateSqueakSpurCogVM [
+	^VMMaker
+		generate: (Smalltalk at: ([:choices| choices at: (UIManager default chooseFrom: choices) ifAbsent: [^self]]
+									value: #(CoInterpreter CoInterpreterMT)))
+		and: StackToRegisterMappingCogit
+		with: #(	ObjectMemory Spur32BitCoMemoryManager
+				MULTIPLEBYTECODESETS false
+				NewspeakVM false)
+		to: (FileDirectory default pathFromURI: 'oscogvm/spursrc')
+		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
+		including:#()
+]
+
+{ #category : #configurations }
 VMMaker class >> generateSqueakSpurStackVM [
 	"No primitives since we can use those for the Cog VM"
 	^VMMaker

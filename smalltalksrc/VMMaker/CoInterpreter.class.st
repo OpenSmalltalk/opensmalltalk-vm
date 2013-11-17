@@ -404,7 +404,8 @@ CoInterpreter class >> isAcceptableAncilliaryClass: aClass [
 
 { #category : #translation }
 CoInterpreter class >> isNonArgumentImplicitReceiverVariableName: aString [
-	^#('self' 'stackPages' 'cogit' 'coInterpreter' 'cogMethodZone' 'objectMemory' 'interpreter' 'heapMap') includes: aString
+	^(#('self' 'stackPages' 'cogit' 'coInterpreter' 'cogMethodZone' 'interpreter' 'objectMemory') includes: aString)
+	  or: [self objectMemoryClass isNonArgumentImplicitReceiverVariableName: aString]
 ]
 
 { #category : #testing }
@@ -2111,7 +2112,7 @@ CoInterpreter >> commonCallerReturn [
 		 localIP := self pointerForOop: (self iframeSavedIP: localFP)].
 	self setMethod: (self iframeMethod: localFP).
 	self fetchNextBytecode.
-	^self internalStackTopPut: localReturnValue
+	self internalStackTopPut: localReturnValue
 ]
 
 { #category : #'return bytecodes' }
@@ -3999,7 +4000,7 @@ CoInterpreter >> itemporary: offset in: theFP put: valueOop [
 	| frameNumArgs |
 	<inline: true>
 	<var: #theFP type: #'char *'>
-	offset < (frameNumArgs := self iframeNumArgs: theFP)
+	^offset < (frameNumArgs := self iframeNumArgs: theFP)
 		ifTrue: [stackPages longAt: theFP + FoxCallerSavedIP + ((frameNumArgs - offset) * BytesPerWord) put: valueOop]
 		ifFalse: [stackPages longAt: theFP + FoxIFReceiver - BytesPerWord + ((frameNumArgs - offset) * BytesPerWord) put: valueOop]
 ]
