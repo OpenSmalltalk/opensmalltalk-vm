@@ -955,6 +955,15 @@ TMethod >> hasUnrenamableCCode [
 TMethod >> inferReturnTypeFromReturnsIn: aCodeGen [
 	"Attempt to infer the return type of the receiver from returns in the parse tree."
 
+	"this for determining which returns have which return types:"
+	"aCodeGen
+		pushScope: declarations
+		while: [parseTree
+				nodesSelect: [:n| n isReturn]
+				thenCollect: [:n| | s |
+					s := Set new.
+					self addTypesFor: n expression to: s in: aCodeGen.
+					{n. s}]]"
 	returnType ifNil: "the initial default"
 		[aCodeGen
 			pushScope: declarations
