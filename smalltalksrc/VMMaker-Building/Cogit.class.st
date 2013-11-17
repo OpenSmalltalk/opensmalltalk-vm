@@ -823,7 +823,7 @@ Cogit class >> isCogitClass [
 Cogit class >> isNonArgumentImplicitReceiverVariableName: aString [
 	^#('cogit' 'coInterpreter'
 		'methodZone'
-		'objectMemory' 'objectRepresentation') includes: aString
+		'objectMemory' 'objectRepresentation' 'manager') includes: aString
 ]
 
 { #category : #translation }

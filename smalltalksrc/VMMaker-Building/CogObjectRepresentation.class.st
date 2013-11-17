@@ -48,8 +48,7 @@ CogObjectRepresentation >> genInnerPrimitiveNewMethod: retNoffset [
 
 { #category : #'primitive generators' }
 CogObjectRepresentation >> genInnerPrimitiveNewWithArg: retNoffset [
-	self subclassResponsibility.
-	^0
+	self subclassResponsibility
 ]
 
 { #category : #initialization }

@@ -306,6 +306,17 @@ TParseNode >> nodesDo: aBlock unless: cautionaryBlock [
 ]
 
 { #category : #enumerating }
+TParseNode >> nodesSelect: selectBlock thenCollect: collectBlock [
+	| result |
+	result := OrderedCollection new.
+	self nodesDo:
+		[:node|
+		(selectBlock value: node) ifTrue:
+			[result addLast: (collectBlock value: node)]].
+	^result
+]
+
+{ #category : #enumerating }
 TParseNode >> nodesWithParentsDo: aBlock [
 	"Apply aBlock to all nodes in the receiver with each node's parent.
 	 N.B. This is assumed to be bottom-up, leaves first."
