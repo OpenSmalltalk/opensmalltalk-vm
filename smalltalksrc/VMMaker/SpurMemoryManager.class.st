@@ -945,7 +945,7 @@ SpurMemoryManager >> addToFreeTree: freeChunk bytes: chunkBytes [
 		 child := self fetchPointer: (childBytes > chunkBytes
 										ifTrue: [self freeChunkSmallerIndex]
 										ifFalse: [self freeChunkLargerIndex])
-					ofObject: child].
+					ofFreeChunk: child].
 	parent = 0 ifTrue:
 		[self assert: (freeLists at: 0) = 0.
 		 freeLists at: 0 put: freeChunk.
@@ -7104,21 +7104,21 @@ SpurMemoryManager >> setHashBitsOf: objOop to: hash [
 ]
 
 { #category : #snapshot }
-SpurMemoryManager >> setHeapBase: heapBase memoryLimit: memLimit endOfMemory: memEnd [
+SpurMemoryManager >> setHeapBase: baseOfHeap memoryLimit: memLimit endOfMemory: memEnd [
 	"Transcript
-		cr; nextPutAll: 'heapBase: '; print: heapBase; nextPut: $/; nextPutAll: heapBase hex;
+		cr; nextPutAll: 'heapBase: '; print: baseOfHeap; nextPut: $/; nextPutAll: baseOfHeap hex;
 		nextPutAll: ' memLimit '; print: memLimit; nextPut: $/; nextPutAll: memLimit hex;
 		nextPutAll: ' memEnd '; print: memEnd; nextPut: $/; nextPutAll: memEnd hex; cr; flush."
-	startOfMemory := heapBase.
-	newSpaceLimit := heapBase
+	startOfMemory := baseOfHeap.
+	newSpaceLimit := baseOfHeap
 					 + self newSpaceBytes
 					 + coInterpreter interpreterAllocationReserveBytes.
 	freeOldSpaceStart := memEnd.
 	endOfMemory := memLimit.
 	scavenger
-		newSpaceStart: heapBase
-		newSpaceBytes: newSpaceLimit - heapBase
-		edenBytes: newSpaceLimit - heapBase
+		newSpaceStart: baseOfHeap
+		newSpaceBytes: newSpaceLimit - baseOfHeap
+		edenBytes: newSpaceLimit - baseOfHeap
 				   * (self scavengerDenominator - self numSurvivorSpaces) // self scavengerDenominator.
 	freeStart := scavenger eden start.
 	pastSpaceStart := scavenger pastSpace start

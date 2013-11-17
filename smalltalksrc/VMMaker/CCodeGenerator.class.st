@@ -97,10 +97,7 @@ CCodeGenerator >> addClass: aClass [
 	"ikp..."
 	self addPoolVarsFor: aClass.
 	(aClass inheritsFrom: VMStructType) ifFalse:
-		[variables addAll: (vmClass
-							ifNil: [aClass instVarNames]
-							ifNotNil: [aClass instVarNames reject:
-										[:ivn| vmClass isNonArgumentImplicitReceiverVariableName: ivn]])].
+		[variables addAll: (self instVarNamesForClass: aClass)].
 	self retainMethods: (aClass requiredMethodNames: self options).
 	
 	'Adding Class ' , aClass name , '...'
@@ -175,6 +172,8 @@ CCodeGenerator >> addMethod: aTMethod [
 		 and: [aTMethod isStructAccessor
 		 and: [conflict compiledMethod decompileString = aTMethod compiledMethod decompileString]]) ifTrue:
 			[^nil].
+		(conflict definingClass inheritsFrom: aTMethod definingClass) ifTrue:
+			[^nil].
 		self error: 'Method name conflict: ', aTMethod selector].
 	^methods at: aTMethod selector put: aTMethod
 ]
@@ -189,6 +188,8 @@ CCodeGenerator >> addMethodFor: aClass selector: selector [
 		[^nil].
 	method := aClass compiledMethodAt: selector.
 	(method pragmaAt: #doNotGenerate) ifNotNil:
+		[^nil].
+	method isSubclassResponsibility ifTrue:
 		[^nil].
 	(self shouldIncludeMethodFor: aClass selector: selector) ifFalse:
 		[^nil].
@@ -459,19 +460,20 @@ CCodeGenerator >> checkClassForNameConflicts: aClass [
 
 	"check for instance variable name collisions"
 	(aClass inheritsFrom: VMStructType) ifFalse:
-		[aClass instVarNames do:
+		[(self instVarNamesForClass: aClass) do:
 			[:varName |
 			(variables includes: varName) ifTrue:
 				[self error: 'Instance variable ', varName, ' was defined in a previously added class']]].
 
 	"check for method name collisions"
 	aClass selectors do:
-		[:sel | | meth |
-		((methods includesKey: sel)
+		[:sel | | tmeth meth |
+		((tmeth := methods at: sel ifAbsent: nil) notNil
 		and: [(aClass isStructClass and: [(aClass isAccessor: sel)
 				and: [(methods at: sel) isStructAccessor]]) not
 		and: [((meth := aClass compiledMethodAt: sel) pragmaAt: #doNotGenerate) isNil
-		and: [meth isSubclassResponsibility not]]]) ifTrue:
+		and: [meth isSubclassResponsibility not
+		and: [(tmeth definingClass inheritsFrom: aClass) not]]]]) ifTrue:
 			[self error: 'Method ', sel, ' was defined in a previously added class.']]
 ]
 
@@ -2813,6 +2815,19 @@ CCodeGenerator >> inlineDispatchesInMethodNamed: selector localizingVars: varsLi
 	]
 ]
 
+{ #category : #utilities }
+CCodeGenerator >> instVarNamesForClass: aClass [
+	((vmClass
+		ifNil: [aClass instVarNames]
+		ifNotNil: [aClass instVarNames reject:
+					[:ivn| vmClass isNonArgumentImplicitReceiverVariableName: ivn]]) includes: 'manager') ifTrue:
+		[self halt: aClass name].
+	^vmClass
+		ifNil: [aClass instVarNames]
+		ifNotNil: [aClass instVarNames reject:
+					[:ivn| vmClass isNonArgumentImplicitReceiverVariableName: ivn]]
+]
+
 { #category : #inlining }
 CCodeGenerator >> isAssertSelector: selector [
 	^#(assert: asserta: assert:l: asserta:l:) includes: selector
@@ -3206,13 +3221,13 @@ CCodeGenerator >> prepareMethods [
 		m locals, m args do:
 			[:var |
 			(globals includes: var) ifTrue:
-				[self error: 'Local variable name may mask global when inlining: ' , var].
+				[self error: 'Local variable ''', var, ''' may mask global when inlining ', m selector].
 			((methods at: var ifAbsent: [nil]) ifNil: [false] ifNotNil: [:m1| m1 isStructAccessor not]) ifTrue:
 				[logger
 					ensureCr;
-					nextPutAll: 'Local variable name ', var, ' in ';
+					nextPutAll: 'Local variable name ''', var, ''' in ';
 					nextPutAll: m selector;
-					nextPutAll: ' may mask method when inlining: ' , var]].
+					nextPutAll: ' may mask method when inlining']].
 		m bindClassVariablesIn: constants.
 		m prepareMethodIn: self]
 ]

@@ -5457,13 +5457,15 @@ StackInterpreter >> flushMethodCacheFrom: memStart to: memEnd [
 { #category : #'lazy become' }
 StackInterpreter >> followField: fieldIndex in: anObject [
 	"Make sure the oop at fieldIndex in anObject is not forwarded (follow the
-	 forwarder there-in if so).  Answer the (possibly followed) oop at fieldIndex."
-	| field |
-	field := objectMemory fetchPointer: fieldIndex ofObject: anObject.
-	(objectMemory isForwarded: field) ifTrue:
-		[field := objectMemory followForwarded: field.
-		 objectMemory storePointer: fieldIndex ofObject: anObject withValue: field].
-	^field
+	 forwarder there-in if so).  Answer the (possibly followed) oop at fieldIndex.
+	 N.B. the oop is assumed to be non-immediate."
+	| objOop |
+	objOop := objectMemory fetchPointer: fieldIndex ofObject: anObject.
+	self assert: (objectMemory isNonImmediate: objOop).
+	(objectMemory isForwarded: objOop) ifTrue:
+		[objOop := objectMemory followForwarded: objOop.
+		 objectMemory storePointer: fieldIndex ofObject: anObject withValue: objOop].
+	^objOop
 ]
 
 { #category : #'lazy become' }
@@ -9557,23 +9559,19 @@ StackInterpreter >> printOop: oop [
 		[^self shortPrintOop: oop].
 	self printHex: oop.
 	(objectMemory addressCouldBeObj: oop) ifFalse:
-		[self print: ((oop bitAnd: objectMemory allocationUnit - 1) ~= 0
+		[^self print: ((oop bitAnd: objectMemory allocationUnit - 1) ~= 0
 						ifTrue: [' is misaligned']
-						ifFalse: [' is not on the heap']); cr.
-		 ^nil].
+						ifFalse: [' is not on the heap']); cr].
 	(objectMemory isFreeObject: oop) ifTrue:
-		[self print: ' is a free chunk of size '; printNum: (objectMemory sizeOfFree: oop); cr.
-		 ^nil].
+		[^self print: ' is a free chunk of size '; printNum: (objectMemory sizeOfFree: oop); cr].
 	(objectMemory isForwarded: oop) ifTrue:
-		[self
+		[^self
 			print: ' is a forwarded object to '; printHex: (objectMemory followForwarded: oop);
-			print: ' of slot size '; printNum: (objectMemory numSlotsOfAny: oop); cr.
-		 ^nil].
+			print: ' of slot size '; printNum: (objectMemory numSlotsOfAny: oop); cr].
 	self print: ': a(n) '.
 	self printNameOfClass: (cls := objectMemory fetchClassOfNonImm: oop) count: 5.
 	cls = (objectMemory splObj: ClassFloat) ifTrue:
-		[self cr; printFloat: (self dbgFloatValueOf: oop); cr.
-		 ^nil].
+		[^self cr; printFloat: (self dbgFloatValueOf: oop); cr].
 	fmt := objectMemory formatOf: oop.
 	fmt > objectMemory lastPointerFormat ifTrue:
 		[self print: ' nbytes '; printNum: (objectMemory byteLengthOf: oop)].
@@ -9588,8 +9586,7 @@ StackInterpreter >> printOop: oop [
 								[(self isPointerAlien: oop)
 									ifTrue: [' pointer @ ']
 									ifFalse: [' direct @ ']]).
-			 self printHex: (self startOfAlienData: oop) asUnsignedInteger; cr.
-			 ^nil].
+			 ^self printHex: (self startOfAlienData: oop) asUnsignedInteger; cr].
 		 (objectMemory isWords: oop) ifTrue:
 			[lastIndex := 64 min: ((objectMemory byteLengthOf: oop) / BytesPerWord).
 			 lastIndex > 0 ifTrue:
@@ -9600,7 +9597,7 @@ StackInterpreter >> printOop: oop [
 						[self cr]].
 				(lastIndex \\ self elementsPerPrintOopLine) = 0 ifFalse:
 					[self cr]].
-			^nil].
+			^self].
 		^self printStringOf: oop; cr].
 	"this is nonsense.  apologies."
 	startIP := (objectMemory lastPointerOf: oop) + BytesPerOop - objectMemory baseHeaderSize / BytesPerOop.
@@ -11227,17 +11224,18 @@ StackInterpreter >> shortPrintOop: oop [
 	self printHexnp: oop.
 	(objectMemory isImmediate: oop) ifTrue:
 		[(objectMemory isImmediateCharacter: oop) ifTrue:
-			[^self
+			[self
 				cCode: 'printf("=$%ld ($%lc)\n", (long)characterValueOf(oop), (wint_t)characterValueOf(oop))'
 				inSmalltalk: [self print: (self shortPrint: oop); cr]].
-		 ^self
-			cCode: 'printf("=%ld\n", (long)integerValueOf(oop))'
-			inSmalltalk: [self print: (self shortPrint: oop); cr]].
+		 (objectMemory isIntegerObject: oop) ifTrue:
+			[self
+				cCode: 'printf("=%ld\n", (long)integerValueOf(oop))'
+				inSmalltalk: [self print: (self shortPrint: oop); cr]].
+		 ^self].
 	(objectMemory addressCouldBeObj: oop) ifFalse:
-		[self print: ((oop bitAnd: objectMemory allocationUnit - 1) ~= 0
+		[^self print: ((oop bitAnd: objectMemory allocationUnit - 1) ~= 0
 						ifTrue: [' is misaligned']
-						ifFalse: [' is not on the heap']); cr.
-		 ^nil].
+						ifFalse: [' is not on the heap']); cr].
 	((objectMemory isFreeObject: oop)
 	 or: [objectMemory isForwarded: oop]) ifTrue:
 		[^self printOop: oop].
@@ -11896,7 +11894,7 @@ StackInterpreter >> storeLiteralVariable: literalIndex withValue: anObject [
 
 	(objectMemory isForwarded: litVar) ifTrue:
 		[litVar := objectMemory followForwarded: litVar].
-	objectMemory storePointer: ValueIndex ofObject: litVar withValue: anObject
+	^objectMemory storePointer: ValueIndex ofObject: litVar withValue: anObject
 ]
 
 { #category : #'stack bytecodes' }
