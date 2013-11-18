@@ -51,6 +51,11 @@ Spur32BitCoMemoryManager >> ceStoreCheck: anOop [
 	^anOop
 ]
 
+{ #category : #accessing }
+Spur32BitCoMemoryManager >> checkForLeaks [
+	^checkForLeaks
+]
+
 { #category : #'debug support' }
 Spur32BitCoMemoryManager >> clearLeakMapAndMapAccessibleObjects [
 	"Perform an integrity/leak check using the heapMap.  Set a bit at each object's header.
