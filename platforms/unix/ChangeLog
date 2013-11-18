@@ -1,3 +1,9 @@
+2013-11-18  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* cmake/Plugins.cmake: Remove handling of disabled plugins.
+	Create sqNamedPrims.h from plugins_int once configuration is
+	complete.  Copy interp.h from generated source into build dir.
+
 2013-11-13  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* cmake/Plugins.cmake: Look for plugins.{int,ext,exc} in ${bld},
