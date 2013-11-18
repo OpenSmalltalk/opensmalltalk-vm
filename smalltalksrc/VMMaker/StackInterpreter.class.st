@@ -3201,7 +3201,8 @@ StackInterpreter >> checkOkayFields: oop [
 	(objectMemory checkOkayOop: oop) ifFalse: [ ^false ].
 	(objectMemory checkOopHasOkayClass: oop) ifFalse: [ ^false ].
 	((objectMemory isPointersNonImm: oop) or: [objectMemory isCompiledMethod: oop]) ifFalse: [ ^true ].
-	hasYoung := objectMemory isYoung: (objectMemory fetchClassOfNonImm: oop).
+	hasYoung := objectMemory hasSpurMemoryManagerAPI not
+				  and: [objectMemory isYoung: (objectMemory fetchClassOfNonImm: oop)].
 	(objectMemory isCompiledMethod: oop)
 		ifTrue:
 			[i := (self literalCountOf: oop) + LiteralStart - 1]

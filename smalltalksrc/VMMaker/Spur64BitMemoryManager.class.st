@@ -374,6 +374,7 @@ Spur64BitMemoryManager >> integerValueOf: oop [
 
 { #category : #'header access' }
 Spur64BitMemoryManager >> isMarked: objOop [
+	<api>
 	^((self longAt: objOop) >> self markedBitFullShift bitAnd: 1) ~= 0
 ]
 
@@ -394,6 +395,7 @@ Spur64BitMemoryManager >> numFreeLists [
 
 { #category : #'object access' }
 Spur64BitMemoryManager >> numTagBits [
+	<api>
 	"4th bit reserved for object alignment, which could imply e.g. what space the object is in."
 	^3
 ]
@@ -521,11 +523,13 @@ Spur64BitMemoryManager >> setIsRememberedOf: objOop to: aBoolean [
 
 { #category : #'word size' }
 Spur64BitMemoryManager >> shiftForWord [
+	<api>
 	^3
 ]
 
 { #category : #'word size' }
 Spur64BitMemoryManager >> tagMask [
+	<api>
 	^7
 ]
 

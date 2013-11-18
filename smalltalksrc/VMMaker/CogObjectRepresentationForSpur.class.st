@@ -8,6 +8,19 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
+{ #category : #'garbage collection' }
+CogObjectRepresentationForSpur >> allYoungObjectsAgeInFullGC [
+	^false
+]
+
+{ #category : #'garbage collection' }
+CogObjectRepresentationForSpur >> cacheTagIsMarked: cacheTag [
+	"Answer if the cacheTag is not unmarked, i.e. answer true for compact class
+	 indices and immediates; only answer false for unmarked objects.  In Spur
+	 linked send cache tags are class indices so effectively they're always marked."
+	^true
+]
+
 { #category : #'debug support' }
 CogObjectRepresentationForSpur >> checkValidInlineCacheTag: classIndexOrTagPattern [
 	^classIndexOrTagPattern <= objectMemory tagMask
@@ -20,9 +33,9 @@ CogObjectRepresentationForSpur >> checkValidObjectReference: anOop [
 	   or: [(objectMemory heapMapAtWord: (self pointerForOop: anOop)) ~= 0]
 ]
 
-{ #category : #'debug support' }
-CogObjectRepresentationForSpur >> couldBeObject: oop [
-	^objectMemory addressCouldBeObj: oop
+{ #category : #'garbage collection' }
+CogObjectRepresentationForSpur >> couldBeObject: literal [
+	^objectMemory isNonImmediate: literal
 ]
 
 { #category : #'primitive generators' }
@@ -320,9 +333,10 @@ CogObjectRepresentationForSpur >> inlineCacheTagForInstance: oop [
 	^objectMemory classIndexOf: oop
 ]
 
-{ #category : #'in-line cacheing' }
-CogObjectRepresentationForSpur >> inlineCacheTagIsYoung: anInteger [
-	"classIndices are not objects, heh, heh, heh..."
+{ #category : #'garbage collection' }
+CogObjectRepresentationForSpur >> inlineCacheTagIsYoung: cacheTag [
+	"Since all cache tags in Spur are class indices none of
+	 them are young or have to be updated in a scavenge."
 	^false
 ]
 
@@ -340,6 +354,36 @@ CogObjectRepresentationForSpur >> isSmallIntegerTagNonZero [
 CogObjectRepresentationForSpur >> jumpNotCharacterUnsignedValueInRegister: reg [
 	cogit CmpCq: 16r3FFFFFFF R: reg.
 	^cogit JumpAbove: 0
+]
+
+{ #category : #'garbage collection' }
+CogObjectRepresentationForSpur >> markAndTraceLiteral: literal [
+	(self couldBeObject: literal) ifTrue:
+		[self assert: (objectMemory addressCouldBeObj: literal).
+		 objectMemory markAndTrace: literal]
+]
+
+{ #category : #'garbage collection' }
+CogObjectRepresentationForSpur >> markAndTraceLiteralIfYoung: literal [
+	self shouldNotImplement.  "sumpin' wrong surely ;-)"
+	((self couldBeObject: literal)
+	 and: [objectMemory isYoungObject: literal]) ifTrue:
+		[self assert: (objectMemory addressCouldBeObj: literal).
+		 objectMemory markAndTrace: literal]
+]
+
+{ #category : #'garbage collection' }
+CogObjectRepresentationForSpur >> remapObject: objOop [
+	^(objectMemory shouldRemapObj: objOop)
+		ifTrue: [objectMemory remapObj: objOop]
+		ifFalse: [objOop]
+]
+
+{ #category : #'garbage collection' }
+CogObjectRepresentationForSpur >> remapOop: objOop [
+	^(objectMemory shouldRemapOop: objOop)
+		ifTrue: [objectMemory remapObj: objOop]
+		ifFalse: [objOop]
 ]
 
 { #category : #'garbage collection' }
