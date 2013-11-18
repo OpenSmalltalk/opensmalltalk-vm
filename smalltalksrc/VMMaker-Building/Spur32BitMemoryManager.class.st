@@ -424,6 +424,7 @@ Spur32BitMemoryManager >> isIntegerValue: intValue [
 
 { #category : #'header access' }
 Spur32BitMemoryManager >> isMarked: objOop [
+	<api>
 	self flag: #endianness.
 	^((self longAt: objOop + 4) >> self markedBitHalfShift bitAnd: 1) ~= 0
 ]
@@ -445,6 +446,7 @@ Spur32BitMemoryManager >> numFreeLists [
 
 { #category : #'object access' }
 Spur32BitMemoryManager >> numTagBits [
+	<api>
 	^2
 ]
 
@@ -582,6 +584,7 @@ Spur32BitMemoryManager >> setIsRememberedOf: objOop to: aBoolean [
 
 { #category : #'word size' }
 Spur32BitMemoryManager >> shiftForWord [
+	<api>
 	^2
 ]
 
@@ -603,6 +606,7 @@ Spur32BitMemoryManager >> sortedFreeObject: objOop [
 
 { #category : #'word size' }
 Spur32BitMemoryManager >> tagMask [
+	<api>
 	^3
 ]
 

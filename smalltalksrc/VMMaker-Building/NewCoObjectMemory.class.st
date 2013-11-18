@@ -190,7 +190,7 @@ NewCoObjectMemory >> withoutForwardingOn: obj1 and: obj2 sendToCogit: selector [
 
 { #category : #'cog jit support' }
 NewCoObjectMemory >> withoutForwardingOn: obj1 and: obj2 with: aBool sendToCogit: selector [
-	"For the purposes of become: send selector to the cogit with obj1 and obj2 and
+	"For the purposes of become: send selector to the cogit with obj1, obj2 and aBool, and
 	 answer the result. Undo forwarding for the selector, but redo forwarding after since
 	 become:'s restoreHeadersAfter*Become* methods expect to be able to restore."
 	<api>

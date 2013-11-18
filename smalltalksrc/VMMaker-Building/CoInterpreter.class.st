@@ -1911,7 +1911,8 @@ CoInterpreter >> checkOkayFields: oop [
 	(objectMemory checkOkayOop: oop) ifFalse: [ ^false ].
 	(objectMemory checkOopHasOkayClass: oop) ifFalse: [ ^false ].
 	((objectMemory isPointersNonImm: oop) or: [objectMemory isCompiledMethod: oop]) ifFalse: [ ^true ].
-	hasYoung := objectMemory isYoung: (objectMemory fetchClassOfNonImm: oop).
+	hasYoung := objectMemory hasSpurMemoryManagerAPI not
+				  and: [objectMemory isYoungObject: (objectMemory fetchClassOfNonImm: oop)].
 	(objectMemory isCompiledMethod: oop)
 		ifTrue:
 			[i := (self literalCountOf: oop) + LiteralStart - 1]
@@ -4347,8 +4348,10 @@ CoInterpreter >> mapStackPages [
 					[stackPages
 						longAt: theFP + FoxThisContext
 						put: (objectMemory remapObj: (self frameContext: theFP))].
-				 self assert: ((self isMarriedOrWidowedContext: (self frameContext: theFP))
-							and: [(self frameOfMarriedContext: (self frameContext: theFP)) = theFP])].
+				 "forwarding scheme in SqueakV3 obj rep makes this hard to check."
+				 objectMemory hasSpurMemoryManagerAPI ifTrue:
+					[self assert: ((self isMarriedOrWidowedContext: (self frameContext: theFP))
+								and: [(self frameOfMarriedContext: (self frameContext: theFP)) = theFP])]].
 			(self isMachineCodeFrame: theFP) ifFalse:
 				[(objectMemory shouldRemapObj: (self iframeMethod: theFP)) ifTrue:
 					[theIPPtr ~= 0 ifTrue:
