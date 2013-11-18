@@ -75,6 +75,7 @@ CogObjectRepresentationForSqueakV3 >> compactClassFieldMask [
 
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> couldBeObject: oop [
+	"Note this version filters-out compact class indices via the >= nilObj clause"
 	^(objectMemory isNonIntegerObject: oop)
 	  and: [self oop: oop isGreaterThanOrEqualTo: objectMemory nilObject]
 ]
@@ -678,7 +679,7 @@ CogObjectRepresentationForSqueakV3 >> markAndTraceLiteral: literal [
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> markAndTraceLiteralIfYoung: literal [
 	((self couldBeObject: literal)
-	 and: [objectMemory isYoung: literal]) ifTrue:
+	 and: [objectMemory isYoungObject: literal]) ifTrue:
 		[self assert: (objectMemory addressCouldBeObj: literal).
 		 objectMemory markAndTrace: literal]
 ]
@@ -701,7 +702,7 @@ CogObjectRepresentationForSqueakV3 >> remapCacheTag: cacheTag [
 ]
 
 { #category : #'garbage collection' }
-CogObjectRepresentationForSqueakV3 >> remapObj: oop [
+CogObjectRepresentationForSqueakV3 >> remapObject: oop [
 	^objectMemory remap: oop
 ]
 

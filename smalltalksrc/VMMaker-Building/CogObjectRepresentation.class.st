@@ -34,6 +34,11 @@ CogObjectRepresentation class >> typeForSelf [
 	^#implicit
 ]
 
+{ #category : #'garbage collection' }
+CogObjectRepresentation >> allYoungObjectsAgeInFullGC [
+	^self subclassResponsibility
+]
+
 { #category : #'primitive generators' }
 CogObjectRepresentation >> genInnerPrimitiveNew: retNoffset [
 	self subclassResponsibility.
@@ -88,6 +93,16 @@ CogObjectRepresentation >> isImmediate: oop [
 
 { #category : #testing }
 CogObjectRepresentation >> isSmallIntegerTagNonZero [
+	self subclassResponsibility
+]
+
+{ #category : #'garbage collection' }
+CogObjectRepresentation >> markAndTraceLiteral: literal [
+	self subclassResponsibility
+]
+
+{ #category : #'garbage collection' }
+CogObjectRepresentation >> markAndTraceLiteralIfYoung: literal [
 	self subclassResponsibility
 ]
 

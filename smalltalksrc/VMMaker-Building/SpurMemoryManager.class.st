@@ -1782,6 +1782,16 @@ SpurMemoryManager >> baseHeaderSize [
 	^8
 ]
 
+{ #category : #'store check' }
+SpurMemoryManager >> beRootIfOld: oop [ 
+	"If this object is old, mark it as a root (because a new object
+	 may be stored into it)."
+	<api>
+	<inline: false>
+	(self isYoung: oop) ifTrue:"Yes, oop is an old object"
+		[self possibleRootStoreInto: oop]
+]
+
 { #category : #'plugin support' }
 SpurMemoryManager >> become: array1 with: array2 [
 	<api>
@@ -1900,7 +1910,10 @@ SpurMemoryManager >> byteFormatMask [
 { #category : #'object access' }
 SpurMemoryManager >> byteLengthOf: objOop [ 
 	"Answer the number of indexable bytes in the given object.
-	 Does not adjust contexts by stackPointer."
+	 Does not adjust contexts by stackPointer.
+	 This is basically a special copy of lengthOf: for BitBlt. But it is also
+	 whoorishly used for the Cogit."
+	<api>
 	| fmt numBytes |
 	<inline: true>
 	<asmLabel: false>
@@ -2019,6 +2032,7 @@ SpurMemoryManager >> characterTable [
 
 { #category : #'object access' }
 SpurMemoryManager >> characterTag [
+	<api>
 	^2
 ]
 
@@ -2075,7 +2089,7 @@ SpurMemoryManager >> checkHeapIntegrity: excludeUnmarkedNewSpaceObjs [
 	self allHeapEntitiesDo:
 		[:obj| | containsYoung fieldOop classIndex classOop |
 		((self isFreeObject: obj)
-		 or: [(self isYoung: obj) and: [(self isMarked: obj) not and: [excludeUnmarkedNewSpaceObjs]]]) ifFalse:
+		 or: [(self isYoungObject: obj) and: [(self isMarked: obj) not and: [excludeUnmarkedNewSpaceObjs]]]) ifFalse:
 			[containsYoung := false.
 			 (self isRemembered: obj) ifTrue:
 				[numRememberedRootsInHeap := numRememberedRootsInHeap + 1.
@@ -2329,6 +2343,7 @@ SpurMemoryManager >> classArray [
 
 { #category : #'class table' }
 SpurMemoryManager >> classAtIndex: classIndex [
+	<api>
 	| classTablePage |
 	self assert: (classIndex <= self tagMask or: [classIndex >= self arrayClassIndexPun]).
 	classTablePage := self fetchPointer: classIndex >> self classTableMajorIndexShift
@@ -2433,12 +2448,14 @@ SpurMemoryManager >> classIndexFieldWidth [
 
 { #category : #'header format' }
 SpurMemoryManager >> classIndexMask [
+	<api>
 	"22-bit class mask => ~ 4M classes"
 	^16r3fffff
 ]
 
 { #category : #'header access' }
 SpurMemoryManager >> classIndexOf: objOop [
+	<api>
 	^(self longAt: objOop) bitAnd: self classIndexMask
 ]
 
@@ -2505,12 +2522,14 @@ SpurMemoryManager >> classTableIndex: n [
 
 { #category : #'class table' }
 SpurMemoryManager >> classTableMajorIndexShift [
+	<api>
 	"1024 entries per page (2^10); 22 bit classIndex implies 2^12 pages"
 	^10
 ]
 
 { #category : #'class table' }
 SpurMemoryManager >> classTableMinorIndexMask [
+	<api>
 	"1024 entries per page (2^10); 22 bit classIndex implies 2^12 pages"
 	"self basicNew classTableMinorIndexMask"
 	^1 << self classTableMajorIndexShift - 1
@@ -2539,6 +2558,7 @@ SpurMemoryManager >> classTablePageSize [
 
 { #category : #accessing }
 SpurMemoryManager >> classTableRootObj [
+	<api>
 	"For Cogit & bootstrap"
 	^hiddenRootsObj
 ]
@@ -2602,7 +2622,7 @@ SpurMemoryManager >> clone: objOop [
 					ofObject: newObj
 					withValue: oop].
 			((self isRemembered: objOop)
-			 and: [(self isYoung: newObj) not]) ifTrue:
+			 and: [(self isYoungObject: newObj) not]) ifTrue:
 				[scavenger remember: newObj.
 				 self setIsRememberedOf: newObj to: true]]
 		ifFalse:
@@ -2644,6 +2664,8 @@ SpurMemoryManager >> compact [
 
 { #category : #'object access' }
 SpurMemoryManager >> compactClassIndexOf: objOop [
+	<api>
+	<inline: true>
 	^self classIndexOf: objOop
 ]
 
@@ -2976,7 +2998,7 @@ SpurMemoryManager >> eliminateAndFreeForwarders [
 					f := self fetchPointer: i ofObject: o.
 					(self isOopForwarded: f) ifTrue:
 						[f := self followForwarded: f.
-						 self assert: ((self isImmediate: f) or: [self isYoung: f]) not.
+						 self assert: (self isYoung: f) not.
 						 self storePointerUnchecked: i ofObject: o withValue: f]]]].
 	self checkFreeSpace.
 	firstForwarded := lastForwarded := 0.
@@ -3598,6 +3620,7 @@ SpurMemoryManager >> firstSegmentSize: firstSegmentSize [
 
 { #category : #'header formats' }
 SpurMemoryManager >> firstShortFormat [
+	<api>
 	^12
 ]
 
@@ -3621,6 +3644,7 @@ SpurMemoryManager >> firstValidIndexOfIndexableObject: obj withFormat: fmt [
 
 { #category : #'object format' }
 SpurMemoryManager >> fixedFieldsFieldWidth [
+	<api>
 	^16
 ]
 
@@ -3647,6 +3671,7 @@ SpurMemoryManager >> fixedFieldsOfClassFormat: classFormat [
 
 { #category : #'object format' }
 SpurMemoryManager >> fixedFieldsOfClassFormatMask [
+	<api>
 	^1 << self fixedFieldsFieldWidth - 1
 ]
 
@@ -3775,6 +3800,7 @@ SpurMemoryManager >> formatFieldWidthShift [
 
 { #category : #'header format' }
 SpurMemoryManager >> formatMask [
+	<api>
 	"0 = 0 sized objects (UndefinedObject True False et al)
 	 1 = non-indexable objects with inst vars (Point et al)
 	 2 = indexable objects with no inst vars (Array et al)
@@ -3838,6 +3864,7 @@ SpurMemoryManager >> formatOfHeader: header [
 
 { #category : #'header format' }
 SpurMemoryManager >> formatShift [
+	<api>
 	^24
 ]
 
@@ -4188,8 +4215,7 @@ SpurMemoryManager >> hasYoungReferents: objOop [
 	0 to: (self numPointerSlotsOf: objOop) - 1 do:
 		[:i| | oop |
 		oop := self fetchPointer: i ofObject: objOop.
-		((self isNonImmediate: oop)
-		 and: [self isYoung: oop]) ifTrue:
+		(self isYoung: oop) ifTrue:
 			[^true]].
 	^false
 ]
@@ -4210,6 +4236,7 @@ SpurMemoryManager >> hashBitsOf: objOop [
 
 { #category : #'header format' }
 SpurMemoryManager >> headerForSlots: numSlots format: formatField classIndex: classIndex [
+	<api>
 	"The header format in LSB is
 	 MSB:	| 8: numSlots		| (on a byte boundary)
 			| 2 bits				|	(msb,lsb = {isMarked,?})
@@ -4276,6 +4303,7 @@ SpurMemoryManager >> identityHashFieldWidth [
 
 { #category : #'header format' }
 SpurMemoryManager >> identityHashHalfWordMask [
+	<api>
 	^16r3fffff
 ]
 
@@ -4362,14 +4390,14 @@ SpurMemoryManager >> inPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag [
 		self storePointerUnchecked: i
 			ofObject: obj2
 			withValue: temp1.
-		((self isNonImmediate: temp2) and: [self isYoung: temp2]) ifTrue:
+		(self isYoung: temp2) ifTrue:
 			[o1HasYoung := true].
-		((self isNonImmediate: temp1) and: [self isYoung: temp1]) ifTrue:
+		(self isYoung: temp1) ifTrue:
 			[o2HasYoung := true]].
-	(self isYoung: obj1) ifFalse:
+	(self isYoungObject: obj1) ifFalse:
 		[o1HasYoung ifTrue:
 			[self possibleRootStoreInto: obj1]].
-	(self isYoung: obj2) ifFalse:
+	(self isYoungObject: obj2) ifFalse:
 		[o2HasYoung ifTrue:
 			[self possibleRootStoreInto: obj2]]
 ]
@@ -4917,6 +4945,7 @@ SpurMemoryManager >> isForwardedClassTag: classIndex [
 
 { #category : #'class table puns' }
 SpurMemoryManager >> isForwardedObjectClassIndexPun [
+	<api>
 	^8 "Not to be confused with that of any immediate class"
 ]
 
@@ -5050,11 +5079,13 @@ SpurMemoryManager >> isLargeFreeObject: objOop [
 
 { #category : #'header access' }
 SpurMemoryManager >> isMarked: objOop [
+	<api>
 	self subclassResponsibility
 ]
 
 { #category : #'object testing' }
-SpurMemoryManager >> isNonImmediate: oop [ 
+SpurMemoryManager >> isNonImmediate: oop [
+	<api>
 	^(oop bitAnd: self tagMask) = 0
 ]
 
@@ -5124,6 +5155,14 @@ SpurMemoryManager >> isPointersNonImm: objOop [
 SpurMemoryManager >> isPureBitsFormat: format [
 	^format >= self sixtyFourBitIndexableFormat
 	  and: [format < self firstCompiledMethodFormat]
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isReallyYoungObject: obj [
+	<api>
+	"Answer if obj is young. This for compatibility with SqueakV3 where
+	 the GC makes all objects young during full GC.  Spur doesn't do so."
+	^self isYoungObject: obj
 ]
 
 { #category : #'header access' }
@@ -5283,7 +5322,18 @@ SpurMemoryManager >> isWordsOrBytesNonImm: objOop [
 ]
 
 { #category : #'object testing' }
-SpurMemoryManager >> isYoung: objOop [
+SpurMemoryManager >> isYoung: oop [
+	<api>
+	"Answer if oop is young."
+	^(self isNonImmediate: oop)
+	 and: [self oop: oop isLessThan: newSpaceLimit]
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isYoungObject: objOop [
+	<api>
+	"Answer if obj is young. Assume obj is non-immediate."
+	self assert: (self isNonImmediate: objOop).
 	^self oop: objOop isLessThan: newSpaceLimit
 ]
 
@@ -5614,8 +5664,9 @@ SpurMemoryManager >> markAndShouldScan: objOop [
 
 { #category : #'gc - global' }
 SpurMemoryManager >> markAndTrace: objOop [
-	"Mark the argument, and all objects reachable from it, and any remaining objects on the mark stack.
-	 Follow forwarding pointers in the scan."
+	"Mark the argument, and all objects reachable from it, and any remaining objects
+	 on the mark stack. Follow forwarding pointers in the scan."
+	<api>
 	| objToScan numStrongSlots index field |
 	(self markAndShouldScan: objOop) ifFalse:
 		[^self].
@@ -6075,6 +6126,7 @@ SpurMemoryManager >> noUnscannedEphemerons [
 
 { #category : #'header formats' }
 SpurMemoryManager >> nonIndexablePointerFormat [
+	<api>
 	^1
 ]
 
@@ -6124,11 +6176,13 @@ SpurMemoryManager >> numSlotsFullShift [
 
 { #category : #'header format' }
 SpurMemoryManager >> numSlotsHalfShift [
+	<api>
 	^24
 ]
 
 { #category : #'header format' }
 SpurMemoryManager >> numSlotsMask [
+	<api>
 	"8-bit slot count
 		max 64-bit small obj size 254 * 8 =  2032 bytes
 		max 32-bit small obj size 254 * 4 =   1016 bytes"
@@ -6202,6 +6256,7 @@ SpurMemoryManager >> numSurvivorSpaces [
 
 { #category : #'object access' }
 SpurMemoryManager >> numTagBits [
+	<api>
 	^self subclassResponsibility
 ]
 
@@ -6782,6 +6837,7 @@ SpurMemoryManager >> remapObj: objOop [
 	"Scavenge or simply follow objOop.  Answer the new location of objOop.  The
 	 send should have been guarded by a send of shouldRemapOop: or shouldScavengeObj:.
 	 The method is called remapObj: for compatibility with ObjectMemory."
+	<api>
 	<inline: false>
 	| resolvedObj |
 	self assert: (self shouldRemapOop: objOop).
@@ -6799,6 +6855,7 @@ SpurMemoryManager >> remapObj: objOop [
 
 { #category : #'header format' }
 SpurMemoryManager >> rememberedBitShift [
+	<api>
 	"bit 0 of 3-bit field above format (little endian)"
 	^29
 ]
@@ -7156,15 +7213,17 @@ SpurMemoryManager >> shiftForAllocationUnit [
 
 { #category : #'word size' }
 SpurMemoryManager >> shiftForWord [
+	<api>
 	^self subclassResponsibility
 ]
 
 { #category : #'gc - scavenging' }
 SpurMemoryManager >> shouldRemapObj: objOop [
+	<api>
 	"Answer if the obj should be scavenged (or simply followed). The method is called
 	 shouldRemapObj: for compatibility with ObjectMemory."
 	^(self isForwarded: objOop)
-	  or: [self isYoung: objOop]
+	  or: [self isYoungObject: objOop]
 ]
 
 { #category : #'gc - scavenging' }
@@ -7577,7 +7636,7 @@ SpurMemoryManager >> storePointer: fieldIndex ofForwarder: objOop withValue: val
 	self assert: (self isForwarded: objOop).
 	self assert: (self isOopForwarded: valuePointer) not.
 
-	(self isYoung: objOop) ifFalse: "most stores into young objects"
+	(self isYoungObject: objOop) ifFalse: "most stores into young objects"
 		[((self isNonImmediate: valuePointer) and: [self isYoung: valuePointer]) ifTrue:
 			[self possibleRootStoreInto: objOop]].
 
@@ -7624,7 +7683,7 @@ SpurMemoryManager >> storePointer: fieldIndex ofObject: objOop withValue: valueP
 	"Note must check here for stores of young objects into old ones."
 	self assert: (self isForwarded: objOop) not.
 
-	(self isYoung: objOop) ifFalse: "most stores into young objects"
+	(self isYoungObject: objOop) ifFalse: "most stores into young objects"
 		[(self isImmediate: valuePointer) ifFalse:
 			[(self isYoung: valuePointer) ifTrue:
 				[self possibleRootStoreInto: objOop]]].
@@ -7651,6 +7710,7 @@ SpurMemoryManager >> storePointerUnchecked: fieldIndex ofMaybeForwardedObject: o
 
 { #category : #'object access' }
 SpurMemoryManager >> storePointerUnchecked: fieldIndex ofObject: objOop withValue: valuePointer [
+	<api>
 	self assert: (self isForwarded: objOop) not.
 	^self
 		longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
@@ -7751,6 +7811,7 @@ SpurMemoryManager >> swizzleObjStackAt: objStackRootIndex [
 
 { #category : #'word size' }
 SpurMemoryManager >> tagMask [
+	<api>
 	^self subclassResponsibility
 ]
 
