@@ -12,7 +12,6 @@ ADD_EXECUTABLE (squeakvm${scriptsuffix}
   ${cross}/vm/sqNamedPrims.c
   ${cross}/vm/sqVirtualMachine.c
   ${bld}/version.c
-  ${bld}/disabledPlugins.c
 )
 
 ADD_CUSTOM_COMMAND (
@@ -34,7 +33,7 @@ ADD_CUSTOM_COMMAND (
 
 INCLUDE_DIRECTORIES (
   ${bld}
-  ${src}/vm
+# ${src}/vm # files are now copied/generated in ${bld}
   ${unix}/vm
   ${cross}/vm
   ${unix}/plugins/B3DAcceleratorPlugin	# for sqUnixOpenGL.h

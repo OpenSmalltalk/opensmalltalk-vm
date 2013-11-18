@@ -1,5 +1,8 @@
 2013-11-18  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
+	* vm/build.cmake: Remove disabledPlugins.c from list of source
+	files.  Remove ${src}/vm from include directories.
+
 	* cmake/Plugins.cmake: Remove handling of disabled plugins.
 	Create sqNamedPrims.h from plugins_int once configuration is
 	complete.  Copy interp.h from generated source into build dir.
