@@ -1,8 +1,22 @@
 Class {
 	#name : #Spur32BitMMLECoSimulator,
 	#superclass : #Spur32BitCoMemoryManager,
+	#instVars : [
+		'bootstrapping'
+	],
 	#category : #'VMMaker-SpurMemoryManagerSimulation'
 }
+
+{ #category : #accessing }
+Spur32BitMMLECoSimulator >> bootstrapping [
+	^bootstrapping
+]
+
+{ #category : #accessing }
+Spur32BitMMLECoSimulator >> bootstrapping: aBoolean [
+	bootstrapping := aBoolean.
+	segmentManager initForBootstrap
+]
 
 { #category : #'memory access' }
 Spur32BitMMLECoSimulator >> byteAt: byteAddress [
@@ -69,6 +83,12 @@ Spur32BitMMLECoSimulator >> endianness [
 	^#little
 ]
 
+{ #category : #compaction }
+Spur32BitMMLECoSimulator >> exactFitCompact [
+	coInterpreter transcript nextPutAll: 'ef compacting...'; flush.
+	^super exactFitCompact
+]
+
 { #category : #'float primitives' }
 Spur32BitMMLECoSimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
 	aFloat at: 2 put: (self long32At: floatBitsAddress).
@@ -78,8 +98,15 @@ Spur32BitMMLECoSimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
 { #category : #'object access' }
 Spur32BitMMLECoSimulator >> fetchPointer: fieldIndex ofObject: objOop [
 	self assert: (self isForwarded: objOop) not.
-	self assert: (fieldIndex >= 0 and: [fieldIndex < (self numSlotsOf: objOop)]).
+	self assert: (fieldIndex >= 0 and: [fieldIndex < (self numSlotsOfAny: objOop)
+				or: [fieldIndex = 0 "forwarders and free objs"]]).
 	^super fetchPointer: fieldIndex ofObject: objOop
+]
+
+{ #category : #compaction }
+Spur32BitMMLECoSimulator >> firstFitCompact [
+	coInterpreter transcript nextPutAll: 'ff compacting...'; flush.
+	^super firstFitCompact
 ]
 
 { #category : #'object format' }
@@ -117,11 +144,9 @@ Spur32BitMMLECoSimulator >> firstIndexableField: objOop [
 				ifFalse: ["byte objects (including CompiledMethod" #'char *'])
 ]
 
-{ #category : #accessing }
-Spur32BitMMLECoSimulator >> freeStart [
-	(#(Cogit SimpleStackBasedCogit StackToRegisterMappingCogit) includes: thisContext sender class name) ifTrue:
-		[self halt].
-	^super freeStart
+{ #category : #'spur bootstrap' }
+Spur32BitMMLECoSimulator >> freeLists [
+	^freeLists
 ]
 
 { #category : #'gc - global' }
@@ -134,6 +159,15 @@ Spur32BitMMLECoSimulator >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpace [
 Spur32BitMMLECoSimulator >> globalGarbageCollect [
 	self halt.
 	^super globalGarbageCollect
+]
+
+{ #category : #'growing/shrinking memory' }
+Spur32BitMMLECoSimulator >> growOldSpaceByAtLeast: minAmmount [
+	"Attempt to grow memory by at least minAmmount.
+	 Answer the size of the new segment, or nil if the attempt failed.
+	 Override to not grow during the Spur image bootstrap."
+	^bootstrapping ifFalse:
+		[super growOldSpaceByAtLeast: minAmmount]
 ]
 
 { #category : #'memory access' }
@@ -171,9 +205,107 @@ Spur32BitMMLECoSimulator >> heapMapAtWord: address [
 	^heapMap heapMapAtWord: address
 ]
 
+{ #category : #initialization }
+Spur32BitMMLECoSimulator >> initialize [
+	super initialize.
+	bootstrapping := false
+]
+
 { #category : #'memory access' }
 Spur32BitMMLECoSimulator >> intAt: byteAddress put: a32BitValue [
 	^self longAt: byteAddress put: (a32BitValue bitAnd: 16rFFFFFFFF)
+]
+
+{ #category : #'object testing' }
+Spur32BitMMLECoSimulator >> isIntegerObject: oop [
+	"This list records the valid senders of isIntegerObject: as we replace uses of
+	  isIntegerObject: by isImmediate: where appropriate."
+	| sel |
+	sel := thisContext sender method selector.
+	(#(	DoIt
+		DoItIn:
+		on:do: "from the debugger"
+		makeBaseFrameFor:
+		quickFetchInteger:ofObject:
+		frameOfMarriedContext:
+		objCouldBeClassObj:
+		isMarriedOrWidowedContext:
+		shortPrint:
+		bytecodePrimAt
+		bytecodePrimAtPut
+		commonAt:
+		commonAtPut:
+		loadFloatOrIntFrom:
+		positive32BitValueOf:
+		primitiveExternalCall
+		checkedIntegerValueOf:
+		bytecodePrimAtPut
+		commonAtPut:
+		primitiveVMParameter
+		checkIsStillMarriedContext:currentFP:
+		displayBitsOf:Left:Top:Right:Bottom:
+		fetchStackPointerOf:
+		primitiveContextAt
+		primitiveContextAtPut
+		subscript:with:storing:format:
+		printContext:
+		compare31or32Bits:equal:
+		signed64BitValueOf:
+		primDigitMultiply:negative:
+		digitLength:
+		isNegativeIntegerValueOf:
+		magnitude64BitValueOf:
+		primitiveMakePoint
+		primitiveAsCharacter
+		primitiveInputSemaphore
+		baseFrameReturn
+		primitiveExternalCall
+		primDigitCompare:
+		isLiveContext:
+		numPointerSlotsOf:
+		fileValueOf:
+		loadBitBltDestForm
+		fetchIntOrFloat:ofObject:ifNil:
+		fetchIntOrFloat:ofObject:
+		loadBitBltSourceForm
+		loadPoint:from:
+		primDigitAdd:
+		primDigitSubtract:
+		positive64BitValueOf:
+		digitBitLogic:with:opIndex:
+		signed32BitValueOf:
+		isNormalized:
+		primDigitDiv:negative:
+		bytesOrInt:growTo:
+		primitiveNewMethod
+		isCogMethodReference:
+		functionForPrimitiveExternalCall:
+		genSpecialSelectorArithmetic
+		genSpecialSelectorComparison
+		ensureContextHasBytecodePC:
+		instVar:ofContext:
+		ceBaseFrameReturn:
+		inlineCacheTagForInstance:
+		primitiveObjectAtPut
+		commonVariable:at:put:cacheIndex:
+		primDigitBitShiftMagnitude:
+		externalInstVar:ofContext:
+		primitiveGrowMemoryByAtLeast
+		primitiveFileSetPosition) includes: sel) ifFalse:
+		[self halt].
+	^super isIntegerObject: oop
+]
+
+{ #category : #'object testing' }
+Spur32BitMMLECoSimulator >> isNonIntegerObject: oop [
+	"This list records the valid senders of isNonIntegerObject: as we replace uses of
+	  isNonIntegerObject: by isNonImmediate: where appropriate."
+	(#(	on:do: "from the dbeugger"
+		reverseDisplayFrom:to:
+		primitiveObjectAtPut
+		isCogMethodReference:) includes: thisContext sender method selector) ifFalse:
+		[self halt].
+	^super isNonIntegerObject: oop
 ]
 
 { #category : #'memory access' }
@@ -228,15 +360,37 @@ Spur32BitMMLECoSimulator >> longLongAt: byteAddress put: a64BitValue [
 ]
 
 { #category : #'gc - global' }
+Spur32BitMMLECoSimulator >> markAndTrace: objOop [
+	"objOop = 16rB26020 ifTrue: [self halt].
+	objOop = 16rB25FD8 ifTrue: [self halt].
+	objOop = 16rB26010 ifTrue: [self halt]."
+	^super markAndTrace: objOop
+]
+
+{ #category : #'gc - global' }
 Spur32BitMMLECoSimulator >> markObjects [
 	coInterpreter transcript nextPutAll: 'marking...'; flush.
 	^super markObjects
+]
+
+{ #category : #snapshot }
+Spur32BitMMLECoSimulator >> memoryBaseForImageRead [
+	"Answer the address to read the image into.  Override so that when bootstrapping,
+	 the segmentManager's segments are undisturbed in adjustSegmentSwizzlesBy:"
+	^bootstrapping
+		ifTrue: [0] 
+		ifFalse: [super memoryBaseForImageRead]
 ]
 
 { #category : #'gc - global' }
 Spur32BitMMLECoSimulator >> nilUnmarkedWeaklingSlots [
 	coInterpreter transcript nextPutAll: 'nilling...'; flush.
 	^super nilUnmarkedWeaklingSlots
+]
+
+{ #category : #'spur bootstrap' }
+Spur32BitMMLECoSimulator >> numClassTablePages [
+	^numClassTablePages
 ]
 
 { #category : #'debug support' }
@@ -257,6 +411,19 @@ Spur32BitMMLECoSimulator >> scavengingGCTenuringIf: tenuringCriterion [
 	^super scavengingGCTenuringIf: tenuringCriterion
 ]
 
+{ #category : #'header access' }
+Spur32BitMMLECoSimulator >> setIsMarkedOf: objOop to: aBoolean [
+	"objOop = 16rB26020 ifTrue: [self halt]."
+	super setIsMarkedOf: objOop to: aBoolean.
+	"(aBoolean
+	 and: [(self isContextNonImm: objOop)
+	 and: [(coInterpreter
+			checkIsStillMarriedContext: objOop
+			currentFP: coInterpreter framePointer)
+	 and: [(coInterpreter stackPages stackPageFor: (coInterpreter frameOfMarriedContext: objOop)) trace = 0]]]) ifTrue:
+		[self halt]"
+]
+
 { #category : #'memory access' }
 Spur32BitMMLECoSimulator >> shortAt: byteAddress [
     "Return the half-word at byteAddress which must be even."
@@ -272,6 +439,35 @@ Spur32BitMMLECoSimulator >> shortAt: byteAddress [
 Spur32BitMMLECoSimulator >> storeFloatAt: floatBitsAddress from: aFloat [
 	self long32At: floatBitsAddress put: (aFloat at: 2).
 	self long32At: floatBitsAddress+4 put: (aFloat at: 1)
+]
+
+{ #category : #'ad-hoc tests' }
+Spur32BitMMLECoSimulator >> testObjStackDo [
+	| size them seqA seqB seqC rs |
+	self initializeWeaklingStack; emptyObjStack: weaklingStack.
+	self assert: (self topOfObjStack: weaklingStack) isNil.
+	self assert: (self capacityOfObjStack: weaklingStack) >= ObjStackLimit.
+	seqA := (1 to: ObjStackLimit * 5 // 2) collect: [:i| self integerObjectOf: i].
+	seqA do: [:it| self noCheckPush: it onObjStack: weaklingStack].
+	them := Set new.
+	size := self objStack: weaklingStack from: 0 do: [:it| them add: it].
+	self assert: size = seqA size.
+	self assert: (them asSortedCollection asArray = seqA).
+	self assert: (self isValidObjStack: weaklingStack).
+	seqB := (ObjStackLimit * 5 // 2 + 1 to: ObjStackLimit * 10 // 2) collect: [:i| self integerObjectOf: i].
+	self assert: seqA size = seqB size.
+	rs := seqB readStream.
+	them := Set new.
+	size := self objStack: weaklingStack from: 0 do:
+				[:it|
+				them add: it.
+				self noCheckPush: rs next onObjStack: weaklingStack].
+	self assert: size = seqA size.
+	self assert: rs atEnd.
+	self objStack: weaklingStack from: size do:
+		[:it| them add: it].
+	seqC := (seqA, seqB) sort.
+	self assert: them asSortedCollection asArray = seqC
 ]
 
 { #category : #'memory access' }
