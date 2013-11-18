@@ -702,8 +702,7 @@ SpurGenerationScavenger >> processWeaklings [
 { #category : #'store check' }
 SpurGenerationScavenger >> remember: objOop [
 	<inline: false>
-	self assert: ((manager isNonImmediate: objOop)
-				and: [(manager isYoung: objOop) not]).
+	self assert: (manager isYoung: objOop) not.
 	rememberedSetSize < RememberedSetLimit
 		ifTrue:
 			[rememberedSet at: rememberedSetSize put: objOop.
@@ -844,8 +843,7 @@ SpurGenerationScavenger >> scavengeReferentsOf: referrer [
 			["a forwarding pointer could be because of become: or scavenging."
 			 (manager isForwarded: referent) ifTrue:
 				[referent := manager followForwarded: referent].
-			 ((manager isNonImmediate: referent)
-			  and: [manager isYoung: referent])
+			 (manager isYoung: referent)
 				ifTrue: "if target is already in future space forwarding pointer was due to a become:."
 					[(manager isInFutureSpace: referent)
 						ifTrue: [newLocation := referent. foundNewReferent := true]
