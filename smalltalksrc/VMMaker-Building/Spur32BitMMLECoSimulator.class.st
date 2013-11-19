@@ -291,7 +291,8 @@ Spur32BitMMLECoSimulator >> isIntegerObject: oop [
 		primDigitBitShiftMagnitude:
 		externalInstVar:ofContext:
 		primitiveGrowMemoryByAtLeast
-		primitiveFileSetPosition) includes: sel) ifFalse:
+		primitiveFileSetPosition
+		cogMethodDoesntLookKosher:) includes: sel) ifFalse:
 		[self halt].
 	^super isIntegerObject: oop
 ]
@@ -332,7 +333,7 @@ Spur32BitMMLECoSimulator >> longAt: byteAddress [
 { #category : #'memory access' }
 Spur32BitMMLECoSimulator >> longAt: byteAddress put: a32BitValue [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
-	"(byteAddress = 16r1614CB8 and: [a32BitValue = 16rA000035]) ifTrue:
+	"(byteAddress = 16r15FF7A8 and: [a32BitValue = 16r19D09D0]) ifTrue:
 		[self halt]."
 	byteAddress \\ 4 ~= 0 ifTrue: [self unalignedAccessError].
 	^memory at: byteAddress // 4 + 1 put: a32BitValue
