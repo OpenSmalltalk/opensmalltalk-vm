@@ -4197,6 +4197,7 @@ SpurMemoryManager >> growOldSpaceByAtLeast: minAmmount [
 	^(segmentManager addSegmentOfSize: ammount) ifNotNil:
 		[:segInfo|
 		 self assimilateNewSegment: segInfo.
+		 self checkFreeSpace.
 		 segInfo segSize]
 ]
 

@@ -6264,8 +6264,8 @@ Cogit >> mapObjectReferencesInMachineCode: gcMode [
 	<api>
 	"Update all references to objects in machine code."
 	gcMode caseOf: {
-		[GCModeScavenge]	-> [self mapObjectReferencesInMachineCodeForScavenge].
-		[GCModeIncr]			-> [self mapObjectReferencesInMachineCodeForIncrementalGC].
+		[GCModeScavenge]	-> [self mapObjectReferencesInMachineCodeForYoungGC].
+		[GCModeIncr]			-> [self mapObjectReferencesInMachineCodeForYoungGC].
 		[GCModeFull]			-> [self mapObjectReferencesInMachineCodeForFullGC].
 		[GCModeBecome]		-> [self mapObjectReferencesInMachineCodeForBecome] }.
 
@@ -6283,11 +6283,7 @@ Cogit >> mapObjectReferencesInMachineCodeForBecome [
 	| cogMethod hasYoungObj hasYoungObjPtr freedPIC |
 	<var: #cogMethod type: #'CogMethod *'>
 	hasYoungObj := false.
-	hasYoungObjPtr := self cCode: [(self addressOf: hasYoungObj) asInteger]
-							inSmalltalk: [CPluggableAccessor new
-											setObject: nil;
-											atBlock: [:obj :idx| hasYoungObj]
-											atPutBlock: [:obj :idx :val| hasYoungObj := val]].
+	hasYoungObjPtr := (self addressOf: hasYoungObj put: [:val| hasYoungObj := val]) asInteger.
 	codeModified := freedPIC := false.
 	self mapObjectReferencesInGeneratedRuntime.
 	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
@@ -6398,19 +6394,15 @@ Cogit >> mapObjectReferencesInMachineCodeForFullGC [
 ]
 
 { #category : #'garbage collection' }
-Cogit >> mapObjectReferencesInMachineCodeForIncrementalGC [
-	"Update all references to objects in machine code for an incremental gc.
-	 Avoid scanning all code by using the youngReferrers list.  In an incremental
-	 GC a method referring to young may no longer refer to young, but a method
-	 not referring to young cannot and will not refer to young afterwards."
+Cogit >> mapObjectReferencesInMachineCodeForYoungGC [
+	"Update all references to objects in machine code for either a Spur scavenging gc
+	 or a Squeak V3 incremental GC.  Avoid scanning all code by using the youngReferrers
+	 list.  In a young gc a method referring to young may no longer refer to young, but a
+	 method not referring to young cannot and will not refer to young afterwards."
 	| pointer cogMethod hasYoungObj hasYoungObjPtr |
 	<var: #cogMethod type: #'CogMethod *'>
 	hasYoungObj := false.
-	hasYoungObjPtr := self cCode: [(self addressOf: hasYoungObj) asInteger]
-							inSmalltalk: [CPluggableAccessor new
-											setObject: nil;
-											atBlock: [:obj :idx| hasYoungObj]
-											atPutBlock: [:obj :idx :val| hasYoungObj := val]].
+	hasYoungObjPtr := (self addressOf: hasYoungObj put: [:val| hasYoungObj := val]) asInteger.
 	codeModified := false.
 	pointer := methodZone youngReferrers.
 	[pointer < methodZone zoneEnd] whileTrue:
@@ -6443,11 +6435,6 @@ Cogit >> mapObjectReferencesInMachineCodeForIncrementalGC [
 	methodZone pruneYoungReferrers.
 	codeModified ifTrue: "After updating oops in inline caches we need to flush the icache."
 		[processor flushICacheFrom: methodZoneBase to: methodZone limitZony asInteger]
-]
-
-{ #category : #'garbage collection' }
-Cogit >> mapObjectReferencesInMachineCodeForScavenge [
-	self shouldBeImplemented
 ]
 
 { #category : #'simulation only' }
