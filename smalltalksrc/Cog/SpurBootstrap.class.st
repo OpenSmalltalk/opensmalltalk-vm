@@ -1687,6 +1687,11 @@ SpurBootstrap >> wordSizeMask [
 
 { #category : #testing }
 SpurBootstrap >> writeSnapshotOfTransformedImage [
+	self writeSnapshotOfTransformedImageAs: 'spur.image'
+]
+
+{ #category : #testing }
+SpurBootstrap >> writeSnapshotOfTransformedImageAs: imageFileName [
 	"The bootstrapped image typically contains a few big free chunks and one huge free chunk.
 	 Test snapshot writing and loading by turning the largest non-huge chunks into segment bridges
 	 and saving."
@@ -1721,6 +1726,6 @@ SpurBootstrap >> writeSnapshotOfTransformedImage [
 	heap checkFreeSpace.
 	heap runLeakCheckerForFullGC: true.
 	sim bereaveAndNormalizeContextsAndFlushExternalPrimitives.
-	sim imageName: 'spur.image'.
+	sim imageName: imageFileName.
 	sim writeImageFileIO
 ]
