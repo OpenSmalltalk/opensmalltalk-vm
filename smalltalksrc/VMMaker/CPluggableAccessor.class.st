@@ -11,6 +11,11 @@ Class {
 	#category : #'VMMaker-InterpreterSimulation'
 }
 
+{ #category : #coercion }
+CPluggableAccessor >> asInteger [
+	^self
+]
+
 { #category : #accessing }
 CPluggableAccessor >> at: index [
 	^readBlock value: object value: index + offset + 1
