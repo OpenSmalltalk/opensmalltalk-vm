@@ -303,13 +303,13 @@ sqInt sqMemoryExtraBytesLeft(sqInt includingSwap)			{ return uxMemoryExtraBytesL
 
 #endif
 
+#define roundDownToPage(v) ((v)&pageMask)
+#define roundUpToPage(v) (((v)+pageSize-1)&pageMask)
 #if COGVM
-# define roundDownToPageBoundary(v) ((v)&pageMask)
-# define roundUpToPageBoundary(v) (((v)+pageSize-1)&pageMask)
 void
 sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 {
-	unsigned long firstPage = roundDownToPageBoundary(startAddr);
+	unsigned long firstPage = roundDownToPage(startAddr);
 	if (mprotect((void *)firstPage,
 				 endAddr - firstPage + 1,
 				 PROT_READ | PROT_WRITE | PROT_EXEC) < 0)
@@ -319,13 +319,45 @@ sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 void
 sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 {
-	unsigned long firstPage = roundDownToPageBoundary(startAddr);
+	unsigned long firstPage = roundDownToPage(startAddr);
 	if (mprotect((void *)firstPage,
 				 endAddr - firstPage + 1,
 				 PROT_READ | PROT_WRITE) < 0)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE)");
 }
 #endif /* COGVM */
+
+#if SPURVM
+/* Allocate a region of memory of al least size bytes, at or above minAddress.
+ *  If the attempt fails, answer null.  If the attempt succeeds, answer the
+ * start of the region and assign its size through allocatedSizePointer.
+ */
+void *
+sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress, sqInt *allocatedSizePointer)
+{
+	void *alloc;
+	long bytes = roundUpToPage(size);
+
+	if (!pageSize) {
+		pageSize = getpagesize();
+		pageMask = pageSize - 1;
+	}
+	*allocatedSizePointer = bytes;
+	while ((char *)minAddress + bytes > (char *)minAddress) {
+		alloc = mmap((void *)roundUpToPage((unsigned long)minAddress), bytes,
+					PROT_READ | PROT_WRITE, MAP_ANON | MAP_SHARED, -1, 0);
+		if (alloc == MAP_FAILED) {
+			perror("sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto mmap:");
+			return 0;
+		}
+		if (alloc >= minAddress)
+			return alloc;
+		munmap(alloc, bytes);
+		minAddress = (void *)((char *)minAddress + bytes);
+	}
+	return 0;
+}
+#endif /* SPURVM */
 
 
 #if defined(TEST_MEMORY)
