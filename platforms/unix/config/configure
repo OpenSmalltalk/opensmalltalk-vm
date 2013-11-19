@@ -1038,7 +1038,7 @@ Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
   --with-src=dir          generated src directory default=src
-  --with-plugins=dir          generated plugins directory default=src/plugins
+  --with-plugins=dir          generated plugins directory default=${vmmdir}/plugins
   --with-vmmcfg=dir        vm configuration directory containing plugins.int and plugins.ext default=.
   --with-gnu-awk          assume that awk is GNU gawk default=no
   --with-gnu-as           assume that as is the GNU assembler default=no
@@ -1540,12 +1540,12 @@ vmmdir="${topdir}/${vmmsrc}"
 # Check whether --with-plugins or --without-plugins was given.
 if test "${with_plugins+set}" = set; then
   withval="$with_plugins"
-   vmpsrc="${with_plugins}"
+   vmpsrc="${topdir}/${with_plugins}"
 else
-   vmpsrc="src/plugins"
+   vmpsrc="${vmmdir}/plugins"
 fi;
 
-vmpdir="${topdir}/${vmpsrc}"
+vmpdir="${vmpsrc}"
 
 if test ! -d "${topdir}/${vmmsrc}"; then
   if test -d "${topdir}/platforms/unix/${vmmsrc}/vm"; then

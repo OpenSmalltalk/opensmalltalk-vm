@@ -47,11 +47,11 @@ AC_ARG_WITH(src,
 vmmdir="${topdir}/${vmmsrc}"
 
 AC_ARG_WITH(plugins,
-[  --with-plugins=dir          generated plugins directory [default=src/plugins]],
-[ vmpsrc="${with_plugins}"],
-[ vmpsrc="src/plugins"])
+[  --with-plugins=dir          generated plugins directory [default=${vmmdir}/plugins]],
+[ vmpsrc="${topdir}/${with_plugins}"],
+[ vmpsrc="${vmmdir}/plugins"])
 
-vmpdir="${topdir}/${vmpsrc}"
+vmpdir="${vmpsrc}"
 
 if test ! -d "${topdir}/${vmmsrc}"; then
   if test -d "${topdir}/platforms/unix/${vmmsrc}/vm"; then
