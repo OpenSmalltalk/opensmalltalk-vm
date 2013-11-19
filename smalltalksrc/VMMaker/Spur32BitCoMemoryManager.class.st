@@ -25,6 +25,7 @@ Spur32BitCoMemoryManager >> assimilateNewSegment: segInfo [
 	"Update after adding a segment.
 	 Here we make sure the new segment is not executable."
 	<var: #segInfo type: #'SpurSegmentInfo *'>
+	super assimilateNewSegment: segInfo.
 	coInterpreter sqMakeMemoryNotExecutableFrom: segInfo segStart To: segInfo segLimit
 ]
 
@@ -108,7 +109,10 @@ Spur32BitCoMemoryManager >> newSpaceLimitAddress [
 { #category : #'garbage collection' }
 Spur32BitCoMemoryManager >> nullHeaderForMachineCodeMethod [
 	<api>
-	^self firstLongFormat << self formatShift + ClassBitmapCompactIndex
+	<returnTypeC: #sqLong>
+	^(self firstLongFormat << self formatShift)
+	+ (1 << self markedBitFullShift)
+	+ ClassBitmapCompactIndex
 ]
 
 { #category : #'cog jit support' }
