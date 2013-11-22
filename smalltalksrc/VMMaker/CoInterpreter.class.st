@@ -3657,9 +3657,15 @@ CoInterpreter >> initialEnterSmalltalkExecutive [
 
 { #category : #initialization }
 CoInterpreter >> initializeCodeGenerator [
-	cogit
-		initializeCodeZoneFrom: (self cCode: [objectMemory memory] inSmalltalk: [0])
-		upTo: (self cCode: [objectMemory memory] inSmalltalk: [0]) + cogCodeSize
+	objectMemory hasSpurMemoryManagerAPI
+		ifTrue:
+			[cogit
+				initializeCodeZoneFrom: objectMemory newSpaceLimit
+				upTo: objectMemory newSpaceLimit + cogCodeSize]
+		ifFalse:
+			[cogit
+				initializeCodeZoneFrom: (self cCode: [objectMemory memory] inSmalltalk: [Cogit guardPageSize])
+				upTo: (self cCode: [objectMemory memory] inSmalltalk: [Cogit guardPageSize]) + cogCodeSize]
 ]
 
 { #category : #'frame access' }
@@ -3960,7 +3966,7 @@ CoInterpreter >> isCogCompiledCodeCompactionCalledFor [
 CoInterpreter >> isCogMethodReference: methodHeader [
 	<api>
 	self assert: ((objectMemory isIntegerObject: methodHeader)
-				or: [methodHeader asUnsignedInteger < objectMemory startOfMemory
+				 or: [methodHeader asUnsignedInteger < cogit maxCogMethodAddress
 					and: [methodHeader asUnsignedInteger >= cogit minCogMethodAddress]]).
 	^objectMemory isNonIntegerObject: methodHeader
 ]

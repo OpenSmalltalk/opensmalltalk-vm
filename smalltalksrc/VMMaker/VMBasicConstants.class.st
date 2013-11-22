@@ -72,3 +72,8 @@ Class {
 	],
 	#category : #'VMMaker-Interpreter'
 }
+
+{ #category : #accessing }
+VMBasicConstants class >> mostBasicConstantNames [
+	^#(BaseHeaderSize BytesPerWord BytesPerOop)
+]
