@@ -380,8 +380,8 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueakV3 [
 		"StorageManagement Primitives (68-79)"
 		"(68 primitiveObjectAt)"
 		"(69 primitiveObjectAtPut)"
-		(70 genPrimitiveNew			0			objectRepresentationImplementsNew:)
-		(71 genPrimitiveNewWithArg	1			objectRepresentationImplementsNewWithArg:)
+		(70 genPrimitiveNew			0)
+		(71 genPrimitiveNewWithArg	1)
 		"(72 primitiveArrayBecomeOneWay)"		"Blue Book: primitiveBecome"
 		"(73 primitiveInstVarAt)"
 		"(74 primitiveInstVarAtPut)"
@@ -389,7 +389,7 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueakV3 [
 		"(76 primitiveStoreStackp)"					"Blue Book: primitiveAsObject"
 		"(77 primitiveSomeInstance)"
 		"(78 primitiveNextInstance)"
-		(79 genPrimitiveNewMethod	2			objectRepresentationImplementsNewMethod:)
+		(79 genPrimitiveNewMethod	2)
 
 		"Control Primitives (80-89)"
 		"(80 primitiveFail)"							"Blue Book: primitiveBlockCopy"
@@ -2200,24 +2200,33 @@ SimpleStackBasedCogit >> genPrimitiveMultiply [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveNew [
 	| r |
-	(r := objectRepresentation genInnerPrimitiveNew: BytesPerWord) < 0 ifTrue:
+	((r := objectRepresentation genInnerPrimitiveNew: BytesPerWord) < 0
+	 and: [r ~= UnimplementedPrimitive]) ifTrue:
 		[^r].
+	"Call the interpreter primitive either when the machine-code primitive
+	 fails, or if the machine-code primitive is unimplemented."
 	^self compileFallbackToInterpreterPrimitive
 ]
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveNewMethod [
 	| r |
-	(r := objectRepresentation genInnerPrimitiveNewMethod: 2 * BytesPerWord) < 0 ifTrue:
+	((r := objectRepresentation genInnerPrimitiveNewMethod: 2 * BytesPerWord) < 0
+	 and: [r ~= UnimplementedPrimitive]) ifTrue:
 		[^r].
+	"Call the interpreter primitive either when the machine-code primitive
+	 fails, or if the machine-code primitive is unimplemented."
 	^self compileFallbackToInterpreterPrimitive
 ]
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveNewWithArg [
 	| r |
-	(r := objectRepresentation genInnerPrimitiveNewWithArg: BytesPerWord) < 0 ifTrue:
+	((r := objectRepresentation genInnerPrimitiveNewWithArg: BytesPerWord) < 0
+	 and: [r ~= UnimplementedPrimitive]) ifTrue:
 		[^r].
+	"Call the interpreter primitive either when the machine-code primitive
+	 fails, or if the machine-code primitive is unimplemented."
 	^self compileFallbackToInterpreterPrimitive
 ]
 

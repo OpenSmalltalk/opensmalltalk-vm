@@ -2294,16 +2294,22 @@ StackToRegisterMappingCogit >> genPrimitiveMultiply [
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveNew [
 	| r |
-	(r := objectRepresentation genInnerPrimitiveNew: 0) < 0 ifTrue:
+	((r := objectRepresentation genInnerPrimitiveNew: 0) < 0
+	 and: [r ~= UnimplementedPrimitive]) ifTrue:
 		[^r].
+	"Call the interpreter primitive either when the machine-code primitive
+	 fails, or if the machine-code primitive is unimplemented."
 	^self compileFallbackToInterpreterPrimitive
 ]
 
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveNewWithArg [
 	| r |
-	(r := objectRepresentation genInnerPrimitiveNewWithArg: 0) < 0 ifTrue:
+	((r := objectRepresentation genInnerPrimitiveNewWithArg: 0) < 0
+	 and: [r ~= UnimplementedPrimitive]) ifTrue:
 		[^r].
+	"Call the interpreter primitive either when the machine-code primitive
+	 fails, or if the machine-code primitive is unimplemented."
 	^self compileFallbackToInterpreterPrimitive
 ]
 

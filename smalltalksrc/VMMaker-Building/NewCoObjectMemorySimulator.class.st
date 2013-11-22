@@ -90,6 +90,11 @@ NewCoObjectMemorySimulator >> coInterpreter: aCoInterpreter cogit: aCogit [
 	cogit := aCogit
 ]
 
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> cogCodeBase [
+	^0
+]
+
 { #category : #printing }
 NewCoObjectMemorySimulator >> cr [
 	^coInterpreter cr

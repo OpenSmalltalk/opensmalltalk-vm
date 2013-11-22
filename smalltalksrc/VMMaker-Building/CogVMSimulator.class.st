@@ -923,7 +923,7 @@ CogVMSimulator >> fetchByte [
 { #category : #'interpreter access' }
 CogVMSimulator >> fetchPointer: fieldIndex ofObject: oop [
 	"index by word size, and return a pointer as long as the word size"
-	self assert: oop >= objectMemory startOfMemory.
+	self assert: (objectMemory cheapIsInMemory: oop).
 	^objectMemory fetchPointer: fieldIndex ofObject: oop
 ]
 
@@ -1124,6 +1124,13 @@ CogVMSimulator >> handleMNU: selectorIndex InMachineCodeTo: rcvr classForMessage
 CogVMSimulator >> headerStart: oop [
 
 	^ (objectMemory extraHeaderBytes: oop) negated
+]
+
+{ #category : #accessing }
+CogVMSimulator >> heapBase: anObject [
+	"Set the value of heapBase; used by the Spur CoSimulator to reposition cog code between newSpace and oldSpace."
+
+	^heapBase := anObject
 ]
 
 { #category : #'debug support' }
@@ -2328,7 +2335,8 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 	primTraceLogSize := primTraceLog size * BytesPerWord.
 	"allocate interpreter memory. This list is in address order, low to high.
 	 In the actual VM the stack zone exists on the C stack."
-	heapBase := (cogCodeSize
+	heapBase := (Cogit guardPageSize
+				+ cogCodeSize
 				+ stackZoneSize
 				+ methodCacheSize
 				+ primTraceLogSize
@@ -2354,8 +2362,8 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 	count ~= heapSize ifTrue: [self halt].
 	]
 		ensure: [f close].
-	self moveMethodCacheToMemoryAt: cogCodeSize + stackZoneSize.
-	self movePrimTraceLogToMemoryAt: cogCodeSize + stackZoneSize + methodCacheSize.
+	self moveMethodCacheToMemoryAt: objectMemory cogCodeBase + cogCodeSize + stackZoneSize.
+	self movePrimTraceLogToMemoryAt: objectMemory cogCodeBase + cogCodeSize + stackZoneSize + methodCacheSize.
 
 	self ensureImageFormatIsUpToDate: swapBytes.
 
@@ -3339,7 +3347,7 @@ CogVMSimulator >> stackPointer [
 { #category : #'stack pages' }
 CogVMSimulator >> stackZoneBase [
 	"In the simulator the stack zone starts immediately after the code zone."
-	^cogCodeSize
+	^objectMemory cogCodeBase + cogCodeSize
 ]
 
 { #category : #'simulation only' }

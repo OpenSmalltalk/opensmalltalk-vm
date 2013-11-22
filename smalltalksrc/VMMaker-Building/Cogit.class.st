@@ -276,6 +276,7 @@ Class {
 		'NumSendTrampolines',
 		'NumTrampolines',
 		'ProcessorClass',
+		'UnimplementedPrimitive',
 		'YoungSelectorInPIC'
 	],
 	#pools : [
@@ -632,6 +633,11 @@ Cogit class >> generatorTableFrom: anArray [
 	^generatorTable
 ]
 
+{ #category : #accessing }
+Cogit class >> guardPageSize [
+	^1024
+]
+
 { #category : #translation }
 Cogit class >> implicitReturnTypeFor: aSelector [
 	"Answer the return type for methods that don't have an explicit return."
@@ -757,7 +763,8 @@ Cogit class >> initializeErrorCodes [
 	MethodTooBig := -4.
 	YoungSelectorInPIC := -5.
 	EncounteredUnknownBytecode := -6.
-	MaxNegativeErrorCode := EncounteredUnknownBytecode.
+	UnimplementedPrimitive := -7.
+	MaxNegativeErrorCode := UnimplementedPrimitive.
 	"Internal errors returned by generator routines to other generator routines"
 	BadRegisterSet := 1
 ]
@@ -5638,7 +5645,7 @@ Cogit >> handleSimulationTrap: aProcessorSimulationTrap [
 Cogit >> handleWriteSimulationTrap: aProcessorSimulationTrap [ 
 	<doNotGenerate>
 	| variableValue |
-	aProcessorSimulationTrap address < coInterpreter cogCodeSize ifTrue:
+	(aProcessorSimulationTrap address between: codeBase and: methodZone zoneEnd) ifTrue:
 		[self error: 'attempt to write to code space'].
 	variableValue := processor perform: aProcessorSimulationTrap registerAccessor.
 	(simulatedVariableSetters at: aProcessorSimulationTrap address) value: variableValue.
@@ -5719,9 +5726,7 @@ Cogit >> initializeCodeZoneFrom: startAddress upTo: endAddress [
 	<api>
 	self cCode: [self sqMakeMemoryExecutableFrom: startAddress To: endAddress]
 		inSmalltalk: [self initializeProcessor].
-	codeBase := methodZoneBase := (self
-											cCode: [startAddress]
-											inSmalltalk: [startAddress + guardPageSize]).
+	codeBase := methodZoneBase := startAddress.
 	minValidCallAddress := (codeBase min: coInterpreter interpretAddress)
 								min: coInterpreter primitiveFailAddress.
 	self initializeBackend.
@@ -5731,6 +5736,7 @@ Cogit >> initializeCodeZoneFrom: startAddress upTo: endAddress [
 	ceGetSP := self cCoerceSimple: self genGetLeafCallStackPointer to: #'unsigned long (*)(void)'.
 	self generateStackPointerCapture.
 	self generateTrampolines.
+	self cCode: '' inSmalltalk: [methodZone zoneEnd: endAddress]. "so that simulator works"
 	self checkPrimitiveTableEnablers.
 	methodZone manageFrom: methodZoneBase to: endAddress.
 	self computeEntryOffsets.
@@ -5755,7 +5761,7 @@ Cogit >> initializeFixupAt: targetIndex [
 Cogit >> initializeProcessor [
 	"Initialize the simulation processor, arranging that its initial stack is somewhere on the rump C stack."
 	<doNotGenerate>
-	guardPageSize := 1024.
+	guardPageSize := self class guardPageSize.
 	lastNInstructions := OrderedCollection new.
 	"This is for testing.  On many OS's the stack must remain aligned;
 	 e.g. IA32 using SSE requires 16 byte alignment."
@@ -7036,21 +7042,6 @@ Cogit >> objectRepresentation [
 	^objectRepresentation
 ]
 
-{ #category : #initialization }
-Cogit >> objectRepresentationImplementsNew: primIndex [
-	^objectRepresentation implementsNew
-]
-
-{ #category : #initialization }
-Cogit >> objectRepresentationImplementsNewMethod: primIndex [
-	^objectRepresentation implementsNewMethod
-]
-
-{ #category : #initialization }
-Cogit >> objectRepresentationImplementsNewWithArg: primIndex [
-	^objectRepresentation implementsNewWithArg
-]
-
 { #category : #'simulation only' }
 Cogit >> offset: aClass of: fieldSymbol [
 	"This is implemented by stddef's offsetof macro."
@@ -7447,6 +7438,14 @@ Cogit >> recordPrimTraceFunc [
 	"This one for C support code."
 	<api>
 	^self recordPrimTrace
+]
+
+{ #category : #'simulation only' }
+Cogit >> recordProcessing [
+	self recordRegisters.
+	printRegisters ifTrue:
+		[processor printRegistersOn: coInterpreter transcript].
+	self recordLastInstruction
 ]
 
 { #category : #'simulation only' }
@@ -8059,14 +8058,7 @@ Cogit >> simulateCogCodeAt: address [ "<Integer>"
 	processor pc: address.
 	[[[singleStep ifTrue:
 		[[processor sp < stackZoneBase ifTrue: [self halt].
-		  self recordRegisters.
-		  printRegisters ifTrue:
-			[processor printRegistersOn: coInterpreter transcript].
-		  self recordLastInstruction.
-		  printInstructions ifTrue:
-			[coInterpreter transcript nextPutAll: lastNInstructions last; cr.
-			 printRegisters ifTrue: [coInterpreter transcript cr].
-			 coInterpreter transcript flush].
+		  self recordProcessing.
 		  (breakPC isInteger
 			ifTrue:
 				[processor pc = breakPC
@@ -8091,11 +8083,13 @@ Cogit >> simulateCogCodeAt: address [ "<Integer>"
 		ifTrue: [processor
 					singleStepIn: coInterpreter memory
 					minimumAddress: guardPageSize
-					readOnlyBelow: coInterpreter cogCodeSize]
+					executableAndReadOnlyFrom: codeBase
+					to: methodZone zoneEnd]
 		ifFalse: [processor
 					runInMemory: coInterpreter memory
 					minimumAddress: guardPageSize
-					readOnlyBelow: coInterpreter cogCodeSize].
+					executableAndReadOnlyFrom: codeBase
+					to: methodZone zoneEnd].
 	   ((printRegisters or: [printInstructions]) and: [clickConfirm]) ifTrue:
 	 	[(self confirm: 'continue?') ifFalse:
 			[self halt]].
@@ -8148,22 +8142,23 @@ Cogit >> simulateLeafCallOf: someFunction [
 		memory: coInterpreter memory.
 	spOnEntry := processor sp.
 	self recordInstruction: {'(simulated call of '. someFunction. ')'}.
-	[[processor pc between: 0 and: coInterpreter cogCodeSize] whileTrue:
+	[[processor pc between: codeBase and: methodZone zoneEnd] whileTrue:
 		[singleStep
-			ifTrue: [self recordLastInstruction.
-					self recordRegisters.
+			ifTrue: [self recordProcessing.
 					processor
 						singleStepIn: coInterpreter memory
 						minimumAddress: guardPageSize
-						readOnlyBelow: coInterpreter cogCodeSize]
+						executableAndReadOnlyFrom: codeBase
+						to: methodZone zoneEnd]
 			ifFalse: [processor
 						runInMemory: coInterpreter memory
 						minimumAddress: guardPageSize
-						readOnlyBelow: coInterpreter cogCodeSize]]]
+						executableAndReadOnlyFrom: codeBase
+						to: methodZone zoneEnd]]]
 		on: ProcessorSimulationTrap
 		do: [:ex| | retpc |
 			"If the ip is out of bounds the return has already occurred."
-			((processor pc between: 0 and: coInterpreter cogCodeSize)
+			((processor pc between: codeBase and: methodZone zoneEnd)
 			 and: [processor sp <= spOnEntry]) ifTrue:
 				[retpc := processor leafRetpcIn: coInterpreter memory.
 				 self assert: retpc = 16rBADF00D5.
@@ -8472,6 +8467,11 @@ Cogit >> tryLockVMOwner [
 		 already held.  Anything else (in fact -1) implies we hold the lock."
 	<cmacro: '() (ceTryLockVMOwner() != 0)'>
 	^(self simulateLeafCallOf: ceTryLockVMOwner) ~= 0
+]
+
+{ #category : #accessing }
+Cogit >> unimplementedPrimitive [
+	^UnimplementedPrimitive
 ]
 
 { #category : #'bytecode generators' }
