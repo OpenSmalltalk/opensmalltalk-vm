@@ -124,7 +124,7 @@ GdbARMAlien >> fp: aNumber [
 ]
 
 { #category : #'error handling' }
-GdbARMAlien >> handleCallFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+GdbARMAlien >> handleCallFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Convert an execution primitive failure for a call into a ProcessorSimulationTrap signal."
 	|  relativeJump callAddress |
 	((memoryArray byteAt: pc + 4) bitAnd: 16rF) = 16rB "BL opcode"
@@ -150,13 +150,13 @@ GdbARMAlien >> handleCallFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|Byte
 ]
 
 { #category : #'error handling' }
-GdbARMAlien >> handleExecutionPrimitiveFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+GdbARMAlien >> handleExecutionPrimitiveFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Handle an execution primitive failure for an unhandled opcode."
 	^self reportPrimitiveFailure
 ]
 
 { #category : #'error handling' }
-GdbARMAlien >> handleExecutionPrimitiveFailureIn: memoryArray "<Bitmap|ByteArray>" minimumAddress: minimumAddress "<Integer>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+GdbARMAlien >> handleExecutionPrimitiveFailureIn: memoryArray "<Bitmap|ByteArray>" minimumAddress: minimumAddress [ "<Integer>"
 	"Handle an execution primitive failure.  Convert out-of-range call and absolute
 	 memory read into register instructions into ProcessorSimulationTrap signals."
 	"self printRegistersOn: Transcript"
@@ -164,26 +164,26 @@ GdbARMAlien >> handleExecutionPrimitiveFailureIn: memoryArray "<Bitmap|ByteArray
 	((pc := self pc) between: minimumAddress and: memoryArray byteSize - 1) ifTrue:
 		[(self instructionTypeAt: pc in: memoryArray)
 			caseOf: {
-				[#Call] 			-> [^self handleCallFailureAt: pc in: memoryArray readOnlyBelow: minimumWritableAddress].
-				[#Jump] 		-> [^self handleJmpFailureAt: pc in: memoryArray readOnlyBelow: minimumWritableAddress].
-				[#MoveAwR]	-> [^self handleMoveAwRFailureAt: pc in: memoryArray readOnlyBelow: minimumWritableAddress].
-				[#MoveMbrR]	-> [^self handleMoveMbrRFailureAt: pc in: memoryArray readOnlyBelow: minimumWritableAddress].
-				[#MoveRAw]	-> [^self handleMoveRAwFailureAt: pc in: memoryArray readOnlyBelow: minimumWritableAddress].
-				[#MoveRMbr]	-> [^self handleMoveRMbrFailureAt: pc in: memoryArray readOnlyBelow: minimumWritableAddress].
-				[#Ret]			-> [^self handleRetFailureAt: pc in: memoryArray readOnlyBelow: minimumWritableAddress].} 
-			otherwise: [^self handleExecutionPrimitiveFailureAt: pc in: memoryArray readOnlyBelow: minimumWritableAddress]].
+				[#Call] 			-> [^self handleCallFailureAt: pc in: memoryArray].
+				[#Jump] 		-> [^self handleJmpFailureAt: pc in: memoryArray].
+				[#MoveAwR]	-> [^self handleMoveAwRFailureAt: pc in: memoryArray].
+				[#MoveMbrR]	-> [^self handleMoveMbrRFailureAt: pc in: memoryArray].
+				[#MoveRAw]	-> [^self handleMoveRAwFailureAt: pc in: memoryArray].
+				[#MoveRMbr]	-> [^self handleMoveRMbrFailureAt: pc in: memoryArray].
+				[#Ret]			-> [^self handleRetFailureAt: pc in: memoryArray].} 
+			otherwise: [^self handleExecutionPrimitiveFailureAt: pc in: memoryArray]].
 	((pc := self lr - 4) between: minimumAddress and: memoryArray byteSize - 1) ifTrue:
 		[(self instructionTypeAt: pc in: memoryArray)
 			caseOf: {
-				[#Call] 		-> [^self handleCallFailureAt: pc in: memoryArray readOnlyBelow: minimumWritableAddress].
-				[#Jump] 	-> [^self handleJmpFailureAt: pc in: memoryArray readOnlyBelow: minimumWritableAddress].
-				[#Ret]		-> [^self handleRetFailureAt: pc in: memoryArray readOnlyBelow: minimumWritableAddress].} 
-			otherwise: [^self handleExecutionPrimitiveFailureAt: pc in: memoryArray readOnlyBelow: minimumWritableAddress]].
+				[#Call] 		-> [^self handleCallFailureAt: pc in: memoryArray].
+				[#Jump] 	-> [^self handleJmpFailureAt: pc in: memoryArray].
+				[#Ret]		-> [^self handleRetFailureAt: pc in: memoryArray].} 
+			otherwise: [^self handleExecutionPrimitiveFailureAt: pc in: memoryArray]].
 	^self reportPrimitiveFailure
 ]
 
 { #category : #'error handling' }
-GdbARMAlien >> handleJmpFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+GdbARMAlien >> handleJmpFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Convert an execution primitive failure for a jmp into a ProcessorSimulationTrap signal."
 	|  relativeJump |
 	self halt.
@@ -197,7 +197,7 @@ GdbARMAlien >> handleJmpFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteA
 ]
 
 { #category : #'error handling' }
-GdbARMAlien >> handleMoveAwRFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+GdbARMAlien >> handleMoveAwRFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Convert an execution primitive failure for a register load from an Address into a ProcessorSimulationTrap signal."
 	((memoryArray byteAt: pc + 4) = 16rE5  "test for E593 as the most significant two bytes"
 		and: [(memoryArray byteAt: pc + 3) = (16r90 + (CogARMCompiler classPool at: #RISCTempReg))])
@@ -217,7 +217,7 @@ GdbARMAlien >> handleMoveAwRFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|B
 ]
 
 { #category : #'error handling' }
-GdbARMAlien >> handleMoveMbrRFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+GdbARMAlien >> handleMoveMbrRFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Convert an execution primitive failure for a byte register load into a ProcessorSimulationTrap signal."
 	"MoveMbrR"
 	| modrmByte |
@@ -238,7 +238,7 @@ GdbARMAlien >> handleMoveMbrRFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|
 ]
 
 { #category : #'error handling' }
-GdbARMAlien >> handleMoveRAwFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+GdbARMAlien >> handleMoveRAwFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Convert an execution primitive failure for a register write into Memory at a predefined address into a ProcessorSimulationTrap signal."
 	^((memoryArray byteAt: pc + 4) = 16rE5 
 		and: [(memoryArray byteAt: pc + 3) = (16r80 + (CogARMCompiler classPool at: #RISCTempReg))])
@@ -258,7 +258,7 @@ GdbARMAlien >> handleMoveRAwFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|B
 ]
 
 { #category : #'error handling' }
-GdbARMAlien >> handleMoveRMbrFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+GdbARMAlien >> handleMoveRMbrFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 		"Convert an execution primitive failure for a byte register write into a ProcessorSimulationTrap signal."
 	"MoveRMbr"
 	| modrmByte |
@@ -279,7 +279,7 @@ GdbARMAlien >> handleMoveRMbrFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|
 ]
 
 { #category : #'error handling' }
-GdbARMAlien >> handleRetFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+GdbARMAlien >> handleRetFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Convert an execution primitive failure for a ret into a ProcessorSimulationTrap signal."
 	self halt.
 	^(ProcessorSimulationTrap
@@ -420,6 +420,23 @@ GdbARMAlien >> primitiveResetCPU [
 ]
 
 { #category : #primitives }
+GdbARMAlien >> primitiveRunInMemory: memoryArray "<Bitmap|ByteArray>"
+	minimumAddress: minimumAddress "<Integer>"
+		executableAndReadOnlyFrom: minExecAndReadOnlyAddress "<Integer>"
+			to: maxExecAndReadOnlyAddress [ "<Integer>"
+	"Run the receiver using the argument as the store.  Origin the argument at 0. i.e. the first byte of the
+	 memoryArray is address 0.  Make addresses below minimumAddress illegal.  Convert out-of-range
+	 calls, jumps and memory read/writes into ProcessorSimulationTrap signals."
+	<primitive: 'primitiveRunInMemoryMinimumAddressERFromTo' module: 'GdbARMPlugin' error: ec>
+	^ec == #'inappropriate operation'
+		ifTrue: [self handleExecutionPrimitiveFailureIn: memoryArray
+					minimumAddress: minimumAddress]
+		ifFalse: [self reportPrimitiveFailure]
+
+	"self printRegistersOn: Transcript"
+]
+
+{ #category : #primitives }
 GdbARMAlien >> primitiveRunInMemory: memoryArray "<Bitmap|ByteArray>" minimumAddress: minimumAddress "<Integer>" maximumAddress: maximimAddress "<Integer>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
 	"Run the receiver using the argument as the store.  Origin the argument at 0. i.e. the first byte of the
 	 memoryArray is address 0.  Make addresses below minimumAddress illegal.  Convert out-of-range
@@ -427,8 +444,7 @@ GdbARMAlien >> primitiveRunInMemory: memoryArray "<Bitmap|ByteArray>" minimumAdd
 	<primitive: 'primitiveRunInMemoryMinAddressMaxAddressReadWrite' module: 'GdbARMPlugin' error: ec>
 	^ec == #'inappropriate operation'
 		ifTrue: [self handleExecutionPrimitiveFailureIn: memoryArray
-					minimumAddress: minimumAddress
-					readOnlyBelow: minimumWritableAddress]
+					minimumAddress: minimumAddress]
 		ifFalse: [self reportPrimitiveFailure]
 
 	"self printRegistersOn: Transcript"
@@ -442,8 +458,24 @@ GdbARMAlien >> primitiveRunInMemory: memoryArray "<Bitmap|ByteArray>" minimumAdd
 	<primitive: 'primitiveRunInMemoryMinimumAddressReadWrite' module: 'GdbARMPlugin' error: ec>
 	^ec == #'inappropriate operation'
 		ifTrue: [self handleExecutionPrimitiveFailureIn: memoryArray
-					minimumAddress: minimumAddress
-					readOnlyBelow: minimumWritableAddress]
+					minimumAddress: minimumAddress]
+		ifFalse: [self reportPrimitiveFailure]
+
+	"self printRegistersOn: Transcript"
+]
+
+{ #category : #primitives }
+GdbARMAlien >> primitiveSingleStepInMemory: memoryArray "<Bitmap|ByteArray>"
+	minimumAddress: minimumAddress "<Integer>"
+		executableAndReadOnlyFrom: minExecAndReadOnlyAddress "<Integer>"
+			to: maxExecAndReadOnlyAddress [ "<Integer>"
+	"Single-step the receiver using the argument as the store.  Origin the argument at 0. i.e. the first byte of the
+	 memoryArray is address 0.  Make addresses below minimumAddress illegal.  Convert out-of-range
+	 calls, jumps and memory read/writes into ProcessorSimulationTrap signals."
+	<primitive: 'primitiveSingleStepInMemoryMinimumAddressERFromTo' module: 'GdbARMPlugin' error: ec>
+	^ec == #'inappropriate operation'
+		ifTrue: [self handleExecutionPrimitiveFailureIn: memoryArray
+					minimumAddress: minimumAddress]
 		ifFalse: [self reportPrimitiveFailure]
 
 	"self printRegistersOn: Transcript"
@@ -457,8 +489,7 @@ GdbARMAlien >> primitiveSingleStepInMemory: memoryArray "<Bitmap|ByteArray>" min
 	<primitive: 'primitiveSingleStepInMemoryMinAddressMaxAddressReadWrite' module: 'GdbARMPlugin' error: ec>
 	^ec == #'inappropriate operation'
 		ifTrue: [self handleExecutionPrimitiveFailureIn: memoryArray
-					minimumAddress: minimumAddress
-					readOnlyBelow: minimumWritableAddress]
+					minimumAddress: minimumAddress]
 		ifFalse: [self reportPrimitiveFailure]
 ]
 
@@ -470,8 +501,7 @@ GdbARMAlien >> primitiveSingleStepInMemory: memoryArray "<Bitmap|ByteArray>" min
 	<primitive: 'primitiveSingleStepInMemoryMinimumAddressReadWrite' module: 'GdbARMPlugin' error: ec>
 	^ec == #'inappropriate operation'
 		ifTrue: [self handleExecutionPrimitiveFailureIn: memoryArray
-					minimumAddress: minimumAddress
-					readOnlyBelow: minimumWritableAddress]
+					minimumAddress: minimumAddress]
 		ifFalse: [self reportPrimitiveFailure]
 ]
 

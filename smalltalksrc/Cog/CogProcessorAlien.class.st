@@ -187,6 +187,17 @@ CogProcessorAlien >> runInMemory: aMemory [
 ]
 
 { #category : #execution }
+CogProcessorAlien >> runInMemory: aMemory minimumAddress: minimumAddress executableAndReadOnlyFrom: minExecAndReadOnlyAddress to: maxExecAndReadOnlyAddress [
+	| result |
+	result := self primitiveRunInMemory: aMemory
+				minimumAddress: minimumAddress
+				executableAndReadOnlyFrom: minExecAndReadOnlyAddress
+				to: maxExecAndReadOnlyAddress.
+	result ~~ self ifTrue:
+		[self error: 'eek!']
+]
+
+{ #category : #execution }
 CogProcessorAlien >> runInMemory: aMemory minimumAddress: minimumAddress readOnlyBelow: minimumWritableAddress [
 	| result |
 	result := self primitiveRunInMemory: aMemory
@@ -226,6 +237,17 @@ CogProcessorAlien >> singleStepIn: aMemory minimumAddress: minimumAddress readOn
 CogProcessorAlien >> singleStepIn: aMemory readExecuteOnlyBelow: minWriteMaxExecAddr [
 	| result |
 	result := self primitiveSingleStepInMemory: aMemory minimumAddress: 0 readOnlyBelow: minWriteMaxExecAddr.
+	result ~~ self ifTrue:
+		[self error: 'eek!']
+]
+
+{ #category : #execution }
+CogProcessorAlien >> singleStepInMemory: aMemory minimumAddress: minimumAddress executableAndReadOnlyFrom: minExecAndReadOnlyAddress to: maxExecAndReadOnlyAddress [
+	| result |
+	result := self primitiveSingleStepInMemory: aMemory
+				minimumAddress: minimumAddress
+				executableAndReadOnlyFrom: minExecAndReadOnlyAddress
+				to: maxExecAndReadOnlyAddress.
 	result ~~ self ifTrue:
 		[self error: 'eek!']
 ]
