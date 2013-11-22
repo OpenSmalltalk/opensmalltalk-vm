@@ -150,6 +150,31 @@ GdbARMPlugin >> primitiveResetCPU [
 ]
 
 { #category : #primitives }
+GdbARMPlugin >> primitiveRunInMemory: memory "<Bitmap|ByteArray|WordArray>" minimumAddress: minAddress "<Integer>" executableAndReadOnlyFrom: minExecAndReadOnlyAddress "<Integer>" to: maxExecAndReadOnlyAddress [ "<Integer>"
+	"Run the cpu using the first argument as the memory and the following arguments defining valid addresses, running until it halts or hits an exception."
+	| cpuAlien cpu maybeErr |
+	<var: #cpu type: #'void *'>
+	cpuAlien := self primitive: #primitiveRunInMemoryMinimumAddressERFromTo
+					parameters: #(WordsOrBytes Unsigned Unsigned Unsigned)
+					receiver: #Oop.
+	(cpu := self startOfData: cpuAlien) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	prevInterruptCheckChain := interpreterProxy setInterruptCheckChain: #forceStopOnInterrupt asSymbol.
+	prevInterruptCheckChain = #forceStopOnInterrupt asSymbol ifTrue:
+		[prevInterruptCheckChain = 0].
+	maybeErr := self runCPU: cpu
+					In: memory
+					Size: (interpreterProxy byteSizeOf: memory cPtrAsOop)
+					MinAddress: minAddress
+					EROFrom: minExecAndReadOnlyAddress
+					To: maxExecAndReadOnlyAddress.
+	interpreterProxy setInterruptCheckChain: prevInterruptCheckChain.
+	maybeErr ~= 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrInappropriate].
+	^cpuAlien
+]
+
+{ #category : #primitives }
 GdbARMPlugin >> primitiveRunInMemory: memory "<Bitmap|ByteArray|WordArray>" minimumAddress: minAddress "<Integer>" maximumAddress: maxAddress "<Integer>" readOnlyBelow: minWriteMaxExecAddress [ "<Integer>"
 	"Run the cpu using the first argument as the memory and the following arguments defining valid addresses, running until it halts or hits an exception."
 	| cpuAlien cpu memorySize maybeErr |
@@ -199,8 +224,30 @@ GdbARMPlugin >> primitiveRunInMemory: memory "<Bitmap|ByteArray|WordArray>" mini
 ]
 
 { #category : #primitives }
+GdbARMPlugin >> primitiveSingleStepInMemory: memory "<Bitmap|ByteArray|WordArray>" minimumAddress: minAddress "<Integer>" executableAndReadOnlyFrom: minExecAndReadOnlyAddress "<Integer>" to: maxExecAndReadOnlyAddress [ "<Integer>"
+	"Single-step the cpu using the first argument as the memory and the following arguments defining valid addresses, running until it halts or hits an exception."
+	| cpuAlien cpu maybeErr |
+	<var: #cpu type: #'void *'>
+	cpuAlien := self primitive: #primitiveSingleStepInMemoryMinimumAddressERFromTo
+					parameters: #(WordsOrBytes Unsigned Unsigned Unsigned)
+					receiver: #Oop.
+	(cpu := self startOfData: cpuAlien) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	maybeErr := self singleStepCPU: cpu
+					In: memory
+					Size: (interpreterProxy byteSizeOf: memory cPtrAsOop)
+					MinAddress: minAddress
+					EROFrom: minExecAndReadOnlyAddress
+					To: maxExecAndReadOnlyAddress.
+	interpreterProxy setInterruptCheckChain: prevInterruptCheckChain.
+	maybeErr ~= 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrInappropriate].
+	^cpuAlien
+]
+
+{ #category : #primitives }
 GdbARMPlugin >> primitiveSingleStepInMemory: memory "<Bitmap|ByteArray|WordArray>" minimumAddress: minAddress "<Integer>" maximumAddress: maxAddress "<Integer>" readOnlyBelow: minWriteMaxExecAddress [ "<Integer>"
-	"Single-step the cpu using the first argument as the memory and the following arguments defining valid addresses."
+	"Single-step the cpu using the first argument as the memory and the following arguments defining valid addresses, running until it halts or hits an exception."
 	| cpuAlien cpu memorySize maybeErr |
 	<var: #cpu type: #'void *'>
 	cpuAlien := self primitive: #primitiveSingleStepInMemoryMinAddressMaxAddressReadWrite
@@ -208,12 +255,16 @@ GdbARMPlugin >> primitiveSingleStepInMemory: memory "<Bitmap|ByteArray|WordArray
 					receiver: #Oop.
 	(cpu := self startOfData: cpuAlien) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	prevInterruptCheckChain := interpreterProxy setInterruptCheckChain: #forceStopOnInterrupt asSymbol.
+	prevInterruptCheckChain = #forceStopOnInterrupt asSymbol ifTrue:
+		[prevInterruptCheckChain = 0].
 	memorySize := interpreterProxy byteSizeOf: memory cPtrAsOop.
 	maybeErr := self singleStepCPU: cpu
 					In: memory
 					Size: (memorySize min: maxAddress)
 					MinAddressRead: minAddress
 					Write: minWriteMaxExecAddress.
+	interpreterProxy setInterruptCheckChain: prevInterruptCheckChain.
 	maybeErr ~= 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrInappropriate].
 	^cpuAlien
