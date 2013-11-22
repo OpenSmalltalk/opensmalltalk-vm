@@ -41,19 +41,20 @@ CogObjectRepresentation >> allYoungObjectsAgeInFullGC [
 
 { #category : #'primitive generators' }
 CogObjectRepresentation >> genInnerPrimitiveNew: retNoffset [
-	self subclassResponsibility.
-	^0
+	"subclasses override if they can"
+	^cogit unimplementedPrimitive
 ]
 
 { #category : #'primitive generators' }
 CogObjectRepresentation >> genInnerPrimitiveNewMethod: retNoffset [
-	self subclassResponsibility.
-	^0
+	"subclasses override if they can"
+	^cogit unimplementedPrimitive
 ]
 
 { #category : #'primitive generators' }
 CogObjectRepresentation >> genInnerPrimitiveNewWithArg: retNoffset [
-	self subclassResponsibility
+	"subclasses override if they can"
+	^cogit unimplementedPrimitive
 ]
 
 { #category : #initialization }
@@ -63,21 +64,6 @@ CogObjectRepresentation >> generateObjectRepresentationTrampolines [
 									called: 'ceStoreCheckTrampoline'
 									arg: ReceiverResultReg
 									result: cogit returnRegForStoreCheck
-]
-
-{ #category : #initialization }
-CogObjectRepresentation >> implementsNew [
-	^false
-]
-
-{ #category : #initialization }
-CogObjectRepresentation >> implementsNewMethod [
-	^false
-]
-
-{ #category : #initialization }
-CogObjectRepresentation >> implementsNewWithArg [
-	^false
 ]
 
 { #category : #testing }

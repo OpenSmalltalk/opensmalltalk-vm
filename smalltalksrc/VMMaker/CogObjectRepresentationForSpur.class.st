@@ -260,7 +260,7 @@ CogObjectRepresentationForSpur >> genStoreSourceReg: sourceReg slotIndex: index 
 	cogit AndCq: objectMemory tagMask R: scratchReg.
 	jmpImmediate := cogit JumpNonZero: 0.
 	"Get the old/new boundary in scratchReg"
-	cogit MoveAw: objectMemory newSpaceLimitAddress R: scratchReg.
+	cogit MoveCw: objectMemory newSpaceLimit R: scratchReg.
 	"Is target young?  If so we're done"
 	cogit CmpR: scratchReg R: destReg. "N.B. FLAGS := destReg - scratchReg"
 	jmpDestYoung := cogit JumpBelow: 0.
@@ -311,16 +311,6 @@ CogObjectRepresentationForSpur >> hasValidHeaderPostGC: cogMethod [
 	<var: #cogMethod type: #'CogMethod *'>
 	<inline: true>
 	^cogMethod objectHeader = objectMemory nullHeaderForMachineCodeMethod
-]
-
-{ #category : #initialization }
-CogObjectRepresentationForSpur >> implementsNew [
-	^true
-]
-
-{ #category : #initialization }
-CogObjectRepresentationForSpur >> implementsNewWithArg [
-	^true
 ]
 
 { #category : #'in-line cacheing' }

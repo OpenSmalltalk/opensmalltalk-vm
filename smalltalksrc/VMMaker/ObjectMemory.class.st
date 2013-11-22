@@ -1072,6 +1072,14 @@ ObjectMemory >> characterTable [
 	^self splObj: CharacterTable
 ]
 
+{ #category : #'plugin support' }
+ObjectMemory >> cheapIsInMemory: address [ 
+	"Answer if the given address is in ST object memory.  For simulation only."
+	<doNotGenerate>
+	^address >= self startOfMemory
+	  and: [address < endOfMemory]
+]
+
 { #category : #'memory access' }
 ObjectMemory >> checkAddress: byteAddress [ 
 	"Keep this method around for debugging the C code."

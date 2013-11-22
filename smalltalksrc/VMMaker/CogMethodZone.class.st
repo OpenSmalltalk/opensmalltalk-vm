@@ -683,3 +683,9 @@ CogMethodZone >> zoneEnd [
 	<inline: true>
 	^limitAddress
 ]
+
+{ #category : #'simulation only' }
+CogMethodZone >> zoneEnd: zoneEnd [
+	<doNotGenerate> 
+	limitAddress := zoneEnd
+]

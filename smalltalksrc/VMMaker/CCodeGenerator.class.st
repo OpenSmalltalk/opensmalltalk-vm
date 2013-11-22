@@ -827,8 +827,8 @@ CCodeGenerator >> emitCConstantsOn: aStream [
 		[:const|
 		(variableDeclarations anySatisfy: [:value| value includesSubString: const]) ifTrue:
 			[unused remove: const ifAbsent: []]].
-	unused remove: #BytesPerWord ifAbsent: []. "force inclusion of BytesPerWord declaration"
-	unused remove: #BaseHeaderSize ifAbsent: []. "force inclusion of BaseHeaderSize declaration"
+	"and VMBasicConstants mostBasicConstantNames *must* be taken from interp.h"
+	unused addAll: VMBasicConstants mostBasicConstantNames.
 	constList := constants keys reject: [:any| unused includes: any].
 	aStream cr; nextPutAll: '/*** Constants ***/'; cr.
 	(self sortStrings: constList) do:

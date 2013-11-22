@@ -133,11 +133,11 @@ CogStackPageSurrogate32 >> stackLimit: aValue [
 
 { #category : #accessing }
 CogStackPageSurrogate32 >> trace [
-	^memory unsignedLongAt: address + 29
+	^memory longAt: address + 29
 ]
 
 { #category : #accessing }
 CogStackPageSurrogate32 >> trace: aValue [
 	self assert: (address + 28 >= zoneBase and: [address + 31 < zoneLimit]).
-	^memory unsignedLongAt: address + 29 put: (16rFFFFFFFF bitAnd: aValue)
+	^memory longAt: address + 29 put: aValue
 ]

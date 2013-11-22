@@ -67,6 +67,11 @@ Spur32BitMMLECoSimulator >> coInterpreter: aCoInterpreter cogit: aCogit [
 	scavenger coInterpreter: aCoInterpreter
 ]
 
+{ #category : #'simulation only' }
+Spur32BitMMLECoSimulator >> cogCodeBase [
+	^newSpaceLimit
+]
+
 { #category : #'debug support' }
 Spur32BitMMLECoSimulator >> eek [
 	self halt
@@ -292,7 +297,8 @@ Spur32BitMMLECoSimulator >> isIntegerObject: oop [
 		externalInstVar:ofContext:
 		primitiveGrowMemoryByAtLeast
 		primitiveFileSetPosition
-		cogMethodDoesntLookKosher:) includes: sel) ifFalse:
+		cogMethodDoesntLookKosher:
+		shortPrintOop:) includes: sel) ifFalse:
 		[self halt].
 	^super isIntegerObject: oop
 ]
@@ -410,6 +416,35 @@ Spur32BitMMLECoSimulator >> scavengingGCTenuringIf: tenuringCriterion [
 													ifTrue: ['th']
 													ifFalse: [#('st' 'nd' 'rd') at: (statScavenges + 1) \\ 10 ifAbsent: 'th']), ' scavenge'."
 	^super scavengingGCTenuringIf: tenuringCriterion
+]
+
+{ #category : #initialization }
+Spur32BitMMLECoSimulator >> setHeapBase: baseOfHeap memoryLimit: memLimit endOfMemory: memEnd [
+	"As invoced by CogVMSimulator>>openOn:extraBytes: baseOfHeap contains the combined
+	 zone sizes for cog methods, stack zone, etc.  The memory map in SqueakV3 looks like
+		0:	cogCode
+			stackZone
+			methodCache
+			primTraceLog
+			rumpCStack
+		heapBase:
+			nilObj etc
+	 But here in Spur we want
+		0:	(newSpace):
+			past/future survivor space
+			past/future survivor space
+			eden
+		M:
+			cogCode
+			stackZone
+			methodCache
+			primTraceLog
+			rumpCStack
+		heapBase:
+			nilObj etc"
+	super setHeapBase: Cogit guardPageSize memoryLimit: memLimit endOfMemory: memEnd.
+	oldSpaceStart := newSpaceLimit + baseOfHeap.
+	coInterpreter heapBase: oldSpaceStart.
 ]
 
 { #category : #'header access' }
