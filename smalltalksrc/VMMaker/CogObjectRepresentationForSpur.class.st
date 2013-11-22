@@ -260,7 +260,7 @@ CogObjectRepresentationForSpur >> genStoreSourceReg: sourceReg slotIndex: index 
 	cogit AndCq: objectMemory tagMask R: scratchReg.
 	jmpImmediate := cogit JumpNonZero: 0.
 	"Get the old/new boundary in scratchReg"
-	cogit MoveCw: objectMemory newSpaceLimit R: scratchReg.
+	cogit MoveCw: objectMemory storeCheckBoundary R: scratchReg.
 	"Is target young?  If so we're done"
 	cogit CmpR: scratchReg R: destReg. "N.B. FLAGS := destReg - scratchReg"
 	jmpDestYoung := cogit JumpBelow: 0.

@@ -984,6 +984,12 @@ VMMaker >> generateEntire [
 VMMaker >> generateExportsFile [
 	"Store the exports on the given file"
 	| cg contents filePath fileStream |
+	filePath := self interpreterExportsFilePath.
+	"don't bother endlessly regenerating the example file."
+	(internalPlugins isEmpty
+	 and: [(filePath includesSubString: 'example')
+	 and: [FileDirectory default fileExists: filePath]]) ifTrue:
+		[^self].
 	cg := self createCodeGenerator.
 	cg vmClass: self interpreterClass.
 	contents := String streamContents:
@@ -1011,7 +1017,6 @@ VMMaker >> generateExportsFile [
 		].
 		s crtab; nextPutAll:'NULL'.
 		s cr; nextPutAll:'};'; cr].
-	filePath := self interpreterExportsFilePath.
 	(cg needToGenerateHeader: (FileDirectory baseNameFor: filePath) file: filePath contents: contents) ifTrue:
 		[[fileStream := VMMaker forceNewFileNamed: filePath] 
 			on: FileDoesNotExistException 

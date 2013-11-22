@@ -6058,7 +6058,7 @@ SpurMemoryManager >> newSpaceIsEmpty [
 
 { #category : #accessing }
 SpurMemoryManager >> newSpaceLimit [
-	<api>
+	<cmacro: '() GIV(newSpaceLimit)'>
 	^newSpaceLimit
 ]
 
@@ -6450,6 +6450,7 @@ SpurMemoryManager >> oldSpaceSize [
 
 { #category : #accessing }
 SpurMemoryManager >> oldSpaceStart [
+	<cmacro: '() GIV(oldSpaceStart)'>
 	^oldSpaceStart
 ]
 
@@ -7632,6 +7633,13 @@ SpurMemoryManager >> statTenures [
 { #category : #'object access' }
 SpurMemoryManager >> storeByte: byteIndex ofObject: oop withValue: valueByte [
 	^self byteAt: oop + self baseHeaderSize + byteIndex put: valueByte
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> storeCheckBoundary [
+	"A renaming for the Cogit, which couldn't make sense of GIV(newSpaceLimit)"
+	<api>
+	^newSpaceLimit
 ]
 
 { #category : #'primitive support' }
