@@ -133,11 +133,11 @@ CogStackPageSurrogate64 >> stackLimit: aValue [
 
 { #category : #accessing }
 CogStackPageSurrogate64 >> trace [
-	^memory unsignedLongAt: address + 57
+	^memory longAt: address + 57
 ]
 
 { #category : #accessing }
 CogStackPageSurrogate64 >> trace: aValue [
 	self assert: (address + 56 >= zoneBase and: [address + 59 < zoneLimit]).
-	^memory unsignedLongAt: address + 57 put: aValue
+	^memory longAt: address + 57 put: aValue
 ]

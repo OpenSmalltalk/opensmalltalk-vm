@@ -194,8 +194,8 @@ SpurSegmentManager >> collapseSegmentsPostSwizzle [
 				[self allocateOrExtendSegmentInfos]].
 	numSegments := 1.
 	(segments at: 0)
-		segStart: manager newSpaceLimit;
-		segSize: manager endOfMemory - manager newSpaceLimit.
+		segStart: manager oldSpaceStart;
+		segSize: manager endOfMemory - manager oldSpaceStart.
 	manager bootstrapping ifTrue:
 		["finally plant a bridge at the end of the coalesced segment and cut back the
 		  manager's notion of the end of memory to immediately before the bridge."
@@ -358,9 +358,9 @@ SpurSegmentManager >> readHeapFromImageFile: f dataBytes: numBytes [
 	"segment sizes include the two-header-word bridge at the end of each segment."
 	numSegments := totalBytesRead := 0.
 	oldBase := 0. "N.B. still must be adjusted by oldBaseAddr."
-	newBase := manager newSpaceLimit.
+	newBase := manager oldSpaceStart.
 	nextSegmentSize := firstSegmentSize.
-	bridge := firstSegmentSize + manager newSpaceLimit - manager baseHeaderSize.
+	bridge := firstSegmentSize + manager oldSpaceStart - manager baseHeaderSize.
 	[segInfo := self addressOf: (segments at: numSegments).
 	 segInfo
 		segStart: oldBase;					"N.B. still must be adjusted by oldBaseAddr."
@@ -379,7 +379,7 @@ SpurSegmentManager >> readHeapFromImageFile: f dataBytes: numBytes [
 	 nextSegmentSize ~= 0] whileTrue:
 		[bridge := bridge - manager bridgeSize + nextSegmentSize].
 	"newBase should point just past the last bridge. all others should have been eliminated."
-	self assert: newBase - manager newSpaceLimit
+	self assert: newBase - manager oldSpaceStart
 				= (totalBytesRead - (numSegments * manager bridgeSize)).
 	"set freeOldSpaceStart now for adjustAllOopsBy:"
 	manager setFreeOldSpaceStart: newBase.

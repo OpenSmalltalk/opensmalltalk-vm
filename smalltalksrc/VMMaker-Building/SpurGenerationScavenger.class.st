@@ -216,7 +216,8 @@ SpurGenerationScavenger >> copyAndForward: survivor [
 	 then corpse is threaded onto the weakList for later treatment."
 	<inline: false>
 	| bytesInObj newLocation hash |
-	self assert: survivor >= manager startOfMemory. "cog methods should be excluded."
+	self assert: ((manager isInEden: survivor) "cog methods should be excluded."
+				or: [manager isInPastSpace: survivor]).
 	bytesInObj := manager bytesInObject: survivor.
 	"Must remember hash before copying because threading
 	 on to the weak & ephemeron lists smashes the hash field."
@@ -291,7 +292,7 @@ SpurGenerationScavenger >> corpseForCorpseOffset: corpseOffset [
 	 non-future newSpace and use this to implement lists for weak array and
 	 ephemeron processing.  27 bits of 8 byte allocationUnits units is 2 ^ 30 bytes
 	 or 1Gb, big enough for newSpace for a good few years yet."
-	^corpseOffset << manager shiftForAllocationUnit + manager startOfMemory
+	^corpseOffset << manager shiftForAllocationUnit + manager newSpaceStart
 ]
 
 { #category : #'weakness and ephemerality' }
@@ -301,7 +302,7 @@ SpurGenerationScavenger >> corpseOffsetOf: corpse [
 	 non-future newSpace and use this to implement lists for weak array and
 	 ephemeron processing.  27 bits of 8 byte allocationUnits units is 2 ^ 30
 	 bytes or 1Gb, big enough for newSpace for a good few years yet."
-	^corpse - manager startOfMemory >> manager shiftForAllocationUnit.
+	^corpse - manager newSpaceStart >> manager shiftForAllocationUnit.
 ]
 
 { #category : #accessing }
@@ -517,11 +518,6 @@ SpurGenerationScavenger >> isScavengeSurvivor: oop [
 		ifFalse: [target := oop].
 	^(manager isYoung: target) not
 	  or: [manager isInFutureSpace: target]
-]
-
-{ #category : #initialization }
-SpurGenerationScavenger >> manager: aSpurMemoryManager newSpaceStart: startAddress newSpaceBytes: totalBytes edenBytes: requestedEdenBytes [ 	self manager: aSpurMemoryManager.
-	self newSpaceStart: startAddress newSpaceBytes: totalBytes edenBytes: requestedEdenBytes
 ]
 
 { #category : #accessing }
