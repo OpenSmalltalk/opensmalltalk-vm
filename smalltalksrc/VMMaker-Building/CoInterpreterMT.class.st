@@ -1287,7 +1287,6 @@ CoInterpreterMT >> threadSchedulingLoop: vmThread [
 	 middle of transferTo:from: once the active process has been stored in the scheduler."
 	<var: #vmThread type: #'CogVMThread *'>
 	| attemptToRun |
-	<var: #dvmt type: #'CogVMThread *'>
 	<inline: false>
 	[self assert: vmThread state = CTMAssignableOrInVM.
 	 attemptToRun := false.

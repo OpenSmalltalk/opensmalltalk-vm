@@ -391,7 +391,8 @@ CCodeGenerator >> cLiteralFor: anObject [
 				[| printString |
 				 printString := (anObject > 0
 								and: [(anObject >> anObject lowBit + 1) isPowerOfTwo
-								and: [anObject highBit - anObject lowBit >= 4]])
+								and: [(anObject highBit = anObject lowBit and: [anObject > 65536])
+									  or: [anObject highBit - anObject lowBit >= 4]]])
 									ifTrue: ['0x', (anObject printStringBase: 16)]
 									ifFalse: [anObject printString].
 				^anObject > 16rFFFFFFFF
