@@ -41,7 +41,6 @@ static char __buildInfo[] = "FT2Plugin * Freetype-Plugin-Igor.Stasenko.57 uuid: 
 
 
 /*** Constants ***/
-#define BytesPerWord 4
 #define FormBitsIndex 0
 #define FormDepthIndex 3
 #define FormHeightIndex 2
@@ -569,7 +568,7 @@ primitiveCopyToExternalMemory(void)
 	}
 	
 	errorCode = 0;
-	byteSize = byteSizeOf(((sqInt)(long)(aByteArray) - 4));
+	byteSize = byteSizeOf(((sqInt)(long)(aByteArray) - BaseHeaderSize));
 	
 	if (failed()) {
 		return null;
@@ -1684,7 +1683,7 @@ primitiveNewFaceFromFileAndIndex(void)
 	}
 	
 	errorCode = 0;
-	byteSize = byteSizeOf(((sqInt)(long)(fontFilePath) - 4));
+	byteSize = byteSizeOf(((sqInt)(long)(fontFilePath) - BaseHeaderSize));
 	
 	if (failed()) {
 		return null;

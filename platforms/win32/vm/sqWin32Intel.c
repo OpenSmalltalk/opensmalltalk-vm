@@ -999,7 +999,7 @@ error(char *msg) {
   if(f){  
     time_t crashTime = time(NULL);
     fprintf(f,"---------------------------------------------------------------------\n");
-    fprintf(f,"%s\n\n", ctime(&crashTime));
+    fprintf(f,"%s %s\n\n", ctime(&crashTime), GetAttributeString(0));
 
 	fprintf(f,
 			"Error in %s thread\nReason: %s\n\n",

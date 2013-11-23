@@ -800,7 +800,7 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 	static sqInt printingStack = false;
 
 	printf("\n%s%s%s\n\n", msg, date ? " " : "", date ? date : "");
-	printf("%s\n\n", getVersionInfo(1));
+	printf("%s\n%s\n\n", GetAttributeString(0), getVersionInfo(1));
 
 #if !defined(NOEXECINFO)
 	printf("C stack backtrace & registers:\n");
