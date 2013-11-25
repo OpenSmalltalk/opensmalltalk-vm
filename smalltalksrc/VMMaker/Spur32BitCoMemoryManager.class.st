@@ -171,13 +171,6 @@ Spur32BitCoMemoryManager >> scavengeThresholdAddress [
 		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #scavengeThreshold in: self]
 ]
 
-{ #category : #snapshot }
-Spur32BitCoMemoryManager >> setHeapBase: baseOfHeap memoryLimit: memLimit endOfMemory: memEnd [
-	"Set the dimensions of the heap, answering the start of oldSpace.
-	 Override to position the cog code zone beneath the heap."
-	^super setHeapBase: coInterpreter cogCodeSize memoryLimit: memLimit endOfMemory: memEnd
-]
-
 { #category : #accessing }
 Spur32BitCoMemoryManager >> startOfMemory [
 	"Return the start of object memory.  This is immediately after the native code zone.
