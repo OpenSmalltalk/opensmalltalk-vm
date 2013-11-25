@@ -92,7 +92,7 @@ NewCoObjectMemorySimulator >> coInterpreter: aCoInterpreter cogit: aCogit [
 
 { #category : #'simulation only' }
 NewCoObjectMemorySimulator >> cogCodeBase [
-	^0
+	^Cogit guardPageSize
 ]
 
 { #category : #printing }
