@@ -617,6 +617,8 @@ Spur32BitMemoryManager >> wordIndexableFormat [
 
 { #category : #'word size' }
 Spur32BitMemoryManager >> wordSize [
+	<api>
+	<cmacro: '() 4'>
 	^4
 ]
 

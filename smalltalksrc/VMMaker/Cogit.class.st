@@ -2707,10 +2707,18 @@ Cogit >> ceSICMiss: receiver [
 				[coInterpreter callForCogCompiledCodeCompaction].
 			^coInterpreter ceSendFromInLineCacheMiss: targetMethod].
 		 processor flushICacheFrom: pic asInteger to: pic asInteger + closedPICSize].
-	"Relink the send site to the pic."
-	extent := backEnd
-				rewriteCallAt: outerReturn
-				target: pic asInteger + cmEntryOffset.
+	"Relink the send site to the pic.  If to an open PIC then reset the cache tag to the selector,
+	 for the benefit of the cacheTag assert check in checkIfValidObjectRef:pc:cogMethod:."
+	extent := pic cmType = CMOpenPIC
+				ifTrue:
+					[backEnd
+						rewriteInlineCacheAt: outerReturn
+						tag: targetMethod selector
+						target: pic asInteger + cmEntryOffset]
+				ifFalse:
+					[backEnd
+						rewriteCallAt: outerReturn
+						target: pic asInteger + cmEntryOffset].
 	processor flushICacheFrom: outerReturn - 1 - extent to: outerReturn - 1.
 	"Jump back into the pic at its entry in case this is an MNU (newTargetMethodOrNil is nil)"
 	coInterpreter
@@ -2756,8 +2764,7 @@ Cogit >> checkIfValidObjectRef: annotation pc: mcpc cogMethod: cogMethod [
 		 selectorOrCacheTag := backEnd inlineCacheTagAt: mcpc asInteger.
 		 (entryPoint > methodZoneBase
 		  and: [offset ~= cmNoCheckEntryOffset
-		  and: [(self cCoerceSimple: entryPoint + offset to: #'CogMethod *') cmType ~= CMOpenPIC
-				or: [(objectRepresentation couldBeObject: selectorOrCacheTag) not]]])
+		  and: [(self cCoerceSimple: entryPoint - offset to: #'CogMethod *') cmType ~= CMOpenPIC]])
 			ifTrue: "linked non-super send, cacheTag is a cacheTag"
 				[(objectRepresentation checkValidInlineCacheTag: selectorOrCacheTag) ifFalse:
 					[coInterpreter print: 'cache tag leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
@@ -2896,10 +2903,11 @@ Cogit >> checkValidObjectReferencesInClosedPIC: cPIC [
 	pc := pc + cPICCaseSize.
 	2 to: cPIC cPICNumCases do:
 		[:i|
-		(self checkMaybeObjRefAt: pc - backEnd jumpLongConditionalByteSize - backEnd loadLiteralByteSize) ifFalse:
-			[self print: 'object leak in CPIC '; printHex: cPIC asInteger;
-				print: ' @ '; printHex: pc - backEnd jumpLongConditionalByteSize - backEnd loadLiteralByteSize; cr.
-			 ok := false].
+		objectRepresentation inlineCacheTagsMayBeObjects ifTrue:
+			[(self checkMaybeObjRefAt: pc - backEnd jumpLongConditionalByteSize - backEnd loadLiteralByteSize) ifFalse:
+				[self print: 'object leak in CPIC '; printHex: cPIC asInteger;
+					print: ' @ '; printHex: pc - backEnd jumpLongConditionalByteSize - backEnd loadLiteralByteSize; cr.
+				 ok := false]].
 		(self checkMaybeObjRefAt: pc - backEnd jumpLongConditionalByteSize) ifFalse:
 			[self print: 'object leak in CPIC '; printHex: cPIC asInteger;
 				print: ' @ '; printHex: pc - backEnd jumpLongConditionalByteSize; cr.
