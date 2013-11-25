@@ -158,8 +158,10 @@ Spur32BitCoMemoryManager >> scavengeThresholdAddress [
 
 { #category : #snapshot }
 Spur32BitCoMemoryManager >> setHeapBase: baseOfHeap memoryLimit: memLimit endOfMemory: memEnd [
+	"Set the dimensions of the heap, answering the start of oldSpace.
+	 Override to position oldSpace above the cog code zone."
 	super setHeapBase: baseOfHeap memoryLimit: memLimit endOfMemory: memEnd.
-	oldSpaceStart := newSpaceLimit + coInterpreter cogCodeSize
+	^oldSpaceStart := newSpaceLimit + coInterpreter cogCodeSize
 ]
 
 { #category : #accessing }

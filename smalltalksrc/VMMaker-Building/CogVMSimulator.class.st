@@ -1126,13 +1126,6 @@ CogVMSimulator >> headerStart: oop [
 	^ (objectMemory extraHeaderBytes: oop) negated
 ]
 
-{ #category : #accessing }
-CogVMSimulator >> heapBase: anObject [
-	"Set the value of heapBase; used by the Spur CoSimulator to reposition cog code between newSpace and oldSpace."
-
-	^heapBase := anObject
-]
-
 { #category : #'debug support' }
 CogVMSimulator >> heapMapAtWord: address [
 	^objectMemory heapMap heapMapAtWord: address asUnsignedInteger
@@ -2341,14 +2334,14 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 				+ methodCacheSize
 				+ primTraceLogSize
 				+ self rumpCStackSize) roundUpTo: objectMemory allocationUnit.
-	objectMemory
-		setHeapBase: heapBase
-		memoryLimit:  heapBase
-						+ heapSize
-						+ objectMemory newSpaceBytes
-						+ self interpreterAllocationReserveBytes
-						+ extraBytes
-		endOfMemory: heapBase + heapSize.
+	heapBase := objectMemory
+					setHeapBase: heapBase
+					memoryLimit:  heapBase
+									+ heapSize
+									+ objectMemory newSpaceBytes
+									+ self interpreterAllocationReserveBytes
+									+ extraBytes
+					endOfMemory: heapBase + heapSize.
 
 	self assert: cogCodeSize \\ 4 = 0.
 	self assert: objectMemory memoryLimit \\ 4 = 0.
