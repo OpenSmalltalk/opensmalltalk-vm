@@ -1292,7 +1292,7 @@ SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceByt
 	endOfMemory := freeOldSpaceStart := memoryBytes + newSpaceBytes + codeBytes + stackBytes.
 	"leave newSpace empty for the bootstrap"
 	freeStart := newSpaceBytes + newSpaceStart.
-	newSpaceLimit := newSpaceBytes + newSpaceStart.
+	oldSpaceStart := newSpaceLimit := newSpaceBytes + newSpaceStart.
 	scavengeThreshold := memory size * 4. "Bitmap is a 4-byte per word array"
 	scavenger := SpurGenerationScavengerSimulator new.
 	scavenger manager: self.
@@ -1939,6 +1939,41 @@ SpurMemoryManager >> byteSizeOf: oop [
 	format >= self firstLongFormat ifTrue:
 		[^(self numSlotsOf: oop) << self shiftForWord - ((format bitAnd: 1) << 2)].
 	^(self numSlotsOf: oop) << self shiftForWord
+]
+
+{ #category : #'indexing primitive support' }
+SpurMemoryManager >> byteSizeOfInstanceOf: classObj [
+	| instSpec classFormat numSlots |
+	classFormat := self formatOfClass: classObj.
+	instSpec := self instSpecOfClassFormat: classFormat.
+	(self isFixedSizePointerFormat: instSpec) ifFalse:
+		[^PrimErrBadReceiver negated]. "indexable"
+	numSlots := self fixedFieldsOfClassFormat: classFormat.
+	^self objectBytesForSlots: numSlots
+]
+
+{ #category : #'indexing primitive support' }
+SpurMemoryManager >> byteSizeOfInstanceOf: classObj withIndexableSlots: nElements [
+	| instSpec classFormat numSlots |
+	classFormat := self formatOfClass: classObj.
+	instSpec := self instSpecOfClassFormat: classFormat.
+	instSpec caseOf: {
+		[self arrayFormat]	->
+			[numSlots := nElements].
+		[self indexablePointersFormat]	->
+			[numSlots := (self fixedFieldsOfClassFormat: classFormat) + nElements].
+		[self weakArrayFormat]	->
+			[numSlots := (self fixedFieldsOfClassFormat: classFormat) + nElements].
+		[self sixtyFourBitIndexableFormat]	->
+			[numSlots := self wordSize = 4 ifTrue: [nElements * 2] ifFalse: [nElements]].
+		[self firstLongFormat]	->
+			[numSlots := self wordSize = 4 ifTrue: [nElements] ifFalse: [nElements + 1 // 2]].
+		[self firstShortFormat]	->
+			[numSlots := self wordSize = 4 ifTrue: [nElements + 1 // 2] ifFalse: [nElements + 3 // 4]].
+		[self firstByteFormat]	->
+			[numSlots := nElements + (self wordSize - 1) // self wordSize] }
+		otherwise: [^PrimErrBadReceiver negated]. "non-indexable or CompiledMethod"
+	^self objectBytesForSlots: numSlots
 ]
 
 { #category : #snapshot }
@@ -4131,6 +4166,7 @@ SpurMemoryManager >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpace [
 
 { #category : #'gc - global' }
 SpurMemoryManager >> fullGC [
+	"Perform a full lazy compacting GC.  Answer the size of the largest free chunk."
 	<inline: false>
 	needGCFlag := false.
 	gcStartUsecs := self ioUTCMicrosecondsNow.
@@ -4141,6 +4177,9 @@ SpurMemoryManager >> fullGC [
 	statFullGCs := statFullGCs + 1.
 	statGCEndUsecs := self ioUTCMicrosecondsNow.
 	statFullGCUsecs := statFullGCUsecs + (statGCEndUsecs - gcStartUsecs).
+	^(freeLists at: 0) ~= 0
+		ifTrue: [self bytesInObject: self findLargestFreeChunk]
+		ifFalse: [0]
 ]
 
 { #category : #'gc - global' }
@@ -7201,6 +7240,7 @@ SpurMemoryManager >> setHashBitsOf: objOop to: hash [
 
 { #category : #snapshot }
 SpurMemoryManager >> setHeapBase: baseOfHeap memoryLimit: memLimit endOfMemory: memEnd [
+	"Set the dimensions of the heap, answering the start of oldSpace."
 	"Transcript
 		cr; nextPutAll: 'heapBase: '; print: baseOfHeap; nextPut: $/; nextPutAll: baseOfHeap hex;
 		nextPutAll: ' memLimit '; print: memLimit; nextPut: $/; nextPutAll: memLimit hex;
@@ -7220,7 +7260,8 @@ SpurMemoryManager >> setHeapBase: baseOfHeap memoryLimit: memLimit endOfMemory: 
 
 	freeOldSpaceStart := memEnd.
 	endOfMemory := memLimit.
-	oldSpaceStart := newSpaceLimit
+	oldSpaceStart := newSpaceLimit.
+	^oldSpaceStart
 ]
 
 { #category : #'header access' }
@@ -7914,6 +7955,13 @@ SpurMemoryManager >> topRemappableOop [
 	 We support this excessence for compatibility with ObjectMemory.
 	 Spur doesn't GC during allocation."
 	^remapBuffer at: remapBufferCount
+]
+
+{ #category : #'indexing primitive support' }
+SpurMemoryManager >> totalByteSizeOf: oop [
+	^(self isImmediate: oop)
+		ifTrue: [0]
+		ifFalse: [self bytesInObject: oop]
 ]
 
 { #category : #'free space' }

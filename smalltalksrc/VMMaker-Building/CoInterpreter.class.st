@@ -5586,8 +5586,8 @@ CoInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imag
 	"This code is based on C code by Ian Piumarta and Smalltalk code by Tim Rowledge. Many thanks to both of you!!"
 
 	| swapBytes headerStart headerSize dataSize oldBaseAddr
-	  minimumMemory heapSize bytesRead bytesToShift
-	  hdrNumStackPages hdrEdenBytes hdrCogCodeSize headerFlags hdrMaxExtSemTabSize firstSegSize |
+	  minimumMemory heapSize bytesRead bytesToShift firstSegSize
+	  hdrNumStackPages hdrEdenBytes hdrCogCodeSize headerFlags hdrMaxExtSemTabSize |
 	<var: #f type: #sqImageFile>
 	<var: #dataSize type: #'size_t'>
 	<var: #desiredHeapSize type: #usqInt>
@@ -5664,14 +5664,12 @@ CoInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imag
 								minimum: minimumMemory
 								imageFile: f
 								headerSize: headerSize) asUnsignedInteger.
-	
-	objectMemory memory = nil ifTrue: [self insufficientMemoryAvailableError].
-	heapBase := objectMemory memory + cogCodeSize.
-	self assert: objectMemory startOfMemory = heapBase.
-	objectMemory
-		setHeapBase: heapBase
-		memoryLimit: objectMemory memory + heapSize - 24  "decrease memoryLimit a tad for safety (?!?!? eem eem 10/9/2013 15:15)"
-		endOfMemory: heapBase + dataSize.
+	objectMemory memory ifNil: [self insufficientMemoryAvailableError].
+
+	heapBase := objectMemory
+					setHeapBase: objectMemory memory
+					memoryLimit: objectMemory memory + heapSize
+					endOfMemory: objectMemory memory + dataSize.
 
 	"position file after the header"
 	self sqImageFile: f Seek: headerStart + headerSize.
