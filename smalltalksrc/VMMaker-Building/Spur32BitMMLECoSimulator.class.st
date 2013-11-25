@@ -418,19 +418,6 @@ Spur32BitMMLECoSimulator >> scavengingGCTenuringIf: tenuringCriterion [
 	^super scavengingGCTenuringIf: tenuringCriterion
 ]
 
-{ #category : #initialization }
-Spur32BitMMLECoSimulator >> setHeapBase: baseOfHeap memoryLimit: memLimit endOfMemory: memEnd [
-	"Set the dimensions of the heap, answering the start of oldSpace.
-	 Override to add a guard page beneath the code zone.  We can't use
-	 super; we need to skip over the super implementation."
-	^self
-		perform: #setHeapBase:memoryLimit:endOfMemory:
-		withArguments: {	baseOfHeap.
-							memLimit.
-							memEnd }
-		inSuperclass: Spur32BitMemoryManager
-]
-
 { #category : #'header access' }
 Spur32BitMMLECoSimulator >> setIsMarkedOf: objOop to: aBoolean [
 	"objOop = 16rB26020 ifTrue: [self halt]."

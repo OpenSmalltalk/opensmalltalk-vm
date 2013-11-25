@@ -4644,10 +4644,11 @@ SpurMemoryManager >> initializeOldSpaceFirstFree: startOfFreeOldSpace [
 	limit > startOfFreeOldSpace ifTrue:
 		[totalFreeOldSpace := totalFreeOldSpace + (limit - startOfFreeOldSpace).
 		 freeOldStart := startOfFreeOldSpace.
-		 [limit - freeOldStart >= (2 raisedTo: 32)] whileTrue:
-			[freeChunk := self freeChunkWithBytes: (2 raisedTo: 32) at: freeOldStart.
-			 freeOldStart := freeOldStart + (2 raisedTo: 32).
-			 self assert: freeOldStart = (self addressAfter: freeChunk)].
+		 self wordSize > 4 ifTrue:
+			[[limit - freeOldStart >= (1 << 32)] whileTrue:
+				[freeChunk := self freeChunkWithBytes: (1 << 32) at: freeOldStart.
+				 freeOldStart := freeOldStart + (1 << 32).
+				 self assert: freeOldStart = (self addressAfter: freeChunk)]].
 		freeOldStart < limit ifTrue:
 			[freeChunk := self freeChunkWithBytes: limit - freeOldStart at: freeOldStart.
 			 self assert: (self addressAfter: freeChunk) = limit]].

@@ -3083,12 +3083,12 @@ CoInterpreter >> flushMethodCache [
 { #category : #'object memory support' }
 CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 	"Spur's become: is lazy, turning the becommed object into a forwarding object to the other.
-	 The read-barrier is minimised by arranging that forwarding pointers will fail a method cache probe,
-	 since notionally objects' internals are accessed only via sending messages to them (the exception
-	 is primitives that access the internals of the non-receiver argument(s).
-	 To avoid a read barrier on bytecode, literal and inst var fetch we scan the receivers and methods
-	 in the stack zone and follow any forwarded ones.  This is of course way cheaper than scanning all
-	 of memory as in the old become."
+	 The read-barrier is minimised by arranging that forwarding pointers will fail a method cache
+	 probe, since notionally objects' internals are accessed only via sending messages to them,
+	 the exception is primitives that access the internals of the non-receiver argument(s).
+	 To avoid a read barrier on bytecode, literal and inst var fetch we scan the receivers and
+	 methods in the stack zone and follow any forwarded ones.  This is of course way cheaper
+	 than scanning all of memory as in the old become."
 	| theIPPtr |
 	<inline: false>
 	<var: #thePage type: #'StackPage *'>
@@ -3120,12 +3120,12 @@ CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 					 theSP := theSP + BytesPerWord].
 			 [self assert: (thePage addressIsInPage: theFP).
 			  self assert: (theIPPtr = 0 or: [thePage addressIsInPage: theIPPtr asVoidPointer]).
-			  offset := theFP + (self frameStackedReceiverOffset: theFP).
-			  oop := stackPages longAt: offset.
+			  offset := self frameStackedReceiverOffset: theFP.
+			  oop := stackPages longAt: theFP + offset.
 			  ((objectMemory isNonImmediate: oop)
 			   and: [(objectMemory isForwarded: oop)]) ifTrue:
 				[stackPages
-					longAt: offset
+					longAt: theFP + offset
 					put: (objectMemory followForwarded: oop)].
 			  ((self frameHasContext: theFP)
 			   and: [(objectMemory isForwarded: (self frameContext: theFP))]) ifTrue:
@@ -5660,7 +5660,7 @@ CoInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imag
 	objectMemory memory ifNil: [self insufficientMemoryAvailableError].
 
 	heapBase := objectMemory
-					setHeapBase: objectMemory memory
+					setHeapBase: objectMemory memory + cogCodeSize
 					memoryLimit: objectMemory memory + heapSize
 					endOfMemory: objectMemory memory + dataSize.
 

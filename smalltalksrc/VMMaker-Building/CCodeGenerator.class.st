@@ -2712,7 +2712,6 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#touch:						#generateTouch:on:indent:
 
 	#bytesPerWord 			#generateBytesPerWord:on:indent:
-	#wordSize		 			#generateBytesPerWord:on:indent:
 	#baseHeaderSize			#generateBaseHeaderSize:on:indent:
 	
 	#sharedCodeNamed:inCase:		#generateSharedCodeDirective:on:indent:
