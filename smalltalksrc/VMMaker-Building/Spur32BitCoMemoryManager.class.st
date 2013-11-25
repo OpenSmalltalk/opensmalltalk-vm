@@ -1,27 +1,28 @@
 "
-Spur32BitCoMemoryManager is a refinement of Spur32BitMemoryManager that supports the CoInterpreter/Cogit just-in-time compiler.  The signifiant difference from Spur32BitMemoryManager is the memory layout.  Spur32BitCoMemoryManager adds the cgCodeZone between newSpace and the firts oldSpace segment:
+Spur32BitCoMemoryManager is a refinement of Spur32BitMemoryManager that supports the CoInterpreter/Cogit just-in-time compiler.  The significant difference from Spur32BitMemoryManager is the memory layout.  Spur32BitCoMemoryManager adds the cogCodeZone beneath newSpace:
 
 low address:
-	newSpace:
-		past/future survivor space
-		future/past survivor space
-		eden
 	cogCodeZone:
 		generated run-time
 		cog methods
 		free space
 		young referrers
+	newSpace:
+		past/future survivor space
+		future/past survivor space
+		eden
 	first oldSpace segment
 	...
 	subsequent oldSpace segment
 high address:
+
+It would be convenient if the code zone were placed between newSpace and oldSpace; then Cog methods could be onsidered neither old nor young, filtering them out of copyAndForward: and the store check with single bounds checks.  But the CoInterpreter already assumes Cog methods are less than all objects (e.g. in its isMachineCodeFrame:).  If the dynamic frequency of isMachineCodeFrame: is higher (likely because this is used in e.g. scanning for unwind protects in non-local return) then it should keep the single bounds check.  So the coder zone remains beneath newSpace and Spur32BitCoMemoryManager ocerrides isReallyYoungObject: to filter-out Cog methods for copyAndForward:.
 
 Instance Variables
 	cogit:		<SimpleStackBasedCogit or subclass>
 
 cogit
 	- the just-in-time compiler
-
 "
 Class {
 	#name : #Spur32BitCoMemoryManager,
@@ -98,8 +99,13 @@ Spur32BitCoMemoryManager >> checkMemoryMap [
 	self assert: (self isOldObject: oldSpaceStart).
 	self assert: (self isOldObject: endOfMemory).
 
-	self assert: (self isYoungObject: cogit minCogMethodAddress) not.
-	self assert: (self isYoungObject: cogit maxCogMethodAddress) not.
+	"we would like the following to be true, but we either choose one boundary check for
+	 cogMethods vs objects (isMachineCodeFrame: et al) or one boundary check for
+	 copyAndForward:.  We can't have both, and the former is likely the highest dynamic
+	 frequency."
+	false ifTrue:
+		[self assert: (self isYoungObject: cogit minCogMethodAddress) not.
+		 self assert: (self isYoungObject: cogit maxCogMethodAddress) not].
 	self assert: (self isOldObject: cogit minCogMethodAddress) not.
 	self assert: (self isOldObject: cogit maxCogMethodAddress) not
 ]
@@ -134,6 +140,15 @@ Spur32BitCoMemoryManager >> headerWhileForwardingOf: aCompiledMethodObjOop [
 	^self baseHeader: aCompiledMethodObjOop
 ]
 
+{ #category : #'object testing' }
+Spur32BitCoMemoryManager >> isReallyYoungObject: objOop [
+	<api>
+	"Answer if obj is young. Require that obj is non-immediate. Override to filter-out Cog methods"
+	self assert: (self isNonImmediate: objOop).
+	^(self oop: objOop isLessThan: newSpaceLimit)
+	  and: [self oop: objOop isGreaterThanOrEqualTo: newSpaceStart]
+]
+
 { #category : #'garbage collection' }
 Spur32BitCoMemoryManager >> nullHeaderForMachineCodeMethod [
 	<api>
@@ -159,9 +174,8 @@ Spur32BitCoMemoryManager >> scavengeThresholdAddress [
 { #category : #snapshot }
 Spur32BitCoMemoryManager >> setHeapBase: baseOfHeap memoryLimit: memLimit endOfMemory: memEnd [
 	"Set the dimensions of the heap, answering the start of oldSpace.
-	 Override to position oldSpace above the cog code zone."
-	super setHeapBase: baseOfHeap memoryLimit: memLimit endOfMemory: memEnd.
-	^oldSpaceStart := newSpaceLimit + coInterpreter cogCodeSize
+	 Override to position the cog code zone beneath the heap."
+	^super setHeapBase: coInterpreter cogCodeSize memoryLimit: memLimit endOfMemory: memEnd
 ]
 
 { #category : #accessing }

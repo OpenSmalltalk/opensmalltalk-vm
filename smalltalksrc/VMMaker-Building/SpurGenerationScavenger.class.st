@@ -839,7 +839,7 @@ SpurGenerationScavenger >> scavengeReferentsOf: referrer [
 			["a forwarding pointer could be because of become: or scavenging."
 			 (manager isForwarded: referent) ifTrue:
 				[referent := manager followForwarded: referent].
-			 (manager isYoung: referent)
+			 (manager isReallyYoungObject: referent)
 				ifTrue: "if target is already in future space forwarding pointer was due to a become:."
 					[(manager isInFutureSpace: referent)
 						ifTrue: [newLocation := referent. foundNewReferent := true]

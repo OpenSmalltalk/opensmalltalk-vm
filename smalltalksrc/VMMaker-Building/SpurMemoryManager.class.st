@@ -1287,7 +1287,6 @@ SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceByt
 	memory := (self endianness == #little
 					ifTrue: [LittleEndianBitmap]
 					ifFalse: [Bitmap]) new: (memoryBytes + newSpaceBytes + codeBytes + stackBytes) // 4.
-	"N.B. This layout does NOT reflect the layout of SpurCoMemoryManager"
 	newSpaceStart := codeBytes + stackBytes.
 	endOfMemory := freeOldSpaceStart := memoryBytes + newSpaceBytes + codeBytes + stackBytes.
 	"leave newSpace empty for the bootstrap"
@@ -2084,8 +2083,7 @@ SpurMemoryManager >> cheapAddressCouldBeInHeap: address [
 SpurMemoryManager >> cheapIsInMemory: address [
 	"Answer if the given address is in ST object memory.  For simulation only."
 	<doNotGenerate>
-	^(address < newSpaceLimit and: [address >= newSpaceStart])
-	 or: [address >= oldSpaceStart and: [address < endOfMemory]]
+	^address >= newSpaceStart and: [address < endOfMemory]
 ]
 
 { #category : #initialization }
@@ -2167,7 +2165,9 @@ SpurMemoryManager >> checkHeapIntegrity: excludeUnmarkedNewSpaceObjs [
 										[coInterpreter print: 'object leak in '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; cr.
 										 self eek.
 										 ok := false].
-									 (self isYoung: fieldOop) ifTrue:
+									 "don't be misled by CogMethods; they appear to be young, but they're not"
+									 ((self isYoung: fieldOop)
+									  and: [self oop: fieldOop isGreaterThanOrEqualTo: newSpaceStart]) ifTrue:
 										[containsYoung := true]]]]].
 					(containsYoung and: [(self isYoung: obj) not]) ifTrue:
 						[(self isRemembered: obj) ifFalse:
@@ -7258,10 +7258,10 @@ SpurMemoryManager >> setHeapBase: baseOfHeap memoryLimit: memLimit endOfMemory: 
 	freeStart := scavenger eden start.
 	pastSpaceStart := scavenger pastSpace start.
 
+	oldSpaceStart := newSpaceLimit.
 	freeOldSpaceStart := memEnd.
 	endOfMemory := memLimit.
-	oldSpaceStart := newSpaceLimit.
-	^oldSpaceStart
+	^baseOfHeap
 ]
 
 { #category : #'header access' }

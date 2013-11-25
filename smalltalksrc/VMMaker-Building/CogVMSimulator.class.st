@@ -3340,7 +3340,7 @@ CogVMSimulator >> stackPointer [
 { #category : #'stack pages' }
 CogVMSimulator >> stackZoneBase [
 	"In the simulator the stack zone starts immediately after the code zone."
-	^objectMemory cogCodeBase + cogCodeSize
+	^cogit cogCodeBase + cogCodeSize
 ]
 
 { #category : #'simulation only' }
