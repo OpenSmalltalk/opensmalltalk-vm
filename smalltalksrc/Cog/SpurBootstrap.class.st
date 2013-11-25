@@ -119,6 +119,28 @@ SpurBootstrap class >> BehaviorPROTOTYPEbasicNew: sizeRequested [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrap class >> BehaviorPROTOTYPEbyteSizeOfInstance [
+	"Answer the total memory size of an instance of the receiver."
+
+	<primitive: 181>
+	self isVariable ifTrue:
+		[^self byteSizeOfInstanceWithIndexableVariables: 0].
+	self primitiveFailed
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> BehaviorPROTOTYPEbyteSizeOfInstanceWithIndexableVariables: sizeRequested [
+	"Answer the total memory size of an instance of the receiver
+	 with the given number of indexable instance variables."
+
+	<primitive: 181>
+	self isVariable ifFalse:
+		[sizeRequested = 0 ifTrue:
+			[^self byteSizeOfInstance]].
+	self primitiveFailed
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrap class >> BehaviorPROTOTYPEelementSize [
 	"Answer the size in bytes of an element in the receiver.  The formats are
 		0 = 0 sized objects (UndefinedObject True False et al)
@@ -158,7 +180,6 @@ SpurBootstrap class >> BehaviorPROTOTYPEhandleFailingBasicNew [
 	 enough memory available. Essential. See Object documentation whatIsAPrimitive."
 
 	<primitive: 70>
-	self isVariable ifTrue: [^self basicNew: 0].
 	Smalltalk garbageCollect < 1048576 ifTrue:
 		[Smalltalk growMemoryByAtLeast: 1048576].
 	^self handleFailingFailingBasicNew "retry after global garbage collect"
@@ -178,13 +199,12 @@ SpurBootstrap class >> BehaviorPROTOTYPEhandleFailingBasicNew: sizeRequested [
 	 enough memory available. Essential. See Object documentation whatIsAPrimitive."
 
 	<primitive: 71>
-	self isVariable ifFalse:
-		[self error: self printString, ' cannot have variable sized instances'].
-	(sizeRequested isInteger and: [sizeRequested >= 0]) ifTrue:
-		[Smalltalk garbageCollect < sizeRequested ifTrue:
-			[Smalltalk growMemoryByAtLeast: sizeRequested * self elementSize].
-		^self handleFailingFailingBasicNew: sizeRequested  "retry after global garbage collect and possible grow"].
-	self primitiveFailed
+	| bytesRequested |
+	bytesRequested := self byteSizeOfInstanceWithIndexableVariables: sizeRequested.
+	Smalltalk garbageCollect < bytesRequested ifTrue:
+		[Smalltalk growMemoryByAtLeast: bytesRequested].
+	"retry after global garbage collect and possible grow"
+	^self handleFailingFailingBasicNew: sizeRequested
 ]
 
 { #category : #'method prototypes' }
@@ -198,7 +218,6 @@ SpurBootstrap class >> BehaviorPROTOTYPEhandleFailingFailingBasicNew [
 	 enough memory available. Essential. See Object documentation whatIsAPrimitive."
 
 	<primitive: 70>
-	self isVariable ifTrue: [^self basicNew: 0].
 	"space must be low"
 	OutOfMemory signal.
 	^self basicNew  "retry if user proceeds"
@@ -215,13 +234,9 @@ SpurBootstrap class >> BehaviorPROTOTYPEhandleFailingFailingBasicNew: sizeReques
 	 enough memory available. Essential. See Object documentation whatIsAPrimitive."
 
 	<primitive: 71>
-	self isVariable ifFalse:
-		[self error: self printString, ' cannot have variable sized instances'].
-	(sizeRequested isInteger and: [sizeRequested >= 0]) ifTrue:
-		["arg okay; space must be low."
-		OutOfMemory signal.
-		^self basicNew: sizeRequested  "retry if user proceeds"].
-	self primitiveFailed
+	"arg okay; space must be low."
+	OutOfMemory signal.
+	^self basicNew: sizeRequested  "retry if user proceeds"
 ]
 
 { #category : #'method prototypes' }
@@ -1353,7 +1368,7 @@ SpurBootstrap >> on: imageName [
 		allocateMemoryOfSize: (oldHeap youngStart * 3 / 2 roundUpTo: 1024 * 1024)
 		newSpaceSize: 1024 * 1024
 		stackSize: 1024 * 1024
-		codeSize: 1024 * 1024.
+		codeSize: 0.
 	newHeap setCheckForLeaks: 15 - 6. "don't check become; or newSpace; soooo many rehashes in bootstrap"
 	map := Dictionary new: oldHeap memory size // 4.
 	reverseMap := Dictionary new: oldHeap memory size // 4.
