@@ -6,6 +6,7 @@ Class {
 	#superclass : #CogClass,
 	#instVars : [
 		'cogit',
+		'methodZone',
 		'objectMemory',
 		'ceStoreCheckTrampoline'
 	],
@@ -19,8 +20,8 @@ Class {
 }
 
 { #category : #'instance creation' }
-CogObjectRepresentation class >> for: aCogit [
-	^self new setCogit: aCogit
+CogObjectRepresentation class >> forCogit: aCogit methodZone: methodZone [
+	^self new setCogit: aCogit methodZone: methodZone
 ]
 
 { #category : #translation }
@@ -93,12 +94,13 @@ CogObjectRepresentation >> markAndTraceLiteralIfYoung: literal [
 ]
 
 { #category : #initialization }
-CogObjectRepresentation >> setCogit: aCogit [
+CogObjectRepresentation >> setCogit: aCogit methodZone: aMethodZone [
 	<doNotGenerate>
 	cogit := aCogit.
-	objectMemory := (aCogit coInterpreter isKindOf: ObjectMemory)
-						ifTrue: [aCogit coInterpreter]
-						ifFalse: [aCogit coInterpreter objectMemory]
+	methodZone := aMethodZone.
+	objectMemory := (aCogit coInterpreter isKindOf: StackInterpreter)
+						ifTrue: [aCogit coInterpreter objectMemory]
+						ifFalse: [aCogit coInterpreter]
 ]
 
 { #category : #testing }

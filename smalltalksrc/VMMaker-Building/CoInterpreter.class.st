@@ -1637,8 +1637,7 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 	superNormalBar = 0
 		ifTrue: [classTag := objectMemory fetchClassTagOf: rcvr]
 		ifFalse: [classTag := objectMemory classTagForClass: (self superclassOf: (self methodClassOf: (self frameMethodObject: framePointer)))].
-	canLinkCacheTag := objectMemory hasSpurMemoryManagerAPI
-						or: [(objectMemory isYoungObject: classTag) not or: [cogit canLinkToYoungClasses]].
+	canLinkCacheTag := cogit canLinkToYoungClasses or: [(objectMemory isYoungObject: classTag) not].
 	argumentCount := numArgs.
 	(self lookupInMethodCacheSel: selector classTag: classTag)
 		ifTrue:"check for coggability because method is in the cache"
@@ -3657,15 +3656,9 @@ CoInterpreter >> initialEnterSmalltalkExecutive [
 
 { #category : #initialization }
 CoInterpreter >> initializeCodeGenerator [
-	objectMemory hasSpurMemoryManagerAPI
-		ifTrue:
-			[cogit
-				initializeCodeZoneFrom: objectMemory newSpaceLimit
-				upTo: objectMemory newSpaceLimit + cogCodeSize]
-		ifFalse:
-			[cogit
-				initializeCodeZoneFrom: (self cCode: [objectMemory memory] inSmalltalk: [Cogit guardPageSize])
-				upTo: (self cCode: [objectMemory memory] inSmalltalk: [Cogit guardPageSize]) + cogCodeSize]
+	cogit
+		initializeCodeZoneFrom: (self cCode: [objectMemory memory] inSmalltalk: [Cogit guardPageSize])
+		upTo: (self cCode: [objectMemory memory] inSmalltalk: [Cogit guardPageSize]) + cogCodeSize
 ]
 
 { #category : #'frame access' }
@@ -3966,7 +3959,7 @@ CoInterpreter >> isCogCompiledCodeCompactionCalledFor [
 CoInterpreter >> isCogMethodReference: methodHeader [
 	<api>
 	self assert: ((objectMemory isIntegerObject: methodHeader)
-				 or: [methodHeader asUnsignedInteger < cogit maxCogMethodAddress
+				or: [methodHeader asUnsignedInteger < objectMemory startOfMemory
 					and: [methodHeader asUnsignedInteger >= cogit minCogMethodAddress]]).
 	^objectMemory isNonIntegerObject: methodHeader
 ]

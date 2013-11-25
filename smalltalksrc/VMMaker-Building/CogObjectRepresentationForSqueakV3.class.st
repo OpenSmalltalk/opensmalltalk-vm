@@ -42,6 +42,12 @@ CogObjectRepresentationForSqueakV3 >> cacheTagIsMarked: cacheTag [
 	^objectMemory isMarked: cacheTag
 ]
 
+{ #category : #'in-line cacheing' }
+CogObjectRepresentationForSqueakV3 >> canLinkToYoungClasses [
+	<api>
+	^methodZone roomOnYoungReferrersList
+]
+
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> checkValidInlineCacheTag: cacheTag [
 	^((cacheTag bitAnd: 1 << ShiftForWord - 1) = 0
