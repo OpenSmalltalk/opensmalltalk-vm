@@ -1598,14 +1598,17 @@ InterpreterPrimitives >> primitiveFractionalPart [
 
 { #category : #'memory space primitives' }
 InterpreterPrimitives >> primitiveFullGC [
-	"Do a full garbage collection and return the number of bytes available (including swap space if dynamic memory management is supported)."
+	"Do a full garbage collection.  In SqueakV3ObjectMemory, answer the number
+	 of bytes available (including swap space if dynamic memory management is
+	 supported).  In Spur, answer the size of the largest free chunk."
 
+	objectMemory hasSpurMemoryManagerAPI ifTrue:
+		[^self pop: 1 thenPushInteger: objectMemory fullGC].
 	objectMemory fullGCLock > 0 ifTrue:
 		[^self primitiveFailFor: PrimErrInappropriate].
-	objectMemory hasSpurMemoryManagerAPI ifFalse:
-		[objectMemory incrementalGC].  "maximimize space for forwarding table"
+	objectMemory incrementalGC.  "maximimize space for forwarding table"
 	objectMemory fullGC.
-	self pop: 1 thenPushInteger: (objectMemory bytesLeft: true).
+	self pop: 1 thenPushInteger: (objectMemory bytesLeft: true)
 ]
 
 { #category : #'system control primitives' }
@@ -3173,6 +3176,34 @@ InterpreterPrimitives >> primitiveSize [
 	totalLength := objectMemory lengthOf: rcvr baseHeader: hdr format: fmt.
 	fixedFields := objectMemory fixedFieldsOf: rcvr format: fmt length: totalLength.
 	self pop: argumentCount + 1 thenPush: (objectMemory integerObjectOf: totalLength - fixedFields)
+]
+
+{ #category : #'memory space primitives' }
+InterpreterPrimitives >> primitiveSizeInBytes [
+	<option: #SpurObjectMemory>
+	self pop: argumentCount + 1
+		 thenPushInteger: (objectMemory totalByteSizeOf: self stackTop)
+]
+
+{ #category : #'memory space primitives' }
+InterpreterPrimitives >> primitiveSizeInBytesOfInstance [
+	<option: #SpurObjectMemory>
+	| byteSizeOrErr |
+	argumentCount > 1 ifTrue:
+		[^self primitiveFailFor: PrimErrBadNumArgs].
+	argumentCount = 1 ifTrue:
+		[(objectMemory isIntegerObject: self stackTop) ifFalse:
+			[^self primitiveFailFor: PrimErrBadArgument].
+		 byteSizeOrErr := objectMemory
+								byteSizeOfInstanceOf: (self stackValue: 1)
+								withIndexableSlots: (objectMemory integerValueOf: self stackTop).
+		 byteSizeOrErr < 0 ifTrue:
+			[^self primitiveFailFor: byteSizeOrErr negated].
+		 ^self pop: 2 thenPushInteger: byteSizeOrErr].
+	byteSizeOrErr := objectMemory byteSizeOfInstanceOf: (self stackValue: 1).
+	byteSizeOrErr < 0 ifTrue:
+		[^self primitiveFailFor: byteSizeOrErr negated].
+	self pop: 1 thenPushInteger: byteSizeOrErr
 ]
 
 { #category : #'system control primitives' }
