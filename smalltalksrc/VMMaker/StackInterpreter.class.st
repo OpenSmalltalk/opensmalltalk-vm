@@ -1021,7 +1021,9 @@ StackInterpreter class >> initializePrimitiveTable [
 		(176 primitiveMaxIdentityHash)
 		(177 179 primitiveFail)
 		(180 primitiveGrowMemoryByAtLeast)
-		(181 184 primitiveFail)
+		(181 primitiveSizeInBytesOfInstance)
+		(182 primitiveSizeInBytes)
+		(183 184 primitiveFail)
 
 		"CriticalSection primitives"
 		(185 primitiveExitCriticalSection) "similar to signal hence index = signal + 100"
@@ -9652,47 +9654,41 @@ StackInterpreter >> printOopShortInner: oop [
 	<inline: true>
 	(objectMemory isImmediate: oop) ifTrue:
 		[(objectMemory isImmediateCharacter: oop) ifTrue:
-			[self printChar: $$;
+			[^self
+				printChar: $$;
 				printChar: (objectMemory characterValueOf: oop);
 				printChar: $(;
 				printHex: (objectMemory integerValueOf: oop);
-				printChar: $).
-			 ^nil].
-		self printNum: (objectMemory integerValueOf: oop);
+				printChar: $)].
+		^self
+			printNum: (objectMemory integerValueOf: oop);
 			printChar: $(;
 			printHex: (objectMemory integerValueOf: oop);
-			printChar: $).
-		 ^nil].
+			printChar: $)].
 	(objectMemory addressCouldBeObj: oop) ifFalse:
-		[self print: ((oop bitAnd: objectMemory allocationUnit - 1) ~= 0
+		[^self print: ((oop bitAnd: objectMemory allocationUnit - 1) ~= 0
 						ifTrue: [' is misaligned']
-						ifFalse: [' is not on the heap']); cr.
-		 ^nil].
+						ifFalse: [' is not on the heap'])].
 	(self isFloatObject: oop) ifTrue:
-		[self printFloat: (self dbgFloatValueOf: oop).
-		 ^nil].
+		[^self printFloat: (self dbgFloatValueOf: oop)].
 	classOop := objectMemory fetchClassOfNonImm: oop.
 	(objectMemory addressCouldBeObj: classOop) ifFalse:
-		[self print: 'a ??'. ^nil].
+		[^self print: 'a ??'].
 	(objectMemory numSlotsOf: classOop) = metaclassNumSlots ifTrue:
-		[self printNameOfClass: oop count: 5.
-		 ^nil].
-	oop = objectMemory nilObject ifTrue: [self print: 'nil'. ^nil].
-	oop = objectMemory trueObject ifTrue: [self print: 'true'. ^nil].
-	oop = objectMemory falseObject ifTrue: [self print: 'false'. ^nil].
+		[^self printNameOfClass: oop count: 5].
+	oop = objectMemory nilObject ifTrue: [^self print: 'nil'].
+	oop = objectMemory trueObject ifTrue: [^self print: 'true'].
+	oop = objectMemory falseObject ifTrue: [^self print: 'false'].
 	nameLen := self lengthOfNameOfClass: classOop.
-	nameLen = 0 ifTrue: [self print: 'a ??'. ^nil].
+	nameLen = 0 ifTrue: [^self print: 'a ??'].
 	name := self nameOfClass: classOop.
 	nameLen = 10 ifTrue:
 		[(self str: name n: 'ByteString' cmp: 10) not "strncmp is weird" ifTrue:
-			[self printChar: $'; printStringOf: oop; printChar: $'.
-			 ^nil].
+			[^self printChar: $'; printStringOf: oop; printChar: $'].
 		 (self str: name n: 'ByteSymbol' cmp: 10) not "strncmp is weird" ifTrue:
-			[self printChar: $#; printStringOf: oop.
-			 ^nil]].
+			[self printChar: $#; printStringOf: oop. ^self]].
 	(nameLen = 9 and: [(self str: name n: 'Character' cmp: 9) not]) ifTrue:
-		[self printChar: $$; printChar: (objectMemory integerValueOf: (objectMemory fetchPointer: 0 ofObject: oop)).
-		 ^nil].
+		[^self printChar: $$; printChar: (objectMemory integerValueOf: (objectMemory fetchPointer: 0 ofObject: oop))].
 	self print: 'a(n) '.
 	self
 		cCode: [0 to: nameLen - 1 do: [:i| self printChar: (name at: i)]]
@@ -10288,12 +10284,11 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 	"Details: This method detects when the image was stored on a machine with the opposite byte ordering from this machine and swaps the bytes automatically. Furthermore, it allows the header information to start 512 bytes into the file, since some file transfer programs for the Macintosh apparently prepend a Mac-specific header of this size. Note that this same 512 bytes of prefix area could also be used to store an exec command on Unix systems, allowing one to launch Smalltalk by invoking the image name as a command."
 	"This code is based on C code by Ian Piumarta and Smalltalk code by Tim Rowledge. Many thanks to both of you!!"
 
-	| swapBytes headerStart headerSize dataSize oldBaseAddr hdrNumStackPages
-	  minimumMemory heapBase bytesRead bytesToShift heapSize hdrEdenBytes
-	  headerFlags hdrMaxExtSemTabSize firstSegSize |
+	| headerStart headerSize headerFlags dataSize oldBaseAddr swapBytes
+	  minimumMemory bytesRead bytesToShift heapSize firstSegSize
+	  hdrEdenBytes hdrMaxExtSemTabSize hdrNumStackPages |
 	<var: #f type: #sqImageFile>
 	<var: #dataSize type: #'size_t'>
-	<var: #heapBase type: #usqInt>
 	<var: #desiredHeapSize type: #usqInt>
 	<var: #headerStart type: #squeakFileOffsetType>
 	<var: #imageOffset type: #squeakFileOffsetType>
@@ -10361,13 +10356,12 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 								minimum: minimumMemory
 								imageFile: f
 								headerSize: headerSize) asUnsignedInteger.
-	objectMemory memory = nil ifTrue: [self insufficientMemoryAvailableError].
+	objectMemory memory ifNil: [self insufficientMemoryAvailableError].
 
-	heapBase := objectMemory memory.
 	objectMemory
-		setHeapBase: heapBase
-		memoryLimit: (heapBase + heapSize) - 24  "decrease memoryLimit a tad for safety"
-		endOfMemory: heapBase + dataSize.
+		setHeapBase: objectMemory memory
+		memoryLimit: objectMemory memory + heapSize
+		endOfMemory: objectMemory memory + dataSize.
 
 	"position file after the header"
 	self sqImageFile: f Seek: headerStart + headerSize.

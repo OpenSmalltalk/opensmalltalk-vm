@@ -765,21 +765,12 @@ StackInterpreterPrimitives >> primitiveFlushCacheBySelector [
 
 { #category : #'memory space primitives' }
 StackInterpreterPrimitives >> primitiveFullGC [
-	"Do a full garbage collection and return the number of bytes available.
-	 If on SqueakV3ObjectMemory include swap space if dynamic memory
-	 management is supported."
+	"Do a full garbage collection.  In SqueakV3ObjectMemory, answer the number
+	 of bytes available (including swap space if dynamic memory management is
+	 supported).  In Spur, answer the size of the largest free chunk."
 
-	objectMemory fullGCLock > 0 ifTrue:
-		[^self primitiveFailFor: PrimErrInappropriate].
 	self externalWriteBackHeadFramePointers.
-	objectMemory hasSpurMemoryManagerAPI ifFalse:
-		[objectMemory incrementalGC].  "maximimize space for forwarding table"
-	objectMemory fullGC.
-	"In Spur we exclude swap space."
-	self pop: 1
-		thenPushInteger: (objectMemory hasSpurMemoryManagerAPI
-							ifTrue: [objectMemory bytesLeftInOldSpace]
-							ifFalse: [objectMemory bytesLeft: true])
+	super primitiveFullGC
 ]
 
 { #category : #'memory space primitives' }
