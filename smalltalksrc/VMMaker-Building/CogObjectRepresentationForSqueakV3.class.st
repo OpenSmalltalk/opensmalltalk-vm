@@ -658,6 +658,11 @@ CogObjectRepresentationForSqueakV3 >> inlineCacheTagIsYoung: cacheTag [
 	^objectMemory isYoung: cacheTag
 ]
 
+{ #category : #'in-line cacheing' }
+CogObjectRepresentationForSqueakV3 >> inlineCacheTagsMayBeObjects [
+	^true
+]
+
 { #category : #'object representation' }
 CogObjectRepresentationForSqueakV3 >> instFormatFieldMask [
 	"This is the mask for the field when shifted into the least significant bits"

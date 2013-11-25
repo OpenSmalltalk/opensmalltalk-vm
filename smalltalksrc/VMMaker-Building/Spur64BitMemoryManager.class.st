@@ -540,6 +540,7 @@ Spur64BitMemoryManager >> wordIndexableFormat [
 
 { #category : #'word size' }
 Spur64BitMemoryManager >> wordSize [
+	<cmacro: '() 8'>
 	^8
 ]
 
