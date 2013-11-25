@@ -2474,8 +2474,8 @@ Cogit >> cStackPointerAddress [
 
 { #category : #'jit - api' }
 Cogit >> canLinkToYoungClasses [
-	<api>
-	^methodZone roomOnYoungReferrersList
+	<doNotGenerate>
+	^objectRepresentation canLinkToYoungClasses
 ]
 
 { #category : #accessing }
@@ -7949,8 +7949,9 @@ Cogit >> setInterpreter: aCoInterpreter [
 	coInterpreter := aCoInterpreter.
 	objectMemory := aCoInterpreter objectMemory.
 	threadManager := aCoInterpreter threadManager. "N.B. may be nil"
-	objectRepresentation := objectMemory objectRepresentationClass for: self.
 	methodZone := CogMethodZone new.
+	objectRepresentation := objectMemory objectRepresentationClass
+								forCogit: self methodZone: methodZone.
 	methodZone setInterpreter: aCoInterpreter
 				objectRepresentation: objectRepresentation
 				cogit: self.
@@ -8085,13 +8086,11 @@ Cogit >> simulateCogCodeAt: address [ "<Integer>"
 		ifTrue: [processor
 					singleStepIn: coInterpreter memory
 					minimumAddress: guardPageSize
-					executableAndReadOnlyFrom: codeBase
-					to: methodZone zoneEnd]
+					readOnlyBelow: methodZone zoneEnd]
 		ifFalse: [processor
 					runInMemory: coInterpreter memory
 					minimumAddress: guardPageSize
-					executableAndReadOnlyFrom: codeBase
-					to: methodZone zoneEnd].
+					readOnlyBelow: methodZone zoneEnd].
 	   ((printRegisters or: [printInstructions]) and: [clickConfirm]) ifTrue:
 	 	[(self confirm: 'continue?') ifFalse:
 			[self halt]].
@@ -8144,23 +8143,21 @@ Cogit >> simulateLeafCallOf: someFunction [
 		memory: coInterpreter memory.
 	spOnEntry := processor sp.
 	self recordInstruction: {'(simulated call of '. someFunction. ')'}.
-	[[processor pc between: codeBase and: methodZone zoneEnd] whileTrue:
+	[[processor pc between: 0 and: methodZone zoneEnd] whileTrue:
 		[singleStep
 			ifTrue: [self recordProcessing.
 					processor
 						singleStepIn: coInterpreter memory
 						minimumAddress: guardPageSize
-						executableAndReadOnlyFrom: codeBase
-						to: methodZone zoneEnd]
+						readOnlyBelow: methodZone zoneEnd]
 			ifFalse: [processor
 						runInMemory: coInterpreter memory
 						minimumAddress: guardPageSize
-						executableAndReadOnlyFrom: codeBase
-						to: methodZone zoneEnd]]]
+						readOnlyBelow: methodZone zoneEnd]]]
 		on: ProcessorSimulationTrap
 		do: [:ex| | retpc |
 			"If the ip is out of bounds the return has already occurred."
-			((processor pc between: codeBase and: methodZone zoneEnd)
+			((processor pc between: 0 and: methodZone zoneEnd)
 			 and: [processor sp <= spOnEntry]) ifTrue:
 				[retpc := processor leafRetpcIn: coInterpreter memory.
 				 self assert: retpc = 16rBADF00D5.

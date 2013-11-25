@@ -21,6 +21,13 @@ CogObjectRepresentationForSpur >> cacheTagIsMarked: cacheTag [
 	^true
 ]
 
+{ #category : #'in-line cacheing' }
+CogObjectRepresentationForSpur >> canLinkToYoungClasses [
+	<api>
+	<cmacro: '() true'>
+	^true
+]
+
 { #category : #'debug support' }
 CogObjectRepresentationForSpur >> checkValidInlineCacheTag: classIndexOrTagPattern [
 	^classIndexOrTagPattern <= objectMemory tagMask

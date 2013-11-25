@@ -132,13 +132,8 @@ CoInterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots p
 	<var: #pageStructBase type: #'char *'>
 	self cCode: []
 		inSmalltalk:
-			[objectMemory hasSpurMemoryManagerAPI
-				ifTrue:
-					[self assert: objectMemory oldSpaceStart - objectMemory newSpaceLimit - coInterpreter cogCodeSize - coInterpreter methodCacheSize - coInterpreter primTraceLogSize - coInterpreter rumpCStackSize - Cogit guardPageSize
-					= (stackSlots * BytesPerWord roundUpTo: objectMemory allocationUnit)]
-				ifFalse:
-					[self assert: objectMemory startOfMemory - coInterpreter cogCodeSize - coInterpreter methodCacheSize - coInterpreter primTraceLogSize - coInterpreter rumpCStackSize - Cogit guardPageSize
-					= (stackSlots * BytesPerWord roundUpTo: objectMemory allocationUnit)]].
+			[self assert: objectMemory startOfMemory - coInterpreter cogCodeSize - Cogit guardPageSize - coInterpreter methodCacheSize - coInterpreter primTraceLogSize - coInterpreter rumpCStackSize
+					= (stackSlots * BytesPerWord roundUpTo: objectMemory allocationUnit)].
 	structStackPageSize := coInterpreter sizeof: InterpreterStackPage.
 	bytesPerPage := slotsPerPage * BytesPerWord.
 	numPages := coInterpreter numStkPages.
