@@ -337,6 +337,11 @@ CogObjectRepresentationForSpur >> inlineCacheTagIsYoung: cacheTag [
 	^false
 ]
 
+{ #category : #'in-line cacheing' }
+CogObjectRepresentationForSpur >> inlineCacheTagsMayBeObjects [
+	^false
+]
+
 { #category : #testing }
 CogObjectRepresentationForSpur >> isHashSetOnInstanceCreation [
 	^false

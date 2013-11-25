@@ -40,6 +40,11 @@ CogObjectRepresentation >> allYoungObjectsAgeInFullGC [
 	^self subclassResponsibility
 ]
 
+{ #category : #'in-line cacheing' }
+CogObjectRepresentation >> canLinkToYoungClasses [
+	^self subclassResponsibility
+]
+
 { #category : #'primitive generators' }
 CogObjectRepresentation >> genInnerPrimitiveNew: retNoffset [
 	"subclasses override if they can"
@@ -65,6 +70,22 @@ CogObjectRepresentation >> generateObjectRepresentationTrampolines [
 									called: 'ceStoreCheckTrampoline'
 									arg: ReceiverResultReg
 									result: cogit returnRegForStoreCheck
+]
+
+{ #category : #'in-line cacheing' }
+CogObjectRepresentation >> inlineCacheTagForInstance: oop [
+	"c.f. getInlineCacheClassTagFrom:into:"
+	^self subclassResponsibility
+]
+
+{ #category : #'in-line cacheing' }
+CogObjectRepresentation >> inlineCacheTagIsYoung: cacheTag [
+	^self subclassResponsibility
+]
+
+{ #category : #'in-line cacheing' }
+CogObjectRepresentation >> inlineCacheTagsMayBeObjects [
+	^self subclassResponsibility
 ]
 
 { #category : #testing }
