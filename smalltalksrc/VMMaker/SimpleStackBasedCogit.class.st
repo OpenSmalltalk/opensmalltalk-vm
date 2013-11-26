@@ -2446,6 +2446,7 @@ SimpleStackBasedCogit >> genPushLiteralVariable: literalIndex [
 	association := self getLiteral: literalIndex.
 	"N.B. Do _not_ use ReceiverResultReg to avoid overwriting receiver in assignment in frameless methods."
 	self annotate: (self MoveCw: association R: ClassReg) objRef: association.
+	objectRepresentation genEnsureRegNotForwarded: ClassReg scratchReg: TempReg.
 	objectRepresentation
 		genLoadSlot: ValueIndex
 		sourceReg: ClassReg
@@ -2947,6 +2948,7 @@ SimpleStackBasedCogit >> genStorePop: popBoolean LiteralVariable: litVarIndex [
 	self assert: needsFrame.
 	association := self getLiteral: litVarIndex.
 	self annotate: (self MoveCw: association R: ReceiverResultReg) objRef: association.
+	objectRepresentation genEnsureRegNotForwarded: ReceiverResultReg scratchReg: TempReg.
 	popBoolean
 		ifTrue: [self PopR: ClassReg]
 		ifFalse: [self MoveMw: 0 r: SPReg R: ClassReg].
