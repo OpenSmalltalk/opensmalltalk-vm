@@ -929,7 +929,8 @@ SpurMemoryManager >> addToFreeTree: freeChunk bytes: chunkBytes [
 		storePointer: self freeChunkNextIndex ofFreeChunk: freeChunk withValue: 0;
 		storePointer: self freeChunkParentIndex ofFreeChunk: freeChunk withValue: 0;
 		storePointer: self freeChunkSmallerIndex ofFreeChunk: freeChunk withValue: 0;
-		storePointer: self freeChunkLargerIndex ofFreeChunk: freeChunk withValue: 0.
+		storePointer: self freeChunkLargerIndex ofFreeChunk: freeChunk withValue: 0;
+		storePointer: self freeChunkPrevIndex ofFreeChunk: freeChunk withValue: 0.
 	"Large chunk list organized as a tree, each node of which is a list of chunks of the same size.
 	 Beneath the node are smaller and larger blocks."
 	parent := 0.
@@ -2097,6 +2098,28 @@ SpurMemoryManager >> checkCompactIndex: classIndex isClass: specialIndex named: 
 		[self invalidCompactClassError: name]
 ]
 
+{ #category : #'debug support' }
+SpurMemoryManager >> checkForCompactableObjects [
+	"self checkForCompactableObjects"
+	<doNotGenerate>
+	| firstFree them sizes |
+	firstFree := 0.
+	self allOldSpaceEntitiesDo: [:o| (firstFree = 0 and: [self isFreeObject: o]) ifTrue: [firstFree := o]].
+	firstFree = 0 ifTrue: [^nil].
+	sizes := Bag new.
+	self allFreeObjectsDo:
+		[:f| sizes add: (self bytesInObject: f)].
+	them := OrderedCollection new.
+	self allOldSpaceObjectsFrom: firstFree do:
+		[:o| | b |
+		b := self bytesInObject: o.
+		(sizes includes: b) ifTrue:
+			[them add: o.
+			 sizes remove: b]].
+	^them isEmpty ifFalse:
+		[{them size. them first. them last}]
+]
+
 { #category : #allocation }
 SpurMemoryManager >> checkForLastObjectOverwrite [
 	<doNotGenerate>
@@ -2855,6 +2878,35 @@ SpurMemoryManager >> defaultEdenBytes [
 ]
 
 { #category : #'free space' }
+SpurMemoryManager >> detachFreeObject: freeChunk [
+	<inline: false>
+	| chunkBytes index node prev next |
+	chunkBytes := self bytesInObject: freeChunk.
+	totalFreeOldSpace := totalFreeOldSpace - chunkBytes.
+	index := chunkBytes / self allocationUnit.
+	index >= self numFreeLists ifTrue:
+		[^self detachLargeFreeObject: freeChunk].
+	node := freeLists at: index.
+	freeChunk = node
+		ifTrue:
+			[(freeLists at: index put: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: node)) = 0 ifTrue:
+				[self assert: (freeListsMask anyMask: 1 << index).
+				 freeListsMask := freeListsMask - (1 << index)]]
+		ifFalse:
+			[prev := 0.
+			 [node ~= 0] whileTrue:
+				[self assert: node = (self startOfObject: node).
+				 self assert: (self isValidFreeObject: node).
+				 next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: node.
+				 node = freeChunk ifTrue:
+					[prev = 0
+						ifTrue: [freeLists at: index put: next]
+						ifFalse: [self storePointer: self freeChunkNextIndex ofFreeChunk: prev withValue: next].
+					 ^node].
+				 node := next]]
+]
+
+{ #category : #'free space' }
 SpurMemoryManager >> detachLargeFreeObject: freeChunk [
 	| prev next |
 	prev := self fetchPointer: self freeChunkPrevIndex ofObject: freeChunk.
@@ -3015,10 +3067,11 @@ SpurMemoryManager >> eek [
 
 { #category : #'gc - global' }
 SpurMemoryManager >> eliminateAndFreeForwarders [
-	"As the final phase of global garbage collect, sweep
-	 the heap to follow forwarders, then free forwarders"
-	| lowestForwarded firstForwarded lastForwarded |
+	"As the final phase of global garbage collect, sweep the heap to follow
+	 forwarders, then free forwarders, coalescing with free space as we go."
+	| lowestFree firstFree lastFree |
 	<inline: false>
+	self flag: 'this might be unnecessary.  if we were to track firstFreeChunk we might be able to repeat the freeUnmarkedObjectsAndSortAndCoalesceFreeSpace; compact cycle until firstFreeChunk reaches a fixed point'.
 	self assert: (self isForwarded: nilObj) not.
 	self assert: (self isForwarded: falseObj) not.
 	self assert: (self isForwarded: trueObj) not.
@@ -3027,20 +3080,20 @@ SpurMemoryManager >> eliminateAndFreeForwarders [
 	self assert: (self isForwarded: classTableFirstPage) not.
 	(self isForwarded: specialObjectsOop) ifTrue:
 		[specialObjectsOop := self followForwarded: specialObjectsOop].
-	"N.B. we don't have to explcitly do mapInterpreterOops
+	"N.B. we don't have to explicitly do mapInterpreterOops
 	 since the scavenge below will do it."
 	self followForwardedObjStacks.
 	scavenger followRememberedForwardersAndForgetFreeObjects.
 	self doScavenge: DontTenureButDoUnmark.
 	self checkFreeSpace.
-	lowestForwarded := 0.
+	lowestFree := 0.
 	"sweep, following forwarders in all live objects, and finding the first forwarder."
-	self allOldSpaceObjectsDo:
+	self allOldSpaceEntitiesDo:
 		[:o|
-		(self isForwarded: o)
+		((self isFreeObject: o) or: [self isForwarded: o])
 			ifTrue:
-				[lowestForwarded = 0 ifTrue:
-					[lowestForwarded := o]]
+				[lowestFree = 0 ifTrue:
+					[lowestFree := o]]
 			ifFalse:
 				[0 to: (self numPointerSlotsOf: o) - 1 do:
 					[:i| | f |
@@ -3050,28 +3103,43 @@ SpurMemoryManager >> eliminateAndFreeForwarders [
 						 self assert: (self isYoung: f) not.
 						 self storePointerUnchecked: i ofObject: o withValue: f]]]].
 	self checkFreeSpace.
-	firstForwarded := lastForwarded := 0.
-	"sweep from lowest forwarder, coalescing runs of forwarders. perhaps this should
-	 coalewsce free space and forwarders.  the previous loop could reprise the discarding
-	 of free space in freeUnmarkedObjectsAndSortAndCoalesceFreeSpace."
-	self allOldSpaceEntitiesFrom: lowestForwarded do:
+	lowestFree = 0 ifTrue: "yeah, right..."
+		[^self].
+	firstFree := lastFree := 0.
+	"Sweep from lowest forwarder, coalescing runs of forwarders and free objects."
+	self allOldSpaceEntitiesFrom: lowestFree do:
 		[:o|
-		(self isForwarded: o)
-			ifTrue:
-				[firstForwarded = 0 ifTrue:
-					[firstForwarded := o].
-				 lastForwarded := o]
+		(self isFreeObject: o)
+			ifTrue: "two cases, isolated, in which case leave alone, or adjacent,
+					in which case, remove from free set prior to coalesce."
+				[| next |
+				 next := self objectAfter: o limit: endOfMemory.
+				 self assert: (next = endOfMemory or: [(self isFreeObject: next) not]). "free chunks have already been coalesced"
+				 (firstFree ~= 0
+				  or: [next ~= endOfMemory and: [self isForwarded: next]]) ifTrue:
+					[firstFree = 0 ifTrue:
+						[firstFree := o].
+					 lastFree := o.
+					 self detachFreeObject: o.
+					 self checkFreeSpace]]
 			ifFalse:
-				[firstForwarded ~= 0 ifTrue:
-					[| start bytes |
-					 start := self startOfObject: firstForwarded.
-					 bytes := (self addressAfter: lastForwarded) - start.
-					 self addFreeChunkWithBytes: bytes at: start].
-				 firstForwarded := 0]].
-	firstForwarded ~= 0 ifTrue:
+				[(self isForwarded: o)
+					ifTrue:
+						[firstFree = 0 ifTrue:
+							[firstFree := o].
+						 lastFree := o]
+					ifFalse:
+						[firstFree ~= 0 ifTrue:
+							[| start bytes |
+							 start := self startOfObject: firstFree.
+							 bytes := (self addressAfter: lastFree) - start.
+							 self addFreeChunkWithBytes: bytes at: start.
+							 self checkFreeSpace].
+						 firstFree := 0]]].
+	firstFree ~= 0 ifTrue:
 		[| start bytes |
-		 start := self startOfObject: firstForwarded.
-		 bytes := (self addressAfter: lastForwarded) - start.
+		 start := self startOfObject: firstFree.
+		 bytes := (self addressAfter: lastFree) - start.
 		 self addFreeChunkWithBytes: bytes at: start].
 	self checkFreeSpace
 ]
@@ -6707,6 +6775,24 @@ SpurMemoryManager >> primitiveFailureCode [
 	^coInterpreter primitiveFailureCode
 ]
 
+{ #category : #'debug support' }
+SpurMemoryManager >> printAdjacentFreeChunks [
+	"self printAdjacentFreeChunks"
+	<doNotGenerate>
+	| uncoalesced |
+	uncoalesced := OrderedCollection new.
+	self allOldSpaceEntitiesDo:
+		[:e| | s |
+		((self isFreeObject: e)
+		 and: [(s := self objectAfter: e limit: endOfMemory) < endOfMemory
+		 and: [self isFreeObject: s]]) ifTrue:
+			[uncoalesced addLast: e]].
+	uncoalesced do:
+		[:f|
+		self printFreeChunk: f. coInterpreter printHexnp: (self objectAfter: f limit: endOfMemory); cr] 
+
+]
+
 { #category : #'debug printing' }
 SpurMemoryManager >> printFreeChunk: freeChunk [
 	<api>
@@ -8062,7 +8148,8 @@ SpurMemoryManager >> unlinkFreeTreeNode: freeTreeNode withSiblings: next [
 									ifTrue: [self freeChunkSmallerIndex]
 									ifFalse: [self freeChunkLargerIndex])
 				ofFreeChunk: parent
-				withValue: next].
+				withValue: next.
+			  self storePointer: self freeChunkParentIndex ofFreeChunk: next withValue: parent].
 	self storePointer: self freeChunkSmallerIndex ofFreeChunk: next withValue: smaller.
 	smaller ~= 0 ifTrue:
 		[self storePointer: self freeChunkParentIndex ofFreeChunk: smaller withValue: next].
