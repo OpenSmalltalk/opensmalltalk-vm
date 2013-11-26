@@ -45,6 +45,13 @@ CogObjectRepresentation >> canLinkToYoungClasses [
 	^self subclassResponsibility
 ]
 
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentation >> genEnsureRegNotForwarded: reg scratchReg: scratch [
+	"Make sure that the obejct in reg is not forwarded.  By default there is
+	 nothing to do.  Subclasses for memory managers that forward will override."
+	^0
+]
+
 { #category : #'primitive generators' }
 CogObjectRepresentation >> genInnerPrimitiveNew: retNoffset [
 	"subclasses override if they can"
