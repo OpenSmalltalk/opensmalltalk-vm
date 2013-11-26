@@ -588,22 +588,6 @@ Spur32BitMemoryManager >> shiftForWord [
 	^2
 ]
 
-{ #category : #'free space' }
-Spur32BitMemoryManager >> sortedFreeObject: objOop [
-	"A variant of freeObject: that assumes objOop already has its valid number of slots, etc,
-	 but makes sure the freeChunkPrevIndex is valid."
-	| bytes treeNode nextNode |
-	bytes := self bytesInObject: objOop.
-	totalFreeOldSpace := totalFreeOldSpace + bytes.
-	self longAt: objOop put: 0.
-	treeNode := self addToFreeList: objOop bytes: bytes.
-	treeNode ~= 0 ifTrue:
-		[self storePointer: self freeChunkPrevIndex ofFreeChunk: objOop withValue: treeNode].
-	nextNode := self fetchPointer: self freeChunkNextIndex ofObject: objOop.
-	nextNode ~= 0 ifTrue:
-		[self storePointer: self freeChunkPrevIndex ofFreeChunk: nextNode withValue: objOop]
-]
-
 { #category : #'word size' }
 Spur32BitMemoryManager >> tagMask [
 	<api>
