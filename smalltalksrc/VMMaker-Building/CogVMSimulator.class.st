@@ -2775,12 +2775,12 @@ CogVMSimulator >> primitiveScreenSize [
 { #category : #'system control primitives' }
 CogVMSimulator >> primitiveSignalAtMilliseconds [
 	super primitiveSignalAtMilliseconds.
-	self successful ifTrue:
+	"self successful ifTrue:
 		[Transcript
 			cr; nextPutAll: thisContext selector;
 			nextPutAll: ' now '; nextPutAll: self ioUTCMicroseconds hex;
 			nextPutAll: ' wakeup '; nextPutAll: nextWakeupUsecs hex;
-			nextPutAll: ' wakeup - now '; print: self ioUTCMicroseconds - nextWakeupUsecs; flush]
+			nextPutAll: ' wakeup - now '; print: nextWakeupUsecs - self ioUTCMicroseconds; flush]"
 ]
 
 { #category : #'debugging traps' }
