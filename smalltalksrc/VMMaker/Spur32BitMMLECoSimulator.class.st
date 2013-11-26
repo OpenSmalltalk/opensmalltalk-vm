@@ -339,7 +339,7 @@ Spur32BitMMLECoSimulator >> longAt: byteAddress [
 { #category : #'memory access' }
 Spur32BitMMLECoSimulator >> longAt: byteAddress put: a32BitValue [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
-	"(byteAddress = 16r15FF7A8 and: [a32BitValue = 16r19D09D0]) ifTrue:
+	"(byteAddress = 16r32F644 and: [a32BitValue = 16r78FFB0]) ifTrue:
 		[self halt]."
 	byteAddress \\ 4 ~= 0 ifTrue: [self unalignedAccessError].
 	^memory at: byteAddress // 4 + 1 put: a32BitValue

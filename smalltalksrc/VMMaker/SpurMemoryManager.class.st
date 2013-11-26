@@ -863,6 +863,7 @@ SpurMemoryManager >> addFreeSubTree: freeTree [
 	| bytesInArg treeNode bytesInNode subNode |
 	"N.B. *can't* use numSlotsOfAny: because of rounding up of odd slots
 	 and/or step in size at 1032 bytes in 32-bits or 2048 bytes in 64-bits."
+	self assert: (self isFreeObject: freeTree).
 	bytesInArg := self bytesInObject: freeTree.
 	self assert: bytesInArg / (self allocationUnit / self wordSize) >= self numFreeLists.
 	treeNode := freeLists at: 0.
@@ -920,6 +921,7 @@ SpurMemoryManager >> addToFreeTree: freeChunk bytes: chunkBytes [
 	 For the benefit of sortedFreeObject:, answer the treeNode it is added
 	 to, if it is added to the next list of a freeTreeNode, otherwise answer 0."
 	| childBytes parent child |
+	self assert: (self isFreeObject: freeChunk).
 	self assert: chunkBytes = (self bytesInObject: freeChunk).
 	self assert: chunkBytes / self allocationUnit >= self numFreeLists.
 
@@ -2702,11 +2704,11 @@ SpurMemoryManager >> coalesce: obj1 and: obj2 [
 
 { #category : #compaction }
 SpurMemoryManager >> compact [
-	"We'd like to use exact fit followed by best fit.  But in practice exact fit doesn't move
-	 many objects (it does in artificial contexts such as the image bootstrap, but not in
-	 use of a real system).  bestFit is potentially worth-while but takes effort to code.
-	 For now we just use fist-fit."
-	^self firstFitCompact
+	"We'd like to use exact fit followed by best fit, but best-fit is complex to implement
+	 and potentially expensive.  So just use exactFit followed, if necessary, by first-fit."
+	self exactFitCompact.
+	highestObjects usedSize > 0 ifTrue:
+		[self firstFitCompact]
 ]
 
 { #category : #'object access' }
@@ -3248,7 +3250,10 @@ SpurMemoryManager >> exactFitCompact [
 	[statCompactPassCount := statCompactPassCount + 1.
 	 highestObjects from: misfits - self wordSize reverseDo:
 		[:o| | b |
-		 self assert: (self oop: o isGreaterThan: firstFreeChunk).
+		 (self oop: o isGreaterThan: firstFreeChunk) ifFalse:
+			[highestObjects first: misfits.
+			 coInterpreter print: 'exactFitCompact fits: '; printNum: nfits; print: ' misfits: '; printNum: nmiss; cr.
+			 ^self].
 		 ((self isForwarded: o) or: [self isPinned: o]) ifFalse:
 			[b := self bytesInObject: o.
 			 (self allocateOldSpaceChunkOfExactlyBytes: b suchThat: [:f| f < o])
@@ -4105,7 +4110,7 @@ SpurMemoryManager >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpace [
 	"for sorting free space throw away the list heads, rebuilding them for small free chunks below."
 	self resetFreeListHeads.
 	highestObjects initializeStart: freeStart limit: scavenger eden limit.
-	lastHighest := highestObjects last "a.k.a. freeStart - wordSize".
+	lastHighest := highestObjects start - self wordSize. "a.k.a. freeStart - wordSize"
 	highestObjectsWraps := 0.
 	self assert: highestObjects limit - highestObjects start // self wordSize >= 1024.
 	firstFreeChunk := sortedFreeChunks := lastLargeFree := 0.
@@ -4125,7 +4130,8 @@ SpurMemoryManager >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpace [
 						ifTrue: [highestObjects addLast: o]
 						ifFalse: "but we inline so we can use the local lastHighest"
 							[(lastHighest := lastHighest + self wordSize) >= highestObjects limit ifTrue:
-								[highestObjectsWraps := highestObjectsWraps + 1].
+								[highestObjectsWraps := highestObjectsWraps + 1.
+								 lastHighest := highestObjects start].
 							 self longAt: lastHighest put: o]]]
 			ifFalse: "unmarked; two cases, an unreachable object or a free chunk."
 				[| here limit next |
@@ -4138,16 +4144,17 @@ SpurMemoryManager >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpace [
 					 statCoalesces := statCoalesces + 1.
 					 here := self coalesce: here and: next.
 					 next := self objectAfter: here limit: limit].
-				 self setFree: here.
 				 firstFreeChunk = 0 ifTrue:
 					[firstFreeChunk := here].
 				 (self isLargeFreeObject: here)
 					ifTrue:
-						[lastLargeFree = 0
-							ifTrue: [sortedFreeChunks := here]
+						[self setFree: here.
+						 lastLargeFree = 0
+							ifTrue: [sortedFreeChunks := lastLargeFree := here]
 							ifFalse:
-								[self setFree: here.
-								 self storePointer: self freeChunkNextAddressIndex ofFreeChunk: lastLargeFree withValue: here].
+								[self storePointer: self freeChunkNextAddressIndex
+									ofFreeChunk: lastLargeFree
+									withValue: here].
 						 lastLargeFree := here]
 					ifFalse:
 						[self freeSmallObject: here]]].
