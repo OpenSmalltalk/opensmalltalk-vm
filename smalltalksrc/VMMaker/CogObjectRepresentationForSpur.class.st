@@ -82,6 +82,24 @@ CogObjectRepresentationForSpur >> genConvertIntegerToCharacterInScratchReg: reg 
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genEnsureRegNotForwarded: reg scratchReg: scratch [
+	"Make sure that the obejct in reg is not forwarded."
+	| loop ok |
+	<var: #ok type: #'AbstractInstruction *'>
+	<var: #loop type: #'AbstractInstruction *'>
+	self assert: reg ~= scratch.
+	loop := cogit Label.
+	self genGetClassIndexOfNonImm: reg into: scratch.
+	cogit CmpCq: objectMemory isForwardedObjectClassIndexPun
+		R: TempReg.
+	ok := cogit JumpNonZero:  0.
+	self genLoadSlot: 0 sourceReg: reg destReg: reg.
+	cogit Jump: loop.
+	ok jmpTarget: cogit Label.
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genFetchIndexRegister: indexReg from: tableObj into: destReg [
 	"indexReg contains the 1-relative index of an element in tableObj."
 	self subclassResponsibility
