@@ -3298,7 +3298,12 @@ SpurMemoryManager >> exactFitCompact [
 				ifNotNil:
 					[:f|
 					 nfits := nfits + 1.
-					 self copyAndForward: o withBytes: b toFreeChunk: f]]].
+					 self copyAndForward: o withBytes: b toFreeChunk: f.
+					 "here's a wrinkle; if the firstFreeChunk is allocated to a small object and the firstFreeChunk
+					  is a large chunk then firstFreeChunk will no longer point to an object header.  So check and
+					  adjust firstFreeChunk if it is assigned to."
+					 f = firstFreeChunk ifTrue:
+						[firstFreeChunk := self objectStartingAt: f]]]].
 	 self checkFreeSpace.
 	 "now highestObjects contains only misfits, if any, from misfits to last.
 	  set first to first failure and refill buffer. next cycle will add more misfits.
@@ -3311,7 +3316,6 @@ SpurMemoryManager >> exactFitCompact [
 	 nMisses > (nHighest // 2) ifTrue:
 		[coInterpreter print: 'exactFitCompact fits: '; printNum: nfits; print: ' misfits: '; printNum: nmiss; cr.
 		 ^self].
-	 self findFirstFreeChunkPostCompactionPass.
 	 savedLimit := self moveMisfitsToTopOfHighestObjects: misfits.
 	 self fillHighestObjectsWithMovableObjectsFrom: firstFreeChunk upTo: first.
 	 misfits := self moveMisfitsInHighestObjectsBack: savedLimit.
@@ -3486,23 +3490,31 @@ SpurMemoryManager >> fetchWordLengthOf: objOop [
 SpurMemoryManager >> fillHighestObjectsWithMovableObjectsFrom: startObj upTo: limitObj [
 	"Refill highestObjects with movable objects up to, but not including limitObj.
 	 c.f. the loop in freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoalesceFreeSpace."
-	| lastHighest highestObjectsWraps |
+	| lastHighest highestObjectsWraps firstFree |
 	highestObjects resetAsEmpty.
 	lastHighest := highestObjects last.
-	highestObjectsWraps := 0.
-	self allOldSpaceObjectsFrom: startObj do:
+	highestObjectsWraps := firstFree := 0.
+	self allOldSpaceEntitiesFrom: startObj do:
 		[:o|
 		(self oop: o isGreaterThanOrEqualTo: limitObj) ifTrue:
 			[highestObjects last: lastHighest.
+			 (firstFree ~= 0 and: [(self isFreeObject: firstFreeChunk) not]) ifTrue:
+				[firstFreeChunk := firstFree].
 			 ^self].
-		((self isForwarded: o) or: [self isPinned: o]) ifFalse:
-			[false "conceptually...: "
-				ifTrue: [highestObjects addLast: o]
-				ifFalse: "but we inline so we can use the local lastHighest"
-					[(lastHighest := lastHighest + self wordSize) >= highestObjects limit ifTrue:
-						[highestObjectsWraps := highestObjectsWraps + 1].
-					 self longAt: lastHighest put: o]]].
-	highestObjects last: lastHighest
+		(self isFreeObject: o)
+			ifTrue: [firstFree = 0 ifTrue:
+						[firstFree := o]]
+			ifFalse:
+				[((self isForwarded: o) or: [self isPinned: o]) ifFalse:
+					[false "conceptually...: "
+						ifTrue: [highestObjects addLast: o]
+						ifFalse: "but we inline so we can use the local lastHighest"
+							[(lastHighest := lastHighest + self wordSize) >= highestObjects limit ifTrue:
+								[highestObjectsWraps := highestObjectsWraps + 1].
+							 self longAt: lastHighest put: o]]]].
+	highestObjects last: lastHighest.
+	(firstFree ~= 0 and: [(self isFreeObject: firstFreeChunk) not]) ifTrue:
+		[firstFreeChunk := firstFree]
 ]
 
 { #category : #instantiation }
@@ -3517,12 +3529,6 @@ SpurMemoryManager >> findFirstFreeChunkAfter: start [
 		(self isFreeObject: o) ifTrue:
 			[^o]].
 	^endOfMemory
-]
-
-{ #category : #compaction }
-SpurMemoryManager >> findFirstFreeChunkPostCompactionPass [
-	(self isFreeObject: firstFreeChunk) ifFalse:
-		[firstFreeChunk := self findFirstFreeChunkAfter: firstFreeChunk]
 ]
 
 { #category : #'free space' }
@@ -3625,12 +3631,16 @@ SpurMemoryManager >> firstFitCompact [
 					[:f|
 					 nhits := nhits + 1.
 					 self copyAndForward: o withBytes: b toFreeChunk: f.
+					 "here's a wrinkle; if the firstFreeChunk is allocated to a small object and the firstFreeChunk
+					  is a large chunk then firstFreeChunk will no longer point to an object header.  So check and
+					  adjust firstFreeChunk if it is assigned to."
+					 f = firstFreeChunk ifTrue:
+						[firstFreeChunk := self objectStartingAt: f].
 					 self assert: (lastSubdividedFreeChunk = 0
 								  or: [(self addressAfter: (self objectStartingAt: f)) = lastSubdividedFreeChunk])]]].
 	 self checkFreeSpace.
 	 first := self longAt: highestObjects first.
 	 self assert: (self oop: first isGreaterThan: firstFreeChunk).
-	 self findFirstFreeChunkPostCompactionPass.
 	 self fillHighestObjectsWithMovableObjectsFrom: firstFreeChunk upTo: first.
 	 highestObjects usedSize > 0] whileTrue.
 
