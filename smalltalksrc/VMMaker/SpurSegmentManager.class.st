@@ -81,11 +81,14 @@ SpurSegmentManager >> addSegmentOfSize: ammount [
 		 "test isInMemory:"
 		 0 to: numSegments - 1 do:
 			[:i|
-			self assert: (manager isInMemory: (segments at: i) segStart).
-			self assert: (manager isInMemory: (segments at: i) segLimit - manager wordSize).
-			self assert: (manager isInMemory: (segments at: i) segLimit) not.
-			(i between: 1 and: numSegments - 2) ifTrue:
-				[self assert: (manager isInMemory: (segments at: i) segStart - manager wordSize) not]].
+			self assert: (self isInSegments: (segments at: i) segStart).
+			self assert: (self isInSegments: (segments at: i) segLimit - manager wordSize).
+			self assert: ((self isInSegments: (segments at: i) segLimit) not
+						or: [i < (numSegments - 1)
+							and: [(segments at: i) segLimit = (segments at: i + 1) segStart]]).
+			self assert: ((self isInSegments: (segments at: i) segStart - manager wordSize) not
+							or: [i > 0
+								and: [(segments at: i - 1) segLimit = (segments at: i) segStart]])].
 		 ^newSeg].
 	^nil
 ]
@@ -266,7 +269,7 @@ SpurSegmentManager >> insertSegmentFor: segAddress [
 	self assert: numSegments < numSegInfos.
 	segIndex := lastSegIndex := numSegments - 1.
 	numSegments := numSegments + 1.
-	[segAddress > (segments at: segIndex) segLimit ifTrue:
+	[segAddress >= (segments at: segIndex) segLimit ifTrue:
 		[segIndex := segIndex + 1.
 		 lastSegIndex to: segIndex by: -1 do:
 			[:idx| segments at: idx + 1 put: (segments at: idx)].
