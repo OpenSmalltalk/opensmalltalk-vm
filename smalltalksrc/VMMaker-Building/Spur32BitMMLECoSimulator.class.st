@@ -298,7 +298,8 @@ Spur32BitMMLECoSimulator >> isIntegerObject: oop [
 		primitiveGrowMemoryByAtLeast
 		primitiveFileSetPosition
 		cogMethodDoesntLookKosher:
-		shortPrintOop:) includes: sel) ifFalse:
+		shortPrintOop:
+		primitiveSizeInBytesOfInstance) includes: sel) ifFalse:
 		[self halt].
 	^super isIntegerObject: oop
 ]
@@ -339,7 +340,7 @@ Spur32BitMMLECoSimulator >> longAt: byteAddress [
 { #category : #'memory access' }
 Spur32BitMMLECoSimulator >> longAt: byteAddress put: a32BitValue [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
-	"(byteAddress = 16r32F644 and: [a32BitValue = 16r78FFB0]) ifTrue:
+	"(byteAddress = 16r32F600 and: [a32BitValue = 16rB31E18]) ifTrue:
 		[self halt]."
 	byteAddress \\ 4 ~= 0 ifTrue: [self unalignedAccessError].
 	^memory at: byteAddress // 4 + 1 put: a32BitValue
@@ -420,7 +421,7 @@ Spur32BitMMLECoSimulator >> scavengingGCTenuringIf: tenuringCriterion [
 
 { #category : #'free space' }
 Spur32BitMMLECoSimulator >> setFree: o [
-	"o = 16r113E7A8 ifTrue: [self halt]."
+	"o = 16rB34D40 ifTrue: [self halt]."
 	super setFree: o
 ]
 
