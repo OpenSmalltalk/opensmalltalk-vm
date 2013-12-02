@@ -1901,6 +1901,11 @@ ObjectMemory >> fixedFieldsOf: oop format: fmt length: wordLength [
 	^(classFormat >> 11 bitAnd: 16rC0) + (classFormat >> 2 bitAnd: 16r3F) - 1
 ]
 
+{ #category : #'forward compatibility' }
+ObjectMemory >> followField: fieldIndex ofObject: anObject [
+	^self fetchPointer: fieldIndex ofObject: anObject
+]
+
 { #category : #'spur compatibility' }
 ObjectMemory >> followForwarded: objOop [
 	<inline: false>
@@ -2893,6 +2898,8 @@ ObjectMemory >> isContextNonImm: oop [
 ObjectMemory >> isForwarded: oop [
 	"Compatibility wth SpurMemoryManager.  In ObjectMemory, no forwarding pointers
 	 are visible to the VM."
+	<api>
+	<cmacro: '() false'>
 	<inline: true>
 	^false
 ]
@@ -3039,6 +3046,8 @@ ObjectMemory >> isOopCompiledMethod: oop [
 ObjectMemory >> isOopForwarded: oop [
 	"Compatibility wth SpurMemoryManager.  In ObjectMemory, no forwarding pointers
 	 are visible to the VM."
+	<api>
+	<cmacro: '() false'>
 	<inline: true>
 	^false
 ]

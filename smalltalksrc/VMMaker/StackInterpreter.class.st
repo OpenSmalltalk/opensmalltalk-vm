@@ -5458,20 +5458,6 @@ StackInterpreter >> flushMethodCacheFrom: memStart to: memEnd [
 ]
 
 { #category : #'lazy become' }
-StackInterpreter >> followField: fieldIndex in: anObject [
-	"Make sure the oop at fieldIndex in anObject is not forwarded (follow the
-	 forwarder there-in if so).  Answer the (possibly followed) oop at fieldIndex.
-	 N.B. the oop is assumed to be non-immediate."
-	| objOop |
-	objOop := objectMemory fetchPointer: fieldIndex ofObject: anObject.
-	self assert: (objectMemory isNonImmediate: objOop).
-	(objectMemory isForwarded: objOop) ifTrue:
-		[objOop := objectMemory followForwarded: objOop.
-		 objectMemory storePointer: fieldIndex ofObject: anObject withValue: objOop].
-	^objOop
-]
-
-{ #category : #'lazy become' }
 StackInterpreter >> followForwardedFrameContents: theFP stackPointer: theSP [
 	"follow pointers in the current stack frame up to theSP."
 	<var: #theFP type: #'char *'>
@@ -5505,17 +5491,17 @@ StackInterpreter >> followForwardingPointersInScheduler [
 	"the GC follows pointers in the special objects array for us."
 	self assert: (objectMemory isForwarded: schedAssoc) not.
 
-	sched := self followField: ValueIndex in: schedAssoc.
+	sched := objectMemory followField: ValueIndex ofObject: schedAssoc.
 
-	procLists := self followField: ProcessListsIndex in: sched.
+	procLists := objectMemory followField: ProcessListsIndex ofObject: sched.
 
 	0 to: (objectMemory numSlotsOf: procLists) - 1 do:
 		[:i| | list first last next |
-		list := self followField: i in: procLists.
-		first := self followField: FirstLinkIndex in: list.
-		last := self followField: LastLinkIndex in: list.
+		list := objectMemory followField: i ofObject: procLists.
+		first := objectMemory followField: FirstLinkIndex ofObject: list.
+		last := objectMemory followField: LastLinkIndex ofObject: list.
 		[first ~= last] whileTrue:
-			[next := self followField: NextLinkIndex in: first.
+			[next := objectMemory followField: NextLinkIndex ofObject: first.
 			 first := next]]
 
 ]
@@ -7558,7 +7544,7 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	"Marry aContext with the base frame of a new stack page.  Build the base
 	 frame to reflect the context's state.  Answer the new page."
 	<returnTypeC: #'StackPage *'>
-	| page pointer theMethod theIP numArgs stackPtrIndex maybeClosure |
+	| page pointer theMethod theIP numArgs stackPtrIndex maybeClosure rcvr |
 	<inline: false>
 	<var: #page type: #'StackPage *'>
 	<var: #pointer type: #'char *'>
@@ -7567,20 +7553,21 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	page := self newStackPage.
 	pointer := page baseAddress.
 	theIP := objectMemory fetchPointer: InstructionPointerIndex ofObject: aContext.
-	theMethod := objectMemory fetchPointer: MethodIndex ofObject: aContext.
+	theMethod := objectMemory followField: MethodIndex ofObject: aContext.
 	(objectMemory isIntegerObject: theIP) ifFalse:
 		[self error: 'context is not resumable'].
 	theIP := objectMemory integerValueOf: theIP.
+	rcvr := objectMemory followField: ReceiverIndex ofObject: aContext.
 	"If the frame is a closure activation then the closure should be on the stack in
 	 the pushed receiver position (closures receiver the value[:value:] messages).
 	 Otherwise it should be the receiver proper."
-	maybeClosure := objectMemory fetchPointer: ClosureIndex ofObject: aContext.
+	maybeClosure := objectMemory followField: ClosureIndex ofObject: aContext.
 	maybeClosure ~= objectMemory nilObject
 		ifTrue:
 			[numArgs := self argumentCountOfClosure: maybeClosure.
 			 stackPages longAt: pointer put: maybeClosure]
 		ifFalse:
-			[| header |
+			[| header field |
 			 header := self headerOf: theMethod.
 			 numArgs := self argumentCountOfMethodHeader: header.
 			 self cppIf: MULTIPLEBYTECODESETS
@@ -7589,7 +7576,7 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 					  and: [(self methodHeaderHasPrimitive: header)
 					  and: [theIP = (1 + (objectMemory lastPointerOf: theMethod))]]) ifTrue:
 						[theIP := theIP + (self sizeOfCallPrimitiveBytecode: header)]].
-			 stackPages longAt: pointer put: (objectMemory fetchPointer: ReceiverIndex ofObject: aContext)].
+			 stackPages longAt: pointer put: rcvr].
 	"Put the arguments on the stack"
 	1 to: numArgs do:
 		[:i|
@@ -7618,7 +7605,7 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 		put: aContext.
 	stackPages
 		longAt: (pointer := pointer - BytesPerWord)
-		put: (objectMemory fetchPointer: ReceiverIndex ofObject: aContext).
+		put: rcvr.
 	stackPtrIndex := self quickFetchInteger: StackPointerIndex ofObject: aContext.
 	self assert: ReceiverIndex + stackPtrIndex < (objectMemory lengthOf: aContext).
 	numArgs + 1 to: stackPtrIndex do:
