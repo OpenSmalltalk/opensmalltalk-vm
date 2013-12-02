@@ -307,6 +307,19 @@ CCodeGenerator >> addStructMethodFor: aClass selector: selector [
 		tmethod]
 ]
 
+{ #category : #utilities }
+CCodeGenerator >> anyMethodNamed: selector [
+	"Answer any method in the code base (including api methods) with the given selector."
+
+	^methods
+		at: selector
+		ifAbsent:
+			[apiMethods ifNotNil:
+				[apiMethods
+					at: selector
+					ifAbsent: []]]
+]
+
 { #category : #accessing }
 CCodeGenerator >> apiMethods: aDictionary [
 	apiMethods := aDictionary
@@ -2564,11 +2577,16 @@ CCodeGenerator >> inferTypesForImplicitlyTypedVariablesAndMethods [
 	 done here."
 
 	"Iterate over all methods, inferring #void return types, until we reach a fixed point."
-	| firstTime |
+	| firstTime allMethods |
 	firstTime := true.
+	allMethods := apiMethods
+					ifNil: [methods]
+					ifNotNil: [(Set withAll: methods)
+								addAll: apiMethods;
+								yourself].
 	[| changedReturnType |
 	 changedReturnType := false.
-	 methods do:
+	 allMethods do:
 		[:m|
 		 firstTime ifTrue:
 			[m removeFinalSelfReturnIn: self. "must preceed recordDeclarationsIn: because it may set returnType"
