@@ -1740,26 +1740,33 @@ CoInterpreter >> ceSendAbort: selector to: rcvr numArgs: numArgs [
 ]
 
 { #category : #trampolines }
-CoInterpreter >> ceSendFromInLineCacheMiss: oPIC [
+CoInterpreter >> ceSendFromInLineCacheMiss: cogMethodOrPIC [
 	"Send from an Open PIC when the first-level method lookup probe has failed,
-	 or to continue when PIC creation has failed (e.g. because we're out of code space)."
+	 or to continue when PIC creation has failed (e.g. because we're out of code space),
+	 or when a send has failed due to a forwarded receiver."
 	<api>
-	<var: #oPIC type: #'CogMethod *'>
+	<var: #cogMethodOrPIC type: #'CogMethod *'>
 	| numArgs rcvr classTag errSelIdx |
 	"self printFrame: stackPage headFP WithSP: stackPage headSP"
 	"self printStringOf: selector"
-	numArgs := oPIC cmNumArgs.
+	numArgs := cogMethodOrPIC cmNumArgs.
 	rcvr := self stackValue: numArgs + 1. "skip return pc"
 	self assert: (objectMemory addressCouldBeOop: rcvr).
 	classTag := objectMemory fetchClassTagOf: rcvr.
 	argumentCount := numArgs.
-	(self lookupInMethodCacheSel: oPIC selector classTag: classTag)
+	(self lookupInMethodCacheSel: cogMethodOrPIC selector classTag: classTag)
 		ifTrue:"check for coggability because method is in the cache"
 			[self
 				ifAppropriateCompileToNativeCode: newMethod
-				selector: oPIC selector]
+				selector: cogMethodOrPIC selector]
 		ifFalse:
-			[messageSelector := oPIC selector.
+			[messageSelector := cogMethodOrPIC selector.
+			 ((objectMemory isOopForwarded: messageSelector)
+			  or: [objectMemory isForwardedClassTag: classTag]) ifTrue:
+				[(objectMemory isOopForwarded: messageSelector) ifTrue:
+					[messageSelector := self handleForwardedSelectorFaultFor: messageSelector].
+				 (objectMemory isForwardedClassTag: classTag) ifTrue:
+					[classTag := self handleForwardedSendFaultFor: classTag]].
 			 (errSelIdx := self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
 				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: (objectMemory classForClassTag: classTag).
 				"NOTREACHED"
@@ -3038,23 +3045,28 @@ CoInterpreter >> fastLogPrim: aSelector [
 ]
 
 { #category : #'message sending' }
-CoInterpreter >> findNewMethodInClassTag: classTag [
+CoInterpreter >> findNewMethodInClassTag: classTagArg [
 	"Find the compiled method to be run when the current messageSelector is
 	 sent to the given classTag, setting the values of newMethod and primitiveIndex."
-	| ok class |
+	| ok class classTag |
 	<inline: false>
-	ok := self lookupInMethodCacheSel: messageSelector classTag: classTag.
+	ok := self lookupInMethodCacheSel: messageSelector classTag: classTagArg.
 	ok	ifTrue:
 			[self ifAppropriateCompileToNativeCode: newMethod selector: messageSelector]
 		ifFalse:
-			["entry was not found in the cache; look it up the hard way "
+			["entry was not found in the cache; perhaps soemthing was forwarded."
+			 classTag := classTagArg.
+			 ((objectMemory isOopForwarded: messageSelector)
+			  or: [objectMemory isForwardedClassTag: classTag]) ifTrue:
+				[(objectMemory isOopForwarded: messageSelector) ifTrue:
+					[messageSelector := self handleForwardedSelectorFaultFor: messageSelector].
+				 (objectMemory isForwardedClassTag: classTag) ifTrue:
+					[classTag := self handleForwardedSendFaultFor: classTag].
+				ok := self lookupInMethodCacheSel: messageSelector classTag: classTag.
+				ok ifTrue:
+					[^self ifAppropriateCompileToNativeCode: newMethod selector: messageSelector]].
+			 "entry was not found in the cache; look it up the hard way "
 			 class := objectMemory classForClassTag: classTag.
-			 objectMemory hasSpurMemoryManagerAPI ifTrue:
-			 	[| oop |
-				 oop := self stackValue: argumentCount.
-				 ((objectMemory isNonImmediate: oop)
-				  and: [objectMemory isForwarded: oop]) ifTrue:
-					[self stackValue: argumentCount put: (objectMemory followForwarded: oop)]].
 			 self lookupMethodInClass: class.
 			 self addNewMethodToCache: class]
 ]
@@ -3840,8 +3852,7 @@ CoInterpreter >> internalFindNewMethod [
 					[lkupClassTag := self handleForwardedSendFaultFor: lkupClassTag].
 				ok := self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag.
 				ok ifTrue:
-					[self ifAppropriateCompileToNativeCode: newMethod selector: messageSelector.
-					^nil]].
+					[^self ifAppropriateCompileToNativeCode: newMethod selector: messageSelector]].
 			 lkupClass := objectMemory classForClassTag: lkupClassTag.
 			self lookupMethodInClass: lkupClass.
 			self internalizeIPandSP.
@@ -4131,7 +4142,7 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	 the caller saved ip, but in the Cog VM caller saved ip is the ceBaseReturn:
 	 trampoline.  Simply hold the caller context in the first word of the stack."
 	<returnTypeC: #'StackPage *'>
-	| page pointer theMethod theIP numArgs stackPtrIndex maybeClosure |
+	| page pointer theMethod theIP numArgs stackPtrIndex maybeClosure rcvr |
 	<inline: false>
 	<var: #page type: #'StackPage *'>
 	<var: #pointer type: #'char *'>
@@ -4143,7 +4154,7 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	theIP := (objectMemory isIntegerObject: theIP)
 				ifTrue: [objectMemory integerValueOf: theIP]
 				ifFalse: [HasBeenReturnedFromMCPC].
-	theMethod := objectMemory fetchPointer: MethodIndex ofObject: aContext.
+	theMethod := objectMemory followField: MethodIndex ofObject: aContext.
 	page := self newStackPage.
 	"first word on stack is caller context of base frame"
 	stackPages
@@ -4153,6 +4164,7 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	stackPages
 		longAt: (pointer := pointer - BytesPerWord)
 		put: aContext.
+	rcvr := objectMemory followField: ReceiverIndex ofObject: aContext.
 	"If the frame is a closure activation then the closure should be on the stack in
 	 the pushed receiver position (closures receiver the value[:value:] messages).
 	 Otherwise it should be the receiver proper."
@@ -4175,7 +4187,7 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 						[theIP := theIP + (self sizeOfCallPrimitiveBytecode: header)]].
 			 stackPages
 				longAt: (pointer := pointer - BytesPerWord)
-				put: (objectMemory fetchPointer: ReceiverIndex ofObject: aContext)].
+				put: rcvr].
 	"Put the arguments on the stack"
 	1 to: numArgs do:
 		[:i|
@@ -4257,7 +4269,7 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	self assert: (self frameNumArgs: page baseFP) == numArgs.
 	stackPages
 		longAt: (pointer := pointer - BytesPerWord)
-		put: (objectMemory fetchPointer: ReceiverIndex ofObject: aContext).
+		put: rcvr.
 	stackPtrIndex := self quickFetchInteger: StackPointerIndex ofObject: aContext.
 	self assert: ReceiverIndex + stackPtrIndex < (objectMemory lengthOf: aContext).
 	numArgs + 1 to: stackPtrIndex do:

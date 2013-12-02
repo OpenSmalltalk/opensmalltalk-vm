@@ -16,9 +16,6 @@ Class {
 		'nextPage',
 		'prevPage'
 	],
-	#classVars : [
-		'LargeContextBytes'
-	],
 	#pools : [
 		'VMBasicConstants',
 		'VMSqueakV3BytecodeConstants'
@@ -34,12 +31,6 @@ InterpreterStackPage class >> alignedByteSize [
 { #category : #translation }
 InterpreterStackPage class >> alignedByteSizeOf: anObject forClient: aVMClass [
 	^self surrogateClass alignedByteSize
-]
-
-{ #category : #'class initialization' }
-InterpreterStackPage class >> initialize [
-	"InterpreterStackPage initialize"
-	LargeContextBytes := LargeContextSize
 ]
 
 { #category : #translation }
@@ -120,7 +111,7 @@ InterpreterStackPage >> headFP: pointer [ "<Integer>"
 	"Set the value of headFP"
 	"N.B.  This assert is run in simulation only because headFP:
 	 becomes a simple field assignment in the C code."
-	self assert: (pointer = 0 or: [pointer < baseAddress and: [realStackLimit - (LargeContextBytes / 2) <= pointer]]).
+	self assert: (pointer = 0 or: [pointer < baseAddress and: [realStackLimit - (LargeContextSize / 2) <= pointer]]).
 	^headFP := pointer
 ]
 
@@ -136,7 +127,7 @@ InterpreterStackPage >> headSP: pointer [ "<Integer>"
 	"Set the value of headSP"
 	"N.B.  This assert is run in simulation only because headFP:
 	 becomes a simple field assignment in the C code."
-	self assert: (pointer = 0 or: [pointer < baseAddress and: [realStackLimit - LargeContextBytes <= pointer]]).
+	self assert: (pointer = 0 or: [pointer < baseAddress and: [realStackLimit - LargeContextSize <= pointer]]).
 	^headSP := pointer
 ]
 

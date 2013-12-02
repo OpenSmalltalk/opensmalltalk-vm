@@ -1380,6 +1380,8 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 						withValue: (self fetchPointer: self freeChunkNextIndex
 										ofFreeChunk: chunk).
 					 ^self startOfObject: chunk].
+				 nodeBytes := childBytes.
+				 parent := child.
 				 child := 0] "break out of loop to remove interior node"
 			ifFalse:
 				["Note that because the minimum free size is 16 bytes (2 * allocationUnit), to
@@ -3510,7 +3512,8 @@ SpurMemoryManager >> fillHighestObjectsWithMovableObjectsFrom: startObj upTo: li
 						ifTrue: [highestObjects addLast: o]
 						ifFalse: "but we inline so we can use the local lastHighest"
 							[(lastHighest := lastHighest + self wordSize) >= highestObjects limit ifTrue:
-								[highestObjectsWraps := highestObjectsWraps + 1].
+								[highestObjectsWraps := highestObjectsWraps + 1.
+								 lastHighest := highestObjects start].
 							 self longAt: lastHighest put: o]]]].
 	highestObjects last: lastHighest.
 	(firstFree ~= 0 and: [(self isFreeObject: firstFreeChunk) not]) ifTrue:
@@ -3799,7 +3802,21 @@ SpurMemoryManager >> flushNewSpaceInstancesOf: aClass [
 	self assert: (self existInstancesInNewSpaceOf: aClass) not
 ]
 
-{ #category : #'become api' }
+{ #category : #forwarding }
+SpurMemoryManager >> followField: fieldIndex ofObject: anObject [
+	"Make sure the oop at fieldIndex in anObject is not forwarded (follow the
+	 forwarder there-in if so).  Answer the (possibly followed) oop at fieldIndex.
+	 N.B. the oop is assumed to be non-immediate."
+	| objOop |
+	objOop := self fetchPointer: fieldIndex ofObject: anObject.
+	self assert: (self isNonImmediate: objOop).
+	(self isForwarded: objOop) ifTrue:
+		[objOop := self followForwarded: objOop.
+		 self storePointer: fieldIndex ofObject: anObject withValue: objOop].
+	^objOop
+]
+
+{ #category : #forwarding }
 SpurMemoryManager >> followForwarded: objOop [
 	"Follow a forwarding pointer.  Alas we cannot prevent forwarders to forwarders
 	 being created by lazy become.  Consider the following example by Igor Stasenko:
@@ -3862,7 +3879,7 @@ SpurMemoryManager >> followForwardedObjStacks [
 	self followForwardedInObjStack: ephemeronQueue atIndex: EphemeronQueueRootIndex
 ]
 
-{ #category : #'become api' }
+{ #category : #forwarding }
 SpurMemoryManager >> followForwardedObjectFields: objOop toDepth: depth [
 	"follow pointers in the object to depth.
 	 How to avoid cyclic structures?? A temproary mark bit?"
@@ -4210,6 +4227,7 @@ SpurMemoryManager >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpace [
 { #category : #'gc - global' }
 SpurMemoryManager >> fullGC [
 	"Perform a full lazy compacting GC.  Answer the size of the largest free chunk."
+	<returnTypeC: #usqLong>
 	<inline: false>
 	needGCFlag := false.
 	gcStartUsecs := self ioUTCMicrosecondsNow.
@@ -5031,6 +5049,7 @@ SpurMemoryManager >> isFloatObject: oop [
 
 { #category : #'object testing' }
 SpurMemoryManager >> isForwarded: objOop [
+	<api>
 	^(self classIndexOf: objOop) = self isForwardedObjectClassIndexPun
 ]
 
@@ -5220,6 +5239,7 @@ SpurMemoryManager >> isOopCompiledMethod: oop [
 
 { #category : #'object testing' }
 SpurMemoryManager >> isOopForwarded: oop [
+	<api>
 	^(self isNonImmediate: oop)
 	  and: [(self classIndexOf: oop) = self isForwardedObjectClassIndexPun]
 ]
@@ -5266,6 +5286,14 @@ SpurMemoryManager >> isPointersNonImm: objOop [
 SpurMemoryManager >> isPureBitsFormat: format [
 	^format >= self sixtyFourBitIndexableFormat
 	  and: [format < self firstCompiledMethodFormat]
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isReallyYoung: oop [
+	<api>
+	"Answer if oop is young."
+	^(self isNonImmediate: oop)
+	 and: [self isReallyYoungObject: oop]
 ]
 
 { #category : #'object testing' }
@@ -6987,7 +7015,7 @@ SpurMemoryManager >> remapObj: objOop [
 				[^resolvedObj]]
 		ifFalse:
 			[resolvedObj := objOop].
-	(self isYoung: resolvedObj) ifFalse: "a becommed or compacted object whose target is in old space"
+	(self isReallyYoung: resolvedObj) ifFalse: "a becommed or compacted object whose target is in old space, or a CogMethod."
 		[^resolvedObj].
 	^scavenger copyAndForward: resolvedObj
 ]
@@ -7369,7 +7397,7 @@ SpurMemoryManager >> shouldRemapObj: objOop [
 	"Answer if the obj should be scavenged (or simply followed). The method is called
 	 shouldRemapObj: for compatibility with ObjectMemory."
 	^(self isForwarded: objOop)
-	  or: [self isYoungObject: objOop]
+	  or: [self isReallyYoungObject: objOop]
 ]
 
 { #category : #'gc - scavenging' }
@@ -7544,12 +7572,14 @@ SpurMemoryManager >> splObj: index put: anObject [
 { #category : #'simulation only' }
 SpurMemoryManager >> sqAllocateMemorySegmentOfSize: segmentSize Above: minAddress AllocatedSizeInto: allocSizePtrOrBlock [
 	<doNotGenerate>
-	"Simulate heap growth by growing memory by segmentSize + 1Meg.
-	 1Meg will be the distance between segments to be bridged."
-	| oneMeg newMemory start |
-	oneMeg := 1024 * 1024.
-	start := memory size * 4 + oneMeg.
-	newMemory := memory class new: memory size + (segmentSize + oneMeg / 4).
+	"Simulate heap growth by growing memory by segmentSize + a delta.
+	 To test bridges alternate the delta between 0 bytes and 1M bytes
+	 depending on the number of segments.
+	 The delta will be the distance between segments to be bridged."
+	| delta newMemory start |
+	delta := segmentManager numSegments odd ifTrue: [1024 * 1024] ifFalse: [0].
+	start := memory size * 4 + delta.
+	newMemory := memory class new: memory size + (segmentSize + delta / 4).
 	newMemory replaceFrom: 1 to: memory size with: memory startingAt: 1.
 	memory := newMemory.
 	allocSizePtrOrBlock value: segmentSize.
@@ -8022,6 +8052,7 @@ SpurMemoryManager >> topRemappableOop [
 
 { #category : #'indexing primitive support' }
 SpurMemoryManager >> totalByteSizeOf: oop [
+	<returnTypeC: #usqLong>
 	^(self isImmediate: oop)
 		ifTrue: [0]
 		ifFalse: [self bytesInObject: oop]
