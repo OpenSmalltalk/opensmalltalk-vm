@@ -516,7 +516,7 @@ SpurGenerationScavenger >> isScavengeSurvivor: oop [
 	(manager isForwarded: oop)
 		ifTrue: [target := manager followForwarded: oop]
 		ifFalse: [target := oop].
-	^(manager isYoung: target) not
+	^(manager isReallyYoung: target) not
 	  or: [manager isInFutureSpace: target]
 ]
 

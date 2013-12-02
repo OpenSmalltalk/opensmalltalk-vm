@@ -150,6 +150,7 @@ Spur64BitMemoryManager >> byteSwapped: w [
 { #category : #'object enumeration' }
 Spur64BitMemoryManager >> bytesInObject: objOop [
 	"Answer the total number of bytes in an object including header and possible overflow size header."
+	<returnTypeC: #usqLong>
 	| header headerNumSlots numSlots |
 	<var: 'header' type: #usqLong>
 	self flag: #endianness.
@@ -285,19 +286,28 @@ Spur64BitMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
 
 { #category : #segments }
 Spur64BitMemoryManager >> initSegmentBridgeWithBytes: numBytes at: address [
-	| numSlots |
 	<var: #numBytes type: #usqLong>
-	self assert: (numBytes >= (self baseHeaderSize + self baseHeaderSize)
-			and: [numBytes \\ self allocationUnit = 0]).
+	| numSlots |
+	"must have room for a double header"
+	self assert: (numBytes \\ self allocationUnit = 0
+				 and: [numBytes >= (self baseHeaderSize + self baseHeaderSize)]).
 	numSlots := numBytes - self baseHeaderSize - self baseHeaderSize >> self shiftForWord.
-	self longAt: address
-			put: self numSlotsMask << self numSlotsFullShift + numSlots;
-		longAt: address + self baseHeaderSize
-			put: (self numSlotsMask << self numSlotsFullShift)
-				+ (1 << self pinnedBitShift)
-				+ (1 << self markedBitFullShift)
-				+ (self wordIndexableFormat << self formatShift)
-				+ self segmentBridgePun
+	numSlots = 0
+		ifTrue: "short bridge for adjacent segments"
+			[self longAt: address
+					put:    (1 << self pinnedBitShift)
+						+ (1 << self markedBitFullShift)
+						+ (self wordIndexableFormat << self formatShift)
+						+ self segmentBridgePun]
+		ifFalse: "long bridge"
+			[self longAt: address
+					put: self numSlotsMask << self numSlotsFullShift + numSlots;
+				longAt: address + self baseHeaderSize
+					put: (self numSlotsMask << self numSlotsFullShift)
+						+ (1 << self pinnedBitShift)
+						+ (1 << self markedBitFullShift)
+						+ (self wordIndexableFormat << self formatShift)
+						+ self segmentBridgePun]
 ]
 
 { #category : #instantiation }

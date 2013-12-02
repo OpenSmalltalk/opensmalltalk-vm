@@ -893,7 +893,7 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 { #category : #'in-line cacheing' }
 SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 	"Compile the code for an open PIC.  Perform a probe of the first-level method
-	 lookup cache followed by a call of ceSendFromOpenPIC: if the probe fails."
+	 lookup cache followed by a call of ceSendFromInLineCacheMiss: if the probe fails."
 	| jumpSelectorMiss jumpClassMiss itsAHit jumpBCMethod routine |
 	<var: #jumpSelectorMiss type: #'AbstractInstruction *'>
 	<var: #jumpClassMiss type: #'AbstractInstruction *'>
@@ -970,7 +970,7 @@ SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 	self CmpR: SendNumArgsReg R: TempReg.
 	self JumpZero: itsAHit.
 
-	"Last probe missed.  Call ceSendFromOpenPIC: to do the full lookup."
+	"Last probe missed.  Call ceSendFromInLineCacheMiss: to do the full lookup."
 	jumpSelectorMiss jmpTarget: self Label.
 	self genSaveStackPointers.
 	self genLoadCStackPointers.

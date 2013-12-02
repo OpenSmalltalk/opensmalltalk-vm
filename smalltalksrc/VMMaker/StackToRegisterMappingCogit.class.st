@@ -1283,8 +1283,8 @@ StackToRegisterMappingCogit >> compileFrameBuild [
 { #category : #'in-line cacheing' }
 StackToRegisterMappingCogit >> compileOpenPIC: selector numArgs: numArgs [
 	"Compile the code for an open PIC.  Perform a probe of the first-level method
-	 lookup cache followed by a call of ceSendFromOpenPIC: if the probe fails.
-	 Override to push the register args when calling ceSendFromOpenPIC:"
+	 lookup cache followed by a call of ceSendFromInLineCacheMiss: if the probe fails.
+	 Override to push the register args when calling ceSendFromInLineCacheMiss:"
 	| jumpSelectorMiss jumpClassMiss itsAHit jumpBCMethod routine |
 	<var: #jumpSelectorMiss type: #'AbstractInstruction *'>
 	<var: #jumpClassMiss type: #'AbstractInstruction *'>

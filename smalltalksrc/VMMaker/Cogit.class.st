@@ -2501,6 +2501,8 @@ Cogit >> ceCPICMiss: cPIC receiver: receiver [
 		inSmalltalk:
 			[cPIC isInteger ifTrue:
 				[^self ceCPICMiss: (self cogMethodSurrogateAt: cPIC) receiver: receiver]].
+	(objectMemory isOopForwarded: receiver) ifTrue:
+		[^coInterpreter ceSendFromInLineCacheMiss: cPIC].
 	outerReturn := coInterpreter stackTop.
 	cPIC cPICNumCases < numPICCases
 		ifTrue:
@@ -2655,6 +2657,8 @@ Cogit >> ceSICMiss: receiver [
 	"Whether we can relink to a PIC or not we need to pop off the inner return and identify the target method."
 	innerReturn := coInterpreter popStack.
 	targetMethod := self cCoerceSimple: innerReturn - missOffset to: #'CogMethod *'.
+	(objectMemory isOopForwarded: receiver) ifTrue:
+		[^coInterpreter ceSendFromInLineCacheMiss: targetMethod].
 	outerReturn := coInterpreter stackTop.
 	self assert: (outerReturn between: methodZoneBase and: methodZone freeStart).
 	entryPoint := backEnd callTargetFromReturnAddress: outerReturn.
