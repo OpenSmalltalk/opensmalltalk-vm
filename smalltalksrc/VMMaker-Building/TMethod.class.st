@@ -461,7 +461,7 @@ TMethod >> determineTypeFor: aNode in: aCodeGen [
 								extractTypeFor: aNode receiver name
 								fromDeclaration: type allButLast]
 					ifFalse: [type]]].
-		^(aCodeGen methodNamed: aNode selector)
+		^(aCodeGen anyMethodNamed: aNode selector)
 			ifNil: [#sqInt]
 			ifNotNil: [:method| method returnType]].
 	aNode isAssignment ifTrue:
@@ -1031,7 +1031,7 @@ TMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 		 and: [(locals includes: (var := node variable name))
 		 and: [(declarations includesKey: var) not
 		 and: [node expression isSend
-		 and: [(m := aCodeGen methodNamed: node expression selector) notNil]]]]) ifTrue:
+		 and: [(m := aCodeGen anyMethodNamed: node expression selector) notNil]]]]) ifTrue:
 			[(#(sqInt void nil) includes: m returnType) ifFalse:
 				["the $: is to map things like unsigned field : 3 to usqInt"
 				 declarations

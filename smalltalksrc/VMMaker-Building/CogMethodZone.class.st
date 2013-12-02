@@ -138,10 +138,11 @@ CogMethodZone >> cogit [
 ]
 
 { #category : #compaction }
-CogMethodZone >> compactCompiledCode: objectHeaderValue [
-	| source dest bytes |
+CogMethodZone >> compactCompiledCode [
+	| objectHeaderValue source dest bytes |
 	<var: #source type: #'CogMethod *'>
 	<var: #dest type: #'CogMethod *'>
+	objectHeaderValue := objectMemory nullHeaderForMachineCodeMethod.
 	source := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
 	openPICList := nil.
 	methodCount := 0.
