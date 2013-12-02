@@ -73,7 +73,12 @@ FilePlugin class >> simulatorClass [
 
 { #category : #'directory primitives' }
 FilePlugin >> asciiDirectoryDelimiter [
-	^ self cCode: 'dir_Delimitor()' inSmalltalk: [FileDirectory pathNameDelimiter asciiValue]
+	^ self
+		cCode: 'dir_Delimitor()'
+		inSmalltalk:
+			[(Smalltalk classNamed: #FileSystem)
+				ifNotNil: [:fileSystem| fileSystem disk delimiter asciiValue]
+				ifNil: [FileDirectory pathNameDelimiter asciiValue]]
 ]
 
 { #category : #'file primitives' }

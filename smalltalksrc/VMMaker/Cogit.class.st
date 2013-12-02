@@ -3473,7 +3473,7 @@ Cogit >> compactCogCompiledCode [
 	methodZone planCompaction.
 	coInterpreter updateStackZoneReferencesToCompiledCodePreCompaction.
 	self relocateMethodsPreCompaction.
-	methodZone compactCompiledCode: objectMemory nullHeaderForMachineCodeMethod.
+	methodZone compactCompiledCode.
 	self assert: self allMethodsHaveCorrectHeader.
 	self assert: methodZone kosherYoungReferrers.
 	processor flushICacheFrom: methodZoneBase to: methodZone freeStart
