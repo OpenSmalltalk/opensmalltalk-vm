@@ -5491,17 +5491,17 @@ StackInterpreter >> followForwardingPointersInScheduler [
 	"the GC follows pointers in the special objects array for us."
 	self assert: (objectMemory isForwarded: schedAssoc) not.
 
-	sched := objectMemory followField: ValueIndex ofObject: schedAssoc.
+	sched := objectMemory followNonImmediateField: ValueIndex ofObject: schedAssoc.
 
-	procLists := objectMemory followField: ProcessListsIndex ofObject: sched.
+	procLists := objectMemory followNonImmediateField: ProcessListsIndex ofObject: sched.
 
 	0 to: (objectMemory numSlotsOf: procLists) - 1 do:
 		[:i| | list first last next |
-		list := objectMemory followField: i ofObject: procLists.
-		first := objectMemory followField: FirstLinkIndex ofObject: list.
-		last := objectMemory followField: LastLinkIndex ofObject: list.
+		list := objectMemory followNonImmediateField: i ofObject: procLists.
+		first := objectMemory followNonImmediateField: FirstLinkIndex ofObject: list.
+		last := objectMemory followNonImmediateField: LastLinkIndex ofObject: list.
 		[first ~= last] whileTrue:
-			[next := objectMemory followField: NextLinkIndex ofObject: first.
+			[next := objectMemory followNonImmediateField: NextLinkIndex ofObject: first.
 			 first := next]]
 
 ]
@@ -7553,7 +7553,7 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	page := self newStackPage.
 	pointer := page baseAddress.
 	theIP := objectMemory fetchPointer: InstructionPointerIndex ofObject: aContext.
-	theMethod := objectMemory followField: MethodIndex ofObject: aContext.
+	theMethod := objectMemory followNonImmediateField: MethodIndex ofObject: aContext.
 	(objectMemory isIntegerObject: theIP) ifFalse:
 		[self error: 'context is not resumable'].
 	theIP := objectMemory integerValueOf: theIP.
@@ -7567,7 +7567,7 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 			[numArgs := self argumentCountOfClosure: maybeClosure.
 			 stackPages longAt: pointer put: maybeClosure]
 		ifFalse:
-			[| header field |
+			[| header |
 			 header := self headerOf: theMethod.
 			 numArgs := self argumentCountOfMethodHeader: header.
 			 self cppIf: MULTIPLEBYTECODESETS
@@ -7630,7 +7630,7 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 		withValue: (self withSmallIntegerTags: 0).
 	self assert: (objectMemory isIntegerObject: (objectMemory fetchPointer: SenderIndex ofObject: aContext)).
 	self assert: (self frameOfMarriedContext: aContext) = page baseFP.
-	self assert: self validStackPageBaseFrames.
+	self assert: (self validStackPageBaseFrame: page).
 	^page
 ]
 
@@ -12316,19 +12316,30 @@ StackInterpreter >> validInstructionPointer: theInstrPointer inMethod: aMethod f
 ]
 
 { #category : #'stack pages' }
+StackInterpreter >> validStackPageBaseFrame: aPage [
+	"Check that the base frame in the stack page has a valid sender context."
+	<var: #aPage type: #'StackPage *'>
+	<inline: false>
+	| senderContextOrNil |
+	(self asserta: (self isBaseFrame: aPage baseFP)) ifFalse:
+		[^false].
+	senderContextOrNil := self frameCallerContext: aPage baseFP.
+	(self asserta: (objectMemory addressCouldBeObj: senderContextOrNil)) ifFalse:
+		[^false].
+	(self asserta: (senderContextOrNil = objectMemory nilObject or: [objectMemory isContext: senderContextOrNil])) ifFalse:
+		[^false].
+	^true
+]
+
+{ #category : #'stack pages' }
 StackInterpreter >> validStackPageBaseFrames [
-	"Check that the base frames in all in-use stack pages have a valid sender context."
+	"Check that the base frames in all in-use stack pages have a sender and a saved context."
 	<var: #aPage type: #'StackPage *'>
 	0 to: numStackPages - 1 do:
-		[:i| | aPage senderContextOrNil |
+		[:i| | aPage senderContextOrNil savedThisContext |
 		aPage := stackPages stackPageAt: i.
 		(stackPages isFree: aPage) ifFalse:
-			[(self asserta: (self isBaseFrame: aPage baseFP)) ifFalse:
-				[^false].
-			 senderContextOrNil := self frameCallerContext: aPage baseFP.
-			 (self asserta: (objectMemory addressCouldBeObj: senderContextOrNil)) ifFalse:
-				[^false].
-			 (self asserta: (senderContextOrNil = objectMemory nilObject or: [objectMemory isContext: senderContextOrNil])) ifFalse:
+			[(self validStackPageBaseFrame: aPage) ifFalse:
 				[^false]]].
 	^true
 ]

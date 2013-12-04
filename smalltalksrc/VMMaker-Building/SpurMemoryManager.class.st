@@ -3563,6 +3563,21 @@ SpurMemoryManager >> findString: aCString [
 			[coInterpreter printHex: obj; space; printOopShort: obj; cr]]
 ]
 
+{ #category : #'debug support' }
+SpurMemoryManager >> findStringBeginningWith: aCString [
+	"Print the oops of all string-like things that start with the same characters as aCString"
+	<api>
+	<var: #aCString type: #'char *'>
+	| cssz |
+	cssz := self strlen: aCString.
+	self allObjectsDo:
+		[:obj|
+		 ((self isBytesNonInt: obj)
+		  and: [(self lengthOf: obj) >= cssz
+		  and: [(self str: aCString n: (self pointerForOop: obj + BaseHeaderSize) cmp: cssz) = 0]]) ifTrue:
+				[coInterpreter printHex: obj; space; printNum: (self lengthOf: obj); space; printOopShort: obj; cr]]
+]
+
 { #category : #'weakness and ephemerality' }
 SpurMemoryManager >> fireAllUnscannedEphemerons [
 	self assert: (self noUnscannedEphemerons) not.
@@ -3739,6 +3754,17 @@ SpurMemoryManager >> firstValidIndexOfIndexableObject: obj withFormat: fmt [
 		ifFalse: [1]
 ]
 
+{ #category : #forwarding }
+SpurMemoryManager >> fixFollowedField: fieldIndex ofObject: anObject withInitialValue: initialValue [
+	"Private helper for followField:ofObject: to avoid code duplication for rare case."
+	<inline: false>
+	| objOop |
+	self assert: (self isOopForwarded: initialValue).
+	objOop := self followForwarded: objOop.
+	self storePointer: fieldIndex ofObject: anObject withValue: objOop.
+	^objOop
+]
+
 { #category : #'object format' }
 SpurMemoryManager >> fixedFieldsFieldWidth [
 	<api>
@@ -3805,14 +3831,11 @@ SpurMemoryManager >> flushNewSpaceInstancesOf: aClass [
 { #category : #forwarding }
 SpurMemoryManager >> followField: fieldIndex ofObject: anObject [
 	"Make sure the oop at fieldIndex in anObject is not forwarded (follow the
-	 forwarder there-in if so).  Answer the (possibly followed) oop at fieldIndex.
-	 N.B. the oop is assumed to be non-immediate."
+	 forwarder there-in if so).  Answer the (possibly followed) oop at fieldIndex."
 	| objOop |
 	objOop := self fetchPointer: fieldIndex ofObject: anObject.
-	self assert: (self isNonImmediate: objOop).
-	(self isForwarded: objOop) ifTrue:
-		[objOop := self followForwarded: objOop.
-		 self storePointer: fieldIndex ofObject: anObject withValue: objOop].
+	(self isOopForwarded: objOop) ifTrue:
+		[objOop := self fixFollowedField: fieldIndex ofObject: anObject withInitialValue: objOop].
 	^objOop
 ]
 
@@ -3901,6 +3924,19 @@ SpurMemoryManager >> followMaybeForwarded: objOop [
 	^(self isForwarded: objOop)
 		ifTrue: [self followForwarded: objOop]
 		ifFalse: [objOop]
+]
+
+{ #category : #forwarding }
+SpurMemoryManager >> followNonImmediateField: fieldIndex ofObject: anObject [
+	"Make sure the oop at fieldIndex in anObject is not forwarded (follow the
+	 forwarder there-in if so).  Answer the (possibly followed) oop at fieldIndex.
+	 N.B. the oop is assumed to be non-immediate."
+	| objOop |
+	objOop := self fetchPointer: fieldIndex ofObject: anObject.
+	self assert: (self isNonImmediate: objOop).
+	(self isForwarded: objOop) ifTrue:
+		[objOop := self fixFollowedField: fieldIndex ofObject: anObject withInitialValue: objOop].
+	^objOop
 ]
 
 { #category : #'header format' }
@@ -6850,6 +6886,20 @@ SpurMemoryManager >> printMemoryFrom: start to: end [
 	[address < end] whileTrue:
 		[coInterpreter printHex: address; printChar: $:; space; printHex: (self longAt: address); cr.
 		 address := address + BytesPerWord]
+]
+
+{ #category : #'debug printing' }
+SpurMemoryManager >> printMethodReferencesTo: anOop [
+	"Scan the heap printing the oops of any and all methods that refer to anOop"
+	<api>
+	self allObjectsDo:
+		[:obj| | i |
+		 (self isCompiledMethod: obj) ifTrue:
+			[i := (self literalCountOf: obj) + LiteralStart - 1.
+			[(i := i - 1) >= 0] whileTrue:
+				[anOop = (self fetchPointer: i ofObject: obj) ifTrue:
+					[coInterpreter printHex: obj; print: ' @ '; printNum: i; space; printOopShort: obj; cr.
+					 i := 0]]]]
 ]
 
 { #category : #'debug printing' }
