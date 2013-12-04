@@ -7347,6 +7347,20 @@ Cogit >> printPCMapPairsFor: cogMethod on: aStream [
 		separatedBy: [aStream tab; next: 2 put: $=; cr]
 ]
 
+{ #category : #disassembly }
+Cogit >> printRegisterMapOn: aStream [
+	<doNotGenerate>
+	| map n |
+	map := backEnd generalPurposeRegisterMap.
+	n := 0.
+	map keys sort
+		do:	[:regName| | abstractName |
+			abstractName := CogRTLOpcodes nameForRegister: (backEnd abstractRegisterForConcreteRegister: (map at: regName)).
+			aStream nextPutAll: abstractName; nextPutAll: ' => '; nextPutAll: regName]
+		separatedBy: [(n := n + 1) \\ 4 = 0 ifTrue: [aStream cr] ifFalse: [aStream tab]].
+	aStream cr; flush
+]
+
 { #category : #debugging }
 Cogit >> printRegisters [
 	<doNotGenerate>
@@ -7422,13 +7436,14 @@ Cogit >> recordInstruction: thing [
 	[lastNInstructions size > 160"80"] whileTrue:
 		[lastNInstructions removeFirst.
 		 lastNInstructions size * 2 > lastNInstructions capacity ifTrue:
-			[lastNInstructions makeRoomAtLast]]
+			[lastNInstructions makeRoomAtLast]].
+	^thing
 ]
 
 { #category : #'simulation only' }
 Cogit >> recordLastInstruction [
 	<doNotGenerate>
-	self recordInstruction: (processor
+	^self recordInstruction: (processor
 								disassembleNextInstructionIn: coInterpreter memory
 								for: (EagerInstructionDecoration ifTrue: [self]))
 ]
@@ -7456,10 +7471,15 @@ Cogit >> recordPrimTraceFunc [
 
 { #category : #'simulation only' }
 Cogit >> recordProcessing [
+	| inst |
 	self recordRegisters.
+	inst := self recordLastInstruction.
 	printRegisters ifTrue:
 		[processor printRegistersOn: coInterpreter transcript].
-	self recordLastInstruction
+	printInstructions ifTrue:
+		[printRegisters ifTrue:
+			[coInterpreter transcript cr].
+		 coInterpreter transcript nextPutAll: inst; cr; flush]
 ]
 
 { #category : #'simulation only' }
@@ -8090,10 +8110,7 @@ Cogit >> simulateCogCodeAt: address [ "<Integer>"
 			 "coInterpreter shortPrintFrameAndCallers: processor fp"
 			"self disassembleMethodFor: processor pc"
 			 coInterpreter changed: #byteCountText.
-			 self halt: 'machine code breakpoint at ',
-						(breakPC isInteger
-							ifTrue: [breakPC hex]
-							ifFalse: [String streamContents: [:s| breakBlock decompile printOn: s indent: 0]])]] value]. "So that the Debugger's Over steps over all this"
+			 self halt: 'machine code breakpoint at ', processor pc hex]] value]. "So that the Debugger's Over steps over all this"
 	   singleStep
 		ifTrue: [processor
 					singleStepIn: coInterpreter memory

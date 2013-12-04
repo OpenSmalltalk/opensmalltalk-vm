@@ -2105,8 +2105,12 @@ StackInterpreterSimulator >> shortPrint: oop [
 	| name classOop |
 	(objectMemory isImmediate: oop) ifTrue:
 		[(objectMemory isImmediateCharacter: oop) ifTrue:
-			[^ '=$' , (objectMemory characterValueOf: oop) printString , 
-			' (' , (String with: (Character value: (objectMemory characterValueOf: oop))) , ')'].
+			[^(objectMemory characterValueOf: oop) < 256
+				ifTrue:
+					['=$' , (objectMemory characterValueOf: oop) printString , 
+					' (' , (String with: (Character value: (objectMemory characterValueOf: oop))) , ')']
+				ifFalse:
+					['=$' , (objectMemory characterValueOf: oop) printString, '(???)']].
 		(objectMemory isIntegerObject: oop) ifTrue:
 			[^ '=' , (objectMemory integerValueOf: oop) printString , 
 			' (' , (objectMemory integerValueOf: oop) hex , ')'].

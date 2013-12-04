@@ -120,6 +120,8 @@ Spur32BitCoMemoryManager >> clearLeakMapAndMapAccessibleObjects [
 
 { #category : #'cog jit support' }
 Spur32BitCoMemoryManager >> freeStart: aValue [
+	self assert: (aValue >= scavenger eden start and: [aValue < scavengeThreshold]).
+	self assert: scavengeThreshold + coInterpreter interpreterAllocationReserveBytes <= scavenger eden limit.
 	^freeStart := aValue
 ]
 
@@ -129,6 +131,13 @@ Spur32BitCoMemoryManager >> freeStartAddress [
 	<returnTypeC: #usqInt>
 	^self cCode: [(self addressOf: freeStart) asUnsignedInteger]
 		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #freeStart in: self]
+]
+
+{ #category : #'cog jit support' }
+Spur32BitCoMemoryManager >> getScavengeThreshold [
+	<api>
+	<returnTypeC: #usqInt>
+	^scavengeThreshold
 ]
 
 { #category : #'garbage collection' }
@@ -156,19 +165,6 @@ Spur32BitCoMemoryManager >> nullHeaderForMachineCodeMethod [
 	^(self firstLongFormat << self formatShift)
 	+ (1 << self markedBitFullShift)
 	+ ClassBitmapCompactIndex
-]
-
-{ #category : #'cog jit support' }
-Spur32BitCoMemoryManager >> scavengeThreshold [
-	^scavengeThreshold
-]
-
-{ #category : #'trampoline support' }
-Spur32BitCoMemoryManager >> scavengeThresholdAddress [
-	<api>
-	<returnTypeC: #usqInt>
-	^self cCode: [(self addressOf: scavengeThreshold) asUnsignedInteger]
-		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #scavengeThreshold in: self]
 ]
 
 { #category : #accessing }

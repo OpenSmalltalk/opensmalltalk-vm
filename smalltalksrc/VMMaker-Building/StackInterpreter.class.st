@@ -9450,29 +9450,44 @@ StackInterpreter >> printHexnp: n [
 
 { #category : #'debug printing' }
 StackInterpreter >> printMethodCache [
+	<api>
+	self printMethodCacheFor: -1
+]
+
+{ #category : #'debug printing' }
+StackInterpreter >> printMethodCacheFor: thing [
+	<api>
 	0 to: MethodCacheSize - 1 by: MethodCacheEntrySize do:
 		[:i | | s c m p |
 		s := methodCache at: i + MethodCacheSelector.
 		c := methodCache at: i + MethodCacheClass.
 		m := methodCache at: i + MethodCacheMethod.
 		p := methodCache at: i + MethodCachePrimFunction.
-		((objectMemory addressCouldBeOop: s)
+		((thing = -1 or: [s = thing or: [c = thing or: [p = thing or: [m = thing
+			or: [(objectMemory addressCouldBeObj: m)
+				and: [(self maybeMethodHasCogMethod: m)
+				and: [(self cogMethodOf: m) asInteger = thing]]]]]]])
+		 and: [(objectMemory addressCouldBeOop: s)
 		 and: [c ~= 0
 		 and: [(self addressCouldBeClassObj: c)
-			or: [self addressCouldBeClassObj: (objectMemory classForClassTag: c)]]]) ifTrue:
-			[self transcript ensureCr.
-			 self print: i; cr; tab.
+			or: [self addressCouldBeClassObj: (objectMemory classForClassTag: c)]]]]) ifTrue:
+			[self cCode: [] inSmalltalk: [self transcript ensureCr].
+			 self printNum: i; cr; tab.
 			 (objectMemory isBytesNonImm: s)
-				ifTrue: [self printHex: s; space; print: (self stringOf: s); cr]
+				ifTrue: [self cCode: 'printf("%x %.*s\n", s, byteLengthOf(s), (char *)firstIndexableField(s))'
+						inSmalltalk: [self printHex: s; space; print: (self stringOf: s); cr]]
 				ifFalse: [self shortPrintOop: s].
 			 self tab.
 			 (self addressCouldBeClassObj: c)
 				ifTrue: [self shortPrintOop: c]
 				ifFalse: [self printNum: c; space; shortPrintOop: (objectMemory classForClassTag: c)].
 			self tab; shortPrintOop: m; tab.
-			p isSymbol
-				ifTrue: [self print: p]
-				ifFalse: [self printNum: p].
+			self cCode:
+					[p > 1024
+						ifTrue: [self printHexnp: p]
+						ifFalse: [self printNum: p]]
+				inSmalltalk:
+					[p isSymbol ifTrue: [self print: p] ifFalse: [self printNum: p]].
 			self cr]]
 ]
 
