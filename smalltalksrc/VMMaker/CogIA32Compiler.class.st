@@ -2333,6 +2333,19 @@ CogIA32Compiler >> genSubstituteReturnAddress: retpc [
 	^cogit PushCw: retpc
 ]
 
+{ #category : #disassembly }
+CogIA32Compiler >> generalPurposeRegisterMap [
+	<doNotGenerate>
+	"Answer a Dictionary from register getter to register index."
+	^Dictionary newFromPairs:
+		{	#eax. EAX.
+			#ecx. ECX.
+			#edx. EDX.
+			#ebx. EBX.
+			#esi.  ESI.
+			#edi.  EDI	}
+]
+
 { #category : #'feature detection' }
 CogIA32Compiler >> generateCheckFeatures [
 	cogit

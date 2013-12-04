@@ -288,8 +288,8 @@ CogMethodZone >> freeOlderMethodsForCompaction [
 
 { #category : #accessing }
 CogMethodZone >> freeStart [
-	<inline: true>
-	<returnTypeC: #usqInt>
+	"declared as a macro so as not to conflict with the memory manager's freeStart."
+	<cmacro: '() mzFreeStart'>
 	^mzFreeStart
 ]
 

@@ -56,9 +56,8 @@ CogObjectRepresentationForSpur >> genAllocFloatValue: dpreg into: resultReg scra
 							format: objectMemory firstLongFormat
 							classIndex: objectMemory classFloatCompactIndex.
 	cogit MoveAw: objectMemory freeStartAddress R: resultReg.
-	cogit MoveAw: objectMemory scavengeThresholdAddress R: scratch2.
 	cogit LoadEffectiveAddressMw: allocSize r: resultReg R: scratch1.
-	cogit CmpR: scratch2 R: scratch1.
+	cogit CmpCq: objectMemory getScavengeThreshold R: scratch1.
 	jumpFail := cogit JumpAboveOrEqual: 0.
 	cogit MoveR: scratch1 Aw: objectMemory freeStartAddress.
 	cogit MoveCq: newFloatHeader R: scratch2.
@@ -66,9 +65,9 @@ CogObjectRepresentationForSpur >> genAllocFloatValue: dpreg into: resultReg scra
 		ifTrue: [cogit MoveR: scratch2 Mw: 0 r: resultReg]
 		ifFalse:
 			[self flag: #endianness.
-			 cogit MoveCq: 0 R: scratch1.
+			 cogit MoveCq: newFloatHeader >> 32 R: scratch1.
 			 cogit MoveR: scratch2 Mw: 0 r: resultReg.
-			 cogit MoveR: scratch1 Mw: objectMemory wordSize r: resultReg.].
+			 cogit MoveR: scratch1 Mw: objectMemory wordSize r: resultReg].
 	cogit MoveRd: dpreg M64: objectMemory baseHeaderSize r: resultReg.
 	^jumpFail
 ]

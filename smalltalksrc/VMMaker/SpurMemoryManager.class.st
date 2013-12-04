@@ -5677,7 +5677,8 @@ SpurMemoryManager >> lookupAddress: address [
 	<doNotGenerate>
 	| fmt size string class classSize maybeThisClass classNameIndex thisClassIndex |
 	(self addressCouldBeObj: address) ifFalse:
-		[^nil].
+		[^address = scavengeThreshold ifTrue:
+			['scavengeThreshold']].
 	address - self baseHeaderSize = hiddenRootsObj ifTrue:
 		[^'(hiddenRootsObj+baseHeaderSize)'].
 	fmt := self formatOf: address.
@@ -6824,6 +6825,24 @@ SpurMemoryManager >> printHeaderTypeOf: objOop [
 ]
 
 { #category : #'debug printing' }
+SpurMemoryManager >> printInstancesOf: aClassOop [
+	"Scan the heap printing the oops of any and all objects that are instances of aClassOop"
+	<api>
+	self printInstancesWithClassIndex: (self rawHashBitsOf: aClassOop)
+]
+
+{ #category : #'debug printing' }
+SpurMemoryManager >> printInstancesWithClassIndex: classIndex [
+	"Scan the heap printing the oops of any and all objects whose classIndex equals the argument."
+	<api>
+	<inline: false>
+	self allHeapEntitiesDo:
+		[:obj|
+		 (self classIndexOf: obj) = classIndex ifTrue:
+			[self printHex: obj; cr]]
+]
+
+{ #category : #'debug printing' }
 SpurMemoryManager >> printMemoryFrom: start to: end [
 	<doNotGenerate>
 	| address |
@@ -7420,7 +7439,8 @@ SpurMemoryManager >> showDisplayBits: aForm Left: l Top: t Right: r Bottom: b [
 { #category : #'growing/shrinking memory' }
 SpurMemoryManager >> shrinkObjectMemory: delta [ 
 	"Attempt to shrink the object memory by the given delta amount."
-	self shouldBeImplemented
+	self cCode: [self print: 'shrinkObjectMemory: shouldBeImplemented'; cr]
+		inSmalltalk: [self shouldBeImplemented]
 ]
 
 { #category : #'free space' }

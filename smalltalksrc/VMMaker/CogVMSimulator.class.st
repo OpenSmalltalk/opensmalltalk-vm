@@ -2887,7 +2887,7 @@ CogVMSimulator >> printFrameThing: name andFrame: theFP at: address [
 		printHex: it.
 	it ~= 0 ifTrue:
 		[self printChar: $=; printNum: it.
-		 (it between: objectMemory startOfMemory and: objectMemory endOfMemory) ifFalse:
+		 (objectMemory isInMemory: it) ifFalse:
 			[(cogit lookupAddress: it) ifNotNil:
 				[:label| self space; printChar: $(; print: label; printChar: $)]]].
 	self print: ' frame: '; printHex: theFP; cr
@@ -2908,7 +2908,7 @@ CogVMSimulator >> printFrameThing: name at: address [
 		printHex: it.
 	it ~= 0 ifTrue:
 		[self printChar: $=; printNum: it.
-		 (it between: objectMemory startOfMemory and: objectMemory endOfMemory) ifFalse:
+		 (objectMemory isInMemory: it) ifFalse:
 			[(cogit lookupAddress: it) ifNotNil:
 				[:label| self space; printChar: $(; print: label; printChar: $)]]].
 	self cr
@@ -3194,8 +3194,12 @@ CogVMSimulator >> shortPrint: oop [
 	| name classOop |
 	(objectMemory isImmediate: oop) ifTrue:
 		[(objectMemory isImmediateCharacter: oop) ifTrue:
-			[^ '=$' , (objectMemory characterValueOf: oop) printString , 
-			' (' , (String with: (Character value: (objectMemory characterValueOf: oop))) , ')'].
+			[^(objectMemory characterValueOf: oop) < 256
+				ifTrue:
+					['=$' , (objectMemory characterValueOf: oop) printString , 
+					' (' , (String with: (Character value: (objectMemory characterValueOf: oop))) , ')']
+				ifFalse:
+					['=$' , (objectMemory characterValueOf: oop) printString, '(???)']].
 		(objectMemory isIntegerObject: oop) ifTrue:
 			[^ '=' , (objectMemory integerValueOf: oop) printString , 
 			' (' , (objectMemory integerValueOf: oop) hex , ')'].
@@ -3624,6 +3628,7 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 											self writeBackHeadFramePointers];
 		addLine;
 		add: 'print registers' action: [cogit processor printRegistersOn: transcript];
+		add: 'print register map' action: [cogit printRegisterMapOn: transcript];
 		add: 'disassemble method/trampoline...' action: [(self promptHex: 'pc') ifNotNil: [:pc| cogit disassembleCodeAt: pc]];
 		add: 'disassemble method/trampoline at pc' action: [cogit disassembleCodeAt: cogit processor pc];
 		add: 'disassemble ext head frame method' action: [cogit disassembleMethod: (self frameMethod: framePointer)];
@@ -3660,7 +3665,7 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 											s notEmpty ifTrue: [breakCount := Integer readFrom: s readStream]];
 		add: 'set break selector...' action: [|s| s := UIManager default request: 'break selector'.
 											s notEmpty ifTrue: [self setBreakSelector: s]];
-		add: 'set break block...' action: [|s| s := UIManager default request: 'break selector'.
+		add: 'set break block...' action: [|s| s := UIManager default request: 'break block'.
 											s notEmpty ifTrue: [self setBreakBlockFromString: s]];
 		add: (printBytecodeAtEachStep
 				ifTrue: ['no print bytecode each bytecode']
