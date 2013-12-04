@@ -449,6 +449,24 @@ Spur32BitMMLECoSimulator >> shortAt: byteAddress [
 		ifFalse: [ long bitAnd: 16rFFFF ]
 ]
 
+{ #category : #'memory access' }
+Spur32BitMMLECoSimulator >> shortAt: byteAddress put: a16BitValue [
+    "Return the half-word at byteAddress which must be even."
+	| lowBits long longAddress |
+	lowBits := byteAddress bitAnd: 2.
+	lowBits = 0
+		ifTrue: "storing into LS word"
+			[long := self longAt: byteAddress.
+			 self longAt: byteAddress
+				put: ((long bitAnd: 16rFFFF0000) bitOr: a16BitValue)]
+		ifFalse: "storing into MS word"
+			[longAddress := byteAddress - 2.
+			long := self longAt: longAddress.
+			self longAt: longAddress
+				put: ((long bitAnd: 16rFFFF) bitOr: (a16BitValue bitShift: 16))].
+	^a16BitValue
+]
+
 { #category : #'float primitives' }
 Spur32BitMMLECoSimulator >> storeFloatAt: floatBitsAddress from: aFloat [
 	self long32At: floatBitsAddress put: (aFloat at: 2).
