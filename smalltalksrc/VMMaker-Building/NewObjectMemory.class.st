@@ -981,7 +981,7 @@ NewObjectMemory >> findString: aCString [
 			ifTrue:
 				[sz := self sizeOfFree: obj]
 			ifFalse:
-				[((self isBytesNonInt: obj)
+				[((self isBytesNonImm: obj)
 				  and: [(self lengthOf: obj) = cssz
 				  and: [(self str: aCString n: (self pointerForOop: obj + BaseHeaderSize) cmp: cssz) = 0]]) ifTrue:
 					[coInterpreter printHex: obj; space; printOopShort: obj; cr].
@@ -1002,7 +1002,7 @@ NewObjectMemory >> findStringBeginningWith: aCString [
 			ifTrue:
 				[sz := self sizeOfFree: obj]
 			ifFalse:
-				[((self isBytesNonInt: obj)
+				[((self isBytesNonImm: obj)
 				  and: [(self lengthOf: obj) >= cssz
 				  and: [(self str: aCString n: (self pointerForOop: obj + BaseHeaderSize) cmp: cssz) = 0]]) ifTrue:
 					[coInterpreter printHex: obj; space; printNum: (self lengthOf: obj); space; printOopShort: obj; cr].
@@ -1835,7 +1835,7 @@ NewObjectMemory >> longPrintReferencesTo: anOop [
 	prntObj := false.
 	oop := self firstAccessibleObject.
 	[oop = nil] whileFalse:
-		[((self isPointersNonInt: oop) or: [self isCompiledMethod: oop]) ifTrue:
+		[((self isPointersNonImm: oop) or: [self isCompiledMethod: oop]) ifTrue:
 			[(self isCompiledMethod: oop)
 				ifTrue:
 					[i := (self literalCountOf: oop) + LiteralStart]
@@ -2047,7 +2047,7 @@ NewObjectMemory >> numReferencesTo: anOop [
 	oop := self firstAccessibleObject.
 	n := 0.
 	[oop = nil] whileFalse:
-		[((self isPointersNonInt: oop) or: [self isCompiledMethod: oop]) ifTrue:
+		[((self isPointersNonImm: oop) or: [self isCompiledMethod: oop]) ifTrue:
 			[(self isCompiledMethod: oop)
 				ifTrue:
 					[i := (self literalCountOf: oop) + LiteralStart]
@@ -2172,9 +2172,9 @@ NewObjectMemory >> oopHasAcceptableClass: signedOop [
 	(self addressCouldBeObj: oopClass) ifFalse: [^ false].
 	(oopClass + (self sizeBitsOf: oopClass)) <= freeStart ifFalse: [^ false].
 
-	((self isPointersNonInt: oopClass) and: [(self lengthOf: oopClass) >= 3]) ifFalse: [^ false].
+	((self isPointersNonImm: oopClass) and: [(self lengthOf: oopClass) >= 3]) ifFalse: [^ false].
 
-	formatMask := (self isBytesNonInt: oop)
+	formatMask := (self isBytesNonImm: oop)
 						ifTrue: [16rC00]  "ignore extra bytes size bits"
 						ifFalse: [16rF00].
 
@@ -2308,7 +2308,7 @@ NewObjectMemory >> printReferencesTo: anOop [
 	<api>
 	oop := self firstAccessibleObject.
 	[oop = nil] whileFalse:
-		[((self isPointersNonInt: oop) or: [self isCompiledMethod: oop]) ifTrue:
+		[((self isPointersNonImm: oop) or: [self isCompiledMethod: oop]) ifTrue:
 			[(self isCompiledMethod: oop)
 				ifTrue:
 					[i := (self literalCountOf: oop) + LiteralStart]
@@ -2491,7 +2491,7 @@ NewObjectMemory >> setEndOfMemory: newEndOfMemory [
 NewObjectMemory >> shorten: obj toIndexableSize: nSlots [
 	"Currently this works for pointer objects only, and is almost certainly wrong for 64 bits."
 	| deltaBytes desiredLength fixedFields fmt hdr totalLength |
-	(self isPointersNonInt: obj) ifFalse:
+	(self isPointersNonImm: obj) ifFalse:
 		[^obj].
 	hdr := self baseHeader: obj.
 	fmt := self formatOfHeader: hdr.
