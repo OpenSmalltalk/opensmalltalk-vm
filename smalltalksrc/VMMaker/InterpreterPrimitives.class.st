@@ -3103,7 +3103,7 @@ InterpreterPrimitives >> primitiveShortAtPut [
 	(self successful and: [(value >= -32768) and: [value <= 32767]]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadArgument].
 	rcvr := self stackValue: 2.
-	((objectMemory isIntegerObject: rcvr) not and: [objectMemory isWordsOrBytes: rcvr]) ifFalse:
+	(objectMemory isWordsOrBytes: rcvr) ifFalse:
 		[^self primitiveFailFor: PrimErrInappropriate].
 	sz := ((objectMemory sizeBitsOf: rcvr) - BaseHeaderSize) // 2.  "number of 16-bit fields"
 	(index >= 1 and: [index <= sz]) ifFalse:
