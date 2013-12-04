@@ -1296,7 +1296,7 @@ ObjectMemory >> checkOopHasOkayClass: obj [
 		[self print: 'obj '; printHex: obj; print: ' a SmallInteger is not a valid class or behavior'; cr. ^false].
 	(self okayOop: objClass) ifFalse:
 		[self print: 'obj '; printHex: obj; print: ' class obj is not ok'; cr. ^false].
-	((self isPointersNonInt: objClass) and: [(self lengthOf: objClass) >= 3]) ifFalse:
+	((self isPointersNonImm: objClass) and: [(self lengthOf: objClass) >= 3]) ifFalse:
 		[self print: 'obj '; printHex: obj; print: ' a class (behavior) must be a pointers object of size >= 3'; cr. ^false].
 	formatMask := (self isBytes: obj)
 						ifTrue: [16rC00]  "ignore extra bytes size bits"
@@ -2798,15 +2798,15 @@ ObjectMemory >> isArrayNonImm: oop [
 ObjectMemory >> isBytes: oop [
 	"Answer true if the argument contains indexable bytes. See comment in formatOf:"
 	"Note: Includes CompiledMethods."
-	^(self isNonIntegerObject: oop) and:[self isBytesNonInt: oop]
+	^(self isNonIntegerObject: oop) and:[self isBytesNonImm: oop]
 ]
 
 { #category : #'header access' }
-ObjectMemory >> isBytesNonInt: oop [
+ObjectMemory >> isBytesNonImm: oop [
 	"Answer true if the argument contains indexable bytes. See comment in formatOf:"
 	"Note: Includes CompiledMethods."
 
-	^(self formatOf: oop)  >= self firstByteFormat
+	^(self formatOf: oop) >= self firstByteFormat
 ]
 
 { #category : #'interpreter access' }
@@ -3070,7 +3070,7 @@ ObjectMemory >> isOopMutable: anOop [
 ObjectMemory >> isPointers: oop [
 	"Answer true if the argument has only fields that can hold oops. See comment in formatOf:"
 
-	^(self isNonIntegerObject: oop) and:[self isPointersNonInt: oop]
+	^(self isNonIntegerObject: oop) and:[self isPointersNonImm: oop]
 ]
 
 { #category : #'header access' }
@@ -3079,14 +3079,7 @@ ObjectMemory >> isPointersFormat: format [
 ]
 
 { #category : #'header access' }
-ObjectMemory >> isPointersNonImm: objOop [
-	"Answer if the argument has only fields that can hold oops. See comment in formatOf:"
-
-	^(self formatOf: objOop) <= self lastPointerFormat
-]
-
-{ #category : #'header access' }
-ObjectMemory >> isPointersNonInt: oop [
+ObjectMemory >> isPointersNonImm: oop [
 	"Answer if the argument has only fields that can hold oops. See comment in formatOf:"
 
 	^(self formatOf: oop) <= self lastPointerFormat
@@ -3106,28 +3099,28 @@ ObjectMemory >> isWeakNonImm: oop [
 
 { #category : #'header access' }
 ObjectMemory >> isWords: oop [
-	"Answer true if the argument contains only indexable words (no oops). See comment in formatOf:"
+	"Answer if the argument contains only indexable words (no oops). See comment in formatOf:"
 
-	^(self isNonIntegerObject: oop) and:[self isWordsNonInt: oop]
+	^(self isNonIntegerObject: oop) and: [self isWordsNonImm: oop]
 ]
 
 { #category : #'header access' }
-ObjectMemory >> isWordsNonInt: oop [
-	"Answer true if the argument contains only indexable words (no oops). See comment in formatOf:"
+ObjectMemory >> isWordsNonImm: oop [
+	"Answer if the argument contains only indexable words (no oops). See comment in formatOf:"
 
 	^ (self formatOf: oop) = self firstLongFormat
 ]
 
 { #category : #'header access' }
 ObjectMemory >> isWordsOrBytes: oop [
-	"Answer true if the contains only indexable words or bytes (no oops). See comment in formatOf:"
+	"Answer if the contains only indexable words or bytes (no oops). See comment in formatOf:"
 	"Note: Excludes CompiledMethods."
-	^(self isNonIntegerObject: oop) and:[self isWordsOrBytesNonInt: oop]
+	^(self isNonIntegerObject: oop) and: [self isWordsOrBytesNonImm: oop]
 ]
 
 { #category : #'header access' }
-ObjectMemory >> isWordsOrBytesNonInt: oop [
-	"Answer true if the contains only indexable words or bytes (no oops). See comment in formatOf:"
+ObjectMemory >> isWordsOrBytesNonImm: oop [
+	"Answer if the contains only indexable words or bytes (no oops). See comment in formatOf:"
 	"Note: Excludes CompiledMethods."
 
 	| fmt |
@@ -3834,9 +3827,9 @@ ObjectMemory >> oopHasAcceptableClass: signedOop [
 	(self addressCouldBeObj: oopClass) ifFalse: [^ false].
 	(oopClass + (self sizeBitsOf: oopClass)) < freeBlock ifFalse: [^ false].
 
-	((self isPointersNonInt: oopClass) and: [(self lengthOf: oopClass) >= 3]) ifFalse: [^ false].
+	((self isPointersNonImm: oopClass) and: [(self lengthOf: oopClass) >= 3]) ifFalse: [^ false].
 
-	formatMask := (self isBytesNonInt: oop)
+	formatMask := (self isBytesNonImm: oop)
 						ifTrue: [16rC00]  "ignore extra bytes size bits"
 						ifFalse: [16rF00].
 
@@ -3862,7 +3855,7 @@ ObjectMemory >> oopHasOkayClass: signedOop [
 		ifTrue: [ self error: 'a SmallInteger is not a valid class or behavior'. ^false ].
 	(self okayOop: oopClass)
 		ifFalse: [ self error: 'class oop is not ok'. ^false ].
-	((self isPointersNonInt: oopClass) and: [(self lengthOf: oopClass) >= 3])
+	((self isPointersNonImm: oopClass) and: [(self lengthOf: oopClass) >= 3])
 		ifFalse: [ self error: 'a class (behavior) must be a pointers object of size >= 3'. ^false ].
 	(self isBytes: oop)
 		ifTrue: [ formatMask := 16rC00 ]  "ignore extra bytes size bits"
@@ -4013,7 +4006,7 @@ ObjectMemory >> printReferencesTo: anOop [
 	<api>
 	oop := self firstAccessibleObject.
 	[oop = nil] whileFalse:
-		[((self isPointersNonInt: oop) or: [self isCompiledMethod: oop]) ifTrue:
+		[((self isPointersNonImm: oop) or: [self isCompiledMethod: oop]) ifTrue:
 			[(self isCompiledMethod: oop)
 				ifTrue:
 					[i := (self literalCountOf: oop) + LiteralStart]
@@ -4436,7 +4429,7 @@ ObjectMemory >> setSizeOfFree: chunk to: byteSize [
 ObjectMemory >> shorten: obj toIndexableSize: nSlots [
 	"Currently this works for pointer objects only, and is almost certainly wrong for 64 bits."
 	| deltaBytes desiredLength fixedFields fmt hdr totalLength |
-	(self isPointersNonInt: obj) ifFalse:
+	(self isPointersNonImm: obj) ifFalse:
 		[^obj].
 	hdr := self baseHeader: obj.
 	fmt := self formatOfHeader: hdr.
