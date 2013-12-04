@@ -4147,6 +4147,8 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	<var: #page type: #'StackPage *'>
 	<var: #pointer type: #'char *'>
 	<var: #cogMethod type: #'CogMethod *'>
+	"theIP must be typed as signed because it is assigned ceCannotResumePC and so maybe implicitly typed as unsigned."
+	<var: #theIP type: #sqInt>
 	self assert: (self isSingleContext: aContext).
 	self assert: (objectMemory goodContextSize: aContext).
 	theIP := objectMemory fetchPointer: InstructionPointerIndex ofObject: aContext.
@@ -4154,7 +4156,7 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	theIP := (objectMemory isIntegerObject: theIP)
 				ifTrue: [objectMemory integerValueOf: theIP]
 				ifFalse: [HasBeenReturnedFromMCPC].
-	theMethod := objectMemory followField: MethodIndex ofObject: aContext.
+	theMethod := objectMemory followNonImmediateField: MethodIndex ofObject: aContext.
 	page := self newStackPage.
 	"first word on stack is caller context of base frame"
 	stackPages
@@ -4293,7 +4295,7 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 		withValue: (self withSmallIntegerTags: 0).
 	self assert: (objectMemory isIntegerObject: (objectMemory fetchPointer: SenderIndex ofObject: aContext)).
 	self assert: (self frameOfMarriedContext: aContext) = page baseFP.
-	self assert: self validStackPageBaseFrames.
+	self assert: (self validStackPageBaseFrame: page).
 	^page
 ]
 
@@ -6540,29 +6542,27 @@ CoInterpreter >> validInstructionPointer: instrPointer inMethod: aMethod framePo
 ]
 
 { #category : #'stack pages' }
-CoInterpreter >> validStackPageBaseFrames [
-	"Check that the base frames in all in-use stack pages have a sender and a saved context."
+CoInterpreter >> validStackPageBaseFrame: aPage [
+	"Check that the base frame in the stack page has a valid sender and saved context."
 	<var: #aPage type: #'StackPage *'>
-	0 to: numStackPages - 1 do:
-		[:i| | aPage senderContextOrNil savedThisContext |
-		aPage := stackPages stackPageAt: i.
-		(stackPages isFree: aPage) ifFalse:
-			[senderContextOrNil := stackPages longAt: aPage baseAddress.
-			 savedThisContext := stackPages longAt: aPage baseAddress - BytesPerWord.
-			 (self asserta: aPage baseFP + (self frameStackedReceiverOffset: aPage baseFP) + (2 * BytesPerWord) = aPage baseAddress) ifFalse:
-				[^false].
-			 (self asserta: (objectMemory addressCouldBeObj: senderContextOrNil)) ifFalse:
-				[^false].
-			 (self asserta: (objectMemory addressCouldBeObj: savedThisContext)) ifFalse:
-				[^false].
-			 (self asserta: (senderContextOrNil = objectMemory nilObject or: [objectMemory isContext: senderContextOrNil])) ifFalse:
-				[^false].
-			 (self asserta: (objectMemory isContext: savedThisContext)) ifFalse:
-				[^false].
-			 (self asserta: (self frameCallerContext: aPage baseFP) = senderContextOrNil) ifFalse:
-				[^false].
-			 (self asserta: (self frameContext: aPage baseFP) = savedThisContext) ifFalse:
-				[^false]]].
+	<inline: false>
+	| savedThisContext senderContextOrNil |
+	senderContextOrNil := stackPages longAt: aPage baseAddress.
+	savedThisContext := stackPages longAt: aPage baseAddress - BytesPerWord.
+	(self asserta: aPage baseFP + (self frameStackedReceiverOffset: aPage baseFP) + (2 * BytesPerWord) = aPage baseAddress) ifFalse:
+		[^false].
+	(self asserta: (objectMemory addressCouldBeObj: senderContextOrNil)) ifFalse:
+		[^false].
+	(self asserta: (objectMemory addressCouldBeObj: savedThisContext)) ifFalse:
+		[^false].
+	(self asserta: (senderContextOrNil = objectMemory nilObject or: [objectMemory isContext: senderContextOrNil])) ifFalse:
+		[^false].
+	(self asserta: (objectMemory isContext: savedThisContext)) ifFalse:
+		[^false].
+	(self asserta: (self frameCallerContext: aPage baseFP) = senderContextOrNil) ifFalse:
+		[^false].
+	(self asserta: (self frameContext: aPage baseFP) = savedThisContext) ifFalse:
+		[^false].
 	^true
 ]
 
