@@ -5712,7 +5712,8 @@ SpurMemoryManager >> lookupAddress: address [
 	 For code disassembly"
 	<doNotGenerate>
 	| fmt size string class classSize maybeThisClass classNameIndex thisClassIndex |
-	(self addressCouldBeObj: address) ifFalse:
+	((self addressCouldBeObj: address)
+	 and: [(self classIndexOf: address) > 0]) ifFalse:
 		[^address = scavengeThreshold ifTrue:
 			['scavengeThreshold']].
 	address - self baseHeaderSize = hiddenRootsObj ifTrue:
