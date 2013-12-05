@@ -346,7 +346,7 @@ ftHandleValueFromReceiver(sqInt rcvrOop)
 	if (failed()) {
 		return null;
 	}
-	btw = BytesPerWord;
+	btw = wordSize();
 	return *(void**)(pointerForOop(oop + btw));
 }
 
@@ -922,7 +922,7 @@ primitiveGetFaceCharMapsIntoArray(void)
 	}
 	charmap = face->charmaps;
 	
-	for (i = 0; i <= (numCharmaps - 1); i += 1) {
+	for (i = 0; i < numCharmaps; i += 1) {
 		pushRemappableOop(arrayOop);
 		stringOop = ftStringFromEncodingValue((*charmap)->encoding);
 		arrayOop = popRemappableOop();
@@ -1449,7 +1449,7 @@ primitiveLoadGlyphSlotFromFace(void)
 	pushRemappableOop(rcvr);
 	gfOop = instantiateClassindexableSize(classByteArray(), sizeof(FT_Glyph_Format));
 	
-	btw = BytesPerWord;
+	btw = wordSize();
 	gfPtr = (FT_Glyph_Format *) pointerForOop(gfOop + btw);
 	
 	if (failed()) {
@@ -1557,7 +1557,7 @@ l2:	/* end fetchByteArray:ofObject:assureSize: */;
 		primitiveFail();
 		return null;
 	}
-	for (i = 0; i <= (pointsSize - 1); i += 1) {
+	for (i = 0; i < pointsSize; i += 1) {
 		points[2 * i] = (gs->outline.points[i].x);
 		points[(2 * i) + 1] = (gs->outline.points[i].y);
 		tags[i] = (gs->outline.tags[i]);
@@ -1572,7 +1572,7 @@ l2:	/* end fetchByteArray:ofObject:assureSize: */;
 	}
 	contours = ((short*) null);
 l3:	/* end fetchShortArray:ofObject:assureSize: */;
-	for (i = 0; i <= (contoursSize - 1); i += 1) {
+	for (i = 0; i < contoursSize; i += 1) {
 		contours[i] = (gs->outline.contours[i]);
 	}
 	if (failed()) {

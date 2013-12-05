@@ -1,0 +1,2 @@
+#!/bin/sh
+svn log -rHEAD `dirname $0`/../platforms/Cross/vm/sqSCCSVersion.h
