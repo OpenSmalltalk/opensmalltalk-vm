@@ -2358,14 +2358,30 @@ CCodeGenerator >> generateToByDo: msgNode on: aStream indent: level [
 	negative := ((step := msgNode args at: 2) isConstant and: [step value < 0])
 				or: [step isSend and: [step selector == #negated
 					and: [step receiver isConstant and: [step receiver value >= 0]]]].
-	aStream nextPutAll: (negative ifTrue: [' >= '] ifFalse: [' <= ']).
-	self emitCExpression: limitExpr on: aStream.
+	self generateToByDoLimitExpression: limitExpr negative: negative on: aStream.
 	aStream nextPutAll: '; ', iterationVar, ' += '.
 	self emitCExpression: step on: aStream.
 	aStream nextPutAll: ') {'; cr.
 	blockExpr emitCCodeOn: aStream level: level + 1 generator: self.
 	aStream tab: level.
 	aStream nextPut: $}
+]
+
+{ #category : #'C translation' }
+CCodeGenerator >> generateToByDoLimitExpression: limitExpr negative: negative on: aStream [
+	"Generate the limit expression for a to:do: or to:by:do:.
+	 If the limitExpr is of the form foo - 1 use < foo or > foo, as appropriate, instead of
+	 <= (foo - 1) or >= (foo - 1), so as to avoid underflowing an unsigned value to maxint."
+	(limitExpr isSend
+	 and: [limitExpr selector = #-
+	 and: [limitExpr args first isConstant
+	 and: [limitExpr args first value = 1]]])
+		ifTrue:
+			[aStream nextPutAll: (negative ifTrue: [' > '] ifFalse: [' < ']).
+			 self emitCExpression: limitExpr receiver on: aStream]
+		ifFalse:
+			[aStream nextPutAll: (negative ifTrue: [' >= '] ifFalse: [' <= ']).
+			 self emitCExpression: limitExpr on: aStream]
 ]
 
 { #category : #'C translation' }
@@ -2379,8 +2395,8 @@ CCodeGenerator >> generateToDo: msgNode on: aStream indent: level [
 	iterationVar := msgNode args last args first.
 	aStream nextPutAll: 'for (', iterationVar, ' = '.
 	self emitCExpression: msgNode receiver on: aStream.
-	aStream nextPutAll: '; ', iterationVar, ' <= '.
-	self emitCExpression: msgNode args first on: aStream.
+	aStream nextPutAll: '; ', iterationVar.
+	self generateToByDoLimitExpression: msgNode args first negative: false on: aStream.
 	aStream nextPutAll: '; ', iterationVar, '++) {'; cr.
 	msgNode args last emitCCodeOn: aStream level: level + 1 generator: self.
 	level timesRepeat: [ aStream tab ].
