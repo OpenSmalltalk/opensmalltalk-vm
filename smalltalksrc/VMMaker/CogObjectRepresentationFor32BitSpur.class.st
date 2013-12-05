@@ -193,9 +193,10 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAt: retNoffset [
 	cogit MoveR: ReceiverResultReg R: TempReg.
 	jumpImmediate := self genJumpImmediateInScratchReg: TempReg.
 	cogit MoveR: Arg0Reg R: TempReg.
+	cogit MoveR: Arg0Reg R: Arg1Reg.
 	jumpBadIndex := self genJumpNotSmallIntegerInScratchReg: TempReg.
-	self genConvertSmallIntegerToIntegerInScratchReg: Arg0Reg.
-	cogit SubCq: 1 R: Arg0Reg. "1-rel => 0-rel"
+	self genConvertSmallIntegerToIntegerInScratchReg: Arg1Reg.
+	cogit SubCq: 1 R: Arg1Reg. "1-rel => 0-rel"
 
 	formatReg := SendNumArgsReg.
 	cogit
@@ -246,10 +247,10 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAt: retNoffset [
 		(cogit LogicalShiftLeftCq: objectMemory shiftForWord R: ClassReg).
 		cogit AndCq: objectMemory wordSize - 1 R: formatReg.
 		cogit SubR: formatReg R: ClassReg;
-		CmpR: Arg0Reg R: ClassReg.
+		CmpR: Arg1Reg R: ClassReg.
 	jumpBytesOutOfBounds := cogit JumpBelowOrEqual: 0.
-	cogit AddCq: objectMemory baseHeaderSize R: Arg0Reg.
-	cogit MoveXbr: Arg0Reg R: ReceiverResultReg R: ReceiverResultReg.
+	cogit AddCq: objectMemory baseHeaderSize R: Arg1Reg.
+	cogit MoveXbr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg.
 	self genConvertIntegerToSmallIntegerInScratchReg: ReceiverResultReg.
 	jumpBytesDone := cogit Jump: 0.
 
@@ -257,19 +258,19 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAt: retNoffset [
 		(cogit LogicalShiftLeftCq: objectMemory shiftForWord - 1 R: ClassReg).
 		cogit AndCq: 1 R: formatReg.
 		cogit SubR: formatReg R: ClassReg;
-		CmpR: Arg0Reg R: ClassReg.
+		CmpR: Arg1Reg R: ClassReg.
 	jumpShortsOutOfBounds := cogit JumpBelowOrEqual: 0.
-	cogit AddR: Arg0Reg R: ReceiverResultReg.
+	cogit AddR: Arg1Reg R: ReceiverResultReg.
 	cogit MoveM16: objectMemory baseHeaderSize r: ReceiverResultReg R: ReceiverResultReg.
 	self genConvertIntegerToSmallIntegerInScratchReg: ReceiverResultReg.
 	jumpShortsDone := cogit Jump: 0.
 
 	jumpIsWords jmpTarget:
-		(cogit CmpR: Arg0Reg R: ClassReg).
+		(cogit CmpR: Arg1Reg R: ClassReg).
 	jumpWordsOutOfBounds := cogit JumpBelowOrEqual: 0.
-	cogit AddCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: Arg0Reg.
-	cogit MoveXwr: Arg0Reg R: ReceiverResultReg R: TempReg.
-	cogit SubCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: Arg0Reg.
+	cogit AddCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: Arg1Reg.
+	cogit MoveXwr: Arg1Reg R: ReceiverResultReg R: TempReg.
+	cogit SubCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: Arg1Reg.
 	jumpWordTooBig := self jumpNotSmallIntegerUnsignedValueInRegister: TempReg.
 	cogit MoveR: TempReg R: ReceiverResultReg.
 	self genConvertIntegerToSmallIntegerInScratchReg: ReceiverResultReg.
@@ -289,19 +290,19 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAt: retNoffset [
 	cogit
 		AndCq: objectMemory fixedFieldsOfClassFormatMask R: formatReg;
 		SubR: formatReg R: ClassReg;
-		CmpR: Arg0Reg R: ClassReg.
+		CmpR: Arg1Reg R: ClassReg.
 	jumpFixedFieldsOutOfBounds := cogit JumpBelowOrEqual: 0.
-	"index is (formatReg (fixed fields) + Arg0Reg (0-rel index)) * wordSize + baseHeaderSize"
-	cogit AddR: formatReg R: Arg0Reg.
-	cogit AddCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: Arg0Reg.
-	cogit MoveXwr: Arg0Reg R: ReceiverResultReg R: ReceiverResultReg.
+	"index is (formatReg (fixed fields) + Arg1Reg (0-rel index)) * wordSize + baseHeaderSize"
+	cogit AddR: formatReg R: Arg1Reg.
+	cogit AddCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: Arg1Reg.
+	cogit MoveXwr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg.
 	jumpFixedFieldsDone := cogit Jump: 0.
 
 	jumpIsArray jmpTarget:
-		(cogit CmpR: Arg0Reg R: ClassReg).
+		(cogit CmpR: Arg1Reg R: ClassReg).
 	jumpArrayOutOfBounds := cogit JumpBelowOrEqual: 0.	
-	cogit AddCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: Arg0Reg.
-	cogit MoveXwr: Arg0Reg R: ReceiverResultReg R: ReceiverResultReg.
+	cogit AddCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: Arg1Reg.
+	cogit MoveXwr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg.
 
 	jumpFixedFieldsDone jmpTarget:
 	(jumpWordsDone jmpTarget:
@@ -316,12 +317,9 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAt: retNoffset [
 	(jumpWordsOutOfBounds jmpTarget:
 	(jumpWordTooBig jmpTarget:
 	(jumpNotIndexable jmpTarget:
-	(jumpIsContext jmpTarget: cogit Label))))))).
-
-	cogit AddCq: 1 R: Arg0Reg. "0-rel => 1-rel"
-	self genConvertIntegerToSmallIntegerInScratchReg: Arg0Reg.
-
-	(jumpBadIndex jmpTarget: (jumpImmediate jmpTarget: cogit Label)).
+	(jumpIsContext jmpTarget:
+	(jumpBadIndex jmpTarget:
+	(jumpImmediate jmpTarget: cogit Label))))))))).
 
 	^0
 ]
@@ -600,9 +598,10 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAt: retNoffset [
 	<var: #jumpWordsOutOfBounds type: #'AbstractInstruction *'>
 
 	cogit MoveR: Arg0Reg R: TempReg.
+	cogit MoveR: Arg0Reg R: Arg1Reg.
 	jumpBadIndex := self genJumpNotSmallIntegerInScratchReg: TempReg.
-	self genConvertSmallIntegerToIntegerInScratchReg: Arg0Reg.
-	cogit SubCq: 1 R: Arg0Reg. "1-rel => 0-rel"
+	self genConvertSmallIntegerToIntegerInScratchReg: Arg1Reg.
+	cogit SubCq: 1 R: Arg1Reg. "1-rel => 0-rel"
 
 	formatReg := SendNumArgsReg.
 	cogit
@@ -646,10 +645,10 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAt: retNoffset [
 		(cogit LogicalShiftLeftCq: objectMemory shiftForWord R: ClassReg).
 		cogit AndCq: objectMemory wordSize - 1 R: formatReg.
 		cogit SubR: formatReg R: ClassReg;
-		CmpR: Arg0Reg R: ClassReg.
-	jumpBytesOutOfBounds := cogit JumpAboveOrEqual: 0.
-	cogit AddCq: objectMemory baseHeaderSize R: Arg0Reg.
-	cogit MoveXbr: Arg0Reg R: ReceiverResultReg R: ReceiverResultReg.
+		CmpR: Arg1Reg R: ClassReg.
+	jumpBytesOutOfBounds := cogit JumpBelowOrEqual: 0.
+	cogit AddCq: objectMemory baseHeaderSize R: Arg1Reg.
+	cogit MoveXbr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg.
 	done := cogit Label.
 	self genConvertIntegerToCharacterInScratchReg: ReceiverResultReg.
 	cogit RetN: retNoffset.
@@ -658,18 +657,18 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAt: retNoffset [
 		(cogit LogicalShiftLeftCq: objectMemory shiftForWord - 1 R: ClassReg).
 		cogit AndCq: 1 R: formatReg.
 		cogit SubR: formatReg R: ClassReg;
-		CmpR: Arg0Reg R: ClassReg.
-	jumpShortsOutOfBounds := cogit JumpAboveOrEqual: 0.
-	cogit AddR: Arg0Reg R: ReceiverResultReg.
+		CmpR: Arg1Reg R: ClassReg.
+	jumpShortsOutOfBounds := cogit JumpBelowOrEqual: 0.
+	cogit AddR: Arg1Reg R: ReceiverResultReg.
 	cogit MoveM16: objectMemory baseHeaderSize r: ReceiverResultReg R: ReceiverResultReg.
 	cogit Jump: done.
 
 	jumpIsWords jmpTarget:
-		(cogit CmpR: Arg0Reg R: ClassReg).
-	jumpWordsOutOfBounds := cogit JumpAboveOrEqual: 0.
-	cogit AddCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: Arg0Reg.
-	cogit MoveXwr: Arg0Reg R: ReceiverResultReg R: TempReg.
-	cogit SubCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: Arg0Reg.
+		(cogit CmpR: Arg1Reg R: ClassReg).
+	jumpWordsOutOfBounds := cogit JumpBelowOrEqual: 0.
+	cogit AddCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: Arg1Reg.
+	cogit MoveXwr: Arg1Reg R: ReceiverResultReg R: TempReg.
+	cogit SubCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: Arg1Reg.
 	jumpWordTooBig := self jumpNotCharacterUnsignedValueInRegister: TempReg.
 	cogit MoveR: TempReg R: ReceiverResultReg.
 	cogit Jump: done.
@@ -678,12 +677,8 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAt: retNoffset [
 	(jumpShortsOutOfBounds jmpTarget:
 	(jumpWordsOutOfBounds jmpTarget:
 	(jumpWordTooBig jmpTarget:
-	(jumpNotIndexable jmpTarget: cogit Label)))).
-
-	cogit AddCq: 1 R: Arg0Reg. "0-rel => 1-rel"
-	self genConvertIntegerToSmallIntegerInScratchReg: Arg0Reg.
-
-	jumpBadIndex jmpTarget: cogit Label.
+	(jumpNotIndexable jmpTarget: 
+	(jumpBadIndex jmpTarget: cogit Label))))).
 
 	^0
 ]
