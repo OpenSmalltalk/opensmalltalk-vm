@@ -796,6 +796,16 @@ VMClass >> promptHex: string [
 				Integer readFrom: s readStream base: 16]]
 ]
 
+{ #category : #'simulation support' }
+VMClass >> promptNum: string [
+	<doNotGenerate>
+	| s |
+	s := UIManager default request: string, ' (dec)'.
+	s := s withBlanksTrimmed.
+	^s notEmpty ifTrue:
+		[Number readFrom: s readStream]
+]
+
 { #category : #arithmetic }
 VMClass >> safe: signedInteger mod: positiveModulus [
 	<inline>

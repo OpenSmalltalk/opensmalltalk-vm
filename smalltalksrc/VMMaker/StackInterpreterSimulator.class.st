@@ -2516,6 +2516,7 @@ StackInterpreterSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'print call stack' action: #printCallStack;
 		add: 'print stack call stack' action: #printStackCallStack;
 		add: 'print call stack of...' action: [(self promptHex: 'context or process oop') ifNotNil: [:obj| self printCallStackOf: obj]];
+		add: 'print call stack of frame...' action: [(self promptHex: 'frame') ifNotNil: [:fp| self printCallStackFP: fp]];
 		add: 'print all stacks' action: #printAllStacks;
 		add: 'write back local ptrs' action: [stackPointer := localSP. framePointer := localFP. instructionPointer := localIP.
 											self writeBackHeadFramePointers];
