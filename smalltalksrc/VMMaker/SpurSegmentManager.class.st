@@ -473,7 +473,7 @@ SpurSegmentManager >> writeSegment: segment nextSegmentSize: nextSegSize toFile:
 	<var: 'savedDoubleWord' type: #usqLong>
 	lastDoubleWord := segment segLimit - manager baseHeaderSize.
 	self assert: (self isValidSegmentBridge: (self bridgeFor: segment)).
-	self assert: (self bridgeFor: segment) = (lastDoubleWord - manager baseHeaderSize).
+	self assert: (manager startOfObject: (self bridgeFor: segment)) = (lastDoubleWord - manager baseHeaderSize).
 	savedDoubleWord := manager longLongAt: lastDoubleWord.
 	manager longLongAt: lastDoubleWord put: nextSegSize.
 	nWritten := self cCode:

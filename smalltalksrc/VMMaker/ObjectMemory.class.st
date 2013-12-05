@@ -1919,6 +1919,11 @@ ObjectMemory >> followForwardedObjectFields: objOop toDepth: depth [
 	self shouldNotImplement
 ]
 
+{ #category : #'forward compatibility' }
+ObjectMemory >> followNonImmediateField: fieldIndex ofObject: anObject [
+	^self fetchPointer: fieldIndex ofObject: anObject
+]
+
 { #category : #accessing }
 ObjectMemory >> forceTenureFlag [
 	^forceTenureFlag
