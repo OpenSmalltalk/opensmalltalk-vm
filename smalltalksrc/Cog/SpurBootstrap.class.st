@@ -661,6 +661,8 @@ SpurBootstrap >> allocateFreeLists [
 SpurBootstrap >> bootstrapImage [
 	oldHeap fullGC.
 	oldHeapSize := oldHeap freeStart.
+	self initMaps.
+	self findRequiredGlobals.
 	Transcript cr; nextPutAll: 'transforming image...'; flush.
 	self cloneNilTrueAndFalse.
 	self allocateFreeLists.
@@ -1086,6 +1088,17 @@ SpurBootstrap >> indexOfSelector: selectorOop in: methodDict [
 	self error: 'could not find selector in method dict'
 ]
 
+{ #category : #'initialize-release' }
+SpurBootstrap >> initMaps [
+	map := Dictionary new: oldHeap memory size // 4.
+	reverseMap := Dictionary new: oldHeap memory size // 4.
+	classToIndex := Dictionary new: 1024.
+	literalMap := IdentityDictionary new.
+	methodClasses := Set new.
+	installedPrototypes := Set new.
+	sizeSym := rehashSym := classMetaclass := nil
+]
+
 { #category : #'bootstrap methods' }
 SpurBootstrap >> installModifiedMethods [
 	"Install all the methods in the class-side method prototypes protocol in the relevant classes
@@ -1370,12 +1383,7 @@ SpurBootstrap >> on: imageName [
 		stackSize: 1024 * 1024
 		codeSize: 0.
 	newHeap setCheckForLeaks: 15 - 6. "don't check become; or newSpace; soooo many rehashes in bootstrap"
-	map := Dictionary new: oldHeap memory size // 4.
-	reverseMap := Dictionary new: oldHeap memory size // 4.
-	classToIndex := Dictionary new: 1024.
-	literalMap := IdentityDictionary new.
-	methodClasses := Set new.
-	installedPrototypes := Set new
+	self initMaps
 ]
 
 { #category : #'method prototypes' }
@@ -1597,6 +1605,7 @@ SpurBootstrap >> transform [
 	self installModifiedMethods.
 	self bootstrapImage.
 	self validate.
+	self rememberRehashSymbol.
 	self rehashImage.
 	self followForwardingPointers.
 	self scavengeImage.
@@ -1687,7 +1696,11 @@ SpurBootstrap >> withExecutableInterpreter: sim do: aBlock [
 	"now undo the execution state"
 	finalContext := sim voidVMStateForSnapshot.
 	self assert: initialContext = finalContext.
-	self assert: sim localIP = savedpc
+	self assert: sim localIP = savedpc.
+	sim objectMemory
+		storePointer: SuspendedContextIndex
+		ofObject: sim activeProcess
+		withValue: finalContext
 ]
 
 { #category : #'word size' }
@@ -1727,11 +1740,15 @@ SpurBootstrap >> writeSnapshotOfTransformedImageAs: imageFileName [
 		sizes add: (heap bytesInObject: f)].
 	counts := sizes sortedCounts.
 	self assert: counts last key = 1. "1 huge chunk"
-	self assert: ((counts at: counts size - 1) key > 2
-				and: [(counts at: counts size - 1) value > 1024]).
-	barriers := (1 to: (counts at: counts size - 1) key) collect:
-					[:ign| heap allocateOldSpaceChunkOfExactlyBytes: (counts at: counts size - 1) value].
-	barriers := barriers, {heap allocateOldSpaceChunkOfExactlyBytes: (heap bytesInObject: penultimate)}.
+	counts size > 1
+		ifTrue:
+			[self assert: ((counts at: counts size - 1) key > 2
+						and: [(counts at: counts size - 1) value > 1024]).
+			barriers := (1 to: (counts at: counts size - 1) key) collect:
+							[:ign| heap allocateOldSpaceChunkOfExactlyBytes: (counts at: counts size - 1) value].
+			barriers := barriers, {heap allocateOldSpaceChunkOfExactlyBytes: (heap bytesInObject: penultimate)}]
+		ifFalse:
+			[barriers := {heap allocateOldSpaceChunkOfExactlyBytes: (heap bytesInObject: penultimate)}].
 	heap setEndOfMemory: barriers last.
 	heap allOldSpaceEntitiesDo: [:e| penultimate := ultimate. ultimate := e].
 	self assert: (heap addressAfter: ultimate) = barriers last.
