@@ -4410,11 +4410,11 @@ ObjectMemory >> setHashBitsOf: oop to: hash [
 ]
 
 { #category : #initialization }
-ObjectMemory >> setHeapBase: heapBase memoryLimit: memLimit endOfMemory: memEnd [
+ObjectMemory >> setHeapBase: baseOfHeap memoryLimit: memLimit endOfMemory: memEnd [
 	"Set the dimensions of the heap, answering the start of oldSpace."
 	self setMemoryLimit: memLimit.
 	self setEndOfMemory: memEnd.
-	^heapBase
+	^baseOfHeap
 ]
 
 { #category : #initialization }
