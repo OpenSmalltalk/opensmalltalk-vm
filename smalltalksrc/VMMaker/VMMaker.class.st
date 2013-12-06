@@ -116,6 +116,11 @@ VMMaker class >> chooseCoInterpreterClassIfAbsent: ifAbsentBlock [
 				value: #(CoInterpreter CoInterpreterMT))
 ]
 
+{ #category : #'confs-support' }
+VMMaker class >> configuirationNameFromSelector: aSelector [
+	^(aSelector piecesCutWhere: [:a :b| a isLowercase and: [b isUppercase]]) allButFirst fold: [:a :b| a, ' ', b]
+]
+
 { #category : #accessing }
 VMMaker class >> coreVMDirName [
 	^DirNames at: #coreVMDir
@@ -313,9 +318,7 @@ VMMaker class >> generateConfiguration [
 	selectors remove: thisContext selector.
 	selectors := selectors asArray sort.
 	(UIManager default
-			chooseFrom: (selectors collect:
-							[:sel| (sel piecesCutWhere: [:a :b| a isLowercase and: [b isUppercase]]) allButFirst
-									fold: [:a :b| a, ' ', b]])
+			chooseFrom: (selectors collect: [:sel| self configuirationNameFromSelector: sel])
 			values: selectors) ifNotNil:
 		[:choice|
 		self perform: choice]
@@ -770,6 +773,13 @@ VMMaker >> configurationInfo [
 		isRelative value: self platformRootDirectory pathName.
 		self interpreterClassName
 	  }
+]
+
+{ #category : #'generate sources' }
+VMMaker >> configurationNameIfAny [
+	^(thisContext findContextSuchThat: [:ctxt| ctxt receiver == VMMaker and: [ctxt method methodReference category = #configurations]])
+		ifNotNil: [:ctxt| (self class configuirationNameFromSelector: ctxt selector), ' ']
+		ifNil: [' ']
 ]
 
 { #category : #'private - copying files' }
@@ -1460,7 +1470,7 @@ VMMaker >> needsToRegenerateCogitFile [
 	(self coreVMDirectory entryAt: cogitClass sourceFileName ifAbsent: [nil]) ifNotNil:
 		[:fstat|
 		tStamp < fstat modificationTime ifTrue:
-			[^self confirm: 'The ', cogitClass printString, ' classes have not been modified since\ the source file was last generated.\Do you still want to regenerate it?' withCRs]].
+			[^self confirm: 'The ', self configurationNameIfAny, cogitClass printString, ' classes have not been modified since\ the source file was last generated.\Do you still want to regenerate it?' withCRs]].
 	^true
 
 ]
@@ -1483,7 +1493,7 @@ VMMaker >> needsToRegenerateInterpreterFile [
 	(self coreVMDirectory entryAt: self interpreterFilename ifAbsent: [nil]) ifNotNil:
 		[:fstat|
 		tStamp < fstat modificationTime ifTrue:
-			[^self confirm: 'The interpreter classes have not been modified since\ the interpreter file was last generated.\Do you still want to regenerate their source file?' withCRs]].
+			[^self confirm: 'The ', self configurationNameIfAny, 'interpreter classes have not been modified since\ the interpreter file was last generated.\Do you still want to regenerate their source file?' withCRs]].
 	^true
 
 ]
