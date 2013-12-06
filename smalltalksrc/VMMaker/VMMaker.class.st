@@ -744,6 +744,16 @@ VMMaker >> cogitClassName [
 	^cogitClassName
 ]
 
+{ #category : #'generate sources' }
+VMMaker >> configurationGeneratorNameOrNil [
+	"Search the sender chain for the first method in VMMaker class protocol configurations, and answer it if found,
+	 otherwise answer nil.  This allows us to name the configuration being generated."
+	^thisContext findContextSuchThat:
+		[:ctxt|
+		 ctxt receiver == VMMaker
+		 and: [ctxt method methodReference category = #configurations]]
+]
+
 { #category : #'objects from disk' }
 VMMaker >> configurationInfo [
 	"build a simple Array of the configuration information that would be 
@@ -777,7 +787,7 @@ VMMaker >> configurationInfo [
 
 { #category : #'generate sources' }
 VMMaker >> configurationNameIfAny [
-	^(thisContext findContextSuchThat: [:ctxt| ctxt receiver == VMMaker and: [ctxt method methodReference category = #configurations]])
+	^self configurationGeneratorNameOrNil
 		ifNotNil: [:ctxt| (self class configuirationNameFromSelector: ctxt selector), ' ']
 		ifNil: [' ']
 ]
@@ -1002,13 +1012,11 @@ VMMaker >> generateCogitFile [
 VMMaker >> generateEntire [
 	"Generate the interp, internal plugins and exports as well as the external plugins.
 	 If this comes from a generator, log it for convenience."
-	(thisContext findContextSuchThat: [:ctxt| ctxt selector == #generateConfiguration]) ifNotNil:
-		[:root|
-		(thisContext findContextSuchThat: [:ctxt| ctxt sender == root]) ifNotNil:
-			[:generator|
-			logger cr; nextPutAll: (generator selector copyReplaceAll: 'generate' with: '').
-			interpreterClassName ifNotNil: [logger space; nextPutAll: interpreterClassName].
-			logger cr; flush]].
+	self configurationGeneratorNameOrNil ifNotNil:
+		[:generator|
+		 logger cr; nextPutAll: (generator selector copyReplaceAll: 'generate' with: '').
+		 interpreterClassName ifNotNil: [logger space; nextPutAll: interpreterClassName].
+		 logger cr; flush].
 	self generateMainVM.
 	self generateExternalPlugins
 ]
