@@ -106,6 +106,16 @@ VMMaker class >> activeVMMakerClassFor: platformName [
 
 ]
 
+{ #category : #'confs-support' }
+VMMaker class >> chooseCoInterpreterClassIfAbsent: ifAbsentBlock [
+	^Smalltalk classNamed:
+		 ([:choices|
+		   choices
+			at: (UIManager default chooseFrom: choices)
+			ifAbsent: ifAbsentBlock]
+				value: #(CoInterpreter CoInterpreterMT))
+]
+
 { #category : #accessing }
 VMMaker class >> coreVMDirName [
 	^DirNames at: #coreVMDir
@@ -281,6 +291,16 @@ VMMaker class >> generate: interpreterClass with: optionsPairsArray to: srcDirNa
 ]
 
 { #category : #configurations }
+VMMaker class >> generateAllConfigurationsUnderVersionControl [
+	self generateNewspeakCogVM;
+		generateSqueakCogVMWithInterpreterClass: CoInterpreter;
+		generateSqueakCogVMWithInterpreterClass: CoInterpreterMT;
+		generateSqueakStackVM;
+		generateSqueakSpurCogVM;
+		generateSqueakSpurStackVM
+]
+
+{ #category : #configurations }
 VMMaker class >> generateConfiguration [
 	"VMMaker generateConfiguration"
 	| configCategoryName selectors |
@@ -380,9 +400,13 @@ VMMaker class >> generateSqueakCogSistaVM [
 
 { #category : #configurations }
 VMMaker class >> generateSqueakCogVM [
+	^self generateSqueakCogVMWithInterpreterClass: (self chooseCoInterpreterClassIfAbsent: [^self])
+]
+
+{ #category : #'confs-support' }
+VMMaker class >> generateSqueakCogVMWithInterpreterClass: interpreterClass [
 	^VMMaker
-		generate: (Smalltalk at: ([:choices| choices at: (UIManager default chooseFrom: choices) ifAbsent: [^self]]
-									value: #(CoInterpreter CoInterpreterMT)))
+		generate: interpreterClass
 		and: StackToRegisterMappingCogit
 		with: #(	MULTIPLEBYTECODESETS false
 				NewspeakVM false)
@@ -403,8 +427,7 @@ VMMaker class >> generateSqueakCogVM [
 { #category : #configurations }
 VMMaker class >> generateSqueakSpurCogVM [
 	^VMMaker
-		generate: (Smalltalk at: ([:choices| choices at: (UIManager default chooseFrom: choices) ifAbsent: [^self]]
-									value: #(CoInterpreter CoInterpreterMT)))
+		generate: CoInterpreter
 		and: StackToRegisterMappingCogit
 		with: #(	ObjectMemory Spur32BitCoMemoryManager
 				MULTIPLEBYTECODESETS false
