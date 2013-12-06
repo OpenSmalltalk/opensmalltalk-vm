@@ -120,6 +120,13 @@ CogObjectRepresentationForSqueakV3 >> genAllocFloatValue: dpreg into: resultReg 
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genConvertIntegerToSmallIntegerInReg: reg [
+	cogit LogicalShiftLeftCq: 1 R: reg.
+	cogit AddCq: 1 R: reg.
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genConvertIntegerToSmallIntegerInScratchReg: scratchReg [
 	cogit LogicalShiftLeftCq: 1 R: scratchReg.
 	cogit AddCq: 1 R: scratchReg.
@@ -127,8 +134,8 @@ CogObjectRepresentationForSqueakV3 >> genConvertIntegerToSmallIntegerInScratchRe
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genConvertSmallIntegerToIntegerInScratchReg: scratchReg [
-	cogit ArithmeticShiftRightCq: 1 R: scratchReg.
+CogObjectRepresentationForSqueakV3 >> genConvertSmallIntegerToIntegerInReg: reg [
+	cogit ArithmeticShiftRightCq: 1 R: reg.
 	^0
 ]
 
@@ -363,7 +370,7 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
 		formatReg: SendNumArgsReg
 		scratchReg: TempReg
 		abortJumpsInto: [:jnx :jic| jumpNotIndexable := jnx. jumpIsContext := jic].
-	self genConvertSmallIntegerToIntegerInScratchReg: Arg1Reg.
+	self genConvertSmallIntegerToIntegerInReg: Arg1Reg.
 	cogit SubCq: 1 R: Arg1Reg.
 	cogit CmpR: ClassReg R: Arg1Reg.
 	jumpBounds := cogit JumpAboveOrEqual: 0.
@@ -398,7 +405,7 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
 	cogit
 		AddCq: BaseHeaderSize R: Arg1Reg;
 		MoveXbr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg.
-	self genConvertIntegerToSmallIntegerInScratchReg: ReceiverResultReg.
+	self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
 	cogit RetN: retNoffset.
 	jumpFmtLt8 jmpTarget: cogit Label.
 	self assert: BytesPerWord = 4. "documenting my laziness"
@@ -438,7 +445,7 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveSize: retNoffset [
 		formatReg: SendNumArgsReg
 		scratchReg: TempReg
 		abortJumpsInto: [:jnx :jic| jumpNotIndexable := jnx. jumpIsContext := jic].
-	self genConvertIntegerToSmallIntegerInScratchReg: ClassReg.
+	self genConvertIntegerToSmallIntegerInReg: ClassReg.
 	cogit MoveR: ClassReg R: ReceiverResultReg.
 	cogit RetN: retNoffset.
 	jumpSI jmpTarget: (jumpNotIndexable jmpTarget: (jumpIsContext jmpTarget: cogit Label)).
@@ -483,7 +490,7 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveStringAt: retNOffset [
 	jumpShortHeader jmpTarget: (cogit AndCq: SizeMask R: ClassReg).	"hdr bitAnd: SizeMask"
 	jumpSkip jmpTarget: (cogit SubCq: BaseHeaderSize R: ClassReg). "sz - BaseHeaderSize"
 	cogit SubR: SendNumArgsReg R: ClassReg. "sz - (fmt bitAnd: 3)"
-	self genConvertSmallIntegerToIntegerInScratchReg: Arg1Reg.
+	self genConvertSmallIntegerToIntegerInReg: Arg1Reg.
 	cogit SubCq: 1 R: Arg1Reg.
 	cogit CmpR: ClassReg R: Arg1Reg.
 	jumpBounds := cogit JumpAboveOrEqual: 0.

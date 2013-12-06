@@ -746,7 +746,7 @@ SimpleStackBasedCogit >> compileGetErrorCode [
 	objectRepresentation genFetchIndexRegister: TempReg from: primErrorTable into: ClassReg.
 	jmpGotError := self Jump: 0.
 	jmpIntError jmpTarget: self Label.
-	objectRepresentation genConvertIntegerToSmallIntegerInScratchReg: TempReg.
+	objectRepresentation genConvertIntegerToSmallIntegerInReg: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jmpGotError jmpTarget: (self MoveR: ClassReg Mw: 0 r: SPReg).
 	"zero the error code to agree with the interpreter's (internal)ActivateNewMethod."
@@ -1122,7 +1122,7 @@ SimpleStackBasedCogit >> genDoubleArithmetic: arithmeticOperator preOpCheck: pre
 	jumpImmediate jmpTarget: self Label.
 	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
 		[jumpNonInt := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg].
-	objectRepresentation genConvertSmallIntegerToIntegerInScratchReg: ClassReg.
+	objectRepresentation genConvertSmallIntegerToIntegerInReg: ClassReg.
 	self ConvertR: ClassReg Rd: DPFPReg1.
 	self Jump: doOp.
 	jumpFailAlloc jmpTarget: self Label.
@@ -1172,7 +1172,7 @@ SimpleStackBasedCogit >> genDoubleComparison: jumpOpcodeGenerator invert: invert
 	jumpImmediate jmpTarget: self Label.
 	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
 		[jumpNonInt := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg].
-	objectRepresentation genConvertSmallIntegerToIntegerInScratchReg: ClassReg.
+	objectRepresentation genConvertSmallIntegerToIntegerInReg: ClassReg.
 	self ConvertR: ClassReg Rd: DPFPReg1.
 	self Jump: compare.
 	jumpFail jmpTarget: self Label.
@@ -1730,7 +1730,7 @@ SimpleStackBasedCogit >> genPrimitiveAsFloat [
 	| jumpFailAlloc |
 	<var: #jumpFailAlloc type: #'AbstractInstruction *'>
 	self MoveR: ReceiverResultReg R: ClassReg.
-	objectRepresentation genConvertSmallIntegerToIntegerInScratchReg: ClassReg.
+	objectRepresentation genConvertSmallIntegerToIntegerInReg: ClassReg.
 	self ConvertR: ClassReg Rd: DPFPReg0.
 	jumpFailAlloc := objectRepresentation
 					genAllocFloatValue: DPFPReg0
@@ -1830,7 +1830,7 @@ nonInt:
 	self MoveMw: BytesPerWord r: SPReg R: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
-	objectRepresentation genConvertSmallIntegerToIntegerInScratchReg: ClassReg.
+	objectRepresentation genConvertSmallIntegerToIntegerInReg: ClassReg.
 	(self lastOpcode setsConditionCodesFor: JumpNegative) ifFalse:
 		[self CmpCq: 0 R: ClassReg]. "N.B. FLAGS := ClassReg - 0"
 	jumpNegative := self JumpNegative: 0.
@@ -1960,7 +1960,7 @@ SimpleStackBasedCogit >> genPrimitiveDiv [
 	jumpSameSign := self JumpGreaterOrEqual: 0.
 	self SubCq: 1 R: TempReg.
 	jumpSameSign jmpTarget: (convert := self Label).
-	objectRepresentation genConvertIntegerToSmallIntegerInScratchReg: TempReg.
+	objectRepresentation genConvertIntegerToSmallIntegerInReg: TempReg.
 	self MoveR: TempReg R: ReceiverResultReg.
 	self flag: 'currently caller pushes result'.
 	self RetN: BytesPerWord * 2.
@@ -1995,7 +1995,7 @@ SimpleStackBasedCogit >> genPrimitiveDivide [
 	"test for overflow; the only case is SmallInteger minVal / -1"
 	self CmpCq: (1 << (objectRepresentation numSmallIntegerBits - 1)) R: TempReg.
 	jumpOverflow := self JumpGreaterOrEqual: 0.
-	objectRepresentation genConvertIntegerToSmallIntegerInScratchReg: TempReg.
+	objectRepresentation genConvertIntegerToSmallIntegerInReg: TempReg.
 	self MoveR: TempReg R: ReceiverResultReg.
 	self flag: 'currently caller pushes result'.
 	self RetN: BytesPerWord * 2.
@@ -2277,7 +2277,7 @@ SimpleStackBasedCogit >> genPrimitiveQuo [
 	"test for overflow; the only case is SmallInteger minVal quo: -1"
 	self CmpCq: (1 << (objectRepresentation numSmallIntegerBits - 1)) R: TempReg.
 	jumpOverflow := self JumpGreaterOrEqual: 0.
-	objectRepresentation genConvertIntegerToSmallIntegerInScratchReg: TempReg.
+	objectRepresentation genConvertIntegerToSmallIntegerInReg: TempReg.
 	self MoveR: TempReg R: ReceiverResultReg.
 	self flag: 'currently caller pushes result'.
 	self RetN: BytesPerWord * 2.
@@ -2870,7 +2870,7 @@ SimpleStackBasedCogit >> genSmallIntegerComparison: jumpOpcode orDoubleCompariso
 	
 	"It was a Float, so convert the receiver to double and perform the operation"
 	self MoveR: ReceiverResultReg R: TempReg.
-	objectRepresentation genConvertSmallIntegerToIntegerInScratchReg: TempReg.
+	objectRepresentation genConvertSmallIntegerToIntegerInReg: TempReg.
 	self ConvertR: TempReg Rd: DPFPReg0.
 	objectRepresentation genGetDoubleValueOf: ClassReg into: DPFPReg1.
 	self CmpRd: DPFPReg1 Rd: DPFPReg0.
