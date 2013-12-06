@@ -1120,10 +1120,13 @@ VMMaker >> generateInterpreterFile [
 
 { #category : #'generate sources' }
 VMMaker >> generateMainVM [
-"generate the interp (and optionally the cogit), internal plugins and exports"
+	"Generate the interp (and optionally the cogit), internal plugins and exports.
+	 N.B. generateInterpreterFile *must* preceed generateCogitFile so that
+	 the objectMemory and interpreter classes are initialized before the Cogit
+	 code is generated."
 
-	self generateCogitFile;
-		generateInterpreterFile;
+	self generateInterpreterFile;
+		generateCogitFile;
 		processFilesForCoreVM;
 		generateInternalPlugins;
 		generateExportsFile
