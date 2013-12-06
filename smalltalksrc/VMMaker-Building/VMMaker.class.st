@@ -325,6 +325,11 @@ VMMaker class >> generateConfiguration [
 ]
 
 { #category : #configurations }
+VMMaker class >> generateEitherSqueakCogVM [
+	^self generateSqueakCogVMWithInterpreterClass: (self chooseCoInterpreterClassIfAbsent: [^self])
+]
+
+{ #category : #configurations }
 VMMaker class >> generateNewSqueakCogVM [
 	"self generateNewSqueakCogVM"
 	^VMMaker
@@ -392,6 +397,11 @@ VMMaker class >> generateNewspeakStackVM [
 ]
 
 { #category : #configurations }
+VMMaker class >> generateSqueakCogMTVM [
+	^self generateSqueakCogVMWithInterpreterClass: CoInterpreterMT
+]
+
+{ #category : #configurations }
 VMMaker class >> generateSqueakCogSistaVM [
 	^VMMaker
 		generate: CoInterpreter
@@ -403,7 +413,7 @@ VMMaker class >> generateSqueakCogSistaVM [
 
 { #category : #configurations }
 VMMaker class >> generateSqueakCogVM [
-	^self generateSqueakCogVMWithInterpreterClass: (self chooseCoInterpreterClassIfAbsent: [^self])
+	^self generateSqueakCogVMWithInterpreterClass: CoInterpreter
 ]
 
 { #category : #'confs-support' }
