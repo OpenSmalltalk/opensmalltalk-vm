@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   andreasr@wdi.disney.com
-*   RCSID:   $Id: b3dMain.c,v 1.1 2001/10/24 23:12:23 rowledge Exp $
+*   RCSID:   $Id$
 *
 *   NOTES:
 *
@@ -63,7 +63,7 @@ int maxEdges = 0;
 /*************************************************************/
 
 void b3dAbort(char *msg){
-	printf(msg);
+	printf("%s\n", msg);
 	exit(-1);
 }
 
