@@ -5547,15 +5547,13 @@ StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 			 [self assert: (thePage addressIsInPage: theFP).
 			  self assert: (theIPPtr = 0 or: [thePage addressIsInPage: theIPPtr asVoidPointer]).
 			  oop := stackPages longAt: theFP + FoxReceiver.
-			  ((objectMemory isNonImmediate: oop)
-			   and: [(objectMemory isForwarded: oop)]) ifTrue:
+			  (objectMemory isOopForwarded: oop) ifTrue:
 				[stackPages
 					longAt: theFP + FoxReceiver
 					put: (objectMemory followForwarded: oop)].
 			  theIP := (theFP + (self frameStackedReceiverOffset: theFP)) asUnsignedInteger. "reuse theIP; its just an offset here"
 			  oop := stackPages longAt: theIP.
-			  ((objectMemory isNonImmediate: oop)
-			   and: [(objectMemory isForwarded: oop)]) ifTrue:
+			  (objectMemory isOopForwarded: oop) ifTrue:
 				[stackPages
 					longAt: theIP
 					put: (objectMemory followForwarded: oop)].
@@ -5566,17 +5564,18 @@ StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 					put: (objectMemory followForwarded: (self frameContext: theFP))].
 			  oop := self frameMethod: theFP.
 			  (objectMemory isForwarded: oop) ifTrue:
-				[| delta |
+				[| newOop delta |
+				 newOop := objectMemory followForwarded: oop.
 				 theIPPtr ~= 0 ifTrue:
 					[self assert: (stackPages longAt: theIPPtr) > (self frameMethod: theFP).
-					 delta := (objectMemory followForwarded: oop) - oop.
+					 delta := newOop - oop.
 					 stackPages
 						longAt: theIPPtr
 						put: (stackPages longAt: theIPPtr) + delta].
 				stackPages
 					longAt: theFP + FoxMethod
-					put: (objectMemory followForwarded: oop)].
-			  self followNecessaryForwardingInMethod: (self frameMethod: theFP).
+					put: (oop := newOop)].
+			  self followNecessaryForwardingInMethod: oop.
 			  (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
 				[theIPPtr := (theFP + FoxCallerSavedIP) asUnsignedInteger.
 				 theFP := callerFP]]]
