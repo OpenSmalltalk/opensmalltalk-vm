@@ -3210,7 +3210,7 @@ SpurMemoryManager >> ensureRoomOnObjStackAt: objStackRootIndex [
 			  storePointer: objStackRootIndex ofObject: hiddenRootsObj withValue: freeOrNewPage.
 		 self assert: (self isValidObjStackAt: objStackRootIndex).
 		 "Added a new page; now update and answer the relevant cached first page."
-		 ^self updateRootOfObjStackAt: objStackRootIndex with: freeOrNewPage].
+		 stackOrNil := self updateRootOfObjStackAt: objStackRootIndex with: freeOrNewPage].
 	self assert: (self isValidObjStackAt: objStackRootIndex).
 	^stackOrNil
 ]
@@ -5437,7 +5437,7 @@ SpurMemoryManager >> isValidObjStackPage: objStackPage myIndex: myx firstPage: i
 			 invalidObjStackPage := objStackPage.
 			 ^false].
 		 (self isValidObjStackPage: freeOrNextPage myIndex: myx) ifFalse:
-			[objStackInvalidBecause := self str: objStackInvalidBecause cat: ', on next page'.
+			[objStackInvalidBecause := self stretch: objStackInvalidBecause cat: ', on next page'.
 			^false].
 		 freeOrNextPage := self fetchPointer: ObjStackFreex ofObject: freeOrNextPage].
 	isFirstPage ifTrue:
@@ -6681,6 +6681,7 @@ SpurMemoryManager >> popObjStack: objStack [
 		 self storePointer: ObjStackNextx ofObjStack: objStack withValue: 0.
 		 myx := self fetchPointer: ObjStackMyx ofObject: objStack.
 		 self updateRootOfObjStackAt: myx with: nextPage].
+	self assert: (self isValidObjStack: objStack).
 	^top
 ]
 
@@ -6901,6 +6902,60 @@ SpurMemoryManager >> printMethodReferencesTo: anOop [
 				[anOop = (self fetchPointer: i ofObject: obj) ifTrue:
 					[coInterpreter printHex: obj; print: ' @ '; printNum: i; space; printOopShort: obj; cr.
 					 i := 0]]]]
+]
+
+{ #category : #'obj stacks' }
+SpurMemoryManager >> printObjStack: objStack [
+	<api>
+	objStack = nilObj
+		ifTrue:
+			[coInterpreter print: 'nil'; cr]
+		ifFalse:
+			[self printObjStackPage: objStack
+				myIndex: (self fetchPointer: ObjStackMyx ofObject: objStack)
+				pageType: ObjStackMyx]
+]
+
+{ #category : #'obj stacks' }
+SpurMemoryManager >> printObjStackPage: objStackPage myIndex: myx pageType: pageType [
+	| freeOrNextPage isFirstPage isNextPage isFreePage |
+	<inline: false>
+	isFirstPage := pageType = ObjStackMyx.
+	isNextPage := pageType = ObjStackNextx.
+	isFreePage := pageType = ObjStackFreex.
+	self printObjStackPage: objStackPage
+		myIndex: myx
+		tag: (isFirstPage ifTrue: ['head'] ifFalse: [isFreePage ifTrue: ['free'] ifFalse: ['next']]).
+	(isFirstPage or: [isNextPage]) ifTrue:
+		[coInterpreter tab; print: 'next: '; printHex: (self fetchPointer: ObjStackNextx ofObject: objStackPage).
+		 isFirstPage ifTrue:
+			[coInterpreter print: ' free: '; printHex: (self fetchPointer: ObjStackFreex ofObject: objStackPage)].
+		 coInterpreter cr].
+	freeOrNextPage := self fetchPointer: ObjStackFreex ofObject: objStackPage.
+	[freeOrNextPage ~= 0] whileTrue:
+		[self printObjStackPage: freeOrNextPage myIndex: myx pageType: ObjStackFreex.
+		 freeOrNextPage := self fetchPointer: ObjStackFreex ofObject: freeOrNextPage].
+	freeOrNextPage := self fetchPointer: ObjStackNextx ofObject: objStackPage.
+	freeOrNextPage ~= 0 ifTrue:
+		[self printObjStackPage: freeOrNextPage myIndex: myx pageType: ObjStackNextx]
+]
+
+{ #category : #'obj stacks' }
+SpurMemoryManager >> printObjStackPage: objStackPage myIndex: myx tag: pageType [
+	<var: 'pageType' type: #'char *'>
+	<inline: false>
+	coInterpreter
+		print: pageType; space; printHex: objStackPage; space;
+		print: 'cx '; printNum: (self classIndexOf: objStackPage);
+		print: ' ('; printNum: self wordSizeClassIndexPun;
+		print: ') fmt '; printNum: (self formatOf: objStackPage);
+		print: ' ('; printNum: self wordIndexableFormat;
+		print: ') sz '; printNum: (self numSlotsOfAny: objStackPage);
+		print: ' ('; printNum: ObjStackPageSlots;
+		print: ') myx: '; printNum: (self fetchPointer: ObjStackMyx ofObject: objStackPage);
+		print: ' ('; printNum: myx;
+		print: ((self isMarked: objStackPage) ifTrue: [') mkd'] ifFalse: [') unmkd']);
+		cr
 ]
 
 { #category : #'debug printing' }
@@ -8303,7 +8358,6 @@ SpurMemoryManager >> updateRootOfObjStackAt: objStackRootIndex with: newRootPage
 		[MarkStackRootIndex]			->	[markStack := newRootPage].
 		[WeaklingStackRootIndex]		->	[weaklingStack := newRootPage].
 		[EphemeronQueueRootIndex]	->	[ephemeronQueue := newRootPage] }.
-	self assert: (self isValidObjStack: newRootPage).
 	^newRootPage
 ]
 
