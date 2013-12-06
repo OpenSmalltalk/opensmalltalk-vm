@@ -58,6 +58,8 @@ TAssignmentNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 		[^self emitLiteralArrayDeclarationOn: aStream level: level generator: aCodeGen].
 	(expression isSend and: [expression isValueExpansion]) ifTrue:
 		[^self emitValueExpansionOn: aStream level: level generator: aCodeGen].
+	(expression isStmtList and: [expression statements size > 1]) ifTrue:
+		[^self emitStatementListExpansion: expression on: aStream level: level generator: aCodeGen].
 	variable emitCCodeOn: aStream level: level generator: aCodeGen.
 	self isVariableUpdatingAssignment
 		ifTrue:
@@ -88,6 +90,21 @@ TAssignmentNode >> emitLiteralArrayDeclarationOn: aStream level: level generator
 		crtab: level;
 		nextPut: $};
 		cr
+]
+
+{ #category : #'C code generation' }
+TAssignmentNode >> emitStatementListExpansion: stmtList on: aStream level: level generator: aCodeGen [
+	| lastStmt copy |
+	lastStmt := stmtList statements last.
+	lastStmt = variable ifTrue:
+		[^expression emitCCodeOn: aStream level: level generator: aCodeGen].
+	copy := stmtList copy.
+	copy statements
+		at: stmtList statements size
+		put: (TAssignmentNode new
+				setVariable: variable
+				expression: lastStmt).
+	copy emitCCodeOn: aStream level: level generator: aCodeGen
 ]
 
 { #category : #'C code generation' }
