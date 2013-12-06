@@ -73,7 +73,7 @@ CogObjectRepresentationForSpur >> genAllocFloatValue: dpreg into: resultReg scra
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genConvertIntegerToCharacterInScratchReg: reg [
+CogObjectRepresentationForSpur >> genConvertIntegerToCharacterInReg: reg [
 	cogit
 		LogicalShiftLeftCq: objectMemory numTagBits R: reg;
 		AddCq: objectMemory characterTag R: reg.
@@ -227,7 +227,7 @@ CogObjectRepresentationForSpur >> genInnerPrimitiveSize: retNoffset [
 		formatReg: SendNumArgsReg
 		scratchReg: TempReg
 		abortJumpsInto: [:jnx :jic| jumpNotIndexable := jnx. jumpIsContext := jic].
-	self genConvertIntegerToSmallIntegerInScratchReg: ClassReg.
+	self genConvertIntegerToSmallIntegerInReg: ClassReg.
 	cogit MoveR: ClassReg R: ReceiverResultReg.
 	cogit RetN: retNoffset.
 	jumpImm jmpTarget: (jumpNotIndexable jmpTarget: (jumpIsContext jmpTarget: cogit Label)).

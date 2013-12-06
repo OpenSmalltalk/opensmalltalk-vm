@@ -11,6 +11,13 @@ CogObjectRepresentationFor32BitSpur >> genAddSmallIntegerTagsTo: aRegister [
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationFor32BitSpur >> genConvertIntegerToSmallIntegerInReg: reg [
+	cogit LogicalShiftLeftCq: 1 R: reg.
+	cogit AddCq: 1 R: reg.
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationFor32BitSpur >> genConvertIntegerToSmallIntegerInScratchReg: scratchReg [
 	cogit LogicalShiftLeftCq: 1 R: scratchReg.
 	cogit AddCq: 1 R: scratchReg.
@@ -18,8 +25,8 @@ CogObjectRepresentationFor32BitSpur >> genConvertIntegerToSmallIntegerInScratchR
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationFor32BitSpur >> genConvertSmallIntegerToIntegerInScratchReg: scratchReg [
-	cogit ArithmeticShiftRightCq: 1 R: scratchReg.
+CogObjectRepresentationFor32BitSpur >> genConvertSmallIntegerToIntegerInReg: reg [
+	cogit ArithmeticShiftRightCq: 1 R: reg.
 	^0
 ]
 
@@ -47,7 +54,7 @@ CogObjectRepresentationFor32BitSpur >> genGetHashFieldNonImmOf: instReg asSmallI
 	cogit MoveMw: 4 r: instReg R: destReg.
 	"Shift and mask the field leaving room for the SmallInteger tag."
 	cogit AndCq: objectMemory identityHashHalfWordMask R: destReg.
-	self genConvertIntegerToSmallIntegerInScratchReg: destReg.
+	self genConvertIntegerToSmallIntegerInReg: destReg.
 	^0
 ]
 
@@ -148,7 +155,7 @@ CogObjectRepresentationFor32BitSpur >> genGetSizeOf: sourceReg into: destReg for
 	cogit PushR: destReg.
 	self genGetClassObjectOfClassIndex: formatReg into: destReg scratchReg: scratchReg.
 	self genLoadSlot: InstanceSpecificationIndex sourceReg: destReg destReg: formatReg.
-	self genConvertSmallIntegerToIntegerInScratchReg: formatReg.
+	self genConvertSmallIntegerToIntegerInReg: formatReg.
 	cogit
 		PopR: destReg;
 		AndCq: objectMemory fixedFieldsOfClassFormatMask R: formatReg;
@@ -195,7 +202,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAt: retNoffset [
 	cogit MoveR: Arg0Reg R: TempReg.
 	cogit MoveR: Arg0Reg R: Arg1Reg.
 	jumpBadIndex := self genJumpNotSmallIntegerInScratchReg: TempReg.
-	self genConvertSmallIntegerToIntegerInScratchReg: Arg1Reg.
+	self genConvertSmallIntegerToIntegerInReg: Arg1Reg.
 	cogit SubCq: 1 R: Arg1Reg. "1-rel => 0-rel"
 
 	formatReg := SendNumArgsReg.
@@ -251,7 +258,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAt: retNoffset [
 	jumpBytesOutOfBounds := cogit JumpBelowOrEqual: 0.
 	cogit AddCq: objectMemory baseHeaderSize R: Arg1Reg.
 	cogit MoveXbr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg.
-	self genConvertIntegerToSmallIntegerInScratchReg: ReceiverResultReg.
+	self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
 	jumpBytesDone := cogit Jump: 0.
 
 	jumpIsShorts jmpTarget:
@@ -286,7 +293,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAt: retNoffset [
 	self genGetClassObjectOfClassIndex: formatReg into: ClassReg scratchReg: TempReg.
 	self genLoadSlot: InstanceSpecificationIndex sourceReg: ClassReg destReg: formatReg.
 	cogit PopR: ClassReg.
-	self genConvertSmallIntegerToIntegerInScratchReg: formatReg.
+	self genConvertSmallIntegerToIntegerInReg: formatReg.
 	cogit
 		AndCq: objectMemory fixedFieldsOfClassFormatMask R: formatReg;
 		SubR: formatReg R: ClassReg;
@@ -356,7 +363,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveNew: retNoffset [
 	jumpUnhashed := cogit JumpZero: 0.
 	"get class's format inst var for both inst spec (format field) and num fixed fields"
 	self genLoadSlot: InstanceSpecificationIndex sourceReg: ReceiverResultReg destReg: TempReg.
-	self genConvertSmallIntegerToIntegerInScratchReg: TempReg.
+	self genConvertSmallIntegerToIntegerInReg: TempReg.
 	cogit MoveR: TempReg R: instSpecReg.
 	cogit LogicalShiftRightCq: objectMemory fixedFieldsFieldWidth R: TempReg.
 	cogit AndCq: objectMemory formatMask R: TempReg.
@@ -473,7 +480,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveNewWithArg: retNoffset [
 	cogit AddR: TempReg R: halfHeaderReg.
 	"get integer value of num fields in TempReg now"
 	cogit MoveR: Arg0Reg R: TempReg.
-	self genConvertSmallIntegerToIntegerInScratchReg: TempReg.
+	self genConvertSmallIntegerToIntegerInReg: TempReg.
 	"dispatch on format, failing if not variable or if compiled method"
 	cogit CmpCq: objectMemory arrayFormat R: instSpecReg.
 	jumpArrayFormat := cogit JumpZero: 0.
@@ -600,7 +607,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAt: retNoffset [
 	cogit MoveR: Arg0Reg R: TempReg.
 	cogit MoveR: Arg0Reg R: Arg1Reg.
 	jumpBadIndex := self genJumpNotSmallIntegerInScratchReg: TempReg.
-	self genConvertSmallIntegerToIntegerInScratchReg: Arg1Reg.
+	self genConvertSmallIntegerToIntegerInReg: Arg1Reg.
 	cogit SubCq: 1 R: Arg1Reg. "1-rel => 0-rel"
 
 	formatReg := SendNumArgsReg.
@@ -650,7 +657,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAt: retNoffset [
 	cogit AddCq: objectMemory baseHeaderSize R: Arg1Reg.
 	cogit MoveXbr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg.
 	done := cogit Label.
-	self genConvertIntegerToCharacterInScratchReg: ReceiverResultReg.
+	self genConvertIntegerToCharacterInReg: ReceiverResultReg.
 	cogit RetN: retNoffset.
 
 	jumpIsShorts jmpTarget:

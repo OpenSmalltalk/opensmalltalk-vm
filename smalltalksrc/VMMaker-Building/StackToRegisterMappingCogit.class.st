@@ -1567,7 +1567,7 @@ StackToRegisterMappingCogit >> genDoubleArithmetic: arithmeticOperator preOpChec
 	jumpImmediate jmpTarget: self Label.
 	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
 		[jumpNonInt := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg].
-	objectRepresentation genConvertSmallIntegerToIntegerInScratchReg: ClassReg.
+	objectRepresentation genConvertSmallIntegerToIntegerInReg: ClassReg.
 	self ConvertR: ClassReg Rd: DPFPReg1.
 	self Jump: doOp.
 	jumpFailAlloc jmpTarget: self Label.
@@ -1610,7 +1610,7 @@ StackToRegisterMappingCogit >> genDoubleComparison: jumpOpcodeGenerator invert: 
 	jumpImmediate jmpTarget: self Label.
 	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
 		[jumpNonInt := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg].
-	objectRepresentation genConvertSmallIntegerToIntegerInScratchReg: Arg0Reg.
+	objectRepresentation genConvertSmallIntegerToIntegerInReg: Arg0Reg.
 	self ConvertR: Arg0Reg Rd: DPFPReg1.
 	self Jump: compare.
 	jumpFail jmpTarget: self Label.
@@ -1935,7 +1935,7 @@ StackToRegisterMappingCogit >> genPrimitiveAsFloat [
 	| jumpFailAlloc |
 	<var: #jumpFailAlloc type: #'AbstractInstruction *'>
 	self MoveR: ReceiverResultReg R: TempReg.
-	objectRepresentation genConvertSmallIntegerToIntegerInScratchReg: TempReg.
+	objectRepresentation genConvertSmallIntegerToIntegerInReg: TempReg.
 	self ConvertR: TempReg Rd: DPFPReg0.
 	jumpFailAlloc := objectRepresentation
 						genAllocFloatValue: DPFPReg0
@@ -2030,7 +2030,7 @@ nonInt:
 	self MoveR: Arg0Reg R: TempReg.
 	self MoveR: Arg0Reg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
-	objectRepresentation genConvertSmallIntegerToIntegerInScratchReg: ClassReg.
+	objectRepresentation genConvertSmallIntegerToIntegerInReg: ClassReg.
 	(self lastOpcode setsConditionCodesFor: JumpNegative) ifFalse:
 		[self CmpCq: 0 R: ClassReg]. "N.B. FLAGS := ClassReg - 0"
 	jumpNegative := self JumpNegative: 0.
@@ -2141,7 +2141,7 @@ StackToRegisterMappingCogit >> genPrimitiveDiv [
 	jumpSameSign := self JumpGreaterOrEqual: 0.
 	self SubCq: 1 R: TempReg.
 	jumpSameSign jmpTarget: (convert := self Label).
-	objectRepresentation genConvertIntegerToSmallIntegerInScratchReg: TempReg.
+	objectRepresentation genConvertIntegerToSmallIntegerInReg: TempReg.
 	self MoveR: TempReg R: ReceiverResultReg.
 	self RetN: 0.
 	"test for overflow; the only case is SmallInteger minVal // -1"
@@ -2175,7 +2175,7 @@ StackToRegisterMappingCogit >> genPrimitiveDivide [
 	"test for overflow; the only case is SmallInteger minVal / -1"
 	self CmpCq: (1 << (objectRepresentation numSmallIntegerBits - 1)) R: TempReg.
 	jumpOverflow := self JumpGreaterOrEqual: 0.
-	objectRepresentation genConvertIntegerToSmallIntegerInScratchReg: TempReg.
+	objectRepresentation genConvertIntegerToSmallIntegerInReg: TempReg.
 	self MoveR: TempReg R: ReceiverResultReg.
 	self RetN: 0.
 	jumpOverflow jmpTarget: (jumpInexact jmpTarget: (jumpZero jmpTarget: (jumpNotSI jmpTarget: self Label))).
@@ -2352,7 +2352,7 @@ StackToRegisterMappingCogit >> genPrimitiveQuo [
 	"test for overflow; the only case is SmallInteger minVal quo: -1"
 	self CmpCq: (1 << (objectRepresentation numSmallIntegerBits - 1)) R: TempReg.
 	jumpOverflow := self JumpGreaterOrEqual: 0.
-	objectRepresentation genConvertIntegerToSmallIntegerInScratchReg: TempReg.
+	objectRepresentation genConvertIntegerToSmallIntegerInReg: TempReg.
 	self MoveR: TempReg R: ReceiverResultReg.
 	self RetN: 0.
 	jumpOverflow jmpTarget: (jumpZero jmpTarget: (jumpNotSI jmpTarget: self Label)).
@@ -2797,7 +2797,7 @@ StackToRegisterMappingCogit >> genSmallIntegerComparison: jumpOpcode orDoubleCom
 	jumpFail := self JumpNonZero: 0.
 	
 	"It was a Float, so convert the receiver to double and perform the operation"
-	objectRepresentation genConvertSmallIntegerToIntegerInScratchReg: ReceiverResultReg.
+	objectRepresentation genConvertSmallIntegerToIntegerInReg: ReceiverResultReg.
 	self ConvertR: ReceiverResultReg Rd: DPFPReg0.
 	objectRepresentation genGetDoubleValueOf: Arg0Reg into: DPFPReg1.
 	self CmpRd: DPFPReg1 Rd: DPFPReg0.
