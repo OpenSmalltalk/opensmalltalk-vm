@@ -3134,8 +3134,7 @@ CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 			  self assert: (theIPPtr = 0 or: [thePage addressIsInPage: theIPPtr asVoidPointer]).
 			  offset := self frameStackedReceiverOffset: theFP.
 			  oop := stackPages longAt: theFP + offset.
-			  ((objectMemory isNonImmediate: oop)
-			   and: [(objectMemory isForwarded: oop)]) ifTrue:
+			  (objectMemory isOopForwarded: oop) ifTrue:
 				[stackPages
 					longAt: theFP + offset
 					put: (objectMemory followForwarded: oop)].
@@ -3146,26 +3145,26 @@ CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 					put: (objectMemory followForwarded: (self frameContext: theFP))].
 			 (self isMachineCodeFrame: theFP)
 				ifTrue:
-					[oop := stackPages longAt: theFP + FoxIFReceiver.
-					 ((objectMemory isNonImmediate: oop)
-					  and: [(objectMemory isForwarded: oop)]) ifTrue:
+					[oop := stackPages longAt: theFP + FoxMFReceiver.
+					 (objectMemory isOopForwarded: oop) ifTrue:
 						[stackPages
-							longAt: theFP + FoxIFReceiver
+							longAt: theFP + FoxMFReceiver
 							put: (objectMemory followForwarded: oop)].
-					 self assert: (objectMemory isForwarded: (self frameMethodObject: theFP)) not]
+					 oop := (self mframeHomeMethod: theFP) methodObject.
+					 self assert: (objectMemory isForwarded: oop) not]
 				ifFalse:
 					[oop := stackPages longAt: theFP + FoxIFReceiver.
-					 ((objectMemory isNonImmediate: oop)
-					  and: [(objectMemory isForwarded: oop)]) ifTrue:
+					 (objectMemory isOopForwarded: oop) ifTrue:
 						[stackPages
 							longAt: theFP + FoxIFReceiver
 							put: (objectMemory followForwarded: oop)].
-					 oop := self frameMethod: theFP.
+					 oop := self iframeMethod: theFP.
 					 (objectMemory isForwarded: oop) ifTrue:
-						[| delta |
-						 delta := (objectMemory followForwarded: oop) - oop.
+						[| newOop delta |
+						 newOop := objectMemory followForwarded: oop.
+						 delta := newOop - oop.
 						 (theIPPtr ~= 0
-						  and: [(stackPages longAt: theIPPtr) > (self frameMethod: theFP)]) ifTrue:
+						  and: [(stackPages longAt: theIPPtr) > oop]) ifTrue:
 							[stackPages
 								longAt: theIPPtr
 								put: (stackPages longAt: theIPPtr) + delta].
@@ -3174,8 +3173,8 @@ CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 							put: (stackPages longAt: theFP + FoxIFSavedIP) + delta.
 						stackPages
 							longAt: theFP + FoxMethod
-							put: (objectMemory followForwarded: oop)]].
-			  self followNecessaryForwardingInMethod: (self frameMethod: theFP).
+							put: (oop := newOop)]].
+			  self followNecessaryForwardingInMethod: oop.
 			  (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
 				[theIPPtr := (theFP + FoxCallerSavedIP) asUnsignedInteger.
 				 theFP := callerFP]]]
