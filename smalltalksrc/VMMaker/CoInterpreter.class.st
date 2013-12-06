@@ -5702,8 +5702,8 @@ CoInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imag
 
 	heapBase := objectMemory
 					setHeapBase: objectMemory memory + cogCodeSize
-					memoryLimit: objectMemory memory + heapSize
-					endOfMemory: objectMemory memory + dataSize.
+					memoryLimit: objectMemory memory + cogCodeSize + heapSize
+					endOfMemory: objectMemory memory + cogCodeSize + dataSize.
 
 	"position file after the header"
 	self sqImageFile: f Seek: headerStart + headerSize.
