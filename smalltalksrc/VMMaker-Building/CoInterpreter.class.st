@@ -1344,7 +1344,7 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 			 (objectMemory isForwardedClassTag: classTag) ifTrue:
 				[^self
 					ceDynamicSuperSend: selector
-					to: (self handleForwardedSendFaultForReceiver: rcvr)
+					to: (self handleForwardedSendFaultForReceiver: rcvr stackDelta: 1 "skip return pc")
 					numArgs: numArgs].
 			 messageSelector := selector.
 			 (errSelIdx := self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
@@ -1659,7 +1659,7 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 				^self
 					ceSend: selector
 					super: superNormalBar
-					to: (self handleForwardedSendFaultForReceiver: rcvr)
+					to: (self handleForwardedSendFaultForReceiver: rcvr stackDelta: 1 "skip return pc")
 					numArgs: numArgs].
 			 messageSelector := selector.
 			 (errSelIdx := self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
@@ -1780,7 +1780,7 @@ CoInterpreter >> ceSendFromInLineCacheMiss: cogMethodOrPIC [
 				[self handleForwardedSelectorFaultFor: cogMethodOrPIC selector.
 				 ^self ceSendFromInLineCacheMiss: cogMethodOrPIC].
 			 (objectMemory isForwardedClassTag: classTag) ifTrue:
-				[self handleForwardedSendFaultForReceiver: rcvr.
+				[self handleForwardedSendFaultForReceiver: rcvr stackDelta: 1 "skip return pc".
 				 ^self ceSendFromInLineCacheMiss: cogMethodOrPIC].
 			 messageSelector := cogMethodOrPIC selector.
 			 (errSelIdx := self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
@@ -3479,20 +3479,20 @@ CoInterpreter >> getImageHeaderFlags [
 ]
 
 { #category : #'message sending' }
-CoInterpreter >> handleForwardedSendFaultForReceiver: forwardedReceiver [
+CoInterpreter >> handleForwardedSendFaultForReceiver: forwardedReceiver stackDelta: stackDelta [
 	"Handle a send fault that may be due to a send to a forwarded object.
 	 Unforward the receiver on the stack and answer it."
 	<option: #SpurObjectMemory>
-	| rcvr |
+	| rcvrStackIndex rcvr |
 	<inline: false>
 	"should *not* be a super send, so the receiver should be forwarded."
 	self assert: (objectMemory isOopForwarded: forwardedReceiver).
-
-	self assert: (self stackValue: argumentCount) = forwardedReceiver.
+	rcvrStackIndex := argumentCount + stackDelta.
+	self assert: (self stackValue: rcvrStackIndex) = forwardedReceiver.
 	rcvr := objectMemory followForwarded: forwardedReceiver.
-	self stackValue: argumentCount put: rcvr.
+	self stackValue: rcvrStackIndex put: rcvr.
 	self followForwardedFrameContents: framePointer
-		stackPointer: stackPointer + (argumentCount + 1 * BytesPerWord). "don't repeat effort"
+		stackPointer: stackPointer + (rcvrStackIndex + 1 * BytesPerWord). "don't repeat effort"
 	(objectMemory isPointers: (self frameReceiver: framePointer)) ifTrue:
 		[objectMemory
 			followForwardedObjectFields: (self frameReceiver: framePointer)

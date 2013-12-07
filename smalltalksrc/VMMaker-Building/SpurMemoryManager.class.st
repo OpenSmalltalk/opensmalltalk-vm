@@ -3908,7 +3908,7 @@ SpurMemoryManager >> followForwardedObjectFields: objOop toDepth: depth [
 	 How to avoid cyclic structures?? A temproary mark bit?"
 	| oop |
 	self assert: ((self isPointers: objOop) or: [self isOopCompiledMethod: objOop]).
-	0 to: (self numSlotsOf: objOop) - 1 do:
+	0 to: (self numPointerSlotsOf: objOop) - 1 do:
 		[:i|
 		oop := self fetchPointer: i ofObject: objOop.
 		((self isNonImmediate: oop)
