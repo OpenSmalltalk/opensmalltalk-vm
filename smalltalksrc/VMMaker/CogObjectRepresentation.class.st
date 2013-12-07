@@ -46,8 +46,8 @@ CogObjectRepresentation >> canLinkToYoungClasses [
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentation >> genEnsureRegNotForwarded: reg scratchReg: scratch [
-	"Make sure that the obejct in reg is not forwarded.  By default there is
+CogObjectRepresentation >> genEnsureObjInRegRegNotForwarded: reg scratchReg: scratch [
+	"Make sure that the object in reg is not forwarded.  By default there is
 	 nothing to do.  Subclasses for memory managers that forward will override."
 	^0
 ]
