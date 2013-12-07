@@ -5194,7 +5194,7 @@ StackInterpreter >> findNewMethodInClassTag: classTagArg [
 			[(objectMemory isOopForwarded: messageSelector) ifTrue:
 				[messageSelector := self handleForwardedSelectorFaultFor: messageSelector].
 			 (objectMemory isForwardedClassTag: classTag) ifTrue:
-				[classTag := self handleForwardedSendFaultFor: classTag].
+				[classTag := self handleForwardedSendFaultForTag: classTag].
 			ok := self lookupInMethodCacheSel: messageSelector classTag: classTag.
 			ok ifTrue:
 				[^nil]].
@@ -5457,6 +5457,13 @@ StackInterpreter >> flushMethodCacheFrom: memStart to: memEnd [
 	self flushAtCache
 ]
 
+{ #category : #'message sending' }
+StackInterpreter >> followForwardedFieldsInCurrentMethod [
+	objectMemory
+		followForwardedObjectFields: method
+		toDepth: 0
+]
+
 { #category : #'lazy become' }
 StackInterpreter >> followForwardedFrameContents: theFP stackPointer: theSP [
 	"follow pointers in the current stack frame up to theSP."
@@ -5482,6 +5489,24 @@ StackInterpreter >> followForwardedFrameContents: theFP stackPointer: theSP [
 	self assert: (objectMemory isForwarded: (self frameMethod: theFP)) not.
 	(self frameHasContext: theFP) ifTrue:
 		[self assert: (objectMemory isForwarded: (self frameContext: theFP)) not]
+]
+
+{ #category : #'object memory support' }
+StackInterpreter >> followForwardedMethods [
+	"This is just a stub for the CoInterpreter"
+]
+
+{ #category : #'object memory support' }
+StackInterpreter >> followForwardedMethodsInMethodCache [
+	0 to: MethodCacheSize - 1 by: MethodCacheEntrySize do:
+		[:i | | c s m |
+		c := methodCache at: i + MethodCacheClass.
+		s := methodCache at: i + MethodCacheSelector.
+		m := methodCache at: i + MethodCacheMethod.
+		(c ~= 0 and: [s ~= 0 and: [m ~= 0
+		 and: [objectMemory isOopForwarded: m]]]) ifTrue:
+			[m := objectMemory followForwarded: m.
+			 methodCache at: i + MethodCacheMethod put: m]]
 ]
 
 { #category : #'object memory support' }
@@ -5983,21 +6008,21 @@ StackInterpreter >> handleForwardedSelectorFaultFor: selectorOop [
 	"Handle a send fault that is due to a send using a forwarded selector.
 	 Unforward the selector and follow the current method and special
 	 selectors array to unforward the source of the forwarded selector."
+	<option: #SpurObjectMemory>
 	<inline: false>
 	self assert: (objectMemory isOopForwarded: selectorOop).
-
+	self followForwardedFieldsInCurrentMethod.
 	objectMemory
-		followForwardedObjectFields: method
-			toDepth: 0;
 		followForwardedObjectFields: (objectMemory splObj: SpecialSelectors)
-			toDepth: 0.
+		toDepth: 0.
 	^objectMemory followForwarded: selectorOop
 ]
 
 { #category : #'message sending' }
-StackInterpreter >> handleForwardedSendFaultFor: classTag [
+StackInterpreter >> handleForwardedSendFaultForTag: classTag [
 	"Handle a send fault that may be due to a send to a forwarded object.
 	 Unforward the receiver on the stack and answer its actual class."
+	<option: #SpurObjectMemory>
 	| rcvr |
 	<inline: false>
 	self assert: (objectMemory isForwardedClassTag: classTag).
@@ -6712,7 +6737,7 @@ StackInterpreter >> internalFindNewMethod [
 			[(objectMemory isOopForwarded: messageSelector) ifTrue:
 				[messageSelector := self handleForwardedSelectorFaultFor: messageSelector].
 			 (objectMemory isForwardedClassTag: lkupClassTag) ifTrue:
-				[lkupClassTag := self handleForwardedSendFaultFor: lkupClassTag].
+				[lkupClassTag := self handleForwardedSendFaultForTag: lkupClassTag].
 			ok := self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag.
 			ok ifTrue:
 				[^nil]].
@@ -8664,6 +8689,9 @@ StackInterpreter >> positive64BitIntegerFor: integerValue [
 StackInterpreter >> postBecomeAction: theBecomeEffectsFlags [
 	theBecomeEffectsFlags ~= 0 ifTrue:
 		[self followForwardingPointersInStackZone: theBecomeEffectsFlags.
+		 (theBecomeEffectsFlags anyMask: BecameCompiledMethodFlag) ifTrue:
+			[self followForwardedMethodsInMethodCache].
+		 self followForwardedMethods. "for CoInterpreter"
 		 self followForwardingPointersInScheduler]
 ]
 
@@ -9683,6 +9711,8 @@ StackInterpreter >> printOopShortInner: oop [
 		[^self print: ((oop bitAnd: objectMemory allocationUnit - 1) ~= 0
 						ifTrue: [' is misaligned']
 						ifFalse: [' is not on the heap'])].
+	(objectMemory isOopForwarded: oop) ifTrue:
+		[^self printHex: oop; print: ' is a forwarder to '; printHex: (objectMemory followForwarded: oop)].
 	(self isFloatObject: oop) ifTrue:
 		[^self printFloat: (self dbgFloatValueOf: oop)].
 	classOop := objectMemory fetchClassOfNonImm: oop.

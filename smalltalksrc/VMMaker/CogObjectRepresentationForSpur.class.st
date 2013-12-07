@@ -42,7 +42,8 @@ CogObjectRepresentationForSpur >> checkValidObjectReference: anOop [
 
 { #category : #'garbage collection' }
 CogObjectRepresentationForSpur >> couldBeObject: literal [
-	^objectMemory isNonImmediate: literal
+	^(objectMemory isNonImmediate: literal)
+	  and: [self oop: literal isGreaterThanOrEqualTo: objectMemory startOfMemory]
 ]
 
 { #category : #'primitive generators' }
@@ -81,7 +82,7 @@ CogObjectRepresentationForSpur >> genConvertIntegerToCharacterInReg: reg [
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genEnsureRegNotForwarded: reg scratchReg: scratch [
+CogObjectRepresentationForSpur >> genEnsureObjInRegRegNotForwarded: reg scratchReg: scratch [
 	"Make sure that the obejct in reg is not forwarded."
 	| loop ok |
 	<var: #ok type: #'AbstractInstruction *'>
@@ -115,7 +116,7 @@ CogObjectRepresentationForSpur >> genGetClassIndexOfNonImm: sourceReg into: dest
 
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genGetClassObjectOf: instReg into: destReg scratchReg: scratchReg instRegIsReceiver: instRegIsReceiver [
-	"Fetch the instance's class into destReg."
+	"Fetch the instance's class into destReg.  If the instance is forwarded, follow forwarding."
 	| jumpIsImm jumpNotForwarded loop |
 	<var: #jumpIsImm type: #'AbstractInstruction *'>
 	<var: #jumpNotForwarded type: #'AbstractInstruction *'>

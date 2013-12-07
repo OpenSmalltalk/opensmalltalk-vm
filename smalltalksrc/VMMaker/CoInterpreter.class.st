@@ -115,28 +115,21 @@ CoInterpreter class >> declareCVarsIn: aCCodeGenerator [
 	self declareInterpreterVersionIn: aCCodeGenerator
 		defaultName: (threaded ifTrue: ['Cog MT'] ifFalse: ['Cog']).
 	aCCodeGenerator
-		var: #heapBase
-		declareC: 'static usqInt heapBase';
+		var: #heapBase type: #usqInt;
+		var: #statCodeCompactionUsecs type: #usqLong;
 		var: #maxLiteralCountForCompile
-		declareC: 'sqInt maxLiteralCountForCompile = MaxLiteralCountForCompile /* ', MaxLiteralCountForCompile printString, ' */';
+			declareC: 'sqInt maxLiteralCountForCompile = MaxLiteralCountForCompile /* ', MaxLiteralCountForCompile printString, ' */';
 		var: #minBackwardJumpCountForCompile
-		declareC: 'sqInt minBackwardJumpCountForCompile = MinBackwardJumpCountForCompile /* ', MinBackwardJumpCountForCompile printString, ' */'.
+			declareC: 'sqInt minBackwardJumpCountForCompile = MinBackwardJumpCountForCompile /* ', MinBackwardJumpCountForCompile printString, ' */'.
 	aCCodeGenerator
 		var: #reenterInterpreter
 		declareC: 'jmp_buf reenterInterpreter; /* private export */'.
-	aCCodeGenerator
-		var: #statCodeCompactionUsecs
-		type: #usqLong.
 	aCCodeGenerator
 		var: #primTraceLogIndex type: #'unsigned char';
 		var: #primTraceLog declareC: 'sqInt primTraceLog[256]';
 		var: #traceLog
 		declareC: 'sqInt traceLog[TraceBufferSize /* ', TraceBufferSize printString, ' */]';
-		var: #traceSources
-		declareC: (aCCodeGenerator
-					arrayInitializerCalled: 'traceSources'
-					for: TraceSources
-					type: 'char *')
+		var: #traceSources type: #'char *' array: TraceSources
 ]
 
 { #category : #'accessing class hierarchy' }
@@ -1343,7 +1336,17 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 				ifAppropriateCompileToNativeCode: newMethod
 				selector: selector]
 		ifFalse:
-			[messageSelector := selector.
+			[(objectMemory isOopForwarded: selector) ifTrue:
+				[^self
+					ceDynamicSuperSend: (self handleForwardedSelectorFaultFor: selector)
+					to: rcvr
+					numArgs: numArgs].
+			 (objectMemory isForwardedClassTag: classTag) ifTrue:
+				[^self
+					ceDynamicSuperSend: selector
+					to: (self handleForwardedSendFaultForReceiver: rcvr)
+					numArgs: numArgs].
+			 messageSelector := selector.
 			 (errSelIdx := self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
 				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: (objectMemory classForClassTag: classTag).
 				self assert: false "NOTREACHED"]].
@@ -1393,7 +1396,7 @@ CoInterpreter >> ceInterpretMethodFromPIC: aMethodObj receiver: rcvr [
 	"pop off inner return and locate open PIC"
 	pic := self cCoerceSimple: self popStack - cogit interpretOffset to: #'CogMethod *'.
 	self assert: (pic cmType = CMOpenPIC or: [pic cmType = CMClosedPIC]).
-	"If found from an open PIC then it must be an uncoged method and, since it's been found
+	"If found from an open PIC then it must be an uncogged method and, since it's been found
 	 in the method cache, should be cogged if possible.  If found from a closed PIC it should
 	 be interpreted (since being reached by that route implies it is uncoggable)."
 	pic cmType = CMOpenPIC
@@ -1645,7 +1648,20 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 				ifAppropriateCompileToNativeCode: newMethod
 				selector: selector]
 		ifFalse:
-			[messageSelector := selector.
+			[(objectMemory isOopForwarded: selector) ifTrue:
+				[^self
+					ceSend: (self handleForwardedSelectorFaultFor: selector)
+					super: superNormalBar
+					to: rcvr
+					numArgs: numArgs].
+			 (objectMemory isForwardedClassTag: classTag) ifTrue:
+				[self assert: superNormalBar = 0.
+				^self
+					ceSend: selector
+					super: superNormalBar
+					to: (self handleForwardedSendFaultForReceiver: rcvr)
+					numArgs: numArgs].
+			 messageSelector := selector.
 			 (errSelIdx := self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
 				[(canLinkCacheTag
 				  and: [errSelIdx = SelectorDoesNotUnderstand
@@ -1760,13 +1776,13 @@ CoInterpreter >> ceSendFromInLineCacheMiss: cogMethodOrPIC [
 				ifAppropriateCompileToNativeCode: newMethod
 				selector: cogMethodOrPIC selector]
 		ifFalse:
-			[messageSelector := cogMethodOrPIC selector.
-			 ((objectMemory isOopForwarded: messageSelector)
-			  or: [objectMemory isForwardedClassTag: classTag]) ifTrue:
-				[(objectMemory isOopForwarded: messageSelector) ifTrue:
-					[messageSelector := self handleForwardedSelectorFaultFor: messageSelector].
-				 (objectMemory isForwardedClassTag: classTag) ifTrue:
-					[classTag := self handleForwardedSendFaultFor: classTag]].
+			[(objectMemory isOopForwarded: cogMethodOrPIC selector) ifTrue:
+				[self handleForwardedSelectorFaultFor: cogMethodOrPIC selector.
+				 ^self ceSendFromInLineCacheMiss: cogMethodOrPIC].
+			 (objectMemory isForwardedClassTag: classTag) ifTrue:
+				[self handleForwardedSendFaultForReceiver: rcvr.
+				 ^self ceSendFromInLineCacheMiss: cogMethodOrPIC].
+			 messageSelector := cogMethodOrPIC selector.
 			 (errSelIdx := self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
 				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: (objectMemory classForClassTag: classTag).
 				"NOTREACHED"
@@ -3061,7 +3077,7 @@ CoInterpreter >> findNewMethodInClassTag: classTagArg [
 				[(objectMemory isOopForwarded: messageSelector) ifTrue:
 					[messageSelector := self handleForwardedSelectorFaultFor: messageSelector].
 				 (objectMemory isForwardedClassTag: classTag) ifTrue:
-					[classTag := self handleForwardedSendFaultFor: classTag].
+					[classTag := self handleForwardedSendFaultForTag: classTag].
 				ok := self lookupInMethodCacheSel: messageSelector classTag: classTag.
 				ok ifTrue:
 					[^self ifAppropriateCompileToNativeCode: newMethod selector: messageSelector]].
@@ -3090,6 +3106,30 @@ CoInterpreter >> flushMethodCache [
 
 	super flushMethodCache.
 	cogit unlinkAllSends
+]
+
+{ #category : #'message sending' }
+CoInterpreter >> followForwardedFieldsInCurrentMethod [
+	| cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	<inline: false>
+	(self isMachineCodeFrame: framePointer)
+		ifTrue:
+			[cogMethod := self mframeHomeMethod: framePointer.
+			 objectMemory
+				followForwardedObjectFields: cogMethod methodObject
+				toDepth: 0.
+			 cogit followForwardedLiteralsIn: cogMethod]
+		ifFalse:
+			[objectMemory
+				followForwardedObjectFields: method
+				toDepth: 0]
+]
+
+{ #category : #'object memory support' }
+CoInterpreter >> followForwardedMethods [
+	<doNotGenerate>
+	cogit followForwardedMethods
 ]
 
 { #category : #'object memory support' }
@@ -3436,6 +3476,29 @@ CoInterpreter >> getImageHeaderFlags [
 	+ (preemptionYields ifTrue: [0] ifFalse: [16])
 	+ (noThreadingOfGUIThread ifTrue: [32] ifFalse: [0])
 	+ (imageHeaderFlags bitClear: 63) "these are any flags we do not recognize"
+]
+
+{ #category : #'message sending' }
+CoInterpreter >> handleForwardedSendFaultForReceiver: forwardedReceiver [
+	"Handle a send fault that may be due to a send to a forwarded object.
+	 Unforward the receiver on the stack and answer it."
+	<option: #SpurObjectMemory>
+	| rcvr |
+	<inline: false>
+	"should *not* be a super send, so the receiver should be forwarded."
+	self assert: (objectMemory isOopForwarded: forwardedReceiver).
+
+	self assert: (self stackValue: argumentCount) = forwardedReceiver.
+	rcvr := objectMemory followForwarded: forwardedReceiver.
+	self stackValue: argumentCount put: rcvr.
+	self followForwardedFrameContents: framePointer
+		stackPointer: stackPointer + (argumentCount + 1 * BytesPerWord). "don't repeat effort"
+	(objectMemory isPointers: (self frameReceiver: framePointer)) ifTrue:
+		[objectMemory
+			followForwardedObjectFields: (self frameReceiver: framePointer)
+			toDepth: 0].
+	self followForwardedFieldsInCurrentMethod.
+	^rcvr
 ]
 
 { #category : #'message sending' }
@@ -3848,7 +3911,7 @@ CoInterpreter >> internalFindNewMethod [
 				[(objectMemory isOopForwarded: messageSelector) ifTrue:
 					[messageSelector := self handleForwardedSelectorFaultFor: messageSelector].
 				 (objectMemory isForwardedClassTag: lkupClassTag) ifTrue:
-					[lkupClassTag := self handleForwardedSendFaultFor: lkupClassTag].
+					[lkupClassTag := self handleForwardedSendFaultForTag: lkupClassTag].
 				ok := self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag.
 				ok ifTrue:
 					[^self ifAppropriateCompileToNativeCode: newMethod selector: messageSelector]].
