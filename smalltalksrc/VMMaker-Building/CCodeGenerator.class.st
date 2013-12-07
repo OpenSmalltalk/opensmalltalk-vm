@@ -1001,9 +1001,13 @@ CCodeGenerator >> emitCVariablesOn: aStream [
 							ifFalse: [(decl beginsWith: 'static') ifFalse:
 										[aStream nextPutAll: 'static ']]]
 					ifFalse:
-						[(vmClass mustBeGlobal: varString) ifFalse:
-							[(decl beginsWith: 'static') ifFalse:
-								[aStream nextPutAll: 'static ']]].
+						[(vmClass mustBeGlobal: varString)
+							ifTrue:
+								[(decl beginsWith: 'static ') ifTrue:
+									[decl := decl allButFirst: 7]]
+							ifFalse:
+								[(decl beginsWith: 'static') ifFalse:
+									[aStream nextPutAll: 'static ']]].
 				aStream
 					nextPutAll: decl;
 					nextPut: $;;
@@ -1056,7 +1060,7 @@ CCodeGenerator >> emitGlobalCVariablesOn: aStream [
 				[aStream nextPutAll: decl; cr]
 			ifFalse:
 				[((decl includesSubString: ' private ')
-				  or: [decl beginsWith: 'static']) ifFalse: "work-around hack to prevent localization of variables only referenced once."
+				  "or: [decl beginsWith: 'static']") ifFalse: "work-around hack to prevent localization of variables only referenced once."
 					[(decl includes: $=) ifTrue:
 						[decl := decl copyFrom: 1 to: (decl indexOf: $=) - 1].
 					aStream
@@ -3180,7 +3184,12 @@ CCodeGenerator >> nilOrBooleanConstantReceiverOf: aNode [
 		 ((#(= ~= < > <= >=) includes: aNode selector)
 		  and: [(aNode receiver isConstant and: [aNode receiver value isInteger])
 		  and: [(aNode args first isConstant and: [aNode args first value isInteger])]]) ifTrue:
-			[^aNode receiver value perform: aNode selector with: aNode args first value]].
+			[^aNode receiver value perform: aNode selector with: aNode args first value].
+		(self methodNamed: aNode selector) ifNotNil:
+			[:m|
+			(m statements size = 1
+			 and: [m statements last isReturn]) ifTrue:
+				[^self nilOrBooleanConstantReceiverOf: m statements last expression]]].
 	^nil
 
 ]
@@ -3274,28 +3283,6 @@ CCodeGenerator >> prepareMethods [
 					nextPutAll: ' may mask method when inlining']].
 		m bindClassVariablesIn: constants.
 		m prepareMethodIn: self]
-]
-
-{ #category : #private }
-CCodeGenerator >> printArray: array on: aStream [
-	| first |
-	first := true.
-	1 to: array size do:
-		[:i |
-		first 
-			ifTrue: [first := false]
-			ifFalse: [aStream nextPutAll: ', '].
-		i \\ 16 = 1 ifTrue: [aStream cr].
-		self printInt: (array at: i) on: aStream]
-]
-
-{ #category : #private }
-CCodeGenerator >> printInt: int on: aStream [
-	aStream print: int.
-	(int between: -2147483648 and: 2147483647)
-		ifFalse: [(int between: 2147483648 and: 4294967295)
-			ifTrue: [aStream nextPut: $U]
-			ifFalse: [aStream nextPut: $L]]
 ]
 
 { #category : #'error notification' }
@@ -3943,19 +3930,14 @@ CCodeGenerator >> var: varName type: type [
 ]
 
 { #category : #public }
-CCodeGenerator >> var: varName type: type array: array [
-"use this in preference to #var:declareC: when possible. This produces a C statment of the form
-int * fooArray[]={1,2,3}
-See also #var:type: for simple var decls" 
+CCodeGenerator >> var: varName type: cType array: array [
+	"Use this in preference to #var:declareC: when possible. This produces a C
+	 statment of the form
+		int * fooArray[]={1,2,3}
+	 See also #var:type: for simple var decls" 
 	self
 		var: varName
-		declareC: (String streamContents: [:s |
-			s nextPutAll: type.
-			s space.
-			s nextPutAll: varName.
-			s nextPutAll: '[] = {'.
-			self printArray: array on: s.
-			s nextPut: $}])
+		declareC: (self arrayInitializerCalled: varName for: array type: cType)
 ]
 
 { #category : #inlining }

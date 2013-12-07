@@ -149,9 +149,16 @@ ObjectMemory class >> characterObjectOf: characterCode [
 
 { #category : #translation }
 ObjectMemory class >> declareCVarsIn: aCCodeGenerator [
-	aCCodeGenerator
-		var: #memory
-		declareC: 'static usqInt memory'.
+	self declareCAsOop:
+			#(	memory endOfMemory memoryLimit
+				youngStart youngStartLocal freeBlock
+				compStart compEnd
+				fwdTableNext fwdTableLast
+				gcBiasToGrowThreshold )
+		in: aCCodeGenerator.
+	self declareCAsUSqLong:
+			#( gcStartUsecs statFullGCUsecs statIncrGCUsecs statIGCDeltaUsecs )
+		in: aCCodeGenerator.
 	aCCodeGenerator
 		var: #remapBuffer
 		declareC: 'sqInt remapBuffer[RemapBufferSize + 1 /* ', (RemapBufferSize + 1) printString, ' */]'.
@@ -168,22 +175,8 @@ ObjectMemory class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
 		var: #extraRoots
 		declareC: 'sqInt* extraRoots[ExtraRootSize + 1 /* ', (ExtraRootSize + 1) printString, ' */]'.
-	self declareCAsOop: {
-			#youngStart .
-			#endOfMemory .
-			#memoryLimit .
-			#youngStartLocal .
-			#freeBlock .
-			#compStart .
-			#compEnd .
-			#fwdTableNext .
-			#fwdTableLast .
-			#gcBiasToGrowThreshold }
-		in: aCCodeGenerator.
 	aCCodeGenerator
-		var: #headerTypeBytes type: 'const sqInt' array: HeaderTypeExtraBytes.
-	self declareCAsUSqLong: #(gcStartUsecs statFullGCUsecs statIncrGCUsecs statIGCDeltaUsecs)
-		in: aCCodeGenerator
+		var: #headerTypeBytes type: 'const sqInt' array: HeaderTypeExtraBytes
 ]
 
 { #category : #translation }
@@ -435,7 +428,7 @@ ObjectMemory class >> isNonArgumentImplicitReceiverVariableName: aString [
 ObjectMemory class >> mustBeGlobal: var [
 	"Answer if a variable must be global and exported.  Used for inst vars that are accessed from VM support code."
 
-	^'memory' = var
+	^false "used to be: ^'memory' = var"
 ]
 
 { #category : #'accessing class hierarchy' }
@@ -3051,8 +3044,6 @@ ObjectMemory >> isOopCompiledMethod: oop [
 ObjectMemory >> isOopForwarded: oop [
 	"Compatibility wth SpurMemoryManager.  In ObjectMemory, no forwarding pointers
 	 are visible to the VM."
-	<api>
-	<cmacro: '(oop) false'>
 	<inline: true>
 	^false
 ]
