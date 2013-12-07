@@ -7347,7 +7347,11 @@ SpurMemoryManager >> scavengingGCTenuringIf: tenuringCriterion [
 	"Run the scavenger."
 
 	self assert: remapBufferCount = 0.
-	self assert: scavenger eden limit - freeStart > coInterpreter interpreterAllocationReserveBytes.
+	(self asserta: scavenger eden limit - freeStart > coInterpreter interpreterAllocationReserveBytes) ifFalse:
+		[coInterpreter tab;
+			printNum: scavenger eden limit - freeStart; space;
+			printNum: coInterpreter interpreterAllocationReserveBytes; space;
+			printNum: coInterpreter interpreterAllocationReserveBytes - (scavenger eden limit - freeStart); cr].
 	self checkMemoryMap.
 	self checkFreeSpace.
 	"coInterpreter printCallStackFP: coInterpreter framePointer"

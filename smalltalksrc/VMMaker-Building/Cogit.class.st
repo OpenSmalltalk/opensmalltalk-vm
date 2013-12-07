@@ -518,7 +518,7 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		var: #cePositive32BitIntegerTrampoline
 			declareC: 'static sqInt cePositive32BitIntegerTrampoline';
 		var: #labelCounter
-			declareC: 'static int labelCounter';
+			type: #int;
 		var: #traceFlags
 			declareC: 'int traceFlags = 8 /* prim trace log on by default */';
 		var: #cStackAlignment
@@ -837,16 +837,16 @@ Cogit class >> isNonArgumentImplicitReceiverVariableName: aString [
 Cogit class >> mustBeGlobal: var [
 	"Answer if a variable must be global and exported.  Used for inst vars that are accessed from VM
 	 support code.  include cePositive32BitIntegerTrampoline as a hack to prevent it being inlined (it is
-	 only used outside of Cogit by the object representation).  Include labelCounter as a hack to stop it
-	 being inlined into genLabel, and CFramePointer CStackPointer as a hack to get them declared at all."
+	 only used outside of Cogit by the object representation).  Include CFramePointer CStackPointer as
+	 a hack to get them declared at all."
 	^#('ceBaseFrameReturnTrampoline' 'ceCaptureCStackPointers' 'ceCheckForInterruptTrampoline'
 		'ceEnterCogCodePopReceiverReg' 'realCEEnterCogCodePopReceiverReg'
 		'ceEnterCogCodePopReceiverAndClassRegs' 'realCEEnterCogCodePopReceiverAndClassRegs'
 		'ceReturnToInterpreterTrampoline' 'ceCannotResumeTrampoline'
-		'cePositive32BitIntegerTrampoline' 'ceFlushICache' 'ceTryLockVMOwner' 'ceUnlockVMOwner'
+		'ceTryLockVMOwner' 'ceUnlockVMOwner'
 		'cmEntryOffset' 'cmNoCheckEntryOffset' 'cmDynSuperEntryOffset'
 		'blockNoContextSwitchOffset' 'breakPC'
-		'labelCounter' 'CFramePointer' 'CStackPointer' 'cFramePointerInUse' 'ceGetSP'
+		'CFramePointer' 'CStackPointer' 'cFramePointerInUse' 'ceGetSP'
 		'traceFlags' 'traceStores' 'debugPrimCallStackOffset')
 			includes: var
 ]
@@ -4436,6 +4436,47 @@ Cogit >> fixupAt: index [
 	<cmacro: '(index) (&fixups[index])'>
 	<returnTypeC: #'BytecodeFixup *'>
 	^self addressOf: (fixups at: index)
+]
+
+{ #category : #'garbage collection' }
+Cogit >> followForwardedLiteralsIn: cogMethod [
+	<api>
+	<option: #SpurObjectMemory>
+	<var: #cogMethod type: #'CogMethod *'>
+	self assert: (objectMemory shouldRemapOop: cogMethod methodObject) not.
+	(objectMemory shouldRemapOop: cogMethod selector) ifTrue:
+		[cogMethod selector: (objectMemory remapObj: cogMethod selector)].
+	self mapFor: cogMethod
+		performUntil: (self cppIf: NewspeakVM
+							ifTrue: [#remapNSIfObjectRef:pc:hasYoung:]
+							ifFalse: [#remapIfObjectRef:pc:hasYoung:])
+		arg: 0
+]
+
+{ #category : #'garbage collection' }
+Cogit >> followForwardedMethods [
+	<api>
+	<option: #SpurObjectMemory>
+	<var: #cogMethod type: #'CogMethod *'>
+	| cogMethod freedPIC |
+	<var: #cogMethod type: #'CogMethod *'>
+	freedPIC := false.
+	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
+	[cogMethod < methodZone limitZony] whileTrue:
+		[cogMethod cmType = CMMethod ifTrue:
+			[(objectMemory shouldRemapOop: cogMethod methodObject) ifTrue:
+				[cogMethod methodObject: (objectMemory remapObj: cogMethod methodObject).
+				 (cogMethod cmRefersToYoung not
+				  and: [objectMemory isYoungObject: cogMethod methodObject]) ifTrue:
+					[methodZone addToYoungReferrers: cogMethod methodObject]]].
+		 cogMethod cmType = CMClosedPIC ifTrue:
+			[(self mapObjectReferencesInClosedPIC: cogMethod) ifTrue:
+				[freedPIC := true.
+				 methodZone freeMethod: cogMethod]].
+		 cogMethod := methodZone methodAfter: cogMethod].
+	freedPIC ifTrue:
+		[self unlinkSendsToFree.
+		 processor flushICacheFrom: codeBase to: methodZone limitZony asInteger]
 ]
 
 { #category : #compaction }

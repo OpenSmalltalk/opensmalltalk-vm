@@ -682,6 +682,14 @@ CogObjectRepresentationForSqueakV3 >> isHashSetOnInstanceCreation [
 	^true
 ]
 
+{ #category : #'garbage collection' }
+CogObjectRepresentationForSqueakV3 >> isOopForwarded: oop [
+	"Compatibility wth SpurMemoryManager.  In ObjectMemory, no forwarding pointers
+	 are visible to the VM."
+	<inline: true>
+	^false
+]
+
 { #category : #'object representation' }
 CogObjectRepresentationForSqueakV3 >> isSmallIntegerTagNonZero [
 	^true

@@ -2446,7 +2446,9 @@ SimpleStackBasedCogit >> genPushLiteralVariable: literalIndex [
 	association := self getLiteral: literalIndex.
 	"N.B. Do _not_ use ReceiverResultReg to avoid overwriting receiver in assignment in frameless methods."
 	self annotate: (self MoveCw: association R: ClassReg) objRef: association.
-	objectRepresentation genEnsureRegNotForwarded: ClassReg scratchReg: TempReg.
+	objectRepresentation
+		genEnsureObjInRegRegNotForwarded: ClassReg
+		scratchReg: TempReg.
 	objectRepresentation
 		genLoadSlot: ValueIndex
 		sourceReg: ClassReg
@@ -2904,16 +2906,22 @@ SimpleStackBasedCogit >> genSpecialSelectorEqualsEquals [
 	| jumpNotEqual jumpPush |
 	<var: #jumpNotEqual type: #'AbstractInstruction *'>
 	<var: #jumpPush type: #'AbstractInstruction *'>
-	self PopR: TempReg.
+	self PopR: Arg0Reg.
+	objectRepresentation
+		genEnsureObjInRegRegNotForwarded: Arg0Reg
+		scratchReg: TempReg.
 	self MoveMw: 0 r: SPReg R: ClassReg.
-	self CmpR: TempReg R: ClassReg.
+	objectRepresentation
+		genEnsureObjInRegRegNotForwarded: ClassReg
+		scratchReg: TempReg.
+	self CmpR: Arg0Reg R: ClassReg.
 	jumpNotEqual := self JumpNonZero: 0.
-	self annotate: (self MoveCw: objectMemory trueObject R: TempReg)
+	self annotate: (self MoveCw: objectMemory trueObject R: Arg0Reg)
 		objRef: objectMemory trueObject.
 	jumpPush := self Jump: 0.
-	jumpNotEqual jmpTarget: (self annotate: (self MoveCw: objectMemory falseObject R: TempReg)
+	jumpNotEqual jmpTarget: (self annotate: (self MoveCw: objectMemory falseObject R: Arg0Reg)
 							objRef: objectMemory falseObject).
-	jumpPush jmpTarget: (self MoveR: TempReg Mw: 0 r: SPReg).
+	jumpPush jmpTarget: (self MoveR: Arg0Reg Mw: 0 r: SPReg).
 	^0
 ]
 
@@ -2948,7 +2956,9 @@ SimpleStackBasedCogit >> genStorePop: popBoolean LiteralVariable: litVarIndex [
 	self assert: needsFrame.
 	association := self getLiteral: litVarIndex.
 	self annotate: (self MoveCw: association R: ReceiverResultReg) objRef: association.
-	objectRepresentation genEnsureRegNotForwarded: ReceiverResultReg scratchReg: TempReg.
+	objectRepresentation
+		genEnsureObjInRegRegNotForwarded: ReceiverResultReg
+		scratchReg: TempReg.
 	popBoolean
 		ifTrue: [self PopR: ClassReg]
 		ifFalse: [self MoveMw: 0 r: SPReg R: ClassReg].
