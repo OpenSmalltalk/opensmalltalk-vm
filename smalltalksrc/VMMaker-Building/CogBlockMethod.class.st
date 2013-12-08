@@ -29,6 +29,7 @@ Class {
 		'cpicHasMNUCase',
 		'cmUsageCount',
 		'cmUsesPenultimateLit',
+		'cmUsesMethodClass',
 		'cmUnusedFlags',
 		'stackCheckOffset'
 	],
@@ -100,7 +101,8 @@ CogBlockMethod class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 								['cpicHasMNUCase']		-> [#(unsigned #Boolean ' : 1')].
 								['cmUsageCount']			-> [#(unsigned ' : 3')]. "see CMMaxUsageCount in initialize"
 								['cmUsesPenultimateLit']	-> [#(unsigned #Boolean ' : 1')].
-								['cmUnusedFlags']			-> [#(unsigned ' : 3')].
+								['cmUsesMethodClass']		-> [#(unsigned #Boolean ' : 1')].
+								['cmUnusedFlags']			-> [#(unsigned ' : 2')].
 								['stackCheckOffset']		-> [#(unsigned ' : 12')]. "See MaxStackCheckOffset in initialize. a.k.a. cPICNumCases"
 								['blockSize']				-> [#'unsigned short']. "See MaxMethodSize in initialize"
 								['blockEntryOffset']			-> [#'unsigned short'].
@@ -205,6 +207,20 @@ CogBlockMethod >> cmUsageCount: anInteger [
 	"Set the value of cmUsageCount"
 
 	^cmUsageCount := anInteger
+]
+
+{ #category : #accessing }
+CogBlockMethod >> cmUsesMethodClass [
+	"Answer the value of cmUsesMethodClass"
+
+	^cmUsesMethodClass
+]
+
+{ #category : #accessing }
+CogBlockMethod >> cmUsesMethodClass: anObject [
+	"Set the value of cmUsesMethodClass"
+
+	^cmUsesMethodClass := anObject
 ]
 
 { #category : #accessing }
