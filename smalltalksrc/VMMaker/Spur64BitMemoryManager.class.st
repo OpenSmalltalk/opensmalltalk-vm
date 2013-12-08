@@ -31,7 +31,8 @@ Spur64BitMemoryManager >> addressAfter: objOop [
 { #category : #allocation }
 Spur64BitMemoryManager >> allocateNewSpaceSlots: numSlots format: formatField classIndex: classIndex [
 	"Allocate an object with numSlots in newSpace.  This is for the `ee' execution engine allocations,
-	 and must be satisfied.  If no memory is available, abort."
+	 and must be satisfied.  If no memory is available, abort.  If the allocation pushes freeStart past
+	 scavengeThreshold and a scavenge is not already scheduled, schedule a scavenge."
 	| numBytes newObj |
 	"Object headers are 8 bytes in length if the slot size fits in the num slots field (max implies overflow),
 	 16 bytes otherwise (num slots in preceeding word).
@@ -72,6 +73,9 @@ Spur64BitMemoryManager >> allocateNewSpaceSlots: numSlots format: formatField cl
 
 { #category : #allocation }
 Spur64BitMemoryManager >> allocateSlots: numSlots format: formatField classIndex: classIndex [
+	"Allocate an object with numSlots space.  If there is room beneath scavengeThreshold
+	 allocate in newSpace, otherwise alocate in oldSpace.  If there is not room in newSpace
+	 and a scavenge is not already scheduled, schedule a scavenge."
 	<inline: true>
 	| numBytes newObj |
 	"Object headers are 8 bytes in length if the slot size fits in the num slots field (max implies overflow),
@@ -94,8 +98,7 @@ Spur64BitMemoryManager >> allocateSlots: numSlots format: formatField classIndex
 	
 	freeStart + numBytes > scavengeThreshold ifTrue:
 		[needGCFlag ifFalse: [self scheduleScavenge].
-		 freeStart + numBytes > scavenger eden limit ifTrue:
-			[^self allocateSlotsInOldSpace: numSlots bytes: numBytes format: formatField classIndex: classIndex]].
+		 ^self allocateSlotsInOldSpace: numSlots bytes: numBytes format: formatField classIndex: classIndex].
 	numSlots >= self numSlotsMask
 		ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
 			[self flag: #endianness.

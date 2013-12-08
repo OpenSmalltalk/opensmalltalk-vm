@@ -81,6 +81,19 @@ CogBlockMethodSurrogate64 >> cmUsageCount: aValue [
 ]
 
 { #category : #accessing }
+CogBlockMethodSurrogate64 >> cmUsesMethodClass [
+	^(((memory unsignedByteAt: address + 3 + baseHeaderSize) bitShift: -1) bitAnd: 16r1) ~= 0
+]
+
+{ #category : #accessing }
+CogBlockMethodSurrogate64 >> cmUsesMethodClass: aValue [
+	memory
+		unsignedByteAt: address + baseHeaderSize + 3
+		put: (((memory unsignedByteAt: address + baseHeaderSize + 3) bitAnd: 16rFD) + ((aValue ifTrue: [1] ifFalse: [0]) bitShift: 1)).
+	^aValue
+]
+
+{ #category : #accessing }
 CogBlockMethodSurrogate64 >> cmUsesPenultimateLit [
 	^((memory unsignedByteAt: address + 3 + baseHeaderSize) bitAnd: 16r1) ~= 0
 ]

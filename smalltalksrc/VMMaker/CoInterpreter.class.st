@@ -3220,6 +3220,21 @@ CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 				 theFP := callerFP]]]
 ]
 
+{ #category : #'lazy become' }
+CoInterpreter >> followNecessaryForwardingInMethod: methodObj [
+	"To avoid any chance of a forwarded object during super sends we follow the
+	 methodClassAssociation.  The forwarded object send fault only copes with
+	 normal sends to instances."
+	| cogMethod header |
+	<var: #cogMethod type: #'CogMethod *'>
+	super followNecessaryForwardingInMethod: methodObj.
+	header := self rawHeaderOf: methodObj.
+	(self isCogMethodReference: header) ifTrue:
+		[cogMethod := self cCoerceSimple: header to: #'CogMethod *'.
+		 cogMethod cmUsesMethodClass ifTrue:
+			[cogit followForwardedLiteralsIn: cogMethod]]
+]
+
 { #category : #'process primitive support' }
 CoInterpreter >> forProcessPrimitiveReturnToExecutivePostContextSwitch: inInterpreter [
 	"Do a returnToExecutive: inInterpreter postContextSwitch: true for a process primtive
@@ -4219,6 +4234,7 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 				ifTrue: [objectMemory integerValueOf: theIP]
 				ifFalse: [HasBeenReturnedFromMCPC].
 	theMethod := objectMemory followNonImmediateField: MethodIndex ofObject: aContext.
+	self followNecessaryForwardingInMethod: theMethod.
 	page := self newStackPage.
 	"first word on stack is caller context of base frame"
 	stackPages
