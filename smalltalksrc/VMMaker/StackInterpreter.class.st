@@ -7578,6 +7578,7 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	pointer := page baseAddress.
 	theIP := objectMemory fetchPointer: InstructionPointerIndex ofObject: aContext.
 	theMethod := objectMemory followNonImmediateField: MethodIndex ofObject: aContext.
+	self followNecessaryForwardingInMethod: theMethod.
 	(objectMemory isIntegerObject: theIP) ifFalse:
 		[self error: 'context is not resumable'].
 	theIP := objectMemory integerValueOf: theIP.

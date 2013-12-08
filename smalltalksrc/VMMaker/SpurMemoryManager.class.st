@@ -1116,13 +1116,8 @@ SpurMemoryManager >> allNewSpaceEntitiesDo: aBlock [
 	| prevObj prevPrevObj objOop limit |
 	prevPrevObj := prevObj := nil.
 	"After a scavenge eden is empty, futureSpace is empty, and all newSpace objects are
-	  in pastSpace.  Objects are allocated in eden.  So enumerate only eden and pastSpace."
-	objOop := self objectStartingAt: scavenger eden start.
-	[self oop: objOop isLessThan: freeStart] whileTrue:
-		[aBlock value: objOop.
-		 prevPrevObj := prevObj.
-		 prevObj := objOop.
-		 objOop := self objectAfter: objOop limit: freeStart].
+	  in pastSpace.  Objects are allocated in eden.  So enumerate only pastSpace and eden."
+	self assert: scavenger pastSpace start < scavenger eden start.
 	objOop := self objectStartingAt: scavenger pastSpace start.
 	limit := pastSpaceStart.
 	[self oop: objOop isLessThan: limit] whileTrue:
@@ -1130,6 +1125,12 @@ SpurMemoryManager >> allNewSpaceEntitiesDo: aBlock [
 		 prevPrevObj := prevObj.
 		 prevObj := objOop.
 		 objOop := self objectAfter: objOop limit: limit].
+	objOop := self objectStartingAt: scavenger eden start.
+	[self oop: objOop isLessThan: freeStart] whileTrue:
+		[aBlock value: objOop.
+		 prevPrevObj := prevObj.
+		 prevObj := objOop.
+		 objOop := self objectAfter: objOop limit: freeStart].
 	self touch: prevPrevObj.
 	self touch: prevObj
 ]
@@ -1305,6 +1306,9 @@ SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceByt
 
 { #category : #allocation }
 SpurMemoryManager >> allocateNewSpaceSlots: numSlots format: formatField classIndex: classIndex [
+	"Allocate an object with numSlots in newSpace.  This is for the `ee' execution engine allocations,
+	 and must be satisfied.  If no memory is available, abort.  If the allocation pushes freeStart past
+	 scavengeThreshold and a scavenge is not already scheduled, schedule a scavenge."
 	self subclassResponsibility
 ]
 
@@ -1712,6 +1716,9 @@ SpurMemoryManager >> allocateOldSpaceChunkOfExactlyBytes: chunkBytes suchThat: a
 
 { #category : #allocation }
 SpurMemoryManager >> allocateSlots: numSlots format: formatField classIndex: classIndex [
+	"Allocate an object with numSlots space.  If there is room beneath scavengeThreshold
+	 allocate in newSpace, otherwise alocate in oldSpace.  If there is not room in newSpace
+	 and a scavenge is not already scheduled, schedule a scavenge."
 	self subclassResponsibility
 ]
 
@@ -2686,16 +2693,21 @@ SpurMemoryManager >> clone: objOop [
 							classIndex: (self classIndexOf: objOop)].
 	(self isPointersNonImm: objOop)
 		ifTrue:
-			[0 to: numSlots - 1 do:
+			[| hasYoung |
+			 hasYoung := false.
+			 0 to: numSlots - 1 do:
 				[:i| | oop |
 				oop := self fetchPointer: i ofObject: objOop.
 				((self isNonImmediate: oop)
 				 and: [self isForwarded: oop]) ifTrue:
 					[oop := self followForwarded: oop].
+				((self isNonImmediate: oop)
+				 and: [self isYoungObject: oop]) ifTrue:
+					[hasYoung := true].
 				self storePointerUnchecked: i
 					ofObject: newObj
 					withValue: oop].
-			((self isRemembered: objOop)
+			(hasYoung
 			 and: [(self isYoungObject: newObj) not]) ifTrue:
 				[scavenger remember: newObj.
 				 self setIsRememberedOf: newObj to: true]]
@@ -6959,6 +6971,22 @@ SpurMemoryManager >> printObjStackPage: objStackPage myIndex: myx tag: pageType 
 ]
 
 { #category : #'debug printing' }
+SpurMemoryManager >> printObjectsFrom: startAddress to: endAddress [
+	<api>
+	| oop |
+	oop := self objectBefore: startAddress.
+	oop := oop
+				ifNil: [startAddress]
+				ifNotNil: [(self objectAfter: oop) = startAddress
+							ifTrue: [startAddress]
+							ifFalse: [oop]].
+	[self oop: oop isLessThan: endAddress] whileTrue:
+		[(self isFreeObject: oop) ifFalse:
+			[self printOop: oop].
+		oop := self objectAfter: oop]
+]
+
+{ #category : #'debug printing' }
 SpurMemoryManager >> printReferencesTo: anOop [
 	"Scan the heap printing the oops of any and all objects that refer to anOop"
 	<api>
@@ -7518,6 +7546,22 @@ SpurMemoryManager >> shiftForAllocationUnit [
 SpurMemoryManager >> shiftForWord [
 	<api>
 	^self subclassResponsibility
+]
+
+{ #category : #'debug printing' }
+SpurMemoryManager >> shortPrintObjectsFrom: startAddress to: endAddress [
+	<api>
+	| oop |
+	oop := self objectBefore: startAddress.
+	oop := oop
+				ifNil: [startAddress]
+				ifNotNil: [(self objectAfter: oop) = startAddress
+							ifTrue: [startAddress]
+							ifFalse: [oop]].
+	[self oop: oop isLessThan: endAddress] whileTrue:
+		[(self isFreeObject: oop) ifFalse:
+			[self shortPrintOop: oop].
+		oop := self objectAfter: oop]
 ]
 
 { #category : #'gc - scavenging' }
