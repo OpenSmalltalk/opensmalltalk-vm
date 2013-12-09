@@ -367,11 +367,11 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueakV3 [
 		"(59 primitiveExp)"
 
 		"Subscript and Stream Primitives (60-67)"
-		(60 genPrimitiveAt			1)
-		"(61 primitiveAtPut)"
-		(62 genPrimitiveSize		0)
-		(63 genPrimitiveStringAt	1)
-		"(64 primitiveStringAtPut)"
+		(60 genPrimitiveAt				1)
+		(61 genPrimitiveAtPut			2)
+		(62 genPrimitiveSize			0)
+		(63 genPrimitiveStringAt		1)
+		(64 genPrimitiveStringAtPut		2)
 		"The stream primitives no longer pay their way; normal Smalltalk code is faster."
 		"(65 primitiveFail)""was primitiveNext"
 		"(66 primitiveFail)" "was primitiveNextPut"
@@ -1752,6 +1752,17 @@ SimpleStackBasedCogit >> genPrimitiveAt [
 ]
 
 { #category : #'primitive generators' }
+SimpleStackBasedCogit >> genPrimitiveAtPut [
+	| r |
+	self MoveMw: BytesPerWord * 2 r: SPReg R: Arg0Reg.
+	self MoveMw: BytesPerWord r: SPReg R: Arg1Reg.
+	((r := objectRepresentation genInnerPrimitiveAtPut: BytesPerWord * 3) < 0
+	 and: [r ~= UnimplementedPrimitive]) ifTrue:
+		[^r].
+	^self compileFallbackToInterpreterPrimitive
+]
+
+{ #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveBitAnd [
 	| jumpNotSI |
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
@@ -2296,6 +2307,17 @@ SimpleStackBasedCogit >> genPrimitiveStringAt [
 	| r |
 	self MoveMw: BytesPerWord r: SPReg R: Arg0Reg.
 	(r := objectRepresentation genInnerPrimitiveStringAt: BytesPerWord * 2) < 0 ifTrue:
+		[^r].
+	^self compileFallbackToInterpreterPrimitive
+]
+
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> genPrimitiveStringAtPut [
+	| r |
+	self MoveMw: BytesPerWord * 2 r: SPReg R: Arg0Reg.
+	self MoveMw: BytesPerWord r: SPReg R: Arg1Reg.
+	((r := objectRepresentation genInnerPrimitiveStringAtPut: BytesPerWord * 3) < 0
+	 and: [r ~= UnimplementedPrimitive]) ifTrue:
 		[^r].
 	^self compileFallbackToInterpreterPrimitive
 ]
