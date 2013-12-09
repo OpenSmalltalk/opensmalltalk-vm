@@ -7283,7 +7283,10 @@ StackInterpreter >> longPrintOop: oop [
 		ifNil: [self print: ' has a nil class!!']
 		ifNotNil: [:class|
 			self print: ': a(n) '; printNameOfClass: class count: 5;
-				print: ' ('; printHex: class; print: ')'].
+				print: ' ('.
+			objectMemory hasSpurMemoryManagerAPI ifTrue:
+				[self printHexnp: (objectMemory compactClassIndexOf: oop); print: '=>'].
+			self printHexnp: class; print: ')'].
 	fmt := objectMemory formatOf: oop.
 	self print: ' format '; printHexnp: fmt.
 	fmt > objectMemory lastPointerFormat
