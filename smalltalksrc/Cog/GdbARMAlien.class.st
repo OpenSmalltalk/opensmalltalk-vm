@@ -472,23 +472,10 @@ GdbARMAlien >> primitiveSingleStepInMemory: memoryArray "<Bitmap|ByteArray>" min
 ]
 
 { #category : #printing }
-GdbARMAlien >> printOn: aStream [
-	aStream nextPutAll: 'an ARMAlien('.
-	self registerState allButLast with: self registerStateNames allButLast do: [ :state :i |
-		aStream 
-			<< i << ': ' 
-			<< (state abs > 15 ifTrue: [state hex] ifFalse: [state asString]) 
-			<< ', '].
-	aStream << 'NZCVIF: ' 
-		<< (self registerState last printStringBase: 2 length: 6 padded: true) << ')'.
-]
-
-{ #category : #printing }
-GdbARMAlien >> printRegisterState: registerStateVector on: aStream [
-	| rsvs fields|
+GdbARMAlien >> printFields: fields inRegisterState: registerStateVector on: aStream [
+	| rsvs |
 	aStream ensureCr.
 	rsvs := registerStateVector readStream.
-	fields := #(	r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 sp lr pc eflags cr).
 	fields withIndexDo:
 		[:sym :index| | val |
 		sym = #cr
@@ -511,6 +498,38 @@ GdbARMAlien >> printRegisterState: registerStateVector on: aStream [
 							 aStream nextPut: $)]].
 				(fields at: index + 1) ~~ #cr ifTrue:
 					[aStream tab]]]
+]
+
+{ #category : #printing }
+GdbARMAlien >> printOn: aStream [
+	aStream nextPutAll: 'an ARMAlien('.
+	self registerState allButLast with: self registerStateNames allButLast do: [ :state :i |
+		aStream 
+			<< i << ': ' 
+			<< (state abs > 15 ifTrue: [state hex] ifFalse: [state asString]) 
+			<< ', '].
+	aStream << 'NZCVIF: ' 
+		<< (self registerState last printStringBase: 2 length: 6 padded: true) << ')'.
+]
+
+{ #category : #printing }
+GdbARMAlien >> printRegisterState: registerStateVector on: aStream [
+	self printFields: #(	r0 r1 r2 r3 cr
+						r4 r5 r6 r7 cr
+						r8 r9 r10 r11 cr
+						r12 sp lr pc eflags cr)
+		inRegisterState: registerStateVector
+		on: aStream
+]
+
+{ #category : #printing }
+GdbARMAlien >> printRegisterStateExceptPC: registerStateVector on: aStream [
+	self printFields: #(	r0 r1 r2 r3 cr
+						r4 r5 r6 r7 cr
+						r8 r9 r10 r11 cr
+						r12 sp lr eflags cr)
+		inRegisterState: registerStateVector
+		on: aStream
 ]
 
 { #category : #execution }
