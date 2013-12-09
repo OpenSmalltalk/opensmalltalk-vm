@@ -2534,8 +2534,8 @@ Cogit >> ceCPICMiss: cPIC receiver: receiver [
 		isMNUCase: errorSelectorOrNil = SelectorDoesNotUnderstand.
 	"Jump back into the pic at its entry in case this is an MNU."
 	coInterpreter
-		executeCogMethodFromLinkedSend: cPIC
-		withReceiver: receiver
+		executeCogMethod: cPIC
+		fromLinkedSendWithReceiver: receiver
 		andCacheTag: (backEnd inlineCacheTagAt: outerReturn).
 	"NOTREACHED"
 	^nil
@@ -2727,8 +2727,8 @@ Cogit >> ceSICMiss: receiver [
 	processor flushICacheFrom: outerReturn - 1 - extent to: outerReturn - 1.
 	"Jump back into the pic at its entry in case this is an MNU (newTargetMethodOrNil is nil)"
 	coInterpreter
-		executeCogMethodFromLinkedSend: pic
-		withReceiver: receiver
+		executeCogMethod: pic
+		fromLinkedSendWithReceiver: receiver
 		andCacheTag: (backEnd inlineCacheTagAt: outerReturn).
 	"NOTREACHED"
 	^nil
@@ -6082,7 +6082,7 @@ Cogit >> lookup: selector for: receiver methodAndErrorSelectorInto: binaryBlock 
 	methodOrSelectorIndex := coInterpreter
 									lookup: selector
 									receiver: receiver.
-	methodOrSelectorIndex asUnsignedInteger >= objectMemory nilObject ifTrue:
+	methodOrSelectorIndex asUnsignedInteger > coInterpreter maxLookupNoMNUErrorCode ifTrue:
 		[(objectMemory isOopCompiledMethod: methodOrSelectorIndex) ifFalse:
 			[^binaryBlock value: methodOrSelectorIndex value: SelectorCannotInterpret].
 		 ((coInterpreter methodHasCogMethod: methodOrSelectorIndex) not
@@ -6094,7 +6094,7 @@ Cogit >> lookup: selector for: receiver methodAndErrorSelectorInto: binaryBlock 
 		[methodOrSelectorIndex := coInterpreter
 										lookup: (objectMemory splObj: SelectorDoesNotUnderstand)
 										receiver: receiver.
-		 methodOrSelectorIndex asUnsignedInteger >= objectMemory nilObject ifTrue:
+		 methodOrSelectorIndex asUnsignedInteger > coInterpreter maxLookupNoMNUErrorCode ifTrue:
 			[self assert: (objectMemory isOopCompiledMethod: methodOrSelectorIndex).
 			 ((coInterpreter methodHasCogMethod: methodOrSelectorIndex) not
 			  and: [coInterpreter methodShouldBeCogged: methodOrSelectorIndex]) ifTrue:
@@ -7204,7 +7204,7 @@ Cogit >> patchToOpenPICFor: selector numArgs: numArgs receiver: receiver [
 		flushICacheFrom: outerReturn - 1 - extent to: outerReturn - 1;
 		flushICacheFrom: oPIC asInteger to: oPIC asInteger + openPICSize.
 	"Jump into the oPIC at its entry"
-	coInterpreter executeCogMethodFromLinkedSend: oPIC withReceiver: receiver.
+	coInterpreter executeCogMethod: oPIC fromLinkedSendWithReceiver: receiver.
 	"NOTREACHED"
 	^true
 ]
@@ -7810,30 +7810,47 @@ Cogit >> reportError: anInteger [
 { #category : #debugging }
 Cogit >> reportLastNInstructions [
 	<doNotGenerate>
-	lastNInstructions do:
-		[:thing|
-		thing isArray
-			ifTrue:
-				[thing first isString "i.e. { '(simulated return to '. processor retpcIn: coInterpreter memory. ')'}"
-					ifTrue:
-						[thing do:
-							[:stringOrNumber|
-							coInterpreter transcript nextPutAll: (stringOrNumber isString
-													ifTrue: [stringOrNumber]
-													ifFalse: [stringOrNumber hex])].
-							coInterpreter transcript cr]
-					ifFalse:
-						[coInterpreter transcript cr.
-						 (self relativeLabelForPC: (thing at: processor registerStatePCIndex)) ifNotNil:
-							[:label| coInterpreter transcript nextPutAll: label; nextPut: $:; cr].
-						 processor printRegisterState: thing on: coInterpreter transcript]]
+	| skipNext printInst |
+	skipNext := false.
+	printInst := [:inst|
+				coInterpreter transcript nextPutAll:
+					(EagerInstructionDecoration
+						ifTrue: [inst]
+						ifFalse: [processor
+									decorateDisassembly: inst
+									for: self]); cr].
+	lastNInstructions withIndexDo:
+		[:thing :idx| | next pc label |
+		skipNext
+			ifTrue: [skipNext := false]
 			ifFalse:
-				[coInterpreter transcript
-					nextPutAll: (EagerInstructionDecoration
-									ifTrue: [thing]
-									ifFalse: [processor
-												decorateDisassembly: thing
-												for: self]); cr]].
+				[thing isArray
+					ifTrue:
+						[thing first isString "i.e. { '(simulated return to '. processor retpcIn: coInterpreter memory. ')'}"
+							ifTrue:
+								[thing do:
+									[:stringOrNumber|
+									coInterpreter transcript nextPutAll: (stringOrNumber isString
+															ifTrue: [stringOrNumber]
+															ifFalse: [stringOrNumber hex])].
+									coInterpreter transcript cr]
+							ifFalse: "if possible, add the label to the instruction line to condense the output"
+								[coInterpreter transcript cr.
+								 pc := thing at: processor registerStatePCIndex.
+								 label := self relativeLabelForPC: pc.
+								 ((next := lastNInstructions at: idx + 1 ifAbsent: []) notNil
+								  and: [next isString
+								  and: [(Integer readFrom: next readStream radix: 16) = pc]])
+									ifTrue: "Decorate instruction and eliminate pc line"
+										[skipNext := true.
+										 processor printRegisterStateExceptPC: thing on: coInterpreter transcript.
+										 label ifNotNil: [coInterpreter transcript nextPutAll: label; space].
+										 printInst value: next]
+									ifFalse:
+										[label ifNotNil: [coInterpreter transcript nextPutAll: label; nextPut: $:; cr].
+										 processor printRegisterState: thing on: coInterpreter transcript]]]
+					ifFalse:
+						[printInst value: thing]]].
 	coInterpreter transcript flush
 ]
 
