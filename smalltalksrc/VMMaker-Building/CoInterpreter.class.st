@@ -489,11 +489,9 @@ CoInterpreter >> activateCoggedNewMethod: inInterpreter [
 	self push: instructionPointer.
 	cogMethod stackCheckOffset = 0 ifTrue:
 		["frameless method; nothing to activate..."
-		 self
-			cppIf: cogit numRegArgs > 0
-		  	ifTrue:
-				[cogMethod cmNumArgs <= cogit numRegArgs ifTrue:
-					[self enterRegisterArgCogMethod: cogMethod at: cogit noCheckEntryOffset receiver: rcvr]].
+		(cogit numRegArgs > 0
+		 and: [cogMethod cmNumArgs <= cogit numRegArgs]) ifTrue:
+			[self enterRegisterArgCogMethod: cogMethod at: cogit noCheckEntryOffset receiver: rcvr].
 		 self push: cogMethod asInteger + cogit noCheckEntryOffset.
 		 self push: rcvr.
 		 cogit ceEnterCogCodePopReceiverReg.
@@ -2703,32 +2701,28 @@ CoInterpreter >> enterRegisterArgCogMethod: cogMethod at: entryOffset receiver: 
 			arg(s)	<- sp
 	 and then enter at either the checked or the unchecked entry-point."
 	<var: #cogMethod type: #'CogMethod *'>
-	self cppIf: cogit numRegArgs > 0
-		ifTrue:
-			[self assert: (cogit numRegArgs > 0 and: [cogit numRegArgs <= 2]).
-			 cogMethod cmNumArgs = 2 ifTrue:
-				[self stackValue: 3 put: self stackTop. "retpc"
-				 self push: (self stackValue: 1). "last arg"
-				 self stackValue: 1 put: (self stackValue: 3). "first arg"
-				 self stackValue: 2 put: rcvr.
-				 self stackValue: 3 put: cogMethod asInteger + entryOffset.
-				 cogit ceEnterCogCodePopReceiverArg1Arg0Regs
-				"NOTREACHED"].
-			 cogMethod cmNumArgs = 1 ifTrue:
-				[self stackValue: 2 put: self stackTop. "retpc"
-				 self push: (self stackValue: 1). "arg"
-				 self stackValue: 1 put: rcvr.
-				 self stackValue: 2 put: cogMethod asInteger + entryOffset.
-				 cogit ceEnterCogCodePopReceiverArg0Regs
-				"NOTREACHED"].
-			 self assert: cogMethod cmNumArgs = 0.
-			 self stackValue: 1 put: self stackTop. "retpc"
-			 self stackValue: 0 put: cogMethod asInteger + entryOffset.
-			 self push: rcvr.
-			 cogit ceEnterCogCodePopReceiverReg
-			 "NOTREACHED"]
-		ifFalse:
-			[self assert: false]
+	self assert: (cogit numRegArgs > 0 and: [cogit numRegArgs <= 2 and: [cogMethod cmNumArgs <= cogit numRegArgs]]).
+	cogMethod cmNumArgs = 2 ifTrue:
+		[self stackValue: 3 put: self stackTop. "retpc"
+		 self push: (self stackValue: 1). "last arg"
+		 self stackValue: 1 put: (self stackValue: 3). "first arg"
+		 self stackValue: 2 put: rcvr.
+		 self stackValue: 3 put: cogMethod asInteger + entryOffset.
+		 cogit ceEnterCogCodePopReceiverArg1Arg0Regs
+		"NOTREACHED"].
+	cogMethod cmNumArgs = 1 ifTrue:
+		[self stackValue: 2 put: self stackTop. "retpc"
+		 self push: (self stackValue: 1). "arg"
+		 self stackValue: 1 put: rcvr.
+		 self stackValue: 2 put: cogMethod asInteger + entryOffset.
+		 cogit ceEnterCogCodePopReceiverArg0Regs
+		"NOTREACHED"].
+	self assert: cogMethod cmNumArgs = 0.
+	self stackValue: 1 put: self stackTop. "retpc"
+	self stackValue: 0 put: cogMethod asInteger + entryOffset.
+	self push: rcvr.
+	cogit ceEnterCogCodePopReceiverReg
+	"NOTREACHED"
 ]
 
 { #category : #initialization }
@@ -2815,11 +2809,9 @@ CoInterpreter >> executeCogMethodFromLinkedSend: cogMethod withReceiver: rcvr [
 	cogit assertCStackWellAligned.
 	self assert: (self isMachineCodeFrame: framePointer).
 	self assertValidExecutionPointe: self stackTop r: framePointer s: stackPointer imbar: false line: #'__LINE__'.
-	self
-		cppIf: cogit numRegArgs > 0
-		ifTrue:
-			[cogMethod cmNumArgs <= cogit numRegArgs ifTrue:
-				[self enterRegisterArgCogMethod: cogMethod at: cogit entryOffset receiver: rcvr]].
+	(cogit numRegArgs > 0
+	 and: [cogMethod cmNumArgs <= cogit numRegArgs]) ifTrue:
+		[self enterRegisterArgCogMethod: cogMethod at: cogit entryOffset receiver: rcvr].
 	self
 		push: cogMethod asInteger + cogit entryOffset;
 		push: rcvr.
@@ -2843,19 +2835,17 @@ CoInterpreter >> executeCogMethodFromLinkedSend: cogMethod withReceiver: rcvr an
 	self assert: (self isMachineCodeFrame: framePointer).
 	self assertValidExecutionPointe: self stackTop r: framePointer s: stackPointer imbar: false line: #'__LINE__'.
 	self push: cogMethod asInteger + cogit entryOffset.
-	self
-		cppIf: cogit numRegArgs > 0
-		ifTrue:
-			[cogMethod cmNumArgs <= cogit numRegArgs ifTrue:
-				[self assert: cogit numRegArgs <= 2.
-				 self push: cacheTag.
-				 cogMethod cmNumArgs = 0 ifTrue:
-					[cogit ceEnter0ArgsPIC].
-				 cogMethod cmNumArgs = 1 ifTrue:
-					[cogit ceEnter1ArgsPIC].
-				 cogMethod cmNumArgs = 2 ifTrue:
-					[cogit ceEnter2ArgsPIC].
-				 self error: 'not reached']].
+	cogit numRegArgs > 0 ifTrue:
+		[cogMethod cmNumArgs <= cogit numRegArgs ifTrue:
+			[self assert: cogit numRegArgs <= 2.
+			 self push: cacheTag.
+			 cogMethod cmNumArgs = 0 ifTrue:
+				[cogit ceEnter0ArgsPIC].
+			 cogMethod cmNumArgs = 1 ifTrue:
+				[cogit ceEnter1ArgsPIC].
+			 cogMethod cmNumArgs = 2 ifTrue:
+				[cogit ceEnter2ArgsPIC].
+			 self error: 'not reached']].
 	self
 		push: rcvr;
 		push: cacheTag.
@@ -2877,11 +2867,9 @@ CoInterpreter >> executeCogMethodFromUnlinkedSend: cogMethod withReceiver: rcvr 
 	cogit assertCStackWellAligned.
 	self assert: (self isMachineCodeFrame: framePointer).
 	self assertValidExecutionPointe: self stackTop r: framePointer s: stackPointer imbar: false line: #'__LINE__'.
-	self
-		cppIf: cogit numRegArgs > 0
-		ifTrue:
-			[cogMethod cmNumArgs <= cogit numRegArgs ifTrue:
-				[self enterRegisterArgCogMethod: cogMethod at: cogit noCheckEntryOffset receiver: rcvr]].
+	(cogit numRegArgs > 0
+	 and: [cogMethod cmNumArgs <= cogit numRegArgs]) ifTrue:
+		[self enterRegisterArgCogMethod: cogMethod at: cogit noCheckEntryOffset receiver: rcvr].
 	self
 		push: cogMethod asInteger + cogit noCheckEntryOffset;
 		push: rcvr.

@@ -1359,7 +1359,7 @@ StackToRegisterMappingCogit >> compileOpenPIC: selector numArgs: numArgs [
 	self CmpR: SendNumArgsReg R: TempReg.
 	self JumpZero: itsAHit.
 
-	"Last probe missed.  Call ceSendFromOpenPIC: to do the full lookup."
+	"Last probe missed.  Call ceSendFromInLineCacheMiss: to do the full lookup."
 	jumpSelectorMiss jmpTarget: self Label.
 	self genPushRegisterArgsForNumArgs: numArgs.
 	self genSaveStackPointers.
@@ -2706,7 +2706,7 @@ StackToRegisterMappingCogit >> genSendSuper: selector numArgs: numArgs [
 
 { #category : #initialization }
 StackToRegisterMappingCogit >> genSendTrampolineFor: aRoutine numArgs: numArgs called: aString arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 [
-	"Generate a trampoline with four arguments.
+	"Generate a trampoline with three arguments.
 	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
 	<var: #aRoutine type: #'void *'>
 	<var: #aString type: #'char *'>
@@ -3815,8 +3815,6 @@ StackToRegisterMappingCogit >> needsFrameIfStackGreaterThanOne: stackDelta [
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> numRegArgs [
 	<api>
-	"Use of the macro allows the compiler to avoid the call and test in cointerpreter.c"
-	<cmacro: '() 1'>
 	^1
 ]
 
