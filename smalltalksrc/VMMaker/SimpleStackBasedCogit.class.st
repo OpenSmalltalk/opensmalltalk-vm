@@ -900,12 +900,10 @@ SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 	<var: #itsAHit type: #'AbstractInstruction *'>
 	<var: #jumpBCMethod type: #'AbstractInstruction *'>
 	self compilePICProlog: numArgs.
-	self AlignmentNops: (BytesPerWord max: 8).
-	entry := self Label.
-	objectRepresentation genGetClassTagOf: ReceiverResultReg into: ClassReg scratchReg: TempReg.
+	entry := objectRepresentation genGetClassTagOf: ReceiverResultReg into: ClassReg scratchReg: TempReg.
 
-	"Do first of three probes.  See CoInterpreter>>lookupInMethodCacheSel:class:"
-	self flag: #lookupInMethodCacheSel:classTag:. "so this method shows up as a sender of lookupInMethodCacheSel:classTag:"
+	"Do first of three probes.  See CoInterpreter>>lookupInMethodCacheSel:classTag:"
+	self flag: #lookupInMethodCacheSel:classTag:. "so this method shows up as a sender of lookupInMethodCacheSel:class:"
 	self MoveR: ClassReg R: SendNumArgsReg.
 	self annotate: (self XorCw: selector R: ClassReg) objRef: selector.
 	self LogicalShiftLeftCq: ShiftForWord R: ClassReg.
@@ -3157,8 +3155,6 @@ SimpleStackBasedCogit >> methodAbortTrampolineFor: numArgs [
 { #category : #testing }
 SimpleStackBasedCogit >> numRegArgs [
 	<api>
-	"Use of the macro allows the compiler to avoid the call and test in cointerpreter.c"
-	<cmacro: '() 0'>
 	^0
 ]
 

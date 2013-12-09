@@ -2900,6 +2900,23 @@ CCodeGenerator >> isCLiteral: anObject [
 	^false
 ]
 
+{ #category : #utilities }
+CCodeGenerator >> isConstantNode: aNode valueInto: aBlock [
+	"Answer if aNode evaluates to a constant, and if so, evaluate aBlock with the value of that constant."
+
+	aNode isConstant ifTrue:
+		[aBlock value: aNode value.
+		 ^true].
+	aNode isSend ifFalse:
+		[^false].
+	(self anyMethodNamed: aNode selector) ifNotNil:
+		[:m|
+		(m statements size = 1
+		 and: [m statements last isReturn]) ifTrue:
+			[^self isConstantNode: m statements last expression valueInto: aBlock]].
+	^false
+]
+
 { #category : #inlining }
 CCodeGenerator >> isFloatingPointCType: aCType [ "<String>"
 	^#('float' 'double' 'long double') includes: aCType asString
@@ -2948,8 +2965,10 @@ CCodeGenerator >> isKernelSelector: sel [
 CCodeGenerator >> isNilConstantReceiverOf: sendNode [
 	"Answer true if the receiver of the given message send is the constant nil. Used to suppress conditional code when the condition is a translation-time constant."
 
+	| val |
 	generateDeadCode ifTrue: [^false].
-	^sendNode receiver isConstant and: [sendNode receiver value isNil]
+	^(self isConstantNode: sendNode receiver valueInto: [:v| val := v])
+	  and: [val isNil]
 ]
 
 { #category : #'C code generator' }
@@ -3168,10 +3187,11 @@ CCodeGenerator >> nilOrBooleanConstantReceiverOf: aNode [
 	"Answer nil or the boolean constant that is the receiver of the given message send.
 	 Used to suppress conditional code when the condition is a translation-time constant."
 
+	| val receiver argument |
 	generateDeadCode ifTrue:[^nil].
-	(aNode isConstant
-	 and: [#(true false) includes: aNode value]) ifTrue:
-		[^aNode value].
+	((self isConstantNode: aNode valueInto: [:v| val := v])
+	 and: [#(true false) includes: val]) ifTrue:
+		[^val].
 	aNode isSend ifTrue:
 		[((#(or: and:) includes: aNode selector)
 		 and: [aNode args last isStmtList
@@ -3182,16 +3202,12 @@ CCodeGenerator >> nilOrBooleanConstantReceiverOf: aNode [
 					[:arg|
 					^rcvr perform: aNode selector with: [arg]]]].
 		 ((#(= ~= < > <= >=) includes: aNode selector)
-		  and: [(aNode receiver isConstant and: [aNode receiver value isInteger])
-		  and: [(aNode args first isConstant and: [aNode args first value isInteger])]]) ifTrue:
-			[^aNode receiver value perform: aNode selector with: aNode args first value].
-		(self methodNamed: aNode selector) ifNotNil:
-			[:m|
-			(m statements size = 1
-			 and: [m statements last isReturn]) ifTrue:
-				[^self nilOrBooleanConstantReceiverOf: m statements last expression]]].
+		  and: [(self isConstantNode: aNode receiver valueInto: [:v| receiver := v])
+		  and: [receiver isInteger
+		  and: [(self isConstantNode: aNode args first valueInto: [:v| argument := v])
+		  and: [argument isInteger]]]]) ifTrue:
+			[^receiver perform: aNode selector with: argument]].
 	^nil
-
 ]
 
 { #category : #utilities }
