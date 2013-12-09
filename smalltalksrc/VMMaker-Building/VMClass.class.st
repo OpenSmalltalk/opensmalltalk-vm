@@ -784,7 +784,7 @@ VMClass >> promptHex: string [
 	| s |
 	s := UIManager default request: string, ' (hex)'.
 	s := s withBlanksTrimmed.
-	^s notEmpty ifTrue:
+	^(s notEmpty and: ['-+0123456789abcdefABCDEF' includes: s first]) ifTrue:
 		[(s includes: $r)
 			ifTrue:
 				[Number readFrom: s readStream]
