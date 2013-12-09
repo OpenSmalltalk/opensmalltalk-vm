@@ -489,9 +489,9 @@ CoInterpreter >> activateCoggedNewMethod: inInterpreter [
 	self push: instructionPointer.
 	cogMethod stackCheckOffset = 0 ifTrue:
 		["frameless method; nothing to activate..."
-		(cogit numRegArgs > 0
-		 and: [cogMethod cmNumArgs <= cogit numRegArgs]) ifTrue:
-			[self enterRegisterArgCogMethod: cogMethod at: cogit noCheckEntryOffset receiver: rcvr].
+		 cogit numRegArgs > 0 ifTrue: "dont use and: so as to get Slang to inline cogit numRegArgs > 0"
+			[cogMethod cmNumArgs <= cogit numRegArgs ifTrue:
+				[self enterRegisterArgCogMethod: cogMethod at: cogit noCheckEntryOffset receiver: rcvr]].
 		 self push: cogMethod asInteger + cogit noCheckEntryOffset.
 		 self push: rcvr.
 		 cogit ceEnterCogCodePopReceiverReg.
@@ -1402,8 +1402,8 @@ CoInterpreter >> ceInterpretMethodFromPIC: aMethodObj receiver: rcvr [
 			[(self methodShouldBeCogged: aMethodObj) ifTrue:
 				[cogit cog: aMethodObj selector: pic selector.
 				 (self methodHasCogMethod: aMethodObj) ifTrue:
-					[self executeCogMethodFromUnlinkedSend: (self cogMethodOf: aMethodObj)
-						withReceiver: rcvr]]]
+					[self executeCogMethod: (self cogMethodOf: aMethodObj)
+						fromUnlinkedSendWithReceiver: rcvr]]]
 		ifFalse:
 			[self assert: (cogCompiledCodeCompactionCalledFor
 						or: [(cogit methodShouldBeCogged: aMethodObj) not])].
@@ -1435,8 +1435,8 @@ CoInterpreter >> ceMNUFromPICMNUMethod: aMethodObj receiver: rcvr [
 		self createActualMessageTo: (objectMemory fetchClassOf: rcvr).
 		(self maybeMethodHasCogMethod: aMethodObj) ifTrue:
 			[self push: instructionPointer.
-			 self executeCogMethodFromUnlinkedSend: (self cogMethodOf: aMethodObj)
-				 withReceiver: rcvr.
+			 self executeCogMethod: (self cogMethodOf: aMethodObj)
+				 fromUnlinkedSendWithReceiver: rcvr.
 			 "NOTREACHED"
 			 self assert: false].
 		newMethod := aMethodObj.
@@ -2795,7 +2795,7 @@ CoInterpreter >> executeCogBlock: cogMethod closure: closure mayContextSwitch: m
 ]
 
 { #category : #enilopmarts }
-CoInterpreter >> executeCogMethodFromLinkedSend: cogMethod withReceiver: rcvr [
+CoInterpreter >> executeCogMethod: cogMethod fromLinkedSendWithReceiver: rcvr [
 	<api>
 	"Execute a CogMethod from a linked send.  The receiver,
 	 arguments and return address are on the Smalltalk stack.  First
@@ -2809,9 +2809,9 @@ CoInterpreter >> executeCogMethodFromLinkedSend: cogMethod withReceiver: rcvr [
 	cogit assertCStackWellAligned.
 	self assert: (self isMachineCodeFrame: framePointer).
 	self assertValidExecutionPointe: self stackTop r: framePointer s: stackPointer imbar: false line: #'__LINE__'.
-	(cogit numRegArgs > 0
-	 and: [cogMethod cmNumArgs <= cogit numRegArgs]) ifTrue:
-		[self enterRegisterArgCogMethod: cogMethod at: cogit entryOffset receiver: rcvr].
+	cogit numRegArgs > 0 ifTrue: "dont use and: so as to get Slang to inline cogit numRegArgs > 0"
+		[cogMethod cmNumArgs <= cogit numRegArgs ifTrue:
+			[self enterRegisterArgCogMethod: cogMethod at: cogit entryOffset receiver: rcvr]].
 	self
 		push: cogMethod asInteger + cogit entryOffset;
 		push: rcvr.
@@ -2820,7 +2820,7 @@ CoInterpreter >> executeCogMethodFromLinkedSend: cogMethod withReceiver: rcvr [
 ]
 
 { #category : #enilopmarts }
-CoInterpreter >> executeCogMethodFromLinkedSend: cogMethod withReceiver: rcvr andCacheTag: cacheTag [
+CoInterpreter >> executeCogMethod: cogMethod fromLinkedSendWithReceiver: rcvr andCacheTag: cacheTag [
 	<api>
 	"Execute a CogMethod from a linked send.  The receiver,
 	 arguments and return address are on the Smalltalk stack.  First
@@ -2835,16 +2835,15 @@ CoInterpreter >> executeCogMethodFromLinkedSend: cogMethod withReceiver: rcvr an
 	self assert: (self isMachineCodeFrame: framePointer).
 	self assertValidExecutionPointe: self stackTop r: framePointer s: stackPointer imbar: false line: #'__LINE__'.
 	self push: cogMethod asInteger + cogit entryOffset.
-	cogit numRegArgs > 0 ifTrue:
+	cogit numRegArgs > 0 ifTrue:"dont use and: so as to get Slang to inline cogit numRegArgs > 0"
 		[cogMethod cmNumArgs <= cogit numRegArgs ifTrue:
-			[self assert: cogit numRegArgs <= 2.
-			 self push: cacheTag.
-			 cogMethod cmNumArgs = 0 ifTrue:
-				[cogit ceEnter0ArgsPIC].
-			 cogMethod cmNumArgs = 1 ifTrue:
-				[cogit ceEnter1ArgsPIC].
-			 cogMethod cmNumArgs = 2 ifTrue:
-				[cogit ceEnter2ArgsPIC].
+			[self push: cacheTag.
+			 cogMethod cmNumArgs caseOf: {
+				[0]	->	[cogit ceEnter0ArgsPIC].
+				[1]	->	[cogit ceEnter1ArgsPIC].
+				[2]	->	[cogit ceEnter2ArgsPIC]
+			 	}
+				otherwise: [].
 			 self error: 'not reached']].
 	self
 		push: rcvr;
@@ -2854,7 +2853,7 @@ CoInterpreter >> executeCogMethodFromLinkedSend: cogMethod withReceiver: rcvr an
 ]
 
 { #category : #enilopmarts }
-CoInterpreter >> executeCogMethodFromUnlinkedSend: cogMethod withReceiver: rcvr [
+CoInterpreter >> executeCogMethod: cogMethod fromUnlinkedSendWithReceiver: rcvr [
 	"Execute a CogMethod from an unlinked send.  The receiver,
 	 arguments and return address are on the Smalltalk stack.  First
 	 push the entry-point and finally the register argument(s).  Then write
@@ -2867,9 +2866,9 @@ CoInterpreter >> executeCogMethodFromUnlinkedSend: cogMethod withReceiver: rcvr 
 	cogit assertCStackWellAligned.
 	self assert: (self isMachineCodeFrame: framePointer).
 	self assertValidExecutionPointe: self stackTop r: framePointer s: stackPointer imbar: false line: #'__LINE__'.
-	(cogit numRegArgs > 0
-	 and: [cogMethod cmNumArgs <= cogit numRegArgs]) ifTrue:
-		[self enterRegisterArgCogMethod: cogMethod at: cogit noCheckEntryOffset receiver: rcvr].
+	cogit numRegArgs > 0 ifTrue: "dont use and: so as to get Slang to inline cogit numRegArgs > 0"
+		[cogMethod cmNumArgs <= cogit numRegArgs ifTrue:
+			[self enterRegisterArgCogMethod: cogMethod at: cogit noCheckEntryOffset receiver: rcvr]].
 	self
 		push: cogMethod asInteger + cogit noCheckEntryOffset;
 		push: rcvr.
@@ -3528,8 +3527,8 @@ CoInterpreter >> handleMNU: selectorIndex InMachineCodeTo: rcvr classForMessage:
 				 ^self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: classForThisMessage]].
 	(self maybeMethodHasCogMethod: newMethod) ifTrue:
 		[self push: instructionPointer.
-		 self executeCogMethodFromUnlinkedSend: (self cogMethodOf: newMethod)
-			 withReceiver: rcvr.
+		 self executeCogMethod: (self cogMethodOf: newMethod)
+			 fromUnlinkedSendWithReceiver: rcvr.
 		 "NOTREACHED"
 		 self assert: false].
 	^self interpretMethodFromMachineCode
@@ -4170,7 +4169,7 @@ CoInterpreter >> longStoreTemporaryVariableBytecode [
 CoInterpreter >> lookup: selector receiver: rcvr [
 	<api>
 	"Lookup selector in rcvr, without doing MNU processing, and answer either a
-	 method or nil if the message was not understood.  Used to populate closed PICs."
+	 method or an error code if the message was not understood.  Used to populate closed PICs."
 	| classTag erridx |
 	"self printFrame: stackPage headFP WithSP: stackPage headSP"
 	"self printStringOf: selector"
@@ -4178,7 +4177,8 @@ CoInterpreter >> lookup: selector receiver: rcvr [
 	(self lookupInMethodCacheSel: selector classTag: classTag) ifFalse:
 		[messageSelector := selector.
 		 (erridx := self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
-			[^erridx]].
+			[self assert: erridx <= self maxLookupNoMNUErrorCode.
+			 ^erridx]].
 	^newMethod
 ]
 
@@ -4739,6 +4739,12 @@ CoInterpreter >> marryFrame: theFP SP: theSP copyTemps: copyTemps [
 	self assert: numStack + ReceiverIndex < (objectMemory lengthOf: theContext).
 
 	^theContext
+]
+
+{ #category : #'cog jit support' }
+CoInterpreter >> maxLookupNoMNUErrorCode [
+	<api>
+	^SelectorCannotInterpret max: SelectorDoesNotUnderstand
 ]
 
 { #category : #'compiled methods' }

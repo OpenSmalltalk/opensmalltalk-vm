@@ -710,6 +710,15 @@ CogObjectRepresentationForSqueakV3 >> markAndTraceLiteralIfYoung: literal [
 		 objectMemory markAndTrace: literal]
 ]
 
+{ #category : #'calling convention' }
+CogObjectRepresentationForSqueakV3 >> numRegArgs [
+	"CogObjectRepresentationForSqueakV3 only implements at most 1-arg primitives, because
+	 the complexity of the object representation makes it difficult to implement at:put:, the most
+	 performance-critical 2-argument primitive."
+	<api>
+	^1
+]
+
 { #category : #'object representation' }
 CogObjectRepresentationForSqueakV3 >> numSmallIntegerBits [
 	^31
