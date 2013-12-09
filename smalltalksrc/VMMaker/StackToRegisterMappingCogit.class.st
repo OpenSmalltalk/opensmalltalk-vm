@@ -1960,6 +1960,15 @@ StackToRegisterMappingCogit >> genPrimitiveAt [
 ]
 
 { #category : #'primitive generators' }
+StackToRegisterMappingCogit >> genPrimitiveAtPut [
+	| r |
+	((r := objectRepresentation genInnerPrimitiveAtPut: 0) < 0
+	 and: [r ~= UnimplementedPrimitive]) ifTrue:
+		[^r].
+	^self compileFallbackToInterpreterPrimitive
+]
+
+{ #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveBitAnd [
 	| jumpNotSI |
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
@@ -2374,6 +2383,15 @@ StackToRegisterMappingCogit >> genPrimitiveStringAt [
 	| r |
 	self assert: self numRegArgs >= 1.
 	(r := objectRepresentation genInnerPrimitiveStringAt: 0) < 0 ifTrue:
+		[^r].
+	^self compileFallbackToInterpreterPrimitive
+]
+
+{ #category : #'primitive generators' }
+StackToRegisterMappingCogit >> genPrimitiveStringAtPut [
+	| r |
+	((r := objectRepresentation genInnerPrimitiveStringAtPut: 0) < 0
+	 and: [r ~= UnimplementedPrimitive]) ifTrue:
 		[^r].
 	^self compileFallbackToInterpreterPrimitive
 ]

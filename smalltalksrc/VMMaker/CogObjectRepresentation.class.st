@@ -53,6 +53,12 @@ CogObjectRepresentation >> genEnsureObjInRegRegNotForwarded: reg scratchReg: scr
 ]
 
 { #category : #'primitive generators' }
+CogObjectRepresentation >> genInnerPrimitiveAtPut: retNoffset [
+	"subclasses override if they can"
+	^cogit unimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
 CogObjectRepresentation >> genInnerPrimitiveNew: retNoffset [
 	"subclasses override if they can"
 	^cogit unimplementedPrimitive
@@ -66,6 +72,12 @@ CogObjectRepresentation >> genInnerPrimitiveNewMethod: retNoffset [
 
 { #category : #'primitive generators' }
 CogObjectRepresentation >> genInnerPrimitiveNewWithArg: retNoffset [
+	"subclasses override if they can"
+	^cogit unimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genInnerPrimitiveStringAtPut: retNoffset [
 	"subclasses override if they can"
 	^cogit unimplementedPrimitive
 ]

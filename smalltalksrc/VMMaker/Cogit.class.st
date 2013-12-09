@@ -1672,6 +1672,13 @@ Cogit >> MoveR: reg1 R: reg2 [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> MoveR: srcReg Xbr: indexReg R: baseReg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: MoveRXbrR operand: srcReg operand: indexReg operand: baseReg
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> MoveR: sourceReg Xwr: indexReg R: baseReg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>

@@ -385,6 +385,10 @@ CogIA32Compiler >> computeMaximumSize [
 							^maxSize := (self concreteRegister: (operands at: 1)) = EBP
 											ifTrue: [5]
 											ifFalse: [4]].
+		[MoveRXbrR]	->	[self assert: (self concreteRegister: (operands at: 1)) ~= ESP.
+							^maxSize := (self concreteRegister: (operands at: 2)) = EBP
+											ifTrue: [4]
+											ifFalse: [3]].
 		[MoveXwrRR]	-> [self assert: (self concreteRegister: (operands at: 0)) ~= ESP.
 							^maxSize := (self concreteRegister: (operands at: 1)) = EBP
 											ifTrue: [4]
@@ -1539,6 +1543,28 @@ CogIA32Compiler >> concretizeMoveRR [
 ]
 
 { #category : #'generate machine code' }
+CogIA32Compiler >> concretizeMoveRXbrR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| src index base |
+	src := self concreteRegister: (operands at: 0).
+	index := self concreteRegister: (operands at: 1).
+	base := self concreteRegister: (operands at: 2).
+	base ~= EBP ifTrue:
+		[machineCode
+			at: 0 put: 16r88;
+			at: 1 put: (self mod: ModRegInd RM: 4 RO: src);
+			at: 2 put: (self s: SIB1 i: index b: base).
+		 ^machineCodeSize := 3].
+	machineCode
+		at: 0 put: 16r88;
+		at: 1 put: (self mod: ModRegRegDisp8 RM: 4 RO: src);
+		at: 2 put: (self s: SIB1 i: index b: base);
+		at: 3 put: 0.
+	 ^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code' }
 CogIA32Compiler >> concretizeMoveRXwrR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -2139,6 +2165,7 @@ CogIA32Compiler >> dispatchConcretize [
 		[MoveM64rRd]		-> [^self concretizeMoveM64rRd].
 		[MoveMwrR]		-> [^self concretizeMoveMwrR].
 		[MoveXbrRR]		-> [^self concretizeMoveXbrRR].
+		[MoveRXbrR]		-> [^self concretizeMoveRXbrR].
 		[MoveXwrRR]		-> [^self concretizeMoveXwrRR].
 		[MoveRXwrR]		-> [^self concretizeMoveRXwrR].
 		[MoveRMwr]		-> [^self concretizeMoveRMwr].
