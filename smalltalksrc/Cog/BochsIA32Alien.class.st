@@ -696,30 +696,10 @@ BochsIA32Alien >> primitiveSingleStepInMemory: memoryArray "<Bitmap|ByteArray>" 
 ]
 
 { #category : #printing }
-BochsIA32Alien >> printIntegerRegistersOn: aStream [
-	self printRegisterState: self integerRegisterState on: aStream.
-	aStream flush
-]
-
-{ #category : #printing }
-BochsIA32Alien >> printRegisterState: registerStateVector on: aStream [
-	| rsvs fields|
+BochsIA32Alien >> printFields: fields inRegisterState: registerStateVector on: aStream [
+	| rsvs |
 	aStream ensureCr.
 	rsvs := registerStateVector readStream.
-	fields := (registerStateVector size < 18
-			   or: [(11 to: 18) allSatisfy: [:i| (registerStateVector at: i) isZero]])
-				ifTrue:
-					[#(	eax ebx ecx edx cr
-						esp ebp esi edi cr
-						eip eflags cr )]
-				ifFalse:
-					[#(	eax ebx ecx edx cr
-						esp ebp esi edi cr
-						eip eflags cr
-						xmm0low xmm1low cr
-						xmm2low xmm3low cr
-						xmm4low xmm5low cr
-						xmm6low xmm7low cr )].
 	fields withIndexDo:
 		[:sym :index| | val |
 		sym = #cr
@@ -755,6 +735,52 @@ BochsIA32Alien >> printRegisterState: registerStateVector on: aStream [
 									 aStream nextPut: $)]]].
 						(fields at: index + 1) ~~ #cr ifTrue:
 							[aStream tab]]]
+]
+
+{ #category : #printing }
+BochsIA32Alien >> printIntegerRegistersOn: aStream [
+	self printRegisterState: self integerRegisterState on: aStream.
+	aStream flush
+]
+
+{ #category : #printing }
+BochsIA32Alien >> printRegisterState: registerStateVector on: aStream [
+	self printFields:
+			((registerStateVector size < 18
+			  or: [(11 to: 18) allSatisfy: [:i| (registerStateVector at: i) isZero]])
+				ifTrue:
+					[#(	eax ebx ecx edx cr
+						esp ebp esi edi cr
+						eip eflags cr )]
+				ifFalse:
+					[#(	eax ebx ecx edx cr
+						esp ebp esi edi cr
+						eip eflags cr
+						xmm0low xmm1low cr
+						xmm2low xmm3low cr
+						xmm4low xmm5low cr
+						xmm6low xmm7low cr )])
+		inRegisterState: registerStateVector
+		on: aStream
+]
+
+{ #category : #printing }
+BochsIA32Alien >> printRegisterStateExceptPC: registerStateVector on: aStream [
+	self printFields:
+			((registerStateVector size < 18
+			  or: [(11 to: 18) allSatisfy: [:i| (registerStateVector at: i) isZero]])
+				ifTrue:
+					[#(	eax ebx ecx edx cr
+						esp ebp esi edi cr)]
+				ifFalse:
+					[#(	eax ebx ecx edx cr
+						esp ebp esi edi cr
+						xmm0low xmm1low cr
+						xmm2low xmm3low cr
+						xmm4low xmm5low cr
+						xmm6low xmm7low cr )])
+		inRegisterState: registerStateVector
+		on: aStream
 ]
 
 { #category : #execution }
