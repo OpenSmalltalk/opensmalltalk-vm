@@ -15,6 +15,9 @@
 
 ARMul_State*	lastCPU = NULL;
 
+/* When compiling armulator, it generally sets NEED_UI_LOOP_HOOK, which 
+	makes the main emulation step require this symbol to be set. */
+extern int (*deprecated_ui_loop_hook) (int) = NULL;
 
 // These two variables exist, in case there are library-functions which write to a stream.
 // In that case, we would write functions which print to that stream instead of stderr or similar
@@ -112,9 +115,8 @@ runCPUInSizeMinAddressReadWrite(void *cpu, void *memory,
 	return runOnCPU(cpu, memory, byteSize, minAddr, minWriteMaxExecAddr, ARMul_DoProg);
 }
 
-// next functions reason for existence is not clear
 /*
- * Currently a dummy for Bochs.
+ * Currently a dummy for ARM Processor Alien.
  */
 void
 flushICacheFromTo(void *cpu, ulong saddr, ulong eaddr)
@@ -158,22 +160,13 @@ disassembleForAtInSize(void *cpu, ulong laddr,
 	
 	// sets some fields in the structure dis to architecture specific values
 	disassemble_init_for_target( dis );
-	// Given a bfd, the disassembler can find the arch by itself.
-	// Unfortunately, we don't have bfd-structures, so we have to choose the function by hand.
-	//disassemble = disassembler( c );
-	disassembler_ftype disassembler = print_insn_little_arm;
-	//other possible functions are listed in opcodes/dissassemble.c
 	
 	dis->buffer_vma = 0;
 	dis->buffer = memory;
 	dis->buffer_length = byteSize;
 	
-	// while-loop for calling single instruction decoding:
-	unsigned int isize = 0;
-	size_t pos = laddr;
-	size_t max_pos = dis->buffer_vma+dis->buffer_length;
-	
-	unsigned int size = disassembler((bfd_vma) pos, dis);
+	//other possible functions are listed in opcodes/dissassemble.c
+	unsigned int size = print_insn_little_arm((bfd_vma) laddr, dis);
 	
 	free(dis);
 	gdb_log[gdblog_index+1] = 0;
@@ -212,7 +205,7 @@ __wrap_ARMul_OSHandleSWI (ARMul_State * state, ARMword number)
 			state->EndCondition = MemoryBoundsError;
 			
 			// during execution, the pc points the next fetch address, which is 8 byte after the current instruction.
-			gdb_log_printf(NULL, "Illegal Instruction fetch address (0x%p).", state->Reg[15]-8);
+			gdb_log_printf(NULL, "Illegal Instruction fetch address (%#p).", state->Reg[15]-8);
 			return TRUE;
 	  }
 	return __real_ARMul_OSHandleSWI(state, number);

@@ -73,7 +73,7 @@ GetWord (ARMul_State * state, ARMword address, int check)
     //raise memory access error
     state->EndCondition = MemoryBoundsError;
     state->Emulate = FALSE;
-    gdb_log_printf(NULL, "Illegal memory read at 0x%p. ", address);
+    gdb_log_printf(NULL, "Illegal memory read at %#p. ", address);
     return 0;
   }
   else
@@ -93,7 +93,7 @@ PutWord (ARMul_State * state, ARMword address, ARMword data, int check)
   {
     state->Emulate = FALSE;
     state->EndCondition = MemoryBoundsError;
-    gdb_log_printf(NULL, "Illegal memory write at 0x%p. ", address);
+    gdb_log_printf(NULL, "Illegal memory write at %#p. ", address);
   } 
   else
   {
