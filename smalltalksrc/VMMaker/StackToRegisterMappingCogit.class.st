@@ -1080,7 +1080,7 @@ StackToRegisterMappingCogit >> ceEnter1ArgsPIC [
 StackToRegisterMappingCogit >> ceEnter2ArgsPIC [
 	<api: 'extern void (*ceEnter2ArgsPIC)()'>
 	<doNotGenerate>
-	self simulateEnilopmart: ceEnter2ArgsPIC numArgs: 2
+	self simulateEnilopmart: ceEnter2ArgsPIC numArgs: 1
 ]
 
 { #category : #'simulation only' }
@@ -3344,7 +3344,7 @@ StackToRegisterMappingCogit >> generateEnilopmarts [
 	self numRegArgs >= 1 ifTrue:
 		[ceEnter1ArgsPIC := self genEnterPICEnilopmartNumArgs: 1.
 		 self numRegArgs >= 2 ifTrue:
-			[ceEnter1ArgsPIC := self genEnterPICEnilopmartNumArgs: 2.
+			[ceEnter2ArgsPIC := self genEnterPICEnilopmartNumArgs: 2.
 			 self assert: self numRegArgs = 2]]
 ]
 
@@ -3814,8 +3814,8 @@ StackToRegisterMappingCogit >> needsFrameIfStackGreaterThanOne: stackDelta [
 
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> numRegArgs [
-	<api>
-	^1
+	<doNotGenerate>
+	^objectRepresentation numRegArgs
 ]
 
 { #category : #'simulation stack' }

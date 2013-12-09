@@ -392,6 +392,14 @@ CogObjectRepresentationForSpur >> markAndTraceLiteralIfYoung: literal [
 		 objectMemory markAndTrace: literal]
 ]
 
+{ #category : #'calling convention' }
+CogObjectRepresentationForSpur >> numRegArgs [
+	"The Spur object representation is simple enough that implementing
+	 at:put: is straight-forward and hence 2 register args are worth while."
+	<api>
+	^2
+]
+
 { #category : #'garbage collection' }
 CogObjectRepresentationForSpur >> remapObject: objOop [
 	^(objectMemory shouldRemapObj: objOop)
