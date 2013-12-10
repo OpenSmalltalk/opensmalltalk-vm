@@ -1616,6 +1616,24 @@ StackInterpreter >> activeProcess [
 	^objectMemory fetchPointer: ActiveProcessIndex ofObject: self schedulerPointer
 ]
 
+{ #category : #'lazy become' }
+StackInterpreter >> actuallyFollowNecessaryForwardingInMethod: methodObj [
+	"To avoid any chance of a forwarded object during super sends we follow the
+	 methodClassAssociation.  The forwarded object send fault only copes with
+	 normal sends to instances."
+	| assoc classObj |
+	<option: #SpurObjectMemory>
+	<inline: true>
+	assoc := self methodClassAssociationOf: methodObj.
+	(objectMemory isForwarded: assoc) ifTrue:
+		[assoc := objectMemory followForwarded: assoc.
+		 self setMethodClassAssociationOf: methodObj to: assoc].
+	classObj := objectMemory fetchPointer: ValueIndex ofObject: assoc.
+	(objectMemory isForwarded: classObj) ifTrue:
+		[classObj := objectMemory followForwarded: assoc.
+		 objectMemory storePointer: ValueIndex ofObject: assoc withValue: classObj]
+]
+
 { #category : #'process primitive support' }
 StackInterpreter >> addFirstLink: proc toList: aList [ 
 	"Add the given process to the front of the given linked list
@@ -5611,15 +5629,9 @@ StackInterpreter >> followNecessaryForwardingInMethod: methodObj [
 	"To avoid any chance of a forwarded object during super sends we follow the
 	 methodClassAssociation.  The forwarded object send fault only copes with
 	 normal sends to instances."
-	| assoc classObj |
-	assoc := self methodClassAssociationOf: methodObj.
-	(objectMemory isForwarded: assoc) ifTrue:
-		[assoc := objectMemory followForwarded: assoc.
-		 self setMethodClassAssociationOf: methodObj to: assoc].
-	classObj := objectMemory fetchPointer: ValueIndex ofObject: assoc.
-	(objectMemory isForwarded: classObj) ifTrue:
-		[classObj := objectMemory followForwarded: assoc.
-		 objectMemory storePointer: ValueIndex ofObject: assoc withValue: classObj]
+	<inline: false>
+	objectMemory hasSpurMemoryManagerAPI ifTrue:
+		[self actuallyFollowNecessaryForwardingInMethod: methodObj]
 ]
 
 { #category : #'process primitive support' }
@@ -6044,6 +6056,7 @@ StackInterpreter >> handleForwardedSendFaultForTag: classTag [
 { #category : #'message sending' }
 StackInterpreter >> handleSpecialSelectorSendFaultFor: obj [
 	<inline: true>
+	<option: #SpurObjectMemory>
 	^self handleSpecialSelectorSendFaultFor: obj fp: localFP sp: localSP
 ]
 

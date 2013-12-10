@@ -675,6 +675,21 @@ CoInterpreter >> activateNewMethod [
 	self returnToExecutive: inInterpreter postContextSwitch: switched
 ]
 
+{ #category : #'lazy become' }
+CoInterpreter >> actuallyFollowNecessaryForwardingInMethod: methodObj [
+	"To avoid any chance of a forwarded object during super sends we follow the
+	 methodClassAssociation.  The forwarded object send fault only copes with
+	 normal sends to instances."
+	| cogMethod header |
+	<var: #cogMethod type: #'CogMethod *'>
+	super actuallyFollowNecessaryForwardingInMethod: methodObj.
+	header := self rawHeaderOf: methodObj.
+	(self isCogMethodReference: header) ifTrue:
+		[cogMethod := self cCoerceSimple: header to: #'CogMethod *'.
+		 cogMethod cmUsesMethodClass ifTrue:
+			[cogit followForwardedLiteralsIn: cogMethod]]
+]
+
 { #category : #'method lookup cache' }
 CoInterpreter >> addNewMethodToCache: classObj [
 	"Override to refuse to cache other than compiled methods.
@@ -3205,21 +3220,6 @@ CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 			  (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
 				[theIPPtr := (theFP + FoxCallerSavedIP) asUnsignedInteger.
 				 theFP := callerFP]]]
-]
-
-{ #category : #'lazy become' }
-CoInterpreter >> followNecessaryForwardingInMethod: methodObj [
-	"To avoid any chance of a forwarded object during super sends we follow the
-	 methodClassAssociation.  The forwarded object send fault only copes with
-	 normal sends to instances."
-	| cogMethod header |
-	<var: #cogMethod type: #'CogMethod *'>
-	super followNecessaryForwardingInMethod: methodObj.
-	header := self rawHeaderOf: methodObj.
-	(self isCogMethodReference: header) ifTrue:
-		[cogMethod := self cCoerceSimple: header to: #'CogMethod *'.
-		 cogMethod cmUsesMethodClass ifTrue:
-			[cogit followForwardedLiteralsIn: cogMethod]]
 ]
 
 { #category : #'process primitive support' }
