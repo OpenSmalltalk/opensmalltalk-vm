@@ -149,7 +149,7 @@ Spur32BitMemoryManager >> bytesInObject: objOop [
 	"Answer the total number of bytes in an object including header and possible overflow size header."
 	<returnTypeC: #usqLong>
 	| headerNumSlots numSlots |
-	headerNumSlots := self rawNumSlotsOf: objOop..
+	headerNumSlots := self rawNumSlotsOf: objOop.
 	numSlots := headerNumSlots = self numSlotsMask
 					ifTrue: [self longAt: objOop - self baseHeaderSize]
 					ifFalse: [headerNumSlots = 0 ifTrue: [1] ifFalse: [headerNumSlots]].
