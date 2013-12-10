@@ -1070,8 +1070,7 @@ SpurMemoryManager >> allExistingOldSpaceObjectsDo: aBlock [
 	oldSpaceLimit := endOfMemory.
 	[self assert: objOop \\ self allocationUnit = 0.
 	 self oop: objOop isLessThan: oldSpaceLimit] whileTrue:
-		[self assert: (self longLongAt: objOop) ~= 0.
-		 (self isEnumerableObject: objOop) ifTrue:
+		[(self isEnumerableObject: objOop) ifTrue:
 			[aBlock value: objOop].
 		 prevPrevObj := prevObj.
 		 prevObj := objOop.
@@ -4122,13 +4121,23 @@ SpurMemoryManager >> freeSize [
 
 { #category : #'free space' }
 SpurMemoryManager >> freeSmallObject: objOop [
-	| bytes index |
-	bytes := self bytesInObject: objOop.
-	index := bytes / self allocationUnit.
-	self assert: index < self numFreeLists.
+	"Free a small object.  The wrinkle here is that we don't tolerate a zero-slot
+	 count in a free object so that the (self longLongAt: objOop) ~= 0 assert in
+	 isEnumerableObject: isn't triggered."
+		 
+	| headerNumSlots bytes index |
+	headerNumSlots := self rawNumSlotsOf: objOop.
+	headerNumSlots = 0
+		ifTrue:
+			[self setRawNumSlotsOf: objOop to: 1.
+			 index := self baseHeaderSize + self allocationUnit / self allocationUnit]
+		ifFalse:
+			[bytes := self bytesInObject: objOop.
+			 index := bytes / self allocationUnit.
+			 self assert: index < self numFreeLists].
 	self setFree: objOop. 
 	self storePointer: self freeChunkNextIndex ofFreeChunk: objOop withValue: (freeLists at: index).
-	freeLists at: index put: objOop.
+	freeLists at: index put: objOop
 ]
 
 { #category : #'debug support' }
@@ -5072,7 +5081,8 @@ SpurMemoryManager >> isEnumerableObject: objOop [
 	| classIndex |
 	<inline: true>
 	classIndex := self classIndexOf: objOop.
-	self assert: (classIndex >= 0 and: [classIndex < (numClassTablePages * self classTablePageSize)]).
+	self assert: ((self longLongAt: objOop) ~= 0
+				  and: [classIndex < (numClassTablePages * self classTablePageSize)]).
 	^classIndex >= self isForwardedObjectClassIndexPun
 ]
 
@@ -7535,6 +7545,13 @@ SpurMemoryManager >> setIsPinnedOf: objOop to: aBoolean [
 { #category : #'header access' }
 SpurMemoryManager >> setIsRememberedOf: objOop to: aBoolean [
 	self subclassResponsibility
+]
+
+{ #category : #'free space' }
+SpurMemoryManager >> setRawNumSlotsOf: objOop to: n [
+	"Private to free space. See freeSmallObject:"
+	self flag: #endian.
+	self byteAt: objOop + 7 put: n
 ]
 
 { #category : #'word size' }
