@@ -4478,7 +4478,7 @@ Cogit >> followForwardedMethods [
 				[cogMethod methodObject: (objectMemory remapObj: cogMethod methodObject).
 				 (cogMethod cmRefersToYoung not
 				  and: [objectMemory isYoungObject: cogMethod methodObject]) ifTrue:
-					[methodZone addToYoungReferrers: cogMethod methodObject]]].
+					[methodZone addToYoungReferrers: cogMethod]]].
 		 cogMethod cmType = CMClosedPIC ifTrue:
 			[(self mapObjectReferencesInClosedPIC: cogMethod) ifTrue:
 				[freedPIC := true.
