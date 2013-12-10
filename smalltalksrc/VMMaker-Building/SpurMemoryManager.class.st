@@ -1033,16 +1033,16 @@ SpurMemoryManager >> allExistingNewSpaceObjectsDo: aBlock [
 	objOop := self objectStartingAt: scavenger eden start.
 	limit := freeStart.
 	[self oop: objOop isLessThan: limit] whileTrue:
-		[(self isEnumerableObject: objOop) ifTrue:
-			[aBlock value: objOop].
+		[self assert: (self isEnumerableObjectNoAssert: objOop).
+		 aBlock value: objOop.
 		 prevPrevObj := prevObj.
 		 prevObj := objOop.
 		 objOop := self objectAfter: objOop limit: freeStart].
 	objOop := self objectStartingAt: scavenger pastSpace start.
 	limit := pastSpaceStart.
 	[self oop: objOop isLessThan: limit] whileTrue:
-		[(self isFreeObject: objOop) ifFalse:
-			[aBlock value: objOop].
+		[self assert: (self isEnumerableObjectNoAssert: objOop).
+		 aBlock value: objOop.
 		 prevPrevObj := prevObj.
 		 prevObj := objOop.
 		 objOop := self objectAfter: objOop limit: limit].
@@ -1140,8 +1140,8 @@ SpurMemoryManager >> allNewSpaceObjectsDo: aBlock [
 	<inline: true>
 	self allNewSpaceEntitiesDo:
 		[:objOop|
-		 (self isEnumerableObject: objOop) ifTrue:
-			[aBlock value: objOop]]
+		 self assert: (self isEnumerableObjectNoAssert: objOop).
+		 aBlock value: objOop]
 ]
 
 { #category : #'object enumeration' }
@@ -5084,6 +5084,13 @@ SpurMemoryManager >> isEnumerableObject: objOop [
 	self assert: ((self longLongAt: objOop) ~= 0
 				  and: [classIndex < (numClassTablePages * self classTablePageSize)]).
 	^classIndex >= self isForwardedObjectClassIndexPun
+]
+
+{ #category : #'object enumeration' }
+SpurMemoryManager >> isEnumerableObjectNoAssert: objOop [
+	"Answer if objOop should be included in an allObjects...Do: enumeration.
+	 Non-objects should be excluded; these are bridges and free chunks."
+	^(self classIndexOf: objOop) >= self isForwardedObjectClassIndexPun
 ]
 
 { #category : #'object testing' }
