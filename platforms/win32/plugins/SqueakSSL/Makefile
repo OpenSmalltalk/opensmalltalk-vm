@@ -1,0 +1,28 @@
+# Makefile for SqueakSSL plugin.  This should work given the right versions of
+# things.  Alas my current MINGW installation, 3.17, doesn't have an up-to-date
+# /usr/lib/w32api/libcrypt32.a; it defines 14 funcs needed by sqWin32SSL.c but
+# another 11 are undefined.
+# If you want to experiment, download a suitable version of openssl,
+# e.g. http://www.openssl.org/source/openssl-1.0.1e.tar.gz
+# and unpack it.  The below assumes it is unpacked in /usr/local.
+# Then in the openssl directory do
+# 	./Configure mingw
+#	make
+#	make test
+# Then in cygwinbuild do
+#	make build/vm/SqueakSSL.dll
+# If you get something that works please let me know.
+# Eliot Miranda, eliot.miranda@gmail.com, 2013/4/4
+
+OPENSSL:=/usr/local/openssl-1.0.1e
+EXTRALIBS:= -L$(OPENSSL) \
+			-lssl -lcrypto \
+			-L/usr/lib/w32api \
+			-lcrypt32 -lsecur32
+
+# You may need the following to make an internal plugin
+DLLTOOLEXTRA := $(OPENSSL)/libssl.a \
+				$(OPENSSL)/libcrypto.a
+DLLWRAPEXTRA := $(DLLTOOLEXTRA)
+
+include ../../Makefile.plugin
