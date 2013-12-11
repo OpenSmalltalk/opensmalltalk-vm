@@ -2141,6 +2141,13 @@ ObjectMemory >> fwdTableSize: blkSize [
 	^ (fwdLast - fwdFirst) // blkSize  "round down"
 ]
 
+{ #category : #'image save/restore' }
+ObjectMemory >> garbageCollectForSnapshot [
+	self incrementalGC. "maximimize space for forwarding table"
+	self fullGC.
+	self clearRootsTable
+]
+
 { #category : #accessing }
 ObjectMemory >> gcBiasToGrow [
 	^gcBiasToGrow

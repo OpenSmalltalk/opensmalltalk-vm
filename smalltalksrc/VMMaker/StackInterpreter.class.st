@@ -1934,38 +1934,18 @@ StackInterpreter >> baseFrameReturn [
 ]
 
 { #category : #'frame access' }
-StackInterpreter >> bereaveAllMarriedContexts [
+StackInterpreter >> bereaveAllMarriedContextsForSnapshotFlushingExternalPrimitivesIf: flushExtPrims [
 	"Enumerate all contexts and convert married contexts to widowed contexts so
 	 that the snapshot contains only single contexts.  This allows the test for being
-	 married to avoid checking for a context's frame pointer being in bounds.
-	 Thanks to Greg Nuyens for this idea."
+	 married to avoid checking for a context's frame pointer being in bounds.  If
+	 flushExtPrims is true, flush references to external primitives in methods."
 	<asmLabel: false>
 	objectMemory allObjectsDo:
-		[:obj|
-		((objectMemory isContextNonImm: obj)
-		  and: [self isMarriedOrWidowedContext: obj]) ifTrue:
-			[self markContextAsDead: obj]]
-]
-
-{ #category : #'image save/restore' }
-StackInterpreter >> bereaveAndNormalizeContextsAndFlushExternalPrimitives [
-	"Clean up right before saving an image, sweeping memory and:
-	* nilling out all fields of contexts above the stack pointer
-	* bereaving widowed contexts. 
-	* flushing external primitives.
-	 By ensuring that all contexts are single in a snapshot (i.e. that no married contexts
-	 exist) we can maintain the invariant that a married or widowed context's frame
-	 reference (in its sender field) must point into the stack pages since no married or
-	 widowed contexts are present from older runs of the system."
-	objectMemory allObjectsDo:
-		[:obj| | header fmt sz |
-		 header := self longAt: obj.
-		 fmt := objectMemory formatOfHeader: header.
-		 "Clean out context"
-		 (fmt = objectMemory indexablePointersFormat
-		  and: [objectMemory isContextHeader: header]) ifTrue:
-			["All contexts have been divorced. Bereave remaining widows."
-			 (self isMarriedOrWidowedContext: obj) ifTrue:
+		[:obj| | fmt |
+		fmt := objectMemory formatOf: obj.
+		(fmt = objectMemory indexablePointersFormat
+		  and: [objectMemory isContextNonImm: obj]) ifTrue:
+			[(self isMarriedOrWidowedContext: obj) ifTrue:
 				[self markContextAsDead: obj].
 			 "Fill slots beyond top of stack with nil"
 			 (self fetchStackPointerOf: obj) + CtxtTempFrameStart
@@ -1976,10 +1956,11 @@ StackInterpreter >> bereaveAndNormalizeContextsAndFlushExternalPrimitives [
 						ofObject: obj
 						withValue: objectMemory nilObject]].
 		 "Clean out external functions from compiled methods"
-		 fmt >= objectMemory firstCompiledMethodFormat ifTrue:
+		 (flushExtPrims
+		  and: [fmt >= objectMemory firstCompiledMethodFormat]) ifTrue:
 			["Its primitiveExternalCall"
 			 (self primitiveIndexOf: obj) = PrimitiveExternalCallIndex ifTrue:
-				[self flushExternalPrimitiveOf: obj]]].
+				[self flushExternalPrimitiveOf: obj]]]
 ]
 
 { #category : #utilities }
@@ -11541,7 +11522,7 @@ StackInterpreter >> snapshot: embedded [
 
 	"Need to convert all frames into contexts since the snapshot file only holds objects."
 	self push: instructionPointer.
-	activeContext := self voidVMStateForSnapshot.
+	activeContext := self voidVMStateForSnapshotFlushingExternalPrimitivesIf: true.
 
 	"update state of active process"
 	activeProc := self activeProcess.
@@ -11550,13 +11531,11 @@ StackInterpreter >> snapshot: embedded [
 		ofObject: activeProc
 		withValue: activeContext.
 
-	objectMemory pushRemappableOop: activeContext.
-
-	"garbage collect, bereave contexts and flush external methods."
-	self snapshotCleanUp.
-
+	tempOop := activeContext.
+	objectMemory garbageCollectForSnapshot.
 	"Nothing moves from here on so it is safe to grab the activeContext again."
-	activeContext := objectMemory popRemappableOop.
+	activeContext := tempOop.
+	tempOop := 0.
 
 	self successful ifTrue:
 		["Without contexts or stacks simulate
@@ -11589,31 +11568,6 @@ StackInterpreter >> snapshot: embedded [
 		ifFalse:
 			[self push: rcvr.
 			 self justActivateNewMethod]
-]
-
-{ #category : #'image save/restore' }
-StackInterpreter >> snapshotCleanUp [
-	"Clean up right before saving an image, garbage collecting, sweeping memory and:
-	* nilling out all fields of contexts above the stack pointer.
-	* flushing external primitives
-	* bereaving widowed contexts
-	* clearing the root bit of any object in the root table.
-	 By ensuring that all contexts are single in a snapshot (i.e. that no married contexts
-	 exist) we can maintain the invariant that a married or widowed context's frame
-	 reference (in its sender field) must point into the stack pages since no married or
-	 widowed contexts are present from older runs of the system."
-
-	objectMemory hasSpurMemoryManagerAPI
-		ifTrue: [objectMemory flushNewSpace]
-		ifFalse: [objectMemory incrementalGC].	"compact memory and compute the size of the memory actually in use"
-
-	"maximimize space for forwarding table"
-	objectMemory fullGC.
-
-	self bereaveAndNormalizeContextsAndFlushExternalPrimitives.
-
-	objectMemory hasSpurMemoryManagerAPI ifFalse:
-		[objectMemory clearRootsTable]
 ]
 
 { #category : #'debug printing' }
@@ -12426,13 +12380,14 @@ StackInterpreter >> voidLongRunningPrimitive: reason [
 ]
 
 { #category : #'frame access' }
-StackInterpreter >> voidVMStateForSnapshot [
-	"Make sure that all VM state that affects the heap contents is voided so that the heap is ready
-	 to be snapshotted. Answer the activeContext object that should be stored in the snapshot."
+StackInterpreter >> voidVMStateForSnapshotFlushingExternalPrimitivesIf: flushExtPrims [
+	"Make sure that all VM state that affects the heap contents is voided so that the heap is
+	 ready to be snapshotted.  If flushExtPrims is true, flush references to external
+	 primitives in methods.  Answer the activeContext that should be stored in the snapshot."
 	| activeContext |
 	<inline: false>
 	activeContext := self divorceAllFrames.
-	self bereaveAllMarriedContexts.
+	self bereaveAllMarriedContextsForSnapshotFlushingExternalPrimitivesIf: flushExtPrims.
 	^activeContext
 ]
 

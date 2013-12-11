@@ -418,6 +418,8 @@ SpurSegmentManager >> readHeapFromImageFile: f dataBytes: numBytes [
 				= (totalBytesRead - (numSegments * manager bridgeSize)).
 	"set freeOldSpaceStart now for adjustAllOopsBy:"
 	manager setFreeOldSpaceStart: newBase.
+	"we're done. nil firstSegmentSize for a subsequent snapshot."
+	firstSegmentSize := nil.
 	^totalBytesRead
 ]
 
@@ -451,7 +453,8 @@ SpurSegmentManager >> totalBytesInSegments [
 SpurSegmentManager >> writeImageToFile: aBinaryStream [
 	| total |
 	total := 0.
-	self assert: (segments at: numSegments - 1) segLimit = manager endOfMemory.
+	self assert: (manager endOfMemory = (segments at: numSegments - 1) segLimit
+				 or: [manager endOfMemory + manager bridgeSize = (segments at: numSegments - 1) segLimit]).
 	firstSegmentSize ifNotNil:
 		[self assert: firstSegmentSize = (segments at: 0) segSize].
 	0 to: numSegments - 1 do:
