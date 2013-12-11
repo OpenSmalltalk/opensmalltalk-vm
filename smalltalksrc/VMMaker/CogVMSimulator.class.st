@@ -2279,8 +2279,10 @@ CogVMSimulator >> openOn: fileName [
 CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 	"CogVMSimulator new openOn: 'clone.im' extraMemory: 100000"
 
-	| f version headerSize count heapSize oldBaseAddr bytesToShift swapBytes hdrNumStackPages
-	 hdrEdenBytes hdrCogCodeSize stackZoneSize methodCacheSize headerFlags primTraceLogSize firstSegSize hdrMaxExtSemTabSize |
+	| f version headerSize dataSize count oldBaseAddr bytesToShift swapBytes
+	  headerFlags firstSegSize heapSize
+	  hdrNumStackPages hdrEdenBytes hdrMaxExtSemTabSize
+	  hdrCogCodeSize stackZoneSize methodCacheSize primTraceLogSize |
 	"open image file and read the header"
 
 	["begin ensure block..."
@@ -2294,7 +2296,7 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 					ifTrue: [swapBytes := true]
 					ifFalse: [self error: 'incomaptible image format']].
 	headerSize := self getLongFromFile: f swap: swapBytes.
-	heapSize := self getLongFromFile: f swap: swapBytes.  "length of heap in file"
+	dataSize := self getLongFromFile: f swap: swapBytes.  "length of heap in file"
 	oldBaseAddr := self getLongFromFile: f swap: swapBytes.  "object memory base address of image"
 	objectMemory specialObjectsOop: (self getLongFromFile: f swap: swapBytes).
 	objectMemory lastHash: (self getLongFromFile: f swap: swapBytes).  "Should be loaded from, and saved to the image header"
@@ -2353,14 +2355,17 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 				+ methodCacheSize
 				+ primTraceLogSize
 				+ self rumpCStackSize) roundUpTo: objectMemory allocationUnit.
+	heapSize := dataSize
+				+ extraBytes
+				+ objectMemory newSpaceBytes
+				+ self interpreterAllocationReserveBytes
+				+ (objectMemory hasSpurMemoryManagerAPI
+					ifTrue: [headerSize]
+					ifFalse: [0]).
 	heapBase := objectMemory
 					setHeapBase: heapBase
-					memoryLimit:  heapBase
-									+ heapSize
-									+ objectMemory newSpaceBytes
-									+ self interpreterAllocationReserveBytes
-									+ extraBytes
-					endOfMemory: heapBase + heapSize.
+					memoryLimit:  heapBase + heapSize
+					endOfMemory: heapBase + dataSize.
 
 	self assert: cogCodeSize \\ 4 = 0.
 	self assert: objectMemory memoryLimit \\ 4 = 0.
@@ -2370,8 +2375,8 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 	objectMemory memory: ((cogit processor endianness == #little
 					ifTrue: [LittleEndianBitmap]
 					ifFalse: [Bitmap]) new: objectMemory memoryLimit // 4).
-	count := objectMemory readHeapFromImageFile: f dataBytes: heapSize.
-	count ~= heapSize ifTrue: [self halt].
+	count := objectMemory readHeapFromImageFile: f dataBytes: dataSize.
+	count ~= dataSize ifTrue: [self halt].
 	]
 		ensure: [f close].
 	self moveMethodCacheToMemoryAt: objectMemory cogCodeBase + cogCodeSize + stackZoneSize.
