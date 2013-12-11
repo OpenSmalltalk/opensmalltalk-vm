@@ -7000,7 +7000,7 @@ SpurMemoryManager >> printObjStackPage: objStackPage myIndex: myx pageType: page
 		myIndex: myx
 		tag: (isFirstPage ifTrue: ['head'] ifFalse: [isFreePage ifTrue: ['free'] ifFalse: ['next']]).
 	(isFirstPage or: [isNextPage]) ifTrue:
-		[coInterpreter tab; print: 'next: '; printHex: (self fetchPointer: ObjStackNextx ofObject: objStackPage).
+		[coInterpreter tab; print: 'topx: '; printNum: (self fetchPointer: ObjStackTopx ofObject: objStackPage); print: ' next: '; printHex: (self fetchPointer: ObjStackNextx ofObject: objStackPage).
 		 isFirstPage ifTrue:
 			[coInterpreter print: ' free: '; printHex: (self fetchPointer: ObjStackFreex ofObject: objStackPage)].
 		 coInterpreter cr].
@@ -8226,7 +8226,7 @@ SpurMemoryManager >> swizzleObjStackAt: objStackRootIndex [
 	 stackOrNil ~= 0] whileTrue:
 		[field := segmentManager swizzleObj: stackOrNil.
 		 self storePointer: ObjStackFreex ofObjStack: firstPage withValue: field.
-		 firstPage := stackOrNil].
+		 firstPage := field].
 	self assert: (self isValidObjStackAt: objStackRootIndex).
 	^self fetchPointer: objStackRootIndex ofObject: hiddenRootsObj
 ]
