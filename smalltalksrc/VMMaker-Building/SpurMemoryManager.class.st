@@ -4306,6 +4306,12 @@ SpurMemoryManager >> fullGCLock [
 	^0
 ]
 
+{ #category : #snapshot }
+SpurMemoryManager >> garbageCollectForSnapshot [
+	self flushNewSpace. "There is no place to put newSpace in the snapshot file."
+	self fullGC
+]
+
 { #category : #accessing }
 SpurMemoryManager >> gcStartUsecs [
 	^gcStartUsecs
@@ -5793,6 +5799,12 @@ SpurMemoryManager >> lowSpaceThreshold: threshold [
 { #category : #'gc - global' }
 SpurMemoryManager >> mapExtraRoots [
 	self assert: remapBufferCount = 0.
+	"1 to: remapBufferCount do:
+		[:i | | oop |
+		oop := remapBufferCount at: i.
+		((self isImmediate: oop) or: [self isFreeObject: oop]) ifFalse:
+			[(self shouldRemapObj: oop) ifTrue:
+				[remapBuffer at: i put: (self remapObj: oop)]]]."
 	1 to: extraRootCount do:
 		[:i | | oop |
 		oop := (extraRoots at: i) at: 0.
@@ -5814,6 +5826,7 @@ SpurMemoryManager >> markAccessibleObjects [
 	  Otherwise it will clear the trace flags of reached pages."
 	coInterpreter initStackPageGC.
 	self markAndTraceHiddenRoots.
+	self markAndTraceExtraRoots.
 	self assert: self validClassTableRootPages.
 	coInterpreter markAndTraceInterpreterOops: true.
 	self assert: self validObjStacks.
@@ -5944,6 +5957,22 @@ SpurMemoryManager >> markAndTraceClassOf: objOop [
 		[self setIsMarkedOf: classObj to: true.
 		 self markAndTraceClassOf: classObj.
 		 self push: classObj onObjStack: markStack]
+]
+
+{ #category : #'gc - global' }
+SpurMemoryManager >> markAndTraceExtraRoots [
+	| oop |
+	self assert: remapBufferCount = 0.
+	"1 to: remapBufferCount do:
+		[:i|
+		 oop := remapBuffer at: i.
+		 ((self isImmediate: oop) or: [self isFreeObject: oop]) ifFalse:
+			[self markAndTrace: oop]]."
+	1 to: extraRootCount do:
+		[:i|
+		oop := (extraRoots at: i) at: 0.
+		((self isImmediate: oop) or: [self isFreeObject: oop]) ifFalse:
+			[self markAndTrace: oop]]
 ]
 
 { #category : #'gc - global' }

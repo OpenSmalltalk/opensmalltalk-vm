@@ -538,9 +538,8 @@ NewObjectMemorySimulator >> storePointerUnchecked: index ofObject: oop withValue
 	self assert: oop >= self startOfMemory.
 	hdr := self baseHeader: oop.
 	fmt := self formatOfHeader: hdr.
-	thisContext sender selector ~~ #snapshotCleanUp ifTrue:
-		[self assert: ((fmt <= self lastPointerFormat or: [fmt >= self firstCompiledMethodFormat])
-					and: [index >= 0 and: [index < (self lengthOf: oop baseHeader: hdr format: fmt)]])].
+	self assert: ((fmt <= self lastPointerFormat or: [fmt >= self firstCompiledMethodFormat])
+				and: [index >= 0 and: [index < (self lengthOf: oop baseHeader: hdr format: fmt)]]).
 	^super storePointerUnchecked: index ofObject: oop withValue: valuePointer
 ]
 
