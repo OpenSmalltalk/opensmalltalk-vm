@@ -1116,7 +1116,7 @@ SpurMemoryManager >> allNewSpaceEntitiesDo: aBlock [
 	prevPrevObj := prevObj := nil.
 	"After a scavenge eden is empty, futureSpace is empty, and all newSpace objects are
 	  in pastSpace.  Objects are allocated in eden.  So enumerate only pastSpace and eden."
-	self assert: scavenger pastSpace start < scavenger eden start.
+	self assert: (self bootstrapping or: [scavenger pastSpace start < scavenger eden start]).
 	objOop := self objectStartingAt: scavenger pastSpace start.
 	limit := pastSpaceStart.
 	[self oop: objOop isLessThan: limit] whileTrue:
@@ -4179,6 +4179,8 @@ SpurMemoryManager >> freeTreeNodesDo: aBlock [
 	[| smallChild largeChild |
 	 smallChild := self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: treeNode.
 	 largeChild := self fetchPointer: self freeChunkLargerIndex ofFreeChunk: treeNode.
+	 self assert: (smallChild = 0 or: [treeNode = (self fetchPointer: self freeChunkParentIndex ofFreeChunk: smallChild)]).
+	 self assert: (largeChild = 0 or: [treeNode = (self fetchPointer: self freeChunkParentIndex ofFreeChunk: largeChild)]).
 	 "apply if the node has no children, or it has no large children and we're
 	  returning from the small child, or we're returning from the large child."
 	 ((smallChild = 0 and: [largeChild = 0])
@@ -6896,7 +6898,7 @@ SpurMemoryManager >> printFreeChunk: freeChunk [
 		print: ' bytes '; printNum: numBytes;
 		print: ' next '; printHexPtrnp: (self fetchPointer: self freeChunkNextIndex
 											ofFreeChunk: freeChunk).
-	numBytes / self allocationUnit > self numFreeLists ifTrue:
+	numBytes / self allocationUnit >= self numFreeLists ifTrue:
 		[coInterpreter
 			print: ' ^ '; printHexPtrnp: (self fetchPointer: self freeChunkParentIndex
 											ofFreeChunk: freeChunk);
@@ -6905,6 +6907,18 @@ SpurMemoryManager >> printFreeChunk: freeChunk [
 			print: ' > '; printHexPtrnp: (self fetchPointer: self freeChunkLargerIndex
 											ofFreeChunk: freeChunk)].
 	coInterpreter cr
+]
+
+{ #category : #'debug printing' }
+SpurMemoryManager >> printFreeList: chunkOrIndex [
+	<api>
+	| freeChunk |
+	(chunkOrIndex >= 0 and: [chunkOrIndex < self numFreeLists]) ifTrue:
+		[^self printFreeList: (freeLists at: chunkOrIndex)].
+	freeChunk := chunkOrIndex.
+	[freeChunk ~= 0] whileTrue:
+		[self printFreeChunk: freeChunk.
+		 freeChunk := self fetchPointer: self freeChunkNextIndex ofFreeChunk: freeChunk]
 ]
 
 { #category : #'debug printing' }
@@ -8197,10 +8211,10 @@ SpurMemoryManager >> swizzleObjStackAt: objStackRootIndex [
 	 index := (self fetchPointer: ObjStackTopx ofObject: stackOrNil) + ObjStackNextx.
 	 "swizzle fields including ObjStackNextx and leave field containing the next link."
 	 [field := self fetchPointer: index ofObject: stackOrNil.
-	  (self isImmediate: field) ifFalse:
+	  (field = 0 or: [self isImmediate: field]) ifFalse:
 		[field := segmentManager swizzleObj: field.
 		 self storePointer: ObjStackNextx ofObjStack: stackOrNil withValue: field].
-	  (index := index - 1) > ObjStackTopx] whileTrue.
+	  (index := index - 1) > ObjStackMyx] whileTrue.
 	 (stackOrNil := field) ~= 0] whileTrue.
 	[stackOrNil := self fetchPointer: ObjStackFreex ofObject: firstPage.
 	 stackOrNil ~= 0] whileTrue:
