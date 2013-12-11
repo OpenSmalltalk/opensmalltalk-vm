@@ -274,7 +274,8 @@ Spur32BitMMLESimulator >> isIntegerObject: oop [
 		primDigitBitShiftMagnitude:
 		externalInstVar:ofContext:
 		primitiveGrowMemoryByAtLeast
-		primitiveFileSetPosition) includes: sel) ifFalse:
+		primitiveFileSetPosition
+		bereaveAllMarriedContextsForSnapshotFlushingExternalPrimitivesIf:) includes: sel) ifFalse:
 		[self halt].
 	^super isIntegerObject: oop
 ]
