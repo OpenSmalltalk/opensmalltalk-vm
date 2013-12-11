@@ -4,8 +4,6 @@
 *   CONTENT: C support code for the threaded FFIPlugin
 *
 *   AUTHOR:  Eliot Miranda
-*   ADDRESS: Teleplace, Inc.
-*
 *
 *****************************************************************************/
 
