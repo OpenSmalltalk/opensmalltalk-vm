@@ -4,6 +4,45 @@ Class {
 	#category : #'VMMaker-Interpreter'
 }
 
+{ #category : #'frame access' }
+StackInterpreterPrimitives >> bereaveAllMarriedContextsForSnapshotFlushingExternalPrimitivesIf: flushExtPrims [
+	"Enumerate all contexts and convert married contexts to widowed contexts so
+	 that the snapshot contains only single contexts.  This allows the test for being
+	 married to avoid checking for a context's frame pointer being in bounds.  If
+	 flushExtPrims is true, flush references to external primitives in methods."
+	<asmLabel: false>
+	objectMemory allObjectsDo:
+		[:obj| | fmt |
+		fmt := objectMemory formatOf: obj.
+		(fmt = objectMemory indexablePointersFormat
+		  and: [objectMemory isContextNonImm: obj]) ifTrue:
+			[(self isMarriedOrWidowedContext: obj)
+				ifTrue: "The stack pages have already been discarded.  Any remaining married contexts are actually widows."
+					[self markContextAsDead: obj]
+				ifFalse:
+					[| decodedIP |
+					decodedIP := objectMemory fetchPointer: InstructionPointerIndex ofObject: obj.
+					((objectMemory isIntegerObject: decodedIP)
+					 and: [decodedIP signedIntFromLong < 0]) ifTrue:
+						[decodedIP := self mustMapMachineCodePC: (objectMemory integerValueOf: decodedIP)
+											context: obj.
+						 objectMemory storePointerUnchecked: InstructionPointerIndex ofObject: obj withValue: decodedIP]].
+			 "Fill slots beyond top of stack with nil"
+			 (self fetchStackPointerOf: obj) + CtxtTempFrameStart
+				to: (objectMemory numSlotsOf: obj) - 1
+				do: [:i |
+					objectMemory
+						storePointerUnchecked: i
+						ofObject: obj
+						withValue: objectMemory nilObject]].
+		 "Clean out external functions from compiled methods"
+		 (flushExtPrims
+		  and: [fmt >= objectMemory firstCompiledMethodFormat]) ifTrue:
+			["Its primitiveExternalCall"
+			 (self primitiveIndexOf: obj) = PrimitiveExternalCallIndex ifTrue:
+				[self flushExternalPrimitiveOf: obj]]]
+]
+
 { #category : #'primitive support' }
 StackInterpreterPrimitives >> cloneContext: aContext [ 
 	| sz cloned spouseFP sp |
@@ -1553,7 +1592,7 @@ StackInterpreterPrimitives >> primitiveVoidVMState [
 	"Void all internal VM state in the stack and machine code zones"
 	| activeContext |
 	self push: instructionPointer.
-	activeContext := self voidVMStateForSnapshot.
+	activeContext := self voidVMStateForSnapshotFlushingExternalPrimitivesIf: false.
 	self marryContextInNewStackPageAndInitializeInterpreterRegisters: activeContext
 ]
 
