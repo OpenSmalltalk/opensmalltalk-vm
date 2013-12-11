@@ -2885,9 +2885,10 @@ SpurMemoryManager >> countNumClassPagesPreSwizzle: bytesToShift [
 
 { #category : #snapshot }
 SpurMemoryManager >> defaultEdenBytes [
+	"Return the default amount of memory to allocate for the eden space.
+	 The actual value can be set via vmParameterAt: and/or a preference in the ini file."
+	<inline: false>
 	^2 * 1024 * 1024
-	+ (coInterpreter interpreterAllocationReserveBytes
-	    * self scavengerDenominator + self numSurvivorSpaces // self scavengerDenominator)
 ]
 
 { #category : #'free space' }
@@ -4701,7 +4702,7 @@ SpurMemoryManager >> initializeNewSpaceVariables [
 	freeStart := scavenger eden start.
 	pastSpaceStart := scavenger pastSpace start.
 	scavengeThreshold := scavenger eden limit
-							- (scavenger edenBytes / 64)
+							- (scavenger edenBytes // 64)
 							- coInterpreter interpreterAllocationReserveBytes.
 	newSpaceStart := scavenger pastSpace start min: scavenger futureSpace start.
 	self assert: newSpaceStart < scavenger eden start.
@@ -4789,7 +4790,7 @@ SpurMemoryManager >> initializePostBootstrap [
 	freeOldSpaceStart := freeStart.
 	freeStart := scavenger eden start.
 	pastSpaceStart := scavenger pastSpace start.
-	scavengeThreshold := scavenger eden limit - (scavenger edenBytes / 64)
+	scavengeThreshold := scavenger eden limit - (scavenger edenBytes // 64)
 ]
 
 { #category : #'gc - global' }
@@ -8173,15 +8174,20 @@ SpurMemoryManager >> sufficientSpaceToInstantiate: classObj indexableSize: index
 { #category : #snapshot }
 SpurMemoryManager >> swizzleFieldsOfFreeChunk: chunk [
 	<inline: true>
-	0 to: ((self bytesInObject: chunk) / self allocationUnit > self numFreeLists
-			ifTrue: [self freeChunkLargerIndex]
-			ifFalse: [self freeChunkNextIndex])
-	   do: [:index| | field |
-		field := self fetchPointer: index ofFreeChunk: chunk.
-		field ~= 0 ifTrue:
-			[self storePointerNoAssert: index
-				ofFreeChunk: chunk
-				withValue: (segmentManager swizzleObj: field)]]
+	| field |
+	field := self fetchPointer: self freeChunkNextIndex ofFreeChunk: chunk.
+	field ~= 0 ifTrue:
+		[self storePointerNoAssert: self freeChunkNextIndex
+			ofFreeChunk: chunk
+			withValue: (segmentManager swizzleObj: field)].
+	(self bytesInObject: chunk) / self allocationUnit >= self numFreeLists ifTrue:
+		[self freeChunkParentIndex to: self freeChunkLargerIndex do:
+			[:index|
+			 field := self fetchPointer: index ofFreeChunk: chunk.
+			 field ~= 0 ifTrue:
+				[self storePointerNoAssert: index
+					ofFreeChunk: chunk
+					withValue: (segmentManager swizzleObj: field)]]]
 ]
 
 { #category : #snapshot }
