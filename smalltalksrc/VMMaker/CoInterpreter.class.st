@@ -2588,29 +2588,6 @@ CoInterpreter >> encodedNativePCOf: mcpc cogMethod: cogMethod [
 ]
 
 { #category : #'frame access' }
-CoInterpreter >> ensureAllContextsHaveBytecodePCsOrAreBereaved [
-	"Enumerate all contexts preparing them for a snapshot.  Map all native pcs to bytecoded pcs.
-	 Convert widowed contexts to single contexts so that the snapshot contains only single contexts.
-	 This allows the being married test to avoid checking for a context's frame pointer being in bounds
-	 since all frame pointers must have been created in the current system and so be in bounds.
-	 Thanks to Greg Nuyens for this idea."
-	objectMemory allObjectsDo:
-		[:oop|
-		 (objectMemory isContextNonImm: oop) ifTrue:
-			[(self isMarriedOrWidowedContext: oop)
-				ifTrue: "The stack pages have already been discarded.  Any remaining married contexts are actually widows."
-					[self markContextAsDead: oop]
-				ifFalse:
-					[| decodedIP |
-					decodedIP := objectMemory fetchPointer: InstructionPointerIndex ofObject: oop.
-					((objectMemory isIntegerObject: decodedIP)
-					 and: [decodedIP signedIntFromLong < 0]) ifTrue:
-						[decodedIP := self mustMapMachineCodePC: (objectMemory integerValueOf: decodedIP)
-											context: oop.
-						 objectMemory storePointerUnchecked: InstructionPointerIndex ofObject: oop withValue: decodedIP]]]]
-]
-
-{ #category : #'frame access' }
 CoInterpreter >> ensureAllContextsWithMethodHaveBytecodePCs: methodObj [
 	"Map all native pcs to bytecoded pcs in all contexts on methodObj.
 	 Used to implement primitiveVoidVMStateForMethod."
@@ -6639,14 +6616,14 @@ CoInterpreter >> validStackPageBaseFrame: aPage [
 ]
 
 { #category : #'frame access' }
-CoInterpreter >> voidVMStateForSnapshot [
-	"Make sure that all VM state that affects the heap contents is voided so that the heap is ready
-	 to be snapshotted. Answer the activeContext object that should be stored in the snapshot."
+CoInterpreter >> voidVMStateForSnapshotFlushingExternalPrimitivesIf: flushExtPrims [
+	"Make sure that all VM state that affects the heap contents is voided so that the heap is
+	 ready to be snapshotted.  If flushExtPrims is true, flush references to external
+	 primitives in methods.  Answer the activeContext that should be stored in the snapshot."
 	<inline: false>
 	| activeContext |
 	instructionPointer := 0. "in case of code compactions."
-	activeContext := self divorceAllFrames.
-	self ensureAllContextsHaveBytecodePCsOrAreBereaved.
+	activeContext := super voidVMStateForSnapshotFlushingExternalPrimitivesIf: flushExtPrims.
 	cogit voidCogCompiledCode.
 	^activeContext
 ]

@@ -337,7 +337,7 @@ CoInterpreterPrimitives >> primitiveLongRunningPrimitiveSemaphore [
 	 slightly different code from here on in."
 	flushState ifTrue:
 		[self push: instructionPointer.
-		 activeContext := self voidVMStateForSnapshot.
+		 activeContext := self voidVMStateForSnapshotFlushingExternalPrimitivesIf: false.
 		 self marryContextInNewStackPageAndInitializeInterpreterRegisters: activeContext.
 		 self assert: (((self stackValue: 0) = objectMemory nilObject and: [longRunningPrimitiveCheckSemaphore isNil])
 				  or: [(self stackValue: 0) = longRunningPrimitiveCheckSemaphore
@@ -452,7 +452,7 @@ CoInterpreterPrimitives >> primitiveProfileSemaphore [
 	 and so generate slightly different code from here on in."
 	flushState ifTrue:
 		[self push: instructionPointer.
-		 activeContext := self voidVMStateForSnapshot.
+		 activeContext := self voidVMStateForSnapshotFlushingExternalPrimitivesIf: false.
 		 self marryContextInNewStackPageAndInitializeInterpreterRegisters: activeContext.
 		 self assert: (((self stackValue: 0) = objectMemory nilObject and: [profileSemaphore = objectMemory nilObject])
 				  or: [(self stackValue: 0) = profileSemaphore
@@ -781,7 +781,7 @@ CoInterpreterPrimitives >> primitiveVoidVMState [
 	 Override to jump to the interpreter because the machine code zone is now void."
 	| activeContext |
 	self push: instructionPointer.
-	activeContext := self voidVMStateForSnapshot.
+	activeContext := self voidVMStateForSnapshotFlushingExternalPrimitivesIf: false.
 	self marryContextInNewStackPageAndInitializeInterpreterRegisters: activeContext.
 	self siglong: reenterInterpreter jmp: ReturnToInterpreter
 	"NOTREACHED"
