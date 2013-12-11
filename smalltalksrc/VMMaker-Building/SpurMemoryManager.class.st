@@ -6022,7 +6022,7 @@ SpurMemoryManager >> markAndTraceObjStack: stackOrNil andContents: markAndTraceC
 	field ~= 0 ifTrue:
 		[self markAndTraceObjStack: field andContents: markAndTraceContents].
 	field := stackOrNil.
-	[field := self fetchPointer: ObjStackFreex ofObject: stackOrNil.
+	[field := self fetchPointer: ObjStackFreex ofObject: field.
 	 field ~= 0] whileTrue:
 		[self setIsMarkedOf: field to: true].
 	markAndTraceContents ifFalse:
