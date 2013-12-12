@@ -52,7 +52,9 @@ struct VirtualMachine* interpreterProxy;
 # error cannot determine image word size/object header size
 #endif
 
-#define BaseHeaderSize BytesPerOop
+#if !defined(BaseHeaderSize)
+# define BaseHeaderSize BytesPerOop
+#endif
  
 #ifdef _MSC_VER
 # define alloca _alloca
