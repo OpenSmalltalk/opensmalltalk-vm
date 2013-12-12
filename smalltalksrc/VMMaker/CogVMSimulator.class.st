@@ -786,7 +786,6 @@ CogVMSimulator >> ensureMultiThreadingOverridesAreUpToDate [
 		do: [:sel| | argNames desiredSource |
 			argNames := Parser new
 							initPattern: (mtInterpreterClass sourceCodeAt: sel)
-							notifying: nil
 							return: [:pattern| pattern second].
 			desiredSource := String streamContents:
 								[:str|
