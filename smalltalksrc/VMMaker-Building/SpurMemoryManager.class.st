@@ -1760,6 +1760,13 @@ SpurMemoryManager >> arrayFormat [
 	^2
 ]
 
+{ #category : #'simulation only' }
+SpurMemoryManager >> arrayValueOf: arrayOop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter arrayValueOf: arrayOop
+]
+
 { #category : #'growing/shrinking memory' }
 SpurMemoryManager >> assimilateNewSegment: segInfo [
 	"Update after adding a segment.
@@ -4320,6 +4327,13 @@ SpurMemoryManager >> gcStartUsecs [
 	^gcStartUsecs
 ]
 
+{ #category : #'simulation only' }
+SpurMemoryManager >> getThisSessionID [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter getThisSessionID
+]
+
 { #category : #'gc - global' }
 SpurMemoryManager >> globalGarbageCollect [
 	self runLeakCheckerForFullGC: true.
@@ -5464,7 +5478,7 @@ SpurMemoryManager >> isValidObjStackPage: objStackPage myIndex: myx [
 { #category : #'obj stacks' }
 SpurMemoryManager >> isValidObjStackPage: objStackPage myIndex: myx firstPage: isFirstPage [
 	"Answer if the obj stack at stackRootIndex is valid."
-	| freeOrNextPage index |
+	| page freeOrNextPage index |
 	<inline: false>
 	(self isValidObjStackPage: objStackPage myIndex: myx) ifFalse:
 		[^false].
@@ -5474,10 +5488,20 @@ SpurMemoryManager >> isValidObjStackPage: objStackPage myIndex: myx firstPage: i
 			[objStackInvalidBecause := 'free page on other than first page'.
 			 invalidObjStackPage := objStackPage.
 			 ^false].
+		 freeOrNextPage = (self fetchPointer: ObjStackNextx ofObject: objStackPage) ifTrue:
+			[objStackInvalidBecause := 'free page = next page'.
+			 invalidObjStackPage := freeOrNextPage.
+			^false].
 		 (self isValidObjStackPage: freeOrNextPage myIndex: myx) ifFalse:
 			[objStackInvalidBecause := self stretch: objStackInvalidBecause cat: ', on next page'.
 			^false].
-		 freeOrNextPage := self fetchPointer: ObjStackFreex ofObject: freeOrNextPage].
+		 page := self fetchPointer: ObjStackFreex ofObject: freeOrNextPage.
+		 (page = freeOrNextPage
+		  or: [page = objStackPage]) ifTrue:
+			[objStackInvalidBecause := 'circularity in free page list'.
+			 invalidObjStackPage := page.
+			^false].
+		 freeOrNextPage := page].
 	isFirstPage ifTrue:
 		[(myx between: self classTableRootSlots and: self classTableRootSlots + self hiddenRootSlots - 1) ifFalse:
 			[objStackInvalidBecause := 'myx out of range'.
@@ -5493,8 +5517,13 @@ SpurMemoryManager >> isValidObjStackPage: objStackPage myIndex: myx firstPage: i
 		 invalidObjStackPage := objStackPage.
 		 ^false].
 	freeOrNextPage := self fetchPointer: ObjStackNextx ofObject: objStackPage.
-	^freeOrNextPage = 0
-	  or: [self isValidObjStackPage: freeOrNextPage myIndex: myx firstPage: false]
+	freeOrNextPage = 0 ifTrue:
+		[^true].
+	freeOrNextPage = objStackPage ifTrue:
+		[objStackInvalidBecause := 'circularity in objStack page list'.
+		 invalidObjStackPage := objStackPage.
+		 ^false].
+	^self isValidObjStackPage: freeOrNextPage myIndex: myx firstPage: false
 ]
 
 { #category : #'object testing' }
@@ -6991,7 +7020,7 @@ SpurMemoryManager >> printObjStack: objStack [
 
 { #category : #'obj stacks' }
 SpurMemoryManager >> printObjStackPage: objStackPage myIndex: myx pageType: pageType [
-	| freeOrNextPage isFirstPage isNextPage isFreePage |
+	| freeOrNextPage page isFirstPage isNextPage isFreePage |
 	<inline: false>
 	isFirstPage := pageType = ObjStackMyx.
 	isNextPage := pageType = ObjStackNextx.
@@ -7004,10 +7033,16 @@ SpurMemoryManager >> printObjStackPage: objStackPage myIndex: myx pageType: page
 		 isFirstPage ifTrue:
 			[coInterpreter print: ' free: '; printHex: (self fetchPointer: ObjStackFreex ofObject: objStackPage)].
 		 coInterpreter cr].
-	freeOrNextPage := self fetchPointer: ObjStackFreex ofObject: objStackPage.
-	[freeOrNextPage ~= 0] whileTrue:
-		[self printObjStackPage: freeOrNextPage myIndex: myx pageType: ObjStackFreex.
-		 freeOrNextPage := self fetchPointer: ObjStackFreex ofObject: freeOrNextPage].
+	isFirstPage ifTrue:
+		[freeOrNextPage := self fetchPointer: ObjStackFreex ofObject: objStackPage.
+		 [freeOrNextPage ~= 0] whileTrue:
+			[self printObjStackPage: freeOrNextPage myIndex: myx pageType: ObjStackFreex.
+			 page := self fetchPointer: ObjStackFreex ofObject: freeOrNextPage.
+			 (page = freeOrNextPage
+			  or: [page = objStackPage]) ifTrue:
+				[coInterpreter print: 'circularity in free page list!!'; cr.
+				 page := 0].
+			 freeOrNextPage := page]].
 	freeOrNextPage := self fetchPointer: ObjStackNextx ofObject: objStackPage.
 	freeOrNextPage ~= 0 ifTrue:
 		[self printObjStackPage: freeOrNextPage myIndex: myx pageType: ObjStackNextx]
@@ -8205,7 +8240,7 @@ SpurMemoryManager >> swizzleFieldsOfObject: oop [
 { #category : #'obj stacks' }
 SpurMemoryManager >> swizzleObjStackAt: objStackRootIndex [
 	"On load, swizzle the pointers in an obj stack. Answer the obj stack's oop."
-	| firstPage stackOrNil index field |
+	| firstPage page stackOrNil index field |
 	firstPage := stackOrNil := self fetchPointer: objStackRootIndex ofObject: hiddenRootsObj.
 	stackOrNil = nilObj ifTrue:
 		[^stackOrNil].
@@ -8219,14 +8254,21 @@ SpurMemoryManager >> swizzleObjStackAt: objStackRootIndex [
 	 [field := self fetchPointer: index ofObject: stackOrNil.
 	  (field = 0 or: [self isImmediate: field]) ifFalse:
 		[field := segmentManager swizzleObj: field.
-		 self storePointer: ObjStackNextx ofObjStack: stackOrNil withValue: field].
+		 self storePointer: index ofObjStack: stackOrNil withValue: field].
 	  (index := index - 1) > ObjStackMyx] whileTrue.
 	 (stackOrNil := field) ~= 0] whileTrue.
-	[stackOrNil := self fetchPointer: ObjStackFreex ofObject: firstPage.
-	 stackOrNil ~= 0] whileTrue:
-		[field := segmentManager swizzleObj: stackOrNil.
-		 self storePointer: ObjStackFreex ofObjStack: firstPage withValue: field.
-		 firstPage := field].
+	(stackOrNil := self fetchPointer: ObjStackFreex ofObject: firstPage) ~=  0 ifTrue:
+		[[page := self fetchPointer: ObjStackFreex ofObject: stackOrNil.
+		 page ~= 0] whileTrue:
+			[field := segmentManager swizzleObj: page.
+			 self storePointer: ObjStackFreex ofObjStack: stackOrNil withValue: field.
+			 stackOrNil := field]].
+	(stackOrNil := self fetchPointer: ObjStackNextx ofObject: firstPage) ~= 0 ifTrue:
+		[[page := self fetchPointer: ObjStackNextx ofObject: stackOrNil.
+		 page ~= 0] whileTrue:
+			[field := segmentManager swizzleObj: page.
+			 self storePointer: ObjStackNextx ofObjStack: stackOrNil withValue: field.
+			 stackOrNil := field]].
 	self assert: (self isValidObjStackAt: objStackRootIndex).
 	^self fetchPointer: objStackRootIndex ofObject: hiddenRootsObj
 ]

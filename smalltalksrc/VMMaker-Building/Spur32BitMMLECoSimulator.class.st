@@ -300,7 +300,8 @@ Spur32BitMMLECoSimulator >> isIntegerObject: oop [
 		cogMethodDoesntLookKosher:
 		shortPrintOop:
 		primitiveSizeInBytesOfInstance
-		bereaveAllMarriedContextsForSnapshotFlushingExternalPrimitivesIf:) includes: sel) ifFalse:
+		bereaveAllMarriedContextsForSnapshotFlushingExternalPrimitivesIf:
+		primitiveForwardSignalToSemaphore) includes: sel) ifFalse:
 		[self halt].
 	^super isIntegerObject: oop
 ]

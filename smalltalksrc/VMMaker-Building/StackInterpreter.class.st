@@ -1804,8 +1804,7 @@ StackInterpreter >> arrayValueOf: arrayOop [
 	"Note: May be called by translated primitive code."
 
 	<returnTypeC: #'void *'>
-	((objectMemory isNonIntegerObject: arrayOop)
-	 and: [objectMemory isWordsOrBytes: arrayOop]) ifTrue:
+	(objectMemory isWordsOrBytes: arrayOop) ifTrue:
 		[^self cCoerceSimple: (self pointerForOop: arrayOop + BaseHeaderSize) to: #'void *'].
 	self primitiveFail
 ]
