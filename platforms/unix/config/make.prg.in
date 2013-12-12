@@ -2,7 +2,7 @@
 # 
 # Author: Ian.Piumarta@inria.fr
 # 
-# Last edited: Thu Jan 21 14:59:38 PST 2010 by eliot (support for .cpp)
+# Last edited: Thu Dec 12 10:36:03 PST 2013 by eliot (eliminate -R from LINK)
 
 o		= .o
 a		= .a
@@ -16,5 +16,5 @@ COMPILE.cpp	= $(CXX) $(CXXFLAGS) $(XCFLAGS) \
 		  $(LDFLAGS) $(XLDFLAGS) -export-dynamic -c -o
 LINK		= $(LIBTOOL) --mode=link \
 		  $(CC) $(CFLAGS) $(XCFLAGS) \
-		  $(LDFLAGS) $(XLDFLAGS) -export-dynamic -R$(libdir) -o
+		  $(LDFLAGS) $(XLDFLAGS) -export-dynamic -o
 RANLIB		= :
