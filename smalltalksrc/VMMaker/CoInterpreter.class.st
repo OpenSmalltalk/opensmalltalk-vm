@@ -677,17 +677,24 @@ CoInterpreter >> activateNewMethod [
 
 { #category : #'lazy become' }
 CoInterpreter >> actuallyFollowNecessaryForwardingInMethod: methodObj [
-	"To avoid any chance of a forwarded object during super sends we follow the
-	 methodClassAssociation.  The forwarded object send fault only copes with
-	 normal sends to instances."
-	| cogMethod header |
+	"To avoid any chance of a forwarded object during super sends
+	 we follow the methodClassAssociation.  The forwarded object
+	 send fault only copes with normal sends to instances."
+	| cogMethod header litCount |
 	<var: #cogMethod type: #'CogMethod *'>
-	super actuallyFollowNecessaryForwardingInMethod: methodObj.
 	header := self rawHeaderOf: methodObj.
 	(self isCogMethodReference: header) ifTrue:
 		[cogMethod := self cCoerceSimple: header to: #'CogMethod *'.
-		 cogMethod cmUsesMethodClass ifTrue:
-			[cogit followForwardedLiteralsIn: cogMethod]]
+		 "If the method class is not used we can avoid the forwarding
+		  check for both the cogMehod and the bytecoded method."
+		 cogMethod cmUsesMethodClass ifFalse:
+			[^self].
+		 cogit followForwardedLiteralsIn: cogMethod.
+		 header := cogMethod methodHeader].
+	litCount := self literalCountOfHeader: header. "Slang super expansion limitation"
+	super
+		actuallyFollowNecessaryForwardingInMethod: methodObj
+		literalCount: litCount
 ]
 
 { #category : #'method lookup cache' }
@@ -5737,7 +5744,7 @@ CoInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imag
 						+ self interpreterAllocationReserveBytes.
 	heapSize             :=  cogCodeSize "no need to include the stackZone; this is alloca'ed"
 						+ desiredHeapSize
-						"+ edenBytes" "don't include edenBytes; this is part of the heap and so part of desiredHeapSize"
+						+ objectMemory newSpaceBytes
 						+ self interpreterAllocationReserveBytes.
 	heapSize < minimumMemory ifTrue:
 		[self insufficientMemorySpecifiedError].
@@ -5752,7 +5759,7 @@ CoInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imag
 
 	heapBase := objectMemory
 					setHeapBase: objectMemory memory + cogCodeSize
-					memoryLimit: objectMemory memory + cogCodeSize + heapSize
+					memoryLimit: objectMemory memory + heapSize
 					endOfMemory: objectMemory memory + cogCodeSize + dataSize.
 
 	"position file after the header"
