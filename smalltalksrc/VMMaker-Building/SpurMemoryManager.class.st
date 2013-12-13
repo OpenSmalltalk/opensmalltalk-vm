@@ -3708,18 +3708,22 @@ SpurMemoryManager >> firstIndexableField: objOop [
 	| fmt classFormat |
 	<returnTypeC: #'void *'>
 	fmt := self formatOf: objOop.
-	fmt <= self lastPointerFormat ifTrue: "pointer; may need to delve into the class format word"
-		[(fmt between: self indexablePointersFormat and: self weakArrayFormat) ifTrue:
+	fmt <= self weakArrayFormat ifTrue:
+		[fmt = self arrayFormat ifTrue: "array starts at 0."
+			[^self pointerForOop: objOop + self baseHeaderSize].
+		 fmt >= self indexablePointersFormat ifTrue: "indexable with inst vars; need to delve into the class format word"
 			[classFormat := self formatOfClass: (self fetchClassOfNonImm: objOop).
 			 ^self pointerForOop: objOop
 								+ self baseHeaderSize
 								+ ((self fixedFieldsOfClassFormat: classFormat) << self wordSize)].
-		^self pointerForOop: objOop
-							+ self baseHeaderSize
-							+ ((self numSlotsOf: objOop) << self wordSize)].
+		 "otherwise not indexable"
+		 ^0].
 	"All bit objects, and indeed CompiledMethod, though this is a non-no, start at 0"
-	self assert: fmt < self firstCompiledMethodFormat.
-	^self pointerForOop: objOop + self baseHeaderSize
+	(fmt >= self sixtyFourBitIndexableFormat
+	 and: [fmt < self firstCompiledMethodFormat]) ifTrue:
+		[^self pointerForOop: objOop + self baseHeaderSize].
+	"otherwise not indexable"
+	^0
 ]
 
 { #category : #'header formats' }
