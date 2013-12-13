@@ -1015,6 +1015,18 @@ CogObjectRepresentationFor32BitSpur >> getInlineCacheClassTagFrom: sourceReg int
 	 objects of different classes.  In Spur this is either the tags for immediates, (with
 	 1 & 3 collapsed to 1 for SmallIntegers, and 2 collapsed to 0 for Characters), or
 	 the receiver's classIndex.  Generate something like this:
+		Lentry:
+			movl rSource, rDest
+			andl $0x3, rDest
+			jz LnotImm
+			andl $1, rDest
+			j Lcmp
+		LnotImm:
+			movl 0(%edx), rDest
+			andl $0x3fffff, rDest
+		Lcmp:
+	 At least on a 2.2GHz Intel Core i7 it is slightly faster,
+	 136m sends/sec vs 130m sends/sec for nfib in tinyBenchmarks, than
 		Limm:
 			andl $0x1, rDest
 			j Lcmp
@@ -1024,26 +1036,25 @@ CogObjectRepresentationFor32BitSpur >> getInlineCacheClassTagFrom: sourceReg int
 			jnz Limm
 			movl 0(%edx), rDest
 			andl $0x3fffff, rDest
-		Lcmp
+		Lcmp:
 	"
-	| immLabel entryLabel jumpCompare |
-	<var: #immLabel type: #'AbstractInstruction *'>
+	| jumpNotImm entryLabel jumpCompare |
+	<var: #jumpNotImm type: #'AbstractInstruction *'>
 	<var: #entryLabel type: #'AbstractInstruction *'>
 	<var: #jumpCompare type: #'AbstractInstruction *'>
-	cogit AlignmentNops: BytesPerWord.
-	immLabel := cogit Label.
-	cogit AndCq: 1 R: destReg.
-	jumpCompare := cogit Jump: 0.
-	cogit AlignmentNops: BytesPerWord.
+	cogit AlignmentNops: (BytesPerWord max: 8).
 	entryLabel := cogit Label.
 	cogit MoveR: sourceReg R: destReg.
 	cogit AndCq: objectMemory tagMask R: destReg.
-	cogit JumpNonZero: immLabel.
-	self flag: #endianness.
+	jumpNotImm := cogit JumpZero: 0.
+	cogit AndCq: 1 R: destReg.
+	jumpCompare := cogit Jump: 0.
 	"Get least significant half of header word in destReg"
-	cogit MoveMw: 0 r: sourceReg R: destReg.
-	cogit AndCq: objectMemory classIndexMask R: destReg.
-	jumpCompare jmpTarget: cogit Label.
+	self flag: #endianness.
+	jumpNotImm jmpTarget:
+		(cogit MoveMw: 0 r: sourceReg R: destReg).
+	jumpCompare jmpTarget:
+		(cogit AndCq: objectMemory classIndexMask R: destReg).
 	^entryLabel
 ]
 
