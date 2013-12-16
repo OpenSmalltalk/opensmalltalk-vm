@@ -35,10 +35,14 @@ static usqInt	memoryAllocationBase;
 static int	    pageSize = 0;
 static unsigned int pageMask = 0;
 
-usqInt	sqGetAvailableMemory() {
+#define roundDownToPage(v) ((v)&pageMask)
+#define roundUpToPage(v) (((v)+pageSize-1)&pageMask)
 
+usqInt
+sqGetAvailableMemory()
+{
 	/******
-	  Note: 	    
+	  Note:  (Except Spur)
 	    For os-x this doesn't matter we just mmap 512MB for the image, and 
 	    the application allocates more out of the 4GB address for VM logic. 
 	******/
@@ -46,52 +50,76 @@ usqInt	sqGetAvailableMemory() {
 	return gMaxHeapSize >= 0xFFFFFFFFULL ? 0xFFFFFFFF : gMaxHeapSize;
 }
 
-usqInt sqAllocateMemoryMac(sqInt minHeapSize, sqInt desiredHeapSize) {
+usqInt
+sqAllocateMemoryMac(sqInt desiredHeapSize, sqInt minHeapSize)
+{
     void * debug, *actually;
-	#pragma unused(minHeapSize,desiredHeapSize)
-     
+#if SPURVM
+	pageSize= getpagesize();
+	pageMask= ~(pageSize - 1);
+
+    gHeapSize = roundUpToPage(desiredHeapSize);
+    debug = mmap(NULL, gHeapSize,PROT_READ|PROT_WRITE,MAP_ANON|MAP_SHARED,-1,0);
+#else
+# pragma unused(minHeapSize,desiredHeapSize)
+
 	pageSize= getpagesize();
 	pageMask= ~(pageSize - 1);
     gHeapSize = gMaxHeapSize;
     debug = mmap( NULL, gMaxHeapSize+pageSize, PROT_READ | PROT_WRITE, MAP_ANON | MAP_SHARED,-1,0);
-    //debug = mmap( /*2147483648U-512*1024*1024*/
-	//			3221225472U, gMaxHeapSize+pageSize , PROT_READ | PROT_WRITE, MAP_ANON | MAP_SHARED,-1,0);
-	
-    if(debug == MAP_FAILED)
+#endif /* SPURVM */
+
+    if (debug == MAP_FAILED)
         return 0;
 	mmapWasAt = debug;
 	actually = debug+pageSize-1;
 	actually = (void*) (((usqInt) actually) & pageMask);
-	
+
 	return memoryAllocationBase = (usqInt) actually;
 }
 
-sqInt sqGrowMemoryBy(sqInt memoryLimit, sqInt delta) {
+#if !SPURVM
+sqInt
+sqGrowMemoryBy(sqInt memoryLimit, sqInt delta)
+{
     if ((usqInt) memoryLimit + (usqInt) delta - memoryAllocationBase > gMaxHeapSize)
         return memoryLimit;
-   
+
     gHeapSize += delta;
     return memoryLimit + delta;
 }
 
-sqInt sqShrinkMemoryBy(sqInt memoryLimit, sqInt delta) {
+sqInt
+sqShrinkMemoryBy(sqInt memoryLimit, sqInt delta)
+{
     return sqGrowMemoryBy(memoryLimit,0-delta);
 }
 
-sqInt sqMemoryExtraBytesLeft(int flag) {
+sqInt
+sqMemoryExtraBytesLeft(int flag)
+{
     return flag ? gMaxHeapSize - gHeapSize : 0;
 }
+#endif /* ! SPURVM */
 
-void sqMacMemoryFree() {
+void
+sqMacMemoryFree()
+{
 	if (!memoryAllocationBase) 
 		return;
+#if SPURVM
+	/* N.B. This is a hack for an unsupported configuration (NSPlugin(*/
+	/* If we really need to free memry we need to unmap all segments. */
+	/* But right now this is called only on exit and so is unnecessary. */
+	if (munmap((void *)memoryAllocationBase,gHeapSize))
+		perror("munmap");
+#else
 	if (munmap((void *)memoryAllocationBase,gMaxHeapSize+pageSize))
 		perror("munmap");
+#endif
 	memoryAllocationBase = 0;
 }
 
-#define roundDownToPage(v) ((v)&pageMask)
-#define roundUpToPage(v) (((v)+pageSize-1)&pageMask)
 #if COGVM
 void
 sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
