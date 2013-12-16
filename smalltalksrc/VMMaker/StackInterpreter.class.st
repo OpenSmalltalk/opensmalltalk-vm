@@ -4059,7 +4059,9 @@ StackInterpreter >> divorceAllFrames [
 	<var: #aPage type: #'StackPage *'>
 	stackPage ~= 0 ifTrue:
 		[self externalWriteBackHeadFramePointers].
-	activeContext := self ensureFrameIsMarried: framePointer SP: stackPointer.
+	activeContext := self
+						ensureFrameIsMarried: framePointer
+						SP: stackPointer + BytesPerWord.
 	0 to: numStackPages - 1 do:
 		[:i| | aPage |
 		aPage := stackPages stackPageAt: i.
