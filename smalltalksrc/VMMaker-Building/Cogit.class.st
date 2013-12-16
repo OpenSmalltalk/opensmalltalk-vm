@@ -2769,10 +2769,14 @@ Cogit >> checkIfValidObjectRef: annotation pc: mcpc cogMethod: cogMethod [
 	(self isSendAnnotation: annotation) ifTrue:
 		[| entryPoint selectorOrCacheTag offset sendTable |
 		 entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
-		 self
-			offsetAndSendTableFor: entryPoint
-			annotation: annotation
-			into: [:off :table| offset := off. sendTable := table].
+		 entryPoint <= methodZoneBase
+			ifTrue:
+				[offset := entryPoint]
+			ifFalse:
+				[self
+					offsetAndSendTableFor: entryPoint
+					annotation: annotation
+					into: [:off :table| offset := off. sendTable := table]].
 		 selectorOrCacheTag := backEnd inlineCacheTagAt: mcpc asInteger.
 		 (entryPoint > methodZoneBase
 		  and: [offset ~= cmNoCheckEntryOffset
