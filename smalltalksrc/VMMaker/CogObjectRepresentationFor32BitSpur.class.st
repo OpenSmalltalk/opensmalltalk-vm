@@ -1038,23 +1038,41 @@ CogObjectRepresentationFor32BitSpur >> getInlineCacheClassTagFrom: sourceReg int
 			andl $0x3fffff, rDest
 		Lcmp:
 	"
-	| jumpNotImm entryLabel jumpCompare |
+	| immLabel jumpNotImm entryLabel jumpCompare |
+	<var: #immLabel type: #'AbstractInstruction *'>
 	<var: #jumpNotImm type: #'AbstractInstruction *'>
 	<var: #entryLabel type: #'AbstractInstruction *'>
 	<var: #jumpCompare type: #'AbstractInstruction *'>
-	cogit AlignmentNops: (BytesPerWord max: 8).
-	entryLabel := cogit Label.
-	cogit MoveR: sourceReg R: destReg.
-	cogit AndCq: objectMemory tagMask R: destReg.
-	jumpNotImm := cogit JumpZero: 0.
-	cogit AndCq: 1 R: destReg.
-	jumpCompare := cogit Jump: 0.
-	"Get least significant half of header word in destReg"
-	self flag: #endianness.
-	jumpNotImm jmpTarget:
-		(cogit MoveMw: 0 r: sourceReg R: destReg).
-	jumpCompare jmpTarget:
-		(cogit AndCq: objectMemory classIndexMask R: destReg).
+	true
+		ifTrue:
+			[cogit AlignmentNops: (BytesPerWord max: 8).
+			 entryLabel := cogit Label.
+			 cogit MoveR: sourceReg R: destReg.
+			 cogit AndCq: objectMemory tagMask R: destReg.
+			 jumpNotImm := cogit JumpZero: 0.
+			 cogit AndCq: 1 R: destReg.
+			 jumpCompare := cogit Jump: 0.
+			 "Get least significant half of header word in destReg"
+			 self flag: #endianness.
+			 jumpNotImm jmpTarget:
+				(cogit MoveMw: 0 r: sourceReg R: destReg).
+			 jumpCompare jmpTarget:
+				(cogit AndCq: objectMemory classIndexMask R: destReg)]
+		ifFalse:
+			[cogit AlignmentNops: BytesPerWord.
+			 immLabel := cogit Label.
+			 cogit AndCq: 1 R: destReg.
+			 jumpCompare := cogit Jump: 0.
+			 cogit AlignmentNops: BytesPerWord.
+			 entryLabel := cogit Label.
+			 cogit MoveR: sourceReg R: destReg.
+			 cogit AndCq: objectMemory tagMask R: destReg.
+			 cogit JumpNonZero: immLabel.
+			 self flag: #endianness.
+			 "Get least significant half of header word in destReg"
+			 cogit MoveMw: 0 r: sourceReg R: destReg.
+			 cogit AndCq: objectMemory classIndexMask R: destReg.
+			 jumpCompare jmpTarget: cogit Label].
 	^entryLabel
 ]
 
