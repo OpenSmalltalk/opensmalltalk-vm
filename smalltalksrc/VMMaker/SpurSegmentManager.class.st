@@ -254,7 +254,8 @@ SpurSegmentManager >> firstSegmentSize: firstSegSize [
 
 { #category : #'spur bootstrap' }
 SpurSegmentManager >> initForBootstrap [
-	self allocateOrExtendSegmentInfos
+	numSegInfos = 0 ifTrue:
+		[self allocateOrExtendSegmentInfos]
 ]
 
 { #category : #initialization }
