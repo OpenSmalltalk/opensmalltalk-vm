@@ -382,7 +382,7 @@ Spur32BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 		otherwise: ["some Squeak images include funky fixed subclasses of abstract variable
 					 superclasses. e.g. DirectoryEntry as a subclass of ArrayedCollection.
 					 Allow fixed classes to be instantiated here iff nElements = 0."
-					 (nElements ~= 0 or: [instSpec >= self sixtyFourBitIndexableFormat]) ifTrue:
+					 (nElements ~= 0 or: [instSpec > self lastPointerFormat]) ifTrue:
 						[^nil].
 					 numSlots := self fixedFieldsOfClassFormat: classFormat]. "non-indexable"
 	classIndex := self ensureBehaviorHash: classObj.
