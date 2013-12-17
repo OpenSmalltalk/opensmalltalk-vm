@@ -1315,6 +1315,9 @@ SpurBootstrap >> newClassFormatFor: oldClassObj [
 	"OLD: 		<2 bits=instSize//64><5 bits=cClass><4 bits=instSpec><6 bits=instSize\\64><1 bit=0>
 	 NEW: 		<5 bits inst spec><16 bits inst size>"
 	| oldFormat instSize newInstSpec |
+	((oldInterpreter classNameOf: oldClassObj Is: 'SmallInteger')
+	 or: [oldInterpreter classNameOf: oldClassObj Is: 'Character']) ifTrue:
+		[^newHeap integerObjectOf: newHeap instSpecForImmediateClasses << 16].
 	oldFormat := oldHeap formatOfClass: oldClassObj. "N.B. SmallInteger with tag bit cleared"
 	oldFormat := oldFormat >> 1.
 	instSize := ((oldFormat bitShift: -10) bitAnd: 16rC0) + ((oldFormat bitShift: -1) bitAnd: 16r3F) - 1.
@@ -1383,6 +1386,7 @@ SpurBootstrap >> on: imageName [
 		stackSize: 1024 * 1024
 		codeSize: 0.
 	newHeap setCheckForLeaks: 15 - 6. "don't check become; or newSpace; soooo many rehashes in bootstrap"
+	newHeap bootstrapping: true.
 	self initMaps
 ]
 
@@ -1564,7 +1568,7 @@ SpurBootstrap >> saveTransformedImage [
 { #category : #'bootstrap image' }
 SpurBootstrap >> scavengeImage [
 	"Scavenge the image to get it into a simpler state."
-	newHeap coInterpreter voidVMStateForSnapshot.
+	newHeap coInterpreter voidVMStateForSnapshotFlushingExternalPrimitivesIf: false.
 	newHeap flushNewSpace
 ]
 
@@ -1694,7 +1698,7 @@ SpurBootstrap >> withExecutableInterpreter: sim do: aBlock [
 		internalPush: sim localIP;
 		externalizeIPandSP.
 	"now undo the execution state"
-	finalContext := sim voidVMStateForSnapshot.
+	finalContext := sim voidVMStateForSnapshotFlushingExternalPrimitivesIf: false.
 	self assert: initialContext = finalContext.
 	self assert: sim localIP = savedpc.
 	sim objectMemory
@@ -1757,7 +1761,7 @@ SpurBootstrap >> writeSnapshotOfTransformedImageAs: imageFileName [
 	heap segmentManager initializeFromFreeChunks: (barriers sort collect: [:b| heap objectStartingAt: b]).
 	heap checkFreeSpace.
 	heap runLeakCheckerForFullGC: true.
-	sim bereaveAndNormalizeContextsAndFlushExternalPrimitives.
+	sim bereaveAllMarriedContextsForSnapshotFlushingExternalPrimitivesIf: true.
 	sim imageName: imageFileName.
 	sim writeImageFileIO
 ]
