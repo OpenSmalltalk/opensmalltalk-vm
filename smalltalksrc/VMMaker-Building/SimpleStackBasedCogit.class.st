@@ -521,7 +521,7 @@ SimpleStackBasedCogit >> ceShortCutTraceBlockActivation: aProcessorSimulationTra
 { #category : #'simulation only' }
 SimpleStackBasedCogit >> ceShortCutTraceLinkedSend: aProcessorSimulationTrap [
 	self shortcutTrampoline: aProcessorSimulationTrap
-		to: [coInterpreter ceTraceLinkedSend: (processor registerAt: (methodLabel concreteRegister: ReceiverResultReg))]
+		to: [coInterpreter ceTraceLinkedSend: (processor registerAt: (backEnd concreteRegister: ReceiverResultReg))]
 ]
 
 { #category : #'simulation only' }
@@ -529,8 +529,8 @@ SimpleStackBasedCogit >> ceShortCutTraceStore: aProcessorSimulationTrap [
 	<doNotGenerate>
 	self shortcutTrampoline: aProcessorSimulationTrap
 		to: [coInterpreter
-				ceTraceStoreOf: (processor registerAt: (methodLabel concreteRegister: ClassReg))
-				into: (processor registerAt: (methodLabel concreteRegister: ReceiverResultReg))]
+				ceTraceStoreOf: (processor registerAt: (backEnd concreteRegister: ClassReg))
+				into: (processor registerAt: (backEnd concreteRegister: ReceiverResultReg))]
 ]
 
 { #category : #'compile abstract instructions' }
