@@ -4,62 +4,6 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
-{ #category : #'in-line cacheing' }
-CogObjectRepresentationFor32BitSpur >> entryCodeForMethodClass: methodClassOrNil sendMissCall: theSendMissCall [
-	"Generate the method-entry code.  Extract the inline cache tag for the object
-	 in ReceiverResultReg into TempReg and compare it against ClassReg. The inline
-	 cache tag for a given object is the value loaded in inline caches to distinguish
-	 objects of different classes.  In Spur this is either the tags for immediates, (with
-	 1 & 3 collapsed to 1 for SmallIntegers, and 2 collapsed to 0 for Characters), or
-	 the receiver's classIndex.  Try and special-case sends to immediates and sends
-	 to non-immediates."
-	<var: #sendMissCall type: #'AbstractInstruction *'>
-	| entryLabel characterClass smallIntegerClass |
-	<var: #entryLabel type: #'AbstractInstruction *'>
-	"special cases"
-	methodClassOrNil ~= objectMemory nilObject ifTrue:
-		[characterClass := objectMemory classCharacter.
-		 smallIntegerClass := objectMemory classSmallInteger.
-
-		 (methodClassOrNil = characterClass
-		  or: [methodClassOrNil = smallIntegerClass]) ifTrue:
-			["methodClass is an immediate class.  immediate classes can't
-			  have subclasses so test for the immediate tag directly."
-			 cogit AlignmentNops: (BytesPerWord max: self entryAlignment).
-			 entryLabel := cogit Label.
-			 cogit MoveR: ReceiverResultReg R: TempReg.
-			 cogit AndCq: objectMemory tagMask R: TempReg.
-			 cogit CmpCq: (methodClassOrNil = characterClass
-								ifTrue: [objectMemory characterTag]
-								ifFalse: [objectMemory smallIntegerTag])
-					R: TempReg.
-			 cogit JumpNonZero: theSendMissCall.
-			 cogit AlignmentNopsTo: cogit noCheckEntryOffset from: cogit methodLabel.
-			 ^entryLabel].
-
-		 (self methodClass: methodClassOrNil isSuperclassOf: characterClass or: smallIntegerClass) ifFalse:
-			["methodClass can't have immediate general instances, so fail on immediate."
-			 cogit AlignmentNops: (BytesPerWord max: self entryAlignment).
-			 entryLabel := cogit Label.
-			 cogit MoveR: ReceiverResultReg R: TempReg.
-			 cogit AndCq: objectMemory tagMask R: TempReg.
-			 cogit JumpNonZero: theSendMissCall.
-			 self flag: #endianness.
-			 "Get least significant half of header word in destReg"
-			 cogit MoveMw: 0 r: ReceiverResultReg R: TempReg.
-			 cogit AndCq: objectMemory classIndexMask R: TempReg.
-			 cogit CmpR: ClassReg R: TempReg.
-			 cogit JumpNonZero: theSendMissCall.
-			 cogit AlignmentNopsTo: cogit noCheckEntryOffset from: cogit methodLabel.
-			 ^entryLabel]].
-
-	"generic case, could be either immediate or non-immediate."
-	entryLabel := self getInlineCacheClassTagFrom: ReceiverResultReg into: TempReg.
-	cogit CmpR: ClassReg R: TempReg.
-	cogit JumpNonZero: theSendMissCall.
-	^entryLabel
-]
-
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationFor32BitSpur >> genAddSmallIntegerTagsTo: aRegister [
 	cogit AddCq: 1 R: aRegister.
@@ -1071,18 +1015,6 @@ CogObjectRepresentationFor32BitSpur >> getInlineCacheClassTagFrom: sourceReg int
 	 objects of different classes.  In Spur this is either the tags for immediates, (with
 	 1 & 3 collapsed to 1 for SmallIntegers, and 2 collapsed to 0 for Characters), or
 	 the receiver's classIndex.  Generate something like this:
-		Lentry:
-			movl rSource, rDest
-			andl $0x3, rDest
-			jz LnotImm
-			andl $1, rDest
-			j Lcmp
-		LnotImm:
-			movl 0(%edx), rDest
-			andl $0x3fffff, rDest
-		Lcmp:
-	 At least on a 2.2GHz Intel Core i7 it is slightly faster,
-	 136m sends/sec vs 130m sends/sec for nfib in tinyBenchmarks, than
 		Limm:
 			andl $0x1, rDest
 			j Lcmp
@@ -1093,15 +1025,28 @@ CogObjectRepresentationFor32BitSpur >> getInlineCacheClassTagFrom: sourceReg int
 			movl 0(%edx), rDest
 			andl $0x3fffff, rDest
 		Lcmp:
-	"
+	 At least on a 2.2GHz Intel Core i7 the following is slightly faster than the above,
+	 136m sends/sec vs 130m sends/sec for nfib in tinyBenchmarks
+		Lentry:
+			movl rSource, rDest
+			andl $0x3, rDest
+			jz LnotImm
+			andl $1, rDest
+			j Lcmp
+		LnotImm:
+			movl 0(%edx), rDest
+			andl $0x3fffff, rDest
+		Lcmp:
+	 But we expect most SMallInteger arithmetic to be performwd in-line and so prefer the
+	 version that is faster for non-immediates (because it branches for immediates only)."
 	| immLabel jumpNotImm entryLabel jumpCompare |
 	<var: #immLabel type: #'AbstractInstruction *'>
 	<var: #jumpNotImm type: #'AbstractInstruction *'>
 	<var: #entryLabel type: #'AbstractInstruction *'>
 	<var: #jumpCompare type: #'AbstractInstruction *'>
-	true
+	false
 		ifTrue:
-			[cogit AlignmentNops: (BytesPerWord max: self entryAlignment).
+			[cogit AlignmentNops: BytesPerWord.
 			 entryLabel := cogit Label.
 			 cogit MoveR: sourceReg R: destReg.
 			 cogit AndCq: objectMemory tagMask R: destReg.
