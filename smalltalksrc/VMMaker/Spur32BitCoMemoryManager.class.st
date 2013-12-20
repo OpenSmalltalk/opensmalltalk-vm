@@ -167,12 +167,6 @@ Spur32BitCoMemoryManager >> nullHeaderForMachineCodeMethod [
 	+ ClassBitmapCompactIndex
 ]
 
-{ #category : #'object access' }
-Spur32BitCoMemoryManager >> smallIntegerTag [
-	<api>
-	^1
-]
-
 { #category : #accessing }
 Spur32BitCoMemoryManager >> startOfMemory [
 	"Return the start of object memory.  This is immediately after the native code zone.
@@ -181,12 +175,6 @@ Spur32BitCoMemoryManager >> startOfMemory [
 	<cmacro: '() heapBase'>
 	<returnTypeC: #usqInt>
 	^coInterpreter heapBase
-]
-
-{ #category : #'cogit support' }
-Spur32BitCoMemoryManager >> superclassOf: classPointer [
-	<doNotGenerate>
-	^coInterpreter superclassOf: classPointer
 ]
 
 { #category : #'cog jit support' }
