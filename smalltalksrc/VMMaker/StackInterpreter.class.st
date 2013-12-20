@@ -1959,8 +1959,11 @@ StackInterpreter >> bereaveAllMarriedContextsForSnapshotFlushingExternalPrimitiv
 		fmt := objectMemory formatOf: obj.
 		(fmt = objectMemory indexablePointersFormat
 		  and: [objectMemory isContextNonImm: obj]) ifTrue:
-			[(self isMarriedOrWidowedContext: obj) ifTrue:
-				[self markContextAsDead: obj].
+			[(self isMarriedOrWidowedContext: obj)
+				ifTrue: "The stack pages have already been discarded.  Any remaining married contexts are actually widows."
+					[self markContextAsDead: obj]
+				ifFalse:
+					[self ensureContextHasBytecodePC: obj].
 			 "Fill slots beyond top of stack with nil"
 			 (self fetchStackPointerOf: obj) + CtxtTempFrameStart
 				to: (objectMemory numSlotsOf: obj) - 1
@@ -4304,6 +4307,12 @@ StackInterpreter >> ensureCallerContext: theFP [
 	callerFP = 0 ifTrue: "base frame, context in saved ip slot (or base of stack in Cog)"
 		[^self frameCallerContext: theFP].
 	^self ensureFrameIsMarried: callerFP SP: (self frameCallerStackPointer: theFP)
+]
+
+{ #category : #'frame access' }
+StackInterpreter >> ensureContextHasBytecodePC: aContext [
+	"Make sure the context has a byetcode pc.  Can only be used on single contexts.
+	 This is a nop in the StackInterpreter."
 ]
 
 { #category : #'frame access' }
@@ -9517,10 +9526,7 @@ StackInterpreter >> printMethodCacheFor: thing [
 		c := methodCache at: i + MethodCacheClass.
 		m := methodCache at: i + MethodCacheMethod.
 		p := methodCache at: i + MethodCachePrimFunction.
-		((thing = -1 or: [s = thing or: [c = thing or: [p = thing or: [m = thing
-			or: [(objectMemory addressCouldBeObj: m)
-				and: [(self maybeMethodHasCogMethod: m)
-				and: [(self cogMethodOf: m) asInteger = thing]]]]]]])
+		((thing = -1 or: [s = thing or: [c = thing or: [p = thing or: [m = thing]]]])
 		 and: [(objectMemory addressCouldBeOop: s)
 		 and: [c ~= 0
 		 and: [(self addressCouldBeClassObj: c)
