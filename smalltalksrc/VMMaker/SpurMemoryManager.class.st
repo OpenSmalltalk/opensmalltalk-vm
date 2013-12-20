@@ -2471,6 +2471,7 @@ SpurMemoryManager >> classByteArray [
 
 { #category : #'plugin support' }
 SpurMemoryManager >> classCharacter [
+	<api>
 	^self splObj: ClassCharacter
 ]
 
