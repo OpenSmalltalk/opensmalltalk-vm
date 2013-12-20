@@ -45,6 +45,21 @@ CogObjectRepresentation >> canLinkToYoungClasses [
 	^self subclassResponsibility
 ]
 
+{ #category : #'in-line cacheing' }
+CogObjectRepresentation >> entryCodeForMethodClass: methodClassOrNil sendMissCall: theSendMissCall [
+	"Generate the method-entry code.  Extract the inline cache tag for the object
+	 in ReceiverResultReg into TempReg and compare it against ClassReg. The inline
+	 cache tag for a given object is the value loaded in inline caches to distinguish
+	 objects of different classes."
+	<var: #sendMissCall type: #'AbstractInstruction *'>
+	| entryLabel |
+	<var: #entryLabel type: #'AbstractInstruction *'>
+	entryLabel := self getInlineCacheClassTagFrom: ReceiverResultReg into: TempReg.
+	cogit CmpR: ClassReg R: TempReg.
+	cogit JumpNonZero: theSendMissCall.
+	^entryLabel
+]
+
 { #category : #'compile abstract instructions' }
 CogObjectRepresentation >> genEnsureObjInRegRegNotForwarded: reg scratchReg: scratch [
 	"Make sure that the object in reg is not forwarded.  By default there is
