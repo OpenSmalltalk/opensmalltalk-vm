@@ -2775,7 +2775,7 @@ BitBltSimulation >> primitivePixelValueAtX: xVal y: yVal [
 	If x or y are < 0, return 0 to indicate transparent (cf BitBlt>bitPeekerFromForm: usage).
 	Likewise if x>width or y>depth.
 	Fail if the rcvr doesn't seem to be a Form, or x|y seem wrong"
-	| rcvr bitmap depth ppW stride word mask shift pixel |
+	| rcvr bitmap depth ppW stride bitsSize word mask shift pixel |
 	rcvr := self primitive: 'primitivePixelValueAt' parameters: #(SmallInteger SmallInteger) receiver: #Oop.
 	
 	"possible quick exit if x or y is -ve"
@@ -2787,6 +2787,7 @@ BitBltSimulation >> primitivePixelValueAtX: xVal y: yVal [
 
 	"get the bits oop and width/height/depth"
 	bitmap := interpreterProxy fetchPointer: FormBitsIndex ofObject: rcvr.
+	(interpreterProxy isWordsOrBytes: bitmap) ifFalse: [^interpreterProxy primitiveFail].
 	width := interpreterProxy fetchInteger: FormWidthIndex ofObject: rcvr.
 	height := interpreterProxy fetchInteger: FormHeightIndex ofObject: rcvr.
 	depth := interpreterProxy fetchInteger: FormDepthIndex ofObject: rcvr.
@@ -2801,7 +2802,10 @@ BitBltSimulation >> primitivePixelValueAtX: xVal y: yVal [
 	
 	"OK so now we know we have a plausible Form, the width/height/depth/x/y are all reasonable and it's time to plunder the bitmap"
 	ppW := 32//depth. "pixels in each word"
-	stride := (width + (ppW  -1)) // ppW. "how many words per rox of pixels"
+	stride := (width + (ppW  -1)) // ppW. "how many words per row of pixels"
+	bitsSize := interpreterProxy byteSizeOf: bitmap.
+	bitsSize = (stride * height * 4 "bytes per word")
+		ifFalse: [^interpreterProxy primitiveFail].
 	word := interpreterProxy fetchLong32:(yVal * stride) + (xVal//ppW) ofObject: bitmap. "load the word that contains our target"
 	mask := 16rFFFFFFFF >> (32 - depth). "make a mask to isolate the pixel within that word"
 	shift := 32 - (((xVal bitAnd: ppW-1) + 1) * depth). "this is the tricky MSB part - we mask the xVal to find how far into the word we need, then add 1 for the pixel we're looking for, then * depth to get the bit shift"
