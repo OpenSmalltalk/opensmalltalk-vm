@@ -11,6 +11,16 @@ CogObjectRepresentationFor32BitSpur >> genAddSmallIntegerTagsTo: aRegister [
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationFor32BitSpur >> genConvertCharacterToSmallIntegerInReg: reg [
+	"Convert the SmallInteger in reg to a Character, assuming
+	 the SmallInteger's value is a valid character."
+	"self assume: objectMemory smallIntegerTag = 1"
+	self assert: (objectMemory characterTag = 2
+				 and: [self numCharacterBits + 1 = self numSmallIntegerBits]).
+	cogit LogicalShiftRightCq: 1 R: reg
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationFor32BitSpur >> genConvertIntegerToSmallIntegerInReg: reg [
 	cogit LogicalShiftLeftCq: 1 R: reg.
 	cogit AddCq: 1 R: reg.
@@ -22,6 +32,16 @@ CogObjectRepresentationFor32BitSpur >> genConvertIntegerToSmallIntegerInScratchR
 	cogit LogicalShiftLeftCq: 1 R: scratchReg.
 	cogit AddCq: 1 R: scratchReg.
 	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor32BitSpur >> genConvertSmallIntegerToCharacterInReg: reg [
+	"Convert the SmallInteger in reg to a Character, assuming
+	 the SmallInteger's value is a valid character."
+	"self assume: objectMemory smallIntegerTag = 1"
+	self assert: (objectMemory characterTag = 2
+				 and: [self numCharacterBits + 1 = self numSmallIntegerBits]).
+	cogit LogicalShiftLeftCq: 1 R: reg
 ]
 
 { #category : #'compile abstract instructions' }
@@ -1081,6 +1101,11 @@ CogObjectRepresentationFor32BitSpur >> getInlineCacheClassTagFrom: sourceReg int
 CogObjectRepresentationFor32BitSpur >> jumpNotSmallIntegerUnsignedValueInRegister: reg [
 	cogit CmpCq: 16r3FFFFFFF R: reg.
 	^cogit JumpAbove: 0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor32BitSpur >> numCharacterBits [
+	^30
 ]
 
 { #category : #'compile abstract instructions' }
