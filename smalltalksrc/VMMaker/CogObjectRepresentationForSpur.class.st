@@ -88,6 +88,11 @@ CogObjectRepresentationForSpur >> genConvertIntegerToCharacterInReg: reg [
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genConvertSmallIntegerToCharacterInReg: reg [
+	self subclassResponsibility
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genEnsureObjInRegRegNotForwarded: reg scratchReg: scratch [
 	"Make sure that the obejct in reg is not forwarded."
 	| loop ok |
@@ -189,6 +194,81 @@ CogObjectRepresentationForSpur >> genGetDoubleValueOf: srcReg into: destFPReg [
 ]
 
 { #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genInnerPrimitiveAsCharacter: retNOffset inReg: reg [
+	| jumpNotInt jumpOutOfRange |
+	<var: 'jumpNotInt' type: #'AbstractInstruction *'>
+	<var: 'jumpOutOfRange' type: #'AbstractInstruction *'>
+	reg ~= ReceiverResultReg ifTrue:
+		[cogit MoveR: reg R: TempReg.
+		 jumpNotInt := self genJumpNotSmallIntegerInScratchReg: TempReg].
+	cogit MoveR: reg R: TempReg.
+	self genConvertSmallIntegerToIntegerInReg: TempReg.
+	cogit CmpCq: (1 << 30) - 1 R: TempReg.
+	jumpOutOfRange := cogit JumpAbove: 0.
+	self genConvertSmallIntegerToCharacterInReg: reg.
+	reg ~= ReceiverResultReg ifTrue:
+		[cogit MoveR: reg R: ReceiverResultReg].
+	cogit RetN: retNOffset.
+	jumpOutOfRange jmpTarget: cogit Label.
+	reg ~= ReceiverResultReg ifTrue:
+		[jumpNotInt jmpTarget: jumpOutOfRange getJmpTarget].
+	^0
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genInnerPrimitiveCharacterValue: retNOffset [
+	self genConvertCharacterToSmallIntegerInReg: ReceiverResultReg.
+	cogit RetN: retNOffset.
+	^0
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genInnerPrimitiveIdentical: retNoffset orNotIf: orNot [
+	| jumpImmediate jumpCmp |
+	<var: #jumpCmp type: #'AbstractInstruction *'>
+	<var: #jumpImmediate type: #'AbstractInstruction *'>
+	cogit MoveR: Arg0Reg R: TempReg.
+	jumpImmediate := self genJumpImmediateInScratchReg: TempReg.
+	self genEnsureObjInRegRegNotForwarded: Arg0Reg scratchReg: TempReg.
+	jumpImmediate jmpTarget:
+		(cogit CmpR: Arg0Reg R: ReceiverResultReg).
+	jumpCmp := orNot
+					ifTrue: [cogit JumpZero: 0]
+					ifFalse: [cogit JumpNonZero: 0].
+	cogit annotate: (cogit MoveCw: objectMemory trueObject R: ReceiverResultReg)
+		objRef: objectMemory trueObject.
+	cogit RetN: retNoffset.
+	jumpCmp jmpTarget: (cogit annotate: (cogit MoveCw: objectMemory falseObject R: ReceiverResultReg)
+								objRef: objectMemory falseObject).
+	cogit RetN: retNoffset.
+	^0
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genInnerPrimitiveIdentityHash: retNoffset [
+	| jumpImm jumpSI jumpNotSet ret |
+	<var: #jumpSI type: #'AbstractInstruction *'>
+	<var: #jumpImm type: #'AbstractInstruction *'>
+	<var: #jumpNotSet type: #'AbstractInstruction *'>
+	cogit MoveR: ReceiverResultReg R: ClassReg.
+	jumpImm := self genJumpImmediateInScratchReg: ClassReg.
+	self genGetHashFieldNonImmOf: ReceiverResultReg asSmallIntegerInto: TempReg.
+	cogit CmpCq: ConstZero R: TempReg.
+	jumpNotSet := cogit JumpZero: 0.
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	ret := cogit RetN: 0.
+	cogit MoveR: ReceiverResultReg R: ClassReg.
+	jumpSI := self genJumpSmallIntegerInScratchReg: ClassReg.
+	jumpSI jmpTarget: ret.
+	jumpImm jmpTarget: cogit Label.
+	self genRemoveSmallIntegerTagsInScratchReg: ReceiverResultReg.
+	self genSetCharacterTagsIn: ReceiverResultReg.
+	cogit Jump: ret.
+	jumpNotSet jmpTarget: cogit Label.
+	^0
+]
+
+{ #category : #'primitive generators' }
 CogObjectRepresentationForSpur >> genInnerPrimitiveNew: retNoffset [
 	"Implement primitiveNew for convenient cases:
 	- the receiver has a hash
@@ -265,8 +345,18 @@ CogObjectRepresentationForSpur >> genLoadSlot: index sourceReg: sourceReg destRe
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genRemoveCharacterTagsInScratchReg: scratchReg [
+	cogit SubCq: objectMemory characterTag R: scratchReg
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genRemoveSmallIntegerTagsInScratchReg: scratchReg [
 	self subclassResponsibility
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genSetCharacterTagsIn: reg [
+	cogit OrCq: objectMemory characterTag R: reg
 ]
 
 { #category : #'compile abstract instructions' }
@@ -420,11 +510,6 @@ CogObjectRepresentationForSpur >> inlineCacheTagIsYoung: cacheTag [
 
 { #category : #'in-line cacheing' }
 CogObjectRepresentationForSpur >> inlineCacheTagsMayBeObjects [
-	^false
-]
-
-{ #category : #testing }
-CogObjectRepresentationForSpur >> isHashSetOnInstanceCreation [
 	^false
 ]
 

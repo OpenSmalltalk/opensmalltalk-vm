@@ -53,7 +53,19 @@ CogObjectRepresentation >> genEnsureObjInRegRegNotForwarded: reg scratchReg: scr
 ]
 
 { #category : #'primitive generators' }
+CogObjectRepresentation >> genInnerPrimitiveAsCharacter: retNOffset inReg: reg [
+	"subclasses override if they can"
+	^cogit unimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
 CogObjectRepresentation >> genInnerPrimitiveAtPut: retNoffset [
+	"subclasses override if they can"
+	^cogit unimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genInnerPrimitiveCharacterValue: retNOffset [
 	"subclasses override if they can"
 	^cogit unimplementedPrimitive
 ]
@@ -105,11 +117,6 @@ CogObjectRepresentation >> inlineCacheTagIsYoung: cacheTag [
 { #category : #'in-line cacheing' }
 CogObjectRepresentation >> inlineCacheTagsMayBeObjects [
 	^self subclassResponsibility
-]
-
-{ #category : #testing }
-CogObjectRepresentation >> isHashSetOnInstanceCreation [
-	self subclassResponsibility
 ]
 
 { #category : #testing }
