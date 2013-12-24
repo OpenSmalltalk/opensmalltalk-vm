@@ -3542,7 +3542,7 @@ ObjectMemory >> maybeSplObj: index [
 
 { #category : #accessing }
 ObjectMemory >> memory [
-	<cmacro: '() memory'>
+	<cmacro: '() GIV(memory)'>
 	^memory
 ]
 
@@ -4637,7 +4637,7 @@ ObjectMemory >> startOfFreeSpace [
 { #category : #'object enumeration' }
 ObjectMemory >> startOfMemory [
 	"Return the start of object memory. Use a macro so as not to punish the debug VM."
-	<cmacro: '() memory'>
+	<cmacro: '() GIV(memory)'>
 	<returnTypeC: #usqInt>
 	^memory
 ]
