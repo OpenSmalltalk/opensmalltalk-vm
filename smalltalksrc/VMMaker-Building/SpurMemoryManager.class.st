@@ -6199,7 +6199,7 @@ SpurMemoryManager >> mem: destAddress cp: sourceAddress y: bytes [
 
 { #category : #accessing }
 SpurMemoryManager >> memory [
-	<cmacro: '() memory'>
+	<cmacro: '() GIV(memory)'>
 	^memory
 ]
 
@@ -7927,7 +7927,7 @@ SpurMemoryManager >> stackValue: offset ofObjStack: objStackPage [
 { #category : #accessing }
 SpurMemoryManager >> startOfMemory [
 	"Return the start of object memory. Use a macro so as not to punish the debug VM."
-	<cmacro: '() memory'>
+	<cmacro: '() GIV(memory)'>
 	<returnTypeC: #usqInt>
 	^0
 ]
