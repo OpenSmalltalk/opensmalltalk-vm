@@ -428,6 +428,10 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueakV3 [
 		"File Primitives (150-169) - NO LONGER INDEXED; We won't compile any of these"
 		(169 genPrimitiveNotIdentical 1)
 
+		(170 genPrimitiveAsCharacter)			"SmallInteger>>asCharacter, Character class>>value:"
+		(171 genPrimitiveCharacterValue 0)	"Character>>value"
+		"Sound Primitives (170-199) - NO LONGER INDEXED; We won't compile any of these"
+		(175 genPrimitiveIdentityHash	0)		"Behavior>>identityHash"
 		"Sound Primitives (170-199) - NO LONGER INDEXED; We won't compile any of these"
 
 		"Old closure primitives"
@@ -1721,6 +1725,20 @@ SimpleStackBasedCogit >> genPrimitiveAdd [
 ]
 
 { #category : #'primitive generators' }
+SimpleStackBasedCogit >> genPrimitiveAsCharacter [
+	| na r |
+	na := coInterpreter argumentCountOf: methodObj.
+	na <= 1 ifTrue:
+		[na = 1 ifTrue:
+			[self MoveMw: BytesPerWord r: SPReg R: Arg0Reg].
+		 (r := objectRepresentation
+				genInnerPrimitiveAsCharacter: 0
+				inReg: (na = 0 ifTrue: [ReceiverResultReg] ifFalse: [Arg0Reg])) < 0 ifTrue:
+			[^r]].
+	^self compileFallbackToInterpreterPrimitive
+]
+
+{ #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveAsFloat [
 	"Stack looks like
 		receiver (also in ResultReceiverReg)
@@ -1879,6 +1897,14 @@ SimpleStackBasedCogit >> genPrimitiveBitXor [
 	self RetN: BytesPerWord * 2.
 	jumpNotSI jmpTarget: self Label.
 	^0
+]
+
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> genPrimitiveCharacterValue [
+	| r |
+	(r := objectRepresentation genInnerPrimitiveCharacterValue: BytesPerWord) < 0 ifTrue:
+		[^r].
+	^self compileFallbackToInterpreterPrimitive
 ]
 
 { #category : #'primitive generators' }
@@ -2104,40 +2130,18 @@ SimpleStackBasedCogit >> genPrimitiveIdentical [
 		receiver (also in ResultReceiverReg)
 		arg
 		return address"
-	| jumpFalse |
-	<var: #jumpFalse type: #'AbstractInstruction *'>
 	self MoveMw: BytesPerWord r: SPReg R: TempReg.
-	self CmpR: TempReg R: ReceiverResultReg.
-	jumpFalse := self JumpNonZero: 0.
-	self annotate: (self MoveCw: objectMemory trueObject R: ReceiverResultReg)
-		objRef: objectMemory trueObject.
-	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord * 2.
-	jumpFalse jmpTarget: (self annotate: (self MoveCw: objectMemory falseObject R: ReceiverResultReg)
-								objRef: objectMemory falseObject).
-	self RetN: BytesPerWord * 2.
-	^0
+	^objectRepresentation
+		genInnerPrimitiveIdentical: BytesPerWord * 2
+		orNotIf: false
 ]
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveIdentityHash [
-	| jumpSI jumpNotSet |
-	<var: #jumpSI type: #'AbstractInstruction *'>
-	<var: #jumpNotSet type: #'AbstractInstruction *'>
-	self MoveR: ReceiverResultReg R: ClassReg.
-	jumpSI := objectRepresentation genJumpSmallIntegerInScratchReg: ClassReg.
-	objectRepresentation genGetHashFieldNonImmOf: ReceiverResultReg asSmallIntegerInto: TempReg.
-	objectRepresentation isHashSetOnInstanceCreation ifFalse:
-		[self CmpCq: ConstZero R: TempReg.
-		 jumpNotSet := self JumpZero: 0].
-	self MoveR: TempReg R: ReceiverResultReg.
-	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord.
-	objectRepresentation isHashSetOnInstanceCreation ifFalse:
-		[jumpNotSet jmpTarget: self Label.
-		 self compileFallbackToInterpreterPrimitive].
-	jumpSI jmpTarget: self Label.
-	^0
+	| r |
+	(r := objectRepresentation genInnerPrimitiveIdentityHash: BytesPerWord) < 0 ifTrue:
+		[^r].
+	^self compileFallbackToInterpreterPrimitive
 ]
 
 { #category : #'primitive generators' }
@@ -2250,19 +2254,10 @@ SimpleStackBasedCogit >> genPrimitiveNotIdentical [
 		receiver (also in ResultReceiverReg)
 		arg
 		return address"
-	| jumpFalse |
-	<var: #jumpFalse type: #'AbstractInstruction *'>
 	self MoveMw: BytesPerWord r: SPReg R: TempReg.
-	self CmpR: TempReg R: ReceiverResultReg.
-	jumpFalse := self JumpZero: 0.
-	self annotate: (self MoveCw: objectMemory trueObject R: ReceiverResultReg)
-		objRef: objectMemory trueObject.
-	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord * 2.
-	jumpFalse jmpTarget: (self annotate: (self MoveCw: objectMemory falseObject R: ReceiverResultReg)
-								objRef: objectMemory falseObject).
-	self RetN: BytesPerWord * 2.
-	^0
+	^objectRepresentation
+		genInnerPrimitiveIdentical: BytesPerWord * 2
+		orNotIf: true
 ]
 
 { #category : #'primitive generators' }
