@@ -431,6 +431,36 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
 ]
 
 { #category : #'primitive generators' }
+CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveIdentical: retNoffset orNotIf: orNot [
+	| jumpCmp |
+	<var: #jumpCmp type: #'AbstractInstruction *'>
+	cogit CmpR: Arg0Reg R: ReceiverResultReg.
+	jumpCmp := orNot
+					ifTrue: [cogit JumpZero: 0]
+					ifFalse: [cogit JumpNonZero: 0].
+	cogit annotate: (cogit MoveCw: objectMemory trueObject R: ReceiverResultReg)
+		objRef: objectMemory trueObject.
+	cogit RetN: retNoffset.
+	jumpCmp jmpTarget: (cogit annotate: (cogit MoveCw: objectMemory falseObject R: ReceiverResultReg)
+								objRef: objectMemory falseObject).
+	cogit RetN: retNoffset.
+	^0
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveIdentityHash: retNOffset [
+	| jumpSI |
+	<var: #jumpSI type: #'AbstractInstruction *'>
+	cogit MoveR: ReceiverResultReg R: ClassReg.
+	jumpSI := self genJumpSmallIntegerInScratchReg: ClassReg.
+	self genGetHashFieldNonImmOf: ReceiverResultReg asSmallIntegerInto: TempReg.
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit RetN: retNOffset.
+	jumpSI jmpTarget: cogit Label.
+	^0
+]
+
+{ #category : #'primitive generators' }
 CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveSize: retNoffset [
 	| jumpSI jumpNotIndexable jumpIsContext |
 	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
@@ -675,11 +705,6 @@ CogObjectRepresentationForSqueakV3 >> instFormatFieldMask [
 	"This is the mask for the field when shifted into the least significant bits"
 	<inline: true>
 	^(1 << objectMemory instFormatFieldWidth) - 1
-]
-
-{ #category : #testing }
-CogObjectRepresentationForSqueakV3 >> isHashSetOnInstanceCreation [
-	^true
 ]
 
 { #category : #'garbage collection' }

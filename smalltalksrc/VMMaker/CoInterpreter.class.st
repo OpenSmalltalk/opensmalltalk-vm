@@ -5591,7 +5591,7 @@ CoInterpreter >> printPrimLogEntryAt: i [
 	intOrSelector := primTraceLog at: i.
 	(objectMemory isImmediate: intOrSelector)
 		ifTrue:
-			[ intOrSelector = TraceIncrementalGC ifTrue:
+			[intOrSelector = TraceIncrementalGC ifTrue:
 				[self print: '**IncrementalGC**'. ^nil].
 			 intOrSelector = TraceFullGC ifTrue:
 				[self print: '**FullGC**'. ^nil].

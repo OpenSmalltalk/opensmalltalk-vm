@@ -1933,6 +1933,18 @@ StackToRegisterMappingCogit >> genPrimitiveAdd [
 ]
 
 { #category : #'primitive generators' }
+StackToRegisterMappingCogit >> genPrimitiveAsCharacter [
+	| na r |
+	na := coInterpreter argumentCountOf: methodObj.
+	na <= 1 ifTrue:
+		[(r := objectRepresentation
+				genInnerPrimitiveAsCharacter: 0
+				inReg: (na = 0 ifTrue: [ReceiverResultReg] ifFalse: [Arg0Reg])) < 0 ifTrue:
+			[^r]].
+	^self compileFallbackToInterpreterPrimitive
+]
+
+{ #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveAsFloat [
 	| jumpFailAlloc |
 	<var: #jumpFailAlloc type: #'AbstractInstruction *'>
@@ -2082,6 +2094,14 @@ StackToRegisterMappingCogit >> genPrimitiveBitXor [
 ]
 
 { #category : #'primitive generators' }
+StackToRegisterMappingCogit >> genPrimitiveCharacterValue [
+	| r |
+	(r := objectRepresentation genInnerPrimitiveCharacterValue: 0) < 0 ifTrue:
+		[^r].
+	^self compileFallbackToInterpreterPrimitive
+]
+
+{ #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveClass [
 	"Depending on argument count the argument is either
 		0 args: ReceiverResultReg
@@ -2215,37 +2235,17 @@ StackToRegisterMappingCogit >> genPrimitiveIdentical [
 	"Receiver and arg in registers.
 	 Stack looks like
 		return address"
-	| jumpFalse |
-	<var: #jumpFalse type: #'AbstractInstruction *'>
-	self CmpR: Arg0Reg R: ReceiverResultReg.
-	jumpFalse := self JumpNonZero: 0.
-	self annotate: (self MoveCw: objectMemory trueObject R: ReceiverResultReg)
-		objRef: objectMemory trueObject.
-	self RetN: 0.
-	jumpFalse jmpTarget: (self annotate: (self MoveCw: objectMemory falseObject R: ReceiverResultReg)
-								objRef: objectMemory falseObject).
-	self RetN: 0.
-	^0
+	^objectRepresentation
+		genInnerPrimitiveIdentical: 0
+		orNotIf: false
 ]
 
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveIdentityHash [
-	| jumpSI jumpNotSet |
-	<var: #jumpSI type: #'AbstractInstruction *'>
-	<var: #jumpNotSet type: #'AbstractInstruction *'>
-	self MoveR: ReceiverResultReg R: ClassReg.
-	jumpSI := objectRepresentation genJumpSmallIntegerInScratchReg: ClassReg.
-	objectRepresentation genGetHashFieldNonImmOf: ReceiverResultReg asSmallIntegerInto: TempReg.
-	objectRepresentation isHashSetOnInstanceCreation ifFalse:
-		[self CmpCq: ConstZero R: TempReg.
-		 jumpNotSet := self JumpZero: 0].
-	self MoveR: TempReg R: ReceiverResultReg.
-	self RetN: 0.
-	objectRepresentation isHashSetOnInstanceCreation ifFalse:
-		[jumpNotSet jmpTarget: self Label.
-		 self compileFallbackToInterpreterPrimitive].
-	jumpSI jmpTarget: self Label.
-	^0
+	| r |
+	(r := objectRepresentation genInnerPrimitiveIdentityHash: 0) < 0 ifTrue:
+		[^r].
+	^self compileFallbackToInterpreterPrimitive
 ]
 
 { #category : #'primitive generators' }
@@ -2329,17 +2329,9 @@ StackToRegisterMappingCogit >> genPrimitiveNotIdentical [
 	"Receiver and arg in registers.
 	 Stack looks like
 		return address"
-	| jumpFalse |
-	<var: #jumpFalse type: #'AbstractInstruction *'>
-	self CmpR: Arg0Reg R: ReceiverResultReg.
-	jumpFalse := self JumpZero: 0.
-	self annotate: (self MoveCw: objectMemory trueObject R: ReceiverResultReg)
-		objRef: objectMemory trueObject.
-	self RetN: 0.
-	jumpFalse jmpTarget: (self annotate: (self MoveCw: objectMemory falseObject R: ReceiverResultReg)
-								objRef: objectMemory falseObject).
-	self RetN: 0.
-	^0
+	^objectRepresentation
+		genInnerPrimitiveIdentical: 0
+		orNotIf: true
 ]
 
 { #category : #'primitive generators' }

@@ -5259,7 +5259,7 @@ SpurMemoryManager >> isInPastSpace: address [
 
 { #category : #immediates }
 SpurMemoryManager >> isInRangeCharacterCode: characterCode [
-	^characterCode >= 0 and: [characterCode < (2 raisedTo: 30)]
+	^characterCode between: 0 and: (1 << 30) - 1
 ]
 
 { #category : #'object testing' }
