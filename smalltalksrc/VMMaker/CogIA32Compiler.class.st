@@ -200,6 +200,8 @@ CogIA32Compiler >> computeMaximumSize [
 		"Noops & Pseudo Ops"
 		[Label]					-> [^maxSize := 0].
 		[AlignmentNops]		-> [^maxSize := (operands at: 0) - 1].
+		[AlignmentNopsTo]		-> ["this is a hack but we get away with it because there are no forward branches over the entry code."
+									^maxSize := (operands at: 0) - address].
 		[Fill16]					-> [^maxSize := 2].
 		[Fill32]					-> [^maxSize := 4].
 		[FillFromWord]			-> [^maxSize := 4].
@@ -547,6 +549,18 @@ CogIA32Compiler >> concretizeAlignmentNops [
 	0 to: machineCodeSize - 1 do:
 		[:i|
 		machineCode at: i put: 16r90]
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeAlignmentNopsTo [
+	<inline: true>
+	| targetAddress label |
+	<var: 'label'  type: #'AbstractInstruction *'>
+	label := self cCoerceSimple: (operands at: 1) to: #'AbstractInstruction *'.
+	targetAddress := label address + (operands at: 0).
+	self assert: targetAddress >= address.
+	machineCodeSize := targetAddress - address.
+	^self concretizeAlignmentNops
 ]
 
 { #category : #'generate machine code' }
@@ -2071,6 +2085,7 @@ CogIA32Compiler >> dispatchConcretize [
 		"Noops & Pseudo Ops"
 		[Label]				-> [^self concretizeLabel].
 		[AlignmentNops]	-> [^self concretizeAlignmentNops].
+		[AlignmentNopsTo]	-> [^self concretizeAlignmentNopsTo].
 		[Fill16]				-> [^self concretizeFill16].
 		[Fill32]				-> [^self concretizeFill32].
 		[FillFromWord]		-> [^self concretizeFillFromWord].
@@ -2602,8 +2617,9 @@ CogIA32Compiler >> loadLiteralByteSize [
 { #category : #'generate machine code' }
 CogIA32Compiler >> machineCodeBytes [
 	"Answer the maximum number of bytes of machine code generated for any abstract instruction.
-	 e.g. lock movsd  0x400(%esp),%xmm4 => f0 f2 0f 10 a4 24 00 04 00 00"
-	^10
+	 e.g. lock movsd  0x400(%esp),%xmm4 => f0 f2 0f 10 a4 24 00 04 00 00
+	 But with the new entry code, AlignmentNopsTo may generate 13 bytes of nops."
+	^14 "10"
 ]
 
 { #category : #encoding }
