@@ -1163,6 +1163,13 @@ Cogit >> AlignmentNops: alignment [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> AlignmentNopsTo: offset from: label [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: AlignmentNopsTo operand: offset operand: label
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> AndCq: quickConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -3758,14 +3765,17 @@ Cogit >> compileEntry [
 	 different from the alignment of the noCheckEntry so that the method map machinery
 	 can distinguish normal and super sends (super sends bind to the noCheckEntry).
 	 In Newspeak we also need to distinguish dynSuperSends from normal and super
-	 and so bind a the preceeding nop (on x86 there happens to be one anyway)."
+	 sends (which is done by their alignment) and so bind the preceeding nop (on x86
+	 there happens to be one anyway)."
 
 	self cppIf: NewspeakVM ifTrue:
 		[self Nop. "1st nop differentiates dynSuperEntry from no-check entry if using nextMethod"
 		 dynSuperEntry := self Nop].
-	entry := objectRepresentation getInlineCacheClassTagFrom: ReceiverResultReg into: TempReg.
-	self CmpR: ClassReg R: TempReg.
-	self JumpNonZero: sendMissCall.
+	entry := objectRepresentation
+				entryCodeForMethodClass: (methodObj
+												ifNil: [objectMemory nilObject]
+												ifNotNil: [coInterpreter methodClassOf: methodObj])
+				sendMissCall: sendMissCall.
 	noCheckEntry := self Label.
 	self recordSendTrace ifTrue:
 		[self CallRT: ceTraceLinkedSendTrampoline]
@@ -6975,6 +6985,12 @@ Cogit >> method: methodA hasSameCodeAs: methodB checkPenultimate: comparePenulti
 		(objectMemory fetchByte: bi ofObject: methodA) ~= (objectMemory fetchByte: bi ofObject: methodB) ifTrue:
 			[^false]].
 	^true
+]
+
+{ #category : #accessing }
+Cogit >> methodLabel [
+	<cmacro: '() methodLabel'>
+	^methodLabel
 ]
 
 { #category : #'simulation only' }

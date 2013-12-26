@@ -46,6 +46,12 @@ CogObjectRepresentationForSpur >> couldBeObject: literal [
 	  and: [self oop: literal isGreaterThanOrEqualTo: objectMemory startOfMemory]
 ]
 
+{ #category : #'in-line cacheing' }
+CogObjectRepresentationForSpur >> entryAlignment [
+	"At least on Core i7, 8 is no better than 4, and 4 gives more compact code."
+	^4 "8"
+]
+
 { #category : #'primitive generators' }
 CogObjectRepresentationForSpur >> genAllocFloatValue: dpreg into: resultReg scratchReg: scratch1 scratchReg: scratch2 [
 	<returnTypeC: #'AbstractInstruction *'>
@@ -538,6 +544,28 @@ CogObjectRepresentationForSpur >> markAndTraceLiteralIfYoung: literal [
 	 and: [objectMemory isYoungObject: literal]) ifTrue:
 		[self assert: (objectMemory addressCouldBeObj: literal).
 		 objectMemory markAndTrace: literal]
+]
+
+{ #category : #'in-line cacheing' }
+CogObjectRepresentationForSpur >> methodClass: methodClass isSuperclassOf: firstImmediateClass or: secondImmediateClass [
+	| classAOrNil classBOrNil nilObj |
+	classAOrNil := firstImmediateClass.
+	classBOrNil := secondImmediateClass.
+	nilObj := objectMemory nilObject.
+	[classAOrNil = nilObj
+		ifTrue:
+			[classBOrNil = nilObj ifTrue:
+				[^false]]
+		ifFalse:
+			[(classAOrNil := objectMemory superclassOf: classAOrNil) = methodClass ifTrue:
+				[^true]].
+	 classBOrNil = nilObj
+		ifTrue:
+			[classAOrNil = nilObj ifTrue:
+				[^false]]
+		ifFalse:
+			[(classBOrNil := objectMemory superclassOf: classBOrNil) = methodClass ifTrue:
+				[^true]]] repeat
 ]
 
 { #category : #'calling convention' }
