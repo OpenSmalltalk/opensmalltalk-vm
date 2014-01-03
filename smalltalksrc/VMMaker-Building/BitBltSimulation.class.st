@@ -530,39 +530,32 @@ BitBltSimulation >> alphaBlend: sourceWord with: destinationWord [
 	The blend produced is alpha*source + (1-alpha)*dest, with
 	the computation being performed independently on each color
 	component.  The high byte of the result will be 0."
-	| alpha unAlpha colorMask result blend shift |
+	| alpha unAlpha result blendRB blendAG |
 	<inline: false>
+	<return: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
+	<var: #blendRB type: 'unsigned int'>
+	<var: #blendAG type: 'unsigned int'>
+	<var: #result type: 'unsigned int'>
+	<var: #alpha type: 'unsigned int'>
+	<var: #unAlpha type: 'unsigned int'>
 	alpha := sourceWord >> 24.  "High 8 bits of source pixel"
 	alpha = 0 ifTrue: [ ^ destinationWord ].
 	alpha = 255 ifTrue: [ ^ sourceWord ].
 	unAlpha := 255 - alpha.
-	colorMask := 16rFF.
-	result := 0.
 
-	"red"
-	shift := 0.
-	blend := ((sourceWord >> shift bitAnd: colorMask) * alpha) +
-				((destinationWord>>shift bitAnd: colorMask) * unAlpha)
-			 	+ 254 // 255 bitAnd: colorMask.
-	result := result bitOr: blend << shift.
-	"green"
-	shift := 8.
-	blend := ((sourceWord >> shift bitAnd: colorMask) * alpha) +
-				((destinationWord>>shift bitAnd: colorMask) * unAlpha)
-			 	+ 254 // 255 bitAnd: colorMask.
-	result := result bitOr: blend << shift.
-	"blue"
-	shift := 16.
-	blend := ((sourceWord >> shift bitAnd: colorMask) * alpha) +
-				((destinationWord>>shift bitAnd: colorMask) * unAlpha)
-			 	+ 254 // 255 bitAnd: colorMask.
-	result := result bitOr: blend << shift.
-	"alpha (pre-multiplied)"
-	shift := 24.
-	blend := (alpha * 255) +
-				((destinationWord>>shift bitAnd: colorMask) * unAlpha)
-			 	+ 254 // 255 bitAnd: colorMask.
-	result := result bitOr: blend << shift.
+	blendRB := ((sourceWord bitAnd: 16rFF00FF) * alpha) +
+				((destinationWord bitAnd: 16rFF00FF) * unAlpha)
+				+ 16rFF00FF.	"blend red and blue"
+
+	blendAG := (((sourceWord>> 8 bitOr: 16rFF0000) bitAnd: 16rFF00FF) * alpha) +
+				((destinationWord>>8 bitAnd: 16rFF00FF) * unAlpha)
+				+ 16rFF00FF.	"blend alpha and green"
+
+	blendRB := blendRB + (blendRB - 16r10001 >> 8 bitAnd: 16rFF00FF) >> 8 bitAnd: 16rFF00FF.	"divide by 255"
+	blendAG := blendAG + (blendAG - 16r10001 >> 8 bitAnd: 16rFF00FF) >> 8 bitAnd: 16rFF00FF.
+	result := blendRB bitOr: blendAG<<8.
 	^ result
 
 ]
@@ -589,30 +582,39 @@ BitBltSimulation >> alphaBlendConst: sourceWord with: destinationWord paintMode:
 	To allow storing into any depth will require subsequent addition of two other
 	colormaps, as is the case with WarpBlt."
 
-	| pixMask destShifted sourceShifted destPixVal rgbMask sourcePixVal unAlpha result pixBlend shift blend maskShifted bitsPerColor |
+	| pixMask destShifted sourceShifted destPixVal rgbMask sourcePixVal unAlpha result pixBlend shift blend maskShifted bitsPerColor blendAG blendRB |
 	<inline: false>
+	<return: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
+	<var: #blendRB type: 'unsigned int'>
+	<var: #blendAG type: 'unsigned int'>
+	<var: #result type: 'unsigned int'>
+	<var: #sourceAlpha type: 'unsigned int'>
+	<var: #unAlpha type: 'unsigned int'>
 	destDepth < 16 ifTrue: [^ destinationWord "no-op"].
 	unAlpha := 255 - sourceAlpha.
-	pixMask := maskTable at: destDepth.
-	destDepth = 16 
-		ifTrue: [bitsPerColor := 5]
-		ifFalse:[bitsPerColor := 8].
-	rgbMask := (1<<bitsPerColor) - 1.
-	maskShifted := destMask.
-	destShifted := destinationWord.
-	sourceShifted := sourceWord.
 	result := destinationWord.
 	destPPW = 1 ifTrue:["32bpp blends include alpha"
 		paintMode & (sourceWord = 0)  "painting a transparent pixel" ifFalse:[
-			result := 0.
-			1 to: 4 do:[:i|
-				shift := (i-1)*8.
-				blend := (((sourceWord>>shift bitAnd: rgbMask) * sourceAlpha)
-							+ ((destinationWord>>shift bitAnd: rgbMask) * unAlpha))
-					 	+ 254 // 255 bitAnd: rgbMask.
-				result := result bitOr: blend<<shift].
+
+				blendRB := ((sourceWord bitAnd: 16rFF00FF) * sourceAlpha) +
+						((destinationWord bitAnd: 16rFF00FF) * unAlpha) + 16rFF00FF.	"blendRB red and blue"
+
+				blendAG := ((sourceWord>> 8 bitAnd: 16rFF00FF) * sourceAlpha) +
+						((destinationWord>>8 bitAnd: 16rFF00FF) * unAlpha) + 16rFF00FF.	"blendRB alpha and green"
+
+				blendRB := blendRB + (blendRB - 16r10001 >> 8 bitAnd: 16rFF00FF) >> 8 bitAnd: 16rFF00FF.	"divide by 255"
+				blendAG := blendAG + (blendAG - 16r10001 >> 8 bitAnd: 16rFF00FF) >> 8 bitAnd: 16rFF00FF.
+				result := blendRB bitOr: blendAG<<8.
 		].
 	] ifFalse:[
+		pixMask := maskTable at: destDepth.
+		bitsPerColor := 5.
+		rgbMask := 16r1F.
+		maskShifted := destMask.
+		destShifted := destinationWord.
+		sourceShifted := sourceWord.
 		1 to: destPPW do:[:j |
 			sourcePixVal := sourceShifted bitAnd: pixMask.
 			((maskShifted bitAnd: pixMask) = 0  "no effect if outside of dest rectangle"
@@ -626,10 +628,8 @@ BitBltSimulation >> alphaBlendConst: sourceWord with: destinationWord paintMode:
 								+ ((destPixVal>>shift bitAnd: rgbMask) * unAlpha))
 						 	+ 254 // 255 bitAnd: rgbMask.
 					pixBlend := pixBlend bitOr: blend<<shift].
-				destDepth = 16
-					ifTrue: [result := (result bitAnd: (pixMask << (j-1*16)) bitInvert32)
-										bitOr: pixBlend << (j-1*16)]
-					ifFalse: [result := pixBlend]].
+				result := (result bitAnd: (pixMask << (j-1*16)) bitInvert32)
+								bitOr: pixBlend << (j-1*16)].
 			maskShifted := maskShifted >> destDepth.
 			sourceShifted := sourceShifted >> destDepth.
 			destShifted := destShifted >> destDepth].
@@ -647,26 +647,19 @@ BitBltSimulation >> alphaBlendScaled: sourceWord with: destinationWord [
 		srcColor + (1-srcAlpha) * dstColor
 
 	e.g., it is assumed that the source color is already scaled."
-	| unAlpha dstMask srcMask b g r a |
+	| unAlpha rb ag |
 	<inline: false>	"Do NOT inline this into optimized loops"
-	unAlpha := 255 - (sourceWord >> 24).  "High 8 bits of source pixel"
-	dstMask := destinationWord.
-	srcMask := sourceWord.
-	b := (dstMask bitAnd: 255) * unAlpha >> 8 + (srcMask bitAnd: 255).
-	b > 255 ifTrue:[b := 255].
-	dstMask := dstMask >> 8.
-	srcMask := srcMask >> 8.
-	g := (dstMask bitAnd: 255) * unAlpha >> 8 + (srcMask bitAnd: 255).
-	g > 255 ifTrue:[g := 255].
-	dstMask := dstMask >> 8.
-	srcMask := srcMask >> 8.
-	r := (dstMask bitAnd: 255) * unAlpha >> 8 + (srcMask bitAnd: 255).
-	r > 255 ifTrue:[r := 255].
-	dstMask := dstMask >> 8.
-	srcMask := srcMask >> 8.
-	a := (dstMask bitAnd: 255) * unAlpha >> 8 + (srcMask bitAnd: 255).
-	a > 255 ifTrue:[a := 255].
-	^(((((a << 8) + r) << 8) + g) << 8) + b
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
+	<var: #rb type: 'unsigned int'>
+	<var: #ag type: 'unsigned int'>
+	<var: #unAlpha type: 'unsigned int'>
+	unAlpha := 255 - (sourceWord >> 24).  "High 8 bits of source pixel is source opacity (ARGB format)"
+	rb := ((destinationWord bitAnd: 16rFF00FF) * unAlpha >> 8 bitAnd: 16rFF00FF) + (sourceWord bitAnd: 16rFF00FF). "blend red and blue components"
+	ag := ((destinationWord>>8 bitAnd: 16rFF00FF) * unAlpha >> 8 bitAnd: 16rFF00FF) + (sourceWord>>8 bitAnd: 16rFF00FF). "blend alpha and green components"
+	rb := (rb bitAnd: 16rFF00FF) bitOr: (rb bitAnd: 16r1000100) * 16rFF >> 8. "saturate red and blue components if there is a carry"
+	ag := (ag bitAnd: 16rFF00FF) << 8 bitOr: (ag bitAnd: 16r1000100) * 16rFF. "saturate alpha and green components if there is a carry"
+	^ag bitOr: rb "recompose"
 ]
 
 { #category : #'combination rules' }
@@ -2351,32 +2344,25 @@ BitBltSimulation >> partitionedAND: word1 to: word2 nBits: nBits nPartitions: nP
 ]
 
 { #category : #'combination rules' }
-BitBltSimulation >> partitionedAdd: word1 to: word2 nBits: nBits nPartitions: nParts [
+BitBltSimulation >> partitionedAdd: word1 to: word2 nBits: nBits componentMask: componentMask carryOverflowMask: carryOverflowMask [
 	"Add word1 to word2 as nParts partitions of nBits each.
 	This is useful for packed pixels, or packed colors"
-	| mask sum result maskedWord1 |
-	"In C, most arithmetic operations answer the same bit pattern regardless of the operands being signed or unsigned ints
-	(this is due to the way 2's complement numbers work). However, comparisions might fail. Add the proper declaration of
-	words as unsigned int in those cases where comparisions are done (jmv)"
-	<var: #word1 type: 'unsigned int'>
+	| carryOverflow sum w1 w2 |
+	"Use unsigned int everywhere because it has a well known arithmetic model without undefined behavior w.r.t. overflow and shifts"
+	 <var: #word1 type: 'unsigned int'>
 	<var: #word2 type: 'unsigned int'>
-	<var: #mask type: 'unsigned int'>
+	 <var: #w1 type: 'unsigned int'>
+	<var: #w2 type: 'unsigned int'>
+	<var: #componentMask type: 'unsigned int'>
+	<var: #carryOverflowMask type: 'unsigned int'>
+	<var: #carryOverflow type: 'unsigned int'>
 	<var: #sum type: 'unsigned int'>
-	<var: #result type: 'unsigned int'>
-	<var: #maskedWord1 type: 'unsigned int'>
-	mask := maskTable at: nBits.  "partition mask starts at the right"
-	result := 0.
-	1 to: nParts do:
-		[:i |
-		maskedWord1 := word1 bitAnd: mask.
-		sum := maskedWord1 + (word2 bitAnd: mask).
-		(sum <= mask "result must not carry out of partition"
-				and: [ sum >= maskedWord1 ])	"This is needed because in C, integer arithmetic overflows silently! (jmv)"
-			ifTrue: [result := result bitOr: sum]
-			ifFalse: [result := result bitOr: mask].
-		mask := mask << nBits  "slide left to next partition"].
-	^ result
-
+	w1 := word1 bitAnd: carryOverflowMask. "mask to remove high bit of each component"
+	w2 := word2 bitAnd: carryOverflowMask.
+	sum := (word1 bitXor: w1)+(word2 bitXor: w2). "sum without high bit to avoid overflowing over next component"
+	carryOverflow := (w1 bitAnd: w2) bitOr: ((w1 bitOr: w2) bitAnd: sum). "detect overflow condition for saturating"
+	^((sum bitXor: w1)bitXor:w2) "sum high bit without overflow"
+		bitOr: carryOverflow>>(nBits-1) * componentMask "saturate in case of overflow"
 ]
 
 { #category : #'combination rules' }
@@ -2860,20 +2846,29 @@ BitBltSimulation >> querySourceSurface: handle [
 { #category : #'combination rules' }
 BitBltSimulation >> rgbAdd: sourceWord with: destinationWord [
 	<inline: false>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
+	<var: #carryOverflowMask type: 'unsigned int'>
+	<var: #componentMask type: 'unsigned int'>
+	| componentMask carryOverflowMask |
 	destDepth < 16 ifTrue:
 		["Add each pixel separately"
+		componentMask := 1<<destDepth-1.
+		carryOverflowMask := 16rFFFFFFFF//componentMask<<(destDepth-1).
 		^ self partitionedAdd: sourceWord to: destinationWord
-						nBits: destDepth nPartitions: destPPW].
+						nBits: destDepth componentMask: componentMask carryOverflowMask: carryOverflowMask].
 	destDepth = 16 ifTrue:
 		["Add RGB components of each pixel separately"
-		^ (self partitionedAdd: sourceWord to: destinationWord
-						nBits: 5 nPartitions: 3)
-		+ ((self partitionedAdd: sourceWord>>16 to: destinationWord>>16
-						nBits: 5 nPartitions: 3) << 16)]
+		componentMask := 16r1F.
+		carryOverflowMask := 16r42104210.
+		^ (self partitionedAdd: (sourceWord bitAnd: 16r7FFF7FFF) to: (destinationWord bitAnd: 16r7FFF7FFF) "make sure that the unused bit is at 0"
+						nBits: 5 componentMask: componentMask carryOverflowMask: carryOverflowMask)]
 	ifFalse:
 		["Add RGBA components of the pixel separately"
+		componentMask := 16rFF.
+		carryOverflowMask := 16r80808080.
 		^ self partitionedAdd: sourceWord to: destinationWord
-						nBits: 8 nPartitions: 4]
+						nBits: 8 componentMask: componentMask carryOverflowMask: carryOverflowMask]
 ]
 
 { #category : #'combination rules' }
