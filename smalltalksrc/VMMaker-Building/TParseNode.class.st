@@ -232,6 +232,11 @@ TParseNode >> isReturningIf [
 	^false
 ]
 
+{ #category : #comparing }
+TParseNode >> isSameAs: aTParseNode [
+	^self subclassResponsibility
+]
+
 { #category : #testing }
 TParseNode >> isSend [
 
