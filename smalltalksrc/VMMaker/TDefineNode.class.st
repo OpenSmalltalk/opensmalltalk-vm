@@ -14,6 +14,14 @@ TDefineNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 	aStream nextPutAll: name.
 ]
 
+{ #category : #comparing }
+TDefineNode >> isSameAs: aTParseNode [
+	^self class == aTParseNode class
+	  and: [value class == aTParseNode value class
+	  and: [value = aTParseNode value
+	  and: [name = aTParseNode nameOrValue]]]
+]
+
 { #category : #accessing }
 TDefineNode >> name [
 	^name asString

@@ -7,10 +7,50 @@ Class {
 	#instVars : [
 		'pluginClass',
 		'pluginName',
-		'pluginFunctionsUsed'
+		'pluginFunctionsUsed',
+		'inProgressSelectors'
 	],
 	#category : #'VMMaker-Translation to C'
 }
+
+{ #category : #'spur primitive compilation' }
+VMPluginCodeGenerator >> accessorChainsForMethod: method interpreterClass: interpreterClass [
+	inProgressSelectors := Set new.
+	^[super accessorChainsForMethod: method interpreterClass: interpreterClass] ensure:
+		[inProgressSelectors := nil]
+]
+
+{ #category : #'spur primitive compilation' }
+VMPluginCodeGenerator >> accessorDepthDeterminationFollowsSelfSends [
+	^true
+]
+
+{ #category : #'spur primitive compilation' }
+VMPluginCodeGenerator >> accessorsAndAssignmentsForSubMethodNamed: selector actuals: actualParameters depth: depth interpreterClass: interpreterClass into: aTrinaryBlock [
+	"Evaluate aTrinaryBlock with the root accessor sends, accessor sends and assignments in the sub-method named selector."
+
+	| method map |
+	(inProgressSelectors includes: selector) ifTrue:
+		[^nil].
+	inProgressSelectors add: selector.
+	method := self methodNamed: selector.
+	"this is unsatisfactory.  a pluggable scheme that asks the relevant plugin the right question would
+	 be better but for now the only cross-plugin load is for loadBitBltFrom:warping: and variants."
+	(#(loadBitBltFrom: loadWarpBltFrom: loadBitBltFrom:warping:) includes: selector) ifTrue:
+		[(method isNil
+		  or: [method definingClass ~~ BitBltSimulation]) ifTrue:
+			[method := (BitBltSimulation >> selector) methodNode asTranslationMethodOfClass: TMethod]].
+	method ifNil:
+		[^nil].
+	map := Dictionary new.
+	method args do: [:var| map at: var put: depth asString, var].
+	method locals do: [:var| map at: var put: depth asString, var].
+	^self accessorsAndAssignmentsForMethod: (method copy renameVariablesUsing: map)
+		actuals: actualParameters
+		depth: depth + 1
+		interpreterClass: interpreterClass
+		into: aTrinaryBlock
+]
 
 { #category : #'C translation' }
 VMPluginCodeGenerator >> atLeastVMProxyMajor: major minor: minor [ 
@@ -161,30 +201,10 @@ VMPluginCodeGenerator >> emitCTypesOn: aStream [
 
 { #category : #'C code generator' }
 VMPluginCodeGenerator >> emitExportsOn: aStream [
-	"Store all the exported primitives in a form to be used by internal plugins"
-	| prefix |
-	aStream nextPutAll:'
-
-#ifdef SQUEAK_BUILTIN_PLUGIN
-
-void* ', pluginName,'_exports[][3] = {'.
-	prefix := '"', pluginName,'"'.
-	(self sortStrings: self exportedPrimitiveNames) do:[:primName|
-		aStream cr;
-			nextPutAll:'	{'; 
-			nextPutAll: prefix; 
-			nextPutAll:', "'; 
-			nextPutAll: primName; 
-			nextPutAll:'", (void*)'; 
-			nextPutAll: primName;
-			nextPutAll:'},'.
-	].
-	aStream nextPutAll:'
-	{NULL, NULL, NULL}
-};
-
-#endif /* ifdef SQ_BUILTIN_PLUGIN */
-'
+	"Store all the exported primitives in the form used by the internal named prim system."
+	aStream cr; cr; nextPutAll:'#ifdef SQUEAK_BUILTIN_PLUGIN'.
+	self emitExportsNamed: pluginName pluginName: pluginName on: aStream.
+	aStream cr; nextPutAll: '#endif /* ifdef SQ_BUILTIN_PLUGIN */'; cr
 ]
 
 { #category : #'C translation' }

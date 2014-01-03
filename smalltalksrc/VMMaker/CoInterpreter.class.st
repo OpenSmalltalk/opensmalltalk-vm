@@ -4769,14 +4769,6 @@ CoInterpreter >> methodCacheAddress [
 	^self cCode: 'GIV(methodCache)' inSmalltalk: [methodCache offset * BytesPerWord]
 ]
 
-{ #category : #'message sending' }
-CoInterpreter >> methodClassOf: methodPointer [
-	<inline: true>
-	<option: #SpurObjectMemory>
-	<api>
-	^super methodClassOf: methodPointer
-]
-
 { #category : #'compiled methods' }
 CoInterpreter >> methodHasCogMethod: aMethodOop [
 	<api>
@@ -6372,14 +6364,6 @@ CoInterpreter >> storeRemoteTemp: index inVectorAt: tempVectorIndex [
 	| tempVector |
 	tempVector := self itemporary: tempVectorIndex in: localFP.
 	objectMemory storePointer: index ofObject: tempVector withValue: self internalStackTop
-]
-
-{ #category : #'message sending' }
-CoInterpreter >> superclassOf: classPointer [
-	<inline: true>
-	<option: #SpurObjectMemory>
-	<api>
-	^super superclassOf: classPointer
 ]
 
 { #category : #'process primitive support' }

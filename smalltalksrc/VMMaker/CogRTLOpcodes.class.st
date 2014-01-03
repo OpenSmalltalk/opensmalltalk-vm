@@ -10,7 +10,6 @@ Class {
 		'AddRR',
 		'AddRdRd',
 		'AlignmentNops',
-		'AlignmentNopsTo',
 		'AndCqR',
 		'AndCwR',
 		'AndRR',
@@ -78,7 +77,6 @@ Class {
 		'LastRTLCode',
 		'LinkReg',
 		'LoadEffectiveAddressMwrR',
-		'LoadEffectiveAddressXowrR',
 		'LogicalShiftLeftCqR',
 		'LogicalShiftLeftRR',
 		'LogicalShiftRightCqR',
@@ -90,25 +88,21 @@ Class {
 		'MoveCqR',
 		'MoveCwR',
 		'MoveM16rR',
-		'MoveM32rR',
 		'MoveM64rRd',
 		'MoveMbrR',
 		'MoveMwrR',
 		'MoveRAw',
 		'MoveRM16r',
-		'MoveRM32r',
 		'MoveRMbr',
 		'MoveRMwr',
 		'MoveRR',
 		'MoveRX16rR',
-		'MoveRX32rR',
 		'MoveRXbrR',
 		'MoveRXowr',
 		'MoveRXwrR',
 		'MoveRdM64r',
 		'MoveRdRd',
 		'MoveX16rRR',
-		'MoveX32rRR',
 		'MoveXbrRR',
 		'MoveXowrR',
 		'MoveXwrRR',
@@ -157,8 +151,8 @@ CogRTLOpcodes class >> initialize [
 				  of bits.  This allows e.g. a garbage collector to update the value without invalidating the code.
 		C32	- a constant with 32 bit size.  The generated constant must occupy 32 bits.
 		C64	- a constant with 64 bit size.  The generated constant must occupy 64 bits.
-		Aw		- memory word at an absolute address
-		Ab		- memory byte at an absolute address
+		Aw		- memory word with an absolute address
+		Ab		- memory byte with an absolute address
 		Mwr	- memory word whose address is at a constant offset from an address in a register
 		Mbr		- memory byte whose address is at a constant offset from an address in a register
 		M16r	- memory 16-bit halfword whose address is at a constant offset from an address in a register
@@ -207,15 +201,14 @@ CogRTLOpcodes class >> initialize [
 	
 	LinkReg := -17.
 
-	opcodeNames := #("No ops & Pseudo Ops"
+	opcodeNames := #("Noops & Pseudo Ops"
 						Label
-						AlignmentNops		"output nops until a byte aligned on an operand 0 boundary"
-						AlignmentNopsTo	"output nops until just before the address in operand 0 + operand 1"
-						FillBytesFrom		"output operand 0's worth of bytes from the address in operand 1"
-						Fill8					"output a byte's worth of bytes with operand 0"
-						Fill16				"output two byte's worth of bytes with operand 0"
-						Fill32				"output four byte's worth of bytes with operand 0"
-						FillFromWord		"output BytesPerWord's worth of bytes with operand 0 + operand 1"
+						AlignmentNops
+						FillBytesFrom	"output operand 0's worth of bytes from the address in operand 1"
+						Fill8				"output a byte's worth of bytes with operand 0"
+						Fill16			"output two byte's worth of bytes with operand 0"
+						Fill32			"output four byte's worth of bytes with operand 0"
+						FillFromWord	"output BytesPerWord's worth of bytes with operand 0 + operand 1"
 						Nop
 
 						"Control"
