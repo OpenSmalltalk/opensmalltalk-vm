@@ -1206,6 +1206,24 @@ StackInterpreter class >> isNonArgumentImplicitReceiverVariableName: aString [
 	  or: [self objectMemoryClass isNonArgumentImplicitReceiverVariableName: aString]
 ]
 
+{ #category : #'spur compilation support' }
+StackInterpreter class >> isObjectAccessor: selector [
+	"Answer if selector is one of fetchPointer:ofObject: storePointer:ofObject:withValue:
+	 et al."
+	^(InterpreterProxy whichCategoryIncludesSelector: selector) = #'object access'
+	 or: [(SpurMemoryManager whichCategoryIncludesSelector: selector) = #'object access']
+
+	"This for checking.  The above two protocols are somewhat disjoint."
+	"(InterpreterProxy allMethodsInCategory: #'object access') copyWithoutAll: (SpurMemoryManager allMethodsInCategory: #'object access')"
+	"(SpurMemoryManager allMethodsInCategory: #'object access') copyWithoutAll: (InterpreterProxy allMethodsInCategory: #'object access')"
+]
+
+{ #category : #'spur compilation support' }
+StackInterpreter class >> isStackAccessor: selector [
+	^#( stackTop stackValue: stackTopPut: stackValue:put:
+		stackFloatValue: stackIntegerValue: stackObjectValue:) includes: selector
+]
+
 { #category : #benchmarks }
 StackInterpreter class >> macroBenchmark [  "StackInterpreter macroBenchmark"
 	| dir |
@@ -4228,7 +4246,7 @@ StackInterpreter >> dumpImage: fileName [
 	f := self cCode: 'sqImageFileOpen(pointerForOop(fileName), "wb")'.
 	f = nil ifTrue: [^-1].
 	dataSize := objectMemory endOfMemory - objectMemory startOfMemory.
-	result := self cCode: 'sqImageFileWrite(pointerForOop(memory()), sizeof(unsigned char), dataSize, f)'.
+	result := self cCode: 'sqImageFileWrite(pointerForOop(memory), sizeof(unsigned char), dataSize, f)'.
 	self cCode: 'sqImageFileClose(f)'.
 	^result
 
