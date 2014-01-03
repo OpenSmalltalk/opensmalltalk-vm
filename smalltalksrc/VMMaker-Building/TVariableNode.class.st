@@ -38,6 +38,12 @@ TVariableNode >> isLeaf [
 	^true
 ]
 
+{ #category : #comparing }
+TVariableNode >> isSameAs: aTParseNode [
+	^aTParseNode isVariable
+	 and: [name = aTParseNode name]
+]
+
 { #category : #testing }
 TVariableNode >> isVariable [
 

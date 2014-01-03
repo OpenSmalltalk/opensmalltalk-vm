@@ -587,21 +587,21 @@ StackInterpreterPrimitives >> primitiveExecuteMethodArgsArray [
 { #category : #'plugin primitives' }
 StackInterpreterPrimitives >> primitiveExternalCall [
 	"Call an external primitive. External primitive methods first literals are an array of
-		* The module name (String | Symbol) 
-		* The function name (String | Symbol) 
-		* The session ID (SmallInteger) [OBSOLETE] 
+		* The module name (String | Symbol)
+		* The function name (String | Symbol)
+		* The session ID (SmallInteger) [OBSOLETE] (or in Spur, the accessorDepth)
 		* The function index (Integer) in the externalPrimitiveTable
 	For fast interpreter dispatch in subsequent invocations the primitiveFunctionPointer
 	in the method cache is rewritten, either to the function itself, or to zero if the external
 	function is not found.   This allows for fast responses as long as the method stays in
 	the cache. The cache rewrite relies on lastMethodCacheProbeWrite which is set in
-	addNewMethodToCache:. 
+	addNewMethodToCache:.
 	Now that the VM flushes function addresses from its tables, the session ID is obsolete,
 	but it is kept for backward compatibility. Also, a failed lookup is reported specially. If a
 	method has been  looked up and not been found, the function address is stored as -1
 	(i.e., the SmallInteger -1 to distinguish from 16rFFFFFFFF which may be returned from
 	lookup), and the primitive fails with PrimErrNotFound."
-	| lit addr moduleName functionName moduleLength functionLength index |
+	| lit addr moduleName functionName moduleLength functionLength accessorDepth index |
 	<var: #addr declareC: 'void (*addr)()'>
 	
 	"Fetch the first literal of the method"
@@ -653,14 +653,31 @@ StackInterpreterPrimitives >> primitiveExternalCall [
 		[self primitiveFailFor: PrimErrBadMethod].
 	functionLength := objectMemory lengthOf: functionName.
 
-	addr := self ioLoadExternalFunction: functionName + BaseHeaderSize
-				OfLength: functionLength
-				FromModule: moduleName + BaseHeaderSize
-				OfLength: moduleLength.
-	addr = 0
-		ifTrue: [index := -1]
-		ifFalse: ["add the function to the external primitive table"
-			index := self addToExternalPrimitiveTable: addr].
+	objectMemory hasSpurMemoryManagerAPI
+		ifTrue:
+			[addr := self ioLoadExternalFunction: functionName + BaseHeaderSize
+						OfLength: functionLength
+						FromModule: moduleName + BaseHeaderSize
+						OfLength: moduleLength
+						AccessorDepthInto: (self addressOf: accessorDepth
+												 put: [:val| accessorDepth := val]).
+			 addr = 0
+				ifTrue: [index := -1]
+				ifFalse: "add the function to the external primitive table"
+					[index := self addToExternalPrimitiveTable: addr.
+					 objectMemory
+						storePointerUnchecked: 2
+						ofObject: lit
+						withValue: (objectMemory integerObjectOf: accessorDepth)]]
+		ifFalse:
+			[addr := self ioLoadExternalFunction: functionName + BaseHeaderSize
+						OfLength: functionLength
+						FromModule: moduleName + BaseHeaderSize
+						OfLength: moduleLength.
+			 addr = 0
+				ifTrue: [index := -1]
+				ifFalse: "add the function to the external primitive table"
+					[index := self addToExternalPrimitiveTable: addr]].
 
 	"Store the index (or -1 if failure) back in the literal"
 	objectMemory storePointerUnchecked: 3 ofObject: lit withValue: (objectMemory integerObjectOf: index).
@@ -669,10 +686,11 @@ StackInterpreterPrimitives >> primitiveExternalCall [
 	index >= 0
 		ifTrue:
 			[self rewriteMethodCacheEntryForExternalPrimitiveToFunction: (self cCode: [addr] inSmalltalk: [1000 + index]).
-			self callExternalPrimitive: addr]
-		ifFalse: ["Otherwise void the primitive function and fail"
-			self rewriteMethodCacheEntryForExternalPrimitiveToFunction: 0.
-			^self primitiveFailFor: PrimErrNotFound]
+			 self callExternalPrimitive: addr]
+		ifFalse: "Otherwise void the primitive function and fail"
+			[self rewriteMethodCacheEntryForExternalPrimitiveToFunction: 0.
+			 self assert: (objectMemory fetchPointer: 2 ofObject: lit) = ConstZero.
+			 self primitiveFailFor: PrimErrNotFound]
 ]
 
 { #category : #'control primitives' }
