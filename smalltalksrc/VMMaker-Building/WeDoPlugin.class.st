@@ -18,7 +18,7 @@ WeDoPlugin class >> hasHeaderFile [
 WeDoPlugin >> primClosePort [
 	"Close the WeDo port."
 
-	self export: true.
+	<export: true>
 	interpreterProxy success: (self cCode: 'WeDoClosePort()').
 	^ 0
 
@@ -28,7 +28,7 @@ WeDoPlugin >> primClosePort [
 WeDoPlugin >> primOpenPort [
 	"Open the WeDo port."
 
-	self export: true.
+	<export: true>
 	interpreterProxy success: (self cCode: 'WeDoOpenPort()').
 	^ 0
 
@@ -39,8 +39,8 @@ WeDoPlugin >> primRead [
 	"Read data from the WeDo port into the given buffer (a ByteArray or String). Answer the number of bytes read."
 
 	| bufOop bufPtr bufSize byteCount |
-	self export: true.
-	self var: 'bufPtr' declareC: 'char *bufPtr'.
+	<export: true>
+	<var: 'bufPtr' declareC: 'char *bufPtr'>
 
 	bufOop := interpreterProxy stackValue: 0.
 	((interpreterProxy isIntegerObject: bufOop) or:
@@ -67,8 +67,8 @@ WeDoPlugin >> primWrite [
 	"Write data to the WeDo port from the given buffer (a ByteArray or String). Answer the number of bytes written."
 
 	| bufOop bufPtr bufSize byteCount |
-	self export: true.
-	self var: 'bufPtr' declareC: 'char *bufPtr'.
+	<export: true>
+	<var: 'bufPtr' declareC: 'char *bufPtr'>
 
 	bufOop := interpreterProxy stackValue: 0.
 	((interpreterProxy isIntegerObject: bufOop) or:

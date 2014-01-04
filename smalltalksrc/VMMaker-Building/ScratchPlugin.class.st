@@ -40,8 +40,8 @@ ScratchPlugin class >> hasHeaderFile [
 ScratchPlugin >> bitmap: bitmap at: i putH: hue s: saturation v: brightness [
 
 	| hI hF p q t v outPix |
-	self inline: true.
-	self var: 'bitmap' declareC: 'unsigned int *bitmap'.
+	<inline: true>
+	<var: 'bitmap' declareC: 'unsigned int *bitmap'>
 
 	hI := hue // 60.  "integer part of hue (0..5)"
 	hF := hue \\ 60.  "fractional part ofhue"
@@ -71,8 +71,8 @@ ScratchPlugin >> bitmap: bitmap at: i putH: hue s: saturation v: brightness [
 ScratchPlugin >> checkedFloatPtrOf: oop [
 	"Return an unsigned int pointer to the first indexable word of oop, which must be a words object."
 
-	self inline: true.
-	self returnTypeC: 'double *'.
+	<inline: true>
+	<returnTypeC: 'double *'>
 
 	interpreterProxy success: (interpreterProxy isWordsOrBytes: oop).
 	interpreterProxy failed ifTrue: [^ 0].
@@ -84,8 +84,8 @@ ScratchPlugin >> checkedFloatPtrOf: oop [
 ScratchPlugin >> checkedUnsignedIntPtrOf: oop [
 	"Return an unsigned int pointer to the first indexable word of oop, which must be a words object."
 
-	self inline: true.
-	self returnTypeC: 'unsigned int *'.
+	<inline: true>
+	<returnTypeC: 'unsigned int *'>
 
 	interpreterProxy success: (interpreterProxy isWords: oop).
 	interpreterProxy failed ifTrue: [^ 0].
@@ -98,7 +98,7 @@ ScratchPlugin >> hueFromR: r G: g B: b min: min max: max [
 	"Answer the hue, an angle between 0 and 360."
 
 	| span result |
-	self inline: true.
+	<inline: true>
 
 	span := max - min.
 	span = 0 ifTrue: [^ 0].
@@ -120,7 +120,7 @@ ScratchPlugin >> interpolate: pix1 and: pix2 frac: frac2 [
 	"Answer the interpolated pixel value between the given two pixel values. If either pixel is zero (transparent) answer the other pixel. If both pixels are  transparent, answer transparent. The fraction is between 0 and 1023, out of a total range of 1024."
 
 	| frac1 r g b result |
-	self inline: true.
+	<inline: true>
 
 	pix1 = 0 ifTrue: [^ pix2].  "pix1 is transparent"
 	pix2 = 0 ifTrue: [^ pix1].  "pix2 is transparent"
@@ -140,8 +140,8 @@ ScratchPlugin >> interpolatedFrom: bitmap x: xFixed y: yFixed width: w height: h
 	"Answer the interpolated pixel value from the given bitmap at the given point. The x and y coordinates are fixed-point integers with 10 bits of fraction (i.e. they were multiplied by 1024, then truncated). If the given point is right on an edge, answer the nearest edge pixel value. If it is entirely outside of the image, answer 0 (transparent)."
 
 	| x y xFrac yFrac index topPix bottomPix |
-	self inline: true.
-	self var: 'bitmap' declareC: 'unsigned int *bitmap'.
+	<inline: true>
+	<var: 'bitmap' declareC: 'unsigned int *bitmap'>
 
 	x := xFixed bitShift: -10.
 	(x < -1 or: [x >= w]) ifTrue: [^ 0].
@@ -177,7 +177,7 @@ ScratchPlugin >> primClose [
 	"Close the given serial port."
 
 	| portNum |
-	self export: true.
+	<export: true>
 	portNum := interpreterProxy stackIntegerValue: 0.
 	interpreterProxy failed ifTrue: [^ nil].
 
@@ -193,7 +193,7 @@ ScratchPlugin >> primGetOption [
 	"Return the given option value for the given serial port."
 
 	| portNum attrNum result |
-	self export: true.
+	<export: true>
 	portNum := interpreterProxy stackIntegerValue: 1.
 	attrNum := interpreterProxy stackIntegerValue: 0.
 	interpreterProxy failed ifTrue: [^ nil].
@@ -212,7 +212,7 @@ ScratchPlugin >> primIsPortOpen [
 	"Answer the true if the given port is open."
 
 	| portNum result |
-	self export: true.
+	<export: true>
 	portNum := interpreterProxy stackIntegerValue: 0.
 	interpreterProxy failed ifTrue: [^ 0].
 
@@ -229,9 +229,9 @@ ScratchPlugin >> primOpenPortNamed [
 	"Open the port with the given name and baud rate."
 
 	| nameStr src nameOop baudRate count portNum |
-	self export: true.
-	self var: 'nameStr' declareC: 'char nameStr[1000]'.
-	self var: 'src' declareC: 'char * src'.
+	<export: true>
+	<var: 'nameStr' declareC: 'char nameStr[1000]'>
+	<var: 'src' declareC: 'char * src'>
 
 	nameOop := interpreterProxy stackValue: 1.
 	baudRate := interpreterProxy stackIntegerValue: 0.
@@ -264,7 +264,7 @@ ScratchPlugin >> primPortCount [
 	"Answer the number of serial ports."
 
 	| result |
-	self export: true.
+	<export: true>
 
 	result := self cCode: 'SerialPortCount()'.
 	result = -1 ifTrue: [interpreterProxy success: false. ^ 0].
@@ -280,9 +280,9 @@ ScratchPlugin >> primPortName [
 	"Get the name for the port with the given number. Fail if the port number is greater than the number of available ports. Port numbering starts with 1."
 
 	| portIndex nameStr count resultOop dst |
-	self export: true.
-	self var: 'nameStr' declareC: 'char nameStr[1000]'.
-	self var: 'dst' declareC: 'char* dst'.
+	<export: true>
+	<var: 'nameStr' declareC: 'char nameStr[1000]'>
+	<var: 'dst' declareC: 'char* dst'>
 
 	portIndex := interpreterProxy stackIntegerValue: 0.
 	interpreterProxy failed ifTrue: [^ 0].
@@ -308,8 +308,8 @@ ScratchPlugin >> primRead [
 	"Read data from the given serial port into the given buffer (a ByteArray or String). Answer the number of bytes read."
 
 	| portNum bufOop bufPtr bufSize bytesRead |
-	self export: true.
-	self var: 'bufPtr' declareC: 'char *bufPtr'.
+	<export: true>
+	<var: 'bufPtr' declareC: 'char *bufPtr'>
 
 	portNum := interpreterProxy stackIntegerValue: 1.
 	bufOop := interpreterProxy stackValue: 0.
@@ -335,7 +335,7 @@ ScratchPlugin >> primSetOption [
 	"Return the given option value for the given serial port."
 
 	| portNum attrNum attrValue result |
-	self export: true.
+	<export: true>
 	portNum := interpreterProxy stackIntegerValue: 2.
 	attrNum := interpreterProxy stackIntegerValue: 1.
 	attrValue := interpreterProxy stackIntegerValue: 0.
@@ -354,8 +354,8 @@ ScratchPlugin >> primWrite [
 	"Write data to the given serial port from the given buffer (a ByteArray or String). Answer the number of bytes written."
 
 	| portNum bufOop bufPtr bufSize bytesWritten |
-	self export: true.
-	self var: 'bufPtr' declareC: 'char *bufPtr'.
+	<export: true>
+	<var: 'bufPtr' declareC: 'char *bufPtr'>
 
 	portNum := interpreterProxy stackIntegerValue: 1.
 	bufOop := interpreterProxy stackValue: 0.
@@ -380,9 +380,9 @@ ScratchPlugin >> primWrite [
 ScratchPlugin >> primitiveBlur [
 
 	| inOop outOop width in out sz height n rTotal gTotal bTotal pix outPix |
-	self export: true.
-	self var: 'in' declareC: 'unsigned int *in'.
-	self var: 'out' declareC: 'unsigned int *out'.
+	<export: true>
+	<var: 'in' declareC: 'unsigned int *in'>
+	<var: 'out' declareC: 'unsigned int *out'>
 
 	inOop := interpreterProxy stackValue: 2.
 	outOop := interpreterProxy stackValue: 1.
@@ -419,9 +419,9 @@ ScratchPlugin >> primitiveBlur [
 ScratchPlugin >> primitiveBrightnessShift [
 
 	| inOop outOop shift in sz out pix r g b max min hue saturation brightness |
-	self export: true.
-	self var: 'in' declareC: 'unsigned int *in'.
-	self var: 'out' declareC: 'unsigned int *out'.
+	<export: true>
+	<var: 'in' declareC: 'unsigned int *in'>
+	<var: 'out' declareC: 'unsigned int *out'>
 
 	inOop := interpreterProxy stackValue: 2.
 	outOop := interpreterProxy stackValue: 1.
@@ -469,9 +469,9 @@ ScratchPlugin >> primitiveBrightnessShift [
 ScratchPlugin >> primitiveCondenseSound [
 
 	| srcOop dstOop factor sz src dst count max v |
-	self export: true.
-	self var: 'src' declareC: 'short *src'.
-	self var: 'dst' declareC: 'short *dst'.
+	<export: true>
+	<var: 'src' declareC: 'short *src'>
+	<var: 'dst' declareC: 'short *dst'>
 
 	srcOop := interpreterProxy stackValue: 2.
 	dstOop := interpreterProxy stackValue: 1.
@@ -504,9 +504,9 @@ ScratchPlugin >> primitiveCondenseSound [
 ScratchPlugin >> primitiveDoubleSize [
 
 	| in out inOop outOop inW inH outW outH dstX dstY baseIndex pix i |
-	self export: true.
-	self var: 'in' declareC: 'int *in'.
-	self var: 'out' declareC: 'int *out'.
+	<export: true>
+	<var: 'in' declareC: 'int *in'>
+	<var: 'out' declareC: 'int *out'>
 
 	inOop := interpreterProxy stackValue: 7.
 	inW := interpreterProxy stackIntegerValue: 6.
@@ -542,9 +542,9 @@ ScratchPlugin >> primitiveDoubleSize [
 ScratchPlugin >> primitiveExtractChannel [
 
 	| srcOop dstOop rightFlag sz src dst |
-	self export: true.
-	self var: 'src' declareC: 'short *src'.
-	self var: 'dst' declareC: 'short *dst'.
+	<export: true>
+	<var: 'src' declareC: 'short *src'>
+	<var: 'dst' declareC: 'short *dst'>
 
 	srcOop := interpreterProxy stackValue: 2.
 	dstOop := interpreterProxy stackValue: 1.
@@ -571,22 +571,22 @@ ScratchPlugin >> primitiveExtractChannel [
 ScratchPlugin >> primitiveFisheye [
 
 	| inOop outOop width in out sz height centerX centerY dx dy ang pix power r srcX srcY scaledPower |
-	self export: true.
-	self var: 'in' declareC: 'unsigned int *in'.
-	self var: 'out' declareC: 'unsigned int *out'.
-	self var: 'scaleX' declareC: 'double scaleX'.
-	self var: 'scaleY' declareC: 'double scaleY'.
-	self var: 'whirlRadians' declareC: 'double whirlRadians'.
-	self var: 'radiusSquared' declareC: 'double radiusSquared'.
-	self var: 'dx' declareC: 'double dx'.
-	self var: 'dy' declareC: 'double dy'.
-	self var: 'd' declareC: 'double d'.
-	self var: 'factor' declareC: 'double factor'.
-	self var: 'ang' declareC: 'double ang'.
-	self var: 'sina' declareC: 'double sina'.
-	self var: 'cosa' declareC: 'double cosa'.
-	self var: 'r' declareC: 'double r'.
-	self var: 'scaledPower' declareC: 'double scaledPower'.
+	<export: true>
+	<var: 'in' declareC: 'unsigned int *in'>
+	<var: 'out' declareC: 'unsigned int *out'>
+	<var: 'scaleX' declareC: 'double scaleX'>
+	<var: 'scaleY' declareC: 'double scaleY'>
+	<var: 'whirlRadians' declareC: 'double whirlRadians'>
+	<var: 'radiusSquared' declareC: 'double radiusSquared'>
+	<var: 'dx' declareC: 'double dx'>
+	<var: 'dy' declareC: 'double dy'>
+	<var: 'd' declareC: 'double d'>
+	<var: 'factor' declareC: 'double factor'>
+	<var: 'ang' declareC: 'double ang'>
+	<var: 'sina' declareC: 'double sina'>
+	<var: 'cosa' declareC: 'double cosa'>
+	<var: 'r' declareC: 'double r'>
+	<var: 'scaledPower' declareC: 'double scaledPower'>
 
 	inOop := interpreterProxy stackValue: 3.
 	outOop := interpreterProxy stackValue: 2.
@@ -638,9 +638,9 @@ ScratchPlugin >> primitiveGetFolderPath [
 	"Get the path for the special folder with given ID. Fail if the folder ID is out of range."
 
 	| nameStr dst folderID count resultOop |
-	self export: true.
-	self var: 'nameStr' declareC: 'char nameStr[2000]'.
-	self var: 'dst' declareC: 'char* dst'.
+	<export: true>
+	<var: 'nameStr' declareC: 'char nameStr[2000]'>
+	<var: 'dst' declareC: 'char* dst'>
 
 	folderID := interpreterProxy stackIntegerValue: 0.
 	interpreterProxy failed ifTrue: [^ 0].
@@ -661,9 +661,9 @@ ScratchPlugin >> primitiveGetFolderPath [
 ScratchPlugin >> primitiveHalfSizeAverage [
 
 	| in inW inH out outW outH srcX srcY dstX dstY dstW dstH srcIndex dstIndex pixel r g b |
-	self export: true.
-	self var: 'in' declareC: 'int *in'.
-	self var: 'out' declareC: 'int *out'.
+	<export: true>
+	<var: 'in' declareC: 'int *in'>
+	<var: 'out' declareC: 'int *out'>
 
 	in := self checkedUnsignedIntPtrOf: (interpreterProxy stackValue: 11).
 	inW := interpreterProxy stackIntegerValue: 10.
@@ -727,9 +727,9 @@ ScratchPlugin >> primitiveHalfSizeAverage [
 ScratchPlugin >> primitiveHalfSizeDiagonal [
 
 	| in inW inH out outW outH srcX srcY dstX dstY dstW dstH srcIndex dstIndex p1 p2 r g b |
-	self export: true.
-	self var: 'in' declareC: 'int *in'.
-	self var: 'out' declareC: 'int *out'.
+	<export: true>
+	<var: 'in' declareC: 'int *in'>
+	<var: 'out' declareC: 'int *out'>
 
 	in := self checkedUnsignedIntPtrOf: (interpreterProxy stackValue: 11).
 	inW := interpreterProxy stackIntegerValue: 10.
@@ -778,9 +778,9 @@ ScratchPlugin >> primitiveHalfSizeDiagonal [
 ScratchPlugin >> primitiveHueShift [
 
 	| inOop outOop shift in sz out pix r g b max min brightness saturation hue |
-	self export: true.
-	self var: 'in' declareC: 'unsigned int *in'.
-	self var: 'out' declareC: 'unsigned int *out'.
+	<export: true>
+	<var: 'in' declareC: 'unsigned int *in'>
+	<var: 'out' declareC: 'unsigned int *out'>
 
 	inOop := interpreterProxy stackValue: 2.
 	outOop := interpreterProxy stackValue: 1.
@@ -828,8 +828,8 @@ ScratchPlugin >> primitiveHueShift [
 ScratchPlugin >> primitiveInterpolate [
 
 	| inOop xFixed yFixed width in sz result |
-	self export: true.
-	self var: 'in' declareC: 'unsigned int *in'.
+	<export: true>
+	<var: 'in' declareC: 'unsigned int *in'>
 
 	inOop := interpreterProxy stackValue: 3.
 	width := interpreterProxy stackIntegerValue: 2.
@@ -852,9 +852,9 @@ ScratchPlugin >> primitiveIsHidden [
 	"Answer true if the file or folder with the given path should be hidden from the user. On Windows, this is the value of the 'hidden' file property."
 
 	| pathOop src count fullPath result |
-	self export: true.
-	self var: 'fullPath' declareC: 'char fullPath[1000]'.
-	self var: 'src' declareC: 'char * src'.
+	<export: true>
+	<var: 'fullPath' declareC: 'char fullPath[1000]'>
+	<var: 'src' declareC: 'char * src'>
 
 	pathOop := interpreterProxy stackValue: 0.
 
@@ -884,9 +884,9 @@ ScratchPlugin >> primitiveOpenURL [
 	"Open a web browser on the given URL."
 
 	| urlStr src urlOop count |
-	self export: true.
-	self var: 'urlStr' declareC: 'char urlStr[2000]'.
-	self var: 'src' declareC: 'char * src'.
+	<export: true>
+	<var: 'urlStr' declareC: 'char urlStr[2000]'>
+	<var: 'src' declareC: 'char * src'>
 
 	urlOop := interpreterProxy stackValue: 0.
 
@@ -914,9 +914,9 @@ ScratchPlugin >> primitiveOpenURL [
 ScratchPlugin >> primitiveSaturationShift [
 
 	| inOop outOop shift in sz out pix r g b max min brightness saturation hue |
-	self export: true.
-	self var: 'in' declareC: 'unsigned int *in'.
-	self var: 'out' declareC: 'unsigned int *out'.
+	<export: true>
+	<var: 'in' declareC: 'unsigned int *in'>
+	<var: 'out' declareC: 'unsigned int *out'>
 
 	inOop := interpreterProxy stackValue: 2.
 	outOop := interpreterProxy stackValue: 1.
@@ -964,9 +964,9 @@ ScratchPlugin >> primitiveScale [
 	"Scale using bilinear interpolation."
 
 	| inOop inW inH outOop outW outH in out inX inY xIncr yIncr outPix w1 w2 w3 w4 t p1 p2 p3 p4 tWeight |
-	self export: true.
-	self var: 'in' declareC: 'int *in'.
-	self var: 'out' declareC: 'int *out'.
+	<export: true>
+	<var: 'in' declareC: 'int *in'>
+	<var: 'out' declareC: 'int *out'>
 
 	inOop := interpreterProxy stackValue: 5.
 	inW := interpreterProxy stackIntegerValue: 4.
@@ -1035,8 +1035,8 @@ ScratchPlugin >> primitiveSetUnicodePasteBuffer [
 	"Set the Mac OS X Unicode paste buffer."
 
 	| utf16 strOop count |
-	self export: true.
-	self var: 'utf16' declareC: 'short int *utf16'.
+	<export: true>
+	<var: 'utf16' declareC: 'short int *utf16'>
 
 	strOop := interpreterProxy stackValue: 0.
 
@@ -1062,9 +1062,9 @@ ScratchPlugin >> primitiveSetWindowTitle [
 	"Set the title of the Scratch window."
 
 	| titleStr src titleOop count |
-	self export: true.
-	self var: 'titleStr' declareC: 'char titleStr[1000]'.
-	self var: 'src' declareC: 'char * src'.
+	<export: true>
+	<var: 'titleStr' declareC: 'char titleStr[1000]'>
+	<var: 'src' declareC: 'char * src'>
 
 	titleOop := interpreterProxy stackValue: 0.
 
@@ -1093,10 +1093,10 @@ ScratchPlugin >> primitiveShortToLongPath [
 	"On Windows, convert a short file/path name into a long one. Fail on other platforms."
 
 	| shortPath longPath ptr shortPathOop result count resultOop |
-	self export: true.
-	self var: 'shortPath' declareC: 'char shortPath[1000]'.
-	self var: 'longPath' declareC: 'char longPath[1000]'.
-	self var: 'ptr' declareC: 'char * ptr'.
+	<export: true>
+	<var: 'shortPath' declareC: 'char shortPath[1000]'>
+	<var: 'longPath' declareC: 'char longPath[1000]'>
+	<var: 'ptr' declareC: 'char * ptr'>
 
 	shortPathOop := interpreterProxy stackValue: 0.
 
@@ -1127,17 +1127,17 @@ ScratchPlugin >> primitiveShortToLongPath [
 ScratchPlugin >> primitiveWaterRipples1 [
  
 	| in out aArray bArray ripply temp pix dx dy dist inOop outOop width allPix aArOop bArOop height t1 blops x y power val val2 dx2 dy2 newLoc |
-	self export: true.
-	self var: 'in' declareC: 'unsigned int *in'.
-	self var: 'out' declareC: 'unsigned int *out'.
-	self var: 'aArray' declareC: 'double *aArray'.
-	self var: 'bArray' declareC: 'double *bArray'.
-	self var: 'ripply' declareC: 'int ripply'.
-	self var: 'temp' declareC: 'double temp'.
-	self var: 'pix' declareC: 'unsigned int pix'.
-	self var: 'dist' declareC: 'double dist'.
-	self var: 'dx2' declareC: 'double dx2'.
-	self var: 'dy2' declareC: 'double dy2'.
+	<export: true>
+	<var: 'in' declareC: 'unsigned int *in'>
+	<var: 'out' declareC: 'unsigned int *out'>
+	<var: 'aArray' declareC: 'double *aArray'>
+	<var: 'bArray' declareC: 'double *bArray'>
+	<var: 'ripply' declareC: 'int ripply'>
+	<var: 'temp' declareC: 'double temp'>
+	<var: 'pix' declareC: 'unsigned int pix'>
+	<var: 'dist' declareC: 'double dist'>
+	<var: 'dx2' declareC: 'double dx2'>
+	<var: 'dy2' declareC: 'double dy2'>
 
 	inOop := interpreterProxy stackValue: 5.
 	outOop := interpreterProxy stackValue: 4.
@@ -1227,20 +1227,20 @@ ScratchPlugin >> primitiveWaterRipples1 [
 ScratchPlugin >> primitiveWhirl [
 
 	| inOop outOop width degrees in out sz height centerX centerY radius scaleX scaleY whirlRadians radiusSquared dx dy d factor ang sina cosa pix |
-	self export: true.
-	self var: 'in' declareC: 'unsigned int *in'.
-	self var: 'out' declareC: 'unsigned int *out'.
-	self var: 'scaleX' declareC: 'double scaleX'.
-	self var: 'scaleY' declareC: 'double scaleY'.
-	self var: 'whirlRadians' declareC: 'double whirlRadians'.
-	self var: 'radiusSquared' declareC: 'double radiusSquared'.
-	self var: 'dx' declareC: 'double dx'.
-	self var: 'dy' declareC: 'double dy'.
-	self var: 'd' declareC: 'double d'.
-	self var: 'factor' declareC: 'double factor'.
-	self var: 'ang' declareC: 'double ang'.
-	self var: 'sina' declareC: 'double sina'.
-	self var: 'cosa' declareC: 'double cosa'.
+	<export: true>
+	<var: 'in' declareC: 'unsigned int *in'>
+	<var: 'out' declareC: 'unsigned int *out'>
+	<var: 'scaleX' declareC: 'double scaleX'>
+	<var: 'scaleY' declareC: 'double scaleY'>
+	<var: 'whirlRadians' declareC: 'double whirlRadians'>
+	<var: 'radiusSquared' declareC: 'double radiusSquared'>
+	<var: 'dx' declareC: 'double dx'>
+	<var: 'dy' declareC: 'double dy'>
+	<var: 'd' declareC: 'double d'>
+	<var: 'factor' declareC: 'double factor'>
+	<var: 'ang' declareC: 'double ang'>
+	<var: 'sina' declareC: 'double sina'>
+	<var: 'cosa' declareC: 'double cosa'>
 
 	inOop := interpreterProxy stackValue: 3.
 	outOop := interpreterProxy stackValue: 2.
