@@ -20,8 +20,8 @@ UnicodePlugin >> asCString: stringOop [
 	"Warning: A Squeak string is not necessarily null-terminated."
 	"Warning: the resulting pointer may become invalid after the next garbage collection and should only be using during the current primitive call."
 
-	self inline: false.
-	self returnTypeC: 'char *'.
+	<inline: false>
+	<returnTypeC: 'char *'>
 
 	((interpreterProxy isIntegerObject: stringOop) or:
 	 [(interpreterProxy isBytes: stringOop) not]) ifTrue: [
@@ -37,8 +37,8 @@ UnicodePlugin >> cWordsPtr: oop minSize: minSize [
 	"Return a C pointer to the first indexable field of oop, which must be a words object of at least the given size."
 	"Warning: the resulting pointer may become invalid after the next garbage collection and should only be using during the current primitive call."
 
-	self inline: false.
-	self returnTypeC: 'void *'.
+	<inline: false>
+	<returnTypeC: 'void *'>
 
 	interpreterProxy success:
 		((interpreterProxy isIntegerObject: oop) not and:
@@ -54,9 +54,9 @@ UnicodePlugin >> copyString: stringOop into: stringPtr max: maxChars [
 	"Copy the Squeak string into a temporary buffer and add a terminating null byte. Fail if there is not sufficent space in the buffer."
 
 	| srcPtr count |
-	self inline: false.
-	self var: 'stringPtr' declareC: 'char *stringPtr'.
-	self var: 'srcPtr' declareC: 'char *srcPtr'.
+	<inline: false>
+	<var: 'stringPtr' declareC: 'char *stringPtr'>
+	<var: 'srcPtr' declareC: 'char *srcPtr'>
 
 	((interpreterProxy isIntegerObject: stringOop) or:
 	 [(interpreterProxy isBytes: stringOop) not]) ifTrue: [
@@ -80,8 +80,8 @@ UnicodePlugin >> primitiveClipboardGet [
 	"Read the clipboard into the given UTF16 string.."
 
 	| utf16Oop utf16 utf16Length count |
-	self export: true.
-	self var: 'utf16' declareC: 'unsigned short *utf16'.
+	<export: true>
+	<var: 'utf16' declareC: 'unsigned short *utf16'>
 
 	utf16Oop := interpreterProxy stackValue: 0.
 
@@ -108,8 +108,8 @@ UnicodePlugin >> primitiveClipboardPut [
 	"Set the clipboard to a UTF16 string.."
 
 	| strOop count utf16 utf16Length |
-	self export: true.
-	self var: 'utf16' declareC: 'unsigned short *utf16'.
+	<export: true>
+	<var: 'utf16' declareC: 'unsigned short *utf16'>
 
 	strOop := interpreterProxy stackValue: 1.
 	count := interpreterProxy stackIntegerValue: 0.
@@ -135,7 +135,7 @@ UnicodePlugin >> primitiveClipboardPut [
 UnicodePlugin >> primitiveClipboardSize [
 
 	| count |
-	self export: true.
+	<export: true>
 
 	count := self cCode: 'unicodeClipboardSize()'.
 
@@ -149,9 +149,9 @@ UnicodePlugin >> primitiveClipboardSize [
 UnicodePlugin >> primitiveDrawString [
 
 	| utf8Oop utf8 w h bitmapOop bitmapPtr utf8Length result |
-	self export: true.
-	self var: 'utf8' declareC: 'char *utf8'.
-	self var: 'bitmapPtr' declareC: 'void *bitmapPtr'.
+	<export: true>
+	<var: 'utf8' declareC: 'char *utf8'>
+	<var: 'bitmapPtr' declareC: 'void *bitmapPtr'>
 
 	utf8Oop := interpreterProxy stackValue: 3.
 	utf8 := self asCString: utf8Oop.
@@ -175,8 +175,8 @@ UnicodePlugin >> primitiveGetFontList [
 
 
 	| strOop str strLength count |
-	self export: true.
-	self var: 'str' declareC: 'char *str'.
+	<export: true>
+	<var: 'str' declareC: 'char *str'>
 
 	strOop := interpreterProxy stackValue: 0.
 	str := self asCString: strOop.
@@ -195,9 +195,9 @@ UnicodePlugin >> primitiveGetFontList [
 UnicodePlugin >> primitiveGetXRanges [
 
 	| utf8Oop utf8 resultOop resultPtr utf8Length count resultLength |
-	self export: true.
-	self var: 'utf8' declareC: 'char *utf8'.
-	self var: 'resultPtr' declareC: 'int *resultPtr'.
+	<export: true>
+	<var: 'utf8' declareC: 'char *utf8'>
+	<var: 'resultPtr' declareC: 'int *resultPtr'>
 
 	utf8Oop := interpreterProxy stackValue: 1.
 	utf8 := self asCString: utf8Oop.
@@ -219,8 +219,8 @@ UnicodePlugin >> primitiveGetXRanges [
 UnicodePlugin >> primitiveMeasureString [
 
 	| utf8Oop utf8 utf8Length w h result |
-	self export: true.
-	self var: 'utf8' declareC: 'char *utf8'.
+	<export: true>
+	<var: 'utf8' declareC: 'char *utf8'>
 
 	utf8Oop := interpreterProxy stackValue: 0.
 	utf8 := self asCString: utf8Oop.
@@ -240,7 +240,7 @@ UnicodePlugin >> primitiveMeasureString [
 UnicodePlugin >> primitiveSetColors [
 
 	| fgRed fgGreen fgBlue bgRed bgGreen bgBlue mapBGToTransparent |
-	self export: true.
+	<export: true>
 
 	fgRed := interpreterProxy stackIntegerValue: 6.
 	fgGreen := interpreterProxy stackIntegerValue: 5.
@@ -262,8 +262,8 @@ UnicodePlugin >> primitiveSetColors [
 UnicodePlugin >> primitiveSetFont [
 
 	| fontName fontSize boldFlag italicFlag antiAliasFlag |
-	self export: true.
-	self var: 'fontName' declareC: 'char fontName[200]'.
+	<export: true>
+	<var: 'fontName' declareC: 'char fontName[200]'>
 
 	self copyString: (interpreterProxy stackValue: 4) into: fontName max: 200.
 	fontSize := interpreterProxy stackIntegerValue: 3.
