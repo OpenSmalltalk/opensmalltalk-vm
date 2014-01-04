@@ -15,9 +15,9 @@ CameraPlugin >> primCameraName [
 	"Get the name for the camera with the given number. Fail if the camera number is greater than the number of available cameras."
 
 	| cameraNum nameStr count resultOop dst |
-	self export: true.
-	self var: 'nameStr' declareC: 'char* nameStr'.
-	self var: 'dst' declareC: 'char* dst'.
+	<export: true>
+	<var: 'nameStr' declareC: 'char* nameStr'>
+	<var: 'dst' declareC: 'char* dst'>
 
 	cameraNum := interpreterProxy stackIntegerValue: 0.
 	interpreterProxy failed ifTrue: [^ 0].
@@ -42,7 +42,7 @@ CameraPlugin >> primCloseCamera [
 	"Close the camera. Do nothing if it was not open."
 
 	| cameraNum |
-	self export: true.
+	<export: true>
 	cameraNum := interpreterProxy stackIntegerValue: 0.
 	interpreterProxy failed ifTrue: [^ 0].
 
@@ -58,7 +58,7 @@ CameraPlugin >> primFrameExtent [
 	"Answer the frame extent of the given camera, or zero if the camera is not open. The extent is 16 bits of width and height packed into a single integer."
 
 	| cameraNum e |
-	self export: true.
+	<export: true>
 	cameraNum := interpreterProxy stackIntegerValue: 0.
 	interpreterProxy failed ifTrue: [^ 0].
 
@@ -74,8 +74,8 @@ CameraPlugin >> primGetFrame [
 	"Copy a camera frame into the given Bitmap. The Bitmap should be for a Form of depth 32 that is the same width and height as the current camera frame. Fail if the camera is not open or if the bitmap is not the right size. If successful, answer the number of frames received from the camera since the last call. If this is zero, then there has been no change."
 
 	| cameraNum bitmapOop bitmap pixCount result |
-	self export: true.
-	self var: 'bitmap' declareC: 'unsigned char *bitmap'.
+	<export: true>
+	<var: 'bitmap' declareC: 'unsigned char *bitmap'>
 
 	cameraNum := interpreterProxy stackIntegerValue: 1.
 	bitmapOop := interpreterProxy stackValue: 0.
@@ -102,7 +102,7 @@ CameraPlugin >> primGetParam [
 	"Answer the given integer parameter of the given camera."
 
 	| cameraNum paramNum result |
-	self export: true.
+	<export: true>
 	cameraNum := interpreterProxy stackIntegerValue: 1.
 	paramNum := interpreterProxy stackIntegerValue: 0.
 	interpreterProxy failed ifTrue: [^ 0].
@@ -119,7 +119,7 @@ CameraPlugin >> primOpenCamera [
 	"Open a camera. Takes one argument, the index of the device to open."
 
 	| cameraNum desiredFrameWidth desiredFrameHeight ok |
-	self export: true.
+	<export: true>
 
 	cameraNum := interpreterProxy stackIntegerValue: 2.
 	desiredFrameWidth := interpreterProxy stackIntegerValue: 1.
