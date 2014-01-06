@@ -61,6 +61,7 @@ Class {
 		'interpreterProxy',
 		'showSurfaceFn',
 		'primitiveTable',
+		'primitiveAccessorDepthTable',
 		'externalPrimitiveTable',
 		'externalPrimitiveTableFirstFreeIndex',
 		'overflowedPage',
@@ -1364,6 +1365,22 @@ StackInterpreter class >> prepareToBeAddedToCodeGenerator: aCodeGen [
 		[:sel|
 		 (superclass whichClassIncludesSelector: sel) ifNotNil:
 			[aCodeGen removeMethodForSelector: sel]]
+]
+
+{ #category : #constants }
+StackInterpreter class >> primitiveAccessorDepthTable [
+	| cg |
+	cg := CCodeGenerator new.
+	cg vmClass: StackInterpreter.
+	^PrimitiveTable collect:
+		[:thing| |class  method |
+		(thing isInteger "quick prims, 0 for fast primitve fail"
+		 or: [thing == #primitiveFail
+		 or: [(class := self whichClassIncludesSelector: thing) isNil]])
+			ifTrue: [-1]
+			ifFalse:
+				[method := (class >> thing) methodNode asTranslationMethodOfClass: TMethod.
+				 cg accessorDepthForMethod: method]]
 ]
 
 { #category : #constants }
@@ -2969,6 +2986,44 @@ StackInterpreter >> checkDeliveryOfLongRunningPrimitiveSignal [
 		"Signal the LRP check semaphore if it is present"
 		^self synchronousSignal: longRunningPrimitiveCheckSemaphore].
 	^false
+]
+
+{ #category : #'primitive support' }
+StackInterpreter >> checkForAndFollowForwardedPrimitiveState [
+	"In Spur a primitive may fail due to encountering a forwarder.
+	 On failure check the accessorDepth for the primitive and
+	 if non-negative scan the args to the depth, following any
+	 forwarders.  Answer if any are found so the prim can be retried.."
+	| primIndex accessorDepth found |
+	self assert: self successful not.
+	found := false.
+	primIndex := self primitiveIndexOf: newMethod.
+	self assert: (self
+					cCode:
+						[primitiveFunctionPointer = (self functionPointerFor: primIndex inClass: objectMemory nilObject)]
+					inSmalltalk:
+						[((primitiveFunctionPointer isInteger and: [primitiveFunctionPointer >= 1000])
+							ifTrue: [#primitiveExternalCall]
+							ifFalse: [primitiveFunctionPointer]) = (self functionPointerFor: primIndex inClass: objectMemory nilObject)]).
+	self assert: argumentCount = (self argumentCountOf: newMethod).
+	accessorDepth := (primIndex = 117 and: [primitiveFunctionPointer ~~ #primitiveExternalCall])
+							ifTrue: [self primitiveAccessorDepthForExternalPrimitiveMethod: newMethod]
+							ifFalse: [primitiveAccessorDepthTable at: primIndex].
+	accessorDepth < 0 ifTrue:
+		[^false].
+	0 to: argumentCount do:
+		[:index| | oop |
+		oop := self stackValue: index.
+		(objectMemory isNonImmediate: oop) ifTrue:
+			[(objectMemory isForwarded: oop) ifTrue:
+				[self assert: index < argumentCount. "receiver should have been caught at send time."
+				 found := true.
+				 oop := objectMemory followForwarded: oop.
+				 self stackValue: index put: oop].
+			((objectMemory hasPointerFields: oop)
+			 and: [objectMemory followForwardedObjectFields: oop toDepth: accessorDepth]) ifTrue:
+				[found := true]]].
+	^found
 ]
 
 { #category : #'process primitive support' }
@@ -6929,6 +6984,32 @@ Note the resolveAliases flag - this is an awful artefact of OSX and Apples demen
 ]
 
 { #category : #'primitive support' }
+StackInterpreter >> ioLoadExternalFunction: functionName OfLength: functionLength FromModule: moduleName OfLength: moduleLength [
+	"Load and return the requested function from a module.
+	 N.B. The actual code lives in platforms/Cross/vm/sqNamedPrims.h"
+	<doNotGenerate>
+	| pluginString functionString |
+	pluginString := String new: moduleLength.
+	1 to: moduleLength do:[:i| pluginString byteAt: i put: (objectMemory byteAt: moduleName+i-1)].
+	functionString := String new: functionLength.
+	1 to: functionLength do:[:i| functionString byteAt: i put: (objectMemory byteAt: functionName+i-1)].
+	^self ioLoadFunction: functionString From: pluginString
+]
+
+{ #category : #'primitive support' }
+StackInterpreter >> ioLoadExternalFunction: functionName OfLength: functionLength FromModule: moduleName OfLength: moduleLength AccessorDepthInto: accessorDepthPtr [
+	"Load and return the requested function from a module.  Assign the accessor depth through accessorDepthPtr.
+	 N.B. The actual code lives in platforms/Cross/vm/sqNamedPrims.h"
+	<doNotGenerate>
+	| pluginString functionString |
+	pluginString := String new: moduleLength.
+	1 to: moduleLength do:[:i| pluginString byteAt: i put: (objectMemory byteAt: moduleName+i-1)].
+	functionString := String new: functionLength.
+	1 to: functionLength do:[:i| functionString byteAt: i put: (objectMemory byteAt: functionName+i-1)].
+	^self ioLoadFunction: functionString From: pluginString AccessorDepthInto: accessorDepthPtr
+]
+
+{ #category : #'primitive support' }
 StackInterpreter >> ioLocalMicroseconds [
 	<doNotGenerate>
 	^self ioUTCMicroseconds + (1000000 * DateAndTime localOffset asSeconds)
@@ -7791,8 +7872,10 @@ StackInterpreter >> mapStackPages [
 					[stackPages
 						longAt: theFP + FoxThisContext
 						put: (objectMemory remapObj: (self frameContext: theFP))].
-				 self assert: ((self isMarriedOrWidowedContext: (self frameContext: theFP))
-							and: [(self frameOfMarriedContext: (self frameContext: theFP)) = theFP])].
+				 "With SqueakV3 objectMemory can't assert since object body is yet to move."
+				 objectMemory hasSpurMemoryManagerAPI ifTrue:
+					[self assert: ((self isMarriedOrWidowedContext: (self frameContext: theFP))
+								  and: [(self frameOfMarriedContext: (self frameContext: theFP)) = theFP])]].
 			 (objectMemory shouldRemapObj: (self frameMethod: theFP)) ifTrue:
 				[theIPPtr ~= 0 ifTrue:
 					[self assert: (stackPages longAt: theIPPtr) > (self frameMethod: theFP).
@@ -8767,6 +8850,14 @@ StackInterpreter >> preGCAction: gcModeArg [
 	(gcModeArg = GCModeFull
 	 and: [objectMemory hasSpurMemoryManagerAPI]) ifTrue:
 		[self flushMethodCache]
+]
+
+{ #category : #'primitive support' }
+StackInterpreter >> primitiveAccessorDepthForExternalPrimitiveMethod: methodObj [
+	^objectMemory integerValueOf:
+		(objectMemory
+			fetchPointer: 2
+			ofObject: (self literal: 0 ofMethod: methodObj))
 ]
 
 { #category : #'I/O primitives' }
@@ -11522,7 +11613,7 @@ StackInterpreter >> sizeOfSTArrayFromCPrimitive: cPtr [
 { #category : #'primitive support' }
 StackInterpreter >> slowPrimitiveResponse [
 	"Invoke a normal (non-quick) primitive.
-	 Called under the assumption that primFunctionPtr has been preloaded"
+	 Called under the assumption that primFunctionPointer has been preloaded."
 	| nArgs savedFramePointer savedStackPointer |
 	<inline: true>
 	<asmLabel: false>
@@ -11534,9 +11625,20 @@ StackInterpreter >> slowPrimitiveResponse [
 		 savedFramePointer := framePointer].
 	self initPrimCall.
 	self dispatchFunctionPointer: primitiveFunctionPointer.
+	"In Spur a primitive may fail due to encountering a forwarder.
+	 On failure check the accessorDepth for the primitive and
+	 if non-negative scan the args to the depth, following any
+	 forwarders.  Retry the primitive if any are found."
+	(objectMemory hasSpurMemoryManagerAPI
+	 and: [self successful not
+	 and: [(objectMemory isOopCompiledMethod: newMethod)
+	 and: [self checkForAndFollowForwardedPrimitiveState]]]) ifTrue:
+		[self initPrimCall.
+		 self dispatchFunctionPointer: primitiveFunctionPointer].
 	(FailImbalancedPrimitives
 	and: [self successful
-	and: [framePointer = savedFramePointer]]) ifTrue:"Don't fail if primitive has done something radical, e.g. perform:"
+	and: [framePointer = savedFramePointer
+	and: [(self isMachineCodeFrame: framePointer) not]]]) ifTrue:"Don't fail if primitive has done something radical, e.g. perform:"
 		[stackPointer ~= (savedStackPointer + (nArgs * BytesPerWord)) ifTrue:
 			[self flag: 'Would be nice to make this a message send of e.g. unbalancedPrimitive to the current process or context'.
 			 "This is necessary but insufficient; the result may still have been written to the stack.
@@ -12234,6 +12336,56 @@ StackInterpreter >> transferTo: newProc [
 	objectMemory storePointer: ActiveProcessIndex ofObject: sched withValue: newProc.
 	objectMemory storePointerUnchecked: MyListIndex ofObject: newProc withValue: objectMemory nilObject.
 	self externalSetStackPageAndPointersForSuspendedContextOfProcess: newProc
+]
+
+{ #category : #'primitive support' }
+StackInterpreter >> tryLoadNewPlugin: pluginString pluginEntries: pluginEntries [
+	"Load the plugin and if on Spur, populate pluginEntries with the prmitives in the plugin."
+	<doNotGenerate>
+	| plugin plugins simulatorClasses |
+	self transcript cr; show: 'Looking for module ', pluginString.
+	"Defeat loading of the FloatArrayPlugin & Matrix2x3Plugin since complications with 32-bit
+	 float support prevent simulation.  If you feel up to tackling this start by implementing
+		cCoerce: value to: cType
+			^cType = 'float'
+				ifTrue: [value asIEEE32BitWord]
+				ifFalse: [value]
+	 in FloatArrayPlugin & Matrix2x3Plugin and then address the issues in the BalloonEnginePlugin.
+	 See http://forum.world.st/Simulating-the-BalloonEnginePlugin-FloatArrayPlugin-amp-Matrix2x3Plugin-primitives-td4734673.html"
+	(#('FloatArrayPlugin' 'Matrix2x3Plugin') includes: pluginString) ifTrue:
+		[self transcript show: ' ... defeated'. ^nil].
+	pluginString isEmpty
+		ifTrue:
+			[plugin := self]
+		ifFalse:
+			[plugins := InterpreterPlugin allSubclasses select: [:psc| psc moduleName asString = pluginString asString].
+			simulatorClasses := (plugins
+									select: [:psc| psc simulatorClass notNil]
+									thenCollect: [:psc| psc simulatorClass]) asSet.
+			simulatorClasses isEmpty ifTrue: [self transcript show: ' ... not found'. ^nil].
+			simulatorClasses size > 1 ifTrue: [^self error: 'This won''t work...'].
+			plugins size > 1 ifTrue:
+				[self transcript show: '...multiple plugin classes; choosing ', plugins last name].
+			plugin := simulatorClasses anyOne newFor: plugins last. "hopefully lowest in the hierarchy..."
+			plugin setInterpreter: objectMemory. "Ignore return value from setInterpreter"
+			(plugin respondsTo: #initialiseModule) ifTrue:
+				[plugin initialiseModule ifFalse:
+					[self transcript show: ' ... initialiser failed'. ^nil]]]. "module initialiser failed"
+	self transcript show: ' ... loaded'.
+	objectMemory hasSpurMemoryManagerAPI ifTrue:
+		[| realPlugin cg |
+		 self transcript show: '...computing accessor depths'.
+		 realPlugin := plugin class withAllSuperclasses detect: [:class| class shouldBeTranslated].
+		 cg := realPlugin buildCodeGeneratorUpTo: realPlugin.
+		 cg exportedPrimitiveNames do:
+			[:primName| | fnSymbol |
+			 fnSymbol := primName asSymbol.
+			 pluginEntries addLast: {plugin.
+									fnSymbol.
+									[plugin perform: fnSymbol. self].
+									cg accessorDepthForSelector: fnSymbol}].
+		 self transcript show: '...done'].
+	^pluginString asString -> plugin
 ]
 
 { #category : #'internal interpreter access' }
