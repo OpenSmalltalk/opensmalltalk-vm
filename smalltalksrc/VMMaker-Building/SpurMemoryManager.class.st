@@ -564,6 +564,11 @@ SpurMemoryManager class >> declareCVarsIn: aCCodeGenerator [
 		declareC: 'sqInt *extraRoots[ExtraRootsSize + 1 /* ', (ExtraRootsSize + 1) printString, ' */]'
 ]
 
+{ #category : #'api characterization' }
+SpurMemoryManager class >> hasSpurMemoryManagerAPI [
+	^true
+]
+
 { #category : #translation }
 SpurMemoryManager class >> implicitReturnTypeFor: aSelector [
 	"Answer the return type for methods that don't have an explicit return."

@@ -179,6 +179,11 @@ ObjectMemory class >> declareCVarsIn: aCCodeGenerator [
 		var: #headerTypeBytes type: 'const sqInt' array: HeaderTypeExtraBytes
 ]
 
+{ #category : #'api chacterization' }
+ObjectMemory class >> hasSpurMemoryManagerAPI [
+	^false
+]
+
 { #category : #translation }
 ObjectMemory class >> implicitReturnTypeFor: aSelector [
 	"Answer the return type for methods that don't have an explicit return."
