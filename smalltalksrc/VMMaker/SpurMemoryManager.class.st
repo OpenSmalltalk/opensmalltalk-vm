@@ -3927,19 +3927,25 @@ SpurMemoryManager >> followForwardedObjStacks [
 
 { #category : #forwarding }
 SpurMemoryManager >> followForwardedObjectFields: objOop toDepth: depth [
-	"follow pointers in the object to depth.
+	"Follow pointers in the object to depth.
+	 Answer if any forwarders were found.
 	 How to avoid cyclic structures?? A temproary mark bit?"
-	| oop |
+	| oop found |
+	found := false.
 	self assert: ((self isPointers: objOop) or: [self isOopCompiledMethod: objOop]).
 	0 to: (self numPointerSlotsOf: objOop) - 1 do:
 		[:i|
-		oop := self fetchPointer: i ofObject: objOop.
-		((self isNonImmediate: oop)
-		 and: [self isForwarded: oop]) ifTrue:
-			[oop := self followForwarded: oop.
-			self storePointer: i ofObject: objOop withValue: oop].
-		depth > 0 ifTrue:
-			[self followForwardedObjectFields: objOop toDepth: depth - 1]]
+		 oop := self fetchPointer: i ofObject: objOop.
+		 (self isNonImmediate: oop) ifTrue:
+			[(self isForwarded: oop) ifTrue:
+				[found := true.
+				 oop := self followForwarded: oop.
+				 self storePointer: i ofObject: objOop withValue: oop].
+			(depth > 0
+			 and: [(self hasPointerFields: oop)
+			 and: [self followForwardedObjectFields: oop toDepth: depth - 1]]) ifTrue:
+				[found := true]]].
+	^found
 ]
 
 { #category : #'become implementation' }
@@ -4400,6 +4406,15 @@ SpurMemoryManager >> growOldSpaceByAtLeast: minAmmount [
 { #category : #'header access' }
 SpurMemoryManager >> hasOverflowHeader: objOop [
 	^(self rawNumSlotsOf: objOop) = self numSlotsMask
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> hasPointerFields: oop [
+	<inline: true>
+	| format |
+	^(self isNonImmediate: oop)
+	  and: [(format := self formatOf: oop) <= self lastPointerFormat
+		   or: [format >= self firstCompiledMethodFormat]]
 ]
 
 { #category : #'api characterization' }
