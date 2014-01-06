@@ -98,8 +98,8 @@
   static inline sqInt intAtput(sqInt oop, int val)		{ return intAtPointerput(pointerForOop(oop), val); }
   static inline sqInt longAt(sqInt oop)				{ return longAtPointer(pointerForOop(oop)); }
   static inline sqInt longAtput(sqInt oop, sqInt val)		{ return longAtPointerput(pointerForOop(oop), val); }
-  static inline sqInt longLongAt(sqInt oop)				{ return longLongAtPointer(pointerForOop(oop)); }
-  static inline sqInt longLongAtput(sqInt oop, sqLong val)		{ return longLongAtPointerput(pointerForOop(oop), val); }
+  static inline sqLong longLongAt(sqInt oop)				{ return longLongAtPointer(pointerForOop(oop)); }
+  static inline sqLong longLongAtput(sqInt oop, sqLong val)		{ return longLongAtPointerput(pointerForOop(oop), val); }
   static inline sqInt oopAt(sqInt oop)				{ return oopAtPointer(pointerForOop(oop)); }
   static inline sqInt oopAtput(sqInt oop, sqInt val)		{ return oopAtPointerput(pointerForOop(oop), val); }
 #else
