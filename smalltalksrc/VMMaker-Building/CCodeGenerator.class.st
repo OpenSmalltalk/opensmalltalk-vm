@@ -488,7 +488,7 @@ CCodeGenerator >> apiMethods: aDictionary [
 ]
 
 { #category : #utilities }
-CCodeGenerator >> arrayInitializerCalled: varName for: array type: cType [
+CCodeGenerator >> arrayInitializerCalled: varName for: array sizeString: sizeStringOrNil type: cType [
 	"array is a literal array or a CArray on some array."
 	| sequence lastLine |
 	sequence := array isCollection ifTrue: [array] ifFalse: [array object].
@@ -498,7 +498,9 @@ CCodeGenerator >> arrayInitializerCalled: varName for: array type: cType [
 		s	nextPutAll: cType;
 			space;
 			nextPutAll: varName;
-			nextPutAll: '[] = '.
+			nextPut: $[.
+		sizeStringOrNil ifNotNil: [s nextPutAll: sizeStringOrNil].
+		s nextPutAll: '] = '.
 		sequence isString
 			ifTrue: [s nextPutAll: (self cLiteralFor: sequence)]
 			ifFalse:
@@ -510,8 +512,7 @@ CCodeGenerator >> arrayInitializerCalled: varName for: array type: cType [
 						 (s position - lastLine) > 76
 							ifTrue: [s crtab: 2. lastLine := s position]
 							ifFalse: [s space]].
-				s crtab; nextPut: $}].
-		s cr]
+				s crtab; nextPut: $}]]
 ]
 
 { #category : #accessing }
@@ -4129,7 +4130,18 @@ CCodeGenerator >> var: varName type: cType array: array [
 	 See also #var:type: for simple var decls" 
 	self
 		var: varName
-		declareC: (self arrayInitializerCalled: varName for: array type: cType)
+		declareC: (self arrayInitializerCalled: varName for: array sizeString: nil type: cType)
+]
+
+{ #category : #public }
+CCodeGenerator >> var: varName type: cType sizeString: sizeString array: array [
+	"Use this in preference to #var:declareC: when possible. This produces a C
+	 statment of the form
+		int * fooArray[3 /* Foo */]={1,2,3}
+	 See also #var:type: for simple var decls" 
+	self
+		var: varName
+		declareC: (self arrayInitializerCalled: varName for: array sizeString: sizeString type: cType)
 ]
 
 { #category : #inlining }

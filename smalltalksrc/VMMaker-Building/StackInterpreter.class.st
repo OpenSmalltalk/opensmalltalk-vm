@@ -222,13 +222,19 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		declareC: 'sqInt atCache[AtCacheTotalSize + 1 /* ', (AtCacheTotalSize + 1) printString, ' */]'.
 	aCCodeGenerator
 		var: #primitiveTable
-		declareC: 'void (*primitiveTable[MaxPrimitiveIndex + 2 /* ', (MaxPrimitiveIndex +2) printString, ' */])(void) = ', self primitiveTableString.
+		declareC: 'void (*primitiveTable[MaxPrimitiveIndex + 2 /* ', (MaxPrimitiveIndex + 2) printString, ' */])(void) = ', self primitiveTableString.
 	self primitiveTable do:
 		[:symbolOrNot|
 		(symbolOrNot isSymbol
 		 and: [symbolOrNot ~~ #primitiveFail]) ifTrue:
 			[(aCCodeGenerator methodNamed: symbolOrNot) ifNotNil:
 				[:tMethod| tMethod returnType: #void]]].
+	self objectMemoryClass basicNew hasSpurMemoryManagerAPI ifTrue:
+		[aCCodeGenerator
+			var: #primitiveAccessorDepthTable
+			type: 'signed char'
+			sizeString: 'MaxPrimitiveIndex + 2 /* ', (MaxPrimitiveIndex + 2) printString, ' */'
+			array: self primitiveAccessorDepthTable].
 	aCCodeGenerator
 		var: #primitiveFunctionPointer
 		declareC: 'void (*primitiveFunctionPointer)()'.
