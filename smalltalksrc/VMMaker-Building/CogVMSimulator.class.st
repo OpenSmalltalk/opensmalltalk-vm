@@ -1315,6 +1315,8 @@ CogVMSimulator >> initialize [
 	externalPrimitiveTable := CArrayAccessor on: (Array new: MaxExternalPrimitiveTableSize).
 	externalPrimitiveTableFirstFreeIndex := 0.
 	primitiveTable := self class primitiveTable copy.
+	primitiveAccessorDepthTable := objectMemory hasSpurMemoryManagerAPI ifTrue:
+										[self class primitiveAccessorDepthTable].
 	pluginList := {'' -> self }.
 	mappedPluginEntries := OrderedCollection new.
 	desiredNumStackPages := desiredEdenBytes := desiredCogCodeSize := 0.
@@ -1557,17 +1559,6 @@ CogVMSimulator >> ioHighResClock [
 { #category : #initialization }
 CogVMSimulator >> ioInitHeartbeat [
 	"No-op in the simulator.  We cause a poll every 1000 bytecodes instead."
-]
-
-{ #category : #'plugin support' }
-CogVMSimulator >> ioLoadExternalFunction: functionName OfLength: functionLength FromModule: moduleName OfLength: moduleLength [
-	"Load and return the requested function from a module"
-	| pluginString functionString |
-	pluginString := String new: moduleLength.
-	1 to: moduleLength do:[:i| pluginString byteAt: i put: (objectMemory byteAt: moduleName+i-1)].
-	functionString := String new: functionLength.
-	1 to: functionLength do:[:i| functionString byteAt: i put: (objectMemory byteAt: functionName+i-1)].
-	^self ioLoadFunction: functionString From: pluginString
 ]
 
 { #category : #'plugin support' }
@@ -1815,31 +1806,10 @@ CogVMSimulator >> loadInitialContext [
 
 { #category : #'plugin support' }
 CogVMSimulator >> loadNewPlugin: pluginString [
-	| plugin plugins simulatorClasses |
-	transcript cr; show: 'Looking for module ', pluginString.
-	"but *why*??"
-	(#('FloatArrayPlugin' 'Matrix2x3Plugin') includes: pluginString) ifTrue:
-		[transcript show: ' ... defeated'. ^nil].
-	pluginString isEmpty
-		ifTrue:
-			[plugin := self]
-		ifFalse:
-			[plugins := InterpreterPlugin allSubclasses select: [:psc| psc moduleName asString = pluginString asString].
-			simulatorClasses := (plugins
-									select: [:psc| psc simulatorClass notNil]
-									thenCollect: [:psc| psc simulatorClass]) asSet.
-			simulatorClasses isEmpty ifTrue: [transcript show: ' ... not found'. ^nil].
-			simulatorClasses size > 1 ifTrue: [^self error: 'This won''t work...'].
-			plugins size > 1 ifTrue:
-				[transcript show: '...multiple plugin classes; choosing ', plugins last name].
-			plugin := simulatorClasses anyOne newFor: plugins last. "hopefully lowest in the hierarchy..."
-			plugin setInterpreter: objectMemory. "Ignore return value from setInterpreter"
-			(plugin respondsTo: #initialiseModule) ifTrue:
-				[plugin initialiseModule ifFalse:
-					[transcript show: ' ... initialiser failed'. ^nil]]]. "module initialiser failed"
-	pluginList := pluginList copyWith: (pluginString asString -> plugin).
-	transcript show: ' ... loaded'.
-	^pluginList last
+	^(self tryLoadNewPlugin: pluginString pluginEntries: mappedPluginEntries) ifNotNil:
+		[:entry|
+		 pluginList := pluginList copyWith: entry.
+		 entry]
 ]
 
 { #category : #testing }
