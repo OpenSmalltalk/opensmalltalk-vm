@@ -1203,10 +1203,10 @@ ScratchPlugin >> primitiveWaterRipples1 [
 					val2 := (j)*width + i.
 					dx2 := ((((aArray at: (val2)) - (aArray at: (val2-1))) + ((aArray at: (val2+1)) - (aArray at: (val2)))) *64) asFloat.
 					dy2 := ((((aArray at: (val2)) - (aArray at: (val2-width))) + ((aArray at: (val2+width)) - (aArray at: (val2)))) /64) asFloat.
-					(dx2<2) ifTrue: [dx2 := -2].
-					(dx2>2) ifTrue: [dx2 := 2].
-					(dy2<2) ifTrue: [dy2 := -2].
-					(dy2>2) ifTrue: [dy2 := 2].
+					(dx2 < -2) ifTrue: [dx2 := -2].
+					(dx2 >  2) ifTrue: [dx2 :=  2].
+					(dy2 < -2) ifTrue: [dy2 := -2].
+					(dy2 >  2) ifTrue: [dy2 :=  2].
 					newLoc := ((j+dy2)*width + (i+dx2)) asInteger.
 					((newLoc < (width*height)) and: [newLoc >=0]) ifTrue: [
 						pix := in at: newLoc]
