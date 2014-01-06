@@ -229,12 +229,15 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		 and: [symbolOrNot ~~ #primitiveFail]) ifTrue:
 			[(aCCodeGenerator methodNamed: symbolOrNot) ifNotNil:
 				[:tMethod| tMethod returnType: #void]]].
-	self objectMemoryClass basicNew hasSpurMemoryManagerAPI ifTrue:
-		[aCCodeGenerator
-			var: #primitiveAccessorDepthTable
-			type: 'signed char'
-			sizeString: 'MaxPrimitiveIndex + 2 /* ', (MaxPrimitiveIndex + 2) printString, ' */'
-			array: self primitiveAccessorDepthTable].
+	self objectMemoryClass hasSpurMemoryManagerAPI
+		ifTrue:
+			[aCCodeGenerator
+				var: #primitiveAccessorDepthTable
+				type: 'signed char'
+				sizeString: 'MaxPrimitiveIndex + 2 /* ', (MaxPrimitiveIndex + 2) printString, ' */'
+				array: self primitiveAccessorDepthTable]
+		ifFalse:
+			[aCCodeGenerator removeVariable: #primitiveAccessorDepthTable].
 	aCCodeGenerator
 		var: #primitiveFunctionPointer
 		declareC: 'void (*primitiveFunctionPointer)()'.
@@ -2999,7 +3002,8 @@ StackInterpreter >> checkForAndFollowForwardedPrimitiveState [
 	"In Spur a primitive may fail due to encountering a forwarder.
 	 On failure check the accessorDepth for the primitive and
 	 if non-negative scan the args to the depth, following any
-	 forwarders.  Answer if any are found so the prim can be retried.."
+	 forwarders.  Answer if any are found so the prim can be retried."
+	<option: #SpurObjectMemory>
 	| primIndex accessorDepth found |
 	self assert: self successful not.
 	found := false.

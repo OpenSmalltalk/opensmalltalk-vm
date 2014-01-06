@@ -1190,28 +1190,33 @@ CCodeGenerator >> emitExportPragma [
 { #category : #'C code generator' }
 CCodeGenerator >> emitExportsNamed: exportsNamePrefix pluginName: pluginName on: aStream [
 	"Store all the exported primitives in the form used by the internal named prim system."
-	| nilVMClass |
+	| nilVMClass excludeDepth |
 	(nilVMClass := vmClass isNil) ifTrue:
 		[vmClass := StackInterpreter].
+	"Don't include the depth in the vm's named primitives if the vm is non-Spur."
+	excludeDepth := exportsNamePrefix = 'vm'
+					  and: [pluginName isEmpty
+					  and: [vmClass objectMemoryClass hasSpurMemoryManagerAPI not]].
 	aStream cr; cr; nextPutAll: 'void* '; nextPutAll: exportsNamePrefix; nextPutAll: '_exports[][3] = {'.
 	(self sortStrings: self exportedPrimitiveNames) do:
 		[:primName|
-		 aStream cr;
-			nextPutAll:'	{"'; 
+		 aStream cr; tab;
+			nextPutAll: '{"'; 
 			nextPutAll: pluginName; 
 			nextPutAll: '", "'; 
 			nextPutAll: primName.
-		 (self accessorDepthForSelector: primName asSymbol) ifNotNil:
-			[:depth| "store the accessor depth in a hidden byte immediately after the primName"
-			self assert: depth < 128.
-			aStream
-				nextPutAll: '\000\';
-				nextPutAll: ((depth bitAnd: 255) printStringBase: 8 nDigits: 3)].
+		 excludeDepth ifFalse:
+			[(self accessorDepthForSelector: primName asSymbol) ifNotNil:
+				[:depth| "store the accessor depth in a hidden byte immediately after the primName"
+				self assert: depth < 128.
+				aStream
+					nextPutAll: '\000\';
+					nextPutAll: ((depth bitAnd: 255) printStringBase: 8 nDigits: 3)]].
 		 aStream
-			nextPutAll:'", (void*)'; 
+			nextPutAll: '", (void*)'; 
 			nextPutAll: primName;
-			nextPutAll:'},'].
-	aStream cr; tab; nextPutAll:'{NULL, NULL, NULL}'; cr; nextPutAll: '};'; cr.
+			nextPutAll: '},'].
+	aStream cr; tab; nextPutAll: '{NULL, NULL, NULL}'; cr; nextPutAll: '};'; cr.
 	nilVMClass ifTrue:
 		[vmClass := nil]
 ]
@@ -3375,6 +3380,9 @@ CCodeGenerator >> nilOrBooleanConstantReceiverOf: aNode [
 		 and: [aNode args last statements size = 1]]) ifTrue:
 			[(self nilOrBooleanConstantReceiverOf: aNode receiver) ifNotNil:
 				[:rcvr|
+				((rcvr == false and: [aNode selector == #and:])
+				 or: [rcvr == true and: [aNode selector == #or:]]) ifTrue:
+					[^rcvr].
 				(self nilOrBooleanConstantReceiverOf: aNode args last statements first) ifNotNil:
 					[:arg|
 					^rcvr perform: aNode selector with: [arg]]]].
