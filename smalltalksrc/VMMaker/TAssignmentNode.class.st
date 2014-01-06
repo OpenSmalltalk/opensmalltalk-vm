@@ -82,7 +82,11 @@ TAssignmentNode >> emitLiteralArrayDeclarationOn: aStream level: level generator
 	aStream
 		crtab: level;
 		nextPutAll: '{ static ';
-		nextPutAll: (aCCodeGen arrayInitializerCalled: 'aLiteralArray' for: expression args first value type: type allButLast) withBlanksTrimmed;
+		nextPutAll: (aCCodeGen
+						arrayInitializerCalled: 'aLiteralArray'
+						for: expression args first value
+						sizeString: nil
+						type: type allButLast) withBlanksTrimmed;
 		nextPut: $;;
 		crtab: level + 1;
 		nextPutAll: variable name;
