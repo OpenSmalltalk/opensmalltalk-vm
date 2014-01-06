@@ -522,8 +522,8 @@ StackInterpreterSimulator >> flush [
 
 { #category : #'plugin support' }
 StackInterpreterSimulator >> flushExternalPrimitives [
-	mappedPluginEntries := #().
-	super flushExternalPrimitives.
+	mappedPluginEntries := OrderedCollection new.
+	super flushExternalPrimitives
 ]
 
 { #category : #'frame access' }
@@ -684,8 +684,10 @@ StackInterpreterSimulator >> initialize [
 	externalPrimitiveTable := CArrayAccessor on: (Array new: MaxExternalPrimitiveTableSize).
 	externalPrimitiveTableFirstFreeIndex := 0.
 	primitiveTable := self class primitiveTable copy.
+	primitiveAccessorDepthTable := objectMemory hasSpurMemoryManagerAPI ifTrue:
+										[self class primitiveAccessorDepthTable].
 	pluginList := {'' -> self }.
-	mappedPluginEntries := #().
+	mappedPluginEntries := OrderedCollection new.
 	desiredNumStackPages := desiredEdenBytes := 0.
 	"This is initialized on loading the image, but convenient for testing stack page values..."
 	numStackPages := self defaultNumStackPages. 
@@ -858,17 +860,6 @@ StackInterpreterSimulator >> ioInitHeartbeat [
 ]
 
 { #category : #'plugin support' }
-StackInterpreterSimulator >> ioLoadExternalFunction: functionName OfLength: functionLength FromModule: moduleName OfLength: moduleLength [
-	"Load and return the requested function from a module"
-	| pluginString functionString |
-	pluginString := String new: moduleLength.
-	1 to: moduleLength do:[:i| pluginString byteAt: i put: (objectMemory byteAt: moduleName+i-1)].
-	functionString := String new: functionLength.
-	1 to: functionLength do:[:i| functionString byteAt: i put: (objectMemory byteAt: functionName+i-1)].
-	^self ioLoadFunction: functionString From: pluginString
-]
-
-{ #category : #'plugin support' }
 StackInterpreterSimulator >> ioLoadFunction: functionString From: pluginString [
 	"Load and return the requested function from a module"
 	| plugin fnSymbol |
@@ -892,6 +883,39 @@ StackInterpreterSimulator >> ioLoadFunction: functionString From: pluginString [
 	mappedPluginEntries := mappedPluginEntries copyWith: (Array with: plugin with: fnSymbol).
 	"Transcript show:' ... okay'."
 	^ mappedPluginEntries size
+]
+
+{ #category : #'plugin support' }
+StackInterpreterSimulator >> ioLoadFunction: functionString From: pluginString AccessorDepthInto: accessorDepthPtr [
+	"Load and return the requested function from a module.
+	 Assign the accessor depth through accessorDepthPtr.
+	 N.B. The actual code lives in platforms/Cross/vm/sqNamedPrims.h"
+	| firstTime plugin fnSymbol |
+	firstTime := false.
+	fnSymbol := functionString asSymbol.
+	transcript
+		cr;
+		show: '(', byteCount printString, ') Looking for ', functionString, ' in ',
+				(pluginString isEmpty ifTrue:['vm'] ifFalse:[pluginString]).
+	functionString = breakSelector ifTrue: [self halt: breakSelector].
+	plugin := pluginList 
+				detect: [:any| any key = pluginString asString]
+				ifNone:
+					[firstTime := true.
+					 self loadNewPlugin: pluginString].
+	plugin ifNil:
+		[firstTime ifTrue: [transcript cr; show: 'Failed ... primitive not in plugin'].
+		 ^0].
+	plugin := plugin value.
+	mappedPluginEntries doWithIndex:
+		[:pluginAndName :index|
+		 ((pluginAndName at: 1) == plugin 
+		  and:[(pluginAndName at: 2) == fnSymbol]) ifTrue:
+			[firstTime ifTrue: [transcript cr; show: ' ... okay'].
+			 accessorDepthPtr at: 0 put: (pluginAndName at: 4).
+			 ^index]].
+	firstTime ifTrue: [transcript cr; show: 'Failed ... primitive not in plugin'].
+	^0
 ]
 
 { #category : #'I/O primitives support' }
@@ -1039,27 +1063,10 @@ StackInterpreterSimulator >> literal: offset [
 
 { #category : #'plugin support' }
 StackInterpreterSimulator >> loadNewPlugin: pluginString [
-	| plugin plugins simulatorClasses |
-	transcript cr; show: 'Looking for module ', pluginString.
-	"but *why*??"
-	(#('FloatArrayPlugin' 'Matrix2x3Plugin') includes: pluginString) ifTrue:
-		[transcript show: ' ... defeated'. ^nil].
-	plugins := InterpreterPlugin allSubclasses select: [:psc| psc moduleName asString = pluginString asString].
-	simulatorClasses := (plugins
-							select: [:psc| psc simulatorClass notNil]
-							thenCollect: [:psc| psc simulatorClass]) asSet.
-	simulatorClasses isEmpty ifTrue: [transcript show: ' ... not found'. ^nil].
-	simulatorClasses size > 1 ifTrue: [^self error: 'This won''t work...'].
-	plugins size > 1 ifTrue:
-		[transcript show: '...multiple plugin classes; choosing ', plugins last name].
-	plugin := simulatorClasses anyOne newFor: plugins last. "hopefully lowest in the hierarchy..."
-	plugin setInterpreter: objectMemory. "Ignore return value from setInterpreter"
-	(plugin respondsTo: #initialiseModule) ifTrue:
-		[plugin initialiseModule ifFalse:
-			[transcript show: ' ... initialiser failed'. ^nil]]. "module initialiser failed"
-	pluginList := pluginList copyWith: (pluginString asString -> plugin).
-	transcript show: ' ... loaded'.
-	^pluginList last
+	^(self tryLoadNewPlugin: pluginString pluginEntries: mappedPluginEntries) ifNotNil:
+		[:entry|
+		 pluginList := pluginList copyWith: entry.
+		 entry]
 ]
 
 { #category : #'spur bootstrap' }
@@ -2526,7 +2533,7 @@ StackInterpreterSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'long print oop...' action: [(self promptHex: 'print oop') ifNotNil: [:oop| self longPrintOop: oop]];
 		addLine;
 		add: 'inspect object memory' target: objectMemory action: #inspect;
-		add: 'inspect cointerpreter' action: #inspect;
+		add: 'inspect interpreter' action: #inspect;
 		addLine;
 		add: 'set break count...' action: [|s| s := UIManager default request: 'break count (dec)'.
 											s notEmpty ifTrue: [breakCount := Integer readFrom: s readStream]];
