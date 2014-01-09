@@ -100,16 +100,6 @@ Object >> debugCode: aBlock [
 ]
 
 { #category : #'*VMMaker-translation support' }
-Object >> export: aBoolean [
-	"For translation only; noop when running in Smalltalk."
-]
-
-{ #category : #'*VMMaker-translation support' }
-Object >> inline: inlineFlag [
-	"For translation only; noop when running in Smalltalk."
-]
-
-{ #category : #'*VMMaker-translation support' }
 Object >> isCObjectAccessor [
 
 	^ false
@@ -158,11 +148,6 @@ Object >> stAt: index put: value [
 Object >> stSize [
 
 	^self size
-]
-
-{ #category : #'*VMMaker-translation support' }
-Object >> static: aBoolean [
-	"For translation only; noop when running in Smalltalk."
 ]
 
 { #category : #'*VMMaker-translation support' }

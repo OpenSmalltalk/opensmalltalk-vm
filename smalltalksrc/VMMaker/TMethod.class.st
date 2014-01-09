@@ -695,6 +695,11 @@ TMethod >> export [
 
 ]
 
+{ #category : #accessing }
+TMethod >> export: aBoolean [
+	export := aBoolean
+]
+
 { #category : #initialization }
 TMethod >> extraVariableName: root [
 	extraVariableNumber := extraVariableNumber
