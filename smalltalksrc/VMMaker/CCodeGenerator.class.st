@@ -361,11 +361,13 @@ CCodeGenerator >> addMethodFor: aClass selector: selector [
 	(method pragmaAt: #cmacro:) ifNotNil:
 		[:pragma|
 		self addMacro: (pragma argumentAt: 1) for: selector.
-		tmethod inline: false].
+		(inlineList includes: selector) ifTrue:
+			[inlineList := inlineList copyWithout: selector]].
 	(method propertyValueAt: #cmacro:) ifNotNil:
 		[:macro|
 		self addMacro: macro for: selector.
-		tmethod inline: false].
+		(inlineList includes: selector) ifTrue:
+			[inlineList := inlineList copyWithout: selector]].
 	^tmethod
 ]
 
