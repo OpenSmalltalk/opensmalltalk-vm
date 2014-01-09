@@ -4996,10 +4996,14 @@ SpurMemoryManager >> interpreter [
 ]
 
 { #category : #'simulation only' }
-SpurMemoryManager >> ioLoadFunction: functionString From: pluginString [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
+SpurMemoryManager >> ioLoadFunction: functionName From: moduleName [
+	"hack around the CoInterpreter/ObjectMemory split refactoring.
+	 provide accurate types for the VMPluginCodeGenerator."
 	<doNotGenerate>
-	^coInterpreter ioLoadFunction: functionString From: pluginString
+	<returnTypeC: #'void *'>
+	<var: #functionName type: #'char *'>
+	<var: #moduleName type: #'char *'>
+	^coInterpreter ioLoadFunction: functionName From: moduleName
 ]
 
 { #category : #'simulation only' }

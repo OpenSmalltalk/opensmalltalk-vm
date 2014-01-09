@@ -88,6 +88,27 @@ VMPluginCodeGenerator >> doInlining: inlineFlag [
 ]
 
 { #category : #'C code generator' }
+VMPluginCodeGenerator >> emitAccessorDepthsOn: aStream [ 
+	"Output accessor depth bytes for all primitives in the plugin.
+	 This is for external primitives in Spur."
+	(self sortStrings: self exportedPrimitiveNames) do:
+		[:primName|
+		 (self accessorDepthForSelector: primName asSymbol) ifNotNil:
+			[:depth|
+			 "store the accessor depth in a byte variable; save a little space
+			  by omitting depths < 0; support code supplies the default."
+			 self assert: depth < 128.
+			 depth >= 0 ifTrue:
+				[aStream
+					nextPutAll: 'signed char ';
+					nextPutAll: primName;
+					nextPutAll: 'AccessorDepth = ';
+					nextPutAll: (self cLiteralFor: depth);
+					nextPut: $;;
+					cr]]]
+]
+
+{ #category : #'C code generator' }
 VMPluginCodeGenerator >> emitCCodeOn: aStream doInlining: inlineFlag doAssertions: assertionFlag [
 	"Generate twice; the first time to collect the used functions, the second to output the used functions."
 	| savedHeaders |
@@ -204,6 +225,8 @@ VMPluginCodeGenerator >> emitExportsOn: aStream [
 	"Store all the exported primitives in the form used by the internal named prim system."
 	aStream cr; cr; nextPutAll:'#ifdef SQUEAK_BUILTIN_PLUGIN'.
 	self emitExportsNamed: pluginName pluginName: pluginName on: aStream.
+	aStream cr; nextPutAll: '#else /* ifdef SQ_BUILTIN_PLUGIN */'; cr; cr.
+	self emitAccessorDepthsOn: aStream.
 	aStream cr; nextPutAll: '#endif /* ifdef SQ_BUILTIN_PLUGIN */'; cr
 ]
 
@@ -335,42 +358,78 @@ VMPluginCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 		[:s| pcc noteUsedPluginFunction: s].
 	pcc preDeclareInterpreterProxyOn: Transcript.
 	Transcript flush"
-	| pluginsToClone |
-	(pluginsToClone := self pluginFunctionsToClone) isEmpty ifTrue:
+	| pluginFuncs interpreterClass objectMemoryClass |
+	(pluginFuncs := self pluginFunctionsToClone) isEmpty ifTrue:
 		[^super preDeclareInterpreterProxyOn: aStream].
 	aStream cr; nextPutAll: '#if !defined(SQUEAK_BUILTIN_PLUGIN)'; cr.
-	pluginsToClone do:
-		[:selector| | functionName |
-		functionName := self cFunctionNameFor: selector.
+	interpreterClass := self referenceInterpreterClass.
+	objectMemoryClass := self referenceObjectMemoryClass.
+	pluginFuncs := pluginFuncs collect:
+						[:selector| | reference actual |
+						reference := self compileToTMethodSelector: selector
+										in: ((interpreterClass whichClassIncludesSelector: selector) ifNil:
+											[(objectMemoryClass whichClassIncludesSelector: selector) ifNil:
+												[InterpreterProxy]]).
+						actual := self compileToTMethodSelector: selector in: InterpreterProxy.
+						(reference returnType ~= actual returnType
+						 or: [(1 to: reference args size) anySatisfy:
+								[:i| (reference typeFor: (reference args at: i) in: self)
+								  ~= (actual typeFor: (actual args at: i) in: self)]]) ifTrue:
+							[self logger
+								nextPutAll: 'warning, signature of InterpreterProxy>>';
+								nextPutAll: selector;
+								nextPutAll: ' does not match reference implementation.';
+								cr].
+						actual].
+	pluginFuncs do:
+		[:tMethod| | functionName |
+		functionName := self cFunctionNameFor: tMethod selector.
 		aStream nextPutAll:
 			((String streamContents:
-				[:s|
-				(self compileToTMethodSelector: selector in: InterpreterProxy)
-					emitCFunctionPrototype: s generator: self])
+					[:s|
+					tMethod
+						static: true;
+						emitCFunctionPrototype: s generator: self])
 				copyReplaceAll: functionName
-				with: '(*', functionName, ')').
+				with: '(*', functionName, ')'
+				tokenish: [:ch| ch = $_ or: [ch isAlphaNumeric]]).
 		aStream nextPut: $;; cr].
 	aStream nextPutAll: '#else /* !defined(SQUEAK_BUILTIN_PLUGIN) */'.
-	pluginsToClone do:
-		[:selector| | m |
-		m := self compileToTMethodSelector: selector in: InterpreterProxy.
-		self withOptionalVerbiageFor: selector
+	pluginFuncs do:
+		[:tMethod|
+		self withOptionalVerbiageFor: tMethod selector
 			on: aStream
 			do: [aStream cr; nextPutAll: 'extern '.
-				m static: false; emitCFunctionPrototype: aStream generator: self.
+				tMethod static: false; export: false; emitCFunctionPrototype: aStream generator: self.
 				aStream nextPut: $;]
 			ifOptionalDo:
 				[aStream cr; nextPutAll: '# define '.
 				 (TSendNode new
-					setSelector: selector
+					setSelector: tMethod selector
 						receiver: (TVariableNode new setName: 'interpreterProxy')
-							arguments: (m args collect: [:a| TVariableNode new setName: a]))
+							arguments: (tMethod args collect: [:a| TVariableNode new setName: a]))
 					emitCCodeAsArgumentOn: aStream
 						level: 0
 							generator: self.
 				 aStream nextPutAll: ' 0']].
 	aStream cr; nextPutAll: 'extern'.
 	aStream cr; nextPutAll: '#endif'; cr
+]
+
+{ #category : #'C code generator' }
+VMPluginCodeGenerator >> referenceInterpreterClass [
+	"Define the class from which to take methods to define the interpreter proxy imports."
+	^(Smalltalk classNamed: #StackInterpreter) ifNil:
+		[(Smalltalk classNamed: #Interpreter) ifNil:
+			[InterpreterProxy]]
+]
+
+{ #category : #'C code generator' }
+VMPluginCodeGenerator >> referenceObjectMemoryClass [
+	"Define the class from which to take methods to define the interpreter proxy imports."
+	^(Smalltalk classNamed: #SpurMemoryManager) ifNil:
+		[(Smalltalk classNamed: #NewObjectMemory) ifNil:
+			[ObjectMemory]]
 ]
 
 { #category : #private }
