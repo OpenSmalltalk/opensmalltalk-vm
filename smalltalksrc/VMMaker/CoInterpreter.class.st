@@ -2542,7 +2542,7 @@ CoInterpreter >> dumpPrimTraceLog [
 
 	<api>
 	<inline: false>
-	(primTraceLog at: (self safe: primTraceLogIndex - 1 mod: PrimTraceLogSize)) = 0 ifTrue: [^nil].
+	(primTraceLog at: (self safe: primTraceLogIndex - 1 mod: PrimTraceLogSize)) = 0 ifTrue: [^self].
 	(primTraceLog at: primTraceLogIndex) ~= 0 ifTrue:
 		[primTraceLogIndex to: PrimTraceLogSize - 1 do:
 			[:i | self printPrimLogEntryAt: i; cr]].
@@ -2557,7 +2557,7 @@ CoInterpreter >> dumpTraceLog [
 	 an entry at traceLogIndex - 3 \\ TraceBufferSize it has entries.
 	 If there is something at traceLogIndex it has wrapped."
 	<inline: false>
-	(traceLog at: (self safe: traceLogIndex - 3 mod: TraceBufferSize)) = 0 ifTrue: [^nil].
+	(traceLog at: (self safe: traceLogIndex - 3 mod: TraceBufferSize)) = 0 ifTrue: [^self].
 	(traceLog at: traceLogIndex) ~= 0 ifTrue:
 		[traceLogIndex to: TraceBufferSize - 3 by: 3 do:
 			[:i| self printLogEntryAt: i]].
@@ -4363,7 +4363,7 @@ CoInterpreter >> mapPrimTraceLog [
 	<inline: false>
 	| limit |
 	limit := self safe: primTraceLogIndex - 1 mod: PrimTraceLogSize.
-	(primTraceLog at: limit) = 0 ifTrue: [^nil].
+	(primTraceLog at: limit) = 0 ifTrue: [^self].
 	(primTraceLog at: primTraceLogIndex) ~= 0 ifTrue:
 		[limit := PrimTraceLogSize - 1].
 	0 to: limit do:
@@ -4451,7 +4451,7 @@ CoInterpreter >> mapTraceLog [
 	<inline: false>
 	| limit |
 	limit := self safe: traceLogIndex - 3 mod: TraceBufferSize.
-	(traceLog at: limit) = 0 ifTrue: [^nil].
+	(traceLog at: limit) = 0 ifTrue: [^self].
 	(traceLog at: traceLogIndex) ~= 0 ifTrue:
 		[limit := TraceBufferSize - 3].
 	0 to: limit by: 3 do:
@@ -4528,7 +4528,7 @@ CoInterpreter >> markAndTracePrimTraceLog [
 	<inline: false>
 	| limit |
 	limit := self safe: primTraceLogIndex - 1 mod: PrimTraceLogSize.
-	(primTraceLog at: limit) = 0 ifTrue: [^nil].
+	(primTraceLog at: limit) = 0 ifTrue: [^self].
 	(primTraceLog at: primTraceLogIndex) ~= 0 ifTrue:
 		[limit := PrimTraceLogSize - 1].
 	0 to: limit do:
@@ -4588,7 +4588,7 @@ CoInterpreter >> markAndTraceTraceLog [
 	<inline: false>
 	| limit |
 	limit := self safe: traceLogIndex - 3 mod: TraceBufferSize.
-	(traceLog at: limit) = 0 ifTrue: [^nil].
+	(traceLog at: limit) = 0 ifTrue: [^self].
 	(traceLog at: traceLogIndex) ~= 0 ifTrue:
 		[limit := TraceBufferSize - 3].
 	0 to: limit by: 3 do:
