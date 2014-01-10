@@ -552,8 +552,14 @@ sqInt getAttributeIntoLength(sqInt indexNumber, sqInt byteArrayIndex, sqInt leng
 /*** Pluggable primitive support. ***/
 
 /* NOTE: The following functions are those implemented by sqNamedPrims.c */
-void *ioLoadExternalFunctionOfLengthFromModuleOfLength(sqInt functionNameIndex, sqInt functionNameLength,
-						       sqInt moduleNameIndex, sqInt moduleNameLength);
+void *ioLoadExternalFunctionOfLengthFromModuleOfLength
+		(sqInt functionNameIndex, sqInt functionNameLength,
+		 sqInt moduleNameIndex, sqInt moduleNameLength);
+#if SPURVM
+void *ioLoadExternalFunctionOfLengthFromModuleOfLengthAccessorDepthInto
+	(sqInt functionNameIndex, sqInt functionNameLength,
+	 sqInt moduleNameIndex,   sqInt moduleNameLength, sqInt *accessorDepthPtr);
+#endif
 sqInt  ioUnloadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength);
 void  *ioLoadFunctionFrom(char *functionName, char *pluginName);
 sqInt  ioShutdownAllModules(void);
@@ -561,7 +567,7 @@ sqInt  ioUnloadModule(char *moduleName);
 sqInt  ioUnloadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength);
 char  *ioListBuiltinModule(sqInt moduleIndex);
 char  *ioListLoadedModule(sqInt moduleIndex);
-/* The next two are FFI entries! (implemented in sqNamedPrims.c as well) */
+/* The next two for the FFI, also implemented in sqNamedPrims.c. */
 void  *ioLoadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength);
 void  *ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength, void *moduleHandle);
 
@@ -574,11 +580,17 @@ void  *ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNam
 */
 void *ioLoadModule(char *pluginName);
 
-/* ioFindExternalFunctionIn:
+/* ioFindExternalFunctionIn[AccessorDepthInto]:
 	Find the function with the given name in the moduleHandle.
 	WARNING: never primitiveFail() within, just return 0.
+	Note in Spur takes an extra parameter which is defaulted to 0.
 */
+#if SPURVM
+void *ioFindExternalFunctionInAccessorDepthInto(char *lookupName, void *moduleHandle, sqInt *accessorDepthPtr);
+# define ioFindExternalFunctionIn(ln,mh) ioFindExternalFunctionInAccessorDepthInto(ln,mh,0)
+#else
 void *ioFindExternalFunctionIn(char *lookupName, void *moduleHandle);
+#endif
 
 /* ioFreeModule:
 	Free the module with the associated handle.

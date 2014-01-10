@@ -397,7 +397,14 @@ ioLoadModule(char *pluginName)
 /*  Find a function in a loaded module.  Answer 0 if not found (do NOT
  *  fail the primitive!).
  */
-void *ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
+#if SPURVM
+void *
+ioFindExternalFunctionInAccessorDepthInto(char *lookupName, void *moduleHandle,
+											sqInt *accessorDepthPtr)
+#else
+void *
+ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
+#endif
 {
   char buf[256];
   void *fn;
@@ -424,6 +431,25 @@ void *ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
       && strcmp(lookupName, "getModuleName"))
     fprintf(stderr, "ioFindExternalFunctionIn(%s, %p):\n  %s\n",
 	    lookupName, moduleHandle, dlerror());
+
+#if SPURVM
+  if (fn && accessorDepthPtr) {
+	signed char *accessorDepthVarPtr;
+
+# ifdef HAVE_SNPRINTF
+	snprintf(buf+strlen(buf), sizeof(buf), "AccessorDepth");
+# else
+	sprintf(buf+strlen(buf), "AccessorDepth");
+# endif
+	accessorDepthVarPtr = dlsym(moduleHandle, buf);
+	/* The Slang machinery assumes accessor depth defaults to -1, which
+	 * means "no accessor depth".  It saves space not outputting -1 depths.
+	 */
+	*accessorDepthPtr = accessorDepthVarPtr
+							? *accessorDepthVarPtr
+							: -1;
+  }
+#endif /* SPURVM */
 
   return fn;
 }

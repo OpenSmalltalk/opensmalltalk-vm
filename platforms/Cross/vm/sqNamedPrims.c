@@ -98,13 +98,24 @@ removeFromList(ModuleEntry *entry)
 	primitive table.
 */
 static void *
-findExternalFunctionIn(char *functionName, ModuleEntry *module)
+findExternalFunctionIn(char *functionName, ModuleEntry *module
+#if SPURVM
+# define NADA , 0, 0
+					,  sqInt fnameLength, sqInt *accessorDepthPtr
+#else
+# define NADA /* nada */
+#endif
+)
 {
 	void *result;
 
 	DPRINTF(("Looking (externally) for %s in %s... ", functionName,module->name));
 	if(module->handle)
+#if SPURVM
+		result = ioFindExternalFunctionInAccessorDepthInto(functionName, module->handle, accessorDepthPtr);
+#else
 		result = ioFindExternalFunctionIn(functionName, module->handle);
+#endif
 	else
 		result = NULL;
 	DPRINTF(("%s\n", result ? "found" : "not found"));
@@ -121,10 +132,7 @@ findExternalFunctionIn(char *functionName, ModuleEntry *module)
 static void *
 findInternalFunctionIn(char *functionName, char *pluginName
 #if SPURVM
-# define NADA , 0, 0
 					,  sqInt fnameLength, sqInt *accessorDepthPtr
-#else
-# define NADA /* nada */
 #endif
 )
 {
@@ -165,7 +173,6 @@ findInternalFunctionIn(char *functionName, char *pluginName
   }
   DPRINTF(("not found\n"));
   return NULL;
-
 }
 
 
@@ -177,7 +184,8 @@ findFunctionAndAccessorDepthIn(char *functionName, ModuleEntry *module,
 	return module->handle == squeakModule->handle
 		? findInternalFunctionIn(functionName, module->name,
 								fnameLength, accessorDepthPtr)
-		: findExternalFunctionIn(functionName, module);
+		: findExternalFunctionIn(functionName, module,
+								fnameLength, accessorDepthPtr);
 }
 #endif /* SPURVM */
 
@@ -186,7 +194,7 @@ findFunctionIn(char *functionName, ModuleEntry *module)
 {
 	return module->handle == squeakModule->handle
 		? findInternalFunctionIn(functionName, module->name NADA)
-		: findExternalFunctionIn(functionName, module);
+		: findExternalFunctionIn(functionName, module NADA);
 }
 
 /*
@@ -352,7 +360,6 @@ ioLoadExternalFunctionOfLengthFromModuleOfLength
 	char *moduleNamePointer= pointerForOop((usqInt)moduleNameIndex);
 	char functionName[256];
 	char moduleName[256];
-	sqInt i;
 
 	if(functionNameLength > 255 || moduleNameLength > 255)
 		return 0; /* can't cope with those */
@@ -404,7 +411,6 @@ ioLoadExternalFunctionOfLengthFromModuleOfLengthAccessorDepthInto
 	char *moduleNamePointer= pointerForOop((usqInt)moduleNameIndex);
 	char functionName[256];
 	char moduleName[256];
-	sqInt i;
 
 	if(functionNameLength > 255 || moduleNameLength > 255)
 		return 0; /* can't cope with those */
@@ -423,19 +429,16 @@ ioLoadExternalFunctionOfLengthFromModuleOfLengthAccessorDepthInto
 void *
 ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength, void *moduleHandle)
 {
-	char *functionNamePointer= pointerForOop((usqInt)functionNameIndex);
+	char *functionNamePointer = pointerForOop((usqInt)functionNameIndex);
 	char functionName[256];
-	sqInt i;
 
-	if(functionNameLength > 255)
+	if (functionNameLength > 255)
 		return 0; /* can't cope with those */
-	for(i=0; i< functionNameLength; i++)
-		functionName[i] = functionNamePointer[i];
+	strncpy(functionName, functionNamePointer, functionNameLength);
 	functionName[functionNameLength] = 0;
-	if(moduleHandle)
-		return ioFindExternalFunctionIn(functionName, moduleHandle);
-	else
-		return 0;
+	return moduleHandle
+		? ioFindExternalFunctionIn(functionName, moduleHandle)
+		: 0;
 }
 
 /* ioLoadModuleOfLength
