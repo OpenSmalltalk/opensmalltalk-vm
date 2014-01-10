@@ -2849,7 +2849,7 @@ NewspeakInterpreter >> dumpPrimTraceLog [
 
 	<api>
 	<inline: false>
-	(primTraceLog at: (self safe: primTraceLogIndex - 1 mod: TraceLogSize)) = 0 ifTrue: [^nil].
+	(primTraceLog at: (self safe: primTraceLogIndex - 1 mod: TraceLogSize)) = 0 ifTrue: [^self].
 	(primTraceLog at: primTraceLogIndex) ~= 0 ifTrue:
 		[primTraceLogIndex to: TraceLogSize - 1 do:
 			[:i | self safePrintStringOf: (primTraceLog at: i); cr]].
@@ -2865,7 +2865,7 @@ NewspeakInterpreter >> dumpSendTraceLog [
 
 	<api>
 	<inline: false>
-	(sendTraceLog at: (self safe: sendTraceLogIndex - 1 mod: TraceLogSize)) = 0 ifTrue: [^nil].
+	(sendTraceLog at: (self safe: sendTraceLogIndex - 1 mod: TraceLogSize)) = 0 ifTrue: [^self].
 	(sendTraceLog at: sendTraceLogIndex) ~= 0 ifTrue:
 		[sendTraceLogIndex to: TraceLogSize - 1 do:
 			[:i | self safePrintStringOf: (sendTraceLog at: i); cr]].
@@ -4516,7 +4516,7 @@ NewspeakInterpreter >> mapTraceLogs [
 	<inline: false>
 	| limit |
 	limit := self safe: primTraceLogIndex - 1 mod: TraceLogSize.
-	(primTraceLog at: limit) = 0 ifTrue: [^nil].
+	(primTraceLog at: limit) = 0 ifTrue: [^self].
 	(primTraceLog at: primTraceLogIndex) ~= 0 ifTrue:
 		[limit := TraceLogSize - 1].
 	0 to: limit do:
