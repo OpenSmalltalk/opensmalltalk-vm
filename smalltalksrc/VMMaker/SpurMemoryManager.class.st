@@ -1304,8 +1304,9 @@ SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceByt
 	scavenger manager: self.
 	scavenger newSpaceStart: newSpaceStart
 				newSpaceBytes: newSpaceBytes
-				edenBytes: newSpaceBytes * self scavengerDenominator
-						- self numSurvivorSpaces // self scavengerDenominator
+				edenBytes: newSpaceBytes
+						* (self scavengerDenominator - self numSurvivorSpaces)
+						// self scavengerDenominator
 ]
 
 { #category : #allocation }
