@@ -6,7 +6,7 @@ self ensureClassPool.
 "
 Class {
 	#name : #VMSqueakV3BytecodeConstants,
-	#superclass : #VMBasicConstants,
+	#superclass : #SharedPool,
 	#classVars : [
 		'CtxtTempFrameStart',
 		'LargeContextBit',
