@@ -57,6 +57,8 @@ Class {
 		'newHeap',
 		'oldHeapSize',
 		'newHeapSize',
+		'oldHeapNumObjs',
+		'newHeapNumObjs',
 		'map',
 		'reverseMap',
 		'classToIndex',
@@ -660,7 +662,7 @@ SpurBootstrap >> allocateFreeLists [
 { #category : #'bootstrap image' }
 SpurBootstrap >> bootstrapImage [
 	oldHeap fullGC.
-	oldHeapSize := oldHeap freeStart.
+	self measureOldHeapPostGC.
 	self initMaps.
 	self findRequiredGlobals.
 	Transcript cr; nextPutAll: 'transforming image...'; flush.
@@ -672,7 +674,8 @@ SpurBootstrap >> bootstrapImage [
 	self fillInObjects.
 	self fillInClassTable.
 	newHeapSize := newHeap freeStart.
-	newHeap initializePostBootstrap
+	newHeap initializePostBootstrap.
+	self measureNewHeapPostInitPostBootstrap
 ]
 
 { #category : #'bootstrap image' }
@@ -1237,6 +1240,10 @@ SpurBootstrap >> launch: heap simulatorClass: simulatorClass headerFlags: header
 			 	initializeCodeGenerator]
 		ifFalse:
 			[sim initializeInterpreter: 0].
+	heap
+		initializeNewSpaceVariables;
+		bootstrapping: false;
+		assimilateNewSegment: (heap segmentManager segments at: 0).
 	sim
 		setImageHeaderFlagsFrom: headerFlags;
 		imageName: ImageName;
@@ -1266,6 +1273,26 @@ SpurBootstrap >> launchSavedWithJIT [
 	self launch: (self coHeapFrom: TransformedImage veryDeepCopy)
 		simulatorClass: CogVMSimulator
 		headerFlags: ImageHeaderFlags
+]
+
+{ #category : #stats }
+SpurBootstrap >> measureNewHeapPostInitPostBootstrap [
+	| savedEndOfMemory |
+	"need to hack around the fact that newHeap isn't all there yet.
+	 In particular, it has no freeList so can't free space from
+	 freeOldSpaceStart to endOfMemory to make oldSpace enumerable."
+	newHeapNumObjs := 0.
+	savedEndOfMemory := newHeap endOfMemory.
+	newHeap setEndOfMemory: newHeap freeOldSpaceStart.
+	newHeap allObjectsDo: [:o| newHeapNumObjs := newHeapNumObjs + 1].
+	newHeap setEndOfMemory: savedEndOfMemory
+]
+
+{ #category : #stats }
+SpurBootstrap >> measureOldHeapPostGC [
+	oldHeapSize := oldHeap freeStart.
+	oldHeapNumObjs := 0.
+	oldHeap allObjectsDo: [:o| oldHeapNumObjs := oldHeapNumObjs + 1]
 ]
 
 { #category : #'bootstrap methods' }
@@ -1382,7 +1409,7 @@ SpurBootstrap >> on: imageName [
 	newHeap := Spur32BitMMLESimulator new.
 	newHeap
 		allocateMemoryOfSize: (oldHeap youngStart * 3 / 2 roundUpTo: 1024 * 1024)
-		newSpaceSize: 1024 * 1024
+		newSpaceSize: 2 * 1024 * 1024
 		stackSize: 1024 * 1024
 		codeSize: 0.
 	newHeap setCheckForLeaks: 15 - 6. "don't check become; or newSpace; soooo many rehashes in bootstrap"
@@ -1554,6 +1581,30 @@ SpurBootstrap >> replacementForCharacterMethod: characterMethodOop [
 		isMeta: false
 ]
 
+{ #category : #'bootstrap image' }
+SpurBootstrap >> reportSizes [
+	| change oldAvgBytes newAvgBytes |
+	change := newHeapSize - oldHeapSize / oldHeapSize.
+	oldAvgBytes := oldHeapSize asFloat / oldHeapNumObjs.
+	Transcript
+		nextPutAll: 'done.'; cr;
+		nextPutAll: 'old heap size: '; print: oldHeapSize; tab;
+		nextPutAll: ' (avg obj bytes '; print: (oldAvgBytes roundTo: 0.01); nextPutAll: ' words '; print: (oldAvgBytes / self wordSize roundTo: 0.01); nextPut: $); cr;
+		nextPutAll: 'initial new heap size: '; print: newHeapSize; cr;
+		nextPutAll: 'change: '; print: (change * 100.0 roundTo: 0.01); nextPut: $%; cr;
+		flush.
+	newHeapSize := newHeap endOfMemory
+					- newHeap scavenger eden limit
+					- newHeap totalFreeListBytes.
+	change := newHeapSize - oldHeapSize / oldHeapSize.
+	newAvgBytes := newHeapSize asFloat / newHeapNumObjs.
+	Transcript
+		nextPutAll: 'final new heap size: '; print: newHeapSize; tab;
+		nextPutAll: ' (avg obj bytes '; print: (newAvgBytes roundTo: 0.01); nextPutAll: ' words '; print: (newAvgBytes / self wordSize roundTo: 0.01); nextPut: $); cr;
+		nextPutAll: 'change: '; print: (change * 100.0 roundTo: 0.01); nextPut: $%; cr;
+		flush
+]
+
 { #category : #'development support' }
 SpurBootstrap >> saveTransformedImage [
 	ImageHeaderFlags := oldInterpreter getImageHeaderFlags.
@@ -1603,7 +1654,6 @@ SpurBootstrap >> symbolClass [
 
 { #category : #'bootstrap image' }
 SpurBootstrap >> transform [
-	| change |
 	self rememberRehashSymbol.
 	self findRequiredGlobals.
 	self installModifiedMethods.
@@ -1615,21 +1665,7 @@ SpurBootstrap >> transform [
 	self scavengeImage.
 	self freeForwarders.
 	self compactImage.
-	change := newHeapSize - oldHeapSize / oldHeapSize.
-	Transcript
-		nextPutAll: 'done.'; cr;
-		nextPutAll: 'old heap size: '; print: oldHeapSize; cr;
-		nextPutAll: 'initial new heap size: '; print: newHeapSize; cr;
-		nextPutAll: 'change: '; print: (change * 100.0 roundTo: 0.01); nextPut: $%; cr;
-		flush.
-	newHeapSize := newHeap endOfMemory
-					- newHeap scavenger eden limit
-					- newHeap totalFreeListBytes.
-	change := newHeapSize - oldHeapSize / oldHeapSize.
-	Transcript
-		nextPutAll: 'final new heap size: '; print: newHeapSize; cr;
-		nextPutAll: 'change: '; print: (change * 100.0 roundTo: 0.01); nextPut: $%; cr;
-		flush.
+	self reportSizes
 ]
 
 { #category : #'bootstrap image' }
