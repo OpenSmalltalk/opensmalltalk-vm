@@ -3008,13 +3008,8 @@ StackInterpreter >> checkForAndFollowForwardedPrimitiveState [
 	self assert: self successful not.
 	found := false.
 	primIndex := self primitiveIndexOf: newMethod.
-	self assert: (self
-					cCode:
-						[primitiveFunctionPointer = (self functionPointerFor: primIndex inClass: objectMemory nilObject)]
-					inSmalltalk:
-						[((primitiveFunctionPointer isInteger and: [primitiveFunctionPointer >= 1000])
-							ifTrue: [#primitiveExternalCall]
-							ifFalse: [primitiveFunctionPointer]) = (self functionPointerFor: primIndex inClass: objectMemory nilObject)]).
+	self assert: (primIndex = 117
+				 or: [primitiveFunctionPointer = (self functionPointerFor: primIndex inClass: objectMemory nilObject)]).
 	self assert: argumentCount = (self argumentCountOf: newMethod).
 	accessorDepth := (primIndex = 117 and: [primitiveFunctionPointer ~~ #primitiveExternalCall])
 							ifTrue: [self primitiveAccessorDepthForExternalPrimitiveMethod: newMethod]

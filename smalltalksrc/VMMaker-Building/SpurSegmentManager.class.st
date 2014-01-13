@@ -267,6 +267,7 @@ SpurSegmentManager >> initialize [
 { #category : #'simulation only' }
 SpurSegmentManager >> initializeFromFreeChunks: freeChunks [
 	"For testing, create a set of segments using the freeChunks as bridges."
+	self assert: (freeChunks allSatisfy: [:f| manager hasOverflowHeader: f]).
 	numSegments := freeChunks size.
 	freeChunks do:
 		[:f|
@@ -285,8 +286,10 @@ SpurSegmentManager >> initializeFromFreeChunks: freeChunks [
 						yourself].
 	manager setEndOfMemory: segments last segLimit.
 	segments := CArrayAccessor on: segments.
-	freeChunks do:
-		[:bridge| self assert: (self isValidSegmentBridge: bridge)]
+	freeChunks with: segments object do:
+		[:bridge :segment|
+		self assert: (self isValidSegmentBridge: bridge).
+		self assert: bridge = (self bridgeFor: segment)]
 ]
 
 { #category : #'growing/shrinking memory' }
@@ -325,9 +328,9 @@ SpurSegmentManager >> isInSegments: address [
 { #category : #testing }
 SpurSegmentManager >> isValidSegmentBridge: objOop [
 	"bridges bridge the gaps between segments. They are the last object in each segment."
-	^(manager addressCouldBeObj: objOop - manager baseHeaderSize)
-	 and: [(manager isSegmentBridge: objOop)
-	 and: [(manager hasOverflowHeader: objOop)
+	^(manager addressCouldBeObj: objOop)
+	  and: [(manager isSegmentBridge: objOop)
+	  and: [(manager hasOverflowHeader: objOop)
 		or: [(manager numSlotsOfAny: objOop) = 0]]]
 ]
 
