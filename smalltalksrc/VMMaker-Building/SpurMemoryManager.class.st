@@ -1012,7 +1012,7 @@ SpurMemoryManager >> adjustAllOopsBy: bytesToShift [
 		ifTrue:
 			[self assert: self newSpaceIsEmpty.
 			 obj := self objectStartingAt: oldSpaceStart.
-			 [self oop: obj isLessThan: endOfMemory] whileTrue:
+			 [self oop: obj isLessThan: freeOldSpaceStart] whileTrue:
 				[(self isFreeObject: obj)
 					ifTrue: [self swizzleFieldsOfFreeChunk: obj]
 					ifFalse:
