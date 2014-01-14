@@ -3113,8 +3113,8 @@ CoInterpreter >> followForwardedFieldsInCurrentMethod [
 ]
 
 { #category : #'object memory support' }
-CoInterpreter >> followForwardedMethods [
-	<doNotGenerate>
+CoInterpreter >> followForwardedMethodsInMethodZone [
+	<inline: true>
 	cogit followForwardedMethods
 ]
 
