@@ -411,6 +411,7 @@ ioInitHeartbeat()
 extern sqInt suppressHeartbeatFlag;
 	int er;
 	struct sigaction heartbeat_handler_action;
+	sigset_t ss;
 
 	if (suppressHeartbeatFlag) return;
 
@@ -445,6 +446,11 @@ extern sqInt suppressHeartbeatFlag;
 		perror("ioInitHeartbeat sigaction");
 		exit(1);
 	}
+
+	/* Make sure SIGALRM is unblocked. */
+	sigemptyset(&ss);
+	sigaddset(&ss, ITIMER_SIGNAL);
+	sigprocmask(SIG_UNBLOCK, &ss, NULL);
 
 	setIntervalTimer(beatMilliseconds);
 }
