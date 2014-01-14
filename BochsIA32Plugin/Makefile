@@ -4,9 +4,9 @@ DLLTOOLEXTRA := $(PLATDIR)/../processors/IA32/winbochs/cpu/libcpu.a \
 DLLWRAPEXTRA := $(DLLTOOLEXTRA)
 
 LINK_WITH_GPP := yes
-EXTRALIBS:= -L../../../processors/IA32/winbochs/cpu \
-			-L../../../processors/IA32/winbochs/fpu \
-			-L../../../processors/IA32/winbochs/disasm \
+EXTRALIBS:= -L$(PLATDIR)/../processors/IA32/winbochs/cpu \
+			-L$(PLATDIR)/../processors/IA32/winbochs/fpu \
+			-L$(PLATDIR)/../processors/IA32/winbochs/disasm \
 			-lcpu -lfpu -ldisasm
 
 include ../../Makefile.plugin
