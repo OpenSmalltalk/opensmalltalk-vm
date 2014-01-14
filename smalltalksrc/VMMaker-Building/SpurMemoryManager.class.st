@@ -3880,6 +3880,7 @@ SpurMemoryManager >> followForwarded: objOop [
 		- array at: 1 still points to &a. array at: 2 still points to &b. array at: 3 still points to &c
 		- when accessing array first one has to follow a forwarding chain:
 		&a -> &b -> c"
+	<api>
 	| referent |
 	self assert: (self isForwarded: objOop).
 	referent := self fetchPointer: 0 ofMaybeForwardedObject: objOop.
