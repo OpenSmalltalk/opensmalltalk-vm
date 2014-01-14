@@ -3672,7 +3672,9 @@ Cogit >> compileCPICEntry [
 
 { #category : #'in-line cacheing' }
 Cogit >> compileClosedPICPrototype [
-	"Compile the abstract instructions for a full closed PIC used to initialize closedPICSize"
+	"Compile the abstract instructions for a full closed PIC used to initialize closedPICSize.
+	 The loads into SendNumArgsReg are those for optional method objects which may be
+	 used in MNU cases."
 	| numArgs jumpNext |
 	<var: #jumpNext type: #'AbstractInstruction *'>
 	numArgs := 0.
@@ -4478,19 +4480,53 @@ Cogit >> followForwardedMethods [
 	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
 	[cogMethod < methodZone limitZony] whileTrue:
 		[cogMethod cmType = CMMethod ifTrue:
-			[(objectMemory shouldRemapOop: cogMethod methodObject) ifTrue:
-				[cogMethod methodObject: (objectMemory remapObj: cogMethod methodObject).
+			[(objectMemory isForwarded: cogMethod methodObject) ifTrue:
+				[cogMethod methodObject: (objectMemory followForwarded: cogMethod methodObject).
 				 (cogMethod cmRefersToYoung not
 				  and: [objectMemory isYoungObject: cogMethod methodObject]) ifTrue:
 					[methodZone addToYoungReferrers: cogMethod]]].
 		 cogMethod cmType = CMClosedPIC ifTrue:
-			[(self mapObjectReferencesInClosedPIC: cogMethod) ifTrue:
+			[(self followMethodReferencesInClosedPIC: cogMethod) ifTrue:
 				[freedPIC := true.
 				 methodZone freeMethod: cogMethod]].
 		 cogMethod := methodZone methodAfter: cogMethod].
 	freedPIC ifTrue:
 		[self unlinkSendsToFree.
 		 processor flushICacheFrom: codeBase to: methodZone limitZony asInteger]
+]
+
+{ #category : #'garbage collection' }
+Cogit >> followMaybeObjRefAt: mcpc [
+	"Follow a potential object reference from a closed PIC.
+	 This may be a method reference or null.
+	 Answer if the followed literal is young."
+	| object subject |
+	object := backEnd literalBeforeFollowingAddress: mcpc.
+	(objectRepresentation couldBeObject: object) ifFalse:
+		[^false].
+	(objectMemory isForwarded: object) ifFalse:
+		[^objectMemory isYoungObject: object].
+	subject := objectMemory followForwarded: object.
+	backEnd storeLiteral: subject beforeFollowingAddress: mcpc.
+	codeModified := true.
+	^objectMemory isYoungObject: subject
+]
+
+{ #category : #'garbage collection' }
+Cogit >> followMethodReferencesInClosedPIC: cPIC [
+	"Remap all object references in the closed PIC.  Answer if any references are young.
+	Set codeModified if any modifications are made."
+	<var: #cPIC type: #'CogMethod *'>
+	| pc refersToYoung |
+	pc := cPIC asInteger + firstCPICCaseOffset.
+	refersToYoung := self followMaybeObjRefAt: pc - backEnd jumpLongByteSize.
+	pc := pc + cPICCaseSize.
+	2 to: cPIC cPICNumCases do:
+		[:i|
+		(self followMaybeObjRefAt: pc - backEnd jumpLongConditionalByteSize) ifTrue:
+			[refersToYoung := true].
+		pc := pc + cPICCaseSize].
+	^refersToYoung
 ]
 
 { #category : #compaction }
@@ -8818,7 +8854,7 @@ Cogit >> unlockVMOwner [
 
 { #category : #'garbage collection' }
 Cogit >> updateMaybeObjRefAt: mcpc [
-	"Update a potential object reference form a closed PIC.
+	"Update a potential object reference from a closed PIC.
 	 This may be an object reference, an inline cache tag or null.
 	 Answer if the updated literal is young."
 	| object subject |

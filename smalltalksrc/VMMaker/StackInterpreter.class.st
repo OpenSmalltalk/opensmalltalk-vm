@@ -5594,11 +5594,6 @@ StackInterpreter >> followForwardedFrameContents: theFP stackPointer: theSP [
 ]
 
 { #category : #'object memory support' }
-StackInterpreter >> followForwardedMethods [
-	"This is just a stub for the CoInterpreter"
-]
-
-{ #category : #'object memory support' }
 StackInterpreter >> followForwardedMethodsInMethodCache [
 	0 to: MethodCacheSize - 1 by: MethodCacheEntrySize do:
 		[:i | | c s m |
@@ -5609,6 +5604,11 @@ StackInterpreter >> followForwardedMethodsInMethodCache [
 		 and: [objectMemory isOopForwarded: m]]]) ifTrue:
 			[m := objectMemory followForwarded: m.
 			 methodCache at: i + MethodCacheMethod put: m]]
+]
+
+{ #category : #'object memory support' }
+StackInterpreter >> followForwardedMethodsInMethodZone [
+	"This is just a stub for the CoInterpreter"
 ]
 
 { #category : #'object memory support' }
@@ -8819,8 +8819,8 @@ StackInterpreter >> postBecomeAction: theBecomeEffectsFlags [
 	theBecomeEffectsFlags ~= 0 ifTrue:
 		[self followForwardingPointersInStackZone: theBecomeEffectsFlags.
 		 (theBecomeEffectsFlags anyMask: BecameCompiledMethodFlag) ifTrue:
-			[self followForwardedMethodsInMethodCache].
-		 self followForwardedMethods. "for CoInterpreter"
+			[self followForwardedMethodsInMethodCache.
+			 self followForwardedMethodsInMethodZone]. "for CoInterpreter"
 		 self followForwardingPointersInScheduler]
 ]
 
