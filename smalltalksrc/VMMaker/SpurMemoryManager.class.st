@@ -2453,7 +2453,9 @@ SpurMemoryManager >> classAtIndex: classIndex put: objOop [
 	"for become & GC of classes"
 	| classTablePage |
 	self assert: (classIndex <= self tagMask or: [classIndex >= self arrayClassIndexPun]).
-	self assert: (objOop = nilObj or: [(self rawHashBitsOf: objOop) = classIndex]).
+	self assert: (objOop = nilObj
+				 or: [(self rawHashBitsOf: objOop) = classIndex
+					and: [coInterpreter objCouldBeClassObj: objOop]]).
 	classTablePage := self fetchPointer: classIndex >> self classTableMajorIndexShift
 							ofObject: hiddenRootsObj.
 	classTablePage = nilObj ifTrue:
@@ -2518,6 +2520,7 @@ SpurMemoryManager >> classFloatCompactIndex [
 
 { #category : #'interpreter access' }
 SpurMemoryManager >> classForClassTag: classIndex [
+	self assert: classIndex ~= self isForwardedObjectClassIndexPun.
 	^self classAtIndex: classIndex
 ]
 
@@ -2755,6 +2758,7 @@ SpurMemoryManager >> coalesce: obj1 and: obj2 [
 SpurMemoryManager >> compact [
 	"We'd like to use exact fit followed by best fit, but best-fit is complex to implement
 	 and potentially expensive.  So just use exactFit followed, if necessary, by first-fit."
+	<inline: false>
 	self exactFitCompact.
 	highestObjects usedSize > 0 ifTrue:
 		[self firstFitCompact]
@@ -2926,7 +2930,7 @@ SpurMemoryManager >> doBecome: obj1 and: obj2 copyHash: copyHashFlag [
 	| o1ClassIndex o2ClassIndex |
 	copyHashFlag ifFalse:
 		["in-lined
-			clasIndex := (self isInClassTable: obj) ifTrue: [self rawHashBitsOf: obj] ifFalse: [0]
+			classIndex := (self isInClassTable: obj) ifTrue: [self rawHashBitsOf: obj] ifFalse: [0]
 		 for speed."
 		 o1ClassIndex := self rawHashBitsOf: obj1.
 		 (o1ClassIndex ~= 0 and: [(self classAtIndex: o1ClassIndex) ~= obj1]) ifTrue:
@@ -3361,7 +3365,7 @@ SpurMemoryManager >> existInstancesInNewSpaceOf: classObj [
 ]
 
 { #category : #'class table' }
-SpurMemoryManager >> expungeDuplicateClasses [
+SpurMemoryManager >> expungeDuplicateAndUnmarkedClasses: expungeUnmarked [
 	"Bits have been set in the classTableBitmap corresponding to
 	 used classes.  Any class in the class table that does not have a
 	 bit set has no instances with that class index.  However, becomeForward:
@@ -3369,8 +3373,10 @@ SpurMemoryManager >> expungeDuplicateClasses [
 		a) won't have a bit set on load (because there are no forwarders on load),
 		b) wont match their identityHash.
 	 So expunge duplicates by eliminating unmarked entries that don't occur at
-	 their identityHash."
-	1 to: numClassTablePages - 1 do:
+	 their identityHash.
+	 Further, any class in the table that is unmarked will also not have a bit set so
+	 eliminate unmarked classes using the bitmap too."
+	1 to: numClassTablePages - 1 do: "Avoid expunging the puns by not scanning the 0th page."
 		[:i| | classTablePage |
 		"optimize scan by only scanning bitmap in regions that have pages."
 		classTablePage := self fetchPointer: i ofObject: hiddenRootsObj.
@@ -3390,14 +3396,21 @@ SpurMemoryManager >> expungeDuplicateClasses [
 								 classOrNil := self fetchPointer: (classIndex bitAnd: self classTableMinorIndexMask)
 												   ofObject: classTablePage.
 								 self assert: (self classAtIndex: classIndex) = classOrNil.
-								 "only remove a class if it is at a duplicate entry"
+								 self assert: (classOrNil = nilObj or: [coInterpreter addressCouldBeClassObj: classOrNil]).
+								 "only remove a class if it is at a duplicate entry or it is unmarked and we're expunging unmarked classes."
 								 (classOrNil ~= nilObj
-								  and: [(self rawHashBitsOf: classOrNil) ~= classIndex]) ifTrue:
+								  and: [(expungeUnmarked and: [(self isMarked: classOrNil) not])
+									  or: [(self rawHashBitsOf: classOrNil) ~= classIndex]]) ifTrue:
 									[self storePointerUnchecked: (classIndex bitAnd: self classTableMinorIndexMask)
 										ofObject: classTablePage
 										withValue: nilObj.
-									 "but it should still be in the table at its correct index."
-									 self assert: ((self classAtIndex: (self rawHashBitsOf: classOrNil)) = classOrNil)]]]]]]]
+									 "but if it is marked, it should still be in the table at its correct index."
+									 self assert: ((expungeUnmarked and: [(self isMarked: classOrNil) not])
+												or: [(self classAtIndex: (self rawHashBitsOf: classOrNil)) = classOrNil]).
+									 "If the removed class is before the classTableIndex, set the
+									  classTableIndex to point to the empty slot so as to reuse it asap."
+									 classIndex < classTableIndex ifTrue:
+										[classTableIndex := classIndex]]]]]]]]
 ]
 
 { #category : #'class table' }
@@ -3789,7 +3802,7 @@ SpurMemoryManager >> fixFollowedField: fieldIndex ofObject: anObject withInitial
 	<inline: false>
 	| objOop |
 	self assert: (self isOopForwarded: initialValue).
-	objOop := self followForwarded: objOop.
+	objOop := self followForwarded: initialValue.
 	self storePointer: fieldIndex ofObject: anObject withValue: objOop.
 	^objOop
 ]
@@ -3967,6 +3980,18 @@ SpurMemoryManager >> followNonImmediateField: fieldIndex ofObject: anObject [
 	"Make sure the oop at fieldIndex in anObject is not forwarded (follow the
 	 forwarder there-in if so).  Answer the (possibly followed) oop at fieldIndex.
 	 N.B. the oop is assumed to be non-immediate."
+	| objOop |
+	objOop := self fetchPointer: fieldIndex ofObject: anObject.
+	self assert: (self isNonImmediate: objOop).
+	(self isForwarded: objOop) ifTrue:
+		[objOop := self fixFollowedField: fieldIndex ofObject: anObject withInitialValue: objOop].
+	^objOop
+]
+
+{ #category : #forwarding }
+SpurMemoryManager >> followObjField: fieldIndex ofObject: anObject [
+	"Make sure the obj at fieldIndex in anObject is not forwarded (follow the
+	 forwarder there-in if so).  Answer the (possibly followed) obj at fieldIndex."
 	| objOop |
 	objOop := self fetchPointer: fieldIndex ofObject: anObject.
 	self assert: (self isNonImmediate: objOop).
@@ -4240,6 +4265,7 @@ SpurMemoryManager >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpace [
 	 segmentManager mark which segments contain pinned objects via notePinned:."
 
 	| lastLargeFree lastHighest highestObjectsWraps sortedFreeChunks |
+	<inline: false>
 	<var: #lastHighest type: #usqInt>
 	self checkFreeSpace.
 	scavenger forgetUnmarkedRememberedObjects.
@@ -6149,6 +6175,7 @@ SpurMemoryManager >> markInactiveEphemerons [
 
 { #category : #'gc - global' }
 SpurMemoryManager >> markObjects [
+	<inline: false>
 	"Mark all accessible objects."
 	"If the incremental collector is running mark bits may be set; stop it and clear them if necessary."
 	self ensureAllMarkBitsAreZero.
@@ -6157,7 +6184,7 @@ SpurMemoryManager >> markObjects [
 	self initializeMarkStack.
 	self initializeWeaklingStack.
 	self markAccessibleObjects.
-	self expungeDuplicateClasses
+	self expungeDuplicateAndUnmarkedClasses: true
 ]
 
 { #category : #'gc - global' }
@@ -6872,7 +6899,7 @@ SpurMemoryManager >> postBecomeOrCompactScanClassTable: effectsFlags [
 	 We can somehow avoid following classes from the classTable until after this mark phase."
 	self assert: self validClassTableRootPages.
 
-	(effectsFlags anyMask: BecamePointerObjectFlag+BecameCompiledMethodFlag) ifFalse: [^self].
+	(effectsFlags anyMask: BecamePointerObjectFlag"+BecameCompiledMethodFlag") ifFalse: [^self].
 	
 	0 to: numClassTablePages - 1 do:
 		[:i| | page |
@@ -7236,7 +7263,7 @@ SpurMemoryManager >> rawOverflowSlotsOf: objOop [
 { #category : #'class table' }
 SpurMemoryManager >> reInitializeClassTablePostLoad: hiddenRoots [
 	self hiddenRootsObj: hiddenRoots.
-	self expungeDuplicateClasses
+	self expungeDuplicateAndUnmarkedClasses: false
 ]
 
 { #category : #snapshot }
@@ -7441,45 +7468,33 @@ SpurMemoryManager >> safePrintStringOf: oop [
 SpurMemoryManager >> scanClassPostBecome: startClassObj effects: becomeEffects [
 	"Scan a class in the class table post-become.  Make sure the superclass
 	 chain contains no forwarding pointers, and that the method dictionaries
-	 are not forwarded either, and that methoidClassAssociations in methods
-	 are not followed either."
+	 are not forwarded either.  N.B. we don't follow methods or their
+	 methodClassAssociations since we can't guarantee that forwarders
+	 to compiled methods are not stored in method dictionaries via at:put:
+	 and so have to cope with forwarding pointers to compiled methods
+	 in method dictionaries anyway.  Instead the [Co]Interpreter must
+	 follow forwarders when fetching from method dictionaries and follow
+	 forwarders on become in the method cache and method zone."
 
-	| classObj obj obj2 |
-	"Algorithm depend on this to terminate loop at root of superclass chain."
+	| classObj obj |
+	"Algorithm depends on this to terminate loop at root of superclass chain."
 	self assert: (self rawHashBitsOf: nilObj) ~= 0.
-	self assert: (becomeEffects anyMask: BecamePointerObjectFlag+BecameCompiledMethodFlag). "otherwise why bother?"
+	self assert: (becomeEffects anyMask: BecamePointerObjectFlag). "otherwise why bother?"
 	classObj := startClassObj.
 
-	[obj := self fetchPointer: MethodDictionaryIndex ofObject: classObj.
-	 self assert: (self isNonImmediate: obj).
-	 (self isForwarded: obj) ifTrue:
-		[obj := self followForwarded: obj.
-		 self storePointer: MethodDictionaryIndex ofObject: classObj withValue: obj].
-	 obj2 := self fetchPointer: MethodArrayIndex ofObject: obj.
-	 self assert: (self isNonImmediate: obj2).
-	 (self isForwarded: obj2) ifTrue:
-		[obj2 := self followForwarded: obj2.
-		 self storePointer: MethodArrayIndex ofObject: obj withValue: obj2].
-	 "Only need to follow pointers in MethodArray if we've became any compiled methods..."
-	 (becomeEffects anyMask: BecameCompiledMethodFlag) ifTrue:
-		[self followForwardedObjectFields: obj2 toDepth: 0].
-	 "But the methodClassAssociations there-in need to be followed if we've done any pointer becomes."
-	 (becomeEffects anyMask: BecamePointerObjectFlag) ifTrue:
-		[0 to: (self numSlotsOf: obj2) - 1 do:
-			[:i|
-			obj := self fetchPointer: i ofObject: obj2.
-			(self isOopCompiledMethod: obj2) ifTrue:
-				[coInterpreter followNecessaryForwardingInMethod: obj2]]].
-
-	 obj := self fetchPointer: SuperclassIndex ofObject: classObj.
-	 self assert: (self isNonImmediate: obj).
-	 (self isForwarded: obj) ifTrue:
-		[obj := self followForwarded: obj.
-		 self storePointer: SuperclassIndex ofObject: classObj withValue: obj].
-
-	"If the superclass has an identityHash then either it is nil, or is in the class table.
-	 Tail recurse."
-	(self rawHashBitsOf: obj) = 0] whileTrue:
+	[obj := self followObjField: MethodDictionaryIndex ofObject: classObj.
+	 "Solving the becommed method stored into a method dictionary object issue is
+	  easy; just have a read barrier on fetching the method.  But solving the read barrier
+	  for selectors is more difficult (because selectors are currently not read, just their
+	  oops.  For now punt on the issue and simply follow all selectors on become"
+	 self flag: 'need to fix the selector and methodDictionary issue'.
+	 true
+		ifTrue: [self followForwardedObjectFields: obj toDepth: 0]
+		ifFalse: [self followObjField: MethodArrayIndex ofObject: obj].
+	 obj := self followObjField: SuperclassIndex ofObject: classObj.
+	 "If the superclass has an identityHash then either it is nil, or is in the class table.
+	  Tail recurse."
+	 (self rawHashBitsOf: obj) = 0] whileTrue:
 		["effectively self scanClassPostBecome: obj"
 		 classObj := obj]
 ]

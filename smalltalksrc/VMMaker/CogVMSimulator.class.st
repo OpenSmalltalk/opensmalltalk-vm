@@ -1623,7 +1623,7 @@ CogVMSimulator >> ioLoadFunction: functionString From: pluginString AccessorDept
 		[:pluginAndName :index|
 		 ((pluginAndName at: 1) == plugin 
 		  and:[(pluginAndName at: 2) == fnSymbol]) ifTrue:
-			[firstTime ifTrue: [transcript cr; show: ' ... okay'].
+			[firstTime ifTrue: [transcript show: ' ... okay'; cr].
 			 accessorDepthPtr at: 0 put: (pluginAndName at: 4).
 			 ^index]].
 	firstTime ifTrue: [transcript cr; show: 'Failed ... primitive not in plugin'].
