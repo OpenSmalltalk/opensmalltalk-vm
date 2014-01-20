@@ -1744,7 +1744,9 @@ StackInterpreter >> addNewMethodToCache: classObj [
 			[primitiveIndex := self primitiveIndexOf: newMethod.
 			 primitiveFunctionPointer := self functionPointerFor: primitiveIndex inClass: classObj]
 		ifFalse:
-			[primitiveFunctionPointer := #primitiveInvokeObjectAsMethod].
+			[self assert: ((objectMemory isNonImmediate: newMethod)
+						  and: [objectMemory isForwarded: newMethod]) not.
+			 primitiveFunctionPointer := #primitiveInvokeObjectAsMethod].
 
 	0 to: CacheProbeMax-1 do:
 		[:p | probe := (hash >> p) bitAnd: MethodCacheMask.
@@ -6398,7 +6400,7 @@ StackInterpreter >> implicitReceiverFor: rcvr mixin: mixin implementing: selecto
 							startingAtBehavior: (objectMemory fetchClassOf: rcvr).
 	 mixinApplication = objectMemory nilObject ifTrue:
 		[^rcvr].
-	 dictionary := objectMemory fetchPointer: MethodDictionaryIndex ofObject: mixinApplication.
+	 dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: mixinApplication.
 	 found := self lookupMethodInDictionary: dictionary.
 	 found ifFalse:
 		[| implicitReceiverOrNil theMixin |
@@ -7596,7 +7598,7 @@ StackInterpreter >> lookupMethodInClass: class [
 	currentClass := class.
 	[currentClass ~= objectMemory nilObject]
 		whileTrue:
-		[dictionary := objectMemory fetchPointer: MethodDictionaryIndex ofObject: currentClass.
+		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.
 		dictionary = objectMemory nilObject ifTrue:
 			["MethodDict pointer is nil (hopefully due a swapped out stub)
 				-- raise exception #cannotInterpret:."
@@ -7640,7 +7642,7 @@ StackInterpreter >> lookupMethodInDictionary: dictionary [
 			[nextSelector := objectMemory fetchPointer: index + SelectorStart ofObject: dictionary.
 			 nextSelector = messageSelector ifTrue:
 				[methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: dictionary.
-				 newMethod := objectMemory fetchPointer: index ofObject: methodArray.
+				 newMethod := objectMemory followField: index ofObject: methodArray.
 				^true].
 		 index := index + 1].
 		 ^false].
@@ -7654,10 +7656,10 @@ StackInterpreter >> lookupMethodInDictionary: dictionary [
 	wrapAround := false.
 	[true] whileTrue:
 		[nextSelector := objectMemory fetchPointer: index ofObject: dictionary.
-		 nextSelector = objectMemory nilObject ifTrue: [^ false].
+		 nextSelector = objectMemory nilObject ifTrue: [^false].
 		 nextSelector = messageSelector ifTrue:
 			[methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: dictionary.
-			 newMethod := objectMemory fetchPointer: index - SelectorStart ofObject: methodArray.
+			 newMethod := objectMemory followField: index - SelectorStart ofObject: methodArray.
 			^true].
 		 index := index + 1.
 		 index = length ifTrue:
@@ -7677,7 +7679,7 @@ StackInterpreter >> lookupMethodNoMNUEtcInClass: class [
 
 	currentClass := class.
 	[currentClass ~= objectMemory nilObject] whileTrue:
-		[dictionary := objectMemory fetchPointer: MethodDictionaryIndex ofObject: currentClass.
+		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.
 		 dictionary = objectMemory nilObject ifTrue:
 			[lkupClass := self superclassOf: currentClass.
 			 ^SelectorCannotInterpret].
@@ -8495,7 +8497,7 @@ StackInterpreter >> nextImplicitReceiverFor: anObject withMixin: mixin [
 							startingAtNonMetaClass: (objectMemory fetchClassOf: implicitReceiver).
 	 mixinApplication = objectMemory nilObject ifTrue:
 		[^objectMemory nilObject].
-	 dictionary := objectMemory fetchPointer: MethodDictionaryIndex ofObject: mixinApplication.
+	 dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: mixinApplication.
 	 found := self lookupMethodInDictionary: dictionary.
 	 found]
 		whileFalse:
