@@ -1659,14 +1659,6 @@ ObjectMemory >> ensureBehaviorHash: oop [
 	^self hashBitsOf: oop
 ]
 
-{ #category : #'forward compatibility' }
-ObjectMemory >> enterIntoClassTable: aBehavior [
-	"The old ObjectMemory should never be called upon to enter anything into the class table.
-	 Alas 0 is a valid identityhash in the Squeak V3 objrep so primitiveBehaviorHash may
-	 ask to enter into the table a class with a 0 id hash.  SImply ignore the request."
-	^0
-]
-
 { #category : #'gc -- compaction' }
 ObjectMemory >> existImmutableReferencesToForwardedInRangeFrom: memStart to: memEnd [
 	"Answer if any immutable objects refer to any forwarded objects so that the become: primitives can fail if a become would update a reference from an immutable object."

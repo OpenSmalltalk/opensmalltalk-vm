@@ -40,6 +40,7 @@ Class {
 		'displayView',
 		'printFrameAtEachStep',
 		'printBytecodeAtEachStep',
+		'systemAttributes',
 		'startMicroseconds',
 		'externalSemaphoreSignalRequests',
 		'externalSemaphoreSignalResponses',
@@ -318,7 +319,12 @@ StackInterpreterSimulator >> cr [
 { #category : #'debugging traps' }
 StackInterpreterSimulator >> createActualMessageTo: class [
 
-	"self halt: (self stringOf: messageSelector)."
+	"false
+		ifTrue:
+			[(self stringOf: messageSelector) = 'run:with:in:' ifTrue:
+				[self halt]]
+		ifFalse:
+			[self halt: (self stringOf: messageSelector)]."
 
 	^super createActualMessageTo: class
 ]
@@ -703,6 +709,7 @@ StackInterpreterSimulator >> initialize [
 	transcript := Transcript.
 	displayForm := 'Display has not yet been installed' asDisplayText form.
 	suppressHeartbeatFlag := false.
+	systemAttributes := Dictionary new.
 	extSemTabSize := 256.
 	disableBooleanCheat := false
 ]
@@ -911,7 +918,7 @@ StackInterpreterSimulator >> ioLoadFunction: functionString From: pluginString A
 		[:pluginAndName :index|
 		 ((pluginAndName at: 1) == plugin 
 		  and:[(pluginAndName at: 2) == fnSymbol]) ifTrue:
-			[firstTime ifTrue: [transcript cr; show: ' ... okay'].
+			[firstTime ifTrue: [transcript show: ' ... okay'; cr].
 			 accessorDepthPtr at: 0 put: (pluginAndName at: 4).
 			 ^index]].
 	firstTime ifTrue: [transcript cr; show: 'Failed ... primitive not in plugin'].
@@ -1471,6 +1478,13 @@ StackInterpreterSimulator >> penultimateLiteralOf: aMethodOop [
 	^self literal: (self literalCountOf: aMethodOop) - 2 ofMethod: aMethodOop
 ]
 
+{ #category : #'object memory support' }
+StackInterpreterSimulator >> preBecomeAction [
+	"((objectMemory instVarNamed: 'becomeEffectsFlags') anyMask: BecameCompiledMethodFlag) ifTrue:
+		[self halt]."
+	super preBecomeAction
+]
+
 { #category : #'debugging traps' }
 StackInterpreterSimulator >> preGCAction: gcMode [
 	"self halt."
@@ -1628,7 +1642,9 @@ StackInterpreterSimulator >> primitiveExecuteMethod [
 
 { #category : #'control primitives' }
 StackInterpreterSimulator >> primitiveExecuteMethodArgsArray [
-	self halt: thisContext selector.
+	"self halt: thisContext selector."
+	(objectMemory isOopCompiledMethod: self stackTop) ifFalse:
+		[self halt].
 	^super primitiveExecuteMethodArgsArray
 ]
 
@@ -1642,10 +1658,10 @@ StackInterpreterSimulator >> primitiveFailFor: reasonCode [
 StackInterpreterSimulator >> primitiveGetAttribute [
 	"Fetch the system attribute with the given integer ID. The result is a string, which will be empty if the attribute is not defined."
 
-	| attr s attribute |
-	attr := self stackIntegerValue: 0.
+	| index s attribute |
+	index := self stackIntegerValue: 0.
 	self successful ifTrue: [
-		attribute := Smalltalk getSystemAttribute: attr.
+		attribute := systemAttributes at: index ifAbsent: [Smalltalk getSystemAttribute: index].
 		attribute ifNil: [ ^self primitiveFail ].
 		s := objectMemory instantiateClass: (objectMemory splObj: ClassByteString) indexableSize: attribute size.
 		1 to: attribute size do: [ :i |
@@ -2333,6 +2349,11 @@ StackInterpreterSimulator >> success: successBoolean [
 	"successBoolean ifFalse:
 		[self halt]."
 	^super success: successBoolean
+]
+
+{ #category : #'simulation only' }
+StackInterpreterSimulator >> systemAttributes [
+	^systemAttributes
 ]
 
 { #category : #'debug printing' }

@@ -275,7 +275,8 @@ Spur32BitMMLESimulator >> isIntegerObject: oop [
 		externalInstVar:ofContext:
 		primitiveGrowMemoryByAtLeast
 		primitiveFileSetPosition
-		bereaveAllMarriedContextsForSnapshotFlushingExternalPrimitivesIf:) includes: sel) ifFalse:
+		bereaveAllMarriedContextsForSnapshotFlushingExternalPrimitivesIf:
+		shortPrintOop:) includes: sel) ifFalse:
 		[self halt].
 	^super isIntegerObject: oop
 ]
