@@ -1449,7 +1449,7 @@ CoInterpreter >> ceMNUFromPICMNUMethod: aMethodObj receiver: rcvr [
 				or: [(objectMemory addressCouldBeObj: aMethodObj)
 					and: [objectMemory isOopCompiledMethod: aMethodObj]]).
 	cPIC := self cCoerceSimple: self popStack - cogit mnuOffset to: #'CogMethod *'.
-	self assert: cPIC cmType = CMClosedPIC.
+	self assert: (cPIC cmType = CMClosedPIC or: [cPIC cmType = CMOpenPIC]).
 	argumentCount := cPIC cmNumArgs.
 	messageSelector := cPIC selector.
 	aMethodObj ~= 0 ifTrue:
