@@ -1511,7 +1511,7 @@ VMMaker >> needsToRegenerateInterpreterFile [
 	(self coreVMDirectory entryAt: self interpreterFilename ifAbsent: [nil]) ifNotNil:
 		[:fstat|
 		tStamp < fstat modificationTime ifTrue:
-			[^self confirm: 'The ', self configurationNameIfAny, 'interpreter classes have not been modified since\ the interpreter file was last generated.\Do you still want to regenerate their source file?' withCRs]].
+			[^self confirm: 'The ', self configurationNameIfAny, 'interpreter classes have not been modified since\ the interpreter file was last generated.\Do you still want to regenerate the source file?' withCRs]].
 	^true
 
 ]

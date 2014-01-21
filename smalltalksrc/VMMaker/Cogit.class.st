@@ -753,7 +753,7 @@ Cogit class >> initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid 
 
 { #category : #'class initialization' }
 Cogit class >> initializeCogMethodConstants [
-	CMOpenPIC := 1 + (CMClosedPIC := 1 + (CMBlock := 1 +(CMMethod := 1 + (CMFree := 1))))
+	CMOpenPIC := 1 + (CMClosedPIC := 1 + (CMBlock := 1 + (CMMethod := 1 + (CMFree := 1))))
 ]
 
 { #category : #'class initialization' }
@@ -3854,18 +3854,6 @@ Cogit >> compilePrimitive [
 		[^self genFastPrimFail].
 	minValidCallAddress := minValidCallAddress min: primitiveRoutine asUnsignedInteger.
 	^self compileInterpreterPrimitive: primitiveRoutine
-]
-
-{ #category : #'compile abstract instructions' }
-Cogit >> compileProlog [
-	"The start of a CogMethod has a call to a run-time abort routine that either
-	 handles an in-line cache failure or a stack overflow.  The routine selects the
-	 path depending on ReceiverResultReg; if zero it takes the stack overflow
-	 path; if nonzero the in-line cache miss path.  Neither of these paths returns.
-	 The abort routine must be called;  In the callee the method is located by
-	 adding the relevant offset to the return address of the call."
-	stackOverflowCall := self MoveCq: 0 R: ReceiverResultReg.
-	sendMissCall := self Call: (self methodAbortTrampolineFor: methodOrBlockNumArgs)
 ]
 
 { #category : #initialization }
@@ -7650,6 +7638,11 @@ Cogit >> relocateCallsAndSelfReferencesInMethod: cogMethod [
 	<var: #cogMethod type: #'CogMethod *'>
 	| delta |
 	delta := cogMethod objectHeader.
+	self assert: (cogMethod cmType = CMMethod or: [cogMethod cmType = CMOpenPIC]).
+	self assert: (backEnd callTargetFromReturnAddress: cogMethod asInteger + missOffset)
+				= (cogMethod cmType = CMMethod
+					ifTrue: [self methodAbortTrampolineFor: cogMethod cmNumArgs]
+					ifFalse: [self picAbortTrampolineFor: cogMethod cmNumArgs]).
 	backEnd relocateCallBeforeReturnPC: cogMethod asInteger + missOffset by: delta negated.
 	self mapFor: cogMethod
 		performUntil: #relocateIfCallOrMethodReference:mcpc:delta:
@@ -8638,6 +8631,39 @@ Cogit >> unlinkAllSends [
 ]
 
 { #category : #'in-line cacheing' }
+Cogit >> unlinkIfFreeOrLinkedSend: annotation pc: mcpc of: theSelector [
+	<var: #mcpc type: #'char *'>
+	| entryPoint targetMethod offset sendTable unlinkedRoutine |
+	<var: #targetMethod type: #'CogMethod *'>
+	<var: #sendTable type: #'sqInt *'>
+	(self isSendAnnotation: annotation) ifTrue:
+		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
+		 entryPoint > methodZoneBase
+			ifTrue: "It's a linked send."
+				[self
+					offsetAndSendTableFor: entryPoint
+					annotation: annotation
+					into: [:off :table| offset := off. sendTable := table].
+				targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
+				(targetMethod cmType = CMFree
+				 or: [targetMethod selector = theSelector]) ifTrue:
+					[unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
+					 backEnd
+						rewriteInlineCacheAt: mcpc asInteger
+						tag: targetMethod selector
+						target: unlinkedRoutine.
+					 codeModified := true]]
+			ifFalse:
+				[self cppIf: NewspeakVM ifTrue:
+					[entryPoint = ceImplicitReceiverTrampoline ifTrue:
+						[(backEnd inlineCacheTagAt: mcpc asInteger) = theSelector ifTrue:
+						 	[backEnd
+								unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize put: 0;
+								unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop put: 0]]]]].
+	^0 "keep scanning"
+]
+
+{ #category : #'in-line cacheing' }
 Cogit >> unlinkIfLinkedSend: annotation pc: mcpc ignored: superfluity [
 	<var: #mcpc type: #'char *'>
 	| entryPoint targetMethod offset sendTable unlinkedRoutine |
@@ -8757,30 +8783,30 @@ Cogit >> unlinkIfLinkedSendToFree: annotation pc: mcpc ignored: superfluity [
 Cogit >> unlinkSendsOf: selector isMNUSelector: isMNUSelector [
 	<api>
 	"Unlink all sends in cog methods."
-	| cogMethod |
+	| freeSpace cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
 	methodZoneBase isNil ifTrue: [^self].
 	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
+	freeSpace := methodZone methodBytesFreedSinceLastCompaction.
 	"First check if any method actually has the selector; if not there can't
 	 be any linked send to it."
 	[cogMethod < methodZone limitZony
 	 and: [cogMethod selector ~= selector]] whileTrue:
-		[cogMethod := methodZone methodAfter: cogMethod].
-	cogMethod >= methodZone limitZony ifTrue:
+		[(cogMethod cmType ~= CMFree
+		  and: [(isMNUSelector and: [cogMethod cpicHasMNUCase])
+			or: [cogMethod selector = selector]]) ifTrue:
+				[methodZone freeMethod: cogMethod].
+			cogMethod := methodZone methodAfter: cogMethod].
+	(cogMethod >= methodZone limitZony
+	 and: [freeSpace = methodZone methodBytesFreedSinceLastCompaction]) ifTrue:
 		[^self].
 	codeModified := false.
 	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
 	[cogMethod < methodZone limitZony] whileTrue:
-		[cogMethod cmType = CMMethod
-			ifTrue:
-				[self mapFor: cogMethod
-					 performUntil: #unlinkIfLinkedSend:pc:of:
-					 arg: selector]
-			ifFalse:
-				[(cogMethod cmType ~= CMFree
-				  and: [(isMNUSelector and: [cogMethod cpicHasMNUCase])
-					or: [cogMethod selector = selector]]) ifTrue:
-					[methodZone freeMethod: cogMethod]].
+		[cogMethod cmType = CMMethod ifTrue:
+			[self mapFor: cogMethod
+				 performUntil: #unlinkIfFreeOrLinkedSend:pc:of:
+				 arg: selector].
 		cogMethod := methodZone methodAfter: cogMethod].
 	codeModified ifTrue: "After possibly updating inline caches we need to flush the icache."
 		[processor flushICacheFrom: methodZoneBase to: methodZone limitZony asInteger]

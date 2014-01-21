@@ -343,6 +343,12 @@ CogMethodZone >> methodAfter: cogMethod [
 		to: #'CogMethod *'
 ]
 
+{ #category : #accessing }
+CogMethodZone >> methodBytesFreedSinceLastCompaction [
+	<cmacro: '() methodBytesFreedSinceLastCompaction'>
+	^methodBytesFreedSinceLastCompaction
+]
+
 { #category : #'jit - api' }
 CogMethodZone >> methodFor: address [
 	<api>
@@ -538,6 +544,17 @@ CogMethodZone >> printCogYoungReferrers [
 			[coInterpreter print: '* '].
 		 coInterpreter printCogMethod: cogMethod.
 		 pointer := pointer + BytesPerWord]
+]
+
+{ #category : #accessing }
+CogMethodZone >> printOpenPICList [
+	<api>
+	| openPIC |
+	<var: #openPIC type: #'CogMethod *'>
+	openPIC := openPICList.
+	[openPIC == nil] whileFalse:
+		[self printCogMethod: openPIC.
+		 openPIC := self cCoerceSimple: openPIC nextOpenPIC to: #'CogMethod *']
 ]
 
 { #category : #'young referers' }
