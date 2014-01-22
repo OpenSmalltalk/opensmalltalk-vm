@@ -22,7 +22,7 @@ NewObjectMemorySimulator class >> vmProxyMajorVersion [
 { #category : #'simulation only' }
 NewObjectMemorySimulator class >> vmProxyMinorVersion [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^CoInterpreter vmProxyMinorVersion
+	^StackInterpreter vmProxyMinorVersion
 ]
 
 { #category : #'simulation only' }
