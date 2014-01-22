@@ -383,6 +383,33 @@ VMMaker class >> generateNewspeakInterpreterVM [
 ]
 
 { #category : #configurations }
+VMMaker class >> generateNewspeakSpurCogVM [
+	"No primitives since we can use those for the Cog Newspeak VM"
+	^VMMaker
+		generate: CoInterpreter
+		and: StackToRegisterMappingCogit
+		with: #(	ObjectMemory Spur32BitCoMemoryManager
+				MULTIPLEBYTECODESETS true
+				NewspeakVM true)
+		to: (FileDirectory default pathFromURI: 'oscogvm/nsspursrc')
+		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
+		including:#()
+]
+
+{ #category : #configurations }
+VMMaker class >> generateNewspeakSpurStackVM [
+	"No primitives since we can use those for the Cog Newspeak VM"
+	^VMMaker
+		generate: StackInterpreter
+		with: #(	ObjectMemory Spur32BitMemoryManager
+				MULTIPLEBYTECODESETS true
+				NewspeakVM true)
+		to: (FileDirectory default directoryNamed: 'oscogvm/nsspurstacksrc') fullName
+		platformDir: (FileDirectory default directoryNamed: 'oscogvm/platforms') fullName
+		excluding: (InterpreterPlugin withAllSubclasses collect: [:ea| ea name])
+]
+
+{ #category : #configurations }
 VMMaker class >> generateNewspeakStackVM [
 	^VMMaker
 		generate: StackInterpreter
@@ -439,6 +466,7 @@ VMMaker class >> generateSqueakCogVMWithInterpreterClass: interpreterClass [
 
 { #category : #configurations }
 VMMaker class >> generateSqueakSpurCogVM [
+	"No primitives since we can use those for the Cog VM"
 	^VMMaker
 		generate: CoInterpreter
 		and: StackToRegisterMappingCogit
@@ -455,7 +483,9 @@ VMMaker class >> generateSqueakSpurStackVM [
 	"No primitives since we can use those for the Cog VM"
 	^VMMaker
 		generate: StackInterpreter
-		with: #(ObjectMemory Spur32BitMemoryManager)
+		with: #(	ObjectMemory Spur32BitCoMemoryManager
+				MULTIPLEBYTECODESETS false
+				NewspeakVM false)
 		to: (FileDirectory default directoryNamed: 'oscogvm/spurstacksrc') fullName
 		platformDir: (FileDirectory default directoryNamed: 'oscogvm/platforms') fullName
 		excluding: (InterpreterPlugin withAllSubclasses collect: [:ea| ea name])

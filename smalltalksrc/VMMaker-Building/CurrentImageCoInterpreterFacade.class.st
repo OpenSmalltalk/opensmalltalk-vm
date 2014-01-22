@@ -19,6 +19,17 @@ Class {
 	#category : #'VMMaker-Support'
 }
 
+{ #category : #'instance creation' }
+CurrentImageCoInterpreterFacade class >> forCogit: aCogit [
+	| class |
+	class := self allSubclasses
+				detect: [:subclass| aCogit class objectMemoryClass = subclass objectRepresentationClass objectMemoryClass]
+				ifNone: [self error: 'cannot find subclass for the Cogit''s objectRepresentation and/or objectMemory'].
+	^class new
+		cogit: aCogit;
+		yourself
+]
+
 { #category : #accessing }
 CurrentImageCoInterpreterFacade class >> objectRepresentationClass [
 	^self subclassResponsibility

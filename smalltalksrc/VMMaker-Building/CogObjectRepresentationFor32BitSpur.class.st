@@ -4,6 +4,12 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
+{ #category : #accessing }
+CogObjectRepresentationFor32BitSpur class >> defaultObjectMemoryClass [
+	"For in-image compilation."
+	^Spur32BitCoMemoryManager
+]
+
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationFor32BitSpur >> genAddSmallIntegerTagsTo: aRegister [
 	cogit AddCq: 1 R: aRegister.
