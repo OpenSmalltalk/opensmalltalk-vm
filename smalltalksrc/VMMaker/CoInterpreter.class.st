@@ -6593,7 +6593,7 @@ CoInterpreter >> validInstructionPointer: instrPointer inMethod: aMethod framePo
 				[^false].
 			 theInstrPointer := self iframeSavedIP: fp]
 		ifFalse:
-			[theInstrPointer := instrPointer.
+			[theInstrPointer := instrPointer + 1.
 			self cppIf: NewspeakVM
 				ifTrue:
 					[(self isMachineCodeFrame: fp) ifTrue:
