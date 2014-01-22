@@ -4,6 +4,12 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
+{ #category : #accessing }
+CogObjectRepresentationFor64BitSpur class >> defaultObjectMemoryClass [
+	"For in-image compilation.  Spur64BitCoMemoryManager is as yet undefined."
+	^Smalltalk classNamed: #Spur64BitCoMemoryManager
+]
+
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationFor64BitSpur >> genFetchIndexRegister: indexReg from: tableObj into: destReg [
 	"indexReg contains the 1-relative index of an element in tableObj.

@@ -14,6 +14,12 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
+{ #category : #accessing }
+CogObjectRepresentationForSqueakV3 class >> defaultObjectMemoryClass [
+	"For in-image compilation."
+	^NewCoObjectMemory
+]
+
 { #category : #'class initialization' }
 CogObjectRepresentationForSqueakV3 class >> initialize [
 	RootBit ifNil: [ObjectMemory initializeObjectHeaderConstants].
