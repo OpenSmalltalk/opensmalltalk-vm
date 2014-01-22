@@ -3924,7 +3924,7 @@ StackInterpreter >> context: aContext hasValidInversePCMappingOf: theIP in: theF
 { #category : #'frame access' }
 StackInterpreter >> contextInstructionPointer: theIP frame: theFP [
 	<var: #theFP type: #'char *'>
-	self assert: (self validInstructionPointer: theIP inFrame: theFP).
+	self assert: (self validInstructionPointer: theIP + 1 inFrame: theFP).
 	^objectMemory integerObjectOf: theIP - (self iframeMethod: theFP) - BaseHeaderSize + 2
 ]
 
@@ -4998,7 +4998,7 @@ StackInterpreter >> externalSetStackPageAndPointersForSuspendedContextOfProcess:
 	(self isMachineCodeFrame: framePointer) ifFalse:
 		[self setMethod: (self iframeMethod: framePointer)].
 	instructionPointer := self popStack.
-	self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer
+	self assertValidExecutionPointe: instructionPointer + 1 r: framePointer s: stackPointer
 ]
 
 { #category : #'stack pages' }
@@ -6210,11 +6210,11 @@ StackInterpreter >> handleStackOverflow [
 	self isCog
 		ifFalse: "To overflow the stack this must be a new frame, but in Cog base frames are married."
 			[self assert: (self frameHasContext: framePointer) not.
-			 self assert: (self validInstructionPointer: instructionPointer
+			 self assert: (self validInstructionPointer: instructionPointer + 1
 							inMethod: method
 							framePointer: framePointer)]
 		ifTrue:
-			[self assert: (self validInstructionPointer: instructionPointer
+			[self assert: (self validInstructionPointer: instructionPointer + 1
 							inFrame: framePointer).
 			 self assert: ((self frameHasContext: framePointer) not
 						or: [objectMemory isContext: (self frameContext: framePointer)])]
@@ -12335,7 +12335,7 @@ StackInterpreter >> transferTo: newProc [
 	statProcessSwitch := statProcessSwitch + 1.
 	self push: instructionPointer.
 	self externalWriteBackHeadFramePointers.
-	self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer.
+	self assertValidExecutionPointe: instructionPointer + 1 r: framePointer s: stackPointer.
 	sched := self schedulerPointer.
 	oldProc := objectMemory fetchPointer: ActiveProcessIndex ofObject: sched.
 	activeContext := self ensureFrameIsMarried: framePointer SP: stackPointer + BytesPerWord.
@@ -12512,7 +12512,7 @@ StackInterpreter >> validInstructionPointer: theInstrPointer inMethod: aMethod f
 		ifTrue:
 			[| methodHeader |
 			 methodHeader := self noAssertHeaderOf: aMethod. "-1 for pre-increment in fetchNextBytecode"
-			 theInstrPointer >= (aMethod + (objectMemory lastPointerOf: aMethod) + BaseHeaderSize - 1)
+			 theInstrPointer >= (aMethod + (objectMemory lastPointerOf: aMethod) + BytesPerOop)
 			 and: [theInstrPointer < (aMethod + (objectMemory byteLengthOf: aMethod) + BaseHeaderSize - 1)
 			 and: ["If the method starts with a CallPrimitive opcode the instruction pointer should be past it."
 				((self headerIndicatesAlternateBytecodeSet: methodHeader)
@@ -12523,7 +12523,7 @@ StackInterpreter >> validInstructionPointer: theInstrPointer inMethod: aMethod f
 										+ (self sizeOfCallPrimitiveBytecode: methodHeader) - 1)]])
 					not]]]
 		ifFalse: "-1 for pre-increment in fetchNextBytecode"
-			[theInstrPointer >= (aMethod + (objectMemory lastPointerOf: aMethod))
+			[theInstrPointer >= (aMethod + (objectMemory lastPointerOf: aMethod) + BytesPerOop)
 			 and: [theInstrPointer < (aMethod + (objectMemory byteLengthOf: aMethod) + objectMemory baseHeaderSize - 1)]]
 ]
 

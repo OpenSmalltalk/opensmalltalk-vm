@@ -1893,6 +1893,7 @@ ObjectMemory >> fixedFieldsOf: oop format: fmt length: wordLength [
 
 { #category : #'forward compatibility' }
 ObjectMemory >> followField: fieldIndex ofObject: anObject [
+	<inline: true>
 	^self fetchPointer: fieldIndex ofObject: anObject
 ]
 
@@ -1911,6 +1912,12 @@ ObjectMemory >> followForwardedObjectFields: objOop toDepth: depth [
 
 { #category : #'forward compatibility' }
 ObjectMemory >> followNonImmediateField: fieldIndex ofObject: anObject [
+	^self fetchPointer: fieldIndex ofObject: anObject
+]
+
+{ #category : #'forward compatibility' }
+ObjectMemory >> followObjField: fieldIndex ofObject: anObject [
+	<inline: true>
 	^self fetchPointer: fieldIndex ofObject: anObject
 ]
 
