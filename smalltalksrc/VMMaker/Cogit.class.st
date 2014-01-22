@@ -406,7 +406,7 @@ Cogit class >> cog: aCompiledMethod selector: aSelector options: optionsDictiona
 	"StackToRegisterMappingCogit cog: (Integer >> #benchFib) selector: #benchFib options: #(COGMTVM false)"
 	| coInterpreter cogit |
 	self initializeWithOptions: (self asOptionsDictionary: optionsDictionaryOrArray).
-	coInterpreter := CurrentImageCoInterpreterFacade new cogit: (cogit := self new); yourself.
+	coInterpreter := CurrentImageCoInterpreterFacade forCogit: (cogit := self new).
 	[cogit
 		setInterpreter: coInterpreter;
 		singleStep: true;
