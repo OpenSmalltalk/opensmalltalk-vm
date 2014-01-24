@@ -1346,7 +1346,7 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 							findApplicationOfTargetMixin: mClassMixin
 							startingAtBehavior: (objectMemory fetchClassOf: rcvr).
 	self assert: (objectMemory lengthOf: mixinApplication) > (InstanceSpecificationIndex + 1).
-	classTag := self classTagForClass: (self superclassOf: mixinApplication).
+	classTag := objectMemory classTagForClass: (self superclassOf: mixinApplication).
 	class := objectMemory fetchClassOf: rcvr. "what about the read barrier??"
 	canLinkCacheTag := (objectMemory isYoungObject: class) not or: [cogit canLinkToYoungClasses].
 	argumentCount := numArgs.
@@ -6593,7 +6593,7 @@ CoInterpreter >> validInstructionPointer: instrPointer inMethod: aMethod framePo
 				[^false].
 			 theInstrPointer := self iframeSavedIP: fp]
 		ifFalse:
-			[theInstrPointer := instrPointer + 1.
+			[theInstrPointer := instrPointer.
 			self cppIf: NewspeakVM
 				ifTrue:
 					[(self isMachineCodeFrame: fp) ifTrue:
