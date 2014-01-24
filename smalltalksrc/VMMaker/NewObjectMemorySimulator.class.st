@@ -273,6 +273,12 @@ NewObjectMemorySimulator >> methodArgumentCount [
 	^coInterpreter methodArgumentCount
 ]
 
+{ #category : #'simulation only' }
+NewObjectMemorySimulator >> methodReturnValue: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter methodReturnValue: oop
+]
+
 { #category : #'image save/restore' }
 NewObjectMemorySimulator >> nextLongFrom: aStream swap: swapFlag [
 	^swapFlag 
@@ -440,6 +446,12 @@ NewObjectMemorySimulator >> showDisplayBits: aForm Left: l Top: t Right: r Botto
 NewObjectMemorySimulator >> signalFinalization: oop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter signalFinalization: oop
+]
+
+{ #category : #'simulation only' }
+NewObjectMemorySimulator >> signed32BitIntegerFor: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter signed32BitIntegerFor: integerValue
 ]
 
 { #category : #printing }

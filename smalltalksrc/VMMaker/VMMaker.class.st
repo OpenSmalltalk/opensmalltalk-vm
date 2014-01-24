@@ -411,16 +411,13 @@ VMMaker class >> generateNewspeakSpurStackVM [
 
 { #category : #configurations }
 VMMaker class >> generateNewspeakStackVM [
+	"No primitives since we can use those for the Cog Newspeak VM"
 	^VMMaker
 		generate: StackInterpreter
 		with: #(NewspeakVM true MULTIPLEBYTECODESETS true)
 		to: (FileDirectory default pathFromURI: 'oscogvm/nsstacksrc')
 		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
-		including:#(	AsynchFilePlugin BMPReadWriterPlugin BalloonEnginePlugin BitBltSimulation DSAPlugin DropPlugin
-					FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin InflatePlugin JPEGReadWriter2Plugin
-					JPEGReaderPlugin LargeIntegersPlugin Matrix2x3Plugin MiscPrimitivePlugin NewsqueakIA32ABIPlugin
-					RePlugin SecurityPlugin SocketPlugin SoundPlugin SurfacePlugin SqueakSSLPlugin ThreadedIA32FFIPlugin
-					UUIDPlugin UnixOSProcessPlugin VMProfileLinuxSupportPlugin VMProfileMacSupportPlugin Win32OSProcessPlugin)
+		excluding: (InterpreterPlugin withAllSubclasses collect: [:ea| ea name])
 ]
 
 { #category : #configurations }
