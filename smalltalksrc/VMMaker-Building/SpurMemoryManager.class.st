@@ -6279,6 +6279,13 @@ SpurMemoryManager >> methodArgumentCount [
 	^coInterpreter methodArgumentCount
 ]
 
+{ #category : #'simulation only' }
+SpurMemoryManager >> methodReturnValue: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter methodReturnValue: oop
+]
+
 { #category : #compaction }
 SpurMemoryManager >> moveMisfitsInHighestObjectsBack: savedLimit [
 	"After refilling highestObjects move any misfits back to being
@@ -7772,6 +7779,13 @@ SpurMemoryManager >> signalLowSpace [
 { #category : #accessing }
 SpurMemoryManager >> signalLowSpace: aValue [
 	^signalLowSpace := aValue
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> signed32BitIntegerFor: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter signed32BitIntegerFor: integerValue
 ]
 
 { #category : #'header formats' }

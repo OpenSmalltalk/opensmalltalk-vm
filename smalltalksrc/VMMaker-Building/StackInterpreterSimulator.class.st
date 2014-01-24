@@ -46,7 +46,8 @@ Class {
 		'externalSemaphoreSignalResponses',
 		'extSemTabSize',
 		'atEachStepBlock',
-		'disableBooleanCheat'
+		'disableBooleanCheat',
+		'performFilters'
 	],
 	#category : #'VMMaker-InterpreterSimulation'
 }
@@ -485,6 +486,16 @@ StackInterpreterSimulator >> fetchByte [
 	^ self byteAt: (localIP := localIP + 1).
 ]
 
+{ #category : #'control primitives' }
+StackInterpreterSimulator >> filterPerformOf: selector to: receiver [
+	"This is to allow simulator to filter start-up items to avoid as-yet unsimulatable plugins."
+	performFilters ifNil: [^false].
+	(performFilters at: (self shortPrint: receiver) ifAbsent: []) ifNotNil:
+		[:messages|
+		^messages includes: (self stringOf: selector)].
+	^false
+]
+
 { #category : #testing }
 StackInterpreterSimulator >> findNewMethodInClassTag: classTag [
 "
@@ -530,6 +541,13 @@ StackInterpreterSimulator >> flush [
 StackInterpreterSimulator >> flushExternalPrimitives [
 	mappedPluginEntries := OrderedCollection new.
 	super flushExternalPrimitives
+]
+
+{ #category : #'control primitives' }
+StackInterpreterSimulator >> forShortPrintString: shortPrintString filterPerformMessages: aCollection [
+	performFilters ifNil:
+		[performFilters := Dictionary new].
+	performFilters at: shortPrintString put: aCollection
 ]
 
 { #category : #'frame access' }
@@ -1763,6 +1781,25 @@ StackInterpreterSimulator >> primitiveNewWithArg [
 	 3->#('BalloonBuffer' #firstLongFormat).
 	 1->#('ByteArray' #firstByteFormat).
 	 1->0}"
+]
+
+{ #category : #'control primitives' }
+StackInterpreterSimulator >> primitiveObject: actualReceiver perform: selector withArguments: argumentArray lookedUpIn: lookupClass [
+	"Override to allow simulator to filter start-up items to avoid as-yet unsimulatable plugins."
+
+	(self filterPerformOf: selector to: actualReceiver) ifTrue:
+		[^self pop: argumentCount + 1 thenPush: actualReceiver].
+	^super primitiveObject: actualReceiver perform: selector withArguments: argumentArray lookedUpIn: lookupClass
+]
+
+{ #category : #'debugging traps' }
+StackInterpreterSimulator >> primitivePerform [
+	| selector |
+	selector := self stackValue: argumentCount - 1.
+	self sendBreakpoint: selector receiver: (self stackValue: argumentCount).
+	(self filterPerformOf: selector to: (self stackValue: argumentCount)) ifTrue:
+		[^self pop: argumentCount].
+	^super primitivePerform
 ]
 
 { #category : #'I/O primitives' }
