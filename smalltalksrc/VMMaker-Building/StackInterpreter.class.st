@@ -7825,7 +7825,7 @@ StackInterpreter >> mapProfileState [
 	(objectMemory shouldRemapObj: profileProcess) ifTrue:
 		[profileProcess := objectMemory remapObj: profileProcess].
 	(objectMemory shouldRemapObj: profileMethod) ifTrue:
-		[profileMethod := objectMemory remapObj: profileProcess].
+		[profileMethod := objectMemory remapObj: profileMethod].
 	(objectMemory shouldRemapObj: profileSemaphore) ifTrue:
 		[profileSemaphore := objectMemory remapObj: profileSemaphore].
 	"The longRunningPrimitiveCheckMethod (LRPCM) is sampled in an interrupt.  Be very careful with it.
