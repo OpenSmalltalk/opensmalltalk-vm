@@ -1,4 +1,4 @@
-/* Smalltalk from Squeak4.5 with VMMaker 4.12.14 translated as C source on 20 January 2014 7:15:36 pm */
+/* Smalltalk from Squeak4.5 with VMMaker 4.13.1 translated as C source on 27 January 2014 3:24:16 pm */
 /* This is an automatically generated table of all builtin modules in the VM */
 
 extern sqExport vm_exports[];
@@ -13,7 +13,6 @@ extern sqExport DSAPrims_exports[];
 extern sqExport ZipPlugin_exports[];
 extern sqExport DropPlugin_exports[];
 extern sqExport FFTPlugin_exports[];
-extern sqExport FT2Plugin_exports[];
 extern sqExport FilePlugin_exports[];
 extern sqExport FloatArrayPlugin_exports[];
 extern sqExport FloatMathPlugin_exports[];
@@ -49,7 +48,6 @@ sqExport *pluginExports[] = {
 	ZipPlugin_exports,
 	DropPlugin_exports,
 	FFTPlugin_exports,
-	FT2Plugin_exports,
 	FilePlugin_exports,
 	FloatArrayPlugin_exports,
 	FloatMathPlugin_exports,
