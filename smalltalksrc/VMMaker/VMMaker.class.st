@@ -330,30 +330,6 @@ VMMaker class >> generateEitherSqueakCogVM [
 ]
 
 { #category : #configurations }
-VMMaker class >> generateNewSqueakCogVM [
-	"self generateNewSqueakCogVM"
-	^VMMaker
-		generate: (Smalltalk at: ([:choices| choices at: (UIManager default chooseFrom: choices) ifAbsent: [^self]]
-									value: #(CoInterpreter CoInterpreterMT)))
-		and: StackToRegisterMappingCogit
-		with: #(	MULTIPLEBYTECODESETS false
-				NewspeakVM false
-				bytecodeTableInitializer newInitializeBytecodeTableForSqueakV3PlusClosures)
-		to: (FileDirectory default pathFromURI: 'oscogvm/src')
-		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
-		including:#(	ADPCMCodecPlugin AsynchFilePlugin BalloonEnginePlugin B3DAcceleratorPlugin
-					BMPReadWriterPlugin BitBltSimulation BochsIA32Plugin CroquetPlugin DSAPlugin
-					DeflatePlugin DropPlugin FT2Plugin FFTPlugin FileCopyPlugin FilePlugin FloatArrayPlugin
-					FloatMathPlugin GeniePlugin HostWindowPlugin IA32ABIPlugin InternetConfigPlugin
-					JPEGReadWriter2Plugin JPEGReaderPlugin JoystickTabletPlugin KlattSynthesizerPlugin
-					LargeIntegersPlugin LocalePlugin MIDIPlugin MacMenubarPlugin Matrix2x3Plugin
-					MiscPrimitivePlugin Mpeg3Plugin QuicktimePlugin RePlugin SecurityPlugin SerialPlugin
-					SocketPlugin SoundCodecPlugin SoundGenerationPlugin SoundPlugin SqueakSSLPlugin StarSqueakPlugin
-					ThreadedIA32FFIPlugin UnixAioPlugin UUIDPlugin UnixOSProcessPlugin
-					Win32OSProcessPlugin VMProfileLinuxSupportPlugin VMProfileMacSupportPlugin)
-]
-
-{ #category : #configurations }
 VMMaker class >> generateNewspeakCogVM [
 	^VMMaker
 		generate: CoInterpreter
@@ -406,7 +382,7 @@ VMMaker class >> generateNewspeakSpurStackVM [
 				NewspeakVM true)
 		to: (FileDirectory default directoryNamed: 'oscogvm/nsspurstacksrc') fullName
 		platformDir: (FileDirectory default directoryNamed: 'oscogvm/platforms') fullName
-		excluding: (InterpreterPlugin withAllSubclasses collect: [:ea| ea name])
+		including: #()
 ]
 
 { #category : #configurations }
@@ -417,7 +393,7 @@ VMMaker class >> generateNewspeakStackVM [
 		with: #(NewspeakVM true MULTIPLEBYTECODESETS true)
 		to: (FileDirectory default pathFromURI: 'oscogvm/nsstacksrc')
 		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
-		excluding: (InterpreterPlugin withAllSubclasses collect: [:ea| ea name])
+		including: #()
 ]
 
 { #category : #configurations }
@@ -427,12 +403,13 @@ VMMaker class >> generateSqueakCogMTVM [
 
 { #category : #configurations }
 VMMaker class >> generateSqueakCogSistaVM [
+	"No primitives since we can use those for the Cog VM"
 	^VMMaker
 		generate: CoInterpreter
 		and: SistaStackToRegisterMappingCogit
 		to: (FileDirectory default pathFromURI: 'oscogvm/sistasrc')
 		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
-		excluding: (InterpreterPlugin withAllSubclasses collect: [:ea| ea name])
+		including: #()
 ]
 
 { #category : #configurations }
@@ -445,20 +422,22 @@ VMMaker class >> generateSqueakCogVMWithInterpreterClass: interpreterClass [
 	^VMMaker
 		generate: interpreterClass
 		and: StackToRegisterMappingCogit
-		with: #(	MULTIPLEBYTECODESETS false
-				NewspeakVM false)
 		to: (FileDirectory default pathFromURI: 'oscogvm/src')
 		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
-		including:#(	ADPCMCodecPlugin AsynchFilePlugin BalloonEnginePlugin B3DAcceleratorPlugin
-					BMPReadWriterPlugin BitBltSimulation BochsIA32Plugin CroquetPlugin DSAPlugin
-					DeflatePlugin DropPlugin FT2Plugin FFTPlugin FileCopyPlugin FilePlugin FloatArrayPlugin
-					FloatMathPlugin GeniePlugin HostWindowPlugin IA32ABIPlugin InternetConfigPlugin
+		including:#(	ADPCMCodecPlugin AsynchFilePlugin
+					BalloonEnginePlugin B3DAcceleratorPlugin BMPReadWriterPlugin BitBltSimulation BochsIA32Plugin
+					CameraPlugin CroquetPlugin DSAPlugin DeflatePlugin DropPlugin
+					FT2Plugin FFTPlugin FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin
+					GeniePlugin HostWindowPlugin IA32ABIPlugin InternetConfigPlugin
 					JPEGReadWriter2Plugin JPEGReaderPlugin JoystickTabletPlugin KlattSynthesizerPlugin
 					LargeIntegersPlugin LocalePlugin MIDIPlugin MacMenubarPlugin Matrix2x3Plugin
-					MiscPrimitivePlugin Mpeg3Plugin QuicktimePlugin RePlugin SecurityPlugin SerialPlugin
-					SocketPlugin SoundCodecPlugin SoundGenerationPlugin SoundPlugin SqueakSSLPlugin StarSqueakPlugin
-					ThreadedIA32FFIPlugin UnixAioPlugin UUIDPlugin UnixOSProcessPlugin
-					Win32OSProcessPlugin VMProfileLinuxSupportPlugin VMProfileMacSupportPlugin)
+					MiscPrimitivePlugin Mpeg3Plugin QuicktimePlugin RePlugin
+					ScratchPlugin SecurityPlugin SerialPlugin SocketPlugin
+					SoundCodecPlugin SoundGenerationPlugin SoundPlugin SqueakSSLPlugin StarSqueakPlugin
+					ThreadedIA32FFIPlugin UnicodePlugin UnixAioPlugin UUIDPlugin UnixOSProcessPlugin
+					Win32OSProcessPlugin VMProfileLinuxSupportPlugin VMProfileMacSupportPlugin WeDoPlugin)
+					
+
 ]
 
 { #category : #configurations }
@@ -467,9 +446,7 @@ VMMaker class >> generateSqueakSpurCogVM [
 	^VMMaker
 		generate: CoInterpreter
 		and: StackToRegisterMappingCogit
-		with: #(	ObjectMemory Spur32BitCoMemoryManager
-				MULTIPLEBYTECODESETS false
-				NewspeakVM false)
+		with: #(	ObjectMemory Spur32BitCoMemoryManager)
 		to: (FileDirectory default pathFromURI: 'oscogvm/spursrc')
 		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
 		including:#()
@@ -483,7 +460,7 @@ VMMaker class >> generateSqueakSpurStackVM [
 		with: #(ObjectMemory Spur32BitMemoryManager)
 		to: (FileDirectory default directoryNamed: 'oscogvm/spurstacksrc') fullName
 		platformDir: (FileDirectory default directoryNamed: 'oscogvm/platforms') fullName
-		excluding: (InterpreterPlugin withAllSubclasses collect: [:ea| ea name])
+		including: #()
 ]
 
 { #category : #configurations }
@@ -493,7 +470,7 @@ VMMaker class >> generateSqueakStackVM [
 		generate: StackInterpreter
 		to: (FileDirectory default directoryNamed: 'oscogvm/stacksrc') fullName
 		platformDir: (FileDirectory default directoryNamed: 'oscogvm/platforms') fullName
-		excluding: (InterpreterPlugin withAllSubclasses collect: [:ea| ea name])
+		including: #()
 ]
 
 { #category : #'version testing' }
