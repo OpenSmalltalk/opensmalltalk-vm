@@ -3665,6 +3665,9 @@ Cogit >> compileCPIC: cPIC Case0: case0CogMethod Case1Method: case1Method tag: c
 Cogit >> compileCPICEntry [
 	<returnTypeC: #'AbstractInstruction *'>
 	"Compile the cache tag computation and the first comparison.  Answer the address of that comparison."
+	self cppIf: NewspeakVM ifTrue:
+		[self Nop. "1st nop differentiates dynSuperEntry from no-check entry if using nextMethod"
+		 dynSuperEntry := self Nop].
 	entry := objectRepresentation getInlineCacheClassTagFrom: ReceiverResultReg into: TempReg.
 	self CmpR: ClassReg R: TempReg.
 	^self JumpNonZero: 0
@@ -5534,7 +5537,7 @@ Cogit >> generateTrampolines [
 	 Read the class-side method trampolines for documentation on the various trampolines"
 	| methodZoneStart |
 	methodZoneStart := methodZoneBase.
-	self allocateOpcodes: 40 bytecodes: 0.
+	self allocateOpcodes: 42 bytecodes: 0.
 	initialPC := 0.
 	endPC := numAbstractOpcodes - 1.
 	hasYoungReferent := false.

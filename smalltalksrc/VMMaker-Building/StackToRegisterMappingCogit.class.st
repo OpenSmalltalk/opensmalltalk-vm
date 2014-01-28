@@ -1291,6 +1291,9 @@ StackToRegisterMappingCogit >> compileOpenPIC: selector numArgs: numArgs [
 	<var: #itsAHit type: #'AbstractInstruction *'>
 	<var: #jumpBCMethod type: #'AbstractInstruction *'>
 	self compilePICProlog: numArgs.
+	self cppIf: NewspeakVM ifTrue:
+		[self Nop. "1st nop differentiates dynSuperEntry from no-check entry if using nextMethod"
+		 dynSuperEntry := self Nop].
 	entry := objectRepresentation genGetClassTagOf: ReceiverResultReg into: ClassReg scratchReg: TempReg.
 
 	"Do first of three probes.  See CoInterpreter>>lookupInMethodCacheSel:classTag:"
