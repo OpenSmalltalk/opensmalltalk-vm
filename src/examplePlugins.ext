@@ -7,6 +7,7 @@ BMPReadWriterPlugin \
 B2DPlugin \
 BitBltPlugin \
 BochsIA32Plugin \
+CameraPlugin \
 CroquetPlugin \
 DSAPrims \
 ZipPlugin \
@@ -34,6 +35,7 @@ MiscPrimitivePlugin \
 Mpeg3Plugin \
 QuicktimePlugin \
 RePlugin \
+ScratchPlugin \
 SecurityPlugin \
 SerialPlugin \
 SocketPlugin \
@@ -44,8 +46,10 @@ SqueakSSL \
 StarSqueakPlugin \
 SqueakFFIPrims \
 UUIDPlugin \
+UnicodePlugin \
 AioPlugin \
 UnixOSProcessPlugin \
 VMProfileLinuxSupportPlugin \
 VMProfileMacSupportPlugin \
+WeDoPlugin \
 Win32OSProcessPlugin
