@@ -37,6 +37,21 @@ VMClass class >> cogMethodClass: options [
 		ifFalse: [CogMethod]
 ]
 
+{ #category : #initialization }
+VMClass class >> copyOptionsBackTo: optionsDictionary [
+	"Ugh.  Copy back those options that the CCodeGenerator will do
+	 dead-code elimination for that are not yet set in optionsDictionary.
+	 This lets the CCodeGenerator see defaults for the options below."
+
+	optionsDictionary ifNil: [^self].
+	initializationOptions ifNil: [^self].
+	#(MULTIPLEBYTECODESETS IMMUTABILITY) do:
+		[:option|
+		((initializationOptions includesKey: option)
+		 and: [(optionsDictionary includesKey: option) not]) ifTrue:
+			[optionsDictionary at: option put: (initializationOptions at: option)]]
+]
+
 { #category : #translation }
 VMClass class >> coreInterpreterClass [
 	"While the interpreterClass/vmClass for translation may be
@@ -151,7 +166,7 @@ VMClass class >> initializationOptions: optionsDictionary [
 VMClass class >> initializeMiscConstants [
 	"Falsify the `what type of VM is this?' flags that are defined in the various interp.h files,
 	 or in the case of VMBIGENDIAN the various sqConfig.h files.
-	 Subclass implementations need to include a super initializeMiscConstantsWith:."
+	 Subclass implementations need to include a super initializeMiscConstants"
 
 	| omc |
 	VMBIGENDIAN class. "Mention this for the benefit of CCodeGenerator>>emitCConstantsOn:"
@@ -169,10 +184,12 @@ VMClass class >> initializeMiscConstants [
 					ifNil: [false]
 					ifNotNil: [(Smalltalk at: omc) inheritsFrom: SpurMemoryManager]).
 
-	NewspeakVM := initializationOptions at: #NewspeakVM ifAbsent: [false].
-	MULTIPLEBYTECODESETS := initializationOptions at: #MULTIPLEBYTECODESETS ifAbsent: [false].
+	"Use ifAbsentPut: so that they will get copied back to the
+	 VMMaker's options and dead code will likely be eliminated."
+	NewspeakVM := initializationOptions at: #NewspeakVM ifAbsentPut: [false].
+	MULTIPLEBYTECODESETS := initializationOptions at: #MULTIPLEBYTECODESETS ifAbsentPut: [false].
 	"N.B.  Not yet implemented."
-	IMMUTABILITY := initializationOptions at: #IMMUTABILITY ifAbsent: [false].
+	IMMUTABILITY := initializationOptions at: #IMMUTABILITY ifAbsentPut: [false].
 
 	"These for scripts etc... Usually they should get set by an Interpreter class's initializeMiscConstantsWith:"
 	(initializationOptions includesKey: #STACKVM) ifTrue:
@@ -222,6 +239,10 @@ VMClass class >> initializeWithOptions: optionsDictionaryOrArray [
 	optionsDictionary := optionsDictionaryOrArray isArray
 							ifTrue: [Dictionary newFromPairs: optionsDictionaryOrArray]
 							ifFalse: [optionsDictionaryOrArray].
+	"This is necessary.  e.g. if the receiver is CoInterpreterPrimitives,
+	 it is still necessary to set the options in CoInterpreter.  Otherwise,
+	 some class in the chain may have stale options, and when building
+	 the code generator, a stale ancilliary class may be computed."
 	(self withAllSuperclasses copyUpThrough: VMClass) do:
 		[:class|
 		class initializationOptions: optionsDictionary]
