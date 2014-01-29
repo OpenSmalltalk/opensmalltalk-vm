@@ -623,8 +623,8 @@
 				A27729360CE7A8D300ABAFCA /* ZipPlugin */,
 			);
 			name = plugins;
-			path = ../Users/eliot/Cog/oscogvm/nscogsrc;
-			sourceTree = SYSTEM_DEVELOPER_DIR;
+			path = ../../nscogsrc;
+			sourceTree = "<group>";
 		};
 		738FB1E80EE4CF4B004BEE42 /* IA32ABI */ = {
 			isa = PBXGroup;
@@ -980,22 +980,13 @@
 		F5F8ADC002EB4E090100013C /* Sources */ = {
 			isa = PBXGroup;
 			children = (
-				F5F8ADC102EB4E090100013C /* src */,
+				F5F8ADC502EB4E090100013C /* vm */,
+				7384271E11010B920070B80D /* plugins */,
 				F5F8AF0F02EB4E0A0100013C /* Cross */,
 				F5F8AE0802EB4E090100013C /* Mac OS */,
 				73BC1BC80F5769A8003412C5 /* unix */,
 			);
 			name = Sources;
-			sourceTree = "<group>";
-		};
-		F5F8ADC102EB4E090100013C /* src */ = {
-			isa = PBXGroup;
-			children = (
-				7384271E11010B920070B80D /* plugins */,
-				F5F8ADC502EB4E090100013C /* vm */,
-			);
-			name = src;
-			path = ../../nscogsrc;
 			sourceTree = "<group>";
 		};
 		F5F8ADC502EB4E090100013C /* vm */ = {
@@ -1010,7 +1001,7 @@
 				737D7E2513BAB68900347756 /* cogmethod.h */,
 			);
 			name = vm;
-			path = ../nsspursrc/vm;
+			path = ../../nsspursrc/vm;
 			sourceTree = "<group>";
 		};
 		F5F8AE0802EB4E090100013C /* Mac OS */ = {
