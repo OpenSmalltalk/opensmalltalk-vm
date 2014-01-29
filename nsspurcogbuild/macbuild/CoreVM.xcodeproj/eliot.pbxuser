@@ -1,0 +1,346 @@
+// !$*UTF8*$!
+{
+	08773EB400C6A1C4C0A80109 /* Project object */ = {
+		activeBuildConfigurationName = Development;
+		activeExecutable = 738CF29A18987A140039020A /* Newspeak Virtual Machine */;
+		activeTarget = 941A3B2B09AA144000C9D25A /* Newspeak Virtual Machine */;
+		codeSenseManager = 738CF2B718987A350039020A /* Code sense */;
+		executables = (
+			738CF29A18987A140039020A /* Newspeak Virtual Machine */,
+		);
+		perUserDictionary = {
+			PBXConfiguration.PBXFileTableDataSource3.PBXFileTableDataSource = {
+				PBXFileTableDataSourceColumnSortingDirectionKey = "-1";
+				PBXFileTableDataSourceColumnSortingKey = PBXFileDataSource_Filename_ColumnID;
+				PBXFileTableDataSourceColumnWidthsKey = (
+					20,
+					341,
+					20,
+					48.16259765625,
+					43,
+					43,
+					20,
+				);
+				PBXFileTableDataSourceColumnsKey = (
+					PBXFileDataSource_FiletypeID,
+					PBXFileDataSource_Filename_ColumnID,
+					PBXFileDataSource_Built_ColumnID,
+					PBXFileDataSource_ObjectSize_ColumnID,
+					PBXFileDataSource_Errors_ColumnID,
+					PBXFileDataSource_Warnings_ColumnID,
+					PBXFileDataSource_Target_ColumnID,
+				);
+			};
+			PBXPerProjectTemplateStateSaveDate = 412645909;
+			PBXWorkspaceStateSaveDate = 412645909;
+		};
+		perUserProjectItems = {
+			738CF2BA18987C220039020A /* PBXTextBookmark */ = 738CF2BA18987C220039020A /* PBXTextBookmark */;
+			738CF2BC18987C220039020A /* PBXTextBookmark */ = 738CF2BC18987C220039020A /* PBXTextBookmark */;
+			738CF2BE18987C220039020A /* PBXTextBookmark */ = 738CF2BE18987C220039020A /* PBXTextBookmark */;
+			738CF2C018987C220039020A /* PBXTextBookmark */ = 738CF2C018987C220039020A /* PBXTextBookmark */;
+			738CF2C218987C220039020A /* PBXTextBookmark */ = 738CF2C218987C220039020A /* PBXTextBookmark */;
+			738CF2C418987C220039020A /* PBXTextBookmark */ = 738CF2C418987C220039020A /* PBXTextBookmark */;
+			738CF2C618987C220039020A /* PBXTextBookmark */ = 738CF2C618987C220039020A /* PBXTextBookmark */;
+			738CF2C818987C220039020A /* PBXTextBookmark */ = 738CF2C818987C220039020A /* PBXTextBookmark */;
+			738CF2C918987C220039020A /* PBXTextBookmark */ = 738CF2C918987C220039020A /* PBXTextBookmark */;
+			738CF2CA18987C220039020A /* PBXTextBookmark */ = 738CF2CA18987C220039020A /* PBXTextBookmark */;
+			738CF2CB18987C220039020A /* PBXTextBookmark */ = 738CF2CB18987C220039020A /* PBXTextBookmark */;
+			738CF2CC18987C220039020A /* PBXTextBookmark */ = 738CF2CC18987C220039020A /* PBXTextBookmark */;
+			738CF2CD18987C220039020A /* PBXTextBookmark */ = 738CF2CD18987C220039020A /* PBXTextBookmark */;
+			738CF2CE18987C220039020A /* PBXTextBookmark */ = 738CF2CE18987C220039020A /* PBXTextBookmark */;
+			738CF2D518987C230039020A /* PBXTextBookmark */ = 738CF2D518987C230039020A /* PBXTextBookmark */;
+		};
+		sourceControlManager = 738CF2B618987A350039020A /* Source Control */;
+		userBuildSettings = {
+		};
+	};
+	737D7E1F13BAB68900347756 /* gcc3x-cointerp.c */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {852, 819195}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 559}";
+		};
+	};
+	737D7E2013BAB68900347756 /* cointerp.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {698, 3861}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 654}";
+		};
+	};
+	737D7E2113BAB68900347756 /* interp.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {698, 494}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 461}";
+		};
+	};
+	737D7E2213BAB68900347756 /* cogit.c */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {950, 292292}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 556}";
+		};
+	};
+	737D7E2313BAB68900347756 /* cogit.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {621, 1846}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 742}";
+		};
+	};
+	737D7E2513BAB68900347756 /* cogmethod.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {593, 533}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 507}";
+		};
+	};
+	738CF29A18987A140039020A /* Newspeak Virtual Machine */ = {
+		isa = PBXExecutable;
+		activeArgIndices = (
+		);
+		argumentStrings = (
+		);
+		autoAttachOnCrash = 1;
+		breakpointsEnabled = 0;
+		configStateDict = {
+		};
+		customDataFormattersEnabled = 1;
+		dataTipCustomDataFormattersEnabled = 1;
+		dataTipShowTypeColumn = 1;
+		dataTipSortType = 0;
+		debuggerPlugin = GDBDebugging;
+		disassemblyDisplayState = 0;
+		enableDebugStr = 1;
+		environmentEntries = (
+		);
+		executableSystemSymbolLevel = 0;
+		executableUserSymbolLevel = 0;
+		libgmallocEnabled = 0;
+		name = "Newspeak Virtual Machine";
+		showTypeColumn = 0;
+		sourceDirectories = (
+		);
+	};
+	738CF2B618987A350039020A /* Source Control */ = {
+		isa = PBXSourceControlManager;
+		fallbackIsa = XCSourceControlManager;
+		isSCMEnabled = 0;
+		scmConfiguration = {
+			repositoryNamesForRoots = {
+				"" = "";
+			};
+		};
+	};
+	738CF2B718987A350039020A /* Code sense */ = {
+		isa = PBXCodeSenseManager;
+		indexTemplatePath = "";
+	};
+	738CF2BA18987C220039020A /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 738CF2BB18987C220039020A /* cogit.c */;
+		name = "cogit.c: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 556;
+		vrLoc = 0;
+	};
+	738CF2BB18987C220039020A /* cogit.c */ = {
+		isa = PBXFileReference;
+		name = cogit.c;
+		path = /Users/eliot/Cog/oscogvm/nscogsrc/vm/cogit.c;
+		sourceTree = "<absolute>";
+	};
+	738CF2BC18987C220039020A /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 738CF2BD18987C220039020A /* cogit.h */;
+		name = "cogit.h: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 744;
+		vrLoc = 0;
+	};
+	738CF2BD18987C220039020A /* cogit.h */ = {
+		isa = PBXFileReference;
+		name = cogit.h;
+		path = /Users/eliot/Cog/oscogvm/nscogsrc/vm/cogit.h;
+		sourceTree = "<absolute>";
+	};
+	738CF2BE18987C220039020A /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 738CF2BF18987C220039020A /* cogmethod.h */;
+		name = "cogmethod.h: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 510;
+		vrLoc = 0;
+	};
+	738CF2BF18987C220039020A /* cogmethod.h */ = {
+		isa = PBXFileReference;
+		name = cogmethod.h;
+		path = /Users/eliot/Cog/oscogvm/nscogsrc/vm/cogmethod.h;
+		sourceTree = "<absolute>";
+	};
+	738CF2C018987C220039020A /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 738CF2C118987C220039020A /* cointerp.h */;
+		name = "cointerp.h: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 641;
+		vrLoc = 0;
+	};
+	738CF2C118987C220039020A /* cointerp.h */ = {
+		isa = PBXFileReference;
+		name = cointerp.h;
+		path = /Users/eliot/Cog/oscogvm/nscogsrc/vm/cointerp.h;
+		sourceTree = "<absolute>";
+	};
+	738CF2C218987C220039020A /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 738CF2C318987C220039020A /* gcc3x-cointerp.c */;
+		name = "gcc3x-cointerp.c: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 559;
+		vrLoc = 0;
+	};
+	738CF2C318987C220039020A /* gcc3x-cointerp.c */ = {
+		isa = PBXFileReference;
+		name = "gcc3x-cointerp.c";
+		path = "/Users/eliot/Cog/oscogvm/nscogsrc/vm/gcc3x-cointerp.c";
+		sourceTree = "<absolute>";
+	};
+	738CF2C418987C220039020A /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 738CF2C518987C220039020A /* interp.h */;
+		name = "interp.h: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 461;
+		vrLoc = 0;
+	};
+	738CF2C518987C220039020A /* interp.h */ = {
+		isa = PBXFileReference;
+		name = interp.h;
+		path = /Users/eliot/Cog/oscogvm/nscogsrc/vm/interp.h;
+		sourceTree = "<absolute>";
+	};
+	738CF2C618987C220039020A /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 738CF2C718987C220039020A /* vmCallback.h */;
+		name = "vmCallback.h: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 518;
+		vrLoc = 0;
+	};
+	738CF2C718987C220039020A /* vmCallback.h */ = {
+		isa = PBXFileReference;
+		name = vmCallback.h;
+		path = /Users/eliot/Cog/oscogvm/nscogsrc/vm/vmCallback.h;
+		sourceTree = "<absolute>";
+	};
+	738CF2C818987C220039020A /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 737D7E2113BAB68900347756 /* interp.h */;
+		name = "interp.h: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 461;
+		vrLoc = 0;
+	};
+	738CF2C918987C220039020A /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 737D7E1F13BAB68900347756 /* gcc3x-cointerp.c */;
+		name = "gcc3x-cointerp.c: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 559;
+		vrLoc = 0;
+	};
+	738CF2CA18987C220039020A /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 737D7E2013BAB68900347756 /* cointerp.h */;
+		name = "cointerp.h: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 654;
+		vrLoc = 0;
+	};
+	738CF2CB18987C220039020A /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 737D7E2513BAB68900347756 /* cogmethod.h */;
+		name = "cogmethod.h: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 507;
+		vrLoc = 0;
+	};
+	738CF2CC18987C220039020A /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 737D7E2313BAB68900347756 /* cogit.h */;
+		name = "cogit.h: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 742;
+		vrLoc = 0;
+	};
+	738CF2CD18987C220039020A /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 737D7E2213BAB68900347756 /* cogit.c */;
+		name = "cogit.c: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 556;
+		vrLoc = 0;
+	};
+	738CF2CE18987C220039020A /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = A27728EE0CE7A8D300ABAFCA /* AsynchFilePlugin.c */;
+		name = "AsynchFilePlugin.c: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 623;
+		vrLoc = 0;
+	};
+	738CF2D518987C230039020A /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = A27728EE0CE7A8D300ABAFCA /* AsynchFilePlugin.c */;
+		name = "AsynchFilePlugin.c: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 623;
+		vrLoc = 0;
+	};
+	941A3B2B09AA144000C9D25A /* Newspeak Virtual Machine */ = {
+		activeExec = 0;
+		executables = (
+			738CF29A18987A140039020A /* Newspeak Virtual Machine */,
+		);
+	};
+	A27728EE0CE7A8D300ABAFCA /* AsynchFilePlugin.c */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {873, 6227}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 623}";
+		};
+	};
+}
