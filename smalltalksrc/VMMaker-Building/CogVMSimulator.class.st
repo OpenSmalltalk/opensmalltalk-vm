@@ -2439,12 +2439,6 @@ CogVMSimulator >> ownerIndexOfThreadId: threadId [
 		inSuperclass: (cogThreadManager ifNil: [CoInterpreterPrimitives] ifNotNil: [CoInterpreterMT])
 ]
 
-{ #category : #'simulation only' }
-CogVMSimulator >> penultimateLiteralOf: aMethodOop [
-	self assert: (objectMemory isOopCompiledMethod: aMethodOop).
-	^self literal: (self literalCountOf: aMethodOop) - 2 ofMethod: aMethodOop
-]
-
 { #category : #'plugin support' }
 CogVMSimulator >> pluginEntryFor: mapIndex [
 	^mappedPluginEntries at: (mapIndex > 1000

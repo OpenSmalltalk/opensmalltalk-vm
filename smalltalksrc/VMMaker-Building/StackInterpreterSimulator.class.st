@@ -1490,12 +1490,6 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 
 ]
 
-{ #category : #'simulation only' }
-StackInterpreterSimulator >> penultimateLiteralOf: aMethodOop [
-	self assert: (objectMemory isOopCompiledMethod: aMethodOop).
-	^self literal: (self literalCountOf: aMethodOop) - 2 ofMethod: aMethodOop
-]
-
 { #category : #'object memory support' }
 StackInterpreterSimulator >> preBecomeAction [
 	"((objectMemory instVarNamed: 'becomeEffectsFlags') anyMask: BecameCompiledMethodFlag) ifTrue:
