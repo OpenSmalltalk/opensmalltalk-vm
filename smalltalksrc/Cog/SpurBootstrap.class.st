@@ -350,6 +350,17 @@ SpurBootstrap class >> BehaviorPROTOTYPEisVariable [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrap class >> BehaviorPROTOTYPEshouldNotBeRedefined [
+	"Answer if the receiver should not be redefined.
+	 The assumption is that classes in Smalltalk specialObjects and 
+	 instance-specific Behaviors should not be redefined"
+
+	^(Smalltalk specialObjectsArray
+		identityIndexOf: self
+		ifAbsent: [(self isKindOf: self) ifTrue: [1] ifFalse: [0]]) ~= 0
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrap class >> CharacterPROTOTYPEDollarEquals: aCharacter [ 
 	"Primitive. Answer if the receiver and the argument are the
 	 same object (have the same object pointer). Optional. See
@@ -941,8 +952,7 @@ SpurBootstrap >> fillInPointerObject: newObj from: oldObj [
 						ifFalse:
 							[map at: oldValue ifAbsent:
 								[(oldValue = oldHeap characterTable
-								
-								   or: [oldValue = (oldHeap splObj: CompactClasses)])
+								  or: [oldValue = (oldHeap splObj: CompactClasses)])
 									ifTrue: [newHeap nilObject]
 									ifFalse:
 										[self assert: (oldHeap fetchClassOfNonImm: oldValue) = oldHeap classCharacter.
