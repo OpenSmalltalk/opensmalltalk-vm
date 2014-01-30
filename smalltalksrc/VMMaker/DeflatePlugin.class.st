@@ -270,13 +270,12 @@ DeflatePlugin >> insertStringAt: here [
 DeflatePlugin >> loadDeflateStreamFrom: rcvr [
 	| oop |
 	<inline: false>
-	((interpreterProxy isPointers: rcvr) and:[
-		(interpreterProxy slotSizeOf: rcvr) >= 15]) ifFalse:[^false].
+	((interpreterProxy isPointers: rcvr)
+	 and: [(interpreterProxy slotSizeOf: rcvr) >= 15]) ifFalse:
+		[^false].
 	oop := interpreterProxy fetchPointer: 0 ofObject: rcvr.
-	(interpreterProxy isIntegerObject: oop)
-		ifTrue:[^false].
-	(interpreterProxy isBytes: oop)
-		ifFalse:[^false].
+	(interpreterProxy isBytes: oop) ifFalse:
+		[^false].
 	zipCollection := interpreterProxy firstIndexableField: oop.
 	zipCollectionSize := interpreterProxy byteSizeOf: oop.
 
@@ -285,40 +284,40 @@ DeflatePlugin >> loadDeflateStreamFrom: rcvr [
 	"zipWriteLimit := interpreterProxy fetchInteger: 3 ofObject: rcvr."
 
 	oop := interpreterProxy fetchPointer: 4 ofObject: rcvr.
-	((interpreterProxy isIntegerObject: oop) or:[
-		(interpreterProxy isWords: oop) not]) ifTrue:[^false].
-	(interpreterProxy slotSizeOf: oop) = DeflateHashTableSize ifFalse:[^false].
+	((interpreterProxy isWords: oop)
+	 and: [(interpreterProxy slotSizeOf: oop) = DeflateHashTableSize]) ifFalse:
+		[^false].
 	zipHashHead := interpreterProxy firstIndexableField: oop.
 	oop := interpreterProxy fetchPointer: 5 ofObject: rcvr.
-	((interpreterProxy isIntegerObject: oop) or:[
-		(interpreterProxy isWords: oop) not]) ifTrue:[^false].
-	(interpreterProxy slotSizeOf: oop) = DeflateWindowSize ifFalse:[^false].
+	((interpreterProxy isWords: oop)
+	 and: [(interpreterProxy slotSizeOf: oop) = DeflateWindowSize]) ifFalse:
+		[^false].
 	zipHashTail := interpreterProxy firstIndexableField: oop.
 	zipHashValue := interpreterProxy fetchInteger: 6 ofObject: rcvr.
 	zipBlockPos := interpreterProxy fetchInteger: 7 ofObject: rcvr.
 	"zipBlockStart := interpreterProxy fetchInteger: 8 ofObject: rcvr."
 	oop := interpreterProxy fetchPointer: 9 ofObject: rcvr.
-	((interpreterProxy isIntegerObject: oop) or:[
-		(interpreterProxy isBytes: oop) not]) ifTrue:[^false].
+	(interpreterProxy isBytes: oop) ifFalse:
+		[^false].
 	zipLiteralSize := interpreterProxy slotSizeOf: oop.
 	zipLiterals := interpreterProxy firstIndexableField: oop.
 
 	oop := interpreterProxy fetchPointer: 10 ofObject: rcvr.
-	((interpreterProxy isIntegerObject: oop) or:[
-		(interpreterProxy isWords: oop) not]) ifTrue:[^false].
-	(interpreterProxy slotSizeOf: oop) < zipLiteralSize ifTrue:[^false].
+	((interpreterProxy isWords: oop)
+	 and: [(interpreterProxy slotSizeOf: oop) >= zipLiteralSize]) ifFalse:
+		[^false].
 	zipDistances := interpreterProxy firstIndexableField: oop.
 
 	oop := interpreterProxy fetchPointer: 11 ofObject: rcvr.
-	((interpreterProxy isIntegerObject: oop) or:[
-		(interpreterProxy isWords: oop) not]) ifTrue:[^false].
-	(interpreterProxy slotSizeOf: oop) = DeflateMaxLiteralCodes ifFalse:[^false].
+	((interpreterProxy isWords: oop)
+	 and: [(interpreterProxy slotSizeOf: oop) = DeflateMaxLiteralCodes]) ifFalse:
+		[^false].
 	zipLiteralFreq := interpreterProxy firstIndexableField: oop.
 
 	oop := interpreterProxy fetchPointer: 12 ofObject: rcvr.
-	((interpreterProxy isIntegerObject: oop) or:[
-		(interpreterProxy isWords: oop) not]) ifTrue:[^false].
-	(interpreterProxy slotSizeOf: oop) = DeflateMaxDistanceCodes ifFalse:[^false].
+	((interpreterProxy isWords: oop)
+	 and: [(interpreterProxy slotSizeOf: oop) = DeflateMaxDistanceCodes]) ifFalse:
+		[^false].
 	zipDistanceFreq := interpreterProxy firstIndexableField: oop.
 
 	zipLiteralCount := interpreterProxy fetchInteger: 13 ofObject: rcvr.
@@ -331,13 +330,12 @@ DeflatePlugin >> loadDeflateStreamFrom: rcvr [
 DeflatePlugin >> loadZipEncoderFrom: rcvr [
 	| oop |
 	<inline: false>
-	((interpreterProxy isPointers: rcvr) and:[
-		(interpreterProxy slotSizeOf: rcvr) >= 6]) ifFalse:[^false].
+	((interpreterProxy isPointers: rcvr)
+	 and: [(interpreterProxy slotSizeOf: rcvr) >= 6]) ifFalse:
+		[^false].
 	oop := interpreterProxy fetchPointer: 0 ofObject: rcvr.
-	(interpreterProxy isIntegerObject: oop)
-		ifTrue:[^interpreterProxy primitiveFail].
-	(interpreterProxy isBytes: oop)
-		ifFalse:[^interpreterProxy primitiveFail].
+	(interpreterProxy isBytes: oop) ifFalse:
+		[^interpreterProxy primitiveFail].
 	zipCollection := interpreterProxy firstIndexableField: oop.
 	zipCollectionSize := interpreterProxy byteSizeOf: oop.
 
@@ -537,57 +535,52 @@ DeflatePlugin >> sendBlock: literalStream with: distanceStream with: litTree wit
 		zipBitBuf, zipBitPos.
 	"
 	| oop litPos litLimit litArray distArray lit dist sum llBitLengths llCodes distBitLengths distCodes code extra litBlCount distBlCount |
-	<var: #litArray type:'unsigned char *'>
-	<var: #distArray type:'unsigned int *'>
-	<var: #llBitLengths type:'unsigned int *'>
-	<var: #llCodes type:'unsigned int *'>
-	<var: #distBitLengths type:'unsigned int *'>
-	<var: #distCodes type:'unsigned int *'>
+	<var: #litArray type: #'unsigned char *'>
+	<var: #distArray type: #'unsigned int *'>
+	<var: #llBitLengths type: #'unsigned int *'>
+	<var: #llCodes type: #'unsigned int *'>
+	<var: #distBitLengths type: #'unsigned int *'>
+	<var: #distCodes type: #'unsigned int *'>
 	oop := interpreterProxy fetchPointer: 0 ofObject: literalStream.
 	litPos := interpreterProxy fetchInteger: 1 ofObject: literalStream.
 	litLimit := interpreterProxy fetchInteger: 2 ofObject: literalStream.
-	((interpreterProxy isIntegerObject: oop) not and:[litPos <= litLimit and:[
-		litLimit <= (interpreterProxy byteSizeOf: oop) and:[interpreterProxy isBytes: oop]]])
-			ifFalse:[^interpreterProxy primitiveFail].
+	(litPos <= litLimit
+	 and: [(interpreterProxy isBytes: oop)
+	 and: [litLimit <= (interpreterProxy byteSizeOf: oop)]]) ifFalse:
+		[^interpreterProxy primitiveFail].
 	litArray := interpreterProxy firstIndexableField: oop.
 
 	oop := interpreterProxy fetchPointer: 0 ofObject: distanceStream.
-	((interpreterProxy isIntegerObject: oop) not and:[
-		(interpreterProxy fetchInteger: 1 ofObject: distanceStream) = litPos and:[
-			(interpreterProxy fetchInteger: 2 ofObject: distanceStream) = litLimit]])
-				ifFalse:[^interpreterProxy primitiveFail].
-	((interpreterProxy isWords: oop) and:[
-		litLimit <= (interpreterProxy slotSizeOf: oop)])
-			ifFalse:[^interpreterProxy primitiveFail].
+	((interpreterProxy isWords: oop)
+	 and: [litLimit <= (interpreterProxy slotSizeOf: oop)
+	 and: [(interpreterProxy fetchInteger: 1 ofObject: distanceStream) = litPos
+	 and: [(interpreterProxy fetchInteger: 2 ofObject: distanceStream) = litLimit]]]) ifFalse:
+		[^interpreterProxy primitiveFail].
 	distArray := interpreterProxy firstIndexableField: oop.
 
 	oop := interpreterProxy fetchPointer: 0 ofObject: litTree.
-	((interpreterProxy isIntegerObject: oop) not and:[interpreterProxy isWords: oop])
-		ifFalse:[^interpreterProxy primitiveFail].
+	(interpreterProxy isWords: oop) ifFalse:
+		[^interpreterProxy primitiveFail].
 	litBlCount := interpreterProxy slotSizeOf: oop.
 	llBitLengths := interpreterProxy firstIndexableField: oop.
 
 	oop := interpreterProxy fetchPointer: 1 ofObject: litTree.
-	((interpreterProxy isIntegerObject: oop) not and:[interpreterProxy isWords: oop])
-		ifFalse:[^interpreterProxy primitiveFail].
-	(litBlCount = (interpreterProxy slotSizeOf: oop))
-		ifFalse:[^interpreterProxy primitiveFail].
+	((interpreterProxy isWords: oop)
+	 and: [litBlCount = (interpreterProxy slotSizeOf: oop)]) ifFalse:
+		[^interpreterProxy primitiveFail].
 	llCodes := interpreterProxy firstIndexableField: oop.
 
 	oop := interpreterProxy fetchPointer: 0 ofObject: distTree.
-	((interpreterProxy isIntegerObject: oop) not and:[interpreterProxy isWords: oop])
-		ifFalse:[^interpreterProxy primitiveFail].
+	(interpreterProxy isWords: oop) ifFalse:
+		[^interpreterProxy primitiveFail].
 	distBlCount := interpreterProxy slotSizeOf: oop.
 	distBitLengths := interpreterProxy firstIndexableField: oop.
 
 	oop := interpreterProxy fetchPointer: 1 ofObject: distTree.
-	((interpreterProxy isIntegerObject: oop) not and:[interpreterProxy isWords: oop])
-		ifFalse:[^interpreterProxy primitiveFail].
-	(distBlCount = (interpreterProxy slotSizeOf: oop))
-		ifFalse:[^interpreterProxy primitiveFail].
+	((interpreterProxy isWords: oop)
+	 and: [distBlCount = (interpreterProxy slotSizeOf: oop)]) ifFalse:
+		[^interpreterProxy primitiveFail].
 	distCodes := interpreterProxy firstIndexableField: oop.
-
-	interpreterProxy failed ifTrue:[^nil].
 
 	self nextZipBits: 0 put: 0. "Flush pending bits if necessary"
 	sum := 0.

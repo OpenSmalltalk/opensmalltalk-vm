@@ -143,8 +143,8 @@ FFIPlugin >> ffiArgument: oop Spec: argSpec Class: argClass [
 	"Check if oopClass is a subclass of ExternalStructure.
 	If this is the case we'll work on it's handle and not the actual oop."
 	isStruct := false.
-	((interpreterProxy isIntegerObject: oop) or:[oop == nilOop]) ifFalse:[
-		"#isPointers: will fail if oop is SmallInteger so don't even attempt to use it"
+	((interpreterProxy isImmediate: oop) or:[oop == nilOop]) ifFalse:[
+		"#isPointers: will fail if oop is immediate so don't even attempt to use it"
 		(interpreterProxy isPointers: oop) 
 			ifTrue:[isStruct := interpreterProxy includesBehavior: oopClass 
 								ThatOf: interpreterProxy classExternalStructure.
@@ -159,8 +159,6 @@ FFIPlugin >> ffiArgument: oop Spec: argSpec Class: argClass [
 		ifFalse:[valueOop := oop].
 
 	"Fetch and check the contents of the compiled spec"
-	(interpreterProxy isIntegerObject: argSpec)
-		ifTrue:[self ffiFail: FFIErrorWrongType. ^nil].
 	(interpreterProxy isWords: argSpec)
 		ifFalse:[self ffiFail: FFIErrorWrongType. ^nil].
 	ffiArgSpecSize := interpreterProxy slotSizeOf: argSpec.
@@ -179,8 +177,8 @@ FFIPlugin >> ffiArgument: oop Spec: argSpec Class: argClass [
 		^self ffiPushStructureContentsOf: valueOop].
 
 	(ffiArgHeader anyMask: FFIFlagPointer) ifTrue:[
-		"no integers for pointers please"
-		(interpreterProxy isIntegerObject: oop) 
+		"no integers (or characters) for pointers please"
+		(interpreterProxy isImmediate: oop) 
 			ifTrue:[^self ffiFail: FFIErrorIntAsPointer].
 
 		"but allow passing nil pointer for any pointer type"
@@ -359,8 +357,6 @@ FFIPlugin >> ffiCheckReturn: retSpec With: retClass [
 			ifFalse:[^self ffiFail: FFIErrorBadReturn]].
 	ffiRetClass := retClass.
 
-	(interpreterProxy isIntegerObject: retSpec)
-		ifTrue:[self ffiFail: FFIErrorWrongType. ^nil].
 	(interpreterProxy isWords: retSpec)
 		ifFalse:[self ffiFail: FFIErrorWrongType. ^nil].
 	ffiRetSpecSize := interpreterProxy slotSizeOf: retSpec.
@@ -379,8 +375,6 @@ FFIPlugin >> ffiCheckReturn: retSpec With: retClass [
 FFIPlugin >> ffiContentsOfHandle: oop errCode: errCode [
 	"Make sure that the given oop is a valid external handle"
 	<inline: true>
-	(interpreterProxy isIntegerObject: oop)
-		ifTrue:[^self ffiFail: errCode].
 	(interpreterProxy isBytes: oop)
 		ifFalse:[^self ffiFail: errCode].
 	((interpreterProxy byteSizeOf: oop) == 4)
@@ -620,7 +614,7 @@ FFIPlugin >> ffiIntegerValueOf: oop [
 	oopClass == interpreterProxy classFloat
 		ifTrue:[^(interpreterProxy floatValueOf: oop) asInteger].
 	oopClass == interpreterProxy classCharacter
-		ifTrue:[^interpreterProxy fetchInteger: 0 ofObject: oop].
+		ifTrue:[^interpreterProxy characterValueOf: oop].
 	oopClass == interpreterProxy classLargePositiveInteger
 		ifTrue:[^interpreterProxy positive32BitValueOf: oop].
 	^interpreterProxy signed32BitValueOf: oop "<- will fail if not integer"
@@ -901,15 +895,11 @@ FFIPlugin >> ffiValidateExternalData: oop AtomicType: atomicType [
 	| ptrType specOop spec specType |
 	<inline: true>
 	ptrType := interpreterProxy fetchPointer: 1 ofObject: oop.
-	(interpreterProxy isIntegerObject: ptrType)
-		ifTrue:[^self ffiFail: FFIErrorWrongType].
 	(interpreterProxy isPointers: ptrType)
 		ifFalse:[^self ffiFail: FFIErrorWrongType].
 	(interpreterProxy slotSizeOf: ptrType) < 2
 		ifTrue:[^self ffiFail: FFIErrorWrongType].
 	specOop := interpreterProxy fetchPointer: 0 ofObject: ptrType.
-	(interpreterProxy isIntegerObject: specOop)
-		ifTrue:[^self ffiFail: FFIErrorWrongType].
 	(interpreterProxy isWords: specOop)
 		ifFalse:[^self ffiFail: FFIErrorWrongType].
 	(interpreterProxy slotSizeOf: specOop) = 0

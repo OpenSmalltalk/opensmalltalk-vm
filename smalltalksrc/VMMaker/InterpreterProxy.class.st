@@ -494,8 +494,7 @@ InterpreterProxy >> is: oop MemberOf: aString [
 
 { #category : #testing }
 InterpreterProxy >> isArray: oop [
-	^(self isIntegerObject: oop) not and:[(oop class format bitAnd: 15) = 2]
-
+	^(self isNonImmediate: oop) and: [oop class instSpec = 2]
 ]
 
 { #category : #testing }
@@ -976,7 +975,7 @@ InterpreterProxy >> stackIntegerValue: offset [
 InterpreterProxy >> stackObjectValue: offset [
 	| oop |
 	oop := self stackValue: offset.
-	(self isIntegerObject: oop) ifTrue: [self primitiveFail. ^ nil].
+	(self isImmediate: oop) ifTrue: [self primitiveFail. ^ nil].
 	^oop
 ]
 
