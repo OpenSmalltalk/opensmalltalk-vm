@@ -307,8 +307,8 @@ ThreadedFFIPlugin >> ffiArgument: oop Spec: argSpec Class: argClass in: calloutS
 	"Check if oopClass is a subclass of ExternalStructure.
 	If this is the case we'll work on it's handle and not the actual oop."
 	isStruct := false.
-	((interpreterProxy isIntegerObject: oop) or:[oop = nilOop]) ifFalse:[
-		"#isPointers: will fail if oop is SmallInteger so don't even attempt to use it"
+	((interpreterProxy isImmediate: oop) or:[oop = nilOop]) ifFalse:[
+		"#isPointers: will fail if oop is immediate so don't even attempt to use it"
 		(interpreterProxy isPointers: oop) 
 			ifTrue:[isStruct := interpreterProxy includesBehavior: oopClass 
 								ThatOf: interpreterProxy classExternalStructure.
@@ -323,8 +323,6 @@ ThreadedFFIPlugin >> ffiArgument: oop Spec: argSpec Class: argClass in: calloutS
 		ifFalse:[valueOop := oop].
 
 	"Fetch and check the contents of the compiled spec"
-	(interpreterProxy isIntegerObject: argSpec)
-		ifTrue:[^FFIErrorWrongType].
 	(interpreterProxy isWords: argSpec)
 		ifFalse:[^FFIErrorWrongType].
 	calloutState ffiArgSpecSize: (interpreterProxy slotSizeOf: argSpec).
@@ -343,8 +341,8 @@ ThreadedFFIPlugin >> ffiArgument: oop Spec: argSpec Class: argClass in: calloutS
 		^self ffiPushStructureContentsOf: valueOop in: calloutState].
 
 	(calloutState ffiArgHeader anyMask: FFIFlagPointer) ifTrue:[
-		"no integers for pointers please"
-		(interpreterProxy isIntegerObject: oop) 
+		"no integers (or characters) for pointers please"
+		(interpreterProxy isImmediate: oop) 
 			ifTrue:[^FFIErrorIntAsPointer].
 
 		"but allow passing nil pointer for any pointer type"
@@ -597,12 +595,9 @@ ThreadedFFIPlugin >> ffiCheckReturn: retSpec With: retClass in: calloutState [
 ThreadedFFIPlugin >> ffiContentsOfHandle: oop errCode: errCode [
 	"Make sure that the given oop is a valid external handle"
 	<inline: true>
-	(interpreterProxy isIntegerObject: oop)
-		ifTrue:[^self ffiFail: errCode].
-	(interpreterProxy isBytes: oop)
-		ifFalse:[^self ffiFail: errCode].
-	((interpreterProxy byteSizeOf: oop) == 4)
-		ifFalse:[^self ffiFail: errCode].
+	((interpreterProxy isBytes: oop)
+	 and: [(interpreterProxy byteSizeOf: oop) = 4]) ifFalse:
+		[^self ffiFail: errCode].
 	^interpreterProxy fetchPointer: 0 ofObject: oop
 ]
 
@@ -690,18 +685,19 @@ ThreadedFFIPlugin >> ffiIntegerValueOf: oop [
 	"Support for generic callout. Return an integer value that is coerced as C would do."
 	| oopClass |
 	<inline: true>
-	(interpreterProxy isIntegerObject: oop) ifTrue:[^interpreterProxy integerValueOf: oop].
-	oop = interpreterProxy nilObject ifTrue:[^0]. "@@: should we really allow this????"
-	oop = interpreterProxy falseObject ifTrue:[^0].
-	oop = interpreterProxy trueObject ifTrue:[^1].
+	(interpreterProxy isIntegerObject: oop) ifTrue:
+		[^interpreterProxy integerValueOf: oop].
+	oop = interpreterProxy nilObject ifTrue: [^0]. "@@: should we really allow this????"
+	oop = interpreterProxy falseObject ifTrue: [^0].
+	oop = interpreterProxy trueObject ifTrue: [^1].
 	oopClass := interpreterProxy fetchClassOf: oop.
-	oopClass = interpreterProxy classFloat
-		ifTrue:[^(interpreterProxy floatValueOf: oop) asInteger].
-	oopClass = interpreterProxy classCharacter
-		ifTrue:[^interpreterProxy fetchInteger: 0 ofObject: oop].
-	oopClass = interpreterProxy classLargePositiveInteger
-		ifTrue:[^interpreterProxy positive32BitValueOf: oop].
-	^interpreterProxy signed32BitValueOf: oop "<- will fail if not integer"
+	oopClass = interpreterProxy classFloat ifTrue:
+		[^(interpreterProxy floatValueOf: oop) asInteger].
+	oopClass = interpreterProxy classCharacter ifTrue:
+		[^interpreterProxy characterValueOf: oop].
+	oopClass = interpreterProxy classLargePositiveInteger ifTrue:
+		[^interpreterProxy positive32BitValueOf: oop].
+	^interpreterProxy signedMachineIntegerValueOf: oop "<- will fail if not integer"
 ]
 
 { #category : #'symbol loading' }
@@ -1174,29 +1170,24 @@ ThreadedFFIPlugin >> ffiValidateExternalData: oop AtomicType: atomicType [
 	| ptrType specOop spec specType |
 	<inline: true>
 	ptrType := interpreterProxy fetchPointer: 1 ofObject: oop.
-	(interpreterProxy isIntegerObject: ptrType)
-		ifTrue:[^FFIErrorWrongType].
-	(interpreterProxy isPointers: ptrType)
-		ifFalse:[^FFIErrorWrongType].
-	(interpreterProxy slotSizeOf: ptrType) < 2
-		ifTrue:[^FFIErrorWrongType].
+	((interpreterProxy isPointers: ptrType)
+	and: [(interpreterProxy slotSizeOf: ptrType) >= 2]) ifFalse:
+		[^FFIErrorWrongType].
 	specOop := interpreterProxy fetchPointer: 0 ofObject: ptrType.
-	(interpreterProxy isIntegerObject: specOop)
-		ifTrue:[^FFIErrorWrongType].
-	(interpreterProxy isWords: specOop)
-		ifFalse:[^FFIErrorWrongType].
-	(interpreterProxy slotSizeOf: specOop) = 0
-		ifTrue:[^FFIErrorWrongType].
+	((interpreterProxy isWords: specOop)
+	and: [(interpreterProxy slotSizeOf: specOop) > 0]) ifFalse:
+		[^FFIErrorWrongType].
 	spec := interpreterProxy fetchPointer: 0 ofObject: specOop.
-	(self isAtomicType: spec)
-		ifFalse:[^FFIErrorWrongType].
+	(self isAtomicType: spec) ifFalse:
+		[^FFIErrorWrongType].
 	specType := self atomicTypeOf: spec.
-	specType ~= atomicType ifTrue:[
-		"allow for signed/unsigned conversion but nothing else"
-		(atomicType > FFITypeBool and:[atomicType < FFITypeSingleFloat])
-			ifFalse:[^FFIErrorCoercionFailed].
-		((atomicType >> 1) = (specType >> 1))
-			ifFalse:[^FFIErrorCoercionFailed]].
+	specType ~= atomicType ifTrue:
+		"Allow for signed/unsigned conversion but nothing else.
+		 See FFIConstants class>>#initializeTypeConstants"
+		[(atomicType >= FFITypeUnsignedByte
+		  and: [atomicType <= FFITypeSignedChar
+		  and: [(atomicType >> 1) = (specType >> 1)]]) ifFalse:
+			[^FFIErrorCoercionFailed]].
 	^0
 ]
 

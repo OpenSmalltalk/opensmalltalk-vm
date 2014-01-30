@@ -75,18 +75,17 @@ CameraPlugin >> primGetFrame [
 
 	| cameraNum bitmapOop bitmap pixCount result |
 	<export: true>
-	<var: 'bitmap' declareC: 'unsigned char *bitmap'>
+	<var: 'bitmap' type: #'unsigned char *'>
 
 	cameraNum := interpreterProxy stackIntegerValue: 1.
 	bitmapOop := interpreterProxy stackValue: 0.
-	((interpreterProxy isIntegerObject: bitmapOop) or:
-	 [(interpreterProxy isWords: bitmapOop) not]) ifTrue: [
-		interpreterProxy success: false.
-		^ 0].
-	bitmap := self cCoerce: (interpreterProxy firstIndexableField: bitmapOop) to: 'unsigned char *'.
+	interpreterProxy success: (interpreterProxy isWords: bitmapOop).
+	interpreterProxy failed ifTrue:
+		[^ 0].
+	bitmap := self cCoerce: (interpreterProxy firstIndexableField: bitmapOop) to: #'unsigned char *'.
 	pixCount := interpreterProxy stSizeOf: bitmapOop.
 
-	result := self cCode: 'CameraGetFrame(cameraNum, bitmap, pixCount)'.
+	result := self Camera: cameraNum Get: bitmap Frame: pixCount.
 	result < 0 ifTrue: [
 		interpreterProxy success: false.
 		^ 0].

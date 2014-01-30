@@ -43,8 +43,7 @@ WeDoPlugin >> primRead [
 	<var: 'bufPtr' declareC: 'char *bufPtr'>
 
 	bufOop := interpreterProxy stackValue: 0.
-	((interpreterProxy isIntegerObject: bufOop) or:
-	 [(interpreterProxy isBytes: bufOop) not]) ifTrue: [
+	(interpreterProxy isBytes: bufOop) ifFalse: [
 		interpreterProxy success: false.
 		^ 0].
 	bufPtr := self cCoerce: (interpreterProxy firstIndexableField: bufOop) to: 'char *'.
@@ -71,8 +70,7 @@ WeDoPlugin >> primWrite [
 	<var: 'bufPtr' declareC: 'char *bufPtr'>
 
 	bufOop := interpreterProxy stackValue: 0.
-	((interpreterProxy isIntegerObject: bufOop) or:
-	 [(interpreterProxy isBytes: bufOop) not]) ifTrue: [
+	(interpreterProxy isBytes: bufOop) ifFalse: [
 		interpreterProxy success: false.
 		^ 0].
 	bufPtr := self cCoerce: (interpreterProxy firstIndexableField: bufOop) to: 'char *'.
