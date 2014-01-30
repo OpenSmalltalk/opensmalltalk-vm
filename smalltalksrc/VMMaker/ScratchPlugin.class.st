@@ -559,21 +559,13 @@ ScratchPlugin >> primitiveFisheye [
 
 	| inOop outOop width in out sz height centerX centerY dx dy ang pix power r srcX srcY scaledPower |
 	<export: true>
-	<var: 'in' declareC: 'unsigned int *in'>
-	<var: 'out' declareC: 'unsigned int *out'>
-	<var: 'scaleX' declareC: 'double scaleX'>
-	<var: 'scaleY' declareC: 'double scaleY'>
-	<var: 'whirlRadians' declareC: 'double whirlRadians'>
-	<var: 'radiusSquared' declareC: 'double radiusSquared'>
-	<var: 'dx' declareC: 'double dx'>
-	<var: 'dy' declareC: 'double dy'>
-	<var: 'd' declareC: 'double d'>
-	<var: 'factor' declareC: 'double factor'>
-	<var: 'ang' declareC: 'double ang'>
-	<var: 'sina' declareC: 'double sina'>
-	<var: 'cosa' declareC: 'double cosa'>
-	<var: 'r' declareC: 'double r'>
-	<var: 'scaledPower' declareC: 'double scaledPower'>
+	<var: 'in' type: #'unsigned int *'>
+	<var: 'out' type: #'unsigned int *'>
+	<var: 'dx' type: #double>
+	<var: 'dy' type: #double>
+	<var: 'ang' type: #double>
+	<var: 'r' type: #double>
+	<var: 'scaledPower' type: #double>
 
 	inOop := interpreterProxy stackValue: 3.
 	outOop := interpreterProxy stackValue: 2.
