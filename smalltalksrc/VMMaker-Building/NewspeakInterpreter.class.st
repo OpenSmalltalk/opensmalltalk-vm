@@ -6614,9 +6614,7 @@ NewspeakInterpreter >> primitiveFormPrint [
 				self success: (bitsArraySize = (wordsPerLine * h * 4))]
 			ifFalse: [self success: false]].	
 	self successful ifTrue: [
-		BytesPerWord = 8
-			ifTrue: [ok := self cCode: 'ioFormPrint(bitsArray + 8, w, h, depth, hScale, vScale, landscapeFlag)']
-			ifFalse: [ok := self cCode: 'ioFormPrint(bitsArray + 4, w, h, depth, hScale, vScale, landscapeFlag)'].
+		ok := self cCode: 'ioFormPrint(bitsArray + BaseHeaderSize, w, h, depth, hScale, vScale, landscapeFlag)'.
 		self success: ok].
 	self successful ifTrue: [
 		self pop: 3].  "pop hScale, vScale, and landscapeFlag; leave rcvr on stack"

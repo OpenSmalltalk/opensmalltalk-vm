@@ -231,24 +231,21 @@ ScratchPlugin >> primOpenPortNamed [
 	| nameStr src nameOop baudRate count portNum |
 	<export: true>
 	<var: 'nameStr' declareC: 'char nameStr[1000]'>
-	<var: 'src' declareC: 'char * src'>
+	<var: 'src' type: #'char *'>
 
 	nameOop := interpreterProxy stackValue: 1.
 	baudRate := interpreterProxy stackIntegerValue: 0.
 
-	((interpreterProxy isIntegerObject: nameOop) or:
-	 [(interpreterProxy isBytes: nameOop) not]) ifTrue: [
-		interpreterProxy success: false.
-		^ 0].
+	interpreterProxy success: (interpreterProxy isBytes: nameOop).
 
 	interpreterProxy failed ifTrue: [^ 0].
 
-	src := self cCoerce: (interpreterProxy firstIndexableField: nameOop) to: 'char *'.
+	src := self cCoerce: (interpreterProxy firstIndexableField: nameOop) to: #'char *'.
 	count := interpreterProxy stSizeOf: nameOop.
 	0 to: count - 1 do: [:i | nameStr at: i put: (src at: i)].
 	nameStr at: count put: 0.
 
-	portNum := self cCode: 'SerialPortOpenPortNamed(nameStr, baudRate)'.
+	portNum := self SerialPortOpen: nameStr PortNamed: baudRate.
 	portNum = -1 ifTrue: [interpreterProxy success: false. ^ 0].
 
 	interpreterProxy	"pop args and rcvr, push result"
@@ -307,27 +304,22 @@ ScratchPlugin >> primPortName [
 ScratchPlugin >> primRead [
 	"Read data from the given serial port into the given buffer (a ByteArray or String). Answer the number of bytes read."
 
-	| portNum bufOop bufPtr bufSize bytesRead |
+	| portNum bufOop bytesRead |
 	<export: true>
-	<var: 'bufPtr' declareC: 'char *bufPtr'>
 
 	portNum := interpreterProxy stackIntegerValue: 1.
 	bufOop := interpreterProxy stackValue: 0.
 
-	((interpreterProxy isIntegerObject: bufOop) or:
-	 [(interpreterProxy isBytes: bufOop) not]) ifTrue: [
-		interpreterProxy success: false.
-		^ 0].
-	bufPtr := self cCoerce: (interpreterProxy firstIndexableField: bufOop) to: 'char *'.
-	bufSize := interpreterProxy stSizeOf: bufOop.
-	interpreterProxy failed ifTrue: [^ nil].
+	interpreterProxy success: (interpreterProxy isBytes: bufOop).
+	interpreterProxy failed ifTrue: [^ 0].
 
-	bytesRead := self cCode: 'SerialPortRead(portNum, bufPtr, bufSize)'.
+	bytesRead := self Serial: portNum
+						Port: (self cCoerce: (interpreterProxy firstIndexableField: bufOop) to: 'char *')
+						Read: (interpreterProxy stSizeOf: bufOop).
 
 	interpreterProxy pop: 3.  					"pop args and rcvr"
 	interpreterProxy pushInteger: bytesRead.	"push result"
 	^ 0
-
 ]
 
 { #category : #'serial port' }
@@ -353,27 +345,22 @@ ScratchPlugin >> primSetOption [
 ScratchPlugin >> primWrite [
 	"Write data to the given serial port from the given buffer (a ByteArray or String). Answer the number of bytes written."
 
-	| portNum bufOop bufPtr bufSize bytesWritten |
+	| portNum bufOop bytesWritten |
 	<export: true>
-	<var: 'bufPtr' declareC: 'char *bufPtr'>
 
 	portNum := interpreterProxy stackIntegerValue: 1.
 	bufOop := interpreterProxy stackValue: 0.
 
-	((interpreterProxy isIntegerObject: bufOop) or:
-	 [(interpreterProxy isBytes: bufOop) not]) ifTrue: [
-		interpreterProxy success: false.
-		^ 0].
-	bufPtr := self cCoerce: (interpreterProxy firstIndexableField: bufOop) to: 'char *'.
-	bufSize := interpreterProxy stSizeOf: bufOop.
-	interpreterProxy failed ifTrue: [^ nil].
+	interpreterProxy success: (interpreterProxy isBytes: bufOop).
+	interpreterProxy failed ifTrue: [^ 0].
 
-	bytesWritten := self cCode: 'SerialPortWrite(portNum, bufPtr, bufSize)'.
+	bytesWritten := self Serial: portNum
+						Port: (self cCoerce: (interpreterProxy firstIndexableField: bufOop) to: 'char *')
+						Write: (interpreterProxy stSizeOf: bufOop).
 
-	interpreterProxy pop: 3.  					"pop args and rcvr"
+	interpreterProxy pop: 3.  						"pop args and rcvr"
 	interpreterProxy pushInteger: bytesWritten.	"push result"
 	^ 0
-
 ]
 
 { #category : #'other filters' }
@@ -854,29 +841,25 @@ ScratchPlugin >> primitiveIsHidden [
 	| pathOop src count fullPath result |
 	<export: true>
 	<var: 'fullPath' declareC: 'char fullPath[1000]'>
-	<var: 'src' declareC: 'char * src'>
+	<var: 'src' type: #'char *'>
 
 	pathOop := interpreterProxy stackValue: 0.
 
-	((interpreterProxy isIntegerObject: pathOop) or:
-	 [(interpreterProxy isBytes: pathOop) not]) ifTrue: [
-		interpreterProxy success: false].
+	interpreterProxy success: (interpreterProxy isBytes: pathOop).
 
 	interpreterProxy failed ifTrue: [^ 0].
 
-	src := self cCoerce: (interpreterProxy firstIndexableField: pathOop) to: 'char *'.
+	src := self cCoerce: (interpreterProxy firstIndexableField: pathOop) to: #'char *'.
 	count := interpreterProxy stSizeOf: pathOop.
 	count >= 1000 ifTrue: [interpreterProxy success: false. ^ 0].
 	0 to: count - 1 do: [:i | fullPath at: i put: (src at: i)].
 	fullPath at: count put: 0.
 
-	result := self cCode: 'IsFileOrFolderHidden(fullPath)'.
+	result := self IsFileOrFolderHidden: fullPath.
 
 	interpreterProxy pop: 2.  "pop arg and rcvr"
 	interpreterProxy pushBool: result ~= 0.  "push result"
 	^ 0
-
-
 ]
 
 { #category : #'os functions' }
@@ -886,28 +869,24 @@ ScratchPlugin >> primitiveOpenURL [
 	| urlStr src urlOop count |
 	<export: true>
 	<var: 'urlStr' declareC: 'char urlStr[2000]'>
-	<var: 'src' declareC: 'char * src'>
+	<var: 'src' type: #'char *'>
 
 	urlOop := interpreterProxy stackValue: 0.
 
-	((interpreterProxy isIntegerObject: urlOop) or:
-	 [(interpreterProxy isBytes: urlOop) not]) ifTrue: [
-		interpreterProxy success: false].
+	interpreterProxy success: (interpreterProxy isBytes: urlOop).
 
 	interpreterProxy failed ifTrue: [^ 0].
 
-	src := self cCoerce: (interpreterProxy firstIndexableField: urlOop) to: 'char *'.
+	src := self cCoerce: (interpreterProxy firstIndexableField: urlOop) to: #'char *'.
 	count := interpreterProxy stSizeOf: urlOop.
 	count >= 2000 ifTrue: [interpreterProxy success: false. ^ 0].
 	0 to: count - 1 do: [:i | urlStr at: i put: (src at: i)].
 	urlStr at: count put: 0.
 
-	self cCode: 'OpenURL(urlStr)'.
+	self OpenURL: urlStr.
 
 	interpreterProxy pop: 1.  "pop arg, leave rcvr on stack"
 	^ 0
-
-
 ]
 
 { #category : #'hsv filters' }
@@ -1036,25 +1015,21 @@ ScratchPlugin >> primitiveSetUnicodePasteBuffer [
 
 	| utf16 strOop count |
 	<export: true>
-	<var: 'utf16' declareC: 'short int *utf16'>
+	<var: 'utf16' declareC: 'short *utf16'>
 
 	strOop := interpreterProxy stackValue: 0.
 
-	((interpreterProxy isIntegerObject: strOop) or:
-	 [(interpreterProxy isBytes: strOop) not]) ifTrue: [
-		interpreterProxy success: false].
+	interpreterProxy success: (interpreterProxy isBytes: strOop).
 
 	interpreterProxy failed ifTrue: [^ 0].
 
-	utf16 := self cCoerce: (interpreterProxy firstIndexableField: strOop) to: 'short int *'.
+	utf16 := self cCoerce: (interpreterProxy firstIndexableField: strOop) to: #'short *'.
 	count := interpreterProxy stSizeOf: strOop.
 
-	self cCode: 'SetUnicodePasteBuffer(utf16, count)'.
+	self SetUnicodePaste: utf16 Buffer: count.
 
 	interpreterProxy pop: 1.  "pop arg, leave rcvr on stack"
 	^ 0
-
-
 ]
 
 { #category : #'os functions' }
@@ -1064,28 +1039,24 @@ ScratchPlugin >> primitiveSetWindowTitle [
 	| titleStr src titleOop count |
 	<export: true>
 	<var: 'titleStr' declareC: 'char titleStr[1000]'>
-	<var: 'src' declareC: 'char * src'>
+	<var: 'src' type: #'char *'>
 
 	titleOop := interpreterProxy stackValue: 0.
 
-	((interpreterProxy isIntegerObject: titleOop) or:
-	 [(interpreterProxy isBytes: titleOop) not]) ifTrue: [
-		interpreterProxy success: false].
+	interpreterProxy success: (interpreterProxy isBytes: titleOop).
 
 	interpreterProxy failed ifTrue: [^ 0].
 
-	src := self cCoerce: (interpreterProxy firstIndexableField: titleOop) to: 'char *'.
+	src := self cCoerce: (interpreterProxy firstIndexableField: titleOop) to: #'char *'.
 	count := interpreterProxy stSizeOf: titleOop.
 	count >= 1000 ifTrue: [interpreterProxy success: false. ^ 0].
 	0 to: count - 1 do: [:i | titleStr at: i put: (src at: i)].
 	titleStr at: count put: 0.
 
-	self cCode: 'SetScratchWindowTitle(titleStr)'.
+	self SetScratchWindowTitle: titleStr.
 
 	interpreterProxy pop: 1.  "pop arg, leave rcvr on stack"
 	^ 0
-
-
 ]
 
 { #category : #'os functions' }
@@ -1096,15 +1067,14 @@ ScratchPlugin >> primitiveShortToLongPath [
 	<export: true>
 	<var: 'shortPath' declareC: 'char shortPath[1000]'>
 	<var: 'longPath' declareC: 'char longPath[1000]'>
-	<var: 'ptr' declareC: 'char * ptr'>
+	<var: 'ptr' type: #'char *'>
 
 	shortPathOop := interpreterProxy stackValue: 0.
 
-	((interpreterProxy isIntegerObject: shortPathOop) or:
-	 [(interpreterProxy isBytes: shortPathOop) not]) ifTrue: [
-		interpreterProxy success: false. ^ 0].
+	(interpreterProxy isBytes: shortPathOop) ifFalse:
+		[interpreterProxy success: false. ^ 0].
 
-	ptr := self cCoerce: (interpreterProxy firstIndexableField: shortPathOop) to: 'char *'.
+	ptr := self cCoerce: (interpreterProxy firstIndexableField: shortPathOop) to: #'char *'.
 	count := interpreterProxy stSizeOf: shortPathOop.
 	count >= 1000 ifTrue: [interpreterProxy success: false. ^ 0].
 	0 to: count - 1 do: [:i | shortPath at: i put: (ptr at: i)].
@@ -1113,14 +1083,13 @@ ScratchPlugin >> primitiveShortToLongPath [
 	result := self cCode: 'WinShortToLongPath(shortPath, longPath, 1000)'.
 	result = -1 ifTrue: [interpreterProxy success: false. ^ 0].
 
-	count := self cCode: 'strlen(longPath)'.
+	count := self strlen: longPath.
 	resultOop := interpreterProxy instantiateClass: interpreterProxy classString indexableSize: count.
-	ptr := self cCoerce: (interpreterProxy firstIndexableField: resultOop) to: 'char *'.
+	ptr := self cCoerce: (interpreterProxy firstIndexableField: resultOop) to: #'char *'.
 	0 to: count - 1 do: [:i | ptr at: i put: (longPath at: i)].
 
 	interpreterProxy pop: 2 thenPush: resultOop.  "pop arg and rcvr, push result"
 	^ 0
-
 ]
 
 { #category : #'other filters' }

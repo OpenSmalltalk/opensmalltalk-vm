@@ -850,15 +850,13 @@ B3DAcceleratorPlugin >> stackLightArrayValue: stackIndex [
 	| oop array arraySize |
 	<inline: false>
 	array := interpreterProxy stackObjectValue: stackIndex.
-	array = nil ifTrue:[^nil].
+	array = nil ifTrue:[^nil]. "really??"
 	array = interpreterProxy nilObject ifTrue:[^nil].
-	(interpreterProxy fetchClassOf: array) = interpreterProxy classArray
+	(interpreterProxy isArray: array)
 		ifFalse:[^interpreterProxy primitiveFail].
 	arraySize := interpreterProxy slotSizeOf: array.
 	0 to: arraySize-1 do:[:i|
 		oop := interpreterProxy fetchPointer: i ofObject: array.
-		(interpreterProxy isIntegerObject: oop)
-			ifTrue:[^interpreterProxy primitiveFail].
 		((interpreterProxy isWords: oop) and:[(interpreterProxy slotSizeOf: oop) = 32])
 			ifFalse:[^interpreterProxy primitiveFail].
 	].

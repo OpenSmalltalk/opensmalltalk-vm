@@ -1557,30 +1557,27 @@ InterpreterPrimitives >> primitiveFormPrint [
 	vScale := self floatValueOf: (self stackValue: 1).
 	hScale := self floatValueOf: (self stackValue: 2).
 	rcvr := self stackValue: 3.
-	(rcvr isIntegerObject: rcvr) ifTrue: [self success: false].
-	self successful ifTrue: [
-		((objectMemory  isPointers: rcvr) and: [(objectMemory lengthOf: rcvr) >= 4])
-			ifFalse: [self success: false]].
-	self successful ifTrue: [
-		bitsArray := objectMemory fetchPointer: 0 ofObject: rcvr.
+	((objectMemory  isPointers: rcvr)
+	 and: [(objectMemory lengthOf: rcvr) >= 4]) ifFalse:
+		[self success: false].
+	self successful ifTrue:
+		[bitsArray := objectMemory fetchPointer: 0 ofObject: rcvr.
 		w := self fetchInteger: 1 ofObject: rcvr.
 		h := self fetchInteger: 2 ofObject: rcvr.
 		depth := self fetchInteger: 3 ofObject: rcvr.
 		(w > 0 and: [h > 0]) ifFalse: [self success: false].
 		pixelsPerWord := 32 // depth.
 		wordsPerLine := (w + (pixelsPerWord - 1)) // pixelsPerWord.
-		((rcvr isIntegerObject: rcvr) not and: [objectMemory isWordsOrBytes: bitsArray])
-			ifTrue: [
-				bitsArraySize := objectMemory byteLengthOf: bitsArray.
+		(objectMemory isWordsOrBytes: bitsArray)
+			ifTrue:
+				[bitsArraySize := objectMemory byteLengthOf: bitsArray.
 				self success: (bitsArraySize = (wordsPerLine * h * 4))]
 			ifFalse: [self success: false]].	
-	self successful ifTrue: [
-		BytesPerWord = 8
-			ifTrue: [ok := self cCode: 'ioFormPrint(bitsArray + 8, w, h, depth, hScale, vScale, landscapeFlag)']
-			ifFalse: [ok := self cCode: 'ioFormPrint(bitsArray + 4, w, h, depth, hScale, vScale, landscapeFlag)'].
+	self successful ifTrue:
+		[ok := self cCode: 'ioFormPrint(bitsArray + BaseHeaderSize, w, h, depth, hScale, vScale, landscapeFlag)'.
 		self success: ok].
-	self successful ifTrue: [
-		self pop: 3].  "pop hScale, vScale, and landscapeFlag; leave rcvr on stack"
+	self successful ifTrue:
+		[self pop: 3]	"pop hScale, vScale, and landscapeFlag; leave rcvr on stack"
 ]
 
 { #category : #'arithmetic float primitives' }

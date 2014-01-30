@@ -1705,11 +1705,10 @@ BalloonEngineBase >> loadFormsFrom: arrayOop [
 	formArray := arrayOop.
 	0 to: (interpreterProxy slotSizeOf: formArray) - 1 do:[:i|
 		formOop := interpreterProxy fetchPointer: i ofObject: formArray.
-		(interpreterProxy isIntegerObject: formOop) ifTrue:[^false].
 		(interpreterProxy isPointers: formOop) ifFalse:[^false].
 		(interpreterProxy slotSizeOf: formOop) < 5 ifTrue:[^false].
 		bmBits := interpreterProxy fetchPointer: 0 ofObject: formOop.
-		(interpreterProxy fetchClassOf: bmBits) == interpreterProxy classBitmap
+		(interpreterProxy fetchClassOf: bmBits) = interpreterProxy classBitmap
 			ifFalse:[^false].
 		bmBitsSize := interpreterProxy slotSizeOf: bmBits.
 		bmWidth := interpreterProxy fetchInteger: 1 ofObject: formOop.
@@ -2331,7 +2330,7 @@ BalloonEngineBase >> primitiveGetFailureReason [
 		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
 	engine := interpreterProxy stackValue: 0.
 	"Note -- don't call loadEngineFrom here because this will override the stopReason with Zero"
-	(interpreterProxy isIntegerObject: engine) ifTrue:[^interpreterProxy primitiveFailFor: GEFEngineIsInteger].
+	(interpreterProxy isImmediate: engine) ifTrue:[^interpreterProxy primitiveFailFor: GEFEngineIsInteger].
 	(interpreterProxy isPointers: engine) ifFalse:[^interpreterProxy primitiveFailFor: GEFEngineIsWords].
 	(interpreterProxy slotSizeOf: engine) < BEBalloonEngineSize ifTrue:[^interpreterProxy primitiveFailFor: GEFEngineTooSmall].
 	(failCode := self loadWorkBufferFrom: 

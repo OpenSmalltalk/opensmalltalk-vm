@@ -1847,6 +1847,7 @@ SpurMemoryManager >> become: array1 with: array2 twoWay: twoWayFlag copyHash: co
 		ifFalse:
 			[self innerBecomeObjectsIn: array1 to: array2 copyHash: copyHashFlag].
 	self postBecomeScanClassTable.
+	self followSpecialObjectsOop.
 	coInterpreter postBecomeAction: becomeEffectsFlags.
 	becomeEffectsFlags := 0.
 
@@ -3073,8 +3074,7 @@ SpurMemoryManager >> eliminateAndFreeForwarders [
 	self assert: (self isForwarded: self freeListsObj) not.
 	self assert: (self isForwarded: hiddenRootsObj) not.
 	self assert: (self isForwarded: classTableFirstPage) not.
-	(self isForwarded: specialObjectsOop) ifTrue:
-		[specialObjectsOop := self followForwarded: specialObjectsOop].
+	self followSpecialObjectsOop.
 	"N.B. we don't have to explicitly do mapInterpreterOops
 	 since the scavenge below will do it."
 	self followForwardedObjStacks.
@@ -3095,8 +3095,7 @@ SpurMemoryManager >> eliminateAndFreeForwarders [
 					f := self fetchPointer: i ofObject: o.
 					(self isOopForwarded: f) ifTrue:
 						[f := self followForwarded: f.
-						 self assert: (self isYoung: f) not.
-						 self storePointerUnchecked: i ofObject: o withValue: f]]]].
+						 self storePointer: i ofObject: o withValue: f]]]].
 	self checkFreeSpace.
 	lowestFree = 0 ifTrue: "yeah, right..."
 		[^self].
@@ -3998,6 +3997,12 @@ SpurMemoryManager >> followObjField: fieldIndex ofObject: anObject [
 	(self isForwarded: objOop) ifTrue:
 		[objOop := self fixFollowedField: fieldIndex ofObject: anObject withInitialValue: objOop].
 	^objOop
+]
+
+{ #category : #'become implementation' }
+SpurMemoryManager >> followSpecialObjectsOop [
+	(self isForwarded: specialObjectsOop) ifTrue:
+		[specialObjectsOop := self followForwarded: specialObjectsOop]
 ]
 
 { #category : #'header format' }
