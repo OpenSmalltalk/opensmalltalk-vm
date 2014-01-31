@@ -93,8 +93,8 @@ CogObjectRepresentationForSpur >> genConvertSmallIntegerToCharacterInReg: reg [
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genEnsureObjInRegRegNotForwarded: reg scratchReg: scratch [
-	"Make sure that the obejct in reg is not forwarded."
+CogObjectRepresentationForSpur >> genEnsureObjInRegNotForwarded: reg scratchReg: scratch [
+	"Make sure that the object in reg is not forwarded."
 	| loop ok |
 	<var: #ok type: #'AbstractInstruction *'>
 	<var: #loop type: #'AbstractInstruction *'>
@@ -229,7 +229,7 @@ CogObjectRepresentationForSpur >> genInnerPrimitiveIdentical: retNoffset orNotIf
 	<var: #jumpImmediate type: #'AbstractInstruction *'>
 	cogit MoveR: Arg0Reg R: TempReg.
 	jumpImmediate := self genJumpImmediateInScratchReg: TempReg.
-	self genEnsureObjInRegRegNotForwarded: Arg0Reg scratchReg: TempReg.
+	self genEnsureObjInRegNotForwarded: Arg0Reg scratchReg: TempReg.
 	jumpImmediate jmpTarget:
 		(cogit CmpR: Arg0Reg R: ReceiverResultReg).
 	jumpCmp := orNot
