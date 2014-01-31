@@ -45,9 +45,9 @@ revisionAsString()
 static char *
 revisionDateAsString()
 {
-	char *maybe_space = strchr(DATE_START,' ');
-	if (maybe_space)
-		*maybe_space = 0;
+	char *maybe_paren = strchr(DATE_START,'(');
+	if (maybe_paren)
+		*(maybe_paren - 1) = 0;
 	return DATE_START;
 }
 
