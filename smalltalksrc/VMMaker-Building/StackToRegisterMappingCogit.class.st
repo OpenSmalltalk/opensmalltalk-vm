@@ -2478,7 +2478,7 @@ StackToRegisterMappingCogit >> genPushLiteralVariable: literalIndex [
 	 load but don't push the result.  There is an order-of-evaluation issue if we defer the dereference."
 	self annotate: (self MoveCw: association R: TempReg) objRef: association.
 	objectRepresentation
-		genEnsureObjInRegRegNotForwarded: TempReg
+		genEnsureObjInRegNotForwarded: TempReg
 		scratchReg: freeReg.
 	objectRepresentation
 		genLoadSlot: ValueIndex
@@ -3137,7 +3137,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean LiteralVariable: litVarIn
 		[self ssAllocateRequiredReg: ReceiverResultReg.
 		 self annotate: (self MoveCw: association R: ReceiverResultReg) objRef: association.
 		 objectRepresentation
-			genEnsureObjInRegRegNotForwarded: ReceiverResultReg
+			genEnsureObjInRegNotForwarded: ReceiverResultReg
 			scratchReg: TempReg.
 		 self ssStorePop: popBoolean toPreferredReg: TempReg.
 		 traceStores > 0 ifTrue:
@@ -3157,7 +3157,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean LiteralVariable: litVarIn
 		[self MoveR: valueReg R: topReg].
 	self ssAllocateCallReg: ReceiverResultReg.
 	self annotate: (self MoveCw: association R: ReceiverResultReg) objRef: association.
-	objectRepresentation genEnsureObjInRegRegNotForwarded: ReceiverResultReg scratchReg: TempReg.
+	objectRepresentation genEnsureObjInRegNotForwarded: ReceiverResultReg scratchReg: TempReg.
 	traceStores > 0 ifTrue:
 		[self MoveR: topReg R: TempReg.
 		 self CallRT: ceTraceStoreTrampoline].

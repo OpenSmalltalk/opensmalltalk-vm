@@ -5900,6 +5900,8 @@ SpurMemoryManager >> lowSpaceThreshold: threshold [
 
 { #category : #'gc - global' }
 SpurMemoryManager >> mapExtraRoots [
+	(self shouldRemapObj: specialObjectsOop) ifTrue:
+		[specialObjectsOop := self remapObj: specialObjectsOop].
 	self assert: remapBufferCount = 0.
 	"1 to: remapBufferCount do:
 		[:i | | oop |
