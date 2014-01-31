@@ -27,6 +27,9 @@
 static char SvnRawRevisionString[] = "$Rev$";
 # define REV_START (SvnRawRevisionString + 6)
 
+static char SvnRawRevisionDate[] = "$Date$";
+# define DATE_START (SvnRawRevisionDate + 7)
+
 static char SvnRawRepositoryURL[] = "$URL$";
 # define URL_START (SvnRawRepositoryURL + 6)
 
@@ -37,6 +40,15 @@ revisionAsString()
 	if (maybe_space)
 		*maybe_space = 0;
 	return REV_START;
+}
+
+static char *
+revisionDateAsString()
+{
+	char *maybe_space = strchr(DATE_START,' ');
+	if (maybe_space)
+		*maybe_space = 0;
+	return DATE_START;
 }
 
 static char *
@@ -64,20 +76,21 @@ sourceVersionString(char separator)
 {
 	if (!sourceVersion) {
 #if 1 /* a) mingw32 doesn't have asprintf and b) on Mac OS it segfaults. */
-		char *fmt = "VM: r%s %s%cPlugins: r%s %s";
+		char *fmt = "VM: r%s %s Date: %s%cPlugins: r%s %s";
 		int len = strlen(fmt)
 				+ strlen(revisionAsString())
 				+ strlen(repositoryURL())
+				+ strlen(revisionDateAsString())
 				+ strlen(pluginsRevisionAsString())
 				+ strlen(pluginsRepositoryURL());
 		sourceVersion = malloc(len);
 		sprintf(sourceVersion, fmt,
-				revisionAsString(), repositoryURL(),
+				revisionAsString(), repositoryURL(), revisionDateAsString(),
 				separator,
 				pluginsRevisionAsString(), pluginsRepositoryURL());
 #else
-		asprintf(&sourceVersion, "VM: r%s %s Plugins: r%s %s",
-				revisionAsString(), repositoryURL(),
+		asprintf(&sourceVersion, "VM: r%s %s Date: %s%cPlugins: r%s %s",
+				revisionAsString(), repositoryURL(), revisionDateAsString(),
 				separator,
 				pluginsRevisionAsString(), pluginsRepositoryURL());
 #endif
