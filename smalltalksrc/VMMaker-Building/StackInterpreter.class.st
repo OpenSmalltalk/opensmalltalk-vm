@@ -4998,7 +4998,7 @@ StackInterpreter >> externalSetStackPageAndPointersForSuspendedContextOfProcess:
 	(self isMachineCodeFrame: framePointer) ifFalse:
 		[self setMethod: (self iframeMethod: framePointer)].
 	instructionPointer := self popStack.
-	self assertValidExecutionPointe: instructionPointer + 1 r: framePointer s: stackPointer
+	self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer
 ]
 
 { #category : #'stack pages' }
