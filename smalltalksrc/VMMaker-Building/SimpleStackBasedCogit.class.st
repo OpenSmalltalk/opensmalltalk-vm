@@ -2465,7 +2465,7 @@ SimpleStackBasedCogit >> genPushLiteralVariable: literalIndex [
 	"N.B. Do _not_ use ReceiverResultReg to avoid overwriting receiver in assignment in frameless methods."
 	self annotate: (self MoveCw: association R: ClassReg) objRef: association.
 	objectRepresentation
-		genEnsureObjInRegRegNotForwarded: ClassReg
+		genEnsureObjInRegNotForwarded: ClassReg
 		scratchReg: TempReg.
 	objectRepresentation
 		genLoadSlot: ValueIndex
@@ -2928,11 +2928,11 @@ SimpleStackBasedCogit >> genSpecialSelectorEqualsEquals [
 	<var: #jumpPush type: #'AbstractInstruction *'>
 	self PopR: Arg0Reg.
 	objectRepresentation
-		genEnsureObjInRegRegNotForwarded: Arg0Reg
+		genEnsureObjInRegNotForwarded: Arg0Reg
 		scratchReg: TempReg.
 	self MoveMw: 0 r: SPReg R: ClassReg.
 	objectRepresentation
-		genEnsureObjInRegRegNotForwarded: ClassReg
+		genEnsureObjInRegNotForwarded: ClassReg
 		scratchReg: TempReg.
 	self CmpR: Arg0Reg R: ClassReg.
 	jumpNotEqual := self JumpNonZero: 0.
@@ -2977,7 +2977,7 @@ SimpleStackBasedCogit >> genStorePop: popBoolean LiteralVariable: litVarIndex [
 	association := self getLiteral: litVarIndex.
 	self annotate: (self MoveCw: association R: ReceiverResultReg) objRef: association.
 	objectRepresentation
-		genEnsureObjInRegRegNotForwarded: ReceiverResultReg
+		genEnsureObjInRegNotForwarded: ReceiverResultReg
 		scratchReg: TempReg.
 	popBoolean
 		ifTrue: [self PopR: ClassReg]
