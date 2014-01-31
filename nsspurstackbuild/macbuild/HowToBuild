@@ -1,0 +1,29 @@
+To generate a VM check-out http://www.squeakvm.org/svn/squeak/branches/Cog/image
+which contains
+http://www.squeakvm.org/svn/squeak/branches/Cog/image/VMMaker-Squeak4.1.changes
+http://www.squeakvm.org/svn/squeak/branches/Cog/image/VMMaker-Squeak4.1.image
+
+How to Build a Croquet Cog Stack VM on Mac OS X
+--------------------------------
+1. Install the tools (xcode etc);  the CoreVM.xcodeproj is set-up to build
+   using gcc 4.2 but you can optionally install the Intel C++ compiler 11.1
+   and change the compilerSpec in CoreVM.xcodeproj/project.pbxproj to get
+   better performance.
+
+2. Check out the following sources from svn (if you haven't already - if you're
+   reading this in macbuild its likely you've already got the sources)
+     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/platforms
+     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/src
+     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/macbuild
+
+3. Open a shell, cd into ROOT/macbuild directory and execute either
+     ./makevm
+  or
+     mvm -A
+  mvm is a convenience wrapper around makevm that will build different versions
+  (DeploymentSymbols, Debug, etc) and collect compiler output to log files.
+
+4. At the end of this process you should have a brand new Croquet.app in the
+   macbuild folder (or Fast.app Assert.app and Debug.app if you've used mvm).
+
+N.B. The plugin set is defined by plugins.ext and plugins.int in the build dir.

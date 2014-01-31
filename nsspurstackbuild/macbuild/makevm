@@ -1,0 +1,74 @@
+#!/bin/bash
+# Build a "complete" Mac VM consisting of CoreVM + Plugins.
+# By default build the Deployment configuration into Newspeak Virtual Machine.app.
+IFS='	
+'
+BUILD_CONFIGURATION=Deployment
+NSD_BUILD_CONFIGURATION=Deployment
+XCD_BUILD_CONFIGURATION=Release
+DEST="Newspeak Virtual Machine.app"
+KEEP=
+
+USAGE="usage: `basename $0` -[adskh?]"
+
+while getopts 'adskh?' opt $@; do
+	case $opt in
+	a)		BUILD_CONFIGURATION=Assert
+			NSD_BUILD_CONFIGURATION=Development
+			XCD_BUILD_CONFIGURATION=Debug
+			DEST="Assert.app";;
+	d)		BUILD_CONFIGURATION=Development
+			NSD_BUILD_CONFIGURATION=Development
+			XCD_BUILD_CONFIGURATION=Debug
+			DEST="Debug.app";;
+	s)		BUILD_CONFIGURATION=DeploymentSymbols
+			DEST="Fast.app";;
+	k)		KEEP=1;;
+	h|\?|*)	echo $USAGE
+			echo '	build the vm (defaults to a Deployment version)'
+			echo '  -a: compile Assert configuration in Assert.app for assert checks'
+			echo '  -d: compile Development configuration in Debug.app for debugging'
+			echo '  -s: compile DeploymentSymbols configuration in Fast.app for partial debugging'
+			echo '  -k: keep (do not delete) the existing Newspeak Virtual Machine.app prior to the build'
+			echo '	-h: display this help'
+			exit 0;;
+	esac
+done
+
+if [ -z "$DEVELOPER_SDK_DIR" ]; then
+	DEVELOPER_SDK_DIR=/Developer/SDKs
+fi
+test -d "$DEVELOPER_SDK_DIR" || echo '$DEVELOPER_SDK_DIR' "$DEVELOPER_SDK_DIR" does not exist \(needed by SqueakFFIPrims project\)
+export DEVELOPER_SDK_DIR
+if [ ! -d "$DEVELOPER_SDK_DIR/MacOSX10.5.sdk" ]; then
+	if [ -d "$DEVELOPER_SDK_DIR/MacOSX10.4u.sdk" ]; then
+		export SDKROOT="$DEVELOPER_SDK_DIR/MacOSX10.4u.sdk"
+	fi
+fi
+
+test "$KEEP" = 1 || rm -rf "$DEST"/* "$DEST"/.??*
+
+# Build CoreVM using xcode
+echo
+echo CoreVM xcodebuild -project CoreVM.xcodeproj -configuration $BUILD_CONFIGURATION
+xcodebuild -project CoreVM.xcodeproj -configuration $BUILD_CONFIGURATION
+if [ -d "$DEST" ]; then
+	mv build/$BUILD_CONFIGURATION/Newspeak\ Virtual\ Machine.app/* "$DEST"
+else
+	mv build/$BUILD_CONFIGURATION/Newspeak\ Virtual\ Machine.app "$DEST"
+fi
+
+../../scripts/versionInfoPlist ../../platforms CoreVM.plist "$DEST/Contents/Info.plist"
+
+if false; then
+# Build the BochsIA32Plugin
+# N.B. To build the plugin you also have to build the Bochs libraries in
+# ../processors/IA32/bochs.  cd ../processors/IA32/bochs. Run conf.COG & makeem.
+echo BochsIA32Plugin xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project BochsIA32Plugin/BochsIA32Plugin.xcodeproj
+xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project BochsIA32Plugin/BochsIA32Plugin.xcodeproj
+rm -rf "$DEST/Contents/Resources/BochsIA32Plugin.bundle"
+cp -R BochsIA32Plugin/build/$XCD_BUILD_CONFIGURATION/BochsIA32Plugin.bundle "$DEST/Contents/Resources"
+fi
+
+# Clean out any .svn directories (result of copying) in the VM
+find "$DEST" -name .svn -exec rm -rf {} \;
