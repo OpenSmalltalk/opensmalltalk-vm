@@ -451,6 +451,43 @@ InterpreterPrimitives >> primitiveAdoptInstance [
 	^nil
 ]
 
+{ #category : #'object access primitives' }
+InterpreterPrimitives >> primitiveAllObjects [
+	"Answer an array of all objects that exist when the primitive is called, excluding those
+	that may be garbage collected as a side effect of allocating the result array. The array
+	will contain at least one trailing integer zero that serves as a marker for end of valid
+	object references. Additional trailing zeros represent objects that were garbage
+	collected during execution of this primitive. Sender is responsible for ignoring all
+	trailing zero marker objects in the result array."
+
+	<export: true>
+	| count obj resultArray newCount |
+	self pop: argumentCount+1.
+	"Count the currently accessible objects"
+	count := 0.
+	obj := objectMemory firstAccessibleObject.
+	[obj = nil] whileFalse:
+		[count := count + 1.
+		obj := objectMemory accessibleObjectAfter: obj].
+	"Allocate result array, may cause GC"
+	resultArray := objectMemory instantiateClass: objectMemory classArray indexableSize: count.
+	resultArray = nil ifTrue:
+		[^self primitiveFailFor: PrimErrNoMemory].
+	"Store all objects in result array, excluding any reference to the result array 
+	itself, as may happen if garbage collection occurred during allocation of the array."
+	newCount := 0.
+	obj := objectMemory firstAccessibleObject.
+	[obj = nil or: [newCount >= count]] whileFalse:
+		[obj == resultArray
+			ifFalse: [newCount := newCount + 1.
+				self stObject: resultArray at: newCount put: obj ].
+		obj := objectMemory accessibleObjectAfter: obj].
+	"If GC occurred during result array allocation, truncate unused portion of result array"
+	newCount < count
+		ifTrue: [self shorten: resultArray toIndexableSize: newCount].
+	self push: resultArray
+]
+
 { #category : #'arithmetic float primitives' }
 InterpreterPrimitives >> primitiveArctan [
 
@@ -3503,6 +3540,21 @@ InterpreterPrimitives >> primitiveTestDisplayDepth [
 	bitsPerPixel := self stackIntegerValue: 0.
 	self successful ifTrue: [okay := self ioHasDisplayDepth: bitsPerPixel].
 	self successful ifTrue: [self pop: 2 thenPushBool: okay"Pop arg+rcvr"]
+]
+
+{ #category : #'object access primitives' }
+InterpreterPrimitives >> primitiveTestShortenIndexableSize [
+	"Given an object with indexable pointer fields, reduce the size of the indexable fields
+	to the requested size. Answer the number of bytes freed, or zero if the object cannot
+	be shortened."
+
+	<export: true>
+	| array newSize bytesFreed |
+	newSize := self stackIntegerValue: 0.
+	array := self stackValue: 1.
+	self pop: argumentCount + 1.
+	bytesFreed := self shorten: array toIndexableSize: newSize.
+	self pushInteger: bytesFreed
 ]
 
 { #category : #'arithmetic float primitives' }
