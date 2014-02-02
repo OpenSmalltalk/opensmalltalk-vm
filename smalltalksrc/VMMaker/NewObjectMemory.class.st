@@ -2489,15 +2489,23 @@ NewObjectMemory >> setEndOfMemory: newEndOfMemory [
 
 { #category : #allocation }
 NewObjectMemory >> shorten: obj toIndexableSize: nSlots [
-	"Currently this works for pointer objects only, and is almost certainly wrong for 64 bits."
-	| deltaBytes desiredLength fixedFields fmt hdr totalLength |
-	(self isPointersNonImm: obj) ifFalse:
-		[^obj].
+	"Reduce the number if indexable fields in obj, a pointer object, to nSlots. Convert the
+	unused residual to a free chunk. Word and byte indexable objects are not changed.
+	Answer the number of bytes returned to free memory, which may be zero if no change
+	was possible."
+	| deltaBytes desiredLength fixedFields fmt hdr totalLength
+	 indexableFields |
+	(self isPointersNonImm: obj) ifFalse: [^0].
+	nSlots >  0
+		ifFalse: [^0]. "no change if nSlots is zero, error if nSlots is negative"
 	hdr := self baseHeader: obj.
 	fmt := self formatOfHeader: hdr.
 	totalLength := self lengthOf: obj baseHeader: hdr format: fmt.
 	fixedFields := self fixedFieldsOf: obj format: fmt length: totalLength.
-	desiredLength := fixedFields + nSlots.
+	indexableFields := totalLength - fixedFields.
+	nSlots >= indexableFields
+		ifTrue: [^0]. "no change, or error if attempting to increase size into next chunk"
+	desiredLength := fixedFields + nSlots.		
 	deltaBytes := (totalLength - desiredLength) * BytesPerWord.
 	obj + BaseHeaderSize + (totalLength * BytesPerWord) = freeStart
 		ifTrue: "Shortening the last object.  Need to reduce freeStart."
@@ -2508,12 +2516,12 @@ NewObjectMemory >> shorten: obj toIndexableSize: nSlots [
 				to: deltaBytes].
 	(self headerType: obj) caseOf:	{
 		[HeaderTypeSizeAndClass] ->
-			[self longAt: obj put: hdr - deltaBytes].
+			[self longAt: (obj - (BaseHeaderSize * 2)) put: (self sizeHeader: obj) - deltaBytes].
 		[HeaderTypeClass] ->
 			[self longAt: obj put: ((hdr bitClear: SizeMask) bitOr: (hdr bitAnd: SizeMask) - deltaBytes)].
 		[HeaderTypeShort] ->
 			[self longAt: obj put: ((hdr bitClear: SizeMask) bitOr: (hdr bitAnd: SizeMask) - deltaBytes)] }.
-	^obj
+	^deltaBytes
 ]
 
 { #category : #allocation }
