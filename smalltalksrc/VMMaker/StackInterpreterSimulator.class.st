@@ -104,7 +104,7 @@ StackInterpreterSimulator >> allObjectsSelect: objBlock [
 
 	| selected |
 	selected := OrderedCollection new.
-	objectMemory allObjectsDo:
+	objectMemory allObjectsDoSafely:
 		[:obj|
 		(objBlock value: obj) ifTrue: [selected addLast: obj]].
 	^selected

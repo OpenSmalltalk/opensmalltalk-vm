@@ -648,7 +648,7 @@ ObjectMemory >> allObjects [
 	"Count the currently accessible objects"
 	count := 0.
 	self allObjectsDo:
-		[count := count + 1].
+		[:ign| count := count + 1].
 	"Allocate result array, may cause GC"
 	resultArray := self instantiateClass: self classArray indexableSize: count.
 	resultArray = nil ifTrue:
@@ -671,6 +671,17 @@ ObjectMemory >> allObjects [
 
 { #category : #'object enumeration' }
 ObjectMemory >> allObjectsDo: aBlock [
+	<inline: true>
+	| oop |
+	oop := self firstObject.
+	[oop < freeBlock] whileTrue:
+		[(self isFreeObject: oop) ifFalse:
+			[aBlock value: oop].
+		 oop := self objectAfter: oop]
+]
+
+{ #category : #'object enumeration' }
+ObjectMemory >> allObjectsDoSafely: aBlock [
 	<inline: true>
 	| oop |
 	oop := self firstObject.
