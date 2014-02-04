@@ -639,6 +639,36 @@ ObjectMemory >> adjustFieldsAndClassOf: oop by: offsetBytes [
 		 self longAt: oop - BytesPerWord put: (newClassOop bitOr: (classHeader bitAnd: TypeMask))]
 ]
 
+{ #category : #'primitive support' }
+ObjectMemory >> allObjects [
+	"Attempt to answer an array of all objects, excluding those that may
+	 be garbage collected as a side effect of allocating the result array.
+	 If no memory is available answer 0."
+	| count obj resultArray newCount |
+	"Count the currently accessible objects"
+	count := 0.
+	self allObjectsDo:
+		[count := count + 1].
+	"Allocate result array, may cause GC"
+	resultArray := self instantiateClass: self classArray indexableSize: count.
+	resultArray = nil ifTrue:
+		[^0].
+	"Store all objects in result array, excluding any reference to the result array itself,
+	 as may happen if garbage collection occurred during allocation of the array. No store
+	 check is necessary; the result array will be the last object in memory and hence new."
+	newCount := 0.
+	obj := self firstObject.
+	[obj < resultArray] whileTrue:
+		[(self isFreeObject: obj) ifFalse:
+			[newCount := newCount + 1.
+			 self storePointerUnchecked: newCount ofObject: resultArray withValue: obj].
+		 obj := self objectAfter: obj].
+	"If GC occurred during result array allocation, truncate unused portion of result array"
+	newCount < count ifTrue:
+		[self shorten: resultArray toIndexableSize: newCount].
+	^resultArray
+]
+
 { #category : #'object enumeration' }
 ObjectMemory >> allObjectsDo: aBlock [
 	<inline: true>

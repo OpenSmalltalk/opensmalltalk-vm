@@ -641,35 +641,43 @@ VMMaker >> availablePlugins [
 VMMaker >> buildCodeGeneratorForCogit [
 	"Answer the code generator for translating the cogit."
 
-	^self buildCodeGeneratorForCogit: true
+	^self
+		buildCodeGeneratorForCogit: self cogitClass
+		includeAPIMethods: true
+		initializeClasses: true
 ]
 
 { #category : #'generate sources' }
-VMMaker >> buildCodeGeneratorForCogit: getAPIMethods [
+VMMaker >> buildCodeGeneratorForCogit: cogitClass includeAPIMethods: getAPIMethods initializeClasses: initializeClasses [
 	"Answer the code generator for translating the cogit."
 
-	| cg cogitClass cogitClasses apicg |
+	| cg aClass cogitClasses apicg |
 	cg := self createCogitCodeGenerator.
 
-	cg vmClass: (cogitClass := self cogitClass).
-	{ cogitClass. self interpreterClass. self interpreterClass objectMemoryClass } do:
-		[:cgc|
-		(cgc respondsTo: #initializeWithOptions:)
-			ifTrue: [cgc initializeWithOptions: optionsDictionary]
-			ifFalse: [cgc initialize]].
+	cg vmClass: cogitClass.
+	initializeClasses ifTrue:
+		[{ cogitClass. self interpreterClass. self interpreterClass objectMemoryClass } do:
+			[:cgc|
+			(cgc respondsTo: #initializeWithOptions:)
+				ifTrue: [cgc initializeWithOptions: optionsDictionary]
+				ifFalse: [cgc initialize]]].
 
 	cogitClasses := OrderedCollection new.
-	[cogitClasses addFirst: cogitClass.
-	 cogitClass ~~ Cogit
-	 and: [cogitClass inheritsFrom: Cogit]] whileTrue:
-		[cogitClass := cogitClass superclass].
+	aClass := cogitClass.
+	[cogitClasses addFirst: aClass.
+	 aClass ~~ Cogit
+	 and: [aClass inheritsFrom: Cogit]] whileTrue:
+		[aClass := cogitClass superclass].
 	cogitClasses addFirst: VMClass.
-	cogitClasses addAllLast: ((self cogitClass ancilliaryClasses: optionsDictionary) reject: [:class| class isStructClass]).
+	cogitClasses addAllLast: ((cogitClass ancilliaryClasses: optionsDictionary) reject: [:class| class isStructClass]).
 	cogitClasses do: [:cgc| cg addClass: cgc].
 	cg addStructClasses: (cg structClassesForTranslationClasses: cogitClasses).
 
 	getAPIMethods ifTrue:
-		[apicg := self buildCodeGeneratorForInterpreter: false.
+		[apicg := self
+					buildCodeGeneratorForInterpreter: self interpreterClass
+					includeAPIMethods: false
+					initializeClasses: false.
 		 cg apiMethods: apicg selectAPIMethods].
 
 	^cg
@@ -679,42 +687,47 @@ VMMaker >> buildCodeGeneratorForCogit: getAPIMethods [
 VMMaker >> buildCodeGeneratorForInterpreter [
 	"Answer the code generator for translating the interpreter."
 
-	^self buildCodeGeneratorForInterpreter: true
+	^self
+		buildCodeGeneratorForInterpreter: self interpreterClass
+		includeAPIMethods: true
+		initializeClasses: true
 ]
 
 { #category : #'generate sources' }
-VMMaker >> buildCodeGeneratorForInterpreter: getAPIMethods [
+VMMaker >> buildCodeGeneratorForInterpreter: interpreterClass includeAPIMethods: getAPIMethods initializeClasses: initializeClasses [
 	"Answer the code generator for translating the interpreter."
 
-	| cg interpreterClass interpreterClasses apicg |
+	| cg theClass interpreterClasses apicg |
 	interpreterClasses := OrderedCollection new.
 
-	interpreterClass := self interpreterClass.
-	interpreterClass initializeWithOptions: optionsDictionary.
+	initializeClasses ifTrue:
+		[interpreterClass initializeWithOptions: optionsDictionary].
 
 	(cg := self createCodeGenerator) vmClass: interpreterClass.
 
-	[interpreterClass ~~ VMClass] whileTrue:
-		[interpreterClasses addFirst: interpreterClass.
-		 interpreterClass := interpreterClass superclass].
+	theClass := interpreterClass.
+	[theClass ~~ VMClass] whileTrue:
+		[interpreterClasses addFirst: theClass.
+		 theClass := theClass superclass].
 	
 	cg vmClass objectMemoryClass ifNotNil:
 		[:objectMemoryClass|
-		interpreterClass := objectMemoryClass.
-		[interpreterClass ~~ VMClass] whileTrue:
-			[interpreterClasses addFirst: interpreterClass.
-			 interpreterClass := interpreterClass superclass]].
+		theClass := objectMemoryClass.
+		[theClass ~~ VMClass] whileTrue:
+			[interpreterClasses addFirst: theClass.
+			 theClass := theClass superclass]].
 
 	interpreterClasses addFirst: VMClass.
 	interpreterClasses addAllLast: (cg nonStructClassesForTranslationClasses: interpreterClasses).
 
-	interpreterClasses do:
-		[:ic|
-		(ic respondsTo: #initializeWithOptions:)
-			ifTrue: [ic initializeWithOptions: optionsDictionary]
-			ifFalse: [ic initialize]].
-	(cg structClassesForTranslationClasses: interpreterClasses) do:
-		[:structClass| structClass initialize].
+	initializeClasses ifTrue:
+		[interpreterClasses do:
+			[:ic|
+			(ic respondsTo: #initializeWithOptions:)
+				ifTrue: [ic initializeWithOptions: optionsDictionary]
+				ifFalse: [ic initialize]].
+		 (cg structClassesForTranslationClasses: interpreterClasses) do:
+			[:structClass| structClass initialize]].
 
 	cg addStructClasses: (cg structClassesForTranslationClasses: interpreterClasses).
 
@@ -722,7 +735,10 @@ VMMaker >> buildCodeGeneratorForInterpreter: getAPIMethods [
 
 	(getAPIMethods
 	and: [self interpreterClass needsCogit]) ifTrue:
-		[apicg := self buildCodeGeneratorForCogit: false.
+		[apicg := self
+					buildCodeGeneratorForCogit: self cogitClass
+					includeAPIMethods: false
+					initializeClasses: false.
 		 cg apiMethods: apicg selectAPIMethods].
 
 	^cg

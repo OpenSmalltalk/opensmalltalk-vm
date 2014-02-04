@@ -12420,8 +12420,15 @@ StackInterpreter >> tryLoadNewPlugin: pluginString pluginEntries: pluginEntries 
 	objectMemory hasSpurMemoryManagerAPI ifTrue:
 		[| realPlugin cg |
 		 self transcript show: '...computing accessor depths'.
-		 realPlugin := plugin class withAllSuperclasses detect: [:class| class shouldBeTranslated].
-		 cg := realPlugin buildCodeGeneratorUpTo: realPlugin.
+		 plugin class isPluginClass
+			ifTrue:
+				[realPlugin := plugin class withAllSuperclasses detect: [:class| class shouldBeTranslated].
+				 cg := realPlugin buildCodeGeneratorUpTo: realPlugin]
+			ifFalse:
+				[cg := VMMaker new
+							buildCodeGeneratorForInterpreter: StackInterpreter
+							includeAPIMethods: false
+							initializeClasses: false].
 		 cg exportedPrimitiveNames do:
 			[:primName| | fnSymbol |
 			 fnSymbol := primName asSymbol.

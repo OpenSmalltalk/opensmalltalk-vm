@@ -128,11 +128,11 @@ Spur32BitMMLECoSimulator >> firstIndexableField: objOop [
 			[classFormat := self formatOfClass: (self fetchClassOfNonImm: objOop).
 			 ^self cCoerce: (self pointerForOop: objOop
 												+ self baseHeaderSize
-												+ ((self fixedFieldsOfClassFormat: classFormat) << self wordSize))
+												+ ((self fixedFieldsOfClassFormat: classFormat) << self shiftForWord))
 					to: #'oop *'].
 		^self cCoerce: (self pointerForOop: objOop
 											+ self baseHeaderSize
-											+ ((self numSlotsOf: objOop) << self wordSize))
+											+ ((self numSlotsOf: objOop) << self shiftForWord))
 				to: #'oop *'].
 	"All bit objects, and indeed CompiledMethod, though this is a non-no, start at 0"
 	self assert: (fmt >= self sixtyFourBitIndexableFormat and: [fmt < self firstCompiledMethodFormat]).
