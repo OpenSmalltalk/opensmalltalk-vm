@@ -306,6 +306,14 @@ VMMaker class >> generateAllConfigurationsUnderVersionControl [
 ]
 
 { #category : #configurations }
+VMMaker class >> generateAllSpurConfigurations [
+	self generateNewspeakSpurCogVM;
+		generateNewspeakSpurStackVM;
+		generateSqueakSpurCogVM;
+		generateSqueakSpurStackVM
+]
+
+{ #category : #configurations }
 VMMaker class >> generateConfiguration [
 	"VMMaker generateConfiguration"
 	| configCategoryName selectors |
@@ -667,7 +675,7 @@ VMMaker >> buildCodeGeneratorForCogit: cogitClass includeAPIMethods: getAPIMetho
 	[cogitClasses addFirst: aClass.
 	 aClass ~~ Cogit
 	 and: [aClass inheritsFrom: Cogit]] whileTrue:
-		[aClass := cogitClass superclass].
+		[aClass := aClass superclass].
 	cogitClasses addFirst: VMClass.
 	cogitClasses addAllLast: ((cogitClass ancilliaryClasses: optionsDictionary) reject: [:class| class isStructClass]).
 	cogitClasses do: [:cgc| cg addClass: cgc].
