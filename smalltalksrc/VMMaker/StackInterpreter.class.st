@@ -1802,7 +1802,7 @@ StackInterpreter >> allAccessibleObjectsOkay [
 	"Ensure that all accessible objects in the heap are okay."
 	| ok |
 	ok := true.
-	objectMemory allObjectsDo:
+	objectMemory allObjectsDoSafely:
 		[:oop|
 		ok := ok & (self okayFields: oop)].
 	^ok
@@ -2946,7 +2946,7 @@ StackInterpreter >> checkAllAccessibleObjectsOkay [
 	<api>
 	| ok |
 	ok := true.
-	objectMemory allObjectsDo:
+	objectMemory allObjectsDoSafely:
 		[:oop| ok := ok & (self checkOkayFields: oop)].
 	^ok
 ]
@@ -9217,7 +9217,7 @@ StackInterpreter >> printAllStacks [
 				  or: [classIdx = mutexClass]) ifTrue:
 					[self printProcsOnList: obj]]]
 		ifFalse:
-			[objectMemory allObjectsDo:
+			[objectMemory allObjectsDoSafely:
 				[:obj| | classObj |
 				 classObj := objectMemory fetchClassOfNonImm: obj.
 				 (classObj = semaphoreClass
