@@ -708,9 +708,12 @@ StackInterpreterSimulator >> initialize [
 	externalPrimitiveTable := CArrayAccessor on: (Array new: MaxExternalPrimitiveTableSize).
 	externalPrimitiveTableFirstFreeIndex := 0.
 	primitiveTable := self class primitiveTable copy.
-	primitiveAccessorDepthTable := objectMemory hasSpurMemoryManagerAPI ifTrue:
-										[self class primitiveAccessorDepthTable].
-	pluginList := {'' -> self }.
+	objectMemory hasSpurMemoryManagerAPI
+		ifTrue:
+			[primitiveAccessorDepthTable := self class primitiveAccessorDepthTable.
+			 pluginList := {}]
+		ifFalse:
+			[pluginList := {'' -> self }].
 	mappedPluginEntries := OrderedCollection new.
 	desiredNumStackPages := desiredEdenBytes := 0.
 	"This is initialized on loading the image, but convenient for testing stack page values..."

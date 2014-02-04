@@ -32,85 +32,6 @@ Spur32BitMemoryManager >> addressAfter: objOop [
 ]
 
 { #category : #allocation }
-Spur32BitMemoryManager >> allocateNewSpaceSlots: numSlots format: formatField classIndex: classIndex [
-	"Allocate an object with numSlots in newSpace.  This is for the `ee' execution engine allocations,
-	 and must be satisfied.  If no memory is available, abort.  If the allocation pushes freeStart past
-	 scavengeThreshold and a scavenge is not already scheduled, schedule a scavenge."
-	| numBytes newObj |
-	"Object headers are 8 bytes in length if the slot size fits in the num slots field (max implies overflow),
-	 16 bytes otherwise (num slots in preceeding word).
-	 Objects always have at least one slot, for the forwarding pointer,
-	 and are multiples of 8 bytes in length."
-	numSlots >= self numSlotsMask
-		ifTrue:
-			[newObj := freeStart + self baseHeaderSize.
-			 numBytes := self baseHeaderSize + self baseHeaderSize "double header"
-						+ (numSlots + (numSlots bitAnd: 1) * self bytesPerSlot)] "roundTo allocationUnit"
-		ifFalse:
-			[newObj := freeStart.
-			 numBytes := self baseHeaderSize "single header"
-						+ (numSlots <= 1
-							ifTrue: [self allocationUnit] "at least one slot for the forwarding pointer"
-							ifFalse: [numSlots + (numSlots bitAnd: 1) * self bytesPerSlot])]. "roundTo allocationUnit"
-	freeStart + numBytes > scavengeThreshold ifTrue:
-		[needGCFlag ifFalse: [self scheduleScavenge].
-		 freeStart + numBytes > scavenger eden limit ifTrue:
-			[self error: 'no room in eden for allocateNewSpaceSlots:format:classIndex:'.
-			 ^0]].
-	numSlots >= self numSlotsMask
-		ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
-			[self flag: #endianness.
-			 self longAt: freeStart put: numSlots.
-			 self longAt: freeStart + 4 put: self numSlotsMask << self numSlotsHalfShift.
-			 self longLongAt: newObj put: (self headerForSlots: self numSlotsMask format: formatField classIndex: classIndex)]
-		ifFalse:
-			[self longLongAt: newObj put: (self headerForSlots: numSlots format: formatField classIndex: classIndex)].
-	self assert: numBytes \\ self allocationUnit = 0.
-	self assert: newObj \\ self allocationUnit = 0.
-	freeStart := freeStart + numBytes.
-	^newObj
-]
-
-{ #category : #allocation }
-Spur32BitMemoryManager >> allocateSlots: numSlots format: formatField classIndex: classIndex [
-	"Allocate an object with numSlots space.  If there is room beneath scavengeThreshold
-	 allocate in newSpace, otherwise alocate in oldSpace.  If there is not room in newSpace
-	 and a scavenge is not already scheduled, schedule a scavenge."
-	<inline: true>
-	| numBytes newObj |
-	"Object headers are 8 bytes in length if the slot size fits in the num slots field (max implies overflow),
-	 16 bytes otherwise (num slots in preceeding word).
-	 Objects always have at least one slot, for the forwarding pointer,
-	 and are multiples of 8 bytes in length."
-	numSlots >= self numSlotsMask
-		ifTrue:
-			[newObj := freeStart + self baseHeaderSize.
-			 numBytes := self baseHeaderSize + self baseHeaderSize "double header"
-						+ (numSlots + (numSlots bitAnd: 1) * self bytesPerSlot)] "roundTo allocationUnit"
-		ifFalse:
-			[newObj := freeStart.
-			 numBytes := self baseHeaderSize "single header"
-						+ (numSlots <= 1
-							ifTrue: [self allocationUnit] "at least one slot for the forwarding pointer"
-							ifFalse: [numSlots + (numSlots bitAnd: 1) * self bytesPerSlot])]. "roundTo allocationUnit"
-	freeStart + numBytes > scavengeThreshold ifTrue:
-		[needGCFlag ifFalse: [self scheduleScavenge].
-		 ^self allocateSlotsInOldSpace: numSlots bytes: numBytes format: formatField classIndex: classIndex].
-	numSlots >= self numSlotsMask
-		ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
-			[self flag: #endianness.
-			 self longAt: freeStart put: numSlots.
-			 self longAt: freeStart + 4 put: self numSlotsMask << self numSlotsHalfShift.
-			 self longLongAt: newObj put: (self headerForSlots: self numSlotsMask format: formatField classIndex: classIndex)]
-		ifFalse:
-			[self longLongAt: newObj put: (self headerForSlots: numSlots format: formatField classIndex: classIndex)].
-	self assert: numBytes \\ self allocationUnit = 0.
-	self assert: newObj \\ self allocationUnit = 0.
-	freeStart := freeStart + numBytes.
-	^newObj
-]
-
-{ #category : #allocation }
 Spur32BitMemoryManager >> allocateSlotsInOldSpace: numSlots bytes: totalBytes format: formatField classIndex: classIndex [
 	"Answer the oop of a chunk of space in oldSpace with numSlots slots.  The header
 	 will have been filled-in but not the contents."
@@ -291,10 +212,10 @@ Spur32BitMemoryManager >> coalesce: obj1 and: obj2 [
 { #category : #instantiation }
 Spur32BitMemoryManager >> fillObj: objOop numSlots: numSlots with: fillValue [
 	<inline: true>
-	self assert: (self oop: objOop + self baseHeaderSize + (numSlots * self bytesPerOop) - 1
+	self assert: (self oop: objOop + self baseHeaderSize + (numSlots * self bytesPerSlot) - 1
 					isLessThan: (self addressAfter: objOop)).
 	objOop + self baseHeaderSize
-		to: objOop + self baseHeaderSize + (numSlots * self wordSize) - 1
+		to: objOop + self baseHeaderSize + (numSlots * self bytesPerSlot) - 1
 		by: self allocationUnit
 		do: [:p|
 			self longAt: p put: fillValue;
@@ -307,7 +228,7 @@ Spur32BitMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
 	| numSlots |
 	"must have room for a header (single or double) plus the next free pointer"
 	self assert: (numBytes \\ self allocationUnit = 0
-				 and: [numBytes >= (self baseHeaderSize + self wordSize)]).
+				 and: [numBytes >= (self baseHeaderSize + self bytesPerSlot)]).
 	self flag: #endianness.
 	"double header"
 	numBytes >= ((self numSlotsMask << self shiftForWord) + self baseHeaderSize) ifTrue:
@@ -444,6 +365,13 @@ Spur32BitMemoryManager >> isWordsNonImm: objOop [
 	"Answer if the argument contains only indexable words (no oops). See comment in formatOf:"
 
 	^(self formatOf: objOop) = self firstLongFormat
+]
+
+{ #category : #allocation }
+Spur32BitMemoryManager >> largeObjectBytesForSlots: numSlots [
+	"Answer the total number of bytes in an object with an overflow header, including header bytes."
+	^self baseHeaderSize + self baseHeaderSize "double header"
+	+ (numSlots + (numSlots bitAnd: 1) * self bytesPerSlot) "roundTo allocationUnit"
 ]
 
 { #category : #'free space' }
@@ -596,6 +524,15 @@ Spur32BitMemoryManager >> setIsRememberedOf: objOop to: aBoolean [
 Spur32BitMemoryManager >> shiftForWord [
 	<api>
 	^2
+]
+
+{ #category : #allocation }
+Spur32BitMemoryManager >> smallObjectBytesForSlots: numSlots [
+	"Answer the total number of bytes in an object without an overflow header, including header bytes."
+	^self baseHeaderSize "single header"
+	+ (numSlots <= 1
+		ifTrue: [self allocationUnit] "at least one slot for the forwarding pointer"
+		ifFalse: [numSlots + (numSlots bitAnd: 1) * self bytesPerSlot]) "round up to allocationUnit"
 ]
 
 { #category : #'word size' }
