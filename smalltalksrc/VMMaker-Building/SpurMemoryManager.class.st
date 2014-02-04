@@ -870,7 +870,7 @@ SpurMemoryManager >> addFreeSubTree: freeTree [
 	 and/or step in size at 1032 bytes in 32-bits or 2048 bytes in 64-bits."
 	self assert: (self isFreeObject: freeTree).
 	bytesInArg := self bytesInObject: freeTree.
-	self assert: bytesInArg / (self allocationUnit / self wordSize) >= self numFreeLists.
+	self assert: bytesInArg / (self allocationUnit / self bytesPerSlot) >= self numFreeLists.
 	treeNode := freeLists at: 0.
 	self assert: treeNode ~= 0.
 	[bytesInNode := self bytesInObject: treeNode.
@@ -1108,9 +1108,10 @@ SpurMemoryManager >> allFreeObjectsDo: aBlock [
 
 { #category : #'object enumeration' }
 SpurMemoryManager >> allHeapEntitiesDo: aBlock [
+	"N.B. e.g. allObjects relies on the old/new order here."
 	<inline: true>
-	self allNewSpaceEntitiesDo: aBlock.
-	self allOldSpaceEntitiesDo: aBlock
+	self allOldSpaceEntitiesDo: aBlock.
+	self allNewSpaceEntitiesDo: aBlock
 ]
 
 { #category : #'object enumeration' }
@@ -1147,6 +1148,48 @@ SpurMemoryManager >> allNewSpaceObjectsDo: aBlock [
 		[:objOop|
 		 self assert: (self isEnumerableObjectNoAssert: objOop).
 		 aBlock value: objOop]
+]
+
+{ #category : #'primitive support' }
+SpurMemoryManager >> allObjects [
+	"Attempt to answer an array of all objects, excluding those that may
+	 be garbage collected as a side effect of allocating the result array.
+	 If no memory is available answer 0."
+	| freeChunk ptr start limit count bytes |
+	self markObjects. "don't want to revive objects unnecessarily."
+	freeChunk := self allocateLargestFreeChunk.
+	ptr := start := freeChunk + self baseHeaderSize.
+	limit := self addressAfter: freeChunk.
+	count := 0.
+	self allHeapEntitiesDo:
+		[:obj| "continue enumerating even if no room so as to unmark all objects."
+		 (self isMarked: obj) ifTrue:
+			[(self isNormalObject: obj)
+				ifTrue:
+					[self setIsMarkedOf: obj to: false.
+					 count := count + 1.
+					 ptr < limit ifTrue:
+						[self longAt: ptr put: obj.
+						 ptr := ptr + self bytesPerSlot]]
+				ifFalse:
+					[(self isSegmentBridge: obj) ifFalse:
+						[self setIsMarkedOf: obj to: false]]]].
+	self assert: self allObjectsUnmarked.
+	self assert: count >= self numSlotsMask.
+	(count > (ptr - start / self bytesPerSlot) "not enough room"
+	 or: [limit ~= ptr and: [limit - ptr <= self allocationUnit]]) ifTrue: "can't split a single word"
+		[self freeObject: freeChunk.
+		 ^0].
+	bytes := self largeObjectBytesForSlots: count.
+	start := self startOfObject: freeChunk.
+	self freeChunkWithBytes: limit - start - bytes at: start + bytes.
+	self setOverflowNumSlotsOf: freeChunk to: count.
+	self setClassIndexOf: freeChunk to: ClassArrayCompactIndex.
+	self setFormatOf: freeChunk to: self arrayFormat.
+	self possibleRootStoreInto: freeChunk.
+	^freeChunk
+	
+	
 ]
 
 { #category : #'object enumeration' }
@@ -1260,7 +1303,7 @@ SpurMemoryManager >> allOldSpaceObjectsFrom: initialObject do: aBlock [
 
 { #category : #'weakness and ephemerality' }
 SpurMemoryManager >> allUnscannedEphemeronsAreActive [
-	unscannedEphemerons start to: unscannedEphemerons top - self wordSize do:
+	unscannedEphemerons start to: unscannedEphemerons top - self bytesPerSlot do:
 		[:p| | key |
 		key := self keyOfEphemeron: (self longAt: p).
 		((self isImmediate: key) or: [self isMarked: key]) ifTrue:
@@ -1276,9 +1319,25 @@ SpurMemoryManager >> allocateBytes: numBytes classIndex: classIndex [
 	self assert: (coInterpreter addressCouldBeClassObj: (self classAtIndex: classIndex)).
 	self assert: (self instSpecOfClass: (self classAtIndex: classIndex)) = self firstByteFormat.
 	^self
-		allocateSlots: (numBytes + self wordSize - 1 // self wordSize)
-		format: self firstByteFormat + (self wordSize - numBytes bitAnd: self wordSize - 1)
+		allocateSlots: (numBytes + self bytesPerSlot - 1 // self bytesPerSlot)
+		format: self firstByteFormat + (self bytesPerSlot - numBytes bitAnd: self bytesPerSlot - 1)
 		classIndex: classIndex
+]
+
+{ #category : #'free space' }
+SpurMemoryManager >> allocateLargestFreeChunk [
+	"Answer the largest free chunk in the free lists."
+	^self findLargestFreeChunk ifNotNil:
+		[:freeChunk| | next |
+		"This will be the node, not a list element.  Answer a list element in preference."
+		next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: freeChunk.
+		next ~= 0 ifTrue:
+			[self storePointer:  self freeChunkNextIndex
+				ofFreeChunk: freeChunk
+				withValue: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: next).
+			 ^next].
+		self unlinkSolitaryFreeTreeNode: freeChunk.
+		freeChunk]
 ]
 
 { #category : #'spur bootstrap' }
@@ -1314,7 +1373,38 @@ SpurMemoryManager >> allocateNewSpaceSlots: numSlots format: formatField classIn
 	"Allocate an object with numSlots in newSpace.  This is for the `ee' execution engine allocations,
 	 and must be satisfied.  If no memory is available, abort.  If the allocation pushes freeStart past
 	 scavengeThreshold and a scavenge is not already scheduled, schedule a scavenge."
-	self subclassResponsibility
+	| numBytes newObj |
+	"Object headers are 8 bytes in length if the slot size fits in the num slots field (max implies overflow),
+	 16 bytes otherwise (num slots in preceeding word).
+	 Objects always have at least one slot, for the forwarding pointer,
+	 and are multiples of 8 bytes in length."
+	numSlots >= self numSlotsMask
+		ifTrue:
+			[(self wordSize >= 8 and: [numSlots > 16rffffffff]) ifTrue:
+				[^nil]. "overflow size must fit in 32-bits"
+			 newObj := freeStart + self baseHeaderSize.
+			 numBytes := self largeObjectBytesForSlots: numSlots]
+		ifFalse:
+			[newObj := freeStart.
+			 numBytes := self smallObjectBytesForSlots: numSlots].
+	
+	freeStart + numBytes > scavengeThreshold ifTrue:
+		[needGCFlag ifFalse: [self scheduleScavenge].
+		 freeStart + numBytes > scavenger eden limit ifTrue:
+			[self error: 'no room in eden for allocateNewSpaceSlots:format:classIndex:'.
+			 ^0]].
+	numSlots >= self numSlotsMask
+		ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
+			[self flag: #endianness.
+			 self longAt: freeStart put: numSlots.
+			 self longAt: freeStart + 4 put: self numSlotsMask << self numSlotsHalfShift.
+			 self longLongAt: newObj put: (self headerForSlots: self numSlotsMask format: formatField classIndex: classIndex)]
+		ifFalse:
+			[self longLongAt: newObj put: (self headerForSlots: numSlots format: formatField classIndex: classIndex)].
+	self assert: numBytes \\ self allocationUnit = 0.
+	self assert: newObj \\ self allocationUnit = 0.
+	freeStart := freeStart + numBytes.
+	^newObj
 ]
 
 { #category : #'free space' }
@@ -1724,7 +1814,37 @@ SpurMemoryManager >> allocateSlots: numSlots format: formatField classIndex: cla
 	"Allocate an object with numSlots space.  If there is room beneath scavengeThreshold
 	 allocate in newSpace, otherwise alocate in oldSpace.  If there is not room in newSpace
 	 and a scavenge is not already scheduled, schedule a scavenge."
-	self subclassResponsibility
+	<inline: true>
+	| numBytes newObj |
+	"Object headers are 8 bytes in length if the slot size fits in the num slots field (max implies overflow),
+	 16 bytes otherwise (num slots in preceeding word).
+	 Objects always have at least one slot, for the forwarding pointer,
+	 and are multiples of 8 bytes in length."
+	numSlots >= self numSlotsMask
+		ifTrue:
+			[(self wordSize >= 8 and: [numSlots > 16rffffffff]) ifTrue:
+				[^nil]. "overflow size must fit in 32-bits"
+			 newObj := freeStart + self baseHeaderSize.
+			 numBytes := self largeObjectBytesForSlots: numSlots]
+		ifFalse:
+			[newObj := freeStart.
+			 numBytes := self smallObjectBytesForSlots: numSlots].
+	
+	freeStart + numBytes > scavengeThreshold ifTrue:
+		[needGCFlag ifFalse: [self scheduleScavenge].
+		 ^self allocateSlotsInOldSpace: numSlots bytes: numBytes format: formatField classIndex: classIndex].
+	numSlots >= self numSlotsMask
+		ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
+			[self flag: #endianness.
+			 self longAt: freeStart put: numSlots.
+			 self longAt: freeStart + 4 put: self numSlotsMask << self numSlotsHalfShift.
+			 self longLongAt: newObj put: (self headerForSlots: self numSlotsMask format: formatField classIndex: classIndex)]
+		ifFalse:
+			[self longLongAt: newObj put: (self headerForSlots: numSlots format: formatField classIndex: classIndex)].
+	self assert: numBytes \\ self allocationUnit = 0.
+	self assert: newObj \\ self allocationUnit = 0.
+	freeStart := freeStart + numBytes.
+	^newObj
 ]
 
 { #category : #allocation }
@@ -3733,7 +3853,7 @@ SpurMemoryManager >> firstIndexableField: objOop [
 			[classFormat := self formatOfClass: (self fetchClassOfNonImm: objOop).
 			 ^self pointerForOop: objOop
 								+ self baseHeaderSize
-								+ ((self fixedFieldsOfClassFormat: classFormat) << self wordSize)].
+								+ ((self fixedFieldsOfClassFormat: classFormat) << self shiftForWord)].
 		 "otherwise not indexable"
 		 ^0].
 	"All bit objects, and indeed CompiledMethod, though this is a non-no, start at 0"
@@ -4876,7 +4996,9 @@ SpurMemoryManager >> initializeUnscannedEphemerons [
 	 and: [(self numSlotsOfAny: largestFree) > (sizeOfUnusedEden / self wordSize)])
 		ifTrue:
 			[unscannedEphemerons
-				start: largestFree + self baseHeaderSize;
+				start: largestFree
+					+ self baseHeaderSize
+					+ (self freeChunkLargerIndex + 1 * self wordSize);
 				limit: (self addressAfter: largestFree)]
 		ifFalse:
 			[unscannedEphemerons
@@ -5660,6 +5782,12 @@ SpurMemoryManager >> keyOfEphemeron: objOop [
 SpurMemoryManager >> knownClassAtIndex: classIndex [
 	self assert: (classIndex between: 1 and: self classTablePageSize).
 	^self fetchPointer: classIndex ofObject: classTableFirstPage
+]
+
+{ #category : #allocation }
+SpurMemoryManager >> largeObjectBytesForSlots: numSlots [
+	"Answer the total number of bytes in an object with an overflow header, including header bytes."
+	^self subclassResponsibility
 ]
 
 { #category : #'class table puns' }
@@ -6690,7 +6818,7 @@ SpurMemoryManager >> objectBefore: objOop [
 	^prev
 ]
 
-{ #category : #'object enumeration' }
+{ #category : #allocation }
 SpurMemoryManager >> objectBytesForSlots: numSlots [
 	"Answer the total number of bytes in an object with the given
 	 number of slots, including header and possible overflow size header."
@@ -7448,6 +7576,11 @@ SpurMemoryManager >> rootTableCount [
 	^scavenger rememberedSetSize
 ]
 
+{ #category : #allocation }
+SpurMemoryManager >> roundBytesToAllocationUnit: bytes [
+	^bytes + (self allocationUnit - 1) bitClear: self allocationUnit - 1
+]
+
 { #category : #'debug support' }
 SpurMemoryManager >> runLeakCheckerForFullGC: fullGCFlag [
 	^self runLeakCheckerForFullGC: fullGCFlag excludeUnmarkedNewSpaceObjs: false
@@ -7702,6 +7835,12 @@ SpurMemoryManager >> setIsRememberedOf: objOop to: aBoolean [
 ]
 
 { #category : #'free space' }
+SpurMemoryManager >> setOverflowNumSlotsOf: objOop to: numSlots [
+	self flag: #endian.
+	self long32At: objOop - self baseHeaderSize put: numSlots
+]
+
+{ #category : #'free space' }
 SpurMemoryManager >> setRawNumSlotsOf: objOop to: n [
 	"Private to free space. See freeSmallObject:"
 	self flag: #endian.
@@ -7841,6 +7980,12 @@ SpurMemoryManager >> slotSizeOf: oop [
 	 Otherwise return the number of words."
 	(self isImmediate: oop) ifTrue: [^0].
 	^self lengthOf: oop
+]
+
+{ #category : #allocation }
+SpurMemoryManager >> smallObjectBytesForSlots: numSlots [
+	"Answer the total number of bytes in an object without an overflow header, including header bytes."
+	^self subclassResponsibility
 ]
 
 { #category : #'free space' }
