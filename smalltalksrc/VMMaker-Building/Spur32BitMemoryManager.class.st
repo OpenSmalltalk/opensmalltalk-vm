@@ -97,10 +97,12 @@ Spur32BitMemoryManager >> changeClassOf: rcvr to: argClass [
 	| classFormat fixedFields instFormat normalizedInstFormat newFormat classIndex |
 	classFormat := self formatOfClass: argClass.
 	fixedFields := self fixedFieldsOfClassFormat: classFormat.
+	classFormat := self instSpecOfClassFormat: classFormat.
 	instFormat := self formatOf: rcvr.
 	normalizedInstFormat := self classFormatForInstanceFormat: instFormat.
 
-	normalizedInstFormat = classFormat
+	(normalizedInstFormat > self lastPointerFormat
+	 and: [normalizedInstFormat = classFormat])
 		ifTrue: [newFormat := instFormat]
 		ifFalse:
 			[normalizedInstFormat <= self lastPointerFormat
