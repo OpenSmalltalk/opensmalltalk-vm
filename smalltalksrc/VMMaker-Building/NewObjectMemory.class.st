@@ -160,6 +160,17 @@ NewObjectMemory >> allObjectsDo: aBlock [
 	[oop < freeStart] whileTrue:
 		[(self isFreeObject: oop) ifFalse:
 			[aBlock value: oop].
+		 oop := self objectAfter: oop]
+]
+
+{ #category : #'object enumeration' }
+NewObjectMemory >> allObjectsDoSafely: aBlock [
+	<inline: true>
+	| oop |
+	oop := self firstObject.
+	[oop < freeStart] whileTrue:
+		[(self isFreeObject: oop) ifFalse:
+			[aBlock value: oop].
 		 oop := self objectAfterWhileForwarding: oop]
 ]
 
