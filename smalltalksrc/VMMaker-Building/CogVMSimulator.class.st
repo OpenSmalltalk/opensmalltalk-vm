@@ -175,7 +175,7 @@ CogVMSimulator >> allObjectsSelect: objBlock [
 
 	| selected |
 	selected := OrderedCollection new.
-	objectMemory allObjectsDo:
+	objectMemory allObjectsDoSafely:
 		[:oop| (objBlock value: oop) ifTrue: [selected addLast: oop]].
 	^ selected
 ]
