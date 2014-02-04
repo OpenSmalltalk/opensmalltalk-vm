@@ -6153,7 +6153,7 @@ SpurMemoryManager >> markAndTrace: objOop [
 				 field := self fetchPointer: index ofObject: objToScan.
 				 (self isOopForwarded: field) ifTrue:
 					[field := self followForwarded: field.
-					 self storePointerUnchecked: index ofObject: objToScan withValue: field].
+					 self storePointer: index ofObject: objToScan withValue: field].
 				 (self markAndShouldScan: field) ifTrue:
 					[index > 0 ifTrue:
 						[(self topOfObjStack: markStack) ~= objToScan ifTrue: 
@@ -6173,7 +6173,7 @@ SpurMemoryManager >> markAndTrace: objOop [
 				 field := self fetchPointer: index ofObject: objToScan.
 				 (self isOopForwarded: field) ifTrue:
 					[field := self followForwarded: field.
-					 self storePointerUnchecked: index ofObject: objToScan withValue: field].
+					 self storePointer: index ofObject: objToScan withValue: field].
 				 (self markAndShouldScan: field) ifTrue:
 					[self push: field onObjStack: markStack.
 					 numStrongSlots := self numStrongSlotsOf: field ephemeronInactiveIf: #inactiveOrFailedToDeferScan:.
