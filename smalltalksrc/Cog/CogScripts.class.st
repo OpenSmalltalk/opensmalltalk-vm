@@ -316,7 +316,7 @@ CogScripts class >> changedMethodsForObjectMemorySends [
 	self readOnlyVars do: [:instVar|
 			rules replace: instVar with: 'objectMemory ', instVar].
 	model := RBNamespace new.
-	environment := BrowserEnvironment new forClasses:
+	environment := RBBrowserEnvironment new forClasses:
 						{ StackInterpreter. CoInterpreter. CoInterpreterMT.
 						   StackInterpreterSimulator. CogVMSimulator }.
 	environment classesAndSelectorsDo:
@@ -509,7 +509,7 @@ CogScripts class >> doClassSide [
 
 	rules := RBParseTreeRewriter new.
 	model := RBNamespace new.
-	env := BrowserEnvironment new forClasses: classes.
+	env := RBBrowserEnvironment new forClasses: classes.
 	classes do: [:c| rules replace: c name with: c name, 'S'].
 	env classesAndSelectorsDo:
 		[:class :selector| | tree |
@@ -559,6 +559,22 @@ CogScripts class >> readWriteVars [
 		#growHeadroom #lastHash #lowSpaceThreshold #memory
 		#remapBuffer #remapBufferCount #rootTable #rootTableCount
 		#signalLowSpace #shrinkThreshold tenuringThreshold)
+]
+
+{ #category : #documentation }
+CogScripts class >> refactoringPackages [
+	"to use the source editing facilities in the refactoring browser that this class uses load
+		AST-Core
+		AST-Semantic
+		Refactoring-Core
+		Refactoring-Environment
+		Refactoring-Changes
+	in that order from http://www.squeaksource.com/rb.  Relevant tests are
+		AST-Tests-Core
+		AST-Tests-Semantic
+		Refactoring-Tests-Core
+		Refactoring-Tests-Environment
+		Refactoring-Tests-Changes"
 ]
 
 { #category : #'look on class side' }
