@@ -35,6 +35,17 @@ SpurBootstrapMonticelloPackagePatcher >> from: sourceDirName to: destDirName [
 	destDir := FileDirectory on: destDirName
 ]
 
+{ #category : #patching }
+SpurBootstrapMonticelloPackagePatcher >> modifiedCharacterDefinitionsIn: definitions [
+	| rewriter |
+	rewriter := RBParseTreeRewriter new.
+	rewriter replace: 'value' with: 'self asInteger'.
+	^((definitions select: [:d| d isMethodDefinition and: [d fullClassName = #Character]])
+		collect: [:d| { d. self patchDefinition: d withRewriter: rewriter} ]
+		thenSelect: [:pair| pair first source ~= pair second source])
+			collect: [:pair| pair second]
+]
+
 { #category : #'private-accessing' }
 SpurBootstrapMonticelloPackagePatcher >> packages [
 	"SpurBootstrapMonticelloPackagePatcher new packages"
@@ -86,6 +97,10 @@ SpurBootstrapMonticelloPackagePatcher >> patch [
 			from: '/Users/eliot/Glue/repositories/nsboot/smalltalk'
 			to: '/Users/eliot/Glue/repositories/spurnsboot/smalltalk')
 		patch"
+	"(SpurBootstrapMonticelloPackagePatcher new
+			from: '/Users/eliot/Glue/repositories/nsboot/Squeak4.3/squeak-package-cache'
+			to: '/Users/eliot/Glue/repositories/nsboot/Squeak4.3/package-cache')
+		patch"
 	self packagesAndPatches keysAndValuesDo:
 		[:package :patches|
 		 (self filesForPackage: package in: sourceDir) do:
@@ -94,9 +109,34 @@ SpurBootstrapMonticelloPackagePatcher >> patch [
 ]
 
 { #category : #patching }
+SpurBootstrapMonticelloPackagePatcher >> patchDefinition: aMCMethodDefinition withRewriter: aRBParseTreeRewriter [ 
+	| parseTree |
+	parseTree := RBParser
+					parseMethod: aMCMethodDefinition source
+					onError: [:str :pos | self halt].
+	aRBParseTreeRewriter executeTree: parseTree.
+	^MCMethodDefinition 
+		className: aMCMethodDefinition className
+		classIsMeta:aMCMethodDefinition classIsMeta
+		selector: aMCMethodDefinition selector
+		category: aMCMethodDefinition category
+		timeStamp: aMCMethodDefinition timeStamp
+		source: aRBParseTreeRewriter tree newSource
+]
+
+{ #category : #patching }
 SpurBootstrapMonticelloPackagePatcher >> patchForPackage: package withPatches: patches snapshot: snapshot [
 	(package includesClass: Character) ifTrue:
-		[snapshot halt].
+		[patches addAll: ((self modifiedCharacterDefinitionsIn: snapshot definitions) 
+							select:
+								[:def|
+								 patches noneSatisfy:
+									[:addition|
+									addition definition selector = def selector
+									and: [addition definition className = def className
+									and: [addition definition classIsMeta = def classIsMeta]]]]
+							thenCollect:
+								[:def| MCAddition of: def])].
 	^MCPatch operations: patches
 ]
 
@@ -126,7 +166,9 @@ SpurBootstrapMonticelloPackagePatcher >> version: version withPatches: patches f
 		package: version package
 		info: (ancestry
 				infoWithName: version info name
-				message: version info name, ' patched for Spur')
+				message:	version info name,
+							' patched for Spur by ',
+							(CCodeGenerator new shortMonticelloDescriptionForClass: self class))
 		snapshot: snapshot
 		dependencies: {} "punt on computing dependencies; there are't any so far"
 
