@@ -68,12 +68,15 @@ SpurBootstrapMonticelloPackagePatcher >> packagesAndPatches [
 	| packagesAndPatches |
 	packagesAndPatches := Dictionary new.
 	SpurBootstrap new prototypeClassNameMetaSelectorMethodDo:
-		[:className :isMeta :selector :method| | class methodReference |
+		[:className :isMeta :selector :method| | class methodReference source |
 		 class := Smalltalk classNamed: className.
 		 isMeta ifTrue:
 			[class := class class].
 		 methodReference := (class includesSelector: selector) ifTrue:
 								[(class >> selector) methodReference].
+		 source := method getSourceFromFile asString allButFirst: method selector size - selector size.
+		 source first ~= selector first ifTrue:
+			[source replaceFrom: 1 to: selector size with: selector startingAt: 1].
 		 (packagesAndPatches
 				at: (methodReference
 						ifNotNil: [PackageOrganizer default packageOfMethod: methodReference]
@@ -87,7 +90,7 @@ SpurBootstrapMonticelloPackagePatcher >> packagesAndPatches [
 												ifNotNil: [methodReference category]
 												ifNil: [Categorizer default])
 									timeStamp: method timeStamp
-									source: (method getSourceFromFile asString allButFirst: method selector size - selector size)))].
+									source: source))].
 	^packagesAndPatches
 ]
 
