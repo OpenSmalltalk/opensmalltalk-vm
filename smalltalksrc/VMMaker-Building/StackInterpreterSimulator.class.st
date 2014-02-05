@@ -1789,6 +1789,12 @@ StackInterpreterSimulator >> primitiveObject: actualReceiver perform: selector w
 	^super primitiveObject: actualReceiver perform: selector withArguments: argumentArray lookedUpIn: lookupClass
 ]
 
+{ #category : #'object access primitives' }
+StackInterpreterSimulator >> primitiveObjectPointsTo [
+	"self halt."
+	^super primitiveObjectPointsTo
+]
+
 { #category : #'debugging traps' }
 StackInterpreterSimulator >> primitivePerform [
 	| selector |
