@@ -35,11 +35,13 @@ SpurBootstrapMonticelloPackagePatcher >> from: sourceDirName to: destDirName [
 	destDir := FileDirectory on: destDirName
 ]
 
-{ #category : #patching }
+{ #category : #'private-accessing' }
 SpurBootstrapMonticelloPackagePatcher >> modifiedCharacterDefinitionsIn: definitions [
 	| rewriter |
 	rewriter := RBParseTreeRewriter new.
-	rewriter replace: 'value' with: 'self asInteger'.
+	rewriter
+		replace: 'value' with: 'self asInteger';
+		replace: 'value := ``@args' with: 'DELETEME'.
 	^((definitions select: [:d| d isMethodDefinition and: [d fullClassName = #Character]])
 		collect: [:d| { d. self patchDefinition: d withRewriter: rewriter} ]
 		thenSelect: [:pair| pair first source ~= pair second source])
@@ -139,7 +141,10 @@ SpurBootstrapMonticelloPackagePatcher >> patchForPackage: package withPatches: p
 									and: [addition definition className = def className
 									and: [addition definition classIsMeta = def classIsMeta]]]]
 							thenCollect:
-								[:def| MCAddition of: def])].
+								[:def|
+								 ((def source includesSubString: 'DELETEME')
+									ifTrue: [MCRemoval]
+									ifFalse: [MCAddition]) of: def])].
 	^MCPatch operations: patches
 ]
 
