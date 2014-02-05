@@ -371,50 +371,62 @@ SpurBootstrap class >> CharacterPROTOTYPEDollarEquals: aCharacter [
 
 { #category : #'method prototypes' }
 SpurBootstrap class >> CharacterPROTOTYPEasInteger [
+	"Answer the receiver's character code."
 	<primitive: 171>
 	^self primitiveFailed
 ]
 
 { #category : #'method prototypes' }
 SpurBootstrap class >> CharacterPROTOTYPEasciiValue [
+	"Answer the receiver's character code.
+	 This will be ascii for characters with value <= 127,
+	 and Unicode for those with higher values."
 	<primitive: 171>
 	^self primitiveFailed
 ]
 
 { #category : #'method prototypes' }
 SpurBootstrap class >> CharacterPROTOTYPEclone [
+	"Answer the receiver, because Characters are unique."
 	^self
 ]
 
 { #category : #'method prototypes' }
 SpurBootstrap class >> CharacterPROTOTYPEcopy [
+	"Answer the receiver, because Characters are unique."
 	^self
 ]
 
 { #category : #'method prototypes' }
 SpurBootstrap class >> CharacterPROTOTYPEdeepCopy [
+	"Answer the receiver, because Characters are unique."
 	^self
 ]
 
 { #category : #'method prototypes' }
 SpurBootstrap class >> CharacterPROTOTYPEhash [
+	"Hash is reimplemented because = is implemented.
+	 Answer the receiver's character code."
 	<primitive: 171>
 	^self primitiveFailed
 ]
 
 { #category : #'method prototypes' }
 SpurBootstrap class >> CharacterPROTOTYPEidentityHash [
+	"Answer the receiver's character code."
 	<primitive: 171>
 	^self primitiveFailed
 ]
 
 { #category : #'method prototypes' }
 SpurBootstrap class >> CharacterPROTOTYPEshallowCopy [
+	"Answer the receiver, because Characters are unique."
 	^self
 ]
 
 { #category : #'method prototypes' }
 SpurBootstrap class >> CharacterPROTOTYPEveryDeepCopyWith: deepCopier [
+	"Answer the receiver, because Characters are unique."
 	^self
 ]
 
@@ -430,6 +442,7 @@ SpurBootstrap class >> CharacterclassPROTOTYPEdigitValue: x [
 
 { #category : #'method prototypes' }
 SpurBootstrap class >> CharacterclassPROTOTYPEvalue: anInteger [
+	"Answer the Character whose value is anInteger."
 	<primitive: 170>
 	^self primitiveFailed
 ]
