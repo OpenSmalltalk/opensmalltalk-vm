@@ -551,6 +551,38 @@ SpurBootstrap class >> SystemDictionaryPROTOTYPEsetGCParameters [
 	SmalltalkImage current vmParameterAt: 6 put: numObjects  "tenure when more than this many objects survive the GC"
 ]
 
+{ #category : #'method prototypes' }
+SpurBootstrap class >> WideStringPROTOTYPEat: index [
+	"Answer the Character stored in the field of the receiver indexed by the
+	 argument.  Primitive.  Fail if the index argument is not an Integer or is out
+	 of bounds.  Essential.  See Object documentation whatIsAPrimitive."
+
+	<primitive: 63>
+	^index isInteger
+		ifTrue:
+			[self errorSubscriptBounds: index]
+		ifFalse:
+			[index isNumber
+				ifTrue: [self at: index asInteger]
+				ifFalse: [self errorNonIntegerIndex]]
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> WideStringPROTOTYPEat: index put: aCharacter [
+	"Store the Character into the field of the receiver indicated by the index.
+	 Primitive.  Fail if the index is not an Integer or is out of bounds, or if the
+	 argument is not a Character.  Essential.  See Object documentation whatIsAPrimitive."
+
+	<primitive: 64>
+	^aCharacter isCharacter
+		ifTrue:
+			[index isInteger
+				ifTrue: [self errorSubscriptBounds: index]
+				ifFalse: [self errorNonIntegerIndex]]
+		ifFalse:
+			[self errorImproperStore]
+]
+
 { #category : #'bootstrap methods' }
 SpurBootstrap >> addNewMethods [
 	"Get the simulator to add any and all missing methods immediately."
@@ -1140,9 +1172,11 @@ SpurBootstrap >> installModifiedMethods [
 
 { #category : #'bootstrap methods' }
 SpurBootstrap >> installableMethodFor: aCompiledMethod selector: selector className: className isMeta: isMeta [
-	| compiledMethodClass sourcelessMethod bytes newMethod methodClass |
+	"Create a sourceless method to install in the bootstrapped image.  It will allow the
+	 bootstrap to limp along until the relevant transformed Monticello package is loaded."
+	| compiledMethodClass sourcelessMethod bytes newMethod |
 	compiledMethodClass := self findClassNamed: (self findSymbol: #CompiledMethod).
-	"the prototypes hve source pointers.  the Character methods to be replaced don't."
+	"the prototypes have source pointers.  the Character methods to be replaced don't."
 	sourcelessMethod := aCompiledMethod trailer hasSourcePointer
 							ifTrue: [aCompiledMethod copyWithTempsFromMethodNode: aCompiledMethod methodNode]
 							ifFalse: [aCompiledMethod].
@@ -1153,11 +1187,9 @@ SpurBootstrap >> installableMethodFor: aCompiledMethod selector: selector classN
 					perform: (self findSymbol: #newMethod:header:)
 					withArguments: { oldHeap integerObjectOf: bytes.
 									   oldHeap integerObjectOf: sourcelessMethod header }.
-	1 to: sourcelessMethod numLiterals - 1 do:
+	1 to: sourcelessMethod numLiterals - 2 do:
 		[:i| | literal oop |
 		literal := sourcelessMethod literalAt: i.
-		literal isMethodProperties ifTrue:
-			[literal := selector].
 		oop := (literal isLiteral or: [literal isVariableBinding])
 					ifTrue:
 						[literal isInteger
@@ -1166,8 +1198,16 @@ SpurBootstrap >> installableMethodFor: aCompiledMethod selector: selector classN
 					ifFalse: "should be a VMObjectProxy"
 						[literal oop].
 		oldHeap storePointer: i ofObject: newMethod withValue: oop].
-	methodClass := self methodClassForClassName: className isMeta: isMeta.
-	oldHeap storePointer: sourcelessMethod numLiterals ofObject: newMethod withValue: methodClass.
+	oldHeap
+		storePointer: sourcelessMethod numLiterals - 1
+		ofObject: newMethod
+		withValue: (selector isSymbol
+						ifTrue: [self findSymbol: selector]
+						ifFalse: [selector oop]);
+		storePointer: sourcelessMethod numLiterals
+		ofObject: newMethod
+		withValue: (self methodClassForClassName: className
+						isMeta: isMeta).
 	sourcelessMethod initialPC to: sourcelessMethod size do:
 		[:i|
 		oldHeap storeByte: i - 1 ofObject: newMethod withValue: (sourcelessMethod byteAt: i)].
