@@ -6752,6 +6752,7 @@ StackInterpreter >> internalActivateNewMethod [
 	numTemps := self temporaryCountOfMethodHeader: methodHeader.
 
 	rcvr := self internalStackValue: argumentCount. "could new rcvr be set at point of send?"
+	self assert: (objectMemory isOopForwarded: rcvr) not.
 
 	self internalPush: localIP.
 	self internalPush: localFP.
@@ -7251,6 +7252,7 @@ StackInterpreter >> justActivateNewMethod [
 	numArgs := self argumentCountOfMethodHeader: methodHeader.
 
 	rcvr := self stackValue: numArgs. "could new rcvr be set at point of send?"
+	self assert: (objectMemory isOopForwarded: rcvr) not.
 
 	self push: instructionPointer.
 	self push: framePointer.
@@ -8830,9 +8832,19 @@ StackInterpreter >> positive64BitIntegerFor: integerValue [
 
 { #category : #'object memory support' }
 StackInterpreter >> postBecomeAction: theBecomeEffectsFlags [
+	"Insulate the stack zone from the effects of a become.
+	 All receivers must be unfollowed for two reasons:
+		1. inst var access is direct with no read barrier
+		2. super sends (always to the receiver) have no class check and so don't trap
+		   for forwarded receivers.
+	 Methods must be unfollowed since bytecode access is direct with no read barrier.
+	 But this only needs to be done if the becomeEffectsFlags indicate that a
+	 CompiledMethod was becommed.
+	 The sceduler state must be followed, but only if the becomeEffectsFlags indicate
+	 that a pointer object was becommed."
+	self followForwardingPointersInStackZone: theBecomeEffectsFlags.
 	theBecomeEffectsFlags ~= 0 ifTrue:
-		[self followForwardingPointersInStackZone: theBecomeEffectsFlags.
-		 (theBecomeEffectsFlags anyMask: BecameCompiledMethodFlag) ifTrue:
+		[(theBecomeEffectsFlags anyMask: BecameCompiledMethodFlag) ifTrue:
 			[self followForwardedMethodsInMethodCache.
 			 self followForwardedMethodsInMethodZone]. "for CoInterpreter"
 		 self followForwardingPointersInScheduler]
@@ -11664,6 +11676,7 @@ StackInterpreter >> slowPrimitiveResponse [
 	<asmLabel: false>
 	<var: #savedFramePointer type: #'char *'>
 	<var: #savedStackPointer type: #'char *'>
+	self assert: (objectMemory isOopForwarded: (self stackValue: argumentCount)) not.
 	FailImbalancedPrimitives ifTrue:
 		[nArgs := argumentCount.
 		 savedStackPointer := stackPointer.
