@@ -627,6 +627,7 @@ CoInterpreter >> activateNewMethod [
 	numArgs := self argumentCountOfMethodHeader: methodHeader.
 
 	rcvr := self stackValue: numArgs. "could new rcvr be set at point of send?"
+	self assert: (objectMemory isOopForwarded: rcvr) not.
 
 	"Because this is an uncogged method we need to continue via the interpreter.
 	 We could have been reached either from the interpreter, in which case we
@@ -3805,6 +3806,7 @@ CoInterpreter >> internalActivateNewMethod [
 	numTemps := self temporaryCountOfMethodHeader: methodHeader.
 
 	rcvr := self internalStackValue: argumentCount. "could new rcvr be set at point of send?"
+	self assert: (objectMemory isOopForwarded: rcvr) not.
 
 	self internalPush: localIP.
 	self internalPush: localFP.
@@ -4078,6 +4080,7 @@ CoInterpreter >> justActivateNewMethod [
 	numArgs := self argumentCountOfMethodHeader: methodHeader.
 
 	rcvr := self stackValue: numArgs. "could new rcvr be set at point of send?"
+	self assert: (objectMemory isOopForwarded: rcvr) not.
 
 	(activateCogMethod
 	and: [instructionPointer >= objectMemory startOfMemory]) ifTrue:
