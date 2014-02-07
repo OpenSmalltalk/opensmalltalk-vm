@@ -3945,8 +3945,12 @@ SpurMemoryManager >> fixedFieldsOf: objOop format: fmt length: wordLength [
 	| class |
 	<inline: true>
 	<asmLabel: false>
-	(fmt > self lastPointerFormat or: [fmt = 2]) ifTrue: [^0].  "indexable fields only"
-	fmt < 2 ifTrue: [^wordLength].  "fixed fields only (zero or more)"
+	"N.B. written to fall through to fetchClassOfNonImm: et al for forwarders
+	 so as to trigger an assert fail."
+	(fmt >= self sixtyFourBitIndexableFormat or: [fmt = self arrayFormat]) ifTrue:
+		[^0].  "indexable fields only"
+	fmt < self arrayFormat ifTrue:
+		[^wordLength].  "fixed fields only (zero or more)"
 	class := self fetchClassOfNonImm: objOop.
 	^self fixedFieldsOfClassFormat: (self formatOfClass: class)
 ]
@@ -5760,7 +5764,7 @@ SpurMemoryManager >> isWordsOrBytes: oop [
 
 { #category : #'object testing' }
 SpurMemoryManager >> isWordsOrBytesNonImm: objOop [
-	^(self formatOf: objOop) > self lastPointerFormat
+	^(self formatOf: objOop) >= self sixtyFourBitIndexableFormat
 ]
 
 { #category : #'object testing' }
@@ -7107,6 +7111,13 @@ SpurMemoryManager >> primitiveFail [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	<doNotGenerate>
 	^coInterpreter primitiveFail
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> primitiveFailFor: reasonCode [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter primitiveFailFor: reasonCode
 ]
 
 { #category : #'simulation only' }
