@@ -3812,7 +3812,12 @@ StackInterpreter >> commonVariable: rcvr at: index cacheIndex: atIx [
 			 ^self positive32BitIntegerFor: result].
 		 fmt >= objectMemory firstStringyFakeFormat  "Note fmt >= firstStringyFormat is an artificial flag for strings"
 			ifTrue: "String"
-				[^self characterForAscii: (objectMemory fetchByte: index - 1 ofObject: rcvr)]
+				["Spur supports the String at:[put:] primitives on WideString"
+				 result := (objectMemory hasSpurMemoryManagerAPI
+							and: [fmt - objectMemory firstStringyFakeFormat < objectMemory firstByteFormat])
+								ifTrue: [objectMemory fetchLong32: index - 1 ofObject: rcvr]
+								ifFalse: [objectMemory fetchByte: index - 1 ofObject: rcvr].
+				^self characterForAscii: result]
 			ifFalse:
 				[(fmt < objectMemory firstCompiledMethodFormat "ByteArray"
 				  or: [index >= (self firstByteIndexOfMethod: rcvr) "CompiledMethod"]) ifTrue:
@@ -3839,8 +3844,7 @@ StackInterpreter >> commonVariable: rcvr at: index put: value cacheIndex: atIx [
 		fmt < objectMemory firstByteFormat ifTrue:  "Bitmap"
 			[valToPut := self positive32BitValueOf: value.
 			 self successful ifTrue:
-				[objectMemory storeLong32: index - 1 ofObject: rcvr withValue: valToPut.
-				^nil].
+				[^objectMemory storeLong32: index - 1 ofObject: rcvr withValue: valToPut].
 			 ^self primitiveFailFor: PrimErrBadArgument].
 		fmt >= objectMemory firstStringyFakeFormat  "Note fmt >= firstStringyFormat is an artificial flag for strings"
 			ifTrue:
@@ -3853,7 +3857,10 @@ StackInterpreter >> commonVariable: rcvr at: index put: value cacheIndex: atIx [
 						[valToPut := objectMemory fetchPointer: CharacterValueIndex ofObject: value.
 						 valToPut := (objectMemory isIntegerObject: valToPut)
 										ifTrue: [objectMemory integerValueOf: valToPut]
-										ifFalse: [-1]]]
+										ifFalse: [-1]].
+				 (objectMemory hasSpurMemoryManagerAPI
+				  and: [fmt - objectMemory firstStringyFakeFormat < objectMemory firstByteFormat]) ifTrue:
+					[^objectMemory storeLong32: index - 1 ofObject: rcvr withValue: valToPut]]
 			ifFalse:
 				[(fmt >= objectMemory firstCompiledMethodFormat
 				  and: [index < (self firstByteIndexOfMethod: rcvr)]) ifTrue:

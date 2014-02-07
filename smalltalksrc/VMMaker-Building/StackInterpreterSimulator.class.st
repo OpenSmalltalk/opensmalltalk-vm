@@ -183,6 +183,12 @@ StackInterpreterSimulator >> byteCountText [
 	^ byteCount printString asText
 ]
 
+{ #category : #'indexing primitives' }
+StackInterpreterSimulator >> bytecodePrimAtPut [
+	"self halt."
+	^super bytecodePrimAtPut
+]
+
 { #category : #'memory access' }
 StackInterpreterSimulator >> cCoerce: value to: cTypeString [
 	"Type coercion for translation only; just return the value when running in Smalltalk."
