@@ -1352,7 +1352,7 @@ SpurBootstrap >> mapOldBehavior: oldObj toNewBehavior: newObj [
 			 and: [field := oldHeap fetchPointer: 0 ofObject: var.
 				(oldHeap fetchClassOf: field) = oldHeap classString
 			 and: [(oldHeap lengthOf: field) = 5
-			 and: [(oldHeap str: (oldHeap firstIndexableField: field) n: 'value' cmp: 5) = 0]]]]) ifTrue:
+			 and: [(oldHeap str: 'value'  n: (oldHeap firstIndexableField: field) cmp: 5) = 0]]]]) ifTrue:
 				[newHeap
 					storePointerUnchecked: i
 					ofObject: newObj
