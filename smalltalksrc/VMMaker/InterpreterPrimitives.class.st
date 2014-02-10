@@ -949,7 +949,7 @@ InterpreterPrimitives >> primitiveClone [
 			[newCopy := objectMemory clone: rcvr.
 			 newCopy = 0 ifTrue: "not enough memory most likely"
 				[^self primitiveFail]].
-	self pop: 1 thenPush: newCopy
+	self pop: argumentCount + 1 thenPush: newCopy
 ]
 
 { #category : #'control primitives' }
