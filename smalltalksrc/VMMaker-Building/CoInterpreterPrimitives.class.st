@@ -151,7 +151,7 @@ CoInterpreterPrimitives >> primitiveClone [
 			(objectMemory isCompiledMethodHeader: objHeader) ifTrue:
 				["use stackTop since GC may have moved rcvr"
 				 self rawHeaderOf: newCopy put: (self headerOf: self stackTop)]].
-	self pop: 1 thenPush: newCopy
+	self pop: argumentCount + 1 thenPush: newCopy
 ]
 
 { #category : #'control primitives' }
