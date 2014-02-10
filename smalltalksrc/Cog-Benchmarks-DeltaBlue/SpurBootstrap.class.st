@@ -1009,10 +1009,7 @@ SpurBootstrap >> fillInPointerObject: newObj from: oldObj [
 			ofObject: newObj
 			withValue: newValue].
 	(self isOldObjABehavior: oldObj) ifTrue:
-		[newHeap
-			storePointerUnchecked: InstanceSpecificationIndex
-			ofObject: newObj
-			withValue: (self newClassFormatFor: oldObj)]
+		[self mapOldBehavior: oldObj toNewBehavior: newObj]
 ]
 
 { #category : #'bootstrap methods' }
@@ -1336,6 +1333,31 @@ SpurBootstrap >> launchSavedWithJIT [
 	self launch: (self coHeapFrom: TransformedImage veryDeepCopy)
 		simulatorClass: CogVMSimulator
 		headerFlags: ImageHeaderFlags
+]
+
+{ #category : #'bootstrap image' }
+SpurBootstrap >> mapOldBehavior: oldObj toNewBehavior: newObj [
+	"Map the old format inst var's value to the new value.
+	 In addition, for Character, make it immediate and remove its instance variable."
+	newHeap
+		storePointerUnchecked: InstanceSpecificationIndex
+		ofObject: newObj
+		withValue: (self newClassFormatFor: oldObj).
+	oldObj = oldHeap classCharacter ifTrue:
+		[InstanceSpecificationIndex + 1 to: (oldHeap numSlotsOf: oldObj) do:
+			[:i| | var field |
+			var := oldHeap fetchPointer: i ofObject: oldObj.
+			((oldHeap fetchClassOf: var) = oldHeap classArray
+			 and: [(oldHeap numSlotsOf: var) = 1
+			 and: [field := oldHeap fetchPointer: 0 ofObject: var.
+				(oldHeap fetchClassOf: field) = oldHeap classString
+			 and: [(oldHeap lengthOf: field) = 5
+			 and: [(oldHeap str: (oldHeap firstIndexableField: field) n: 'value' cmp: 5) = 0]]]]) ifTrue:
+				[newHeap
+					storePointerUnchecked: i
+					ofObject: newObj
+					withValue: newHeap nilObject.
+				 ^self]]]
 ]
 
 { #category : #stats }
