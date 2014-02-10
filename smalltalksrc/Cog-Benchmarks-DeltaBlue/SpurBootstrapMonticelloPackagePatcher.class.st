@@ -42,10 +42,18 @@ SpurBootstrapMonticelloPackagePatcher >> modifiedCharacterDefinitionsIn: definit
 	rewriter
 		replace: 'value' with: 'self asInteger';
 		replace: 'value := ``@args' with: 'DELETEME'.
-	^((definitions select: [:d| d isMethodDefinition and: [d fullClassName = #Character]])
+	^(((definitions select: [:d| d isMethodDefinition and: [d fullClassName = #Character]])
 		collect: [:d| { d. self patchDefinition: d withRewriter: rewriter} ]
 		thenSelect: [:pair| pair first source ~= pair second source])
-			collect: [:pair| pair second]
+			collect: [:pair| pair second]),
+	 (definitions
+		select: [:d| d isClassDefinition and: [d className = #Character]]
+		thenCollect:
+			[:d|
+			 d variables removeAllSuchThat:
+				[:varDef|
+				 varDef isInstanceVariable and: [varDef name = 'value']].
+			 d])
 ]
 
 { #category : #'private-accessing' }
@@ -137,9 +145,10 @@ SpurBootstrapMonticelloPackagePatcher >> patchForPackage: package withPatches: p
 								[:def|
 								 patches noneSatisfy:
 									[:addition|
-									addition definition selector = def selector
+									def isMethodDefinition
+									and: [addition definition selector = def selector
 									and: [addition definition className = def className
-									and: [addition definition classIsMeta = def classIsMeta]]]]
+									and: [addition definition classIsMeta = def classIsMeta]]]]]
 							thenCollect:
 								[:def|
 								 ((def source includesSubString: 'DELETEME')
