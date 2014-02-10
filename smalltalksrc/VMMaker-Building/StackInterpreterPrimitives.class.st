@@ -224,7 +224,7 @@ StackInterpreterPrimitives >> primitiveClone [
 					[newCopy := objectMemory clone: rcvr].
 			newCopy = 0 ifTrue:
 				[^self primitiveFailFor: PrimErrNoMemory]].
-	self pop: 1 thenPush: newCopy
+	self pop: argumentCount + 1 thenPush: newCopy
 ]
 
 { #category : #'control primitives' }
