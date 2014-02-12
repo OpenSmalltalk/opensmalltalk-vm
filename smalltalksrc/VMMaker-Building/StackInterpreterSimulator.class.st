@@ -1746,11 +1746,13 @@ StackInterpreterSimulator >> primitiveNewWithArg [
 		[self halt]."
 	"| hash |
 	hash := objectMemory rawHashBitsOf: (self stackValue: 1)."
-	| format |
-	format := objectMemory instSpecOfClass: (self stackValue: 1).
+	"| format |
+	format := objectMemory instSpecOfClass: (self stackValue: 1)."
+	"(objectMemory numSlotsOf: (self stackValue: 1)) = 3 ifTrue:
+		[self halt]."
 	super primitiveNewWithArg.
-	self successful ifTrue:
-		[(Smalltalk at: #Counts ifAbsentPut: [Bag new]) add: format].
+	"self successful ifTrue:
+		[(Smalltalk at: #Counts ifAbsentPut: [Bag new]) add: format]."
 	"(self successful and: [objectMemory hasSpurMemoryManagerAPI]) ifTrue:
 		[(Smalltalk at: #Counts ifAbsentPut: [Bag new]) add: hash]"
 	"Smalltalk removeKey: #Counts"
