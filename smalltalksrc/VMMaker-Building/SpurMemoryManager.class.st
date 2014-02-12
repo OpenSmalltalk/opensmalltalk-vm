@@ -6498,10 +6498,32 @@ SpurMemoryManager >> needGCFlag [
 
 { #category : #accessing }
 SpurMemoryManager >> newObjectHash [
-	"Use simple algorithm by D.H. Lehmer from 1951, for now."
-	lastHash := lastHash * 16807 "7 raisedTo: 5" \\ 16r7ffffffd "(2 raisedTo: 31) - 1".
+	"Use a slight variation on D.H. Lehmer's linear congruential generator from 1951.
+	 See e.g. http://en.wikipedia.org/wiki/Linear_congruential_generator."
+	lastHash := self cCode: [lastHash * 16807] "7 raisedTo: 5"
+					inSmalltalk: [lastHash := lastHash * 16807 bitAnd: 16rFFFFFFFF].
 	self assert: lastHash ~= 0.
-	^lastHash
+	^lastHash + (lastHash >> 8) "adding the top bits gives much better spread.  See below:"
+
+	"| r s n |
+	r := 1.
+	n := 256 * 256 * 256.
+	s := Set new: n * 2.
+	n timesRepeat:
+		[s add: (r + (r bitShift: -8) bitAnd: n - 1).
+		r := r * 16807 bitAnd: 16rFFFFFFFF].
+	{ s size. s size / n asFloat. s includes: 0. r hex }
+=>	#(10702109 0.637895405292511 false '16r38000001')"
+
+	"| r s n |
+	r := 1.
+	n := 256 * 256 * 256.
+	s := Set new: n * 2.
+	n timesRepeat:
+		[s add: (r bitAnd: n - 1).
+		r := r * 16807 bitAnd: 16rFFFFFFFF].
+	{ s size. s size / n asFloat. s includes: 0. r hex }
+=>	 #(2097152 0.125 false '16r38000001')"
 ]
 
 { #category : #accessing }
