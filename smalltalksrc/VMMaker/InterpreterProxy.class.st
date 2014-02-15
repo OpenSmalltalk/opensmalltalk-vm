@@ -212,7 +212,7 @@ InterpreterProxy >> classUnsafeAlien [
 
 { #category : #'instance creation' }
 InterpreterProxy >> clone: oop [
-	^oop clone
+	^oop shallowCopy
 ]
 
 { #category : #'BitBlt support' }
