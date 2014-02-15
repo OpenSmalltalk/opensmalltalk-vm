@@ -47,7 +47,8 @@ Class {
 		'extSemTabSize',
 		'atEachStepBlock',
 		'disableBooleanCheat',
-		'performFilters'
+		'performFilters',
+		'eventQueue'
 	],
 	#category : #'VMMaker-InterpreterSimulation'
 }
@@ -376,10 +377,40 @@ StackInterpreterSimulator >> dispatchOn: anInteger in: selectorArray [
 	self perform: (selectorArray at: (anInteger + 1)).
 ]
 
+{ #category : #accessing }
+StackInterpreterSimulator >> displayForm [
+	"The VM SImulator draws directly on an imageMorph named displayView
+	  displayView is housed on a Form named displayForm
+	  displayForm is initialized in my initialize method. 
+	  it 'needs' to be initialized there to support Eliot's legacy openAsMorph functionality
+	"
+	^displayForm
+]
+
 { #category : #'I/O primitives support' }
 StackInterpreterSimulator >> displayLocation [
 
 	^ Display extent - displayForm extent - (10@10)
+]
+
+{ #category : #accessing }
+StackInterpreterSimulator >> displayView [
+	"The VM SImulator draws directly on an imageMorph named displayView
+	  displayView is housed on a Form named displayForm
+	  Since this is housed directly on the Morph, I have this tight compling from here->model->morph. 
+	"
+	self flag: 'tty'.	
+	^displayView
+]
+
+{ #category : #accessing }
+StackInterpreterSimulator >> displayView: anImageMorph [
+	"The VM SImulator draws directly on an imageMorph named displayView
+	  displayView is housed on a Form named displayForm
+	  Since this is housed directly on the Morph, I have this tight compling from here->model->morph. 
+	"
+	self flag: 'tty'.
+	displayView := anImageMorph
 ]
 
 { #category : #'debugging traps' }
@@ -686,7 +717,7 @@ StackInterpreterSimulator >> incrementByteCount [
 	byteCount \\ 1000 = 0 ifTrue:
 		[self doOrDefer: [self changed: #byteCountText].
 		 self forceInterruptCheck.
-		 byteCount \\ 10000 = 0 ifTrue: [self fullDisplayUpdate]]
+		 byteCount \\ 1000 = 0 ifTrue: [self fullDisplayUpdate]] "tty. denominator was 10000 before event forwarding. Refactor me."
 ]
 
 { #category : #initialization }
@@ -738,7 +769,10 @@ StackInterpreterSimulator >> initialize [
 	suppressHeartbeatFlag := false.
 	systemAttributes := Dictionary new.
 	extSemTabSize := 256.
-	disableBooleanCheat := false
+	disableBooleanCheat := false.
+
+	"Forward events from the host to the Simulator tty"
+	eventQueue := SharedQueue new.
 ]
 
 { #category : #'frame access' }
@@ -873,8 +907,15 @@ StackInterpreterSimulator >> ioGetMaxExtSemTableSize [
 
 { #category : #'I/O primitives' }
 StackInterpreterSimulator >> ioGetNextEvent: evtBuf [
-
-	self primitiveFail.
+	| evt  |
+	"StackInterpreterSimulatorMorphicModel browse"
+	eventQueue isNil ifTrue: 
+		[^self primitiveFail].
+	eventQueue isEmpty
+		ifFalse:
+			[	evt :=  eventQueue next.
+			      1 to: (evt size) do: [:i | ((evt at: i) isNil) ifFalse: [evtBuf at: (i - 1) put: (evt at: i)]]].
+	 self success: true.
 
 ]
 
@@ -1399,6 +1440,33 @@ StackInterpreterSimulator >> openAsMorphNoTranscript [
 								+ (2 * borderWidth)
 								+ (0@window labelHeight)
 								* (1@(1/0.95))) rounded
+]
+
+{ #category : #UI }
+StackInterpreterSimulator >> openAsStackInterpreterSimulatorMorph [
+	"Open a morphic view on this simulation. ala Bert Freudenberg's
+	SqueakJS http://lively-web.org/users/bert/squeak.html	"
+	| localImageName borderWidth window |
+	localImageName := imageName
+				ifNil: [' synthetic image']
+				ifNotNil: [FileDirectory default localNameFor: imageName].
+
+	transcript := TranscriptStream
+				on: (String new: 10000).
+
+	window := StackInterpreterSimulatorMorph	
+					withVMSimulator: self 
+					title: 'Simulation of ' , localImageName, ' (beta)'
+					transcript: transcript.				
+
+	borderWidth := [StackInterpreterSimulatorMorph borderWidth
+			"Squeak 4.1"]
+				on: MessageNotUnderstood
+				do: [:ex | 0].
+	"3.8"
+	borderWidth := borderWidth + window borderWidth.
+	window openInWorldExtent: (self desiredDisplayExtent + (2 * borderWidth) + (0 @ window labelHeight) * (1 @ (1 / 0.8))) rounded.
+	^ window
 ]
 
 { #category : #initialization }
@@ -2026,6 +2094,13 @@ StackInterpreterSimulator >> pushMaybeContextReceiverVariable: index [
 	^super pushMaybeContextReceiverVariable: index
 ]
 
+{ #category : #'event forwarding' }
+StackInterpreterSimulator >> queueForwardedEvent:evt [
+	eventQueue isNil
+		ifTrue:[eventQueue := SharedQueue new].
+	eventQueue nextPut: evt.
+]
+
 { #category : #'image save/restore' }
 StackInterpreterSimulator >> reverseBytesInImage [
 	Utilities
@@ -2548,14 +2623,27 @@ StackInterpreterSimulator >> toggleTranscript [
 					ifFalse: [Transcript]
 ]
 
-{ #category : #'simulation only' }
-StackInterpreterSimulator >> transcript [
-	^transcript
+{ #category : #UI }
+StackInterpreterSimulator >> toggleTranscriptForSimulatorMorph: aTranscriptStreamOrTranscript [
+	"tty think this through when not so tired"
+	self flag: 'tty'.
+	transcript ifNil: [transcript := Transcript. ^self].
+	displayView ifNil: [^self changed: #flash].
+	transcript := transcript = Transcript
+					ifTrue: [aTranscriptStreamOrTranscript]
+					ifFalse: [Transcript]
 ]
 
-{ #category : #'simulation only' }
+{ #category : #accessing }
+StackInterpreterSimulator >> transcript [
+	"tty accessor needed by StackInstperpeterSimulatorMorphicModel"
+		^transcript
+]
+
+{ #category : #accessing }
 StackInterpreterSimulator >> transcript: aTranscript [
-	transcript := aTranscript
+	"tty accessor needed by StackInstperpeterSimulatorMorphicModel"
+		transcript := aTranscript
 ]
 
 { #category : #'debugging traps' }
