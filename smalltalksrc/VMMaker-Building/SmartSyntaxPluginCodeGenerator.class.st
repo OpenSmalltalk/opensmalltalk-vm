@@ -743,7 +743,7 @@ SmartSyntaxPluginCodeGenerator >> initializeCTranslationDictionary [
 		#isIndexable					#generateIsIndexable:on:indent:
 		#isIntegerOop				#generateIsIntegerOop:on:indent:
 		#isIntegerValue				#generateIsIntegerValue:on:indent:
-		#FloatOop					#generateIsFloatValue:on:indent:
+		"#FloatOop					#generateIsFloatValue:on:indent:"		"unused, never implemented"
 		#isWords					#generateIsWords:on:indent:
 		#isWordsOrBytes				#generateIsWordsOrBytes:on:indent:
 		#isPointers					#generateIsPointers:on:indent:
@@ -752,10 +752,10 @@ SmartSyntaxPluginCodeGenerator >> initializeCTranslationDictionary [
 		#isKindOf:					#generateIsKindOf:on:indent:
 
 		#fromStack:					#generateFromStack:on:indent:
-		#clone						#generateClone:on:indent
-		#new						#generateNew:on:indent
-		#new:						#generateNewSize:on:indent
-		#superclass					#generateSuperclass:on:indent:
+		"#clone						#generateClone:on:indent:"				"unused, never implemented"
+		"#new						#generateNew:on:indent:"				"unused, never implemented"
+		"#new:						#generateNewSize:on:indent:"			"unused, never implemented"
+		"#superclass					#generateSuperclass:on:indent:"	"unused, never implemented"
 		#remapOop:in:				#generateRemapOopIn:on:indent:
 		#debugCode:					#generateDebugCode:on:indent:
 	).

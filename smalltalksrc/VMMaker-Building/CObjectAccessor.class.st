@@ -24,7 +24,7 @@ CObjectAccessor class >> on: anObject [
 
 { #category : #'pointer arithmetic' }
 CObjectAccessor >> + increment [
-	^self clone += increment
+	^self shallowCopy += increment
 ]
 
 { #category : #'pointer arithmetic' }
@@ -34,7 +34,7 @@ CObjectAccessor >> += increment [
 
 { #category : #'pointer arithmetic' }
 CObjectAccessor >> - decrement [
-	^self clone -= decrement
+	^self shallowCopy -= decrement
 ]
 
 { #category : #'pointer arithmetic' }
