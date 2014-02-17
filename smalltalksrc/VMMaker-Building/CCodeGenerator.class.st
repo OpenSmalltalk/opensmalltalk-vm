@@ -3890,7 +3890,9 @@ CCodeGenerator >> shouldIncludeMethodFor: aClass selector: selector [
 				 cogitClass := Smalltalk classNamed: vmMaker cogitClassName.
 				 optionClass := Smalltalk classNamed: key.
 				 ^cogitClass includesBehavior: optionClass].
-			(vmMaker options at: key ifAbsent: [false]) ifNotNil:
+			((vmClass
+				ifNotNil: [vmClass initializationOptions]
+				ifNil: [vmMaker options]) at: key ifAbsent: [false]) ifNotNil:
 				[:option| option ~~ false ifTrue: [^true]].
 		(aClass bindingOf: key) ifNotNil:
 			[:binding|

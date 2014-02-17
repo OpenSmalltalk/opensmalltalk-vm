@@ -358,12 +358,70 @@ SpurSegmentManager >> numSegments [
 	^numSegments
 ]
 
+{ #category : #snapshot }
+SpurSegmentManager >> postSnapshot [
+	"Restore all shortened segments to their proper size,
+	 re-freeing the trailing space."
+	numSegments - 1 to: 0 by: -1 do:
+		[:i|
+		 (segments at: i) lastFreeObject ifNotNil:
+			[:freeChunk| | address |
+			address := (segments at: i) segLimit - manager bridgeSize.
+			(segments at: i) segSize: (segments at: i) savedSegSize.
+			self bridgeFrom: (self addressOf: (segments at: i))
+				to: (i < (numSegments - 1) ifTrue: [self addressOf: (segments at: i + 1)]).
+			manager
+				addFreeChunkWithBytes: (segments at: i) segLimit - address - manager bridgeSize
+				at: address]].
+
+	"perhaps this should read
+		manager setEndOfMemory: 0; assimilateNewSegment: (segments at: numSegments - 1)"
+	manager setEndOfMemory: (segments at: numSegments - 1) segLimit - manager bridgeSize
+]
+
 { #category : #pinning }
 SpurSegmentManager >> prepareForGlobalSweep [
 	"Let the segmentManager mark which segments contain pinned objects via notePinned:"
 	sweepIndex := 0.
 	0 to: numSegments - 1 do:
 		[:i| (segments at: i) containsPinned: false]
+]
+
+{ #category : #snapshot }
+SpurSegmentManager >> prepareForSnapshot [
+	"shorten all segments by any trailing free space."
+	<var: #seg type: #'SpurSegmentInfo *'>
+	0 to: numSegments - 1 do:
+		[:i|
+		 (segments at: i)
+			savedSegSize: (segments at: i) segSize;
+			lastFreeObject: nil].
+
+	"Ideally finding the lastFreeObject of each segment would be
+	 done in some linear pass through the heap.  But for now KISS."
+	manager freeTreeNodesDo:
+		[:freeChunk| | next seg |
+		 next := manager objectAfter: freeChunk limit: manager endOfMemory.
+		 (manager isSegmentBridge: next) ifTrue:
+			[seg := self segmentContainingObj: freeChunk.
+			 seg lastFreeObject: freeChunk].
+		 freeChunk].
+
+	0 to: numSegments - 1 do:
+		[:i|
+		 (segments at: i) lastFreeObject ifNotNil:
+			[:freeChunk|
+			manager detachFreeObject: freeChunk.
+			(segments at: i)
+				segSize: (manager startOfObject: freeChunk)
+						+ manager bridgeSize
+						- (segments at: i) segStart.
+			self bridgeFrom: (self addressOf: (segments at: i))
+				to: (i < (numSegments - 1) ifTrue: [self addressOf: (segments at: i + 1)])]].
+
+	"perhaps this should read
+		manager setEndOfMemory: 0; assimilateNewSegment: (segments at: numSegments - 1)"
+	manager setEndOfMemory: (segments at: numSegments - 1) segLimit - manager bridgeSize
 ]
 
 { #category : #private }
@@ -425,6 +483,16 @@ SpurSegmentManager >> readHeapFromImageFile: f dataBytes: numBytes [
 	"we're done. nil firstSegmentSize for a subsequent snapshot."
 	firstSegmentSize := nil.
 	^totalBytesRead
+]
+
+{ #category : #accessing }
+SpurSegmentManager >> segmentContainingObj: objOop [
+	<returnTypeC: #'SpurSegmentInfo *'>
+	numSegments - 1 to: 0 by: -1 do:
+		[:i|
+		objOop >= (segments at: i) segStart ifTrue:
+			[^self addressOf: (segments at: i)]].
+	^nil
 ]
 
 { #category : #accessing }

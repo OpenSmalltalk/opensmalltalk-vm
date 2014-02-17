@@ -728,6 +728,7 @@ StackInterpreterSimulator >> initialize [
 	 global arrays in the translated code."
 
 	bootstrapping := false.
+	transcript := Transcript.
 
 	objectMemory ifNil:
 		[objectMemory := self class objectMemoryClass simulatorClass new].
@@ -745,13 +746,14 @@ StackInterpreterSimulator >> initialize [
 	externalPrimitiveTable := CArrayAccessor on: (Array new: MaxExternalPrimitiveTableSize).
 	externalPrimitiveTableFirstFreeIndex := 0.
 	primitiveTable := self class primitiveTable copy.
+	mappedPluginEntries := OrderedCollection new.
 	objectMemory hasSpurMemoryManagerAPI
 		ifTrue:
-			[primitiveAccessorDepthTable := self class primitiveAccessorDepthTable.
-			 pluginList := {}]
+			[primitiveAccessorDepthTable := Array new: primitiveTable size.
+			 pluginList := {}.
+			 self loadNewPlugin: '']
 		ifFalse:
 			[pluginList := {'' -> self }].
-	mappedPluginEntries := OrderedCollection new.
 	desiredNumStackPages := desiredEdenBytes := 0.
 	"This is initialized on loading the image, but convenient for testing stack page values..."
 	numStackPages := self defaultNumStackPages. 
@@ -764,15 +766,12 @@ StackInterpreterSimulator >> initialize [
 	traceOn := true.
 	printSends := printReturns := printFrameAtEachStep := printBytecodeAtEachStep := false.
 	myBitBlt := BitBltSimulator new setInterpreter: self.
-	transcript := Transcript.
 	displayForm := 'Display has not yet been installed' asDisplayText form.
+	eventQueue := SharedQueue new.
 	suppressHeartbeatFlag := false.
 	systemAttributes := Dictionary new.
 	extSemTabSize := 256.
-	disableBooleanCheat := false.
-
-	"Forward events from the host to the Simulator tty"
-	eventQueue := SharedQueue new.
+	disableBooleanCheat := false
 ]
 
 { #category : #'frame access' }
@@ -1750,13 +1749,12 @@ StackInterpreterSimulator >> primitiveGetAttribute [
 	| index s attribute |
 	index := self stackIntegerValue: 0.
 	self successful ifTrue: [
-		attribute := systemAttributes at: index ifAbsent: [Smalltalk getSystemAttribute: index].
+		attribute := systemAttributes at: index ifAbsent: [Smalltalk vm getSystemAttribute: index].
 		attribute ifNil: [ ^self primitiveFail ].
 		s := objectMemory instantiateClass: (objectMemory splObj: ClassByteString) indexableSize: attribute size.
 		1 to: attribute size do: [ :i |
 			objectMemory storeByte: i-1 ofObject: s withValue: (attribute at: i) asciiValue].
-		self pop: 2.  "rcvr, attr"
-		self push: s]
+		self pop: 2 "rcvr, attr" thenPush: s]
 ]
 
 { #category : #'debugging traps' }
@@ -2636,14 +2634,12 @@ StackInterpreterSimulator >> toggleTranscriptForSimulatorMorph: aTranscriptStrea
 
 { #category : #accessing }
 StackInterpreterSimulator >> transcript [
-	"tty accessor needed by StackInstperpeterSimulatorMorphicModel"
-		^transcript
+	^transcript
 ]
 
 { #category : #accessing }
 StackInterpreterSimulator >> transcript: aTranscript [
-	"tty accessor needed by StackInstperpeterSimulatorMorphicModel"
-		transcript := aTranscript
+	transcript := aTranscript
 ]
 
 { #category : #'debugging traps' }

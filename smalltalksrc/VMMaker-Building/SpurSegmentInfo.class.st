@@ -5,7 +5,9 @@ Class {
 		'segStart',
 		'segSize',
 		'swizzle',
-		'containsPinned'
+		'containsPinned',
+		'savedSegSize',
+		'lastFreeObject'
 	],
 	#category : #'VMMaker-SpurMemoryManager'
 }
@@ -43,6 +45,20 @@ SpurSegmentInfo >> initialize [
 	containsPinned := false
 ]
 
+{ #category : #accessing }
+SpurSegmentInfo >> lastFreeObject [
+	"Answer the value of lastFreeObject"
+
+	^ lastFreeObject
+]
+
+{ #category : #accessing }
+SpurSegmentInfo >> lastFreeObject: anObject [
+	"Set the value of lastFreeObject"
+
+	^lastFreeObject := anObject
+]
+
 { #category : #printing }
 SpurSegmentInfo >> printOn: aStream [
 	<doNotGenerate>
@@ -53,6 +69,20 @@ SpurSegmentInfo >> printOn: aStream [
 		aStream space; nextPutAll: name; space; print: iv.
 		(iv isInteger and: [iv ~= 0]) ifTrue:
 			[aStream nextPut: $/.  iv storeOn: aStream base: 16]]
+]
+
+{ #category : #accessing }
+SpurSegmentInfo >> savedSegSize [
+	"Answer the value of savedSegSize"
+
+	^ savedSegSize
+]
+
+{ #category : #accessing }
+SpurSegmentInfo >> savedSegSize: anObject [
+	"Set the value of savedSegSize"
+
+	^savedSegSize := anObject
 ]
 
 { #category : #accessing }
