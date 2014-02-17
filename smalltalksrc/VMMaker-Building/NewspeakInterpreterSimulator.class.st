@@ -1244,13 +1244,12 @@ NewspeakInterpreterSimulator >> primitiveGetAttribute [
 	| attr s attribute |
 	attr := self stackIntegerValue: 0.
 	self successful ifTrue: [
-		attribute := Smalltalk getSystemAttribute: attr.
+		attribute := Smalltalk vm getSystemAttribute: attr.
 		attribute ifNil: [ ^self primitiveFail ].
 		s := self instantiateClass: (self splObj: ClassByteString) indexableSize: attribute size.
 		1 to: attribute size do: [ :i |
 			self storeByte: i-1 ofObject: s withValue: (attribute at: i) asciiValue].
-		self pop: 2.  "rcvr, attr"
-		self push: s].
+		self pop: 2  "rcvr, attr" thenPush: s].
 
 ]
 

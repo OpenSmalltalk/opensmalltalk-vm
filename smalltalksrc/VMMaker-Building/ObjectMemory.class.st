@@ -3939,6 +3939,11 @@ ObjectMemory >> possibleRootStoreInto: oop value: valueObj [
 				self noteAsRoot: oop headerLoc: oop]
 ]
 
+{ #category : #'image save/restore' }
+ObjectMemory >> postSnapshot [
+	"No op for Spur compatibility."
+]
+
 { #category : #become }
 ObjectMemory >> prepareForwardingTableForBecoming: array1 with: array2 twoWay: twoWayFlag [ 
 	"Ensure that there are enough forwarding blocks to 
