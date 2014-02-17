@@ -840,6 +840,56 @@ SpurMemoryManager class >> wordSize [
 	^self subclassResponsibility
 ]
 
+{ #category : #'compaction - analysis' }
+SpurMemoryManager >> abstractCompaction [
+	"This method answers a rough estimate of compactibility."
+	<doNotGenerate>
+	| lowestFree freeChunks used movable |
+	lowestFree := SmallInteger maxVal.
+	freeChunks := Set new.
+	used := Set new.
+	movable := Set new.
+	self allObjectsInFreeTreeDo:
+		[:f|
+		(self addressAfter: f) < endOfMemory ifTrue:
+			[freeChunks add: f.
+			 f < lowestFree ifTrue: [lowestFree := f]]].
+	self allOldSpaceObjectsFrom: lowestFree do:
+		[:o| | size delta best |
+		size := self bytesInObject: o.
+		delta := SmallInteger maxVal.
+		freeChunks do: [:f| | fs |
+			((fs := self bytesInObject: f) >= size) ifTrue:
+				[delta > (fs - size) ifTrue:
+					[delta := fs - size. best := f]]].
+		 best ifNotNil:
+			[movable add: o.
+			 used add: (freeChunks remove: best)]].
+	^{ totalFreeOldSpace. movable inject: 0 into: [:s :o| s + (self bytesInObject: o)]. used inject: 0 into: [:s :o| s + (self bytesInObject: o)] }
+]
+
+{ #category : #'compaction - analysis' }
+SpurMemoryManager >> abstractPigCompaction [
+	"This method answers a rough estimate of compactibility using a pig (a large free chunk)."
+	<doNotGenerate>
+	| pig pork moved unmoved nmoved nunmoved |
+	pig := self findAPig.
+	pork := self bytesInObject: pig.
+	moved := unmoved := nmoved := nunmoved := 0.
+	self allOldSpaceObjectsFrom: pig do:
+		[:o| | bytes |
+		bytes := self bytesInObject: o.
+		bytes <= pork
+			ifTrue:
+				[moved := moved + bytes.
+				 nmoved := nmoved + 1.
+				 pork := pork - bytes]
+			ifFalse:
+				[unmoved := unmoved + bytes.
+				 nunmoved := nunmoved + 1]].
+	^{ self bytesInObject: pig. pork. moved. nmoved. unmoved. nunmoved }
+]
+
 { #category : #'object enumeration' }
 SpurMemoryManager >> accessibleObjectAfter: objOop [
 	"Answer the accessible object following the given object or 
@@ -2011,6 +2061,23 @@ SpurMemoryManager >> becomeEffectFlagsFor: objOop [
 				ifFalse: [0]]
 ]
 
+{ #category : #'compaction - analysis' }
+SpurMemoryManager >> biggies [
+	"This method answers a sorted collection of the objects >= 1,000,000 bytes long,
+	 above the lowest large free chunk, sandwiched between nilObj and the end of memory."
+	<doNotGenerate>
+	| lowestFree biggies |
+	lowestFree := SmallInteger maxVal.
+	self allObjectsInFreeTreeDo:
+		[:f| (self addressAfter: f) < endOfMemory ifTrue: [f < lowestFree ifTrue: [lowestFree := f]]].
+	biggies := SortedCollection new.
+	self allOldSpaceObjectsFrom: lowestFree do:
+		[:f|
+		(self bytesInObject: f) >= 1000000 ifTrue:
+			[biggies add: f]].
+	^{{nilObj hex. #nil}}, (biggies collect: [:f| {f hex. self bytesInObject: f}]), {{endOfMemory hex. #endOfMemory}}
+]
+
 { #category : #'debug support' }
 SpurMemoryManager >> bitsSetInFreeSpaceMaskForAllFreeLists [
 	0 to: self numFreeLists - 1 do:
@@ -2888,7 +2955,11 @@ SpurMemoryManager >> compact [
 	"We'd like to use exact fit followed by best fit, but best-fit is complex to implement
 	 and potentially expensive.  So just use exactFit followed, if necessary, by first-fit."
 	<inline: false>
+	self assert: (firstFreeChunk = 0 or: [self isFreeObject: firstFreeChunk]).
 	self exactFitCompact.
+	self assert: (firstFreeChunk = 0
+				or: [(self isFreeObject: firstFreeChunk)
+				or: [self isValidClassIndex: (self classIndexOf: firstFreeChunk)]]).
 	highestObjects usedSize > 0 ifTrue:
 		[self firstFitCompact]
 ]
@@ -2904,6 +2975,39 @@ SpurMemoryManager >> compactClassIndexOf: objOop [
 SpurMemoryManager >> compactIndexOfClass: objOop [
 	self assert: (self rawHashBitsOf: objOop) ~= 0.
 	^self rawHashBitsOf: objOop
+]
+
+{ #category : #'compaction - analysis' }
+SpurMemoryManager >> compactionIssues [
+	<doNotGenerate>
+	"Compaction isn't working well.  It rarely moves more than a few tens of kilobytes.  Why?
+	 Load an image and before you run it, or just before a GC, run these anaylsis routines.
+	 e.g.
+		self abstractCompaction #(63230272 75456 63210648)
+	 shows we can move 75456 bytes of objects, but that would use 63210648 of free space.
+	 i.e. there are lots of big free chunks in play, not many small ones that fit the bill.
+
+		self largeFreeChunkDistribution
+			#(	#('16r31C788' #nil)
+				#('16r1423AC0' 2061864)
+				#('16r1B705E8' 1515200)
+				#('16r1D31D20' 2011152)
+				#('16r1F37818' 1491480)
+				#('16r2225968' 1450512)
+				#('16r24C92C8' 48575672)  (16r24C92C8 + 48575672) hex '16r531C780' a free chunk
+				#('16r531C788' #endOfMemory))
+	 shows there's plenty of large free chunks.  And the trailing 16-byte free chunk shows coallescing is not working properly.
+
+		self biggies #(#('16r31C788' #nil) #('16r531C788' #endOfMemory))
+	 shows there are no large objects to be moved.
+
+	 So... looks like compaction should hold onto the lowest large chunk and preferentially move objects into that.
+	 Let's call it a pig.  Compaction needs to whittle away at the pig.
+
+	 e.g.
+		self abstractPigCompaction #(2061864 0 2061864 18759 2018224 34757)
+	 shows we can move 18759 objects that will occupy 2018224 bytes into that
+	 low pig of 2061864 bytes."
 ]
 
 { #category : #'free space' }
@@ -3271,6 +3375,8 @@ SpurMemoryManager >> emptyObjStack: objStack [
 	"Remove all the entries on the stack.  Do so by setting Topx to 0
 	 on the first page, and adding all subsequent pages to the free list."
 	| nextPage nextNextPage |
+	objStack = nilObj ifTrue:
+		[^self].
 	self assert: (self isValidObjStack: objStack).
 	self storePointer: ObjStackTopx ofObject: objStack withValue: 0.
 	nextPage := self fetchPointer: ObjStackNextx ofObject: objStack.
@@ -3475,7 +3581,7 @@ SpurMemoryManager >> exactFitCompact [
 		[coInterpreter print: 'exactFitCompact fits: '; printNum: nfits; print: ' misfits: '; printNum: nmiss; cr.
 		 ^self].
 	 savedLimit := self moveMisfitsToTopOfHighestObjects: misfits.
-	 self fillHighestObjectsWithMovableObjectsFrom: firstFreeChunk upTo: first.
+	 self fillHighestObjectsWithMovableObjectsFromFirstFreeChunkUpTo: first.
 	 misfits := self moveMisfitsInHighestObjectsBack: savedLimit.
 	 highestObjects usedSize > 0] whileTrue
 ]
@@ -3654,19 +3760,22 @@ SpurMemoryManager >> fetchWordLengthOf: objOop [
 ]
 
 { #category : #compaction }
-SpurMemoryManager >> fillHighestObjectsWithMovableObjectsFrom: startObj upTo: limitObj [
+SpurMemoryManager >> fillHighestObjectsWithMovableObjectsFromFirstFreeChunkUpTo: limitObj [
 	"Refill highestObjects with movable objects up to, but not including limitObj.
-	 c.f. the loop in freeUnmarkedObjectsNilUnmarkedWeaklingSlotsAndSortAndCoalesceFreeSpace."
+	 c.f. the loop in freeUnmarkedObjectsAndSortAndCoalesceFreeSpace."
 	| lastHighest highestObjectsWraps firstFree |
+	self assert: (firstFreeChunk = 0
+				or: [(self isFreeObject: firstFreeChunk)
+				or: [self isValidClassIndex: (self classIndexOf: firstFreeChunk)]]).
 	highestObjects resetAsEmpty.
 	lastHighest := highestObjects last.
 	highestObjectsWraps := firstFree := 0.
-	self allOldSpaceEntitiesFrom: startObj do:
+	self allOldSpaceEntitiesFrom: firstFreeChunk do:
 		[:o|
 		(self oop: o isGreaterThanOrEqualTo: limitObj) ifTrue:
 			[highestObjects last: lastHighest.
-			 (firstFree ~= 0 and: [(self isFreeObject: firstFreeChunk) not]) ifTrue:
-				[firstFreeChunk := firstFree].
+			 (self isFreeObject: firstFreeChunk) ifFalse:
+				[firstFreeChunk := firstFree = 0 ifTrue: [limitObj] ifFalse: [firstFree]].
 			 ^self].
 		(self isFreeObject: o)
 			ifTrue: [firstFree = 0 ifTrue:
@@ -3681,13 +3790,29 @@ SpurMemoryManager >> fillHighestObjectsWithMovableObjectsFrom: startObj upTo: li
 								 lastHighest := highestObjects start].
 							 self longAt: lastHighest put: o]]]].
 	highestObjects last: lastHighest.
-	(firstFree ~= 0 and: [(self isFreeObject: firstFreeChunk) not]) ifTrue:
-		[firstFreeChunk := firstFree]
+	(self isFreeObject: firstFreeChunk) ifFalse:
+		[firstFreeChunk := firstFree = 0 ifTrue: [limitObj] ifFalse: [firstFree]].
+	self assert: (firstFreeChunk = 0
+				or: [(self isFreeObject: firstFreeChunk)
+				or: [self isValidClassIndex: (self classIndexOf: firstFreeChunk)]])
 ]
 
 { #category : #instantiation }
 SpurMemoryManager >> fillObj: objOop numSlots: numSlots with: fillValue [
 	self subclassResponsibility
+]
+
+{ #category : #'compaction - analysis' }
+SpurMemoryManager >> findAPig [
+	"Answer a large low free chuink."
+	<doNotGenerate>
+	| pig |
+	self allObjectsInFreeTreeDo:
+		[:f|
+		(self bytesInObject: f) >= 1000000 ifTrue:
+			[(pig isNil or: [pig > f]) ifTrue:
+				[pig := f]]].
+	^pig
 ]
 
 { #category : #compaction }
@@ -3824,7 +3949,7 @@ SpurMemoryManager >> firstFitCompact [
 	 self checkFreeSpace.
 	 first := self longAt: highestObjects first.
 	 self assert: (self oop: first isGreaterThan: firstFreeChunk).
-	 self fillHighestObjectsWithMovableObjectsFrom: firstFreeChunk upTo: first.
+	 self fillHighestObjectsWithMovableObjectsFromFirstFreeChunkUpTo: first.
 	 highestObjects usedSize > 0] whileTrue.
 
 	coInterpreter print: 'firstFitCompact fits: '; printNum: nhits; print: ' misfits: '; printNum: nmisses; cr
@@ -4419,7 +4544,8 @@ SpurMemoryManager >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpace [
 	 the need to test firstFreeChunk when filling highestObjects."
 	self allOldSpaceEntitiesForCoalescingDo:
 		[:o|
-		(self isMarked: o)
+		 self assert: (firstFreeChunk = 0 or: [self isFreeObject: firstFreeChunk]).
+		 (self isMarked: o)
 			ifTrue: "forwarders should have been followed in markAndTrace:"
 				[self assert: (self isForwarded: o) not.
 				 self setIsMarkedOf: o to: false. "this will unmark bridges. undo the damage in notePinned:"
@@ -4444,8 +4570,6 @@ SpurMemoryManager >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpace [
 					 statCoalesces := statCoalesces + 1.
 					 here := self coalesce: here and: next.
 					 next := self objectAfter: here limit: limit].
-				 firstFreeChunk = 0 ifTrue:
-					[firstFreeChunk := here].
 				 (self isLargeFreeObject: here)
 					ifTrue:
 						[self setFree: here.
@@ -4457,7 +4581,10 @@ SpurMemoryManager >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpace [
 									withValue: here].
 						 lastLargeFree := here]
 					ifFalse:
-						[self freeSmallObject: here]]].
+						[self freeSmallObject: here].
+				 firstFreeChunk = 0 ifTrue:
+					[self assert: (self isFreeObject: here).
+					 firstFreeChunk := here]]].
 	highestObjects last: lastHighest.
 	highestObjectsWraps ~= 0 ifTrue:
 		[highestObjects first: (lastHighest + self wordSize >= highestObjects limit
@@ -4499,7 +4626,8 @@ SpurMemoryManager >> fullGCLock [
 { #category : #snapshot }
 SpurMemoryManager >> garbageCollectForSnapshot [
 	self flushNewSpace. "There is no place to put newSpace in the snapshot file."
-	self fullGC
+	self fullGC.
+	segmentManager prepareForSnapshot
 ]
 
 { #category : #accessing }
@@ -4525,6 +4653,7 @@ SpurMemoryManager >> globalGarbageCollect [
 	self compact.
 	self eliminateAndFreeForwarders.
 	self assert: self validObjStacks.
+	self assert: (self isEmptyObjStack: weaklingStack).
 	self assert: self allObjectsUnmarked.
 	self runLeakCheckerForFullGC: true
 ]
@@ -4950,6 +5079,8 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	markStack := self swizzleObjStackAt: MarkStackRootIndex.
 	weaklingStack := self swizzleObjStackAt: WeaklingStackRootIndex.
 	ephemeronQueue := self swizzleObjStackAt: EphemeronQueueRootIndex.
+	self assert: self validObjStacks.
+	self assert: (self isEmptyObjStack: weaklingStack).
 
 	self initializeFreeSpacePostLoad: freeListObj.
 	segmentManager collapseSegmentsPostSwizzle.
@@ -5297,8 +5428,11 @@ SpurMemoryManager >> isContextNonImm: oop [
 
 { #category : #'obj stacks' }
 SpurMemoryManager >> isEmptyObjStack: objStack [
+	objStack = nilObj ifTrue:
+		[^true].
 	self assert: (self isValidObjStack: objStack).
 	^0 = (self fetchPointer: ObjStackTopx ofObject: objStack)
+	  and: [0 = (self fetchPointer: ObjStackNextx ofObject: objStack)]
 ]
 
 { #category : #'object enumeration' }
@@ -5613,6 +5747,27 @@ SpurMemoryManager >> isSegmentBridge: objOop [
 	^(self classIndexOf: objOop) = self segmentBridgePun
 ]
 
+{ #category : #'class table' }
+SpurMemoryManager >> isValidClassIndex: classIndex [
+	| classTablePage |
+	classIndex <= 0 ifTrue:
+		[^false].
+	(classIndex <= self tagMask or: [classIndex >= self arrayClassIndexPun]) ifFalse:
+		[^false].
+	classIndex >= (1 << self classIndexFieldWidth) ifTrue:
+		[^false].
+	classTablePage := self fetchPointer: classIndex >> self classTableMajorIndexShift
+							ofObject: hiddenRootsObj.
+	classTablePage = nilObj ifTrue:
+		[^false].
+	(self addressCouldBeObj: classTablePage) ifFalse:
+		[false].
+	^coInterpreter addressCouldBeClassObj:
+		(self
+			fetchPointer: (classIndex bitAnd: self classTableMinorIndexMask)
+			ofObject: classTablePage)
+]
+
 { #category : #'free space' }
 SpurMemoryManager >> isValidFreeObject: objOop [
 	| chunk |
@@ -5794,6 +5949,21 @@ SpurMemoryManager >> keyOfEphemeron: objOop [
 SpurMemoryManager >> knownClassAtIndex: classIndex [
 	self assert: (classIndex between: 1 and: self classTablePageSize).
 	^self fetchPointer: classIndex ofObject: classTableFirstPage
+]
+
+{ #category : #'compaction - analysis' }
+SpurMemoryManager >> largeFreeChunkDistribution [
+	"This method answers a sorted collection of the free chunks >= 1,000,000 bytes long,
+	 sandwiched between nilObj and the end of memory (ignoring the large chunk often found at the end of the heap)."
+	<doNotGenerate>
+	| freeChunks |
+	freeChunks := SortedCollection new.
+	self allObjectsInFreeTreeDo:
+		[:f|
+		((self addressAfter: f) < endOfMemory
+		 and: [(self bytesInObject: f) >= 1000000]) ifTrue:
+			[freeChunks add: f]].
+	^{{nilObj hex. #nil}}, (freeChunks collect: [:f| {f hex. self bytesInObject: f}]), {{endOfMemory hex. #endOfMemory}}
 ]
 
 { #category : #allocation }
@@ -6590,6 +6760,8 @@ SpurMemoryManager >> nilUnmarkedWeaklingSlots [
 	 weakling stack, finalizing those that lost references.
 	 Finally, empty the weaklingStack."
 	<inline: false>
+	weaklingStack = nilObj ifTrue:
+		[^self].
 	self objStack: weaklingStack from: 0 do:
 		[:weakling|
 		(self nilUnmarkedWeaklingSlotsIn: weakling) ifTrue:
@@ -7120,6 +7292,12 @@ SpurMemoryManager >> postCompactScanClassTable [
 			 self storePointer: i ofObject: hiddenRootsObj withValue: page]].
 	self assert: self validClassTableRootPages.	
 	self postBecomeOrCompactScanClassTable: BecamePointerObjectFlag+BecameCompiledMethodFlag
+]
+
+{ #category : #snapshot }
+SpurMemoryManager >> postSnapshot [
+	<doNotGenerate>
+	segmentManager postSnapshot
 ]
 
 { #category : #accessing }
