@@ -158,6 +158,11 @@ VMClass class >> implicitReturnTypeFor: aSelector [
 ]
 
 { #category : #initialization }
+VMClass class >> initializationOptions [
+	^initializationOptions
+]
+
+{ #category : #initialization }
 VMClass class >> initializationOptions: optionsDictionary [
 	initializationOptions := optionsDictionary
 ]

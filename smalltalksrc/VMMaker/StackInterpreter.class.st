@@ -3574,6 +3574,14 @@ StackInterpreter >> closureIn: context numArgs: numArgs instructionPointer: init
 	^newClosure
 ]
 
+{ #category : #'primitive support' }
+StackInterpreter >> codeGeneratorToComputeAccessorDepth [
+	^VMMaker new
+		buildCodeGeneratorForInterpreter: StackInterpreterPrimitives
+		includeAPIMethods: false
+		initializeClasses: false
+]
+
 { #category : #'indexing primitive support' }
 StackInterpreter >> commonAt: stringy [
 	"This code is called if the receiver responds primitively to at:.
@@ -11769,6 +11777,7 @@ StackInterpreter >> snapshot: embedded [
 			ofObject: activeContext
 			withValue: (objectMemory integerObjectOf: stackIndex - 1)].
 
+	objectMemory postSnapshot.
 	self marryContextInNewStackPageAndInitializeInterpreterRegisters: activeContext.
 	self successful
 		ifTrue: [self push: objectMemory falseObject]
@@ -12445,10 +12454,13 @@ StackInterpreter >> tryLoadNewPlugin: pluginString pluginEntries: pluginEntries 
 				[realPlugin := plugin class withAllSuperclasses detect: [:class| class shouldBeTranslated].
 				 cg := realPlugin buildCodeGeneratorUpTo: realPlugin]
 			ifFalse:
-				[cg := VMMaker new
-							buildCodeGeneratorForInterpreter: StackInterpreter
-							includeAPIMethods: false
-							initializeClasses: false].
+				[cg := self codeGeneratorToComputeAccessorDepth.
+				 primitiveTable withIndexDo:
+					[:prim :index| | depth |
+					 prim isSymbol ifTrue:
+						[depth := cg accessorDepthForSelector: prim.
+						 self assert: depth isInteger.
+						 primitiveAccessorDepthTable at: index - 1 put: depth]]].
 		 cg exportedPrimitiveNames do:
 			[:primName| | fnSymbol |
 			 fnSymbol := primName asSymbol.

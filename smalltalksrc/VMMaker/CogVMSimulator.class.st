@@ -549,6 +549,17 @@ CogVMSimulator >> close [  "close any files that ST may have opened"
 		[:filePlugin| filePlugin close]
 ]
 
+{ #category : #'primitive support' }
+CogVMSimulator >> codeGeneratorToComputeAccessorDepth [
+	^VMMaker new
+		cogitClass: (Smalltalk classNamed: (self class initializationOptions
+												at: #Cogit
+												ifAbsent: [self class cogitClass name]));
+		buildCodeGeneratorForInterpreter: CoInterpreterPrimitives
+		includeAPIMethods: false
+		initializeClasses: false
+]
+
 { #category : #'simulation only' }
 CogVMSimulator >> cogit [
 	^cogit
@@ -1286,6 +1297,8 @@ CogVMSimulator >> initialize [
 	 primary responsibility of this method is to allocate Smalltalk Arrays for variables
 	 that will be declared as statically-allocated global arrays in the translated code."
 
+	transcript := Transcript.
+
 	objectMemory ifNil:
 		[objectMemory := self class objectMemoryClass simulatorClass new].
 	cogit ifNil:
@@ -1315,10 +1328,14 @@ CogVMSimulator >> initialize [
 	externalPrimitiveTable := CArrayAccessor on: (Array new: MaxExternalPrimitiveTableSize).
 	externalPrimitiveTableFirstFreeIndex := 0.
 	primitiveTable := self class primitiveTable copy.
-	primitiveAccessorDepthTable := objectMemory hasSpurMemoryManagerAPI ifTrue:
-										[self class primitiveAccessorDepthTable].
-	pluginList := {'' -> self }.
 	mappedPluginEntries := OrderedCollection new.
+	objectMemory hasSpurMemoryManagerAPI
+		ifTrue:
+			[primitiveAccessorDepthTable := Array new: primitiveTable size.
+			 pluginList := {}.
+			 self loadNewPlugin: '']
+		ifFalse:
+			[pluginList := {'' -> self }].
 	desiredNumStackPages := desiredEdenBytes := desiredCogCodeSize := 0.
 	"This is initialized on loading the image, but convenient for testing stack page values..."
 	numStackPages := self defaultNumStackPages. 
@@ -1333,7 +1350,6 @@ CogVMSimulator >> initialize [
 	traceOn := true.
 	printSends := printFrameAtEachStep := printBytecodeAtEachStep := false.
 	myBitBlt := BitBltSimulator new setInterpreter: self.
-	transcript := Transcript.
 	displayForm := 'Display has not yet been installed' asDisplayText form.
 	suppressHeartbeatFlag := deferSmash := deferredSmash := false.
 	systemAttributes := Dictionary new.
@@ -2644,13 +2660,12 @@ CogVMSimulator >> primitiveGetAttribute [
 	| index s attribute |
 	index := self stackIntegerValue: 0.
 	self successful ifTrue: [
-		attribute := systemAttributes at: index ifAbsent: [Smalltalk getSystemAttribute: index].
+		attribute := systemAttributes at: index ifAbsent: [Smalltalk vm getSystemAttribute: index].
 		attribute ifNil: [ ^self primitiveFail ].
 		s := objectMemory instantiateClass: (objectMemory splObj: ClassByteString) indexableSize: attribute size.
 		1 to: attribute size do: [ :i |
 			objectMemory storeByte: i-1 ofObject: s withValue: (attribute at: i) asciiValue].
-		self pop: 2.  "rcvr, attr"
-		self push: s]
+		self pop: 2 "rcvr, attr" thenPush: s]
 ]
 
 { #category : #'I/O primitives' }
