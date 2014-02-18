@@ -1700,21 +1700,23 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes suchThat: acceptan
 					[child := self fetchPointer: self freeChunkLargerIndex ofFreeChunk: child]
 				ifFalse:
 					[self flag: 'we can do better here; preferentially choosing the lowest node. That would be a form of best-fit since we are trying to compact down'.
+					 node := child.
+					 child := self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: node.
 					 acceptedNode = 0 ifTrue:
-						[acceptedChunk := child.
+						[acceptedChunk := node.
 						 "first search the list."
 						 [acceptedChunk := self fetchPointer: self freeChunkNextIndex
 													ofFreeChunk: acceptedChunk.
 						  (acceptedChunk ~= 0 and: [acceptanceBlock value: acceptedChunk]) ifTrue:
-							[acceptedNode := child].
+							[acceptedNode := node].
 						  acceptedChunk ~= 0 and: [acceptedNode = 0]] whileTrue.
 						 "nothing on the list; will the node do?  This prefers
 						  acceptable nodes higher up the tree over acceptable
 						  list elements further down, but we haven't got all day..."
 						 (acceptedNode = 0
-						  and: [acceptanceBlock value: child]) ifTrue:
-							[acceptedNode := child]].
-					 child := self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: child]]].
+						  and: [acceptanceBlock value: node]) ifTrue:
+							[acceptedNode := node.
+							 child := 0 "break out of loop now we have an acceptedNode"]]]]].
 
 	acceptedNode ~= 0 ifTrue:
 		[acceptedChunk ~= 0 ifTrue:
@@ -3560,14 +3562,15 @@ SpurMemoryManager >> exactFitCompact [
 						[misfits := highestObjects limit - self wordSize].
 					 self longAt: misfits put: o]
 				ifNotNil:
-					[:f|
+					[:f| | fo |
 					 nfits := nfits + 1.
-					 self copyAndForward: o withBytes: b toFreeChunk: f.
 					 "here's a wrinkle; if the firstFreeChunk is allocated to a small object and the firstFreeChunk
 					  is a large chunk then firstFreeChunk will no longer point to an object header.  So check and
 					  adjust firstFreeChunk if it is assigned to."
-					 f = firstFreeChunk ifTrue:
-						[firstFreeChunk := self objectStartingAt: f]]]].
+					 fo := self objectStartingAt: f.
+					 fo = firstFreeChunk ifTrue:
+						[firstFreeChunk := self objectAfter: fo].
+					 self copyAndForward: o withBytes: b toFreeChunk: f]]].
 	 self checkFreeSpace.
 	 "now highestObjects contains only misfits, if any, from misfits to last.
 	  set first to first failure and refill buffer. next cycle will add more misfits.
@@ -3927,6 +3930,9 @@ SpurMemoryManager >> firstFitCompact [
 	[statCompactPassCount := statCompactPassCount + 1.
 	 highestObjects reverseDo:
 		[:o| | b |
+	 	 self assert: (firstFreeChunk = 0
+					or: [(self isFreeObject: firstFreeChunk)
+					or: [self isValidClassIndex: (self classIndexOf: firstFreeChunk)]]).
 		 (self oop: o isLessThanOrEqualTo: firstFreeChunk) ifTrue:
 			[coInterpreter print: 'firstFitCompact fits: '; printNum: nhits; print: ' misfits: '; printNum: nmisses; cr.
 			 ^self].
@@ -3936,14 +3942,17 @@ SpurMemoryManager >> firstFitCompact [
 				ifNil:
 					[nmisses := nmisses + 1]
 				ifNotNil:
-					[:f|
+					[:f| | fo |
 					 nhits := nhits + 1.
-					 self copyAndForward: o withBytes: b toFreeChunk: f.
 					 "here's a wrinkle; if the firstFreeChunk is allocated to a small object and the firstFreeChunk
 					  is a large chunk then firstFreeChunk will no longer point to an object header.  So check and
 					  adjust firstFreeChunk if it is assigned to."
-					 f = firstFreeChunk ifTrue:
-						[firstFreeChunk := self objectStartingAt: f].
+					 fo := self objectStartingAt: f.
+					 fo = firstFreeChunk ifTrue:
+						[firstFreeChunk := lastSubdividedFreeChunk = 0
+												ifTrue: [self objectAfter: fo]
+												ifFalse: [self objectStartingAt: lastSubdividedFreeChunk]].
+					 self copyAndForward: o withBytes: b toFreeChunk: f.
 					 self assert: (lastSubdividedFreeChunk = 0
 								  or: [(self addressAfter: (self objectStartingAt: f)) = lastSubdividedFreeChunk])]]].
 	 self checkFreeSpace.
