@@ -145,7 +145,7 @@ Spur32BitMMLESimulator >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpace [
 
 { #category : #'gc - global' }
 Spur32BitMMLESimulator >> globalGarbageCollect [
-	self halt.
+	self halt: 'GC number ', statFullGCs printString.
 	^super globalGarbageCollect
 ]
 
