@@ -7865,11 +7865,16 @@ SpurMemoryManager >> scanClassPostBecome: startClassObj effects: becomeEffects [
 	self assert: (becomeEffects anyMask: BecamePointerObjectFlag). "otherwise why bother?"
 	classObj := startClassObj.
 
-	[obj := self followObjField: MethodDictionaryIndex ofObject: classObj.
+	["e.g. the Newspeak bootstrap creates fake classes that contain bogus superclasses.
+	  Hence be cautious."
+	 ((self isPointers: classObj)
+	   and: [(self numSlotsOf: classObj) > MethodDictionaryIndex]) ifFalse:
+		[^self].
+	 obj := self followObjField: MethodDictionaryIndex ofObject: classObj.
 	 "Solving the becommed method stored into a method dictionary object issue is
 	  easy; just have a read barrier on fetching the method.  But solving the read barrier
 	  for selectors is more difficult (because selectors are currently not read, just their
-	  oops.  For now punt on the issue and simply follow all selectors on become"
+	  oops).  For now punt on the issue and simply follow all selectors on become"
 	 self flag: 'need to fix the selector and methodDictionary issue'.
 	 true
 		ifTrue: [self followForwardedObjectFields: obj toDepth: 0]
