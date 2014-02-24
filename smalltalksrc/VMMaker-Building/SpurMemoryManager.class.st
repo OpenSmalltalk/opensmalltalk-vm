@@ -5169,15 +5169,17 @@ SpurMemoryManager >> innerBecomeObjectsIn: array1 and: array2 copyHash: copyHash
 	"Inner loop of two-way become."
 	0 to: (self numSlotsOf: array1) - 1 do:
 		[:i| | obj1 obj2 |
-		obj1 := self fetchPointer: i ofObject: array1.
-		obj2 := self fetchPointer: i ofObject: array2.
-		self doBecome: obj1 and: obj2 copyHash: copyHashFlag.
-		(self isForwarded: obj1) ifTrue:
-			[obj1 := self followForwarded: obj1.
-			 self storePointer: i ofObject: array1 withValue: obj1].
-		(self isForwarded: obj2) ifTrue:
-			[obj2 := self followForwarded: obj2.
-			 self storePointer: i ofObject: array2 withValue: obj2]]
+		"At first blush it would appear unnecessary to use followField: here since
+		 the validation in become:with:twoWay:copyHash: follows forwarders.  But
+		 there's nothing to ensure all elements of each array is unique and doesn't
+		 appear in the other array.  So the enumeration could encounter an object
+		 already becommed earlier in the same enumeration."
+		obj1 := self followField: i ofObject: array1.
+		obj2 := self followField: i ofObject: array2.
+		obj1 ~= obj2 ifTrue:
+			[self doBecome: obj1 and: obj2 copyHash: copyHashFlag.
+			 self followField: i ofObject: array1.
+			 self followField: i ofObject: array2]]
 ]
 
 { #category : #'become implementation' }
@@ -5185,13 +5187,17 @@ SpurMemoryManager >> innerBecomeObjectsIn: array1 to: array2 copyHash: copyHashF
 	"Inner loop of one-way become."
 	0 to: (self numSlotsOf: array1) - 1 do:
 		[:i| | obj1 obj2 |
-		obj1 := self fetchPointer: i ofObject: array1.
-		obj2 := self fetchPointer: i ofObject: array2.
-		self doBecome: obj1 to: obj2 copyHash: copyHashFlag.
-		(self isForwarded: obj1) ifTrue:
-			[obj1 := self followForwarded: obj1.
-			 self storePointer: i ofObject: array1 withValue: obj1].
-		self assert: (self isForwarded: obj2) not]
+		"At first blush it would appear unnecessary to use followField: here since
+		 the validation in become:with:twoWay:copyHash: follows forwarders.  But
+		 there's nothing to ensure all elements of each array is unique and doesn't
+		 appear in the other array.  So the enumeration could encounter an object
+		 already becommed earlier in the same enumeration."
+		obj1 := self followField: i ofObject: array1.
+		obj2 := self followField: i ofObject: array2.
+		obj1 ~= obj2 ifTrue:
+			[self doBecome: obj1 to: obj2 copyHash: copyHashFlag.
+			 self followField: i ofObject: array1.
+			 self assert: (self isForwarded: obj2) not]]
 ]
 
 { #category : #'header formats' }
