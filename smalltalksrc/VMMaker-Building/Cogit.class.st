@@ -313,7 +313,8 @@ Cogit class >> additionalSelectorTables [
 
 { #category : #translation }
 Cogit class >> ancilliaryClasses: options [
-	ProcessorClass ifNil: [thisContext methodClass theNonMetaClass initialize].
+	ProcessorClass ifNil:
+		[Cogit initializeMiscConstants].
 	^{	CogMethodZone.
 		CogAbstractInstruction.
 		ProcessorClass basicNew abstractInstructionCompilerClass.
