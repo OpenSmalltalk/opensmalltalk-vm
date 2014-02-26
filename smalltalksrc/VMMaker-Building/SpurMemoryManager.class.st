@@ -2387,8 +2387,8 @@ SpurMemoryManager >> checkHeapIntegrity: excludeUnmarkedNewSpaceObjs [
 					 (self isYoung: fieldOop) ifTrue:
 						[containsYoung := true]]
 				ifFalse:
-					[classOop := self classAtIndex: (classIndex := self classIndexOf: obj).
-					 ((classOop isNil or: [classOop = nilObj])
+					[classOop := self classOrNilAtIndex: (classIndex := self classIndexOf: obj).
+					 (classOop = nilObj
 					  and: [(self isHiddenObj: obj) not]) ifTrue:
 						[coInterpreter print: 'object leak in '; printHex: obj; print: ' invalid class index '; printHex: classIndex; print: ' -> '; print: (classOop ifNil: ['nil'] ifNotNil: ['nilObj']); cr.
 						 self eek.
@@ -2782,6 +2782,20 @@ SpurMemoryManager >> classLargePositiveInteger [
 { #category : #'plugin support' }
 SpurMemoryManager >> classMutex [
 	^self splObj: ClassMutex
+]
+
+{ #category : #'class table' }
+SpurMemoryManager >> classOrNilAtIndex: classIndex [
+	<api>
+	| classTablePage |
+	self assert: (classIndex <= self tagMask or: [classIndex >= self arrayClassIndexPun]).
+	classTablePage := self fetchPointer: classIndex >> self classTableMajorIndexShift
+							ofObject: hiddenRootsObj.
+	classTablePage = nilObj ifTrue:
+		[^nilObj].
+	^self
+		fetchPointer: (classIndex bitAnd: self classTableMinorIndexMask)
+		ofObject: classTablePage
 ]
 
 { #category : #'plugin support' }
@@ -3708,7 +3722,7 @@ SpurMemoryManager >> fetchClassOfNonImm: objOop [
 	classIndex = self classIsItselfClassIndexPun ifTrue:
 		[^objOop].
 	self assert: classIndex >= self arrayClassIndexPun.
-	^self classAtIndex: classIndex
+	^self classOrNilAtIndex: classIndex
 ]
 
 { #category : #'interpreter access' }
@@ -6266,6 +6280,7 @@ SpurMemoryManager >> markAccessibleObjects [
 	self markAndTraceExtraRoots.
 	self assert: self validClassTableRootPages.
 	coInterpreter markAndTraceInterpreterOops: true.
+	coInterpreter markAndTraceOrFreeMachineCode: true.
 	self assert: self validObjStacks.
 	self markWeaklingsAndMarkAndFireEphemerons.
 	self assert: self validObjStacks.
@@ -6389,7 +6404,7 @@ SpurMemoryManager >> markAndTraceClassOf: objOop [
 	| classIndex classObj |
 	classIndex := self classIndexOf: objOop.
 	self inClassTableBitmapSet: classIndex.
-	classObj := self classAtIndex: classIndex.
+	classObj := self classOrNilAtIndex: classIndex.
 	(self isMarked: classObj) ifFalse:
 		[self setIsMarkedOf: classObj to: true.
 		 self markAndTraceClassOf: classObj.
