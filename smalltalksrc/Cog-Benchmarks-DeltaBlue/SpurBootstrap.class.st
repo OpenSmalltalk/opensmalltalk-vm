@@ -1779,13 +1779,13 @@ SpurBootstrap >> validate [
 	maxClassIndex := classToIndex inject: 0 into: [:a :b| a max: b].
 	self assert: ((newHeap arrayClassIndexPun to: maxClassIndex) select:
 					[:idx| | classObj |
-					(classObj := newHeap classAtIndex: idx) ~= newHeap nilObject
+					(classObj := newHeap classOrNilAtIndex: idx) ~= newHeap nilObject
 					and: [(newHeap classIndexOf: classObj) = (newHeap rawHashBitsOf: classObj)]]) isEmpty.
 	0 to: maxClassIndex do:
 		[:index| | classObj |
 		(index <= newHeap tagMask
 		 and: [index > newHeap isForwardedObjectClassIndexPun]) ifTrue:
-			[(classObj := newHeap classAtIndex: index) = newHeap nilObject
+			[(classObj := newHeap classOrNilAtIndex: index) = newHeap nilObject
 				ifTrue:
 					[self assert: (classToIndex keyAtValue: index ifAbsent: []) isNil]
 				ifFalse:
