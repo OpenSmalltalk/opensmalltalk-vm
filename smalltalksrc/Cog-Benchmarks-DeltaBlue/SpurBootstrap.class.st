@@ -91,7 +91,7 @@ SpurBootstrap class >> BehaviorPROTOTYPEbasicNew [
 	
 	 If the primitive fails because space is low then the scavenger
 	 will run before the method is activated.  Check arguments and
-	 retry via failingBasicNew: if they're OK."
+	 retry via handleFailingBasicNew if they're OK."
 
 	<primitive: 70>
 	self isVariable ifTrue: [^self basicNew: 0].
@@ -108,7 +108,7 @@ SpurBootstrap class >> BehaviorPROTOTYPEbasicNew: sizeRequested [
 	 enough memory available. Essential. See Object documentation whatIsAPrimitive.
 	
 	 If the primitive fails because space is low then the scavenger will run before the
-	 method is activated.  Check arguments and retry via failingBasicNew: if they're OK."
+	 method is activated.  Check args and retry via handleFailingBasicNew: if they're OK."
 
 	<primitive: 71>
 	self isVariable ifFalse:
@@ -145,20 +145,20 @@ SpurBootstrap class >> BehaviorPROTOTYPEbyteSizeOfInstanceWithIndexableVariables
 { #category : #'method prototypes' }
 SpurBootstrap class >> BehaviorPROTOTYPEelementSize [
 	"Answer the size in bytes of an element in the receiver.  The formats are
-		0 = 0 sized objects (UndefinedObject True False et al)
-		1 = non-indexable objects with inst vars (Point et al)
-		2 = indexable objects with no inst vars (Array et al)
-		3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
-		4 = weak indexable objects with inst vars (WeakArray et al)
-		5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
-		6 unused, reserved for exotic pointer objects?
-		7 reserved by the VM
-		8 unused, reserved for exotic non-pointer objects?
-		9 (?) 64-bit indexable
-		10 - 11 32-bit indexable
-		12 - 15 16-bit indexable
-		16 - 23 byte indexable
-		24 - 31 compiled method"
+			0	= 0 sized objects (UndefinedObject True False et al)
+			1	= non-indexable objects with inst vars (Point et al)
+			2	= indexable objects with no inst vars (Array et al)
+			3	= indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+			4	= weak indexable objects with inst vars (WeakArray et al)
+			5	= weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+			6	= unused
+			7	= immediates (SmallInteger, Character)
+			8	= unused
+			9	= 64-bit indexable
+		10-11	= 32-bit indexable (Bitmap)
+		12-15	= 16-bit indexable
+		16-23	= 8-bit indexable
+		24-31	= compiled methods (CompiledMethod)"
 	| instSpec |
 	instSpec := self instSpec.
 	instSpec < 9 ifTrue: [^Smalltalk wordSize].
@@ -170,11 +170,12 @@ SpurBootstrap class >> BehaviorPROTOTYPEelementSize [
 
 { #category : #'method prototypes' }
 SpurBootstrap class >> BehaviorPROTOTYPEhandleFailingBasicNew [
-	"This basicNew gets sent after basicNew has failed and allowed a
-	 scavenging garbage collection to occur.  The scavenging collection
-	 will have happened as the VM is activating the (failing) basicNew.
-	 If failingBasicNew fails then the scavenge failed to reclaim sufficient
-	 space and a global garbage collection is required.
+	"handleFailingBasicNew gets sent after basicNew has failed and allowed
+	 a scavenging garbage collection to occur.  The scavenging collection
+	 will have happened as the VM is activating the (failing) basicNew.  If
+	 handleFailingBasicNew fails then the scavenge failed to reclaim sufficient
+	 space and a global garbage collection is required.  Retry after garbage
+	 collecting and growing memory if necessary.
 
 	 Primitive. Answer an instance of this class with the number of indexable
 	 variables specified by the argument, sizeRequested.  Fail if this class is not
@@ -189,11 +190,12 @@ SpurBootstrap class >> BehaviorPROTOTYPEhandleFailingBasicNew [
 
 { #category : #'method prototypes' }
 SpurBootstrap class >> BehaviorPROTOTYPEhandleFailingBasicNew: sizeRequested [
-	"This basicNew: gets sent after basicNew: has failed and allowed a
-	 scavenging garbage collection to occur.  The scavenging collection
-	 will have happened as the VM is activating the (failing) basicNew:.
-	 If handleFailingBasicNew: fails then the scavenge failed to reclaim
-	 sufficient space and a global garbage collection is required.
+	"handleFailingBasicNew: gets sent after basicNew: has failed and allowed
+	 a scavenging garbage collection to occur.  The scavenging collection
+	 will have happened as the VM is activating the (failing) basicNew:.  If
+	 handleFailingBasicNew: fails then the scavenge failed to reclaim sufficient
+	 space and a global garbage collection is required.  Retry after garbage
+	 collecting and growing memory if necessary.
 
 	 Primitive. Answer an instance of this class with the number of indexable
 	 variables specified by the argument, sizeRequested.  Fail if this class is not
@@ -211,8 +213,9 @@ SpurBootstrap class >> BehaviorPROTOTYPEhandleFailingBasicNew: sizeRequested [
 
 { #category : #'method prototypes' }
 SpurBootstrap class >> BehaviorPROTOTYPEhandleFailingFailingBasicNew [
-	"This basicNew gets sent after failingBasicNew: has sent Smalltalk garbageCollect.
-	 If this fails then the system really is low on space.
+	"This basicNew gets sent after handleFailingBasicNew: has done a full
+	 garbage collection and possibly grown memory.  If this basicNew fails
+	 then the system really is low on space, so raise the OutOfMemory signal.
 
 	 Primitive. Answer an instance of this class with the number of indexable
 	 variables specified by the argument, sizeRequested.  Fail if this class is not
@@ -227,8 +230,9 @@ SpurBootstrap class >> BehaviorPROTOTYPEhandleFailingFailingBasicNew [
 
 { #category : #'method prototypes' }
 SpurBootstrap class >> BehaviorPROTOTYPEhandleFailingFailingBasicNew: sizeRequested [
-	"This basicNew: gets sent after failingBasicNew: has sent Smalltalk garbageCollect.
-	 If that fails the system really is low on space.
+	"This basicNew: gets sent after handleFailingBasicNew: has done a full
+	 garbage collection and possibly grown memory.  If this basicNew: fails
+	 then the system really is low on space, so raise the OutOfMemory signal.
 
 	 Primitive. Answer an instance of this class with the number of indexable
 	 variables specified by the argument, sizeRequested.  Fail if this class is not
@@ -236,7 +240,7 @@ SpurBootstrap class >> BehaviorPROTOTYPEhandleFailingFailingBasicNew: sizeReques
 	 enough memory available. Essential. See Object documentation whatIsAPrimitive."
 
 	<primitive: 71>
-	"arg okay; space must be low."
+	"space must be low."
 	OutOfMemory signal.
 	^self basicNew: sizeRequested  "retry if user proceeds"
 ]
@@ -244,11 +248,16 @@ SpurBootstrap class >> BehaviorPROTOTYPEhandleFailingFailingBasicNew: sizeReques
 { #category : #'method prototypes' }
 SpurBootstrap class >> BehaviorPROTOTYPEidentityHash [
 	"Answer a SmallInteger whose value is related to the receiver's identity.
-	This method must not be overridden.
-	Primitive. Fails if the receiver is not a Behavior. Essential.
-	See Object documentation whatIsAPrimitive.
+	 Behavior implements identityHash to allow the VM to use an object representation which
+	 does not include a direct reference to an object's class in an object.  If the VM is using
+	 this implementation then classes are held in a class table and instances contain the index
+	 of their class in the table.  A class's class table index is its identityHash so that an instance
+	 can be created without searching the table for a class's index.  The VM uses this primitive
+	 to enter the class into the class table, assigning its identityHash with an as yet unused
+	 class table index. If this primitive fails it means that the class table is full.  In Spur as of
+	 2014 there are 22 bits of classTable index and 22 bits of identityHash per object.
 
-	Do not override."
+	 Primitive. Essential. Do not override. See Object documentation whatIsAPrimitive."
 
 	<primitive: 175>
 	self primitiveFailed
@@ -267,20 +276,20 @@ SpurBootstrap class >> BehaviorPROTOTYPEinstSize [
 SpurBootstrap class >> BehaviorPROTOTYPEinstSpec [
 	"Answer the instance specification part of the format that defines what kind of object
 	 an instance of the receiver is.  The formats are
-		0 = 0 sized objects (UndefinedObject True False et al)
-		1 = non-indexable objects with inst vars (Point et al)
-		2 = indexable objects with no inst vars (Array et al)
-		3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
-		4 = weak indexable objects with inst vars (WeakArray et al)
-		5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
-		6 unused, reserved for exotic pointer objects?
-		7 reserved by the VM
-		8 unused, reserved for exotic non-pointer objects?
-		9 (?) 64-bit indexable
-		10 - 11 32-bit indexable
-		12 - 15 16-bit indexable
-		16 - 23 byte indexable
-		24 - 31 compiled method"
+			0	= 0 sized objects (UndefinedObject True False et al)
+			1	= non-indexable objects with inst vars (Point et al)
+			2	= indexable objects with no inst vars (Array et al)
+			3	= indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+			4	= weak indexable objects with inst vars (WeakArray et al)
+			5	= weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+			6	= unused
+			7	= immediates (SmallInteger, Character)
+			8	= unused
+			9	= 64-bit indexable
+		10-11	= 32-bit indexable (Bitmap)
+		12-15	= 16-bit indexable
+		16-23	= 8-bit indexable
+		24-31	= compiled methods (CompiledMethod)"
 	^(format bitShift: -16) bitAnd: 16r1F
 ]
 
@@ -290,19 +299,21 @@ SpurBootstrap class >> BehaviorPROTOTYPEisBits [
 	 Above Cog Spur the class format is
 		<5 bits inst spec><16 bits inst size>
 	 where the 5-bit inst spec is
-		 0 = 0 sized objects (UndefinedObject True False et al)
-		 1 = non-indexable objects with inst vars (Point et al)
-		 2 = indexable objects with no inst vars (Array et al)
-		 3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
-		 4 = weak indexable objects with inst vars (WeakArray et al)
-		 5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
-		 6,7,8 unused
-		 9 (?) 64-bit indexable
-		 10 - 11 32-bit indexable
-		 12 - 15 16-bit indexable
-		 16 - 23 byte indexable
-		 24 - 31 compiled method"
-	^self instSpec >= 9
+			0	= 0 sized objects (UndefinedObject True False et al)
+			1	= non-indexable objects with inst vars (Point et al)
+			2	= indexable objects with no inst vars (Array et al)
+			3	= indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+			4	= weak indexable objects with inst vars (WeakArray et al)
+			5	= weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+			6	= unused
+			7	= immediates (SmallInteger, Character)
+			8	= unused
+			9	= 64-bit indexable
+		10-11	= 32-bit indexable (Bitmap)
+		12-15	= 16-bit indexable
+		16-23	= 8-bit indexable
+		24-31	= compiled methods (CompiledMethod)"
+	^self instSpec >= 7
 ]
 
 { #category : #'method prototypes' }
@@ -311,18 +322,20 @@ SpurBootstrap class >> BehaviorPROTOTYPEisBytes [
 	 Above Cog Spur the class format is
 		<5 bits inst spec><16 bits inst size>
 	 where the 5-bit inst spec is
-		 0 = 0 sized objects (UndefinedObject True False et al)
-		 1 = non-indexable objects with inst vars (Point et al)
-		 2 = indexable objects with no inst vars (Array et al)
-		 3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
-		 4 = weak indexable objects with inst vars (WeakArray et al)
-		 5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
-		 6,7,8 unused
-		 9 (?) 64-bit indexable
-		 10 - 11 32-bit indexable
-		 12 - 15 16-bit indexable
-		 16 - 23 byte indexable
-		 24 - 31 compiled method"
+			0	= 0 sized objects (UndefinedObject True False et al)
+			1	= non-indexable objects with inst vars (Point et al)
+			2	= indexable objects with no inst vars (Array et al)
+			3	= indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+			4	= weak indexable objects with inst vars (WeakArray et al)
+			5	= weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+			6	= unused
+			7	= immediates (SmallInteger, Character)
+			8	= unused
+			9	= 64-bit indexable
+		10-11	= 32-bit indexable (Bitmap)
+		12-15	= 16-bit indexable
+		16-23	= 8-bit indexable
+		24-31	= compiled methods (CompiledMethod)"
 	^self instSpec >= 16
 ]
 
@@ -332,18 +345,20 @@ SpurBootstrap class >> BehaviorPROTOTYPEisVariable [
 	 Above Cog Spur the class format is
 		<5 bits inst spec><16 bits inst size>
 	 where the 5-bit inst spec is
-		 0 = 0 sized objects (UndefinedObject True False et al)
-		 1 = non-indexable objects with inst vars (Point et al)
-		 2 = indexable objects with no inst vars (Array et al)
-		 3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
-		 4 = weak indexable objects with inst vars (WeakArray et al)
-		 5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
-		 6,7,8 unused
-		 9 (?) 64-bit indexable
-		 10 - 11 32-bit indexable
-		 12 - 15 16-bit indexable
-		 16 - 23 byte indexable
-		 24 - 31 compiled method"
+			0	= 0 sized objects (UndefinedObject True False et al)
+			1	= non-indexable objects with inst vars (Point et al)
+			2	= indexable objects with no inst vars (Array et al)
+			3	= indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+			4	= weak indexable objects with inst vars (WeakArray et al)
+			5	= weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+			6	= unused
+			7	= immediates (SmallInteger, Character)
+			8	= unused
+			9	= 64-bit indexable
+		10-11	= 32-bit indexable (Bitmap)
+		12-15	= 16-bit indexable
+		16-23	= 8-bit indexable
+		24-31	= compiled methods (CompiledMethod)"
 	| instSpec |
 	instSpec := self instSpec.
 	^instSpec >= 2 and: [instSpec ~= 5]
