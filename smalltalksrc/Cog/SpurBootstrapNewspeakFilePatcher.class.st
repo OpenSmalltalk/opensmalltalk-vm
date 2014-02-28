@@ -64,6 +64,15 @@ SpurBootstrapNewspeakFilePatcher >> newspeakSourceFor: method "<CompiledMethod>"
 		 source := source copyReplaceFrom: startIndex to: startIndex with: '(* '.
 		 startIndex := nextIndex + 5].
 
+	"map assignments to Newspeak format"
+	startIndex := 1.
+	[(startIndex := source indexOfSubCollection: ':=' startingAt: startIndex) > 0] whileTrue:
+		[nextIndex := startIndex.
+		 [(source at: nextIndex - 1) isSeparator] whileTrue:
+			[nextIndex := nextIndex - 1].
+		 source := source copyReplaceFrom: nextIndex to: startIndex + 1 with: '::'.
+		 startIndex := nextIndex + 1].
+
 	"add the horror-show parentheses"
 	startIndex := source indexOf: Character cr.
 	source := source copyReplaceFrom: startIndex to: startIndex - 1 with: ' = ('.
