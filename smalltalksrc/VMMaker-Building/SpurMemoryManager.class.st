@@ -7465,7 +7465,10 @@ SpurMemoryManager >> printHeaderTypeOf: objOop [
 SpurMemoryManager >> printInstancesOf: aClassOop [
 	"Scan the heap printing the oops of any and all objects that are instances of aClassOop"
 	<api>
-	self printInstancesWithClassIndex: (self rawHashBitsOf: aClassOop)
+	| classIndex |
+	classIndex := self rawHashBitsOf: aClassOop.
+	classIndex ~= self isFreeObjectClassIndexPun ifTrue:
+		[self printInstancesWithClassIndex: classIndex]
 ]
 
 { #category : #'debug printing' }
