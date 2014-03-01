@@ -17,7 +17,7 @@ typedef struct {
 	unsigned		stackCheckOffset : 12;
  } CogBlockMethod;
 
-typedef struct {
+typedef struct _CogMethod {
 	sqLong	objectHeader;
 	unsigned		cmNumArgs : 8;
 	unsigned		cmType : 3;
@@ -33,4 +33,7 @@ typedef struct {
 	sqInt	methodObject;
 	sqInt	methodHeader;
 	sqInt	selector;
+	struct _CogMethod *nextMethod;
  } CogMethod;
+
+#define NewspeakCogMethod CogMethod

@@ -1,55 +1,11 @@
-# Automatically generated makefile include for external plugins
+# This is an example external plugin list.
+# Edit plugins.ext in vm build dir to specify the external plugins to be built.
 EXTERNAL_PLUGINS = \
-ADPCMCodecPlugin \
-AsynchFilePlugin \
-B3DAcceleratorPlugin \
-BMPReadWriterPlugin \
-B2DPlugin \
-BitBltPlugin \
 BochsIA32Plugin \
-CameraPlugin \
 CroquetPlugin \
-DSAPrims \
-ZipPlugin \
-DropPlugin \
-FFTPlugin \
-FT2Plugin \
-FileCopyPlugin \
-FilePlugin \
+SqueakFFIPrims \
+SqueakSSL \
 FloatArrayPlugin \
 FloatMathPlugin \
-GeniePlugin \
-HostWindowPlugin \
-IA32ABI \
-InternetConfigPlugin \
-JPEGReadWriter2Plugin \
-JPEGReaderPlugin \
-JoystickTabletPlugin \
-Klatt \
-LargeIntegers \
-LocalePlugin \
-MIDIPlugin \
-MacMenubarPlugin \
-Matrix2x3Plugin \
-MiscPrimitivePlugin \
 Mpeg3Plugin \
-QuicktimePlugin \
-RePlugin \
-ScratchPlugin \
-SecurityPlugin \
-SerialPlugin \
-SocketPlugin \
-SoundCodecPrims \
-SoundGenerationPlugin \
-SoundPlugin \
-SqueakSSL \
-StarSqueakPlugin \
-SqueakFFIPrims \
-UUIDPlugin \
-UnicodePlugin \
-AioPlugin \
-UnixOSProcessPlugin \
-VMProfileLinuxSupportPlugin \
-VMProfileMacSupportPlugin \
-WeDoPlugin \
-Win32OSProcessPlugin
+UnixOSProcessPlugin

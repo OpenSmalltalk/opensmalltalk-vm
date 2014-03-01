@@ -28,6 +28,8 @@
 #define PrimErrLimitExceeded 15
 #define PrimErrObjectIsPinned 16
 
+#define NewspeakVM 1
+
 #define STACKVM 1
 #define SPURVM 1
 #define COGVM 1

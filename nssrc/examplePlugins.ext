@@ -1,28 +1,4 @@
-# Automatically generated makefile include for external plugins
+# This is an example external plugin list.
+# Edit plugins.ext in vm build dir to specify the external plugins to be built.
 EXTERNAL_PLUGINS = \
-AsynchFilePlugin \
-BMPReadWriterPlugin \
-B2DPlugin \
-BitBltPlugin \
-DSAPrims \
-DropPlugin \
-FileCopyPlugin \
-FilePlugin \
-FloatArrayPlugin \
-FloatMathPlugin \
-ZipPlugin \
-JPEGReadWriter2Plugin \
-JPEGReaderPlugin \
-LargeIntegers \
-Matrix2x3Plugin \
-MiscPrimitivePlugin \
-IA32ABI \
-RePlugin \
-SecurityPlugin \
-SocketPlugin \
-SoundPlugin \
-SurfacePlugin \
-UUIDPlugin \
-UnixOSProcessPlugin \
-VMProfileMacSupportPlugin \
-Win32OSProcessPlugin
+SqueakSSL
