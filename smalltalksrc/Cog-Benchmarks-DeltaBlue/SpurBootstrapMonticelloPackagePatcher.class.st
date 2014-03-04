@@ -36,6 +36,17 @@ SpurBootstrapMonticelloPackagePatcher >> from: sourceDirName to: destDirName [
 ]
 
 { #category : #'private-accessing' }
+SpurBootstrapMonticelloPackagePatcher >> immediateClassDefinitionFor: className from: definitions [
+	| classDef |
+	classDef := definitions detect: [:d| d isClassDefinition and: [d className = className]].
+	classDef variables removeAllSuchThat:
+		[:varDef|
+		 varDef isInstanceVariable and: [varDef name = 'value']].
+	classDef instVarNamed: 'type' put: #immediate.
+	^MCAddition of: classDef
+]
+
+{ #category : #'private-accessing' }
 SpurBootstrapMonticelloPackagePatcher >> modifiedCharacterDefinitionsIn: definitions [
 	| rewriter |
 	rewriter := RBParseTreeRewriter new.
@@ -45,15 +56,7 @@ SpurBootstrapMonticelloPackagePatcher >> modifiedCharacterDefinitionsIn: definit
 	^(((definitions select: [:d| d isMethodDefinition and: [d fullClassName = #Character]])
 		collect: [:d| { d. self patchDefinition: d withRewriter: rewriter} ]
 		thenSelect: [:pair| pair first source ~= pair second source])
-			collect: [:pair| pair second]),
-	 (definitions
-		select: [:d| d isClassDefinition and: [d className = #Character]]
-		thenCollect:
-			[:d|
-			 d variables removeAllSuchThat:
-				[:varDef|
-				 varDef isInstanceVariable and: [varDef name = 'value']].
-			 d])
+			collect: [:pair| pair second])
 ]
 
 { #category : #'private-accessing' }
@@ -107,13 +110,15 @@ SpurBootstrapMonticelloPackagePatcher >> packagesAndPatches [
 { #category : #patching }
 SpurBootstrapMonticelloPackagePatcher >> patch [
 	"(SpurBootstrapMonticelloPackagePatcher new
-			from: '/Users/eliot/Glue/repositories/nsboot/smalltalk'
-			to: '/Users/eliot/Glue/repositories/spurnsboot/smalltalk')
+			from: '/Users/eliot/Squeak/Squeak4.5-spur/squeakv3-package-cache'
+			to: '/Users/eliot/Squeak/Squeak4.5-spur/package-cache')
 		patch"
 	"(SpurBootstrapMonticelloPackagePatcher new
 			from: '/Users/eliot/Glue/repositories/nsboot/Squeak4.3/squeak-package-cache'
 			to: '/Users/eliot/Glue/repositories/nsboot/Squeak4.3/package-cache')
 		patch"
+	(sourceDir exists and: [destDir exists]) ifFalse:
+		[self error: 'one or both of the directories don''t exist'].
 	self packagesAndPatches keysAndValuesDo:
 		[:package :patches|
 		 (self filesForPackage: package in: sourceDir) do:
@@ -140,20 +145,25 @@ SpurBootstrapMonticelloPackagePatcher >> patchDefinition: aMCMethodDefinition wi
 { #category : #patching }
 SpurBootstrapMonticelloPackagePatcher >> patchForPackage: package withPatches: patches snapshot: snapshot [
 	(package includesClass: Character) ifTrue:
-		[patches addAll: ((self modifiedCharacterDefinitionsIn: snapshot definitions) 
-							select:
-								[:def|
-								 patches noneSatisfy:
-									[:addition|
-									def isMethodDefinition
-									and: [addition definition selector = def selector
-									and: [addition definition className = def className
-									and: [addition definition classIsMeta = def classIsMeta]]]]]
-							thenCollect:
-								[:def|
-								 ((def source includesSubString: 'DELETEME')
-									ifTrue: [MCRemoval]
-									ifFalse: [MCAddition]) of: def])].
+		[patches
+			addAll: ((self modifiedCharacterDefinitionsIn: snapshot definitions)
+						select:
+							[:def|
+							 patches noneSatisfy:
+								[:addition|
+								def isMethodDefinition
+								and: [addition definition selector = def selector
+								and: [addition definition className = def className
+								and: [addition definition classIsMeta = def classIsMeta]]]]]
+						thenCollect:
+							[:def|
+							 ((def source includesSubString: 'DELETEME')
+								ifTrue: [MCRemoval]
+								ifFalse: [MCAddition]) of: def]);
+			add: (self immediateClassDefinitionFor: #Character from: snapshot definitions)].
+	(package includesClass: SmallInteger) ifTrue:
+		[patches
+			add: (self immediateClassDefinitionFor: #SmallInteger from: snapshot definitions)].
 	^MCPatch operations: patches
 ]
 
@@ -185,7 +195,9 @@ SpurBootstrapMonticelloPackagePatcher >> version: version withPatches: patches f
 				infoWithName: version info name
 				message:	version info name,
 							' patched for Spur by ',
-							(CCodeGenerator new shortMonticelloDescriptionForClass: self class))
+							(CCodeGenerator new shortMonticelloDescriptionForClass: self class),
+							'\\' withCRs,
+							version info message)
 		snapshot: snapshot
 		dependencies: {} "punt on computing dependencies; there are't any so far"
 
