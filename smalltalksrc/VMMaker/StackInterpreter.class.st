@@ -8687,6 +8687,20 @@ StackInterpreter >> okayInterpreterObjects [
 	self okayStackZone.
 ]
 
+{ #category : #simulation }
+StackInterpreter >> openOn: fileName [
+	"(StackInterpreterSimulator new openOn: 'clonex.image') openAsMorph; run"
+	<doNotGenerate>
+	objectMemory hasSpurMemoryManagerAPI ifTrue:
+		[| fileSize potSize |
+		fileSize := (FileDirectory directoryEntryFor: fileName)
+						ifNotNil: [:ent| ent fileSize]
+						ifNil: [((FileDoesNotExistException fileName: fileName) readOnly: true) signal].
+		potSize := 1 << (fileSize - 1) highBit.
+		^self openOn: fileName extraMemory: potSize / 4 + potSize - fileSize].
+	self openOn: fileName extraMemory: 2500000
+]
+
 { #category : #'debug printing' }
 StackInterpreter >> penultimateLiteralOf: aMethodOop [
 	self assert: (objectMemory isOopCompiledMethod: aMethodOop).
@@ -12212,6 +12226,22 @@ StackInterpreter >> stringForCString: aCString [
 			rn: aCString
 			cpy: len]. "(char *)strncpy()"
 	^newString
+]
+
+{ #category : #'debug support' }
+StackInterpreter >> stringOf: oop [
+	<doNotGenerate>
+	| size long nLongs chars |
+	^ String streamContents:
+		[:strm |
+		size := 128 min: (self stSizeOf: oop).
+		nLongs := size-1//BytesPerWord+1.
+		1 to: nLongs do:
+			[:i | long := self longAt: oop + BaseHeaderSize + (i-1*BytesPerWord).
+			chars := self charsOfLong: long.
+			strm nextPutAll: (i=nLongs
+							ifTrue: [chars copyFrom: 1 to: size-1\\BytesPerWord+1]
+							ifFalse: [chars])]]
 ]
 
 { #category : #'indexing primitive support' }
