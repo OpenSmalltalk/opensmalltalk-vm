@@ -2282,18 +2282,6 @@ CogVMSimulator >> openAsMorphNoTranscript [
 ]
 
 { #category : #initialization }
-CogVMSimulator >> openOn: fileName [
-	"(CogVMSimulator new openOn: 'clonex.image') test"
-	objectMemory hasSpurMemoryManagerAPI ifTrue:
-		[| fileSize potSize |
-		fileSize := (FileDirectory directoryEntryFor: fileName) fileSize.
-		potSize := 1 << (fileSize - 1) highBit.
-		^self openOn: fileName extraMemory: potSize / 4 + potSize - fileSize].
-
-	self openOn: fileName extraMemory: 2500000.
-]
-
-{ #category : #initialization }
 CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 	"CogVMSimulator new openOn: 'clone.im' extraMemory: 100000"
 
@@ -3412,21 +3400,6 @@ CogVMSimulator >> startInContextSuchThat: aBlock [
 { #category : #'debugging traps' }
 CogVMSimulator >> startOfMemory [
 	self shouldNotImplement
-]
-
-{ #category : #'debug support' }
-CogVMSimulator >> stringOf: oop [
-	| size long nLongs chars |
-	^ String streamContents:
-		[:strm |
-		size := 100 min: (self stSizeOf: oop).
-		nLongs := size-1//BytesPerWord+1.
-		1 to: nLongs do:
-			[:i | long := self longAt: oop + BaseHeaderSize + (i-1*BytesPerWord).
-			chars := self charsOfLong: long.
-			strm nextPutAll: (i=nLongs
-							ifTrue: [chars copyFrom: 1 to: size-1\\BytesPerWord+1]
-							ifFalse: [chars])]]
 ]
 
 { #category : #'simulation only' }
