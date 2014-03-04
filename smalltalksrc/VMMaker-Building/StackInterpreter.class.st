@@ -3533,7 +3533,7 @@ StackInterpreter >> closureIn: context numArgs: numArgs instructionPointer: init
 	ClassBlockClosureCompactIndex ~= 0
 		ifTrue:
 			[newClosure := objectMemory
-								eeInstantiateClassIndex: ClassBlockClosureCompactIndex
+								eeInstantiateSmallClassIndex: ClassBlockClosureCompactIndex
 								format: objectMemory indexablePointersFormat
 								numSlots: ClosureFirstCopiedValueIndex + numCopied]
 		ifFalse:
@@ -3560,7 +3560,7 @@ StackInterpreter >> closureIn: context numArgs: numArgs instructionPointer: init
 	ClassBlockClosureCompactIndex ~= 0
 		ifTrue:
 			[newClosure := objectMemory
-								eeInstantiateClassIndex: ClassBlockClosureCompactIndex
+								eeInstantiateSmallClassIndex: ClassBlockClosureCompactIndex
 								format: objectMemory indexablePointersFormat
 								numSlots: ClosureFirstCopiedValueIndex + numCopied]
 		ifFalse:
@@ -4016,20 +4016,20 @@ StackInterpreter >> createActualMessageTo: lookupClass [
 	objectMemory hasSpurMemoryManagerAPI
 		ifTrue:
 			[argumentArray := objectMemory
-								eeInstantiateClassIndex: ClassArrayCompactIndex
+								eeInstantiateSmallClassIndex: ClassArrayCompactIndex
 								format: objectMemory arrayFormat
 								numSlots: argumentCount.
 			 message := objectMemory
-								eeInstantiateClassIndex: ClassMessageCompactIndex
+								eeInstantiateSmallClassIndex: ClassMessageCompactIndex
 								format: objectMemory nonIndexablePointerFormat
 								numSlots: MessageLookupClassIndex + 1]
 		ifFalse:
 			[argumentArray := objectMemory
-								eeInstantiateClass: (objectMemory splObj: ClassArray)
-								indexableSize: argumentCount.
+								eeInstantiateSmallClass: (objectMemory splObj: ClassArray)
+								numSlots: argumentCount.
 			 message := objectMemory
-								eeInstantiateClass: (objectMemory splObj: ClassMessage)
-								indexableSize: 0].
+								eeInstantiateSmallClass: (objectMemory splObj: ClassMessage)
+								numSlots: MessageLookupClassIndex + 1].
 
 	"Since the array is new can use unchecked stores."
 	(argumentCount - 1) * BytesPerOop to: 0 by: BytesPerOop negated do:
@@ -4043,7 +4043,7 @@ StackInterpreter >> createActualMessageTo: lookupClass [
 
 	self push: message.
 
-	argumentCount := 1.
+	argumentCount := 1
 ]
 
 { #category : #utilities }
@@ -5468,7 +5468,7 @@ StackInterpreter >> floatObjectOf: aFloat [
 	<inline: false>
 	<var: #aFloat type: #double>
 	newFloatObj := objectMemory
-						eeInstantiateClassIndex: ClassFloatCompactIndex
+						eeInstantiateSmallClassIndex: ClassFloatCompactIndex
 						format: objectMemory firstLongFormat
 						numSlots: 8 / objectMemory wordSize.
 	objectMemory storeFloatAt: newFloatObj + objectMemory baseHeaderSize from: aFloat.
@@ -8822,7 +8822,7 @@ StackInterpreter >> positive32BitIntegerFor: integerValue [
 		[^objectMemory integerObjectOf: integerValue].
 
 	newLargeInteger := objectMemory
-							eeInstantiateClassIndex: ClassLargePositiveIntegerCompactIndex
+							eeInstantiateSmallClassIndex: ClassLargePositiveIntegerCompactIndex
 							format: (objectMemory byteFormatForNumBytes: 4)
 							numSlots: 1.
 	objectMemory
@@ -10390,12 +10390,18 @@ StackInterpreter >> pushNewArrayBytecode [
 	popValues := size > 127.
 	size := size bitAnd: 127.
 	self fetchNextBytecode.
-	self externalizeIPandSP.
-	array := objectMemory
-				eeInstantiateClassIndex: ClassArrayCompactIndex
-				format: objectMemory arrayFormat
-				numSlots: size.
-	self internalizeIPandSP.
+	self externalizeIPandSP. "in case of abort"
+	objectMemory hasSpurMemoryManagerAPI
+		ifTrue:
+			[array := objectMemory
+						eeInstantiateSmallClassIndex: ClassArrayCompactIndex
+						format: objectMemory arrayFormat
+						numSlots: size]
+		ifFalse:
+			[array := objectMemory
+						eeInstantiateClassIndex: ClassArrayCompactIndex
+						format: objectMemory arrayFormat
+						numSlots: size].
 	popValues
 		ifTrue:
 			[0 to: size - 1 do:
