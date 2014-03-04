@@ -1925,6 +1925,29 @@ SpurMemoryManager >> allocateSlotsInOldSpace: numSlots format: formatField class
 ]
 
 { #category : #allocation }
+SpurMemoryManager >> allocateSmallNewSpaceSlots: numSlots format: formatField classIndex: classIndex [
+	"Allocate an object with numSlots in newSpace, where numSlots is known to be small.
+	 This is for the `ee' execution engine allocations, and must be satisfied.  If no memory
+	 is available, abort.  If the allocation pushes freeStart past scavengeThreshold and a
+	 scavenge is not already scheduled, schedule a scavenge."
+	<inline: true>
+	| numBytes newObj |
+	self assert: numSlots < self numSlotsMask.
+	newObj := freeStart.
+	numBytes := self smallObjectBytesForSlots: numSlots.
+	self assert: numBytes \\ self allocationUnit = 0.
+	self assert: newObj \\ self allocationUnit = 0.
+	freeStart + numBytes > scavengeThreshold ifTrue:
+		[needGCFlag ifFalse: [self scheduleScavenge].
+		 freeStart + numBytes > scavenger eden limit ifTrue:
+			[self error: 'no room in eden for allocateSmallNewSpaceSlots:format:classIndex:'.
+			 ^0]].
+	self longLongAt: newObj put: (self headerForSlots: numSlots format: formatField classIndex: classIndex).
+	freeStart := freeStart + numBytes.
+	^newObj
+]
+
+{ #category : #allocation }
 SpurMemoryManager >> allocationUnit [
 	"All objects are a multiple of 8 bytes in length"
 	^8
@@ -3299,9 +3322,25 @@ SpurMemoryManager >> eeInstantiateSmallClass: classObj numSlots: numSlots [
 	<inline: true>
 	classIndex := self ensureBehaviorHash: classObj.
 	^self
-		eeInstantiateClassIndex: classIndex
+		eeInstantiateSmallClassIndex: classIndex
 		format: (self instSpecOfClass: classObj)
 		numSlots: numSlots
+]
+
+{ #category : #instantiation }
+SpurMemoryManager >> eeInstantiateSmallClassIndex: knownClassIndex format: objFormat numSlots: numSlots [
+	"Instantiate a small instance of a compact class.  ee stands for execution engine and
+	 implies that this allocation will *NOT* cause a GC.  small implies the object will have
+	 less than 255 slots. N.B. the instantiated object IS NOT FILLED and must be completed
+	 before returning it to Smalltalk. Since this call is used in routines that do just that we
+	 are safe.  Break this rule and die in GC.  Result is guaranteed to be young."
+	<inline: true>
+	self assert: (numSlots >= 0 and: [knownClassIndex ~= 0]).
+	self assert: (objFormat < self firstByteFormat
+					ifTrue: [objFormat]
+					ifFalse: [objFormat bitAnd: self byteFormatMask])
+				= (self instSpecOfClass: (self knownClassAtIndex: knownClassIndex)).
+	^self allocateSmallNewSpaceSlots: numSlots format: objFormat classIndex: knownClassIndex
 ]
 
 { #category : #'debug support' }

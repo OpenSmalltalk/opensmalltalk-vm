@@ -1479,7 +1479,7 @@ CoInterpreter >> ceNewArraySlotSize: slotSize [
 	objectMemory hasSpurMemoryManagerAPI ifTrue:
 		[| obj |
 		 obj := objectMemory
-					eeInstantiateClassIndex: ClassArrayCompactIndex
+					eeInstantiateSmallClassIndex: ClassArrayCompactIndex
 					format: objectMemory arrayFormat
 					numSlots: slotSize.
 		objectMemory fillObj: obj numSlots: slotSize with: objectMemory nilObject.
