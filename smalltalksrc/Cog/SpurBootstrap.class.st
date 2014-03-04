@@ -340,6 +340,32 @@ SpurBootstrap class >> BehaviorPROTOTYPEisBytes [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrap class >> BehaviorPROTOTYPEisEphemeronClass [
+	"Answer whether the receiver has ephemeral instance variables.  The garbage collector will
+	 fire (queue for finalization) any ephemeron whose first instance variable is not referenced
+	 other than from the transitive closure of references from ephemerons. Hence referring to
+	 an object from the first inst var of an ephemeron will cause the ephemeron to fire when
+	 the rest of the system does not refer to the object and that object is ready to be collected.
+	 Since references from the remaining inst vars of an ephemeron will not prevent the ephemeron
+	 from firing, ephemerons may act as the associations in weak dictionaries such that the value
+	 (e.g. properties attached to the key) will not prevent firing when the key is no longer referenced
+	 other than from ephemerons.  Ephemerons can therefore be used to implement instance-based
+	 pre-mortem finalization."
+	^self instSpec = 5
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> BehaviorPROTOTYPEisImmediateClass [
+	"Answer whether the receiver has immediate instances.  Immediate instances
+	 store their value in their object pointer, not in an object body.  Hence immediates
+	 take no space and are immutable.  The immediates are distinguished by tag bits
+	 in the pointer. They include SmallIntegers and Characters.  Hence in the 32-bit
+	 system SmallIntegers are 31-bit signed integers and Characters are 30-bit
+	 unsigned character codes."
+	^self instSpec = 7
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrap class >> BehaviorPROTOTYPEisVariable [
 	"Answer whether the receiver has indexable variables.
 	 Above Cog Spur the class format is
@@ -361,7 +387,33 @@ SpurBootstrap class >> BehaviorPROTOTYPEisVariable [
 		24-31	= compiled methods (CompiledMethod)"
 	| instSpec |
 	instSpec := self instSpec.
-	^instSpec >= 2 and: [instSpec ~= 5]
+	^instSpec >= 2 and: [instSpec <= 4 or: [instSpec >= 9]]
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> BehaviorPROTOTYPEkindOfSubclass [
+	"Answer a String that is the keyword that describes the receiver's kind of subclass,
+	 either a regular subclass, a variableSubclass, a variableByteSubclass,
+	 a variableWordSubclass, a weakSubclass, an ephemeronSubclass or an immediateSubclass.
+	 c.f. typeOfClass"
+	^self isVariable
+		ifTrue:
+			[self isBits
+				ifTrue:
+					[self isBytes
+						ifTrue: [' variableByteSubclass: ']
+						ifFalse: [' variableWordSubclass: ']]
+				ifFalse:
+					[self isWeak
+						ifTrue: [' weakSubclass: ']
+						ifFalse: [' variableSubclass: ']]]
+		ifFalse:
+			[self isImmediateClass
+				ifTrue: [' immediateSubclass: ']
+				ifFalse:
+					[self isEphemeronClass
+						ifTrue: [' ephemeronSubclass: ']
+						ifFalse: [' subclass: ']]]
 ]
 
 { #category : #'method prototypes' }
@@ -373,6 +425,23 @@ SpurBootstrap class >> BehaviorPROTOTYPEshouldNotBeRedefined [
 	^(Smalltalk specialObjectsArray
 		identityIndexOf: self
 		ifAbsent: [(self isKindOf: self) ifTrue: [1] ifFalse: [0]]) ~= 0
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> BehaviorPROTOTYPEtypeOfClass [
+	"Answer a symbol uniquely describing the type of the receiver. c.f. kindOfSubclass"
+	self isBytes ifTrue:
+		[^self instSpec = CompiledMethod instSpec
+			ifTrue: [#compiledMethod] "Very special!"
+			ifFalse: [#bytes]].
+	(self isWords and: [self isPointers not]) ifTrue:
+		[^self instSpec = SmallInteger instSpec
+			ifTrue: [#immediate] "Very special!"
+			ifFalse: [#words]].
+	self isWeak ifTrue: [^#weak].
+	self isVariable ifTrue: [^#variable].
+	self isEphemeronClass ifTrue: [^#ephemeron].
+	^#normal
 ]
 
 { #category : #'method prototypes' }
@@ -463,34 +532,110 @@ SpurBootstrap class >> CharacterclassPROTOTYPEvalue: anInteger [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrap class >> ClassBuilderPROTOTYPEcomputeFormat: type instSize: newInstSize forSuper: newSuper ccIndex: ccIndex [
+	"Compute the new format for making oldClass a subclass of newSuper.
+	 Answer the format or nil if there is any problem."
+	| instSize isVar isWords isPointers isWeak |
+	type == #compiledMethod ifTrue:
+		[newInstSize > 0 ifTrue:
+			[self error: 'A compiled method class cannot have named instance variables'.
+			^nil].
+		^CompiledMethod format].
+	instSize := newInstSize + (newSuper ifNil:[0] ifNotNil:[newSuper instSize]).
+	instSize > 65535 ifTrue:
+		[self error: 'Class has too many instance variables (', instSize printString,')'.
+		^nil].
+	type == #normal ifTrue:[isVar := isWeak := false. isWords := isPointers := true].
+	type == #bytes ifTrue:[isVar := true. isWords := isPointers := isWeak := false].
+	type == #words ifTrue:[isVar := isWords := true. isPointers := isWeak := false].
+	type == #variable ifTrue:[isVar := isPointers := isWords := true. isWeak := false].
+	type == #weak ifTrue:[isVar := isWeak := isWords := isPointers := true].
+	type == #ephemeron ifTrue:[isVar := false. isWeak := isWords := isPointers := true].
+	type == #immediate ifTrue:[isVar := isWeak := isPointers := false. isWords := true].
+	(isPointers not and: [instSize > 0]) ifTrue:
+		[self error: 'A non-pointer class cannot have named instance variables'.
+		^nil].
+	^self format: instSize variable: isVar words: isWords pointers: isPointers weak: isWeak
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrap class >> ClassBuilderPROTOTYPEformat: nInstVars variable: isVar words: isWords pointers: isPointers weak: isWeak [
 	"Compute the format for the given instance specfication.
 	 Above Cog Spur the class format is
 		<5 bits inst spec><16 bits inst size>
 	 where the 5-bit inst spec is
-		 0 = 0 sized objects (UndefinedObject True False et al)
-		 1 = non-indexable objects with inst vars (Point et al)
-		 2 = indexable objects with no inst vars (Array et al)
-		 3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
-		 4 = weak indexable objects with inst vars (WeakArray et al)
-		 5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
-		 6,7,8 unused
-		 9 (?) 64-bit indexable
-		 10 - 11 32-bit indexable
-		 12 - 15 16-bit indexable
-		 16 - 23 byte indexable
-		 24 - 31 compiled method"
+			0	= 0 sized objects (UndefinedObject True False et al)
+			1	= non-indexable objects with inst vars (Point et al)
+			2	= indexable objects with no inst vars (Array et al)
+			3	= indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+			4	= weak indexable objects with inst vars (WeakArray et al)
+			5	= weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+			6	= unused
+			7	= immediates (SmallInteger, Character)
+			8	= unused
+			9	= reserved for 64-bit indexable
+		10-11	= 32-bit indexable (Bitmap)
+		12-15	= 16-bit indexable
+		16-23	= 8-bit indexable
+		24-31	= compiled methods (CompiledMethod)"
 	| instSpec |
 	instSpec := isWeak
-					ifTrue: [4]
+					ifTrue:
+						[isVar
+							ifTrue: [4]
+							ifFalse: [5]]
 					ifFalse:
 						[isPointers
 							ifTrue:
 								[isVar
 									ifTrue: [nInstVars > 0 ifTrue: [3] ifFalse: [2]]
 									ifFalse: [nInstVars > 0 ifTrue: [1] ifFalse: [0]]]
-							ifFalse: [isWords ifTrue: [12] ifFalse: [16]]].
+							ifFalse:
+								[isVar
+									ifTrue: [isWords ifTrue: [12] ifFalse: [16]]
+									ifFalse: [7]]].
 	^(instSpec bitShift: 16) + nInstVars
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> ClassBuilderPROTOTYPEsuperclass: aClass
+	immediateSubclass: t instanceVariableNames: f 
+	classVariableNames: d poolDictionaries: s category: cat [
+	"This is the standard initialization message for creating a
+	 new immediate class as a subclass of an existing class."
+	| env |
+	aClass instSize > 0
+		ifTrue: [^self error: 'cannot make an immediate subclass of a class with named fields'].
+	aClass isVariable
+		ifTrue: [^self error: 'cannot make an immediate subclass of a class with indexed instance variables'].
+	aClass isPointers
+		ifFalse: [^self error: 'cannot make an immediate subclass of a class without pointer fields'].
+	"Cope with pre-environment and environment versions. Simplify asap."
+	env := (Smalltalk classNamed: #EnvironmentRequest)
+				ifNil: [aClass environment]
+				ifNotNil: [:erc| erc signal ifNil: [aClass environment]].
+	^self 
+		name: t
+		inEnvironment: env
+		subclassOf: aClass
+		type: #immediate
+		instanceVariableNames: f
+		classVariableNames: d
+		poolDictionaries: s
+		category: cat
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> ClassPROTOTYPEimmediateSubclass: t instanceVariableNames: f classVariableNames: d poolDictionaries: s category: cat [ 
+	"This is the standard initialization message for creating a new
+	 immediate class as a subclass of an existing class (the receiver)."
+	^ClassBuilder new
+		superclass: self
+		immediateSubclass: t
+		instanceVariableNames: f
+		classVariableNames: d
+		poolDictionaries: s
+		category: cat
 ]
 
 { #category : #'method prototypes' }
@@ -596,6 +741,45 @@ SpurBootstrap class >> WideStringPROTOTYPEat: index put: aCharacter [
 				ifFalse: [self errorNonIntegerIndex]]
 		ifFalse:
 			[self errorImproperStore]
+]
+
+{ #category : #utilities }
+SpurBootstrap class >> bootstrapImage: imageFileBaseName [
+	"SpurBootstrap bootstrapImage: '/Users/eliot/Squeak/Squeak4.5/Squeak4.5-13680'"
+	| imageFormat |
+	imageFormat := ImageFormat fromFile: imageFileBaseName, '.image'.
+	imageFormat requiresClosureSupport ifFalse:
+		[self error: 'Can''t bootstrap this image since Spur assumes closure support.'].
+	imageFormat requiresSpurSupport ifTrue:
+		[self error: 'This image is already in Spur format.'].
+	imageFormat is32Bit ifTrue:
+		[^SpurBootstrap32 new bootstrapImage: imageFileBaseName].
+	self error: '64-bit support and 64-bit generation as-yet-unimplemented'
+]
+
+{ #category : #tests }
+SpurBootstrap class >> testComputeFormat [
+	"self testComputeFormat"
+	#(	(normal 0)
+		(bytes 16)
+		(words 12)
+		(variable 2)
+		(weak 4)
+		(ephemeron 5)
+		(immediate 7)
+		(compiledMethod 24)) do:
+		[:tuple|
+		 [:type :instSpec| | fmt |
+		   fmt := [self ClassBuilderPROTOTYPEcomputeFormat: type instSize: 0 forSuper: Object ccIndex: 0]
+					on: MessageNotUnderstood
+					do: [:ex|
+						ex message selector ~~ #format:variable:words:pointers:weak: ifTrue:
+							[ex pass].
+						self perform: #ClassBuilderPROTOTYPEformat:variable:words:pointers:weak:
+							withArguments: ex message arguments].
+		   self assert: (fmt >> 16 = instSpec
+						or: [type = #compiledMethod and: [fmt = CompiledMethod format]]).
+		 ] valueWithArguments: tuple]
 ]
 
 { #category : #'bootstrap methods' }
@@ -747,6 +931,30 @@ SpurBootstrap >> bootstrapImage [
 	newHeapSize := newHeap freeStart.
 	newHeap initializePostBootstrap.
 	self measureNewHeapPostInitPostBootstrap
+]
+
+{ #category : #'public access' }
+SpurBootstrap >> bootstrapImage: imageName [
+	| dirName baseName dir |
+	dirName := FileDirectory dirPathFor: imageName.
+	baseName := (imageName endsWith: '.image')
+					ifTrue: [FileDirectory baseNameFor: imageName]
+					ifFalse: [FileDirectory localNameFor: imageName].
+	dir := FileDirectory on: dirName.
+	self on: (dir fullNameFor: baseName, '.image').
+	[self transform]
+		on: Halt
+		do: [:ex|
+			"suppress halts from the usual suspects (development time halts)"
+			(#(fullGC compactImage) includes: ex signalerContext sender selector)
+				ifTrue: [ex resume]
+				ifFalse: [ex pass]].
+	self writeSnapshot: (dir fullNameFor: baseName, '-spur.image')
+		ofTransformedImage: newHeap
+		headerFlags: oldInterpreter getImageHeaderFlags
+		screenSize: oldInterpreter savedWindowSize.
+	dir copyFileNamed: (dir fullNameFor: baseName, '.changes')
+		toFileNamed: (dir fullNameFor: baseName, '-spur.changes')
 ]
 
 { #category : #'bootstrap image' }
@@ -1851,6 +2059,49 @@ SpurBootstrap >> wordSize [
 { #category : #'word size' }
 SpurBootstrap >> wordSizeMask [
 	^self subclassResponsibility
+]
+
+{ #category : #testing }
+SpurBootstrap >> writeSnapshot: imageFileName ofTransformedImage: spurHeap headerFlags: headerFlags screenSize: screenSizeInteger [
+	"The bootstrapped image typically contains a few big free chunks and one huge free chunk.
+	 Test snapshot writing and loading by turning the largest non-huge chunks into segment bridges
+	 and saving."
+	| penultimate ultimate sizes counts barriers sim |
+	sim := StackInterpreterSimulator onObjectMemory: spurHeap.
+	sim bootstrapping: true.
+	spurHeap coInterpreter: sim.
+	sim initializeInterpreter: 0;
+		setImageHeaderFlagsFrom: headerFlags;
+		setDisplayForm: (Form extent: screenSizeInteger >> 16 @ (screenSizeInteger bitAnd: 16rFFFF)).
+	spurHeap allOldSpaceEntitiesDo: [:e| penultimate := ultimate. ultimate := e].
+	self assert: (spurHeap isFreeObject: penultimate).
+	self assert: (spurHeap isSegmentBridge: ultimate).
+	sizes := Bag new.
+	spurHeap allObjectsInFreeTree: (spurHeap freeLists at: 0) do:
+		[:f|
+		sizes add: (spurHeap bytesInObject: f)].
+	counts := sizes sortedCounts.
+	self assert: counts last key = 1. "1 huge chunk"
+	counts size > 1
+		ifTrue:
+			[self assert: ((counts at: counts size - 1) key > 2
+						and: [(counts at: counts size - 1) value > 1024]).
+			barriers := (1 to: (counts at: counts size - 1) key) collect:
+							[:ign| spurHeap allocateOldSpaceChunkOfExactlyBytes: (counts at: counts size - 1) value].
+			barriers := barriers, {spurHeap allocateOldSpaceChunkOfExactlyBytes: (spurHeap bytesInObject: penultimate)}]
+		ifFalse:
+			[barriers := {spurHeap allocateOldSpaceChunkOfExactlyBytes: (spurHeap bytesInObject: penultimate)}].
+	spurHeap setEndOfMemory: barriers last.
+	spurHeap allOldSpaceEntitiesDo: [:e| penultimate := ultimate. ultimate := e].
+	self assert: (spurHeap addressAfter: ultimate) = barriers last.
+	spurHeap checkFreeSpace.
+	spurHeap runLeakCheckerForFullGC: true.
+	spurHeap segmentManager initializeFromFreeChunks: (barriers sort collect: [:b| spurHeap objectStartingAt: b]).
+	spurHeap checkFreeSpace.
+	spurHeap runLeakCheckerForFullGC: true.
+	sim bereaveAllMarriedContextsForSnapshotFlushingExternalPrimitivesIf: true.
+	sim imageName: imageFileName.
+	sim writeImageFileIO
 ]
 
 { #category : #testing }
