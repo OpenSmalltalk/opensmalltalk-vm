@@ -920,10 +920,11 @@ SpurMemoryManager >> addFreeSubTree: freeTree [
 	 and/or step in size at 1032 bytes in 32-bits or 2048 bytes in 64-bits."
 	self assert: (self isFreeObject: freeTree).
 	bytesInArg := self bytesInObject: freeTree.
-	self assert: bytesInArg / (self allocationUnit / self bytesPerSlot) >= self numFreeLists.
+	self assert: bytesInArg >= (self numFreeLists * self allocationUnit).
 	treeNode := freeLists at: 0.
 	self assert: treeNode ~= 0.
 	[bytesInNode := self bytesInObject: treeNode.
+	 self assert: bytesInNode >= (self numFreeLists * self allocationUnit).
 	 self assert: bytesInArg ~= bytesInNode.
 	 bytesInNode > bytesInArg
 		ifTrue:
@@ -978,8 +979,7 @@ SpurMemoryManager >> addToFreeTree: freeChunk bytes: chunkBytes [
 	| childBytes parent child |
 	self assert: (self isFreeObject: freeChunk).
 	self assert: chunkBytes = (self bytesInObject: freeChunk).
-	self assert: chunkBytes / self allocationUnit >= self numFreeLists.
-
+	self assert: chunkBytes >= (self numFreeLists * self allocationUnit).
 	self
 		storePointer: self freeChunkNextIndex ofFreeChunk: freeChunk withValue: 0;
 		storePointer: self freeChunkParentIndex ofFreeChunk: freeChunk withValue: 0;
@@ -3849,6 +3849,7 @@ SpurMemoryManager >> findLargestFreeChunk [
 	treeNode = 0 ifTrue:
 		[^nil].
 	[self assert: (self isValidFreeObject: treeNode).
+	 self assert: (self bytesInObject: treeNode) >= (self numFreeLists * self allocationUnit).
 	 childNode := self fetchPointer: self freeChunkLargerIndex ofFreeChunk: treeNode.
 	 childNode ~= 0] whileTrue:
 		[treeNode := childNode].
@@ -4512,6 +4513,7 @@ SpurMemoryManager >> freeTreeNodesDo: aBlock [
 		[^self].
 	cameFrom := -1.
 	[| smallChild largeChild |
+	 self assert: (self bytesInObject: treeNode) >= (self numFreeLists * self allocationUnit).
 	 smallChild := self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: treeNode.
 	 largeChild := self fetchPointer: self freeChunkLargerIndex ofFreeChunk: treeNode.
 	 self assert: (smallChild = 0 or: [treeNode = (self fetchPointer: self freeChunkParentIndex ofFreeChunk: smallChild)]).
@@ -5659,7 +5661,7 @@ SpurMemoryManager >> isIntegerValue: intValue [
 
 { #category : #'free space' }
 SpurMemoryManager >> isLargeFreeObject: objOop [
-	^(self bytesInObject: objOop)  / self allocationUnit >= self numFreeLists
+	^(self bytesInObject: objOop) >= (self numFreeLists * self allocationUnit)
 ]
 
 { #category : #'header access' }
@@ -5813,7 +5815,7 @@ SpurMemoryManager >> isValidFreeObject: objOop [
 	  and: [(self isInMemory: (self addressAfter: objOop))
 	  and: [((chunk := (self fetchPointer: self freeChunkNextIndex ofFreeChunk: objOop)) = 0
 		   or: [self isFreeObject: chunk])
-	  and: [(self bytesInObject: objOop) / self allocationUnit < self numFreeLists
+	  and: [(self bytesInObject: objOop) < (self numFreeLists * self allocationUnit)
 		    or: [((chunk := (self fetchPointer: self freeChunkParentIndex ofFreeChunk: objOop)) = 0
 			   or: [self isFreeObject: chunk])
 			  and: [((chunk := (self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: objOop)) = 0
@@ -7425,7 +7427,7 @@ SpurMemoryManager >> printFreeChunk: freeChunk [
 		print: ' bytes '; printNum: numBytes;
 		print: ' next '; printHexPtrnp: (self fetchPointer: self freeChunkNextIndex
 											ofFreeChunk: freeChunk).
-	numBytes / self allocationUnit >= self numFreeLists ifTrue:
+	numBytes >= (self numFreeLists * self allocationUnit) ifTrue:
 		[coInterpreter
 			print: ' ^ '; printHexPtrnp: (self fetchPointer: self freeChunkParentIndex
 											ofFreeChunk: freeChunk);
@@ -8739,7 +8741,7 @@ SpurMemoryManager >> swizzleFieldsOfFreeChunk: chunk [
 		[self storePointerNoAssert: self freeChunkNextIndex
 			ofFreeChunk: chunk
 			withValue: (segmentManager swizzleObj: field)].
-	(self bytesInObject: chunk) / self allocationUnit >= self numFreeLists ifTrue:
+	(self bytesInObject: chunk) >= (self numFreeLists * self allocationUnit) ifTrue:
 		[self freeChunkParentIndex to: self freeChunkLargerIndex do:
 			[:index|
 			 field := self fetchPointer: index ofFreeChunk: chunk.
