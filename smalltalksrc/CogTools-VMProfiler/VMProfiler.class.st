@@ -611,7 +611,9 @@ VMProfiler >> interpReport: s [
 
 { #category : #reports }
 VMProfiler >> interpreterReport: justWeird [
-	(String streamContents: [:s| self interpReport: s]) openInWorkspaceWithTitle: 'Interpreter Labels by Cost'
+	UIManager default
+		edit: (String streamContents: [:s| self interpReport: s])
+		label: 'Interpreter Labels by Cost'
 ]
 
 { #category : #opening }
@@ -1525,7 +1527,9 @@ VMProfiler >> updateButtons [
 
 { #category : #reports }
 VMProfiler >> vmReport: justWeird [
-	(String streamContents: [:s| self report: s]) openInWorkspaceWithTitle: 'VM Functions by Cost'
+	UIManager default
+		edit: (String streamContents: [:s| self report: s])
+		label: 'VM Functions by Cost'
 ]
 
 { #category : #reports }
