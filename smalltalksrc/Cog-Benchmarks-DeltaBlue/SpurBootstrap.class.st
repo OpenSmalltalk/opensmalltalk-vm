@@ -654,6 +654,13 @@ SpurBootstrap class >> SmallIntegerPROTOTYPEasCharacter [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrap class >> SmalltalkImagePROTOTYPEcompactClassesArray [
+	"Smalltalk compactClassesArray"
+	"Backward-compatibility support.  Spur does not have compact classes."
+	^{}
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrap class >> SmalltalkImagePROTOTYPEgrowMemoryByAtLeast: numBytes [
 	"Grow memory by at least the requested number of bytes.
 	 Fail if no memory is available."
