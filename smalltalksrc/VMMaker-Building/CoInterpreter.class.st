@@ -6313,14 +6313,12 @@ CoInterpreter >> startPCOfMethodHeader: aCompiledMethodHeader [
 
 { #category : #'cog jit support' }
 CoInterpreter >> startPCOrNilOfLiteral: lit in: aMethodObj [
-	"Answer the startPC of lit if it is a (clean) block in aMethodObj, oitherwise answer nil."
+	"Answer the startPC of lit if it is a (clean) block in aMethodObj, otherwise answer nil."
 	<api>
 	| outerContext |
-	(objectMemory isImmediate: lit) ifTrue:
-		[^nil].
-	(objectMemory lastPointerOf: lit) <= ClosureCopiedValuesIndex ifTrue:
-		[^nil].
-	(objectMemory isArrayNonImm: lit) ifTrue:
+	((objectMemory isNonImmediate: lit)
+	 and: [(objectMemory formatOf: lit) = objectMemory indexablePointersFormat
+	 and: [(objectMemory numSlotsOf: lit) >= ClosureCopiedValuesIndex]]) ifFalse:
 		[^nil].
 	outerContext := objectMemory fetchPointer: ClosureOuterContextIndex ofObject: lit.
 	(objectMemory isContext: outerContext) ifFalse:
