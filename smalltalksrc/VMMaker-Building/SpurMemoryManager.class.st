@@ -1054,7 +1054,7 @@ SpurMemoryManager >> adjustAllOopsBy: bytesToShift [
 	 or when loading multiple segments that have been coalesced.  Also
 	 set bits in the classTableBitmap corresponding to used classes."
 
-	| obj |
+	| obj classIndex |
 	self countNumClassPagesPreSwizzle: bytesToShift;
 		ensureAdequateClassTableBitmap.
 	(bytesToShift ~= 0
@@ -1063,18 +1063,23 @@ SpurMemoryManager >> adjustAllOopsBy: bytesToShift [
 			[self assert: self newSpaceIsEmpty.
 			 obj := self objectStartingAt: oldSpaceStart.
 			 [self oop: obj isLessThan: freeOldSpaceStart] whileTrue:
-				[(self isFreeObject: obj)
-					ifTrue: [self swizzleFieldsOfFreeChunk: obj]
+				[classIndex := self classIndexOf: obj.
+				 classIndex >= self isForwardedObjectClassIndexPun
+					ifTrue:
+						[classIndex > self lastClassIndexPun ifTrue:
+							[self inClassTableBitmapSet: classIndex].
+						 self swizzleFieldsOfObject: obj]
 					ifFalse:
-						[self inClassTableBitmapSet: (self classIndexOf: obj).
-						 self swizzleFieldsOfObject: obj].
+						[classIndex = self isFreeObjectClassIndexPun ifTrue:
+							[self swizzleFieldsOfFreeChunk: obj]].
 				 obj := self objectAfter: obj]]
 		ifFalse:
 			[self assert: self newSpaceIsEmpty.
 			 obj := self objectStartingAt: oldSpaceStart.
 			 [self oop: obj isLessThan: endOfMemory] whileTrue:
-				[(self isFreeObject: obj) ifFalse:
-					[self inClassTableBitmapSet: (self classIndexOf: obj)].
+				[classIndex := self classIndexOf: obj.
+				 classIndex > self lastClassIndexPun ifTrue:
+					[self inClassTableBitmapSet: classIndex].
 				 obj := self objectAfter: obj]]
 ]
 
@@ -4898,7 +4903,7 @@ SpurMemoryManager >> immutableBitShift [
 { #category : #'class table' }
 SpurMemoryManager >> inClassTableBitmapSet: classIndex [
 	| bit majorIndex |
-	self assert: (classIndex >= 0 and: [classIndex <= self classIndexMask]).
+	self assert: (classIndex > self lastClassIndexPun and: [classIndex <= self classIndexMask]).
 	majorIndex := classIndex // BitsPerByte.
 	bit := 1 << (classIndex bitAnd: BitsPerByte - 1).
 	classTableBitmap
@@ -4933,6 +4938,23 @@ SpurMemoryManager >> inFreeTreeReplace: treeNode with: newNode [
 					 self storePointer: self freeChunkParentIndex ofFreeChunk: relative withValue: newNode]].
 		self storePointer: i ofFreeChunk: newNode withValue: relative.
 		self storePointer: i ofFreeChunk: treeNode withValue: 0]
+]
+
+{ #category : #'debug printing' }
+SpurMemoryManager >> inOrderPrintFreeTree: freeChunk printList: printNextList [
+	"print free chunks in freeTree in order."
+	<api>
+	| next |
+	(next := self fetchPointer: self freeChunkSmallerIndex ofObject: freeChunk) ~= 0 ifTrue:
+		[self inOrderPrintFreeTree: next printList: printNextList].
+	self printFreeChunk: freeChunk isNextChunk: false.
+	printNextList ifTrue:
+		[next := freeChunk.
+		 [(next := self fetchPointer: self freeChunkNextIndex ofObject: next) ~= 0] whileTrue:
+			[coInterpreter tab.
+			 self printFreeChunk: next isNextChunk: true]].
+	(next := self fetchPointer: self freeChunkLargerIndex ofObject: freeChunk) ~= 0 ifTrue:
+		[self inOrderPrintFreeTree: next printList: printNextList]
 ]
 
 { #category : #'become implementation' }
@@ -7459,6 +7481,11 @@ SpurMemoryManager >> printAdjacentFreeChunks [
 { #category : #'debug printing' }
 SpurMemoryManager >> printFreeChunk: freeChunk [
 	<api>
+	self printFreeChunk: freeChunk isNextChunk: false
+]
+
+{ #category : #'debug printing' }
+SpurMemoryManager >> printFreeChunk: freeChunk isNextChunk: isNextChunk [
 	| numBytes |
 	numBytes := self bytesInObject: freeChunk.
 	coInterpreter
@@ -7466,7 +7493,8 @@ SpurMemoryManager >> printFreeChunk: freeChunk [
 		print: ' bytes '; printNum: numBytes;
 		print: ' next '; printHexPtrnp: (self fetchPointer: self freeChunkNextIndex
 											ofFreeChunk: freeChunk).
-	numBytes >= (self numFreeLists * self allocationUnit) ifTrue:
+	(numBytes >= (self numFreeLists * self allocationUnit)
+	 and: [isNextChunk not]) ifTrue:
 		[coInterpreter
 			print: ' ^ '; printHexPtrnp: (self fetchPointer: self freeChunkParentIndex
 											ofFreeChunk: freeChunk);
