@@ -263,7 +263,10 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		declareC: 'sqInt breakSelectorLength = -1'.
 
 	self declareCAsUSqLong: #(nextPollUsecs nextWakeupUsecs longRunningPrimitiveGCUsecs
-								longRunningPrimitiveStartUsecs longRunningPrimitiveStopUsecs)
+								longRunningPrimitiveStartUsecs longRunningPrimitiveStopUsecs
+								"these are high-frequency enough that tehy're overflowing quite quickly on modern hardware"
+								statProcessSwitch statIOProcessEvents statForceInterruptCheck
+								statCheckForEvents statStackOverflow statStackPageDivorce)
 		in: aCCodeGenerator.
 	aCCodeGenerator var: #nextProfileTick type: #sqLong
 ]
@@ -8818,7 +8821,8 @@ StackInterpreter >> popStackBytecode [
 { #category : #'primitive support' }
 StackInterpreter >> positive32BitIntegerFor: integerValue [
 	| newLargeInteger |
-	"Note - integerValue is interpreted as POSITIVE, eg, as the result of Bitmap>at:, or integer>bitAnd:."
+	"N.B. will *not* cause a GC.
+		integerValue is interpreted as POSITIVE, e.g. as the result of Bitmap>at:."
 	(integerValue >= 0
 	 and: [objectMemory isIntegerValue: integerValue]) ifTrue:
 		[^objectMemory integerObjectOf: integerValue].
@@ -8837,26 +8841,30 @@ StackInterpreter >> positive32BitIntegerFor: integerValue [
 
 { #category : #'primitive support' }
 StackInterpreter >> positive64BitIntegerFor: integerValue [
-
-	| newLargeInteger value highWord sz |
-	"Note - integerValue is interpreted as POSITIVE, eg, as the result of
-		Bitmap>at:, or integer>bitAnd:."
 	<var: 'integerValue' type: 'sqLong'>
- 
-	(self sizeof: integerValue) = 4 ifTrue: [^self positive32BitIntegerFor: integerValue].
-
-
-	highWord := self cCode: 'integerValue >> 32'. "shift is coerced to usqInt otherwise"
+	| newLargeInteger highWord sz |
+	"N.B. will *not* cause a GC.
+		integerValue is interpreted as POSITIVE, e.g. as the result of Bitmap>at:."
+	highWord := self cCode: 'integerValue >> 32' inSmalltalk: [integerValue >> 32]. "shift is coerced to usqInt otherwise"
 	highWord = 0 ifTrue:[^self positive32BitIntegerFor: integerValue].
 	sz := 5.
 	(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1].
 	(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1].
 	(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1].
-	newLargeInteger := objectMemory instantiateClass: (objectMemory splObj: ClassLargePositiveInteger) indexableSize:  sz.
-	0 to: sz-1 do: [:i |
-		value := self cCode: '(integerValue >> (i * 8)) & 255'.
-		objectMemory storeByte: i ofObject: newLargeInteger withValue: value].
-	^ newLargeInteger
+	newLargeInteger := objectMemory
+							eeInstantiateSmallClassIndex: ClassLargePositiveIntegerCompactIndex
+							format: (objectMemory byteFormatForNumBytes: sz)
+							numSlots: 8 / objectMemory bytesPerSlot.
+	objectMemory
+		storeByte: 7 ofObject: newLargeInteger withValue: (integerValue >> 56 bitAnd: 16rFF);
+		storeByte: 6 ofObject: newLargeInteger withValue: (integerValue >> 48 bitAnd: 16rFF);
+		storeByte: 5 ofObject: newLargeInteger withValue: (integerValue >> 40 bitAnd: 16rFF);
+		storeByte: 4 ofObject: newLargeInteger withValue: (integerValue >> 32 bitAnd: 16rFF);
+		storeByte: 3 ofObject: newLargeInteger withValue: (integerValue >> 24 bitAnd: 16rFF);
+		storeByte: 2 ofObject: newLargeInteger withValue: (integerValue >> 16 bitAnd: 16rFF);
+		storeByte: 1 ofObject: newLargeInteger withValue: (integerValue >>   8 bitAnd: 16rFF);
+		storeByte: 0 ofObject: newLargeInteger withValue: (integerValue ">> 0" bitAnd: 16rFF).
+	^newLargeInteger
 
 ]
 
