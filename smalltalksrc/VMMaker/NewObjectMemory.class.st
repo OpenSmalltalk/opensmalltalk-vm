@@ -387,6 +387,11 @@ NewObjectMemory >> bytesLeft: includingSwap [
 	^self freeSize + (self sqMemoryExtraBytesLeft: includingSwap)
 ]
 
+{ #category : #accessing }
+NewObjectMemory >> bytesPerSlot [
+	^self bytesPerOop
+]
+
 { #category : #allocation }
 NewObjectMemory >> checkForLastObjectOverwrite [
 	<doNotGenerate>
