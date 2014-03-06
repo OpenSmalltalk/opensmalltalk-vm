@@ -1341,8 +1341,8 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 	argumentCount = 0 ifTrue:
 		[result := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: paramsArraySize.
 		objectMemory storePointerUnchecked: 0	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory newSpaceSize).
-		objectMemory storePointerUnchecked: 1	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory oldSpaceSize).
-		objectMemory storePointerUnchecked: 2	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory totalMemorySize).
+		objectMemory storePointerUnchecked: 1	ofObject: result withValue: (self positive64BitIntegerFor: objectMemory oldSpaceSize).
+		objectMemory storePointerUnchecked: 2	ofObject: result withValue: (self positive64BitIntegerFor: objectMemory totalMemorySize).
 		objectMemory storePointerUnchecked: 3	ofObject: result withValue: objectMemory nilObject "was allocationCount".
 		objectMemory storePointerUnchecked: 4	ofObject: result withValue: objectMemory nilObject "allocationsBetweenGCs".
 		objectMemory storePointerUnchecked: 5	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory tenuringThreshold).
@@ -1395,12 +1395,12 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		objectMemory storePointerUnchecked: 48	ofObject: result withValue: (objectMemory integerObjectOf: self ioGetMaxExtSemTableSize).
 		49 to: 54 do:
 			[:i | objectMemory storePointerUnchecked: i ofObject: result withValue: objectMemory nilObject].
-		objectMemory storePointerUnchecked: 55	ofObject: result withValue: (objectMemory integerObjectOf: statProcessSwitch).
-		objectMemory storePointerUnchecked: 56	ofObject: result withValue: (objectMemory integerObjectOf: statIOProcessEvents).
-		objectMemory storePointerUnchecked: 57	ofObject: result withValue: (objectMemory integerObjectOf: statForceInterruptCheck).
-		objectMemory storePointerUnchecked: 58	ofObject: result withValue: (objectMemory integerObjectOf: statCheckForEvents).
-		objectMemory storePointerUnchecked: 59	ofObject: result withValue: (objectMemory integerObjectOf: statStackOverflow).
-		objectMemory storePointerUnchecked: 60	ofObject: result withValue: (objectMemory integerObjectOf: statStackPageDivorce).
+		objectMemory storePointerUnchecked: 55	ofObject: result withValue: (self positive64BitIntegerFor: statProcessSwitch).
+		objectMemory storePointerUnchecked: 56	ofObject: result withValue: (self positive64BitIntegerFor: statIOProcessEvents).
+		objectMemory storePointerUnchecked: 57	ofObject: result withValue: (self positive64BitIntegerFor: statForceInterruptCheck).
+		objectMemory storePointerUnchecked: 58	ofObject: result withValue: (self positive64BitIntegerFor: statCheckForEvents).
+		objectMemory storePointerUnchecked: 59	ofObject: result withValue: (self positive64BitIntegerFor: statStackOverflow).
+		objectMemory storePointerUnchecked: 60	ofObject: result withValue: (self positive64BitIntegerFor: statStackPageDivorce).
 		objectMemory storePointerUnchecked: 61	ofObject: result withValue: self getCodeCompactionCount.
 		objectMemory storePointerUnchecked: 62	ofObject: result withValue: self getCodeCompactionMSecs.
 		objectMemory storePointerUnchecked: 63	ofObject: result withValue: self getCogMethodCount.
@@ -1427,8 +1427,8 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		[(arg < 1 or: [arg > paramsArraySize]) ifTrue: [^self primitiveFailFor: PrimErrBadIndex].
 		result := objectMemory nilObject.
 		arg = 1		ifTrue: [result := objectMemory integerObjectOf: objectMemory newSpaceSize].
-		arg = 2		ifTrue: [result := objectMemory integerObjectOf: objectMemory oldSpaceSize].
-		arg = 3		ifTrue: [result := objectMemory integerObjectOf: objectMemory totalMemorySize].
+		arg = 2		ifTrue: [result := self positive64BitIntegerFor: objectMemory oldSpaceSize].
+		arg = 3		ifTrue: [result := self positive64BitIntegerFor: objectMemory totalMemorySize].
 		arg = 4		ifTrue: [result := objectMemory nilObject "was allocationCount"].
 		arg = 5		ifTrue: [result := objectMemory nilObject "was allocationsBetweenGCs"].
 		arg = 6		ifTrue: [result := objectMemory integerObjectOf: objectMemory tenuringThreshold].
@@ -1472,12 +1472,12 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		arg = 48	ifTrue: [result := self getCogVMFlags].
 		arg = 49	ifTrue: [result := objectMemory integerObjectOf: self ioGetMaxExtSemTableSize].
 		"(arg between: 50 and: 55) ifTrue: [result := objectMemory nilObject]."
-		arg = 56	ifTrue: [result := objectMemory integerObjectOf: statProcessSwitch].
-		arg = 57	ifTrue: [result := objectMemory integerObjectOf: statIOProcessEvents].
-		arg = 58	ifTrue: [result := objectMemory integerObjectOf: statForceInterruptCheck].
-		arg = 59	ifTrue: [result := objectMemory integerObjectOf: statCheckForEvents].
-		arg = 60	ifTrue: [result := objectMemory integerObjectOf: statStackOverflow].
-		arg = 61	ifTrue: [result := objectMemory integerObjectOf: statStackPageDivorce].
+		arg = 56	ifTrue: [result := self positive64BitIntegerFor: statProcessSwitch].
+		arg = 57	ifTrue: [result := self positive64BitIntegerFor: statIOProcessEvents].
+		arg = 58	ifTrue: [result := self positive64BitIntegerFor: statForceInterruptCheck].
+		arg = 59	ifTrue: [result := self positive64BitIntegerFor: statCheckForEvents].
+		arg = 60	ifTrue: [result := self positive64BitIntegerFor: statStackOverflow].
+		arg = 61	ifTrue: [result := self positive64BitIntegerFor: statStackPageDivorce].
 		arg = 62	ifTrue: [result := self getCodeCompactionCount].
 		arg = 63	ifTrue: [result := self getCodeCompactionMSecs].
 		arg = 64	ifTrue: [result := self getCogMethodCount].
