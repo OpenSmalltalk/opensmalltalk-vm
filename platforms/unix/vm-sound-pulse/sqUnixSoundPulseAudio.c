@@ -25,7 +25,7 @@
  *   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  *   DEALINGS IN THE SOFTWARE.
  *
- * Last edited: 2010-04-13 07:45:37 by piumarta on ubuntu
+ * Last edited: 2014-03-07 08:25:10 by piumarta on emilia.local
  */
 
 /* ========== */
@@ -995,10 +995,10 @@ DBGMSG("<sound_StartRecording()");
 static sqInt sound_StopRecording(void) {
 DBGMSG(">sound_StopRecording()");
 
-	if (!audioIn.open) return;
+	if (!audioIn.open) return 0;
 	audioIn.open = false;
 	
-	if (NULL == audioIn.pa_conn) return;
+	if (NULL == audioIn.pa_conn) return 1;
 	
 	ioThreadStall(&audioIn);
 

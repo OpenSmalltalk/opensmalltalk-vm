@@ -1,3 +1,8 @@
+2014-03-07  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm-sound-pulse/sqUnixSoundPulseAudio.c: Add missing values to
+	non-void returns.
+
 2013-11-18  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm/build.cmake: Remove disabledPlugins.c from list of source

@@ -1,6 +1,6 @@
 # Yes, it's true: you can write makefiles in COBOL.
 # 
-# Last edited: 2013-11-11 18:46:18 by piumarta on emilia
+# Last edited: 2013-12-06 14:09:50 by piumarta on emilia
 
 PROJECT (squeak)
 
@@ -139,7 +139,7 @@ SET (ioUtcWithOffset sqUnixUtcWithOffset)
 CONFIG_DEFINE (ioUtcWithOffset)
 
 SET (CMAKE_SKIP_BUILD_RPATH TRUE)
-SET (CMAKE_BUILD_WITH_INSTALL_RPATH TRUE) 
+SET (CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 SET (CMAKE_INSTALL_RPATH "")
 SET (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
