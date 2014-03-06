@@ -264,7 +264,7 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 
 	self declareCAsUSqLong: #(nextPollUsecs nextWakeupUsecs longRunningPrimitiveGCUsecs
 								longRunningPrimitiveStartUsecs longRunningPrimitiveStopUsecs
-								"these are high-frequency enough that tehy're overflowing quite quickly on modern hardware"
+								"these are high-frequency enough that they're overflowing quite quickly on modern hardware"
 								statProcessSwitch statIOProcessEvents statForceInterruptCheck
 								statCheckForEvents statStackOverflow statStackPageDivorce)
 		in: aCCodeGenerator.
