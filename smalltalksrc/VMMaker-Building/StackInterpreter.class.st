@@ -8593,17 +8593,19 @@ StackInterpreter >> objCouldBeClassObj: objOop [
 	<inline: false>
 	| fieldOop |
 	^(objectMemory isPointersNonImm: objOop)
-	  and: [(objectMemory numSlotsOf: objOop) >= (InstanceSpecificationIndex+1)
+	  and: [(objectMemory numSlotsOf: objOop) > InstanceSpecificationIndex
 	  and: [fieldOop := objectMemory fetchPointer: SuperclassIndex ofObject: objOop.
-			((objectMemory isPointers: fieldOop)
-			or: [(objectMemory rawHashBitsOf: objOop) = 0
-				and: [(objectMemory isOopForwarded: fieldOop)
-				and: [objectMemory isPointers: (objectMemory followForwarded: fieldOop)]]])
+			((objectMemory isNonImmediate: fieldOop)
+			and:[ (objectMemory isPointersNonImm: fieldOop)
+				or: [(objectMemory rawHashBitsOf: fieldOop) = 0
+					and: [(objectMemory isOopForwarded: fieldOop)
+					and: [objectMemory isPointers: (objectMemory followForwarded: fieldOop)]]]])
 	  and: [fieldOop := objectMemory fetchPointer: MethodDictionaryIndex ofObject: objOop.
-			((objectMemory isPointers: fieldOop)
-			or: [(objectMemory rawHashBitsOf: objOop) = 0
-				and: [(objectMemory isOopForwarded: fieldOop)
-				and: [objectMemory isPointers: (objectMemory followForwarded: fieldOop)]]])
+			((objectMemory isNonImmediate: fieldOop)
+			and:[ (objectMemory isPointersNonImm: fieldOop)
+				or: [(objectMemory rawHashBitsOf: fieldOop) = 0
+					and: [(objectMemory isOopForwarded: fieldOop)
+					and: [objectMemory isPointers: (objectMemory followForwarded: fieldOop)]]]])
 	  and: [(objectMemory isIntegerObject: (objectMemory fetchPointer: InstanceSpecificationIndex ofObject: objOop))]]]]
 ]
 
