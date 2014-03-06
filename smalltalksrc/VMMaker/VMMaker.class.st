@@ -298,6 +298,8 @@ VMMaker class >> generate: interpreterClass with: optionsPairsArray to: srcDirNa
 { #category : #configurations }
 VMMaker class >> generateAllConfigurationsUnderVersionControl [
 	self generateNewspeakCogVM;
+		generateNewspeakSpurCogVM;
+		generateNewspeakSpurStackVM;
 		generateSqueakCogVM;
 		generateSqueakCogMTVM;
 		generateSqueakStackVM;
