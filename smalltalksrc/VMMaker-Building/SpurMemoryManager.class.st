@@ -4891,7 +4891,7 @@ SpurMemoryManager >> identityHashHalfWordMask [
 SpurMemoryManager >> imageSizeToWrite [
 	"when asked, newSpace should be empty."
 	self assert: self newSpaceIsEmpty.
-	^segmentManager totalBytesInSegments
+	^segmentManager totalBytesInNonEmptySegments
 ]
 
 { #category : #'header format' }
@@ -4903,7 +4903,8 @@ SpurMemoryManager >> immutableBitShift [
 { #category : #'class table' }
 SpurMemoryManager >> inClassTableBitmapSet: classIndex [
 	| bit majorIndex |
-	self assert: (classIndex > self lastClassIndexPun and: [classIndex <= self classIndexMask]).
+	self assert: (classIndex >= self firstClassIndexPun
+				 and: [classIndex <= self classIndexMask]).
 	majorIndex := classIndex // BitsPerByte.
 	bit := 1 << (classIndex bitAnd: BitsPerByte - 1).
 	classTableBitmap

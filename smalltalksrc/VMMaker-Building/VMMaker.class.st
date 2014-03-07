@@ -1053,7 +1053,10 @@ VMMaker >> generateEntire [
 	self configurationGeneratorNameOrNil ifNotNil:
 		[:generator|
 		 logger cr; nextPutAll: (generator selector copyReplaceAll: 'generate' with: '').
-		 interpreterClassName ifNotNil: [logger space; nextPutAll: interpreterClassName].
+		 interpreterClassName ifNotNil:
+			[logger
+				space; nextPutAll: interpreterClassName;
+				space; nextPutAll: (CCodeGenerator shortMonticelloDescriptionForClass: interpreterClassName)].
 		 logger cr; flush].
 	self generateMainVM.
 	self generateExternalPlugins
@@ -1803,6 +1806,9 @@ VMMaker >> sourceFilePathFor: sourceFileName [
 { #category : #exports }
 VMMaker >> storeExternalPluginList [
 	| contents filePath fileStream |
+	((self externalPluginListName beginsWith: 'example')
+	 and: [self makefileDirectory fileExists: self externalPluginListName]) ifTrue:
+		[^self].
 	contents := String streamContents:
 		[:s|
 		s nextPutAll:'# Automatically generated makefile include for external plugins'.
@@ -1822,6 +1828,9 @@ VMMaker >> storeExternalPluginList [
 { #category : #exports }
 VMMaker >> storeInternalPluginList [
 	| contents filePath fileStream |
+	((self internalPluginListName beginsWith: 'example')
+	 and: [self makefileDirectory fileExists: self internalPluginListName]) ifTrue:
+		[^self].
 	contents := String streamContents:
 		[:s|
 		s nextPutAll:'# Automatically generated makefile include for internal plugins'.

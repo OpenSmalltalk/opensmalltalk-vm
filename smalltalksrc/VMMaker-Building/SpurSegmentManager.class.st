@@ -119,7 +119,7 @@ SpurSegmentManager >> adjustSegmentSwizzlesBy: firstSegmentShift [
 	 they were in the image when it was written, so that oops' segments
 	 can be determined and hence oops correctly swizzled."
 	<inline: false>
-	<var: 'segInfo' type: 'SpurSegmentInfo *'>
+	<var: 'segInfo' type: #'SpurSegmentInfo *'>
 	| oldBaseAddr |
 	oldBaseAddr := manager memoryBaseForImageRead - firstSegmentShift.
 	0 to: numSegments - 1 do:
@@ -339,6 +339,20 @@ SpurSegmentManager >> manager: aSpurMemoryManager [
 	manager := aSpurMemoryManager
 ]
 
+{ #category : #snapshot }
+SpurSegmentManager >> nextNonEmptySegmentSizeAfter: i [
+	"Answer the size of the next non-empty segment.
+	 The size of a segment includes that of its bridge.
+	 A segment containing just a free object and a bridge will still have a
+	 size of manager bridgeSize after shortening it in prepareForSnapshot."
+	| nextx |
+	nextx := i.
+	[(nextx := nextx + 1) >= numSegments ifTrue:
+		[^0].
+	 (segments at: nextx) segSize > manager bridgeSize ifTrue:
+		[^(segments at: nextx) segSize]] repeat
+]
+
 { #category : #pinning }
 SpurSegmentManager >> notePinned: objOop [
 	"Let the segmentManager mark which segments contain pinned objects"
@@ -390,6 +404,7 @@ SpurSegmentManager >> prepareForGlobalSweep [
 { #category : #snapshot }
 SpurSegmentManager >> prepareForSnapshot [
 	"shorten all segments by any trailing free space."
+	<inline: false>
 	<var: #seg type: #'SpurSegmentInfo *'>
 	0 to: numSegments - 1 do:
 		[:i|
@@ -400,11 +415,18 @@ SpurSegmentManager >> prepareForSnapshot [
 	"Ideally finding the lastFreeObject of each segment would be
 	 done in some linear pass through the heap.  But for now KISS."
 	manager freeTreeNodesDo:
-		[:freeChunk| | next seg |
-		 next := manager objectAfter: freeChunk limit: manager endOfMemory.
-		 (manager isSegmentBridge: next) ifTrue:
-			[seg := self segmentContainingObj: freeChunk.
-			 seg lastFreeObject: freeChunk].
+		[:freeChunk| | node next seg |
+		 node := freeChunk.
+		 [node ~= 0] whileTrue:
+			[next := manager objectAfter: node limit: manager endOfMemory.
+			 (manager isSegmentBridge: next)
+				ifTrue:
+					[seg := self segmentContainingObj: node.
+					 seg lastFreeObject: node.
+					 node := 0]
+				ifFalse:
+					[node := self fetchPointer: self freeChunkNextIndex
+								ofFreeChunk: node]].
 		 freeChunk].
 
 	0 to: numSegments - 1 do:
@@ -449,7 +471,7 @@ SpurSegmentManager >> readHeapFromImageFile: f dataBytes: numBytes [
 	<var: #f type: #sqImageFile>
 	<inline: false>
 	| bytesRead totalBytesRead bridge nextSegmentSize oldBase newBase segInfo bridgeSpan |
-	<var: 'segInfo' type: 'SpurSegmentInfo *'>
+	<var: 'segInfo' type: #'SpurSegmentInfo *'>
 	self allocateOrExtendSegmentInfos.
 
 	"segment sizes include the two-header-word bridge at the end of each segment."
@@ -487,6 +509,7 @@ SpurSegmentManager >> readHeapFromImageFile: f dataBytes: numBytes [
 
 { #category : #accessing }
 SpurSegmentManager >> segmentContainingObj: objOop [
+	<export: true>
 	<returnTypeC: #'SpurSegmentInfo *'>
 	numSegments - 1 to: 0 by: -1 do:
 		[:i|
@@ -512,6 +535,17 @@ SpurSegmentManager >> swizzleObj: objOop [
 ]
 
 { #category : #snapshot }
+SpurSegmentManager >> totalBytesInNonEmptySegments [
+	| total |
+	total := 0.
+	0 to: numSegments - 1 do:
+		[:i|
+		(segments at: i) segSize > manager bridgeSize ifTrue:
+			[total := total + (segments at: i) segSize]].
+	^total
+]
+
+{ #category : #snapshot }
 SpurSegmentManager >> totalBytesInSegments [
 	| total |
 	total := 0.
@@ -523,20 +557,21 @@ SpurSegmentManager >> totalBytesInSegments [
 
 { #category : #snapshot }
 SpurSegmentManager >> writeImageToFile: aBinaryStream [
+	<var: 'aBinaryStream' type: #'FILE *'>
+	<inline: false>
 	| total |
-	total := 0.
 	self assert: (manager endOfMemory = (segments at: numSegments - 1) segLimit
 				 or: [manager endOfMemory + manager bridgeSize = (segments at: numSegments - 1) segLimit]).
 	firstSegmentSize ifNotNil:
 		[self assert: firstSegmentSize = (segments at: 0) segSize].
+	self assert: (segments at: 0) segSize > 0.
+	total := 0.
 	0 to: numSegments - 1 do:
-		[:i| | nextSegSize |
-		nextSegSize := i = (numSegments - 1)
-							ifTrue: [0]
-							ifFalse: [(segments at: i + 1) segSize].
-		total := total + (self writeSegment: (self addressOf: (segments at: i))
-							nextSegmentSize: nextSegSize
-							toFile: aBinaryStream)].
+		[:i|
+		(segments at: i) segSize > manager bridgeSize ifTrue:
+			[total := total + (self writeSegment: (self addressOf: (segments at: i))
+								nextSegmentSize: (self nextNonEmptySegmentSizeAfter: i)
+								toFile: aBinaryStream)]].
 	^total
 ]
 
