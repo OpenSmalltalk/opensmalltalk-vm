@@ -77,6 +77,16 @@ CCodeGenerator class >> removeCompilerMethods [
 
 ]
 
+{ #category : #'C code generator' }
+CCodeGenerator class >> shortMonticelloDescriptionForClass: aClass [
+	"Answer a suitable Monticello package stamp to include in a moduleName."
+	| mdesc |
+	mdesc := [self monticelloDescriptionFor: aClass]
+				on: Error
+				do: [:ex| ^' ', Date today asString].
+	^mdesc copyFrom: 1 to: (mdesc indexOfSubCollection: ' uuid:') - 1
+]
+
 { #category : #'spur primitive compilation' }
 CCodeGenerator >> accessorChainsForMethod: method interpreterClass: interpreterClass [
 	"Answer a set of access paths from arguments through objects, in the method, assuming
@@ -3870,11 +3880,7 @@ CCodeGenerator >> selectorsAndMethodsDo: aBinaryBlock [
 { #category : #'C code generator' }
 CCodeGenerator >> shortMonticelloDescriptionForClass: aClass [
 	"Answer a suitable Monticello package stamp to include in a moduleName."
-	| mdesc |
-	mdesc := [self class monticelloDescriptionFor: aClass]
-				on: Error
-				do: [:ex| ^' ', Date today asString].
-	^mdesc copyFrom: 1 to: (mdesc indexOfSubCollection: ' uuid:') - 1
+	^self class shortMonticelloDescriptionForClass: aClass
 ]
 
 { #category : #utilities }
