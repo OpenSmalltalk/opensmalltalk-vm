@@ -12790,11 +12790,14 @@ StackInterpreter >> writeImageFile: imageBytes [
 
 { #category : #'image save/restore' }
 StackInterpreter >> writeImageFileIO [
+	"Write the image header and heap contents to imageFile for snapshot."
+	| imageName headerStart headerSize f imageBytes bytesWritten sCWIfn okToWrite |
+	<var: #f type: #sqImageFile>
+	<var: #headerStart type: #squeakFileOffsetType>
+	<var: #sCWIfn type: #'void *'>
+	<var: #imageName declareC: 'extern char imageName[]'>
 
-	| headerStart headerSize f bytesWritten sCWIfn okToWrite |
-	<var: #f type: 'sqImageFile'>
-	<var: #headerStart type: 'squeakFileOffsetType '>
-	<var: #sCWIfn type: 'void *'>
+	self cCode: [] inSmalltalk: [^self writeImageFileIOSimulation].
 
 	"If the security plugin can be loaded, use it to check for write permission.
 	If not, assume it's ok"
@@ -12807,18 +12810,19 @@ StackInterpreter >> writeImageFileIO [
 	headerStart := 0.  
 	headerSize := 64.  "header size in bytes; do not change!"
 
-	f := self cCode: 'sqImageFileOpen(imageName, "wb")'.
+	f := self sqImageFile: imageName Open: 'wb'.
 	f = nil ifTrue: "could not open the image file for writing"
 		[^self primitiveFail].
 
-	headerStart := self cCode: 'sqImageFileStartLocation(f,imageName,headerSize+imageBytes)'.
+	imageBytes := objectMemory imageSizeToWrite.
+	headerStart := self sqImage: f File: imageName StartLocation: headerSize + imageBytes.
 	self cCode: '/* Note: on Unix systems one could put an exec command here, padded to 512 bytes */'.
 	"position file to start of header"
 	self sqImageFile: f Seek: headerStart.
 
 	self putLong: self imageFormatVersion toFile: f.
 	self putLong: headerSize toFile: f.
-	self putLong: objectMemory imageSizeToWrite toFile: f.
+	self putLong: imageBytes toFile: f.
 	self putLong: objectMemory baseAddressOfImage toFile: f.
 	self putLong: objectMemory specialObjectsOop toFile: f.
 	self putLong: objectMemory newObjectHash toFile: f.
@@ -12836,29 +12840,90 @@ StackInterpreter >> writeImageFileIO [
 			 1 to: 3 do: [:i| self putLong: 0 toFile: f]]
 		ifFalse:
 			[1 to: 4 do: [:i| self putLong: 0 toFile: f]].  "fill remaining header words with zeros"
-	self successful ifFalse: [
-		"file write or seek failure"
-		self cCode: 'sqImageFileClose(f)'.
-		^ nil].
-
 	"position file after the header"
 	self sqImageFile: f Seek: headerStart + headerSize.
+
+	self successful ifFalse: "file write or seek failure"
+		[self sqImageFileClose: f.
+		 ^nil].
 
 	"write the image data"
 	objectMemory hasSpurMemoryManagerAPI
 		ifTrue:
-			[bytesWritten := objectMemory segmentManager writeImageToFile: f]
+			[bytesWritten := objectMemory writeImageSegmentsToFile: f]
 		ifFalse:
-			[| memStart |
-			memStart := objectMemory baseAddressOfImage.
-			bytesWritten := self sq: (self pointerForOop: memStart)
+			[bytesWritten := self sq: (self pointerForOop: objectMemory baseAddressOfImage)
 								Image: (self sizeof: #char)
-								File: objectMemory imageSizeToWrite
-								Write: f.
-	self touch: memStart].
-	self success: bytesWritten = objectMemory imageSizeToWrite.
-	self cCode: 'sqImageFileClose(f)'
+								File: imageBytes
+								Write: f].
+	self success: bytesWritten = imageBytes.
+	self sqImageFileClose: f
+]
 
+{ #category : #'image save/restore' }
+StackInterpreter >> writeImageFileIOSimulation [
+	"Write the image header and heap contents to imageFile for snapshot.
+	 c.f. writeImageFileIO"
+	<doNotGenerate>
+	| headerSize file |
+	BytesPerWord = 4 ifFalse: [self error: 'Not rewritten for 64 bits yet'].
+	headerSize := 64.
+
+	(file := FileStream fileNamed: self imageName) ifNil:
+		[self primitiveFail.
+		 ^nil].
+	[
+		file binary.
+
+		{
+			self imageFormatVersion.
+			headerSize.
+			objectMemory imageSizeToWrite.
+			objectMemory baseAddressOfImage.
+			objectMemory specialObjectsOop.
+			objectMemory lastHash.
+			self ioScreenSize.
+			self getImageHeaderFlags.
+			extraVMMemory ifNil: [0]
+		}
+			do: [:long | self putLong: long toFile: file].
+
+		{	desiredNumStackPages. self unknownShortOrCodeSizeInKs } do:
+			[:short| self putShort: short toFile: file].
+
+		self putLong: desiredEdenBytes toFile: file.
+
+		{	maxExtSemTabSizeSet ifTrue: [self ioGetMaxExtSemTableSize] ifFalse: [0]. 0 } do:
+			[:short| self putShort: short toFile: file].
+
+		objectMemory hasSpurMemoryManagerAPI
+			ifTrue:
+				[| bytesWritten |
+				 self putLong: objectMemory firstSegmentBytes toFile: file."Pad the rest of the header."
+				 3 timesRepeat: [self putLong: 0 toFile: file].
+
+				"Position the file after the header."
+				file position: headerSize.
+				bytesWritten := objectMemory writeImageSegmentsToFile: file.
+				self assert: bytesWritten = objectMemory imageSizeToWrite]
+			ifFalse:
+				["Pad the rest of the header."
+				4 timesRepeat: [self putLong: 0 toFile: file].
+
+				"Position the file after the header."
+				file position: headerSize.
+
+				"Write the object memory."
+				objectMemory baseAddressOfImage // 4 + 1
+					to: objectMemory baseAddressOfImage + objectMemory imageSizeToWrite // 4
+					do: [:index |
+						self
+							putLong: (objectMemory memory at: index)
+							toFile: file]].
+	
+		self success: true
+	]
+		ensure: [file ifNotNil: [file close]]
 ]
 
 { #category : #'stack pages' }
