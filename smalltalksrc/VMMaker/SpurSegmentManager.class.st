@@ -470,7 +470,7 @@ SpurSegmentManager >> readHeapFromImageFile: f dataBytes: numBytes [
 	 segment that specify the distance to and the size of the subsequent segment."
 	<var: #f type: #sqImageFile>
 	<inline: false>
-	| bytesRead totalBytesRead bridge nextSegmentSize oldBase newBase segInfo bridgeSpan |
+	| bytesRead totalBytesRead bridgehead bridge nextSegmentSize oldBase newBase segInfo bridgeSpan |
 	<var: 'segInfo' type: #'SpurSegmentInfo *'>
 	self allocateOrExtendSegmentInfos.
 
@@ -479,7 +479,7 @@ SpurSegmentManager >> readHeapFromImageFile: f dataBytes: numBytes [
 	oldBase := 0. "N.B. still must be adjusted by oldBaseAddr."
 	newBase := manager oldSpaceStart.
 	nextSegmentSize := firstSegmentSize.
-	bridge := firstSegmentSize + manager oldSpaceStart - manager baseHeaderSize.
+	bridgehead := firstSegmentSize + manager oldSpaceStart - manager bridgeSize.
 	[segInfo := self addressOf: (segments at: numSegments).
 	 segInfo
 		segStart: oldBase;					"N.B. still must be adjusted by oldBaseAddr."
@@ -491,14 +491,15 @@ SpurSegmentManager >> readHeapFromImageFile: f dataBytes: numBytes [
 	 bytesRead ~= nextSegmentSize ifTrue:
 		[^totalBytesRead].
 	 numSegments := numSegments + 1.
-	 bridgeSpan := (manager rawNumSlotsOf: bridge) = 0
+	 bridge := bridgehead + manager baseHeaderSize.
+	 bridgeSpan := (manager rawNumSlotsOf: bridgehead) = 0
 						ifTrue: [0]
 						ifFalse: [manager bytesPerSlot * (manager rawOverflowSlotsOf: bridge)].
 	 oldBase := oldBase + nextSegmentSize + bridgeSpan.
 	 newBase := newBase + nextSegmentSize - manager bridgeSize.
 	 nextSegmentSize := manager longLongAt: bridge.
 	 nextSegmentSize ~= 0] whileTrue:
-		[bridge := bridge - manager bridgeSize + nextSegmentSize].
+		[bridgehead := bridgehead - manager bridgeSize + nextSegmentSize].
 	"newBase should point just past the last bridge. all others should have been eliminated."
 	self assert: newBase - manager oldSpaceStart
 				= (totalBytesRead - (numSegments * manager bridgeSize)).
