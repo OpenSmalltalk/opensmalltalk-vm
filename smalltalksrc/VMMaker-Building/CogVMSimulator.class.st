@@ -1195,6 +1195,11 @@ CogVMSimulator >> iframeSavedIP: theFP [
 	^super iframeSavedIP: theFP
 ]
 
+{ #category : #'image save/restore' }
+CogVMSimulator >> imageName [
+	^imageName
+]
+
 { #category : #'spur bootstrap' }
 CogVMSimulator >> imageName: aString [
 	imageName := aString
@@ -3780,69 +3785,4 @@ CogVMSimulator >> withoutSmallIntegerTags: anInteger [
 				(anInteger bitAnd: 16r7FFFFFFE) - 16r80000000]
 		ifFalse: ["positive"
 				anInteger - 1]
-]
-
-{ #category : #'image save/restore' }
-CogVMSimulator >> writeImageFileIO [
-	"Write the image to a file as an image snapshot."
-
-	| headerSize file |
-	BytesPerWord = 4 ifFalse: [self error: 'Not rewritten for 64 bits yet'].
-	headerSize := 64.
-
-	(file := FileStream fileNamed: imageName) ifNil:
-		[self primitiveFail.
-		 ^nil].
-	[
-		file binary.
-
-		{
-			self imageFormatVersion.
-			headerSize.
-			objectMemory imageSizeToWrite.
-			objectMemory baseAddressOfImage.
-			objectMemory specialObjectsOop.
-			objectMemory lastHash.
-			self ioScreenSize.
-			self getImageHeaderFlags.
-			extraVMMemory
-		}
-			do: [:long | self putLong: long toFile: file].
-
-		{	desiredNumStackPages. self unknownShortOrCodeSizeInKs } do:
-			[:short| self putShort: short toFile: file].
-
-		self putLong: desiredEdenBytes toFile: file.
-
-		{	maxExtSemTabSizeSet ifTrue: [self ioGetMaxExtSemTableSize] ifFalse: [0]. 0 } do:
-			[:short| self putShort: short toFile: file].
-
-		objectMemory hasSpurMemoryManagerAPI
-			ifTrue:
-				[| bytesWritten |
-				 self putLong: objectMemory firstSegmentBytes toFile: file."Pad the rest of the header."
-				 3 timesRepeat: [self putLong: 0 toFile: file].
-
-				"Position the file after the header."
-				file position: headerSize.
-				bytesWritten := objectMemory segmentManager writeImageToFile: file.
-				self assert: bytesWritten = objectMemory imageSizeToWrite]
-			ifFalse:
-				["Pad the rest of the header."
-				4 timesRepeat: [self putLong: 0 toFile: file].
-
-				"Position the file after the header."
-				file position: headerSize.
-
-				"Write the object memory."
-				objectMemory baseAddressOfImage // 4 + 1
-					to: objectMemory baseAddressOfImage + objectMemory imageSizeToWrite // 4
-					do: [:index |
-						self
-							putLong: (objectMemory memory at: index)
-							toFile: file]].
-	
-		self success: true
-	]
-		ensure: [file ifNotNil: [file close]]
 ]

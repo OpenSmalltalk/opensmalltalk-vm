@@ -340,17 +340,17 @@ SpurSegmentManager >> manager: aSpurMemoryManager [
 ]
 
 { #category : #snapshot }
-SpurSegmentManager >> nextNonEmptySegmentSizeAfter: i [
-	"Answer the size of the next non-empty segment.
-	 The size of a segment includes that of its bridge.
-	 A segment containing just a free object and a bridge will still have a
-	 size of manager bridgeSize after shortening it in prepareForSnapshot."
+SpurSegmentManager >> nextNonEmptySegmentAfter: i [
+	"Answer the the next non-empty segment or nil. The size of a segment includes
+	 that of its bridge. A segment containing just a free object and a bridge will still
+	 have a size of manager bridgeSize after shortening it in prepareForSnapshot."
+	<returnTypeC: #'SpurSegmentInfo *'>
 	| nextx |
 	nextx := i.
 	[(nextx := nextx + 1) >= numSegments ifTrue:
-		[^0].
+		[^nil].
 	 (segments at: nextx) segSize > manager bridgeSize ifTrue:
-		[^(segments at: nextx) segSize]] repeat
+		[^self addressOf: (segments at: nextx)]] repeat
 ]
 
 { #category : #pinning }
@@ -466,8 +466,8 @@ SpurSegmentManager >> readHeapFrom: f at: location dataBytes: numBytes [
 SpurSegmentManager >> readHeapFromImageFile: f dataBytes: numBytes [
 	"Read numBytes of image data from f into memory at memoryBaseForImageRead.
 	 Answer the number of bytes written.  In addition, read each segment, build up the
-	 segment info, while eliminating the bridge objects that end each segment and
-	 give the size of the subsequent segment."
+	 segment info for swizzling, while eliminating the bridge objects at the end of each
+	 segment that specify the distance to and the size of the subsequent segment."
 	<var: #f type: #sqImageFile>
 	<inline: false>
 	| bytesRead totalBytesRead bridge nextSegmentSize oldBase newBase segInfo bridgeSpan |
@@ -491,7 +491,9 @@ SpurSegmentManager >> readHeapFromImageFile: f dataBytes: numBytes [
 	 bytesRead ~= nextSegmentSize ifTrue:
 		[^totalBytesRead].
 	 numSegments := numSegments + 1.
-	 bridgeSpan := manager bytesPerSlot * (manager rawOverflowSlotsOf: bridge).
+	 bridgeSpan := (manager rawNumSlotsOf: bridge) = 0
+						ifTrue: [0]
+						ifFalse: [manager bytesPerSlot * (manager rawOverflowSlotsOf: bridge)].
 	 oldBase := oldBase + nextSegmentSize + bridgeSpan.
 	 newBase := newBase + nextSegmentSize - manager bridgeSize.
 	 nextSegmentSize := manager longLongAt: bridge.
@@ -556,8 +558,8 @@ SpurSegmentManager >> totalBytesInSegments [
 ]
 
 { #category : #snapshot }
-SpurSegmentManager >> writeImageToFile: aBinaryStream [
-	<var: 'aBinaryStream' type: #'FILE *'>
+SpurSegmentManager >> writeImageSegmentsToFile: aBinaryStream [
+	<var: 'aBinaryStream' type: #sqImageFile>
 	<inline: false>
 	| total |
 	self assert: (manager endOfMemory = (segments at: numSegments - 1) segLimit
@@ -570,22 +572,34 @@ SpurSegmentManager >> writeImageToFile: aBinaryStream [
 		[:i|
 		(segments at: i) segSize > manager bridgeSize ifTrue:
 			[total := total + (self writeSegment: (self addressOf: (segments at: i))
-								nextSegmentSize: (self nextNonEmptySegmentSizeAfter: i)
+								nextSegment: (self nextNonEmptySegmentAfter: i)
 								toFile: aBinaryStream)]].
 	^total
 ]
 
 { #category : #snapshot }
-SpurSegmentManager >> writeSegment: segment nextSegmentSize: nextSegSize toFile: aBinaryStream [
+SpurSegmentManager >> writeSegment: segment nextSegment: nextSegment toFile: aBinaryStream [
+	"Write the segment contents, the size of and the distance to the next segment to aBinaryStream."
 	<var: 'segment' type: #'SpurSegmentInfo *'>
-	<var: 'aBinaryStream' type: #'FILE *'>
-	| lastDoubleWord savedDoubleWord nWritten |
-	<var: 'savedDoubleWord' type: #usqLong>
-	lastDoubleWord := segment segLimit - manager baseHeaderSize.
+	<var: 'nextSegment' type: #'SpurSegmentInfo *'>
+	<var: 'aBinaryStream' type: #sqImageFile>
+	| pier1 pier2 firstSavedBridgeWord secondSavedBridgeWord nWritten |
+	<var: 'firstSavedBridgeWord' type: #usqLong>
+	<var: 'secondSavedBridgeWord' type: #usqLong>
+	pier1 := segment segLimit - manager bridgeSize.
+	pier2 := pier1 + manager baseHeaderSize.
 	self assert: (self isValidSegmentBridge: (self bridgeFor: segment)).
-	self assert: (manager startOfObject: (self bridgeFor: segment)) = (lastDoubleWord - manager baseHeaderSize).
-	savedDoubleWord := manager longLongAt: lastDoubleWord.
-	manager longLongAt: lastDoubleWord put: nextSegSize.
+	self assert: (manager startOfObject: (self bridgeFor: segment)) = pier1.
+	"Temporarily change the bridge to bridge to the next non-empty segment.
+	 The first double word of the bridge includes the bridge size in slots, and
+	 hence specifies the distance to the next segment. The following double
+	 word is replaced by the size of the next segment, or 0 if there isn't one."
+	firstSavedBridgeWord := manager longLongAt: pier1.
+	secondSavedBridgeWord := manager longLongAt: pier2.
+	self bridgeFrom: segment to: nextSegment.
+	manager
+		longLongAt: pier2
+		put: (nextSegment ifNil: [0] ifNotNil: [nextSegment segSize]).
 	nWritten := self cCode:
 						[self
 							sq: segment segStart asVoidPointer
@@ -598,6 +612,8 @@ SpurSegmentManager >> writeSegment: segment nextSegmentSize: nextSegSize toFile:
 							putAll: manager memory
 							startingAt: segment segStart / 4 + 1.
 						 segment segSize].
-	manager longLongAt: lastDoubleWord put: savedDoubleWord.
+	manager
+		longLongAt: pier1 put: firstSavedBridgeWord;
+		longLongAt: pier2 put: secondSavedBridgeWord.
 	^nWritten
 ]

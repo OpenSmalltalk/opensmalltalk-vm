@@ -9185,3 +9185,9 @@ SpurMemoryManager >> wordSize [
 SpurMemoryManager >> wordSizeClassIndexPun [
 	^self subclassResponsibility
 ]
+
+{ #category : #snapshot }
+SpurMemoryManager >> writeImageSegmentsToFile: aBinaryStream [
+	<doNotGenerate>
+	^segmentManager writeImageSegmentsToFile: aBinaryStream
+]
