@@ -195,7 +195,7 @@ SpurBootstrapMonticelloPackagePatcher >> version: version withPatches: patches f
 				infoWithName: version info name
 				message:	version info name,
 							' patched for Spur by ',
-							(CCodeGenerator new shortMonticelloDescriptionForClass: self class),
+							(CCodeGenerator shortMonticelloDescriptionForClass: self class),
 							'\\' withCRs,
 							version info message)
 		snapshot: snapshot
