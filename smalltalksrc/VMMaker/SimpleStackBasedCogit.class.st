@@ -2865,12 +2865,13 @@ SimpleStackBasedCogit >> genSmallIntegerComparison: jumpOpcode orDoubleCompariso
 		receiver (also in ResultReceiverReg)
 		arg
 		return address"
-	| jumpDouble jumpFail jumpTrue jumpCond |
+	| jumpDouble jumpNonInt jumpFail jumpTrue jumpCond |
 	<var: #jumpFPOpcodeGenerator declareC: 'AbstractInstruction *(*jumpFPOpcodeGenerator)(void *)'>
 	<var: #jumpDouble type: #'AbstractInstruction *'>
-	<var: #jumpFail type: #'AbstractInstruction *'>
+	<var: #jumpNonInt type: #'AbstractInstruction *'>
+	<var: #jumpCond type: #'AbstractInstruction *'>
 	<var: #jumpTrue type: #'AbstractInstruction *'>
-	<var: #jumpCond type: #'AbstractInstruction *'>	
+	<var: #jumpFail type: #'AbstractInstruction *'>
 	self MoveMw: BytesPerWord r: SPReg R: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpDouble := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
@@ -2886,10 +2887,13 @@ SimpleStackBasedCogit >> genSmallIntegerComparison: jumpOpcode orDoubleCompariso
 	
 	"Argument may be a Float : let us check or fail"
 	jumpDouble jmpTarget: self Label.
+	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
+		[self MoveR: ClassReg R: TempReg.
+		 jumpNonInt := objectRepresentation genJumpImmediateInScratchReg: TempReg].
 	objectRepresentation genGetCompactClassIndexNonImmOf: ClassReg into: SendNumArgsReg.
 	self CmpCq: objectMemory classFloatCompactIndex R: SendNumArgsReg.
 	jumpFail := self JumpNonZero: 0.
-	
+
 	"It was a Float, so convert the receiver to double and perform the operation"
 	self MoveR: ReceiverResultReg R: TempReg.
 	objectRepresentation genConvertSmallIntegerToIntegerInReg: TempReg.
@@ -2905,7 +2909,9 @@ SimpleStackBasedCogit >> genSmallIntegerComparison: jumpOpcode orDoubleCompariso
 							objRef: objectMemory trueObject).
 	self RetN: BytesPerWord * 2.
 
-	jumpFail jmpTarget: self Label.
+	objectRepresentation smallIntegerIsOnlyImmediateType
+		ifTrue: [jumpFail jmpTarget: self Label]
+		ifFalse: [jumpNonInt jmpTarget: (jumpFail jmpTarget: self Label)].
 	^0
 ]
 
