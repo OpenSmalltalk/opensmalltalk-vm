@@ -938,7 +938,7 @@ ObjectMemory >> booleanObjectOf: bool [
 
 { #category : #'header access' }
 ObjectMemory >> byteFormatForNumBytes: numBytes [
-	^self firstByteFormat + (numBytes bitAnd: 3)
+	^self firstByteFormat + (4 - numBytes bitAnd: 3)
 ]
 
 { #category : #'header access' }

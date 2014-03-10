@@ -2143,7 +2143,7 @@ SpurMemoryManager >> bridgeSize [
 
 { #category : #'header format' }
 SpurMemoryManager >> byteFormatForNumBytes: numBytes [
-	^self firstByteFormat + (numBytes bitAnd: self wordSize - 1)
+	^self firstByteFormat + (8 - numBytes bitAnd: self wordSize - 1)
 ]
 
 { #category : #'header format' }
@@ -3692,19 +3692,23 @@ SpurMemoryManager >> expungeDuplicateAndUnmarkedClasses: expungeUnmarked [
 								 self assert: (self classAtIndex: classIndex) = classOrNil.
 								 self assert: (classOrNil = nilObj or: [coInterpreter addressCouldBeClassObj: classOrNil]).
 								 "only remove a class if it is at a duplicate entry or it is unmarked and we're expunging unmarked classes."
-								 (classOrNil ~= nilObj
-								  and: [(expungeUnmarked and: [(self isMarked: classOrNil) not])
-									  or: [(self rawHashBitsOf: classOrNil) ~= classIndex]]) ifTrue:
-									[self storePointerUnchecked: (classIndex bitAnd: self classTableMinorIndexMask)
-										ofObject: classTablePage
-										withValue: nilObj.
-									 "but if it is marked, it should still be in the table at its correct index."
-									 self assert: ((expungeUnmarked and: [(self isMarked: classOrNil) not])
-												or: [(self classAtIndex: (self rawHashBitsOf: classOrNil)) = classOrNil]).
-									 "If the removed class is before the classTableIndex, set the
-									  classTableIndex to point to the empty slot so as to reuse it asap."
-									 classIndex < classTableIndex ifTrue:
-										[classTableIndex := classIndex]]]]]]]]
+								 classOrNil = nilObj
+									ifTrue:
+										[classIndex < classTableIndex ifTrue:
+											[classTableIndex := classIndex]]
+									ifFalse:
+										[((expungeUnmarked and: [(self isMarked: classOrNil) not])
+										  or: [(self rawHashBitsOf: classOrNil) ~= classIndex]) ifTrue:
+										[self storePointerUnchecked: (classIndex bitAnd: self classTableMinorIndexMask)
+											ofObject: classTablePage
+											withValue: nilObj.
+										 "but if it is marked, it should still be in the table at its correct index."
+										 self assert: ((expungeUnmarked and: [(self isMarked: classOrNil) not])
+													or: [(self classAtIndex: (self rawHashBitsOf: classOrNil)) = classOrNil]).
+										 "If the removed class is before the classTableIndex, set the
+										  classTableIndex to point to the empty slot so as to reuse it asap."
+										 classIndex < classTableIndex ifTrue:
+											[classTableIndex := classIndex]]]]]]]]]
 ]
 
 { #category : #'class table' }
@@ -6498,7 +6502,7 @@ SpurMemoryManager >> markAndTraceHiddenRoots [
 	 The obj stacks must be marked specially; their pages must be marked,
 	 but only the contents of the ephemeronQueue should be marked.
 	 If a class table page is weak we can mark and trace the hiddenRoots,
-	 which will not trace through class table opages because they are weak.
+	 which will not trace through class table pages because they are weak.
 	 But if class table pages are strong, we must mark the pages and *not*
 	 trace them so that only classes reachable from the true roots will be
 	 marked, and unreachable classes will be left unmarked."

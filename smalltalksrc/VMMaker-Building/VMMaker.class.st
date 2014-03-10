@@ -1054,9 +1054,7 @@ VMMaker >> generateEntire [
 		[:generator|
 		 logger cr; nextPutAll: (generator selector copyReplaceAll: 'generate' with: '').
 		 interpreterClassName ifNotNil:
-			[logger
-				space; nextPutAll: interpreterClassName;
-				space; nextPutAll: (CCodeGenerator shortMonticelloDescriptionForClass: (Smalltalk classNamed: interpreterClassName))].
+			[logger space; nextPutAll: (CCodeGenerator shortMonticelloDescriptionForClass: (Smalltalk classNamed: interpreterClassName))].
 		 logger cr; flush].
 	self generateMainVM.
 	self generateExternalPlugins
