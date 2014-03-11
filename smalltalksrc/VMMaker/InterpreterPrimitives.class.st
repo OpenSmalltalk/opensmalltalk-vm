@@ -452,6 +452,23 @@ InterpreterPrimitives >> primitiveAdoptInstance [
 ]
 
 { #category : #'object access primitives' }
+InterpreterPrimitives >> primitiveAllInstances [
+	"Answer an array of all instances of the receiver that exist
+	 when the primitive is called, excluding any that may be
+	 garbage collected as a side effect of allocating the result array."
+
+	<export: true>
+	| result |
+	result := objectMemory allInstancesOf: self stackTop.
+	(objectMemory isIntegerObject: result) ifTrue:
+		[objectMemory growToAccomodateContainerWithNumSlots: (objectMemory integerValueOf: result).
+		 result := objectMemory allInstancesOf: self stackTop.
+		 (objectMemory isIntegerObject: result) ifTrue:
+			[^self primitiveFailFor: PrimErrNoMemory]].
+	self pop: argumentCount+1 thenPush: result
+]
+
+{ #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveAllObjects [
 	"Answer an array of all objects that exist when the primitive
 	 is called, excluding those that may be garbage collected as
@@ -460,8 +477,11 @@ InterpreterPrimitives >> primitiveAllObjects [
 	<export: true>
 	| result |
 	result := objectMemory allObjects.
-	result = 0 ifTrue:
-		[^self primitiveFailFor: PrimErrNoMemory].
+	(objectMemory isIntegerObject: result) ifTrue:
+		[objectMemory growToAccomodateContainerWithNumSlots: (objectMemory integerValueOf: result).
+		 result := objectMemory allObjects.
+		 (objectMemory isIntegerObject: result) ifTrue:
+			[^self primitiveFailFor: PrimErrNoMemory]].
 	self pop: argumentCount+1 thenPush: result
 ]
 
@@ -2208,7 +2228,7 @@ InterpreterPrimitives >> primitiveLocalMicrosecondClock [
 	"Return the value of the microsecond clock as an integer.  The microsecond clock is at
 	 least 60 bits wide which means it'll get to around August 38435 before it wraps around."
 
-	self pop: 1 thenPush: (self positive64BitIntegerFor: self ioLocalMicroseconds)
+	self pop: 1 thenPush: (self positive64BitIntegerFor: self ioLocalMicrosecondsNow)
 ]
 
 { #category : #'arithmetic float primitives' }
@@ -2975,7 +2995,7 @@ InterpreterPrimitives >> primitiveScreenSize [
 InterpreterPrimitives >> primitiveSecondsClock [
 	"Return the number of seconds since January 1, 1901 as an integer."
 
-	self pop: 1 thenPush: (self positive32BitIntegerFor: self ioSeconds).
+	self pop: 1 thenPush: (self positive32BitIntegerFor: self ioSecondsNow)
 ]
 
 { #category : #'I/O primitives' }
@@ -3581,7 +3601,7 @@ InterpreterPrimitives >> primitiveUTCMicrosecondClock [
 	"Return the value of the microsecond clock as an integer.  The microsecond clock is at
 	 least 60 bits wide which means it'll get to around August 38435 before it wraps around."
 
-	self pop: 1 thenPush: (self positive64BitIntegerFor: self ioUTCMicroseconds)
+	self pop: 1 thenPush: (self positive64BitIntegerFor: self ioUTCMicrosecondsNow)
 ]
 
 { #category : #'plugin primitives' }
@@ -3617,7 +3637,7 @@ InterpreterPrimitives >> primitiveUtcWithOffset [
 	| resultArray |
 	<export: true>
 	"2177452800000000 = '1/1/1970' asDate asSeconds - '1/1/1901' asDate asSeconds * 1,000,000"
-	objectMemory pushRemappableOop: (self positive64BitIntegerFor: self ioUTCMicroseconds - 2177452800000000).
+	objectMemory pushRemappableOop: (self positive64BitIntegerFor: self ioUTCMicrosecondsNow - 2177452800000000).
 	resultArray := objectMemory instantiateClass: objectMemory classArray indexableSize: 2.
 	self storePointer: 0 ofObject: resultArray withValue: objectMemory popRemappableOop.
 	self storePointerUnchecked: 1 ofObject: resultArray withValue: (objectMemory integerObjectOf: self ioLocalSecondsOffset).
