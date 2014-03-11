@@ -84,6 +84,50 @@ Class {
 }
 
 { #category : #'method prototypes' }
+SpurBootstrap class >> BehaviorPROTOTYPEallInstances [
+	"Answer all instances of the receiver."
+	<primitive: 177>
+	"The primitive can fail because memory is low.  If so, fall back on the old
+	 enumeration code, which gives the system a chance to GC and/or grow.
+	 Because aBlock might change the class of inst (for example, using become:),
+	 it is essential to compute next before aBlock value: inst."
+	| inst insts next |
+	insts := WriteStream on: (Array new: 64).
+	inst := self someInstance.
+	[inst == nil] whileFalse:
+		[next := inst nextInstance.
+		 (inst == insts or: [inst == insts originalContents]) ifFalse: [insts nextPut: inst].
+		 inst := next].
+	^insts contents
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> BehaviorPROTOTYPEallInstancesDo: aBlock [
+	"Evaluate aBlock with each of the current instances of the receiver."
+	| instances inst next |
+	instances := self allInstancesOrNil.
+	instances ifNotNil:
+		[instances do: aBlock.
+		 ^self].
+	"allInstancesOrNil can fail because memory is low.  If so, fall back on the old
+	 enumeration code.  Because aBlock might change the class of inst (for example,
+	 using become:), it is essential to compute next before aBlock value: inst."
+	inst := self someInstance.
+	[inst == nil] whileFalse:
+		[next := inst nextInstance.
+		 aBlock value: inst.
+		 inst := next]
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> BehaviorPROTOTYPEallInstancesOrNil [
+	"Answer all instances of the receiver, or nil if the primitive
+	 fails, which it may be due to being out of memory."
+	<primitive: 177>
+	^nil
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrap class >> BehaviorPROTOTYPEbasicNew [
 	"Primitive. Answer an instance of the receiver (which is a class) with no 
 	 indexable variables. Fail if the class is indexable. Essential. See Object 
@@ -639,6 +683,45 @@ SpurBootstrap class >> ClassPROTOTYPEimmediateSubclass: t instanceVariableNames:
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrap class >> MethodContextPROTOTYPEallInstances [
+	"Answer all instances of the receiver."
+	<primitive: 177>
+	"The primitive can fail because memory is low.  If so, fall back on the old
+	 enumeration code, which gives the system a chance to GC and/or grow.
+	 Because aBlock might change the class of inst (for example, using become:),
+	 it is essential to compute next before aBlock value: inst.
+	 Only count until thisContext since this context has been created only to
+	 compute the existing instances."
+	| inst insts next |
+	insts := WriteStream on: (Array new: 64).
+	inst := self someInstance.
+	[inst == thisContext or: [inst == nil]] whileFalse:
+		[next := inst nextInstance.
+		 insts nextPut: inst.
+		 inst := next].
+	^insts contents
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> MethodContextPROTOTYPEallInstancesDo: aBlock [
+	"Evaluate aBlock with each of the current instances of the receiver."
+	| instances inst next |
+	instances := self allInstancesOrNil.
+	instances ifNotNil:
+		[instances do: aBlock.
+		 ^self].
+	"allInstancesOrNil can fail because memory is low.  If so, fall back on the old
+	 enumeration code.  Because aBlock might change the class of inst (for example,
+	 using become:), it is essential to compute next before aBlock value: inst.
+	 Only count until thisContext since evaluation of aBlock will create new contexts."
+	inst := self someInstance.
+	[inst == thisContext or: [inst == nil]] whileFalse:
+		[next := inst nextInstance.
+		 aBlock value: inst.
+		 inst := next]
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrap class >> ProtoObjectPROTOTYPEscaledIdentityHash [
 	"For identityHash values returned by primitive 75, answer
 	 such values times 2^8.  Otherwise, match the existing
@@ -716,6 +799,42 @@ SpurBootstrap class >> SystemDictionaryPROTOTYPEsetGCParameters [
 	averageObjectSize := 8 * self wordSize. "a good approximation"
 	numObjects := (proportion * survivorSize / averageObjectSize) rounded.
 	SmalltalkImage current vmParameterAt: 6 put: numObjects  "tenure when more than this many objects survive the GC"
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> SystemNavigationPROTOTYPEallObjects [
+	"Answer an Array of all objects in the system.  Fail if
+	 there isn't enough memory to instantiate the result."
+	<primitive: 178>
+	^self primitiveFailed
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> SystemNavigationPROTOTYPEallObjectsDo: aBlock [ 
+	"Evaluate the argument, aBlock, for each object in the system, excluding immediates
+	 such as SmallInteger and Character."
+	self allObjectsOrNil
+		ifNotNil: [:allObjects| allObjects do: aBlock]
+		ifNil:
+			["Fall back on the old single object primitive code.  With closures, this needs
+			  to use an end marker (lastObject) since activation of the block will create
+			  new contexts and cause an infinite loop.  The lastObject must be created
+			  before calling someObject, so that the VM can settle the enumeration (e.g.
+			  by flushing new space) as a side effect of  someObject"
+			| object lastObject |
+			lastObject := Object new.
+			object := self someObject.
+			[lastObject == object or: [0 == object]] whileFalse:
+				[aBlock value: object.
+				 object := object nextObject]]
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> SystemNavigationPROTOTYPEallObjectsOrNil [
+	"Answer an Array of all objects in the system.  Fail if there isn't
+	 enough memory to instantiate the result and answer nil."
+	<primitive: 178>
+	^nil
 ]
 
 { #category : #'method prototypes' }
