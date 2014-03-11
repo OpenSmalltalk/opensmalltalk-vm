@@ -1032,7 +1032,9 @@ StackInterpreter class >> initializePrimitiveTable [
 		(172 174 primitiveFail)
 		(175 primitiveBehaviorHash)
 		(176 primitiveMaxIdentityHash)
-		(177 179 primitiveFail)
+		(177 primitiveAllInstances)
+		(178 primitiveAllObjects)
+		(179 primitiveFail) "reserved for primitiveAllInstancesOfAny"
 		(180 primitiveGrowMemoryByAtLeast)
 		(181 primitiveSizeInBytesOfInstance)
 		(182 primitiveSizeInBytes)
@@ -7038,6 +7040,46 @@ StackInterpreter >> ioLoadExternalFunction: functionName OfLength: functionLengt
 StackInterpreter >> ioLocalMicroseconds [
 	<doNotGenerate>
 	^self ioUTCMicroseconds + (1000000 * DateAndTime localOffset asSeconds)
+]
+
+{ #category : #'primitive support' }
+StackInterpreter >> ioLocalMicrosecondsNow [
+	<doNotGenerate>
+	^self ioUTCMicrosecondsNow + (1000000 * DateAndTime localOffset asSeconds)
+]
+
+{ #category : #'primitive support' }
+StackInterpreter >> ioLocalSecondsOffset [
+	"simulation-only implementation"
+	<doNotGenerate>
+	^DateAndTime localOffset asSeconds
+]
+
+{ #category : #'primitive support' }
+StackInterpreter >> ioSeconds [
+	"simulation-only implementation"
+	<doNotGenerate>
+	^self ioLocalMicroseconds // 1000000
+]
+
+{ #category : #'primitive support' }
+StackInterpreter >> ioSecondsNow [
+	"simulation-only implementation"
+	<doNotGenerate>
+	^self ioLocalMicrosecondsNow // 1000000
+]
+
+{ #category : #'primitive support' }
+StackInterpreter >> ioSetHeartbeatMilliseconds: ignored [
+	"simulation-only implementation"
+	<doNotGenerate>
+]
+
+{ #category : #'primitive support' }
+StackInterpreter >> ioUTCMicrosecondsNow [
+	"simulation-only implementation"
+	<doNotGenerate>
+	^self ioUTCMicroseconds
 ]
 
 { #category : #'system control primitives' }

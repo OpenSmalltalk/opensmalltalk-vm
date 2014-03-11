@@ -1169,6 +1169,69 @@ SpurMemoryManager >> allHeapEntitiesDo: aBlock [
 	self allNewSpaceEntitiesDo: aBlock
 ]
 
+{ #category : #'primitive support' }
+SpurMemoryManager >> allInstancesOf: aClass [
+	"Attempt to answer an array of all objects, excluding those that may
+	 be garbage collected as a side effect of allocating the result array.
+	 If no memory is available answer the number of instances as a SmallInteger.
+	 Since objects are at least 16 bytes big, and the largest SmallInteger covers
+	 1/4 of the address space, the count can never overflow."
+	| classIndex freeChunk ptr start limit count bytes |
+	classIndex := self rawHashBitsOf: aClass.
+	(classIndex = 0
+	 or: [aClass ~~ (self classOrNilAtIndex: classIndex)]) ifTrue:
+		[freeChunk := self allocateSlots: 0 format: self arrayFormat classIndex: ClassArrayCompactIndex.
+		 ^freeChunk].
+	self markObjects. "don't want to revive objects unnecessarily."
+	freeChunk := self allocateLargestFreeChunk.
+	ptr := start := freeChunk + self baseHeaderSize.
+	limit := self addressAfter: freeChunk.
+	count := 0.
+	self allHeapEntitiesDo:
+		[:obj| "continue enumerating even if no room so as to unmark all objects."
+		 (self isMarked: obj) ifTrue:
+			[(self isNormalObject: obj)
+				ifTrue:
+					[self setIsMarkedOf: obj to: false.
+					 (self classIndexOf: obj) = classIndex ifTrue:
+					 	[count := count + 1.
+						 ptr < limit ifTrue:
+							[self longAt: ptr put: obj.
+							 ptr := ptr + self bytesPerSlot]]]
+				ifFalse:
+					[(self isSegmentBridge: obj) ifFalse:
+						[self setIsMarkedOf: obj to: false]]]].
+	self assert: self allObjectsUnmarked.
+	self assert: (self isEmptyObjStack: markStack).
+	self emptyObjStack: weaklingStack.
+	(count > (ptr - start / self bytesPerSlot) "not enough room"
+	 or: [limit ~= ptr and: [limit - ptr <= self allocationUnit]]) ifTrue: "can't split a single word"
+		[self freeObject: freeChunk.
+		 ^self integerObjectOf: count].
+	count < self numSlotsMask ifTrue:
+		[| smallObj |
+		 smallObj := self allocateSlots: count format: self arrayFormat classIndex: ClassArrayCompactIndex.
+		 0 to: count - 1 do:
+			[:i|
+			self storePointerUnchecked: i ofObject: smallObj withValue: (self fetchPointer: i ofObject: freeChunk)].
+		 self freeChunkWithBytes: (self bytesInObject: freeChunk) at: (self startOfObject: freeChunk).
+		 self beRootIfOld: smallObj.
+		 self checkFreeSpace.
+		 ^smallObj].
+	bytes := self largeObjectBytesForSlots: count.
+	start := self startOfObject: freeChunk.
+	self freeChunkWithBytes: limit - start - bytes at: start + bytes.
+	totalFreeOldSpace := totalFreeOldSpace - bytes.
+	self setOverflowNumSlotsOf: freeChunk to: count.
+	self setClassIndexOf: freeChunk to: ClassArrayCompactIndex.
+	self setFormatOf: freeChunk to: self arrayFormat.
+	self possibleRootStoreInto: freeChunk.
+	self checkFreeSpace.
+	^freeChunk
+	
+	
+]
+
 { #category : #'object enumeration' }
 SpurMemoryManager >> allNewSpaceEntitiesDo: aBlock [
 	"Enumerate all new space objects, including free objects."
@@ -1209,7 +1272,9 @@ SpurMemoryManager >> allNewSpaceObjectsDo: aBlock [
 SpurMemoryManager >> allObjects [
 	"Attempt to answer an array of all objects, excluding those that may
 	 be garbage collected as a side effect of allocating the result array.
-	 If no memory is available answer 0."
+	 If no memory is available answer the number of objects as a SmallInteger.
+	 Since objects are at least 16 bytes big, and the largest SmallInteger covers
+	 1/4 of the address space, the count can never overflow."
 	| freeChunk ptr start limit count bytes |
 	self markObjects. "don't want to revive objects unnecessarily."
 	freeChunk := self allocateLargestFreeChunk.
@@ -1230,18 +1295,23 @@ SpurMemoryManager >> allObjects [
 					[(self isSegmentBridge: obj) ifFalse:
 						[self setIsMarkedOf: obj to: false]]]].
 	self assert: self allObjectsUnmarked.
+	self assert: (self isEmptyObjStack: markStack).
+	self emptyObjStack: weaklingStack.
 	self assert: count >= self numSlotsMask.
 	(count > (ptr - start / self bytesPerSlot) "not enough room"
 	 or: [limit ~= ptr and: [limit - ptr <= self allocationUnit]]) ifTrue: "can't split a single word"
-		[self freeObject: freeChunk.
-		 ^0].
+		[self freeChunkWithBytes: (self bytesInObject: freeChunk) at: (self startOfObject: freeChunk).
+		 self checkFreeSpace.
+		 ^self integerObjectOf: count].
 	bytes := self largeObjectBytesForSlots: count.
 	start := self startOfObject: freeChunk.
 	self freeChunkWithBytes: limit - start - bytes at: start + bytes.
+	totalFreeOldSpace := totalFreeOldSpace - bytes.
 	self setOverflowNumSlotsOf: freeChunk to: count.
 	self setClassIndexOf: freeChunk to: ClassArrayCompactIndex.
 	self setFormatOf: freeChunk to: self arrayFormat.
 	self possibleRootStoreInto: freeChunk.
+	self checkFreeSpace.
 	^freeChunk
 	
 	
@@ -4719,13 +4789,20 @@ SpurMemoryManager >> getThisSessionID [
 SpurMemoryManager >> globalGarbageCollect [
 	self runLeakCheckerForFullGC: true.
 	self assert: self validObjStacks.
+	self assert: (self isEmptyObjStack: markStack).
+	self assert: (self isEmptyObjStack: weaklingStack).
+
 	self markObjects.
 	self nilUnmarkedWeaklingSlots.
 	self freeUnmarkedObjectsAndSortAndCoalesceFreeSpace.
+
 	self runLeakCheckerForFullGC: true excludeUnmarkedNewSpaceObjs: true.
+
 	self compact.
 	self eliminateAndFreeForwarders.
+
 	self assert: self validObjStacks.
+	self assert: (self isEmptyObjStack: markStack).
 	self assert: (self isEmptyObjStack: weaklingStack).
 	self assert: self allObjectsUnmarked.
 	self runLeakCheckerForFullGC: true
@@ -4773,6 +4850,15 @@ SpurMemoryManager >> growOldSpaceByAtLeast: minAmmount [
 		 self assimilateNewSegment: segInfo.
 		 self checkFreeSpace.
 		 segInfo segSize]
+]
+
+{ #category : #'growing/shrinking memory' }
+SpurMemoryManager >> growToAccomodateContainerWithNumSlots: numSlots [
+	"Grow memory to accomodate a container (an Array) with numSlots.
+	 Grow by at least the growHeadroom.  Supports allInstancesOf: and allObjects."
+	| delta |
+	delta := self baseHeaderSize * 2 + (numSlots * self bytesPerOop).
+	self growOldSpaceByAtLeast: (growHeadroom max: delta)
 ]
 
 { #category : #'header access' }
@@ -5171,6 +5257,7 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	weaklingStack := self swizzleObjStackAt: WeaklingStackRootIndex.
 	ephemeronQueue := self swizzleObjStackAt: EphemeronQueueRootIndex.
 	self assert: self validObjStacks.
+	self assert: (self isEmptyObjStack: markStack).
 	self assert: (self isEmptyObjStack: weaklingStack).
 
 	self initializeFreeSpacePostLoad: freeListObj.
@@ -5555,8 +5642,11 @@ SpurMemoryManager >> isEnumerableObject: objOop [
 { #category : #'object enumeration' }
 SpurMemoryManager >> isEnumerableObjectNoAssert: objOop [
 	"Answer if objOop should be included in an allObjects...Do: enumeration.
-	 Non-objects should be excluded; these are bridges and free chunks."
-	^(self classIndexOf: objOop) >= self isForwardedObjectClassIndexPun
+	 This is for assert-checking only."
+	| classIndex |
+	classIndex := self classIndexOf: objOop.
+	^classIndex >= self isForwardedObjectClassIndexPun
+	  and: [classIndex < (numClassTablePages * self classTablePageSize)]
 ]
 
 { #category : #'object testing' }
@@ -7092,6 +7182,7 @@ SpurMemoryManager >> objStack: objStack from: start do: aBlock [
 	 unstable if aBlock causes elements to be removed."
 	<inline: true>
 	| size objStackPage numToEnumerate |
+	self assert: (self isValidObjStack: weaklingStack).
 	size := self fetchPointer: ObjStackTopx ofObject: objStack.
 	objStackPage := self fetchPointer: ObjStackNextx ofObject: objStack.
 	[objStackPage ~= 0] whileTrue:
@@ -7108,7 +7199,9 @@ SpurMemoryManager >> objStack: objStack from: start do: aBlock [
 		 topIndex
 			to: topIndex - numToEnumerateOnThisPage + 1
 			by: -1
-			do:	[:i| aBlock value: (self fetchPointer: i ofObject: objStackPage)].
+			do:	[:i|
+				self assert: (self isWeak: (self fetchPointer: i ofObject: objStackPage)).
+				aBlock value: (self fetchPointer: i ofObject: objStackPage)].
 		 numToEnumerate := numToEnumerate - numToEnumerateOnThisPage.
 		 objStackPage := self fetchPointer: ObjStackNextx ofObject: objStackPage].
 	^size
@@ -7318,12 +7411,15 @@ SpurMemoryManager >> popObjStack: objStack [
 						ifFalse: [MarkStackRecord addLast: {#pop. top}]]]].
 	self storePointer: ObjStackTopx ofObject: objStack withValue: topx.
 	(topx = 0
-	 and: [(nextPage := self fetchPointer: ObjStackNextx ofObject: objStack) ~= 0]) ifTrue:
-		[self storePointer: ObjStackFreex ofObjStack: nextPage withValue: objStack.
-		 self storePointer: ObjStackNextx ofObjStack: objStack withValue: 0.
-		 myx := self fetchPointer: ObjStackMyx ofObject: objStack.
-		 self updateRootOfObjStackAt: myx with: nextPage].
-	self assert: (self isValidObjStack: objStack).
+	 and: [(nextPage := self fetchPointer: ObjStackNextx ofObject: objStack) ~= 0])
+		ifTrue:
+			[self storePointer: ObjStackFreex ofObjStack: nextPage withValue: objStack.
+			 self storePointer: ObjStackNextx ofObjStack: objStack withValue: 0.
+			 myx := self fetchPointer: ObjStackMyx ofObject: objStack.
+			 self updateRootOfObjStackAt: myx with: nextPage.
+			 self assert: (self isValidObjStack: nextPage)]
+		ifFalse:
+			[self assert: (self isValidObjStack: objStack)].
 	^top
 ]
 
