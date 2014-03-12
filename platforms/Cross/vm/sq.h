@@ -134,8 +134,8 @@ extern void *sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt sz, void 
    regular intervals (of the order of ever milisecond).  The heartbeat on these
    VMs is responsible for updating a 64-bit microsecond clock with the number
    of microseconds since the start of the 20th century (12pm Dec 31, 1900)
-   available via ioUTCMicroseconds() and ioLocalMicroseconds().  For cases
-   where exact time is required we provide ioUTCMicrosecondsNow that updates
+   available via ioUTCMicroseconds and ioLocalMicroseconds.  When exact time is
+   required we provide ioUTCMicrosecondsNow & ioLocalMicrosecondsNow that update
    the clock to return the time right now, rather than of the last heartbeat.
 */
 
@@ -154,6 +154,7 @@ sqInt ioMicroMSecs(void);
 #if STACKVM
 usqLong ioUTCMicrosecondsNow();
 usqLong ioUTCMicroseconds();
+usqLong ioLocalMicrosecondsNow();
 usqLong ioLocalMicroseconds();
 usqInt	ioLocalSecondsOffset();
 void	ioUpdateVMTimezone();
@@ -225,6 +226,7 @@ sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds);
 sqInt ioScreenSize(void);
 sqInt ioScreenDepth(void);
 sqInt ioSeconds(void);
+sqInt ioSecondsNow(void);
 sqInt ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY);
 sqInt ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY);
 sqInt ioShowDisplay(sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth,
