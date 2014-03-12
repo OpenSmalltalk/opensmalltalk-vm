@@ -170,18 +170,18 @@ SpurBootstrap class >> BehaviorPROTOTYPEbyteSizeOfInstance [
 
 	<primitive: 181>
 	self isVariable ifTrue:
-		[^self byteSizeOfInstanceWithIndexableVariables: 0].
+		[^self byteSizeOfInstanceOfSize: 0].
 	self primitiveFailed
 ]
 
 { #category : #'method prototypes' }
-SpurBootstrap class >> BehaviorPROTOTYPEbyteSizeOfInstanceWithIndexableVariables: sizeRequested [
+SpurBootstrap class >> BehaviorPROTOTYPEbyteSizeOfInstanceOfSize: basicSize [
 	"Answer the total memory size of an instance of the receiver
 	 with the given number of indexable instance variables."
 
 	<primitive: 181>
 	self isVariable ifFalse:
-		[sizeRequested = 0 ifTrue:
+		[basicSize = 0 ifTrue:
 			[^self byteSizeOfInstance]].
 	self primitiveFailed
 ]
@@ -248,7 +248,7 @@ SpurBootstrap class >> BehaviorPROTOTYPEhandleFailingBasicNew: sizeRequested [
 
 	<primitive: 71>
 	| bytesRequested |
-	bytesRequested := self byteSizeOfInstanceWithIndexableVariables: sizeRequested.
+	bytesRequested := self byteSizeOfInstanceOfSize: sizeRequested.
 	Smalltalk garbageCollect < bytesRequested ifTrue:
 		[Smalltalk growMemoryByAtLeast: bytesRequested].
 	"retry after global garbage collect and possible grow"
@@ -770,6 +770,24 @@ SpurBootstrap class >> SmalltalkImagePROTOTYPEsetGCParameters [
 	averageObjectSize := 8 * self wordSize. "a good approximation"
 	numObjects := (proportion * survivorSize / averageObjectSize) rounded.
 	SmalltalkImage current vmParameterAt: 6 put: numObjects  "tenure when more than this many objects survive the GC"
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> SpaceTallyPROTOTYPEspaceForInstancesOf: aClass [
+	"Answer a pair of the number of bytes consumed by all instances of the
+	 given class, including their object headers, and the number of instances."
+
+	| instances total |
+	instances := aClass allInstances.
+	instances isEmpty ifTrue: [^#(0 0)].
+	total := 0.
+	aClass isVariable
+		ifTrue:
+			[instances do:
+				[:i| total := total + (aClass byteSizeOfInstanceOfSize: i basicSize)]]
+		ifFalse:
+			[total := instances size * aClass byteSizeOfInstance].
+	^{ total. instances size }
 ]
 
 { #category : #'method prototypes' }
