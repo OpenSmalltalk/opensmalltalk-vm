@@ -84,6 +84,11 @@ Spur64BitMemoryManager >> bytesInObject: objOop [
 		ifFalse: [self baseHeaderSize])
 ]
 
+{ #category : #accessing }
+Spur64BitMemoryManager >> bytesPerOop [
+	^8
+]
+
 { #category : #'header format' }
 Spur64BitMemoryManager >> bytesPerSlot [
 	^8

@@ -2284,14 +2284,16 @@ SpurMemoryManager >> byteSizeOfInstanceOf: classObj withIndexableSlots: nElement
 		[self weakArrayFormat]	->
 			[numSlots := (self fixedFieldsOfClassFormat: classFormat) + nElements].
 		[self sixtyFourBitIndexableFormat]	->
-			[numSlots := self wordSize = 4 ifTrue: [nElements * 2] ifFalse: [nElements]].
+			[numSlots := self bytesPerSlot = 4 ifTrue: [nElements * 2] ifFalse: [nElements]].
 		[self firstLongFormat]	->
-			[numSlots := self wordSize = 4 ifTrue: [nElements] ifFalse: [nElements + 1 // 2]].
+			[numSlots := self bytesPerSlot = 4 ifTrue: [nElements] ifFalse: [nElements + 1 // 2]].
 		[self firstShortFormat]	->
-			[numSlots := self wordSize = 4 ifTrue: [nElements + 1 // 2] ifFalse: [nElements + 3 // 4]].
+			[numSlots := self bytesPerSlot = 4 ifTrue: [nElements + 1 // 2] ifFalse: [nElements + 3 // 4]].
 		[self firstByteFormat]	->
-			[numSlots := nElements + (self wordSize - 1) // self wordSize] }
-		otherwise: [^PrimErrBadReceiver negated]. "non-indexable or CompiledMethod"
+			[numSlots := nElements + (self bytesPerSlot - 1) // self bytesPerSlot].
+		[self firstCompiledMethodFormat]	-> "Assume nElements is derived from CompiledMethod>>basicSize."
+			[numSlots := nElements + (self bytesPerSlot - 1) // self bytesPerSlot] }
+		otherwise: [^PrimErrBadReceiver negated]. "non-indexable"
 	^self objectBytesForSlots: numSlots
 ]
 
