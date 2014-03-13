@@ -4529,6 +4529,27 @@ Cogit >> freePICsWithFreedTargets [
 	self assert: count = methodZone numMethods
 ]
 
+{ #category : #'jit - api' }
+Cogit >> freeUnmarkedMachineCode [
+	"Free machine-code methods whose compiled methods are unmarked
+	 and open PICs whose selectors are not marked."
+	<api>
+	<option: #SpurMemoryManager>
+	| cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
+	[cogMethod < methodZone limitZony] whileTrue:
+		[(cogMethod cmType = CMMethod
+		  and: [(objectMemory isMarked: cogMethod methodObject) not]) ifTrue:
+			[self freeMethod: cogMethod].
+		 (cogMethod cmType = CMOpenPIC
+		  and: [(objectMemory isImmediate: cogMethod selector) not
+		  and: [(objectMemory isMarked: cogMethod selector) not]]) ifTrue:
+			[self freeMethod: cogMethod].
+		 cogMethod := methodZone methodAfter: cogMethod].
+	self unlinkSendsToFree
+]
+
 { #category : #'compile abstract instructions' }
 Cogit >> gen: opcode [ "<Integer>"
 	| abstractInstruction |
@@ -6546,6 +6567,27 @@ Cogit >> mapStartFor: cogMethod [
 	^cogMethod asUnsignedInteger + cogMethod blockSize - 1
 ]
 
+{ #category : #'garbage collection' }
+Cogit >> markAndTraceLiteralsIn: cogMethod [
+	<option: #SpurMemoryManager>
+	"Unlink sends that have unmarked classes in inline caches or freed/freeable targets.
+	 Nil-out inline caches linked to open PICs.
+	 Assert that any selectors are marked.  We can do this since
+	 this is only run on marked methods and thus any selectors they
+	 reference should already be marked."
+	<var: #cogMethod type: #'CogMethod *'>
+	<inline: true>
+	self assert: ((cogMethod cmType = CMMethod
+				 and: [objectMemory isMarked: cogMethod methodObject])
+				 or: [cogMethod cmType = CMOpenPIC
+				 and: [(objectMemory isImmediate: cogMethod selector)
+					or: [objectMemory isMarked: cogMethod selector]]]).
+	objectRepresentation markAndTraceLiteral: cogMethod selector.
+	self mapFor: cogMethod
+		 performUntil: #markLiterals:pc:method:
+		 arg: cogMethod asInteger
+]
+
 { #category : #'jit - api' }
 Cogit >> markAndTraceMachineCodeForNewSpaceGC [
 	"Free any methods that refer to unmarked objects, unlinking sends to freed methods."
@@ -6575,6 +6617,33 @@ Cogit >> markAndTraceMachineCodeForNewSpaceGC [
 ]
 
 { #category : #'jit - api' }
+Cogit >> markAndTraceMachineCodeOfMarkedMethods [
+	"Mark objects in machine-code of marked methods (or open PICs with marked selectors)."
+	<api>
+	<option: #SpurMemoryManager>
+	| cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	objectMemory leakCheckFullGC ifTrue:
+		[self assert: self allMachineCodeObjectReferencesValid].
+	codeModified := false.
+	self markAndTraceObjectReferencesInGeneratedRuntime.
+	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
+	[cogMethod < methodZone limitZony] whileTrue:
+		[(cogMethod cmType = CMMethod
+		  and: [objectMemory isMarked: cogMethod methodObject]) ifTrue:
+			[self markAndTraceLiteralsIn: cogMethod].
+		 (cogMethod cmType = CMOpenPIC
+		  and: [(objectMemory isImmediate: cogMethod selector)
+				or: [objectMemory isMarked: cogMethod selector]]) ifTrue:
+			[self markAndTraceLiteralsIn: cogMethod].
+		 cogMethod := methodZone methodAfter: cogMethod].
+	objectMemory leakCheckFullGC ifTrue:
+		[self assert: self allMachineCodeObjectReferencesValid].
+	codeModified ifTrue: "After updating oops in inline caches we need to flush the icache."
+		[processor flushICacheFrom: methodZoneBase to: methodZone limitZony asInteger]
+]
+
+{ #category : #'jit - api' }
 Cogit >> markAndTraceObjectReferencesInGeneratedRuntime [
 	"Mark and trace any object references in the generated run-time."
 	0 to: runtimeObjectRefIndex - 1 do:
@@ -6587,6 +6656,7 @@ Cogit >> markAndTraceObjectReferencesInGeneratedRuntime [
 { #category : #'jit - api' }
 Cogit >> markAndTraceObjectsOrFreeMachineCode: inFullGC [
 	<api>
+	<option: #SqueakV3ObjectMemory>
 	inFullGC
 		ifTrue: [self markAndTraceOrFreeMachineCodeForFullGC]
 		ifFalse: [self markAndTraceMachineCodeForNewSpaceGC]
@@ -6650,6 +6720,43 @@ Cogit >> markAndTraceOrFreeMachineCodeForFullGC [
 		[self assert: self allMachineCodeObjectReferencesValid].
 	codeModified ifTrue: "After updating oops in inline caches we need to flush the icache."
 		[processor flushICacheFrom: methodZoneBase to: methodZone limitZony asInteger]
+]
+
+{ #category : #'garbage collection' }
+Cogit >> markLiterals: annotation pc: mcpc method: cogMethod [
+	"Mark and trace literals.
+	 Additionally in Newspeak, void push implicits that have unmarked classes."
+	<var: #mcpc type: #'char *'>
+	| literal |
+	annotation = IsObjectReference ifTrue:
+		[literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
+		 objectRepresentation markAndTraceLiteral: literal].
+	(self isSendAnnotation: annotation) ifTrue:
+		[self offsetCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
+			[:entryPoint :cacheTag :tagCouldBeObj |
+			 tagCouldBeObj ifTrue:
+				[objectRepresentation markAndTraceLiteral: cacheTag].  "cacheTag is selector"
+			  self cppIf: NewspeakVM ifTrue:
+				[entryPoint = ceImplicitReceiverTrampoline ifTrue:
+					[| classpc mixinpc class mixin |
+					 classpc := mcpc asInteger + backEnd jumpShortByteSize.
+					 mixinpc := mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop.
+					 class := backEnd unalignedLongAt: classpc.
+					 class ~= 0
+						ifTrue:
+							[self assert: (objectMemory addressCouldBeObj: class).
+							 (objectRepresentation cacheTagIsMarked: class)
+								ifTrue:
+									[(mixin := backEnd unalignedLongAt: mixinpc) ~= 0 ifTrue:
+										[objectRepresentation markAndTraceLiteral: mixin]]
+								ifFalse:
+									[backEnd
+										unalignedLongAt: classpc put: 0;
+										unalignedLongAt: mixinpc put: 0.
+									 codeModified := true]]
+						ifFalse:
+							[self assert: (backEnd unalignedLongAt: mixinpc) = 0]]]]].
+	^0 "keep scanning"
 ]
 
 { #category : #'garbage collection' }
