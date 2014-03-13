@@ -5931,6 +5931,11 @@ StackInterpreter >> frameStackedReceiverOffsetNumArgs: numArgs [
 ]
 
 { #category : #'object memory support' }
+StackInterpreter >> freeUnmarkedMachineCode [
+	"This is a no-op in the StackInterpreter"
+]
+
+{ #category : #'object memory support' }
 StackInterpreter >> freeUntracedStackPages [
 	"Free any untraced stack pages."
 	<var: #thePage type: #'StackPage *'>
@@ -8032,6 +8037,11 @@ StackInterpreter >> markAndTraceInterpreterOops: fullGCFlag [
 		oop := suspendedMethods at: i.
 		(objectMemory isIntegerObject: oop) ifFalse:[objectMemory markAndTrace: oop].
 	]
+]
+
+{ #category : #'object memory support' }
+StackInterpreter >> markAndTraceMachineCodeOfMarkedMethods [
+	"This is a no-op in the StackVM"
 ]
 
 { #category : #'object memory support' }
