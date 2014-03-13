@@ -1313,10 +1313,10 @@ TMethod >> isFunctional [
 	 Answer false for methods with return types other than the simple
 	 integer types to work around bugs in the inliner."
 
-	(parseTree statements size = 1 and:
-	 [parseTree statements last isReturn]) ifFalse: [ ^false ].
+	(parseTree statements size = 1
+	 and: [parseTree statements last isReturn]) ifFalse: [ ^false ].
 	parseTree statements last expression nodesDo: [ :n | n isReturn ifTrue: [ ^false ]].
-	^#(sqInt usqInt sqLong usqLong #'sqInt *') includes: returnType
+	^#(sqInt usqInt sqLong usqLong #'sqInt *' #'CogMethod *') includes: returnType
 ]
 
 { #category : #inlining }
