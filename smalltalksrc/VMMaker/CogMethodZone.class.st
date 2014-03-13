@@ -338,6 +338,7 @@ CogMethodZone >> manageFrom: theStartAddress to: theLimitAddress [
 { #category : #accessing }
 CogMethodZone >> methodAfter: cogMethod [
 	<var: #cogMethod type: #'CogMethod *'>
+	<inline: true>
 	^coInterpreter
 		cCoerceSimple: (self roundUpLength: cogMethod asInteger + cogMethod blockSize)
 		to: #'CogMethod *'
@@ -691,6 +692,7 @@ CogMethodZone >> roundUpAddress: address [
 
 { #category : #accessing }
 CogMethodZone >> roundUpLength: numBytes [
+	<cmacro: '(numBytes) ((numBytes) + 7 & -8)'>
 	^numBytes + 7 bitAnd: -8
 ]
 

@@ -514,7 +514,6 @@ CogObjectRepresentationForSpur >> markAndTraceLiteral: literal [
 
 { #category : #'garbage collection' }
 CogObjectRepresentationForSpur >> markAndTraceLiteralIfYoung: literal [
-	self shouldNotImplement.  "sumpin' wrong surely ;-)"
 	((self couldBeObject: literal)
 	 and: [objectMemory isYoungObject: literal]) ifTrue:
 		[self assert: (objectMemory addressCouldBeObj: literal).
