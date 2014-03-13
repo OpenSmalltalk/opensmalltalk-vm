@@ -6440,7 +6440,6 @@ SpurMemoryManager >> markAccessibleObjects [
 	self markAndTraceExtraRoots.
 	self assert: self validClassTableRootPages.
 	coInterpreter markAndTraceInterpreterOops: true.
-	coInterpreter markAndTraceOrFreeMachineCode: true.
 	self assert: self validObjStacks.
 	self markWeaklingsAndMarkAndFireEphemerons.
 	self assert: self validObjStacks.
@@ -6713,11 +6712,14 @@ SpurMemoryManager >> markWeaklingsAndMarkAndFireEphemerons [
 	<inline: false>
 	numTracedWeaklings := 0.
 	[coInterpreter markAndTraceUntracedReachableStackPages.
+	 coInterpreter markAndTraceMachineCodeOfMarkedMethods.
 	 numTracedWeaklings := self markAndTraceWeaklingsFrom: numTracedWeaklings.
 	 self noUnscannedEphemerons ifTrue:
 		[coInterpreter
 			markAndTraceUntracedReachableStackPages;
-			freeUntracedStackPages.
+	 		markAndTraceMachineCodeOfMarkedMethods;
+			freeUntracedStackPages;
+			freeUnmarkedMachineCode.
 		 ^self].
 	 self markInactiveEphemerons ifFalse:
 		[self fireAllUnscannedEphemerons].

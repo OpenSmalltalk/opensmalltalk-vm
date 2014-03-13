@@ -3356,6 +3356,16 @@ CoInterpreter >> freeStart [
 	^objectMemory freeStart
 ]
 
+{ #category : #'object memory support' }
+CoInterpreter >> freeUnmarkedMachineCode [
+	"Free machine-code methods whose compiled methods are unmarked
+	 (or open PICs whose selectors are not marked).
+	 The stack pages have already been traced so any methods
+	 of live stack activations have already been marked and traced."
+	<doNotGenerate>
+	cogit freeUnmarkedMachineCode
+]
+
 { #category : #'plugin primitives' }
 CoInterpreter >> functionForPrimitiveExternalCall: methodObj [
 	"Arrange to call the external primitive directly.  The complication is arranging
@@ -4515,9 +4525,19 @@ CoInterpreter >> markAndTraceMachineCodeMethod: aCogMethod [
 ]
 
 { #category : #'object memory support' }
+CoInterpreter >> markAndTraceMachineCodeOfMarkedMethods [
+	"Deal with a fulGC's effects on machine code.  Mark and
+	 trace oops in marked machine code methods.  The stack
+	 pages have already been traced so any methods of live
+	 stack activations have already been marked and traced."
+	<doNotGenerate>
+	cogit markAndTraceMachineCodeOfMarkedMethods
+]
+
+{ #category : #'object memory support' }
 CoInterpreter >> markAndTraceOrFreeMachineCode: fullGCFlag [
 	"Deal with a fulGC's effects on machine code.  Either mark and trace
-	 oops in machine code or free machine-code methds that refer to freed
+	 oops in machine code or free machine-code methods that refer to freed
 	 oops.  The stack pages have already been traced so any methods
 	 of live stack activations have already been marked and traced."
 	cogit markAndTraceObjectsOrFreeMachineCode: fullGCFlag
