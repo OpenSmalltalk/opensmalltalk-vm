@@ -2970,6 +2970,7 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#value								#generateValue:on:indent:
 	#value:								#generateValue:on:indent:
 	#value:value:						#generateValue:on:indent:
+	#value:value:value:					#generateValue:on:indent:
 
 	#shouldNotImplement				#generateSmalltalkMetaError:on:indent:
 	#shouldBeImplemented			#generateSmalltalkMetaError:on:indent:
