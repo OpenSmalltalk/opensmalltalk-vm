@@ -134,13 +134,19 @@ sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 void
 sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 {
-	unsigned long firstPage = roundDownToPage(startAddr);
+# if 0
 	/* We get EACCESS on 10.6.3 when trying to disable exec perm; Why? */
+	/* Arguably this is pointless since allocated memory always does include
+	 * write permission.  Annoyingly the mprotect call fails on both linux &
+	 * mac os x.  So make the whole thing a nop.
+	 */
+	unsigned long firstPage = roundDownToPage(startAddr);
 	if (mprotect((void *)firstPage,
 				 endAddr - firstPage + 1,
 				 PROT_READ | PROT_WRITE) < 0
 	 && errno != EACCES)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE)");
+# endif
 }
 #endif /* COGVM */
 
