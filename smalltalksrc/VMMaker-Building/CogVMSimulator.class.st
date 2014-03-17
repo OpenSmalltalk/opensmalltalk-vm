@@ -2102,7 +2102,7 @@ CogVMSimulator >> markAndTraceInterpreterOops: fullGCFlag [
 
 { #category : #'debug support' }
 CogVMSimulator >> maybeCheckStackDepth: delta sp: sp pc: mcpc [
-	| asp bcpc cogHomeMethod cogBlockMethod csp debugStackPointers |
+	| asp bcpc startbcpc cogHomeMethod cogBlockMethod csp debugStackPointers |
 	debugStackDepthDictionary ifNil: [^self].
 	(self isMachineCodeFrame: framePointer) ifFalse: [^self].
 	cogBlockMethod := self mframeCogMethod: framePointer.
@@ -2110,13 +2110,16 @@ CogVMSimulator >> maybeCheckStackDepth: delta sp: sp pc: mcpc [
 	debugStackPointers := debugStackDepthDictionary
 								at: cogHomeMethod methodObject
 								ifAbsentPut: [self debugStackPointersFor: cogHomeMethod methodObject].
-	bcpc := cogit
-				bytecodePCFor: mcpc
-				startBcpc: (cogHomeMethod = cogBlockMethod
-								ifTrue: [self startPCOfMethod: cogHomeMethod methodObject]
-								ifFalse: [self startPCOfClosure: (self pushedReceiverOrClosureOfFrame: framePointer)])
-				in: cogBlockMethod.
+	startbcpc := cogHomeMethod = cogBlockMethod
+					ifTrue: [self startPCOfMethod: cogHomeMethod methodObject]
+					ifFalse: [self startPCOfClosure: (self pushedReceiverOrClosureOfFrame: framePointer)].
+	bcpc := cogit bytecodePCFor: mcpc startBcpc: startbcpc in: cogBlockMethod.
 	self assert: bcpc ~= 0.
+	cogBlockMethod ~= cogHomeMethod ifTrue:
+		[| lastbcpc |
+		 lastbcpc := cogit lastBytecodePCForBlockAt: startbcpc in: cogHomeMethod methodObject.
+		 bcpc > lastbcpc ifTrue:
+			[bcpc := lastbcpc]].
 	asp := self stackPointerIndexForFrame: framePointer WithSP: sp + BytesPerWord.
 	csp := debugStackPointers at: bcpc.
 	"Compensate lazily for absent receiver sends."
@@ -2447,6 +2450,14 @@ CogVMSimulator >> pluginEntryFor: mapIndex [
 	^mappedPluginEntries at: (mapIndex > 1000
 								ifTrue: [externalPrimitiveTable at: mapIndex - 1001]
 								ifFalse: [mapIndex])
+]
+
+{ #category : #'object memory support' }
+CogVMSimulator >> preGCAction: gcModeArg [
+	"Override to void debugStackPointers on any GC/remap"
+	debugStackDepthDictionary ifNotNil:
+		[debugStackDepthDictionary := Dictionary new].
+	^super preGCAction: gcModeArg
 ]
 
 { #category : #'multi-threading simulation switch' }
