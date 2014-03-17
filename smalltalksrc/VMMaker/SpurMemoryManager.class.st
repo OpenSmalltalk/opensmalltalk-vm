@@ -1451,7 +1451,7 @@ SpurMemoryManager >> allocateBytes: numBytes classIndex: classIndex [
 	self assert: (self instSpecOfClass: (self classAtIndex: classIndex)) = self firstByteFormat.
 	^self
 		allocateSlots: (numBytes + self bytesPerSlot - 1 // self bytesPerSlot)
-		format: self firstByteFormat + (self bytesPerSlot - numBytes bitAnd: self bytesPerSlot - 1)
+		format: (self byteFormatForNumBytes: numBytes)
 		classIndex: classIndex
 ]
 
@@ -2454,7 +2454,7 @@ SpurMemoryManager >> checkFreeSpace [
 ]
 
 { #category : #'debug support' }
-SpurMemoryManager >> checkHeapIntegrity: excludeUnmarkedNewSpaceObjs [
+SpurMemoryManager >> checkHeapIntegrity: excludeUnmarkedNewSpaceObjs classIndicesShouldBeValid: classIndicesShouldBeValid [
 	"Perform an integrity/leak check using the heapMap.  Assume
 	 clearLeakMapAndMapAccessibleObjects has set a bit at each
 	 object's header.  Scan all objects in the heap checking that every
@@ -2488,8 +2488,9 @@ SpurMemoryManager >> checkHeapIntegrity: excludeUnmarkedNewSpaceObjs [
 						[containsYoung := true]]
 				ifFalse:
 					[classOop := self classOrNilAtIndex: (classIndex := self classIndexOf: obj).
-					 (classOop = nilObj
-					  and: [(self isHiddenObj: obj) not]) ifTrue:
+					 (classIndicesShouldBeValid
+					  and: [classOop = nilObj
+					  and: [(self isHiddenObj: obj) not]]) ifTrue:
 						[coInterpreter print: 'object leak in '; printHex: obj; print: ' invalid class index '; printHex: classIndex; print: ' -> '; print: (classOop ifNil: ['nil'] ifNotNil: ['nilObj']); cr.
 						 self eek.
 						 ok := false].
@@ -4743,6 +4744,13 @@ SpurMemoryManager >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpace [
 	self touch: highestObjectsWraps
 ]
 
+{ #category : #'simulation only' }
+SpurMemoryManager >> fullDisplayUpdate [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter fullDisplayUpdate
+]
+
 { #category : #'gc - global' }
 SpurMemoryManager >> fullGC [
 	"Perform a full lazy compacting GC.  Answer the size of the largest free chunk."
@@ -4798,7 +4806,7 @@ SpurMemoryManager >> globalGarbageCollect [
 	self nilUnmarkedWeaklingSlots.
 	self freeUnmarkedObjectsAndSortAndCoalesceFreeSpace.
 
-	self runLeakCheckerForFullGC: true excludeUnmarkedNewSpaceObjs: true.
+	self runLeakCheckerForFullGC: true excludeUnmarkedNewSpaceObjs: true classIndicesShouldBeValid: false.
 
 	self compact.
 	self eliminateAndFreeForwarders.
@@ -8049,11 +8057,11 @@ SpurMemoryManager >> roundBytesToAllocationUnit: bytes [
 
 { #category : #'debug support' }
 SpurMemoryManager >> runLeakCheckerForFullGC: fullGCFlag [
-	^self runLeakCheckerForFullGC: fullGCFlag excludeUnmarkedNewSpaceObjs: false
+	^self runLeakCheckerForFullGC: fullGCFlag excludeUnmarkedNewSpaceObjs: false classIndicesShouldBeValid: true
 ]
 
 { #category : #'debug support' }
-SpurMemoryManager >> runLeakCheckerForFullGC: fullGCFlag excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs [
+SpurMemoryManager >> runLeakCheckerForFullGC: fullGCFlag excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs classIndicesShouldBeValid: classIndicesShouldBeValid [
 	<inline: false>
 	(fullGCFlag
 			ifTrue: [self leakCheckFullGC]
@@ -8062,7 +8070,7 @@ SpurMemoryManager >> runLeakCheckerForFullGC: fullGCFlag excludeUnmarkedNewSpace
 			ifTrue: [coInterpreter reverseDisplayFrom: 0 to: 7]
 			ifFalse: [coInterpreter reverseDisplayFrom: 8 to: 15].
 		 self clearLeakMapAndMapAccessibleObjects.
-		 self assert: (self checkHeapIntegrity: excludeUnmarkedNewSpaceObjs).
+		 self assert: (self checkHeapIntegrity: excludeUnmarkedNewSpaceObjs classIndicesShouldBeValid: classIndicesShouldBeValid).
 		 self assert: coInterpreter checkInterpreterIntegrity.
 		 self assert: coInterpreter checkStackIntegrity.
 		 self assert: (coInterpreter checkCodeIntegrity: fullGCFlag)]

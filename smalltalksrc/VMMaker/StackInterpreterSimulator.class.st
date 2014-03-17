@@ -48,7 +48,8 @@ Class {
 		'atEachStepBlock',
 		'disableBooleanCheat',
 		'performFilters',
-		'eventQueue'
+		'eventQueue',
+		'assertVEPAES'
 	],
 	#category : #'VMMaker-InterpreterSimulation'
 }
@@ -612,8 +613,8 @@ StackInterpreterSimulator >> fullDisplay [
 
 { #category : #'debug support' }
 StackInterpreterSimulator >> fullDisplayUpdate [
-	"Preserve self successful when call asynchronously from Simulator"
 	| primFailCodeValue |
+	self break.
 	primFailCodeValue := primFailCode.
 	self initPrimCall.
 	super fullDisplayUpdate.
@@ -716,8 +717,7 @@ StackInterpreterSimulator >> incrementByteCount [
 		 self halt].
 	byteCount \\ 1000 = 0 ifTrue:
 		[self doOrDefer: [self changed: #byteCountText].
-		 self forceInterruptCheck.
-		 byteCount \\ 1000 = 0 ifTrue: [self fullDisplayUpdate]] "tty. denominator was 10000 before event forwarding. Refactor me."
+		 self forceInterruptCheck]
 ]
 
 { #category : #initialization }
@@ -762,7 +762,7 @@ StackInterpreterSimulator >> initialize [
 	"initialize InterpreterSimulator variables used for debugging"
 	byteCount := 0.
 	sendCount := 0.
-	quitBlock := [^ self].
+	quitBlock := [^self].
 	traceOn := true.
 	printSends := printReturns := printFrameAtEachStep := printBytecodeAtEachStep := false.
 	myBitBlt := BitBltSimulator new setInterpreter: self.
@@ -771,7 +771,8 @@ StackInterpreterSimulator >> initialize [
 	suppressHeartbeatFlag := false.
 	systemAttributes := Dictionary new.
 	extSemTabSize := 256.
-	disableBooleanCheat := false
+	disableBooleanCheat := false.
+	assertVEPAES := true. "a flag so the assertValidExecutionPointers in run can be turned off for simulation speed"
 ]
 
 { #category : #'frame access' }
@@ -1025,7 +1026,10 @@ StackInterpreterSimulator >> ioRelinquishProcessorForMicroseconds: microseconds 
 		[World doOneCycle].
 	microseconds >= 1000
 		ifTrue: [(Delay forMilliseconds: microseconds + 999 // 1000) wait]
-		ifFalse: [Processor yield]
+		ifFalse: [Processor yield].
+	"And increase the byteCount form which the microsecond clock is derived..."
+	byteCount := byteCount + microseconds - 1.
+	self incrementByteCount
 ]
 
 { #category : #'I/O primitives' }
@@ -1847,13 +1851,6 @@ StackInterpreterSimulator >> primitivePerform [
 	^super primitivePerform
 ]
 
-{ #category : #'I/O primitives' }
-StackInterpreterSimulator >> primitiveScreenSize [
-	| size |
-	size := self desiredDisplayExtent min: 800@640.
-	self pop: 1 thenPush: (self makePointwithxValue: size x yValue: size y)
-]
-
 { #category : #'object access primitives' }
 StackInterpreterSimulator >> primitiveStoreStackp [
 	"self printContext: (self stackValue: 1).
@@ -2099,7 +2096,7 @@ StackInterpreterSimulator >> run [
 	self internalizeIPandSP.
 	self fetchNextBytecode.
 	[true] whileTrue:
-		[self assertValidExecutionPointers.
+		[assertVEPAES ifTrue: [self assertValidExecutionPointers].
 		 atEachStepBlock value. "N.B. may be nil"
 		 self dispatchOn: currentBytecode in: BytecodeTable.
 		 self incrementByteCount].
@@ -2645,6 +2642,7 @@ StackInterpreterSimulator >> utilitiesMenu: aMenuMorph [
 											s notEmpty ifTrue: [breakCount := Integer readFrom: s readStream]];
 		add: 'set break selector...' action: [|s| s := UIManager default request: 'break selector'.
 											s notEmpty ifTrue: [self setBreakSelector: s]];
+		add: 'turn valid exec ptrs assert o', (assertVEPAES ifTrue: ['ff'] ifFalse: ['n']) action: [assertVEPAES := assertVEPAES not];
 		add: (printSends
 				ifTrue: ['no print sends']
 				ifFalse: ['print sends'])

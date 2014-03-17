@@ -6028,6 +6028,12 @@ StackInterpreter >> getCurrentBytecode [
 	^objectMemory byteAt: instructionPointer
 ]
 
+{ #category : #'simulation support' }
+StackInterpreter >> getDeferDisplayUpdates [
+	<doNotGenerate>
+	^deferDisplayUpdates
+]
+
 { #category : #'internal interpreter access' }
 StackInterpreter >> getDesiredCogCodeSize [
 	"This is nil in the StackVM"
@@ -8894,10 +8900,9 @@ StackInterpreter >> positive32BitIntegerFor: integerValue [
 
 { #category : #'primitive support' }
 StackInterpreter >> positive64BitIntegerFor: integerValue [
-	<var: 'integerValue' type: 'sqLong'>
+	<var: 'integerValue' type: #sqLong>
+	"Answer a Large Positive Integer object for the given integer value.  N.B. will *not* cause a GC."
 	| newLargeInteger highWord sz |
-	"N.B. will *not* cause a GC.
-		integerValue is interpreted as POSITIVE, e.g. as the result of Bitmap>at:."
 	highWord := self cCode: 'integerValue >> 32' inSmalltalk: [integerValue >> 32]. "shift is coerced to usqInt otherwise"
 	highWord = 0 ifTrue:[^self positive32BitIntegerFor: integerValue].
 	sz := 5.
@@ -11638,26 +11643,20 @@ StackInterpreter >> signalFinalization: weakReferenceOop [
 
 { #category : #'primitive support' }
 StackInterpreter >> signed32BitIntegerFor: integerValue [
-	"Return a full 32 bit integer object for the given integer value"
+	"Answer a full 32 bit integer object for the given integer value."
 	| newLargeInteger value largeClass |
 	<inline: false>
 	(objectMemory isIntegerValue: integerValue) ifTrue:
 		[^objectMemory integerObjectOf: integerValue].
-	 objectMemory hasSpurMemoryManagerAPI
-		ifTrue:
-			[integerValue < 0
-				ifTrue: [largeClass := ClassLargeNegativeIntegerCompactIndex.
-						value := 0 - integerValue]
-				ifFalse: [largeClass := ClassLargePositiveIntegerCompactIndex.
-						value := integerValue].
-			objectMemory allocateBytes: 4 classIndex: largeClass]
-		ifFalse:
-			[integerValue < 0
-				ifTrue: [largeClass := objectMemory classLargeNegativeInteger.
-						value := 0 - integerValue]
-				ifFalse: [largeClass := objectMemory classLargePositiveInteger.
-						value := integerValue].
-			newLargeInteger := objectMemory eeInstantiateClass: largeClass indexableSize: 4].
+	 integerValue < 0
+		ifTrue: [largeClass := ClassLargeNegativeIntegerCompactIndex.
+				value := 0 - integerValue]
+		ifFalse: [largeClass := ClassLargePositiveIntegerCompactIndex.
+				value := integerValue].
+	newLargeInteger := objectMemory
+							eeInstantiateSmallClassIndex: largeClass
+							format: (objectMemory byteFormatForNumBytes: 4)
+							numSlots: 1.
 	objectMemory storeByte: 3 ofObject: newLargeInteger withValue: ((value >> 24) bitAnd: 16rFF).
 	objectMemory storeByte: 2 ofObject: newLargeInteger withValue: ((value >> 16) bitAnd: 16rFF).
 	objectMemory storeByte: 1 ofObject: newLargeInteger withValue: ((value >> 8) bitAnd: 16rFF).
@@ -11667,17 +11666,17 @@ StackInterpreter >> signed32BitIntegerFor: integerValue [
 
 { #category : #'primitive support' }
 StackInterpreter >> signed64BitIntegerFor: integerValue [
-	"Return a Large Integer object for the given integer value"
-	| newLargeInteger magnitude largeClass intValue highWord sz |
-	<inline: false>
 	<var: 'integerValue' type: #sqLong>
+	"Answer a Large Integer object for the given integer value.  N.B. will *not* cause a GC."
+	| newLargeInteger magnitude largeClass highWord sz |
+	<inline: false>
 	<var: 'magnitude' type: #sqLong>
 	<var: 'highWord' type: #usqInt>
 
 	integerValue < 0
-		ifTrue:[	largeClass := objectMemory classLargeNegativeInteger.
+		ifTrue:[	largeClass := ClassLargeNegativeIntegerCompactIndex.
 				magnitude := 0 - integerValue]
-		ifFalse:[	largeClass := objectMemory classLargePositiveInteger.
+		ifFalse:[	largeClass := ClassLargePositiveIntegerCompactIndex.
 				magnitude := integerValue].
 
 	"Make sure to handle the most -ve value correctly. 0 - most -ve = most -ve and most -ve - 1
@@ -11697,10 +11696,21 @@ StackInterpreter >> signed64BitIntegerFor: integerValue [
 			(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1].
 			(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1].
 			(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1]].
-	newLargeInteger := objectMemory instantiateClass: largeClass indexableSize:  sz.
-	0 to: sz-1 do: [:i |
-		intValue := (magnitude >> (i * 8)) bitAnd: 255.
-		objectMemory storeByte: i ofObject: newLargeInteger withValue: intValue].
+	newLargeInteger := objectMemory
+							eeInstantiateSmallClassIndex: largeClass
+							format: (objectMemory byteFormatForNumBytes: sz)
+							numSlots: sz + 3 // objectMemory bytesPerSlot.
+	sz > 4 ifTrue:
+		[objectMemory
+			storeByte: 7 ofObject: newLargeInteger withValue: (magnitude >> 56 bitAnd: 16rFF);
+			storeByte: 6 ofObject: newLargeInteger withValue: (magnitude >> 48 bitAnd: 16rFF);
+			storeByte: 5 ofObject: newLargeInteger withValue: (magnitude >> 40 bitAnd: 16rFF);
+			storeByte: 4 ofObject: newLargeInteger withValue: (magnitude >> 32 bitAnd: 16rFF)].
+	objectMemory
+		storeByte: 3 ofObject: newLargeInteger withValue: (magnitude >> 24 bitAnd: 16rFF);
+		storeByte: 2 ofObject: newLargeInteger withValue: (magnitude >> 16 bitAnd: 16rFF);
+		storeByte: 1 ofObject: newLargeInteger withValue: (magnitude >>   8 bitAnd: 16rFF);
+		storeByte: 0 ofObject: newLargeInteger withValue: (magnitude ">> 0" bitAnd: 16rFF).
 	^newLargeInteger
 ]
 

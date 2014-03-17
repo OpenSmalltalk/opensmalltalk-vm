@@ -106,6 +106,11 @@ Object >> isCObjectAccessor [
 ]
 
 { #category : #'*VMMaker-translation support' }
+Object >> isInterpreterPlugin [
+	^false
+]
+
+{ #category : #'*VMMaker-translation support' }
 Object >> isTParseNode [
 	^false
 ]
