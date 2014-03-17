@@ -353,6 +353,11 @@ InterpreterProxy >> fullGC [
 	Smalltalk garbageCollect.
 ]
 
+{ #category : #'special objects' }
+InterpreterProxy >> getDeferDisplayUpdates [
+	^false
+]
+
 { #category : #other }
 InterpreterProxy >> getInterruptPending [
 	^self notYetImplementedError

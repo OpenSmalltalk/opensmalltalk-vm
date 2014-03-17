@@ -79,6 +79,17 @@ BitBltSimulator >> mergeFn: arg1 with: arg2 [
 	^ self perform: (opTable at: combinationRule+1) with: arg1 with: arg2
 ]
 
+{ #category : #simulation }
+BitBltSimulator >> primitive: primitiveName parameters: parameterTypesArray receiver: rcvrType [
+	primitiveName caseOf: {
+		['primitivePixelValueAt'] -> [^self] }
+]
+
+{ #category : #simulation }
+BitBltSimulator >> primitivePixelValueAt [
+	self primitivePixelValueAtX: (interpreterProxy stackValue: 1) y: (interpreterProxy stackValue: 0)
+]
+
 { #category : #'debug support' }
 BitBltSimulator >> srcLongAt: srcIndex [
 

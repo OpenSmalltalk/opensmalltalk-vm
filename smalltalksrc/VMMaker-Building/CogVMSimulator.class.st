@@ -692,6 +692,16 @@ CogVMSimulator >> displayLocation [
 	^ Display extent - displayForm extent - (10@10)
 ]
 
+{ #category : #accessing }
+CogVMSimulator >> displayView [
+	"The VM SImulator draws directly on an imageMorph named displayView
+	  displayView is housed on a Form named displayForm
+	  Since this is housed directly on the Morph, I have this tight compling from here->model->morph. 
+	"
+	self flag: 'tty'.	
+	^displayView
+]
+
 { #category : #'process primitive support' }
 CogVMSimulator >> doSignalExternalSemaphores: minTableSize [
 	"This is a non-thread-safe simulation.  See platforms/Cross/vm/sqExternalSemaphores.c
@@ -1275,8 +1285,7 @@ CogVMSimulator >> incrementByteCount [
 		 self halt].
 	byteCount \\ 1000 = 0 ifTrue:
 		[self doOrDefer: [self changed: #byteCountText; changed: #composeAll].
-		 self forceInterruptCheck.
-		 byteCount \\ 10000 = 0 ifTrue: [self fullDisplayUpdate]]
+		 self forceInterruptCheck]
 ]
 
 { #category : #'test support' }
@@ -1690,9 +1699,6 @@ CogVMSimulator >> ioRelinquishProcessorForMicroseconds: microseconds [
 	 (to run activities such as fill-in-the-blanks) but we also need an independent
 	 thread of control to run this VM thread.  So we need to fork a new UI process."
 	Display reverse: (0@0 extent: 16@16).
-	instructionPointer >= objectMemory startOfMemory ifFalse:
-		[byteCount := byteCount + microseconds - 1.
-		 self incrementByteCount].
 	Sensor peekEvent ifNotNil:
 		[self forceInterruptCheck].
 	Processor activeProcess == Project uiProcess ifTrue:
@@ -1701,7 +1707,9 @@ CogVMSimulator >> ioRelinquishProcessorForMicroseconds: microseconds [
 		ifTrue: [self isThreadedVM ifTrue:
 					[self forceInterruptCheckFromHeartbeat].
 				(Delay forMilliseconds: microseconds + 999 // 1000) wait]
-		ifFalse: [Processor yield]
+		ifFalse: [Processor yield].
+	byteCount := byteCount + microseconds - 1.
+	self incrementByteCount
 ]
 
 { #category : #'I/O primitives' }
@@ -2760,13 +2768,6 @@ CogVMSimulator >> primitiveRelinquishProcessor [
 		inSuperclass: (cogThreadManager ifNil: [CoInterpreterPrimitives] ifNotNil: [CoInterpreterMT])
 ]
 
-{ #category : #'I/O primitives' }
-CogVMSimulator >> primitiveScreenSize [
-	| size |
-	size := self desiredDisplayExtent min: 800@640.
-	self pop: 1 thenPush: (self makePointwithxValue: size x yValue: size y)
-]
-
 { #category : #'system control primitives' }
 CogVMSimulator >> primitiveSignalAtMilliseconds [
 	super primitiveSignalAtMilliseconds.
@@ -3329,8 +3330,6 @@ CogVMSimulator >> stackLimitFromMachineCode [
 	 somethng reasonable when we're purely in machine code."
 	(byteCount := byteCount + 1) - lastPollCount >= 100 ifTrue:
 		[lastPollCount := byteCount.
-		 byteCount \\ 500 = 0 ifTrue:
-			[self fullDisplayUpdate].
 		 (Sensor peekEvent notNil
 		  or: [nextProfileTick > 0
 			  and: [nextProfileTick <= self ioUTCMicroseconds]]) ifTrue:
