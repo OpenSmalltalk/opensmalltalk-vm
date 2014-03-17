@@ -492,7 +492,10 @@ InterpreterPrimitives >> primitiveArctan [
 	<var: #rcvr type: #double>
 	rcvr := self popFloat.
 	self successful
-		ifTrue: [self pushFloat: (self cCode: 'atan(rcvr)' inSmalltalk: [rcvr arcTan])]
+		ifTrue: [self pushFloat: (self cCode: [rcvr atan]
+									inSmalltalk: [rcvr = rcvr
+													ifTrue: [rcvr arcTan]
+													ifFalse: [Float nan]])]
 		ifFalse: [self unPop: 1]
 ]
 
@@ -1369,7 +1372,10 @@ InterpreterPrimitives >> primitiveExp [
 	<var: #rcvr type: #double>
 	rcvr := self popFloat.
 	self successful
-		ifTrue: [self pushFloat: (self cCode: 'exp(rcvr)' inSmalltalk: [rcvr exp])]
+		ifTrue: [self pushFloat: (self cCode: [rcvr exp]
+									inSmalltalk: [rcvr = rcvr
+													ifTrue: [rcvr exp]
+													ifFalse: [Float nan]])]
 		ifFalse: [self unPop: 1]
 ]
 
@@ -2239,7 +2245,10 @@ InterpreterPrimitives >> primitiveLogN [
 	<var: #rcvr type: #double>
 	rcvr := self popFloat.
 	self successful
-		ifTrue: [self pushFloat: (self cCode: 'log(rcvr)' inSmalltalk: [rcvr ln])]
+		ifTrue: [self pushFloat: (self cCode: [rcvr log]
+									inSmalltalk: [rcvr = rcvr
+													ifTrue: [rcvr ln]
+													ifFalse: [Float nan]])]
 		ifFalse: [self unPop: 1]
 ]
 
@@ -2984,11 +2993,25 @@ InterpreterPrimitives >> primitiveScreenDepth [
 
 { #category : #'I/O primitives' }
 InterpreterPrimitives >> primitiveScreenSize [
-	"Return a point indicating the current size of the Smalltalk window. Currently there is a limit of 65535 in each direction because the point is encoded into a single 32bit value in the image header. This might well become a problem one day"
-	| pointWord |
-	self pop: 1.
-	pointWord := self ioScreenSize.
-	self push: (self makePointwithxValue: (pointWord >> 16 bitAnd: 65535) yValue: (pointWord bitAnd: 65535))
+	"Answer a point indicating the current size of the Smalltalk window.
+	 Currently there is a limit of 65535 in each direction because the
+	 point is encoded into a single 32bit value in the image header.
+	 This might well become a problem one day"
+	self
+		cCode:
+			[| pointWord |
+			 pointWord := self ioScreenSize.
+			 self pop: 1
+				thenPush: (self makePointwithxValue: (pointWord >> 16 bitAnd: 65535)
+								yValue: (pointWord bitAnd: 65535))]
+		inSmalltalk:
+			[| size |
+			"Default to a reasonable size for simulation, unless the window has opened,
+			 in which case allow the screen to be as large as the simulation window"
+			 size := (self displayView notNil and: [self savedWindowSize notNil])
+						ifTrue: [self desiredDisplayExtent]
+						ifFalse: [self desiredDisplayExtent min: 800@640].
+			 self pop: 1 thenPush: (self makePointwithxValue: size x yValue: size y)]
 ]
 
 { #category : #'system control primitives' }
@@ -3193,7 +3216,10 @@ InterpreterPrimitives >> primitiveSine [
 	<var: #rcvr type: #double>
 	rcvr := self popFloat.
 	self successful
-		ifTrue: [self pushFloat: (self cCode: 'sin(rcvr)' inSmalltalk: [rcvr sin])]
+		ifTrue: [self pushFloat: (self cCode: [rcvr sin]
+									inSmalltalk: [rcvr = rcvr
+													ifTrue: [rcvr sin]
+													ifFalse: [Float nan]])]
 		ifFalse: [self unPop: 1]
 ]
 
@@ -3297,7 +3323,7 @@ InterpreterPrimitives >> primitiveSquareRoot [
 	rcvr := self popFloat.
 	self success: rcvr >= 0.0.
 	self successful
-		ifTrue: [self pushFloat: (self cCode: 'sqrt(rcvr)' inSmalltalk: [rcvr sqrt])]
+		ifTrue: [self pushFloat: rcvr sqrt]
 		ifFalse: [self unPop: 1]
 ]
 

@@ -481,8 +481,7 @@ NewspeakInterpreterSimulator >> incrementByteCount [
 		 self halt].
 	byteCount \\ 1000 = 0 ifTrue:
 		[self doOrDefer: [self changed: #byteCountText].
-		 self forceInterruptCheck.
-		 byteCount \\ 10000 = 0 ifTrue: [self fullDisplayUpdate]]
+		 self forceInterruptCheck]
 ]
 
 { #category : #'debug support' }
