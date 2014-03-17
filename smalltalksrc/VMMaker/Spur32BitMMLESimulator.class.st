@@ -207,76 +207,79 @@ Spur32BitMMLESimulator >> isIntegerObject: oop [
 	sel := thisContext sender method selector.
 	(#(	DoIt
 		DoItIn:
-		on:do: "from the debugger"
-		makeBaseFrameFor:
-		quickFetchInteger:ofObject:
-		frameOfMarriedContext:
-		objCouldBeClassObj:
-		isMarriedOrWidowedContext:
-		shortPrint:
+		baseFrameReturn
+		bereaveAllMarriedContextsForSnapshotFlushingExternalPrimitivesIf:
 		bytecodePrimAt
 		bytecodePrimAtPut
+		bytesOrInt:growTo:
+		ceBaseFrameReturn:
+		checkIsStillMarriedContext:currentFP:
+		checkedIntegerValueOf:
+		cogMethodDoesntLookKosher:
 		commonAt:
 		commonAtPut:
-		loadFloatOrIntFrom:
-		positive32BitValueOf:
-		primitiveExternalCall
-		checkedIntegerValueOf:
-		bytecodePrimAtPut
-		commonAtPut:
-		primitiveVMParameter
-		checkIsStillMarriedContext:currentFP:
-		displayBitsOf:Left:Top:Right:Bottom:
-		fetchStackPointerOf:
-		primitiveContextAt
-		primitiveContextAtPut
-		subscript:with:storing:format:
-		printContext:
+		commonVariable:at:put:cacheIndex:
 		compare31or32Bits:equal:
-		signed64BitValueOf:
-		primDigitMultiply:negative:
-		digitLength:
-		isNegativeIntegerValueOf:
-		magnitude64BitValueOf:
-		primitiveMakePoint
-		primitiveAsCharacter
-		primitiveInputSemaphore
-		baseFrameReturn
-		primitiveExternalCall
-		primDigitCompare:
-		isLiveContext:
-		numPointerSlotsOf:
-		fileValueOf:
-		loadBitBltDestForm
-		fetchIntOrFloat:ofObject:ifNil:
-		fetchIntOrFloat:ofObject:
-		loadBitBltSourceForm
-		loadPoint:from:
-		primDigitAdd:
-		primDigitSubtract:
-		positive64BitValueOf:
 		digitBitLogic:with:opIndex:
-		signed32BitValueOf:
-		isNormalized:
-		primDigitDiv:negative:
-		bytesOrInt:growTo:
-		primitiveNewMethod
-		isCogMethodReference:
+		digitLength:
+		displayBitsOf:Left:Top:Right:Bottom:
+		ensureContextHasBytecodePC:
+		externalInstVar:ofContext:
+		fetchIntOrFloat:ofObject:
+		fetchIntOrFloat:ofObject:ifNil:
+		fetchStackPointerOf:
+		fileValueOf:
+		frameOfMarriedContext:
 		functionForPrimitiveExternalCall:
 		genSpecialSelectorArithmetic
 		genSpecialSelectorComparison
-		ensureContextHasBytecodePC:
-		instVar:ofContext:
-		ceBaseFrameReturn:
 		inlineCacheTagForInstance:
-		primitiveObjectAtPut
-		commonVariable:at:put:cacheIndex:
+		instVar:ofContext:
+		isCogMethodReference:
+		isLiveContext:
+		isMarriedOrWidowedContext:
+		isNegativeIntegerValueOf:
+		isNormalized:
+		loadBitBltDestForm
+		loadBitBltSourceForm
+		loadFloatOrIntFrom:
+		loadPoint:from:
+		magnitude64BitValueOf:
+		makeBaseFrameFor:
+		numPointerSlotsOf:
+		objCouldBeClassObj:
+		on:do: "from the debugger"
+		positive32BitValueOf:
+		positive64BitValueOf:
+		primDigitAdd:
 		primDigitBitShiftMagnitude:
-		externalInstVar:ofContext:
-		primitiveGrowMemoryByAtLeast
+		primDigitCompare:
+		primDigitDiv:negative:
+		primDigitMultiply:negative:
+		primDigitSubtract:
+		primitiveAllInstances
+		primitiveAsCharacter
+		primitiveContextAt
+		primitiveContextAtPut
+		primitiveExternalCall
 		primitiveFileSetPosition
-		bereaveAllMarriedContextsForSnapshotFlushingExternalPrimitivesIf:
-		shortPrintOop:) includes: sel) ifFalse:
+		primitiveFileTruncate	DoIt
+		primitiveForwardSignalToSemaphore
+		primitiveGrowMemoryByAtLeast
+		primitiveInputSemaphore
+		primitiveMakePoint
+		primitiveNewMethod
+		primitiveObjectAtPut
+		primitiveSizeInBytesOfInstance
+		primitiveVMParameter
+		printContext:
+		quickFetchInteger:ofObject:
+		shortPrint:
+		shortPrintOop:
+		signed32BitValueOf:
+		signed64BitValueOf:
+		subscript:with:storing:format:
+		unlockSurfaces) includes: sel) ifFalse:
 		[self halt].
 	^super isIntegerObject: oop
 ]
@@ -381,12 +384,15 @@ Spur32BitMMLESimulator >> numClassTablePages [
 ]
 
 { #category : #'debug support' }
-Spur32BitMMLESimulator >> runLeakCheckerForFullGC: fullGCFlag excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs [
+Spur32BitMMLESimulator >> runLeakCheckerForFullGC: fullGCFlag excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs classIndicesShouldBeValid: classIndicesShouldBeValid [
 	(fullGCFlag
 			ifTrue: [self leakCheckFullGC]
 			ifFalse: [self leakCheckNewSpaceGC]) ifTrue:
 		[coInterpreter transcript nextPutAll: 'leak-checking...'; flush].
-	^super runLeakCheckerForFullGC: fullGCFlag excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs
+	^super
+		runLeakCheckerForFullGC: fullGCFlag
+		excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs
+		classIndicesShouldBeValid: classIndicesShouldBeValid
 ]
 
 { #category : #'generation scavenging' }

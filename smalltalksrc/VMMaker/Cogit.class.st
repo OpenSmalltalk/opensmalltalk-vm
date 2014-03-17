@@ -2795,7 +2795,7 @@ Cogit >> checkIfValidObjectRef: annotation pc: mcpc cogMethod: cogMethod [
 { #category : #'garbage collection' }
 Cogit >> checkIfValidObjectRefAndTarget: annotation pc: mcpc cogMethod: cogMethod [
 	<var: #mcpc type: #'char *'>
-	| literal cacheTag entryPoint |
+	| literal entryPoint |
 	annotation = IsObjectReference ifTrue:
 		[literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
 		 (self asserta: (objectRepresentation checkValidObjectReference: literal)) ifFalse:
@@ -2807,13 +2807,24 @@ Cogit >> checkIfValidObjectRefAndTarget: annotation pc: mcpc cogMethod: cogMetho
 	(self isSendAnnotation: annotation) ifTrue:
 		[(self asserta: (self cCoerceSimple: cogMethod to: #'CogMethod *') cmType = CMMethod) ifFalse:
 			[^3].
-		 cacheTag := backEnd inlineCacheTagAt: mcpc asInteger.
-		 (self asserta: (objectRepresentation checkValidInlineCacheTag: cacheTag)) ifFalse:
-			[^4].
-		((objectRepresentation couldBeObject: cacheTag)
-		 and: [coInterpreter isReallyYoungObject: cacheTag]) ifTrue:
-			[(self asserta: (self cCoerceSimple: cogMethod to: #'CogMethod *') cmRefersToYoung) ifFalse:
-				[^5]].
+		 self offsetCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
+			[:offset :cacheTag :tagCouldBeObject|
+			tagCouldBeObject
+				ifTrue:
+					[(objectRepresentation couldBeObject: cacheTag)
+						ifTrue:
+							[(self asserta: (objectRepresentation checkValidObjectReference: cacheTag)) ifFalse:
+								[^4]]
+						ifFalse:
+							[(self asserta: (objectRepresentation checkValidInlineCacheTag: cacheTag)) ifFalse:
+								[^5]].
+					((objectRepresentation couldBeObject: cacheTag)
+					 and: [coInterpreter isReallyYoungObject: cacheTag]) ifTrue:
+						[(self asserta: (self cCoerceSimple: cogMethod to: #'CogMethod *') cmRefersToYoung) ifFalse:
+							[^6]]]
+				ifFalse:
+					[(self asserta: (objectRepresentation checkValidInlineCacheTag: cacheTag)) ifFalse:
+						[^7]]].
 		entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		entryPoint > methodZoneBase ifTrue:
 			["It's a linked send; find which kind."
@@ -2822,7 +2833,7 @@ Cogit >> checkIfValidObjectRefAndTarget: annotation pc: mcpc cogMethod: cogMetho
 					 (self asserta: (targetMethod cmType = CMMethod
 								   or: [targetMethod cmType = CMClosedPIC
 								   or: [targetMethod cmType = CMOpenPIC]])) ifFalse:
-						[^6]]]].
+						[^8]]]].
 	^0 "keep scanning"
 ]
 

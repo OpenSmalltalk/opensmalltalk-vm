@@ -252,6 +252,13 @@ InterpreterPlugin >> halt [
 	^0
 ]
 
+{ #category : #testing }
+InterpreterPlugin >> isInterpreterPlugin [
+	<doNotGenerate>
+	"Simulation only"
+	^true
+]
+
 { #category : #'simulation support' }
 InterpreterPlugin >> majorVersion [
 	"This is implemented in sqVirtualMachine.c, so this form is for simulation only."
