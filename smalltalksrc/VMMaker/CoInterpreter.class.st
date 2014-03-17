@@ -5370,12 +5370,13 @@ CoInterpreter >> printFrame: theFP WithSP: theSP [
 			 numTemps := self tempCountOf: theMethod].
 	(self frameIsBlockActivation: theFP) ifTrue:
 		[| rcvrOrClosure |
+		 "No BlockLocalTempCounter in the Cogit's C code, so quick hack is to use numCopied + numArgs"
 		 rcvrOrClosure := self pushedReceiverOrClosureOfFrame: theFP.
 		 ((objectMemory isNonImmediate: rcvrOrClosure)
 		 and: [(objectMemory addressCouldBeObj: rcvrOrClosure)
 		 and: [(objectMemory fetchClassOfNonImm: rcvrOrClosure) = (objectMemory splObj: ClassBlockClosure)]])
 			ifTrue: [numTemps := numArgs + (self stSizeOf: rcvrOrClosure)]
-			ifFalse: [numTemps := 0]].
+			ifFalse: [numTemps := numArgs]].
 	self shortPrintFrame: theFP.
 	(self isBaseFrame: theFP) ifTrue:
 		[self printFrameOop: '(caller ctxt'
@@ -5416,7 +5417,10 @@ CoInterpreter >> printFrame: theFP WithSP: theSP [
 				index := rcvrAddress - addr / BytesPerWord + numArgs.
 				index <= numTemps
 					ifTrue: [self printFrameOop: 'temp' index: index - 1 at: addr]
-					ifFalse: [self printFrameOop: 'stck' at: addr]].
+					ifFalse: [self printFrameOop: ((self frameIsBlockActivation: theFP)
+													ifTrue: ['temp/stck']
+													ifFalse: ['stck'])
+								at: addr]].
 			self printFrameThing: 'frame ip'
 				at: theSP
 				extra: ((self isMachineCodeFrame: theFP)
@@ -5428,7 +5432,10 @@ CoInterpreter >> printFrame: theFP WithSP: theSP [
 				index := rcvrAddress - addr / BytesPerWord + numArgs.
 				index <= numTemps
 					ifTrue: [self printFrameOop: 'temp' index: index - 1 at: addr]
-					ifFalse: [self printFrameOop: 'stck' at: addr]]]
+					ifFalse: [self printFrameOop: ((self frameIsBlockActivation: theFP)
+													ifTrue: ['temp/stck']
+													ifFalse: ['stck'])
+								at: addr]]]
 ]
 
 { #category : #'debug printing' }
