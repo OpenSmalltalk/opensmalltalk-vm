@@ -5,7 +5,8 @@ Class {
 	#name : #FilePluginSimulator,
 	#superclass : #FilePlugin,
 	#instVars : [
-		'openFiles'
+		'openFiles',
+		'states'
 	],
 	#category : #'VMMaker-InterpreterSimulation'
 }
@@ -40,7 +41,7 @@ FilePluginSimulator >> fileOpenName: nameIndex size: nameSize write: writeFlag s
 
 { #category : #simulation }
 FilePluginSimulator >> fileValueOf: objectPointer [
-	| index |
+	| index file |
 	index := (interpreterProxy isIntegerObject: objectPointer)
 				ifTrue: [interpreterProxy integerValueOf: objectPointer]
 				ifFalse:
@@ -49,7 +50,15 @@ FilePluginSimulator >> fileValueOf: objectPointer [
 						[interpreterProxy primitiveFail.
 						 ^nil].
 					interpreterProxy longAt: objectPointer + BaseHeaderSize].
-	^openFiles at: index
+	file := openFiles at: index.
+	"this attempts to preserve file positions across snapshots when debugging the VM
+	 requires saving an image in full flight and pushing it over the cliff time after time..."
+	(file closed and: [states includesKey: file]) ifTrue:
+		[[:pos :isBinary|
+		  file reopen; position: pos.
+		  isBinary ifTrue:
+			[file binary]] valueWithArguments: (states at: file)].
+	^file
 ]
 
 { #category : #'initialize-release' }
@@ -59,6 +68,7 @@ FilePluginSimulator >> initialiseModule [
 		at: 0 put: (FakeStdinStream for: interpreterProxy interpreter); "stdin"
 		at: 1 put: Transcript; "stdout"
 		at: 2 put: Transcript. "stderr"
+	states := IdentityDictionary new.
 	^super initialiseModule
 ]
 
@@ -138,6 +148,15 @@ FilePluginSimulator >> primitiveFileRename [
 ]
 
 { #category : #simulation }
+FilePluginSimulator >> recordStateOf: file [
+	([file position]
+			on: Error
+			do: [:ex| nil]) ifNotNil:
+		[:position|
+		states at: file put: {position. file isBinary}]
+]
+
+{ #category : #simulation }
 FilePluginSimulator >> sizeof: objectSymbolOrClass [
 	"In the simulator file handles are just integer indices into openFiles and so need only be BytesPerWord big."
 	^objectSymbolOrClass == #SQFile
@@ -153,17 +172,20 @@ FilePluginSimulator >> sqFile: file Read: count Into: byteArrayIndex At: startIn
 		[ :i |
 		file atEnd ifTrue: [^i - startIndex].
 		interpreter byteAt: byteArrayIndex + i put: file next asInteger].
+	self recordStateOf: file.
 	^count
 ]
 
 { #category : #simulation }
 FilePluginSimulator >> sqFile: file SetPosition: newPosition [
-	file position: newPosition
+	file position: newPosition.
+	self recordStateOf: file
 ]
 
 { #category : #simulation }
 FilePluginSimulator >> sqFile: file Truncate: truncatePosition [
-	file truncate: truncatePosition
+	file truncate: truncatePosition.
+	self recordStateOf: file
 ]
 
 { #category : #simulation }
@@ -179,6 +201,7 @@ FilePluginSimulator >> sqFile: file Write: count From: byteArrayIndex At: startI
 				[ :i | | byte |
 				byte := interpreter byteAt: byteArrayIndex + i.
 				file nextPut: (Character value: (byte == 12 "lf" ifTrue: [15"cr"] ifFalse: [byte]))]].
+	self recordStateOf: file.
 	^count
 ]
 
@@ -189,7 +212,8 @@ FilePluginSimulator >> sqFileAtEnd: file [
 
 { #category : #simulation }
 FilePluginSimulator >> sqFileClose: file [
-	file close
+	file close.
+	self recordStateOf: file
 ]
 
 { #category : #simulation }
