@@ -90,11 +90,6 @@ BochsIA32Alien class >> initialize [
 		at: 1 + self basicNew movEbGbOpcode	put: #handleMovEbGbFailureAt:in:
 ]
 
-{ #category : #'instance creation' }
-BochsIA32Alien class >> new [
-	^(self atAddress: self primitiveNewCPU) reset
-]
-
 { #category : #primitives }
 BochsIA32Alien class >> primitiveNewCPU [
 	"Answer the address of a new Bochs C++ class bx_cpu_c/BX_CPU_C x86 CPU emulator instance."
@@ -804,8 +799,22 @@ BochsIA32Alien >> registerState [
 ]
 
 { #category : #'accessing-abstract' }
+BochsIA32Alien >> registerStateGetters [
+	^#(	eax ebx ecx edx esp ebp esi edi eip eflags
+		xmm0low xmm1low xmm2low xmm3low
+		xmm4low xmm5low xmm6low xmm7low )
+]
+
+{ #category : #'accessing-abstract' }
 BochsIA32Alien >> registerStatePCIndex [
 	^9
+]
+
+{ #category : #'accessing-abstract' }
+BochsIA32Alien >> registerStateSetters [
+	^#(	eax: ebx: ecx: edx: esp: ebp: esi: edi: eip: eflags:
+		xmm0low: xmm1low: xmm2low: xmm3low:
+		xmm4low: xmm5low: xmm6low: xmm7low: )
 ]
 
 { #category : #execution }
