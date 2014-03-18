@@ -29,11 +29,6 @@ GdbARMAlien class >> initialize [
 	PostBuildStackDelta := 0.
 ]
 
-{ #category : #'instance creation' }
-GdbARMAlien class >> new [
-	^(self atAddress: self primitiveNewCPU) reset
-]
-
 { #category : #primitives }
 GdbARMAlien class >> primitiveNewCPU [
 	"Answer the address of a new ARMulator C type ARMul_State instance."
@@ -684,6 +679,12 @@ GdbARMAlien >> r9: anUnsignedInteger [
 GdbARMAlien >> registerState [
 	^{	self r0. self r1. self r2. self r3. self r4. self r5. self r6. self r7.
 		self r8. self r9. self r10. self r11. self r12. self sp. self lr. self pc. self eflags }
+]
+
+{ #category : #'accessing-abstract' }
+GdbARMAlien >> registerStateGetters [
+	^#(	r0 r1 r2 r3 r4 r5 r6 r7
+		r8 r9 r10 r11 r12 sp lr pc eflags )
 ]
 
 { #category : #'accessing-abstract' }

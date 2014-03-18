@@ -32,6 +32,16 @@ BochsIA32AlienTests >> callTrapPerformance: n [
 ]
 
 { #category : #accessing }
+BochsIA32AlienTests >> integerRegisterGetters [
+	^#(eax ecx edx ebx esp ebp esi edi eip)
+]
+
+{ #category : #accessing }
+BochsIA32AlienTests >> integerRegisterSetters [
+	^#(eax: ecx: edx: ebx: esp: ebp: esi: edi: eip:)
+]
+
+{ #category : #accessing }
 BochsIA32AlienTests >> nfib [
 	"long fib(long n) { return n <= 1 ? 1 : fib(n-1) + fib(n-2) + 1; }
 	 as compiled by Microsoft Visual C++ V6 (12.00.8804) cl /O2 /Fc"
@@ -73,16 +83,6 @@ BochsIA32AlienTests >> processor [
 	processor ifNil:
 		[processor := BochsIA32Alien new].
 	^processor
-]
-
-{ #category : #accessing }
-BochsIA32AlienTests >> registerGetters [
-	^#(eax ecx edx ebx esp ebp esi edi eip)
-]
-
-{ #category : #accessing }
-BochsIA32AlienTests >> registerSetters [
-	^#(eax: ecx: edx: ebx: esp: ebp: esi: edi: eip:)
 ]
 
 { #category : #execution }
@@ -276,14 +276,14 @@ BochsIA32AlienTests >> testNfib4 [
 { #category : #tests }
 BochsIA32AlienTests >> testResetCPU [
 	"self new testResetCPU"
-	self registerSetters do:
+	self integerRegisterSetters do:
 		[:setter|
 		self processor perform: setter with: 16r55555555].
-	self registerGetters do:
+	self integerRegisterGetters do:
 		[:getter|
 		self assert: 16r55555555 = (self processor perform: getter)].
 	self processor reset.
-	self registerGetters do:
+	self integerRegisterGetters do:
 		[:getter|
 		self assert: 0 = (self processor perform: getter)]
 ]

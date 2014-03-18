@@ -8,6 +8,16 @@ Class {
 }
 
 { #category : #accessing }
+GdbARMAlienTests >> integerRegisterGetters [
+	^#(r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 lr sp pc)
+]
+
+{ #category : #accessing }
+GdbARMAlienTests >> integerRegisterSetters [
+	^#(r0: r1: r2: r3: r4: r5: r6: r7: r8: r9: r10: r11: r12: lr: sp: pc:)
+]
+
+{ #category : #accessing }
 GdbARMAlienTests >> nfib [
 	"long fib(long n) { return n <= 1 ? 1 : fib(n-1) + fib(n-2) + 1; }
 	 as compiled by arm-elf-gnuabi-gcc fib.c -c -marm
@@ -53,16 +63,6 @@ GdbARMAlienTests >> processor [
 	processor ifNil:
 		[processor := GdbARMAlien new].
 	^processor
-]
-
-{ #category : #accessing }
-GdbARMAlienTests >> registerGetters [
-	^#(r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 lr sp pc)
-]
-
-{ #category : #accessing }
-GdbARMAlienTests >> registerSetters [
-	^#(r0: r1: r2: r3: r4: r5: r6: r7: r8: r9: r10: r11: r12: lr: sp: pc:)
 ]
 
 { #category : #execution }
@@ -257,14 +257,14 @@ GdbARMAlienTests >> testNfib4 [
 { #category : #tests }
 GdbARMAlienTests >> testResetCPU [
 	"self new testResetCPU"
-	self registerSetters do:
+	self integerRegisterSetters do:
 		[:setter|
 		self processor perform: setter with: 16r55555555].
-	self registerGetters do:
+	self integerRegisterGetters do:
 		[:getter|
 		self assert: 16r55555555 = (self processor perform: getter)].
 	self processor reset.
-	self registerGetters do:
+	self integerRegisterGetters do:
 		[:getter|
 		self assert: 0 = (self processor perform: getter)]
 ]

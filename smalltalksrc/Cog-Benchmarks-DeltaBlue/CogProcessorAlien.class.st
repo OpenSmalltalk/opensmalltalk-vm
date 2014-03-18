@@ -5,8 +5,44 @@ Class {
 	#name : #CogProcessorAlien,
 	#superclass : #Alien,
 	#type : #bytes,
+	#classVars : [
+		'SavedState'
+	],
 	#category : #'Cog-Processors'
 }
+
+{ #category : #'class initialization' }
+CogProcessorAlien class >> initialize [
+	SavedState := WeakIdentityKeyDictionary new.
+	Smalltalk
+		addToStartUpList: self;
+		addToShutDownList: self
+]
+
+{ #category : #'instance creation' }
+CogProcessorAlien class >> new [
+	^(self atAddress: self primitiveNewCPU) reset
+]
+
+{ #category : #'system startup' }
+CogProcessorAlien class >> shutDown: quitting [
+	self allSubInstancesDo:
+		[:processor|
+		SavedState at: processor put: processor registerState]
+]
+
+{ #category : #'system startup' }
+CogProcessorAlien class >> startUp: resuming [
+	resuming ifTrue:
+		[SavedState keysAndValuesDo:
+			[:processorOrNil :state|
+			 processorOrNil ifNotNil:
+				[processorOrNil addressFieldPut: processorOrNil class primitiveNewCPU.
+				 state with: processorOrNil registerStateSetters do:
+					[:value :setter|
+					processorOrNil perform: setter with: value]]]].
+	SavedState removeAll
+]
 
 { #category : #'Cog API' }
 CogProcessorAlien >> abstractInstructionCompilerClass [
