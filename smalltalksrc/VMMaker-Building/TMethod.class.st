@@ -1024,7 +1024,7 @@ TMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 	explicitlyTyped := declarations keys asSet.
 	effectiveNodes := Dictionary new. "this for debugging"
 	parseTree nodesDo:
-		[:node| | type var m |
+		[:node| | type var |
 		"If there is something of the form i >= 0, then i should be signed, not unsigned."
 		(node isSend
 		 and: [(locals includes: (var := node receiver variableNameOrNil))
@@ -1041,12 +1041,12 @@ TMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 		 and: [(locals includes: (var := node variable name))
 		 and: [(declarations includesKey: var) not
 		 and: [node expression isSend
-		 and: [(m := aCodeGen anyMethodNamed: node expression selector) notNil]]]]) ifTrue:
-			[(#(sqInt void nil) includes: m returnType) ifFalse:
+		 and: [(type := aCodeGen returnTypeForSend: node expression) notNil]]]]) ifTrue:
+			[(#(sqInt void) includes: type) ifFalse:
 				["the $: is to map things like unsigned field : 3 to usqInt"
 				 declarations
 					at: var
-					put: ((m returnType includes: $:) ifTrue: [#usqInt] ifFalse: [m returnType]), ' ', var.
+					put: ((type includes: $:) ifTrue: [#usqInt] ifFalse: [type]), ' ', var.
 				 effectiveNodes at: var put: { declarations at: var. node }]]].
 	^effectiveNodes
 ]
