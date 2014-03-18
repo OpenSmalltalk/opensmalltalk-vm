@@ -5609,7 +5609,7 @@ StackInterpreter >> followForwardedFrameContents: theFP stackPointer: theSP [
 			((objectMemory isNonImmediate: oop)
 			 and: [objectMemory isForwarded: oop]) ifTrue:
 				[stackPages longAt: ptr put: (objectMemory followForwarded: oop)]].
-	self assert: (objectMemory isForwarded: (self frameMethod: theFP)) not.
+	self assert: (objectMemory isForwarded: (self frameMethodObject: theFP)) not.
 	(self frameHasContext: theFP) ifTrue:
 		[self assert: (objectMemory isForwarded: (self frameContext: theFP)) not]
 ]
