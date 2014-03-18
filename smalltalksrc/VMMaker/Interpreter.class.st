@@ -4646,7 +4646,7 @@ Interpreter >> primitiveArrayBecome [
 	| arg rcvr |
 	arg := self stackTop.
 	rcvr := self stackValue: 1.
-	self success: (self become: rcvr with: arg twoWay: true copyHash: true).
+	self success: (self become: rcvr with: arg twoWay: true copyHash: false).
 	successFlag ifTrue: [ self pop: 1 ].
 ]
 
