@@ -5061,7 +5061,7 @@ SpurMemoryManager >> inOrderPrintFreeTree: freeChunk printList: printNextList [
 { #category : #'become implementation' }
 SpurMemoryManager >> inPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag [
 	"Do become in place by swapping object contents."
-	| headerTemp temp1 temp2 o1HasYoung o2HasYoung |
+	| headerTemp temp1 temp2 o1HasYoung o2HasYoung fmt |
 	self assert: (self numSlotsOf: obj1) = (self numSlotsOf: obj2).
 	"swap headers, but swapping headers swaps remembered bits;
 	 these need to be unswapped."
@@ -5093,10 +5093,12 @@ SpurMemoryManager >> inPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag [
 		(self isYoung: temp1) ifTrue:
 			[o2HasYoung := true]].
 	(self isOldObject: obj1) ifTrue:
-		[o1HasYoung ifTrue:
+		[fmt := self formatOf: obj1.
+		 (o1HasYoung and: [(self isPureBitsFormat: fmt) not]) ifTrue:
 			[self possibleRootStoreInto: obj1]].
 	(self isOldObject: obj2) ifTrue:
-		[o2HasYoung ifTrue:
+		[fmt := self formatOf: obj2.
+		 (o2HasYoung and: [(self isPureBitsFormat: fmt) not]) ifTrue:
 			[self possibleRootStoreInto: obj2]]
 ]
 

@@ -5125,7 +5125,7 @@ NewspeakInterpreter >> primitiveArrayBecome [
 	| arg rcvr ec |
 	arg := self stackTop.
 	rcvr := self stackValue: 1.
-	ec := self become: rcvr with: arg twoWay: true copyHash: true forceImmutables: false.
+	ec := self become: rcvr with: arg twoWay: true copyHash: false forceImmutables: false.
 	ec = PrimNoErr
 		ifTrue: [self pop: 1]
 		ifFalse: [self primitiveFailFor: ec]
