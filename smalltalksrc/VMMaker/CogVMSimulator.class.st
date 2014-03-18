@@ -3660,6 +3660,7 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 											s notEmpty ifTrue: [self setBreakSelector: s]];
 		add: 'set break block...' action: [|s| s := UIManager default request: 'break block'.
 											s notEmpty ifTrue: [self setBreakBlockFromString: s]];
+		add: 'set cogit break method...' action: [(self promptHex: 'cogit breakMethod') ifNotNil: [:bm| cogit setBreakMethod: bm]];
 		add: (printBytecodeAtEachStep
 				ifTrue: ['no print bytecode each bytecode']
 				ifFalse: ['print bytecode each bytecode'])
