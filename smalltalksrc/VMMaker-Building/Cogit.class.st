@@ -2913,6 +2913,12 @@ Cogit >> checkPrimitiveTableEnablers [
 				[primitiveDescriptor primitiveGenerator: nil]]]
 ]
 
+{ #category : #debugging }
+Cogit >> checkStackDepthOnSend [
+	<doNotGenerate>
+	^(traceFlags bitAnd: 128) ~= 0
+]
+
 { #category : #'garbage collection' }
 Cogit >> checkValidObjectReferencesInClosedPIC: cPIC [
 	<var: #cPIC type: #'CogMethod *'>
@@ -8061,7 +8067,8 @@ Cogit >> sendTrace: aBooleanOrInteger [
 	 8 => trace interpreter primitives
 	 16 => trace events (context switches, GCs, etc)
 	 32 => trace stack overflow
-	 64 => send breakpoint on implicit receiver (Newspeak VM only)"
+	 64 => send breakpoint on implicit receiver (Newspeak VM only)
+	128 => check stack depth on send (simulation only)"
 	traceFlags := aBooleanOrInteger isInteger
 							ifTrue: [aBooleanOrInteger]
 							ifFalse: [aBooleanOrInteger ifTrue: [6] ifFalse: [0]]
