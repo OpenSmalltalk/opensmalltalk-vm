@@ -381,6 +381,11 @@ Spur32BitMemoryManager >> largeObjectBytesForSlots: numSlots [
 	+ (numSlots + (numSlots bitAnd: 1) * self bytesPerSlot) "roundTo allocationUnit"
 ]
 
+{ #category : #'header format' }
+Spur32BitMemoryManager >> logBytesPerSlot [
+	^2
+]
+
 { #category : #'free space' }
 Spur32BitMemoryManager >> numFreeLists [
 	"Answer the number of free lists.  We use freeListsMask, a bitmap, to avoid
