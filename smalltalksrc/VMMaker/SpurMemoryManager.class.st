@@ -2274,6 +2274,7 @@ SpurMemoryManager >> byteSizeOfInstanceOf: classObj [
 { #category : #'indexing primitive support' }
 SpurMemoryManager >> byteSizeOfInstanceOf: classObj withIndexableSlots: nElements [
 	| instSpec classFormat numSlots |
+	<var: 'numSlots' type: #usqInt>
 	classFormat := self formatOfClass: classObj.
 	instSpec := self instSpecOfClassFormat: classFormat.
 	instSpec caseOf: {
@@ -2294,6 +2295,8 @@ SpurMemoryManager >> byteSizeOfInstanceOf: classObj withIndexableSlots: nElement
 		[self firstCompiledMethodFormat]	-> "Assume nElements is derived from CompiledMethod>>basicSize."
 			[numSlots := nElements + (self bytesPerSlot - 1) // self bytesPerSlot] }
 		otherwise: [^PrimErrBadReceiver negated]. "non-indexable"
+	numSlots >= (1 << (self bytesPerSlot * 8 - self logBytesPerSlot)) ifTrue:
+		[^PrimErrLimitExceeded negated].
 	^self objectBytesForSlots: numSlots
 ]
 
