@@ -7018,9 +7018,12 @@ SpurMemoryManager >> nilUnmarkedWeaklingSlotsIn: aWeakling [
 	| anyUnmarked |
 	anyUnmarked := false.
 	(self numStrongSlotsOf: aWeakling ephemeronInactiveIf: nil) to: (self numSlotsOf: aWeakling) - 1 do:
-		[:i| | oop |
-		oop := self fetchPointer: i ofObject: aWeakling.
-		((self isImmediate: oop) or: [self isMarked: oop]) ifFalse:
+		[:i| | referent |
+		referent := self fetchPointer: i ofObject: aWeakling.
+		((self isNonImmediate: referent)
+		 and: [self isForwarded: referent]) ifTrue:
+			[referent := self fixFollowedField: i ofObject: aWeakling withInitialValue: referent].
+		((self isImmediate: referent) or: [self isMarked: referent]) ifFalse:
 			[self storePointerUnchecked: i ofObject: aWeakling withValue: nilObj.
 			 anyUnmarked := true]].
 	^anyUnmarked
