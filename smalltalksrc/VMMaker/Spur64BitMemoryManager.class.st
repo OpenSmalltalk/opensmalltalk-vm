@@ -89,7 +89,7 @@ Spur64BitMemoryManager >> bytesPerOop [
 	^8
 ]
 
-{ #category : #'header format' }
+{ #category : #accessing }
 Spur64BitMemoryManager >> bytesPerSlot [
 	^8
 ]
@@ -326,6 +326,11 @@ Spur64BitMemoryManager >> largeObjectBytesForSlots: numSlots [
 	"Answer the total number of bytes in an object with an overflow header, including header bytes."
 	^self baseHeaderSize + self baseHeaderSize "double header"
 	+ (numSlots * self bytesPerSlot) "no rounding; bytesPerSlot = allocationUnit"
+]
+
+{ #category : #accessing }
+Spur64BitMemoryManager >> logBytesPerSlot [
+	^3
 ]
 
 { #category : #'free space' }
