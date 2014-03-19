@@ -3307,14 +3307,14 @@ SpurMemoryManager >> doBecome: obj1 and: obj2 copyHash: copyHashFlag [
 					 self classAtIndex: o2ClassIndex put: tmp]
 				ifFalse: "o2 wasn't in the table; put it there"
 					[| newObj2 |
-					 newObj2 := self followForwarded: obj2.
+					 newObj2 := self followForwarded: obj1.
 					 self assert: (self rawHashBitsOf: newObj2) = 0.
 					 self setHashBitsOf: newObj2 to: o1ClassIndex.
 					 self classAtIndex: o1ClassIndex put: newObj2]]
 		ifFalse:
 			[o2ClassIndex ~= 0 ifTrue:
 				[| newObj1 |
-				 newObj1 := self followForwarded: obj1.
+				 newObj1 := self followForwarded: obj2.
 				 self assert: (self rawHashBitsOf: newObj1) = 0.
 				 self setHashBitsOf: newObj1 to: o2ClassIndex.
 				 self classAtIndex: o2ClassIndex put: newObj1]]
