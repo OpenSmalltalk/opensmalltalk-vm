@@ -5308,11 +5308,11 @@ CoInterpreter >> printCogMethod: cogMethod [
 			printHex: cogMethod cPICNumCases].
 	cogMethod cmType = CMOpenPIC ifTrue:
 		[self print: ': Open PIC '].
-	self print: ' selector: ';
-		printHex: cogMethod selector;
-		print: ' ';
-		printStringOf: cogMethod selector;
-		cr
+	self print: ' selector: '; printHex: cogMethod selector.
+	cogMethod selector = objectMemory nilObject
+		ifTrue: [self print: ' (nil)']
+		ifFalse: [self space; printStringOf: cogMethod selector].
+	self cr
 ]
 
 { #category : #'debug printing' }

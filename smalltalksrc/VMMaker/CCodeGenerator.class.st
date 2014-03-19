@@ -3820,7 +3820,7 @@ CCodeGenerator >> returnPrefixFromVariable: aName [
 CCodeGenerator >> returnTypeForSend: aTSendNode [
 	"Answer the return type for a send.  Absent sends default to #sqInt."
 	| sel |
-	^(methods at: (sel := aTSendNode selector) ifAbsent: nil)
+	^(self anyMethodNamed: (sel := aTSendNode selector))
 		ifNil: [kernelReturnTypes
 				at: sel
 				ifAbsent:
