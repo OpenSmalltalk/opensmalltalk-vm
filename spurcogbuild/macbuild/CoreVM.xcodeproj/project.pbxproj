@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7332AB8C18D37C7D00D95C93 /* AioPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 7332AB8B18D37C7D00D95C93 /* AioPlugin.c */; };
 		733AC8DB0FEAAC4F007C6206 /* version.c in Sources */ = {isa = PBXBuildFile; fileRef = 733AC8DA0FEAAC4F007C6206 /* version.c */; };
 		733B2C37106AB74B004652BE /* sqExternalSemaphores.c in Sources */ = {isa = PBXBuildFile; fileRef = 733B2C36106AB74B004652BE /* sqExternalSemaphores.c */; };
 		7351A09B100963670035A878 /* sqUnixThreads.c in Sources */ = {isa = PBXBuildFile; fileRef = 7351A09A100963670035A878 /* sqUnixThreads.c */; };
@@ -271,6 +272,7 @@
 		664A73DF0300584000A80109 /* SqueakPlugin.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakPlugin.icns; path = resources/ProjectBuilder/SqueakPlugin.icns; sourceTree = "<group>"; };
 		664A73E00300584000A80109 /* SqueakScript.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakScript.icns; path = resources/ProjectBuilder/SqueakScript.icns; sourceTree = "<group>"; };
 		66A8FED80300824600A80109 /* sqGnu.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqGnu.h; path = Developer/sqGnu.h; sourceTree = "<group>"; };
+		7332AB8B18D37C7D00D95C93 /* AioPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = AioPlugin.c; path = plugins/AioPlugin/AioPlugin.c; sourceTree = "<group>"; };
 		733AC8DA0FEAAC4F007C6206 /* version.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = version.c; sourceTree = "<group>"; };
 		733B2C36106AB74B004652BE /* sqExternalSemaphores.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqExternalSemaphores.c; sourceTree = "<group>"; };
 		7351A09A100963670035A878 /* sqUnixThreads.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqUnixThreads.c; path = vm/sqUnixThreads.c; sourceTree = "<group>"; };
@@ -606,6 +608,7 @@
 		7384271E11010B920070B80D /* src */ = {
 			isa = PBXGroup;
 			children = (
+				7332AB8B18D37C7D00D95C93 /* AioPlugin.c */,
 				A2DB7E220EA0214A005419A3 /* GIFLibPlugin */,
 				A27728EB0CE7A8D300ABAFCA /* ADPCMCodecPlugin */,
 				A27728ED0CE7A8D300ABAFCA /* AsynchFilePlugin */,
@@ -1726,6 +1729,8 @@
 				941A3BFA09AA144000C9D25A /* Frameworks */,
 				941A3C0409AA144000C9D25A /* Rez */,
 			);
+			buildRules = (
+			);
 			name = Squeak;
 			productInstallPath = "$(USER_APPS_DIR)";
 			productName = "Squeak VM OPT";
@@ -1954,6 +1959,7 @@
 				733B2C37106AB74B004652BE /* sqExternalSemaphores.c in Sources */,
 				A2F27E6A1087169800F905FB /* nsPoolManagement.m in Sources */,
 				739C6ED6112DCBB00049B7D3 /* sqTicker.c in Sources */,
+				7332AB8C18D37C7D00D95C93 /* AioPlugin.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		733AC8DB0FEAAC4F007C6206 /* version.c in Sources */ = {isa = PBXBuildFile; fileRef = 733AC8DA0FEAAC4F007C6206 /* version.c */; };
 		733B2C37106AB74B004652BE /* sqExternalSemaphores.c in Sources */ = {isa = PBXBuildFile; fileRef = 733B2C36106AB74B004652BE /* sqExternalSemaphores.c */; };
+		7344860418D379FC00B08809 /* AioPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 7344860318D379FC00B08809 /* AioPlugin.c */; };
 		7351A09B100963670035A878 /* sqUnixThreads.c in Sources */ = {isa = PBXBuildFile; fileRef = 7351A09A100963670035A878 /* sqUnixThreads.c */; };
 		735B4CA30E8069B7008FA2CA /* VMProfileMacSupportPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */; };
 		737888E713D0DE6500C5E1AD /* sqMemoryFence.h in Headers */ = {isa = PBXBuildFile; fileRef = 737888E513D0DE6500C5E1AD /* sqMemoryFence.h */; };
@@ -268,6 +269,7 @@
 		66A8FED80300824600A80109 /* sqGnu.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqGnu.h; path = Developer/sqGnu.h; sourceTree = "<group>"; };
 		733AC8DA0FEAAC4F007C6206 /* version.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = version.c; sourceTree = "<group>"; };
 		733B2C36106AB74B004652BE /* sqExternalSemaphores.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqExternalSemaphores.c; sourceTree = "<group>"; };
+		7344860318D379FC00B08809 /* AioPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = AioPlugin.c; path = plugins/AioPlugin/AioPlugin.c; sourceTree = "<group>"; };
 		7351A09A100963670035A878 /* sqUnixThreads.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqUnixThreads.c; path = vm/sqUnixThreads.c; sourceTree = "<group>"; };
 		735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = VMProfileMacSupportPlugin.c; sourceTree = "<group>"; };
 		737888E513D0DE6500C5E1AD /* sqMemoryFence.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqMemoryFence.h; sourceTree = "<group>"; };
@@ -1107,6 +1109,7 @@
 		F5F8ADC102EB4E090100013C /* src */ = {
 			isa = PBXGroup;
 			children = (
+				7344860318D379FC00B08809 /* AioPlugin.c */,
 				7384271E11010B920070B80D /* plugins */,
 				F5F8ADC502EB4E090100013C /* ../spurstacksrc/vm */,
 			);
@@ -1941,6 +1944,7 @@
 				733B2C37106AB74B004652BE /* sqExternalSemaphores.c in Sources */,
 				A2F27E6A1087169800F905FB /* nsPoolManagement.m in Sources */,
 				739C6ED6112DCBB00049B7D3 /* sqTicker.c in Sources */,
+				7344860418D379FC00B08809 /* AioPlugin.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -26,6 +26,7 @@
 		73BC1BBE0F576864003412C5 /* gcc3x-cointerp.c in Sources */ = {isa = PBXBuildFile; fileRef = 73BC1BB90F576864003412C5 /* gcc3x-cointerp.c */; };
 		73BC1BBF0F576864003412C5 /* cointerp.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BC1BBA0F576864003412C5 /* cointerp.h */; };
 		73BC1BC70F57699F003412C5 /* sqCogStackAlignment.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BC1BC60F57699F003412C5 /* sqCogStackAlignment.h */; };
+		73DFFAC018D380C200C3C543 /* AioPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 73DFFABF18D380C200C3C543 /* AioPlugin.c */; };
 		94002C4409EB18EF003C4BF2 /* sqMemoryAccess.h in Headers */ = {isa = PBXBuildFile; fileRef = 94002C4209EB18EF003C4BF2 /* sqMemoryAccess.h */; };
 		941A3B2D09AA144000C9D25A /* sqMacOpenGL.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AE0F02EB4E090100013C /* sqMacOpenGL.h */; };
 		941A3B2E09AA144000C9D25A /* JConfig.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AE4102EB4E090100013C /* JConfig.h */; };
@@ -290,6 +291,7 @@
 		73BC1BB90F576864003412C5 /* gcc3x-cointerp.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = "gcc3x-cointerp.c"; sourceTree = "<group>"; };
 		73BC1BBA0F576864003412C5 /* cointerp.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = cointerp.h; sourceTree = "<group>"; };
 		73BC1BC60F57699F003412C5 /* sqCogStackAlignment.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqCogStackAlignment.h; sourceTree = "<group>"; };
+		73DFFABF18D380C200C3C543 /* AioPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = AioPlugin.c; path = plugins/AioPlugin/AioPlugin.c; sourceTree = "<group>"; };
 		94002C4209EB18EF003C4BF2 /* sqMemoryAccess.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqMemoryAccess.h; sourceTree = "<group>"; };
 		9405366D057BC0EB0080D7FF /* sqMacEncoding.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqMacEncoding.h; sourceTree = "<group>"; };
 		9405366E057BC0EB0080D7FF /* sqMacEncoding.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqMacEncoding.c; sourceTree = "<group>"; };
@@ -606,6 +608,7 @@
 		7384271E11010B920070B80D /* plugins */ = {
 			isa = PBXGroup;
 			children = (
+				73DFFABE18D380A800C3C543 /* AioPlugin */,
 				A2DB7E220EA0214A005419A3 /* GIFLibPlugin */,
 				A27728EB0CE7A8D300ABAFCA /* ADPCMCodecPlugin */,
 				A27728ED0CE7A8D300ABAFCA /* AsynchFilePlugin */,
@@ -673,6 +676,14 @@
 			);
 			name = unix;
 			path = ../platforms/unix;
+			sourceTree = "<group>";
+		};
+		73DFFABE18D380A800C3C543 /* AioPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				73DFFABF18D380C200C3C543 /* AioPlugin.c */,
+			);
+			name = AioPlugin;
 			sourceTree = "<group>";
 		};
 		940AFA4106DFCFDC0062E19F /* MacMenubarPlugin */ = {
@@ -1725,6 +1736,8 @@
 				941A3BFA09AA144000C9D25A /* Frameworks */,
 				941A3C0409AA144000C9D25A /* Rez */,
 			);
+			buildRules = (
+			);
 			comments = "
 
 
@@ -1959,6 +1972,7 @@
 				733B2C37106AB74B004652BE /* sqExternalSemaphores.c in Sources */,
 				A2F27E6A1087169800F905FB /* nsPoolManagement.m in Sources */,
 				739C6ED6112DCBB00049B7D3 /* sqTicker.c in Sources */,
+				73DFFAC018D380C200C3C543 /* AioPlugin.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

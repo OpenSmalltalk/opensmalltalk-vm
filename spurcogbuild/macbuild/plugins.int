@@ -1,6 +1,7 @@
 # Copied, perhaps edited, from ../src/examplePlugins.int
 INTERNAL_PLUGINS = \
 ADPCMCodecPlugin \
+AioPlugin \
 AsynchFilePlugin \
 B3DAcceleratorPlugin \
 B2DPlugin \

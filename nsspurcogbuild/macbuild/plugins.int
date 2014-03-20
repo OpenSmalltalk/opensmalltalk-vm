@@ -1,5 +1,6 @@
 # Copied, perhaps edited, from ../../nscogsrc/examplePlugins.int
 INTERNAL_PLUGINS = \
+AioPlugin \
 AsynchFilePlugin \
 BMPReadWriterPlugin \
 B2DPlugin \
