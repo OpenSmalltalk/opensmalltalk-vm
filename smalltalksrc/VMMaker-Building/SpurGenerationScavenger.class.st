@@ -224,21 +224,17 @@ SpurGenerationScavenger >> copyAndForward: survivor [
 	hash := manager rawHashBitsOf: survivor.
 	((self shouldBeTenured: survivor)
 	 or: [futureSurvivorStart + bytesInObj > futureSpace limit])
-		ifTrue:
-			[newLocation := self copyToOldSpace: survivor.
-			 manager forwardSurvivor: survivor to: newLocation]
-		ifFalse:
-			[newLocation := self copyToFutureSpace: survivor bytes: bytesInObj.
-			 manager forwardSurvivor: survivor to: newLocation.
-			 "if weak or ephemeron add to the relevant lists if newLocation is young.  If
-			  old, newLocation will be remembered and dealt with in the rememberedSet."
-			 (manager isWeakNonImm: newLocation) ifTrue:
-				[self addToWeakList: survivor].
-			 ((manager isEphemeron: newLocation)
-			  and: [(self isScavengeSurvivor: (manager keyOfEphemeron: newLocation)) not]) ifTrue:
-				[self addToEphemeronList: survivor]].
+		ifTrue: [newLocation := self copyToOldSpace: survivor]
+		ifFalse: [newLocation := self copyToFutureSpace: survivor bytes: bytesInObj].
 	hash ~= 0 ifTrue:
 		[manager setHashBitsOf: newLocation to: hash].
+	manager forwardSurvivor: survivor to: newLocation.
+	"if weak or ephemeron add to the relevant list for subsequent scanning."
+	(manager isWeakNonImm: newLocation) ifTrue:
+		[self addToWeakList: survivor].
+	((manager isEphemeron: newLocation)
+	 and: [(self isScavengeSurvivor: (manager keyOfEphemeron: newLocation)) not]) ifTrue:
+		[self addToEphemeronList: survivor].
 	^newLocation
 ]
 

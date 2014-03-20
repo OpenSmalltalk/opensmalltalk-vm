@@ -8,6 +8,7 @@ Class {
 		'cogit',
 		'methodZone',
 		'objectMemory',
+		'backEnd',
 		'ceStoreCheckTrampoline'
 	],
 	#pools : [
@@ -20,14 +21,19 @@ Class {
 }
 
 { #category : #'instance creation' }
-CogObjectRepresentation class >> forCogit: aCogit methodZone: methodZone [
-	^self new setCogit: aCogit methodZone: methodZone
+CogObjectRepresentation class >> forCogit: aCogit backEnd: backEnd methodZone: methodZone [
+	^self new setCogit: aCogit backEnd: backEnd methodZone: methodZone
 ]
 
 { #category : #translation }
 CogObjectRepresentation class >> implicitReturnTypeFor: aSelector [
 	"Answer the return type for methods that don't have an explicit return."
 	^#void
+]
+
+{ #category : #translation }
+CogObjectRepresentation class >> prepareToBeAddedToCodeGenerator: aCCodeGenerator [
+	aCCodeGenerator removeVariable: 'backEnd'
 ]
 
 { #category : #translation }
@@ -149,9 +155,10 @@ CogObjectRepresentation >> numRegArgs [
 ]
 
 { #category : #initialization }
-CogObjectRepresentation >> setCogit: aCogit methodZone: aMethodZone [
+CogObjectRepresentation >> setCogit: aCogit backEnd: aBackEnd methodZone: aMethodZone [
 	<doNotGenerate>
 	cogit := aCogit.
+	backEnd := backEnd.
 	methodZone := aMethodZone.
 	objectMemory := (aCogit coInterpreter isKindOf: StackInterpreter)
 						ifTrue: [aCogit coInterpreter objectMemory]
