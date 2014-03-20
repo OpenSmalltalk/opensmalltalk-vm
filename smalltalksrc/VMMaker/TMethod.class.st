@@ -1406,6 +1406,11 @@ TMethod >> isSubstitutableNode: aNode intoMethod: targetMeth in: aCodeGen [
 	 with value[:value:*] messages though!"
 	aNode isStmtList ifTrue: [^true].
 
+	(aNode isSend
+	 and: [aNode numArgs = 0
+	 and: [aNode isStructSendIn: aCodeGen]]) ifTrue:
+		[^true].
+
 	"scan expression tree; must contain only constants, builtin ops, and inlineable vars"
 	aNode nodesDo: [ :node |
 		node isSend ifTrue: [

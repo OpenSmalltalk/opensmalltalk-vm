@@ -9888,7 +9888,7 @@ StackInterpreter >> printOop: oop [
 	(objectMemory addressCouldBeObj: oop) ifFalse:
 		[^self print: ((oop bitAnd: objectMemory allocationUnit - 1) ~= 0
 						ifTrue: [' is misaligned']
-						ifFalse: [' is not on the heap']); cr].
+						ifFalse: [self whereIs: oop]); cr].
 	(objectMemory isFreeObject: oop) ifTrue:
 		[^self print: ' is a free chunk of size '; printNum: (objectMemory sizeOfFree: oop); cr].
 	(objectMemory isForwarded: oop) ifTrue:
@@ -9992,7 +9992,7 @@ StackInterpreter >> printOopShortInner: oop [
 	(objectMemory addressCouldBeObj: oop) ifFalse:
 		[^self print: ((oop bitAnd: objectMemory allocationUnit - 1) ~= 0
 						ifTrue: [' is misaligned']
-						ifFalse: [' is not on the heap'])].
+						ifFalse: [self whereIs: oop])].
 	(objectMemory isOopForwarded: oop) ifTrue:
 		[^self printHex: oop; print: ' is a forwarder to '; printHex: (objectMemory followForwarded: oop)].
 	(self isFloatObject: oop) ifTrue:
@@ -11562,7 +11562,7 @@ StackInterpreter >> shortPrintOop: oop [
 	(objectMemory addressCouldBeObj: oop) ifFalse:
 		[^self print: ((oop bitAnd: objectMemory allocationUnit - 1) ~= 0
 						ifTrue: [' is misaligned']
-						ifFalse: [' is not on the heap']); cr].
+						ifFalse: [self whereIs: oop]); cr].
 	((objectMemory isFreeObject: oop)
 	 or: [objectMemory isForwarded: oop]) ifTrue:
 		[^self printOop: oop].
@@ -12802,6 +12802,17 @@ StackInterpreter >> wakeHighestPriority [
 			 self warning: 'evicted zombie process from run queue']].
 	self error: 'scheduler could not find a runnable process'.
 	^nil
+]
+
+{ #category : #'debug printing' }
+StackInterpreter >> whereIs: anOop [
+	<api>
+	<returnTypeC: 'char *'>
+	<inline: false>
+	<var: 'where' type: #'char *'>
+	(objectMemory whereIsMaybeHeapThing: anOop) ifNotNil: [:where| ^where].
+	(stackPages whereIsMaybeStackThing: anOop) ifNotNil: [:where| ^where].
+	^' is no where obvious'
 ]
 
 { #category : #'frame access' }

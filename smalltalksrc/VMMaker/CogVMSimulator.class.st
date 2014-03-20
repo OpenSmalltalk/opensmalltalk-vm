@@ -3216,7 +3216,7 @@ CogVMSimulator >> shortPrint: oop [
 	(objectMemory addressCouldBeObj: oop) ifFalse:
 		[^(oop bitAnd: objectMemory allocationUnit - 1) ~= 0
 			ifTrue: [' is misaligned']
-			ifFalse: [' is not on the heap']].
+			ifFalse: [self whereIs: oop]].
 	(objectMemory isFreeObject: oop) ifTrue:
 		[^' is a free chunk of size ', (objectMemory sizeOfFree: oop) printString].
 	(objectMemory isForwarded: oop) ifTrue:

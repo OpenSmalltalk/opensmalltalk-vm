@@ -306,6 +306,11 @@ TSendNode >> nodesDo: aBlock unless: cautionaryBlock [
 	aBlock value: self.
 ]
 
+{ #category : #accessing }
+TSendNode >> numArgs [
+	^arguments size
+]
+
 { #category : #copying }
 TSendNode >> postCopy [
 
@@ -411,7 +416,7 @@ TSendNode >> shouldExcludeReceiverAsFirstArgument: aCodeGen [
 	    and: [(aCodeGen isNonArgumentImplicitReceiverVariableName: receiver name)
 		    or: [(self isSelfReference: receiver in: aCodeGen)
 			    and: [(m := aCodeGen methodNamed: selector) isNil
-					or: [m typeForSelf == #implicit]]]]
+					or: [#(implicit nil) includes: m typeForSelf]]]]
 ]
 
 { #category : #'C code generation' }
