@@ -3892,11 +3892,12 @@ CCodeGenerator >> shouldIncludeMethodFor: aClass selector: selector [
 		[:pragma| | key |
 		key := pragma argumentAt: 1.
 		vmMaker ifNotNil:
-			[(Cogit withAllSubclasses anySatisfy: [:c| c name = key]) ifTrue:
-				[| cogitClass optionClass |
-				 cogitClass := Smalltalk classNamed: vmMaker cogitClassName.
-				 optionClass := Smalltalk classNamed: key.
-				 ^cogitClass includesBehavior: optionClass].
+			[vmMaker cogitClassName ifNotNil:
+				[(Cogit withAllSubclasses anySatisfy: [:c| c name = key]) ifTrue:
+					[| cogitClass optionClass |
+					 cogitClass := Smalltalk classNamed: vmMaker cogitClassName.
+					 optionClass := Smalltalk classNamed: key.
+					 ^cogitClass includesBehavior: optionClass]].
 			((vmClass
 				ifNotNil: [vmClass initializationOptions]
 				ifNil: [vmMaker options]) at: key ifAbsent: [false]) ifNotNil:

@@ -279,7 +279,8 @@ Spur32BitMMLESimulator >> isIntegerObject: oop [
 		signed32BitValueOf:
 		signed64BitValueOf:
 		subscript:with:storing:format:
-		unlockSurfaces) includes: sel) ifFalse:
+		unlockSurfaces
+		establishFrameForContextToReturnTo:) includes: sel) ifFalse:
 		[self halt].
 	^super isIntegerObject: oop
 ]

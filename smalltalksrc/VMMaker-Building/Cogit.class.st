@@ -8949,6 +8949,12 @@ Cogit >> voidCogCompiledCode [
 	methodZone clearCogCompiledCode
 ]
 
+{ #category : #'debug printing' }
+Cogit >> whereIsMaybeCodeThing: anOop [
+	<doNotGenerate>
+	^methodZone whereIsMaybeCodeThing: anOop
+]
+
 { #category : #analysis }
 Cogit >> withAnnotation: annotation mcpc: mcpc evaluate: binaryBlock [
 	<doNotGenerate>

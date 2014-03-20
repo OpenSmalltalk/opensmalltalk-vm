@@ -6696,3 +6696,10 @@ CoInterpreter >> warning: aString [
 	<doNotGenerate>
 	self transcript cr; nextPutAll: aString; flush
 ]
+
+{ #category : #'debug printing' }
+CoInterpreter >> whereIs: anOop [
+	<var: 'somewhere' type: #'char *'>
+	(cogit whereIsMaybeCodeThing: anOop) ifNotNil: [:somewhere| ^somewhere].
+	^super whereIs: anOop
+]
