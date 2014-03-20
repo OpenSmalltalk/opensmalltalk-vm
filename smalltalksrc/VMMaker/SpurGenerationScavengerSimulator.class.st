@@ -21,6 +21,6 @@ SpurGenerationScavengerSimulator >> remember: objOop [
 
 { #category : #scavenger }
 SpurGenerationScavengerSimulator >> scavenge: tenuringCriterion [
-	coInterpreter transcript nextPutAll: 'scavenging ('; print: manager statScavenges; nextPutAll: ') ...'; flush.
+	coInterpreter transcript nextPutAll: 'scavenging('; print: manager statScavenges; nextPutAll: ')...'; flush.
 	^super scavenge: tenuringCriterion
 ]

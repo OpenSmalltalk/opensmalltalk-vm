@@ -386,9 +386,10 @@ Spur32BitMMLESimulator >> numClassTablePages [
 
 { #category : #'debug support' }
 Spur32BitMMLESimulator >> runLeakCheckerForFullGC: fullGCFlag excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs classIndicesShouldBeValid: classIndicesShouldBeValid [
-	(fullGCFlag
+	(coInterpreter displayView isNil
+	 and: [fullGCFlag
 			ifTrue: [self leakCheckFullGC]
-			ifFalse: [self leakCheckNewSpaceGC]) ifTrue:
+			ifFalse: [self leakCheckNewSpaceGC]]) ifTrue:
 		[coInterpreter transcript nextPutAll: 'leak-checking...'; flush].
 	^super
 		runLeakCheckerForFullGC: fullGCFlag
