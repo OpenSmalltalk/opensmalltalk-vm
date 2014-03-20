@@ -2819,7 +2819,7 @@ Cogit >> checkIfValidObjectRefAndTarget: annotation pc: mcpc cogMethod: cogMetho
 							[(self asserta: (objectRepresentation checkValidInlineCacheTag: cacheTag)) ifFalse:
 								[^5]].
 					((objectRepresentation couldBeObject: cacheTag)
-					 and: [coInterpreter isReallyYoungObject: cacheTag]) ifTrue:
+					 and: [objectMemory isReallyYoungObject: cacheTag]) ifTrue:
 						[(self asserta: (self cCoerceSimple: cogMethod to: #'CogMethod *') cmRefersToYoung) ifFalse:
 							[^6]]]
 				ifFalse:
@@ -4561,12 +4561,12 @@ Cogit >> freeUnmarkedMachineCode [
 		[(cogMethod cmType = CMMethod
 		  and: [(objectMemory isMarked: cogMethod methodObject) not]) ifTrue:
 			[freedMethod := true.
-			 self freeMethod: cogMethod].
+			 methodZone freeMethod: cogMethod].
 		 (cogMethod cmType = CMOpenPIC
 		  and: [(objectMemory isImmediate: cogMethod selector) not
 		  and: [(objectMemory isMarked: cogMethod selector) not]]) ifTrue:
 			[freedMethod := true.
-			 self freeMethod: cogMethod].
+			 methodZone freeMethod: cogMethod].
 		 cogMethod := methodZone methodAfter: cogMethod].
 	freedMethod ifTrue:
 		[self unlinkSendsToFree.
@@ -7237,13 +7237,16 @@ Cogit >> offsetCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into: tri
 	cacheTag := backEnd inlineCacheTagAt: mcpc asInteger.
 	entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 	"in-line cache tags are the selectors of sends if sends are unlinked,
-	 the selectors of super sends (entry offset = cmNoCheckEntryOffset)
+	 the selectors of super sends (entry offset = cmNoCheckEntryOffset),
+	 the selectors of open PIC sends (entry offset = cmEntryOffset, target is an Open PIC)
 	 or in-line cache tags (classes, class indices, immediate bit patterns, etc).
 	 Note that selectors can be immediate so there is no guarantee that they
 	 are markable/remappable objects."
 	tagCouldBeObj := objectRepresentation inlineCacheTagsMayBeObjects
 						or: [entryPoint < methodZoneBase
-						or: [(entryPoint bitAnd: entryPointMask) = cmNoCheckEntryOffset]].
+						or: [(entryPoint bitAnd: entryPointMask) = uncheckedEntryAlignment
+						or: [(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
+							and: [(self cCoerceSimple: entryPoint - cmEntryOffset to: #'CogMethod *') cmType = CMOpenPIC]]]].
 	trinaryBlock
 		value: entryPoint
 		value: cacheTag
@@ -8118,7 +8121,9 @@ Cogit >> setInterpreter: aCoInterpreter [
 	threadManager := aCoInterpreter threadManager. "N.B. may be nil"
 	methodZone := CogMethodZone new.
 	objectRepresentation := objectMemory objectRepresentationClass
-								forCogit: self methodZone: methodZone.
+								forCogit: self
+								backEnd: backEnd
+								methodZone: methodZone.
 	methodZone setInterpreter: aCoInterpreter
 				objectRepresentation: objectRepresentation
 				cogit: self.

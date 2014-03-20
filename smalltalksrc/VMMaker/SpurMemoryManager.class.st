@@ -4800,7 +4800,9 @@ SpurMemoryManager >> getThisSessionID [
 
 { #category : #'gc - global' }
 SpurMemoryManager >> globalGarbageCollect [
-	self runLeakCheckerForFullGC: true.
+	self runLeakCheckerForFullGC: true
+		excludeUnmarkedNewSpaceObjs: false
+		classIndicesShouldBeValid: false.
 	self assert: self validObjStacks.
 	self assert: (self isEmptyObjStack: markStack).
 	self assert: (self isEmptyObjStack: weaklingStack).
@@ -4809,7 +4811,9 @@ SpurMemoryManager >> globalGarbageCollect [
 	self nilUnmarkedWeaklingSlots.
 	self freeUnmarkedObjectsAndSortAndCoalesceFreeSpace.
 
-	self runLeakCheckerForFullGC: true excludeUnmarkedNewSpaceObjs: true classIndicesShouldBeValid: false.
+	self runLeakCheckerForFullGC: true
+		excludeUnmarkedNewSpaceObjs: true
+		classIndicesShouldBeValid: false.
 
 	self compact.
 	self eliminateAndFreeForwarders.
@@ -4819,6 +4823,8 @@ SpurMemoryManager >> globalGarbageCollect [
 	self assert: (self isEmptyObjStack: weaklingStack).
 	self assert: self allObjectsUnmarked.
 	self runLeakCheckerForFullGC: true
+		excludeUnmarkedNewSpaceObjs: false
+		classIndicesShouldBeValid: true
 ]
 
 { #category : #'object testing' }
