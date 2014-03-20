@@ -631,7 +631,10 @@ CogObjectRepresentationForSqueakV3 >> genStoreSourceReg: sourceReg slotIndex: in
 	jmpAlreadyRoot := cogit JumpNonZero: 0.
 	"Root bit is not set.  Call store check to insert dest into root table."
 	self assert: destReg == ReceiverResultReg.
-	cogit CallRT: ceStoreCheckTrampoline.
+	cogit
+		CallRT: ceStoreCheckTrampoline
+		registersToBeSavedMask: ((cogit registerMaskFor: sourceReg)
+										bitAnd: backEnd callerSavedRegisterMask).
 	jmpImmediate jmpTarget:
 	(jmpDestYoung jmpTarget:
 	(jmpSourceOld jmpTarget:
