@@ -1223,8 +1223,7 @@ SpurMemoryManager >> allInstancesOf: aClass [
 	self freeChunkWithBytes: limit - start - bytes at: start + bytes.
 	totalFreeOldSpace := totalFreeOldSpace - bytes.
 	self setOverflowNumSlotsOf: freeChunk to: count.
-	self setClassIndexOf: freeChunk to: ClassArrayCompactIndex.
-	self setFormatOf: freeChunk to: self arrayFormat.
+	self set: freeChunk classIndexTo: ClassArrayCompactIndex formatTo: self arrayFormat.
 	self possibleRootStoreInto: freeChunk.
 	self checkFreeSpace.
 	^freeChunk
@@ -1308,8 +1307,7 @@ SpurMemoryManager >> allObjects [
 	self freeChunkWithBytes: limit - start - bytes at: start + bytes.
 	totalFreeOldSpace := totalFreeOldSpace - bytes.
 	self setOverflowNumSlotsOf: freeChunk to: count.
-	self setClassIndexOf: freeChunk to: ClassArrayCompactIndex.
-	self setFormatOf: freeChunk to: self arrayFormat.
+	self set: freeChunk classIndexTo: ClassArrayCompactIndex formatTo: self arrayFormat.
 	self possibleRootStoreInto: freeChunk.
 	self checkFreeSpace.
 	^freeChunk
@@ -4488,18 +4486,17 @@ SpurMemoryManager >> formatShift [
 
 { #category : #'become implementation' }
 SpurMemoryManager >> forward: obj1 to: obj2 [
-	self setFormatOf: obj1 to: self forwardedFormat.
-	self setClassIndexOf: obj1 to: self isForwardedObjectClassIndexPun.
+	self set: obj1 classIndexTo: self isForwardedObjectClassIndexPun formatTo: self forwardedFormat.
 	self storePointer: 0 ofForwarder: obj1 withValue: obj2
 ]
 
 { #category : #'become implementation' }
 SpurMemoryManager >> forwardSurvivor: obj1 to: obj2 [
+	"This version of forward:to: can use an uncecked store because it is known that obj1 is young."
 	self assert: (self isInNewSpace: obj1).
 	self assert: ((self isInFutureSpace: obj2) or: [self isInOldSpace: obj2]).
 	self storePointerUnchecked: 0 ofObject: obj1 withValue: obj2.
-	self setFormatOf: obj1 to: self forwardedFormat.
-	self setClassIndexOf: obj1 to: self isForwardedObjectClassIndexPun
+	self set: obj1 classIndexTo: self isForwardedObjectClassIndexPun formatTo: self forwardedFormat
 ]
 
 { #category : #'header formats' }
@@ -4888,10 +4885,14 @@ SpurMemoryManager >> hasOverflowHeader: objOop [
 { #category : #'object testing' }
 SpurMemoryManager >> hasPointerFields: oop [
 	<inline: true>
-	| format |
 	^(self isNonImmediate: oop)
-	  and: [(format := self formatOf: oop) <= self lastPointerFormat
-		   or: [format >= self firstCompiledMethodFormat]]
+	  and: [self hasPointerFieldsNonImm: oop]
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> hasPointerFieldsNonImm: oop [
+	<inline: true>
+	^self isAnyPointerFormat: (self formatOf: oop)
 ]
 
 { #category : #'api characterization' }
@@ -5545,6 +5546,13 @@ SpurMemoryManager >> is: oop instanceOf: classOop compactClassIndex: compactClas
 	^self isClassOfNonImm: oop equalTo: classOop compactClassIndex: compactClassIndex
 ]
 
+{ #category : #'header formats' }
+SpurMemoryManager >> isAnyPointerFormat: format [
+	"the inverse of isPureBitsFormat:"
+	<inline: true>
+	^format <= self lastPointerFormat or: [format >= self firstCompiledMethodFormat]
+]
+
 { #category : #'object testing' }
 SpurMemoryManager >> isArray: oop [
 	"Answer true if this is an indexable object with pointer elements, e.g., an array"
@@ -5673,7 +5681,13 @@ SpurMemoryManager >> isEnumerableObjectNoAssert: objOop [
 { #category : #'object testing' }
 SpurMemoryManager >> isEphemeron: objOop [
 	self assert: (self isNonImmediate: objOop).
-	^(self formatOf: objOop) = self ephemeronFormat
+	^self isEphemeronFormat: (self formatOf: objOop)
+]
+
+{ #category : #'header formats' }
+SpurMemoryManager >> isEphemeronFormat: format [
+	<inline: true>
+	^format = self ephemeronFormat
 ]
 
 { #category : #'header format' }
@@ -5818,7 +5832,7 @@ SpurMemoryManager >> isIndexable: objOop [
 	^self isIndexableFormat: fmt
 ]
 
-{ #category : #'object testing' }
+{ #category : #'header formats' }
 SpurMemoryManager >> isIndexableFormat: format [
 	^format >= self arrayFormat
 	  and: [format <= self weakArrayFormat
@@ -5913,7 +5927,7 @@ SpurMemoryManager >> isPointers: oop [
 	^(self isNonImmediate: oop) and: [self isPointersNonImm: oop]
 ]
 
-{ #category : #'object testing' }
+{ #category : #'header formats' }
 SpurMemoryManager >> isPointersFormat: format [
 	^format <= self lastPointerFormat
 ]
@@ -5926,6 +5940,7 @@ SpurMemoryManager >> isPointersNonImm: objOop [
 
 { #category : #'header formats' }
 SpurMemoryManager >> isPureBitsFormat: format [
+	"the inverse of isAnyPointerFormat:"
 	^format >= self sixtyFourBitIndexableFormat
 	  and: [format < self firstCompiledMethodFormat]
 ]
@@ -6107,9 +6122,16 @@ SpurMemoryManager >> isWeak: oop [
 	^(self isNonImmediate: oop) and: [self isWeakNonImm: oop]
 ]
 
+{ #category : #'header formats' }
+SpurMemoryManager >> isWeakFormat: format [
+	<inline: true>
+	^format = self weakArrayFormat
+]
+
 { #category : #'object testing' }
 SpurMemoryManager >> isWeakNonImm: objOop [
-	^(self formatOf: objOop) = self weakArrayFormat
+	<inline: true>
+	^self isWeakFormat: (self formatOf: objOop)
 ]
 
 { #category : #'object testing' }
@@ -8212,6 +8234,25 @@ SpurMemoryManager >> segmentBridgePun [
 { #category : #accessing }
 SpurMemoryManager >> segmentManager [
 	^segmentManager
+]
+
+{ #category : #'header access' }
+SpurMemoryManager >> set: objOop classIndexTo: classIndex formatTo: format [
+	"0 = 0 sized objects (UndefinedObject True False et al)
+	 1 = non-indexable objects with inst vars (Point et al)
+	 2 = indexable objects with no inst vars (Array et al)
+	 3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+	 4 = weak indexable objects with inst vars (WeakArray et al)
+	 5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+	 6 unused, reserved for exotic pointer objects?
+	 7 Forwarded Object, 1st field is pointer, rest of fields are ignored
+	 8 unused, reserved for exotic non-pointer objects?
+	 9 (?) 64-bit indexable
+	 10 - 11 32-bit indexable
+	 12 - 15 16-bit indexable
+	 16 - 23 byte indexable
+	 24 - 31 compiled method"
+	self subclassResponsibility
 ]
 
 { #category : #'spur bootstrap' }
