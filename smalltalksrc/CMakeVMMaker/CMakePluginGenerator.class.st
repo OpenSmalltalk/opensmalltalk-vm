@@ -11,41 +11,47 @@ Class {
 		'vmGen',
 		'internal',
 		'extraRules',
-		'doNotGenerate'
+		'doNotGenerate',
+		'externalDependencies'
 	],
 	#category : #CMakeVMMaker
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 CMakePluginGenerator >> addCrossSources: sources [
 
 	^ self addSources: sources prefixed: '${pluginCross}/'
 
 ]
 
-{ #category : #'as yet unclassified' }
-CMakePluginGenerator >> addExternalLibrary: aLibrary [ 
-
-	self isInternal ifTrue: [
-		vmGen addExternalLibrary: aLibrary  
-		]
-	ifFalse: [ super addExternalLibrary: aLibrary ]
-
+{ #category : #accessing }
+CMakePluginGenerator >> addExternalDependency: aString [ 
+	"We need to collect external dependencies to internal plugins because we need to force its 
+	resolve before, and if we just add teh dependency in executable some times is not enough. 
+	check StackIPhoneConfig>>#configureFT2Plugin: as an example"
+	externalDependencies := externalDependencies copyWith: aString.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'cmake commands' }
+CMakePluginGenerator >> addExternalLibrary: aLibrary [ 
+	self isInternal 
+		ifTrue: [ vmGen addExternalLibrary: aLibrary ]
+		ifFalse: [ super addExternalLibrary: aLibrary ].
+]
+
+{ #category : #accessing }
 CMakePluginGenerator >> addPlatformSources: sources [
 
 	^ self addSources: sources prefixed: '${pluginPlatform}/'
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 CMakePluginGenerator >> config [
 	^ vmGen config
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 CMakePluginGenerator >> configurationName [
 	^ vmGen configurationName
 ]
@@ -70,6 +76,11 @@ CMakePluginGenerator >> doNotGenerate: aValue [
 	effectively excluding any unwanted stuff "
 	
 	doNotGenerate := aValue
+]
+
+{ #category : #accessing }
+CMakePluginGenerator >> externalDependencies [
+	^ externalDependencies
 ]
 
 { #category : #'code generation' }
@@ -149,7 +160,7 @@ CMakePluginGenerator >> generate [
 	self saveFile.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'code generation' }
 CMakePluginGenerator >> generate: aPlugin for: aCMakeVMGenerator internal: aBoolean extraRules: aBlock [
 
 	doNotGenerate := false.
@@ -159,6 +170,12 @@ CMakePluginGenerator >> generate: aPlugin for: aCMakeVMGenerator internal: aBool
 	extraRules := aBlock.
 		
 	^ self generate
+]
+
+{ #category : #initialization }
+CMakePluginGenerator >> initialize [ 
+	super initialize.
+	externalDependencies := #().
 ]
 
 { #category : #testing }
@@ -181,7 +198,7 @@ CMakePluginGenerator >> plugin [
 	^ plugin
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 CMakePluginGenerator >> saveFile [
 	
 	| reference |

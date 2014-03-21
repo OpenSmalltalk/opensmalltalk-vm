@@ -52,7 +52,7 @@ CMThirdpartyLibrary class >> supports: aConfig [
 	^ self platformName = aConfig platformName 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 CMThirdpartyLibrary >> archiveFileName [
 	^ self downloadURL asUrl fileName 
 ]
@@ -125,7 +125,7 @@ CMThirdpartyLibrary >> copyArtefacts [
 { #category : #settings }
 CMThirdpartyLibrary >> defaultConfigurationFlags [ 
 	^#(
-		'CFLAGS=''-arch i386''' 
+		'CFLAGS=''-arch i386'''
 		'LDFLAGS=''-arch i386''')
 ]
 

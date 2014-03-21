@@ -12,6 +12,7 @@ Class {
 
 { #category : #'compiler flags' }
 CogMacOSDebugConfig >> compilerFlags [
-
-    ^  self compilerFlagsDebug
+    ^ String streamContents:  [ :stream |
+	self commonCompilerFlags asStringOn: stream delimiter: ' '. 
+	self compilerFlagsDebug asStringOn: stream delimiter: ' ' ]
 ]
