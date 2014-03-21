@@ -1,7 +1,7 @@
 Class {
 	#name : #CMWin32Pixman,
 	#superclass : #CMPixman,
-	#category : #'CMakeVMMaker-Libs'
+	#category : 'CMakeVMMaker-Libs'
 }
 
 { #category : #'as yet unclassified' }

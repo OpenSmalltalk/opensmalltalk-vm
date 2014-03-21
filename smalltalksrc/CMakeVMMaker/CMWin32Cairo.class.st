@@ -1,7 +1,7 @@
 Class {
 	#name : #CMWin32Cairo,
 	#superclass : #CMCairo,
-	#category : #'CMakeVMMaker-Libs'
+	#category : 'CMakeVMMaker-Libs'
 }
 
 { #category : #'as yet unclassified' }
