@@ -215,24 +215,20 @@ SpurGenerationScavenger >> copyAndForward: survivor [
 	 It leaves a forwarding pointer behind.  If the object is weak
 	 then corpse is threaded onto the weakList for later treatment."
 	<inline: false>
-	| bytesInObj newLocation hash |
+	| bytesInObj format newLocation |
 	self assert: ((manager isInEden: survivor) "cog methods should be excluded."
 				or: [manager isInPastSpace: survivor]).
 	bytesInObj := manager bytesInObject: survivor.
-	"Must remember hash before copying because threading
-	 on to the weak & ephemeron lists smashes the hash field."
-	hash := manager rawHashBitsOf: survivor.
+	format := manager formatOf: survivor.
 	((self shouldBeTenured: survivor)
 	 or: [futureSurvivorStart + bytesInObj > futureSpace limit])
-		ifTrue: [newLocation := self copyToOldSpace: survivor]
+		ifTrue: [newLocation := self copyToOldSpace: survivor bytes: bytesInObj format: format]
 		ifFalse: [newLocation := self copyToFutureSpace: survivor bytes: bytesInObj].
-	hash ~= 0 ifTrue:
-		[manager setHashBitsOf: newLocation to: hash].
 	manager forwardSurvivor: survivor to: newLocation.
 	"if weak or ephemeron add to the relevant list for subsequent scanning."
-	(manager isWeakNonImm: newLocation) ifTrue:
+	(manager isWeakFormat: format) ifTrue:
 		[self addToWeakList: survivor].
-	((manager isEphemeron: newLocation)
+	((manager isEphemeronFormat: format)
 	 and: [(self isScavengeSurvivor: (manager keyOfEphemeron: newLocation)) not]) ifTrue:
 		[self addToEphemeronList: survivor].
 	^newLocation
@@ -256,10 +252,11 @@ SpurGenerationScavenger >> copyToFutureSpace: survivor bytes: bytesInObject [
 SpurGenerationScavenger >> copyToOldSpace: survivor [
 	"Copy survivor to oldSpace.  Answer the new oop of the object."
 	<inline: true>
-	| nTenures numSlots newOop |
+	| nTenures numSlots hash newOop |
 	nTenures := statTenures.
 	self flag: 'why not just pass header??'.
 	numSlots := manager numSlotsOf: survivor.
+	hash := manager rawHashBitsOf: survivor.
 	newOop := manager
 					allocateSlotsInOldSpace: numSlots
 					format: (manager formatOf: survivor)
@@ -276,8 +273,61 @@ SpurGenerationScavenger >> copyToOldSpace: survivor [
 		mem: (newOop + manager baseHeaderSize) asVoidPointer
 		cp: (survivor + manager baseHeaderSize) asVoidPointer
 		y: numSlots * manager wordSize.
-	self remember: newOop.
-	manager setIsRememberedOf: newOop to: true.
+	(manager hasPointerFields: survivor) ifTrue:
+		[self remember: newOop.
+		 manager setIsRememberedOf: newOop to: true].
+	hash ~= 0 ifTrue:
+		[manager setHashBitsOf: newOop to: hash].
+	statTenures := nTenures + 1.
+	^newOop
+]
+
+{ #category : #scavenger }
+SpurGenerationScavenger >> copyToOldSpace: survivor bytes: bytesInObject [
+	"Copy survivor to oldSpace.  Answer the new oop of the object."
+	<inline: true>
+	| nTenures startOfSurvivor newStart newOop |
+	nTenures := statTenures.
+	startOfSurvivor := manager startOfObject: survivor.
+	newStart := manager allocateOldSpaceChunkOfBytes: bytesInObject.
+	newStart ifNil:
+		[manager growOldSpaceByAtLeast: 0. "grow by growHeadroom"
+		 newStart := manager allocateOldSpaceChunkOfBytes: bytesInObject.
+		 newStart ifNil:
+			[self error: 'out of memory']].
+	manager checkFreeSpace.
+	manager mem: newStart asVoidPointer cp: startOfSurvivor asVoidPointer y: bytesInObject.
+	newOop := newStart + (survivor - startOfSurvivor).
+	(manager hasPointerFields: survivor) ifTrue:
+		[self remember: newOop.
+		 manager setIsRememberedOf: newOop to: true].
+	statTenures := nTenures + 1.
+	^newOop
+]
+
+{ #category : #scavenger }
+SpurGenerationScavenger >> copyToOldSpace: survivor bytes: bytesInObject format: formatOfSurvivor [
+	"Copy survivor to oldSpace.  Answer the new oop of the object."
+	<inline: true>
+	| nTenures startOfSurvivor newStart newOop |
+	self assert: (formatOfSurvivor = (manager formatOf: survivor)
+				and: [(manager isMarked: survivor) not
+				and: [(manager isPinned: survivor) not
+				and: [(manager isRemembered: survivor) not]]]).
+	nTenures := statTenures.
+	startOfSurvivor := manager startOfObject: survivor.
+	newStart := manager allocateOldSpaceChunkOfBytes: bytesInObject.
+	newStart ifNil:
+		[manager growOldSpaceByAtLeast: 0. "grow by growHeadroom"
+		 newStart := manager allocateOldSpaceChunkOfBytes: bytesInObject.
+		 newStart ifNil:
+			[self error: 'out of memory']].
+	manager checkFreeSpace.
+	manager mem: newStart asVoidPointer cp: startOfSurvivor asVoidPointer y: bytesInObject.
+	newOop := newStart + (survivor - startOfSurvivor).
+	(manager isAnyPointerFormat: formatOfSurvivor) ifTrue:
+		[self remember: newOop.
+		 manager setIsRememberedOf: newOop to: true].
 	statTenures := nTenures + 1.
 	^newOop
 ]
