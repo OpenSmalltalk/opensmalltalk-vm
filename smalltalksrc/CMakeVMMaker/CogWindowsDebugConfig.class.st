@@ -6,8 +6,9 @@ Class {
 
 { #category : #'as yet unclassified' }
 CogWindowsDebugConfig >> compilerFlags [
-	"depends on config ..."
-	^ self commonCompilerFlags, ' ' , self compilerFlagsDebug
+	^ String streamContents:  [ :stream |
+	self commonCompilerFlags asStringOn: stream delimiter: ' '. 
+	self compilerFlagsDebug asStringOn: stream delimiter: ' ' ]
 ]
 
 { #category : #'as yet unclassified' }
