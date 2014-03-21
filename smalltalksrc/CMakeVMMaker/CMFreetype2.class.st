@@ -4,7 +4,7 @@ This is a configuration for building freetype2 library
 Class {
 	#name : #CMFreetype2,
 	#superclass : #CMThirdpartyLibrary,
-	#category : #'CMakeVMMaker-Libs'
+	#category : 'CMakeVMMaker-Libs'
 }
 
 { #category : #accessing }

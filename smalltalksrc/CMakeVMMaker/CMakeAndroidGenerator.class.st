@@ -4,7 +4,7 @@ This class inherits from CMakeGenerator and provides the same generation facilit
 Class {
 	#name : #CMakeAndroidGenerator,
 	#superclass : #CMakeVMGenerator,
-	#category : #'CMakeVMMaker-Android'
+	#category : 'CMakeVMMaker-Android'
 }
 
 { #category : #'gmake commands' }
