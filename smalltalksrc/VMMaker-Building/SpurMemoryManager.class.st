@@ -196,7 +196,7 @@ classTableIndex ranges from classTablePageSize to classTableMask, since the firs
 Design
 The design objectives for the Spur memory manager are
 
-- efficient object representation a la Eliot Miranda's VisualWorks 64-bit object representation that uses a 64-bit header, eliminating direct class references so that all objects refer to their classes indirectly.  Instead the header contains a constant class index, in a field smaller than a full pointer, These class indices are used in inline and first-level method caches, hence they do not have to be updated on GC (although they do have to be traced to be able to GC classes).  Classes are held in a sparse weak table.  The class table needs only to be indexed by an instance's class index in class hierarchy search, in the class primitive, and in tracing live objects in the heap.  The additional header space is allocated to a much expanded identity hash field, reducing hash efficiency problems in identity collections due to the extremely small (11 bit) hash field in the old Squeak GC.  The identity hash field is also a key element of the class index scheme.  A class's identity hash is its index into the class table, so to create an instance of a class one merely copies its identity hash into the class index field of the new instance.  This implies that when classes gain their identity hash they are entered into the class table and their identity hash is that of a previously unused index in the table.  It also implies that there is a maximum number of classes in the table.  The classIndex field could be as narrow as 16 bits (for efficient access); at least for a few years 64k classes should be enough.  But currently we make it the same as the identityHash field, 22 bits, or 4M values.  A class is entered into the class table in the following operations:
+- efficient object representation a la Eliot Miranda's VisualWorks 64-bit object representation that uses a 64-bit header, eliminating direct class references so that all objects refer to their classes indirectly.  Instead the header contains a constant class index, in a field smaller than a full pointer, These class indices are used in inline and first-level method caches, hence they do not have to be updated on GC (although they do have to be traced to be able to GC classes).  Classes are held in a sparse strong table.  The class table needs only to be indexed by an instance's class index in class hierarchy search, in the class primitive, and in tracing live objects in the heap.  The additional header space is allocated to a much expanded identity hash field, reducing hash efficiency problems in identity collections due to the extremely small (11 bit) hash field in the old Squeak GC.  The identity hash field is also a key element of the class index scheme.  A class's identity hash is its index into the class table, so to create an instance of a class one merely copies its identity hash into the class index field of the new instance.  This implies that when classes gain their identity hash they are entered into the class table and their identity hash is that of a previously unused index in the table.  It also implies that there is a maximum number of classes in the table.  The classIndex field could be as narrow as 16 bits (for efficient access); at least for a few years 64k classes should be enough.  But currently we make it the same as the identityHash field, 22 bits, or 4M values.  A class is entered into the class table in the following operations:
 	behaviorHash
 	adoptInstance
 	instantiate
@@ -246,7 +246,7 @@ Note that the size field of an object (its slot size) reflects the logical size 
 
 Heap growth and shrinkage will be handled by allocating and deallocating heap segments from/to the OS via e.g. memory-mapping.  This technique allows space to be released back to the OS by unmapping empty segments.  See ""Segmented Old Space"" below).
 
-The basic approach is to use a fixed size new space and a growable old space.  The new space is a classic three-space nursery a la Ungar's Generation Scavenging, a large eden for new objects and two smaller survivor spaces that exchange roles on each collection, one being the to space to which surviving objects are copied, the other being the from space of the survivors of the previous collection, i.e. the previous to space.  (This basic algorithm must be extended for weak arrays and ephemerons).
+The basic approach is to use a fixed size new space and a growable old space.  The new space is a classic three-space nursery a la Ungar's Generation Scavenging, a large eden for new objects and two smaller survivor spaces that exchange roles on each collection, one being the to space to which surviving objects are copied, the other being the from space of the survivors of the previous collection, i.e. the previous to space.  (This basic algorithm is extended to handle weak arrays and ephemerons).
 
 To provide apparent pinning in new space we rely on lazy become.  Since most pinned objects will be byte data and these do not require stack zone activation scanning, the overhead is simply an old space allocation and corpsing.
 
@@ -391,7 +391,7 @@ Issues:
 Are class indices in inline caches strong references to classes or weak references?
 If strong then they must be scanned during GC and the methodZone must be flushed on fullGC to reclaim all classes (this looks to be a bug in the V3 Cogit).
 If weak then when the class table loses references, PICs containing freed classes must be freed and then sends to freed PICs or containing freed clases must be unlinked.
-The second approach is faster; the common case is scanning the class table, the uncommon case is freeing classes.  The second approach is better for machine code; in-line caches do not prevent reclamation of classes.  However, the former is better for the scavengerm which as a result doesnt have to scan the classes of objects.  The sytsem scavenges much more frequently than it reclaims classes and the number of cog methods to be scanned during scavenge is small.  So I think a strong class table is better after all.
+The second approach is faster; the common case is scanning the class table, the uncommon case is freeing classes.  The second approach is better for machine code; in-line caches do not prevent reclamation of classes.  However, the former is better for the scavenger which as a result doesn't have to scan the classes of objects.  The system scavenges much more frequently than it reclaims classes and the number of cog methods to be scanned during scavenge is small.  So I think a strong class table is better after all.  Indeed we use a strong class table with old pages.  So classes are only GCed by the incremental and global GCs, never by the scavenger.
 "
 Class {
 	#name : #SpurMemoryManager,
@@ -1182,6 +1182,7 @@ SpurMemoryManager >> allInstancesOf: aClass [
 	 or: [aClass ~~ (self classOrNilAtIndex: classIndex)]) ifTrue:
 		[freeChunk := self allocateSlots: 0 format: self arrayFormat classIndex: ClassArrayCompactIndex.
 		 ^freeChunk].
+	self runLeakCheckerForFullGC: false.
 	self markObjects. "don't want to revive objects unnecessarily."
 	freeChunk := self allocateLargestFreeChunk.
 	ptr := start := freeChunk + self baseHeaderSize.
@@ -1226,6 +1227,7 @@ SpurMemoryManager >> allInstancesOf: aClass [
 	self set: freeChunk classIndexTo: ClassArrayCompactIndex formatTo: self arrayFormat.
 	self possibleRootStoreInto: freeChunk.
 	self checkFreeSpace.
+	self runLeakCheckerForFullGC: false.
 	^freeChunk
 	
 	
@@ -1275,6 +1277,7 @@ SpurMemoryManager >> allObjects [
 	 Since objects are at least 16 bytes big, and the largest SmallInteger covers
 	 1/4 of the address space, the count can never overflow."
 	| freeChunk ptr start limit count bytes |
+	self runLeakCheckerForFullGC: false.
 	self markObjects. "don't want to revive objects unnecessarily."
 	freeChunk := self allocateLargestFreeChunk.
 	ptr := start := freeChunk + self baseHeaderSize.
@@ -1310,6 +1313,7 @@ SpurMemoryManager >> allObjects [
 	self set: freeChunk classIndexTo: ClassArrayCompactIndex formatTo: self arrayFormat.
 	self possibleRootStoreInto: freeChunk.
 	self checkFreeSpace.
+	self runLeakCheckerForFullGC: false.
 	^freeChunk
 	
 	
@@ -4797,20 +4801,21 @@ SpurMemoryManager >> getThisSessionID [
 
 { #category : #'gc - global' }
 SpurMemoryManager >> globalGarbageCollect [
-	self runLeakCheckerForFullGC: true
-		excludeUnmarkedNewSpaceObjs: false
-		classIndicesShouldBeValid: false.
+	self runLeakCheckerForFullGC: true.
 	self assert: self validObjStacks.
 	self assert: (self isEmptyObjStack: markStack).
 	self assert: (self isEmptyObjStack: weaklingStack).
 
 	self markObjects.
+	self expungeDuplicateAndUnmarkedClasses: true.
 	self nilUnmarkedWeaklingSlots.
 	self freeUnmarkedObjectsAndSortAndCoalesceFreeSpace.
 
+	"Mid-way the leak check must be more lenient.  Unmarked classes will have been
+	 expunged from the table, but unmarked instances will not yet have been reclaimed."
 	self runLeakCheckerForFullGC: true
 		excludeUnmarkedNewSpaceObjs: true
-		classIndicesShouldBeValid: false.
+		classIndicesShouldBeValid: true.
 
 	self compact.
 	self eliminateAndFreeForwarders.
@@ -4820,8 +4825,6 @@ SpurMemoryManager >> globalGarbageCollect [
 	self assert: (self isEmptyObjStack: weaklingStack).
 	self assert: self allObjectsUnmarked.
 	self runLeakCheckerForFullGC: true
-		excludeUnmarkedNewSpaceObjs: false
-		classIndicesShouldBeValid: true
 ]
 
 { #category : #'object testing' }
@@ -6738,8 +6741,7 @@ SpurMemoryManager >> markObjects [
 	self initializeUnscannedEphemerons.
 	self initializeMarkStack.
 	self initializeWeaklingStack.
-	self markAccessibleObjects.
-	self expungeDuplicateAndUnmarkedClasses: true
+	self markAccessibleObjects
 ]
 
 { #category : #'gc - global' }
@@ -7697,7 +7699,7 @@ SpurMemoryManager >> printInstancesWithClassIndex: classIndex [
 	self allHeapEntitiesDo:
 		[:obj|
 		 (self classIndexOf: obj) = classIndex ifTrue:
-			[self printHex: obj; cr]]
+			[coInterpreter printHex: obj; cr]]
 ]
 
 { #category : #'debug printing' }
@@ -8194,9 +8196,8 @@ SpurMemoryManager >> scavengingGCTenuringIf: tenuringCriterion [
 			printNum: coInterpreter interpreterAllocationReserveBytes - (scavenger eden limit - freeStart); cr].
 	self checkMemoryMap.
 	self checkFreeSpace.
-	"coInterpreter printCallStackFP: coInterpreter framePointer"
-
 	self runLeakCheckerForFullGC: false.
+
 	coInterpreter
 		preGCAction: GCModeScavenge;
 		"would prefer this to be in mapInterpreterOops, but
@@ -8215,8 +8216,8 @@ SpurMemoryManager >> scavengingGCTenuringIf: tenuringCriterion [
 	statRootTableCount := scavenger rememberedSetSize.
 
 	coInterpreter postGCAction: GCModeScavenge.
-	self runLeakCheckerForFullGC: false.
 
+	self runLeakCheckerForFullGC: false.
 	self checkFreeSpace
 ]
 
