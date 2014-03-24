@@ -3111,6 +3111,18 @@ NewObjectMemory >> verifyCleanHeaders [
 		oop := self objectAfter: oop]
 ]
 
+{ #category : #'debug printing' }
+NewObjectMemory >> whereIsMaybeHeapThing: anOop [
+	<returnTypeC: 'char *'>
+	(self oop: anOop isGreaterThanOrEqualTo: self startOfMemory andLessThan: endOfMemory) ifTrue:
+		[(self oop: anOop isLessThan: freeStart) ifTrue:
+			[^' is in old space'].
+		 (self oop: anOop isLessThan: reserveStart) ifTrue:
+			[^' is in new space'].
+		 ^' is above reserve start'].
+	^nil
+]
+
 { #category : #'image segment in/out' }
 NewObjectMemory >> wordSwapFloatsFrom: startOop to: stopAddr [
 	"Swap the most and least significant words of Floats in a range of the image."
