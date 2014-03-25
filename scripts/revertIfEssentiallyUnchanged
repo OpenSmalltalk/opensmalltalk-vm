@@ -6,4 +6,5 @@ case `svn st "$1"` in
 M*)	;;
 *)	exit 0
 esac
-test -z "`svn diff \"$1\" | grep '^[+-]' | egrep -v ' VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]* uuid:| Qwaq-Plugins-[a-z][a-z]*\.[0-9][0-9]* uuid:| VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]* \([ie]\)| Qwaq-Plugins-[a-z][a-z]*\.[0-9][0-9]* \([ie]\)|^-\-\-|^+\+\+|^[+-]$'`" && svn revert "$1"
+test -z "`svn diff \"$1\" | grep '^[+-]' | egrep -v ' VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]* uuid:| Qwaq-Plugins-[a-z][a-z]*\.[0-9][0-9]* uuid:| VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]* \([ie]\)| Qwaq-Plugins-[a-z][a-z]*\.[0-9][0-9]* \([ie]\)| VMConstruction-Plugins-OSProcessPlugin[a-z.-][a-z.-]*\.[0-9][0-9]* |^-\-\-|^+\+\+|^[+-]$'`" && svn revert "$1"
+
