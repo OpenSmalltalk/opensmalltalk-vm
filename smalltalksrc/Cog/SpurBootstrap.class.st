@@ -746,8 +746,10 @@ SpurBootstrap class >> SmalltalkImagePROTOTYPEcompactClassesArray [
 { #category : #'method prototypes' }
 SpurBootstrap class >> SmalltalkImagePROTOTYPEgrowMemoryByAtLeast: numBytes [
 	"Grow memory by at least the requested number of bytes.
-	 Fail if no memory is available."
+	 Primitive.  Essential. Fail if no memory is available."
 	<primitive: 180>
+	(numBytes isInteger and: [numBytes > 0]) ifTrue:
+		[OutOfMemory signal].
 	^self primitiveFailed
 ]
 
@@ -793,9 +795,11 @@ SpurBootstrap class >> SpaceTallyPROTOTYPEspaceForInstancesOf: aClass [
 { #category : #'method prototypes' }
 SpurBootstrap class >> SystemDictionaryPROTOTYPEgrowMemoryByAtLeast: numBytes [
 	"Grow memory by at least the requested number of bytes.
-	 Fail if no memory is available."
+	 Primitive.  Fail if no memory is available.  Essential."
 	<primitive: 180>
-	^self primitiveFailed
+	^(numBytes isInteger and: [numBytes > 0])
+		ifTrue: [OutOfMemory signal]
+		ifFalse: [self primitiveFailed]
 ]
 
 { #category : #'method prototypes' }
