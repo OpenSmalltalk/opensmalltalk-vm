@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		73020E8D0EE714E60021D217 /* BochsIA32Plugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 73020E8C0EE714E60021D217 /* BochsIA32Plugin.c */; settings = {COMPILER_FLAGS = "-I../../../platforms/Cross/vm -I../../../platforms/Cross/plugins/BochsIA32Plugin -I\"../../../platforms/Mac OS/vm\" -I../../../src/vm"; }; };
+		73020E8D0EE714E60021D217 /* BochsIA32Plugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 73020E8C0EE714E60021D217 /* BochsIA32Plugin.c */; settings = {COMPILER_FLAGS = "-I../../../platforms/Cross/vm -I../../../platforms/Cross/plugins/BochsIA32Plugin -I\"../../../platforms/Mac OS/vm\" -I../../../spursrc/vm"; }; };
 		737482B30EE7339F004E10F8 /* libcpu.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 737482B20EE7339F004E10F8 /* libcpu.a */; };
 		737482B50EE733BD004E10F8 /* libfpu.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 737482B40EE733BD004E10F8 /* libfpu.a */; };
 		737482B70EE7343B004E10F8 /* sqBochsIA32Plugin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 737482B60EE7343B004E10F8 /* sqBochsIA32Plugin.cpp */; settings = {COMPILER_FLAGS = "-I../../../processors/IA32/macbochs -I../../../processors/IA32/bochs -I../../../processors/IA32/bochs/instrument/stubs"; }; };
@@ -25,7 +25,7 @@
 		737483070EE7406A004E10F8 /* libdisasm.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libdisasm.a; path = ../../../processors/IA32/macbochs/disasm/libdisasm.a; sourceTree = SOURCE_ROOT; };
 		8D01CCD10486CAD60068D4B7 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		8D01CCD20486CAD60068D4B7 /* BochsIA32Plugin.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BochsIA32Plugin.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
-		DA3A20F50AA63CBF0050B983 /* interp.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../../src/vm/interp.h; sourceTree = SOURCE_ROOT; };
+		DA3A20F50AA63CBF0050B983 /* interp.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../../spursrc/vm/interp.h; sourceTree = SOURCE_ROOT; };
 		DA3A20F60AA63CDC0050B983 /* sqMemoryAccess.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqMemoryAccess.h; path = ../../../platforms/Cross/vm/sqMemoryAccess.h; sourceTree = SOURCE_ROOT; };
 		DA3A20F70AA63CDC0050B983 /* sqVirtualMachine.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqVirtualMachine.h; path = ../../../platforms/Cross/vm/sqVirtualMachine.h; sourceTree = SOURCE_ROOT; };
 		DA3A20F80AA63D000050B983 /* config.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = config.h; path = "../../../platforms/Mac OS/vm/config.h"; sourceTree = SOURCE_ROOT; };
