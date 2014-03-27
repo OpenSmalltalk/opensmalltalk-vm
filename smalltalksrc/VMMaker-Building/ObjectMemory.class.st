@@ -4515,6 +4515,18 @@ ObjectMemory >> setHeapBase: baseOfHeap memoryLimit: memLimit endOfMemory: memEn
 	^baseOfHeap
 ]
 
+{ #category : #'header access' }
+ObjectMemory >> setIsMarkedOf: objOop to: aBoolean [
+	| header |
+	self assert: (self isFreeObject: objOop) not.
+	header := self baseHeader: objOop.
+	self
+		baseHeader: objOop
+		put: (aBoolean
+				ifTrue: [header bitOr: MarkBit]
+				ifFalse: [(header bitOr: MarkBit) - MarkBit])
+]
+
 { #category : #initialization }
 ObjectMemory >> setMemoryLimit: newMemoryLimit [
 	self assert: (newMemoryLimit bitAnd: BytesPerWord - 1) = 0.
