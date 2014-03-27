@@ -206,6 +206,13 @@ NewObjectMemory >> allObjectsDoSafely: aBlock [
 		 oop := self objectAfterWhileForwarding: oop]
 ]
 
+{ #category : #'primitive support' }
+NewObjectMemory >> allObjectsUnmarked [
+	self allObjectsDo:
+		[:o| (self isMarked: o) ifTrue: [^false]].
+	^true
+]
+
 { #category : #allocation }
 NewObjectMemory >> allocate: byteSize headerSize: hdrSize h1: baseHeader h2: classOopArg h3: extendedSize doFill: doFill format: format [
 	"Allocate a new object of the given size and number of header words. (Note: byteSize already includes space for the base header word.) Initialize the header fields of the new object and fill the remainder of the object with a value appropriate for the format.
