@@ -343,13 +343,13 @@ VMMaker class >> generateEitherSqueakCogVM [
 VMMaker class >> generateNewspeakCogVM [
 	^VMMaker
 		generate: CoInterpreter
-		and: StackToRegisterMappingCogit"Cogit chooseCogitClass"
+		and: StackToRegisterMappingCogit
 		with: #(	NewspeakVM true
 				MULTIPLEBYTECODESETS true)
 		to: (FileDirectory default pathFromURI: 'oscogvm/nscogsrc')
 		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
-		including:#(	AsynchFilePlugin BMPReadWriterPlugin BalloonEnginePlugin BitBltSimulation DSAPlugin DropPlugin
-					FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin DeflatePlugin JPEGReadWriter2Plugin
+		including:#(	AsynchFilePlugin BMPReadWriterPlugin BalloonEnginePlugin BitBltSimulation DeflatePlugin DSAPlugin DropPlugin
+					FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin ImmX11Plugin JPEGReadWriter2Plugin
 					JPEGReaderPlugin LargeIntegersPlugin Matrix2x3Plugin MiscPrimitivePlugin NewsqueakIA32ABIPlugin
 					RePlugin SecurityPlugin SocketPlugin SoundPlugin SqueakSSLPlugin SurfacePlugin ThreadedIA32FFIPlugin
 					UUIDPlugin UnixOSProcessPlugin VMProfileLinuxSupportPlugin VMProfileMacSupportPlugin Win32OSProcessPlugin)
@@ -361,8 +361,8 @@ VMMaker class >> generateNewspeakInterpreterVM [
 		generate: NewspeakInterpreter
 		to: (FileDirectory default pathFromURI: 'oscogvm/nssrc')
 		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
-		including:#(	AsynchFilePlugin BMPReadWriterPlugin BalloonEnginePlugin BitBltSimulation DSAPlugin DropPlugin
-					FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin InflatePlugin JPEGReadWriter2Plugin
+		including:#(	AsynchFilePlugin BMPReadWriterPlugin BalloonEnginePlugin BitBltSimulation DeflatePlugin DSAPlugin DropPlugin
+					FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin ImmX11Plugin JPEGReadWriter2Plugin
 					JPEGReaderPlugin LargeIntegersPlugin Matrix2x3Plugin MiscPrimitivePlugin NewsqueakIA32ABIPlugin
 					RePlugin SecurityPlugin SocketPlugin SoundPlugin SqueakSSLPlugin SurfacePlugin
 					UUIDPlugin UnixOSProcessPlugin VMProfileLinuxSupportPlugin VMProfileMacSupportPlugin Win32OSProcessPlugin)
@@ -438,7 +438,7 @@ VMMaker class >> generateSqueakCogVMWithInterpreterClass: interpreterClass [
 					BalloonEnginePlugin B3DAcceleratorPlugin BMPReadWriterPlugin BitBltSimulation BochsIA32Plugin
 					CameraPlugin CroquetPlugin DSAPlugin DeflatePlugin DropPlugin
 					FT2Plugin FFTPlugin FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin
-					GeniePlugin HostWindowPlugin IA32ABIPlugin InternetConfigPlugin
+					GeniePlugin HostWindowPlugin IA32ABIPlugin ImmX11Plugin InternetConfigPlugin
 					JPEGReadWriter2Plugin JPEGReaderPlugin JoystickTabletPlugin KlattSynthesizerPlugin
 					LargeIntegersPlugin LocalePlugin MIDIPlugin MacMenubarPlugin Matrix2x3Plugin
 					MiscPrimitivePlugin Mpeg3Plugin QuicktimePlugin RePlugin

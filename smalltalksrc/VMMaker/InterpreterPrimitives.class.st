@@ -2632,9 +2632,15 @@ InterpreterPrimitives >> primitivePathToUsing [
 	 the current context"
 	| err path |
 	<export: true>
-	<option: #SqueakV3ObjectMemory> "for now..."
 	self externalWriteBackHeadFramePointers.
-	err := self pathTo: (self stackValue: 2) using: (self stackValue: 1) followWeak: self stackTop = objectMemory trueObject.
+	argumentCount >= 2 ifFalse:
+		[^self primitiveFailFor: PrimErrBadNumArgs].
+	(self stackTop = objectMemory trueObject
+	 or: [self stackTop = objectMemory falseObject]) ifFalse:
+		[^self primitiveFailFor: PrimErrBadArgument].
+	err := self pathTo: (self stackValue: 2)
+				using: (self stackValue: 1)
+				followWeak: self stackTop = objectMemory trueObject.
 	err ~= 0 ifTrue:
 		[^self primitiveFailFor: err].
 	path := self self stackValue: 1.
