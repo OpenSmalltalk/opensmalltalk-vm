@@ -6468,6 +6468,12 @@ SpurMemoryManager >> mapExtraRoots [
 				[(extraRoots at: i) at: 0 put: (self remapObj: oop)]]]
 ]
 
+{ #category : #'primitive support' }
+SpurMemoryManager >> mark: objOop [
+	<inline: true>
+	self setIsMarkedOf: objOop to: true
+]
+
 { #category : #'gc - global' }
 SpurMemoryManager >> markAccessibleObjects [
 	self assert: self validClassTableRootPages.
@@ -9266,6 +9272,20 @@ SpurMemoryManager >> unlinkSolitaryFreeTreeNode: freeTreeNode [
 						withValue: parent.
 					 larger ~= 0 ifTrue:
 						[self addFreeSubTree: larger]]]
+]
+
+{ #category : #'primitive support' }
+SpurMemoryManager >> unmarkAllObjects [
+	self allHeapEntitiesDo:
+		[:obj|
+		 (self isMarked: obj) ifTrue:
+			[(self isNormalObject: obj)
+				ifTrue:
+					[self setIsMarkedOf: obj to: false]
+				ifFalse:
+					[(self isSegmentBridge: obj) ifFalse:
+						[self setIsMarkedOf: obj to: false]]]].
+
 ]
 
 { #category : #'obj stacks' }

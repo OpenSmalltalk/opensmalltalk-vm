@@ -35,9 +35,10 @@ CoInterpreterPrimitives >> pathTo: goal using: stack followWeak: followWeak [
 		PrimErrBadArgument if stack is not an Array
 		PrimErrBadIndex if search overflows stack
 		PrimErrNotFound if goal cannot be found"
-	| current hdr index next stackSize stackp freeStartAtStart |
+	| current index next stackSize stackp freeStartAtStart |
 	(objectMemory isArray: stack) ifFalse:
 		[^PrimErrBadArgument].
+	self assert: objectMemory allObjectsUnmarked.
 	freeStartAtStart := objectMemory freeStart. "check no allocations during search"
 	objectMemory beRootIfOld: stack. "so no store checks are necessary on stack"
 	stackSize := objectMemory lengthOf: stack.
@@ -57,8 +58,7 @@ CoInterpreterPrimitives >> pathTo: goal using: stack followWeak: followWeak [
 			ifFalse:
 				[index >= 0
 					ifTrue:
-						[hdr := objectMemory baseHeader: current.
-						next := (objectMemory isContextHeader: hdr)
+						[next := (objectMemory isContextNonImm: current)
 									ifTrue: [self fieldOrSenderFP: index ofContext: current]
 									ifFalse: [objectMemory fetchPointer: index ofObject: current]]
 					ifFalse:
@@ -67,7 +67,7 @@ CoInterpreterPrimitives >> pathTo: goal using: stack followWeak: followWeak [
 			ifTrue: [self assert: (self isFrame: (self cCoerceSimple: next to: #'char *')
 										onPage: (stackPages stackPageFor: (self cCoerceSimple: next to: #'char *')))]
 			ifFalse:
-				[next >= heapBase ifTrue:
+				[next >= heapBase ifTrue: "exclude Cog methods"
 					[self assert: (self checkOkayOop: next)]].
 		 next = goal ifTrue:
 			[self assert: freeStartAtStart = objectMemory freeStart.
@@ -98,9 +98,8 @@ CoInterpreterPrimitives >> pathTo: goal using: stack followWeak: followWeak [
 						[self markFrame: next.
 						index := self fieldsInFrame: (self cCoerceSimple: next to: #'char *')]
 					ifFalse:
-						[hdr := objectMemory baseHeader: next.
-						 objectMemory baseHeader: next put: (hdr bitOr: MarkBit).
-						 (objectMemory isCompiledMethodHeader: hdr)
+						[objectMemory mark: next.
+						 (objectMemory isCompiledMethod: next)
 							ifTrue: [index := (self literalCountOf: next) + LiteralStart]
 							ifFalse: [index := objectMemory lengthOf: next]].
 				 current := next]].
