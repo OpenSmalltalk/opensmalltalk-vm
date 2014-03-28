@@ -8,7 +8,6 @@ Class {
 		'cogit',
 		'methodZone',
 		'objectMemory',
-		'backEnd',
 		'ceStoreCheckTrampoline'
 	],
 	#pools : [
@@ -20,20 +19,10 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
-{ #category : #'instance creation' }
-CogObjectRepresentation class >> forCogit: aCogit backEnd: backEnd methodZone: methodZone [
-	^self new setCogit: aCogit backEnd: backEnd methodZone: methodZone
-]
-
 { #category : #translation }
 CogObjectRepresentation class >> implicitReturnTypeFor: aSelector [
 	"Answer the return type for methods that don't have an explicit return."
 	^#void
-]
-
-{ #category : #translation }
-CogObjectRepresentation class >> prepareToBeAddedToCodeGenerator: aCCodeGenerator [
-	aCCodeGenerator removeVariable: 'backEnd'
 ]
 
 { #category : #translation }
@@ -152,17 +141,6 @@ CogObjectRepresentation >> numRegArgs [
 	 with the receiver.  The value must be 0, 1 or 2.  Note that a SimpleStackBasedCogit always
 	 has 0 register args (although the receiver is passed in a register)."
 	self subclassResponsibility
-]
-
-{ #category : #initialization }
-CogObjectRepresentation >> setCogit: aCogit backEnd: aBackEnd methodZone: aMethodZone [
-	<doNotGenerate>
-	cogit := aCogit.
-	backEnd := backEnd.
-	methodZone := aMethodZone.
-	objectMemory := (aCogit coInterpreter isKindOf: StackInterpreter)
-						ifTrue: [aCogit coInterpreter objectMemory]
-						ifFalse: [aCogit coInterpreter]
 ]
 
 { #category : #testing }
