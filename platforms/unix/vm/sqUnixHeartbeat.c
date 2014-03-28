@@ -335,7 +335,9 @@ heartbeat()
 
 typedef enum { dead, condemned, nascent, quiescent, active } machine_state;
 
-static int					stateMachinePolicy;
+#define UNDEFINED 0xBADF00D
+
+static int					stateMachinePolicy = UNDEFINED;
 static struct sched_param	stateMachinePriority;
 
 static volatile machine_state beatState = nascent;
@@ -386,19 +388,30 @@ ioInitHeartbeat()
 	struct timespec halfAMo;
 	pthread_t careLess;
 
-	if ((er = pthread_getschedparam(pthread_self(),
-									&stateMachinePolicy,
-									&stateMachinePriority))) {
-		errno = er;
-		perror("pthread_getschedparam failed");
-		exit(errno);
-	}
-	++stateMachinePriority.sched_priority;
-	/* If the priority isn't appropriate for the policy (typically SCHED_OTHER)
-	 * then change policy.
+	/* First time through choose a policy and priority for the heartbeat thread,
+	 * and install ioInitHeartbeat via pthread_atfork to be run again in a forked
+	 * child, restarting the heartbeat in a forked child.
 	 */
-	if (sched_get_priority_max(stateMachinePolicy) < stateMachinePriority.sched_priority)
-		stateMachinePolicy = SCHED_FIFO;
+	if (stateMachinePolicy == UNDEFINED) {
+		if ((er = pthread_getschedparam(pthread_self(),
+										&stateMachinePolicy,
+										&stateMachinePriority))) {
+			errno = er;
+			perror("pthread_getschedparam failed");
+			exit(errno);
+		}
+		assert(stateMachinePolicy != UNDEFINED);
+		++stateMachinePriority.sched_priority;
+		/* If the priority isn't appropriate for the policy (typically
+		 * SCHED_OTHER) then change policy.
+		 */
+		if (sched_get_priority_max(stateMachinePolicy) < stateMachinePriority.sched_priority)
+			stateMachinePolicy = SCHED_FIFO;
+		pthread_atfork(0, /*prepare*/ 0, /*parent*/ ioInitHeartbeat /*child*/);
+	}
+	else /* subsequently (in the child) init beatState before creating thread */
+		beatState = nascent;
+
 	halfAMo.tv_sec  = 0;
 	halfAMo.tv_nsec = 1000 * 100;
 	if ((er= pthread_create(&careLess,
