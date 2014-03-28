@@ -86,7 +86,6 @@ Class {
 		'prevBCDescriptor',
 		'isPushNilFunction',
 		'pushNilSizeFunction',
-		'callerSavedRegMask',
 		'methodOrBlockNumTemps',
 		'regArgsHaveBeenPushed',
 		'simSelf',
@@ -3622,12 +3621,6 @@ StackToRegisterMappingCogit >> initSimStackForFramelessMethod: startpc [
 					offset: ((methodOrBlockNumArgs - i) * BytesPerWord);
 					bcptr: startpc]].
 	simSpillBase := simStackPtr := methodOrBlockNumArgs - 1
-]
-
-{ #category : #initialization }
-StackToRegisterMappingCogit >> initializeBackend [
-	super initializeBackend.
-	callerSavedRegMask := backEnd callerSavedRegisterMask
 ]
 
 { #category : #'compile abstract instructions' }
