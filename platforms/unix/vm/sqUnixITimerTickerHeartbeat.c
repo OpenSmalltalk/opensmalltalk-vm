@@ -588,7 +588,7 @@ extern sqInt suppressHeartbeatFlag;
      * e.g. ODBC connections.
 	 */
 #if NEED_SIGALTSTACK
-	ticker_handler_action.sa_flags = SA_RESTART;
+	ticker_handler_action.sa_flags = SA_RESTART | SA_ONSTACK;
 #else
 	ticker_handler_action.sa_flags = SA_RESTART;
 #endif
