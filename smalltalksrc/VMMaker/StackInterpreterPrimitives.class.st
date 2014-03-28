@@ -1523,7 +1523,7 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 			objectMemory growHeadroom: arg.
 			self initPrimCall]].
 	index = 26 ifTrue: [
-		arg > 1 ifTrue:[
+		arg >= 0 ifTrue:[ "0 turns off the heartbeat"
 			result := self ioHeartbeatMilliseconds.
 			self ioSetHeartbeatMilliseconds: arg.
 			self initPrimCall]].
