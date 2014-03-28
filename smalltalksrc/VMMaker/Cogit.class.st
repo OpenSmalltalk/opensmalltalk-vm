@@ -141,6 +141,7 @@ Class {
 		'usesMethodClass',
 		'primitiveIndex',
 		'backEnd',
+		'callerSavedRegMask',
 		'postCompileHook',
 		'primInvokeLabel',
 		'methodLabel',
@@ -1222,7 +1223,7 @@ Cogit >> CallRT: callTarget registersToBeSavedMask: registersToBeSaved [
 	<returnTypeC: #'AbstractInstruction *'>
 	| callerSavedRegsToBeSaved lastInst |
 	<var: 'lastInst' type: #'AbstractInstruction *'>
-	callerSavedRegsToBeSaved := backEnd callerSavedRegisterMask bitAnd: registersToBeSaved.
+	callerSavedRegsToBeSaved := callerSavedRegMask bitAnd: registersToBeSaved.
 
 	GPRegMax to: GPRegMin by: -1 do:
 		[:reg|
@@ -2479,6 +2480,12 @@ Cogit >> cPICHasFreedTargets: cPIC [
 Cogit >> cStackPointerAddress [
 	<cmacro: '() ((unsigned long)&CStackPointer)'>
 	^coInterpreter inMemoryCStackPointerAddress
+]
+
+{ #category : #accessing }
+Cogit >> callerSavedRegMask [
+	<cmacro: '() callerSavedRegMask'>
+	^callerSavedRegMask
 ]
 
 { #category : #'jit - api' }
@@ -5849,7 +5856,8 @@ Cogit >> initializeBackend [
 	methodLabel machineCodeSize: 0.
 	methodLabel opcode: Label.
 	methodLabel operands at: 0 put: 0.
-	methodLabel operands at: 1 put: 0 "label offset"
+	methodLabel operands at: 1 put: 0. "label offset"
+	callerSavedRegMask := backEnd callerSavedRegisterMask
 ]
 
 { #category : #initialization }
@@ -8121,9 +8129,7 @@ Cogit >> setInterpreter: aCoInterpreter [
 	threadManager := aCoInterpreter threadManager. "N.B. may be nil"
 	methodZone := CogMethodZone new.
 	objectRepresentation := objectMemory objectRepresentationClass
-								forCogit: self
-								backEnd: backEnd
-								methodZone: methodZone.
+								forCogit: self methodZone: methodZone.
 	methodZone setInterpreter: aCoInterpreter
 				objectRepresentation: objectRepresentation
 				cogit: self.

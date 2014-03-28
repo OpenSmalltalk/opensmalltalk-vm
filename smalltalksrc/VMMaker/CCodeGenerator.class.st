@@ -3072,11 +3072,6 @@ CCodeGenerator >> inlineDispatchesInMethodNamed: selector localizingVars: varsLi
 
 { #category : #utilities }
 CCodeGenerator >> instVarNamesForClass: aClass [
-	((vmClass
-		ifNil: [aClass instVarNames]
-		ifNotNil: [aClass instVarNames reject:
-					[:ivn| vmClass isNonArgumentImplicitReceiverVariableName: ivn]]) includes: 'manager') ifTrue:
-		[self halt: aClass name].
 	^vmClass
 		ifNil: [aClass instVarNames]
 		ifNotNil: [aClass instVarNames reject:

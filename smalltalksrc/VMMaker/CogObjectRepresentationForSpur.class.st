@@ -382,7 +382,7 @@ CogObjectRepresentationForSpur >> genStoreCheckReceiverReg: destReg valueReg: va
 	cogit
 		CallRT: ceStoreCheckTrampoline
 		registersToBeSavedMask: ((cogit registerMaskFor: valueReg)
-										bitAnd: backEnd callerSavedRegisterMask).
+										bitAnd: cogit callerSavedRegMask).
 	jmpImmediate jmpTarget:
 	(jmpDestYoung jmpTarget:
 	(jmpSourceOld jmpTarget:

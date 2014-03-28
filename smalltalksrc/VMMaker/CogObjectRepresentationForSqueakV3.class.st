@@ -634,7 +634,7 @@ CogObjectRepresentationForSqueakV3 >> genStoreSourceReg: sourceReg slotIndex: in
 	cogit
 		CallRT: ceStoreCheckTrampoline
 		registersToBeSavedMask: ((cogit registerMaskFor: sourceReg)
-										bitAnd: backEnd callerSavedRegisterMask).
+										bitAnd: cogit callerSavedRegMask).
 	jmpImmediate jmpTarget:
 	(jmpDestYoung jmpTarget:
 	(jmpSourceOld jmpTarget:
