@@ -294,7 +294,10 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 		(self CallRT: (boolean == objectMemory falseObject
 						ifTrue: [ceSendMustBeBooleanAddFalseTrampoline]
 						ifFalse: [ceSendMustBeBooleanAddTrueTrampoline])).
-	self CmpCq: 0 R: TempReg.
+	"Return to machine code (e.g. via ceEnterCogCodePopReceiverReg in returnToMachineCodeFrame
+	 loads return value into ReceiverResultReg but branch code tests TempReg.  So reload Tempreg."
+	self MoveR: ReceiverResultReg R: TempReg.
+	self CmpCq: 0 R: ReceiverResultReg.
 	self JumpNonZero: retry.
 	ok jmpTarget: (self annotateBytecode: self Label).
 	^0

@@ -356,6 +356,13 @@ CogVMSimulator >> ceContext: aOnceMarriedContext instVar: slotIndex value: anOop
 	^super ceContext: aOnceMarriedContext instVar: slotIndex value: anOop
 ]
 
+{ #category : #'cog jit support' }
+CogVMSimulator >> ceCounterTripped: condition [
+	self transcript cr; nextPutAll: 'counter trpped in '.
+	self shortPrintFrame: framePointer.
+	^super ceCounterTripped: condition
+]
+
 { #category : #trampolines }
 CogVMSimulator >> ceMNUFromPICMNUMethod: aMethodObj receiver: rcvr [
 	"self halt."

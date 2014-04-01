@@ -462,6 +462,18 @@ CoInterpreterPrimitives >> primitiveProfileSemaphore [
 		[self siglong: reenterInterpreter jmp: ReturnToInterpreter]
 ]
 
+{ #category : #'method introspection primitives' }
+CoInterpreterPrimitives >> primitiveResetCountersInMethod [
+	<export: true>
+	<option: #SistaStackToRegisterMappingCogit>
+	| methodReceiver |
+	argumentCount ~= 0 ifTrue:
+		[self primitiveFailFor: PrimErrBadNumArgs].
+	methodReceiver := self stackTop.
+	(self methodHasCogMethod: methodReceiver) ifTrue:
+		[cogit resetCountersIn: (self cogMethodOf: methodReceiver)]
+]
+
 { #category : #'process primitives' }
 CoInterpreterPrimitives >> primitiveResume [
 	"Put this process on the scheduler's lists thus allowing it to proceed next time there is
