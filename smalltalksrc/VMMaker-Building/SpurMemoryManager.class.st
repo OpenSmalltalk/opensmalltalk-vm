@@ -2063,6 +2063,13 @@ SpurMemoryManager >> assimilateNewSegment: segInfo [
 		 endOfMemory := segInfo segLimit - self bridgeSize]
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> averageObjectSize [
+	"Answer an approximation of the average object size.  This is a bit of an underestimate.
+	 In the 32-bit system average object size is about 11 words per object, including header."
+	^8 * self bytesPerSlot
+]
+
 { #category : #snapshot }
 SpurMemoryManager >> baseAddressOfImage [
 	^oldSpaceStart
@@ -9054,16 +9061,14 @@ SpurMemoryManager >> tenuringThreshold [
 	 accessed as a proportion of pastSpace from 0 to 1.   In the Squeak image the tenuring
 	 threshold is an object count. Marry the two notions by multiplying the proportion by
 	 the size of pastSpace and dividing by the average object size, as derived from observation."
-	| averageObjectSize |
-	averageObjectSize := 8 * self wordSize.
-	^(scavenger scavengerTenuringThreshold * scavenger pastSpaceBytes // averageObjectSize) asInteger
+	^(scavenger scavengerTenuringThreshold * scavenger pastSpaceBytes // self averageObjectSize) asInteger
 ]
 
 { #category : #accessing }
 SpurMemoryManager >> tenuringThreshold: threshold [
 	"c.f. tenuringThreshold"
 	scavenger scavengerTenuringThreshold:
-		(threshold * 8 * self wordSize) asFloat
+		(threshold * self averageObjectSize) asFloat
 		/ scavenger pastSpaceBytes asFloat
 ]
 
