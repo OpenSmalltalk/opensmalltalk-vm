@@ -412,7 +412,7 @@ Cogit class >> cog: aCompiledMethod selector: aSelector options: optionsDictiona
 	[cogit
 		setInterpreter: coInterpreter;
 		singleStep: true;
-		initializeCodeZoneFrom: 1024 upTo: coInterpreter memory size.
+		initializeCodeZoneFrom: 1024 upTo: coInterpreter memory size / 2. "leave space for rump C stack"
 	 cogit methodZone freeStart: (cogit methodZone freeStart roundUpTo: 1024)]
 		on: Notification
 		do: [:ex|

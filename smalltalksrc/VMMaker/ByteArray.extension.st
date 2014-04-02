@@ -20,3 +20,8 @@ ByteArray class >> ccgDeclareCForVar: aSymbolOrString [
 ByteArray >> coerceTo: cTypeString sim: interpreterSimulator [
 	^CLiteralArray on: self
 ]
+
+{ #category : #'*VMMaker-accessing' }
+ByteArray >> longAt: byteIndex put: aValue [
+	^self signedLongAt: byteIndex put: aValue
+]
