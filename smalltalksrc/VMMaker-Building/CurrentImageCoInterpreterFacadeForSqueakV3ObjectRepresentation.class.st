@@ -10,6 +10,11 @@ CurrentImageCoInterpreterFacadeForSqueakV3ObjectRepresentation class >> objectRe
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacadeForSqueakV3ObjectRepresentation >> baseHeaderSize [
+	^ObjectMemory baseHeaderSize
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacadeForSqueakV3ObjectRepresentation >> characterTable [
 	^self oopForObject: Character characterTable
 ]

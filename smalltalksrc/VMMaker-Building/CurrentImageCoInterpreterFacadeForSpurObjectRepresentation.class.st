@@ -8,3 +8,8 @@ Class {
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation class >> objectRepresentationClass [
 	^CogObjectRepresentationFor32BitSpur
 ]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> baseHeaderSize [
+	^SpurMemoryManager baseHeaderSize
+]
