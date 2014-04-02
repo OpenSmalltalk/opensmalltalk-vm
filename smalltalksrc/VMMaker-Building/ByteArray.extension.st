@@ -22,6 +22,11 @@ ByteArray >> coerceTo: cTypeString sim: interpreterSimulator [
 ]
 
 { #category : #'*VMMaker-accessing' }
+ByteArray >> longAt: byteIndex [
+	^self signedLongAt: byteIndex
+]
+
+{ #category : #'*VMMaker-accessing' }
 ByteArray >> longAt: byteIndex put: aValue [
 	^self signedLongAt: byteIndex put: aValue
 ]

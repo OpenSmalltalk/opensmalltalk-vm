@@ -7212,24 +7212,13 @@ Cogit >> offsetAndSendTableFor: entryPoint annotation: annotation into: binaryBl
 	<inline: true>
 	self cppIf: NewspeakVM
 		ifTrue:
-			[(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
-				ifTrue:
-					[self assert: annotation = IsSendCall.
-					 binaryBlock
-							value: cmEntryOffset
-							value: sendTrampolines]
+			[self assert: annotation = IsSendCall.
+			 (entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
+				ifTrue: [binaryBlock value: cmEntryOffset value: sendTrampolines]
 				ifFalse:
 					[(entryPoint bitAnd: entryPointMask) = dynSuperEntryAlignment
-						ifTrue:
-							[self assert: annotation = IsNSSendCall.
-							 binaryBlock
-								value: cmDynSuperEntryOffset
-								value: dynamicSuperSendTrampolines]
-						ifFalse:
-							[self assert: annotation = IsSendCall.
-							 binaryBlock
-								value: cmNoCheckEntryOffset
-								value: superSendTrampolines]]]
+						ifTrue: [binaryBlock value: cmDynSuperEntryOffset value: dynamicSuperSendTrampolines]
+						ifFalse: [binaryBlock value: cmNoCheckEntryOffset value: superSendTrampolines]]]
 		ifFalse:
 			[(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
 				ifTrue: [binaryBlock value: cmEntryOffset value: sendTrampolines]
@@ -8489,20 +8478,18 @@ Cogit >> targetMethodAndSendTableFor: entryPoint annotation: annotation into: bi
 	<var: #sendTable type: #'sqInt *'>
 	self cppIf: NewspeakVM
 		ifTrue:
-			[(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
+			[self assert: annotation = IsSendCall.
+			 (entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
 				ifTrue:
-					[self assert: annotation = IsSendCall.
-					 targetMethod := self cCoerceSimple: entryPoint - cmEntryOffset to: #'CogMethod *'.
+					[targetMethod := self cCoerceSimple: entryPoint - cmEntryOffset to: #'CogMethod *'.
 					 sendTable := sendTrampolines]
 				ifFalse:
 					[(entryPoint bitAnd: entryPointMask) = dynSuperEntryAlignment
 						ifTrue:
-							[self assert: annotation = IsNSSendCall.
-							 targetMethod := self cCoerceSimple: entryPoint - cmDynSuperEntryOffset to: #'CogMethod *'.
+							[targetMethod := self cCoerceSimple: entryPoint - cmDynSuperEntryOffset to: #'CogMethod *'.
 							 sendTable := dynamicSuperSendTrampolines]
 						ifFalse:
-							[self assert: annotation = IsSendCall.
-							 targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
+							[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
 							 sendTable := superSendTrampolines]]]
 		ifFalse:
 			[(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
@@ -8602,7 +8589,9 @@ Cogit >> testMcToBcPcMappingForMethod: cogMethod [
 				 stack check and once for the context inst var access.  The bytecode pc can only map
 				 back to a single mcpc, the first, so the second map entry will fail without this hack."
 				self assert: (mcpc = mappedpc or: [prevMcpc = mappedpc]).
-				(self isSendAnnotation: annotation) ifTrue:
+				"IsNSSendCall is used only for pushImplicitReceiver:.  This isn't a send bytecode.
+				 So filter-out these annotations."
+				((self isSendAnnotation: annotation) and: [annotation ~= IsNSSendCall]) ifTrue:
 					[| mcSelector bcSelector |
 					mcSelector := self selectorForSendAt: mcpc annotation: annotation.
 					"sends map to the following pc.  need to find the selector for the previous pc"
