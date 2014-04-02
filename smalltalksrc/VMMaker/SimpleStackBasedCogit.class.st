@@ -2760,7 +2760,7 @@ SimpleStackBasedCogit >> genSendDynamicSuper: selector numArgs: numArgs [
 	numArgs > 2 ifTrue:
 		[self MoveCq: numArgs R: SendNumArgsReg].
 	self MoveCw: selector R: ClassReg.
-	self CallNewspeakSend: (dynamicSuperSendTrampolines at: (numArgs min: NumSendTrampolines - 1)).
+	self CallSend: (dynamicSuperSendTrampolines at: (numArgs min: NumSendTrampolines - 1)).
 	usesMethodClass := true.
 	self flag: 'currently caller pushes result'.
 	self PushR: ReceiverResultReg.
