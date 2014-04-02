@@ -76,6 +76,11 @@ CurrentImageCoInterpreterFacade >> argumentCountOfMethodHeader: aSmallIntegerOop
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> baseHeaderSize [
+	^self subclassResponsibility
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> byteAt: index [
 	^memory at: index + 1
 ]
@@ -403,6 +408,11 @@ CurrentImageCoInterpreterFacade >> isYoung: anOop [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> isYoungObject: anOop [
+	^false
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> lengthOf: anOop [
 	^(self objectForOop: anOop) basicSize
 ]
@@ -622,7 +632,7 @@ CurrentImageCoInterpreterFacade >> rawHeaderOf: anOop put: aCogMethodSurrogate [
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> rumpCStackAddress [
-	^memory size / 2 + 1024
+	^memory size / 4 * 3 + 1024
 ]
 
 { #category : #accessing }
@@ -717,6 +727,16 @@ CurrentImageCoInterpreterFacade >> tempCountForBlockStartingAt: startpc in: meth
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> tempCountOf: anOop [
 	^(self objectForOop: anOop) numTemps
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> temporaryCountOfMethodHeader: header [
+	^(CompiledMethod
+			newMethod: 8
+			header: (header <= SmallInteger maxVal
+						ifTrue: [header]
+						ifFalse: [(header bitAnd: SmallInteger maxVal) + SmallInteger minVal]))
+		numTemps
 ]
 
 { #category : #accessing }
