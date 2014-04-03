@@ -238,9 +238,9 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	<var: #desc type: #'CogSimStackEntry *'>
 	<var: #fixup type: #'BytecodeFixup *'>
 	<var: #ok type: #'AbstractInstruction *'>
+	<var: #retry type: #'AbstractInstruction *'>
 	<var: #counter type: #'AbstractInstruction *'>
 	<var: #countTripped type: #'AbstractInstruction *'>
-	<var: #retry type: #'AbstractInstruction *'>
 	self ssFlushTo: simStackPtr - 1.
 	desc := self ssTop.
 	self ssPop: 1.
@@ -294,11 +294,12 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 		(self CallRT: (boolean == objectMemory falseObject
 						ifTrue: [ceSendMustBeBooleanAddFalseTrampoline]
 						ifFalse: [ceSendMustBeBooleanAddTrueTrampoline])).
-	"Return to machine code (e.g. via ceEnterCogCodePopReceiverReg in returnToMachineCodeFrame
-	 loads return value into ReceiverResultReg but branch code tests TempReg.  So reload Tempreg."
-	self MoveR: ReceiverResultReg R: TempReg.
-	self CmpCq: 0 R: ReceiverResultReg.
-	self JumpNonZero: retry.
+	"Now we have to jump back to the retry point.  This is always the point at which the boolean is tested.
+	 The register to be tested must be reloaded with the return value of the trampoline; this is for the case
+	 where the trampoline returns immediately without sending back.."
+	backEnd cResultRegister ~= TempReg ifTrue:
+		[self MoveR: backEnd cResultRegister R: TempReg].
+	self Jump: retry.
 	ok jmpTarget: (self annotateBytecode: self Label).
 	^0
 ]
@@ -366,6 +367,7 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	rcvrIsInt := (self ssValue: 1) type = SSConstant
 				 and: [objectMemory isIntegerObject: (rcvrInt := (self ssValue: 1) constant)].
 
+	"short-cut the jump if operands are SmallInteger constants."
 	(argIsInt and: [rcvrIsInt]) ifTrue:
 		[self cCode: '' inSmalltalk: "In Simulator ints are unsigned..."
 				[rcvrInt := objectMemory integerValueOf: rcvrInt.
@@ -444,6 +446,9 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 				ifTrue: [primDescriptor opcode]
 				ifFalse: [self inverseBranchFor: primDescriptor opcode])
 		operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
+	self SubCq: 1 R: SendNumArgsReg. "Count untaken"
+	counter addDependent: (self annotateAbsolutePCRef:
+		(self MoveR: SendNumArgsReg Aw: counter asUnsignedInteger)). "write back"
 	self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC).
 	countTripped jmpTarget: (jumpNotSmallInts jmpTarget: self Label).
 	argIsInt ifTrue:
