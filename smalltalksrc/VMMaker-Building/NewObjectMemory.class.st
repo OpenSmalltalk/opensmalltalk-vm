@@ -2057,6 +2057,12 @@ NewObjectMemory >> maybeFillWithAllocationCheckFillerFrom: start to: end [
 									ifFalse: [AllocationCheckFiller])]]
 ]
 
+{ #category : #'primitive support' }
+NewObjectMemory >> minLargeHeaderSize [
+	"Answer the smallest byte size requiring a large header."
+	^256
+]
+
 { #category : #accessing }
 NewObjectMemory >> needGCFlag [
 	^needGCFlag
@@ -2641,6 +2647,15 @@ NewObjectMemory >> sizeBitsOfSafe: oop [
 	^type = HeaderTypeSizeAndClass
 		ifTrue: [(self sizeHeader: oop) bitAnd: AllButTypeMask]
 		ifFalse: [header bitAnd: SizeMask]
+]
+
+{ #category : #'primitive support' }
+NewObjectMemory >> sizeHeader: obj putBodySize: byteSize [
+	"Too lazy to set the odd bits right now.  Just insist on a multiple of 4 bytes."
+	self assert: byteSize \\ 4 = 0.
+	self longAt: obj - (BytesPerWord*2)
+		put: ((byteSize + BytesPerWord bitAnd: LongSizeMask)
+				bitOr: ((self longAt: obj - (BytesPerWord*2)) bitClear: LongSizeMask))
 ]
 
 { #category : #'memory access' }
