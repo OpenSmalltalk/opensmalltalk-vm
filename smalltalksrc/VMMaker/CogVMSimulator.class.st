@@ -358,7 +358,7 @@ CogVMSimulator >> ceContext: aOnceMarriedContext instVar: slotIndex value: anOop
 
 { #category : #'cog jit support' }
 CogVMSimulator >> ceCounterTripped: condition [
-	self transcript cr; nextPutAll: 'counter trpped in '.
+	self halt transcript cr; nextPutAll: 'counter tripped in '.
 	self shortPrintFrame: framePointer.
 	^super ceCounterTripped: condition
 ]
@@ -3667,7 +3667,7 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 											s notEmpty ifTrue: [breakCount := Integer readFrom: s readStream]];
 		add: 'set break selector...' action: [|s| s := UIManager default request: 'break selector'.
 											s notEmpty ifTrue: [self setBreakSelector: s]];
-		add: 'set break block...' action: [|s| s := UIManager default request: 'break block'.
+		add: 'set break block...' action: [|s| s := UIManager default request: 'break block' initialAnswer: '[:theCogit| false]'.
 											s notEmpty ifTrue: [self setBreakBlockFromString: s]];
 		add: 'set cogit break method...' action: [(self promptHex: 'cogit breakMethod') ifNotNil: [:bm| cogit setBreakMethod: bm]];
 		add: (printBytecodeAtEachStep
