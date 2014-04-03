@@ -1,0 +1,10 @@
+# Copied, perhaps edited, from ../src/examplePlugins.ext
+EXTERNAL_PLUGINS = \
+BochsIA32Plugin \
+CroquetPlugin \
+SqueakFFIPrims \
+SqueakSSL \
+FloatArrayPlugin \
+FloatMathPlugin \
+Mpeg3Plugin \
+UnixOSProcessPlugin

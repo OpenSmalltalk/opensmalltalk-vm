@@ -1,0 +1,457 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 44;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		949199FD098186FB000FC37A /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 66DF6C8201D7DF7E00A80119 /* Carbon.framework */; };
+		A2181C0E10814EC700B8FC7A /* dct.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BC910814EC700B8FC7A /* dct.c */; };
+		A2181C0F10814EC700B8FC7A /* header.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BCA10814EC700B8FC7A /* header.c */; };
+		A2181C1010814EC700B8FC7A /* layer1.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BCC10814EC700B8FC7A /* layer1.c */; };
+		A2181C1110814EC700B8FC7A /* layer2.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BCD10814EC700B8FC7A /* layer2.c */; };
+		A2181C1210814EC700B8FC7A /* layer3.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BCE10814EC700B8FC7A /* layer3.c */; };
+		A2181C1310814EC700B8FC7A /* mpeg3audio.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BCF10814EC700B8FC7A /* mpeg3audio.c */; };
+		A2181C1410814EC700B8FC7A /* pcm.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BD110814EC700B8FC7A /* pcm.c */; };
+		A2181C1510814EC700B8FC7A /* synthesizers.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BD210814EC700B8FC7A /* synthesizers.c */; };
+		A2181C1610814EC700B8FC7A /* tables.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BD310814EC700B8FC7A /* tables.c */; };
+		A2181C1710814EC700B8FC7A /* bitstream.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BD510814EC700B8FC7A /* bitstream.c */; };
+		A2181C1810814EC700B8FC7A /* changesForSqueak.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BD710814EC700B8FC7A /* changesForSqueak.c */; };
+		A2181C1D10814EC700B8FC7A /* libmpeg3.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BDE10814EC700B8FC7A /* libmpeg3.c */; };
+		A2181C2010814EC700B8FC7A /* mpeg3atrack.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BE210814EC700B8FC7A /* mpeg3atrack.c */; };
+		A2181C2210814EC700B8FC7A /* mpeg3demux.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BE610814EC700B8FC7A /* mpeg3demux.c */; };
+		A2181C2310814EC700B8FC7A /* mpeg3io.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BE810814EC700B8FC7A /* mpeg3io.c */; };
+		A2181C2510814EC700B8FC7A /* mpeg3title.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BED10814EC700B8FC7A /* mpeg3title.c */; };
+		A2181C2710814EC700B8FC7A /* mpeg3vtrack.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BF010814EC700B8FC7A /* mpeg3vtrack.c */; };
+		A2181C2B10814EC700B8FC7A /* getpicture.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BF710814EC700B8FC7A /* getpicture.c */; };
+		A2181C2C10814EC700B8FC7A /* headers.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BF810814EC700B8FC7A /* headers.c */; };
+		A2181C2D10814EC700B8FC7A /* idct.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BF910814EC700B8FC7A /* idct.c */; };
+		A2181C2E10814EC700B8FC7A /* macroblocks.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BFC10814EC700B8FC7A /* macroblocks.c */; };
+		A2181C3210814EC700B8FC7A /* mmxtest.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181C0010814EC700B8FC7A /* mmxtest.c */; };
+		A2181C3310814EC700B8FC7A /* motion.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181C0110814EC700B8FC7A /* motion.c */; };
+		A2181C3410814EC700B8FC7A /* mpeg3video.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181C0210814EC700B8FC7A /* mpeg3video.c */; };
+		A2181C3510814EC700B8FC7A /* output.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181C0510814EC700B8FC7A /* output.c */; };
+		A2181C3710814EC700B8FC7A /* reconstruct.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181C0710814EC700B8FC7A /* reconstruct.c */; };
+		A2181C3810814EC700B8FC7A /* seek.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181C0810814EC700B8FC7A /* seek.c */; };
+		A2181C3910814EC700B8FC7A /* slice.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181C0910814EC700B8FC7A /* slice.c */; };
+		A2181C3A10814EC700B8FC7A /* vlc.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181C0B10814EC700B8FC7A /* vlc.c */; };
+		A2181C46108150C800B8FC7A /* Mpeg3Plugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181C45108150C800B8FC7A /* Mpeg3Plugin.c */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		66DF6C8201D7DF7E00A80119 /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
+		949199E209818612000FC37A /* Mpeg3Plugin.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Mpeg3Plugin.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		A2181BBF10814E0B00B8FC7A /* sqVirtualMachine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqVirtualMachine.h; path = ../../platforms/Cross/vm/sqVirtualMachine.h; sourceTree = SOURCE_ROOT; };
+		A2181BC010814E0B00B8FC7A /* sqMemoryAccess.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqMemoryAccess.h; path = ../../platforms/Cross/vm/sqMemoryAccess.h; sourceTree = SOURCE_ROOT; };
+		A2181BC210814E4E00B8FC7A /* sqConfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqConfig.h; path = "../../platforms/Mac OS/vm/sqConfig.h"; sourceTree = SOURCE_ROOT; };
+		A2181BC310814E4E00B8FC7A /* sqPlatformSpecific.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqPlatformSpecific.h; path = "../../platforms/Mac OS/vm/sqPlatformSpecific.h"; sourceTree = SOURCE_ROOT; };
+		A2181BC410814E7000B8FC7A /* interp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../src/vm/interp.h; sourceTree = SOURCE_ROOT; };
+		A2181BC510814EA000B8FC7A /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = "../../platforms/Mac OS/vm/config.h"; sourceTree = SOURCE_ROOT; };
+		A2181BC810814EC700B8FC7A /* ac3.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ac3.h; sourceTree = "<group>"; };
+		A2181BC910814EC700B8FC7A /* dct.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = dct.c; sourceTree = "<group>"; };
+		A2181BCA10814EC700B8FC7A /* header.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = header.c; sourceTree = "<group>"; };
+		A2181BCB10814EC700B8FC7A /* huffman.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = huffman.h; sourceTree = "<group>"; };
+		A2181BCC10814EC700B8FC7A /* layer1.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = layer1.c; sourceTree = "<group>"; };
+		A2181BCD10814EC700B8FC7A /* layer2.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = layer2.c; sourceTree = "<group>"; };
+		A2181BCE10814EC700B8FC7A /* layer3.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = layer3.c; sourceTree = "<group>"; };
+		A2181BCF10814EC700B8FC7A /* mpeg3audio.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mpeg3audio.c; sourceTree = "<group>"; };
+		A2181BD010814EC700B8FC7A /* mpeg3audio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mpeg3audio.h; sourceTree = "<group>"; };
+		A2181BD110814EC700B8FC7A /* pcm.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = pcm.c; sourceTree = "<group>"; };
+		A2181BD210814EC700B8FC7A /* synthesizers.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = synthesizers.c; sourceTree = "<group>"; };
+		A2181BD310814EC700B8FC7A /* tables.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = tables.c; sourceTree = "<group>"; };
+		A2181BD410814EC700B8FC7A /* tables.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tables.h; sourceTree = "<group>"; };
+		A2181BD510814EC700B8FC7A /* bitstream.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = bitstream.c; sourceTree = "<group>"; };
+		A2181BD610814EC700B8FC7A /* bitstream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bitstream.h; sourceTree = "<group>"; };
+		A2181BD710814EC700B8FC7A /* changesForSqueak.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = changesForSqueak.c; sourceTree = "<group>"; };
+		A2181BD810814EC700B8FC7A /* changesForSqueak.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = changesForSqueak.h; sourceTree = "<group>"; };
+		A2181BDD10814EC700B8FC7A /* ioctl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ioctl.h; sourceTree = "<group>"; };
+		A2181BDE10814EC700B8FC7A /* libmpeg3.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = libmpeg3.c; sourceTree = "<group>"; };
+		A2181BDF10814EC700B8FC7A /* libmpeg3.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = libmpeg3.h; sourceTree = "<group>"; };
+		A2181BE210814EC700B8FC7A /* mpeg3atrack.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mpeg3atrack.c; sourceTree = "<group>"; };
+		A2181BE310814EC700B8FC7A /* mpeg3atrack.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mpeg3atrack.h; sourceTree = "<group>"; };
+		A2181BE510814EC700B8FC7A /* mpeg3css.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mpeg3css.h; sourceTree = "<group>"; };
+		A2181BE610814EC700B8FC7A /* mpeg3demux.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mpeg3demux.c; sourceTree = "<group>"; };
+		A2181BE710814EC700B8FC7A /* mpeg3demux.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mpeg3demux.h; sourceTree = "<group>"; };
+		A2181BE810814EC700B8FC7A /* mpeg3io.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mpeg3io.c; sourceTree = "<group>"; };
+		A2181BE910814EC700B8FC7A /* mpeg3io.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mpeg3io.h; sourceTree = "<group>"; };
+		A2181BEA10814EC700B8FC7A /* mpeg3private.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mpeg3private.h; sourceTree = "<group>"; };
+		A2181BEC10814EC700B8FC7A /* mpeg3protos.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mpeg3protos.h; sourceTree = "<group>"; };
+		A2181BED10814EC700B8FC7A /* mpeg3title.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mpeg3title.c; sourceTree = "<group>"; };
+		A2181BEE10814EC700B8FC7A /* mpeg3title.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mpeg3title.h; sourceTree = "<group>"; };
+		A2181BF010814EC700B8FC7A /* mpeg3vtrack.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mpeg3vtrack.c; sourceTree = "<group>"; };
+		A2181BF110814EC700B8FC7A /* mpeg3vtrack.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mpeg3vtrack.h; sourceTree = "<group>"; };
+		A2181BF410814EC700B8FC7A /* timecode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = timecode.h; sourceTree = "<group>"; };
+		A2181BF710814EC700B8FC7A /* getpicture.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = getpicture.c; sourceTree = "<group>"; };
+		A2181BF810814EC700B8FC7A /* headers.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = headers.c; sourceTree = "<group>"; };
+		A2181BF910814EC700B8FC7A /* idct.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = idct.c; sourceTree = "<group>"; };
+		A2181BFA10814EC700B8FC7A /* idct.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = idct.h; sourceTree = "<group>"; };
+		A2181BFB10814EC700B8FC7A /* layerdata.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = layerdata.h; sourceTree = "<group>"; };
+		A2181BFC10814EC700B8FC7A /* macroblocks.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = macroblocks.c; sourceTree = "<group>"; };
+		A2181C0010814EC700B8FC7A /* mmxtest.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mmxtest.c; sourceTree = "<group>"; };
+		A2181C0110814EC700B8FC7A /* motion.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = motion.c; sourceTree = "<group>"; };
+		A2181C0210814EC700B8FC7A /* mpeg3video.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mpeg3video.c; sourceTree = "<group>"; };
+		A2181C0310814EC700B8FC7A /* mpeg3video.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mpeg3video.h; sourceTree = "<group>"; };
+		A2181C0410814EC700B8FC7A /* mpeg3videoprotos.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mpeg3videoprotos.h; sourceTree = "<group>"; };
+		A2181C0510814EC700B8FC7A /* output.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = output.c; sourceTree = "<group>"; };
+		A2181C0710814EC700B8FC7A /* reconstruct.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = reconstruct.c; sourceTree = "<group>"; };
+		A2181C0810814EC700B8FC7A /* seek.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = seek.c; sourceTree = "<group>"; };
+		A2181C0910814EC700B8FC7A /* slice.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = slice.c; sourceTree = "<group>"; };
+		A2181C0A10814EC700B8FC7A /* slice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = slice.h; sourceTree = "<group>"; };
+		A2181C0B10814EC700B8FC7A /* vlc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = vlc.c; sourceTree = "<group>"; };
+		A2181C0C10814EC700B8FC7A /* vlc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = vlc.h; sourceTree = "<group>"; };
+		A2181C45108150C800B8FC7A /* Mpeg3Plugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = Mpeg3Plugin.c; path = ../../src/plugins/Mpeg3Plugin/Mpeg3Plugin.c; sourceTree = SOURCE_ROOT; };
+		A2181C491081511C00B8FC7A /* Mpeg3Plugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Mpeg3Plugin.h; path = ../../platforms/Cross/plugins/Mpeg3Plugin/Mpeg3Plugin.h; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		949199E009818612000FC37A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				949199FD098186FB000FC37A /* Carbon.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		66DF6BFE01D7DCEA00A80119 = {
+			isa = PBXGroup;
+			children = (
+				66DF6BFF01D7DCEA00A80119 /* Sources */,
+				66DF6C3901D7DCEA00A80119 /* resources */,
+				66DF6C8201D7DF7E00A80119 /* Carbon.framework */,
+				66DF6C4501D7DEEE00A80119 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		66DF6BFF01D7DCEA00A80119 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				A2181C491081511C00B8FC7A /* Mpeg3Plugin.h */,
+				A2181C45108150C800B8FC7A /* Mpeg3Plugin.c */,
+				A2181BC610814EC700B8FC7A /* libmpeg */,
+				A2181BC510814EA000B8FC7A /* config.h */,
+				A2181BC410814E7000B8FC7A /* interp.h */,
+				A2181BC210814E4E00B8FC7A /* sqConfig.h */,
+				A2181BC310814E4E00B8FC7A /* sqPlatformSpecific.h */,
+				A2181BBF10814E0B00B8FC7A /* sqVirtualMachine.h */,
+				A2181BC010814E0B00B8FC7A /* sqMemoryAccess.h */,
+			);
+			name = Sources;
+			sourceTree = "<group>";
+		};
+		66DF6C3901D7DCEA00A80119 /* resources */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = resources;
+			sourceTree = "<group>";
+		};
+		66DF6C4501D7DEEE00A80119 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				949199E209818612000FC37A /* Mpeg3Plugin.bundle */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A2181BC610814EC700B8FC7A /* libmpeg */ = {
+			isa = PBXGroup;
+			children = (
+				A2181BC710814EC700B8FC7A /* audio */,
+				A2181BD510814EC700B8FC7A /* bitstream.c */,
+				A2181BD610814EC700B8FC7A /* bitstream.h */,
+				A2181BD710814EC700B8FC7A /* changesForSqueak.c */,
+				A2181BD810814EC700B8FC7A /* changesForSqueak.h */,
+				A2181BDD10814EC700B8FC7A /* ioctl.h */,
+				A2181BDE10814EC700B8FC7A /* libmpeg3.c */,
+				A2181BDF10814EC700B8FC7A /* libmpeg3.h */,
+				A2181BE210814EC700B8FC7A /* mpeg3atrack.c */,
+				A2181BE310814EC700B8FC7A /* mpeg3atrack.h */,
+				A2181BE510814EC700B8FC7A /* mpeg3css.h */,
+				A2181BE610814EC700B8FC7A /* mpeg3demux.c */,
+				A2181BE710814EC700B8FC7A /* mpeg3demux.h */,
+				A2181BE810814EC700B8FC7A /* mpeg3io.c */,
+				A2181BE910814EC700B8FC7A /* mpeg3io.h */,
+				A2181BEA10814EC700B8FC7A /* mpeg3private.h */,
+				A2181BEC10814EC700B8FC7A /* mpeg3protos.h */,
+				A2181BED10814EC700B8FC7A /* mpeg3title.c */,
+				A2181BEE10814EC700B8FC7A /* mpeg3title.h */,
+				A2181BF010814EC700B8FC7A /* mpeg3vtrack.c */,
+				A2181BF110814EC700B8FC7A /* mpeg3vtrack.h */,
+				A2181BF410814EC700B8FC7A /* timecode.h */,
+				A2181BF610814EC700B8FC7A /* video */,
+			);
+			name = libmpeg;
+			path = ../../platforms/Cross/plugins/Mpeg3Plugin/libmpeg;
+			sourceTree = SOURCE_ROOT;
+		};
+		A2181BC710814EC700B8FC7A /* audio */ = {
+			isa = PBXGroup;
+			children = (
+				A2181BC810814EC700B8FC7A /* ac3.h */,
+				A2181BC910814EC700B8FC7A /* dct.c */,
+				A2181BCA10814EC700B8FC7A /* header.c */,
+				A2181BCB10814EC700B8FC7A /* huffman.h */,
+				A2181BCC10814EC700B8FC7A /* layer1.c */,
+				A2181BCD10814EC700B8FC7A /* layer2.c */,
+				A2181BCE10814EC700B8FC7A /* layer3.c */,
+				A2181BCF10814EC700B8FC7A /* mpeg3audio.c */,
+				A2181BD010814EC700B8FC7A /* mpeg3audio.h */,
+				A2181BD110814EC700B8FC7A /* pcm.c */,
+				A2181BD210814EC700B8FC7A /* synthesizers.c */,
+				A2181BD310814EC700B8FC7A /* tables.c */,
+				A2181BD410814EC700B8FC7A /* tables.h */,
+			);
+			path = audio;
+			sourceTree = "<group>";
+		};
+		A2181BF610814EC700B8FC7A /* video */ = {
+			isa = PBXGroup;
+			children = (
+				A2181BF710814EC700B8FC7A /* getpicture.c */,
+				A2181BF810814EC700B8FC7A /* headers.c */,
+				A2181BF910814EC700B8FC7A /* idct.c */,
+				A2181BFA10814EC700B8FC7A /* idct.h */,
+				A2181BFB10814EC700B8FC7A /* layerdata.h */,
+				A2181BFC10814EC700B8FC7A /* macroblocks.c */,
+				A2181C0010814EC700B8FC7A /* mmxtest.c */,
+				A2181C0110814EC700B8FC7A /* motion.c */,
+				A2181C0210814EC700B8FC7A /* mpeg3video.c */,
+				A2181C0310814EC700B8FC7A /* mpeg3video.h */,
+				A2181C0410814EC700B8FC7A /* mpeg3videoprotos.h */,
+				A2181C0510814EC700B8FC7A /* output.c */,
+				A2181C0710814EC700B8FC7A /* reconstruct.c */,
+				A2181C0810814EC700B8FC7A /* seek.c */,
+				A2181C0910814EC700B8FC7A /* slice.c */,
+				A2181C0A10814EC700B8FC7A /* slice.h */,
+				A2181C0B10814EC700B8FC7A /* vlc.c */,
+				A2181C0C10814EC700B8FC7A /* vlc.h */,
+			);
+			path = video;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		949199E109818612000FC37A /* Mpeg3Plugin */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 949199E409818612000FC37A /* Build configuration list for PBXNativeTarget "Mpeg3Plugin" */;
+			buildPhases = (
+				949199DE09818612000FC37A /* Resources */,
+				949199DF09818612000FC37A /* Sources */,
+				949199E009818612000FC37A /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Mpeg3Plugin;
+			productName = Mpeg3Plugin;
+			productReference = 949199E209818612000FC37A /* Mpeg3Plugin.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		66DF6BFD01D7DCEA00A80119 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = 946BCE000959347500803517 /* Build configuration list for PBXProject "Mpeg3Plugin" */;
+			compatibilityVersion = "Xcode 3.0";
+			developmentRegion = English;
+			hasScannedForEncodings = 1;
+			knownRegions = (
+				English,
+				Japanese,
+				French,
+				German,
+			);
+			mainGroup = 66DF6BFE01D7DCEA00A80119;
+			productRefGroup = 66DF6C4501D7DEEE00A80119 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				949199E109818612000FC37A /* Mpeg3Plugin */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		949199DE09818612000FC37A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		949199DF09818612000FC37A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A2181C0E10814EC700B8FC7A /* dct.c in Sources */,
+				A2181C0F10814EC700B8FC7A /* header.c in Sources */,
+				A2181C1010814EC700B8FC7A /* layer1.c in Sources */,
+				A2181C1110814EC700B8FC7A /* layer2.c in Sources */,
+				A2181C1210814EC700B8FC7A /* layer3.c in Sources */,
+				A2181C1310814EC700B8FC7A /* mpeg3audio.c in Sources */,
+				A2181C1410814EC700B8FC7A /* pcm.c in Sources */,
+				A2181C1510814EC700B8FC7A /* synthesizers.c in Sources */,
+				A2181C1610814EC700B8FC7A /* tables.c in Sources */,
+				A2181C1710814EC700B8FC7A /* bitstream.c in Sources */,
+				A2181C1810814EC700B8FC7A /* changesForSqueak.c in Sources */,
+				A2181C1D10814EC700B8FC7A /* libmpeg3.c in Sources */,
+				A2181C2010814EC700B8FC7A /* mpeg3atrack.c in Sources */,
+				A2181C2210814EC700B8FC7A /* mpeg3demux.c in Sources */,
+				A2181C2310814EC700B8FC7A /* mpeg3io.c in Sources */,
+				A2181C2510814EC700B8FC7A /* mpeg3title.c in Sources */,
+				A2181C2710814EC700B8FC7A /* mpeg3vtrack.c in Sources */,
+				A2181C2B10814EC700B8FC7A /* getpicture.c in Sources */,
+				A2181C2C10814EC700B8FC7A /* headers.c in Sources */,
+				A2181C2D10814EC700B8FC7A /* idct.c in Sources */,
+				A2181C2E10814EC700B8FC7A /* macroblocks.c in Sources */,
+				A2181C3210814EC700B8FC7A /* mmxtest.c in Sources */,
+				A2181C3310814EC700B8FC7A /* motion.c in Sources */,
+				A2181C3410814EC700B8FC7A /* mpeg3video.c in Sources */,
+				A2181C3510814EC700B8FC7A /* output.c in Sources */,
+				A2181C3710814EC700B8FC7A /* reconstruct.c in Sources */,
+				A2181C3810814EC700B8FC7A /* seek.c in Sources */,
+				A2181C3910814EC700B8FC7A /* slice.c in Sources */,
+				A2181C3A10814EC700B8FC7A /* vlc.c in Sources */,
+				A2181C46108150C800B8FC7A /* Mpeg3Plugin.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		946BCE010959347500803517 /* Development */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				HEADER_SEARCH_PATHS = "../../platforms/Cross/plugins/Mpeg3Plugin/libmpeg/**";
+				SDKROOT = "$(DEVELOPER_SDK_DIR)/MacOSX10.5.sdk";
+				USER_HEADER_SEARCH_PATHS = "";
+			};
+			name = Development;
+		};
+		946BCE020959347500803517 /* Deployment */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = i386;
+				SDKROOT = "$(DEVELOPER_SDK_DIR)/MacOSX10.5.sdk";
+			};
+			name = Deployment;
+		};
+		946BCE030959347500803517 /* Default */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				SDKROOT = "$(DEVELOPER_SDK_DIR)/MacOSX10.5.sdk";
+			};
+			name = Default;
+		};
+		949199E509818612000FC37A /* Development */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_MODEL_TUNING = "";
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PRECOMPILE_PREFIX_HEADER = NO;
+				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
+				HEADER_SEARCH_PATHS = /Developer/Headers/FlatCarbon;
+				INFOPLIST_FILE = "Mpeg3Plugin-Info.plist";
+				INSTALL_PATH = "$(HOME)/Library/Bundles";
+				OTHER_CFLAGS = (
+					"-fPIC",
+					"-DNOPTHREADS",
+				);
+				OTHER_LDFLAGS = (
+					"-framework",
+					Carbon,
+				);
+				PKGINFO_FILE_CONTENTS = BNDLFAST;
+				PREBINDING = NO;
+				PRODUCT_NAME = Mpeg3Plugin;
+				USER_HEADER_SEARCH_PATHS = "../../platforms/Cross/plugins/Mpeg3Plugin/libmpeg/**";
+				WRAPPER_EXTENSION = bundle;
+				ZERO_LINK = YES;
+			};
+			name = Development;
+		};
+		949199E609818612000FC37A /* Deployment */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				GCC_ENABLE_CPP_EXCEPTIONS = NO;
+				GCC_ENABLE_CPP_RTTI = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_PRECOMPILE_PREFIX_HEADER = NO;
+				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
+				GCC_UNROLL_LOOPS = YES;
+				HEADER_SEARCH_PATHS = /Developer/Headers/FlatCarbon;
+				INFOPLIST_FILE = "Mpeg3Plugin-Info.plist";
+				INSTALL_PATH = "$(HOME)/Library/Bundles";
+				OTHER_CFLAGS = "-DNOPTHREADS";
+				OTHER_LDFLAGS = (
+					"-framework",
+					Carbon,
+				);
+				PREBINDING = NO;
+				PRODUCT_NAME = Mpeg3Plugin;
+				USER_HEADER_SEARCH_PATHS = "../../platforms/Cross/plugins/Mpeg3Plugin/libmpeg/**";
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Deployment;
+		};
+		949199E709818612000FC37A /* Default */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_PRECOMPILE_PREFIX_HEADER = NO;
+				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
+				INFOPLIST_FILE = "Mpeg3Plugin-Info.plist";
+				INSTALL_PATH = "$(HOME)/Library/Bundles";
+				OTHER_LDFLAGS = (
+					"-framework",
+					Carbon,
+				);
+				PREBINDING = NO;
+				PRODUCT_NAME = Mpeg3Plugin;
+				WRAPPER_EXTENSION = bundle;
+				ZERO_LINK = YES;
+			};
+			name = Default;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		946BCE000959347500803517 /* Build configuration list for PBXProject "Mpeg3Plugin" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				946BCE010959347500803517 /* Development */,
+				946BCE020959347500803517 /* Deployment */,
+				946BCE030959347500803517 /* Default */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Default;
+		};
+		949199E409818612000FC37A /* Build configuration list for PBXNativeTarget "Mpeg3Plugin" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				949199E509818612000FC37A /* Development */,
+				949199E609818612000FC37A /* Deployment */,
+				949199E709818612000FC37A /* Default */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Default;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 66DF6BFD01D7DCEA00A80119 /* Project object */;
+}

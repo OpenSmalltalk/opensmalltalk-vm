@@ -1,0 +1,39 @@
+# This is an example internal plugin list.
+# Edit plugins.int in vm build dir to specify internal plugins to be built and
+# linked into the vm.
+INTERNAL_PLUGINS = \
+ADPCMCodecPlugin \
+AsynchFilePlugin \
+B3DAcceleratorPlugin \
+B2DPlugin \
+BitBltPlugin \
+BMPReadWriterPlugin \
+ZipPlugin \
+DropPlugin \
+DSAPrims \
+FFTPlugin \
+FilePlugin \
+HostWindowPlugin \
+IA32ABI \
+InternetConfigPlugin \
+JoystickTabletPlugin \
+JPEGReaderPlugin \
+JPEGReadWriter2Plugin \
+Klatt \
+LargeIntegers \
+LocalePlugin \
+MacMenubarPlugin \
+Matrix2x3Plugin \
+MIDIPlugin \
+MiscPrimitivePlugin \
+RePlugin \
+SecurityPlugin \
+SerialPlugin \
+SocketPlugin \
+SoundCodecPrims \
+SoundGenerationPlugin \
+SoundPlugin \
+StarSqueakPlugin \
+SurfacePlugin \
+UUIDPlugin \
+VMProfileMacSupportPlugin \
