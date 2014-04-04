@@ -1,7 +1,8 @@
-/* Automatically generated on Mon Sep 23 09:23:27 PDT 2013 */
+/* Automatically generated on Wed Apr 2 19:33:03 PDT 2014 */
 extern sqExport vm_exports[];
 extern sqExport os_exports[];
 extern sqExport ADPCMCodecPlugin_exports[];
+extern sqExport AioPlugin_exports[];
 extern sqExport AsynchFilePlugin_exports[];
 extern sqExport B3DAcceleratorPlugin_exports[];
 extern sqExport B2DPlugin_exports[];
@@ -41,6 +42,7 @@ sqExport *pluginExports[] = {
 	vm_exports,
 	os_exports,
 	ADPCMCodecPlugin_exports,
+	AioPlugin_exports,
 	AsynchFilePlugin_exports,
 	B3DAcceleratorPlugin_exports,
 	B2DPlugin_exports,
