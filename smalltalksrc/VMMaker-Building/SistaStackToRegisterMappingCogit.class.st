@@ -1,3 +1,47 @@
+"
+A SistaStackToRegisterMappingCogit is a refinement of StackToRegisterMappingCogit that generates code suitable for dynamic optimization by Sista, the Speculative Inlining Smalltalk Architecture, a project by Clément Bera and Eliot Miranda.  Sista is an optimizer that exists in the Smalltalk image, /not/ in the VM,  and optimizes by substituting normal bytecoded methods by optimized bytecoded methods that may use special bytecodes for which the Cogit can generate faster code.  These bytecodes eliminate overheads such as bounds checks or polymorphic code (indexing Array, ByteArray, String etc).  But the bulk of the optimization performed is in inlining blocks and sends for the common path.
+
+The basic scheme is that SistaStackToRegisterMappingCogit generates code containing performance counters.  When these counters trip, a callback into the image is performed, at which point Sista analyses some portion of the stack, looking at performance data for the methods on the stack, and optimises based on teh stack and performance data.  Execution then resumes in the optimized code.
+
+SistaStackToRegisterMappingCogit adds counters to conditional branches.  Each branch has an executed and a taken count, implemented at the two 16-bit halves of a single 32-bit word.  Each counter pair is initialized with initialCounterValue.  On entry to the branch the executed count is decremented and if the count goes below zero the ceMustBeBooleanAdd[True|False] trampoline called.  The trampoline distinguishes between true mustBeBoolean and counter trips because in the former the register temporarily holding the counter value will contain zero.  Then the condition is tested, and if the branch is taken the taken count is decremented.  The two counter values allow an optimizer to collect basic block execution paths and to know what are the ""hot"" paths through execution that are worth agressively optimizing.  Since conditional branches are about 1/6 as frequent as sends, and since they can be used to determine the hot path throguh code, they are a better choice to count than, for example, method or block entry.
+
+SistaStackToRegisterMappingCogit implements picDataFor:into: that fills an Array with the state of the counters in a method and the state of each linked send in a method.  This is used to implement a primitive used by the optimizer to answer the branch and send data for a method as an Array.
+
+Instance Variables
+	counterIndex:			<Integer>
+	counterMethodCache:	<CogMethod>
+	counters:				<Array of AbstractInstruction>
+	initialCounterValue:		<Integer>
+	numCounters:			<Integer>
+	picData:				<Integer Oop>
+	picDataIndex:			<Integer>
+	prevMapAbsPCMcpc:	<Integer>
+
+counterIndex
+	- xxxxx
+
+counterMethodCache
+	- xxxxx
+
+counters
+	- xxxxx
+
+initialCounterValue
+	- xxxxx
+
+numCounters
+	- xxxxx
+
+picData
+	- xxxxx
+
+picDataIndex
+	- xxxxx
+
+prevMapAbsPCMcpc
+	- xxxxx
+
+"
 Class {
 	#name : #SistaStackToRegisterMappingCogit,
 	#superclass : #StackToRegisterMappingCogit,
@@ -232,11 +276,11 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	 Each conditional has a 32-bit counter split into an upper 16 bits counting executions
 	 and a lower half counting untaken executions of the branch.  Executing the branch
 	 decrements the upper half, tripping if the count goes negative.  Not taking the branch
-	 decrements the lower half."
+	 decrements the lower half.  N.B. We *do not* eliminate dead branches (true ifTrue:/true ifFalse:)
+	 so that scanning for send and branch data is simplified and that branch data is correct."
 	<inline: false>
-	| desc fixup ok counter countTripped retry |
+	| desc ok counter countTripped retry |
 	<var: #desc type: #'CogSimStackEntry *'>
-	<var: #fixup type: #'BytecodeFixup *'>
 	<var: #ok type: #'AbstractInstruction *'>
 	<var: #retry type: #'AbstractInstruction *'>
 	<var: #counter type: #'AbstractInstruction *'>
@@ -244,20 +288,6 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	self ssFlushTo: simStackPtr - 1.
 	desc := self ssTop.
 	self ssPop: 1.
-	(desc type == SSConstant
-	 and: [desc constant = objectMemory trueObject or: [desc constant = objectMemory falseObject]]) ifTrue:
-		["Must arrange there's a fixup at the target whether it is jumped to or
-		  not so that the simStackPtr can be kept correct."
-		 fixup := self ensureFixupAt: targetBytecodePC - initialPC.
-		 "Must enter any annotatedConstants into the map"
-		 self annotateBytecodeIfAnnotated: desc.
-		 "Must annotate the bytecode for correct pc mapping."
-		 self annotateBytecode: (desc constant = boolean
-									ifTrue: [self Jump: fixup]
-									ifFalse: [self prevInstIsPCAnnotated
-												ifTrue: [self Nop]
-												ifFalse: [self Label]]).
-		 ^0].
 	desc popToReg: TempReg.
 
 	self ssAllocateRequiredReg: SendNumArgsReg. "Use this as the count reg."
@@ -648,7 +678,8 @@ SistaStackToRegisterMappingCogit >> mapFor: cogMethod bcpc: startbcpc performUnt
 					 bcpc := nextBcpc.
 					 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]].
 				annotation = IsAbsPCReference ifTrue:
-					[prevMapAbsPCMcpc := mcpc]]
+					[self assert: mcpc ~= 0.
+					 prevMapAbsPCMcpc := mcpc]]
 			ifFalse:
 				[mcpc := mcpc + (mapByte >= DisplacementX2N
 									ifTrue: [mapByte - DisplacementX2N << AnnotationShift]
@@ -693,8 +724,7 @@ SistaStackToRegisterMappingCogit >> picDataFor: descriptor Mcpc: mcpc Bcpc: bcpc
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<var: #mcpc type: #'char *'>
 	<var: #cogMethodArg type: #'void *'>
-	| entryPoint offset targetMethod tuple |
-	<var: #targetMethod type: #'CogMethod *'>
+	| entryPoint tuple |
 	descriptor isNil ifTrue:
 		[^0].
 	descriptor isBranch ifFalse: "infer it's a send"
@@ -702,12 +732,9 @@ SistaStackToRegisterMappingCogit >> picDataFor: descriptor Mcpc: mcpc Bcpc: bcpc
 		 entryPoint := backEnd callTargetFromReturnAddress: mcpc asUnsignedInteger.
 		 entryPoint <= methodZoneBase ifTrue: "send is not linked"
 			[^0].
-		"It's a linked send; find which kind."
-		offset := (entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
-						ifTrue: [cmEntryOffset]
-						ifFalse: [cmNoCheckEntryOffset].
-		 targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
-		 tuple := self picDataForSendTo: targetMethod at: mcpc bcpc: bcpc.
+		 self targetMethodAndSendTableFor: entryPoint into: "It's a linked send; find which kind."
+			[:targetMethod :sendTable|
+			 tuple := self picDataForSendTo: targetMethod at: mcpc bcpc: bcpc + 1 - descriptor numBytes].
 		 tuple = 0 ifTrue: [^PrimErrNoMemory].
 		 objectMemory storePointer: picDataIndex ofObject: picData withValue: tuple.
 		 picDataIndex := picDataIndex + 1.
@@ -724,8 +751,7 @@ SistaStackToRegisterMappingCogit >> picDataFor: descriptor Mcpc: mcpc Bcpc: bcpc
 
 { #category : #'method introspection' }
 SistaStackToRegisterMappingCogit >> picDataFor: cogMethod into: arrayObj [
-	"Answer the zero-relative bytecode pc matching the machine code pc argument in
-	 cogMethod, given the start of the bytecodes for cogMethod's block or method object."
+	"Collect the branch and send data for cogMethod, storing it into arrayObj."
 	<api>
 	<var: #cogMethod type: #'CogMethod *'>
 	| errCode |
@@ -741,7 +767,30 @@ SistaStackToRegisterMappingCogit >> picDataFor: cogMethod into: arrayObj [
 	errCode ~= 0 ifTrue:
 		[self assert: errCode = PrimErrNoMemory.
 		 ^-1].
+	cogMethod blockEntryOffset ~= 0 ifTrue:
+		[errCode := self blockDispatchTargetsFor: cogMethod
+						perform: #picDataForBlockEntry:Method:
+						arg: cogMethod asVoidPointer.
+		 errCode ~= 0 ifTrue:
+			[self assert: errCode = PrimErrNoMemory.
+			 ^-1]].
 	^picDataIndex
+]
+
+{ #category : #'method introspection' }
+SistaStackToRegisterMappingCogit >> picDataForBlockEntry: blockEntryMcpc Method: cogMethod [
+	"Collect the branch and send data for the block method starting at blockEntryMcpc, storing it into picData."
+	| cogBlockMethod |
+	<var: #cogBlockMethod type: #'CogBlockMethod *'>
+	cogBlockMethod := self cCoerceSimple: blockEntryMcpc - (self sizeof: CogBlockMethod)
+							  to: #'CogBlockMethod *'.
+	cogBlockMethod stackCheckOffset = 0 ifTrue:
+		[^0].
+	^self
+		mapFor: cogBlockMethod
+		bcpc: cogBlockMethod startpc
+		performUntil: #picDataFor:Mcpc:Bcpc:Method:
+		arg: cogMethod
 ]
 
 { #category : #'method introspection' }
@@ -767,6 +816,13 @@ SistaStackToRegisterMappingCogit >> picDataForConditionalBranch: counterReferenc
 
 { #category : #'method introspection' }
 SistaStackToRegisterMappingCogit >> picDataForSendTo: cogMethod at: sendMcpc bcpc: sendBcpc [
+	"Answer a tuple with the send data for a linked send to cogMethod.
+	 If the target is a CogMethod (monomorphic send) answer
+		{ bytecode pc, inline cache class, target method }
+	 If the target is an open PIC (megamorphic send) answer
+		{ bytecode pc, nil, send selector }
+	If the target is a closed PIC (polymorphic send) answer
+		{ bytecode pc, first class, target method, second class, second target method, ... }"
 	<var: #cogMethod type: #'CogMethod *'>
 	<var: #sendMcpc type: #'char *'>
 	| tuple |
@@ -778,10 +834,10 @@ SistaStackToRegisterMappingCogit >> picDataForSendTo: cogMethod at: sendMcpc bcp
 			[^0].
 		objectMemory
 			storePointerUnchecked: 0 ofObject: tuple withValue: (objectMemory integerObjectOf: sendBcpc);
-			storePointer: 1 ofObject: tuple withValue: cogMethod methodObject;
-			storePointer: 2
+			storePointer: 1
 				ofObject: tuple
-					withValue: (objectRepresentation classForInlineCacheTag: (backEnd inlineCacheTagAt: sendMcpc asUnsignedInteger)).
+					withValue: (objectRepresentation classForInlineCacheTag: (backEnd inlineCacheTagAt: sendMcpc asUnsignedInteger));
+			storePointer: 2 ofObject: tuple withValue: cogMethod methodObject.
 		^tuple].
 	cogMethod cmType = CMClosedPIC ifTrue:
 		[tuple := objectMemory
@@ -795,12 +851,13 @@ SistaStackToRegisterMappingCogit >> picDataForSendTo: cogMethod at: sendMcpc bcp
 	cogMethod cmType = CMOpenPIC ifTrue:
 		[tuple := objectMemory
 					eeInstantiateClass: (objectMemory splObj: ClassArray)
-					indexableSize: 2.
+					indexableSize: 3.
 		tuple = 0 ifTrue:
 			[^0].
-		coInterpreter
-			storeInteger: 0 ofObject: tuple withValue: sendBcpc;
-			storePointerUnchecked: 1 ofObject: tuple withValue: objectMemory nilObject.
+		objectMemory
+			storePointerUnchecked: 0 ofObject: tuple withValue: (objectMemory integerObjectOf: sendBcpc);
+			storePointerUnchecked: 1 ofObject: tuple withValue: objectMemory nilObject;
+			storePointer: 2 ofObject: tuple withValue: cogMethod selector.
 		^tuple].
 	self error: 'invalid method type'.
 	^0 "to get Slang to type this method as answering sqInt"
@@ -811,9 +868,8 @@ SistaStackToRegisterMappingCogit >> populate: tuple withPICInfoFor: cPIC firstCa
 	"Populate tuple (which must be large enough) with the ClosedPIC's target method class pairs.
 	 The first entry in tuple contains the bytecode pc for the send, so skip the tuple's first field."
 	<var: #cPIC type: #'CogMethod *'>
-	| pc cacheTag classOop entryPoint targetMethod |
+	| pc cacheTag classOop entryPoint targetMethod value |
 	<var: #targetMethod type: #'CogMethod *'>
-	self halt.
 	pc := cPIC asInteger + firstCPICCaseOffset.
 	1 to: cPIC cPICNumCases do:
 		[:i|
@@ -825,13 +881,16 @@ SistaStackToRegisterMappingCogit >> populate: tuple withPICInfoFor: cPIC firstCa
 		classOop := objectRepresentation classForInlineCacheTag: cacheTag.
 		objectMemory storePointer: i * 2 - 1 ofObject: tuple withValue: classOop.
 		entryPoint := backEnd jumpLongTargetBeforeFollowingAddress: pc.
-		"Find target from jump.  Ignore jumps to the interpret and MNU calls within this PIC"
+		"Find target from jump.  A jump to the MNU entry-point should collect #doesNotUnderstand:"
 		(entryPoint asUnsignedInteger < cPIC asUnsignedInteger
 		 or: [entryPoint asUnsignedInteger > (cPIC asUnsignedInteger + cPIC blockSize) asUnsignedInteger])
 			ifTrue:
 				[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
 				 self assert: targetMethod cmType = CMMethod.
-				 objectMemory storePointer: i * 2 ofObject: tuple withValue: targetMethod methodObject].
+				 value := targetMethod methodObject]
+			ifFalse:
+				[value := objectMemory splObj: SelectorDoesNotUnderstand].
+		objectMemory storePointer: i * 2 ofObject: tuple withValue: value.
 		pc := pc + cPICCaseSize]
 ]
 

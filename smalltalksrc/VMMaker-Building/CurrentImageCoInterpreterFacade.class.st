@@ -326,6 +326,12 @@ CurrentImageCoInterpreterFacade >> instFormatFieldWidth [
 	^objectMemory instFormatFieldWidth
 ]
 
+{ #category : #instantiation }
+CurrentImageCoInterpreterFacade >> instantiateClass: classPointer indexableSize: size [
+	(self objectForOop: classPointer) caseOf:
+		{[Array]	->	[^self oopForObject: (Array new: size)]}
+]
+
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> instructionPointerAddress [
 	^self addressForLabel: #instructionPointer
