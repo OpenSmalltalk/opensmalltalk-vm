@@ -399,6 +399,16 @@ Cogit class >> chooseCogitClass [
 ]
 
 { #category : #'in-image compilation' }
+Cogit class >> cog: aCompiledMethod [
+	^self cog: aCompiledMethod options: #()
+]
+
+{ #category : #'in-image compilation' }
+Cogit class >> cog: aCompiledMethod options: optionsArray [
+	^self cog: aCompiledMethod selector: aCompiledMethod selector options: optionsArray
+]
+
+{ #category : #'in-image compilation' }
 Cogit class >> cog: aCompiledMethod selector: aSelector [
 	^self cog: aCompiledMethod selector: aSelector options: #()
 ]
@@ -2835,7 +2845,7 @@ Cogit >> checkIfValidObjectRefAndTarget: annotation pc: mcpc cogMethod: cogMetho
 		entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		entryPoint > methodZoneBase ifTrue:
 			["It's a linked send; find which kind."
-			 self targetMethodAndSendTableFor: entryPoint annotation: annotation into:
+			 self targetMethodAndSendTableFor: entryPoint into:
 					[:targetMethod :sendTable|
 					 (self asserta: (targetMethod cmType = CMMethod
 								   or: [targetMethod cmType = CMClosedPIC
@@ -5801,7 +5811,7 @@ Cogit >> incrementUsageOfTargetIfLinkedSend: annotation mcpc: mcpc ignored: supe
 	(self isSendAnnotation: annotation) ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint > methodZoneBase ifTrue: "It's a linked send."
-			[self targetMethodAndSendTableFor: entryPoint annotation: annotation into:
+			[self targetMethodAndSendTableFor: entryPoint into:
 				[:targetMethod :sendTable|
 				 targetMethod cmUsageCount < (CMMaxUsageCount // 2) ifTrue:
 					[targetMethod cmUsageCount: targetMethod cmUsageCount + 1]]]].
@@ -6818,7 +6828,7 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMet
 			 cacheTagMarked := tagCouldBeObj and: [objectRepresentation cacheTagIsMarked: cacheTag].
 			 entryPoint > methodZoneBase
 				ifTrue: "It's a linked send."
-					[self targetMethodAndSendTableFor: entryPoint annotation: annotation into:
+					[self targetMethodAndSendTableFor: entryPoint into:
 						[:targetMethod :sendTable| | unlinkedRoutine |
 						 (cacheTagMarked not
 						  or: [self markAndTraceOrFreeCogMethod: targetMethod firstVisit: targetMethod asUnsignedInteger > mcpc asUnsignedInteger]) ifTrue:
@@ -8467,7 +8477,7 @@ Cogit >> subMethodsAsRangesFor: surrogateOrAddress [
 ]
 
 { #category : #'in-line cacheing' }
-Cogit >> targetMethodAndSendTableFor: entryPoint annotation: annotation into: binaryBlock [
+Cogit >> targetMethodAndSendTableFor: entryPoint into: binaryBlock [
 	"Evaluate binaryBlock with the targetMethod and relevant send table for a linked-send
 	 to entryPoint.  Do so based on the alignment of entryPoint.  N.B.  For Newspeak sends
 	 we don't need to distinguish between ceImplicitReceiver and the other sends since
@@ -8478,8 +8488,7 @@ Cogit >> targetMethodAndSendTableFor: entryPoint annotation: annotation into: bi
 	<var: #sendTable type: #'sqInt *'>
 	self cppIf: NewspeakVM
 		ifTrue:
-			[self assert: annotation = IsSendCall.
-			 (entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
+			[(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
 				ifTrue:
 					[targetMethod := self cCoerceSimple: entryPoint - cmEntryOffset to: #'CogMethod *'.
 					 sendTable := sendTrampolines]
@@ -8712,7 +8721,7 @@ Cogit >> unlinkIfFreeOrLinkedSend: annotation pc: mcpc of: theSelector [
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint > methodZoneBase
 			ifTrue: "It's a linked send."
-				[self targetMethodAndSendTableFor: entryPoint annotation: annotation into:
+				[self targetMethodAndSendTableFor: entryPoint into:
 					[:targetMethod :sendTable| | unlinkedRoutine |
 					 (targetMethod cmType = CMFree
 					  or: [targetMethod selector = theSelector]) ifTrue:
@@ -8740,7 +8749,7 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc ignored: superfluity [
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint > methodZoneBase
 			ifTrue: "It's a linked send."
-				[self targetMethodAndSendTableFor: entryPoint annotation: annotation into:
+				[self targetMethodAndSendTableFor: entryPoint into:
 					[:targetMethod :sendTable| | unlinkedRoutine |
 					 unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
 					 backEnd
@@ -8764,7 +8773,7 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc of: theSelector [
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint > methodZoneBase
 			ifTrue: "It's a linked send."
-				[self targetMethodAndSendTableFor: entryPoint annotation: annotation into:
+				[self targetMethodAndSendTableFor: entryPoint into:
 					[:targetMethod :sendTable| | unlinkedRoutine |
 					 targetMethod selector = theSelector ifTrue:
 						[unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
@@ -8791,7 +8800,7 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc to: theCogMethod [
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint > methodZoneBase
 			ifTrue: "It's a linked send."
-				[self targetMethodAndSendTableFor: entryPoint annotation: annotation into:
+				[self targetMethodAndSendTableFor: entryPoint into:
 					[:targetMethod :sendTable| | unlinkedRoutine |
 					 targetMethod asInteger = theCogMethod ifTrue:
 						[unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
@@ -8816,7 +8825,7 @@ Cogit >> unlinkIfLinkedSendToFree: annotation pc: mcpc ignored: superfluity [
 	(self isSendAnnotation: annotation) ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint > methodZoneBase ifTrue: "It's a linked send."
-			[self targetMethodAndSendTableFor: entryPoint annotation: annotation into:
+			[self targetMethodAndSendTableFor: entryPoint into:
 				[:targetMethod :sendTable| | unlinkedRoutine |
 				 targetMethod cmType = CMFree ifTrue:
 					[unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).

@@ -83,6 +83,11 @@ CogMethodSurrogate >> asUnsignedInteger [
 	^address
 ]
 
+{ #category : #coercing }
+CogMethodSurrogate >> asVoidPointer [
+	^self
+]
+
 { #category : #'instance initialization' }
 CogMethodSurrogate >> at: anAddress objectMemory: objectMemory cogit: aCogit [
 	address := anAddress.
