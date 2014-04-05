@@ -8379,7 +8379,7 @@ StackInterpreter >> methodClassAssociationOf: methodPointer [
 
 { #category : #'compiled methods' }
 StackInterpreter >> methodClassOf: methodPointer [
-
+	<api>
 	^self cppIf: NewspeakVM
 		ifTrue:
 			[| literal |

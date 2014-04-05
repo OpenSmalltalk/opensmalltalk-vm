@@ -429,7 +429,7 @@ Spur32BitMemoryManager >> objectBytesForSlots: numSlots [
 ]
 
 { #category : #'object access' }
-Spur32BitMemoryManager >> rawNumSlotsOf: objOop [
+Spur32BitMemoryManager >> oldRawNumSlotsOf: objOop [
 	<returnTypeC: #usqInt>
 	<inline: true>
 	self flag: #endianness.
@@ -442,6 +442,14 @@ Spur32BitMemoryManager >> rawOverflowSlotsOf: objOop [
 	<inline: true>
 	self flag: #endianness.
 	^self longAt: objOop - self baseHeaderSize
+]
+
+{ #category : #'object access' }
+Spur32BitMemoryManager >> rawOverflowSlotsOf: objOop put: numSlots [
+	<returnTypeC: #usqInt>
+	<inline: true>
+	self flag: #endianness.
+	^self longAt: objOop - self baseHeaderSize put: numSlots
 ]
 
 { #category : #'header access' }
