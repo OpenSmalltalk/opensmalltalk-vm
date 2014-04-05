@@ -3377,6 +3377,7 @@ SpurMemoryManager >> eeInstantiateClassIndex: knownClassIndex format: objFormat 
 	 IS NOT FILLED and must be completed before returning it to Smalltalk. Since this
 	 call is used in routines that do just that we are safe.  Break this rule and die in GC.
 	 Result is guaranteed to be young."
+	<api>
 	<inline: true>
 	self assert: (numSlots >= 0 and: [knownClassIndex ~= 0]).
 	self assert: (objFormat < self firstByteFormat
@@ -6859,6 +6860,13 @@ SpurMemoryManager >> methodReturnValue: oop [
 	^coInterpreter methodReturnValue: oop
 ]
 
+{ #category : #allocation }
+SpurMemoryManager >> minSlotsForShortening [
+	"Answer the minimum number of additional slots to allocate in an object to always be able to shorten it.
+	 This is enough slots to allocate a minimum-sized object."
+	^self allocationUnit * 2 / self bytesPerSlot
+]
+
 { #category : #compaction }
 SpurMemoryManager >> moveMisfitsInHighestObjectsBack: savedLimit [
 	"After refilling highestObjects move any misfits back to being
@@ -7390,6 +7398,12 @@ SpurMemoryManager >> okayOop: signedOop [
 
 ]
 
+{ #category : #'object access' }
+SpurMemoryManager >> oldRawNumSlotsOf: objOop [
+	<returnTypeC: #usqInt>
+	^self subclassResponsibility
+]
+
 { #category : #accessing }
 SpurMemoryManager >> oldSpaceSize [
 	^segmentManager totalBytesInSegments
@@ -7918,11 +7932,27 @@ SpurMemoryManager >> rawHashBitsOf: objOop [
 { #category : #'object access' }
 SpurMemoryManager >> rawNumSlotsOf: objOop [
 	<returnTypeC: #usqInt>
-	^self subclassResponsibility
+	<inline: true>
+	self flag: #endian.
+	^self byteAt: objOop + 7
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> rawNumSlotsOf: objOop put: aByte [
+	<returnTypeC: #usqInt>
+	<inline: true>
+	self flag: #endian.
+	^self byteAt: objOop + 7 put: aByte
 ]
 
 { #category : #'object access' }
 SpurMemoryManager >> rawOverflowSlotsOf: objOop [
+	<returnTypeC: #usqInt>
+	self subclassResponsibility
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> rawOverflowSlotsOf: objOop put: numSlots [
 	<returnTypeC: #usqInt>
 	self subclassResponsibility
 ]
@@ -8420,6 +8450,27 @@ SpurMemoryManager >> shortPrintObjectsFrom: startAddress to: endAddress [
 		[(self isFreeObject: oop) ifFalse:
 			[self shortPrintOop: oop].
 		oop := self objectAfter: oop]
+]
+
+{ #category : #allocation }
+SpurMemoryManager >> shorten: objOop toIndexableSize: indexableSize [
+	"Reduce the number of indexable fields in objOop, a pointer object, to nSlots. Convert the
+	 unused residual to a free chunk. Word and byte indexable objects are not changed.
+	 Answer the number of bytes returned to free memory, which may be zero if no change
+	 was possible."
+	<inline: false>
+	| numSlots bytesBefore bytesAfter |
+	(self formatOf: objOop) caseOf:
+		{ [self arrayFormat]	->	[numSlots := indexableSize] }.
+	bytesBefore := self bytesInObject: objOop.
+	(self hasOverflowHeader: objOop)
+		ifTrue: [self rawOverflowSlotsOf: objOop put: numSlots]
+		ifFalse:
+			[self assert: numSlots < self numSlotsMask.
+			 self rawNumSlotsOf: objOop put: numSlots].
+	bytesAfter := self bytesInObject: objOop.
+	self freeChunkWithBytes: bytesAfter - bytesBefore at: (self addressAfter: objOop).
+	^bytesAfter - bytesBefore
 ]
 
 { #category : #'gc - scavenging' }
