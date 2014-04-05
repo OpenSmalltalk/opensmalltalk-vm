@@ -40,6 +40,11 @@ CogObjectRepresentationForSpur >> checkValidObjectReference: anOop [
 	   or: [(objectMemory heapMapAtWord: (self pointerForOop: anOop)) ~= 0]
 ]
 
+{ #category : #'in-line cacheing' }
+CogObjectRepresentationForSpur >> classForInlineCacheTag: classIndex [
+	^objectMemory classOrNilAtIndex: classIndex
+]
+
 { #category : #'garbage collection' }
 CogObjectRepresentationForSpur >> couldBeObject: literal [
 	^(objectMemory isNonImmediate: literal)

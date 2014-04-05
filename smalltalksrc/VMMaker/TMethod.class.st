@@ -1131,6 +1131,10 @@ TMethod >> inlineFunctionCall: aSendNode in: aCodeGen [
 		[ :argName :exprNode |
 		exprNode isLeaf ifTrue:
 			[doNotRename add: argName]].
+	(meth statements size = 2
+	and: [meth statements first isSend
+	and: [meth statements first selector == #flag:]]) ifTrue:
+		[meth statements removeFirst].
 	meth renameVarsForInliningInto: self except: doNotRename in: aCodeGen.
 	meth renameLabelsForInliningInto: self.
 	self addVarsDeclarationsAndLabelsOf: meth except: doNotRename.
@@ -1313,9 +1317,17 @@ TMethod >> isFunctional [
 	 Answer false for methods with return types other than the simple
 	 integer types to work around bugs in the inliner."
 
-	(parseTree statements size = 1
-	 and: [parseTree statements last isReturn]) ifFalse: [ ^false ].
-	parseTree statements last expression nodesDo: [ :n | n isReturn ifTrue: [ ^false ]].
+	parseTree statements isEmpty ifTrue:
+		[^false].
+	parseTree statements last isReturn ifFalse:
+		[^false].
+	parseTree statements size = 1 ifFalse:
+		[(parseTree statements size = 2
+		  and: [parseTree statements first isSend
+		  and: [parseTree statements first selector == #flag:]]) ifFalse:
+			[^false]].
+	parseTree statements last expression nodesDo:
+		[ :n | n isReturn ifTrue: [^false]].
 	^#(sqInt usqInt sqLong usqLong #'sqInt *' #'CogMethod *') includes: returnType
 ]
 

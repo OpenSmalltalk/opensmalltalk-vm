@@ -451,6 +451,18 @@ VMMaker class >> generateSqueakCogVMWithInterpreterClass: interpreterClass [
 ]
 
 { #category : #configurations }
+VMMaker class >> generateSqueakSpurCogSistaVM [
+	"No primitives since we can use those for the Cog VM"
+	^VMMaker
+		generate: CoInterpreter
+		and: SistaStackToRegisterMappingCogit
+		with: #(ObjectMemory Spur32BitCoMemoryManager)
+		to: (FileDirectory default pathFromURI: 'oscogvm/spursistasrc')
+		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
+		including:#()
+]
+
+{ #category : #configurations }
 VMMaker class >> generateSqueakSpurCogVM [
 	"No primitives since we can use those for the Cog VM"
 	^VMMaker

@@ -375,7 +375,7 @@ Spur64BitMemoryManager >> objectBytesForSlots: numSlots [
 ]
 
 { #category : #'object access' }
-Spur64BitMemoryManager >> rawNumSlotsOf: objOop [
+Spur64BitMemoryManager >> oldRawNumSlotsOf: objOop [
 	<returnTypeC: #usqInt>
 	<inline: true>
 	^(self longAt: objOop) asUnsignedLong >> self numSlotsFullShift
@@ -387,6 +387,16 @@ Spur64BitMemoryManager >> rawOverflowSlotsOf: objOop [
 	<inline: true>
 	self flag: #endianness.
 	^((self longAt: objOop - self baseHeaderSize) << 8) asUnsignedLong >> 8
+]
+
+{ #category : #'object access' }
+Spur64BitMemoryManager >> rawOverflowSlotsOf: objOop put: numSlots [
+	<returnTypeC: #usqLong>
+	<inline: true>
+	self flag: #endianness.
+	self longAt: objOop - self baseHeaderSize
+		put: (self byteAt: objOop - 1) << 56 + numSlots.
+	^numSlots
 ]
 
 { #category : #'header access' }

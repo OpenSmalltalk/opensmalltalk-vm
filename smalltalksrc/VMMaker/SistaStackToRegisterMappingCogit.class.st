@@ -59,6 +59,9 @@ Class {
 		'CounterBytes',
 		'MaxCounterValue'
 	],
+	#pools : [
+		'VMSqueakClassIndices'
+	],
 	#category : #'VMMaker-JIT'
 }
 
@@ -727,25 +730,30 @@ SistaStackToRegisterMappingCogit >> picDataFor: descriptor Mcpc: mcpc Bcpc: bcpc
 	| entryPoint tuple |
 	descriptor isNil ifTrue:
 		[^0].
-	descriptor isBranch ifFalse: "infer it's a send"
-		[self assert: (backEnd isCallPreceedingReturnPC: mcpc asUnsignedInteger).
-		 entryPoint := backEnd callTargetFromReturnAddress: mcpc asUnsignedInteger.
-		 entryPoint <= methodZoneBase ifTrue: "send is not linked"
-			[^0].
-		 self targetMethodAndSendTableFor: entryPoint into: "It's a linked send; find which kind."
-			[:targetMethod :sendTable|
-			 tuple := self picDataForSendTo: targetMethod at: mcpc bcpc: bcpc + 1 - descriptor numBytes].
-		 tuple = 0 ifTrue: [^PrimErrNoMemory].
-		 objectMemory storePointer: picDataIndex ofObject: picData withValue: tuple.
-		 picDataIndex := picDataIndex + 1.
+	descriptor isBranch ifTrue:
+		["it's a branch; conditional?"
+		 (descriptor isBranchTrue or: [descriptor isBranchFalse]) ifTrue:
+			[tuple := self picDataForConditionalBranch: prevMapAbsPCMcpc at: bcpc.
+			 tuple = 0 ifTrue: [^PrimErrNoMemory].
+			 objectMemory storePointer: picDataIndex ofObject: picData withValue: tuple.
+			 picDataIndex := picDataIndex + 1].
 		 ^0].
-	"it's a branch; conditional?"
-	(descriptor isBranchTrue or: [descriptor isBranchFalse]) ifTrue:
-		[tuple := self picDataForConditionalBranch: prevMapAbsPCMcpc at: bcpc.
-		 tuple = 0 ifTrue: [^PrimErrNoMemory].
-		 objectMemory storePointer: picDataIndex ofObject: picData withValue: tuple.
-		 picDataIndex := picDataIndex + 1.
-		 ^0].
+	"infer it's a send"
+	self assert: (backEnd isCallPreceedingReturnPC: mcpc asUnsignedInteger).
+	entryPoint := backEnd callTargetFromReturnAddress: mcpc asUnsignedInteger.
+	entryPoint <= methodZoneBase ifTrue: "send is not linked"
+		[^0].
+	self targetMethodAndSendTableFor: entryPoint into: "It's a linked send; find which kind."
+		[:targetMethod :sendTable|
+		 tuple := self picDataForSendTo: targetMethod
+					methodClassIfSuper: (sendTable = superSendTrampolines ifTrue:
+												[coInterpreter methodClassOf:
+													(self cCoerceSimple: cogMethodArg to: #'CogMethod *') methodObject])
+					at: mcpc
+					bcpc: bcpc + 1 - descriptor numBytes].
+	tuple = 0 ifTrue: [^PrimErrNoMemory].
+	objectMemory storePointer: picDataIndex ofObject: picData withValue: tuple.
+	picDataIndex := picDataIndex + 1.
 	^0
 ]
 
@@ -798,8 +806,9 @@ SistaStackToRegisterMappingCogit >> picDataForConditionalBranch: counterReferenc
 	| address counter executedCount tuple untakenCount |
 	<var: #counter type: #'unsigned long'>
 	tuple := objectMemory
-				instantiateClass: (objectMemory splObj: ClassArray)
-				indexableSize: 3.
+				eeInstantiateClassIndex: ClassArrayCompactIndex
+				format: objectMemory arrayFormat
+				numSlots: 3.
 	tuple = 0 ifTrue:
 		[^0].
 	self assert: CounterBytes = 4.
@@ -815,7 +824,7 @@ SistaStackToRegisterMappingCogit >> picDataForConditionalBranch: counterReferenc
 ]
 
 { #category : #'method introspection' }
-SistaStackToRegisterMappingCogit >> picDataForSendTo: cogMethod at: sendMcpc bcpc: sendBcpc [
+SistaStackToRegisterMappingCogit >> picDataForSendTo: cogMethod methodClassIfSuper: methodClassOrNil at: sendMcpc bcpc: sendBcpc [
 	"Answer a tuple with the send data for a linked send to cogMethod.
 	 If the target is a CogMethod (monomorphic send) answer
 		{ bytecode pc, inline cache class, target method }
@@ -826,36 +835,28 @@ SistaStackToRegisterMappingCogit >> picDataForSendTo: cogMethod at: sendMcpc bcp
 	<var: #cogMethod type: #'CogMethod *'>
 	<var: #sendMcpc type: #'char *'>
 	| tuple |
+	tuple := objectMemory
+					eeInstantiateClassIndex: ClassArrayCompactIndex
+					format: objectMemory arrayFormat
+					numSlots: (cogMethod cmType = CMClosedPIC
+								ifTrue: [2 * cogMethod cPICNumCases + 1]
+								ifFalse: [3]).
+	tuple = 0 ifTrue:
+		[^0].
+	objectMemory storePointerUnchecked: 0 ofObject: tuple withValue: (objectMemory integerObjectOf: sendBcpc).
 	cogMethod cmType = CMMethod ifTrue:
-		[tuple := objectMemory
-					eeInstantiateClass: (objectMemory splObj: ClassArray)
-					indexableSize: 3.
-		tuple = 0 ifTrue:
-			[^0].
-		objectMemory
-			storePointerUnchecked: 0 ofObject: tuple withValue: (objectMemory integerObjectOf: sendBcpc);
+		[objectMemory
 			storePointer: 1
 				ofObject: tuple
-					withValue: (objectRepresentation classForInlineCacheTag: (backEnd inlineCacheTagAt: sendMcpc asUnsignedInteger));
+					withValue: (methodClassOrNil ifNil:
+								[objectRepresentation classForInlineCacheTag: (backEnd inlineCacheTagAt: sendMcpc asUnsignedInteger)]);
 			storePointer: 2 ofObject: tuple withValue: cogMethod methodObject.
 		^tuple].
 	cogMethod cmType = CMClosedPIC ifTrue:
-		[tuple := objectMemory
-					eeInstantiateClass: (objectMemory splObj: ClassArray)
-					indexableSize: 2 * cogMethod cPICNumCases + 1.
-		tuple = 0 ifTrue:
-			[^0].
-		objectMemory storePointerUnchecked: 0 ofObject: tuple withValue: (objectMemory integerObjectOf: sendBcpc).
-		self populate: tuple withPICInfoFor: cogMethod firstCacheTag: (backEnd inlineCacheTagAt: sendMcpc asUnsignedInteger).
+		[self populate: tuple withPICInfoFor: cogMethod firstCacheTag: (backEnd inlineCacheTagAt: sendMcpc asUnsignedInteger).
 		^tuple].
 	cogMethod cmType = CMOpenPIC ifTrue:
-		[tuple := objectMemory
-					eeInstantiateClass: (objectMemory splObj: ClassArray)
-					indexableSize: 3.
-		tuple = 0 ifTrue:
-			[^0].
-		objectMemory
-			storePointerUnchecked: 0 ofObject: tuple withValue: (objectMemory integerObjectOf: sendBcpc);
+		[objectMemory
 			storePointerUnchecked: 1 ofObject: tuple withValue: objectMemory nilObject;
 			storePointer: 2 ofObject: tuple withValue: cogMethod selector.
 		^tuple].
