@@ -1,9 +1,9 @@
 "
 A SistaStackToRegisterMappingCogit is a refinement of StackToRegisterMappingCogit that generates code suitable for dynamic optimization by Sista, the Speculative Inlining Smalltalk Architecture, a project by Clément Bera and Eliot Miranda.  Sista is an optimizer that exists in the Smalltalk image, /not/ in the VM,  and optimizes by substituting normal bytecoded methods by optimized bytecoded methods that may use special bytecodes for which the Cogit can generate faster code.  These bytecodes eliminate overheads such as bounds checks or polymorphic code (indexing Array, ByteArray, String etc).  But the bulk of the optimization performed is in inlining blocks and sends for the common path.
 
-The basic scheme is that SistaStackToRegisterMappingCogit generates code containing performance counters.  When these counters trip, a callback into the image is performed, at which point Sista analyses some portion of the stack, looking at performance data for the methods on the stack, and optimises based on teh stack and performance data.  Execution then resumes in the optimized code.
+The basic scheme is that SistaStackToRegisterMappingCogit generates code containing performance counters.  When these counters trip, a callback into the image is performed, at which point Sista analyses some portion of the stack, looking at performance data for the methods on the stack, and optimises based on the stack and performance data.  Execution then resumes in the optimized code.
 
-SistaStackToRegisterMappingCogit adds counters to conditional branches.  Each branch has an executed and a taken count, implemented at the two 16-bit halves of a single 32-bit word.  Each counter pair is initialized with initialCounterValue.  On entry to the branch the executed count is decremented and if the count goes below zero the ceMustBeBooleanAdd[True|False] trampoline called.  The trampoline distinguishes between true mustBeBoolean and counter trips because in the former the register temporarily holding the counter value will contain zero.  Then the condition is tested, and if the branch is taken the taken count is decremented.  The two counter values allow an optimizer to collect basic block execution paths and to know what are the ""hot"" paths through execution that are worth agressively optimizing.  Since conditional branches are about 1/6 as frequent as sends, and since they can be used to determine the hot path throguh code, they are a better choice to count than, for example, method or block entry.
+SistaStackToRegisterMappingCogit adds counters to conditional branches.  Each branch has an executed and a taken count, implemented at the two 16-bit halves of a single 32-bit word.  Each counter pair is initialized with initialCounterValue.  On entry to the branch the executed count is decremented and if the count goes below zero the ceMustBeBooleanAdd[True|False] trampoline called.  The trampoline distinguishes between true mustBeBoolean and counter trips because in the former the register temporarily holding the counter value will contain zero.  Then the condition is tested, and if the branch is taken the taken count is decremented.  The two counter values allow an optimizer to collect basic block execution paths and to know what are the ""hot"" paths through execution that are worth agressively optimizing.  Since conditional branches are about 1/6 as frequent as sends, and since they can be used to determine the hot path through code, they are a better choice to count than, for example, method or block entry.
 
 SistaStackToRegisterMappingCogit implements picDataFor:into: that fills an Array with the state of the counters in a method and the state of each linked send in a method.  This is used to implement a primitive used by the optimizer to answer the branch and send data for a method as an Array.
 
@@ -327,13 +327,21 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 		(self CallRT: (boolean == objectMemory falseObject
 						ifTrue: [ceSendMustBeBooleanAddFalseTrampoline]
 						ifFalse: [ceSendMustBeBooleanAddTrueTrampoline])).
-	"Now we have to jump back to the retry point.  This is always the point at which the boolean is tested.
-	 The register to be tested must be reloaded with the return value of the trampoline; this is for the case
-	 where the trampoline returns immediately without sending back.."
-	backEnd cResultRegister ~= TempReg ifTrue:
-		[self MoveR: backEnd cResultRegister R: TempReg].
-	self Jump: retry.
-	ok jmpTarget: (self annotateBytecode: self Label).
+	"If we're in an image which hasn't got the Sista code loaded then the ceCounterTripped: trampoline will
+	 return directly to machine code, returning the boolean.  So the code should jump back to the retry point.
+	 This is always the point at which the boolean is tested. The register to be tested must be reloaded with
+	 the return value of the trampoline, if it differs from cResultRegister.
+
+	 In images with the Sista code loaded, return must be via backing up the PC to after the send, and returning
+	 (this time answering the boolean via ReceiverResultReg).  For this case, and for normal mustBeBoolean
+	 processing, the instruction after the mustBeBoolean trampoline must be annotated as having a bytecode pc."
+	backEnd cResultRegister ~= TempReg
+		ifTrue:
+			[self annotateBytecode: (self MoveR: backEnd cResultRegister R: TempReg).
+			 self Jump: retry]
+		ifFalse:
+			[self annotateBytecode: (self Jump: retry)].
+	ok jmpTarget: self Label.
 	^0
 ]
 
