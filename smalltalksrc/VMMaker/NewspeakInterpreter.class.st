@@ -264,7 +264,7 @@ NewspeakInterpreter class >> initializeBytecodeTable [
 
 		"Closure & Newspeak bytecodes"
 		(138 pushNewArrayBytecode)
-		(139 pushExplicitOuterSendReceiverBytecode)
+		(139 pushExplicitOuterReceiverBytecode)
 		(140 pushRemoteTempLongBytecode)
 		(141 storeRemoteTempLongBytecode)
 		(142 storeAndPopRemoteTempLongBytecode)
@@ -9283,6 +9283,24 @@ NewspeakInterpreter >> pushConstantZeroBytecode [
 
 	self fetchNextBytecode.
 	self internalPush: ConstZero.
+
+]
+
+{ #category : #'stack bytecodes' }
+NewspeakInterpreter >> pushExplicitOuterReceiverBytecode [
+	"Find the appropriate implicit receiver for outer N"
+	|  mClassMixin  litIndex  n anInt |
+	<inline: true>
+	litIndex := self fetchByte.
+	anInt := self literal: litIndex.
+	n := self checkedIntegerValueOf: anInt.
+	self fetchNextBytecode.
+	mClassMixin := self methodClassOf: method.
+	self internalPush:(self 
+		explicitOuterReceiver: n 
+		withObject: receiver 
+		withMixin: mClassMixin
+		)
 
 ]
 
