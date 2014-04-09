@@ -4381,15 +4381,20 @@ CoInterpreter >> mapPrimTraceLog [
 	 an entry at primTraceLogIndex - 1 \\ PrimTraceBufferSize it has entries.
 	 If there is something at primTraceLogIndex it has wrapped."
 	<inline: false>
-	| limit |
-	limit := self safe: primTraceLogIndex - 1 mod: PrimTraceLogSize.
-	(primTraceLog at: limit) = 0 ifTrue: [^self].
+	(primTraceLog at: (self safe: primTraceLogIndex - 1 mod: PrimTraceLogSize)) = 0 ifTrue:
+		[^self].
 	(primTraceLog at: primTraceLogIndex) ~= 0 ifTrue:
-		[limit := PrimTraceLogSize - 1].
-	0 to: limit do:
+		[primTraceLogIndex to: PrimTraceLogSize - 1 do:
+			[:i| | selector |
+			 selector := primTraceLog at: i.
+			 (selector ~= 0
+			  and: [objectMemory shouldRemapOop: selector]) ifTrue:
+				[primTraceLog at: i put: (objectMemory remapObj: selector)]]].
+	0 to: primTraceLogIndex - 1 do:
 		[:i| | selector |
-		selector := primTraceLog at: i.
-		(objectMemory shouldRemapOop: selector) ifTrue:
+		 selector := primTraceLog at: i.
+		 (selector ~= 0
+		  and: [objectMemory shouldRemapOop: selector]) ifTrue:
 			[primTraceLog at: i put: (objectMemory remapObj: selector)]]
 ]
 
@@ -4556,15 +4561,20 @@ CoInterpreter >> markAndTracePrimTraceLog [
 	 an entry at primTraceLogIndex - 1 \\ PrimTraceBufferSize it has entries.
 	 If there is something at primTraceLogIndex it has wrapped."
 	<inline: false>
-	| limit |
-	limit := self safe: primTraceLogIndex - 1 mod: PrimTraceLogSize.
-	(primTraceLog at: limit) = 0 ifTrue: [^self].
+	(primTraceLog at: (self safe: primTraceLogIndex - 1 mod: PrimTraceLogSize)) = 0 ifTrue:
+		[^self].
 	(primTraceLog at: primTraceLogIndex) ~= 0 ifTrue:
-		[limit := PrimTraceLogSize - 1].
-	0 to: limit do:
+		[primTraceLogIndex to: PrimTraceLogSize - 1 do:
+			[:i| | selector |
+			 selector := primTraceLog at: i.
+			 (selector ~= 0
+			  and: [objectMemory isNonImmediate: selector]) ifTrue:
+				[objectMemory markAndTrace: selector]]].
+	0 to: primTraceLogIndex - 1 do:
 		[:i| | selector |
 		selector := primTraceLog at: i.
-		(objectMemory isImmediate: selector) ifFalse:
+		(selector ~= 0
+		  and: [objectMemory isNonImmediate: selector]) ifTrue:
 			[objectMemory markAndTrace: selector]]
 ]
 
@@ -5642,7 +5652,9 @@ CoInterpreter >> printPrimLogEntryAt: i [
 				[self print: '**CompactCode**'. ^nil].
 			 self print: '???']
 		ifFalse:
-			[objectMemory safePrintStringOf: intOrSelector]
+			[intOrSelector = 0
+				ifTrue: [self printNum: i; print: '!!!']
+				ifFalse: [objectMemory safePrintStringOf: intOrSelector]]
 ]
 
 { #category : #'debug printing' }

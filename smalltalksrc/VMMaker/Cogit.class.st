@@ -2351,6 +2351,12 @@ Cogit >> blockStartPcsIn: aMethod [
 ]
 
 { #category : #'simulation only' }
+Cogit >> breakBlock [
+	<doNotGenerate>
+	^breakBlock
+]
+
+{ #category : #'simulation only' }
 Cogit >> breakBlock: aBlock [
 	<doNotGenerate>
 	breakBlock := aBlock
@@ -6281,8 +6287,9 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 			 self assert: startbcpc = (coInterpreter startPCOfMethodHeader: homeMethod methodHeader).
 			 map := self mapStartFor: homeMethod.
 			 self assert: ((objectMemory byteAt: map) >> AnnotationShift = IsAbsPCReference
+						 or: [(objectMemory byteAt: map) >> AnnotationShift = IsObjectReference
 						 or: [(objectMemory byteAt: map) >> AnnotationShift = IsRelativeCall
-						 or: [(objectMemory byteAt: map) >> AnnotationShift = IsDisplacementX2N]]).
+						 or: [(objectMemory byteAt: map) >> AnnotationShift = IsDisplacementX2N]]]).
 			 latestContinuation := startbcpc.
 			 aMethodObj := homeMethod methodObject.
 			 endbcpc := (objectMemory byteLengthOf: aMethodObj) - 1.
@@ -7870,17 +7877,14 @@ Cogit >> remapIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
 							[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]]]]
 				ifFalse:
 					[hasYoungPtr ~= 0 ifTrue:
-						[| offset targetMethod |
-						 "Since the unlinking routines may rewrite the cacheTag to the send's selector, and
+						["Since the unlinking routines may rewrite the cacheTag to the send's selector, and
 						  since they don't have the cogMethod to hand and can't add it to youngReferrers,
 						  the method must remain in youngReferrers if the targetMethod's selector is young."
 						 entryPoint > methodZoneBase ifTrue: "It's a linked send."
-							[offset := (entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
-										ifTrue: [cmEntryOffset]
-										ifFalse: [cmNoCheckEntryOffset].
-							targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
-							(objectMemory isYoung: targetMethod selector) ifTrue:
-								[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]]]]]].
+							[self targetMethodAndSendTableFor: entryPoint into:
+								[:targetMethod :ignored|
+								 (objectMemory isYoung: targetMethod selector) ifTrue:
+									[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]]]]]]].
 	^0 "keep scanning"
 ]
 

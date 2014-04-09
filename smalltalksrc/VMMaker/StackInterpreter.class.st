@@ -358,7 +358,7 @@ StackInterpreter class >> initializeBytecodeTableForNewspeakV3PlusClosures [
 		(138 pushNewArrayBytecode)
 
 		"The last of 3 Newspeak bytecodes"
-		(139 pushExplicitOuterSendReceiverBytecode)
+		(139 pushExplicitOuterReceiverBytecode)
 
 		(140 pushRemoteTempLongBytecode)
 		(141 storeRemoteTempLongBytecode)
@@ -10322,6 +10322,23 @@ StackInterpreter >> pushConstantZeroBytecode [
 	self fetchNextBytecode.
 	self internalPush: ConstZero.
 
+]
+
+{ #category : #'stack bytecodes' }
+StackInterpreter >> pushExplicitOuterReceiverBytecode [
+	"Find the appropriate implicit receiver for outer N"
+	| litIndex  n anIntOop |
+	<inline: true>
+	litIndex := self fetchByte.
+	anIntOop := self literal: litIndex.
+	n := (objectMemory isIntegerObject: anIntOop)
+			ifTrue: [objectMemory integerValueOf: anIntOop]
+			ifFalse: [0].
+	self fetchNextBytecode.
+	self internalPush:(self 
+						explicitOuterReceiver: n 
+						withObject: self receiver 
+						withMixin: (self methodClassOf: method))
 ]
 
 { #category : #'stack bytecodes' }
