@@ -122,7 +122,7 @@ CoInterpreterPrimitives >> picDataFor: cogMethod [
 	data := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: nSlots.
 	nEntries := cogit picDataFor: cogMethod into: data.
 	nEntries = 0 ifTrue:
-		[^nil].
+		[^0].
 	nEntries < nSlots ifTrue:
 		[objectMemory shorten: data toIndexableSize: nEntries].
 	^data
