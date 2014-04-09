@@ -97,7 +97,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV3PlusClosures 
 		(1 137 137 genPushActiveContextBytecode)
 		(2 138 138 genPushNewArrayBytecode)
 
-		(2 139 139 genPushExplicitOuterSendReceiverBytecode isMapped)	"Newspeak"
+		(2 139 139 genPushExplicitOuterReceiverBytecode isMapped)	"Newspeak"
 
 		(3 140 140 genPushRemoteTempLongBytecode)
 		(3 141 141 genStoreRemoteTempLongBytecode)
@@ -1302,7 +1302,7 @@ SimpleStackBasedCogit >> genExtPushPseudoVariableOrOuterBytecode [
 		}
 		otherwise:
 			[ext < 0 ifTrue:
-				[^self genPushExplicitOuterSendReceiver: 0 - ext].
+				[^self genPushExplicitOuterReceiver: 0 - ext].
 			 self warning: 'undefined extension for extPushPseudoVariableOrOuter'.
 			 ^self unknownBytecode].
 	^0
@@ -2404,7 +2404,7 @@ SimpleStackBasedCogit >> genPushConstantZeroBytecode [
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genPushExplicitOuterSendReceiver: level [
+SimpleStackBasedCogit >> genPushExplicitOuterReceiver: level [
 	"Uncached push explicit outer send receiver"
 	self assert: needsFrame. "because this should always be followed by a send"
 	self MoveCq: level R: SendNumArgsReg.
@@ -2414,12 +2414,12 @@ SimpleStackBasedCogit >> genPushExplicitOuterSendReceiver: level [
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genPushExplicitOuterSendReceiverBytecode [
+SimpleStackBasedCogit >> genPushExplicitOuterReceiverBytecode [
 	"Uncached push explicit outer send receiver"
 	| levelOop |
 	levelOop := self getLiteral: byte1.
 	self assert: (objectMemory isIntegerObject: levelOop).
-	^self genPushExplicitOuterSendReceiver: (objectMemory integerValueOf: levelOop)
+	^self genPushExplicitOuterReceiver: (objectMemory integerValueOf: levelOop)
 ]
 
 { #category : #'bytecode generators' }

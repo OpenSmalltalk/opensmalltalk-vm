@@ -2866,6 +2866,14 @@ ObjectMemory >> interpreter [
 	^self
 ]
 
+{ #category : #simulation }
+ObjectMemory >> ioLoadModule: moduleNameIndex OfLength: moduleLength [
+	<doNotGenerate>
+	<returnTypeC: #'void *'>
+	"Dummy - provided by support code"
+	^0
+]
+
 { #category : #'header access' }
 ObjectMemory >> is: oop instanceOf: classOop compactClassIndex: compactClassIndex [
 	"Answer if oop is an instance of the given class. If the class has a (non-zero)

@@ -1460,10 +1460,13 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 	  hdrNumStackPages hdrEdenBytes hdrMaxExtSemTabSize |
 	"open image file and read the header"
 
-	["begin ensure block..."
 	f := FileStream readOnlyFileNamed: fileName.
+	f ifNil: [^self error: 'no image found'].
+
+	["begin ensure block..."
 	imageName := f fullName.
 	f binary.
+
 	version := self nextLongFrom: f.  "current version: 16r1968 (=6504) vive la revolucion!"
 	(self readableFormat: version)
 		ifTrue: [swapBytes := false]

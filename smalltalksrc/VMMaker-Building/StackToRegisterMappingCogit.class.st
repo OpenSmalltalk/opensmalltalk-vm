@@ -272,7 +272,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV3PlusClo
 		(1 137 137 genPushActiveContextBytecode)
 		(2 138 138 genPushNewArrayBytecode)
 
-		(2 139 139 genPushExplicitOuterSendReceiverBytecode isMapped)	"Newspeak"
+		(2 139 139 genPushExplicitOuterReceiverBytecode isMapped)	"Newspeak"
 
 		(3 140 140 genPushRemoteTempLongBytecode)
 		(3 141 141 genStoreRemoteTempLongBytecode)
@@ -609,7 +609,7 @@ StackToRegisterMappingCogit class >> newInitializeBytecodeTableForNewspeakV3Plus
 		(1 137 137 genPushActiveContextBytecode)
 		(2 138 138 genPushNewArrayBytecode)
 
-		(2 139 139 genPushExplicitOuterSendReceiverBytecode isMapped)	"Newspeak"
+		(2 139 139 genPushExplicitOuterReceiverBytecode isMapped)	"Newspeak"
 
 		(3 140 140 genPushRemoteTempLongBytecode)
 		(3 141 141 genStoreRemoteTempLongBytecode)
@@ -2442,7 +2442,7 @@ StackToRegisterMappingCogit >> genPushClosureCopyCopiedValuesBytecode [
 ]
 
 { #category : #'bytecode generators' }
-StackToRegisterMappingCogit >> genPushExplicitOuterSendReceiver: level [
+StackToRegisterMappingCogit >> genPushExplicitOuterReceiver: level [
 	"Uncached push explicit outer send receiver"
 	self assert: needsFrame. "because this should always be followed by a send"
 	optStatus isReceiverResultRegLive: false.
