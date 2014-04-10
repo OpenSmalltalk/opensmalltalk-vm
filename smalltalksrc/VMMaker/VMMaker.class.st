@@ -304,7 +304,9 @@ VMMaker class >> generateAllConfigurationsUnderVersionControl [
 		generateSqueakCogMTVM;
 		generateSqueakStackVM;
 		generateSqueakSpurCogVM;
-		generateSqueakSpurStackVM
+		generateSqueakSpurStackVM;
+		generateSqueakCogSistaVM;
+		generateSqueakSpurCogSistaVM
 ]
 
 { #category : #configurations }
