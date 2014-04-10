@@ -1,4 +1,4 @@
 #!/bin/sh
 # List any files with an un-checked-in package version comment "* VMMaker-..."
 find ${@-src nscogsrc stacksrc spursrc spurstacksrc nsspursrc nsspurstacksrc sistasrc spursistasrc} -name .svn -prune -o \( -type f -a -name '*.[ch]' \) \
-		-exec egrep -l '\* VMMaker|\* VMConstruction' {} \;
+		-exec egrep -l '\* VMMaker|\* VMConstruction|\* Freetype-Plugin|\* Cog-' {} \;
