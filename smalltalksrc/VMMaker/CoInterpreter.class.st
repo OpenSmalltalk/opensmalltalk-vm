@@ -1283,16 +1283,27 @@ CoInterpreter >> ceContext: maybeMarriedContext instVar: slotIndex value: anOop 
 
 { #category : #'cog jit support' }
 CoInterpreter >> ceCounterTripped: condition [
+	"Two things are going on here.  The main one is catching a counter trip and attempting
+	 to send the SelectorCounterTripped selector.  In this case, if the send can be made, the
+	 pc should be backed up to the return address of the send that yields the boolean to be
+	 tested, so that after potential optimization, computation proceeds by retryying the jump.
+
+	 The minor case is that there is an unlikely  possibility that the cointer tripped but condition
+	 is not a boolean, in which case a mustBeBoolean response should occur."
 	<api>
 	<option: #SistaStackToRegisterMappingCogit>
 	"Send e.g. thisContext conditionalBranchCounterTrippedOn: boolean."
 	| context counterTrippedSelector classTag |
+	(condition = objectMemory falseObject
+	or: [condition = objectMemory trueObject]) ifFalse:
+		[^self ceSendMustBeBoolean: condition].
+
 	counterTrippedSelector := objectMemory maybeSplObj: SelectorCounterTripped.
 	(counterTrippedSelector isNil
 	or: [counterTrippedSelector = objectMemory nilObject]) ifTrue:
 		[cogit resetCountersIn: (self mframeHomeMethod: framePointer).
 		 ^condition].
-	
+
 	classTag := objectMemory
 					classTagForSpecialObjectsIndex: ClassMethodContext
 					compactClassIndex: ClassMethodContextCompactIndex.
@@ -1307,7 +1318,9 @@ CoInterpreter >> ceCounterTripped: condition [
 		[cogit resetCountersIn: (self mframeHomeMethod: framePointer).
 		 ^condition].
 
-	instructionPointer := self popStack.
+	"now back-up the pc; there is always a jump following the
+	 call to the ceSendMustBeBooleanAddTrue/FalseTrampoline."
+	instructionPointer := cogit getJumpTargetPCAt: self popStack.
 	context := self ensureFrameIsMarried: framePointer SP: stackPointer.
 	self push: context.
 	self push: condition.
