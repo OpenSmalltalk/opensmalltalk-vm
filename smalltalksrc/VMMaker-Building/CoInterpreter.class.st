@@ -1284,9 +1284,12 @@ CoInterpreter >> ceContext: maybeMarriedContext instVar: slotIndex value: anOop 
 { #category : #'cog jit support' }
 CoInterpreter >> ceCounterTripped: condition [
 	"Two things are going on here.  The main one is catching a counter trip and attempting
-	 to send the SelectorCounterTripped selector.  In this case, if the send can be made, the
-	 pc should be backed up to the return address of the send that yields the boolean to be
-	 tested, so that after potential optimization, computation proceeds by retryying the jump.
+	 to send the SelectorCounterTripped selector.  In this case we would like to back-up
+	 the pc to the return address of the send that yields the boolean to be tested, so that
+	 after potential optimization, computation proceeds by retrying the jump.  But we cannot,
+	 since there may be no send, just a pop (as in and: [] and or: [] chains).  In this case we also
+	 want to prevent further callbacks until optimization is complete.  So we nil-out the
+	 SelectorCounterTripped entry in the specialSelectorArray.
 
 	 The minor case is that there is an unlikely  possibility that the cointer tripped but condition
 	 is not a boolean, in which case a mustBeBoolean response should occur."
@@ -1318,9 +1321,8 @@ CoInterpreter >> ceCounterTripped: condition [
 		[cogit resetCountersIn: (self mframeHomeMethod: framePointer).
 		 ^condition].
 
-	"now back-up the pc; there is always a jump following the
-	 call to the ceSendMustBeBooleanAddTrue/FalseTrampoline."
-	instructionPointer := cogit getJumpTargetPCAt: self popStack.
+	objectMemory splObj: SelectorCounterTripped put: objectMemory nilObject.
+	instructionPointer := self popStack.
 	context := self ensureFrameIsMarried: framePointer SP: stackPointer.
 	self push: context.
 	self push: condition.
