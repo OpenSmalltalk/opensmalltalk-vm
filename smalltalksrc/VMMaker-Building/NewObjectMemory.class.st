@@ -431,6 +431,15 @@ NewObjectMemory >> bytesPerSlot [
 	^self bytesPerOop
 ]
 
+{ #category : #'primitive support' }
+NewObjectMemory >> characterValueOf: oop [
+	<api>
+	(self isCharacterObject: oop) ifFalse:
+		[coInterpreter primitiveFailFor: PrimErrUnsupported.
+		 ^-1].
+	^self integerValueOf: (self fetchPointer: 0 ofObject: oop)
+]
+
 { #category : #allocation }
 NewObjectMemory >> checkForLastObjectOverwrite [
 	<doNotGenerate>
@@ -2270,6 +2279,13 @@ NewObjectMemory >> oopHasAcceptableClass: signedOop [
 	oopFormatBits := (self baseHeader: oop) bitAnd: formatMask.
 	behaviorFormatBits = oopFormatBits ifFalse: [^ false].
 	^ true
+]
+
+{ #category : #'primitive support' }
+NewObjectMemory >> pinObject: objOop [
+	"For forward-compatibility with Spur.  Fail; ObjectMemory does not support pinning."
+	<api>
+	coInterpreter primitiveFailFor: PrimErrUnsupported
 ]
 
 { #category : #become }

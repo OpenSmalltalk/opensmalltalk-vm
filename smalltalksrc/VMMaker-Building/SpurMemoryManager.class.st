@@ -831,7 +831,6 @@ SpurMemoryManager class >> vmProxyMajorVersion [
 
 { #category : #'simulation only' }
 SpurMemoryManager class >> vmProxyMinorVersion [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^StackInterpreter vmProxyMinorVersion max: 13
 ]
 
@@ -7440,6 +7439,10 @@ SpurMemoryManager >> outOfPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag
 
 { #category : #'primitive support' }
 SpurMemoryManager >> pinObject: objOop [
+	"Pin objOop in memory.  If objOop is in oldSpace merely set its isPinned
+	 bit.  If objOop is in newSpace then created a pinned copy in oldSpace
+	 and forward objOop to the pinned copy.  Answer the (possibly changed)
+	 oop of the pinned object."
 	<api>
 	self shouldBeImplemented
 ]
