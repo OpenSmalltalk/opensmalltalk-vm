@@ -1141,6 +1141,14 @@ ObjectMemory >> changeClassOf: rcvr to: argClass [
 	^0
 ]
 
+{ #category : #'primitive support' }
+ObjectMemory >> characterObjectOf: characterCode [
+	<api>
+	^(characterCode between: 0 and: 255)
+		ifTrue: [self fetchPointer: characterCode ofObject: self characterTable]
+		ifFalse: [nilObj]
+]
+
 { #category : #'plugin support' }
 ObjectMemory >> characterTable [
 	<api>
@@ -2928,6 +2936,12 @@ ObjectMemory >> isCharacterObject: oop [
 		compactClassIndex: 0
 ]
 
+{ #category : #'primitive support' }
+ObjectMemory >> isCharacterValue: anInteger [
+	<api>
+	^self isInRangeCharacterCode: anInteger
+]
+
 { #category : #'header access' }
 ObjectMemory >> isClassOfNonImm: oop equalTo: classOop [
 	"Answer if the given (non-immediate) object is an instance of the given class."
@@ -3061,7 +3075,7 @@ ObjectMemory >> isInMemory: address [
 
 { #category : #'interpreter access' }
 ObjectMemory >> isInRangeCharacterCode: characterCode [
-	^characterCode >= 0 and: [characterCode <= 255]
+	^characterCode between: 0 and: 255
 ]
 
 { #category : #'object format' }
@@ -3168,6 +3182,13 @@ ObjectMemory >> isOopMutable: anOop [
 	<api>
 	^(self isIntegerObject: anOop) not
 	  and: [(self isObjImmutable: anOop) not]
+]
+
+{ #category : #'primitive support' }
+ObjectMemory >> isPinned: objOop [
+	"For forward-compatibility with Spur.  Answer false; ObjectMemory does not support pinning."
+	<api>
+	^false
 ]
 
 { #category : #'header access' }
