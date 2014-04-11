@@ -306,7 +306,6 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	self ssFlushTo: simStackPtr - 1.
 	desc := self ssTop.
 	self ssPop: 1.
-	retry := self Label.
 	desc popToReg: TempReg.
 
 	self ssAllocateRequiredReg: SendNumArgsReg. "Use this as the count reg."
@@ -314,7 +313,8 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	counterIndex := counterIndex + 1.
 	self flag: 'will need to use MoveAw32:R: if 64 bits'.
 	self assert: BytesPerWord = CounterBytes.
-	counter addDependent: (self annotateAbsolutePCRef: (self MoveAw: counter asUnsignedInteger R: SendNumArgsReg)).
+	retry := self MoveAw: counter asUnsignedInteger R: SendNumArgsReg.
+	counter addDependent: (self annotateAbsolutePCRef: retry).
 	self SubCq: 16r10000 R: SendNumArgsReg. "Count executed"
 	"Don't write back if we trip; avoids wrapping count back to initial value, and if we trip we don't execute."
 	countTripped := self JumpCarry: 0.
@@ -342,10 +342,9 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 		(self CallRT: (boolean == objectMemory falseObject
 						ifTrue: [ceSendMustBeBooleanAddFalseTrampoline]
 						ifFalse: [ceSendMustBeBooleanAddTrueTrampoline])).
-	"If we're in an image which hasn't got the Sista code loaded then the ceCounterTripped: trampoline
-	 will return directly to machine code, returning the boolean.  So the code should jump back to the
-	 retry point. This is the return address of the non-inlined method that yields the boolean to be tested.
-	 If ceCounterTripped: does not return it will examine the branch to retry to reposition the PC to that point."
+	"If we're in an image which hasn't got the Sista code loaded then the ceCounterTripped:
+	 trampoline will return directly to machine code, returning the boolean.  So the code should
+	 jump back to the retry point. The trampoline makes sure that TempReg has been reloaded."
 	self annotateBytecode: self Label.
 	self Jump: retry.
 	ok jmpTarget: self Label.
@@ -380,10 +379,10 @@ SistaStackToRegisterMappingCogit >> genMustBeBooleanTrampolineFor: boolean calle
 		resultReg: nil.
 	"For the case where the ceCounterTripped: call returns (e.g. because there's no callback selector
 	 installed), the call to the ceSendMustBeBooleanAddTrue/FalseTrampoline is followed by a jump
-	 back to the return address of the send that yields the boolean to be tested.  For this case copy
-	 the C result to ReceiverResultReg, to reload it with the boolean to be tested."
-	backEnd cResultRegister ~= ReceiverResultReg ifTrue:
-		[self MoveR: backEnd cResultRegister R: ReceiverResultReg].
+	 back to the start of the counter/condition test sequence.  For this case copy the C result to
+	 TempReg (the register that is tested), to reload it with the boolean to be tested."
+	backEnd cResultRegister ~= TempReg ifTrue:
+		[self MoveR: backEnd cResultRegister R: TempReg].
 	"If the objectRepresentation does want true & false to be mobile then we need to record these addresses."
 	self assert: (objectRepresentation shouldAnnotateObjectReference: boolean) not.
 	jumpMBB jmpTarget: (self AddCq: boolean R: TempReg).
