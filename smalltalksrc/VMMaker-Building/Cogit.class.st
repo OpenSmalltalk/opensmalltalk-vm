@@ -2411,7 +2411,7 @@ Cogit >> bytecodePCFor: mcpc startBcpc: startbcpc in: cogMethod [
 	^self
 		mapFor: cogMethod
 		bcpc: startbcpc
-		performUntil: #findMcpc:Bcpc:MatchingMcpc:
+		performUntil: #find:IsBackwardBranch:Mcpc:Bcpc:MatchingMcpc:
 		arg: mcpc asVoidPointer
 ]
 
@@ -4412,6 +4412,43 @@ Cogit >> fillInOPICHeader: pic size: size numArgs: numArgs selector: selector [
 ]
 
 { #category : #'method map' }
+Cogit >> find: descriptor IsBackwardBranch: isBackwardBranch Mcpc: mcpc Bcpc: bcpc MatchingBcpc: targetBcpc [
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	<var: #mcpc type: #'char *'>
+	<var: #targetBcpc type: #'void *'>
+	<inline: true>
+	^targetBcpc asInteger = ((descriptor isNil or: [isBackwardBranch]) ifTrue: [bcpc] ifFalse: [bcpc + descriptor numBytes])
+		ifTrue: [mcpc asInteger]
+		ifFalse: [0]
+]
+
+{ #category : #'method map' }
+Cogit >> find: descriptor IsBackwardBranch: isBackwardBranch Mcpc: mcpc Bcpc: bcpc MatchingMcpc: targetMcpc [
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	<var: #mcpc type: #'char *'>
+	<var: #targetMcpc type: #'void *'>
+	"Machine code addresses map to the following bytecode for all bytecodes
+	 except backward branches, where they map to the backward branch itself.
+	 This is so that loops continue, rather than terminate prematurely."
+	^targetMcpc = mcpc
+		ifTrue: [(descriptor isNil or: [isBackwardBranch])
+					ifTrue: [bcpc]
+					ifFalse: [bcpc + descriptor numBytes]]
+		ifFalse: [0]
+]
+
+{ #category : #'method map' }
+Cogit >> findBackwardBranch: descriptor IsBackwardBranch: isBackwardBranch Mcpc: mcpc Bcpc: bcpc MatchingBcpc: targetBcpc [
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	<var: #mcpc type: #'char *'>
+	<var: #targetBcpc type: #'void *'>
+	<inline: true>
+	^(isBackwardBranch and: [targetBcpc asInteger = bcpc])
+		ifTrue: [mcpc asInteger]
+		ifFalse: [0]
+]
+
+{ #category : #'method map' }
 Cogit >> findBlockMethodWithEntry: blockEntryMcpc startBcpc: startBcpc [
 	<returnTypeC: #usqInt>
 	| cogBlockMethod |
@@ -4440,20 +4477,6 @@ Cogit >> findMapLocationForMcpc: targetMcpc inMethod: cogMethod [
 			 ^map].
 		 map := map - 1].
 	^0
-]
-
-{ #category : #'method map' }
-Cogit >> findMcpc: mcpc Bcpc: bcpc MatchingBcpc: targetBcpc [
-	<var: #mcpc type: #'char *'>
-	<var: #targetBcpc type: #'void *'>
-	^targetBcpc asInteger = bcpc ifTrue: [mcpc asInteger] ifFalse: [0]
-]
-
-{ #category : #'method map' }
-Cogit >> findMcpc: mcpc Bcpc: bcpc MatchingMcpc: targetMcpc [
-	<var: #mcpc type: #'char *'>
-	<var: #targetMcpc type: #'void *'>
-	^targetMcpc = mcpc ifTrue: [bcpc] ifFalse: [0]
 ]
 
 { #category : #'method map' }
@@ -6271,8 +6294,9 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 	 for each mcpc, bcpc pair in the map until the function returns non-zero,
 	 answering that result, or 0 if it fails to.  This works only for frameful methods."
 	<var: #cogMethod type: #'CogBlockMethod *'>
-	<var: #functionSymbol declareC: 'sqInt (*functionSymbol)(char *mcpc, sqInt bcpc, void *arg)'>
+	<var: #functionSymbol declareC: 'sqInt (*functionSymbol)(BytecodeDescriptor *desc, sqInt isBackwardBranch, char *mcpc, sqInt bcpc, void *arg)'>
 	<var: #arg type: #'void *'>
+	<inline: true>
 	| isInBlock mcpc bcpc endbcpc map mapByte homeMethod aMethodObj result
 	  latestContinuation byte descriptor bsOffset nExts |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
@@ -6317,6 +6341,8 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 	"The stack check maps to the start of the first bytecode,
 	 the first bytecode being effectively after frame build."
 	result := self perform: functionSymbol
+					with: nil
+					with: false
 					with: (self cCoerceSimple: mcpc to: #'char *')
 					with: startbcpc
 					with: arg.
@@ -6329,7 +6355,7 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 	[(mapByte := objectMemory byteAt: map) ~= MapEnd] whileTrue: "defensive; we exit on bcpc"
 		[mapByte >= FirstAnnotation
 			ifTrue:
-				[| annotation nextBcpc |
+				[| annotation nextBcpc isBackwardBranch |
 				annotation := mapByte >> AnnotationShift.
 				mcpc := mcpc + (mapByte bitAnd: DisplacementMask).
 				(self isPCMappedAnnotation: annotation alternateInstructionSet: bsOffset > 0) ifTrue:
@@ -6348,20 +6374,19 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 					  or: [isInBlock and: [descriptor isMappedInBlock]]] whileFalse:
 						[bcpc := nextBcpc.
 						 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]].
-					"All subsequent bytecodes except backward branches map to the
-					 following bytecode. Backward branches map to themselves other-
-					 wise mapping could cause premature breaking out of loops." 
+					isBackwardBranch := descriptor isBranch
+										   and: [self isBackwardBranch: descriptor at: bcpc exts: nExts in: aMethodObj].
 					result := self perform: functionSymbol
+									with: descriptor
+									with: isBackwardBranch
 									with: (self cCoerceSimple: mcpc to: #'char *')
-									with: ((descriptor isBranch
-										   and: [self isBackwardBranch: descriptor at: bcpc exts: nExts in: aMethodObj])
-											ifTrue: [bcpc]
-											ifFalse: [bcpc + descriptor numBytes])
+									with: bcpc
 									with: arg.
 					 result ~= 0 ifTrue:
 						[^result].
 					 bcpc := nextBcpc.
-					 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]]]
+					 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]].
+				self maybeRememberPrevMap: annotation absPCMcpc: mcpc]
 			ifFalse:
 				[mcpc := mcpc + (mapByte >= DisplacementX2N
 									ifTrue: [mapByte - DisplacementX2N << AnnotationShift]
@@ -6378,9 +6403,10 @@ Cogit >> mapFor: cogMethod do: aBlock [
 
 { #category : #'method map' }
 Cogit >> mapFor: cogMethod performUntil: functionSymbol arg: arg [
-	"Disassembly/GC support"
+	"Unlinking/GC/Disassembly support"
 	<var: #cogMethod type: #'CogMethod *'>
 	<var: #functionSymbol declareC: 'int (*functionSymbol)(sqInt annotation, char *mcpc, sqInt arg)'>
+	<inline: true>
 	| mcpc map mapByte result |
 	mcpc := cogMethod asInteger + cmNoCheckEntryOffset.
 	map := self mapStartFor: cogMethod.
@@ -7004,20 +7030,37 @@ Cogit >> maybeGenerateICacheFlush [
 ]
 
 { #category : #'method map' }
+Cogit >> maybeRememberPrevMap: annotation absPCMcpc: mcpc [
+	"This is a nop in all except the SistaStackToRegisterMappingCogit."
+	<inline: true>
+]
+
+{ #category : #'method map' }
 Cogit >> mcPCFor: bcpc startBcpc: startbcpc in: cogMethod [
 	"Answer the absolute machine code pc matching the zero-relative bytecode pc argument
 	 in cogMethod, given the start of the bytecodes for cogMethod's block or method object."
+	<var: #cogMethod type: #'CogBlockMethod *'>
+	<returnTypeC: #usqInt>
+	^self
+		mapFor: cogMethod
+		bcpc: startbcpc
+		performUntil: #find:IsBackwardBranch:Mcpc:Bcpc:MatchingBcpc:
+		arg: bcpc asVoidPointer
+]
+
+{ #category : #'method map' }
+Cogit >> mcPCForBackwardBranch: bcpc startBcpc: startbcpc in: cogMethod [
+	"Answer the absolute machine code pc matching the zero-relative
+	 bytecode pc of a backward branch in cogMethod, given the start
+	 of the bytecodes for cogMethod's block or method object."
 	<api>
 	<var: #cogMethod type: #'CogBlockMethod *'>
-	| absPC |
-	absPC := self
-				mapFor: cogMethod
-				bcpc: startbcpc
-				performUntil: #findMcpc:Bcpc:MatchingBcpc:
-				arg: bcpc asVoidPointer.
-	^absPC ~= 0
-		ifTrue: [absPC asUnsignedInteger - cogMethod asUnsignedInteger]
-		ifFalse: [absPC]
+	<returnTypeC: #usqInt>
+	^self
+		mapFor: cogMethod
+		bcpc: startbcpc
+		performUntil: #findBackwardBranch:IsBackwardBranch:Mcpc:Bcpc:MatchingBcpc:
+		arg: bcpc asVoidPointer
 ]
 
 { #category : #'garbage collection' }
@@ -7367,6 +7410,18 @@ Cogit >> print: aString [
 	coInterpreter transcript print: aString
 ]
 
+{ #category : #'method map' }
+Cogit >> print: descriptor IsBackwardBranch: isBackwardBranch Mcpc: mcpc Bcpc: bcpc on: aStream [
+	<doNotGenerate>
+	aStream ensureCr.
+	mcpc printOn: aStream base: 16.
+	aStream
+		space; tab;
+		print: (isBackwardBranch ifTrue: [bcpc] ifFalse: [bcpc + descriptor numBytes]);
+		cr; flush.
+	^0
+]
+
 { #category : #printing }
 Cogit >> printCogMethodFor: address [
 	<api>
@@ -7513,7 +7568,7 @@ Cogit >> printPCMapPairsFor: cogMethod on: aStream [
 	<doNotGenerate>
 	(self subMethodsAsRangesFor: cogMethod)
 		do: [:sm|
-			self mapFor: sm cogMethod bcpc: sm startpc performUntil: #printMcpc:Bcpc:on: arg: aStream]
+			self mapFor: sm cogMethod bcpc: sm startpc performUntil: #print:IsBackwardBranch:Mcpc:Bcpc:on: arg: aStream]
 		separatedBy: [aStream tab; next: 2 put: $=; cr]
 ]
 
@@ -8539,7 +8594,7 @@ Cogit >> testBcToMcPcMappingForMethod: cogMethod [
 								inHomeMethod: cogMethod.
 		self assert: cogBlockMethod address = (blockSubMethod first - (self sizeof: CogBlockMethod))].
 	self bcpcsAndDescriptorsFor: aMethodObj do:
-		[:bcpc :byte :desc| | relMcpc absMcpc mappedBcpc |
+		[:bcpc :byte :desc| | absMcpc mappedBcpc |
 		currentSubMethod := self innermostSubMethodFor: bcpc in: subMethods startingAt: 1.
 		(currentSubMethod cogMethod stackCheckOffset > 0
 		 and: [desc isNil or: [desc isMapped]]) ifTrue:
@@ -8550,12 +8605,11 @@ Cogit >> testBcToMcPcMappingForMethod: cogMethod [
 								   and: [(self isBackwardBranch: desc at: bcpc exts: (self nExtensionsFor: bcpc in: aMethodObj) in: aMethodObj)]])
 								ifTrue: [bcpc]
 								ifFalse: [bcpc + desc numBytes].
-			 relMcpc := self
+			 absMcpc := self
 							mcPCFor: mappedBcpc
 							startBcpc: currentSubMethod startpc
 							in: currentSubMethod cogMethod.
-			 self assert: relMcpc ~= 0.
-			 absMcpc := relMcpc + currentSubMethod cogMethod address.
+			 self assert: absMcpc > (currentSubMethod cogMethod asInteger + self noCheckEntryOffset).
 			 self assert: (self
 							bytecodePCFor: absMcpc
 							startBcpc: currentSubMethod startpc
@@ -8595,10 +8649,9 @@ Cogit >> testMcToBcPcMappingForMethod: cogMethod [
 							in: subMethod cogMethod.
 				self assert: bcpc ~= 0.
 				mappedpc := self mcPCFor: bcpc startBcpc: subMethod startpc in: subMethod cogMethod.
-				self assert: mappedpc ~= 0.
-				mappedpc := mappedpc + subMethod cogMethod address.
+				self assert: mappedpc > (subMethod cogMethod address + self noCheckEntryOffset).
 				"mcpc = mappedpc is obviously what we want and expect.  PrevMcpc = mappedpc hacks
-				 around frame building accessors where the frst bytecode is mapped twice, once for the
+				 around frame building accessors where the first bytecode is mapped twice, once for the
 				 stack check and once for the context inst var access.  The bytecode pc can only map
 				 back to a single mcpc, the first, so the second map entry will fail without this hack."
 				self assert: (mcpc = mappedpc or: [prevMcpc = mappedpc]).
