@@ -594,6 +594,16 @@ CogVMSimulator >> convertToArray [
 	self shouldNotImplement
 ]
 
+{ #category : #'frame access' }
+CogVMSimulator >> convertToMachineCodeFrame: cogHomeMethod bcpc: bcpc [
+	"(minBackwardJumpCountForCompile ~= MinBackwardJumpCountForCompile
+	 and: [(self stringOf: (self penultimateLiteralOf: cogHomeMethod methodObject)) = #repeat]) ifTrue:
+		[self printExternalHeadFrame.
+		self print: bcpc; cr.
+		self halt]."
+	^super convertToMachineCodeFrame: cogHomeMethod bcpc: bcpc
+]
+
 { #category : #'I/O primitives support' }
 CogVMSimulator >> copyBits [
 
@@ -2159,6 +2169,18 @@ CogVMSimulator >> methodCacheSize [
 CogVMSimulator >> methodForContext: aContextOop [
 	self assert: (objectMemory isContext: aContextOop).
 	^objectMemory fetchPointer: MethodIndex ofObject: aContextOop
+]
+
+{ #category : #'simulation only' }
+CogVMSimulator >> minBackwardJumpCountForCompile [
+	<doNotGenerate>
+	^minBackwardJumpCountForCompile
+]
+
+{ #category : #'simulation only' }
+CogVMSimulator >> minBackwardJumpCountForCompile: n [
+	<doNotGenerate>
+	minBackwardJumpCountForCompile := n
 ]
 
 { #category : #initialization }

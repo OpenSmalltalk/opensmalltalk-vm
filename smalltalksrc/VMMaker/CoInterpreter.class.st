@@ -2423,9 +2423,9 @@ CoInterpreter >> convertToMachineCodeFrame: cogHomeMethod bcpc: bcpc [
 		[:p|
 		stackPages longAt: p + FoxMFReceiver - FoxIFReceiver put: (stackPages longAt: p)].
 	stackPointer := stackPointer + FoxMFReceiver - FoxIFReceiver.
-	pc := cogit mcPCFor: bcpc startBcpc: startBcpc in: cogMethod.
-	self assert: pc > cogit noCheckEntryOffset.
-	^cogMethod asInteger + pc
+	pc := cogit mcPCForBackwardBranch: bcpc startBcpc: startBcpc in: cogMethod.
+	self assert: pc > (cogMethod asInteger + cogit noCheckEntryOffset).
+	^pc
 ]
 
 { #category : #trampolines }
@@ -5426,10 +5426,10 @@ CoInterpreter >> printFrame: theFP WithSP: theSP [
 						['ceReturnToInterptreter']).
 	self printFrameThing: 'saved fp' at: theFP + FoxSavedFP.
 	self printFrameMethodFor: theFP.
-	(self isMachineCodeFrame: theFP) ifFalse:
+	(self isMachineCodeFrame: theFP) ifTrue:
 		[self printFrameFlagsForFP: theFP].
 	self printFrameOop: 'context' at: theFP + FoxThisContext.
-	(self isMachineCodeFrame: theFP) ifTrue:
+	(self isMachineCodeFrame: theFP) ifFalse:
 		[self printFrameFlagsForFP: theFP].
 	(self isMachineCodeFrame: theFP)
 		ifTrue: [rcvrAddress := theFP + FoxMFReceiver]
