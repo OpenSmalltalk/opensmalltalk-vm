@@ -120,6 +120,14 @@ StackRaspbianConfig >> configureBitBltSimulation: maker [
 ]
 
 { #category : #'as yet unclassified' }
+StackRaspbianConfig >> configureSoundPlugin: maker [ 
+	"extra rules for SoundPlugin"
+	
+	maker addPlatformSources: #( 'sqUnixSound').
+	maker addExternalLibraries: #( 'asound2' )
+]
+
+{ #category : #'as yet unclassified' }
 StackRaspbianConfig >> defaultExternalPlugins [
 	^ #(
 		B3DAcceleratorPlugin
