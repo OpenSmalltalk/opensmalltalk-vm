@@ -60,20 +60,6 @@ ThreadedFFICalloutStateForPPC >> integerRegisters: anObject [
 ]
 
 { #category : #accessing }
-ThreadedFFICalloutStateForPPC >> regIndex [
-	"Answer the value of regIndex"
-
-	^ regIndex
-]
-
-{ #category : #accessing }
-ThreadedFFICalloutStateForPPC >> regIndex: anObject [
-	"Set the value of regIndex"
-
-	^regIndex := anObject
-]
-
-{ #category : #accessing }
 ThreadedFFICalloutStateForPPC >> registerIndex [
 
 	^ registerIndex
