@@ -84,17 +84,3 @@ ThreadedFFICalloutStateForARM >> integerRegisters: anObject [
 
 	^integerRegisters := anObject
 ]
-
-{ #category : #accessing }
-ThreadedFFICalloutStateForARM >> regIndex [
-	"Answer the value of regIndex"
-
-	^ regIndex
-]
-
-{ #category : #accessing }
-ThreadedFFICalloutStateForARM >> regIndex: anObject [
-	"Set the value of regIndex"
-
-	^regIndex := anObject
-]
