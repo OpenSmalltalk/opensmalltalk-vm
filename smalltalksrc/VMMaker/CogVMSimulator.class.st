@@ -216,6 +216,15 @@ CogVMSimulator >> attemptToSwitchToMachineCode: bcpc [
 	^super attemptToSwitchToMachineCode: bcpc
 ]
 
+{ #category : #'return bytecodes' }
+CogVMSimulator >> baseFrameReturn [
+	"| contextToReturnTo |
+	contextToReturnTo := self frameCallerContext: localFP.
+	(self stringOf: (self penultimateLiteralOf: (self fetchPointer: MethodIndex ofObject: contextToReturnTo))) = #indexOf:startingAt:ifAbsent: ifTrue:
+		[self halt]."
+	^super baseFrameReturn
+]
+
 { #category : #'multi-threading simulation switch' }
 CogVMSimulator >> bindProcess: aProcess toId: newId [
 	"This method includes or excludes CoInterpreterMT methods as required.
@@ -332,6 +341,10 @@ CogVMSimulator >> ceBaseFrameReturn: returnValue [
 	Transcript print: byteCount; tab; print: thisContext; cr.
 	(self confirm: 'continue?') ifFalse: [self returnValue hex]."
 	"returnValue = 16r01934F78 ifTrue: [self halt]."
+	"| contextToReturnTo |
+	contextToReturnTo := stackPages longAt: stackPage baseAddress.
+	(self stringOf: (self penultimateLiteralOf: (self fetchPointer: MethodIndex ofObject: contextToReturnTo))) = #indexOf:startingAt:ifAbsent: ifTrue:
+		[self halt]."
 	^super ceBaseFrameReturn: returnValue
 ]
 
@@ -358,8 +371,13 @@ CogVMSimulator >> ceContext: aOnceMarriedContext instVar: slotIndex value: anOop
 
 { #category : #'cog jit support' }
 CogVMSimulator >> ceCounterTripped: condition [
-	self halt transcript cr; nextPutAll: 'counter tripped in '.
+	| counterTrippedSelector |
+	self transcript cr; nextPutAll: 'counter tripped in '.
 	self shortPrintFrame: framePointer.
+	counterTrippedSelector := objectMemory maybeSplObj: SelectorCounterTripped.
+	(counterTrippedSelector isNil
+	or: [counterTrippedSelector = objectMemory nilObject]) ifFalse:
+		[self halt: 'counter tripped'].
 	^super ceCounterTripped: condition
 ]
 
@@ -944,41 +962,50 @@ CogVMSimulator >> externalDivorceFrame: theFP andContext: ctxt [
 ]
 
 { #category : #'debugging traps' }
-CogVMSimulator >> externalInstVar: offset ofContext: aOnceMarriedContext [
+CogVMSimulator >> externalInstVar: offset ofContext: aContext [
 
 	"offset = InstructionPointerIndex ifTrue:
-		[Transcript nextPutAll: '==================='; cr.
-		  self printContext: 16r1715630.
-		 self printCallStackOf: aOnceMarriedContext currentFP: framePointer.
-		 Transcript nextPutAll: '==================='; cr.
+		[transcript nextPutAll: '==================='; cr.
+		 self printContext: 16r1715630.
+		 self printCallStackOf: aContext currentFP: framePointer.
+		 transcript nextPutAll: '==================='; cr.
 		 self halt]."
 
 	| result |
 	"self shortPrintFrameAndCallers: framePointer.
-	Transcript print: byteCount; tab; print: thisContext; cr.
+	transcript print: byteCount; tab; print: thisContext; cr.
 	self print: offset; cr.
-	self printContext: aOnceMarriedContext.
+	self printContext: aContext.
 	(self confirm: 'continue?') ifFalse: [self halt]."
-	result := super externalInstVar: offset ofContext: aOnceMarriedContext.
+	"result := super externalInstVar: offset ofContext: aContext.
+	(offset = InstructionPointerIndex
+	and: [(self stringOf: (self penultimateLiteralOf: (self fetchPointer: MethodIndex ofObject: aContext))) = #indexOf:startingAt:ifAbsent:]) ifTrue:
+		[transcript space; nextPutAll: '^pc '; nextPutAll: result hex.
+		 (objectMemory isIntegerObject: result) ifTrue:
+			[transcript space; print: (objectMemory integerValueOf: result)].
+		 transcript tab.
+		 self shortPrintContext: aContext]."
 	"offset = StackPointerIndex ifTrue:
-		[Transcript nextPutAll: '^stackp ', (self integerValueOf: result) printString; tab.
-		 self shortPrintContext: aOnceMarriedContext.
-		 (#(24205456 24205732) includes: aOnceMarriedContext) ifTrue:
-		 	[(self checkIsStillMarriedContext: aOnceMarriedContext currentFP: framePointer)
-				ifTrue: [self printFrame: (self frameOfMarriedContext: aOnceMarriedContext) WithSP: (self frameOfMarriedContext: aOnceMarriedContext) - 48]
-				ifFalse: [self printContext: aOnceMarriedContext]]]."
+		[transcript nextPutAll: '^stackp ', (self integerValueOf: result) printString; tab.
+		 self shortPrintContext: aContext.
+		 (#(24205456 24205732) includes: aContext) ifTrue:
+		 	[(self checkIsStillMarriedContext: aContext currentFP: framePointer)
+				ifTrue: [self printFrame: (self frameOfMarriedContext: aContext) WithSP: (self frameOfMarriedContext: aContext) - 48]
+				ifFalse: [self printContext: aContext]]]."
 	^result
 ]
 
 { #category : #'frame access' }
-CogVMSimulator >> externalInstVar: index ofContext: maybeMarriedContext put: anOop [
+CogVMSimulator >> externalInstVar: index ofContext: aContext put: anOop [
 	"self shortPrintFrameAndCallers: framePointer.
 	Transcript print: byteCount; tab; print: thisContext; cr.
 	self print: index; cr.
-	self printContext: maybeMarriedContext.
+	self printContext: aContext.
 	self shortPrintOop: anOop.
 	(self confirm: 'continue?') ifFalse: [self halt]."
-	^super externalInstVar: index ofContext: maybeMarriedContext put: anOop
+	"(self stringOf: (self penultimateLiteralOf: (self fetchPointer: MethodIndex ofObject: aContext))) = #indexOf:startingAt:ifAbsent: ifTrue:
+		[self halt]."
+	^super externalInstVar: index ofContext: aContext put: anOop
 ]
 
 { #category : #'interpreter shell' }
@@ -1432,12 +1459,12 @@ CogVMSimulator >> initializeThreadSupport [
 ]
 
 { #category : #'debugging traps' }
-CogVMSimulator >> instVar: offset ofContext: aOnceMarriedContext [
+CogVMSimulator >> instVar: offset ofContext: aContext [
 
 	"offset = InstructionPointerIndex ifTrue:
 		[Transcript nextPutAll: '==================='; cr.
 		  self printContext: 16r1715630.
-		 self printCallStackOf: aOnceMarriedContext currentFP: framePointer.
+		 self printCallStackOf: aContext currentFP: framePointer.
 		 Transcript nextPutAll: '==================='; cr.
 		 self halt]."
 
@@ -1445,16 +1472,23 @@ CogVMSimulator >> instVar: offset ofContext: aOnceMarriedContext [
 	"self shortPrintFrameAndCallers: localFP.
 	Transcript print: byteCount; tab; print: thisContext; cr.
 	self print: offset; cr.
-	self printContext: aOnceMarriedContext.
+	self printContext: aContext.
 	(self confirm: 'continue?') ifFalse: [self halt]."
-	result := super instVar: offset ofContext: aOnceMarriedContext.
+	"result := super instVar: offset ofContext: aContext.
+	(offset = InstructionPointerIndex
+	and: [(self stringOf: (self penultimateLiteralOf: (self fetchPointer: MethodIndex ofObject: aContext))) = #indexOf:startingAt:ifAbsent:]) ifTrue:
+		[transcript space; nextPutAll: '^pc '; nextPutAll: result hex.
+		 (objectMemory isIntegerObject: result) ifTrue:
+			[transcript space; print: (objectMemory integerValueOf: result)].
+		 transcript tab.
+		 self shortPrintContext: aContext]."
 	"offset = StackPointerIndex ifTrue:
 		[Transcript nextPutAll: '^stackp ', (self integerValueOf: result) printString; tab.
-		 self shortPrintContext: aOnceMarriedContext.
-		 (#(24205456 24205732) includes: aOnceMarriedContext) ifTrue:
-		 	[(self checkIsStillMarriedContext: aOnceMarriedContext currentFP: localFP)
-				ifTrue: [self printFrame: (self frameOfMarriedContext: aOnceMarriedContext) WithSP: (self frameOfMarriedContext: aOnceMarriedContext) - 48]
-				ifFalse: [self printContext: aOnceMarriedContext]]]."
+		 self shortPrintContext: aContext.
+		 (#(24205456 24205732) includes: aContext) ifTrue:
+		 	[(self checkIsStillMarriedContext: aContext currentFP: localFP)
+				ifTrue: [self printFrame: (self frameOfMarriedContext: aContext) WithSP: (self frameOfMarriedContext: aContext) - 48]
+				ifFalse: [self printContext: aContext]]]."
 	^result
 ]
 
@@ -1466,6 +1500,8 @@ CogVMSimulator >> instVar: index ofContext: aMarriedContext put: anOop [
 	self printContext: aMarriedContext.
 	self shortPrintOop: anOop.
 	(self confirm: 'continue?') ifFalse: [self halt]."
+	"(self stringOf: (self penultimateLiteralOf: (self fetchPointer: MethodIndex ofObject: aMarriedContext))) = #indexOf:startingAt:ifAbsent: ifTrue:
+		[self halt]."
 	^super instVar: index ofContext: aMarriedContext put: anOop
 ]
 
@@ -3624,6 +3660,8 @@ CogVMSimulator >> unableToReadImageError [
 CogVMSimulator >> updateStateOfSpouseContextForFrame: theFP WithSP: theSP [
 	 "26431360 = (self frameContext: theFP) ifTrue:
 		[self halt]."
+	"((self stringOf: (self penultimateLiteralOf: (self frameMethodObject: theFP))) = #indexOf:startingAt:ifAbsent:) ifTrue:
+		[self halt]."
 	^super updateStateOfSpouseContextForFrame: theFP WithSP: theSP
 ]
 
@@ -3661,6 +3699,7 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'disassemble ext head frame method' action: [cogit disassembleMethod: (self frameMethod: framePointer)];
 		add: 'print oop...' action: [(self promptHex: 'print oop') ifNotNil: [:oop| self printOop: oop]];
 		add: 'long print oop...' action: [(self promptHex: 'print oop') ifNotNil: [:oop| self longPrintOop: oop]];
+		add: 'print context...' action: [(self promptHex: 'print context') ifNotNil: [:oop| self printContext: oop]];
 		addLine;
 		add: 'inspect object memory' target: objectMemory action: #inspect;
 		add: 'inspect cointerpreter' action: #inspect;
