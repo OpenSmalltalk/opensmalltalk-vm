@@ -83,6 +83,9 @@ ThreadedFFIPlugin class >> preambleCCode [
 #if defined(__GNUC__) && (defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__))
 # define setsp(sp) asm volatile ("movl %0,%%esp" : : "m"(sp))
 # define getsp() ({ void *esp; asm volatile ("movl %%esp,%0" : "=r"(esp) : ); esp;})
+# elif defined(__GNUC__) && (defined(__arm__))
+# define setsp(sp) asm volatile ("ldr %%sp, %0" : : "m"(sp))
+# define getsp() ({ void *sp; asm volatile ("mov %0, %%sp" : "=r"(sp) : ); sp;})
 #endif
 #if !defined(getsp)
 # define getsp() 0
@@ -103,6 +106,8 @@ ThreadedFFIPlugin class >> preambleCCode [
 # elif defined(__sparc64__) || defined(__sparcv9__) || defined(__sparc_v9__) /* must preceed 32-bit sparc defs */
 #  define STACK_ALIGN_BYTES 16
 # elif defined(sparc) || defined(__sparc__) || defined(__sparclite__)
+#  define STACK_ALIGN_BYTES 8
+# elif defined(__arm__) 
 #  define STACK_ALIGN_BYTES 8
 # else
 #  define STACK_ALIGN_BYTES 0
@@ -128,6 +133,11 @@ ThreadedFFIPlugin class >> preambleCCode [
 #	define PLATFORM_API_USES_CALLEE_POPS_CONVENTION 0
 # endif
 #endif /* defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__) */
+
+#if defined(__arm__)
+#	define WIN32_X86_STRUCT_RETURN 0
+#	define PLATFORM_API_USES_CALLEE_POPS_CONVENTION 0
+#endif /* defined(__arm__) */
 
 #if !defined(ALLOCA_LIES_SO_USE_GETSP)
 # if defined(__MINGW32__) && (__GNUC__ >= 3)

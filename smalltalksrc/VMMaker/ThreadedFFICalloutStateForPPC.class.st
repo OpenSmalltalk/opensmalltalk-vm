@@ -2,7 +2,7 @@ Class {
 	#name : #ThreadedFFICalloutStateForPPC,
 	#superclass : #ThreadedFFICalloutState,
 	#instVars : [
-		'regIndex',
+		'registerIndex',
 		'integerRegisters',
 		'floatRegisters'
 	],
@@ -32,10 +32,16 @@ ThreadedFFICalloutStateForPPC >> floatRegisters [
 	^ floatRegisters
 ]
 
+{ #category : #accessing }
+ThreadedFFICalloutStateForPPC >> floatRegisters: anObject [
+
+	^floatRegisters := anObject
+]
+
 { #category : #'initialize-release' }
 ThreadedFFICalloutStateForPPC >> initialize [
 	super initialize.
-	regIndex := 0.
+	registerIndex := 0.
 	integerRegisters := CArrayAccessor on: (Array new: ThreadedPPCBEFFIPlugin numRegArgs).
 	floatRegisters := CArrayAccessor on: (Array new: ThreadedPPCBEFFIPlugin numRegArgs)
 ]
@@ -45,6 +51,12 @@ ThreadedFFICalloutStateForPPC >> integerRegisters [
 	"Answer the value of integerRegisters"
 
 	^ integerRegisters
+]
+
+{ #category : #accessing }
+ThreadedFFICalloutStateForPPC >> integerRegisters: anObject [
+
+	^integerRegisters := anObject
 ]
 
 { #category : #accessing }
@@ -59,4 +71,16 @@ ThreadedFFICalloutStateForPPC >> regIndex: anObject [
 	"Set the value of regIndex"
 
 	^regIndex := anObject
+]
+
+{ #category : #accessing }
+ThreadedFFICalloutStateForPPC >> registerIndex [
+
+	^ registerIndex
+]
+
+{ #category : #accessing }
+ThreadedFFICalloutStateForPPC >> registerIndex: anObject [
+
+	^registerIndex := anObject
 ]
