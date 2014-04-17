@@ -146,9 +146,13 @@ ThreadedARMFFIPlugin >> ffiPushDoubleFloat: value in: calloutState [
 	<var: #value type: #double>
 	<var: #calloutState type: #'CalloutState *'>
 	<inline: true>
+
 	calloutState floatRegisterIndex < (NumFloatRegArgs - 1)
 		ifTrue:
-			[calloutState floatRegisterIndex: (calloutState floatRegisterIndex + 1 bitClear: 1).
+			[(calloutState floatRegisterIndex bitAnd: 1) = 1
+				ifTrue: 
+					[calloutState backfillFloatRegisterIndex: calloutState floatRegisterIndex.
+					 calloutState floatRegisterIndex: (calloutState floatRegisterIndex + 1)].
 		  	 (self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: calloutState floatRegisterIndex)) 
 				 	to: 'double*')
 						at: 0
@@ -157,23 +161,25 @@ ThreadedARMFFIPlugin >> ffiPushDoubleFloat: value in: calloutState [
 		ifFalse:
 			[calloutState currentArg + 8 > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
+			 calloutState floatRegisterIndex: NumFloatRegArgs.
 			 interpreterProxy storeFloatAtPointer: calloutState currentArg from: value.
 			 calloutState currentArg: calloutState currentArg + 8].
 	^0
 ]
 
 { #category : #marshalling }
-ThreadedARMFFIPlugin >> ffiPushPointer: value in: calloutState [
+ThreadedARMFFIPlugin >> ffiPushPointer: pointer in: calloutState [
+	<var: #pointer type: #'void *'>
 	<var: #calloutState type: #'CalloutState *'>
 	<inline: true>
 	calloutState integerRegisterIndex < NumIntRegArgs
 		ifTrue:
-			[calloutState integerRegisters at: calloutState integerRegisterIndex put: value.
+			[calloutState integerRegisters at: calloutState integerRegisterIndex put: pointer.
 			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
 		ifFalse:
 			[calloutState currentArg + 4 > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
-			 interpreterProxy longAt: calloutState currentArg put: value.
+			 interpreterProxy longAt: calloutState currentArg put: pointer.
 			 calloutState currentArg: calloutState currentArg + 4].
 	^0
 ]
@@ -240,6 +246,7 @@ ThreadedARMFFIPlugin >> ffiPushSignedLongLong: value in: calloutState [
 			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 2]
 		ifFalse:
 			[calloutState currentArg + 8 > calloutState limit ifTrue: [^FFIErrorCallFrameTooBig].
+			 calloutState integerRegisterIndex: NumIntRegArgs.
 			 interpreterProxy
 				longAt: calloutState currentArg put: (self cCoerceSimple: value to: #usqInt);
 				longAt: calloutState currentArg + 4 put: (self cCoerceSimple: value >> 32 to: #usqInt).
@@ -265,12 +272,18 @@ ThreadedARMFFIPlugin >> ffiPushSignedShort: value in: calloutState [
 
 { #category : #marshalling }
 ThreadedARMFFIPlugin >> ffiPushSingleFloat: value in: calloutState [
+	<var: #value type: #float>
 	<var: #calloutState type: #'CalloutState *'>
 	<inline: true>
 	calloutState floatRegisterIndex < NumFloatRegArgs
 		ifTrue: 
-			[calloutState floatRegisters at: calloutState floatRegisterIndex  put: (self cCoerceSimple: value to: #'float').
-			 calloutState floatRegisterIndex: calloutState floatRegisterIndex + 1]
+			[calloutState backfillFloatRegisterIndex > 0
+				ifTrue: 
+					[calloutState floatRegisters at: calloutState backfillFloatRegisterIndex  put: value.
+					 calloutState backfillFloatRegisterIndex: 0]
+				ifFalse: 
+					[calloutState floatRegisters at: calloutState floatRegisterIndex  put: value.
+					 calloutState floatRegisterIndex: calloutState floatRegisterIndex + 1]]
 		ifFalse:
 			[calloutState currentArg + 4 > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
@@ -361,6 +374,7 @@ ThreadedARMFFIPlugin >> ffiPushUnsignedLongLong: value in: calloutState [
 			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 2]
 		ifFalse:
 			[calloutState currentArg + 8 > calloutState limit ifTrue: [^FFIErrorCallFrameTooBig].
+			 calloutState integerRegisterIndex: NumIntRegArgs.
 			 interpreterProxy
 				longAt: calloutState currentArg put: (self cCoerceSimple: value to: #usqInt);
 				longAt: calloutState currentArg + 4 put: (self cCoerceSimple: value >> 32 to: #usqInt).
