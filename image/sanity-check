@@ -1,5 +1,0 @@
-#!/bin/sh
-case `hexdump -n 4 -e '"%u\n"' VMMaker-Squeak4.1.image` in
-6504)	echo "vmmaker image looks good";;
-*)	echo "vmmaker image version is screwed up.  Did you use Cog?"
-esac
