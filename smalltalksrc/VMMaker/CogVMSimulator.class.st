@@ -977,8 +977,8 @@ CogVMSimulator >> externalInstVar: offset ofContext: aContext [
 	self print: offset; cr.
 	self printContext: aContext.
 	(self confirm: 'continue?') ifFalse: [self halt]."
-	"result := super externalInstVar: offset ofContext: aContext.
-	(offset = InstructionPointerIndex
+	result := super externalInstVar: offset ofContext: aContext.
+	"(offset = InstructionPointerIndex
 	and: [(self stringOf: (self penultimateLiteralOf: (self fetchPointer: MethodIndex ofObject: aContext))) = #indexOf:startingAt:ifAbsent:]) ifTrue:
 		[transcript space; nextPutAll: '^pc '; nextPutAll: result hex.
 		 (objectMemory isIntegerObject: result) ifTrue:
@@ -1474,8 +1474,8 @@ CogVMSimulator >> instVar: offset ofContext: aContext [
 	self print: offset; cr.
 	self printContext: aContext.
 	(self confirm: 'continue?') ifFalse: [self halt]."
-	"result := super instVar: offset ofContext: aContext.
-	(offset = InstructionPointerIndex
+	result := super instVar: offset ofContext: aContext.
+	"(offset = InstructionPointerIndex
 	and: [(self stringOf: (self penultimateLiteralOf: (self fetchPointer: MethodIndex ofObject: aContext))) = #indexOf:startingAt:ifAbsent:]) ifTrue:
 		[transcript space; nextPutAll: '^pc '; nextPutAll: result hex.
 		 (objectMemory isIntegerObject: result) ifTrue:
