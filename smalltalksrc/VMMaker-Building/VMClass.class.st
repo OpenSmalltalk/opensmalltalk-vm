@@ -178,6 +178,7 @@ VMClass class >> initializeMiscConstants [
 	self isInterpreterClass ifTrue:
 		[STACKVM := COGVM := COGMTVM := false].
 
+	initializationOptions ifNil: [self initializationOptions: Dictionary new].
 	omc := initializationOptions at: #ObjectMemory ifAbsent: nil.
 	initializationOptions
 		at: #SqueakV3ObjectMemory	"the good ole default"

@@ -141,8 +141,8 @@ CogObjectRepresentation >> markAndTraceLiteralIfYoung: literal [
 ]
 
 { #category : #'calling convention' }
-CogObjectRepresentation >> numRegArgs [
-	"Define how many register arguments a StackToRegisterMapngCogit can and should use
+CogObjectRepresentation >> preferredNumRegArgs [
+	"Define how many register arguments a StackToRegisterMappingCogit can and should use
 	 with the receiver.  The value must be 0, 1 or 2.  Note that a SimpleStackBasedCogit always
 	 has 0 register args (although the receiver is passed in a register)."
 	self subclassResponsibility

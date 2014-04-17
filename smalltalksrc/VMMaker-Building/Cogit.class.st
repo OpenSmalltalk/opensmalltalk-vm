@@ -541,15 +541,17 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		declareVar: #CStackPointer type: #'void *';
 		declareVar: #minValidCallAddress type: #'unsigned long';
 		declareVar: #debugPrimCallStackOffset type: #'unsigned long'.
-	aCCodeGenerator
-		var: #generatorTable
-			declareC: 'BytecodeDescriptor generatorTable[', aCCodeGenerator vmClass generatorTable size, ']'
-						, (self tableInitializerFor: aCCodeGenerator vmClass generatorTable
-							in: aCCodeGenerator);
-		var: #primitiveGeneratorTable
-			declareC: 'PrimitiveDescriptor primitiveGeneratorTable[MaxCompiledPrimitiveIndex+1]'
-						, (self tableInitializerFor: aCCodeGenerator vmClass primitiveTable
-							in: aCCodeGenerator).
+	aCCodeGenerator vmClass generatorTable ifNotNil:
+		[:generatorTable|
+		aCCodeGenerator
+			var: #generatorTable
+				declareC: 'BytecodeDescriptor generatorTable[', aCCodeGenerator vmClass generatorTable size, ']'
+							, (self tableInitializerFor: aCCodeGenerator vmClass generatorTable
+								in: aCCodeGenerator);
+			var: #primitiveGeneratorTable
+				declareC: 'PrimitiveDescriptor primitiveGeneratorTable[MaxCompiledPrimitiveIndex+1]'
+							, (self tableInitializerFor: aCCodeGenerator vmClass primitiveTable
+								in: aCCodeGenerator)].
 	"In C the abstract opcode names clash with the Smalltak generator syntactic sugar.
 	 Most of the syntactic sugar is inlined, but alas some remains.  Rename the syntactic
 	 sugar to avoid the clash."
@@ -969,6 +971,8 @@ Cogit class >> tableFunctions [
 	"self tableFunctions"
 	self getVMMaker ifNotNil:
 		[:vmMaker| vmMaker cogitClass ~= self ifTrue: [^Set new]].
+	generatorTable ifNil:
+		[^Set new].
 	^Set new
 		addAll: (generatorTable object
 					collect: [:ea| ea generator]);
