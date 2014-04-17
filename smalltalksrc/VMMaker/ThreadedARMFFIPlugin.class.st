@@ -32,11 +32,6 @@ ThreadedARMFFIPlugin class >> numIntRegArgs [
 	^NumIntRegArgs
 ]
 
-{ #category : #accessing }
-ThreadedARMFFIPlugin class >> numRegArgs [
-	^NumRegArgs
-]
-
 { #category : #'callout support' }
 ThreadedARMFFIPlugin >> dispatchFunctionPointer: aFunctionPointer with: int1 with: int2 with: int3 with: int4 [
 	"In C aFunctionPointer is void (*aFunctionPointer)(int, int, int, int)"

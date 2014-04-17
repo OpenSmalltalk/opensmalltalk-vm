@@ -210,12 +210,15 @@ StackToRegisterMappingCogit class >> declareCVarsIn: aCodeGen [
 			type: #CogSimStackEntry;
 		var: #optStatus
 			type: #CogSSOptStatus;
-		var: 'isPushNilFunction'
-			declareC: 'sqInt (* const isPushNilFunction)(struct _BytecodeDescriptor *,sqInt,sqInt,sqInt) = ', (aCodeGen cFunctionNameFor: self isPushNilFunction);
-		var: 'pushNilSizeFunction'
-			declareC: 'sqInt (* const pushNilSizeFunction)(sqInt) = ', (aCodeGen cFunctionNameFor: self pushNilSizeFunction);
 		var: 'prevBCDescriptor'
 			type: #'BytecodeDescriptor *'.
+
+	self isPushNilFunction ifNotNil:
+		[aCodeGen
+			var: 'isPushNilFunction'
+				declareC: 'sqInt (* const isPushNilFunction)(struct _BytecodeDescriptor *,sqInt,sqInt,sqInt) = ', (aCodeGen cFunctionNameFor: self isPushNilFunction);
+			var: 'pushNilSizeFunction'
+				declareC: 'sqInt (* const pushNilSizeFunction)(sqInt) = ', (aCodeGen cFunctionNameFor: self pushNilSizeFunction)].
 
 	aCodeGen
 		addSelectorTranslation: #register to: (aCodeGen cFunctionNameFor: 'registerr');
@@ -3837,8 +3840,8 @@ StackToRegisterMappingCogit >> needsFrameIfStackGreaterThanOne: stackDelta [
 
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> numRegArgs [
-	<doNotGenerate>
-	^objectRepresentation numRegArgs
+	<api>
+	^objectRepresentation preferredNumRegArgs
 ]
 
 { #category : #'simulation stack' }
