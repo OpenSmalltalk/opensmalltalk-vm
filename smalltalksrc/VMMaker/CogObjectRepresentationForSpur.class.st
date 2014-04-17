@@ -486,10 +486,13 @@ CogObjectRepresentationForSpur >> markAndTraceLiteralIfYoung: literal [
 ]
 
 { #category : #'calling convention' }
-CogObjectRepresentationForSpur >> numRegArgs [
-	"The Spur object representation is simple enough that implementing
-	 at:put: is straight-forward and hence 2 register args are worth while."
-	<api>
+CogObjectRepresentationForSpur >> preferredNumRegArgs [
+	"Define how many register arguments a StackToRegisterMappingCogit can
+	 and should use with the receiver.  The value must be 0, 1 or 2.  Note that a
+	 SimpleStackBasedCogit always has 0 register args (although the receiver is
+	 passed in a register).  The Spur object representation is simple enough that
+	 implementing at:put: is straight-forward and hence 2 register args are worth while."
+	<inline: true>
 	^2
 ]
 
