@@ -5,6 +5,7 @@ Class {
 		'integerRegisterIndex',
 		'integerRegisters',
 		'floatRegisterIndex',
+		'backfillFloatRegisterIndex',
 		'floatRegisters'
 	],
 	#category : #'VMMaker-Plugins'
@@ -24,6 +25,18 @@ ThreadedFFICalloutStateForARM class >> instVarNamesAndTypesForTranslationDo: aBi
 						['floatRegisters']	-> [{#float. '[', ThreadedARMFFIPlugin numFloatRegArgs printString, ']'}] }
 					otherwise:
 						[#sqInt])]
+]
+
+{ #category : #accessing }
+ThreadedFFICalloutStateForARM >> backfillFloatRegisterIndex [
+
+	^ backfillFloatRegisterIndex
+]
+
+{ #category : #accessing }
+ThreadedFFICalloutStateForARM >> backfillFloatRegisterIndex: anObject [
+
+	^backfillFloatRegisterIndex := anObject
 ]
 
 { #category : #accessing }
@@ -55,6 +68,7 @@ ThreadedFFICalloutStateForARM >> initialize [
 	super initialize.
 	integerRegisterIndex := 0.
 	floatRegisterIndex := 0.
+	backfillFloatRegisterIndex := 0.
 	integerRegisters := CArrayAccessor on: (Array new: ThreadedARMFFIPlugin numIntRegArgs).
 	floatRegisters := CArrayAccessor on: (Array new: ThreadedARMFFIPlugin numFloatRegArgs)
 ]
