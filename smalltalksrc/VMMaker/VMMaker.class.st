@@ -348,8 +348,8 @@ VMMaker class >> generateNewspeakCogVM [
 		and: StackToRegisterMappingCogit
 		with: #(	NewspeakVM true
 				MULTIPLEBYTECODESETS true)
-		to: (FileDirectory default pathFromURI: 'oscogvm/nscogsrc')
-		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
+		to: (FileDirectory default pathFromURI: self sourceTree, '/nscogsrc')
+		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including:#(	AsynchFilePlugin BMPReadWriterPlugin BalloonEnginePlugin BitBltSimulation DeflatePlugin DSAPlugin DropPlugin
 					FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin ImmX11Plugin JPEGReadWriter2Plugin
 					JPEGReaderPlugin LargeIntegersPlugin Matrix2x3Plugin MiscPrimitivePlugin NewsqueakIA32ABIPlugin
@@ -361,8 +361,8 @@ VMMaker class >> generateNewspeakCogVM [
 VMMaker class >> generateNewspeakInterpreterVM [
 	^VMMaker
 		generate: NewspeakInterpreter
-		to: (FileDirectory default pathFromURI: 'oscogvm/nssrc')
-		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
+		to: (FileDirectory default pathFromURI: self sourceTree, '/nssrc')
+		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including:#(	AsynchFilePlugin BMPReadWriterPlugin BalloonEnginePlugin BitBltSimulation DeflatePlugin DSAPlugin DropPlugin
 					FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin ImmX11Plugin JPEGReadWriter2Plugin
 					JPEGReaderPlugin LargeIntegersPlugin Matrix2x3Plugin MiscPrimitivePlugin NewsqueakIA32ABIPlugin
@@ -379,8 +379,8 @@ VMMaker class >> generateNewspeakSpurCogVM [
 		with: #(	ObjectMemory Spur32BitCoMemoryManager
 				MULTIPLEBYTECODESETS true
 				NewspeakVM true)
-		to: (FileDirectory default pathFromURI: 'oscogvm/nsspursrc')
-		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
+		to: (FileDirectory default pathFromURI: self sourceTree, '/nsspursrc')
+		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including:#()
 ]
 
@@ -392,8 +392,8 @@ VMMaker class >> generateNewspeakSpurStackVM [
 		with: #(	ObjectMemory Spur32BitMemoryManager
 				MULTIPLEBYTECODESETS true
 				NewspeakVM true)
-		to: (FileDirectory default directoryNamed: 'oscogvm/nsspurstacksrc') fullName
-		platformDir: (FileDirectory default directoryNamed: 'oscogvm/platforms') fullName
+		to: (FileDirectory default directoryNamed: self sourceTree, '/nsspurstacksrc') fullName
+		platformDir: (FileDirectory default directoryNamed: self sourceTree, '/platforms') fullName
 		including: #()
 ]
 
@@ -403,8 +403,8 @@ VMMaker class >> generateNewspeakStackVM [
 	^VMMaker
 		generate: StackInterpreter
 		with: #(NewspeakVM true MULTIPLEBYTECODESETS true)
-		to: (FileDirectory default pathFromURI: 'oscogvm/nsstacksrc')
-		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
+		to: (FileDirectory default pathFromURI: self sourceTree, '/nsstacksrc')
+		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including: #()
 ]
 
@@ -419,8 +419,8 @@ VMMaker class >> generateSqueakCogSistaVM [
 	^VMMaker
 		generate: CoInterpreter
 		and: SistaStackToRegisterMappingCogit
-		to: (FileDirectory default pathFromURI: 'oscogvm/sistasrc')
-		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
+		to: (FileDirectory default pathFromURI: self sourceTree, '/sistasrc')
+		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including: #()
 ]
 
@@ -459,8 +459,8 @@ VMMaker class >> generateSqueakSpurCogSistaVM [
 		generate: CoInterpreter
 		and: SistaStackToRegisterMappingCogit
 		with: #(ObjectMemory Spur32BitCoMemoryManager)
-		to: (FileDirectory default pathFromURI: 'oscogvm/spursistasrc')
-		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
+		to: (FileDirectory default pathFromURI: self sourceTree, '/spursistasrc')
+		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including:#()
 ]
 
@@ -471,8 +471,8 @@ VMMaker class >> generateSqueakSpurCogVM [
 		generate: CoInterpreter
 		and: StackToRegisterMappingCogit
 		with: #(	ObjectMemory Spur32BitCoMemoryManager)
-		to: (FileDirectory default pathFromURI: 'oscogvm/spursrc')
-		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
+		to: (FileDirectory default pathFromURI: self sourceTree, '/spursrc')
+		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including:#()
 ]
 
@@ -482,8 +482,8 @@ VMMaker class >> generateSqueakSpurStackVM [
 	^VMMaker
 		generate: StackInterpreter
 		with: #(ObjectMemory Spur32BitMemoryManager)
-		to: (FileDirectory default directoryNamed: 'oscogvm/spurstacksrc') fullName
-		platformDir: (FileDirectory default directoryNamed: 'oscogvm/platforms') fullName
+		to: (FileDirectory default directoryNamed: self sourceTree, '/spurstacksrc') fullName
+		platformDir: (FileDirectory default directoryNamed: self sourceTree, '/platforms') fullName
 		including: #()
 ]
 
@@ -492,8 +492,8 @@ VMMaker class >> generateSqueakStackVM [
 	"No primitives since we can use those for the Cog VM"
 	^VMMaker
 		generate: StackInterpreter
-		to: (FileDirectory default directoryNamed: 'oscogvm/stacksrc') fullName
-		platformDir: (FileDirectory default directoryNamed: 'oscogvm/platforms') fullName
+		to: (FileDirectory default directoryNamed: self sourceTree, '/stacksrc') fullName
+		platformDir: (FileDirectory default directoryNamed: self sourceTree, '/platforms') fullName
 		including: #()
 ]
 
@@ -513,10 +513,23 @@ VMMaker class >> headerNotice [
 VMMaker class >> initialize [
 	"VMMaker initialize"
 	DirNames := Dictionary new.
-	DirNames at: #coreVMDir put: 'vm';
+	DirNames
+		at: #coreVMDir put: 'vm';
 		at: #platformsDir put: 'platforms';
 		at: #pluginsDir put: 'plugins';
-		at: #sourceDir put: 'src'
+		at: #sourceDir put: 'src'.
+
+	"Try and decide where the Cog source tree is.  Two configurations are likely.
+	 One is that the VMMaker image is running in the image directory in the
+	 source tree and hence everything will be at '..'.
+	 Another is where the source tree is at the same level as the VMMaker image,
+	 in which case it is likely called oscogvm or Cog."
+	#('../platforms' 'oscogvm/platforms' 'Cog/platforms')
+		with: #('../' 'oscogvm' 'Cog')
+		do: [:dir :path|
+			(FileDirectory default directoryExists: dir) ifTrue:
+				[DirNames at: #sourceTree put: path.
+				 ^self]]
 ]
 
 { #category : #initialisation }
@@ -633,6 +646,11 @@ VMMaker class >> pluginsDirName [
 { #category : #accessing }
 VMMaker class >> sourceDirName [
 	^DirNames at: #sourceDir
+]
+
+{ #category : #accessing }
+VMMaker class >> sourceTree [
+	^DirNames at: #sourceTree
 ]
 
 { #category : #'version testing' }
