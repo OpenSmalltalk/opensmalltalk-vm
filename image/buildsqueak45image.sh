@@ -31,4 +31,4 @@ Linux)		if [ "$CPU" = x86_64 ]; then
 *)	echo "don't know how to run Squeak on your system.  bailing out." 1>&2; exit 2
 esac
 
-exec "$VM" CogVMMaker.image BuildImage.st
+exec "$VM" CogVMMaker.image BuildSqueak45Image.st
