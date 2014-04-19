@@ -36,7 +36,12 @@ ThreadedARMFFIPlugin class >> numIntRegArgs [
 ThreadedARMFFIPlugin >> dispatchFunctionPointer: aFunctionPointer with: int1 with: int2 with: int3 with: int4 [
 	"In C aFunctionPointer is void (*aFunctionPointer)(int, int, int, int)"
 	<cmacro: '(aFunctionPointer, int1, int2, int3, int4) (aFunctionPointer)(int1, int2, int3, int4)'>
-	^self perform: aFunctionPointer
+	^self 
+		perform: aFunctionPointer
+		with: int1
+		with: int2
+		with: int3
+		with: int4
 ]
 
 { #category : #'callout support' }
@@ -68,8 +73,6 @@ ThreadedARMFFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: call
 	self cppIf: COGMTVM ifTrue:
 	[(calloutState callFlags anyMask: FFICallFlagThreaded) ifTrue:
 		[myThreadIndex := interpreterProxy disownVM: 0]].
-
-	self msg: 'calling out to C function'.
 
 	self registerArgsSlop + self cStackAlignment > 0 ifTrue:
 		[self setsp: calloutState argVector].
@@ -293,7 +296,38 @@ ThreadedARMFFIPlugin >> ffiPushStructure: pointer ofSize: structSize typeSpec: a
 	<var: #argSpec type: #'sqInt *'>
 	<var: #calloutState type: #'CalloutState *'>
 	<inline: true>
-	self shouldBeImplemented.
+	| availableRegisterSpace stackPartSize roundedSize |
+
+	availableRegisterSpace := (NumIntRegArgs - calloutState integerRegisterIndex) * 4.
+	stackPartSize := structSize.
+	availableRegisterSpace > 0
+		ifTrue: 
+			[structSize <= availableRegisterSpace
+				ifTrue:
+					["all in registers"
+					 stackPartSize = 0.
+					 self 
+						mem: (self cCoerceSimple: (self addressOf: (calloutState integerRegisters at: calloutState integerRegisterIndex)) to: 'void *') 
+						cp: pointer 
+						y: structSize.
+					 calloutState integerRegisterIndex: calloutState integerRegisterIndex + (structSize + 3 bitShift: -2) ]
+				ifFalse:
+					["some in registers rest on stack"
+					 stackPartSize := structSize - availableRegisterSpace.
+					 self 
+						mem: (self cCoerceSimple: (self addressOf: (calloutState integerRegisters at: calloutState integerRegisterIndex)) to: 'void *') 
+						cp: pointer 
+						y: availableRegisterSpace.
+					 calloutState integerRegisterIndex: NumIntRegArgs]].
+
+	stackPartSize > 0
+		ifTrue: 
+			[roundedSize := stackPartSize + 3 bitClear: 3.
+			 calloutState currentArg + roundedSize > calloutState limit ifTrue:
+				 [^FFIErrorCallFrameTooBig].
+			 self mem: calloutState currentArg cp: (self addressOf: ((self cCoerceSimple: pointer to: 'char *') at: availableRegisterSpace)) y: stackPartSize.
+			 calloutState currentArg: calloutState currentArg + roundedSize].
+
 	^0
 ]
 
@@ -346,14 +380,6 @@ ThreadedARMFFIPlugin >> ffiPushUnsignedInt: value in: calloutState [
 	^0
 
 
-]
-
-{ #category : #marshalling }
-ThreadedARMFFIPlugin >> ffiPushUnsignedLong: value in: calloutState [
-	<var: #calloutState type: #'CalloutState *'>
-	<inline: true>
-	self shouldBeImplemented.
-	^0
 ]
 
 { #category : #marshalling }
@@ -429,5 +455,5 @@ ThreadedARMFFIPlugin >> registerArgsSlop [
 { #category : #marshalling }
 ThreadedARMFFIPlugin >> returnStructInRegisters: returnStructSize [
 	"Answer if a struct result of a given size is returned in memory or not."
-	^false
+	^returnStructSize <= 4
 ]
