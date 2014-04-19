@@ -1,0 +1,1 @@
+'From Squeak4.1 of 17 April 2010 [latest update: #9957] on 18 April 2014 at 4:13:49 pm'!!CompiledMethod methodsFor: 'testing' stamp: 'eliot 10/16/2012 15:12'!usesAlternateBytecodeSet	"(CompiledMethod >> #usesAlternateBytecodeSet) usesAlternateBytecodeSet"	^self signFlag! !
