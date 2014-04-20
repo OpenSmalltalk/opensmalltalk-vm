@@ -804,9 +804,11 @@ CCodeGenerator >> computeKernelReturnTypes [
 			intAtPointer: #sqInt intAtPointer:put: #sqInt
 		 longAt: #sqInt longAt:put: #sqInt
 			longAtPointer: #sqInt longAtPointer:put: #sqInt
+				long32At: #sqInt long32At:put: #sqInt
 
 		 longLongAt: #sqLong longLongAt:put: #sqLong
 			longLongAtPointer: #sqLong longLongAtPointer:put: #sqLong
+				long64At: #sqLong long64At:put: #sqLong
 		
 		 fetchFloatAt:into: #float storeFloatAt:from: #float
 			fetchFloatAtPointer:into: #float storeFloatAtPointer:from: #float
@@ -3152,12 +3154,10 @@ CCodeGenerator >> isKernelSelector: sel [
 		 byteAt: byteAt:put: byteAtPointer: byteAtPointer:put:
 		 shortAt: shortAt:put: shortAtPointer: shortAtPointer:put:
 		 intAt: intAt:put: intAtPointer: intAtPointer:put:
-		 longAt: longAt:put: longAtPointer: longAtPointer:put:
-		 longLongAt: longLongAt:put: longLongAtPointer: longLongAtPointer:put:
-		 fetchFloatAt:into: storeFloatAt:from:
-				fetchFloatAtPointer:into: storeFloatAtPointer:from:
-		 fetchSingleFloatAt:into: storeSingleFloatAt:from:
-				fetchSingleFloatAtPointer:into: storeSingleFloatAtPointer:from:
+		 longAt: longAt:put: longAtPointer: longAtPointer:put: long32At: long32At:put:
+		 longLongAt: longLongAt:put: longLongAtPointer: longLongAtPointer:put: 	long64At: long64At:put:
+		 fetchFloatAt:into: storeFloatAt:from: fetchFloatAtPointer:into: storeFloatAtPointer:from:
+		 fetchSingleFloatAt:into: storeSingleFloatAt:from: fetchSingleFloatAtPointer:into: storeSingleFloatAtPointer:from:
 		 pointerForOop: oopForPointer:
 		 cCoerce:to: cCoerceSimple:to:)
 			includes: sel)

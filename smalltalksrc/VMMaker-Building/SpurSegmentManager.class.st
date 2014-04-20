@@ -497,7 +497,7 @@ SpurSegmentManager >> readHeapFromImageFile: f dataBytes: numBytes [
 						ifFalse: [manager bytesPerSlot * (manager rawOverflowSlotsOf: bridge)].
 	 oldBase := oldBase + nextSegmentSize + bridgeSpan.
 	 newBase := newBase + nextSegmentSize - manager bridgeSize.
-	 nextSegmentSize := manager longLongAt: bridge.
+	 nextSegmentSize := manager long64At: bridge.
 	 nextSegmentSize ~= 0] whileTrue:
 		[bridgehead := bridgehead - manager bridgeSize + nextSegmentSize].
 	"newBase should point just past the last bridge. all others should have been eliminated."
@@ -595,11 +595,11 @@ SpurSegmentManager >> writeSegment: segment nextSegment: nextSegment toFile: aBi
 	 The first double word of the bridge includes the bridge size in slots, and
 	 hence specifies the distance to the next segment. The following double
 	 word is replaced by the size of the next segment, or 0 if there isn't one."
-	firstSavedBridgeWord := manager longLongAt: pier1.
-	secondSavedBridgeWord := manager longLongAt: pier2.
+	firstSavedBridgeWord := manager long64At: pier1.
+	secondSavedBridgeWord := manager long64At: pier2.
 	self bridgeFrom: segment to: nextSegment.
 	manager
-		longLongAt: pier2
+		long64At: pier2
 		put: (nextSegment ifNil: [0] ifNotNil: [nextSegment segSize]).
 	nWritten := self cCode:
 						[self
@@ -614,7 +614,7 @@ SpurSegmentManager >> writeSegment: segment nextSegment: nextSegment toFile: aBi
 							startingAt: segment segStart / 4 + 1.
 						 segment segSize].
 	manager
-		longLongAt: pier1 put: firstSavedBridgeWord;
-		longLongAt: pier2 put: secondSavedBridgeWord.
+		long64At: pier1 put: firstSavedBridgeWord;
+		long64At: pier2 put: secondSavedBridgeWord.
 	^nWritten
 ]
