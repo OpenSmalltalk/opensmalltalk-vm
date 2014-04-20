@@ -305,7 +305,7 @@ ThreadedARMFFIPlugin >> ffiPushStructure: pointer ofSize: structSize typeSpec: a
 			[structSize <= availableRegisterSpace
 				ifTrue:
 					["all in registers"
-					 stackPartSize = 0.
+					 stackPartSize := 0.
 					 self 
 						mem: (self cCoerceSimple: (self addressOf: (calloutState integerRegisters at: calloutState integerRegisterIndex)) to: 'void *') 
 						cp: pointer 
@@ -327,7 +327,6 @@ ThreadedARMFFIPlugin >> ffiPushStructure: pointer ofSize: structSize typeSpec: a
 				 [^FFIErrorCallFrameTooBig].
 			 self mem: calloutState currentArg cp: (self addressOf: ((self cCoerceSimple: pointer to: 'char *') at: availableRegisterSpace)) y: stackPartSize.
 			 calloutState currentArg: calloutState currentArg + roundedSize].
-
 	^0
 ]
 
