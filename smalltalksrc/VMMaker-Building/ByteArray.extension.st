@@ -22,6 +22,24 @@ ByteArray >> coerceTo: cTypeString sim: interpreterSimulator [
 ]
 
 { #category : #'*VMMaker-accessing' }
+ByteArray >> long64At: index [
+	"Answer a 64-bit integer in Smalltalk order (little-endian)."
+	| n1 n2 |
+	n1 := self unsignedLongAt: index bigEndian: true.
+	n2 := self unsignedLongAt: index+4 bigEndian: true.
+	^(n1 bitShift: 32) + n2
+]
+
+{ #category : #'*VMMaker-accessing' }
+ByteArray >> long64At: index put: val [
+	"I store 64-bit integers in Smalltalk (little-endian) order."
+	self unsignedLongAt: index put: (val bitAnd: 16rFFFFFFFF) bigEndian: false.
+	self unsignedLongAt: index+4 put: (val bitShift: -32) bigEndian: false.
+	^val
+
+]
+
+{ #category : #'*VMMaker-accessing' }
 ByteArray >> longAt: byteIndex [
 	^self signedLongAt: byteIndex
 ]
