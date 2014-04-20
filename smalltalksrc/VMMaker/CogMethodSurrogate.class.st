@@ -127,14 +127,14 @@ CogMethodSurrogate >> nextOpenPIC: cogMethodSurrogateOrNil [
 { #category : #accessing }
 CogMethodSurrogate >> objectHeader [
 	^baseHeaderSize = 8
-		ifTrue: [memory longLongAt: address + 1]
+		ifTrue: [memory long64At: address + 1]
 		ifFalse: [memory longAt: address + 1]
 ]
 
 { #category : #accessing }
 CogMethodSurrogate >> objectHeader: aValue [
 	^baseHeaderSize = 8
-		ifTrue: [memory longLongAt: address + 1 put: aValue]
+		ifTrue: [memory long64At: address + 1 put: aValue]
 		ifFalse: [memory longAt: address + 1 put: aValue]
 ]
 

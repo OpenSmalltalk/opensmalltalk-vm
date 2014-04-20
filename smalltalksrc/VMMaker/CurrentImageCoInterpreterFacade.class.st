@@ -368,6 +368,11 @@ CurrentImageCoInterpreterFacade >> isCurrentImageFacade [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> isImmediate: anOop [
+	^objectMemory isImmediate: anOop
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> isIntegerObject: anOop [
 	^objectMemory isIntegerObject: anOop
 ]
@@ -375,6 +380,11 @@ CurrentImageCoInterpreterFacade >> isIntegerObject: anOop [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> isIntegerValue: anInteger [
 	^objectMemory isIntegerValue: anInteger
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> isNonImmediate: anOop [
+	^objectMemory isNonImmediate: anOop
 ]
 
 { #category : #accessing }
@@ -763,6 +773,11 @@ CurrentImageCoInterpreterFacade >> trueObject [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> unalignedLongAt: index [ 
 	^memory unsignedLongAt: index + 1
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> wordSize [
+	^self memMgr wordSize
 ]
 
 { #category : #accessing }
