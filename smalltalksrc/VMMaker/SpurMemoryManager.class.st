@@ -1383,7 +1383,7 @@ SpurMemoryManager >> allOldSpaceEntitiesForCoalescingDo: aBlock [
 	objOop := self firstObject.
 	[self assert: objOop \\ self allocationUnit = 0.
 	 self oop: objOop isLessThan: endOfMemory] whileTrue:
-		[self assert: (self longLongAt: objOop) ~= 0.
+		[self assert: (self long64At: objOop) ~= 0.
 		 rawNumSlots := self rawNumSlotsOf: objOop.
 		 aBlock value: objOop.
 		 "If the number of slot changes coalescing changed an object from a single to a double header."
@@ -1407,7 +1407,7 @@ SpurMemoryManager >> allOldSpaceEntitiesFrom: initialObject do: aBlock [
 	objOop := initialObject.
 	[self assert: objOop \\ self allocationUnit = 0.
 	 self oop: objOop isLessThan: endOfMemory] whileTrue:
-		[self assert: (self longLongAt: objOop) ~= 0.
+		[self assert: (self long64At: objOop) ~= 0.
 		 aBlock value: objOop.
 		 prevPrevObj := prevObj.
 		 prevObj := objOop.
@@ -1532,9 +1532,9 @@ SpurMemoryManager >> allocateNewSpaceSlots: numSlots format: formatField classIn
 			[self flag: #endianness.
 			 self longAt: freeStart put: numSlots.
 			 self longAt: freeStart + 4 put: self numSlotsMask << self numSlotsHalfShift.
-			 self longLongAt: newObj put: (self headerForSlots: self numSlotsMask format: formatField classIndex: classIndex)]
+			 self long64At: newObj put: (self headerForSlots: self numSlotsMask format: formatField classIndex: classIndex)]
 		ifFalse:
-			[self longLongAt: newObj put: (self headerForSlots: numSlots format: formatField classIndex: classIndex)].
+			[self long64At: newObj put: (self headerForSlots: numSlots format: formatField classIndex: classIndex)].
 	self assert: numBytes \\ self allocationUnit = 0.
 	self assert: newObj \\ self allocationUnit = 0.
 	freeStart := freeStart + numBytes.
@@ -1974,9 +1974,9 @@ SpurMemoryManager >> allocateSlots: numSlots format: formatField classIndex: cla
 			[self flag: #endianness.
 			 self longAt: freeStart put: numSlots.
 			 self longAt: freeStart + 4 put: self numSlotsMask << self numSlotsHalfShift.
-			 self longLongAt: newObj put: (self headerForSlots: self numSlotsMask format: formatField classIndex: classIndex)]
+			 self long64At: newObj put: (self headerForSlots: self numSlotsMask format: formatField classIndex: classIndex)]
 		ifFalse:
-			[self longLongAt: newObj put: (self headerForSlots: numSlots format: formatField classIndex: classIndex)].
+			[self long64At: newObj put: (self headerForSlots: numSlots format: formatField classIndex: classIndex)].
 	self assert: numBytes \\ self allocationUnit = 0.
 	self assert: newObj \\ self allocationUnit = 0.
 	freeStart := freeStart + numBytes.
@@ -2018,7 +2018,7 @@ SpurMemoryManager >> allocateSmallNewSpaceSlots: numSlots format: formatField cl
 		 freeStart + numBytes > scavenger eden limit ifTrue:
 			[self error: 'no room in eden for allocateSmallNewSpaceSlots:format:classIndex:'.
 			 ^0]].
-	self longLongAt: newObj put: (self headerForSlots: numSlots format: formatField classIndex: classIndex).
+	self long64At: newObj put: (self headerForSlots: numSlots format: formatField classIndex: classIndex).
 	freeStart := freeStart + numBytes.
 	^newObj
 ]
@@ -2076,7 +2076,7 @@ SpurMemoryManager >> baseAddressOfImage [
 
 { #category : #'header access' }
 SpurMemoryManager >> baseHeader: obj [
-	^self longLongAt: obj
+	^self long64At: obj
 ]
 
 { #category : #'header format' }
@@ -2636,7 +2636,7 @@ SpurMemoryManager >> checkOkayOop: oop [
 	"specific header bit checks"
 	unusedBits := (1 << self classIndexFieldWidth)
 				   | (1 << (self identityHashFieldWidth + 32)).
-	((self longLongAt: oop) bitAnd: unusedBits) ~= 0 ifTrue:
+	((self long64At: oop) bitAnd: unusedBits) ~= 0 ifTrue:
 		[self print: 'oop '; printHex: oop; print: ' has some unused header bits set; should be zero'. ^false].
 
 	unusedBitsInYoungObjects := self newSpaceRefCountMask.
@@ -5087,9 +5087,9 @@ SpurMemoryManager >> inPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag [
 	 these need to be unswapped."
 	temp1 := self isRemembered: obj1.
 	temp2 := self isRemembered: obj2.
-	headerTemp := self longLongAt: obj1.
-	self longLongAt: obj1 put: (self longLongAt: obj2).
-	self longLongAt: obj2 put: headerTemp.
+	headerTemp := self long64At: obj1.
+	self long64At: obj1 put: (self long64At: obj2).
+	self long64At: obj2 put: headerTemp.
 	self setIsRememberedOf: obj1 to: temp1.
 	self setIsRememberedOf: obj2 to: temp2.
 	"swapping headers swaps hash; if !copyHashFlag undo hash copy"
@@ -5673,7 +5673,7 @@ SpurMemoryManager >> isEnumerableObject: objOop [
 	| classIndex |
 	<inline: true>
 	classIndex := self classIndexOf: objOop.
-	self assert: ((self longLongAt: objOop) ~= 0
+	self assert: ((self long64At: objOop) ~= 0
 				  and: [classIndex < (numClassTablePages * self classTablePageSize)]).
 	^classIndex >= self isForwardedObjectClassIndexPun
 ]
@@ -7385,7 +7385,7 @@ SpurMemoryManager >> okayOop: signedOop [
 	"specific header bit checks"
 	unusedBits := (1 << self classIndexFieldWidth)
 				   | (1 << (self identityHashFieldWidth + 32)).
-	((self longLongAt: oop) bitAnd: unusedBits) ~= 0 ifTrue:
+	((self long64At: oop) bitAnd: unusedBits) ~= 0 ifTrue:
 		[self error: 'some unused header bits are set; should be zero'. ^false].
 
 	unusedBitsInYoungObjects := (1 << self greyBitShift)
