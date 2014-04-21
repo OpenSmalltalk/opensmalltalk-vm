@@ -20,6 +20,11 @@ ThreadedPPCBEFFIPlugin class >> initialize [
 	NumRegArgs := 8
 ]
 
+{ #category : #translation }
+ThreadedPPCBEFFIPlugin class >> moduleName [
+	^'PPC32FFIPlugin'
+]
+
 { #category : #accessing }
 ThreadedPPCBEFFIPlugin class >> numRegArgs [
 	^NumRegArgs

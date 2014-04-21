@@ -353,7 +353,7 @@ VMMaker class >> generateNewspeakCogVM [
 		including:#(	AsynchFilePlugin BMPReadWriterPlugin BalloonEnginePlugin BitBltSimulation DeflatePlugin DSAPlugin DropPlugin
 					FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin ImmX11Plugin JPEGReadWriter2Plugin
 					JPEGReaderPlugin LargeIntegersPlugin Matrix2x3Plugin MiscPrimitivePlugin NewsqueakIA32ABIPlugin
-					RePlugin SecurityPlugin SocketPlugin SoundPlugin SqueakSSLPlugin SurfacePlugin ThreadedIA32FFIPlugin
+					RePlugin SecurityPlugin SocketPlugin SoundPlugin SqueakSSLPlugin SurfacePlugin
 					UUIDPlugin UnixOSProcessPlugin VMProfileLinuxSupportPlugin VMProfileMacSupportPlugin Win32OSProcessPlugin)
 ]
 
@@ -446,7 +446,8 @@ VMMaker class >> generateSqueakCogVMWithInterpreterClass: interpreterClass [
 					MiscPrimitivePlugin Mpeg3Plugin QuicktimePlugin RePlugin
 					ScratchPlugin SecurityPlugin SerialPlugin SocketPlugin
 					SoundCodecPlugin SoundGenerationPlugin SoundPlugin SqueakSSLPlugin StarSqueakPlugin
-					ThreadedIA32FFIPlugin UnicodePlugin UnixAioPlugin UUIDPlugin UnixOSProcessPlugin
+					ThreadedFFIPlugin ThreadedARMFFIPlugin ThreadedIA32FFIPlugin
+					UnicodePlugin UnixAioPlugin UUIDPlugin UnixOSProcessPlugin
 					Win32OSProcessPlugin VMProfileLinuxSupportPlugin VMProfileMacSupportPlugin WeDoPlugin)
 					
 
