@@ -411,7 +411,9 @@ CogVMSimulator >> ceSendAbort: selector to: rcvr numArgs: numArgs [
 	"self printOop: rcvr"
 	self logSend: selector.
 	cogit assertCStackWellAligned.
-	self maybeCheckStackDepth: numArgs + 1
+	self maybeCheckStackDepth: (selector = (objectMemory splObj: SelectorAboutToReturn)
+										ifTrue: [numArgs]
+										ifFalse: [numArgs + 1])
 		sp: stackPointer + BytesPerWord
 		pc: (stackPages longAt: stackPointer).
 	^super ceSendAbort: selector to: rcvr numArgs: numArgs

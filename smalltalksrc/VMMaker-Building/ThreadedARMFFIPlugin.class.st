@@ -16,10 +16,20 @@ ThreadedARMFFIPlugin class >> calloutStateClass [
 	^ThreadedFFICalloutStateForARM
 ]
 
+{ #category : #translation }
+ThreadedARMFFIPlugin class >> identifyingPredefinedMacros [
+	^#('__ARM_ARCH__' '__arm__' '__arm32__' 'ARM32')
+]
+
 { #category : #'class initialization' }
 ThreadedARMFFIPlugin class >> initialize [
 	NumIntRegArgs := 4.
 	NumFloatRegArgs := 16
+]
+
+{ #category : #translation }
+ThreadedARMFFIPlugin class >> moduleName [
+	^'ARM32FFIPlugin'
 ]
 
 { #category : #accessing }
