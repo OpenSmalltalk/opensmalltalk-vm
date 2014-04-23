@@ -34,26 +34,22 @@ CogUnixConfig >> commonCompilerFlags [
 	
 	"
 	
-	^ {
-		'-DLSB_FIRST=1'. 
-		'-DUSE_GLOBAL_STRUCT=0'. 
-		'-DCOGMTVM=0'. 
-		'-m32'.
-		'-DENABLE_FAST_BLT ' } 	
+	^ ' -DLSB_FIRST=1 -DUSE_GLOBAL_STRUCT=0 -DCOGMTVM=0 -m32 -DENABLE_FAST_BLT ' 	
 	
+]
+
+{ #category : #'compiler flags' }
+CogUnixConfig >> compilerFlags [
+	"depends on config ..."
+	^ self commonCompilerFlags, ' ' ,self compilerFlagsRelease
 ]
 
 { #category : #'compiler flags' }
 CogUnixConfig >> compilerFlagsDebug [
 
-	^ {
-		'-g3'. 
-		'-O0'. 
-		'-msse2'. 
-		'-D_GNU_SOURCE'. 
-		'-DITIMER_HEARTBEAT=1'. 
-		'-DNO_VM_PROFILE=1'. 
-		'-DDEBUGVM=1' }
+	^ '-g3 -O0 -msse2 -D_GNU_SOURCE -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DDEBUGVM=1'
+
+
 ]
 
 { #category : #'compiler flags' }
@@ -74,17 +70,7 @@ THIS IS LIKE: -O2 -fno-tree-pre -fno-caller-saves
 
 "
 
-	^ {
-		'-g0'. 
-		'-O2'. 
-		'-fno-tree-pre'. 
-		'-fno-caller-saves'. 
-		'-msse2'. 
-		'-D_GNU_SOURCE'. 
-		'-DNDEBUG'. 
-		'-DITIMER_HEARTBEAT=1'. 
-		'-DNO_VM_PROFILE=1'. 
-		'-DDEBUGVM=0' }
+	^ '-g0 -O2 -fno-tree-pre -fno-caller-saves -msse2 -D_GNU_SOURCE -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DDEBUGVM=0'
 ]
 
 { #category : #'headers generation' }

@@ -22,10 +22,10 @@ MacOSConfig >> buildScript [
 	
 
 	^ 
-'#!/usr/bin/env bash
+'#!bash
 
 if [ ! -e vmVersionInfo.h ]; then
-	../scripts/extract-commit-info.sh
+	../codegen-scripts/extract-commit-info.sh
 fi
 cmake .
 make

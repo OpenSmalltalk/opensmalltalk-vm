@@ -7,6 +7,9 @@ Fore more information, check the class comments of all the superclasses.
 Class {
 	#name : #CocoaIOSConfig,
 	#superclass : #MacOSConfig,
+	#instVars : [
+		'generateForRelease'
+	],
 	#category : #'CMakeVMMaker-IOS'
 }
 
@@ -79,6 +82,20 @@ CocoaIOSConfig >> commonCompilerFlags [
 ]
 
 { #category : #accessing }
+CocoaIOSConfig >> compilerFlags [ 
+	| releaseFlags |
+	
+	releaseFlags := self isGenerateForRelease 
+		ifTrue: [ self compilerFlagsRelease ]
+		ifFalse: [ self compilerFlagsDebug ].
+		
+	^String streamContents: [ :stream |
+		(self commonCompilerFlags, releaseFlags) asSet
+			do: [ :each | stream nextPutAll: each ]
+			separatedBy: [ stream space ] ]
+]
+
+{ #category : #accessing }
 CocoaIOSConfig >> compilerFlagsRelease [ 
 	^#(
 	"'-fobjc-direct-dispatch'" 
@@ -88,7 +105,7 @@ CocoaIOSConfig >> compilerFlagsRelease [
 	"'-mdynamic-no-pic'" 
 	"'-fwritable-strings'" 
 	'-Os' 
-	'-fvisibility=default'
+	'-fvisibility=hidden'
 	'-funroll-loops' 
 	"'-fno-asm'" 
 	'-fasm-blocks' 
@@ -99,6 +116,7 @@ CocoaIOSConfig >> compilerFlagsRelease [
 	'-mtune=prescott' 
 	'-falign-functions=16'  
 	'-fno-gcse' 
+	'-fno-cse-follow-jumps' 
 	'-std=gnu99' 
 	'-DBUILD_FOR_OSX' 
 	"'-DUSE_INLINE_MEMORY_ACCESSORS'" 
@@ -161,13 +179,6 @@ CocoaIOSConfig >> configureLocalePlugin: maker [
 	maker addFrameworks: #('CoreFoundation').
 	maker addPlatformSources: #( 'sqIOSLocale.c' )	.
 
-]
-
-{ #category : #'plugin extra rules' }
-CocoaIOSConfig >> configureMIDIPlugin: maker [ 
-	"extra rules for MIDIPlugin"
-
-	maker addPlatformSources: #( 'sqMacMIDI.m')
 ]
 
 { #category : #'plugin extra rules' }
@@ -317,13 +328,33 @@ CocoaIOSConfig >> frameworks [
 	ApplicationServices
 	QuartzCore
 	OpenGL
-	AGL
-	QuickTime)
+	AGL)
 ]
 
 { #category : #accessing }
 CocoaIOSConfig >> freetypeLibClass [ 
 	^CMOSXFreetype2
+]
+
+{ #category : #accessing }
+CocoaIOSConfig >> generateForDebug [
+	generateForRelease := false
+]
+
+{ #category : #accessing }
+CocoaIOSConfig >> generateForRelease [
+	generateForRelease := true
+]
+
+{ #category : #initialization }
+CocoaIOSConfig >> initialize [ 
+	super initialize.
+	self generateForRelease
+]
+
+{ #category : #testing }
+CocoaIOSConfig >> isGenerateForRelease [ 
+	^generateForRelease
 ]
 
 { #category : #accessing }
@@ -1082,7 +1113,7 @@ CocoaIOSConfig >> setExtraTargetProperties: maker [
 		addXCodeProperty: 'ICC_OPT_PREFETCH_INSERTION' value: 'YES';
 		addXCodeProperty: 'ICC_OPT_PROVIDE_FRAME_PTR' value: 'NO';
 		addXCodeProperty: 'ICC_OPT_USE_ARCH_IA32' value: 'SSE41';
-		addXCodeProperty: 'PER_ARCH_CFLAGS_i386' value: '-finline-functions -mfpmath=sse -march=pentium-m -mtune=prescott -falign-functions=16  -fno-gcse -DLSB_FIRST';
+		addXCodeProperty: 'PER_ARCH_CFLAGS_i386' value: '-finline-functions -mfpmath=sse -march=pentium-m -mtune=prescott -falign-functions=16  -fno-gcse -fno-cse-follow-jumps  -DLSB_FIRST';
 		addXCodeProperty: 'PER_ARCH_CFLAGS_ppc' value: '-fast -mtune=7450 -mcpu=7450 -D_BSD_SOCKLEN_T_=int'
 ]
 

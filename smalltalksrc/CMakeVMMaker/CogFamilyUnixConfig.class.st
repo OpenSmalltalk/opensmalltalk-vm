@@ -145,15 +145,20 @@ CogFamilyUnixConfig >> buildScript [
 	
 
 	^ 
-'#!/usr/bin/env bash
+'#!bash
 
 if [ ! -e vmVersionInfo.h ]; then
-	../scripts/extract-commit-info.sh
+	../codegen-scripts/extract-commit-info.sh
 fi
 cmake .
 make
 
 '
+]
+
+{ #category : #'compiler flags' }
+CogFamilyUnixConfig >> compilerFlags [
+	^ self subclassResponsibility
 ]
 
 { #category : #'plugin extra rules' }
@@ -281,8 +286,7 @@ CogFamilyUnixConfig >> configureSocketPlugin: maker [
 CogFamilyUnixConfig >> configureSoundPlugin: maker [ 
 	"extra rules for SoundPlugin"
 	
-	maker addPlatformSources: #( 'sqUnixSound').
-	maker addExternalLibraries: #( 'asound' )
+	maker addPlatformSources: #( 'sqUnixSound')
 ]
 
 { #category : #'plugin extra rules' }
@@ -319,13 +323,6 @@ CogFamilyUnixConfig >> configureUnixOSProcessPlugin: maker [
 	
 	maker addDefinitions: '-DSQAIO_H=\"sqaio.h\"'
 
-]
-
-{ #category : #accessing }
-CogFamilyUnixConfig >> externalModulesDir [
-	"answer the location in VM bundle, where plugins and rest of dynamic libs will be copied,
-	"
-	^ '${outputDir}'
 ]
 
 { #category : #'plugin extra rules' }
@@ -396,10 +393,4 @@ CogFamilyUnixConfig >> setExtraTargetProperties: maker [
 		
 	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir fullName.
 	self addVMDrivers: maker.
-]
-
-{ #category : #utils }
-CogFamilyUnixConfig >> setupDirectories: gen [
-	super setupDirectories: gen.
-	gen set: #externalModulesDir toString: self externalModulesDir.
 ]

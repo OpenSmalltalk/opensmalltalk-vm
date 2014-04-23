@@ -61,7 +61,7 @@ CMakeVMGenerator >> config [
 	^ config
 ]
 
-{ #category : #accessing }
+{ #category : #'as yet unclassified' }
 CMakeVMGenerator >> configurationName [
 	^ config class name
 ]
@@ -104,7 +104,7 @@ CMakeVMGenerator >> generate [
 	
 	intPlugins := self generatePluginConfigs: config internalPlugins internal: true.
 	extPlugins := self generatePluginConfigs: config externalPlugins internal: false.
-
+	
 	self processThirdpartyLibraries.
 	
 	self processPlugins:  intPlugins, extPlugins.
@@ -166,7 +166,7 @@ extern sqExport os_exports[];
 	
 ]
 
-{ #category : #plugins }
+{ #category : #'as yet unclassified' }
 CMakeVMGenerator >> generatePlugin: aPlugin internal: aBoolean extraRules: aBlock [
 	" this method called back from plugin"
 	^ CMakePluginGenerator new
@@ -196,7 +196,7 @@ CMakeVMGenerator >> generatePluginsSource: plugins internal: bool [
 
 ]
 
-{ #category : #'sources management' }
+{ #category : #'as yet unclassified' }
 CMakeVMGenerator >> includeDirs [
 
 	^ '${crossDir}/vm ${srcVMDir} ${targetPlatform}/vm ${buildDir}'.
@@ -278,37 +278,27 @@ CMakeVMGenerator >> processInternalPlugins: pluginGenerators [
 
 { #category : #'processing plugins' }
 CMakeVMGenerator >> processPlugins: pluginGenerators [
-	| libs libDeps |
 
+	| libs |
 	libs := OrderedCollection new.
-	libDeps := Dictionary new.
+
 	pluginGenerators do: [:gen |
 		gen doNotGenerate ifFalse: [
-			gen isInternal 
-				ifTrue: [
-					libs add: gen plugin moduleName ]
-				ifFalse: [
-					"make main module to depend on external plugin, just to make sure it is built 
-					 before main module built"
-					self 
-						cmd: 'add_dependencies' 
-						params: config executableName, ' ' , gen plugin moduleName ].
-				gen externalDependencies 
-					ifNotEmpty: [ :deps |
-						libDeps 
-							at: gen plugin moduleName
-							put: (deps fold: [ :a :b | a, ' ', b ]) ].
-			self addSubdirectory: gen plugin moduleName ] ].
+			gen isInternal ifTrue: [
+				libs add:  gen plugin moduleName ]
+			ifFalse: [
+				"make main module to depend on external plugin, just to make sure it is built before main module built"
+				self cmd: 'add_dependencies' params: config executableName, ' ' , gen plugin moduleName
+				].
+			self addSubdirectory:  gen plugin moduleName.
+			 ].
+		].
 
 	self cmd: 'target_link_libraries' params:  config executableName , ' ' ,
-		(libs inject: '' into: [:res :ea | res, ' ' , ea ]).
-
-	libDeps keysAndValuesDo: [ :moduleName :dependencies |
-		self 
-			cmd: 'add_dependencies' 
-			params: moduleName, ' ', dependencies ].  
+		(libs inject: '' into: [:res :ea | res, ' ' , ea ]) .
 
 	self generateExportsH: libs.
+
 ]
 
 { #category : #'as yet unclassified' }
@@ -320,7 +310,7 @@ CMakeVMGenerator >> processThirdpartyLibraries [
 
 ]
 
-{ #category : #accessing }
+{ #category : #'as yet unclassified' }
 CMakeVMGenerator >> saveFile [
 	
 	config write: output contents toFile: (self outputFileName).
