@@ -21,30 +21,23 @@ CogWindowsConfig >> cogitClass [
 	^ StackToRegisterMappingCogit 
 ]
 
+{ #category : #'compiler flags' }
+CogWindowsConfig >> compilerFlags [
+	"depends on config ..."
+	^ self commonCompilerFlags, ' ' , self compilerFlagsRelease
+]
+
 { #category : #plugins }
 CogWindowsConfig >> compilerFlagsDebug [
 	"Define NDEBUG for production to exclude asserts "
-	^ {
-		'-g3'. 
-		'-O0'. 
-		'-march=pentium4'. 
-		'-momit-leaf-frame-pointer'. 
-		'-maccumulate-outgoing-args'. 
-		'-funroll-loops'. 
-		'-DDEBUGVM=1' }
+	^ '-g3 -O0 -march=pentium4 -momit-leaf-frame-pointer -maccumulate-outgoing-args -funroll-loops  -DDEBUGVM=1'
 ]
 
 { #category : #'compiler flags' }
 CogWindowsConfig >> compilerFlagsRelease [
 	"Define NDEBUG for production to exclude asserts "
-	^ {
-		'-g0'. 
-		'-O2'. 
-		'-march=pentium4'. 
-		'-momit-leaf-frame-pointer'. 
-		'-maccumulate-outgoing-args'. 
-		'-funroll-loops'.
-		'-DNDEBUG -DDEBUGVM=0'}
+	^ '-g0 -O2 -march=pentium4 -momit-leaf-frame-pointer -maccumulate-outgoing-args -funroll-loops ',
+	'-DNDEBUG -DDEBUGVM=0'
 ]
 
 { #category : #'source files' }
@@ -104,7 +97,6 @@ SerialPlugin
 SocketPlugin 
 SoundCodecPlugin "SoundCodecPrims"
 SoundGenerationPlugin 
-SoundPlugin
 StarSqueakPlugin 
 SurfacePlugin 
 UUIDPlugin

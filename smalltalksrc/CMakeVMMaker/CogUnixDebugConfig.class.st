@@ -13,7 +13,6 @@ Class {
 
 { #category : #'as yet unclassified' }
 CogUnixDebugConfig >> compilerFlags [
-	^  String streamContents:  [ :stream |
-	self commonCompilerFlags asStringOn: stream delimiter: ' '. 
-	self compilerFlagsDebug asStringOn: stream delimiter: ' ' ]
+
+	^  self commonCompilerFlags, ' ' ,self compilerFlagsDebug
 ]

@@ -21,11 +21,8 @@ CogMTUnixConfig >> commonCompilerFlags [
 	
 	"
 	
-	^ {
-		'-DLSB_FIRST=1'. 
-		'-DUSE_GLOBAL_STRUCT=0'. 
-		'-DCOGMTVM=1'. 
-		'-m32' }
+	^ ' -DLSB_FIRST=1 -DUSE_GLOBAL_STRUCT=0 -DCOGMTVM=1 -m32' 	
+	
 ]
 
 { #category : #'plugin extra rules' }
