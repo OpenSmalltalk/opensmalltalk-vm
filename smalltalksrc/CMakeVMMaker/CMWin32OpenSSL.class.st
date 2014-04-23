@@ -1,7 +1,7 @@
 Class {
 	#name : #CMWin32OpenSSL,
 	#superclass : #CMOpenSSL,
-	#category : 'CMakeVMMaker-Libs'
+	#category : #'CMakeVMMaker-Libs'
 }
 
 { #category : #'as yet unclassified' }

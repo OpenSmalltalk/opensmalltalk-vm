@@ -7,7 +7,7 @@ Fore more information, check the class comments of all the superclasses.
 Class {
 	#name : #CogMTFreeBSDConfig,
 	#superclass : #CogFreeBSDConfig,
-	#category : 'CMakeVMMaker-FreeBSD'
+	#category : #'CMakeVMMaker-FreeBSD'
 }
 
 { #category : #'compiler flags' }
@@ -21,10 +21,8 @@ CogMTFreeBSDConfig >> commonCompilerFlags [
 	
 	"
 	
-	^ {
-		'-DLSB_FIRST=1'. 
-		'-DUSE_GLOBAL_STRUCT=0'. 
-		'-DCOGMTVM=1' }
+	^ ' -DLSB_FIRST=1 -DUSE_GLOBAL_STRUCT=0 -DCOGMTVM=1'	
+	
 ]
 
 { #category : #'plugin extra rules' }
