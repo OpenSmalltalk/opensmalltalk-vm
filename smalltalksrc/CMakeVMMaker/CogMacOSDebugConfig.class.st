@@ -7,12 +7,11 @@ Fore more information, check the class comments of all the superclasses.
 Class {
 	#name : #CogMacOSDebugConfig,
 	#superclass : #CogMacOSConfig,
-	#category : 'CMakeVMMaker-MacOS'
+	#category : #'CMakeVMMaker-MacOS'
 }
 
 { #category : #'compiler flags' }
 CogMacOSDebugConfig >> compilerFlags [
-    ^ String streamContents:  [ :stream |
-	self commonCompilerFlags asStringOn: stream delimiter: ' '. 
-	self compilerFlagsDebug asStringOn: stream delimiter: ' ' ]
+
+    ^  self compilerFlagsDebug
 ]

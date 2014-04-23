@@ -8,22 +8,15 @@ Fore more information, check the class comments of all the superclasses.
 Class {
 	#name : #StackUnixDebugFixedVerSIConfig,
 	#superclass : #StackUnixDebugConfig,
-	#category : 'CMakeVMMaker-Unix'
+	#category : #'CMakeVMMaker-Unix'
 }
 
 { #category : #'as yet unclassified' }
 StackUnixDebugFixedVerSIConfig >> compilerFlagsDebug [
 
-	^ {
-		'-g3'. 
-		'-O0'. 
-		'-msse2'. 
-		'-save-temps'. 
-		'-D_GNU_SOURCE'. 
-		'-DITIMER_HEARTBEAT=1'. 
-		'-DNO_VM_PROFILE=1'. 
-		'-DCOGMTVM=0'. 
-		'-DDEBUGVM=1' }
+	^ '-g3 -O0 -msse2 -save-temps -D_GNU_SOURCE -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=1'
+
+
 ]
 
 { #category : #'as yet unclassified' }

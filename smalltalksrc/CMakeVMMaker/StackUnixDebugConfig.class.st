@@ -8,12 +8,11 @@ Fore more information, check the class comments of all the superclasses.
 Class {
 	#name : #StackUnixDebugConfig,
 	#superclass : #StackUnixConfig,
-	#category : 'CMakeVMMaker-Unix'
+	#category : #'CMakeVMMaker-Unix'
 }
 
 { #category : #'compiler flags' }
 StackUnixDebugConfig >> compilerFlags [
-	^  String streamContents:  [ :stream |
-	self commonCompilerFlags asStringOn: stream delimiter: ' '. 
-	self compilerFlagsDebug asStringOn: stream delimiter: ' ' ]
+
+	^  self commonCompilerFlags, ' ' ,self compilerFlagsDebug
 ]
