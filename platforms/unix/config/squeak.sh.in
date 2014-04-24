@@ -30,6 +30,8 @@ case "$LIBC_SO" in
 	SVMLLP="/lib/tls/i686/cmov:/lib:/usr/lib/tls/i686/cmov:/usr/lib";;
 /lib/tls/i686/nosegneg/libc*)	\
 	SVMLLP="/lib/i686/nosegneg/tls:/lib:/usr/lib/i686/nosegneg/tls:/usr/lib";;
+/lib/arm-linux-gnueabihf/libc*)	\
+	SVMLLP="/lib/arm-linux-gnueabihf:/lib:/usr/lib/arm-linux-gnueabihf:/usr/lib";;
 "")	case `/bin/uname -m || /usr/bin/uname -m` in
 	*64*)	echo "/usr/bin/ldd didn't produce any output and the system is 64 bit.  You may need to (re)install the 32-bit libraries." 1>&2;;
 	*)	echo "/usr/bin/ldd didn't produce any output. Can't infer base LD_LIBRARY_PATH. Aborting." 1>&2
