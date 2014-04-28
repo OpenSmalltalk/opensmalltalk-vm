@@ -434,12 +434,12 @@ VMMaker class >> generateSqueakCogVMWithInterpreterClass: interpreterClass [
 	^VMMaker
 		generate: interpreterClass
 		and: StackToRegisterMappingCogit
-		to: (FileDirectory default pathFromURI: 'oscogvm/src')
-		platformDir: (FileDirectory default pathFromURI: 'oscogvm/platforms')
+		to: (FileDirectory default pathFromURI: self sourceTree, '/src')
+		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including:#(	ADPCMCodecPlugin AsynchFilePlugin
 					BalloonEnginePlugin B3DAcceleratorPlugin BMPReadWriterPlugin BitBltSimulation BochsIA32Plugin
 					CameraPlugin CroquetPlugin DSAPlugin DeflatePlugin DropPlugin
-					FT2Plugin FFTPlugin FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin
+					"FT2Plugin" FFTPlugin FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin
 					GeniePlugin HostWindowPlugin IA32ABIPlugin ImmX11Plugin InternetConfigPlugin
 					JPEGReadWriter2Plugin JPEGReaderPlugin JoystickTabletPlugin KlattSynthesizerPlugin
 					LargeIntegersPlugin LocalePlugin MIDIPlugin MacMenubarPlugin Matrix2x3Plugin
