@@ -44,18 +44,6 @@ extern
 #endif 
 struct VirtualMachine* interpreterProxy;
 
-#if defined(SQ_IMAGE32)
-# define BytesPerOop    4
-#elif defined(SQ_IMAGE64)
-# define BytesPerOop    8
-#else   
-# error cannot determine image word size/object header size
-#endif
-
-#if !defined(BaseHeaderSize)
-# define BaseHeaderSize BytesPerOop
-#endif
- 
 #ifdef _MSC_VER
 # define alloca _alloca
 #endif
