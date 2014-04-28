@@ -101,7 +101,7 @@ ThreadedFFIPlugin class >> maxNumArgs [
 { #category : #translation }
 ThreadedFFIPlugin class >> moduleName [
 	"IMPORTANT: IF YOU CHANGE THE NAME OF THIS PLUGIN YOU MUST CHANGE
-		Interpreter>>primitiveCalloutToFFI
+		Interpreter>>primitiveCalloutToFFI *and* ThreadedFFIPlugin>>getModuleName
 	TO REFLECT THE CHANGE."
 	^#('SqueakFFIPrims' 'FFIPlugin') first
 ]
@@ -200,12 +200,12 @@ warning(char *s) { /* Print an error message but don''t exit. */
 
 { #category : #translation }
 ThreadedFFIPlugin class >> prepareToBeAddedToCodeGenerator: aCodeGen [
-	"Remove the methods of ThreadedFFIPlugin any concrete subclass overrides."
-	self class ~~ thisContext methodClass ifTrue:
-		[self selectors do:
-			[:sel|
-			 (superclass includesSelector: sel) ifTrue:
-				[aCodeGen removeMethodForSelector: sel]]]
+	"Remove the methods of ThreadedFFIPlugin any concrete subclass overrides,
+	 and the methods of InterpreterPlugin that ThreadedFFIPlugin overrides."
+	self selectors do:
+		[:sel|
+		 (superclass includesSelector: sel) ifTrue:
+			[aCodeGen removeMethodForSelector: sel]]
 ]
 
 { #category : #translation }
@@ -1256,6 +1256,17 @@ ThreadedFFIPlugin >> ffiValidateExternalData: oop AtomicType: atomicType [
 ]
 
 { #category : #initialize }
+ThreadedFFIPlugin >> getModuleName [
+	"Note: This is hardcoded so it can be run from Squeak.
+	The module name is used for validating a module *after*
+	it is loaded to check if it does really contain the module
+	we're thinking it contains. This is important!"
+	<returnTypeC: 'const char *'>
+	<export: true>
+	^'SqueakFFIPrims'
+]
+
+{ #category : #initialize }
 ThreadedFFIPlugin >> initialiseModule [
 	<export: true>
 	"By default, disable logging"
@@ -1289,6 +1300,14 @@ ThreadedFFIPlugin >> isCalleePopsConvention: callType [
 ThreadedFFIPlugin >> isDirectAlien: oop [
 	self assert: (self isAlien: oop).
 	^(self sizeField: oop) > 0
+]
+
+{ #category : #debugging }
+ThreadedFFIPlugin >> msg: s [
+	<var: #s type: 'char *'>
+	self cCode: 'fprintf(stderr, "\n%s: %s", getModuleName(), s)'
+		inSmalltalk: [super msg: s].
+	^0
 ]
 
 { #category : #marshalling }
