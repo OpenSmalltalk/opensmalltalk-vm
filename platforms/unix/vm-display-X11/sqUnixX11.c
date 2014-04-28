@@ -113,7 +113,7 @@
 #include <X11/Xatom.h>
 #define XK_MISCELLANY
 #define XK_XKB_KEYS
-#include <X11/keysymdef.h>
+#include <X11/keysym.h> /* /not/ keysymdef.h */
 #if defined(SUGAR)
 # include <X11/XF86keysym.h>
 #endif
@@ -137,16 +137,6 @@
 
 #define isAligned(T, V)	(((V) % sizeof(T)) == 0)
 #define align(T, V)	(((V) / sizeof(T)) * sizeof(T))
-
-#if defined(SQ_IMAGE32)
-# define BytesPerOop	4
-#elif defined(SQ_IMAGE64)
-# define BytesPerOop	8
-#else
-# error cannot determine image word size
-#endif
-
-#define BaseHeaderSize	BytesPerOop
 
 /*** Variables -- Imported from Virtual Machine ***/
 
