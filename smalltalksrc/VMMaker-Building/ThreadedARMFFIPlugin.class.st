@@ -55,28 +55,13 @@ ThreadedARMFFIPlugin >> dispatchFunctionPointer: aFunctionPointer with: int1 wit
 ]
 
 { #category : #'callout support' }
-ThreadedARMFFIPlugin >> dummyFloatFunction: d1 with: d2 with: d3 with: d4 with: d5 with: d6 with: d7 with: d8 [
-	<var: #d1 type: #'double'>
-	<var: #d2 type: #'double'>
-	<var: #d3 type: #'double'>
-	<var: #d4 type: #'double'>
-	<var: #d5 type: #'double'>
-	<var: #d6 type: #'double'>
-	<var: #d7 type: #'double'>
-	<var: #d8 type: #'double'>
-	<returnTypeC: 'void'>
-	<inline: false>
-
-
-]
-
-{ #category : #'callout support' }
 ThreadedARMFFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: calloutState [
 	<var: #procAddr type: #'void *'>
 	<var: #calloutState type: #'CalloutState *'>
+	<var: #loadFloatRegs declareC: 'extern void loadFloatRegs(double, double, double, double, double, double, double, double)'>
 	"Go out, call this guy and create the return value.  This *must* be inlined because of
 	 the alloca of the outgoing stack frame in ffiCall:WithFlags:NumArgs:Args:AndTypes:"
-	| myThreadIndex atomicType floatRet intRet |
+	| myThreadIndex atomicType floatRet intRet loadFloatRegs |
 	<var: #floatRet type: #double>
 	<var: #intRet type: #usqLong>
 	<inline: true>
@@ -90,14 +75,14 @@ ThreadedARMFFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: call
 	calloutState floatRegisterIndex > 0
 		ifTrue:
 			[self 
-				dummyFloatFunction: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 0)) to: 'double *') at: 0)
-				with: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 2)) to: 'double *') at: 0)
-				with: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 4)) to: 'double *') at: 0)
-				with: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 6)) to: 'double *') at: 0)
-				with: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 8)) to: 'double *') at: 0)
-				with: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 10)) to: 'double *') at: 0)
-				with: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 12)) to: 'double *') at: 0)
-				with: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 14)) to: 'double *') at: 0)
+				load: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 0)) to: 'double *') at: 0)
+				Flo: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 2)) to: 'double *') at: 0)
+				a: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 4)) to: 'double *') at: 0)
+				t: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 6)) to: 'double *') at: 0)
+				R: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 8)) to: 'double *') at: 0)
+				e: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 10)) to: 'double *') at: 0)
+				g: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 12)) to: 'double *') at: 0)
+				s: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 14)) to: 'double *') at: 0)
 			].
 
 	atomicType := self atomicTypeOf: calloutState ffiRetHeader.
