@@ -1,7 +1,7 @@
 Class {
 	#name : #CMWin32LibPng,
 	#superclass : #CMLibPng,
-	#category : #'CMakeVMMaker-Libs'
+	#category : 'CMakeVMMaker-Libs'
 }
 
 { #category : #'as yet unclassified' }

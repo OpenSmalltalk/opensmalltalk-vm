@@ -8,7 +8,7 @@ Fore more information, check the class comments of all the superclasses.
 Class {
 	#name : #StackWindowsConfig,
 	#superclass : #CogWindowsConfig,
-	#category : #'CMakeVMMaker-Windows'
+	#category : 'CMakeVMMaker-Windows'
 }
 
 { #category : #'source files' }

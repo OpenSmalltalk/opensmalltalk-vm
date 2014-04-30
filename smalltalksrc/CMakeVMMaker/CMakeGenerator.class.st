@@ -8,7 +8,7 @@ Class {
 	#instVars : [
 		'output'
 	],
-	#category : #CMakeVMMaker
+	#category : 'CMakeVMMaker'
 }
 
 { #category : #'cmake commands' }
@@ -32,7 +32,6 @@ CMakeGenerator >> addExternalLibraries: libs [
 
 { #category : #'cmake commands' }
 CMakeGenerator >> addExternalLibrary: aLibrary [ 
-
 	self cmd: 'list'
 		params: 'APPEND LINKLIBS ' , aLibrary .
 		

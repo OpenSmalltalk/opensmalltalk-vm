@@ -1,7 +1,7 @@
 Class {
 	#name : #CMakeAndroidPluginGenerator,
 	#superclass : #CMakePluginGenerator,
-	#category : #'CMakeVMMaker-Android'
+	#category : 'CMakeVMMaker-Android'
 }
 
 { #category : #'sources management' }

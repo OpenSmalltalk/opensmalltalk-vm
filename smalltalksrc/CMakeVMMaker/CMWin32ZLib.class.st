@@ -1,7 +1,7 @@
 Class {
 	#name : #CMWin32ZLib,
 	#superclass : #CMThirdpartyLibrary,
-	#category : #'CMakeVMMaker-Libs'
+	#category : 'CMakeVMMaker-Libs'
 }
 
 { #category : #'as yet unclassified' }
