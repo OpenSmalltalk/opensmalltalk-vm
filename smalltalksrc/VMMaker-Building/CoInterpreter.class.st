@@ -2381,6 +2381,7 @@ CoInterpreter >> contextInstructionPointer: theIP frame: theFP [
 { #category : #'frame access' }
 CoInterpreter >> convertToMachineCodeFrame: cogHomeMethod bcpc: bcpc [
 	<var: #cogHomeMethod type: #'CogHomeMethod *'>
+	<returnTypeC: #usqInt>
 	"Convert the current interpreter frame into a machine code frame
 	 and answer the machine code pc matching bcpc."
 	| startBcpc methodField closure cogMethod pc |
@@ -2424,7 +2425,7 @@ CoInterpreter >> convertToMachineCodeFrame: cogHomeMethod bcpc: bcpc [
 		stackPages longAt: p + FoxMFReceiver - FoxIFReceiver put: (stackPages longAt: p)].
 	stackPointer := stackPointer + FoxMFReceiver - FoxIFReceiver.
 	pc := cogit mcPCForBackwardBranch: bcpc startBcpc: startBcpc in: cogMethod.
-	self assert: pc > (cogMethod asInteger + cogit noCheckEntryOffset).
+	self assert: pc > (cogMethod asUnsignedInteger + cogit noCheckEntryOffset).
 	^pc
 ]
 
