@@ -12994,20 +12994,6 @@ StackInterpreter >> writeBackHeadFramePointers [
 ]
 
 { #category : #'image save/restore' }
-StackInterpreter >> writeImageFile: imageBytes [
-
-	| fn |
-	<var: #fn type: 'void *'>
-	self writeImageFileIO: imageBytes.
-	self successful ifTrue:
-		["set Mac file type and creator; this is a noop on other platforms"
-		fn := self ioLoadFunction: 'setMacFileTypeAndCreator' From: 'FilePlugin'.
-		fn = 0 ifFalse:
-			[self cCode:'((sqInt (*)(char*, char*, char*))fn)(imageName, "STim", "FAST")']]
-
-]
-
-{ #category : #'image save/restore' }
 StackInterpreter >> writeImageFileIO [
 	"Write the image header and heap contents to imageFile for snapshot."
 	| imageName headerStart headerSize f imageBytes bytesWritten sCWIfn okToWrite |
@@ -13016,10 +13002,10 @@ StackInterpreter >> writeImageFileIO [
 	<var: #sCWIfn type: #'void *'>
 	<var: #imageName declareC: 'extern char imageName[]'>
 
-	self cCode: [] inSmalltalk: [^self writeImageFileIOSimulation].
+	self cCode: [] inSmalltalk: [imageName := 'sooth compiler'. ^self writeImageFileIOSimulation].
 
 	"If the security plugin can be loaded, use it to check for write permission.
-	If not, assume it's ok"
+	 If not, assume it's ok"
 	sCWIfn := self ioLoadFunction: 'secCanWriteImage' From: 'SecurityPlugin'.
 	sCWIfn ~= 0 ifTrue:
 		[okToWrite := self cCode: '((sqInt (*)(void))sCWIfn)()'.
@@ -13055,8 +13041,9 @@ StackInterpreter >> writeImageFileIO [
 	self putShort: the2ndUnknownShort toFile: f.
 	objectMemory hasSpurMemoryManagerAPI
 		ifTrue:
-			[self putLong: objectMemory firstSegmentBytes toFile: f."Pad the rest of the header."
-			 1 to: 3 do: [:i| self putLong: 0 toFile: f]]
+			[self putLong: objectMemory firstSegmentBytes toFile: f.
+			 self putLong: objectMemory bytesLeftInOldSpace toFile: f.
+			 1 to: 2 do: [:i| self putLong: 0 toFile: f]	"Pad the rest of the header."]
 		ifFalse:
 			[1 to: 4 do: [:i| self putLong: 0 toFile: f]].  "fill remaining header words with zeros"
 	"position file after the header"
@@ -13118,8 +13105,9 @@ StackInterpreter >> writeImageFileIOSimulation [
 		objectMemory hasSpurMemoryManagerAPI
 			ifTrue:
 				[| bytesWritten |
-				 self putLong: objectMemory firstSegmentBytes toFile: file."Pad the rest of the header."
-				 3 timesRepeat: [self putLong: 0 toFile: file].
+				 self putLong: objectMemory firstSegmentBytes toFile: file.
+				 self putLong: objectMemory bytesLeftInOldSpace toFile: file.
+				 2 timesRepeat: [self putLong: 0 toFile: file "Pad the rest of the header."].
 
 				"Position the file after the header."
 				file position: headerSize.

@@ -77,21 +77,9 @@ Spur32BitMMLECoSimulator >> eek [
 	self halt
 ]
 
-{ #category : #'gc - global' }
-Spur32BitMMLECoSimulator >> eliminateAndFreeForwarders [
-	coInterpreter transcript nextPutAll: 'eliminating forwarders...'; flush.
-	^super eliminateAndFreeForwarders
-]
-
 { #category : #'memory access' }
 Spur32BitMMLECoSimulator >> endianness [
 	^#little
-]
-
-{ #category : #compaction }
-Spur32BitMMLECoSimulator >> exactFitCompact [
-	coInterpreter transcript nextPutAll: 'ef compacting...'; flush.
-	^super exactFitCompact
 ]
 
 { #category : #'float primitives' }
@@ -106,12 +94,6 @@ Spur32BitMMLECoSimulator >> fetchPointer: fieldIndex ofObject: objOop [
 	self assert: (fieldIndex >= 0 and: [fieldIndex < (self numSlotsOfAny: objOop)
 				or: [fieldIndex = 0 "forwarders and free objs"]]).
 	^super fetchPointer: fieldIndex ofObject: objOop
-]
-
-{ #category : #compaction }
-Spur32BitMMLECoSimulator >> firstFitCompact [
-	coInterpreter transcript nextPutAll: 'ff compacting...'; flush.
-	^super firstFitCompact
 ]
 
 { #category : #'object format' }
@@ -152,12 +134,6 @@ Spur32BitMMLECoSimulator >> firstIndexableField: objOop [
 { #category : #'spur bootstrap' }
 Spur32BitMMLECoSimulator >> freeLists [
 	^freeLists
-]
-
-{ #category : #'gc - global' }
-Spur32BitMMLECoSimulator >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpace [
-	coInterpreter transcript nextPutAll: 'sweeping...'; flush.
-	^super freeUnmarkedObjectsAndSortAndCoalesceFreeSpace
 ]
 
 { #category : #'gc - global' }
@@ -399,12 +375,6 @@ Spur32BitMMLECoSimulator >> markAndTrace: objOop [
 	^super markAndTrace: objOop
 ]
 
-{ #category : #'gc - global' }
-Spur32BitMMLECoSimulator >> markObjects [
-	coInterpreter transcript nextPutAll: 'marking...'; flush.
-	^super markObjects
-]
-
 { #category : #snapshot }
 Spur32BitMMLECoSimulator >> memoryBaseForImageRead [
 	"Answer the address to read the image into.  Override so that when bootstrapping,
@@ -412,12 +382,6 @@ Spur32BitMMLECoSimulator >> memoryBaseForImageRead [
 	^bootstrapping
 		ifTrue: [0] 
 		ifFalse: [super memoryBaseForImageRead]
-]
-
-{ #category : #'gc - global' }
-Spur32BitMMLECoSimulator >> nilUnmarkedWeaklingSlots [
-	coInterpreter transcript nextPutAll: 'nilling...'; flush.
-	^super nilUnmarkedWeaklingSlots
 ]
 
 { #category : #'spur bootstrap' }
