@@ -351,6 +351,7 @@ CogAbstractInstruction >> concretizeFillFromWord [
 
 { #category : #'generate machine code' }
 CogAbstractInstruction >> concretizeLabel [
+	<inline: true>
 	<var: #dependentChain type: #'AbstractInstruction *'>
 	| dependentChain |
 	dependentChain := dependent.

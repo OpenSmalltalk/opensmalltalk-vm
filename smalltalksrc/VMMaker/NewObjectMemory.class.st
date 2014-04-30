@@ -2401,7 +2401,7 @@ NewObjectMemory >> printObjectsFrom: startAddress to: endAddress [
 	oop := startAddress.
 	[self oop: oop isLessThan: endAddress] whileTrue:
 		[(self isFreeObject: oop) ifFalse:
-			[self printOop: oop].
+			[coInterpreter printOop: oop].
 		oop := self objectAfter: oop].
 ]
 

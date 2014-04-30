@@ -620,6 +620,7 @@ CogIA32Compiler >> concretizeAndRR [
 
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizeArithmeticShiftRightCqR [
+	<inline: true>
 	| shiftCount reg |
 	shiftCount := (operands at: 0) min: 31.
 	reg := self concreteRegister: (operands at: 1).
@@ -641,6 +642,7 @@ CogIA32Compiler >> concretizeArithmeticShiftRightRR [
 	"On the x86 the only instructions that shift by the value of a
 	 register require the shift count to be  in %ecx.  So we may
 	 have to use swap instructions to get the count into %ecx."
+	<inline: true>
 	| shiftCountReg destReg regToShift |
 	shiftCountReg := self concreteRegister: (operands at: 0).
 	destReg := self concreteRegister: (operands at: 1).
@@ -692,6 +694,7 @@ CogIA32Compiler >> concretizeCDQ [
 
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizeCMPXCHGAwR [
+	<inline: true>
 	| addressOperand reg |
 	addressOperand := operands at: 0.
 	reg := self concreteRegister: (operands at: 1).
@@ -708,6 +711,7 @@ CogIA32Compiler >> concretizeCMPXCHGAwR [
 
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizeCMPXCHGMwrR [
+	<inline: true>
 	| srcReg offset destReg |
 	offset := operands at: 0.
 	srcReg := self concreteRegister: (operands at: 1).
@@ -752,6 +756,7 @@ CogIA32Compiler >> concretizeCMPXCHGMwrR [
 
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizeCPUID [
+	<inline: true>
 	machineCode
 		at: 0 put: 16r0F;
 		at: 1 put: 16rA2.
@@ -918,6 +923,7 @@ CogIA32Compiler >> concretizeConvertRRd [
 
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizeFENCE: regOpcode [
+	<inline: true>
 	machineCode
 		at: 0 put: 16r0F;
 		at: 1 put: 16rAE;
@@ -927,6 +933,7 @@ CogIA32Compiler >> concretizeFENCE: regOpcode [
 
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizeFill16 [
+	<inline: true>
 	| word |
 	<var: #word type: 'unsigned short'>
 	self assert: maxSize == 2.
@@ -938,6 +945,7 @@ CogIA32Compiler >> concretizeFill16 [
 
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizeFill32 [
+	<inline: true>
 	| word |
 	<var: #word type: #'unsigned long'>
 	word := operands at: 0.
@@ -950,6 +958,7 @@ CogIA32Compiler >> concretizeFill32 [
 
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizeFillFromWord [
+	<inline: true>
 	| word |
 	<var: #word type: #'unsigned long'>
 	self assert: maxSize == 4.
@@ -1032,6 +1041,7 @@ CogIA32Compiler >> concretizeJumpLong [
 
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizeJumpR [
+	<inline: true>
 	| reg |
 	reg := self concreteRegister: (operands at: 0).
 	machineCode
@@ -1042,6 +1052,7 @@ CogIA32Compiler >> concretizeJumpR [
 
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizeLOCK [
+	<inline: true>
 	machineCode at: 0 put: 16rF0.
 	^machineCodeSize := 1
 ]
@@ -1109,6 +1120,7 @@ CogIA32Compiler >> concretizeLogicalShiftLeftCqR [
 
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizeLogicalShiftLeftRR [
+	<inline: true>
 	"On the x86 the only instructions that shift by the value of a
 	 register require the shift count to be  in %ecx.  So we may
 	 have to use swap instructions to get the count into %ecx."
@@ -1710,6 +1722,7 @@ CogIA32Compiler >> concretizeNegateR [
 
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizeNop [
+	<inline: true>
 	machineCode at: 0 put: 16r90.
 	^machineCodeSize := 1
 ]
@@ -1946,6 +1959,7 @@ CogIA32Compiler >> concretizeSubRR [
 
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizeXCHGAwR [
+	<inline: true>
 	| addressOperand reg |
 	addressOperand := operands at: 0.
 	reg := self concreteRegister: (operands at: 1).
@@ -1961,6 +1975,7 @@ CogIA32Compiler >> concretizeXCHGAwR [
 
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizeXCHGMwrR [
+	<inline: true>
 	| srcReg offset destReg |
 	offset := operands at: 0.
 	srcReg := self concreteRegister: (operands at: 1).
@@ -2001,6 +2016,7 @@ CogIA32Compiler >> concretizeXCHGMwrR [
 
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizeXCHGRR [
+	<inline: true>
 	| reg1 reg2 |
 	reg1 := self concreteRegister: (operands at: 0).
 	reg2 := self concreteRegister: (operands at: 1).
