@@ -31,6 +31,35 @@ CogObjectRepresentation class >> implicitReturnTypeFor: aSelector [
 ]
 
 { #category : #translation }
+CogObjectRepresentation class >> prepareToBeAddedToCodeGenerator: aCodeGen [
+	"This is a horrible hack to keep an optimization lost by necessary
+	 refactoring of StackToRegisterMappingCogit>>#numRegArgs
+	 when the Spur object representation was added.  Avert your gaze?
+	 Refactoring was needed because SimpleStackBasedCogit defines numregArgs as ^0,
+	 so if the object representations also defined numregArgs there would be a clash.
+
+	 To make numRegArgs a method that answers a constant and hence a
+	 method that Slang will inline at compile time and do code elimination on,
+	 we slam in the preferredNumRegArgs method that does answer a constant.
+
+	 Another option I played with was defining a <soft> pragma that would be used in
+	 the object representation's numRegArgs, which would cause the code generator
+	 to discard it when used with the SimpleStackBasedCogit, and allow the numRegArgs
+	 in StackToRegisterMappingCogit to have the <doNotGenerate> pragma.  Which hack
+	 to prefer is up for debate."
+	((self includesSelector: #preferredNumArgs)
+	 and: [(self >> #preferredNumRegArgs) messages asArray ~= #(subclassResponsibility)]) ifTrue:
+		[(aCodeGen methodNamed: #numRegArgs) ifNotNil:
+			[:aTMethod| | doppelganger |
+			 aTMethod compiledMethod messages asArray = #(preferredNumRegArgs) ifTrue:
+				[doppelganger := (self >> #preferredNumRegArgs) asTranslationMethodOfClass: TMethod.
+				 doppelganger selector: #numRegArgs.
+				 aCodeGen
+					removeMethodForSelector: #numRegArgs;
+					addMethod: doppelganger]]]
+]
+
+{ #category : #translation }
 CogObjectRepresentation class >> typeForSelf [
 	^#implicit
 ]
