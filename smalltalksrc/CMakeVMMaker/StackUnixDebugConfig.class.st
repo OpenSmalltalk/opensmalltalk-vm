@@ -13,6 +13,7 @@ Class {
 
 { #category : #'compiler flags' }
 StackUnixDebugConfig >> compilerFlags [
-
-	^  self commonCompilerFlags, ' ' ,self compilerFlagsDebug
+	^  String streamContents:  [ :stream |
+	self commonCompilerFlags asStringOn: stream delimiter: ' '. 
+	self compilerFlagsDebug asStringOn: stream delimiter: ' ' ]
 ]

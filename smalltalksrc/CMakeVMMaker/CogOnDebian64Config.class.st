@@ -22,7 +22,7 @@ Class {
 
 { #category : #accessing }
 CogOnDebian64Config >> commonCompilerFlags [ 
-	^ super commonCompilerFlags , ' -L/usr/lib32'
+	^ super commonCompilerFlags , { '-L/usr/lib32' }
 ]
 
 { #category : #accessing }

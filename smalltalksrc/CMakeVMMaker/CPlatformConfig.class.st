@@ -1,10 +1,8 @@
 "
 Base class, defining some common properties and behavior for all kinds of VM build configurations. These classes are used to generate the VM sources and the CMMake files. 
 
-Notice that this configuration classes expect that you have download the ""platofroms code"" which is hosted here:
- https://github.com/pharo-project/pharo-vm.
-
-You can clone it using this command:  git clone https://github.com/pharo-project/pharo-vm
+Notice that this configuration classes expect that you have download the ""platofroms code"" which is in Gitorious: https://gitorious.org/cogvm
+You can load it executing: git clone git://gitorious.org/cogvm/blessed.git
 
 Once that is done it should have created a directory /blessed. In order to get all the directories by default, place this image under /blessed/image 
 
@@ -61,7 +59,8 @@ Class {
 		'externalPlugins',
 		'pluginsDir',
 		'externalLibs',
-		'thirdpartyLibs'
+		'thirdpartyLibs',
+		'generateForRelease'
 	],
 	#category : #CMakeVMMaker
 }
@@ -128,6 +127,11 @@ CPlatformConfig >> addInternalPlugins: aPluginNames [
 ]
 
 { #category : #'thirdparty libs' }
+CPlatformConfig >> addThirdpartyLibraries: aCollection [ 
+	aCollection do: [ :each | self addThirdpartyLibrary: each ]
+]
+
+{ #category : #'thirdparty libs' }
 CPlatformConfig >> addThirdpartyLibrary: libName [
 	| libs lib |
 	
@@ -138,10 +142,10 @@ CPlatformConfig >> addThirdpartyLibrary: libName [
 		ifNone: [ nil ].
 		
 	lib ifNil: [ 
-		lib := (CMThirdpartyLibrary named: libName config: self).
-			"add dependencies first, so thirpartyLibs collection will be naturally dependency sorted"
-			lib dependencies do: [:dep | self addThirdpartyLibrary: dep ].
-			libs add: lib ].
+		lib := CMThirdpartyLibrary named: libName config: self.
+		"add dependencies first, so thirpartyLibs collection will be naturally dependency sorted"
+		lib dependencies do: [:dep | self addThirdpartyLibrary: dep ].
+		libs add: lib ].
 
 	^ lib
 ]
@@ -172,7 +176,7 @@ CPlatformConfig >> buildScript [
 	
 
 	^ 
-'#!bash
+'#!/usr/bin/env bash
 
 cmake .
 make
@@ -190,6 +194,35 @@ CPlatformConfig >> cogitClass [
 	"answer a class for machine code generation or nil"
 	
 	^ nil
+]
+
+{ #category : #'compiler flags' }
+CPlatformConfig >> commonCompilerFlags [
+	^ #()
+]
+
+{ #category : #'compiler flags' }
+CPlatformConfig >> compilerFlags [ 
+	| releaseFlags |
+	
+	releaseFlags := self isGenerateForRelease 
+		ifTrue: [ self compilerFlagsRelease ]
+		ifFalse: [ self compilerFlagsDebug ].
+		
+	^ String streamContents: [ :stream |
+		((self commonCompilerFlags, releaseFlags) collect: #trimBoth as: Set)
+			asStringOn: stream 
+			delimiter: ' ' ]
+]
+
+{ #category : #'compiler flags' }
+CPlatformConfig >> compilerFlagsDebug [
+	^ #()
+]
+
+{ #category : #'compiler flags' }
+CPlatformConfig >> compilerFlagsRelease [
+	^ #()
 ]
 
 { #category : #'plugin extra rules' }
@@ -649,6 +682,16 @@ CPlatformConfig >> generate [
 	^ CMakeVMGenerator generate: self 
 ]
 
+{ #category : #accessing }
+CPlatformConfig >> generateForDebug [
+	generateForRelease := false
+]
+
+{ #category : #accessing }
+CPlatformConfig >> generateForRelease [
+	generateForRelease := true
+]
+
 { #category : #'source generation' }
 CPlatformConfig >> generateSources [
 	"Generate whole VM + plugins sources"
@@ -717,6 +760,12 @@ CPlatformConfig >> generateVMOnlySources [
 
 ]
 
+{ #category : #'initialize-release' }
+CPlatformConfig >> initialize [ 
+	super initialize.
+	generateForRelease := true.
+]
+
 { #category : #plugins }
 CPlatformConfig >> internalPlugins [
 	^ internalPlugins ifNil: [ internalPlugins := self defaultInternalPlugins ]
@@ -732,6 +781,11 @@ CPlatformConfig >> internalPlugins: aColl [
 CPlatformConfig >> interpreterClass [
 	"answer an interpreter class for VM source code generation"
 	self subclassResponsibility 
+]
+
+{ #category : #testing }
+CPlatformConfig >> isGenerateForRelease [ 
+	^generateForRelease
 ]
 
 { #category : #testing }
