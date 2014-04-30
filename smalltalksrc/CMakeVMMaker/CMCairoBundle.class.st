@@ -4,7 +4,7 @@ this is common superclass for defining settings for building cairo and accompani
 Class {
 	#name : #CMCairoBundle,
 	#superclass : #CMThirdpartyLibrary,
-	#category : #'CMakeVMMaker-Libs'
+	#category : 'CMakeVMMaker-Libs'
 }
 
 { #category : #'as yet unclassified' }

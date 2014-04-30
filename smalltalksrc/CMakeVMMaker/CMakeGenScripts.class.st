@@ -5,7 +5,7 @@ C source files (using VMMaker) and Cmake files.
 Class {
 	#name : #CMakeGenScripts,
 	#superclass : #Object,
-	#category : #CMakeVMMaker
+	#category : 'CMakeVMMaker'
 }
 
 { #category : #'scripts generation' }

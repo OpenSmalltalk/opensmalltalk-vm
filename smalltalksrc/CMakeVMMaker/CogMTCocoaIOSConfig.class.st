@@ -7,7 +7,7 @@ Fore more information, check the class comments of all the superclasses.
 Class {
 	#name : #CogMTCocoaIOSConfig,
 	#superclass : #CogCocoaIOSConfig,
-	#category : #'CMakeVMMaker-IOS'
+	#category : 'CMakeVMMaker-IOS'
 }
 
 { #category : #settings }

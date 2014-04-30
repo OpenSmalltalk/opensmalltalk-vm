@@ -13,7 +13,7 @@ Fore more information, check the class comments of all the superclasses.
 Class {
 	#name : #StackEvtUnixConfig,
 	#superclass : #CogUnixConfig,
-	#category : #'CMakeVMMaker-Unix'
+	#category : 'CMakeVMMaker-Unix'
 }
 
 { #category : #'as yet unclassified' }

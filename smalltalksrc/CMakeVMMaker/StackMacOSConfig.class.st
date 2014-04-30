@@ -10,7 +10,7 @@ Fore more information, check the class comments of all the superclasses.
 Class {
 	#name : #StackMacOSConfig,
 	#superclass : #CogMacOSConfig,
-	#category : #'CMakeVMMaker-MacOS'
+	#category : 'CMakeVMMaker-MacOS'
 }
 
 { #category : #'source files' }
