@@ -334,6 +334,11 @@ SpurSegmentManager >> isValidSegmentBridge: objOop [
 		or: [(manager numSlotsOfAny: objOop) = 0]]]
 ]
 
+{ #category : #accessing }
+SpurSegmentManager >> lastBridge [
+	^self bridgeAt: numSegments - 1
+]
+
 { #category : #initialization }
 SpurSegmentManager >> manager: aSpurMemoryManager [
 	manager := aSpurMemoryManager
@@ -395,10 +400,14 @@ SpurSegmentManager >> postSnapshot [
 
 { #category : #pinning }
 SpurSegmentManager >> prepareForGlobalSweep [
-	"Let the segmentManager mark which segments contain pinned objects via notePinned:"
+	"Let the segmentManager mark which segments contain pinned objects via notePinned:.
+	 For coallesceFreeChunk:, ensure that the last bridge is marked."
 	sweepIndex := 0.
 	0 to: numSegments - 1 do:
-		[:i| (segments at: i) containsPinned: false]
+		[:i| (segments at: i) containsPinned: false].
+	manager
+		setIsMarkedOf: (self bridgeAt: numSegments - 1)
+		to: true
 ]
 
 { #category : #snapshot }
