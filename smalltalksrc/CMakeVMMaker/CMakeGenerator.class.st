@@ -32,7 +32,6 @@ CMakeGenerator >> addExternalLibraries: libs [
 
 { #category : #'cmake commands' }
 CMakeGenerator >> addExternalLibrary: aLibrary [ 
-
 	self cmd: 'list'
 		params: 'APPEND LINKLIBS ' , aLibrary .
 		

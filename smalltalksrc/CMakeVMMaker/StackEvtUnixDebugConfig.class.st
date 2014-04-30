@@ -6,6 +6,7 @@ Class {
 
 { #category : #'compiler flags' }
 StackEvtUnixDebugConfig >> compilerFlags [
-
-	^  self commonCompilerFlags, ' ' ,self compilerFlagsDebug
+	^ String streamContents:  [ :stream |
+	self commonCompilerFlags asStringOn: stream delimiter: ' '. 
+	self compilerFlagsDebug asStringOn: stream delimiter: ' ' ]
 ]

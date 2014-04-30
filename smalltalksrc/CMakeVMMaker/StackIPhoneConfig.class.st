@@ -94,15 +94,18 @@ StackIPhoneConfig >> buildScript [
 	
 
 	^ 
-'#!bash
+'#!/usr/bin/env bash
+
+set -e 
 
 if [ ! -e vmVersionInfo.h ]; then
-	../codegen-scripts/extract-commit-info.sh
+	../scripts/extract-commit-info.sh
 fi
-cmake -G Xcode .
-xcodebuild -sdk {2} -configuration Release -target {1}
-
-' format: {self executableName. self sdkTarget}
+cmake .
+make 
+find ../{1}/{2}.app/Contents -type f -exec mv ''\{\}'' ../{1}/{2}.app \\;
+rm -Rf ../{1}/{2}.app/Contents
+' format: { self outputDirName. self executableName }
 ]
 
 { #category : #accessing }
@@ -114,29 +117,31 @@ StackIPhoneConfig >> codeSignIdentity [
 StackIPhoneConfig >> commonCompilerFlags [
 	"Common compiler flags"
 	^{
-	"'-miphoneos-version-min=4.3'. "
-	'-isysroot /Applications/Xcode.app/Contents/Developer/Platforms/{1}.platform/Developer/SDKs/{1}{2}.sdk' format: { self targetDevice. self sdkVersion}.
+	'-arch {1}' format: { self architecture }.
+	"CLANG >>"
+	'-fwrapv'. "Non optimization of stackoverflow (to allow number conversions)"
+	'-Wno-return-type'. "to avoid clang to complain about plugins that do not return properly."	
+	'-Qunused-arguments'.
+	"CLANG <<"	
+	'-isysroot {1}' format: { self sysroot }.
 	'-x objective-c'.
 	'-std=gnu99'.
 	'-falign-functions=16'.
 	'-fno-gcse'.
-	'-fno-cse-follow-jumps'.
 	'-fvisibility=hidden'.
 	'-funroll-loops'.
 	'-finline-functions'.
 	'-mno-thumb'.
-	'-fwrapv'.
 	'-DSTACKVM=1'.
 	'-DCOGMTVM=0'. 
 	'-DUSE_GLOBAL_STRUCT=0'. 
 	'-DBASE_HEADER_SIZE=4'.
 	'-DTARGET_OS_IS_IPHONE'.
 	'-DHAVE_UUID_GENERATE'.
-	"'-DUSE_INLINE_MEMORY_ACCESSORS'. "
 	'-DHAVE_SYS_TIME_H'.
 	'-DLSB_FIRST'.
 	'-DHAVE_NANOSLEEP'.
-	'-DISQUEAK_IMAGE=', self imageName.
+	'-DISQUEAK_IMAGE={1}' format: { self imageName }.
 	'-DISQUEAK_SOURCES=PharoV10'.
 	'-DSTACKVM'}
 ]
@@ -155,30 +160,17 @@ StackIPhoneConfig >> compilerFlagsRelease [
 StackIPhoneConfig >> configureFT2Plugin: maker [
 	"extra rules for Freetype plugin.
 	a custom rule to build freetype library"
-	| lib devRoot sdkRoot |
-
-	devRoot := '/Applications/Xcode.app/Contents/Developer/Platforms/{1}.platform/Developer'
-		format: { self targetDevice}.
-	sdkRoot := '{1}/SDKs/{2}{3}.sdk' 
-		format: { devRoot. self targetDevice. self sdkVersion}.
+	| lib |
 
 	"add freetype library into loop"
 	lib := self addThirdpartyLibrary: 'freetype2'.
-	lib configurationFlags: ({
-		'--without-zlib'.
-		'--without-bzip2'.
- 		'--host=arm-apple-darwin'.
-		'--enable-static=yes'. 
-		'--enable-shared=no'.
-		'CC={3}/usr/bin/gcc'.
-		'CXX={3}/usr/bin/g++'.
-		'CFLAGS=\\"-arch {1} -std=c99 -Wno-trigraphs -O2 -fwrapv -Wreturn-type -Wunused-variable -fmessage-length=0 -miphoneos-version-min=4.0 -I{2}/usr/include/libxml2 -isysroot {2}\\"'.
-		'LDFLAGS=\\"-arch {1} -isysroot {2}\\"'}
-		collect: [ :each | each format: { self architecture. sdkRoot. devRoot} ]).
+	lib configurationFlags: self ft2PluginConfigurationFlags.
 
 	"link plugin with freetype lib"
-	maker addExternalLibrary: '${thirdpartyDir}/out/lib/', lib libraryFileName.
 	maker includeDirectories: lib includeDir. 
+	maker addExternalLibrary: '${thirdpartyDir}/out/lib/', lib libraryFileName.
+	maker addExternalDependency: 'freetype2'.
+
 ]
 
 { #category : #'plugin extra rules' }
@@ -307,6 +299,22 @@ StackIPhoneConfig >> frameworks [
 { #category : #accessing }
 StackIPhoneConfig >> freetypeLibClass [ 
 	^CMIOSFreetype2
+]
+
+{ #category : #'plugin extra rules' }
+StackIPhoneConfig >> ft2PluginConfigurationFlags [
+	^ {'--without-zlib'.
+		'--without-bzip2'.
+		'--host=arm-apple-darwin'.
+		'--enable-static=yes'. 
+		'--enable-shared=no'.
+		'CFLAGS=\\"-arch {1} -std=c99 -Wno-trigraphs -O2 -fpascal-strings -fwrapv -Wreturn-type -Wunused-variable -fvisibility=hidden -fmessage-length=0 -miphoneos-version-min={3}  -I{2}/usr/include/libxml2 -isysroot {2}\\"'.
+		'LDFLAGS=\\"-arch {1} -miphoneos-version-min={3} -isysroot {2}\\"' }
+		collect: [ :each | 
+			each format: { 
+				self architecture. 
+				self sysroot. 
+				self sdkVersion } ]
 ]
 
 { #category : #accessing }
@@ -491,7 +499,7 @@ StackIPhoneConfig >> sdkTarget [
 
 { #category : #accessing }
 StackIPhoneConfig >> sdkVersion [ 
-	^'6.1'
+	^'7.0'
 ]
 
 { #category : #settings }
@@ -501,9 +509,13 @@ StackIPhoneConfig >> setCommonProperties: maker [
 	maker set: 'CMAKE_SYSTEM_PROCESSOR' to: 'arm'.
 
 	maker set: 'SDKVER' toString: self sdkVersion.
-	maker set: 'DEVROOT' toString: ('/Applications/Xcode.app/Contents/Developer/Platforms/{1}.platform/Developer'
-		format: { self targetDevice }).
-	maker set: 'SDKROOT' toString: '${DEVROOT}/SDKs/', self targetDevice,'${SDKVER}.sdk'.
+	maker 
+		set: 'DEVROOT' 
+		toString: ('/Applications/Xcode.app/Contents/Developer/Platforms/{1}.platform/Developer'
+			format: { self targetDevice }).
+	maker 
+		set: 'SDKROOT' 
+		toString: '${DEVROOT}/SDKs/', self targetDevice,'${SDKVER}.sdk'.
 
 	maker set: 'CMAKE_OSX_SYSROOT' to: 'iphoneos${SDKVER}'.
 		
@@ -545,20 +557,27 @@ StackIPhoneConfig >> setExtraTargetProperties: maker [
 		cmd: 'set_target_properties' 
 		params: self executableName, ' PROPERTIES COMPILE_FLAGS "-include \"', (self buildDir / self prefixHeaderFileName) fullName, '\""'. 
 
-	maker set: 'CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY' 
+	maker 
+		set: 'CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY' 
 		toString: self codeSignIdentity.
-	maker set: 'CMAKE_XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY' 
+	maker 
+		set: 'CMAKE_XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY' 
 		toString: self targetedDeviceFamilyAsString.
-	maker set: 'CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET' 
+	maker 
+		set: 'CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET' 
 		to: self deploymentTargetVersion.
-	maker set: 'CMAKE_XCODE_ATTRIBUTE_CONFIGURATION_BUILD_DIR' 
+	maker 
+		set: 'CMAKE_XCODE_ATTRIBUTE_CONFIGURATION_BUILD_DIR' 
 		toString: '$(BUILD_DIR)/$(CONFIGURATION)'.
-	maker set: 'CMAKE_XCODE_ATTRIBUTE_CONFIGURATION_TEMP_DIR' 
+	maker 
+		set: 'CMAKE_XCODE_ATTRIBUTE_CONFIGURATION_TEMP_DIR' 
 		toString: '$(BUILD_DIR)/$(CONFIGURATION)'.
 
 	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir fullName.
 	
-	maker puts: 'set_source_files_properties(${srcVMDir}/gcc3x-cointerp.c PROPERTIES COMPILE_FLAGS -O0)'
+	maker puts: 'set_source_files_properties(${srcVMDir}/gcc3x-cointerp.c PROPERTIES COMPILE_FLAGS -O0)'.
+
+
 
 ]
 
@@ -636,6 +655,14 @@ StackIPhoneConfig >> standardIncludes [
 	'${crossDir}/plugins/FilePlugin'
 	)	
 
+]
+
+{ #category : #accessing }
+StackIPhoneConfig >> sysroot [ 
+	^ '/Applications/Xcode.app/Contents/Developer/Platforms/{1}.platform/Developer/SDKs/{1}{2}.sdk' 
+	format: { 
+		self targetDevice. 
+		self sdkVersion }
 ]
 
 { #category : #accessing }

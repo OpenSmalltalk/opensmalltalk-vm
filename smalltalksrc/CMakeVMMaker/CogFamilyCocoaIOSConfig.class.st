@@ -25,8 +25,12 @@ CogFamilyCocoaIOSConfig >> CFBundleVersion [
 
 { #category : #settings }
 CogFamilyCocoaIOSConfig >> commonCompilerFlags [
-	^super commonCompilerFlags, 
-		#(
+	^super commonCompilerFlags,  #(
+	"CLANG >>"
+	'-fwrapv' "Non optimization of stackoverflow (to allow number conversions)"
+	'-Wno-return-type' "to avoid clang to complain about plugins that do not return properly."	
+	'-Qunused-arguments'
+	"CLANG <<"
 	'-funroll-loops' 
 	'-fasm-blocks' 
 	'-fno-inline-functions' 
@@ -35,7 +39,6 @@ CogFamilyCocoaIOSConfig >> commonCompilerFlags [
 	'-mtune=prescott' 
 	'-falign-functions=16' 
 	'-fno-gcse' 
-	'-fno-cse-follow-jumps' 
 	'-std=gnu99'
 	'-fmessage-length=0' 
 	'-fpascal-strings' 
@@ -122,11 +125,9 @@ CogFamilyCocoaIOSConfig >> defaultExternalPlugins [
 		UUIDPlugin
 		FloatMathPlugin
 		AsynchFilePlugin
-		SerialPlugin
 		Mpeg3Plugin
 		CroquetPlugin
 		JoystickTabletPlugin
-		MIDIPlugin
 		B3DAcceleratorPlugin
 		JPEGReadWriter2Plugin 
 		JPEGReaderPlugin
@@ -136,7 +137,8 @@ CogFamilyCocoaIOSConfig >> defaultExternalPlugins [
 		QuicktimePlugin
 		TestOSAPlugin
 		SqueakSSLPlugin
-		"UnixOSProcessPlugin"
+		SerialPlugin
+		MIDIPlugin
 	)
 ]
 
@@ -158,9 +160,8 @@ CogFamilyCocoaIOSConfig >> defaultInternalPlugins [
 		HostWindowPlugin 
 		"JPEGReadWriter2Plugin 
 		JPEGReaderPlugin" 
-		KlattSynthesizerPlugin 
+		KlattSynthesizerPlugin
 		LargeIntegersPlugin 
-		"MacMenubarPlugin" "This plugin is not yet ported"
 		Matrix2x3Plugin 
 		MiscPrimitivePlugin 
 		"RePlugin" 
@@ -270,7 +271,7 @@ CogFamilyCocoaIOSConfig >> setExtraTargetProperties: maker [
 	maker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/', self prefixHeaderFileName.
 
 	maker 
-		addXCodeProperty: 'PER_ARCH_CFLAGS_i386' value: '-DLSB_FIRST -mfpmath=sse -finline-functions  -fno-cse-follow-jumps -fno-gcse -mtune=prescott -march=pentium-m -falign-functions=16'.
+		addXCodeProperty: 'PER_ARCH_CFLAGS_i386' value: '-DLSB_FIRST -mfpmath=sse -finline-functions  -fno-gcse -mtune=prescott -march=pentium-m -falign-functions=16'.
 		
 	"maker 
 		addXCodeProperty: 'GCC_VERSION' value: '4.3'."
