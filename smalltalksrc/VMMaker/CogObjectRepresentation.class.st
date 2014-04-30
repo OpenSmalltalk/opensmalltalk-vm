@@ -47,13 +47,14 @@ CogObjectRepresentation class >> prepareToBeAddedToCodeGenerator: aCodeGen [
 	 to discard it when used with the SimpleStackBasedCogit, and allow the numRegArgs
 	 in StackToRegisterMappingCogit to have the <doNotGenerate> pragma.  Which hack
 	 to prefer is up for debate."
-	((self includesSelector: #preferredNumArgs)
+	((self includesSelector: #preferredNumRegArgs)
 	 and: [(self >> #preferredNumRegArgs) messages asArray ~= #(subclassResponsibility)]) ifTrue:
 		[(aCodeGen methodNamed: #numRegArgs) ifNotNil:
 			[:aTMethod| | doppelganger |
 			 aTMethod compiledMethod messages asArray = #(preferredNumRegArgs) ifTrue:
-				[doppelganger := (self >> #preferredNumRegArgs) asTranslationMethodOfClass: TMethod.
+				[doppelganger := aCodeGen compileToTMethodSelector: #preferredNumRegArgs in: self.
 				 doppelganger selector: #numRegArgs.
+				 doppelganger mergePropertiesOfSuperMethod: aTMethod.
 				 aCodeGen
 					removeMethodForSelector: #numRegArgs;
 					addMethod: doppelganger]]]
