@@ -67,9 +67,11 @@ NewObjectMemory class >> mustBeGlobal: var [
 
 { #category : #translation }
 NewObjectMemory class >> prepareToBeAddedToCodeGenerator: aCodeGen [
-	"Remove the instance variables we don't use."
-	self ~~ NewObjectMemory ifTrue:
+	"Remove the methods and instance variables we don't use."
+
+	self ~~ NewObjectMemory ifTrue: "No Need to repeat in NewCoObjectMemory"
 		[^self].
+
 	aCodeGen
 		removeMethodForSelector: #markPhase; "we implement markPhase:"
 		removeMethodForSelector: #printWronglySizedContexts. "we implement printWronglySizedContexts:"

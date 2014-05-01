@@ -338,7 +338,12 @@ VMMaker class >> generateConfiguration [
 
 { #category : #configurations }
 VMMaker class >> generateEitherSqueakCogVM [
-	^self generateSqueakCogVMWithInterpreterClass: (self chooseCoInterpreterClassIfAbsent: [^self])
+	| coInterpreterClass |
+	coInterpreterClass := self chooseCoInterpreterClassIfAbsent: [^self].
+	^self generateSqueakCogVMWithInterpreterClass: coInterpreterClass
+		  options: ((coInterpreterClass includesBehavior: CoInterpreterMT)
+					ifTrue: [#(COGMTVM true)]
+					ifFalse: [#()])
 ]
 
 { #category : #configurations }
@@ -411,6 +416,7 @@ VMMaker class >> generateNewspeakStackVM [
 { #category : #configurations }
 VMMaker class >> generateSqueakCogMTVM [
 	^self generateSqueakCogVMWithInterpreterClass: CoInterpreterMT
+		  options: #(COGMTVM true)
 ]
 
 { #category : #configurations }
@@ -427,13 +433,15 @@ VMMaker class >> generateSqueakCogSistaVM [
 { #category : #configurations }
 VMMaker class >> generateSqueakCogVM [
 	^self generateSqueakCogVMWithInterpreterClass: CoInterpreter
+		  options: #()
 ]
 
 { #category : #'confs-support' }
-VMMaker class >> generateSqueakCogVMWithInterpreterClass: interpreterClass [
+VMMaker class >> generateSqueakCogVMWithInterpreterClass: interpreterClass options: optionsArray [
 	^VMMaker
 		generate: interpreterClass
 		and: StackToRegisterMappingCogit
+		with: optionsArray
 		to: (FileDirectory default pathFromURI: self sourceTree, '/src')
 		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including:#(	ADPCMCodecPlugin AsynchFilePlugin
@@ -449,8 +457,6 @@ VMMaker class >> generateSqueakCogVMWithInterpreterClass: interpreterClass [
 					ThreadedFFIPlugin ThreadedARMFFIPlugin ThreadedIA32FFIPlugin
 					UnicodePlugin UnixAioPlugin UUIDPlugin UnixOSProcessPlugin
 					Win32OSProcessPlugin VMProfileLinuxSupportPlugin VMProfileMacSupportPlugin WeDoPlugin)
-					
-
 ]
 
 { #category : #configurations }
