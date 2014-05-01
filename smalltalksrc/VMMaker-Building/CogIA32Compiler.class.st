@@ -131,15 +131,6 @@ CogIA32Compiler class >> initialize [
 			at: classVarName put: value + LastRTLCode - 1]
 ]
 
-{ #category : #translation }
-CogIA32Compiler class >> prepareToBeAddedToCodeGenerator: aCodeGen [
-	"Remove the methods of CogAbstractInstruction we override."
-	self selectors do:
-		[:sel|
-		 (superclass includesSelector: sel) ifTrue:
-			[aCodeGen removeMethodForSelector: sel]].
-]
-
 { #category : #verification }
 CogIA32Compiler class >> specificOpcodes [
 	"Answer the processor-specific opcodes for this class.

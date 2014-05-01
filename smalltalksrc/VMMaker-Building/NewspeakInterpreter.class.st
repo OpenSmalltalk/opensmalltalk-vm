@@ -985,16 +985,6 @@ invalidCompactClassError(char *s) { /* Print a compact class index error message
 '
 ]
 
-{ #category : #translation }
-NewspeakInterpreter class >> prepareToBeAddedToCodeGenerator: aCodeGen [
-	"Override to avoid repeating ObjectMemory's preparations
-	 and to delete ObjectMemory methods we override."
-	self selectors do:
-		[:sel|
-		 (superclass whichClassIncludesSelector: sel) ifNotNil:
-			[aCodeGen removeMethodForSelector: sel]]
-]
-
 { #category : #constants }
 NewspeakInterpreter class >> primitiveTable [
 

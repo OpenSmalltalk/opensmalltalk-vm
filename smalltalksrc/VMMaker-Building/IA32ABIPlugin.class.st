@@ -54,11 +54,6 @@ IA32ABIPlugin class >> moduleName [
 ]
 
 { #category : #translation }
-IA32ABIPlugin class >> prepareToBeAddedToCodeGenerator: aCodeGen [
-	aCodeGen removeMethodForSelector: #setInterpreter:
-]
-
-{ #category : #translation }
 IA32ABIPlugin class >> shouldGenerateTypedefFor: aStructClass [
 	"Hack to work-around mutliple definitions.  Sometimes a type has been defined in an include."
 	^aStructClass ~~ VMCallbackContext

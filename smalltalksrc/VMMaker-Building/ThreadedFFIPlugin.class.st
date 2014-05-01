@@ -199,16 +199,6 @@ warning(char *s) { /* Print an error message but don''t exit. */
 ]
 
 { #category : #translation }
-ThreadedFFIPlugin class >> prepareToBeAddedToCodeGenerator: aCodeGen [
-	"Remove the methods of ThreadedFFIPlugin any concrete subclass overrides,
-	 and the methods of InterpreterPlugin that ThreadedFFIPlugin overrides."
-	self selectors do:
-		[:sel|
-		 (superclass includesSelector: sel) ifTrue:
-			[aCodeGen removeMethodForSelector: sel]]
-]
-
-{ #category : #translation }
 ThreadedFFIPlugin class >> translateInDirectory: directory doInlining: inlineFlag [
 	"As a hack to allow ThreadedFFIPlugin to generate a skeletal SqueakFFIPrims.c that
 	 simply includes the fleshed-out SqueakIA32FFIPrims.c, SqueakARMFFIPrims.c et al,

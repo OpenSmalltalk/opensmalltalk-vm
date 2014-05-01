@@ -1496,16 +1496,6 @@ invalidCompactClassError(char *s) { /* Print a compact class index error message
 '
 ]
 
-{ #category : #translation }
-StackInterpreter class >> prepareToBeAddedToCodeGenerator: aCodeGen [
-	"Override to delete InterpreterPrimitives methods we override."
-	aCodeGen removeVariable: 'cogit'.
-	self selectors do:
-		[:sel|
-		 (superclass whichClassIncludesSelector: sel) ifNotNil:
-			[aCodeGen removeMethodForSelector: sel]]
-]
-
 { #category : #constants }
 StackInterpreter class >> primitiveAccessorDepthTable [
 	| cg |
@@ -5113,6 +5103,7 @@ StackInterpreter >> externalSetStackPageAndPointersForSuspendedContextOfProcess:
 	 aProcess, marrying the context if necessary, and niling the suspendedContext slot.  This is used
 	 on process switch to ensure a context has a stack frame and so can continue execution."
 	| newContext theFrame thePage newPage |
+	<inline: true>
 	<var: #theFrame type: #'char *'>
 	<var: #thePage type: #'StackPage *'>
 	<var: #newPage type: #'StackPage *'>

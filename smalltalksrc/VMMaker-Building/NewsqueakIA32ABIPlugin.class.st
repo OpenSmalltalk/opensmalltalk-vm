@@ -53,11 +53,6 @@ NewsqueakIA32ABIPlugin class >> moduleName [
 	^'IA32ABI'
 ]
 
-{ #category : #translation }
-NewsqueakIA32ABIPlugin class >> prepareToBeAddedToCodeGenerator: aCodeGen [
-	aCodeGen removeMethodForSelector: #setInterpreter:
-]
-
 { #category : #'simulation only' }
 NewsqueakIA32ABIPlugin class >> simulatorClass [
 	^NewspeakVM ifTrue: [NewsqueakIA32ABIPluginSimulator]

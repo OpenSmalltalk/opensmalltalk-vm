@@ -67,15 +67,12 @@ NewObjectMemory class >> mustBeGlobal: var [
 
 { #category : #translation }
 NewObjectMemory class >> prepareToBeAddedToCodeGenerator: aCodeGen [
-	"Remove the superclass methods we override
-	 and the instance variables we don't use."
-	self selectors do:
-		[:sel|
-		 (superclass whichClassIncludesSelector: sel) ifNotNil:
-			[aCodeGen removeMethodForSelector: sel]].
+	"Remove the instance variables we don't use."
 	self ~~ NewObjectMemory ifTrue:
 		[^self].
-	aCodeGen removeMethodForSelector: #markPhase. "we implement markPhase:"
+	aCodeGen
+		removeMethodForSelector: #markPhase; "we implement markPhase:"
+		removeMethodForSelector: #printWronglySizedContexts. "we implement printWronglySizedContexts:"
 	"This class uses freeStart in place of freeBlock.  It does
 	 not maintain an allocationCount nor stats there-of.
 	 Having an interpreter that uses a stack zone, it doesn't

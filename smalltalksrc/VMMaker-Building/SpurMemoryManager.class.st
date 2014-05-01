@@ -818,15 +818,6 @@ SpurMemoryManager class >> objectRepresentationClass [
 	^self subclassResponsibility
 ]
 
-{ #category : #translation }
-SpurMemoryManager class >> prepareToBeAddedToCodeGenerator: aCodeGen [
-	"Remove the superclass methods we override."
-	self selectors do:
-		[:sel|
-		 (superclass whichClassIncludesSelector: sel) ifNotNil:
-			[aCodeGen removeMethodForSelector: sel]]
-]
-
 { #category : #'simulation only' }
 SpurMemoryManager class >> vmProxyMajorVersion [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"

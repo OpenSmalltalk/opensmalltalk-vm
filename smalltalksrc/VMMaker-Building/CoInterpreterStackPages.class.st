@@ -46,13 +46,6 @@ CoInterpreterStackPages class >> declareCVarsIn: aCCodeGenerator [
 		removeMethodForSelector: #memIndexFor:
 ]
 
-{ #category : #translation }
-CoInterpreterStackPages class >> prepareToBeAddedToCodeGenerator: aCodeGen [
-	aCodeGen
-		removeVariable: 'coInterpreter';
-		removeVariable: 'objectMemory'
-]
-
 { #category : #assertions }
 CoInterpreterStackPages >> allPagesFree [
 	^pages allSatisfy: [:page| page isFree]
