@@ -160,13 +160,6 @@ CogThreadManager class >> initialize [
 	AWOLProcessesIncrement := 4
 ]
 
-{ #category : #translation }
-CogThreadManager class >> prepareToBeAddedToCodeGenerator: aCodeGen [
-	aCodeGen
-		removeVariable: 'coInterpreter';
-		removeVariable: 'cogit'
-]
-
 { #category : #'public api' }
 CogThreadManager >> acquireVMFor: threadIndex [
 	"Attempt to acquire the VM, eventually blocking until it becomes available.

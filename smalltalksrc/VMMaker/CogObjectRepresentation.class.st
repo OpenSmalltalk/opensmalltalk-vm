@@ -31,36 +31,6 @@ CogObjectRepresentation class >> implicitReturnTypeFor: aSelector [
 ]
 
 { #category : #translation }
-CogObjectRepresentation class >> prepareToBeAddedToCodeGenerator: aCodeGen [
-	"This is a horrible hack to keep an optimization lost by necessary
-	 refactoring of StackToRegisterMappingCogit>>#numRegArgs
-	 when the Spur object representation was added.  Avert your gaze?
-	 Refactoring was needed because SimpleStackBasedCogit defines numregArgs as ^0,
-	 so if the object representations also defined numregArgs there would be a clash.
-
-	 To make numRegArgs a method that answers a constant and hence a
-	 method that Slang will inline at compile time and do code elimination on,
-	 we slam in the preferredNumRegArgs method that does answer a constant.
-
-	 Another option I played with was defining a <soft> pragma that would be used in
-	 the object representation's numRegArgs, which would cause the code generator
-	 to discard it when used with the SimpleStackBasedCogit, and allow the numRegArgs
-	 in StackToRegisterMappingCogit to have the <doNotGenerate> pragma.  Which hack
-	 to prefer is up for debate."
-	((self includesSelector: #preferredNumRegArgs)
-	 and: [(self >> #preferredNumRegArgs) messages asArray ~= #(subclassResponsibility)]) ifTrue:
-		[(aCodeGen methodNamed: #numRegArgs) ifNotNil:
-			[:aTMethod| | doppelganger |
-			 aTMethod compiledMethod messages asArray = #(preferredNumRegArgs) ifTrue:
-				[doppelganger := aCodeGen compileToTMethodSelector: #preferredNumRegArgs in: self.
-				 doppelganger selector: #numRegArgs.
-				 doppelganger mergePropertiesOfSuperMethod: aTMethod.
-				 aCodeGen
-					removeMethodForSelector: #numRegArgs;
-					addMethod: doppelganger]]]
-]
-
-{ #category : #translation }
 CogObjectRepresentation class >> typeForSelf [
 	^#implicit
 ]
@@ -171,10 +141,16 @@ CogObjectRepresentation >> markAndTraceLiteralIfYoung: literal [
 ]
 
 { #category : #'calling convention' }
-CogObjectRepresentation >> preferredNumRegArgs [
+CogObjectRepresentation >> numRegArgs [
 	"Define how many register arguments a StackToRegisterMappingCogit can and should use
 	 with the receiver.  The value must be 0, 1 or 2.  Note that a SimpleStackBasedCogit always
-	 has 0 register args (although the receiver is passed in a register)."
+	 has 0 register args (although the receiver is passed in a register).  The method must
+	 be inlined in CoInterpreter, and dead code eliminated so that the register-popping
+	 enilopmarts such as enterRegisterArgCogMethod:at:receiver: do not have to be
+	 implemented in SimpleStackBasedCogit."
+	<api>
+	<option: #StackToRegisterMappingCogit>
+	<inline: true>
 	self subclassResponsibility
 ]
 
