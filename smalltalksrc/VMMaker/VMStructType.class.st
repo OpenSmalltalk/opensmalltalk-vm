@@ -246,15 +246,6 @@ VMStructType class >> offsetForInstVar: instVarName [
 ]
 
 { #category : #translation }
-VMStructType class >> prepareToBeAddedToCodeGenerator: aCodeGen [
-	aCodeGen
-		removeVariable: 'coInterpreter';
-		removeVariable: 'cogit';
-		removeVariable: 'objectMemory';
-		removeVariable: 'objectRepresentation' ifAbsent: []
-]
-
-{ #category : #translation }
 VMStructType class >> printTypedefOn: aStream [
 	aStream nextPutAll: 'typedef struct '.
 	self needsTypeTag ifTrue:

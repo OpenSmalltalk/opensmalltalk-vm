@@ -479,15 +479,6 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueakV3 [
 	)
 ]
 
-{ #category : #translation }
-SimpleStackBasedCogit class >> prepareToBeAddedToCodeGenerator: aCCodeGenerator [
-	"Override to avoid repeating Cogit's preparations and remove the methods we override."
-	self selectors do:
-		[:sel|
-		 (Cogit includesSelector: sel) ifTrue:
-			[aCCodeGenerator removeMethodForSelector: sel]]
-]
-
 { #category : #'simulation only' }
 SimpleStackBasedCogit >> bytecodeFixupClass [
 	<doNotGenerate>

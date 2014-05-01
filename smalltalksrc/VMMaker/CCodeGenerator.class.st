@@ -334,7 +334,8 @@ CCodeGenerator >> addMacro: aString for: selector [
 CCodeGenerator >> addMethod: aTMethod [
 	"Add the given method to the code base and answer it.
 	 Only allow duplicate definitions for struct accessors, since we don't actually
-	 generate code for these methods and hence the conflict doesn't matter."
+	 generate code for these methods and hence the conflict doesn't matter.
+	 Allow subclasses to redefine methods (Smalltalk has inheritance after all)."
 
 	(methods at: aTMethod selector ifAbsent: []) ifNotNil:
 		[:conflict |
@@ -344,9 +345,9 @@ CCodeGenerator >> addMethod: aTMethod [
 		 and: [aTMethod isStructAccessor
 		 and: [conflict compiledMethod decompileString = aTMethod compiledMethod decompileString]]) ifTrue:
 			[^nil].
-		(conflict definingClass inheritsFrom: aTMethod definingClass) ifTrue:
-			[^nil].
-		self error: 'Method name conflict: ', aTMethod selector].
+		((aTMethod definingClass inheritsFrom: conflict definingClass)
+		 or: [(aTMethod compiledMethod pragmaAt: #option:) notNil]) ifFalse:
+			[self error: 'Method name conflict: ', aTMethod selector]].
 	^methods at: aTMethod selector put: aTMethod
 ]
 
@@ -669,13 +670,20 @@ CCodeGenerator >> checkClassForNameConflicts: aClass [
 	"check for method name collisions"
 	aClass selectors do:
 		[:sel | | tmeth meth |
-		((tmeth := methods at: sel ifAbsent: nil) notNil
+		((self shouldIncludeMethodFor: aClass selector: sel)
+		and: [(tmeth := methods at: sel ifAbsent: nil) notNil
 		and: [(aClass isStructClass and: [(aClass isAccessor: sel)
 				and: [(methods at: sel) isStructAccessor]]) not
-		and: [((meth := aClass compiledMethodAt: sel) pragmaAt: #doNotGenerate) isNil
-		and: [meth isSubclassResponsibility not
-		and: [(tmeth definingClass inheritsFrom: aClass) not]]]]) ifTrue:
-			[self error: 'Method ', sel, ' was defined in a previously added class.']]
+		and: [(meth := aClass >> sel) isSubclassResponsibility not
+		and: [(aClass includesBehavior: tmeth definingClass) not]]]]) ifTrue:
+			[((aClass >>sel) pragmaAt: #option:)
+				ifNil: [self error: 'Method ', sel, ' was defined in a previously added class.']
+				ifNotNil:
+					[logger
+						ensureCr;
+						show: 'warning, method ', aClass name, '>>', sel storeString,
+								' overrides ', tmeth definingClass, '>>', sel storeString;
+						cr]]]
 ]
 
 { #category : #utilities }
@@ -3881,8 +3889,10 @@ CCodeGenerator >> shortMonticelloDescriptionForClass: aClass [
 
 { #category : #utilities }
 CCodeGenerator >> shouldIncludeMethodFor: aClass selector: selector [
-	"process optional methods by interpreting the argument to the option: pragma as either
-	 a Cogit class name or a class variable name or a variable name in VMBasicConstants."
+	"Answer whether a method shoud be translated.  Process optional methods by
+	 interpreting the argument to the option: pragma as either a Cogit class name
+	 or a class variable name or a variable name in VMBasicConstants.  Exclude
+	 methods with the doNotGenerate pragma."
 	(aClass >> selector pragmaAt: #option:) ifNotNil:
 		[:pragma| | key |
 		key := pragma argumentAt: 1.
@@ -3904,7 +3914,7 @@ CCodeGenerator >> shouldIncludeMethodFor: aClass selector: selector [
 			[:binding|
 			binding value ~~ false ifTrue: [^true]]].
 		^false].
-	^true
+	^(aClass >> selector pragmaAt: #doNotGenerate) isNil
 ]
 
 { #category : #inlining }

@@ -846,15 +846,6 @@ StackToRegisterMappingCogit class >> newInitializeBytecodeTableForSqueakV3PlusCl
 		(1 240 255 genSendLiteralSelector2ArgsBytecode isMapped))
 ]
 
-{ #category : #translation }
-StackToRegisterMappingCogit class >> prepareToBeAddedToCodeGenerator: aCCodeGenerator [
-	"Override to avoid repeating SimpleStackBasedCogit's preparations and remove the methods we override."
-	self selectors do:
-		[:sel|
-		 (superclass whichClassIncludesSelector: sel) ifNotNil:
-			[aCCodeGenerator removeMethodForSelector: sel]]
-]
-
 { #category : #accessing }
 StackToRegisterMappingCogit class >> pushNilSizeFunction [
 	"Answer the value of pushNilSizeFunction"
@@ -3840,8 +3831,8 @@ StackToRegisterMappingCogit >> needsFrameIfStackGreaterThanOne: stackDelta [
 
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> numRegArgs [
-	<api>
-	^objectRepresentation preferredNumRegArgs
+	<doNotGenerate>
+	^objectRepresentation numRegArgs
 ]
 
 { #category : #'simulation stack' }
