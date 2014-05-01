@@ -1668,10 +1668,10 @@ CCodeGenerator >> generateDoWhileFalse: msgNode on: aStream indent: level [
 	receiverWithoutTest := TStmtListNode new setStatements: msgNode receiver statements allButLast.
 	aStream nextPutAll: 'do {'; cr.
 	receiverWithoutTest emitCCodeOn: aStream level: level + 1 generator: self.
-	level timesRepeat: [ aStream tab ].
+	aStream tab: level.
 	aStream nextPutAll: '} while(!('.
-	testStmt emitCCodeOn: aStream level: 0 generator: self.
-	aStream nextPutAll: '))'.
+	testStmt emitCCodeAsExpressionOn: aStream level: 0 generator: self.
+	aStream nextPutAll: '))'
 ]
 
 { #category : #'C translation' }
@@ -1683,10 +1683,10 @@ CCodeGenerator >> generateDoWhileTrue: msgNode on: aStream indent: level [
 	receiverWithoutTest := TStmtListNode new setStatements: msgNode receiver statements allButLast.
 	aStream nextPutAll: 'do {'; cr.
 	receiverWithoutTest emitCCodeOn: aStream level: level + 1 generator: self.
-	level timesRepeat: [ aStream tab ].
+	aStream tab: level.
 	aStream nextPutAll: '} while('.
-	testStmt emitCCodeOn: aStream level: 0 generator: self.
-	aStream nextPutAll: ')'.
+	testStmt emitCCodeAsExpressionOn: aStream level: 0 generator: self.
+	aStream nextPut: $)
 ]
 
 { #category : #'C translation' }
@@ -2731,7 +2731,7 @@ CCodeGenerator >> generateWhileForeverBreakIf: breakBoolean loop: msgNode on: aS
 	receiverWithoutTest emitCCodeOn: aStream level: level + 1 generator: self.
 	aStream tab: level + 1; nextPutAll: 'if ('.
 	breakBoolean ifFalse: [aStream nextPut: $!; nextPut: $(].
-	testStmt emitCCodeOn: aStream level: 0 generator: self.
+	testStmt emitCCodeAsExpressionOn: aStream level: 0 generator: self.
 	breakBoolean ifFalse: [aStream nextPut: $)].
 	aStream nextPutAll: ') break;'; cr.
 	msgNode args first emitCCodeOn: aStream level: level + 1 generator: self.
