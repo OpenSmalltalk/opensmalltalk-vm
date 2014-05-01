@@ -7139,8 +7139,7 @@ SpurMemoryManager >> moveARunOfObjectsStartingAt: startAddress upTo: limit [
 			[^maxFreeChunk >= startAddress ifTrue: [0] ifFalse: [there]].
 
 		 "Was the loop stopped by a pig? If so, try and find space for it"
-		 (there - here >= (self averageObjectSizeInBytes * 8) "256b in 32 bit, 512b in 64 bit"
-		  and: [self isMobileObject: hereObj]) ifTrue:
+		 there - here >= (self averageObjectSizeInBytes * 8) ifTrue: "256b in 32 bit, 512b in 64 bit"
 			[| usedChunk |
 			 usedChunk := self tryToMovePig: hereObj at: here end: there.
 			"if it couldn't be moved we need to advance, so always
