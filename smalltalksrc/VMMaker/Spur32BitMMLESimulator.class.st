@@ -364,6 +364,12 @@ Spur32BitMMLESimulator >> memoryBaseForImageRead [
 		ifFalse: [super memoryBaseForImageRead]
 ]
 
+{ #category : #compaction }
+Spur32BitMMLESimulator >> moveARunOfObjectsStartingAt: startAddress upTo: limit [
+	"startAddress = 175450576 ifTrue: [self halt]."
+	^super moveARunOfObjectsStartingAt: startAddress upTo: limit
+]
+
 { #category : #'spur bootstrap' }
 Spur32BitMMLESimulator >> numClassTablePages [
 	^numClassTablePages
