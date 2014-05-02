@@ -8053,15 +8053,16 @@ SpurMemoryManager >> printFreeList: chunkOrIndex [
 { #category : #'debug printing' }
 SpurMemoryManager >> printFreeTree [
 	<api>
-	self printFreeTree: (freeLists at: 0)
+	self printFreeTreeChunk: (freeLists at: 0)
 ]
 
 { #category : #'debug printing' }
-SpurMemoryManager >> printFreeTree: chunkOrZero [
+SpurMemoryManager >> printFreeTreeChunk: chunkOrZero [
+	<inline: false> "Slang is blind-sided by the inlining of printFreeTreeChunk: into printFreeTree."
 	chunkOrZero > 0 ifTrue:
-		[self printFreeTree: (self fetchPointer: self freeChunkSmallerIndex ofObject: chunkOrZero).
+		[self printFreeTreeChunk: (self fetchPointer: self freeChunkSmallerIndex ofObject: chunkOrZero).
 		 self printFreeChunk: chunkOrZero.
-		 self printFreeTree: (self fetchPointer: self freeChunkLargerIndex ofObject: chunkOrZero)]
+		 self printFreeTreeChunk: (self fetchPointer: self freeChunkLargerIndex ofObject: chunkOrZero)]
 ]
 
 { #category : #'debug printing' }
