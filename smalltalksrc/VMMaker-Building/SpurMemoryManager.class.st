@@ -2742,6 +2742,8 @@ SpurMemoryManager >> checkOopIntegrity: obj named: name index: i [
 { #category : #'simulation only' }
 SpurMemoryManager >> checkTraversableSortedFreeList [
 	| prevFree freeChunk next |
+	<api>
+	<inline: false>
 	prevFree := 0.
 	freeChunk := firstFreeChunk.
 	self allOldSpaceEntitiesDo:
@@ -7088,19 +7090,23 @@ SpurMemoryManager >> moveARunOfObjectsStartingAt: startAddress upTo: limit [
 	[thisFreeChunk ~= 0] whileTrue:
 		[| freeBytes endOfFree nextFree destination there moved |
 
+		 "skip any initial immobile objects"
 		 [(self isMobileObjectHeader: hereObjHeader)] whileFalse:
 			[here := self addressAfter: hereObj.
 			 here >= limit ifTrue:
 				[^maxFreeChunk >= startAddress ifTrue: [0] ifFalse: [limit]].
 			 hereObj := self objectStartingAt: here.
-			  hereObjHeader := self atLeastClassIndexHalfHeader: hereObj].
+			 hereObjHeader := self atLeastClassIndexHalfHeader: hereObj].
 
+		 "grab a free chunk, and the following one, because we want to overwrite this one."
+		 self assert: ((self isFreeObject: firstFreeChunk) and: [self isFreeObject: thisFreeChunk]).
 		 freeBytes		:= self bytesInObject: thisFreeChunk.
 		 nextFree		:= self nextInSortedFreeListLink: thisFreeChunk given: prevFreeChunk.
 		 destination	:= self startOfObject: thisFreeChunk.
 		 endOfFree		:= destination + freeBytes.
 		 moved			:= false.
 		 maxFreeChunk	:= maxFreeChunk max: nextFree.
+		 self assert: (nextFree = 0 or: [self isFreeObject: nextFree]).
 
 		"move as many objects as will fit in freeBytes..."
 		 [there := self addressAfter: hereObj.
@@ -7117,10 +7123,13 @@ SpurMemoryManager >> moveARunOfObjectsStartingAt: startAddress upTo: limit [
 			 hereObjHeader := self atLeastClassIndexHalfHeader: hereObj].
 
 		 moved
-			ifTrue: "need to repair the free list"
+			ifTrue: "we did overwrite it; we need to repair the free list"
 				[| nextNextFree |
+				 thisFreeChunk ~= firstFreeChunk ifTrue:
+					[self checkTraversableSortedFreeList].
 				 nextFree ~= 0 ifTrue:
-					[nextNextFree  := self nextInSortedFreeListLink: nextFree given: thisFreeChunk].
+					[nextNextFree  := self nextInSortedFreeListLink: nextFree given: thisFreeChunk.
+					 self assert: (self isFreeObject: nextFree)].
 				 (destination > thisFreeChunk "if false couldn't move anything"
 				  and: [destination < endOfFree]) "if false, filled entire free chunk"
 					ifTrue:
@@ -7135,9 +7144,9 @@ SpurMemoryManager >> moveARunOfObjectsStartingAt: startAddress upTo: limit [
 					ifFalse:
 						[self inSortedFreeListLink: prevFreeChunk to: nextFree given: prevPrevFreeChunk.
 						 nextFree ~= 0 ifTrue:
-							[self inSortedFreeListLink: nextFree to: nextNextFree given: prevFreeChunk.
-						 thisFreeChunk := nextFree]].
-				 "self checkTraversableSortedFreeList"]
+							[self inSortedFreeListLink: nextFree to: nextNextFree given: prevFreeChunk].
+						 thisFreeChunk := nextFree].
+				 self checkTraversableSortedFreeList]
 			ifFalse: "out of space (or immobile object); move on up the free list..."
 				[prevPrevFreeChunk := prevFreeChunk.
 				 prevFreeChunk := thisFreeChunk.
@@ -7340,6 +7349,7 @@ SpurMemoryManager >> nextInSortedFreeListLink: freeChunk given: prevFree [
 	 "Answer the next free free chunk using the xor trick to use only one field, see e.g.
 		The Art of Computer Programming, Vol 1, D.E. Knuth, 3rd Ed, Sec 2.2.4 `Circular Lists', exercise. 18
 		http://en.wikipedia.org/wiki/XOR_linked_list."
+	<api>
 	^(self fetchPointer: self freeChunkNextIndex ofFreeChunk: freeChunk) bitXor: prevFree
 ]
 
@@ -9771,7 +9781,7 @@ SpurMemoryManager >> tryToMovePig: pigObj at: pigStart end: pigEnd [
 					[self inSortedFreeListLink: prevFree to: next given: prevPrevFree.
 					 next ~= 0 ifTrue:
 						[self inSortedFreeListLink: next to: nextNext given: prevFree]].
-			 "self checkTraversableSortedFreeList."
+			 self checkTraversableSortedFreeList.
 			 ^freeChunk].
 		 prevPrevFree := prevFree.
 		 prevFree := freeChunk.
