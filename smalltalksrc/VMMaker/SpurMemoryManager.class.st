@@ -7125,8 +7125,6 @@ SpurMemoryManager >> moveARunOfObjectsStartingAt: startAddress upTo: limit [
 		 moved
 			ifTrue: "we did overwrite it; we need to repair the free list"
 				[| nextNextFree |
-				 thisFreeChunk ~= firstFreeChunk ifTrue:
-					[self checkTraversableSortedFreeList].
 				 nextFree ~= 0 ifTrue:
 					[nextNextFree  := self nextInSortedFreeListLink: nextFree given: thisFreeChunk.
 					 self assert: (self isFreeObject: nextFree)].
@@ -7145,8 +7143,7 @@ SpurMemoryManager >> moveARunOfObjectsStartingAt: startAddress upTo: limit [
 						[self inSortedFreeListLink: prevFreeChunk to: nextFree given: prevPrevFreeChunk.
 						 nextFree ~= 0 ifTrue:
 							[self inSortedFreeListLink: nextFree to: nextNextFree given: prevFreeChunk].
-						 thisFreeChunk := nextFree].
-				 self checkTraversableSortedFreeList]
+						 thisFreeChunk := nextFree]]
 			ifFalse: "out of space (or immobile object); move on up the free list..."
 				[prevPrevFreeChunk := prevFreeChunk.
 				 prevFreeChunk := thisFreeChunk.
@@ -7169,7 +7166,7 @@ SpurMemoryManager >> moveARunOfObjectsStartingAt: startAddress upTo: limit [
 			  simpler than resetting the list pointers."
 			 (usedChunk = prevPrevFreeChunk
 			  or: [usedChunk = prevFreeChunk
-			  or: [usedChunk = thisFreeChunk]]) ifTrue: "a bad idea; leads to N^2 behaviour when encountering pigs"
+			  or: [usedChunk = thisFreeChunk]]) ifTrue:
 				["reset the scan for free space back to the start of the list"
 				 prevPrevFreeChunk := prevFreeChunk := 0.
 				 thisFreeChunk := firstFreeChunk]].
@@ -7796,7 +7793,8 @@ SpurMemoryManager >> pigCompact [
 		 [scanAddress < high] whileTrue:
 			[scanAddress := self moveARunOfObjectsStartingAt: scanAddress upTo: high.
 			 scanAddress = 0 ifTrue:
-				[^self]]]
+				[^self]]].
+	self cCode: [] inSmalltalk: [self checkTraversableSortedFreeList]
 ]
 
 { #category : #'primitive support' }
@@ -9781,7 +9779,7 @@ SpurMemoryManager >> tryToMovePig: pigObj at: pigStart end: pigEnd [
 					[self inSortedFreeListLink: prevFree to: next given: prevPrevFree.
 					 next ~= 0 ifTrue:
 						[self inSortedFreeListLink: next to: nextNext given: prevFree]].
-			 self checkTraversableSortedFreeList.
+			 "self checkTraversableSortedFreeList".
 			 ^freeChunk].
 		 prevPrevFree := prevFree.
 		 prevFree := freeChunk.

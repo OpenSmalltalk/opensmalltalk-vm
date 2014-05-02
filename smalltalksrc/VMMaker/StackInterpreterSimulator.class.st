@@ -613,8 +613,8 @@ StackInterpreterSimulator >> fullDisplay [
 
 { #category : #'debug support' }
 StackInterpreterSimulator >> fullDisplayUpdate [
+	"Preserve self successful when call asynchronously from Simulator"
 	| primFailCodeValue |
-	self break.
 	primFailCodeValue := primFailCode.
 	self initPrimCall.
 	super fullDisplayUpdate.
