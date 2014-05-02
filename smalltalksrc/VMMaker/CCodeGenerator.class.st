@@ -1670,7 +1670,7 @@ CCodeGenerator >> generateDoWhileFalse: msgNode on: aStream indent: level [
 	receiverWithoutTest emitCCodeOn: aStream level: level + 1 generator: self.
 	aStream tab: level.
 	aStream nextPutAll: '} while(!('.
-	testStmt emitCCodeAsExpressionOn: aStream level: 0 generator: self.
+	testStmt emitCCodeAsExpressionOn: aStream level: level + 1 generator: self.
 	aStream nextPutAll: '))'
 ]
 
@@ -1685,7 +1685,7 @@ CCodeGenerator >> generateDoWhileTrue: msgNode on: aStream indent: level [
 	receiverWithoutTest emitCCodeOn: aStream level: level + 1 generator: self.
 	aStream tab: level.
 	aStream nextPutAll: '} while('.
-	testStmt emitCCodeAsExpressionOn: aStream level: 0 generator: self.
+	testStmt emitCCodeAsExpressionOn: aStream level: level + 1 generator: self.
 	aStream nextPut: $)
 ]
 
@@ -2731,7 +2731,7 @@ CCodeGenerator >> generateWhileForeverBreakIf: breakBoolean loop: msgNode on: aS
 	receiverWithoutTest emitCCodeOn: aStream level: level + 1 generator: self.
 	aStream tab: level + 1; nextPutAll: 'if ('.
 	breakBoolean ifFalse: [aStream nextPut: $!; nextPut: $(].
-	testStmt emitCCodeAsExpressionOn: aStream level: 0 generator: self.
+	testStmt emitCCodeAsExpressionOn: aStream level: level + 1 generator: self.
 	breakBoolean ifFalse: [aStream nextPut: $)].
 	aStream nextPutAll: ') break;'; cr.
 	msgNode args first emitCCodeOn: aStream level: level + 1 generator: self.
