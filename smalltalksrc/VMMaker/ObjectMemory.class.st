@@ -5159,7 +5159,7 @@ ObjectMemory >> sufficientSpaceToInstantiate: classOop indexableSize: size [
 				 format < self arrayFormat ifTrue:
 					[^false].
 				 "fail if attempting to allocate over 2 Gb, since this overflows 32-bit arithmetic"
-				 size >> (LongSizeNumBits - BytesPerWord) > 0 ifTrue:
+				 size >> (LongSizeNumBits - ShiftForWord) > 0 ifTrue:
 					[^false]].
 			allocSize := size * BytesPerWord]
 		ifFalse:
