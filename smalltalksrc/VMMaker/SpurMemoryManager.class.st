@@ -3610,7 +3610,8 @@ SpurMemoryManager >> eliminateAndFreeForwardersForPigCompact [
 	self doScavenge: DontTenureButDoUnmark.
 	self sweepToFollowForwardersForPigCompact.
 	self sweepToCoallesceFreeSpaceAndRebuildFreeListsForPigCompact.
-	self checkFreeSpace
+	self checkFreeSpace.
+	self assert: self numberOfForwarders = 0
 ]
 
 { #category : #'obj stacks' }
@@ -4891,7 +4892,7 @@ SpurMemoryManager >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpaceForPigCompact
 				[| here |
 				 self assert: (self isRemembered: o) not. "scavenger should have cleared this above"
 				 here := self coallesceFreeChunk: o.
-				 self setFree: here.
+				 self setObjectFree: here.
 				 self inSortedFreeListLink: prevFree to: here given: prevPrevFree.
 				 prevPrevFree := prevFree.
 				 prevFree := here]].
@@ -4972,6 +4973,12 @@ SpurMemoryManager >> globalGarbageCollect [
 		excludeUnmarkedNewSpaceObjs: true
 		classIndicesShouldBeValid: true.
 
+	"At least for pigCompact it is worth repeating these two phases to get better compaction,
+	 for example during snapshot.  In which case the code needs to be reorganized to not
+	 rebuild the free list after compact, but instead just coallesce, and maintain the sorted free
+	 list until compaction has been repeated sufficiently (an experiment showed no improvement
+	 after 3 repetitions, but a useful gain of ~ 200k in a small image on the third iteration."
+	self flag: 'future work'.
 	self compact.
 	self eliminateAndFreeForwarders.
 
@@ -6052,9 +6059,8 @@ SpurMemoryManager >> isMobileObjectHeader: objHeader [
 	"Answer if an object with header objHeader should be moved during compaction.
 	 Non-objects (free chunks & bridges), forwarders and pinned objects are excluded."
 	<inline: true>
-	^(objHeader >> self pinnedBitShift bitAnd: 1) ~= 0
-		ifTrue: [false]
-		ifFalse: [(self classIndexOfHeader: objHeader) > self isForwardedObjectClassIndexPun]
+	^(objHeader >> self pinnedBitShift bitAnd: 1) = 0
+	  and: [(self classIndexOfHeader: objHeader) > self isForwardedObjectClassIndexPun]
 ]
 
 { #category : #'object testing' }
@@ -7073,19 +7079,21 @@ SpurMemoryManager >> moveARunOfObjectsStartingAt: startAddress upTo: limit [
 	 to fit in the typical free chunk. This second pig needs careful handling; it needs to be
 	 moved to the lowest place it will fit and not cause the scan to skip lots of smaller
 	 free chunks looking in vain for somewhere to put it."
-	| here prevPrevFreeChunk prevFreeChunk thisFreeChunk maxFreeChunk |
+	| here hereObj hereObjHeader prevPrevFreeChunk prevFreeChunk thisFreeChunk maxFreeChunk |
 	here := startAddress.
+	hereObj := self objectStartingAt: startAddress.
+	hereObjHeader := self atLeastClassIndexHalfHeader: hereObj.
 	prevPrevFreeChunk := prevFreeChunk := 0.
 	thisFreeChunk := maxFreeChunk := firstFreeChunk.
 	[thisFreeChunk ~= 0] whileTrue:
-		[| freeBytes endOfFree nextFree destination hereObj hereObjHeader there moved |
+		[| freeBytes endOfFree nextFree destination there moved |
 
-		 [hereObj := self objectStartingAt: here.
-		  hereObjHeader := self atLeastClassIndexHalfHeader: hereObj.
-		  (self isMobileObjectHeader: hereObjHeader)] whileFalse:
+		 [(self isMobileObjectHeader: hereObjHeader)] whileFalse:
 			[here := self addressAfter: hereObj.
 			 here >= limit ifTrue:
-				[^maxFreeChunk >= startAddress ifTrue: [0] ifFalse: [limit]]].
+				[^maxFreeChunk >= startAddress ifTrue: [0] ifFalse: [limit]].
+			 hereObj := self objectStartingAt: here.
+			  hereObjHeader := self atLeastClassIndexHalfHeader: hereObj].
 
 		 freeBytes		:= self bytesInObject: thisFreeChunk.
 		 nextFree		:= self nextInSortedFreeListLink: thisFreeChunk given: prevFreeChunk.
@@ -7144,7 +7152,9 @@ SpurMemoryManager >> moveARunOfObjectsStartingAt: startAddress upTo: limit [
 			 usedChunk := self tryToMovePig: hereObj at: here end: there.
 			"if it couldn't be moved we need to advance, so always
 			 set here to there whether the pig was moved or not."
+			 hereObj := self objectStartingAt: there.
 			 here := there.
+			 hereObjHeader := self atLeastClassIndexHalfHeader: hereObj.
 			 "In general it's a bad idea to reset the enumeration; it leads to N^2 behaviour
 			  when encountering pigs.  But if the move affected the enumeration this is
 			  simpler than resetting the list pointers."
@@ -7155,7 +7165,7 @@ SpurMemoryManager >> moveARunOfObjectsStartingAt: startAddress upTo: limit [
 				 prevPrevFreeChunk := prevFreeChunk := 0.
 				 thisFreeChunk := firstFreeChunk]].
 
-		(there >= limit
+		((here > startAddress and: [there >= limit])
 		 or: [maxFreeChunk >= startAddress]) ifTrue:
 			[^maxFreeChunk >= startAddress ifTrue: [0] ifFalse: [there]]].
 ]
@@ -7405,6 +7415,17 @@ SpurMemoryManager >> noCheckPush: objOop onObjStack: objStack [
 	^objOop
 ]
 
+{ #category : #'gc - global' }
+SpurMemoryManager >> noForwardersBelowFirstFreeChunk [
+	self allOldSpaceEntitiesDo:
+		[:o|
+		 o >= firstFreeChunk ifTrue:
+			[^true].
+		 (self isForwarded: o) ifTrue:
+			[^false]].
+	^true
+]
+
 { #category : #'weakness and ephemerality' }
 SpurMemoryManager >> noUnscannedEphemerons [
 	^unscannedEphemerons top = unscannedEphemerons start
@@ -7544,6 +7565,17 @@ SpurMemoryManager >> numSurvivorSpaces [
 SpurMemoryManager >> numTagBits [
 	<api>
 	^self subclassResponsibility
+]
+
+{ #category : #'debug support' }
+SpurMemoryManager >> numberOfForwarders [
+	| n |
+	n := 0.
+	self allHeapEntitiesDo:
+		[:o|
+		(self isForwarded: o) ifTrue:
+			[n := n + 1]].
+	^n
 ]
 
 { #category : #'obj stacks' }
@@ -7749,6 +7781,7 @@ SpurMemoryManager >> pigCompact [
 	self cCode: '' inSmalltalk: [coInterpreter transcript nextPutAll: 'pig compacting...'; flush].
 	self sortedFreeListPairwiseReverseDo:
 		[:low :high| | scanAddress |
+		 self cCode: '' inSmalltalk: [coInterpreter transcript nextPut: $.; flush].
 		 scanAddress := self addressAfter: low.
 		 [scanAddress < high] whileTrue:
 			[scanAddress := self moveARunOfObjectsStartingAt: scanAddress upTo: high.
@@ -8015,6 +8048,20 @@ SpurMemoryManager >> printFreeList: chunkOrIndex [
 	[freeChunk ~= 0] whileTrue:
 		[self printFreeChunk: freeChunk.
 		 freeChunk := self fetchPointer: self freeChunkNextIndex ofFreeChunk: freeChunk]
+]
+
+{ #category : #'debug printing' }
+SpurMemoryManager >> printFreeTree [
+	<api>
+	self printFreeTree: (freeLists at: 0)
+]
+
+{ #category : #'debug printing' }
+SpurMemoryManager >> printFreeTree: chunkOrZero [
+	chunkOrZero > 0 ifTrue:
+		[self printFreeTree: (self fetchPointer: self freeChunkSmallerIndex ofObject: chunkOrZero).
+		 self printFreeChunk: chunkOrZero.
+		 self printFreeTree: (self fetchPointer: self freeChunkLargerIndex ofObject: chunkOrZero)]
 ]
 
 { #category : #'debug printing' }
@@ -8757,6 +8804,17 @@ SpurMemoryManager >> setIsRememberedOf: objOop to: aBoolean [
 ]
 
 { #category : #'free space' }
+SpurMemoryManager >> setObjectFree: objOop [
+	"Mark an object free, but do not add it to the free lists.  The wrinkle here
+	 is that we don't tolerate a zero-slot count in a free object so that the
+	 (self long64At: objOop) ~= 0 assert in isEnumerableObject: isn't triggered."
+		 
+	(self rawNumSlotsOf: objOop) = 0 ifTrue:
+		[self setRawNumSlotsOf: objOop to: 1].
+	self setFree: objOop
+]
+
+{ #category : #'free space' }
 SpurMemoryManager >> setOverflowNumSlotsOf: objOop to: numSlots [
 	self flag: #endian.
 	self long32At: objOop - self baseHeaderSize put: numSlots
@@ -8992,18 +9050,34 @@ SpurMemoryManager >> sortedFreeListPairwiseReverseDo: aBinaryBlock [
 	 high address to low address.  The second argument is in fact the
 	 start of the next free chunk, not the free chunk itself.  Use
 	 endOfMemory - bridgeSize as the second argument in the first evaluation."
-	| free prevFree nextFree |
+	| free nextFree prevFree prevPrevFree |
 	free := lastFreeChunk.
-	prevFree := 0.
+	prevPrevFree := prevFree := 0.
 	[free ~= 0] whileTrue:
 		[nextFree := self nextInSortedFreeListLink: free given: prevFree.
-		 self assert: (nextFree = 0 or: [self isFreeObject: nextFree]).
+		 self assert: (free = 0 or: [self isFreeObject: free]).
 		 self assert: (prevFree = 0 or: [prevFree > free]).
 	 	 aBinaryBlock value: free value: (prevFree = 0
 											ifTrue: [endOfMemory - self bridgeSize]
 											ifFalse: [self startOfObject: prevFree]).
-		 prevFree := free.
-		 free := nextFree]
+		 self assert: (prevFree = 0 or: [self isFreeObject: prevFree]).
+		 self assert: (prevPrevFree = 0 or: [self isFreeObject: prevPrevFree]).
+		 (self isFreeObject: free) ifFalse:
+			[free := self nextInSortedFreeListLink: prevFree given: prevPrevFree].
+		 (self isFreeObject: nextFree)
+			ifTrue:
+				[prevPrevFree := prevFree.
+				 prevFree := free.
+				 free := nextFree]
+			ifFalse:
+				[free := lastFreeChunk.
+				 prevPrevFree := prevFree := 0.
+				 [free > nextFree] whileTrue:
+					[nextFree := self nextInSortedFreeListLink: free given: prevFree.
+					 self assert: (self isFreeObject: nextFree).
+					 prevPrevFree := prevFree.
+					 prevFree := free.
+					 free := nextFree]]]
 ]
 
 { #category : #'free space' }
@@ -9409,16 +9483,16 @@ SpurMemoryManager >> sufficientSpaceToInstantiate: classObj indexableSize: index
 SpurMemoryManager >> sweepToCoallesceFreeSpaceAndRebuildFreeListsForPigCompact [
 	"Coallesce free chunks and forwarders and rebuild the free list."
 	| firstFree firstFreeStart lastFree |
-	self checkNoForwardersBelowFirstFreeChunk.
+	self assert: (self noForwardersBelowFirstFreeChunk).
 	firstFree := totalFreeOldSpace := 0.
 	self allOldSpaceEntitiesFrom: firstFreeChunk do:
 		[:o|
 		((self isFreeObject: o) or: [self isForwarded: o])
 			ifTrue:
 				[firstFree = 0 ifTrue:
-					[firstFree := o].
-					 lastFree := o.
-					 firstFreeStart := self startOfObject: o]
+					[firstFree := o.
+					 firstFreeStart := self startOfObject: o].
+				 lastFree := o]
 			ifFalse:
 				[firstFree ~= 0 ifTrue:
 					[| bytes |
