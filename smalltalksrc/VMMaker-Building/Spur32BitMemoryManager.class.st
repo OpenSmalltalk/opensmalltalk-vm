@@ -68,7 +68,7 @@ Spur32BitMemoryManager >> byteSwapped: w [
 { #category : #'object enumeration' }
 Spur32BitMemoryManager >> bytesInObject: objOop [
 	"Answer the total number of bytes in an object including header and possible overflow size header."
-	<returnTypeC: #usqLong>
+	<returnTypeC: #usqInt>
 	| headerNumSlots numSlots |
 	headerNumSlots := self rawNumSlotsOf: objOop.
 	numSlots := headerNumSlots = self numSlotsMask

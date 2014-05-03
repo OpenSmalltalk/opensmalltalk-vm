@@ -2618,7 +2618,7 @@ SpurMemoryManager >> checkMemoryMap [
 SpurMemoryManager >> checkNoForwardersBelowFirstFreeChunk [
 	self allOldSpaceEntitiesDo:
 		[:o|
-		o >= firstFreeChunk ifTrue:
+		(self oop: o isGreaterThanOrEqualTo: firstFreeChunk) ifTrue:
 			[^true].
 		(self asserta: (self isForwarded: o) not) ifFalse:
 			[^false]].
@@ -4606,9 +4606,17 @@ SpurMemoryManager >> forward: obj1 to: obj2 [
 
 { #category : #'become implementation' }
 SpurMemoryManager >> forwardSurvivor: obj1 to: obj2 [
-	"This version of forward:to: can use an uncecked store because it is known that obj1 is young."
+	"This version of forward:to: can use an unchecked store because it is known that obj1 is young."
 	self assert: (self isInNewSpace: obj1).
 	self assert: ((self isInFutureSpace: obj2) or: [self isInOldSpace: obj2]).
+	self storePointerUnchecked: 0 ofObject: obj1 withValue: obj2.
+	self set: obj1 classIndexTo: self isForwardedObjectClassIndexPun formatTo: self forwardedFormat
+]
+
+{ #category : #'become implementation' }
+SpurMemoryManager >> forwardUnchecked: obj1 to: obj2 [
+	"This version of forward:to: can use an unchecked store because it is known that both obj1 and obj2 are old."
+	self assert: ((self isInOldSpace: obj1) and: [self isInOldSpace: obj2]).
 	self storePointerUnchecked: 0 ofObject: obj1 withValue: obj2.
 	self set: obj1 classIndexTo: self isForwardedObjectClassIndexPun formatTo: self forwardedFormat
 ]
@@ -7081,7 +7089,16 @@ SpurMemoryManager >> moveARunOfObjectsStartingAt: startAddress upTo: limit [
 	 to fit in the typical free chunk. This second pig needs careful handling; it needs to be
 	 moved to the lowest place it will fit and not cause the scan to skip lots of smaller
 	 free chunks looking in vain for somewhere to put it."
+	<var: #startAddress type: #usqInt>
+	<var: #limit type: #usqInt>
+	<inline: false>
 	| here hereObj hereObjHeader prevPrevFreeChunk prevFreeChunk thisFreeChunk maxFreeChunk |
+	<var: #here type: #usqInt>
+	<var: #there type: #usqInt>
+	<var: #nextFree type: #usqInt>
+	<var: #endOfFree type: #usqInt>
+	<var: #destination type: #usqInt>
+	<var: #maxFreeChunk type: #usqInt>
 	here := startAddress.
 	hereObj := self objectStartingAt: startAddress.
 	hereObjHeader := self atLeastClassIndexHalfHeader: hereObj.
@@ -7110,12 +7127,13 @@ SpurMemoryManager >> moveARunOfObjectsStartingAt: startAddress upTo: limit [
 
 		"move as many objects as will fit in freeBytes..."
 		 [there := self addressAfter: hereObj.
+		  "N.B. *must* add allocationUnit, not subtract, to avoid unsigned arithmetic issues when freeBytes = 0"
 		  (self isMobileObjectHeader: hereObjHeader)
-		  and: [there - here < (freeBytes - self allocationUnit)
-			    or: [there - here = freeBytes]]] whileTrue:
+		  and: [freeBytes > (there - here + self allocationUnit)
+			    or: [freeBytes = (there - here)]]] whileTrue:
 			[moved := true.
 			 self mem: destination cp: here y: there - here.
-			 self forward: hereObj to: destination + (hereObj - here).
+			 self forwardUnchecked: hereObj to: destination + (hereObj - here).
 			 destination := destination + (there - here).
 			 freeBytes := freeBytes - (there - here).
 			 hereObj := self objectStartingAt: there.
@@ -7174,6 +7192,7 @@ SpurMemoryManager >> moveARunOfObjectsStartingAt: startAddress upTo: limit [
 		((here > startAddress and: [there >= limit])
 		 or: [maxFreeChunk >= startAddress]) ifTrue:
 			[^maxFreeChunk >= startAddress ifTrue: [0] ifFalse: [there]]].
+	^here
 ]
 
 { #category : #compaction }
@@ -7426,7 +7445,7 @@ SpurMemoryManager >> noCheckPush: objOop onObjStack: objStack [
 SpurMemoryManager >> noForwardersBelowFirstFreeChunk [
 	self allOldSpaceEntitiesDo:
 		[:o|
-		 o >= firstFreeChunk ifTrue:
+		 (self oop: o isGreaterThanOrEqualTo: firstFreeChunk) ifTrue:
 			[^true].
 		 (self isForwarded: o) ifTrue:
 			[^false]].
@@ -7790,7 +7809,7 @@ SpurMemoryManager >> pigCompact [
 		[:low :high| | scanAddress |
 		 self cCode: '' inSmalltalk: [coInterpreter transcript nextPut: $.; flush].
 		 scanAddress := self addressAfter: low.
-		 [scanAddress < high] whileTrue:
+		 [self oop: scanAddress isLessThan: high] whileTrue:
 			[scanAddress := self moveARunOfObjectsStartingAt: scanAddress upTo: high.
 			 scanAddress = 0 ifTrue:
 				[^self]]].
@@ -9761,10 +9780,11 @@ SpurMemoryManager >> tryToMovePig: pigObj at: pigStart end: pigEnd [
 		 next			:= self nextInSortedFreeListLink: freeChunk given: prevFree.
 		 dest			:= self startOfObject: freeChunk.
 		 chunkBytes	:= (self addressAfter: freeChunk) - dest.
+		 "N.B. *must* add allocationUnit, not subtract, to avoid unsigned arithmetic issues when chunkBytes = 0"
 		 (chunkBytes = pigBytes
-		  or: [chunkBytes - self allocationUnit > pigBytes]) ifTrue:
+		  or: [chunkBytes > (pigBytes + self allocationUnit)]) ifTrue:
 			[self mem: dest cp: pigStart y: pigBytes.
-			 self forward: pigObj to: dest + (pigObj - pigStart).
+			 self forwardUnchecked: pigObj to: dest + (pigObj - pigStart).
 			 next ~= 0 ifTrue:
 				[nextNext  := self nextInSortedFreeListLink: next given: freeChunk].
 			 "now either shorten the chunk, or remove it, adjusting the links to keep the list sorted."
