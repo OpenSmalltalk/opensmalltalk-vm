@@ -1067,13 +1067,20 @@ CCodeGenerator >> emitCConstantsOn: aStream [
 CCodeGenerator >> emitCExpression: aParseNode on: aStream [ 
 	"Emit C code for the expression described by the given parse node."
 
+	self emitCExpression: aParseNode on: aStream indent: 0
+]
+
+{ #category : #'C code generator' }
+CCodeGenerator >> emitCExpression: aParseNode on: aStream indent: level [
+	"Emit C code for the expression described by the given parse node."
+
 	aParseNode isLeaf 
 		ifTrue: 
 			["omit parens"
-			 aParseNode emitCCodeAsExpressionOn: aStream level: 0 generator: self]
+			 aParseNode emitCCodeAsExpressionOn: aStream level: level generator: self]
 		ifFalse: 
 			[aStream nextPut: $(.
-			 aParseNode emitCCodeAsExpressionOn: aStream level: 0 generator: self.
+			 aParseNode emitCCodeAsExpressionOn: aStream level: level generator: self.
 			 aStream nextPut: $)]
 ]
 
@@ -2393,7 +2400,7 @@ CCodeGenerator >> generateRounded: msgNode on: aStream indent: level [
 CCodeGenerator >> generateSequentialAnd: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	self emitCExpression: msgNode receiver on: aStream.
+	self emitCExpression: msgNode receiver on: aStream indent: level.
 	aStream crtab: level; nextPutAll: ' && ('.
 	self emitCTestBlock: msgNode args first on: aStream indent: level.
 	aStream nextPut: $)
@@ -2406,7 +2413,7 @@ CCodeGenerator >> generateSequentialOr: msgNode on: aStream indent: level [
 	 to help with inlining later. Taking the last agument should do the correct
 	 thing even if your compiler is different."
 
-	self emitCExpression: msgNode receiver on: aStream.
+	self emitCExpression: msgNode receiver on: aStream indent: level.
 	aStream crtab: level; nextPutAll: ' || ('.
 	self emitCTestBlock: msgNode args last on: aStream indent: level.
 	aStream nextPutAll: ')'
@@ -2690,6 +2697,21 @@ CCodeGenerator >> generateValueAsArgument: aTSendNode on: aStream indent: level 
 ]
 
 { #category : #'C translation' }
+CCodeGenerator >> generateWhile: boolean loop: msgNode on: aStream indent: level [
+	"Generate while(cond) {stmtList} or while(!(cond)) {stmtList}."
+
+	aStream nextPutAll: 'while ('.
+	boolean ifFalse: [aStream nextPut: $(].
+	self emitCTestBlock: msgNode receiver on: aStream indent: level.
+	boolean ifFalse: [aStream nextPut: $)].
+	aStream nextPutAll: ') {'; cr.
+	msgNode args first isNilStmtListNode ifFalse:
+		[msgNode args first emitCCodeOn: aStream level: level + 1 generator: self].
+	aStream tab: level.
+	aStream nextPut: $}
+]
+
+{ #category : #'C translation' }
 CCodeGenerator >> generateWhileFalse: msgNode on: aStream indent: level [
 	"Generate C code for a loop in one of the following formats, as appropriate:
 		while(!(cond)) { stmtList }
@@ -2697,23 +2719,10 @@ CCodeGenerator >> generateWhileFalse: msgNode on: aStream indent: level [
 		while(1) {stmtListA; if (cond) break; stmtListB}"
 
 	msgNode receiver statements size <= 1
-		ifTrue: [^self generateWhileFalseLoop: msgNode on: aStream indent: level].
+		ifTrue: [^self generateWhile: false loop: msgNode on: aStream indent: level].
 	msgNode args first isNilStmtListNode
 		ifTrue: [^self generateDoWhileFalse: msgNode on: aStream indent: level].
 	^self generateWhileForeverBreakIf: true loop: msgNode on: aStream indent: level
-]
-
-{ #category : #'C translation' }
-CCodeGenerator >> generateWhileFalseLoop: msgNode on: aStream indent: level [
-	"Generate while(!(cond)) {stmtList}."
-
-	aStream nextPutAll: 'while (!('.
-	self emitCTestBlock: msgNode receiver on: aStream indent: level.
-	aStream nextPutAll: ')) {'; cr.
-	msgNode args first isNilStmtListNode ifFalse:
-		[msgNode args first emitCCodeOn: aStream level: level + 1 generator: self].
-	level timesRepeat: [ aStream tab ].
-	aStream nextPutAll: '}'.
 ]
 
 { #category : #'C translation' }
@@ -2746,23 +2755,10 @@ CCodeGenerator >> generateWhileTrue: msgNode on: aStream indent: level [
 		while(1) {stmtListA; if (!(cond)) break; stmtListB}"
 
 	msgNode receiver statements size <= 1
-		ifTrue: [^self generateWhileTrueLoop: msgNode on: aStream indent: level].
+		ifTrue: [^self generateWhile: true loop: msgNode on: aStream indent: level].
 	msgNode args first isNilStmtListNode
 		ifTrue: [^self generateDoWhileTrue: msgNode on: aStream indent: level].
 	^self generateWhileForeverBreakIf: false loop: msgNode on: aStream indent: level
-]
-
-{ #category : #'C translation' }
-CCodeGenerator >> generateWhileTrueLoop: msgNode on: aStream indent: level [
-	"Generate while(cond) {stmtList}."
-
-	aStream nextPutAll: 'while ('.
-	self emitCTestBlock: msgNode receiver on: aStream indent: level.
-	aStream nextPutAll: ') {'; cr.
-	msgNode args first isNilStmtListNode ifFalse:
-		[msgNode args first emitCCodeOn: aStream level: level + 1 generator: self].
-	level timesRepeat: [ aStream tab ].
-	aStream nextPutAll: '}'.
 ]
 
 { #category : #public }
