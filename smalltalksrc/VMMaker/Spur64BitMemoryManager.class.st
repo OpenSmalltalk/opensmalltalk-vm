@@ -69,7 +69,7 @@ Spur64BitMemoryManager >> byteSwapped: w [
 { #category : #'object enumeration' }
 Spur64BitMemoryManager >> bytesInObject: objOop [
 	"Answer the total number of bytes in an object including header and possible overflow size header."
-	<returnTypeC: #usqLong>
+	<returnTypeC: #usqInt>
 	| header headerNumSlots numSlots |
 	<var: 'header' type: #usqLong>
 	self flag: #endianness.
