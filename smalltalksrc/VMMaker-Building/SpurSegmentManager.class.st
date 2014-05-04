@@ -434,7 +434,8 @@ SpurSegmentManager >> prepareForSnapshot [
 					 seg lastFreeObject: node.
 					 node := 0]
 				ifFalse:
-					[node := self fetchPointer: self freeChunkNextIndex
+					[node := manager
+								fetchPointer: manager freeChunkNextIndex
 								ofFreeChunk: node]].
 		 freeChunk].
 

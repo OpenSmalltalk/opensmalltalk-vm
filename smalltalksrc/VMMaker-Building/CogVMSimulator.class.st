@@ -1704,7 +1704,8 @@ CogVMSimulator >> ioLoadFunction: functionString From: pluginString AccessorDept
 		cr;
 		show: '(', byteCount printString, ') Looking for ', functionString, ' in ',
 				(pluginString isEmpty ifTrue:['vm'] ifFalse:[pluginString]).
-	functionString = breakSelector ifTrue: [self halt: breakSelector].
+	(self str: functionString n: breakSelector cmp: functionString size) = 0 ifTrue:
+		[self halt: functionString].
 	plugin := pluginList 
 				detect: [:any| any key = pluginString asString]
 				ifNone:
@@ -1912,6 +1913,8 @@ CogVMSimulator >> loadInitialContext [
 
 { #category : #'plugin support' }
 CogVMSimulator >> loadNewPlugin: pluginString [
+	(self str: pluginString n: breakSelector cmp: pluginString size) = 0 ifTrue:
+		[self halt: pluginString].
 	^(self tryLoadNewPlugin: pluginString pluginEntries: mappedPluginEntries) ifNotNil:
 		[:entry|
 		 pluginList := pluginList copyWith: entry.
