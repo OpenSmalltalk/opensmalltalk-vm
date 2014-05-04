@@ -9542,7 +9542,9 @@ StackInterpreter >> printCallStackOf: aContext currentFP: currFP [
 							 ^nil].
 						 self shortPrintFrameAndCallers: theFP.
 						 theFP := thePage baseFP.
-						 ctxt := self frameCallerContext: theFP]
+						 ctxt := self frameCallerContext: theFP.
+						 (objectMemory isForwarded: ctxt) ifTrue:
+							[ctxt := objectMemory followForwarded: ctxt]]
 					ifFalse: [self print: 'widowed caller frame '; printHexPtr: theFP; cr.
 							^nil]]]
 ]
@@ -11709,7 +11711,7 @@ StackInterpreter >> shortPrintOop: oop [
 
 { #category : #'debug printing' }
 StackInterpreter >> shortReversePrintFrameAndCallers: aFramePointer [
-	| theFP callerFP |
+	| theFP callerFP caller |
 	<inline: false>
 	<var: #aFramePointer type: #'char *'>
 	<var: #theFP type: #'char *'>
@@ -11721,7 +11723,10 @@ StackInterpreter >> shortReversePrintFrameAndCallers: aFramePointer [
 	 callerFP := self frameCallerFP: theFP.
 	 callerFP ~= 0] whileTrue:
 		[theFP := callerFP].
-	^self frameCallerContext: theFP
+	caller := self frameCallerContext: theFP.
+	(objectMemory isForwarded: caller) ifTrue:
+		[caller := objectMemory followForwarded: caller].
+	^caller
 ]
 
 { #category : #'jump bytecodes' }
