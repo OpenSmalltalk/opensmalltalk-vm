@@ -972,7 +972,9 @@ StackInterpreterSimulator >> ioLoadFunction: functionString From: pluginString A
 		cr;
 		show: '(', byteCount printString, ') Looking for ', functionString, ' in ',
 				(pluginString isEmpty ifTrue:['vm'] ifFalse:[pluginString]).
-	functionString = breakSelector ifTrue: [self halt: breakSelector].
+	breakSelector ifNotNil:
+		[(self str: functionString n: breakSelector cmp: functionString size) = 0 ifTrue:
+			[self halt: functionString]].
 	plugin := pluginList 
 				detect: [:any| any key = pluginString asString]
 				ifNone:
@@ -982,6 +984,7 @@ StackInterpreterSimulator >> ioLoadFunction: functionString From: pluginString A
 		[firstTime ifTrue: [transcript cr; show: 'Failed ... primitive not in plugin'].
 		 ^0].
 	plugin := plugin value.
+	"mappedPluginEntries select: [:tuple| tuple first = plugin] an OrderedCollection({an UnixOSProcessPlugin . #getModuleName . [closure] in [] in StackInterpreterSimulatorLSB(StackInterpreter)>>tryLoadNewPlugin:pluginEntries: . nil} {an UnixOSProcessPlugin . #setInterpreter . [closure] in [] in StackInterpreterSimulatorLSB(StackInterpreter)>>tryLoadNewPlugin:pluginEntries: . nil})"
 	mappedPluginEntries doWithIndex:
 		[:pluginAndName :index|
 		 ((pluginAndName at: 1) == plugin 
@@ -1120,6 +1123,9 @@ StackInterpreterSimulator >> literal: offset [
 
 { #category : #'plugin support' }
 StackInterpreterSimulator >> loadNewPlugin: pluginString [
+	breakSelector ifNotNil:
+		[(self str: pluginString n: breakSelector cmp: pluginString size) = 0 ifTrue:
+			[self halt: pluginString]].
 	^(self tryLoadNewPlugin: pluginString pluginEntries: mappedPluginEntries) ifNotNil:
 		[:entry|
 		 pluginList := pluginList copyWith: entry.
