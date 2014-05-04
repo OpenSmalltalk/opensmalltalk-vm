@@ -2701,7 +2701,7 @@ CCodeGenerator >> generateWhile: boolean loop: msgNode on: aStream indent: level
 	"Generate while(cond) {stmtList} or while(!(cond)) {stmtList}."
 
 	aStream nextPutAll: 'while ('.
-	boolean ifFalse: [aStream nextPut: $(].
+	boolean ifFalse: [aStream nextPutAll: '!('].
 	self emitCTestBlock: msgNode receiver on: aStream indent: level.
 	boolean ifFalse: [aStream nextPut: $)].
 	aStream nextPutAll: ') {'; cr.
