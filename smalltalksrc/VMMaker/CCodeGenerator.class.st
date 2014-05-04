@@ -818,10 +818,10 @@ CCodeGenerator >> computeKernelReturnTypes [
 			longLongAtPointer: #sqLong longLongAtPointer:put: #sqLong
 				long64At: #sqLong long64At:put: #sqLong
 		
-		 fetchFloatAt:into: #float storeFloatAt:from: #float
-			fetchFloatAtPointer:into: #float storeFloatAtPointer:from: #float
-		 fetchSingleFloatAt:into: #float storeSingleFloatAt:from: #float
-			fetchSingleFloatAtPointer:into: #float storeSingleFloatAtPointer:from: #float
+		 fetchFloatAt:into: #void storeFloatAt:from: #void
+			fetchFloatAtPointer:into: #void storeFloatAtPointer:from: #void
+		 fetchSingleFloatAt:into: #void storeSingleFloatAt:from: #void
+			fetchSingleFloatAtPointer:into: #void storeSingleFloatAtPointer:from: #void
 
 		 pointerForOop: #'char *' oopForPointer: #sqInt)
 ]

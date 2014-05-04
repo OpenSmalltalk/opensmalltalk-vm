@@ -7132,7 +7132,7 @@ SpurMemoryManager >> moveARunOfObjectsStartingAt: startAddress upTo: limit [
 		  and: [freeBytes > (there - here + self allocationUnit)
 			    or: [freeBytes = (there - here)]]] whileTrue:
 			[moved := true.
-			 self mem: destination cp: here y: there - here.
+			 self mem: destination asVoidPointer cp: here asVoidPointer y: there - here.
 			 self forwardUnchecked: hereObj to: destination + (hereObj - here).
 			 destination := destination + (there - here).
 			 freeBytes := freeBytes - (there - here).
@@ -9783,7 +9783,7 @@ SpurMemoryManager >> tryToMovePig: pigObj at: pigStart end: pigEnd [
 		 "N.B. *must* add allocationUnit, not subtract, to avoid unsigned arithmetic issues when chunkBytes = 0"
 		 (chunkBytes = pigBytes
 		  or: [chunkBytes > (pigBytes + self allocationUnit)]) ifTrue:
-			[self mem: dest cp: pigStart y: pigBytes.
+			[self mem: dest asVoidPointer cp: pigStart asVoidPointer y: pigBytes.
 			 self forwardUnchecked: pigObj to: dest + (pigObj - pigStart).
 			 next ~= 0 ifTrue:
 				[nextNext  := self nextInSortedFreeListLink: next given: freeChunk].
