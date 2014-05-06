@@ -2891,6 +2891,9 @@ Cogit >> checkIntegrityOfObjectReferencesInCode: fullGCFlag [
 					 (objectRepresentation checkValidObjectReference: cogMethod methodObject) ifFalse:
 						[coInterpreter print: 'object leak in CM '; printHex: cogMethod asInteger; print: ' methodObject'; cr.
 						 ok := false].
+					 (objectMemory isCompiledMethod: cogMethod methodObject) ifFalse:
+						[coInterpreter print: 'non-method in CM '; printHex: cogMethod asInteger; print: ' methodObject'; cr.
+						 ok := false].
 					 (self mapFor: cogMethod
 						 performUntil: #checkIfValidObjectRef:pc:cogMethod:
 						 arg: cogMethod asInteger) ~= 0
@@ -8915,20 +8918,22 @@ Cogit >> unlinkSendsOf: selector isMNUSelector: isMNUSelector [
 	isMNUSelector
 		ifTrue:
 			[[cogMethod < methodZone limitZony] whileTrue:
-				[cogMethod cpicHasMNUCase
-					ifTrue:
-						[self assert: cogMethod cmType = CMClosedPIC.
-						 methodZone freeMethod: cogMethod.
-						 mustScanAndUnlink := true]
-					ifFalse:
-						[cogMethod selector = selector ifTrue:
-							[mustScanAndUnlink := true.
-							 cogMethod cmType = CMClosedPIC ifTrue:
-								[methodZone freeMethod: cogMethod]]].
+				[cogMethod cmType ~= CMFree ifTrue:
+					[cogMethod cpicHasMNUCase
+						ifTrue:
+							[self assert: cogMethod cmType = CMClosedPIC.
+							 methodZone freeMethod: cogMethod.
+							 mustScanAndUnlink := true]
+						ifFalse:
+							[cogMethod selector = selector ifTrue:
+								[mustScanAndUnlink := true.
+								 cogMethod cmType = CMClosedPIC ifTrue:
+									[methodZone freeMethod: cogMethod]]]].
 				 cogMethod := methodZone methodAfter: cogMethod]]
 		ifFalse:
 			[[cogMethod < methodZone limitZony] whileTrue:
-				[cogMethod selector = selector ifTrue:
+				[(cogMethod cmType ~= CMFree
+				  and: [cogMethod selector = selector]) ifTrue:
 					[mustScanAndUnlink := true.
 					 cogMethod cmType = CMClosedPIC ifTrue:
 						[methodZone freeMethod: cogMethod]].

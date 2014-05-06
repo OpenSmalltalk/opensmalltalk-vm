@@ -149,7 +149,9 @@ SpurGenerationScavenger class >> initialize [
 
 	TenureByAge := 1.
 	TenureByClass := 2.
-	DontTenureButDoUnmark := 3
+	DontTenure := 3.
+	DontTenureButDoUnmark := 4.
+	MarkOnTenure := 5
 ]
 
 { #category : #translation }
@@ -215,13 +217,13 @@ SpurGenerationScavenger >> copyAndForward: survivor [
 	 It leaves a forwarding pointer behind.  If the object is weak
 	 then corpse is threaded onto the weakList for later treatment."
 	<inline: false>
-	| bytesInObj format newLocation |
+	| bytesInObj format tenure newLocation |
 	self assert: ((manager isInEden: survivor) "cog methods should be excluded."
 				or: [manager isInPastSpace: survivor]).
 	bytesInObj := manager bytesInObject: survivor.
 	format := manager formatOf: survivor.
-	((self shouldBeTenured: survivor)
-	 or: [futureSurvivorStart + bytesInObj > futureSpace limit])
+	tenure := self shouldBeTenured: survivor. "Allow Slang to inline."
+	(tenure or: [futureSurvivorStart + bytesInObj > futureSpace limit])
 		ifTrue: [newLocation := self copyToOldSpace: survivor bytes: bytesInObj format: format]
 		ifFalse: [newLocation := self copyToFutureSpace: survivor bytes: bytesInObj].
 	manager forwardSurvivor: survivor to: newLocation.
@@ -311,7 +313,7 @@ SpurGenerationScavenger >> copyToOldSpace: survivor bytes: bytesInObject format:
 	<inline: true>
 	| nTenures startOfSurvivor newStart newOop |
 	self assert: (formatOfSurvivor = (manager formatOf: survivor)
-				and: [(manager isMarked: survivor) not
+				and: [((manager isMarked: survivor) not or: [tenureCriterion = MarkOnTenure])
 				and: [(manager isPinned: survivor) not
 				and: [(manager isRemembered: survivor) not]]]).
 	nTenures := statTenures.
@@ -328,6 +330,8 @@ SpurGenerationScavenger >> copyToOldSpace: survivor bytes: bytesInObject format:
 	(manager isAnyPointerFormat: formatOfSurvivor) ifTrue:
 		[self remember: newOop.
 		 manager setIsRememberedOf: newOop to: true].
+	tenureCriterion = MarkOnTenure ifTrue:
+		[manager setIsMarkedOf: newOop to: true].
 	statTenures := nTenures + 1.
 	^newOop
 ]
@@ -1078,7 +1082,6 @@ SpurGenerationScavenger >> shouldBeTenured: survivor [
 		ACM TOPLAS, Volume 14 Issue 1, Jan. 1992, pp 1 - 27.
 
 	 The other policies are for special purposes."
-	<inline: false> "Slang limitations given this used in (... or: []) ifTrue:"
 	^tenureCriterion
 		caseOf: {
 			[TenureByAge]	->
