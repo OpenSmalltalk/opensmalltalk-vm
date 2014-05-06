@@ -2,7 +2,9 @@ Class {
 	#name : #SpurMemoryManagementConstants,
 	#superclass : #SharedPool,
 	#classVars : [
+		'DontTenure',
 		'DontTenureButDoUnmark',
+		'MarkOnTenure',
 		'TenureByAge',
 		'TenureByClass'
 	],
