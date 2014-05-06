@@ -22,6 +22,11 @@ typedef struct ffiTestPoint4 {
 	int w;
 } ffiTestPoint4;
 
+typedef struct ffiSmallStruct1 {
+   unsigned char x;
+   unsigned char y;
+} ffiSmallStruct1;
+
 #pragma export on
 EXPORT(char) ffiTestChars(char c1, char c2, char c3, char c4);
 EXPORT(short) ffiTestShorts(short c1, short c2, short c3, short c4);
@@ -31,18 +36,26 @@ EXPORT(float) ffiTestFloats(float f1, float f2);
 EXPORT(float) ffiTestFloats7(float f1, float f2, float f3, float f4, float f5, float f6, float f7);
 EXPORT(float) ffiTestFloats13(float f1, float f2, float f3, float f4, float f5, float f6, float f7, float f8, float f9, float f10, float f11, float f12, float f13);
 EXPORT(float) ffiTestFloats14(float f1, float f2, float f3, float f4, float f5, float f6, float f7, float f8, float f9, float f10, float f11, float f12, float f13, float f14);
+EXPORT(double) ffiTestDoubles9(double f1, double f2, double f3, double f4, double f5, double f6, double f7, double f8, double f9);
 EXPORT(double) ffiTestDoubles14(double f1, double f2, double f3, double f4, double f5, double f6, double f7, double f8, double f9, double f10, double f11, double f12, double f13, double f14);
+EXPORT(double) ffiTestMixedFloatsAndDouble(float f1, double d1, float f2, float f3);
+EXPORT(double) ffiTestMixedDoublesIntAndStruct(double f1, double f2, double f3, double f4, double f5, double f6, double f7, double f8, double f9, int i1, ffiTestPoint4 pt);
 EXPORT(double) ffiTestDoubles(double d1, double d2);
 EXPORT(char *) ffiPrintString(char *string);
 EXPORT(ffiTestPoint2) ffiTestStruct64(ffiTestPoint2 pt1, ffiTestPoint2 pt2);
 EXPORT(ffiTestPoint4) ffiTestStructBig(ffiTestPoint4 pt1, ffiTestPoint4 pt2);
 EXPORT(ffiTestPoint4*) ffiTestPointers(ffiTestPoint4 *pt1, ffiTestPoint4 *pt2);
+EXPORT(ffiSmallStruct1) ffiTestSmallStructReturn(void);
+EXPORT(int) ffiTestMixedIntAndStruct(int i1, ffiTestPoint2 pt1, ffiTestPoint2 pt2);
+EXPORT(int) ffiTestMixedIntAndStruct2(int i1, ffiTestPoint4 pt2);
+EXPORT(int) ffiTestMixedIntAndStruct3(int i1, ffiSmallStruct1 pt2);
 EXPORT(LONGLONG) ffiTestLongLong(LONGLONG i1, LONGLONG i2);
 EXPORT(LONGLONG) ffiTestLongLong8(char c1, char c2, char c3, char c4, char c5, char c6, char c7, char c8, LONGLONG i1, LONGLONG i2);
 EXPORT(LONGLONG) ffiTestLongLong8a1(char c1, char c2, char c3, char c4, char c5, char c6, char c7, char c8, char c9, LONGLONG i1, LONGLONG i2);
 EXPORT(LONGLONG) ffiTestLongLong8a2(char c1, char c2, char c3, char c4, char c5, char c6, char c7, char c8, char c9,  char c10, LONGLONG i1, LONGLONG i2);
 EXPORT(LONGLONG) ffiTestLongLonga1(char c1, LONGLONG i1, LONGLONG i2);
 EXPORT(LONGLONG) ffiTestLongLonga2(char c1, char c2, LONGLONG i1, LONGLONG i2);
+EXPORT(LONGLONG) ffiTestLongLonga3(char c1, LONGLONG i1, char c2);
 #pragma export off
 
 
@@ -91,9 +104,20 @@ EXPORT(float) ffiTestFloats14(float f1, float f2, float f3, float f4, float f5, 
 	return (float) (f1 + f2 + f3 + f4 + f5 + f6 + f7 + f8 + f9 + f10 + f11 + f12 + f13 + f14);
 }
 
+EXPORT(double) ffiTestDoubles9(double f1, double f2, double f3, double f4, double f5, double f6, double f7, double f8, double f9) {
+	printf("The 9 doubles are %f %f %f %f %f %f %f %f %f\n", f1, f2, f3, f4, f5, f6, f7, f8, f9);
+	return (double) (f1 + f2 + f3 + f4 + f5 + f6 + f7 + f8 + f9);
+}
+
 EXPORT(double) ffiTestDoubles14(double f1, double f2, double f3, double f4, double f5, double f6, double f7, double f8, double f9, double f10, double f11, double f12, double f13, double f14) {
 	printf("The 14 double are %f %f %f %f %f %f %f %f %f %f %f %f %f\n", f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13);
 	return (double) (f1 + f2 + f3 + f4 + f5 + f6 + f7 + f8 + f9 + f10 + f11 + f12 + f13 + f14);
+}
+
+EXPORT(double) ffiTestMixedFloatsAndDouble(float f1, double d1, float f2, float f3)
+{
+  printf("The four floats are %f %f %f %f\n", f1, d1, f2, f3);   
+  return f1 + d1 + f2 + f3;
 }
 
 /* test passing and returning doubles */
@@ -147,6 +171,48 @@ EXPORT(ffiTestPoint4*) ffiTestPointers(ffiTestPoint4 *pt1, ffiTestPoint4 *pt2) {
 	return result;
 }
 
+/* test returning small structure (uses registers on some platforms) */
+EXPORT(ffiSmallStruct1) ffiTestSmallStructReturn(void) {
+	ffiSmallStruct1 result;
+	result.x = 3;
+	result.y = 4;
+	return result;
+}
+
+EXPORT(int) ffiTestMixedIntAndStruct(int i1, ffiTestPoint2 pt1, ffiTestPoint2 pt2) {
+   int result;
+	printf("int1 = %d\n", i1);
+   printf("pt1.x = %d\npt1.y = %d\n", pt1.x, pt1.y);
+   printf("pt2.x = %d\npt2.y = %d\n", pt2.x, pt2.y);
+   result = i1 + pt1.x + pt1.y + pt2.x + pt2.y;
+   return result;
+}
+
+EXPORT(int) ffiTestMixedIntAndStruct2(int i1, ffiTestPoint4 pt2) {
+   int result;
+   printf("int1 = %d\n", i1);
+   printf("pt2.x = %d\npt2.y = %d\npt2.z = %d\npt2.w = %d\n",
+           pt2.x, pt2.y, pt2.z, pt2.w);
+   result = i1 + pt2.x + pt2.y + pt2.z + pt2.w;
+   return result;
+}
+
+EXPORT(int) ffiTestMixedIntAndStruct3(int i1, ffiSmallStruct1 pt2) {
+   int result;
+   printf("int1 = %d\n", i1);
+   printf("pt2.x = %d\npt2.y = %d\n", pt2.x, pt2.y);
+   result = i1 + pt2.x + pt2.y;
+   return result;
+}
+
+EXPORT(double) ffiTestMixedDoublesIntAndStruct(double f1, double f2, double f3, double f4, double f5, double f6, double f7, double f8, double f9, int i1, ffiTestPoint4 pt) {
+	printf("The 9 doubles are %f %f %f %f %f %f %f %f %f\n", f1, f2, f3, f4, f5, f6, f7, f8, f9);
+   printf("int1 = %d\n", i1);
+   printf("pt.x = %d\npt.y = %d\npt.z = %d\npt.w = %d\n",
+           pt.x, pt.y, pt.z, pt.w);   
+	return (double) (f1 + f2 + f3 + f4 + f5 + f6 + f7 + f8 + f9 + i1 + pt.x + pt.y + pt.z + pt.w);
+}
+
 /* test passing and returning longlongs */
 EXPORT(LONGLONG) ffiTestLongLong(LONGLONG i1, LONGLONG i2) {
 	return i1 + i2;
@@ -158,6 +224,10 @@ EXPORT(LONGLONG) ffiTestLongLonga1(char c1, LONGLONG i1, LONGLONG i2) {
 
 EXPORT(LONGLONG) ffiTestLongLonga2(char c1, char c2, LONGLONG i1, LONGLONG i2) {
 	return c1 + c2 + i1 + i2;
+}
+
+EXPORT(LONGLONG) ffiTestLongLonga3(char c1, LONGLONG i1, char c2) {
+	return c1 + i1 + c2;
 }
 
 EXPORT(LONGLONG) ffiTestLongLong8(char c1, char c2, char c3, char c4, char c5, char c6, char c7, char c8, LONGLONG i1, LONGLONG i2) {
