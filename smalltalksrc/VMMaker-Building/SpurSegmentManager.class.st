@@ -93,11 +93,6 @@ SpurSegmentManager >> addSegmentOfSize: ammount [
 		 self bridgeFrom: (self addressOf: (segments at: newSegIndex - 1)) to: newSeg.
 		 self bridgeFrom: newSeg to: (newSegIndex = (numSegments - 1) ifFalse:
 										[self addressOf: (segments at: newSegIndex + 1)]).
-		 "and add the new free chunk to the free list; done here
-		  instead of in assimilateNewSegment: for the assert"
-		 manager addFreeChunkWithBytes: allocatedSize - manager bridgeSize at: newSeg segStart.
-		 self assert: (manager addressAfter: (manager objectStartingAt: newSeg segStart))
-					= (newSeg segLimit - manager bridgeSize).
 		 "test isInMemory:"
 		 0 to: numSegments - 1 do:
 			[:i|
@@ -379,23 +374,28 @@ SpurSegmentManager >> numSegments [
 
 { #category : #snapshot }
 SpurSegmentManager >> postSnapshot [
-	"Restore all shortened segments to their proper size,
-	 re-freeing the trailing space."
+	"Restore all shortened segments to their proper size, re-freeing the trailing space."
+	<inline: false>
+	| seg |
+	<var: #seg type: #'SpurSegmentInfo *'>
+	"Set endOfMemory first, to avoid assert fails in freeChunkWithBytes:at:."
+	seg := self addressOf: (segments at: numSegments - 1).
+	seg lastFreeObject
+		ifNil: [self assert: manager endOfMemory = (seg segLimit - manager bridgeSize)]
+		ifNotNil: [manager setEndOfMemory: seg savedSegSize + seg segStart - manager bridgeSize].
+
 	numSegments - 1 to: 0 by: -1 do:
 		[:i|
-		 (segments at: i) lastFreeObject ifNotNil:
+		 seg := self addressOf: (segments at: i).
+		 seg lastFreeObject ifNotNil:
 			[:freeChunk| | address |
-			address := (segments at: i) segLimit - manager bridgeSize.
-			(segments at: i) segSize: (segments at: i) savedSegSize.
-			self bridgeFrom: (self addressOf: (segments at: i))
+			address := seg segLimit - manager bridgeSize.
+			seg segSize: seg savedSegSize.
+			self bridgeFrom: seg
 				to: (i < (numSegments - 1) ifTrue: [self addressOf: (segments at: i + 1)]).
 			manager
-				addFreeChunkWithBytes: (segments at: i) segLimit - address - manager bridgeSize
-				at: address]].
-
-	"perhaps this should read
-		manager setEndOfMemory: 0; assimilateNewSegment: (segments at: numSegments - 1)"
-	manager setEndOfMemory: (segments at: numSegments - 1) segLimit - manager bridgeSize
+				addFreeChunkWithBytes: seg segLimit - address - manager bridgeSize
+				at: address]]
 ]
 
 { #category : #pinning }
