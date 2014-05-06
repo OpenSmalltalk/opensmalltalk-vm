@@ -307,13 +307,18 @@ ThreadedARMFFIPlugin >> ffiPushStructure: pointer ofSize: structSize typeSpec: a
 						y: structSize.
 					 calloutState integerRegisterIndex: calloutState integerRegisterIndex + (structSize + 3 bitShift: -2) ]
 				ifFalse:
-					["some in registers rest on stack"
-					 stackPartSize := structSize - availableRegisterSpace.
-					 self 
-						mem: (self cCoerceSimple: (self addressOf: (calloutState integerRegisters at: calloutState integerRegisterIndex)) to: 'void *') 
-						cp: pointer 
-						y: availableRegisterSpace.
-					 calloutState integerRegisterIndex: NumIntRegArgs]].
+					["If no previous co-processor candidate arg has already been pushed on the stack, then split the struct between registers and stack.
+					  Otherwise push entire struct on stack."
+					 calloutState currentArg = calloutState argVector
+						ifTrue: 
+					 		[stackPartSize := structSize - availableRegisterSpace.
+					 		self 
+								mem: (self cCoerceSimple: (self addressOf: (calloutState integerRegisters at: calloutState integerRegisterIndex)) to: 'void *') 
+								cp: pointer 
+								y: availableRegisterSpace]
+						ifFalse:
+							[availableRegisterSpace := 0].
+					calloutState integerRegisterIndex: NumIntRegArgs]].
 
 	stackPartSize > 0
 		ifTrue: 
