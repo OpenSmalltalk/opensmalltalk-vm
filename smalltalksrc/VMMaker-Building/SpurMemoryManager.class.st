@@ -1428,6 +1428,32 @@ SpurMemoryManager >> allOldSpaceObjectsFrom: initialObject do: aBlock [
 				[aBlock value: objOop]]
 ]
 
+{ #category : #'object enumeration' }
+SpurMemoryManager >> allPastSpaceEntitiesDo: aBlock [
+	"Enumerate all past space objects, including free objects."
+	<inline: true>
+	| prevObj prevPrevObj objOop |
+	prevPrevObj := prevObj := nil.
+	objOop := self objectStartingAt: scavenger pastSpace start.
+	[self oop: objOop isLessThan: pastSpaceStart] whileTrue:
+		[aBlock value: objOop.
+		 prevPrevObj := prevObj.
+		 prevObj := objOop.
+		 objOop := self objectAfter: objOop limit: pastSpaceStart].
+	self touch: prevPrevObj.
+	self touch: prevObj
+]
+
+{ #category : #'object enumeration' }
+SpurMemoryManager >> allPastSpaceObjectsDo: aBlock [
+	"Enumerate all past space objects, excluding free objects."
+	<inline: true>
+	self allPastSpaceEntitiesDo:
+		[:objOop|
+		 self assert: (self isEnumerableObjectNoAssert: objOop).
+		 aBlock value: objOop]
+]
+
 { #category : #'weakness and ephemerality' }
 SpurMemoryManager >> allUnscannedEphemeronsAreActive [
 	unscannedEphemerons start to: unscannedEphemerons top - self bytesPerSlot do:
@@ -3535,7 +3561,7 @@ SpurMemoryManager >> eliminateAndFreeForwardersForFitCompact [
 	self followForwardedObjStacks.
 	scavenger followRememberedForwardersAndForgetFreeObjects.
 	self doScavenge: DontTenureButDoUnmark.
-	coInterpreter mapMachineCode.
+	coInterpreter mapMachineCode: GCModeFull.
 	self checkFreeSpace.
 	lowestFree := self sweepToFollowForwardersForFitCompact.
 	self checkFreeSpace.
@@ -3568,7 +3594,7 @@ SpurMemoryManager >> eliminateAndFreeForwardersForPigCompact [
 	totalFreeOldSpace := 0.
 	self doScavenge: DontTenureButDoUnmark.
 	self assert: totalFreeOldSpace = 0.
-	coInterpreter mapMachineCode.
+	coInterpreter mapMachineCode: GCModeFull.
 	lowestForwarder := self sweepToFollowForwardersForPigCompact.
 	self sweepToCoallesceFreeSpaceAndRebuildFreeListsForPigCompactFrom: lowestForwarder.
 	self checkFreeSpace.
@@ -9609,8 +9635,19 @@ SpurMemoryManager >> sweepToFollowForwardersForFitCompact [
 { #category : #compaction }
 SpurMemoryManager >> sweepToFollowForwardersForPigCompact [
 	"Sweep, following forwarders in all live objects.
-	 Answer the lowest forwarder."
+	 Answer the lowest forwarder in oldSpace."
 	| lowestForwarder |
+	self assert: (freeStart = scavenger eden start
+				  and: [scavenger futureSurvivorStart = scavenger futureSpace start]).
+	self allPastSpaceObjectsDo:
+		[:o|
+		(self isForwarded: o) ifFalse:
+			[0 to: (self numPointerSlotsOf: o) - 1 do:
+				[:i| | f |
+				f := self fetchPointer: i ofObject: o.
+				(self isOopForwarded: f) ifTrue:
+					[f := self followForwarded: f.
+					 self storePointerUnchecked: i ofObject: o withValue: f]]]].
 	lowestForwarder := 0.
 	self allOldSpaceObjectsDo:
 		[:o|
