@@ -3479,6 +3479,11 @@ CoInterpreter >> getDesiredCogCodeSize [
 	^objectMemory integerObjectOf: desiredCogCodeSize
 ]
 
+{ #category : #'object memory support' }
+CoInterpreter >> getGCMode [
+	^gcMode
+]
+
 { #category : #'image save/restore' }
 CoInterpreter >> getImageHeaderFlags [
 	"Answer the flags that are contained in the 7th long of the image header."
@@ -4379,9 +4384,10 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 ]
 
 { #category : #'object memory support' }
-CoInterpreter >> mapMachineCode [
+CoInterpreter >> mapMachineCode: theGCMode [
+	<inline: true>
 	"Update all references to objects in machine code."
-	cogit mapObjectReferencesInMachineCode: gcMode
+	cogit mapObjectReferencesInMachineCode: theGCMode
 ]
 
 { #category : #'debug support' }
