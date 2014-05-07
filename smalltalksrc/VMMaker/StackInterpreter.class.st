@@ -6177,6 +6177,12 @@ StackInterpreter >> getFullScreenFlag [
 	^fullScreenFlag
 ]
 
+{ #category : #'object memory support' }
+StackInterpreter >> getGCMode [
+	"This is a no-op in the StackVM"
+	^0
+]
+
 { #category : #'image save/restore' }
 StackInterpreter >> getImageHeaderFlags [
 	"Answer the flags that are contained in the 7th long of the image header."
@@ -7996,7 +8002,7 @@ StackInterpreter >> mapInterpreterOops [
 	"Assume: All traced variables contain valid oops."
 	<inline: false>
 	self mapStackPages.
-	self mapMachineCode.
+	self mapMachineCode: self getGCMode.
 	self mapTraceLogs.
 	self mapVMRegisters.
 	self mapProfileState.
@@ -8007,7 +8013,8 @@ StackInterpreter >> mapInterpreterOops [
 ]
 
 { #category : #'object memory support' }
-StackInterpreter >> mapMachineCode [
+StackInterpreter >> mapMachineCode: theGCMode [
+	<inline: true>
 	"This is a no-op in the StackVM"
 ]
 

@@ -523,6 +523,7 @@ SpurGenerationScavenger >> futureSpaceObjectsDo: aBlock [
 
 { #category : #accessing }
 SpurGenerationScavenger >> futureSurvivorStart [
+	<cmacro: '() GIV(futureSurvivorStart)'>
 	^futureSurvivorStart
 ]
 
