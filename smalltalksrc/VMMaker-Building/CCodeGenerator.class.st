@@ -361,11 +361,14 @@ CCodeGenerator >> addMethodFor: aClass selector: selector [
 		[^nil].
 	method := aClass compiledMethodAt: selector.
 	(method pragmaAt: #doNotGenerate) ifNotNil:
-		[^nil].
+		[methods removeKey: selector ifAbsent: [].
+		 ^nil].
 	method isSubclassResponsibility ifTrue:
-		[^nil].
+		[methods removeKey: selector ifAbsent: [].
+		 ^nil].
 	(self shouldIncludeMethodFor: aClass selector: selector) ifFalse:
-		[^nil].
+		[methods removeKey: selector ifAbsent: [].
+		 ^nil].
 	tmethod := self addMethod: (self compileToTMethodSelector: selector in: aClass).
 	"If the method has a macro then add the macro.  But keep the method
 	 for analysis purposes (e.g. its variable accesses)."
@@ -728,6 +731,8 @@ CCodeGenerator >> collectInlineList: inlineFlagOrSymbol [
 	self assert: (#(true false asSpecified) includes: inlineFlagOrSymbol).
 	selectorsOfMethodsNotToInline := Set new: methods size.
 	selectorsOfMethodsNotToInline addAll: macros keys.
+	apiMethods ifNotNil:
+		[selectorsOfMethodsNotToInline addAll: apiMethods keys].
 	methods do:
 		[:m|
 		m isStructAccessor ifTrue:
