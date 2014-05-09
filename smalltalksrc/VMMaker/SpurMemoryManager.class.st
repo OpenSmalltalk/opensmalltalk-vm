@@ -1176,7 +1176,6 @@ SpurMemoryManager >> allInstancesOf: aClass [
 	 or: [aClass ~~ (self classOrNilAtIndex: classIndex)]) ifTrue:
 		[freeChunk := self allocateSlots: 0 format: self arrayFormat classIndex: ClassArrayCompactIndex.
 		 ^freeChunk].
-	self runLeakCheckerForFullGC: false.
 	self markObjects. "don't want to revive objects unnecessarily."
 	freeChunk := self allocateLargestFreeChunk.
 	ptr := start := freeChunk + self baseHeaderSize.
@@ -1271,7 +1270,6 @@ SpurMemoryManager >> allObjects [
 	 Since objects are at least 16 bytes big, and the largest SmallInteger covers
 	 1/4 of the address space, the count can never overflow."
 	| freeChunk ptr start limit count bytes |
-	self runLeakCheckerForFullGC: false.
 	self markObjects. "don't want to revive objects unnecessarily."
 	freeChunk := self allocateLargestFreeChunk.
 	ptr := start := freeChunk + self baseHeaderSize.
@@ -3584,17 +3582,10 @@ SpurMemoryManager >> eliminateAndFreeForwardersForPigCompact [
 	self assert: (self isForwarded: hiddenRootsObj) not.
 	self assert: (self isForwarded: classTableFirstPage) not.
 	self followSpecialObjectsOop.
-	"N.B. we don't have to explicitly do mapInterpreterOops since the scavenge below
-	 will do it, except that scavenging maps only young references in machine code."
 	self followForwardedObjStacks.
+	coInterpreter mapInterpreterOops.
 	scavenger followRememberedForwardersAndForgetFreeObjectsForPigCompact.
-	"Because of the flushEden before markObjects the scavenge /should not/
-	 tenure. In fact it must not because the free list has not been rebuilt, so
-	 there is no space, and any attempt to tenure will allocate a new segment."
-	totalFreeOldSpace := 0.
-	self doScavenge: DontTenureButDoUnmark.
-	self assert: totalFreeOldSpace = 0.
-	coInterpreter mapMachineCode: GCModeFull.
+	self unmarkSurvivingObjectsForPigCompact.
 	lowestForwarder := self sweepToFollowForwardersForPigCompact.
 	self sweepToCoallesceFreeSpaceAndRebuildFreeListsForPigCompactFrom: lowestForwarder.
 	self checkFreeSpace.
@@ -4880,10 +4871,8 @@ SpurMemoryManager >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpaceForPigCompact
 	| prevPrevFree prevFree |
 	<inline: false>
 	self checkFreeSpace.
-	"Using pigCompact we scavenge to unmark objects before the free list has been
-	 rebuilt, and that scavenge must not tenure.  So get tenuring out of the way now."
 	scavenger forgetUnmarkedRememberedObjects.
-	self self doScavenge: MarkOnTenure.
+	self doScavenge: MarkOnTenure.
 	segmentManager prepareForGlobalSweep."for notePinned:"
 	"throw away the list heads, including the tree."
 	self resetFreeListHeads.
@@ -4966,7 +4955,6 @@ SpurMemoryManager >> getThisSessionID [
 
 { #category : #'gc - global' }
 SpurMemoryManager >> globalGarbageCollect [
-	self runLeakCheckerForFullGC: true.
 	self assert: self validObjStacks.
 	self assert: (self isEmptyObjStack: markStack).
 	self assert: (self isEmptyObjStack: weaklingStack).
@@ -6963,6 +6951,8 @@ SpurMemoryManager >> markObjects [
 	"Mark all accessible objects."
 	"If the incremental collector is running mark bits may be set; stop it and clear them if necessary."
 	self cCode: '' inSmalltalk: [coInterpreter transcript nextPutAll: 'marking...'; flush].
+	self runLeakCheckerForFullGC: true.
+
 	self ensureAllMarkBitsAreZero.
 	self ensureAdequateClassTableBitmap.
 	self initializeUnscannedEphemerons.
@@ -8445,8 +8435,8 @@ SpurMemoryManager >> remapBufferCount [
 
 { #category : #'gc - scavenging' }
 SpurMemoryManager >> remapObj: objOop [
-	"Scavenge or simply follow objOop.  Answer the new location of objOop.  The
-	 send should have been guarded by a send of shouldRemapOop: or shouldScavengeObj:.
+	"Scavenge or simply follow objOop.  Answer the new location of objOop.
+	 The send should have been guarded by a send of shouldRemapOop:.
 	 The method is called remapObj: for compatibility with ObjectMemory."
 	<api>
 	<inline: false>
@@ -8459,7 +8449,8 @@ SpurMemoryManager >> remapObj: objOop [
 				[^resolvedObj]]
 		ifFalse:
 			[resolvedObj := objOop].
-	(self isReallyYoung: resolvedObj) ifFalse: "a becommed or compacted object whose target is in old space, or a CogMethod."
+	(scavengeInProgress
+	 and: [self isReallyYoung: resolvedObj]) ifFalse: "a becommed or compacted object whose target is in old space, or a CogMethod."
 		[^resolvedObj].
 	^scavenger copyAndForward: resolvedObj
 ]
@@ -10020,6 +10011,14 @@ SpurMemoryManager >> unmarkAllObjects [
 					[(self isSegmentBridge: obj) ifFalse:
 						[self setIsMarkedOf: obj to: false]]]].
 
+]
+
+{ #category : #'gc - global' }
+SpurMemoryManager >> unmarkSurvivingObjectsForPigCompact [
+	self allPastSpaceObjectsDo:
+		[:objOop|
+		(self isMarked: objOop) ifTrue:
+			[self setIsMarkedOf: objOop to: false]]
 ]
 
 { #category : #'obj stacks' }

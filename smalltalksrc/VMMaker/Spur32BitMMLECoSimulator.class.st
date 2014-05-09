@@ -138,7 +138,7 @@ Spur32BitMMLECoSimulator >> freeLists [
 
 { #category : #'gc - global' }
 Spur32BitMMLECoSimulator >> globalGarbageCollect [
-	self halt.
+	self halt: 'GC number ', statFullGCs printString.
 	^super globalGarbageCollect
 ]
 
