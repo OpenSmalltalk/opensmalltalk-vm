@@ -48,7 +48,7 @@ CogObjectRepresentation >> canLinkToYoungClasses [
 { #category : #'garbage collection' }
 CogObjectRepresentation >> checkValidObjectReference: anOop [
 	^(objectMemory isImmediate: anOop) not
-	   and: [(self heapMapAtWord: (self pointerForOop: anOop)) ~= 0]
+	   and: [(objectMemory heapMapAtWord: (self pointerForOop: anOop)) ~= 0]
 ]
 
 { #category : #'compile abstract instructions' }

@@ -2030,14 +2030,14 @@ CoInterpreter >> checkStackIntegrity [
 			  [theSP <= frameRcvrOffset] whileTrue:
 				[oop := stackPages longAt: theSP.
 				 ((objectMemory isNonImmediate: oop) 
-				   and: [(self heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
+				   and: [(objectMemory heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
 					[self printFrameThing: 'object leak in frame temp' andFrame: theFP at: theSP.
 					 ok := false].
 				 theSP := theSP + BytesPerWord].
 			 (self frameHasContext: theFP) ifTrue:
 				[oop := self frameContext: theFP.
 				 ((objectMemory isImmediate: oop) 
-				   or: [(self heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
+				   or: [(objectMemory heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
 					[self printFrameThing: 'object leak in frame ctxt' andFrame: theFP at: theFP + FoxThisContext.
 					 ok := false].
 				 (objectMemory isContext: oop) ifFalse:
@@ -2053,13 +2053,13 @@ CoInterpreter >> checkStackIntegrity [
 				ifTrue:
 					[| cogMethod |
 					 cogMethod := self mframeHomeMethod: theFP.
-					 (self heapMapAtWord: (self pointerForOop: cogMethod)) = 0 ifTrue:
+					 (objectMemory heapMapAtWord: (self pointerForOop: cogMethod)) = 0 ifTrue:
 						[self printFrameThing: 'object leak in mframe mthd' andFrame: theFP at: theFP + FoxMethod.
 						 ok := false]]
 				ifFalse:
 					[oop := self iframeMethod: theFP.
 					 ((objectMemory isImmediate: oop) 
-					   or: [(self heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
+					   or: [(objectMemory heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
 						[self printFrameThing: 'object leak in iframe mthd' andFrame: theFP at: theFP + FoxMethod.
 						 ok := false]].
 			 (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
@@ -2069,7 +2069,7 @@ CoInterpreter >> checkStackIntegrity [
 			 [theSP <= thePage baseAddress] whileTrue:
 				[oop := stackPages longAt: theSP.
 				 ((objectMemory isNonImmediate: oop) 
-				   and: [(self heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
+				   and: [(objectMemory heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
 					[self printFrameThing: 'object leak in frame arg' andFrame: theFP at: theSP.
 					 ok := false].
 				 theSP := theSP + BytesPerWord]]].

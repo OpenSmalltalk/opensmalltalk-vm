@@ -183,7 +183,7 @@ Spur32BitMMLECoSimulator >> headerForSlots: numSlots format: formatField classIn
 
 { #category : #'debug support' }
 Spur32BitMMLECoSimulator >> heapMapAtWord: address [
-	^heapMap heapMapAtWord: address
+	^heapMap heapMapAtWord: address asInteger
 ]
 
 { #category : #initialization }
