@@ -164,6 +164,11 @@ Spur32BitMMLESimulator >> headerForSlots: numSlots format: formatField classInde
 	^super headerForSlots: numSlots format: formatField classIndex: classIndex
 ]
 
+{ #category : #'debug support' }
+Spur32BitMMLESimulator >> heapMapAtWord: address [
+	^heapMap heapMapAtWord: address
+]
+
 { #category : #compaction }
 Spur32BitMMLESimulator >> inSortedFreeListLink: freeChunk to: nextFree given: prevFree [
 	"thisContext sender selector = #sweepToCoallesceFreeSpaceForPigCompactFrom: ifTrue:
