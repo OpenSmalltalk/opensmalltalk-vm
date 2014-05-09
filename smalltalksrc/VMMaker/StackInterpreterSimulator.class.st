@@ -669,11 +669,6 @@ StackInterpreterSimulator >> headerStart: oop [
 	^ (objectMemory extraHeaderBytes: oop) negated
 ]
 
-{ #category : #'debug support' }
-StackInterpreterSimulator >> heapMapAtWord: address [
-	^objectMemory heapMap heapMapAtWord: address
-]
-
 { #category : #'image save/restore' }
 StackInterpreterSimulator >> imageName [
 	^imageName
