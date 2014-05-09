@@ -1222,11 +1222,6 @@ CogVMSimulator >> headerStart: oop [
 ]
 
 { #category : #'debug support' }
-CogVMSimulator >> heapMapAtWord: address [
-	^objectMemory heapMap heapMapAtWord: address asUnsignedInteger
-]
-
-{ #category : #'debug support' }
 CogVMSimulator >> heapMapAtWord: address Put: aBit [
 	^objectMemory heapMap heapMapAtWord: address asUnsignedInteger Put: aBit
 ]
