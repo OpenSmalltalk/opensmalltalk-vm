@@ -4423,8 +4423,9 @@ StackInterpreter >> doubleExtendedDoAnythingBytecode [
 	opType = 4 ifTrue: [^self pushLiteralVariable: byte3].
 	top := self internalStackTop.
 	opType = 7 ifTrue:
-		[^self storeLiteralVariable: byte3 withValue: top].
-	"opType = 5 is store; opType = 6 = storePop"
+		[self storeLiteralVariable: byte3 withValue: top.
+		 ^self].
+	"opType = 5 is store; opType = 6 is storePop"
 	opType = 6 ifTrue:
 		[self internalPop: 1].
 	self storeMaybeContextReceiverVariable: byte3 withValue: top

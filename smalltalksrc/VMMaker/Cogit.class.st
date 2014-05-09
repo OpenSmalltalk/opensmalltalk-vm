@@ -2004,14 +2004,14 @@ Cogit >> allMachineCodeObjectReferencesValid [
 	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
 	[cogMethod < methodZone limitZony] whileTrue:
 		[cogMethod cmType ~= CMFree ifTrue:
-			[(self asserta: (objectRepresentation checkValidObjectReference: cogMethod selector)) ifFalse:
+			[(self asserta: (objectRepresentation checkValidOopReference: cogMethod selector)) ifFalse:
 				[ok := false].
 			 (self asserta: (self cogMethodDoesntLookKosher: cogMethod) = 0) ifFalse:
 				[ok := false]].
 		(cogMethod cmType = CMMethod
 		 or: [cogMethod cmType = CMOpenPIC]) ifTrue:
 			[(self asserta: ((self mapFor: cogMethod
-								 performUntil: #checkIfValidObjectRefAndTarget:pc:cogMethod:
+								 performUntil: #checkIfValidOopRefAndTarget:pc:cogMethod:
 								 arg: cogMethod asInteger) = 0)) ifFalse:
 				[ok := false]].
 		cogMethod cmType = CMClosedPIC ifTrue:
@@ -2786,12 +2786,12 @@ Cogit >> checkEnoughOpcodes [
 ]
 
 { #category : #'garbage collection' }
-Cogit >> checkIfValidObjectRef: annotation pc: mcpc cogMethod: cogMethod [
+Cogit >> checkIfValidOopRef: annotation pc: mcpc cogMethod: cogMethod [
 	<var: #mcpc type: #'char *'>
 	annotation = IsObjectReference ifTrue:
 		[| literal |
 		 literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
-		 (objectRepresentation checkValidObjectReference: literal) ifFalse:
+		 (objectRepresentation checkValidOopReference: literal) ifFalse:
 			[coInterpreter print: 'object ref leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
 			^1]].
 	(self isSendAnnotation: annotation) ifTrue:
@@ -2814,19 +2814,19 @@ Cogit >> checkIfValidObjectRef: annotation pc: mcpc cogMethod: cogMethod [
 					[coInterpreter print: 'cache tag leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
 					^1]]
 			ifFalse: "unlinked send or super send; cacheTag is a selector"
-				[(objectRepresentation checkValidObjectReference: selectorOrCacheTag) ifFalse:
+				[(objectRepresentation checkValidOopReference: selectorOrCacheTag) ifFalse:
 					[coInterpreter print: 'selector leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
 					^1]]].
 	^0 "keep scanning"
 ]
 
 { #category : #'garbage collection' }
-Cogit >> checkIfValidObjectRefAndTarget: annotation pc: mcpc cogMethod: cogMethod [
+Cogit >> checkIfValidOopRefAndTarget: annotation pc: mcpc cogMethod: cogMethod [
 	<var: #mcpc type: #'char *'>
 	| literal entryPoint |
 	annotation = IsObjectReference ifTrue:
 		[literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
-		 (self asserta: (objectRepresentation checkValidObjectReference: literal)) ifFalse:
+		 (self asserta: (objectRepresentation checkValidOopReference: literal)) ifFalse:
 			[^1].
 		((objectRepresentation couldBeObject: literal)
 		 and: [objectMemory isReallyYoungObject: literal]) ifTrue:
@@ -2841,7 +2841,7 @@ Cogit >> checkIfValidObjectRefAndTarget: annotation pc: mcpc cogMethod: cogMetho
 				ifTrue:
 					[(objectRepresentation couldBeObject: cacheTag)
 						ifTrue:
-							[(self asserta: (objectRepresentation checkValidObjectReference: cacheTag)) ifFalse:
+							[(self asserta: (objectRepresentation checkValidOopReference: cacheTag)) ifFalse:
 								[^4]]
 						ifFalse:
 							[(self asserta: (objectRepresentation checkValidInlineCacheTag: cacheTag)) ifFalse:
@@ -2882,7 +2882,7 @@ Cogit >> checkIntegrityOfObjectReferencesInCode: fullGCFlag [
 						ifTrue: [coInterpreter print: ' is not in youngReferrers'; cr]
 						ifFalse: [coInterpreter print: ' is in youngReferrers '; printNum: count; print: ' times!'; cr].
 					 ok := false]].
-			 (objectRepresentation checkValidObjectReference: cogMethod selector) ifFalse:
+			 (objectRepresentation checkValidOopReference: cogMethod selector) ifFalse:
 				[coInterpreter print: 'object leak in CM '; printHex: cogMethod asInteger; print: ' selector'; cr.
 				 ok := false].
 			 cogMethod cmType = CMMethod
@@ -2891,11 +2891,11 @@ Cogit >> checkIntegrityOfObjectReferencesInCode: fullGCFlag [
 					 (objectRepresentation checkValidObjectReference: cogMethod methodObject) ifFalse:
 						[coInterpreter print: 'object leak in CM '; printHex: cogMethod asInteger; print: ' methodObject'; cr.
 						 ok := false].
-					 (objectMemory isCompiledMethod: cogMethod methodObject) ifFalse:
+					 (objectMemory isOopCompiledMethod: cogMethod methodObject) ifFalse:
 						[coInterpreter print: 'non-method in CM '; printHex: cogMethod asInteger; print: ' methodObject'; cr.
 						 ok := false].
 					 (self mapFor: cogMethod
-						 performUntil: #checkIfValidObjectRef:pc:cogMethod:
+						 performUntil: #checkIfValidOopRef:pc:cogMethod:
 						 arg: cogMethod asInteger) ~= 0
 							ifTrue: [ok := false].
 					 fullGCFlag ifFalse:
@@ -2913,7 +2913,7 @@ Cogit >> checkIntegrityOfObjectReferencesInCode: fullGCFlag [
 							[cogMethod cmType = CMOpenPIC
 								ifTrue:
 									[(self mapFor: cogMethod
-										performUntil: #checkIfValidObjectRef:pc:cogMethod:
+										performUntil: #checkIfValidOopRef:pc:cogMethod:
 										arg: cogMethod asInteger) ~= 0
 											ifTrue: [ok := false]]]]].
 		cogMethod := methodZone methodAfter: cogMethod].

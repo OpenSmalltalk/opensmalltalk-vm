@@ -45,6 +45,12 @@ CogObjectRepresentation >> canLinkToYoungClasses [
 	^self subclassResponsibility
 ]
 
+{ #category : #'garbage collection' }
+CogObjectRepresentation >> checkValidObjectReference: anOop [
+	^(objectMemory isImmediate: anOop) not
+	   and: [(self heapMapAtWord: (self pointerForOop: anOop)) ~= 0]
+]
+
 { #category : #'compile abstract instructions' }
 CogObjectRepresentation >> genEnsureObjInRegNotForwarded: reg scratchReg: scratch [
 	"Make sure that the object in reg is not forwarded.  By default there is
