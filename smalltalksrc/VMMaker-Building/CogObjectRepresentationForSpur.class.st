@@ -35,7 +35,7 @@ CogObjectRepresentationForSpur >> checkValidInlineCacheTag: classIndexOrTagPatte
 ]
 
 { #category : #'debug support' }
-CogObjectRepresentationForSpur >> checkValidObjectReference: anOop [
+CogObjectRepresentationForSpur >> checkValidOopReference: anOop [
 	^(objectMemory isImmediate: anOop)
 	   or: [(objectMemory heapMapAtWord: (self pointerForOop: anOop)) ~= 0]
 ]

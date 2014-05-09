@@ -64,7 +64,7 @@ CogObjectRepresentationForSqueakV3 >> checkValidInlineCacheTag: cacheTag [
 ]
 
 { #category : #'garbage collection' }
-CogObjectRepresentationForSqueakV3 >> checkValidObjectReference: anOop [
+CogObjectRepresentationForSqueakV3 >> checkValidOopReference: anOop [
 	^(objectMemory isIntegerObject: anOop)
 	   or: [(self heapMapAtWord: (self pointerForOop: anOop)) ~= 0]
 ]
