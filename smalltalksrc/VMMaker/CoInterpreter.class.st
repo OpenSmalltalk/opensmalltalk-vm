@@ -3366,12 +3366,6 @@ CoInterpreter >> frameReceiverOffset: theFP [
 		ifFalse: [theFP + FoxIFReceiver]
 ]
 
-{ #category : #'cog jit support' }
-CoInterpreter >> freeStart [
-	<doNotGenerate>
-	^objectMemory freeStart
-]
-
 { #category : #'object memory support' }
 CoInterpreter >> freeUnmarkedMachineCode [
 	"Free machine-code methods whose compiled methods are unmarked
