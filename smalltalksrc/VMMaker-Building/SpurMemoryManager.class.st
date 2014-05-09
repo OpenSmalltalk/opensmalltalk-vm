@@ -1369,17 +1369,19 @@ SpurMemoryManager >> allOldSpaceEntitiesDo: aBlock [
 ]
 
 { #category : #'object enumeration' }
-SpurMemoryManager >> allOldSpaceEntitiesForCoalescingDo: aBlock [
+SpurMemoryManager >> allOldSpaceEntitiesForCoalescingFrom: firstObj do: aBlock [
 	<inline: true>
 	| prevObj prevPrevObj objOop rawNumSlots rawNumSlotsAfter |
 	prevPrevObj := prevObj := nil.
-	objOop := self firstObject.
+	objOop := firstObj.
 	[self assert: objOop \\ self allocationUnit = 0.
 	 self oop: objOop isLessThan: endOfMemory] whileTrue:
 		[self assert: (self long64At: objOop) ~= 0.
 		 rawNumSlots := self rawNumSlotsOf: objOop.
 		 aBlock value: objOop.
-		 "If the number of slot changes coalescing changed an object from a single to a double header."
+		 "If the number of slot changes coalescing changed an object from a single to a double header.
+		  In future have the block return the vaue.  It should know when things change."
+		 self flag: 'future work'.
 		 rawNumSlotsAfter := self rawNumSlotsOf: objOop.
 		 (rawNumSlotsAfter ~= rawNumSlots
 		  and: [rawNumSlotsAfter = self numSlotsMask]) ifTrue:
@@ -3587,8 +3589,7 @@ SpurMemoryManager >> eliminateAndFreeForwardersForPigCompact [
 	scavenger followRememberedForwardersAndForgetFreeObjectsForPigCompact.
 	self unmarkSurvivingObjectsForPigCompact.
 	lowestForwarder := self sweepToFollowForwardersForPigCompact.
-	self sweepToCoallesceFreeSpaceAndRebuildFreeListsForPigCompactFrom: lowestForwarder.
-	self checkFreeSpace.
+	self sweepToCoallesceFreeSpaceForPigCompactFrom: lowestForwarder.
 	self assert: self numberOfForwarders = 0
 ]
 
@@ -4808,7 +4809,7 @@ SpurMemoryManager >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpaceForFitCompact
 	"Note that if we were truly striving for performance we could split the scan into
 	 two phases, one up to the first free object and one after, which would remove
 	 the need to test firstFreeChunk when filling highestObjects."
-	self allOldSpaceEntitiesForCoalescingDo:
+	self allOldSpaceEntitiesForCoalescingFrom: self firstObject do:
 		[:o|
 		 self assert: (firstFreeChunk = 0 or: [self isFreeObject: firstFreeChunk]).
 		 (self isMarked: o)
@@ -4877,7 +4878,7 @@ SpurMemoryManager >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpaceForPigCompact
 	"throw away the list heads, including the tree."
 	self resetFreeListHeads.
 	firstFreeChunk := prevPrevFree := prevFree := 0.
-	self allOldSpaceEntitiesForCoalescingDo:
+	self allOldSpaceEntitiesForCoalescingFrom: self firstObject do:
 		[:o|
 		 self assert: (firstFreeChunk = 0 or: [self isFreeObject: firstFreeChunk]).
 		 (self isMarked: o)
@@ -4970,14 +4971,16 @@ SpurMemoryManager >> globalGarbageCollect [
 		excludeUnmarkedNewSpaceObjs: true
 		classIndicesShouldBeValid: true.
 
-	"At least for pigCompact it is worth repeating these two phases to get better compaction,
-	 for example during snapshot.  In which case the code needs to be reorganized to not
-	 rebuild the free list after compact, but instead just coallesce, and maintain the sorted free
-	 list until compaction has been repeated sufficiently (an experiment showed no improvement
-	 after 3 repetitions, but a useful gain of ~ 200k in a small image on the third iteration."
-	self flag: 'future work'.
-	self compact.
-	self eliminateAndFreeForwarders.
+	UseFitCompact
+		ifTrue:
+			[self compact.
+			 self eliminateAndFreeForwarders]
+		ifFalse:
+			[1 to: 3 do:
+				[:i|
+				 self pigCompact.
+				 self eliminateAndFreeForwardersForPigCompact].
+			 self rebuildFreeListsForPigCompact].
 
 	self assert: self validObjStacks.
 	self assert: (self isEmptyObjStack: markStack).
@@ -8393,6 +8396,17 @@ SpurMemoryManager >> readHeapFromImageFile: f dataBytes: numBytes [
 	^segmentManager readHeapFromImageFile: f dataBytes: numBytes
 ]
 
+{ #category : #compaction }
+SpurMemoryManager >> rebuildFreeListsForPigCompact [
+	"Rebuild the free lists from the doubly-linked free list."
+	totalFreeOldSpace := 0.
+	self sortedFreeListDo:
+		[:freeObj| | start bytes |
+		 bytes := (self bytesInObject: freeObj).
+		 start := self startOfObject: freeObj.
+		 self addFreeChunkWithBytes: bytes at: start]
+]
+
 { #category : #'free space' }
 SpurMemoryManager >> rebuildFreeTreeFrom: sortedFreeChunks [
 	"post sweep and pre compact, rebuild the large free chunk tree from the
@@ -9077,12 +9091,31 @@ SpurMemoryManager >> sortFreeListAt: i [
 ]
 
 { #category : #compaction }
+SpurMemoryManager >> sortedFreeListDo: aBlock [
+	"Evaluate aBlock with ascending entries in the free list"
+	| free nextFree prevFree prevPrevFree |
+	<inline: true>
+	free := firstFreeChunk.
+	prevPrevFree := prevFree := 0.
+	[free ~= 0] whileTrue:
+		[nextFree := self nextInSortedFreeListLink: free given: prevFree.
+		 self assert: (self isFreeObject: free).
+		 self assert: (nextFree = 0 or: [nextFree > free and: [self isFreeObject: nextFree]]).
+		 self assert: (prevFree = 0 or: [prevFree < free]).
+	 	 aBlock value: free.
+		 prevPrevFree := prevFree.
+		 prevFree := free.
+		 free := nextFree]
+]
+
+{ #category : #compaction }
 SpurMemoryManager >> sortedFreeListPairwiseReverseDo: aBinaryBlock [
 	"Evaluate aBinaryBlock with adjacent entries in the free list, from
 	 high address to low address.  The second argument is in fact the
 	 start of the next free chunk, not the free chunk itself.  Use
 	 endOfMemory - bridgeSize as the second argument in the first evaluation."
 	| free nextFree prevFree prevPrevFree |
+	<inline: true>
 	free := lastFreeChunk.
 	prevPrevFree := prevFree := 0.
 	[free ~= 0] whileTrue:
@@ -9559,7 +9592,7 @@ SpurMemoryManager >> sweepToCoallesceFreeSpaceAndRebuildFreeListsForPigCompactFr
 	lowest := (lowestForwarder = 0 ifTrue: [endOfMemory] ifFalse: [lowestForwarder])
 				min: (firstFreeChunk = 0 ifTrue: [endOfMemory] ifFalse: [firstFreeChunk]).
 	firstFree := totalFreeOldSpace := 0.
-	self allOldSpaceEntitiesFrom: lowest do:
+	self allOldSpaceEntitiesForCoalescingFrom: lowest do:
 		[:o|
 		((self isFreeObject: o) or: [self isForwarded: o])
 			ifTrue:
@@ -9578,6 +9611,47 @@ SpurMemoryManager >> sweepToCoallesceFreeSpaceAndRebuildFreeListsForPigCompactFr
 		 bytes := (self addressAfter: lastFree) - firstFreeStart.
 		 self addFreeChunkWithBytes: bytes at: firstFreeStart].
 	firstFreeChunk := lastFreeChunk := 0
+]
+
+{ #category : #compaction }
+SpurMemoryManager >> sweepToCoallesceFreeSpaceForPigCompactFrom: lowestForwarder [
+	"Coallesce free chunks and forwarders, maintaining the doubly-linked free list."
+	| lowest firstOfFreeRun startOfFreeRun endOfFreeRun prevPrevFree prevFree |
+	lowest := (lowestForwarder = 0 ifTrue: [endOfMemory] ifFalse: [lowestForwarder])
+				min: (firstFreeChunk = 0 ifTrue: [endOfMemory] ifFalse: [firstFreeChunk]).
+	firstOfFreeRun := prevPrevFree := prevFree := 0.
+	self allOldSpaceEntitiesFrom: lowest do:
+		[:o|
+		((self isFreeObject: o) or: [self isForwarded: o])
+			ifTrue:
+				[firstOfFreeRun = 0 ifTrue:
+					[self setObjectFree: o.
+					 firstOfFreeRun := o.
+					 startOfFreeRun := self startOfObject: o].
+				 endOfFreeRun := o]
+			ifFalse:
+				[firstOfFreeRun ~= 0 ifTrue:
+					[| bytes |
+					 bytes := (self addressAfter: endOfFreeRun) - startOfFreeRun.
+					 firstOfFreeRun := self initFreeChunkWithBytes: bytes at: startOfFreeRun.
+					 self inSortedFreeListLink: prevFree to: firstOfFreeRun given: prevPrevFree.
+					 prevPrevFree := prevFree.
+					 prevFree := firstOfFreeRun.
+					 firstOfFreeRun := 0]]].
+	firstOfFreeRun ~= 0 ifTrue:
+		[| bytes |
+		 bytes := (self addressAfter: endOfFreeRun) - startOfFreeRun.
+		 firstOfFreeRun := self initFreeChunkWithBytes: bytes at: startOfFreeRun.
+		 self inSortedFreeListLink: prevFree to: firstOfFreeRun given: prevPrevFree.
+		 prevPrevFree := prevFree.
+		 prevFree := firstOfFreeRun.
+		 firstOfFreeRun := 0].
+	prevFree ~= firstFreeChunk ifTrue:
+		[self storePointer: self freeChunkNextIndex
+			ofFreeChunk: prevFree
+			withValue: prevPrevFree].
+	lastFreeChunk := prevFree.
+	self cCode: [] inSmalltalk: [self checkTraversableSortedFreeList]
 ]
 
 { #category : #compaction }
