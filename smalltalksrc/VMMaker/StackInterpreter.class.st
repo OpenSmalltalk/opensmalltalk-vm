@@ -12890,12 +12890,6 @@ StackInterpreter >> validStackPageBaseFrames [
 	^true
 ]
 
-{ #category : #'simulation support' }
-StackInterpreter >> validate [
-	<doNotGenerate>
-	objectMemory validate
-]
-
 { #category : #'primitive support' }
 StackInterpreter >> voidLongRunningPrimitive: reason [
 	"Void the state associated with the long-running primitive check.
