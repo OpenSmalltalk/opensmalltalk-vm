@@ -1854,17 +1854,12 @@ int ioSetFullScreen(int fullScreen) {
 #else /* LSB_FIRST */
 # if defined(__GNUC__) && (defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__))
    /* GCC generates *optimal* code with a little help */
-#  if __GNUC__ >= 3
-#   define BYTE_SWAP(w) __asm__("bswap %0" : "=r" (w) : "r" (w))
-#   define WORD_SWAP(w) __asm__("roll $16, %0" : "=r" (w) : "r" (w))
-#  else
-#   define BYTE_SWAP(w) __asm__("bswap %%eax" : "=eax" (w) : "eax" (w))
-#   define WORD_SWAP(w) __asm__("roll $16, %%eax" : "=eax" (w) : "eax" (w))
-#  endif
+#  define BYTE_SWAP(w) __asm__("bswap %0" : "+r" (w))
+#  define WORD_SWAP(w) __asm__("roll $16, %0" : "+r" (w))
 #  define SRC_PIX_REG asm("%esi")
 #  define DST_PIX_REG asm("%edi")
-# else /* Not GCC?! Well, it's your own fault */
-#  define BYTE_SWAP(w) w = (w << 24) | ((w & 0xFF00) << 8) | ((w >> 8) & 0xFF00) | (w >> 24)
+# else /* Not GCC?! Well, it's your own fault ;-) */
+#  define BYTE_SWAP(w) w = (w<<24) | ((w&0xFF00)<<8) | ((w>>8)&0xFF00) | (w>>24)
 #  define WORD_SWAP(w) w = (( (unsigned)(w) << 16) | ((unsigned) (w) >> 16))
 # endif /* __GNUC__ */
 #endif /* MSB_FIRST */
