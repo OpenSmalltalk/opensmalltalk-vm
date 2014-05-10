@@ -301,7 +301,7 @@ SpurBootstrapMonticelloPackagePatcher >> populateSpurRepository [
 SpurBootstrapMonticelloPackagePatcher >> spur [
 	^MCHttpRepository fillInTheBlankConfigure:
 		(MCHttpRepository
-			creationTemplateLocation: 'http://source.squeak.org/trunk'
+			creationTemplateLocation: 'http://source.squeak.org/spur'
 			user: 'user with write permission'
 			password: 'password')
 ]
@@ -319,6 +319,16 @@ SpurBootstrapMonticelloPackagePatcher >> trunk [
 		location: 'http://source.squeak.org/trunk'
 		user: 'squeak'
 		password: 'squeak'
+]
+
+{ #category : #'repository population' }
+SpurBootstrapMonticelloPackagePatcher >> uploadTo: uploadRepository [ 
+	| localRepo |
+	localRepo := MCDirectoryRepository directory: destDir.
+	localRepo allVersionsDo:
+		[:version|
+		(uploadRepository includesVersionNamed: version info name) ifFalse:
+			[uploadRepository storeVersion: version]]
 ]
 
 { #category : #patching }
