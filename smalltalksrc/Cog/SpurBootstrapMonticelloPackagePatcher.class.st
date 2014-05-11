@@ -110,7 +110,11 @@ SpurBootstrapMonticelloPackagePatcher >> directoryFrom: dirName [
 ]
 
 { #category : #'repository population' }
-SpurBootstrapMonticelloPackagePatcher >> download: base from: repo [
+SpurBootstrapMonticelloPackagePatcher >> download: baseConfigurationOrArray "<MCConfiguration|Array>" from: repo [
+	| base |
+	base := baseConfigurationOrArray isArray
+				ifTrue: [MCConfiguration fromArray: baseConfigurationOrArray]
+				ifFalse: [baseConfigurationOrArray].
 	self packagesAndPatches keysAndValuesDo:
 		[:package :patches| | dependency |
 		dependency := base dependencies detect: [:dep| dep package name = package name].
@@ -299,11 +303,16 @@ SpurBootstrapMonticelloPackagePatcher >> patchPackage: packageFileName with: pat
 
 { #category : #'repository population' }
 SpurBootstrapMonticelloPackagePatcher >> spur [
-	^MCHttpRepository fillInTheBlankConfigure:
-		(MCHttpRepository
-			creationTemplateLocation: 'http://source.squeak.org/spur'
-			user: 'user with write permission'
-			password: 'password')
+	| url |
+	url := 'http://source.squeak.org/spur'.
+	^MCRepositoryGroup default repositories 
+		detect: [:r| r description = url]
+		ifNone:
+			[MCHttpRepository fillInTheBlankConfigure:
+				(MCHttpRepository
+					creationTemplateLocation: url
+					user: 'user with write permission'
+					password: 'password')]
 ]
 
 { #category : #patching }
@@ -315,28 +324,29 @@ SpurBootstrapMonticelloPackagePatcher >> storeVersion: newVersion [
 
 { #category : #'repository population' }
 SpurBootstrapMonticelloPackagePatcher >> trunk [
-	^MCHttpRepository
-		location: 'http://source.squeak.org/trunk'
-		user: 'squeak'
-		password: 'squeak'
+	| url |
+	url := 'http://source.squeak.org/trunk'.
+	^MCRepositoryGroup default repositories 
+		detect: [:r| r description = url]
+		ifNone: [MCHttpRepository
+					location: url
+					user: 'squeak'
+					password: 'squeak']
 ]
 
 { #category : #'repository population' }
 SpurBootstrapMonticelloPackagePatcher >> updateSpurRepository [
 	"self new from: 'trunkpackages' to: 'spurpackages'; updateSpurRepository"
-	| base |
-	base := MCConfiguration fromArray: self class squeak45baseline.
+	"AndreasSystemProfiler spyOn: [self new from: 'trunkpackages' to: 'spurpackages'; updateSpurRepository]"
 	sourceDir assureExistence.
-	self download: base from: self trunk.
+	self download: self class squeak45baseline from: self trunk.
 	destDir assureExistence.
 	self patchAsNeeded.
-	self uploadTo: self spur
+	self uploadFrom: (MCDirectoryRepository directory: destDir) to: self spur
 ]
 
 { #category : #'repository population' }
-SpurBootstrapMonticelloPackagePatcher >> uploadTo: uploadRepository [ 
-	| localRepo |
-	localRepo := MCDirectoryRepository directory: destDir.
+SpurBootstrapMonticelloPackagePatcher >> uploadFrom: localRepo to: uploadRepository [
 	localRepo allVersionsDo:
 		[:version|
 		(uploadRepository includesVersionNamed: version info name) ifFalse:
