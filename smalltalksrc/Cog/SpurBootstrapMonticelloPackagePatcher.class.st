@@ -237,6 +237,18 @@ SpurBootstrapMonticelloPackagePatcher >> patch [
 ]
 
 { #category : #patching }
+SpurBootstrapMonticelloPackagePatcher >> patchAsNeeded [
+	(sourceDir exists and: [destDir exists]) ifFalse:
+		[self error: 'one or both of the directories don''t exist'].
+	self packagesAndPatches keysAndValuesDo:
+		[:package :patches|
+		 (self filesForPackage: package in: sourceDir) do:
+			[:packageFile|
+			 (destDir includesKey: packageFile) ifFalse:
+				[self patchPackage: packageFile with: patches for: package]]]
+]
+
+{ #category : #patching }
 SpurBootstrapMonticelloPackagePatcher >> patchDefinition: aMCMethodDefinition withRewriter: aRBParseTreeRewriter [ 
 	| parseTree |
 	parseTree := RBParser
@@ -286,18 +298,6 @@ SpurBootstrapMonticelloPackagePatcher >> patchPackage: packageFileName with: pat
 ]
 
 { #category : #'repository population' }
-SpurBootstrapMonticelloPackagePatcher >> populateSpurRepository [
-	"self new from: 'trunkpackages' to: 'spurpackages'; populateSpurRepository"
-	| base |
-	base := MCConfiguration fromArray: self class squeak45baseline.
-	sourceDir assureExistence.
-	self download: base from: self trunk.
-	destDir assureExistence.
-	self patch.
-	self uploadTo: self spur
-]
-
-{ #category : #'repository population' }
 SpurBootstrapMonticelloPackagePatcher >> spur [
 	^MCHttpRepository fillInTheBlankConfigure:
 		(MCHttpRepository
@@ -319,6 +319,18 @@ SpurBootstrapMonticelloPackagePatcher >> trunk [
 		location: 'http://source.squeak.org/trunk'
 		user: 'squeak'
 		password: 'squeak'
+]
+
+{ #category : #'repository population' }
+SpurBootstrapMonticelloPackagePatcher >> updateSpurRepository [
+	"self new from: 'trunkpackages' to: 'spurpackages'; updateSpurRepository"
+	| base |
+	base := MCConfiguration fromArray: self class squeak45baseline.
+	sourceDir assureExistence.
+	self download: base from: self trunk.
+	destDir assureExistence.
+	self patchAsNeeded.
+	self uploadTo: self spur
 ]
 
 { #category : #'repository population' }
