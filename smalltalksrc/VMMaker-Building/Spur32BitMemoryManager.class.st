@@ -47,10 +47,8 @@ Spur32BitMemoryManager >> allocateSlotsInOldSpace: numSlots bytes: totalBytes fo
 		 self longAt: chunk + 4 put: self numSlotsMask << self numSlotsHalfShift.
 		 self long64At: chunk + self baseHeaderSize
 			put: (self headerForSlots: self numSlotsMask format: formatField classIndex: classIndex).
-		 self assert: (lastSubdividedFreeChunk = 0 or: [(self addressAfter: chunk + self baseHeaderSize) = lastSubdividedFreeChunk]).
 		 ^chunk + self baseHeaderSize].
 	self long64At: chunk put: (self headerForSlots: numSlots format: formatField classIndex: classIndex).
-	self assert: (lastSubdividedFreeChunk = 0 or: [(self addressAfter: chunk) = lastSubdividedFreeChunk]).
 	^chunk
 ]
 
