@@ -1,65 +1,86 @@
 "
 SpurMemoryManager is a new object representation and garbage collector for the Cog VM's.  Spur is dedicated to Andreas Raab, friend and colleague.  I miss you, Andreas.  The goal for Spur is an overall improvement in Cog of -50% (twice as fast) for memory-intensive benchmarks.  
 
-A detailed design sketch is included below after the instance variable descriptions.
+A detailed design sketch is included below after the instance variable descriptions.  The instance variable declarations can be checked for extra and missing declarations by making a literal array out of them and using
+	| ivs |
+	ivs := (#(becomeEffectsFlags		<Integer> ...) piecesCutWhere: [:a :b| a = #>]) collect: [:ea| ea first].
+	{ivs reject: [:iv| SpurMemoryManager instVarNames includes: iv].
+	(SpurMemoryManager instVarNames reject: [:iv| ivs includes: iv]) sort}
+The instance variable descriptions can be checked for extra and missing declarations by making a literal string out of them and using
+	| ivs |
+	ivs := ('becomeEffectsFlags...' piecesCutWhere: [:a :b| a = Character cr]) select: [:s| s notEmpty and: [s first isLetter]] thenCollect: [:ea| ea withoutTrailingBlanks].
+	{ivs reject: [:iv| SpurMemoryManager instVarNames includes: iv].
+	(SpurMemoryManager instVarNames reject: [:iv| ivs includes: iv]) sort}
 
 Instance Variables
 	becomeEffectsFlags		<Integer>
-	checkForLeaks:				<Boolean>
+	checkForLeaks				<Boolean>
 	classTableBitmap			<CArrayAccessor on: ByteArray>
-	classTableFirstPage:		<Integer oop>
-	classTableIndex:			<Integer>
-	coInterpreter:				<StackInterpreter|CoInterpreter (StackInterpreterSimulator|CogVMSimulator)>
-	endOfMemory:				<Integer address>
-	falseObj:					<Integer oop>
-	firstFreeChunk				<Integer address|nil>
-	freeLists:					<CArray on: memory>
-	freeListMask:				<Integer>
-	freeOldSpaceStart:			<Integer address>
-	freeStart:					<Integer address>
-	gcStartUsecs:				<Integer>
-	heapMap:					<CogCheck32BitHeapMap>
-	hiddenRootsObj:			<Integer oop>
-	lastHash:					<Integer>
-	lowSpaceThreshold:		<Integer address>
-	marking:					<Boolean>
-	memory:					<Bitmap|LittleEndianBitmap>
-	needGCFlag:				<Boolean>
-	newSpaceLimit:				<Integer address>
-	nilObj:						<Integer oop>
-	numClassTablePages:		<Integer>
-	pastSpaceStart:			<Integer address>
-	remapBuffer:				<CArrayAccessor on: (Array new: RemapBufferSize)>
-	remapBufferCount:			<Integer>
-	scavengeInProgress:		<Boolean>
-	scavengeThreshold:		<Integer address>
-	scavenger:					<SourGenerationScavenger>
-	segmentManager:			<SpurSegmentManager>
-	signalLowSpace:			<Boolean>
+	classTableFirstPage		<Integer oop>
+	classTableIndex			<Integer>
+	coInterpreter				<StackInterpreter|CoInterpreter (StackInterpreterSimulator|CogVMSimulator)>
+	edenBytes					<Integer>
+	endOfMemory				<Integer address>
+	ephemeronQueue			<Integer objStack oop>
+	extraRootCount			<Integer>
+	extraRoots					<Array of: oop>
+	falseObj					<Integer oop>
+	firstFreeChunk				<Integer oop|nil>
+	freeLists					<CArray on: memory>
+	freeListsMask				<Integer>
+	freeOldSpaceStart			<Integer address>
+	freeStart					<Integer address>
+	gcStartUsecs				<Integer>
+	growHeadroom				<Integer>
+	heapMap					<CogCheck32BitHeapMap>
+	hiddenRootsObj			<Integer oop>
+	invalidObjStackPage		<Integer oop|nil>
+	lastFreeChunk				<Integer oop|nil>
+	lastHash					<Integer>
+	lowSpaceThreshold		<Integer address>
+	marking					<Boolean>
+	markStack					<Integer objStack oop>
+	memory					<Bitmap|LittleEndianBitmap>
+	needGCFlag				<Boolean>
+	newSpaceLimit				<Integer address>
+	newSpaceStart				<Integer address>
+	nilObj						<Integer oop>
+	numClassTablePages		<Integer>
+	objStackInvalidBecause	<String|nil>
+	oldSpaceStart				<Integer address>
+	pastSpaceStart				<Integer address>
+	remapBuffer				<CArrayAccessor on: (Array new: RemapBufferSize)>
+	remapBufferCount			<Integer>
+	scavengeInProgress		<Boolean>
+	scavengeThreshold		<Integer address>
+	scavenger					<SourGenerationScavenger>
+	segmentManager			<SpurSegmentManager>
+	signalLowSpace			<Boolean>
 	shrinkThreshold			<Integer>
-	specialObjectsOop:		<Integer oop>
-	startOfMemory:				<Integer address>
-	statFGCDeltaUsecs:		<Integer>
-	statFullGCUsecs:			<Integer>
-	statFullGCs:					<Integer>
-	statGCEndUsecs:			<Integer>
-	statGrowMemory:			<Integer>
-	statIGCDeltaUsecs:			<Integer>
-	statIncrGCUsecs:			<Integer>
-	statIncrGCs:				<Integer>
-	statMarkCount:				<Integer>
-	statMkFwdCount:			<Integer>
-	statRootTableCount:		<Integer>
-	statRootTableOverflows:	<Integer>
-	statSGCDeltaUsecs:		<Integer>
-	statScavengeGCUsecs:		<Integer>
-	statScavenges:				<Integer>
-	statShrinkMemory:			<Integer>
-	statSpecialMarkCount:		<Integer>
-	statSurvivorCount:			<Integer>
-	statSweepCount:			<Integer>
-	totalFreeOldSpace:			<Integer>
-	trueObj:					<Integer oop>
+	specialObjectsOop			<Integer oop>
+	statCoalesces				<Integer>
+	statCompactPassCount		<Integer>
+	statFGCDeltaUsecs			<Integer>
+	statFullGCUsecs			<Integer>
+	statFullGCs					<Integer>
+	statGCEndUsecs			<Integer>
+	statGrowMemory			<Integer>
+	statIGCDeltaUsecs			<Integer>
+	statIncrGCUsecs			<Integer>
+	statIncrGCs					<Integer>
+	statMarkCount				<Integer>
+	statRootTableCount		<Integer>
+	statRootTableOverflows	<Integer>
+	statSGCDeltaUsecs		<Integer>
+	statScavengeGCUsecs		<Integer>
+	statScavenges				<Integer>
+	statShrinkMemory			<Integer>
+	statSpecialMarkCount		<Integer>
+	statSurvivorCount			<Integer>
+	totalFreeOldSpace			<Integer>
+	trueObj						<Integer oop>
+	unscannedEphemerons		<SpurContiguousObjStack>
+	weaklingStack				<Integer objStack oop>
 
 becomeEffectsFlags
 	- a set of flags to limit the work done during become; one of BecameCompiledMethodFlag, BecamePointerObjectFlag
@@ -79,8 +100,20 @@ classTableIndex
 coInterpreter
 	- the VM interpreter using this heap
 
+edenBytes
+	- a variable holding the size of eden at start up only
+
 endOfMemory
 	- the address past the last oldSpace segment
+
+ephemeronQueue
+	- the oopStack holding triggered ephemerons
+
+extraRootCount
+	- the count of extra roots
+
+extraRoots
+	- an array of pointers to variables holding oops that need updating.  used by plugins to update objects they hold on to.
 
 falseObj
 	- the oop of the false object; must be the second object in oldSpace
@@ -93,7 +126,7 @@ freeLists
 	  is the head of a tree of free chunks of size > 63 slots in 64-bits or 31 slots in 32-bits.
 	  freeLists is the firstIndexableField of the fourth object in oldSpace.
 
-freeListMask
+freeListsMask
 	- a bitmap of flags with a 1 set whereever the freeLists has a non-empty entry, used to limit the search for free chunks
 
 freeOldSpaceStart
@@ -106,6 +139,9 @@ freeStart
 gcStartUsecs
 	- the time in microseconds of the start of the most recent gc, used to compute the duration of a gc.
 
+growHeadroom
+	- the minimum ammount of space to grow memory by when a grow is required.
+
 heapMap
 	- a bitmap used to check for leaks. a bit is set in the map at each object's header.  every pointer in the heap should point to the header of an object
 
@@ -114,8 +150,14 @@ hiddenRootsObj
 	  numClassTablePages elements are pages containing classes. Remaining slots hold other
 	  roots the VM needs.  Must be the fifth object in oldSpace.
 
+invalidObjStackPage
+	- the offending objStack page, if isValidObjStack: failed, or nil. This is for debugging.
+
+lastFreeChunk
+	- the free chunk at the highest address discovered during global gc's sweep through the heap.  used in compaction.
+
 lastHash
-	- the last object hash value.  a pseudo-randome number generator.
+	- the last object hash value.  a pseudo-random number generator.
 
 lowSpaceThreshold
 	- the ammount of free memory below which the low space condition should be signalled.
@@ -123,11 +165,17 @@ lowSpaceThreshold
 marking
 	- a flag set and cleared in markAccessibleObjects to allow ensureRoomOnObjStackAtIndex: to know whether to mark a new obj stack page or not.
 
+markStack
+	- the objStack that houses the mark stack.
+
 memory
 	- in the Simulator this is the single oldSpace segment that contains the codeZone, newSpace and oldSpace.  In C it is effectively the base address of used memory.
 
 needGCFlag
 	- a boolean flag set if a scavenge is needed
+
+newSpaceStart
+	- the first address in newSpace (the start address of the first of the two survivor spaces, past and future space)
 
 newSpaceLimit
 	- the last address in newSpace (the last address in eden)
@@ -135,18 +183,24 @@ newSpaceLimit
 nilObj
 	- the oop of the nil object; must be the first object in oldSpace
 
-numClassTablePages:
+numClassTablePages
 	- the number of used pages in the classTable
+
+objStackInvalidBecause
+	- a string identifying the reason isValidObjStack: failed, or nil.  This is for debugging.
+
+oldSpaceStart
+	- the start of oldSpace, which happens to be nilObj.
 
 pastSpaceStart
 	- the address past the last object in pastSpace, used to enumerate objects in newSpace.
 
-remampBuffer:
+remapBuffer
 	- an Array of objects used to implement pushRemappableOop: et al for compatibility with ObjectMemory.
 	  Its functionality isnt needed because Spur will never GC during allocation.  But it muts be present and
 	  correct, otherwise many primitives that use pushRemappableOop: et al would have to be rewritten.
 
-remapBufferCount:
+remapBufferCount
 	- the index of the last used entry in remampBuffer
 
 scavengeInProgress
@@ -171,9 +225,6 @@ signalLowSpace
 specialObjectsOop
 	- the oop of the specialObjectsArray object
 
-startOfMemory
-	- the first address in newSpace (the first address in either pastSpace or futureSpace)
-
 statFGCDeltaUsecs statFullGCUsecs statFullGCs statGCEndUsecs statGrowMemory statIGCDeltaUsecs statIncrGCUsecs statIncrGCs statMarkCount statMkFwdCount statRootTableCount statRootTableOverflows statSGCDeltaUsecs statScavengeGCUsecs statScavenges statShrinkMemory statSpecialMarkCount statSurvivorCount statSweepCount
 	- various statistics
 
@@ -182,6 +233,13 @@ totalFreeOldSpace
 	
 trueObj
 	- the oop of the false object; must be the third object in oldSpace
+
+unscannedEphemerons
+	- the set of ephemerons yet to be scanned.  used for identifying firable ephemerons during gc.
+
+weaklingStack
+	- the set of weak collections that must be scanned later on in gc to nil their collected referents.
+
 
 
 Invariants (far from an exhaustive list; I'm adding to this as they arise; please prompt me to add undocumented ones):
@@ -213,7 +271,7 @@ For details see ""60-bit immediate Floats"" below.
 
 - efficient scavenging.  The current Squeak GC uses a slow pointer-reversal collector that writes every field in live objects three times in each collection, twice in the pointer-reversing heap traversal to mark live objects and once to update the pointer to its new location.  A scavenger writes every field of live data twice in each collection, once as it does a block copy of the object when copying to to space, once as it traverses the live pointers in the to space objects.  Of course the block copy is a relatively cheap write.
 
-- lazy become.  The JIT's use of inline cacheing provides a cheap way of avoiding scanning the heap as part of a become (which is the simple approach to implementing become in a system with direct pointers).  A becomeForward: on a (set of) non-zero-sized object(s) turns the object into a ""corpse"" or ""forwarding object"" whose first (non-header) word/slot is replaced by a pointer to the target of the becomeForward:.  The corpse's class index is set to one that identifies corpses (let's say classIndex 1), and, because it is a special, hidden class index, will always fail an inline cache test.  The inline cache failure code is then responsible for following the forwarding pointer chain (these are Iliffe vectors :) ) and resolving to the actual target.  (In the interpreter there needs to be a similar check when probing the method cache).   It has yet to be determined exactly how this is done (e.g. change the receiver register and/or stack contents and retry the send, perhaps scanning the current activation).  See become read barrier below on how we deal with becomes on objects with named inst vars.  We insist that objects are at least 16 bytes in size (see 8-byte alignment below) so that there will always be space for a forwarding pointer.  Since none of the immediate classes can have non-immediate instances and since we allocate the immediate class indices corresponding to their tag pattern (SmallInteger = 1 & 3, Character = 2, SmallFloat = 5?) we can use all the class indices from 0 to 7 for special uses, 0 = free, and e.g. 1 = isForwarded.  In general what;s going on here is the implemention of a partial read barrier. Certain operations require a read barrier to ensure access of the target of the forwarding corpse, not the corpse itself.  Read barriers stink, so we must restrict the read barrier to as few places as possible.  See become read barrier below.
+- lazy become.  The JIT's use of inline cacheing provides a cheap way of avoiding scanning the heap as part of a become (which is the simple approach to implementing become in a system with direct pointers).  A becomeForward: on a (set of) non-zero-sized object(s) turns the object into a ""corpse"" or ""forwarding object"" whose first (non-header) word/slot is replaced by a pointer to the target of the becomeForward:.  The corpse's class index is set to one that identifies corpses (let's say classIndex 1), and, because it is a special, hidden class index, will always fail an inline cache test.  The inline cache failure code is then responsible for following the forwarding pointer chain (these are Iliffe vectors :) ) and resolving to the actual target.  (In the interpreter there needs to be a similar check when probing the method cache).   It has yet to be determined exactly how this is done (e.g. change the receiver register and/or stack contents and retry the send, perhaps scanning the current activation).  See become read barrier below on how we deal with becomes on objects with named inst vars.  We insist that objects are at least 16 bytes in size (see 8-byte alignment below) so that there will always be space for a forwarding pointer.  Since none of the immediate classes can have non-immediate instances and since we allocate the immediate class indices corresponding to their tag pattern (SmallInteger = 1 & 3, Character = 2, SmallFloat = 5?) we can use all the class indices from 0 to 7 for special uses, 0 = free, and e.g. 1 = isForwarded.  In general what's going on here is the implemention of a partial read barrier. Certain operations require a read barrier to ensure access of the target of the forwarding corpse, not the corpse itself.  Read barriers stink (have poor performance), so we must restrict the read barrier to as few places as possible.  See become read barrier below.  See http://www.mirandabanda.org/cogblog/2013/09/13/lazy-become-and-a-partial-read-barrier/ & http://www.mirandabanda.org/cogblog/2014/02/08/primitives-and-the-partial-read-barrier/.
 
 - pinning.  To support a robust and easy-to-use FFI the memory manager must support temporary pinning where individual objects can be prevented from being moved by the GC for as long as required, either by being one of an in-progress FFI call's arguments, or by having pinning asserted by a primitive (allowing objects to be passed to external code that retains a reference to the object after returning).  Pinning probably implies a per-object ""is-pinned"" bit in the object header.  Pinning will be done via lazy become; i..e an object in new space will be becommed into a pinned object in old space.  We will only support pinning in old space.
 
@@ -285,7 +343,7 @@ Segmented Old Space
 A segmented oldSpace is useful.  It allows growing oldSpace incrementally, adding a segment at a time, and freeing empty segments.  But such a scheme is likely to introduces complexity in object enumeration, and compaction (enumeration would apear to require visiting each segment, compaction must be wthin a segment, etc). One idea that might fly to allow a segmented old space that appears to be a single contiguous spece is to use fake pinned objects to bridge the gaps between segments.  The last two words of each segment can be used to hold the header of a pinned object whose size is the distance to the next segment.  The pinned object's classIndex can be one of the puns so that it doesn't show up in allInstances; this can perhaps also indicate to the incremental collector that it is not to reclaim the object, etc.  However, free objects would need a large enough size field to stretch across large gaps in the address space.  The current design limits the overflow size field to a 32-bit slot count, which wouldn't be large enough in a 64-bit implementation.  The overflow size field is at most 7 bytes since the overflow size word also contains a maxed-out 8-bit slot count (for object parsing).  A byte can be stolen from e.g. the identityHash field to beef up the size to a full 64-bits.
 
 
-Lazy become & the become read barrier.
+Lazy become & the become read barrier (see http://www.mirandabanda.org/cogblog/2013/09/13/lazy-become-and-a-partial-read-barrier/ & http://www.mirandabanda.org/cogblog/2014/02/08/primitives-and-the-partial-read-barrier/).
 
 As described earlier the basic idea behind lazy become is to use corpses (forwarding objects) that are followed lazily during GC and inline cache miss.  However, a lazy scheme would appear to require a read barrier to avoid accessing the coirpse and mak sure wel follow the forwarding pointer.  Without hardware support read barriers have poor performance, so we must restrict the read barrier as much as possible.  The main goal is to avoid having to scan all of the heap to fix up pointers, as is done with ObjectMemory.  We're happy to do some scanning of a small subset oif the heap, but become: cannot scale to large heaps if it must scan the entire heap.  Objects with named inst vars and CompiledMethods are accessed extensively by the interpreter and jitted code.  We must avoid as much checking of such accesses as possible; We judge an explicit read barrier on all accesses far too expensive.  The accesses the VM makes which notionally require a read barrier are:
 - inst vars of thisContext, including stack contents (the receiver of a message and its arguments), which in Cog are the fields of the current stack frame, and the sender chain during (possibly non-local) return
@@ -447,7 +505,6 @@ Class {
 		'totalFreeOldSpace',
 		'firstFreeChunk',
 		'lastFreeChunk',
-		'highestObjects',
 		'statCoalesces',
 		'statCompactPassCount',
 		'statFGCDeltaUsecs',
@@ -484,7 +541,6 @@ Class {
 		'ObjStackPageSlots',
 		'ObjStackTopx',
 		'RemapBufferSize',
-		'UseFitCompact',
 		'WeaklingStackRootIndex'
 	],
 	#pools : [
@@ -620,8 +676,6 @@ SpurMemoryManager class >> initBytesPerWord: nBytes [
 SpurMemoryManager class >> initialize [
 	"SpurMemoryManager initialize"
 	BitsPerByte := 8.
-
-	UseFitCompact := false.
 
 	"An obj stack is a stack of objects stored in a hidden root slot, such as
 	 the markStack or the ephemeronQueue.  It is a linked list of segments,
@@ -1569,7 +1623,6 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 	 exact size does not exist.  N.B.  the chunk is simply a pointer, it
 	 has no valid header.  The caller *must* fill in the header correctly."
 	| initialIndex chunk index nodeBytes parent child |
-	self assert: (lastSubdividedFreeChunk := 0) = 0.
 	"for debugging:" "totalFreeOldSpace := self totalFreeListBytes"
 	totalFreeOldSpace := totalFreeOldSpace - chunkBytes. "be optimistic (& don't wait for the write)"
 	initialIndex := chunkBytes / self allocationUnit.
@@ -1678,168 +1731,6 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 		[self freeChunkWithBytes: nodeBytes - chunkBytes
 				at: (self startOfObject: chunk) + chunkBytes].
 	^self startOfObject: chunk
-]
-
-{ #category : #'free space' }
-SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes suchThat: acceptanceBlock [
-	"Answer a chunk of oldSpace from the free lists that satisfies acceptanceBlock,
-	 if available, otherwise answer nil.  Break up a larger chunk if one of the exact
-	 size cannot be found.  N.B.  the chunk is simply a pointer, it has no valid header.
-	 The caller *must* fill in the header correctly."
-	| initialIndex node next prev index child childBytes acceptedChunk acceptedNode |
-	<inline: true> "must inline for acceptanceBlock"
-	self assert: (lastSubdividedFreeChunk := 0) = 0.
-	"for debugging:" "totalFreeOldSpace := self totalFreeListBytes"
-	totalFreeOldSpace := totalFreeOldSpace - chunkBytes. "be optimistic (& don't wait for the write)"
-	initialIndex := chunkBytes / self allocationUnit.
-	(initialIndex < self numFreeLists and: [1 << initialIndex <= freeListsMask]) ifTrue:
-		[(freeListsMask anyMask: 1 << initialIndex) ifTrue:
-			[(node := freeLists at: initialIndex) = 0
-				ifTrue: [freeListsMask := freeListsMask - (1 << initialIndex)]
-				ifFalse:
-					[prev := 0.
-					 [node ~= 0] whileTrue:
-						[self assert: node = (self startOfObject: node).
-						 self assert: (self isValidFreeObject: node).
-						 next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: node.
-						 (acceptanceBlock value: node) ifTrue:
-							[prev = 0
-								ifTrue: [freeLists at: initialIndex put: next]
-								ifFalse: [self storePointer: self freeChunkNextIndex ofFreeChunk: prev withValue: next].
-							 ^node].
-						 prev := node.
-						 node := next]]].
-		 "first search for free chunks of a multiple of chunkBytes in size"
-		 index := initialIndex.
-		 [(index := index + initialIndex) < self numFreeLists
-		  and: [1 << index <= freeListsMask]] whileTrue:
-			[(freeListsMask anyMask: 1 << index) ifTrue:
-				[(node := freeLists at: index) = 0
-					ifTrue: [freeListsMask := freeListsMask - (1 << index)]
-					ifFalse:
-						[prev := 0.
-						 [node ~= 0] whileTrue:
-							[self assert: node = (self startOfObject: node).
-							 self assert: (self isValidFreeObject: node).
-							 next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: node.
-							 (acceptanceBlock value: node) ifTrue:
-								[prev = 0
-									ifTrue: [freeLists at: index put: next]
-									ifFalse: [self storePointer: self freeChunkNextIndex ofFreeChunk: prev withValue: next]. 
-								 self freeChunkWithBytes: index * self allocationUnit - chunkBytes
-									at: (self startOfObject: node) + chunkBytes.
-								 ^node].
-							 prev := node.
-							 node := next]]]].
-		 "now get desperate and use the first that'll fit.
-		  Note that because the minimum free size is 16 bytes (2 * allocationUnit), to
-		  leave room for the forwarding pointer/next free link, we can only break chunks
-		  that are at least 16 bytes larger, hence start at initialIndex + 2."
-		 index := initialIndex + 1.
-		 [(index := index + 1) < self numFreeLists
-		  and: [1 << index <= freeListsMask]] whileTrue:
-			[(freeListsMask anyMask: 1 << index) ifTrue:
-				[(node := freeLists at: index) = 0
-					ifTrue: [freeListsMask := freeListsMask - (1 << index)]
-					ifFalse:
-						[prev := 0.
-						 [node ~= 0] whileTrue:
-							[self assert: node = (self startOfObject: node).
-							 self assert: (self isValidFreeObject: node).
-							 next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: node.
-							 (acceptanceBlock value: node) ifTrue:
-								[prev = 0
-									ifTrue: [freeLists at: index put: next]
-									ifFalse: [self storePointer: self freeChunkNextIndex ofFreeChunk: prev withValue: next]. 
-								 self freeChunkWithBytes: index * self allocationUnit - chunkBytes
-									at: (self startOfObject: node) + chunkBytes.
-								 ^node].
-							 prev := node.
-							 node := next]]]]].
-
-	"Large chunk, or no space on small free lists.  Search the large chunk list.
-	 Large chunk list organized as a tree, each node of which is a list of chunks
-	 of the same size. Beneath the node are smaller and larger blocks.
-	 When the search ends parent should hold the smallest chunk at least as
-	 large as chunkBytes, or 0 if none.  acceptedChunk and acceptedNode save
-	 us from having to back-up when the acceptanceBlock filters-out all nodes
-	 of the right size, but there are nodes of the wrong size it does accept."
-	child := freeLists at: 0.
-	node := acceptedChunk := acceptedNode := 0.
-	[child ~= 0] whileTrue:
-		[self assert: (self isValidFreeObject: child).
-		 childBytes := self bytesInObject: child.
-		 childBytes = chunkBytes ifTrue: "size match; try to remove from list at node."
-			[node := child.
-			 [prev := node.
-			  node := self fetchPointer: self freeChunkNextIndex ofFreeChunk: node.
-			  node ~= 0] whileTrue:
-				[(acceptanceBlock value: node) ifTrue:
-					[self assert: (self isValidFreeObject: node).
-					 self storePointer: self freeChunkNextIndex
-						ofFreeChunk: prev
-						withValue: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: node).
-					 ^self startOfObject: node]].
-			 (acceptanceBlock value: child) ifTrue:
-				[next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: child.
-				 next = 0
-					ifTrue: "no list; remove the interior node"
-						[self unlinkSolitaryFreeTreeNode: child]
-					ifFalse: "list; replace node with it"
-						[self inFreeTreeReplace: child with: next].
-				 ^self startOfObject: child]].
-		 child ~= 0 ifTrue:
-			["Note that because the minimum free size is 16 bytes (2 * allocationUnit), to
-			  leave room for the forwarding pointer/next free link, we can only break chunks
-			  that are at least 16 bytes larger, hence reject chunks < 2 * allocationUnit larger."
-			childBytes <= (chunkBytes + self allocationUnit)
-				ifTrue: "node too small; walk down the larger size of the tree"
-					[child := self fetchPointer: self freeChunkLargerIndex ofFreeChunk: child]
-				ifFalse:
-					[self flag: 'we can do better here; preferentially choosing the lowest node. That would be a form of best-fit since we are trying to compact down'.
-					 node := child.
-					 child := self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: node.
-					 acceptedNode = 0 ifTrue:
-						[acceptedChunk := node.
-						 "first search the list."
-						 [acceptedChunk := self fetchPointer: self freeChunkNextIndex
-													ofFreeChunk: acceptedChunk.
-						  (acceptedChunk ~= 0 and: [acceptanceBlock value: acceptedChunk]) ifTrue:
-							[acceptedNode := node].
-						  acceptedChunk ~= 0 and: [acceptedNode = 0]] whileTrue.
-						 "nothing on the list; will the node do?  This prefers
-						  acceptable nodes higher up the tree over acceptable
-						  list elements further down, but we haven't got all day..."
-						 (acceptedNode = 0
-						  and: [acceptanceBlock value: node]) ifTrue:
-							[acceptedNode := node.
-							 child := 0 "break out of loop now we have an acceptedNode"]]]]].
-
-	acceptedNode ~= 0 ifTrue:
-		[acceptedChunk ~= 0 ifTrue:
-			[self assert: (self bytesInObject: acceptedChunk) >= (chunkBytes + self allocationUnit).
-			 [next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: acceptedNode.
-			  next ~= acceptedChunk] whileTrue:
-				[acceptedNode := next].
-			 self storePointer: self freeChunkNextIndex
-				ofFreeChunk: acceptedNode
-				withValue: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: acceptedChunk).
-			self freeChunkWithBytes: (self bytesInObject: acceptedChunk) - chunkBytes
-					at: (self startOfObject: acceptedChunk) + chunkBytes.
-			^self startOfObject: acceptedChunk].
-		next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: acceptedNode.
-		next = 0
-			ifTrue: "no list; remove the interior node"
-				[self unlinkSolitaryFreeTreeNode: acceptedNode]
-			ifFalse: "list; replace node with it"
-				[self inFreeTreeReplace: acceptedNode with: next].
-		 self assert: (self bytesInObject: acceptedNode) >= (chunkBytes + self allocationUnit).
-		 self freeChunkWithBytes: (self bytesInObject: acceptedNode) - chunkBytes
-				at: (self startOfObject: acceptedNode) + chunkBytes.
-		^self startOfObject: acceptedNode].
-
-	totalFreeOldSpace := totalFreeOldSpace + chunkBytes. "optimism was unfounded"
-	^nil
 ]
 
 { #category : #'free space' }
@@ -3173,17 +3064,13 @@ SpurMemoryManager >> compact [
 	 well enough in practice.  So use pig compact.  Fill large free objects starting
 	 from low memory with objects taken from the end of memory."
 	<inline: false>
+	statCompactPassCount := statCompactPassCount + 1.
 	self assert: (firstFreeChunk = 0 or: [self isFreeObject: firstFreeChunk]).
-	UseFitCompact
-		ifTrue:
-			[self exactFitCompact.
-			 self assert: (firstFreeChunk = 0
-						or: [(self isFreeObject: firstFreeChunk)
-						or: [self isValidClassIndex: (self classIndexOf: firstFreeChunk)]]).
-			 highestObjects usedSize > 0 ifTrue:
-				[self firstFitCompact]]
-		ifFalse:
-			[self pigCompact]
+	1 to: 3 do:
+		[:i|
+		 self pigCompact.
+		 self eliminateAndFreeForwardersForPigCompact].
+	self rebuildFreeListsForPigCompact
 ]
 
 { #category : #'object access' }
@@ -3533,45 +3420,6 @@ SpurMemoryManager >> eek [
 ]
 
 { #category : #'gc - global' }
-SpurMemoryManager >> eliminateAndFreeForwarders [
-	"As the final phase of global garbage collect, sweep the heap to follow
-	 forwarders, then free forwarders, coalescing with free space as we go."
-	self cCode: '' inSmalltalk: [coInterpreter transcript nextPutAll: 'eliminating forwarders...'; flush].
-	UseFitCompact
-		ifTrue: [self eliminateAndFreeForwardersForFitCompact]
-		ifFalse: [self eliminateAndFreeForwardersForPigCompact]
-]
-
-{ #category : #'gc - global' }
-SpurMemoryManager >> eliminateAndFreeForwardersForFitCompact [
-	"As the final phase of global garbage collect, sweep the heap to follow
-	 forwarders, then free forwarders, coalescing with free space as we go."
-	| lowestFree |
-	<inline: false>
-	self flag: 'this might be unnecessary.  if we were to track firstFreeChunk we might be able to repeat the freeUnmarkedObjectsAndSortAndCoalesceFreeSpace; compact cycle until firstFreeChunk reaches a fixed point'.
-	self assert: (self isForwarded: nilObj) not.
-	self assert: (self isForwarded: falseObj) not.
-	self assert: (self isForwarded: trueObj) not.
-	self assert: (self isForwarded: self freeListsObj) not.
-	self assert: (self isForwarded: hiddenRootsObj) not.
-	self assert: (self isForwarded: classTableFirstPage) not.
-	self followSpecialObjectsOop.
-	"N.B. we don't have to explicitly do mapInterpreterOops since the scavenge below
-	 will do it, except that scavenging maps only young references in machine code."
-	self followForwardedObjStacks.
-	scavenger followRememberedForwardersAndForgetFreeObjects.
-	self doScavenge: DontTenureButDoUnmark.
-	coInterpreter mapMachineCode: GCModeFull.
-	self checkFreeSpace.
-	lowestFree := self sweepToFollowForwardersForFitCompact.
-	self checkFreeSpace.
-	lowestFree = 0 ifTrue: "yeah, right..."
-		[^self].
-	self sweepToCoallesceFreeSpaceAndRebuildFreeListsForFitCompactFrom: lowestFree.
-	self checkFreeSpace
-]
-
-{ #category : #'gc - global' }
 SpurMemoryManager >> eliminateAndFreeForwardersForPigCompact [
 	"As the final phase of global garbage collect, sweep the heap to follow
 	 forwarders, then free forwarders, coalescing with free space as we go."
@@ -3746,69 +3594,6 @@ SpurMemoryManager >> enterIntoClassTable: aBehavior [
 { #category : #'header formats' }
 SpurMemoryManager >> ephemeronFormat [
 	^5
-]
-
-{ #category : #compaction }
-SpurMemoryManager >> exactFitCompact [
-	"Compact all of memory above firstFreeChunk using exact-fit, assuming free
-	 space is sorted and that as many of the the highest objects as will fit are
-	 recorded in highestObjects.  Don't move pinned objects.
-	 Note that we don't actually move; we merely copy and forward.  Eliminating
-	 forwarders will be done in a final pass.  Leave the objects that don't fit
-	 exactly (the misfits), and hence aren't moved, in highestObjects."
-
-	<inline: false>
-	| misfits first nfits nmiss nHighest nMisses savedLimit |
-	<var: #misfits type: #usqInt>
-	self cCode: '' inSmalltalk: [coInterpreter transcript nextPutAll: 'ef compacting...'; flush].
-	self checkFreeSpace.
-	totalFreeOldSpace = 0 ifTrue: [^self].
-	highestObjects isEmpty ifTrue:
-		[^self].
-	nfits := nmiss  := 0.
-	misfits := highestObjects last + self wordSize.
-	[statCompactPassCount := statCompactPassCount + 1.
-	 highestObjects from: misfits - self wordSize reverseDo:
-		[:o| | b |
-		 (self oop: o isGreaterThan: firstFreeChunk) ifFalse:
-			[highestObjects first: misfits.
-			 coInterpreter print: 'exactFitCompact fits: '; printNum: nfits; print: ' misfits: '; printNum: nmiss; cr.
-			 ^self].
-		 ((self isForwarded: o) or: [self isPinned: o]) ifFalse:
-			[b := self bytesInObject: o.
-			 (self allocateOldSpaceChunkOfExactlyBytes: b suchThat: [:f| f < o])
-				ifNil:
-					[nmiss := nmiss + 1.
-					 misfits := misfits - self wordSize.
-					 misfits < highestObjects start ifTrue:
-						[misfits := highestObjects limit - self wordSize].
-					 self longAt: misfits put: o]
-				ifNotNil:
-					[:f| | fo |
-					 nfits := nfits + 1.
-					 "here's a wrinkle; if the firstFreeChunk is allocated to a small object and the firstFreeChunk
-					  is a large chunk then firstFreeChunk will no longer point to an object header.  So check and
-					  adjust firstFreeChunk if it is assigned to."
-					 fo := self objectStartingAt: f.
-					 fo = firstFreeChunk ifTrue:
-						[firstFreeChunk := self objectAfter: fo].
-					 self copyAndForward: o withBytes: b toFreeChunk: f]]].
-	 self checkFreeSpace.
-	 "now highestObjects contains only misfits, if any, from misfits to last.
-	  set first to first failure and refill buffer. next cycle will add more misfits.
-	  give up on exact-fit when half of the highest objects fail to fit."
-	first := self longAt: highestObjects first.
-	 self assert: (self oop: first isGreaterThan: firstFreeChunk).
-	 nHighest := highestObjects usedSize.
-	 highestObjects first: misfits.
-	 nMisses := highestObjects usedSize.
-	 nMisses > (nHighest // 2) ifTrue:
-		[coInterpreter print: 'exactFitCompact fits: '; printNum: nfits; print: ' misfits: '; printNum: nmiss; cr.
-		 ^self].
-	 savedLimit := self moveMisfitsToTopOfHighestObjects: misfits.
-	 self fillHighestObjectsWithMovableObjectsFromFirstFreeChunkUpTo: first.
-	 misfits := self moveMisfitsInHighestObjectsBack: savedLimit.
-	 highestObjects usedSize > 0] whileTrue
 ]
 
 { #category : #'debug support' }
@@ -3988,44 +3773,6 @@ SpurMemoryManager >> fetchWordLengthOf: objOop [
 	^self numSlotsOf: objOop
 ]
 
-{ #category : #compaction }
-SpurMemoryManager >> fillHighestObjectsWithMovableObjectsFromFirstFreeChunkUpTo: limitObj [
-	"Refill highestObjects with movable objects up to, but not including limitObj.
-	 c.f. the loop in freeUnmarkedObjectsAndSortAndCoalesceFreeSpace."
-	| lastHighest highestObjectsWraps firstFree |
-	self assert: (firstFreeChunk = 0
-				or: [(self isFreeObject: firstFreeChunk)
-				or: [self isValidClassIndex: (self classIndexOf: firstFreeChunk)]]).
-	highestObjects resetAsEmpty.
-	lastHighest := highestObjects last.
-	highestObjectsWraps := firstFree := 0.
-	self allOldSpaceEntitiesFrom: firstFreeChunk do:
-		[:o|
-		(self oop: o isGreaterThanOrEqualTo: limitObj) ifTrue:
-			[highestObjects last: lastHighest.
-			 (self isFreeObject: firstFreeChunk) ifFalse:
-				[firstFreeChunk := firstFree = 0 ifTrue: [limitObj] ifFalse: [firstFree]].
-			 ^self].
-		(self isFreeObject: o)
-			ifTrue: [firstFree = 0 ifTrue:
-						[firstFree := o]]
-			ifFalse:
-				[((self isForwarded: o) or: [self isPinned: o]) ifFalse:
-					[false "conceptually...: "
-						ifTrue: [highestObjects addLast: o]
-						ifFalse: "but we inline so we can use the local lastHighest"
-							[(lastHighest := lastHighest + self wordSize) >= highestObjects limit ifTrue:
-								[highestObjectsWraps := highestObjectsWraps + 1.
-								 lastHighest := highestObjects start].
-							 self longAt: lastHighest put: o]]]].
-	highestObjects last: lastHighest.
-	(self isFreeObject: firstFreeChunk) ifFalse:
-		[firstFreeChunk := firstFree = 0 ifTrue: [limitObj] ifFalse: [firstFree]].
-	self assert: (firstFreeChunk = 0
-				or: [(self isFreeObject: firstFreeChunk)
-				or: [self isValidClassIndex: (self classIndexOf: firstFreeChunk)]])
-]
-
 { #category : #instantiation }
 SpurMemoryManager >> fillObj: objOop numSlots: numSlots with: fillValue [
 	self subclassResponsibility
@@ -4042,15 +3789,6 @@ SpurMemoryManager >> findAPig [
 			[(pig isNil or: [pig > f]) ifTrue:
 				[pig := f]]].
 	^pig
-]
-
-{ #category : #compaction }
-SpurMemoryManager >> findFirstFreeChunkAfter: start [
-	self allOldSpaceObjectsFrom: start do:
-		[:o|
-		(self isFreeObject: o) ifTrue:
-			[^o]].
-	^endOfMemory
 ]
 
 { #category : #'free space' }
@@ -4137,59 +3875,6 @@ SpurMemoryManager >> firstClassIndexPun [
 SpurMemoryManager >> firstCompiledMethodFormat [
 	<api>
 	^24
-]
-
-{ #category : #compaction }
-SpurMemoryManager >> firstFitCompact [
-	"Compact all of memory above firstFreeChunk using first-fit, assuming free
-	 space is sorted and that as many of the the highest objects as will fit are
-	 recorded in highestObjects.  Don't move pinned objects.
-	 Note that we don't actually move; we merely copy and forward.  Eliminating
-	 forwarders will be done in a final pass."
-
-	<inline: false>
-	| first nhits nmisses |
-	self cCode: '' inSmalltalk: [coInterpreter transcript nextPutAll: 'ff compacting...'; flush].
-	self checkFreeSpace.
-	totalFreeOldSpace = 0 ifTrue: [^self].
-	highestObjects isEmpty ifTrue:
-		[^self].
-	nhits := nmisses  := 0.
-	[statCompactPassCount := statCompactPassCount + 1.
-	 highestObjects reverseDo:
-		[:o| | b |
-	 	 self assert: (firstFreeChunk = 0
-					or: [(self isFreeObject: firstFreeChunk)
-					or: [self isValidClassIndex: (self classIndexOf: firstFreeChunk)]]).
-		 (self oop: o isLessThanOrEqualTo: firstFreeChunk) ifTrue:
-			[coInterpreter print: 'firstFitCompact fits: '; printNum: nhits; print: ' misfits: '; printNum: nmisses; cr.
-			 ^self].
-		 ((self isForwarded: o) or: [self isPinned: o]) ifFalse:
-			[b := self bytesInObject: o.
-			 (self allocateOldSpaceChunkOfBytes: b suchThat: [:f| f < o])
-				ifNil:
-					[nmisses := nmisses + 1]
-				ifNotNil:
-					[:f| | fo |
-					 nhits := nhits + 1.
-					 "here's a wrinkle; if the firstFreeChunk is allocated to a small object and the firstFreeChunk
-					  is a large chunk then firstFreeChunk will no longer point to an object header.  So check and
-					  adjust firstFreeChunk if it is assigned to."
-					 fo := self objectStartingAt: f.
-					 fo = firstFreeChunk ifTrue:
-						[firstFreeChunk := lastSubdividedFreeChunk = 0
-												ifTrue: [self objectAfter: fo]
-												ifFalse: [self objectStartingAt: lastSubdividedFreeChunk]].
-					 self copyAndForward: o withBytes: b toFreeChunk: f.
-					 self assert: (lastSubdividedFreeChunk = 0
-								  or: [(self addressAfter: (self objectStartingAt: f)) = lastSubdividedFreeChunk])]]].
-	 self checkFreeSpace.
-	 first := self longAt: highestObjects first.
-	 self assert: (self oop: first isGreaterThan: firstFreeChunk).
-	 self fillHighestObjectsWithMovableObjectsFromFirstFreeChunkUpTo: first.
-	 highestObjects usedSize > 0] whileTrue.
-
-	coInterpreter print: 'firstFitCompact fits: '; printNum: nhits; print: ' misfits: '; printNum: nmisses; cr
 ]
 
 { #category : #'object access' }
@@ -4649,7 +4334,6 @@ SpurMemoryManager >> freeChunkSmallerIndex [
 SpurMemoryManager >> freeChunkWithBytes: bytes at: address [
 	<inline: false>
 	| freeChunk |
-	self assert: (lastSubdividedFreeChunk := address) ~= 0.
 	self assert: (self isInOldSpace: address).
 	freeChunk := self initFreeChunkWithBytes: bytes at: address.
 	self assert: (self isInMemory: (self addressAfter: freeChunk)).
@@ -4773,91 +4457,6 @@ SpurMemoryManager >> freeTreeNodesDo: aBlock [
 ]
 
 { #category : #'gc - global' }
-SpurMemoryManager >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpace [
-	"Sweep all of old space, freeing unmarked objects, coalescing free chunks, and sorting free space.
-	Sort to suit the compaction algorithm being used."
-	self cCode: '' inSmalltalk: [coInterpreter transcript nextPutAll: 'sweeping...'; flush].
-	UseFitCompact
-		ifTrue: [self freeUnmarkedObjectsAndSortAndCoalesceFreeSpaceForFitCompact]
-		ifFalse: [self freeUnmarkedObjectsAndSortAndCoalesceFreeSpaceForPigCompact]
-]
-
-{ #category : #'gc - global' }
-SpurMemoryManager >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpaceForFitCompact [
-	"Sweep all of old space, freeing unmarked objects, coalescing free chunks, and sorting free space.
-
-	 Small free chunks are sorted in address order on each small list head.  Large free chunks
-	 are sorted on the sortedFreeChunks list.  Record as many of the highest objects as there
-	 is room for in highestObjects, a circular buffer, for the use of exactFitCompact.  Use
-	 unused eden space for highestObjects.  If highestObjects does not wrap, store 0
-	 at highestObjects last.  Record the lowest free object in firstFreeChunk.  Let the
-	 segmentManager mark which segments contain pinned objects via notePinned:."
-
-	| lastLargeFree lastHighest highestObjectsWraps sortedFreeChunks |
-	<inline: false>
-	<var: #lastHighest type: #usqInt>
-	self checkFreeSpace.
-	scavenger forgetUnmarkedRememberedObjects.
-	segmentManager prepareForGlobalSweep."for notePinned:"
-	"for sorting free space throw away the list heads, rebuilding them for small free chunks below."
-	self resetFreeListHeads.
-	highestObjects initializeStart: freeStart limit: scavenger eden limit.
-	lastHighest := highestObjects start - self wordSize. "a.k.a. freeStart - wordSize"
-	highestObjectsWraps := 0.
-	self assert: highestObjects limit - highestObjects start // self wordSize >= 1024.
-	firstFreeChunk := sortedFreeChunks := lastLargeFree := 0.
-	"Note that if we were truly striving for performance we could split the scan into
-	 two phases, one up to the first free object and one after, which would remove
-	 the need to test firstFreeChunk when filling highestObjects."
-	self allOldSpaceEntitiesForCoalescingFrom: self firstObject do:
-		[:o|
-		 self assert: (firstFreeChunk = 0 or: [self isFreeObject: firstFreeChunk]).
-		 (self isMarked: o)
-			ifTrue: "forwarders should have been followed in markAndTrace:"
-				[self assert: (self isForwarded: o) not.
-				 self setIsMarkedOf: o to: false. "this will unmark bridges. undo the damage in notePinned:"
-				 (self isPinned: o) ifTrue:
-					[segmentManager notePinned: o].
-				 firstFreeChunk ~= 0 ifTrue:
-					[false "conceptually...: "
-						ifTrue: [highestObjects addLast: o]
-						ifFalse: "but we inline so we can use the local lastHighest"
-							[(lastHighest := lastHighest + self wordSize) >= highestObjects limit ifTrue:
-								[highestObjectsWraps := highestObjectsWraps + 1.
-								 lastHighest := highestObjects start].
-							 self longAt: lastHighest put: o]]]
-			ifFalse: "unmarked; two cases, an unreachable object or a free chunk."
-				[| here |
-				 here := self coallesceFreeChunk: o.
-				 (self isLargeFreeObject: here)
-					ifTrue:
-						[self setFree: here.
-						 lastLargeFree = 0
-							ifTrue: [sortedFreeChunks := lastLargeFree := here]
-							ifFalse:
-								[self storePointer: self freeChunkNextAddressIndex
-									ofFreeChunk: lastLargeFree
-									withValue: here].
-						 lastLargeFree := here]
-					ifFalse:
-						[self freeSmallObject: here].
-				 firstFreeChunk = 0 ifTrue:
-					[self assert: (self isFreeObject: here).
-					 firstFreeChunk := here]]].
-	highestObjects last: lastHighest.
-	highestObjectsWraps ~= 0 ifTrue:
-		[highestObjects first: (lastHighest + self wordSize >= highestObjects limit
-								ifTrue: [highestObjects start]
-								ifFalse: [lastHighest + self wordSize])].
-	lastLargeFree ~= 0 ifTrue:
-		[self storePointer: self freeChunkNextAddressIndex ofFreeChunk: lastLargeFree withValue: 0].
-	totalFreeOldSpace := self reverseSmallListHeads.
-	totalFreeOldSpace := totalFreeOldSpace + (self rebuildFreeTreeFrom: sortedFreeChunks).
-	self checkFreeSpace.
-	self touch: highestObjectsWraps
-]
-
-{ #category : #'gc - global' }
 SpurMemoryManager >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpaceForPigCompact [
 	"Sweep all of old space, freeing unmarked objects, coalescing free chunks, and sorting free space.
 
@@ -4963,7 +4562,7 @@ SpurMemoryManager >> globalGarbageCollect [
 	self markObjects.
 	self expungeDuplicateAndUnmarkedClasses: true.
 	self nilUnmarkedWeaklingSlots.
-	self freeUnmarkedObjectsAndSortAndCoalesceFreeSpace.
+	self freeUnmarkedObjectsAndSortAndCoalesceFreeSpaceForPigCompact.
 
 	"Mid-way the leak check must be more lenient.  Unmarked classes will have been
 	 expunged from the table, but unmarked instances will not yet have been reclaimed."
@@ -4971,16 +4570,7 @@ SpurMemoryManager >> globalGarbageCollect [
 		excludeUnmarkedNewSpaceObjs: true
 		classIndicesShouldBeValid: true.
 
-	UseFitCompact
-		ifTrue:
-			[self compact.
-			 self eliminateAndFreeForwarders]
-		ifFalse:
-			[1 to: 3 do:
-				[:i|
-				 self pigCompact.
-				 self eliminateAndFreeForwardersForPigCompact].
-			 self rebuildFreeListsForPigCompact].
+	self compact.
 
 	self assert: self validObjStacks.
 	self assert: (self isEmptyObjStack: markStack).
@@ -5377,7 +4967,6 @@ SpurMemoryManager >> initialize [
 
 	"We can initialize things that are allocated but are lazily initialized."
 	unscannedEphemerons := SpurContiguousObjStack new.
-	highestObjects := SpurCircularBuffer new manager: self; yourself.
 
 	"we can initialize things that are virtual in C."
 	scavenger := SpurGenerationScavengerSimulator new manager: self; yourself.
@@ -7192,64 +6781,6 @@ SpurMemoryManager >> moveARunOfObjectsStartingAt: startAddress upTo: limit [
 	^here
 ]
 
-{ #category : #compaction }
-SpurMemoryManager >> moveMisfitsInHighestObjectsBack: savedLimit [
-	"After refilling highestObjects move any misfits back to being
-	 adjacent with the new objects, reset the space's limit and
-	 answer the pointer to the lowest failure to resume the scan."
-
-	| newMisfitsPosition |
-	savedLimit = highestObjects limit ifTrue:
-		[^highestObjects last].
-	"simple; we didnt fill all the way; just move misfits down."
-	(highestObjects first = highestObjects start
-	 and: [highestObjects last < highestObjects limit]) ifTrue:
-		[newMisfitsPosition := highestObjects limit.
-		 self mem: newMisfitsPosition asVoidPointer
-			mo: (highestObjects last + self wordSize) asVoidPointer
-			ve: savedLimit - newMisfitsPosition.
-		 highestObjects limit: savedLimit.
-		 ^newMisfitsPosition].
-	"tricky to do unless we have last - start's worth of free space.
-	 we *don't* want to rotate lots and lots of objects.  We could push
-	 misfits onto the mark stack, if it is big enough.
-	 limit: | misfits hi <-> lo | lowest candidates | highest candidates | : start
-	                                                                   ^ last"
-	self shouldBeImplemented.
-	^newMisfitsPosition
-]
-
-{ #category : #compaction }
-SpurMemoryManager >> moveMisfitsToTopOfHighestObjects: misfits [
-	"After a cycle of exact-fit compaction highestObjects may contain some
-	 number of mobile objects that fail to fit, and more objects may exist to
-	 move.  Move existing misfits to top of highestObjects and temporarily
-	 shrink highestObjects to refill it without overwriting misfits.  Answer the
-	 old limit. moveMisfitsInHighestObjectsBack: will undo the change."
-
-	| oldLimit bytesToMove |
-	oldLimit := highestObjects limit.
-	misfits = (highestObjects last + self wordSize) ifTrue:
-		[^oldLimit].
-	(self oop: misfits isLessThanOrEqualTo: highestObjects last) ifTrue:
-		[bytesToMove := highestObjects last + self wordSize - misfits.
-		 self mem: (highestObjects limit - bytesToMove) asVoidPointer
-			mo: misfits asVoidPointer
-			ve: bytesToMove.
-		 highestObjects limit: misfits - self wordSize.
-		 ^oldLimit].
-	"misfits wrapped; move in two stages to preserve ordering"
-	bytesToMove := highestObjects last - highestObjects start.
-	self mem: (misfits - bytesToMove) asVoidPointer
-		mo: misfits asVoidPointer
-		ve: oldLimit - misfits.
-	highestObjects limit: misfits - bytesToMove.
-	self mem: (oldLimit - bytesToMove)  asVoidPointer
-		mo: highestObjects start asVoidPointer
-		ve: bytesToMove.
-	^oldLimit
-]
-
 { #category : #accessing }
 SpurMemoryManager >> needGCFlag [
 	^needGCFlag
@@ -8404,7 +7935,8 @@ SpurMemoryManager >> rebuildFreeListsForPigCompact [
 		[:freeObj| | start bytes |
 		 bytes := (self bytesInObject: freeObj).
 		 start := self startOfObject: freeObj.
-		 self addFreeChunkWithBytes: bytes at: start]
+		 self addFreeChunkWithBytes: bytes at: start].
+	self checkFreeSpace
 ]
 
 { #category : #'free space' }
@@ -9545,47 +9077,6 @@ SpurMemoryManager >> sufficientSpaceToInstantiate: classObj indexableSize: index
 ]
 
 { #category : #compaction }
-SpurMemoryManager >> sweepToCoallesceFreeSpaceAndRebuildFreeListsForFitCompactFrom: lowestFree [
-	| firstFree lastFree |
-	firstFree := lastFree := 0.
-	"Sweep from lowest forwarder, coalescing runs of forwarders and free objects."
-	self allOldSpaceEntitiesFrom: lowestFree do:
-		[:o|
-		(self isFreeObject: o)
-			ifTrue: "two cases, isolated, in which case leave alone, or adjacent,
-					in which case, remove from free set prior to coalesce."
-				[| next |
-				 next := self objectAfter: o limit: endOfMemory.
-				 self assert: (next = endOfMemory or: [(self isFreeObject: next) not]). "free chunks have already been coalesced"
-				 (firstFree ~= 0
-				  or: [next ~= endOfMemory and: [self isForwarded: next]]) ifTrue:
-					[firstFree = 0 ifTrue:
-						[firstFree := o].
-					 lastFree := o.
-					 self detachFreeObject: o.
-					 self checkFreeSpace]]
-			ifFalse:
-				[(self isForwarded: o)
-					ifTrue:
-						[firstFree = 0 ifTrue:
-							[firstFree := o].
-						 lastFree := o]
-					ifFalse:
-						[firstFree ~= 0 ifTrue:
-							[| start bytes |
-							 start := self startOfObject: firstFree.
-							 bytes := (self addressAfter: lastFree) - start.
-							 self addFreeChunkWithBytes: bytes at: start.
-							 self checkFreeSpace].
-						 firstFree := 0]]].
-	firstFree ~= 0 ifTrue:
-		[| start bytes |
-		 start := self startOfObject: firstFree.
-		 bytes := (self addressAfter: lastFree) - start.
-		 self addFreeChunkWithBytes: bytes at: start].
-]
-
-{ #category : #compaction }
 SpurMemoryManager >> sweepToCoallesceFreeSpaceAndRebuildFreeListsForPigCompactFrom: lowestForwarder [
 	"Coallesce free chunks and forwarders and rebuild the free list."
 	| lowest firstFree firstFreeStart lastFree |
@@ -9674,27 +9165,6 @@ SpurMemoryManager >> sweepToFollowForwarders [
 						 self storePointer: i ofObject: o withValue: f]]]].
 	^lowestFree
 
-]
-
-{ #category : #compaction }
-SpurMemoryManager >> sweepToFollowForwardersForFitCompact [
-	"sweep, following forwarders in all live objects, and finding the first forwarder."
-	| lowestFree |
-	lowestFree := 0.
-	self allOldSpaceEntitiesDo:
-		[:o|
-		((self isFreeObject: o) or: [self isForwarded: o])
-			ifTrue:
-				[lowestFree = 0 ifTrue:
-					[lowestFree := o]]
-			ifFalse:
-				[0 to: (self numPointerSlotsOf: o) - 1 do:
-					[:i| | f |
-					f := self fetchPointer: i ofObject: o.
-					(self isOopForwarded: f) ifTrue:
-						[f := self followForwarded: f.
-						 self storePointer: i ofObject: o withValue: f]]]].
-	^lowestFree
 ]
 
 { #category : #compaction }
