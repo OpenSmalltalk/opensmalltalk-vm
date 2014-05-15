@@ -4903,6 +4903,10 @@ Cogit >> genMethodAbortTrampoline [
 	opcodeIndex := 0.
 	self CmpCq: 0 R: ReceiverResultReg.
 	jumpSICMiss := self JumpNonZero: 0.
+	"on machines with a link register, pop the stack if the receiverresulteg = 0"
+		backEnd hasLinkRegister ifTrue:
+			[self AddCq: BytesPerWord R: SPReg].
+
 	self compileTrampolineFor: #ceStackOverflow:
 		callJumpBar: true
 		numArgs: 1

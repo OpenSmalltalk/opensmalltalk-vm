@@ -52,6 +52,12 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
+{ #category : #accessing }
+CogARMCompiler class >> ARMTempReg [
+"return the name of the general temp reg in the ARM APCS convention"
+	^RISCTempReg
+]
+
 { #category : #'class initialization' }
 CogARMCompiler class >> initialize [
 	
@@ -62,23 +68,33 @@ CogARMCompiler class >> initialize [
 	super initialize.
 	self ~~ CogARMCompiler ifTrue: [^self].
 	
-	R0 := 0. R1 := 1.
-	R2 := 2. R3 := 3.
-	R4 := 4. R5 := 5.
-	R6 := 6. R7 := 7.
-	R8 := 8. R9 := 9.
-	R10 := 10. R11 := 11.
-	R12 := 12.
-	SP := 13.
+	R0 := 0.
+	R1 := 1.
+	R2 := 2.
+	R3 := 3.
+	R4 := 4.
+	R5 := 5.
+	R6 := 6.
+	R7 := 7.
+	R8 := 8.
+	R9 := 9.
+	R10 := 10.
+	R11 := 11.
+	R12 := 12..
+	SP := 13..
 	LR := 14.
 	PC := 15.
 	
-	CArg0Reg := 0. CArg1Reg := 1. CArg2Reg := 2. CArg3Reg := 3.
+	CArg0Reg := 0.
+	CArg1Reg := 1.
+	CArg2Reg := 2.
+	CArg3Reg := 3.
 	
 	RISCTempReg := R10.
 	
-	"Condition Codes"
+	"Condition Codes. Note that cc=16rF is NOT ALLOWED as a condition; it specifies an extension instruction. See e.g.ARM_ARM v5 DDI01001.pdf A3.2.1"
 	conditionCodes := #(EQ NE CS CC MI PL VS VC HI LS GE LT GT LE AL).
+	"this is a somewhat odd way to set class variables - were they originally globals?"
 	conditionCodes withIndexDo: [ :classVarName :value | 
 		self classPool
 			declare: classVarName from: Undeclared;
@@ -100,6 +116,34 @@ CogARMCompiler class >> initialize [
 			at: classVarName put: value + LastRTLCode - 1]
 ]
 
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> add: destReg rn: srcReg imm: immediate ror: rot [
+"return an ADD destReg, srcReg, immediat ROR rot instruction"
+
+	^self type: 1 op: 4 set: 0 rn: srcReg rd: destReg shifterOperand: (rot <<8 bitOr: immediate)
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> addRd: destReg rn: srcReg imm: immediate ror: rot [
+"return an ADD destReg, srcReg, immediat ROR rot instruction"
+
+	^self type: 1 op: 4 set: 0 rn: srcReg rd: destReg shifterOperand: (rot <<8 bitOr: immediate)
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> addRd: destReg rn: srcReg rm: addReg [
+"return an ADD destReg, srcReg, addReg instruction"
+
+	^self type: 0 op: 4 set: 0 rn: srcReg rd: destReg shifterOperand: addReg
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> adds: destReg rn: srcReg imm: immediate ror: rot [
+"return an ADDS destReg, srcReg, immediat ROR rot instruction"
+
+	^self type: 1 op: 4 set: 1 rn: srcReg rd: destReg shifterOperand: (rot <<8 bitOr: immediate)
+]
+
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> at: offset moveCw: constant intoR: destReg [
 	"This loads aWord into the inter-opcode temporary register. Because most ARM instruction enable using a (8-12bit) offset relative to a register, the LS Byte can be included in that instruction, saving one instruction. This is done in a decorator, e.g. CmpCqR"
@@ -111,37 +155,41 @@ CogARMCompiler >> at: offset moveCw: constant intoR: destReg [
 	with minimal choice of the rotation (last digit)"
 	"The same area can be modified multiple times, because the opperation is (inclusive) or."
 	<inline: true>
-	0 to: 12 by: 4 do: [ :i | | rightRingRotation |
-		rightRingRotation := self minimalRightRingRotationFor: constant initialRotation: 12 - i.
-		machineCode
-			at: offset + i + 3 put: 16rE3;
-			at: offset + i + 2 put: (16r80 bitOr: destReg);
-			at: offset + i + 1 put: ((rightRingRotation at: 1) bitOr: destReg << 4);
-			at: offset + i"+0"put: (rightRingRotation at: 2).
-		].
-	machineCode at: offset + 2 put: 16rA0. "only the first operation need be MOV"
+	"self assert: destReg < 12."
+
+	self machineCodeAt: offset put: (self mov: destReg imm: (constant >>24 bitAnd: 16rFF) ror: 8).
+	self machineCodeAt: offset +4 put: (self orr: destReg imm: (constant >> 16 bitAnd: 16rFF) ror: 16).
+	self machineCodeAt: offset +8 put: (self orr: destReg imm: (constant >> 8 bitAnd: 16rFF) ror: 24).
+	self machineCodeAt: offset +12 put: (self orr: destReg imm: (constant bitAnd: 16rFF) ror: 0).
 	^16
 ]
 
-{ #category : #encoding }
-CogARMCompiler >> c: c t: t o: o s: s [
-	"c : 4 bit, t: 3 bit, o: 4 bit, s: 1bit"
-	"the leftmost 12bit of (most) ARM instruction"
-	<inline: true>
-	^ c << 28 bitOr: ((t << 25) bitOr: ((o << 21) bitOr: (s << 20)))
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> b: offset [
+"return a B offset instruction"
+	^self cond: AL br: 0 offset: offset
+
 ]
 
-{ #category : #encoding }
-CogARMCompiler >> c: conditionCode t: type o: flagsOrOpcode s: doUpdateStatusRegister rn:  sourceRegister rd: targetRegister [
-	<inline: true>
-	^(self c: conditionCode t: type o: flagsOrOpcode s: doUpdateStatusRegister) 
-		bitOr: (sourceRegister << 16 bitOr: targetRegister << 12)
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> bl: offset [
+"return a BL offset instruction"
+	^self cond: AL br: 1 offset: offset
+
 ]
 
-{ #category : #encoding }
-CogARMCompiler >> c: conditionCode t: type o: flagsOrOpcode s: doUpdateStatusRegister rn:  sourceRegister rd: targetRegister shifterOperand: so [
-	<inline: true>
-	^(self c: conditionCode t: type o: flagsOrOpcode s: doUpdateStatusRegister rn: sourceRegister rd: targetRegister) bitOr: so
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> blx: targetReg [
+"return a BX targetReg instruction"
+	^self cond: AL bx: 1 target: targetReg
+
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> bx: targetReg [
+"return a BX targetReg instruction"
+	^self cond: AL bx: 0 target: targetReg
+
 ]
 
 { #category : #abi }
@@ -154,15 +202,15 @@ CogARMCompiler >> cResultRegister [
 { #category : #'inline cacheing' }
 CogARMCompiler >> callTargetFromReturnAddress: callSiteReturnAddress [
 	"Answer the address the call immediately preceeding callSiteReturnAddress will jump to."
+	"this is also used by #jumpLongTargetBeforeFOllowingAddress: and so we check for both call and jump related instructions; later on we can use simpler tests once it feels safe to assume we get here always with a call/jump in the proper place"
 	| callDistance call |
 	call := self instructionBeforeAddress: callSiteReturnAddress.
 	self assert: call ~= 0. "andeq r0, r0 will not be generated, not even as nops"
-	(self isBranch: call)
-		ifTrue: [ callDistance := (call bitAnd: 16r00FFFFFF) << 2.
-			"The distance is a signed 24bit number. Therefore, the highest (26th) bit has to be expanded"
-			(callDistance bitAnd: 16r02000000) ~= 0 
-				ifTrue: [callDistance := callDistance bitOr: 16rFC000000]]
-		ifFalse: [ "A Long Jump. Extract the value saved to RISCTempReg from all the instructions before."
+	((self instructionIsB: call) or:[self instructionIsBL: call])
+		ifTrue: [ "a short call/jump" callDistance := self extractOffsetFromBL: call]
+		ifFalse: [ "A Long Call/Jump. Extract the value saved to RISCTempReg from all the instructions before."
+			((self instructionIsBX: call) or:[self instructionIsBLX: call])
+				ifTrue:[self extractOffsetFromBXAt: self halt].
 			self notYetImplemented ].
 	^callSiteReturnAddress + 4 + callDistance signedIntFromLong
 ]
@@ -204,12 +252,12 @@ CogARMCompiler >> computeMaximumSize [
 		caseOf: {
 			[Label]					-> [^maxSize := 0].
 			[AlignmentNops]		-> [^maxSize := (operands at: 0) - 1].
-			[MoveAwR]				-> [^maxSize := 16].
+			[MoveAwR]				-> [^maxSize := 20].
 			[MoveCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
 											ifTrue: [:r :i| maxSize := 4]
 											ifFalse: [maxSize := 16]].
 			[MoveCwR]				-> [^maxSize := 16].
-			[MoveRAw]				-> [^maxSize := 16].
+			[MoveRAw]				-> [^maxSize := 20].
 			[MoveRMwr]			-> [self is12BitValue: (operands at: 1)
 											ifTrue: [ :u :i | ^maxSize := 4]
 											ifFalse: [ ^maxSize := 20 ]].
@@ -222,7 +270,7 @@ CogARMCompiler >> computeMaximumSize [
 			[MoveMbrR]				-> [self is12BitValue: (operands at: 0)
 											ifTrue: [ :u :i | ^maxSize := 4]
 											ifFalse: [ ^maxSize := 20 ]].
-			[PrefetchAw] 			-> [^maxSize := 16].
+			[PrefetchAw] 			-> [^maxSize := 20].
 			[Call]					-> [^maxSize := 20 "recomputed in #sizePCDependentInstruction."].
 			[RetN]					-> [^(operands at: 0) = 0 
 											ifTrue: [maxSize := 4]
@@ -248,9 +296,9 @@ CogARMCompiler >> computeMaximumSize [
 			[JumpFPLessOrEqual]	-> [^maxSize := 8].
 			[JumpFPOrdered]		-> [^maxSize := 8].
 			[JumpFPUnordered]		-> [^maxSize := 8].
-			[JumpLong]				-> [^maxSize := 16].
-			[JumpLongZero]		-> [^maxSize := 16].
-			[JumpLongNonZero]	-> [^maxSize := 16].
+			[JumpLong]				-> [^maxSize := 20].
+			[JumpLongZero]		-> [^maxSize := 20].
+			[JumpLongNonZero]	-> [^maxSize := 20].
 			[LoadEffectiveAddressMwrR] -> [rotateableAt0then4or20Block value].
 			[PushCw]				-> [^maxSize := 20].
 		}
@@ -293,9 +341,7 @@ CogARMCompiler >> concretizeAddCqR [
 	self rotateable8bitImmediate: (operands at: 0)
 		ifTrue: [ :rot :immediate | | reg |
 			reg := self concreteRegister: (operands at: 1).
-			self machineCodeAt: 0 put: ((self t: 1 o: 4 s: 1) bitOr: reg << 16).
-			machineCode at: 0 put: immediate.
-			machineCode at: 1 put: (reg << 4 bitOr: rot).
+			self machineCodeAt: 0 put: (self adds: reg rn: reg imm: immediate ror: rot).
 			^machineCodeSize := 4]
 		ifFalse: [
 			self rotateable8bitImmediate: (operands at: 0) negated
@@ -309,37 +355,42 @@ CogARMCompiler >> concretizeAddCqR [
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeAlignmentNops [
 	<inline: true>
+	"fill any slots with NOPs - in this case mov  r0, r0 - which is the NOP I always used to use"
 	self assert: machineCodeSize \\ 4 = 0.
 	0 to: machineCodeSize - 1 by: 4 do:
-		[:p| objectMemory 
-			byteAt: p put: 16r01;
-			byteAt: p+1 put: 16r10;
-			byteAt: p+2 put: 16rA0;
-			byteAt: p+3 put: 16rE1]
+		[:p| machineCode 
+			at: p put: 16r0;
+			at: p+1 put: 16r0;
+			at: p+2 put: 16rA0;
+			at: p+3 put: 16rE1]
 ]
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeArithmeticShiftRightCqR [
 	"Will get inlined into concretizeAt: switch."
+	"this is an unfortunate waste of an instruction in most cases since the shift can usually be done in a subsequent arithmetic instruction. 
+	Handle for now with a MOV reg, reg, ASR #distance"
 	<inline: true>
 	| distance reg |
 	distance := (operands at: 0) min: 31.
 	reg := self concreteRegister: (operands at: 1).
 	"cond 000 1101 0 0000 dest dist -100 srcR"
-	self machineCodeAt: 0 put: (self t: 0 o: 16rD s: 0 rn: 0 rd: reg 
-									shifterOperand: (distance << 7 bitOr: (64 bitOr: reg))).
+	self machineCodeAt: 0 put: (self type: 0 op: 16rD set: 0 rn: 0 rd: reg 
+									shifterOperand: (distance << 7 bitOr: (64 "flag for arithmetic" bitOr: reg))).
 	^machineCodeSize := 4
 ]
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeArithmeticShiftRightRR [
 	"Will get inlined into concretizeAt: switch."
+	"this is an unfortunate waste of an instruction in most cases since the shift can usually be done in a subsequent arithmetic instruction. 
+	Handle for now with a MOV reg, reg, ASR distReg"
 	<inline: true>
 	| destReg distReg |
 	distReg := self concreteRegister: (operands at: 0).
 	destReg := self concreteRegister: (operands at: 1).
-	"cond 000 1101 0 0000 dest dist 0101 srcR"
-	self machineCodeAt: 0 put: (self t: 0 o: 16rD s: 0 rn: 0 rd: destReg 
+	"cond 000 1101 0 0000 destR distR 0101 srcR"
+	self machineCodeAt: 0 put: (self type: 0 op: 16rD set: 0 rn: 0 rd: destReg 
 									shifterOperand: (distReg << 8 bitOr: (80 bitOr: destReg))).
 	^machineCodeSize := 4
 ]
@@ -366,17 +417,11 @@ CogARMCompiler >> concretizeCall [
 	offset := (operands at: 0) signedIntFromLong - (address + 8 "normal pc offset") signedIntFromLong.
 	(self isQuick: offset)
 		ifTrue: [
-			self machineCodeAt: 0 put: (self t: 5 o: 8) + (offset >> 2 bitAnd: 16r00FFFFFF). "BL offset"
+			self machineCodeAt: 0 put: (self bl: offset). "BL offset"
 			^machineCodeSize := 4]
 		ifFalse: [
-			self error: 'While we know how to generate a long distance call, we can''t update such a send site yet. Please restart with smaller cache size'.
-			self concretizeConditionalJumpLong: AL.
-			"move the actual jump two instructions further, inserting the pc back-up to lr and the pc push."
-			self machineCodeAt: 16 put: (self machineCodeAt: 12).
-		"Because the pc always points to the actual address + 8, the value at pc is the address of the instruction after the branch"
-			"mov lr, pc"
-			self machineCodeAt: 12 put: (self t: 0 o: 16rD s: 0 rn: 0 rd: LR shifterOperand: PC).
-			^machineCodeSize := 20]
+			"self error: 'While we know how to generate a long distance call, we can''t update such a send site yet. Please restart with smaller cache size'."
+			^self concretizeLongCall]
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -425,7 +470,7 @@ CogARMCompiler >> concretizeConditionalJump: conditionCode [
 	offset := self computeJumpTargetOffsetPlus: 8.
  	(self isQuick: offset)
 		ifTrue: [
-			self machineCodeAt: 0 put: (self c: conditionCode t: 5 o: 0 s: 0) + (offset >> 2 bitAnd: 16r00FFFFFF). "B offset"
+			self machineCodeAt: 0 put: (self cond: conditionCode br: 0 offset: offset). "B offset"
 			^machineCodeSize := 4]
 		ifFalse: [
 			^self concretizeConditionalJumpLong: conditionCode]
@@ -439,13 +484,13 @@ CogARMCompiler >> concretizeConditionalJumpLong: conditionCode [
 		Generating initial trampolines instructions may have no maxSize and be to absolute addresses.
 		Otherwise instructions must have a machineCodeSize which must be kept to."
 	<inline: true>
-	| jumpTarget |
+	| jumpTarget instrOffset|
 	<var: #jumpTarget type: #'AbstractInstruction *'>
 	jumpTarget := self longJumpTargetAddress.
-	self at: 0 moveCw: jumpTarget intoR: RISCTempReg.
-	"add pc, r3, #<byte 0>"
-	self machineCodeAt: 12 put: (self c: conditionCode t: 1 o: 4 s: 0 rn: RISCTempReg rd: PC shifterOperand: (jumpTarget bitAnd: 16rFF)).
-	^machineCodeSize := 16
+	instrOffset := self at: 0 moveCw: jumpTarget intoR: RISCTempReg.
+	"bx RISCTempReg"
+	self machineCodeAt: instrOffset put: (self bx: RISCTempReg).
+	^machineCodeSize := instrOffset + 4
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -457,9 +502,7 @@ CogARMCompiler >> concretizeDataOperationCqR: opcode [
 		rotateable8bitImmediate: (operands at: 0) 
 		ifTrue: [:rot :immediate | | reg |
 			reg := self concreteRegister: (operands at: 1).
-			self machineCodeAt: 0 put: ((self t: 1 o: opcode s: 1) bitOr: reg << 16).
-			machineCode at: 0 put: immediate.
-			machineCode at: 1 put: (reg << 4 bitOr: rot).
+			self machineCodeAt: 0 put: (self type: 1 op: opcode set: 1 rn: reg rd: reg shifterOperand: (rot << 8 bitOr: immediate)).
 			^machineCodeSize := 4]
 		ifFalse: [^self concretizeDataOperationCwR: opcode].
 	
@@ -470,13 +513,13 @@ CogARMCompiler >> concretizeDataOperationCwR: opcode [
 	"Will get inlined into concretizeAt: switch."
 	"Load the word into the RISCTempReg, then cmp R, RISCTempReg"
 	<inline: true>
-	| constant srcDestReg |
+	| constant srcDestReg instrOffset|
 	constant := operands at: 0.
 	srcDestReg := (self concreteRegister: (operands at: 1)).
-	self at: 0 moveCw: constant intoR: RISCTempReg.
-	self machineCodeAt: 16 
-		put: ((self t: 0 o: opcode s: 1) bitOr: ((srcDestReg << 16 bitOr: srcDestReg <<12) bitOr: RISCTempReg)).
-	^machineCodeSize := 20.
+	instrOffset := self at: 0 moveCw: constant intoR: RISCTempReg.
+	self machineCodeAt: instrOffset 
+		put: (self type: 0 op: opcode set: 1 rn: srcDestReg rd: srcDestReg shifterOperand: RISCTempReg).
+	^machineCodeSize := instrOffset + 4
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -488,7 +531,7 @@ CogARMCompiler >> concretizeDataOperationRR: opcode [
 	srcReg := self concreteRegister: (operands at: 0).
 	destReg := (self concreteRegister: (operands at: 1)).
 	self machineCodeAt: 0 
-		put: (self t: 0 o: opcode s: 1 rn: destReg rd: destReg shifterOperand: srcReg).
+		put: (self type: 0 op: opcode set: 1 rn: destReg rd: destReg shifterOperand: srcReg).
 	^machineCodeSize := 4.
 ]
 
@@ -500,9 +543,28 @@ CogARMCompiler >> concretizeFPConditionalJump: conditionCode [
 	self assert: (operands at: 0) ~= 0.
 	offset := ((operands at: 0) - (address + 8)) signedIntFromLong "signed-conversion for range assertion".
 	self assert: offset <= 33554428 & (offset >= -33554432).
-	self machineCodeAt: 0 put: 16rEF1FA10. "FMSTAT: copy the FPSCR to CPSR"
-	self machineCodeAt: 4 put: (self c: conditionCode t: 5 o: 0 s: 0) + (offset >> 2 bitAnd: 16r00FFFFFF). "B offset"
+	self machineCodeAt: 0 put: self fmstat. "FMSTAT: copy the FPSCR to CPSR"
+	self machineCodeAt: 4 put: (self cond: conditionCode br: 0 offset: offset). "B offset"
 	^machineCodeSize := 8
+]
+
+{ #category : #'generate machine code' }
+CogARMCompiler >> concretizeFill16 [
+	"fill with (operand 0 bitAnd: 16rFFFF) according to the processor's endianness"
+	self halt: 'unused opcode?'
+]
+
+{ #category : #'generate machine code' }
+CogARMCompiler >> concretizeFill32 [
+	"fill with operand 0 according to the processor's endianness"
+	| word |
+	<var: #word type: #'unsigned long'>
+	word := operands at: 0.
+	machineCode at: 0 put: (word bitAnd: 16rFF).
+	machineCode at: 1 put: (word >> 8bitAnd: 16rFF)..
+	machineCode at: 2 put: (word >> 16bitAnd: 16rFF)..
+	machineCode at: 3 put: (word >> 24bitAnd: 16rFF)..
+	^machineCodeSize := 4
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -515,54 +577,58 @@ CogARMCompiler >> concretizeJumpR [
 	<inline: true>
 	| reg |
 	reg := self concreteRegister: (operands at: 0).
-	"mov pc, r?, #0"
-	self machineCodeAt: 0 put: (self t: 0 o: 16rD s: 0 rn: 0 rd: PC shifterOperand: reg).
+	"bx reg"
+	self machineCodeAt: 0 put: (self bx: reg).
 	^machineCodeSize := 4
 ]
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeLoadEffectiveAddressMwrR [
 	"Will get inlined into concretizeAt: switch."
-	"destReg = destReg + offset"
+	"destReg = srcReg (which contains an address) + offset"
 	<inline: true>
-	| srcReg offset destReg |
+	| srcReg offset destReg instrOffset |
 	offset := operands at: 0.
 	srcReg := self concreteRegister: (operands at: 1).
 	destReg := self concreteRegister: (operands at: 2).
 	self rotateable8bitImmediate: offset
 		ifTrue: [ :rot :immediate | 
 			self machineCodeAt: 0 
-				"add destReg, srcReg, #immediate"
-				put: (self t: 1 o: 4 s: 0 rn: srcReg rd: destReg shifterOperand: (rot <<8 bitOr: immediate)).
+				"add destReg, srcReg, #immediate ROR rot"
+				put: (self add: destReg rn: srcReg imm: immediate ror: rot).
 			^machineCodeSize := 4]
 		ifFalse: [ 
-			self at: 0 moveCw: offset intoR: RISCTempReg.
+			instrOffset := self at: 0 moveCw: offset intoR: RISCTempReg.
 			"add destReg, srcReg, RISCTempReg"
-			self machineCodeAt: 16 put: (self t: 0 o: 4 s: 0 rn: srcReg rd: destReg shifterOperand: RISCTempReg).
-			^machineCodeSize := 20 ]
+			self machineCodeAt: 16 put: (self addRd: destReg rn: srcReg rm: RISCTempReg).
+			^machineCodeSize := instrOffset + 4 ]
 ]
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeLogicalShiftLeftCqR [
 	"Will get inlined into concretizeAt: switch."
+	"this is an unfortunate waste of an instruction in most cases since the shift can usually be done in a subsequent arithmetic instruction. 
+	Handle for now with a MOV reg, reg, LSL #distance"
 	<inline: true>
 	| distance reg |
 	distance := (operands at: 0) min: 31.
 	reg := self concreteRegister: (operands at: 1).
 	"cond 000 1101 0 0000 dest dista 000 srcR"
-	self machineCodeAt: 0 put: (self t: 0 o: 16rD s: 0 rn: 0 rd: reg shifterOperand: (distance << 7 bitOr: reg)).
+	self machineCodeAt: 0 put: (self type: 0 op: 16rD set: 0 rn: 0 rd: reg shifterOperand: (distance << 7 bitOr: reg)).
 	^machineCodeSize := 4
 ]
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeLogicalShiftLeftRR [
 	"Will get inlined into concretizeAt: switch."
+	"this is an unfortunate waste of an instruction in most cases since the shift can usually be done in a subsequent arithmetic instruction. 
+	Handle for now with a MOV reg, reg, LSL distReg"
 	<inline: true>
 	| destReg distReg |
 	distReg := self concreteRegister: (operands at: 0).
 	destReg := self concreteRegister: (operands at: 1).
 	"cond 000 1101 0 0000 dest dist 0001 srcR"
-	self machineCodeAt: 0 put: (self t: 0 o: 16rD s: 0 rn: 0 rd: destReg 
+	self machineCodeAt: 0 put: (self type: 0 op: 16rD set: 0 rn: 0 rd: destReg 
 									shifterOperand: (distReg << 8 bitOr: (16 bitOr: destReg))).
 	^machineCodeSize := 4
 ]
@@ -570,12 +636,14 @@ CogARMCompiler >> concretizeLogicalShiftLeftRR [
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeLogicalShiftRightCqR [
 	"Will get inlined into concretizeAt: switch."
+	"this is an unfortunate waste of an instruction in most cases since the shift can usually be done in a subsequent arithmetic instruction. 
+	Handle for now with a MOV reg, reg, LSR #distance"
 	<inline: true>
 	| distance reg |
 	distance := (operands at: 0) min: 31.
 	reg := self concreteRegister: (operands at: 1).
 	"cond 000 1101 0 0000 dest dist -010 srcR"
-	self machineCodeAt: 0 put: (self t: 0 o: 16rD s: 0 rn: 0 rd: reg 
+	self machineCodeAt: 0 put: (self type: 0 op: 16rD set: 0 rn: 0 rd: reg 
 									shifterOperand: (distance << 7 bitOr: (32 bitOr: reg))).
 	^machineCodeSize := 4
 ]
@@ -583,31 +651,47 @@ CogARMCompiler >> concretizeLogicalShiftRightCqR [
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeLogicalShiftRightRR [
 	"Will get inlined into concretizeAt: switch."
+	"this is an unfortunate waste of an instruction in most cases since the shift can usually be done in a subsequent arithmetic instruction. 
+	Handle for now with a MOV reg, reg, LSR distReg"
 	<inline: true>
 	| destReg distReg |
 	distReg := self concreteRegister: (operands at: 0).
 	destReg := self concreteRegister: (operands at: 1).
 	"cond 000 1101 0 0000 dest dist 0011 srcR"
-	self machineCodeAt: 0 put: (self t: 0 o: 16rD s: 0 rn: 0 rd: destReg 
+	self machineCodeAt: 0 put: (self type: 0 op: 16rD set: 0 rn: 0 rd: destReg 
 									shifterOperand: (distReg << 8 bitOr: (48 bitOr: destReg))).
 	^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeLongCall [
+	"Will get inlined into concretizeAt: switch."
+	"Sizing/generating calls.
+		Jump targets can be to absolute addresses or other abstract instructions.
+		Generating initial trampolines instructions may have no maxSize and be to absolute addresses.
+		Otherwise instructions must have a machineCodeSize which must be kept to."
+	<inline: true>
+	| jumpTarget instrOffset|
+	<var: #jumpTarget type: #'AbstractInstruction *'>
+	jumpTarget := self longJumpTargetAddress.
+	instrOffset := self at: 0 moveCw: jumpTarget intoR: RISCTempReg.
+	"blx RISCTempReg"
+	self machineCodeAt: instrOffset put: (self blx: RISCTempReg).
+	^machineCodeSize := instrOffset + 4
 ]
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeMoveAwR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	| srcAddr destReg |
+	| srcAddr destReg instrOffset|
 	srcAddr := operands at: 0.
 	destReg := self concreteRegister: (operands at: 1).
 	"load the address into RISCTempReg"
-	self at: 0 moveCw: srcAddr intoR: RISCTempReg.
-	"Moving allows building an 8bit offset, so the lowest byte can be used in this instruction and we save 4 byte."
-	machineCode
-		at: 15 put: 16rE5; "LDR srcReg, [R3, +LSB(addr)]"
-		at: 14 put: (16r90 bitOr: RISCTempReg);
-		at: 13 put: (destReg << 4).
-	^machineCodeSize := 16
+	instrOffset := self at: 0 moveCw: srcAddr intoR: RISCTempReg.
+	"We *could* overwrite the last instruction above with a LDR a, b, last-byte-of-srcAddr BUT that would break if we change to loading literals instead of forming long constants"
+	self machineCodeAt: instrOffset put: (self ldr: destReg rn: RISCTempReg plusImm: 0).
+	^machineCodeSize := instrOffset + 4
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -619,9 +703,7 @@ CogARMCompiler >> concretizeMoveCqR [
 		rotateable8bitImmediate: (operands at: 0) 
 		ifTrue: [:rot :immediate | | reg |
 			reg := self concreteRegister: (operands at: 1).
-			self machineCodeAt: 0 put: (self t: 1 o: 16rD s: 0).
-			machineCode at: 0 put: immediate.
-			machineCode at: 1 put: (reg << 4 bitOr: rot).
+			self machineCodeAt: 0 put: (self type: 1 op: 16rD set: 0 rn: 0 rd: reg shifterOperand: (rot << 8 bitOr: immediate)).
 			^machineCodeSize := 4]
 		ifFalse: [^self concretizeMoveCwR].
 	
@@ -634,36 +716,35 @@ CogARMCompiler >> concretizeMoveCwR [
 	| constant destReg |
 	constant := operands at: 0.
 	destReg := self concreteRegister: (operands at: 1).
-	self at: 0 moveCw: constant intoR: destReg.
-	^machineCodeSize := 16.
+	^machineCodeSize :=self at: 0 moveCw: constant intoR: destReg
 ]
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeMoveMbrR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	| srcReg offset destReg |
+	| srcReg offset destReg instrOffset|
 	offset := operands at: 0.
 	srcReg := self concreteRegister: (operands at: 1).
 	destReg := self concreteRegister: (operands at: 2).
 	self is12BitValue: offset
 		ifTrue: [ :u :immediate | 
 			self machineCodeAt: 0 
-				"ldr destReg, [srcReg, #immediate]"
-				put: (self t: 2 o: (16rA bitOr: u <<2) s: 1 rn: srcReg rd: destReg shifterOperand: immediate).
+				"ldrb destReg, [srcReg, #immediate]"
+				put: (self ldrb: destReg rn: srcReg plus: u imm: immediate).
 			^machineCodeSize := 4]
 		ifFalse: [ 
-			self at: 0 moveCw: offset intoR: RISCTempReg.
-			"ldr destReg, [srcReg, RISCTempReg]"
-			self machineCodeAt: 16 put: (self t: 3 o: 16rE s: 1 rn: srcReg rd: destReg shifterOperand: RISCTempReg).
-			^machineCodeSize := 20 ]
+			instrOffset := self at: 0 moveCw: offset intoR: RISCTempReg.
+			"ldrb destReg, [srcReg, RISCTempReg]"
+			self machineCodeAt: instrOffset put: (self ldrb: destReg rn: srcReg rm: RISCTempReg).
+			^machineCodeSize := instrOffset + 4 ]
 ]
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeMoveMwrR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	| srcReg offset destReg |
+	| srcReg offset destReg instrOffset|
 	offset := operands at: 0.
 	srcReg := self concreteRegister: (operands at: 1).
 	destReg := self concreteRegister: (operands at: 2).
@@ -671,71 +752,69 @@ CogARMCompiler >> concretizeMoveMwrR [
 		ifTrue: [ :u :immediate | 
 			self machineCodeAt: 0 
 				"ldr destReg, [srcReg, #immediate]"
-				put: (self t: 2 o: (8 bitOr: u <<2) s: 1 rn: srcReg rd: destReg shifterOperand: immediate).
+				put: (self ldr: destReg rn: srcReg plus: u imm: immediate).
 			^machineCodeSize := 4]
 		ifFalse: [ 
-			self at: 0 moveCw: offset intoR: RISCTempReg.
+			instrOffset := self at: 0 moveCw: offset intoR: RISCTempReg.
 			"ldr destReg, [srcReg, RISCTempReg]"
-			self machineCodeAt: 16 put: (self t: 3 o: 16rC s: 1 rn: srcReg rd: destReg shifterOperand: RISCTempReg).
-			^machineCodeSize := 20 ]
+			self machineCodeAt: instrOffset put: (self ldr: destReg rn: srcReg rm: RISCTempReg).
+			^machineCodeSize := instrOffset +4 ]
 ]
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeMoveRAw [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	| srcReg destAddr |
+	| srcReg destAddr instrOffset|
 	srcReg := self concreteRegister: (operands at: 0).
 	destAddr := operands at: 1.
-	"load the address into R3"
-	self at: 0 moveCw: destAddr intoR: RISCTempReg.
-	machineCode 
-		at: 15 put: 16rE5; "STR srcReg, [R3, +LSB(addr)]"
-		at: 14 put: (16r80 bitOr: RISCTempReg);
-		at: 13 put: (srcReg << 4).
-	^machineCodeSize := 16
+	"load the address into RISCTempReg"
+	instrOffset := self at: 0 moveCw: destAddr intoR: RISCTempReg.
+	"We *could* overwrite the last instruction above with a LDR a, b, last-byte-of-srcAddr BUT that would break if we change to loading literals instead of forming long constants"
+	self machineCodeAt: instrOffset put: (self str: srcReg rn: RISCTempReg plusImm: 0).
+	^machineCodeSize := instrOffset + 4
 ]
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeMoveRMbr [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	| srcReg offset destReg |
+	| srcReg offset baseReg instrOffset|
 	srcReg := self concreteRegister: (operands at: 0).
 	offset := operands at: 1.
-	destReg := self concreteRegister: (operands at: 2).
+	baseReg := self concreteRegister: (operands at: 2).
 	self is12BitValue: offset
 		ifTrue: [ :u :immediate | 
 			self machineCodeAt: 0 
-			"strb 	destReg, [srcReg, #immediate]"
-				put: (self t: 2 o: (16rA bitOr: u<<2) s: 0 rn: destReg rd: srcReg shifterOperand: immediate).
+				"strb 	srcReg, [baseReg, #immediate]"
+				put: (self strb: srcReg rn: baseReg plus: u imm: immediate).
 			^machineCodeSize := 4]
 		ifFalse: [ 
-			self at: 0 moveCw: offset intoR: RISCTempReg.
-			"strb 	destReg, [srcReg, RISCTempReg]"
-			self machineCodeAt: 16 put: (self t: 3 o: 16rE s: 0 rn: srcReg rd: destReg shifterOperand: RISCTempReg).
-			^machineCodeSize := 20 ]
+			instrOffset := self at: 0 moveCw: offset intoR: RISCTempReg.
+			"strb 	srcReg, [baseReg, RISCTempReg]"
+			self machineCodeAt: instrOffset put: (self strb: srcReg rn: baseReg rm: RISCTempReg).
+			^machineCodeSize := instrOffset + 4 ]
 ]
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeMoveRMwr [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	| srcReg offset destReg |
+	| srcReg offset baseReg instrOffset|
 	srcReg := self concreteRegister: (operands at: 0).
 	offset := operands at: 1.
-	destReg := self concreteRegister: (operands at: 2).
+	baseReg := self concreteRegister: (operands at: 2).
 	self is12BitValue: offset
 		ifTrue: [ :u :immediate | 
 			self machineCodeAt: 0 
-			"strb 	destReg, [srcReg, #immediate]"
-				put: (self t: 2 o: (8 bitOr: u<<2) s: 0 rn: destReg rd: srcReg shifterOperand: immediate).
+				"str 	srcReg, [baseReg, #immediate]"
+				put: (self str: srcReg rn: baseReg plus: u imm: immediate).
 			^machineCodeSize := 4]
 		ifFalse: [ 
-			self at: 0 moveCw: offset intoR: RISCTempReg.
-			"strb 	destReg, [srcReg, RISCTempReg]"
-			self machineCodeAt: 16 put: (self t: 3 o: 16rC s: 0 rn: srcReg rd: destReg shifterOperand: RISCTempReg).
-			^machineCodeSize := 20 ]
+			instrOffset := self at: 0 moveCw: offset intoR: RISCTempReg.
+			"str srcReg, [baseReg, RISCTempReg]"
+			self machineCodeAt: instrOffset put: (self str: srcReg rn: baseReg rm: RISCTempReg).
+			^machineCodeSize := instrOffset + 4 ]
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -746,22 +825,7 @@ CogARMCompiler >> concretizeMoveRR [
 	srcReg := self concreteRegister: (operands at: 0).
 	destReg := self concreteRegister: (operands at: 1).
 	"cond 000 1101 0 0000 dest 0000 0000 srcR"
-	self machineCodeAt: 0 put: (self t: 0 o: 16rD s: 0 rn: 0 rd: destReg shifterOperand: srcReg).
-	^machineCodeSize := 4
-]
-
-{ #category : #'generate machine code - concretize' }
-CogARMCompiler >> concretizeMoveRX16rR [
-	"Will get inlined into concretizeAt: switch."
-	"Write the word in R(src) into memory at address (base+2*index)"
-	<inline: true>
-	| index base src |
-	src := self concreteRegister: (operands at: 0).
-	index := self concreteRegister: (operands at: 1).
-	base := self concreteRegister: (operands at: 2).
-	"str		src, [base, +index, LSL #1]"
-	"cond 011 1100 0 base srcR 00001 00 0 inde"
-	self machineCodeAt: 0 put: (self t: 3 o: 16rC s: 0 rn: base rd: src shifterOperand: (16r080 bitOr: index)).
+	self machineCodeAt: 0 put: (self type: 0 op: 16rD set: 0 rn: 0 rd: destReg shifterOperand: srcReg).
 	^machineCodeSize := 4
 ]
 
@@ -776,7 +840,7 @@ CogARMCompiler >> concretizeMoveRXbrR [
 	base := self concreteRegister: (operands at: 2).
 	"str		src, [base, +index, LSL #0]"
 	"cond 011 1100 0 base srcR 00000 00 0 inde"
-	self machineCodeAt: 0 put: (self t: 3 o: 16rC s: 0 rn: base rd: src shifterOperand: index).
+	self machineCodeAt: 0 put: (self type: 3 op: 16rC set: 0 rn: base rd: src shifterOperand: index).
 	^machineCodeSize := 4
 ]
 
@@ -791,7 +855,7 @@ CogARMCompiler >> concretizeMoveRXwrR [
 	base := self concreteRegister: (operands at: 2).
 	"str		src, [base, +index, LSL #2]"
 	"cond 011 1100 0 base srcR 00010 00 0 inde"
-	self machineCodeAt: 0 put: (self t: 3 o: 16rC s: 0 rn: base rd: src shifterOperand: (16r100 bitOr: index)).
+	self machineCodeAt: 0 put: (self type: 3 op: 16rC set: 0 rn: base rd: src shifterOperand: (16r100 bitOr: index)).
 	^machineCodeSize := 4
 ]
 
@@ -806,7 +870,7 @@ CogARMCompiler >> concretizeMoveXbrRR [
 	dest := self concreteRegister: (operands at: 2).
 	"LDR	dest, [base, +index, LSL #0]"
 	"cond 011 1100 1 base dest 00000 00 0 inde"
-	self machineCodeAt: 0 put: (self t: 3 o: 16rC s: 1 rn: base rd: dest shifterOperand: index).
+	self machineCodeAt: 0 put: (self type: 3 op: 16rC set: 1 rn: base rd: dest shifterOperand: index).
 	^machineCodeSize := 4
 ]
 
@@ -821,7 +885,7 @@ CogARMCompiler >> concretizeMoveXwrRR [
 	dest := self concreteRegister: (operands at: 2).
 	"LDR	dest, [base, +index, LSL #2]"
 	"cond 011 1100 1 base dest 00010 00 0 inde"
-	self machineCodeAt: 0 put: (self t: 3 o: 16rC s: 1 rn: base rd: dest shifterOperand: (16r100 bitOr: index)).
+	self machineCodeAt: 0 put: (self type: 3 op: 16rC set: 1 rn: base rd: dest shifterOperand: (16r100 bitOr: index)).
 	^machineCodeSize := 4
 ]
 
@@ -832,7 +896,7 @@ CogARMCompiler >> concretizeNegateR [
 	| reg |
 	reg := self concreteRegister: (operands at: 0).
 	"rsb r?, r?, #0"
-	self machineCodeAt: 0 put: (self t: 1 o: 3 s: 0 rn: reg rd: reg).
+	self machineCodeAt: 0 put: (self type: 1 op: 3 set: 0 rn: reg rd: reg).
 	^machineCodeSize := 4
 ]
 
@@ -840,7 +904,8 @@ CogARMCompiler >> concretizeNegateR [
 CogARMCompiler >> concretizeNop [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	self machineCodeAt: 0 put: 16rE1A01001.
+	"MOV r0, r0"
+	self machineCodeAt: 0 put: 16rE1A00000.
 	^machineCodeSize := 4
 			
 ]
@@ -852,7 +917,7 @@ CogARMCompiler >> concretizePopR [
 	| destReg |
 	destReg := self concreteRegister: (operands at: 0).
 	"cond | 010 | 0100 | 1 | -Rn- | -Rd- | 0000 0000 0100 " "LDR destReg, [SP], #4"
-	self machineCodeAt: 0 put: (self t: 2 o: 4 s: 1 rn: SP rd: destReg shifterOperand: 4).
+	self machineCodeAt: 0 put: (self popR: destReg).
 	^machineCodeSize := 4
 ]
 
@@ -860,28 +925,23 @@ CogARMCompiler >> concretizePopR [
 CogARMCompiler >> concretizePrefetchAw [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	| addressOperand |
+	| addressOperand instrOffset|
 	addressOperand := operands at: 0.
-	self at: 0 moveCw: addressOperand intoR: RISCTempReg.
-	"pld	[RISCTempReg, +<byte 0>]"
-	"u = 1, I = 0"
-	"1111 0101 1101 RTem 1111 0000 byte"
-	machineCode
-		at: 15 put: 16rF5;
-		at: 14 put: (16rD0 bitOr: RISCTempReg);
-		at: 13 put: 16rF0.
-	^machineCodeSize := 16
+	instrOffset := self at: 0 moveCw: addressOperand intoR: RISCTempReg.
+	"pld	[RISCTempReg]"
+	self machineCodeAt: instrOffset put: (self pld: RISCTempReg plus: 1offset: 0).
+	^machineCodeSize := instrOffset + 4
 ]
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizePushCw [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	| word |
+	| word instrOffset|
 	word := operands at: 0.
-	self at: 0 moveCw: word intoR: RISCTempReg.
-	self machineCodeAt: 16 put: (self t: 2 o: 9 s: 0 rn: SP rd: RISCTempReg shifterOperand: 4).
-	^machineCodeSize := 20
+	instrOffset := self at: 0 moveCw: word intoR: RISCTempReg.
+	self machineCodeAt: instrOffset put: (self pushR: RISCTempReg).
+	^machineCodeSize := instrOffset + 4
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -891,7 +951,7 @@ CogARMCompiler >> concretizePushR [
 	| srcReg |
 	srcReg := self concreteRegister: (operands at: 0).
 	"cond | 010 | 1001 | 0 | -Rn- | -Rd- | 0000 0000 0100" "STR srcReg, [sp, #-4]"
-	self machineCodeAt: 0 put: (self t: 2 o: 9 s: 0 rn: SP rd: srcReg shifterOperand: 4).
+	self machineCodeAt: 0 put: (self type: 2 op: 9 set: 0 rn: SP rd: srcReg shifterOperand: 4).
 	^machineCodeSize := 4
 ]
 
@@ -902,13 +962,12 @@ CogARMCompiler >> concretizeRetN [
 	| offset |
 	offset := operands at: 0.
 	offset = 0 ifTrue:
-		[self machineCodeAt: 0 put: 16rE8BD8000. "pop	{pc}"
+		[self machineCodeAt: 0 put: (self popR: PC). "pop	{pc}"
 		^machineCodeSize := 4].
 	self assert: offset < 32. "We have an 8 bit immediate. If needed, we could rotate it less than 30 bit."
-	self machineCodeAt: 0 put: 16rE28DDFFF. "add sp, sp, #n, 14"
-	machineCode
-		at: 0 put: offset. "no bit-mask needed, because of the assert"
-	self machineCodeAt: 4 put: 16rE8BD8000.  "pop	{pc}"
+	"add sp, sp, #n, ROR (15<<2) <- ie shift left 2 to convert words to bytes"
+	self machineCodeAt: 0 put: (self add: SP rn: SP imm: offset ror: 30).
+	self machineCodeAt: 4 put: (self popR: PC).  "pop	{pc}"
 	^machineCodeSize := 8
 ]
 
@@ -920,9 +979,7 @@ CogARMCompiler >> concretizeSubCqR [
 	self rotateable8bitImmediate: (operands at: 0)
 		ifTrue: [ :rot :immediate | | reg |
 			reg := self concreteRegister: (operands at: 1).
-			self machineCodeAt: 0 put: ((self t: 1 o: 2 s: 1) bitOr: reg << 16).
-			machineCode at: 0 put: immediate.
-			machineCode at: 1 put: (reg << 4 bitOr: rot).
+			self machineCodeAt: 0 put: (self type: 1 op: 2 set: 1 rn: reg rd: reg shifterOperand: (rot << 8 bitOr: immediate)).
 			^machineCodeSize := 4]
 		ifFalse: [
 			self rotateable8bitImmediate: (operands at: 0) negated
@@ -931,6 +988,44 @@ CogARMCompiler >> concretizeSubCqR [
 						operands at: 0 put: (operands at: 0) negated.
 						^self concretizeDataOperationCqR: 4]
 				ifFalse: [^self concretizeDataOperationCwR: 2]]
+]
+
+{ #category : #encoding }
+CogARMCompiler >> cond: c br: link offset: offset [
+	"c : 4 bit, opcode = 10 bitOr: link, offset >>2, limited to 24 bits (which are sign-extended, shifted left 2 and added to 8 + pc to make the resulting address)"
+	"single instr Branch, no link"
+	<inline: true>
+	^ c << 28 bitOr: (((2r1010 bitOr: (link bitAnd: 1)) << 24) bitOr: (offset >> 2 bitAnd: 16r00FFFFFF))
+]
+
+{ #category : #encoding }
+CogARMCompiler >> cond: c bx: link target: targetReg [
+	"c : 4 bit, opcode = 10 bitOr: link, offset >>2, limited to 24 bits (which are sign-extended, shifted left 2 and added to 8 + pc to make the resulting address)"
+	"BX targetReg or BLX targetReg"
+	<inline: true>
+	^ c << 28 bitOr: ( (16r12FFF10  bitOr: (link bitAnd: 1) <<5 ) bitOr: targetReg)
+]
+
+{ #category : #encoding }
+CogARMCompiler >> cond: c type: t op: o set: s [
+	"c : 4 bit, t: 3 bit, o: 4 bit, s: 1bit"
+	"cccctttoooos + oxFFFFF - the leftmost 12bit of (most) ARM instruction"
+	<inline: true>
+	^ c << 28 bitOr: ((t << 25) bitOr: ((o << 21) bitOr: (s << 20)))
+]
+
+{ #category : #encoding }
+CogARMCompiler >> cond: conditionCode type: type op: flagsOrOpcode set: doUpdateStatusRegister rn:  sourceRegister rd: targetRegister [
+"build an instruction - cccctttoooo + source + target"
+	<inline: true>
+	^(self cond: conditionCode type: type op: flagsOrOpcode set: doUpdateStatusRegister) 
+		bitOr: (sourceRegister << 16 bitOr: targetRegister << 12)
+]
+
+{ #category : #encoding }
+CogARMCompiler >> cond: conditionCode type: type op: flagsOrOpcode set: doUpdateStatusRegister rn:  sourceRegister rd: targetRegister shifterOperand: so [
+	<inline: true>
+	^(self cond: conditionCode type: type op: flagsOrOpcode set: doUpdateStatusRegister rn: sourceRegister rd: targetRegister) bitOr: (so bitAnd: 16rFFF)
 ]
 
 { #category : #'generate machine code' }
@@ -1030,6 +1125,7 @@ CogARMCompiler >> dispatchConcretize [
 		[MoveM64rRd]		-> [^self concretizeMoveM64rRd].
 		[MoveMwrR]		-> [^self concretizeMoveMwrR].
 		[MoveXbrRR]		-> [^self concretizeMoveXbrRR].
+		[MoveRXbrR]		-> [^self concretizeMoveRXbrR].
 		[MoveXwrRR]		-> [^self concretizeMoveXwrRR].
 		[MoveRXwrR]		-> [^self concretizeMoveRXwrR].
 		[MoveRMwr]		-> [^self concretizeMoveRMwr].
@@ -1043,6 +1139,30 @@ CogARMCompiler >> dispatchConcretize [
 		"ARM specific opcodes" 
 		[LDMFD]			-> [^self concretizeLDMFD].
 		[STMFD]			-> [^self concretizeSTMFD]	}
+]
+
+{ #category : #testing }
+CogARMCompiler >> extractOffsetFromBL: instr [
+"we are told this is a BL <offset> instruction, so work out the offset it encodes"
+	| relativeJump |
+	relativeJump := instr bitAnd: 16r00FFFFFF.
+	relativeJump := (relativeJump bitAt: 24) = 1 
+						ifTrue: [((relativeJump bitOr: 16r3F000000) << 2) signedIntFromLong]
+						ifFalse: [relativeJump << 2].
+	^relativeJump
+]
+
+{ #category : #testing }
+CogARMCompiler >> extractOffsetFromBXAt: address [
+"this should return the long call/jump target"
+	self notYetImplemented
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> fmstat [
+	"unconditional transfer FP status to cpsr to choose jumps etc. Manually fudged for now"
+	<inline: true>
+	^16rEF1FA10
 ]
 
 { #category : #assertions }
@@ -1209,13 +1329,45 @@ CogARMCompiler >> hasPCDependentInstruction [
 ]
 
 { #category : #'inline cacheing' }
+CogARMCompiler >> inlineCacheTagAt: callSiteReturnAddress [
+	"Answer the inline cache tag for the return address of a send."
+	^self literalBeforeFollowingAddress: callSiteReturnAddress -4  
+]
+
+{ #category : #'inline cacheing' }
 CogARMCompiler >> instructionBeforeAddress: followingAddress [
 	"Answer the instruction immediately preceeding followingAddress."
-	^  ((objectMemory byteAt: followingAddress - 1) << 24)
+	^objectMemory longAt: followingAddress -4
+
+	" old version - ^  ((objectMemory byteAt: followingAddress - 1 235) << 24)
 	+  ((objectMemory byteAt: followingAddress - 2) << 16)
 	+  ((objectMemory byteAt: followingAddress - 3) << 8)
-	+   (objectMemory byteAt: followingAddress - 4)
+	+   (objectMemory byteAt: followingAddress - 4)"
 
+]
+
+{ #category : #testing }
+CogARMCompiler >> instructionIsB: instr [
+"is this a B <offset> instruction?"
+	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: (16rF<<24)) = (16rA<<24)]
+]
+
+{ #category : #testing }
+CogARMCompiler >> instructionIsBL: instr [
+"is this a BL <offset> instruction?"
+	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: (16rF<<24)) = (16rB<<24)]
+]
+
+{ #category : #testing }
+CogARMCompiler >> instructionIsBLX: instr [
+"is this a BLX <targetReg> instruction?"
+	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: 16r0FFFFFF0) = 16r12FFF30]
+]
+
+{ #category : #testing }
+CogARMCompiler >> instructionIsBX: instr [
+"is this a BX <targetReg> instruction?"
+	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: 16r0FFFFFF0) = 16r12FFF10]
 ]
 
 { #category : #testing }
@@ -1238,10 +1390,10 @@ CogARMCompiler >> isBranch: anInstruction [
 { #category : #testing }
 CogARMCompiler >> isCallPreceedingReturnPC: mcpc [
 	"Assuming mcpc is a return pc answer if the instruction before it is a call."
-	"There are two types of calls: BL and (MOV, ORR, ORR, ADD, ADD)"
-	"PUSH {pc} is not sufficient as a test, because pc may be pushed using the PushR opcode"
-	^ (objectMemory byteAt: mcpc - 3) >> 4 = 16rB "BL" 
-			or: [ (objectMemory longAt: mcpc - 4) >> 12 = ((self t: 1 o: 4 s: 0 rn: RISCTempReg rd: PC)"add pc, r3, 0" >> 12) ]
+	"There are two types of calls: BL and/BLX encoding"
+	| call |
+	call := self instructionBeforeAddress: mcpc.
+	^(self instructionIsBX: call) or:[self instructionIsBLX: call]
 ]
 
 { #category : #testing }
@@ -1256,6 +1408,42 @@ CogARMCompiler >> isQuick: operand [
 	^operand signedIntFromLong between: -33554432 and: 33554428
 ]
 
+{ #category : #'inline cacheing' }
+CogARMCompiler >> jumpLongTargetBeforeFollowingAddress: mcpc [ 
+	"Answer the target address for the long jump immediately preceeding mcpc"
+	^self callTargetFromReturnAddress: mcpc
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> ldr: destReg rn: baseReg plus: u imm: immediate12bitValue [
+"return a LDR destReg, [baseReg, 'u' immediate12bitValue]"
+	^self memMxr: AL reg: destReg  base: baseReg u: u b: 0 l: 1 imm: immediate12bitValue
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> ldr: destReg rn: baseReg plusImm: immediate12bitValue [
+"return a LDR destReg, [baseReg, +immediate12bitValue]"
+	^self memMxr: AL reg: destReg  base: baseReg u: 1 b: 0 l: 1 imm: immediate12bitValue
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> ldr: destReg rn: baseReg rm: offsetReg [
+"return a LDR destReg, [baseReg, + offsetReg] The contents of offsetReg are assumed to be correctly signed"
+	^self memMxr: AL reg: destReg  base: baseReg p: 1 u: 1 b: 0 w: 0 l: 1 rm: offsetReg
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> ldrb: destReg rn: baseReg plus: u imm: immediate12bitValue [
+"return a LDRB destReg, [baseReg, 'u' immediate12bitValue]"
+	^self memMxr: AL reg: destReg  base: baseReg u: u b: 1 l: 1 imm: immediate12bitValue
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> ldrb: destReg rn: baseReg rm: offsetReg [
+"return a LDR destReg, [baseReg, + offsetReg] The contents of offsetReg are assumed to be correctly signed"
+	^self memMxr: AL reg: destReg  base: baseReg p: 1 u: 1 b: 1 w: 0 l: 1 rm: offsetReg
+]
+
 { #category : #abi }
 CogARMCompiler >> leafCallStackPointerDelta [
 	"Answer the delta from the stack pointer after a call to the stack pointer
@@ -1264,6 +1452,15 @@ CogARMCompiler >> leafCallStackPointerDelta [
 	 to capture the c stack pointer to use in trampolines back into the C run-time."
 	"This might actually be false, since directly after a call, lr, fp and variable registers need be pushed onto the stack. It depends on the implementation of call."
 	^0
+]
+
+{ #category : #'inline cacheing' }
+CogARMCompiler >> literalBeforeFollowingAddress: followingAddress [
+	"Answer the long constant loaded by a MOV/ORR/ORR/ORR sequence just before this address:"
+	^  ((objectMemory byteAt: followingAddress - 16) << 24)
+	+  ((objectMemory byteAt: followingAddress - 12) << 16)
+	+  ((objectMemory byteAt: followingAddress - 8) << 8)
+	+   (objectMemory byteAt: followingAddress - 4) 
 ]
 
 { #category : #accessing }
@@ -1299,6 +1496,61 @@ CogARMCompiler >> machineCodeBytes [
 ]
 
 { #category : #encoding }
+CogARMCompiler >> memMxr: cond reg: destReg base: baseReg p: postpreoffset u: updown b: byteword w: weirdstuff l: loadstore imm: offset [
+	"build an ARM [base +/- offset] memory instruction
+	p -> pre-index (1) or post-index (0) the offset. Combines with W to do some odd things.
+	u -> up (1) or down (0) ie + or - for the offset
+	b -> byte(1) or word (0)
+	w -> write-back (1) if pre-indexing. 
+	l -> load (1) or store (0)"
+	^ cond << 28
+		bitOr: (2 << 25
+		bitOr: (postpreoffset << 24
+		bitOr: (updown << 23
+		bitOr: (byteword << 22
+		bitOr: (weirdstuff << 21
+		bitOr: (loadstore << 20
+		bitOr: (baseReg << 16
+		bitOr: (destReg << 12 bitOr: offset))))))))
+]
+
+{ #category : #encoding }
+CogARMCompiler >> memMxr: cond reg: destReg base: baseReg p: postpreoffset u: updown b: byteword w: weirdstuff l: loadstore rm: offsetReg [ 
+	"build an ARM [base +/- offsetReg] memory instruction
+	p -> pre-index (1) or post-index (0) the offset. Combines with W to do some odd things.
+	u -> up (1) or down (0) ie + or - for the offset
+	b -> byte(1) or word (0)
+	w -> write-back (1) if pre-indexing. 
+	l -> load (1) or store (0)"
+	^ cond << 28
+		bitOr: (3 << 25
+		bitOr: (postpreoffset << 24
+		bitOr: (updown << 23
+		bitOr: (byteword << 22
+		bitOr: (weirdstuff << 21
+		bitOr: (loadstore << 20
+		bitOr: (baseReg << 16
+		bitOr: (destReg << 12 bitOr: offsetReg))))))))
+]
+
+{ #category : #encoding }
+CogARMCompiler >> memMxr: cond reg: destReg  base: baseReg u: updown b: byteword l: loadstore imm: immediate12bitValue [
+"build an ARM [base +/- immediate 12bit offset] memory instruction
+u -> up (1) or down (0) ie + or - for the offset
+b -> byte(1) or word (0)
+l -> load (1) or store (0)"
+
+	^ cond << 28
+		bitOr: (5<<24
+		bitOr: (updown << 23
+		bitOr:(byteword<<22
+		bitOr:(loadstore<<20
+		bitOr:(baseReg<<16
+		bitOr:(destReg<<12
+		bitOr: immediate12bitValue))))))
+]
+
+{ #category : #encoding }
 CogARMCompiler >> minimalRightRingRotationFor: constant initialRotation: iniRightRingRotation [
 	"Given a constant and some initial rotation, tries to minimize that rotation in an effort to encode the according byte in constant. This is used, to encode the last 12bit of many operations, for which a 8bit immediate rotated by (2*)4bit is available. That immediate need be encoded with minimal rotation."
 	| byte rightRingRotation |
@@ -1318,6 +1570,18 @@ CogARMCompiler >> minimalRightRingRotationFor: constant initialRotation: iniRigh
 	^{rightRingRotation. byte}
 ]
 
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> mov: destReg imm: immediate8bitValue ror: rotateRightBy [
+	"return the ARM instruction MOV destReg, #immediate8BitValue ROR rotateRightBy"
+	^self type: 1 op: 16rD set: 0 rn: 0 rd: destReg shifterOperand: ((rotateRightBy>>1) <<8 bitOr: immediate8bitValue)
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> movRd: destReg imm: immediate8bitValue ror: rotateRightBy [
+	"return the ARM instruction MOV destReg, #immediate8BitValue ROR rotateRightBy"
+	^self type: 1 op: 16rD set: 0 rn: destReg rd: destReg shifterOperand: (rotateRightBy <<8 bitOr: immediate8bitValue)
+]
+
 { #category : #printing }
 CogARMCompiler >> nameForRegister: reg [ "<Integer>"
 	
@@ -1328,11 +1592,12 @@ CogARMCompiler >> nameForRegister: reg [ "<Integer>"
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> nopsFrom: startAddr to: endAddr [
+"fill with MOV R0, R0 no-op instructions"
 	self assert: endAddr - startAddr + 1 \\ 4 = 0.
 	startAddr to: endAddr by: 4 do:
 		[:p| objectMemory 
-			byteAt: p put: 16r01;
-			byteAt: p+1 put: 16r10;
+			byteAt: p put: 16r0;
+			byteAt: p+1 put: 16r0;
 			byteAt: p+2 put: 16rA0;
 			byteAt: p+3 put: 16rE1]
 ]
@@ -1345,6 +1610,18 @@ CogARMCompiler >> numberOfSaveableRegisters [
 	^0
 ]
 
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> orr: destReg imm: immediate8bitValue ror: rotateRightBy [
+	"return the ARM instruction ORR destReg, #immediate8BitValue ROR rotateRightBy"
+	^self type: 1 op: 16rC set: 0 rn: destReg rd: destReg shifterOperand: ((rotateRightBy>>1) <<8 bitOr: immediate8bitValue)
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> orrRd: destReg imm: immediate8bitValue ror: rotateRightBy [
+	"return the ARM instruction ORR destReg, #immediate8BitValue ROR rotateRightBy"
+	^self type: 1 op: 16rB set: 0 rn: destReg rd: destReg shifterOperand: (rotateRightBy <<8 bitOr: immediate8bitValue)
+]
+
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> padIfPossibleWithNopsFrom: startAddr to: endAddr [
 	| nullBytes |
@@ -1352,6 +1629,25 @@ CogARMCompiler >> padIfPossibleWithNopsFrom: startAddr to: endAddr [
 	self nopsFrom: startAddr to: endAddr - nullBytes.
 	endAddr - nullBytes + 1 to: endAddr 
 		do: [ :p | objectMemory byteAt: p put: 16r0]
+]
+
+{ #category : #encoding }
+CogARMCompiler >> pld: baseReg plus: u offset: immediate [
+	"hint to memory that we will want to read from baseReg +/- imediate sometime soon"
+	<inline: true>
+	^ 2r11110101010100001111000000000000 bitOr: (baseReg<<16 bitOr:(u <<23 bitOr: immediate))
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> popR: dstReg [
+"return a pop - LDR srcReg, [sp] #4"
+	^self memMxr: AL reg: dstReg base: SP p: 0 u: 1 b: 0 w: 0 l: 1 imm: 4
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> pushR: srcReg [
+"return a push - STR srcReg, [sp, #-4]!"
+	^self memMxr: AL reg: srcReg base: SP p: 1 u: 0 b: 0 w: 1l: 0 imm: 4
 ]
 
 { #category : #'inline cacheing' }
@@ -1364,8 +1660,7 @@ CogARMCompiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag targ
 	<var: #callSiteReturnAddress type: #usqInt>
 	<var: #callTargetAddress type: #usqInt>
 	| call callDistance |
-	"self cCode: ''
-		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 20 to: callSiteReturnAddress -1]."
+	"cogit disassembleFrom: callSiteReturnAddress - 40 to: callSiteReturnAddress + 9"
 	false
 		ifTrue: [self assert: callTargetAddress >= cogit minCallAddress]
 		ifFalse: [callTargetAddress >= cogit minCallAddress ifFalse:
@@ -1373,25 +1668,14 @@ CogARMCompiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag targ
 	callDistance := (callTargetAddress - (callSiteReturnAddress + 8 "pc offset"- 4 "return offset")) signedIntToLong.
 	
 	self assert: (self isQuick: callDistance). "we don't support long call updates, yet"
-	call := (self t: 5 o: 8)"BL" + (callDistance >> 2 bitAnd: 16rFFFFFF).
-	objectMemory
-		byteAt: callSiteReturnAddress - 1 put: (call >> 24 bitAnd: 16rFF);
-		byteAt: callSiteReturnAddress - 2 put: (call >> 16 bitAnd: 16rFF);
-		byteAt: callSiteReturnAddress - 3 put: (call >>   8 bitAnd: 16rFF);
-		byteAt: callSiteReturnAddress - 4 put: (call            bitAnd: 16rFF).
+	call := self cond: AL br: 1 offset: callDistance.
+	objectMemory longAt:  callSiteReturnAddress - 4 put: call.
 	
 	"The cacheTag is loaded byte by byte. Each byte needs to be encoded with minimal right ring rotation. See also #at:moveCw:intoR:"
-	-20 to: -8 by: 4 do: [ :offset || rotation |
-		rotation := self minimalRightRingRotationFor: cacheTag initialRotation: (offset + 8) negated.
-		(offset + 8) ~= 0 ifTrue: [ "in case of decoration which may change the last instrution, we should not overwrite bits 9 to 12"
-			objectMemory 
-				byteAt: callSiteReturnAddress + offset + 1 
-				put: (((objectMemory byteAt: callSiteReturnAddress - offset + 1) 
-							bitAnd: 16rF0)
-						bitOr: (rotation at: 1))].
-		objectMemory
-			byteAt: callSiteReturnAddress + offset
-			put: (rotation at: 2)].
+	objectMemory byteAt: callSiteReturnAddress - 20 put: (cacheTag >> 24 bitAnd: 16rFF).
+	objectMemory byteAt: callSiteReturnAddress - 16 put: (cacheTag >> 16 bitAnd: 16rFF).
+	objectMemory byteAt: callSiteReturnAddress - 12 put: (cacheTag >> 8 bitAnd: 16rFF).
+	objectMemory byteAt: callSiteReturnAddress - 8 put: (cacheTag  bitAnd: 16rFF).
 
 	self assert: (self callTargetFromReturnAddress: callSiteReturnAddress) signedIntToLong = callTargetAddress.
 	"self cCode: ''
@@ -1450,7 +1734,7 @@ CogARMCompiler >> sizePCDependentInstructionAt: eventualAbsoluteAddress [
 				ifTrue: [(self isQuick: maximumSpan) ifTrue: [4] ifFalse: [20]]
 				ifFalse: [(self isLongJump not and: [self isQuick: maximumSpan])
 								ifTrue: [4]
-								ifFalse: [16]] "load address to register, add"
+								ifFalse: [20]] "load address to register, add"
 ]
 
 { #category : #accessing }
@@ -1461,27 +1745,45 @@ CogARMCompiler >> stackPageInterruptHeadroomBytes [
 	^128 "32 words"
 ]
 
-{ #category : #encoding }
-CogARMCompiler >> t: type o: flagsOrOpcode [
-	<inline: true>
-	^self c: AL t: type o: flagsOrOpcode s: 0
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> str: destReg rn: baseReg plus: u imm: immediate12bitValue [
+"return a STR destReg, [baseReg, 'u' immediate12bitValue]"
+	^self memMxr: AL reg: destReg  base: baseReg u: u b: 0 l: 0 imm: immediate12bitValue
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> str: srcReg rn: baseReg plusImm: immediate12bitValue [
+"return a STR srcReg, [baseReg, +immediate12bitValue]"
+	^self memMxr: AL reg: srcReg  base: baseReg u: 1 b: 0 l: 0 imm: immediate12bitValue
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> str: srcReg rn: baseReg rm: offsetReg [
+"return a STR srcReg, [baseReg, + offsetReg] The contents of offsetReg are assumed to be correctly signed"
+	^self memMxr: AL reg: srcReg  base: baseReg p: 1 u: 1 b: 0 w: 0 l: 0 rm: offsetReg
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> strb: destReg rn: baseReg plus: u imm: immediate12bitValue [
+"return a STRB destReg, [baseReg, 'u' immediate12bitValue]"
+	^self memMxr: AL reg: destReg  base: baseReg u: u b: 1 l: 0 imm: immediate12bitValue
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> strb: srcReg rn: baseReg rm: offsetReg [
+"return a STRB srcReg, [baseReg, + offsetReg] The contents of offsetReg are assumed to be correctly signed"
+	^self memMxr: AL reg: srcReg  base: baseReg p: 1 u: 1 b: 1 w: 0 l: 0 rm: offsetReg
 ]
 
 { #category : #encoding }
-CogARMCompiler >> t: type o: flagsOrOpcode s: doUpdateStatusRegister [
+CogARMCompiler >> type: type op: flagsOrOpcode set: doUpdateStatusRegister rn:  sourceRegister rd: targetRegister [
 	<inline: true>
-	^self c: AL t: type o: flagsOrOpcode s: doUpdateStatusRegister
-]
-
-{ #category : #encoding }
-CogARMCompiler >> t: type o: flagsOrOpcode s: doUpdateStatusRegister rn:  sourceRegister rd: targetRegister [
-	<inline: true>
-	^(self c: AL t: type o: flagsOrOpcode s: doUpdateStatusRegister) 
+	^(self cond: AL type: type op: flagsOrOpcode set: doUpdateStatusRegister) 
 		bitOr: (sourceRegister << 16 bitOr: targetRegister << 12)
 ]
 
 { #category : #encoding }
-CogARMCompiler >> t: type o: flagsOrOpcode s: doUpdateStatusRegister rn:  sourceRegister rd: targetRegister shifterOperand: so [
+CogARMCompiler >> type: type op: flagsOrOpcode set: doUpdateStatusRegister rn:  sourceRegister rd: targetRegister shifterOperand: so [
 	<inline: true>
-	^(self t: type o: flagsOrOpcode s: doUpdateStatusRegister rn: sourceRegister rd: targetRegister) bitOr: so
+	^(self type: type op: flagsOrOpcode set: doUpdateStatusRegister rn: sourceRegister rd: targetRegister) bitOr: (so bitAnd: 16rFFF)
 ]
