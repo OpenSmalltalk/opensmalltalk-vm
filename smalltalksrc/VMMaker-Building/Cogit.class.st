@@ -3915,8 +3915,7 @@ Cogit >> compileTrampolineFor: aRoutine callJumpBar: callJumpBar "<Boolean>" num
 	 stack so that the interpreter sees the same stack layout as on CISC."
 	backEnd hasLinkRegister ifTrue:
 		[self PushR: LinkReg].
-	self genSaveStackPointers.
-	self genLoadCStackPointers.
+	self genSmalltalkToCStackSwitch.
 	cStackAlignment > BytesPerWord ifTrue:
 		[backEnd
 			genAlignCStackSavingRegisters: saveRegs
@@ -3954,7 +3953,7 @@ Cogit >> compileTrampolineFor: aRoutine callJumpBar: callJumpBar "<Boolean>" num
 			resultRegOrNil
 				ifNotNil: [backEnd genRestoreRegsExcept: resultRegOrNil]
 				ifNil: [backEnd genRestoreRegs]].
-		self genLoadStackPointers.
+		backEnd genLoadStackPointers.
 		backEnd hasLinkRegister ifTrue:
 			[self PopR: LinkReg].
 		self RetN: 0]
@@ -4586,6 +4585,13 @@ Cogit >> followMethodReferencesInClosedPIC: cPIC [
 	^refersToYoung
 ]
 
+{ #category : #'simulation only' }
+Cogit >> framePointerAddress [
+	"redirect for the backEnd's genSaveStackPointers"
+	<doNotGenerate>
+	^coInterpreter framePointerAddress
+]
+
 { #category : #compaction }
 Cogit >> freePICsWithFreedTargets [
 	| cogMethod count |
@@ -4743,7 +4749,7 @@ Cogit >> genEnilopmartFor: regArg1 and: regArg2 and: regArg3 called: trampolineN
 	<returnTypeC: 'void (*genEnilopmartForandandcalled(sqInt regArg1, sqInt regArg2, sqInt regArg3, char *trampolineName))(void)'>
 	| size endAddress enilopmart |
 	opcodeIndex := 0.
-	self genLoadStackPointers.
+	backEnd genLoadStackPointers.
 	self PopR: regArg3.
 	self PopR: regArg2.
 	self PopR: regArg1.
@@ -4769,7 +4775,7 @@ Cogit >> genEnilopmartFor: regArg1 and: regArg2 called: trampolineName [
 	<returnTypeC: 'void (*genEnilopmartForandcalled(sqInt regArg1, sqInt regArg2, char *trampolineName))(void)'>
 	| size endAddress enilopmart |
 	opcodeIndex := 0.
-	self genLoadStackPointers.
+	backEnd genLoadStackPointers.
 	self PopR: regArg2.
 	self PopR: regArg1.
 	self RetN: 0.
@@ -4794,7 +4800,7 @@ Cogit >> genEnilopmartFor: regArg called: trampolineName [
 	<returnTypeC: 'void (*genEnilopmartForcalled(sqInt regArg, char *trampolineName))(void)'>
 	| size endAddress enilopmart |
 	opcodeIndex := 0.
-	self genLoadStackPointers.
+	backEnd genLoadStackPointers.
 	self PopR: regArg.
 	self RetN: 0.
 	self computeMaximumSizes.
@@ -4871,14 +4877,6 @@ Cogit >> genInnerPICAbortTrampoline: name [
 ]
 
 { #category : #'trampoline support' }
-Cogit >> genLoadCStackPointers [
-	self MoveAw: self cStackPointerAddress R: SPReg.
-	cFramePointerInUse ifTrue:
-		[self MoveAw: self cFramePointerAddress R: FPReg].
-	^0
-]
-
-{ #category : #'trampoline support' }
 Cogit >> genLoadCStackPointersForPrimCall [
 	debugPrimCallStackOffset = 0
 		ifTrue:
@@ -4889,15 +4887,6 @@ Cogit >> genLoadCStackPointersForPrimCall [
 			 self MoveR: TempReg R: SPReg].
 	cFramePointerInUse ifTrue:
 		[self MoveAw: self cFramePointerAddress R: FPReg].
-	^0
-]
-
-{ #category : #'trampoline support' }
-Cogit >> genLoadStackPointers [
-	"Switch back to the Smalltalk stack. Assign SPReg first
-	 because typically it is used immediately afterwards."
-	self MoveAw: coInterpreter stackPointerAddress R: SPReg.
-	self MoveAw: coInterpreter framePointerAddress R: FPReg.
 	^0
 ]
 
@@ -5007,9 +4996,11 @@ Cogit >> genSafeTrampolineFor: aRoutine called: aString arg: regOrConst0 arg: re
 ]
 
 { #category : #'trampoline support' }
-Cogit >> genSaveStackPointers [
-	self MoveR: FPReg Aw: coInterpreter framePointerAddress.
-	self MoveR: SPReg Aw: coInterpreter stackPointerAddress.
+Cogit >> genSmalltalkToCStackSwitch [
+	backEnd genSaveStackPointers.
+	cFramePointerInUse
+		ifTrue: [backEnd genLoadCStackPointers]
+		ifFalse: [backEnd genLoadCStackPointer].
 	^0
 ]
 
@@ -8511,6 +8502,13 @@ Cogit >> spanForCleanBlockStartingAt: startPC [
 			[^pc - startPC]].
 	self error: 'couldn''t locate end of clean block'.
 	^0
+]
+
+{ #category : #'simulation only' }
+Cogit >> stackPointerAddress [
+	"redirect for the backEnd's genSaveStackPointers"
+	<doNotGenerate>
+	^coInterpreter stackPointerAddress
 ]
 
 { #category : #disassembly }

@@ -431,9 +431,84 @@ CogAbstractInstruction >> genJumpFPNotEqual: jumpTarget [
 	^cogit gen: JumpFPNotEqual operand: jumpTarget asInteger
 ]
 
+{ #category : #'smalltalk calling convention' }
+CogAbstractInstruction >> genLoadCStackPointer [
+	"Load the stack pointer register with that of the C stack, effecting
+	 a switch to the C stack.  Used when machine code calls into the
+	 CoInterpreter run-time (e.g. to invoke interpreter primitives)."
+	self subclassResponsibility
+]
+
+{ #category : #'smalltalk calling convention' }
+CogAbstractInstruction >> genLoadCStackPointers [
+	"Load the frame and stack pointer registers with those of the C stack,
+	 effecting a switch to the C stack.  Used when machine code calls into
+	 the CoInterpreter run-time (e.g. to invoke interpreter primitives)."
+	self subclassResponsibility
+]
+
+{ #category : #'smalltalk calling convention' }
+CogAbstractInstruction >> genLoadStackPointers [
+	"Switch back to the Smalltalk stack. Assign SPReg first
+	 because typically it is used immediately afterwards."
+	self subclassResponsibility
+]
+
+{ #category : #'smalltalk calling convention' }
+CogAbstractInstruction >> genPushRegisterArgsForAbortMissNumArgs: numArgs [
+	"Ensure that the register args are pushed before the outer and
+	 inner retpcs at an entry miss for arity <= self numRegArgs.  The
+	 outer retpc is that of a call at a send site.  The inner is the call
+	 from a method or PIC abort/miss to the trampoline."
+
+	"This won't be as clumsy on a RISC.  But putting the receiver and
+	 args above the return address means the CoInterpreter has a
+	 single machine-code frame format which saves us a lot of work."
+
+	"Iff there are register args convert
+		base	->	outerRetpc		(send site retpc)
+		sp		->	innerRetpc		(PIC abort/miss retpc)
+	 to
+		base	->	receiver
+					(arg0)
+					(arg1)
+					outerRetpc
+		sp		->	innerRetpc		(PIC abort/miss retpc)"
+	self subclassResponsibility
+]
+
+{ #category : #'smalltalk calling convention' }
+CogAbstractInstruction >> genPushRegisterArgsForNumArgs: numArgs [
+	"Ensure that the register args are pushed before the retpc for arity <= self numRegArgs."
+	"This won't be as clumsy on a RISC.  But putting the receiver and
+	 args above the return address means the CoInterpreter has a
+	 single machine-code frame format which saves us a lot of work."
+
+	"This won't be as clumsy on a RISC.  But putting the receiver and
+	 args above the return address means the CoInterpreter has a
+	 single machine-code frame format which saves us a lot of work."
+
+	"Iff there are register args convert
+		sp		->	retpc		(send site retpc)
+	 to
+		base	->	receiver
+					(arg0)
+					(arg1)
+		sp		->	retpc		(send site retpc)"
+	self subclassResponsibility
+]
+
 { #category : #abi }
 CogAbstractInstruction >> genSaveRegisters [
 	"Save the general purpose registers for a trampoline call."
+	self subclassResponsibility
+]
+
+{ #category : #'smalltalk calling convention' }
+CogAbstractInstruction >> genSaveStackPointers [
+	"Save the frame and stack pointer registers to the framePointer
+	 and stackPointer variables.  Used to save the machine code frame
+	 for use by the run-time when calling into the CoInterpreter run-time."
 	self subclassResponsibility
 ]
 

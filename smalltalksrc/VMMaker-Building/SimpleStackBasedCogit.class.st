@@ -845,7 +845,7 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 											return pc
 			In either case we can push the instructionPointer to reestablish the return pc"
 			self MoveAw: coInterpreter instructionPointerAddress R: ClassReg.
-			self genLoadStackPointers.
+			backEnd genLoadStackPointers.
 			"Test primitive failure"
 			self MoveAw: coInterpreter primFailCodeAddress R: TempReg.
 			self PushR: ClassReg. "Restore return pc"
@@ -1666,7 +1666,7 @@ SimpleStackBasedCogit >> genPrimReturnEnterCogCodeEnilopmart: profiling [
 	but leave it to ceActivateFailingPrimitiveMethod: to do so in the failure case."
 
 	self MoveAw: coInterpreter instructionPointerAddress R: ClassReg.
-	self genLoadStackPointers.
+	backEnd genLoadStackPointers.
 	self PushR: ClassReg. "Restore return pc"
 	"Fetch result from stack"
 	self MoveMw: BytesPerWord r: SPReg R: ReceiverResultReg.

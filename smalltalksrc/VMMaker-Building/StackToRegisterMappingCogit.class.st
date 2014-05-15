@@ -1357,9 +1357,8 @@ StackToRegisterMappingCogit >> compileOpenPIC: selector numArgs: numArgs [
 
 	"Last probe missed.  Call ceSendFromInLineCacheMiss: to do the full lookup."
 	jumpSelectorMiss jmpTarget: self Label.
-	self genPushRegisterArgsForNumArgs: numArgs.
-	self genSaveStackPointers.
-	self genLoadCStackPointers.
+	backEnd genPushRegisterArgsForNumArgs: numArgs.
+	self genSmalltalkToCStackSwitch.
 	methodLabel addDependent: (self annotateAbsolutePCRef: (self MoveCw: methodLabel asInteger R: SendNumArgsReg)).
 	cStackAlignment > BytesPerWord ifTrue:
 		[backEnd
@@ -1558,7 +1557,7 @@ StackToRegisterMappingCogit >> genDoubleArithmetic: arithmeticOperator preOpChec
 	jumpFailClass jmpTarget: self Label.
 	preOpCheckOrNil ifNotNil:
 		[jumpFailCheck jmpTarget: jumpFailClass getJmpTarget].
-	self genPushRegisterArgsForNumArgs: methodOrBlockNumArgs.
+	backEnd genPushRegisterArgsForNumArgs: methodOrBlockNumArgs.
 	jumpFailClass := self Jump: 0.
 	jumpImmediate jmpTarget: self Label.
 	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
@@ -1623,7 +1622,7 @@ StackToRegisterMappingCogit >> genEnterPICEnilopmartNumArgs: numArgs [
 	<returnTypeC: 'void (*genEnterPICEnilopmartNumArgs(sqInt numArgs))(void)'>
 	| size endAddress enilopmart |
 	opcodeIndex := 0.
-	self genLoadStackPointers.
+	backEnd genLoadStackPointers.
 	self PopR: ClassReg. "cacheTag"
 	self PopR: TempReg. "entry-point"
 	self PopR: SendNumArgsReg. "retpc"
@@ -1854,7 +1853,7 @@ StackToRegisterMappingCogit >> genMethodAbortTrampolineFor: numArgs [
 		saveRegs: false
 		resultReg: nil.
 	jumpSICMiss jmpTarget: self Label.
-	self genPushRegisterArgsForAbortMissNumArgs: numArgs.
+	backEnd genPushRegisterArgsForAbortMissNumArgs: numArgs.
 	^self genTrampolineFor: #ceSICMiss:
 		called: (self trampolineName: 'ceMethodAbort' numArgs: (numArgs <= self numRegArgs ifTrue: [numArgs] ifFalse: [-1]))
 		callJumpBar: true
@@ -1876,7 +1875,7 @@ StackToRegisterMappingCogit >> genPICAbortTrampolineFor: numArgs [
 	 MNU dispatch in a closed PIC.  It distinguishes the two by testing
 	 ClassReg.  If the register is zero then this is an MNU."
 	opcodeIndex := 0. 
-	self genPushRegisterArgsForAbortMissNumArgs: numArgs.
+	backEnd genPushRegisterArgsForAbortMissNumArgs: numArgs.
 	^self genInnerPICAbortTrampoline: (self trampolineName: 'cePICAbort' numArgs: (numArgs <= self numRegArgs ifTrue: [numArgs] ifFalse: [-1]))
 ]
 
@@ -1887,7 +1886,7 @@ StackToRegisterMappingCogit >> genPICMissTrampolineFor: numArgs [
 	startAddress := methodZoneBase.
 	opcodeIndex := 0.
 	"N.B. a closed PIC jumps to the miss routine, not calls it, so there is only one retpc on the stack."
-	self genPushRegisterArgsForNumArgs: numArgs.
+	backEnd genPushRegisterArgsForNumArgs: numArgs.
 	self genTrampolineFor: #ceCPICMiss:receiver:
 		called: (self trampolineName: 'cePICMiss' numArgs: (numArgs <= self numRegArgs ifTrue: [numArgs] ifFalse: [-1]))
 		callJumpBar: true
@@ -2560,83 +2559,8 @@ StackToRegisterMappingCogit >> genPushRegisterArgs [
 	 single machine-code frame format which saves us a lot of work."
 	(regArgsHaveBeenPushed
 	 or: [methodOrBlockNumArgs > self numRegArgs]) ifFalse:
-		[self genPushRegisterArgsForNumArgs: methodOrBlockNumArgs.
+		[backEnd genPushRegisterArgsForNumArgs: methodOrBlockNumArgs.
 		regArgsHaveBeenPushed := true]
-]
-
-{ #category : #'compile abstract instructions' }
-StackToRegisterMappingCogit >> genPushRegisterArgsForAbortMissNumArgs: numArgs [
-	"Ensure that the register args are pushed before the outer and
-	 inner retpcs at an entry miss for arity <= self numRegArgs.  The
-	 outer retpc is that of a call at a send site.  The inner is the call
-	 from a method or PIC abort/miss to the trampoline."
-
-	"This won't be as clumsy on a RISC.  But putting the receiver and
-	 args above the return address means the CoInterpreter has a
-	 single machine-code frame format which saves us a lot of work."
-
-	"Iff there are register args convert
-		base	->	outerRetpc		(send site retpc)
-		sp		->	innerRetpc		(PIC abort/miss retpc)
-	 to
-		base	->	receiver
-					(arg0)
-					(arg1)
-					outerRetpc
-		sp		->	innerRetpc		(PIC abort/miss retpc)"
-	numArgs <= self numRegArgs ifTrue:
-		[self assert: self numRegArgs <= 2.
-		 numArgs = 0 ifTrue:
-			[self MoveMw: 0 r: SPReg R: TempReg.
-			 self PushR: TempReg.
-			 self MoveMw: BytesPerWord * 2 r: SPReg R: TempReg.
-			 self MoveR: TempReg Mw: BytesPerWord r: SPReg.
-			 self MoveR: ReceiverResultReg Mw: 2 * BytesPerWord r: SPReg.
-			 ^self].
-		 numArgs = 1 ifTrue:
-			[self MoveMw: BytesPerWord r: SPReg R: TempReg.
-			 self PushR: TempReg.
-			 self MoveMw: BytesPerWord r: SPReg R: TempReg.
-			 self PushR: TempReg.
-			 self MoveR: ReceiverResultReg Mw: 3 * BytesPerWord r: SPReg.
-			 self MoveR: Arg0Reg Mw: 2 * BytesPerWord r: SPReg.
-			 ^self].
-		 numArgs = 2 ifTrue:
-			[self PushR: Arg1Reg.
-			 self MoveMw: BytesPerWord * 2 r: SPReg R: TempReg.
-			 self PushR: TempReg.
-			 self MoveMw: BytesPerWord * 2 r: SPReg R: TempReg.
-			 self PushR: TempReg.
-			 self MoveR: ReceiverResultReg Mw: 4 * BytesPerWord r: SPReg.
-			 self MoveR: Arg0Reg Mw: 3 * BytesPerWord r: SPReg.
-			 ^self]]
-]
-
-{ #category : #'compile abstract instructions' }
-StackToRegisterMappingCogit >> genPushRegisterArgsForNumArgs: numArgs [
-	"Ensure that the register args are pushed before the retpc for arity <= self numRegArgs."
-	"This won't be as clumsy on a RISC.  But putting the receiver and
-	 args above the return address means the CoInterpreter has a
-	 single machine-code frame format which saves us a lot of work."
-	numArgs <= self numRegArgs ifTrue:
-		[self assert: self numRegArgs <= 2.
-		 false "these two variants show the same performance on Intel Core i7, but the second one may be shorter."
-			ifTrue:
-				[self MoveMw: 0 r: SPReg R: TempReg. "Save return address"
-				 numArgs > 0 ifTrue:
-					[self PushR: Arg0Reg.
-					 numArgs > 1 ifTrue:
-						[self PushR: Arg1Reg]].
-				 self PushR: TempReg.
-				 self MoveR: ReceiverResultReg Mw: BytesPerWord * (1 + numArgs) r: SPReg]
-			ifFalse:
-				[self MoveMw: 0 r: SPReg R: TempReg. "Save return address"
-				 self MoveR: ReceiverResultReg Mw: 0 r: SPReg.
-				 numArgs > 0 ifTrue:
-					[self PushR: Arg0Reg.
-					 numArgs > 1 ifTrue:
-						[self PushR: Arg1Reg]].
-				self PushR: TempReg]] "Restore return address"
 ]
 
 { #category : #'bytecode generators' }
@@ -2730,7 +2654,7 @@ StackToRegisterMappingCogit >> genSendTrampolineFor: aRoutine numArgs: numArgs c
 	<inline: false>
 	startAddress := methodZoneBase.
 	opcodeIndex := 0.
-	self genPushRegisterArgsForNumArgs: numArgs.
+	backEnd genPushRegisterArgsForNumArgs: numArgs.
 	self genTrampolineFor: aRoutine
 		called: aString
 		callJumpBar: true
@@ -2755,7 +2679,7 @@ StackToRegisterMappingCogit >> genSendTrampolineFor: aRoutine numArgs: numArgs c
 	<inline: false>
 	startAddress := methodZoneBase.
 	opcodeIndex := 0.
-	self genPushRegisterArgsForNumArgs: numArgs.
+	backEnd genPushRegisterArgsForNumArgs: numArgs.
 	self genTrampolineFor: aRoutine
 		called: aString
 		callJumpBar: true

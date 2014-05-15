@@ -2297,6 +2297,34 @@ CogIA32Compiler >> genJumpFPNotEqual: jumpTarget [
 	^jumpToTarget
 ]
 
+{ #category : #'smalltalk calling convention' }
+CogIA32Compiler >> genLoadCStackPointer [
+	"Load the stack pointer register with that of the C stack, effecting
+	 a switch to the C stack.  Used when machine code calls into the
+	 CoInterpreter run-time (e.g. to invoke interpreter primitives)."
+	cogit MoveAw: cogit cStackPointerAddress R: SPReg.
+	^0
+]
+
+{ #category : #'smalltalk calling convention' }
+CogIA32Compiler >> genLoadCStackPointers [
+	"Load the frame and stack pointer registers with those of the C stack,
+	 effecting a switch to the C stack.  Used when machine code calls into
+	 the CoInterpreter run-time (e.g. to invoke interpreter primitives)."
+	cogit MoveAw: cogit cStackPointerAddress R: SPReg.
+	cogit MoveAw: cogit cFramePointerAddress R: FPReg.
+	^0
+]
+
+{ #category : #'smalltalk calling convention' }
+CogIA32Compiler >> genLoadStackPointers [
+	"Switch back to the Smalltalk stack. Assign SPReg first
+	 because typically it is used immediately afterwards."
+	cogit MoveAw: cogit stackPointerAddress R: SPReg.
+	cogit MoveAw: cogit framePointerAddress R: FPReg.
+	^0
+]
+
 { #category : #'abstract instructions' }
 CogIA32Compiler >> genMulR: regSource R: regDest [
 	cogit gen: IMULRR operand: regSource operand: regDest
@@ -2314,6 +2342,81 @@ CogIA32Compiler >> genPassConst: constant asArgument: zeroRelativeArgIndex [
 CogIA32Compiler >> genPassReg: abstractRegister asArgument: zeroRelativeArgIndex [
 	cogit PushR: abstractRegister.
 	^0
+]
+
+{ #category : #'smalltalk calling convention' }
+CogIA32Compiler >> genPushRegisterArgsForAbortMissNumArgs: numArgs [
+	"Ensure that the register args are pushed before the outer and
+	 inner retpcs at an entry miss for arity <= self numRegArgs.  The
+	 outer retpc is that of a call at a send site.  The inner is the call
+	 from a method or PIC abort/miss to the trampoline."
+
+	"This won't be as clumsy on a RISC.  But putting the receiver and
+	 args above the return address means the CoInterpreter has a
+	 single machine-code frame format which saves us a lot of work."
+
+	"Iff there are register args convert
+		base	->	outerRetpc		(send site retpc)
+		sp		->	innerRetpc		(PIC abort/miss retpc)
+	 to
+		base	->	receiver
+					(arg0)
+					(arg1)
+					outerRetpc
+		sp		->	innerRetpc		(PIC abort/miss retpc)"
+	numArgs <= cogit numRegArgs ifTrue:
+		[self assert: cogit numRegArgs <= 2.
+		 numArgs = 0 ifTrue:
+			[cogit MoveMw: 0 r: SPReg R: TempReg.
+			 cogit PushR: TempReg.
+			 cogit MoveMw: BytesPerWord * 2 r: SPReg R: TempReg.
+			 cogit MoveR: TempReg Mw: BytesPerWord r: SPReg.
+			 cogit MoveR: ReceiverResultReg Mw: 2 * BytesPerWord r: SPReg.
+			 ^self].
+		 numArgs = 1 ifTrue:
+			[cogit MoveMw: BytesPerWord r: SPReg R: TempReg.
+			 cogit PushR: TempReg.
+			 cogit MoveMw: BytesPerWord r: SPReg R: TempReg.
+			 cogit PushR: TempReg.
+			 cogit MoveR: ReceiverResultReg Mw: 3 * BytesPerWord r: SPReg.
+			 cogit MoveR: Arg0Reg Mw: 2 * BytesPerWord r: SPReg.
+			 ^self].
+		 numArgs = 2 ifTrue:
+			[cogit PushR: Arg1Reg.
+			 cogit MoveMw: BytesPerWord * 2 r: SPReg R: TempReg.
+			 cogit PushR: TempReg.
+			 cogit MoveMw: BytesPerWord * 2 r: SPReg R: TempReg.
+			 cogit PushR: TempReg.
+			 cogit MoveR: ReceiverResultReg Mw: 4 * BytesPerWord r: SPReg.
+			 cogit MoveR: Arg0Reg Mw: 3 * BytesPerWord r: SPReg.
+			 ^self]]
+]
+
+{ #category : #'smalltalk calling convention' }
+CogIA32Compiler >> genPushRegisterArgsForNumArgs: numArgs [
+	"Ensure that the register args are pushed before the retpc for arity <= self numRegArgs."
+	"This won't be as clumsy on a RISC.  But putting the receiver and
+	 args above the return address means the CoInterpreter has a
+	 single machine-code frame format which saves us a lot of work."
+	numArgs <= cogit numRegArgs ifTrue:
+		[self assert: cogit numRegArgs <= 2.
+		 false "these two variants show the same performance on Intel Core i7, but the second one may be shorter."
+			ifTrue:
+				[cogit MoveMw: 0 r: SPReg R: TempReg. "Save return address"
+				 numArgs > 0 ifTrue:
+					[cogit PushR: Arg0Reg.
+					 numArgs > 1 ifTrue:
+						[cogit PushR: Arg1Reg]].
+				 cogit PushR: TempReg.
+				 cogit MoveR: ReceiverResultReg Mw: BytesPerWord * (1 + numArgs) r: SPReg]
+			ifFalse:
+				[cogit MoveMw: 0 r: SPReg R: TempReg. "Save return address"
+				 cogit MoveR: ReceiverResultReg Mw: 0 r: SPReg.
+				 numArgs > 0 ifTrue:
+					[cogit PushR: Arg0Reg.
+					 numArgs > 1 ifTrue:
+						[cogit PushR: Arg1Reg]].
+				cogit PushR: TempReg]] "Restore return address"
 ]
 
 { #category : #abi }
@@ -2357,6 +2460,16 @@ CogIA32Compiler >> genSaveRegisters [
 		PushR: ECX;
 		PushR: EBX;
 		PushR: EAX.
+	^0
+]
+
+{ #category : #'smalltalk calling convention' }
+CogIA32Compiler >> genSaveStackPointers [
+	"Save the frame and stack pointer registers to the framePointer
+	 and stackPointer variables.  Used to save the machine code frame
+	 for use by the run-time when calling into the CoInterpreter run-time."
+	cogit MoveR: FPReg Aw: cogit framePointerAddress.
+	cogit MoveR: SPReg Aw: cogit stackPointerAddress.
 	^0
 ]
 

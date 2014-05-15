@@ -12,6 +12,14 @@ VMCompiledMethodProxy >> at: index [
 ]
 
 { #category : #accessing }
+VMCompiledMethodProxy >> encoderClass [
+
+	^(coInterpreter headerIndicatesAlternateBytecodeSet: self header)
+		ifTrue: [EncoderForNewsqueakV4]
+		ifFalse: [EncoderForV3PlusClosures]
+]
+
+{ #category : #accessing }
 VMCompiledMethodProxy >> endPC [
 	"Answer the index of the last bytecode."
 	^(coInterpreter cogit endPCOf: oop) + 1
