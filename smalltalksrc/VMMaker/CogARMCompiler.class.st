@@ -1051,6 +1051,34 @@ CogARMCompiler >> genGetLeafCallStackPointerFunction [
 	cogit RetN: 0
 ]
 
+{ #category : #'smalltalk calling convention' }
+CogARMCompiler >> genLoadCStackPointer [
+	"Load the stack pointer register with that of the C stack, effecting
+	 a switch to the C stack.  Used when machine code calls into the
+	 CoInterpreter run-time (e.g. to invoke interpreter primitives)."
+	cogit MoveAw: cogit cStackPointerAddress R: SPReg.
+	^0
+]
+
+{ #category : #'smalltalk calling convention' }
+CogARMCompiler >> genLoadCStackPointers [
+	"Load the frame and stack pointer registers with those of the C stack,
+	 effecting a switch to the C stack.  Used when machine code calls into
+	 the CoInterpreter run-time (e.g. to invoke interpreter primitives)."
+	cogit MoveAw: cogit cStackPointerAddress R: SPReg.
+	cogit MoveAw: cogit cFramePointerAddress R: FPReg.
+	^0
+]
+
+{ #category : #'smalltalk calling convention' }
+CogARMCompiler >> genLoadStackPointers [
+	"Switch back to the Smalltalk stack. Assign SPReg first
+	 because typically it is used immediately afterwards."
+	cogit MoveAw: cogit stackPointerAddress R: SPReg.
+	cogit MoveAw: cogit framePointerAddress R: FPReg.
+	^0
+]
+
 { #category : #abi }
 CogARMCompiler >> genPassConst: constant asArgument: zeroRelativeArgIndex [
 	zeroRelativeArgIndex caseOf: {
@@ -1071,6 +1099,52 @@ CogARMCompiler >> genPassReg: abstractRegister asArgument: zeroRelativeArgIndex 
 	^0
 ]
 
+{ #category : #'smalltalk calling convention' }
+CogARMCompiler >> genPushRegisterArgsForAbortMissNumArgs: numArgs [
+	"Ensure that the register args are pushed before the outer and
+	 inner retpcs at an entry miss for arity <= self numRegArgs.  The
+	 outer retpc is that of a call at a send site.  The inner is the call
+	 from a method or PIC abort/miss to the trampoline."
+
+	"Putting the receiver and args above the return address means the
+	 CoInterpreter has a single machine-code frame format which saves
+	 us a lot of work."
+
+	"Iff there are register args convert
+		sp		->	outerRetpc		(send site retpc)
+		linkReg = innerRetpc		(PIC abort/miss retpc)
+	 to
+		base	->	receiver
+					(arg0)
+					(arg1)
+		sp		->	outerRetpc		(send site retpc)
+		linkReg = innerRetpc		(PIC abort/miss retpc)"
+	numArgs <= cogit numRegArgs ifTrue:
+		[self assert: cogit numRegArgs <= 2.
+		 cogit MoveMw: 0 r: SPReg R: TempReg. "Save return address"
+		 cogit MoveR: ReceiverResultReg Mw: 0 r: SPReg.
+		 numArgs > 0 ifTrue:
+			[cogit PushR: Arg0Reg.
+			 numArgs > 1 ifTrue:
+				[cogit PushR: Arg1Reg]].
+		cogit PushR: TempReg] "Restore return address"
+]
+
+{ #category : #'smalltalk calling convention' }
+CogARMCompiler >> genPushRegisterArgsForNumArgs: numArgs [
+	"Ensure that the register args are pushed before the retpc for arity <= self numRegArgs."
+	"This is easy on a RISC like ARM because the return address is in the link register.  Putting
+	 the receiver and args above the return address means the CoInterpreter has a single
+	 machine-code frame format which saves us a lot of work."
+	numArgs <= cogit numRegArgs ifTrue:
+		[self assert: cogit numRegArgs <= 2.
+		 numArgs > 0 ifTrue:
+			[cogit PushR: ReceiverResultReg.
+			 cogit PushR: Arg0Reg.
+			 numArgs > 1 ifTrue:
+				[cogit PushR: Arg1Reg]]]
+]
+
 { #category : #abi }
 CogARMCompiler >> genRestoreRegisters [
 	"Load the general purpose registers after the return of a trampoline call."
@@ -1085,6 +1159,16 @@ CogARMCompiler >> genSaveRegisters [
 	"Save none, because we use only callee saved registers."
 	"cogit
 		gen: STMFD operand: 16r7F"
+]
+
+{ #category : #'smalltalk calling convention' }
+CogARMCompiler >> genSaveStackPointers [
+	"Save the frame and stack pointer registers to the framePointer
+	 and stackPointer variables.  Used to save the machine code frame
+	 for use by the run-time when calling into the CoInterpreter run-time."
+	cogit MoveR: FPReg Aw: cogit framePointerAddress.
+	cogit MoveR: SPReg Aw: cogit stackPointerAddress.
+	^0
 ]
 
 { #category : #'abstract instructions' }
