@@ -9,3 +9,9 @@ CompiledMethod >> abstractDetailedSymbolic [
 CompiledMethod >> detailedSymbolic [
 	^String streamContents: [:s| (DetailedInstructionPrinter on: self) printInstructionsOn: s]
 ]
+
+{ #category : #'*VMMaker-support' }
+CompiledMethod >> usesAlternateBytecodeSet [
+	"only an issue in vmcompiledmethodproxy stuff"
+	^false
+]
