@@ -198,6 +198,36 @@ CogObjectRepresentationForSpur >> genGetDoubleValueOf: srcReg into: destFPReg [
 	^0
 ]
 
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genGetFormatOf: sourceReg into: destReg baseHeaderIntoScratch: scratchReg [
+	cogit MoveMw: 0 r: sourceReg R: destReg.
+	scratchReg ifNotNil:
+		[cogit MoveR: destReg R: scratchReg]. "destReg := (at least) least significant half of self baseHeader: receiver"
+	cogit LogicalShiftRightCq: objectMemory formatShift R: destReg.
+	cogit AndCq: objectMemory formatMask R: destReg.	"formatReg := self formatOfHeader: destReg"
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genGetFormatOf: sourceReg into: destReg leastSignificantHalfOfBaseHeaderIntoScratch: scratchRegOrNil [
+	"Get the format of the object in sourceReg into destReg.  If scratchRegOrNil
+	 is not nil, load at least the least significant 32-bits (64-bits in 64-bits) of the
+	 header word, which contains the format, into scratchRegOrNil."
+	cogit MoveMw: 0 r: sourceReg R: destReg.
+	scratchRegOrNil ifNotNil:
+		[cogit MoveR: destReg R: scratchRegOrNil]. "destReg := (at least) least significant half of self baseHeader: receiver"
+	cogit LogicalShiftRightCq: objectMemory formatShift R: destReg.
+	cogit AndCq: objectMemory formatMask R: destReg.	"formatReg := self formatOfHeader: destReg"
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genGetRawSlotSizeOfNonImm: sourceReg into: destReg [
+	"The raw numSlots field is the most significant byte of the 64-bit header word."
+	cogit MoveMb: 7 r: sourceReg R: destReg.
+	^0
+]
+
 { #category : #'primitive generators' }
 CogObjectRepresentationForSpur >> genInnerPrimitiveAsCharacter: retNOffset inReg: reg [
 	| jumpNotInt jumpOutOfRange |

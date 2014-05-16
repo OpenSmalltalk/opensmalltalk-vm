@@ -2299,10 +2299,22 @@ StackToRegisterMappingCogit >> genPrimitiveMultiply [
 
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveNew [
-	| r |
-	((r := objectRepresentation genInnerPrimitiveNew: 0) < 0
-	 and: [r ~= UnimplementedPrimitive]) ifTrue:
-		[^r].
+	| r numArgs |
+	NewspeakVM
+		ifTrue:
+			[numArgs := coInterpreter argumentCountOf: methodObj.
+			 numArgs = 1 ifTrue:
+				[((r := objectRepresentation genInnerPrimitiveMirrorNew: 0) < 0
+				  and: [r ~= UnimplementedPrimitive]) ifTrue:
+					[^r]].
+			 numArgs = 0 ifTrue:
+				[((r := objectRepresentation genInnerPrimitiveNew: 0) < 0
+				  and: [r ~= UnimplementedPrimitive]) ifTrue:
+					[^r]]]
+		ifFalse:
+			[((r := objectRepresentation genInnerPrimitiveNew: 0) < 0
+			  and: [r ~= UnimplementedPrimitive]) ifTrue:
+				[^r]].
 	"Call the interpreter primitive either when the machine-code primitive
 	 fails, or if the machine-code primitive is unimplemented."
 	^self compileFallbackToInterpreterPrimitive
@@ -2310,10 +2322,22 @@ StackToRegisterMappingCogit >> genPrimitiveNew [
 
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveNewWithArg [
-	| r |
-	((r := objectRepresentation genInnerPrimitiveNewWithArg: 0) < 0
-	 and: [r ~= UnimplementedPrimitive]) ifTrue:
-		[^r].
+	| r numArgs |
+	NewspeakVM
+		ifTrue:
+			[numArgs := coInterpreter argumentCountOf: methodObj.
+			 numArgs = 2 ifTrue:
+				[((r := objectRepresentation genInnerPrimitiveMirrorNewWithArg: 0) < 0
+				  and: [r ~= UnimplementedPrimitive]) ifTrue:
+					[^r]].
+			 numArgs = 1 ifTrue:
+				[((r := objectRepresentation genInnerPrimitiveNewWithArg: 0) < 0
+				  and: [r ~= UnimplementedPrimitive]) ifTrue:
+					[^r]]]
+		ifFalse:
+			[((r := objectRepresentation genInnerPrimitiveNewWithArg: 0) < 0
+			  and: [r ~= UnimplementedPrimitive]) ifTrue:
+				[^r]].
 	"Call the interpreter primitive either when the machine-code primitive
 	 fails, or if the machine-code primitive is unimplemented."
 	^self compileFallbackToInterpreterPrimitive
