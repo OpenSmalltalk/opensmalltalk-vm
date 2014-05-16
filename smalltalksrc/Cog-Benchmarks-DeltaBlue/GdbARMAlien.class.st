@@ -56,13 +56,10 @@ GdbARMAlien >> bitsInWord [
 ]
 
 { #category : #opcodes }
-GdbARMAlien >> branchAndLinkOpcodeWithOffset: aNumber [
-	
-	| offset |
-	offset := (aNumber - 8) asInteger.
-	(offset between: -33554432 and: 33554428) ifFalse: [self error: 'The offset is to far. ARM does not support such far jumps.'].
-	^ 16reb000000 bitOr: (offset >> 2 bitAnd: 16r00FFFFFF)
-
+GdbARMAlien >> byteSwappedNopOpcode [
+	"For the Tsts class which keeps filling BitMaps with nop, provide one swapped so it turns out correct when disassembled
+	mov r0, r0 swapped -> "
+	^ 16r00000A0E1
 ]
 
 { #category : #'accessing-abstract' }
@@ -77,12 +74,13 @@ GdbARMAlien >> cResultRegister: aValue [
 
 { #category : #accessing }
 GdbARMAlien >> cflag [
-	^self unsignedLongAt: 577
+"The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
+	^self unsignedLongAt: 573
 ]
 
 { #category : #disassembly }
 GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager "<Cogit>" fromAddress: address [
-	(anInstructionString endsWith: 'mov	r1, r1')
+	(anInstructionString endsWith: 'mov	r0, r0')
 		ifTrue: [^super decorateDisassembly: 'nop' for: aSymbolManager].
 	^super decorateDisassembly: anInstructionString for: aSymbolManager
 ]
@@ -96,9 +94,32 @@ GdbARMAlien >> eflags [
 					bitOr: self ifflags
 ]
 
+{ #category : #accessing }
+GdbARMAlien >> endCondition [
+"why did the simulator stop?"
+	^self unsignedLongAt: 5
+]
+
 { #category : #'accessing-abstract' }
 GdbARMAlien >> endianness [
 	^#little
+]
+
+{ #category : #accessing }
+GdbARMAlien >> errorCode [
+"simulator error code"
+	^self unsignedLongAt: 9
+]
+
+{ #category : #testing }
+GdbARMAlien >> extractOffsetFromBL: instr [
+"we are told this is a BL <offset> instruction, so work out the offset it encodes"
+	| relativeJump |
+	relativeJump := instr bitAnd: 16r00FFFFFF.
+	relativeJump := (relativeJump bitAt: 24) = 1 
+						ifTrue: [((relativeJump bitOr: 16r3F000000) << 2) signedIntFromLong]
+						ifFalse: [relativeJump << 2].
+	^relativeJump
 ]
 
 { #category : #execution }
@@ -121,21 +142,14 @@ GdbARMAlien >> fp: aNumber [
 { #category : #'error handling' }
 GdbARMAlien >> handleCallFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Convert an execution primitive failure for a call into a ProcessorSimulationTrap signal."
-	|  relativeJump callAddress |
-	((memoryArray byteAt: pc + 4) bitAnd: 16rF) = 16rB "BL opcode"
-		ifTrue: ["short jump via BL, therefore we have a 24bit signed integer offset"
-			relativeJump := (memoryArray unsignedLongAt: pc + 1 bigEndian: false) bitAnd: 16r00FFFFFF.
-			relativeJump := (relativeJump bitAt: 24) = 1 
-									ifTrue: [((relativeJump bitOr: 16r3F000000) << 2) signedIntFromLong]
-									ifFalse: [relativeJump << 2].
-			callAddress := (pc + 8 + relativeJump)]
-		
-		ifFalse: ["long jump using RISCTempReg"
-			"The memoryArray starts indexing from 1, whereas the pc is based on 0-indexing, therefore all access-offsets are one greater than expected"
-			callAddress := (memoryArray byteAt: pc + 4) 
-								+ ((memoryArray byteAt: pc - 4) << 24) 
-								+ ((memoryArray byteAt: pc - 8) << 16) 
-								+ ((memoryArray byteAt: pc - 12) << 8)].
+	|  callAddress failedInstruction|
+	"grab the instruction at issue"
+	failedInstruction := memoryArray unsignedLongAt: pc + 1 bigEndian: false.
+	(self instructionIsBL: failedInstruction)
+		ifFalse:[self halt].
+	"short jump via BL, therefore we have a 24bit signed integer offset"
+	callAddress := (pc + 8 + (self extractOffsetFromBL: failedInstruction)).
+
 	^(ProcessorSimulationTrap
 			pc: pc
 			nextpc: pc + 4
@@ -146,7 +160,7 @@ GdbARMAlien >> handleCallFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|By
 
 { #category : #'error handling' }
 GdbARMAlien >> handleExecutionPrimitiveFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
-	"Handle an execution primitive failure for an unhandled opcode."
+	"Handle an execution primitive failure for an otherwise unhandled opcode."
 	^self reportPrimitiveFailure
 ]
 
@@ -156,11 +170,14 @@ GdbARMAlien >> handleExecutionPrimitiveFailureIn: memoryArray "<Bitmap|ByteArray
 	 memory read into register instructions into ProcessorSimulationTrap signals."
 	"self printRegistersOn: Transcript"
 	| pc |
+	self endCondition = 5 ifTrue:[self pc: self priorPc].
 	((pc := self pc) between: minimumAddress and: memoryArray byteSize - 1) ifTrue:
 		[(self instructionTypeAt: pc in: memoryArray)
 			caseOf: {
 				[#Call] 			-> [^self handleCallFailureAt: pc in: memoryArray].
+				[#LongCall] 	-> [^self handleLongCallFailureAt: pc in: memoryArray].
 				[#Jump] 		-> [^self handleJmpFailureAt: pc in: memoryArray].
+				[#LongJump] 	-> [^self handleLongJmpFailureAt: pc in: memoryArray].
 				[#MoveAwR]	-> [^self handleMoveAwRFailureAt: pc in: memoryArray].
 				[#MoveMbrR]	-> [^self handleMoveMbrRFailureAt: pc in: memoryArray].
 				[#MoveRAw]	-> [^self handleMoveRAwFailureAt: pc in: memoryArray].
@@ -171,7 +188,9 @@ GdbARMAlien >> handleExecutionPrimitiveFailureIn: memoryArray "<Bitmap|ByteArray
 		[(self instructionTypeAt: pc in: memoryArray)
 			caseOf: {
 				[#Call] 		-> [^self handleCallFailureAt: pc in: memoryArray].
+				[#LongCall] -> [^self handleLongCallFailureAt: pc in: memoryArray].
 				[#Jump] 	-> [^self handleJmpFailureAt: pc in: memoryArray].
+				[#LongJump] 	-> [^self handleLongJmpFailureAt: pc in: memoryArray].
 				[#Ret]		-> [^self handleRetFailureAt: pc in: memoryArray].} 
 			otherwise: [^self handleExecutionPrimitiveFailureAt: pc in: memoryArray]].
 	^self reportPrimitiveFailure
@@ -179,14 +198,65 @@ GdbARMAlien >> handleExecutionPrimitiveFailureIn: memoryArray "<Bitmap|ByteArray
 
 { #category : #'error handling' }
 GdbARMAlien >> handleJmpFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
-	"Convert an execution primitive failure for a jmp into a ProcessorSimulationTrap signal."
-	|  relativeJump |
-	self halt.
-	relativeJump := memoryArray longAt: pc + 2 bigEndian: false.
+	"Convert an execution primitive failure for a jump into a ProcessorSimulationTrap signal."
+	|  callAddress failedInstruction|
+	"grab the instruction at issue"
+	failedInstruction := memoryArray unsignedLongAt: pc + 1 bigEndian: false.
+	(self instructionIsB: failedInstruction)
+		ifFalse:[self halt].
+	"short jump via B, therefore we have a 24bit signed integer offset"
+	callAddress := (pc + 8 + (self extractOffsetFromBL: failedInstruction)).
+
 	^(ProcessorSimulationTrap
 			pc: pc
-			nextpc: pc + 5
-			address: (pc + 5 + relativeJump) signedIntToLong
+			nextpc: pc + 4
+			address: callAddress signedIntToLong
+			type: #jump)
+		signal
+]
+
+{ #category : #'error handling' }
+GdbARMAlien >> handleLongCallFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
+	"Convert an execution primitive failure for a long call into a ProcessorSimulationTrap signal."
+	|  callAddress failedInstruction|
+	"grab the instruction at issue"
+	failedInstruction := memoryArray unsignedLongAt: pc + 1 bigEndian: false.
+	"Hmm. Perhaps we ought to test for an actual BLX here rather than assuming?"
+	(self instructionIsBLX: failedInstruction)
+				ifFalse:[ self halt: 'failed call type test'].
+	"The memoryArray starts indexing from 1, whereas the pc is based on 0-indexing, therefore all access-offsets are one greater than expected" 
+	"address, combined from prior four MOV/ORR instructions. See CogARMCompiler>concretizeLongCall"
+	callAddress := (memoryArray byteAt: pc -3) 
+						+ ((memoryArray byteAt: pc - 7) << 8) 
+						+ ((memoryArray byteAt: pc - 11) << 16) 
+						+ ((memoryArray byteAt: pc - 15) << 24).
+	^(ProcessorSimulationTrap
+			pc: pc
+			nextpc: pc + 4
+			address: callAddress signedIntToLong
+			type: #call)
+		signal
+]
+
+{ #category : #'error handling' }
+GdbARMAlien >> handleLongJmpFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
+	"Convert an execution primitive failure for a long jump into a ProcessorSimulationTrap signal."
+	|  callAddress failedInstruction|
+	"grab the instruction at issue"
+	failedInstruction := memoryArray unsignedLongAt: pc + 1 bigEndian: false.
+	"Hmm. Perhaps we ought to test for an actual BX here rather than assuming?"
+	(self instructionIsBX: failedInstruction)
+				ifFalse:[ self halt: 'failed call type test'].
+	"The memoryArray starts indexing from 1, whereas the pc is based on 0-indexing, therefore all access-offsets are one greater than expected" 
+	"address, combined from prior four MOV/ORR instructions. See CogARMCompiler>concretizeLongCall"
+	callAddress := (memoryArray byteAt: pc -3) 
+						+ ((memoryArray byteAt: pc - 7) << 8) 
+						+ ((memoryArray byteAt: pc - 11) << 16) 
+						+ ((memoryArray byteAt: pc - 15) << 248).
+	^(ProcessorSimulationTrap
+			pc: pc
+			nextpc: pc + 4
+			address: callAddress signedIntToLong
 			type: #jump)
 		signal
 ]
@@ -194,18 +264,19 @@ GdbARMAlien >> handleJmpFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|Byt
 { #category : #'error handling' }
 GdbARMAlien >> handleMoveAwRFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Convert an execution primitive failure for a register load from an Address into a ProcessorSimulationTrap signal."
-	((memoryArray byteAt: pc + 4) = 16rE5  "test for E593 as the most significant two bytes"
-		and: [(memoryArray byteAt: pc + 3) = (16r90 + (CogARMCompiler classPool at: #RISCTempReg))])
+	((memoryArray byteAt: pc + 4) = 16rE5  "test for 0xE59X as the most significant two bytes - X being the index of the RISCTempReg (or 0xA in current code).
+		LDR Rx, [RiscTempReg, #0]"
+		and: [(memoryArray byteAt: pc + 3) = (16r90 + CogARMCompiler ARMTempReg)])
 		ifTrue:
 			[(ProcessorSimulationTrap
 					pc: pc
 					nextpc: pc + 4 
-					address: (memoryArray byteAt: pc + 1) "address, combined from four instructions"
-								+ ((memoryArray byteAt: pc - 3) << 24) 
-								+ ((memoryArray byteAt: pc - 7) << 16) 
-								+ ((memoryArray byteAt: pc - 11) << 8)
+					address: (memoryArray byteAt: pc -3) "address, combined from prior four MOV/ORR instructions. See CogARMCompiler>concretizeMoveAwR"
+								+ ((memoryArray byteAt: pc - 7) << 8) 
+								+ ((memoryArray byteAt: pc - 11) << 16) 
+								+ ((memoryArray byteAt: pc - 15) << 24)
 					type: #read
-					accessor: (self registerStateSetters at: ((memoryArray byteAt: pc + 2) >> 4) + 1))
+					accessor: (self registerStateSetters at: ("destination register" (memoryArray byteAt: pc + 2) >> 4) + 1))
 				signal]
 		ifFalse:
 			[self reportPrimitiveFailure]
@@ -236,15 +307,15 @@ GdbARMAlien >> handleMoveMbrRFailureAt: pc "<Integer>" in: memoryArray [ "<Bitma
 GdbARMAlien >> handleMoveRAwFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Convert an execution primitive failure for a register write into Memory at a predefined address into a ProcessorSimulationTrap signal."
 	^((memoryArray byteAt: pc + 4) = 16rE5 
-		and: [(memoryArray byteAt: pc + 3) = (16r80 + (CogARMCompiler classPool at: #RISCTempReg))])
+		and: [(memoryArray byteAt: pc + 3) = (16r80 + CogARMCompiler ARMTempReg)])
 		ifTrue:
 			[(ProcessorSimulationTrap
 					pc: pc
 					nextpc: pc + 4
-					address: (memoryArray byteAt: pc + 1) 
-								+ ((memoryArray byteAt: pc - 3) << 24) 
-								+ ((memoryArray byteAt: pc - 7) << 16) 
-								+ ((memoryArray byteAt: pc - 11) << 8)
+					address: (memoryArray byteAt: pc -3) 
+								+ ((memoryArray byteAt: pc - 7) << 8) 
+								+ ((memoryArray byteAt: pc - 11) << 16) 
+								+ ((memoryArray byteAt: pc - 15) <<24)
 					type: #write
 					accessor: (self registerStateNames at: ((memoryArray byteAt: pc + 2) >> 4) + 1))
 				signal]
@@ -288,46 +359,107 @@ GdbARMAlien >> handleRetFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|Byt
 
 { #category : #accessing }
 GdbARMAlien >> ifflags [
-	^self unsignedLongAt: 585
+"The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
+	^self unsignedLongAt: 581
+]
+
+{ #category : #testing }
+GdbARMAlien >> instructionIsB: instr [
+"is this a B <offset> instruction?"
+	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: (16rF<<24)) = (16rA<<24)]
+]
+
+{ #category : #testing }
+GdbARMAlien >> instructionIsBL: instr [
+"is this a BL <offset> instruction?"
+	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: (16rF<<24)) = (16rB<<24)]
+]
+
+{ #category : #testing }
+GdbARMAlien >> instructionIsBLX: instr [
+"is this a BLX <targetReg> instruction?"
+	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: 16r0FFFFFF0) = 16r12FFF30]
+]
+
+{ #category : #testing }
+GdbARMAlien >> instructionIsBX: instr [
+"is this a BX <targetReg> instruction?"
+	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: 16r0FFFFFF0) = 16r12FFF10]
+]
+
+{ #category : #testing }
+GdbARMAlien >> instructionIsLDR: instr byReg: rn [
+"is this a LDR r1, [r2, rn] instruction? Special case to detect MoveAwR case"
+	| foo |
+	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [foo := (instr >> 20 bitAnd: 16rFF). foo = 16r59  and:[(instr >>16 bitAnd: 16rF) = rn]]
+]
+
+{ #category : #testing }
+GdbARMAlien >> instructionIsLDRB: instr [
+"is this a LDRB instruction?"
+	| foo |
+	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" 
+		and: [foo := (instr >> 20 bitAnd: 16rFF).
+			foo = 16r55 "ldrb r1, [r2, #imm]"
+				or:[foo = 16r5D "ldrb r1, [r2, #-imm]"
+				or:[foo = 16r7D "ldrb r1, [r2, r3]"]]]
+]
+
+{ #category : #testing }
+GdbARMAlien >> instructionIsSTR: instr [
+"is this a STR instruction?"
+	| foo |
+	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [foo := (instr >> 20 bitAnd: 16rFF). foo = 16r58 "str r1, [r2, #imm]" or:[foo = 16r50 "str r1, [r2, #-imm]" or:[foo = 16r78 "str r1, [r2, r3]"]]]
+]
+
+{ #category : #testing }
+GdbARMAlien >> instructionIsSTR: instr byReg: rn [
+"is this a STR r1, [r2, rn] instruction? Special case to detect MoveRAw case"
+	| foo |
+	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [foo := (instr >> 20 bitAnd: 16rFF). foo = 16r58  and:[(instr >>16 bitAnd: 16rF) = rn]]
+]
+
+{ #category : #testing }
+GdbARMAlien >> instructionIsSTRB: instr [
+"is this a STRB instruction?"
+	| foo |
+	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [foo := (instr >> 20 bitAnd: 16rFF). foo = 16r54 "strb r1, [r2, #imm]" or:[foo = 16r5c "strb r1, [r2, #-imm]" or:[foo = 16r7c "strb r1, [r2, r3]"]]]
 ]
 
 { #category : #'error handling' }
 GdbARMAlien >> instructionTypeAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
-	"Identify which type of instruction is at pc in memoryArray. For the time beeing, only those instructions needed for PrimitiveFailure are identified."
+	"Identify which type of instruction is at pc in memoryArray. For the time being, only those instructions needed for PrimitiveFailure are identified."
 	| RISCTempReg lastInstruction typeOperandStatus |
-	RISCTempReg := CogARMCompiler classPool at: #RISCTempReg.
-	lastInstruction := memoryArray unsignedLongAt: pc + 1 bigEndian: false.
-	"self disassembleFrom: pc - 16 to: pc + 3 in: memoryArray on: Transcript cr"
+	RISCTempReg := CogARMCompiler ARMTempReg.
+	lastInstruction := memoryArray unsignedLongAt:  pc + 1 bigEndian: false .
+	"self disassembleFrom: pc - 16 to: pc + 11 in: memoryArray on: Transcript cr"
 	
 	"Ret"
-	lastInstruction = 16rE8BD8000 ifTrue: [#Ret].
+	lastInstruction = self popPcOpcode ifTrue: [#Ret].
 
 	"Call"
-	(((memoryArray byteAt: pc + 4) bitAnd: 16rF) = 16rB "BL opcode"
-		or: [(memoryArray unsignedLongAt: pc - 3 bigEndian: false) = 16rE1A0E00F]) ifTrue: [^#Call].
+	(self instructionIsBL: lastInstruction) ifTrue: [^#Call].
+	"long call"
+	(self instructionIsBLX: lastInstruction) ifTrue: [^#LongCall].
+	
 	
 	"Jump"
-	((memoryArray byteAt: pc + 3) >> 4 = 16rA "B opcode, for short jumps"
-		or: [(lastInstruction >> 12 bitAnd: 16r0FFFF) = 
-				(16r0280F + (RISCTempReg << 4)) 	"ADD? PC, RISCTempReg, #anything, for JumpLong-Instructions"])
-		ifTrue: [^#Jump].
+	(self instructionIsB: lastInstruction) ifTrue: [^#Jump].
+	"long Jump"
+	(self instructionIsBX: lastInstruction) ifTrue: [^#LongJump].
 		
 	typeOperandStatus := lastInstruction >> 20 bitAnd: 16rFF.
 	"MoveRMbr"
-	(typeOperandStatus = 16r54 or: [typeOperandStatus = 16r5C] or: [typeOperandStatus = 16r7C])
-		ifTrue: [^#MoveRMbr].
+	(self instructionIsSTRB: lastInstruction) ifTrue: [^#MoveRMbr].
 		
 	"MoveRAw"
-	(typeOperandStatus = 16r58 and: [(lastInstruction >> 16 bitAnd: 16rF) = RISCTempReg])
-		ifTrue: [^#MoveRAw].
+	(self instructionIsSTR: lastInstruction byReg: RISCTempReg) ifTrue: [^#MoveRAw].
 		
 	"MoveMbrR"
-	(typeOperandStatus = 16r55 or: [typeOperandStatus = 16r5D] or: [typeOperandStatus = 16r7D])
-		ifTrue: [^#MoveMbrR].
+	(self instructionIsLDRB: lastInstruction) ifTrue: [^#MoveMbrR].
 		
 	"MoveAwR"
-	((typeOperandStatus = 16r59) and: [(lastInstruction >> 16 bitAnd: 16rF) = RISCTempReg])
-		ifTrue: [^#MoveAwR].
+	(self instructionIsLDR: lastInstruction byReg: RISCTempReg) ifTrue: [^#MoveAwR].
 	
 	
 	^#UnidentifiedInstruction
@@ -352,7 +484,8 @@ GdbARMAlien >> lr: anUnsignedInteger [
 
 { #category : #accessing }
 GdbARMAlien >> nflag [
-	^self unsignedLongAt: 569
+"The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
+	^self unsignedLongAt: 565
 ]
 
 { #category : #opcodes }
@@ -372,6 +505,12 @@ GdbARMAlien >> pc: anUnsignedInteger [
 	^self unsignedLongAt: 73 put: anUnsignedInteger
 ]
 
+{ #category : #opcodes }
+GdbARMAlien >> popPcOpcode [
+"See also CogARMCompiler>concretizePopR"
+	^16rE49DF004
+]
+
 { #category : #execution }
 GdbARMAlien >> postCallArgumentsNumArgs: numArgs "<Integer>" in: memory [ "<ByteArray|Bitmap>"
 	"Answer an argument vector of the requested size after a vanilla
@@ -384,6 +523,12 @@ GdbARMAlien >> postCallArgumentsNumArgs: numArgs "<Integer>" in: memory [ "<Byte
 			ifTrue: [self perform: (self registerStateNames at: i)]
 			"ARM uses a full descending stack. Directly after calling a procedure, nothing but the arguments are pushed."
 			ifFalse: [memory unsignedLongAt: self sp + (i-5)*4 bigEndian: false]].
+]
+
+{ #category : #accessing }
+GdbARMAlien >> postTrapCorrectedPC [
+	"return the pc - 8 for trap handling - remember the ARM alwayshas that funky +8 offset vs the actual instruction running/failig"
+	^self pc -8
 ]
 
 { #category : #primitives }
@@ -432,7 +577,8 @@ GdbARMAlien >> primitiveRunInMemory: memoryArray "<Bitmap|ByteArray>" minimumAdd
 GdbARMAlien >> primitiveRunInMemory: memoryArray "<Bitmap|ByteArray>" minimumAddress: minimumAddress "<Integer>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
 	"Run the receiver using the argument as the store.  Origin the argument at 0. i.e. the first byte of the
 	 memoryArray is address 0.  Make addresses below minimumAddress illegal.  Convert out-of-range
-	 calls, jumps and memory read/writes into ProcessorSimulationTrap signals."
+	 calls, jumps and memory read/writes into ProcessorSimulationTrap signals.
+	Note that minWriteMaxExecAddress is both the minimum writeable address AND the maximum executable address"
 	<primitive: 'primitiveRunInMemoryMinimumAddressReadWrite' module: 'GdbARMPlugin' error: ec>
 	^ec == #'inappropriate operation'
 		ifTrue: [self handleExecutionPrimitiveFailureIn: memoryArray
@@ -525,6 +671,12 @@ GdbARMAlien >> printRegisterStateExceptPC: registerStateVector on: aStream [
 						r12 sp lr eflags cr)
 		inRegisterState: registerStateVector
 		on: aStream
+]
+
+{ #category : #accessing }
+GdbARMAlien >> priorPc [
+"where did the simulator stop just before a prefetch abort?"
+	^self unsignedLongAt: 609
 ]
 
 { #category : #execution }
@@ -675,6 +827,13 @@ GdbARMAlien >> r9: anUnsignedInteger [
 	^self unsignedLongAt: 49 put: anUnsignedInteger
 ]
 
+{ #category : #accessing }
+GdbARMAlien >> rawCPSR [
+"The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
+"read the raw value of the cpsr from the alien structure"
+	^self unsignedLongAt: 533
+]
+
 { #category : #'accessing-abstract' }
 GdbARMAlien >> registerState [
 	^{	self r0. self r1. self r2. self r3. self r4. self r5. self r6. self r7.
@@ -699,6 +858,7 @@ GdbARMAlien >> registerStatePCIndex [
 
 { #category : #'accessing-abstract' }
 GdbARMAlien >> registerStateSetters [
+"a list of register setting messages used to initialise or reset registers"
 	^#(	r0: r1: r2: r3: r4: r5: r6: r7: r8: r9: r10: fp: r12: sp: lr: pc:)
 ]
 
@@ -716,7 +876,8 @@ GdbARMAlien >> setFramePointer: framePointer stackPointer: stackPointer [
 
 { #category : #accessing }
 GdbARMAlien >> sflag [
-	^self unsignedLongAt: 589
+"The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
+	^self unsignedLongAt: 585
 ]
 
 { #category : #'execution simulation' }
@@ -772,11 +933,20 @@ GdbARMAlien >> sp: anUnsignedInteger [
 ]
 
 { #category : #accessing }
+GdbARMAlien >> tflag [
+"The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
+"This would be the Thumb flag if we have it -which depends rather oddly on the compiletime flags used to build the ARMulator. Sigh"
+	^self unsignedLongAt: 589
+]
+
+{ #category : #accessing }
 GdbARMAlien >> vflag [
-	^self unsignedLongAt: 581
+"The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
+	^self unsignedLongAt: 577
 ]
 
 { #category : #accessing }
 GdbARMAlien >> zflag [
-	^self unsignedLongAt: 573
+"The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
+	^self unsignedLongAt: 569
 ]
