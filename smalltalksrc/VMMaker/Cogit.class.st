@@ -812,8 +812,9 @@ Cogit class >> initializeMiscConstants [
 
 { #category : #'class initialization' }
 Cogit class >> initializePrimitiveTable [
-	"Currently there is only one sequence of primitives."
-	self initializePrimitiveTableForSqueakV3
+	NewspeakVM
+		ifTrue: [self initializePrimitiveTableForNewsqueak]
+		ifFalse: [self initializePrimitiveTableForSqueak]
 ]
 
 { #category : #'class initialization' }
@@ -2394,11 +2395,11 @@ Cogit >> breakPC: anAddress [
 	 and: [anAddress between: codeBase and: coInterpreter heapBase]) ifTrue:
 		[singleStep := true].
 	"If there's a breakPC then it is anded with breakBlock's result, so the breakBlock must default to true.
-	If there's no breakPC the break block is used on its own and so must befault to false."
+	 If there's no breakPC the break block is used on its own and so must befault to false."
 	(breakBlock isNil
 	 or: [breakBlock method = thisContext method]) ifTrue:
 		[breakBlock := breakPC isInteger
-						ifTrue: [[:cogit| true]]
+						ifTrue: [[:cogit| processor pc = breakPC]]
 						ifFalse: [[:cogit| false]]]
 ]
 
@@ -4903,9 +4904,10 @@ Cogit >> genMethodAbortTrampoline [
 	opcodeIndex := 0.
 	self CmpCq: 0 R: ReceiverResultReg.
 	jumpSICMiss := self JumpNonZero: 0.
-	"on machines with a link register, pop the stack if the receiverresulteg = 0"
-		backEnd hasLinkRegister ifTrue:
-			[self AddCq: BytesPerWord R: SPReg].
+	"on machines with a link register, pop the stack if the ReceiverResultReg = 0,
+	 i.e. if coming through the stack check abort; frame build has already pushed it."
+	backEnd hasLinkRegister ifTrue:
+		[self AddCq: BytesPerWord R: SPReg].
 
 	self compileTrampolineFor: #ceStackOverflow:
 		callJumpBar: true
