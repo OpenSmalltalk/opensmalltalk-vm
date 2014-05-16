@@ -173,7 +173,7 @@ CogProcessorAlien >> disassembleNextInstructionIn: memory for: aSymbolManager [ 
 	| string |
 	string := self pc < memory size 
 				ifTrue: [(self primitiveDisassembleAt: self pc inMemory: memory) last.]
-				ifFalse: ['Invalid address (', (self pc hex allButFirst: 3), ')'].
+				ifFalse: [^{'Invalid address ' . self pc. ')'}].
 	^aSymbolManager
 		ifNil: [string]
 		ifNotNil: [self decorateDisassembly: string for: aSymbolManager]
@@ -224,6 +224,7 @@ CogProcessorAlien >> runInMemory: aMemory [
 
 { #category : #execution }
 CogProcessorAlien >> runInMemory: aMemory minimumAddress: minimumAddress readOnlyBelow: minimumWritableAddress [
+"Note that minimumWritableAddress is both the minimum writeable address AND the maximum executable address"
 	| result |
 	result := self primitiveRunInMemory: aMemory
 				minimumAddress: minimumAddress
