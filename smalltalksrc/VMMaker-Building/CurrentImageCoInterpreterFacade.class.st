@@ -190,10 +190,8 @@ CurrentImageCoInterpreterFacade >> compilationBreak: aString point: length [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> debugStackPointersFor: anOop [
 	^CArrayAccessor on:
-		(((NewspeakVM
-				ifTrue: [NewspeakStackDepthFinder]
-				ifFalse: [StackDepthFinder]) on: (objectMap keyAtValue: anOop))
-			stackPointers)
+		(StackDepthFinder on: (objectMap keyAtValue: anOop))
+			stackPointers
 ]
 
 { #category : #accessing }
@@ -472,9 +470,10 @@ CurrentImageCoInterpreterFacade >> longStoreBytecodeForHeader: methodHeaderOop [
 	"Answer the relevant long store temp bytecode, which indicates it has a primitive error code."
 	"234		11101010	i i i i i i i i	Store Temporary Variable #iiiiiiii"
 	"129 		10000001 jjkkkkkk 	Store (Receiver Variable, Temporary Location, Illegal, Literal Variable) [jj] #kkkkkk"
-	^(headerToMethodMap at: methodHeaderOop) usesAlternateBytecodeSet
+	^coInterpreter longStoreBytecodeForHeader: methodHeaderOop
+	"was: ^(headerToMethodMap at: methodHeaderOop) usesAlternateBytecodeSet
 		ifTrue: [234]
-		ifFalse: [129]
+		ifFalse: [129]"
 ]
 
 { #category : #labels }

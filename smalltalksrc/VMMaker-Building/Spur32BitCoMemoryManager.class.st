@@ -177,6 +177,34 @@ Spur32BitCoMemoryManager >> startOfMemory [
 	^coInterpreter heapBase
 ]
 
+{ #category : #'simulation only' }
+Spur32BitCoMemoryManager >> unalignedLongAt: byteAddress [
+	<doNotGenerate>
+	| rem |
+	rem := byteAddress \\ 4.
+	^rem = 0
+		ifTrue: [self longAt: byteAddress]
+		ifFalse: [((self longAt: byteAddress - rem) + ((self longAt: byteAddress - rem + 4) bitShift: 32) bitShift: rem * -8) bitAnd: 16rFFFFFFFF]
+]
+
+{ #category : #'simulation only' }
+Spur32BitCoMemoryManager >> unalignedLongAt: byteAddress put: aLong [
+	<doNotGenerate>
+	| rem mask |
+	rem := byteAddress \\ 4.
+	^rem = 0
+		ifTrue: [self longAt: byteAddress put: aLong]
+		ifFalse:
+			[mask := 16rFFFFFFFF bitAnd: (-1 bitShift: rem * 8).
+			 self longAt: byteAddress - rem
+				put: ((self longAt: byteAddress - rem) bitAnd: mask bitInvert)
+					+ ((aLong bitShift: rem * 8) bitAnd: mask).
+			 self longAt: byteAddress - rem + 4
+				put: ((self longAt: byteAddress - rem + 4) bitAnd: mask)
+					+ ((aLong bitShift: 4 - rem * -8) bitAnd: mask bitInvert).
+			 aLong]
+]
+
 { #category : #'cog jit support' }
 Spur32BitCoMemoryManager >> withoutForwardingOn: obj1 and: obj2 sendToCogit: selector [
 	"For the purposes of become: send selector to the cogit with obj1 and obj2

@@ -9053,13 +9053,13 @@ NewspeakInterpreter >> printOopShortInner: oop [
 	nameLen = 0 ifTrue: [self print: 'a ??'. ^nil].
 	name := self nameOfClass: classOop.
 	nameLen = 10 ifTrue:
-		[(self str: name n: 'ByteString' cmp: 10) not "strncmp is weird" ifTrue:
+		[(self str: name n: 'ByteString' cmp: 10) = 0 "strncmp is weird" ifTrue:
 			[self printChar: $"; printStringOf: oop; printChar: $".
 			 ^nil].
-		 (self str: name n: 'ByteSymbol' cmp: 10) not "strncmp is weird" ifTrue:
+		 (self str: name n: 'ByteSymbol' cmp: 10) = 0 "strncmp is weird" ifTrue:
 			[self printChar: $#; printStringOf: oop.
 			 ^nil]].
-	(nameLen = 9 and: [(self str: name n: 'Character' cmp: 9) not]) ifTrue:
+	(nameLen = 9 and: [(self str: name n: 'Character' cmp: 9) = 0]) ifTrue:
 		[self printChar: $$; printChar: (self integerValueOf: (self fetchPointer: 0 ofObject: oop)).
 		 ^nil].
 	self cCode: [self prin: 'a(n) %.*s' t: nameLen f: name]
