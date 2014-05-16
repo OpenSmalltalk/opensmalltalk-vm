@@ -651,13 +651,11 @@ CogVMSimulator >> createActualMessageTo: class [
 { #category : #'debug support' }
 CogVMSimulator >> debugStackPointersFor: aMethod [
 	^CArrayAccessor on:
-		(((NewspeakVM
-			ifTrue: [NewspeakStackDepthFinder]
-			ifFalse: [StackDepthFinder]) on: (VMCompiledMethodProxy new
+		(StackDepthFinder on: (VMCompiledMethodProxy new
 									for: aMethod
 									coInterpreter: self
 									objectMemory: objectMemory))
-			stackPointers)
+			stackPointers
 ]
 
 { #category : #'multi-threading simulation switch' }

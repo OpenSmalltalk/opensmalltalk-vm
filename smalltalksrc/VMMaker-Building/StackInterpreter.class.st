@@ -105,6 +105,8 @@ Class {
 		'classByteArrayCompactIndex'
 	],
 	#classVars : [
+		'AltBytecodeEncoderClassName',
+		'AltLongStoreBytecode',
 		'AtCacheEntries',
 		'AtCacheFixedFields',
 		'AtCacheFmt',
@@ -113,6 +115,7 @@ Class {
 		'AtCacheSize',
 		'AtCacheTotalSize',
 		'AtPutBase',
+		'BytecodeEncoderClassName',
 		'BytecodeTable',
 		'CacheProbeMax',
 		'DirBadPath',
@@ -123,6 +126,7 @@ Class {
 		'EnclosingObjectIndex',
 		'FailImbalancedPrimitives',
 		'HeaderFlagBitPosition',
+		'LongStoreBytecode',
 		'MaxExternalPrimitiveTableSize',
 		'MaxJumpBuf',
 		'MaxPrimitiveIndex',
@@ -317,6 +321,8 @@ StackInterpreter class >> initializeBytecodeTableForNewspeakV3PlusClosures [
 	"Note: This table will be used to generate a C switch statement."
 
 	BytecodeTable := Array new: 256.
+	BytecodeEncoderClassName := #EncoderForNewsqueakV3.
+	LongStoreBytecode := 129.
 	self table: BytecodeTable from:
 	#(
 		(  0  15 pushReceiverVariableBytecode)
@@ -418,10 +424,12 @@ StackInterpreter class >> initializeBytecodeTableForNewspeakV3PlusClosuresNewspe
 	"StackInterpreter initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid"
 
 	| v3Table v4Table |
-	self initializeBytecodeTableForNewspeakV3PlusClosures.
-	v3Table := BytecodeTable.
 	self initializeBytecodeTableForNewspeakV4.
 	v4Table := BytecodeTable.
+	AltBytecodeEncoderClassName := BytecodeEncoderClassName.
+	AltLongStoreBytecode := LongStoreBytecode.
+	self initializeBytecodeTableForNewspeakV3PlusClosures.
+	v3Table := BytecodeTable.
 	BytecodeTable := v3Table, v4Table
 ]
 
@@ -431,6 +439,8 @@ StackInterpreter class >> initializeBytecodeTableForNewspeakV4 [
 	"Note: This table will be used to generate a C switch statement."
 
 	BytecodeTable := Array new: 256.
+	BytecodeEncoderClassName := #EncoderForNewsqueakV4.
+	LongStoreBytecode := 234.
 	self table: BytecodeTable from:
 	#(	"1 byte bytecodes"
 		(   0  15 pushReceiverVariableBytecode)
@@ -668,6 +678,8 @@ StackInterpreter class >> initializeBytecodeTableForSqueakV3PlusClosures [
 	"Note: This table will be used to generate a C switch statement."
 
 	BytecodeTable := Array new: 256.
+	BytecodeEncoderClassName := #EncoderForV3PlusClosures.
+	LongStoreBytecode := 129.
 	self table: BytecodeTable from:
 	#(
 		(  0  15 pushReceiverVariableBytecode)
@@ -3132,27 +3144,35 @@ StackInterpreter >> checkForAndFollowForwardedPrimitiveState [
 	| primIndex accessorDepth found |
 	self assert: self successful not.
 	found := false.
-	primIndex := self primitiveIndexOf: newMethod.
-	self assert: (primIndex = 117
-				 or: [primitiveFunctionPointer = (self functionPointerFor: primIndex inClass: objectMemory nilObject)]).
 	self assert: argumentCount = (self argumentCountOf: newMethod).
-	accessorDepth := (primIndex = 117 and: [primitiveFunctionPointer ~~ #primitiveExternalCall])
-							ifTrue: [self primitiveAccessorDepthForExternalPrimitiveMethod: newMethod]
-							ifFalse: [primitiveAccessorDepthTable at: primIndex].
-	accessorDepth < 0 ifTrue:
-		[^false].
-	0 to: argumentCount do:
-		[:index| | oop |
-		oop := self stackValue: index.
-		(objectMemory isNonImmediate: oop) ifTrue:
-			[(objectMemory isForwarded: oop) ifTrue:
-				[self assert: index < argumentCount. "receiver should have been caught at send time."
-				 found := true.
-				 oop := objectMemory followForwarded: oop.
-				 self stackValue: index put: oop].
-			((objectMemory hasPointerFields: oop)
-			 and: [objectMemory followForwardedObjectFields: oop toDepth: accessorDepth]) ifTrue:
-				[found := true]]].
+	primIndex := self primitiveIndexOf: newMethod.
+	accessorDepth := primitiveAccessorDepthTable at: primIndex.
+	"For the method-executing primitives, failure could have been in those primitives or the
+	 primitives of the methods they execute.  find out which failed by seeing what is in effect."
+	primIndex caseOf: {
+		[117] -> 
+			[primitiveFunctionPointer ~~ #primitiveExternalCall ifTrue:
+				[accessorDepth := self primitiveAccessorDepthForExternalPrimitiveMethod: newMethod]].
+		[118] ->
+			[self assert: primitiveFunctionPointer = (self functionPointerFor: primIndex inClass: objectMemory nilObject)].
+		[218] ->
+			[primitiveFunctionPointer ~~ #primitiveDoNamedPrimitiveWithArgs ifTrue:
+				[accessorDepth := self primitiveAccessorDepthForExternalPrimitiveMethod: newMethod]]. }
+		otherwise:
+			[self assert: primitiveFunctionPointer = (self functionPointerFor: primIndex inClass: objectMemory nilObject)].
+	accessorDepth >= 0 ifTrue:
+		[0 to: argumentCount do:
+			[:index| | oop |
+			oop := self stackValue: index.
+			(objectMemory isNonImmediate: oop) ifTrue:
+				[(objectMemory isForwarded: oop) ifTrue:
+					[self assert: index < argumentCount. "receiver should have been caught at send time."
+					 found := true.
+					 oop := objectMemory followForwarded: oop.
+					 self stackValue: index put: oop].
+				((objectMemory hasPointerFields: oop)
+				 and: [objectMemory followForwardedObjectFields: oop toDepth: accessorDepth]) ifTrue:
+					[found := true]]]].
 	^found
 ]
 
@@ -4211,10 +4231,7 @@ StackInterpreter >> detailedSymbolicMethod: aMethod [
 					coInterpreter: self
 					objectMemory: objectMemory.
 	(DetailedInstructionPrinter on: proxy)
-		stackHeightComputer: ((NewspeakVM
-										ifTrue: [NewspeakStackDepthFinder]
-										ifFalse: [StackDepthFinder])
-									on: proxy);
+		stackHeightComputer: (StackDepthFinder on: proxy);
 		indent: 0;
 		printInstructionsOn: ts.
 	ts flush
@@ -7687,8 +7704,10 @@ StackInterpreter >> longStoreBytecodeForHeader: methodHeader [
 	<api>
 	<inline: true>
 	^self cppIf: MULTIPLEBYTECODESETS
-		ifTrue: [(self headerIndicatesAlternateBytecodeSet: methodHeader) ifTrue: [234] ifFalse: [129]]
-		ifFalse: [129]
+		ifTrue: [(self headerIndicatesAlternateBytecodeSet: methodHeader)
+					ifTrue: [AltLongStoreBytecode]
+					ifFalse: [LongStoreBytecode]]
+		ifFalse: [LongStoreBytecode]
 ]
 
 { #category : #'stack bytecodes' }
@@ -10138,11 +10157,11 @@ StackInterpreter >> printOopShortInner: oop [
 	nameLen = 0 ifTrue: [^self print: 'a ??'].
 	name := self nameOfClass: classOop.
 	nameLen = 10 ifTrue:
-		[(self str: name n: 'ByteString' cmp: 10) not "strncmp is weird" ifTrue:
+		[(self str: name n: 'ByteString' cmp: 10) = 0 "strncmp is weird" ifTrue:
 			[^self printChar: $'; printStringOf: oop; printChar: $'].
-		 (self str: name n: 'ByteSymbol' cmp: 10) not "strncmp is weird" ifTrue:
+		 (self str: name n: 'ByteSymbol' cmp: 10) = 0 "strncmp is weird" ifTrue:
 			[self printChar: $#; printStringOf: oop. ^self]].
-	(nameLen = 9 and: [(self str: name n: 'Character' cmp: 9) not]) ifTrue:
+	(nameLen = 9 and: [(self str: name n: 'Character' cmp: 9) = 0]) ifTrue:
 		[^self printChar: $$; printChar: (objectMemory integerValueOf: (objectMemory fetchPointer: 0 ofObject: oop))].
 	self print: 'a(n) '.
 	self
