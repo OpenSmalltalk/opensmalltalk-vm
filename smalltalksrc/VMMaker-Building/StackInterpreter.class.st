@@ -3144,7 +3144,6 @@ StackInterpreter >> checkForAndFollowForwardedPrimitiveState [
 	| primIndex accessorDepth found |
 	self assert: self successful not.
 	found := false.
-	self assert: argumentCount = (self argumentCountOf: newMethod).
 	primIndex := self primitiveIndexOf: newMethod.
 	accessorDepth := primitiveAccessorDepthTable at: primIndex.
 	"For the method-executing primitives, failure could have been in those primitives or the
@@ -3152,14 +3151,17 @@ StackInterpreter >> checkForAndFollowForwardedPrimitiveState [
 	primIndex caseOf: {
 		[117] -> 
 			[primitiveFunctionPointer ~~ #primitiveExternalCall ifTrue:
-				[accessorDepth := self primitiveAccessorDepthForExternalPrimitiveMethod: newMethod]].
-		[118] ->
+				[accessorDepth := self primitiveAccessorDepthForExternalPrimitiveMethod: newMethod].
+			 self assert: argumentCount = (self argumentCountOf: newMethod)].
+		[118] -> "with tryPrimitive:withArgs: the argument count has nothing to do with newMethod's, so no arg count assert."
 			[self assert: primitiveFunctionPointer = (self functionPointerFor: primIndex inClass: objectMemory nilObject)].
 		[218] ->
 			[primitiveFunctionPointer ~~ #primitiveDoNamedPrimitiveWithArgs ifTrue:
-				[accessorDepth := self primitiveAccessorDepthForExternalPrimitiveMethod: newMethod]]. }
+				[accessorDepth := self primitiveAccessorDepthForExternalPrimitiveMethod: newMethod].
+			 self assert: argumentCount = (self argumentCountOf: newMethod)]. }
 		otherwise:
-			[self assert: primitiveFunctionPointer = (self functionPointerFor: primIndex inClass: objectMemory nilObject)].
+			[self assert: primitiveFunctionPointer = (self functionPointerFor: primIndex inClass: objectMemory nilObject).
+			 self assert: argumentCount = (self argumentCountOf: newMethod)].
 	accessorDepth >= 0 ifTrue:
 		[0 to: argumentCount do:
 			[:index| | oop |
@@ -10474,23 +10476,6 @@ StackInterpreter >> pushConstantZeroBytecode [
 
 { #category : #'stack bytecodes' }
 StackInterpreter >> pushExplicitOuterReceiverBytecode [
-	"Find the appropriate implicit receiver for outer N"
-	| litIndex  n anIntOop |
-	<inline: true>
-	litIndex := self fetchByte.
-	anIntOop := self literal: litIndex.
-	n := (objectMemory isIntegerObject: anIntOop)
-			ifTrue: [objectMemory integerValueOf: anIntOop]
-			ifFalse: [0].
-	self fetchNextBytecode.
-	self internalPush:(self 
-						explicitOuterReceiver: n 
-						withObject: self receiver 
-						withMixin: (self methodClassOf: method))
-]
-
-{ #category : #'stack bytecodes' }
-StackInterpreter >> pushExplicitOuterSendReceiverBytecode [
 	"Find the appropriate implicit receiver for outer N"
 	| litIndex  n anIntOop |
 	<inline: true>
