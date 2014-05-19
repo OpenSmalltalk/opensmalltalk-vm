@@ -551,6 +551,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveMirrorNew: retNoffset [
 	- single word header/num slots < numSlotsMask
 	- the result fits in eden (actually below scavengeThreshold)"
 
+	<option: #NewspeakVM>
 	| halfHeaderReg fillReg instSpecReg byteSizeReg
 	  jumpImmediate jumpUnhashed jumpNotFixedPointers jumpTooSmall jumpBadFormat
 	  jumpNoSpace jumpTooBig jumpHasSlots jumpVariableOrEphemeron
@@ -674,6 +675,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveMirrorNewWithArg: retNof
 	See superclass method for dynamic frequencies of formats.
 	For the moment we implement only arrayFormat, firstByteFormat & firstLongFormat"
 
+	<option: #NewspeakVM>
 	| halfHeaderReg fillReg instSpecReg byteSizeReg maxSlots
 	  jumpArrayTooBig jumpByteTooBig jumpLongTooBig
 	  jumpArrayFormat jumpByteFormat jumpBytePrepDone jumpLongPrepDone
@@ -866,26 +868,21 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveMirrorNewWithArg: retNof
 
 { #category : #'primitive generators' }
 CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveNew: retNoffset [
-	"Implement 1-arg (instantiateFixedClass:) primitiveNew for convenient cases:
-	- the class argument has a hash
-	- the class argument is fixed size (excluding ephemerons to save instructions & miniscule time)
+	"Implement primitiveNew for convenient cases:
+	- the receiver has a hash
+	- the receiver is fixed size (excluding ephemerons to save instructions & miniscule time)
 	- single word header/num slots < numSlotsMask
 	- the result fits in eden (actually below scavengeThreshold)"
 
 	| halfHeaderReg fillReg instSpecReg byteSizeReg
-	  jumpImmediate jumpUnhashed jumpNotFixedPointers jumpTooSmall jumpBadFormat
-	  jumpNoSpace jumpTooBig jumpHasSlots jumpVariableOrEphemeron
+	  jumpUnhashed jumpVariableOrEphemeron jumpNoSpace jumpTooBig jumpHasSlots
 	  fillLoop skip |
 	<var: 'skip' type: #'AbstractInstruction *'>
 	<var: 'fillLoop' type: #'AbstractInstruction *'>
 	<var: 'jumpTooBig' type: #'AbstractInstruction *'>
 	<var: 'jumpHasSlots' type: #'AbstractInstruction *'>
 	<var: 'jumpNoSpace' type: #'AbstractInstruction *'>
-	<var: 'jumpTooSmall' type: #'AbstractInstruction *'>
 	<var: 'jumpUnhashed' type: #'AbstractInstruction *'>
-	<var: 'jumpImmediate' type: #'AbstractInstruction *'>
-	<var: 'jumpBadFormat' type: #'AbstractInstruction *'>
-	<var: 'jumpNotFixedPointers' type: #'AbstractInstruction *'>
 	<var: 'jumpVariableOrEphemeron' type: #'AbstractInstruction *'>
 
 	"half header will contain 1st half of header (classIndex/class's hash & format),
@@ -896,31 +893,13 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveNew: retNoffset [
 
 	"get freeStart as early as possible so as not to wait later..."
 	cogit MoveAw: objectMemory freeStartAddress R: Arg1Reg.
-
-	"validate class arg; sigh, this mirror crap hobbles unfairly; there is a better way with selector namespaces..."
-	cogit MoveR: Arg0Reg R: TempReg.
-	jumpImmediate := cogit genJumpImmediateInScratchReg: TempReg.
-
-	"Is the class arg pointers with at least 3 fields?"
-	self genGetFormatOf: Arg0Reg
-		into: TempReg
-		leastSignificantHalfOfBaseHeaderIntoScratch: nil.
-	cogit CmpCq: objectMemory nonIndexablePointerFormat R: TempReg.
-	jumpNotFixedPointers := cogit JumpNonZero: 0.
-	
-	self genGetRawSlotSizeOfNonImm: Arg0Reg into: TempReg.
-	self CmpCq: InstanceSpecificationIndex + 1 R: TempReg.
-	jumpTooSmall := cogit JumpLess: 0.
-
 	"get class's hash & fail if 0"
-	self genGetHashFieldNonImmOf: Arg0Reg into: halfHeaderReg.
+	self genGetHashFieldNonImmOf: ReceiverResultReg into: halfHeaderReg.
 	jumpUnhashed := cogit JumpZero: 0.
-
 	"get class's format inst var for both inst spec (format field) and num fixed fields"
-	self genLoadSlot: InstanceSpecificationIndex sourceReg: Arg0Reg destReg: instSpecReg.
-	cogit MoveR: instSpecReg R: TempReg.
-	jumpBadFormat := cogit genJumpNotSmallIntegerInScratchReg: TempReg.
-	self genConvertSmallIntegerToIntegerInReg: instSpecReg.
+	self genLoadSlot: InstanceSpecificationIndex sourceReg: ReceiverResultReg destReg: TempReg.
+	self genConvertSmallIntegerToIntegerInReg: TempReg.
+	cogit MoveR: TempReg R: instSpecReg.
 	cogit LogicalShiftRightCq: objectMemory fixedFieldsFieldWidth R: TempReg.
 	cogit AndCq: objectMemory formatMask R: TempReg.
 	cogit AndCq: objectMemory fixedFieldsOfClassFormatMask R: instSpecReg.
@@ -973,14 +952,10 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveNew: retNoffset [
 	cogit JumpAbove: fillLoop.
 	cogit RetN: retNoffset.
 
-	jumpNotFixedPointers jmpTarget:
-	(jumpBadFormat jmpTarget:
-	(jumpTooSmall jmpTarget:
-	(jumpImmediate jmpTarget:
-	(jumpUnhashed jmpTarget:
+	jumpUnhashed jmpTarget:
 	(jumpVariableOrEphemeron jmpTarget:
 	(jumpTooBig jmpTarget:
-	(jumpNoSpace jmpTarget: cogit Label))))))).
+	(jumpNoSpace jmpTarget: cogit Label))).
 
 	^0
 ]
