@@ -2395,24 +2395,54 @@ SpurMemoryManager >> checkFreeSpace [
 
 { #category : #'debug support' }
 SpurMemoryManager >> checkHeapIntegrity: excludeUnmarkedNewSpaceObjs classIndicesShouldBeValid: classIndicesShouldBeValid [
-	"Perform an integrity/leak check using the heapMap.  Assume
-	 clearLeakMapAndMapAccessibleObjects has set a bit at each
-	 object's header.  Scan all objects in the heap checking that every
-	 pointer points to a header.  Scan the rootTable, remapBuffer and
-	 extraRootTable checking that every entry is a pointer to a header.
-	 Check that the number of roots is correct and that all rootTable
-	 entries have their rootBit set. Answer if all checks pass."
-	| ok numRememberedRootsInHeap |
+	"Perform an integrity/leak check using the heapMap.  Assume clearLeakMapAndMapAccessibleObjects
+	 has set a bit at each object's header.  Scan all objects in the heap checking that every pointer points
+	 to a header.  Scan the rememberedSet, remapBuffer and extraRootTable checking that every entry is
+	 a pointer to a header. Check that the number of roots is correct and that all rememberedSet entries
+	 have their isRemembered: flag set.  Answer if all checks pass."
+	| ok numRememberedObjectsInHeap |
 	<inline: false>
 	ok := true.
-	numRememberedRootsInHeap := 0.
-	self allHeapEntitiesDo:
-		[:obj| | containsYoung fieldOop classIndex classOop |
+	numRememberedObjectsInHeap := 0.
+	"Excuse the duplication but performance is at a premium and we avoid
+	 some tests by splitting the newSpace and oldSpace enumerations."
+	self allNewSpaceEntitiesDo:
+		[:obj| | fieldOop classIndex classOop |
 		((self isFreeObject: obj)
-		 or: [(self isYoungObject: obj) and: [(self isMarked: obj) not and: [excludeUnmarkedNewSpaceObjs]]]) ifFalse:
+		 or: [(self isMarked: obj) not and: [excludeUnmarkedNewSpaceObjs]]) ifFalse:
+			[(self isRemembered: obj) ifTrue:
+				[coInterpreter print: 'young object '; printHex: obj; print: ' is remembered'; cr.
+				 self eek.
+				 ok := false]].
+			 (self isForwarded: obj)
+				ifTrue:
+					[fieldOop := self fetchPointer: 0 ofMaybeForwardedObject: obj.
+					 (heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
+						[coInterpreter print: 'object leak in forwarder '; printHex: obj; print: ' to unmapped '; printHex: fieldOop; cr.
+						 self eek.
+						 ok := false]]
+				ifFalse:
+					[classOop := self classOrNilAtIndex: (classIndex := self classIndexOf: obj).
+					 (classIndicesShouldBeValid
+					  and: [classOop = nilObj
+					  and: [(self isHiddenObj: obj) not]]) ifTrue:
+						[coInterpreter print: 'object leak in '; printHex: obj; print: ' invalid class index '; printHex: classIndex; print: ' -> '; print: (classOop ifNil: ['nil'] ifNotNil: ['nilObj']); cr.
+						 self eek.
+						 ok := false].
+					 0 to: (self numPointerSlotsOf: obj) - 1 do:
+						[:fi|
+						 fieldOop := self fetchPointer: fi ofObject: obj.
+						 (self isNonImmediate: fieldOop) ifTrue:
+							[(heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
+								[coInterpreter print: 'object leak in '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; cr.
+								 self eek.
+								 ok := false]]]]].
+	self allOldSpaceEntitiesDo:
+		[:obj| | containsYoung fieldOop classIndex classOop |
+		(self isFreeObject: obj) ifFalse:
 			[containsYoung := false.
 			 (self isRemembered: obj) ifTrue:
-				[numRememberedRootsInHeap := numRememberedRootsInHeap + 1.
+				[numRememberedObjectsInHeap := numRememberedObjectsInHeap + 1.
 				 (scavenger isInRememberedSet: obj) ifFalse:
 					[coInterpreter print: 'remembered object '; printHex: obj; print: ' is not in remembered table'; cr.
 					 self eek.
@@ -2424,7 +2454,7 @@ SpurMemoryManager >> checkHeapIntegrity: excludeUnmarkedNewSpaceObjs classIndice
 						[coInterpreter print: 'object leak in forwarder '; printHex: obj; print: ' to unmapped '; printHex: fieldOop; cr.
 						 self eek.
 						 ok := false].
-					 (self isYoung: fieldOop) ifTrue:
+					 (self isReallyYoung: fieldOop) ifTrue:
 						[containsYoung := true]]
 				ifFalse:
 					[classOop := self classOrNilAtIndex: (classIndex := self classIndexOf: obj).
@@ -2434,35 +2464,26 @@ SpurMemoryManager >> checkHeapIntegrity: excludeUnmarkedNewSpaceObjs classIndice
 						[coInterpreter print: 'object leak in '; printHex: obj; print: ' invalid class index '; printHex: classIndex; print: ' -> '; print: (classOop ifNil: ['nil'] ifNotNil: ['nilObj']); cr.
 						 self eek.
 						 ok := false].
-					 self baseHeaderSize to: (self lastPointerOf: obj) by: BytesPerOop do:
-						[:ptr|
-						 fieldOop := self longAt: obj + ptr.
+					 0 to: (self numPointerSlotsOf: obj) - 1 do:
+						[:fi|
+						 fieldOop := self fetchPointer: fi ofObject: obj.
 						 (self isNonImmediate: fieldOop) ifTrue:
-							[| fi |
-							 fi := ptr - self baseHeaderSize / self wordSize.
-							 (fieldOop bitAnd: self wordSize - 1) ~= 0
-								ifTrue:
-									[coInterpreter print: 'misaligned oop in '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; cr.
-									 self eek.
-									 ok := false]
-								ifFalse:
-									[(heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
-										[coInterpreter print: 'object leak in '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; cr.
-										 self eek.
-										 ok := false].
-									 "don't be misled by CogMethods; they appear to be young, but they're not"
-									 ((self isYoung: fieldOop)
-									  and: [self oop: fieldOop isGreaterThanOrEqualTo: newSpaceStart]) ifTrue:
-										[containsYoung := true]]]]].
-					(containsYoung and: [(self isYoung: obj) not]) ifTrue:
+							[(heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
+								[coInterpreter print: 'object leak in '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; cr.
+								 self eek.
+								 ok := false].
+							 "don't be misled by CogMethods; they appear to be young, but they're not"
+							 (self isReallyYoung: fieldOop) ifTrue:
+								[containsYoung := true]]]].
+					containsYoung ifTrue:
 						[(self isRemembered: obj) ifFalse:
 							[coInterpreter print: 'unremembered object '; printHex: obj; print: ' contains young oop(s)'; cr.
 							 self eek.
 							 ok := false]]]].
-	numRememberedRootsInHeap ~= scavenger rememberedSetSize ifTrue:
+	numRememberedObjectsInHeap ~= scavenger rememberedSetSize ifTrue:
 		[coInterpreter
 			print: 'root count mismatch. #heap roots ';
-			printNum: numRememberedRootsInHeap;
+			printNum: numRememberedObjectsInHeap;
 			print: '; #roots ';
 			printNum: scavenger rememberedSetSize;
 			cr.

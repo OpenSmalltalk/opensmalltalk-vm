@@ -168,6 +168,14 @@ VMClass class >> initializationOptions: optionsDictionary [
 ]
 
 { #category : #initialization }
+VMClass class >> initialize [
+	(Utilities classPool at: #CommonRequestStrings ifAbsent: []) ifNotNil:
+		[:commonRequestStringHolder|
+		(commonRequestStringHolder contents asString includesSubString: 'VMClass open') ifFalse:
+			[Utilities appendToCommonRequests: '-\VMMaker generateConfiguration\VMMaker generateAllConfigurationsUnderVersionControl\VMMaker generateAllSpurConfigurations\VMClass openCogMultiWindowBrowser\VMClass openObjectMemoriesInterpretersBrowser\VMClass openSpurMultiWindowBrowser' withCRs]]
+]
+
+{ #category : #initialization }
 VMClass class >> initializeMiscConstants [
 	"Falsify the `what type of VM is this?' flags that are defined in the various interp.h files,
 	 or in the case of VMBIGENDIAN the various sqConfig.h files.
