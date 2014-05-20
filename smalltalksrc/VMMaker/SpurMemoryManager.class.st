@@ -1253,8 +1253,9 @@ SpurMemoryManager >> allInstancesOf: aClass [
 							[self longAt: ptr put: obj.
 							 ptr := ptr + self bytesPerSlot]]]
 				ifFalse:
-					[(self isSegmentBridge: obj) ifFalse:
-						[self setIsMarkedOf: obj to: false]]]].
+					[MarkObjectsForEnumerationPrimitives ifTrue:
+						[(self isSegmentBridge: obj) ifFalse:
+							[self setIsMarkedOf: obj to: false]]]]].
 	self assert: self allObjectsUnmarked.
 	self assert: (self isEmptyObjStack: markStack).
 	self emptyObjStack: weaklingStack.
@@ -1350,8 +1351,9 @@ SpurMemoryManager >> allObjects [
 						[self longAt: ptr put: obj.
 						 ptr := ptr + self bytesPerSlot]]
 				ifFalse:
-					[(self isSegmentBridge: obj) ifFalse:
-						[self setIsMarkedOf: obj to: false]]]].
+					[MarkObjectsForEnumerationPrimitives ifTrue:
+						[(self isSegmentBridge: obj) ifFalse:
+							[self setIsMarkedOf: obj to: false]]]]].
 	self assert: self allObjectsUnmarked.
 	self assert: (self isEmptyObjStack: markStack).
 	self emptyObjStack: weaklingStack.
