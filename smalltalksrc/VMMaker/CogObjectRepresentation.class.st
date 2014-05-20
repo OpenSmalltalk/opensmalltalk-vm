@@ -77,6 +77,20 @@ CogObjectRepresentation >> genInnerPrimitiveCharacterValue: retNOffset [
 ]
 
 { #category : #'primitive generators' }
+CogObjectRepresentation >> genInnerPrimitiveMirrorNew: retNoffset [
+	<option: #NewspeakVM>
+	"subclasses override if they can"
+	^cogit unimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genInnerPrimitiveMirrorNewWithArg: retNoffset [
+	<option: #NewspeakVM>
+	"subclasses override if they can"
+	^cogit unimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
 CogObjectRepresentation >> genInnerPrimitiveNew: retNoffset [
 	"subclasses override if they can"
 	^cogit unimplementedPrimitive
