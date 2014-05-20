@@ -531,6 +531,7 @@ Class {
 		'EphemeronQueueRootIndex',
 		'ExtraRootsSize',
 		'FirstValidClassIndex',
+		'MarkObjectsForEnumerationPrimitives',
 		'MarkStackRecord',
 		'MarkStackRootIndex',
 		'ObjStackFixedSlots',
@@ -698,6 +699,7 @@ SpurMemoryManager class >> initialize [
 	EphemeronQueueRootIndex := MarkStackRootIndex + 2.
 
 	CheckObjectOverwrite := true.
+	MarkObjectsForEnumerationPrimitives := false.
 
 	"The remap buffer support is for compatibility; Spur doesn't GC during allocation.
 	 Eventually this should die."
@@ -1230,17 +1232,21 @@ SpurMemoryManager >> allInstancesOf: aClass [
 	 or: [aClass ~~ (self classOrNilAtIndex: classIndex)]) ifTrue:
 		[freeChunk := self allocateSlots: 0 format: self arrayFormat classIndex: ClassArrayCompactIndex.
 		 ^freeChunk].
-	self markObjects. "don't want to revive objects unnecessarily."
+	MarkObjectsForEnumerationPrimitives ifTrue:
+		[self markObjects]. "may not want to revive objects unnecessarily; but marking is sloooow."
 	freeChunk := self allocateLargestFreeChunk.
 	ptr := start := freeChunk + self baseHeaderSize.
 	limit := self addressAfter: freeChunk.
 	count := 0.
 	self allHeapEntitiesDo:
 		[:obj| "continue enumerating even if no room so as to unmark all objects."
-		 (self isMarked: obj) ifTrue:
+		 (MarkObjectsForEnumerationPrimitives
+				ifTrue: [self isMarked: obj]
+				ifFalse: [true]) ifTrue:
 			[(self isNormalObject: obj)
 				ifTrue:
-					[self setIsMarkedOf: obj to: false.
+					[MarkObjectsForEnumerationPrimitives ifTrue:
+						[self setIsMarkedOf: obj to: false].
 					 (self classIndexOf: obj) = classIndex ifTrue:
 					 	[count := count + 1.
 						 ptr < limit ifTrue:
@@ -1324,17 +1330,21 @@ SpurMemoryManager >> allObjects [
 	 Since objects are at least 16 bytes big, and the largest SmallInteger covers
 	 1/4 of the address space, the count can never overflow."
 	| freeChunk ptr start limit count bytes |
-	self markObjects. "don't want to revive objects unnecessarily."
+	MarkObjectsForEnumerationPrimitives ifTrue:
+		[self markObjects]. "may not want to revive objects unnecessarily; but marking is sloooow."
 	freeChunk := self allocateLargestFreeChunk.
 	ptr := start := freeChunk + self baseHeaderSize.
 	limit := self addressAfter: freeChunk.
 	count := 0.
 	self allHeapEntitiesDo:
 		[:obj| "continue enumerating even if no room so as to unmark all objects."
-		 (self isMarked: obj) ifTrue:
+		 (MarkObjectsForEnumerationPrimitives
+				ifTrue: [self isMarked: obj]
+				ifFalse: [true]) ifTrue:
 			[(self isNormalObject: obj)
 				ifTrue:
-					[self setIsMarkedOf: obj to: false.
+					[MarkObjectsForEnumerationPrimitives ifTrue:
+						[self setIsMarkedOf: obj to: false].
 					 count := count + 1.
 					 ptr < limit ifTrue:
 						[self longAt: ptr put: obj.
