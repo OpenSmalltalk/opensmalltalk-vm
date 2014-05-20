@@ -53,13 +53,25 @@
 #elif defined(SQ_HOST64)
   typedef long		sqInt;
   typedef unsigned long	usqInt;
-#else
-# if (SIZEOF_LONG_LONG != 8)
+#elif (SIZEOF_LONG_LONG != 8)
 #   error long long integers are not 64-bits wide?
-# endif 
+#else
   typedef long long		sqInt;
   typedef unsigned long long	usqInt;
 #endif
+
+#if !defined(sqLong)
+#  if SIZEOF_VOID_P == 8
+#     define sqLong long
+#     define usqLong unsigned long
+#  elif _MSC_VER
+#     define sqLong __int64
+#     define usqLong unsigned __int64
+#  else
+#     define sqLong long long
+#     define usqLong unsigned long long
+#  endif
+#endif /* !defined(sqLong) */
 
 #if defined(SQ_HOST64) && defined(SQ_IMAGE32)
   extern char *sqMemoryBase;

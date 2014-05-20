@@ -2115,7 +2115,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				OTHER_LDFLAGS = "";
 				OTHER_REZFLAGS = "";
-				PER_ARCH_CFLAGS_i386 = "-O3  -falign-functions=16 -fno-gcse -mtune=prescott -march=pentium-m  -mfpmath=sse -finline-functions -Wall -DUSE_INLINE_MEMORY_ACCESSORS";
+				PER_ARCH_CFLAGS_i386 = "-O3  -falign-functions=16 -fno-gcse -mtune=prescott -march=pentium4  -mfpmath=sse -finline-functions -Wall -DUSE_INLINE_MEMORY_ACCESSORS";
 				PRODUCT_NAME = Squeak;
 				SECTORDER_FLAGS = "";
 				WARNING_CFLAGS = "";
