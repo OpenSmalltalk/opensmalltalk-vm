@@ -739,6 +739,8 @@ VMMaker >> buildCodeGeneratorForCogit: cogitClass includeAPIMethods: getAPIMetho
 					initializeClasses: false.
 		 cg apiMethods: apicg selectAPIMethods].
 
+	cg removeConstant: #VMBIGENDIAN. "this should be defined in platforms/??/vm/sqConfig.h"
+
 	^cg
 ]
 
@@ -799,6 +801,8 @@ VMMaker >> buildCodeGeneratorForInterpreter: interpreterClass includeAPIMethods:
 					includeAPIMethods: false
 					initializeClasses: false.
 		 cg apiMethods: apicg selectAPIMethods].
+
+	cg removeConstant: #VMBIGENDIAN. "this should be defined in platforms/??/vm/sqConfig.h"
 
 	^cg
 ]
