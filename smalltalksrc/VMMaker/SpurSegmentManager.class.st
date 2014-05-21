@@ -239,7 +239,7 @@ SpurSegmentManager >> collapseSegmentsPostSwizzle [
 { #category : #'growing/shrinking memory' }
 SpurSegmentManager >> findEmptySegNearestInSizeTo: size [
 	| seg best delta |
-	<var: #seg type: #'SegmentInfo *'>
+	<var: #seg type: #'SpurSegmentInfo *'>
 	best := nil.
 	delta := size.
 	0 to: numSegments - 1 do:
@@ -268,7 +268,7 @@ SpurSegmentManager >> firstSegmentSize: firstSegSize [
 
 { #category : #'growing/shrinking memory' }
 SpurSegmentManager >> indexOfSegment: seg [
-	<var: #seg type: #'SegmentInfo *'>
+	<var: #seg type: #'SpurSegmentInfo *'>
 	0 to: numSegments - 1 do:
 		[:i|
 		seg segStart = (segments at: i) segStart ifTrue:
@@ -339,7 +339,7 @@ SpurSegmentManager >> insertSegmentFor: segAddress [
 
 { #category : #'growing/shrinking memory' }
 SpurSegmentManager >> isEmptySegment: seg [
-	<var: #seg type: #'SegmentInfo *'>
+	<var: #seg type: #'SpurSegmentInfo *'>
 	| firstObj |
 	firstObj := manager objectStartingAt: seg segStart.
 	^(manager isFreeObject: firstObj)
@@ -603,7 +603,7 @@ SpurSegmentManager >> segments [
 { #category : #'growing/shrinking memory' }
 SpurSegmentManager >> shrinkObjectMemory: delta [
 	| shrinkage emptySeg |
-	<var: #emptySeg type: #'SegmentInfo *'>
+	<var: #emptySeg type: #'SpurSegmentInfo *'>
 	shrinkage := delta.
 	[emptySeg := self findEmptySegNearestInSizeTo: shrinkage.
 	 emptySeg notNil] whileTrue:
