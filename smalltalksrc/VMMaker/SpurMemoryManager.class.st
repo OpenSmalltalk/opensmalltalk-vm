@@ -4571,7 +4571,8 @@ SpurMemoryManager >> fullGCLock [
 SpurMemoryManager >> garbageCollectForSnapshot [
 	self flushNewSpace. "There is no place to put newSpace in the snapshot file."
 	self fullGC.
-	segmentManager prepareForSnapshot
+	segmentManager prepareForSnapshot.
+	self checkFreeSpace
 ]
 
 { #category : #accessing }
@@ -8414,6 +8415,20 @@ SpurMemoryManager >> setIsRememberedOf: objOop to: aBoolean [
 	self subclassResponsibility
 ]
 
+{ #category : #'growing/shrinking memory' }
+SpurMemoryManager >> setLastSegment: segInfo [
+	"Update after removing a segment.
+	 Here we cut back endOfMemory if required."
+	<var: #segInfo type: #'SpurSegmentInfo *'>
+	| currentEnd |
+	<var: #currentEnd type: #usqInt>
+	currentEnd := segInfo segLimit - self bridgeSize.
+	currentEnd <= endOfMemory ifTrue:
+		[endOfMemory := currentEnd.
+		 freeOldSpaceStart > currentEnd ifTrue:
+			[freeOldSpaceStart :=currentEnd]]
+]
+
 { #category : #'free space' }
 SpurMemoryManager >> setObjectFree: objOop [
 	"Mark an object free, but do not add it to the free lists.  The wrinkle here
@@ -8513,10 +8528,10 @@ SpurMemoryManager >> showDisplayBits: aForm Left: l Top: t Right: r Bottom: b [
 ]
 
 { #category : #'growing/shrinking memory' }
-SpurMemoryManager >> shrinkObjectMemory: delta [ 
+SpurMemoryManager >> shrinkObjectMemory: delta [
 	"Attempt to shrink the object memory by the given delta amount."
-	self cCode: [self print: 'shrinkObjectMemory: shouldBeImplemented'; cr]
-		inSmalltalk: [self shouldBeImplemented]
+	<doNotGenerate>
+	segmentManager shrinkObjectMemory: delta
 ]
 
 { #category : #'free space' }
@@ -8749,12 +8764,22 @@ SpurMemoryManager >> sqAllocateMemorySegmentOfSize: segmentSize Above: minAddres
 	 The delta will be the distance between segments to be bridged."
 	| delta newMemory start |
 	delta := segmentManager numSegments odd ifTrue: [1024 * 1024] ifFalse: [0].
+	"A previous shrink may have freed up memory.  Don't bother to grow if there's already room."
+	segmentManager lastSegment segLimit + segmentSize + delta <= (memory size * 4) ifTrue:
+		[allocSizePtrOrBlock value: segmentSize.
+		 ^minAddress + delta].
 	start := memory size * 4 + delta.
 	newMemory := memory class new: memory size + (segmentSize + delta / 4).
 	newMemory replaceFrom: 1 to: memory size with: memory startingAt: 1.
 	memory := newMemory.
 	allocSizePtrOrBlock value: segmentSize.
 	^start
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> sqDeallocateMemorySegmentAt: startAddress ofSize: ammount [
+	"This is a nop in the simulator."
+	<doNotGenerate>
 ]
 
 { #category : #'simulation only' }
