@@ -1175,7 +1175,8 @@ StackInterpreter class >> initializePrimitiveTable [
 		(180 primitiveGrowMemoryByAtLeast)
 		(181 primitiveSizeInBytesOfInstance)
 		(182 primitiveSizeInBytes)
-		(183 184 primitiveFail)
+		(183 primitiveIsPinned)
+		(184 primitivePin)
 
 		"CriticalSection primitives"
 		(185 primitiveExitCriticalSection) "similar to signal hence index = signal + 100"
