@@ -612,6 +612,13 @@ SpurSegmentManager >> shrinkObjectMemory: delta [
 		 self removeSegment: emptySeg]
 ]
 
+{ #category : #pinning }
+SpurSegmentManager >> someSegmentContainsPinned [
+	0 to: numSegments - 1 do:
+		[:i| (segments at: i) containsPinned ifTrue: [^true]].
+	^false
+]
+
 { #category : #snapshot }
 SpurSegmentManager >> swizzleObj: objOop [
 	<inline: false>
