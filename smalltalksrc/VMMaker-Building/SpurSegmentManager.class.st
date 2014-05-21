@@ -236,6 +236,25 @@ SpurSegmentManager >> collapseSegmentsPostSwizzle [
 	self assert: (manager numSlotsOfAny: (self bridgeAt: 0)) = 0
 ]
 
+{ #category : #'growing/shrinking memory' }
+SpurSegmentManager >> findEmptySegNearestInSizeTo: size [
+	| seg best delta |
+	<var: #seg type: #'SegmentInfo *'>
+	best := nil.
+	delta := size.
+	0 to: numSegments - 1 do:
+		[:i|
+		seg := self addressOf: (segments at: i).
+		(self isEmptySegment: seg) ifTrue:
+			[best
+				ifNil: [best := seg]
+				ifNotNil:
+					[(size >= (seg segSize * 0.75)
+					 and: [(seg segSize - size) abs < delta]) ifTrue:
+						[best := seg. delta := (seg segSize - size) abs]]]].
+	^best
+]
+
 { #category : #snapshot }
 SpurSegmentManager >> firstSegmentBytes [
 	^(segments at: 0) segSize
@@ -245,6 +264,16 @@ SpurSegmentManager >> firstSegmentBytes [
 SpurSegmentManager >> firstSegmentSize: firstSegSize [
 	"Remember firstSegSize for subsequent image segment parsing."
 	firstSegmentSize := firstSegSize
+]
+
+{ #category : #'growing/shrinking memory' }
+SpurSegmentManager >> indexOfSegment: seg [
+	<var: #seg type: #'SegmentInfo *'>
+	0 to: numSegments - 1 do:
+		[:i|
+		seg segStart = (segments at: i) segStart ifTrue:
+			[^i]].
+	self error: 'segment not found'
 ]
 
 { #category : #'spur bootstrap' }
@@ -308,6 +337,15 @@ SpurSegmentManager >> insertSegmentFor: segAddress [
 		repeat
 ]
 
+{ #category : #'growing/shrinking memory' }
+SpurSegmentManager >> isEmptySegment: seg [
+	<var: #seg type: #'SegmentInfo *'>
+	| firstObj |
+	firstObj := manager objectStartingAt: seg segStart.
+	^(manager isFreeObject: firstObj)
+	  and: [(manager addressAfter: firstObj) = (seg segLimit - manager bridgeSize)]
+]
+
 { #category : #testing }
 SpurSegmentManager >> isInSegments: address [
 	<var: #address type: #usqInt>
@@ -332,6 +370,11 @@ SpurSegmentManager >> isValidSegmentBridge: objOop [
 { #category : #accessing }
 SpurSegmentManager >> lastBridge [
 	^self bridgeAt: numSegments - 1
+]
+
+{ #category : #accessing }
+SpurSegmentManager >> lastSegment [
+	^segments at: numSegments - 1
 ]
 
 { #category : #initialization }
@@ -395,7 +438,8 @@ SpurSegmentManager >> postSnapshot [
 				to: (i < (numSegments - 1) ifTrue: [self addressOf: (segments at: i + 1)]).
 			manager
 				addFreeChunkWithBytes: seg segLimit - address - manager bridgeSize
-				at: address]]
+				at: address]]..
+	manager checkFreeSpace
 ]
 
 { #category : #pinning }
@@ -520,6 +564,26 @@ SpurSegmentManager >> readHeapFromImageFile: f dataBytes: numBytes [
 	^totalBytesRead
 ]
 
+{ #category : #'growing/shrinking memory' }
+SpurSegmentManager >> removeSegment: emptySeg [
+	<var: #emptySeg type: #'SpurSegmentInfo *'>
+	| i |
+	i := self indexOfSegment: emptySeg.
+	self assert: i > 0.
+
+	manager sqDeallocateMemorySegmentAt: emptySeg segStart ofSize: emptySeg segSize.
+
+	i to: numSegments - 1 do:
+		[:j| segments at: j put: (segments at: j + 1)].
+	self cCode: [] inSmalltalk: [segments at: numSegments - 1 put: SpurSegmentInfo new].
+	numSegments := numSegments - 1.
+
+	self bridgeFrom: (self addressOf: (segments at: i - 1))
+		to: (i <= (numSegments - 1) ifTrue: [self addressOf: (segments at: i)]).
+
+	manager setLastSegment: (self addressOf: (segments at: numSegments - 1))
+]
+
 { #category : #accessing }
 SpurSegmentManager >> segmentContainingObj: objOop [
 	<export: true>
@@ -534,6 +598,18 @@ SpurSegmentManager >> segmentContainingObj: objOop [
 { #category : #accessing }
 SpurSegmentManager >> segments [
 	^segments
+]
+
+{ #category : #'growing/shrinking memory' }
+SpurSegmentManager >> shrinkObjectMemory: delta [
+	| shrinkage emptySeg |
+	<var: #emptySeg type: #'SegmentInfo *'>
+	shrinkage := delta.
+	[emptySeg := self findEmptySegNearestInSizeTo: shrinkage.
+	 emptySeg notNil] whileTrue:
+		[shrinkage := shrinkage - emptySeg segSize.
+		 manager detachFreeObject: (manager objectStartingAt: emptySeg segStart).
+		 self removeSegment: emptySeg]
 ]
 
 { #category : #snapshot }
