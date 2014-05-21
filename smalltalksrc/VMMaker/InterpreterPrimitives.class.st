@@ -2061,6 +2061,21 @@ InterpreterPrimitives >> primitiveInvokeObjectAsMethod [
 ]
 
 { #category : #'memory space primitives' }
+InterpreterPrimitives >> primitiveIsPinned [
+	"Answer if the receiver is pinned, i.e. immobile."
+	| receiver |
+	receiver := self stackTop.
+	((objectMemory isImmediate: receiver)
+	 or: [objectMemory isForwarded: receiver]) ifTrue:
+		[^self primitiveFailFor: PrimErrBadReceiver].
+	self pop: argumentCount - 1.
+	self stackTopPut:
+			(objectMemory hasSpurMemoryManagerAPI
+				ifTrue: [objectMemory booleanObjectOf: (objectMemory isPinned: receiver)]
+				ifFalse: [objectMemory falseObject])
+]
+
+{ #category : #'memory space primitives' }
 InterpreterPrimitives >> primitiveIsRoot [
 	"Primitive. Answer whether the argument to the primitive is a root for young space"
 	| oop |
@@ -2674,6 +2689,38 @@ InterpreterPrimitives >> primitivePerformWithArgs [
 		perform: (self stackValue: 1)
 		withArguments: self stackTop
 		lookedUpIn: lookupClass
+]
+
+{ #category : #'memory space primitives' }
+InterpreterPrimitives >> primitivePin [
+	"Pin or unpin the receiver, i.e. make it immobile or mobile.  Answer whether the object was
+	 already pinned. N.B. pinning does *not* prevent an object from being garbage collected."
+	| receiver boolean wasPinned failure |
+	objectMemory hasSpurMemoryManagerAPI ifFalse:
+		[^self primitiveFailFor: PrimErrUnsupported].
+
+	receiver := self stackValue: 1.
+	((objectMemory isImmediate: receiver)
+	 or: [(objectMemory isForwarded: receiver)
+	 or: [(objectMemory isContext: receiver)
+		and: [self isStillMarriedContext: receiver]]]) ifTrue:
+		[^self primitiveFailFor: PrimErrBadReceiver].
+	boolean := self stackTop.
+	(boolean = objectMemory falseObject
+	 or: [boolean = objectMemory trueObject]) ifFalse:
+		[^self primitiveFailFor: PrimErrBadArgument].
+
+	(objectMemory isPinned: receiver)
+		ifTrue:
+			[wasPinned := objectMemory trueObject.
+			 objectMemory setIsPinnedOf: receiver to: false]
+		ifFalse:
+			[wasPinned := objectMemory falseObject.
+			 failure := objectMemory pinObject: receiver.
+			 failure ~= 0 ifTrue:
+				[^self primitiveFailFor: failure]].
+	
+	self pop: argumentCount - 1 thenPush: wasPinned
 ]
 
 { #category : #'object access primitives' }
