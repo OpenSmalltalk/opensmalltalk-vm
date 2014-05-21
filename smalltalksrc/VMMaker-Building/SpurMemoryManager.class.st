@@ -8777,7 +8777,7 @@ SpurMemoryManager >> sqAllocateMemorySegmentOfSize: segmentSize Above: minAddres
 ]
 
 { #category : #'simulation only' }
-SpurMemoryManager >> sqDeallocateMemorySegmentAt: startAddress ofSize: ammount [
+SpurMemoryManager >> sqDeallocateMemorySegmentAt: startAddress OfSize: ammount [
 	"This is a nop in the simulator."
 	<doNotGenerate>
 ]
