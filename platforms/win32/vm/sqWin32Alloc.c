@@ -246,4 +246,16 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 				bytes, minAddress);
 	return NULL;
 }
+
+/* Deallocate a region of memory previously allocated by
+ * sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto.  Cannot fail.
+ */
+void
+sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz)
+{
+	if (!VirtualFree(addr, sz, MEM_RELEASE))
+		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Warning:"),
+					"Unable to VirtualFree committed memory (%d bytes requested)",
+					sz);
+}
 #endif /* SPURVM */

@@ -175,9 +175,20 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 		}
 		if (alloc >= minAddress)
 			return alloc;
-		munmap(alloc, bytes);
+		if (munmap(alloc, bytes) != 0)
+			perror("sqAllocateMemorySegment... munmap");
 		minAddress = (void *)((char *)minAddress + bytes);
 	}
 	return 0;
+}
+
+/* Deallocate a region of memory previously allocated by
+ * sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto.  Cannot fail.
+ */
+void
+sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz)
+{
+	if (munmap(addr, sz) != 0)
+		perror("sqDeallocateMemorySegment... munmap");
 }
 #endif /* SPURVM */
