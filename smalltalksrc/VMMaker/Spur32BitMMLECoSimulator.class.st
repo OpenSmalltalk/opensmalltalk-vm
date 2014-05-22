@@ -136,12 +136,6 @@ Spur32BitMMLECoSimulator >> freeLists [
 	^freeLists
 ]
 
-{ #category : #'gc - global' }
-Spur32BitMMLECoSimulator >> globalGarbageCollect [
-	self halt: 'GC number ', statFullGCs printString.
-	^super globalGarbageCollect
-]
-
 { #category : #'growing/shrinking memory' }
 Spur32BitMMLECoSimulator >> growOldSpaceByAtLeast: minAmmount [
 	"Attempt to grow memory by at least minAmmount.

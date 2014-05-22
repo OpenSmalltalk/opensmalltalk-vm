@@ -3525,7 +3525,8 @@ CCodeGenerator >> prepareMethods [
 					ensureCr;
 					nextPutAll: 'Local variable name ''', var, ''' in ';
 					nextPutAll: m selector;
-					nextPutAll: ' may mask method when inlining']].
+					nextPutAll: ' may mask method when inlining';
+					cr]].
 		m bindClassVariablesIn: constants.
 		m prepareMethodIn: self]
 ]

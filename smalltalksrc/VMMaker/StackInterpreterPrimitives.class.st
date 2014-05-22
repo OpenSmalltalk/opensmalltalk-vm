@@ -1318,7 +1318,8 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		47	desired machine code zone size (Cog only; otherwise nil)
 		48	various header flags.  See getCogVMFlags.
 		49	max size the image promises to grow the external semaphore table to (0 sets to default, which is 256 as of writing)
-		50-55 nil; reserved for VM parameters that persist in the image (such as eden above)
+		50-54 nil; reserved for VM parameters that persist in the image (such as eden above)
+		55	ratio of growth and image size at or above which a GC will be performed post scavenge
 		56	number of process switches since startup (read-only)
 		57	number of ioProcessEvents calls since startup (read-only)
 		58	number of ForceInterruptCheck calls since startup (read-only)
@@ -1392,8 +1393,14 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		objectMemory storePointerUnchecked: 46	ofObject: result withValue: self getDesiredCogCodeSize.
 		objectMemory storePointerUnchecked: 47	ofObject: result withValue: self getCogVMFlags.
 		objectMemory storePointerUnchecked: 48	ofObject: result withValue: (objectMemory integerObjectOf: self ioGetMaxExtSemTableSize).
-		49 to: 54 do:
-			[:i | objectMemory storePointerUnchecked: i ofObject: result withValue: objectMemory nilObject].
+		objectMemory hasSpurMemoryManagerAPI
+			ifTrue:
+				[49 to: 53 do:
+					[:i | objectMemory storePointerUnchecked: i ofObject: result withValue: objectMemory nilObject].
+				 objectMemory storePointer: 54	ofObject: result withValue: (self floatObjectOf: objectMemory getHeapGrowthToSizeGCRatio)]
+			ifFalse:
+				[49 to: 54 do:
+					[:i | objectMemory storePointerUnchecked: i ofObject: result withValue: objectMemory nilObject]].
 		objectMemory storePointerUnchecked: 55	ofObject: result withValue: (self positive64BitIntegerFor: statProcessSwitch).
 		objectMemory storePointerUnchecked: 56	ofObject: result withValue: (self positive64BitIntegerFor: statIOProcessEvents).
 		objectMemory storePointerUnchecked: 57	ofObject: result withValue: (self positive64BitIntegerFor: statForceInterruptCheck).
@@ -1420,10 +1427,11 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		^nil].
 
 	arg := self stackTop.
-	(objectMemory isIntegerObject: arg) ifFalse: [^self primitiveFailFor: PrimErrBadArgument].
-	arg := objectMemory integerValueOf: arg.
 	argumentCount = 1 ifTrue:	 "read VM parameter"
-		[(arg < 1 or: [arg > paramsArraySize]) ifTrue: [^self primitiveFailFor: PrimErrBadIndex].
+		[(objectMemory isIntegerObject: arg) ifFalse:
+			[^self primitiveFailFor: PrimErrBadArgument].
+		arg := objectMemory integerValueOf: arg.
+		(arg < 1 or: [arg > paramsArraySize]) ifTrue: [^self primitiveFailFor: PrimErrBadIndex].
 		result := objectMemory nilObject.
 		arg = 1		ifTrue: [result := objectMemory integerObjectOf: objectMemory newSpaceSize].
 		arg = 2		ifTrue: [result := self positive64BitIntegerFor: objectMemory oldSpaceSize].
@@ -1471,6 +1479,9 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		arg = 48	ifTrue: [result := self getCogVMFlags].
 		arg = 49	ifTrue: [result := objectMemory integerObjectOf: self ioGetMaxExtSemTableSize].
 		"(arg between: 50 and: 55) ifTrue: [result := objectMemory nilObject]."
+		(arg = 55
+		 and: [objectMemory hasSpurMemoryManagerAPI]) ifTrue:
+			[result := self floatObjectOf: objectMemory getHeapGrowthToSizeGCRatio].
 		arg = 56	ifTrue: [result := self positive64BitIntegerFor: statProcessSwitch].
 		arg = 57	ifTrue: [result := self positive64BitIntegerFor: statIOProcessEvents].
 		arg = 58	ifTrue: [result := self positive64BitIntegerFor: statForceInterruptCheck].
@@ -1494,67 +1505,78 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 	index := self stackValue: 1.
 	(objectMemory isIntegerObject: index) ifFalse: [^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
-	(index <= 0 or: [index > 63]) ifTrue: [^self primitiveFailFor: PrimErrBadIndex].
+	(index < 1 or: [index > 63]) ifTrue: [^self primitiveFailFor: PrimErrBadIndex].
+	(objectMemory isIntegerObject: arg)
+		ifTrue: [arg := objectMemory integerValueOf: arg]
+		ifFalse:
+			[(index = 55 and: [self isFloatObject: arg]) ifFalse:
+				[^self primitiveFailFor: PrimErrBadArgument]].
+
+	"assume failure, then set success for handled indices"
 	self success: false.
-	index = 5 ifTrue: [
-		"Was:
-		result := allocationsBetweenGCs.
-		allocationsBetweenGCs := arg."
+	index = 5 ifTrue: "Was:
+						result := allocationsBetweenGCs.
+						allocationsBetweenGCs := arg."
 		"Ignore for now, because old images won't start up otherwise.
 		 See 44 & 45 for eden size setting."
-		result := objectMemory nilObject.
+		[result := objectMemory nilObject.
 		self initPrimCall].
-	index = 6 ifTrue: [
-		result := objectMemory tenuringThreshold.
+	index = 6 ifTrue:
+		[result := objectMemory integerObjectOf: objectMemory tenuringThreshold.
 		objectMemory tenuringThreshold: arg.
 		self initPrimCall].
-	index = 23 ifTrue: [
-		result := extraVMMemory.
+	index = 23 ifTrue:
+		[result := objectMemory integerObjectOf: extraVMMemory.
 		extraVMMemory := arg.
 		self initPrimCall].
-	index = 24 ifTrue: [
-		result := objectMemory shrinkThreshold.
-		arg > 0 ifTrue:[
-			objectMemory shrinkThreshold: arg.
+	index = 24 ifTrue:
+		[result := objectMemory integerObjectOf: objectMemory shrinkThreshold.
+		arg > 0 ifTrue:
+			[objectMemory shrinkThreshold: arg.
 			self initPrimCall]].
-	index = 25 ifTrue: [
-		result := objectMemory growHeadroom.
-		arg > 0 ifTrue:[
-			objectMemory growHeadroom: arg.
+	index = 25 ifTrue:
+		[result := objectMemory integerObjectOf: objectMemory growHeadroom.
+		arg > 0 ifTrue:
+			[objectMemory growHeadroom: arg.
 			self initPrimCall]].
-	index = 26 ifTrue: [
-		arg >= 0 ifTrue:[ "0 turns off the heartbeat"
-			result := self ioHeartbeatMilliseconds.
+	index = 26 ifTrue:
+		[arg >= 0 ifTrue:[ "0 turns off the heartbeat"
+			result := objectMemory integerObjectOf: self ioHeartbeatMilliseconds.
 			self ioSetHeartbeatMilliseconds: arg.
 			self initPrimCall]].
-	index = 43 ifTrue: [
-		(arg >= 0 and: [arg <= 65535]) ifTrue:[
-			result := desiredNumStackPages.
+	index = 43 ifTrue:
+		[(arg >= 0 and: [arg <= 65535]) ifTrue:
+			[result := objectMemory integerObjectOf: desiredNumStackPages.
 			desiredNumStackPages := arg.
 			self initPrimCall]].
-	index = 45 ifTrue: [
-		(arg >= 0) ifTrue:[
-			result := desiredEdenBytes.
+	index = 45 ifTrue:
+		[(arg >= 0) ifTrue:
+			[result := objectMemory integerObjectOf: desiredEdenBytes.
 			desiredEdenBytes := arg.
 			self initPrimCall]].
-	(index = 47 and: [self isCog]) ifTrue: [
-		(arg >= 0) ifTrue:[
-			result := self getDesiredCogCodeSize.
+	(index = 47 and: [self isCog]) ifTrue:
+		[(arg >= 0) ifTrue:
+			[result := objectMemory integerObjectOf: self getDesiredCogCodeSize.
 			self setDesiredCogCodeSize: arg.
 			self initPrimCall]].
-	(index = 48 and: [self isCog]) ifTrue: [
-		(arg >= 0) ifTrue:[
-			result := self getCogVMFlags.
+	(index = 48 and: [self isCog]) ifTrue:
+		[(arg >= 0) ifTrue:
+			[result := objectMemory integerObjectOf: self getCogVMFlags.
 			self initPrimCall. "i.e. setCogVMFlags: can fail"
 			self setCogVMFlags: arg]].
 	index = 49 ifTrue:
 		[(arg >= 0 and: [arg <= 65535]) ifTrue:
-			[result := self ioGetMaxExtSemTableSize.
+			[result := objectMemory integerObjectOf: self ioGetMaxExtSemTableSize.
 			self initPrimCall. "i.e. ioSetMaxExtSemTableSize: is allowed to fail"
 			self setMaxExtSemSizeTo: arg]].
 
+	(index = 55
+	 and: [objectMemory hasSpurMemoryManagerAPI]) ifTrue:
+		[result := self floatObjectOf: objectMemory getHeapGrowthToSizeGCRatio.
+		 primFailCode := objectMemory setHeapGrowthToSizeGCRatio: (self floatValueOf: arg)].
+
 	self successful ifTrue:
-		[self pop: 3 thenPush: (objectMemory integerObjectOf: result).  "return old value"
+		[self pop: 3 thenPush: result.  "return old value"
 		^nil].
 
 	self primitiveFailFor: PrimErrInappropriate  "attempting to write a read-only or non-existent parameter"
