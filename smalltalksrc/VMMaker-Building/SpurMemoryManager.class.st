@@ -492,6 +492,8 @@ Class {
 		'heapMap',
 		'becomeEffectsFlags',
 		'pastSpaceStart',
+		'heapGrowthToSizeGCRatio',
+		'heapSizeAtPreviousGC',
 		'growHeadroom',
 		'shrinkThreshold',
 		'gcStartUsecs',
@@ -614,7 +616,9 @@ SpurMemoryManager class >> declareCVarsIn: aCCodeGenerator [
 		var: #classTableBitmap type: #'unsigned char *';
 		var: #objStackInvalidBecause type: #'char *';
 		var: #highestObjects type: #SpurCircularBuffer;
-		var: #unscannedEphemerons type: #SpurContiguousObjStack.
+		var: #unscannedEphemerons type: #SpurContiguousObjStack;
+		var: #heapGrowthToSizeGCRatio type: #float;
+		var: #heapSizeAtPreviousGC type: #usqInt.
 	aCCodeGenerator
 		var: #remapBuffer
 		declareC: 'sqInt remapBuffer[RemapBufferSize + 1 /* ', (RemapBufferSize + 1) printString, ' */]'.
@@ -4780,6 +4784,12 @@ SpurMemoryManager >> gcStartUsecs [
 	^gcStartUsecs
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> getHeapGrowthToSizeGCRatio [
+	<returnTypeC: #float>
+	^heapGrowthToSizeGCRatio
+]
+
 { #category : #'simulation only' }
 SpurMemoryManager >> getThisSessionID [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
@@ -4789,6 +4799,8 @@ SpurMemoryManager >> getThisSessionID [
 
 { #category : #'gc - global' }
 SpurMemoryManager >> globalGarbageCollect [
+	self cCode: [] inSmalltalk: [self halt: 'GC number ', statFullGCs printString].
+
 	self assert: self validObjStacks.
 	self assert: (self isEmptyObjStack: markStack).
 	self assert: (self isEmptyObjStack: weaklingStack).
@@ -4805,6 +4817,7 @@ SpurMemoryManager >> globalGarbageCollect [
 		classIndicesShouldBeValid: true.
 
 	self compact.
+	self setHeapSizeAtPreviousGC.
 
 	self assert: self validObjStacks.
 	self assert: (self isEmptyObjStack: markStack).
@@ -5301,6 +5314,8 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	"These defaults should depend on machine size; e.g. too small on a powerful laptop, too big on a Pi."
 	growHeadroom := 16*1024*1024.		"headroom when growing"
 	shrinkThreshold := 32*1024*1024.		"free space before shrinking"
+	self setHeapSizeAtPreviousGC.
+	heapGrowthToSizeGCRatio := 0.333333. "By default GC after scavenge if heap has grown by a third since the last GC"
 ]
 
 { #category : #'free space' }
@@ -7851,6 +7866,27 @@ SpurMemoryManager >> printFreeChunk: freeChunk isNextChunk: isNextChunk [
 	coInterpreter cr
 ]
 
+{ #category : #'debug support' }
+SpurMemoryManager >> printFreeChunks [
+	"This version goes through memory, printing all free chunks.
+	 Other versions go through the free lists.  This one will show
+	 all free chunks even if the free lists are corrupt."
+	<api>
+	| seenNewFreeChunk |
+	seenNewFreeChunk := false.
+	self allNewSpaceEntitiesDo:
+		[:o|
+		(self isFreeObject: o) ifTrue:
+			[seenNewFreeChunk ifFalse:
+				[coInterpreter print: 'NewSpace CONTAINS FREE OBJECT(S)!!'; cr.
+				 seenNewFreeChunk := true].
+			 self printFreeChunk: o]].
+	self allOldSpaceEntitiesDo:
+		[:o|
+		(self isFreeObject: o) ifTrue:
+			[self printFreeChunk: o]]
+]
+
 { #category : #'debug printing' }
 SpurMemoryManager >> printFreeList: chunkOrIndex [
 	<api>
@@ -8605,6 +8641,17 @@ SpurMemoryManager >> setHeapBase: baseOfHeap memoryLimit: memLimit endOfMemory: 
 	^baseOfHeap
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> setHeapGrowthToSizeGCRatio: aDouble [
+	<var: #aDouble type: #double>
+	heapGrowthToSizeGCRatio := aDouble
+]
+
+{ #category : #'gc - global' }
+SpurMemoryManager >> setHeapSizeAtPreviousGC [
+	heapSizeAtPreviousGC := endOfMemory - nilObj - totalFreeOldSpace
+]
+
 { #category : #'header access' }
 SpurMemoryManager >> setIsGreyOf: objOop to: aBoolean [
 	self subclassResponsibility
@@ -8928,7 +8975,7 @@ SpurMemoryManager >> sortedFreeListPairwiseReverseDo: aBinaryBlock [
 			ifTrue:
 				[prevPrevFree := prevFree.
 				 prevFree := free.
-				 free := nextFree]
+				 free := prevFree = firstFreeChunk ifTrue: [0] ifFalse: [nextFree]]
 			ifFalse:
 				[free := lastFreeChunk.
 				 prevPrevFree := prevFree := 0.
@@ -9332,8 +9379,12 @@ SpurMemoryManager >> sufficientSpaceAfterGC: numBytes [
 	 which is a stop-the-world a young generation reclaimer.  In Spur
 	 we run the scavenger.  Answer if space is not low."
 
+	| heapSizePostGC |
 	self assert: numBytes = 0.
 	self scavengingGCTenuringIf: TenureByAge.
+	heapSizePostGC := endOfMemory - nilObj - totalFreeOldSpace.
+	(heapSizePostGC - heapSizeAtPreviousGC) asFloat / heapSizeAtPreviousGC >= heapGrowthToSizeGCRatio ifTrue:
+		[self fullGC].
 	[totalFreeOldSpace < growHeadroom
 	 and: [(self growOldSpaceByAtLeast: 0) notNil]] whileTrue:
 		[totalFreeOldSpace >= growHeadroom ifTrue:

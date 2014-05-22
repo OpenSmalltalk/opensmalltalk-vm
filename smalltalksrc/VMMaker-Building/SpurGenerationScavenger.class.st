@@ -340,9 +340,9 @@ SpurGenerationScavenger >> copyToOldSpace: survivor bytes: bytesInObject format:
 SpurGenerationScavenger >> corpseForCorpseOffset: corpseOffset [
 	"Use the identityHash and format fields to construct a 27 bit offset through
 	 non-future newSpace and use this to implement lists for weak array and
-	 ephemeron processing.  27 bits of 8 byte allocationUnits units is 2 ^ 30 bytes
-	 or 1Gb, big enough for newSpace for a good few years yet."
-	^corpseOffset << manager shiftForAllocationUnit + manager newSpaceStart
+	 ephemeron processing.  27 bits of 8 byte allocationUnits units is 2 ^ 30
+	 bytes, or 1Gb, big enough for newSpace for a good few years yet."
+	^corpseOffset - 1 << manager shiftForAllocationUnit + manager newSpaceStart
 ]
 
 { #category : #'weakness and ephemerality' }
@@ -351,8 +351,10 @@ SpurGenerationScavenger >> corpseOffsetOf: corpse [
 	 Use the identityHash and format fields to construct a 27 bit offset through
 	 non-future newSpace and use this to implement lists for weak array and
 	 ephemeron processing.  27 bits of 8 byte allocationUnits units is 2 ^ 30
-	 bytes or 1Gb, big enough for newSpace for a good few years yet."
-	^corpse - manager newSpaceStart >> manager shiftForAllocationUnit.
+	 bytes or 1Gb, big enough for newSpace for a good few years yet.  Add
+	 one to ensure that a corpse offset is always non-zero, even when it is
+	 that of the first object in newSpace."
+	^corpse - manager newSpaceStart >> manager shiftForAllocationUnit + 1
 ]
 
 { #category : #accessing }
