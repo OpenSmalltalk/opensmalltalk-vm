@@ -2063,15 +2063,15 @@ InterpreterPrimitives >> primitiveInvokeObjectAsMethod [
 { #category : #'memory space primitives' }
 InterpreterPrimitives >> primitiveIsPinned [
 	"Answer if the receiver is pinned, i.e. immobile."
-	| receiver |
-	receiver := self stackTop.
-	((objectMemory isImmediate: receiver)
-	 or: [objectMemory isForwarded: receiver]) ifTrue:
+	| obj |
+	obj := self stackTop.
+	((objectMemory isImmediate: obj)
+	 or: [objectMemory isForwarded: obj]) ifTrue:
 		[^self primitiveFailFor: PrimErrBadReceiver].
 	self pop: argumentCount - 1.
 	self stackTopPut:
 			(objectMemory hasSpurMemoryManagerAPI
-				ifTrue: [objectMemory booleanObjectOf: (objectMemory isPinned: receiver)]
+				ifTrue: [objectMemory booleanObjectOf: (objectMemory isPinned: obj)]
 				ifFalse: [objectMemory falseObject])
 ]
 
@@ -2695,28 +2695,28 @@ InterpreterPrimitives >> primitivePerformWithArgs [
 InterpreterPrimitives >> primitivePin [
 	"Pin or unpin the receiver, i.e. make it immobile or mobile.  Answer whether the object was
 	 already pinned. N.B. pinning does *not* prevent an object from being garbage collected."
-	| receiver boolean wasPinned failure |
+	| obj boolean wasPinned failure |
 	objectMemory hasSpurMemoryManagerAPI ifFalse:
 		[^self primitiveFailFor: PrimErrUnsupported].
 
-	receiver := self stackValue: 1.
-	((objectMemory isImmediate: receiver)
-	 or: [(objectMemory isForwarded: receiver)
-	 or: [(objectMemory isContext: receiver)
-		and: [self isStillMarriedContext: receiver]]]) ifTrue:
+	obj := self stackValue: 1.
+	((objectMemory isImmediate: obj)
+	 or: [(objectMemory isForwarded: obj)
+	 or: [(objectMemory isContext: obj)
+		and: [self isStillMarriedContext: obj]]]) ifTrue:
 		[^self primitiveFailFor: PrimErrBadReceiver].
 	boolean := self stackTop.
 	(boolean = objectMemory falseObject
 	 or: [boolean = objectMemory trueObject]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadArgument].
 
-	(objectMemory isPinned: receiver)
+	(objectMemory isPinned: obj)
 		ifTrue:
 			[wasPinned := objectMemory trueObject.
-			 objectMemory setIsPinnedOf: receiver to: false]
+			 objectMemory setIsPinnedOf: obj to: false]
 		ifFalse:
 			[wasPinned := objectMemory falseObject.
-			 failure := objectMemory pinObject: receiver.
+			 failure := objectMemory pinObject: obj.
 			 failure ~= 0 ifTrue:
 				[^self primitiveFailFor: failure]].
 	
