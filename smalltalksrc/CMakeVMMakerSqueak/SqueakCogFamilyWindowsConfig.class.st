@@ -143,9 +143,6 @@ SqueakCogFamilyWindowsConfig >> buildScript [
 	^ 
 '#!/usr/bin/env bash
 
-if [ ! -e vmVersionInfo.h ]; then
-	../scripts/extract-commit-info.sh
-fi
 cmake -G "MSYS Makefiles" .
 make
 
