@@ -6,7 +6,7 @@ As of 2014.05.18 I have not been tested on SunOS and serve merely as a placehold
 "
 Class {
 	#name : #SqueakCogSunOSConfig,
-	#superclass : #CogUnixConfig,
+	#superclass : #SqueakCogUnixConfig,
 	#traits : 'TSqueakStackUnixConfig - {#externalPlugins. #internalPlugins}',
 	#classTraits : 'TSqueakStackUnixConfig classTrait',
 	#category : #'CMakeVMMakerSqueak-SunOS'

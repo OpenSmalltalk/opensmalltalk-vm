@@ -135,6 +135,20 @@ SqueakCogUnixConfig >> buildDirName [
 	^ 'cmake_unixbuild/bld'
 ]
 
+{ #category : #'build script' }
+SqueakCogUnixConfig >> buildScript [
+	"answer the build script for building everything"
+	
+
+	^ 
+'#!/usr/bin/env bash
+
+cmake .
+make
+
+'
+]
+
 { #category : #'source generation' }
 SqueakCogUnixConfig >> cogitClass [
 	"answer a class for machine code generation or nil"

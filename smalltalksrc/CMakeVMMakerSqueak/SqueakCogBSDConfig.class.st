@@ -13,7 +13,7 @@ SqueakCogFreeBSDConfig generate
 "
 Class {
 	#name : #SqueakCogBSDConfig,
-	#superclass : #CogUnixConfig,
+	#superclass : #SqueakCogUnixConfig,
 	#traits : 'TSqueakStackUnixConfig - {#externalPlugins. #internalPlugins}',
 	#classTraits : 'TSqueakStackUnixConfig classTrait',
 	#category : #'CMakeVMMakerSqueak-FreeBSD'
