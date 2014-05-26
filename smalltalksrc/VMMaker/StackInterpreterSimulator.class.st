@@ -22,6 +22,8 @@ Class {
 	#name : #StackInterpreterSimulator,
 	#superclass : #StackInterpreterPrimitives,
 	#instVars : [
+		'clone',
+		'parent',
 		'bootstrapping',
 		'byteCount',
 		'breakCount',
@@ -284,20 +286,34 @@ StackInterpreterSimulator >> clipboardWrite: sz From: actualDataAddress At: igno
 { #category : #'debug support' }
 StackInterpreterSimulator >> cloneSimulation [
 	| savedDisplayView savedDisplayForm savedQuitBlock savedTranscript |
+	self setClone: nil.
 	savedDisplayView := displayView. displayView := nil.
 	savedDisplayForm := displayForm. displayForm = nil.
 	savedQuitBlock := quitBlock. quitBlock := nil.
 	savedTranscript := transcript. transcript := nil.
 
-	[| clone window |
-	 clone := self veryDeepCopy.
-	 window := clone openAsMorph.
-	 window setLabel: 'Clone of ', (savedDisplayView containingWindow label allButFirst: 'Simulation of ' size)]
+	^[| theClone |
+	 Smalltalk garbageCollect.
+	 theClone := self veryDeepCopy.
+	 theClone parent: self; transcript: Transcript.
+	 theClone objectMemory parent: objectMemory.
+	 self setClone: theClone.
+	 objectMemory setClone: theClone objectMemory.
+	 theClone]
 		ensure:
 			[displayView := savedDisplayView.
 			 displayForm = savedDisplayForm.
 			 quitBlock := savedQuitBlock.
 			 transcript := savedTranscript]
+]
+
+{ #category : #'debug support' }
+StackInterpreterSimulator >> cloneSimulationWindow [
+	| label |
+	label := 'Clone of ', (displayView containingWindow label allButFirst: 'Simulation of ' size).
+	^self cloneSimulation openAsMorph
+		setLabel: label;
+		yourself
 ]
 
 { #category : #initialization }
@@ -629,6 +645,12 @@ StackInterpreterSimulator >> functionPointerFor: primIndex inClass: lookupClass 
 	^(primIndex between: 1 and: MaxPrimitiveIndex)
 		ifTrue: [primitiveTable at: primIndex + 1]
 		ifFalse: [0]
+]
+
+{ #category : #accessing }
+StackInterpreterSimulator >> getClone [
+
+	^ clone
 ]
 
 { #category : #'debugging traps' }
@@ -1542,6 +1564,18 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 
 ]
 
+{ #category : #accessing }
+StackInterpreterSimulator >> parent [
+
+	^ parent
+]
+
+{ #category : #accessing }
+StackInterpreterSimulator >> parent: anObject [
+
+	parent := anObject
+]
+
 { #category : #'object memory support' }
 StackInterpreterSimulator >> preBecomeAction [
 	"((objectMemory instVarNamed: 'becomeEffectsFlags') anyMask: BecameCompiledMethodFlag) ifTrue:
@@ -2208,6 +2242,12 @@ StackInterpreterSimulator >> sendBreak: selectorString point: selectorLength rec
 				ifFalse: [i := 0]]]
 ]
 
+{ #category : #accessing }
+StackInterpreterSimulator >> setClone: aSpurMMSimulator [
+
+	clone := aSpurMMSimulator
+]
+
 { #category : #'spur bootstrap' }
 StackInterpreterSimulator >> setDisplayForm: aForm [
 	displayForm := aForm
@@ -2618,7 +2658,7 @@ StackInterpreterSimulator >> updateStateOfSpouseContextForFrame: theFP WithSP: t
 StackInterpreterSimulator >> utilitiesMenu: aMenuMorph [
 	aMenuMorph
 		add: 'toggle transcript' action: #toggleTranscript;
-		add: 'clone VM' action: #cloneSimulation;
+		add: 'clone VM' action: #cloneSimulationWindow;
 		addLine;
 		add: 'print ext head frame' action: #printExternalHeadFrame;
 		add: 'print int head frame' action: #printHeadFrame;

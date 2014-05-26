@@ -190,6 +190,31 @@ SpurGenerationScavenger >> addToWeakList: weakCorpse [
 	self assert: (self firstCorpse: weakList) = weakCorpse
 ]
 
+{ #category : #'weakness and ephemerality' }
+SpurGenerationScavenger >> allFutureSpaceEntitiesDo: aBlock [
+	"Enumerate all future space objects, including free objects."
+	<inline: true>
+	| prevObj prevPrevObj objOop limit |
+	prevPrevObj := prevObj := nil.
+	objOop := manager objectStartingAt: futureSpace start.
+	limit := futureSurvivorStart.
+	[self oop: objOop isLessThan: limit] whileTrue:
+		[aBlock value: objOop.
+		 prevPrevObj := prevObj.
+		 prevObj := objOop.
+		 objOop := manager objectAfter: objOop limit: limit]
+]
+
+{ #category : #'weakness and ephemerality' }
+SpurGenerationScavenger >> allWeakSurvivorsOnWeakList [
+	self allFutureSpaceEntitiesDo:
+		[:survivor|
+		(manager isWeakNonImm: survivor) ifTrue:
+			[(self is: survivor onWeaklingList: weakList) ifFalse:
+				[^false]]].
+	^true
+]
+
 { #category : #accessing }
 SpurGenerationScavenger >> coInterpreter: aCoInterpreter [
 	coInterpreter := aCoInterpreter
@@ -744,6 +769,7 @@ SpurGenerationScavenger >> processWeaklings [
 	 for a more in-depth description of the algorithm."
 	<inline: false>
 	| i rootObj weakCorpse weakObj |
+	self assert: self allWeakSurvivorsOnWeakList.
 	i := 0.
 	[i < rememberedSetSize] whileTrue:
 		[rootObj := rememberedSet at: i.
