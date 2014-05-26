@@ -5781,7 +5781,9 @@ CoInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imag
 	  minimumMemory heapSize bytesRead bytesToShift firstSegSize
 	  hdrNumStackPages hdrEdenBytes hdrCogCodeSize headerFlags hdrMaxExtSemTabSize |
 	<var: #f type: #sqImageFile>
+	<var: #heapSize type: #usqInt>
 	<var: #dataSize type: #'size_t'>
+	<var: #minimumMemory type: #usqInt>
 	<var: #desiredHeapSize type: #usqInt>
 	<var: #headerStart type: #squeakFileOffsetType>
 	<var: #imageOffset type: #squeakFileOffsetType>

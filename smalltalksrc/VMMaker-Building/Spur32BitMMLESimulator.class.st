@@ -2,6 +2,8 @@ Class {
 	#name : #Spur32BitMMLESimulator,
 	#superclass : #Spur32BitMemoryManager,
 	#instVars : [
+		'clone',
+		'parent',
 		'bootstrapping'
 	],
 	#category : #'VMMaker-SpurMemoryManagerSimulation'
@@ -117,6 +119,31 @@ Spur32BitMMLESimulator >> firstIndexableField: objOop [
 { #category : #'spur bootstrap' }
 Spur32BitMMLESimulator >> freeLists [
 	^freeLists
+]
+
+{ #category : #accessing }
+Spur32BitMMLESimulator >> getClone [
+
+	^ clone
+]
+
+{ #category : #'gc - global' }
+Spur32BitMMLESimulator >> globalGarbageCollect [
+	"If we're /not/ a clone, clone the VM and push it over the cliff.
+	 If it survives, destroy the clone and continue.  We should be OK until next time."
+	parent ifNil:
+		[[coInterpreter cloneSimulation objectMemory globalGarbageCollect]
+			on: Halt
+			do: [:ex|
+				(ex messageText beginsWith: 'GC number')
+					ifTrue:
+						[Transcript cr; cr; show: ex messageText; cr; cr.
+						 ex resume]
+					ifFalse: [ex pass]].
+		 coInterpreter setClone: nil.
+		 self setClone: nil.
+		 Smalltalk garbageCollect].
+	^super globalGarbageCollect
 ]
 
 { #category : #'growing/shrinking memory' }
@@ -391,6 +418,18 @@ Spur32BitMMLESimulator >> numClassTablePages [
 	^numClassTablePages
 ]
 
+{ #category : #accessing }
+Spur32BitMMLESimulator >> parent [
+
+	^ parent
+]
+
+{ #category : #accessing }
+Spur32BitMMLESimulator >> parent: anObject [
+
+	parent := anObject
+]
+
 { #category : #'debug support' }
 Spur32BitMMLESimulator >> runLeakCheckerForFullGC: fullGCFlag excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs classIndicesShouldBeValid: classIndicesShouldBeValid [
 	(coInterpreter displayView isNil
@@ -414,6 +453,12 @@ Spur32BitMMLESimulator >> scavengingGCTenuringIf: tenuringCriterion [
 	"statFullGCs > 0 ifTrue:
 		[self halt]."
 	^super scavengingGCTenuringIf: tenuringCriterion
+]
+
+{ #category : #accessing }
+Spur32BitMMLESimulator >> setClone: aSpurMMSimulator [
+
+	clone := aSpurMMSimulator
 ]
 
 { #category : #'header access' }
