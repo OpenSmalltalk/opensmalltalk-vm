@@ -125,6 +125,25 @@ External:
 '
 ]
 
+{ #category : #'as yet unclassified' }
+SqueakCogFamilyWindowsConfig >> addThirdpartyLibrary: libName [
+	| libs lib |
+	
+	libs := self thirdpartyLibs.
+	
+	lib :=  libs 
+		detect: [:each | each canonicalName = libName ] 
+		ifNone: [ nil ].
+		
+	lib ifNil: [ 
+		lib := SqueakCMThirdpartyLibrary named: libName config: self.
+		"add dependencies first, so thirpartyLibs collection will be naturally dependency sorted"
+		lib dependencies do: [:dep | self addThirdpartyLibrary: dep ].
+		libs add: lib ].
+
+	^ lib
+]
+
 { #category : #directories }
 SqueakCogFamilyWindowsConfig >> buildDir [
 	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].
