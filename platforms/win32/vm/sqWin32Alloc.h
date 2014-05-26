@@ -21,7 +21,7 @@
 #undef sqShrinkMemoryBy
 #undef sqMemoryExtraBytesLeft
 
-void *sqAllocateMemory(int minHeapSize, int desiredHeapSize);
+void *sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize);
 #define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
 sqAllocateMemory(minimumMemory, heapSize)
 int sqGrowMemoryBy(int oldLimit, int delta);

@@ -56,7 +56,7 @@
 #include "config.h"
 #include "debug.h"
 
-void *uxAllocateMemory(sqInt minHeapSize, sqInt desiredHeapSize);
+void *uxAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize);
 char *uxGrowMemoryBy(char *oldLimit, sqInt delta);
 char *uxShrinkMemoryBy(char *oldLimit, sqInt delta);
 sqInt uxMemoryExtraBytesLeft(sqInt includingSwap);
@@ -107,29 +107,27 @@ static int max(int x, int y) { return (x > y) ? x : y; }
 
 /* answer the address of (minHeapSize <= N <= desiredHeapSize) bytes of memory. */
 
-void *uxAllocateMemory(sqInt minHeapSize, sqInt desiredHeapSize)
+void *uxAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 {
 #if !ALWAYS_USE_MMAP
   if (!useMmap)
     return malloc(desiredHeapSize);
 #endif
 
-  if (heap)
-    {
+  if (heap) {
       fprintf(stderr, "uxAllocateMemory: already called\n");
       exit(1);
-    }
+  }
   pageSize= getpagesize();
   pageMask= ~(pageSize - 1);
 
   DPRINTF(("uxAllocateMemory: pageSize 0x%x (%d), mask 0x%x\n", pageSize, pageSize, pageMask));
 
 #if (!MAP_ANON)
-  if ((devZero= open("/dev/zero", O_RDWR)) < 0)
-    {
+  if ((devZero= open("/dev/zero", O_RDWR)) < 0) {
       perror("uxAllocateMemory: /dev/zero");
       return 0;
-    }
+  }
 #endif
 
   DPRINTF(("uxAllocateMemory: /dev/zero descriptor %d\n", devZero));
@@ -137,22 +135,19 @@ void *uxAllocateMemory(sqInt minHeapSize, sqInt desiredHeapSize)
 
   heapLimit= valign(max(desiredHeapSize, useMmap));
 
-  while ((!heap) && (heapLimit >= minHeapSize))
-    {
+  while ((!heap) && (heapLimit >= minHeapSize)) {
       DPRINTF(("uxAllocateMemory: mapping 0x%08x bytes (%d Mbytes)\n", heapLimit, heapLimit >> 20));
-      if (MAP_FAILED == (heap= mmap(0, heapLimit, MAP_PROT, MAP_FLAGS, devZero, 0)))
-	{
+      if (MAP_FAILED == (heap= mmap(0, heapLimit, MAP_PROT, MAP_FLAGS, devZero, 0))) {
 	  heap= 0;
 	  heapLimit= valign(heapLimit / 4 * 3);
 	}
-    }
+  }
 
-  if (!heap)
-    {
+  if (!heap) {
       fprintf(stderr, "uxAllocateMemory: failed to allocate at least %lld bytes)\n", (long long)minHeapSize);
       useMmap= 0;
       return malloc(desiredHeapSize);
-    }
+  }
 
   heapSize= heapLimit;
 
@@ -271,7 +266,7 @@ sqInt uxMemoryExtraBytesLeft(sqInt includingSwap)			{ return 0; }
 
 #if defined(SQ_IMAGE32) && defined(SQ_HOST64)
 
-sqInt sqAllocateMemory(sqInt minHeapSize, sqInt desiredHeapSize)
+usqInt sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 {
   sqMemoryBase= uxAllocateMemory(minHeapSize, desiredHeapSize);
   if (!sqMemoryBase) return 0;
@@ -296,7 +291,7 @@ sqInt sqMemoryExtraBytesLeft(sqInt includingSwap)
 
 #else
 
-sqInt sqAllocateMemory(sqInt minHeapSize, sqInt desiredHeapSize)	{ return (sqInt)(long)uxAllocateMemory(minHeapSize, desiredHeapSize); }
+usqInt sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)	{ return (sqInt)(long)uxAllocateMemory(minHeapSize, desiredHeapSize); }
 sqInt sqGrowMemoryBy(sqInt oldLimit, sqInt delta)			{ return (sqInt)(long)uxGrowMemoryBy((char *)(long)oldLimit, delta); }
 sqInt sqShrinkMemoryBy(sqInt oldLimit, sqInt delta)			{ return (sqInt)(long)uxShrinkMemoryBy((char *)(long)oldLimit, delta); }
 sqInt sqMemoryExtraBytesLeft(sqInt includingSwap)			{ return uxMemoryExtraBytesLeft(includingSwap); }

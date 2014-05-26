@@ -51,7 +51,7 @@ sqGetAvailableMemory()
 }
 
 usqInt
-sqAllocateMemoryMac(sqInt desiredHeapSize, sqInt minHeapSize)
+sqAllocateMemoryMac(usqInt desiredHeapSize, usqInt minHeapSize)
 {
     void * debug, *actually;
 #if SPURVM

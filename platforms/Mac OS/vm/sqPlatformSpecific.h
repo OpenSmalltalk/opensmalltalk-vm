@@ -74,7 +74,7 @@ sqInt       sqImageFileWrite(void *ptr, size_t elementSize, size_t count, sqImag
 
 #define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
 	sqAllocateMemoryMac(heapSize, minimumMemory)
-usqInt sqAllocateMemoryMac(sqInt desiredHeapSize, sqInt minHeapSize);
+usqInt sqAllocateMemoryMac(usqInt desiredHeapSize, usqInt minHeapSize);
 
 
 #define sqAllocateMemory(x,y) sqAllocateMemoryMac(&y,x)

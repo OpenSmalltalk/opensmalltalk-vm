@@ -53,7 +53,7 @@ LONG CALLBACK sqExceptionFilter(LPEXCEPTION_POINTERS exp)
 /************************************************************************/
 /* sqAllocateMemory: Initialize virtual memory                          */
 /************************************************************************/
-void *sqAllocateMemory(int minHeapSize, int desiredHeapSize)
+void *sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 { SYSTEM_INFO sysInfo;
   DWORD initialCommit, commit;
 
