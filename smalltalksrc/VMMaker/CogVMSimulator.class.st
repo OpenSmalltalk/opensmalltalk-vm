@@ -394,19 +394,15 @@ CogVMSimulator >> ceNonLocalReturn: returnValue [
 ]
 
 { #category : #trampolines }
-CogVMSimulator >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArgs [ 
-	self break.
+CogVMSimulator >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArgs [
+	"self stringOf: selector"
+	"self printOop: rcvr"
+	"(superNormalBar ~= 0 and: [(self stringOf: selector) = #bitShift:]) ifTrue:
+		[self halt]."
 	self logSend: selector.
 	cogit assertCStackWellAligned.
-	self
-		maybeCheckStackDepth: numArgs + 1
-		sp: stackPointer
-		pc: (stackPages longAt: stackPointer).
-	^ super
-		ceSend: selector
-		super: superNormalBar
-		to: rcvr
-		numArgs: numArgs
+	self maybeCheckStackDepth: numArgs + 1 sp: stackPointer pc: (stackPages longAt: stackPointer).
+	^super ceSend: selector super: superNormalBar to: rcvr numArgs: numArgs
 ]
 
 { #category : #trampolines }
@@ -567,20 +563,34 @@ CogVMSimulator >> clipboardWrite: sz From: actualDataAddress At: ignored [
 { #category : #'debug support' }
 CogVMSimulator >> cloneSimulation [
 	| savedDisplayView savedDisplayForm savedQuitBlock savedTranscript |
+	self setClone: nil.
 	savedDisplayView := displayView. displayView := nil.
 	savedDisplayForm := displayForm. displayForm = nil.
 	savedQuitBlock := quitBlock. quitBlock := nil.
 	savedTranscript := transcript. transcript := nil.
 
-	[| clone window |
-	 clone := self veryDeepCopy.
-	 window := clone openAsMorph.
-	 window setLabel: 'Clone of ', (savedDisplayView containingWindow label allButFirst: 'Simulation of ' size)]
+	^[| theClone |
+	 Smalltalk garbageCollect.
+	 theClone := self veryDeepCopy.
+	 theClone parent: self; transcript: Transcript.
+	 theClone objectMemory parent: objectMemory.
+	 self setClone: theClone.
+	 objectMemory setClone: theClone objectMemory.
+	 theClone]
 		ensure:
 			[displayView := savedDisplayView.
 			 displayForm = savedDisplayForm.
 			 quitBlock := savedQuitBlock.
 			 transcript := savedTranscript]
+]
+
+{ #category : #'debug support' }
+CogVMSimulator >> cloneSimulationWindow [
+	| label |
+	label := 'Clone of ', (displayView containingWindow label allButFirst: 'Simulation of ' size).
+	^self cloneSimulation openAsMorph
+		setLabel: label;
+		yourself
 ]
 
 { #category : #initialization }
@@ -3673,7 +3683,7 @@ CogVMSimulator >> updateStateOfSpouseContextForFrame: theFP WithSP: theSP [
 CogVMSimulator >> utilitiesMenu: aMenuMorph [
 	aMenuMorph
 		add: 'toggle transcript' action: #toggleTranscript;
-		add: 'clone VM' action: #cloneSimulation;
+		add: 'clone VM' action: #cloneSimulationWindow;
 		addLine;
 		add: 'print ext head frame' action: #printExternalHeadFrame;
 		add: 'print int head frame' action: #printHeadFrame;
