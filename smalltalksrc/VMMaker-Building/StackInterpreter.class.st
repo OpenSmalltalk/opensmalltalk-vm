@@ -10771,7 +10771,9 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 	  minimumMemory bytesRead bytesToShift heapSize firstSegSize
 	  hdrEdenBytes hdrMaxExtSemTabSize hdrNumStackPages |
 	<var: #f type: #sqImageFile>
+	<var: #heapSize type: #usqInt>
 	<var: #dataSize type: #'size_t'>
+	<var: #minimumMemory type: #usqInt>
 	<var: #desiredHeapSize type: #usqInt>
 	<var: #headerStart type: #squeakFileOffsetType>
 	<var: #imageOffset type: #squeakFileOffsetType>
