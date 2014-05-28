@@ -978,6 +978,8 @@ SpurMemoryManager >> addFreeSubTree: freeTree [
 	treeNode := freeLists at: 0.
 	self assert: treeNode ~= 0.
 	[bytesInNode := self bytesInObject: treeNode.
+	 self assert: ((self oop: freeTree + bytesInArg isLessThan: treeNode)
+					or: [self oop: freeTree isGreaterThanOrEqualTo: treeNode + bytesInNode]).
 	 self assert: bytesInNode >= (self numFreeLists * self allocationUnit).
 	 self assert: bytesInArg ~= bytesInNode.
 	 bytesInNode > bytesInArg
@@ -1045,6 +1047,8 @@ SpurMemoryManager >> addToFreeTree: freeChunk bytes: chunkBytes [
 	child := freeLists at: 0.
 	[child ~= 0] whileTrue:
 		[childBytes := self bytesInObject: child.
+		 self assert: ((self oop: freeChunk + chunkBytes isLessThan: child)
+						or: [self oop: freeChunk isGreaterThanOrEqualTo: child + childBytes]).
 		 childBytes = chunkBytes ifTrue: "size match; add to list at node."
 			[self storePointer: self freeChunkNextIndex
 					ofFreeChunk: freeChunk
@@ -3318,6 +3322,10 @@ SpurMemoryManager >> compact [
 		[:i|
 		 self pigCompact.
 		 self eliminateAndFreeForwardersForPigCompact].
+	
+	"The free lists are zeroed in freeUnmarkedObjectsAndSortAndCoalesceFreeSpaceForPigCompact.
+	 They should still be zero here"
+	self assert: self freeListHeadsEmpty.
 	self rebuildFreeListsForPigCompact
 ]
 
@@ -4591,6 +4599,13 @@ SpurMemoryManager >> freeChunkWithBytes: bytes at: address [
 ]
 
 { #category : #'free space' }
+SpurMemoryManager >> freeListHeadsEmpty [
+	0 to: self numFreeLists - 1 do:
+		[:i| (freeLists at: i) ~= 0 ifTrue: [^false]].
+	^true
+]
+
+{ #category : #'free space' }
 SpurMemoryManager >> freeListsObj [
 	self assert: (self firstIndexableField: (self objectAfter: trueObj)) = freeLists.
 	^self objectAfter: trueObj
@@ -4747,7 +4762,8 @@ SpurMemoryManager >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpaceForPigCompact
 			ofFreeChunk: prevFree
 			withValue: prevPrevFree].
 	lastFreeChunk := prevFree.
-	self cCode: [] inSmalltalk: [self checkTraversableSortedFreeList]
+	self inSortedFreeListLink: lastFreeChunk to: 0 given: prevPrevFree.
+	self checkTraversableSortedFreeList
 ]
 
 { #category : #'simulation only' }
@@ -4883,6 +4899,7 @@ SpurMemoryManager >> growOldSpaceByAtLeast: minAmmount [
 		 self assert: (self addressAfter: (self objectStartingAt: segInfo segStart))
 					= (segInfo segLimit - self bridgeSize).
 		 self checkFreeSpace.
+		 self checkSegments.
 		 segInfo segSize]
 ]
 
@@ -5347,6 +5364,7 @@ SpurMemoryManager >> initializeOldSpaceFirstFree: startOfFreeOldSpace [
 		freeOldStart < limit ifTrue:
 			[freeChunk := self freeChunkWithBytes: limit - freeOldStart at: freeOldStart.
 			 self assert: (self addressAfter: freeChunk) = limit]].
+	endOfMemory := endOfMemory - self bridgeSize.
 	freeOldSpaceStart := endOfMemory.
 	self checkFreeSpace
 ]
@@ -8246,6 +8264,8 @@ SpurMemoryManager >> readHeapFromImageFile: f dataBytes: numBytes [
 { #category : #compaction }
 SpurMemoryManager >> rebuildFreeListsForPigCompact [
 	"Rebuild the free lists from the doubly-linked free list."
+	<inline: false>
+	self checkTraversableSortedFreeList.
 	totalFreeOldSpace := 0.
 	self sortedFreeListDo:
 		[:freeObj| | start bytes |
@@ -9007,8 +9027,7 @@ SpurMemoryManager >> sortedFreeListPairwiseReverseDo: aBinaryBlock [
 				[self assert: (self isFreeObject: prevFree).
 				 prevPrevFree = 0
 					ifTrue:
-						[self assert: free = (self nextInSortedFreeListLink: lastFreeChunk given: 0).
-						 prevPrevFree := lastFreeChunk.
+						[prevPrevFree := lastFreeChunk.
 						 prevFree := self nextInSortedFreeListLink: lastFreeChunk given: 0]
 					ifFalse:
 						[self assert: (self isFreeObject: prevPrevFree).
@@ -9016,18 +9035,6 @@ SpurMemoryManager >> sortedFreeListPairwiseReverseDo: aBinaryBlock [
 						 prevPrevFree := prevFree.
 						 prevFree := free].
 				 free := self nextInSortedFreeListLink: prevFree given: prevPrevFree]]
-
-"| labels |
- labels := Dictionary new.
- labels
-	at: prevPrevFree put: 'ppf';
-	at: prevFree put: 'pf';
-	at: free put: 'f';
-	at: nextFree put: 'f'.
- self sortedFreeListPairwiseReverseDo: [:a :b|
-		Transcript cr; print: a; space.
-		(labels at: a ifAbsent: []) ifNotNil: [:l| Transcript nextPutAll: l].
-		Transcript flush]"
 ]
 
 { #category : #'free space' }
@@ -9444,34 +9451,6 @@ SpurMemoryManager >> sufficientSpaceToInstantiate: classObj indexableSize: index
 ]
 
 { #category : #compaction }
-SpurMemoryManager >> sweepToCoallesceFreeSpaceAndRebuildFreeListsForPigCompactFrom: lowestForwarder [
-	"Coallesce free chunks and forwarders and rebuild the free list."
-	| lowest firstFree firstFreeStart lastFree |
-	lowest := (lowestForwarder = 0 ifTrue: [endOfMemory] ifFalse: [lowestForwarder])
-				min: (firstFreeChunk = 0 ifTrue: [endOfMemory] ifFalse: [firstFreeChunk]).
-	firstFree := totalFreeOldSpace := 0.
-	self allOldSpaceEntitiesForCoalescingFrom: lowest do:
-		[:o|
-		((self isFreeObject: o) or: [self isForwarded: o])
-			ifTrue:
-				[firstFree = 0 ifTrue:
-					[firstFree := o.
-					 firstFreeStart := self startOfObject: o].
-				 lastFree := o]
-			ifFalse:
-				[firstFree ~= 0 ifTrue:
-					[| bytes |
-					 bytes := (self addressAfter: lastFree) - firstFreeStart.
-					 self addFreeChunkWithBytes: bytes at: firstFreeStart].
-				 firstFree := 0]].
-	firstFree ~= 0 ifTrue:
-		[| bytes |
-		 bytes := (self addressAfter: lastFree) - firstFreeStart.
-		 self addFreeChunkWithBytes: bytes at: firstFreeStart].
-	firstFreeChunk := lastFreeChunk := 0
-]
-
-{ #category : #compaction }
 SpurMemoryManager >> sweepToCoallesceFreeSpaceForPigCompactFrom: lowestForwarder [
 	"Coallesce free chunks and forwarders, maintaining the doubly-linked free list."
 	| lowest firstOfFreeRun startOfFreeRun endOfFreeRun prevPrevFree prevFree |
@@ -9509,7 +9488,8 @@ SpurMemoryManager >> sweepToCoallesceFreeSpaceForPigCompactFrom: lowestForwarder
 			ofFreeChunk: prevFree
 			withValue: prevPrevFree].
 	lastFreeChunk := prevFree.
-	self cCode: [] inSmalltalk: [self checkTraversableSortedFreeList]
+	self inSortedFreeListLink: lastFreeChunk to: 0 given: prevPrevFree.
+	self checkTraversableSortedFreeList
 ]
 
 { #category : #compaction }
