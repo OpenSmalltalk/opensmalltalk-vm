@@ -5417,7 +5417,7 @@ CoInterpreter >> printFrame: theFP WithSP: theSP [
 	self printFrameThing: 'caller ip'
 		at: theFP + FoxCallerSavedIP
 		extraString: ((stackPages longAt: theFP + FoxCallerSavedIP) = cogit ceReturnToInterpreterPC ifTrue:
-						['ceReturnToInterptreter']).
+						['ceReturnToInterpreter']).
 	self printFrameThing: 'saved fp' at: theFP + FoxSavedFP.
 	self printFrameMethodFor: theFP.
 	(self isMachineCodeFrame: theFP) ifTrue:

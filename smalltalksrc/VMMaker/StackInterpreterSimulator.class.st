@@ -118,6 +118,16 @@ StackInterpreterSimulator >> argumentCount: n [
 	argumentCount := n
 ]
 
+{ #category : #accessing }
+StackInterpreterSimulator >> assertValidExecutionPointersAtEachStep [
+	^assertVEPAES
+]
+
+{ #category : #accessing }
+StackInterpreterSimulator >> assertValidExecutionPointersAtEachStep: aBoolean [
+	assertVEPAES := aBoolean
+]
+
 { #category : #'return bytecodes' }
 StackInterpreterSimulator >> baseFrameReturn [
 	| contextToReturnTo |
@@ -1026,7 +1036,7 @@ StackInterpreterSimulator >> ioMicroMSecs [
 StackInterpreterSimulator >> ioProcessEvents [
 ]
 
-{ #category : #'I/O primitive support' }
+{ #category : #'I/O primitives support' }
 StackInterpreterSimulator >> ioRelinquishProcessorForMicroseconds: microseconds [
 	"In the simulator give an indication that we're idling and check for input."
 	Display reverse: (0@0 extent: 16@16).

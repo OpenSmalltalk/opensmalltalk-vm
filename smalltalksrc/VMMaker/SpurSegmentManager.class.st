@@ -208,7 +208,7 @@ SpurSegmentManager >> checkSegments [
 		[:i|
 		self assert: (manager addressCouldBeObj: (segments at: i) segStart).
 		self assert: (self isValidSegmentBridge: (self bridgeAt: i))].
-	self assert: (segments at: numSegments - 1) segLimit = manager endOfMemory
+	self assert: (segments at: numSegments - 1) segLimit - manager bridgeSize = manager endOfMemory
 ]
 
 { #category : #snapshot }
@@ -438,7 +438,8 @@ SpurSegmentManager >> postSnapshot [
 				to: (i < (numSegments - 1) ifTrue: [self addressOf: (segments at: i + 1)]).
 			manager
 				addFreeChunkWithBytes: seg segLimit - address - manager bridgeSize
-				at: address]]..
+				at: address]].
+	self checkSegments.
 	manager checkFreeSpace
 ]
 
@@ -459,6 +460,7 @@ SpurSegmentManager >> prepareForSnapshot [
 	"shorten all segments by any trailing free space."
 	<inline: false>
 	<var: #seg type: #'SpurSegmentInfo *'>
+	self checkSegments.
 	0 to: numSegments - 1 do:
 		[:i|
 		 (segments at: i)
