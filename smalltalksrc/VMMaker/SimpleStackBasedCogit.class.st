@@ -2831,6 +2831,8 @@ SimpleStackBasedCogit >> genReturnTopFromBlock [
 	needsFrame ifTrue:
 		[self MoveR: FPReg R: SPReg.
 		 self PopR: FPReg].
+	backEnd hasLinkRegister ifTrue:
+		[self PopR: LinkReg].
 	self RetN: methodOrBlockNumArgs + 1 * BytesPerWord.
 	^0
 ]
@@ -3279,6 +3281,8 @@ SimpleStackBasedCogit >> genUpArrowReturn [
 	needsFrame ifTrue:
 		[self MoveR: FPReg R: SPReg.
 		 self PopR: FPReg].
+	backEnd hasLinkRegister ifTrue:
+		[self PopR: LinkReg].
 	self RetN: methodOrBlockNumArgs + 1 * BytesPerWord.
 	^0
 ]

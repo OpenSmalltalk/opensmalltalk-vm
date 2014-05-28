@@ -4725,8 +4725,12 @@ Cogit >> genActiveContextTrampoline [
 { #category : #initialization }
 Cogit >> genCheckForInterruptsTrampoline [
 	opcodeIndex := 0.
-	self PopR: TempReg. "instruction pointer"
-	self MoveR: TempReg Aw: coInterpreter instructionPointerAddress.
+	backEnd hasLinkRegister
+		ifTrue:
+			[self MoveR: LinkReg Aw: coInterpreter instructionPointerAddress]
+		ifFalse:
+			[self PopR: TempReg. "instruction pointer"
+			 self MoveR: TempReg Aw: coInterpreter instructionPointerAddress].
 	^self genTrampolineFor: #ceCheckForInterrupts
 		called: 'ceCheckForInterruptsTrampoline'
 		callJumpBar: true
@@ -4754,6 +4758,8 @@ Cogit >> genEnilopmartFor: regArg1 and: regArg2 and: regArg3 called: trampolineN
 	self PopR: regArg3.
 	self PopR: regArg2.
 	self PopR: regArg1.
+	backEnd hasLinkRegister ifTrue:
+		[self PopR: LinkReg].
 	self RetN: 0.
 	self computeMaximumSizes.
 	size := self generateInstructionsAt: methodZoneBase.
@@ -4779,6 +4785,8 @@ Cogit >> genEnilopmartFor: regArg1 and: regArg2 called: trampolineName [
 	backEnd genLoadStackPointers.
 	self PopR: regArg2.
 	self PopR: regArg1.
+	backEnd hasLinkRegister ifTrue:
+		[self PopR: LinkReg].
 	self RetN: 0.
 	self computeMaximumSizes.
 	size := self generateInstructionsAt: methodZoneBase.
@@ -4803,6 +4811,8 @@ Cogit >> genEnilopmartFor: regArg called: trampolineName [
 	opcodeIndex := 0.
 	backEnd genLoadStackPointers.
 	self PopR: regArg.
+	backEnd hasLinkRegister ifTrue:
+		[self PopR: LinkReg].
 	self RetN: 0.
 	self computeMaximumSizes.
 	size := self generateInstructionsAt: methodZoneBase.
@@ -4817,11 +4827,15 @@ Cogit >> genEnilopmartFor: regArg called: trampolineName [
 
 { #category : #'trampoline support' }
 Cogit >> genExternalizePointersForPrimitiveCall [
-	self MoveMw: 0 r: SPReg R: ClassReg.
+	backEnd hasLinkRegister
+		ifTrue: [self PushR: LinkReg]
+		ifFalse: [self MoveMw: 0 r: SPReg R: ClassReg].
 	self MoveR: FPReg Aw: coInterpreter framePointerAddress.
 	"Set coInterpreter stackPointer to the topmost argument, skipping the return address."
 	self LoadEffectiveAddressMw: BytesPerWord r: SPReg R: TempReg.
-	self MoveR: ClassReg Aw: coInterpreter instructionPointerAddress.
+	backEnd hasLinkRegister
+		ifTrue: [self MoveR: LinkReg Aw: coInterpreter instructionPointerAddress]
+		ifFalse: [self MoveR: ClassReg Aw: coInterpreter instructionPointerAddress].
 	self MoveR: TempReg Aw: coInterpreter stackPointerAddress.
 	^0
 ]
@@ -4935,8 +4949,12 @@ Cogit >> genMethodAbortTrampoline [
 { #category : #initialization }
 Cogit >> genNonLocalReturnTrampoline [
 	opcodeIndex := 0.
-	self PopR: TempReg. "instruction pointer"
-	self MoveR: TempReg Aw: coInterpreter instructionPointerAddress.
+	backEnd hasLinkRegister
+		ifTrue:
+			[self MoveR: LinkReg Aw: coInterpreter instructionPointerAddress]
+		ifFalse:
+			[self PopR: TempReg. "instruction pointer"
+			 self MoveR: TempReg Aw: coInterpreter instructionPointerAddress].
 	^self genTrampolineFor: #ceNonLocalReturn:
 		called: 'ceNonLocalReturnTrampoline'
 		callJumpBar: true
