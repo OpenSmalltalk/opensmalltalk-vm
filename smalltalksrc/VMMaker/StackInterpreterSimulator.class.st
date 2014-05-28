@@ -22,7 +22,6 @@ Class {
 	#name : #StackInterpreterSimulator,
 	#superclass : #StackInterpreterPrimitives,
 	#instVars : [
-		'clone',
 		'parent',
 		'bootstrapping',
 		'byteCount',
@@ -286,7 +285,6 @@ StackInterpreterSimulator >> clipboardWrite: sz From: actualDataAddress At: igno
 { #category : #'debug support' }
 StackInterpreterSimulator >> cloneSimulation [
 	| savedDisplayView savedDisplayForm savedQuitBlock savedTranscript |
-	self setClone: nil.
 	savedDisplayView := displayView. displayView := nil.
 	savedDisplayForm := displayForm. displayForm = nil.
 	savedQuitBlock := quitBlock. quitBlock := nil.
@@ -297,8 +295,6 @@ StackInterpreterSimulator >> cloneSimulation [
 	 theClone := self veryDeepCopy.
 	 theClone parent: self; transcript: Transcript.
 	 theClone objectMemory parent: objectMemory.
-	 self setClone: theClone.
-	 objectMemory setClone: theClone objectMemory.
 	 theClone]
 		ensure:
 			[displayView := savedDisplayView.
@@ -645,12 +641,6 @@ StackInterpreterSimulator >> functionPointerFor: primIndex inClass: lookupClass 
 	^(primIndex between: 1 and: MaxPrimitiveIndex)
 		ifTrue: [primitiveTable at: primIndex + 1]
 		ifFalse: [0]
-]
-
-{ #category : #accessing }
-StackInterpreterSimulator >> getClone [
-
-	^ clone
 ]
 
 { #category : #'debugging traps' }
@@ -2240,12 +2230,6 @@ StackInterpreterSimulator >> sendBreak: selectorString point: selectorLength rec
 										ifNotNil: [' to ', (self shortPrint: receiverOrNil)]
 										ifNil: [''])]]
 				ifFalse: [i := 0]]]
-]
-
-{ #category : #accessing }
-StackInterpreterSimulator >> setClone: aSpurMMSimulator [
-
-	clone := aSpurMMSimulator
 ]
 
 { #category : #'spur bootstrap' }

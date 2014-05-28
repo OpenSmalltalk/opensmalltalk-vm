@@ -8987,35 +8987,47 @@ SpurMemoryManager >> sortedFreeListPairwiseReverseDo: aBinaryBlock [
 	 high address to low address.  The second argument is in fact the
 	 start of the next free chunk, not the free chunk itself.  Use
 	 endOfMemory - bridgeSize as the second argument in the first evaluation."
-	| free nextFree prevFree prevPrevFree |
+	| free prevFree prevPrevFree |
 	<inline: true>
 	free := lastFreeChunk.
 	prevPrevFree := prevFree := 0.
 	[free ~= 0] whileTrue:
-		[nextFree := self nextInSortedFreeListLink: free given: prevFree.
-		 self assert: (free = 0 or: [self isFreeObject: free]).
-		 self assert: (prevFree = 0 or: [prevFree > free]).
-	 	 aBinaryBlock value: free value: (prevFree = 0
+		[aBinaryBlock value: free value: (prevFree = 0
 											ifTrue: [endOfMemory - self bridgeSize]
 											ifFalse: [self startOfObject: prevFree]).
-		 self assert: (prevFree = 0 or: [self isFreeObject: prevFree]).
-		 self assert: (prevPrevFree = 0 or: [self isFreeObject: prevPrevFree]).
-		 (self isFreeObject: free) ifFalse:
-			[free := self nextInSortedFreeListLink: prevFree given: prevPrevFree].
-		 (nextFree = 0 or: [self isFreeObject: nextFree])
+		 "post evaluation of aBinaryBlock the value of free may be invalid
+		  because moveARunOfObjectsStartingAt:upTo: may have filled it.
+		  So reconstruct the position in the enumeration."
+		 prevFree = 0
 			ifTrue:
-				[prevPrevFree := prevFree.
-				 prevFree := free.
-				 free := prevFree = firstFreeChunk ifTrue: [0] ifFalse: [nextFree]]
+				[self assert: free = lastFreeChunk.
+				 prevFree := lastFreeChunk.
+				 free := self nextInSortedFreeListLink: lastFreeChunk given: 0]
 			ifFalse:
-				[free := lastFreeChunk.
-				 prevPrevFree := prevFree := 0.
-				 [free > nextFree] whileTrue:
-					[nextFree := self nextInSortedFreeListLink: free given: prevFree.
-					 self assert: (self isFreeObject: nextFree).
-					 prevPrevFree := prevFree.
-					 prevFree := free.
-					 free := nextFree]]]
+				[self assert: (self isFreeObject: prevFree).
+				 prevPrevFree = 0
+					ifTrue:
+						[self assert: free = (self nextInSortedFreeListLink: lastFreeChunk given: 0).
+						 prevPrevFree := lastFreeChunk.
+						 prevFree := self nextInSortedFreeListLink: lastFreeChunk given: 0]
+					ifFalse:
+						[self assert: (self isFreeObject: prevPrevFree).
+						 free := self nextInSortedFreeListLink: prevFree given: prevPrevFree.
+						 prevPrevFree := prevFree.
+						 prevFree := free].
+				 free := self nextInSortedFreeListLink: prevFree given: prevPrevFree]]
+
+"| labels |
+ labels := Dictionary new.
+ labels
+	at: prevPrevFree put: 'ppf';
+	at: prevFree put: 'pf';
+	at: free put: 'f';
+	at: nextFree put: 'f'.
+ self sortedFreeListPairwiseReverseDo: [:a :b|
+		Transcript cr; print: a; space.
+		(labels at: a ifAbsent: []) ifNotNil: [:l| Transcript nextPutAll: l].
+		Transcript flush]"
 ]
 
 { #category : #'free space' }
