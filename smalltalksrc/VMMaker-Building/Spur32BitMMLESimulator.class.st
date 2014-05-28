@@ -2,7 +2,6 @@ Class {
 	#name : #Spur32BitMMLESimulator,
 	#superclass : #Spur32BitMemoryManager,
 	#instVars : [
-		'clone',
 		'parent',
 		'bootstrapping'
 	],
@@ -121,12 +120,6 @@ Spur32BitMMLESimulator >> freeLists [
 	^freeLists
 ]
 
-{ #category : #accessing }
-Spur32BitMMLESimulator >> getClone [
-
-	^ clone
-]
-
 { #category : #'gc - global' }
 Spur32BitMMLESimulator >> globalGarbageCollect [
 	"If we're /not/ a clone, clone the VM and push it over the cliff.
@@ -140,8 +133,6 @@ Spur32BitMMLESimulator >> globalGarbageCollect [
 						[Transcript cr; cr; show: ex messageText; cr; cr.
 						 ex resume]
 					ifFalse: [ex pass]].
-		 coInterpreter setClone: nil.
-		 self setClone: nil.
 		 Smalltalk garbageCollect].
 	^super globalGarbageCollect
 ]
@@ -409,8 +400,11 @@ Spur32BitMMLESimulator >> memoryBaseForImageRead [
 
 { #category : #compaction }
 Spur32BitMMLESimulator >> moveARunOfObjectsStartingAt: startAddress upTo: limit [
-	"startAddress = 175450576 ifTrue: [self halt]."
-	^super moveARunOfObjectsStartingAt: startAddress upTo: limit
+	| result |.
+	"self checkTraversableSortedFreeList."
+	result := super moveARunOfObjectsStartingAt: startAddress upTo: limit.
+	"self checkTraversableSortedFreeList."
+	^result
 ]
 
 { #category : #'spur bootstrap' }
@@ -453,12 +447,6 @@ Spur32BitMMLESimulator >> scavengingGCTenuringIf: tenuringCriterion [
 	"statFullGCs > 0 ifTrue:
 		[self halt]."
 	^super scavengingGCTenuringIf: tenuringCriterion
-]
-
-{ #category : #accessing }
-Spur32BitMMLESimulator >> setClone: aSpurMMSimulator [
-
-	clone := aSpurMMSimulator
 ]
 
 { #category : #'header access' }
