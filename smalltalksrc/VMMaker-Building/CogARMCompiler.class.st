@@ -124,14 +124,7 @@ CogARMCompiler >> add: destReg rn: srcReg imm: immediate ror: rot [
 ]
 
 { #category : #'ARM convenience instructions' }
-CogARMCompiler >> addRd: destReg rn: srcReg imm: immediate ror: rot [
-"return an ADD destReg, srcReg, immediat ROR rot instruction"
-
-	^self type: 1 op: 4 set: 0 rn: srcReg rd: destReg shifterOperand: (rot <<8 bitOr: immediate)
-]
-
-{ #category : #'ARM convenience instructions' }
-CogARMCompiler >> addRd: destReg rn: srcReg rm: addReg [
+CogARMCompiler >> add: destReg rn: srcReg rm: addReg [
 "return an ADD destReg, srcReg, addReg instruction"
 
 	^self type: 0 op: 4 set: 0 rn: srcReg rd: destReg shifterOperand: addReg
@@ -219,11 +212,6 @@ CogARMCompiler >> callTargetFromReturnAddress: callSiteReturnAddress [
 CogARMCompiler >> callerSavedRegisterMask [
 	"registers r0-r3, the lowest four, +lr"
 		^16r40F
-]
-
-{ #category : #testing }
-CogARMCompiler >> callsAreRelative [
-	^true
 ]
 
 { #category : #testing }
@@ -600,7 +588,7 @@ CogARMCompiler >> concretizeLoadEffectiveAddressMwrR [
 		ifFalse: [ 
 			instrOffset := self at: 0 moveCw: offset intoR: RISCTempReg.
 			"add destReg, srcReg, RISCTempReg"
-			self machineCodeAt: 16 put: (self addRd: destReg rn: srcReg rm: RISCTempReg).
+			self machineCodeAt: 16 put: (self add: destReg rn: srcReg rm: RISCTempReg).
 			^machineCodeSize := instrOffset + 4 ]
 ]
 
@@ -916,7 +904,7 @@ CogARMCompiler >> concretizePopR [
 	<inline: true>
 	| destReg |
 	destReg := self concreteRegister: (operands at: 0).
-	"cond | 010 | 0100 | 1 | -Rn- | -Rd- | 0000 0000 0100 " "LDR destReg, [SP], #4"
+	"LDR destReg, [SP], #4"
 	self machineCodeAt: 0 put: (self popR: destReg).
 	^machineCodeSize := 4
 ]
@@ -951,7 +939,7 @@ CogARMCompiler >> concretizePushR [
 	| srcReg |
 	srcReg := self concreteRegister: (operands at: 0).
 	"cond | 010 | 1001 | 0 | -Rn- | -Rd- | 0000 0000 0100" "STR srcReg, [sp, #-4]"
-	self machineCodeAt: 0 put: (self type: 2 op: 9 set: 0 rn: SP rd: srcReg shifterOperand: 4).
+	self machineCodeAt: 0 put: (self pushR: srcReg).
 	^machineCodeSize := 4
 ]
 
@@ -962,12 +950,12 @@ CogARMCompiler >> concretizeRetN [
 	| offset |
 	offset := operands at: 0.
 	offset = 0 ifTrue:
-		[self machineCodeAt: 0 put: (self popR: PC). "pop	{pc}"
+		[self machineCodeAt: 0 put: (self mov: PC rn: LR). "pop	{pc}"
 		^machineCodeSize := 4].
 	self assert: offset < 32. "We have an 8 bit immediate. If needed, we could rotate it less than 30 bit."
 	"add sp, sp, #n, ROR (15<<2) <- ie shift left 2 to convert words to bytes"
 	self machineCodeAt: 0 put: (self add: SP rn: SP imm: offset ror: 30).
-	self machineCodeAt: 4 put: (self popR: PC).  "pop	{pc}"
+	self machineCodeAt: 4 put: (self mov: PC rn: LR).  "pop	{pc}"
 	^machineCodeSize := 8
 ]
 
@@ -1577,9 +1565,17 @@ CogARMCompiler >> mov: destReg imm: immediate8bitValue ror: rotateRightBy [
 ]
 
 { #category : #'ARM convenience instructions' }
-CogARMCompiler >> movRd: destReg imm: immediate8bitValue ror: rotateRightBy [
-	"return the ARM instruction MOV destReg, #immediate8BitValue ROR rotateRightBy"
-	^self type: 1 op: 16rD set: 0 rn: destReg rd: destReg shifterOperand: (rotateRightBy <<8 bitOr: immediate8bitValue)
+CogARMCompiler >> mov: destReg rn: srcReg [
+"return a MOV destReg, srcReg instruction"
+
+	^self type: 0 op: 16rD set: 0 rn: 0 rd: destReg shifterOperand: srcReg
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> movs: destReg rn: srcReg [
+"return a MOV destReg, srcReg instruction"
+
+	^self type: 0 op: 16rD set: 1 rn: 0 rd: destReg shifterOperand: srcReg
 ]
 
 { #category : #printing }
@@ -1614,12 +1610,6 @@ CogARMCompiler >> numberOfSaveableRegisters [
 CogARMCompiler >> orr: destReg imm: immediate8bitValue ror: rotateRightBy [
 	"return the ARM instruction ORR destReg, #immediate8BitValue ROR rotateRightBy"
 	^self type: 1 op: 16rC set: 0 rn: destReg rd: destReg shifterOperand: ((rotateRightBy>>1) <<8 bitOr: immediate8bitValue)
-]
-
-{ #category : #'ARM convenience instructions' }
-CogARMCompiler >> orrRd: destReg imm: immediate8bitValue ror: rotateRightBy [
-	"return the ARM instruction ORR destReg, #immediate8BitValue ROR rotateRightBy"
-	^self type: 1 op: 16rB set: 0 rn: destReg rd: destReg shifterOperand: (rotateRightBy <<8 bitOr: immediate8bitValue)
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1694,6 +1684,31 @@ CogARMCompiler >> rotateable8bitImmediate: constant ifTrue: trueAlternativeBlock
 		(constant bitAnd: 16rFF << (i<<1)) = constant 
 			ifTrue: [ ^trueAlternativeBlock value: 16 - i value: constant >> (i << 1)]].
 	^falseAlternativeBlock value
+]
+
+{ #category : #testing }
+CogARMCompiler >> setsConditionCodesFor: aConditionalJumpOpcode [
+	<inline: false> "to save Slang from having to be a real compiler (it can't inline switches that return)"
+	"Answer if the receiver's opcode sets the condition codes correctly for the given conditional jump opcode.
+	ARM has to check carefully since the V flag is not affected by non-comparison instructions"
+	^opcode caseOf:
+		{	[ArithmeticShiftRightCqR]	->	[self shiftSetsConditionCodesFor: aConditionalJumpOpcode].
+			[ArithmeticShiftRightRR]	->	[self shiftSetsConditionCodesFor: aConditionalJumpOpcode].
+			[LogicalShiftLeftCqR]		->	[self shiftSetsConditionCodesFor: aConditionalJumpOpcode].
+			[LogicalShiftLeftRR]		->	[self shiftSetsConditionCodesFor: aConditionalJumpOpcode].
+			[XorRR]					->	[true]
+		}
+		otherwise: [self halt: 'unhandled opcode in setsConditionCodesFor:'. false]
+]
+
+{ #category : #testing }
+CogARMCompiler >> shiftSetsConditionCodesFor: aConditionalJumpOpcode [
+	"check what flags the opcdoe needs setting - ARM doesn't set V when simply MOVing"
+		^aConditionalJumpOpcode caseOf:
+		{	[JumpNegative]	->	[true].
+			[JumpZero]	->	[true].
+		}
+		otherwise: [self halt: 'unhandled opcode in setsConditionCodesFor:'. false]
 ]
 
 { #category : #'generate machine code' }
