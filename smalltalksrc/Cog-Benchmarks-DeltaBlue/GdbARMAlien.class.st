@@ -184,6 +184,9 @@ GdbARMAlien >> handleExecutionPrimitiveFailureIn: memoryArray "<Bitmap|ByteArray
 				[#MoveRMbr]	-> [^self handleMoveRMbrFailureAt: pc in: memoryArray].
 				[#Ret]			-> [^self handleRetFailureAt: pc in: memoryArray].} 
 			otherwise: [^self handleExecutionPrimitiveFailureAt: pc in: memoryArray]].
+
+	pc = 0 ifTrue:[self halt: 'pc should not be 0 at this point; simulator failure'].
+
 	((pc := self lr - 4) between: minimumAddress and: memoryArray byteSize - 1) ifTrue:
 		[(self instructionTypeAt: pc in: memoryArray)
 			caseOf: {
@@ -351,7 +354,7 @@ GdbARMAlien >> handleRetFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|Byt
 	^(ProcessorSimulationTrap
 			pc: pc
 			nextpc: pc + 4
-			address: (memoryArray unsignedLongAt: self sp + 1)
+			address: (memoryArray unsignedLongAt: self sp -3) 
 			type: #return
 			accessor: #pc:)
 		signal
@@ -406,6 +409,12 @@ GdbARMAlien >> instructionIsLDRB: instr [
 ]
 
 { #category : #testing }
+GdbARMAlien >> instructionIsReturnViaLR: instr [
+"is this a MOV pc, lr instruction?"
+	^instr =  16rE1A0F00E
+]
+
+{ #category : #testing }
 GdbARMAlien >> instructionIsSTR: instr [
 "is this a STR instruction?"
 	| foo |
@@ -435,7 +444,7 @@ GdbARMAlien >> instructionTypeAt: pc "<Integer>" in: memoryArray [ "<Bitmap|Byte
 	"self disassembleFrom: pc - 16 to: pc + 11 in: memoryArray on: Transcript cr"
 	
 	"Ret"
-	lastInstruction = self popPcOpcode ifTrue: [#Ret].
+	(self instructionIsReturnViaLR: lastInstruction ) ifTrue: [^#Ret].
 
 	"Call"
 	(self instructionIsBL: lastInstruction) ifTrue: [^#Call].
