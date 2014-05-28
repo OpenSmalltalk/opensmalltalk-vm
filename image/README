@@ -1,0 +1,7 @@
+This directory contains scripts that can buld various VMMaker images.
+The standard Cog VMMaker image is built loading the latest VMMaker.oscog and Cog
+packages, plus support packages, into an updated Squeak trunk image.
+You can build this image using buildsqueaktrunkimage.sh.
+Once you start-up the image various workspaces contain useful expressions to
+run the simulator, test slang output and so on.  The "do..." menu off the main
+screen menu also contains expressions to generate VM sources.
