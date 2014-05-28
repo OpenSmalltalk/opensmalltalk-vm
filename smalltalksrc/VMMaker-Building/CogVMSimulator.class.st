@@ -563,7 +563,6 @@ CogVMSimulator >> clipboardWrite: sz From: actualDataAddress At: ignored [
 { #category : #'debug support' }
 CogVMSimulator >> cloneSimulation [
 	| savedDisplayView savedDisplayForm savedQuitBlock savedTranscript |
-	self setClone: nil.
 	savedDisplayView := displayView. displayView := nil.
 	savedDisplayForm := displayForm. displayForm = nil.
 	savedQuitBlock := quitBlock. quitBlock := nil.
@@ -574,8 +573,6 @@ CogVMSimulator >> cloneSimulation [
 	 theClone := self veryDeepCopy.
 	 theClone parent: self; transcript: Transcript.
 	 theClone objectMemory parent: objectMemory.
-	 self setClone: theClone.
-	 objectMemory setClone: theClone objectMemory.
 	 theClone]
 		ensure:
 			[displayView := savedDisplayView.
