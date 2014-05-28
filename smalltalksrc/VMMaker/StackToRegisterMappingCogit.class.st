@@ -1831,6 +1831,7 @@ StackToRegisterMappingCogit >> genMarshalledSendSuper: selector numArgs: numArgs
 
 { #category : #initialization }
 StackToRegisterMappingCogit >> genMethodAbortTrampolineFor: numArgs [
+	
 	"Generate the abort for a method.  This abort performs either a call of ceSICMiss:
 	 to handle a single-in-line cache miss or a call of ceStackOverflow: to handle a
 	 stack overflow.  It distinguishes the two by testing ResultReceiverReg.  If the
