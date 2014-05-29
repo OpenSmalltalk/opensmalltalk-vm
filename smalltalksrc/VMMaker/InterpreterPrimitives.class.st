@@ -3722,11 +3722,10 @@ InterpreterPrimitives >> primitiveUtcWithOffset [
 	utcMicroseconds := self ioUTCMicroseconds.
 	offset := self ioLocalMicroseconds - utcMicroseconds.
 	offset := offset / 1000000.
-	objectMemory pushRemappableOop: (objectMemory integerObjectOf: offset).
 	objectMemory pushRemappableOop: (self positive64BitIntegerFor: utcMicroseconds - epochDelta).
 	resultArray := objectMemory instantiateClass: objectMemory classArray indexableSize: 2.
 	self storePointer: 0 ofObject: resultArray withValue: objectMemory popRemappableOop.
-	self storePointerUnchecked: 1 ofObject: resultArray withValue: objectMemory popRemappableOop.
+	self storePointerUnchecked: 1 ofObject: resultArray withValue: (objectMemory integerObjectOf: offset).
 	self pop: 1 thenPush: resultArray
 
 ]
