@@ -213,7 +213,7 @@ ThreadedFFIPlugin class >> translateInDirectory: directory doInlining: inlineFla
 			#()]
 		ifFalse:
 			[super
-				translateInDirectory: (directory containingDirectory directoryNamed: ffiPluginRootClass moduleName)
+				translateInDirectory: (directory containingDirectory directoryNamed: ffiPluginRootClass moduleName) assureExistence
 				doInlining: inlineFlag]
 ]
 
