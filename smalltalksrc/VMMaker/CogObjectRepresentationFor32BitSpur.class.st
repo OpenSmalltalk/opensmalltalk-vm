@@ -1374,7 +1374,7 @@ CogObjectRepresentationFor32BitSpur >> genNewArrayOfSize: size initialized: init
 		MoveR: TempReg Mw: 0 r: ReceiverResultReg;
 		MoveCq: headerHigh R: TempReg;
 		MoveR: TempReg Mw: 4 r: ReceiverResultReg.
-	(initialized and: size > 0) ifTrue:
+	(initialized and: [size > 0]) ifTrue:
 		[cogit MoveCw: objectMemory nilObject R: TempReg.
 		 1 to: size do:
 			[:i| cogit MoveR: TempReg Mw: i * 4 + 4 r: ReceiverResultReg]].
