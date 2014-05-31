@@ -1351,6 +1351,44 @@ CogObjectRepresentationFor32BitSpur >> genJumpSmallIntegerInScratchReg: aRegiste
 	^cogit JumpNonZero: 0
 ]
 
+{ #category : #'bytecode generator support' }
+CogObjectRepresentationFor32BitSpur >> genNewArrayOfSize: size initialized: initialized [
+	"Generate a call to code that allocates a new Array of size.
+	 The Array should be initialized with nils iff initialized is true.
+	 The size arg is passed in SendNumArgsReg, the result
+	 must come back in ReceiverResultReg."
+	| header headerLow headerHigh byteSize skip |
+	<var: #skip type: #'AbstractInstruction *'>
+	self assert: size < objectMemory numSlotsMask.
+	header := objectMemory
+					headerForSlots: size
+					format: objectMemory arrayFormat
+					classIndex: ClassArrayCompactIndex.
+	headerLow := self cCoerceSimple: header to: #usqInt.
+	headerHigh := header >> 32.
+	byteSize := (size max: 1) + 3 >> 1 * 8. "round up to 8 bytes and add 8 bytes of header"
+	self flag: #endianness.
+	cogit
+		MoveAw: objectMemory freeStartAddress R: ReceiverResultReg;
+		MoveCq: headerLow R: TempReg;
+		MoveR: TempReg Mw: 0 r: ReceiverResultReg;
+		MoveCq: headerHigh R: TempReg;
+		MoveR: TempReg Mw: 4 r: ReceiverResultReg.
+	(initialized and: size > 0) ifTrue:
+		[cogit MoveCw: objectMemory nilObject R: TempReg.
+		 1 to: size do:
+			[:i| cogit MoveR: TempReg Mw: i * 4 + 4 r: ReceiverResultReg]].
+	cogit
+		MoveR: ReceiverResultReg R: TempReg;
+		AddCq: byteSize R: TempReg;
+		MoveR: TempReg Aw: objectMemory freeStartAddress;
+		CmpCq: objectMemory getScavengeThreshold R: TempReg.
+	skip := cogit JumpLess: 0.
+	cogit CallRT: ceSheduleScavengeTrampoline.
+	skip jmpTarget: cogit Label.
+	^0
+]
+
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationFor32BitSpur >> genRemoveSmallIntegerTagsInScratchReg: scratchReg [
 	cogit SubCq: 1 R: scratchReg.

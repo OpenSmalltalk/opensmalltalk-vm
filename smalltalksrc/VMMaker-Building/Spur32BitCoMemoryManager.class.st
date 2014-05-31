@@ -65,6 +65,13 @@ Spur32BitCoMemoryManager >> ceClassAtIndex: classIndex [
 ]
 
 { #category : #trampolines }
+Spur32BitCoMemoryManager >> ceSheduleScavenge [
+	<api>
+	self assert: freeStart >= scavengeThreshold.
+	self scheduleScavenge
+]
+
+{ #category : #trampolines }
 Spur32BitCoMemoryManager >> ceStoreCheck: anOop [
 	<api>
 	"Do the store check.  Answer the argument for the benefit of the code generator;
@@ -165,6 +172,14 @@ Spur32BitCoMemoryManager >> nullHeaderForMachineCodeMethod [
 	^(self firstLongFormat << self formatShift)
 	+ (1 << self markedBitFullShift)
 	+ ClassBitmapCompactIndex
+]
+
+{ #category : #'trampoline support' }
+Spur32BitCoMemoryManager >> scavengeThresholdAddress [
+	<api>
+	<returnTypeC: #usqInt>
+	^self cCode: [(self addressOf: scavengeThreshold) asUnsignedInteger]
+		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #getScavengeThreshold in: self]
 ]
 
 { #category : #accessing }
