@@ -14,7 +14,8 @@ Class {
 		'CogMethodConstants',
 		'CogRTLOpcodes',
 		'VMBasicConstants',
-		'VMObjectIndices'
+		'VMObjectIndices',
+		'VMStackFrameOffsets'
 	],
 	#category : #'VMMaker-JIT'
 }
@@ -56,6 +57,12 @@ CogObjectRepresentation >> genEnsureObjInRegNotForwarded: reg scratchReg: scratc
 	"Make sure that the object in reg is not forwarded.  By default there is
 	 nothing to do.  Subclasses for memory managers that forward will override."
 	^0
+]
+
+{ #category : #'bytecode generator support' }
+CogObjectRepresentation >> genGetActiveContextNumArgs: numArgs large: isLargeContext inBlock: isInBlock [
+	"Get the active context into ReceiverResultReg, creating it if necessary."
+	self subclassResponsibility
 ]
 
 { #category : #'primitive generators' }
@@ -130,6 +137,13 @@ CogObjectRepresentation >> generateObjectRepresentationTrampolines [
 									called: 'ceStoreCheckTrampoline'
 									arg: ReceiverResultReg
 									result: cogit returnRegForStoreCheck
+]
+
+{ #category : #'bytecode generator support' }
+CogObjectRepresentation >> getActiveContextAllocatesInMachineCode [
+	"subclasses override if they want, and will have SendNumArgsReg and ClassReg
+	 available in addition to ReceiverResultReg and TempReg if they do."
+	^false
 ]
 
 { #category : #'in-line cacheing' }
