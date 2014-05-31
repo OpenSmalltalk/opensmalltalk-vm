@@ -136,6 +136,12 @@ Spur32BitMMLECoSimulator >> freeLists [
 	^freeLists
 ]
 
+{ #category : #accessing }
+Spur32BitMMLECoSimulator >> freeStart [
+	"freeStart = 16r1BDFF8 ifTrue: [self halt]."
+	^super freeStart
+]
+
 { #category : #'growing/shrinking memory' }
 Spur32BitMMLECoSimulator >> growOldSpaceByAtLeast: minAmmount [
 	"Attempt to grow memory by at least minAmmount.
