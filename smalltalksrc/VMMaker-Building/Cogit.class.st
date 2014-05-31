@@ -212,7 +212,6 @@ Class {
 		'ceNonLocalReturnTrampoline',
 		'ceFetchContextInstVarTrampoline',
 		'ceStoreContextInstVarTrampoline',
-		'cePositive32BitIntegerTrampoline',
 		'ceImplicitReceiverTrampoline',
 		'ceExplicitReceiverTrampoline',
 		'ceCaptureCStackPointers',
