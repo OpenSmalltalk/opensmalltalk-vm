@@ -4,6 +4,10 @@ Read my superclass' class comment.  I am a CogObjectRepresentation for the Squea
 Class {
 	#name : #CogObjectRepresentationForSqueakV3,
 	#superclass : #CogObjectRepresentation,
+	#instVars : [
+		'ceCreateNewArrayTrampoline',
+		'cePositive32BitIntegerTrampoline'
+	],
 	#classVars : [
 		'RootBitDigitLength'
 	],
@@ -422,7 +426,7 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
 	jumpLarge := cogit JumpAbove: 0.
 	self genConvertIntegerToSmallIntegerInScratchReg: ReceiverResultReg.
 	cogit RetN: retNoffset.
-	jumpLarge jmpTarget: (cogit CallRT: cogit cePositive32BitIntegerTrampoline).
+	jumpLarge jmpTarget: (cogit CallRT: cePositive32BitIntegerTrampoline).
 	cogit
 		MoveR: TempReg R: ReceiverResultReg;
 		RetN: retNoffset.
@@ -570,6 +574,17 @@ CogObjectRepresentationForSqueakV3 >> genLoadSlot: index sourceReg: sourceReg de
 	^0
 ]
 
+{ #category : #'bytecode generator support' }
+CogObjectRepresentationForSqueakV3 >> genNewArrayOfSize: size initialized: initialized [
+	"Generate a call to code that allocates a new Array of size.
+	 The Array should be initialized with nils iff initialized is true.
+	 The size arg is passed in SendNumArgsReg, the result
+	 must come back in ReceiverResultReg."
+	cogit
+		MoveCq: size R: SendNumArgsReg;
+		CallRT: ceCreateNewArrayTrampoline
+]
+
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genRemoveSmallIntegerTagsInScratchReg: scratchReg [ 
 	cogit SubCq: 1 R: scratchReg.
@@ -647,6 +662,19 @@ CogObjectRepresentationForSqueakV3 >> genStoreSourceReg: sourceReg slotIndex: in
 CogObjectRepresentationForSqueakV3 >> genStoreSourceReg: sourceReg slotIndex: index intoNewObjectInDestReg: destReg [
 	cogit MoveR: sourceReg Mw: index * BytesPerWord + BaseHeaderSize r: destReg.
 	^0
+]
+
+{ #category : #'in-line cacheing' }
+CogObjectRepresentationForSqueakV3 >> generateObjectRepresentationTrampolines [
+	super generateObjectRepresentationTrampolines.
+	ceCreateNewArrayTrampoline := cogit genTrampolineFor: #ceNewArraySlotSize:
+											called: 'ceCreateNewArrayTrampoline'
+											arg: SendNumArgsReg
+											result: ReceiverResultReg.
+	cePositive32BitIntegerTrampoline := cogit genTrampolineFor: #cePositive32BitIntegerFor:
+											called: 'cePositive32BitIntegerTrampoline'
+											arg: ReceiverResultReg
+											result: TempReg
 ]
 
 { #category : #'compile abstract instructions' }
