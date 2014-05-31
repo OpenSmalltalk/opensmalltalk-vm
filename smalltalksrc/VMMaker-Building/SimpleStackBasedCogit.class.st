@@ -2522,7 +2522,10 @@ SimpleStackBasedCogit >> genPrimitiveSubtract [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPushActiveContextBytecode [
 	self assert: needsFrame.
-	self CallRT: ceActiveContextTrampoline.
+	objectRepresentation
+		genGetActiveContextNumArgs: methodOrBlockNumArgs
+		large: (coInterpreter methodNeedsLargeContext: methodObj)
+		inBlock: inBlock.
 	self PushR: ReceiverResultReg.
 	^0
 ]

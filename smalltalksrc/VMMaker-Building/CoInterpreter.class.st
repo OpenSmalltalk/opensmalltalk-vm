@@ -4831,6 +4831,12 @@ CoInterpreter >> methodHasCogMethod: aMethodOop [
 	^self isCogMethodReference: (self rawHeaderOf: aMethodOop)
 ]
 
+{ #category : #'cog jit support' }
+CoInterpreter >> methodNeedsLargeContext: methodObj [
+	<api>
+	^(self headerOf: methodObj) anyMask: LargeContextBit
+]
+
 { #category : #'compiled methods' }
 CoInterpreter >> methodShouldBeCogged: aMethodObj [
 	<api>

@@ -598,6 +598,7 @@ Spur32BitMemoryManager >> shiftForWord [
 { #category : #allocation }
 Spur32BitMemoryManager >> smallObjectBytesForSlots: numSlots [
 	"Answer the total number of bytes in an object without an overflow header, including header bytes."
+	<api>
 	^self baseHeaderSize "single header"
 	+ (numSlots <= 1
 		ifTrue: [self allocationUnit] "at least one slot for the forwarding pointer"

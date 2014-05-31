@@ -210,7 +210,6 @@ Class {
 		'cePrimReturnEnterCogCode',
 		'cePrimReturnEnterCogCodeProfiling',
 		'ceNonLocalReturnTrampoline',
-		'ceActiveContextTrampoline',
 		'ceFetchContextInstVarTrampoline',
 		'ceStoreContextInstVarTrampoline',
 		'cePositive32BitIntegerTrampoline',
@@ -540,15 +539,15 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		declareVar: #minValidCallAddress type: #'unsigned long';
 		declareVar: #debugPrimCallStackOffset type: #'unsigned long'.
 	aCCodeGenerator vmClass generatorTable ifNotNil:
-		[:generatorTable|
+		[:bytecodeGenTable|
 		aCCodeGenerator
 			var: #generatorTable
-				declareC: 'BytecodeDescriptor generatorTable[', aCCodeGenerator vmClass generatorTable size, ']'
-							, (self tableInitializerFor: aCCodeGenerator vmClass generatorTable
+				declareC: 'BytecodeDescriptor generatorTable[', bytecodeGenTable size, ']',
+							(self tableInitializerFor: bytecodeGenTable
 								in: aCCodeGenerator);
 			var: #primitiveGeneratorTable
-				declareC: 'PrimitiveDescriptor primitiveGeneratorTable[MaxCompiledPrimitiveIndex+1]'
-							, (self tableInitializerFor: aCCodeGenerator vmClass primitiveTable
+				declareC: 'PrimitiveDescriptor primitiveGeneratorTable[MaxCompiledPrimitiveIndex+1]',
+							(self tableInitializerFor: aCCodeGenerator vmClass primitiveTable
 								in: aCCodeGenerator)].
 	"In C the abstract opcode names clash with the Smalltak generator syntactic sugar.
 	 Most of the syntactic sugar is inlined, but alas some remains.  Rename the syntactic
@@ -2206,6 +2205,12 @@ Cogit >> assertSaneJumpTarget: jumpTarget [
 			or: [(jumpTarget asUnsignedInteger
 					between: codeBase
 					and: methodZone limitZony asInteger + (closedPICSize max: openPICSize))]]])
+]
+
+{ #category : #'trampoline support' }
+Cogit >> backEnd [
+	<cmacro: '() backEnd'>
+	^backEnd
 ]
 
 { #category : #'tests-method map' }
@@ -4689,31 +4694,6 @@ Cogit >> gen: opcode "<Integer>" operand: operandOne "<Integer|CogAbstractInstru
 ]
 
 { #category : #initialization }
-Cogit >> genActiveContextTrampoline [
-	"Short-circuit the interpreter call if a frame is already married."
-	| jumpSingle |
-	<var: #jumpSingle type: #'AbstractInstruction *'>
-	opcodeIndex := 0.
-	self MoveMw: FoxMethod r: FPReg R: TempReg.
-	self AndCq: MFMethodFlagHasContextFlag R: TempReg.
-	jumpSingle := self JumpZero: 0.
-	self MoveMw: FoxThisContext r: FPReg R: ReceiverResultReg.
-	self RetN: 0.
-	jumpSingle jmpTarget: self Label.
-	^self genTrampolineFor: #ceActiveContext
-		called: 'ceActiveContextTrampoline'
-		callJumpBar: true
-		numArgs: 0
-		arg: nil
-		arg: nil
-		arg: nil
-		arg: nil
-		saveRegs: false
-		resultReg: ReceiverResultReg
-		appendOpcodes: true
-]
-
-{ #category : #initialization }
 Cogit >> genCheckForInterruptsTrampoline [
 	opcodeIndex := 0.
 	backEnd hasLinkRegister
@@ -5540,7 +5520,6 @@ Cogit >> generateRunTimeTrampolines [
 									called: 'ceClosureCopyTrampoline'
 									arg: SendNumArgsReg
 									result: ReceiverResultReg.
-	ceActiveContextTrampoline := self genActiveContextTrampoline.
 	ceNonLocalReturnTrampoline := self genNonLocalReturnTrampoline.
 	ceBaseFrameReturnTrampoline := self genTrampolineFor: #ceBaseFrameReturn:
 										called: 'ceBaseFrameReturnTrampoline'
@@ -5648,7 +5627,7 @@ Cogit >> generateTrampolines [
 	 Read the class-side method trampolines for documentation on the various trampolines"
 	| methodZoneStart |
 	methodZoneStart := methodZoneBase.
-	self allocateOpcodes: 42 bytecodes: 0.
+	self allocateOpcodes: 72 bytecodes: 0.
 	initialPC := 0.
 	endPC := numAbstractOpcodes - 1.
 	hasYoungReferent := false.
@@ -7151,6 +7130,12 @@ Cogit >> method: methodA hasSameCodeAs: methodB checkPenultimate: comparePenulti
 Cogit >> methodZone [
 	<doNotGenerate>
 	^methodZone
+]
+
+{ #category : #'trampoline support' }
+Cogit >> methodZoneBase [
+	<cmacro: '() methodZoneBase'>
+	^methodZoneBase
 ]
 
 { #category : #accessing }
@@ -9082,4 +9067,10 @@ Cogit >> withAnnotation: annotation mcpc: mcpc evaluate: binaryBlock [
 Cogit >> withAnnotation: annotation pc: mcpc evaluate: aBinaryBlock [
 	<doNotGenerate>
 	^(aBinaryBlock value: annotation value: mcpc) ifTrue: [1] ifFalse: [0]
+]
+
+{ #category : #accessing }
+Cogit >> zeroOpcodeIndex [
+	"Access for the object representations when they need to prepend code to trampolines."
+	opcodeIndex := 0
 ]

@@ -6,7 +6,8 @@ Class {
 	#superclass : #CogObjectRepresentation,
 	#instVars : [
 		'ceCreateNewArrayTrampoline',
-		'cePositive32BitIntegerTrampoline'
+		'cePositive32BitIntegerTrampoline',
+		'ceActiveContextTrampoline'
 	],
 	#classVars : [
 		'RootBitDigitLength'
@@ -96,6 +97,33 @@ CogObjectRepresentationForSqueakV3 >> couldBeObject: oop [
 	  and: [self oop: oop isGreaterThanOrEqualTo: objectMemory nilObject]
 ]
 
+{ #category : #initialization }
+CogObjectRepresentationForSqueakV3 >> genActiveContextTrampoline [
+	"Short-circuit the interpreter call if a frame is already married."
+	| jumpSingle |
+	<var: #jumpSingle type: #'AbstractInstruction *'>
+	cogit
+		zeroOpcodeIndex;
+		MoveMw: FoxMethod r: FPReg R: TempReg;
+		AndCq: MFMethodFlagHasContextFlag R: TempReg.
+	jumpSingle := cogit JumpZero: 0.
+	cogit
+		MoveMw: FoxThisContext r: FPReg R: ReceiverResultReg;
+		RetN: 0.
+	jumpSingle jmpTarget: cogit Label.
+	^cogit genTrampolineFor: #ceActiveContext
+		called: 'ceActiveContextTrampoline'
+		callJumpBar: true
+		numArgs: 0
+		arg: nil
+		arg: nil
+		arg: nil
+		arg: nil
+		saveRegs: false
+		resultReg: ReceiverResultReg
+		appendOpcodes: true
+]
+
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genAddSmallIntegerTagsTo: aRegister [
 	cogit AddCq: 1 R: aRegister.
@@ -158,6 +186,12 @@ CogObjectRepresentationForSqueakV3 >> genFetchIndexRegister: indexReg from: tabl
 	cogit annotate: (cogit MoveCw: tableObj R: destReg) objRef: tableObj.
 	cogit MoveXwr: indexReg R: destReg R: destReg.
 	^0
+]
+
+{ #category : #'bytecode generator support' }
+CogObjectRepresentationForSqueakV3 >> genGetActiveContextNumArgs: numArgs large: isLargeContext inBlock: isInBlock [
+	"Get the active context into ReceiverResultReg, creating it if necessary."
+	cogit CallRT: ceActiveContextTrampoline
 ]
 
 { #category : #'compile abstract instructions' }
@@ -664,7 +698,7 @@ CogObjectRepresentationForSqueakV3 >> genStoreSourceReg: sourceReg slotIndex: in
 	^0
 ]
 
-{ #category : #'in-line cacheing' }
+{ #category : #initialization }
 CogObjectRepresentationForSqueakV3 >> generateObjectRepresentationTrampolines [
 	super generateObjectRepresentationTrampolines.
 	ceCreateNewArrayTrampoline := cogit genTrampolineFor: #ceNewArraySlotSize:
@@ -674,7 +708,8 @@ CogObjectRepresentationForSqueakV3 >> generateObjectRepresentationTrampolines [
 	cePositive32BitIntegerTrampoline := cogit genTrampolineFor: #cePositive32BitIntegerFor:
 											called: 'cePositive32BitIntegerTrampoline'
 											arg: ReceiverResultReg
-											result: TempReg
+											result: TempReg.
+	ceActiveContextTrampoline := self genActiveContextTrampoline
 ]
 
 { #category : #'compile abstract instructions' }
