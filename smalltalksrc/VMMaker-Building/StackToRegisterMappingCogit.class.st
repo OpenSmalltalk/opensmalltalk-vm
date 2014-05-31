@@ -2433,8 +2433,15 @@ StackToRegisterMappingCogit >> genPrimitiveSubtract [
 StackToRegisterMappingCogit >> genPushActiveContextBytecode [
 	self assert: needsFrame.
 	optStatus isReceiverResultRegLive: false.
-	self ssAllocateCallReg: ReceiverResultReg.
-	self CallRT: ceActiveContextTrampoline.
+	objectRepresentation getActiveContextAllocatesInMachineCode
+		ifTrue: [self ssAllocateCallReg: ReceiverResultReg
+					and: SendNumArgsReg
+					and: ClassReg]
+		ifFalse: [self ssAllocateCallReg: ReceiverResultReg].
+	objectRepresentation
+		genGetActiveContextNumArgs: methodOrBlockNumArgs
+		large: (coInterpreter methodNeedsLargeContext: methodObj)
+		inBlock: inBlock.
 	^self ssPushRegister: ReceiverResultReg
 ]
 

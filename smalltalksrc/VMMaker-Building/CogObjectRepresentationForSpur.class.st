@@ -2,11 +2,16 @@ Class {
 	#name : #CogObjectRepresentationForSpur,
 	#superclass : #CogObjectRepresentation,
 	#instVars : [
-		'ceSheduleScavengeTrampoline'
+		'ceSheduleScavengeTrampoline',
+		'ceSmallActiveContextInMethodTrampoline',
+		'ceSmallActiveContextInBlockTrampoline',
+		'ceLargeActiveContextInMethodTrampoline',
+		'ceLargeActiveContextInBlockTrampoline'
 	],
 	#pools : [
 		'CogCompilationConstants',
-		'VMSqueakClassIndices'
+		'VMSqueakClassIndices',
+		'VMSqueakV3BytecodeConstants'
 	],
 	#category : #'VMMaker-JIT'
 }
@@ -52,6 +57,29 @@ CogObjectRepresentationForSpur >> classForInlineCacheTag: classIndex [
 CogObjectRepresentationForSpur >> couldBeObject: literal [
 	^(objectMemory isNonImmediate: literal)
 	  and: [self oop: literal isGreaterThanOrEqualTo: objectMemory startOfMemory]
+]
+
+{ #category : #initialization }
+CogObjectRepresentationForSpur >> genActiveContextTrampolineLarge: isLarge inBlock: isBlock [
+	"Create a trampoline to answer the active context that will
+	 answer it if a frame is already married, and create it otherwise.
+	 Assume numArgs is in SendNumArgsReg."
+	self subclassResponsibility
+]
+
+{ #category : #initialization }
+CogObjectRepresentationForSpur >> genActiveContextTrampolineLarge: isLarge inBlock: isInBlock called: aString [
+	"Create a trampoline to answer the active context that will
+	 answer it if a frame is already married, and create it otherwise.
+	 Assume numArgs is in SendNumArgsReg and ClassReg is free."
+	| startAddress |
+	startAddress := cogit methodZoneBase.
+	cogit zeroOpcodeIndex.
+	self genGetActiveContextLarge: isLarge inBlock: isInBlock.
+	cogit outputInstructionsForGeneratedRuntimeAt: startAddress.
+	cogit recordGeneratedRunTime: aString address: startAddress.
+	cogit recordRunTimeObjectReferences.
+	^startAddress
 ]
 
 { #category : #'primitive generators' }
@@ -122,6 +150,23 @@ CogObjectRepresentationForSpur >> genEnsureObjInRegNotForwarded: reg scratchReg:
 CogObjectRepresentationForSpur >> genFetchIndexRegister: indexReg from: tableObj into: destReg [
 	"indexReg contains the 1-relative index of an element in tableObj."
 	self subclassResponsibility
+]
+
+{ #category : #'bytecode generator support' }
+CogObjectRepresentationForSpur >> genGetActiveContextNumArgs: numArgs large: isLargeContext inBlock: isInBlock [
+	"Get the active context into ReceiverResultReg, creating it if necessary."
+	| routine |
+	routine := isLargeContext
+				ifFalse: [isInBlock
+							ifFalse: [ceSmallActiveContextInMethodTrampoline]
+							ifTrue: [ceSmallActiveContextInBlockTrampoline]]
+				ifTrue: [isInBlock
+							ifFalse: [ceLargeActiveContextInMethodTrampoline]
+							ifTrue: [ceLargeActiveContextInBlockTrampoline]].
+	cogit
+		MoveCq: numArgs R: SendNumArgsReg;
+		CallRT: routine.
+	^0
 ]
 
 { #category : #'compile abstract instructions' }
@@ -460,7 +505,18 @@ CogObjectRepresentationForSpur >> generateObjectRepresentationTrampolines [
 	super generateObjectRepresentationTrampolines.
 	ceSheduleScavengeTrampoline := cogit
 											genSafeTrampolineFor: #ceSheduleScavenge
-											called: 'ceSheduleScavengeTrampoline'
+											called: 'ceSheduleScavengeTrampoline'.
+	ceSmallActiveContextInMethodTrampoline := self genActiveContextTrampolineLarge: false inBlock: false called: 'ceSmallMethodContext'.
+	ceSmallActiveContextInBlockTrampoline := self genActiveContextTrampolineLarge: false inBlock: true called: 'ceSmallBlockContext'.
+	ceLargeActiveContextInMethodTrampoline := self genActiveContextTrampolineLarge: true inBlock: false called: 'ceLargeMethodContext'.
+	ceLargeActiveContextInBlockTrampoline := self genActiveContextTrampolineLarge: true inBlock: true called: 'ceLargeBlockContext'
+]
+
+{ #category : #'bytecode generator support' }
+CogObjectRepresentationForSpur >> getActiveContextAllocatesInMachineCode [
+	"Make sure SendNumArgsReg and ClassReg are available in addition to
+	 ReceiverResultReg and TempReg in genGetActiveContextNumArgs:large:inBlock:."
+	^true
 ]
 
 { #category : #'compile abstract instructions' }

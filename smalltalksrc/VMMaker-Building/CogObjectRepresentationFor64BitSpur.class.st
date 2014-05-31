@@ -20,3 +20,8 @@ CogObjectRepresentationFor64BitSpur >> genFetchIndexRegister: indexReg from: tab
 	cogit MoveXwr: indexReg R: destReg R: destReg.
 	^0
 ]
+
+{ #category : #initialization }
+CogObjectRepresentationFor64BitSpur >> log2BytesPerWord [
+	^3
+]
