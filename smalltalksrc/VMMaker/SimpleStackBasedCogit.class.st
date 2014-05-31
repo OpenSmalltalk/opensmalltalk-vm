@@ -2695,8 +2695,7 @@ SimpleStackBasedCogit >> genPushNewArrayBytecode [
 	self assert: needsFrame.
 	popValues := byte1 > 127.
 	size := byte1 bitAnd: 127.
-	self MoveCq: size R: SendNumArgsReg.
-	self CallRT: ceCreateNewArrayTrampoline.
+	objectRepresentation genNewArrayOfSize: size initialized: popValues not.
 	popValues ifTrue:
 		[size - 1 to: 0 by: -1 do:
 			[:i|

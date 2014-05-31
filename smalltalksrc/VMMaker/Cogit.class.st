@@ -205,7 +205,6 @@ Class {
 		'ceSendMustBeBooleanAddFalseTrampoline',
 		'ceCannotResumeTrampoline',
 		'ceClosureCopyTrampoline',
-		'ceCreateNewArrayTrampoline',
 		'ceEnterCogCodePopReceiverReg',
 		'ceEnterCogCodePopReceiverAndClassRegs',
 		'cePrimReturnEnterCogCode',
@@ -529,8 +528,6 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 			declareC: 'static char *trampolineAddresses[NumTrampolines*2]';
 		var: #objectReferencesInRuntime
 			declareC: 'static sqInt objectReferencesInRuntime[NumObjRefsInRuntime]';
-		var: #cePositive32BitIntegerTrampoline
-			declareC: 'static sqInt cePositive32BitIntegerTrampoline';
 		var: #labelCounter
 			type: #int;
 		var: #traceFlags
@@ -2659,12 +2656,6 @@ Cogit >> ceImplicitReceiverFor: selector receiver: receiver class: rcvrClass [
 	backEnd unalignedLongAt: classpc put: rcvrClass.
 	backEnd unalignedLongAt: mixinpc put: (mixin = receiver ifTrue: [0] ifFalse: [mixin]).
 	^mixin
-]
-
-{ #category : #accessing }
-Cogit >> cePositive32BitIntegerTrampoline [
-	<cmacro: '() cePositive32BitIntegerTrampoline'>
-	^cePositive32BitIntegerTrampoline
 ]
 
 { #category : #accessing }
@@ -4980,6 +4971,26 @@ Cogit >> genPICAbortTrampoline [
 ]
 
 { #category : #initialization }
+Cogit >> genSafeTrampolineFor: aRoutine called: aString [
+	"Generate a trampoline with no arguments that will
+	 save and restore all registers around the call"
+	<var: #aRoutine type: #'void *'>
+	<var: #aString type: #'char *'>
+	^self
+		genTrampolineFor: aRoutine
+		called: aString
+		callJumpBar: true
+		numArgs: 0
+		arg: nil
+		arg: nil
+		arg: nil
+		arg: nil
+		saveRegs: true
+		resultReg: nil
+		appendOpcodes: false
+]
+
+{ #category : #initialization }
 Cogit >> genSafeTrampolineFor: aRoutine called: aString arg: regOrConst0 [
 	"Generate a trampoline with one argument that will
 	 save and restore all registers around the call"
@@ -5534,10 +5545,6 @@ Cogit >> generateRunTimeTrampolines [
 	ceBaseFrameReturnTrampoline := self genTrampolineFor: #ceBaseFrameReturn:
 										called: 'ceBaseFrameReturnTrampoline'
 										arg: ReceiverResultReg.
-	ceCreateNewArrayTrampoline := self genTrampolineFor: #ceNewArraySlotSize:
-										called: 'ceCreateNewArrayTrampoline'
-										arg: SendNumArgsReg
-										result: ReceiverResultReg.
 	ceCheckForInterruptTrampoline := self genCheckForInterruptsTrampoline.
 	ceFetchContextInstVarTrampoline := self genTrampolineFor: #ceContext:instVar:
 											called: 'ceFetchContextInstVarTrampoline'
@@ -5550,10 +5557,6 @@ Cogit >> generateRunTimeTrampolines [
 											arg: SendNumArgsReg
 											arg: ClassReg
 											result: ReceiverResultReg. "to keep ReceiverResultReg live."
-	cePositive32BitIntegerTrampoline := self genTrampolineFor: #cePositive32BitIntegerFor:
-											called: 'cePositive32BitIntegerTrampoline'
-											arg: ReceiverResultReg
-											result: TempReg.
 	ceReturnToInterpreterTrampoline := self genTrampolineFor: #ceReturnToInterpreter:
 											called: 'ceReturnToInterpreterTrampoline'
 											arg: ReceiverResultReg.

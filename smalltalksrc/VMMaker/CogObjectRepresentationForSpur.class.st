@@ -1,6 +1,9 @@
 Class {
 	#name : #CogObjectRepresentationForSpur,
 	#superclass : #CogObjectRepresentation,
+	#instVars : [
+		'ceSheduleScavengeTrampoline'
+	],
 	#pools : [
 		'CogCompilationConstants',
 		'VMSqueakClassIndices'
@@ -450,6 +453,14 @@ CogObjectRepresentationForSpur >> genStoreSourceReg: sourceReg slotIndex: index 
 		   Mw: index * objectMemory wordSize + objectMemory baseHeaderSize
 		   r: destReg.
 	^0
+]
+
+{ #category : #initialization }
+CogObjectRepresentationForSpur >> generateObjectRepresentationTrampolines [
+	super generateObjectRepresentationTrampolines.
+	ceSheduleScavengeTrampoline := cogit
+											genSafeTrampolineFor: #ceSheduleScavenge
+											called: 'ceSheduleScavengeTrampoline'
 ]
 
 { #category : #'compile abstract instructions' }

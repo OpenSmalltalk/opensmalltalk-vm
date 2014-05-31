@@ -4899,7 +4899,7 @@ SpurMemoryManager >> growOldSpaceByAtLeast: minAmmount [
 		 self assert: (self addressAfter: (self objectStartingAt: segInfo segStart))
 					= (segInfo segLimit - self bridgeSize).
 		 self checkFreeSpace.
-		 self checkSegments.
+		 segmentManager checkSegments.
 		 segInfo segSize]
 ]
 
