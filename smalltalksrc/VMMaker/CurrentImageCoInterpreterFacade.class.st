@@ -31,6 +31,11 @@ CurrentImageCoInterpreterFacade class >> forCogit: aCogit [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade class >> objectMemoryClass [
+	^self subclassResponsibility
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade class >> objectRepresentationClass [
 	^self subclassResponsibility
 ]
@@ -169,7 +174,8 @@ CurrentImageCoInterpreterFacade >> cogit [
 CurrentImageCoInterpreterFacade >> cogit: aCogit [
 	cogit := aCogit.
 	coInterpreter cogit: aCogit.
-	objectMemory cogit: aCogit
+	(objectMemory respondsTo: #cogit:) ifTrue:
+		[objectMemory cogit: aCogit]
 ]
 
 { #category : #accessing }
@@ -285,6 +291,11 @@ CurrentImageCoInterpreterFacade >> inMemoryCStackPointerAddress [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> indexablePointersFormat [
+	^objectMemory indexablePointersFormat
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> initialPCForHeader: methodHeaderOop method: aMethodOop [
 	self assert: (self objectForOop: aMethodOop) == (headerToMethodMap at: methodHeaderOop).
 	^{ self objectForOop: aMethodOop. (self objectForOop: aMethodOop) initialPC }
@@ -293,7 +304,7 @@ CurrentImageCoInterpreterFacade >> initialPCForHeader: methodHeaderOop method: a
 { #category : #'initialize-release' }
 CurrentImageCoInterpreterFacade >> initialize [
 	memory := ByteArray new: 262144.
-	objectMemory := NewCoObjectMemory new.
+	objectMemory := self class objectMemoryClass new.
 	coInterpreter := CoInterpreter new.
 	coInterpreter
 		instVarNamed: 'objectMemory'
@@ -503,6 +514,11 @@ CurrentImageCoInterpreterFacade >> methodCacheAddress [
 { #category : #testing }
 CurrentImageCoInterpreterFacade >> methodHasCogMethod: aCompiledMethod [ 
 	^false
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> methodNeedsLargeContext: aMethodOop [ 
+	^(self objectForOop: aMethodOop) frameSize > CompiledMethod smallFrameSize
 ]
 
 { #category : #testing }

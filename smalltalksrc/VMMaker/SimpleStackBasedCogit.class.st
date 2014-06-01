@@ -290,8 +290,8 @@ SimpleStackBasedCogit class >> initializeMiscConstants [
 	super initializeMiscConstants.
 	MaxLiteralCountForCompile := initializationOptions at: #MaxLiteralCountForCompile ifAbsent: [60].
 	NumTrampolines := NewspeakVM
-							ifTrue: [46]
-							ifFalse: [38]
+							ifTrue: [50]
+							ifFalse: [42]
 ]
 
 { #category : #'class initialization' }

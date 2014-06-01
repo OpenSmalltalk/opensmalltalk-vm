@@ -59,6 +59,22 @@ CogObjectRepresentationForSpur >> couldBeObject: literal [
 	  and: [self oop: literal isGreaterThanOrEqualTo: objectMemory startOfMemory]
 ]
 
+{ #category : #'bytecode generator support' }
+CogObjectRepresentationForSpur >> createsArraysInline [
+	"Answer if the object representation allocates arrays inline.  By
+	 default answer false. Better code can be generated when creating
+	 arrays inline if values are /not/ flushed to the stack."
+	^true
+]
+
+{ #category : #'bytecode generator support' }
+CogObjectRepresentationForSpur >> createsClosuresInline [
+	"Answer if the object representation allocates closures inline.  By
+	 default answer false. Better code can be generated when creating
+	 closures inline if copied values are /not/ flushed to the stack."
+	^true
+]
+
 { #category : #initialization }
 CogObjectRepresentationForSpur >> genActiveContextTrampolineLarge: isLarge inBlock: isBlock [
 	"Create a trampoline to answer the active context that will
