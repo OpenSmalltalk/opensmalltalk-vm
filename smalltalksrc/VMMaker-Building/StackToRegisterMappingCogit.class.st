@@ -2465,6 +2465,29 @@ StackToRegisterMappingCogit >> genPushClosureCopyCopiedValuesBytecode [
 		numArgs: (numArgs := byte1 bitAnd: 16rF)
 		numCopied: (numCopied := byte1 >> 4)
 		span: (byte2 << 8) + byte3.
+
+	objectRepresentation createsClosuresInline ifTrue:
+		[self assert: objectRepresentation getActiveContextAllocatesInMachineCode.
+		 optStatus isReceiverResultRegLive: false.
+		 self ssAllocateCallReg: ReceiverResultReg
+			and: SendNumArgsReg
+			and: ClassReg.
+		 objectRepresentation
+			genNoPopCreateClosureAt: bytecodePC + 5 "1 relative"
+			numArgs: numArgs
+			numCopied: numCopied
+			contextNumArgs: methodOrBlockNumArgs
+			large: (coInterpreter methodNeedsLargeContext: methodObj)
+			inBlock: inBlock.
+		 1 to: numCopied do:
+			[:i| | reg |
+			 reg := self ssStorePop: true toPreferredReg: TempReg.
+			 objectRepresentation
+				genStoreSourceReg: reg
+				slotIndex: ClosureFirstCopiedValueIndex + numCopied - i
+				intoNewObjectInDestReg: ReceiverResultReg].
+		 ^self ssPushRegister: ReceiverResultReg].
+
 	numCopied > 0 ifTrue:
 		[self ssFlushTo: simStackPtr].
 	optStatus isReceiverResultRegLive: false.
