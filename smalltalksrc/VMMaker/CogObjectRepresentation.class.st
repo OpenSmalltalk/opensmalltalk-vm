@@ -52,6 +52,14 @@ CogObjectRepresentation >> checkValidObjectReference: anOop [
 	   and: [(objectMemory heapMapAtWord: (self pointerForOop: anOop)) ~= 0]
 ]
 
+{ #category : #'bytecode generator support' }
+CogObjectRepresentation >> genCreateClosureAt: bcpc numArgs: numArgs numCopied: numCopied contextNumArgs: ctxtNumArgs large: isLargeCtxt inBlock: isInBlock [
+	"Create a closure with the given startpc, numArgs and numCopied
+	 within a context with ctxtNumArgs, large if isLargeCtxt that is in a
+	 block if isInBlock.  If numCopied > 0 pop those values off the stack."
+	self subclassResponsibility
+]
+
 { #category : #'compile abstract instructions' }
 CogObjectRepresentation >> genEnsureObjInRegNotForwarded: reg scratchReg: scratch [
 	"Make sure that the object in reg is not forwarded.  By default there is
