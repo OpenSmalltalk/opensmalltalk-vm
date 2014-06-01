@@ -513,8 +513,8 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 StackToRegisterMappingCogit class >> initializeMiscConstants [
 	super initializeMiscConstants.
 	NumTrampolines := NewspeakVM
-							ifTrue: [58]
-							ifFalse: [50]
+							ifTrue: [60]
+							ifFalse: [52]
 ]
 
 { #category : #'class initialization' }
@@ -1130,14 +1130,7 @@ StackToRegisterMappingCogit >> compileAbstractInstructionsFrom: start through: e
 						= (self debugStackPointerFor: bytecodePC)]].
 	 byte0 := (objectMemory fetchByte: bytecodePC ofObject: methodObj) + bytecodeSetOffset.
 	 descriptor := self generatorAt: byte0.
-	 descriptor numBytes > 1 ifTrue:
-		[byte1 := objectMemory fetchByte: bytecodePC + 1 ofObject: methodObj.
-		 descriptor numBytes > 2 ifTrue:
-			[byte2 := objectMemory fetchByte: bytecodePC + 2 ofObject: methodObj.
-			 descriptor numBytes > 3 ifTrue:
-				[byte3 := objectMemory fetchByte: bytecodePC + 3 ofObject: methodObj.
-				 descriptor numBytes > 4 ifTrue:
-					[self notYetImplemented]]]].
+	 self loadSubsequentBytesForDescriptor: descriptor at: bytecodePC.
 	 nextOpcodeIndex := opcodeIndex.
 	 result := deadCode
 				ifTrue: "insert nops for dead code that is mapped so that bc to mc mapping is not many to one"
@@ -1508,6 +1501,15 @@ StackToRegisterMappingCogit >> enterCogCodePopReceiverArg1Arg0Regs [
 	"This exists only for break-pointing."
 	self cCode: [self realCEEnterCogCodePopReceiverArg1Arg0Regs]
 		inSmalltalk: [self ceEnterCogCodePopReceiverArg1Arg0Regs]
+]
+
+{ #category : #'peephole optimizations' }
+StackToRegisterMappingCogit >> evaluate: descriptor at: pc [
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	byte0 := objectMemory fetchByte: pc ofObject: methodObj.
+	self assert: descriptor = (self generatorAt: bytecodeSetOffset + byte0).
+	self loadSubsequentBytesForDescriptor: descriptor at: pc.
+	self perform: descriptor generator
 ]
 
 { #category : #'compile abstract instructions' }
@@ -2622,6 +2624,9 @@ StackToRegisterMappingCogit >> genPushNewArrayBytecode [
 		ifTrue: [self ssFlushTo: simStackPtr]
 		ifFalse: [self ssAllocateCallReg: SendNumArgsReg and: ReceiverResultReg].
 	size := byte1 bitAnd: 127.
+	popValues ifFalse:
+		[(self tryCollapseTempVectorInitializationOfSize: size) ifTrue:
+			[^0]].
 	objectRepresentation genNewArrayOfSize: size initialized: popValues not.
 	popValues ifTrue:
 		[size - 1 to: 0 by: -1 do:
@@ -4409,6 +4414,73 @@ StackToRegisterMappingCogit >> traceSpill: simStackEntry [
 	<cmacro: '(ign) 0'>
 	(compilationTrace anyMask: 2) ifTrue:
 		[coInterpreter transcript cr; print: bytecodePC; space; print: simStackEntry; flush]
+]
+
+{ #category : #'peephole optimizations' }
+StackToRegisterMappingCogit >> tryCollapseTempVectorInitializationOfSize: slots [
+	"Try and collapse
+		push: (Array new: 1)
+		popIntoTemp: tempIndex
+		pushConstant: const or pushTemp: n
+		popIntoTemp: 0 inVectorAt: tempIndex
+	 into
+		tempAt: tempIndex put: {const}.
+	 One might think that we should look for a sequence of more than
+	 one pushes and pops but this is extremely rare."
+	| pushArrayDesc storeArrayDesc pushValueDesc storeValueDesc reg |
+	<var: #pushArrayDesc type: #'BytecodeDescriptor *'>
+	<var: #pushValueDesc type: #'BytecodeDescriptor *'>
+	<var: #storeArrayDesc type: #'BytecodeDescriptor *'>
+	<var: #storeValueDesc type: #'BytecodeDescriptor *'>
+	slots ~= 1 ifTrue:
+		[^false].
+	pushArrayDesc := self generatorAt: bytecodeSetOffset
+										+ (objectMemory
+												fetchByte: bytecodePC
+												ofObject: methodObj).
+	self assert: pushArrayDesc generator == #genPushNewArrayBytecode.
+	storeArrayDesc := self generatorAt: bytecodeSetOffset
+										+ (objectMemory
+												fetchByte: bytecodePC
+														+ pushArrayDesc numBytes
+												ofObject: methodObj).
+	storeArrayDesc generator ~~ #genStoreAndPopTemporaryVariableBytecode ifTrue:
+		[^false].
+	pushValueDesc := self generatorAt: bytecodeSetOffset
+										+ (objectMemory
+												fetchByte: bytecodePC
+														+ pushArrayDesc numBytes
+														+ storeArrayDesc numBytes
+												ofObject: methodObj).
+	(pushValueDesc generator ~~ #genPushLiteralConstantBytecode
+	 and: [pushValueDesc generator ~~ #genPushQuickIntegerConstantBytecode
+	 and: [pushValueDesc generator ~~ #genPushTemporaryVariableBytecode]]) ifTrue:
+		[^false].
+	storeValueDesc := self generatorAt: bytecodeSetOffset
+										+ (objectMemory
+												fetchByte: bytecodePC
+														+ pushArrayDesc numBytes
+														+ storeArrayDesc numBytes
+														+ pushValueDesc numBytes
+												ofObject: methodObj).
+	storeValueDesc generator ~~ #genStoreAndPopRemoteTempLongBytecode ifTrue:
+		[^false].
+
+	objectRepresentation genNewArrayOfSize: 1 initialized: false.
+	self evaluate: pushValueDesc at: bytecodePC + pushArrayDesc numBytes + storeArrayDesc numBytes.
+	reg := self ssStorePop: true toPreferredReg: TempReg.
+	objectRepresentation
+		genStoreSourceReg: reg
+		slotIndex: 0
+		intoNewObjectInDestReg: ReceiverResultReg.
+	self ssPushRegister: ReceiverResultReg.
+	self evaluate: storeArrayDesc at: bytecodePC + pushArrayDesc numBytes.
+	bytecodePC := bytecodePC
+					"+ pushArrayDesc numBytes this gets added by nextBytecodePCFor:at:exts:in:"
+					+ storeArrayDesc numBytes
+					+ pushValueDesc numBytes
+					+ storeValueDesc numBytes.
+	^true
 ]
 
 { #category : #'span functions' }

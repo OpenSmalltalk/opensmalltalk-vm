@@ -5174,6 +5174,7 @@ CoInterpreter >> postBecomeAction: theBecomeEffectsFlags [
 { #category : #'object memory support' }
 CoInterpreter >> postGCAction: gcModeArg [
 	"Attempt to shrink free memory, signal the gc semaphore and let the Cogit do its post GC thang"
+	<inline: false>
 	self assert: gcModeArg = gcMode.
 	super postGCAction: gcModeArg.
 	cogit cogitPostGCAction: gcModeArg.
@@ -5190,7 +5191,7 @@ CoInterpreter >> preBecomeAction [
 
 { #category : #'object memory support' }
 CoInterpreter >> preGCAction: gcModeArg [
-	<inline: true>
+	<inline: false>
 	"Need to write back the frame pointers unless all pages are free (as in snapshot).
 	 Need to set gcMode var (to avoid passing the flag through a lot of the updating code)"
 	super preGCAction: gcModeArg.
