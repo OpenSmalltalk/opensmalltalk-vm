@@ -138,7 +138,7 @@ Spur32BitMMLECoSimulator >> freeLists [
 
 { #category : #accessing }
 Spur32BitMMLECoSimulator >> freeStart [
-	"freeStart = 16r1BDFF8 ifTrue: [self halt]."
+	"freeStart = 16r1163E0 ifTrue: [self halt]."
 	^super freeStart
 ]
 

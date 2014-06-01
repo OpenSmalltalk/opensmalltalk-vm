@@ -204,7 +204,6 @@ Class {
 		'ceSendMustBeBooleanAddTrueTrampoline',
 		'ceSendMustBeBooleanAddFalseTrampoline',
 		'ceCannotResumeTrampoline',
-		'ceClosureCopyTrampoline',
 		'ceEnterCogCodePopReceiverReg',
 		'ceEnterCogCodePopReceiverAndClassRegs',
 		'cePrimReturnEnterCogCode',
@@ -5515,10 +5514,6 @@ Cogit >> generateRunTimeTrampolines [
 														called: 'ceSendMustBeBooleanAddFalseTrampoline'.
 	ceSendMustBeBooleanAddTrueTrampoline := self genMustBeBooleanTrampolineFor: objectMemory trueObject
 														called: 'ceSendMustBeBooleanAddTrueTrampoline'.
-	ceClosureCopyTrampoline := self genTrampolineFor: #ceClosureCopyDescriptor:
-									called: 'ceClosureCopyTrampoline'
-									arg: SendNumArgsReg
-									result: ReceiverResultReg.
 	ceNonLocalReturnTrampoline := self genNonLocalReturnTrampoline.
 	ceBaseFrameReturnTrampoline := self genTrampolineFor: #ceBaseFrameReturn:
 										called: 'ceBaseFrameReturnTrampoline'
@@ -5626,7 +5621,7 @@ Cogit >> generateTrampolines [
 	 Read the class-side method trampolines for documentation on the various trampolines"
 	| methodZoneStart |
 	methodZoneStart := methodZoneBase.
-	self allocateOpcodes: 72 bytecodes: 0.
+	self allocateOpcodes: 80 bytecodes: 0.
 	initialPC := 0.
 	endPC := numAbstractOpcodes - 1.
 	hasYoungReferent := false.

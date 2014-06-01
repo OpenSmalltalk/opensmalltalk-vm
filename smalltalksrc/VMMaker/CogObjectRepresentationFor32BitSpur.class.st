@@ -56,6 +56,53 @@ CogObjectRepresentationFor32BitSpur >> genConvertSmallIntegerToIntegerInReg: reg
 	^0
 ]
 
+{ #category : #'bytecode generator support' }
+CogObjectRepresentationFor32BitSpur >> genCreateClosureAt: bcpc numArgs: numArgs numCopied: numCopied contextNumArgs: ctxtNumArgs large: isLargeCtxt inBlock: isInBlock [
+	"Create a closure with the given startpc, numArgs and numCopied
+	 within a context with ctxtNumArgs, large if isLargeCtxt that is in a
+	 block if isInBlock.  If numCopied > 0 pop those values off the stack."
+	| slotSize header skip |
+	<var: #skip type: #'AbstractInstruction *'>
+
+	"First get thisContext into ReceiverResultRega and thence in ClassReg."
+	self genGetActiveContextNumArgs: ctxtNumArgs large: isLargeCtxt inBlock: isInBlock.
+	cogit MoveR: ReceiverResultReg R: ClassReg.
+
+	slotSize := ClosureFirstCopiedValueIndex + numCopied.
+	header := objectMemory
+					headerForSlots: slotSize
+					format: objectMemory indexablePointersFormat
+					classIndex: ClassBlockClosureCompactIndex.
+	cogit
+		MoveAw: objectMemory freeStartAddress R: ReceiverResultReg;
+		MoveCq: (self cCoerceSimple: header to: #usqInt) R: TempReg;
+		MoveR: TempReg Mw: 0 r: ReceiverResultReg;
+		MoveCq: header >> 32 R: TempReg;
+		MoveR: TempReg Mw: 4 r: ReceiverResultReg;
+		MoveR: ReceiverResultReg R: TempReg;
+		AddCq: (objectMemory smallObjectBytesForSlots: slotSize) R: TempReg;
+		MoveR: TempReg Aw: objectMemory freeStartAddress;
+		CmpCq: objectMemory getScavengeThreshold R: TempReg.
+	skip := cogit JumpBelow: 0.
+	cogit CallRT: ceSheduleScavengeTrampoline.
+	skip jmpTarget: cogit Label.
+
+	cogit
+		MoveR: ClassReg Mw: ClosureOuterContextIndex * BytesPerOop + BaseHeaderSize r: ReceiverResultReg;
+		MoveCq: (objectMemory integerObjectOf: bcpc) R: TempReg;
+		MoveR: TempReg Mw: ClosureStartPCIndex * BytesPerOop + BaseHeaderSize r: ReceiverResultReg;
+		MoveCq: (objectMemory integerObjectOf: numArgs) R: TempReg;
+		MoveR: TempReg Mw: ClosureNumArgsIndex * BytesPerOop + BaseHeaderSize r: ReceiverResultReg.
+	1 to: numCopied do:
+		[:i|
+		cogit
+			PopR: TempReg;
+			MoveR: TempReg
+				Mw: numCopied - i + ClosureFirstCopiedValueIndex * BytesPerOop + BaseHeaderSize
+					r: ReceiverResultReg].
+	^0
+]
+
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationFor32BitSpur >> genFetchIndexRegister: indexReg from: tableObj into: destReg [
 	"indexReg contains the 1-relative index of an element in tableObj.
@@ -121,13 +168,15 @@ CogObjectRepresentationFor32BitSpur >> genGetActiveContextLarge: isLarge inBlock
 		AddCq: (objectMemory smallObjectBytesForSlots: slotSize) R: TempReg;
 		MoveR: TempReg Aw: objectMemory freeStartAddress;
 		CmpCq: objectMemory getScavengeThreshold R: TempReg.
-	jumpNeedScavenge := cogit JumpGreaterOrEqual: 0.
+	jumpNeedScavenge := cogit JumpAboveOrEqual: 0.
 
+	"Now initialize the fields of the context.  See CoInterpreter>>marryFrame:SP:copyTemps:"
 	"sender gets frame pointer as a SmallInteger"
 	continuation :=
 	cogit MoveR: FPReg R: TempReg.
 	self genSetSmallIntegerTagsIn: TempReg.
 	cogit MoveR: TempReg Mw: BaseHeaderSize + (SenderIndex * BytesPerOop) r: ReceiverResultReg.
+
 	"pc gets frame caller as a SmallInteger"
 	cogit MoveMw: FoxSavedFP r: FPReg R: TempReg.
 	self genSetSmallIntegerTagsIn: TempReg.
@@ -138,6 +187,7 @@ CogObjectRepresentationFor32BitSpur >> genGetActiveContextLarge: isLarge inBlock
 		MoveMw: (cogit offset: CogMethod of: #methodObject) r: ClassReg R: TempReg;
 		MoveR: TempReg Mw: BaseHeaderSize + (MethodIndex * BytesPerWord) r: ReceiverResultReg;
 		MoveR: ReceiverResultReg Mw: FoxThisContext r: FPReg.
+
 	"Now compute stack pointer; this is stackPointer (- 1 for return pc if a CISC) - framePointer - 4 (1 each for saved pc, method, context, receiver) + 1 (1-relative)"
 	cogit
 		MoveR: FPReg R: TempReg;
@@ -148,14 +198,7 @@ CogObjectRepresentationFor32BitSpur >> genGetActiveContextLarge: isLarge inBlock
 	self genConvertIntegerToSmallIntegerInReg: TempReg.
 	cogit MoveR: TempReg Mw: BaseHeaderSize + (StackPointerIndex * BytesPerOop) r: ReceiverResultReg.
 
-	"now initialize the fields of the new context, initializing stack with the current stack contents.
-	 See CoInterpreter>>marryFrame:SP:copyTemps:"
-	"Receiver[ClosureOrNil] := inBlock ifTrue: [longAt(FPReg + (SendNumArgs * BytesPerWord)] ifFalse: [nilObject].
-	 0 to: numArgs - 1 do:
-		[:i|
-		temp := longAt(FPReg + ((SendNumArgs - i) * BytesPerWord)).
-		longAtput(FPReg + FoxMFReceiver + (i * BytesPerWord), temp)]"
-	cogit MoveCq: 0 R: ClassReg.
+	"Set closureOrNil to either the stacked receiver or nil"
 	isInBlock
 		ifTrue:
 			[cogit
@@ -164,44 +207,59 @@ CogObjectRepresentationFor32BitSpur >> genGetActiveContextLarge: isLarge inBlock
 				MoveXwr: TempReg R: FPReg R: TempReg]
 		ifFalse:
 			[cogit MoveCw: objectMemory nilObject R: TempReg].
-	cogit MoveR: TempReg Mw: BaseHeaderSize + (ClosureIndex * BytesPerWord) r: ReceiverResultReg.
-	loopHead := cogit CmpR: ClassReg R: SendNumArgsReg.
-	exit := cogit JumpGreaterOrEqual: 0.
+	cogit MoveR: TempReg Mw: BaseHeaderSize + (ClosureIndex * BytesPerOop) r: ReceiverResultReg.
+
+	"Set the receiver"
+	cogit
+		MoveMw: FoxMFReceiver r: FPReg R: TempReg;
+		MoveR: TempReg Mw: BaseHeaderSize + (ReceiverIndex * BytesPerOop) r: ReceiverResultReg.
+
+	"Now copy the arguments.  This is tricky because of the shortage of registers,.  ClassReg ranges
+	 from 1 to numArgs (SendNumArgsReg), and from ReceiverIndex + 1 to ReceiverIndex + numArgs.
+	 1 to: numArgs do:
+		[:i|
+		temp := longAt(FPReg + ((SendNumArgs - i + 2) * BytesPerWord)). +2 for saved pc and savedfp
+		longAtput(FPReg + FoxMFReceiver + (i * BytesPerWord), temp)]"
+	cogit MoveCq: 1 R: ClassReg.
+	loopHead := cogit CmpR: SendNumArgsReg R: ClassReg.
+	exit := cogit JumpGreater: 0.
 	cogit
 		MoveR: SendNumArgsReg R: TempReg;
 		SubR: ClassReg R: TempReg;
+		AddCq: 2 R: TempReg; "+2 for saved fp and saved pc"
 		MoveXwr: TempReg R: FPReg R: TempReg;
-		AddCq: ReceiverIndex R: ClassReg;
+		AddCq: ReceiverIndex + (BaseHeaderSize / BytesPerWord) R: ClassReg; "Now convert ClassReg from frame index to context index"
 		MoveR: TempReg Xwr: ClassReg R: ReceiverResultReg;
-		SubCq: ReceiverIndex - 1 R: ClassReg; "add 1 ;-)"
+		SubCq: ReceiverIndex + (BaseHeaderSize / BytesPerWord) - 1 R: ClassReg; "convert back adding 1 ;-)"
 		Jump: loopHead.
 	exit jmpTarget: cogit Label.
 
-	"Initialize the receiver and the temps.  SendNumArgsReg is now free.
+	"Finally copy the temps.
 	 ClassReg := FPReg + FoxMFReceiver.
-	 receiver[ReceiverIndex] := *ClassReg.
 	 SendNumArgsReg := SendNumArgsReg+ReceiverIndex.
-	 backEnd hasLinkRegister
-		ifTrue: [[ClassReg > SPReg] whileTrue: [receiver[SendNumArgsReg] := *ClassReg. ClassReg := ClassReg - 4. SendNumArgsReg := SendNumArgsReg + 1]]
-		ifFalse: [[ClassReg >= SPReg] whileTrue: [receiver[SendNumArgsReg] := *ClassReg. ClassReg := ClassReg - 4. SendNumArgsReg := SendNumArgsReg + 1]]"
+	 [ClassReg := ClassReg - 4.
+	  backEnd hasLinkRegister
+			ifTrue: [ClassReg > SPReg]
+			ifFalse: [ClassReg >= SPReg]] whileTrue:
+		[receiver[SendNumArgsReg] := *ClassReg.
+		 SendNumArgsReg := SendNumArgsReg + 1]]"
 	cogit
 		MoveR: FPReg R: ClassReg;
 		AddCq: FoxMFReceiver R: ClassReg;
-		MoveMw: 0 r: ClassReg R: TempReg;
-		MoveR: TempReg Mw: BaseHeaderSize + (ReceiverIndex * BytesPerOop) r: ReceiverResultReg;
-		AddCq: ReceiverIndex + (BaseHeaderSize / BytesPerWord) + 1 R: SendNumArgsReg.
+		AddCq: ReceiverIndex + 1 + (BaseHeaderSize / BytesPerWord) R: SendNumArgsReg.
 	loopHead :=
 	cogit SubCq: BytesPerWord R: ClassReg.
-	cogit CmpR: SPReg R: ClassReg. "cogit CmpR: ClassReg R: SPReg."
+	cogit CmpR: SPReg R: ClassReg.
 	exit := cogit backEnd hasLinkRegister
-				ifTrue: [cogit JumpLessOrEqual: 0]
-				ifFalse: [cogit JumpLess: 0].
+				ifTrue: [cogit JumpBelowOrEqual: 0]
+				ifFalse: [cogit JumpBelow: 0].
 	cogit
 		MoveMw: 0 r: ClassReg R: TempReg;
 		MoveR: TempReg Xwr: SendNumArgsReg R: ReceiverResultReg;
 		AddCq: 1 R: SendNumArgsReg;
 		Jump: loopHead.
 	exit jmpTarget: cogit Label.
+
 	cogit RetN: 0.
 	
 	jumpNeedScavenge jmpTarget:
@@ -1522,7 +1580,7 @@ CogObjectRepresentationFor32BitSpur >> genNewArrayOfSize: size initialized: init
 		AddCq: (objectMemory smallObjectBytesForSlots: size) R: TempReg;
 		MoveR: TempReg Aw: objectMemory freeStartAddress;
 		CmpCq: objectMemory getScavengeThreshold R: TempReg.
-	skip := cogit JumpLess: 0.
+	skip := cogit JumpBelow: 0.
 	cogit CallRT: ceSheduleScavengeTrampoline.
 	skip jmpTarget: cogit Label.
 	^0

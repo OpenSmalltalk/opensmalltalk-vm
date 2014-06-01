@@ -1424,16 +1424,14 @@ SimpleStackBasedCogit >> genExtPushClosureBytecode [
 		numCopied: (numCopied := ((byte1 >> 3) bitAnd: 7) + (extA // 16 * 8))
 		span: byte2 + (extB << 8).
 	extA := extB := 0.
-	"see ceClosureCopyDescriptor:"
-	self MoveCq: numArgs + (numCopied << 6) + (bytecodePC + 4 "1 relative" << 12) R: SendNumArgsReg.
-	self CallRT: ceClosureCopyTrampoline.
-	numCopied > 0
-		ifTrue:
-			[numCopied > 1 ifTrue:
-				[self AddCq: (numCopied - 1) * BytesPerWord R: SPReg].
-			 self MoveR: ReceiverResultReg Mw: 0 r: SPReg]
-		ifFalse:
-			[self PushR: ReceiverResultReg].
+	objectRepresentation
+		genCreateClosureAt: bytecodePC + 4 "1 relative"
+		numArgs: numArgs
+		numCopied: numCopied
+		contextNumArgs: methodOrBlockNumArgs
+		large: (coInterpreter methodNeedsLargeContext: methodObj)
+		inBlock: inBlock.
+	self PushR: ReceiverResultReg.
 	^0
 ]
 
@@ -2542,16 +2540,14 @@ SimpleStackBasedCogit >> genPushClosureCopyCopiedValuesBytecode [
 		numArgs: (numArgs := byte1 bitAnd: 16rF)
 		numCopied: (numCopied := byte1 >> 4)
 		span: (byte2 << 8) + byte3.
-	"see ceClosureCopyDescriptor:"
-	self MoveCq: numArgs + (numCopied << 6) + (bytecodePC + 5 "1 relative" << 12) R: SendNumArgsReg.
-	self CallRT: ceClosureCopyTrampoline.
-	numCopied > 0
-		ifTrue:
-			[numCopied > 1 ifTrue:
-				[self AddCq: (numCopied - 1) * BytesPerWord R: SPReg].
-			 self MoveR: ReceiverResultReg Mw: 0 r: SPReg]
-		ifFalse:
-			[self PushR: ReceiverResultReg].
+	objectRepresentation
+		genCreateClosureAt: bytecodePC + 5 "1 relative"
+		numArgs: numArgs
+		numCopied: numCopied
+		contextNumArgs: methodOrBlockNumArgs
+		large: (coInterpreter methodNeedsLargeContext: methodObj)
+		inBlock: inBlock.
+	self PushR: ReceiverResultReg.
 	^0
 ]
 

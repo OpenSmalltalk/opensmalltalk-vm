@@ -7,7 +7,8 @@ Class {
 	#instVars : [
 		'ceCreateNewArrayTrampoline',
 		'cePositive32BitIntegerTrampoline',
-		'ceActiveContextTrampoline'
+		'ceActiveContextTrampoline',
+		'ceClosureCopyTrampoline'
 	],
 	#classVars : [
 		'RootBitDigitLength'
@@ -174,6 +175,20 @@ CogObjectRepresentationForSqueakV3 >> genConvertIntegerToSmallIntegerInScratchRe
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genConvertSmallIntegerToIntegerInReg: reg [
 	cogit ArithmeticShiftRightCq: 1 R: reg.
+	^0
+]
+
+{ #category : #'bytecode generator support' }
+CogObjectRepresentationForSqueakV3 >> genCreateClosureAt: bcpc numArgs: numArgs numCopied: numCopied contextNumArgs: ctxtNumArgs large: isLargeCtxt inBlock: isInBlock [
+	"Create a closure with the given startpc, numArgs and numCopied
+	 within a context with ctxtNumArgs, large if isLargeCtxt that is in a
+	 block if isInBlock.  If numCopied > 0 pop those values off the stack."
+	
+	"see ceClosureCopyDescriptor:"
+	cogit MoveCq: numArgs + (numCopied << 6) + (bcpc << 12) R: SendNumArgsReg.
+	cogit CallRT: ceClosureCopyTrampoline.
+	numCopied > 0 ifTrue:
+		[cogit AddCq: numCopied * BytesPerWord R: SPReg].
 	^0
 ]
 
@@ -706,10 +721,14 @@ CogObjectRepresentationForSqueakV3 >> generateObjectRepresentationTrampolines [
 											arg: SendNumArgsReg
 											result: ReceiverResultReg.
 	cePositive32BitIntegerTrampoline := cogit genTrampolineFor: #cePositive32BitIntegerFor:
-											called: 'cePositive32BitIntegerTrampoline'
-											arg: ReceiverResultReg
-											result: TempReg.
-	ceActiveContextTrampoline := self genActiveContextTrampoline
+												called: 'cePositive32BitIntegerTrampoline'
+												arg: ReceiverResultReg
+												result: TempReg.
+	ceActiveContextTrampoline := self genActiveContextTrampoline.
+	ceClosureCopyTrampoline := cogit genTrampolineFor: #ceClosureCopyDescriptor:
+										called: 'ceClosureCopyTrampoline'
+										arg: SendNumArgsReg
+										result: ReceiverResultReg
 ]
 
 { #category : #'compile abstract instructions' }

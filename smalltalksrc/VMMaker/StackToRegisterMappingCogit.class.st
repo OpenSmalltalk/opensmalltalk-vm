@@ -1661,13 +1661,21 @@ StackToRegisterMappingCogit >> genExtPushClosureBytecode [
 	numCopied > 0 ifTrue:
 		[self ssFlushTo: simStackPtr].
 	optStatus isReceiverResultRegLive: false.
-	self ssAllocateCallReg: SendNumArgsReg and: ReceiverResultReg.
-	"see ceClosureCopyDescriptor:"
-	self MoveCq: numArgs + (numCopied << 6) + (bytecodePC + 4 "1 relative" << 12) R: SendNumArgsReg.
-	self CallRT: ceClosureCopyTrampoline.
+	objectRepresentation getActiveContextAllocatesInMachineCode
+		ifTrue: [self ssAllocateCallReg: ReceiverResultReg
+					and: SendNumArgsReg
+					and: ClassReg]
+		ifFalse: [self ssAllocateCallReg: SendNumArgsReg
+					and: ReceiverResultReg].
+	objectRepresentation
+		genCreateClosureAt: bytecodePC + 4 "1 relative"
+		numArgs: numArgs
+		numCopied: numCopied
+		contextNumArgs: methodOrBlockNumArgs
+		large: (coInterpreter methodNeedsLargeContext: methodObj)
+		inBlock: inBlock.
 	numCopied > 0 ifTrue:
-		[self AddCq: numCopied * BytesPerWord R: SPReg.
-		 self ssPop: numCopied].
+		[self ssPop: numCopied].
 	^self ssPushRegister: ReceiverResultReg
 ]
 
@@ -2460,13 +2468,21 @@ StackToRegisterMappingCogit >> genPushClosureCopyCopiedValuesBytecode [
 	numCopied > 0 ifTrue:
 		[self ssFlushTo: simStackPtr].
 	optStatus isReceiverResultRegLive: false.
-	self ssAllocateCallReg: SendNumArgsReg and: ReceiverResultReg.
-	"see ceClosureCopyDescriptor:"
-	self MoveCq: numArgs + (numCopied << 6) + (bytecodePC + 5 "1 relative" << 12) R: SendNumArgsReg.
-	self CallRT: ceClosureCopyTrampoline.
+	objectRepresentation getActiveContextAllocatesInMachineCode
+		ifTrue: [self ssAllocateCallReg: ReceiverResultReg
+					and: SendNumArgsReg
+					and: ClassReg]
+		ifFalse: [self ssAllocateCallReg: SendNumArgsReg
+					and: ReceiverResultReg].
+	objectRepresentation
+		genCreateClosureAt: bytecodePC + 5 "1 relative"
+		numArgs: numArgs
+		numCopied: numCopied
+		contextNumArgs: methodOrBlockNumArgs
+		large: (coInterpreter methodNeedsLargeContext: methodObj)
+		inBlock: inBlock.
 	numCopied > 0 ifTrue:
-		[self AddCq: numCopied * BytesPerWord R: SPReg.
-		 self ssPop: numCopied].
+		[self ssPop: numCopied].
 	^self ssPushRegister: ReceiverResultReg
 ]
 
