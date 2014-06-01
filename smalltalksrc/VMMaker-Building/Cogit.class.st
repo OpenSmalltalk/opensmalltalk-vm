@@ -3564,14 +3564,7 @@ Cogit >> compileAbstractInstructionsFrom: start through: end [
 	nExts := 0.
 	[byte0 := (objectMemory fetchByte: bytecodePC ofObject: methodObj)  + bytecodeSetOffset.
 	 descriptor := self generatorAt: byte0.
-	 descriptor numBytes > 1 ifTrue:
-		[byte1 := objectMemory fetchByte: bytecodePC + 1 ofObject: methodObj.
-		 descriptor numBytes > 2 ifTrue:
-			[byte2 := objectMemory fetchByte: bytecodePC + 2 ofObject: methodObj.
-			 descriptor numBytes > 3 ifTrue:
-				[byte3 := objectMemory fetchByte: bytecodePC + 3 ofObject: methodObj.
-				 descriptor numBytes > 4 ifTrue:
-					[self notYetImplemented]]]].
+	 self loadSubsequentBytesForDescriptor: descriptor at: bytecodePC.
 	 nextOpcodeIndex := opcodeIndex.
 	 result := self perform: descriptor generator.
 	 descriptor isExtension ifFalse: "extended bytecodes must consume their extensions"
@@ -6201,6 +6194,19 @@ Cogit >> linkedSuperSendCacheTags [
 							 off = cmNoCheckEntryOffset ifTrue:
 								[cacheTags add: (backEnd inlineCacheTagAt: mcpc)]]]]]].
 	^cacheTags
+]
+
+{ #category : #'compile abstract instructions' }
+Cogit >> loadSubsequentBytesForDescriptor: descriptor at: pc [
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	descriptor numBytes > 1 ifTrue:
+		[byte1 := objectMemory fetchByte: pc + 1 ofObject: methodObj.
+		 descriptor numBytes > 2 ifTrue:
+			[byte2 := objectMemory fetchByte: pc + 2 ofObject: methodObj.
+			 descriptor numBytes > 3 ifTrue:
+				[byte3 := objectMemory fetchByte: pc + 3 ofObject: methodObj.
+				 descriptor numBytes > 4 ifTrue:
+					[self notYetImplemented]]]]
 ]
 
 { #category : #'in-line cacheing' }

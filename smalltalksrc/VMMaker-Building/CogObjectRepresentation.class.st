@@ -53,6 +53,14 @@ CogObjectRepresentation >> checkValidObjectReference: anOop [
 ]
 
 { #category : #'bytecode generator support' }
+CogObjectRepresentation >> createsArraysInline [
+	"Answer if the object representation allocates arrays inline.  By
+	 default answer false. Better code can be generated when creating
+	 arrays inline if values are /not/ flushed to the stack."
+	^false
+]
+
+{ #category : #'bytecode generator support' }
 CogObjectRepresentation >> createsClosuresInline [
 	"Answer if the object representation allocates closures inline.  By
 	 default answer false. Better code can be generated when creating
