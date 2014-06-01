@@ -10,14 +10,6 @@ CogObjectRepresentationFor32BitSpur class >> defaultObjectMemoryClass [
 	^Spur32BitCoMemoryManager
 ]
 
-{ #category : #'bytecode generator support' }
-CogObjectRepresentationFor32BitSpur >> createsClosuresInline [
-	"Answer if the object representation allocates closures inline.  By
-	 default answer false. Better code can be generated when creating
-	 closures inline if copied values are /not/ flushed to the stack."
-	^true
-]
-
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationFor32BitSpur >> genAddSmallIntegerTagsTo: aRegister [
 	cogit AddCq: 1 R: aRegister.

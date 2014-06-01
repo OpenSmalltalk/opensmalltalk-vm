@@ -5,6 +5,11 @@ Class {
 }
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacadeForSqueakV3ObjectRepresentation class >> objectMemoryClass [
+	^NewObjectMemory
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacadeForSqueakV3ObjectRepresentation class >> objectRepresentationClass [
 	^CogObjectRepresentationForSqueakV3
 ]
