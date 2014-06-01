@@ -53,6 +53,14 @@ CogObjectRepresentation >> checkValidObjectReference: anOop [
 ]
 
 { #category : #'bytecode generator support' }
+CogObjectRepresentation >> createsClosuresInline [
+	"Answer if the object representation allocates closures inline.  By
+	 default answer false. Better code can be generated when creating
+	 closures inline if copied values are /not/ flushed to the stack."
+	^false
+]
+
+{ #category : #'bytecode generator support' }
 CogObjectRepresentation >> genCreateClosureAt: bcpc numArgs: numArgs numCopied: numCopied contextNumArgs: ctxtNumArgs large: isLargeCtxt inBlock: isInBlock [
 	"Create a closure with the given startpc, numArgs and numCopied
 	 within a context with ctxtNumArgs, large if isLargeCtxt that is in a
