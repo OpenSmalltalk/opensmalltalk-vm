@@ -3,6 +3,11 @@ This is an abstract class for all Mac Cocoa Cog VMs family. That is, for all Cog
 
 For more information, check the class comments of all the superclasses.
 
+
+
+
+
+
 "
 Class {
 	#name : #SqueakCogFamilyCocoaIOSConfig,
@@ -135,7 +140,7 @@ SqueakCogFamilyCocoaIOSConfig >> defaultExternalPlugins [
 		LocalePlugin
 		ObjectiveCPlugin
 		QuicktimePlugin
-		TestOSAPlugin
+	"	TestOSAPlugin  Broken?"
 		SqueakSSLPlugin
 		SerialPlugin
 		MIDIPlugin
