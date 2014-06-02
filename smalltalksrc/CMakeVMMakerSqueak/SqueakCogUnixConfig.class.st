@@ -449,6 +449,7 @@ SqueakCogUnixConfig >> defaultInternalPlugins [
 		StarSqueakPlugin 
 		SurfacePlugin	
 		LocalePlugin
+		VMProfileLinuxSupportPlugin
 		)
 ]
 
