@@ -268,6 +268,7 @@ SqueakCogMacOSConfig >> defaultInternalPlugins [
 		StarSqueakPlugin
 		SurfacePlugin
 		UUIDPlugin
+		VMProfileMacSupportPlugin
 		)
 ]
 
