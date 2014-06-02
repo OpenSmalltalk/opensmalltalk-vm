@@ -6,7 +6,7 @@ Class {
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacadeForSqueakV3ObjectRepresentation class >> objectMemoryClass [
-	^NewObjectMemory
+	^NewCoObjectMemory
 ]
 
 { #category : #accessing }
