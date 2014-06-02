@@ -1024,7 +1024,7 @@ SqueakCocoaIOSConfig >> prefixHeaderFileName [
 	^self executableName, '_Prefix.pch'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'source generation' }
 SqueakCocoaIOSConfig >> prepareVMMaker [
 	
 	| maker allPlugins |
@@ -1135,4 +1135,22 @@ SqueakCocoaIOSConfig >> standardIncludes [
 	'${platformsDir}/iOS/vm/OSX'
 )
 	
+]
+
+{ #category : #directories }
+SqueakCocoaIOSConfig >> write: aContents toFile: aFileName [
+	"write a file to current output directory (buildDir).
+	use line end convention appropriate for config platform"
+
+	| bldDir |
+	bldDir := self buildDir.
+	bldDir isString
+		ifTrue: [ bldDir := FileDirectory directoryEntryFor: bldDir ].
+	bldDir assureExistence.
+	bldDir
+		forceNewFileNamed: aFileName
+		do: [:s | s
+				nextPutAll: (self fixLineEndsOf: aContents)]
+
+
 ]
