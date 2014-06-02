@@ -4418,16 +4418,18 @@ StackToRegisterMappingCogit >> traceSpill: simStackEntry [
 
 { #category : #'peephole optimizations' }
 StackToRegisterMappingCogit >> tryCollapseTempVectorInitializationOfSize: slots [
-	"Try and collapse
+	"If the sequence of bytecodes is
 		push: (Array new: 1)
 		popIntoTemp: tempIndex
 		pushConstant: const or pushTemp: n
 		popIntoTemp: 0 inVectorAt: tempIndex
-	 into
-		tempAt: tempIndex put: {const}.
+	 collapse this into
+		tempAt: tempIndex put: {const or temp}
+	 and answer true, otherwise answer false.
 	 One might think that we should look for a sequence of more than
-	 one pushes and pops but this is extremely rare."
-	| pushArrayDesc storeArrayDesc pushValueDesc storeValueDesc reg |
+	 one pushes and pops but this is extremely rare.
+	 Exclude pushRcvr: n to avoid potential complications with context inst vars."
+	| pushArrayDesc storeArrayDesc pushValueDesc storeValueDesc tempIndex remoteTempIndex reg |
 	<var: #pushArrayDesc type: #'BytecodeDescriptor *'>
 	<var: #pushValueDesc type: #'BytecodeDescriptor *'>
 	<var: #storeArrayDesc type: #'BytecodeDescriptor *'>
@@ -4444,17 +4446,26 @@ StackToRegisterMappingCogit >> tryCollapseTempVectorInitializationOfSize: slots 
 												fetchByte: bytecodePC
 														+ pushArrayDesc numBytes
 												ofObject: methodObj).
-	storeArrayDesc generator ~~ #genStoreAndPopTemporaryVariableBytecode ifTrue:
-		[^false].
+	storeArrayDesc generator == #genStoreAndPopTemporaryVariableBytecode
+		ifTrue:
+			[tempIndex := (objectMemory
+								fetchByte: bytecodePC + pushArrayDesc numBytes
+								ofObject: methodObj) bitAnd: 16r7]
+		ifFalse:
+			[storeArrayDesc generator == #genLongStoreAndPopTemporaryVariableBytecode ifFalse:
+				[^false].
+			 tempIndex := objectMemory
+								fetchByte: bytecodePC + pushArrayDesc numBytes + 1
+								ofObject: methodObj].
 	pushValueDesc := self generatorAt: bytecodeSetOffset
 										+ (objectMemory
 												fetchByte: bytecodePC
 														+ pushArrayDesc numBytes
 														+ storeArrayDesc numBytes
 												ofObject: methodObj).
-	(pushValueDesc generator ~~ #genPushLiteralConstantBytecode
-	 and: [pushValueDesc generator ~~ #genPushQuickIntegerConstantBytecode
-	 and: [pushValueDesc generator ~~ #genPushTemporaryVariableBytecode]]) ifTrue:
+	(pushValueDesc generator == #genPushLiteralConstantBytecode
+	 or: [pushValueDesc generator == #genPushQuickIntegerConstantBytecode
+	 or: [pushValueDesc generator == #genPushTemporaryVariableBytecode]]) ifFalse:
 		[^false].
 	storeValueDesc := self generatorAt: bytecodeSetOffset
 										+ (objectMemory
@@ -4463,7 +4474,15 @@ StackToRegisterMappingCogit >> tryCollapseTempVectorInitializationOfSize: slots 
 														+ storeArrayDesc numBytes
 														+ pushValueDesc numBytes
 												ofObject: methodObj).
-	storeValueDesc generator ~~ #genStoreAndPopRemoteTempLongBytecode ifTrue:
+	remoteTempIndex := objectMemory
+												fetchByte: bytecodePC
+														+ pushArrayDesc numBytes
+														+ storeArrayDesc numBytes
+														+ pushValueDesc numBytes
+														+ 2
+												ofObject: methodObj.
+	(storeValueDesc generator == #genStoreAndPopRemoteTempLongBytecode
+	 and: [tempIndex = remoteTempIndex]) ifFalse:
 		[^false].
 
 	objectRepresentation genNewArrayOfSize: 1 initialized: false.
