@@ -415,6 +415,7 @@ Cogit class >> cog: aCompiledMethod selector: aSelector options: optionsDictiona
 	| coInterpreter cogit |
 	self initializeWithOptions: (self asOptionsDictionary: optionsDictionaryOrArray).
 	CoInterpreter initializeWithOptions: initializationOptions.
+	CoInterpreter objectMemoryClass initializeWithOptions: initializationOptions.
 	coInterpreter := CurrentImageCoInterpreterFacade forCogit: (cogit := self new).
 	[cogit
 		setInterpreter: coInterpreter;
