@@ -20,12 +20,12 @@ CogSistaMethodSurrogate32 class >> offsetOf: aByteSymbol [
 
 { #category : #accessing }
 CogSistaMethodSurrogate32 >> numCounters [
-	^memory unsignedLongAt: address + 25
+	^memory unsignedLongAt: address + 21 + baseHeaderSize
 ]
 
 { #category : #accessing }
 CogSistaMethodSurrogate32 >> numCounters: aValue [
 	^memory
-		unsignedLongAt: address + 25
+		unsignedLongAt: address + 21 + baseHeaderSize
 		put: aValue
 ]
