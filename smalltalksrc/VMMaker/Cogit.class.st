@@ -150,6 +150,7 @@ Class {
 		'blockEntryNoContextSwitch',
 		'blockNoContextSwitchOffset',
 		'stackOverflowCall',
+		'sendMiss',
 		'sendMissCall',
 		'missOffset',
 		'entryPointMask',
@@ -507,7 +508,7 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		var: #primInvokeLabel type: #'AbstractInstruction *'.
 	self declareC: #(abstractOpcodes stackCheckLabel
 					blockEntryLabel blockEntryNoContextSwitch
-					stackOverflowCall sendMissCall entry noCheckEntry dynSuperEntry
+					stackOverflowCall sendMiss sendMissCall entry noCheckEntry dynSuperEntry
 					mnuCall interpretCall endCPICCase0 endCPICCase1)
 			as: #'AbstractInstruction *'
 				in: aCCodeGenerator.
@@ -3550,9 +3551,13 @@ Cogit >> compileAbort [
 	 The abort routine must be called;  In the callee the method is located by
 	 adding the relevant offset to the return address of the call."
 	stackOverflowCall := self MoveCq: 0 R: ReceiverResultReg.
-	backEnd hasLinkRegister ifTrue:
-		[self PushR: LinkReg].
-	sendMissCall := self Call: (self methodAbortTrampolineFor: methodOrBlockNumArgs)
+	backEnd hasLinkRegister
+		ifTrue:
+			[sendMiss := self PushR: LinkReg.
+			 sendMissCall := self Call: (self methodAbortTrampolineFor: methodOrBlockNumArgs)]
+		ifFalse:
+			[sendMiss :=
+			 sendMissCall := self Call: (self methodAbortTrampolineFor: methodOrBlockNumArgs)]
 ]
 
 { #category : #'compile abstract instructions' }
@@ -3803,7 +3808,7 @@ Cogit >> compileEntry [
 		 dynSuperEntry := self Nop].
 	entry := objectRepresentation getInlineCacheClassTagFrom: ReceiverResultReg into: TempReg.
 	self CmpR: ClassReg R: TempReg.
-	self JumpNonZero: sendMissCall.
+	self JumpNonZero: sendMiss.
 	noCheckEntry := self Label.
 	self recordSendTrace ifTrue:
 		[self CallRT: ceTraceLinkedSendTrampoline]
