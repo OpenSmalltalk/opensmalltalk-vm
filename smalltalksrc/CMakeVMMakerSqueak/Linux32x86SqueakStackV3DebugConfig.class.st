@@ -10,19 +10,19 @@ Fore more information, check the class comments of all the superclasses.
 
 "
 Class {
-	#name : #SqueakStackUnixDebugConfig,
-	#superclass : #SqueakStackUnixConfig,
-	#category : #'CMakeVMMakerSqueak-Unix'
+	#name : #Linux32x86SqueakStackV3DebugConfig,
+	#superclass : #Linux32x86SqueakStackV3Config,
+	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
 
 { #category : #'as yet unclassified' }
-SqueakStackUnixDebugConfig >> defaultExternalPlugins [
+Linux32x86SqueakStackV3DebugConfig >> defaultExternalPlugins [
 	"Removed the B3DAcceleratorPlugin since we don't have OpenGL bindings here"
 	^ (super defaultExternalPlugins copyWithoutAll: #(#ThreadedIA32FFIPlugin #InternetConfigPlugin #FT2Plugin))
 ]
 
 { #category : #'as yet unclassified' }
-SqueakStackUnixDebugConfig >> defaultInternalPlugins [
+Linux32x86SqueakStackV3DebugConfig >> defaultInternalPlugins [
 	"Removed the B3DAcceleratorPlugin since we don't have OpenGL bindings here"
 	^ (super defaultInternalPlugins copyWithoutAll: #(#IA32ABIPlugin #JoystickTabletPlugin #StarSqueakPlugin #SurfacePlugin #SqueakFFIPrims #ThreadedIA32FFIPlugin))
 ]
