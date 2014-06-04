@@ -3126,6 +3126,7 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 		ifFalse:
 			[bytecodeSetOffset := 0].
 	extA := extB := 0.
+	objectRepresentation ensureNoForwardedLiteralsIn: aMethodObj.
 	methodObj := aMethodObj.
 	cogMethod := self compileCogMethod: aSelectorOop.
 	(cogMethod asInteger between: MaxNegativeErrorCode and: -1) ifTrue:
