@@ -477,7 +477,7 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 	 and if it trips simply abort the inlining, falling back to the normal send which
 	 will then continue to the conditional branch which will trip and enter the abort."
 	| nextPC postBranchPC targetBytecodePC primDescriptor branchDescriptor nExts
-	  counter countTripped |
+	  counter countTripped unforwardArg unforwardRcvr |
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
 	<var: #counter type: #'AbstractInstruction *'>
@@ -499,6 +499,10 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 							+ branchDescriptor numBytes
 							+ (self spanFor: branchDescriptor at: nextPC exts: nExts in: methodObj).
 	postBranchPC := nextPC + branchDescriptor numBytes.
+	unforwardRcvr := (self ssValue: 1) type ~= SSConstant
+						or: [objectRepresentation shouldAnnotateObjectReference: (self ssValue: 1) constant].
+	unforwardArg := self ssTop type ~= SSConstant
+						or: [objectRepresentation shouldAnnotateObjectReference: self ssTop constant].
 	self marshallSendArguments: 1.
 
 	self ssAllocateRequiredReg: SendNumArgsReg. "Use this as the count reg."
@@ -513,7 +517,10 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 	countTripped := self JumpCarry: 0.
 	counter addDependent: (self annotateAbsolutePCRef:
 		(self MoveR: SendNumArgsReg Aw: counter asUnsignedInteger)). "write back"
-
+	unforwardRcvr ifTrue:
+		[objectRepresentation genEnsureOopInRegNotForwarded: ReceiverResultReg scratchReg: TempReg].
+	unforwardArg ifTrue:
+		[objectRepresentation genEnsureOopInRegNotForwarded: Arg0Reg scratchReg: TempReg].
 	self CmpR: Arg0Reg R: ReceiverResultReg.
 	"Cmp is weird/backwards so invert the comparison.  Further since there is a following conditional
 	 jump bytecode define non-merge fixups and leave the cond bytecode to set the mergeness."

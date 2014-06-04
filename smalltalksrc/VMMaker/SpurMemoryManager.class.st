@@ -4394,6 +4394,7 @@ SpurMemoryManager >> followForwardedObjectFields: objOop toDepth: depth [
 	"Follow pointers in the object to depth.
 	 Answer if any forwarders were found.
 	 How to avoid cyclic structures?? A temproary mark bit?"
+	<api>
 	| oop found |
 	found := false.
 	self assert: ((self isPointers: objOop) or: [self isOopCompiledMethod: objOop]).
@@ -5776,8 +5777,12 @@ SpurMemoryManager >> isFloatObject: oop [
 
 { #category : #'object testing' }
 SpurMemoryManager >> isForwarded: objOop [
+	"Answer if objOop is that if a forwarder.  Take advantage of isForwardedObjectClassIndexPun
+	 being a power of two to generate a more efficient test than the straight-forward
+		(self classIndexOf: objOop) = self isForwardedObjectClassIndexPun
+	"
 	<api>
-	^(self classIndexOf: objOop) = self isForwardedObjectClassIndexPun
+	^(self longAt: objOop) noMask: self classIndexMask - self isForwardedObjectClassIndexPun
 ]
 
 { #category : #'class table' }
@@ -5787,8 +5792,12 @@ SpurMemoryManager >> isForwardedClassTag: classIndex [
 
 { #category : #'class table puns' }
 SpurMemoryManager >> isForwardedObjectClassIndexPun [
+	"Answer the class index of a forwarder.  We choose 8 so as not to
+	 be confused with any immediate class (whose classIndex matches
+	 its instances tag pattern), and because it is a power of two, which
+	 allows us to generate a slightly slimmer test for isForwarded:."
 	<api>
-	^8 "Not to be confused with that of any immediate class"
+	^8
 ]
 
 { #category : #'object testing' }
@@ -9832,7 +9841,7 @@ SpurMemoryManager >> unlinkFreeTreeNode: freeTreeNode withSiblings: next [
 SpurMemoryManager >> unlinkSolitaryFreeTreeNode: freeTreeNode [
 	"Unlink a freeTreeNode.  Assumes the node has no list (null next link)."
 	| parent smaller larger |
-	self assert: (self fetchPointer: self freeChunkNextIndex ofObject: freeTreeNode) = 0.
+	self assert: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: freeTreeNode) = 0.
 
 	"case 1. interior node has one child, P = parent, N = node, S = subtree (mirrored for large vs small)
 			___				  ___
