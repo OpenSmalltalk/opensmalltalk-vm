@@ -68,6 +68,13 @@ CogObjectRepresentation >> createsClosuresInline [
 	^false
 ]
 
+{ #category : #compilation }
+CogObjectRepresentation >> ensureNoForwardedLiteralsIn: aMethodObj [
+	"Ensure there are no forwarded literals in the argument.
+	 By default this is a noop.  Subclasses redefine as necessary."
+	<inline: true>
+]
+
 { #category : #'bytecode generator support' }
 CogObjectRepresentation >> genCreateClosureAt: bcpc numArgs: numArgs numCopied: numCopied contextNumArgs: ctxtNumArgs large: isLargeCtxt inBlock: isInBlock [
 	"Create a closure with the given startpc, numArgs and numCopied

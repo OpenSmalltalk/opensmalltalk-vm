@@ -34,10 +34,25 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> classIndexMask [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> classTableMajorIndexShift [
+	^objectMemory classTableMajorIndexShift
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> classTableMinorIndexMask [
+	^objectMemory classTableMinorIndexMask
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> classTableRootObj [
 	hiddenRoots ifNil:
 		[hiddenRoots := Array new: self memMgr classTableRootSlots + self memMgr hiddenRootSlots].
 	^self oopForObject: hiddenRoots
+]
+
+{ #category : #forwarding }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> followForwardedObjectFields: methodObh toDepth: depth [ 
+	"This is a noop in the facade"
 ]
 
 { #category : #accessing }
@@ -48,6 +63,11 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> getScavengeThresho
 { #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> headerForSlots: numSlots format: formatField classIndex: classIndex [
 	^objectMemory headerForSlots: numSlots format: formatField classIndex: classIndex
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> isForwardedObjectClassIndexPun [
+	^objectMemory isForwardedObjectClassIndexPun
 ]
 
 { #category : #accessing }
@@ -69,6 +89,11 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> numSlotsMask [
 { #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> rememberedBitShift [
 	^objectMemory rememberedBitShift
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> shiftForWord [
+	^objectMemory shiftForWord
 ]
 
 { #category : #accessing }
