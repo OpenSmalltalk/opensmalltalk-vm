@@ -12,7 +12,7 @@ Class {
 	#superclass : #SqueakStackUnix64w32CompatLibsSlackwareConfig,
 	#traits : 'TSqueakStackUnixConfig - {#externalPlugins. #internalPlugins}',
 	#classTraits : 'TSqueakStackUnixConfig classTrait',
-	#category : #'CMakeVMMakerSqueak-Unix'
+	#category : #'CMakeVMMakerSqueak-Linux64-32Compatibility'
 }
 
 { #category : #'squeak compatibility' }

@@ -17,7 +17,7 @@ Class {
 	#superclass : #SqueakStackUnixConfig,
 	#traits : 'TSqueakStackUnixConfig - {#externalPlugins. #internalPlugins}',
 	#classTraits : 'TSqueakStackUnixConfig classTrait',
-	#category : #'CMakeVMMakerSqueak-Unix'
+	#category : #'CMakeVMMakerSqueak-Linux64-32Compatibility'
 }
 
 { #category : #'squeak compatibility' }
