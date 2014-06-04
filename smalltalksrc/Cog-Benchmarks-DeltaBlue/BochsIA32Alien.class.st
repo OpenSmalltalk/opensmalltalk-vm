@@ -97,14 +97,6 @@ BochsIA32Alien class >> primitiveNewCPU [
 	^self primitiveFailed
 ]
 
-{ #category : #accessing }
-BochsIA32Alien class >> setStackAlignmentDelta: 	stackAlignmentDelta [
-	self assert: stackAlignmentDelta isPowerOfTwo.
-	PostBuildStackDelta :=  stackAlignmentDelta > 8
-								ifTrue: [stackAlignmentDelta - 8]
-								ifFalse: [0]
-]
-
 { #category : #'Cog API' }
 BochsIA32Alien >> abstractInstructionCompilerClass [
 	^CogIA32Compiler
@@ -507,6 +499,20 @@ BochsIA32Alien >> handleRetFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|
 			type: #return
 			accessor: #eip:)
 		signal
+]
+
+{ #category : #'processor setup' }
+BochsIA32Alien >> initializeStackFor: aCogit [
+"Different cpus need different stack alignment etc, so handle the details here."
+	"This is for testing.  On many OS's the stack must remain aligned;
+	 e.g. IA32 using SSE requires 16 byte alignment."
+	| stackAlignment |
+	stackAlignment := 16.
+	aCogit setStackAlignment: stackAlignment expectedSPOffset: 0 expectedFPOffset: 8.
+	self assert: stackAlignment isPowerOfTwo.
+	PostBuildStackDelta :=  stackAlignment > 8
+								ifTrue: [stackAlignment - 8]
+								ifFalse: [0]
 ]
 
 { #category : #'accessing-abstract' }
