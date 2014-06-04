@@ -6,20 +6,20 @@ Fore more information, check the class comments of all the superclasses.
 
 "
 Class {
-	#name : #SqueakCogUnixDebugConfig,
-	#superclass : #SqueakCogUnixConfig,
-	#category : #'CMakeVMMakerSqueak-Unix'
+	#name : #Linux32x86SqueakCogV3DebugConfig,
+	#superclass : #Linux32x86SqueakCogV3Config,
+	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
 
 { #category : #'squeak compatibility' }
-SqueakCogUnixDebugConfig >> compilerFlags [
+Linux32x86SqueakCogV3DebugConfig >> compilerFlags [
 	^  String streamContents:  [ :stream |
 	self commonCompilerFlags asStringOn: stream delimiter: ' '. 
 	self compilerFlagsDebug asStringOn: stream delimiter: ' ' ]
 ]
 
 { #category : #plugins }
-SqueakCogUnixDebugConfig >> defaultExternalPlugins [
+Linux32x86SqueakCogV3DebugConfig >> defaultExternalPlugins [
 	^ (super defaultExternalPlugins copyWithoutAll: #(#ThreadedIA32FFIPlugin #InternetConfigPlugin))
 
 

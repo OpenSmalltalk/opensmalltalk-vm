@@ -16,24 +16,24 @@ Then you can go on CogOnDebian64Config generateWithSources.
 
 "
 Class {
-	#name : #SqueakCogOnDebian64Config,
-	#superclass : #SqueakCogUnixConfig,
+	#name : #Linux32x86SqueakCogV3Debian64Config,
+	#superclass : #Linux32x86SqueakCogV3Config,
 	#category : #'CMakeVMMakerSqueak-Linux64-32Compatibility'
 }
 
 { #category : #accessing }
-SqueakCogOnDebian64Config >> commonCompilerFlags [ 
+Linux32x86SqueakCogV3Debian64Config >> commonCompilerFlags [ 
 	^ super commonCompilerFlags , { '-L/usr/lib32' }
 ]
 
 { #category : #plugins }
-SqueakCogOnDebian64Config >> defaultExternalPlugins [
+Linux32x86SqueakCogV3Debian64Config >> defaultExternalPlugins [
 	^ (super defaultExternalPlugins copyWithoutAll: #(#ThreadedIA32FFIPlugin #InternetConfigPlugin))
 
 
 ]
 
 { #category : #accessing }
-SqueakCogOnDebian64Config >> linkFlags [ 
+Linux32x86SqueakCogV3Debian64Config >> linkFlags [ 
 	^ super linkFlags , ' -L/usr/lib32'
 ]

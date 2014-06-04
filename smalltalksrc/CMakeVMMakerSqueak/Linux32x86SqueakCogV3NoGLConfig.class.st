@@ -11,13 +11,13 @@ Or:
 SqueakCogUnixNoGLConfig generate
 "
 Class {
-	#name : #SqueakCogUnixNoGLConfig,
-	#superclass : #SqueakCogUnixConfig,
-	#category : #'CMakeVMMakerSqueak-Unix'
+	#name : #Linux32x86SqueakCogV3NoGLConfig,
+	#superclass : #Linux32x86SqueakCogV3Config,
+	#category : #'CMakeVMMakerSqueak-Linux64-32Compatibility'
 }
 
 { #category : #'as yet unclassified' }
-SqueakCogUnixNoGLConfig >> addDriver: name sources: aSources generator: cmakeGen [
+Linux32x86SqueakCogV3NoGLConfig >> addDriver: name sources: aSources generator: cmakeGen [
 
 	| cfg srcs |
 	
@@ -47,7 +47,7 @@ SqueakCogUnixNoGLConfig >> addDriver: name sources: aSources generator: cmakeGen
 ]
 
 { #category : #'as yet unclassified' }
-SqueakCogUnixNoGLConfig >> configH [
+Linux32x86SqueakCogV3NoGLConfig >> configH [
 	" right now its like  that "
 	^ '
 #ifndef __sq_config_h
@@ -199,7 +199,7 @@ SqueakCogUnixNoGLConfig >> configH [
 ]
 
 { #category : #'as yet unclassified' }
-SqueakCogUnixNoGLConfig >> defaultExternalPlugins [
+Linux32x86SqueakCogV3NoGLConfig >> defaultExternalPlugins [
 	"Removed the B3DAcceleratorPlugin since we don't have OpenGL bindings here"
 	^ (super defaultExternalPlugins copyWithoutAll: #(#B3DAcceleratorPlugin #ThreadedIA32FFIPlugin #InternetConfigPlugin))
 

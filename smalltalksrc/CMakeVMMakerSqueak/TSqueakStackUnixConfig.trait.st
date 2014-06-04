@@ -5,7 +5,7 @@ Trait {
 	#name : #TSqueakStackUnixConfig,
 	#traits : 'TSqueakCPlatformConfig',
 	#classTraits : 'TSqueakCPlatformConfig classTrait',
-	#category : #'CMakeVMMakerSqueak-Unix'
+	#category : #CMakeVMMakerSqueak
 }
 
 { #category : #accessing }

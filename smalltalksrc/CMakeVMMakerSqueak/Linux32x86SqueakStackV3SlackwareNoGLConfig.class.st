@@ -8,52 +8,52 @@ SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig generate
 
 "
 Class {
-	#name : #SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig,
-	#superclass : #SqueakStackUnix64w32CompatLibsSlackwareConfig,
+	#name : #Linux32x86SqueakStackV3SlackwareNoGLConfig,
+	#superclass : #Linux32x86SqueakStackV3SlackwareConfig,
 	#traits : 'TSqueakStackUnixConfig - {#externalPlugins. #internalPlugins}',
 	#classTraits : 'TSqueakStackUnixConfig classTrait',
 	#category : #'CMakeVMMakerSqueak-Linux64-32Compatibility'
 }
 
 { #category : #'squeak compatibility' }
-SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig >> addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs [
+Linux32x86SqueakStackV3SlackwareNoGLConfig >> addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs [
 	super addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs
 ]
 
 { #category : #'squeak compatibility' }
-SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig >> buildDir [
+Linux32x86SqueakStackV3SlackwareNoGLConfig >> buildDir [
 	^super buildDir
 ]
 
 { #category : #'squeak compatibility' }
-SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig >> buildDirName [
+Linux32x86SqueakStackV3SlackwareNoGLConfig >> buildDirName [
 	^super buildDirName
 ]
 
 { #category : #'squeak compatibility' }
-SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig >> compilerFlags [
+Linux32x86SqueakStackV3SlackwareNoGLConfig >> compilerFlags [
 		^super compilerFlags
 ]
 
 { #category : #plugins }
-SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig >> defaultExternalPlugins [
+Linux32x86SqueakStackV3SlackwareNoGLConfig >> defaultExternalPlugins [
 	"Removed the B3DAcceleratorPlugin since we don't have OpenGL bindings here"
 	^ (super defaultExternalPlugins copyWithoutAll: #(#B3DAcceleratorPlugin #ThreadedIA32FFIPlugin #InternetConfigPlugin #FT2Plugin))
 ]
 
 { #category : #plugins }
-SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig >> defaultInternalPlugins [
+Linux32x86SqueakStackV3SlackwareNoGLConfig >> defaultInternalPlugins [
 	"Removed the B3DAcceleratorPlugin since we don't have OpenGL bindings here"
 	^ (super defaultInternalPlugins copyWithoutAll: #(#IA32ABIPlugin #JoystickTabletPlugin #StarSqueakPlugin #SurfacePlugin #SqueakFFIPrims #ThreadedIA32FFIPlugin))
 ]
 
 { #category : #accessing }
-SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig >> executableName [
+Linux32x86SqueakStackV3SlackwareNoGLConfig >> executableName [
 		^super executableName
 ]
 
 { #category : #public }
-SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig >> generate [ 
+Linux32x86SqueakStackV3SlackwareNoGLConfig >> generate [ 
 	self generatePluginsList. 
 	self generateLicense. 
 	"^super generate"
@@ -62,43 +62,43 @@ SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig >> generate [
 ]
 
 { #category : #'compiler flags' }
-SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig >> linkFlags [
+Linux32x86SqueakStackV3SlackwareNoGLConfig >> linkFlags [
 	 ^ '-lSM -lICE -ldl  -lpthread -lm -lnsl -lX11'
 ]
 
 { #category : #'squeak compatibility' }
-SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig >> outputDir [
+Linux32x86SqueakStackV3SlackwareNoGLConfig >> outputDir [
 	^super outputDir
 
 
 ]
 
 { #category : #'squeak compatibility' }
-SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig >> prepareVMMaker [
+Linux32x86SqueakStackV3SlackwareNoGLConfig >> prepareVMMaker [
 		^super prepareVMMaker
 ]
 
 { #category : #'squeak compatibility' }
-SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig >> setupDirectories:gen [
+Linux32x86SqueakStackV3SlackwareNoGLConfig >> setupDirectories:gen [
 		super setupDirectories: gen
 ]
 
 { #category : #'squeak compatibility' }
-SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig >> srcDir [
+Linux32x86SqueakStackV3SlackwareNoGLConfig >> srcDir [
 	^super srcDir
 ]
 
 { #category : #'squeak compatibility' }
-SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig >> topDir [
+Linux32x86SqueakStackV3SlackwareNoGLConfig >> topDir [
 	^super topDir
 ]
 
 { #category : #'squeak compatibility' }
-SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig >> validateSourcesPresent [
+Linux32x86SqueakStackV3SlackwareNoGLConfig >> validateSourcesPresent [
 		super validateSourcesPresent
 ]
 
 { #category : #'squeak compatibility' }
-SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig >> write: aContents toFile: aFileName [
+Linux32x86SqueakStackV3SlackwareNoGLConfig >> write: aContents toFile: aFileName [
 	super write: aContents toFile: aFileName
 ]

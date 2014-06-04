@@ -11,13 +11,13 @@ Fore more information, check the class comments of all the superclasses.
 
 "
 Class {
-	#name : #SqueakStackUnixDebugFixedVerSIConfig,
-	#superclass : #SqueakStackUnixDebugConfig,
-	#category : #'CMakeVMMakerSqueak-Unix'
+	#name : #Linux32x86SqueakStackV3FixedVerSIConfig,
+	#superclass : #Linux32x86SqueakStackV3DebugConfig,
+	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
 
 { #category : #'as yet unclassified' }
-SqueakStackUnixDebugFixedVerSIConfig >> compilerFlagsDebug [
+Linux32x86SqueakStackV3FixedVerSIConfig >> compilerFlagsDebug [
 
 	^ {
 		'-g3'. 
@@ -32,7 +32,7 @@ SqueakStackUnixDebugFixedVerSIConfig >> compilerFlagsDebug [
 ]
 
 { #category : #'as yet unclassified' }
-SqueakStackUnixDebugFixedVerSIConfig >> extraVMSettings: maker [
+Linux32x86SqueakStackV3FixedVerSIConfig >> extraVMSettings: maker [
 	| versionC |
 	self generateConfigH.
 	
