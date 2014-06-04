@@ -349,7 +349,7 @@ SpurGenerationScavenger >> copyToOldSpace: survivor bytes: bytesInObject format:
 		 newStart := manager allocateOldSpaceChunkOfBytes: bytesInObject.
 		 newStart ifNil:
 			[self error: 'out of memory']].
-	manager checkFreeSpace.
+	"manager checkFreeSpace."
 	manager mem: newStart asVoidPointer cp: startOfSurvivor asVoidPointer y: bytesInObject.
 	newOop := newStart + (survivor - startOfSurvivor).
 	(manager isAnyPointerFormat: formatOfSurvivor) ifTrue:
