@@ -8,18 +8,18 @@ SqueakCogMTUnixConfig generate.
 
 "
 Class {
-	#name : #SqueakCogMTUnixConfig,
-	#superclass : #SqueakCogUnixConfig,
-	#category : #'CMakeVMMakerSqueak-Unix'
+	#name : #Linux32x86SqueakCogV3MultiThreadedConfig,
+	#superclass : #Linux32x86SqueakCogV3Config,
+	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
 
 { #category : #'squeak compatibility' }
-SqueakCogMTUnixConfig >> buildDirName [
+Linux32x86SqueakCogV3MultiThreadedConfig >> buildDirName [
 	^ 'cmake_unixbuild/mtbld'
 ]
 
 { #category : #'compiler flags' }
-SqueakCogMTUnixConfig >> commonCompilerFlags [
+Linux32x86SqueakCogV3MultiThreadedConfig >> commonCompilerFlags [
 
 	"Common compiler flags
 	
@@ -37,13 +37,13 @@ SqueakCogMTUnixConfig >> commonCompilerFlags [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakCogMTUnixConfig >> configureReentrantIA32FFIPlugin: maker [
+Linux32x86SqueakCogV3MultiThreadedConfig >> configureReentrantIA32FFIPlugin: maker [
 	self error: 'use ThreadedIA32FFIPlugin instead'
 
 ]
 
 { #category : #sources }
-SqueakCogMTUnixConfig >> coreSources [
+Linux32x86SqueakCogV3MultiThreadedConfig >> coreSources [
 	"files to include from src/vm dir"
 	
 	^ #(
@@ -53,18 +53,18 @@ SqueakCogMTUnixConfig >> coreSources [
 ]
 
 { #category : #plugins }
-SqueakCogMTUnixConfig >> defaultExternalPlugins [
+Linux32x86SqueakCogV3MultiThreadedConfig >> defaultExternalPlugins [
 	^ (super defaultExternalPlugins copyWithoutAll: #(#ThreadedIA32FFIPlugin #InternetConfigPlugin))
 
 
 ]
 
 { #category : #accessing }
-SqueakCogMTUnixConfig >> executableName [
+Linux32x86SqueakCogV3MultiThreadedConfig >> executableName [
 	^ 'CogMTVM'
 ]
 
 { #category : #'source generation' }
-SqueakCogMTUnixConfig >> interpreterClass [
+Linux32x86SqueakCogV3MultiThreadedConfig >> interpreterClass [
 	^ CoInterpreterMT
 ]

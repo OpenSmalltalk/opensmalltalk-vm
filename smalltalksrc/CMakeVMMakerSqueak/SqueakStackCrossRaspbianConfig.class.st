@@ -12,8 +12,8 @@ Fore more information, check the class comments of all the superclasses.
 "
 Class {
 	#name : #SqueakStackCrossRaspbianConfig,
-	#superclass : #SqueakStackUnixConfig,
-	#category : #'CMakeVMMakerSqueak-Unix'
+	#superclass : #Linux32x86SqueakStackV3Config,
+	#category : #'CMakeVMMakerSqueak-Linux32ARMv6'
 }
 
 { #category : #'as yet unclassified' }

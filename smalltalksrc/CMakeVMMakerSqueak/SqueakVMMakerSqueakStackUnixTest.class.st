@@ -7,7 +7,7 @@ Class {
 { #category : #'as yet unclassified' }
 SqueakVMMakerSqueakStackUnixTest >> testBuildDir [
 	| config dir |
-	config := SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig new.  "uses the Trait"
+	config := Linux32x86SqueakStackV3SlackwareNoGLConfig new.  "uses the Trait"
 	dir := config buildDir.
 	self assert: (dir isKindOf: FileDirectory).
 ]
@@ -15,7 +15,7 @@ SqueakVMMakerSqueakStackUnixTest >> testBuildDir [
 { #category : #'as yet unclassified' }
 SqueakVMMakerSqueakStackUnixTest >> testSrcDir [
 	| config dir |
-	config := SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig new.  "uses the Trait"
+	config := Linux32x86SqueakStackV3SlackwareNoGLConfig new.  "uses the Trait"
 	dir := config srcDir.
 	self assert: (dir isKindOf: FileDirectory).
 ]
@@ -23,7 +23,7 @@ SqueakVMMakerSqueakStackUnixTest >> testSrcDir [
 { #category : #'as yet unclassified' }
 SqueakVMMakerSqueakStackUnixTest >> testTSqueakCPlatformConfigDirFrom [
 	| config stringDir dirDir|
-	config := SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig new.  "uses the Trait"
+	config := Linux32x86SqueakStackV3SlackwareNoGLConfig new.  "uses the Trait"
 	stringDir := config dirFrom: Smalltalk vmPath.
 	dirDir := FileDirectory default.
 	self assert: (stringDir isKindOf: FileDirectory).
@@ -33,7 +33,7 @@ SqueakVMMakerSqueakStackUnixTest >> testTSqueakCPlatformConfigDirFrom [
 { #category : #'as yet unclassified' }
 SqueakVMMakerSqueakStackUnixTest >> testTopDir [
 	| config dir |
-	config := SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig new.  "uses the Trait"
+	config := Linux32x86SqueakStackV3SlackwareNoGLConfig new.  "uses the Trait"
 	dir := config topDir.
 	self assert: (dir isKindOf: FileDirectory).
 ]
