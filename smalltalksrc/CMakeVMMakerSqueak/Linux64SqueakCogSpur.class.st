@@ -4,7 +4,7 @@ An Unix64SqueakCogV3 has not been coded yet.
 "
 Class {
 	#name : #Linux64SqueakCogSpur,
-	#superclass : #SqueakCogUnixConfig,
+	#superclass : #Linux32x86SqueakCogV3Config,
 	#category : #'CMakeVMMakerSqueak-Linux64'
 }
 

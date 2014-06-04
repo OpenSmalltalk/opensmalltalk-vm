@@ -69,7 +69,7 @@ SqueakCogMTBuilder >> buildMacOSX32 [
 { #category : #building }
 SqueakCogMTBuilder >> buildUnix32 [
 	
-	SqueakCogMTUnixConfig new
+	Linux32x86SqueakCogV3MultiThreadedConfig new
 "		addExternalPlugins: #( FT2Plugin SqueakSSLPlugin );"
 		addExternalPlugins: #( SqueakSSLPlugin );
 		addInternalPlugins: #( UnixOSProcessPlugin  );

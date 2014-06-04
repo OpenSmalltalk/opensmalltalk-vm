@@ -9,7 +9,7 @@ SqueakStackRaspbianFastBltConfig generate
 Class {
 	#name : #SqueakStackRaspbianFastBltConfig,
 	#superclass : #SqueakStackRaspbianConfig,
-	#category : #'CMakeVMMakerSqueak-Unix'
+	#category : #'CMakeVMMakerSqueak-Linux32ARMv6'
 }
 
 { #category : #'as yet unclassified' }

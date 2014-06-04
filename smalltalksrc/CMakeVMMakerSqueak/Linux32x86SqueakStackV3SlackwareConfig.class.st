@@ -13,52 +13,52 @@ SqueakStackUnix64w32CompatLibsSlackwareConfig generate
 
 "
 Class {
-	#name : #SqueakStackUnix64w32CompatLibsSlackwareConfig,
-	#superclass : #SqueakStackUnixConfig,
+	#name : #Linux32x86SqueakStackV3SlackwareConfig,
+	#superclass : #Linux32x86SqueakStackV3Config,
 	#traits : 'TSqueakStackUnixConfig - {#externalPlugins. #internalPlugins}',
 	#classTraits : 'TSqueakStackUnixConfig classTrait',
 	#category : #'CMakeVMMakerSqueak-Linux64-32Compatibility'
 }
 
 { #category : #'squeak compatibility' }
-SqueakStackUnix64w32CompatLibsSlackwareConfig >> addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs [
+Linux32x86SqueakStackV3SlackwareConfig >> addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs [
 	super addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs
 ]
 
 { #category : #'squeak compatibility' }
-SqueakStackUnix64w32CompatLibsSlackwareConfig >> buildDir [
+Linux32x86SqueakStackV3SlackwareConfig >> buildDir [
 	^super buildDir
 ]
 
 { #category : #'squeak compatibility' }
-SqueakStackUnix64w32CompatLibsSlackwareConfig >> buildDirName [
+Linux32x86SqueakStackV3SlackwareConfig >> buildDirName [
 	^super buildDirName
 ]
 
 { #category : #'squeak compatibility' }
-SqueakStackUnix64w32CompatLibsSlackwareConfig >> compilerFlags [
+Linux32x86SqueakStackV3SlackwareConfig >> compilerFlags [
 	^super compilerFlags
 ]
 
 { #category : #plugins }
-SqueakStackUnix64w32CompatLibsSlackwareConfig >> defaultExternalPlugins [
+Linux32x86SqueakStackV3SlackwareConfig >> defaultExternalPlugins [
 	"Removed the B3DAcceleratorPlugin since we don't have OpenGL bindings here"
 	^ (super defaultExternalPlugins copyWithoutAll: #(#ThreadedIA32FFIPlugin #InternetConfigPlugin #FT2Plugin #InternetConfigPlugin))
 ]
 
 { #category : #plugins }
-SqueakStackUnix64w32CompatLibsSlackwareConfig >> defaultInternalPlugins [
+Linux32x86SqueakStackV3SlackwareConfig >> defaultInternalPlugins [
 	"Removed the B3DAcceleratorPlugin since we don't have OpenGL bindings here"
 	^ (super defaultInternalPlugins copyWithoutAll: #(#IA32ABIPlugin #JoystickTabletPlugin #StarSqueakPlugin #SurfacePlugin #SqueakFFIPrims #ThreadedIA32FFIPlugin))
 ]
 
 { #category : #accessing }
-SqueakStackUnix64w32CompatLibsSlackwareConfig >> executableName [
+Linux32x86SqueakStackV3SlackwareConfig >> executableName [
 	^super executableName
 ]
 
 { #category : #public }
-SqueakStackUnix64w32CompatLibsSlackwareConfig >> generate [ 
+Linux32x86SqueakStackV3SlackwareConfig >> generate [ 
 	self generatePluginsList. 
 	self generateLicense. 
 	"^super generate"
@@ -67,38 +67,38 @@ SqueakStackUnix64w32CompatLibsSlackwareConfig >> generate [
 ]
 
 { #category : #'squeak compatibility' }
-SqueakStackUnix64w32CompatLibsSlackwareConfig >> outputDir [
+Linux32x86SqueakStackV3SlackwareConfig >> outputDir [
 	^super outputDir
 
 
 ]
 
 { #category : #'squeak compatibility' }
-SqueakStackUnix64w32CompatLibsSlackwareConfig >> prepareVMMaker [
+Linux32x86SqueakStackV3SlackwareConfig >> prepareVMMaker [
 	^super prepareVMMaker
 ]
 
 { #category : #'squeak compatibility' }
-SqueakStackUnix64w32CompatLibsSlackwareConfig >> setupDirectories:gen [
+Linux32x86SqueakStackV3SlackwareConfig >> setupDirectories:gen [
 	super setupDirectories: gen
 ]
 
 { #category : #'squeak compatibility' }
-SqueakStackUnix64w32CompatLibsSlackwareConfig >> srcDir [
+Linux32x86SqueakStackV3SlackwareConfig >> srcDir [
 	^super srcDir
 ]
 
 { #category : #'squeak compatibility' }
-SqueakStackUnix64w32CompatLibsSlackwareConfig >> topDir [
+Linux32x86SqueakStackV3SlackwareConfig >> topDir [
 	^super topDir
 ]
 
 { #category : #'squeak compatibility' }
-SqueakStackUnix64w32CompatLibsSlackwareConfig >> validateSourcesPresent [
+Linux32x86SqueakStackV3SlackwareConfig >> validateSourcesPresent [
 	super validateSourcesPresent
 ]
 
 { #category : #'squeak compatibility' }
-SqueakStackUnix64w32CompatLibsSlackwareConfig >> write: aContents toFile: aFileName [
+Linux32x86SqueakStackV3SlackwareConfig >> write: aContents toFile: aFileName [
 	super write: aContents toFile: aFileName
 ]

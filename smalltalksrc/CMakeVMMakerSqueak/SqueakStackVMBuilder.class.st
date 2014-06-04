@@ -97,7 +97,7 @@ SqueakStackVMBuilder >> buildRaspberryPiFBB [
 
 { #category : #building }
 SqueakStackVMBuilder >> buildSlackwareUnix64w32Libs [
-	SqueakStackUnix64w32CompatLibsSlackwareConfig new
+	Linux32x86SqueakStackV3SlackwareConfig new
 		addExternalPlugins: #( SqueakSSLPlugin );
 		addInternalPlugins: #( UnixOSProcessPlugin  );
 		generateSources; generate.
@@ -106,7 +106,7 @@ SqueakStackVMBuilder >> buildSlackwareUnix64w32Libs [
 
 { #category : #building }
 SqueakStackVMBuilder >> buildSlackwareUnix64w32LibsNoGL [
-	SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig new
+	Linux32x86SqueakStackV3SlackwareNoGLConfig new
 		addExternalPlugins: #( SqueakSSLPlugin );
 		addInternalPlugins: #( UnixOSProcessPlugin  );
 		generateSources; generate.
@@ -116,7 +116,7 @@ SqueakStackVMBuilder >> buildSlackwareUnix64w32LibsNoGL [
 { #category : #building }
 SqueakStackVMBuilder >> buildUnix32 [
 
-	SqueakStackUnix64w32CompatLibsSlackwareConfig new
+	Linux32x86SqueakStackV3SlackwareConfig new
 		addExternalPlugins: #( FT2Plugin SqueakSSLPlugin );
 		addInternalPlugins: #( UnixOSProcessPlugin  );
 		generateSources; generate.
