@@ -36,15 +36,6 @@ GdbARMAlien class >> primitiveNewCPU [
 	^self primitiveFailed
 ]
 
-{ #category : #accessing }
-GdbARMAlien class >> setStackAlignmentDelta: 	stackAlignmentDelta [
-	"copy of BochsIA32Alien>>#setStackAlignmentDelta:, because I don't know yet what it's effect is."
-	self assert: stackAlignmentDelta isPowerOfTwo.
-	PostBuildStackDelta :=  stackAlignmentDelta > 8
-								ifTrue: [stackAlignmentDelta - 8]
-								ifFalse: [0]
-]
-
 { #category : #'Cog API' }
 GdbARMAlien >> abstractInstructionCompilerClass [
 	^CogARMCompiler
@@ -127,16 +118,16 @@ GdbARMAlien >> flushICacheFrom: startAddress "<Integer>" to: endAddress [ "<Inte
 	self primitiveFlushICacheFrom: startAddress To: endAddress
 ]
 
-{ #category : #'accessing-abstract' }
+{ #category : #accessing }
 GdbARMAlien >> fp [
-	"According to the use in SVr4"
+"fp is r11"
 	^self r11
 ]
 
-{ #category : #'accessing-abstract' }
-GdbARMAlien >> fp: aNumber [
-	"According to SVr4, the frame pointer is stored in r11"
-	^self r11: aNumber
+{ #category : #accessing }
+GdbARMAlien >> fp: anUnsignedInteger [
+
+	^self r11: anUnsignedInteger
 ]
 
 { #category : #'error handling' }
@@ -354,9 +345,9 @@ GdbARMAlien >> handleRetFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|Byt
 	^(ProcessorSimulationTrap
 			pc: pc
 			nextpc: pc + 4
-			address: (memoryArray unsignedLongAt: self sp -3) 
+			address: self lr " for popping off stack version of retiurn -> (memoryArray unsignedLongAt: self sp -3) "
 			type: #return
-			accessor: #pc:)
+			"don't quite know what to do with this yet ->accessor: #pc:")
 		signal
 ]
 
@@ -364,6 +355,18 @@ GdbARMAlien >> handleRetFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|Byt
 GdbARMAlien >> ifflags [
 "The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
 	^self unsignedLongAt: 581
+]
+
+{ #category : #'processor setup' }
+GdbARMAlien >> initializeStackFor: aCogit [
+"Different cpus need different stack alignment etc, so handle the details here."
+	| stackAlignment |
+	stackAlignment := 8.
+	aCogit setStackAlignment: stackAlignment expectedSPOffset: 0 expectedFPOffset: 0.
+	self assert: stackAlignment isPowerOfTwo.
+	PostBuildStackDelta :=  stackAlignment > 8
+								ifTrue: [stackAlignment - 8]
+								ifFalse: [0]
 ]
 
 { #category : #testing }
@@ -391,6 +394,17 @@ GdbARMAlien >> instructionIsBX: instr [
 ]
 
 { #category : #testing }
+GdbARMAlien >> instructionIsLDR: instr [
+"is this a LDR instruction?"
+	| foo |
+	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" 
+		and: [foo := (instr >> 20 bitAnd: 16rFF).
+			foo = 16r51 "ldr r1, [r2, #imm]"
+				or:[foo = 16r59 "ldr r1, [r2, #-imm]"
+				or:[foo = 16r79 "ldr r1, [r2, r3]"]]]
+]
+
+{ #category : #testing }
 GdbARMAlien >> instructionIsLDR: instr byReg: rn [
 "is this a LDR r1, [r2, rn] instruction? Special case to detect MoveAwR case"
 	| foo |
@@ -406,6 +420,24 @@ GdbARMAlien >> instructionIsLDRB: instr [
 			foo = 16r55 "ldrb r1, [r2, #imm]"
 				or:[foo = 16r5D "ldrb r1, [r2, #-imm]"
 				or:[foo = 16r7D "ldrb r1, [r2, r3]"]]]
+]
+
+{ #category : #testing }
+GdbARMAlien >> instructionIsLDRSP: instr [
+"is this a LDR sp, [??] instruction? Special case to detect LDR sp, [] affecting stack pointer"
+	^(self instructionIsLDR: instr)  and:[(instr >>12 bitAnd: 16rF) = 13]
+]
+
+{ #category : #testing }
+GdbARMAlien >> instructionIsPop: instr [
+"is this a pop - ldr r??, [sp], #4 -  instruction?"
+	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: (16rFFF0FFF)) = (16r49D0004)]
+]
+
+{ #category : #testing }
+GdbARMAlien >> instructionIsPush: instr [
+"is this a push -str r??, [sp, #-4] -  instruction?"
+	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: (16rFFF0FFF)) = (16r52D0004)]
 ]
 
 { #category : #testing }
@@ -433,6 +465,12 @@ GdbARMAlien >> instructionIsSTRB: instr [
 "is this a STRB instruction?"
 	| foo |
 	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [foo := (instr >> 20 bitAnd: 16rFF). foo = 16r54 "strb r1, [r2, #imm]" or:[foo = 16r5c "strb r1, [r2, #-imm]" or:[foo = 16r7c "strb r1, [r2, r3]"]]]
+]
+
+{ #category : #testing }
+GdbARMAlien >> instructionIsSTRSP: instr [
+"is this a STR sp, [??] instruction? Special case to detect STR sp, [] affecting stack pointer"
+	^(self instructionIsSTR: instr)  and:[(instr >>12 bitAnd: 16rF) = 13]
 ]
 
 { #category : #'error handling' }
@@ -477,7 +515,7 @@ GdbARMAlien >> instructionTypeAt: pc "<Integer>" in: memoryArray [ "<Bitmap|Byte
 { #category : #'accessing-abstract' }
 GdbARMAlien >> integerRegisterState [
 	^{	self r0. self r1. self r2. self r3. self r4. self r5. self r6. self r7. self r8. 
-		self r9. self r10. self r11. self r12. self sp. self lr. self pc}
+		self r9. self r10. self fp. self r12. self sp. self lr. self pc}
 ]
 
 { #category : #accessing }
@@ -518,6 +556,14 @@ GdbARMAlien >> pc: anUnsignedInteger [
 GdbARMAlien >> popPcOpcode [
 "See also CogARMCompiler>concretizePopR"
 	^16rE49DF004
+]
+
+{ #category : #execution }
+GdbARMAlien >> popWordIn: aMemory [ 
+	| sp word |
+	word := aMemory unsignedLongAt: (sp := self sp) + 1 bigEndian: false.
+	self sp: sp + 4.
+	^word
 ]
 
 { #category : #execution }
@@ -666,7 +712,7 @@ GdbARMAlien >> printOn: aStream [
 GdbARMAlien >> printRegisterState: registerStateVector on: aStream [
 	self printFields: #(	r0 r1 r2 r3 cr
 						r4 r5 r6 r7 cr
-						r8 r9 r10 r11 cr
+						r8 r9 r10 fp cr
 						r12 sp lr pc eflags cr)
 		inRegisterState: registerStateVector
 		on: aStream
@@ -676,7 +722,7 @@ GdbARMAlien >> printRegisterState: registerStateVector on: aStream [
 GdbARMAlien >> printRegisterStateExceptPC: registerStateVector on: aStream [
 	self printFields: #(	r0 r1 r2 r3 cr
 						r4 r5 r6 r7 cr
-						r8 r9 r10 r11 cr
+						r8 r9 r10 fp cr
 						r12 sp lr eflags cr)
 		inRegisterState: registerStateVector
 		on: aStream
@@ -843,16 +889,23 @@ GdbARMAlien >> rawCPSR [
 	^self unsignedLongAt: 533
 ]
 
+{ #category : #accessing }
+GdbARMAlien >> register: int0to15 [
+"return the value of register"
+	self assert:[int0to15 between: 0 and:15].
+	^self unsignedLongAt: 13 + (4 * int0to15)
+]
+
 { #category : #'accessing-abstract' }
 GdbARMAlien >> registerState [
 	^{	self r0. self r1. self r2. self r3. self r4. self r5. self r6. self r7.
-		self r8. self r9. self r10. self r11. self r12. self sp. self lr. self pc. self eflags }
+		self r8. self r9. self r10. self fp. self r12. self sp. self lr. self pc. self eflags }
 ]
 
 { #category : #'accessing-abstract' }
 GdbARMAlien >> registerStateGetters [
 	^#(	r0 r1 r2 r3 r4 r5 r6 r7
-		r8 r9 r10 r11 r12 sp lr pc eflags )
+		r8 r9 r10 fp r12 sp lr pc eflags )
 ]
 
 { #category : #'accessing-abstract' }
@@ -899,8 +952,8 @@ GdbARMAlien >> simulateCallOf: address nextpc: nextpc memory: aMemory [
 
 	self assert: self sp \\ 8 = 0. "This check ensures, that we conform with ARM abi. Before doing anything to the stack, we ensure 2-word alignment."
 	self pushWord: nextpc in: aMemory.
-	self pushWord: self r11 in: aMemory.
-	self r11: self sp.
+	self pushWord: self fp in: aMemory.
+	self fp: self sp.
 	PostBuildStackDelta ~= 0 ifTrue:
 		[self sp: self sp - PostBuildStackDelta]. "In order to satisfy the CStackAlignment check by cogit, which is only valid on IA32 platforms."
 	self pc: address
@@ -914,15 +967,20 @@ GdbARMAlien >> simulateLeafCallOf: address nextpc: nextpc memory: aMemory [
 
 { #category : #'execution simulation' }
 GdbARMAlien >> simulateLeafReturnIn: aMemory [
+"simulate a leaf return; this may get a bit more complicated since we are trying to compensate for the IA32 automagically pushing the return address whereas the ARM doesn't."
+self halt.
 	self pc: self lr
 ]
 
 { #category : #'execution simulation' }
 GdbARMAlien >> simulateReturnIn: aMemory [
+"simulate a return; this may get a bit more complicated since we are trying to compensate for the IA32 automagically pushing the return address whereas the ARM doesn't."
+self halt.
 	PostBuildStackDelta ~= 0 ifTrue:
 		[self sp: self sp + PostBuildStackDelta].
-	self r11: (self popWordIn: aMemory).
-	self pc: (self popWordIn: aMemory)
+	self fp: (self popWordIn: aMemory).
+	self lr: (self popWordIn: aMemory).
+	self pc: self lr
 ]
 
 { #category : #'accessing-abstract' }
@@ -937,7 +995,7 @@ GdbARMAlien >> sp [
 
 { #category : #accessing }
 GdbARMAlien >> sp: anUnsignedInteger [
-
+Transcript nextPutAll: 'set SP to ', anUnsignedInteger hex; cr.
 	^self unsignedLongAt: 65 put: anUnsignedInteger
 ]
 
@@ -952,6 +1010,24 @@ GdbARMAlien >> tflag [
 GdbARMAlien >> vflag [
 "The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
 	^self unsignedLongAt: 577
+]
+
+{ #category : #'execution simulation' }
+GdbARMAlien >> writePopPushDetailsIn:  memory in: transcript for: aCogit [
+"if the next instruction is a pop or push, or a ldr/str that touches the SP, write the details ontranscript"
+	| instr |
+
+	[ instr := memory unsignedLongAt: self pc + 1 bigEndian: false] on: Error do:[:ex| ^self].
+	(self instructionIsPop: instr) ifTrue:[transcript tab; nextPutAll: 'pop ', (memory unsignedLongAt: self sp + 1 bigEndian: false) hex , ' from ', (self sp hex); cr].
+	(self instructionIsPush: instr) ifTrue:[transcript tab; nextPutAll: 'push ', (self register: ((instr bitAnd: 16rF000) >>12)) hex , ' to ', (self sp -4) hex; cr].
+
+	(self instructionIsLDRSP: instr)  ifTrue:[| val|
+		val := self r10 > memory size
+			ifTrue:[aCogit simulatedVariableAt: self r10]
+			ifFalse:[memory unsignedLongAt: self r10 + 1 bigEndian: false].
+		transcript tab; nextPutAll: 'load SP', val hex , ' from ', (self r10) hex; cr].
+
+	(self instructionIsSTRSP: instr)  ifTrue:[transcript tab; nextPutAll: 'store SP', (self sp) hex , ' to ', (self r10) hex; cr].
 ]
 
 { #category : #accessing }
