@@ -60,7 +60,7 @@ SqueakBSDCogV3Config >> buildDir [
 
 { #category : #'as yet unclassified' }
 SqueakBSDCogV3Config >> buildDirName [
-	^ 'cmake_unixbuild/bld'
+	self subclassResponsibility
 ]
 
 { #category : #'as yet unclassified' }
