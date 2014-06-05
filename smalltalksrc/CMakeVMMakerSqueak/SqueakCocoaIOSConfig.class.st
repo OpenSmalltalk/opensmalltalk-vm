@@ -6,7 +6,7 @@ For more information, check the class comments of all the superclasses.
 "
 Class {
 	#name : #SqueakCocoaIOSConfig,
-	#superclass : #SqueakMacOSConfig,
+	#superclass : #SqueakMacOSV3Config,
 	#category : #'CMakeVMMakerSqueak-IOS'
 }
 

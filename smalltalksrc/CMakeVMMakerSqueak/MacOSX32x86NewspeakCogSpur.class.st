@@ -1,6 +1,6 @@
 Class {
 	#name : #MacOSX32x86NewspeakCogSpur,
-	#superclass : #SqueakMacOSConfig,
+	#superclass : #SqueakMacOSV3Config,
 	#category : #'CMakeVMMakerSqueak-MacOSX32x86'
 }
 

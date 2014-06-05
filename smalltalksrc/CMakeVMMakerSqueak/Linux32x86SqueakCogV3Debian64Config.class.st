@@ -18,7 +18,7 @@ Then you can go on CogOnDebian64Config generateWithSources.
 Class {
 	#name : #Linux32x86SqueakCogV3Debian64Config,
 	#superclass : #Linux32x86SqueakCogV3Config,
-	#category : #'CMakeVMMakerSqueak-Linux64-32Compatibility'
+	#category : #'CMakeVMMakerSqueak-Linuxx86_64-32Compatibility'
 }
 
 { #category : #accessing }
