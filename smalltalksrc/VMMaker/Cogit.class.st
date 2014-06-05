@@ -1213,6 +1213,13 @@ Cogit >> ArithmeticShiftRightR: reg1 R: reg2 [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> BICCq: quickConstant R: reg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: BICCqR operand: quickConstant operand: reg
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> Call: callTarget [ 
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -3915,8 +3922,9 @@ Cogit >> compileTrampolineFor: aRoutine callJumpBar: callJumpBar "<Boolean>" num
 	<inline: false>
 	"If on a RISC processor the return address needs to be pushed to the
 	 stack so that the interpreter sees the same stack layout as on CISC."
-	backEnd hasLinkRegister ifTrue:
-		[self PushR: LinkReg].
+	"tpr evil test hack for stack imbalance problem"
+	aRoutine ~=  #ceCheckForInterrupts ifTrue:[backEnd hasLinkRegister ifTrue:
+		[self PushR: LinkReg]].
 	self genSmalltalkToCStackSwitch.
 	cStackAlignment > BytesPerWord ifTrue:
 		[backEnd
@@ -4926,6 +4934,7 @@ Cogit >> genMethodAbortTrampoline [
 { #category : #initialization }
 Cogit >> genNonLocalReturnTrampoline [
 	opcodeIndex := 0.
+	"write the return address to the coInterpreter instructionPointerAddress; IA32 will have pushed it on the stack, so pop it first; ARM will have it in LR so just write it"
 	backEnd hasLinkRegister
 		ifTrue:
 			[self MoveR: LinkReg Aw: coInterpreter instructionPointerAddress]
@@ -5948,10 +5957,7 @@ Cogit >> initializeProcessor [
 	<doNotGenerate>
 	guardPageSize := self class guardPageSize.
 	lastNInstructions := OrderedCollection new.
-	"This is for testing.  On many OS's the stack must remain aligned;
-	 e.g. IA32 using SSE requires 16 byte alignment."
-	expectedSPAlignment := 0. expectedFPAlignment := 8. cStackAlignment := 16.
-	processor class setStackAlignmentDelta: cStackAlignment.
+	processor initializeStackFor: self.
 	self initializeProcessorStack: coInterpreter rumpCStackAddress.
 	objectMemory
 		longAt: self cFramePointerAddress put: processor fp;
@@ -7730,7 +7736,8 @@ Cogit >> recordProcessing [
 	printInstructions ifTrue:
 		[printRegisters ifTrue:
 			[coInterpreter transcript cr].
-		 coInterpreter transcript nextPutAll: inst; cr; flush]
+		 coInterpreter transcript nextPutAll: inst; cr; flush.
+		processor writePopPushDetailsIn: coInterpreter memory in: coInterpreter transcript for: self]
 ]
 
 { #category : #'simulation only' }
@@ -8273,6 +8280,15 @@ Cogit >> setSelectorOf: cogMethod to: aSelectorOop [
 ]
 
 { #category : #initialization }
+Cogit >> setStackAlignment: stackAlignment expectedSPOffset: spOffset expectedFPOffset: fpOffset [
+	"the processor wants certain stack alignment settings"
+	expectedSPAlignment := spOffset. 
+	expectedFPAlignment := fpOffset. 
+	cStackAlignment := stackAlignment
+
+]
+
+{ #category : #initialization }
 Cogit >> setThreadManager: aCogThreadManager [
 	"Initialization of the code generator in the simulator.
 	 Used in the separate VM since this VM does not do a second initialization of the interpreter,
@@ -8489,6 +8505,15 @@ Cogit >> simulatedVariableAddress: getter in: receiver [
 		at: address
 		ifAbsentPut: [MessageSend receiver: receiver selector: getter].
 	^address
+]
+
+{ #category : #initialization }
+Cogit >> simulatedVariableAt: address [
+	"Answer a simulated variable's value for handling the push/pop tracer."
+	<doNotGenerate>
+	^(simulatedVariableGetters
+		at: address
+		ifAbsent:[0]) value
 ]
 
 { #category : #debugging }
