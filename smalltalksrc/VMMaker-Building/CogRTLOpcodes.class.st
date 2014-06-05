@@ -17,6 +17,7 @@ Class {
 		'Arg1Reg',
 		'ArithmeticShiftRightCqR',
 		'ArithmeticShiftRightRR',
+		'BICCqR',
 		'Call',
 		'ClassReg',
 		'CmpCqR',
@@ -274,7 +275,7 @@ CogRTLOpcodes class >> initialize [
 						LogicalShiftLeftCqR LogicalShiftLeftRR
 
 						CmpRR AddRR SubRR AndRR OrRR XorRR MulRR
-						CmpCqR AddCqR SubCqR AndCqR OrCqR XorCqR MulCqR
+						CmpCqR AddCqR SubCqR AndCqR BICCqR "tpr - ARM only" OrCqR XorCqR MulCqR
 						CmpCwR AddCwR SubCwR AndCwR OrCwR XorCwR MulCwR
 
 						CmpRdRd AddRdRd SubRdRd MulRdRd DivRdRd SqrtRd

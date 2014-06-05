@@ -11,8 +11,8 @@ CogARMCompilerForTests class >> dataRegistersWithAccessorsDo: aTrinaryBlock [
 		[:reg :i|
 		aTrinaryBlock
 			value: reg
-			value: (#(r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r11 r12 sp lr) at: i)
-			value: (#(r0: r1: r2: r3: r4: r5: r6: r7: r8: r9: r11: r12: sp: lr:) at: i)]
+			value: (#(r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 fp r12 sp lr) at: i)
+			value: (#(r0: r1: r2: r3: r4: r5: r6: r7: r8: r9: fp: r12: sp: lr:) at: i)]
 ]
 
 { #category : #'test support' }
