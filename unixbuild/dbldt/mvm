@@ -13,7 +13,7 @@ esac
 test -f config.h || ../../platforms/unix/config/configure --without-npsqueak \
 	CC="gcc -m32" \
 	CFLAGS="-g3 -O0 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=0 -DDEBUGVM=1" \
-	LIBS=-lpthread \
+	LIBS="-lpthread -luuid" \
 	LDFLAGS=-Wl,-z,now
 ../../scripts/nukeversion
 rm -rf ../../$INSTALLDIR

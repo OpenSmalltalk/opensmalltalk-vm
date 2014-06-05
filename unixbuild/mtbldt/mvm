@@ -19,7 +19,7 @@ test -f config.h || ../../platforms/unix/config/configure INTERP=cointerpmt \
 	--without-npsqueak \
 	CC="gcc -m32" \
 	CFLAGS="-g $OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DCOGMTVM=1 -DDEBUGVM=0" \
-	LIBS=-lpthread \
+	LIBS="-lpthread -luuid" \
 	LDFLAGS=-Wl,-z,now
 ../../scripts/nukeversion
 rm -rf ../../$INSTALLDIR
