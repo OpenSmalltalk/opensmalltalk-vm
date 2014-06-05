@@ -1,36 +1,26 @@
-# Copied, perhaps edited, from ../../src/examplePlugins.int
+# Copied, perhaps edited, from ../../../nscogsrc/examplePlugins.int
 INTERNAL_PLUGINS = \
-ADPCMCodecPlugin \
 AsynchFilePlugin \
+BMPReadWriterPlugin \
 B2DPlugin \
 BitBltPlugin \
-BMPReadWriterPlugin \
-CroquetPlugin \
-ZipPlugin \
-DropPlugin \
 DSAPrims \
-FFTPlugin \
+DropPlugin \
 FileCopyPlugin \
 FilePlugin \
 FloatArrayPlugin \
 FloatMathPlugin \
-IA32ABI \
-JoystickTabletPlugin \
-JPEGReaderPlugin \
+ZipPlugin \
 JPEGReadWriter2Plugin \
-Klatt \
+JPEGReaderPlugin \
 LargeIntegers \
 Matrix2x3Plugin \
-MIDIPlugin \
 MiscPrimitivePlugin \
-Mpeg3Plugin \
+IA32ABI \
 RePlugin \
 SecurityPlugin \
-SerialPlugin \
 SocketPlugin \
-SoundCodecPrims \
-SoundGenerationPlugin \
-SoundPlugin \
-StarSqueakPlugin \
 SurfacePlugin \
+UUIDPlugin \
+UnixOSProcessPlugin \
 VMProfileLinuxSupportPlugin
