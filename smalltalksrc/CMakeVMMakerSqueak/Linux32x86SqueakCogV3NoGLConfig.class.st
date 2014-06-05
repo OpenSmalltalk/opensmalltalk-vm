@@ -13,7 +13,7 @@ SqueakCogUnixNoGLConfig generate
 Class {
 	#name : #Linux32x86SqueakCogV3NoGLConfig,
 	#superclass : #Linux32x86SqueakCogV3Config,
-	#category : #'CMakeVMMakerSqueak-Linuxx86_64-32Compatibility'
+	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
 
 { #category : #'as yet unclassified' }
