@@ -1,11 +1,13 @@
 "
-An Unix64SqueakCogV3 has not been coded yet.
+Linux64SqueakCogSpur has not been coded yet.
+
+I am a placeholder for the upcoming Spur release in 2014.
 
 "
 Class {
 	#name : #Linux64SqueakCogSpur,
 	#superclass : #Linux32x86SqueakCogV3Config,
-	#category : #'CMakeVMMakerSqueak-Linux64'
+	#category : #'CMakeVMMakerSqueak-Linuxx86_64'
 }
 
 { #category : #'as yet unclassified' }

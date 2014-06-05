@@ -1,53 +1,67 @@
 "
-A slightly modified configuration, which avoids linking with openGL libraries.
+This is a concrete class which generates a StackVM for Raspbian (debian on RaspberryPi). But in cross compilation usage.
 
 
-For more information, check the class comments of all the superclasses.
+Usage: 
+SqueakStackCrossRaspbianFastBltConfig generateWithSources 
+or:
+SqueakStackCrossRaspbianFastBltConfig generate
 
 
-Usage:
-SqueakCogUnixNoGLConfig generateWithSources.
-Or:
-SqueakCogUnixNoGLConfig generate
+Fore more information, check the class comments of all the superclasses.
+
 "
 Class {
-	#name : #Linux32x86SqueakCogV3NoGLConfig,
-	#superclass : #Linux32x86SqueakCogV3Config,
-	#category : #'CMakeVMMakerSqueak-Linuxx86_64-32Compatibility'
+	#name : #Linux32ARMv6StackV3CrossRaspbianFastBltConfig,
+	#superclass : #Linux32ARMv6StackV3CrossRaspbianConfig,
+	#category : #'CMakeVMMakerSqueak-Linux32ARMv6'
 }
 
 { #category : #'as yet unclassified' }
-Linux32x86SqueakCogV3NoGLConfig >> addDriver: name sources: aSources generator: cmakeGen [
-
-	| cfg srcs |
-	
-	srcs := aSources inject: '' into: [:res :each | res , ' "', each, '"' ].
-	cfg := cmakeGen
-		captureOutputDuring: [
-			cmakeGen printHeader;
-			project: name;
-			include: '../directories.cmake';
-		
-			message: 'Adding module: ', name;
-			
-			addDefinitions:  self compilerFlags;
-			addDefinitions: '-fPIC -DPIC';
-			set: #sources to: srcs;
-			cmd: 'add_library' params: name, ' SHARED ${sources}'; 
-			includeDirectories: '${crossDir}/plugins/FilePlugin';
-			set: 'LIBRARY_OUTPUT_PATH' toString: self outputDir;
-			cmd: 'set_target_properties' params: name , ' PROPERTIES PREFIX "" SUFFIX "" 
-			LINK_FLAGS "-lSM -lICE -ldl -lpthread -lm -lnsl -lX11"'
-	].
-	
-		
-	self write: cfg toFile: ((self buildDir / name) assureExistence / cmakeGen outputFileName) fullName.
-	cmakeGen addSubdirectory:  name.
-	
+Linux32ARMv6StackV3CrossRaspbianFastBltConfig >> commonCompilerFlags [
+	^ super commonCompilerFlags, { '-DENABLE_FAST_BLT' }.
 ]
 
 { #category : #'as yet unclassified' }
-Linux32x86SqueakCogV3NoGLConfig >> configH [
+Linux32ARMv6StackV3CrossRaspbianFastBltConfig >> compilerFlagsDebug [
+
+	^ {
+		'-g3'. 
+		'-D_GNU_SOURCE'. 
+		'-DITIMER_HEARTBEAT=1'. 
+		'-DNO_VM_PROFILE=1'. 
+		'-DDEBUGVM=1' }
+]
+
+{ #category : #'as yet unclassified' }
+Linux32ARMv6StackV3CrossRaspbianFastBltConfig >> compilerFlagsRelease [
+"
+THIS FLAGS ARE CRASHING COMPILER 
+-fschedule-insns2 
+-fschedule-insns 
+
+THIS FLAGS ARE CRASHING VM
+-ftree-pre  
+-fcaller-saves 
+
+THIS FLAGS ARE WORKING 
+-O1 -fthread-jumps -falign-functions -falign-jumps -falign-loops -falign-labels -fcrossjumping -fcse-follow-jumps -fcse-skip-blocks -fdelete-null-pointer-checks -fdevirtualize -fexpensive-optimizations -fgcse -fgcse-lm -finline-small-functions -findirect-inlining -fipa-sra -foptimize-sibling-calls -fpeephole2 -fregmove -freorder-blocks -frerun-cse-after-loop -freorder-functions  -fsched-interblock -fsched-spec -fstrict-aliasing -fstrict-overflow  -ftree-switch-conversion -ftree-vrp
+
+THIS IS LIKE: -O2 -fno-tree-pre -fno-caller-saves 
+
+"
+
+	^ {
+		'-g0'. 
+		'-D_GNU_SOURCE'. 
+		'-DNDEBUG'. 
+		'-DITIMER_HEARTBEAT=1'. 
+		'-DNO_VM_PROFILE=1'. 
+		'-DDEBUGVM=0' }
+]
+
+{ #category : #'as yet unclassified' }
+Linux32ARMv6StackV3CrossRaspbianFastBltConfig >> configH [
 	" right now its like  that "
 	^ '
 #ifndef __sq_config_h
@@ -60,8 +74,7 @@ Linux32x86SqueakCogV3NoGLConfig >> configH [
 /* package options */
 
 #define	USE_X11 1
-
-#undef	USE_X11_GLX 1
+#define	USE_X11_GLX 1
 /* #undef	USE_QUARTZ */
 /* #undef	USE_QUARTZ_CGL */
 /* #undef	USE_RFB */
@@ -107,8 +120,8 @@ Linux32x86SqueakCogV3NoGLConfig >> configH [
 /* #undef	HAVE_LIBUTIL_H */
 #define	HAVE_STROPTS_H 1
 
-#undef	HAVE_GL_GL_H 1
-#undef	HAVE_OPENGL_GL_H 
+#define	HAVE_GL_GL_H 1
+/* #undef	HAVE_OPENGL_GL_H */
 
 /* #undef	NEED_SUNOS_H */
 
@@ -154,6 +167,7 @@ Linux32x86SqueakCogV3NoGLConfig >> configH [
 /* #undef	size_t */
 /* #undef	socklen_t */
 
+#define	ENABLE_FAST_BLT 1
 #define	squeakInt64 long long
 
 /* architecture */
@@ -193,14 +207,35 @@ Linux32x86SqueakCogV3NoGLConfig >> configH [
 # include "glibc.h"
 #endif
 
+
+/* used by UUID plugin: */
+
+#define HAVE_UUID_H 1
+
 #endif /* __sq_config_h */
 																																																																					
 																																																																				'
 ]
 
 { #category : #'as yet unclassified' }
-Linux32x86SqueakCogV3NoGLConfig >> defaultExternalPlugins [
-	"Removed the B3DAcceleratorPlugin since we don't have OpenGL bindings here"
-	^ (super defaultExternalPlugins copyWithoutAll: #(#B3DAcceleratorPlugin #ThreadedIA32FFIPlugin #InternetConfigPlugin))
+Linux32ARMv6StackV3CrossRaspbianFastBltConfig >> configureBitBltSimulation: maker [
+	"extra rules for BitBltSimulation"
 
+	maker includeDirectories: '${pluginCross}'.
+	maker set: 'can_use_assembler' to: 'TRUE'.
+	maker cmd: 'enable_language' params: 'ASM'.
+	maker set: 'CMAKE_ASM_COMPILE_OBJECT' to: '"asasm -cpu 6 -I ${pluginCross} -o <OBJECT> <SOURCE>"'.
+	
+	maker addCrossSources: #(
+		'BitBltArm.c'
+		'BitBltArmSimd.c'
+		'BitBltDispatch.c'
+		'BitBltGeneric.c'
+		'BitBltArmLinux.c'
+		'BitBltArmSimdAlphaBlend.s'
+		'BitBltArmSimdBitLogical.s'
+		'BitBltArmSimdPixPaint.s'
+		'BitBltArmSimdSourceWord.s'
+	).
+	
 ]
