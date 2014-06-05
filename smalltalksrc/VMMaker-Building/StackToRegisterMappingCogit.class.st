@@ -3080,7 +3080,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorComparison [
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 	| nextPC postBranchPC targetBytecodePC primDescriptor branchDescriptor nExts
-	  unforwardArg unforwardRcvr jumpEqual jumpNotEqual rcvrReg argReg |
+	  unforwardArg unforwardRcvr jumpEqual jumpNotEqual rcvrReg argReg result |
 	<var: #jumpEqual type: #'AbstractInstruction *'>
 	<var: #jumpNotEqual type: #'AbstractInstruction *'>
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
@@ -3090,9 +3090,11 @@ StackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 	(self ssTop type = SSConstant
 	 and: [(self ssValue: 1) type = SSConstant]) ifTrue:
 		[self assert: primDescriptor isMapped not.
-		 ^self ssPushConstant: (self ssTop constant = (self ssValue: 1) constant
+		 result := self ssTop constant = (self ssValue: 1) constant
 									ifTrue: [objectMemory trueObject]
-									ifFalse: [objectMemory falseObject])].
+									ifFalse: [objectMemory falseObject].
+		 self ssPop: 2.
+		 ^self ssPushConstant: result].
 
 	nextPC := bytecodePC + primDescriptor numBytes.
 	nExts := 0.
