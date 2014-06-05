@@ -165,6 +165,7 @@ Class {
 		'cmDynSuperEntryOffset',
 		'mnuCall',
 		'interpretCall',
+		'interpretLabel',
 		'endCPICCase0',
 		'endCPICCase1',
 		'numPICCases',
@@ -3685,7 +3686,7 @@ Cogit >> compileCPIC: cPIC Case0: case0CogMethod Case1Method: case1Method tag: c
 		ifFalse:
 			[self assert: (case1Method isNil or: [(objectMemory isYoungObject: case1Method) not]).
 			 operand := case1Method.
-			 targetEntry := case1Method isNil ifTrue: [mnuCall] ifFalse: [interpretCall]].
+			 targetEntry := case1Method isNil ifTrue: [mnuCall] ifFalse: [interpretLabel]].
 
 	jumpNext := self compileCPICEntry.
 	self MoveCw: 0 R: SendNumArgsReg.
@@ -3863,7 +3864,13 @@ Cogit >> compilePICProlog: numArgs [
 	 returns. The abort routine must be called;  In the callee the PIC is located
 	 by adding the relevant offset to the return address of the call."
 	mnuCall := self MoveCq: 0 R: ClassReg.
-	interpretCall := self Call: (self picAbortTrampolineFor: numArgs).
+	backEnd hasLinkRegister
+		ifTrue:
+			[interpretLabel := self PushR: LinkReg.
+			 interpretCall := self Call: (self picAbortTrampolineFor: numArgs)]
+		ifFalse:
+			[interpretLabel :=
+			 interpretCall := self Call: (self picAbortTrampolineFor: numArgs)].
 	^0
 ]
 
