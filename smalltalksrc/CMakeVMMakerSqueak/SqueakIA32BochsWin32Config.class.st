@@ -1,6 +1,6 @@
 Class {
 	#name : #SqueakIA32BochsWin32Config,
-	#superclass : #CPlatformConfig,
+	#superclass : #SqueakIA32BochsConfig,
 	#category : #'CMakeVMMakerSqueak-IA32-Bochs'
 }
 

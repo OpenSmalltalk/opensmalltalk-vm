@@ -15,8 +15,8 @@ SqueakStackUnix64w32CompatLibsSlackwareConfig generate
 Class {
 	#name : #Linux32x86SqueakStackV3SlackwareConfig,
 	#superclass : #Linux32x86SqueakStackV3Config,
-	#traits : 'TSqueakStackUnixConfig - {#externalPlugins. #internalPlugins}',
-	#classTraits : 'TSqueakStackUnixConfig classTrait',
+	#traits : 'TCPlatformConfigForSqueak',
+	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#category : #'CMakeVMMakerSqueak-Linuxx86_64-32Compatibility'
 }
 

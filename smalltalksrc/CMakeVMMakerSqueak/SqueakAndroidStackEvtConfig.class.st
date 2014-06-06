@@ -8,12 +8,24 @@ Ported from pharo to squeak.
 Class {
 	#name : #SqueakAndroidStackEvtConfig,
 	#superclass : #CPlatformConfig,
+	#traits : 'TCPlatformConfigForSqueak',
+	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#category : #'CMakeVMMakerSqueak-Android'
 }
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig class >> availableBuilds [
+	^SqueakCMakeVMMakerAbstractBuilder noBuildConfigurations
+]
 
 { #category : #directories }
 SqueakAndroidStackEvtConfig >> buildDir [
 	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].
+]
+
+{ #category : #'squeak compatibility' }
+SqueakAndroidStackEvtConfig >> buildDirName [
+	^'do not build. see class comment'
 ]
 
 { #category : #'source generation' }
