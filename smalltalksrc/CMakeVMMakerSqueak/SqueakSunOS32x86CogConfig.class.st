@@ -1,6 +1,8 @@
 Class {
 	#name : #SqueakSunOS32x86CogConfig,
 	#superclass : #CPlatformConfig,
+	#traits : 'TCPlatformConfigForSqueak',
+	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#category : #'CMakeVMMakerSqueak-SunOS32x86'
 }
 

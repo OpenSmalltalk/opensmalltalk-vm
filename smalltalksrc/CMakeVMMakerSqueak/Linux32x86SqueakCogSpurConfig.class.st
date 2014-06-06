@@ -1,6 +1,6 @@
 Class {
 	#name : #Linux32x86SqueakCogSpurConfig,
-	#superclass : #CPlatformConfig,
+	#superclass : #Linux32x86Config,
 	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
 

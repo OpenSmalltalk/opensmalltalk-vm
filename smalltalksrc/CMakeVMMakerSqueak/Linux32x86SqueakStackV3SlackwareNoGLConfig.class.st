@@ -10,8 +10,8 @@ SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig generate
 Class {
 	#name : #Linux32x86SqueakStackV3SlackwareNoGLConfig,
 	#superclass : #Linux32x86SqueakStackV3SlackwareConfig,
-	#traits : 'TSqueakStackUnixConfig - {#externalPlugins. #internalPlugins}',
-	#classTraits : 'TSqueakStackUnixConfig classTrait',
+	#traits : 'AnObsoleteTSqueakStackUnixConfig - {#externalPlugins. #internalPlugins}',
+	#classTraits : 'AnObsoleteTSqueakStackUnixConfig classTrait',
 	#category : #'CMakeVMMakerSqueak-Linuxx86_64-32Compatibility'
 }
 

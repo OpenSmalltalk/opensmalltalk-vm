@@ -13,8 +13,17 @@ Fore more information, check the class comments of all the superclasses.
 Class {
 	#name : #Linux32x86SqueakCogV3Config,
 	#superclass : #CogFamilyUnixConfig,
+	#traits : 'TCPlatformConfigForSqueak',
+	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
+
+{ #category : #'as yet unclassified' }
+Linux32x86SqueakCogV3Config class >> availableBuilds [
+	"Answer a subset of SqueakCMakeVMMakerAbstractBuilder allBuildConfigurations"
+	self flag:'tty'. "This really should be at the top of the inheritence tree, but that resides in Pharo's code. Please refactor me"
+	self subclassResponsibility
+]
 
 { #category : #'as yet unclassified' }
 Linux32x86SqueakCogV3Config class >> licenseTemplate [

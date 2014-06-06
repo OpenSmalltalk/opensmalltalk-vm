@@ -47,6 +47,8 @@ Fore more information, check the class comments of all the superclasses.
 Class {
 	#name : #SqueakWin32x86CogFamilyConfig,
 	#superclass : #CPlatformConfig,
+	#traits : 'TCPlatformConfigForSqueak',
+	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#category : #'CMakeVMMakerSqueak-Win32x86'
 }
 
