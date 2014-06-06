@@ -1,4 +1,5 @@
 #!/bin/bash  -x
+. ./envvars.sh
 
 # Author tty.
 # 2014-05-01
@@ -119,11 +120,7 @@ get_four_five(){
 
   check_required
 
-  wget -c http://ftp.squeak.org/4.5/$SQUEAK45ZIP
-#  cp ~/$SQUEAK45ZIP ./    #<--script development timesaver. do a copy instead of a wget
-  unzip $SQUEAK45ZIP
-  rm $SQUEAK45ZIP
-
+  ./getsqueak45.sh
 
   cp -p $SQUEAK45.image              $SQUEAK45RESOURCES/CogVMMaker.image
   cp -p $SQUEAK45.changes            $SQUEAK45RESOURCES/CogVMMaker.changes
@@ -202,17 +199,7 @@ get_four_five_standard_vm(){
   cd    $STANDARDINSTALLDIRECTORY
 
   check_required
-
-  if [ -d  ../$COGINSTALLDIRECTORY ]; then     #   if it exists copy the cog stuff over for reuse and  clean it up otherwise downaload via svn
-    cp -R ../$COGINSTALLDIRECTORY/$SQUEAK45APP ./
-    rm -f   $SQUEAK45RESOURCES/CogVMMaker.*
-    rm -Rf  $SQUEAK45RESOURCES/platforms
-    rm -Rf  $SQUEAK45RESOURCES/oscogvm
-  else
-    wget -c http://ftp.squeak.org/4.5/$SQUEAK45ZIP
-    unzip $SQUEAK45ZIP
-    rm $SQUEAK45ZIP
-  fi
+  ./getsqueak45.sh
 
   cp -p $SQUEAK45.image              $SQUEAK45RESOURCES/StandardVMMaker.image
   cp -p $SQUEAK45.changes            $SQUEAK45RESOURCES/StandardVMMaker.changes
@@ -390,10 +377,6 @@ NO_ARGS=0
 E_OPTERROR=85
 
 #Squeak 4.5 specific variables
-SQUEAK45ZIP=Squeak-4.5-All-in-One.zip
-SQUEAK45APP=Squeak-4.5-All-in-One.app
-SQUEAK45RESOURCES=$SQUEAK45APP/Contents/Resources
-SQUEAK45=$SQUEAK45RESOURCES/Squeak4.5-13680
 SQUEAK45IMAGE="Squeak4.5-13680.image"
 SQUEAK45VM="DETERMINED IN launch_and_configure_four_five()"
 

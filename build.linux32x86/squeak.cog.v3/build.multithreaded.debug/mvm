@@ -1,0 +1,21 @@
+#!/bin/sh
+INSTALLDIR=cogmtdbglinuxht
+if [ $# -ge 1 ]; then
+	INSTALLDIR="$1"; shift
+fi
+
+echo -n "clean? "
+read a
+case $a in
+n|no|N|NO)	echo "ok but this isn't safe!!";;
+*)			test -f Makefile && make reallyclean
+esac
+test -f config.h || ../../platforms/unix/config/configure INTERP=cointerpmt \
+	--without-npsqueak \
+	CC="gcc -m32" \
+	CFLAGS="-g -O0 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=1 -DDEBUGVM=1" \
+	LIBS=-lpthread \
+	LDFLAGS=-Wl,-z,now
+../../scripts/nukeversion
+rm -rf ../../../products/$INSTALLDIR
+make install prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR

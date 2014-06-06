@@ -17,7 +17,7 @@ esac
 test -f config.h || ../../../platforms/unix/config/configure --with-src=nscogsrc \
 	--without-vm-display-fbdev --without-npsqueak \
 	CC="gcc -m32" \
-	CFLAGS="-g $OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DITIMER_HEARTBEAT=1 -DMULTIPLEBYTECODESETS=1 -DDEBUGVM=0 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer" \
+	CFLAGS="-g $OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DITIMER_HEARTBEAT=1 -DDEBUGVM=0 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer" \
 	LIBS="-lpthread -luuid" \
 	LDFLAGS=-Wl,-z,now
 ../../../scripts/nukeversion

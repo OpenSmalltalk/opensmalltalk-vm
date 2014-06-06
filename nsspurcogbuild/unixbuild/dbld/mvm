@@ -17,7 +17,7 @@ test -f config.h || ../../../platforms/unix/config/configure \
 		--with-src=nsspursrc --with-plugins=nscogsrc/plugins \
 		--without-vm-display-fbdev --without-npsqueak \
 	CC="gcc -m32" \
-	CFLAGS="-g3 -O0 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=0 -DITIMER_HEARTBEAT=1 -DMULTIPLEBYTECODESETS=1 -DDEBUGVM=1" \
+	CFLAGS="-g3 -O0 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=0 -DITIMER_HEARTBEAT=1 -DDEBUGVM=1" \
 	LIBS="-lpthread -luuid" \
 	LDFLAGS=-Wl,-z,now
 ../../../scripts/nukeversion
