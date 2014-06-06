@@ -16,10 +16,16 @@ My subclasses, implement them by super calls back to me. Yes, it is not efficien
 Class {
 	#name : #Linux32x86SqueakStackV3Config,
 	#superclass : #StackUnixConfig,
-	#traits : 'TSqueakStackUnixConfig - {#externalPlugins. #internalPlugins}',
-	#classTraits : 'TSqueakStackUnixConfig classTrait',
+	#traits : 'TCPlatformConfigForSqueak',
+	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
+
+{ #category : #'as yet unclassified' }
+Linux32x86SqueakStackV3Config class >> availableBuilds [
+	"Answer a subset of SqueakCMakeVMMakerAbstractBuilder allBuildConfigurations"
+	self subclassResponsibility
+]
 
 { #category : #accessing }
 Linux32x86SqueakStackV3Config class >> licenseTemplate [

@@ -1,21 +1,6 @@
-"
-I am a configuration for Cog on BSD.
-
-
-
-
-Usage:
-SqueakCogFreeBSDConfig generateWithSources
-or:
-SqueakCogFreeBSDConfig generate
-
-
-"
 Class {
 	#name : #SqueakBSDCogV3Config,
 	#superclass : #Linux32x86SqueakCogV3Config,
-	#traits : 'TSqueakStackUnixConfig - {#externalPlugins. #internalPlugins}',
-	#classTraits : 'TSqueakStackUnixConfig classTrait',
 	#category : #'CMakeVMMakerSqueak-BSD32x86'
 }
 
@@ -89,7 +74,14 @@ SqueakBSDCogV3Config >> defaultInternalPlugins [
 
 ]
 
-{ #category : #accessing }
+{ #category : #'as yet unclassified' }
+SqueakBSDCogV3Config >> dirFrom: aStringOrDir [
+	^ aStringOrDir isString
+		ifTrue: [ FileDirectory forFileName: aStringOrDir  ]
+		ifFalse: [ aStringOrDir ]
+]
+
+{ #category : #'as yet unclassified' }
 SqueakBSDCogV3Config >> executableName [
 	^ 'cogvm'
 ]
@@ -172,7 +164,7 @@ SqueakBSDCogV3Config >> validateSourcesPresent [
 		ifTrue: [	self error: 'VM source code cannot be generated without .sources file'.]		
 ]
 
-{ #category : #accessing }
+{ #category : #'as yet unclassified' }
 SqueakBSDCogV3Config >> write: aContents toFile: aFileName [
 	"write a file to current output directory (buildDir).
 	use line end convention appropriate for config platform"

@@ -7,6 +7,8 @@ I am a placeholder for the upcoming Spur release in 2014.
 Class {
 	#name : #Linux64SqueakCogSpur,
 	#superclass : #Linux32x86SqueakCogV3Config,
+	#traits : 'TCPlatformConfigForSqueak',
+	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#category : #'CMakeVMMakerSqueak-Linuxx86_64'
 }
 
