@@ -251,10 +251,21 @@ sqInt sqFileOpen(SQFile *f, char* sqFileName, sqInt sqFileNameSize, sqInt writeF
 			if (getFile(f) == NULL)
 				setFile(f, fopen(cFileName, "ab"));
 			if (getFile(f) != NULL) {
+			    /* New file created, set Mac file characteristics */
 			    char type[4],creator[4];
 				dir_GetMacFileTypeAndCreator(sqFileName, sqFileNameSize, type, creator);
 				if (strncmp(type,"BINA",4) == 0 || strncmp(type,"????",4) == 0 || *(int *)type == 0 ) 
 				    dir_SetMacFileTypeAndCreator(sqFileName, sqFileNameSize,"TEXT","R*ch");	
+			} else {
+				/* If the file could not be opened read/write and if a new file
+				   could not be created, then it may be that the file exists but
+				   does not permit read access. Try opening as a write only file,
+				   opened for append to preserve existing file contents.
+				*/
+				setFile(f, fopen(cFileName, "ab"));
+				if (getFile(f) == NULL) {
+					return interpreterProxy->success(false);
+				}
 			}
 		}
 		f->writable = true;
