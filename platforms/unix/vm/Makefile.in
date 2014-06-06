@@ -63,7 +63,7 @@ $(TARGET) : $(OBJS) Makefile
 	$(RANLIB) $(TARGET)
 
 $(blddir)/sqNamedPrims.h:	$(vmmcfg)/plugins.int
-	$(blddir)/../mkNamedPrims.sh $(vmmcfg)/plugins.int >$(blddir)/sqNamedPrims.h
+	$(blddir)/../../mkNamedPrims.sh $(vmmcfg)/plugins.int >$(blddir)/sqNamedPrims.h
 
 # rebuild sqNamedPrims.o if sqNamedPrims.h changes
 

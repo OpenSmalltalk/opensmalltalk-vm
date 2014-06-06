@@ -10,11 +10,11 @@ case $a in
 n|no|N|NO)	echo "ok but this isn't safe!!";;
 *)			test -f Makefile && make reallyclean
 esac
-test -f config.h || ../../platforms/unix/config/configure --with-src=spursrc --with-plugins=src/plugins --without-npsqueak \
+test -f config.h || ../../../platforms/unix/config/configure --with-src=spursrc --with-plugins=src/plugins --without-npsqueak \
 	CC="gcc -m32" \
 	CFLAGS="-g3 -O0 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=0 -DDEBUGVM=1" \
 	LIBS="-lpthread -luuid" \
 	LDFLAGS=-Wl,-z,now
-../../scripts/nukeversion
+../../../scripts/nukeversion
 rm -rf ../../../products/$INSTALLDIR
 make install prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR

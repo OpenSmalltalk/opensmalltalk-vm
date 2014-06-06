@@ -10,12 +10,12 @@ case $a in
 n|no|N|NO)	echo "ok but this isn't safe!!";;
 *)			test -f Makefile && make reallyclean
 esac
-test -f config.h || ../../platforms/unix/config/configure INTERP=cointerpmt \
+test -f config.h || ../../../platforms/unix/config/configure INTERP=cointerpmt \
 	--without-npsqueak \
 	CC="gcc -m32" \
 	CFLAGS="-g -O0 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=1 -DDEBUGVM=1" \
 	LIBS=-lpthread \
 	LDFLAGS=-Wl,-z,now
-../../scripts/nukeversion
+../../../scripts/nukeversion
 rm -rf ../../../products/$INSTALLDIR
 make install prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR

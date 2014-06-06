@@ -14,14 +14,14 @@ case $a in
 n|no|N|NO)	echo "ok but this isn't safe!!";;
 *)			rm config.h; test -f Makefile && make reallyclean
 esac
-test -f config.h || ../../platforms/unix/config/configure \
+test -f config.h || ../../../platforms/unix/config/configure \
 	--with-src=spurstacksrc --with-plugins=src/plugins --disable-cogit \
 	--without-vm-display-fbdev --without-npsqueak \
 	CC="gcc -m32" \
 	CFLAGS="-g $OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DITIMER_HEARTBEAT=1 -DDEBUGVM=1 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer" \
 	LIBS="-lpthread -luuid" \
 	LDFLAGS=-Wl,-z,now
-../../scripts/nukeversion
+../../../scripts/nukeversion
 rm -rf ../../../products/$INSTALLDIR
 # would prefer make install prefix=`readlink -f \`pwd\`/../../products/$INSTALLDIR`
 # but older linux readlinks lack the -f flag
