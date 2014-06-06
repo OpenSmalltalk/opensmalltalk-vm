@@ -245,6 +245,11 @@ sqInt sqFileOpen(SQFile *f, char* sqFileName, sqInt sqFileNameSize, sqInt writeF
 			   try opening it in write mode to create a new, empty file.
 			*/
 			setFile(f, fopen(cFileName, "w+b"));
+			/* and if w+b fails, try ab to open a write-only file in append mode,
+			   not wb which opens a write-only file but overwrites its contents.
+			 */
+			if (getFile(f) == NULL)
+				setFile(f, fopen(cFileName, "ab"));
 			if (getFile(f) != NULL) {
 			    char type[4],creator[4];
 				dir_GetMacFileTypeAndCreator(sqFileName, sqFileNameSize, type, creator);
