@@ -9,7 +9,7 @@ Fore more information, check the class comments of all the superclasses.
 "
 Class {
 	#name : #SqueakMacOSV3Config,
-	#superclass : #CPlatformConfig,
+	#superclass : #SqueakMacOSConfig,
 	#instVars : [
 		'resourcesDir'
 	],

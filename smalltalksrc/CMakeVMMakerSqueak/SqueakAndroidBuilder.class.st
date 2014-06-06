@@ -4,15 +4,15 @@ I serve as a facade to ease building Cog VM with CMakeVMMakerSqueak configs
 
 "
 Class {
-	#name : #SqueakBSDX86Builder,
+	#name : #SqueakAndroidBuilder,
 	#superclass : #SqueakCMakeVMMakerAbstractBuilder,
 	#category : #'CMakeVMMakerSqueak-Builder'
 }
 
 { #category : #documentation }
-SqueakBSDX86Builder class >> availableBuildTypesForTarget: aSymbol [
+SqueakAndroidBuilder class >> availableBuildTypesForTarget: aSymbol [
 	[
-	((Smalltalk at: aSymbol)  category) = 'CMakeVMMakerSqueak-BSD32x86'
+	((Smalltalk at: aSymbol)  category) = 'CMakeVMMakerSqueak-Android'
 		ifTrue:[	^super availableBuildsTypesForTarget: aSymbol inCategory: ((Smalltalk at: aSymbol)  category).]
 		ifFalse:[self inform: (self userErrorInvalidTarget: aSymbol)]
 	] ifError:[self inform: (self userErrorInvalidTarget: aSymbol)].
@@ -20,6 +20,6 @@ SqueakBSDX86Builder class >> availableBuildTypesForTarget: aSymbol [
 ]
 
 { #category : #documentation }
-SqueakBSDX86Builder class >> availableTargets [
-	^super availableTargets: 'CMakeVMMakerSqueak-BSD32x86'
+SqueakAndroidBuilder class >> availableTargets [
+	^super availableTargets: 'CMakeVMMakerSqueak-Android'
 ]

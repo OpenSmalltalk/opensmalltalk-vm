@@ -1,16 +1,31 @@
 "
 A TSqueakCPlatformConfig provides a template of methods which must be customized for Squeak compatibility with  pharo CMakeVMMaker classes.
 
-Instance Variables
+I exist because tty does not have (and, should not have) permission to modify  to the existing inheritence tree in the pharo CMakeVMMaker categories.
+
+
+
+
+
 
 "
 Trait {
-	#name : #TSqueakCPlatformConfig,
+	#name : #TCPlatformConfigForSqueak,
 	#category : #CMakeVMMakerSqueak
 }
 
 { #category : #accessing }
-TSqueakCPlatformConfig classSide >> licenseTemplate [
+TCPlatformConfigForSqueak classSide >> availableBuilds [
+	"
+	 ^SqueakCMakeVMMakerAbstractBuilder noBuildConfigurations.
+	  ^SqueakCMakeVMMakerAbstractBuilder allBuildConfigurations.
+	 or roll your own.
+	"
+	self required
+]
+
+{ #category : #accessing }
+TCPlatformConfigForSqueak classSide >> licenseTemplate [
 	^'Squeak {1} license information
 ==============================
 
@@ -64,7 +79,7 @@ interpreter.
 ]
 
 { #category : #accessing }
-TSqueakCPlatformConfig classSide >> pluginsTemplate [
+TCPlatformConfigForSqueak classSide >> pluginsTemplate [
 	^'{4} {1} ships with this plugins already built:
 		
 Internal: 
@@ -79,55 +94,55 @@ External:
 ]
 
 { #category : #'squeak compatibility' }
-TSqueakCPlatformConfig >> buildDir [
+TCPlatformConfigForSqueak >> buildDir [
 	self required
 ]
 
 { #category : #'squeak compatibility' }
-TSqueakCPlatformConfig >> buildDirName [
+TCPlatformConfigForSqueak >> buildDirName [
 	self required
 ]
 
 { #category : #'squeak compatibility' }
-TSqueakCPlatformConfig >> compilerFlags [
+TCPlatformConfigForSqueak >> compilerFlags [
 	self required
 ]
 
 { #category : #'squeak compatibility' }
-TSqueakCPlatformConfig >> dirFrom: aStringOrDir [
+TCPlatformConfigForSqueak >> dirFrom: aStringOrDir [
 	^ aStringOrDir isString
 		ifTrue: [ FileDirectory forFileName: aStringOrDir  ]
 		ifFalse: [ aStringOrDir ]
 ]
 
 { #category : #'squeak compatibility' }
-TSqueakCPlatformConfig >> outputDir [
+TCPlatformConfigForSqueak >> outputDir [
 	self required
 
 
 ]
 
 { #category : #'squeak compatibility' }
-TSqueakCPlatformConfig >> setupDirectories:gen [
+TCPlatformConfigForSqueak >> setupDirectories:gen [
 	self required
 ]
 
 { #category : #'squeak compatibility' }
-TSqueakCPlatformConfig >> srcDir [
+TCPlatformConfigForSqueak >> srcDir [
 	self required
 ]
 
 { #category : #'squeak compatibility' }
-TSqueakCPlatformConfig >> topDir [
+TCPlatformConfigForSqueak >> topDir [
 	self required
 ]
 
 { #category : #'squeak compatibility' }
-TSqueakCPlatformConfig >> validateSourcesPresent [
+TCPlatformConfigForSqueak >> validateSourcesPresent [
 	self required
 ]
 
 { #category : #'squeak compatibility' }
-TSqueakCPlatformConfig >> write: aContents toFile: aFileName [
+TCPlatformConfigForSqueak >> write: aContents toFile: aFileName [
 	self required
 ]

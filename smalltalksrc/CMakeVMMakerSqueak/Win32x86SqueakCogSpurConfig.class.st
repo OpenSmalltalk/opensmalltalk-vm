@@ -1,6 +1,8 @@
 Class {
 	#name : #Win32x86SqueakCogSpurConfig,
 	#superclass : #CPlatformConfig,
+	#traits : 'TCPlatformConfigForSqueak',
+	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#category : #'CMakeVMMakerSqueak-Win32x86'
 }
 
