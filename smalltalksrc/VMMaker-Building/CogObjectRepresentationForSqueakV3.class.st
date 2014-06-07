@@ -114,13 +114,13 @@ CogObjectRepresentationForSqueakV3 >> genActiveContextTrampoline [
 	jumpSingle jmpTarget: cogit Label.
 	^cogit genTrampolineFor: #ceActiveContext
 		called: 'ceActiveContextTrampoline'
-		callJumpBar: true
 		numArgs: 0
 		arg: nil
 		arg: nil
 		arg: nil
 		arg: nil
 		saveRegs: false
+		pushLinkReg: true
 		resultReg: ReceiverResultReg
 		appendOpcodes: true
 ]

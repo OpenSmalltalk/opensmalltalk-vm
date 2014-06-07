@@ -1785,13 +1785,13 @@ SimpleStackBasedCogit >> genMustBeBooleanTrampolineFor: boolean called: trampoli
 	self AddCq: boolean R: TempReg.
 	^self genTrampolineFor: #ceSendMustBeBoolean:
 		called: trampolineName
-		callJumpBar: true
 		numArgs: 1
 		arg: TempReg
 		arg: nil
 		arg: nil
 		arg: nil
 		saveRegs: false
+		pushLinkReg: true
 		resultReg: nil
 		appendOpcodes: true
 ]
@@ -1875,11 +1875,13 @@ SimpleStackBasedCogit >> genPrimReturnEnterCogCodeEnilopmart: profiling [
 					inSmalltalk: [self simulatedTrampolineFor: #ceActivateFailingPrimitiveMethod:]).
 
 	profiling ifTrue:
-		["Call ceCheckProfileTick: to record sample and then continue.
-		  newMethod should be up-to-date."
+		["Call ceCheckProfileTick: to record sample and then continue.  newMethod
+		 should be up-to-date.  Need to save and restore the link reg around this call."
 		 jmpSample jmpTarget: self Label.
+		 backEnd hasLinkRegister ifTrue: [self PushR: LinkReg].
 		 self CallRT: (self cCode: '(unsigned long)ceCheckProfileTick'
 						inSmalltalk: [self simulatedTrampolineFor: #ceCheckProfileTick]).
+		 backEnd hasLinkRegister ifTrue: [self PopR: LinkReg].
 		 self Jump: continuePostSample]
 ]
 
