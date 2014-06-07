@@ -86,6 +86,18 @@ Linux32x86Config >> oscogvm [
 ]
 
 { #category : #'squeak compatibility' }
+Linux32x86Config >> outputDir [
+	^ outputDir ifNil: [ outputDir := (FileDirectory default directoryNamed: (self oscogvm,FileDirectory slash, self dirOutput)) assureExistence]
+	
+
+]
+
+{ #category : #'squeak compatibility' }
+Linux32x86Config >> srcDir [
+		^ srcDir ifNil: [ srcDir := (self topDir directoryNamed: 'src' )]
+]
+
+{ #category : #'squeak compatibility' }
 Linux32x86Config >> topDir [
 	"N.B. this is a clash between Trait usage and Inheritence usage due to restrictions on modifying pharo's source"
 	^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: self oscogvm ]

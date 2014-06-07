@@ -104,6 +104,16 @@ SqueakMacOSConfig >> dirBuildPlatform [
 ]
 
 { #category : #'squeak compatibility' }
+SqueakMacOSConfig >> outputDir [
+	^ outputDir ifNil: [ outputDir := (self topDir / self outputDirName) ]	
+]
+
+{ #category : #'squeak compatibility' }
+SqueakMacOSConfig >> srcDir [
+		^ srcDir ifNil: [ srcDir := (self topDir directoryNamed: 'src' )]
+]
+
+{ #category : #'squeak compatibility' }
 SqueakMacOSConfig >> topDir [
 		^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: self oscogvm ]
 ]

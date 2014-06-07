@@ -59,6 +59,17 @@ SqueakSunOS32x86CogConfig >> dirBuildPlatform [
 	^self dirSunOS32x86
 ]
 
+{ #category : #'squeak compatibility' }
+SqueakSunOS32x86CogConfig >> outputDir [
+	^ outputDir ifNil: [ outputDir := (self topDir / self outputDirName) ]	
+
+]
+
+{ #category : #'squeak compatibility' }
+SqueakSunOS32x86CogConfig >> srcDir [
+		^ srcDir ifNil: [ srcDir := (self topDir directoryNamed: 'src' )]
+]
+
 { #category : #'as yet unclassified' }
 SqueakSunOS32x86CogConfig >> todo [
 	self flag:'tty'

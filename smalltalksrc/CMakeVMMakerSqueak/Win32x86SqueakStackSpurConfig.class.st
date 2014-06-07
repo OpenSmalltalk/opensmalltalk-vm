@@ -34,7 +34,7 @@ Win32x86SqueakStackSpurConfig >> buildType: aSymbol [
 { #category : #plugins }
 Win32x86SqueakStackSpurConfig >> defaultExternalPlugins [
 	"expertly cut-n-pasted from Cog/cygwinbuild/plugins.ext"
-	#(
+	^#(
 		BochsIA32Plugin 
 		SqueakFFIPrims 
 		Win32OSProcessPlugin
@@ -44,7 +44,7 @@ Win32x86SqueakStackSpurConfig >> defaultExternalPlugins [
 { #category : #plugins }
 Win32x86SqueakStackSpurConfig >> defaultInternalPlugins [
 	"expertly cut-n-pasted from Cog/cygwinbuild/plugins.int"
-	#(
+	^#(
 		ADPCMCodecPlugin 
 		AsynchFilePlugin 
 		B3DAcceleratorPlugin 
@@ -94,6 +94,18 @@ Win32x86SqueakStackSpurConfig >> dirBuildLanguageVMMM [
 Win32x86SqueakStackSpurConfig >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
 	^self dirWin32x86
+]
+
+{ #category : #'squeak compatibility' }
+Win32x86SqueakStackSpurConfig >> outputDir [
+	^ outputDir ifNil: [ outputDir := (self topDir / self outputDirName) ]	
+
+
+]
+
+{ #category : #'squeak compatibility' }
+Win32x86SqueakStackSpurConfig >> srcDir [
+		^ srcDir ifNil: [ srcDir := (self topDir directoryNamed: 'src' )]
 ]
 
 { #category : #'as yet unclassified' }

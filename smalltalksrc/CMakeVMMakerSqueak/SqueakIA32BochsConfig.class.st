@@ -60,6 +60,16 @@ SqueakIA32BochsConfig >> dirBuildPlatform [
 ]
 
 { #category : #'squeak compatibility' }
+SqueakIA32BochsConfig >> outputDir [
+	^ outputDir ifNil: [ outputDir := (self topDir / self outputDirName) ]	
+]
+
+{ #category : #'squeak compatibility' }
+SqueakIA32BochsConfig >> srcDir [
+		^ srcDir ifNil: [ srcDir := (self topDir directoryNamed: 'src' )]
+]
+
+{ #category : #'squeak compatibility' }
 SqueakIA32BochsConfig >> topDir [
 		^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: self oscogvm ]
 ]
