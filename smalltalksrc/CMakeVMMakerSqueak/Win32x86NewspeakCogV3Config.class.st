@@ -32,6 +32,59 @@ Win32x86NewspeakCogV3Config >> buildType: aSymbol [
 	buildType:= aSymbol
 ]
 
+{ #category : #plugins }
+Win32x86NewspeakCogV3Config >> defaultExternalPlugins [
+	"expertly cut-n-pasted from Cog/cygwinbuild/plugins.ext"
+	#(
+		BochsIA32Plugin 
+		SqueakFFIPrims 
+		Win32OSProcessPlugin
+	)
+]
+
+{ #category : #plugins }
+Win32x86NewspeakCogV3Config >> defaultInternalPlugins [
+	"expertly cut-n-pasted from Cog/cygwinbuild/plugins.int"
+	#(
+		ADPCMCodecPlugin 
+		AsynchFilePlugin 
+		B3DAcceleratorPlugin 
+		B2DPlugin 
+		BitBltPlugin 
+		BMPReadWriterPlugin 
+		CroquetPlugin 
+		ZipPlugin 
+		DropPlugin 
+		DSAPrims 
+		FFTPlugin 
+		FilePlugin 
+		FloatArrayPlugin 
+		FloatMathPlugin 
+		HostWindowPlugin 
+		IA32ABI 
+		JoystickTabletPlugin 
+		JPEGReaderPlugin 
+		JPEGReadWriter2Plugin 
+		Klatt 
+		LargeIntegers 
+		LocalePlugin 
+		Matrix2x3Plugin 
+		MIDIPlugin 
+		MiscPrimitivePlugin 
+		Mpeg3Plugin 
+		RePlugin 
+		SecurityPlugin 
+		SerialPlugin 
+		SocketPlugin 
+		SoundCodecPrims 
+		SoundGenerationPlugin 
+		SoundPlugin 
+		StarSqueakPlugin 
+		SurfacePlugin 
+		UUIDPlugin
+	)
+]
+
 { #category : #cmake }
 Win32x86NewspeakCogV3Config >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"

@@ -43,6 +43,42 @@ Linux32x86SqueakStackSpurConfig >> buildType: aSymbol [
 	buildType:= aSymbol
 ]
 
+{ #category : #plugins }
+Linux32x86SqueakStackSpurConfig >> defaultExternalPlugins [
+	^ #(SqueakSSL	)
+]
+
+{ #category : #plugins }
+Linux32x86SqueakStackSpurConfig >> defaultInternalPlugins [
+" cut-n-paste from Cog/build.linux32x86/squeak.stack.spur/build"
+	^ #(
+		AsynchFilePlugin 
+		BMPReadWriterPlugin 
+		B2DPlugin 
+		BitBltPlugin 
+		DSAPrims 
+		DropPlugin 
+		FileCopyPlugin 
+		FilePlugin 
+		FloatArrayPlugin 
+		FloatMathPlugin 
+		ZipPlugin 
+		JPEGReadWriter2Plugin 
+		JPEGReaderPlugin 
+		LargeIntegers 
+		Matrix2x3Plugin 
+		MiscPrimitivePlugin 
+		IA32ABI 
+		RePlugin 
+		SecurityPlugin 
+		SocketPlugin 
+		SurfacePlugin 
+		UUIDPlugin 
+		UnixOSProcessPlugin 
+		VMProfileLinuxSupportPlugin
+		)
+]
+
 { #category : #cmake }
 Linux32x86SqueakStackSpurConfig >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur"
