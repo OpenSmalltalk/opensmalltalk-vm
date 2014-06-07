@@ -1836,25 +1836,30 @@ SimpleStackBasedCogit >> genPrimReturnEnterCogCodeEnilopmart: profiling [
 
 	"Switch back to the Smalltalk stack.  Stack better be in either of these two states:
 		success:	stackPointer	->	result (was receiver)
-									arg1
-									...
-									argN
-									return pc
-		failure:						receiver
-									arg1
-									...
+										arg1
+										...
+										argN
+										return pc
+		failure:							receiver
+										arg1
+										...
 					stackPointer	->	argN
-									return pc
+										return pc
 	We push the instructionPointer to reestablish the return pc in the success case,
 	but leave it to ceActivateFailingPrimitiveMethod: to do so in the failure case."
 
-	self MoveAw: coInterpreter instructionPointerAddress R: ClassReg.
-	backEnd genLoadStackPointers.
-	self PushR: ClassReg. "Restore return pc"
-	"Fetch result from stack"
-	self MoveMw: BytesPerWord r: SPReg R: ReceiverResultReg.
-	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord.
+	backEnd hasLinkRegister
+		ifTrue:
+			[backEnd genLoadStackPointers.									"Switch back to Smalltalk stack."
+			 self MoveMw: 0 r: SPReg R: ReceiverResultReg.						"Fetch result from stack"
+			 self MoveAw: coInterpreter instructionPointerAddress R: LinkReg.	"Get and restore ret pc"
+			 self RetN: BytesPerWord]											"Return, popping result from stack"
+		ifFalse:
+			[self MoveAw: coInterpreter instructionPointerAddress R: ClassReg.	"Get return pc"
+			 backEnd genLoadStackPointers.									"Switch back to Smalltalk stack."
+			 self MoveMw: 0 r: SPReg R: ReceiverResultReg.						"Fetch result from stack"
+			 self MoveR: ClassReg Mw: 0 r: SPReg.								"Restore return pc"
+			 self RetN: 0].														"Return, popping result from stack"
 
 	"Primitive failed.  Invoke C code to build the frame and continue."
 	jmpFail jmpTarget: (self MoveAw: coInterpreter newMethodAddress R: SendNumArgsReg).
