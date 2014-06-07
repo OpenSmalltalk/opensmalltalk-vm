@@ -1,3 +1,8 @@
+"
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
+
+
+"
 Class {
 	#name : #Win32x86SqueakStackSpurConfig,
 	#superclass : #CPlatformConfig,

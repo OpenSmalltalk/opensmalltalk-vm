@@ -4,11 +4,12 @@ A SqueakStackUnix64w32CompatLibsSlackwareConfig is a configuration for CMake on 
 
 
 Usage:
-SqueakStackVMBuilder 	buildSlackwareUnix64w32Libs
+Linux32x86SqueakStackV3SlackwareConfig generateWithSources.
 Or:
-SqueakStackUnix64w32CompatLibsSlackwareConfig generateWithSources.
+Linux32x86SqueakStackV3SlackwareConfig generate
 Or:
-SqueakStackUnix64w32CompatLibsSlackwareConfig generate
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+
 
 
 "

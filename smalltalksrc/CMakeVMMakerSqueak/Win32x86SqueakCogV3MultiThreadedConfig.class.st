@@ -1,14 +1,17 @@
 "
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
+
 This is a concrete class which generates a thread-aware VM and threaded FFI CogVM for Win32. This VM is normally known as CogMTVM.
 
 
 For more information, check the class comments of all the superclasses.
 
 Usage:
-SqueakCogMTWindowsConfig generateWithSources
+Win32x86SqueakCogV3MultiThreadedConfig generateWithSources
 Or:
-SqueakCogMTWindowsConfig generate
-
+Win32x86SqueakCogV3MultiThreadedConfig generate
+Or: 
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to invoke me.
 "
 Class {
 	#name : #Win32x86SqueakCogV3MultiThreadedConfig,

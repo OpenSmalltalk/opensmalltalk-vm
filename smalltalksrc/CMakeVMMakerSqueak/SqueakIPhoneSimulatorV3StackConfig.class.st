@@ -3,10 +3,13 @@ N.B. tty.
 
 Honestly, I have know idea how to use this (:
 
-Usage?:
-SqueakStackIPhoneSimulatorConfig generateWithSources
-Or?:
-SqueakStackIPhoneSimulatorConfig generate
+
+Usage:
+  SqueakIPhoneSimulatorV3StackConfig generate
+Or:
+  SqueakIPhoneSimulatorV3StackConfig generateWithSources
+Or:
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
 
 "
 Class {

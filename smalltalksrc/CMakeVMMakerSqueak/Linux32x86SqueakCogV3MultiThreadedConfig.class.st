@@ -3,8 +3,8 @@ This is a concrete class which generates a thread-aware VM and threaded FFI CogV
 
 For more information, check the class comments of all the superclasses.
 
-SqueakCogMTUnixConfig generateWithSources.
-SqueakCogMTUnixConfig generate.
+Linux32x86SqueakCogV3MultiThreadedConfig generateWithSources.
+Linux32x86SqueakCogV3MultiThreadedConfig generate.
 
 "
 Class {

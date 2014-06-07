@@ -1,8 +1,24 @@
+"
+A SqueakBSDCogV3Config  configures a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
+
+Usage:
+  SqueakBSDCogV3Config generate
+Or:
+  SqueakBSDCogV3Config generateWithSources
+Or:
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+"
 Class {
 	#name : #SqueakBSDCogV3Config,
 	#superclass : #Linux32x86SqueakCogV3Config,
 	#category : #'CMakeVMMakerSqueak-BSD32x86'
 }
+
+{ #category : #'as yet unclassified' }
+SqueakBSDCogV3Config class >> availableBuilds [
+	"SqueakCMakeVMMakerAbstractBuilder  allBuildConfigurations"
+	^#(#assert #debug  #release )
+]
 
 { #category : #accessing }
 SqueakBSDCogV3Config >> addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs [

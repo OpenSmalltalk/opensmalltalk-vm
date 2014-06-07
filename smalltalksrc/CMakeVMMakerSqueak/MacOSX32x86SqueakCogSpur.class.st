@@ -1,3 +1,7 @@
+"
+A MacOSX32x86SqueakCogSpur  configures a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
+
+"
 Class {
 	#name : #MacOSX32x86SqueakCogSpur,
 	#superclass : #SqueakMacOSV3Config,

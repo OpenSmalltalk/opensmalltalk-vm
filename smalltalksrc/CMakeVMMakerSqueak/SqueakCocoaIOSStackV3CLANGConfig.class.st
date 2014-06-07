@@ -3,11 +3,13 @@ Experimental configuration for compiling using clang compiler
 
 For more information, check the class comments of all the superclasses.
 
-Usage:
 
-SqueakStackCocoaIOSCLANGConfig generateWithSources
-OR:
-SqueakStackCocoaIOSCLANGConfig generate
+Usage:
+  SqueakCocoaIOSStackV3CLANGConfig generate
+Or:
+  SqueakCocoaIOSStackV3CLANGConfig generateWithSources
+Or:
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
 
 "
 Class {

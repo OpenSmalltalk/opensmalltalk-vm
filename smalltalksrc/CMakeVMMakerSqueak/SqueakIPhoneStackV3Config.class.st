@@ -1,9 +1,13 @@
 "
 A SqueakStackIPhoneConfig 
 
-Usage:
 
+Usage:
+  SqueakIPhoneStackV3Config generate
 Or:
+  SqueakIPhoneStackV3Config generateWithSources
+Or:
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
 
 "
 Class {
