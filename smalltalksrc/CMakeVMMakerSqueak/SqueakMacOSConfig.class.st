@@ -35,6 +35,62 @@ SqueakMacOSConfig >> buildType: aSymbol [
 	buildType:= aSymbol
 ]
 
+{ #category : #plugins }
+SqueakMacOSConfig >> defaultExternalPlugins [
+	"cut-n-pasted with exquisite expertise from Cog/macbuild/plugin.ext"
+	^#(BochsIA32Plugin 
+		CroquetPlugin 
+		SqueakFFIPrims 
+		SqueakSSL 
+		FloatArrayPlugin 
+		FloatMathPlugin 
+		Mpeg3Plugin 
+		UnixOSProcessPlugin
+		)
+]
+
+{ #category : #plugins }
+SqueakMacOSConfig >> defaultInternalPlugins [
+	"cut-n-past from Cog/macbuild/plugin.int"
+	^#(ADPCMCodecPlugin 
+		AioPlugin 
+		AsynchFilePlugin 
+		B3DAcceleratorPlugin 
+		B2DPlugin 
+		BitBltPlugin 
+		BMPReadWriterPlugin 
+		ZipPlugin 
+		DropPlugin 
+		DSAPrims 
+		FFTPlugin 
+		FilePlugin 
+		HostWindowPlugin 
+		IA32ABI 
+		InternetConfigPlugin 
+		JoystickTabletPlugin 
+		JPEGReaderPlugin 
+		JPEGReadWriter2Plugin 
+		Klatt 
+		LargeIntegers 
+		LocalePlugin 
+		MacMenubarPlugin 
+		Matrix2x3Plugin 
+		MIDIPlugin 
+		MiscPrimitivePlugin 
+		RePlugin 
+		SecurityPlugin 
+		SerialPlugin 
+		SocketPlugin 
+		SoundCodecPrims 
+		SoundGenerationPlugin 
+		SoundPlugin 
+		StarSqueakPlugin 
+		SurfacePlugin 
+		UUIDPlugin 
+		VMProfileMacSupportPlugin 
+		)
+]
+
 { #category : #cmake }
 SqueakMacOSConfig >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. default is squeak.cog.v3"

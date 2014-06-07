@@ -38,6 +38,16 @@ SqueakIA32BochsConfig >> buildType: aSymbol [
 	buildType:= aSymbol
 ]
 
+{ #category : #plugins }
+SqueakIA32BochsConfig >> defaultExternalPlugins [
+	^ #()
+]
+
+{ #category : #plugins }
+SqueakIA32BochsConfig >> defaultInternalPlugins [
+	^ #()
+]
+
 { #category : #cmake }
 SqueakIA32BochsConfig >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur the default is squeak.cog.v3"
