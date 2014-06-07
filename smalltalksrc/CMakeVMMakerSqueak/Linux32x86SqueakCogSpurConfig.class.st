@@ -1,3 +1,14 @@
+"
+A Linux32x86SqueakCogSpurConfig  configures a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
+
+Usage:
+Linux32x86SqueakCogSpurConfig generate
+Or:
+Linux32x86SqueakCogSpurConfig generateWithSources
+Or:
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+
+"
 Class {
 	#name : #Linux32x86SqueakCogSpurConfig,
 	#superclass : #Linux32x86Config,

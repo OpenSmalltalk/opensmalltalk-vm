@@ -1,16 +1,12 @@
 "
-I configure a StackVM for Linux. 
+A Linux32x86SqueakStackV3Config  configures a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
-My method protocol 'squeak compatibility' contains all the methods in pharo's CMakeVMMaker that I must implement differently/override. 
-
-I use Trait TSqueckStackUnixConfig which forces me and my subclasses to implement pharo CMakeVMMaker methods.
-
-My subclasses, implement them by super calls back to me. Yes, it is not efficient, but in this case, subclassing is not possible due to existing pharo heirarchy
-
-
-
-
-
+Usage: 
+Linux32x86SqueakStackV3Config generate
+Or: 
+Linux32x86SqueakStackV3Config generateWithSources
+Or: 
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
 
 "
 Class {
@@ -23,8 +19,10 @@ Class {
 
 { #category : #'as yet unclassified' }
 Linux32x86SqueakStackV3Config class >> availableBuilds [
-	"Answer a subset of SqueakCMakeVMMakerAbstractBuilder allBuildConfigurations"
-	self subclassResponsibility
+	"SqueakCMakeVMMakerAbstractBuilder  allBuildConfigurations
+	^SqueakCMakeVMMakerAbstractBuilder noBuildConfigurations"
+	^#(#assert  #release )
+
 ]
 
 { #category : #accessing }

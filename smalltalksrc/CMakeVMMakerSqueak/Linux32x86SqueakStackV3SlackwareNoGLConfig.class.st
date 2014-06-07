@@ -1,17 +1,18 @@
 "
 Usage:
-SqueakStackVMBuilder 	buildSlackwareUnix64w32Libs
+Linux32x86SqueakStackV3SlackwareNoGLConfig generateWithSources.
 Or:
-SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig generateWithSources.
+Linux32x86SqueakStackV3SlackwareNoGLConfig generate
 Or:
-SqueakStackUnix64w32CompatLibsSlackwareNoGLConfig generate
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+
 
 "
 Class {
 	#name : #Linux32x86SqueakStackV3SlackwareNoGLConfig,
 	#superclass : #Linux32x86SqueakStackV3SlackwareConfig,
-	#traits : 'AnObsoleteTSqueakStackUnixConfig - {#externalPlugins. #internalPlugins}',
-	#classTraits : 'AnObsoleteTSqueakStackUnixConfig classTrait',
+	#traits : 'TCPlatformConfigForSqueak',
+	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#category : #'CMakeVMMakerSqueak-Linuxx86_64-32Compatibility'
 }
 

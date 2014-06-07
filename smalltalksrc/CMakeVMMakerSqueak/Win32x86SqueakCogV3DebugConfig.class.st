@@ -1,10 +1,12 @@
 "
-A SqueakCogWindowsDebugConfig adds a debugging stuff to its parent config
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
 Usage:
-SqueakCogMTWindowsDebugConfig generateWithSources
+Win32x86SqueakCogV3DebugConfig generateWithSources
 Or:
-SqueakCogMTWindowsDebugConfig generate
+Win32x86SqueakCogV3DebugConfig generate
+Or: 
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to invoke me.
 
 "
 Class {

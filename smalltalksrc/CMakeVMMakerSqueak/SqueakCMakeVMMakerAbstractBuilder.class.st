@@ -65,6 +65,12 @@ SqueakCMakeVMMakerAbstractBuilder class >> configurationDictionary: aCategoryNam
 ]
 
 { #category : #'as yet unclassified' }
+SqueakCMakeVMMakerAbstractBuilder class >> configurationsCategory [
+	"Answer the category in which the Builder's configurations reside."
+	self subclassResponsibility
+]
+
+{ #category : #'as yet unclassified' }
 SqueakCMakeVMMakerAbstractBuilder class >> noBuildConfigurations [
 	^#(#noBuildsImplementedForThisConfiguration)
 ]

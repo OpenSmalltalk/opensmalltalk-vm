@@ -3,10 +3,14 @@ This is a concrete class which generates a thread-aware VM and threaded FFI CogV
 
 For more information, check the class comments of all the superclasses.
 
+
 Usage:
-SqueakCogMTCocoaIOSConfig generateWithSources
-or:
-SqueakCogMTCocoaIOSConfig generate
+  SqueakCocoaIOSCogV3MultiThreadedConfig generate
+Or:
+  SqueakCocoaIOSCogV3MultiThreadedConfig generateWithSources
+Or:
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+
 
 "
 Class {

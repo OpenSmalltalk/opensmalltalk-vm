@@ -1,12 +1,15 @@
 "
+I need to go away. In the meantime....
+
 This is a concrete class which generates a DEBUG StackVM for Unix systems. This VM is normally known as a debug StackVM. The debug means that it is compiled with all the necessary symbolic symbols for debugging and can be debugged, for example, with GDB.
 
 Usage:
-SqueakStackUnixDebugConfig generateWithSources
+Linux32x86SqueakStackV3DebugConfig generateWithSources
 Or:
-SqueakStackUnixDebugConfig generate
+Linux32x86SqueakStackV3DebugConfig generate
 
-Fore more information, check the class comments of all the superclasses.
+Or:
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
 
 "
 Class {
@@ -14,6 +17,13 @@ Class {
 	#superclass : #Linux32x86SqueakStackV3Config,
 	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
+
+{ #category : #'as yet unclassified' }
+Linux32x86SqueakStackV3DebugConfig class >> availableBuilds [
+	self flag:'tty'. "having debug sublclasses makes no sense with the generateForRelease, generateForDebug ,generateForFOO idiom going forward. I need to go away"
+	^#(  #debug )
+
+]
 
 { #category : #'as yet unclassified' }
 Linux32x86SqueakStackV3DebugConfig >> defaultExternalPlugins [

@@ -3,11 +3,13 @@ This is a concrete class which generates a StackVM for Raspbian (debian on Raspb
 
 
 Usage: 
-SqueakStackCrossRaspbianConfig generateWithSources
+Linux32ARMv6StackV3CrossRaspbianConfig generateWithSources
 Or:
-SqueakStackCrossRaspbianConfig generate
+Linux32ARMv6StackV3CrossRaspbianConfig generate
 
-Fore more information, check the class comments of all the superclasses.
+Or:
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+
 
 "
 Class {
