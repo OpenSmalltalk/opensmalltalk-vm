@@ -49,6 +49,9 @@ Class {
 	#superclass : #CPlatformConfig,
 	#traits : 'TCPlatformConfigForSqueak',
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
+	#instVars : [
+		'buildType'
+	],
 	#category : #'CMakeVMMakerSqueak-Win32x86'
 }
 
@@ -153,7 +156,9 @@ SqueakWin32x86CogFamilyConfig >> buildDir [
 
 { #category : #directories }
 SqueakWin32x86CogFamilyConfig >> buildDirName [
-	^ 'cmake_cygwinbuild'
+	buildType isNil
+		ifTrue:[^self dirBuildPlatform, self dirBuildLanguageVMMM, 'build']
+		ifFalse:[^self dirBuildPlatform, self dirBuildLanguageVMMM, buildType asString]
 ]
 
 { #category : #'build script' }
@@ -168,6 +173,11 @@ cmake -G "MSYS Makefiles" .
 make
 
 '
+]
+
+{ #category : #'squeak compatibility' }
+SqueakWin32x86CogFamilyConfig >> buildType: aSymbol [
+	buildType:=aSymbol
 ]
 
 { #category : #'compiler flags' }
@@ -439,6 +449,18 @@ SqueakWin32x86CogFamilyConfig >> configureWin32OSProcessPlugin: maker [
 
 ]
 
+{ #category : #cmake }
+SqueakWin32x86CogFamilyConfig >> dirBuildLanguageVMMM [
+	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
+	^self squeakCogV3
+]
+
+{ #category : #cmake }
+SqueakWin32x86CogFamilyConfig >> dirBuildPlatform [
+	"the directory for the platform. example: build.linux32x86"
+	^self dirWin32x86
+]
+
 { #category : #accessing }
 SqueakWin32x86CogFamilyConfig >> executableType [
 	^ 'WIN32'
@@ -571,7 +593,7 @@ SqueakWin32x86CogFamilyConfig >> srcDir [
 
 { #category : #directories }
 SqueakWin32x86CogFamilyConfig >> topDir [
-	^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: 'oscogvm' ]
+		^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: self oscogvm ]
 ]
 
 { #category : #'source generation' }

@@ -14,7 +14,9 @@ Class {
 	#category : #'CMakeVMMakerSqueak-BSD32x86'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #'squeak compatibility' }
 SqueakFreeBSDCogV3Config >> buildDirName [
-	^ 'cmake_build.linux32x86/squeak.cog.v3/bld'
+	buildType isNil
+		ifTrue:[^self dirBuildPlatform, self dirBuildLanguageVMMM, 'build']
+		ifFalse:[^self dirBuildPlatform, self dirBuildLanguageVMMM, buildType asString]
 ]

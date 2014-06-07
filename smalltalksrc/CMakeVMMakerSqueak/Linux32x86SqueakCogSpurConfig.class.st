@@ -55,6 +55,12 @@ Linux32x86SqueakCogSpurConfig >> defaultInternalPlugins [
 ]
 
 { #category : #'as yet unclassified' }
+Linux32x86SqueakCogSpurConfig >> dirBuildLanguageVMMM [
+	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
+	^self squeakCogSpur
+]
+
+{ #category : #'as yet unclassified' }
 Linux32x86SqueakCogSpurConfig >> todo [
 	self flag:'tty'
 ]

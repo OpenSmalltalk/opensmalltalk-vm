@@ -4,13 +4,13 @@ I am a facade.
 I query, and invoke CMakeVMMakerSqueak configurations.
 "
 Class {
-	#name : #SqueakLinuxMacOSPowerPCBuilder,
+	#name : #SqueakMacOSPowerPCBuilder,
 	#superclass : #SqueakCMakeVMMakerAbstractBuilder,
 	#category : #'CMakeVMMakerSqueak-Builder'
 }
 
 { #category : #documentation }
-SqueakLinuxMacOSPowerPCBuilder class >> availableBuildTypesForTarget: aSymbol [
+SqueakMacOSPowerPCBuilder class >> availableBuildTypesForTarget: aSymbol [
 	self flag:'tty'. "I do not like the hard coding of the category name. Also, how will inform kludge up auto-builds?"
 	[
 	((Smalltalk at: aSymbol)  category) =  (self configurationsCategory)
@@ -21,11 +21,11 @@ SqueakLinuxMacOSPowerPCBuilder class >> availableBuildTypesForTarget: aSymbol [
 ]
 
 { #category : #documentation }
-SqueakLinuxMacOSPowerPCBuilder class >> availableTargets [
+SqueakMacOSPowerPCBuilder class >> availableTargets [
 	^super availableTargets: (self configurationsCategory)
 ]
 
 { #category : #documentation }
-SqueakLinuxMacOSPowerPCBuilder class >> configurationsCategory [
+SqueakMacOSPowerPCBuilder class >> configurationsCategory [
 	^'CMakeVMMakerSqueak-MacOSPowerPC'
 ]

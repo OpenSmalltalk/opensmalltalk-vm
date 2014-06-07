@@ -594,7 +594,7 @@ SqueakMacOSV3Config >> srcDir [
 
 { #category : #directories }
 SqueakMacOSV3Config >> topDir [
-	^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: 'oscogvm' ]
+		^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: self oscogvm ]
 ]
 
 { #category : #'source generation' }

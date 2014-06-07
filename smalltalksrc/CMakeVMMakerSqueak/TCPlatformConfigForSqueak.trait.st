@@ -104,7 +104,54 @@ TCPlatformConfigForSqueak >> buildDirName [
 ]
 
 { #category : #'squeak compatibility' }
+TCPlatformConfigForSqueak >> buildType: aSymbol [
+	self required
+]
+
+{ #category : #'squeak compatibility' }
 TCPlatformConfigForSqueak >> compilerFlags [
+	self required
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirBSD32x86 [
+	^'cmake_build.bsd32x86'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirBuild [
+	^'build'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirBuildAssert [
+	^'build.assert'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirBuildDebug [
+	^'build.debug'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirBuildDebugITimerHeartbeat [
+	^'build.debug.itimerheartbeat'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirBuildITimerHeartbeat [
+	^'build.itimerheartbeat'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirBuildLanguageVMMM [
+	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
+	self required
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirBuildPlatform [
+	"the directory for the platform. example: build.linux32x86"
 	self required
 ]
 
@@ -113,6 +160,96 @@ TCPlatformConfigForSqueak >> dirFrom: aStringOrDir [
 	^ aStringOrDir isString
 		ifTrue: [ FileDirectory forFileName: aStringOrDir  ]
 		ifFalse: [ aStringOrDir ]
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirIA32Bochs [
+	^'cmake_build.ia32bochs'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirIOS [
+	^'cmake_build.ios'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirLinux32Armv6 [
+	^'cmake_build.linux32armv6'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirLinux32x86 [
+	^'cmake_build.linux32x86'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirLinux32x8664 [
+	^'cmake_build.linux32x86_64'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirMacOS [
+	^'cmake_build.macos'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirMacOSPowerPC [
+	^'cmake_build.macospowerpc'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirMacOSX32x86 [
+	^'cmake_build.macosx32x86'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirSunOS32x86 [
+	^'cmake_build.sunos32x86'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirSunOS32x8664 [
+	^'cmake_build.sunos32x86_64'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirWin32x86 [
+	^'cmake_build.win32x86'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> newspeakCogSpur [
+	^'newspeak.cog.spur'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> newspeakCogV3 [
+	^'newspeak.cog.v3'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> newspeakSistaSpur [
+	^'newspeak.sista.Spur'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> newspeakSistaV3 [
+	^'newspeak.sista.v3'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> newspeakStackSpur [
+	^'newspeak.stack.spur'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> newspeakStackV3 [
+	^'newspeak.stack.v3'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> oscogvm [
+	^'oscogvm'
 ]
 
 { #category : #'squeak compatibility' }
@@ -125,6 +262,36 @@ TCPlatformConfigForSqueak >> outputDir [
 { #category : #'squeak compatibility' }
 TCPlatformConfigForSqueak >> setupDirectories:gen [
 	self required
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> squeakCogSpur [
+	^'squeak.cog.spur'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> squeakCogV3 [
+	^'squeak.cog.v3'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> squeakSistaSpur [
+	^'squeak.sista.Spur'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> squeakSistaV3 [
+	^'squeak.sista.v3'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> squeakStackSpur [
+	^'squeak.stack.spur'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> squeakStackV3 [
+	^'squeak.stack.v3'
 ]
 
 { #category : #'squeak compatibility' }
