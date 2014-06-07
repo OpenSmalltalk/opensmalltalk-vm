@@ -203,6 +203,16 @@ TCPlatformConfigForSqueak >> dirMacOSX32x86 [
 ]
 
 { #category : #cmake }
+TCPlatformConfigForSqueak >> dirOutput [
+	^'results'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirSource [
+	^'src'
+]
+
+{ #category : #cmake }
 TCPlatformConfigForSqueak >> dirSunOS32x86 [
 	^'cmake_build.sunos32x86'
 ]

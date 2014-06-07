@@ -91,6 +91,17 @@ Linux32x86SqueakStackSpurConfig >> dirBuildPlatform [
 	^self dirLinux32x86
 ]
 
+{ #category : #'squeak compatibility' }
+Linux32x86SqueakStackSpurConfig >> outputDir [
+		^ outputDir ifNil: [ outputDir := (FileDirectory default directoryNamed: (self oscogvm,FileDirectory slash, self dirOutput)) assureExistence]
+
+]
+
+{ #category : #'squeak compatibility' }
+Linux32x86SqueakStackSpurConfig >> srcDir [
+		^ srcDir ifNil: [ srcDir := (self topDir directoryNamed: 'src' )]
+]
+
 { #category : #'as yet unclassified' }
 Linux32x86SqueakStackSpurConfig >> todo [
 	self flag:'tty'

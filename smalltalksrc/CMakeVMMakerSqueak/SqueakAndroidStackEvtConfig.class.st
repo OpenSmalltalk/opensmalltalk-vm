@@ -380,7 +380,7 @@ SqueakAndroidStackEvtConfig >> mkFileList: anArray baseDir: aDir [
 
 { #category : #directories }
 SqueakAndroidStackEvtConfig >> outputDir [
-	outputDir ifNil: [ outputDir := (self topDir / self outputDirName) ]	
+	^outputDir ifNil: [ outputDir := (self topDir / self outputDirName) ]	
 	
 ]
 
