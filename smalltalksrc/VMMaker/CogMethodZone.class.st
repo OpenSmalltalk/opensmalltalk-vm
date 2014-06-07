@@ -621,7 +621,8 @@ CogMethodZone >> relocateAndPruneYoungReferrers [
 		  and: [cogMethod cmRefersToYoung]) ifTrue:
 			[self assert: source < (dest - BytesPerWord).
 			 cogMethod objectHeader ~= 0 ifTrue:
-				[cogMethod := coInterpreter cCoerceSimple: cogMethod asInteger + cogMethod objectHeader
+				[cogMethod := coInterpreter
+									cCoerceSimple: cogMethod asInteger + cogMethod objectHeader asInteger
 									to: #'CogMethod *'].
 			 objectMemory longAt: (dest := dest - BytesPerWord) put: cogMethod asInteger].
 		 source := source - BytesPerWord].

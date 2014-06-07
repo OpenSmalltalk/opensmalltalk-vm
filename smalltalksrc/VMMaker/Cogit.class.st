@@ -510,7 +510,7 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 	self declareC: #(abstractOpcodes stackCheckLabel
 					blockEntryLabel blockEntryNoContextSwitch
 					stackOverflowCall sendMiss sendMissCall entry noCheckEntry dynSuperEntry
-					mnuCall interpretCall endCPICCase0 endCPICCase1)
+					mnuCall interpretCall interpretLabel endCPICCase0 endCPICCase1)
 			as: #'AbstractInstruction *'
 				in: aCCodeGenerator.
 	aCCodeGenerator
@@ -5004,13 +5004,13 @@ Cogit >> genSafeTrampolineFor: aRoutine called: aString arg: regOrConst0 arg: re
 	^self
 		genTrampolineFor: aRoutine
 		called: aString
-		callJumpBar: true
 		numArgs: 2
 		arg: regOrConst0
 		arg: regOrConst1
 		arg: nil
 		arg: nil
 		saveRegs: true
+		pushLinkReg: true
 		resultReg: nil
 		appendOpcodes: false
 ]
@@ -7628,7 +7628,7 @@ Cogit >> printTrampolineTable [
 		coInterpreter
 			printHex: (trampolineAddresses at: i + 1) asInteger;
 			print: ': ';
-			print: (trampolineAddresses at: i);
+			print: (self cCoerceSimple: (trampolineAddresses at: i) to: #'char *');
 			cr]
 ]
 
