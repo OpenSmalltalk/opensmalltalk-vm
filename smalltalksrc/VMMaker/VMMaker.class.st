@@ -296,17 +296,20 @@ VMMaker class >> generate: interpreterClass with: optionsPairsArray to: srcDirNa
 ]
 
 { #category : #configurations }
-VMMaker class >> generateAllConfigurationsUnderVersionControl [
+VMMaker class >> generateAllCogConfigurationsUnderVersionControl [
 	self generateNewspeakCogVM;
 		generateNewspeakSpurCogVM;
-		generateNewspeakSpurStackVM;
 		generateSqueakCogVM;
 		generateSqueakCogMTVM;
-		generateSqueakStackVM;
 		generateSqueakSpurCogVM;
-		generateSqueakSpurStackVM;
 		generateSqueakCogSistaVM;
 		generateSqueakSpurCogSistaVM
+]
+
+{ #category : #configurations }
+VMMaker class >> generateAllConfigurationsUnderVersionControl [
+	self generateAllStackConfigurationsUnderVersionControl;
+		generateAllCogConfigurationsUnderVersionControl
 ]
 
 { #category : #configurations }
@@ -324,6 +327,13 @@ VMMaker class >> generateAllSpurConfigurations [
 		generateNewspeakSpurStackVM;
 		generateSqueakSpurCogVM;
 		generateSqueakSpurCogSistaVM;
+		generateSqueakSpurStackVM
+]
+
+{ #category : #configurations }
+VMMaker class >> generateAllStackConfigurationsUnderVersionControl [
+	self generateNewspeakSpurStackVM;
+		generateSqueakStackVM;
 		generateSqueakSpurStackVM
 ]
 
