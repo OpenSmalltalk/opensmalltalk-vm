@@ -1213,13 +1213,6 @@ Cogit >> ArithmeticShiftRightR: reg1 R: reg2 [
 ]
 
 { #category : #'abstract instructions' }
-Cogit >> BICCq: quickConstant R: reg [
-	<inline: true>
-	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: BICCqR operand: quickConstant operand: reg
-]
-
-{ #category : #'abstract instructions' }
 Cogit >> Call: callTarget [ 
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -3922,9 +3915,8 @@ Cogit >> compileTrampolineFor: aRoutine callJumpBar: callJumpBar "<Boolean>" num
 	<inline: false>
 	"If on a RISC processor the return address needs to be pushed to the
 	 stack so that the interpreter sees the same stack layout as on CISC."
-	"tpr evil test hack for stack imbalance problem"
-	aRoutine ~=  #ceCheckForInterrupts ifTrue:[backEnd hasLinkRegister ifTrue:
-		[self PushR: LinkReg]].
+	backEnd hasLinkRegister ifTrue:
+		[self PushR: LinkReg].
 	self genSmalltalkToCStackSwitch.
 	cStackAlignment > BytesPerWord ifTrue:
 		[backEnd
@@ -4934,7 +4926,9 @@ Cogit >> genMethodAbortTrampoline [
 { #category : #initialization }
 Cogit >> genNonLocalReturnTrampoline [
 	opcodeIndex := 0.
-	"write the return address to the coInterpreter instructionPointerAddress; IA32 will have pushed it on the stack, so pop it first; ARM will have it in LR so just write it"
+	"write the return address to the coInterpreter instructionPointerAddress;
+	 CISCs will have pushed it on the stack, so pop it first; RISCs will have it in
+	 their link register so just write it directly."
 	backEnd hasLinkRegister
 		ifTrue:
 			[self MoveR: LinkReg Aw: coInterpreter instructionPointerAddress]
