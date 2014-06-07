@@ -2,9 +2,12 @@
 http://www.cmake.org/Wiki/CMake/Assembler
 
 Usage:
-SqueakStackRaspbianFastBltConfig generateWithSources
+Linux32ARMv6StackV3RaspbianFastBltConfig generateWithSources
 Or:
-SqueakStackRaspbianFastBltConfig generate
+Linux32ARMv6StackV3RaspbianFastBltConfig generate
+Or:
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+
 "
 Class {
 	#name : #Linux32ARMv6StackV3RaspbianFastBltConfig,

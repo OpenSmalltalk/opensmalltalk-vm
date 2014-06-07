@@ -3,11 +3,11 @@ This is done specifically to track down the instability issues of Cog VM on UNIX
 
 
 Usage:
-SqueakStackUnixDebugFixedVerSIConfig generateWithSources
+Linux32x86SqueakStackV3FixedVerSIConfig generateWithSources
 or:
-SqueakStackUnixDebugFixedVerSIConfig generate
-
-Fore more information, check the class comments of all the superclasses.
+Linux32x86SqueakStackV3FixedVerSIConfig generate
+Or:
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
 
 "
 Class {

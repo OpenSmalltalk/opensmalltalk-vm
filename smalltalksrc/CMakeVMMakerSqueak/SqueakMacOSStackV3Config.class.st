@@ -7,9 +7,11 @@ It is using a Carbon framework , which will be replaced by Cocoa soon. (see Coco
 For more information, check the class comments of all the superclasses.
 
 Usage:
-SqueakStackMacOSConfig generateWithSources.
+SqueakMacOSStackV3Config generateWithSources.
 Or:
-SqueakStackMacOSConfig generate.
+SqueakMacOSStackV3Config generate.
+Or:
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
 
 
 

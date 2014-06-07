@@ -1,3 +1,7 @@
+"
+A SqueakMacOSConfig  configures a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
+
+"
 Class {
 	#name : #SqueakMacOSConfig,
 	#superclass : #CPlatformConfig,
@@ -8,6 +12,5 @@ Class {
 
 { #category : #'as yet unclassified' }
 SqueakMacOSConfig class >> availableBuilds [
-	"Answer a subset of SqueakCMakeVMMakerAbstractBuilder allBuildConfigurations"
-	self subclassResponsibility
+	^SqueakCMakeVMMakerAbstractBuilder allBuildConfigurations
 ]

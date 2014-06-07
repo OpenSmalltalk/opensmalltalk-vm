@@ -6,9 +6,9 @@ For more information, check the class comments of all the superclasses.
 
 
 Usage:
-SqueakCogUnixNoGLConfig generateWithSources.
+Linux32x86SqueakCogV3NoGLConfig generateWithSources.
 Or:
-SqueakCogUnixNoGLConfig generate
+Linux32x86SqueakCogV3NoGLConfig generate
 "
 Class {
 	#name : #Linux32x86SqueakCogV3NoGLConfig,

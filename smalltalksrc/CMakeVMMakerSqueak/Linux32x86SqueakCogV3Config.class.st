@@ -2,12 +2,12 @@
 Base and concrete configuration for building a CogVM on Unix platform(s).
 
 Usage: 
-SqueakCogUnixConfig generateWithSources
+Linux32x86SqueakCogV3Config generateWithSources
 or
-SqueakCogUnixConfig generate   ""if VMMaker sources already there""
+Linux32x86SqueakCogV3Config generate   ""if VMMaker sources already there""
 
-
-Fore more information, check the class comments of all the superclasses.
+Or:
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
 
 "
 Class {
@@ -20,9 +20,8 @@ Class {
 
 { #category : #'as yet unclassified' }
 Linux32x86SqueakCogV3Config class >> availableBuilds [
-	"Answer a subset of SqueakCMakeVMMakerAbstractBuilder allBuildConfigurations"
-	self flag:'tty'. "This really should be at the top of the inheritence tree, but that resides in Pharo's code. Please refactor me"
-	self subclassResponsibility
+	^SqueakCMakeVMMakerAbstractBuilder allBuildConfigurations
+
 ]
 
 { #category : #'as yet unclassified' }

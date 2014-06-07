@@ -4,10 +4,13 @@ This is a concrete class which generates a StackVM for Mac using the Cocoa libra
 For more information, check the class comments of all the superclasses.
 
 
+
 Usage:
-SqueakStackCocoaIOSConfig generateWithSources
+  SqueakCocoaIOSStackV3Config generate
 Or:
-SqueakStackCocoaIOSConfig generate
+  SqueakCocoaIOSStackV3Config generateWithSources
+Or:
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
 
 "
 Class {

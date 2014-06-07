@@ -5,9 +5,12 @@ For more information, check the class comments of all the superclasses.
 
 
 Usage:
-SqueakCogCocoaIOSConfig generateWithSources
+  SqueakCocoaIOSCogV3Config generate
 Or:
-SqueakCogCocoaIOSConfig generate
+  SqueakCocoaIOSCogV3Config generateWithSources
+Or:
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+
 "
 Class {
 	#name : #SqueakCocoaIOSCogV3Config,
