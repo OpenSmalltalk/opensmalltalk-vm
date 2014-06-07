@@ -1,5 +1,0 @@
-#!/bin/sh
-for d in `dirname $0`/build*; do
-	(cd $d
-	 echo y | ./mvm)
-done
