@@ -10,3 +10,6 @@ case `basename \`dirname \\\`pwd\\\`\`` in
 *unixbuild)		find . -name sqUnixMain.o -print -exec rm {} \; ;;
 *linuxbuild)	find . -name sqUnixMain.o -print -exec rm {} \; ;;
 esac
+case `basename \`dirname \\\`dirname \\\\\\\`pwd\\\\\\\`\\\`\`` in
+build.linux*)	find . -name sqUnixMain.o -print -exec rm {} \; ;;
+esac
