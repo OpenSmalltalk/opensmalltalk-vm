@@ -8,16 +8,16 @@ I query, and invoke CMakeVMMakerSqueak configurations.
 
 "
 Class {
-	#name : #SqueakAndroidBuilder,
+	#name : #'SqueakLinux32X86_64_32CompatBuilder',
 	#superclass : #SqueakCMakeVMMakerAbstractBuilder,
 	#category : #'CMakeVMMakerSqueak-Builder'
 }
 
 { #category : #documentation }
-SqueakAndroidBuilder class >> availableBuildTypesForTarget: aSymbol [
+SqueakLinux32X86_64_32CompatBuilder class >> availableBuildTypesForTarget: aSymbol [
 	self flag:'tty'. "I do not like the hard coding of the category name. Also, how will inform kludge up auto-builds?"
 	[
-	((Smalltalk at: aSymbol)  category) = (self configurationsCategory)
+	((Smalltalk at: aSymbol)  category) =  (self configurationsCategory)
 		ifTrue:[	^super availableBuildsTypesForTarget: aSymbol inCategory: ((Smalltalk at: aSymbol)  category).]
 		ifFalse:[self inform: (self userErrorInvalidTarget: aSymbol)]
 	] ifError:[self inform: (self userErrorInvalidTarget: aSymbol)].
@@ -25,11 +25,11 @@ SqueakAndroidBuilder class >> availableBuildTypesForTarget: aSymbol [
 ]
 
 { #category : #documentation }
-SqueakAndroidBuilder class >> availableTargets [
+SqueakLinux32X86_64_32CompatBuilder class >> availableTargets [
 	^super availableTargets: (self configurationsCategory)
 ]
 
 { #category : #documentation }
-SqueakAndroidBuilder class >> configurationsCategory [
-	^'CMakeVMMakerSqueak-Android'
+SqueakLinux32X86_64_32CompatBuilder class >> configurationsCategory [
+	^'CMakeVMMakerSqueak-LinuxX86_64-32Compatibility'
 ]

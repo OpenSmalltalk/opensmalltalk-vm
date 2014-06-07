@@ -8,13 +8,13 @@ I query, and invoke CMakeVMMakerSqueak configurations.
 
 "
 Class {
-	#name : #SqueakAndroidBuilder,
+	#name : #SqueakWin32x86Builder,
 	#superclass : #SqueakCMakeVMMakerAbstractBuilder,
 	#category : #'CMakeVMMakerSqueak-Builder'
 }
 
 { #category : #documentation }
-SqueakAndroidBuilder class >> availableBuildTypesForTarget: aSymbol [
+SqueakWin32x86Builder class >> availableBuildTypesForTarget: aSymbol [
 	self flag:'tty'. "I do not like the hard coding of the category name. Also, how will inform kludge up auto-builds?"
 	[
 	((Smalltalk at: aSymbol)  category) = (self configurationsCategory)
@@ -25,11 +25,11 @@ SqueakAndroidBuilder class >> availableBuildTypesForTarget: aSymbol [
 ]
 
 { #category : #documentation }
-SqueakAndroidBuilder class >> availableTargets [
+SqueakWin32x86Builder class >> availableTargets [
 	^super availableTargets: (self configurationsCategory)
 ]
 
 { #category : #documentation }
-SqueakAndroidBuilder class >> configurationsCategory [
-	^'CMakeVMMakerSqueak-Android'
+SqueakWin32x86Builder class >> configurationsCategory [
+	^ 'CMakeVMMakerSqueak-Win32x86'
 ]
