@@ -4,32 +4,31 @@ I am a facade.
 I query, and invoke CMakeVMMakerSqueak configurations.
 
 
-
-
 "
 Class {
-	#name : #SqueakAndroidBuilder,
+	#name : #SqueakLinux32ARMv6Builder,
 	#superclass : #SqueakCMakeVMMakerAbstractBuilder,
 	#category : #'CMakeVMMakerSqueak-Builder'
 }
 
 { #category : #documentation }
-SqueakAndroidBuilder class >> availableBuildTypesForTarget: aSymbol [
+SqueakLinux32ARMv6Builder class >> availableBuildTypesForTarget: aSymbol [
 	self flag:'tty'. "I do not like the hard coding of the category name. Also, how will inform kludge up auto-builds?"
 	[
-	((Smalltalk at: aSymbol)  category) = (self configurationsCategory)
+	((Smalltalk at: aSymbol)  category) =  (self configurationsCategory)
 		ifTrue:[	^super availableBuildsTypesForTarget: aSymbol inCategory: ((Smalltalk at: aSymbol)  category).]
-		ifFalse:[self inform: (self userErrorInvalidTarget: aSymbol)]
+		ifFalse:[self inform: (self userErrorInvalidTarget: aSymbol). ]
 	] ifError:[self inform: (self userErrorInvalidTarget: aSymbol)].
 	^nil.
+
 ]
 
 { #category : #documentation }
-SqueakAndroidBuilder class >> availableTargets [
+SqueakLinux32ARMv6Builder class >> availableTargets [
 	^super availableTargets: (self configurationsCategory)
 ]
 
 { #category : #documentation }
-SqueakAndroidBuilder class >> configurationsCategory [
-	^'CMakeVMMakerSqueak-Android'
+SqueakLinux32ARMv6Builder class >> configurationsCategory [
+	^'CMakeVMMakerSqueak-Linux32ARMv6'
 ]

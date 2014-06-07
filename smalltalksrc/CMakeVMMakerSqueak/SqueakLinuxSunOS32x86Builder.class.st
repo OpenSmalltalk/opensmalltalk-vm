@@ -1,32 +1,31 @@
 "
-I serve as a facade to ease building Cog VM with CMakeVMMakerSqueak configs
+I am a facade.
 
-
+I query, and invoke CMakeVMMakerSqueak configurations.
 "
 Class {
-	#name : #SqueakLinuxARMBuilder,
+	#name : #SqueakLinuxSunOS32x86Builder,
 	#superclass : #SqueakCMakeVMMakerAbstractBuilder,
 	#category : #'CMakeVMMakerSqueak-Builder'
 }
 
 { #category : #documentation }
-SqueakLinuxARMBuilder class >> availableBuildTypesForTarget: aSymbol [
+SqueakLinuxSunOS32x86Builder class >> availableBuildTypesForTarget: aSymbol [
 	self flag:'tty'. "I do not like the hard coding of the category name. Also, how will inform kludge up auto-builds?"
 	[
 	((Smalltalk at: aSymbol)  category) =  (self configurationsCategory)
 		ifTrue:[	^super availableBuildsTypesForTarget: aSymbol inCategory: ((Smalltalk at: aSymbol)  category).]
-		ifFalse:[self inform: (self userErrorInvalidTarget: aSymbol). ]
+		ifFalse:[self inform: (self userErrorInvalidTarget: aSymbol)]
 	] ifError:[self inform: (self userErrorInvalidTarget: aSymbol)].
 	^nil.
-
 ]
 
 { #category : #documentation }
-SqueakLinuxARMBuilder class >> availableTargets [
+SqueakLinuxSunOS32x86Builder class >> availableTargets [
 	^super availableTargets: (self configurationsCategory)
 ]
 
 { #category : #documentation }
-SqueakLinuxARMBuilder class >> configurationsCategory [
-	^'CMakeVMMakerSqueak-Linux32ARMv6'
+SqueakLinuxSunOS32x86Builder class >> configurationsCategory [
+	^'CMakeVMMakerSqueak-SunOS32x86'
 ]

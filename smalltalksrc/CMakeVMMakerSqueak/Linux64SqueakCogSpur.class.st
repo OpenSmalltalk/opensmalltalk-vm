@@ -18,7 +18,7 @@ Class {
 	#superclass : #Linux32x86SqueakCogV3Config,
 	#traits : 'TCPlatformConfigForSqueak',
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
-	#category : #'CMakeVMMakerSqueak-Linuxx86_64'
+	#category : #'CMakeVMMakerSqueak-LinuxX86_64'
 }
 
 { #category : #'as yet unclassified' }

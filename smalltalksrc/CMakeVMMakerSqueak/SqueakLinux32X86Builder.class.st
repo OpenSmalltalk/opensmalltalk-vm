@@ -1,5 +1,7 @@
 "
-I serve as a facade to ease building Cog VM with CMakeVMMakerSqueak configs
+I am a facade.
+
+I query, and invoke CMakeVMMakerSqueak configurations.
 
 
 "
