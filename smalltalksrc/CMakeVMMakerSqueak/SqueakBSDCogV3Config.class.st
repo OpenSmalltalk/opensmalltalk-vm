@@ -54,17 +54,19 @@ SqueakBSDCogV3Config >> addDriver: name sources: aSources generator: cmakeGen ex
 	
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'squeak compatibility' }
 SqueakBSDCogV3Config >> buildDir [
 	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'squeak compatibility' }
 SqueakBSDCogV3Config >> buildDirName [
-	^'cmake_build.bsd32x86/squeak.cog.v3/bld'
+	buildType isNil
+		ifTrue:[^self dirBuildPlatform, self dirBuildLanguageVMMM, 'build']
+		ifFalse:[^self dirBuildPlatform, self dirBuildLanguageVMMM, buildType asString]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'squeak compatibility' }
 SqueakBSDCogV3Config >> compilerFlags [ 
 	| releaseFlags |
 	
@@ -78,31 +80,43 @@ SqueakBSDCogV3Config >> compilerFlags [
 			delimiter: ' ' )]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'squeak compatibility' }
 SqueakBSDCogV3Config >> defaultExternalPlugins [
 	^ (super defaultExternalPlugins copyWithoutAll: #(#IA32ABIPlugin #ThreadedIA32FFIPlugin #InternetConfigPlugin ))
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'squeak compatibility' }
 SqueakBSDCogV3Config >> defaultInternalPlugins [
 	^ (super defaultInternalPlugins copyWithoutAll: #(#IA32ABIPlugin #JoystickTabletPlugin #StarSqueakPlugin #SurfacePlugin#ThreadedIA32FFIPlugin))
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #cmake }
+SqueakBSDCogV3Config >> dirBuildLanguageVMMM [
+	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
+	^self squeakCogV3
+]
+
+{ #category : #cmake }
+SqueakBSDCogV3Config >> dirBuildPlatform [
+	"the directory for the platform. example: build.linux32x86"
+	^self dirBSD32x86
+]
+
+{ #category : #'squeak compatibility' }
 SqueakBSDCogV3Config >> dirFrom: aStringOrDir [
 	^ aStringOrDir isString
 		ifTrue: [ FileDirectory forFileName: aStringOrDir  ]
 		ifFalse: [ aStringOrDir ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'squeak compatibility' }
 SqueakBSDCogV3Config >> executableName [
 	^ 'cogvm'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'squeak compatibility' }
 SqueakBSDCogV3Config >> outputDir [
 
 	"the directory where built binaries will be stored"
@@ -111,7 +125,7 @@ SqueakBSDCogV3Config >> outputDir [
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'squeak compatibility' }
 SqueakBSDCogV3Config >> prepareVMMaker [
 	
 	| maker allPlugins |
@@ -134,7 +148,7 @@ SqueakBSDCogV3Config >> prepareVMMaker [
 	^ maker
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'squeak compatibility' }
 SqueakBSDCogV3Config >> setupDirectories: gen [
 	| dirsInclude |
 
@@ -161,17 +175,17 @@ SqueakBSDCogV3Config >> setupDirectories: gen [
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'squeak compatibility' }
 SqueakBSDCogV3Config >> srcDir [
 		^ srcDir ifNil: [ srcDir := (self topDir directoryNamed: 'src' )]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'squeak compatibility' }
 SqueakBSDCogV3Config >> topDir [
-	^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: 'oscogvm' ]
+		^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: self oscogvm ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'squeak compatibility' }
 SqueakBSDCogV3Config >> validateSourcesPresent [
 	| sources |
 	sources := Smalltalk sourcesName.
@@ -180,7 +194,7 @@ SqueakBSDCogV3Config >> validateSourcesPresent [
 		ifTrue: [	self error: 'VM source code cannot be generated without .sources file'.]		
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'squeak compatibility' }
 SqueakBSDCogV3Config >> write: aContents toFile: aFileName [
 	"write a file to current output directory (buildDir).
 	use line end convention appropriate for config platform"

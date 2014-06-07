@@ -25,6 +25,12 @@ Win32x86SqueakStackV3Config >> coreSources [
 		)
 ]
 
+{ #category : #cmake }
+Win32x86SqueakStackV3Config >> dirBuildLanguageVMMM [
+	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
+	^self squeakStackV3
+]
+
 { #category : #accessing }
 Win32x86SqueakStackV3Config >> executableName [
 	^ 'StackVM'

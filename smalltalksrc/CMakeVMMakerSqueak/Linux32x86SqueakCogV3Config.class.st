@@ -15,6 +15,9 @@ Class {
 	#superclass : #CogFamilyUnixConfig,
 	#traits : 'TCPlatformConfigForSqueak',
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
+	#instVars : [
+		'buildType'
+	],
 	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
 
@@ -140,7 +143,7 @@ Linux32x86SqueakCogV3Config >> buildDir [
 
 { #category : #'squeak compatibility' }
 Linux32x86SqueakCogV3Config >> buildDirName [
-	^ 'cmake_unixbuild/bld'
+	^ 'cmake_build.linux32x86'
 ]
 
 { #category : #'build script' }
@@ -155,6 +158,11 @@ cmake .
 make
 
 '
+]
+
+{ #category : #'squeak compatibility' }
+Linux32x86SqueakCogV3Config >> buildType: aSymbol [
+	buildType:= aSymbol
 ]
 
 { #category : #'source generation' }
@@ -461,6 +469,12 @@ Linux32x86SqueakCogV3Config >> defaultInternalPlugins [
 		)
 ]
 
+{ #category : #cmake }
+Linux32x86SqueakCogV3Config >> dirBuildLanguageVMMM [
+	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
+	^self squeakCogV3
+]
+
 { #category : #'squeak compatibility' }
 Linux32x86SqueakCogV3Config >> dirFrom: t1 [ 
 	^ t1 isString
@@ -650,7 +664,7 @@ Linux32x86SqueakCogV3Config >> srcDir [
 
 { #category : #'squeak compatibility' }
 Linux32x86SqueakCogV3Config >> topDir [
-	^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: 'oscogvm' ]
+	^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: self oscogvm ]
 ]
 
 { #category : #'squeak compatibility' }
