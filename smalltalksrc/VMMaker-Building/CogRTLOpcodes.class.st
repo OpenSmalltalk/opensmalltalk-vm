@@ -17,7 +17,6 @@ Class {
 		'Arg1Reg',
 		'ArithmeticShiftRightCqR',
 		'ArithmeticShiftRightRR',
-		'BICCqR',
 		'Call',
 		'ClassReg',
 		'CmpCqR',
@@ -183,9 +182,6 @@ CogRTLOpcodes class >> initialize [
 
 	Note that there are no generic division instructions defined, but a processor may define some."
 
-	"CogRTLOpcodes initialize.
-	 CogAbstractInstruction allSubclasses do: [:sc| sc initialize]"
-
 	| opcodeNames refs |
 	FPReg := -1.
 	SPReg := -2.
@@ -275,7 +271,7 @@ CogRTLOpcodes class >> initialize [
 						LogicalShiftLeftCqR LogicalShiftLeftRR
 
 						CmpRR AddRR SubRR AndRR OrRR XorRR MulRR
-						CmpCqR AddCqR SubCqR AndCqR BICCqR "tpr - ARM only" OrCqR XorCqR MulCqR
+						CmpCqR AddCqR SubCqR AndCqR OrCqR XorCqR MulCqR
 						CmpCwR AddCwR SubCwR AndCwR OrCwR XorCwR MulCwR
 
 						CmpRdRd AddRdRd SubRdRd MulRdRd DivRdRd SqrtRd
@@ -303,7 +299,11 @@ CogRTLOpcodes class >> initialize [
 	"For CogAbstractInstruction>>isJump etc..."
 	FirstJump := JumpLong.
 	LastJump := JumpFPUnordered.
-	FirstShortJump := Jump
+	FirstShortJump := Jump.
+
+	"And now initialize the backends; they add their own opcodes and hence these must be reinitialized."
+	(Smalltalk classNamed: #CogAbstractInstruction) ifNotNil:
+		[:cogAbstractInstruction| cogAbstractInstruction allSubclasses do: [:sc| sc initialize]]
 ]
 
 { #category : #'debug printing' }

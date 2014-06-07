@@ -11,6 +11,7 @@ Class {
 	#superclass : #CogAbstractInstruction,
 	#classVars : [
 		'AL',
+		'BICCqR',
 		'CArg0Reg',
 		'CArg1Reg',
 		'CArg2Reg',
@@ -64,7 +65,7 @@ CogARMCompiler class >> initialize [
 	"Initialize various ARM instruction-related constants."
 	"CogARMCompiler initialize"
 	
-	| specificOpcodes refs conditionCodes |
+	| specificOpcodes refs |
 	super initialize.
 	self ~~ CogARMCompiler ifTrue: [^self].
 	
@@ -93,20 +94,29 @@ CogARMCompiler class >> initialize [
 	RISCTempReg := R10.
 	
 	"Condition Codes. Note that cc=16rF is NOT ALLOWED as a condition; it specifies an extension instruction. See e.g.ARM_ARM v5 DDI01001.pdf A3.2.1"
-	conditionCodes := #(EQ NE CS CC MI PL VS VC HI LS GE LT GT LE AL).
-	"this is a somewhat odd way to set class variables - were they originally globals?"
-	conditionCodes withIndexDo: [ :classVarName :value | 
-		self classPool
-			declare: classVarName from: Undeclared;
-			at: classVarName put: value - 1].
+	EQ := 0.
+	NE := 1.
+	CS := 2.
+	CC := 3.
+	MI := 4.
+	PL := 5.
+	VS := 6.
+	VC := 7.
+	HI := 8.
+	LS := 9.
+	GE := 10.
+	LT := 11.
+	GT := 12.
+	LE := 13.
+	AL := 14.
 	
 	"Specific instructions"
 	LastRTLCode isNil ifTrue:
 		[CogRTLOpcodes initialize].
-	specificOpcodes := #(LDMFD STMFD).
+	specificOpcodes := #(LDMFD STMFD BICCqR).
 	refs := (thisContext method literals select: [:l| l isVariableBinding and: [classPool includesKey: l key]]) collect:
 				[:ea| ea key].
-	(classPool keys reject: [:k| (specificOpcodes includes: k) or: [refs includes: k] or: [conditionCodes includes: k]]) do:
+	(classPool keys reject: [:k| (specificOpcodes includes: k) or: [refs includes: k]]) do:
 		[:k|
 		Undeclared declare: k from: classPool].
 	specificOpcodes withIndexDo:
@@ -114,6 +124,13 @@ CogARMCompiler class >> initialize [
 		self classPool
 			declare: classVarName from: Undeclared;
 			at: classVarName put: value + LastRTLCode - 1]
+]
+
+{ #category : #'class initialization' }
+CogARMCompiler class >> specificOpcodes [
+	"Answer the processor-specific opcodes for this class.
+	 They're all in an Array literal in the initialize method."
+	^(self class >> #initialize) literals detect: [:l| l isArray and: [l includes: #LDMFD]]
 ]
 
 { #category : #'ARM convenience instructions' }
@@ -1210,9 +1227,13 @@ CogARMCompiler >> fmstat [
 
 { #category : #abi }
 CogARMCompiler >> genAlignCStackSavingRegisters: saveRegs numArgs: numArgs wordAlignment: alignment [ 
-"ARM needs 8 byte stack alignment but it's hard to be sure where the stack is at this point due to the cpmplexities of whether we push the return address or not. So do a simple bitAnd to effectively round-down the SP - except the vagaries of the ARM instruction set means we actually need a BIC sp, sp, $7"
-	cogit BICCq: 2r111 R: SPReg.
-	^ 0
+	"ARM needs 8 byte stack alignment but it's hard to be sure where the stack is at this
+	 point due to the complexities of whether we push the return address or not.  So do
+	 a simple bitAnd to effectively round-down the SP - except the vagaries of the ARM
+	 instruction set means we actually need a BIC sp, sp, $7"
+
+	cogit gen: BICCqR operand: 2r111 operand: SPReg.
+	^0
 ]
 
 { #category : #assertions }
