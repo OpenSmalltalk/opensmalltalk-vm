@@ -452,7 +452,7 @@ SqueakWin32x86CogFamilyConfig >> configureWin32OSProcessPlugin: maker [
 { #category : #plugins }
 SqueakWin32x86CogFamilyConfig >> defaultExternalPlugins [
 	"expertly cut-n-pasted from Cog/cygwinbuild/plugins.ext"
-	#(
+	^#(
 		BochsIA32Plugin 
 		SqueakFFIPrims 
 		Win32OSProcessPlugin
@@ -462,7 +462,7 @@ SqueakWin32x86CogFamilyConfig >> defaultExternalPlugins [
 { #category : #plugins }
 SqueakWin32x86CogFamilyConfig >> defaultInternalPlugins [
 	"expertly cut-n-pasted from Cog/cygwinbuild/plugins.int"
-	#(
+	^#(
 		ADPCMCodecPlugin 
 		AsynchFilePlugin 
 		B3DAcceleratorPlugin 
@@ -578,7 +578,7 @@ SqueakWin32x86CogFamilyConfig >> outputDir [
 
 	"the directory where built binaries will be stored"
 
-	^ outputDir ifNil: [ outputDir := self msysPathFor: (self topDir / self outputDirName) ]
+	^ outputDir ifNil: [ outputDir :=  (self topDir / self outputDirName) ]
 ]
 
 { #category : #accessing }
