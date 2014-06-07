@@ -4,9 +4,11 @@ This is a concrete class which generates a DEBUG StackVM for Mac using Carbon li
 For more information, check the class comments of all the superclasses.
 
 Usage:
-SqueakStackMacOSDebugConfig generateWithSources.
+SqueakMacOSStackV3DebugConfig generateWithSources.
 Or:
-SqueakStackMacOSDebugConfig generate.
+SqueakMacOSStackV3DebugConfig generate.
+Or:
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
 
 
 

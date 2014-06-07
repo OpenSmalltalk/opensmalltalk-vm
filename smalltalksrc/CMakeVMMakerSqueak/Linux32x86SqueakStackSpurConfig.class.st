@@ -1,3 +1,15 @@
+"
+A Linux32x86SqueakStackSpurConfig configures a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
+
+Usage:
+Linux32x86SqueakStackSpurConfig generate
+Or: 
+Linux32x86SqueakStackSpurConfig generateWithSources
+Or:
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+
+
+"
 Class {
 	#name : #Linux32x86SqueakStackSpurConfig,
 	#superclass : #CPlatformConfig,
@@ -8,9 +20,7 @@ Class {
 
 { #category : #'as yet unclassified' }
 Linux32x86SqueakStackSpurConfig class >> availableBuilds [
-	"Answer a subset of SqueakCMakeVMMakerAbstractBuilder allBuildConfigurations"
-	self flag:'tty'. "This really should be at the top of the inheritence tree, but that resides in Pharo's code. Please refactor me"
-	self subclassResponsibility
+	^SqueakCMakeVMMakerAbstractBuilder allBuildConfigurations
 ]
 
 { #category : #'as yet unclassified' }

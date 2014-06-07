@@ -1,3 +1,13 @@
+"
+A Linux32x86NewspeakCogV3DebugConfig  configures a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
+
+Usage:
+  Linux32x86NewspeakCogV3DebugConfig generate
+Or:
+  Linux32x86NewspeakCogV3DebugConfig generateWithSources
+Or:
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+"
 Class {
 	#name : #Linux32x86NewspeakCogV3DebugConfig,
 	#superclass : #Linux32x86NewspeakCogV3Config,

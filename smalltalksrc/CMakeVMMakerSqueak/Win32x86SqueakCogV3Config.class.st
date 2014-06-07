@@ -1,17 +1,12 @@
 "
-This is a concrete configuration for building a CogVM on Win32 platform.
-
-Built artifacts are placed in ${build}/results dir.
-Note, that executable contains debug info. Strip it (using strip command) before packaging for distribution.
-
-
-For more information, check the class comments of all the superclasses.
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
 Usage:
-SqueakCogWindowsConfig generateWithSources
+Win32x86SqueakCogV3Config generateWithSources
 Or:
-SqueakCogWindowsConfig generate.
-
+Win32x86SqueakCogV3Config generate.
+Or: 
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
 "
 Class {
 	#name : #Win32x86SqueakCogV3Config,

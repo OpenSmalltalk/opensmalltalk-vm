@@ -10,7 +10,9 @@ ln -s /usr/lib32/libICE.so.6 /usr/lib32/libICE.so
 ln -s /usr/lib32/libGL.so.1 /usr/lib32/libGL.so
 ln -s /usr/lib32/libX11.so.6 /usr/lib32/libX11.so
 
-Then you can go on CogOnDebian64Config generateWithSources.
+Then you can go on Linux32x86SqueakCogV3Debian64Config generateWithSources.
+
+or find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
 
 
 

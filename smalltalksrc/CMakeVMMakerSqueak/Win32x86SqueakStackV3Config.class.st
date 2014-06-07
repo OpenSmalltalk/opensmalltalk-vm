@@ -1,14 +1,12 @@
 "
-This is a configuration for building StackVM on Win32 platform.
-
-
-For more information, check the class comments of all the superclasses.
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
 Usage:
-SqueakStackWindowsConfig generateWithSources
+Win32x86SqueakStackV3Config generateWithSources
 Or:
-SqueakStackWindowsConfig generate
-
+Win32x86SqueakStackV3Config generate
+Or: 
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to invoke me.
 
 
 "

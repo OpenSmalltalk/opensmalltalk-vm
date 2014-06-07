@@ -1,3 +1,13 @@
+"
+A Linux32x86NewspeakCogV3AssertThreadedHeartbeatConfig  configures a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
+
+Usage:
+ Linux32x86NewspeakCogV3AssertThreadedHeartbeatConfig generate
+Or:
+  Linux32x86NewspeakCogV3AssertThreadedHeartbeatConfig generateWithSources
+Or:
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+"
 Class {
 	#name : #Linux32x86NewspeakCogV3AssertThreadedHeartbeatConfig,
 	#superclass : #Linux32x86NewspeakCogV3Config,

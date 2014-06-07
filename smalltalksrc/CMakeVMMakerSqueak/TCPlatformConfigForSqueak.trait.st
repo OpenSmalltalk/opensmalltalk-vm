@@ -16,12 +16,12 @@ Trait {
 
 { #category : #accessing }
 TCPlatformConfigForSqueak classSide >> availableBuilds [
+	^SqueakCMakeVMMakerAbstractBuilder allBuildConfigurations
+
+	" ^SqueakCMakeVMMakerAbstractBuilder noBuildConfigurations.
+	  ^(SqueakCMakeVMMakerAbstractBuilder allBuildConfigurations 
+			copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   
 	"
-	 ^SqueakCMakeVMMakerAbstractBuilder noBuildConfigurations.
-	  ^SqueakCMakeVMMakerAbstractBuilder allBuildConfigurations.
-	 or roll your own.
-	"
-	self required
 ]
 
 { #category : #accessing }
