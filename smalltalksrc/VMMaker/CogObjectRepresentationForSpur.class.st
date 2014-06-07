@@ -174,7 +174,8 @@ CogObjectRepresentationForSpur >> genEnsureObjInRegNotForwarded: reg scratchReg:
 CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg: scratch [
 	"Make sure that the oop in reg is not forwarded."
 	| loop okImm okObj |
-	<var: #ok type: #'AbstractInstruction *'>
+	<var: #okImm type: #'AbstractInstruction *'>
+	<var: #okObj type: #'AbstractInstruction *'>
 	<var: #loop type: #'AbstractInstruction *'>
 	self assert: reg ~= scratch.
 	loop := cogit MoveR: reg R: scratch.
