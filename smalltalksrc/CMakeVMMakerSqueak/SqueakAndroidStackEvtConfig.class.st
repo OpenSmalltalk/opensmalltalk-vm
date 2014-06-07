@@ -10,6 +10,9 @@ Class {
 	#superclass : #CPlatformConfig,
 	#traits : 'TCPlatformConfigForSqueak',
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
+	#instVars : [
+		'buildType'
+	],
 	#category : #'CMakeVMMakerSqueak-Android'
 }
 
@@ -26,6 +29,11 @@ SqueakAndroidStackEvtConfig >> buildDir [
 { #category : #'squeak compatibility' }
 SqueakAndroidStackEvtConfig >> buildDirName [
 	^'do not build. see class comment'
+]
+
+{ #category : #'squeak compatibility' }
+SqueakAndroidStackEvtConfig >> buildType: aSymbol [
+	buildType:= aSymbol
 ]
 
 { #category : #'source generation' }
@@ -441,5 +449,5 @@ SqueakAndroidStackEvtConfig >> srcDir [
 
 { #category : #directories }
 SqueakAndroidStackEvtConfig >> topDir [
-	^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: 'oscogvm' ]
+		^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: self oscogvm ]
 ]

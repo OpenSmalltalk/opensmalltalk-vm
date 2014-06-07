@@ -15,6 +15,12 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
+Linux32x86NewspeakStackV3Config >> dirBuildLanguageVMMM [
+	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
+	^self squeakStackV3
+]
+
+{ #category : #'as yet unclassified' }
 Linux32x86NewspeakStackV3Config >> todo [
 	self flag:'tty'
 ]

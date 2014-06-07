@@ -8,6 +8,9 @@ Class {
 	#superclass : #CPlatformConfig,
 	#traits : 'TCPlatformConfigForSqueak',
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
+	#instVars : [
+		'buildType'
+	],
 	#category : #'CMakeVMMakerSqueak-IA32-Bochs'
 }
 
@@ -16,4 +19,37 @@ SqueakIA32BochsConfig class >> availableBuilds [
 	"SqueakCMakeVMMakerAbstractBuilder  allBuildConfigurations
 	^#(#assert #debug  #release )"
 	^SqueakCMakeVMMakerAbstractBuilder noBuildConfigurations
+]
+
+{ #category : #'squeak compatibility' }
+SqueakIA32BochsConfig >> buildDir [
+	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].
+]
+
+{ #category : #'squeak compatibility' }
+SqueakIA32BochsConfig >> buildDirName [
+	buildType isNil
+		ifTrue:[^self dirBuildPlatform, self dirBuildLanguageVMMM, 'build']
+		ifFalse:[^self dirBuildPlatform, self dirBuildLanguageVMMM, buildType asString]
+]
+
+{ #category : #'squeak compatibility' }
+SqueakIA32BochsConfig >> buildType: aSymbol [
+	buildType:= aSymbol
+]
+
+{ #category : #cmake }
+SqueakIA32BochsConfig >> dirBuildLanguageVMMM [
+	"the directory under buildPlatformDir  example: newspeak.cog.spur the default is squeak.cog.v3"
+	^self squeakCogV3
+]
+
+{ #category : #cmake }
+SqueakIA32BochsConfig >> dirBuildPlatform [
+	^self dirIA32Bochs
+]
+
+{ #category : #'squeak compatibility' }
+SqueakIA32BochsConfig >> topDir [
+		^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: self oscogvm ]
 ]

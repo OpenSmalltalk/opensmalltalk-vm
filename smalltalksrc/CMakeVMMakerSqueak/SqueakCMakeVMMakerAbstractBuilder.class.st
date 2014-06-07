@@ -10,6 +10,8 @@ Think of me as lipstick on a pig.
 oink!
 
 
+I also act as a repository of common information for the various configurations.
+
 
 
 "
@@ -57,7 +59,7 @@ SqueakCMakeVMMakerAbstractBuilder class >> configurationDictionary: aCategoryNam
 	| result |
 	result := Dictionary new.
 	Smalltalk globals 
-		allClassesDo:[:c | (c class category asString withoutQuoting startsWith: aCategoryName)
+		allClassesDo:[:c | (c class category asString withoutQuoting = aCategoryName)
 			ifTrue: [ result at: (c name) put:[c availableBuilds].]].
 	^result
 
