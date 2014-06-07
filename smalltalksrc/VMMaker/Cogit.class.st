@@ -3906,16 +3906,16 @@ Cogit >> compilePrimitive [
 ]
 
 { #category : #initialization }
-Cogit >> compileTrampolineFor: aRoutine callJumpBar: callJumpBar "<Boolean>" numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 saveRegs: saveRegs resultReg: resultRegOrNil [
+Cogit >> compileTrampolineFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 saveRegs: saveRegs pushLinkReg: pushLinkReg resultReg: resultRegOrNil [
 	"Generate a trampoline with up to four arguments.  Generate either a call or a jump to aRoutine
 	 as requested by callJumpBar.  If generating a call and resultRegOrNil is non-zero pass the C result
 	 back in resultRegOrNil.
 	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
 	<var: #aRoutine type: #'void *'>
 	<inline: false>
-	"If on a RISC processor the return address needs to be pushed to the
+	"If on a RISC processor, the return address needs to be pushed to the
 	 stack so that the interpreter sees the same stack layout as on CISC."
-	backEnd hasLinkRegister ifTrue:
+	(pushLinkReg and: [backEnd hasLinkRegister]) ifTrue:
 		[self PushR: LinkReg].
 	self genSmalltalkToCStackSwitch.
 	cStackAlignment > BytesPerWord ifTrue:
@@ -3924,9 +3924,7 @@ Cogit >> compileTrampolineFor: aRoutine callJumpBar: callJumpBar "<Boolean>" num
 			numArgs: numArgs
 			wordAlignment: cStackAlignment / BytesPerWord].
 	saveRegs ifTrue:
-		[callJumpBar ifFalse:
-			[self error: 'why save registers when you''re not going to return?'].
-		 backEnd genSaveRegisters].
+		[backEnd genSaveRegisters].
 	numArgs > 0 ifTrue:
 		[numArgs > 1 ifTrue:
 			[numArgs > 2 ifTrue:
@@ -3943,22 +3941,20 @@ Cogit >> compileTrampolineFor: aRoutine callJumpBar: callJumpBar "<Boolean>" num
 		regOrConst0 < 0
 			ifTrue: [backEnd genPassReg: regOrConst0 asArgument: 0]
 			ifFalse: [backEnd genPassConst: regOrConst0 asArgument: 0]].
-	self gen: (callJumpBar ifTrue: [Call] ifFalse: [Jump])
-		operand: (self cCode: [aRoutine asUnsignedInteger]
+	self Call: (self cCode: [aRoutine asUnsignedInteger]
 					   inSmalltalk: [self simulatedTrampolineFor: aRoutine]).
-	callJumpBar ifTrue:
-		[resultRegOrNil ifNotNil:
-			[backEnd genWriteCResultIntoReg: resultRegOrNil].
-		 saveRegs ifTrue:
-			[numArgs > 0 ifTrue:
-				[backEnd genRemoveNArgsFromStack: numArgs].
-			resultRegOrNil
-				ifNotNil: [backEnd genRestoreRegsExcept: resultRegOrNil]
-				ifNil: [backEnd genRestoreRegs]].
-		backEnd genLoadStackPointers.
-		backEnd hasLinkRegister ifTrue:
-			[self PopR: LinkReg].
-		self RetN: 0]
+	resultRegOrNil ifNotNil:
+		[backEnd genWriteCResultIntoReg: resultRegOrNil].
+	 saveRegs ifTrue:
+		[numArgs > 0 ifTrue:
+			[backEnd genRemoveNArgsFromStack: numArgs].
+		resultRegOrNil
+			ifNotNil: [backEnd genRestoreRegsExcept: resultRegOrNil]
+			ifNil: [backEnd genRestoreRegs]].
+	backEnd genLoadStackPointers.
+	backEnd hasLinkRegister ifTrue:
+		[self PopR: LinkReg].
+	self RetN: 0
 ]
 
 { #category : #initialization }
@@ -4709,13 +4705,13 @@ Cogit >> genCheckForInterruptsTrampoline [
 			 self MoveR: TempReg Aw: coInterpreter instructionPointerAddress].
 	^self genTrampolineFor: #ceCheckForInterrupts
 		called: 'ceCheckForInterruptsTrampoline'
-		callJumpBar: true
 		numArgs: 0
 		arg: nil
 		arg: nil
 		arg: nil
 		arg: nil
 		saveRegs: false
+		pushLinkReg: false
 		resultReg: nil
 		appendOpcodes: true
 ]
@@ -4846,24 +4842,24 @@ Cogit >> genInnerPICAbortTrampoline: name [
 	self CmpCq: 0 R: ClassReg.
 	jumpMNUCase := self JumpZero: 0.
 	self compileTrampolineFor: #ceInterpretMethodFromPIC:receiver:
-		callJumpBar: true
 		numArgs: 2
 		arg: SendNumArgsReg
 		arg: ReceiverResultReg
 		arg: nil
 		arg: nil
 		saveRegs: false
+		pushLinkReg: true
 		resultReg: nil.
 	jumpMNUCase jmpTarget: self Label.
 	^self genTrampolineFor: #ceMNUFromPICMNUMethod:receiver:
 		called: name
-		callJumpBar: true
 		numArgs: 2
 		arg: SendNumArgsReg
 		arg: ReceiverResultReg
 		arg: nil
 		arg: nil
 		saveRegs: false
+		pushLinkReg: true
 		resultReg: nil
 		appendOpcodes: true
 ]
@@ -4901,24 +4897,24 @@ Cogit >> genMethodAbortTrampoline [
 		[self AddCq: BytesPerWord R: SPReg].
 
 	self compileTrampolineFor: #ceStackOverflow:
-		callJumpBar: true
 		numArgs: 1
 		arg: SendNumArgsReg
 		arg: nil
 		arg: nil
 		arg: nil
 		saveRegs: false
+		pushLinkReg: true
 		resultReg: nil.
 	jumpSICMiss jmpTarget: self Label.
 	^self genTrampolineFor: #ceSICMiss:
 		called: 'ceMethodAbort'
-		callJumpBar: true
 		numArgs: 1
 		arg: ReceiverResultReg
 		arg: nil
 		arg: nil
 		arg: nil
 		saveRegs: false
+		pushLinkReg: true
 		resultReg: nil
 		appendOpcodes: true
 ]
@@ -4937,13 +4933,13 @@ Cogit >> genNonLocalReturnTrampoline [
 			 self MoveR: TempReg Aw: coInterpreter instructionPointerAddress].
 	^self genTrampolineFor: #ceNonLocalReturn:
 		called: 'ceNonLocalReturnTrampoline'
-		callJumpBar: true
 		numArgs: 1
 		arg: ReceiverResultReg
 		arg: nil
 		arg: nil
 		arg: nil
 		saveRegs: false
+		pushLinkReg: false
 		resultReg: nil
 		appendOpcodes: true
 ]
@@ -4968,13 +4964,13 @@ Cogit >> genSafeTrampolineFor: aRoutine called: aString [
 	^self
 		genTrampolineFor: aRoutine
 		called: aString
-		callJumpBar: true
 		numArgs: 0
 		arg: nil
 		arg: nil
 		arg: nil
 		arg: nil
 		saveRegs: true
+		pushLinkReg: true
 		resultReg: nil
 		appendOpcodes: false
 ]
@@ -4988,13 +4984,13 @@ Cogit >> genSafeTrampolineFor: aRoutine called: aString arg: regOrConst0 [
 	^self
 		genTrampolineFor: aRoutine
 		called: aString
-		callJumpBar: true
 		numArgs: 1
 		arg: regOrConst0
 		arg: nil
 		arg: nil
 		arg: nil
 		saveRegs: true
+		pushLinkReg: true
 		resultReg: nil
 		appendOpcodes: false
 ]
@@ -5036,13 +5032,13 @@ Cogit >> genTrampolineFor: aRoutine called: aString [
 	^self
 		genTrampolineFor: aRoutine
 		called: aString
-		callJumpBar: true
 		numArgs: 0
 		arg: nil
 		arg: nil
 		arg: nil
 		arg: nil
 		saveRegs: false
+		pushLinkReg: true
 		resultReg: nil
 		appendOpcodes: false
 ]
@@ -5056,13 +5052,13 @@ Cogit >> genTrampolineFor: aRoutine  called: aString arg: regOrConst0 [
 	^self
 		genTrampolineFor: aRoutine
 		called: aString
-		callJumpBar: true
 		numArgs: 1
 		arg: regOrConst0
 		arg: nil
 		arg: nil
 		arg: nil
 		saveRegs: false
+		pushLinkReg: true
 		resultReg: nil
 		appendOpcodes: false
 ]
@@ -5076,13 +5072,13 @@ Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 arg: regOrC
 	^self
 		genTrampolineFor: aRoutine
 		called: aString
-		callJumpBar: true
 		numArgs: 2
 		arg: regOrConst0
 		arg: regOrConst1
 		arg: nil
 		arg: nil
 		saveRegs: false
+		pushLinkReg: true
 		resultReg: nil
 		appendOpcodes: false
 ]
@@ -5096,13 +5092,13 @@ Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 arg: regOrC
 	^self
 		genTrampolineFor: aRoutine
 		called: aString
-		callJumpBar: true
 		numArgs: 3
 		arg: regOrConst0
 		arg: regOrConst1
 		arg: regOrConst2
 		arg: nil
 		saveRegs: false
+		pushLinkReg: true
 		resultReg: nil
 		appendOpcodes: false
 ]
@@ -5116,13 +5112,13 @@ Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 arg: regOrC
 	^self
 		genTrampolineFor: aRoutine
 		called: aString
-		callJumpBar: true
 		numArgs: 4
 		arg: regOrConst0
 		arg: regOrConst1
 		arg: regOrConst2
 		arg: regOrConst3
 		saveRegs: false
+		pushLinkReg: true
 		resultReg: nil
 		appendOpcodes: false
 ]
@@ -5136,13 +5132,13 @@ Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 arg: regOrC
 	^self
 		genTrampolineFor: aRoutine
 		called: aString
-		callJumpBar: true
 		numArgs: 3
 		arg: regOrConst0
 		arg: regOrConst1
 		arg: regOrConst2
 		arg: nil
 		saveRegs: false
+		pushLinkReg: true
 		resultReg: resultReg
 		appendOpcodes: false
 ]
@@ -5156,13 +5152,13 @@ Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 arg: regOrC
 	^self
 		genTrampolineFor: aRoutine
 		called: aString
-		callJumpBar: true
 		numArgs: 2
 		arg: regOrConst0
 		arg: regOrConst1
 		arg: nil
 		arg: nil
 		saveRegs: false
+		pushLinkReg: true
 		resultReg: resultReg
 		appendOpcodes: false
 ]
@@ -5176,19 +5172,19 @@ Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 result: res
 	^self
 		genTrampolineFor: aRoutine
 		called: aString
-		callJumpBar: true
 		numArgs: 1
 		arg: regOrConst0
 		arg: nil
 		arg: nil
 		arg: nil
 		saveRegs: false
+		pushLinkReg: true
 		resultReg: resultReg
 		appendOpcodes: false
 ]
 
 { #category : #initialization }
-Cogit >> genTrampolineFor: aRoutine called: trampolineName callJumpBar: callJumpBar "<Boolean>" numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 saveRegs: saveRegs resultReg: resultRegOrNil appendOpcodes: appendBoolean [
+Cogit >> genTrampolineFor: aRoutine called: trampolineName numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 saveRegs: saveRegs pushLinkReg: pushLinkReg resultReg: resultRegOrNil appendOpcodes: appendBoolean [
 	"Generate a trampoline with up to four arguments.  Generate either a call or a jump to aRoutineOrNil
 	 as requested by callJumpBar.  If generating a call and resultRegOrNil is non-zero pass the C result
 	 back in resultRegOrNil.
@@ -5201,13 +5197,13 @@ Cogit >> genTrampolineFor: aRoutine called: trampolineName callJumpBar: callJump
 	appendBoolean ifFalse:
 		[opcodeIndex := 0].
 	self compileTrampolineFor: aRoutine
-		callJumpBar: callJumpBar
 		numArgs: numArgs
 		arg: regOrConst0
 		arg: regOrConst1
 		arg: regOrConst2
 		arg: regOrConst3
 		saveRegs: saveRegs
+		pushLinkReg: pushLinkReg
 		resultReg: resultRegOrNil.
 	self outputInstructionsForGeneratedRuntimeAt: startAddress.
 	self recordGeneratedRunTime: trampolineName address: startAddress.
@@ -5481,13 +5477,13 @@ Cogit >> generateNewspeakRuntime [
 	ceImplicitReceiverTrampoline := self
 										genTrampolineFor: #ceImplicitReceiverFor:receiver:class:
 										called: 'ceImplicitReceiverTrampoline'
-										callJumpBar: true
 										numArgs: 3
 										arg: SendNumArgsReg
 										arg: ReceiverResultReg
 										arg: ClassReg
 										arg: nil
 										saveRegs: false
+										pushLinkReg: true
 										resultReg: ReceiverResultReg
 										appendOpcodes: true
 ]
