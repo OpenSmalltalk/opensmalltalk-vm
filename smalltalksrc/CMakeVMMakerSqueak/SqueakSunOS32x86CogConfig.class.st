@@ -37,6 +37,16 @@ SqueakSunOS32x86CogConfig >> buildType: aSymbol [
 	buildType:= aSymbol
 ]
 
+{ #category : #plugins }
+SqueakSunOS32x86CogConfig >> defaultExternalPlugins [
+	^#(	)
+]
+
+{ #category : #plugins }
+SqueakSunOS32x86CogConfig >> defaultInternalPlugins [
+	^#(	)
+]
+
 { #category : #cmake }
 SqueakSunOS32x86CogConfig >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"

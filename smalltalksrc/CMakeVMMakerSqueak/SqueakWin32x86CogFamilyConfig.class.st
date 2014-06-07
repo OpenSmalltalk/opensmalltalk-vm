@@ -449,6 +449,59 @@ SqueakWin32x86CogFamilyConfig >> configureWin32OSProcessPlugin: maker [
 
 ]
 
+{ #category : #plugins }
+SqueakWin32x86CogFamilyConfig >> defaultExternalPlugins [
+	"expertly cut-n-pasted from Cog/cygwinbuild/plugins.ext"
+	#(
+		BochsIA32Plugin 
+		SqueakFFIPrims 
+		Win32OSProcessPlugin
+	)
+]
+
+{ #category : #plugins }
+SqueakWin32x86CogFamilyConfig >> defaultInternalPlugins [
+	"expertly cut-n-pasted from Cog/cygwinbuild/plugins.int"
+	#(
+		ADPCMCodecPlugin 
+		AsynchFilePlugin 
+		B3DAcceleratorPlugin 
+		B2DPlugin 
+		BitBltPlugin 
+		BMPReadWriterPlugin 
+		CroquetPlugin 
+		ZipPlugin 
+		DropPlugin 
+		DSAPrims 
+		FFTPlugin 
+		FilePlugin 
+		FloatArrayPlugin 
+		FloatMathPlugin 
+		HostWindowPlugin 
+		IA32ABI 
+		JoystickTabletPlugin 
+		JPEGReaderPlugin 
+		JPEGReadWriter2Plugin 
+		Klatt 
+		LargeIntegers 
+		LocalePlugin 
+		Matrix2x3Plugin 
+		MIDIPlugin 
+		MiscPrimitivePlugin 
+		Mpeg3Plugin 
+		RePlugin 
+		SecurityPlugin 
+		SerialPlugin 
+		SocketPlugin 
+		SoundCodecPrims 
+		SoundGenerationPlugin 
+		SoundPlugin 
+		StarSqueakPlugin 
+		SurfacePlugin 
+		UUIDPlugin
+	)
+]
+
 { #category : #cmake }
 SqueakWin32x86CogFamilyConfig >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
