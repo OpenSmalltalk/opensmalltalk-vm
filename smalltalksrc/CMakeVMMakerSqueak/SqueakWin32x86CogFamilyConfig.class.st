@@ -149,6 +149,14 @@ SqueakWin32x86CogFamilyConfig >> addThirdpartyLibrary: libName [
 	^ lib
 ]
 
+{ #category : #cmake }
+SqueakWin32x86CogFamilyConfig >> availableBuilds [
+	^SqueakCMakeVMMakerAbstractBuilder default allBuildConfigurations copyWithoutAll:#(#assert #assertWithHeartbeatTimer #debugMultiThreadedFFI #debugWithHeartbeatTimer #release #releaseHeartbeatTimer)
+
+
+
+]
+
 { #category : #directories }
 SqueakWin32x86CogFamilyConfig >> buildDir [
 	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].

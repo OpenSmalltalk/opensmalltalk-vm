@@ -16,13 +16,19 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Linux32ARMv6'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #'squeak compatibility' }
 Linux32ARMv6StackV3RaspbianConfig >> addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs [
 	super addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #cmake }
+Linux32ARMv6StackV3RaspbianConfig >> availableBuilds [
+	^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations
+
+]
+
+{ #category : #'compiler flags' }
 Linux32ARMv6StackV3RaspbianConfig >> commonCompilerFlags [
 
 	"Common compiler flags
@@ -39,7 +45,7 @@ Linux32ARMv6StackV3RaspbianConfig >> commonCompilerFlags [
 		'-DCOGMTVM=0' } 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'compiler flags' }
 Linux32ARMv6StackV3RaspbianConfig >> compilerFlagsDebug [
 
 	^ {
@@ -51,7 +57,7 @@ Linux32ARMv6StackV3RaspbianConfig >> compilerFlagsDebug [
 		'-DDEBUGVM=1' }
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'compiler flags' }
 Linux32ARMv6StackV3RaspbianConfig >> compilerFlagsRelease [
 "
 THIS FLAGS ARE CRASHING COMPILER 
@@ -81,7 +87,7 @@ THIS IS LIKE: -O2 -fno-tree-pre -fno-caller-saves
 		'-DDEBUGVM=0' }
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'plugin extra rules' }
 Linux32ARMv6StackV3RaspbianConfig >> configureBitBltSimulation: maker [
 	"extra rules for BitBltSimulation"
 
@@ -94,7 +100,7 @@ Linux32ARMv6StackV3RaspbianConfig >> configureBitBltSimulation: maker [
 	
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #plugins }
 Linux32ARMv6StackV3RaspbianConfig >> defaultExternalPlugins [
 	self flag:'tty'. "InternetConfigPlugin not available default svn co of Cog for unix. "
 	^ #(
@@ -106,7 +112,7 @@ Linux32ARMv6StackV3RaspbianConfig >> defaultExternalPlugins [
 	)
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #plugins }
 Linux32ARMv6StackV3RaspbianConfig >> defaultInternalPlugins [
 " took from unixbuild/bld/plugins.int"
 	^ #(
@@ -143,7 +149,13 @@ Linux32ARMv6StackV3RaspbianConfig >> defaultInternalPlugins [
 		)
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #cmake }
+Linux32ARMv6StackV3RaspbianConfig >> dirBuildPlatform [
+	"the directory for the platform. example: build.linux32x86"
+	^self dirARMv6
+]
+
+{ #category : #'plugin extra rules' }
 Linux32ARMv6StackV3RaspbianConfig >> extraPluginSettings: maker [
 
 	maker isExternal ifTrue: [
@@ -155,12 +167,12 @@ Linux32ARMv6StackV3RaspbianConfig >> extraPluginSettings: maker [
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 Linux32ARMv6StackV3RaspbianConfig >> linkFlags [
 	 ^ '-lSM -lICE -ldl -lGL -lpthread -lm -lnsl -lX11'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #utils }
 Linux32ARMv6StackV3RaspbianConfig >> setExtraTargetProperties: maker [
 
 	"maker setTargetProperties: 'LINK_FLAGS ""'."

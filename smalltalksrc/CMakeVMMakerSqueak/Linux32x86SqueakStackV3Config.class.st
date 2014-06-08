@@ -137,6 +137,14 @@ Linux32x86SqueakStackV3Config >> addDriver: name sources: aSources generator: cm
 	
 ]
 
+{ #category : #cmake }
+Linux32x86SqueakStackV3Config >> availableBuilds [
+	"SqueakCMakeVMMakerAbstractBuilder  default allBuildConfigurations"
+	^SqueakCMakeVMMakerAbstractBuilder default allBuildConfigurations copyWithoutAll:#(#assert #assertWithHeartbeatTimer #debugMultiThreadedFFI  #debugWithHeartbeatTimer  #releaseHeartbeatTimer #releaseMultiThreadedFFI )
+
+
+]
+
 { #category : #'squeak compatibility' }
 Linux32x86SqueakStackV3Config >> buildDir [
 	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].
@@ -187,9 +195,20 @@ Linux32x86SqueakStackV3Config >> compilerFlags [
 ]
 
 { #category : #cmake }
+Linux32x86SqueakStackV3Config >> dirARMv6 [
+	^'cmake_build.armv6'
+]
+
+{ #category : #cmake }
 Linux32x86SqueakStackV3Config >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
 	^self squeakStackV3
+]
+
+{ #category : #cmake }
+Linux32x86SqueakStackV3Config >> dirBuildPlatform [
+	"the directory for the platform. example: build.linux32x86"
+	^self dirLinux32x86
 ]
 
 { #category : #accessing }
