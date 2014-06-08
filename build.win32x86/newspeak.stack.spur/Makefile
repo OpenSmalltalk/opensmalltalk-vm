@@ -285,7 +285,7 @@ $(OBJDIR)/%.lib:	FORCE
 		-f../../$(shell ./eitheror.exe $(PLATDIR)/win32/plugins/$(*F)/Makefile Makefile.plugin) \
 		PLATDIR=../../$(PLATDIR) BASEDIR=../../$(BASEDIR) \
 		PLUGINSRCDIR=../../$(PLUGINSRCDIR) VMSRCDIR=../../$(VMSRCDIR) \
-		LIBNAME=$(*F) XDEFS=-DSQUEAK_BUILTIN_PLUGIN \
+		COGDEFS="" LIBNAME=$(*F) XDEFS=-DSQUEAK_BUILTIN_PLUGIN \
 		../../$(OBJDIR)/$(*F).lib
 
 # External plugin.  Build as dll and copy to vm dir ($(OBJDIR)).
@@ -296,7 +296,7 @@ $(OBJDIR)/%.dll:	FORCE
 		-f../../$(shell ./eitheror.exe $(PLATDIR)/win32/plugins/$(*F)/Makefile Makefile.plugin) \
 		PLATDIR=../../$(PLATDIR) BASEDIR=../../$(BASEDIR) \
 		PLUGINSRCDIR=../../$(PLUGINSRCDIR) VMSRCDIR=../../$(VMSRCDIR) \
-		LIBNAME=$(*F) ../../$(OBJDIR)/$(*F).dll
+		COGDEFS="" LIBNAME=$(*F) ../../$(OBJDIR)/$(*F).dll
 
 FORCE:
 
