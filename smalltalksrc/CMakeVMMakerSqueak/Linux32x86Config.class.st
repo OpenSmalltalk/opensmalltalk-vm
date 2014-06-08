@@ -16,6 +16,12 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
 
+{ #category : #cmake }
+Linux32x86Config >> availableBuilds [
+	^SqueakCMakeVMMakerAbstractBuilder default allBuildConfigurations copyWithoutAll:#(#releaseMultiThreadedFFI #debugMultiThreadedFFI)
+
+]
+
 { #category : #'squeak compatibility' }
 Linux32x86Config >> buildDir [
 	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].

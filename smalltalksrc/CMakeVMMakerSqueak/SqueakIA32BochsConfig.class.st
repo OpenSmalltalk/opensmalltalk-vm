@@ -21,6 +21,12 @@ SqueakIA32BochsConfig class >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder noBuildConfigurations
 ]
 
+{ #category : #cmake }
+SqueakIA32BochsConfig >> availableBuilds [
+	^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations
+
+]
+
 { #category : #'squeak compatibility' }
 SqueakIA32BochsConfig >> buildDir [
 	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].

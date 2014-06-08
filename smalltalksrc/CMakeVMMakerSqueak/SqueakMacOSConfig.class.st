@@ -15,7 +15,13 @@ Class {
 
 { #category : #'as yet unclassified' }
 SqueakMacOSConfig class >> availableBuilds [
-	^SqueakCMakeVMMakerAbstractBuilder allBuildConfigurations
+	^SqueakCMakeVMMakerAbstractBuilder  default  allBuildConfigurations
+]
+
+{ #category : #cmake }
+SqueakMacOSConfig >> availableBuilds [
+	^SqueakCMakeVMMakerAbstractBuilder default allBuildConfigurations copyWithoutAll:#(#assert #assertWithHeartbeatTimer #debugMultiThreadedFFI #debugWithHeartbeatTimer #releaseHeartbeatTimer )
+
 ]
 
 { #category : #'squeak compatibility' }
