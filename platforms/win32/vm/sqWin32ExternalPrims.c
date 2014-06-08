@@ -75,7 +75,7 @@ ioFindExternalFunctionInAccessorDepthInto(char *lookupName, void *moduleHandle,
 # else
 	f = GetProcAddress(moduleHandle, lookupName);
 # endif
-	if (f) {
+	if (f && accessorDepthPtr) {
 		void *accessorDepthVarPtr;
 		snprintf(buffer,256,"%sAccessorDepth",lookupName);
 		accessorDepthVarPtr =

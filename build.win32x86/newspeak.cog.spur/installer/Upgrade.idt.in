@@ -1,0 +1,4 @@
+UpgradeCode	VersionMin	VersionMax	Language	Attributes	Remove	ActionProperty
+s38	S20	S20	S255	i4	S255	s72
+Upgrade	UpgradeCode	VersionMin	VersionMax	Language	Attributes
+{@@GUID_UPGRADE_CODE@@}		255.255.0		0		{@@GUID_UPGRADE_CODE@@}

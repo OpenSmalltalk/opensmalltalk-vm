@@ -1,0 +1,11 @@
+#!/bin/sh
+rm -rf build*/vm/Croquet*.exe build*/vm/Squeak*.exe
+make debug;make assert;make
+ls -rlt build*/vm/Squeak*.exe
+if test -f ../../sources/SqueakV41.sources; then
+	for d in build buildast builddbg; do
+		if [ -d $d/vm -a !  -f $d/vm/SqueakV41.sources ]; then
+			ln ../../sources/SqueakV41.sources $d/vm
+		fi
+	done
+fi

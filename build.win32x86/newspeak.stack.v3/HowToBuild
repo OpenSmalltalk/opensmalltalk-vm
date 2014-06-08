@@ -1,0 +1,75 @@
+To generate a VM check-out http://www.squeakvm.org/svn/squeak/branches/Cog/image
+which contains
+http://www.squeakvm.org/svn/squeak/branches/Cog/image/VMMaker-Squeak4.1.changes
+http://www.squeakvm.org/svn/squeak/branches/Cog/image/VMMaker-Squeak4.1.image
+
+How to Build the Cog VM on Windows
+----------------------------------
+1. Install the tools:
+- Install cygwin from www.cygwin.com.  As of writing the VM is built using
+CYGWIN_NT-5.1 mcstalkerxp 1.5.24(0.156/4/2) 2007-01-31 10:57 i686 Cygwin
+2. Check out the following sources from svn (if you haven't already - if you're
+   reading this in cygwinbuild its likely you've already got the sources)
+     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/platforms
+     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/src
+     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/cygwinbuild
+2a. If you want the whole kit and caboodle including the VMMaker image try e.g.
+     svn co http://www.squeakvm.org/svn/squeak/branches/Cog cogvm
+
+3. Open a cygwin bash shell, cd into the cygbuild directory and execute
+     make
+
+   Caution: if you previously used the mingw gnutools approach, you probably
+   have a path to that 2.x gcc in your Windows PATH.  Make sure that 'which gcc'
+   evalautes to the cygwin gcc 3.4.x not the MinGW gcc 2.95.x (try gcc -v).
+
+   Caution: if your default gcc is too recent (gcc-4), compilation may fail.
+   In this case, you should rather use the following commmand
+     make  CC=gcc-3 LD=gcc-3 DLLWRAP='dllwrap -mno-cygwin --driver-name gcc-3'
+   
+4. At the end of this process you should have a brand new Croquet VM in the
+   cygwinbuild/build/vm folder (make sure you copy Croquet.map along with it)
+
+N.B. The plugin set is defined by plugins.ext and plugins.int in the build dir.
+
+3a. The cygwin makefile supports building three VM configurations, product,
+    assert and debug, building product by default.  To build a configuration
+	simply type make configuration, e.g.
+		make assert
+	The configurations are
+	product: stripped  & unstripped production VMs optimized at -O2 in
+		build/vm/Croquet.exe
+		build/vm/CroquetUnstripped.exe
+	assert: an unstripped VM that includes assertion checks optimized at -O1 in
+		buildast/vm/Croquet.exe
+	debug: an unstripped, unoptimized VM that includs assertion checks
+		builddbg/vm/Croquet.exe
+    Note that even the stripped production VM can be used for debug using the
+	unstripped VM to provide symbols, e.g.
+		U:\ gdb bin/Croquet.exe
+		...
+		(no debugging symbols found)
+		(gdb) file CroquetUnstripped.exe
+		(gdb) run trunk.image
+
+	In fact there is an additional VM alongside each Croquet VM, e.g.
+		build/vm/CroquetConsole.exe
+	This VM is a Windows "console" application which will run inside an MSDOS
+	console window.  When the I/O code in 
+		platforms/win32/plugins/FilePlugin/sqWin32FilePrims.c
+	supports it this VM will be able to read and write to stdin and stdout.
+
+
+3a. If you want to get the Cog VM simulator working you'll need to build the
+BochsIA32Plugin/BochsIA32Plugin.xcodeproj project and to build that you'll
+need to first build bochs.  WARNING: No one has tried to build the plugin on
+Win32.  You are on your own but your efforts will be warmly welcomed.
+First check-out the processor simulator source tree containing Bochs:
+     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/processors
+Then build the libraries winbochs/{cpu/libcpu.a,disasm/libdisasm.a,fpu/libfpu.a}
+  $ cd ROOT/processors/IA32/winbochs
+  $ ./conf.COG
+  $ ../bochs/makeem
+and build the plugin either via make (for the entire VM) or just
+  $ cd ROOT/nsbuild/cygwinbuild
+  $ make build/vm/BochsIA32Plugin.dll
