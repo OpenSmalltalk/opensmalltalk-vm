@@ -21,6 +21,16 @@ Linux32x86SqueakStackV3SlackwareNoGLConfig >> addDriver: name sources: aSources 
 	super addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs
 ]
 
+{ #category : #cmake }
+Linux32x86SqueakStackV3SlackwareNoGLConfig >> availableBuilds [
+	^SqueakCMakeVMMakerAbstractBuilder  default  allBuildConfigurations
+
+	" ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations.
+	  ^(SqueakCMakeVMMakerAbstractBuilder  default  allBuildConfigurations 
+			copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   
+	"
+]
+
 { #category : #'squeak compatibility' }
 Linux32x86SqueakStackV3SlackwareNoGLConfig >> buildDir [
 	^super buildDir
@@ -46,6 +56,12 @@ Linux32x86SqueakStackV3SlackwareNoGLConfig >> defaultExternalPlugins [
 Linux32x86SqueakStackV3SlackwareNoGLConfig >> defaultInternalPlugins [
 	"Removed the B3DAcceleratorPlugin since we don't have OpenGL bindings here"
 	^ (super defaultInternalPlugins copyWithoutAll: #(#IA32ABIPlugin #JoystickTabletPlugin #StarSqueakPlugin #SurfacePlugin #SqueakFFIPrims #ThreadedIA32FFIPlugin))
+]
+
+{ #category : #cmake }
+Linux32x86SqueakStackV3SlackwareNoGLConfig >> dirBuildPlatform [
+	"the directory for the platform. example: build.linux32x86"
+	^self dirLinux32x8664
 ]
 
 { #category : #accessing }

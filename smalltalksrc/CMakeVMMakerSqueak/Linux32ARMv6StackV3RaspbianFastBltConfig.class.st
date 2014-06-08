@@ -15,12 +15,12 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Linux32ARMv6'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #'compiler flags' }
 Linux32ARMv6StackV3RaspbianFastBltConfig >> commonCompilerFlags [
 	^ super commonCompilerFlags, { '-DENABLE_FAST_BLT' }.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'plugin extra rules' }
 Linux32ARMv6StackV3RaspbianFastBltConfig >> configureBitBltSimulation: maker [
 	"extra rules for BitBltSimulation"
 

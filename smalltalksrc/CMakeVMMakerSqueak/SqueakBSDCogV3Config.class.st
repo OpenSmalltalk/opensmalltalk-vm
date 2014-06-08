@@ -54,6 +54,12 @@ SqueakBSDCogV3Config >> addDriver: name sources: aSources generator: cmakeGen ex
 	
 ]
 
+{ #category : #cmake }
+SqueakBSDCogV3Config >> availableBuilds [
+	^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations
+
+]
+
 { #category : #'squeak compatibility' }
 SqueakBSDCogV3Config >> buildDir [
 	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].

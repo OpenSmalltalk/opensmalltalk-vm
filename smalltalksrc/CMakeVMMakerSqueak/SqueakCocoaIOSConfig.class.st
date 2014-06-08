@@ -68,6 +68,12 @@ SqueakCocoaIOSConfig >> architecture [
 	^'i386'
 ]
 
+{ #category : #cmake }
+SqueakCocoaIOSConfig >> availableBuilds [
+	^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations
+
+]
+
 { #category : #accessing }
 SqueakCocoaIOSConfig >> commonCompilerFlags [
 	"Common compiler flags"

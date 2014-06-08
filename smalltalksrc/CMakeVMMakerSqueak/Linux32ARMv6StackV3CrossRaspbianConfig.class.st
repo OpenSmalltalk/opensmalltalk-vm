@@ -18,7 +18,7 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Linux32ARMv6'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #utils }
 Linux32ARMv6StackV3CrossRaspbianConfig >> addDriver: name sources: aSources generator: cmakeGen [
 
 	| cfg srcs |
@@ -52,13 +52,19 @@ Linux32ARMv6StackV3CrossRaspbianConfig >> addDriver: name sources: aSources gene
 	
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'squeak compatibility' }
 Linux32ARMv6StackV3CrossRaspbianConfig >> addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs [
 	super addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #cmake }
+Linux32ARMv6StackV3CrossRaspbianConfig >> availableBuilds [
+	^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations
+
+]
+
+{ #category : #'compiler flags' }
 Linux32ARMv6StackV3CrossRaspbianConfig >> commonCompilerFlags [
 
 	"Common compiler flags
@@ -76,7 +82,7 @@ Linux32ARMv6StackV3CrossRaspbianConfig >> commonCompilerFlags [
 	
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'compiler flags' }
 Linux32ARMv6StackV3CrossRaspbianConfig >> compilerFlagsDebug [
 
 	^ {
@@ -88,7 +94,7 @@ Linux32ARMv6StackV3CrossRaspbianConfig >> compilerFlagsDebug [
 	'-DDEBUGVM=1' }
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'compiler flags' }
 Linux32ARMv6StackV3CrossRaspbianConfig >> compilerFlagsRelease [
 "
 THIS FLAGS ARE CRASHING COMPILER 
@@ -118,7 +124,7 @@ THIS IS LIKE: -O2 -fno-tree-pre -fno-caller-saves
 		'-DDEBUGVM=0' }
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'headers generation' }
 Linux32ARMv6StackV3CrossRaspbianConfig >> configH [
 	" right now its like  that "
 	^ '
@@ -276,7 +282,7 @@ Linux32ARMv6StackV3CrossRaspbianConfig >> configH [
 																																																																				'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'plugin extra rules' }
 Linux32ARMv6StackV3CrossRaspbianConfig >> configureB3DAcceleratorPlugin: maker [
 	"extra rules for B3DAcceleratorPlugin"
 	
@@ -284,7 +290,7 @@ Linux32ARMv6StackV3CrossRaspbianConfig >> configureB3DAcceleratorPlugin: maker [
 	maker includeDirectories: '${CMAKE_FIND_ROOT_PATH}/usr/include/'.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'plugin extra rules' }
 Linux32ARMv6StackV3CrossRaspbianConfig >> configureBitBltSimulation: maker [
 	"extra rules for BitBltSimulation"
 
@@ -297,7 +303,7 @@ Linux32ARMv6StackV3CrossRaspbianConfig >> configureBitBltSimulation: maker [
 	
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #plugins }
 Linux32ARMv6StackV3CrossRaspbianConfig >> defaultExternalPlugins [
 	self flag:'tty'. "InternetConfigPlugin is part of pharo build but not squeak. why?"
 	^ #(
@@ -309,7 +315,7 @@ Linux32ARMv6StackV3CrossRaspbianConfig >> defaultExternalPlugins [
 	)
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #plugins }
 Linux32ARMv6StackV3CrossRaspbianConfig >> defaultInternalPlugins [
 " took from unixbuild/bld/plugins.int"
 	^ #(
@@ -346,7 +352,13 @@ Linux32ARMv6StackV3CrossRaspbianConfig >> defaultInternalPlugins [
 		)
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #cmake }
+Linux32ARMv6StackV3CrossRaspbianConfig >> dirBuildPlatform [
+	"the directory for the platform. example: build.linux32x86"
+	^self dirARMv6
+]
+
+{ #category : #'plugin extra rules' }
 Linux32ARMv6StackV3CrossRaspbianConfig >> extraPluginSettings: maker [
 
 	maker isExternal ifTrue: [
@@ -358,19 +370,19 @@ Linux32ARMv6StackV3CrossRaspbianConfig >> extraPluginSettings: maker [
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 Linux32ARMv6StackV3CrossRaspbianConfig >> linkFlags [
 	 ^ '-lSM -lICE -ldl -lGL -lpthread -lm -lnsl -lX11'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'source files' }
 Linux32ARMv6StackV3CrossRaspbianConfig >> preferredIncludes [
 	^ #('${CMAKE_FIND_ROOT_PATH}/usr/include/'
 	'${targetPlatform}/plugins/B3DAcceleratorPlugin')
 	
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #utils }
 Linux32ARMv6StackV3CrossRaspbianConfig >> setExtraTargetProperties: maker [
 
 	"maker setTargetProperties: 'LINK_FLAGS ""'."

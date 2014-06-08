@@ -10,7 +10,12 @@ Class {
 
 { #category : #'as yet unclassified' }
 MacOSXPowerPCSqueakCogSpur class >> availableBuilds [
-	^SqueakCMakeVMMakerAbstractBuilder allBuildConfigurations
+	^SqueakCMakeVMMakerAbstractBuilder  default   allBuildConfigurations
+]
+
+{ #category : #cmake }
+MacOSXPowerPCSqueakCogSpur >> availableBuilds [
+	^SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations
 ]
 
 { #category : #'as yet unclassified' }
