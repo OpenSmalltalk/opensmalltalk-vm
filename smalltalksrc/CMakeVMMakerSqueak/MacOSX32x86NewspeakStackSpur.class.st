@@ -8,6 +8,11 @@ Class {
 	#category : #'CMakeVMMakerSqueak-MacOSX32x86'
 }
 
+{ #category : #cmake }
+MacOSX32x86NewspeakStackSpur >> availableBuilds [
+	^SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations
+]
+
 { #category : #'as yet unclassified' }
 MacOSX32x86NewspeakStackSpur >> todo [
 	self flag:'tty'

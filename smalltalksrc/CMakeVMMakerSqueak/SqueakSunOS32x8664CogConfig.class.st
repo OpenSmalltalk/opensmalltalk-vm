@@ -20,6 +20,13 @@ Class {
 	#category : #'CMakeVMMakerSqueak-SunOS32x86_64'
 }
 
+{ #category : #cmake }
+SqueakSunOS32x8664CogConfig >> availableBuilds [
+	^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations
+
+
+]
+
 { #category : #'squeak compatibility' }
 SqueakSunOS32x8664CogConfig >> buildDir [
 	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].

@@ -1,7 +1,12 @@
 "
-A TSqueakCPlatformConfig provides a template of methods which must be customized for Squeak compatibility with  pharo CMakeVMMaker classes.
+A TSqueakCPlatformConfig provides a template of methods which must be customized for Squeak compatibility with  pharo CMakeVMMaker classes. I also act as a repository of paths and directories. 
 
 I exist because tty does not have (and, should not have) permission to modify  to the existing inheritence tree in the pharo CMakeVMMaker categories.
+
+
+my protocol 'squeak compatibility' are the pharo override methods.
+my protocol 'cmake' contains helper methods unique to the squeak implementation of CMakeVMMakerSqueak and do not exist in the pharo stack.
+
 
 
 
@@ -13,16 +18,6 @@ Trait {
 	#name : #TCPlatformConfigForSqueak,
 	#category : #CMakeVMMakerSqueak
 }
-
-{ #category : #accessing }
-TCPlatformConfigForSqueak classSide >> availableBuilds [
-	^SqueakCMakeVMMakerAbstractBuilder allBuildConfigurations
-
-	" ^SqueakCMakeVMMakerAbstractBuilder noBuildConfigurations.
-	  ^(SqueakCMakeVMMakerAbstractBuilder allBuildConfigurations 
-			copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   
-	"
-]
 
 { #category : #accessing }
 TCPlatformConfigForSqueak classSide >> licenseTemplate [
@@ -93,6 +88,16 @@ External:
 '
 ]
 
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> availableBuilds [
+	^SqueakCMakeVMMakerAbstractBuilder  default  allBuildConfigurations
+
+	" ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations.
+	  ^(SqueakCMakeVMMakerAbstractBuilder  default  allBuildConfigurations 
+			copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   
+	"
+]
+
 { #category : #'squeak compatibility' }
 TCPlatformConfigForSqueak >> buildDir [
 	self required
@@ -111,6 +116,11 @@ TCPlatformConfigForSqueak >> buildType: aSymbol [
 { #category : #'squeak compatibility' }
 TCPlatformConfigForSqueak >> compilerFlags [
 	self required
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirAndroid [
+	^'Do Not Build. See Class Comment'
 ]
 
 { #category : #cmake }
@@ -204,7 +214,7 @@ TCPlatformConfigForSqueak >> dirMacOSX32x86 [
 
 { #category : #cmake }
 TCPlatformConfigForSqueak >> dirOutput [
-	^'results'
+	^'cmake_products'
 ]
 
 { #category : #cmake }

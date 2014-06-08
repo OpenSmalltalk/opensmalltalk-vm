@@ -17,12 +17,12 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Linux32ARMv6'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #'compiler flags' }
 Linux32ARMv6StackV3CrossRaspbianFastBltConfig >> commonCompilerFlags [
 	^ super commonCompilerFlags, { '-DENABLE_FAST_BLT' }.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'compiler flags' }
 Linux32ARMv6StackV3CrossRaspbianFastBltConfig >> compilerFlagsDebug [
 
 	^ {
@@ -33,7 +33,7 @@ Linux32ARMv6StackV3CrossRaspbianFastBltConfig >> compilerFlagsDebug [
 		'-DDEBUGVM=1' }
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'compiler flags' }
 Linux32ARMv6StackV3CrossRaspbianFastBltConfig >> compilerFlagsRelease [
 "
 THIS FLAGS ARE CRASHING COMPILER 
@@ -60,7 +60,7 @@ THIS IS LIKE: -O2 -fno-tree-pre -fno-caller-saves
 		'-DDEBUGVM=0' }
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'headers generation' }
 Linux32ARMv6StackV3CrossRaspbianFastBltConfig >> configH [
 	" right now its like  that "
 	^ '
@@ -217,7 +217,7 @@ Linux32ARMv6StackV3CrossRaspbianFastBltConfig >> configH [
 																																																																				'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'plugin extra rules' }
 Linux32ARMv6StackV3CrossRaspbianFastBltConfig >> configureBitBltSimulation: maker [
 	"extra rules for BitBltSimulation"
 

@@ -8,16 +8,16 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakBuildersTest >> testAvailableTargets [
+CMakeVMMakerSqueakBuildersTest >> testAvailableBuilds [
 	SqueakCMakeVMMakerAbstractBuilder 
 		subclassesDo:[:c | 
-			self assert: (c availableTargets size > 0).]	
+			self assert: (c default availableBuilds size > 0).]	
 ]
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakBuildersTest >> testBuildConfigurations [
-	self assert: (SqueakCMakeVMMakerAbstractBuilder allBuildConfigurations size > 0).
-	self assert: (SqueakCMakeVMMakerAbstractBuilder noBuildConfigurations size > 0).
+	self assert: (SqueakCMakeVMMakerAbstractBuilder default allBuildConfigurations size > 0).
+	self assert: (SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations size > 0).
 	
 ]
 
@@ -28,7 +28,7 @@ CMakeVMMakerSqueakBuildersTest >> testConfigurationsCategory [
 	oc:= OrderedCollection new.
 	SqueakCMakeVMMakerAbstractBuilder 
 		subclassesDo:[:c | 
-			self assert: (c configurationsCategory isString).
+			self assert: (c default configurationsCategory isString).
 			oc addLast: c.
 			self assert: ( (oc occurrencesOf: c) = 1)]	
 ]

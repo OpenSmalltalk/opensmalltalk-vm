@@ -23,7 +23,7 @@ Class {
 
 { #category : #'as yet unclassified' }
 Linux32x86SqueakCogV3Config class >> availableBuilds [
-	^SqueakCMakeVMMakerAbstractBuilder allBuildConfigurations
+	^SqueakCMakeVMMakerAbstractBuilder default allBuildConfigurations
 
 ]
 
@@ -134,6 +134,14 @@ Linux32x86SqueakCogV3Config >> addDriver: name sources: aSources generator: cmak
 	self write: cfg toFile: name , '/', cmakeGen outputFileName.
 	cmakeGen addSubdirectory:  name.
 	
+]
+
+{ #category : #cmake }
+Linux32x86SqueakCogV3Config >> availableBuilds [
+	^SqueakCMakeVMMakerAbstractBuilder default allBuildConfigurations copyWithoutAll:#(#assert #assertWithHeartbeatTimer #releaseHeartbeatTimer #debugMultiThreadedFFI #debugWithHeartbeatTimer )
+
+
+
 ]
 
 { #category : #'squeak compatibility' }
@@ -473,6 +481,12 @@ Linux32x86SqueakCogV3Config >> defaultInternalPlugins [
 Linux32x86SqueakCogV3Config >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
 	^self squeakCogV3
+]
+
+{ #category : #cmake }
+Linux32x86SqueakCogV3Config >> dirBuildPlatform [
+	"the directory for the platform. example: build.linux32x86"
+	^self dirLinux32x86
 ]
 
 { #category : #'squeak compatibility' }

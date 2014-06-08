@@ -9,12 +9,12 @@ Or:
 find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
 "
 Class {
-	#name : #Linux32x86NewspeakCogV3ThreadedHeartbeatConfig,
+	#name : #Linux32x86NewspeakCogV3HeartbeatTimerConfig,
 	#superclass : #Linux32x86NewspeakCogV3Config,
 	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
 
 { #category : #'as yet unclassified' }
-Linux32x86NewspeakCogV3ThreadedHeartbeatConfig >> todo [
+Linux32x86NewspeakCogV3HeartbeatTimerConfig >> todo [
 	self flag:'tty'
 ]

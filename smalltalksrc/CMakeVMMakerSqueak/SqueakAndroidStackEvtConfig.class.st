@@ -18,7 +18,13 @@ Class {
 
 { #category : #'as yet unclassified' }
 SqueakAndroidStackEvtConfig class >> availableBuilds [
-	^SqueakCMakeVMMakerAbstractBuilder noBuildConfigurations
+	^SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations
+]
+
+{ #category : #cmake }
+SqueakAndroidStackEvtConfig >> availableBuilds [
+	^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations
+
 ]
 
 { #category : #directories }
@@ -328,6 +334,12 @@ SqueakAndroidStackEvtConfig >> defaultInternalPlugins [
 		MiscPrimitivePlugin 
 		DeflatePlugin  "ZipPlugin"
 		)
+]
+
+{ #category : #cmake }
+SqueakAndroidStackEvtConfig >> dirBuildPlatform [
+	"the directory for the platform. example: build.linux32x86"
+	^self dirAndroid
 ]
 
 { #category : #'source generation' }

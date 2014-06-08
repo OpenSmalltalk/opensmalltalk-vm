@@ -23,7 +23,16 @@ Class {
 
 { #category : #'as yet unclassified' }
 Linux32x86SqueakStackSpurConfig class >> availableBuilds [
-	^SqueakCMakeVMMakerAbstractBuilder allBuildConfigurations
+	^SqueakCMakeVMMakerAbstractBuilder  default  allBuildConfigurations
+]
+
+{ #category : #cmake }
+Linux32x86SqueakStackSpurConfig >> availableBuilds [
+	"SqueakCMakeVMMakerAbstractBuilder  default allBuildConfigurations"
+	^SqueakCMakeVMMakerAbstractBuilder default allBuildConfigurations copyWithoutAll:#(#assert #assertWithHeartbeatTimer #debugMultiThreadedFFI  #debug #debugWithHeartbeatTimer  #releaseHeartbeatTimer #releaseMultiThreadedFFI )
+
+
+
 ]
 
 { #category : #'squeak compatibility' }

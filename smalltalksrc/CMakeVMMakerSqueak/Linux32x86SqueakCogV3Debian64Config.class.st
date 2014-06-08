@@ -23,6 +23,14 @@ Class {
 	#category : #'CMakeVMMakerSqueak-LinuxX86_64-32Compatibility'
 }
 
+{ #category : #cmake }
+Linux32x86SqueakCogV3Debian64Config >> availableBuilds [
+	^SqueakCMakeVMMakerAbstractBuilder default allBuildConfigurations copyWithoutAll:#(#assert #assertWithHeartbeatTimer #debug  #debugMultiThreadedFFI #debugWithHeartbeatTimer #releaseHeartbeatTimer #releaseMultiThreadedFFI)
+
+
+
+]
+
 { #category : #accessing }
 Linux32x86SqueakCogV3Debian64Config >> commonCompilerFlags [ 
 	^ super commonCompilerFlags , { '-L/usr/lib32' }
@@ -33,6 +41,12 @@ Linux32x86SqueakCogV3Debian64Config >> defaultExternalPlugins [
 	^ (super defaultExternalPlugins copyWithoutAll: #(#ThreadedIA32FFIPlugin #InternetConfigPlugin))
 
 
+]
+
+{ #category : #cmake }
+Linux32x86SqueakCogV3Debian64Config >> dirBuildPlatform [
+	"the directory for the platform. example: build.linux32x86"
+	^self dirLinux32x8664
 ]
 
 { #category : #accessing }
