@@ -182,6 +182,12 @@ SqueakCocoaIOSCogV3FamilyConfig >> defaultInternalPlugins [
 		)
 ]
 
+{ #category : #cmake }
+SqueakCocoaIOSCogV3FamilyConfig >> excludeFromBuild [
+	^false
+
+]
+
 { #category : #'source files' }
 SqueakCocoaIOSCogV3FamilyConfig >> extraSources [
 	" mac VM using some unix sources "

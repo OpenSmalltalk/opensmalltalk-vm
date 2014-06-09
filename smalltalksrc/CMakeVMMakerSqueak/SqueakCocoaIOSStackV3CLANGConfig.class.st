@@ -14,7 +14,7 @@ find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me 
 "
 Class {
 	#name : #SqueakCocoaIOSStackV3CLANGConfig,
-	#superclass : #SqueakCocoaIOSStackV3Config,
+	#superclass : #SqueakCocoaIOSSqueakStackV3Config,
 	#category : #'CMakeVMMakerSqueak-IOS'
 }
 
@@ -24,6 +24,12 @@ SqueakCocoaIOSStackV3CLANGConfig >> coreSources [
 	^ #(
 		'interp.c'
 		)
+]
+
+{ #category : #cmake }
+SqueakCocoaIOSStackV3CLANGConfig >> excludeFromBuild [
+	^false
+
 ]
 
 { #category : #settings }

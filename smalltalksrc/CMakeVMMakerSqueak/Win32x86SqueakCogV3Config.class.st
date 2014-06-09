@@ -57,6 +57,12 @@ Win32x86SqueakCogV3Config >> coreSources [
 		)
 ]
 
+{ #category : #cmake }
+Win32x86SqueakCogV3Config >> excludeFromBuild [
+	^false
+
+]
+
 { #category : #accessing }
 Win32x86SqueakCogV3Config >> executableName [
 	^ 'CogVM'

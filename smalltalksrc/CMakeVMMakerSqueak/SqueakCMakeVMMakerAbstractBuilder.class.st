@@ -194,8 +194,10 @@ SqueakCMakeVMMakerAbstractBuilder >> configureABuildFor: configSymbol withBuildT
 	((Smalltalk at: configSymbol)  category) =  (self configurationsCategory)  "verify the class is handled by this concrete builder"
 		ifTrue:[	
 				config := (Smalltalk at: configSymbol) new.                              "verify this config can handle this build type."
+				config excludeFromBuild                                                         "has a developer excluded this build manually?"
+					ifTrue:[^self userErrorConfigMarkedAsExcludeFromBuild: configSymbol].
 				i:=config availableBuilds indexOf:typeSymbol                                    
-						ifAbsent:[^self userErrorInvalidBuildType: typeSymbol 
+						ifAbsent:[^self userErrorInvalidBuildType: typeSymbol "this config does not support this build type"
 										forConfiguration: configSymbol 
 										hasTypes: config availableBuilds].
 				config configureForBuildType: typeSymbol.                             "config configure yourself"
@@ -277,6 +279,11 @@ SqueakCMakeVMMakerAbstractBuilder >> sourceDirectoryFor: aSymbol inCategory: aCa
 
 
 
+]
+
+{ #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder >> userErrorConfigMarkedAsExcludeFromBuild: aSymbol [
+	^'Class ', aSymbol ,'has been manually excluded from building. edit method ''excludeFromBuild'' to change this' .
 ]
 
 { #category : #queries }

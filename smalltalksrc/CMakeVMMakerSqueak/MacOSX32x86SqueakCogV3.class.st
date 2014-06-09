@@ -4,7 +4,7 @@ A MacOSX32x86SqueakCogV3  configures a VM according to my name's form: [Operatin
 "
 Class {
 	#name : #MacOSX32x86SqueakCogV3,
-	#superclass : #SqueakMacOSV3Config,
+	#superclass : #SqueakMacOSX32x86Config,
 	#category : #'CMakeVMMakerSqueak-MacOSX32x86'
 }
 
@@ -13,7 +13,8 @@ MacOSX32x86SqueakCogV3 >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations
 ]
 
-{ #category : #'as yet unclassified' }
-MacOSX32x86SqueakCogV3 >> todo [
-	self flag:'tty'
+{ #category : #cmake }
+MacOSX32x86SqueakCogV3 >> excludeFromBuild [
+	^false
+
 ]

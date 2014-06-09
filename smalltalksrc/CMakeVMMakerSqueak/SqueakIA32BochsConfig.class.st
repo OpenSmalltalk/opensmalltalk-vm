@@ -122,6 +122,12 @@ SqueakIA32BochsConfig >> dirBuildPlatform [
 	^self dirIA32Bochs
 ]
 
+{ #category : #cmake }
+SqueakIA32BochsConfig >> excludeFromBuild [
+	^true
+
+]
+
 { #category : #'initialize-release' }
 SqueakIA32BochsConfig >> initialize [
 	super initialize.

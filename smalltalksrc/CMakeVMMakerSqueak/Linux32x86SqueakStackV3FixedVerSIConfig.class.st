@@ -12,11 +12,11 @@ find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me 
 "
 Class {
 	#name : #Linux32x86SqueakStackV3FixedVerSIConfig,
-	#superclass : #Linux32x86SqueakStackV3DebugConfig,
-	#category : #'CMakeVMMakerSqueak-Linux32x86'
+	#superclass : #Linux32x86SqueakStackV3DebugConfigz,
+	#category : #'CMakeVMMakerSqueak-IslandOfMisfitToys'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #'compiler flags' }
 Linux32x86SqueakStackV3FixedVerSIConfig >> compilerFlagsDebug [
 
 	^ {
@@ -31,7 +31,15 @@ Linux32x86SqueakStackV3FixedVerSIConfig >> compilerFlagsDebug [
 		'-DDEBUGVM=1' }
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #cmake }
+Linux32x86SqueakStackV3FixedVerSIConfig >> excludeFromBuild [
+"	^false"   "build this configuration"
+	^true
+
+
+]
+
+{ #category : #settings }
 Linux32x86SqueakStackV3FixedVerSIConfig >> extraVMSettings: maker [
 	| versionC |
 	self generateConfigH.

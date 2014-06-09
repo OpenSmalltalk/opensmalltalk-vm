@@ -19,7 +19,7 @@ or find my Builder in CMakeVMMakerSqueak-Builder category and use that to query 
 "
 Class {
 	#name : #Linux32x86SqueakCogV3Debian64Config,
-	#superclass : #Linux32x86SqueakCogV3Config,
+	#superclass : #Linux32x86SqueakCogV3Configz,
 	#category : #'CMakeVMMakerSqueak-LinuxX86_64-32Compatibility'
 }
 
@@ -47,6 +47,12 @@ Linux32x86SqueakCogV3Debian64Config >> defaultExternalPlugins [
 Linux32x86SqueakCogV3Debian64Config >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
 	^self dirLinux32x8664
+]
+
+{ #category : #cmake }
+Linux32x86SqueakCogV3Debian64Config >> excludeFromBuild [
+	^false
+
 ]
 
 { #category : #accessing }

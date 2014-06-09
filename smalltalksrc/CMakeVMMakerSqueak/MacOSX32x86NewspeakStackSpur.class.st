@@ -4,7 +4,7 @@ A MacOSX32x86NewspeakStackSpur  configures a VM according to my name's form: [Op
 "
 Class {
 	#name : #MacOSX32x86NewspeakStackSpur,
-	#superclass : #SqueakMacOSV3Config,
+	#superclass : #SqueakMacOSX32x86Config,
 	#category : #'CMakeVMMakerSqueak-MacOSX32x86'
 }
 
@@ -13,7 +13,8 @@ MacOSX32x86NewspeakStackSpur >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations
 ]
 
-{ #category : #'as yet unclassified' }
-MacOSX32x86NewspeakStackSpur >> todo [
-	self flag:'tty'
+{ #category : #cmake }
+MacOSX32x86NewspeakStackSpur >> excludeFromBuild [
+	^false
+
 ]

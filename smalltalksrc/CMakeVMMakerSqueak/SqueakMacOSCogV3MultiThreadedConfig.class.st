@@ -6,8 +6,8 @@ Fore more information, check the class comments of all the superclasses.
 "
 Class {
 	#name : #SqueakMacOSCogV3MultiThreadedConfig,
-	#superclass : #SqueakMacOSCogV3Config,
-	#category : #'CMakeVMMakerSqueak-MacOS'
+	#superclass : #SqueakMacOSSqueakCogV3Config,
+	#category : #'CMakeVMMakerSqueak-IslandOfMisfitToys'
 }
 
 { #category : #'compiler flags' }
@@ -55,6 +55,12 @@ SqueakMacOSCogV3MultiThreadedConfig >> defaultExternalPlugins [
 		Mpeg3Plugin
 		"UnixOSProcessPlugin ?? "
 	)
+]
+
+{ #category : #cmake }
+SqueakMacOSCogV3MultiThreadedConfig >> excludeFromBuild [
+	^true
+
 ]
 
 { #category : #accessing }

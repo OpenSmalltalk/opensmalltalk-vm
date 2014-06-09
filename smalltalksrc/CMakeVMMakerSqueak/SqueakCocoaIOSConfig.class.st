@@ -270,6 +270,12 @@ SqueakCocoaIOSConfig >> defaultInternalPlugins [
 		SurfacePlugin)
 ]
 
+{ #category : #cmake }
+SqueakCocoaIOSConfig >> excludeFromBuild [
+	^true
+
+]
+
 { #category : #accessing }
 SqueakCocoaIOSConfig >> executableType [
 	^ 'MACOSX_BUNDLE'

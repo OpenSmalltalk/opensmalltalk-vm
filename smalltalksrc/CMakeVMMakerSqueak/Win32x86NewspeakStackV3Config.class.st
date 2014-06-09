@@ -1,95 +1,28 @@
 "
 I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
+Usage:
+Win32x86SqueakStackV3Config generateWithSources
+Or:
+Win32x86SqueakStackV3Config generate
+Or: 
+find my Builder in CMakeVMMakerSqueak-Builder category and use that to invoke me.
 
 
 "
 Class {
 	#name : #Win32x86NewspeakStackV3Config,
-	#superclass : #CPlatformConfig,
-	#traits : 'TCPlatformConfigForSqueak',
-	#classTraits : 'TCPlatformConfigForSqueak classTrait',
-	#instVars : [
-		'buildType',
-		'generateForAssert',
-		'generateForAssertHeartbeatTimer',
-		'generateForDebug',
-		'generateForDebugWithHeartbeatTimer',
-		'generateForDebugMultiThreadedFFI',
-		'generateForReleaseHeartbeatTimer',
-		'generateForReleaseMultiThreadedFFI'
-	],
+	#superclass : #SqueakWin32x86CogFamilyConfig,
 	#category : #'CMakeVMMakerSqueak-Win32x86'
 }
 
-{ #category : #'squeak compatibility' }
-Win32x86NewspeakStackV3Config >> buildDir [
-	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].
-]
-
-{ #category : #'squeak compatibility' }
-Win32x86NewspeakStackV3Config >> buildDirName [
-	buildType isNil
-		ifTrue:[^self dirBuildPlatform, self dirBuildLanguageVMMM, 'build']
-		ifFalse:[^self dirBuildPlatform, self dirBuildLanguageVMMM, buildType asString]
-]
-
-{ #category : #'squeak compatibility' }
-Win32x86NewspeakStackV3Config >> buildType: aSymbol [
-	buildType:= aSymbol
-]
-
-{ #category : #plugins }
-Win32x86NewspeakStackV3Config >> defaultExternalPlugins [
-	"expertly cut-n-pasted from Cog/cygwinbuild/plugins.ext"
-	^#(
-		BochsIA32Plugin 
-		SqueakFFIPrims 
-		Win32OSProcessPlugin
-	)
-]
-
-{ #category : #plugins }
-Win32x86NewspeakStackV3Config >> defaultInternalPlugins [
-	"expertly cut-n-pasted from Cog/cygwinbuild/plugins.int"
-	^#(
-		ADPCMCodecPlugin 
-		AsynchFilePlugin 
-		B3DAcceleratorPlugin 
-		B2DPlugin 
-		BitBltPlugin 
-		BMPReadWriterPlugin 
-		CroquetPlugin 
-		ZipPlugin 
-		DropPlugin 
-		DSAPrims 
-		FFTPlugin 
-		FilePlugin 
-		FloatArrayPlugin 
-		FloatMathPlugin 
-		HostWindowPlugin 
-		IA32ABI 
-		JoystickTabletPlugin 
-		JPEGReaderPlugin 
-		JPEGReadWriter2Plugin 
-		Klatt 
-		LargeIntegers 
-		LocalePlugin 
-		Matrix2x3Plugin 
-		MIDIPlugin 
-		MiscPrimitivePlugin 
-		Mpeg3Plugin 
-		RePlugin 
-		SecurityPlugin 
-		SerialPlugin 
-		SocketPlugin 
-		SoundCodecPrims 
-		SoundGenerationPlugin 
-		SoundPlugin 
-		StarSqueakPlugin 
-		SurfacePlugin 
-		UUIDPlugin
-	)
+{ #category : #'source files' }
+Win32x86NewspeakStackV3Config >> coreSources [
+	"files to include from src/vm dir"
+	
+	^ #(
+		'gcc3x-interp.c'
+		)
 ]
 
 { #category : #cmake }
@@ -99,35 +32,23 @@ Win32x86NewspeakStackV3Config >> dirBuildLanguageVMMM [
 ]
 
 { #category : #cmake }
-Win32x86NewspeakStackV3Config >> dirBuildPlatform [
-	"the directory for the platform. example: build.linux32x86"
-	^self dirWin32x86
-]
-
-{ #category : #'initialize-release' }
-Win32x86NewspeakStackV3Config >> initialize [
-	super initialize.
-	"this should be in my superclass, but I do not have permission to modify it. tty"
-	 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
-]
-
-{ #category : #'squeak compatibility' }
-Win32x86NewspeakStackV3Config >> outputDir [
-	^ outputDir ifNil: [ outputDir := (self topDir / self outputDirName) ]	
+Win32x86NewspeakStackV3Config >> excludeFromBuild [
+	^false
 
 ]
 
-{ #category : #'squeak compatibility' }
-Win32x86NewspeakStackV3Config >> srcDir [
-		^ srcDir ifNil: [ srcDir := (self topDir directoryNamed: 'src' )]
+{ #category : #accessing }
+Win32x86NewspeakStackV3Config >> executableName [
+	^ 'StackVM'
 ]
 
-{ #category : #'as yet unclassified' }
-Win32x86NewspeakStackV3Config >> todo [
-	self flag:'tty'
+{ #category : #'source generation' }
+Win32x86NewspeakStackV3Config >> interpreterClass [
+	"answer an interpreter class for VM source code generation"
+	^ StackInterpreter
 ]
 
-{ #category : #'squeak compatibility' }
-Win32x86NewspeakStackV3Config >> topDir [
-		^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: self oscogvm ]
+{ #category : #'source generation' }
+Win32x86NewspeakStackV3Config >> prepareForGeneration [
+	^ self prepareForStackVMGeneration
 ]
