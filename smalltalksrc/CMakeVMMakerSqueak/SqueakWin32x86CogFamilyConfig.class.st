@@ -529,6 +529,12 @@ SqueakWin32x86CogFamilyConfig >> dirBuildPlatform [
 	^self dirWin32x86
 ]
 
+{ #category : #cmake }
+SqueakWin32x86CogFamilyConfig >> excludeFromBuild [
+	^true
+
+]
+
 { #category : #accessing }
 SqueakWin32x86CogFamilyConfig >> executableType [
 	^ 'WIN32'

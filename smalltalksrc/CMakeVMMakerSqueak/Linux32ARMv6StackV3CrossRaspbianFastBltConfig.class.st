@@ -239,3 +239,9 @@ Linux32ARMv6StackV3CrossRaspbianFastBltConfig >> configureBitBltSimulation: make
 	).
 	
 ]
+
+{ #category : #cmake }
+Linux32ARMv6StackV3CrossRaspbianFastBltConfig >> excludeFromBuild [
+	^false
+
+]

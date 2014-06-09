@@ -12,7 +12,7 @@ find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me 
 "
 Class {
 	#name : #Linux32ARMv6StackV3RaspbianConfig,
-	#superclass : #Linux32x86SqueakStackV3Config,
+	#superclass : #Linux32x86SqueakStackV3Configz,
 	#category : #'CMakeVMMakerSqueak-Linux32ARMv6'
 }
 
@@ -153,6 +153,12 @@ Linux32ARMv6StackV3RaspbianConfig >> defaultInternalPlugins [
 Linux32ARMv6StackV3RaspbianConfig >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
 	^self dirARMv6
+]
+
+{ #category : #cmake }
+Linux32ARMv6StackV3RaspbianConfig >> excludeFromBuild [
+	^false
+
 ]
 
 { #category : #'plugin extra rules' }
