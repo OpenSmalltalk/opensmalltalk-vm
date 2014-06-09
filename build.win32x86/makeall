@@ -1,0 +1,4 @@
+#!/bin/bash
+for d in newspeak.* squeak.*; do
+	(cd $d;./mvm)
+done

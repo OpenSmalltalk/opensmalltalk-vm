@@ -10,8 +10,9 @@ C=
 while [ -n "$1" ]; do
 	case $1 in
 	-c)	C=-c;; #-c == Core VM only
-	-A)	D=LOGD;A=LOGA;F=LOGS;DT=LOGTD;AT=LOGTA;FT=LOGTS;;
-	-AS)	D=LOGD;A=LOGA;F=LOGS;;
+#	-A)	D=LOGD;A=LOGA;F=LOGS;DT=LOGTD;AT=LOGTA;FT=LOGTS;;
+#	-AS)	D=LOGD;A=LOGA;F=LOGS;;
+	-A|-AS)	D=LOGD;A=LOGA;F=LOGS;;
 	-AT)	DT=LOGTD;AT=LOGTA;FT=LOGTS;;
 	-d)	D=LOGD;;
 	-dt)	DT=LOGTD;;
