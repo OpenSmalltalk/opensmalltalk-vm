@@ -11,7 +11,15 @@ Class {
 	#traits : 'TCPlatformConfigForSqueak',
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#instVars : [
-		'buildType'
+		'buildType',
+		'generateForAssert',
+		'generateForAssertWithHeartbeatTimer',
+		'generateForDebug',
+		'generateForDebugWithHeartbeatTimer',
+		'generateForDebugMultiThreadedFFI',
+		'generateForReleaseHeartbeatTimer',
+		'generateForReleaseMultiThreadedFFI',
+		'generateForAssertHeartbeatTimer'
 	],
 	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
@@ -37,6 +45,47 @@ Linux32x86Config >> buildDirName [
 { #category : #'squeak compatibility' }
 Linux32x86Config >> buildType: aSymbol [
 	buildType:= aSymbol
+]
+
+{ #category : #cmake }
+Linux32x86Config >> configureForAssert [
+	generateForAssert := true.
+]
+
+{ #category : #cmake }
+Linux32x86Config >> configureForAssertWithHeartbeatTimer [
+	generateForAssertWithHeartbeatTimer := true
+]
+
+{ #category : #cmake }
+Linux32x86Config >> configureForDebug [
+	generateForDebug := true
+]
+
+{ #category : #cmake }
+Linux32x86Config >> configureForDebugMultiThreadedFFI [
+	generateForDebugMultiThreadedFFI := true
+]
+
+{ #category : #cmake }
+Linux32x86Config >> configureForDebugWithHeartbeatTimer [
+	generateForDebugWithHeartbeatTimer := true
+]
+
+{ #category : #cmake }
+Linux32x86Config >> configureForRelease [
+	"this variable is in pharo class CPlatformConfig"
+	generateForRelease := true.
+]
+
+{ #category : #cmake }
+Linux32x86Config >> configureForReleaseHeartbeatTimer [
+	generateForReleaseHeartbeatTimer := true.
+]
+
+{ #category : #cmake }
+Linux32x86Config >> configureForReleaseMultiThreadedFFI [
+	generateForReleaseMultiThreadedFFI := true
 ]
 
 { #category : #plugins }
@@ -84,6 +133,13 @@ Linux32x86Config >> dirBuildLanguageVMMM [
 Linux32x86Config >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
 	^self dirLinux32x86
+]
+
+{ #category : #'initialize-release' }
+Linux32x86Config >> initialize [
+	super initialize.
+	"this should be in my superclass, but I do not have permission to modify it. tty"
+	 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
 ]
 
 { #category : #cmake }

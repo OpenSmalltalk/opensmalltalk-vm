@@ -66,6 +66,12 @@ SqueakCMakeVMMakerAbstractBuilder class >> configurationsCategory [
 
 ]
 
+{ #category : #building }
+SqueakCMakeVMMakerAbstractBuilder class >> configureABuildFor: aSqueakCMakeConfiguration withBuildType: aSymbol [
+	default ifNil:[default:= self new].
+	^default configureABuildFor: aSqueakCMakeConfiguration withBuildType: aSymbol
+]
+
 { #category : #'initialize-release' }
 SqueakCMakeVMMakerAbstractBuilder class >> default [
 	^default ifNil:[default:= self new]
@@ -126,6 +132,12 @@ SqueakCMakeVMMakerAbstractBuilder >> availableBuilds: aCategoryName [
 
 ]
 
+{ #category : #accessing }
+SqueakCMakeVMMakerAbstractBuilder >> buildTypeAndDirectoryInfo [
+
+	^ buildTypeAndDirectoryInfo
+]
+
 { #category : #queries }
 SqueakCMakeVMMakerAbstractBuilder >> buildTypeDirectoriesFor: aSymbol [
 	"answer a subset of buildTypeAndDirectoryInfo based on the buildTypes the configuration supports   "
@@ -172,6 +184,29 @@ SqueakCMakeVMMakerAbstractBuilder >> configurationDictionary: aCategoryName [
 SqueakCMakeVMMakerAbstractBuilder >> configurationsCategory [
 	"Answer the category in which the Builder's configurations reside."
 	self subclassResponsibility
+]
+
+{ #category : #building }
+SqueakCMakeVMMakerAbstractBuilder >> configureABuildFor: configSymbol withBuildType: typeSymbol [
+	|config i |
+	"Do some sanity checks, then set the internal state of a Configuration for a particular build type. "
+	[
+	((Smalltalk at: configSymbol)  category) =  (self configurationsCategory)  "verify the class is handled by this concrete builder"
+		ifTrue:[	
+				config := (Smalltalk at: configSymbol) new.                              "verify this config can handle this build type."
+				i:=config availableBuilds indexOf:typeSymbol                                    
+						ifAbsent:[^self userErrorInvalidBuildType: typeSymbol 
+										forConfiguration: configSymbol 
+										hasTypes: config availableBuilds].
+				config configureForBuildType: typeSymbol.                             "config configure yourself"
+				^config]
+		ifFalse:[^self userErrorInvalidTarget: configSymbol]
+	] ifError:[^'error configureABuildFor: ''', configSymbol].
+
+	^nil.
+	
+
+	
 ]
 
 { #category : #queries }
@@ -241,6 +276,12 @@ SqueakCMakeVMMakerAbstractBuilder >> sourceDirectoryFor: aSymbol inCategory: aCa
 
 
 
+
+]
+
+{ #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder >> userErrorInvalidBuildType: typeSymbol forConfiguration: configSymbol hasTypes: anOrderedCollection [
+	^'The configuration: ', configSymbol, 'does not support buildType ', typeSymbol, '. supported types are:', anOrderedCollection
 
 ]
 

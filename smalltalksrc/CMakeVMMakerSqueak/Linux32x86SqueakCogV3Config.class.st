@@ -16,7 +16,14 @@ Class {
 	#traits : 'TCPlatformConfigForSqueak',
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#instVars : [
-		'buildType'
+		'buildType',
+		'generateForAssert',
+		'generateForDebug',
+		'generateForDebugWithHeartbeatTimer',
+		'generateForDebugMultiThreadedFFI',
+		'generateForReleaseHeartbeatTimer',
+		'generateForReleaseMultiThreadedFFI',
+		'generateForAssertHeartbeatTimer'
 	],
 	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
@@ -414,6 +421,59 @@ Linux32x86SqueakCogV3Config >> configH [
 																																																																				'
 ]
 
+{ #category : #cmake }
+Linux32x86SqueakCogV3Config >> configureForAssert [
+	generateForAssert := true
+
+]
+
+{ #category : #cmake }
+Linux32x86SqueakCogV3Config >> configureForAssertWithHeartbeatTimer [
+	generateForAssertHeartbeatTimer := true.
+
+
+]
+
+{ #category : #cmake }
+Linux32x86SqueakCogV3Config >> configureForDebug [
+	generateForDebug := true
+
+]
+
+{ #category : #cmake }
+Linux32x86SqueakCogV3Config >> configureForDebugMultiThreadedFFI [
+	generateForDebugMultiThreadedFFI := true
+
+
+]
+
+{ #category : #cmake }
+Linux32x86SqueakCogV3Config >> configureForDebugWithHeartbeatTimer [
+	generateForDebugWithHeartbeatTimer := true
+
+]
+
+{ #category : #cmake }
+Linux32x86SqueakCogV3Config >> configureForRelease [
+	"this variable is in pharo class CPlatformConfig"
+	generateForRelease := true.
+
+
+]
+
+{ #category : #cmake }
+Linux32x86SqueakCogV3Config >> configureForReleaseHeartbeatTimer [
+	generateForReleaseHeartbeatTimer := true.
+
+
+]
+
+{ #category : #cmake }
+Linux32x86SqueakCogV3Config >> configureForReleaseMultiThreadedFFI [
+	generateForReleaseMultiThreadedFFI := true
+
+]
+
 { #category : #sources }
 Linux32x86SqueakCogV3Config >> coreSources [
 	"files to include from src/vm dir"
@@ -550,6 +610,13 @@ Linux32x86SqueakCogV3Config >> generatePluginsList [
 				self executableName })
 		toFile: 'PLUGINS.txt'
 	
+]
+
+{ #category : #'initialize-release' }
+Linux32x86SqueakCogV3Config >> initialize [
+	super initialize.
+	"this should be in my superclass, but I do not have permission to modify it. tty"
+	 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
 ]
 
 { #category : #'source generation' }

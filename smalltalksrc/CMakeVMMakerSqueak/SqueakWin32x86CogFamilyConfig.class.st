@@ -50,7 +50,14 @@ Class {
 	#traits : 'TCPlatformConfigForSqueak',
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#instVars : [
-		'buildType'
+		'buildType',
+		'generateForAssert',
+		'generateForDebug',
+		'generateForDebugWithHeartbeatTimer',
+		'generateForDebugMultiThreadedFFI',
+		'generateForReleaseHeartbeatTimer',
+		'generateForReleaseMultiThreadedFFI',
+		'generateForAssertHeartbeatTimer'
 	],
 	#category : #'CMakeVMMakerSqueak-Win32x86'
 }
@@ -130,7 +137,7 @@ External:
 '
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'thirdparty libs' }
 SqueakWin32x86CogFamilyConfig >> addThirdpartyLibrary: libName [
 	| libs lib |
 	
@@ -567,6 +574,13 @@ SqueakWin32x86CogFamilyConfig >> generatePluginsList [
 				self executableName })
 		toFile: 'PLUGINS.txt'
 	
+]
+
+{ #category : #'initialize-release' }
+SqueakWin32x86CogFamilyConfig >> initialize [
+	super initialize.
+	"this should be in my superclass, but I do not have permission to modify it. tty"
+	 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
 ]
 
 { #category : #accessing }

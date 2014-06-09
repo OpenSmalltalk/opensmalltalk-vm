@@ -15,7 +15,14 @@ Class {
 	#traits : 'TCPlatformConfigForSqueak',
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#instVars : [
-		'buildType'
+		'buildType',
+		'generateForAssert',
+		'generateForDebug',
+		'generateForDebugWithHeartbeatTimer',
+		'generateForDebugMultiThreadedFFI',
+		'generateForReleaseHeartbeatTimer',
+		'generateForReleaseMultiThreadedFFI',
+		'generateForAssertHeartbeatTimer'
 	],
 	#category : #'CMakeVMMakerSqueak-SunOS32x86'
 }
@@ -43,6 +50,54 @@ SqueakSunOS32x86CogConfig >> buildType: aSymbol [
 	buildType:= aSymbol
 ]
 
+{ #category : #cmake }
+SqueakSunOS32x86CogConfig >> configureForAssert [
+	generateForAssert := true
+
+]
+
+{ #category : #cmake }
+SqueakSunOS32x86CogConfig >> configureForAssertWithHeartbeatTimer [
+	generateForAssertHeartbeatTimer := true.
+
+]
+
+{ #category : #cmake }
+SqueakSunOS32x86CogConfig >> configureForDebug [
+	generateForDebug := true
+
+]
+
+{ #category : #cmake }
+SqueakSunOS32x86CogConfig >> configureForDebugMultiThreadedFFI [
+	generateForDebugMultiThreadedFFI := true
+
+]
+
+{ #category : #cmake }
+SqueakSunOS32x86CogConfig >> configureForDebugWithHeartbeatTimer [
+	generateForDebugWithHeartbeatTimer := true
+
+]
+
+{ #category : #cmake }
+SqueakSunOS32x86CogConfig >> configureForRelease [
+	"this variable is in pharo class CPlatformConfig"
+	generateForRelease := true.
+
+]
+
+{ #category : #cmake }
+SqueakSunOS32x86CogConfig >> configureForReleaseHeartbeatTimer [
+	generateForReleaseHeartbeatTimer := true.
+
+]
+
+{ #category : #cmake }
+SqueakSunOS32x86CogConfig >> configureForReleaseMultiThreadedFFI [
+	generateForReleaseMultiThreadedFFI := true
+]
+
 { #category : #plugins }
 SqueakSunOS32x86CogConfig >> defaultExternalPlugins [
 	^#(	)
@@ -63,6 +118,13 @@ SqueakSunOS32x86CogConfig >> dirBuildLanguageVMMM [
 SqueakSunOS32x86CogConfig >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
 	^self dirSunOS32x86
+]
+
+{ #category : #'initialize-release' }
+SqueakSunOS32x86CogConfig >> initialize [
+	super initialize.
+	"this should be in my superclass, but I do not have permission to modify it. tty"
+	 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
 ]
 
 { #category : #'squeak compatibility' }

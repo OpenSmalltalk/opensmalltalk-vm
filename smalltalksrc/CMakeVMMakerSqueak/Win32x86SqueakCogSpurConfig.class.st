@@ -10,7 +10,14 @@ Class {
 	#traits : 'TCPlatformConfigForSqueak',
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#instVars : [
-		'buildType'
+		'buildType',
+		'generateForAssert',
+		'generateForAssertHeartbeatTimer',
+		'generateForDebug',
+		'generateForDebugWithHeartbeatTimer',
+		'generateForDebugMultiThreadedFFI',
+		'generateForReleaseHeartbeatTimer',
+		'generateForReleaseMultiThreadedFFI'
 	],
 	#category : #'CMakeVMMakerSqueak-Win32x86'
 }
@@ -95,6 +102,13 @@ Win32x86SqueakCogSpurConfig >> dirBuildLanguageVMMM [
 Win32x86SqueakCogSpurConfig >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
 	^self dirWin32x86
+]
+
+{ #category : #'initialize-release' }
+Win32x86SqueakCogSpurConfig >> initialize [
+	super initialize.
+	"this should be in my superclass, but I do not have permission to modify it. tty"
+	 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
 ]
 
 { #category : #'squeak compatibility' }

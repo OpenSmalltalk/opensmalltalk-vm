@@ -11,7 +11,15 @@ Class {
 	#traits : 'TCPlatformConfigForSqueak',
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#instVars : [
-		'buildType'
+		'buildType',
+		'generateForAssert',
+		'generateForAssertWithHeartbeatTimer',
+		'generateForDebug',
+		'generateForDebugWithHeartbeatTimer',
+		'generateForDebugMultiThreadedFFI',
+		'generateForReleaseHeartbeatTimer',
+		'generateForReleaseMultiThreadedFFI',
+		'generateForAssertHeartbeatTimer'
 	],
 	#category : #'CMakeVMMakerSqueak-Android'
 }
@@ -248,6 +256,52 @@ SqueakAndroidStackEvtConfig >> configureFloatMathPlugin: maker [
 
 ]
 
+{ #category : #cmake }
+SqueakAndroidStackEvtConfig >> configureForAssert [
+	generateForAssert := true
+]
+
+{ #category : #cmake }
+SqueakAndroidStackEvtConfig >> configureForAssertWithHeartbeatTimer [
+	generateForAssertHeartbeatTimer := true.
+]
+
+{ #category : #cmake }
+SqueakAndroidStackEvtConfig >> configureForDebug [
+	generateForDebug := true
+]
+
+{ #category : #cmake }
+SqueakAndroidStackEvtConfig >> configureForDebugMultiThreadedFFI [
+	generateForDebugMultiThreadedFFI := true
+]
+
+{ #category : #cmake }
+SqueakAndroidStackEvtConfig >> configureForDebugWithHeartbeatTimer [
+	generateForDebugWithHeartbeatTimer := true
+]
+
+{ #category : #cmake }
+SqueakAndroidStackEvtConfig >> configureForNoBuildType [
+	self initialize
+]
+
+{ #category : #cmake }
+SqueakAndroidStackEvtConfig >> configureForRelease [
+	"this variable is in pharo class CPlatformConfig"
+	generateForRelease := true.
+]
+
+{ #category : #cmake }
+SqueakAndroidStackEvtConfig >> configureForReleaseHeartbeatTimer [
+	generateForReleaseHeartbeatTimer := true.
+]
+
+{ #category : #cmake }
+SqueakAndroidStackEvtConfig >> configureForReleaseMultiThreadedFFI [
+	generateForReleaseMultiThreadedFFI := true
+]
+
 { #category : #'plugin extra rules' }
 SqueakAndroidStackEvtConfig >> configureJoystickTabletPlugin: maker [ 
 	"extra rules for JoystickTabletPlugin"
@@ -377,6 +431,13 @@ SqueakAndroidStackEvtConfig >> generate [
 SqueakAndroidStackEvtConfig >> generateConfigH [
 	"will fix that later"
 	self write: self configH toFile: 'config.h'
+]
+
+{ #category : #'initialize-release' }
+SqueakAndroidStackEvtConfig >> initialize [
+	super initialize.
+	"this should be in my superclass, but I do not have permission to modify it. tty"
+	 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
 ]
 
 { #category : #'source generation' }
