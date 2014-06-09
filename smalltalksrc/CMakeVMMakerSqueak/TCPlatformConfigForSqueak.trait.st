@@ -119,6 +119,69 @@ TCPlatformConfigForSqueak >> compilerFlags [
 ]
 
 { #category : #cmake }
+TCPlatformConfigForSqueak >> configureForAssert [
+	self required
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> configureForAssertWithHeartbeatTimer [
+	self required
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> configureForBuildType: aSymbol [
+	| d |
+	self configureForNoBuildType.                "reset all internal flags"
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo.
+	d 
+		at: #assert put:[self configureForAssert];
+		at: #assertWithHeartbeatTimer put: [self configureForAssertWithHeartbeatTimer];
+            at:#debug put: [self configureForDebug];
+		at: #debugWithHeartbeatTimer put: [self configureForDebugWithHeartbeatTimer];
+		at: #debugMultiThreadedFFI put: [self configureForDebugMultiThreadedFFI];
+		at: #release put: [self configureForRelease];
+		at: #releaseHeartbeatTimer put: [self configureForReleaseHeartbeatTimer];
+		at: #releaseMultiThreadedFFI put: [self configureForReleaseMultiThreadedFFI].
+     ^(d at: aSymbol) value
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> configureForDebug [
+	self required
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> configureForDebugMultiThreadedFFI [
+	self required
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> configureForDebugWithHeartbeatTimer [
+	self required
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> configureForNoBuildType [
+	"this could be dangerous. If it becomes so, then just reset all the generateForXYZ flags in the topmost config. Currently that is all that initialize does."
+	self initialize
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> configureForRelease [
+	self required
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> configureForReleaseHeartbeatTimer [
+	self required
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> configureForReleaseMultiThreadedFFI [
+	self required
+]
+
+{ #category : #cmake }
 TCPlatformConfigForSqueak >> dirAndroid [
 	^'Do Not Build. See Class Comment'
 ]
