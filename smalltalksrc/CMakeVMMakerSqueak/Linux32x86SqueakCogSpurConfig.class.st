@@ -15,7 +15,7 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #plugins }
 Linux32x86SqueakCogSpurConfig >> defaultExternalPlugins [
 	^ #(#B3DAcceleratorPlugin 
 		 #BochsIA32Plugin 
@@ -26,7 +26,7 @@ Linux32x86SqueakCogSpurConfig >> defaultExternalPlugins [
 		#UUIDPlugin)
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #plugins }
 Linux32x86SqueakCogSpurConfig >> defaultInternalPlugins [
 	^ #(#AsynchFilePlugin
 		#BMPReadWriterPlugin
@@ -54,10 +54,16 @@ Linux32x86SqueakCogSpurConfig >> defaultInternalPlugins [
 		#VMProfileLinuxSupportPlugin)
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #cmake }
 Linux32x86SqueakCogSpurConfig >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
 	^self squeakCogSpur
+]
+
+{ #category : #cmake }
+Linux32x86SqueakCogSpurConfig >> excludeFromBuild [
+	"over-ride to exclude yourself from a build"
+	^false
 ]
 
 { #category : #'as yet unclassified' }

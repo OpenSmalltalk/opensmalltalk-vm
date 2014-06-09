@@ -93,6 +93,28 @@ CMakeVMMakerSqueakConfigurationsTest >> testDefaultInternalPlugins [
 ]
 
 { #category : #'as yet unclassified' }
+CMakeVMMakerSqueakConfigurationsTest >> testExcludeFromBuild [
+	"for each builder, make sure all its configurations provide a buildDirectory "
+	SqueakCMakeVMMakerAbstractBuilder 
+		subclassesDo:[:builder | | o |
+			Smalltalk globals 
+				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
+					ifTrue:[ 
+							o:= configuration new.
+							self assert:(((o  excludeFromBuild) == true) | ((o  excludeFromBuild) == false))] 
+
+]]
+
+
+
+
+
+
+
+
+]
+
+{ #category : #'as yet unclassified' }
 CMakeVMMakerSqueakConfigurationsTest >> testExectuableName [
 	"for each builder, make sure all its configurations provide a buildDirectory "
 	SqueakCMakeVMMakerAbstractBuilder 

@@ -1,6 +1,6 @@
 Class {
 	#name : #Linux64SqueakCogSpur,
-	#superclass : #Linux32x86SqueakCogV3Config,
+	#superclass : #Linux64Config,
 	#category : #'CMakeVMMakerSqueak-LinuxX86_64'
 }
 
@@ -13,4 +13,10 @@ Linux64SqueakCogSpur >> availableBuilds [
 Linux64SqueakCogSpur >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
 	^self dirLinux32x8664
+]
+
+{ #category : #cmake }
+Linux64SqueakCogSpur >> excludeFromBuild [
+	^true
+
 ]

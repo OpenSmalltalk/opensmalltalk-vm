@@ -17,7 +17,8 @@ Class {
 	#instVars : [
 		'availableBuildTypes',
 		'dirBuildPlatform',
-		'dirSource'
+		'dirSource',
+		'excludeFromBuild'
 	],
 	#category : #'CMakeVMMakerSqueak-Builder'
 }
@@ -45,6 +46,12 @@ CMakeVMakerConfigurationInfo >> dirSource [
 	^ dirSource
 ]
 
+{ #category : #accessing }
+CMakeVMakerConfigurationInfo >> excludeFromBuild [
+
+	^ excludeFromBuild
+]
+
 { #category : #visiting }
 CMakeVMakerConfigurationInfo >> visit: aVisitor [
 	|v|
@@ -54,6 +61,7 @@ CMakeVMakerConfigurationInfo >> visit: aVisitor [
 	availableBuildTypes := v availableBuilds.
 	dirBuildPlatform := v dirBuildPlatform.
 	dirSource  := v dirSource.
+	excludeFromBuild := v excludeFromBuild.
 
 
 ]

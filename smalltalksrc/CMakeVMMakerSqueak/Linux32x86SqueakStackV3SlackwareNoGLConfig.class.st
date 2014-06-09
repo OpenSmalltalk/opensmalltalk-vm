@@ -64,6 +64,12 @@ Linux32x86SqueakStackV3SlackwareNoGLConfig >> dirBuildPlatform [
 	^self dirLinux32x8664
 ]
 
+{ #category : #cmake }
+Linux32x86SqueakStackV3SlackwareNoGLConfig >> excludeFromBuild [
+	^false
+
+]
+
 { #category : #accessing }
 Linux32x86SqueakStackV3SlackwareNoGLConfig >> executableName [
 		^super executableName

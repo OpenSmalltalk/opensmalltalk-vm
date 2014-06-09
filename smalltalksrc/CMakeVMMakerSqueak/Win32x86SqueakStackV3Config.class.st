@@ -12,7 +12,7 @@ find my Builder in CMakeVMMakerSqueak-Builder category and use that to invoke me
 "
 Class {
 	#name : #Win32x86SqueakStackV3Config,
-	#superclass : #Win32x86SqueakCogV3Config,
+	#superclass : #SqueakWin32x86CogFamilyConfig,
 	#category : #'CMakeVMMakerSqueak-Win32x86'
 }
 
@@ -29,6 +29,12 @@ Win32x86SqueakStackV3Config >> coreSources [
 Win32x86SqueakStackV3Config >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
 	^self squeakStackV3
+]
+
+{ #category : #cmake }
+Win32x86SqueakStackV3Config >> excludeFromBuild [
+	^false
+
 ]
 
 { #category : #accessing }

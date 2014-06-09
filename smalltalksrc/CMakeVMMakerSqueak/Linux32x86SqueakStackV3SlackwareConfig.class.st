@@ -15,7 +15,7 @@ find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me 
 "
 Class {
 	#name : #Linux32x86SqueakStackV3SlackwareConfig,
-	#superclass : #Linux32x86SqueakStackV3Config,
+	#superclass : #Linux32x86SqueakStackV3Configz,
 	#traits : 'TCPlatformConfigForSqueak',
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#category : #'CMakeVMMakerSqueak-LinuxX86_64-32Compatibility'
@@ -65,6 +65,12 @@ Linux32x86SqueakStackV3SlackwareConfig >> defaultInternalPlugins [
 Linux32x86SqueakStackV3SlackwareConfig >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
 	^self dirLinux32x8664
+]
+
+{ #category : #cmake }
+Linux32x86SqueakStackV3SlackwareConfig >> excludeFromBuild [
+	^false
+
 ]
 
 { #category : #accessing }

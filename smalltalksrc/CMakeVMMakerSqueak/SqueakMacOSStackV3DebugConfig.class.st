@@ -16,13 +16,19 @@ find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me 
 "
 Class {
 	#name : #SqueakMacOSStackV3DebugConfig,
-	#superclass : #SqueakMacOSStackV3Config,
-	#category : #'CMakeVMMakerSqueak-MacOS'
+	#superclass : #SqueakMacOSSqueakStackV3Config,
+	#category : #'CMakeVMMakerSqueak-IslandOfMisfitToys'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 SqueakMacOSStackV3DebugConfig >> compilerFlags [
     ^ String streamContents:  [ :stream |
 	self commonCompilerFlags asStringOn: stream delimiter: ' '. 
 	self compilerFlagsDebug asStringOn: stream delimiter: ' ' ]
+]
+
+{ #category : #cmake }
+SqueakMacOSStackV3DebugConfig >> excludeFromBuild [
+	^true
+
 ]

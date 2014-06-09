@@ -4,7 +4,7 @@ A MacOSX32x86SqueakCogSpur  configures a VM according to my name's form: [Operat
 "
 Class {
 	#name : #MacOSX32x86SqueakCogSpur,
-	#superclass : #SqueakMacOSV3Config,
+	#superclass : #SqueakMacOSX32x86Config,
 	#category : #'CMakeVMMakerSqueak-MacOSX32x86'
 }
 
@@ -13,7 +13,8 @@ MacOSX32x86SqueakCogSpur >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations
 ]
 
-{ #category : #'as yet unclassified' }
-MacOSX32x86SqueakCogSpur >> todo [
-	self flag:'tty'
+{ #category : #cmake }
+MacOSX32x86SqueakCogSpur >> excludeFromBuild [
+	^false
+
 ]

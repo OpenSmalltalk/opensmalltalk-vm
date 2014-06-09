@@ -1,122 +1,72 @@
 "
-A Linux32x86SqueakStackSpurConfig configures a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
+A Linux32x86SqueakCogSpurConfig  configures a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
 Usage:
-Linux32x86SqueakStackSpurConfig generate
-Or: 
-Linux32x86SqueakStackSpurConfig generateWithSources
+Linux32x86SqueakCogSpurConfig generate
+Or:
+Linux32x86SqueakCogSpurConfig generateWithSources
 Or:
 find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
-
 
 "
 Class {
 	#name : #Linux32x86SqueakStackSpurConfig,
-	#superclass : #CPlatformConfig,
-	#traits : 'TCPlatformConfigForSqueak',
-	#classTraits : 'TCPlatformConfigForSqueak classTrait',
-	#instVars : [
-		'buildType'
-	],
+	#superclass : #Linux32x86Config,
 	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
 
-{ #category : #'as yet unclassified' }
-Linux32x86SqueakStackSpurConfig class >> availableBuilds [
-	^SqueakCMakeVMMakerAbstractBuilder  default  allBuildConfigurations
-]
-
-{ #category : #cmake }
-Linux32x86SqueakStackSpurConfig >> availableBuilds [
-	"SqueakCMakeVMMakerAbstractBuilder  default allBuildConfigurations"
-	^SqueakCMakeVMMakerAbstractBuilder default allBuildConfigurations copyWithoutAll:#(#assert #assertWithHeartbeatTimer #debugMultiThreadedFFI  #debug #debugWithHeartbeatTimer  #releaseHeartbeatTimer #releaseMultiThreadedFFI )
-
-
-
-]
-
-{ #category : #'squeak compatibility' }
-Linux32x86SqueakStackSpurConfig >> buildDir [
-	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].
-]
-
-{ #category : #'squeak compatibility' }
-Linux32x86SqueakStackSpurConfig >> buildDirName [
-	buildType isNil
-		ifTrue:[^self dirBuildPlatform, self dirBuildLanguageVMMM, 'build']
-		ifFalse:[^self dirBuildPlatform, self dirBuildLanguageVMMM, buildType asString]
-]
-
-{ #category : #'squeak compatibility' }
-Linux32x86SqueakStackSpurConfig >> buildType: aSymbol [
-	buildType:= aSymbol
-]
-
 { #category : #plugins }
 Linux32x86SqueakStackSpurConfig >> defaultExternalPlugins [
-	^ #(SqueakSSL	)
+	^ #(#B3DAcceleratorPlugin 
+		 #BochsIA32Plugin 
+		#SqueakFFIPrims 
+		#SqueakSSL 
+		#LocalePlugin 
+		#UnixOSProcessPlugin 
+		#UUIDPlugin)
 ]
 
 { #category : #plugins }
 Linux32x86SqueakStackSpurConfig >> defaultInternalPlugins [
-" cut-n-paste from Cog/build.linux32x86/squeak.stack.spur/build"
-	^ #(
-		AsynchFilePlugin 
-		BMPReadWriterPlugin 
-		B2DPlugin 
-		BitBltPlugin 
-		DSAPrims 
-		DropPlugin 
-		FileCopyPlugin 
-		FilePlugin 
-		FloatArrayPlugin 
-		FloatMathPlugin 
-		ZipPlugin 
-		JPEGReadWriter2Plugin 
-		JPEGReaderPlugin 
-		LargeIntegers 
-		Matrix2x3Plugin 
-		MiscPrimitivePlugin 
-		IA32ABI 
-		RePlugin 
-		SecurityPlugin 
-		SocketPlugin 
-		SurfacePlugin 
-		UUIDPlugin 
-		UnixOSProcessPlugin 
-		VMProfileLinuxSupportPlugin
-		)
+	^ #(#AsynchFilePlugin
+		#BMPReadWriterPlugin
+		#B2DPlugin
+		#BitBltPlugin
+		#DSAPrims
+		#DropPlugin
+		#FileCopyPlugin
+		#FilePlugin
+		#FloatArrayPlugin
+		#FloatMathPlugin
+		#ZipPlugin
+		#JPEGReadWriter2Plugin
+		#JPEGReaderPlugin
+		#LargeIntegers
+		#Matrix2x3Plugin
+		#MiscPrimitivePlugin
+		#IA32ABI
+		#RePlugin
+		#SecurityPlugin
+		#SocketPlugin
+		#SurfacePlugin
+		#UUIDPlugin
+		#UnixOSProcessPlugin
+		#VMProfileLinuxSupportPlugin)
 ]
 
 { #category : #cmake }
 Linux32x86SqueakStackSpurConfig >> dirBuildLanguageVMMM [
-	"the directory under buildPlatformDir  example: newspeak.cog.spur"
-	^self squeakStackSpur
+	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
+	^self squeakCogSpur
 ]
 
 { #category : #cmake }
-Linux32x86SqueakStackSpurConfig >> dirBuildPlatform [
-	"the directory for the platform. example: build.linux32x86"
-	^self dirLinux32x86
-]
-
-{ #category : #'squeak compatibility' }
-Linux32x86SqueakStackSpurConfig >> outputDir [
-		^ outputDir ifNil: [ outputDir := (FileDirectory default directoryNamed: (self oscogvm,FileDirectory slash, self dirOutput)) assureExistence]
-
-]
-
-{ #category : #'squeak compatibility' }
-Linux32x86SqueakStackSpurConfig >> srcDir [
-		^ srcDir ifNil: [ srcDir := (self topDir directoryNamed: 'src' )]
+Linux32x86SqueakStackSpurConfig >> excludeFromBuild [
+	"over-ride to exclude yourself from a build"
+	^false
 ]
 
 { #category : #'as yet unclassified' }
 Linux32x86SqueakStackSpurConfig >> todo [
 	self flag:'tty'
-]
-
-{ #category : #'squeak compatibility' }
-Linux32x86SqueakStackSpurConfig >> topDir [
-		^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: self oscogvm ]
 ]
