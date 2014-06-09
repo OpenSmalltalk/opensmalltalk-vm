@@ -9,7 +9,15 @@ Class {
 	#traits : 'TCPlatformConfigForSqueak',
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#instVars : [
-		'buildType'
+		'buildType',
+		'generateForAssert',
+		'generateForAssertWithHeartbeatTimer',
+		'generateForDebug',
+		'generateForDebugWithHeartbeatTimer',
+		'generateForDebugMultiThreadedFFI',
+		'generateForReleaseHeartbeatTimer',
+		'generateForReleaseMultiThreadedFFI',
+		'generateForAssertHeartbeatTimer'
 	],
 	#category : #'CMakeVMMakerSqueak-IA32-Bochs'
 }
@@ -44,6 +52,55 @@ SqueakIA32BochsConfig >> buildType: aSymbol [
 	buildType:= aSymbol
 ]
 
+{ #category : #cmake }
+SqueakIA32BochsConfig >> configureForAssert [
+	generateForAssert := true
+
+]
+
+{ #category : #cmake }
+SqueakIA32BochsConfig >> configureForAssertWithHeartbeatTimer [
+	generateForAssertHeartbeatTimer := true.
+
+]
+
+{ #category : #cmake }
+SqueakIA32BochsConfig >> configureForDebug [
+	generateForDebug := true
+
+]
+
+{ #category : #cmake }
+SqueakIA32BochsConfig >> configureForDebugMultiThreadedFFI [
+	generateForDebugMultiThreadedFFI := true
+
+]
+
+{ #category : #cmake }
+SqueakIA32BochsConfig >> configureForDebugWithHeartbeatTimer [
+	generateForDebugWithHeartbeatTimer := true
+
+]
+
+{ #category : #cmake }
+SqueakIA32BochsConfig >> configureForRelease [
+	"this variable is in pharo class CPlatformConfig"
+	generateForRelease := true.
+
+]
+
+{ #category : #cmake }
+SqueakIA32BochsConfig >> configureForReleaseHeartbeatTimer [
+	generateForReleaseHeartbeatTimer := true.
+
+]
+
+{ #category : #cmake }
+SqueakIA32BochsConfig >> configureForReleaseMultiThreadedFFI [
+	generateForReleaseMultiThreadedFFI := true
+
+]
+
 { #category : #plugins }
 SqueakIA32BochsConfig >> defaultExternalPlugins [
 	^ #()
@@ -63,6 +120,13 @@ SqueakIA32BochsConfig >> dirBuildLanguageVMMM [
 { #category : #cmake }
 SqueakIA32BochsConfig >> dirBuildPlatform [
 	^self dirIA32Bochs
+]
+
+{ #category : #'initialize-release' }
+SqueakIA32BochsConfig >> initialize [
+	super initialize.
+	"this should be in my superclass, but I do not have permission to modify it. tty"
+	 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
 ]
 
 { #category : #'squeak compatibility' }
