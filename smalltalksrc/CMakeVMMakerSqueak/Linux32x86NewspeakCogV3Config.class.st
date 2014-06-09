@@ -14,6 +14,12 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
 
+{ #category : #cmake }
+Linux32x86NewspeakCogV3Config >> excludeFromBuild [
+	"over-ride to exclude yourself from a build"
+	^false
+]
+
 { #category : #'as yet unclassified' }
 Linux32x86NewspeakCogV3Config >> todo [
 	self flag:'tty'

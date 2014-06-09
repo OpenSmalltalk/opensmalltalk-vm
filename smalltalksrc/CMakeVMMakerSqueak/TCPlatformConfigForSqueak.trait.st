@@ -301,6 +301,14 @@ TCPlatformConfigForSqueak >> dirWin32x86 [
 ]
 
 { #category : #cmake }
+TCPlatformConfigForSqueak >> excludeFromBuild [
+"	^false"   "build this configuration"
+"	^true"   "do not build this configuration"
+	self required
+
+]
+
+{ #category : #cmake }
 TCPlatformConfigForSqueak >> newspeakCogSpur [
 	^'newspeak.cog.spur'
 ]

@@ -165,6 +165,12 @@ SqueakMacOSConfig >> dirBuildPlatform [
 	^self dirMacOS
 ]
 
+{ #category : #cmake }
+SqueakMacOSConfig >> excludeFromBuild [
+	^true
+
+]
+
 { #category : #'initialize-release' }
 SqueakMacOSConfig >> initialize [
 	super initialize.

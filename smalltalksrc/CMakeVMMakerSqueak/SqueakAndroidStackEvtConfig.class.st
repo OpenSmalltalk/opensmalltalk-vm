@@ -396,6 +396,12 @@ SqueakAndroidStackEvtConfig >> dirBuildPlatform [
 	^self dirAndroid
 ]
 
+{ #category : #cmake }
+SqueakAndroidStackEvtConfig >> excludeFromBuild [
+"	^false"   "build this configuration"
+	^true
+]
+
 { #category : #'source generation' }
 SqueakAndroidStackEvtConfig >> extraVMSettings: maker [
 	| versionC |

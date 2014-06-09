@@ -11,13 +11,19 @@ SqueakCogMacOSDebugConfig generate.
 "
 Class {
 	#name : #SqueakMacOSCogV3DebugConfig,
-	#superclass : #SqueakMacOSCogV3Config,
-	#category : #'CMakeVMMakerSqueak-MacOS'
+	#superclass : #SqueakMacOSSqueakCogV3Config,
+	#category : #'CMakeVMMakerSqueak-IslandOfMisfitToys'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 SqueakMacOSCogV3DebugConfig >> compilerFlags [
     ^ String streamContents:  [ :stream |
 	self commonCompilerFlags asStringOn: stream delimiter: ' '. 
 	self compilerFlagsDebug asStringOn: stream delimiter: ' ' ]
+]
+
+{ #category : #cmake }
+SqueakMacOSCogV3DebugConfig >> excludeFromBuild [
+	^true
+
 ]
