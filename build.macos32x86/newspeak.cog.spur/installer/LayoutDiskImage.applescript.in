@@ -1,0 +1,21 @@
+tell application "Finder"
+	tell disk "@@VM_LOCALIZED_NAME@@"
+		open
+		set backgroundImage to file ".background:@@INSTALLER_BACKGROUND@@.png"
+		tell container window
+			set current view to icon view
+			set toolbar visible to false
+			set statusbar visible to false
+			set position to {100, 100}
+			set bounds to {100, 100, 597, 485}
+		end tell
+		tell icon view options of container window
+			set arrangement to not arranged
+			set icon size to 128
+			set background picture to backgroundImage
+		end tell
+		set position of item "Applications" to {370, 91}
+		set position of item "@@VM_LOCALIZED_NAME@@.app" to {130, 91}
+		eject
+	end tell
+end tell
