@@ -32,5 +32,5 @@ test -f config.h || ../../../platforms/unix/config/configure \
 rm -rf ../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`
 # but older linux readlinks lack the -f flag
-make install prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR
+make install prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG
 ../../editnewspeakinstall.sh ../../../products/$INSTALLDIR
