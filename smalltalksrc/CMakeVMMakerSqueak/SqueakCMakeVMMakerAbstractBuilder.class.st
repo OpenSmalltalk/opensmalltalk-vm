@@ -2,23 +2,49 @@
 I am an abstract base class for various CMakeVMMakerSqueak builders.
 
 I am a singleton.
-I am a facade to the various Squeak[Platform][WordSize][VM][MemoryManager]Config classes that provide all the functionality.
-I also act as a repository of common information for the various configurations.
-Think of me as lipstick on a pig.
+I am a facade to the various Squeak[Platform][WordSize][VM][MemoryManager]Config classes
+I provide facilities to query my configurations.
+I use the Visitor pattern in collecting information about my configurations.
 
+Usage: 
+-------------------------Using CMakeVMMakerSqueak-------------------------
+The easiest way to use this is to utilize one of the concrete Builders in category CMakeVMMakerSqueak-Builder.
 
-Each one of my subclasses manages the CMakeVMMakerSqueak configurations -------->in a specific category<-----. 
-Win32Builder handles the Win32 Smalltalk Category, IOSBuilder handles the Smalltalk IOS category.
-Yes, its a limitation of the design, but so it goes.
+With a builder, you can query it for information and then invoke it to generate configurations and or source.
 
+Printing or inspecting the following lines will give you a flavor of a typical work-flow.
 
+-------------Buildable/non-buildable configurations---------
 
+SqueakCMakeVMMakerAbstractBuilder showExcludeFromBuild:false    ""buildable configurations""
+SqueakCMakeVMMakerAbstractBuilder showExcludeFromBuild:true.    ""edit that configs 'excludeFromBuild' method to change""
+SqueakCMakeVMMakerAbstractBuilder availableBuildTypes
 
+-------------------------Querying Builders and CMake Configurations---------------
 
+SqueakLinux32X86Builder configurationsCategory 
+SqueakLinux32X86Builder buildDirectory 
+SqueakLinux32X86Builder availableBuilds	 
+SqueakLinux32X86Builder availableBuildTypesFor:(SqueakLinux32X86Builder availableBuilds at:1)
+SqueakLinux32X86Builder availableBuildTypesFor: #Linux32x86SqueakStackSpurConfig
+SqueakLinux32X86Builder availableBuildTypesFor: #Linux32x86SqueakStackV3Config
+SqueakLinux32X86Builder sourceDirectoryFor:(SqueakLinux32X86Builder availableBuilds at:1)
 
+-------------------------Generating CMake files and/or Source code-------------------------
 
+SqueakLinux32X86Builder 
+	configureABuildFor: #Linux32x86SqueakCogV3Config withBuildType: #debug
+	generate   ""generate only CMake config files""
 
+SqueakLinux32X86Builder 
+	configureABuildFor: #Linux32x86SqueakCogV3Config withBuildType: #debug
+	generateWithSources  ""generate configurations and invoke VMMaker to generate source code""
 
+-------------------------Compiling Instructions-------------------------
+open a terminal and go to the configurations build directory for that configuration. (SqueakLinux32X86Builder buildDirectory)
+change into the build type subdirectory (build, build.assert, build.debug...etc)
+source build.sh will run the build process
+executable is placed in  /products folder.  (SqueakLinux32X86Builder ouputDirectory)
 
 
 "
@@ -26,13 +52,20 @@ Class {
 	#name : #SqueakCMakeVMMakerAbstractBuilder,
 	#superclass : #Object,
 	#instVars : [
-		'buildTypeAndDirectoryInfo'
+		'buildTypeAndDirectoryInfo',
+		'config'
 	],
 	#classInstVars : [
 		'default'
 	],
 	#category : #'CMakeVMMakerSqueak-Builder'
 }
+
+{ #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder class >> availableBuildTypes [
+	default ifNil:[default:= self new].
+	^default availableBuildTypes.
+]
 
 { #category : #queries }
 SqueakCMakeVMMakerAbstractBuilder class >> availableBuildTypesFor: aSymbol [
@@ -83,6 +116,18 @@ SqueakCMakeVMMakerAbstractBuilder class >> dirBuildPlatform [
 	^default dirBuildPlatform
 ]
 
+{ #category : #building }
+SqueakCMakeVMMakerAbstractBuilder class >> generate [
+	default ifNil:[default:= self new].
+	^default  generate
+]
+
+{ #category : #building }
+SqueakCMakeVMMakerAbstractBuilder class >> generateWithSource [
+	default ifNil:[default:= self new].
+	^default  generateWithSource
+]
+
 { #category : #queries }
 SqueakCMakeVMMakerAbstractBuilder class >> showExcludeFromBuild: aBoolean [
 	default ifNil:[default:= self new].
@@ -98,6 +143,12 @@ SqueakCMakeVMMakerAbstractBuilder class >> sourceDirectoryFor: aSymbol [
 { #category : #queries }
 SqueakCMakeVMMakerAbstractBuilder >> allBuildConfigurations [
 	^buildTypeAndDirectoryInfo keys asOrderedCollection sorted.
+
+]
+
+{ #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder >> availableBuildTypes [
+	^self buildTypeAndDirectoryInfo keys asSortedCollection
 
 ]
 
@@ -194,7 +245,7 @@ SqueakCMakeVMMakerAbstractBuilder >> configurationsCategory [
 
 { #category : #building }
 SqueakCMakeVMMakerAbstractBuilder >> configureABuildFor: configSymbol withBuildType: typeSymbol [
-	|config i |
+	| i |
 	"Do some sanity checks, then set the internal state of a Configuration for a particular build type. "
 	[
 	((Smalltalk at: configSymbol)  category) =  (self configurationsCategory)  "verify the class is handled by this concrete builder"
@@ -207,7 +258,7 @@ SqueakCMakeVMMakerAbstractBuilder >> configureABuildFor: configSymbol withBuildT
 										forConfiguration: configSymbol 
 										hasTypes: config availableBuilds].
 				config configureForBuildType: typeSymbol.                             "config configure yourself"
-				^config]
+				^self]
 		ifFalse:[^self userErrorInvalidTarget: configSymbol]
 	] ifError:[^'error configureABuildFor: ''', configSymbol].
 
@@ -232,6 +283,20 @@ SqueakCMakeVMMakerAbstractBuilder >> dirBuildPlatform: aCategoryName [
 	
 	
 
+]
+
+{ #category : #building }
+SqueakCMakeVMMakerAbstractBuilder >> generate [
+	(config isKindOf: CPlatformConfig)
+		ifTrue:[config generate]
+		
+]
+
+{ #category : #building }
+SqueakCMakeVMMakerAbstractBuilder >> generateWithSource [
+	(config isKindOf: CPlatformConfig)
+		ifTrue:[config generateWithSource]
+		
 ]
 
 { #category : #queries }
