@@ -19,12 +19,13 @@ esac
 test -f config.h || ../../../platforms/unix/config/configure \
 		--with-src=nscogsrc --without-vm-display-fbdev --without-npsqueak \
 	CC="gcc -m32" \
+	CXX="g++ -m32" \
 	CFLAGS="$OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64" \
 	LIBS="-lpthread -luuid" \
 	LDFLAGS=-Wl,-z,now
 ../../../scripts/nukeversion
 rm -rf ../../../products/$INSTALLDIR
-# would prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`
+# prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`
 # but older linux readlinks lack the -f flag
 make install prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR
 ../../editnewspeakinstall.sh ../../../products/$INSTALLDIR

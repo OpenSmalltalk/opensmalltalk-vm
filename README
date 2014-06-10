@@ -1,251 +1,154 @@
-Hi All,
+The Cog VM source tree
+---------------------
+This is the README for the Cog subversion source tree:
+	http://www.squeakvm.org/svn/squeak/branches/Cog
 
-    it gives me great pleasure to announce that the Teleplace Cog VMs are 
-now available.  Huge thanks to all at Teleplace who have given me the 
-opportunity to build Cog and release it as open source, been willing guinea 
-pigs braving its bugs, and providing indispensable participation in getting Cog 
-to its current state.  Huge thanks are also due to the original Back To The 
-Future team whose VMMaker Cog extends to write the VM, and to Peter Deutsch 
-from whom I've taken many ideas.
-
-This release contains two VMs.  The Stack VM, is a cross-platform interpreter 
-that uses context-to-stack mapping to achieve modest performance gains.  The 
-Cog VM is a just-in-time compiler that currently supports only x86 that builds 
-upon the Stack VM to achieve substantial performance improvements.  The release 
-is in the form of a Monticello package containing the VMMaker source and a 
-tarball containing the platform sources, the generated sources and a Squeak 4.1 
-image containing the VMMaker sources.
+Contents:
+	- Overview
+	- VM source directories
+	- Platform build directories
+	- Other directories
 
 
-Cog VMs:
+Overview
+--------
 
-The Cog VMs are Squeak/Croquet VMs that run closure Squeak/Croquet/Pharo/Cuis 
-images. The VMs support existing plugin source but will require plugins to be 
-recompiled as the VM_PROXY_MAJOR plugin api has been extended.
+Cog is an evolution of the Squeak Back-to-the-future Smalltalk virtual machine
+that provides a number of different Smalltalk virtual machines.  The VMs are
+developed in Smalltalk, using all the dynamic and reflective facilities of the
+Squeak/Pharo Smalltalk system.  As such, developing in Cog is a delight.  The
+Smalltalk framework comprising the various Cog VMs is translated into C by its
+Slang component to produce VM source that is combined with platform-specific
+support soures and compiled via a C compiler to obtain a fast production VM.
+This directory tree includes the output of Slang for various configurations of
+"Cog VM" and the associated platform support code, plus build directories that
+can be used to produce production VMs.
 
-This release contains two distinct VMs, the StackInterpreter and the Cogit.  
-The StackInterpreter is a fully-portable plug-in replacement for the current 
-closure Squeak VMs and images.  The Stack VM uses context-to-stack mapping and 
-a somewhat improved garbage collector to achieve modest but useful performance 
-gains in the 10% to 15% range.  The StackInterpreter is intended to supersede 
-the Squeak VM on platforms where the Cogit cannot be used.  The Cogit extends 
-the StackInterpreter with a just-in-time compiler that uses aggressive inline 
-caching techniques to deliver substantial performance gains in the 3x to 15x 
-range, depending on benchmark.  The Cogit currently supports only x86 and the 
-floating-point primitives and parts of the platform support code depend on 
-SSE2.  I hope members of the community will attempt to port it, e.g. to ARM, 
-PowerPC and x86-64.  The Cogit (excuse the pun) is so named because it is both 
-an interpreter and a JIT, choosing not to generate machine code for large 
-methods, interpreting them instead, the default policy being not to JIT methods 
-with more than 60 literals.
+This directory tree also includes an instance of the Smalltalk Cog development
+system, suitable for developing the VM in Smalltalk, and for generating new
+VM sources.
 
-The Cog VM requires a few minor image changes to pre Squeak 4.1 trunk images,
-all in image/NecessaryImageChangesForCogToWork.1.cs.  The JIT's machine-code 
-SmallInteger primitives insist on a SmallInteger receiver so the primitives in 
-LargePositiveInteger = ~= bitAnd: bitOr: butShift: and bitXor: cannot be used 
-and these methods must be deleted.  The Cogit inlines the address of the 
-Character instance table, Smalltalk specialObjectsArray at: 25, into the 
-machine-code at: primitive for faster ByteString>>at: and so the table cannot 
-be rebuilt in SmalltalkImage>>recreateSpecialObjectsArray.  The new version 
-preserves the existing table.  Both VMs maintain floats in platform order to 
-ease implementation of machine code floating-point primitives, and hence 
-internally are in little-endian order instead of big-endian in current Squeak 
-images.  While the VMs convert float order automatically on load they do 
-require special accessing primitives Float>>basicAt: & Float>>basicAt:put: that 
-undo the reversal and answer Float contents in big-endian order so that e.g. 
-Float>>hash is unchanged.  The methods assume these primitives can fail, 
-allowing the code to be used on current Squeak VMs.
+The "Cog VM" comes in a bewildering variety of forms.  The first distinction
+is between Squeak/Croquet VMs that run Squeak, Pharo, Cuis, Croquet images
+and their ilk, and between Newspeak VMs that run Newspeak.
 
-The image/VMMaker-Squeak4.1.image is a Squeak 4.1 image, runnable with the 
-current Squeak VMs, that contains these changes, and can hence also be run with 
-a Cog VM.  But beware, once an image has been saved on Cog it cannot be run by 
-an existing Squeak VM, because existing VMs cannot undo the Float order change.
-You'll fid that a Squeak 4.1 image updated to trunk will run Cog unchanged.
+Another distinction is between Stack, Cog and Sista VMs.  Stack VMs are those
+with context-to-stack mapping that optimise message sending by keeping method
+activations on a stack instead of in contexts.  These are pure interpreters but
+significantly faster than the standard context-based Interpreter VM.  Cog VMs
+add a JIT to the mix, compiling methods used more than once to maxchine code on
+the fly.  Sista VMs, as yet unrealised and in development, add support for
+adaptive optimization that does speculative inlining at the bytecode-to-bytecode
+level.  These are targeted for release in 2015.
 
+Another distinction is between "v3" VMs and Spur VMs.  "v3" is the original
+object representation for Squeak as described in the back-to-the-future paper.
+Spur, as described on the www.mirandabanda.org blog, is a faster object
+representation which uses generation scavenging, lazy forwarding for fast
+become, and a single object header format common to 32 and 64 bit versions.
 
-Platform Subsystem:
-
-Most of the platform subsystem is unchanged but there are some important 
-changes that need description.  The biggest change is the heartbeat and the 
-clock in platforms/unix/vm/sqUnixHeartbeat.c and 
-platforms/win32/vm/sqWin32Heartbeat.c.  The Cog VMs avoid the slow and variable 
-interruptCheckCounter, folding the event check into the stack overflow check on 
-frame build.  The heartbeat, typically 500Hz or 1KHz, changes the stackLimit to 
-a value that will always fail.  On the next frame building send the VM will 
-enter stack overflow handling that, as a side effect, will also check for 
-events.  This is more efficient than the update of interruptCheckCounter and 
-much more regular.  If one is running code that executes long-running 
-primitives (e.g. large integer arithmetic) the counter approach will result in 
-too low an interrupt check frequency, and conversely if one is running normal 
-code the interrupt check frequency can be very high.
-
-The heartbeat also maintains a 64-bit microsecond clock, UTC microseconds from 
-1901, from which the backward-compatible millisecond and second clocks are 
-derived.  Primitives exist to answer UTC microseconds and local microseconds.  
-Updating the clock in the heartbeat results in a 1 or 2 millisecond resolution 
-but avoids the cost of accessing the OS time on every prim tie which we've 
-found important for performance at Teleplace.  The 64-bit microsecond clocks 
-provide a unified time basis and eliminate wrapping (for the next 54,000 years 
-at least).  I hope community images will move to these clocks.  It's worked 
-well in VisualWorks.
-
-Another significant change is in the external semaphore table support code.  
-This is now lock-free at the cost of having to specify a maximum number of 
-external semaphores at start-up (default 256).  The support code for the 
-lock-free data structures are processor-specific and is currently implemented 
-only for x86 and gcc-compatible compilers; see 
-platforms/Cross/vm/{sqAtomicOps.h,sqMemoryFence.h}.
-
-There is also improved crash reporting code that prints a primitive log and a C 
-backtrace in addition to the Smalltalk backtrace.  See platforms/Mac 
-OS/vm/sqMacMain.c, platforms/unix/vm/sqUnixMain.c, 
-platforms/win32/vm/sqWin32Intel.c & platforms/win32/vm/sqWin32Backtrace.c.
-
-Finally there is support for the QVMProfiler, a pc-sampling profiler for 
-profiling at the VM level.  See platforms/unix/vm/sqUnixVMProfile.c and 
-platforms/win32/vm/sqWin32VMProfile.c.  The profiler itself is in the VMMaker 
-image described below in Qwaq-VMProfiling.
-
-There are also changes to do with Teleplace-specific extensions to the 
-HostWindowPlugin but these are not essential to Cog.
+Another distinction is between normal single-threaded VMs that schedule "green"
+Smalltalk processes above a single-threaded VM, and "multi-threaded" VMs that
+share the VM between any number of native threads such that only one native
+thread owns the VM at any one time, switching between threads on FFI calls and
+callbacks or on Smalltalk process switches when Smalltalk processes are owned
+by threads.  This multi-threaded support is as yet experimental.
 
 
-VMMaker and Slang:
+VM source directories
+---------------------
 
-The image/VMMaker-Squeak4.1.image Squeak 4.1 image contains the complete Cog 
-VMMaker with necessary support code for simulation. This image was used to 
-generate the sources in the src and stacksrc directories.
+Slang output of various VMs are kept in "vm source" directories.  These sources
+define the core VM (the Smalltalk execution engine and memory manager), and a
+substantial set of "plugins" that provide interfaces to various external
+facilities via Smalltalk primitive methods.  Each vm source directory is
+specific to a particular VM, be it Squeak Cog Spur, or Newspeak Stack, etc.
+The plugins can be shared between VMs, choosing the set of plugins to include
+in a VM at build time.
 
-Cog's VMMaker is substantially revised and extended from the current VMMaker.  
-It supports multiple classes, not just Interpreter and superclasses, because 
-both context-to-stack mapping and the Cogit are too complex to write 
-monolithically.  Classes can specify ancilliaryClasses and 
-ancilliaryStructClasses, such as CoInterpreterStackPage, CogMethod and 
-CogAbstractInstruction.  The Monticello package version is included in the 
-header of all generated files and constitutes the version stamp for generated 
-code.  Code is generated in sorted order so that minor changes in the Smalltalk 
-source produce correspondingly minor changes in the generated code.  The 
-gnuification step is built-in to VMMaker.  No effort has been made to maintain 
-64-bit compatibility.  Apologies, this was unaffordable.
+The VM source are in directories such as
+	nscogsrc/vm			- Newspeak Cog V3
+	nsspursrc/vm		- Newspeak Cog Spur
+	nsspurstacksrc/vm	- Newspeak Stack Spur
+	nsstacksrc/vm		- Newspeak Stack V3
+	sistasrc/vm			- Smalltalk Sista V3
+	spursistasrc/vm		- Smalltalk Sista Spur
+	spursrc/vm			- Smalltalk Cog Spur
+	spurstacksrc/vm		- Smalltalk Stack Spur
+	src/vm				- Smalltalk Cog V3
+	stacksrc/vm			- Smalltalk Stack V3
 
-The VMMaker generates a single source tree used by all platforms.  Instead of 
-deciding at generation time whether to use the Interpreter struct the generated 
-code depends on the SQ_USE_GLOBAL_STRUCT define which can be overridden in 
-platform makefiles.  All plugins live in src/plugins and platform makefiles 
-along with plugins.int and plugins.ext files in the build subdirectories decide 
-which plugins are built as external or internal.  The VM Generation Workspace 
-from Workspace.text workspace contains dots to generate the sources.  We no 
-longer use the VMMakerTool since there should be nothing platform-specific in 
-the generated sources (if we add ports to other ISAs all their source can be 
-included and selected as required by the platform makefiles).
+There are two plugin directories
+	nscogsrc/plugins
+	src/plugins
 
-Since the Cogit generates x86 machine code simulation is much more complex.  
-There is a support plugin, platforms/Cross/plugins/BochsIA32Plugin that depends 
-on a large simulation of the x86 family implemented in C++ (see  
-processors/IA32/bochs) and on Alien.  I use the simulator frequently.  I have
-tested Cog simulation in this image, running on the 
-image/VMMaker-Squeak4.1.image itself.  The VM Simulation Workspace in the 
-VMMaker image contains an example doit that starts the simulator. Be patient, 
-even on a fast machine unhibernating the Squeak display background image takes 
-nearly a minute.  I have only attempted to build and run the simulator on 
-Mac OS X.  I expect Bochs can be built on linux and win32 but I have not tried. 
-By the way, I've not described how to run the Bochs simulator on the current 
-Squeak VM.  That's because the plugin depends on the heartbeat to break out of 
-simulation occasionally via a new interpreterProxy entry point 
-setInterruptCheckChain.  As this isn't supported by the current Squeak VMs the 
-plugin would require modification.  So to simulate first build either of the 
-Cog VMs and then run the simulation with it.
-
-There are a number of unpublished changes to the base other than those in 
-NecessaryImageChangesForCogToWork.1.cs.  This is partly laziness on my part, 
-partly avoiding publishing things in advance of Cog.  These changes are better 
-motivated once Cog is in use.  There are changes to the "translated primitives" 
-(see implementors of translatedPrimitives) which replace messages with method 
-tags for generation directives.  The Cog VMMaker uses 
-Object>>perform:with:with:with:with: & 
-Object>>perform:with:with:with:with:with: during simulation, and 
-Collection>>#fold: & SquenceableCollection>>#copyUpThrough: during generation.  
-Object>>inline: and Object var:declareC:, which are mispackaged in Kernel in 
-Squeak 4.1 are obsolete (method tags being used instead) and have been removed. 
-I have changed Integer>>hex and Integer>>hex8 back to their original semantics 
-as of 3.8.  Backward compatibility is important and one can easily add new 
-selectors if one wants different functionality.  VMMaker was here first ;)
+These contain many, but not all, of the plugins available for the VM.  Others
+can be found in Cog, or in various Monticello packages in various repositories.
+The two directories include essentially the same material exept for the
+IA32ABI/IA32ABI.c plugin, the core plugin for the Alien FFI on x86 platforms.
+In Newspeak this plgin has support for per-object immutability, a feature
+as-yet-unimplemented in Cog but that was available on the old context-based
+Newspeak interpreter VM.
 
 
-Tarball:
+Platform build directories
+--------------------------
+Build directories are in flux.  Currently there exist some old build directories
+such as unixbuild, cygwinbuild et al.  These are deprecated and will be removed
+before the end of 2014.  The current "official" buikd directories are of the
+form build.OS_WordSize_Processor, and include
+	build.linux32x86	- uses autoconf, gcc and make
+	build.macos32x86	- uses XCode and gcc (currently for 10.6 or earlier)
+	build.win32x86		- uses cygwin, gcc and make
+More can be added as required.  In each there is a HowToBuild that describes
+the necessary steps to produce a VM.
 
-The top-level directories in the tarball are
+In addition, there is a set of build directories that use the CMake build
+configuration system.  These are not yet ready to describe as of this writing.
 
-    src
-        the tree for the Cog generated sources including all plugins
-    stacksrc/vm
-        the directory containing the Stack VM source (plugins can be 
-        taken from above)
-    platforms
-        the usual svn platform tree but including Cog specific changes 
-        such as the heartbeat
-    processors
-        the tree containing simulation support code, i.e. the bochs C++ x86
-        simulation library, along with a potential ARM, PowerPC & MIPS
-        simulator, Skeye.
-
-    image
-        the Cog-prepared Squeak 4.1 VMMaker image
-    scripts
-        some svn scripts to revert unchanged plugins that haven't really
-        changed
-
-    cygwinbuild
-        the win32 build directory
-    winbuild
-        the old win32 build directory for minnow gcc 2.95.  Not entirely
-        obsolete as the cygwin build as yet fails to generate a functional 
-        FFIPlugin
-    macbuild
-        the CoreVM.xcodeproj and support build projects for Mac OS X 10.5 or
-        better
-    unixbuild
-        the build directory for linux
+The scripts directory contains various scripts for validating and checking-in
+generated sources, packaging builds into installable artifacts (tar, msi, zip),
+and so on.  The linux builds and the packaging scripts produce outputs in the
+products directory tree.  The packaging scripts may choose to include Smalltalk
+source files included in the sources directory.
 
 
-Building Cog:
+Other directories
+-----------------
+The platforms directory contains the associated platform-specific files that
+combine with the Slang-generated source to produce complete VMs.  The structure
+is
+	platforms/Cross/vm
+	platforms/Cross/plugins
+	platforms/iOS/vm
+	platforms/iOS/plugins
+	platforms/Mac OS/vm
+	platforms/Mac OS/plugins
+	platforms/unix/vm*
+	platforms/unix/plugins
+	platforms/win32/vm
+	platforms/win32/plugins
 
-Each build directory above contains a HowToBuild file that describes building 
-in more detail.  The build directories only contain Cogit makefiles.  If you 
-want to build a Stack VM you're on your own but this is very close to the 
-existing Squeak VM build.
+Each vm directory contains support for the core VM.  Each plugin directory
+contains run-time and build-time support for various plugins.  The following
+directories are external and shared with the Squeak trunk interpreter source:
 
+	platforms/Cross/plugins
+		- http://squeakvm.org/svn/squeak/trunk/platforms/Cross/plugins
+	platforms/iOS
+		- http://squeakvm.org/svn/squeak/trunk/platforms/iOS
+	platforms/win32/plugins
+		- http://squeakvm.org/svn/squeak/trunk/platforms/win32/plugins
 
-Status:
-The Cogit VM has been our sole VM at Teleplace for over a year.  We do 
-occasionally find bugs, and Cog is still relatively immature.  If you find a
-bug please try and create a reproducible test case and let me know.  I can't
-promise to take a look or fix it but I am motivated to do so and will try my
-best as time allows.  Better still if you find and fix bugs be sure to let me
-know.
+The processors directory contains the source for various processor simulators.
+The JIT is developed in Smalltalk by using one of these processor simulators
+to execute the code the JIT produces.  Currently only the Bochs x86/x86-64
+simulator and the gdbarm simulator are in use, for x86 and ARMv5 respectively.
 
-License (MIT):
-Copyright (c) 2013 3D Immersive Collaboration Consulting, LLC.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-
+Finally the image directory contains scripts that will build a "VMMaker" image,
+a Squeak Smalltalk image containing all the packages that comprise the Cog
+system, suitable for developing the VM and for generating (or updating) the
+sources in the vm source directories.
 
 Eliot Miranda
-June 2010
-updated October 2010
+June 2014

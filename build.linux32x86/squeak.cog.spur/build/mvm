@@ -1,14 +1,15 @@
 #!/bin/bash
-# VM with VM profiler and threaded heartbeat assuming multiple thread priorities
+# Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=cogspurlinuxht
+# Some gcc versions create a broken VM using -O2
+case `gcc -v 2>&1 | grep version | sed 's/gcc version *//'` in
+3.4.*)	OPT="-g -O1 -DNDEBUG -DDEBUGVM=0";;
+*)		OPT="-g -O2 -DNDEBUG -DDEBUGVM=0";;
+esac
+
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
 fi
-# Some gcc versions create a broken VM using -O2
-case `gcc -v 2>&1 | grep version | sed 's/gcc version *//'` in
-3.4.*)	OPT=-O1;;
-*)		OPT=-O2;;
-esac
 
 echo -n "clean? "
 read a
@@ -16,11 +17,15 @@ case $a in
 n|no|N|NO)	echo "ok but this isn't safe!!";;
 *)			test -f Makefile && make reallyclean
 esac
-test -f config.h || ../../../platforms/unix/config/configure --with-src=spursrc --with-plugins=src/plugins --without-npsqueak \
+test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak \
+		--with-src=spursrc --with-plugins=src/plugins \
 	CC="gcc -m32" \
-	CFLAGS="-g $OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DCOGMTVM=0 -DDEBUGVM=0" \
+	CXX="g++ -m32" \
+	CFLAGS="$OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=0" \
 	LIBS="-lpthread -luuid" \
 	LDFLAGS=-Wl,-z,now
 ../../../scripts/nukeversion
 rm -rf ../../../products/$INSTALLDIR
+# prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`
+# but older linux readlinks lack the -f flag
 make install prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR

@@ -1,5 +1,5 @@
 #!/bin/bash
-# assert Spur VM with VM profiler and threaded heartbeat
+# assert Spur VM with VM profiler and itimer heartbeat
 INSTALLDIR=assert/nscogspurlinux
 OPT="-g3 -O1 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -DDEBUGVM=0"
 
@@ -20,7 +20,8 @@ test -f config.h || ../../../platforms/unix/config/configure \
 		--with-src=nsspursrc --with-plugins=nscogsrc/plugins \
 		--without-vm-display-fbdev --without-npsqueak \
 	CC="gcc -m32" \
-	CFLAGS="$OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64" \
+	CXX="g++ -m32" \
+	CFLAGS="$OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DITIMER_HEARTBEAT=1" \
 	LIBS="-lpthread -luuid" \
 	LDFLAGS=-Wl,-z,now
 ../../../scripts/nukeversion

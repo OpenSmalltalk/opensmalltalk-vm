@@ -1,5 +1,8 @@
 #!/bin/bash
-INSTALLDIR=cogmtastlinuxht
+# assert multithreaded VM with VM profiler and threaded heartbeat
+INSTALLDIR=assert/cogmtdbglinuxht
+OPT="-g3 -O1 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -DDEBUGVM=0"
+
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
 fi
@@ -10,12 +13,15 @@ case $a in
 n|no|N|NO)	echo "ok but this isn't safe!!";;
 *)			test -f Makefile && make reallyclean
 esac
-test -f config.h || ../../../platforms/unix/config/configure INTERP=cointerpmt \
-	--without-npsqueak \
+test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak \
+	INTERP=cointerpmt \
 	CC="gcc -m32" \
-	CFLAGS="-g -O1 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=1 -DDEBUGVM=0" \
-	LIBS=-lpthread \
+	CXX="g++ -m32" \
+	CFLAGS="$OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=1" \
+	LIBS="-lpthread -luuid" \
 	LDFLAGS=-Wl,-z,now
 ../../../scripts/nukeversion
 rm -rf ../../../products/$INSTALLDIR
+# prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`
+# but older linux readlinks lack the -f flag
 make install prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR

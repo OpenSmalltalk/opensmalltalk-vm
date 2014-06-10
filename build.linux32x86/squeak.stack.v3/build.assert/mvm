@@ -1,13 +1,11 @@
 #!/bin/bash
-# VM with VM profiler and threaded heartbeat assuming multiple thread priorities
+# assert Stack VM with VM profiler and threaded heartbeat
 INSTALLDIR=assert/stklinuxht
+OPT="-g3 -O1 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -DDEBUGVM=0"
+
 if [ $# -ge 1 ]; then
-	case "$1" in
-	-*)	;;
-	*)	INSTALLDIR="$1"; shift
-	esac
+	INSTALLDIR="$1"; shift
 fi
-OPT=-O1
 
 echo -n "clean? "
 read a
@@ -19,11 +17,12 @@ test -f config.h || ../../../platforms/unix/config/configure \
 	--with-src=stacksrc --with-plugins=src/plugins --disable-cogit \
 	--without-vm-display-fbdev --without-npsqueak \
 	CC="gcc -m32" \
-	CFLAGS="-g $OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DDEBUGVM=0 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer" \
+	CXX="g++ -m32" \
+	CFLAGS="$OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64" \
 	LIBS="-lpthread -luuid" \
 	LDFLAGS=-Wl,-z,now
 ../../../scripts/nukeversion
 rm -rf ../../../products/$INSTALLDIR
-# would prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`
+# prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`
 # but older linux readlinks lack the -f flag
 make install prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR

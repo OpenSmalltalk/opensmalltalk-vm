@@ -1,5 +1,9 @@
 #!/bin/bash
 trap 'exit 2' HUP INT PIPE TERM 0
-for d in newspeak.* squeak.*; do
-	(cd $d;./makeallclean)
+for d in newspeak.cog.* newspeak.stack.* squeak.*; do
+	if test -d "$d"; then
+		(cd $d;./makeallclean)
+	else
+		echo no $d directory found
+	fi
 done
