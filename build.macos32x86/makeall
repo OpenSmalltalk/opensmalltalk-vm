@@ -1,4 +1,5 @@
 #!/bin/bash
+trap 'exit 2' HUP INT PIPE TERM 0
 for d in newspeak.* squeak.*; do
 	(cd $d;./mvm -A)
 done
