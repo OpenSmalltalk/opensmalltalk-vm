@@ -520,7 +520,7 @@ SqueakWin32x86CogFamilyConfig >> defaultInternalPlugins [
 { #category : #cmake }
 SqueakWin32x86CogFamilyConfig >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
-	^self squeakCogV3
+	^self required
 ]
 
 { #category : #cmake }

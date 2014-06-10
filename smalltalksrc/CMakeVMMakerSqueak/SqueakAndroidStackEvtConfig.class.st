@@ -391,6 +391,12 @@ SqueakAndroidStackEvtConfig >> defaultInternalPlugins [
 ]
 
 { #category : #cmake }
+SqueakAndroidStackEvtConfig >> dirBuildLanguageVMMM [
+	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
+	^self eventStackV3
+]
+
+{ #category : #cmake }
 SqueakAndroidStackEvtConfig >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
 	^self dirAndroid

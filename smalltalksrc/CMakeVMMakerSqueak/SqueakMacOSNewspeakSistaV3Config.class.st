@@ -273,6 +273,12 @@ SqueakMacOSNewspeakSistaV3Config >> defaultInternalPlugins [
 ]
 
 { #category : #cmake }
+SqueakMacOSNewspeakSistaV3Config >> dirBuildLanguageVMMM [
+	"the directory under buildPlatformDir  example: newspeak.cog.spur. default is squeak.cog.v3"
+	^self newspeakSistaV3
+]
+
+{ #category : #cmake }
 SqueakMacOSNewspeakSistaV3Config >> excludeFromBuild [
 	^false
 

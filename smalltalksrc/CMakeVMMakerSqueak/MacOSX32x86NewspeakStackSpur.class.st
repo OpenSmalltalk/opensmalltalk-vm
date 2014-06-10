@@ -14,6 +14,11 @@ MacOSX32x86NewspeakStackSpur >> availableBuilds [
 ]
 
 { #category : #cmake }
+MacOSX32x86NewspeakStackSpur >> dirBuildLanguageVMMM [
+	^self newspeakStackSpur
+]
+
+{ #category : #cmake }
 MacOSX32x86NewspeakStackSpur >> excludeFromBuild [
 	^false
 

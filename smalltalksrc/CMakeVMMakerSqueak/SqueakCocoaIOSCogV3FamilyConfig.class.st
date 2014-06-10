@@ -184,7 +184,7 @@ SqueakCocoaIOSCogV3FamilyConfig >> defaultInternalPlugins [
 
 { #category : #cmake }
 SqueakCocoaIOSCogV3FamilyConfig >> excludeFromBuild [
-	^false
+	^true
 
 ]
 

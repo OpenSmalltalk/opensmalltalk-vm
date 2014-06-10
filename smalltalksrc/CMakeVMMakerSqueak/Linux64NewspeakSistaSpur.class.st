@@ -9,6 +9,11 @@ Linux64NewspeakSistaSpur >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations
 ]
 
+{ #category : #cmake }
+Linux64NewspeakSistaSpur >> dirBuildLanguageVMMM [
+	^self newspeakSistaSpur
+]
+
 { #category : #'as yet unclassified' }
 Linux64NewspeakSistaSpur >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"

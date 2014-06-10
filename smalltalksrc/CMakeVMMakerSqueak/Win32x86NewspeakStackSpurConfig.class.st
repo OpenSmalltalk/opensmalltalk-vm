@@ -27,8 +27,7 @@ Win32x86NewspeakStackSpurConfig >> coreSources [
 
 { #category : #cmake }
 Win32x86NewspeakStackSpurConfig >> dirBuildLanguageVMMM [
-	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
-	^self squeakStackV3
+	^self newspeakStackSpur
 ]
 
 { #category : #cmake }
