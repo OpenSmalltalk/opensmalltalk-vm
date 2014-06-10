@@ -22,7 +22,7 @@ Linux32x86NewspeakSistaV3Config >> dirBuildLanguageVMMM [
 { #category : #cmake }
 Linux32x86NewspeakSistaV3Config >> excludeFromBuild [
 	"over-ride to exclude yourself from a build"
-	^false
+	^true "tty 2014.06.10 not implemented on gnu side"
 ]
 
 { #category : #'as yet unclassified' }
