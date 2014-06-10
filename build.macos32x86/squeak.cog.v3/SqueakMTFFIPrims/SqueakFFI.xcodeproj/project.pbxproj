@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		730BD72A10AA26FB0023C110 /* interp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../../src/vm/interp.h; sourceTree = SOURCE_ROOT; };
 		458E6DD111C6D5850024C822 /* sqManualSurface.c in Sources */ = {isa = PBXBuildFile; fileRef = 458E6DD011C6D5850024C822 /* sqManualSurface.c */; };
 		730BD72610AA25350023C110 /* SqueakFFIPrims.c in Sources */ = {isa = PBXBuildFile; fileRef = 730BD72510AA25350023C110 /* SqueakFFIPrims.c */; };
 		730BD72810AA26D00023C110 /* sqFFIPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 730BD72710AA26D00023C110 /* sqFFIPlugin.c */; };
@@ -17,20 +18,19 @@
 
 /* Begin PBXFileReference section */
 		0AA1909FFE8422F4C02AAC07 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = /System/Library/Frameworks/CoreFoundation.framework; sourceTree = "<absolute>"; };
-		458E6DD011C6D5850024C822 /* sqManualSurface.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.c; fileEncoding = 4; name = sqManualSurface.c; path = ../../platforms/Cross/plugins/SqueakFFIPrims/sqManualSurface.c; sourceTree = SOURCE_ROOT; };
-		730BD72510AA25350023C110 /* SqueakFFIPrims.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.c; fileEncoding = 4; name = SqueakFFIPrims.c; path = ../../src/plugins/SqueakFFIPrims/SqueakFFIPrims.c; sourceTree = SOURCE_ROOT; };
-		730BD72710AA26D00023C110 /* sqFFIPlugin.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.c; fileEncoding = 4; name = sqFFIPlugin.c; path = ../../platforms/Cross/plugins/SqueakFFIPrims/sqFFIPlugin.c; sourceTree = SOURCE_ROOT; };
-		730BD72910AA26EF0023C110 /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = "../../platforms/Mac OS/vm/config.h"; sourceTree = SOURCE_ROOT; };
-		730BD72A10AA26FB0023C110 /* interp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../../src/vm/interp.h; sourceTree = SOURCE_ROOT; };
-		730BD72D10AA27410023C110 /* sqMemoryAccess.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqMemoryAccess.h; path = ../../platforms/Cross/vm/sqMemoryAccess.h; sourceTree = SOURCE_ROOT; };
-		730BD72F10AA27590023C110 /* sqVirtualMachine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqVirtualMachine.h; path = ../../platforms/Cross/vm/sqVirtualMachine.h; sourceTree = SOURCE_ROOT; };
+		458E6DD011C6D5850024C822 /* sqManualSurface.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.c; fileEncoding = 4; name = sqManualSurface.c; path = ../../../platforms/Cross/plugins/SqueakFFIPrims/sqManualSurface.c; sourceTree = SOURCE_ROOT; };
+		730BD72510AA25350023C110 /* SqueakFFIPrims.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.c; fileEncoding = 4; name = SqueakFFIPrims.c; path = ../../../src/plugins/SqueakFFIPrims/SqueakFFIPrims.c; sourceTree = SOURCE_ROOT; };
+		730BD72710AA26D00023C110 /* sqFFIPlugin.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.c; fileEncoding = 4; name = sqFFIPlugin.c; path = ../../../platforms/Cross/plugins/SqueakFFIPrims/sqFFIPlugin.c; sourceTree = SOURCE_ROOT; };
+		730BD72910AA26EF0023C110 /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = "../../../platforms/Mac OS/vm/config.h"; sourceTree = SOURCE_ROOT; };
+		730BD72D10AA27410023C110 /* sqMemoryAccess.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqMemoryAccess.h; path = ../../../platforms/Cross/vm/sqMemoryAccess.h; sourceTree = SOURCE_ROOT; };
+		730BD72F10AA27590023C110 /* sqVirtualMachine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqVirtualMachine.h; path = ../../../platforms/Cross/vm/sqVirtualMachine.h; sourceTree = SOURCE_ROOT; };
 		730BD73010AA277B0023C110 /* SqueakPlugin.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakPlugin.icns; path = ../resources/ProjectBuilder/SqueakPlugin.icns; sourceTree = SOURCE_ROOT; };
-		733EFEAC10B4D31C00A2FDA5 /* sqFFI.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = sqFFI.h; path = ../../platforms/Cross/plugins/SqueakFFIPrims/sqFFI.h; sourceTree = SOURCE_ROOT; };
-		7386749011ED15E500E5B738 /* sqFFITestFuncs.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sqFFITestFuncs.c; path = ../../platforms/Cross/plugins/SqueakFFIPrims/sqFFITestFuncs.c; sourceTree = SOURCE_ROOT; };
-		739A636B10AA442600F87ADB /* sqConfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqConfig.h; path = "../../platforms/Mac OS/vm/sqConfig.h"; sourceTree = SOURCE_ROOT; };
-		739A636C10AA444800F87ADB /* sqPlatformSpecific.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqPlatformSpecific.h; path = "../../platforms/Mac OS/vm/sqPlatformSpecific.h"; sourceTree = SOURCE_ROOT; };
-		739BEEE011C96C240093BD8A /* sq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sq.h; path = ../../platforms/Cross/vm/sq.h; sourceTree = SOURCE_ROOT; };
-		73E2C0B310AA5C4700E80856 /* sqAssert.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqAssert.h; path = ../../platforms/Cross/vm/sqAssert.h; sourceTree = SOURCE_ROOT; };
+		733EFEAC10B4D31C00A2FDA5 /* sqFFI.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = sqFFI.h; path = ../../../platforms/Cross/plugins/SqueakFFIPrims/sqFFI.h; sourceTree = SOURCE_ROOT; };
+		7386749011ED15E500E5B738 /* sqFFITestFuncs.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sqFFITestFuncs.c; path = ../../../platforms/Cross/plugins/SqueakFFIPrims/sqFFITestFuncs.c; sourceTree = SOURCE_ROOT; };
+		739A636B10AA442600F87ADB /* sqConfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqConfig.h; path = "../../../platforms/Mac OS/vm/sqConfig.h"; sourceTree = SOURCE_ROOT; };
+		739A636C10AA444800F87ADB /* sqPlatformSpecific.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqPlatformSpecific.h; path = "../../../platforms/Mac OS/vm/sqPlatformSpecific.h"; sourceTree = SOURCE_ROOT; };
+		739BEEE011C96C240093BD8A /* sq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sq.h; path = ../../../platforms/Cross/vm/sq.h; sourceTree = SOURCE_ROOT; };
+		73E2C0B310AA5C4700E80856 /* sqAssert.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqAssert.h; path = ../../../platforms/Cross/vm/sqAssert.h; sourceTree = SOURCE_ROOT; };
 		8D576316048677EA00EA77CD /* SqueakFFIPrims.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SqueakFFIPrims.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		8D576317048677EA00EA77CD /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */

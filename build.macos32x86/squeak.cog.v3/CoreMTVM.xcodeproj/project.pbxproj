@@ -14,6 +14,7 @@
 		73BC1BBF0F576864003412C5 /* cointerpmt.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BC1BBA0F576864003412C5 /* cointerpmt.h */; };
 		733AC8DB0FEAAC4F007C6206 /* version.c in Sources */ = {isa = PBXBuildFile; fileRef = 733AC8DA0FEAAC4F007C6206 /* version.c */; };
 		733B2C37106AB74B004652BE /* sqExternalSemaphores.c in Sources */ = {isa = PBXBuildFile; fileRef = 733B2C36106AB74B004652BE /* sqExternalSemaphores.c */; };
+		735B4CA30E8069B7008FA2CA /* VMProfileMacSupportPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */; };
 		7351A09B100963670035A878 /* sqUnixThreads.c in Sources */ = {isa = PBXBuildFile; fileRef = 7351A09A100963670035A878 /* sqUnixThreads.c */; };
 		737888E713D0DE6500C5E1AD /* sqMemoryFence.h in Headers */ = {isa = PBXBuildFile; fileRef = 737888E513D0DE6500C5E1AD /* sqMemoryFence.h */; };
 		737888E813D0DE6500C5E1AD /* sqSCCSVersion.h in Headers */ = {isa = PBXBuildFile; fileRef = 737888E613D0DE6500C5E1AD /* sqSCCSVersion.h */; };
