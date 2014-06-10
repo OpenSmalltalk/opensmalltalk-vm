@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 INSTALLDIR=cogmtastlinuxht
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift

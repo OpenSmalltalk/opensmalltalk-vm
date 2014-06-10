@@ -1,17 +1,18 @@
 #!/bin/bash
-# VM with VM profiler and threaded heartbeat assuming multiple thread priorities
+# VM with VM profiler and threaded heartbeat
 INSTALLDIR=nscoglinuxht
+# Some gcc versions create a broken VM using -O2
+case `gcc -v 2>&1 | grep version | sed 's/gcc version *//'` in
+3.4.*)	OPT="-g -O1 -DNDEBUG -DDEBUGVM=0";;
+*)		OPT="-g -O2 -DNDEBUG -DDEBUGVM=0";;
+esac
+
 if [ $# -ge 1 ]; then
 	case "$1" in
 	-*)	;;
 	*)	INSTALLDIR="$1"; shift
 	esac
 fi
-# Some gcc versions create a broken VM using -O2
-case `gcc -v 2>&1 | grep version | sed 's/gcc version *//'` in
-3.4.*)	OPT=-O1;;
-*)		OPT=-O2;;
-esac
 
 echo -n "clean? "
 read a
@@ -19,10 +20,10 @@ case $a in
 n|no|N|NO)	echo "ok but this isn't safe!!";;
 *)			rm config.h; test -f Makefile && make reallyclean
 esac
-test -f config.h || ../../../platforms/unix/config/configure --with-src=nscogsrc \
-	--without-vm-display-fbdev --without-npsqueak \
+test -f config.h || ../../../platforms/unix/config/configure \
+	--with-src=nscogsrc --without-vm-display-fbdev --without-npsqueak \
 	CC="gcc -m32" \
-	CFLAGS="-g $OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DDEBUGVM=0" \
+	CFLAGS="$OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64" \
 	LIBS="-lpthread -luuid" \
 	LDFLAGS=-Wl,-z,now
 ../../../scripts/nukeversion
@@ -30,26 +31,4 @@ rm -rf ../../../products/$INSTALLDIR
 # would prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`
 # but older linux readlinks lack the -f flag
 make install prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR
-(cd ../../$INSTALLDIR
- if [ -f squeak ]; then
-        mv squeak nsvm
-        ex -u NONE "+g/squeak/s/squeak/nsvm/g" +w +q nsvm
-  fi
-  if [ -f bin/squeak ]; then
-        mv bin/squeak bin/nsvm
-        ex -u NONE "+g/squeak/s/squeak/nsvm/g" +w +q bin/nsvm
-  fi
-  rm -rf man doc
-  LIBDIR="`echo lib/squeak/[0-9.-]*`"
-  test -f $LIBDIR/squeak && mv $LIBDIR/squeak $LIBDIR/nsvm
-  test -d lib/squeak && mv lib/squeak lib/nsvm
-  LIBDIR="`echo lib/nsvm/[0-9.-]*`"
-  if [ "$1" = -copysource ]; then
-	cp ../../../sources/SqueakV41.sources $LIBDIR
-  elif [ -h ../../../sources/SqueakV41.sources ]; then
-	ln "`readlink ../../../sources/SqueakV41.sources`" $LIBDIR
-  elif [ -f ../../../sources/SqueakV41.sources ]; then
-	ln ../../../sources/SqueakV41.sources $LIBDIR
-  else
-	echo "can't find SqueakV41.sources" 1>&2
-  fi)
+../../editnewspeakinstall.sh ../../../products/$INSTALLDIR

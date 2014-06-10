@@ -1,9 +1,3 @@
-# Copied, perhaps edited, from ../../src/examplePlugins.ext
+# Copied, perhaps edited, from ../../../nscogsrc/examplePlugins.ext
 EXTERNAL_PLUGINS = \
-B3DAcceleratorPlugin \
-BochsIA32Plugin \
-SqueakFFIPrims \
-SqueakSSL \
-LocalePlugin \
-UnixOSProcessPlugin \
-UUIDPlugin
+SqueakSSL

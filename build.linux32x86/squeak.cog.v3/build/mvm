@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # VM with VM profiler and threaded heartbeat assuming multiple thread priorities
 INSTALLDIR=coglinuxht
 if [ $# -ge 1 ]; then

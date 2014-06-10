@@ -1,4 +1,4 @@
-# Copied, perhaps edited, from ../../../nssrc/examplePlugins.int
+# Copied, perhaps edited, from ../../../nscogsrc/examplePlugins.int
 INTERNAL_PLUGINS = \
 AsynchFilePlugin \
 BMPReadWriterPlugin \
@@ -22,4 +22,5 @@ SecurityPlugin \
 SocketPlugin \
 SurfacePlugin \
 UUIDPlugin \
-UnixOSProcessPlugin
+UnixOSProcessPlugin \
+VMProfileLinuxSupportPlugin

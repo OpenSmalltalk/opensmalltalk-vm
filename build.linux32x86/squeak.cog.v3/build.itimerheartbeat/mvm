@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 INSTALLDIR=coglinux
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift

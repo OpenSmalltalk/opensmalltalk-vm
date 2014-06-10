@@ -1,12 +1,18 @@
 #!/bin/bash
-INSTALLDIR=debug/stklinux
+# Stack Spur VM with VM profiler and threaded heartbeat
+INSTALLDIR=nsstkspurlinuxht
+# Some gcc versions create a broken VM using -O2
+case `gcc -v 2>&1 | grep version | sed 's/gcc version *//'` in
+3.4.*)	OPT="-g -O1 -DNDEBUG -DDEBUGVM=0";;
+*)		OPT="-g -O2 -DNDEBUG -DDEBUGVM=0";;
+esac
+
 if [ $# -ge 1 ]; then
 	case "$1" in
 	-*)	;;
 	*)	INSTALLDIR="$1"; shift
 	esac
 fi
-OPT=-O0
 
 echo -n "clean? "
 read a
@@ -15,10 +21,10 @@ n|no|N|NO)	echo "ok but this isn't safe!!";;
 *)			rm config.h; test -f Makefile && make reallyclean
 esac
 test -f config.h || ../../../platforms/unix/config/configure \
-	--with-src=stacksrc --with-plugins=src/plugins --disable-cogit \
+	--with-src=nsspurstacksrc  --with-plugin-src=nscogsrc/plugins --disable-cogit \
 	--without-vm-display-fbdev --without-npsqueak \
 	CC="gcc -m32" \
-	CFLAGS="-g $OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DITIMER_HEARTBEAT=1 -DDEBUGVM=1 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer" \
+	CFLAGS="$OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64" \
 	LIBS="-lpthread -luuid" \
 	LDFLAGS=-Wl,-z,now
 ../../../scripts/nukeversion
@@ -26,3 +32,4 @@ rm -rf ../../../products/$INSTALLDIR
 # would prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`
 # but older linux readlinks lack the -f flag
 make install prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR
+../../editnewspeakinstall.sh ../../../products/$INSTALLDIR
