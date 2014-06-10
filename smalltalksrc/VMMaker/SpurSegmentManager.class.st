@@ -240,6 +240,7 @@ SpurSegmentManager >> collapseSegmentsPostSwizzle [
 SpurSegmentManager >> findEmptySegNearestInSizeTo: size [
 	| seg best delta |
 	<var: #seg type: #'SpurSegmentInfo *'>
+	<var: #best type: #'SpurSegmentInfo *'>
 	best := nil.
 	delta := size.
 	0 to: numSegments - 1 do:
@@ -573,7 +574,7 @@ SpurSegmentManager >> removeSegment: emptySeg [
 	i := self indexOfSegment: emptySeg.
 	self assert: i > 0.
 
-	manager sqDeallocateMemorySegmentAt: emptySeg segStart OfSize: emptySeg segSize.
+	manager sqDeallocateMemorySegmentAt: emptySeg segStart asVoidPointer OfSize: emptySeg segSize.
 
 	i to: numSegments - 1 do:
 		[:j| segments at: j put: (segments at: j + 1)].
