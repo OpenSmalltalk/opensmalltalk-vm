@@ -369,6 +369,12 @@ SqueakMacOSXPowerPCConfig >> defaultDirectoriesFromGitDir: gitRepository [
 ]
 
 { #category : #cmake }
+SqueakMacOSXPowerPCConfig >> dirBuildLanguageVMMM [
+	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
+	^self required
+]
+
+{ #category : #cmake }
 SqueakMacOSXPowerPCConfig >> excludeFromBuild [
 	^true
 

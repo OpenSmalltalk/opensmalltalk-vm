@@ -22,6 +22,11 @@ SqueakFreeBSDNewspeakSistaSpurConfig >> buildDirName [
 ]
 
 { #category : #cmake }
+SqueakFreeBSDNewspeakSistaSpurConfig >> dirBuildLanguageVMMM [
+	^self newspeakSistaSpur
+]
+
+{ #category : #cmake }
 SqueakFreeBSDNewspeakSistaSpurConfig >> excludeFromBuild [
 	^false
 

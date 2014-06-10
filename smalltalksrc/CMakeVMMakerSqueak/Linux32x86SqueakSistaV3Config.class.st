@@ -57,7 +57,7 @@ Linux32x86SqueakSistaV3Config >> defaultInternalPlugins [
 { #category : #cmake }
 Linux32x86SqueakSistaV3Config >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
-	^self squeakCogSpur
+	^self squeakSistaV3
 ]
 
 { #category : #cmake }

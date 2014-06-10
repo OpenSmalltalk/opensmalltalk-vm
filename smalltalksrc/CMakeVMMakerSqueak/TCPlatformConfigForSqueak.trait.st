@@ -301,6 +301,12 @@ TCPlatformConfigForSqueak >> dirWin32x86 [
 ]
 
 { #category : #cmake }
+TCPlatformConfigForSqueak >> eventStackV3 [
+	"needed by Android config to pass internal tests. Android config is not built"
+	^'do not build'
+]
+
+{ #category : #cmake }
 TCPlatformConfigForSqueak >> excludeFromBuild [
 "	^false"   "build this configuration"
 "	^true"   "do not build this configuration"

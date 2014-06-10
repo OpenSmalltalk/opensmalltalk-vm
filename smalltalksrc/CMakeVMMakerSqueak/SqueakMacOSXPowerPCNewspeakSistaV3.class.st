@@ -19,6 +19,11 @@ SqueakMacOSXPowerPCNewspeakSistaV3 >> availableBuilds [
 ]
 
 { #category : #cmake }
+SqueakMacOSXPowerPCNewspeakSistaV3 >> dirBuildLanguageVMMM [
+	^self newspeakSistaV3
+]
+
+{ #category : #cmake }
 SqueakMacOSXPowerPCNewspeakSistaV3 >> excludeFromBuild [
 	^false
 

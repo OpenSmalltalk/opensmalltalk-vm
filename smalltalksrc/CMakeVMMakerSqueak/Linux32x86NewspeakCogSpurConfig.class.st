@@ -15,6 +15,11 @@ Class {
 }
 
 { #category : #cmake }
+Linux32x86NewspeakCogSpurConfig >> dirBuildLanguageVMMM [
+	^self newspeakCogSpur
+]
+
+{ #category : #cmake }
 Linux32x86NewspeakCogSpurConfig >> excludeFromBuild [
 	"over-ride to exclude yourself from a build"
 	^false
