@@ -1,6 +1,6 @@
 #!/bin/sh
 # VM with VM profiler and itimer heartbeat
-INSTALLDIR=nsspurastlinux
+INSTALLDIR=assert/nscogspurlinux
 if [ $# -ge 1 ]; then
 	case "$1" in
 	-*)	;;

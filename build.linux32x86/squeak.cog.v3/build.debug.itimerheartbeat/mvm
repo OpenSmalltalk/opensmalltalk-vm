@@ -1,5 +1,5 @@
 #!/bin/sh
-INSTALLDIR=cogdbglinux
+INSTALLDIR=debug/coglinux
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
 fi

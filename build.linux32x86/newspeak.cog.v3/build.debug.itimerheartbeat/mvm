@@ -1,5 +1,5 @@
 #!/bin/bash
-INSTALLDIR=nsvmlinuxdbg
+INSTALLDIR=debug/nscoglinux
 if [ $# -ge 1 ]; then
 	case "$1" in
 	-*)	;;

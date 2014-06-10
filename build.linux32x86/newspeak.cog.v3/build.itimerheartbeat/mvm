@@ -1,5 +1,5 @@
 #!/bin/bash
-INSTALLDIR=nsvmlinux
+INSTALLDIR=nscoglinux
 if [ $# -ge 1 ]; then
 	case "$1" in
 	-*)	;;

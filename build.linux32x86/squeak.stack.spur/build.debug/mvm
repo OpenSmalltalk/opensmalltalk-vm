@@ -1,6 +1,6 @@
 #!/bin/bash
 # VM with VM profiler and threaded heartbeat assuming multiple thread priorities
-INSTALLDIR=spurstklinuxdbght
+INSTALLDIR=debug/stkspurlinuxht
 if [ $# -ge 1 ]; then
 	case "$1" in
 	-*)	;;

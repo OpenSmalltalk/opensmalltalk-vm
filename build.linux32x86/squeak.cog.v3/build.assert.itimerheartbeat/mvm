@@ -1,5 +1,5 @@
 #!/bin/sh
-INSTALLDIR=cogastlinux
+INSTALLDIR=assert/coglinux
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
 fi

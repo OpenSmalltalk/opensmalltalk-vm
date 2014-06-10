@@ -1,5 +1,5 @@
 #!/bin/bash 
-INSTALLDIR=stklinuxast
+INSTALLDIR=assert/stklinux
 if [ $# -ge 1 ]; then
 	case "$1" in
 	-*)	;;

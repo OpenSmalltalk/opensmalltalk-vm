@@ -1,6 +1,6 @@
 #!/bin/sh
 # VM with VM profiler and threaded heartbeat assuming multiple thread priorities
-INSTALLDIR=cogdbglinuxht
+INSTALLDIR=debug/coglinuxht
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
 fi

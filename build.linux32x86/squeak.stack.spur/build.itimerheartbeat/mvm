@@ -1,5 +1,5 @@
 #!/bin/bash
-INSTALLDIR=spurstklinux
+INSTALLDIR=stkspurlinux
 if [ $# -ge 1 ]; then
 	case "$1" in
 	-*)	;;
