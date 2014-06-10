@@ -273,6 +273,12 @@ SqueakMacOSSqueakCogV3Config >> defaultInternalPlugins [
 ]
 
 { #category : #cmake }
+SqueakMacOSSqueakCogV3Config >> dirBuildLanguageVMMM [
+	"the directory under buildPlatformDir  example: newspeak.cog.spur. default is squeak.cog.v3"
+	^self squeakCogV3
+]
+
+{ #category : #cmake }
 SqueakMacOSSqueakCogV3Config >> excludeFromBuild [
 	^false
 

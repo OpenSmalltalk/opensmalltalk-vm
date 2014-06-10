@@ -15,6 +15,11 @@ Class {
 }
 
 { #category : #cmake }
+Linux32x86NewspeakSistaV3Config >> dirBuildLanguageVMMM [
+	^self newspeakSistaV3
+]
+
+{ #category : #cmake }
 Linux32x86NewspeakSistaV3Config >> excludeFromBuild [
 	"over-ride to exclude yourself from a build"
 	^false

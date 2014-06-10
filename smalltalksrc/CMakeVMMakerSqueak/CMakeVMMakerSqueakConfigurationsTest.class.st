@@ -6,16 +6,15 @@ Class {
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakConfigurationsTest >> testBuildDirName [
-	"for each builder, make sure all its configurations provide a buildDirectory "
+	"for each builder, make sure all its configurations provide a build directory name "
 	SqueakCMakeVMMakerAbstractBuilder 
 		subclassesDo:[:builder | | o |
 			Smalltalk globals 
 				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
 					ifTrue:[ 
 							o:= configuration new.
-							self assert:(o  buildDirName isString)] 
-
-]]
+							o excludeFromBuild not                                                     
+								ifTrue:[self assert:(o  buildDirName isString)]]]]
 
 
 
@@ -28,16 +27,15 @@ CMakeVMMakerSqueakConfigurationsTest >> testBuildDirName [
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakConfigurationsTest >> testBuildDirs [
-	"for each builder, make sure all its configurations provide a buildDirectory "
+	"for each builder, make sure all its configurations provides availbale build directories "
 	SqueakCMakeVMMakerAbstractBuilder 
 		subclassesDo:[:builder | | o |
 			Smalltalk globals 
 				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
 					ifTrue:[ 
 							o:= configuration new.
-							self assert:(o  buildDir isKindOf: FileDirectory)] 
-
-]]
+							o excludeFromBuild not
+								ifTrue:[self assert:(o  buildDir isKindOf: FileDirectory)]]]]
 
 
 
@@ -50,16 +48,14 @@ CMakeVMMakerSqueakConfigurationsTest >> testBuildDirs [
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakConfigurationsTest >> testDefaultExternalPlugins [
-	"for each builder, make sure all its configurations provide a buildDirectory "
+	"for each builder, make sure all its configurations provides defaultExternalPlugins"
 	SqueakCMakeVMMakerAbstractBuilder 
 		subclassesDo:[:builder | | o |
 			Smalltalk globals 
 				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
 					ifTrue:[ 
 							o:= configuration new.
-							self assert:(o  defaultExternalPlugins isArray)] 
-
-]]
+							self assert:(o  defaultExternalPlugins isArray)]]]
 
 
 
@@ -72,16 +68,34 @@ CMakeVMMakerSqueakConfigurationsTest >> testDefaultExternalPlugins [
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakConfigurationsTest >> testDefaultInternalPlugins [
-	"for each builder, make sure all its configurations provide a buildDirectory "
+	"for each builder, make sure all its configurations provides defaultInternalPlugins"
 	SqueakCMakeVMMakerAbstractBuilder 
 		subclassesDo:[:builder | | o |
 			Smalltalk globals 
 				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
 					ifTrue:[ 
 							o:= configuration new.
-							self assert:(o  defaultInternalPlugins isArray)] 
+							self assert:(o  defaultInternalPlugins isArray)]]]
 
-]]
+
+
+
+
+
+
+
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakConfigurationsTest >> testDirSource [
+	"for each builder, make sure all its configurations provide a dirSource "
+	SqueakCMakeVMMakerAbstractBuilder 
+		subclassesDo:[:builder | | o |
+			Smalltalk globals 
+				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
+					ifTrue:[ 
+							o:= configuration new.
+							self assert:(o  dirSource isString)]]]
 
 
 
@@ -94,16 +108,14 @@ CMakeVMMakerSqueakConfigurationsTest >> testDefaultInternalPlugins [
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakConfigurationsTest >> testExcludeFromBuild [
-	"for each builder, make sure all its configurations provide a buildDirectory "
+	"for each builder, make sure all its includes or excludes itself from a build "
 	SqueakCMakeVMMakerAbstractBuilder 
 		subclassesDo:[:builder | | o |
 			Smalltalk globals 
 				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
 					ifTrue:[ 
 							o:= configuration new.
-							self assert:(((o  excludeFromBuild) == true) | ((o  excludeFromBuild) == false))] 
-
-]]
+							self assert:(((o  excludeFromBuild) == true) | ((o  excludeFromBuild) == false))]]]
 
 
 
@@ -116,16 +128,14 @@ CMakeVMMakerSqueakConfigurationsTest >> testExcludeFromBuild [
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakConfigurationsTest >> testExectuableName [
-	"for each builder, make sure all its configurations provide a buildDirectory "
+	"for each builder, make sure all its configurations provide an executableName "
 	SqueakCMakeVMMakerAbstractBuilder 
 		subclassesDo:[:builder | | o |
 			Smalltalk globals 
 				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
 					ifTrue:[ 
 							o:= configuration new.
-							self assert:(o  executableName isString)] 
-
-]]
+							self assert:(o  executableName isString)]]]
 
 
 
@@ -138,16 +148,14 @@ CMakeVMMakerSqueakConfigurationsTest >> testExectuableName [
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakConfigurationsTest >> testExternalPlugins [
-	"for each builder, make sure all its configurations provide a buildDirectory "
+	"for each builder, make sure all its configurations provides externalePlugins "
 	SqueakCMakeVMMakerAbstractBuilder 
 		subclassesDo:[:builder | | o |
 			Smalltalk globals 
 				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
 					ifTrue:[ 
 							o:= configuration new.
-							self assert:(o  externalPlugins isArray)] 
-
-]]
+							self assert:(o  externalPlugins isArray)]]]
 
 
 
@@ -160,16 +168,14 @@ CMakeVMMakerSqueakConfigurationsTest >> testExternalPlugins [
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakConfigurationsTest >> testInternalPlugins [
-	"for each builder, make sure all its configurations provide a buildDirectory "
+	"for each builder, make sure all its configurations provides internalPlutgins "
 	SqueakCMakeVMMakerAbstractBuilder 
 		subclassesDo:[:builder | | o |
 			Smalltalk globals 
 				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
 					ifTrue:[ 
 							o:= configuration new.
-							self assert:(o  internalPlugins isArray)] 
-
-]]
+							self assert:(o  internalPlugins isArray)]]]
 
 
 
@@ -182,16 +188,14 @@ CMakeVMMakerSqueakConfigurationsTest >> testInternalPlugins [
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakConfigurationsTest >> testOutputDir [
-	"for each builder, make sure all its configurations provide a buildDirectory "
+	"for each builder, make sure all its configurations provide an outputDir "
 	SqueakCMakeVMMakerAbstractBuilder 
 		subclassesDo:[:builder | | o |
 			Smalltalk globals 
 				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
 					ifTrue:[ 
 							o:= configuration new.
-							self assert:(o  outputDir isKindOf: FileDirectory)] 
-
-]]
+							self assert:(o  outputDir isKindOf: FileDirectory)]]]
 
 
 
@@ -204,16 +208,14 @@ CMakeVMMakerSqueakConfigurationsTest >> testOutputDir [
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakConfigurationsTest >> testSrcDirs [
-	"for each builder, make sure all its configurations provide a buildDirectory "
+	"for each builder, make sure all its configurations provide a srcDir "
 	SqueakCMakeVMMakerAbstractBuilder 
 		subclassesDo:[:builder | | o |
 			Smalltalk globals 
 				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
 					ifTrue:[ 
 							o:= configuration new.
-							self assert:(o  srcDir isKindOf: FileDirectory)] 
-
-]]
+							self assert:(o  srcDir isKindOf: FileDirectory)]]]
 
 
 
@@ -226,16 +228,35 @@ CMakeVMMakerSqueakConfigurationsTest >> testSrcDirs [
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakConfigurationsTest >> testTopDirs [
-	"for each builder, make sure all its configurations provide a buildDirectory "
+	"for each builder, make sure all its configurations provide a topDir "
 	SqueakCMakeVMMakerAbstractBuilder 
 		subclassesDo:[:builder | | o |
 			Smalltalk globals 
 				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
 					ifTrue:[ 
 							o:= configuration new.
-							self assert:(o  topDir isKindOf: FileDirectory)] 
+							self assert:(o  topDir isKindOf: FileDirectory)]]]
 
-]]
+
+
+
+
+
+
+
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakConfigurationsTest >> testdirBuildLanguageVMMM [
+	"for each builder that does not exclude itself from builds, make sure it returns dirBUildLanguageVMMM "
+	SqueakCMakeVMMakerAbstractBuilder 
+		subclassesDo:[:builder | | o |
+			Smalltalk globals 
+				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
+					ifTrue:[ 
+							o:= configuration new.
+							o excludeFromBuild not                                                     
+							 	ifTrue:[self assert:(o  dirBuildLanguageVMMM isString)]]]]
 
 
 

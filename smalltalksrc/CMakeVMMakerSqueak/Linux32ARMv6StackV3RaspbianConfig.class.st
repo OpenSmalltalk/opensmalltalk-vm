@@ -150,6 +150,12 @@ Linux32ARMv6StackV3RaspbianConfig >> defaultInternalPlugins [
 ]
 
 { #category : #cmake }
+Linux32ARMv6StackV3RaspbianConfig >> dirBuildLanguageVMMM [
+	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
+	^self squeakStackV3
+]
+
+{ #category : #cmake }
 Linux32ARMv6StackV3RaspbianConfig >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
 	^self dirARMv6

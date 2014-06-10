@@ -14,6 +14,11 @@ MacOSX32x86NewspeakSistaV3 >> availableBuilds [
 ]
 
 { #category : #cmake }
+MacOSX32x86NewspeakSistaV3 >> dirBuildLanguageVMMM [
+	^self newspeakSistaV3
+]
+
+{ #category : #cmake }
 MacOSX32x86NewspeakSistaV3 >> excludeFromBuild [
 	^false
 

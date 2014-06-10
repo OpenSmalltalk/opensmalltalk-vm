@@ -22,6 +22,12 @@ SqueakFreeBSDSqueakStackSpurConfig >> buildDirName [
 ]
 
 { #category : #cmake }
+SqueakFreeBSDSqueakStackSpurConfig >> dirBuildLanguageVMMM [
+	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
+	^self squeakStackSpur
+]
+
+{ #category : #cmake }
 SqueakFreeBSDSqueakStackSpurConfig >> excludeFromBuild [
 	^false
 

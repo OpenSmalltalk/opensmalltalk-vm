@@ -14,6 +14,11 @@ SqueakSunOS32x86NewspeakSistaSpurConfig >> availableBuilds [
 ]
 
 { #category : #cmake }
+SqueakSunOS32x86NewspeakSistaSpurConfig >> dirBuildLanguageVMMM [
+	^self newspeakSistaSpur
+]
+
+{ #category : #cmake }
 SqueakSunOS32x86NewspeakSistaSpurConfig >> excludeFromBuild [
 	^false
 

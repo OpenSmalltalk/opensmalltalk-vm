@@ -342,7 +342,7 @@ Linux64Config >> dirBuildITimerHeartbeat [
 { #category : #cmake }
 Linux64Config >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
-	^self squeakCogV3
+	^self required
 ]
 
 { #category : #cmake }

@@ -14,6 +14,12 @@ MacOSX32x86SqueakStackV3 >> availableBuilds [
 ]
 
 { #category : #cmake }
+MacOSX32x86SqueakStackV3 >> dirBuildLanguageVMMM [
+	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
+	^self squeakStackV3
+]
+
+{ #category : #cmake }
 MacOSX32x86SqueakStackV3 >> excludeFromBuild [
 	^false
 

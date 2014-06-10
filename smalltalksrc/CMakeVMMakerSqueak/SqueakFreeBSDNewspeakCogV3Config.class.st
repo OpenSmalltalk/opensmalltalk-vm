@@ -22,6 +22,11 @@ SqueakFreeBSDNewspeakCogV3Config >> buildDirName [
 ]
 
 { #category : #cmake }
+SqueakFreeBSDNewspeakCogV3Config >> dirBuildLanguageVMMM [
+	^self newspeakCogV3
+]
+
+{ #category : #cmake }
 SqueakFreeBSDNewspeakCogV3Config >> excludeFromBuild [
 	^false
 
