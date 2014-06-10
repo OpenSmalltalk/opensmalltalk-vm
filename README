@@ -12,14 +12,13 @@ Contents:
 
 Overview
 --------
-
 Cog is an evolution of the Squeak Back-to-the-future Smalltalk virtual machine
 that provides a number of different Smalltalk virtual machines.  The VMs are
 developed in Smalltalk, using all the dynamic and reflective facilities of the
 Squeak/Pharo Smalltalk system.  As such, developing in Cog is a delight.  The
 Smalltalk framework comprising the various Cog VMs is translated into C by its
 Slang component to produce VM source that is combined with platform-specific
-support soures and compiled via a C compiler to obtain a fast production VM.
+support sources and compiled via a C compiler to obtain a fast production VM.
 This directory tree includes the output of Slang for various configurations of
 "Cog VM" and the associated platform support code, plus build directories that
 can be used to produce production VMs.
@@ -35,34 +34,36 @@ and their ilk, and between Newspeak VMs that run Newspeak.
 Another distinction is between Stack, Cog and Sista VMs.  Stack VMs are those
 with context-to-stack mapping that optimise message sending by keeping method
 activations on a stack instead of in contexts.  These are pure interpreters but
-significantly faster than the standard context-based Interpreter VM.  Cog VMs
-add a JIT to the mix, compiling methods used more than once to maxchine code on
-the fly.  Sista VMs, as yet unrealised and in development, add support for
+are significantly faster than the standard context-based Interpreter VM.  Cog
+VMs add a JIT to the mix, compiling methods used more than once to machine code
+on the fly.  Sista VMs, as yet unrealised and in development, add support for
 adaptive optimization that does speculative inlining at the bytecode-to-bytecode
-level.  These are targeted for release in 2015.
+level.  These are under development and targeted for release in 2015.
 
 Another distinction is between "v3" VMs and Spur VMs.  "v3" is the original
 object representation for Squeak as described in the back-to-the-future paper.
 Spur, as described on the www.mirandabanda.org blog, is a faster object
 representation which uses generation scavenging, lazy forwarding for fast
-become, and a single object header format common to 32 and 64 bit versions.
+become, a single object header format common to 32 and 64 bit versions, and a
+segmented heap that can grow and shrink, releasign memory back to the host OS.
 
 Another distinction is between normal single-threaded VMs that schedule "green"
-Smalltalk processes above a single-threaded VM, and "multi-threaded" VMs that
-share the VM between any number of native threads such that only one native
-thread owns the VM at any one time, switching between threads on FFI calls and
-callbacks or on Smalltalk process switches when Smalltalk processes are owned
-by threads.  This multi-threaded support is as yet experimental.
+Smalltalk light-weight processes above a single-threaded VM, and multi-threaded
+VMs that share the VM between any number of native threads such that only one
+native thread owns the VM at any one time, switching between threads on FFI
+calls and callbacks or on Smalltalk process switches when Smalltalk processes
+are owned by threads.  This architecture offers non-blocking FFI calls and
+interoperability with multiple native threads, but does /not/ provide true
+concurrency.  This multi-threaded support is as yet experimental.
 
 
 VM source directories
 ---------------------
-
-Slang output of various VMs are kept in "vm source" directories.  These sources
-define the core VM (the Smalltalk execution engine and memory manager), and a
-substantial set of "plugins" that provide interfaces to various external
-facilities via Smalltalk primitive methods.  Each vm source directory is
-specific to a particular VM, be it Squeak Cog Spur, or Newspeak Stack, etc.
+The Slang output of the various VMs are kept in "vm source" directories.  These
+C sources define the core VM (the Smalltalk execution engine and the memory
+manager), and a substantial set of "plugins" that provide interfaces to various
+external facilities via Smalltalk primitive methods.  Each vm source directory
+is specific to a particular VM, be it Squeak Cog Spur, or Newspeak Stack, etc.
 The plugins can be shared between VMs, choosing the set of plugins to include
 in a VM at build time.
 
@@ -89,6 +90,21 @@ IA32ABI/IA32ABI.c plugin, the core plugin for the Alien FFI on x86 platforms.
 In Newspeak this plgin has support for per-object immutability, a feature
 as-yet-unimplemented in Cog but that was available on the old context-based
 Newspeak interpreter VM.
+
+Each vm source directory contains several files, a subset of the following:
+	cogit.c				- the JIT; a Cogit cooperates with a CoInterpreter
+	cogit.h				- the Cogit's API, as used by the CoInterpreter
+	cogmethod.h			- the structure of a CogMethod, the output of the Cogit
+	cointerp.c			- the CoInterpreter's source file
+	cointerp.h			- the API of the CoInterpreter, as used by the Cogit
+	cointerpmt.c		- the multi-threaded CoInterpreterMT's source file
+	cointerpmt.h		- the API of the CoInterpreterMT, as used by the Cogit
+	gcc3x-cointerp.c	- cointerp.c massaged to interpret faster if using gcc
+	gcc3x-cointerpmt.c	- ditto for cointerpmt.c
+	gcc3x-interp.c		- ditto for interp.c
+	interp.c			- the StackInterpreter's source file
+	interp.h			- defines for the VM configuration, word size, etc
+	vmCallback.h		- the structure of the VM's VMCallbackContext
 
 
 Platform build directories

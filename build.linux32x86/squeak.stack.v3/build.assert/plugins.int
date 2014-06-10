@@ -21,6 +21,5 @@ RePlugin \
 SecurityPlugin \
 SocketPlugin \
 SurfacePlugin \
-UUIDPlugin \
 UnixOSProcessPlugin \
 VMProfileLinuxSupportPlugin
