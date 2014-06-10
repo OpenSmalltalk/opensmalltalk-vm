@@ -14,6 +14,12 @@ SqueakSunOS32x86SqueakSistaSpurConfig >> availableBuilds [
 ]
 
 { #category : #cmake }
+SqueakSunOS32x86SqueakSistaSpurConfig >> dirBuildLanguageVMMM [
+	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
+	^self squeakSistaSpur
+]
+
+{ #category : #cmake }
 SqueakSunOS32x86SqueakSistaSpurConfig >> excludeFromBuild [
 	^false
 

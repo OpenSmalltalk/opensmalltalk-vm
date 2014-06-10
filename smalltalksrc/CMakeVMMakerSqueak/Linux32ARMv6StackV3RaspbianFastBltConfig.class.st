@@ -43,6 +43,12 @@ Linux32ARMv6StackV3RaspbianFastBltConfig >> configureBitBltSimulation: maker [
 ]
 
 { #category : #cmake }
+Linux32ARMv6StackV3RaspbianFastBltConfig >> dirBuildLanguageVMMM [
+	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
+	^self squeakStackV3
+]
+
+{ #category : #cmake }
 Linux32ARMv6StackV3RaspbianFastBltConfig >> excludeFromBuild [
 	^false
 

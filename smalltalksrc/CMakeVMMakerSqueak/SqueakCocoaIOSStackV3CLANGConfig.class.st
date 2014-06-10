@@ -27,6 +27,12 @@ SqueakCocoaIOSStackV3CLANGConfig >> coreSources [
 ]
 
 { #category : #cmake }
+SqueakCocoaIOSStackV3CLANGConfig >> dirBuildLanguageVMMM [
+	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
+	^self squeakStackV3
+]
+
+{ #category : #cmake }
 SqueakCocoaIOSStackV3CLANGConfig >> excludeFromBuild [
 	^false
 

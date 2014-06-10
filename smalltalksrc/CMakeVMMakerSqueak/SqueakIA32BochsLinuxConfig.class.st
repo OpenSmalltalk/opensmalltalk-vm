@@ -14,6 +14,12 @@ Class {
 	#category : #'CMakeVMMakerSqueak-IA32-Bochs'
 }
 
+{ #category : #cmake }
+SqueakIA32BochsLinuxConfig >> dirBuildLanguageVMMM [
+	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
+	^self squeakCogSpur
+]
+
 { #category : #'as yet unclassified' }
 SqueakIA32BochsLinuxConfig >> todo [
 	self flag:'tty'

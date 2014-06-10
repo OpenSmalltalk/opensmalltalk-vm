@@ -84,6 +84,12 @@ SqueakCMakeVMMakerAbstractBuilder class >> dirBuildPlatform [
 ]
 
 { #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder class >> showExcludeFromBuild: aBoolean [
+	default ifNil:[default:= self new].
+	^default showExcludeFromBuild: aBoolean
+]
+
+{ #category : #queries }
 SqueakCMakeVMMakerAbstractBuilder class >> sourceDirectoryFor: aSymbol [
 	default ifNil:[default:= self new].
 	^default sourceDirectoryFor: aSymbol
@@ -228,6 +234,24 @@ SqueakCMakeVMMakerAbstractBuilder >> dirBuildPlatform: aCategoryName [
 
 ]
 
+{ #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder >> getInfoForBuild: aSymbol [
+]
+
+{ #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder >> getInfoForBuilds [
+	| result|
+	"return a Dictionary of CMakeMakerSqueak-XYZ platform configurations and their associated CMakeVMakerConfigurationInfo "
+	result := Dictionary new.
+	self class allSubclassesDo:[:c | |configurationsCategory |
+				configurationsCategory := c default configurationsCategory.
+				result at:(configurationsCategory asSymbol)  put: (self configurationDictionary: configurationsCategory).
+	].
+.	^result
+
+
+]
+
 { #category : #initialization }
 SqueakCMakeVMMakerAbstractBuilder >> initialize [
 	"a stupid <cough>temporary</cough> hack to workaround initialization problems"
@@ -256,6 +280,22 @@ SqueakCMakeVMMakerAbstractBuilder >> initializeBuildTypeAndDirectoryInfo [
 { #category : #queries }
 SqueakCMakeVMMakerAbstractBuilder >> noBuildConfigurations [
 	^#(#noBuildsImplementedForThisConfiguration)
+]
+
+{ #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder >> showExcludeFromBuild: aBoolean [
+	|dictionary result msg s|
+	"return all configurations that where the  excludeFromBuid matches aBoolean. excludeFromBuild is manually set by the developer"	
+	aBoolean
+		ifTrue:[msg:= 'available configurations are: '. s:='']
+		ifFalse:[msg:= 'disabled configurations are: '. s:= ' edit method excludeFromBuild to toggle'].
+	result := OrderedCollection new.
+	dictionary:=self getInfoForBuilds.
+	dictionary do:[:dict | 
+			dict keysAndValuesDo: [:config :configinfo | 
+				aBoolean == (configinfo excludeFromBuild) 
+					ifTrue:[ result add:  config]]].
+	^'Configurations where excludeFromBuild ==', aBoolean ,'->',result, s.
 ]
 
 { #category : #queries }

@@ -14,6 +14,11 @@ SqueakSunOS32x86NewspeakCogV3Config >> availableBuilds [
 ]
 
 { #category : #cmake }
+SqueakSunOS32x86NewspeakCogV3Config >> dirBuildLanguageVMMM [
+	^self newspeakCogV3
+]
+
+{ #category : #cmake }
 SqueakSunOS32x86NewspeakCogV3Config >> excludeFromBuild [
 	^false
 

@@ -58,6 +58,11 @@ Win32x86NewspeakCogSpurConfig >> coreSources [
 ]
 
 { #category : #cmake }
+Win32x86NewspeakCogSpurConfig >> dirBuildLanguageVMMM [
+	^self newspeakCogSpur
+]
+
+{ #category : #cmake }
 Win32x86NewspeakCogSpurConfig >> excludeFromBuild [
 	^false
 

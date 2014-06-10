@@ -97,7 +97,7 @@ SqueakBSDConfig >> defaultInternalPlugins [
 { #category : #cmake }
 SqueakBSDConfig >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
-	^self squeakCogV3
+	self required
 ]
 
 { #category : #cmake }

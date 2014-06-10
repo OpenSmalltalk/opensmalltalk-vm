@@ -19,6 +19,11 @@ SqueakMacOSXPowerPCNewspeakStackSpur >> availableBuilds [
 ]
 
 { #category : #cmake }
+SqueakMacOSXPowerPCNewspeakStackSpur >> dirBuildLanguageVMMM [
+	^self newspeakStackSpur
+]
+
+{ #category : #cmake }
 SqueakMacOSXPowerPCNewspeakStackSpur >> excludeFromBuild [
 	^false
 

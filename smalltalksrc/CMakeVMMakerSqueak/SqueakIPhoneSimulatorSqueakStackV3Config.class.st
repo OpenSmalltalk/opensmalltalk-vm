@@ -13,35 +13,41 @@ find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me 
 
 "
 Class {
-	#name : #SqueakIPhoneSimulatorV3SqueakStackConfig,
+	#name : #SqueakIPhoneSimulatorSqueakStackV3Config,
 	#superclass : #SqueakIPhoneSqueakStackV3Config,
 	#category : #'CMakeVMMakerSqueak-IOS'
 }
 
 { #category : #accessing }
-SqueakIPhoneSimulatorV3SqueakStackConfig >> architecture [ 
+SqueakIPhoneSimulatorSqueakStackV3Config >> architecture [ 
 	^'i386'
 ]
 
 { #category : #accessing }
-SqueakIPhoneSimulatorV3SqueakStackConfig >> commonCompilerFlags [
+SqueakIPhoneSimulatorSqueakStackV3Config >> commonCompilerFlags [
 	^ super commonCompilerFlags, {
 		'-mios-simulator-version-min={1}' format: { self sdkVersion } }
 ]
 
 { #category : #cmake }
-SqueakIPhoneSimulatorV3SqueakStackConfig >> excludeFromBuild [
+SqueakIPhoneSimulatorSqueakStackV3Config >> dirBuildLanguageVMMM [
+	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
+	^self squeakStackV3
+]
+
+{ #category : #cmake }
+SqueakIPhoneSimulatorSqueakStackV3Config >> excludeFromBuild [
 	^false
 
 ]
 
 { #category : #accessing }
-SqueakIPhoneSimulatorV3SqueakStackConfig >> executableName [
+SqueakIPhoneSimulatorSqueakStackV3Config >> executableName [
 	^'iStackVMSimulator'
 ]
 
 { #category : #'plugin extra rules' }
-SqueakIPhoneSimulatorV3SqueakStackConfig >> ft2PluginConfigurationFlags [ 
+SqueakIPhoneSimulatorSqueakStackV3Config >> ft2PluginConfigurationFlags [ 
 	^ {'--without-zlib'.
 		'--without-bzip2'.
 		'--host=i386-apple-darwin'.
@@ -57,12 +63,12 @@ SqueakIPhoneSimulatorV3SqueakStackConfig >> ft2PluginConfigurationFlags [
 ]
 
 { #category : #accessing }
-SqueakIPhoneSimulatorV3SqueakStackConfig >> sdkTarget [ 
+SqueakIPhoneSimulatorSqueakStackV3Config >> sdkTarget [ 
 	^'iphonesimulator', self sdkVersion
 ]
 
 { #category : #settings }
-SqueakIPhoneSimulatorV3SqueakStackConfig >> setCommonProperties: maker [ 
+SqueakIPhoneSimulatorSqueakStackV3Config >> setCommonProperties: maker [ 
 	maker set: 'CMAKE_CROSSCOMPILING' to: 'TRUE'.
 	maker set: 'CMAKE_SYSTEM_NAME' to: 'Darwin'.
 	maker set: 'CMAKE_SYSTEM_PROCESSOR' to: 'i386'.
@@ -99,7 +105,7 @@ SqueakIPhoneSimulatorV3SqueakStackConfig >> setCommonProperties: maker [
 ]
 
 { #category : #'source files' }
-SqueakIPhoneSimulatorV3SqueakStackConfig >> standardIncludes [ 
+SqueakIPhoneSimulatorSqueakStackV3Config >> standardIncludes [ 
 	^super standardIncludes, {
 		'/Applications/Xcode.app/Contents/Developer/Platforms/{1}.platform/Developer/SDKs/{1}{2}.sdk/usr/include/'
 			format: { 
@@ -109,6 +115,6 @@ SqueakIPhoneSimulatorV3SqueakStackConfig >> standardIncludes [
 ]
 
 { #category : #accessing }
-SqueakIPhoneSimulatorV3SqueakStackConfig >> targetDevice [ 
+SqueakIPhoneSimulatorSqueakStackV3Config >> targetDevice [ 
 	^'iPhoneSimulator'
 ]

@@ -14,10 +14,9 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #cmake }
 Linux32x86NewspeakStackSpurConfig >> dirBuildLanguageVMMM [
-	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
-	^self squeakStackV3
+	^self newspeakStackSpur
 ]
 
 { #category : #cmake }

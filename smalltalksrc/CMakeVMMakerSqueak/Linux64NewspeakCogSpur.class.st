@@ -9,6 +9,11 @@ Linux64NewspeakCogSpur >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations
 ]
 
+{ #category : #cmake }
+Linux64NewspeakCogSpur >> dirBuildLanguageVMMM [
+	^self newspeakCogSpur
+]
+
 { #category : #'as yet unclassified' }
 Linux64NewspeakCogSpur >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
