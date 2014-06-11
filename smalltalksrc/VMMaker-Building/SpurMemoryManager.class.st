@@ -2889,7 +2889,8 @@ SpurMemoryManager >> checkTraversableSortedFreeList [
 			 prevFree := freeChunk.
 			 freeChunk := next]].
 	self assert: prevFree = lastFreeChunk.
-	self assert: freeChunk = 0
+	self assert: freeChunk = 0.
+	^true
 ]
 
 { #category : #'simulation only' }
@@ -4764,7 +4765,7 @@ SpurMemoryManager >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpaceForPigCompact
 			withValue: prevPrevFree].
 	lastFreeChunk := prevFree.
 	self inSortedFreeListLink: lastFreeChunk to: 0 given: prevPrevFree.
-	self checkTraversableSortedFreeList
+	self assert: self checkTraversableSortedFreeList
 ]
 
 { #category : #'simulation only' }
@@ -7648,7 +7649,7 @@ SpurMemoryManager >> pigCompact [
 			[scanAddress := self moveARunOfObjectsStartingAt: scanAddress upTo: high.
 			 scanAddress = 0 ifTrue:
 				[^self]]].
-	self cCode: [] inSmalltalk: [self checkTraversableSortedFreeList]
+	self assert: self checkTraversableSortedFreeList
 ]
 
 { #category : #'primitive support' }
@@ -8274,7 +8275,7 @@ SpurMemoryManager >> readHeapFromImageFile: f dataBytes: numBytes [
 SpurMemoryManager >> rebuildFreeListsForPigCompact [
 	"Rebuild the free lists from the doubly-linked free list."
 	<inline: false>
-	self checkTraversableSortedFreeList.
+	self assert: self checkTraversableSortedFreeList.
 	totalFreeOldSpace := 0.
 	self sortedFreeListDo:
 		[:freeObj| | start bytes |
@@ -9498,7 +9499,7 @@ SpurMemoryManager >> sweepToCoallesceFreeSpaceForPigCompactFrom: lowestForwarder
 			withValue: prevPrevFree].
 	lastFreeChunk := prevFree.
 	self inSortedFreeListLink: lastFreeChunk to: 0 given: prevPrevFree.
-	self checkTraversableSortedFreeList
+	self assert: self checkTraversableSortedFreeList
 ]
 
 { #category : #compaction }
