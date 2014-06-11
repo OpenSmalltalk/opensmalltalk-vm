@@ -108,7 +108,7 @@ endif
 	$(MSIVAL2) "$(shell cygpath -wa $(TMP_MSI))" "$(shell cygpath -wa $(CUB))" -f
 	chmod a+rx $(TMP_MSI)
 	mv $(TMP_MSI) $@
-	test -d ../../../products && cp $@ ../../../products
+	test -d ../../../products && mv $@ ../../../products
 
 Icon/$(notdir $(VM_ICON)).exe: icon.o nopMain.o
 	mkdir -p $(dir $@)
