@@ -14,7 +14,7 @@ endif
 
 # Product name as compiled into the executable and installers
 ifndef PRODUCT_NAME
-PRODUCT_NAME := Newspeak Virtual Machine
+PRODUCT_NAME := Newspeak Spur Virtual Machine
 endif
 
 # Used for Desktop/menubar shortcuts
