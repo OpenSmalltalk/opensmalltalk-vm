@@ -150,7 +150,7 @@ CONSOLELDFLAGS:= -mno-cygwin -mconsole -mthreads -Wl,--export-dynamic -L/usr/lib
 #LDFLAGS:= -mno-cygwin -mwindows -mthreads -Wl,--export-all-symbols -L/usr/lib/mingw
 #CONSOLELDFLAGS:= -mno-cygwin -mconsole -mthreads -Wl,--export-all-symbols -L/usr/lib/mingw
 STDLIBS:= -lddraw -ldinput -lopengl32 -lwsock32 -lcomdlg32 -lole32 -lwinmm \
-	 -lversion -lwininet -luser32 -lgdi32 -lpsapi -lkernel32 -lcrtdll \
+	-lversion -lwininet -luser32 -lgdi32 -lpsapi -lkernel32 -lcrtdll \
 	-ldsound -lsecur32
 
 #############################################################################

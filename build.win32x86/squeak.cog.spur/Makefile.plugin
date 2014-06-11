@@ -33,8 +33,8 @@ MAKERVMDIR:=$(VMSRCDIR)/vm
 DXDIR:=     $(PLATDIR)/win32/third-party/dx9sdk/Include
 
 INCLUDES:= -I. -I$(DXDIR) \
-	  -I$(MAKERVMDIR) -I$(WIN32VMDIR) -I$(CROSSVMDIR) \
-	  -I$(MAKERDIR) -I$(WIN32DIR) -I$(CROSSDIR)
+			-I$(MAKERVMDIR) -I$(WIN32VMDIR) -I$(CROSSVMDIR) \
+			-I$(MAKERDIR) -I$(WIN32DIR) -I$(CROSSDIR)
 
 #############################################################################
 # If no source files were given, use standard set

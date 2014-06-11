@@ -128,7 +128,8 @@ INCLUDEPATH:= -isystem/usr/include/mingw -I/usr/include/w32api
 NOBUILTIN:= -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
 CFLAGS:= $(INCLUDEPATH) -msse2 -ggdb2 -mwindows -mthreads -mno-cygwin -mwin32 \
 	-mno-rtd -mms-bitfields -mno-accumulate-outgoing-args $(OFLAGS) $(NOBUILTIN)
-DEFS:=	-DMULTIPLEBYTECODESETS=1 -D'VM_NAME="$(VM_NAME)"' -DDEBUGVM=$(DEBUGVM) \
+DEFS:=	-D'VM_NAME="$(VM_NAME)"' -DDEBUGVM=$(DEBUGVM) \
+		-DNO_SERVICE -DNO_STD_FILE_SUPPORT \
 		$(WINDEFS) -DNO_ISNAN -DNO_SERVICE $(NDEBUG) -DLSB_FIRST -DX86 $(XDEFS)
 XDEFS:=	-DSQUEAK_BUILTIN_PLUGIN
 INCLUDES:= -I. -I$(VMDIR) -I$(WIN32DIR) -I$(CROSSDIR) -I$(DXDIR) $(XINC)
@@ -146,7 +147,7 @@ CONSOLELDFLAGS:= -mno-cygwin -mconsole -Wl,--export-dynamic -L/usr/lib/mingw
 #LDFLAGS:= -mno-cygwin -mwindows -Wl,--export-all-symbols -L/usr/lib/mingw
 #CONSOLELDFLAGS:= -mno-cygwin -mconsole -Wl,--export-all-symbols -L/usr/lib/mingw
 STDLIBS:= -lddraw -ldinput -lopengl32 -lwsock32 -lcomdlg32 -lole32 -lwinmm \
-	 -lversion -lwininet -luser32 -lgdi32 -lpsapi -lkernel32 -lcrtdll \
+	-lversion -lwininet -luser32 -lgdi32 -lpsapi -lkernel32 -lcrtdll \
 	-ldsound -lsecur32
 
 #############################################################################

@@ -9,7 +9,7 @@
 CONFIGURATION=product
 
 # The name of the VM to build
-VM:=Croquet
+VM:=Squeak
 VM_NAME?=$(VM)
 
 # Is this a Croquet VM (defaults to OGL instead of D3D)?
@@ -35,7 +35,7 @@ BLDDIR:= $(BASEDIR)/$(BUILD)
 OBJDIR:= $(BLDDIR)/vm
 
 # N.B. PLATDIR *must* be a relative path, see -f../../$(shell ./eitheror ... below
-PLATDIR:=../platforms
+PLATDIR:=../../platforms
 CROSSDIR:=$(PLATDIR)/Cross/vm
 WIN32DIR:=$(PLATDIR)/win32/vm
 MAKERDIR:=$(VMSRCDIR)/vm
@@ -113,18 +113,16 @@ DEBUGVM=0
 else ifeq ("$(CONFIGURATION)","assert")
 OFLAGS:= -D_MT -O1 -march=pentium4 -fno-omit-frame-pointer
 DEBUGVM=0
-NDEBUG:=-DAllocationCheckFiller=0xADD4E55
+# Disable bytecode profiling labels in interpret for debugging
+NDEBUG:=-DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo) 0'
 else
 OFLAGS:= -D_MT -march=pentium4
 DEBUGVM=1
-NDEBUG:=-DAllocationCheckFiller=0xADD4E55
+# Disable bytecode profiling labels in interpret for debugging
+NDEBUG:=-DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo) 0'
 endif
 
-ifeq ("$(THREADING)","multi")
-COGDEFS:=-DCOGMTVM=1 -DDEBUGVM=$(DEBUGVM)
-else
-COGDEFS:=-DCOGMTVM=0 -DDEBUGVM=$(DEBUGVM)
-endif
+COGDEFS:=-DDEBUGVM=$(DEBUGVM)
 
 # Set minimum version to WindowsXP (see /cygwin/usr/include//w32api/w32api.h)
 WINVER:=-D_WIN32_WINNT=0x0501 -DWINVER=0x0501
@@ -134,7 +132,7 @@ INCLUDEPATH:= -isystem/usr/include/mingw -I/usr/include/w32api
 NOBUILTIN:= -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
 CFLAGS:= $(INCLUDEPATH) -msse2 -ggdb2 -mwindows -mthreads -mno-cygwin -mwin32 \
 	-mno-rtd -mms-bitfields -mno-accumulate-outgoing-args $(OFLAGS) $(NOBUILTIN)
-DEFS:=	-DDEBUGVM=$(DEBUGVM) $(WINVER) -DWIN32 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
+DEFS:=	$(COGDEFS) $(WINVER) -DWIN32 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
 		-DNO_SERVICE -DNO_STD_FILE_SUPPORT \
 		$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' -DX86 $(XDEFS) $(CROQUET)
 XDEFS:=	-DSQUEAK_BUILTIN_PLUGIN
@@ -145,19 +143,16 @@ INCLUDES:= -I. -I$(VMDIR) -I$(WIN32DIR) -I$(CROSSDIR) -I$(DXDIR) $(XINC)
 #
 # Note: I had to use 'gcc' instead of 'ld' to prevent unresolved symbols
 #       The switch '-mwindows' gives us a GUI app instead of a console app.
+#		Newer cygwins want --export-all-symbols in place of --export-dynamic.
 #
 LD:=	 gcc
 LDFLAGS:= -mno-cygwin -mwindows -mthreads -Wl,--export-dynamic -L/usr/lib/mingw
 CONSOLELDFLAGS:= -mno-cygwin -mconsole -mthreads -Wl,--export-dynamic -L/usr/lib/mingw
+#LDFLAGS:= -mno-cygwin -mwindows -mthreads -Wl,--export-all-symbols -L/usr/lib/mingw
+#CONSOLELDFLAGS:= -mno-cygwin -mconsole -mthreads -Wl,--export-all-symbols -L/usr/lib/mingw
 STDLIBS:= -lddraw -ldinput -lopengl32 -lwsock32 -lcomdlg32 -lole32 -lwinmm \
-	 -lversion -lwininet -luser32 -lgdi32 -lpsapi -lkernel32 -lcrtdll \
+	-lversion -lwininet -luser32 -lgdi32 -lpsapi -lkernel32 -lcrtdll \
 	-ldsound -lsecur32
-
-#############################################################################
-# Gnuifier settings
-#
-AWK:=		gawk
-GNUIFY:= $(PLATDIR)/win32/misc/gnuify
 
 #############################################################################
 # Tools to use
@@ -176,7 +171,8 @@ OBJCOPY:=	objcopy
 # Note: RC compiles the .rc files into linkable .o files
 #
 RC:=	 windres
-RCFLAGS:= --include-dir $(PLATDIR)/win32/misc -D_WIN32
+SVNREV:= $(shell sed -e "s/^static.*SvnRawRevisionString.*Rev: \([0-9][0-9]*\).*/\\1/p" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h)
+RCFLAGS:= --include-dir $(PLATDIR)/win32/misc -D_WIN32 -DFILEVERSIONVALUES=4,0,$(SVNREV),0 '-DFILEVERSIONSTRING=\"4.0.$(SVNREV)\\0\"'
 
 .SUFFIXES:
 .SUFFIXES:	.ccg .cc .c .o .s .i .rc .res .cg .hg .ccg .cpp
@@ -187,6 +183,9 @@ RCFLAGS:= --include-dir $(PLATDIR)/win32/misc -D_WIN32
 # Common build rules
 #
 default: print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) $(STRIPEXE) $(STRIPCONSOLEEXE)
+
+svnver:
+	echo $(RC) $(RCFLAGS)
 
 product:;
 	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=product $(@,product=) default
@@ -200,20 +199,16 @@ debug:
 # Do make init to allow make -n to function.
 init:	$(OBJDIR) eitheror.exe mkNamedPrims.exe
 
+cleanall:	clean cleanast cleandbg
+
 clean:
 	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe build
-
-cleanmt:
-	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe buildmt
 
 cleanast:
 	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe buildast
 
-cleanmtast:
-	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe buildmtast
-
-cleanmtdbg:
-	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe buildmtdbg
+cleandbg:
+	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe builddbg
 
 print-settings:
 	@echo ---------------- Makefile settings ------------------
@@ -223,6 +218,7 @@ print-settings:
 	@echo CFLAGS=$(CFLAGS)
 	@echo INTERNAL_PLUGINS=$(INTERNAL_PLUGINS)
 	@echo EXTERNAL_PLUGINS=$(EXTERNAL_PLUGINS)
+	@echo OBJDIR=$(OBJDIR)
 	@echo LIBS=$(LIBS)
 	@echo DLLS=$(DLLS)
 	@echo -----------------------------------------------------
@@ -233,6 +229,9 @@ print-objects:
 	@echo -----------------------------------------------------
 
 eitheror.exe: $(WIN32UTILDIR)/eitheror.c
+	$(CC) -o $@ -O1 -mconsole -mno-cygwin $<
+
+mingw32ver.exe: $(WIN32UTILDIR)/mingw32ver.c
 	$(CC) -o $@ -O1 -mconsole -mno-cygwin $<
 
 mkNamedPrims.exe: $(WIN32UTILDIR)/mkNamedPrims.c
@@ -246,7 +245,7 @@ $(ETOBJ):	$(WIN32MISCDIR)/etext.c
 
 vm:	$(VMEXE)
 
-$(VMEXE): $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ)
+$(VMEXE): $(OBJDIR) $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ)
 	$(CC) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(WIN32DIR)/version.c
 	$(LD) $(LDFLAGS) -o $(VMEXE) \
 			$(BTOBJ) $(VMOBJ) $(VMEXP) $(OBJDIR)/resource.o $(LIBS) $(STDLIBS) $(ETOBJ)
@@ -287,7 +286,6 @@ $(VMDEF) $(VMEXP) $(VMLIB): $(VMOBJ)
 #############################################################################
 # Building plugins
 #
-
 .PHONY: FORCE
 
 # Internal plugin.  Build as lib then link in lib
@@ -316,15 +314,12 @@ FORCE:
 
 #############################################################################
 # Basic rules
-
+#
 $(OBJDIR)/%.o: %.c $(wildcard $(CROSSDIR)/*.h) $(wildcard $(WIN32DIR)/*.h) $(wildcard $(MAKERDIR)/*.h)
 	$(CC) -o $@ $(CFLAGS) $(INCLUDES) $(DEFS) -c $<
 
 .c.s:
 	$(CC) -S -o $@ -fverbose-asm -Wa,ah $(CFLAGS) $(INCLUDES) $(DEFS) -c $<
-
-gnu-interp.c:	interp.c $(GNUIFY)
-	$(AWK) -f $(GNUIFY) $< > $(VMDIR)/$@
 
 .rc.res:
 	$(RC) $(RCFLAGS) -i $< -o $(OBJDIR)/$@
@@ -339,7 +334,6 @@ resource.o:	$(VMRES)
 #############################################################################
 # Extra specific dependencies
 #
-
 sqNamedPrims.h: plugins.int mkNamedPrims.exe
 	./mkNamedPrims.exe $(INTERNAL_PLUGINS) > sqNamedPrims.h
 
