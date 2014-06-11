@@ -1,0 +1,143 @@
+#!/bin/sh
+# Create the Cog VM archives in products.  Output a check of version numbers
+# etc to products/MCVALOG
+IFS="	
+"
+cd `dirname $0`/../products
+NSB=newspeak.cog.v3
+SQB=squeak.cog.v3
+if [ $# = 0 ]; then
+CL=1
+CM=1
+CW=1
+NL=1
+NM=1
+NW=1
+else
+CL=
+CM=
+CW=
+NL=
+NM=
+NW=
+	while [ -n "$1" ]; do
+		case $1 in
+		-c)		CL=1;CM=1;CW=1;;
+		-cl)	CL=1;;
+		-cm)	CM=1;;
+		-cw)	CW=1;;
+		-n)		NL=1;NM=1;NW=1;;
+		-nl)	NL=1;;
+		-nm)	NM=1;;
+		-nw)	NW=1;;
+		-l)		CL=1;NL=1;;
+		-m)		CM=1;NM=1;;
+		-w)		CW=1;NW=1;;
+		-?|-h)  echo usage: $0 [-c -n -l -m -w -c[lmw] -n[lmw]]; exit 0
+		esac
+		shift
+	done
+fi
+EXES=
+REV=`grep 'SvnRawRevisionString.*Rev:' ../platforms/Cross/vm/sqSCCSVersion.h \
+	| sed 's/^.*Rev: \([0-9][0-9]*\) $";/\1/'`
+TAG=`date +%g.%U.`$REV
+echo REV=$REV TAG=$TAG
+if [ -n "$CL" ]; then
+	for archive in coglinux coglinuxht cogmtlinuxht; do
+		rm -rf $archive-$TAG.tgz
+		echo $archive '=>' $archive-$TAG.tgz
+		COPYFILE_DISABLE=1 tar czf $archive-$TAG.tgz $archive
+		EXES="$EXES	$archive/lib/squeak/[0-9.-]*/squeak"
+	done
+fi
+if [ -n "$NL" ]; then
+	set -- nscoglinux nscoglinuxht
+	for archive in nsvmlinux nsvmlinuxht; do
+		rm -rf $archive-$TAG.tgz
+		echo $1 '=>' $archive-$TAG.tgz
+		COPYFILE_DISABLE=1 tar czf $archive-$TAG.tgz $1
+		EXES="$EXES	$1/lib/nsvm/[0-9.-]*/nsvm"
+		shift
+	done
+fi
+if [ -n "$CM" ]; then
+	set -- Fast.app FastMT.app
+	for app in Cog.app CogMT.app; do
+		test -d $app || mkdir $app
+		if [ -d ../build.macos32x86/$SQB/$1 ]; then
+			rm -rf $app/* $app-$TAG.tgz
+			echo build.macos32x86/$SQB/$1 '=>' $app '=>' $app-$TAG.tgz
+			(cd ../build.macos32x86/$SQB/$1 >/dev/null;tar cf - *) \
+			| (cd $app;tar xf -)
+			tar czf $app-$TAG.tgz $app
+			EXES="$EXES	$app/Contents/MacOS/Squeak"
+		else
+			echo build.macos32x86/$SQB/$1 is missing
+		fi
+		shift
+	done
+fi
+if [ -n "$NM" ]; then
+	set -- Fast.app
+	for app in Newspeak\ Virtual\ Machine.app; do
+		test -d $app || mkdir $app
+		if [ -d ../build.macos32x86/$NSB/$1 ]; then
+			rm -rf $app/* $app-$TAG.tgz
+			echo build.macos32x86/$NSB/$1 '=>' $app '=>' $app-$TAG.tgz
+			(cd ../build.macos32x86/$NSB/$1 >/dev/null;tar cf - *) \
+			| (cd $app;tar xf -)
+			tar czf $app-$TAG.tgz $app
+			EXES="$EXES	$app/Contents/MacOS/Newspeak Virtual Machine"
+		else
+			echo build.macos32x86/$NSB/$1 is missing
+		fi
+		shift
+	done
+fi
+if [ -n "$CW" ]; then
+	set -- build/vm buildmt/vm
+	for dir in cogwin cogmtwin; do
+		test -d $dir || mkdir $dir
+		if [ -d ../build.win32x86/$SQB/$1 ]; then
+			rm -rf $dir/* $dir-$TAG.zip
+			echo build.win32x86/$SQB/$1 '=>' $dir '=>' $dir-$TAG.zip
+			(cd ../build.win32x86/$SQB/$1 >/dev/null; \
+			 tar cf - Squeak.exe Squeak.map Squeak.exe.manifest \
+						SqueakConsole.exe SqueakConsole.map *.dll) \
+			| (cd $dir;tar xf -)
+			zip -qr $dir-$TAG.zip $dir
+			EXES="$EXES	$dir/Squeak.exe	$dir/SqueakConsole.exe"
+		else
+			echo build.win32x86/$SQB/$1 is missing
+		fi
+		shift
+	done
+fi
+if [ -n "$NW" ]; then
+	set -- build/vm
+	for dir in nsvmwin; do
+		test -d $dir || mkdir $dir
+		if [ -d ../build.win32x86/$NSB/$1 ]; then
+			rm -rf $dir/* $dir-$TAG.zip
+			echo build.win32x86/$NSB/$1 '=>' $dir '=>' $dir-$TAG.zip
+			(cd ../build.win32x86/$NSB/$1 >/dev/null; \
+			 tar cf - nsvm*.exe nsvm*.map nsvm*.exe.manifest ) \
+			| (cd $dir;tar xf -)
+			zip -qr $dir-$TAG.zip $dir
+			EXES="$EXES	$dir/nsvm.exe	$dir/nsvmConsole.exe"
+		else
+			echo build.win32x86/$NSB/$1 is missing
+		fi
+		shift
+	done
+fi
+for vm in $EXES
+do
+	echo
+	echo checking $vm version
+#	strings - $vm | egrep '\$Rev: |Interp.*VMMaker|Cogit.*VMMaker| built on ' | grep -v 'Unix built on "__DATE__ " "__TIME__" Compiler: "__VERSION__' | sed 's/ uuid:.*//'
+	strings - $vm | egrep '\$Rev: |Interp.*VMMaker|Cogit.*VMMaker| built on ' | sed 's/ uuid:.*//'
+	echo checking $vm for asserts
+	strings - $vm | grep "assert[^0-9]*[0-9][0-9][0-9]"
+done 2>&1 | tee MCVALOG
