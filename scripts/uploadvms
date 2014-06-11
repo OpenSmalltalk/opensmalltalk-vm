@@ -1,4 +1,7 @@
 #!/bin/sh
+# Upload archives from products to a web/ftp site via ssh.
+RemoteUser=eliotmiranda@highland-park.dreamhost.com
+RemoteRoot=mirandabanda.org/files/Cog/VM
 IFS="	
 "
 VERBOSE=
@@ -90,8 +93,8 @@ if [ -n "$CheckMSI" -a ! -f nsvm-$TAG.msi ]; then
 		exit 1
 	fi
 fi
-if [ ! -f README.$REV ]; then
-	cat <<THEEND >README.$REV
+if [ ! -f history/README.$REV ]; then
+	cat <<THEEND >history/README.$REV
 N.B. For Squeak/Pharo/Croquet please use the archives whose names begin with
      Cog or cog.  The archives whose names begin with nsvm or Newspeak are
      for Newspeak and are missing plugins required by Squeak/Pharo/Croquet.
@@ -120,14 +123,14 @@ sudo cp /etc/security/limits.d/squeak.conf /etc/security/limits.d/nsvm.conf
 
 THEEND
 	echo getting svn log
-	svn log platforms/Cross/vm/sqSCCSVersion.h >>README.$REV
-	vi README.$REV
+	svn log platforms/Cross/vm/sqSCCSVersion.h >>history/README.$REV
+	vi history/README.$REV
 fi
 echo compiling ChangeHistory
-THEM="`ls README.* | sort -n -t. -k2 -r`"
+THEM="`ls history/README.* | sort -n -t. -k2 -r`"
 >ChangeHistory
 for r in $THEM; do
-	m="`echo $r | sed 's/README.//'`"
+	m="`echo $r | sed 's/history\/README.//'`"
 	if [ $REV -ge $m ]; then
 		test $REV -ne $m && echo "-------------------------------" >>ChangeHistory
 		ls -lT $r | awk '{ print $6, $7, $9; }' >>ChangeHistory
@@ -139,8 +142,10 @@ for r in $THEM; do
 		echo >>ChangeHistory
 	fi
 done
-ssh -x eliotmiranda@bugsy.dreamhost.com mkdir mirandabanda.org/files/Cog/VM/VM.r$REV
-echo scp -p ChangeHistory README.$REV $ARCHIVES "$@" eliotmiranda@bugsy.dreamhost.com:mirandabanda.org/files/Cog/VM/VM.r$REV
-scp -p ChangeHistory README.$REV $ARCHIVES "$@" eliotmiranda@bugsy.dreamhost.com:mirandabanda.org/files/Cog/VM/VM.r$REV
-echo ssh eliotmiranda@bugsy.dreamhost.com mirandabanda.org/files/Cog/VM/VM.r$REV/* \\\; ls -al mirandabanda.org/files/Cog/VM/VM.r$REV
-ssh eliotmiranda@bugsy.dreamhost.com chmod a-w \"mirandabanda.org/files/Cog/VM/VM.r$REV/*\" \; ls -al mirandabanda.org/files/Cog/VM/VM.r$REV
+RemoteUser=eliotmiranda@highland-park.dreamhost.com
+RemoteRoot=mirandabanda.org/files/Cog/VM
+ssh -x $RemoteUser mkdir $RemoteRoot/VM.r$REV
+echo scp -p ChangeHistory history/README.$REV $ARCHIVES "$@" $RemoteUser:$RemoteRoot/VM.r$REV
+scp -p ChangeHistory README.$REV $ARCHIVES "$@" $RemoteUser:$RemoteRoot/VM.r$REV
+echo ssh $RemoteUser $RemoteRoot/VM.r$REV/* \\\; ls -al $RemoteRoot/VM.r$REV
+ssh $RemoteUser chmod a-w \"$RemoteRoot/VM.r$REV/*\" \; ls -al $RemoteRoot/VM.r$REV
