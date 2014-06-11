@@ -114,12 +114,12 @@ else ifeq ("$(CONFIGURATION)","assert")
 OFLAGS:= -D_MT -O1 -march=pentium4 -fno-omit-frame-pointer
 DEBUGVM=0
 # Disable bytecode profiling labels in interpret for debugging
-NDEBUG:=-DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo) 0'
+NDEBUG:=-DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo)=0'
 else
 OFLAGS:= -D_MT -march=pentium4
 DEBUGVM=1
 # Disable bytecode profiling labels in interpret for debugging
-NDEBUG:=-DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo) 0'
+NDEBUG:=-DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo)=0'
 endif
 
 COGDEFS:=-DDEBUGVM=$(DEBUGVM)

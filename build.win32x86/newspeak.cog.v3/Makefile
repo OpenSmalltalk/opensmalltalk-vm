@@ -106,11 +106,11 @@ CC:=gcc
 # VM config flags.
 ifeq ("$(CONFIGURATION)","product")
 OFLAGS:= -D_MT -O2 -march=pentium4 -momit-leaf-frame-pointer -funroll-loops
-NDEBUG:=-DNDEBUG -D'VM_LABEL(foo) 0' # Define NDEBUG for production to exclude asserts
+NDEBUG:=-DNDEBUG -D'VM_LABEL(foo)=0' # Define NDEBUG for production to exclude asserts
 DEBUGVM=0
 else ifeq ("$(CONFIGURATION)","assert")
 OFLAGS:= -D_MT -O1 -march=pentium4 -fno-omit-frame-pointer
-NDEBUG:=-D'VM_LABEL(foo) 0'
+NDEBUG:=-D'VM_LABEL(foo)=0'
 DEBUGVM=0
 else
 OFLAGS:= -D_MT -march=pentium4

@@ -111,7 +111,7 @@ NDEBUG:=-DNDEBUG # Define NDEBUG for production to exclude asserts
 DEBUGVM=0
 else ifeq ("$(CONFIGURATION)","assert")
 OFLAGS:= -D_MT -O1 -march=pentium4 -fno-omit-frame-pointer
-NDEBUG:=-D'VM_LABEL(foo) 0' # Exclude labels for debugging interpret
+NDEBUG:=-D'VM_LABEL(foo)=0' # Exclude labels for debugging interpret
 DEBUGVM=0
 else
 OFLAGS:= -D_MT -march=pentium4
