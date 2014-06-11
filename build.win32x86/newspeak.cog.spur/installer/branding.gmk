@@ -16,12 +16,12 @@ endif
 
 # Product name as compiled into the executable and installers
 ifndef PRODUCT_NAME
-PRODUCT_NAME := Newspeak Virtual Machine
+PRODUCT_NAME := Newspeak Spur Virtual Machine
 endif
 
 # Base name of the installer (.msi is appended on Windows)
 ifndef INSTALLER_BASE_NAME
-INSTALLER_BASE_NAME := $(VM_BASE_NAME)
+INSTALLER_BASE_NAME := $(VM_BASE_NAME)-spur
 endif
 
 # Where to install the product (relative to C:/Program Files on
