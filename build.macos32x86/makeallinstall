@@ -1,0 +1,13 @@
+#!/bin/bash
+trap 'exit 2' HUP INT PIPE TERM 0
+REV=`grep 'SvnRawRevisionString.*Rev:' "$1/Cross/vm/sqSCCSVersion.h" \
+	| sed 's/^.*Rev: \([0-9][0-9]*\) $";/\1/'`
+TAG=`date +%g.%U.`$REV
+for d in newspeak.*/installer squeak.*/installer; do
+	if test -d "$d"; then
+		(cd $d;make)
+		test -f $PRODUCT && mv $PRODUCT ../products
+	else
+		echo no $d directory found
+	fi
+done
