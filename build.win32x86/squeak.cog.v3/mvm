@@ -1,7 +1,11 @@
 #!/bin/sh
 rm -rf build*/vm/Croquet*.exe build*/vm/Squeak*.exe
-make debug;make assert;make
-make THREADING=multi CONFIGURATION=debug;make THREADING=multi CONFIGURATION=assert;make THREADING=multi
+make debug 2>&1 | tee LOGD
+make assert 2>&1 | tee LOGA
+make 2>&1 | tee LOGF
+make THREADING=multi CONFIGURATION=debug 2>&1 | tee LOGTD
+make THREADING=multi CONFIGURATION=assert 2>&1 | tee LOGTA
+make THREADING=multi 2>&1 | tee LOGTF
 ls -rlt build*/vm/Squeak*.exe
 if test -f ../../sources/SqueakV41.sources; then
 	for d in build buildast builddbg; do
