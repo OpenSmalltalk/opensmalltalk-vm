@@ -10,14 +10,17 @@ Class {
 	#traits : 'TCPlatformConfigForSqueak',
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#instVars : [
-		'generateForAssertWithHeartbeatTimer',
-		'generateForDebug',
-		'generateForDebugMultiThreadedFFI',
-		'generateForDebugWithHeartbeatTimer',
-		'generateForAssert',
-		'generateForAssertHeartbeatTimer',
-		'generateForReleaseHeartbeatTimer',
-		'generateForReleaseMultiThreadedFFI'
+		'buildType',
+		'generateBuild',
+		'generateBuildAssert',
+		'generateBuildAssertITimerHeartbeat',
+		'generateBuildDebug',
+		'generateBuildDebugITimerHeartbeat',
+		'generateBuildDebugMultiThreaded',
+		'generateBuildIHeartbeatTimer',
+		'generateBuildMultiThreaded',
+		'generateBuildMultiThreadedAssert',
+		'generateBuildMultiThreadedDebug'
 	],
 	#category : #'CMakeVMMakerSqueak-BSD32x86'
 }
@@ -95,62 +98,8 @@ SqueakBSDConfig >> compilerFlags [
 ]
 
 { #category : #cmake }
-SqueakBSDConfig >> configureForAssertWithHeartbeatTimer [
-	generateForAssertWithHeartbeatTimer := true
-]
-
-{ #category : #cmake }
-SqueakBSDConfig >> configureForBuildType: aSymbol [
-	| d |
-	self configureForNoBuildType.                "reset all internal flags"
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo.
-	d 
-		at: #assert put:[self configureForAssert];
-		at: #assertWithHeartbeatTimer put: [self configureForAssertWithHeartbeatTimer];
-            at:#debug put: [self configureForDebug];
-		at: #debugWithHeartbeatTimer put: [self configureForDebugWithHeartbeatTimer];
-		at: #debugMultiThreadedFFI put: [self configureForDebugMultiThreadedFFI];
-		at: #release put: [self configureForRelease];
-		at: #releaseHeartbeatTimer put: [self configureForReleaseHeartbeatTimer];
-		at: #releaseMultiThreadedFFI put: [self configureForReleaseMultiThreadedFFI].
-     ^(d at: aSymbol) value
-]
-
-{ #category : #cmake }
-SqueakBSDConfig >> configureForDebug [
-	generateForDebug := true
-]
-
-{ #category : #cmake }
-SqueakBSDConfig >> configureForDebugMultiThreadedFFI [
-	generateForDebugMultiThreadedFFI := true
-]
-
-{ #category : #cmake }
-SqueakBSDConfig >> configureForDebugWithHeartbeatTimer [
-	generateForDebugWithHeartbeatTimer := true
-]
-
-{ #category : #cmake }
-SqueakBSDConfig >> configureForNoBuildType [
-	"this could be dangerous. If it becomes so, then just reset all the generateForXYZ flags in the topmost config. Currently that is all that initialize does."
-		 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
-]
-
-{ #category : #cmake }
-SqueakBSDConfig >> configureForRelease [
-	"this variable is in pharo class CPlatformConfig"
-	generateForRelease := true.
-]
-
-{ #category : #cmake }
-SqueakBSDConfig >> configureForReleaseHeartbeatTimer [
-	generateForReleaseHeartbeatTimer := true.
-]
-
-{ #category : #cmake }
-SqueakBSDConfig >> configureForReleaseMultiThreadedFFI [
-	generateForReleaseMultiThreadedFFI := true
+SqueakBSDConfig >> configureNoBuildType [
+		generateBuild:=generateBuildAssert:=generateBuildAssertITimerHeartbeat:=generateBuildDebug:=generateBuildDebugITimerHeartbeat:= generateBuildDebugMultiThreaded:= generateBuildIHeartbeatTimer:= generateBuildMultiThreaded:= generateBuildMultiThreadedAssert:= generateBuildMultiThreadedDebug:=false.
 ]
 
 { #category : #plugins }

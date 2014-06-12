@@ -202,54 +202,6 @@ Linux32x86SqueakStackV3Configz >> compilerFlags [
 ]
 
 { #category : #cmake }
-Linux32x86SqueakStackV3Configz >> configureForAssert [
-	generateForAssert := true
-
-]
-
-{ #category : #cmake }
-Linux32x86SqueakStackV3Configz >> configureForAssertWithHeartbeatTimer [
-	generateForAssertHeartbeatTimer := true.
-
-]
-
-{ #category : #cmake }
-Linux32x86SqueakStackV3Configz >> configureForDebug [
-	generateForDebug := true
-
-]
-
-{ #category : #cmake }
-Linux32x86SqueakStackV3Configz >> configureForDebugMultiThreadedFFI [
-	generateForDebugMultiThreadedFFI := true
-
-]
-
-{ #category : #cmake }
-Linux32x86SqueakStackV3Configz >> configureForDebugWithHeartbeatTimer [
-	generateForDebugWithHeartbeatTimer := true
-
-]
-
-{ #category : #cmake }
-Linux32x86SqueakStackV3Configz >> configureForRelease [
-	"this variable is in pharo class CPlatformConfig"
-	generateForRelease := true.
-
-]
-
-{ #category : #cmake }
-Linux32x86SqueakStackV3Configz >> configureForReleaseHeartbeatTimer [
-	generateForReleaseHeartbeatTimer := true.
-
-]
-
-{ #category : #cmake }
-Linux32x86SqueakStackV3Configz >> configureForReleaseMultiThreadedFFI [
-	generateForReleaseMultiThreadedFFI := true
-]
-
-{ #category : #cmake }
 Linux32x86SqueakStackV3Configz >> dirARMv6 [
 	^'cmake_build.armv6'
 ]

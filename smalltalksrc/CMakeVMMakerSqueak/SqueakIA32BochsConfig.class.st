@@ -10,14 +10,16 @@ Class {
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#instVars : [
 		'buildType',
-		'generateForAssert',
-		'generateForAssertWithHeartbeatTimer',
-		'generateForDebug',
-		'generateForDebugWithHeartbeatTimer',
-		'generateForDebugMultiThreadedFFI',
-		'generateForReleaseHeartbeatTimer',
-		'generateForReleaseMultiThreadedFFI',
-		'generateForAssertHeartbeatTimer'
+		'generateBuild',
+		'generateBuildAssert',
+		'generateBuildAssertITimerHeartbeat',
+		'generateBuildDebug',
+		'generateBuildDebugITimerHeartbeat',
+		'generateBuildDebugMultiThreaded',
+		'generateBuildIHeartbeatTimer',
+		'generateBuildMultiThreaded',
+		'generateBuildMultiThreadedAssert',
+		'generateBuildMultiThreadedDebug'
 	],
 	#category : #'CMakeVMMakerSqueak-IA32-Bochs'
 }
@@ -53,57 +55,8 @@ SqueakIA32BochsConfig >> buildType: aSymbol [
 ]
 
 { #category : #cmake }
-SqueakIA32BochsConfig >> configureForAssert [
-	generateForAssert := true
-
-]
-
-{ #category : #cmake }
-SqueakIA32BochsConfig >> configureForAssertWithHeartbeatTimer [
-	generateForAssertHeartbeatTimer := true.
-
-]
-
-{ #category : #cmake }
-SqueakIA32BochsConfig >> configureForDebug [
-	generateForDebug := true
-
-]
-
-{ #category : #cmake }
-SqueakIA32BochsConfig >> configureForDebugMultiThreadedFFI [
-	generateForDebugMultiThreadedFFI := true
-
-]
-
-{ #category : #cmake }
-SqueakIA32BochsConfig >> configureForDebugWithHeartbeatTimer [
-	generateForDebugWithHeartbeatTimer := true
-
-]
-
-{ #category : #cmake }
-SqueakIA32BochsConfig >> configureForNoBuildType [
-		 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
-]
-
-{ #category : #cmake }
-SqueakIA32BochsConfig >> configureForRelease [
-	"this variable is in pharo class CPlatformConfig"
-	generateForRelease := true.
-
-]
-
-{ #category : #cmake }
-SqueakIA32BochsConfig >> configureForReleaseHeartbeatTimer [
-	generateForReleaseHeartbeatTimer := true.
-
-]
-
-{ #category : #cmake }
-SqueakIA32BochsConfig >> configureForReleaseMultiThreadedFFI [
-	generateForReleaseMultiThreadedFFI := true
-
+SqueakIA32BochsConfig >> configureNoBuildType [
+		generateBuild:=generateBuildAssert:=generateBuildAssertITimerHeartbeat:=generateBuildDebug:=generateBuildDebugITimerHeartbeat:= generateBuildDebugMultiThreaded:= generateBuildIHeartbeatTimer:= generateBuildMultiThreaded:= generateBuildMultiThreadedAssert:= generateBuildMultiThreadedDebug:=false.
 ]
 
 { #category : #plugins }

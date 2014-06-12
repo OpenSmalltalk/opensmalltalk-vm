@@ -51,13 +51,16 @@ Class {
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#instVars : [
 		'buildType',
-		'generateForAssert',
-		'generateForDebug',
-		'generateForDebugWithHeartbeatTimer',
-		'generateForDebugMultiThreadedFFI',
-		'generateForReleaseHeartbeatTimer',
-		'generateForReleaseMultiThreadedFFI',
-		'generateForAssertHeartbeatTimer'
+		'generateBuild',
+		'generateBuildAssert',
+		'generateBuildAssertITimerHeartbeat',
+		'generateBuildDebug',
+		'generateBuildDebugITimerHeartbeat',
+		'generateBuildDebugMultiThreaded',
+		'generateBuildIHeartbeatTimer',
+		'generateBuildMultiThreaded',
+		'generateBuildMultiThreadedAssert',
+		'generateBuildMultiThreadedDebug'
 	],
 	#category : #'CMakeVMMakerSqueak-Win32x86'
 }
@@ -324,7 +327,7 @@ SqueakWin32x86CogFamilyConfig >> configureFilePlugin: maker [
 
 { #category : #cmake }
 SqueakWin32x86CogFamilyConfig >> configureForNoBuildType [
-		 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
+		generateBuild:=generateBuildAssert:=generateBuildAssertITimerHeartbeat:=generateBuildDebug:=generateBuildDebugITimerHeartbeat:= generateBuildDebugMultiThreaded:= generateBuildIHeartbeatTimer:= generateBuildMultiThreaded:= generateBuildMultiThreadedAssert:= generateBuildMultiThreadedDebug:=false.
 ]
 
 { #category : #'plugin extra rules' }

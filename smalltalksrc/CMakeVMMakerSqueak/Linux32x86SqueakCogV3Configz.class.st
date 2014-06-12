@@ -421,59 +421,6 @@ Linux32x86SqueakCogV3Configz >> configH [
 																																																																				'
 ]
 
-{ #category : #cmake }
-Linux32x86SqueakCogV3Configz >> configureForAssert [
-	generateForAssert := true
-
-]
-
-{ #category : #cmake }
-Linux32x86SqueakCogV3Configz >> configureForAssertWithHeartbeatTimer [
-	generateForAssertHeartbeatTimer := true.
-
-
-]
-
-{ #category : #cmake }
-Linux32x86SqueakCogV3Configz >> configureForDebug [
-	generateForDebug := true
-
-]
-
-{ #category : #cmake }
-Linux32x86SqueakCogV3Configz >> configureForDebugMultiThreadedFFI [
-	generateForDebugMultiThreadedFFI := true
-
-
-]
-
-{ #category : #cmake }
-Linux32x86SqueakCogV3Configz >> configureForDebugWithHeartbeatTimer [
-	generateForDebugWithHeartbeatTimer := true
-
-]
-
-{ #category : #cmake }
-Linux32x86SqueakCogV3Configz >> configureForRelease [
-	"this variable is in pharo class CPlatformConfig"
-	generateForRelease := true.
-
-
-]
-
-{ #category : #cmake }
-Linux32x86SqueakCogV3Configz >> configureForReleaseHeartbeatTimer [
-	generateForReleaseHeartbeatTimer := true.
-
-
-]
-
-{ #category : #cmake }
-Linux32x86SqueakCogV3Configz >> configureForReleaseMultiThreadedFFI [
-	generateForReleaseMultiThreadedFFI := true
-
-]
-
 { #category : #sources }
 Linux32x86SqueakCogV3Configz >> coreSources [
 	"files to include from src/vm dir"
