@@ -249,8 +249,7 @@ Linux64Config >> configureForDebugWithHeartbeatTimer [
 
 { #category : #cmake }
 Linux64Config >> configureForNoBuildType [
-	"this could be dangerous. If it becomes so, then just reset all the generateForXYZ flags in the topmost config. Currently that is all that initialize does."
-	self initialize
+		 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
 ]
 
 { #category : #cmake }

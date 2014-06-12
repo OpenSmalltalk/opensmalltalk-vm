@@ -79,6 +79,11 @@ SqueakMacOSConfig >> configureForDebugWithHeartbeatTimer [
 ]
 
 { #category : #cmake }
+SqueakMacOSConfig >> configureForNoBuildType [
+		 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
+]
+
+{ #category : #cmake }
 SqueakMacOSConfig >> configureForRelease [
 	"this variable is in pharo class CPlatformConfig"
 	generateForRelease := true.

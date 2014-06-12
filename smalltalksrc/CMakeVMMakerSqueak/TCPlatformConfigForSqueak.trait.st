@@ -163,7 +163,7 @@ TCPlatformConfigForSqueak >> configureForDebugWithHeartbeatTimer [
 { #category : #cmake }
 TCPlatformConfigForSqueak >> configureForNoBuildType [
 	"this could be dangerous. If it becomes so, then just reset all the generateForXYZ flags in the topmost config. Currently that is all that initialize does."
-	self initialize
+	self required
 ]
 
 { #category : #cmake }

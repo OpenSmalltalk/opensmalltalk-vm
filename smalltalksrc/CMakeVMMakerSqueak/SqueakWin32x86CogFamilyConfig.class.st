@@ -322,6 +322,11 @@ SqueakWin32x86CogFamilyConfig >> configureFilePlugin: maker [
 
 ]
 
+{ #category : #cmake }
+SqueakWin32x86CogFamilyConfig >> configureForNoBuildType [
+		 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
+]
+
 { #category : #'plugin extra rules' }
 SqueakWin32x86CogFamilyConfig >> configureHostWindowPlugin:    maker [ 
 	"extra rules for HostWindowPlugin "
