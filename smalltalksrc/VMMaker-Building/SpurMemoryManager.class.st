@@ -1099,6 +1099,12 @@ SpurMemoryManager >> addressCouldBeObj: address [
 ]
 
 { #category : #'debug support' }
+SpurMemoryManager >> addressCouldBeOldObj: address [
+	^(address bitAnd: self baseHeaderSize - 1) = 0
+	  and: [self isInOldSpace: address]
+]
+
+{ #category : #'debug support' }
 SpurMemoryManager >> addressCouldBeOop: address [ 
 	^(self isImmediate: address)
 	  or: [self addressCouldBeObj: address]
@@ -6113,9 +6119,9 @@ SpurMemoryManager >> isValidClassIndex: classIndex [
 { #category : #'free space' }
 SpurMemoryManager >> isValidFreeObject: objOop [
 	| chunk |
-	^(self addressCouldBeObj: objOop)
+	^(self addressCouldBeOldObj: objOop)
 	  and: [(self isFreeObject: objOop)
-	  and: [(self isInMemory: (self addressAfter: objOop))
+	  and: [(self oop: (self addressAfter: objOop) isLessThanOrEqualTo: endOfMemory)
 	  and: [((chunk := (self fetchPointer: self freeChunkNextIndex ofFreeChunk: objOop)) = 0
 		   or: [self isFreeObject: chunk])
 	  and: [(self bytesInObject: objOop) < (self numFreeLists * self allocationUnit)
@@ -7969,9 +7975,9 @@ SpurMemoryManager >> printFreeTree [
 SpurMemoryManager >> printFreeTreeChunk: chunkOrZero [
 	<inline: false> "Slang is blind-sided by the inlining of printFreeTreeChunk: into printFreeTree."
 	chunkOrZero > 0 ifTrue:
-		[self printFreeTreeChunk: (self fetchPointer: self freeChunkSmallerIndex ofObject: chunkOrZero).
+		[self printFreeTreeChunk: (self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: chunkOrZero).
 		 self printFreeChunk: chunkOrZero.
-		 self printFreeTreeChunk: (self fetchPointer: self freeChunkLargerIndex ofObject: chunkOrZero)]
+		 self printFreeTreeChunk: (self fetchPointer: self freeChunkLargerIndex ofFreeChunk: chunkOrZero)]
 ]
 
 { #category : #'debug printing' }
