@@ -1595,12 +1595,17 @@ char *getVersionInfo(int verbose)
   char *info= (char *)malloc(4096);
   info[0]= '\0';
 
+#if SPURVM
+# define ObjectMemory " Spur"
+#else
+# define ObjectMemory
+#endif
 #if defined(NDEBUG)
-# define BuildVariant "Production"
+# define BuildVariant "Production" ObjectMemory
 #elif DEBUGVM
-# define BuildVariant "Debug"
+# define BuildVariant "Debug" ObjectMemory
 # else
-# define BuildVariant "Assert"
+# define BuildVariant "Assert" ObjectMemory
 #endif
 
 #if ITIMER_HEARTBEAT

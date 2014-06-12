@@ -5,9 +5,6 @@
 cp -p $SQUEAK45.image CogVMMaker.image
 cp -p $SQUEAK45.changes CogVMMaker.changes
 
-OS=`uname -s`
-CPU=`uname -m`
-
 case $OS in
 Darwin)		VM="$SQUEAK45APP/Contents/MacOS/Squeak";;
 CYGWIN*)	VM="$SQUEAK45APP/SqueakConsole.exe";;
