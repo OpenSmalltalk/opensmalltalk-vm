@@ -14,13 +14,6 @@ Class {
 	#category : #'CMakeVMMakerSqueak-BSD32x86'
 }
 
-{ #category : #'squeak compatibility' }
-SqueakFreeBSDNewspeakCogSpurConfig >> buildDirName [
-	buildType isNil
-		ifTrue:[^self dirBuildPlatform, self dirBuildLanguageVMMM, 'build']
-		ifFalse:[^self dirBuildPlatform, self dirBuildLanguageVMMM, buildType asString]
-]
-
 { #category : #cmake }
 SqueakFreeBSDNewspeakCogSpurConfig >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. default is squeak.cog.v3"
