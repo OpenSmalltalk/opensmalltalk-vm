@@ -1012,7 +1012,7 @@ GdbARMAlien >> vflag [
 	^self unsignedLongAt: 577
 ]
 
-{ #category : #'execution simulation' }
+{ #category : #printing }
 GdbARMAlien >> writePopPushDetailsIn:  memory in: transcript for: aCogit [
 "if the next instruction is a pop or push, or a ldr/str that touches the SP, write the details ontranscript"
 	| instr |
