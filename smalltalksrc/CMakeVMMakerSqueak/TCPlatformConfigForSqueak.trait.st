@@ -182,13 +182,18 @@ TCPlatformConfigForSqueak >> configureForReleaseMultiThreadedFFI [
 ]
 
 { #category : #cmake }
+TCPlatformConfigForSqueak >> dirARMv6 [
+	^'cmake.build.arm.v6'
+]
+
+{ #category : #cmake }
 TCPlatformConfigForSqueak >> dirAndroid [
 	^'Do Not Build. See Class Comment'
 ]
 
 { #category : #cmake }
 TCPlatformConfigForSqueak >> dirBSD32x86 [
-	^'cmake_build.bsd32x86'
+	^'cmake.build.bsd32x86'
 ]
 
 { #category : #cmake }
@@ -237,47 +242,47 @@ TCPlatformConfigForSqueak >> dirFrom: aStringOrDir [
 
 { #category : #cmake }
 TCPlatformConfigForSqueak >> dirIA32Bochs [
-	^'cmake_build.ia32bochs'
+	^'cmake.build.ia32bochs'
 ]
 
 { #category : #cmake }
 TCPlatformConfigForSqueak >> dirIOS [
-	^'cmake_build.ios'
+	^'cmake.build.ios'
 ]
 
 { #category : #cmake }
 TCPlatformConfigForSqueak >> dirLinux32Armv6 [
-	^'cmake_build.linux32armv6'
+	^'cmake.build.linux32armv6'
 ]
 
 { #category : #cmake }
 TCPlatformConfigForSqueak >> dirLinux32x86 [
-	^'cmake_build.linux32x86'
+	^'cmake.build.linux32x86'
 ]
 
 { #category : #cmake }
 TCPlatformConfigForSqueak >> dirLinux32x8664 [
-	^'cmake_build.linux32x86_64'
+	^'cmake.build.linux32_64x86'
 ]
 
 { #category : #cmake }
 TCPlatformConfigForSqueak >> dirMacOS [
-	^'cmake_build.macos'
+	^'cmake.build.macos'
 ]
 
 { #category : #cmake }
 TCPlatformConfigForSqueak >> dirMacOSPowerPC [
-	^'cmake_build.macospowerpc'
+	^'cmake.build.macospowerpc'
 ]
 
 { #category : #cmake }
 TCPlatformConfigForSqueak >> dirMacOSX32x86 [
-	^'cmake_build.macosx32x86'
+	^'cmake.build.macosx32x86'
 ]
 
 { #category : #cmake }
 TCPlatformConfigForSqueak >> dirOutput [
-	^'cmake_products'
+	^'cmake.products'
 ]
 
 { #category : #cmake }
@@ -287,17 +292,12 @@ TCPlatformConfigForSqueak >> dirSource [
 
 { #category : #cmake }
 TCPlatformConfigForSqueak >> dirSunOS32x86 [
-	^'cmake_build.sunos32x86'
-]
-
-{ #category : #cmake }
-TCPlatformConfigForSqueak >> dirSunOS32x8664 [
-	^'cmake_build.sunos32x86_64'
+	^'cmake.build.sunos32x86'
 ]
 
 { #category : #cmake }
 TCPlatformConfigForSqueak >> dirWin32x86 [
-	^'cmake_build.win32x86'
+	^'cmake.build.win32x86'
 ]
 
 { #category : #cmake }

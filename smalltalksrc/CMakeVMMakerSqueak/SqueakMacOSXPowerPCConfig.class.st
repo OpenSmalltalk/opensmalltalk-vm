@@ -95,7 +95,9 @@ SqueakMacOSXPowerPCConfig >> buildDir [
 
 { #category : #directories }
 SqueakMacOSXPowerPCConfig >> buildDirName [
-	^ 'cmake_macbuild'
+	buildType isNil
+		ifTrue:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, 'build']
+		ifFalse:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, buildType asString]
 ]
 
 { #category : #'build script' }

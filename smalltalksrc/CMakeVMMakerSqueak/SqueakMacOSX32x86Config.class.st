@@ -95,7 +95,9 @@ SqueakMacOSX32x86Config >> buildDir [
 
 { #category : #directories }
 SqueakMacOSX32x86Config >> buildDirName [
-	^ 'cmake_macbuild'
+	buildType isNil
+		ifTrue:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, 'build']
+		ifFalse:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, buildType asString]
 ]
 
 { #category : #'build script' }

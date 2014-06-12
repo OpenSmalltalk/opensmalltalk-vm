@@ -15,45 +15,6 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
 
-{ #category : #plugins }
-Linux32x86SqueakStackSpurConfig >> defaultExternalPlugins [
-	^ #(#B3DAcceleratorPlugin 
-		 #BochsIA32Plugin 
-		#SqueakFFIPrims 
-		#SqueakSSL 
-		#LocalePlugin 
-		#UnixOSProcessPlugin 
-		#UUIDPlugin)
-]
-
-{ #category : #plugins }
-Linux32x86SqueakStackSpurConfig >> defaultInternalPlugins [
-	^ #(#AsynchFilePlugin
-		#BMPReadWriterPlugin
-		#B2DPlugin
-		#BitBltPlugin
-		#DSAPrims
-		#DropPlugin
-		#FileCopyPlugin
-		#FilePlugin
-		#FloatArrayPlugin
-		#FloatMathPlugin
-		#ZipPlugin
-		#JPEGReadWriter2Plugin
-		#JPEGReaderPlugin
-		#LargeIntegers
-		#Matrix2x3Plugin
-		#MiscPrimitivePlugin
-		#IA32ABI
-		#RePlugin
-		#SecurityPlugin
-		#SocketPlugin
-		#SurfacePlugin
-		#UUIDPlugin
-		#UnixOSProcessPlugin
-		#VMProfileLinuxSupportPlugin)
-]
-
 { #category : #cmake }
 Linux32x86SqueakStackSpurConfig >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"

@@ -98,11 +98,6 @@ SqueakMacOSV3Config >> buildDir [
 	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].
 ]
 
-{ #category : #directories }
-SqueakMacOSV3Config >> buildDirName [
-	^ 'cmake_macbuild'
-]
-
 { #category : #'build script' }
 SqueakMacOSV3Config >> buildScript [
 	"answer the build script for building everything"
