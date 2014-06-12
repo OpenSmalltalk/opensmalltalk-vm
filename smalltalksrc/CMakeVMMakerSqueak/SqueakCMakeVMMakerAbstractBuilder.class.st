@@ -165,6 +165,11 @@ SqueakCMakeVMMakerAbstractBuilder class >> generateSources [
 	^default  generateSources
 ]
 
+{ #category : #'initialize-release' }
+SqueakCMakeVMMakerAbstractBuilder class >> reset [
+	default:=nil.
+]
+
 { #category : #queries }
 SqueakCMakeVMMakerAbstractBuilder class >> showExcludeFromBuild: aBoolean [
 	default ifNil:[default:= self new].
@@ -294,7 +299,8 @@ SqueakCMakeVMMakerAbstractBuilder >> configureABuildFor: configSymbol withBuildT
 						ifAbsent:[^self userErrorInvalidBuildType: typeSymbol "this config does not support this build type"
 										forConfiguration: configSymbol 
 										hasTypes: config availableBuilds].
-				config configureForBuildType: typeSymbol.                             "config configure yourself"
+
+				(config configureForBuildType: typeSymbol) value.                             "config configure yourself"
 				^self]
 		ifFalse:[^self userErrorInvalidTarget: configSymbol]
 	] ifError:[^'error configureABuildFor: ''', configSymbol].
@@ -369,14 +375,17 @@ SqueakCMakeVMMakerAbstractBuilder >> initializeBuildTypeAndDirectoryInfo [
 	"A dictionary of build types and the name of the directory they are stored in"
 	buildTypeAndDirectoryInfo := Dictionary new.
 	buildTypeAndDirectoryInfo 
-			at: #assert put:'build.assert';
-		      at: #assertWithHeartbeatTimer put: 'build.assert.itimerheartbeat';
-                  at:#debug put: 'build.debug';
-			at: #debugWithHeartbeatTimer put: 'build.debug.itimerheartbeat';
-			at: #debugMultiThreadedFFI put: 'build.debug.multithreaded';
-			at: #release put: 'build';
-			at: #releaseHeartbeatTimer put: 'build.itimerheartbeat';
-			at: #releaseMultiThreadedFFI put: 'build.multithreaded'.
+			at: #build put: 'build';
+			at: #buildAssert put:'build.assert';
+		      at: #buildAssertITimerHeartbeat put: 'build.assert.itimerheartbeat';
+                  at: #buildDebug put: 'build.debug';                                                                     
+			at: #buildDebugITimerHeartbeat put: 'build.debug.itimerheartbeat';
+			at: #buildDebugMultiThreaded put: 'build.debug.multithreaded';
+			at: #buildITimerHeartbeat put: 'build.itimerheartbeat';
+			at: #buildMultiThreaded put: 'build.multithreaded';
+			at: #buildMultiThreadedAssert put: 'build.multithreaded.assert';
+			at: #buildMultiThreadedDebug put: 'build.multithreaded.debug'.
+
 ]
 
 { #category : #queries }

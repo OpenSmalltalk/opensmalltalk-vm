@@ -12,14 +12,16 @@ Class {
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#instVars : [
 		'buildType',
-		'generateForAssert',
-		'generateForAssertWithHeartbeatTimer',
-		'generateForDebug',
-		'generateForDebugWithHeartbeatTimer',
-		'generateForDebugMultiThreadedFFI',
-		'generateForReleaseHeartbeatTimer',
-		'generateForReleaseMultiThreadedFFI',
-		'generateForAssertHeartbeatTimer'
+		'generateBuild',
+		'generateBuildAssert',
+		'generateBuildAssertITimerHeartbeat',
+		'generateBuildDebug',
+		'generateBuildDebugITimerHeartbeat',
+		'generateBuildDebugMultiThreaded',
+		'generateBuildIHeartbeatTimer',
+		'generateBuildMultiThreaded',
+		'generateBuildMultiThreadedAssert',
+		'generateBuildMultiThreadedDebug'
 	],
 	#category : #'CMakeVMMakerSqueak-Android'
 }
@@ -256,52 +258,6 @@ SqueakAndroidStackEvtConfig >> configureFloatMathPlugin: maker [
 
 ]
 
-{ #category : #cmake }
-SqueakAndroidStackEvtConfig >> configureForAssert [
-	generateForAssert := true
-]
-
-{ #category : #cmake }
-SqueakAndroidStackEvtConfig >> configureForAssertWithHeartbeatTimer [
-	generateForAssertHeartbeatTimer := true.
-]
-
-{ #category : #cmake }
-SqueakAndroidStackEvtConfig >> configureForDebug [
-	generateForDebug := true
-]
-
-{ #category : #cmake }
-SqueakAndroidStackEvtConfig >> configureForDebugMultiThreadedFFI [
-	generateForDebugMultiThreadedFFI := true
-]
-
-{ #category : #cmake }
-SqueakAndroidStackEvtConfig >> configureForDebugWithHeartbeatTimer [
-	generateForDebugWithHeartbeatTimer := true
-]
-
-{ #category : #cmake }
-SqueakAndroidStackEvtConfig >> configureForNoBuildType [
-		 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
-]
-
-{ #category : #cmake }
-SqueakAndroidStackEvtConfig >> configureForRelease [
-	"this variable is in pharo class CPlatformConfig"
-	generateForRelease := true.
-]
-
-{ #category : #cmake }
-SqueakAndroidStackEvtConfig >> configureForReleaseHeartbeatTimer [
-	generateForReleaseHeartbeatTimer := true.
-]
-
-{ #category : #cmake }
-SqueakAndroidStackEvtConfig >> configureForReleaseMultiThreadedFFI [
-	generateForReleaseMultiThreadedFFI := true
-]
-
 { #category : #'plugin extra rules' }
 SqueakAndroidStackEvtConfig >> configureJoystickTabletPlugin: maker [ 
 	"extra rules for JoystickTabletPlugin"
@@ -319,6 +275,11 @@ SqueakAndroidStackEvtConfig >> configureLocalePlugin: maker [
 	super configureLocalePlugin: maker.  
 	
 	maker addPlatformSources: #( 'sqAndroidLocale.c')
+]
+
+{ #category : #cmake }
+SqueakAndroidStackEvtConfig >> configureNoBuildType [
+		generateBuild:=generateBuildAssert:=generateBuildAssertITimerHeartbeat:=generateBuildDebug:=generateBuildDebugITimerHeartbeat:= generateBuildDebugMultiThreaded:= generateBuildIHeartbeatTimer:= generateBuildMultiThreaded:= generateBuildMultiThreadedAssert:= generateBuildMultiThreadedDebug:=false.
 ]
 
 { #category : #'plugin extra rules' }
