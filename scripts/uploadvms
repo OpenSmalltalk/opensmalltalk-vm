@@ -4,6 +4,7 @@ RemoteUser=eliotmiranda@highland-park.dreamhost.com
 RemoteRoot=mirandabanda.org/files/Cog/VM
 IFS="	
 "
+cd `dirname $0`/../products
 VERBOSE=
 REV="`svnversion | sed 's/^.*://'`"
 case $REV in
@@ -23,10 +24,10 @@ TAG=`date +%g.%U.`$REV
 echo REV=$REV TAG=$TAG
 
 CSARCS="Cog.app-$TAG.tgz	coglinux-$TAG.tgz	coglinuxht-$TAG.tgz	cogwin-$TAG.zip"
-CSARCS="$CSARCS	CogSpur.app-$TAG.tgz	cogspurlinux-$TAG.tgz	cogspurlinuxht-$TAG.tgz	cogspurwin-$TAG.zip"
-CMARCS="CogMT.app-$TAG.tgz	cogmtlinux-$TAG.tgz	cogmtlinuxht-$TAG.tgz	cogmtwin-$TAG.zip"
+CSARCS="$CSARCS	CogSpur.app-$TAG.tgz	cogspurlinuxht-$TAG.tgz	cogspurwin-$TAG.zip"
+CMARCS="CogMT.app-$TAG.tgz	cogmtlinuxht-$TAG.tgz	cogmtwin-$TAG.zip"
 NSARCS="Newspeak Virtual Machine-$TAG.dmg	nsvmlinux-$TAG.tgz	nsvmlinuxht-$TAG.tgz	nsvm-$TAG.msi"
-NSARCS="$NSARCS	Newspeak Spur Virtual Machine-$TAG.dmg	nsvmspurlinux-$TAG.tgz	nsvmspurlinuxht-$TAG.tgz	nsvm-$TAG.msi"
+NSARCS="$NSARCS	Newspeak Spur Virtual Machine-$TAG.dmg	nsvmspurlinuxht-$TAG.tgz	nsvm-$TAG.msi"
 #NMARCS="Newspeak Virtual MachineMT-$TAG.dmg	nsvmmtlinux-$TAG.tgz	nsvmmtlinuxht-$TAG.tgz	nsvmmt-spur-$TAG.msi"
 if [ $# = 0 ]; then
 	ARCHIVES="$CSARCS	$CMARCS		$NSARCS"
@@ -93,13 +94,15 @@ if [ -n "$CheckMSI" -a ! -f nsvm-$TAG.msi ]; then
 		exit 1
 	fi
 fi
-if [ ! -f history/README.$REV ]; then
-	cat <<THEEND >history/README.$REV
+if [ ! -f ../history/README.$REV ]; then
+	cat <<THEEND >../history/README.$REV
 N.B. For Squeak/Pharo/Croquet please use the archives whose names begin with
      Cog or cog.  The archives whose names begin with nsvm or Newspeak are
      for Newspeak and are missing plugins required by Squeak/Pharo/Croquet.
      VMs with "mt" or "MT" in the name are multi-threaded VMs which support
-     non-blocking FFI calls.
+     non-blocking FFI calls.  The archives containing "Spur" or "spur" are
+	 VMs using the new Spur object representation and garbage collector and
+	 should be used with Spur-format Squeak/Pharo/Croquet or Newspeak images.
 
 	There are two variants of the Linux VMs; those ending in "ht" have a
 	heartbeat thread, while those that don't, use an interval timer for the
@@ -123,14 +126,14 @@ sudo cp /etc/security/limits.d/squeak.conf /etc/security/limits.d/nsvm.conf
 
 THEEND
 	echo getting svn log
-	svn log platforms/Cross/vm/sqSCCSVersion.h >>history/README.$REV
-	vi history/README.$REV
+	svn log ../platforms/Cross/vm/sqSCCSVersion.h >>../history/README.$REV
+	vi ../history/README.$REV
 fi
 echo compiling ChangeHistory
-THEM="`ls history/README.* | sort -n -t. -k2 -r`"
+THEM="`ls ../history/README.* | sort -n -t. -k2 -r`"
 >ChangeHistory
 for r in $THEM; do
-	m="`echo $r | sed 's/history\/README.//'`"
+	m="`echo $r | sed 's/..\/history\/README.//'`"
 	if [ $REV -ge $m ]; then
 		test $REV -ne $m && echo "-------------------------------" >>ChangeHistory
 		ls -lT $r | awk '{ print $6, $7, $9; }' >>ChangeHistory
@@ -145,7 +148,7 @@ done
 RemoteUser=eliotmiranda@highland-park.dreamhost.com
 RemoteRoot=mirandabanda.org/files/Cog/VM
 ssh -x $RemoteUser mkdir $RemoteRoot/VM.r$REV
-echo scp -p ChangeHistory history/README.$REV $ARCHIVES "$@" $RemoteUser:$RemoteRoot/VM.r$REV
-scp -p ChangeHistory README.$REV $ARCHIVES "$@" $RemoteUser:$RemoteRoot/VM.r$REV
+echo scp -p ChangeHistory ../history/README.$REV $ARCHIVES "$@" $RemoteUser:$RemoteRoot/VM.r$REV
+scp -p ChangeHistory ../history/README.$REV $ARCHIVES "$@" $RemoteUser:$RemoteRoot/VM.r$REV
 echo ssh $RemoteUser $RemoteRoot/VM.r$REV/* \\\; ls -al $RemoteRoot/VM.r$REV
-ssh $RemoteUser chmod a-w \"$RemoteRoot/VM.r$REV/*\" \; ls -al $RemoteRoot/VM.r$REV
+ash $RemoteUser chmod a-w $RemoteRoot/VM.r$REV/* \; ls -al $RemoteRoot/VM.r$REV
