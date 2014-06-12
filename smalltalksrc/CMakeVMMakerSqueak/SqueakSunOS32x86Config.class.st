@@ -81,6 +81,11 @@ SqueakSunOS32x86Config >> configureForDebugWithHeartbeatTimer [
 ]
 
 { #category : #cmake }
+SqueakSunOS32x86Config >> configureForNoBuildType [
+		 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
+]
+
+{ #category : #cmake }
 SqueakSunOS32x86Config >> configureForRelease [
 	"this variable is in pharo class CPlatformConfig"
 	generateForRelease := true.

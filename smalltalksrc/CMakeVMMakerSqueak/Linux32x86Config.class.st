@@ -315,6 +315,12 @@ Linux32x86Config >> configureForDebugWithHeartbeatTimer [
 ]
 
 { #category : #cmake }
+Linux32x86Config >> configureForNoBuildType [
+	"this could be dangerous. If it becomes so, then just reset all the generateForXYZ flags in the topmost config. Currently that is all that initialize does."
+		 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
+]
+
+{ #category : #cmake }
 Linux32x86Config >> configureForRelease [
 	"this variable is in pharo class CPlatformConfig"
 	generateForRelease := true.
