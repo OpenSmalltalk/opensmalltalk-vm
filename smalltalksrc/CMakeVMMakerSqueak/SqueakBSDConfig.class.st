@@ -6,7 +6,19 @@ My subclasses do actual configurations, I just sit here and look good. Plus, I e
 "
 Class {
 	#name : #SqueakBSDConfig,
-	#superclass : #Linux32x86SqueakCogV3Configz,
+	#superclass : #CogFamilyUnixConfig,
+	#traits : 'TCPlatformConfigForSqueak',
+	#classTraits : 'TCPlatformConfigForSqueak classTrait',
+	#instVars : [
+		'generateForAssertWithHeartbeatTimer',
+		'generateForDebug',
+		'generateForDebugMultiThreadedFFI',
+		'generateForDebugWithHeartbeatTimer',
+		'generateForAssert',
+		'generateForAssertHeartbeatTimer',
+		'generateForReleaseHeartbeatTimer',
+		'generateForReleaseMultiThreadedFFI'
+	],
 	#category : #'CMakeVMMakerSqueak-BSD32x86'
 }
 
@@ -82,16 +94,128 @@ SqueakBSDConfig >> compilerFlags [
 			delimiter: ' ' )]
 ]
 
-{ #category : #'squeak compatibility' }
-SqueakBSDConfig >> defaultExternalPlugins [
-	^ (super defaultExternalPlugins copyWithoutAll: #(#IA32ABIPlugin #ThreadedIA32FFIPlugin #InternetConfigPlugin ))
-
+{ #category : #cmake }
+SqueakBSDConfig >> configureForAssertWithHeartbeatTimer [
+	generateForAssertWithHeartbeatTimer := true
 ]
 
-{ #category : #'squeak compatibility' }
-SqueakBSDConfig >> defaultInternalPlugins [
-	^ (super defaultInternalPlugins copyWithoutAll: #(#IA32ABIPlugin #JoystickTabletPlugin #StarSqueakPlugin #SurfacePlugin#ThreadedIA32FFIPlugin))
+{ #category : #cmake }
+SqueakBSDConfig >> configureForBuildType: aSymbol [
+	| d |
+	self configureForNoBuildType.                "reset all internal flags"
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo.
+	d 
+		at: #assert put:[self configureForAssert];
+		at: #assertWithHeartbeatTimer put: [self configureForAssertWithHeartbeatTimer];
+            at:#debug put: [self configureForDebug];
+		at: #debugWithHeartbeatTimer put: [self configureForDebugWithHeartbeatTimer];
+		at: #debugMultiThreadedFFI put: [self configureForDebugMultiThreadedFFI];
+		at: #release put: [self configureForRelease];
+		at: #releaseHeartbeatTimer put: [self configureForReleaseHeartbeatTimer];
+		at: #releaseMultiThreadedFFI put: [self configureForReleaseMultiThreadedFFI].
+     ^(d at: aSymbol) value
+]
 
+{ #category : #cmake }
+SqueakBSDConfig >> configureForDebug [
+	generateForDebug := true
+]
+
+{ #category : #cmake }
+SqueakBSDConfig >> configureForDebugMultiThreadedFFI [
+	generateForDebugMultiThreadedFFI := true
+]
+
+{ #category : #cmake }
+SqueakBSDConfig >> configureForDebugWithHeartbeatTimer [
+	generateForDebugWithHeartbeatTimer := true
+]
+
+{ #category : #cmake }
+SqueakBSDConfig >> configureForNoBuildType [
+	"this could be dangerous. If it becomes so, then just reset all the generateForXYZ flags in the topmost config. Currently that is all that initialize does."
+		 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
+]
+
+{ #category : #cmake }
+SqueakBSDConfig >> configureForRelease [
+	"this variable is in pharo class CPlatformConfig"
+	generateForRelease := true.
+]
+
+{ #category : #cmake }
+SqueakBSDConfig >> configureForReleaseHeartbeatTimer [
+	generateForReleaseHeartbeatTimer := true.
+]
+
+{ #category : #cmake }
+SqueakBSDConfig >> configureForReleaseMultiThreadedFFI [
+	generateForReleaseMultiThreadedFFI := true
+]
+
+{ #category : #plugins }
+SqueakBSDConfig >> defaultExternalPlugins [
+" tty 2014.06.10  cut-n-paste from Cog/build.linux32x86/newspeak.cog.spur/build/plugins.ext"
+	^ #(B3DAcceleratorPlugin 
+		BochsIA32Plugin 
+	      ThreadedFFIPlugin    "moduleName->SqueakFFIPrims "
+		"FFIPlugin"                   "moduleName->SqueakFFIPrims "
+		SqueakSSLPlugin       "moduleName->SqueakSSL" 
+		LocalePlugin 
+		UnixOSProcessPlugin 
+		UUIDPlugin)
+
+
+"N.B. Regarding ThreadedFFIPlugin and FFIPlugin from eem:
+
+Use  ThreadedFFIPlugin.  The FFIPlugin is obsolete (it requires assembler support files, and is non-reentrant).  This should generate in src/plugins/SqueakFFIPrims/{SqueakFFIPrims.c,ARM32FFIPlugin.c,IA32FFIPlugin.c} and you should compile only src/plugins/SqueakFFIPrims/SqueakFFIPrims.c.  src/plugins/SqueakFFIPrims/SqueakFFIPrims.c is a simple wrapper that includes ARM32FFIPlugin.c or IA32FFIPlugin.c as appropriate (and others can be added as they are developed).
+
+
+"
+]
+
+{ #category : #plugins }
+SqueakBSDConfig >> defaultInternalPlugins [
+" N.B. THESE MAY BE WILDLY INAPPROPRIATE FOR BSD. cut-n-pasted from Linux32x86Config.
+   N.B. moduleName->XYZ means XYZ appears in the GNU-Build's plugins.int/ext. However, Smalltalk requires the class name.
+                                 XYZSmalltalkClass  moduleName->XYZ as it appears in plugins.int/ext
+"
+	^ #(
+	    ADPCMCodecPlugin
+    AsynchFilePlugin
+    BalloonEnginePlugin "moduleName -->B2DPlugin"
+    BitBltSimulation        "moduleName->BitBltPlugin"
+    BMPReadWriterPlugin
+    CroquetPlugin
+    DeflatePlugin               "moduleName->ZipPlugin"
+    DropPlugin
+    DSAPlugin                    "moduleName->DSAPrims"
+    FFTPlugin
+    FileCopyPlugin
+    FilePlugin
+    FloatArrayPlugin
+    FloatMathPlugin
+    IA32ABIPlugin             "moduleName->IA32ABI"
+    InflatePlugin               "moduleName->ZipPlugin"
+    JoystickTabletPlugin
+    JPEGReaderPlugin
+    JPEGReadWriter2Plugin
+    KlattSynthesizerPlugin  "moduleName->Klatt"
+    LargeIntegersPlugin      "moduleName->LargeIntegers"
+    Matrix2x3Plugin
+    MIDIPlugin
+    MiscPrimitivePlugin
+    Mpeg3Plugin
+    RePlugin
+    SecurityPlugin
+    SerialPlugin
+    SocketPlugin
+    SoundCodecPlugin        "moduleName->SoundCodecPrims"
+    SoundGenerationPlugin
+    SoundPlugin
+    StarSqueakPlugin
+    SurfacePlugin
+    VMProfileLinuxSupportPlugin)
 ]
 
 { #category : #cmake }

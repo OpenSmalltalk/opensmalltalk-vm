@@ -283,7 +283,7 @@ SqueakAndroidStackEvtConfig >> configureForDebugWithHeartbeatTimer [
 
 { #category : #cmake }
 SqueakAndroidStackEvtConfig >> configureForNoBuildType [
-	self initialize
+		 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
 ]
 
 { #category : #cmake }
