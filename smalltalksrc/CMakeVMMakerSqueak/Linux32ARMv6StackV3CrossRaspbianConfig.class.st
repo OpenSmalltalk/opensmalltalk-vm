@@ -14,7 +14,7 @@ find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me 
 "
 Class {
 	#name : #Linux32ARMv6StackV3CrossRaspbianConfig,
-	#superclass : #Linux32x86SqueakStackV3Configz,
+	#superclass : #Linux32x86Config,
 	#category : #'CMakeVMMakerSqueak-Linux32ARMv6'
 }
 

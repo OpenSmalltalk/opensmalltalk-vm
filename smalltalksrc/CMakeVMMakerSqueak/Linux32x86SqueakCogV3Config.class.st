@@ -15,45 +15,6 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
 
-{ #category : #plugins }
-Linux32x86SqueakCogV3Config >> defaultExternalPlugins [
-	^ #(#B3DAcceleratorPlugin 
-		 #BochsIA32Plugin 
-		#SqueakFFIPrims 
-		#SqueakSSL 
-		#LocalePlugin 
-		#UnixOSProcessPlugin 
-		#UUIDPlugin)
-]
-
-{ #category : #plugins }
-Linux32x86SqueakCogV3Config >> defaultInternalPlugins [
-	^ #(#AsynchFilePlugin
-		#BMPReadWriterPlugin
-		#B2DPlugin
-		#BitBltPlugin
-		#DSAPrims
-		#DropPlugin
-		#FileCopyPlugin
-		#FilePlugin
-		#FloatArrayPlugin
-		#FloatMathPlugin
-		#ZipPlugin
-		#JPEGReadWriter2Plugin
-		#JPEGReaderPlugin
-		#LargeIntegers
-		#Matrix2x3Plugin
-		#MiscPrimitivePlugin
-		#IA32ABI
-		#RePlugin
-		#SecurityPlugin
-		#SocketPlugin
-		#SurfacePlugin
-		#UUIDPlugin
-		#UnixOSProcessPlugin
-		#VMProfileLinuxSupportPlugin)
-]
-
 { #category : #cmake }
 Linux32x86SqueakCogV3Config >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
@@ -66,7 +27,13 @@ Linux32x86SqueakCogV3Config >> excludeFromBuild [
 	^false
 ]
 
-{ #category : #'as yet unclassified' }
-Linux32x86SqueakCogV3Config >> todo [
-	self flag:'tty'
+{ #category : #'source generation' }
+Linux32x86SqueakCogV3Config >> interpreterClass [
+	^ CoInterpreter
+]
+
+{ #category : #'source generation' }
+Linux32x86SqueakCogV3Config >> prepareForGeneration [
+	^ self prepareForCogGeneration
+
 ]

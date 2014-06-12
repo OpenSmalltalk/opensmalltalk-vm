@@ -19,7 +19,7 @@ or find my Builder in CMakeVMMakerSqueak-Builder category and use that to query 
 "
 Class {
 	#name : #Linux32x86SqueakCogV3Debian64Config,
-	#superclass : #Linux32x86SqueakCogV3Configz,
+	#superclass : #Linux32x86Config,
 	#category : #'CMakeVMMakerSqueak-LinuxX86_64-32Compatibility'
 }
 

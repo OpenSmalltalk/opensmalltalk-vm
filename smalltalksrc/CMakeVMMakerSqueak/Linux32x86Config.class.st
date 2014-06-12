@@ -72,8 +72,8 @@ Linux32x86Config >> buildDir [
 { #category : #'squeak compatibility' }
 Linux32x86Config >> buildDirName [
 	buildType isNil
-		ifTrue:[^self dirBuildPlatform, self dirBuildLanguageVMMM, 'build']
-		ifFalse:[^self dirBuildPlatform, self dirBuildLanguageVMMM, buildType asString]
+		ifTrue:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, 'build']
+		ifFalse:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, buildType asString]
 ]
 
 { #category : #'squeak compatibility' }
@@ -335,41 +335,69 @@ Linux32x86Config >> defaultExternalPlugins [
 " tty 2014.06.10  cut-n-paste from Cog/build.linux32x86/newspeak.cog.spur/build/plugins.ext"
 	^ #(B3DAcceleratorPlugin 
 		BochsIA32Plugin 
-		SqueakFFIPrims 
-		SqueakSSL 
+	      ThreadedFFIPlugin    "moduleName->SqueakFFIPrims "
+		"FFIPlugin"                   "moduleName->SqueakFFIPrims "
+		SqueakSSLPlugin       "moduleName->SqueakSSL" 
 		LocalePlugin 
 		UnixOSProcessPlugin 
 		UUIDPlugin)
+
+
+"N.B. Regarding ThreadedFFIPlugin and FFIPlugin from eem:
+
+Use  ThreadedFFIPlugin.  The FFIPlugin is obsolete (it requires assembler support files, and is non-reentrant).  This should generate in src/plugins/SqueakFFIPrims/{SqueakFFIPrims.c,ARM32FFIPlugin.c,IA32FFIPlugin.c} and you should compile only src/plugins/SqueakFFIPrims/SqueakFFIPrims.c.  src/plugins/SqueakFFIPrims/SqueakFFIPrims.c is a simple wrapper that includes ARM32FFIPlugin.c or IA32FFIPlugin.c as appropriate (and others can be added as they are developed).
+
+
+"
 ]
 
 { #category : #plugins }
 Linux32x86Config >> defaultInternalPlugins [
-" tty 2014.06.10  cut-n-paste from Cog/build.linux32x86/newspeak.cog.spur/build/plugins.int"
+" tty 2014.06.10  cut-n-paste from Cog/build.linux32x86/newspeak.cog.spur/build/plugins.int
+   N.B. moduleName->XYZ means XYZ appears in the GNU-Build's plugins.int/ext. However, Smalltalk requires the class name.
+                                 XYZSmalltalkClass  moduleName->XYZ as it appears in plugins.int/ext
+"
 	^ #(
-		AsynchFilePlugin 
-		BMPReadWriterPlugin 
-		B2DPlugin 
-		BitBltPlugin 
-		DSAPrims 
-		DropPlugin 
-		FileCopyPlugin 
-		FilePlugin 
-		FloatArrayPlugin 
-		FloatMathPlugin 
-		ZipPlugin 
-		JPEGReadWriter2Plugin 
-		JPEGReaderPlugin 
-		LargeIntegers 
-		Matrix2x3Plugin 
-		MiscPrimitivePlugin 
-		IA32ABI 
-		RePlugin 
-		SecurityPlugin 
-		SocketPlugin 
-		SurfacePlugin 
-		UUIDPlugin 
-		UnixOSProcessPlugin 
-		VMProfileLinuxSupportPlugin)
+	    ADPCMCodecPlugin
+    AsynchFilePlugin
+    BalloonEnginePlugin "moduleName -->B2DPlugin"
+    BitBltSimulation        "moduleName->BitBltPlugin"
+    BMPReadWriterPlugin
+    CroquetPlugin
+    DeflatePlugin               "moduleName->ZipPlugin"
+    DropPlugin
+    DSAPlugin                    "moduleName->DSAPrims"
+    FFTPlugin
+    FileCopyPlugin
+    FilePlugin
+    FloatArrayPlugin
+    FloatMathPlugin
+    IA32ABIPlugin             "moduleName->IA32ABI"
+    InflatePlugin               "moduleName->ZipPlugin"
+    JoystickTabletPlugin
+    JPEGReaderPlugin
+    JPEGReadWriter2Plugin
+    KlattSynthesizerPlugin  "moduleName->Klatt"
+    LargeIntegersPlugin      "moduleName->LargeIntegers"
+    Matrix2x3Plugin
+    MIDIPlugin
+    MiscPrimitivePlugin
+    Mpeg3Plugin
+    RePlugin
+    SecurityPlugin
+    SerialPlugin
+    SocketPlugin
+    SoundCodecPlugin        "moduleName->SoundCodecPrims"
+    SoundGenerationPlugin
+    SoundPlugin
+    StarSqueakPlugin
+    SurfacePlugin
+    VMProfileLinuxSupportPlugin)
+]
+
+{ #category : #cmake }
+Linux32x86Config >> dirArmv6 [
+	^'cmake.build.arm.v6'
 ]
 
 { #category : #cmake }

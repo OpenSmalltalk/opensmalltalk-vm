@@ -141,8 +141,8 @@ Linux64Config >> buildDir [
 { #category : #'squeak compatibility' }
 Linux64Config >> buildDirName [
 	buildType isNil
-		ifTrue:[^self dirBuildPlatform, self dirBuildLanguageVMMM, 'build']
-		ifFalse:[^self dirBuildPlatform, self dirBuildLanguageVMMM, buildType asString]
+		ifTrue:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, 'build']
+		ifFalse:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, buildType asString]
 ]
 
 { #category : #'squeak compatibility' }

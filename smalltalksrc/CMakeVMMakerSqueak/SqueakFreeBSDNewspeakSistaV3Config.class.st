@@ -14,13 +14,6 @@ Class {
 	#category : #'CMakeVMMakerSqueak-BSD32x86'
 }
 
-{ #category : #'squeak compatibility' }
-SqueakFreeBSDNewspeakSistaV3Config >> buildDirName [
-	buildType isNil
-		ifTrue:[^self dirBuildPlatform, self dirBuildLanguageVMMM, 'build']
-		ifFalse:[^self dirBuildPlatform, self dirBuildLanguageVMMM, buildType asString]
-]
-
 { #category : #cmake }
 SqueakFreeBSDNewspeakSistaV3Config >> dirBuildLanguageVMMM [
 	^self newspeakSistaV3
