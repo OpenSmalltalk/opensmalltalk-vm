@@ -231,8 +231,10 @@ SpurBootstrapMonticelloPackagePatcher >> patch [
 			from: '/Users/eliot/Glue/repositories/nsboot/Squeak4.3/squeak-package-cache'
 			to: '/Users/eliot/Glue/repositories/nsboot/Squeak4.3/package-cache')
 		patch"
-	(sourceDir exists and: [destDir exists]) ifFalse:
-		[self error: 'one or both of the directories don''t exist'].
+	
+	sourceDir exists ifFalse:
+		[self error: 'source directory doest not exist'].
+	destDir assureExistence.
 	self packagesAndPatches keysAndValuesDo:
 		[:package :patches|
 		 (self filesForPackage: package in: sourceDir) do:
