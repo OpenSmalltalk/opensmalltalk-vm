@@ -16,13 +16,16 @@ Class {
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#instVars : [
 		'buildType',
-		'generateForAssert',
-		'generateForDebug',
-		'generateForDebugWithHeartbeatTimer',
-		'generateForDebugMultiThreadedFFI',
-		'generateForReleaseHeartbeatTimer',
-		'generateForReleaseMultiThreadedFFI',
-		'generateForAssertHeartbeatTimer'
+		'generateBuild',
+		'generateBuildAssert',
+		'generateBuildAssertITimerHeartbeat',
+		'generateBuildDebug',
+		'generateBuildDebugITimerHeartbeat',
+		'generateBuildDebugMultiThreaded',
+		'generateBuildIHeartbeatTimer',
+		'generateBuildMultiThreaded',
+		'generateBuildMultiThreadedAssert',
+		'generateBuildMultiThreadedDebug'
 	],
 	#category : #'CMakeVMMakerSqueak-SunOS32x86'
 }
@@ -51,56 +54,8 @@ SqueakSunOS32x86Config >> buildType: aSymbol [
 ]
 
 { #category : #cmake }
-SqueakSunOS32x86Config >> configureForAssert [
-	generateForAssert := true
-
-]
-
-{ #category : #cmake }
-SqueakSunOS32x86Config >> configureForAssertWithHeartbeatTimer [
-	generateForAssertHeartbeatTimer := true.
-
-]
-
-{ #category : #cmake }
-SqueakSunOS32x86Config >> configureForDebug [
-	generateForDebug := true
-
-]
-
-{ #category : #cmake }
-SqueakSunOS32x86Config >> configureForDebugMultiThreadedFFI [
-	generateForDebugMultiThreadedFFI := true
-
-]
-
-{ #category : #cmake }
-SqueakSunOS32x86Config >> configureForDebugWithHeartbeatTimer [
-	generateForDebugWithHeartbeatTimer := true
-
-]
-
-{ #category : #cmake }
-SqueakSunOS32x86Config >> configureForNoBuildType [
-		 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
-]
-
-{ #category : #cmake }
-SqueakSunOS32x86Config >> configureForRelease [
-	"this variable is in pharo class CPlatformConfig"
-	generateForRelease := true.
-
-]
-
-{ #category : #cmake }
-SqueakSunOS32x86Config >> configureForReleaseHeartbeatTimer [
-	generateForReleaseHeartbeatTimer := true.
-
-]
-
-{ #category : #cmake }
-SqueakSunOS32x86Config >> configureForReleaseMultiThreadedFFI [
-	generateForReleaseMultiThreadedFFI := true
+SqueakSunOS32x86Config >> configureNoBuildType [
+			generateBuild:=generateBuildAssert:=generateBuildAssertITimerHeartbeat:=generateBuildDebug:=generateBuildDebugITimerHeartbeat:= generateBuildDebugMultiThreaded:= generateBuildIHeartbeatTimer:= generateBuildMultiThreaded:= generateBuildMultiThreadedAssert:= generateBuildMultiThreadedDebug:=false.
 ]
 
 { #category : #plugins }

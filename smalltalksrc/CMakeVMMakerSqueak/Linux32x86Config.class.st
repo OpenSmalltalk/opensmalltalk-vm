@@ -12,14 +12,16 @@ Class {
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#instVars : [
 		'buildType',
-		'generateForAssert',
-		'generateForAssertWithHeartbeatTimer',
-		'generateForDebug',
-		'generateForDebugWithHeartbeatTimer',
-		'generateForDebugMultiThreadedFFI',
-		'generateForReleaseHeartbeatTimer',
-		'generateForReleaseMultiThreadedFFI',
-		'generateForAssertHeartbeatTimer'
+		'generateBuild',
+		'generateBuildAssert',
+		'generateBuildAssertITimerHeartbeat',
+		'generateBuildDebug',
+		'generateBuildDebugITimerHeartbeat',
+		'generateBuildDebugMultiThreaded',
+		'generateBuildIHeartbeatTimer',
+		'generateBuildMultiThreaded',
+		'generateBuildMultiThreadedAssert',
+		'generateBuildMultiThreadedDebug'
 	],
 	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
@@ -290,50 +292,54 @@ Linux32x86Config >> configH [
 ]
 
 { #category : #cmake }
-Linux32x86Config >> configureForAssert [
-	generateForAssert := true.
+Linux32x86Config >> configureBuildAssertITimerHeartbeat [
+	generateBuildAssertITimerHeartbeat:=true.
 ]
 
 { #category : #cmake }
-Linux32x86Config >> configureForAssertWithHeartbeatTimer [
-	generateForAssertWithHeartbeatTimer := true
+Linux32x86Config >> configureForBuildType: aSymbol [
+	| d info |
+	"provide a concrete builder with the buildType and configureBuildX method to invoke"
+	info := SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	self configureNoBuildType.                "reset all internal flags"
+	d 
+		at: #build 
+		put: [self buildType:(info at:#build).  self configureBuild];
+
+		at: #buildAssert 
+		put: [self buildType:(info at: #buildAssert).  	self configureBuildAssert];
+
+		at: #buildAssertITimerHeartbeat 
+		put:     [ self buildType:(info at: #buildAssertITimerHeartbeat ).   self configureBuildAssertITimerHeartbeat];
+
+            at:#buildDebug 
+		put: [self buildType:(info at: #buildDebug ).  self configureBuildDebug];
+
+		at: #buildDebugITimerHeartbeat 
+		put:  [self buildType:(info at: #buildDebugITimerHeartbeat).   self configureBuildDebugITimerHeartbeat];
+
+		at: #buildDebugMultiThreaded 
+		put: [self buildType:(info at: #buildDebugMultiThreaded ).   self configureBuildDebugMultiThreaded];
+
+		at: #buildITimerHeartbeat 
+		put: [self buildType:(info at:#buildITimerHeartbeat ).    self configureBuildIHeartbeatTimer];
+
+		at: #buildMultiThreaded 
+		put:  [self buildType:(info at:#buildMultiThreaded ). self configureBuildMultiThreaded];
+
+		at: #buildMultiThreadedAssert 
+		put: [self buildType:(info at: #buildMultiThreadedAssert). self configureBuildMultiThreadedAssert];
+
+		at: #buildMultiThreadedDebug  
+		put: [self buildType: (info at: #buildMultiThreadedDebug). self configureBuildMultiThreadedDebug].
+
+     ^(d at: aSymbol).
 ]
 
 { #category : #cmake }
-Linux32x86Config >> configureForDebug [
-	generateForDebug := true
-]
-
-{ #category : #cmake }
-Linux32x86Config >> configureForDebugMultiThreadedFFI [
-	generateForDebugMultiThreadedFFI := true
-]
-
-{ #category : #cmake }
-Linux32x86Config >> configureForDebugWithHeartbeatTimer [
-	generateForDebugWithHeartbeatTimer := true
-]
-
-{ #category : #cmake }
-Linux32x86Config >> configureForNoBuildType [
-	"this could be dangerous. If it becomes so, then just reset all the generateForXYZ flags in the topmost config. Currently that is all that initialize does."
-		 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
-]
-
-{ #category : #cmake }
-Linux32x86Config >> configureForRelease [
-	"this variable is in pharo class CPlatformConfig"
-	generateForRelease := true.
-]
-
-{ #category : #cmake }
-Linux32x86Config >> configureForReleaseHeartbeatTimer [
-	generateForReleaseHeartbeatTimer := true.
-]
-
-{ #category : #cmake }
-Linux32x86Config >> configureForReleaseMultiThreadedFFI [
-	generateForReleaseMultiThreadedFFI := true
+Linux32x86Config >> configureNoBuildType [
+		generateBuild:=generateBuildAssert:=generateBuildAssertITimerHeartbeat:=generateBuildDebug:=generateBuildDebugITimerHeartbeat:= generateBuildDebugMultiThreaded:= generateBuildIHeartbeatTimer:= generateBuildMultiThreaded:= generateBuildMultiThreadedAssert:= generateBuildMultiThreadedDebug:=false.
 ]
 
 { #category : #plugins }

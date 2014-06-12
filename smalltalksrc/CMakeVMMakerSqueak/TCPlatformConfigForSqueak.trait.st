@@ -108,9 +108,10 @@ TCPlatformConfigForSqueak >> buildDirName [
 	self required
 ]
 
-{ #category : #'squeak compatibility' }
-TCPlatformConfigForSqueak >> buildType: aSymbol [
-	self required
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> buildType: aSymbol [	
+	"force suclass to implement instance var accessor"
+	self required.
 ]
 
 { #category : #'squeak compatibility' }
@@ -119,65 +120,98 @@ TCPlatformConfigForSqueak >> compilerFlags [
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> configureForAssert [
+TCPlatformConfigForSqueak >> configureBuild [
 	self required
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> configureForAssertWithHeartbeatTimer [
+TCPlatformConfigForSqueak >> configureBuildAssert [
+	self required
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> configureBuildAssertITimerHeartbeat [
+	self required
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> configureBuildDebug [
+	self required
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> configureBuildDebugITimerHeartbeat [
+	self required
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> configureBuildDebugMultiThreaded [
+	self required
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> configureBuildIHeartbeatTimer [
+	self required
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> configureBuildMultiThreaded [
+	self required
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> configureBuildMultiThreadedAssert [
+	self required
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> configureBuildMultiThreadedDebug [
 	self required
 ]
 
 { #category : #cmake }
 TCPlatformConfigForSqueak >> configureForBuildType: aSymbol [
-	| d |
-	self configureForNoBuildType.                "reset all internal flags"
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo.
+	| d info |
+	"provide a concrete builder with the buildType and configureBuildX method to invoke"
+	info := SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	self configureNoBuildType.                "reset all internal flags"
 	d 
-		at: #assert put:[self configureForAssert];
-		at: #assertWithHeartbeatTimer put: [self configureForAssertWithHeartbeatTimer];
-            at:#debug put: [self configureForDebug];
-		at: #debugWithHeartbeatTimer put: [self configureForDebugWithHeartbeatTimer];
-		at: #debugMultiThreadedFFI put: [self configureForDebugMultiThreadedFFI];
-		at: #release put: [self configureForRelease];
-		at: #releaseHeartbeatTimer put: [self configureForReleaseHeartbeatTimer];
-		at: #releaseMultiThreadedFFI put: [self configureForReleaseMultiThreadedFFI].
-     ^(d at: aSymbol) value
+		at: #build 
+		put: [self buildType:(info at:#build).  self configureBuild];
+
+		at: #buildAssert 
+		put: [self buildType:(info at: #buildAssert).  	self configureBuildAssert];
+
+		at: #buildAssertITimerHeartbeat 
+		put:     [ self buildType:(info at: #buildAssertITimerHeartbeat ).   self configureBuildAssertITimerHeartbeat];
+
+            at:#buildDebug 
+		put: [self buildType:(info at: #buildDebug ).  self configureBuildDebug];
+
+		at: #buildDebugITimerHeartbeat 
+		put:  [self buildType:(info at: #buildDebugITimerHeartbeat).   self configureBuildDebugITimerHeartbeat];
+
+		at: #buildDebugMultiThreaded 
+		put: [self buildType:(info at: #buildDebugMultiThreaded ).   self configureBuildDebugMultiThreaded];
+
+		at: #buildITimerHeartbeat 
+		put: [self buildType:(info at:#buildITimerHeartbeat ).    self configureBuildIHeartbeatTimer];
+
+		at: #buildMultiThreaded 
+		put:  [self buildType:(info at:#buildMultiThreaded ). self configureBuildMultiThreaded];
+
+		at: #buildMultiThreadedAssert 
+		put: [self buildType:(info at: #buildMultiThreadedAssert). self configureBuildMultiThreadedAssert];
+
+		at: #buildMultiThreadedDebug  
+		put: [self buildType: (info at: #buildMultiThreadedDebug). self configureBuildMultiThreadedDebug].
+
+     ^(d at: aSymbol).
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> configureForDebug [
-	self required
-]
-
-{ #category : #cmake }
-TCPlatformConfigForSqueak >> configureForDebugMultiThreadedFFI [
-	self required
-]
-
-{ #category : #cmake }
-TCPlatformConfigForSqueak >> configureForDebugWithHeartbeatTimer [
-	self required
-]
-
-{ #category : #cmake }
-TCPlatformConfigForSqueak >> configureForNoBuildType [
-	"this could be dangerous. If it becomes so, then just reset all the generateForXYZ flags in the topmost config. Currently that is all that initialize does."
-	self required
-]
-
-{ #category : #cmake }
-TCPlatformConfigForSqueak >> configureForRelease [
-	self required
-]
-
-{ #category : #cmake }
-TCPlatformConfigForSqueak >> configureForReleaseHeartbeatTimer [
-	self required
-]
-
-{ #category : #cmake }
-TCPlatformConfigForSqueak >> configureForReleaseMultiThreadedFFI [
+TCPlatformConfigForSqueak >> configureNoBuildType [
 	self required
 ]
 
@@ -198,33 +232,58 @@ TCPlatformConfigForSqueak >> dirBSD32x86 [
 
 { #category : #cmake }
 TCPlatformConfigForSqueak >> dirBuild [
-	^'build'
+	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #build
 ]
 
 { #category : #cmake }
 TCPlatformConfigForSqueak >> dirBuildAssert [
-	^'build.assert'
+	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #buildAssert
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirBuildAssertITimerHeartbeat [
+	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #buildAssertITimerHeartbeat
 ]
 
 { #category : #cmake }
 TCPlatformConfigForSqueak >> dirBuildDebug [
-	^'build.debug'
+	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #debug
 ]
 
 { #category : #cmake }
 TCPlatformConfigForSqueak >> dirBuildDebugITimerHeartbeat [
-	^'build.debug.itimerheartbeat'
+	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #debugITimerHeartbeat
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirBuildDebugMultiThreaded [
+	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #debugMultiThreaded
 ]
 
 { #category : #cmake }
 TCPlatformConfigForSqueak >> dirBuildITimerHeartbeat [
-	^'build.itimerheartbeat'
+	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #buildITimerHeartbeat
 ]
 
 { #category : #cmake }
 TCPlatformConfigForSqueak >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
 	self required
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirBuildMultiThreaded [
+	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #buildMultiThreaded
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirBuildMultiThreadedAssert [
+	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #buildMultiThreadedAssert
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> dirBuildMultiThreadedDebug [
+	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #buildMultiThreadedDebug
 ]
 
 { #category : #cmake }
