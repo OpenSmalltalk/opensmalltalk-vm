@@ -17,7 +17,7 @@ LIBDIR="`echo lib/squeak/[0-9.-]*`"
 test -f $LIBDIR/squeak && mv $LIBDIR/squeak $LIBDIR/nsvm
 test -d lib/squeak && mv lib/squeak lib/nsvm
 LIBDIR="`echo lib/nsvm/[0-9.-]*`"
-if [ "$1" = -copysource ]; then
+if [ "$2" = -copysource ]; then
 	cp $SOURCE $LIBDIR
 elif [ -h $SOURCE ]; then
 	ln "`readlink $SOURCE`" $LIBDIR

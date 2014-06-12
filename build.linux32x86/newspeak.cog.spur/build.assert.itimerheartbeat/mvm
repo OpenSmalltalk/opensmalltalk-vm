@@ -27,4 +27,4 @@ test -f config.h || ../../../platforms/unix/config/configure \
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
 make install prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG
-../../editnewspeakinstall.sh "$@" ../../../products/$INSTALLDIR
+../../editnewspeakinstall.sh ../../../products/$INSTALLDIR "$@"
