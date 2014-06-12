@@ -144,9 +144,9 @@ launch_and_configure_four_five(){  #copy-n-paste-n-mangle from Bert's squeak.sh
   esac
 
   if [ "$TRUNK" = true ]; then
-     SCRIPT="$APP/BuildSqueak45TrunkCMakeImage.st"
+     SCRIPT="$APP/BuildSqueak45TrunkCMakeVMMakerImage.st"
   else
-     SCRIPT="$APP/BuildSqueak45CMakeImage.st" 
+     SCRIPT="$APP/BuildSqueak45CMakeVMMakerImage.st" 
   fi
 
   if [ "$CPU" = x86_64 ] ; then
@@ -233,7 +233,7 @@ launch_and_configure_four_five_standard(){
    	       SQUEAK45VM="$STANDARDINSTALLDIRECTORY/$SQUEAK45APP/Contents/$OS-$CPU/bin/squeak";;
   *)	echo "don't know how to run Squeak on your system.  bailing out." 1>&2; exit 2
   esac
-  SCRIPT="$APP/BuildSqueakStandardImage.st" 
+  SCRIPT="$APP/BuildSqueakStandardVMMakerImage.st" 
 
 
   cp $STANDARDINSTALLDIRECTORY/$SQUEAK45APP/squeak.sh $STANDARDINSTALLDIRECTORY/$SQUEAK45APP/squeakStandardVMMaker.sh    #create a shell script that launches our CogVMMaker.image
@@ -244,7 +244,7 @@ launch_and_configure_four_five_standard(){
 
  cp -p *.text                      $STANDARDINSTALLDIRECTORY/$SQUEAK45RESOURCES  #Workspaces with helpful text
  cp -p *.config                    $STANDARDINSTALLDIRECTORY/$SQUEAK45RESOURCES  #VMMakerTool configuration files
- cp -p BuildSqueakStandardImage.st $STANDARDINSTALLDIRECTORY/$SQUEAK45RESOURCES  #Smalltalk 
+ cp -p BuildSqueakStandardVMMakerImage.st $STANDARDINSTALLDIRECTORY/$SQUEAK45RESOURCES  #Smalltalk 
 
  "$SQUEAK45VM" "$STANDARDINSTALLDIRECTORY/$SQUEAK45RESOURCES/$STANDARDIMAGE" "$SCRIPT"
 
@@ -295,7 +295,7 @@ launch_and_configure_four_six(){
 
   cd $COGINSTALLDIRECTORY/$COGLINUX
   ln -s  oscogvm/platforms platforms   #<--needed for VMMakerTool
-  ./squeak CogVMMaker.image BuildSqueak46CMakeImage.st
+  ./squeak CogVMMaker.image BuildSqueak46CMakeVMMakerImage.st
   cd -
 
   cd ../
@@ -350,11 +350,11 @@ launch_and_configure_four_six_standard(){
 #echo 'http://wiki.squeak.org/squeak/6177'
 
 
-  cp -p BuildSqueakStandardImage.st  $STANDARDINSTALLDIRECTORY/$COGLINUX
+  cp -p BuildSqueakStandardVMMakerImage.st  $STANDARDINSTALLDIRECTORY/$COGLINUX
   cp -p *.text         $STANDARDINSTALLDIRECTORY/$COGLINUX
   cp -p *.config       $STANDARDINSTALLDIRECTORY/$COGLINUX
   cd $STANDARDINSTALLDIRECTORY/$COGLINUX
-  ./squeak StandardVMMaker.image BuildSqueakStandardImage.st
+  ./squeak StandardVMMaker.image BuildSqueakStandardVMMakerImage.st
   cd -
 }
 

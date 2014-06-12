@@ -1,0 +1,1 @@
+| pwd |pwd := FileDirectory default fullName.SpurBootstrap bootstrapImage: pwd, '/', 'trunk46forspur'.SpurBootstrapMonticelloPackagePatcher new	from: 'temp-v3-repository' to: 'temp-spur-repository';	patch.Smalltalk snapshot: false andQuit: true

@@ -1,0 +1,1 @@
+"Change the update stream to trunk, update, then build as per 4.5"[MCMcmUpdater	defaultUpdateURL: 'http://source.squeak.org/trunk';	updateFromServer] valueSupplyingAnswer: true.Smalltalk snapshot: true andQuit: true
