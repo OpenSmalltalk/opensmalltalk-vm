@@ -83,6 +83,11 @@ SqueakIA32BochsConfig >> configureForDebugWithHeartbeatTimer [
 ]
 
 { #category : #cmake }
+SqueakIA32BochsConfig >> configureForNoBuildType [
+		 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
+]
+
+{ #category : #cmake }
 SqueakIA32BochsConfig >> configureForRelease [
 	"this variable is in pharo class CPlatformConfig"
 	generateForRelease := true.
