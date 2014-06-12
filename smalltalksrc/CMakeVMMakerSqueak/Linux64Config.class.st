@@ -12,14 +12,16 @@ Class {
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#instVars : [
 		'buildType',
-		'generateForAssert',
-		'generateForAssertWithHeartbeatTimer',
-		'generateForDebug',
-		'generateForDebugWithHeartbeatTimer',
-		'generateForDebugMultiThreadedFFI',
-		'generateForReleaseHeartbeatTimer',
-		'generateForReleaseMultiThreadedFFI',
-		'generateForAssertHeartbeatTimer'
+		'generateBuild',
+		'generateBuildAssert',
+		'generateBuildAssertITimerHeartbeat',
+		'generateBuildDebug',
+		'generateBuildDebugITimerHeartbeat',
+		'generateBuildDebugMultiThreaded',
+		'generateBuildIHeartbeatTimer',
+		'generateBuildMultiThreaded',
+		'generateBuildMultiThreadedAssert',
+		'generateBuildMultiThreadedDebug'
 	],
 	#category : #'CMakeVMMakerSqueak-LinuxX86_64'
 }
@@ -206,66 +208,8 @@ Linux64Config >> compilerFlags [
 ]
 
 { #category : #cmake }
-Linux64Config >> configureForAssert [
-	generateForAssert := true.
-]
-
-{ #category : #cmake }
-Linux64Config >> configureForAssertWithHeartbeatTimer [
-	generateForAssertWithHeartbeatTimer := true
-]
-
-{ #category : #cmake }
-Linux64Config >> configureForBuildType: aSymbol [
-	| d |
-	self configureForNoBuildType.                "reset all internal flags"
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo.
-	d 
-		at: #assert put:[self configureForAssert];
-		at: #assertWithHeartbeatTimer put: [self configureForAssertWithHeartbeatTimer];
-            at:#debug put: [self configureForDebug];
-		at: #debugWithHeartbeatTimer put: [self configureForDebugWithHeartbeatTimer];
-		at: #debugMultiThreadedFFI put: [self configureForDebugMultiThreadedFFI];
-		at: #release put: [self configureForRelease];
-		at: #releaseHeartbeatTimer put: [self configureForReleaseHeartbeatTimer];
-		at: #releaseMultiThreadedFFI put: [self configureForReleaseMultiThreadedFFI].
-     ^(d at: aSymbol) value
-]
-
-{ #category : #cmake }
-Linux64Config >> configureForDebug [
-	generateForDebug := true
-]
-
-{ #category : #cmake }
-Linux64Config >> configureForDebugMultiThreadedFFI [
-	generateForDebugMultiThreadedFFI := true
-]
-
-{ #category : #cmake }
-Linux64Config >> configureForDebugWithHeartbeatTimer [
-	generateForDebugWithHeartbeatTimer := true
-]
-
-{ #category : #cmake }
-Linux64Config >> configureForNoBuildType [
-		 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
-]
-
-{ #category : #cmake }
-Linux64Config >> configureForRelease [
-	"this variable is in pharo class CPlatformConfig"
-	generateForRelease := true.
-]
-
-{ #category : #cmake }
-Linux64Config >> configureForReleaseHeartbeatTimer [
-	generateForReleaseHeartbeatTimer := true.
-]
-
-{ #category : #cmake }
-Linux64Config >> configureForReleaseMultiThreadedFFI [
-	generateForReleaseMultiThreadedFFI := true
+Linux64Config >> configureNoBuildType [
+		generateBuild:=generateBuildAssert:=generateBuildAssertITimerHeartbeat:=generateBuildDebug:=generateBuildDebugITimerHeartbeat:= generateBuildDebugMultiThreaded:= generateBuildIHeartbeatTimer:= generateBuildMultiThreaded:= generateBuildMultiThreadedAssert:= generateBuildMultiThreadedDebug:=false.
 ]
 
 { #category : #plugins }

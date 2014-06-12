@@ -9,13 +9,16 @@ Class {
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#instVars : [
 		'buildType',
-		'generateForAssert',
-		'generateForDebug',
-		'generateForDebugWithHeartbeatTimer',
-		'generateForDebugMultiThreadedFFI',
-		'generateForReleaseHeartbeatTimer',
-		'generateForReleaseMultiThreadedFFI',
-		'generateForAssertHeartbeatTimer'
+		'generateBuild',
+		'generateBuildAssert',
+		'generateBuildAssertITimerHeartbeat',
+		'generateBuildDebug',
+		'generateBuildDebugITimerHeartbeat',
+		'generateBuildDebugMultiThreaded',
+		'generateBuildIHeartbeatTimer',
+		'generateBuildMultiThreaded',
+		'generateBuildMultiThreadedAssert',
+		'generateBuildMultiThreadedDebug'
 	],
 	#category : #'CMakeVMMakerSqueak-MacOS'
 }
@@ -49,57 +52,8 @@ SqueakMacOSConfig >> buildType: aSymbol [
 ]
 
 { #category : #cmake }
-SqueakMacOSConfig >> configureForAssert [
-	generateForAssert := true
-
-]
-
-{ #category : #cmake }
-SqueakMacOSConfig >> configureForAssertWithHeartbeatTimer [
-	generateForAssertHeartbeatTimer := true.
-
-]
-
-{ #category : #cmake }
-SqueakMacOSConfig >> configureForDebug [
-	generateForDebug := true
-
-]
-
-{ #category : #cmake }
-SqueakMacOSConfig >> configureForDebugMultiThreadedFFI [
-	generateForDebugMultiThreadedFFI := true
-
-]
-
-{ #category : #cmake }
-SqueakMacOSConfig >> configureForDebugWithHeartbeatTimer [
-	generateForDebugWithHeartbeatTimer := true
-
-]
-
-{ #category : #cmake }
-SqueakMacOSConfig >> configureForNoBuildType [
-		 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
-]
-
-{ #category : #cmake }
-SqueakMacOSConfig >> configureForRelease [
-	"this variable is in pharo class CPlatformConfig"
-	generateForRelease := true.
-
-]
-
-{ #category : #cmake }
-SqueakMacOSConfig >> configureForReleaseHeartbeatTimer [
-	generateForReleaseHeartbeatTimer := true.
-
-]
-
-{ #category : #cmake }
-SqueakMacOSConfig >> configureForReleaseMultiThreadedFFI [
-	generateForReleaseMultiThreadedFFI := true
-
+SqueakMacOSConfig >> configureNoBuildType [
+		generateBuild:=generateBuildAssert:=generateBuildAssertITimerHeartbeat:=generateBuildDebug:=generateBuildDebugITimerHeartbeat:= generateBuildDebugMultiThreaded:= generateBuildIHeartbeatTimer:= generateBuildMultiThreaded:= generateBuildMultiThreadedAssert:= generateBuildMultiThreadedDebug:=false.
 ]
 
 { #category : #plugins }
