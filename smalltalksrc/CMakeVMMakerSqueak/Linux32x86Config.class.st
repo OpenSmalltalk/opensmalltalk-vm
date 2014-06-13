@@ -97,45 +97,52 @@ Linux32x86Config >> buildType: aSymbol [
 	buildType:= aSymbol
 ]
 
-{ #category : #'squeak compatibility' }
+{ #category : #'source generation' }
 Linux32x86Config >> cogitClass [
-	"answer a class for machine code generation or nil"
-	
 	^ StackToRegisterMappingCogit 
 ]
 
-{ #category : #'squeak compatibility' }
+{ #category : #'compiler flags' }
 Linux32x86Config >> commonCompilerFlags [
-
-	"Common compiler flags
-	
-	
-	LSB_FIRST=1 means that target platform is little endian. 
-	set it to 0 for big-endian platforms
-	
-	"
-	
-	^ {
-		'-DLSB_FIRST=1'. 
-		'-DUSE_GLOBAL_STRUCT=0'. 
-		'-DCOGMTVM=0'. 
-		'-m32'.
-		'-DENABLE_FAST_BLT ' } 	
-	
+	self flag: 'tty'. "pull up common flags from subclasses on a refactoring pass."
+	^#()
 ]
 
-{ #category : #'squeak compatibility' }
-Linux32x86Config >> compilerFlags [ 
-	| releaseFlags |
-	
-	releaseFlags := self isGenerateForRelease 
-		ifTrue: [ self compilerFlagsRelease ]
-		ifFalse: [ self compilerFlagsDebug ].
-		
+{ #category : #'compiler flags' }
+Linux32x86Config >> compilerFlags [
+	|d |
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self compilerFlagsBuild];
+		at: #buildAssert  put: [self compilerFlagsAssert];
+		at: #buildAssertITimerHeartbeat  put: [self compilerFlagsAssertITimerHeartbeat];
+            at:#buildDebug  put: [self compilerFlagsDebug];   "located in CMakeVMMaker CPlatformConfig"
+		at: #buildDebugITimerHeartbeat  put: [self compilerFlagsDebugITimerHeartbeat ];
+		at: #buildDebugMultiThreaded  put: [self compilerFlagsDebugMultiThreaded];
+		at: #buildITimerHeartbeat  put: [self compilerFlagsIHeartbeatTimer];
+		at: #buildMultiThreaded  put: [self compilerFlagsMultiThreaded ];
+		at: #buildMultiThreadedAssert  put: [self compilerFlagsMultiThreadedAssert];
+		at: #buildMultiThreadedDebug   put: [self compilerFlagsMultiThreadedDebug ];
+		at: #buildNone put:[self compilerFlagsNoBuildType].
+     (d at:  buildType) value.
+
 	^ String streamContents: [ :stream |
-		((self commonCompilerFlags, releaseFlags)
+		((self commonCompilerFlags) collect: #withBlanksTrimmed as: Set)
 			asStringOn: stream 
-			delimiter: ' ' )]
+			delimiter: ' ' ]
+]
+
+{ #category : #cmake }
+Linux32x86Config >> compilerFlagsDebug [
+
+	^ {
+		'-g3'. 
+		'-O0'. 
+		'-msse2'. 
+		'-D_GNU_SOURCE'. 
+		'-DITIMER_HEARTBEAT=1'. 
+		'-DNO_VM_PROFILE=1'. 
+		'-DDEBUGVM=1' }
 ]
 
 { #category : #'squeak compatibility' }
@@ -342,6 +349,15 @@ Linux32x86Config >> configureNoBuildType [
 		generateBuild:=generateBuildAssert:=generateBuildAssertITimerHeartbeat:=generateBuildDebug:=generateBuildDebugITimerHeartbeat:= generateBuildDebugMultiThreaded:= generateBuildIHeartbeatTimer:= generateBuildMultiThreaded:= generateBuildMultiThreadedAssert:= generateBuildMultiThreadedDebug:=false.
 ]
 
+{ #category : #sources }
+Linux32x86Config >> coreSources [
+	"files to include from src/vm dir"
+	^ #(
+		'cogit.c'
+		'gcc3x-cointerp.c'
+		)
+]
+
 { #category : #plugins }
 Linux32x86Config >> defaultExternalPlugins [
 " tty 2014.06.10  cut-n-paste from Cog/build.linux32x86/newspeak.cog.spur/build/plugins.ext"
@@ -385,7 +401,7 @@ Linux32x86Config >> defaultInternalPlugins [
     FloatArrayPlugin
     FloatMathPlugin
     IA32ABIPlugin             "moduleName->IA32ABI"
-    InflatePlugin               "moduleName->ZipPlugin"
+   " InflatePlugin"               "moduleName->ZipPlugin"   "already included with the DeflatePlugin"
     JoystickTabletPlugin
     JPEGReaderPlugin
     JPEGReadWriter2Plugin
@@ -430,6 +446,23 @@ Linux32x86Config >> excludeFromBuild [
 	^true
 ]
 
+{ #category : #accessing }
+Linux32x86Config >> executableName [
+	self required
+]
+
+{ #category : #'plugin extra rules' }
+Linux32x86Config >> extraPluginSettings: maker [
+	super extraPluginSettings: maker.  
+	maker set: #linkFlags toString: '${linkFlags} -m32'
+]
+
+{ #category : #sources }
+Linux32x86Config >> extraSources [
+	self flag: 'tty'. "what is this?"
+	^ 'version.c'
+]
+
 { #category : #'squeak compatibility' }
 Linux32x86Config >> extraVMSettings: maker [
 	self generateConfigH.
@@ -449,6 +482,8 @@ char *ux_version= "<FAKE FROZEN VERSION FOR DEBUGGING PURPOSES>";
 
 { #category : #'squeak compatibility' }
 Linux32x86Config >> generate [
+	self generatePluginsList. 
+	self generateLicense. 
 	^ CMakeVMGeneratorForSqueak generate: self 
 ]
 
@@ -465,6 +500,13 @@ Linux32x86Config >> initialize [
 	 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
 ]
 
+{ #category : #accessing }
+Linux32x86Config >> linkFlags [
+	^ super linkFlags , ' -m32'
+
+
+]
+
 { #category : #cmake }
 Linux32x86Config >> oscogvm [
 	^ 'oscogvm'
@@ -477,6 +519,26 @@ Linux32x86Config >> outputDir [
 	^ outputDir ifNil: [ outputDir := (self topDir / self outputDirName) ]	
 
 
+]
+
+{ #category : #sources }
+Linux32x86Config >> platformSources [
+	"files added from platform/unix/vm dir "
+	^ #(
+	'aio.c'
+	'debug.c'
+"	'dlfcn-dyld.c'
+	'mac-alias.c' "
+	'osExports.c'
+	'sqUnixCharConv.c'
+"	'sqUnixEvent.c' "
+	'sqUnixExternalPrims.c'
+	'sqUnixHeartbeat.c'
+	'sqUnixMain.c'
+	'sqUnixMemory.c'
+	'sqUnixThreads.c'
+	'sqUnixVMProfile.c'
+	)
 ]
 
 { #category : #'squeak compatibility' }
