@@ -25,6 +25,12 @@ Linux32x86NewspeakCogV3Config >> excludeFromBuild [
 	^false
 ]
 
+{ #category : #'source generation' }
+Linux32x86NewspeakCogV3Config >> prepareForGeneration [
+	^ self prepareForCogGeneration
+
+]
+
 { #category : #'as yet unclassified' }
 Linux32x86NewspeakCogV3Config >> todo [
 	self flag:'tty'
