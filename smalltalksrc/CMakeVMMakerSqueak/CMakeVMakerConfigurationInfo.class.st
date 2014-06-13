@@ -30,12 +30,6 @@ CMakeVMakerConfigurationInfo >> availableBuildTypes [
 ]
 
 { #category : #accessing }
-CMakeVMakerConfigurationInfo >> buildDirectoriesForTarget [
-
-	^ buildDirectoriesForTarget
-]
-
-{ #category : #accessing }
 CMakeVMakerConfigurationInfo >> dirBuildPlatform [
 
 	^ dirBuildPlatform

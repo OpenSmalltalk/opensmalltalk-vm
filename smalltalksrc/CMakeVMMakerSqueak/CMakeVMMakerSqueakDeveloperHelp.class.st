@@ -4,9 +4,79 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Help'
 }
 
+{ #category : #pages }
+CMakeVMMakerSqueakDeveloperHelp class >> availableBuilds [
+	^HelpTopic
+		title:'configuring available build types'
+		contents:
+'The purpose of this method is to present the end user with the avaiable buildTypes for a configuration category. when they invoke a Builder like so:
+
+	SqueakLinux32X86Builder availableBuildTypesFor: #Linux32x86SqueakStackV3Config
+
+Since builds are sometimes not available and/or under development  a developer may wish to restrict what build types are avaiable for a configurations Builder by modifying the configuration''s "availableBuilds" method.
+
+The default is all buildTypes: 
+	^SqueakCMakeVMMakerAbstractBuilder  default  allBuildConfigurations
+
+You can display no buildTypes with:
+	^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations.
+
+or you can customize it like so:
+	^(SqueakCMakeVMMakerAbstractBuilder  default  allBuildConfigurations 
+			copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))  
+
+
+'
+]
+
 { #category : #accessing }
 CMakeVMMakerSqueakDeveloperHelp class >> bookName [ 
 	^'Developer''s Guide'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakDeveloperHelp class >> excludeFromBuild [
+	^HelpTopic
+		title:'Excluding a Configuration From Builds'
+		contents:
+' The "excludeFromBuild" method in a concrete configuration can be manually toggled to exclude or include a configuration from being built by a builder.
+
+	excludeFromBuild
+		"over-ride to exclude yourself from a build"
+		^false
+
+
+  Be careful witht he logic. True excludes the configuration. False includes the configuration
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakDeveloperHelp class >> executableName [
+	^HelpTopic
+		title:'set executable name'
+		contents:
+'
+In your concrete configuration, set the exectuable name in method "executableName"
+
+SystemNavigation default browseMethodsWhoseNamesContain: ''executableName''
+
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakDeveloperHelp class >> extraPluginSettings [
+	^HelpTopic
+		title:'set extra plugin settings'
+		contents:
+'In your concrete configuration configure "extraPluginSettings"
+
+SystemNavigation default browseMethodsWhoseNamesContain: ''extraPluginSettings''
+
+
+look at the differences in the concrete implementations, especially by platform type.	
+
+'
 ]
 
 { #category : #pages }
@@ -47,7 +117,7 @@ The end result is a CMake evironment that is set up to correctly build a VM
 
 { #category : #pages }
 CMakeVMMakerSqueakDeveloperHelp class >> pages [
-	^#(overview prerequisites igorStasenkoDesign plugins scratch)
+	^#(overview prerequisites igorStasenkoDesign plugins availableBuilds excludeFromBuild executableName extraPluginSettings preferredIncludes setExtraTargetProperties scratch)
 ]
 
 { #category : #pages }
@@ -70,6 +140,16 @@ InterpreterPlugin allSubclassesDo:[:p|
 '
 
 
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakDeveloperHelp class >> preferredIncludes [
+	^HelpTopic
+		title:'configuring preferred includes'
+		contents:
+'
+SystemNavigation default browseMethodsWhoseNamesContain: ''preferredIncludes'' 
+'
 ]
 
 { #category : #pages }
@@ -541,6 +621,34 @@ char *ux_version= "<FAKE FROZEN VERSION FOR DEBUGGING PURPOSES>";
 
 
 
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakDeveloperHelp class >> setExtraTargetProperties [
+	^HelpTopic
+		title:'set extra target properties'
+		contents:
+'
+SystemNavigation default browseMethodsWhoseNamesContain: ''setExtraTargetProperties'' 
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakDeveloperHelp class >> settingCompilerFlags [
+	^HelpTopic
+		title:'Setting Compiler Flags for a build'
+		contents:
+'Each buildType (SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo) may require custom compiler flags.
+
+Trait TCPlatformConfigForSqueak compilerFlags method provides a method lookup that is invoked for a specific buildType.
+These methods are named compilerFlagsXYZ corresponding to the buildTypes displayed above.
+
+In the compilerFlagsXYZ method for your concrete configuration, you set the internal state of your configuration.
+
+Note: there are two legacy internal states from CPlatformConfig in CMakeVMMaker for pharo "compilerFlagsDebug" and "compilerFlagsRelease" that are invoked
+for backwards compatibility.
 
 '
 ]

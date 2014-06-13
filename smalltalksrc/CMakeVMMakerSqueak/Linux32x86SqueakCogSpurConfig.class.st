@@ -27,6 +27,12 @@ Linux32x86SqueakCogSpurConfig >> excludeFromBuild [
 	^false
 ]
 
+{ #category : #'source generation' }
+Linux32x86SqueakCogSpurConfig >> prepareForGeneration [
+	^ self prepareForCogGeneration
+
+]
+
 { #category : #'as yet unclassified' }
 Linux32x86SqueakCogSpurConfig >> todo [
 	self flag:'tty'

@@ -384,7 +384,8 @@ SqueakCMakeVMMakerAbstractBuilder >> initializeBuildTypeAndDirectoryInfo [
 			at: #buildITimerHeartbeat put: 'build.itimerheartbeat';
 			at: #buildMultiThreaded put: 'build.multithreaded';
 			at: #buildMultiThreadedAssert put: 'build.multithreaded.assert';
-			at: #buildMultiThreadedDebug put: 'build.multithreaded.debug'.
+			at: #buildMultiThreadedDebug put: 'build.multithreaded.debug';
+			at: #buildNone put: 'build.should.not.happen'.
 
 ]
 

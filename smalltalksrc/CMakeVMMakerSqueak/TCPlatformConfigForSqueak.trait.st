@@ -114,9 +114,232 @@ TCPlatformConfigForSqueak >> buildType: aSymbol [
 	self required.
 ]
 
-{ #category : #'squeak compatibility' }
+{ #category : #'source generation' }
+TCPlatformConfigForSqueak >> cogitClass [
+	"answer a class for machine code generation or nil"
+	^ StackToRegisterMappingCogit 
+
+
+
+]
+
+{ #category : #'compiler flags' }
+TCPlatformConfigForSqueak >> commonCompilerFlags [
+	^#()
+]
+
+{ #category : #'compiler flags' }
 TCPlatformConfigForSqueak >> compilerFlags [
 	self required
+]
+
+{ #category : #'compiler flags' }
+TCPlatformConfigForSqueak >> compilerFlagsAssert [
+	self required
+]
+
+{ #category : #'compiler flags' }
+TCPlatformConfigForSqueak >> compilerFlagsAssertITimerHeartbeat [
+	self required
+]
+
+{ #category : #'compiler flags' }
+TCPlatformConfigForSqueak >> compilerFlagsBuild [
+	"backwards compatability with pharo. If adding, override compilerFlagsRelease in your configuration."
+	^self compilerFlagsRelease.
+]
+
+{ #category : #'compiler flags' }
+TCPlatformConfigForSqueak >> compilerFlagsDebug [
+	self required
+]
+
+{ #category : #'compiler flags' }
+TCPlatformConfigForSqueak >> compilerFlagsDebugITimerHeartbeat [
+	self required
+]
+
+{ #category : #'compiler flags' }
+TCPlatformConfigForSqueak >> compilerFlagsDebugMultiThreaded [
+	self required
+]
+
+{ #category : #'compiler flags' }
+TCPlatformConfigForSqueak >> compilerFlagsIHeartbeatTimer [
+	self required
+]
+
+{ #category : #'compiler flags' }
+TCPlatformConfigForSqueak >> compilerFlagsMultiThreaded [
+	self required
+]
+
+{ #category : #'compiler flags' }
+TCPlatformConfigForSqueak >> compilerFlagsMultiThreadedAssert [
+	self required
+]
+
+{ #category : #'compiler flags' }
+TCPlatformConfigForSqueak >> compilerFlagsMultiThreadedDebug [
+	self required
+]
+
+{ #category : #'compiler flags' }
+TCPlatformConfigForSqueak >> compilerFlagsNoBuildType [
+	self shouldNotImplement.
+]
+
+{ #category : #'headers generation' }
+TCPlatformConfigForSqueak >> configH [
+	" right now its like  that "
+	^ '
+#ifndef __sq_config_h
+#define __sq_config_h
+
+/* explicit image width */
+
+#define HAVE_INTERP_H 1
+
+/* package options */
+
+#define USE_X11 1
+#define USE_X11_GLX 1
+/* #undef       USE_QUARTZ */
+/* #undef       USE_QUARTZ_CGL */
+/* #undef       USE_RFB */
+
+/* libraries */
+
+/* #undef       HAVE_LIBX11 */
+#define HAVE_LIBXEXT 1
+#define HAVE_LIBDL 1
+/* #undef       HAVE_DYLD */
+/* #undef       HAVE_LIBFFI */
+/* #undef       HAVE_ICONV */
+
+/* #undef       USE_AUDIO_NONE */
+/* #undef       USE_AUDIO_SUN */
+/* #undef       USE_AUDIO_NAS */
+/* #undef       USE_AUDIO_OSS */
+/* #undef       USE_AUDIO_MACOSX */
+/* #undef       OSS_DEVICE */
+
+/* header files */
+
+#define HAVE_UNISTD_H 1
+/* #undef       NEED_GETHOSTNAME_P */
+
+#define HAVE_DIRENT_H 1
+/* #undef       HAVE_SYS_NDIR_H */
+/* #undef       HAVE_SYS_DIR_H */
+/* #undef       HAVE_NDIR_H */
+#define HAVE_DLFCN_H 1
+/* #undef       HAVE_ICONV_H */
+
+#define HAVE_SYS_TIME_H 1
+#define TIME_WITH_SYS_TIME 1
+
+#define HAVE_SYS_FILIO_H 1
+
+/* #undef       HAVE_SYS_AUDIOIO_H */
+/* #undef       HAVE_SUN_AUDIOIO_H */
+
+/* #undef       HAVE_PTY_H */
+/* #undef       HAVE_UTIL_H */
+#define HAVE_LIBUTIL_H 1
+/* #undef       HAVE_STROPTS_H */
+
+#define HAVE_GL_GL_H 1
+/* #undef       HAVE_OPENGL_GL_H */
+
+/* #undef       NEED_SUNOS_H */
+
+
+#define HAVE_UUID_H
+/* system calls/library functions */
+
+#define AT_EXIT atexit
+
+#define HAVE_TZSET 1
+
+#define HAVE_OPENPTY 1
+/* #undef       HAVE_UNIX98_PTYS */
+
+#define HAVE_SNPRINTF 1
+/* #undef       HAVE___SNPRINTF */
+
+#define HAVE_MMAP 1
+
+/* #undef       HAVE_DYLD */
+
+#define HAVE_LANGINFO_CODESET 1
+
+#define HAVE_ALLOCA 1
+/* #undef       HAVE_ALLOCA_H */
+
+#define HAVE_UNSETENV 1
+
+#define HAVE_NANOSLEEP 1
+
+/* widths of primitive types */
+
+#define SIZEOF_INT 4
+#define SIZEOF_LONG 4
+#define SIZEOF_LONG_LONG 8
+#define SIZEOF_VOID_P 4
+
+/* structures */
+
+#define HAVE_TM_GMTOFF 1
+#define HAVE_TIMEZONE 1
+
+/* typedefs */
+
+/* #undef       size_t */
+/* #undef       socklen_t */
+
+#define squeakInt64 long long
+
+/* architecture */
+
+#define OS_TYPE "unix"
+
+#define VM_HOST "i386-freebsd8.2"
+#define VM_HOST_CPU "i386"
+/* #undef       VM_HOST_VENDOR */
+#define VM_HOST_OS "freebsd8.2"
+#define VM_BUILD_STRING "Unix built on "__DATE__ " "__TIME__" Compiler: "__VERSION__
+
+/* #undef       WORDS_BIGENDIAN */
+/* #undef       DOUBLE_WORD_ALIGNMENT */
+
+/* damage containment */
+
+/* #undef       DARWIN */
+
+#ifdef NEED_SUNOS_H
+# include "sunos.h"
+#endif
+
+/* other configured variables */
+
+#define SQ_VERSION "3.9a-7024"
+#define VM_VERSION "3.9-7"
+#define VM_MODULE_PREFIX ""
+/* #undef VM_DLSYM_PREFIX */
+#define VM_X11DIR "/usr/X11R6/lib"
+
+/* avoid dependencies on glibc2.3 */
+
+/* #undef HAVE_FEATURES_H */
+
+#if defined(HAVE_FEATURES_H)
+# include "glibc.h"
+#endif
+
+#endif /* __sq_config_h */
+																																																																					
+																																																																				'
 ]
 
 { #category : #cmake }
@@ -373,6 +596,90 @@ TCPlatformConfigForSqueak >> excludeFromBuild [
 
 ]
 
+{ #category : #accessing }
+TCPlatformConfigForSqueak >> executableName [
+	self required.
+
+"browse subclasses of CPLatformConfig for context
+^'CogVM'
+^ 'CogMTVM'
+^ 'EventVM'.
+^'iStackVMSimulator'
+^ 'iStackVM'
+^'Squeak'
+^ 'StackVM'
+
+
+
+"
+]
+
+{ #category : #'plugin extra rules' }
+TCPlatformConfigForSqueak >> extraPluginSettings: maker [
+	super extraPluginSettings: maker.  
+"	This is a very active method depending on Platform 
+
+	CPlatformConfig browse.
+	
+"
+]
+
+{ #category : #accessing }
+TCPlatformConfigForSqueak >> generate [
+	self generatePluginsList. 
+	self generateLicense. 
+	^ CMakeVMGeneratorForSqueak generate: self 
+]
+
+{ #category : #'headers generation' }
+TCPlatformConfigForSqueak >> generateConfigH [
+	"will fix that later"
+	self write: self configH toFile: 'config.h'
+]
+
+{ #category : #accessing }
+TCPlatformConfigForSqueak >> generateLicense [ 
+	self 
+		write:  (self class licenseTemplate 
+			format: { self version })
+		toFile: 'LICENSE.txt'
+	
+]
+
+{ #category : #accessing }
+TCPlatformConfigForSqueak >> generatePluginsList [ 
+	self 
+		write:  (self class pluginsTemplate 
+			format: {
+				self version. 
+				String streamContents: [ :stream | self internalPlugins asStringOn: stream delimiter: String cr ].
+				String streamContents: [ :stream | self externalPlugins asStringOn: stream delimiter: String cr ].
+				self executableName })
+		toFile: 'PLUGINS.txt'
+	
+]
+
+{ #category : #'source generation' }
+TCPlatformConfigForSqueak >> interpreterClass [
+	self required.
+	"
+	^ CoInterpreter
+	^ CoInterpreterMT
+	^ StackInterpreter
+	^ StackEvtAndroidInterpreter
+	??other
+	"
+]
+
+{ #category : #accessing }
+TCPlatformConfigForSqueak >> linkFlags [
+	self required
+
+"example:
+	^ super linkFlags , ' -m32'
+"
+]
+
 { #category : #cmake }
 TCPlatformConfigForSqueak >> newspeakCogSpur [
 	^'newspeak.cog.spur'
@@ -413,6 +720,35 @@ TCPlatformConfigForSqueak >> outputDir [
 	self required
 
 
+]
+
+{ #category : #'source files' }
+TCPlatformConfigForSqueak >> preferredIncludes [
+	^ #()
+
+"SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'"
+	
+]
+
+{ #category : #'source generation' }
+TCPlatformConfigForSqueak >> prepareForGeneration [
+	self required
+
+	"^self prepareForCogGeneration
+	  ^self prepareForStackVMGeneration
+		
+	  CPlatformConfig browse"
+
+]
+
+{ #category : #utils }
+TCPlatformConfigForSqueak >> setExtraTargetProperties: maker [
+	"override me if needed. Super call is to CPlatformConfig which does nothing"
+	super setExtraTargetProperties: maker.
+"
+SystemNavigation default browseMethodsWhoseNamesContain: 'setExtraTargetProperties:' 
+
+"
 ]
 
 { #category : #'squeak compatibility' }
@@ -463,6 +799,11 @@ TCPlatformConfigForSqueak >> topDir [
 { #category : #'squeak compatibility' }
 TCPlatformConfigForSqueak >> validateSourcesPresent [
 	self required
+]
+
+{ #category : #accessing }
+TCPlatformConfigForSqueak >> version [
+	^ ''
 ]
 
 { #category : #'squeak compatibility' }
