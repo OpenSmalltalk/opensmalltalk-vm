@@ -117,7 +117,7 @@ VMMaker class >> chooseCoInterpreterClassIfAbsent: ifAbsentBlock [
 ]
 
 { #category : #'confs-support' }
-VMMaker class >> configuirationNameFromSelector: aSelector [
+VMMaker class >> configurationNameFromSelector: aSelector [
 	^(aSelector piecesCutWhere: [:a :b| a isLowercase and: [b isUppercase]]) allButFirst fold: [:a :b| a, ' ', b]
 ]
 
@@ -350,7 +350,7 @@ VMMaker class >> generateConfiguration [
 	selectors remove: thisContext selector.
 	selectors := selectors asArray sort.
 	(UIManager default
-			chooseFrom: (selectors collect: [:sel| self configuirationNameFromSelector: sel])
+			chooseFrom: (selectors collect: [:sel| self configurationNameFromSelector: sel])
 			values: selectors) ifNotNil:
 		[:choice|
 		self perform: choice]
@@ -476,7 +476,8 @@ VMMaker class >> generateSqueakCogVMWithInterpreterClass: interpreterClass optio
 					SoundCodecPlugin SoundGenerationPlugin SoundPlugin SqueakSSLPlugin StarSqueakPlugin
 					ThreadedFFIPlugin ThreadedARMFFIPlugin ThreadedIA32FFIPlugin
 					UnicodePlugin UnixAioPlugin UUIDPlugin UnixOSProcessPlugin
-					Win32OSProcessPlugin VMProfileLinuxSupportPlugin VMProfileMacSupportPlugin WeDoPlugin)
+					Win32OSProcessPlugin VMProfileLinuxSupportPlugin VMProfileMacSupportPlugin WeDoPlugin
+					XDisplayControlPlugin)
 ]
 
 { #category : #configurations }
@@ -889,7 +890,7 @@ VMMaker >> configurationInfo [
 { #category : #'generate sources' }
 VMMaker >> configurationNameIfAny [
 	^self configurationGeneratorNameOrNil
-		ifNotNil: [:ctxt| (self class configuirationNameFromSelector: ctxt selector), ' ']
+		ifNotNil: [:ctxt| (self class configurationNameFromSelector: ctxt selector), ' ']
 		ifNil: [' ']
 ]
 
