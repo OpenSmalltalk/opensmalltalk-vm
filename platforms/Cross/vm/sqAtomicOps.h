@@ -238,7 +238,7 @@ AtomicGet(uint64_t *target)
 	__sync_bool_compare_and_swap(&(var), (old), (new))
 
 # define sqCompareAndSwapRes(var,old,new,res) \
-	__sync_val_compare_and_swap(&(var), (old), (new))
+	(res = __sync_val_compare_and_swap(&(var), (old), (new)))
 
 #else
 /* Dear implementor, you have choices.  Google atomic increment and you will
