@@ -5,4 +5,5 @@ SqueakFFIPrims \
 SqueakSSL \
 LocalePlugin \
 UnixOSProcessPlugin \
-UUIDPlugin
+UUIDPlugin \
+XDisplayControlPlugin
