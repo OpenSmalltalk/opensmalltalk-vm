@@ -17,9 +17,28 @@ Class {
 
 { #category : #accessing }
 SqueakMacOSCogV3DebugConfig >> compilerFlags [
-    ^ String streamContents:  [ :stream |
-	self commonCompilerFlags asStringOn: stream delimiter: ' '. 
-	self compilerFlagsDebug asStringOn: stream delimiter: ' ' ]
+	|d releaseFlags|
+	self break.
+	releaseFlags := self isGenerateForRelease .
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self compilerFlagsBuild];
+		at: #buildAssert  put: [self compilerFlagsAssert];
+		at: #buildAssertITimerHeartbeat  put: [self compilerFlagsAssertITimerHeartbeat];
+            at:#buildDebug  put: [self compilerFlagsDebug];   "located in CMakeVMMaker CPlatformConfig"
+		at: #buildDebugITimerHeartbeat  put: [self compilerFlagsDebugITimerHeartbeat ];
+		at: #buildDebugMultiThreaded  put: [self compilerFlagsDebugMultiThreaded];
+		at: #buildITimerHeartbeat  put: [self compilerFlagsIHeartbeatTimer];
+		at: #buildMultiThreaded  put: [self compilerFlagsMultiThreaded ];
+		at: #buildMultiThreadedAssert  put: [self compilerFlagsMultiThreadedAssert];
+		at: #buildMultiThreadedDebug   put: [self compilerFlagsMultiThreadedDebug ];
+		at: #buildNone put:[self compilerFlagsNoBuildType].
+     (d at: self buildType) value.
+
+	^ String streamContents: [ :stream |
+		((self commonCompilerFlags, releaseFlags)
+			asStringOn: stream 
+			delimiter: ' ' )]
 ]
 
 { #category : #cmake }

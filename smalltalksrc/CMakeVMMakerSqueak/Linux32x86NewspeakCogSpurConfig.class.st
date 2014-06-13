@@ -25,6 +25,12 @@ Linux32x86NewspeakCogSpurConfig >> excludeFromBuild [
 	^false
 ]
 
+{ #category : #'source generation' }
+Linux32x86NewspeakCogSpurConfig >> prepareForGeneration [
+	^ self prepareForCogGeneration
+
+]
+
 { #category : #'as yet unclassified' }
 Linux32x86NewspeakCogSpurConfig >> todo [
 	self flag:'tty'
