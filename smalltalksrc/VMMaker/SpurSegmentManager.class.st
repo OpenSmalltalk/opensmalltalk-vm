@@ -81,7 +81,7 @@ SpurSegmentManager >> addSegmentOfSize: ammount [
 	self cCode: [] inSmalltalk: [segments ifNil: [^nil]]. "bootstrap"
 	(manager "sent to the manager so that the simulator can increase memory to simulate a new segment"
 			sqAllocateMemorySegmentOfSize: ammount
-			Above: (segments at: 0) segLimit asVoidPointer
+			Above: (self firstGapOfSizeAtLeast: ammount)
 			AllocatedSizeInto: (self cCode: [self addressOf: allocatedSize]
 									inSmalltalk: [[:sz| allocatedSize := sz]])) ifNotNil:
 		[:segAddress| | newSegIndex newSeg |
@@ -254,6 +254,17 @@ SpurSegmentManager >> findEmptySegNearestInSizeTo: size [
 					 and: [(seg segSize - size) abs < delta]) ifTrue:
 						[best := seg. delta := (seg segSize - size) abs]]]].
 	^best
+]
+
+{ #category : #'growing/shrinking memory' }
+SpurSegmentManager >> firstGapOfSizeAtLeast: size [
+	"Answer the segment limit of the first segment followed by a gap of at least size bytes."
+	0 to: numSegments - 2 do:
+		[:i| | bridge |
+		bridge := self bridgeAt: i.
+		(manager bytesInObject: bridge) - manager bridgeSize >= size ifTrue:
+			[^(segments at: i) segLimit asVoidPointer]].
+	^(segments at: numSegments - 1) segLimit asVoidPointer
 ]
 
 { #category : #snapshot }

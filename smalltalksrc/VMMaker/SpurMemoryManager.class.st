@@ -484,7 +484,6 @@ Class {
 		'weaklingStack',
 		'freeLists',
 		'freeListsMask',
-		'lastSubdividedFreeChunk',
 		'lastHash',
 		'signalLowSpace',
 		'checkForLeaks',
@@ -606,7 +605,7 @@ SpurMemoryManager class >> classTableBitmapBytes [
 { #category : #translation }
 SpurMemoryManager class >> declareCVarsIn: aCCodeGenerator [
 	self declareCAsOop: #(	memory freeStart scavengeThreshold newSpaceStart newSpaceLimit pastSpaceStart
-							lowSpaceThreshold freeOldSpaceStart oldSpaceStart endOfMemory sortedFreeChunks)
+							lowSpaceThreshold freeOldSpaceStart oldSpaceStart endOfMemory firstFreeChunk lastFreeChunk)
 		in: aCCodeGenerator.
 	self declareCAsUSqLong: (self allInstVarNames select: [:ivn| ivn endsWith: 'Usecs'])
 		in: aCCodeGenerator.
@@ -1778,7 +1777,6 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes suchThat: acceptan
 	 The caller *must* fill in the header correctly."
 	| initialIndex node next prev index child childBytes acceptedChunk acceptedNode |
 	<inline: true> "must inline for acceptanceBlock"
-	self assert: (lastSubdividedFreeChunk := 0) = 0.
 	"for debugging:" "totalFreeOldSpace := self totalFreeListBytes"
 	totalFreeOldSpace := totalFreeOldSpace - chunkBytes. "be optimistic (& don't wait for the write)"
 	initialIndex := chunkBytes / self allocationUnit.
@@ -3689,6 +3687,7 @@ SpurMemoryManager >> eliminateAndFreeForwardersForPigCompact [
 	 forwarders, then free forwarders, coalescing with free space as we go."
 	<inline: false>
 	| lowestForwarder |
+	<var: #lowestForwarder type: #usqInt>
 	self assert: (self isForwarded: nilObj) not.
 	self assert: (self isForwarded: falseObj) not.
 	self assert: (self isForwarded: trueObj) not.
@@ -5788,7 +5787,8 @@ SpurMemoryManager >> isForwarded: objOop [
 	"Answer if objOop is that if a forwarder.  Take advantage of isForwardedObjectClassIndexPun
 	 being a power of two to generate a more efficient test than the straight-forward
 		(self classIndexOf: objOop) = self isForwardedObjectClassIndexPun
-	"
+	 at the cost of this being ambiguous with free chunks.  So either never apply this to free chunks
+	 or guard with (self isFreeObject: foo) not.  So far the idiom has been to guard with isFreeObject:"
 	<api>
 	^(self longAt: objOop) noMask: self classIndexMask - self isForwardedObjectClassIndexPun
 ]
@@ -7442,7 +7442,7 @@ SpurMemoryManager >> numberOfForwarders [
 	n := 0.
 	self allHeapEntitiesDo:
 		[:o|
-		(self isForwarded: o) ifTrue:
+		((self isForwarded: o) and: [(self isFreeObject: o) not]) ifTrue:
 			[n := n + 1]].
 	^n
 ]
@@ -7901,7 +7901,7 @@ SpurMemoryManager >> printForwarders [
 	<api>
 	self allHeapEntitiesDo:
 		[:objOop|
-		 (self isForwarded: objOop) ifTrue:
+		 ((self isForwarded: objOop) and: [(self isFreeObject: objOop) not]) ifTrue:
 			[coInterpreter printHex: objOop; cr]]
 ]
 
@@ -8118,14 +8118,15 @@ SpurMemoryManager >> printObjectsFrom: startAddress to: endAddress [
 { #category : #'debug printing' }
 SpurMemoryManager >> printOopsFrom: startAddress to: endAddress [
 	<api>
-	| oop |
+	| oop limit |
 	oop := self objectBefore: startAddress.
+	limit := endAddress asUnsignedLong min: endOfMemory.
 	oop := oop
 				ifNil: [startAddress]
 				ifNotNil: [(self objectAfter: oop) = startAddress
 							ifTrue: [startAddress]
 							ifFalse: [oop]].
-	[self oop: oop isLessThan: endAddress] whileTrue:
+	[self oop: oop isLessThan: limit] whileTrue:
 		[coInterpreter
 			printHex: oop; print: '/'; printNum: oop; space;
 			print: ((self isFreeObject: oop) ifTrue: ['free'] ifFalse:
@@ -9004,6 +9005,10 @@ SpurMemoryManager >> sortFreeListAt: i [
 SpurMemoryManager >> sortedFreeListDo: aBlock [
 	"Evaluate aBlock with ascending entries in the free list"
 	| free nextFree prevFree prevPrevFree |
+	<var: #free type: #usqInt>
+	<var: #nextFree type: #usqInt>
+	<var: #prevFree type: #usqInt>
+	<var: #prevPrevFree type: #usqInt>
 	<inline: true>
 	free := firstFreeChunk.
 	prevPrevFree := prevFree := 0.
@@ -9025,6 +9030,9 @@ SpurMemoryManager >> sortedFreeListPairwiseReverseDo: aBinaryBlock [
 	 start of the next free chunk, not the free chunk itself.  Use
 	 endOfMemory - bridgeSize as the second argument in the first evaluation."
 	| free prevFree prevPrevFree |
+	<var: #free type: #usqInt>
+	<var: #prevFree type: #usqInt>
+	<var: #prevPrevFree type: #usqInt>
 	<inline: true>
 	free := lastFreeChunk.
 	prevPrevFree := prevFree := 0.
@@ -9471,6 +9479,7 @@ SpurMemoryManager >> sufficientSpaceToInstantiate: classObj indexableSize: index
 SpurMemoryManager >> sweepToCoallesceFreeSpaceForPigCompactFrom: lowestForwarder [
 	"Coallesce free chunks and forwarders, maintaining the doubly-linked free list."
 	| lowest firstOfFreeRun startOfFreeRun endOfFreeRun prevPrevFree prevFree |
+	<var: #lowestForwarder type: #usqInt>
 	lowest := (lowestForwarder = 0 ifTrue: [endOfMemory] ifFalse: [lowestForwarder])
 				min: (firstFreeChunk = 0 ifTrue: [endOfMemory] ifFalse: [firstFreeChunk]).
 	firstOfFreeRun := prevPrevFree := prevFree := 0.
@@ -9536,6 +9545,7 @@ SpurMemoryManager >> sweepToFollowForwardersForPigCompact [
 	"Sweep, following forwarders in all live objects.
 	 Answer the lowest forwarder in oldSpace."
 	| lowestForwarder |
+	<var: #lowestForwarder type: #usqInt>
 	self assert: (freeStart = scavenger eden start
 				  and: [scavenger futureSurvivorStart = scavenger futureSpace start]).
 	self allPastSpaceObjectsDo:
