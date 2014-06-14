@@ -10,6 +10,8 @@
 		73027B6B17012E5F0086D8E4 /* SqueakSSL.c in Sources */ = {isa = PBXBuildFile; fileRef = 73027B6A17012E5F0086D8E4 /* SqueakSSL.c */; };
 		732D9F4317012B6E00E25893 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 732D9F4117012B6E00E25893 /* Security.framework */; };
 		732D9F4417012B6E00E25893 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 732D9F4217012B6E00E25893 /* CoreFoundation.framework */; };
+		73CEDF26194BF52D005C12A4 /* libcrypto.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 73CEDF25194BF52D005C12A4 /* libcrypto.dylib */; };
+		73CEDF28194BF53B005C12A4 /* libssl.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 73CEDF27194BF53B005C12A4 /* libssl.dylib */; };
 		73D8A6421701272700C66275 /* sqMacSSL.c in Sources */ = {isa = PBXBuildFile; fileRef = 73D8A6411701272700C66275 /* sqMacSSL.c */; };
 /* End PBXBuildFile section */
 
@@ -19,6 +21,8 @@
 		732D9F4117012B6E00E25893 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = /System/Library/Frameworks/Security.framework; sourceTree = "<absolute>"; };
 		732D9F4217012B6E00E25893 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = /System/Library/Frameworks/CoreFoundation.framework; sourceTree = "<absolute>"; };
 		73811791170128D400CB30CE /* sq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sq.h; path = ../../../platforms/Cross/vm/sq.h; sourceTree = SOURCE_ROOT; };
+		73CEDF25194BF52D005C12A4 /* libcrypto.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.dylib; path = usr/lib/libcrypto.dylib; sourceTree = SDKROOT; };
+		73CEDF27194BF53B005C12A4 /* libssl.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libssl.dylib; path = usr/lib/libssl.dylib; sourceTree = SDKROOT; };
 		73D8A62E1701259800C66275 /* SqueakSSL.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SqueakSSL.h; path = ../../../platforms/Cross/plugins/SqueakSSL/SqueakSSL.h; sourceTree = SOURCE_ROOT; };
 		73D8A6411701272700C66275 /* sqMacSSL.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sqMacSSL.c; path = "../../../platforms/Mac OS/plugins/SqueakSSL/sqMacSSL.c"; sourceTree = SOURCE_ROOT; };
 		8D01CCD10486CAD60068D4B7 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -38,6 +42,8 @@
 			files = (
 				732D9F4317012B6E00E25893 /* Security.framework in Frameworks */,
 				732D9F4417012B6E00E25893 /* CoreFoundation.framework in Frameworks */,
+				73CEDF26194BF52D005C12A4 /* libcrypto.dylib in Frameworks */,
+				73CEDF28194BF53B005C12A4 /* libssl.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -50,6 +56,8 @@
 				08FB77ADFE841716C02AAC07 /* Source */,
 				089C167CFE841241C02AAC07 /* Resources */,
 				19C28FB4FE9D528D11CA2CBB /* Products */,
+				73CEDF25194BF52D005C12A4 /* libcrypto.dylib */,
+				73CEDF27194BF53B005C12A4 /* libssl.dylib */,
 			);
 			name = SqueakSSL;
 			sourceTree = "<group>";
