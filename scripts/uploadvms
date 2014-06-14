@@ -151,4 +151,4 @@ ssh -x $RemoteUser mkdir $RemoteRoot/VM.r$REV
 echo scp -p ChangeHistory ../history/README.$REV $ARCHIVES "$@" $RemoteUser:$RemoteRoot/VM.r$REV
 scp -p ChangeHistory ../history/README.$REV $ARCHIVES "$@" $RemoteUser:$RemoteRoot/VM.r$REV
 echo ssh $RemoteUser $RemoteRoot/VM.r$REV/* \\\; ls -al $RemoteRoot/VM.r$REV
-ash $RemoteUser chmod a-w $RemoteRoot/VM.r$REV/* \; ls -al $RemoteRoot/VM.r$REV
+ssh $RemoteUser chmod a-w $RemoteRoot/VM.r$REV/* \; ls -al $RemoteRoot/VM.r$REV
