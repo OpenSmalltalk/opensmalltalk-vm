@@ -188,17 +188,32 @@ Linux32x86SqueakStackV3Configz >> commonCompilerFlags [
 ]
 
 { #category : #'squeak compatibility' }
-Linux32x86SqueakStackV3Configz >> compilerFlags [ 
-	| releaseFlags |
-	
-	releaseFlags := self isGenerateForRelease 
-		ifTrue: [ self compilerFlagsRelease ]
-		ifFalse: [ self compilerFlagsDebug ].
-		
-	^ String streamContents: [ :stream |
-		((self commonCompilerFlags, releaseFlags)
+Linux32x86SqueakStackV3Configz >> compilerFlags [
+	|d commonFlags flags|
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self compilerFlagsBuild];
+		at: #buildAssert  put: [self compilerFlagsAssert];
+		at: #buildAssertITimerHeartbeat  put: [self compilerFlagsAssertITimerHeartbeat];
+            at:#buildDebug  put: [self compilerFlagsDebug];   "located in CMakeVMMaker CPlatformConfig"
+		at: #buildDebugITimerHeartbeat  put: [self compilerFlagsDebugITimerHeartbeat ];
+		at: #buildDebugMultiThreaded  put: [self compilerFlagsDebugMultiThreaded];
+		at: #buildITimerHeartbeat  put: [self compilerFlagsIHeartbeatTimer];
+		at: #buildMultiThreaded  put: [self compilerFlagsMultiThreaded ];
+		at: #buildMultiThreadedAssert  put: [self compilerFlagsMultiThreadedAssert];
+		at: #buildMultiThreadedDebug   put: [self compilerFlagsMultiThreadedDebug ];
+		at: #buildNone put:[self compilerFlagsNoBuildType].
+
+    flags:= String streamContents: [ :stream |
+	 (((d at:  buildType) value)  collect: #withBlanksTrimmed as: Set)
+		asStringOn: stream 
+		delimiter:' '].
+
+    commonFlags:=String streamContents: [ :stream |
+		((self commonCompilerFlags) collect: #withBlanksTrimmed as: Set)
 			asStringOn: stream 
-			delimiter: ' ' )]
+			delimiter: ' ' ].
+	^ commonFlags, ' ' ,flags.
 ]
 
 { #category : #cmake }

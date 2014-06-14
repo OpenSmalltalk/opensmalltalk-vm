@@ -233,9 +233,7 @@ SqueakWin32x86CogFamilyConfig >> commonCompilerFlags [
 
 { #category : #directories }
 SqueakWin32x86CogFamilyConfig >> compilerFlags [
-	|d releaseFlags|
-	self break.
-	releaseFlags := self isGenerateForRelease .
+	|d commonFlags flags|
 	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
 	d 
 		at: #build put: [self compilerFlagsBuild];
@@ -249,12 +247,17 @@ SqueakWin32x86CogFamilyConfig >> compilerFlags [
 		at: #buildMultiThreadedAssert  put: [self compilerFlagsMultiThreadedAssert];
 		at: #buildMultiThreadedDebug   put: [self compilerFlagsMultiThreadedDebug ];
 		at: #buildNone put:[self compilerFlagsNoBuildType].
-     (d at: self buildType) value.
 
-	^ String streamContents: [ :stream |
-		((self commonCompilerFlags, releaseFlags)
+    flags:= String streamContents: [ :stream |
+	 (((d at:  buildType) value)  collect: #withBlanksTrimmed as: Set)
+		asStringOn: stream 
+		delimiter:' '].
+
+    commonFlags:=String streamContents: [ :stream |
+		((self commonCompilerFlags) collect: #withBlanksTrimmed as: Set)
 			asStringOn: stream 
-			delimiter: ' ' )]
+			delimiter: ' ' ].
+	^ commonFlags, ' ' ,flags.
 ]
 
 { #category : #'plugin extra rules' }
@@ -625,8 +628,9 @@ SqueakWin32x86CogFamilyConfig >> msysPathFor: aPath [
 SqueakWin32x86CogFamilyConfig >> outputDir [
 
 	"the directory where built binaries will be stored"
+	^ outputDir ifNil: [ outputDir := (self topDir / self dirOutput/ self dirInstall) ]	
 
-	^ outputDir ifNil: [ outputDir :=  (self topDir / self outputDirName) ]
+
 ]
 
 { #category : #accessing }

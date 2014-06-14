@@ -22,9 +22,7 @@ Class {
 
 { #category : #accessing }
 SqueakMacOSStackV3DebugConfig >> compilerFlags [
-	|d releaseFlags|
-	self break.
-	releaseFlags := self isGenerateForRelease .
+	|d commonFlags flags|
 	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
 	d 
 		at: #build put: [self compilerFlagsBuild];
@@ -38,12 +36,17 @@ SqueakMacOSStackV3DebugConfig >> compilerFlags [
 		at: #buildMultiThreadedAssert  put: [self compilerFlagsMultiThreadedAssert];
 		at: #buildMultiThreadedDebug   put: [self compilerFlagsMultiThreadedDebug ];
 		at: #buildNone put:[self compilerFlagsNoBuildType].
-     (d at: self buildType) value.
 
-	^ String streamContents: [ :stream |
-		((self commonCompilerFlags, releaseFlags)
+    flags:= String streamContents: [ :stream |
+	 (((d at:  buildType) value)  collect: #withBlanksTrimmed as: Set)
+		asStringOn: stream 
+		delimiter:' '].
+
+    commonFlags:=String streamContents: [ :stream |
+		((self commonCompilerFlags) collect: #withBlanksTrimmed as: Set)
 			asStringOn: stream 
-			delimiter: ' ' )]
+			delimiter: ' ' ].
+	^ commonFlags, ' ' ,flags.
 ]
 
 { #category : #cmake }
