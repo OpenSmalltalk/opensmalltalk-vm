@@ -288,13 +288,14 @@ SqueakCMakeVMMakerAbstractBuilder >> configurationsCategory [
 { #category : #building }
 SqueakCMakeVMMakerAbstractBuilder >> configureABuildFor: configSymbol withBuildType: typeSymbol [
 	| i |
+	self flag:'tty'. "excludeFromBuild returning True does not exit gracefully"
 	"Do some sanity checks, then set the internal state of a Configuration for a particular build type. "
 	[
 	((Smalltalk at: configSymbol)  category) =  (self configurationsCategory)  "verify the class is handled by this concrete builder"
 		ifTrue:[	
 				config := (Smalltalk at: configSymbol) new.                              "verify this config can handle this build type."
 				config excludeFromBuild                                                         "has a developer excluded this build manually?"
-					ifTrue:[^self userErrorConfigMarkedAsExcludeFromBuild: configSymbol].
+					ifTrue:[^self userErrorConfigMarkedAsExcludeFromBuild: configSymbol].   
 				i:=config availableBuilds indexOf:typeSymbol                                    
 						ifAbsent:[^self userErrorInvalidBuildType: typeSymbol "this config does not support this build type"
 										forConfiguration: configSymbol 

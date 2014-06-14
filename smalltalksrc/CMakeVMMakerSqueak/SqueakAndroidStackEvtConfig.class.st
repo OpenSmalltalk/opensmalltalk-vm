@@ -426,8 +426,11 @@ SqueakAndroidStackEvtConfig >> mkFileList: anArray baseDir: aDir [
 
 { #category : #directories }
 SqueakAndroidStackEvtConfig >> outputDir [
-	^outputDir ifNil: [ outputDir := (self topDir / self outputDirName) ]	
-	
+
+	"the directory where built binaries will be stored"
+	^ outputDir ifNil: [ outputDir := (self topDir / self dirOutput/ self dirInstall) ]	
+
+
 ]
 
 { #category : #'source generation' }
