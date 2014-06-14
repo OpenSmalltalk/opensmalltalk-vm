@@ -35,6 +35,16 @@ CMakeVMMakerSqueakDeveloperHelp class >> bookName [
 ]
 
 { #category : #pages }
+CMakeVMMakerSqueakDeveloperHelp class >> cMakeMacros [
+	^HelpTopic
+		title:'configuring cmake macros'
+		contents:
+'
+SystemNavigation default browseMethodsWhoseNamesContain: ''cMakeMacros''
+'
+]
+
+{ #category : #pages }
 CMakeVMMakerSqueakDeveloperHelp class >> excludeFromBuild [
 	^HelpTopic
 		title:'Excluding a Configuration From Builds'
@@ -117,7 +127,7 @@ The end result is a CMake evironment that is set up to correctly build a VM
 
 { #category : #pages }
 CMakeVMMakerSqueakDeveloperHelp class >> pages [
-	^#(overview prerequisites igorStasenkoDesign plugins availableBuilds excludeFromBuild executableName extraPluginSettings preferredIncludes setExtraTargetProperties scratch)
+	^#(overview prerequisites igorStasenkoDesign plugins availableBuilds excludeFromBuild executableName extraPluginSettings preferredIncludes setExtraTargetProperties cMakeMacros scratch)
 ]
 
 { #category : #pages }

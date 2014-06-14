@@ -110,7 +110,7 @@ Linux32x86Config >> commonCompilerFlags [
 
 { #category : #'compiler flags' }
 Linux32x86Config >> compilerFlags [
-	|d |
+	|d commonFlags flags|
 	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
 	d 
 		at: #build put: [self compilerFlagsBuild];
@@ -124,12 +124,24 @@ Linux32x86Config >> compilerFlags [
 		at: #buildMultiThreadedAssert  put: [self compilerFlagsMultiThreadedAssert];
 		at: #buildMultiThreadedDebug   put: [self compilerFlagsMultiThreadedDebug ];
 		at: #buildNone put:[self compilerFlagsNoBuildType].
-     (d at:  buildType) value.
 
-	^ String streamContents: [ :stream |
+    flags:= String streamContents: [ :stream |
+	 (((d at:  buildType) value)  collect: #withBlanksTrimmed as: Set)
+		asStringOn: stream 
+		delimiter:' '].
+
+    commonFlags:=String streamContents: [ :stream |
 		((self commonCompilerFlags) collect: #withBlanksTrimmed as: Set)
 			asStringOn: stream 
-			delimiter: ' ' ]
+			delimiter: ' ' ].
+	^ commonFlags, ' ' ,flags.
+]
+
+{ #category : #'compiler flags' }
+Linux32x86Config >> compilerFlagsBuild [
+	"backwards compatability with pharo. If adding, override compilerFlagsRelease in your configuration."
+
+	^self compilerFlagsRelease.
 ]
 
 { #category : #cmake }
@@ -451,6 +463,18 @@ Linux32x86Config >> executableName [
 	self required
 ]
 
+{ #category : #accessing }
+Linux32x86Config >> executableType [
+	^''
+
+"
+SystemNavigation default browseMethodsWhoseNamesContain: ''executableType''
+	^ 'MACOSX_BUNDLE'
+	^ 'WIN32'\
+	^ ''
+"
+]
+
 { #category : #'plugin extra rules' }
 Linux32x86Config >> extraPluginSettings: maker [
 	super extraPluginSettings: maker.  
@@ -463,21 +487,22 @@ Linux32x86Config >> extraSources [
 	^ 'version.c'
 ]
 
-{ #category : #'squeak compatibility' }
+{ #category : #settings }
 Linux32x86Config >> extraVMSettings: maker [
+	| versionC |
 	self generateConfigH.
 	
+	"add a generated version.c"
 	
-	"output a fake version.c file"
+	versionC := 'version.c'.
 	
-	self write:
-'int vm_serial= 1;
-char *vm_date= "<HERE IS SUPPOSED TO BE THE DATE>";
-char *cc_version= "<HERE IS SUPPOSED TO BE gcc VERSION>";
-char *ux_version= "<FAKE FROZEN VERSION FOR DEBUGGING PURPOSES>";
-'
-	toFile: 'version.c'.
-
+	maker cmd: 'add_custom_command' params: 'OUTPUT ',
+		versionC , '
+		COMMAND ${platformsDir}/unix/config/verstamp ',versionC,' gcc
+		COMMENT "Generating version.c"
+	'.
+	
+	
 ]
 
 { #category : #'squeak compatibility' }
@@ -502,7 +527,8 @@ Linux32x86Config >> initialize [
 
 { #category : #accessing }
 Linux32x86Config >> linkFlags [
-	^ super linkFlags , ' -m32'
+"	^ super linkFlags , ' -luuid -lSM -lICE -ldl -lGL -lpthread -lm -lnsl -lX11'"
+	^ super linkFlags , ' -luuid -lSM -lICE -ldl  -lpthread -lm -lnsl -lX11'
 
 
 ]
@@ -516,7 +542,7 @@ Linux32x86Config >> oscogvm [
 Linux32x86Config >> outputDir [
 
 	"the directory where built binaries will be stored"
-	^ outputDir ifNil: [ outputDir := (self topDir / self outputDirName) ]	
+	^ outputDir ifNil: [ outputDir := (self topDir / self dirOutput /  self dirInstall) ]	
 
 
 ]
@@ -541,6 +567,16 @@ Linux32x86Config >> platformSources [
 	)
 ]
 
+{ #category : #'source files' }
+Linux32x86Config >> preferredIncludes [
+	self flag:'tty'. "pharo does not support newspeak or sista., yet sets this in CogUnixConfig. Is this appropriate here? Revisit when coding newspeak etc"
+	^ #( '${targetPlatform}/plugins/B3DAcceleratorPlugin')
+	
+
+"SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'"
+	
+]
+
 { #category : #'squeak compatibility' }
 Linux32x86Config >> prepareVMMaker [
 	
@@ -562,6 +598,25 @@ Linux32x86Config >> prepareVMMaker [
 	maker externalModules addAll:  allPlugins.
 	
 	^ maker
+]
+
+{ #category : #utils }
+Linux32x86Config >> setExtraTargetProperties: maker [
+	self flag:'tty'. "I am nervous about this method up here in this class, but pharo has it in CogUnixConfig, so using as is for now"
+
+	maker setTargetProperties: 'LINK_FLAGS "-m32"'.
+		
+	maker puts: 'set_source_files_properties( ${srcVMDir}/cogit.c PROPERTIES 
+		COMPILE_FLAGS "-O1 -fno-omit-frame-pointer -momit-leaf-frame-pointer -mno-rtd -mno-accumulate-outgoing-args")'.
+		
+	
+	maker 
+		cmd: 'set_source_files_properties'
+		params: ' ${targetPlatform}/vm/sqUnixHeartbeat.c PROPERTIES 
+		COMPILE_FLAGS "-O1 -fno-omit-frame-pointer -mno-rtd -mno-accumulate-outgoing-args"'.
+						
+	super setExtraTargetProperties: maker.
+
 ]
 
 { #category : #'squeak compatibility' }

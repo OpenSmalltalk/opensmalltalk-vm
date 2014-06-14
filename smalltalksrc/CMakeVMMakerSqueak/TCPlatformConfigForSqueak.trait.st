@@ -533,6 +533,15 @@ TCPlatformConfigForSqueak >> dirIOS [
 ]
 
 { #category : #cmake }
+TCPlatformConfigForSqueak >> dirInstall [
+	"the directory of the finished product.. the place where 'make install' puts stuff.
+	SystemNavigation default browseMethodsWhoseNamesContain: 'outputDir'
+      "
+self required.
+
+]
+
+{ #category : #cmake }
 TCPlatformConfigForSqueak >> dirLinux32Armv6 [
 	^'cmake.build.linux32armv6'
 ]
@@ -614,6 +623,18 @@ TCPlatformConfigForSqueak >> executableName [
 "
 ]
 
+{ #category : #accessing }
+TCPlatformConfigForSqueak >> executableType [
+	self required.
+
+"
+SystemNavigation default browseMethodsWhoseNamesContain: ''executableType''
+	^ 'MACOSX_BUNDLE'
+	^ 'WIN32'\
+	^ ''
+"
+]
+
 { #category : #'plugin extra rules' }
 TCPlatformConfigForSqueak >> extraPluginSettings: maker [
 	super extraPluginSettings: maker.  
@@ -622,6 +643,17 @@ TCPlatformConfigForSqueak >> extraPluginSettings: maker [
 	CPlatformConfig browse.
 	
 "
+]
+
+{ #category : #settings }
+TCPlatformConfigForSqueak >> extraVMSettings: maker [
+	self required
+]
+
+{ #category : #accessing }
+TCPlatformConfigForSqueak >> frameworks [
+	"leave empty for all platforms but Mac OS"
+	^ #()
 ]
 
 { #category : #accessing }
@@ -720,6 +752,11 @@ TCPlatformConfigForSqueak >> outputDir [
 	self required
 
 
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> outputDirName [
+	^ 'products'
 ]
 
 { #category : #'source files' }

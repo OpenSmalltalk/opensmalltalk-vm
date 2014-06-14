@@ -11,13 +11,13 @@ Or:
 Linux32x86SqueakCogV3NoGLConfig generate
 "
 Class {
-	#name : #Linux32x86SqueakCogV3NoGLConfigz,
+	#name : #Linux32x86SqueakCogV3NoGLConfig,
 	#superclass : #Linux32x86Config,
-	#category : #'CMakeVMMakerSqueak-IslandOfMisfitToys'
+	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
 
 { #category : #utils }
-Linux32x86SqueakCogV3NoGLConfigz >> addDriver: name sources: aSources generator: cmakeGen [
+Linux32x86SqueakCogV3NoGLConfig >> addDriver: name sources: aSources generator: cmakeGen [
 
 	| cfg srcs |
 	
@@ -46,8 +46,36 @@ Linux32x86SqueakCogV3NoGLConfigz >> addDriver: name sources: aSources generator:
 	
 ]
 
-{ #category : #'as yet unclassified' }
-Linux32x86SqueakCogV3NoGLConfigz >> configH [
+{ #category : #'compiler flags' }
+Linux32x86SqueakCogV3NoGLConfig >> commonCompilerFlags [
+"	LSB_FIRST=1 means that target platform is little endian. 	set it to 0 for big-endian platforms"
+	^ {
+		'-DLSB_FIRST=1'. 
+		'-DUSE_GLOBAL_STRUCT=0'. 
+		'-DCOGMTVM=0'. 
+		'-m32'.
+		'-DENABLE_FAST_BLT ' } 	
+	
+]
+
+{ #category : #'compiler flags' }
+Linux32x86SqueakCogV3NoGLConfig >> compilerFlagsRelease [
+
+	^ {
+		'-g0'. 
+		'-O2'. 
+		'-fno-tree-pre'. 
+		'-fno-caller-saves'. 
+		'-msse2'. 
+		'-D_GNU_SOURCE'. 
+		'-DNDEBUG'. 
+		'-DITIMER_HEARTBEAT=1'. 
+		'-DNO_VM_PROFILE=1'. 
+		'-DDEBUGVM=0' }
+]
+
+{ #category : #'squeak compatibility' }
+Linux32x86SqueakCogV3NoGLConfig >> configH [
 	" right now its like  that "
 	^ '
 #ifndef __sq_config_h
@@ -199,16 +227,92 @@ Linux32x86SqueakCogV3NoGLConfigz >> configH [
 ]
 
 { #category : #plugins }
-Linux32x86SqueakCogV3NoGLConfigz >> defaultExternalPlugins [
-	"Removed the B3DAcceleratorPlugin since we don't have OpenGL bindings here"
-	^ (super defaultExternalPlugins copyWithoutAll: #(#B3DAcceleratorPlugin #ThreadedIA32FFIPlugin #InternetConfigPlugin))
+Linux32x86SqueakCogV3NoGLConfig >> defaultExternalPlugins [
+	^ #(
+"		B3DAcceleratorPlugin"
+		ThreadedFFIPlugin "SqueakFFIPrims"   "IA32FFIPlugin is what pharo uses"
+		"UUIDPlugin"
+		"UnixOSProcessPlugin ?? "	
+		JPEGReaderPlugin 
+		JPEGReadWriter2Plugin 			
+		RePlugin
+		"InternetConfigPlugin"  "pharo git source tree inludes this in platforms/unix/plugins/  while squeak does not have it in SVN"
+	)
+]
 
+{ #category : #plugins }
+Linux32x86SqueakCogV3NoGLConfig >> defaultInternalPlugins [
+	self flag:'tty'. "if this config compiles with these plugins, then systematically sync and debug with the super class's for didactic purposes"
+" copied from pharo CogUnixConfig "
+	^ #(
+		ADPCMCodecPlugin 
+		AsynchFilePlugin 
+		BalloonEnginePlugin "B2DPlugin" 
+		BitBltSimulation "BitBltPlugin"
+		BMPReadWriterPlugin 
+		CroquetPlugin 
+		DeflatePlugin  "ZipPlugin"
+		DropPlugin 
+		DSAPlugin "DSAPrims" 
+		FFTPlugin 
+		FileCopyPlugin 
+		FilePlugin 
+		FloatArrayPlugin 
+		FloatMathPlugin 
+		IA32ABIPlugin "IA32ABI"
+		JoystickTabletPlugin 
+		KlattSynthesizerPlugin "Klatt"
+		LargeIntegersPlugin "LargeIntegers"
+		Matrix2x3Plugin 
+		MIDIPlugin 
+		MiscPrimitivePlugin 
+		Mpeg3Plugin  	
+		SecurityPlugin 
+		SerialPlugin 
+		SocketPlugin 
+		SoundCodecPlugin "SoundCodecPrims"
+		SoundGenerationPlugin 
+		SoundPlugin 
+		StarSqueakPlugin 
+		SurfacePlugin	
+		LocalePlugin
+		)
 ]
 
 { #category : #cmake }
-Linux32x86SqueakCogV3NoGLConfigz >> excludeFromBuild [
-"	^false"   "build this configuration"
-	^true
+Linux32x86SqueakCogV3NoGLConfig >> dirInstall [
+	"the directory of the finished product.. the place where 'make install' puts stuff.
+	SystemNavigation default browseMethodsWhoseNamesContain: 'outputDir'
+      "
+	^self squeakCogV3 , '.noGL'
+]
+
+{ #category : #cmake }
+Linux32x86SqueakCogV3NoGLConfig >> excludeFromBuild [
+	^false   "build this configuration"
+"	^true"
 
 
+]
+
+{ #category : #accessing }
+Linux32x86SqueakCogV3NoGLConfig >> executableName [
+	^ 'CogVM'
+]
+
+{ #category : #'source generation' }
+Linux32x86SqueakCogV3NoGLConfig >> interpreterClass [
+	^ CoInterpreter
+]
+
+{ #category : #'source generation' }
+Linux32x86SqueakCogV3NoGLConfig >> prepareForGeneration [
+	^self prepareForCogGeneration
+
+]
+
+{ #category : #'squeak compatibility' }
+Linux32x86SqueakCogV3NoGLConfig >> setupDirectories: gen [
+	super setupDirectories: gen.
+	gen set: #externalModulesDir toString: self externalModulesDir.
 ]

@@ -26,29 +26,35 @@ Linux32x86SqueakCogV3Config >> cogitClass [
 Linux32x86SqueakCogV3Config >> commonCompilerFlags [
 	^ {
 		'-DLSB_FIRST=1'. 
-	      '-m32' .
-	 } 	
+		'-DUSE_GLOBAL_STRUCT=0'. 
+		'-DCOGMTVM=0'. 
+		'-m32'.
+		'-DENABLE_FAST_BLT ' } 	
 	
 ]
 
-{ #category : #cmake }
-Linux32x86SqueakCogV3Config >> compilerFlagsRelease [
-"tty. cut-n-paste from Igor's CogUnixConfig
-THIS FLAGS ARE CRASHING COMPILER 
--fschedule-insns2 
--fschedule-insns 
-
-THIS FLAGS ARE CRASHING VM
--ftree-pre  
--fcaller-saves 
-
-THIS FLAGS ARE WORKING 
--O1 -fthread-jumps -falign-functions -falign-jumps -falign-loops -falign-labels -fcrossjumping -fcse-follow-jumps -fcse-skip-blocks -fdelete-null-pointer-checks -fdevirtualize -fexpensive-optimizations -fgcse -fgcse-lm -finline-small-functions -findirect-inlining -fipa-sra -foptimize-sibling-calls -fpeephole2 -fregmove -freorder-blocks -frerun-cse-after-loop -freorder-functions  -fsched-interblock -fsched-spec -fstrict-aliasing -fstrict-overflow  -ftree-switch-conversion -ftree-vrp
-
-THIS IS LIKE: -O2 -fno-tree-pre -fno-caller-saves 
-
+{ #category : #'compiler flags' }
+Linux32x86SqueakCogV3Config >> compilerFlagsDebug [
 "
+SystemNavigation default browseMethodsWhoseNamesContain: ''compilerFlagsRelease''
+"
+	
 
+	^ {
+		'-g3'. 
+		'-O0'. 
+		'-msse2'. 
+		'-D_GNU_SOURCE'. 
+		'-DITIMER_HEARTBEAT=1'. 
+		'-DNO_VM_PROFILE=1'. 
+		'-DDEBUGVM=1' }
+]
+
+{ #category : #'compiler flags' }
+Linux32x86SqueakCogV3Config >> compilerFlagsRelease [
+"
+SystemNavigation default browseMethodsWhoseNamesContain: ''compilerFlagsRelease''
+"
 	^ {
 		'-g0'. 
 		'-O2'. 
@@ -67,7 +73,7 @@ Linux32x86SqueakCogV3Config >> coreSources [
 	"files to include from src/vm dir"
 	^ #(
 		'cogit.c'
-		'cointerp.c'
+		'gcc3x-cointerp.c'
 		)
 ]
 
@@ -95,11 +101,6 @@ Linux32x86SqueakCogV3Config >> dirBuildLanguageVMMM [
 Linux32x86SqueakCogV3Config >> excludeFromBuild [
 	"over-ride to exclude yourself from a build"
 	^false
-]
-
-{ #category : #accessing }
-Linux32x86SqueakCogV3Config >> executableName [
-	^ 'CogVM'
 ]
 
 { #category : #'source generation' }
