@@ -48,6 +48,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/mman.h>
 
@@ -63,6 +64,7 @@ sqInt uxMemoryExtraBytesLeft(sqInt includingSwap);
 
 static int	    pageSize = 0;
 static unsigned int pageMask = 0;
+int mmapErrno = 0;
 
 #if defined(HAVE_MMAP)
 
@@ -345,9 +347,15 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 	}
 	*allocatedSizePointer = bytes;
 	while ((char *)minAddress + bytes > (char *)minAddress) {
+#if 0
 		alloc = mmap((void *)roundUpToPage((unsigned long)minAddress), bytes,
-					PROT_READ | PROT_WRITE, MAP_ANON | MAP_SHARED, -1, 0);
+					PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
+#else
+		alloc = mmap((void *)roundUpToPage((unsigned long)minAddress), bytes,
+					PROT_READ | PROT_WRITE, MAP_ANON | MAP_FIXED | MAP_PRIVATE, -1, 0);
+#endif
 		if (alloc == MAP_FAILED) {
+			mmapErrno = errno;
 			perror("sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto mmap");
 			return 0;
 		}

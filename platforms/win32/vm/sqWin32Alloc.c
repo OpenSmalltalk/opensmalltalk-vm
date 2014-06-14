@@ -208,10 +208,23 @@ sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 #endif /* COGVM */
 
 #if SPURVM
-/* Allocate a region of memory of al least size bytes, at or above minAddress.
+/* Allocate a region of memory of at least size bytes, at or above minAddress.
  *  If the attempt fails, answer null.  If the attempt succeeds, answer the
  * start of the region and assign its size through allocatedSizePointer.
+ *
+ * This from the VirtualFree doc is rather scary:
+	dwSize [in]
+
+		The size of the region of memory to be freed, in bytes.
+
+		If the dwFreeType parameter is MEM_RELEASE, this parameter must be 0
+		(zero). The function frees the entire region that is reserved in the
+		initial allocation call to VirtualAlloc.
+ *
+ * So we rely on the SpurMemoryManager to free exactly the segments that were
+ * allocated.
  */
+#define SizeForRelease(bytes) 0
 void *
 sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress, sqInt *allocatedSizePointer)
 {
@@ -223,27 +236,27 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 	alloc = VirtualAlloc(0, bytes, MEM_COMMIT, PAGE_READWRITE);
 	if (!alloc) {
 		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-					"Unable to VirtualAlloc committed memory (%d bytes requested)",
-					bytes);
+					"Unable to VirtualAlloc committed memory (%d bytes requested), Error: %ul",
+					bytes, GetLastError());
 		return NULL;
 	}
 	if ((unsigned long)alloc >= (unsigned long)minAddress)
 		return alloc;
-	if (!VirtualFree(alloc, bytes, MEM_RELEASE))
+	if (!VirtualFree(alloc, SizeForRelease(bytes), MEM_RELEASE))
 		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Warning:"),
-					"Unable to VirtualFree committed memory (%d bytes requested)",
-					bytes);
+					"Unable to VirtualFree committed memory (%d bytes requested), Error: %ul",
+					bytes, GetLastError());
 #endif /* 0 */
 	alloc = VirtualAlloc(0, bytes, MEM_COMMIT+MEM_TOP_DOWN, PAGE_READWRITE);
 	if ((unsigned long)alloc >= (unsigned long)minAddress)
 		return alloc;
-	if (!VirtualFree(alloc, bytes, MEM_RELEASE))
+	if (alloc && !VirtualFree(alloc, SizeForRelease(bytes), MEM_RELEASE))
 		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Warning:"),
-					"Unable to VirtualFree committed memory (%d bytes requested)",
-					bytes);
+					"Unable to VirtualFree committed memory (%d bytes requested), Error: %ul",
+					bytes, GetLastError());
 	sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-				"Unable to VirtualAlloc committed memory at desired address (%d bytes requested at or above %p)",
-				bytes, minAddress);
+				"Unable to VirtualAlloc committed memory at desired address (%d bytes requested at or above %p), Error: %ul",
+				bytes, minAddress, GetLastError());
 	return NULL;
 }
 
@@ -253,9 +266,9 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 void
 sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz)
 {
-	if (!VirtualFree(addr, sz, MEM_RELEASE))
+	if (!VirtualFree(addr, SizeForRelease(sz), MEM_RELEASE))
 		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Warning:"),
-					"Unable to VirtualFree committed memory (%d bytes requested)",
-					sz);
+					"Unable to VirtualFree committed memory (%d bytes requested), Error: %ul",
+					sz, GetLastError());
 }
 #endif /* SPURVM */
