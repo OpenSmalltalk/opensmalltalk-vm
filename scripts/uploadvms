@@ -6,7 +6,7 @@ IFS="
 "
 cd `dirname $0`/../products
 VERBOSE=
-REV="`svnversion | sed 's/^.*://'`"
+REV="`svnversion .. | sed 's/^.*://'`"
 case $REV in
 *M)	echo -n "source tree is modified, are you sure you want to continue? "
 	read a
