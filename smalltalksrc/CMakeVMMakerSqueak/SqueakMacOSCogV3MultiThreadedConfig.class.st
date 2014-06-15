@@ -59,8 +59,8 @@ SqueakMacOSCogV3MultiThreadedConfig >> defaultExternalPlugins [
 
 { #category : #cmake }
 SqueakMacOSCogV3MultiThreadedConfig >> excludeFromBuild [
+	"over-ride to exclude yourself from a build or not"
 	^true
-
 ]
 
 { #category : #accessing }

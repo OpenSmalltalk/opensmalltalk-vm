@@ -6,7 +6,15 @@ This is an abstract class for all Mac Carbon configurations. It is intended to s
 It is using a Carbon framework , which eventually will be replaced by Cocoa. (see CocoaIOSConfig and its subclasses).
 
 
-Fore more information, check the class comments of all the superclasses.
+I am not meant to be built.
+
+SqueakMacOSBuilder 
+	configureABuildFor: #ONE OF MY SUBCLASSES NAME HERE withBuildType: #build;
+	generateSources;
+	generate.  
+
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 
 "
 Class {
@@ -391,8 +399,8 @@ SqueakMacOSV3Config >> dirBuildLanguageVMMM [
 
 { #category : #cmake }
 SqueakMacOSV3Config >> excludeFromBuild [
+	"over-ride to exclude yourself from a build or not"
 	^true
-
 ]
 
 { #category : #accessing }

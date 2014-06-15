@@ -36,8 +36,8 @@ SqueakCocoaIOSCogV3MultiThreadedConfigz >> coreSources [
 
 { #category : #cmake }
 SqueakCocoaIOSCogV3MultiThreadedConfigz >> excludeFromBuild [
+	"over-ride to exclude yourself from a build or not"
 	^true
-
 ]
 
 { #category : #accessing }

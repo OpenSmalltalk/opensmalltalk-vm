@@ -1,7 +1,16 @@
 "
-A SqueakBSDConfig  configures a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
-My subclasses do actual configurations, I just sit here and look good. Plus, I encapsulate common behavior. But mostly I just sit here.
+I am not meant to be built.
+
+SqueakBSDx86Builder 
+	configureABuildFor: #MY SUBCLASS NAME HERE withBuildType: #build;
+	generateSources;
+	generate.  
+
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
+
 
 "
 Class {
@@ -203,8 +212,8 @@ SqueakBSDConfig >> dirFrom: aStringOrDir [
 
 { #category : #cmake }
 SqueakBSDConfig >> excludeFromBuild [
+	"over-ride to exclude yourself from a build or not"
 	^true
-
 ]
 
 { #category : #'squeak compatibility' }

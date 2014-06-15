@@ -1,12 +1,15 @@
 "
-A SqueakFreeBSDCogV3Config  configures a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
-Usage:
-  SqueakFreeBSDCogV3Config generate
-Or:
-  SqueakFreeBSDCogV3Config generateWithSources
-Or:
-find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+SqueakBSDx86Builder 
+	configureABuildFor: #MY NAME HERE withBuildType: #build;
+	generateSources;
+	generate.  
+
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
+
+
 "
 Class {
 	#name : #SqueakFreeBSDSqueakSistaSpurConfig,
@@ -22,6 +25,6 @@ SqueakFreeBSDSqueakSistaSpurConfig >> dirBuildLanguageVMMM [
 
 { #category : #cmake }
 SqueakFreeBSDSqueakSistaSpurConfig >> excludeFromBuild [
-	^false
-
+	"over-ride to exclude yourself from a build or not"
+	^true
 ]

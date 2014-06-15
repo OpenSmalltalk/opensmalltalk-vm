@@ -1,23 +1,22 @@
 "
 A slightly modified configuration, which avoids linking with openGL libraries.
 
+SqueakLinux64x86w32CompatBuilder 
+	configureABuildFor: #Linux32x86SqueakCogV3NoGLConfig withBuildType: #build;
+	generateSources;
+	generate.  
 
-For more information, check the class comments of all the superclasses.
-
-
-Usage:
-Linux32x86SqueakCogV3NoGLConfig generateWithSources.
-Or:
-Linux32x86SqueakCogV3NoGLConfig generate
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {
-	#name : #Linux32x86SqueakCogV3NoGLConfig,
-	#superclass : #Linux32x86Config,
-	#category : #'CMakeVMMakerSqueak-Linux32x86'
+	#name : #Linux32x86SqueakCogV3SlackwareNoGLConfig,
+	#superclass : #Linux32x86SqueakCogV3SlackwareConfig,
+	#category : #'CMakeVMMakerSqueak-Linux64X86-32BitCompatibility'
 }
 
 { #category : #utils }
-Linux32x86SqueakCogV3NoGLConfig >> addDriver: name sources: aSources generator: cmakeGen [
+Linux32x86SqueakCogV3SlackwareNoGLConfig >> addDriver: name sources: aSources generator: cmakeGen [
 
 	| cfg srcs |
 	
@@ -47,7 +46,7 @@ Linux32x86SqueakCogV3NoGLConfig >> addDriver: name sources: aSources generator: 
 ]
 
 { #category : #'compiler flags' }
-Linux32x86SqueakCogV3NoGLConfig >> commonCompilerFlags [
+Linux32x86SqueakCogV3SlackwareNoGLConfig >> commonCompilerFlags [
 "	LSB_FIRST=1 means that target platform is little endian. 	set it to 0 for big-endian platforms"
 	^ {
 		'-DLSB_FIRST=1'. 
@@ -59,7 +58,7 @@ Linux32x86SqueakCogV3NoGLConfig >> commonCompilerFlags [
 ]
 
 { #category : #'compiler flags' }
-Linux32x86SqueakCogV3NoGLConfig >> compilerFlagsRelease [
+Linux32x86SqueakCogV3SlackwareNoGLConfig >> compilerFlagsRelease [
 
 	^ {
 		'-g0'. 
@@ -75,7 +74,7 @@ Linux32x86SqueakCogV3NoGLConfig >> compilerFlagsRelease [
 ]
 
 { #category : #'squeak compatibility' }
-Linux32x86SqueakCogV3NoGLConfig >> configH [
+Linux32x86SqueakCogV3SlackwareNoGLConfig >> configH [
 	" right now its like  that "
 	^ '
 #ifndef __sq_config_h
@@ -227,21 +226,21 @@ Linux32x86SqueakCogV3NoGLConfig >> configH [
 ]
 
 { #category : #plugins }
-Linux32x86SqueakCogV3NoGLConfig >> defaultExternalPlugins [
+Linux32x86SqueakCogV3SlackwareNoGLConfig >> defaultExternalPlugins [
 	^ #(
 "		B3DAcceleratorPlugin"
-		ThreadedFFIPlugin "SqueakFFIPrims"   "IA32FFIPlugin is what pharo uses"
-		"UUIDPlugin"
-		"UnixOSProcessPlugin ?? "	
 		JPEGReaderPlugin 
 		JPEGReadWriter2Plugin 			
+		InternetConfigPlugin 
 		RePlugin
-		"InternetConfigPlugin"  "pharo git source tree inludes this in platforms/unix/plugins/  while squeak does not have it in SVN"
+		ThreadedFFIPlugin "SqueakFFIPrims"   "IA32FFIPlugin is what pharo uses"
+		UnixOSProcessPlugin	
+		UUIDPlugin
 	)
 ]
 
 { #category : #plugins }
-Linux32x86SqueakCogV3NoGLConfig >> defaultInternalPlugins [
+Linux32x86SqueakCogV3SlackwareNoGLConfig >> defaultInternalPlugins [
 	self flag:'tty'. "if this config compiles with these plugins, then systematically sync and debug with the super class's for didactic purposes"
 " copied from pharo CogUnixConfig "
 	^ #(
@@ -263,6 +262,7 @@ Linux32x86SqueakCogV3NoGLConfig >> defaultInternalPlugins [
 		JoystickTabletPlugin 
 		KlattSynthesizerPlugin "Klatt"
 		LargeIntegersPlugin "LargeIntegers"
+		LocalePlugin
 		Matrix2x3Plugin 
 		MIDIPlugin 
 		MiscPrimitivePlugin 
@@ -273,14 +273,14 @@ Linux32x86SqueakCogV3NoGLConfig >> defaultInternalPlugins [
 		SoundCodecPlugin "SoundCodecPrims"
 		SoundGenerationPlugin 
 		SoundPlugin 
+		SqueakSSLPlugin
 		StarSqueakPlugin 
 		SurfacePlugin	
-		LocalePlugin
 		)
 ]
 
 { #category : #cmake }
-Linux32x86SqueakCogV3NoGLConfig >> dirInstall [
+Linux32x86SqueakCogV3SlackwareNoGLConfig >> dirInstall [
 	"the directory of the finished product.. the place where 'make install' puts stuff.
 	SystemNavigation default browseMethodsWhoseNamesContain: 'outputDir'
       "
@@ -288,7 +288,7 @@ Linux32x86SqueakCogV3NoGLConfig >> dirInstall [
 ]
 
 { #category : #cmake }
-Linux32x86SqueakCogV3NoGLConfig >> excludeFromBuild [
+Linux32x86SqueakCogV3SlackwareNoGLConfig >> excludeFromBuild [
 	^false   "build this configuration"
 "	^true"
 
@@ -296,23 +296,23 @@ Linux32x86SqueakCogV3NoGLConfig >> excludeFromBuild [
 ]
 
 { #category : #accessing }
-Linux32x86SqueakCogV3NoGLConfig >> executableName [
+Linux32x86SqueakCogV3SlackwareNoGLConfig >> executableName [
 	^ 'CogVM'
 ]
 
 { #category : #'source generation' }
-Linux32x86SqueakCogV3NoGLConfig >> interpreterClass [
+Linux32x86SqueakCogV3SlackwareNoGLConfig >> interpreterClass [
 	^ CoInterpreter
 ]
 
 { #category : #'source generation' }
-Linux32x86SqueakCogV3NoGLConfig >> prepareForGeneration [
+Linux32x86SqueakCogV3SlackwareNoGLConfig >> prepareForGeneration [
 	^self prepareForCogGeneration
 
 ]
 
 { #category : #'squeak compatibility' }
-Linux32x86SqueakCogV3NoGLConfig >> setupDirectories: gen [
+Linux32x86SqueakCogV3SlackwareNoGLConfig >> setupDirectories: gen [
 	super setupDirectories: gen.
 	gen set: #externalModulesDir toString: self externalModulesDir.
 ]

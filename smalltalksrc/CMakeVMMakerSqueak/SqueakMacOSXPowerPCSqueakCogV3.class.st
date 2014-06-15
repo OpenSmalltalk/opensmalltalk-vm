@@ -1,6 +1,13 @@
 "
 A MacOSXPowerPCSqueakCogSpur  configures a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
+SqueakMacOSPowerPCBuilder 
+	configureABuildFor: #MY NAME HERE withBuildType: #build;
+	generateSources;
+	generate.  
+
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {
 	#name : #SqueakMacOSXPowerPCSqueakCogV3,
@@ -26,8 +33,8 @@ SqueakMacOSXPowerPCSqueakCogV3 >> dirBuildLanguageVMMM [
 
 { #category : #cmake }
 SqueakMacOSXPowerPCSqueakCogV3 >> excludeFromBuild [
-	^false
-
+	"over-ride to exclude yourself from a build or not"
+	^true
 ]
 
 { #category : #'as yet unclassified' }

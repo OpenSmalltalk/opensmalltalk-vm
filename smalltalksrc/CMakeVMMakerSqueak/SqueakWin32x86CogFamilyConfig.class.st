@@ -1,4 +1,6 @@
 "
+N.B. tty.  This class comment is from my pharo parent..
+
 This is an abstract class and it is the root configuration for building all types of Cog VMs on MS-Windows platform.
 
 

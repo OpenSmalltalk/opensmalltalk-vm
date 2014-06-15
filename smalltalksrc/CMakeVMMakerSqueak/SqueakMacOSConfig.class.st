@@ -1,6 +1,17 @@
 "
 A SqueakMacOSConfig  configures a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
+
+I am not meant to be built.
+
+SqueakMacOSBuilder 
+	configureABuildFor: #ONE OF MY SUBCLASSES NAME HERE withBuildType: #build;
+	generateSources;
+	generate.  
+
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
+
 "
 Class {
 	#name : #SqueakMacOSConfig,

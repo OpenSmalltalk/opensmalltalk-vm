@@ -1,8 +1,16 @@
 "
-A Linux32x86Config is a Squeak Compatibility Layer between the Pharo code in CMakeVMMaker and CMakeVMakerSqueak.
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
-I exist because modifying the pharo tree is verbotten as of 2014.06.10
 
+I am not meant to be built.
+
+SqueakLinux32x86_64Builder 
+	configureABuildFor: #ONE OF MY SUBCLASSES NAME HERE withBuildType: #build;
+	generateSources;
+	generate.  
+
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 
 "
 Class {
@@ -23,7 +31,7 @@ Class {
 		'generateBuildMultiThreadedAssert',
 		'generateBuildMultiThreadedDebug'
 	],
-	#category : #'CMakeVMMakerSqueak-LinuxX86_64'
+	#category : #'CMakeVMMakerSqueak-LinuxX86-64'
 }
 
 { #category : #accessing }

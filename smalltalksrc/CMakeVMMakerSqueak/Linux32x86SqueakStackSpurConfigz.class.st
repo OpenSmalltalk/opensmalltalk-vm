@@ -76,10 +76,8 @@ Linux32x86SqueakStackSpurConfigz >> defaultInternalPlugins [
 
 { #category : #cmake }
 Linux32x86SqueakStackSpurConfigz >> excludeFromBuild [
-"	^false"   "build this configuration"
+	"over-ride to exclude yourself from a build or not"
 	^true
-
-
 ]
 
 { #category : #'as yet unclassified' }

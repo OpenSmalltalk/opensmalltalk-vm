@@ -31,7 +31,7 @@ or you can customize it like so:
 
 { #category : #accessing }
 CMakeVMMakerSqueakDeveloperHelp class >> bookName [ 
-	^'Developer''s Guide'
+	^'CMakeVMMakerSqueak Developer''s Guide'
 ]
 
 { #category : #pages }
@@ -105,6 +105,49 @@ TODO: finish me
 ]
 
 { #category : #pages }
+CMakeVMMakerSqueakDeveloperHelp class >> organizationOfBuildersConfigs [
+	^HelpTopic
+		title:'Organization Of Builder and Configuration Classes'
+		contents:
+'
+The CMakeVMMakerSqueak Builders and Configurations are organized to mirror  Eliot''s GNU build system organization.
+
+The intent is to reduce brain cycles translating from the computer''s directory layout to what you see in CMakeVMMakerSqueak by providing a (nearly) one-to-one correspondence.
+
+Eliot has named build directories in Cog/ svn (oscogvm directory in this system) by the convention
+build.[OperatingSystem].[VMWordSize].[Processor Architecture]. For  example: build.macosx32x86 
+
+Under each build.[OperatingSystem].[VMWordSize].[Processor Architecture]  directory are subdirectories for each
+[Language][VM][MemoryManager]. example newspeak.sista.spur.
+
+The permutations of [Language][VM][MemoryManager] currently are: 
+
+[newspeak | squeak]. [cog | sista | stack]. [spur | v3] or 2! x 3! x 2!  which is  between 12 and eleventy billion permutations 
+
+Similarly, in CMakeVMMakerSqueak,  Categories containing Configurations are organized by CMakeVMMakerSqueak-[OperatingSystem][VMWordSize][Processor][etc]
+
+Configuration classes within a CMakeVMMakerSqueak-[OperatingSystem][VMWordSize][Processor][etc] are Named:
+[[Squeak] | [] ][Language][VM][MemoryManager][etc]Config and correspond with the 12 permutations
+
+When CMakeVMMakerSqueak generates build or products , it prefaces Eliot''s naming convention with a ''cmake.''
+
+for example builds take place in:  cmake.build.linux.32.x66/squeak.cog.spur
+and output is placed in cmake.products. for example: oscogvm/cmake.products/squeak.cog.v3.noGL/
+
+Builders manage Configurations and Builds for a particular [Language][VM][MemoryManager]  category.
+THERE IS A ONE-TO-ONE CORRESPONEDENCE between aConcreteBuilder>configurationsCategory and the Smalltalk Category name. 
+If you change one, you must change the other in order for the Builder to manage that configuration.
+
+example: SqueakMacOSBuilder configurationsCategory
+
+
+
+Semi-Kludgey--yes, but an acceptable kludge in my estimation.
+
+'
+]
+
+{ #category : #pages }
 CMakeVMMakerSqueakDeveloperHelp class >> overview [
 	^HelpTopic
 		title:'CMakeVMMaker in a couple of sentences.'
@@ -127,7 +170,7 @@ The end result is a CMake evironment that is set up to correctly build a VM
 
 { #category : #pages }
 CMakeVMMakerSqueakDeveloperHelp class >> pages [
-	^#(overview prerequisites igorStasenkoDesign plugins availableBuilds excludeFromBuild executableName extraPluginSettings preferredIncludes setExtraTargetProperties cMakeMacros scratch)
+	^#(overview prerequisites igorStasenkoDesign plugins organizationOfBuildersConfigs availableBuilds excludeFromBuild executableName extraPluginSettings preferredIncludes setExtraTargetProperties cMakeMacros scratch)
 ]
 
 { #category : #pages }
