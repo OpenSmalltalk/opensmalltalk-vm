@@ -45,6 +45,94 @@ SystemNavigation default browseMethodsWhoseNamesContain: ''cMakeMacros''
 ]
 
 { #category : #pages }
+CMakeVMMakerSqueakDeveloperHelp class >> configH [
+	^HelpTopic
+		title:'configuring configH'
+		contents:
+'
+Use AConcreteBuilder>>configH to tell your plugins where to find its libraries etc.
+
+The version of this is platform dependent.
+
+You may also need to edit your oscogvm/platforms/YOUR PLATFORM/plugins/ThePLuginDirectory/acinclude.m4 file so that it conforms to your system.
+
+ 
+
+based on my work getting the oscogvm/platforms/unix/plugins/UUIDPlugin/sqUnixUUID.c... to compile.
+Working from the C source up to configuration then to Squeak....we start with the source code for sqUnixUUID.c
+
+#include "config.h"
+
+#if defined(HAVE_SYS_UUID_H)
+# include <sys/types.h>
+# include <sys/uuid.h>
+#elif defined(HAVE_UUID_UUID_H)
+# include <uuid/uuid.h>
+#elif defined(HAVE_UUID_H)
+# include <uuid.h>
+#else
+# error cannot find a uuid.h to include
+#endif
+
+On my platform, I needed that HAVE_UUID_H define set. 
+To do that, I modified the acinclude.m4 file to check for the <uuid.h> (my changes in Bold--I emailed you this previously)
+
+
+AC_MSG_CHECKING([for UUID support uuid/uuid.h] and uuid_generate)
+AC_TRY_COMPILE([#include <uuid/uuid.h>],[uuid_generate;],[
+ AC_MSG_RESULT(yes)
+ AC_CHECK_LIB(uuid, uuid_generate, LIB_UUID="-luuid")],[
+ AC_MSG_RESULT(no)
+AC_MSG_CHECKING([for UUID support uuid and uuidgen] )
+ AC_TRY_COMPILE([#include <uuid.h>],[uuidgen;],[
+ AC_MSG_RESULT(yes)
+ AC_CHECK_LIB(uuid, uuidgen, LIB_UUID="-luuid" )],[
+ AC_MSG_RESULT(no)
+AC_PLUGIN_DISABLE
+ ])
+])
+
+AC_SUBST(LIB_UUID)
+
+ 
+
+
+For the source code to see it, the config.h file needs to be in place with that HAVE_UUID_H  flag*, so in Squeak, I over-ride the configH method to include that define flag:
+
+
+configH
+
+
+#define HAVE_UUID_H 1 
+#define HAVE_UUIDGEN 1
+
+#ifndef __sq_config_h
+
+The CMakeVMMakerSqueak ''generate'' message to a builder dumps that config.h to the build directory.
+running the build.sh generated script invokes
+cmake .
+
+ command which looks in the specified source/config directory to configure the GNU-Makefile to look for that source code and pairs it with the generated config.h
+
+The CMake generate GNU-Make system then uses those source/build artifacts to put the output in the oscogvm/products directory.
+
+
+So, let me summarize.
+
+1. We know that the plugins depend on config.h
+2. Ideally, that config.h should be incrementally build by the Squeak plugins themselves or the CMakeVMMaker configurations. How? I don''t know yet. Looking at it, the UUIDPlugin class would have to contribute its configuration information.
+    this is non-trivial.
+3. So, in the meantime, CMakeVMMakerSqueak configurations are classes that encapsulate a <drum roll please> Configuration.
+4. It seems reasonable to make this part of the configuration setup process.
+5. I will/have documented in in the HelpBrowser HelpTopic for the system.
+
+My apologies for the long-winded explanation. 
+
+
+'
+]
+
+{ #category : #pages }
 CMakeVMMakerSqueakDeveloperHelp class >> excludeFromBuild [
 	^HelpTopic
 		title:'Excluding a Configuration From Builds'
@@ -170,7 +258,7 @@ The end result is a CMake evironment that is set up to correctly build a VM
 
 { #category : #pages }
 CMakeVMMakerSqueakDeveloperHelp class >> pages [
-	^#(overview prerequisites igorStasenkoDesign plugins organizationOfBuildersConfigs availableBuilds excludeFromBuild executableName extraPluginSettings preferredIncludes setExtraTargetProperties cMakeMacros scratch)
+	^#(overview prerequisites igorStasenkoDesign plugins organizationOfBuildersConfigs availableBuilds excludeFromBuild executableName extraPluginSettings preferredIncludes setExtraTargetProperties cMakeMacros configH scratch)
 ]
 
 { #category : #pages }

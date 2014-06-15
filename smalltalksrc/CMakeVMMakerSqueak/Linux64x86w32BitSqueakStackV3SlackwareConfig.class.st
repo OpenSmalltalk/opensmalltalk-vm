@@ -1,5 +1,5 @@
 "
-I am like my parent, but no GL.
+A Linux32x86SqueakStackV3SlackwareConfig is a configuration for CMake on a 64 bit Slackware linux with 32 bit compat libs and includes linking to GL. 
 
 
 
@@ -12,40 +12,38 @@ HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
 HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {
-	#name : #Linux32x86SqueakStackV3SlackwareNoGLConfig,
-	#superclass : #Linux32x86SqueakStackV3SlackwareConfig,
+	#name : #Linux64x86w32BitSqueakStackV3SlackwareConfig,
+	#superclass : #AnObsoleteLinux64x86w32BitConfigSlackware,
 	#traits : 'TCPlatformConfigForSqueak',
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
-	#category : #'CMakeVMMakerSqueak-Linux64X86-32BitCompatibility'
+	#category : #'CMakeVMMakerSqueak-IslandOfMisfitToys'
 }
 
 { #category : #'squeak compatibility' }
-Linux32x86SqueakStackV3SlackwareNoGLConfig >> addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs [
+Linux64x86w32BitSqueakStackV3SlackwareConfig >> addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs [
 	super addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs
 ]
 
 { #category : #cmake }
-Linux32x86SqueakStackV3SlackwareNoGLConfig >> availableBuilds [
-	^SqueakCMakeVMMakerAbstractBuilder  default  allBuildConfigurations
+Linux64x86w32BitSqueakStackV3SlackwareConfig >> availableBuilds [
+	^SqueakCMakeVMMakerAbstractBuilder default allBuildConfigurations copyWithoutAll:#(#assert #assertWithHeartbeatTimer #debug  #debugMultiThreadedFFI #debugWithHeartbeatTimer #releaseHeartbeatTimer #releaseMultiThreadedFFI)
 
-	" ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations.
-	  ^(SqueakCMakeVMMakerAbstractBuilder  default  allBuildConfigurations 
-			copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   
-	"
+
+
 ]
 
 { #category : #'squeak compatibility' }
-Linux32x86SqueakStackV3SlackwareNoGLConfig >> buildDir [
+Linux64x86w32BitSqueakStackV3SlackwareConfig >> buildDir [
 	^super buildDir
 ]
 
 { #category : #'squeak compatibility' }
-Linux32x86SqueakStackV3SlackwareNoGLConfig >> buildDirName [
+Linux64x86w32BitSqueakStackV3SlackwareConfig >> buildDirName [
 	^super buildDirName
 ]
 
 { #category : #'squeak compatibility' }
-Linux32x86SqueakStackV3SlackwareNoGLConfig >> compilerFlags [
+Linux64x86w32BitSqueakStackV3SlackwareConfig >> compilerFlags [
 	|d commonFlags flags|
 	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
 	d 
@@ -74,87 +72,77 @@ Linux32x86SqueakStackV3SlackwareNoGLConfig >> compilerFlags [
 ]
 
 { #category : #plugins }
-Linux32x86SqueakStackV3SlackwareNoGLConfig >> defaultExternalPlugins [
+Linux64x86w32BitSqueakStackV3SlackwareConfig >> defaultExternalPlugins [
 	"Removed the B3DAcceleratorPlugin since we don't have OpenGL bindings here"
-	^ (super defaultExternalPlugins copyWithoutAll: #(#B3DAcceleratorPlugin #ThreadedIA32FFIPlugin #InternetConfigPlugin #FT2Plugin))
+	^ (super defaultExternalPlugins copyWithoutAll: #(#ThreadedIA32FFIPlugin #InternetConfigPlugin #FT2Plugin #InternetConfigPlugin))
 ]
 
 { #category : #plugins }
-Linux32x86SqueakStackV3SlackwareNoGLConfig >> defaultInternalPlugins [
+Linux64x86w32BitSqueakStackV3SlackwareConfig >> defaultInternalPlugins [
 	"Removed the B3DAcceleratorPlugin since we don't have OpenGL bindings here"
 	^ (super defaultInternalPlugins copyWithoutAll: #(#IA32ABIPlugin #JoystickTabletPlugin #StarSqueakPlugin #SurfacePlugin #SqueakFFIPrims #ThreadedIA32FFIPlugin))
 ]
 
 { #category : #cmake }
-Linux32x86SqueakStackV3SlackwareNoGLConfig >> dirBuildLanguageVMMM [
+Linux64x86w32BitSqueakStackV3SlackwareConfig >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
 	^self squeakStackV3
 ]
 
 { #category : #cmake }
-Linux32x86SqueakStackV3SlackwareNoGLConfig >> dirBuildPlatform [
+Linux64x86w32BitSqueakStackV3SlackwareConfig >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
 	^self dirLinux32x8664
 ]
 
 { #category : #cmake }
-Linux32x86SqueakStackV3SlackwareNoGLConfig >> excludeFromBuild [
+Linux64x86w32BitSqueakStackV3SlackwareConfig >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true
 ]
 
 { #category : #accessing }
-Linux32x86SqueakStackV3SlackwareNoGLConfig >> executableName [
-		^super executableName
+Linux64x86w32BitSqueakStackV3SlackwareConfig >> executableName [
+	^super executableName
 ]
 
 { #category : #public }
-Linux32x86SqueakStackV3SlackwareNoGLConfig >> generate [ 
+Linux64x86w32BitSqueakStackV3SlackwareConfig >> generate [ 
 	self generatePluginsList. 
 	self generateLicense. 
 	"^super generate"
-	^CMakeVMGeneratorForSqueak generate:self   "Bypass CPlatformConfig generate to invoke our compatibility class"
+	^CMakeVMGeneratorForSqueak generate:self    "Bypass CPlatformConfig generate to invoke our compatibility class"
 
-]
-
-{ #category : #'compiler flags' }
-Linux32x86SqueakStackV3SlackwareNoGLConfig >> linkFlags [
-	 ^ '-lSM -lICE -ldl  -lpthread -lm -lnsl -lX11'
 ]
 
 { #category : #'squeak compatibility' }
-Linux32x86SqueakStackV3SlackwareNoGLConfig >> outputDir [
+Linux64x86w32BitSqueakStackV3SlackwareConfig >> outputDir [
 	^super outputDir
 
 
 ]
 
 { #category : #'squeak compatibility' }
-Linux32x86SqueakStackV3SlackwareNoGLConfig >> prepareVMMaker [
-		^super prepareVMMaker
+Linux64x86w32BitSqueakStackV3SlackwareConfig >> prepareVMMaker [
+	^super prepareVMMaker
 ]
 
 { #category : #'squeak compatibility' }
-Linux32x86SqueakStackV3SlackwareNoGLConfig >> setupDirectories:gen [
-		super setupDirectories: gen
+Linux64x86w32BitSqueakStackV3SlackwareConfig >> setupDirectories:gen [
+	super setupDirectories: gen
 ]
 
 { #category : #'squeak compatibility' }
-Linux32x86SqueakStackV3SlackwareNoGLConfig >> srcDir [
+Linux64x86w32BitSqueakStackV3SlackwareConfig >> srcDir [
 	^super srcDir
 ]
 
 { #category : #'squeak compatibility' }
-Linux32x86SqueakStackV3SlackwareNoGLConfig >> topDir [
+Linux64x86w32BitSqueakStackV3SlackwareConfig >> topDir [
 	^super topDir
 ]
 
 { #category : #'squeak compatibility' }
-Linux32x86SqueakStackV3SlackwareNoGLConfig >> validateSourcesPresent [
-		super validateSourcesPresent
-]
-
-{ #category : #'squeak compatibility' }
-Linux32x86SqueakStackV3SlackwareNoGLConfig >> write: aContents toFile: aFileName [
+Linux64x86w32BitSqueakStackV3SlackwareConfig >> write: aContents toFile: aFileName [
 	super write: aContents toFile: aFileName
 ]
