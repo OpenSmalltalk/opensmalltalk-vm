@@ -8,15 +8,52 @@ SqueakLinux64x86w32CompatBuilder
 
 HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
 HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
+
+
+Getting the UUIDPlugin to compile (not work, unfortunately, but compile) required modifying oscogvm/platforms/unix/plugins/acinclude.m4.
+to read: (my Slackware system has <uuid> and uuidgen. then setting the 
+
+# -*- sh -*-
+
+AC_MSG_CHECKING([for UUID support])
+AC_TRY_COMPILE([#include <sys/uuid.h>],[uuid_generatorxyz;],[
+  AC_MSG_RESULT(yes)
+  AC_CHECK_LIB(uuid, uuid_generator_xyz,LIB_UUID=""-luuid"" )
+],[
+  AC_MSG_RESULT(no)
+  AC_MSG_CHECKING([for UUID support uuid/uuid.h] and uuid_generate)
+  AC_TRY_COMPILE([#include <uuid/uuid.h>],[uuid_generate;],[
+    AC_MSG_RESULT(yes)
+    AC_CHECK_LIB(uuid, uuid_generate, LIB_UUID=""-luuid"")],[
+    AC_MSG_RESULT(no)
+      AC_MSG_CHECKING([for UUID support uuid and uuidgen] )
+      AC_TRY_COMPILE([#include <uuid.h>],[uuidgen;],[
+      AC_MSG_RESULT(yes)
+       AC_CHECK_LIB(uuid, uuidgen, LIB_UUID=""-luuid"" )],[
+       AC_MSG_RESULT(no)
+        AC_PLUGIN_DISABLE
+   ])
+ ])
+])
+
+
+
+
+#define HAVE_UUID_H 1 
+#define HAVE_UUIDGEN 1
+
+fl;ags in my configH method
+
+
 "
 Class {
-	#name : #Linux32x86SqueakCogV3SlackwareNoGLConfig,
-	#superclass : #Linux32x86SqueakCogV3SlackwareConfig,
+	#name : #Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig,
+	#superclass : #Linux64x86w32BitConfig,
 	#category : #'CMakeVMMakerSqueak-Linux64X86-32BitCompatibility'
 }
 
 { #category : #utils }
-Linux32x86SqueakCogV3SlackwareNoGLConfig >> addDriver: name sources: aSources generator: cmakeGen [
+Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> addDriver: name sources: aSources generator: cmakeGen [
 
 	| cfg srcs |
 	
@@ -46,7 +83,7 @@ Linux32x86SqueakCogV3SlackwareNoGLConfig >> addDriver: name sources: aSources ge
 ]
 
 { #category : #'compiler flags' }
-Linux32x86SqueakCogV3SlackwareNoGLConfig >> commonCompilerFlags [
+Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> commonCompilerFlags [
 "	LSB_FIRST=1 means that target platform is little endian. 	set it to 0 for big-endian platforms"
 	^ {
 		'-DLSB_FIRST=1'. 
@@ -58,7 +95,7 @@ Linux32x86SqueakCogV3SlackwareNoGLConfig >> commonCompilerFlags [
 ]
 
 { #category : #'compiler flags' }
-Linux32x86SqueakCogV3SlackwareNoGLConfig >> compilerFlagsRelease [
+Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> compilerFlagsRelease [
 
 	^ {
 		'-g0'. 
@@ -74,9 +111,12 @@ Linux32x86SqueakCogV3SlackwareNoGLConfig >> compilerFlagsRelease [
 ]
 
 { #category : #'squeak compatibility' }
-Linux32x86SqueakCogV3SlackwareNoGLConfig >> configH [
-	" right now its like  that "
+Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> configH [
 	^ '
+
+#define HAVE_UUID_H 1 
+#define HAVE_UUIDGEN 1
+
 #ifndef __sq_config_h
 #define __sq_config_h
 
@@ -88,7 +128,7 @@ Linux32x86SqueakCogV3SlackwareNoGLConfig >> configH [
 
 #define	USE_X11 1
 
-#undef	USE_X11_GLX 1
+#undef	USE_X11_GLX 
 /* #undef	USE_QUARTZ */
 /* #undef	USE_QUARTZ_CGL */
 /* #undef	USE_RFB */
@@ -110,7 +150,7 @@ Linux32x86SqueakCogV3SlackwareNoGLConfig >> configH [
 /* #undef	OSS_DEVICE */
 
 /* header files */
-
+	
 #define	HAVE_UNISTD_H 1
 /* #undef	NEED_GETHOSTNAME_P */
 
@@ -134,7 +174,7 @@ Linux32x86SqueakCogV3SlackwareNoGLConfig >> configH [
 /* #undef	HAVE_LIBUTIL_H */
 #define	HAVE_STROPTS_H 1
 
-#undef	HAVE_GL_GL_H 1
+#undef	HAVE_GL_GL_H
 #undef	HAVE_OPENGL_GL_H 
 
 /* #undef	NEED_SUNOS_H */
@@ -226,7 +266,7 @@ Linux32x86SqueakCogV3SlackwareNoGLConfig >> configH [
 ]
 
 { #category : #plugins }
-Linux32x86SqueakCogV3SlackwareNoGLConfig >> defaultExternalPlugins [
+Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> defaultExternalPlugins [
 	^ #(
 "		B3DAcceleratorPlugin"
 		JPEGReaderPlugin 
@@ -240,7 +280,7 @@ Linux32x86SqueakCogV3SlackwareNoGLConfig >> defaultExternalPlugins [
 ]
 
 { #category : #plugins }
-Linux32x86SqueakCogV3SlackwareNoGLConfig >> defaultInternalPlugins [
+Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> defaultInternalPlugins [
 	self flag:'tty'. "if this config compiles with these plugins, then systematically sync and debug with the super class's for didactic purposes"
 " copied from pharo CogUnixConfig "
 	^ #(
@@ -280,7 +320,7 @@ Linux32x86SqueakCogV3SlackwareNoGLConfig >> defaultInternalPlugins [
 ]
 
 { #category : #cmake }
-Linux32x86SqueakCogV3SlackwareNoGLConfig >> dirInstall [
+Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> dirInstall [
 	"the directory of the finished product.. the place where 'make install' puts stuff.
 	SystemNavigation default browseMethodsWhoseNamesContain: 'outputDir'
       "
@@ -288,7 +328,7 @@ Linux32x86SqueakCogV3SlackwareNoGLConfig >> dirInstall [
 ]
 
 { #category : #cmake }
-Linux32x86SqueakCogV3SlackwareNoGLConfig >> excludeFromBuild [
+Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> excludeFromBuild [
 	^false   "build this configuration"
 "	^true"
 
@@ -296,23 +336,23 @@ Linux32x86SqueakCogV3SlackwareNoGLConfig >> excludeFromBuild [
 ]
 
 { #category : #accessing }
-Linux32x86SqueakCogV3SlackwareNoGLConfig >> executableName [
+Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> executableName [
 	^ 'CogVM'
 ]
 
 { #category : #'source generation' }
-Linux32x86SqueakCogV3SlackwareNoGLConfig >> interpreterClass [
+Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> interpreterClass [
 	^ CoInterpreter
 ]
 
 { #category : #'source generation' }
-Linux32x86SqueakCogV3SlackwareNoGLConfig >> prepareForGeneration [
+Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> prepareForGeneration [
 	^self prepareForCogGeneration
 
 ]
 
 { #category : #'squeak compatibility' }
-Linux32x86SqueakCogV3SlackwareNoGLConfig >> setupDirectories: gen [
+Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> setupDirectories: gen [
 	super setupDirectories: gen.
 	gen set: #externalModulesDir toString: self externalModulesDir.
 ]
