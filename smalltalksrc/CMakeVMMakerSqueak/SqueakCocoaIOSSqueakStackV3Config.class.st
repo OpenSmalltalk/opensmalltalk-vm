@@ -4,14 +4,15 @@ This is a concrete class which generates a StackVM for Mac using the Cocoa libra
 For more information, check the class comments of all the superclasses.
 
 
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
-Usage:
-  SqueakCocoaIOSStackV3Config generate
-Or:
-  SqueakCocoaIOSStackV3Config generateWithSources
-Or:
-find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+SqueakIOSBuilder 
+	configureABuildFor: #MY NAME HERE withBuildType: #build;
+	generateSources;
+	generate.  
 
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {
 	#name : #SqueakCocoaIOSSqueakStackV3Config,
@@ -39,8 +40,8 @@ SqueakCocoaIOSSqueakStackV3Config >> dirBuildLanguageVMMM [
 
 { #category : #cmake }
 SqueakCocoaIOSSqueakStackV3Config >> excludeFromBuild [
-	^false
-
+	"over-ride to exclude yourself from a build or not"
+	^true
 ]
 
 { #category : #accessing }

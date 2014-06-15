@@ -51,6 +51,6 @@ SqueakMacOSStackV3DebugConfig >> compilerFlags [
 
 { #category : #cmake }
 SqueakMacOSStackV3DebugConfig >> excludeFromBuild [
+	"over-ride to exclude yourself from a build or not"
 	^true
-
 ]

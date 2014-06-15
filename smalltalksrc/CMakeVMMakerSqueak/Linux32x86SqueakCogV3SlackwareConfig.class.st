@@ -1,26 +1,25 @@
 "
-A TSqueakCPlatformConfig provides a template of methods which must be customized for Squeak compatibility with  pharo CMakeVMMaker classes. I also act as a repository of paths and directories. 
-
-I exist because tty does not have (and, should not have) permission to modify  to the existing inheritence tree in the pharo CMakeVMMaker categories.
+A Linux32x86SqueakCogV3SlackwareConfig is a configuration for CMake on a 64 bit Slackware linux with 32 bit compat libs and includes linking to GL. 
 
 
-my protocol 'squeak compatibility' are the pharo override methods.
-my protocol 'cmake' contains helper methods unique to the squeak implementation of CMakeVMMakerSqueak and do not exist in the pharo stack.
+SqueakLinux64x86w32CompatBuilder 
+	configureABuildFor: #Linux32x86SqueakCogV3SlackwareConfig withBuildType: #build;
+	generateSources;
+	generate.  
 
-
-
-
-
-
-
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
-Trait {
-	#name : #TCPlatformConfigForSqueak,
-	#category : #CMakeVMMakerSqueak
+Class {
+	#name : #Linux32x86SqueakCogV3SlackwareConfig,
+	#superclass : #Linux64x86w32BitConfigSlackware,
+	#traits : 'TCPlatformConfigForSqueak',
+	#classTraits : 'TCPlatformConfigForSqueak classTrait',
+	#category : #'CMakeVMMakerSqueak-Linux64X86-32BitCompatibility'
 }
 
 { #category : #accessing }
-TCPlatformConfigForSqueak classSide >> licenseTemplate [
+Linux32x86SqueakCogV3SlackwareConfig class >> licenseTemplate [
 	^'Squeak {1} license information
 ==============================
 
@@ -74,7 +73,7 @@ interpreter.
 ]
 
 { #category : #accessing }
-TCPlatformConfigForSqueak classSide >> pluginsTemplate [
+Linux32x86SqueakCogV3SlackwareConfig class >> pluginsTemplate [
 	^'{4} {1} ships with this plugins already built:
 		
 Internal: 
@@ -88,34 +87,37 @@ External:
 '
 ]
 
-{ #category : #cmake }
-TCPlatformConfigForSqueak >> availableBuilds [
-	^SqueakCMakeVMMakerAbstractBuilder  default  allBuildConfigurations
-
-	" ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations.
-	  ^(SqueakCMakeVMMakerAbstractBuilder  default  allBuildConfigurations 
-			copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   
-	"
-]
-
 { #category : #'squeak compatibility' }
-TCPlatformConfigForSqueak >> buildDir [
-	self required
-]
-
-{ #category : #'squeak compatibility' }
-TCPlatformConfigForSqueak >> buildDirName [
-	self required
+Linux32x86SqueakCogV3SlackwareConfig >> addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs [
+	super addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> buildType: aSymbol [	
+Linux32x86SqueakCogV3SlackwareConfig >> availableBuilds [
+	^SqueakCMakeVMMakerAbstractBuilder default allBuildConfigurations copyWithoutAll:#(#assert #assertWithHeartbeatTimer #debug  #debugMultiThreadedFFI #debugWithHeartbeatTimer #releaseHeartbeatTimer #releaseMultiThreadedFFI)
+
+
+
+]
+
+{ #category : #'squeak compatibility' }
+Linux32x86SqueakCogV3SlackwareConfig >> buildDir [
+	^super buildDir
+]
+
+{ #category : #'squeak compatibility' }
+Linux32x86SqueakCogV3SlackwareConfig >> buildDirName [
+	^super buildDirName
+]
+
+{ #category : #cmake }
+Linux32x86SqueakCogV3SlackwareConfig >> buildType: aSymbol [	
 	"force suclass to implement instance var accessor"
 	self required.
 ]
 
 { #category : #'source generation' }
-TCPlatformConfigForSqueak >> cogitClass [
+Linux32x86SqueakCogV3SlackwareConfig >> cogitClass [
 	"answer a class for machine code generation or nil"
 	^ StackToRegisterMappingCogit 
 
@@ -124,73 +126,97 @@ TCPlatformConfigForSqueak >> cogitClass [
 ]
 
 { #category : #'compiler flags' }
-TCPlatformConfigForSqueak >> commonCompilerFlags [
+Linux32x86SqueakCogV3SlackwareConfig >> commonCompilerFlags [
 	^#()
 ]
 
+{ #category : #'squeak compatibility' }
+Linux32x86SqueakCogV3SlackwareConfig >> compilerFlags [
+	|d commonFlags flags|
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self compilerFlagsBuild];
+		at: #buildAssert  put: [self compilerFlagsAssert];
+		at: #buildAssertITimerHeartbeat  put: [self compilerFlagsAssertITimerHeartbeat];
+            at:#buildDebug  put: [self compilerFlagsDebug];   "located in CMakeVMMaker CPlatformConfig"
+		at: #buildDebugITimerHeartbeat  put: [self compilerFlagsDebugITimerHeartbeat ];
+		at: #buildDebugMultiThreaded  put: [self compilerFlagsDebugMultiThreaded];
+		at: #buildITimerHeartbeat  put: [self compilerFlagsIHeartbeatTimer];
+		at: #buildMultiThreaded  put: [self compilerFlagsMultiThreaded ];
+		at: #buildMultiThreadedAssert  put: [self compilerFlagsMultiThreadedAssert];
+		at: #buildMultiThreadedDebug   put: [self compilerFlagsMultiThreadedDebug ];
+		at: #buildNone put:[self compilerFlagsNoBuildType].
+
+    flags:= String streamContents: [ :stream |
+	 (((d at:  buildType) value)  collect: #withBlanksTrimmed as: Set)
+		asStringOn: stream 
+		delimiter:' '].
+
+    commonFlags:=String streamContents: [ :stream |
+		((self commonCompilerFlags) collect: #withBlanksTrimmed as: Set)
+			asStringOn: stream 
+			delimiter: ' ' ].
+	^ commonFlags, ' ' ,flags.
+]
+
 { #category : #'compiler flags' }
-TCPlatformConfigForSqueak >> compilerFlags [
+Linux32x86SqueakCogV3SlackwareConfig >> compilerFlagsAssert [
 	self required
 ]
 
 { #category : #'compiler flags' }
-TCPlatformConfigForSqueak >> compilerFlagsAssert [
+Linux32x86SqueakCogV3SlackwareConfig >> compilerFlagsAssertITimerHeartbeat [
 	self required
 ]
 
 { #category : #'compiler flags' }
-TCPlatformConfigForSqueak >> compilerFlagsAssertITimerHeartbeat [
-	self required
-]
-
-{ #category : #'compiler flags' }
-TCPlatformConfigForSqueak >> compilerFlagsBuild [
+Linux32x86SqueakCogV3SlackwareConfig >> compilerFlagsBuild [
 	"backwards compatability with pharo. If adding, override compilerFlagsRelease in your configuration."
 	^self compilerFlagsRelease.
 ]
 
 { #category : #'compiler flags' }
-TCPlatformConfigForSqueak >> compilerFlagsDebug [
+Linux32x86SqueakCogV3SlackwareConfig >> compilerFlagsDebug [
 	self required
 ]
 
 { #category : #'compiler flags' }
-TCPlatformConfigForSqueak >> compilerFlagsDebugITimerHeartbeat [
+Linux32x86SqueakCogV3SlackwareConfig >> compilerFlagsDebugITimerHeartbeat [
 	self required
 ]
 
 { #category : #'compiler flags' }
-TCPlatformConfigForSqueak >> compilerFlagsDebugMultiThreaded [
+Linux32x86SqueakCogV3SlackwareConfig >> compilerFlagsDebugMultiThreaded [
 	self required
 ]
 
 { #category : #'compiler flags' }
-TCPlatformConfigForSqueak >> compilerFlagsIHeartbeatTimer [
+Linux32x86SqueakCogV3SlackwareConfig >> compilerFlagsIHeartbeatTimer [
 	self required
 ]
 
 { #category : #'compiler flags' }
-TCPlatformConfigForSqueak >> compilerFlagsMultiThreaded [
+Linux32x86SqueakCogV3SlackwareConfig >> compilerFlagsMultiThreaded [
 	self required
 ]
 
 { #category : #'compiler flags' }
-TCPlatformConfigForSqueak >> compilerFlagsMultiThreadedAssert [
+Linux32x86SqueakCogV3SlackwareConfig >> compilerFlagsMultiThreadedAssert [
 	self required
 ]
 
 { #category : #'compiler flags' }
-TCPlatformConfigForSqueak >> compilerFlagsMultiThreadedDebug [
+Linux32x86SqueakCogV3SlackwareConfig >> compilerFlagsMultiThreadedDebug [
 	self required
 ]
 
 { #category : #'compiler flags' }
-TCPlatformConfigForSqueak >> compilerFlagsNoBuildType [
+Linux32x86SqueakCogV3SlackwareConfig >> compilerFlagsNoBuildType [
 	self shouldNotImplement.
 ]
 
 { #category : #'headers generation' }
-TCPlatformConfigForSqueak >> configH [
+Linux32x86SqueakCogV3SlackwareConfig >> configH [
 	self flag:'tty' . "TODO: express correctly the 'what' and 'why' of this method"
 	self required
 "
@@ -363,57 +389,57 @@ Again. it is easier to copy the one in CPlatformConfig.
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> configureBuild [
+Linux32x86SqueakCogV3SlackwareConfig >> configureBuild [
 	self required
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> configureBuildAssert [
+Linux32x86SqueakCogV3SlackwareConfig >> configureBuildAssert [
 	self required
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> configureBuildAssertITimerHeartbeat [
+Linux32x86SqueakCogV3SlackwareConfig >> configureBuildAssertITimerHeartbeat [
 	self required
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> configureBuildDebug [
+Linux32x86SqueakCogV3SlackwareConfig >> configureBuildDebug [
 	self required
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> configureBuildDebugITimerHeartbeat [
+Linux32x86SqueakCogV3SlackwareConfig >> configureBuildDebugITimerHeartbeat [
 	self required
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> configureBuildDebugMultiThreaded [
+Linux32x86SqueakCogV3SlackwareConfig >> configureBuildDebugMultiThreaded [
 	self required
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> configureBuildIHeartbeatTimer [
+Linux32x86SqueakCogV3SlackwareConfig >> configureBuildIHeartbeatTimer [
 	self required
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> configureBuildMultiThreaded [
+Linux32x86SqueakCogV3SlackwareConfig >> configureBuildMultiThreaded [
 	self required
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> configureBuildMultiThreadedAssert [
+Linux32x86SqueakCogV3SlackwareConfig >> configureBuildMultiThreadedAssert [
 	self required
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> configureBuildMultiThreadedDebug [
+Linux32x86SqueakCogV3SlackwareConfig >> configureBuildMultiThreadedDebug [
 	self required
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> configureForBuildType: aSymbol [
+Linux32x86SqueakCogV3SlackwareConfig >> configureForBuildType: aSymbol [
 	| d info |
 	"provide a concrete builder with the buildType and configureBuildX method to invoke"
 	info := SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
@@ -454,106 +480,118 @@ TCPlatformConfigForSqueak >> configureForBuildType: aSymbol [
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> configureNoBuildType [
+Linux32x86SqueakCogV3SlackwareConfig >> configureNoBuildType [
 	self required
 ]
 
+{ #category : #plugins }
+Linux32x86SqueakCogV3SlackwareConfig >> defaultExternalPlugins [
+	"Removed the B3DAcceleratorPlugin since we don't have OpenGL bindings here"
+	^ (super defaultExternalPlugins copyWithoutAll: #(#ThreadedIA32FFIPlugin #InternetConfigPlugin #FT2Plugin #InternetConfigPlugin))
+]
+
+{ #category : #plugins }
+Linux32x86SqueakCogV3SlackwareConfig >> defaultInternalPlugins [
+	"Removed the B3DAcceleratorPlugin since we don't have OpenGL bindings here"
+	^ (super defaultInternalPlugins copyWithoutAll: #(#IA32ABIPlugin #JoystickTabletPlugin #StarSqueakPlugin #SurfacePlugin #SqueakFFIPrims #ThreadedIA32FFIPlugin))
+]
+
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirARMv6 [
+Linux32x86SqueakCogV3SlackwareConfig >> dirARMv6 [
 	^'cmake.build.arm.v6'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirAndroid [
+Linux32x86SqueakCogV3SlackwareConfig >> dirAndroid [
 	^'Do Not Build. See Class Comment'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirBSD32x86 [
+Linux32x86SqueakCogV3SlackwareConfig >> dirBSD32x86 [
 	^'cmake.build.bsd32x86'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirBuild [
+Linux32x86SqueakCogV3SlackwareConfig >> dirBuild [
 	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #build
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirBuildAssert [
+Linux32x86SqueakCogV3SlackwareConfig >> dirBuildAssert [
 	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #buildAssert
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirBuildAssertITimerHeartbeat [
+Linux32x86SqueakCogV3SlackwareConfig >> dirBuildAssertITimerHeartbeat [
 	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #buildAssertITimerHeartbeat
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirBuildDebug [
+Linux32x86SqueakCogV3SlackwareConfig >> dirBuildDebug [
 	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #debug
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirBuildDebugITimerHeartbeat [
+Linux32x86SqueakCogV3SlackwareConfig >> dirBuildDebugITimerHeartbeat [
 	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #debugITimerHeartbeat
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirBuildDebugMultiThreaded [
+Linux32x86SqueakCogV3SlackwareConfig >> dirBuildDebugMultiThreaded [
 	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #debugMultiThreaded
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirBuildITimerHeartbeat [
+Linux32x86SqueakCogV3SlackwareConfig >> dirBuildITimerHeartbeat [
 	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #buildITimerHeartbeat
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirBuildLanguageVMMM [
+Linux32x86SqueakCogV3SlackwareConfig >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
-	self required
+	^self squeakStackV3
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirBuildMultiThreaded [
+Linux32x86SqueakCogV3SlackwareConfig >> dirBuildMultiThreaded [
 	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #buildMultiThreaded
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirBuildMultiThreadedAssert [
+Linux32x86SqueakCogV3SlackwareConfig >> dirBuildMultiThreadedAssert [
 	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #buildMultiThreadedAssert
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirBuildMultiThreadedDebug [
+Linux32x86SqueakCogV3SlackwareConfig >> dirBuildMultiThreadedDebug [
 	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #buildMultiThreadedDebug
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirBuildPlatform [
+Linux32x86SqueakCogV3SlackwareConfig >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
-	self required
+	^self dirLinux32x8664
 ]
 
 { #category : #'squeak compatibility' }
-TCPlatformConfigForSqueak >> dirFrom: aStringOrDir [
+Linux32x86SqueakCogV3SlackwareConfig >> dirFrom: aStringOrDir [
 	^ aStringOrDir isString
 		ifTrue: [ FileDirectory forFileName: aStringOrDir  ]
 		ifFalse: [ aStringOrDir ]
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirIA32Bochs [
+Linux32x86SqueakCogV3SlackwareConfig >> dirIA32Bochs [
 	^'cmake.build.ia32bochs'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirIOS [
+Linux32x86SqueakCogV3SlackwareConfig >> dirIOS [
 	^'cmake.build.ios'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirInstall [
+Linux32x86SqueakCogV3SlackwareConfig >> dirInstall [
 	"the directory of the finished product.. the place where 'make install' puts stuff.
 	SystemNavigation default browseMethodsWhoseNamesContain: 'outputDir'
       "
@@ -562,89 +600,74 @@ self required.
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirLinux32Armv6 [
+Linux32x86SqueakCogV3SlackwareConfig >> dirLinux32Armv6 [
 	^'cmake.build.linux32armv6'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirLinux32x86 [
+Linux32x86SqueakCogV3SlackwareConfig >> dirLinux32x86 [
 	^'cmake.build.linux32x86'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirLinux32x8664 [
+Linux32x86SqueakCogV3SlackwareConfig >> dirLinux32x8664 [
 	^'cmake.build.linux32_64x86'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirMacOS [
+Linux32x86SqueakCogV3SlackwareConfig >> dirMacOS [
 	^'cmake.build.macos'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirMacOSPowerPC [
+Linux32x86SqueakCogV3SlackwareConfig >> dirMacOSPowerPC [
 	^'cmake.build.macospowerpc'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirMacOSX32x86 [
+Linux32x86SqueakCogV3SlackwareConfig >> dirMacOSX32x86 [
 	^'cmake.build.macosx32x86'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirOutput [
+Linux32x86SqueakCogV3SlackwareConfig >> dirOutput [
 	^'cmake.products'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirSource [
+Linux32x86SqueakCogV3SlackwareConfig >> dirSource [
 	^'src'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirSunOS32x86 [
+Linux32x86SqueakCogV3SlackwareConfig >> dirSunOS32x86 [
 	^'cmake.build.sunos32x86'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> dirWin32x86 [
+Linux32x86SqueakCogV3SlackwareConfig >> dirWin32x86 [
 	^'cmake.build.win32x86'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> eventStackV3 [
+Linux32x86SqueakCogV3SlackwareConfig >> eventStackV3 [
 	"needed by Android config to pass internal tests. Android config is not built"
 	^'do not build'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> excludeFromBuild [
-"	^false"   "build this configuration"
-"	^true"   "do not build this configuration"
-	self required
-
+Linux32x86SqueakCogV3SlackwareConfig >> excludeFromBuild [
+	"over-ride to exclude yourself from a build or not"
+	^true
 ]
 
 { #category : #accessing }
-TCPlatformConfigForSqueak >> executableName [
-	self required.
-
-"browse subclasses of CPLatformConfig for context
-^'CogVM'
-^ 'CogMTVM'
-^ 'EventVM'.
-^'iStackVMSimulator'
-^ 'iStackVM'
-^'Squeak'
-^ 'StackVM'
-
-
-
-"
+Linux32x86SqueakCogV3SlackwareConfig >> executableName [
+	^super executableName
 ]
 
 { #category : #accessing }
-TCPlatformConfigForSqueak >> executableType [
+Linux32x86SqueakCogV3SlackwareConfig >> executableType [
 	self required.
 
 "
@@ -656,7 +679,7 @@ SystemNavigation default browseMethodsWhoseNamesContain: ''executableType''
 ]
 
 { #category : #'plugin extra rules' }
-TCPlatformConfigForSqueak >> extraPluginSettings: maker [
+Linux32x86SqueakCogV3SlackwareConfig >> extraPluginSettings: maker [
 	super extraPluginSettings: maker.  
 "	This is a very active method depending on Platform 
 
@@ -666,31 +689,33 @@ TCPlatformConfigForSqueak >> extraPluginSettings: maker [
 ]
 
 { #category : #settings }
-TCPlatformConfigForSqueak >> extraVMSettings: maker [
+Linux32x86SqueakCogV3SlackwareConfig >> extraVMSettings: maker [
 	self required
 ]
 
 { #category : #accessing }
-TCPlatformConfigForSqueak >> frameworks [
+Linux32x86SqueakCogV3SlackwareConfig >> frameworks [
 	"leave empty for all platforms but Mac OS"
 	^ #()
 ]
 
-{ #category : #accessing }
-TCPlatformConfigForSqueak >> generate [
+{ #category : #public }
+Linux32x86SqueakCogV3SlackwareConfig >> generate [ 
 	self generatePluginsList. 
 	self generateLicense. 
-	^ CMakeVMGeneratorForSqueak generate: self 
+	"^super generate"
+	^CMakeVMGeneratorForSqueak generate:self    "Bypass CPlatformConfig generate to invoke our compatibility class"
+
 ]
 
 { #category : #'headers generation' }
-TCPlatformConfigForSqueak >> generateConfigH [
+Linux32x86SqueakCogV3SlackwareConfig >> generateConfigH [
 	"will fix that later"
 	self write: self configH toFile: 'config.h'
 ]
 
 { #category : #accessing }
-TCPlatformConfigForSqueak >> generateLicense [ 
+Linux32x86SqueakCogV3SlackwareConfig >> generateLicense [ 
 	self 
 		write:  (self class licenseTemplate 
 			format: { self version })
@@ -699,7 +724,7 @@ TCPlatformConfigForSqueak >> generateLicense [
 ]
 
 { #category : #accessing }
-TCPlatformConfigForSqueak >> generatePluginsList [ 
+Linux32x86SqueakCogV3SlackwareConfig >> generatePluginsList [ 
 	self 
 		write:  (self class pluginsTemplate 
 			format: {
@@ -712,7 +737,7 @@ TCPlatformConfigForSqueak >> generatePluginsList [
 ]
 
 { #category : #'source generation' }
-TCPlatformConfigForSqueak >> interpreterClass [
+Linux32x86SqueakCogV3SlackwareConfig >> interpreterClass [
 	self required.
 	"
 	^ CoInterpreter
@@ -724,7 +749,7 @@ TCPlatformConfigForSqueak >> interpreterClass [
 ]
 
 { #category : #accessing }
-TCPlatformConfigForSqueak >> linkFlags [
+Linux32x86SqueakCogV3SlackwareConfig >> linkFlags [
 	self required
 
 "example:
@@ -733,54 +758,54 @@ TCPlatformConfigForSqueak >> linkFlags [
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> newspeakCogSpur [
+Linux32x86SqueakCogV3SlackwareConfig >> newspeakCogSpur [
 	^'newspeak.cog.spur'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> newspeakCogV3 [
+Linux32x86SqueakCogV3SlackwareConfig >> newspeakCogV3 [
 	^'newspeak.cog.v3'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> newspeakSistaSpur [
+Linux32x86SqueakCogV3SlackwareConfig >> newspeakSistaSpur [
 	^'newspeak.sista.Spur'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> newspeakSistaV3 [
+Linux32x86SqueakCogV3SlackwareConfig >> newspeakSistaV3 [
 	^'newspeak.sista.v3'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> newspeakStackSpur [
+Linux32x86SqueakCogV3SlackwareConfig >> newspeakStackSpur [
 	^'newspeak.stack.spur'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> newspeakStackV3 [
+Linux32x86SqueakCogV3SlackwareConfig >> newspeakStackV3 [
 	^'newspeak.stack.v3'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> oscogvm [
+Linux32x86SqueakCogV3SlackwareConfig >> oscogvm [
 	^'oscogvm'
 ]
 
 { #category : #'squeak compatibility' }
-TCPlatformConfigForSqueak >> outputDir [
-	self required
+Linux32x86SqueakCogV3SlackwareConfig >> outputDir [
+	^super outputDir
 
 
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> outputDirName [
+Linux32x86SqueakCogV3SlackwareConfig >> outputDirName [
 	^ 'products'
 ]
 
 { #category : #'source files' }
-TCPlatformConfigForSqueak >> preferredIncludes [
+Linux32x86SqueakCogV3SlackwareConfig >> preferredIncludes [
 	self required
 
 "
@@ -791,7 +816,7 @@ SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'"
 ]
 
 { #category : #'source generation' }
-TCPlatformConfigForSqueak >> prepareForGeneration [
+Linux32x86SqueakCogV3SlackwareConfig >> prepareForGeneration [
 	self required
 
 	"^self prepareForCogGeneration
@@ -801,8 +826,13 @@ TCPlatformConfigForSqueak >> prepareForGeneration [
 
 ]
 
+{ #category : #'squeak compatibility' }
+Linux32x86SqueakCogV3SlackwareConfig >> prepareVMMaker [
+	^super prepareVMMaker
+]
+
 { #category : #utils }
-TCPlatformConfigForSqueak >> setExtraTargetProperties: maker [
+Linux32x86SqueakCogV3SlackwareConfig >> setExtraTargetProperties: maker [
 	"override me if needed. Super call is to CPlatformConfig which does nothing"
 	super setExtraTargetProperties: maker.
 "
@@ -812,7 +842,7 @@ SystemNavigation default browseMethodsWhoseNamesContain: 'setExtraTargetProperti
 ]
 
 { #category : #utils }
-TCPlatformConfigForSqueak >> setGlobalOptions: maker [
+Linux32x86SqueakCogV3SlackwareConfig >> setGlobalOptions: maker [
 	self required
 	"set any CMake global options, before declaring a project in cmake file
 	
@@ -824,61 +854,61 @@ TCPlatformConfigForSqueak >> setGlobalOptions: maker [
 ]
 
 { #category : #'squeak compatibility' }
-TCPlatformConfigForSqueak >> setupDirectories:gen [
-	self required
+Linux32x86SqueakCogV3SlackwareConfig >> setupDirectories:gen [
+	super setupDirectories: gen
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> squeakCogSpur [
+Linux32x86SqueakCogV3SlackwareConfig >> squeakCogSpur [
 	^'squeak.cog.spur'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> squeakCogV3 [
+Linux32x86SqueakCogV3SlackwareConfig >> squeakCogV3 [
 	^'squeak.cog.v3'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> squeakSistaSpur [
+Linux32x86SqueakCogV3SlackwareConfig >> squeakSistaSpur [
 	^'squeak.sista.Spur'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> squeakSistaV3 [
+Linux32x86SqueakCogV3SlackwareConfig >> squeakSistaV3 [
 	^'squeak.sista.v3'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> squeakStackSpur [
+Linux32x86SqueakCogV3SlackwareConfig >> squeakStackSpur [
 	^'squeak.stack.spur'
 ]
 
 { #category : #cmake }
-TCPlatformConfigForSqueak >> squeakStackV3 [
+Linux32x86SqueakCogV3SlackwareConfig >> squeakStackV3 [
 	^'squeak.stack.v3'
 ]
 
 { #category : #'squeak compatibility' }
-TCPlatformConfigForSqueak >> srcDir [
-	self required
+Linux32x86SqueakCogV3SlackwareConfig >> srcDir [
+	^super srcDir
 ]
 
 { #category : #'squeak compatibility' }
-TCPlatformConfigForSqueak >> topDir [
-	self required
+Linux32x86SqueakCogV3SlackwareConfig >> topDir [
+	^super topDir
 ]
 
 { #category : #'squeak compatibility' }
-TCPlatformConfigForSqueak >> validateSourcesPresent [
-	self required
+Linux32x86SqueakCogV3SlackwareConfig >> validateSourcesPresent [
+	super validateSourcesPresent
 ]
 
 { #category : #accessing }
-TCPlatformConfigForSqueak >> version [
+Linux32x86SqueakCogV3SlackwareConfig >> version [
 	^ ''
 ]
 
 { #category : #'squeak compatibility' }
-TCPlatformConfigForSqueak >> write: aContents toFile: aFileName [
-	self required
+Linux32x86SqueakCogV3SlackwareConfig >> write: aContents toFile: aFileName [
+	super write: aContents toFile: aFileName
 ]

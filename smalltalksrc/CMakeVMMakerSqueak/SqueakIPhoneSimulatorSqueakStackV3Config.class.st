@@ -4,13 +4,13 @@ N.B. tty.
 Honestly, I have know idea how to use this (:
 
 
-Usage:
-  SqueakIPhoneSimulatorV3StackConfig generate
-Or:
-  SqueakIPhoneSimulatorV3StackConfig generateWithSources
-Or:
-find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+SqueakIOSBuilder 
+	configureABuildFor: #MY NAME HERE withBuildType: #build;
+	generateSources;
+	generate.  
 
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {
 	#name : #SqueakIPhoneSimulatorSqueakStackV3Config,
@@ -37,8 +37,8 @@ SqueakIPhoneSimulatorSqueakStackV3Config >> dirBuildLanguageVMMM [
 
 { #category : #cmake }
 SqueakIPhoneSimulatorSqueakStackV3Config >> excludeFromBuild [
-	^false
-
+	"over-ride to exclude yourself from a build or not"
+	^true
 ]
 
 { #category : #accessing }

@@ -51,8 +51,6 @@ Linux32x86SqueakCogV3DebugConfigz >> defaultExternalPlugins [
 
 { #category : #cmake }
 Linux32x86SqueakCogV3DebugConfigz >> excludeFromBuild [
-"	^false"   "build this configuration"
+	"over-ride to exclude yourself from a build or not"
 	^true
-
-
 ]

@@ -52,8 +52,8 @@ Win32x86SqueakCogV3MultiThreadedConfigz >> defaultExternalPlugins [
 
 { #category : #cmake }
 Win32x86SqueakCogV3MultiThreadedConfigz >> excludeFromBuild [
-	^false
-
+	"over-ride to exclude yourself from a build or not"
+	^true
 ]
 
 { #category : #accessing }

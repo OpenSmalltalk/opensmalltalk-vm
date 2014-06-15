@@ -3,6 +3,16 @@ tty. Don't use me until I am refactored for this platform
 
 I am not sure what this does yet. I have put this here to keep a consistent pattern of top level configuration per platform.
 I need to be configured for the job I am advertised to do.
+
+I am not meant to be built.
+
+SqueakMacOSPowerPCBuilder 
+	configureABuildFor: #ONE OF MY SUBCLASSES NAME HERE withBuildType: #build;
+	generateSources;
+	generate.  
+
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {
 	#name : #SqueakMacOSXPowerPCConfig,
@@ -393,8 +403,8 @@ SqueakMacOSXPowerPCConfig >> dirBuildLanguageVMMM [
 
 { #category : #cmake }
 SqueakMacOSXPowerPCConfig >> excludeFromBuild [
+	"over-ride to exclude yourself from a build or not"
 	^true
-
 ]
 
 { #category : #accessing }
