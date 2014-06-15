@@ -1,14 +1,16 @@
 "
 This is a concrete class which generates a StackVM for Raspbian (debian on RaspberryPi). But in cross compilation usage.
 
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
-Usage: 
-Linux32ARMv6StackV3CrossRaspbianFastBltConfig generateWithSources
-Or:
-Linux32ARMv6StackV3CrossRaspbianFastBltConfig generate
+SqueakLinux32ARMv6Builder 
+	configureABuildFor: #MY NAME HERE withBuildType: #build;
+	generateSources;
+	generate.  
 
-Or:
-find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
+
 
 "
 Class {
@@ -248,6 +250,6 @@ Linux32ARMv6StackV3CrossRaspbianFastBltConfig >> dirBuildLanguageVMMM [
 
 { #category : #cmake }
 Linux32ARMv6StackV3CrossRaspbianFastBltConfig >> excludeFromBuild [
-	^false
+	^true
 
 ]

@@ -1,19 +1,22 @@
 "
-Usage:
-Linux32x86SqueakStackV3SlackwareNoGLConfig generateWithSources.
-Or:
-Linux32x86SqueakStackV3SlackwareNoGLConfig generate
-Or:
-find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+I am like my parent, but no GL.
 
 
+
+SqueakLinux64x86w32CompatBuilder 
+	configureABuildFor: #Linux32x86SqueakStackV3SlackwareConfig withBuildType: #build;
+	generateSources;
+	generate.  
+
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {
 	#name : #Linux32x86SqueakStackV3SlackwareNoGLConfig,
 	#superclass : #Linux32x86SqueakStackV3SlackwareConfig,
 	#traits : 'TCPlatformConfigForSqueak',
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
-	#category : #'CMakeVMMakerSqueak-LinuxX86_64-32Compatibility'
+	#category : #'CMakeVMMakerSqueak-Linux64X86-32BitCompatibility'
 }
 
 { #category : #'squeak compatibility' }
@@ -96,8 +99,8 @@ Linux32x86SqueakStackV3SlackwareNoGLConfig >> dirBuildPlatform [
 
 { #category : #cmake }
 Linux32x86SqueakStackV3SlackwareNoGLConfig >> excludeFromBuild [
-	^false
-
+	"over-ride to exclude yourself from a build or not"
+	^true
 ]
 
 { #category : #accessing }

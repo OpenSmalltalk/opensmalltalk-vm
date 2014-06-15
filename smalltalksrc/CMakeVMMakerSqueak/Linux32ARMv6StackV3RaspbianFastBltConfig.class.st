@@ -1,12 +1,15 @@
 "
 http://www.cmake.org/Wiki/CMake/Assembler
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
-Usage:
-Linux32ARMv6StackV3RaspbianFastBltConfig generateWithSources
-Or:
-Linux32ARMv6StackV3RaspbianFastBltConfig generate
-Or:
-find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+SqueakLinux32ARMv6Builder 
+	configureABuildFor: #MY NAME HERE withBuildType: #build;
+	generateSources;
+	generate.  
+
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
+
 
 "
 Class {
@@ -50,6 +53,6 @@ Linux32ARMv6StackV3RaspbianFastBltConfig >> dirBuildLanguageVMMM [
 
 { #category : #cmake }
 Linux32ARMv6StackV3RaspbianFastBltConfig >> excludeFromBuild [
-	^false
+	^true
 
 ]

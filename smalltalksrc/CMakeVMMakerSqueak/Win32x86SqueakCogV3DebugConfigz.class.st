@@ -46,8 +46,8 @@ Win32x86SqueakCogV3DebugConfigz >> compilerFlags [
 
 { #category : #cmake }
 Win32x86SqueakCogV3DebugConfigz >> excludeFromBuild [
+	"over-ride to exclude yourself from a build or not"
 	^true
-
 ]
 
 { #category : #utils }

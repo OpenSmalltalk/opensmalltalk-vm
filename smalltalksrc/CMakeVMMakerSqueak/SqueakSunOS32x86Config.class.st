@@ -1,13 +1,15 @@
 "
-A SqueakSunOS32x86CogConfig is xxxxxxxxx.
+A SqueakSunOS32x86CogConfig provides common informatin for my subclasses.
 
+I am not meant to be built.
 
-usage: 
-SqueakSunOS32x86CogConfig generate
-or
-SqueakSunOS32x86CogConfig generateWithSources
-or:
-find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+SqueakSunOS32x86Builder 
+	configureABuildFor: #ONE OF MY SUBCLASSES NAME HERE withBuildType: #build;
+	generateSources;
+	generate.  
+
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {
 	#name : #SqueakSunOS32x86Config,

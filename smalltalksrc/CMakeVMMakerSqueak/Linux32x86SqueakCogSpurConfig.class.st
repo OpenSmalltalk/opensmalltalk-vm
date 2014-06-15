@@ -1,12 +1,16 @@
 "
-A Linux32x86SqueakCogSpurConfig  configures a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
-Usage:
-Linux32x86SqueakCogSpurConfig generate
-Or:
-Linux32x86SqueakCogSpurConfig generateWithSources
-Or:
-find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+
+I am not meant to be built.
+
+SqueakLinux32x86Builder 
+	configureABuildFor: #MY NAME HERE withBuildType: #build;
+	generateSources;
+	generate.  
+
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 
 "
 Class {
@@ -23,8 +27,8 @@ Linux32x86SqueakCogSpurConfig >> dirBuildLanguageVMMM [
 
 { #category : #cmake }
 Linux32x86SqueakCogSpurConfig >> excludeFromBuild [
-	"over-ride to exclude yourself from a build"
-	^false
+	"over-ride to exclude yourself from a build or not"
+	^true
 ]
 
 { #category : #'source generation' }

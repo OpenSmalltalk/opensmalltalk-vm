@@ -4,14 +4,16 @@ I am a facade.
 I query, and invoke CMakeVMMakerSqueak configurations.
 
 
+
+
 "
 Class {
-	#name : #'SqueakLinux32X86_64Builder',
+	#name : #SqueakLinux64x86w32CompatBuilder,
 	#superclass : #SqueakCMakeVMMakerAbstractBuilder,
 	#category : #'CMakeVMMakerSqueak-Builder'
 }
 
 { #category : #queries }
-SqueakLinux32X86_64Builder >> configurationsCategory [
-	^'CMakeVMMakerSqueak-LinuxX86_64'
+SqueakLinux64x86w32CompatBuilder >> configurationsCategory [
+	^'CMakeVMMakerSqueak-Linux64X86-32BitCompatibility'
 ]

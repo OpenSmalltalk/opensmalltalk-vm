@@ -520,10 +520,8 @@ Linux32x86SqueakCogV3Configz >> dirFrom: t1 [
 
 { #category : #cmake }
 Linux32x86SqueakCogV3Configz >> excludeFromBuild [
-"	^false"   "build this configuration"
+	"over-ride to exclude yourself from a build or not"
 	^true
-
-
 ]
 
 { #category : #accessing }

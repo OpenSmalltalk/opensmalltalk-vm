@@ -365,7 +365,7 @@ SqueakAndroidStackEvtConfig >> dirBuildPlatform [
 
 { #category : #cmake }
 SqueakAndroidStackEvtConfig >> excludeFromBuild [
-"	^false"   "build this configuration"
+	"over-ride to exclude yourself from a build or not"
 	^true
 ]
 

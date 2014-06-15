@@ -1,12 +1,15 @@
 "
-A SqueakIA32BochsMacOSConfig  configures a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
-Usage:
-  SqueakIA32BochsMacOSConfig generate
-Or:
-  SqueakIA32BochsMacOSConfig generateWithSources
-Or:
-find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+SqueakIA32BochsBuilder 
+	configureABuildFor: #MY NAME HERE withBuildType: #build;
+	generateSources;
+	generate.  
+
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
+
+
 "
 Class {
 	#name : #SqueakIA32BochsMacOSConfig,
