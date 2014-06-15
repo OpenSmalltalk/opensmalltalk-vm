@@ -1,12 +1,13 @@
 "
 I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
-Usage:
-Win32x86SqueakCogV3Config generateWithSources
-Or:
-Win32x86SqueakCogV3Config generate.
-Or: 
-find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+SqueakWin32x86Builder 
+	configureABuildFor: #MYCLASSNAMEHERE withBuildType: #build;
+	generateSources;
+	generate.  
+
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {
 	#name : #Win32x86SqueakCogV3Config,
@@ -65,8 +66,8 @@ Win32x86SqueakCogV3Config >> dirBuildLanguageVMMM [
 
 { #category : #cmake }
 Win32x86SqueakCogV3Config >> excludeFromBuild [
-	^false
-
+	"over-ride to exclude yourself from a build or not"
+	^true
 ]
 
 { #category : #accessing }

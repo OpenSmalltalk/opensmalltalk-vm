@@ -6,12 +6,12 @@ I query, and invoke CMakeVMMakerSqueak configurations.
 
 "
 Class {
-	#name : #SqueakBSDX86Builder,
+	#name : #SqueakLinux32x86Builder,
 	#superclass : #SqueakCMakeVMMakerAbstractBuilder,
 	#category : #'CMakeVMMakerSqueak-Builder'
 }
 
 { #category : #queries }
-SqueakBSDX86Builder >> configurationsCategory [
-	^ 'CMakeVMMakerSqueak-BSD32x86'
+SqueakLinux32x86Builder >> configurationsCategory [
+	^'CMakeVMMakerSqueak-Linux32x86'
 ]

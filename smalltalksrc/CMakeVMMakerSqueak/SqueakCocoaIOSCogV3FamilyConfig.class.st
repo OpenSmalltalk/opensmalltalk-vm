@@ -1,7 +1,19 @@
 "
 This is an abstract class for all Mac Cocoa Cog VMs family. That is, for all CogVMS (StackVM, CogVM, CogMTVM, etc). 
 
-For more information, check the class comments of all the superclasses.
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
+
+
+I am not meant to be built.
+
+SqueakIOSBuilder 
+	configureABuildFor: #ONE OF MY SUBCLASSES NAME HERE withBuildType: #build;
+	generateSources;
+	generate.  
+
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
+
 
 
 
@@ -184,8 +196,8 @@ SqueakCocoaIOSCogV3FamilyConfig >> defaultInternalPlugins [
 
 { #category : #cmake }
 SqueakCocoaIOSCogV3FamilyConfig >> excludeFromBuild [
+	"over-ride to exclude yourself from a build or not"
 	^true
-
 ]
 
 { #category : #'source files' }

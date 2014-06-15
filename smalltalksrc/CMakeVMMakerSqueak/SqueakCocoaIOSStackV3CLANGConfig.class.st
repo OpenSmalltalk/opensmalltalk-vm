@@ -4,12 +4,15 @@ Experimental configuration for compiling using clang compiler
 For more information, check the class comments of all the superclasses.
 
 
-Usage:
-  SqueakCocoaIOSStackV3CLANGConfig generate
-Or:
-  SqueakCocoaIOSStackV3CLANGConfig generateWithSources
-Or:
-find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
+
+SqueakIOSBuilder 
+	configureABuildFor: #MY NAME HERE withBuildType: #build;
+	generateSources;
+	generate.  
+
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 
 "
 Class {
@@ -34,8 +37,8 @@ SqueakCocoaIOSStackV3CLANGConfig >> dirBuildLanguageVMMM [
 
 { #category : #cmake }
 SqueakCocoaIOSStackV3CLANGConfig >> excludeFromBuild [
-	^false
-
+	"over-ride to exclude yourself from a build or not"
+	^true
 ]
 
 { #category : #settings }

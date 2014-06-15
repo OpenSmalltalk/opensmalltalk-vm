@@ -1,24 +1,22 @@
 "
-A SqueakStackUnix64w32CompatLibsSlackwareConfig is a configuration for CMake on a 64 bit Slackware linux with 32 bit compat libs and includes linking to GL. 
+A Linux32x86SqueakStackV3SlackwareConfig is a configuration for CMake on a 64 bit Slackware linux with 32 bit compat libs and includes linking to GL. 
 
 
 
-Usage:
-Linux32x86SqueakStackV3SlackwareConfig generateWithSources.
-Or:
-Linux32x86SqueakStackV3SlackwareConfig generate
-Or:
-find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+SqueakLinux64x86w32CompatBuilder 
+	configureABuildFor: #Linux32x86SqueakStackV3SlackwareConfig withBuildType: #build;
+	generateSources;
+	generate.  
 
-
-
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {
 	#name : #Linux32x86SqueakStackV3SlackwareConfig,
-	#superclass : #Linux32x86Config,
+	#superclass : #Linux64x86w32BitConfigSlackware,
 	#traits : 'TCPlatformConfigForSqueak',
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
-	#category : #'CMakeVMMakerSqueak-LinuxX86_64-32Compatibility'
+	#category : #'CMakeVMMakerSqueak-Linux64X86-32BitCompatibility'
 }
 
 { #category : #'squeak compatibility' }
@@ -99,8 +97,8 @@ Linux32x86SqueakStackV3SlackwareConfig >> dirBuildPlatform [
 
 { #category : #cmake }
 Linux32x86SqueakStackV3SlackwareConfig >> excludeFromBuild [
-	^false
-
+	"over-ride to exclude yourself from a build or not"
+	^true
 ]
 
 { #category : #accessing }

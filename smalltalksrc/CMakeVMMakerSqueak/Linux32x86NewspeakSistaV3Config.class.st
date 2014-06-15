@@ -1,12 +1,17 @@
 "
-A Linux32x86NewspeakCogV3Config  configures a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
-Usage:
-  Linux32x86NewspeakCogV3Config generate
-Or:
-  Linux32x86NewspeakCogV3Config generateWithSources
-Or:
-find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+
+I am not meant to be built.
+
+SqueakLinux32x86Builder 
+	configureABuildFor: #MY NAME HERE withBuildType: #build;
+	generateSources;
+	generate.  
+
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
+
 "
 Class {
 	#name : #Linux32x86NewspeakSistaV3Config,

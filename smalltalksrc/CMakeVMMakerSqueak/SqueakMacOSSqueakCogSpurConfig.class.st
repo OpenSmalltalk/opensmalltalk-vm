@@ -3,12 +3,13 @@ This is a concrete configuration for building a CogVM 32 bit on Mac OS.
 
 It is using a Carbon framework , which eventually will be replaced by Cocoa. (see CocoaIOSConfig and its subclasses).
 
-Usage:
-SqueakCogMacOSConfig generateWithSources.
-or:
-SqueakCogMacOSConfig generate.
-Fore more information, check the class comments of all the superclasses.
+SqueakMacOSBuilder 
+	configureABuildFor: #MY NAME HERE withBuildType: #build;
+	generateSources;
+	generate.  
 
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {
 	#name : #SqueakMacOSSqueakCogSpurConfig,
@@ -280,8 +281,8 @@ SqueakMacOSSqueakCogSpurConfig >> dirBuildLanguageVMMM [
 
 { #category : #cmake }
 SqueakMacOSSqueakCogSpurConfig >> excludeFromBuild [
-	^false
-
+	"over-ride to exclude yourself from a build or not"
+	^true
 ]
 
 { #category : #accessing }

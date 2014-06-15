@@ -12,15 +12,18 @@ ln -s /usr/lib32/libX11.so.6 /usr/lib32/libX11.so
 
 Then you can go on Linux32x86SqueakCogV3Debian64Config generateWithSources.
 
-or find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+SqueakLinux64x86w32CompatBuilder 
+	configureABuildFor: #MY NAME HERE withBuildType: #build;
+	generateSources;
+	generate.  
 
-
-
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {
 	#name : #Linux32x86SqueakCogV3Debian64Config,
-	#superclass : #Linux32x86Config,
-	#category : #'CMakeVMMakerSqueak-LinuxX86_64-32Compatibility'
+	#superclass : #Linux64x86w32BitConfigDebian,
+	#category : #'CMakeVMMakerSqueak-Linux64X86-32BitCompatibility'
 }
 
 { #category : #cmake }
@@ -57,8 +60,8 @@ Linux32x86SqueakCogV3Debian64Config >> dirBuildPlatform [
 
 { #category : #cmake }
 Linux32x86SqueakCogV3Debian64Config >> excludeFromBuild [
-	^false
-
+	"over-ride to exclude yourself from a build or not"
+	^true
 ]
 
 { #category : #accessing }

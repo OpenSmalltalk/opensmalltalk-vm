@@ -61,10 +61,8 @@ Linux32x86SqueakCogV3MultiThreadedConfigz >> defaultExternalPlugins [
 
 { #category : #cmake }
 Linux32x86SqueakCogV3MultiThreadedConfigz >> excludeFromBuild [
-"	^false"   "build this configuration"
+	"over-ride to exclude yourself from a build or not"
 	^true
-
-
 ]
 
 { #category : #accessing }

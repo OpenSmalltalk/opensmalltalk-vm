@@ -1,7 +1,20 @@
 "
-A SqueakIA32BochsConfig is a Squeak Compatibility Layer between the Pharo code in CMakeVMMaker and CMakeVMakerSqueak.
+N.B. I honestly have no idea how to use this. tty (:
 
-I exist because modifying the pharo tree is verbotten as of 2014.06.10
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
+
+
+I am not meant to be built.
+
+SqueakIA32BochsBuilder 
+	configureABuildFor: #ONE OF MY SUBCLASSES NAME HERE withBuildType: #build;
+	generateSources;
+	generate.  
+
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
+
+
 "
 Class {
 	#name : #SqueakIA32BochsConfig,
@@ -111,8 +124,8 @@ SqueakIA32BochsConfig >> dirBuildPlatform [
 
 { #category : #cmake }
 SqueakIA32BochsConfig >> excludeFromBuild [
+	"over-ride to exclude yourself from a build or not"
 	^true
-
 ]
 
 { #category : #'initialize-release' }

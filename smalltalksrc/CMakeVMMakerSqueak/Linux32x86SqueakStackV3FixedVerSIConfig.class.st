@@ -33,10 +33,8 @@ Linux32x86SqueakStackV3FixedVerSIConfig >> compilerFlagsDebug [
 
 { #category : #cmake }
 Linux32x86SqueakStackV3FixedVerSIConfig >> excludeFromBuild [
-"	^false"   "build this configuration"
+	"over-ride to exclude yourself from a build or not"
 	^true
-
-
 ]
 
 { #category : #settings }

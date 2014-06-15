@@ -1,15 +1,16 @@
 "
 This is a concrete class which generates a CogVM for Mac using the Cocoa library
 
-For more information, check the class comments of all the superclasses.
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
 
-Usage:
-  SqueakCocoaIOSCogV3Config generate
-Or:
-  SqueakCocoaIOSCogV3Config generateWithSources
-Or:
-find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me or invoke me
+SqueakIOSBuilder 
+	configureABuildFor: #MY NAME HERE withBuildType: #build;
+	generateSources;
+	generate.  
+
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 
 "
 Class {
@@ -46,8 +47,8 @@ SqueakCocoaIOSSqueakCogV3Config >> dirBuildLanguageVMMM [
 
 { #category : #cmake }
 SqueakCocoaIOSSqueakCogV3Config >> excludeFromBuild [
-	^false
-
+	"over-ride to exclude yourself from a build or not"
+	^true
 ]
 
 { #category : #accessing }

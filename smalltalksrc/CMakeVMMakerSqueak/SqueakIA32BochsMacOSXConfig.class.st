@@ -1,3 +1,16 @@
+"
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
+
+SqueakIA32BochsBuilder 
+	configureABuildFor: #MY NAME HERE withBuildType: #build;
+	generateSources;
+	generate.  
+
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
+
+
+"
 Class {
 	#name : #SqueakIA32BochsMacOSXConfig,
 	#superclass : #SqueakIA32BochsConfig,

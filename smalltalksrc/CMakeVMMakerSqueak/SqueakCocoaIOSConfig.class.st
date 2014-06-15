@@ -1,7 +1,20 @@
 "
 This is an abstract class for all Mac Cocoa configurations. It is intended to share code between different concrete implementations. 
 
-For more information, check the class comments of all the superclasses.
+
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
+
+
+I am not meant to be built.
+
+SqueakIOSBuilder 
+	configureABuildFor: #ONE OF MY SUBCLASSES NAME HERE withBuildType: #build;
+	generateSources;
+	generate.  
+
+HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
+
 
 "
 Class {
@@ -272,8 +285,8 @@ SqueakCocoaIOSConfig >> defaultInternalPlugins [
 
 { #category : #cmake }
 SqueakCocoaIOSConfig >> excludeFromBuild [
+	"over-ride to exclude yourself from a build or not"
 	^true
-
 ]
 
 { #category : #accessing }
