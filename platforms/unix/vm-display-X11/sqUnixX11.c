@@ -4174,7 +4174,7 @@ static int xError(Display *dpy, XErrorEvent *evt)
 }
 
 
-static void initWindow(char *displayName)
+void initWindow(char *displayName)
 {
   XRectangle windowBounds= { 0, 0, 640, 480 };  /* default window bounds */
   int right, bottom;
@@ -6662,7 +6662,7 @@ static void display_winSetName(char *imageName)
 /*** display connection ***/
 
 
-static int openXDisplay(void)
+int openXDisplay(void)
 {
   /* open the Squeak window. */
   if (!isConnectedToXServer)
@@ -6701,7 +6701,7 @@ mapXDisplay(void)
   }
 }
 
-static int forgetXDisplay(void)
+int forgetXDisplay(void)
 {
   /* Initialise variables related to the X connection, and
      make the existing connection to the X Display invalid
