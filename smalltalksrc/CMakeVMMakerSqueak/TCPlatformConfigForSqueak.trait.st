@@ -517,9 +517,6 @@ TCPlatformConfigForSqueak >> configureForBuildType: aSymbol [
 		at: #buildDebugITimerHeartbeat 
 		put:  [self buildType: #buildDebugITimerHeartbeat.   self configureBuildDebugITimerHeartbeat];
 
-		at: #buildDebugMultiThreaded 
-		put: [self buildType: #buildDebugMultiThreaded.   self configureBuildDebugMultiThreaded];
-
 		at: #buildITimerHeartbeat 
 		put: [self buildType:#buildITimerHeartbeat.    self configureBuildIHeartbeatTimer];
 
@@ -911,7 +908,6 @@ TCPlatformConfigForSqueak >> generateConfigH: aBuildType [
 		at: #buildAssertITimerHeartbeat  put: [self configHBuildAssertITimerHeartbeat];
             at:#buildDebug  put: [self configHBuildDebug];   "located in CMakeVMMaker CPlatformConfig"
 		at: #buildDebugITimerHeartbeat  put: [self configHBuildDebugITimerHeartbeat ];
-		at: #buildDebugMultiThreaded  put: [self configHBuildDebugMultiThreaded];
 		at: #buildITimerHeartbeat  put: [self configHBuildITimerHeartbeat];
 		at: #buildMultiThreaded  put: [self configHBuildMultiThreaded ];
 		at: #buildMultiThreadedAssert  put: [self configHBuildMultiThreadedAssert];
@@ -1355,7 +1351,6 @@ TCPlatformConfigForSqueak >> setGlobalOptions: aMaker buildType: aBuildType [
 		at: #buildAssertITimerHeartbeat  put: [self setGlobalOptionsBuildAssertITimerHeartbeat: aMaker];
             at:#buildDebug  put: [self setGlobalOptionsBuildDebug: aMaker];   "located in CMakeVMMaker CPlatformConfig"
 		at: #buildDebugITimerHeartbeat  put: [self setGlobalOptionsBuildDebugITimerHeartbeat: aMaker ];
-		at: #buildDebugMultiThreaded  put: [self setGlobalOptionsBuildDebugMultiThreaded: aMaker];
 		at: #buildITimerHeartbeat  put: [self setGlobalOptionsBuildITimerHeartbeat: aMaker];
 		at: #buildMultiThreaded  put: [self setGlobalOptionsBuildMultiThreaded: aMaker ];
 		at: #buildMultiThreadedAssert  put: [self setGlobalOptionsBuildMultiThreadedAssert: aMaker];
@@ -1366,55 +1361,109 @@ TCPlatformConfigForSqueak >> setGlobalOptions: aMaker buildType: aBuildType [
 
 ]
 
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuild [ 
-	self required
-]
+{ #category : #utils }
+TCPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystem: aMaker buildType: aBuildType [
+	"invoke correct setGlobalOptions for this buildType to allow per-buildType customization'"
 
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildAssert [ 
-	self required
+	|d |
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self setGlobalOptionsAfterDetermineSystemBuild: aMaker];
+		at: #buildAssert  put: [self setGlobalOptionsAfterDetermineSystemBuildAssert: aMaker];
+		at: #buildAssertITimerHeartbeat  put: [self setGlobalOptionsAfterDetermineSystemBuildAssertITimerHeartbeat: aMaker];
+            at:#buildDebug  put: [self setGlobalOptionsAfterDetermineSystemBuildDebug: aMaker];   
+		at: #buildITimerHeartbeat  put: [self setGlobalOptionsAfterDetermineSystemBuildITimerHeartbeat: aMaker];
+		at: #buildMultiThreaded  put: [self setGlobalOptionsAfterDetermineSystemBuildMultiThreaded: aMaker ];
+		at: #buildMultiThreadedAssert  put: [self setGlobalOptionsAfterDetermineSystemBuildMultiThreadedAssert: aMaker];
+		at: #buildMultiThreadedDebug   put: [self setGlobalOptionsAfterDetermineSystemBuildMultiThreadedDebug: aMaker ];
+		at: #buildNone put:[self setGlobalOptionsBuildNone: aMaker].
 
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildAssertITimerHeartbeat [ 
-	self required
-
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildDebug [ 
-	self required
+	 ^(d at: ( aBuildType)) value
 
 ]
 
 { #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildDebugITimerHeartbeat [ 
-	self required
+TCPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuild: aMaker [
+	"convenience method to customize setGlobalOptionsAfterDetermineSystemBuild: aMaker for this build type. 
+
+	Default is in CPlatformConfig>AfterDetermineSystemBuild aMaker setGlobalOptions: aMaker"
+	^super setGlobalOptions: aMaker 
 
 ]
 
 { #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildITimerHeartbeat [ 
-	self required
-]
+TCPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildAssert: aMaker [
+	"convenience method to customize setGlobalOptionsAfterDetermineSystemBuild: aMaker for this build type. 
 
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildMultiThreaded [ 
-	self required
+	Default is in CPlatformConfig>AfterDetermineSystemBuild aMaker setGlobalOptions: aMaker"
+	^super setGlobalOptions: aMaker 
 
 ]
 
 { #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildMultiThreadedAssert [
-	self required
+TCPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildAssertITimerHeartbeat: aMaker [
+	"convenience method to customize setGlobalOptionsAfterDetermineSystemBuild: aMaker for this build type. 
+
+	Default is in CPlatformConfig>AfterDetermineSystemBuild aMaker setGlobalOptions: aMaker"
+	^super setGlobalOptions: aMaker 
 
 ]
 
 { #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildMultiThreadedDebug [ 
-	self required
+TCPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildDebug: aMaker [
+	"convenience method to customize setGlobalOptionsAfterDetermineSystemBuild: aMaker for this build type. 
+
+	Default is in CPlatformConfig>AfterDetermineSystemBuild aMaker setGlobalOptions: aMaker"
+	^super setGlobalOptions: aMaker 
+
+]
+
+{ #category : #'cmake config build type ' }
+TCPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildDebugITimerHeartbeat: aMaker [
+	"convenience method to customize setGlobalOptionsAfterDetermineSystemBuild: aMaker for this build type. 
+
+	Default is in CPlatformConfig>AfterDetermineSystemBuild aMaker setGlobalOptions: aMaker"
+	^super setGlobalOptions: aMaker 
+ 
+
+]
+
+{ #category : #'cmake config build type ' }
+TCPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildITimerHeartbeat: aMaker [
+	"convenience method to customize setGlobalOptionsAfterDetermineSystemBuild: aMaker for this build type. 
+
+	Default is in CPlatformConfig>AfterDetermineSystemBuild aMaker setGlobalOptions: aMaker"
+	^super setGlobalOptions: aMaker 
+
+]
+
+{ #category : #'cmake config build type ' }
+TCPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildMultiThreaded: aMaker [
+	"convenience method to customize setGlobalOptionsAfterDetermineSystemBuild: aMaker for this build type. 
+
+	Default is in CPlatformConfig>AfterDetermineSystemBuild aMaker setGlobalOptions: aMaker"
+	^super setGlobalOptions: aMaker 
+
+
+]
+
+{ #category : #'cmake config build type ' }
+TCPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildMultiThreadedAssert: aMaker [
+	"convenience method to customize setGlobalOptionsAfterDetermineSystemBuild: aMaker for this build type. 
+
+	Default is in CPlatformConfig>AfterDetermineSystemBuild aMaker setGlobalOptions: aMaker"
+	^super setGlobalOptions: aMaker 
+
+
+]
+
+{ #category : #'cmake config build type ' }
+TCPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildMultiThreadedDebug: aMaker [
+	"convenience method to customize setGlobalOptionsAfterDetermineSystemBuild: aMaker for this build type. 
+
+	Default is in CPlatformConfig>AfterDetermineSystemBuild aMaker setGlobalOptions: aMaker"
+	^super setGlobalOptions: aMaker 
+
 
 ]
 
