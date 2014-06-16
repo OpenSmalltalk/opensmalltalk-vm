@@ -91,6 +91,46 @@ SqueakMacOSConfig >> compilerFlags [
 	^ commonFlags, ' ' ,flags.
 ]
 
+{ #category : #'cmake configuration' }
+SqueakMacOSConfig >> configureForBuildType: aSymbol [
+	| d |
+	"provide a concrete builder with the buildType and configureBuildX method to invoke"
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	self configureNoBuildType.                "reset all internal flags"
+	d 
+		at: #build 
+		put: [self buildType:#build.  self configureBuild];
+
+		at: #buildAssert 
+		put: [self buildType: #buildAssert.  	self configureBuildAssert];
+
+		at: #buildAssertITimerHeartbeat 
+		put:     [ self buildType: #buildAssertITimerHeartbeat.   self configureBuildAssertITimerHeartbeat];
+
+            at:#buildDebug 
+		put: [self buildType: #buildDebug.  self configureBuildDebug];
+
+		at: #buildDebugITimerHeartbeat 
+		put:  [self buildType: #buildDebugITimerHeartbeat.   self configureBuildDebugITimerHeartbeat];
+
+		at: #buildDebugMultiThreaded 
+		put: [self buildType: #buildDebugMultiThreaded.   self configureBuildDebugMultiThreaded];
+
+		at: #buildITimerHeartbeat 
+		put: [self buildType:#buildITimerHeartbeat.    self configureBuildIHeartbeatTimer];
+
+		at: #buildMultiThreaded 
+		put:  [self buildType:#buildMultiThreaded . self configureBuildMultiThreaded];
+
+		at: #buildMultiThreadedAssert 
+		put: [self buildType: #buildMultiThreadedAssert. self configureBuildMultiThreadedAssert];
+
+		at: #buildMultiThreadedDebug  
+		put: [self buildType: #buildMultiThreadedDebug. self configureBuildMultiThreadedDebug].
+
+     ^(d at: aSymbol).
+]
+
 { #category : #cmake }
 SqueakMacOSConfig >> configureNoBuildType [
 		generateBuild:=generateBuildAssert:=generateBuildAssertITimerHeartbeat:=generateBuildDebug:=generateBuildDebugITimerHeartbeat:= generateBuildDebugMultiThreaded:= generateBuildIHeartbeatTimer:= generateBuildMultiThreaded:= generateBuildMultiThreadedAssert:= generateBuildMultiThreadedDebug:=false.

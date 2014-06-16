@@ -320,7 +320,6 @@ SqueakCMakeVMMakerAbstractBuilder >> configureABuildFor: configSymbol withBuildT
 						ifAbsent:[^self userErrorInvalidBuildType: typeSymbol "this config does not support this build type"
 										forConfiguration: configSymbol 
 										hasTypes: config availableBuilds].
-
 				(config configureForBuildType: typeSymbol) value.                             "config configure yourself"
 				^self]
 		ifFalse:[^self userErrorInvalidTarget: configSymbol]
