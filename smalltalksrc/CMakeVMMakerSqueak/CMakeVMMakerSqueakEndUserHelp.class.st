@@ -6,7 +6,7 @@ Class {
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakEndUserHelp class >> bookName [ 
-	^'CMakeVMMakerSqueak End User''s Guide'
+	^'End User Guide'
 ]
 
 { #category : #'as yet unclassified' }

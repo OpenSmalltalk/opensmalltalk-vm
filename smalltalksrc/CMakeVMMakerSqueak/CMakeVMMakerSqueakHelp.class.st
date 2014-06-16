@@ -9,10 +9,10 @@ Class {
 
 { #category : #accessing }
 CMakeVMMakerSqueakHelp class >> bookName [
-	^'CMakeVMMaker'
+	^'CMakeVMMaker on Squeak'
 ]
 
 { #category : #accessing }
 CMakeVMMakerSqueakHelp class >> pages [
-	^#(CMakeVMMakerSqueakDeveloperHelp)
+	^#(CMakeVMMakerSqueakDeveloperHelp CMakeVMMakerSqueakEndUserHelp CMakeVMMakerSqueakHowToCreateNewConfiguration)
 ]
