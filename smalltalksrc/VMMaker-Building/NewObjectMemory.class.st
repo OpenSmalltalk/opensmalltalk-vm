@@ -16,9 +16,6 @@ Class {
 		'statGCEndUsecs',
 		'heapMap'
 	],
-	#classVars : [
-		'AllocationCheckFiller'
-	],
 	#category : #'VMMaker-Interpreter'
 }
 
@@ -33,28 +30,6 @@ NewObjectMemory class >> declareCVarsIn: aCCodeGenerator [
 NewObjectMemory class >> initialize [
 	"This is for Monticello package loading"
 	self initializeWithOptions: Dictionary new
-]
-
-{ #category : #initialization }
-NewObjectMemory class >> initializeWithOptions: optionsDictionary [
-	"NewObjectMemory initializeWithOptions: Dictionary new"
-
-	super initializeWithOptions: optionsDictionary.
-
-	"The AllocationCheckFiller is used to fill newSpace and hence check for
-	 writes beyond the ends of objects which would overwrite the filler."
-	(optionsDictionary includesKey: #AllocationCheckFiller)
-		ifTrue:
-			[AllocationCheckFiller := optionsDictionary at: #AllocationCheckFiller]
-		ifFalse:
-			[AllocationCheckFiller isNil ifTrue:
-				[AllocationCheckFiller := #(	0				"no allocation check"
-											16r55AA55AA	"fill with 16r55AA55AA"
-											16rADD4E55)	"fill with address"
-												last
-				"AllocationCheckFiller := 0"
-				"AllocationCheckFiller := 16r55AA55AA"
-				"AllocationCheckFiller := 16rADD4E55"]]
 ]
 
 { #category : #translation }
@@ -280,12 +255,7 @@ NewObjectMemory >> allocateChunk: byteSize [
 	newChunk := freeStart.
 	newFreeStart := freeStart + byteSize.
 	newFreeStart < scavengeThreshold ifTrue:
-		[(AllocationCheckFiller ~= 0
-		  and: [(self longAt: newChunk) ~= (AllocationCheckFiller = 16rADD4E55
-												ifTrue: [newChunk]
-												ifFalse: [AllocationCheckFiller])]) ifTrue:
-			[self error: 'last object overwritten'].
-		freeStart := newFreeStart.
+		[freeStart := newFreeStart.
 		 ^self oopForPointer: newChunk].
 
 	self scheduleIncrementalGC.
@@ -331,12 +301,7 @@ NewObjectMemory >> allocateInterpreterChunk: byteSize [
 	newChunk := freeStart.
 	newFreeStart := freeStart + byteSize.
 	newFreeStart < scavengeThreshold ifTrue:
-		[(AllocationCheckFiller ~= 0
-		  and: [(self longAt: newChunk) ~= (AllocationCheckFiller = 16rADD4E55
-												ifTrue: [newChunk]
-												ifFalse: [AllocationCheckFiller])]) ifTrue:
-			[self error: 'last object overwritten'].
-		freeStart := newFreeStart.
+		[freeStart := newFreeStart.
 		 ^self oopForPointer: newChunk].
 
 	"Don't thrash doing collections when over the scavengeThreshold.
@@ -437,16 +402,6 @@ NewObjectMemory >> characterValueOf: oop [
 		[coInterpreter primitiveFailFor: PrimErrUnsupported.
 		 ^-1].
 	^self integerValueOf: (self fetchPointer: 0 ofObject: oop)
-]
-
-{ #category : #allocation }
-NewObjectMemory >> checkForLastObjectOverwrite [
-	<doNotGenerate>
-	self assert: (freeStart >= scavengeThreshold
-				or: [(AllocationCheckFiller = 0
-		  		or: [(self longAt: freeStart) = (AllocationCheckFiller = 16rADD4E55
-												ifTrue: [freeStart]
-												ifFalse: [AllocationCheckFiller])])])
 ]
 
 { #category : #accessing }
@@ -2056,13 +2011,10 @@ NewObjectMemory >> maybeFillWithAllocationCheckFillerFrom: start to: end [
 	<inline: true>
 	<var: 'start' type: #usqInt>
 	<var: 'end' type: #usqInt>
-	<var: 'i' type: #usqInt>
-	AllocationCheckFiller ~= 0 ifTrue:
+	<var: 'p' type: #usqInt>
+	coInterpreter checkAllocFiller ifTrue:
 		[start to: end by: BytesPerWord do:
-			[:i|
-			self longAt: i put: (AllocationCheckFiller = 16rADD4E55
-									ifTrue: [i]
-									ifFalse: [AllocationCheckFiller])]]
+			[:p| self longAt: p put: p]]
 ]
 
 { #category : #'primitive support' }

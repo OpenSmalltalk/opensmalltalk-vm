@@ -8,6 +8,7 @@ Class {
 		'CMMaxUsageCount',
 		'CMMethod',
 		'CMOpenPIC',
+		'CheckAllocationFillerAfterPrimCall',
 		'MaxLiteralCountForCompile',
 		'MaxMethodSize',
 		'MaxNumArgs',
