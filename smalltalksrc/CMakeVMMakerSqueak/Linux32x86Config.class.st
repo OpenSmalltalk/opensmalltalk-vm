@@ -328,41 +328,40 @@ Linux32x86Config >> configureBuildAssertITimerHeartbeat [
 
 { #category : #cmake }
 Linux32x86Config >> configureForBuildType: aSymbol [
-	| d info |
+	| d |
 	"provide a concrete builder with the buildType and configureBuildX method to invoke"
-	info := SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
 	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
 	self configureNoBuildType.                "reset all internal flags"
 	d 
 		at: #build 
-		put: [self buildType:(info at:#build).  self configureBuild];
+		put: [self buildType:#build.  self configureBuild];
 
 		at: #buildAssert 
-		put: [self buildType:(info at: #buildAssert).  	self configureBuildAssert];
+		put: [self buildType: #buildAssert.  	self configureBuildAssert];
 
 		at: #buildAssertITimerHeartbeat 
-		put:     [ self buildType:(info at: #buildAssertITimerHeartbeat ).   self configureBuildAssertITimerHeartbeat];
+		put:     [ self buildType: #buildAssertITimerHeartbeat.   self configureBuildAssertITimerHeartbeat];
 
             at:#buildDebug 
-		put: [self buildType:(info at: #buildDebug ).  self configureBuildDebug];
+		put: [self buildType: #buildDebug.  self configureBuildDebug];
 
 		at: #buildDebugITimerHeartbeat 
-		put:  [self buildType:(info at: #buildDebugITimerHeartbeat).   self configureBuildDebugITimerHeartbeat];
+		put:  [self buildType: #buildDebugITimerHeartbeat.   self configureBuildDebugITimerHeartbeat];
 
 		at: #buildDebugMultiThreaded 
-		put: [self buildType:(info at: #buildDebugMultiThreaded ).   self configureBuildDebugMultiThreaded];
+		put: [self buildType: #buildDebugMultiThreaded.   self configureBuildDebugMultiThreaded];
 
 		at: #buildITimerHeartbeat 
-		put: [self buildType:(info at:#buildITimerHeartbeat ).    self configureBuildIHeartbeatTimer];
+		put: [self buildType:#buildITimerHeartbeat.    self configureBuildIHeartbeatTimer];
 
 		at: #buildMultiThreaded 
-		put:  [self buildType:(info at:#buildMultiThreaded ). self configureBuildMultiThreaded];
+		put:  [self buildType:#buildMultiThreaded . self configureBuildMultiThreaded];
 
 		at: #buildMultiThreadedAssert 
-		put: [self buildType:(info at: #buildMultiThreadedAssert). self configureBuildMultiThreadedAssert];
+		put: [self buildType: #buildMultiThreadedAssert. self configureBuildMultiThreadedAssert];
 
 		at: #buildMultiThreadedDebug  
-		put: [self buildType: (info at: #buildMultiThreadedDebug). self configureBuildMultiThreadedDebug].
+		put: [self buildType: #buildMultiThreadedDebug. self configureBuildMultiThreadedDebug].
 
      ^(d at: aSymbol).
 ]
