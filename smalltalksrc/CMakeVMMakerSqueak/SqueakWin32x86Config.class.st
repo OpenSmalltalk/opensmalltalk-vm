@@ -285,6 +285,24 @@ SqueakWin32x86Config >> configureB3DAcceleratorPlugin:  maker [
 
 ]
 
+{ #category : #'cmake configuration' }
+SqueakWin32x86Config >> configureBuild [
+	"configure this Configuration for a buildType #build"
+	self 
+		preferredIncludesBuild;
+		standardIncludesBuild;
+		compilerFlagsBuild;
+		internalPluginsBuild;
+		externalPluginsBuild;
+		thirdpartyLibsBuild
+		
+
+
+		
+		
+		
+]
+
 { #category : #'plugin extra rules' }
 SqueakWin32x86Config >> configureCroquetPlugin:  maker [ 
 	"extra rules for CroquetPlugin "
