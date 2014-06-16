@@ -1017,6 +1017,7 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 				"If set, jump to record sample call."
 				jmpSamplePrim := self JumpNonZero: 0.
 				continuePostSamplePrim := self Label].
+			self maybeCompileAllocFillerCheck.
 			"Switch back to the Smalltalk stack.  Stack better be in either of these two states:
 				success:	stackPointer	->	result (was receiver)
 											arg1
@@ -1827,6 +1828,8 @@ SimpleStackBasedCogit >> genPrimReturnEnterCogCodeEnilopmart: profiling [
 		"If set, jump to record sample call."
 		jmpSample := self JumpNonZero: 0.
 		continuePostSample := self Label].
+
+	self maybeCompileAllocFillerCheck.
 
 	"Test primitive failure"
 	self MoveAw: coInterpreter primFailCodeAddress R: TempReg.
@@ -3356,6 +3359,24 @@ SimpleStackBasedCogit >> generateTracingTrampolines [
 						at: (a := self simulatedAddressFor: #ceShortCutTraceStore:)
 						put: #ceShortCutTraceStore:.
 					 a]
+]
+
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> maybeCompileAllocFillerCheck [
+	"If allocCheckFiller is true, words in newSpace from freeStart to scavengeThreshold
+	 are filled with their address, and after each call of a plugin primitive, the VM checks
+	 that freeStart points to a word containing the value of freeStart.  This is a simple
+	 check for primitives overwriting the ends of an object."
+	| jmpOk |
+	<var: #jmpOk type: #'AbstractInstruction *'>
+	coInterpreter getCheckAllocFiller ifTrue:
+		[self MoveAw: objectMemory freeStartAddress R: ClassReg.
+		 self MoveMw: 0 r: ClassReg R: TempReg.
+		 self CmpR: ClassReg R: TempReg.
+		 jmpOk := self JumpZero: 0.
+		 self MoveCq: PrimErrWritePastObject R: TempReg.
+		 self MoveR: TempReg Aw: coInterpreter primFailCodeAddress.
+		 jmpOk jmpTarget: self Label]
 ]
 
 { #category : #trampolines }

@@ -88,21 +88,22 @@ Class {
 		'longRunningPrimitiveGCUsecs',
 		'longRunningPrimitiveCheckSequenceNumber',
 		'longRunningPrimitiveSignalUndelivered',
+		'checkAllocFiller',
 		'tempOop',
+		'theUnknownShort',
+		'the2ndUnknownShort',
+		'imageFloatsBigEndian',
+		'maxExtSemTabSizeSet',
+		'lastMethodCacheProbeWrite',
+		'gcSemaphoreIndex',
+		'classByteArrayCompactIndex',
 		'statForceInterruptCheck',
 		'statStackOverflow',
 		'statStackPageDivorce',
 		'statCheckForEvents',
 		'statProcessSwitch',
 		'statIOProcessEvents',
-		'theUnknownShort',
-		'the2ndUnknownShort',
-		'imageFloatsBigEndian',
-		'maxExtSemTabSizeSet',
-		'lastMethodCacheProbeWrite',
-		'statPendingFinalizationSignals',
-		'gcSemaphoreIndex',
-		'classByteArrayCompactIndex'
+		'statPendingFinalizationSignals'
 	],
 	#classVars : [
 		'AltBytecodeEncoderClassName',
@@ -1405,7 +1406,7 @@ StackInterpreter class >> mustBeGlobal: var [
 	   or: [(#('interpreterProxy' 'interpreterVersion' 'inIOProcessEvents'
 			'deferDisplayUpdates' 'extraVMMemory' 'showSurfaceFn'
 			'desiredNumStackPages' 'desiredEdenBytes'
-			'breakSelector' 'breakSelectorLength' 'sendTrace'
+			'breakSelector' 'breakSelectorLength' 'sendTrace' 'checkAllocFiller'
 			'suppressHeartbeatFlag') includes: var)
 	   or: [ "This allows slow machines to define bytecodeSetSelector as 0
 			to avoid the interpretation overhead."
@@ -2957,7 +2958,8 @@ StackInterpreter >> callExternalPrimitive: functionID [
 	 see StackInterpreterSimulator for its version."
 
 	<var: #functionID declareC: 'void (*functionID)()'>
-	self dispatchFunctionPointer: functionID
+	self dispatchFunctionPointer: functionID.
+	self maybeFailForLastObjectOverwrite.
 ]
 
 { #category : #'miscellaneous bytecodes' }
@@ -3087,6 +3089,16 @@ StackInterpreter >> checkAllAccessibleObjectsOkay [
 	objectMemory allObjectsDoSafely:
 		[:oop| ok := ok & (self checkOkayFields: oop)].
 	^ok
+]
+
+{ #category : #'primitive support' }
+StackInterpreter >> checkAllocFiller [
+	"If allocCheckFiller is true, words in newSpace from freeStart to scavengeThreshold
+	 are filled with their address, and after each call of a plugin primitive, the VM checks
+	 that freeStart points to a word containing the value of freeStart.  This is a simple
+	 check for primitives overwriting the ends of an object."
+	<cmacro: '() GIV(checkAllocFiller)'>
+	^checkAllocFiller
 ]
 
 { #category : #initialization }
@@ -3289,6 +3301,15 @@ StackInterpreter >> checkForEventsMayContextSwitch: mayContextSwitch [
 		[switched := true].
 
 	^switched
+]
+
+{ #category : #simulation }
+StackInterpreter >> checkForLastObjectOverwrite [
+	<doNotGenerate>
+	| freeStart |
+	checkAllocFiller ifTrue: 
+		[self assert: ((freeStart := objectMemory freeStart) >= objectMemory scavengeThreshold
+					  or: [(self longAt: freeStart) = freeStart])]
 ]
 
 { #category : #'primitive support' }
@@ -4246,16 +4267,12 @@ StackInterpreter >> detailedSymbolicMethod: aMethod [
 StackInterpreter >> dispatchFunctionPointer: aFunctionPointer [
 	"In C aFunctionPointer is void (*aFunctionPointer)()"
 	<cmacro: '(aFunctionPointer) (aFunctionPointer)()'>
-	| result |
+	"In Smalltalk aFunctionPointer is a message selector symbol, except for
+	 external primitives which are funkily encoded as integers >= 1000."
 	(aFunctionPointer isInteger
-	 and: [aFunctionPointer >= 1000]) ifTrue:
-		[result := self callExternalPrimitive: aFunctionPointer.
-		 objectMemory checkForLastObjectOverwrite.
-		 ^result].
-	"In Smalltalk aFunctionPointer is a message selector symbol"
-	result := self perform: aFunctionPointer.
-	 objectMemory checkForLastObjectOverwrite.
-	 ^result
+	 and: [aFunctionPointer >= 1000])
+		ifTrue: [self callExternalPrimitive: aFunctionPointer]
+		ifFalse: [self perform: aFunctionPointer]
 ]
 
 { #category : #'I/O primitives' }
@@ -6775,6 +6792,7 @@ StackInterpreter >> initializeInterpreter: bytesToShift [
 	longRunningPrimitiveStartUsecs :=
 	longRunningPrimitiveStopUsecs := 0.
 	maxExtSemTabSizeSet := false.
+	checkAllocFiller := false.
 	statForceInterruptCheck := 0.
 	statStackOverflow := 0.
 	statCheckForEvents := 0.
@@ -8494,6 +8512,15 @@ StackInterpreter >> marryFrame: theFP SP: theSP copyTemps: copyTemps [
 
 	^theContext
 
+]
+
+{ #category : #simulation }
+StackInterpreter >> maybeFailForLastObjectOverwrite [
+	<inline: true>
+	checkAllocFiller ifTrue: 
+		[(objectMemory freeStart < objectMemory scavengeThreshold
+		  and: [(objectMemory longAt: objectMemory freeStart) ~= objectMemory freeStart]) ifTrue:
+			[self primitiveFailFor: PrimErrWritePastObject]]
 ]
 
 { #category : #'compiled methods' }
@@ -11403,6 +11430,15 @@ StackInterpreter >> setBreakSelector: aString [
 		ifFalse: [breakSelectorLength := self strlen: aString. breakSelector := aString]
 ]
 
+{ #category : #'primitive support' }
+StackInterpreter >> setCheckAllocFiller: aBool [
+	"If allocCheckFiller is true, words in newSpace from freeStart to scavengeThreshold
+	 are filled with their address, and after each call of a plugin primitive, the VM checks
+	 that freeStart points to a word containing the value of freeStart.  This is a simple
+	 check for primitives overwriting the ends of an object."
+	checkAllocFiller := aBool
+]
+
 { #category : #'internal interpreter access' }
 StackInterpreter >> setCogVMFlags: flags [
 	"Set an array of flags indicating various properties of the Cog VM.
@@ -11958,6 +11994,7 @@ StackInterpreter >> slowPrimitiveResponse [
 	 and: [self checkForAndFollowForwardedPrimitiveState]]]) ifTrue:
 		[self initPrimCall.
 		 self dispatchFunctionPointer: primitiveFunctionPointer].
+	self maybeFailForLastObjectOverwrite.
 	(FailImbalancedPrimitives
 	and: [self successful
 	and: [framePointer = savedFramePointer
