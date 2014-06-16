@@ -1694,6 +1694,10 @@ parseVMArgument(int argc, char *argv[])
 		extern sqInt desiredNumStackPages;
 		desiredNumStackPages = atoi(argv[0]+12);	 
 		return 2; }
+	else if (!strcmp(argv[0], "-checkpluginwrites")) { 
+		extern sqInt checkAllocFiller;
+		checkAllocFiller = 1;
+		return 1; }
 	else if (!strcmp(argv[0], "-noheartbeat")) { 
 		extern sqInt suppressHeartbeatFlag;
 		suppressHeartbeatFlag = 1;

@@ -3197,6 +3197,7 @@ int printUsage(int level)
                    TEXT("\n\t-eden: bytes \t(set eden memory size to bytes)")
 				   TEXT("\n\t-stackpages: n \t(use n stack pages)")
                    TEXT("\n\t-numextsems: n \t(allow up to n external semaphores)")
+                   TEXT("\n\t-checkpluginwrites \t(check for writes past end of object in plugins")
                    TEXT("\n\t-noheartbeat \t(no heartbeat for debug)")
 #endif /* STACKVM */
 #if STACKVM || NewspeakVM

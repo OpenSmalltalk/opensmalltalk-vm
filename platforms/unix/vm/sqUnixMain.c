@@ -1402,6 +1402,10 @@ static int vm_parseArgument(int argc, char **argv)
       else if (!strcmp(argv[0], "-numextsems")) { 
 		ioSetMaxExtSemTableSize(atoi(argv[1]));
 		return 2; }
+      else if (!strcmp(argv[0], "-checkpluginwrites")) { 
+		extern sqInt checkAllocFiller;
+		checkAllocFiller = 1;
+		return 1; }
       else if (!strcmp(argv[0], "-noheartbeat")) { 
 		extern sqInt suppressHeartbeatFlag;
 		suppressHeartbeatFlag = 1;
@@ -1488,6 +1492,7 @@ static void vm_printUsage(void)
   printf("  -noevents             disable event-driven input support\n");
   printf("  -nohandlers           disable sigsegv & sigusr1 handlers\n");
   printf("  -pollpip              output . on each poll for input\n");
+  printf("  -checkpluginwrites    check for writes past end of object in plugins\n");
   printf("  -pathenc <enc>        set encoding for pathnames (default: UTF-8)\n");
   printf("  -plugins <path>       specify alternative plugin location (see manpage)\n");
   printf("  -textenc <enc>        set encoding for external text (default: UTF-8)\n");

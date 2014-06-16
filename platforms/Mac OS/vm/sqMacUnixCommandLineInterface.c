@@ -198,6 +198,10 @@ static int parseArgument(int argc, char **argv)
       else if (!strcmp(argv[0], "-numextsems")) { 
 		ioSetMaxExtSemTableSize(atoi(argv[1]));
 		return 2; }
+      else if (!strcmp(argv[0], "-checkpluginwrites")) { 
+		extern sqInt checkAllocFiller;
+		checkAllocFiller = 1;
+		return 1; }
       else if (!strcmp(argv[0], "-noheartbeat")) { 
 		extern sqInt suppressHeartbeatFlag;
 		suppressHeartbeatFlag = 1;
@@ -293,6 +297,7 @@ static void printUsage(void)
   printf("  -numextsems num       make the external semaphore table num in size\n");
   printf("  -noheartbeat          disable the heartbeat for VM debugging. disables input\n");
   printf("  -pollpip              output . on each poll for input\n");
+  printf("  -checkpluginwrites    check for writes past end of object in plugins\n");
 #endif
 #if STACKVM || NewspeakVM
 # if COGVM
