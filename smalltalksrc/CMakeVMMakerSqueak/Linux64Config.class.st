@@ -395,6 +395,17 @@ Linux64Config >> excludeFromBuild [
 	^true
 ]
 
+{ #category : #'headers generation' }
+Linux64Config >> generateConfigH [
+	"	
+	used to be: 	
+		self write: self configH toFile: 'config.h'
+      but with variable buildTypes we need:
+"
+	self write: (self generateConfigH: buildType) toFile: 'config.h'   
+
+]
+
 { #category : #'initialize-release' }
 Linux64Config >> initialize [
 	super initialize.
