@@ -44,9 +44,9 @@ SqueakCocoaIOSSqueakStackV3Config >> excludeFromBuild [
 	^true
 ]
 
-{ #category : #accessing }
+{ #category : #cmake }
 SqueakCocoaIOSSqueakStackV3Config >> executableName [
-	^ 'StackVM'
+	^ self vmStackExecutableName
 ]
 
 { #category : #'source generation' }

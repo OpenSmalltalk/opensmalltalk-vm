@@ -285,9 +285,9 @@ SqueakMacOSNewspeakCogSpurConfig >> excludeFromBuild [
 	^true
 ]
 
-{ #category : #accessing }
+{ #category : #cmake }
 SqueakMacOSNewspeakCogSpurConfig >> executableName [
-	^ 'CogVM'
+	^ self vmCogExecutableName
 ]
 
 { #category : #accessing }

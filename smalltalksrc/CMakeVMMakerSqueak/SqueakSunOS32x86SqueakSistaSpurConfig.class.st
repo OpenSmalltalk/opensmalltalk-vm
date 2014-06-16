@@ -28,7 +28,20 @@ SqueakSunOS32x86SqueakSistaSpurConfig >> dirBuildLanguageVMMM [
 ]
 
 { #category : #cmake }
+SqueakSunOS32x86SqueakSistaSpurConfig >> dirInstall [
+	"the directory of the finished product.. the place where 'make install' puts stuff.
+	SystemNavigation default browseMethodsWhoseNamesContain: 'outputDir'
+      "
+	^self squeakSistaSpur
+]
+
+{ #category : #cmake }
 SqueakSunOS32x86SqueakSistaSpurConfig >> excludeFromBuild [
 	^false
 
+]
+
+{ #category : #cmake }
+SqueakSunOS32x86SqueakSistaSpurConfig >> executableName [
+	^ self vmSistaExecutableName
 ]

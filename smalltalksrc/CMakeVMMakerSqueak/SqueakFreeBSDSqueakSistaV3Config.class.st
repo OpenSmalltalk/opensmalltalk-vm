@@ -28,3 +28,8 @@ SqueakFreeBSDSqueakSistaV3Config >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true
 ]
+
+{ #category : #cmake }
+SqueakFreeBSDSqueakSistaV3Config >> executableName [
+	^ self vmSistaExecutableName
+]

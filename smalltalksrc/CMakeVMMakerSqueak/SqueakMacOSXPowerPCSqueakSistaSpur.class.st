@@ -38,7 +38,7 @@ SqueakMacOSXPowerPCSqueakSistaSpur >> excludeFromBuild [
 	^true
 ]
 
-{ #category : #'as yet unclassified' }
-SqueakMacOSXPowerPCSqueakSistaSpur >> todo [
-	self flag:'tty'
+{ #category : #cmake }
+SqueakMacOSXPowerPCSqueakSistaSpur >> executableName [
+	^ self vmSistaExecutableName
 ]

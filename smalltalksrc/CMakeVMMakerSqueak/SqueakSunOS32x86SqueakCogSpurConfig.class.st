@@ -28,7 +28,20 @@ SqueakSunOS32x86SqueakCogSpurConfig >> dirBuildLanguageVMMM [
 ]
 
 { #category : #cmake }
+SqueakSunOS32x86SqueakCogSpurConfig >> dirInstall [
+	"the directory of the finished product.. the place where 'make install' puts stuff.
+	SystemNavigation default browseMethodsWhoseNamesContain: 'outputDir'
+      "
+	^self squeakCogSpur
+]
+
+{ #category : #cmake }
 SqueakSunOS32x86SqueakCogSpurConfig >> excludeFromBuild [
 	^false
 
+]
+
+{ #category : #cmake }
+SqueakSunOS32x86SqueakCogSpurConfig >> executableName [
+	^ self vmCogExecutableName
 ]

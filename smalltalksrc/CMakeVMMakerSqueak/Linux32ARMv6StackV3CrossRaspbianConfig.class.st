@@ -372,6 +372,11 @@ Linux32ARMv6StackV3CrossRaspbianConfig >> excludeFromBuild [
 
 ]
 
+{ #category : #cmake }
+Linux32ARMv6StackV3CrossRaspbianConfig >> executableName [
+	^ self vmStackExecutableName
+]
+
 { #category : #'plugin extra rules' }
 Linux32ARMv6StackV3CrossRaspbianConfig >> extraPluginSettings: maker [
 

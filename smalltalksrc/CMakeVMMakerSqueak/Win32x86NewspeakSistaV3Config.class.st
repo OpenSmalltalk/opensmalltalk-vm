@@ -12,7 +12,7 @@ HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {
 	#name : #Win32x86NewspeakSistaV3Config,
-	#superclass : #SqueakWin32x86CogFamilyConfig,
+	#superclass : #SqueakWin32x86Config,
 	#category : #'CMakeVMMakerSqueak-Win32x86'
 }
 
@@ -36,9 +36,9 @@ Win32x86NewspeakSistaV3Config >> excludeFromBuild [
 	^true
 ]
 
-{ #category : #accessing }
+{ #category : #cmake }
 Win32x86NewspeakSistaV3Config >> executableName [
-	^ 'StackVM'
+	^ self vmSistaExecutableName
 ]
 
 { #category : #'source generation' }

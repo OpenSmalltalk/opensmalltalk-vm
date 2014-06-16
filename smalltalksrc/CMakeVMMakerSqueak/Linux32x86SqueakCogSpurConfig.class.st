@@ -31,13 +31,13 @@ Linux32x86SqueakCogSpurConfig >> excludeFromBuild [
 	^true
 ]
 
+{ #category : #cmake }
+Linux32x86SqueakCogSpurConfig >> executableName [
+	^ self vmCogExecutableName
+]
+
 { #category : #'source generation' }
 Linux32x86SqueakCogSpurConfig >> prepareForGeneration [
 	^ self prepareForCogGeneration
 
-]
-
-{ #category : #'as yet unclassified' }
-Linux32x86SqueakCogSpurConfig >> todo [
-	self flag:'tty'
 ]

@@ -28,7 +28,20 @@ SqueakSunOS32x86NewspeakStackV3Config >> dirBuildLanguageVMMM [
 ]
 
 { #category : #cmake }
+SqueakSunOS32x86NewspeakStackV3Config >> dirInstall [
+	"the directory of the finished product.. the place where 'make install' puts stuff.
+	SystemNavigation default browseMethodsWhoseNamesContain: 'outputDir'
+      "
+	^self newspeakStackV3
+]
+
+{ #category : #cmake }
 SqueakSunOS32x86NewspeakStackV3Config >> excludeFromBuild [
 	^false
 
+]
+
+{ #category : #cmake }
+SqueakSunOS32x86NewspeakStackV3Config >> executableName [
+	^ self vmStackExecutableName
 ]

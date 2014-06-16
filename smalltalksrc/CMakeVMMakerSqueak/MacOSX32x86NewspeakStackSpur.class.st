@@ -31,3 +31,8 @@ MacOSX32x86NewspeakStackSpur >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true
 ]
+
+{ #category : #cmake }
+MacOSX32x86NewspeakStackSpur >> executableName [
+	^ self vmStackExecutableName
+]

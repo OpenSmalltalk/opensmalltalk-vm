@@ -31,3 +31,8 @@ MacOSX32x86SqueakSistaV3 >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true
 ]
+
+{ #category : #cmake }
+MacOSX32x86SqueakSistaV3 >> executableName [
+	^ self vmSistaExecutableName
+]

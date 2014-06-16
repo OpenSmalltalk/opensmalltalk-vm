@@ -107,6 +107,11 @@ Linux32x86SqueakCogV3Config >> excludeFromBuild [
 	^true
 ]
 
+{ #category : #cmake }
+Linux32x86SqueakCogV3Config >> executableName [
+	^ self vmCogExecutableName
+]
+
 { #category : #'source generation' }
 Linux32x86SqueakCogV3Config >> interpreterClass [
 	^ CoInterpreter

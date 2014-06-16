@@ -31,7 +31,7 @@ Linux32x86SqueakSistaSpurConfig >> excludeFromBuild [
 	^true
 ]
 
-{ #category : #'as yet unclassified' }
-Linux32x86SqueakSistaSpurConfig >> todo [
-	self flag:'tty'
+{ #category : #cmake }
+Linux32x86SqueakSistaSpurConfig >> executableName [
+	^ self vmSistaExecutableName
 ]

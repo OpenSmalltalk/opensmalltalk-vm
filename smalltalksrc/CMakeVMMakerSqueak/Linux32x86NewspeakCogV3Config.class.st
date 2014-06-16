@@ -30,13 +30,13 @@ Linux32x86NewspeakCogV3Config >> excludeFromBuild [
 
 ]
 
+{ #category : #cmake }
+Linux32x86NewspeakCogV3Config >> executableName [
+	^ self vmCogExecutableName
+]
+
 { #category : #'source generation' }
 Linux32x86NewspeakCogV3Config >> prepareForGeneration [
 	^ self prepareForCogGeneration
 
-]
-
-{ #category : #'as yet unclassified' }
-Linux32x86NewspeakCogV3Config >> todo [
-	self flag:'tty'
 ]

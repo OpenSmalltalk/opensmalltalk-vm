@@ -141,6 +141,14 @@ SqueakCMakeVMMakerAbstractBuilder class >> configurationsCategory [
 ]
 
 { #category : #building }
+SqueakCMakeVMMakerAbstractBuilder class >> configureA: aSqueakCMakeConfiguration forBuildType: aSymbol [
+	"a better end-user facing method name"
+	self flag: 'tty'. "refactor this after system is in place and make this facade method the real method"
+	default ifNil:[default:= self new].
+	^default configureABuildFor: aSqueakCMakeConfiguration withBuildType: aSymbol
+]
+
+{ #category : #building }
 SqueakCMakeVMMakerAbstractBuilder class >> configureABuildFor: aSqueakCMakeConfiguration withBuildType: aSymbol [
 	default ifNil:[default:= self new].
 	^default configureABuildFor: aSqueakCMakeConfiguration withBuildType: aSymbol
@@ -159,6 +167,14 @@ SqueakCMakeVMMakerAbstractBuilder class >> dirBuildPlatform [
 
 { #category : #building }
 SqueakCMakeVMMakerAbstractBuilder class >> generate [
+	default ifNil:[default:= self new].
+	^default  generate
+]
+
+{ #category : #building }
+SqueakCMakeVMMakerAbstractBuilder class >> generateCmakeFiles [
+	"a better end-user facing method name"
+	self flag: 'tty'. "refactor this after system is in place and make this facade method the real method"
 	default ifNil:[default:= self new].
 	^default  generate
 ]
@@ -452,6 +468,11 @@ SqueakCMakeVMMakerAbstractBuilder >> userErrorInvalidBuildType: typeSymbol forCo
 { #category : #queries }
 SqueakCMakeVMMakerAbstractBuilder >> userErrorInvalidTarget: aSymbol [
 	^'I cannot build for this target', aSymbol asString.
+]
+
+{ #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder >> userErrorNoExecutable: aSymbol [
+	^aSymbol asString, ' is not meant to be an executable. Read my class comment'
 ]
 
 { #category : #queries }

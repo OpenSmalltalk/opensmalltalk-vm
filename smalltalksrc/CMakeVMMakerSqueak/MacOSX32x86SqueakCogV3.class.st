@@ -32,3 +32,8 @@ MacOSX32x86SqueakCogV3 >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true
 ]
+
+{ #category : #cmake }
+MacOSX32x86SqueakCogV3 >> executableName [
+	^ self vmCogExecutableName
+]

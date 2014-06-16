@@ -11,7 +11,7 @@ HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {
 	#name : #Win32x86SqueakCogSpurConfig,
-	#superclass : #SqueakWin32x86CogFamilyConfig,
+	#superclass : #SqueakWin32x86Config,
 	#category : #'CMakeVMMakerSqueak-Win32x86'
 }
 
@@ -70,9 +70,9 @@ Win32x86SqueakCogSpurConfig >> excludeFromBuild [
 	^true
 ]
 
-{ #category : #accessing }
+{ #category : #cmake }
 Win32x86SqueakCogSpurConfig >> executableName [
-	^ 'CogVM'
+	^ self vmCogExecutableName
 ]
 
 { #category : #accessing }

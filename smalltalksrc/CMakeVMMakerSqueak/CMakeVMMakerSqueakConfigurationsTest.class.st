@@ -135,7 +135,8 @@ CMakeVMMakerSqueakConfigurationsTest >> testExectuableName [
 				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
 					ifTrue:[ 
 							o:= configuration new.
-							self assert:(o  executableName isString)]]]
+							(o excludeFromBuild not)
+								ifTrue:[self assert:(o  executableName isString)]]]]
 
 
 
