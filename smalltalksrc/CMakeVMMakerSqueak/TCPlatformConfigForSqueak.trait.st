@@ -878,6 +878,24 @@ TCPlatformConfigForSqueak >> version [
 	^ ''
 ]
 
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> vmCogExecutableName [
+	"the name of the cog vm executable"
+	^'cog'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> vmSistaExecutableName [
+	"the name of the sista vm executable"
+	^'sista'
+]
+
+{ #category : #cmake }
+TCPlatformConfigForSqueak >> vmStackExecutableName [
+	"the name of the stack vm executable"
+	^'squeak'
+]
+
 { #category : #'squeak compatibility' }
 TCPlatformConfigForSqueak >> write: aContents toFile: aFileName [
 	self required

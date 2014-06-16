@@ -200,6 +200,11 @@ SqueakCocoaIOSCogV3FamilyConfig >> excludeFromBuild [
 	^true
 ]
 
+{ #category : #cmake }
+SqueakCocoaIOSCogV3FamilyConfig >> executableName [
+	^ self vmCogExecutableName
+]
+
 { #category : #'source files' }
 SqueakCocoaIOSCogV3FamilyConfig >> extraSources [
 	" mac VM using some unix sources "

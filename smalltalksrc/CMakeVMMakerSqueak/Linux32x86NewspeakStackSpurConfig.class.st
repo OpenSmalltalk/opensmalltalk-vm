@@ -30,7 +30,7 @@ Linux32x86NewspeakStackSpurConfig >> excludeFromBuild [
 
 ]
 
-{ #category : #'as yet unclassified' }
-Linux32x86NewspeakStackSpurConfig >> todo [
-	self flag:'tty'
+{ #category : #cmake }
+Linux32x86NewspeakStackSpurConfig >> executableName [
+	^ self vmStackExecutableName
 ]

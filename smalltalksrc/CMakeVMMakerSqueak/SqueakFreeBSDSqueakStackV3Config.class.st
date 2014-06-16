@@ -28,3 +28,8 @@ SqueakFreeBSDSqueakStackV3Config >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true
 ]
+
+{ #category : #cmake }
+SqueakFreeBSDSqueakStackV3Config >> executableName [
+	^ self vmStackExecutableName
+]

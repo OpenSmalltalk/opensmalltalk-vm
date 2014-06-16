@@ -26,7 +26,7 @@ Linux64NewspeakStackSpur >> dirBuildLanguageVMMM [
 	^self newspeakStackSpur
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #cmake }
 Linux64NewspeakStackSpur >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
 	^self dirLinux32x8664
@@ -36,4 +36,9 @@ Linux64NewspeakStackSpur >> dirBuildPlatform [
 Linux64NewspeakStackSpur >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true
+]
+
+{ #category : #accessing }
+Linux64NewspeakStackSpur >> executableName [
+	^ self vmStackExecutableName
 ]

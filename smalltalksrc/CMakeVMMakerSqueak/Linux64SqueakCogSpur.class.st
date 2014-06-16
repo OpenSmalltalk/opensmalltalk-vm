@@ -27,7 +27,7 @@ Linux64SqueakCogSpur >> dirBuildLanguageVMMM [
 	^self squeakCogSpur
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #cmake }
 Linux64SqueakCogSpur >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
 	^self dirLinux32x8664
@@ -37,4 +37,9 @@ Linux64SqueakCogSpur >> dirBuildPlatform [
 Linux64SqueakCogSpur >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true
+]
+
+{ #category : #cmake }
+Linux64SqueakCogSpur >> executableName [
+	^ self vmCogExecutableName
 ]

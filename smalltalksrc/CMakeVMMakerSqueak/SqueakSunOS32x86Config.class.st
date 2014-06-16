@@ -112,6 +112,15 @@ SqueakSunOS32x86Config >> dirBuildPlatform [
 ]
 
 { #category : #cmake }
+SqueakSunOS32x86Config >> dirInstall [
+	"the directory of the finished product.. the place where 'make install' puts stuff.
+	SystemNavigation default browseMethodsWhoseNamesContain: 'dirInstall'
+      "
+self required.
+
+]
+
+{ #category : #cmake }
 SqueakSunOS32x86Config >> excludeFromBuild [
 	^true
 
@@ -136,11 +145,6 @@ SqueakSunOS32x86Config >> outputDir [
 { #category : #'squeak compatibility' }
 SqueakSunOS32x86Config >> srcDir [
 		^ srcDir ifNil: [ srcDir := (self topDir directoryNamed: 'src' )]
-]
-
-{ #category : #'as yet unclassified' }
-SqueakSunOS32x86Config >> todo [
-	self flag:'tty'
 ]
 
 { #category : #'squeak compatibility' }

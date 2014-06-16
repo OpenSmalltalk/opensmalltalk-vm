@@ -41,6 +41,11 @@ SqueakCocoaIOSStackV3CLANGConfig >> excludeFromBuild [
 	^true
 ]
 
+{ #category : #cmake }
+SqueakCocoaIOSStackV3CLANGConfig >> executableName [
+	^ self vmStackExecutableName
+]
+
 { #category : #settings }
 SqueakCocoaIOSStackV3CLANGConfig >> setExtraTargetProperties: maker [
 
