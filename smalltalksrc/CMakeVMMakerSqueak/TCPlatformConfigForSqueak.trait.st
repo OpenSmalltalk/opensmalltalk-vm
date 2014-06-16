@@ -160,11 +160,6 @@ TCPlatformConfigForSqueak >> compilerFlagsDebugITimerHeartbeat [
 ]
 
 { #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> compilerFlagsDebugMultiThreaded [
-	self required
-]
-
-{ #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> compilerFlagsIHeartbeatTimer [
 	self required
 ]
@@ -360,6 +355,69 @@ Again. it is easier to copy the one in CPlatformConfig.
 																																																																					
 																																																																				'
 "
+]
+
+{ #category : #'headers generation' }
+TCPlatformConfigForSqueak >> configHBuild [
+	"convenience method to customize configH for this buildType. default is self configH"
+	^self configH
+
+]
+
+{ #category : #'headers generation' }
+TCPlatformConfigForSqueak >> configHBuildAssert [
+	"convenience method to customize configH for this buildType. default is self configH"
+	^self configH
+
+]
+
+{ #category : #'headers generation' }
+TCPlatformConfigForSqueak >> configHBuildAssertITimerHeartbeat [
+	"convenience method to customize configH for this buildType. default is self configH"
+	^self configH
+
+]
+
+{ #category : #'headers generation' }
+TCPlatformConfigForSqueak >> configHBuildDebug [
+	"convenience method to customize configH for this buildType. default is self configH"
+	^self configH
+
+]
+
+{ #category : #'headers generation' }
+TCPlatformConfigForSqueak >> configHBuildDebugITimerHeartbeat [
+	"convenience method to customize configH for this buildType. default is self configH"
+	^self configH
+
+]
+
+{ #category : #'headers generation' }
+TCPlatformConfigForSqueak >> configHBuildITimerHeartbeat [
+	"convenience method to customize configH for this buildType. default is self configH"
+	^self configH
+
+]
+
+{ #category : #'headers generation' }
+TCPlatformConfigForSqueak >> configHBuildMultiThreaded [
+	"convenience method to customize configH for this buildType. default is self configH"
+	^self configH
+
+]
+
+{ #category : #'headers generation' }
+TCPlatformConfigForSqueak >> configHBuildMultiThreadedAssert [
+	"convenience method to customize configH for this buildType. default is self configH"
+	^self configH
+
+]
+
+{ #category : #'headers generation' }
+TCPlatformConfigForSqueak >> configHBuildMultiThreadedDebug [
+	"convenience method to customize configH for this buildType. default is self configH"
+	^self configH
+
 ]
 
 { #category : #'cmake configuration' }
@@ -691,13 +749,6 @@ TCPlatformConfigForSqueak >> externalPluginsBuildDebugITimerHeartbeat [
 ]
 
 { #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> externalPluginsBuildDebugMultiThreaded [ 
-	"convenience method to customize plugins for this build.  default is self  externalPluins"
-	^self externalPlugins
-
-]
-
-{ #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> externalPluginsBuildITimerHeartbeat [ 
 	"convenience method to customize plugins for this build.  default is self  externalPluins"
 	^self externalPlugins
@@ -769,11 +820,6 @@ TCPlatformConfigForSqueak >> extraVMSettingsBuildDebug [
 
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> extraVMSettingsBuildDebugITimerHeartbeat [ 
-	self required
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> extraVMSettingsBuildDebugMultiThreaded [ 
 	self required
 ]
 
@@ -873,13 +919,6 @@ TCPlatformConfigForSqueak >> internalPluginsBuildDebug [
 
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> internalPluginsBuildDebugITimerHeartbeat [ 
-	"convenience method to customize plugins for this build.  default is self  internalPluins"
-	^self internalPlugins
-
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> internalPluginsBuildDebugMultiThreaded [ 
 	"convenience method to customize plugins for this build.  default is self  internalPluins"
 	^self internalPlugins
 
@@ -1024,13 +1063,6 @@ TCPlatformConfigForSqueak >> postBuildActionsBuildDebugITimerHeartbeat: aMaker [
 ]
 
 { #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> postBuildActionsBuildDebugMultiThreaded: aMaker [
-	"convenience method for this buildType. default is self postBuildActions: aMaker"
-	^self postBuildActions:aMaker
-
-]
-
-{ #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> postBuildActionsBuildITimerHeartbeat: aMaker [
 	"convenience method for this buildType. default is self postBuildActions: aMaker"
 	^self postBuildActions:aMaker
@@ -1098,11 +1130,6 @@ TCPlatformConfigForSqueak >> preferredIncludesBuildDebug [
 
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> preferredIncludesBuildDebugITimerHeartbeat [
-	self required
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> preferredIncludesBuildDebugMultiThreaded [
 	self required
 ]
 
@@ -1188,13 +1215,6 @@ TCPlatformConfigForSqueak >> setExtraTargetPropertiesBuildDebugITimerHeartbeat: 
 ]
 
 { #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setExtraTargetPropertiesBuildDebugMultiThreaded: aMaker [
-	"convenience method for this buildType. default is self setExtraTargetProperties"
-	^self setExtraTargetProperties
-
-]
-
-{ #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> setExtraTargetPropertiesBuildITimerHeartbeat: aMaker [
 	"convenience method for this buildType. default is self setExtraTargetProperties"
 	^self setExtraTargetProperties
@@ -1271,12 +1291,6 @@ TCPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildDebugITime
 ]
 
 { #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildDebugMultiThreaded [ 
-	self required
-
-]
-
-{ #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildITimerHeartbeat [ 
 	self required
 ]
@@ -1326,11 +1340,6 @@ TCPlatformConfigForSqueak >> setGlobalOptionsBuildDebug: aMaker [
 
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> setGlobalOptionsBuildDebugITimerHeartbeat: aMaker [
-	self required.
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setGlobalOptionsBuildDebugMultiThreaded: aMaker [
 	self required.
 ]
 
@@ -1396,12 +1405,6 @@ TCPlatformConfigForSqueak >> setupDirectoriesBuildDebug [
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> setupDirectoriesBuildDebugITimerHeartbeat [ 
 	self required.
-
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setupDirectoriesBuildDebugMultiThreaded [ 
-	self required
 
 ]
 
@@ -1496,11 +1499,6 @@ TCPlatformConfigForSqueak >> standardIncludesBuildDebugITimerHeartbeat [
 ]
 
 { #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> standardIncludesBuildDebugMultiThreaded [ 
-	self required
-]
-
-{ #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> standardIncludesBuildITimerHeartbeat [ 
 	self required
 ]
@@ -1555,13 +1553,6 @@ TCPlatformConfigForSqueak >> thirdpartyLibsBuildDebug [
 
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> thirdpartyLibsBuildDebugITimerHeartbeat [ 
-	"convenience method to customize third party libs for this buildType.  default is self  thirdpartyLibs"
-	^self thirdpartyLibs
-
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> thirdpartyLibsBuildDebugMultiThreaded [ 
 	"convenience method to customize third party libs for this buildType.  default is self  thirdpartyLibs"
 	^self thirdpartyLibs
 

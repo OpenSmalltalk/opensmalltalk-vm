@@ -32,6 +32,7 @@ CMakeVMMakerSqueakHowToCreateNewConfiguration class >> pages [
 		step4j 
 		step4k 
 		step4l 
+		step4m
 		step5 
 )
 ]
@@ -278,6 +279,20 @@ A Reminder: Consistent Naming Conventions Are Our Friends!
 CMakeVMMakerSqueakHowToCreateNewConfiguration class >> step4l [
 	^HelpTopic
 		title:'Step4k postBuildActions: aMaker'
+		contents:
+'TODO: summarize this
+
+
+
+A Reminder: Consistent Naming Conventions Are Our Friends!
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakHowToCreateNewConfiguration class >> step4m [
+	^HelpTopic
+		title:'Step4m configH'
 		contents:
 'TODO: summarize this
 
