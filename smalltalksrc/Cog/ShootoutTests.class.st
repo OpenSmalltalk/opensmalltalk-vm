@@ -108,33 +108,25 @@ ShootoutTests class >> profileAll [
 ]
 
 { #category : #'benchmark scripts' }
-ShootoutTests class >> referenceTimesForClosureInterpreter [
-	 "ClosureVM (QF 1.2.23 + Closure Bytecodes) on Eliot's 2010 vintage 2.66GHz Intel Core i7 MacBook Pro"
-	^Dictionary new
-		at: #nbody put: 4543;
-		at: #binarytrees put: 6944;
-		at: #chameneosredux put: 5799;
-		at: #threadring put: 5623;
-		yourself
-
-	 "ClosureVM (QF 1.2.23 + Closure Bytecodes) on Eliot's 2006 vintage 2.16GHz Intel Core Duo MacBook Pro"
-	"^Dictionary new
-		at: #nbody put: 7660;
-		at: #binarytrees put: 14417;
-		at: #chameneosredux put: 8478;
-		at: #threadring put: 8718;
-		yourself"
+ShootoutTests class >> referenceArgs [
+	^self referenceTimesAndArgsForClosureInterpreter collect: [:ea| ea last]
 ]
 
 { #category : #'benchmark scripts' }
-ShootoutTests class >> referenceTimesForSqueakVM [
-	 "Squeak VM (4.2.2beta1 + Closure Bytecodes) on Eliot's 2010 vintage 2.66GHz Intel Core i7 MacBook Pro"
+ShootoutTests class >> referenceTimesAndArgsForClosureInterpreter [
+	 "Interpreter + Closures VM (Mac Cocoa 5.7b3 27-Aug-10 >7BCAB029-A835-4D12-946D-4AB7083D2955< VMMaker versionString 4.4.9)
+	  on Eliot's 2012 vintage 2.2GHz Intel (quad) Core i7 MacBook Pro"
 	^Dictionary new
-		at: #nbody put: 4917;
-		at: #binarytrees put: 8593;
-		at: #chameneosredux put: 5405;
-		at: #threadring put: 3789;
+		at: #nbody				put: #(40903	2000000);
+		at: #binarytrees		put: #(30573	17);
+		at: #chameneosredux	put: #(30722	2000000);
+		at: #threadring			put: #(9148		30000000);
 		yourself
+]
+
+{ #category : #'benchmark scripts' }
+ShootoutTests class >> referenceTimesForClosureInterpreter [
+	^self referenceTimesAndArgsForClosureInterpreter collect: [:ea| ea first]
 ]
 
 { #category : #reporting }
@@ -161,14 +153,10 @@ ShootoutTests class >> runAllToDummyStreamVs: referenceTimes [
 	 self runAllToDummyStreamVs: self referenceTimesForClosureInterpreter"
 	"Transcript clear.
 	 self runAllToDummyStreamVs: self referenceTimesForSqueakVM"
-	| stream times ratios geometricMean |
-	stream := DummyStream new.
+	| times ratios geometricMean |
 	times := Array new writeStream.
 	ratios := Array new writeStream.
-	{ [self nbody: 200000 "20000000" to: stream].
-	   [self binarytrees: 15 to: stream].
-	   [self chameneosredux: 260000 to: stream].
-	   [self threadring: 10000000 to: stream] } do:
+	(self standardSuiteTo: DummyStream basicNew) do:
 		[:block | | benchmark reference t |
 		benchmark := (self selectorForSimpleBlock: block) copyUpTo: $:.
 		reference := referenceTimes at: benchmark asSymbol.
@@ -196,14 +184,10 @@ ShootoutTests class >> runAllToInternalStreamVs: referenceTimes [
 	 self runAllToInternalStreamVs: self referenceTimesForClosureInterpreter"
 	"Transcript clear.
 	 self runAllToInternalStreamVs: self referenceTimesForSqueakVM"
-	| stream times ratios geometricMean |
-	stream := (ByteString new: 10000) writeStream.
+	| times ratios geometricMean |
 	times := Array new writeStream.
 	ratios := Array new writeStream.
-	{ [self nbody: 200000 "20000000" to: stream].
-	   [self binarytrees: 15 to: stream].
-	   [self chameneosredux: 260000 to: stream].
-	   [self threadring: 10000000 to: stream] } do:
+	(self standardSuiteTo: (ByteString new: 10000) writeStream) do:
 		[:block | | benchmark reference t |
 		benchmark := (self selectorForSimpleBlock: block) copyUpTo: $:.
 		reference := referenceTimes at: benchmark asSymbol.
@@ -234,10 +218,7 @@ ShootoutTests class >> runAllToTranscriptVs: referenceTimes [
 	| times ratios geometricMean |
 	times := Array new writeStream.
 	ratios := Array new writeStream.
-	{ [self nbody: 200000 "20000000" to: Transcript].
-	   [self binarytrees: 15 to: Transcript].
-	   [self chameneosredux: 260000 to: Transcript].
-	   [self threadring: 10000000 to: Transcript] } do:
+	(self standardSuiteTo: Transcript) do:
 		[:block | | benchmark reference t |
 		benchmark := (self selectorForSimpleBlock: block) copyUpTo: $:.
 		reference := referenceTimes at: benchmark asSymbol.
@@ -263,6 +244,26 @@ ShootoutTests class >> selectorForSimpleBlock: aBlock [
 			[^selectorOrScanner].
 		false].
 	^nil
+]
+
+{ #category : #'benchmark scripts' }
+ShootoutTests class >> standardSuiteTo: aStream [
+	"revised up from
+		{ [self nbody: 200000 to: stream].
+		   [self binarytrees: 15 to: stream].
+		   [self chameneosredux: 260000 to: stream].
+		   [self threadring: 10000000 to: stream] }
+	 on 6/15/2014"
+	| reference nbodyCount binaryTreeDepth chameneosCount threadringCount |
+	reference := self referenceTimesAndArgsForClosureInterpreter.
+	nbodyCount := (reference at: #nbody) last.
+	binaryTreeDepth := (reference at: #binarytrees) last.
+	chameneosCount := (reference at: #chameneosredux) last.
+	threadringCount := (reference at: #threadring) last.
+	^{ [self nbody: nbodyCount to: aStream].
+	     [self binarytrees: binaryTreeDepth to: aStream].
+	     [self chameneosredux: chameneosCount to: aStream].
+	     [self threadring: threadringCount to: aStream] }
 ]
 
 { #category : #platform }
