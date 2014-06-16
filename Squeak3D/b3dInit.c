@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   andreasr@wdi.disney.com
-*   RCSID:   $Id: b3dInit.c,v 1.1 2001/10/24 23:12:23 rowledge Exp $
+*   RCSID:   $Id$
 *
 *   NOTES:
 *
@@ -36,7 +36,7 @@
 int b3dInitializeEdgeAllocator(void* base, int length)
 {
 	B3DEdgeAllocList *list = (B3DEdgeAllocList*) base;
-	if(length < sizeof(B3DEdgeAllocList))
+	if(length<0 || (unsigned)length < sizeof(B3DEdgeAllocList))
 		return B3D_GENERIC_ERROR;
 	list->magic = B3D_EDGE_ALLOC_MAGIC;
 	list->This = base;
@@ -50,7 +50,7 @@ int b3dInitializeEdgeAllocator(void* base, int length)
 int b3dInitializeFaceAllocator(void* base, int length)
 {
 	B3DFaceAllocList *list = (B3DFaceAllocList*) base;
-	if(length < sizeof(B3DFaceAllocList))
+	if(length<0 || (unsigned)length < sizeof(B3DFaceAllocList))
 		return B3D_GENERIC_ERROR;
 	list->magic = B3D_FACE_ALLOC_MAGIC;
 	list->This = base;
@@ -64,7 +64,7 @@ int b3dInitializeFaceAllocator(void* base, int length)
 int b3dInitializeAttrAllocator(void* base, int length)
 {
 	B3DAttrAllocList *list = (B3DAttrAllocList*) base;
-	if(length < sizeof(B3DAttrAllocList))
+	if(length<0 || (unsigned)length < sizeof(B3DAttrAllocList))
 		return B3D_GENERIC_ERROR;
 	list->magic = B3D_ATTR_ALLOC_MAGIC;
 	list->This = base;
@@ -78,7 +78,7 @@ int b3dInitializeAttrAllocator(void* base, int length)
 int b3dInitializeEdgeList(void* base, int length)
 {
 	B3DPrimitiveEdgeList *list = (B3DPrimitiveEdgeList*) base;
-	if(length < sizeof(B3DPrimitiveEdgeList))
+	if(length<0 || (unsigned)length < sizeof(B3DPrimitiveEdgeList))
 		return B3D_GENERIC_ERROR;
 	list->magic = B3D_EDGE_LIST_MAGIC;
 	list->This = base;
@@ -90,7 +90,7 @@ int b3dInitializeEdgeList(void* base, int length)
 int b3dInitializeAET(void* base, int length)
 {
 	B3DActiveEdgeTable *aet = (B3DActiveEdgeTable *) base;
-	if(length < sizeof(B3DActiveEdgeTable))
+	if(length<0 || (unsigned)length < sizeof(B3DActiveEdgeTable))
 		return B3D_GENERIC_ERROR;
 	aet->magic = B3D_AET_MAGIC;
 	aet->This = base;
@@ -105,7 +105,7 @@ int b3dInitializeAET(void* base, int length)
 int b3dInitializeFillList(void* base, int length)
 {
 	B3DFillList *list = (B3DFillList*) base;
-	if(length < sizeof(B3DFillList))
+	if(length<0 || (unsigned)length < sizeof(B3DFillList))
 		return B3D_GENERIC_ERROR;
 	list->magic = B3D_FILL_LIST_MAGIC;
 	list->This = base;
@@ -550,7 +550,7 @@ int b3dAddIndexedQuadObject(void *objBase, int objLength, int objFlags, int text
 	obj->nFaces = nQuads * 2;
 	obj->faces = (B3DInputFace*) (obj->vertices + obj->nVertices);
 	{
-		int i, nFaces = obj->nFaces;
+		int i;
 		B3DInputQuad *src = quadPtr;
 		B3DInputFace *dst = obj->faces;
 
