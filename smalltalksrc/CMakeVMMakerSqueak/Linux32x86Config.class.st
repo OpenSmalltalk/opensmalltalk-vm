@@ -523,10 +523,15 @@ Linux32x86Config >> generate [
 	^ CMakeVMGeneratorForSqueak generate: self 
 ]
 
-{ #category : #'squeak compatibility' }
+{ #category : #'headers generation' }
 Linux32x86Config >> generateConfigH [
-	"will fix that later"
-	self write: self configH toFile: 'config.h'
+	"	
+	used to be: 	
+		self write: self configH toFile: 'config.h'
+      but with variable buildTypes we need:
+"
+	self write: (self generateConfigH: buildType) toFile: 'config.h'   
+
 ]
 
 { #category : #'initialize-release' }

@@ -186,8 +186,8 @@ TCPlatformConfigForSqueak >> compilerFlagsNoBuildType [
 
 { #category : #'headers generation' }
 TCPlatformConfigForSqueak >> configH [
-	self flag:'tty' . "TODO: express correctly the 'what' and 'why' of this method"
-	self required
+"ONLY USED ON UNIX CONFIGS included here for completeness and consistency CogUnixConfig browse.
+"
 "
 Use  configH to tell your plugins where to find its libraries etc.
 The version of this is platform dependent.
@@ -420,9 +420,34 @@ TCPlatformConfigForSqueak >> configHBuildMultiThreadedDebug [
 
 ]
 
+{ #category : #'headers generation' }
+TCPlatformConfigForSqueak >> configHNoBuildType [
+	"SHOULD NOT GET HERE"	
+	self halt.
+]
+
 { #category : #'cmake configuration' }
 TCPlatformConfigForSqueak >> configureBuild [
-	self compilerFlagsBuild.
+	"configure this Configuration for a buildType #build"
+	self 
+"		setGlobalOptionsBuild: aMaker"
+"		setGlobalOptionsAfterDetermineSystemBuild: aMaker"
+"		setupDirectoriesBuild: aMaker;"
+		preferredIncludesBuild;
+		standardIncludesBuild;
+		compilerFlagsBuild;
+"		extraVMSettingsBuild: aMaker"
+		internalPluginsBuild;
+		externalPluginsBuild;
+		thirdpartyLibsBuild
+"		postBuildActionsBuild:"
+"		configHBuild."
+		
+
+
+		
+		
+		
 ]
 
 { #category : #'cmake configuration' }
@@ -863,8 +888,43 @@ TCPlatformConfigForSqueak >> generate [
 
 { #category : #'headers generation' }
 TCPlatformConfigForSqueak >> generateConfigH [
-	"will fix that later"
-	self write: self configH toFile: 'config.h'
+	"	
+	used to be: 	
+		self write: self configH toFile: 'config.h'
+      but with variable buildTypes we need:
+		self write: (generateConfigH: (self buildType))toFile: 'config.h'   
+      However, I cannot use an instanceVariable in a Trait. so must implement in concrete class
+"
+	self required.
+
+
+]
+
+{ #category : #'headers generation' }
+TCPlatformConfigForSqueak >> generateConfigH: aBuildType [
+	"self write: self configH toFile: 'config.h'"
+
+	|d |
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self configHBuild];
+		at: #buildAssert  put: [self configHBuildAssert];
+		at: #buildAssertITimerHeartbeat  put: [self configHBuildAssertITimerHeartbeat];
+            at:#buildDebug  put: [self configHBuildDebug];   "located in CMakeVMMaker CPlatformConfig"
+		at: #buildDebugITimerHeartbeat  put: [self configHBuildDebugITimerHeartbeat ];
+		at: #buildDebugMultiThreaded  put: [self configHBuildDebugMultiThreaded];
+		at: #buildITimerHeartbeat  put: [self configHBuildITimerHeartbeat];
+		at: #buildMultiThreaded  put: [self configHBuildMultiThreaded ];
+		at: #buildMultiThreadedAssert  put: [self configHBuildMultiThreadedAssert];
+		at: #buildMultiThreadedDebug   put: [self configHBuildMultiThreadedDebug ];
+		at: #buildNone put:[self configHNoBuildType].
+
+
+	 ^(d at: ( aBuildType)) value
+
+
+
+
 ]
 
 { #category : #accessing }
@@ -1109,53 +1169,74 @@ SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'"
 ]
 
 { #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> preferredIncludesBuild [
-	self required
+TCPlatformConfigForSqueak >> preferredIncludesBuild [	
+	"convencience method to customize for this build. default is self preferredIncludes"
+	^self preferredIncludes
+
+
 ]
 
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> preferredIncludesBuildAssert [
-	self required
+	"convencience method to customize for this build. default is self preferredIncludes"
+	^self preferredIncludes
+
 ]
 
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> preferredIncludesBuildAssertITimerHeartbeat [
-	self required
+	"convencience method to customize for this build. default is self preferredIncludes"
+	^self preferredIncludes
+
 ]
 
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> preferredIncludesBuildDebug [
-	self required
+	"convencience method to customize for this build. default is self preferredIncludes"
+	^self preferredIncludes
+
 ]
 
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> preferredIncludesBuildDebugITimerHeartbeat [
-	self required
+	"convencience method to customize for this build. default is self preferredIncludes"
+	^self preferredIncludes
+
 ]
 
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> preferredIncludesBuildITimerHeartbeat [
-	self required
+	"convencience method to customize for this build. default is self preferredIncludes"
+	^self preferredIncludes
+
 ]
 
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> preferredIncludesBuildMultiThreaded [
-	self required
+	"convencience method to customize for this build. default is self preferredIncludes"
+	^self preferredIncludes
+
 ]
 
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> preferredIncludesBuildMultiThreadedAssert [
-	self required
+	"convencience method to customize for this build. default is self preferredIncludes"
+	^self preferredIncludes
+
 ]
 
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> preferredIncludesBuildMultiThreadedDebug [
-	self required
+	"convencience method to customize for this build. default is self preferredIncludes"
+	^self preferredIncludes
+
 ]
 
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> preferredIncludesBuildNone [
-	self required
+	"SHOULD NOT GET HERE"
+	self halt
+
 ]
 
 { #category : #'source generation' }
@@ -1374,68 +1455,77 @@ TCPlatformConfigForSqueak >> setupDirectories:gen [
 ]
 
 { #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setupDirectoriesBuild [ 
-	self required
+TCPlatformConfigForSqueak >> setupDirectoriesBuild: aMaker [ 
+	"convencience method to customize for this build. default is self setupDirectories: aMaker"
+	self setupDirectories: aMaker
 
 ]
 
 { #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setupDirectoriesBuildAssert [ 
-	self required
-
-
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setupDirectoriesBuildAssertITimerHeartbeat [ 
-	self required
-
+TCPlatformConfigForSqueak >> setupDirectoriesBuildAssert: aMaker [ 
+	"convencience method to customize for this build. default is self setupDirectories: aMaker"
+	self setupDirectories: aMaker
 
 
 ]
 
 { #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setupDirectoriesBuildDebug [ 
-	self break
+TCPlatformConfigForSqueak >> setupDirectoriesBuildAssertITimerHeartbeat: aMaker [ 
+	"convencience method to customize for this build. default is self setupDirectories: aMaker"
+	self setupDirectories: aMaker
+
 
 
 
 ]
 
 { #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setupDirectoriesBuildDebugITimerHeartbeat [ 
-	self required.
+TCPlatformConfigForSqueak >> setupDirectoriesBuildDebug: aMaker [ 
+	"convencience method to customize for this build. default is self setupDirectories: aMaker"
+	self setupDirectories: aMaker
+
+
+
 
 ]
 
 { #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setupDirectoriesBuildITimerHeartbeat [ 
+TCPlatformConfigForSqueak >> setupDirectoriesBuildDebugITimerHeartbeat: aMaker [ 
+	"convencience method to customize for this build. default is self setupDirectories: aMaker"
+	self setupDirectories: aMaker
 
-	self required
-
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setupDirectoriesBuildMultiThreaded [ 
-	self required
 
 ]
 
 { #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setupDirectoriesBuildMultiThreadedAssert [
-	self required
-
+TCPlatformConfigForSqueak >> setupDirectoriesBuildITimerHeartbeat: aMaker [ 
+	"convencience method to customize for this build. default is self setupDirectories: aMaker"
+	self setupDirectories: aMaker
 ]
 
 { #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setupDirectoriesBuildMultiThreadedDebug [ 
-	self required
-
+TCPlatformConfigForSqueak >> setupDirectoriesBuildMultiThreaded: aMaker [ 
+	"convencience method to customize for this build. default is self setupDirectories: aMaker"
+	self setupDirectories: aMaker
 ]
 
 { #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setupDirectoriesBuildNone [
-	self required
+TCPlatformConfigForSqueak >> setupDirectoriesBuildMultiThreadedAssert: aMaker [ 
+	"convencience method to customize for this build. default is self setupDirectories: aMaker"
+	self setupDirectories: aMaker
+]
+
+{ #category : #'cmake config build type ' }
+TCPlatformConfigForSqueak >> setupDirectoriesBuildMultiThreadedDebug: aMaker [ 
+	"convencience method to customize for this build. default is self setupDirectories: aMaker"
+	self setupDirectories: aMaker
+]
+
+{ #category : #'cmake config build type ' }
+TCPlatformConfigForSqueak >> setupDirectoriesBuildNone: aMaker [ 
+	"WE SHOULD NEVER GET HERE"
+	self halt.
+
 ]
 
 { #category : #'cmake directory ' }
@@ -1474,53 +1564,73 @@ TCPlatformConfigForSqueak >> srcDir [
 ]
 
 { #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> standardIncludesBuild [ 
-	self required
+TCPlatformConfigForSqueak >> standardIncludesBuild [
+	"convencience method to customize for this build. default is self standardIncludes"
+	^self standardIncludes
+
 ]
 
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> standardIncludesBuildAssert [ 
-	self required
+	"convencience method to customize for this build. default is self standardIncludes"
+	^self standardIncludes
+
 ]
 
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> standardIncludesBuildAssertITimerHeartbeat [ 
-	self required
+	"convencience method to customize for this build. default is self standardIncludes"
+	^self standardIncludes
+
 ]
 
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> standardIncludesBuildDebug [ 
-	self required
+	"convencience method to customize for this build. default is self standardIncludes"
+	^self standardIncludes
+
 ]
 
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> standardIncludesBuildDebugITimerHeartbeat [ 
-	self required
+	"convencience method to customize for this build. default is self standardIncludes"
+	^self standardIncludes
+
 ]
 
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> standardIncludesBuildITimerHeartbeat [ 
-	self required
+	"convencience method to customize for this build. default is self standardIncludes"
+	^self standardIncludes
+
 ]
 
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> standardIncludesBuildMultiThreaded [ 
-	self required
+	"convencience method to customize for this build. default is self standardIncludes"
+	^self standardIncludes
+
 ]
 
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> standardIncludesBuildMultiThreadedAssert [
-	self required
+	"convencience method to customize for this build. default is self standardIncludes"
+	^self standardIncludes
+
 ]
 
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> standardIncludesBuildMultiThreadedDebug [ 
-	self required
+	"convencience method to customize for this build. default is self standardIncludes"
+	^self standardIncludes
+
 ]
 
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> standardIncludesBuildNone [
-	self required
+	"SHOULD NOT GET HERE"
+	^self halt
+
 ]
 
 { #category : #'cmake config build type ' }

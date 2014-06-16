@@ -491,7 +491,7 @@ SqueakMacOSXPowerPCConfig >> generate [
 	^CMakeVMGeneratorForSqueak generate:self    "Bypass CPlatformConfig generate to invoke our compatibility class"
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 SqueakMacOSXPowerPCConfig >> generateLicense [ 
 	self 
 		write:  (self class licenseTemplate 
@@ -500,7 +500,7 @@ SqueakMacOSXPowerPCConfig >> generateLicense [
 	
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 SqueakMacOSXPowerPCConfig >> generatePluginsList [ 
 	self 
 		write:  (self class pluginsTemplate 
@@ -642,7 +642,7 @@ SqueakMacOSXPowerPCConfig >> validateSourcesPresent [
 		ifTrue: [	self error: 'VM source code cannot be generated without .sources file'.]		
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 SqueakMacOSXPowerPCConfig >> version [
 	^ ''
 ]

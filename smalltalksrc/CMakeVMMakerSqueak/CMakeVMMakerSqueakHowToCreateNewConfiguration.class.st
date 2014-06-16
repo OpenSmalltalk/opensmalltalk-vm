@@ -101,20 +101,46 @@ CMakeVMMakerSqueakHowToCreateNewConfiguration class >> step4 [
 	^HelpTopic
 		title:'Step 4. Customize the "cmake build type config" protocol'
 		contents:
-'TODO: summarize this
+'When we invoke a Builder with a command like:
 
-setGlobalOptions
-setGlobalOptionsAfterDetermineSystem
+SqueakLinux64x86w32CompatBuilder
+	configureA: #Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig forBuildType: #buildDebugITimerHeartbeat;
+	generateSources;
+	generate.  
+
+We are telling the Builder to select a Configuration and have that Configuration configure itself to produce CMake output for the buildType: #buildDebugITimerHeartbeat;
+
+On your configuration the entry point for your configuration is one of:
+
+configureBuild
+configureBuildAssert
+configureBuildAssertITimerHeartbeat
+configureBuildDebug
+configureBuildDebugITimerHeartbeat                        <----this one is selected by buildType: #buildDebugITimerHeartbeat;
+configureBuildITimerHeartbeat
+configureBuildMultiThreaded
+configureBuildMultiThreadedAssert
+configureBuildMultiThreadedDebug
+
+Within this method, system state is set up and customizable for many methods in CMakeVMaker CPlatformConfig.
+
+"setGlobalOptions: aMaker"
+"setGlobalOptionsAfterDetermineSystem: aMaker"
 setupDirectories
 preferredIncludes
 standardIncludes
 compilerFlags
-extraVMSettings
+"extraVMSettings: aMaker"
 internalPlugins
 externalPlugins
 thirdpartyLibs
-setExtraTargetProperties:aMaker
-postBuildActions: aMaker
+"setExtraTargetProperties: aMaker"
+"postBuildActions: aMaker"
+configH
+
+The methods above that take the : aMaker argument are handled on-the-fly later in the process and are only presented here for informational purposes.
+
+
 
 A Reminder: Consistent Naming Conventions Are Our Friends!
 
@@ -294,8 +320,17 @@ CMakeVMMakerSqueakHowToCreateNewConfiguration class >> step4m [
 	^HelpTopic
 		title:'Step4m configH'
 		contents:
-'TODO: summarize this
+' This is the contents of a config.h file in the build directory.
+It is used only in Unix builds in CMakeVMMaker.
 
+
+It is called from the method ''extraVMSettings'' of  CogUnixConfig in CMakeVMMaker when CogUnixConfig sends the message:		self generateConfigH.
+
+To provide a custom config.h CMakeVMakerSqueak subclasses that message ''self generateConfigH'' and routes the call
+to ''generateConfigH: aBuildType''
+
+From there, a block is evaluated appropriate for the build type that invokes a ''configHBuildXYZ'' method which can be overridden by you to 
+return a custom config.h. The default is to return the base configH.
 
 
 A Reminder: Consistent Naming Conventions Are Our Friends!
