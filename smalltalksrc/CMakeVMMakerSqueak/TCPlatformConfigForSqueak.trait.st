@@ -813,56 +813,6 @@ TCPlatformConfigForSqueak >> extraVMSettings: maker [
 	self required
 ]
 
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> extraVMSettingsBuild [ 
-	self required
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> extraVMSettingsBuildAssert [ 
-	self required
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> extraVMSettingsBuildAssertITimerHeartbeat [ 
-	self required
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> extraVMSettingsBuildDebug [ 
-	self required
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> extraVMSettingsBuildDebugITimerHeartbeat [ 
-	self required
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> extraVMSettingsBuildITimerHeartbeat [ 
-	self required
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> extraVMSettingsBuildMultiThreaded [ 
-	self required
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> extraVMSettingsBuildMultiThreadedAssert [
-	self required
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> extraVMSettingsBuildMultiThreadedDebug [ 
-	self required
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> extraVMSettingsBuildNone [ 
-	self required
-]
-
 { #category : #accessing }
 TCPlatformConfigForSqueak >> frameworks [
 	"leave empty for all platforms but Mac OS"
@@ -1074,76 +1024,6 @@ TCPlatformConfigForSqueak >> outputDir [
 { #category : #'cmake directory ' }
 TCPlatformConfigForSqueak >> outputDirName [
 	^ 'products'
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> postBuildActionsBuild: aMaker [
-	"convenience method for this buildType. default is self postBuildActions"
-	^self postBuildActions:aMaker
-
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> postBuildActionsBuildAssert: aMaker [
-	"convenience method for this buildType. default is self postBuildActions"
-	^self postBuildActions:aMaker
-
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> postBuildActionsBuildAssertITimerHeartbeat: aMaker [
-	"convenience method for this buildType. default is self postBuildActions"
-	^self postBuildActions:aMaker
-
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> postBuildActionsBuildDebug: aMaker [
-	"convenience method for this buildType. default is self postBuildActions: aMaker"
-	^self postBuildActions:aMaker
-
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> postBuildActionsBuildDebugITimerHeartbeat: aMaker [
-	"convenience method for this buildType. default is self postBuildActions: aMaker"
-	^self postBuildActions:aMaker
-
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> postBuildActionsBuildITimerHeartbeat: aMaker [
-	"convenience method for this buildType. default is self postBuildActions: aMaker"
-	^self postBuildActions:aMaker
-
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> postBuildActionsBuildMultiThreaded: aMaker [
-	"convenience method for this buildType. default is self postBuildActions: aMaker"
-	^self postBuildActions:aMaker
-
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> postBuildActionsBuildMultiThreadedAssert: aMaker [
-	"convenience method for this buildType. default is self postBuildActions: aMaker"
-	^self postBuildActions:aMaker
-
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> postBuildActionsBuildMultiThreadedDebug: aMaker [ 
-	"convenience method for this buildType. default is self postBuildActions: aMaker"
-	^self postBuildActions:aMaker
-
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> postBuildActionsBuildNone: aMaker [
-	"convenience method for this buildType. default is self postBuildActions: aMaker"
-	^self postBuildActions:aMaker
-
 ]
 
 { #category : #'source files' }
