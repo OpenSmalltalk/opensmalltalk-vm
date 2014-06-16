@@ -221,6 +221,17 @@ SqueakBSDConfig >> executableName [
 	^ 'cogvm'
 ]
 
+{ #category : #'headers generation' }
+SqueakBSDConfig >> generateConfigH [
+	"	
+	used to be: 	
+		self write: self configH toFile: 'config.h'
+      but with variable buildTypes we need:
+"
+	self write: (self generateConfigH: buildType) toFile: 'config.h'   
+
+]
+
 { #category : #'squeak compatibility' }
 SqueakBSDConfig >> outputDir [
 

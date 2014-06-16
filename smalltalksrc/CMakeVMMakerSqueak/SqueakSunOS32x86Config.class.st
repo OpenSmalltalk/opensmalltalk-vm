@@ -126,6 +126,17 @@ SqueakSunOS32x86Config >> excludeFromBuild [
 
 ]
 
+{ #category : #'headers generation' }
+SqueakSunOS32x86Config >> generateConfigH [
+	"	
+	used to be: 	
+		self write: self configH toFile: 'config.h'
+      but with variable buildTypes we need:
+"
+	self write: (self generateConfigH: buildType) toFile: 'config.h'   
+
+]
+
 { #category : #'initialize-release' }
 SqueakSunOS32x86Config >> initialize [
 	super initialize.

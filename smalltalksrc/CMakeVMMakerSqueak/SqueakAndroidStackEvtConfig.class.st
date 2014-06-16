@@ -405,10 +405,15 @@ SqueakAndroidStackEvtConfig >> generate [
 
 ]
 
-{ #category : #'source files' }
+{ #category : #'headers generation' }
 SqueakAndroidStackEvtConfig >> generateConfigH [
-	"will fix that later"
-	self write: self configH toFile: 'config.h'
+	"	
+	used to be: 	
+		self write: self configH toFile: 'config.h'
+      but with variable buildTypes we need:
+"
+	self write: (self generateConfigH: buildType) toFile: 'config.h'   
+
 ]
 
 { #category : #'initialize-release' }
