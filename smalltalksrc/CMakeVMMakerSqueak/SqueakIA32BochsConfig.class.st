@@ -96,6 +96,23 @@ SqueakIA32BochsConfig >> compilerFlags [
 ]
 
 { #category : #'cmake configuration' }
+SqueakIA32BochsConfig >> configureBuild [
+	"configure this Configuration for a buildType #build"
+	self 
+		preferredIncludesBuild;
+		standardIncludesBuild;
+		compilerFlagsBuild;
+		internalPluginsBuild;
+		externalPluginsBuild;
+		thirdpartyLibsBuild
+
+
+		
+		
+		
+]
+
+{ #category : #'cmake configuration' }
 SqueakIA32BochsConfig >> configureForBuildType: aSymbol [
 	| d |
 	"provide a concrete builder with the buildType and configureBuildX method to invoke"

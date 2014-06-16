@@ -91,6 +91,24 @@ SqueakMacOSConfig >> compilerFlags [
 ]
 
 { #category : #'cmake configuration' }
+SqueakMacOSConfig >> configureBuild [
+	"configure this Configuration for a buildType #build"
+	self 
+		preferredIncludesBuild;
+		standardIncludesBuild;
+		compilerFlagsBuild;
+		internalPluginsBuild;
+		externalPluginsBuild;
+		thirdpartyLibsBuild
+		
+
+
+		
+		
+		
+]
+
+{ #category : #'cmake configuration' }
 SqueakMacOSConfig >> configureForBuildType: aSymbol [
 	| d |
 	"provide a concrete builder with the buildType and configureBuildX method to invoke"
