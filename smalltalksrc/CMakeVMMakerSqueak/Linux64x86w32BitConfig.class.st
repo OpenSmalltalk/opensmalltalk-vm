@@ -553,7 +553,12 @@ Linux64x86w32BitConfig >> defaultExternalPlugins [
 
 "N.B. Regarding ThreadedFFIPlugin and FFIPlugin from eem:
 
-Use  ThreadedFFIPlugin.  The FFIPlugin is obsolete (it requires assembler support files, and is non-reentrant).  This should generate in src/plugins/SqueakFFIPrims/{SqueakFFIPrims.c,ARM32FFIPlugin.c,IA32FFIPlugin.c} and you should compile only src/plugins/SqueakFFIPrims/SqueakFFIPrims.c.  src/plugins/SqueakFFIPrims/SqueakFFIPrims.c is a simple wrapper that includes ARM32FFIPlugin.c or IA32FFIPlugin.c as appropriate (and others can be added as they are developed).
+Use  ThreadedFFIPlugin.  The FFIPlugin is obsolete (it requires assembler support files, and is non-reentrant).  
+This should generate in src/plugins/SqueakFFIPrims/{SqueakFFIPrims.c,ARM32FFIPlugin.c,IA32FFIPlugin.c} and 
+you should compile only src/plugins/SqueakFFIPrims/SqueakFFIPrims.c.  
+src/plugins/SqueakFFIPrims/SqueakFFIPrims.c is a simple wrapper that includes 
+ARM32FFIPlugin.c or IA32FFIPlugin.c as appropriate 
+(and others can be added as they are developed).
 
 
 "

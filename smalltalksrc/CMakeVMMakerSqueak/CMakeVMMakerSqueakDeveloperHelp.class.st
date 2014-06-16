@@ -31,7 +31,7 @@ or you can customize it like so:
 
 { #category : #accessing }
 CMakeVMMakerSqueakDeveloperHelp class >> bookName [ 
-	^'CMakeVMMakerSqueak Developer''s Guide'
+	^'Developer Guide'
 ]
 
 { #category : #pages }
@@ -299,6 +299,48 @@ CMakeVMMakerSqueakDeveloperHelp class >> prerequisites [
 		title:'Pre-requisits'
 		contents:
 'TODO: write me
+
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakDeveloperHelp class >> protocols [
+	^HelpTopic
+		title:'An Explanation of Protocols in TCPaltformConfigForSqueak'
+		contents:
+'TCPlatformConfigForSqueak browse
+
+The purpose of the Trait is to force Abstract Base Class like behavior for pharo''s CMakeVMMaker CPlatformConfig base class. 
+
+Since I do not have access to modify the base class, I used the Trait TCPlatformConfigForSqueak to squeeze in that behavior ''from the side'' if you will.
+
+The following protocols conform to those in the CPlatformConfig:
+
+accessing
+compiler flags
+headers generation
+plugin extra rules
+settings
+source files
+source generation
+utils
+
+
+For methods in the CMakeVMaker CPlatformConfig that where not portable to Squeak, I overrode those.
+They reside in the protocol:
+
+squeak compatability
+
+
+The pharo CMakeVMMaker does not have the functionality to support the naming conventions and buildTypes that CMakeVMMakerSqueak requires. To that end, extra ''cmake-ish'' behavior is placed that is unique to CMakeVMMakerSqueak is placed in the following protocols:
+
+cmake configuration
+cmake config buid type
+cmake directory
+cmake executable names
+
+
 
 
 '
