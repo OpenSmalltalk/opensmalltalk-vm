@@ -435,7 +435,20 @@ Linux64x86w32BitConfig >> configH [
 
 { #category : #cmake }
 Linux64x86w32BitConfig >> configureBuild [
-	self required
+	"configure this Configuration for a buildType #build"
+	self 
+"		setGlobalOptionsBuild: aMaker"
+"		setGlobalOptionsAfterDetermineSystemBuild: aMaker"
+"		setupDirectoriesBuild: aMaker;"
+		preferredIncludesBuild;
+		standardIncludesBuild;
+		compilerFlagsBuild;
+"		extraVMSettingsBuild: aMaker"
+		internalPluginsBuild;
+		externalPluginsBuild;
+		thirdpartyLibsBuild.
+"		postBuildActionsBuild: aMaker"
+"		configHBuild"
 ]
 
 { #category : #cmake }
@@ -838,10 +851,15 @@ Linux64x86w32BitConfig >> generate [
 	^ CMakeVMGeneratorForSqueak generate: self 
 ]
 
-{ #category : #'squeak compatibility' }
+{ #category : #'headers generation' }
 Linux64x86w32BitConfig >> generateConfigH [
-	"will fix that later"
-	self write: self configH toFile: 'config.h'
+	"	
+	used to be: 	
+		self write: self configH toFile: 'config.h'
+      but with variable buildTypes we need:
+"
+	self write: (self generateConfigH: buildType asSymbol) toFile: 'config.h'   
+
 ]
 
 { #category : #accessing }

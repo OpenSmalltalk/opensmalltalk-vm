@@ -170,6 +170,17 @@ SqueakMacOSConfig >> excludeFromBuild [
 
 ]
 
+{ #category : #'headers generation' }
+SqueakMacOSConfig >> generateConfigH [
+	"	
+	used to be: 	
+		self write: self configH toFile: 'config.h'
+      but with variable buildTypes we need:
+"
+	self write: (self generateConfigH: buildType) toFile: 'config.h'   
+
+]
+
 { #category : #'initialize-release' }
 SqueakMacOSConfig >> initialize [
 	super initialize.

@@ -110,8 +110,8 @@ Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> compilerFlagsRelease [
 		'-DDEBUGVM=0' }
 ]
 
-{ #category : #'squeak compatibility' }
-Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> configH [
+{ #category : #'headers generation' }
+Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> configHBuild [
 	^ '
 
 #define HAVE_UUID_H 1 
