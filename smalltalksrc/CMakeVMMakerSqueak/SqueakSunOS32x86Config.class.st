@@ -84,6 +84,23 @@ SqueakSunOS32x86Config >> compilerFlags [
 ]
 
 { #category : #'cmake configuration' }
+SqueakSunOS32x86Config >> configureBuild [
+	"configure this Configuration for a buildType #build"
+	self 
+		preferredIncludesBuild;
+		standardIncludesBuild;
+		compilerFlagsBuild;
+		internalPluginsBuild;
+		externalPluginsBuild;
+		thirdpartyLibsBuild
+
+
+		
+		
+		
+]
+
+{ #category : #'cmake configuration' }
 SqueakSunOS32x86Config >> configureForBuildType: aSymbol [
 	| d |
 	"provide a concrete builder with the buildType and configureBuildX method to invoke"

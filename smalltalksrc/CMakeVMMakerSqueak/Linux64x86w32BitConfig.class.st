@@ -436,18 +436,13 @@ Linux64x86w32BitConfig >> configH [
 Linux64x86w32BitConfig >> configureBuild [
 	"configure this Configuration for a buildType #build"
 	self 
-"		setGlobalOptionsBuild: aMaker"
-"		setGlobalOptionsAfterDetermineSystemBuild: aMaker"
-"		setupDirectoriesBuild: aMaker;"
 		preferredIncludesBuild;
 		standardIncludesBuild;
 		compilerFlagsBuild;
-"		extraVMSettingsBuild: aMaker"
 		internalPluginsBuild;
 		externalPluginsBuild;
 		thirdpartyLibsBuild.
-"		postBuildActionsBuild: aMaker"
-"		configHBuild"
+
 ]
 
 { #category : #cmake }
@@ -1224,12 +1219,12 @@ Linux64x86w32BitConfig >> setGlobalOptionsBuildMultiThreadedDebug: aMaker [
 ]
 
 { #category : #'squeak compatibility' }
-Linux64x86w32BitConfig >> setupDirectories: gen [
+Linux64x86w32BitConfig >> setupDirectories: aMaker [
 	| dirsInclude |
 
 	" write the directories in separate include file"
-	dirsInclude := gen captureOutputDuring: [
-		gen
+	dirsInclude := aMaker captureOutputDuring: [
+		aMaker
 			set: #topDir toString: (self topDir fullName); 
 			set: #buildDir toString: (self buildDir ifNil: ['${topDir}/build'] ifNotNil: [self buildDir fullName] );
 			set: #thirdpartyDir toString: '${buildDir}/thirdParty';
@@ -1246,7 +1241,7 @@ Linux64x86w32BitConfig >> setupDirectories: gen [
 
 	self write: dirsInclude toFile: 'directories.cmake'.
 	
-	gen include: 'directories.cmake'.
+	aMaker include: 'directories.cmake'.
 
 ]
 
