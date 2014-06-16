@@ -528,7 +528,6 @@ Class {
 	],
 	#classVars : [
 		'BitsPerByte',
-		'CheckObjectOverwrite',
 		'EphemeronQueueRootIndex',
 		'ExtraRootsSize',
 		'FirstValidClassIndex',
@@ -701,7 +700,6 @@ SpurMemoryManager class >> initialize [
 	WeaklingStackRootIndex := MarkStackRootIndex + 1.
 	EphemeronQueueRootIndex := MarkStackRootIndex + 2.
 
-	CheckObjectOverwrite := true.
 	MarkObjectsForEnumerationPrimitives := false.
 
 	"The remap buffer support is for compatibility; Spur doesn't GC during allocation.
@@ -2576,14 +2574,6 @@ SpurMemoryManager >> checkForCompactableObjects [
 		[{them size. them first. them last}]
 ]
 
-{ #category : #allocation }
-SpurMemoryManager >> checkForLastObjectOverwrite [
-	<doNotGenerate>
-	self assert: (freeStart >= scavengeThreshold
-				or: [CheckObjectOverwrite not
-		  		or: [(self longAt: freeStart + BytesPerWord) = (freeStart + BytesPerWord)]])
-]
-
 { #category : #'debug support' }
 SpurMemoryManager >> checkFreeSpace [
 	self assert: self bitsSetInFreeSpaceMaskForAllFreeLists.
@@ -3597,7 +3587,7 @@ SpurMemoryManager >> doScavenge: tenuringCriterion [
 					isGreaterThanOrEqualTo: scavenger pastSpace start
 					andLessThanOrEqualTo: scavenger pastSpace limit).
 	freeStart := scavenger eden start.
-	self initSpaceForAllocationCheck: (self addressOf: scavenger eden).
+	self initSpaceForAllocationCheck: (self addressOf: scavenger eden) limit: scavengeThreshold.
 	scavengeInProgress := false
 ]
 
@@ -5206,12 +5196,13 @@ SpurMemoryManager >> initSegmentBridgeWithBytes: numBytes at: address [
 ]
 
 { #category : #allocation }
-SpurMemoryManager >> initSpaceForAllocationCheck: aNewSpace [
+SpurMemoryManager >> initSpaceForAllocationCheck: aNewSpace limit: limit [
 	<var: 'aNewSpace' type: #'SpurNewSpaceSpace *'>
+	<var: 'limit' type: #usqInt>
 	memory ifNotNil:
-		[CheckObjectOverwrite ifTrue:
+		[coInterpreter checkAllocFiller ifTrue:
 			[aNewSpace start
-				to: aNewSpace limit - 1
+				to: limit - 1
 				by: self wordSize
 				do: [:p| self longAt: p put: p]]]
 ]
@@ -5294,7 +5285,7 @@ SpurMemoryManager >> initializeNewSpaceVariables [
 							- coInterpreter interpreterAllocationReserveBytes.
 	newSpaceStart := scavenger pastSpace start min: scavenger futureSpace start.
 	self assert: newSpaceStart < scavenger eden start.
-	self initSpaceForAllocationCheck: (self addressOf: scavenger eden)
+	self initSpaceForAllocationCheck: (self addressOf: scavenger eden) limit: scavengeThreshold
 ]
 
 { #category : #initialization }
@@ -6817,7 +6808,7 @@ SpurMemoryManager >> markAndTraceWeaklingsFrom: startIndex [
 	^self objStack: weaklingStack from: startIndex do:
 		[:weakling|
 		 self markAndTraceClassOf: weakling.
-		 0 to: (self numStrongSlotsOf: weakling ephemeronInactiveIf: nil) - 1 do:
+		 0 to: (self numStrongSlotsOfWeakling: weakling) - 1 do:
 			[:i| | field |
 			field := self fetchPointer: i ofObject: weakling.
 			((self isImmediate: field) or: [self isMarked: field]) ifFalse:
@@ -7252,7 +7243,7 @@ SpurMemoryManager >> nilUnmarkedWeaklingSlotsIn: aWeakling [
 	 answer if any unmarked slots were found."
 	| anyUnmarked |
 	anyUnmarked := false.
-	(self numStrongSlotsOf: aWeakling ephemeronInactiveIf: nil) to: (self numSlotsOf: aWeakling) - 1 do:
+	(self numStrongSlotsOfWeakling: aWeakling) to: (self numSlotsOf: aWeakling) - 1 do:
 		[:i| | referent |
 		referent := self fetchPointer: i ofObject: aWeakling.
 		((self isNonImmediate: referent)
@@ -7393,12 +7384,22 @@ SpurMemoryManager >> numSlotsOfAny: objOop [
 SpurMemoryManager >> numStrongSlotsOf: objOop ephemeronInactiveIf: criterion [
 	"Answer the number of strong pointer fields in the given object.
 	 Works with CompiledMethods, as well as ordinary objects."
-	<api>
 	<var: 'criterion' declareC: 'int (*criterion)(sqInt key)'>
 	<inline: true>
 	<asmLabel: false>
-	| fmt numSlots  contextSize numLiterals |
+	| fmt |
 	fmt := self formatOf: objOop.
+	^self numStrongSlotsOf: objOop format: (self formatOf: objOop) ephemeronInactiveIf: criterion
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> numStrongSlotsOf: objOop format: fmt ephemeronInactiveIf: criterion [
+	"Answer the number of strong pointer fields in the given object.
+	 Works with CompiledMethods, as well as ordinary objects."
+	<var: 'criterion' declareC: 'int (*criterion)(sqInt key)'>
+	<inline: true>
+	<asmLabel: false>
+	| numSlots  contextSize numLiterals |
 	fmt <= self lastPointerFormat ifTrue:
 		[numSlots := self numSlotsOf: objOop.
 		 fmt <= self arrayFormat ifTrue:
@@ -7413,7 +7414,7 @@ SpurMemoryManager >> numStrongSlotsOf: objOop ephemeronInactiveIf: criterion [
 		 fmt = self weakArrayFormat ifTrue:
 			[^self fixedFieldsOfClass: (self fetchClassOfNonImm: objOop)].
 		 self assert: fmt = self ephemeronFormat.
-		 ^(criterion isNil or: [self perform: criterion with: (self keyOfEphemeron: objOop)])
+		 ^(self perform: criterion with: (self keyOfEphemeron: objOop))
 			ifTrue: [numSlots]
 			ifFalse: [0]].
 	fmt = self forwardedFormat ifTrue: [^1].
@@ -7422,6 +7423,16 @@ SpurMemoryManager >> numStrongSlotsOf: objOop ephemeronInactiveIf: criterion [
 	"CompiledMethod: contains both pointers and bytes"
 	numLiterals := coInterpreter literalCountOf: objOop.
 	^numLiterals + LiteralStart
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> numStrongSlotsOfWeakling: objOop [
+	"Answer the number of strong pointer fields in the given weakling."
+	<api>
+	<inline: true>
+	<asmLabel: false>
+	self assert: (self formatOf: objOop) = self weakArrayFormat.
+	^self fixedFieldsOfClass: (self fetchClassOfNonImm: objOop)
 ]
 
 { #category : #scavenger }
@@ -8527,6 +8538,11 @@ SpurMemoryManager >> scanClassPostBecome: startClassObj effects: becomeEffects [
 	 (self rawHashBitsOf: obj) = 0] whileTrue:
 		["effectively self scanClassPostBecome: obj"
 		 classObj := obj]
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> scavengeThreshold [
+	^scavengeThreshold
 ]
 
 { #category : #'spur bootstrap' }

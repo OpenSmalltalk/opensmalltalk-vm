@@ -65,6 +65,7 @@ Class {
 		'PrimErrObjectIsPinned',
 		'PrimErrObjectMayMove',
 		'PrimErrUnsupported',
+		'PrimErrWritePastObject',
 		'PrimNoErr',
 		'STACKVM',
 		'ShiftForWord',

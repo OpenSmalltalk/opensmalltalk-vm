@@ -249,6 +249,7 @@ CoInterpreter class >> initializeMiscConstants [
 	PrimCallNeedsPrimitiveFunction := 2.
 	PrimCallMayCallBack := 4.
 	PrimCallCollectsProfileSamples := 8.
+	CheckAllocationFillerAfterPrimCall := 16.
 
 	ReturnToInterpreter := 1. "setjmp/longjmp code."
 
@@ -3420,6 +3421,12 @@ CoInterpreter >> gcMode [
 	^gcMode
 ]
 
+{ #category : #'cog jit support' }
+CoInterpreter >> getCheckAllocFiller [
+	<api>
+	^checkAllocFiller
+]
+
 { #category : #'internal interpreter access' }
 CoInterpreter >> getCodeCompactionCount [
 	<cmacro: '() integerObjectOf(GIV(statCodeCompactionCount))'>
@@ -5300,7 +5307,9 @@ CoInterpreter >> primitivePropertyFlags: primIndex [
 
 		(functionPointer == #primitiveExternalCall
 	 or: [functionPointer == #primitiveCalloutToFFI]) ifTrue: "For callbacks"
-		[baseFlags := baseFlags bitOr: PrimCallNeedsNewMethod + PrimCallNeedsPrimitiveFunction + PrimCallMayCallBack].
+		[baseFlags := baseFlags bitOr: PrimCallNeedsNewMethod + PrimCallNeedsPrimitiveFunction + PrimCallMayCallBack.
+		 checkAllocFiller ifTrue:
+			[baseFlags := baseFlags bitOr: CheckAllocationFillerAfterPrimCall]].
 
 	^baseFlags
 ]
