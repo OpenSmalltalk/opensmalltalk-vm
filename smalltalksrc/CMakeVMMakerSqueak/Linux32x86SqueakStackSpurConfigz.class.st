@@ -19,7 +19,6 @@ Linux32x86SqueakStackSpurConfigz >> compilerFlags [
 		at: #buildAssertITimerHeartbeat  put: [self compilerFlagsAssertITimerHeartbeat];
             at:#buildDebug  put: [self compilerFlagsDebug];   "located in CMakeVMMaker CPlatformConfig"
 		at: #buildDebugITimerHeartbeat  put: [self compilerFlagsDebugITimerHeartbeat ];
-		at: #buildDebugMultiThreaded  put: [self compilerFlagsDebugMultiThreaded];
 		at: #buildITimerHeartbeat  put: [self compilerFlagsIHeartbeatTimer];
 		at: #buildMultiThreaded  put: [self compilerFlagsMultiThreaded ];
 		at: #buildMultiThreadedAssert  put: [self compilerFlagsMultiThreadedAssert];
@@ -59,9 +58,6 @@ Linux32x86SqueakStackSpurConfigz >> configureForBuildType: aSymbol [
 
 		at: #buildDebugITimerHeartbeat 
 		put:  [self buildType: #buildDebugITimerHeartbeat.   self configureBuildDebugITimerHeartbeat];
-
-		at: #buildDebugMultiThreaded 
-		put: [self buildType: #buildDebugMultiThreaded.   self configureBuildDebugMultiThreaded];
 
 		at: #buildITimerHeartbeat 
 		put: [self buildType:#buildITimerHeartbeat.    self configureBuildIHeartbeatTimer];
@@ -118,4 +114,51 @@ Linux32x86SqueakStackSpurConfigz >> defaultInternalPlugins [
 Linux32x86SqueakStackSpurConfigz >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true
+]
+
+{ #category : #'headers generation' }
+Linux32x86SqueakStackSpurConfigz >> generateConfigH: aBuildType [
+	"self write: self configH toFile: 'config.h'"
+
+	|d |
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self configHBuild];
+		at: #buildAssert  put: [self configHBuildAssert];
+		at: #buildAssertITimerHeartbeat  put: [self configHBuildAssertITimerHeartbeat];
+            at:#buildDebug  put: [self configHBuildDebug];   "located in CMakeVMMaker CPlatformConfig"
+		at: #buildDebugITimerHeartbeat  put: [self configHBuildDebugITimerHeartbeat ];
+		at: #buildITimerHeartbeat  put: [self configHBuildITimerHeartbeat];
+		at: #buildMultiThreaded  put: [self configHBuildMultiThreaded ];
+		at: #buildMultiThreadedAssert  put: [self configHBuildMultiThreadedAssert];
+		at: #buildMultiThreadedDebug   put: [self configHBuildMultiThreadedDebug ];
+		at: #buildNone put:[self configHNoBuildType].
+
+
+	 ^(d at: ( aBuildType)) value
+
+
+
+
+]
+
+{ #category : #utils }
+Linux32x86SqueakStackSpurConfigz >> setGlobalOptionsAfterDetermineSystem: aMaker buildType: aBuildType [
+	"invoke correct setGlobalOptions for this buildType to allow per-buildType customization'"
+
+	|d |
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self setGlobalOptionsAfterDetermineSystemBuild: aMaker];
+		at: #buildAssert  put: [self setGlobalOptionsAfterDetermineSystemBuildAssert: aMaker];
+		at: #buildAssertITimerHeartbeat  put: [self setGlobalOptionsAfterDetermineSystemBuildAssertITimerHeartbeat: aMaker];
+            at:#buildDebug  put: [self setGlobalOptionsAfterDetermineSystemBuildDebug: aMaker];   
+		at: #buildITimerHeartbeat  put: [self setGlobalOptionsAfterDetermineSystemBuildITimerHeartbeat: aMaker];
+		at: #buildMultiThreaded  put: [self setGlobalOptionsAfterDetermineSystemBuildMultiThreaded: aMaker ];
+		at: #buildMultiThreadedAssert  put: [self setGlobalOptionsAfterDetermineSystemBuildMultiThreadedAssert: aMaker];
+		at: #buildMultiThreadedDebug   put: [self setGlobalOptionsAfterDetermineSystemBuildMultiThreadedDebug: aMaker ];
+		at: #buildNone put:[self setGlobalOptionsBuildNone: aMaker].
+
+	 ^(d at: ( aBuildType)) value
+
 ]
