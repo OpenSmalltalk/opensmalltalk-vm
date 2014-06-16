@@ -5767,7 +5767,7 @@ Cogit >> handleCallOrJumpSimulationTrap: aProcessorSimulationTrap [
 	 not called something that has built a frame, such as closure value or evaluate method, or
 	 switched frames, such as primitiveSignal, primitiveWait, primitiveResume, primitiveSuspend et al."
 	(function beginsWith: 'primitive') ifTrue:
-		[objectMemory checkForLastObjectOverwrite.
+		[coInterpreter checkForLastObjectOverwrite.
 		 coInterpreter primFailCode = 0
 			ifTrue: [(#(	primitiveClosureValue primitiveClosureValueWithArgs primitiveClosureValueNoContextSwitch
 						primitiveSignal primitiveWait primitiveResume primitiveSuspend primitiveYield
