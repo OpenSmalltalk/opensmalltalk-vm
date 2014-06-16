@@ -267,56 +267,8 @@ Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> configH [
 
 { #category : #plugins }
 Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> defaultExternalPlugins [
-	^ #(
-"		B3DAcceleratorPlugin"
-		JPEGReaderPlugin 
-		JPEGReadWriter2Plugin 			
-		InternetConfigPlugin 
-		RePlugin
-		ThreadedFFIPlugin "SqueakFFIPrims"   "IA32FFIPlugin is what pharo uses"
-		UnixOSProcessPlugin	
-		UUIDPlugin
-	)
-]
+	^ super defaultExternalPlugins copyWithoutAll: #(#B3DAcceleratorPlugin #BochsIA32Plugin)
 
-{ #category : #plugins }
-Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> defaultInternalPlugins [
-	self flag:'tty'. "if this config compiles with these plugins, then systematically sync and debug with the super class's for didactic purposes"
-" copied from pharo CogUnixConfig "
-	^ #(
-		ADPCMCodecPlugin 
-		AsynchFilePlugin 
-		BalloonEnginePlugin "B2DPlugin" 
-		BitBltSimulation "BitBltPlugin"
-		BMPReadWriterPlugin 
-		CroquetPlugin 
-		DeflatePlugin  "ZipPlugin"
-		DropPlugin 
-		DSAPlugin "DSAPrims" 
-		FFTPlugin 
-		FileCopyPlugin 
-		FilePlugin 
-		FloatArrayPlugin 
-		FloatMathPlugin 
-		IA32ABIPlugin "IA32ABI"
-		JoystickTabletPlugin 
-		KlattSynthesizerPlugin "Klatt"
-		LargeIntegersPlugin "LargeIntegers"
-		LocalePlugin
-		Matrix2x3Plugin 
-		MIDIPlugin 
-		MiscPrimitivePlugin 
-		Mpeg3Plugin  	
-		SecurityPlugin 
-		SerialPlugin 
-		SocketPlugin 
-		SoundCodecPlugin "SoundCodecPrims"
-		SoundGenerationPlugin 
-		SoundPlugin 
-		SqueakSSLPlugin
-		StarSqueakPlugin 
-		SurfacePlugin	
-		)
 ]
 
 { #category : #cmake }
