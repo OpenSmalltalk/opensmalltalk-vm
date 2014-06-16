@@ -335,9 +335,9 @@ Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> excludeFromBuild [
 
 ]
 
-{ #category : #accessing }
+{ #category : #cmake }
 Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> executableName [
-	^ 'CogVM'
+	^ self vmCogExecutableName
 ]
 
 { #category : #'source generation' }

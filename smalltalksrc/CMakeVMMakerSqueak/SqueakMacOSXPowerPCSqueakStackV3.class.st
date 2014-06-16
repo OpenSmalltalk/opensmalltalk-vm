@@ -37,7 +37,7 @@ SqueakMacOSXPowerPCSqueakStackV3 >> excludeFromBuild [
 	^true
 ]
 
-{ #category : #'as yet unclassified' }
-SqueakMacOSXPowerPCSqueakStackV3 >> todo [
-	self flag:'tty'
+{ #category : #cmake }
+SqueakMacOSXPowerPCSqueakStackV3 >> executableName [
+	^ self vmStackExecutableName
 ]
