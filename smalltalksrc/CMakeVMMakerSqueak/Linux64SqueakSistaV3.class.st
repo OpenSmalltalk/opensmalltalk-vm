@@ -27,7 +27,7 @@ Linux64SqueakSistaV3 >> dirBuildLanguageVMMM [
 	^self squeakSistaV3
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #cmake }
 Linux64SqueakSistaV3 >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
 	^self dirLinux32x8664
@@ -37,4 +37,9 @@ Linux64SqueakSistaV3 >> dirBuildPlatform [
 Linux64SqueakSistaV3 >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true
+]
+
+{ #category : #cmake }
+Linux64SqueakSistaV3 >> executableName [
+	^ self vmSistaExecutableName
 ]

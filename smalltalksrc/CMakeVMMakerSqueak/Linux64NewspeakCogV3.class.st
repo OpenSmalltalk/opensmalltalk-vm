@@ -26,7 +26,7 @@ Linux64NewspeakCogV3 >> dirBuildLanguageVMMM [
 	^self newspeakCogV3
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #cmake }
 Linux64NewspeakCogV3 >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
 	^self dirLinux32x8664
@@ -36,4 +36,9 @@ Linux64NewspeakCogV3 >> dirBuildPlatform [
 Linux64NewspeakCogV3 >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true
+]
+
+{ #category : #cmake }
+Linux64NewspeakCogV3 >> executableName [
+	^ self vmCogExecutableName
 ]

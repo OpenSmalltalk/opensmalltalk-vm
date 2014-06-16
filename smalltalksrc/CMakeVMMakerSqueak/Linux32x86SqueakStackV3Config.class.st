@@ -31,7 +31,7 @@ Linux32x86SqueakStackV3Config >> excludeFromBuild [
 	^true
 ]
 
-{ #category : #'as yet unclassified' }
-Linux32x86SqueakStackV3Config >> todo [
-	self flag:'tty'
+{ #category : #cmake }
+Linux32x86SqueakStackV3Config >> executableName [
+	^ self vmStackExecutableName
 ]

@@ -11,7 +11,7 @@ HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {
 	#name : #Win32x86NewspeakStackSpurConfig,
-	#superclass : #SqueakWin32x86CogFamilyConfig,
+	#superclass : #SqueakWin32x86Config,
 	#category : #'CMakeVMMakerSqueak-Win32x86'
 }
 
@@ -35,9 +35,9 @@ Win32x86NewspeakStackSpurConfig >> excludeFromBuild [
 	^true
 ]
 
-{ #category : #accessing }
+{ #category : #cmake }
 Win32x86NewspeakStackSpurConfig >> executableName [
-	^ 'StackVM'
+	^ self vmStackExecutableName
 ]
 
 { #category : #'source generation' }

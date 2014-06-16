@@ -79,8 +79,3 @@ Linux32x86SqueakStackSpurConfigz >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true
 ]
-
-{ #category : #'as yet unclassified' }
-Linux32x86SqueakStackSpurConfigz >> todo [
-	self flag:'tty'
-]

@@ -51,9 +51,9 @@ SqueakCocoaIOSSqueakCogV3Config >> excludeFromBuild [
 	^true
 ]
 
-{ #category : #accessing }
+{ #category : #cmake }
 SqueakCocoaIOSSqueakCogV3Config >> executableName [
-	^ 'CogVM'
+	^ self vmCogExecutableName
 ]
 
 { #category : #'source generation' }

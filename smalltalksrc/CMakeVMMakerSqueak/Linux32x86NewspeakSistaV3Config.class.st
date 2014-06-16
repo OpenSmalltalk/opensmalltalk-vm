@@ -30,7 +30,7 @@ Linux32x86NewspeakSistaV3Config >> excludeFromBuild [
 	^true "tty 2014.06.10 not implemented on gnu side"
 ]
 
-{ #category : #'as yet unclassified' }
-Linux32x86NewspeakSistaV3Config >> todo [
-	self flag:'tty'
+{ #category : #cmake }
+Linux32x86NewspeakSistaV3Config >> executableName [
+	^ self vmSistaExecutableName
 ]

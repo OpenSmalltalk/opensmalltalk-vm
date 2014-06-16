@@ -285,9 +285,9 @@ SqueakMacOSNewspeakSistaSpurConfig >> excludeFromBuild [
 	^true
 ]
 
-{ #category : #accessing }
+{ #category : #cmake }
 SqueakMacOSNewspeakSistaSpurConfig >> executableName [
-	^ 'CogVM'
+	^ self vmSistaExecutableName
 ]
 
 { #category : #accessing }

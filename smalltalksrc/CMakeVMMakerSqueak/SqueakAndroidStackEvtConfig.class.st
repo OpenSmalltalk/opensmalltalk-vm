@@ -369,6 +369,11 @@ SqueakAndroidStackEvtConfig >> excludeFromBuild [
 	^true
 ]
 
+{ #category : #cmake }
+SqueakAndroidStackEvtConfig >> executableName [
+	^ self vmStackExecutableName
+]
+
 { #category : #'source generation' }
 SqueakAndroidStackEvtConfig >> extraVMSettings: maker [
 	| versionC |

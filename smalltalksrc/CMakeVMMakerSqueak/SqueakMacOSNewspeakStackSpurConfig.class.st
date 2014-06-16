@@ -41,9 +41,9 @@ SqueakMacOSNewspeakStackSpurConfig >> excludeFromBuild [
 	^true
 ]
 
-{ #category : #accessing }
+{ #category : #cmake }
 SqueakMacOSNewspeakStackSpurConfig >> executableName [
-	^ 'StackVM'
+	^ self vmStackExecutableName
 ]
 
 { #category : #'source generation' }

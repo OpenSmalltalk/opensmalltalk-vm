@@ -263,9 +263,9 @@ SqueakIPhoneSqueakStackV3Config >> excludeFromBuild [
 	^true
 ]
 
-{ #category : #accessing }
+{ #category : #cmake }
 SqueakIPhoneSqueakStackV3Config >> executableName [
-	^ 'iStackVM'
+	^ self vmStackExecutableName
 ]
 
 { #category : #'plugin extra rules' }

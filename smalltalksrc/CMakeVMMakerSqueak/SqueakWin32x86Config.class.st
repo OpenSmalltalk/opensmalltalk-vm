@@ -47,7 +47,7 @@ Fore more information, check the class comments of all the superclasses.
 
 "
 Class {
-	#name : #SqueakWin32x86CogFamilyConfig,
+	#name : #SqueakWin32x86Config,
 	#superclass : #CPlatformConfig,
 	#traits : 'TCPlatformConfigForSqueak',
 	#classTraits : 'TCPlatformConfigForSqueak classTrait',
@@ -68,7 +68,7 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
-SqueakWin32x86CogFamilyConfig class >> licenseTemplate [
+SqueakWin32x86Config class >> licenseTemplate [
 	^'Squeak  {1} license information
 ==============================
 
@@ -128,7 +128,7 @@ interpreter.
 ]
 
 { #category : #'as yet unclassified' }
-SqueakWin32x86CogFamilyConfig class >> pluginsTemplate [
+SqueakWin32x86Config class >> pluginsTemplate [
 	^'Squeak {1} ships with the following plugins already built:
 		
 Internal: 
@@ -143,7 +143,7 @@ External:
 ]
 
 { #category : #'thirdparty libs' }
-SqueakWin32x86CogFamilyConfig >> addThirdpartyLibrary: libName [
+SqueakWin32x86Config >> addThirdpartyLibrary: libName [
 	| libs lib |
 	
 	libs := self thirdpartyLibs.
@@ -162,7 +162,7 @@ SqueakWin32x86CogFamilyConfig >> addThirdpartyLibrary: libName [
 ]
 
 { #category : #cmake }
-SqueakWin32x86CogFamilyConfig >> availableBuilds [
+SqueakWin32x86Config >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder default allBuildConfigurations copyWithoutAll:#(#assert #assertWithHeartbeatTimer #debugMultiThreadedFFI #debugWithHeartbeatTimer #release #releaseHeartbeatTimer)
 
 
@@ -170,19 +170,19 @@ SqueakWin32x86CogFamilyConfig >> availableBuilds [
 ]
 
 { #category : #directories }
-SqueakWin32x86CogFamilyConfig >> buildDir [
+SqueakWin32x86Config >> buildDir [
 	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].
 ]
 
 { #category : #directories }
-SqueakWin32x86CogFamilyConfig >> buildDirName [
+SqueakWin32x86Config >> buildDirName [
 	buildType isNil
 		ifTrue:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, 'build']
 		ifFalse:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, buildType asString]
 ]
 
 { #category : #'build script' }
-SqueakWin32x86CogFamilyConfig >> buildScript [
+SqueakWin32x86Config >> buildScript [
 	"answer the build script for building everything"
 	
 
@@ -196,12 +196,12 @@ make
 ]
 
 { #category : #'squeak compatibility' }
-SqueakWin32x86CogFamilyConfig >> buildType: aSymbol [
+SqueakWin32x86Config >> buildType: aSymbol [
 	buildType:=aSymbol
 ]
 
 { #category : #'compiler flags' }
-SqueakWin32x86CogFamilyConfig >> commonCompilerFlags [
+SqueakWin32x86Config >> commonCompilerFlags [
 	"omit -ggdb2 to prevent generating debug info"
 	"Some flags explanation: 
 	
@@ -234,7 +234,7 @@ SqueakWin32x86CogFamilyConfig >> commonCompilerFlags [
 ]
 
 { #category : #directories }
-SqueakWin32x86CogFamilyConfig >> compilerFlags [
+SqueakWin32x86Config >> compilerFlags [
 	|d commonFlags flags|
 	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
 	d 
@@ -263,7 +263,7 @@ SqueakWin32x86CogFamilyConfig >> compilerFlags [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakWin32x86CogFamilyConfig >> configureAsynchFilePlugin:  maker [ 
+SqueakWin32x86Config >> configureAsynchFilePlugin:  maker [ 
 	"extra rules for AsynchFilePlugin "
 
 	super configureAsynchFilePlugin:  maker.
@@ -275,7 +275,7 @@ SqueakWin32x86CogFamilyConfig >> configureAsynchFilePlugin:  maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakWin32x86CogFamilyConfig >> configureB3DAcceleratorPlugin:  maker [ 
+SqueakWin32x86Config >> configureB3DAcceleratorPlugin:  maker [ 
 	"extra rules for B3DAcceleratorPlugin "
 
 	super configureB3DAcceleratorPlugin:  maker.
@@ -287,7 +287,7 @@ SqueakWin32x86CogFamilyConfig >> configureB3DAcceleratorPlugin:  maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakWin32x86CogFamilyConfig >> configureCroquetPlugin:  maker [ 
+SqueakWin32x86Config >> configureCroquetPlugin:  maker [ 
 	"extra rules for CroquetPlugin "
 
 	super configureCroquetPlugin:  maker.
@@ -299,7 +299,7 @@ SqueakWin32x86CogFamilyConfig >> configureCroquetPlugin:  maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakWin32x86CogFamilyConfig >> configureDropPlugin:  maker [ 
+SqueakWin32x86Config >> configureDropPlugin:  maker [ 
 	"extra rules for DropPlugin "
 
 	super configureDropPlugin:  maker.
@@ -311,7 +311,7 @@ SqueakWin32x86CogFamilyConfig >> configureDropPlugin:  maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakWin32x86CogFamilyConfig >> configureFT2Plugin: maker [
+SqueakWin32x86Config >> configureFT2Plugin: maker [
 	"extra rules for Freetype plugin.
 	a custom rule to build freetype library"
 	| lib |
@@ -331,7 +331,7 @@ SqueakWin32x86CogFamilyConfig >> configureFT2Plugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakWin32x86CogFamilyConfig >> configureFilePlugin: maker [ 
+SqueakWin32x86Config >> configureFilePlugin: maker [ 
 	
 	super configureFilePlugin: maker.
 	
@@ -343,12 +343,12 @@ SqueakWin32x86CogFamilyConfig >> configureFilePlugin: maker [
 ]
 
 { #category : #cmake }
-SqueakWin32x86CogFamilyConfig >> configureForNoBuildType [
+SqueakWin32x86Config >> configureForNoBuildType [
 		generateBuild:=generateBuildAssert:=generateBuildAssertITimerHeartbeat:=generateBuildDebug:=generateBuildDebugITimerHeartbeat:= generateBuildDebugMultiThreaded:= generateBuildIHeartbeatTimer:= generateBuildMultiThreaded:= generateBuildMultiThreadedAssert:= generateBuildMultiThreadedDebug:=false.
 ]
 
 { #category : #'plugin extra rules' }
-SqueakWin32x86CogFamilyConfig >> configureHostWindowPlugin:    maker [ 
+SqueakWin32x86Config >> configureHostWindowPlugin:    maker [ 
 	"extra rules for HostWindowPlugin "
 
 	super configureHostWindowPlugin:  maker.
@@ -360,7 +360,7 @@ SqueakWin32x86CogFamilyConfig >> configureHostWindowPlugin:    maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakWin32x86CogFamilyConfig >> configureJoystickTabletPlugin:  maker [ 
+SqueakWin32x86Config >> configureJoystickTabletPlugin:  maker [ 
 	
 	super configureJoystickTabletPlugin:  maker.
 	
@@ -372,7 +372,7 @@ SqueakWin32x86CogFamilyConfig >> configureJoystickTabletPlugin:  maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakWin32x86CogFamilyConfig >> configureLocalePlugin:   maker [ 
+SqueakWin32x86Config >> configureLocalePlugin:   maker [ 
 	"extra rules for LocalePlugin "
 
 	super configureLocalePlugin:  maker.
@@ -384,7 +384,7 @@ SqueakWin32x86CogFamilyConfig >> configureLocalePlugin:   maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakWin32x86CogFamilyConfig >> configureMIDIPlugin:  maker [ 
+SqueakWin32x86Config >> configureMIDIPlugin:  maker [ 
 	"extra rules for MIDIPlugin "
 
 	super configureMIDIPlugin:  maker.
@@ -396,7 +396,7 @@ SqueakWin32x86CogFamilyConfig >> configureMIDIPlugin:  maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakWin32x86CogFamilyConfig >> configureMpeg3Plugin:  maker [ 
+SqueakWin32x86Config >> configureMpeg3Plugin:  maker [ 
 	"extra rules for Mpeg3Plugin "
 
 	super configureMpeg3Plugin:  maker.
@@ -407,7 +407,7 @@ SqueakWin32x86CogFamilyConfig >> configureMpeg3Plugin:  maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakWin32x86CogFamilyConfig >> configureSecurityPlugin: maker [ 
+SqueakWin32x86Config >> configureSecurityPlugin: maker [ 
 	"extra rules for SecurityPlugin"
 
 	super configureSecurityPlugin: maker.
@@ -419,7 +419,7 @@ SqueakWin32x86CogFamilyConfig >> configureSecurityPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakWin32x86CogFamilyConfig >> configureSerialPlugin:     maker [ 
+SqueakWin32x86Config >> configureSerialPlugin:     maker [ 
 	"extra rules for SerialPlugin "
 
 	super configureSerialPlugin:  maker.
@@ -431,7 +431,7 @@ SqueakWin32x86CogFamilyConfig >> configureSerialPlugin:     maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakWin32x86CogFamilyConfig >> configureSocketPlugin:  maker [ 
+SqueakWin32x86Config >> configureSocketPlugin:  maker [ 
 	"extra rules for SocketPlugin "
 
 	super configureSocketPlugin:  maker.
@@ -443,14 +443,14 @@ SqueakWin32x86CogFamilyConfig >> configureSocketPlugin:  maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakWin32x86CogFamilyConfig >> configureSoundPlugin: maker [ 
+SqueakWin32x86Config >> configureSoundPlugin: maker [ 
 	"extra rules for SoundPlugin"
 	
 	maker addPlatformSources: #( 'sqWin32Sound' )
 ]
 
 { #category : #'plugin extra rules' }
-SqueakWin32x86CogFamilyConfig >> configureSqueakSSLPlugin: maker [
+SqueakWin32x86Config >> configureSqueakSSLPlugin: maker [
 	| lib |
 	maker addPlatformSources: #('sqUnixOpenSSL.c').
 	
@@ -470,7 +470,7 @@ SqueakWin32x86CogFamilyConfig >> configureSqueakSSLPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakWin32x86CogFamilyConfig >> configureUUIDPlugin: maker [ 
+SqueakWin32x86Config >> configureUUIDPlugin: maker [ 
 	"extra rules for UUIDPlugin"
 	
 	maker addPlatformSources:
@@ -481,7 +481,7 @@ SqueakWin32x86CogFamilyConfig >> configureUUIDPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakWin32x86CogFamilyConfig >> configureWin32OSProcessPlugin: maker [ 
+SqueakWin32x86Config >> configureWin32OSProcessPlugin: maker [ 
 	"extra rules for Win32OSProcessPlugin"
 
 	maker includeDirectories: '${crossDir}/plugins/FilePlugin'.
@@ -490,7 +490,7 @@ SqueakWin32x86CogFamilyConfig >> configureWin32OSProcessPlugin: maker [
 ]
 
 { #category : #plugins }
-SqueakWin32x86CogFamilyConfig >> defaultExternalPlugins [
+SqueakWin32x86Config >> defaultExternalPlugins [
 	"expertly cut-n-pasted from Cog/cygwinbuild/plugins.ext"
 	^#(
 		BochsIA32Plugin 
@@ -500,7 +500,7 @@ SqueakWin32x86CogFamilyConfig >> defaultExternalPlugins [
 ]
 
 { #category : #plugins }
-SqueakWin32x86CogFamilyConfig >> defaultInternalPlugins [
+SqueakWin32x86Config >> defaultInternalPlugins [
 	"expertly cut-n-pasted from Cog/cygwinbuild/plugins.int"
 	^#(
 		ADPCMCodecPlugin 
@@ -543,42 +543,42 @@ SqueakWin32x86CogFamilyConfig >> defaultInternalPlugins [
 ]
 
 { #category : #cmake }
-SqueakWin32x86CogFamilyConfig >> dirBuildLanguageVMMM [
+SqueakWin32x86Config >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
 	^self required
 ]
 
 { #category : #cmake }
-SqueakWin32x86CogFamilyConfig >> dirBuildPlatform [
+SqueakWin32x86Config >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
 	^self dirWin32x86
 ]
 
 { #category : #cmake }
-SqueakWin32x86CogFamilyConfig >> excludeFromBuild [
+SqueakWin32x86Config >> excludeFromBuild [
 	^true
 
 ]
 
 { #category : #accessing }
-SqueakWin32x86CogFamilyConfig >> executableType [
+SqueakWin32x86Config >> executableType [
 	^ 'WIN32'
 ]
 
 { #category : #accessing }
-SqueakWin32x86CogFamilyConfig >> externalModulesDir [
+SqueakWin32x86Config >> externalModulesDir [
 	"answer the location in VM bundle, where plugins and rest of dynamic libs will be copied,
 	"
 	^ '${outputDir}'
 ]
 
 { #category : #utils }
-SqueakWin32x86CogFamilyConfig >> fixLineEndsOf: string [
+SqueakWin32x86Config >> fixLineEndsOf: string [
 	^ string copyReplaceAll: String cr with: String crlf
 ]
 
 { #category : #public }
-SqueakWin32x86CogFamilyConfig >> generate [ 
+SqueakWin32x86Config >> generate [ 
 	self generatePluginsList. 
 	self generateLicense. 
 	"^super generate"
@@ -586,7 +586,7 @@ SqueakWin32x86CogFamilyConfig >> generate [
 ]
 
 { #category : #'as yet unclassified' }
-SqueakWin32x86CogFamilyConfig >> generateLicense [ 
+SqueakWin32x86Config >> generateLicense [ 
 	self 
 		write:  (self class licenseTemplate 
 			format: { self version })
@@ -595,7 +595,7 @@ SqueakWin32x86CogFamilyConfig >> generateLicense [
 ]
 
 { #category : #'as yet unclassified' }
-SqueakWin32x86CogFamilyConfig >> generatePluginsList [ 
+SqueakWin32x86Config >> generatePluginsList [ 
 	self 
 		write:  (self class pluginsTemplate 
 			format: {
@@ -608,14 +608,14 @@ SqueakWin32x86CogFamilyConfig >> generatePluginsList [
 ]
 
 { #category : #'initialize-release' }
-SqueakWin32x86CogFamilyConfig >> initialize [
+SqueakWin32x86Config >> initialize [
 	super initialize.
 	"this should be in my superclass, but I do not have permission to modify it. tty"
 	 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
 ]
 
 { #category : #accessing }
-SqueakWin32x86CogFamilyConfig >> msysPathFor: aPath [
+SqueakWin32x86Config >> msysPathFor: aPath [
 	| path |
 	self flag:'tty'. "code smell alert"
 	^aPath isString
@@ -627,7 +627,7 @@ SqueakWin32x86CogFamilyConfig >> msysPathFor: aPath [
 ]
 
 { #category : #directories }
-SqueakWin32x86CogFamilyConfig >> outputDir [
+SqueakWin32x86Config >> outputDir [
 
 	"the directory where built binaries will be stored"
 	^ outputDir ifNil: [ outputDir := (self topDir / self dirOutput/ self dirInstall) ]	
@@ -636,12 +636,12 @@ SqueakWin32x86CogFamilyConfig >> outputDir [
 ]
 
 { #category : #accessing }
-SqueakWin32x86CogFamilyConfig >> platformName [
+SqueakWin32x86Config >> platformName [
 	^ 'win32'
 ]
 
 { #category : #'source generation' }
-SqueakWin32x86CogFamilyConfig >> prepareVMMaker [
+SqueakWin32x86Config >> prepareVMMaker [
 	
 	| maker allPlugins |
 	
@@ -664,7 +664,7 @@ SqueakWin32x86CogFamilyConfig >> prepareVMMaker [
 ]
 
 { #category : #directories }
-SqueakWin32x86CogFamilyConfig >> setupDirectories: gen [
+SqueakWin32x86Config >> setupDirectories: gen [
 	"we have to override that, because we need to convert windoze paths to msys ones"
 	| dirsInclude |
 	
@@ -694,17 +694,17 @@ SqueakWin32x86CogFamilyConfig >> setupDirectories: gen [
 ]
 
 { #category : #accessing }
-SqueakWin32x86CogFamilyConfig >> srcDir [
+SqueakWin32x86Config >> srcDir [
 		^ srcDir ifNil: [ srcDir := (self topDir directoryNamed: 'src' )]
 ]
 
 { #category : #directories }
-SqueakWin32x86CogFamilyConfig >> topDir [
+SqueakWin32x86Config >> topDir [
 		^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: self oscogvm ]
 ]
 
 { #category : #'source generation' }
-SqueakWin32x86CogFamilyConfig >> validateSourcesPresent [
+SqueakWin32x86Config >> validateSourcesPresent [
 	| sources |
 	sources := Smalltalk sourcesName.
 	
@@ -713,12 +713,12 @@ SqueakWin32x86CogFamilyConfig >> validateSourcesPresent [
 ]
 
 { #category : #'as yet unclassified' }
-SqueakWin32x86CogFamilyConfig >> version [
+SqueakWin32x86Config >> version [
 	^ ''
 ]
 
 { #category : #accessing }
-SqueakWin32x86CogFamilyConfig >> winVer [
+SqueakWin32x86Config >> winVer [
 	"Set minimum version to WindowsXP (see /cygwin/usr/include//w32api/w32api.h)"
 	
 	^ '-D_WIN32_WINNT=0x0501 -DWINVER=0x0501'

@@ -253,3 +253,8 @@ Linux32ARMv6StackV3CrossRaspbianFastBltConfig >> excludeFromBuild [
 	^true
 
 ]
+
+{ #category : #cmake }
+Linux32ARMv6StackV3CrossRaspbianFastBltConfig >> executableName [
+	^ self vmStackExecutableName
+]
