@@ -121,6 +121,24 @@ SqueakBSDConfig >> compilerFlags [
 ]
 
 { #category : #'cmake configuration' }
+SqueakBSDConfig >> configureBuild [
+	"configure this Configuration for a buildType #build"
+	self 
+		preferredIncludesBuild;
+		standardIncludesBuild;
+		compilerFlagsBuild;
+		internalPluginsBuild;
+		externalPluginsBuild;
+		thirdpartyLibsBuild
+		
+
+
+		
+		
+		
+]
+
+{ #category : #'cmake configuration' }
 SqueakBSDConfig >> configureForBuildType: aSymbol [
 	| d |
 	"provide a concrete builder with the buildType and configureBuildX method to invoke"

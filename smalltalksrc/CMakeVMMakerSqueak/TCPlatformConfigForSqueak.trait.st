@@ -430,18 +430,12 @@ TCPlatformConfigForSqueak >> configHNoBuildType [
 TCPlatformConfigForSqueak >> configureBuild [
 	"configure this Configuration for a buildType #build"
 	self 
-"		setGlobalOptionsBuild: aMaker"
-"		setGlobalOptionsAfterDetermineSystemBuild: aMaker"
-"		setupDirectoriesBuild: aMaker;"
 		preferredIncludesBuild;
 		standardIncludesBuild;
 		compilerFlagsBuild;
-"		extraVMSettingsBuild: aMaker"
 		internalPluginsBuild;
 		externalPluginsBuild;
 		thirdpartyLibsBuild
-"		postBuildActionsBuild:"
-"		configHBuild."
 		
 
 
@@ -1526,80 +1520,6 @@ TCPlatformConfigForSqueak >> setGlobalOptionsBuildNone: aMaker [
 { #category : #'squeak compatibility' }
 TCPlatformConfigForSqueak >> setupDirectories:gen [
 	self required
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setupDirectoriesBuild: aMaker [ 
-	"convencience method to customize for this build. default is self setupDirectories: aMaker"
-	self setupDirectories: aMaker
-
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setupDirectoriesBuildAssert: aMaker [ 
-	"convencience method to customize for this build. default is self setupDirectories: aMaker"
-	self setupDirectories: aMaker
-
-
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setupDirectoriesBuildAssertITimerHeartbeat: aMaker [ 
-	"convencience method to customize for this build. default is self setupDirectories: aMaker"
-	self setupDirectories: aMaker
-
-
-
-
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setupDirectoriesBuildDebug: aMaker [ 
-	"convencience method to customize for this build. default is self setupDirectories: aMaker"
-	self setupDirectories: aMaker
-
-
-
-
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setupDirectoriesBuildDebugITimerHeartbeat: aMaker [ 
-	"convencience method to customize for this build. default is self setupDirectories: aMaker"
-	self setupDirectories: aMaker
-
-
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setupDirectoriesBuildITimerHeartbeat: aMaker [ 
-	"convencience method to customize for this build. default is self setupDirectories: aMaker"
-	self setupDirectories: aMaker
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setupDirectoriesBuildMultiThreaded: aMaker [ 
-	"convencience method to customize for this build. default is self setupDirectories: aMaker"
-	self setupDirectories: aMaker
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setupDirectoriesBuildMultiThreadedAssert: aMaker [ 
-	"convencience method to customize for this build. default is self setupDirectories: aMaker"
-	self setupDirectories: aMaker
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setupDirectoriesBuildMultiThreadedDebug: aMaker [ 
-	"convencience method to customize for this build. default is self setupDirectories: aMaker"
-	self setupDirectories: aMaker
-]
-
-{ #category : #'cmake config build type ' }
-TCPlatformConfigForSqueak >> setupDirectoriesBuildNone: aMaker [ 
-	"WE SHOULD NEVER GET HERE"
-	self halt.
-
 ]
 
 { #category : #'cmake directory ' }

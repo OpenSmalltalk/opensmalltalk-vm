@@ -212,6 +212,24 @@ SqueakAndroidStackEvtConfig >> configH [
 																																																																				'
 ]
 
+{ #category : #'cmake configuration' }
+SqueakAndroidStackEvtConfig >> configureBuild [
+	"configure this Configuration for a buildType #build"
+	self 
+		preferredIncludesBuild;
+		standardIncludesBuild;
+		compilerFlagsBuild;
+		internalPluginsBuild;
+		externalPluginsBuild;
+		thirdpartyLibsBuild
+		
+
+
+		
+		
+		
+]
+
 { #category : #'plugin extra rules' }
 SqueakAndroidStackEvtConfig >> configureFileCopyPlugin: maker [
 	"extra rules for DropPlugin"
