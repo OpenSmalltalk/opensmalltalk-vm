@@ -497,41 +497,40 @@ TCPlatformConfigForSqueak >> configureBuildMultiThreadedDebug [
 
 { #category : #'cmake configuration' }
 TCPlatformConfigForSqueak >> configureForBuildType: aSymbol [
-	| d info |
+	| d |
 	"provide a concrete builder with the buildType and configureBuildX method to invoke"
-	info := SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
 	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
 	self configureNoBuildType.                "reset all internal flags"
 	d 
 		at: #build 
-		put: [self buildType:(info at:#build).  self configureBuild];
+		put: [self buildType:#build.  self configureBuild];
 
 		at: #buildAssert 
-		put: [self buildType:(info at: #buildAssert).  	self configureBuildAssert];
+		put: [self buildType: #buildAssert.  	self configureBuildAssert];
 
 		at: #buildAssertITimerHeartbeat 
-		put:     [ self buildType:(info at: #buildAssertITimerHeartbeat ).   self configureBuildAssertITimerHeartbeat];
+		put:     [ self buildType: #buildAssertITimerHeartbeat.   self configureBuildAssertITimerHeartbeat];
 
             at:#buildDebug 
-		put: [self buildType:(info at: #buildDebug ).  self configureBuildDebug];
+		put: [self buildType: #buildDebug.  self configureBuildDebug];
 
 		at: #buildDebugITimerHeartbeat 
-		put:  [self buildType:(info at: #buildDebugITimerHeartbeat).   self configureBuildDebugITimerHeartbeat];
+		put:  [self buildType: #buildDebugITimerHeartbeat.   self configureBuildDebugITimerHeartbeat];
 
 		at: #buildDebugMultiThreaded 
-		put: [self buildType:(info at: #buildDebugMultiThreaded ).   self configureBuildDebugMultiThreaded];
+		put: [self buildType: #buildDebugMultiThreaded.   self configureBuildDebugMultiThreaded];
 
 		at: #buildITimerHeartbeat 
-		put: [self buildType:(info at:#buildITimerHeartbeat ).    self configureBuildIHeartbeatTimer];
+		put: [self buildType:#buildITimerHeartbeat.    self configureBuildIHeartbeatTimer];
 
 		at: #buildMultiThreaded 
-		put:  [self buildType:(info at:#buildMultiThreaded ). self configureBuildMultiThreaded];
+		put:  [self buildType:#buildMultiThreaded . self configureBuildMultiThreaded];
 
 		at: #buildMultiThreadedAssert 
-		put: [self buildType:(info at: #buildMultiThreadedAssert). self configureBuildMultiThreadedAssert];
+		put: [self buildType: #buildMultiThreadedAssert. self configureBuildMultiThreadedAssert];
 
 		at: #buildMultiThreadedDebug  
-		put: [self buildType: (info at: #buildMultiThreadedDebug). self configureBuildMultiThreadedDebug].
+		put: [self buildType: #buildMultiThreadedDebug. self configureBuildMultiThreadedDebug].
 
      ^(d at: aSymbol).
 ]
@@ -1332,14 +1331,39 @@ TCPlatformConfigForSqueak >> setExtraTargetPropertiesBuildNone: aMaker [
 
 { #category : #utils }
 TCPlatformConfigForSqueak >> setGlobalOptions: maker [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions:'
+	
+	we subclass this in our concrete builder and route it to 
+	
+	^self setGlobalOptions: aMaker buildType: (self buildType asSymbol)
+
+	"
 	self required
-	"set any CMake global options, before declaring a project in cmake file
 	
-	maker set: 'CMAKE_C_COMPILER' to: '/usr/bin/gcc'.
-	maker set: 'CMAKE_CXX_COMPILER' to: '/usr/bin/g++'.
-	
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions:'
-"
+
+]
+
+{ #category : #utils }
+TCPlatformConfigForSqueak >> setGlobalOptions: aMaker buildType: aBuildType [
+	"invoke correct setGlobalOptions for this buildType to allow per-buildType customization'"
+
+	|d |
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self setGlobalOptionsBuild: aMaker];
+		at: #buildAssert  put: [self setGlobalOptionsBuildAssert: aMaker];
+		at: #buildAssertITimerHeartbeat  put: [self setGlobalOptionsBuildAssertITimerHeartbeat: aMaker];
+            at:#buildDebug  put: [self setGlobalOptionsBuildDebug: aMaker];   "located in CMakeVMMaker CPlatformConfig"
+		at: #buildDebugITimerHeartbeat  put: [self setGlobalOptionsBuildDebugITimerHeartbeat: aMaker ];
+		at: #buildDebugMultiThreaded  put: [self setGlobalOptionsBuildDebugMultiThreaded: aMaker];
+		at: #buildITimerHeartbeat  put: [self setGlobalOptionsBuildITimerHeartbeat: aMaker];
+		at: #buildMultiThreaded  put: [self setGlobalOptionsBuildMultiThreaded: aMaker ];
+		at: #buildMultiThreadedAssert  put: [self setGlobalOptionsBuildMultiThreadedAssert: aMaker];
+		at: #buildMultiThreadedDebug   put: [self setGlobalOptionsBuildMultiThreadedDebug: aMaker ];
+		at: #buildNone put:[self setGlobalOptionsBuildNone: aMaker].
+
+	 ^(d at: ( aBuildType)) value
+
 ]
 
 { #category : #'cmake config build type ' }
@@ -1446,7 +1470,8 @@ TCPlatformConfigForSqueak >> setGlobalOptionsBuildMultiThreadedDebug: aMaker [
 
 { #category : #'cmake config build type ' }
 TCPlatformConfigForSqueak >> setGlobalOptionsBuildNone: aMaker [
-	self required.
+	"SHOULD NOT HAPPEN"
+	self halt.
 ]
 
 { #category : #'squeak compatibility' }
