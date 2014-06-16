@@ -152,7 +152,6 @@ SqueakMacOSXPowerPCConfig >> compilerFlags [
 		at: #buildAssertITimerHeartbeat  put: [self compilerFlagsAssertITimerHeartbeat];
             at:#buildDebug  put: [self compilerFlagsDebug];   "located in CMakeVMMaker CPlatformConfig"
 		at: #buildDebugITimerHeartbeat  put: [self compilerFlagsDebugITimerHeartbeat ];
-		at: #buildDebugMultiThreaded  put: [self compilerFlagsDebugMultiThreaded];
 		at: #buildITimerHeartbeat  put: [self compilerFlagsIHeartbeatTimer];
 		at: #buildMultiThreaded  put: [self compilerFlagsMultiThreaded ];
 		at: #buildMultiThreadedAssert  put: [self compilerFlagsMultiThreadedAssert];
