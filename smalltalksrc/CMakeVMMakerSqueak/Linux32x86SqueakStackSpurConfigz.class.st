@@ -1,8 +1,6 @@
 Class {
 	#name : #Linux32x86SqueakStackSpurConfigz,
 	#superclass : #CPlatformConfig,
-	#traits : 'TCPlatformConfigForSqueak',
-	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#instVars : [
 		'buildType'
 	],

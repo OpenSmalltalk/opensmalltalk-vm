@@ -17,8 +17,6 @@ HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 Class {
 	#name : #Linux64x86w32BitConfig,
 	#superclass : #CogFamilyUnixConfig,
-	#traits : 'TCPlatformConfigForSqueak',
-	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#instVars : [
 		'buildType',
 		'generateBuild',
