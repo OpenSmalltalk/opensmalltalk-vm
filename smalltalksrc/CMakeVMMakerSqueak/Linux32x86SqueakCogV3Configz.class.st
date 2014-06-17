@@ -13,8 +13,6 @@ find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me 
 Class {
 	#name : #Linux32x86SqueakCogV3Configz,
 	#superclass : #CogFamilyUnixConfig,
-	#traits : 'TCPlatformConfigForSqueak',
-	#classTraits : 'TCPlatformConfigForSqueak classTrait',
 	#instVars : [
 		'buildType',
 		'generateBuild',
