@@ -72,6 +72,11 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.'
 ]
 
+{ #category : #reports }
+VMProfiler class >> amOnSpur [
+	^(Smalltalk vmParameterAt: 41) anyMask: 16
+]
+
 { #category : #'class initialization' }
 VMProfiler class >> canBenchmark: aByteString [ 
 	CannedBenchmarkStrings addLast: aByteString
@@ -111,7 +116,7 @@ VMProfiler class >> openInstance [
 
 { #category : #spying }
 VMProfiler class >> report: aStream [
-	"Compatibility with MessageTally and QSystemProfiler instance side spyOn: & report:"
+	"Compatibility with MessageTally and AndreasSystemProfiler instance side spyOn: & report:"
 	^self openInstance report: aStream
 ]
 
@@ -120,42 +125,49 @@ VMProfiler class >> reportGCStats: gcStatsArray upTime: elapsedMilliseconds on: 
 	| oldSpaceEnd youngSpaceEnd memoryEnd fullGCs fullGCTime incrGCs incrGCTime tenureCount rootOverflows |
 	gcStatsArray ifNil: [^self].
 
-	oldSpaceEnd	:= gcStatsArray at: 1.
-	youngSpaceEnd	:= gcStatsArray at: 2.
-	memoryEnd		:= gcStatsArray at: 3.
+	oldSpaceEnd	:= gcStatsArray at: 1. "a.k.a. oldSpace size on Spur"
 	fullGCs			:= gcStatsArray at: 7.
 	fullGCTime		:= gcStatsArray at: 8.
 	incrGCs			:= gcStatsArray at: 9.
 	incrGCTime		:= gcStatsArray at: 10.
-	tenureCount		:= gcStatsArray at: 11.
+	tenureCount	:= gcStatsArray at: 11.
 	rootOverflows	:= gcStatsArray at: 22.
 
-	str cr.
+	str	cr.
 	str	nextPutAll: '**Memory**'; cr.
 	str	nextPutAll:	'	old			';
 		nextPutAll: oldSpaceEnd asStringWithCommasSigned; nextPutAll: ' bytes'; cr.
-	str	nextPutAll: '	young		';
-		nextPutAll: (youngSpaceEnd - oldSpaceEnd) asStringWithCommasSigned; nextPutAll: ' bytes'; cr.
-	str	nextPutAll: '	used		';
-		nextPutAll: youngSpaceEnd asStringWithCommasSigned; nextPutAll: ' bytes'; cr.
-	str	nextPutAll: '	free		';
-		nextPutAll: (memoryEnd - youngSpaceEnd) asStringWithCommasSigned; nextPutAll: ' bytes'; cr.
+	self amOnSpur
+		ifTrue:
+			[(gcStatsArray at: 54) ifNotNil:
+				[:freeSpace|
+				 str	nextPutAll: '	free		';
+					nextPutAll: freeSpace asStringWithCommasSigned; nextPutAll: ' bytes'; cr]]
+		ifFalse:
+			[youngSpaceEnd	:= gcStatsArray at: 2.
+			 memoryEnd		:= gcStatsArray at: 3.
+			 str	nextPutAll: '	young		';
+				nextPutAll: (youngSpaceEnd - oldSpaceEnd) asStringWithCommasSigned; nextPutAll: ' bytes'; cr.
+			 str	nextPutAll: '	used		';
+				nextPutAll: youngSpaceEnd asStringWithCommasSigned; nextPutAll: ' bytes'; cr.
+			 str	nextPutAll: '	free		';
+				nextPutAll: (memoryEnd - youngSpaceEnd) asStringWithCommasSigned; nextPutAll: ' bytes'; cr].
 
-	str cr.
+	str	cr.
 	str	nextPutAll: '**GCs**'; cr.
 	str	nextPutAll: '	full			';
 		print: fullGCs; nextPutAll: ' totalling '; nextPutAll: fullGCTime asStringWithCommas; nextPutAll: 'ms (';
-		print: ((fullGCTime / elapsedMilliseconds * 100) rounded);
+		print: fullGCTime / elapsedMilliseconds * 100 maxDecimalPlaces: 3;
 		nextPutAll: '% elapsed time)'.
 	fullGCs = 0 ifFalse:
-		[str	nextPutAll: ', avg '; print: (fullGCTime / fullGCs roundTo: 0.1); nextPutAll: 'ms'].
+		[str	nextPutAll: ', avg '; print: fullGCTime / fullGCs maxDecimalPlaces: 3; nextPutAll: 'ms'].
 	str	cr.
-	str	nextPutAll: '	incr		';
+	str	nextPutAll: (self amOnSpur ifTrue: ['	scavenges	'] ifFalse: ['	incr			']);
 		print: incrGCs; nextPutAll: ' totalling '; nextPutAll: incrGCTime asStringWithCommas; nextPutAll: 'ms (';
-		print: ((incrGCTime / elapsedMilliseconds * 100) roundTo: 0.1);
+		print: incrGCTime / elapsedMilliseconds * 100 maxDecimalPlaces: 3;
 		nextPutAll: '% elapsed time)'.
 	incrGCs = 0 ifFalse:
-		[str nextPutAll:', avg '; print: (incrGCTime / incrGCs roundTo: 0.01); nextPutAll: 'ms'].
+		[str nextPutAll:', avg '; print: incrGCTime / incrGCs maxDecimalPlaces: 3; nextPutAll: 'ms'].
 	str cr.
 	str	nextPutAll: '	tenures		';
 		nextPutAll: tenureCount asStringWithCommas.
@@ -174,25 +186,26 @@ VMProfiler class >> reportGCStats: gcStatsArray upTime: elapsedMilliseconds on: 
 		str	tab;
 			print: numCompactions; nextPutAll: ' totalling ';
 			nextPutAll: compactionMsecs asStringWithCommas; nextPutAll: 'ms (';
-			print: ((compactionMsecs / elapsedMilliseconds * 100) rounded);
+			print: compactionMsecs / elapsedMilliseconds * 100 maxDecimalPlaces: 3;
 			nextPutAll: '% elapsed time)'.
 		numCompactions = 0 ifFalse:
-			[str	nextPutAll: ', avg '; print: (compactionMsecs / numCompactions roundTo: 0.1); nextPutAll: 'ms'].
+			[str	nextPutAll: ', avg '; print: compactionMsecs / numCompactions maxDecimalPlaces: 3; nextPutAll: 'ms'].
 		str	cr].
 
 	gcStatsArray size >= 61 ifTrue:
 		[str cr; nextPutAll: '**Events**'; cr.
 		(56 to: 61)
 			with: #('Process switches' 'ioProcessEvents calls' 'Interrupt checks' 'Event checks' 'Stack overflows' 'Stack page divorces')
-			do: [:index :eventName| | value |
+			do: [:index :eventName| | value n |
 				value := gcStatsArray at: index.
-				str	nextPutAll: eventName; tab; print: value; nextPutAll: ' (';
+				n := 22 - eventName size // 4 + 1.
+				str	nextPutAll: eventName; tab: n; print: value; nextPutAll: ' (';
 					print: (value * 1000 / elapsedMilliseconds) rounded; nextPutAll: ' per second)'; cr]]
 ]
 
 { #category : #spying }
 VMProfiler class >> spyOn: aBlock [
-	"Compatibility with MessageTally and QSystemProfiler instance side spyOn: & report:"
+	"Compatibility with MessageTally and AndreasSystemProfiler instance side spyOn: & report:"
 	^Cursor execute showWhile:
 		[self openInstance spyOn: aBlock]
 ]
@@ -1114,76 +1127,35 @@ VMProfiler >> regress [
 
 { #category : #reports }
 VMProfiler >> report: s [
-	| vmTotals cogTotals nonVMTotals
-	  samplesInVM samplesInCog samplesInNonVMModules samplesInNonVM |
-	vmTotals := Dictionary new.
-	cogTotals := Dictionary new.
-	nonVMTotals := Dictionary new.
-	samplesInVM := samplesInCog := samplesInNonVMModules := 0.
-	Cursor execute showWhile:
-		[(symbolManager symbolsInModule: symbolManager vmModule) do:
-			[:sym| | samples |
-			(#(publicFunction privateFunction) includes: sym type) ifTrue:
-				[samples := 0.
-				 sym address to: sym limit - 1 do:
-					[:a| samples := samples + (highResSamples at: a)].
-				 samples > 0 ifTrue:
-					[vmTotals at: sym put: samples.
-					 samplesInVM := samplesInVM + samples]]].
-		 (symbolManager symbolsInModule: symbolManager cogModule) do:
-			[:sym| | samples |
-			(#(publicFunction privateFunction) includes: sym type) ifTrue:
-				[samples := 0.
-				 sym address to: sym limit - 1 do:
-					[:a| samples := samples + (highResSamples at: a)].
-				 samples > 0 ifTrue:
-					[cogTotals at: sym put: samples.
-					 samplesInCog := samplesInCog + samples]]].
-		 ((symbolManager modules
-				copyWithout: symbolManager vmModule)
-					copyWithout: symbolManager cogModule) do:
-			[:module|
-			(symbolManager symbolsInModule: module) do:
-				[:sym| | samples |
-				((#(publicFunction privateFunction) includes: sym type)
-				and: [(sym address // lowResolution to: sym limit // lowResolution) anySatisfy:
-						[:pc| (lowResSamples at: pc + 1) > 0]]) ifTrue:
-					[samples := 0.
-					 sym address to: sym limit - 1 do:
-						[:a| samples := samples + (highResSamples at: a)].
-					 samples > 0 ifTrue:
-						[nonVMTotals at: sym put: samples.
-						 samplesInNonVMModules := samplesInNonVMModules + samples]]]]].
-	samplesInNonVM := total - samplesInVM - samplesInCog.
-	nonVMTotals
-		at: 'Samples Not In Any Function'
-		put: samplesInNonVM - samplesInNonVMModules.
-	self putReportPreambleOn: s.
-	s print: samplesInVM + samplesInCog; nextPutAll: ' samples in the VM'; tab; nextPut: $(;
-	   print: total; nextPutAll: ' samples in the entire program)  '.
-	self printPercentage: samplesInVM + samplesInCog total: total on: s.
-	s nextPutAll: ' of total'; cr; cr.
-	cogTotals isEmpty ifFalse:
-		[s print: samplesInCog; nextPutAll: ' samples in generated vm code '.
-		 self printPercentage: samplesInCog total: samplesInVM + samplesInCog on: s.
-		 s nextPutAll: ' of entire vm ('.
-		 self printPercentage: samplesInCog total: total on: s.
-		 s nextPutAll: ' of total)'; cr.
-		 s print: samplesInVM; nextPutAll: ' samples in vanilla vm code '.
-		 self printPercentage: samplesInVM total: samplesInVM + samplesInCog on: s.
-		 s nextPutAll: ' of entire vm ('.
-		 self printPercentage: samplesInVM total: total on: s.
-		 s nextPutAll: ' of total)'; cr; cr.
-		 self printSymbolTotals: cogTotals labelled: 'generated vm code' on: s sumTotal: samplesInCog].
-	vmTotals isEmpty ifFalse:
-		[self printSymbolTotals: vmTotals labelled: 'vanilla vm code' on: s sumTotal: samplesInVM].
-	(samplesInNonVM * 100 >= total
-	and: [nonVMTotals notEmpty]) ifTrue:
-		[s print: samplesInNonVM; nextPutAll: ' samples in the rest  '.
-		 self printPercentage: samplesInNonVM total: total on: s.
-		 s nextPutAll: ' of total'; cr; cr.
-		 self printSymbolTotals: nonVMTotals labelled: 'rest' on: s sumTotal: samplesInNonVM].
-	self class reportGCStats: elapsedStats upTime: elapsedTime on: s
+	self totalsDo:
+		[:vmTotals :cogTotals :nonVMTotals
+		 :samplesInVM :samplesInCog :samplesInNonVMModules :samplesInNonVM |
+		self putReportPreambleOn: s.
+		s print: samplesInVM + samplesInCog; nextPutAll: ' samples in the VM'; tab; nextPut: $(;
+		   print: total; nextPutAll: ' samples in the entire program)  '.
+		self printPercentage: samplesInVM + samplesInCog total: total on: s.
+		s nextPutAll: ' of total'; cr; cr.
+		cogTotals isEmpty ifFalse:
+			[s print: samplesInCog; nextPutAll: ' samples in generated vm code '.
+			 self printPercentage: samplesInCog total: samplesInVM + samplesInCog on: s.
+			 s nextPutAll: ' of entire vm ('.
+			 self printPercentage: samplesInCog total: total on: s.
+			 s nextPutAll: ' of total)'; cr.
+			 s print: samplesInVM; nextPutAll: ' samples in vanilla vm code '.
+			 self printPercentage: samplesInVM total: samplesInVM + samplesInCog on: s.
+			 s nextPutAll: ' of entire vm ('.
+			 self printPercentage: samplesInVM total: total on: s.
+			 s nextPutAll: ' of total)'; cr; cr.
+			 self printSymbolTotals: cogTotals labelled: 'generated vm code' on: s sumTotal: samplesInCog].
+		vmTotals isEmpty ifFalse:
+			[self printSymbolTotals: vmTotals labelled: 'vanilla vm code' on: s sumTotal: samplesInVM].
+		(samplesInNonVM * 100 >= total
+		 and: [nonVMTotals notEmpty]) ifTrue:
+			[s print: samplesInNonVM; nextPutAll: ' samples in the rest  '.
+			 self printPercentage: samplesInNonVM total: total on: s.
+			 s nextPutAll: ' of total'; cr; cr.
+			 self printSymbolTotals: nonVMTotals labelled: 'rest' on: s sumTotal: samplesInNonVM].
+		self class reportGCStats: elapsedStats upTime: elapsedTime on: s]
 ]
 
 { #category : #menus }
@@ -1259,6 +1231,7 @@ VMProfiler >> spyOn: aBlock [
 							   sem wait.
 							   fr]]
 						ifFalse: [aBlock].
+	self selectBenchmark: aBlock sourceString.
 	self startProfiling.
 	r := blockToProfile ensure: [self stopProfiling].
 	WorldState addDeferredUIMessage:
@@ -1473,6 +1446,70 @@ VMProfiler >> totalTextMorph: help get: getter [
 		setProperty: #noScrollBarPlease toValue: true;
 		setProperty: #noVScrollBarPlease toValue: true.
 	^ptm
+]
+
+{ #category : #reports }
+VMProfiler >> totalsDo: septuaryBlock [
+	"Evaluate aBlock with 
+		a Dictionary of symbol -> total for the functions in the VM (excluding generated code)
+		a Dictionary of symbol -> total for the generated code in the VM
+		a Dictionary of symbol -> total for the functions in other code
+		total number of samples in functions in the VM (excluding generated code)
+		total number of samples in generated code in the VM
+		total number of samples in generated code in the VM
+		total number of samples in functions in other code
+		total number of samples not in VM or VM-generated code (incudes code not in any function)"
+	| vmTotals cogTotals nonVMTotals
+	  samplesInVM samplesInCog samplesInNonVMModules samplesInNonVM |
+	vmTotals := Dictionary new.
+	cogTotals := Dictionary new.
+	nonVMTotals := Dictionary new.
+	samplesInVM := samplesInCog := samplesInNonVMModules := 0.
+	(symbolManager symbolsInModule: symbolManager vmModule) do:
+		[:sym| | samples |
+		(#(publicFunction privateFunction) includes: sym type) ifTrue:
+			[samples := 0.
+			 sym address to: sym limit - 1 do:
+				[:a| samples := samples + (highResSamples at: a)].
+			 samples > 0 ifTrue:
+				[vmTotals at: sym put: samples.
+				 samplesInVM := samplesInVM + samples]]].
+	 (symbolManager symbolsInModule: symbolManager cogModule) do:
+		[:sym| | samples |
+		(#(publicFunction privateFunction) includes: sym type) ifTrue:
+			[samples := 0.
+			 sym address to: sym limit - 1 do:
+				[:a| samples := samples + (highResSamples at: a)].
+			 samples > 0 ifTrue:
+				[cogTotals at: sym put: samples.
+				 samplesInCog := samplesInCog + samples]]].
+	 ((symbolManager modules
+			copyWithout: symbolManager vmModule)
+				copyWithout: symbolManager cogModule) do:
+		[:module|
+		(symbolManager symbolsInModule: module) do:
+			[:sym| | samples |
+			((#(publicFunction privateFunction) includes: sym type)
+			and: [(sym address // lowResolution to: sym limit // lowResolution) anySatisfy:
+					[:pc| (lowResSamples at: pc + 1) > 0]]) ifTrue:
+				[samples := 0.
+				 sym address to: sym limit - 1 do:
+					[:a| samples := samples + (highResSamples at: a)].
+				 samples > 0 ifTrue:
+					[nonVMTotals at: sym put: samples.
+					 samplesInNonVMModules := samplesInNonVMModules + samples]]]].
+	samplesInNonVM := total - samplesInVM - samplesInCog.
+	nonVMTotals
+		at: 'Samples Not In Any Function'
+		put: samplesInNonVM - samplesInNonVMModules.
+	septuaryBlock valueWithArguments:
+		{vmTotals.
+		 cogTotals.
+		 nonVMTotals.
+		 samplesInVM.
+		 samplesInCog.
+		 samplesInNonVMModules.
+		 samplesInNonVM}
 ]
 
 { #category : #menus }
