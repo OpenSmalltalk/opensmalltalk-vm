@@ -125,7 +125,7 @@ VMProfiler class >> reportGCStats: gcStatsArray upTime: elapsedMilliseconds on: 
 	| oldSpaceEnd youngSpaceEnd memoryEnd fullGCs fullGCTime incrGCs incrGCTime tenureCount rootOverflows |
 	gcStatsArray ifNil: [^self].
 
-	oldSpaceEnd	:= gcStatsArray at: 1. "a.k.a. oldSpace size on Spur"
+	oldSpaceEnd	:= gcStatsArray at: 2. "a.k.a. oldSpace size on Spur"
 	fullGCs			:= gcStatsArray at: 7.
 	fullGCTime		:= gcStatsArray at: 8.
 	incrGCs			:= gcStatsArray at: 9.
@@ -144,7 +144,7 @@ VMProfiler class >> reportGCStats: gcStatsArray upTime: elapsedMilliseconds on: 
 				 str	nextPutAll: '	free		';
 					nextPutAll: freeSpace asStringWithCommasSigned; nextPutAll: ' bytes'; cr]]
 		ifFalse:
-			[youngSpaceEnd	:= gcStatsArray at: 2.
+			[youngSpaceEnd	:= gcStatsArray at: 1.
 			 memoryEnd		:= gcStatsArray at: 3.
 			 str	nextPutAll: '	young		';
 				nextPutAll: (youngSpaceEnd - oldSpaceEnd) asStringWithCommasSigned; nextPutAll: ' bytes'; cr.
