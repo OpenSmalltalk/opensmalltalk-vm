@@ -220,7 +220,8 @@ SqueakSunOS32x86Config >> generateConfigH: aBuildType [
 SqueakSunOS32x86Config >> initialize [
 	super initialize.
 	"this should be in my superclass, but I do not have permission to modify it. tty"
-	 generateForAssert:= generateForAssertHeartbeatTimer:= generateForDebug :=generateForDebugWithHeartbeatTimer:= generateForDebugMultiThreadedFFI:= generateForReleaseHeartbeatTimer:= generateForReleaseMultiThreadedFFI:=false
+ generateBuild:=generateBuildAssert:=generateBuildAssertITimerHeartbeat:=generateBuildDebug:=generateBuildDebugITimerHeartbeat :=generateBuildDebugMultiThreaded:=generateBuildIHeartbeatTimer:=generateBuildMultiThreaded:=generateBuildMultiThreadedAssert:= generateBuildMultiThreadedDebug:=false
+
 ]
 
 { #category : #'squeak compatibility' }

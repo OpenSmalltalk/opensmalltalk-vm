@@ -312,6 +312,14 @@ SqueakBSDConfig >> generateConfigH: aBuildType [
 
 ]
 
+{ #category : #'initialize-release' }
+SqueakBSDConfig >> initialize [
+	super initialize.
+	"this should be in my superclass, but I do not have permission to modify it. tty"
+ generateBuild:=generateBuildAssert:=generateBuildAssertITimerHeartbeat:=generateBuildDebug:=generateBuildDebugITimerHeartbeat :=generateBuildDebugMultiThreaded:=generateBuildIHeartbeatTimer:=generateBuildMultiThreaded:=generateBuildMultiThreadedAssert:= generateBuildMultiThreadedDebug:=false
+
+]
+
 { #category : #'squeak compatibility' }
 SqueakBSDConfig >> outputDir [
 
