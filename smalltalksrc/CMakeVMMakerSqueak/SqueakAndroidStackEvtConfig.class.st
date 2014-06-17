@@ -7,9 +7,7 @@ Ported from pharo to squeak.
 "
 Class {
 	#name : #SqueakAndroidStackEvtConfig,
-	#superclass : #CPlatformConfig,
-	#traits : 'TCPlatformConfigForSqueak',
-	#classTraits : 'TCPlatformConfigForSqueak classTrait',
+	#superclass : #CPlatformConfigForSqueak,
 	#instVars : [
 		'buildType',
 		'generateBuild',
