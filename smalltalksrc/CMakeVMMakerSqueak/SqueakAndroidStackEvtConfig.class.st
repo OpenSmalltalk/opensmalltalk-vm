@@ -193,24 +193,6 @@ SqueakAndroidStackEvtConfig >> configH [
 																																																																				'
 ]
 
-{ #category : #'cmake configuration' }
-SqueakAndroidStackEvtConfig >> configureBuild [
-	"configure this Configuration for a buildType #build"
-	self 
-		preferredIncludesBuild;
-		standardIncludesBuild;
-		compilerFlagsBuild;
-		internalPluginsBuild;
-		externalPluginsBuild;
-		thirdpartyLibsBuild
-		
-
-
-		
-		
-		
-]
-
 { #category : #'plugin extra rules' }
 SqueakAndroidStackEvtConfig >> configureFileCopyPlugin: maker [
 	"extra rules for DropPlugin"
@@ -257,43 +239,6 @@ SqueakAndroidStackEvtConfig >> configureFloatMathPlugin: maker [
 
 ]
 
-{ #category : #'cmake configuration' }
-SqueakAndroidStackEvtConfig >> configureForBuildType: aSymbol [
-	| d |
-	"provide a concrete builder with the buildType and configureBuildX method to invoke"
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	self configureNoBuildType.                "reset all internal flags"
-	d 
-		at: #build 
-		put: [self buildType:#build.  self configureBuild];
-
-		at: #buildAssert 
-		put: [self buildType: #buildAssert.  	self configureBuildAssert];
-
-		at: #buildAssertITimerHeartbeat 
-		put:     [ self buildType: #buildAssertITimerHeartbeat.   self configureBuildAssertITimerHeartbeat];
-
-            at:#buildDebug 
-		put: [self buildType: #buildDebug.  self configureBuildDebug];
-
-		at: #buildDebugITimerHeartbeat 
-		put:  [self buildType: #buildDebugITimerHeartbeat.   self configureBuildDebugITimerHeartbeat];
-
-		at: #buildITimerHeartbeat 
-		put: [self buildType:#buildITimerHeartbeat.    self configureBuildIHeartbeatTimer];
-
-		at: #buildMultiThreaded 
-		put:  [self buildType:#buildMultiThreaded . self configureBuildMultiThreaded];
-
-		at: #buildMultiThreadedAssert 
-		put: [self buildType: #buildMultiThreadedAssert. self configureBuildMultiThreadedAssert];
-
-		at: #buildMultiThreadedDebug  
-		put: [self buildType: #buildMultiThreadedDebug. self configureBuildMultiThreadedDebug].
-
-     ^(d at: aSymbol).
-]
-
 { #category : #'plugin extra rules' }
 SqueakAndroidStackEvtConfig >> configureJoystickTabletPlugin: maker [ 
 	"extra rules for JoystickTabletPlugin"
@@ -311,11 +256,6 @@ SqueakAndroidStackEvtConfig >> configureLocalePlugin: maker [
 	super configureLocalePlugin: maker.  
 	
 	maker addPlatformSources: #( 'sqAndroidLocale.c')
-]
-
-{ #category : #cmake }
-SqueakAndroidStackEvtConfig >> configureNoBuildType [
-		generateBuild:=generateBuildAssert:=generateBuildAssertITimerHeartbeat:=generateBuildDebug:=generateBuildDebugITimerHeartbeat:= generateBuildDebugMultiThreaded:= generateBuildIHeartbeatTimer:= generateBuildMultiThreaded:= generateBuildMultiThreadedAssert:= generateBuildMultiThreadedDebug:=false.
 ]
 
 { #category : #'plugin extra rules' }
@@ -433,51 +373,6 @@ SqueakAndroidStackEvtConfig >> extraVMSettings: maker [
 SqueakAndroidStackEvtConfig >> generate [
 	^ CMakeAndroidGenerator generate: self 	
 
-
-]
-
-{ #category : #'headers generation' }
-SqueakAndroidStackEvtConfig >> generateConfigH [
-	"	
-	used to be: 	
-		self write: self configH toFile: 'config.h'
-      but with variable buildTypes we need:
-"
-	self write: (self generateConfigH: buildType) toFile: 'config.h'   
-
-]
-
-{ #category : #'headers generation' }
-SqueakAndroidStackEvtConfig >> generateConfigH: aBuildType [
-	"self write: self configH toFile: 'config.h'"
-
-	|d |
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self configHBuild];
-		at: #buildAssert  put: [self configHBuildAssert];
-		at: #buildAssertITimerHeartbeat  put: [self configHBuildAssertITimerHeartbeat];
-            at:#buildDebug  put: [self configHBuildDebug];   "located in CMakeVMMaker CPlatformConfig"
-		at: #buildDebugITimerHeartbeat  put: [self configHBuildDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self configHBuildITimerHeartbeat];
-		at: #buildMultiThreaded  put: [self configHBuildMultiThreaded ];
-		at: #buildMultiThreadedAssert  put: [self configHBuildMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self configHBuildMultiThreadedDebug ];
-		at: #buildNone put:[self configHNoBuildType].
-
-
-	 ^(d at: ( aBuildType)) value
-
-
-
-
-]
-
-{ #category : #'initialize-release' }
-SqueakAndroidStackEvtConfig >> initialize [
-	super initialize.
-	"this should be in my superclass, but I do not have permission to modify it. tty"
- generateBuild:=generateBuildAssert:=generateBuildAssertITimerHeartbeat:=generateBuildDebug:=generateBuildDebugITimerHeartbeat :=generateBuildDebugMultiThreaded:=generateBuildIHeartbeatTimer:=generateBuildMultiThreaded:=generateBuildMultiThreadedAssert:= generateBuildMultiThreadedDebug:=false
 
 ]
 

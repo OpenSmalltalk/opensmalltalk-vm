@@ -48,16 +48,6 @@ Win32x86NewspeakCogSpurConfig >> compilerFlagsRelease [
 		'-DNDEBUG -DDEBUGVM=0'}
 ]
 
-{ #category : #'source files' }
-Win32x86NewspeakCogSpurConfig >> coreSources [
-	"files to include from src/vm dir"
-	
-	^ #(
-		'cogit.c'
-		'gcc3x-cointerp.c'
-		)
-]
-
 { #category : #cmake }
 Win32x86NewspeakCogSpurConfig >> dirBuildLanguageVMMM [
 	^self newspeakCogSpur
@@ -131,32 +121,6 @@ Win32x86NewspeakCogSpurConfig >> iconFileName [
 { #category : #'source generation' }
 Win32x86NewspeakCogSpurConfig >> interpreterClass [
 	^ CoInterpreter
-]
-
-{ #category : #'source files' }
-Win32x86NewspeakCogSpurConfig >> platformSources [
-	"files added from platform/win32/vm dir "
-	^ #(
-		'sqWin32Alloc.c'
-		'sqWin32Directory.c'
-		'sqWin32Heartbeat.c'
-		'sqWin32Service.c'
-		'sqWin32VMProfile.c'
-		'sqWin32Args.c'
-		'sqWin32Exports.c'
-		'sqWin32Intel.c'
-		'sqWin32Stubs.c'
-		'sqWin32Window.c'
-		'sqWin32Backtrace.c'
-		'sqWin32ExternalPrims.c'
-		'sqWin32PluginSupport.c'
-		'sqWin32Threads.c'
-		'version.c'
-		'sqWin32DirectInput.c'
-		'sqWin32GUID.c'
-		'sqWin32Prefs.c'
-		'sqWin32Utils.c'
-	)
 ]
 
 { #category : #resources }
