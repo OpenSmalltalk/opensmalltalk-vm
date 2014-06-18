@@ -13,7 +13,7 @@ HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {
 	#name : #SqueakSunOS32x86Config,
-	#superclass : #CPlatformConfig,
+	#superclass : #CPlatformConfigForSqueak,
 	#instVars : [
 		'buildType',
 		'generateBuild',

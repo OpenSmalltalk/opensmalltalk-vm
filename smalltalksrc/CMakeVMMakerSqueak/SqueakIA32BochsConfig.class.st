@@ -18,7 +18,7 @@ HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {
 	#name : #SqueakIA32BochsConfig,
-	#superclass : #CPlatformConfig,
+	#superclass : #CPlatformConfigForSqueak,
 	#instVars : [
 		'buildType',
 		'generateBuild',
