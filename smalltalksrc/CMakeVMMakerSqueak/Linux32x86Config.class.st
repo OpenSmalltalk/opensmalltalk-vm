@@ -28,105 +28,162 @@ Linux32x86Config >> availableBuilds [
 
 ]
 
-{ #category : #'compiler flags' }
-Linux32x86Config >> commonCompilerFlags [
-	self flag: 'tty'. "pull up common flags from subclasses on a refactoring pass."
-	^#()
-]
+{ #category : #'headers generation' }
+Linux32x86Config >> configH [
+	self flag:'tty'. "This needs to be customized"
+	^ '
+#ifndef __sq_config_h
+#define __sq_config_h
 
-{ #category : #'compiler flags' }
-Linux32x86Config >> compilerFlags [
-	|d commonFlags flags|
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self compilerFlagsBuild];
-		at: #buildAssert  put: [self compilerFlagsAssert];
-		at: #buildAssertITimerHeartbeat  put: [self compilerFlagsAssertITimerHeartbeat];
-            at:#buildDebug  put: [self compilerFlagsDebug];   "located in CMakeVMMaker CPlatformConfig"
-		at: #buildDebugITimerHeartbeat  put: [self compilerFlagsDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self compilerFlagsIHeartbeatTimer];
-		at: #buildMultiThreaded  put: [self compilerFlagsMultiThreaded ];
-		at: #buildMultiThreadedAssert  put: [self compilerFlagsMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self compilerFlagsMultiThreadedDebug ];
-		at: #buildNone put:[self compilerFlagsNoBuildType].
+/* explicit image width */
 
-    flags:= String streamContents: [ :stream |
-	 (((d at:  buildType) value)  collect: #withBlanksTrimmed as: Set)
-		asStringOn: stream 
-		delimiter:' '].
+#define	HAVE_INTERP_H 1
 
-    commonFlags:=String streamContents: [ :stream |
-		((self commonCompilerFlags) collect: #withBlanksTrimmed as: Set)
-			asStringOn: stream 
-			delimiter: ' ' ].
-	^ commonFlags, ' ' ,flags.
-]
+/* package options */
 
-{ #category : #'compiler flags' }
-Linux32x86Config >> compilerFlagsBuild [
-	"backwards compatability with pharo. If adding, override compilerFlagsRelease in your configuration."
+#define	USE_X11 1
+#define	USE_X11_GLX 1
+/* #undef	USE_QUARTZ */
+/* #undef	USE_QUARTZ_CGL */
+/* #undef	USE_RFB */
 
-	^self compilerFlagsRelease.
-]
+/* libraries */
 
-{ #category : #cmake }
-Linux32x86Config >> compilerFlagsDebug [
+/* #undef	HAVE_LIBX11 */
+/* #undef	HAVE_LIBXEXT */
+#define	HAVE_LIBDL 1
+/* #undef	HAVE_DYLD */
+/* #undef	HAVE_LIBFFI */
+/* #undef	HAVE_ICONV */
 
-	^ {
-		'-g3'. 
-		'-O0'. 
-		'-msse2'. 
-		'-D_GNU_SOURCE'. 
-		'-DITIMER_HEARTBEAT=1'. 
-		'-DNO_VM_PROFILE=1'. 
-		'-DDEBUGVM=1' }
-]
+/* #undef	USE_AUDIO_NONE */
+/* #undef	USE_AUDIO_SUN */
+/* #undef	USE_AUDIO_NAS */
+/* #undef	USE_AUDIO_OSS */
+/* #undef	USE_AUDIO_MACOSX */
+/* #undef	OSS_DEVICE */
 
-{ #category : #cmake }
-Linux32x86Config >> configureBuildAssertITimerHeartbeat [
-	generateBuildAssertITimerHeartbeat:=true.
-]
+/* header files */
 
-{ #category : #cmake }
-Linux32x86Config >> configureForBuildType: aSymbol [
-	| d |
-	"provide a concrete builder with the buildType and configureBuildX method to invoke"
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	self configureNoBuildType.                "reset all internal flags"
-	d 
-		at: #build 
-		put: [self buildType:#build.  self configureBuild];
+#define	HAVE_UNISTD_H 1
+/* #undef	NEED_GETHOSTNAME_P */
 
-		at: #buildAssert 
-		put: [self buildType: #buildAssert.  	self configureBuildAssert];
+#define	HAVE_DIRENT_H 1
+/* #undef	HAVE_SYS_NDIR_H */
+/* #undef	HAVE_SYS_DIR_H */
+/* #undef	HAVE_NDIR_H */
+#define	HAVE_DLFCN_H 1
+#define	HAVE_ICONV_H 1
 
-		at: #buildAssertITimerHeartbeat 
-		put:     [ self buildType: #buildAssertITimerHeartbeat.   self configureBuildAssertITimerHeartbeat];
+#define	HAVE_SYS_TIME_H 1
+#define	TIME_WITH_SYS_TIME 1
 
-            at:#buildDebug 
-		put: [self buildType: #buildDebug.  self configureBuildDebug];
+/* #undef	HAVE_SYS_FILIO_H */
 
-		at: #buildDebugITimerHeartbeat 
-		put:  [self buildType: #buildDebugITimerHeartbeat.   self configureBuildDebugITimerHeartbeat];
+/* #undef	HAVE_SYS_AUDIOIO_H */
+/* #undef	HAVE_SUN_AUDIOIO_H */
 
-		at: #buildITimerHeartbeat 
-		put: [self buildType:#buildITimerHeartbeat.    self configureBuildIHeartbeatTimer];
+#define	HAVE_PTY_H 1
+/* #undef	HAVE_UTIL_H */
+/* #undef	HAVE_LIBUTIL_H */
+#define	HAVE_STROPTS_H 1
 
-		at: #buildMultiThreaded 
-		put:  [self buildType:#buildMultiThreaded . self configureBuildMultiThreaded];
+#define	HAVE_GL_GL_H 1
+/* #undef	HAVE_OPENGL_GL_H */
 
-		at: #buildMultiThreadedAssert 
-		put: [self buildType: #buildMultiThreadedAssert. self configureBuildMultiThreadedAssert];
+/* #undef	NEED_SUNOS_H */
 
-		at: #buildMultiThreadedDebug  
-		put: [self buildType: #buildMultiThreadedDebug. self configureBuildMultiThreadedDebug].
+/* system calls/library functions */
 
-     ^(d at: aSymbol).
-]
+#define	AT_EXIT atexit
 
-{ #category : #cmake }
-Linux32x86Config >> configureNoBuildType [
-		generateBuild:=generateBuildAssert:=generateBuildAssertITimerHeartbeat:=generateBuildDebug:=generateBuildDebugITimerHeartbeat:= generateBuildDebugMultiThreaded:= generateBuildIHeartbeatTimer:= generateBuildMultiThreaded:= generateBuildMultiThreadedAssert:= generateBuildMultiThreadedDebug:=false.
+#define	HAVE_TZSET 1
+
+#define	HAVE_OPENPTY 1
+/* #undef	HAVE_UNIX98_PTYS */
+
+#define	HAVE_SNPRINTF 1
+/* #undef	HAVE___SNPRINTF */
+
+#define	HAVE_MMAP 1
+
+/* #undef	HAVE_DYLD */
+
+#define	HAVE_LANGINFO_CODESET 1
+
+#define	HAVE_ALLOCA 1
+#define	HAVE_ALLOCA_H 1
+
+#define	HAVE_UNSETENV 1
+
+#define	HAVE_NANOSLEEP 1
+
+/* widths of primitive types */
+
+#define	SIZEOF_INT 4
+#define	SIZEOF_LONG 4
+#define	SIZEOF_LONG_LONG 8
+#define	SIZEOF_VOID_P 4
+
+/* structures */
+
+#define	HAVE_TM_GMTOFF 1
+#define	HAVE_TIMEZONE 1
+
+/* typedefs */
+
+/* #undef	size_t */
+/* #undef	socklen_t */
+
+#define	ENABLE_FAST_BLT 1
+#define	squeakInt64 long long
+
+/* architecture */
+
+#define	OS_TYPE "unix"
+#define __arm__ 1
+#define __ARM_ARCH_6__ 1
+#define	VM_HOST "arm-pc-linux-gnu"
+#define	VM_HOST_CPU "arm"
+/* #undef	VM_HOST_VENDOR */
+#define	VM_HOST_OS "linux-gnu"
+#define	VM_BUILD_STRING "Unix built on "__DATE__ " "__TIME__" Compiler: "__VERSION__
+
+/* #undef	WORDS_BIGENDIAN */
+/* #undef	DOUBLE_WORD_ALIGNMENT */
+
+/* damage containment */
+
+/* #undef	DARWIN */
+
+#ifdef NEED_SUNOS_H
+# include "sunos.h"
+#endif
+
+/* other configured variables */
+
+#define SQ_VERSION "3.9a-7024"
+#define VM_VERSION "3.9-7"
+#define VM_MODULE_PREFIX ""
+/* #undef VM_DLSYM_PREFIX */
+#define VM_X11DIR ""
+
+/* avoid dependencies on glibc2.3 */
+
+#define HAVE_FEATURES_H 1
+
+#if defined(HAVE_FEATURES_H)
+# include "glibc.h"
+#endif
+
+
+/* used by UUID plugin: */
+
+#define HAVE_UUID_H 1
+
+#endif /* __sq_config_h */
+																																																																					
+																																																																				'
 ]
 
 { #category : #sources }
@@ -204,17 +261,6 @@ Linux32x86Config >> defaultInternalPlugins [
 ]
 
 { #category : #cmake }
-Linux32x86Config >> dirArmv6 [
-	^'cmake.build.arm.v6'
-]
-
-{ #category : #cmake }
-Linux32x86Config >> dirBuildLanguageVMMM [
-	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
-	^self squeakCogV3
-]
-
-{ #category : #cmake }
 Linux32x86Config >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
 	^self dirLinux32x86
@@ -237,12 +283,6 @@ Linux32x86Config >> extraPluginSettings: maker [
 	maker set: #linkFlags toString: '${linkFlags} -m32'
 ]
 
-{ #category : #sources }
-Linux32x86Config >> extraSources [
-	self flag: 'tty'. "what is this?"
-	^ 'version.c'
-]
-
 { #category : #settings }
 Linux32x86Config >> extraVMSettings: maker [
 	| versionC |
@@ -261,82 +301,12 @@ Linux32x86Config >> extraVMSettings: maker [
 	
 ]
 
-{ #category : #'headers generation' }
-Linux32x86Config >> generateConfigH [
-	"	
-	used to be: 	
-		self write: self configH toFile: 'config.h'
-      but with variable buildTypes we need:
-"
-	self write: (self generateConfigH: buildType) toFile: 'config.h'   
-
-]
-
-{ #category : #'headers generation' }
-Linux32x86Config >> generateConfigH: aBuildType [
-	"self write: self configH toFile: 'config.h'"
-
-	|d |
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self configHBuild];
-		at: #buildAssert  put: [self configHBuildAssert];
-		at: #buildAssertITimerHeartbeat  put: [self configHBuildAssertITimerHeartbeat];
-            at:#buildDebug  put: [self configHBuildDebug];   "located in CMakeVMMaker CPlatformConfig"
-		at: #buildDebugITimerHeartbeat  put: [self configHBuildDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self configHBuildITimerHeartbeat];
-		at: #buildMultiThreaded  put: [self configHBuildMultiThreaded ];
-		at: #buildMultiThreadedAssert  put: [self configHBuildMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self configHBuildMultiThreadedDebug ];
-		at: #buildNone put:[self configHNoBuildType].
-
-
-	 ^(d at: ( aBuildType)) value
-
-
-
-
-]
-
-{ #category : #'initialize-release' }
-Linux32x86Config >> initialize [
-	super initialize.
-	"this should be in my superclass, but I do not have permission to modify it. tty"
- generateBuild:=generateBuildAssert:=generateBuildAssertITimerHeartbeat:=generateBuildDebug:=generateBuildDebugITimerHeartbeat :=generateBuildDebugMultiThreaded:=generateBuildIHeartbeatTimer:=generateBuildMultiThreaded:=generateBuildMultiThreadedAssert:= generateBuildMultiThreadedDebug:=false
-
-]
-
 { #category : #accessing }
 Linux32x86Config >> linkFlags [
 "	^ super linkFlags , ' -luuid -lSM -lICE -ldl -lGL -lpthread -lm -lnsl -lX11'"
 	^ super linkFlags , ' -luuid -lSM -lICE -ldl  -lpthread -lm -lnsl -lX11'
 
 
-]
-
-{ #category : #cmake }
-Linux32x86Config >> oscogvm [
-	^ 'oscogvm'
-]
-
-{ #category : #sources }
-Linux32x86Config >> platformSources [
-	"files added from platform/unix/vm dir "
-	^ #(
-	'aio.c'
-	'debug.c'
-"	'dlfcn-dyld.c'
-	'mac-alias.c' "
-	'osExports.c'
-	'sqUnixCharConv.c'
-"	'sqUnixEvent.c' "
-	'sqUnixExternalPrims.c'
-	'sqUnixHeartbeat.c'
-	'sqUnixMain.c'
-	'sqUnixMemory.c'
-	'sqUnixThreads.c'
-	'sqUnixVMProfile.c'
-	)
 ]
 
 { #category : #'source files' }
@@ -416,25 +386,4 @@ set any CMake global options, before declaring a project in cmake file
 	set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /opt/local/lib)
 	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions:'
 "
-]
-
-{ #category : #utils }
-Linux32x86Config >> setGlobalOptionsAfterDetermineSystem: aMaker buildType: aBuildType [
-	"invoke correct setGlobalOptions for this buildType to allow per-buildType customization'"
-
-	|d |
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self setGlobalOptionsAfterDetermineSystemBuild: aMaker];
-		at: #buildAssert  put: [self setGlobalOptionsAfterDetermineSystemBuildAssert: aMaker];
-		at: #buildAssertITimerHeartbeat  put: [self setGlobalOptionsAfterDetermineSystemBuildAssertITimerHeartbeat: aMaker];
-            at:#buildDebug  put: [self setGlobalOptionsAfterDetermineSystemBuildDebug: aMaker];   
-		at: #buildITimerHeartbeat  put: [self setGlobalOptionsAfterDetermineSystemBuildITimerHeartbeat: aMaker];
-		at: #buildMultiThreaded  put: [self setGlobalOptionsAfterDetermineSystemBuildMultiThreaded: aMaker ];
-		at: #buildMultiThreadedAssert  put: [self setGlobalOptionsAfterDetermineSystemBuildMultiThreadedAssert: aMaker];
-		at: #buildMultiThreadedDebug   put: [self setGlobalOptionsAfterDetermineSystemBuildMultiThreadedDebug: aMaker ];
-		at: #buildNone put:[self setGlobalOptionsBuildNone: aMaker].
-
-	 ^(d at: ( aBuildType)) value
-
 ]

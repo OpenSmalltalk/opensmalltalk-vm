@@ -187,7 +187,7 @@ CPlatformConfigForSqueak >> cogitClass [
 
 { #category : #'compiler flags' }
 CPlatformConfigForSqueak >> commonCompilerFlags [
-	^#()
+	self	subclassResponsibility
 ]
 
 { #category : #'compiler flags' }
@@ -218,53 +218,53 @@ CPlatformConfigForSqueak >> compilerFlags [
 	^ commonFlags, ' ' ,flags.
 ]
 
-{ #category : #'cmake config build type ' }
+{ #category : #'compiler flags' }
 CPlatformConfigForSqueak >> compilerFlagsAssert [
-	self required
+	self subclassResponsibility
 ]
 
-{ #category : #'cmake config build type ' }
+{ #category : #'compiler flags' }
 CPlatformConfigForSqueak >> compilerFlagsAssertITimerHeartbeat [
-	self required
+	self subclassResponsibility
 ]
 
-{ #category : #'cmake config build type ' }
+{ #category : #'compiler flags' }
 CPlatformConfigForSqueak >> compilerFlagsBuild [
 	"backwards compatability with pharo. If adding, override compilerFlagsRelease in your configuration."
 	^self compilerFlagsRelease.
 ]
 
-{ #category : #'cmake config build type ' }
+{ #category : #'compiler flags' }
 CPlatformConfigForSqueak >> compilerFlagsDebug [
-	self required
+	self subclassResponsibility
 ]
 
-{ #category : #'cmake config build type ' }
+{ #category : #'compiler flags' }
 CPlatformConfigForSqueak >> compilerFlagsDebugITimerHeartbeat [
-	self required
+	self subclassResponsibility
 ]
 
-{ #category : #'cmake config build type ' }
+{ #category : #'compiler flags' }
 CPlatformConfigForSqueak >> compilerFlagsIHeartbeatTimer [
-	self required
+	self subclassResponsibility
 ]
 
-{ #category : #'cmake config build type ' }
+{ #category : #'compiler flags' }
 CPlatformConfigForSqueak >> compilerFlagsMultiThreaded [
-	self required
+	self subclassResponsibility
 ]
 
-{ #category : #'cmake config build type ' }
+{ #category : #'compiler flags' }
 CPlatformConfigForSqueak >> compilerFlagsMultiThreadedAssert [
-	self required
+	self subclassResponsibility
 ]
 
-{ #category : #'cmake config build type ' }
+{ #category : #'compiler flags' }
 CPlatformConfigForSqueak >> compilerFlagsMultiThreadedDebug [
-	self required
+	self subclassResponsibility
 ]
 
-{ #category : #'cmake config build type ' }
+{ #category : #'compiler flags' }
 CPlatformConfigForSqueak >> compilerFlagsNoBuildType [
 	self shouldNotImplement.
 ]
@@ -617,7 +617,24 @@ CPlatformConfigForSqueak >> configureForBuildType: aSymbol [
 
 { #category : #'cmake configuration' }
 CPlatformConfigForSqueak >> configureNoBuildType [
-	self required
+		generateBuild:=generateBuildAssert:=generateBuildAssertITimerHeartbeat:=generateBuildDebug:=generateBuildDebugITimerHeartbeat:= generateBuildDebugMultiThreaded:= generateBuildIHeartbeatTimer:= generateBuildMultiThreaded:= generateBuildMultiThreadedAssert:= generateBuildMultiThreadedDebug:=false.
+]
+
+{ #category : #'source files' }
+CPlatformConfigForSqueak >> coreSources [
+	self subclassResponsibility
+
+]
+
+{ #category : #'source files' }
+CPlatformConfigForSqueak >> crossSources [ 
+	^#(
+			'sqHeapMap.c'
+			'sqTicker.c'
+			'sqExternalSemaphores.c'
+			'sqNamedPrims.c'
+			'sqVirtualMachine.c'
+		)
 ]
 
 { #category : #'cmake directory ' }
@@ -736,6 +753,11 @@ CPlatformConfigForSqueak >> dirLinux32x86 [
 { #category : #'cmake directory ' }
 CPlatformConfigForSqueak >> dirLinux32x8664 [
 	^'cmake.build.linux32_64x86'
+]
+
+{ #category : #'cmake directory ' }
+CPlatformConfigForSqueak >> dirLinux64 [
+	^'cmake.build.linux64'
 ]
 
 { #category : #'cmake directory ' }
@@ -995,6 +1017,11 @@ CPlatformConfigForSqueak >> extraPluginSettingsBuildNone: maker [
 	self subclassResponsibility
 
 
+]
+
+{ #category : #'source files' }
+CPlatformConfigForSqueak >> extraSources [
+	self subclassResponsibility
 ]
 
 { #category : #'cmake config build type ' }
@@ -1391,6 +1418,11 @@ CPlatformConfigForSqueak >> outputDir [
 { #category : #'cmake directory ' }
 CPlatformConfigForSqueak >> outputDirName [
 	^ 'products'
+]
+
+{ #category : #'source files' }
+CPlatformConfigForSqueak >> platformSources [
+	self subclassResponsibility
 ]
 
 { #category : #'source files' }
