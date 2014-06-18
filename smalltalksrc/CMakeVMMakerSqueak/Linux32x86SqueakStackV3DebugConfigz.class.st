@@ -25,6 +25,12 @@ Linux32x86SqueakStackV3DebugConfigz class >> availableBuilds [
 
 ]
 
+{ #category : #'source generation' }
+Linux32x86SqueakStackV3DebugConfigz >> cogitClass [
+	^ StackToRegisterMappingCogit 
+
+]
+
 { #category : #plugins }
 Linux32x86SqueakStackV3DebugConfigz >> defaultExternalPlugins [
 	"Removed the B3DAcceleratorPlugin since we don't have OpenGL bindings here"
@@ -41,4 +47,9 @@ Linux32x86SqueakStackV3DebugConfigz >> defaultInternalPlugins [
 Linux32x86SqueakStackV3DebugConfigz >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true
+]
+
+{ #category : #'source generation' }
+Linux32x86SqueakStackV3DebugConfigz >> interpreterClass [
+	^ StackInterpreter
 ]

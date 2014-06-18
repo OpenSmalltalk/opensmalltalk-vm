@@ -160,11 +160,6 @@ Win32x86SqueakCogSpurConfig >> platformSources [
 	)
 ]
 
-{ #category : #'source generation' }
-Win32x86SqueakCogSpurConfig >> prepareForGeneration [
-	^ self prepareForCogGeneration
-]
-
 { #category : #resources }
 Win32x86SqueakCogSpurConfig >> resourceFile [
 

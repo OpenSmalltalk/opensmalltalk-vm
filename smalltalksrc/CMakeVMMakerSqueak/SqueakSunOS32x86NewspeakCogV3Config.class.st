@@ -21,6 +21,11 @@ SqueakSunOS32x86NewspeakCogV3Config >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations
 ]
 
+{ #category : #'source generation' }
+SqueakSunOS32x86NewspeakCogV3Config >> cogitClass [
+	^ StackToRegisterMappingCogit 
+]
+
 { #category : #cmake }
 SqueakSunOS32x86NewspeakCogV3Config >> dirBuildLanguageVMMM [
 	^self newspeakCogV3
@@ -43,4 +48,10 @@ SqueakSunOS32x86NewspeakCogV3Config >> excludeFromBuild [
 { #category : #cmake }
 SqueakSunOS32x86NewspeakCogV3Config >> executableName [
 	^ self vmCogExecutableName
+]
+
+{ #category : #'source generation' }
+SqueakSunOS32x86NewspeakCogV3Config >> interpreterClass [
+	^ CoInterpreter
+
 ]

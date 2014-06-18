@@ -82,6 +82,12 @@ Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> addDriver: name sources: aSour
 	
 ]
 
+{ #category : #'source generation' }
+Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> cogitClass [
+	^ StackToRegisterMappingCogit 
+
+]
+
 { #category : #'compiler flags' }
 Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> commonCompilerFlags [
 "	LSB_FIRST=1 means that target platform is little endian. 	set it to 0 for big-endian platforms"
@@ -295,16 +301,4 @@ Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> executableName [
 { #category : #'source generation' }
 Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> interpreterClass [
 	^ CoInterpreter
-]
-
-{ #category : #'source generation' }
-Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> prepareForGeneration [
-	^self prepareForCogGeneration
-
-]
-
-{ #category : #'squeak compatibility' }
-Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> setupDirectories: gen [
-	super setupDirectories: gen.
-	gen set: #externalModulesDir toString: self externalModulesDir.
 ]

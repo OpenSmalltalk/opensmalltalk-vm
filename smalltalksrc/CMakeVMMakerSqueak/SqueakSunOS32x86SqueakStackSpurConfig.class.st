@@ -21,6 +21,11 @@ SqueakSunOS32x86SqueakStackSpurConfig >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations
 ]
 
+{ #category : #'source generation' }
+SqueakSunOS32x86SqueakStackSpurConfig >> cogitClass [
+	^ StackToRegisterMappingCogit 
+]
+
 { #category : #cmake }
 SqueakSunOS32x86SqueakStackSpurConfig >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
@@ -44,4 +49,9 @@ SqueakSunOS32x86SqueakStackSpurConfig >> excludeFromBuild [
 { #category : #cmake }
 SqueakSunOS32x86SqueakStackSpurConfig >> executableName [
 	^ self vmStackExecutableName
+]
+
+{ #category : #'source generation' }
+SqueakSunOS32x86SqueakStackSpurConfig >> interpreterClass [
+	^ StackInterpreter
 ]

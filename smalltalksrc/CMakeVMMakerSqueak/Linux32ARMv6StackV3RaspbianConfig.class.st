@@ -19,15 +19,15 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Linux32ARMv6'
 }
 
-{ #category : #'squeak compatibility' }
-Linux32ARMv6StackV3RaspbianConfig >> addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs [
-	super addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs
-
-]
-
 { #category : #cmake }
 Linux32ARMv6StackV3RaspbianConfig >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations
+
+]
+
+{ #category : #'source generation' }
+Linux32ARMv6StackV3RaspbianConfig >> cogitClass [
+	^ StackToRegisterMappingCogit 
 
 ]
 
@@ -185,6 +185,11 @@ Linux32ARMv6StackV3RaspbianConfig >> extraPluginSettings: maker [
 	
 	maker set: #linkFlags toString: '${linkFlags}'
 
+]
+
+{ #category : #'source generation' }
+Linux32ARMv6StackV3RaspbianConfig >> interpreterClass [
+	^ StackInterpreter
 ]
 
 { #category : #accessing }

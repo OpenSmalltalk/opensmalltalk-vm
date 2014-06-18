@@ -25,6 +25,12 @@ SqueakMacOSXPowerPCNewspeakStackV3 >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations
 ]
 
+{ #category : #'source generation' }
+SqueakMacOSXPowerPCNewspeakStackV3 >> cogitClass [
+	^ StackToRegisterMappingCogit 
+
+]
+
 { #category : #cmake }
 SqueakMacOSXPowerPCNewspeakStackV3 >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
@@ -40,4 +46,9 @@ SqueakMacOSXPowerPCNewspeakStackV3 >> excludeFromBuild [
 { #category : #cmake }
 SqueakMacOSXPowerPCNewspeakStackV3 >> executableName [
 	^ self vmStackExecutableName
+]
+
+{ #category : #'source generation' }
+SqueakMacOSXPowerPCNewspeakStackV3 >> interpreterClass [
+	^ StackInterpreter
 ]

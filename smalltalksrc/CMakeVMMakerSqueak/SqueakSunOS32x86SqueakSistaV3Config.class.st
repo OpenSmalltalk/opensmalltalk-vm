@@ -21,6 +21,12 @@ SqueakSunOS32x86SqueakSistaV3Config >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations
 ]
 
+{ #category : #'source generation' }
+SqueakSunOS32x86SqueakSistaV3Config >> cogitClass [
+	^SistaStackToRegisterMappingCogit
+
+]
+
 { #category : #cmake }
 SqueakSunOS32x86SqueakSistaV3Config >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
@@ -44,4 +50,10 @@ SqueakSunOS32x86SqueakSistaV3Config >> excludeFromBuild [
 { #category : #cmake }
 SqueakSunOS32x86SqueakSistaV3Config >> executableName [
 	^ self vmSistaExecutableName
+]
+
+{ #category : #'source generation' }
+SqueakSunOS32x86SqueakSistaV3Config >> interpreterClass [
+	^ CoInterpreter
+
 ]

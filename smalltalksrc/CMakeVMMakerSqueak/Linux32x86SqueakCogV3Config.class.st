@@ -117,12 +117,6 @@ Linux32x86SqueakCogV3Config >> interpreterClass [
 	^ CoInterpreter
 ]
 
-{ #category : #'source generation' }
-Linux32x86SqueakCogV3Config >> prepareForGeneration [
-	^ self prepareForCogGeneration
-
-]
-
 { #category : #utils }
 Linux32x86SqueakCogV3Config >> setExtraTargetProperties: maker [
 

@@ -6,3 +6,73 @@ Class {
 	#superclass : #CPlatformConfigForSqueak,
 	#category : #CMakeVMMakerSqueak
 }
+
+{ #category : #'compiler flags' }
+SqueakWindowsConfig >> commonCompilerFlags [
+	"omit -ggdb2 to prevent generating debug info"
+	"Some flags explanation: 
+	
+	STACK_ALIGN_BYTES=16 is needed in mingw and FFI (and I suppose on other modules too).
+	DALLOCA_LIES_SO_USE_GETSP=0 Some compilers return the stack address+4 on alloca function, 
+	then FFI module needs to adjust that. It is NOT the case of mingw.
+	For more information see this thread: http://forum.world.st/There-are-something-fishy-with-FFI-plugin-td4584226.html
+	"
+	^ {  
+		'-march=pentium4'.
+		'-mwindows'.
+		'-D_MT'.
+		'-msse2'. 
+		'-mthreads'. 
+		'-mwin32'.
+		'-mno-rtd'. 
+		'-mms-bitfields'. 
+		'-mno-accumulate-outgoing-args ', self winVer.
+		'-DWIN32'. 
+		'-DWIN32_FILE_SUPPORT'. 
+		'-DNO_ISNAN'.
+		'-DNO_SERVICE'. 
+		'-DNO_STD_FILE_SUPPORT'.
+		'-DLSB_FIRST'. 
+		'-DVM_NAME="', self executableName,'"'.
+		'-DX86 '.
+		'-DSTACK_ALIGN_BYTES=16'. 
+		'-DALLOCA_LIES_SO_USE_GETSP=0'. 
+		'-DENABLE_FAST_BLT ' }
+]
+
+{ #category : #accessing }
+SqueakWindowsConfig >> executableType [
+	^ 'WIN32'
+]
+
+{ #category : #accessing }
+SqueakWindowsConfig >> externalModulesDir [
+	"answer the location in VM bundle, where plugins and rest of dynamic libs will be copied,
+	"
+	^ '${outputDir}'
+]
+
+{ #category : #accessing }
+SqueakWindowsConfig >> frameworks [
+	"leave empty for all platforms but Mac OS"
+	^ #()
+]
+
+{ #category : #accessing }
+SqueakWindowsConfig >> msysPathFor: aPath [
+	| path |
+	self flag:'tty'. "code smell alert"
+	^aPath isString
+		ifTrue:[	path := aPath  copyReplaceAll: '\' with: '/'.]
+		ifFalse:[	path := aPath pathName copyReplaceAll: '\' with: '/'.]
+
+	
+
+]
+
+{ #category : #accessing }
+SqueakWindowsConfig >> winVer [
+	"Set minimum version to WindowsXP (see /cygwin/usr/include//w32api/w32api.h)"
+	
+	^ '-D_WIN32_WINNT=0x0501 -DWINVER=0x0501'
+]

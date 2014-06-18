@@ -289,11 +289,6 @@ SqueakCocoaIOSConfig >> excludeFromBuild [
 	^true
 ]
 
-{ #category : #accessing }
-SqueakCocoaIOSConfig >> executableType [
-	^ 'MACOSX_BUNDLE'
-]
-
 { #category : #'plugin extra rules' }
 SqueakCocoaIOSConfig >> extraPluginSettings: maker [	
 	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'.
@@ -1049,29 +1044,6 @@ SqueakCocoaIOSConfig >> prefixHeaderFileName [
 	^self executableName, '_Prefix.pch'
 ]
 
-{ #category : #'source generation' }
-SqueakCocoaIOSConfig >> prepareVMMaker [
-	
-	| maker allPlugins |
-	
-	"In CogVMs (in contrast to Interpreter VM) the generated sources are platform independent, therefore Cross is ok"
-	maker := VMMaker forPlatform: 'Cross'.
-	
-	maker sourceDirectoryName: self srcDir pathName.
-	maker platformRootDirectoryName: self platformsDir.
-	
-	
-	allPlugins := self internalPlugins , self externalPlugins.
-	
-	"touch plugins to force their source generation unconditionally"
-	allPlugins do: [:name | (Smalltalk globals at: name) touch ].
-	
-	" Why we put all plugins as external?   Because the generated sources are not different whether the plugins were defined as internal or external. VMMaker used to need this to to generate plugins.int and plugins.ext files. But since this is achieved in another way with CMakeVMMaker, there is no different at all to put all plugins as internal or as external."
-	maker externalModules addAll:  allPlugins.
-	
-	^ maker
-]
-
 { #category : #settings }
 SqueakCocoaIOSConfig >> resources [ 
 	^#('Squeak VM.r'
@@ -1160,22 +1132,4 @@ SqueakCocoaIOSConfig >> standardIncludes [
 	'${platformsDir}/iOS/vm/OSX'
 )
 	
-]
-
-{ #category : #directories }
-SqueakCocoaIOSConfig >> write: aContents toFile: aFileName [
-	"write a file to current output directory (buildDir).
-	use line end convention appropriate for config platform"
-
-	| bldDir |
-	bldDir := self buildDir.
-	bldDir isString
-		ifTrue: [ bldDir := FileDirectory directoryEntryFor: bldDir ].
-	bldDir assureExistence.
-	bldDir
-		forceNewFileNamed: aFileName
-		do: [:s | s
-				nextPutAll: (self fixLineEndsOf: aContents)]
-
-
 ]
