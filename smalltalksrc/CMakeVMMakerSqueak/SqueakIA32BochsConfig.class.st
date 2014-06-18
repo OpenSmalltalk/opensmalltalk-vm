@@ -19,19 +19,6 @@ HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 Class {
 	#name : #SqueakIA32BochsConfig,
 	#superclass : #CPlatformConfigForSqueak,
-	#instVars : [
-		'buildType',
-		'generateBuild',
-		'generateBuildAssert',
-		'generateBuildAssertITimerHeartbeat',
-		'generateBuildDebug',
-		'generateBuildDebugITimerHeartbeat',
-		'generateBuildDebugMultiThreaded',
-		'generateBuildIHeartbeatTimer',
-		'generateBuildMultiThreaded',
-		'generateBuildMultiThreadedAssert',
-		'generateBuildMultiThreadedDebug'
-	],
 	#category : #'CMakeVMMakerSqueak-IA32-Bochs'
 }
 
@@ -46,23 +33,6 @@ SqueakIA32BochsConfig class >> availableBuilds [
 SqueakIA32BochsConfig >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations
 
-]
-
-{ #category : #'squeak compatibility' }
-SqueakIA32BochsConfig >> buildDir [
-	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].
-]
-
-{ #category : #'squeak compatibility' }
-SqueakIA32BochsConfig >> buildDirName [
-	buildType isNil
-		ifTrue:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, 'build']
-		ifFalse:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, buildType asString]
-]
-
-{ #category : #'squeak compatibility' }
-SqueakIA32BochsConfig >> buildType: aSymbol [
-	buildType:= aSymbol
 ]
 
 { #category : #'compiler flags' }
@@ -222,15 +192,6 @@ SqueakIA32BochsConfig >> initialize [
 
 ]
 
-{ #category : #'squeak compatibility' }
-SqueakIA32BochsConfig >> outputDir [
-
-	"the directory where built binaries will be stored"
-	^ outputDir ifNil: [ outputDir := (self topDir / self dirOutput/ self dirInstall) ]	
-
-
-]
-
 { #category : #utils }
 SqueakIA32BochsConfig >> setGlobalOptionsAfterDetermineSystem: aMaker buildType: aBuildType [
 	"invoke correct setGlobalOptions for this buildType to allow per-buildType customization'"
@@ -250,14 +211,4 @@ SqueakIA32BochsConfig >> setGlobalOptionsAfterDetermineSystem: aMaker buildType:
 
 	 ^(d at: ( aBuildType)) value
 
-]
-
-{ #category : #'squeak compatibility' }
-SqueakIA32BochsConfig >> srcDir [
-		^ srcDir ifNil: [ srcDir := (self topDir directoryNamed: 'src' )]
-]
-
-{ #category : #'squeak compatibility' }
-SqueakIA32BochsConfig >> topDir [
-		^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: self oscogvm ]
 ]

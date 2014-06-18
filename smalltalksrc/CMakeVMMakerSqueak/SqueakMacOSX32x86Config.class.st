@@ -18,9 +18,6 @@ HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 Class {
 	#name : #SqueakMacOSX32x86Config,
 	#superclass : #SqueakMacOSConfig,
-	#instVars : [
-		'resourcesDir'
-	],
 	#category : #'CMakeVMMakerSqueak-MacOSX32x86'
 }
 
@@ -99,33 +96,6 @@ External:
 '
 ]
 
-{ #category : #directories }
-SqueakMacOSX32x86Config >> buildDir [
-	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].
-]
-
-{ #category : #directories }
-SqueakMacOSX32x86Config >> buildDirName [
-	buildType isNil
-		ifTrue:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, 'build']
-		ifFalse:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, buildType asString]
-]
-
-{ #category : #'build script' }
-SqueakMacOSX32x86Config >> buildScript [
-	"answer the build script for building everything"
-	
-
-	^ 
-'#!/usr/bin/env bash
-
-cmake .
-make
-make install
-
-'
-]
-
 { #category : #accessing }
 SqueakMacOSX32x86Config >> cMakeMacros [ 
 	^'macro(add_framework appname fwname)
@@ -141,34 +111,6 @@ SqueakMacOSX32x86Config >> cMakeMacros [
 	  target_link_libraries(${appname} ${FRAMEWORK_${fwname}})
     endif()
 endmacro(add_framework)'  
-]
-
-{ #category : #accessing }
-SqueakMacOSX32x86Config >> compilerFlags [
-	|d commonFlags flags|
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self compilerFlagsBuild];
-		at: #buildAssert  put: [self compilerFlagsAssert];
-		at: #buildAssertITimerHeartbeat  put: [self compilerFlagsAssertITimerHeartbeat];
-            at:#buildDebug  put: [self compilerFlagsDebug];   "located in CMakeVMMaker CPlatformConfig"
-		at: #buildDebugITimerHeartbeat  put: [self compilerFlagsDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self compilerFlagsIHeartbeatTimer];
-		at: #buildMultiThreaded  put: [self compilerFlagsMultiThreaded ];
-		at: #buildMultiThreadedAssert  put: [self compilerFlagsMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self compilerFlagsMultiThreadedDebug ];
-		at: #buildNone put:[self compilerFlagsNoBuildType].
-
-    flags:= String streamContents: [ :stream |
-	 (((d at:  buildType) value)  collect: #withBlanksTrimmed as: Set)
-		asStringOn: stream 
-		delimiter:' '].
-
-    commonFlags:=String streamContents: [ :stream |
-		((self commonCompilerFlags) collect: #withBlanksTrimmed as: Set)
-			asStringOn: stream 
-			delimiter: ' ' ].
-	^ commonFlags, ' ' ,flags.
 ]
 
 { #category : #'plugin extra rules' }
@@ -407,23 +349,6 @@ SqueakMacOSX32x86Config >> excludeFromBuild [
 	^true
 ]
 
-{ #category : #accessing }
-SqueakMacOSX32x86Config >> executableName [
-	^ 'CogVM'
-]
-
-{ #category : #accessing }
-SqueakMacOSX32x86Config >> externalModulesDir [
-	"answer the location in VM bundle, where plugins and rest of dynamic libs will be copied,
-	by default, it is Framerowks subdir. i.e: 
-	
-		Cog.app/Contents/Frameworks
-		
-	"
-	
-	^ '${outputDir}/', self executableName, '.app/Contents/MacOS/Plugins'
-]
-
 { #category : #utils }
 SqueakMacOSX32x86Config >> fixLibsTemplate [
 
@@ -479,50 +404,6 @@ endforeach(lib)
 ]
 
 { #category : #utils }
-SqueakMacOSX32x86Config >> fixLineEndsOf: string [
-	^ string copyReplaceAll: String cr with: String lf
-]
-
-{ #category : #public }
-SqueakMacOSX32x86Config >> generate [ 
-	self generatePluginsList. 
-	self generateLicense. 
-	"^super generate"
-	^CMakeVMGeneratorForSqueak generate:self    "Bypass CPlatformConfig generate to invoke our compatibility class"
-]
-
-{ #category : #'as yet unclassified' }
-SqueakMacOSX32x86Config >> generateLicense [ 
-	self 
-		write:  (self class licenseTemplate 
-			format: { self version })
-		toFile: 'LICENSE.txt'
-	
-]
-
-{ #category : #'as yet unclassified' }
-SqueakMacOSX32x86Config >> generatePluginsList [ 
-	self 
-		write:  (self class pluginsTemplate 
-			format: {
-				self version. 
-				String streamContents: [ :stream | self internalPlugins asStringOn: stream delimiter: String cr ].
-				String streamContents: [ :stream | self externalPlugins asStringOn: stream delimiter: String cr ].
-				self executableName })
-		toFile: 'PLUGINS.txt'
-	
-]
-
-{ #category : #accessing }
-SqueakMacOSX32x86Config >> outputDir [
-
-	"the directory where built binaries will be stored"
-	^ outputDir ifNil: [ outputDir := (self topDir / self dirOutput/ self dirInstall) ]	
-
-
-]
-
-{ #category : #utils }
 SqueakMacOSX32x86Config >> postBuildActions: gen [
 
 	" override to add custom rules after all targets is defined "
@@ -548,34 +429,6 @@ SqueakMacOSX32x86Config >> postBuildActions: gen [
 "
 ]
 
-{ #category : #'source generation' }
-SqueakMacOSX32x86Config >> prepareForGeneration [
-	
-]
-
-{ #category : #'source generation' }
-SqueakMacOSX32x86Config >> prepareVMMaker [
-	
-	| maker allPlugins |
-	
-	"In CogVMs (in contrast to Interpreter VM) the generated sources are platform independent, therefore Cross is ok"
-	maker := VMMaker forPlatform: 'Cross'.
-	
-	maker sourceDirectoryName: self srcDir pathName.
-	maker platformRootDirectoryName: self platformsDir.
-	
-	
-	allPlugins := self internalPlugins , self externalPlugins.
-	
-	"touch plugins to force their source generation unconditionally"
-	allPlugins do: [:name | (Smalltalk globals at: name) touch ].
-	
-	" Why we put all plugins as external?   Because the generated sources are not different whether the plugins were defined as internal or external. VMMaker used to need this to to generate plugins.int and plugins.ext files. But since this is achieved in another way with CMakeVMMaker, there is no different at all to put all plugins as internal or as external."
-	maker externalModules addAll:  allPlugins.
-	
-	^ maker
-]
-
 { #category : #accessing }
 SqueakMacOSX32x86Config >> resourcesDir [ 
 	"Answer the value of resourcesDir"
@@ -594,55 +447,4 @@ SqueakMacOSX32x86Config >> resourcesDir: anObject [
 { #category : #accessing }
 SqueakMacOSX32x86Config >> resourcesDirName [
 	^ 'macbuild/resources'
-]
-
-{ #category : #'source generation' }
-SqueakMacOSX32x86Config >> setupDirectories: gen [
-	| dirsInclude |
-
-	" write the directories in separate include file"
-	dirsInclude := gen captureOutputDuring: [
-		gen
-			set: #topDir toString: (self topDir fullName); 
-			set: #buildDir toString: (self buildDir ifNil: ['${topDir}/build'] ifNotNil: [self buildDir fullName] );
-			set: #thirdpartyDir toString: '${buildDir}/thirdParty';
-			set: #platformsDir toString: self platformsDir;
-			set: #srcDir toString: self srcDir pathName;
-			set: #srcPluginsDir toString: (pluginsDir ifNil: [ '${srcDir}/plugins' ]);
-			set: #srcVMDir toString: '${srcDir}/vm';
-			set: #platformName toString: self platformName;
-			set: #targetPlatform to: '${platformsDir}/${platformName}';
-			set: #crossDir toString: '${platformsDir}/Cross';
-			set: #platformVMDir toString: '${targetPlatform}/vm';
-			set: #outputDir toString: self outputDir fullName.
-	].
-
-	self write: dirsInclude toFile: 'directories.cmake'.
-	
-	gen include: 'directories.cmake'.
-
-]
-
-{ #category : #accessing }
-SqueakMacOSX32x86Config >> srcDir [
-		^ srcDir ifNil: [ srcDir := (self topDir directoryNamed: 'src' )]
-]
-
-{ #category : #directories }
-SqueakMacOSX32x86Config >> topDir [
-		^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: self oscogvm ]
-]
-
-{ #category : #'source generation' }
-SqueakMacOSX32x86Config >> validateSourcesPresent [
-	| sources |
-	sources := Smalltalk sourcesName.
-	
-	(sources == nil)
-		ifTrue: [	self error: 'VM source code cannot be generated without .sources file'.]		
-]
-
-{ #category : #'as yet unclassified' }
-SqueakMacOSX32x86Config >> version [
-	^ ''
 ]

@@ -8,6 +8,19 @@ tty.
 Class {
 	#name : #CPlatformConfigForSqueak,
 	#superclass : #CPlatformConfig,
+	#instVars : [
+		'buildType',
+		'generateBuild',
+		'generateBuildAssert',
+		'generateBuildAssertITimerHeartbeat',
+		'generateBuildDebug',
+		'generateBuildDebugITimerHeartbeat',
+		'generateBuildDebugMultiThreaded',
+		'generateBuildIHeartbeatTimer',
+		'generateBuildMultiThreaded',
+		'generateBuildMultiThreadedAssert',
+		'generateBuildMultiThreadedDebug'
+	],
 	#category : #CMakeVMMakerSqueak
 }
 
@@ -80,6 +93,40 @@ External:
 '
 ]
 
+{ #category : #'squeak compatability' }
+CPlatformConfigForSqueak >> addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs [
+
+	| cfg srcs |
+	
+	srcs := aSources inject: '' into: [:res :each | res , ' "', each, '"' ].
+	cfg := cmakeGen
+		captureOutputDuring: [
+			cmakeGen printHeader;
+			project: name;
+			include: '../directories.cmake';
+		
+			message: 'Adding module: ', name;
+			
+			addDefinitions:  self compilerFlags;
+			addDefinitions: '-fPIC -DPIC';
+			set: #sources to: srcs;
+			cmd: 'add_library' params: name, ' SHARED ${sources}'; 
+			includeDirectories: '${crossDir}/plugins/FilePlugin';
+			includeDirectories: '${targetPlatform}/plugins/B3DAcceleratorPlugin';
+			includeDirectories: '${crossDir}/plugins/B3DAcceleratorPlugin';
+			set: 'LIBRARY_OUTPUT_PATH' toString: self outputDir fullName;
+			addExternalLibraries: extLibs;
+			cmd: 'target_link_libraries' params: name , ' ${LINKLIBS}';
+			cmd: 'set_target_properties' params: name , ' PROPERTIES PREFIX "" SUFFIX "" 
+			LINK_FLAGS -m32' 
+	].
+	
+	(self buildDir / name) assureExistence.
+	self write: cfg toFile: name , '/', cmakeGen outputFileName.
+	cmakeGen addSubdirectory:  name.
+	
+]
+
 { #category : #'cmake configuration' }
 CPlatformConfigForSqueak >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder  default  allBuildConfigurations
@@ -90,10 +137,52 @@ CPlatformConfigForSqueak >> availableBuilds [
 	"
 ]
 
-{ #category : #'cmake configuration' }
-CPlatformConfigForSqueak >> buildType: aSymbol [	
-	"force suclass to implement instance var accessor"
-	self subclassResponsibility.
+{ #category : #'squeak compatability' }
+CPlatformConfigForSqueak >> buildDir [
+	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].
+]
+
+{ #category : #'squeak compatability' }
+CPlatformConfigForSqueak >> buildDirName [
+	buildType isNil
+		ifTrue:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, 'build']
+		ifFalse:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, buildType asString]
+]
+
+{ #category : #'squeak compatability' }
+CPlatformConfigForSqueak >> buildScript [
+	"answer the build script for building everything"
+	
+
+	^ 
+'#!/usr/bin/env bash
+
+cmake .
+make
+
+'
+]
+
+{ #category : #'squeak compatability' }
+CPlatformConfigForSqueak >> buildType: aSymbol [
+	buildType:= aSymbol
+]
+
+{ #category : #'source generation' }
+CPlatformConfigForSqueak >> cogitClass [
+	self subclassResponsibility
+
+	"
+	^SimpleStackBasedCogit
+	^ StackToRegisterMappingCogit 
+	^SistaStackToRegisterMappingCogit
+
+	Which one?
+
+	ClassCommentVersionsBrowser browseCommentOf: Cogit 
+
+	"
+
 ]
 
 { #category : #'compiler flags' }
@@ -103,7 +192,30 @@ CPlatformConfigForSqueak >> commonCompilerFlags [
 
 { #category : #'compiler flags' }
 CPlatformConfigForSqueak >> compilerFlags [
-	self subclassResponsibility
+	|d commonFlags flags|
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self compilerFlagsBuild];
+		at: #buildAssert  put: [self compilerFlagsAssert];
+		at: #buildAssertITimerHeartbeat  put: [self compilerFlagsAssertITimerHeartbeat];
+            at:#buildDebug  put: [self compilerFlagsDebug];   "located in CMakeVMMaker CPlatformConfig"
+		at: #buildDebugITimerHeartbeat  put: [self compilerFlagsDebugITimerHeartbeat ];
+		at: #buildITimerHeartbeat  put: [self compilerFlagsIHeartbeatTimer];
+		at: #buildMultiThreaded  put: [self compilerFlagsMultiThreaded ];
+		at: #buildMultiThreadedAssert  put: [self compilerFlagsMultiThreadedAssert];
+		at: #buildMultiThreadedDebug   put: [self compilerFlagsMultiThreadedDebug ];
+		at: #buildNone put:[self compilerFlagsNoBuildType].
+
+    flags:= String streamContents: [ :stream |
+	 (((d at:  buildType) value)  collect: #withBlanksTrimmed as: Set)
+		asStringOn: stream 
+		delimiter:' '].
+
+    commonFlags:=String streamContents: [ :stream |
+		((self commonCompilerFlags) collect: #withBlanksTrimmed as: Set)
+			asStringOn: stream 
+			delimiter: ' ' ].
+	^ commonFlags, ' ' ,flags.
 ]
 
 { #category : #'cmake config build type ' }
@@ -585,6 +697,13 @@ CPlatformConfigForSqueak >> dirBuildPlatform [
 	self subclassResponsibility
 ]
 
+{ #category : #'squeak compatability' }
+CPlatformConfigForSqueak >> dirFrom: aStringOrDir [
+	^ aStringOrDir isString
+		ifTrue: [ FileDirectory forFileName: aStringOrDir  ]
+		ifFalse: [ aStringOrDir ]
+]
+
 { #category : #'cmake directory ' }
 CPlatformConfigForSqueak >> dirIA32Bochs [
 	^'cmake.build.ia32bochs'
@@ -671,19 +790,13 @@ CPlatformConfigForSqueak >> excludeFromBuild [
 { #category : #accessing }
 CPlatformConfigForSqueak >> executableName [
 	self subclassResponsibility
-
-"browse subclasses of CPLatformConfig for context
-^'CogVM'
-^ 'CogMTVM'
-^ 'EventVM'.
-^'iStackVMSimulator'
-^ 'iStackVM'
-^'Squeak'
-^ 'StackVM'
-
-
-
 "
+executableName
+	^ self vmCogExecutableName
+	^ self vmSistaExecutableName
+	^ self vmStackExectuableName
+"
+
 ]
 
 { #category : #accessing }
@@ -696,6 +809,13 @@ SystemNavigation default browseMethodsWhoseNamesContain: ''executableType''
 	^ 'WIN32'\
 	^ ''
 "
+]
+
+{ #category : #accessing }
+CPlatformConfigForSqueak >> externalModulesDir [
+	"answer the location in VM bundle, where plugins and rest of dynamic libs will be copied,
+	"
+	self subclassResponsibility
 ]
 
 { #category : #'cmake config build type ' }
@@ -963,13 +1083,17 @@ CPlatformConfigForSqueak >> extraVMSettingsBuildNone: maker [
 	self subclassResponsibility
 ]
 
-{ #category : #accessing }
-CPlatformConfigForSqueak >> frameworks [
-	"leave empty for all platforms but Mac OS"
-	^ #()
+{ #category : #'squeak compatability' }
+CPlatformConfigForSqueak >> fixLineEndsOf: string [
+	^ string copyReplaceAll: String cr with: String crlf
 ]
 
 { #category : #accessing }
+CPlatformConfigForSqueak >> frameworks [
+	self subclassResponsibility
+]
+
+{ #category : #'squeak compatability' }
 CPlatformConfigForSqueak >> generate [
 	self generatePluginsList. 
 	self generateLicense. 
@@ -1114,6 +1238,103 @@ CPlatformConfigForSqueak >> internalPluginsBuildNone [
 
 ]
 
+{ #category : #'source generation' }
+CPlatformConfigForSqueak >> interpreterClass [
+	"answer an interpreter class for VM source code generation"
+	self subclassResponsibility 
+
+
+"
+	^ CoInterpreter
+	^ CoInterpreterMT
+	^ CoInterpreterMT
+	^ StackInterpreter
+	^ StackEvtAndroidInterpreter
+	??other
+"
+]
+
+{ #category : #'cmake config build type ' }
+CPlatformConfigForSqueak >> interpreterClassBuild [
+	"interpreter class can change to MultiThreaded for certain build types. For consistency sake, we maintain the pattern of other confiuration methods"
+	^self interpreterClass
+
+
+
+]
+
+{ #category : #'cmake config build type ' }
+CPlatformConfigForSqueak >> interpreterClassBuildAssert [
+	"interpreter class can change to MultiThreaded for certain build types. For consistency sake, we maintain the pattern of other confiuration methods"
+	^self interpreterClass
+
+
+
+]
+
+{ #category : #'cmake config build type ' }
+CPlatformConfigForSqueak >> interpreterClassBuildAssertITimerHeartbeat [
+	"interpreter class can change to MultiThreaded for certain build types. For consistency sake, we maintain the pattern of other confiuration methods"
+	^self interpreterClass
+
+
+
+]
+
+{ #category : #'cmake config build type ' }
+CPlatformConfigForSqueak >> interpreterClassBuildDebug [
+	"interpreter class can change to MultiThreaded for certain build types. For consistency sake, we maintain the pattern of other confiuration methods"
+	^self interpreterClass
+
+
+
+]
+
+{ #category : #'cmake config build type ' }
+CPlatformConfigForSqueak >> interpreterClassBuildDebugITImerHeartbeat [
+	"interpreter class can change to MultiThreaded for certain build types. For consistency sake, we maintain the pattern of other confiuration methods"
+	^self interpreterClass
+
+
+
+]
+
+{ #category : #'cmake config build type ' }
+CPlatformConfigForSqueak >> interpreterClassBuildITimerHeartbeat [
+	"interpreter class can change to MultiThreaded for certain build types. For consistency sake, we maintain the pattern of other confiuration methods"
+	^self interpreterClass
+
+
+
+]
+
+{ #category : #'cmake config build type ' }
+CPlatformConfigForSqueak >> interpreterClassBuildITimerMultiThreaded [
+	"interpreter class can change to MultiThreaded for certain build types. For consistency sake, we maintain the pattern of other confiuration methods"
+	^CoInterpreterMT
+
+
+
+]
+
+{ #category : #'cmake config build type ' }
+CPlatformConfigForSqueak >> interpreterClassBuildITimerMultiThreadedAssert [
+	"interpreter class can change to MultiThreaded for certain build types. For consistency sake, we maintain the pattern of other confiuration methods"
+	^self interpreterClassBuildITimerMultiThreaded
+
+
+
+]
+
+{ #category : #'cmake config build type ' }
+CPlatformConfigForSqueak >> interpreterClassBuildITimerMultiThreadedDebug [
+	"interpreter class can change to MultiThreaded for certain build types. For consistency sake, we maintain the pattern of other confiuration methods"
+	^self interpreterClassBuildITimerMultiThreaded
+
+
+
+]
+
 { #category : #accessing }
 CPlatformConfigForSqueak >> linkFlags [
 	self subclassResponsibility
@@ -1158,12 +1379,21 @@ CPlatformConfigForSqueak >> oscogvm [
 	^'oscogvm'
 ]
 
+{ #category : #'squeak compatability' }
+CPlatformConfigForSqueak >> outputDir [
+
+	"the directory where built binaries will be stored"
+	^ outputDir ifNil: [ outputDir := (self topDir / self dirOutput /  self dirInstall) ]	
+
+
+]
+
 { #category : #'cmake directory ' }
 CPlatformConfigForSqueak >> outputDirName [
 	^ 'products'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'source files' }
 CPlatformConfigForSqueak >> preferredIncludes [
 	"^#() SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'"
 
@@ -1251,6 +1481,43 @@ CPlatformConfigForSqueak >> preferredIncludesBuildNone [
 
 ]
 
+{ #category : #'source generation' }
+CPlatformConfigForSqueak >> prepareForGeneration [
+	"feel free to override me"
+	|i|
+	self flag:'tty'. 
+	i:= self interpreterClass.
+	((i == CoInterpreter) | (i == CoInterpreterMT ))
+		ifTrue:[self prepareForCogGeneration].   "what is more efficient? self or super?  tty."
+	(i == StackInterpreter) 
+		ifTrue:[self prepareForStackVMGeneration].
+
+
+]
+
+{ #category : #'squeak compatability' }
+CPlatformConfigForSqueak >> prepareVMMaker [
+	
+	| maker allPlugins |
+	
+	"In CogVMs (in contrast to Interpreter VM) the generated sources are platform independent, therefore Cross is ok"
+	maker := VMMaker forPlatform: 'Cross'.
+	
+	maker sourceDirectoryName: self srcDir pathName.
+	maker platformRootDirectoryName: self platformsDir.
+	
+	
+	allPlugins := self internalPlugins , self externalPlugins.
+	
+	"touch plugins to force their source generation unconditionally"
+	allPlugins do: [:name | (Smalltalk globals at: name) touch ].
+	
+	" Why we put all plugins as external?   Because the generated sources are not different whether the plugins were defined as internal or external. VMMaker used to need this to to generate plugins.int and plugins.ext files. But since this is achieved in another way with CMakeVMMaker, there is no different at all to put all plugins as internal or as external."
+	maker externalModules addAll:  allPlugins.
+	
+	^ maker
+]
+
 { #category : #'cmake config build type ' }
 CPlatformConfigForSqueak >> setExtraTargetPropertiesBuild: aMaker [
 	"convenience method for this buildType. default is self setExtraTargetProperties
@@ -1327,6 +1594,27 @@ CPlatformConfigForSqueak >> setExtraTargetPropertiesBuildMultiThreadedDebug: aMa
 CPlatformConfigForSqueak >> setExtraTargetPropertiesBuildNone: aMaker [
 	"SHOULD NOT GET HERE"
 	self shouldNotImplement.
+
+]
+
+{ #category : #'cmake config build type ' }
+CPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystem: aMaker buildType: aBuildType [
+	"invoke correct setGlobalOptions for this buildType to allow per-buildType customization'"
+
+	|d |
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self setGlobalOptionsAfterDetermineSystemBuild: aMaker];
+		at: #buildAssert  put: [self setGlobalOptionsAfterDetermineSystemBuildAssert: aMaker];
+		at: #buildAssertITimerHeartbeat  put: [self setGlobalOptionsAfterDetermineSystemBuildAssertITimerHeartbeat: aMaker];
+            at:#buildDebug  put: [self setGlobalOptionsAfterDetermineSystemBuildDebug: aMaker];   
+		at: #buildITimerHeartbeat  put: [self setGlobalOptionsAfterDetermineSystemBuildITimerHeartbeat: aMaker];
+		at: #buildMultiThreaded  put: [self setGlobalOptionsAfterDetermineSystemBuildMultiThreaded: aMaker ];
+		at: #buildMultiThreadedAssert  put: [self setGlobalOptionsAfterDetermineSystemBuildMultiThreadedAssert: aMaker];
+		at: #buildMultiThreadedDebug   put: [self setGlobalOptionsAfterDetermineSystemBuildMultiThreadedDebug: aMaker ];
+		at: #buildNone put:[self setGlobalOptionsBuildNone: aMaker].
+
+	 ^(d at: ( aBuildType)) value
 
 ]
 
@@ -1464,6 +1752,33 @@ CPlatformConfigForSqueak >> setGlobalOptionsBuildNone: aMaker [
 	self halt.
 ]
 
+{ #category : #'squeak compatability' }
+CPlatformConfigForSqueak >> setupDirectories: aMaker [
+	| dirsInclude |
+
+	" write the directories in separate include file"
+	dirsInclude := aMaker captureOutputDuring: [
+		aMaker
+			set: #topDir toString: (self topDir fullName); 
+			set: #buildDir toString: (self buildDir ifNil: ['${topDir}/build'] ifNotNil: [self buildDir fullName] );
+			set: #thirdpartyDir toString: '${buildDir}/thirdParty';
+			set: #platformsDir toString: self platformsDir;
+			set: #srcDir toString: self srcDir pathName;
+			set: #srcPluginsDir toString: (pluginsDir ifNil: [ '${srcDir}/plugins' ]);
+			set: #srcVMDir toString: '${srcDir}/vm';
+			set: #platformName toString: self platformName;
+			set: #targetPlatform to: '${platformsDir}/${platformName}';
+			set: #crossDir toString: '${platformsDir}/Cross';
+			set: #platformVMDir toString: '${targetPlatform}/vm';
+			set: #outputDir toString: self outputDir fullName.
+	].
+
+	self write: dirsInclude toFile: 'directories.cmake'.
+	
+	aMaker include: 'directories.cmake'.
+
+]
+
 { #category : #'cmake directory ' }
 CPlatformConfigForSqueak >> squeakCogSpur [
 	^'squeak.cog.spur'
@@ -1492,6 +1807,11 @@ CPlatformConfigForSqueak >> squeakStackSpur [
 { #category : #'cmake directory ' }
 CPlatformConfigForSqueak >> squeakStackV3 [
 	^'squeak.stack.v3'
+]
+
+{ #category : #'squeak compatability' }
+CPlatformConfigForSqueak >> srcDir [
+		^ srcDir ifNil: [ srcDir := (self topDir directoryNamed: 'src' )]
 ]
 
 { #category : #'cmake config build type ' }
@@ -1627,6 +1947,21 @@ CPlatformConfigForSqueak >> thirdpartyLibsBuildNone [
 
 ]
 
+{ #category : #'squeak compatability' }
+CPlatformConfigForSqueak >> topDir [
+	^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: self oscogvm ]
+	
+]
+
+{ #category : #'squeak compatability' }
+CPlatformConfigForSqueak >> validateSourcesPresent [
+	| sources |
+	sources := Smalltalk sourcesName.
+	
+	(sources == nil)
+		ifTrue: [	self error: 'VM source code cannot be generated without .sources file'.]		
+]
+
 { #category : #accessing }
 CPlatformConfigForSqueak >> version [
 	^ ''
@@ -1648,4 +1983,22 @@ CPlatformConfigForSqueak >> vmSistaExecutableName [
 CPlatformConfigForSqueak >> vmStackExecutableName [
 	"the name of the stack vm executable"
 	^'squeak'
+]
+
+{ #category : #'squeak compatability' }
+CPlatformConfigForSqueak >> write: aContents toFile: aFileName [
+	"write a file to current output directory (buildDir).
+	use line end convention appropriate for config platform"
+
+	| bldDir |
+	bldDir := self buildDir.
+	bldDir isString
+		ifTrue: [ bldDir := FileDirectory directoryEntryFor: bldDir ].
+	bldDir assureExistence.
+	bldDir
+		forceNewFileNamed: aFileName
+		do: [:s | s
+				nextPutAll: (self fixLineEndsOf: aContents)]
+
+
 ]

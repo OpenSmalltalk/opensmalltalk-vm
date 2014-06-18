@@ -19,6 +19,12 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
 
+{ #category : #'source generation' }
+Linux32x86NewspeakCogV3Config >> cogitClass [
+	^ StackToRegisterMappingCogit 
+
+]
+
 { #category : #cmake }
 Linux32x86NewspeakCogV3Config >> dirBuildLanguageVMMM [
 	^self newspeakCogV3
@@ -36,7 +42,7 @@ Linux32x86NewspeakCogV3Config >> executableName [
 ]
 
 { #category : #'source generation' }
-Linux32x86NewspeakCogV3Config >> prepareForGeneration [
-	^ self prepareForCogGeneration
+Linux32x86NewspeakCogV3Config >> interpreterClass [
+	^ CoInterpreter
 
 ]

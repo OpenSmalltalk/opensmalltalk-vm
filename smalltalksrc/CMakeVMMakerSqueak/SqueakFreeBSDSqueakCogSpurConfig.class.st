@@ -17,6 +17,12 @@ Class {
 	#category : #'CMakeVMMakerSqueak-BSD32x86'
 }
 
+{ #category : #'source generation' }
+SqueakFreeBSDSqueakCogSpurConfig >> cogitClass [
+	^ StackToRegisterMappingCogit 
+
+]
+
 { #category : #cmake }
 SqueakFreeBSDSqueakCogSpurConfig >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
@@ -32,4 +38,10 @@ SqueakFreeBSDSqueakCogSpurConfig >> excludeFromBuild [
 { #category : #cmake }
 SqueakFreeBSDSqueakCogSpurConfig >> executableName [
 	^ self vmCogExecutableName
+]
+
+{ #category : #'source generation' }
+SqueakFreeBSDSqueakCogSpurConfig >> interpreterClass [
+	^ CoInterpreter
+
 ]

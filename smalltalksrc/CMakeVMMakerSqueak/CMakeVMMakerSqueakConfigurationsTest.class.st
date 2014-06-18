@@ -47,6 +47,27 @@ CMakeVMMakerSqueakConfigurationsTest >> testBuildDirs [
 ]
 
 { #category : #'as yet unclassified' }
+CMakeVMMakerSqueakConfigurationsTest >> testCogitClass [
+	"for each builder that does not exclude itself from builds, make sure it returns cogitClass "
+	SqueakCMakeVMMakerAbstractBuilder 
+		subclassesDo:[:builder | | o |
+			Smalltalk globals 
+				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
+					ifTrue:[ 
+							o:= configuration new.
+							o excludeFromBuild not                                                     
+							 	ifTrue:[self assert:(o  cogitClass inheritsFrom: Cogit)]]]]
+
+
+
+
+
+
+
+
+]
+
+{ #category : #'as yet unclassified' }
 CMakeVMMakerSqueakConfigurationsTest >> testDefaultExternalPlugins [
 	"for each builder, make sure all its configurations provides defaultExternalPlugins"
 	SqueakCMakeVMMakerAbstractBuilder 
@@ -177,6 +198,37 @@ CMakeVMMakerSqueakConfigurationsTest >> testInternalPlugins [
 					ifTrue:[ 
 							o:= configuration new.
 							self assert:(o  internalPlugins isArray)]]]
+
+
+
+
+
+
+
+
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakConfigurationsTest >> testInterpreterClass [
+	"for each builder that does not exclude itself from builds, make sure it returns an InterpreterClass "
+	SqueakCMakeVMMakerAbstractBuilder 
+		subclassesDo:[:builder | | o |
+			Smalltalk globals 
+				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
+					ifTrue:[ 
+							o:= configuration new.
+							o excludeFromBuild not                                                     
+							 	ifTrue:[
+										self assert:(o  interpreterClass inheritsFrom: InterpreterPrimitives).
+										self assert:(o  interpreterClassBuild inheritsFrom: InterpreterPrimitives).
+										self assert:(o  interpreterClassBuildAssert inheritsFrom: InterpreterPrimitives).
+										self assert:(o  interpreterClassBuildAssertITimerHeartbeat inheritsFrom: InterpreterPrimitives).
+										self assert:(o  interpreterClassBuildDebug inheritsFrom: InterpreterPrimitives).
+										self assert:(o  interpreterClassBuildDebugITImerHeartbeat inheritsFrom: InterpreterPrimitives).
+										self assert:(o  interpreterClassBuildITimerHeartbeat inheritsFrom: InterpreterPrimitives).
+										self assert:(o  interpreterClassBuildITimerMultiThreaded inheritsFrom: InterpreterPrimitives).
+										self assert:(o  interpreterClassBuildITimerMultiThreadedAssert inheritsFrom: InterpreterPrimitives).
+										self assert:(o  interpreterClassBuildITimerMultiThreadedDebug inheritsFrom: InterpreterPrimitives)]]]]
 
 
 

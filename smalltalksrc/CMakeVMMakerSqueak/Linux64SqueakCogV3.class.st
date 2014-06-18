@@ -21,16 +21,16 @@ Linux64SqueakCogV3 >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations
 ]
 
+{ #category : #'source generation' }
+Linux64SqueakCogV3 >> cogitClass [
+	^ StackToRegisterMappingCogit 
+
+]
+
 { #category : #cmake }
 Linux64SqueakCogV3 >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
 	^self squeakCogV3
-]
-
-{ #category : #cmake }
-Linux64SqueakCogV3 >> dirBuildPlatform [
-	"the directory for the platform. example: build.linux32x86"
-	^self dirLinux32x8664
 ]
 
 { #category : #cmake }
@@ -42,4 +42,10 @@ Linux64SqueakCogV3 >> excludeFromBuild [
 { #category : #cmake }
 Linux64SqueakCogV3 >> executableName [
 	^ self vmCogExecutableName
+]
+
+{ #category : #'source generation' }
+Linux64SqueakCogV3 >> interpreterClass [
+	^ CoInterpreter
+
 ]

@@ -19,6 +19,12 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
 
+{ #category : #'source generation' }
+Linux32x86SqueakSistaSpurConfig >> cogitClass [
+	^SistaStackToRegisterMappingCogit
+
+]
+
 { #category : #cmake }
 Linux32x86SqueakSistaSpurConfig >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
@@ -34,4 +40,10 @@ Linux32x86SqueakSistaSpurConfig >> excludeFromBuild [
 { #category : #cmake }
 Linux32x86SqueakSistaSpurConfig >> executableName [
 	^ self vmSistaExecutableName
+]
+
+{ #category : #'source generation' }
+Linux32x86SqueakSistaSpurConfig >> interpreterClass [
+	^ CoInterpreter
+
 ]

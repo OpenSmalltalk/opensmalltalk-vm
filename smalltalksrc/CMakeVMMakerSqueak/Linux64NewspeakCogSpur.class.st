@@ -9,7 +9,6 @@ SqueakLinux32x86_64Builder
 
 HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
 HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
-
 "
 Class {
 	#name : #Linux64NewspeakCogSpur,
@@ -22,15 +21,15 @@ Linux64NewspeakCogSpur >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations
 ]
 
-{ #category : #cmake }
-Linux64NewspeakCogSpur >> dirBuildLanguageVMMM [
-	^self newspeakCogSpur
+{ #category : #'source generation' }
+Linux64NewspeakCogSpur >> cogitClass [
+	^ StackToRegisterMappingCogit 
+
 ]
 
 { #category : #cmake }
-Linux64NewspeakCogSpur >> dirBuildPlatform [
-	"the directory for the platform. example: build.linux32x86"
-	^self dirLinux32x8664
+Linux64NewspeakCogSpur >> dirBuildLanguageVMMM [
+	^self newspeakCogSpur
 ]
 
 { #category : #cmake }
@@ -42,4 +41,10 @@ Linux64NewspeakCogSpur >> excludeFromBuild [
 { #category : #cmake }
 Linux64NewspeakCogSpur >> executableName [
 	^ self vmCogExecutableName
+]
+
+{ #category : #'source generation' }
+Linux64NewspeakCogSpur >> interpreterClass [
+	^ CoInterpreter
+
 ]

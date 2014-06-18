@@ -159,11 +159,6 @@ Win32x86NewspeakCogSpurConfig >> platformSources [
 	)
 ]
 
-{ #category : #'source generation' }
-Win32x86NewspeakCogSpurConfig >> prepareForGeneration [
-	^ self prepareForCogGeneration
-]
-
 { #category : #resources }
 Win32x86NewspeakCogSpurConfig >> resourceFile [
 

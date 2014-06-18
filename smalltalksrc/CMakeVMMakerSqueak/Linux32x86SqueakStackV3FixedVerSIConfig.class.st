@@ -16,6 +16,12 @@ Class {
 	#category : #'CMakeVMMakerSqueak-IslandOfMisfitToys'
 }
 
+{ #category : #'source generation' }
+Linux32x86SqueakStackV3FixedVerSIConfig >> cogitClass [
+	^ StackToRegisterMappingCogit 
+
+]
+
 { #category : #'compiler flags' }
 Linux32x86SqueakStackV3FixedVerSIConfig >> compilerFlagsDebug [
 
@@ -53,4 +59,9 @@ char *ux_version= "<FAKE FROZEN VERSION FOR DEBUGGING PURPOSES>";
 '
 	toFile: 'version.c'.
 
+]
+
+{ #category : #'source generation' }
+Linux32x86SqueakStackV3FixedVerSIConfig >> interpreterClass [
+	^ StackInterpreter
 ]

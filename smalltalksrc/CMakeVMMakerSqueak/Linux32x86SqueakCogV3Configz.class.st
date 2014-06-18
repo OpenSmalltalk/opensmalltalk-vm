@@ -12,20 +12,7 @@ find my Builder in CMakeVMMakerSqueak-Builder category and use that to query me 
 "
 Class {
 	#name : #Linux32x86SqueakCogV3Configz,
-	#superclass : #CogFamilyUnixConfig,
-	#instVars : [
-		'buildType',
-		'generateBuild',
-		'generateBuildAssert',
-		'generateBuildAssertITimerHeartbeat',
-		'generateBuildDebug',
-		'generateBuildDebugITimerHeartbeat',
-		'generateBuildDebugMultiThreaded',
-		'generateBuildIHeartbeatTimer',
-		'generateBuildMultiThreaded',
-		'generateBuildMultiThreadedAssert',
-		'generateBuildMultiThreadedDebug'
-	],
+	#superclass : #SqueakUnixConfig,
 	#category : #'CMakeVMMakerSqueak-IslandOfMisfitToys'
 }
 
@@ -110,75 +97,12 @@ External:
 '
 ]
 
-{ #category : #'squeak compatibility' }
-Linux32x86SqueakCogV3Configz >> addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs [
-
-	| cfg srcs |
-	
-	srcs := aSources inject: '' into: [:res :each | res , ' "', each, '"' ].
-	cfg := cmakeGen
-		captureOutputDuring: [
-			cmakeGen printHeader;
-			project: name;
-			include: '../directories.cmake';
-		
-			message: 'Adding module: ', name;
-			
-			addDefinitions:  self compilerFlags;
-			addDefinitions: '-fPIC -DPIC';
-			set: #sources to: srcs;
-			cmd: 'add_library' params: name, ' SHARED ${sources}'; 
-			includeDirectories: '${crossDir}/plugins/FilePlugin';
-			includeDirectories: '${targetPlatform}/plugins/B3DAcceleratorPlugin';
-			includeDirectories: '${crossDir}/plugins/B3DAcceleratorPlugin';
-			set: 'LIBRARY_OUTPUT_PATH' toString: self outputDir fullName;
-			addExternalLibraries: extLibs;
-			cmd: 'target_link_libraries' params: name , ' ${LINKLIBS}';
-			cmd: 'set_target_properties' params: name , ' PROPERTIES PREFIX "" SUFFIX "" 
-			LINK_FLAGS -m32' 
-	].
-	
-	(self buildDir / name) assureExistence.
-	self write: cfg toFile: name , '/', cmakeGen outputFileName.
-	cmakeGen addSubdirectory:  name.
-	
-]
-
 { #category : #cmake }
 Linux32x86SqueakCogV3Configz >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder default allBuildConfigurations copyWithoutAll:#(#assert #assertWithHeartbeatTimer #releaseHeartbeatTimer #debugMultiThreadedFFI #debugWithHeartbeatTimer )
 
 
 
-]
-
-{ #category : #'squeak compatibility' }
-Linux32x86SqueakCogV3Configz >> buildDir [
-	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].
-]
-
-{ #category : #'squeak compatibility' }
-Linux32x86SqueakCogV3Configz >> buildDirName [
-	^ 'cmake_build.linux32x86'
-]
-
-{ #category : #'build script' }
-Linux32x86SqueakCogV3Configz >> buildScript [
-	"answer the build script for building everything"
-	
-
-	^ 
-'#!/usr/bin/env bash
-
-cmake .
-make
-
-'
-]
-
-{ #category : #'squeak compatibility' }
-Linux32x86SqueakCogV3Configz >> buildType: aSymbol [
-	buildType:= aSymbol
 ]
 
 { #category : #'source generation' }
@@ -206,34 +130,6 @@ Linux32x86SqueakCogV3Configz >> commonCompilerFlags [
 		'-m32'.
 		'-DENABLE_FAST_BLT ' } 	
 	
-]
-
-{ #category : #'squeak compatibility' }
-Linux32x86SqueakCogV3Configz >> compilerFlags [
-	|d commonFlags flags|
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self compilerFlagsBuild];
-		at: #buildAssert  put: [self compilerFlagsAssert];
-		at: #buildAssertITimerHeartbeat  put: [self compilerFlagsAssertITimerHeartbeat];
-            at:#buildDebug  put: [self compilerFlagsDebug];   "located in CMakeVMMaker CPlatformConfig"
-		at: #buildDebugITimerHeartbeat  put: [self compilerFlagsDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self compilerFlagsIHeartbeatTimer];
-		at: #buildMultiThreaded  put: [self compilerFlagsMultiThreaded ];
-		at: #buildMultiThreadedAssert  put: [self compilerFlagsMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self compilerFlagsMultiThreadedDebug ];
-		at: #buildNone put:[self compilerFlagsNoBuildType].
-
-    flags:= String streamContents: [ :stream |
-	 (((d at:  buildType) value)  collect: #withBlanksTrimmed as: Set)
-		asStringOn: stream 
-		delimiter:' '].
-
-    commonFlags:=String streamContents: [ :stream |
-		((self commonCompilerFlags) collect: #withBlanksTrimmed as: Set)
-			asStringOn: stream 
-			delimiter: ' ' ].
-	^ commonFlags, ' ' ,flags.
 ]
 
 { #category : #'compiler flags' }
@@ -548,13 +444,6 @@ Linux32x86SqueakCogV3Configz >> dirBuildPlatform [
 	^self dirLinux32x86
 ]
 
-{ #category : #'squeak compatibility' }
-Linux32x86SqueakCogV3Configz >> dirFrom: t1 [ 
-	^ t1 isString
-		ifTrue: [FileDirectory forFileName: t1]
-		ifFalse: [t1]
-]
-
 { #category : #cmake }
 Linux32x86SqueakCogV3Configz >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
@@ -563,7 +452,7 @@ Linux32x86SqueakCogV3Configz >> excludeFromBuild [
 
 { #category : #accessing }
 Linux32x86SqueakCogV3Configz >> executableName [
-	^ 'CogVM'
+	^ self vmCogExecutableName
 ]
 
 { #category : #'plugin extra rules' }
@@ -579,14 +468,6 @@ Linux32x86SqueakCogV3Configz >> extraSources [
 	
 	^ 
 	'version.c'
-]
-
-{ #category : #accessing }
-Linux32x86SqueakCogV3Configz >> generate [ 
-	self generatePluginsList. 
-	self generateLicense. 
-	"^super generate"
-	^CMakeVMGeneratorForSqueak generate:self    "Bypass CPlatformConfig generate to invoke our compatibility class"
 ]
 
 { #category : #'headers generation' }
@@ -621,28 +502,6 @@ Linux32x86SqueakCogV3Configz >> generateConfigH: aBuildType [
 
 ]
 
-{ #category : #accessing }
-Linux32x86SqueakCogV3Configz >> generateLicense [ 
-	self 
-		write:  (self class licenseTemplate 
-			format: { self version })
-		toFile: 'LICENSE.txt'
-	
-]
-
-{ #category : #accessing }
-Linux32x86SqueakCogV3Configz >> generatePluginsList [ 
-	self 
-		write:  (self class pluginsTemplate 
-			format: {
-				self version. 
-				String streamContents: [ :stream | self internalPlugins asStringOn: stream delimiter: String cr ].
-				String streamContents: [ :stream | self externalPlugins asStringOn: stream delimiter: String cr ].
-				self executableName })
-		toFile: 'PLUGINS.txt'
-	
-]
-
 { #category : #'initialize-release' }
 Linux32x86SqueakCogV3Configz >> initialize [
 	super initialize.
@@ -659,15 +518,6 @@ Linux32x86SqueakCogV3Configz >> interpreterClass [
 { #category : #accessing }
 Linux32x86SqueakCogV3Configz >> linkFlags [ 
 	^ super linkFlags , ' -m32'
-]
-
-{ #category : #'squeak compatibility' }
-Linux32x86SqueakCogV3Configz >> outputDir [
-
-	"the directory where built binaries will be stored"
-	^ outputDir ifNil: [ outputDir := (self topDir / self outputDirName) ]	
-
-
 ]
 
 { #category : #sources }
@@ -694,35 +544,6 @@ Linux32x86SqueakCogV3Configz >> platformSources [
 Linux32x86SqueakCogV3Configz >> preferredIncludes [
 	^ #( '${targetPlatform}/plugins/B3DAcceleratorPlugin')
 	
-]
-
-{ #category : #'source generation' }
-Linux32x86SqueakCogV3Configz >> prepareForGeneration [
-	^ self prepareForCogGeneration
-
-]
-
-{ #category : #'squeak compatibility' }
-Linux32x86SqueakCogV3Configz >> prepareVMMaker [
-	
-	| maker allPlugins |
-	
-	"In CogVMs (in contrast to Interpreter VM) the generated sources are platform independent, therefore Cross is ok"
-	maker := VMMaker forPlatform: 'Cross'.
-	
-	maker sourceDirectoryName: self srcDir pathName.
-	maker platformRootDirectoryName: self platformsDir.
-	
-	
-	allPlugins := self internalPlugins , self externalPlugins.
-	
-	"touch plugins to force their source generation unconditionally"
-	allPlugins do: [:name | (Smalltalk globals at: name) touch ].
-	
-	" Why we put all plugins as external?   Because the generated sources are not different whether the plugins were defined as internal or external. VMMaker used to need this to to generate plugins.int and plugins.ext files. But since this is achieved in another way with CMakeVMMaker, there is no different at all to put all plugins as internal or as external."
-	maker externalModules addAll:  allPlugins.
-	
-	^ maker
 ]
 
 { #category : #utils }
@@ -761,74 +582,5 @@ Linux32x86SqueakCogV3Configz >> setGlobalOptionsAfterDetermineSystem: aMaker bui
 		at: #buildNone put:[self setGlobalOptionsBuildNone: aMaker].
 
 	 ^(d at: ( aBuildType)) value
-
-]
-
-{ #category : #'squeak compatibility' }
-Linux32x86SqueakCogV3Configz >> setupDirectories: gen [
-	| dirsInclude |
-
-	" write the directories in separate include file"
-	dirsInclude := gen captureOutputDuring: [
-		gen
-			set: #topDir toString: (self topDir fullName); 
-			set: #buildDir toString: (self buildDir ifNil: ['${topDir}/build'] ifNotNil: [self buildDir fullName] );
-			set: #thirdpartyDir toString: '${buildDir}/thirdParty';
-			set: #platformsDir toString: self platformsDir;
-			set: #srcDir toString: self srcDir pathName;
-			set: #srcPluginsDir toString: (pluginsDir ifNil: [ '${srcDir}/plugins' ]);
-			set: #srcVMDir toString: '${srcDir}/vm';
-			set: #platformName toString: self platformName;
-			set: #targetPlatform to: '${platformsDir}/${platformName}';
-			set: #crossDir toString: '${platformsDir}/Cross';
-			set: #platformVMDir toString: '${targetPlatform}/vm';
-			set: #outputDir toString: self outputDir fullName.
-	].
-
-	self write: dirsInclude toFile: 'directories.cmake'.
-	
-	gen include: 'directories.cmake'.
-
-]
-
-{ #category : #'squeak compatibility' }
-Linux32x86SqueakCogV3Configz >> srcDir [
-		^ srcDir ifNil: [ srcDir := (self topDir directoryNamed: 'src' )]
-]
-
-{ #category : #'squeak compatibility' }
-Linux32x86SqueakCogV3Configz >> topDir [
-	^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: self oscogvm ]
-]
-
-{ #category : #'squeak compatibility' }
-Linux32x86SqueakCogV3Configz >> validateSourcesPresent [
-	| sources |
-	sources := Smalltalk sourcesName.
-	
-	(sources == nil)
-		ifTrue: [	self error: 'VM source code cannot be generated without .sources file'.]		
-]
-
-{ #category : #accessing }
-Linux32x86SqueakCogV3Configz >> version [
-	^ ''
-]
-
-{ #category : #'squeak compatibility' }
-Linux32x86SqueakCogV3Configz >> write: aContents toFile: aFileName [
-	"write a file to current output directory (buildDir).
-	use line end convention appropriate for config platform"
-
-	| bldDir |
-	bldDir := self buildDir.
-	bldDir isString
-		ifTrue: [ bldDir := FileDirectory directoryEntryFor: bldDir ].
-	bldDir assureExistence.
-	bldDir
-		forceNewFileNamed: aFileName
-		do: [:s | s
-				nextPutAll: (self fixLineEndsOf: aContents)]
-
 
 ]

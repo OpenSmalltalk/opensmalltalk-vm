@@ -19,6 +19,12 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Linux32ARMv6'
 }
 
+{ #category : #'source generation' }
+Linux32ARMv6StackV3CrossRaspbianFastBltConfig >> cogitClass [
+	^ StackToRegisterMappingCogit 
+
+]
+
 { #category : #'compiler flags' }
 Linux32ARMv6StackV3CrossRaspbianFastBltConfig >> commonCompilerFlags [
 	^ super commonCompilerFlags, { '-DENABLE_FAST_BLT' }.
@@ -257,4 +263,9 @@ Linux32ARMv6StackV3CrossRaspbianFastBltConfig >> excludeFromBuild [
 { #category : #cmake }
 Linux32ARMv6StackV3CrossRaspbianFastBltConfig >> executableName [
 	^ self vmStackExecutableName
+]
+
+{ #category : #'source generation' }
+Linux32ARMv6StackV3CrossRaspbianFastBltConfig >> interpreterClass [
+	^ StackInterpreter
 ]

@@ -19,6 +19,12 @@ Class {
 	#category : #'CMakeVMMakerSqueak-IslandOfMisfitToys'
 }
 
+{ #category : #'source generation' }
+Win32x86SqueakCogV3MultiThreadedConfigz >> cogitClass [
+	^ StackToRegisterMappingCogit 
+
+]
+
 { #category : #'compiler flags' }
 Win32x86SqueakCogV3MultiThreadedConfigz >> compilerFlags [
 	^ super compilerFlags, ' -DCOGMTVM=1'
@@ -58,7 +64,7 @@ Win32x86SqueakCogV3MultiThreadedConfigz >> excludeFromBuild [
 
 { #category : #accessing }
 Win32x86SqueakCogV3MultiThreadedConfigz >> executableName [
-	^ 'CogMTVM'
+	^ self vmCogExecutableName
 ]
 
 { #category : #'source generation' }

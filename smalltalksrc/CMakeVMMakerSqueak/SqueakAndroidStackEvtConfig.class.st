@@ -7,20 +7,7 @@ Ported from pharo to squeak.
 "
 Class {
 	#name : #SqueakAndroidStackEvtConfig,
-	#superclass : #CPlatformConfigForSqueak,
-	#instVars : [
-		'buildType',
-		'generateBuild',
-		'generateBuildAssert',
-		'generateBuildAssertITimerHeartbeat',
-		'generateBuildDebug',
-		'generateBuildDebugITimerHeartbeat',
-		'generateBuildDebugMultiThreaded',
-		'generateBuildIHeartbeatTimer',
-		'generateBuildMultiThreaded',
-		'generateBuildMultiThreadedAssert',
-		'generateBuildMultiThreadedDebug'
-	],
+	#superclass : #SqueakUnixConfig,
 	#category : #'CMakeVMMakerSqueak-Android'
 }
 
@@ -35,19 +22,15 @@ SqueakAndroidStackEvtConfig >> availableBuilds [
 
 ]
 
-{ #category : #directories }
-SqueakAndroidStackEvtConfig >> buildDir [
-	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].
-]
-
 { #category : #'squeak compatibility' }
 SqueakAndroidStackEvtConfig >> buildDirName [
 	^'do not build. see class comment'
 ]
 
-{ #category : #'squeak compatibility' }
-SqueakAndroidStackEvtConfig >> buildType: aSymbol [
-	buildType:= aSymbol
+{ #category : #'source generation' }
+SqueakAndroidStackEvtConfig >> cogitClass [
+	^ StackToRegisterMappingCogit 
+
 ]
 
 { #category : #'source generation' }
@@ -446,11 +429,6 @@ SqueakAndroidStackEvtConfig >> extraVMSettings: maker [
 	
 ]
 
-{ #category : #utils }
-SqueakAndroidStackEvtConfig >> fixLineEndsOf: string [
-	^ string copyReplaceAll: String cr with: String lf
-]
-
 { #category : #'source generation' }
 SqueakAndroidStackEvtConfig >> generate [
 	^ CMakeAndroidGenerator generate: self 	
@@ -505,22 +483,14 @@ SqueakAndroidStackEvtConfig >> initialize [
 
 { #category : #'source generation' }
 SqueakAndroidStackEvtConfig >> interpreterClass [
-	^ StackEvtAndroidInterpreter
+"Does not exist in squeak"
+"	^ StackEvtAndroidInterpreter"
 ]
 
 { #category : #utils }
 SqueakAndroidStackEvtConfig >> mkFileList: anArray baseDir: aDir [
 	"answer the concatenated contents of the array interspersed with backslash-newline sequences"
 	^ (anArray collect: [ :s | aDir, s]) inject: '' into: [ :s :n | s , #($\), {Character cr}, n ].
-]
-
-{ #category : #directories }
-SqueakAndroidStackEvtConfig >> outputDir [
-
-	"the directory where built binaries will be stored"
-	^ outputDir ifNil: [ outputDir := (self topDir / self dirOutput/ self dirInstall) ]	
-
-
 ]
 
 { #category : #'source generation' }
@@ -555,59 +525,4 @@ SqueakAndroidStackEvtConfig >> prepareForGeneration [
 
 	^ self prepareForStackVMGeneration
 
-]
-
-{ #category : #utils }
-SqueakAndroidStackEvtConfig >> setGlobalOptionsAfterDetermineSystem: aMaker buildType: aBuildType [
-	"invoke correct setGlobalOptions for this buildType to allow per-buildType customization'"
-
-	|d |
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self setGlobalOptionsAfterDetermineSystemBuild: aMaker];
-		at: #buildAssert  put: [self setGlobalOptionsAfterDetermineSystemBuildAssert: aMaker];
-		at: #buildAssertITimerHeartbeat  put: [self setGlobalOptionsAfterDetermineSystemBuildAssertITimerHeartbeat: aMaker];
-            at:#buildDebug  put: [self setGlobalOptionsAfterDetermineSystemBuildDebug: aMaker];   
-		at: #buildITimerHeartbeat  put: [self setGlobalOptionsAfterDetermineSystemBuildITimerHeartbeat: aMaker];
-		at: #buildMultiThreaded  put: [self setGlobalOptionsAfterDetermineSystemBuildMultiThreaded: aMaker ];
-		at: #buildMultiThreadedAssert  put: [self setGlobalOptionsAfterDetermineSystemBuildMultiThreadedAssert: aMaker];
-		at: #buildMultiThreadedDebug   put: [self setGlobalOptionsAfterDetermineSystemBuildMultiThreadedDebug: aMaker ];
-		at: #buildNone put:[self setGlobalOptionsBuildNone: aMaker].
-
-	 ^(d at: ( aBuildType)) value
-
-]
-
-{ #category : #directories }
-SqueakAndroidStackEvtConfig >> setupDirectories: gen [
-	"same logic as the super has, but use gmake syntax instead of cmake"
-	| dirsInclude |
-
-	" write the directories in separate include file"
-	dirsInclude := gen captureOutputDuring: [
-		gen
-			set: #topDir to: ('$(ROOT)/', self topDir fullName); 
-			set: #buildDir to: (self buildDir ifNil: ['$(topDir)/build'] ifNotNil: ['$(ROOT)/', self buildDir fullName] );
-			set: #platformsDir to: ('$(ROOT)/', self platformsDir);
-			set: #srcDir to: ('$(ROOT)/', self srcDir);
-			set: #srcPluginsDir to: (pluginsDir ifNil: [ '$(srcDir)/plugins' ]);
-			set: #srcVMDir to: '$(srcDir)/vm';
-			set: #platformName to: self platformName;
-			set: #targetPlatform to: '$(platformsDir)/$(platformName)';
-			set: #crossDir to: '$(platformsDir)/Cross';
-			set: #platformVMDir to: '$(targetPlatform)/vm'.
-	].
-
-	self write: dirsInclude toFile: 'cogdirs.mk'
-
-]
-
-{ #category : #directories }
-SqueakAndroidStackEvtConfig >> srcDir [
-		^ srcDir ifNil: [ srcDir := (self topDir directoryNamed: 'stacksrc' )]
-]
-
-{ #category : #directories }
-SqueakAndroidStackEvtConfig >> topDir [
-		^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: self oscogvm ]
 ]

@@ -1,11 +1,14 @@
 Class {
 	#name : #Linux32x86SqueakStackSpurConfigz,
-	#superclass : #CPlatformConfigForSqueak,
-	#instVars : [
-		'buildType'
-	],
+	#superclass : #SqueakUnixConfig,
 	#category : #'CMakeVMMakerSqueak-IslandOfMisfitToys'
 }
+
+{ #category : #'source generation' }
+Linux32x86SqueakStackSpurConfigz >> cogitClass [
+	^ StackToRegisterMappingCogit 
+
+]
 
 { #category : #'compiler flags' }
 Linux32x86SqueakStackSpurConfigz >> compilerFlags [
@@ -138,6 +141,11 @@ Linux32x86SqueakStackSpurConfigz >> generateConfigH: aBuildType [
 
 
 
+]
+
+{ #category : #'source generation' }
+Linux32x86SqueakStackSpurConfigz >> interpreterClass [
+	^ StackInterpreter
 ]
 
 { #category : #utils }

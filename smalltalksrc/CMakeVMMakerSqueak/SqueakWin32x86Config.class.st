@@ -48,20 +48,7 @@ Fore more information, check the class comments of all the superclasses.
 "
 Class {
 	#name : #SqueakWin32x86Config,
-	#superclass : #CPlatformConfigForSqueak,
-	#instVars : [
-		'buildType',
-		'generateBuild',
-		'generateBuildAssert',
-		'generateBuildAssertITimerHeartbeat',
-		'generateBuildDebug',
-		'generateBuildDebugITimerHeartbeat',
-		'generateBuildDebugMultiThreaded',
-		'generateBuildIHeartbeatTimer',
-		'generateBuildMultiThreaded',
-		'generateBuildMultiThreadedAssert',
-		'generateBuildMultiThreadedDebug'
-	],
+	#superclass : #SqueakWindowsConfig,
 	#category : #'CMakeVMMakerSqueak-Win32x86'
 }
 
@@ -167,18 +154,6 @@ SqueakWin32x86Config >> availableBuilds [
 
 ]
 
-{ #category : #directories }
-SqueakWin32x86Config >> buildDir [
-	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].
-]
-
-{ #category : #directories }
-SqueakWin32x86Config >> buildDirName [
-	buildType isNil
-		ifTrue:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, 'build']
-		ifFalse:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, buildType asString]
-]
-
 { #category : #'build script' }
 SqueakWin32x86Config >> buildScript [
 	"answer the build script for building everything"
@@ -191,72 +166,6 @@ cmake -G "MSYS Makefiles" .
 make
 
 '
-]
-
-{ #category : #'squeak compatibility' }
-SqueakWin32x86Config >> buildType: aSymbol [
-	buildType:=aSymbol
-]
-
-{ #category : #'compiler flags' }
-SqueakWin32x86Config >> commonCompilerFlags [
-	"omit -ggdb2 to prevent generating debug info"
-	"Some flags explanation: 
-	
-	STACK_ALIGN_BYTES=16 is needed in mingw and FFI (and I suppose on other modules too).
-	DALLOCA_LIES_SO_USE_GETSP=0 Some compilers return the stack address+4 on alloca function, 
-	then FFI module needs to adjust that. It is NOT the case of mingw.
-	For more information see this thread: http://forum.world.st/There-are-something-fishy-with-FFI-plugin-td4584226.html
-	"
-	^ {  
-		'-march=pentium4'.
-		'-mwindows'.
-		'-D_MT'.
-		'-msse2'. 
-		'-mthreads'. 
-		'-mwin32'.
-		'-mno-rtd'. 
-		'-mms-bitfields'. 
-		'-mno-accumulate-outgoing-args ', self winVer.
-		'-DWIN32'. 
-		'-DWIN32_FILE_SUPPORT'. 
-		'-DNO_ISNAN'.
-		'-DNO_SERVICE'. 
-		'-DNO_STD_FILE_SUPPORT'.
-		'-DLSB_FIRST'. 
-		'-DVM_NAME="', self executableName,'"'.
-		'-DX86 '.
-		'-DSTACK_ALIGN_BYTES=16'. 
-		'-DALLOCA_LIES_SO_USE_GETSP=0'. 
-		'-DENABLE_FAST_BLT ' }
-]
-
-{ #category : #directories }
-SqueakWin32x86Config >> compilerFlags [
-	|d commonFlags flags|
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self compilerFlagsBuild];
-		at: #buildAssert  put: [self compilerFlagsAssert];
-		at: #buildAssertITimerHeartbeat  put: [self compilerFlagsAssertITimerHeartbeat];
-            at:#buildDebug  put: [self compilerFlagsDebug];   "located in CMakeVMMaker CPlatformConfig"
-		at: #buildDebugITimerHeartbeat  put: [self compilerFlagsDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self compilerFlagsIHeartbeatTimer];
-		at: #buildMultiThreaded  put: [self compilerFlagsMultiThreaded ];
-		at: #buildMultiThreadedAssert  put: [self compilerFlagsMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self compilerFlagsMultiThreadedDebug ];
-		at: #buildNone put:[self compilerFlagsNoBuildType].
-
-    flags:= String streamContents: [ :stream |
-	 (((d at:  buildType) value)  collect: #withBlanksTrimmed as: Set)
-		asStringOn: stream 
-		delimiter:' '].
-
-    commonFlags:=String streamContents: [ :stream |
-		((self commonCompilerFlags) collect: #withBlanksTrimmed as: Set)
-			asStringOn: stream 
-			delimiter: ' ' ].
-	^ commonFlags, ' ' ,flags.
 ]
 
 { #category : #'plugin extra rules' }
@@ -612,31 +521,6 @@ SqueakWin32x86Config >> excludeFromBuild [
 
 ]
 
-{ #category : #accessing }
-SqueakWin32x86Config >> executableType [
-	^ 'WIN32'
-]
-
-{ #category : #accessing }
-SqueakWin32x86Config >> externalModulesDir [
-	"answer the location in VM bundle, where plugins and rest of dynamic libs will be copied,
-	"
-	^ '${outputDir}'
-]
-
-{ #category : #utils }
-SqueakWin32x86Config >> fixLineEndsOf: string [
-	^ string copyReplaceAll: String cr with: String crlf
-]
-
-{ #category : #public }
-SqueakWin32x86Config >> generate [ 
-	self generatePluginsList. 
-	self generateLicense. 
-	"^super generate"
-	^CMakeVMGeneratorForSqueak generate:self    "Bypass CPlatformConfig generate to invoke our compatibility class"
-]
-
 { #category : #'headers generation' }
 SqueakWin32x86Config >> generateConfigH [
 	"	
@@ -704,133 +588,7 @@ SqueakWin32x86Config >> initialize [
 
 ]
 
-{ #category : #accessing }
-SqueakWin32x86Config >> msysPathFor: aPath [
-	| path |
-	self flag:'tty'. "code smell alert"
-	^aPath isString
-		ifTrue:[	path := aPath  copyReplaceAll: '\' with: '/'.]
-		ifFalse:[	path := aPath pathName copyReplaceAll: '\' with: '/'.]
-
-	
-
-]
-
-{ #category : #directories }
-SqueakWin32x86Config >> outputDir [
-
-	"the directory where built binaries will be stored"
-	^ outputDir ifNil: [ outputDir := (self topDir / self dirOutput/ self dirInstall) ]	
-
-
-]
-
-{ #category : #accessing }
-SqueakWin32x86Config >> platformName [
-	^ 'win32'
-]
-
-{ #category : #'source generation' }
-SqueakWin32x86Config >> prepareVMMaker [
-	
-	| maker allPlugins |
-	
-	"In CogVMs (in contrast to Interpreter VM) the generated sources are platform independent, therefore Cross is ok"
-	maker := VMMaker forPlatform: 'Cross'.
-	
-	maker sourceDirectoryName: self srcDir pathName.
-	maker platformRootDirectoryName: self platformsDir.
-	
-	
-	allPlugins := self internalPlugins , self externalPlugins.
-	
-	"touch plugins to force their source generation unconditionally"
-	allPlugins do: [:name | (Smalltalk globals at: name) touch ].
-	
-	" Why we put all plugins as external?   Because the generated sources are not different whether the plugins were defined as internal or external. VMMaker used to need this to to generate plugins.int and plugins.ext files. But since this is achieved in another way with CMakeVMMaker, there is no different at all to put all plugins as internal or as external."
-	maker externalModules addAll:  allPlugins.
-	
-	^ maker
-]
-
-{ #category : #utils }
-SqueakWin32x86Config >> setGlobalOptionsAfterDetermineSystem: aMaker buildType: aBuildType [
-	"invoke correct setGlobalOptions for this buildType to allow per-buildType customization'"
-
-	|d |
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self setGlobalOptionsAfterDetermineSystemBuild: aMaker];
-		at: #buildAssert  put: [self setGlobalOptionsAfterDetermineSystemBuildAssert: aMaker];
-		at: #buildAssertITimerHeartbeat  put: [self setGlobalOptionsAfterDetermineSystemBuildAssertITimerHeartbeat: aMaker];
-            at:#buildDebug  put: [self setGlobalOptionsAfterDetermineSystemBuildDebug: aMaker];   
-		at: #buildITimerHeartbeat  put: [self setGlobalOptionsAfterDetermineSystemBuildITimerHeartbeat: aMaker];
-		at: #buildMultiThreaded  put: [self setGlobalOptionsAfterDetermineSystemBuildMultiThreaded: aMaker ];
-		at: #buildMultiThreadedAssert  put: [self setGlobalOptionsAfterDetermineSystemBuildMultiThreadedAssert: aMaker];
-		at: #buildMultiThreadedDebug   put: [self setGlobalOptionsAfterDetermineSystemBuildMultiThreadedDebug: aMaker ];
-		at: #buildNone put:[self setGlobalOptionsBuildNone: aMaker].
-
-	 ^(d at: ( aBuildType)) value
-
-]
-
-{ #category : #directories }
-SqueakWin32x86Config >> setupDirectories: gen [
-	"we have to override that, because we need to convert windoze paths to msys ones"
-	| dirsInclude |
-	
-	" write the directories in separate include file"
-	dirsInclude := gen captureOutputDuring: [
-		gen
-			set: #topDir toString: (self msysPathFor: self topDir fullName); 
-			set: #buildDir toString: (self buildDir ifNil: ['${topDir}/build'] ifNotNil:[ self msysPathFor: self buildDir fullName ]);
-			set: #thirdpartyDir toString: '${buildDir}/thirdparty';
-			set: #platformsDir toString: (self msysPathFor: self platformsDir);
-			set: #srcDir toString: (self msysPathFor: self srcDir);
-			set: #srcPluginsDir toString: (pluginsDir ifNil: [ '${srcDir}/plugins' ]);
-			set: #srcVMDir toString: '${srcDir}/vm';
-			set: #platformName toString: self platformName;
-			set: #targetPlatform to: '${platformsDir}/${platformName}';
-			set: #crossDir toString: '${platformsDir}/Cross';
-			set: #platformVMDir toString: '${targetPlatform}/vm';
-			set: #outputDir toString: (self msysPathFor: self outputDir).
-	].
-
-	self write: dirsInclude toFile: 'directories.cmake'.
-	
-	gen include: 'directories.cmake'.
-	
-	gen set: #externalModulesDir toString: self externalModulesDir.
-
-]
-
-{ #category : #accessing }
-SqueakWin32x86Config >> srcDir [
-		^ srcDir ifNil: [ srcDir := (self topDir directoryNamed: 'src' )]
-]
-
-{ #category : #directories }
-SqueakWin32x86Config >> topDir [
-		^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: self oscogvm ]
-]
-
-{ #category : #'source generation' }
-SqueakWin32x86Config >> validateSourcesPresent [
-	| sources |
-	sources := Smalltalk sourcesName.
-	
-	(sources == nil)
-		ifTrue: [	self error: 'VM source code cannot be generated without .sources file'.]		
-]
-
 { #category : #'as yet unclassified' }
 SqueakWin32x86Config >> version [
 	^ ''
-]
-
-{ #category : #accessing }
-SqueakWin32x86Config >> winVer [
-	"Set minimum version to WindowsXP (see /cygwin/usr/include//w32api/w32api.h)"
-	
-	^ '-D_WIN32_WINNT=0x0501 -DWINVER=0x0501'
 ]

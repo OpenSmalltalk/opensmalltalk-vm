@@ -17,6 +17,12 @@ Class {
 	#category : #'CMakeVMMakerSqueak-BSD32x86'
 }
 
+{ #category : #'source generation' }
+SqueakFreeBSDNewspeakSistaV3Config >> cogitClass [
+	^SistaStackToRegisterMappingCogit
+
+]
+
 { #category : #cmake }
 SqueakFreeBSDNewspeakSistaV3Config >> dirBuildLanguageVMMM [
 	^self newspeakSistaV3
@@ -31,4 +37,10 @@ SqueakFreeBSDNewspeakSistaV3Config >> excludeFromBuild [
 { #category : #cmake }
 SqueakFreeBSDNewspeakSistaV3Config >> executableName [
 	^ self vmSistaExecutableName
+]
+
+{ #category : #'source generation' }
+SqueakFreeBSDNewspeakSistaV3Config >> interpreterClass [
+	^ CoInterpreter
+
 ]
