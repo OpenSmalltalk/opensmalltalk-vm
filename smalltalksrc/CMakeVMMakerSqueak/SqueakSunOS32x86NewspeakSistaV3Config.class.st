@@ -21,6 +21,12 @@ SqueakSunOS32x86NewspeakSistaV3Config >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations
 ]
 
+{ #category : #'source generation' }
+SqueakSunOS32x86NewspeakSistaV3Config >> cogitClass [
+	^SistaStackToRegisterMappingCogit
+
+]
+
 { #category : #cmake }
 SqueakSunOS32x86NewspeakSistaV3Config >> dirBuildLanguageVMMM [
 	^self newspeakSistaV3
@@ -43,4 +49,10 @@ SqueakSunOS32x86NewspeakSistaV3Config >> excludeFromBuild [
 { #category : #cmake }
 SqueakSunOS32x86NewspeakSistaV3Config >> executableName [
 	^ self vmSistaExecutableName
+]
+
+{ #category : #'source generation' }
+SqueakSunOS32x86NewspeakSistaV3Config >> interpreterClass [
+	^ CoInterpreter
+
 ]

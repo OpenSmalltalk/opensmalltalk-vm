@@ -21,6 +21,12 @@ MacOSX32x86NewspeakCogV3 >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations
 ]
 
+{ #category : #'source generation' }
+MacOSX32x86NewspeakCogV3 >> cogitClass [
+	^ StackToRegisterMappingCogit 
+
+]
+
 { #category : #cmake }
 MacOSX32x86NewspeakCogV3 >> dirBuildLanguageVMMM [
 	^self newspeakCogV3
@@ -35,4 +41,10 @@ MacOSX32x86NewspeakCogV3 >> excludeFromBuild [
 { #category : #cmake }
 MacOSX32x86NewspeakCogV3 >> executableName [
 	^ self vmCogExecutableName
+]
+
+{ #category : #'source generation' }
+MacOSX32x86NewspeakCogV3 >> interpreterClass [
+	^ CoInterpreter
+
 ]

@@ -66,12 +66,6 @@ SqueakCocoaIOSSqueakCogV3Config >> pluginsDir [
 	^'${srcDir}/plugins'
 ]
 
-{ #category : #'source generation' }
-SqueakCocoaIOSSqueakCogV3Config >> prepareForGeneration [
-	^ self prepareForCogGeneration
-
-]
-
 { #category : #plugins }
 SqueakCocoaIOSSqueakCogV3Config >> versionExternalPlugins [ 
 	^Array 

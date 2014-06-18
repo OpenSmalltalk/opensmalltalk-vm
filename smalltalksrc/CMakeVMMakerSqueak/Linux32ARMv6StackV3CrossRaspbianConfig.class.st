@@ -54,15 +54,15 @@ Linux32ARMv6StackV3CrossRaspbianConfig >> addDriver: name sources: aSources gene
 	
 ]
 
-{ #category : #'squeak compatibility' }
-Linux32ARMv6StackV3CrossRaspbianConfig >> addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs [
-	super addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs
-
-]
-
 { #category : #cmake }
 Linux32ARMv6StackV3CrossRaspbianConfig >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations
+
+]
+
+{ #category : #'source generation' }
+Linux32ARMv6StackV3CrossRaspbianConfig >> cogitClass [
+	^ StackToRegisterMappingCogit 
 
 ]
 
@@ -387,6 +387,11 @@ Linux32ARMv6StackV3CrossRaspbianConfig >> extraPluginSettings: maker [
 	
 	maker set: #linkFlags toString: '${linkFlags}'
 
+]
+
+{ #category : #'source generation' }
+Linux32ARMv6StackV3CrossRaspbianConfig >> interpreterClass [
+	^ StackInterpreter
 ]
 
 { #category : #accessing }

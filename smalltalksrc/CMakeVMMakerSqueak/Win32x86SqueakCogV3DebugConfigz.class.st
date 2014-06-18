@@ -15,6 +15,12 @@ Class {
 	#category : #'CMakeVMMakerSqueak-IslandOfMisfitToys'
 }
 
+{ #category : #'source generation' }
+Win32x86SqueakCogV3DebugConfigz >> cogitClass [
+	^ StackToRegisterMappingCogit 
+
+]
+
 { #category : #directories }
 Win32x86SqueakCogV3DebugConfigz >> compilerFlags [
 	|d commonFlags flags|
@@ -47,6 +53,12 @@ Win32x86SqueakCogV3DebugConfigz >> compilerFlags [
 Win32x86SqueakCogV3DebugConfigz >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true
+]
+
+{ #category : #'source generation' }
+Win32x86SqueakCogV3DebugConfigz >> interpreterClass [
+	^ CoInterpreter
+
 ]
 
 { #category : #utils }

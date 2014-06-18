@@ -26,6 +26,12 @@ SqueakMacOSXPowerPCNewspeakSistaV3 >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations
 ]
 
+{ #category : #'source generation' }
+SqueakMacOSXPowerPCNewspeakSistaV3 >> cogitClass [
+	^SistaStackToRegisterMappingCogit
+
+]
+
 { #category : #cmake }
 SqueakMacOSXPowerPCNewspeakSistaV3 >> dirBuildLanguageVMMM [
 	^self newspeakSistaV3
@@ -40,4 +46,10 @@ SqueakMacOSXPowerPCNewspeakSistaV3 >> excludeFromBuild [
 { #category : #cmake }
 SqueakMacOSXPowerPCNewspeakSistaV3 >> executableName [
 	^ self vmSistaExecutableName
+]
+
+{ #category : #'source generation' }
+SqueakMacOSXPowerPCNewspeakSistaV3 >> interpreterClass [
+	^ CoInterpreter
+
 ]

@@ -290,11 +290,6 @@ SqueakMacOSSqueakCogV3Config >> executableName [
 	^ self vmCogExecutableName
 ]
 
-{ #category : #accessing }
-SqueakMacOSSqueakCogV3Config >> executableType [
-	^ 'MACOSX_BUNDLE'
-]
-
 { #category : #settings }
 SqueakMacOSSqueakCogV3Config >> extraPluginSettings: maker [
 	
@@ -915,12 +910,6 @@ SqueakMacOSSqueakCogV3Config >> plistTemplate [
 </dict>
 </plist>
 '
-]
-
-{ #category : #'source generation' }
-SqueakMacOSSqueakCogV3Config >> prepareForGeneration [
-	^ self prepareForCogGeneration
-
 ]
 
 { #category : #settings }

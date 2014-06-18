@@ -17,6 +17,12 @@ Class {
 	#category : #'CMakeVMMakerSqueak-BSD32x86'
 }
 
+{ #category : #'source generation' }
+SqueakFreeBSDNewspeakCogV3Config >> cogitClass [
+	^ StackToRegisterMappingCogit 
+
+]
+
 { #category : #cmake }
 SqueakFreeBSDNewspeakCogV3Config >> dirBuildLanguageVMMM [
 	^self newspeakCogV3
@@ -31,4 +37,10 @@ SqueakFreeBSDNewspeakCogV3Config >> excludeFromBuild [
 { #category : #cmake }
 SqueakFreeBSDNewspeakCogV3Config >> executableName [
 	^ self vmCogExecutableName
+]
+
+{ #category : #'source generation' }
+SqueakFreeBSDNewspeakCogV3Config >> interpreterClass [
+	^ CoInterpreter
+
 ]
