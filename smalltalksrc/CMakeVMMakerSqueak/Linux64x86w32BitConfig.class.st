@@ -95,202 +95,162 @@ Linux64x86w32BitConfig >> availableBuilds [
 
 ]
 
-{ #category : #'compiler flags' }
-Linux64x86w32BitConfig >> commonCompilerFlags [
-	self flag: 'tty'. "pull up common flags from subclasses on a refactoring pass."
-	^#()
-]
+{ #category : #'headers generation' }
+Linux64x86w32BitConfig >> configH [
+	self flag:'tty'. "This needs to be customized"
+	^ '
+#ifndef __sq_config_h
+#define __sq_config_h
 
-{ #category : #'compiler flags' }
-Linux64x86w32BitConfig >> compilerFlags [
-	|d commonFlags flags|
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self compilerFlagsBuild];
-		at: #buildAssert  put: [self compilerFlagsAssert];
-		at: #buildAssertITimerHeartbeat  put: [self compilerFlagsAssertITimerHeartbeat];
-            at:#buildDebug  put: [self compilerFlagsDebug];   "located in CMakeVMMaker CPlatformConfig"
-		at: #buildDebugITimerHeartbeat  put: [self compilerFlagsDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self compilerFlagsIHeartbeatTimer];
-		at: #buildMultiThreaded  put: [self compilerFlagsMultiThreaded ];
-		at: #buildMultiThreadedAssert  put: [self compilerFlagsMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self compilerFlagsMultiThreadedDebug ];
-		at: #buildNone put:[self compilerFlagsNoBuildType].
+/* explicit image width */
 
-    flags:= String streamContents: [ :stream |
-	 (((d at:  buildType) value)  collect: #withBlanksTrimmed as: Set)
-		asStringOn: stream 
-		delimiter:' '].
+#define	HAVE_INTERP_H 1
 
-    commonFlags:=String streamContents: [ :stream |
-		((self commonCompilerFlags) collect: #withBlanksTrimmed as: Set)
-			asStringOn: stream 
-			delimiter: ' ' ].
-	^ commonFlags, ' ' ,flags.
-]
+/* package options */
 
-{ #category : #'compiler flags' }
-Linux64x86w32BitConfig >> compilerFlagsAssert [
-	self required
-]
+#define	USE_X11 1
+#define	USE_X11_GLX 1
+/* #undef	USE_QUARTZ */
+/* #undef	USE_QUARTZ_CGL */
+/* #undef	USE_RFB */
 
-{ #category : #'compiler flags' }
-Linux64x86w32BitConfig >> compilerFlagsAssertITimerHeartbeat [
-	self required
-]
+/* libraries */
 
-{ #category : #'compiler flags' }
-Linux64x86w32BitConfig >> compilerFlagsBuild [
-	"backwards compatability with pharo. If adding, override compilerFlagsRelease in your configuration."
+/* #undef	HAVE_LIBX11 */
+/* #undef	HAVE_LIBXEXT */
+#define	HAVE_LIBDL 1
+/* #undef	HAVE_DYLD */
+/* #undef	HAVE_LIBFFI */
+/* #undef	HAVE_ICONV */
 
-	^self compilerFlagsRelease.
-]
+/* #undef	USE_AUDIO_NONE */
+/* #undef	USE_AUDIO_SUN */
+/* #undef	USE_AUDIO_NAS */
+/* #undef	USE_AUDIO_OSS */
+/* #undef	USE_AUDIO_MACOSX */
+/* #undef	OSS_DEVICE */
 
-{ #category : #cmake }
-Linux64x86w32BitConfig >> compilerFlagsDebug [
+/* header files */
 
-	^ {
-		'-g3'. 
-		'-O0'. 
-		'-msse2'. 
-		'-D_GNU_SOURCE'. 
-		'-DITIMER_HEARTBEAT=1'. 
-		'-DNO_VM_PROFILE=1'. 
-		'-DDEBUGVM=1' }
-]
+#define	HAVE_UNISTD_H 1
+/* #undef	NEED_GETHOSTNAME_P */
 
-{ #category : #'compiler flags' }
-Linux64x86w32BitConfig >> compilerFlagsDebugITimerHeartbeat [
-	self required
-]
+#define	HAVE_DIRENT_H 1
+/* #undef	HAVE_SYS_NDIR_H */
+/* #undef	HAVE_SYS_DIR_H */
+/* #undef	HAVE_NDIR_H */
+#define	HAVE_DLFCN_H 1
+#define	HAVE_ICONV_H 1
 
-{ #category : #'compiler flags' }
-Linux64x86w32BitConfig >> compilerFlagsDebugMultiThreaded [
-	self required
-]
+#define	HAVE_SYS_TIME_H 1
+#define	TIME_WITH_SYS_TIME 1
 
-{ #category : #'compiler flags' }
-Linux64x86w32BitConfig >> compilerFlagsIHeartbeatTimer [
-	self required
-]
+/* #undef	HAVE_SYS_FILIO_H */
 
-{ #category : #'compiler flags' }
-Linux64x86w32BitConfig >> compilerFlagsMultiThreaded [
-	self required
-]
+/* #undef	HAVE_SYS_AUDIOIO_H */
+/* #undef	HAVE_SUN_AUDIOIO_H */
 
-{ #category : #'compiler flags' }
-Linux64x86w32BitConfig >> compilerFlagsMultiThreadedAssert [
-	self required
-]
+#define	HAVE_PTY_H 1
+/* #undef	HAVE_UTIL_H */
+/* #undef	HAVE_LIBUTIL_H */
+#define	HAVE_STROPTS_H 1
 
-{ #category : #'compiler flags' }
-Linux64x86w32BitConfig >> compilerFlagsMultiThreadedDebug [
-	self required
-]
+#define	HAVE_GL_GL_H 1
+/* #undef	HAVE_OPENGL_GL_H */
 
-{ #category : #'compiler flags' }
-Linux64x86w32BitConfig >> compilerFlagsNoBuildType [
-	self shouldNotImplement.
-]
+/* #undef	NEED_SUNOS_H */
 
-{ #category : #cmake }
-Linux64x86w32BitConfig >> configureBuild [
-	"configure this Configuration for a buildType #build"
-	self 
-		preferredIncludesBuild;
-		standardIncludesBuild;
-		compilerFlagsBuild;
-		internalPluginsBuild;
-		externalPluginsBuild;
-		thirdpartyLibsBuild.
+/* system calls/library functions */
 
-]
+#define	AT_EXIT atexit
 
-{ #category : #cmake }
-Linux64x86w32BitConfig >> configureBuildAssert [
-	self required
-]
+#define	HAVE_TZSET 1
 
-{ #category : #cmake }
-Linux64x86w32BitConfig >> configureBuildAssertITimerHeartbeat [
-	generateBuildAssertITimerHeartbeat:=true.
-]
+#define	HAVE_OPENPTY 1
+/* #undef	HAVE_UNIX98_PTYS */
 
-{ #category : #cmake }
-Linux64x86w32BitConfig >> configureBuildDebug [
-	self required
-]
+#define	HAVE_SNPRINTF 1
+/* #undef	HAVE___SNPRINTF */
 
-{ #category : #cmake }
-Linux64x86w32BitConfig >> configureBuildDebugITimerHeartbeat [
-	self required
-]
+#define	HAVE_MMAP 1
 
-{ #category : #cmake }
-Linux64x86w32BitConfig >> configureBuildDebugMultiThreaded [
-	self required
-]
+/* #undef	HAVE_DYLD */
 
-{ #category : #cmake }
-Linux64x86w32BitConfig >> configureBuildIHeartbeatTimer [
-	self required
-]
+#define	HAVE_LANGINFO_CODESET 1
 
-{ #category : #cmake }
-Linux64x86w32BitConfig >> configureBuildMultiThreaded [
-	self required
-]
+#define	HAVE_ALLOCA 1
+#define	HAVE_ALLOCA_H 1
 
-{ #category : #cmake }
-Linux64x86w32BitConfig >> configureBuildMultiThreadedAssert [
-	self required
-]
+#define	HAVE_UNSETENV 1
 
-{ #category : #cmake }
-Linux64x86w32BitConfig >> configureBuildMultiThreadedDebug [
-	self required
-]
+#define	HAVE_NANOSLEEP 1
 
-{ #category : #cmake }
-Linux64x86w32BitConfig >> configureForBuildType: aSymbol [
-	| d |
-	"provide a concrete builder with the buildType and configureBuildX method to invoke"
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	self configureNoBuildType.                "reset all internal flags"
-	d 
-		at: #build 
-		put: [self buildType:#build.  self configureBuild];
+/* widths of primitive types */
 
-		at: #buildAssert 
-		put: [self buildType: #buildAssert.  	self configureBuildAssert];
+#define	SIZEOF_INT 4
+#define	SIZEOF_LONG 4
+#define	SIZEOF_LONG_LONG 8
+#define	SIZEOF_VOID_P 4
 
-		at: #buildAssertITimerHeartbeat 
-		put:     [ self buildType: #buildAssertITimerHeartbeat.   self configureBuildAssertITimerHeartbeat];
+/* structures */
 
-            at:#buildDebug 
-		put: [self buildType: #buildDebug.  self configureBuildDebug];
+#define	HAVE_TM_GMTOFF 1
+#define	HAVE_TIMEZONE 1
 
-		at: #buildDebugITimerHeartbeat 
-		put:  [self buildType: #buildDebugITimerHeartbeat.   self configureBuildDebugITimerHeartbeat];
+/* typedefs */
 
-		at: #buildITimerHeartbeat 
-		put: [self buildType:#buildITimerHeartbeat.    self configureBuildIHeartbeatTimer];
+/* #undef	size_t */
+/* #undef	socklen_t */
 
-		at: #buildMultiThreaded 
-		put:  [self buildType:#buildMultiThreaded . self configureBuildMultiThreaded];
+#define	ENABLE_FAST_BLT 1
+#define	squeakInt64 long long
 
-		at: #buildMultiThreadedAssert 
-		put: [self buildType: #buildMultiThreadedAssert. self configureBuildMultiThreadedAssert];
+/* architecture */
 
-		at: #buildMultiThreadedDebug  
-		put: [self buildType: #buildMultiThreadedDebug. self configureBuildMultiThreadedDebug].
-     ^(d at: aSymbol).
-]
+#define	OS_TYPE "unix"
+#define __arm__ 1
+#define __ARM_ARCH_6__ 1
+#define	VM_HOST "arm-pc-linux-gnu"
+#define	VM_HOST_CPU "arm"
+/* #undef	VM_HOST_VENDOR */
+#define	VM_HOST_OS "linux-gnu"
+#define	VM_BUILD_STRING "Unix built on "__DATE__ " "__TIME__" Compiler: "__VERSION__
 
-{ #category : #cmake }
-Linux64x86w32BitConfig >> configureNoBuildType [
-		generateBuild:=generateBuildAssert:=generateBuildAssertITimerHeartbeat:=generateBuildDebug:=generateBuildDebugITimerHeartbeat:= generateBuildDebugMultiThreaded:= generateBuildIHeartbeatTimer:= generateBuildMultiThreaded:= generateBuildMultiThreadedAssert:= generateBuildMultiThreadedDebug:=false.
+/* #undef	WORDS_BIGENDIAN */
+/* #undef	DOUBLE_WORD_ALIGNMENT */
+
+/* damage containment */
+
+/* #undef	DARWIN */
+
+#ifdef NEED_SUNOS_H
+# include "sunos.h"
+#endif
+
+/* other configured variables */
+
+#define SQ_VERSION "3.9a-7024"
+#define VM_VERSION "3.9-7"
+#define VM_MODULE_PREFIX ""
+/* #undef VM_DLSYM_PREFIX */
+#define VM_X11DIR ""
+
+/* avoid dependencies on glibc2.3 */
+
+#define HAVE_FEATURES_H 1
+
+#if defined(HAVE_FEATURES_H)
+# include "glibc.h"
+#endif
+
+
+/* used by UUID plugin: */
+
+#define HAVE_UUID_H 1
+
+#endif /* __sq_config_h */
+																																																																					
+																																																																				'
 ]
 
 { #category : #sources }
@@ -373,160 +333,9 @@ Linux64x86w32BitConfig >> defaultInternalPlugins [
 ]
 
 { #category : #cmake }
-Linux64x86w32BitConfig >> dirARMv6 [
-	^'cmake.build.arm.v6'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirAndroid [
-	^'Do Not Build. See Class Comment'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirArmv6 [
-	^'cmake.build.arm.v6'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirBSD32x86 [
-	^'cmake.build.bsd32x86'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirBuild [
-	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #build
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirBuildAssert [
-	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #buildAssert
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirBuildAssertITimerHeartbeat [
-	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #buildAssertITimerHeartbeat
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirBuildDebug [
-	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #debug
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirBuildDebugITimerHeartbeat [
-	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #debugITimerHeartbeat
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirBuildDebugMultiThreaded [
-	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #debugMultiThreaded
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirBuildITimerHeartbeat [
-	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #buildITimerHeartbeat
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirBuildLanguageVMMM [
-	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
-	^self squeakCogV3
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirBuildMultiThreaded [
-	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #buildMultiThreaded
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirBuildMultiThreadedAssert [
-	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #buildMultiThreadedAssert
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirBuildMultiThreadedDebug [
-	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #buildMultiThreadedDebug
-]
-
-{ #category : #cmake }
 Linux64x86w32BitConfig >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
-	^self dirLinux32x86
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirIA32Bochs [
-	^'cmake.build.ia32bochs'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirIOS [
-	^'cmake.build.ios'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirInstall [
-	"the directory of the finished product.. the place where 'make install' puts stuff.
-	SystemNavigation default browseMethodsWhoseNamesContain: 'outputDir'
-      "
-self required.
-
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirLinux32Armv6 [
-	^'cmake.build.linux32armv6'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirLinux32x86 [
-	^'cmake.build.linux32x86'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirLinux32x8664 [
-	^'cmake.build.linux32_64x86'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirMacOS [
-	^'cmake.build.macos'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirMacOSPowerPC [
-	^'cmake.build.macospowerpc'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirMacOSX32x86 [
-	^'cmake.build.macosx32x86'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirOutput [
-	^'cmake.products'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirSource [
-	^'src'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirSunOS32x86 [
-	^'cmake.build.sunos32x86'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> dirWin32x86 [
-	^'cmake.build.win32x86'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> eventStackV3 [
-	"needed by Android config to pass internal tests. Android config is not built"
-	^'do not build'
+	^self dirLinux32x8664
 ]
 
 { #category : #cmake }
@@ -535,21 +344,10 @@ Linux64x86w32BitConfig >> excludeFromBuild [
 	^true
 ]
 
-{ #category : #accessing }
-Linux64x86w32BitConfig >> executableName [
-	self subclassResponsibility
-]
-
 { #category : #'plugin extra rules' }
 Linux64x86w32BitConfig >> extraPluginSettings: maker [
 	super extraPluginSettings: maker.  
 	maker set: #linkFlags toString: '${linkFlags} -m32'
-]
-
-{ #category : #sources }
-Linux64x86w32BitConfig >> extraSources [
-	self flag: 'tty'. "what is this?"
-	^ 'version.c'
 ]
 
 { #category : #settings }
@@ -570,117 +368,12 @@ Linux64x86w32BitConfig >> extraVMSettings: maker [
 	
 ]
 
-{ #category : #'headers generation' }
-Linux64x86w32BitConfig >> generateConfigH [
-	"	
-	used to be: 	
-		self write: self configH toFile: 'config.h'
-      but with variable buildTypes we need:
-"
-	self write: (self generateConfigH: buildType asSymbol) toFile: 'config.h'   
-
-]
-
-{ #category : #'headers generation' }
-Linux64x86w32BitConfig >> generateConfigH: aBuildType [
-	"self write: self configH toFile: 'config.h'"
-
-	|d |
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self configHBuild];
-		at: #buildAssert  put: [self configHBuildAssert];
-		at: #buildAssertITimerHeartbeat  put: [self configHBuildAssertITimerHeartbeat];
-            at:#buildDebug  put: [self configHBuildDebug];   "located in CMakeVMMaker CPlatformConfig"
-		at: #buildDebugITimerHeartbeat  put: [self configHBuildDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self configHBuildITimerHeartbeat];
-		at: #buildMultiThreaded  put: [self configHBuildMultiThreaded ];
-		at: #buildMultiThreadedAssert  put: [self configHBuildMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self configHBuildMultiThreadedDebug ];
-		at: #buildNone put:[self configHNoBuildType].
-
-
-	 ^(d at: ( aBuildType)) value
-
-
-
-
-]
-
-{ #category : #'initialize-release' }
-Linux64x86w32BitConfig >> initialize [
-	super initialize.
-	"this should be in my superclass, but I do not have permission to modify it. tty"
- generateBuild:=generateBuildAssert:=generateBuildAssertITimerHeartbeat:=generateBuildDebug:=generateBuildDebugITimerHeartbeat :=generateBuildDebugMultiThreaded:=generateBuildIHeartbeatTimer:=generateBuildMultiThreaded:=generateBuildMultiThreadedAssert:= generateBuildMultiThreadedDebug:=false
-
-]
-
 { #category : #accessing }
 Linux64x86w32BitConfig >> linkFlags [
 "	^ super linkFlags , ' -luuid -lSM -lICE -ldl -lGL -lpthread -lm -lnsl -lX11'"
 	^ super linkFlags , ' -luuid -lSM -lICE -ldl  -lpthread -lm -lnsl -lX11'
 
 
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> newspeakCogSpur [
-	^'newspeak.cog.spur'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> newspeakCogV3 [
-	^'newspeak.cog.v3'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> newspeakSistaSpur [
-	^'newspeak.sista.Spur'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> newspeakSistaV3 [
-	^'newspeak.sista.v3'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> newspeakStackSpur [
-	^'newspeak.stack.spur'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> newspeakStackV3 [
-	^'newspeak.stack.v3'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> oscogvm [
-	^ 'oscogvm'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> outputDirName [
-	^ 'products'
-]
-
-{ #category : #sources }
-Linux64x86w32BitConfig >> platformSources [
-	"files added from platform/unix/vm dir "
-	^ #(
-	'aio.c'
-	'debug.c'
-"	'dlfcn-dyld.c'
-	'mac-alias.c' "
-	'osExports.c'
-	'sqUnixCharConv.c'
-"	'sqUnixEvent.c' "
-	'sqUnixExternalPrims.c'
-	'sqUnixHeartbeat.c'
-	'sqUnixMain.c'
-	'sqUnixMemory.c'
-	'sqUnixThreads.c'
-	'sqUnixVMProfile.c'
-	)
 ]
 
 { #category : #'source files' }
@@ -747,156 +440,4 @@ Linux64x86w32BitConfig >> setExtraTargetProperties: maker [
 					
 	super setExtraTargetProperties: maker.
 
-]
-
-{ #category : #utils }
-Linux64x86w32BitConfig >> setGlobalOptions: aMaker [
-	"SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions:'
-	
-	we subclass this in our concrete builder and route it to "
-
-	^self setGlobalOptions: aMaker buildType: (buildType asSymbol)
-
-]
-
-{ #category : #utils }
-Linux64x86w32BitConfig >> setGlobalOptions: aMaker buildType: aBuildType [
-	"invoke correct setGlobalOptions for this buildType to allow per-buildType customization'"
-
-	|d |
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self setGlobalOptionsBuild: aMaker];
-		at: #buildAssert  put: [self setGlobalOptionsBuildAssert: aMaker];
-		at: #buildAssertITimerHeartbeat  put: [self setGlobalOptionsBuildAssertITimerHeartbeat: aMaker];
-            at:#buildDebug  put: [self setGlobalOptionsBuildDebug: aMaker];   "located in CMakeVMMaker CPlatformConfig"
-		at: #buildDebugITimerHeartbeat  put: [self setGlobalOptionsBuildDebugITimerHeartbeat: aMaker ];
-		at: #buildITimerHeartbeat  put: [self setGlobalOptionsBuildITimerHeartbeat: aMaker];
-		at: #buildMultiThreaded  put: [self setGlobalOptionsBuildMultiThreaded: aMaker ];
-		at: #buildMultiThreadedAssert  put: [self setGlobalOptionsBuildMultiThreadedAssert: aMaker];
-		at: #buildMultiThreadedDebug   put: [self setGlobalOptionsBuildMultiThreadedDebug: aMaker ];
-		at: #buildNone put:[self setGlobalOptionsBuildNone: aMaker].
-
-	 ^((d at: ( aBuildType)) value)
-
-]
-
-{ #category : #utils }
-Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystem: aMaker buildType: aBuildType [
-	"invoke correct setGlobalOptions for this buildType to allow per-buildType customization'"
-
-	|d |
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self setGlobalOptionsAfterDetermineSystemBuild: aMaker];
-		at: #buildAssert  put: [self setGlobalOptionsAfterDetermineSystemBuildAssert: aMaker];
-		at: #buildAssertITimerHeartbeat  put: [self setGlobalOptionsAfterDetermineSystemBuildAssertITimerHeartbeat: aMaker];
-            at:#buildDebug  put: [self setGlobalOptionsAfterDetermineSystemBuildDebug: aMaker];   
-		at: #buildITimerHeartbeat  put: [self setGlobalOptionsAfterDetermineSystemBuildITimerHeartbeat: aMaker];
-		at: #buildMultiThreaded  put: [self setGlobalOptionsAfterDetermineSystemBuildMultiThreaded: aMaker ];
-		at: #buildMultiThreadedAssert  put: [self setGlobalOptionsAfterDetermineSystemBuildMultiThreadedAssert: aMaker];
-		at: #buildMultiThreadedDebug   put: [self setGlobalOptionsAfterDetermineSystemBuildMultiThreadedDebug: aMaker ];
-		at: #buildNone put:[self setGlobalOptionsBuildNone: aMaker].
-
-	 ^(d at: ( aBuildType)) value
-
-]
-
-{ #category : #'cmake config build type ' }
-Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuild: aMaker [ 
-	self required
-]
-
-{ #category : #'cmake config build type ' }
-Linux64x86w32BitConfig >> setGlobalOptionsBuild: aMaker [
-	"convenience method to customize setGlobalOptions: aMaker for this build type. 
-	Default is in CPlatformConfig>setGlobalOptions: aMaker setGlobalOptions: aMaker"
-	^super setGlobalOptions: aMaker
-]
-
-{ #category : #'cmake config build type ' }
-Linux64x86w32BitConfig >> setGlobalOptionsBuildAssert: aMaker [
-	"convenience method to customize setGlobalOptions: aMaker for this build type. 
-	Default is in CPlatformConfig>setGlobalOptions: aMaker setGlobalOptions: aMaker"
-	^super setGlobalOptions: aMaker
-]
-
-{ #category : #'cmake config build type ' }
-Linux64x86w32BitConfig >> setGlobalOptionsBuildAssertITimerHeartbeat: aMaker [
-	"convenience method to customize setGlobalOptions: aMaker for this build type. 
-	Default is in CPlatformConfig>setGlobalOptions: aMaker setGlobalOptions: aMaker"
-	^super setGlobalOptions: aMaker
-]
-
-{ #category : #'cmake config build type ' }
-Linux64x86w32BitConfig >> setGlobalOptionsBuildDebug: aMaker [
-	"convenience method to customize setGlobalOptions: aMaker for this build type. 
-	Default is in CPlatformConfig>setGlobalOptions: aMaker setGlobalOptions: aMaker"
-	^super setGlobalOptions: aMaker
-]
-
-{ #category : #'cmake config build type ' }
-Linux64x86w32BitConfig >> setGlobalOptionsBuildDebugITimerHeartbeat: aMaker [
-	"convenience method to customize setGlobalOptions: aMaker for this build type. 
-	Default is in CPlatformConfig>setGlobalOptions: aMaker setGlobalOptions: aMaker"
-	^super setGlobalOptions: aMaker
-]
-
-{ #category : #'cmake config build type ' }
-Linux64x86w32BitConfig >> setGlobalOptionsBuildITimerHeartbeat: aMaker [
-	"convenience method to customize setGlobalOptions: aMaker for this build type. 
-	Default is in CPlatformConfig>setGlobalOptions: aMaker setGlobalOptions: aMaker"
-	self break.
-	^super setGlobalOptions: aMaker
-]
-
-{ #category : #'cmake config build type ' }
-Linux64x86w32BitConfig >> setGlobalOptionsBuildMultiThreaded: aMaker [
-	"convenience method to customize setGlobalOptions: aMaker for this build type. 
-	Default is in CPlatformConfig>setGlobalOptions: aMaker setGlobalOptions: aMaker"
-	^super setGlobalOptions: aMaker
-]
-
-{ #category : #'cmake config build type ' }
-Linux64x86w32BitConfig >> setGlobalOptionsBuildMultiThreadedAssert: aMaker [
-	"convenience method to customize setGlobalOptions: aMaker for this build type. 
-	Default is in CPlatformConfig>setGlobalOptions: aMaker setGlobalOptions: aMaker"
-	^super setGlobalOptions: aMaker
-]
-
-{ #category : #'cmake config build type ' }
-Linux64x86w32BitConfig >> setGlobalOptionsBuildMultiThreadedDebug: aMaker [
-	"convenience method to customize setGlobalOptions: aMaker for this build type. 
-	Default is in CPlatformConfig>setGlobalOptions: aMaker setGlobalOptions: aMaker"
-	^super setGlobalOptions: aMaker
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> squeakCogSpur [
-	^'squeak.cog.spur'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> squeakCogV3 [
-	^'squeak.cog.v3'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> squeakSistaSpur [
-	^'squeak.sista.Spur'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> squeakSistaV3 [
-	^'squeak.sista.v3'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> squeakStackSpur [
-	^'squeak.stack.spur'
-]
-
-{ #category : #cmake }
-Linux64x86w32BitConfig >> squeakStackV3 [
-	^'squeak.stack.v3'
 ]

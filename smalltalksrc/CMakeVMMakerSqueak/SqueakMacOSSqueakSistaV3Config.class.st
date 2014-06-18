@@ -296,20 +296,6 @@ SqueakMacOSSqueakSistaV3Config >> extraPluginSettings: maker [
 	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'
 ]
 
-{ #category : #'source files' }
-SqueakMacOSSqueakSistaV3Config >> extraSources [
-	" mac VM using some unix sources"
-	
-	^ 
-	'${platformsDir}/unix/plugins/SocketPlugin/sqUnixSocket.c 
-	${platformsDir}/unix/vm/aio.c 
-	${platformsDir}/unix/plugins/AsynchFilePlugin/sqUnixAsynchFile.c
-	${platformsDir}/unix/vm/sqUnixHeartbeat.c
-	${platformsDir}/unix/vm/sqUnixVMProfile.c
-	${platformsDir}/unix/vm/sqUnixThreads.c
-	${resources}'
-]
-
 { #category : #settings }
 SqueakMacOSSqueakSistaV3Config >> extraVMSettings: maker [
 	
@@ -363,30 +349,6 @@ SqueakMacOSSqueakSistaV3Config >> interpreterClass [
 { #category : #accessing }
 SqueakMacOSSqueakSistaV3Config >> platformName [
 	^ 'Mac OS'
-]
-
-{ #category : #'source files' }
-SqueakMacOSSqueakSistaV3Config >> platformSources [
-	"files added from platform/Mac OS/vm dir "
-	^ #(
-	'NSCursorWrappers.m'
-	'nsPoolManagement.m'
-	'osExports.c'
-	'sqMacEncoding.c'
-	'sqMacImageIO.c'
-	'sqMacMain.c'
-	'sqMacMemory.c'
-	'sqMacNSPluginUILogic2.c'
-	'sqMacTime.c'
-	'sqMacUIAppleEvents.c'
-	'sqMacUIClipBoard.c'
-	'sqMacUIEventsUniversal.c'  " instead of: sqMacUIEvents.c "
-	'sqMacUIMenuBarUniversal.c'
-	'sqMacUnixCommandLineInterface.c'
-	'sqMacUnixExternalPrims.c'
-	'sqMacWindowUniversal.c'
-	'version.c'	
-	)
 ]
 
 { #category : #'bundle strings' }

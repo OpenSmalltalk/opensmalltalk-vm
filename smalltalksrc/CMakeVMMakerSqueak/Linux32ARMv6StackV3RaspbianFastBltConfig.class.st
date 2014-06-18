@@ -18,12 +18,6 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Linux32ARMv6'
 }
 
-{ #category : #'source generation' }
-Linux32ARMv6StackV3RaspbianFastBltConfig >> cogitClass [
-	^ StackToRegisterMappingCogit 
-
-]
-
 { #category : #'compiler flags' }
 Linux32ARMv6StackV3RaspbianFastBltConfig >> commonCompilerFlags [
 	^ super commonCompilerFlags, { '-DENABLE_FAST_BLT' }.
@@ -52,23 +46,7 @@ Linux32ARMv6StackV3RaspbianFastBltConfig >> configureBitBltSimulation: maker [
 ]
 
 { #category : #cmake }
-Linux32ARMv6StackV3RaspbianFastBltConfig >> dirBuildLanguageVMMM [
-	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
-	^self squeakStackV3
-]
-
-{ #category : #cmake }
 Linux32ARMv6StackV3RaspbianFastBltConfig >> excludeFromBuild [
 	^true
 
-]
-
-{ #category : #cmake }
-Linux32ARMv6StackV3RaspbianFastBltConfig >> executableName [
-	^ self vmStackExecutableName
-]
-
-{ #category : #'source generation' }
-Linux32ARMv6StackV3RaspbianFastBltConfig >> interpreterClass [
-	^ StackInterpreter
 ]

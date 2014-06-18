@@ -21,15 +21,6 @@ Win32x86NewspeakSistaSpurConfig >> cogitClass [
 
 ]
 
-{ #category : #'source files' }
-Win32x86NewspeakSistaSpurConfig >> coreSources [
-	"files to include from src/vm dir"
-	
-	^ #(
-		'gcc3x-interp.c'
-		)
-]
-
 { #category : #cmake }
 Win32x86NewspeakSistaSpurConfig >> dirBuildLanguageVMMM [
 	^self newspeakSistaSpur
