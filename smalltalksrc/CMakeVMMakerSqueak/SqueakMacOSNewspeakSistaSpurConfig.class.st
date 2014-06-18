@@ -67,9 +67,8 @@ SqueakMacOSNewspeakSistaSpurConfig >> CFBundleVersion [
 
 { #category : #'source generation' }
 SqueakMacOSNewspeakSistaSpurConfig >> cogitClass [
-	"answer a class for machine code generation or nil"
-	
-	^ StackToRegisterMappingCogit 
+	^SistaStackToRegisterMappingCogit
+
 ]
 
 { #category : #'compiler flags' }
@@ -288,11 +287,6 @@ SqueakMacOSNewspeakSistaSpurConfig >> excludeFromBuild [
 { #category : #cmake }
 SqueakMacOSNewspeakSistaSpurConfig >> executableName [
 	^ self vmSistaExecutableName
-]
-
-{ #category : #accessing }
-SqueakMacOSNewspeakSistaSpurConfig >> executableType [
-	^ 'MACOSX_BUNDLE'
 ]
 
 { #category : #settings }
@@ -915,12 +909,6 @@ SqueakMacOSNewspeakSistaSpurConfig >> plistTemplate [
 </dict>
 </plist>
 '
-]
-
-{ #category : #'source generation' }
-SqueakMacOSNewspeakSistaSpurConfig >> prepareForGeneration [
-	^ self prepareForCogGeneration
-
 ]
 
 { #category : #settings }

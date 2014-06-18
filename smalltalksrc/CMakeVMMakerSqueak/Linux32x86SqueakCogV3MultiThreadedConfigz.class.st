@@ -13,9 +13,10 @@ Class {
 	#category : #'CMakeVMMakerSqueak-IslandOfMisfitToys'
 }
 
-{ #category : #'squeak compatibility' }
-Linux32x86SqueakCogV3MultiThreadedConfigz >> buildDirName [
-	^ 'cmake_unixbuild/mtbld'
+{ #category : #'source generation' }
+Linux32x86SqueakCogV3MultiThreadedConfigz >> cogitClass [
+	^ StackToRegisterMappingCogit 
+
 ]
 
 { #category : #'compiler flags' }
@@ -67,7 +68,7 @@ Linux32x86SqueakCogV3MultiThreadedConfigz >> excludeFromBuild [
 
 { #category : #accessing }
 Linux32x86SqueakCogV3MultiThreadedConfigz >> executableName [
-	^ 'CogMTVM'
+	^ self vmCogExecutableName
 ]
 
 { #category : #'source generation' }

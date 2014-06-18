@@ -13,6 +13,12 @@ Class {
 	#category : #'CMakeVMMakerSqueak-IslandOfMisfitToys'
 }
 
+{ #category : #'source generation' }
+Linux32x86SqueakCogV3DebugConfigz >> cogitClass [
+	^ StackToRegisterMappingCogit 
+
+]
+
 { #category : #'squeak compatibility' }
 Linux32x86SqueakCogV3DebugConfigz >> compilerFlags [
 	|d commonFlags flags|
@@ -52,4 +58,9 @@ Linux32x86SqueakCogV3DebugConfigz >> defaultExternalPlugins [
 Linux32x86SqueakCogV3DebugConfigz >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true
+]
+
+{ #category : #'source generation' }
+Linux32x86SqueakCogV3DebugConfigz >> interpreterClass [
+	^ CoInterpreter
 ]

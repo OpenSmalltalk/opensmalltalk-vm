@@ -21,16 +21,16 @@ Linux64SqueakSistaSpur >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations
 ]
 
+{ #category : #'source generation' }
+Linux64SqueakSistaSpur >> cogitClass [
+	^SistaStackToRegisterMappingCogit
+
+]
+
 { #category : #cmake }
 Linux64SqueakSistaSpur >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
 	^self squeakSistaSpur
-]
-
-{ #category : #'as yet unclassified' }
-Linux64SqueakSistaSpur >> dirBuildPlatform [
-	"the directory for the platform. example: build.linux32x86"
-	^self dirLinux32x8664
 ]
 
 { #category : #cmake }
@@ -42,4 +42,10 @@ Linux64SqueakSistaSpur >> excludeFromBuild [
 { #category : #cmake }
 Linux64SqueakSistaSpur >> executableName [
 	^ self vmSistaExecutableName
+]
+
+{ #category : #'source generation' }
+Linux64SqueakSistaSpur >> interpreterClass [
+	^ CoInterpreter
+
 ]

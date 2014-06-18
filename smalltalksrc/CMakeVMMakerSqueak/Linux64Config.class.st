@@ -15,20 +15,7 @@ HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {
 	#name : #Linux64Config,
-	#superclass : #CogFamilyUnixConfig,
-	#instVars : [
-		'buildType',
-		'generateBuild',
-		'generateBuildAssert',
-		'generateBuildAssertITimerHeartbeat',
-		'generateBuildDebug',
-		'generateBuildDebugITimerHeartbeat',
-		'generateBuildDebugMultiThreaded',
-		'generateBuildIHeartbeatTimer',
-		'generateBuildMultiThreaded',
-		'generateBuildMultiThreadedAssert',
-		'generateBuildMultiThreadedDebug'
-	],
+	#superclass : #SqueakUnixConfig,
 	#category : #'CMakeVMMakerSqueak-LinuxX86-64'
 }
 
@@ -101,130 +88,10 @@ External:
 '
 ]
 
-{ #category : #'squeak compatibility' }
-Linux64Config >> addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs [
-
-	| cfg srcs |
-	
-	srcs := aSources inject: '' into: [:res :each | res , ' "', each, '"' ].
-	cfg := cmakeGen
-		captureOutputDuring: [
-			cmakeGen printHeader;
-			project: name;
-			include: '../directories.cmake';
-		
-			message: 'Adding module: ', name;
-			
-			addDefinitions:  self compilerFlags;
-			addDefinitions: '-fPIC -DPIC';
-			set: #sources to: srcs;
-			cmd: 'add_library' params: name, ' SHARED ${sources}'; 
-			includeDirectories: '${crossDir}/plugins/FilePlugin';
-			includeDirectories: '${targetPlatform}/plugins/B3DAcceleratorPlugin';
-			includeDirectories: '${crossDir}/plugins/B3DAcceleratorPlugin';
-			set: 'LIBRARY_OUTPUT_PATH' toString: self outputDir fullName;
-			addExternalLibraries: extLibs;
-			cmd: 'target_link_libraries' params: name , ' ${LINKLIBS}';
-			cmd: 'set_target_properties' params: name , ' PROPERTIES PREFIX "" SUFFIX "" 
-			LINK_FLAGS -m32' 
-	].
-	
-	(self buildDir / name) assureExistence.
-	self write: cfg toFile: name , '/', cmakeGen outputFileName.
-	cmakeGen addSubdirectory:  name.
-	
-]
-
 { #category : #cmake }
 Linux64Config >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder default allBuildConfigurations copyWithoutAll:#(#releaseMultiThreadedFFI #debugMultiThreadedFFI)
 
-]
-
-{ #category : #'squeak compatibility' }
-Linux64Config >> buildDir [
-	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].
-]
-
-{ #category : #'squeak compatibility' }
-Linux64Config >> buildDirName [
-	buildType isNil
-		ifTrue:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, 'build']
-		ifFalse:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, buildType asString]
-]
-
-{ #category : #'squeak compatibility' }
-Linux64Config >> buildScript [
-	"answer the build script for building everything"
-	
-
-	^ 
-'#!/usr/bin/env bash
-
-cmake .
-make
-
-'
-]
-
-{ #category : #'squeak compatibility' }
-Linux64Config >> buildType: aSymbol [
-	buildType:= aSymbol
-]
-
-{ #category : #'squeak compatibility' }
-Linux64Config >> cogitClass [
-	"answer a class for machine code generation or nil"
-	
-	^ StackToRegisterMappingCogit 
-]
-
-{ #category : #'squeak compatibility' }
-Linux64Config >> commonCompilerFlags [
-
-	"Common compiler flags
-	
-	
-	LSB_FIRST=1 means that target platform is little endian. 
-	set it to 0 for big-endian platforms
-	
-	"
-	
-	^ {
-		'-DLSB_FIRST=1'. 
-		'-DUSE_GLOBAL_STRUCT=0'. 
-		'-DCOGMTVM=0'. 
-		'-m32'.
-		'-DENABLE_FAST_BLT ' } 	
-	
-]
-
-{ #category : #'squeak compatibility' }
-Linux64Config >> compilerFlags [
-	|d commonFlags flags|
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self compilerFlagsBuild];
-		at: #buildAssert  put: [self compilerFlagsAssert];
-		at: #buildAssertITimerHeartbeat  put: [self compilerFlagsAssertITimerHeartbeat];
-            at:#buildDebug  put: [self compilerFlagsDebug];   "located in CMakeVMMaker CPlatformConfig"
-		at: #buildDebugITimerHeartbeat  put: [self compilerFlagsDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self compilerFlagsIHeartbeatTimer];
-		at: #buildMultiThreaded  put: [self compilerFlagsMultiThreaded ];
-		at: #buildMultiThreadedAssert  put: [self compilerFlagsMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self compilerFlagsMultiThreadedDebug ];
-		at: #buildNone put:[self compilerFlagsNoBuildType].
-
-    flags:= String streamContents: [ :stream |
-	 (((d at:  buildType) value)  collect: #withBlanksTrimmed as: Set)
-		asStringOn: stream 
-		delimiter:' '].
-
-    commonFlags:=String streamContents: [ :stream |
-		((self commonCompilerFlags) collect: #withBlanksTrimmed as: Set)
-			asStringOn: stream 
-			delimiter: ' ' ].
-	^ commonFlags, ' ' ,flags.
 ]
 
 { #category : #'cmake configuration' }
@@ -349,13 +216,6 @@ Linux64Config >> dirBuildLanguageVMMM [
 Linux64Config >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
 	^self dirLinux32x86
-]
-
-{ #category : #'squeak compatibility' }
-Linux64Config >> dirFrom: aStringOrDir [
-	^ aStringOrDir isString
-		ifTrue: [ FileDirectory forFileName: aStringOrDir  ]
-		ifFalse: [ aStringOrDir ]
 ]
 
 { #category : #cmake }
@@ -509,38 +369,6 @@ Linux64Config >> oscogvm [
 	^ 'oscogvm'
 ]
 
-{ #category : #'squeak compatibility' }
-Linux64Config >> outputDir [
-
-	"the directory where built binaries will be stored"
-	^ outputDir ifNil: [ outputDir := (self topDir / self dirOutput / self dirInstall) ]	
-
-
-]
-
-{ #category : #'squeak compatibility' }
-Linux64Config >> prepareVMMaker [
-	
-	| maker allPlugins |
-	
-	"In CogVMs (in contrast to Interpreter VM) the generated sources are platform independent, therefore Cross is ok"
-	maker := VMMaker forPlatform: 'Cross'.
-	
-	maker sourceDirectoryName: self srcDir pathName.
-	maker platformRootDirectoryName: self platformsDir.
-	
-	
-	allPlugins := self internalPlugins , self externalPlugins.
-	
-	"touch plugins to force their source generation unconditionally"
-	allPlugins do: [:name | (Smalltalk globals at: name) touch ].
-	
-	" Why we put all plugins as external?   Because the generated sources are not different whether the plugins were defined as internal or external. VMMaker used to need this to to generate plugins.int and plugins.ext files. But since this is achieved in another way with CMakeVMMaker, there is no different at all to put all plugins as internal or as external."
-	maker externalModules addAll:  allPlugins.
-	
-	^ maker
-]
-
 { #category : #utils }
 Linux64Config >> setGlobalOptionsAfterDetermineSystem: aMaker buildType: aBuildType [
 	"invoke correct setGlobalOptions for this buildType to allow per-buildType customization'"
@@ -559,20 +387,6 @@ Linux64Config >> setGlobalOptionsAfterDetermineSystem: aMaker buildType: aBuildT
 		at: #buildNone put:[self setGlobalOptionsBuildNone: aMaker].
 
 	 ^(d at: ( aBuildType)) value
-
-]
-
-{ #category : #'cmake config build type ' }
-Linux64Config >> setupDirectories: aMaker [ 
-	"SystemNavigation default browseMethodsWhoseNamesContain: 'setupDirectories:'
-	
-	we subclass this in our concrete builder and route it to 
-	
-	^self setupDirectories: aMaker buildType: (self buildType asSymbol)
-
-	"
-	self required
-	
 
 ]
 
@@ -604,43 +418,4 @@ Linux64Config >> squeakStackSpur [
 { #category : #cmake }
 Linux64Config >> squeakStackV3 [
 	^'squeak.stack.v3'
-]
-
-{ #category : #'squeak compatibility' }
-Linux64Config >> srcDir [
-		^ srcDir ifNil: [ srcDir := (self topDir directoryNamed: 'src' )]
-]
-
-{ #category : #'squeak compatibility' }
-Linux64Config >> topDir [
-	"N.B. this is a clash between Trait usage and Inheritence usage due to restrictions on modifying pharo's source"
-	^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: self oscogvm ]
-	
-]
-
-{ #category : #'squeak compatibility' }
-Linux64Config >> validateSourcesPresent [
-	| sources |
-	sources := Smalltalk sourcesName.
-	
-	(sources == nil)
-		ifTrue: [	self error: 'VM source code cannot be generated without .sources file'.]		
-]
-
-{ #category : #'squeak compatibility' }
-Linux64Config >> write: aContents toFile: aFileName [
-	"write a file to current output directory (buildDir).
-	use line end convention appropriate for config platform"
-
-	| bldDir |
-	bldDir := self buildDir.
-	bldDir isString
-		ifTrue: [ bldDir := FileDirectory directoryEntryFor: bldDir ].
-	bldDir assureExistence.
-	bldDir
-		forceNewFileNamed: aFileName
-		do: [:s | s
-				nextPutAll: (self fixLineEndsOf: aContents)]
-
-
 ]

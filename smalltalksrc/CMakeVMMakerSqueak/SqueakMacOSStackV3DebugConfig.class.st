@@ -20,6 +20,12 @@ Class {
 	#category : #'CMakeVMMakerSqueak-IslandOfMisfitToys'
 }
 
+{ #category : #'source generation' }
+SqueakMacOSStackV3DebugConfig >> cogitClass [
+	^ StackToRegisterMappingCogit 
+
+]
+
 { #category : #accessing }
 SqueakMacOSStackV3DebugConfig >> compilerFlags [
 	|d commonFlags flags|
@@ -52,4 +58,9 @@ SqueakMacOSStackV3DebugConfig >> compilerFlags [
 SqueakMacOSStackV3DebugConfig >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true
+]
+
+{ #category : #'source generation' }
+SqueakMacOSStackV3DebugConfig >> interpreterClass [
+	^ StackInterpreter
 ]

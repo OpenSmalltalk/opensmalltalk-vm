@@ -25,6 +25,12 @@ SqueakMacOSXPowerPCNewspeakCogV3 >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations
 ]
 
+{ #category : #'source generation' }
+SqueakMacOSXPowerPCNewspeakCogV3 >> cogitClass [
+	^ StackToRegisterMappingCogit 
+
+]
+
 { #category : #cmake }
 SqueakMacOSXPowerPCNewspeakCogV3 >> dirBuildLanguageVMMM [
 	^self newspeakCogV3
@@ -39,4 +45,10 @@ SqueakMacOSXPowerPCNewspeakCogV3 >> excludeFromBuild [
 { #category : #cmake }
 SqueakMacOSXPowerPCNewspeakCogV3 >> executableName [
 	^ self vmCogExecutableName
+]
+
+{ #category : #'source generation' }
+SqueakMacOSXPowerPCNewspeakCogV3 >> interpreterClass [
+	^ CoInterpreter
+
 ]

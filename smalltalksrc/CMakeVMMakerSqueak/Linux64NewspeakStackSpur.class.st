@@ -21,15 +21,15 @@ Linux64NewspeakStackSpur >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations
 ]
 
-{ #category : #cmake }
-Linux64NewspeakStackSpur >> dirBuildLanguageVMMM [
-	^self newspeakStackSpur
+{ #category : #'source generation' }
+Linux64NewspeakStackSpur >> cogitClass [
+	^ StackToRegisterMappingCogit 
+
 ]
 
 { #category : #cmake }
-Linux64NewspeakStackSpur >> dirBuildPlatform [
-	"the directory for the platform. example: build.linux32x86"
-	^self dirLinux32x8664
+Linux64NewspeakStackSpur >> dirBuildLanguageVMMM [
+	^self newspeakStackSpur
 ]
 
 { #category : #cmake }
@@ -41,4 +41,9 @@ Linux64NewspeakStackSpur >> excludeFromBuild [
 { #category : #accessing }
 Linux64NewspeakStackSpur >> executableName [
 	^ self vmStackExecutableName
+]
+
+{ #category : #'source generation' }
+Linux64NewspeakStackSpur >> interpreterClass [
+	^ StackInterpreter
 ]

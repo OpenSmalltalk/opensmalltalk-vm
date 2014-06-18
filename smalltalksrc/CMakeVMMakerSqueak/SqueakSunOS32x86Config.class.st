@@ -13,20 +13,7 @@ HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {
 	#name : #SqueakSunOS32x86Config,
-	#superclass : #CPlatformConfigForSqueak,
-	#instVars : [
-		'buildType',
-		'generateBuild',
-		'generateBuildAssert',
-		'generateBuildAssertITimerHeartbeat',
-		'generateBuildDebug',
-		'generateBuildDebugITimerHeartbeat',
-		'generateBuildDebugMultiThreaded',
-		'generateBuildIHeartbeatTimer',
-		'generateBuildMultiThreaded',
-		'generateBuildMultiThreadedAssert',
-		'generateBuildMultiThreadedDebug'
-	],
+	#superclass : #SqueakUnixConfig,
 	#category : #'CMakeVMMakerSqueak-SunOS32x86'
 }
 
@@ -34,23 +21,6 @@ Class {
 SqueakSunOS32x86Config >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations
 
-]
-
-{ #category : #'squeak compatibility' }
-SqueakSunOS32x86Config >> buildDir [
-	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].
-]
-
-{ #category : #'squeak compatibility' }
-SqueakSunOS32x86Config >> buildDirName [
-	buildType isNil
-		ifTrue:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, 'build']
-		ifFalse:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, buildType asString]
-]
-
-{ #category : #'squeak compatibility' }
-SqueakSunOS32x86Config >> buildType: aSymbol [
-	buildType:= aSymbol
 ]
 
 { #category : #'compiler flags' }
@@ -222,15 +192,6 @@ SqueakSunOS32x86Config >> initialize [
 
 ]
 
-{ #category : #'squeak compatibility' }
-SqueakSunOS32x86Config >> outputDir [
-
-	"the directory where built binaries will be stored"
-	^ outputDir ifNil: [ outputDir := (self topDir / self dirOutput/ self dirInstall) ]	
-
-
-]
-
 { #category : #utils }
 SqueakSunOS32x86Config >> setGlobalOptionsAfterDetermineSystem: aMaker buildType: aBuildType [
 	"invoke correct setGlobalOptions for this buildType to allow per-buildType customization'"
@@ -250,14 +211,4 @@ SqueakSunOS32x86Config >> setGlobalOptionsAfterDetermineSystem: aMaker buildType
 
 	 ^(d at: ( aBuildType)) value
 
-]
-
-{ #category : #'squeak compatibility' }
-SqueakSunOS32x86Config >> srcDir [
-		^ srcDir ifNil: [ srcDir := (self topDir directoryNamed: 'src' )]
-]
-
-{ #category : #'squeak compatibility' }
-SqueakSunOS32x86Config >> topDir [
-		^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: self oscogvm ]
 ]

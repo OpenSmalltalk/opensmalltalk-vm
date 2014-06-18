@@ -26,6 +26,12 @@ SqueakMacOSXPowerPCSqueakSistaSpur >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations
 ]
 
+{ #category : #'source generation' }
+SqueakMacOSXPowerPCSqueakSistaSpur >> cogitClass [
+	^SistaStackToRegisterMappingCogit
+
+]
+
 { #category : #cmake }
 SqueakMacOSXPowerPCSqueakSistaSpur >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
@@ -41,4 +47,10 @@ SqueakMacOSXPowerPCSqueakSistaSpur >> excludeFromBuild [
 { #category : #cmake }
 SqueakMacOSXPowerPCSqueakSistaSpur >> executableName [
 	^ self vmSistaExecutableName
+]
+
+{ #category : #'source generation' }
+SqueakMacOSXPowerPCSqueakSistaSpur >> interpreterClass [
+	^ CoInterpreter
+
 ]

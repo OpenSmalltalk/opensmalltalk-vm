@@ -20,6 +20,12 @@ Class {
 	#category : #'CMakeVMMakerSqueak-MacOS'
 }
 
+{ #category : #'source generation' }
+SqueakMacOSNewspeakStackSpurConfig >> cogitClass [
+	^ StackToRegisterMappingCogit 
+
+]
+
 { #category : #'source files' }
 SqueakMacOSNewspeakStackSpurConfig >> coreSources [
 	"files to include from src/vm dir"
@@ -49,10 +55,4 @@ SqueakMacOSNewspeakStackSpurConfig >> executableName [
 { #category : #'source generation' }
 SqueakMacOSNewspeakStackSpurConfig >> interpreterClass [
 	^ StackInterpreter
-]
-
-{ #category : #'source generation' }
-SqueakMacOSNewspeakStackSpurConfig >> prepareForGeneration [
-	^ self prepareForStackVMGeneration
-
 ]

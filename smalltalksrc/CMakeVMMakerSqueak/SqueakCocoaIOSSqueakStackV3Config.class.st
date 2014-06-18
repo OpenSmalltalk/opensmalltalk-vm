@@ -59,12 +59,6 @@ SqueakCocoaIOSSqueakStackV3Config >> pluginsDir [
 	^'${srcDir}/plugins'
 ]
 
-{ #category : #'source generation' }
-SqueakCocoaIOSSqueakStackV3Config >> prepareForGeneration [
-	^ self prepareForStackVMGeneration
-
-]
-
 { #category : #settings }
 SqueakCocoaIOSSqueakStackV3Config >> setGlobalOptions: maker [
    super setGlobalOptions: maker.

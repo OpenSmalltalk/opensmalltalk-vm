@@ -40,6 +40,12 @@ SqueakCocoaIOSCogV3FamilyConfig >> CFBundleVersion [
 	^ '6.0-pre'
 ]
 
+{ #category : #'source generation' }
+SqueakCocoaIOSCogV3FamilyConfig >> cogitClass [
+	^ StackToRegisterMappingCogit 
+
+]
+
 { #category : #settings }
 SqueakCocoaIOSCogV3FamilyConfig >> commonCompilerFlags [
 	^super commonCompilerFlags,  #(
@@ -214,6 +220,12 @@ SqueakCocoaIOSCogV3FamilyConfig >> extraSources [
 	${platformsDir}/unix/vm/sqUnixHeartbeat.c 
 	${platformsDir}/unix/vm/sqUnixVMProfile.c 
 	${platformsDir}/unix/vm/sqUnixThreads.c '
+]
+
+{ #category : #'source generation' }
+SqueakCocoaIOSCogV3FamilyConfig >> interpreterClass [
+	^ CoInterpreter
+
 ]
 
 { #category : #'source files' }

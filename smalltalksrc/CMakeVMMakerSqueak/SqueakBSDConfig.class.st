@@ -15,20 +15,7 @@ HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {
 	#name : #SqueakBSDConfig,
-	#superclass : #CogFamilyUnixConfig,
-	#instVars : [
-		'buildType',
-		'generateBuild',
-		'generateBuildAssert',
-		'generateBuildAssertITimerHeartbeat',
-		'generateBuildDebug',
-		'generateBuildDebugITimerHeartbeat',
-		'generateBuildDebugMultiThreaded',
-		'generateBuildIHeartbeatTimer',
-		'generateBuildMultiThreaded',
-		'generateBuildMultiThreadedAssert',
-		'generateBuildMultiThreadedDebug'
-	],
+	#superclass : #SqueakUnixConfig,
 	#category : #'CMakeVMMakerSqueak-BSD32x86'
 }
 
@@ -38,84 +25,10 @@ SqueakBSDConfig class >> availableBuilds [
 	^#(#assert #debug  #release )
 ]
 
-{ #category : #accessing }
-SqueakBSDConfig >> addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs [
-
-	| cfg srcs |
-	
-	srcs := aSources inject: '' into: [:res :each | res , ' "', each, '"' ].
-	cfg := cmakeGen
-		captureOutputDuring: [
-			cmakeGen printHeader;
-			project: name;
-			include: '../directories.cmake';
-		
-			message: 'Adding module: ', name;
-			
-			addDefinitions:  self compilerFlags;
-			addDefinitions: '-fPIC -DPIC';
-			set: #sources to: srcs;
-			cmd: 'add_library' params: name, ' SHARED ${sources}'; 
-			includeDirectories: '${crossDir}/plugins/FilePlugin';
-			includeDirectories: '${targetPlatform}/plugins/B3DAcceleratorPlugin';
-			includeDirectories: '${crossDir}/plugins/B3DAcceleratorPlugin';
-			set: 'LIBRARY_OUTPUT_PATH' toString: self outputDir fullName;
-			addExternalLibraries: extLibs;
-			cmd: 'target_link_libraries' params: name , ' ${LINKLIBS}';
-			cmd: 'set_target_properties' params: name , ' PROPERTIES PREFIX "" SUFFIX "" 
-			LINK_FLAGS -m32' 
-	].
-	
-	(self buildDir / name) assureExistence.
-	self write: cfg toFile: name , '/', cmakeGen outputFileName.
-	cmakeGen addSubdirectory:  name.
-	
-]
-
 { #category : #cmake }
 SqueakBSDConfig >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations
 
-]
-
-{ #category : #'squeak compatibility' }
-SqueakBSDConfig >> buildDir [
-	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].
-]
-
-{ #category : #'squeak compatibility' }
-SqueakBSDConfig >> buildDirName [
-	buildType isNil
-		ifTrue:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, 'build']
-		ifFalse:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, buildType asString]
-]
-
-{ #category : #'squeak compatibility' }
-SqueakBSDConfig >> compilerFlags [
-	|d commonFlags flags|
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self compilerFlagsBuild];
-		at: #buildAssert  put: [self compilerFlagsAssert];
-		at: #buildAssertITimerHeartbeat  put: [self compilerFlagsAssertITimerHeartbeat];
-            at:#buildDebug  put: [self compilerFlagsDebug];   "located in CMakeVMMaker CPlatformConfig"
-		at: #buildDebugITimerHeartbeat  put: [self compilerFlagsDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self compilerFlagsIHeartbeatTimer];
-		at: #buildMultiThreaded  put: [self compilerFlagsMultiThreaded ];
-		at: #buildMultiThreadedAssert  put: [self compilerFlagsMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self compilerFlagsMultiThreadedDebug ];
-		at: #buildNone put:[self compilerFlagsNoBuildType].
-
-    flags:= String streamContents: [ :stream |
-	 (((d at:  buildType) value)  collect: #withBlanksTrimmed as: Set)
-		asStringOn: stream 
-		delimiter:' '].
-
-    commonFlags:=String streamContents: [ :stream |
-		((self commonCompilerFlags) collect: #withBlanksTrimmed as: Set)
-			asStringOn: stream 
-			delimiter: ' ' ].
-	^ commonFlags, ' ' ,flags.
 ]
 
 { #category : #'cmake configuration' }
@@ -255,22 +168,10 @@ SqueakBSDConfig >> dirBuildPlatform [
 	^self dirBSD32x86
 ]
 
-{ #category : #'squeak compatibility' }
-SqueakBSDConfig >> dirFrom: aStringOrDir [
-	^ aStringOrDir isString
-		ifTrue: [ FileDirectory forFileName: aStringOrDir  ]
-		ifFalse: [ aStringOrDir ]
-]
-
 { #category : #cmake }
 SqueakBSDConfig >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true
-]
-
-{ #category : #'squeak compatibility' }
-SqueakBSDConfig >> executableName [
-	^ 'cogvm'
 ]
 
 { #category : #'headers generation' }
@@ -318,38 +219,6 @@ SqueakBSDConfig >> initialize [
 
 ]
 
-{ #category : #'squeak compatibility' }
-SqueakBSDConfig >> outputDir [
-
-	"the directory where built binaries will be stored"
-	^ outputDir ifNil: [ outputDir := (self topDir / self dirOutput/ self dirInstall) ]	
-
-
-]
-
-{ #category : #'squeak compatibility' }
-SqueakBSDConfig >> prepareVMMaker [
-	
-	| maker allPlugins |
-	
-	"In CogVMs (in contrast to Interpreter VM) the generated sources are platform independent, therefore Cross is ok"
-	maker := VMMaker forPlatform: 'Cross'.
-	
-	maker sourceDirectoryName: self srcDir pathName.
-	maker platformRootDirectoryName: self platformsDir.
-	
-	
-	allPlugins := self internalPlugins , self externalPlugins.
-	
-	"touch plugins to force their source generation unconditionally"
-	allPlugins do: [:name | (Smalltalk globals at: name) touch ].
-	
-	" Why we put all plugins as external?   Because the generated sources are not different whether the plugins were defined as internal or external. VMMaker used to need this to to generate plugins.int and plugins.ext files. But since this is achieved in another way with CMakeVMMaker, there is no different at all to put all plugins as internal or as external."
-	maker externalModules addAll:  allPlugins.
-	
-	^ maker
-]
-
 { #category : #utils }
 SqueakBSDConfig >> setGlobalOptionsAfterDetermineSystem: aMaker buildType: aBuildType [
 	"invoke correct setGlobalOptions for this buildType to allow per-buildType customization'"
@@ -368,69 +237,5 @@ SqueakBSDConfig >> setGlobalOptionsAfterDetermineSystem: aMaker buildType: aBuil
 		at: #buildNone put:[self setGlobalOptionsBuildNone: aMaker].
 
 	 ^(d at: ( aBuildType)) value
-
-]
-
-{ #category : #'squeak compatibility' }
-SqueakBSDConfig >> setupDirectories: gen [
-	| dirsInclude |
-
-	" write the directories in separate include file"
-	dirsInclude := gen captureOutputDuring: [
-		gen
-			set: #topDir toString: (self topDir fullName); 
-			set: #buildDir toString: (self buildDir ifNil: ['${topDir}/build'] ifNotNil: [self buildDir fullName] );
-			set: #thirdpartyDir toString: '${buildDir}/thirdParty';
-			set: #platformsDir toString: self platformsDir;
-			set: #srcDir toString: self srcDir pathName;
-			set: #srcPluginsDir toString: (pluginsDir ifNil: [ '${srcDir}/plugins' ]);
-			set: #srcVMDir toString: '${srcDir}/vm';
-			set: #platformName toString: self platformName;
-			set: #targetPlatform to: '${platformsDir}/${platformName}';
-			set: #crossDir toString: '${platformsDir}/Cross';
-			set: #platformVMDir toString: '${targetPlatform}/vm';
-			set: #outputDir toString: self outputDir fullName.
-	].
-
-	self write: dirsInclude toFile: 'directories.cmake'.
-	
-	gen include: 'directories.cmake'.
-
-]
-
-{ #category : #'squeak compatibility' }
-SqueakBSDConfig >> srcDir [
-		^ srcDir ifNil: [ srcDir := (self topDir directoryNamed: 'src' )]
-]
-
-{ #category : #'squeak compatibility' }
-SqueakBSDConfig >> topDir [
-		^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: self oscogvm ]
-]
-
-{ #category : #'squeak compatibility' }
-SqueakBSDConfig >> validateSourcesPresent [
-	| sources |
-	sources := Smalltalk sourcesName.
-	
-	(sources == nil)
-		ifTrue: [	self error: 'VM source code cannot be generated without .sources file'.]		
-]
-
-{ #category : #'squeak compatibility' }
-SqueakBSDConfig >> write: aContents toFile: aFileName [
-	"write a file to current output directory (buildDir).
-	use line end convention appropriate for config platform"
-
-	| bldDir |
-	bldDir := self buildDir.
-	bldDir isString
-		ifTrue: [ bldDir := FileDirectory directoryEntryFor: bldDir ].
-	bldDir assureExistence.
-	bldDir
-		forceNewFileNamed: aFileName
-		do: [:s | s
-				nextPutAll: (self fixLineEndsOf: aContents)]
-
 
 ]

@@ -21,6 +21,12 @@ MacOSX32x86NewspeakStackV3 >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations
 ]
 
+{ #category : #'source generation' }
+MacOSX32x86NewspeakStackV3 >> cogitClass [
+	^ StackToRegisterMappingCogit 
+
+]
+
 { #category : #cmake }
 MacOSX32x86NewspeakStackV3 >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
@@ -31,4 +37,9 @@ MacOSX32x86NewspeakStackV3 >> dirBuildLanguageVMMM [
 MacOSX32x86NewspeakStackV3 >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true
+]
+
+{ #category : #'source generation' }
+MacOSX32x86NewspeakStackV3 >> interpreterClass [
+	^ StackInterpreter
 ]

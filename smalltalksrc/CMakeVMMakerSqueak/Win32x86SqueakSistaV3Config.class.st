@@ -15,6 +15,12 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Win32x86'
 }
 
+{ #category : #'source generation' }
+Win32x86SqueakSistaV3Config >> cogitClass [
+	^SistaStackToRegisterMappingCogit
+
+]
+
 { #category : #'source files' }
 Win32x86SqueakSistaV3Config >> coreSources [
 	"files to include from src/vm dir"
@@ -43,11 +49,6 @@ Win32x86SqueakSistaV3Config >> executableName [
 
 { #category : #'source generation' }
 Win32x86SqueakSistaV3Config >> interpreterClass [
-	"answer an interpreter class for VM source code generation"
-	^ StackInterpreter
-]
+	^ CoInterpreter
 
-{ #category : #'source generation' }
-Win32x86SqueakSistaV3Config >> prepareForGeneration [
-	^ self prepareForStackVMGeneration
 ]
