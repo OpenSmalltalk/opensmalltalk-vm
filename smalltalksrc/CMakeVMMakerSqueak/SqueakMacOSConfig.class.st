@@ -15,7 +15,7 @@ HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {
 	#name : #SqueakMacOSConfig,
-	#superclass : #CPlatformConfig,
+	#superclass : #CPlatformConfigForSqueak,
 	#instVars : [
 		'buildType',
 		'generateBuild',

@@ -48,7 +48,7 @@ Fore more information, check the class comments of all the superclasses.
 "
 Class {
 	#name : #SqueakWin32x86Config,
-	#superclass : #CPlatformConfig,
+	#superclass : #CPlatformConfigForSqueak,
 	#instVars : [
 		'buildType',
 		'generateBuild',
