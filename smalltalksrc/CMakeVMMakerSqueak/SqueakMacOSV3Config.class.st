@@ -340,12 +340,6 @@ SqueakMacOSV3Config >> defaultDirectoriesFromGitDir: gitRepository [
 ]
 
 { #category : #cmake }
-SqueakMacOSV3Config >> dirBuildLanguageVMMM [
-	"the directory under buildPlatformDir  example: newspeak.cog.spur. default is squeak.cog.v3"
-	^self required
-]
-
-{ #category : #cmake }
 SqueakMacOSV3Config >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true

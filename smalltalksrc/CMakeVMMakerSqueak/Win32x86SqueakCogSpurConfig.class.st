@@ -48,16 +48,6 @@ Win32x86SqueakCogSpurConfig >> compilerFlagsRelease [
 		'-DNDEBUG -DDEBUGVM=0'}
 ]
 
-{ #category : #'source files' }
-Win32x86SqueakCogSpurConfig >> coreSources [
-	"files to include from src/vm dir"
-	
-	^ #(
-		'cogit.c'
-		'gcc3x-cointerp.c'
-		)
-]
-
 { #category : #cmake }
 Win32x86SqueakCogSpurConfig >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
@@ -96,13 +86,6 @@ Win32x86SqueakCogSpurConfig >> extraPluginSettings: maker [
 	]
 ]
 
-{ #category : #'source files' }
-Win32x86SqueakCogSpurConfig >> extraSources [
-
-	^ 
-	'${resources}'
-]
-
 { #category : #settings }
 Win32x86SqueakCogSpurConfig >> extraVMSettings: maker [
 
@@ -132,32 +115,6 @@ Win32x86SqueakCogSpurConfig >> iconFileName [
 { #category : #'source generation' }
 Win32x86SqueakCogSpurConfig >> interpreterClass [
 	^ CoInterpreter
-]
-
-{ #category : #'source files' }
-Win32x86SqueakCogSpurConfig >> platformSources [
-	"files added from platform/win32/vm dir "
-	^ #(
-		'sqWin32Alloc.c'
-		'sqWin32Directory.c'
-		'sqWin32Heartbeat.c'
-		'sqWin32Service.c'
-		'sqWin32VMProfile.c'
-		'sqWin32Args.c'
-		'sqWin32Exports.c'
-		'sqWin32Intel.c'
-		'sqWin32Stubs.c'
-		'sqWin32Window.c'
-		'sqWin32Backtrace.c'
-		'sqWin32ExternalPrims.c'
-		'sqWin32PluginSupport.c'
-		'sqWin32Threads.c'
-		'version.c'
-		'sqWin32DirectInput.c'
-		'sqWin32GUID.c'
-		'sqWin32Prefs.c'
-		'sqWin32Utils.c'
-	)
 ]
 
 { #category : #resources }

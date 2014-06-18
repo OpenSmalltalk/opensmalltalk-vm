@@ -133,14 +133,6 @@ SqueakCocoaIOSCogV3FamilyConfig >> configureUnixOSProcessPlugin: maker [
 	maker includeDirectories: '${platformsDir}/Cross/plugins/SocketPlugin'.
 ]
 
-{ #category : #'source files' }
-SqueakCocoaIOSCogV3FamilyConfig >> crossSources [ 
-	^super crossSources, #(
-	'sqExternalSemaphores.c'
-	'sqHeapMap.c'
-	'sqTicker.c')
-]
-
 { #category : #plugins }
 SqueakCocoaIOSCogV3FamilyConfig >> defaultExternalPlugins [ 
 	^(self versionExternalPlugins),

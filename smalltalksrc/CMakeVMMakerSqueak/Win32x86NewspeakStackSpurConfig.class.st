@@ -22,15 +22,6 @@ Win32x86NewspeakStackSpurConfig >> cogitClass [
 	^ StackToRegisterMappingCogit 
 ]
 
-{ #category : #'source files' }
-Win32x86NewspeakStackSpurConfig >> coreSources [
-	"files to include from src/vm dir"
-	
-	^ #(
-		'gcc3x-interp.c'
-		)
-]
-
 { #category : #cmake }
 Win32x86NewspeakStackSpurConfig >> dirBuildLanguageVMMM [
 	^self newspeakStackSpur

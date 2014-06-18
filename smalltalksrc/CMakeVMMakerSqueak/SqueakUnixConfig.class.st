@@ -214,10 +214,42 @@ SqueakUnixConfig >> externalModulesDir [
 	^ '${outputDir}'
 ]
 
+{ #category : #'source files' }
+SqueakUnixConfig >> extraSources [	
+	self flag:'tty'. "?"
+	^ 'version.c'
+]
+
 { #category : #accessing }
 SqueakUnixConfig >> frameworks [
 	"leave empty for all platforms but Mac OS"
 	^ #()
+]
+
+{ #category : #'headers generation' }
+SqueakUnixConfig >> generateConfigH [
+		self write: self configH toFile: 'config.h'
+
+]
+
+{ #category : #'source files' }
+SqueakUnixConfig >> platformSources [
+	"files added from platform/unix/vm dir "
+	^ #(
+	'aio.c'
+	'debug.c'
+"	'dlfcn-dyld.c'
+	'mac-alias.c' "
+	'osExports.c'
+	'sqUnixCharConv.c'
+"	'sqUnixEvent.c' "
+	'sqUnixExternalPrims.c'
+	'sqUnixHeartbeat.c'
+	'sqUnixMain.c'
+	'sqUnixMemory.c'
+	'sqUnixThreads.c'
+	'sqUnixVMProfile.c'
+	)
 ]
 
 { #category : #'squeak compatability' }

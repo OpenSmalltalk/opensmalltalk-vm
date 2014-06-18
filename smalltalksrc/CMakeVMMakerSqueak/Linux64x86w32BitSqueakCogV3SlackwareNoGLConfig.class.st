@@ -277,6 +277,11 @@ Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> defaultExternalPlugins [
 
 ]
 
+{ #category : #'as yet unclassified' }
+Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> dirBuildLanguageVMMM [
+	^self squeakCogV3
+]
+
 { #category : #cmake }
 Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> dirInstall [
 	"the directory of the finished product.. the place where 'make install' puts stuff.

@@ -154,20 +154,6 @@ SqueakWin32x86Config >> availableBuilds [
 
 ]
 
-{ #category : #'build script' }
-SqueakWin32x86Config >> buildScript [
-	"answer the build script for building everything"
-	
-
-	^ 
-'#!/usr/bin/env bash
-
-cmake -G "MSYS Makefiles" .
-make
-
-'
-]
-
 { #category : #'plugin extra rules' }
 SqueakWin32x86Config >> configureAsynchFilePlugin:  maker [ 
 	"extra rules for AsynchFilePlugin "
@@ -190,24 +176,6 @@ SqueakWin32x86Config >> configureB3DAcceleratorPlugin:  maker [
 
 
 
-]
-
-{ #category : #'cmake configuration' }
-SqueakWin32x86Config >> configureBuild [
-	"configure this Configuration for a buildType #build"
-	self 
-		preferredIncludesBuild;
-		standardIncludesBuild;
-		compilerFlagsBuild;
-		internalPluginsBuild;
-		externalPluginsBuild;
-		thirdpartyLibsBuild
-		
-
-
-		
-		
-		
 ]
 
 { #category : #'plugin extra rules' }
@@ -450,6 +418,16 @@ SqueakWin32x86Config >> configureWin32OSProcessPlugin: maker [
 
 ]
 
+{ #category : #'source files' }
+SqueakWin32x86Config >> coreSources [
+	"files to include from src/vm dir"
+	
+	^ #(
+		'cogit.c'
+		'gcc3x-cointerp.c'
+		)
+]
+
 { #category : #plugins }
 SqueakWin32x86Config >> defaultExternalPlugins [
 	"expertly cut-n-pasted from Cog/cygwinbuild/plugins.ext"
@@ -504,12 +482,6 @@ SqueakWin32x86Config >> defaultInternalPlugins [
 ]
 
 { #category : #cmake }
-SqueakWin32x86Config >> dirBuildLanguageVMMM [
-	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
-	^self required
-]
-
-{ #category : #cmake }
 SqueakWin32x86Config >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
 	^self dirWin32x86
@@ -519,76 +491,4 @@ SqueakWin32x86Config >> dirBuildPlatform [
 SqueakWin32x86Config >> excludeFromBuild [
 	^true
 
-]
-
-{ #category : #'headers generation' }
-SqueakWin32x86Config >> generateConfigH [
-	"	
-	used to be: 	
-		self write: self configH toFile: 'config.h'
-      but with variable buildTypes we need:
-"
-	self write: (self generateConfigH: buildType) toFile: 'config.h'   
-
-]
-
-{ #category : #'headers generation' }
-SqueakWin32x86Config >> generateConfigH: aBuildType [
-	"self write: self configH toFile: 'config.h'"
-
-	|d |
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self configHBuild];
-		at: #buildAssert  put: [self configHBuildAssert];
-		at: #buildAssertITimerHeartbeat  put: [self configHBuildAssertITimerHeartbeat];
-            at:#buildDebug  put: [self configHBuildDebug];   "located in CMakeVMMaker CPlatformConfig"
-		at: #buildDebugITimerHeartbeat  put: [self configHBuildDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self configHBuildITimerHeartbeat];
-		at: #buildMultiThreaded  put: [self configHBuildMultiThreaded ];
-		at: #buildMultiThreadedAssert  put: [self configHBuildMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self configHBuildMultiThreadedDebug ];
-		at: #buildNone put:[self configHNoBuildType].
-
-
-	 ^(d at: ( aBuildType)) value
-
-
-
-
-]
-
-{ #category : #'as yet unclassified' }
-SqueakWin32x86Config >> generateLicense [ 
-	self 
-		write:  (self class licenseTemplate 
-			format: { self version })
-		toFile: 'LICENSE.txt'
-	
-]
-
-{ #category : #'as yet unclassified' }
-SqueakWin32x86Config >> generatePluginsList [ 
-	self 
-		write:  (self class pluginsTemplate 
-			format: {
-				self version. 
-				String streamContents: [ :stream | self internalPlugins asStringOn: stream delimiter: String cr ].
-				String streamContents: [ :stream | self externalPlugins asStringOn: stream delimiter: String cr ].
-				self executableName })
-		toFile: 'PLUGINS.txt'
-	
-]
-
-{ #category : #'initialize-release' }
-SqueakWin32x86Config >> initialize [
-	super initialize.
-	"this should be in my superclass, but I do not have permission to modify it. tty"
- generateBuild:=generateBuildAssert:=generateBuildAssertITimerHeartbeat:=generateBuildDebug:=generateBuildDebugITimerHeartbeat :=generateBuildDebugMultiThreaded:=generateBuildIHeartbeatTimer:=generateBuildMultiThreaded:=generateBuildMultiThreadedAssert:= generateBuildMultiThreadedDebug:=false
-
-]
-
-{ #category : #'as yet unclassified' }
-SqueakWin32x86Config >> version [
-	^ ''
 ]
