@@ -10,8 +10,11 @@ cp -p $SQUEAK45.image trunk46forspur.image
 cp -p $SQUEAK45.changes trunk46forspur.changes
 
 rm -f temp-spur-repository/* temp-v3-repository/*
+echo $VM trunk46forspur.image BuildSqueakTrunkImage.st
 $VM trunk46forspur.image BuildSqueakTrunkImage.st
+echo $VM trunk46forspur.image ChangeUpdateStreamToSpur.st
 $VM trunk46forspur.image ChangeUpdateStreamToSpur.st
+echo $VM trunk46forspur.image WriteSpurPackagesToTempDir.st
 $VM trunk46forspur.image WriteSpurPackagesToTempDir.st
 
 # Now choose a suitable VMMaker image (Spur preferred) and get it to convert
@@ -44,10 +47,12 @@ while true; do
 		GOTIMAGE=1
 	fi
 done
+echo $VM $IMAGE BuildSpurTrunkImage.st
 $VM $IMAGE BuildSpurTrunkImage.st
 mv trunk46forspur-spur.image trunk46-spur.image
 mv trunk46forspur-spur.changes trunk46-spur.changes
 
 # Now load the modified packages
 . ./get2897spurvm.sh
+echo $VM trunk46-spur.image LoadSpurPackagesFromTempDir.st
 $VM trunk46-spur.image LoadSpurPackagesFromTempDir.st
