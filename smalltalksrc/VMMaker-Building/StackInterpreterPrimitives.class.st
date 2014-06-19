@@ -1277,9 +1277,9 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		1 arg:	return the indicated VM parameter;
 		2 args:	set the VM indicated parameter.
 	VM parameters are numbered as follows:
-		1	end of old-space (0-based, read-only)
-		2	end of young-space (read-only)
-		3	end of memory (read-only)
+		1	end/size of old-space (0-based, read-only)
+		2	end/size of young/new-space (read-only)
+		3	end/size of heap (read-only)
 		4	nil (was allocationCount (read-only))
 		5	nil (was allocations between GCs (read-write)
 		6	survivor count tenuring threshold (read-write)
@@ -1395,9 +1395,11 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		objectMemory storePointerUnchecked: 48	ofObject: result withValue: (objectMemory integerObjectOf: self ioGetMaxExtSemTableSize).
 		objectMemory hasSpurMemoryManagerAPI
 			ifTrue:
-				[49 to: 53 do:
+				[49 to: 52 do:
 					[:i | objectMemory storePointerUnchecked: i ofObject: result withValue: objectMemory nilObject].
-				 objectMemory storePointer: 54	ofObject: result withValue: (self floatObjectOf: objectMemory getHeapGrowthToSizeGCRatio)]
+				 objectMemory
+					storePointerUnchecked: 53 ofObject: result withValue: (objectMemory integerObjectOf: objectMemory freeSize);
+					storePointer: 54	ofObject: result withValue: (self floatObjectOf: objectMemory getHeapGrowthToSizeGCRatio)]
 			ifFalse:
 				[49 to: 54 do:
 					[:i | objectMemory storePointerUnchecked: i ofObject: result withValue: objectMemory nilObject]].
@@ -1479,6 +1481,9 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		arg = 48	ifTrue: [result := self getCogVMFlags].
 		arg = 49	ifTrue: [result := objectMemory integerObjectOf: self ioGetMaxExtSemTableSize].
 		"(arg between: 50 and: 55) ifTrue: [result := objectMemory nilObject]."
+		(arg = 54
+		 and: [objectMemory hasSpurMemoryManagerAPI]) ifTrue:
+			[result := objectMemory integerObjectOf: objectMemory freeSize].
 		(arg = 55
 		 and: [objectMemory hasSpurMemoryManagerAPI]) ifTrue:
 			[result := self floatObjectOf: objectMemory getHeapGrowthToSizeGCRatio].
