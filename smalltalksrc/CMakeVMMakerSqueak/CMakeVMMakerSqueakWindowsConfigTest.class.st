@@ -61,3 +61,26 @@ CMakeVMMakerSqueakWindowsConfigTest >> testExecutableType [
 
 
 ]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakWindowsConfigTest >> testPlatformName [
+
+		#(#SqueakWin32x86Builder) 
+		do:[:builder | | o |
+			Smalltalk globals 
+				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: ((Smalltalk at:builder)  configurationsCategory))
+					ifTrue:[ 
+							o:= configuration new.
+							self assert:(o  platformName = 'win32').  "hello code smell"
+
+
+								]]]
+
+
+
+
+
+
+
+
+]

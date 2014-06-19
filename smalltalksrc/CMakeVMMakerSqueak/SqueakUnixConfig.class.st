@@ -232,6 +232,11 @@ SqueakUnixConfig >> generateConfigH [
 
 ]
 
+{ #category : #accessing }
+SqueakUnixConfig >> platformName [
+	^self unixPlatformName
+]
+
 { #category : #'source files' }
 SqueakUnixConfig >> platformSources [
 	"files added from platform/unix/vm dir "

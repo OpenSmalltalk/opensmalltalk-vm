@@ -68,7 +68,7 @@ SqueakMacintoshConfig >> compilerFlagsRelease [
 		'-DUSE_INLINE_MEMORY_ACCESSORS' }
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 SqueakMacintoshConfig >> executableType [
 	^ 'MACOSX_BUNDLE'
 ]
@@ -88,6 +88,11 @@ SqueakMacintoshConfig >> externalModulesDir [
 { #category : #'source files' }
 SqueakMacintoshConfig >> extraSources [
 	self subclassResponsibility
+]
+
+{ #category : #accessing }
+SqueakMacintoshConfig >> platformName [
+	^self macOSPlatformName
 ]
 
 { #category : #'source files' }
