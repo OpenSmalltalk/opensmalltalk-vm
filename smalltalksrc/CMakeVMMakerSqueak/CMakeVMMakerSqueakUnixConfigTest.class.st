@@ -64,3 +64,17 @@ CMakeVMMakerSqueakUnixConfigTest >> testExecutableType [
 							self assert:(o  executableType = '').]]]    "hello code smell"
 
 ]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakUnixConfigTest >> testPlatformName [
+	#(#SqueakAndroidBuilder  #SqueakBSDx86Builder #SqueakLinux32ARMv6Builder #SqueakLinux32x86Builder  #SqueakLinux32x86_64Builder #SqueakLinux64x86w32CompatBuilder #SqueakSunOS32x86Builder)
+		do:[:builder | | o |
+			Smalltalk globals 
+				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: ((Smalltalk at:builder) configurationsCategory))
+					ifTrue:[ 
+							o:= configuration new.
+							(o excludeFromBuild not)
+								ifTrue:[self assert:(o  platformName = 'unix' )]]]]
+
+
+]

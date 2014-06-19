@@ -347,11 +347,6 @@ SqueakMacOSSqueakCogV3Config >> interpreterClass [
 	^ CoInterpreter
 ]
 
-{ #category : #accessing }
-SqueakMacOSSqueakCogV3Config >> platformName [
-	^ 'Mac OS'
-]
-
 { #category : #'bundle strings' }
 SqueakMacOSSqueakCogV3Config >> plistFile [
 

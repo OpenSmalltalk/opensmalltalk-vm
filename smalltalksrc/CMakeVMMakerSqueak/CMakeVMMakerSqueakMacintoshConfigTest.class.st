@@ -39,6 +39,22 @@ CMakeVMMakerSqueakMacintoshConfigTest >> testExecutableType [
 ]
 
 { #category : #'as yet unclassified' }
+CMakeVMMakerSqueakMacintoshConfigTest >> testPlatformName [
+		#(#SqueakIOSBuilder #SqueakMacOSBuilder  #SqueakMacOSPowerPCBuilder #SqueakMacOSX32x86Builder) 
+		do:[:builder | | o |
+			Smalltalk globals 
+				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: ((Smalltalk at:builder) configurationsCategory))
+					ifTrue:[ 
+							o:= configuration new.
+							(o excludeFromBuild not)
+								ifTrue:[self assert:(o  platformName = 'Mac OS' )]]]]
+
+
+
+
+]
+
+{ #category : #'as yet unclassified' }
 CMakeVMMakerSqueakMacintoshConfigTest >> testResourcesDir [
 
 	#(#SqueakIOSBuilder #SqueakMacOSBuilder  #SqueakMacOSPowerPCBuilder #SqueakMacOSX32x86Builder)
