@@ -347,11 +347,6 @@ SqueakMacOSNewspeakCogV3Config >> interpreterClass [
 	^ CoInterpreter
 ]
 
-{ #category : #accessing }
-SqueakMacOSNewspeakCogV3Config >> platformName [
-	^ 'Mac OS'
-]
-
 { #category : #'bundle strings' }
 SqueakMacOSNewspeakCogV3Config >> plistFile [
 
