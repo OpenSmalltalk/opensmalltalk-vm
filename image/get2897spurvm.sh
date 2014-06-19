@@ -4,7 +4,7 @@
 #set -v
 . ./envvars.sh
 
-if wget --help >/dev/null ; then
+if wget --help >/dev/null; then
 	true
 else
 	echo 'could not find wget.  you can find instructions on how to install it on google.' 1>&2

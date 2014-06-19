@@ -331,6 +331,36 @@ sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 #endif /* COGVM */
 
 #if SPURVM
+/* Answer if any of the memory in the range [address, address + bytes) is used
+ * so as to make sure the MAP_FIXED below doesn't damage any existing mappings.
+ *
+ * See http://stackoverflow.com/questions/14943990
+ *
+ * One must do this separately for each page, because for regions larger than a
+ * single page, ENOMEM means that the region was not fully mapped and it might
+ * still be partially mapped.
+ *
+ * It seems to me (eem 6/18/2014 16:00) that madvise could be called, which
+ * would be cheaper.  But it would have side-effects when applied to an
+ * existing mapping.
+ */
+static long
+address_space_used(char *address, long bytes)
+{
+	long offset = 0;
+	char pagestate;
+
+	while (offset < bytes) {
+		do {
+			if (mincore(address+offset, pageSize, &pagestate) >= 0)
+				return 1;
+		} while (errno == EAGAIN);
+		assert(errno == ENOMEM);
+		offset += pageSize;
+	}
+	return 0;
+}
+
 /* Allocate a region of memory of al least size bytes, at or above minAddress.
  *  If the attempt fails, answer null.  If the attempt succeeds, answer the
  * start of the region and assign its size through allocatedSizePointer.
@@ -339,31 +369,43 @@ void *
 sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress, sqInt *allocatedSizePointer)
 {
 	void *alloc;
-	long bytes = roundUpToPage(size);
+	char *address;
+	long bytes;
 
 	if (!pageSize) {
 		pageSize = getpagesize();
 		pageMask = pageSize - 1;
 	}
+	address = (char *)roundUpToPage((unsigned long)minAddress);
+	bytes = roundUpToPage(size);
 	*allocatedSizePointer = bytes;
-	while ((char *)minAddress + bytes > (char *)minAddress) {
+	while ((unsigned long)(address + bytes) > (unsigned long)address) {
 #if 0
-		alloc = mmap((void *)roundUpToPage((unsigned long)minAddress), bytes,
-					PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
+		alloc = mmap(address, bytes, PROT_READ | PROT_WRITE,
+					 MAP_ANON | MAP_PRIVATE, -1, 0);
 #else
-		alloc = mmap((void *)roundUpToPage((unsigned long)minAddress), bytes,
-					PROT_READ | PROT_WRITE, MAP_ANON | MAP_FIXED | MAP_PRIVATE, -1, 0);
+		/* This is a mess.  To be able to allocate lots of segments it appears
+		 * we have to use MAP_FIXED, but MAP_FIXED will blow away any existing
+		 * mappings, so we have to use mincore to scan the pages in the region
+		 * to check there is no existing mapping there.
+		 */
+		if (address_space_used(address, bytes)) {
+			address += bytes;
+			continue;
+		}
+		alloc = mmap(address, bytes, PROT_READ | PROT_WRITE,
+					 MAP_ANON | MAP_FIXED | MAP_PRIVATE, -1, 0);
 #endif
 		if (alloc == MAP_FAILED) {
 			mmapErrno = errno;
 			perror("sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto mmap");
 			return 0;
 		}
-		if (alloc >= minAddress)
+		if ((char *)alloc >= address)
 			return alloc;
 		if (munmap(alloc, bytes) != 0)
 			perror("sqAllocateMemorySegment... munmap");
-		minAddress = (void *)((char *)minAddress + bytes);
+		address += bytes;
 	}
 	return 0;
 }
