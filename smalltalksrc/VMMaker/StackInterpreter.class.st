@@ -6755,6 +6755,7 @@ StackInterpreter >> initializeInterpreter: bytesToShift [
 	"Initialize Interpreter state before starting execution of a new image."
 	interpreterProxy := self sqGetInterpreterProxy.
 	self dummyReferToProxy.
+	checkAllocFiller := false. "must preceed initializeObjectMemory:"
 	objectMemory initializeObjectMemory: bytesToShift.
 	self checkAssumedCompactClasses.
 	primFailCode := 0.
@@ -6792,7 +6793,6 @@ StackInterpreter >> initializeInterpreter: bytesToShift [
 	longRunningPrimitiveStartUsecs :=
 	longRunningPrimitiveStopUsecs := 0.
 	maxExtSemTabSizeSet := false.
-	checkAllocFiller := false.
 	statForceInterruptCheck := 0.
 	statStackOverflow := 0.
 	statCheckForEvents := 0.
