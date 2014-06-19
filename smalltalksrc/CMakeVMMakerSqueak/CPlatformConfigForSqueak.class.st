@@ -127,6 +127,11 @@ CPlatformConfigForSqueak >> addDriver: name sources: aSources generator: cmakeGe
 	
 ]
 
+{ #category : #'cmake executable names' }
+CPlatformConfigForSqueak >> androidPlatformName [
+	^'android'
+]
+
 { #category : #'cmake configuration' }
 CPlatformConfigForSqueak >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder  default  allBuildConfigurations
@@ -797,7 +802,7 @@ CPlatformConfigForSqueak >> dirWin32x86 [
 
 { #category : #'cmake executable names' }
 CPlatformConfigForSqueak >> eventStackV3 [
-	"needed by Android config to pass internal tests. Android config is not built"
+
 	^'do not build'
 ]
 
@@ -1362,6 +1367,11 @@ CPlatformConfigForSqueak >> interpreterClassBuildITimerMultiThreadedDebug [
 
 ]
 
+{ #category : #'cmake executable names' }
+CPlatformConfigForSqueak >> iosPlatformName [
+	^'iOS'
+]
+
 { #category : #accessing }
 CPlatformConfigForSqueak >> linkFlags [
 	self subclassResponsibility
@@ -1369,6 +1379,11 @@ CPlatformConfigForSqueak >> linkFlags [
 "example:
 	^ super linkFlags , ' -m32'
 "
+]
+
+{ #category : #'cmake executable names' }
+CPlatformConfigForSqueak >> macOSPlatformName [
+	^'Mac OS'
 ]
 
 { #category : #'cmake directory ' }
@@ -1399,6 +1414,11 @@ CPlatformConfigForSqueak >> newspeakStackSpur [
 { #category : #'cmake directory ' }
 CPlatformConfigForSqueak >> newspeakStackV3 [
 	^'newspeak.stack.v3'
+]
+
+{ #category : #'cmake executable names' }
+CPlatformConfigForSqueak >> nilPlatformName [
+	^nil
 ]
 
 { #category : #'cmake directory ' }
@@ -1985,6 +2005,12 @@ CPlatformConfigForSqueak >> topDir [
 	
 ]
 
+{ #category : #'cmake executable names' }
+CPlatformConfigForSqueak >> unixPlatformName [
+
+	^'unix'
+]
+
 { #category : #'squeak compatability' }
 CPlatformConfigForSqueak >> validateSourcesPresent [
 	| sources |
@@ -2001,20 +2027,25 @@ CPlatformConfigForSqueak >> version [
 
 { #category : #'cmake executable names' }
 CPlatformConfigForSqueak >> vmCogExecutableName [
-	"the name of the cog vm executable"
+
 	^'cog'
 ]
 
 { #category : #'cmake executable names' }
 CPlatformConfigForSqueak >> vmSistaExecutableName [
-	"the name of the sista vm executable"
+
 	^'sista'
 ]
 
 { #category : #'cmake executable names' }
 CPlatformConfigForSqueak >> vmStackExecutableName [
-	"the name of the stack vm executable"
+
 	^'squeak'
+]
+
+{ #category : #'cmake executable names' }
+CPlatformConfigForSqueak >> win32PlatformName [
+	^'win32'
 ]
 
 { #category : #'squeak compatability' }

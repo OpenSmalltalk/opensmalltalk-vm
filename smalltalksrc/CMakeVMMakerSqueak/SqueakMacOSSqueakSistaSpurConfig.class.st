@@ -346,11 +346,6 @@ SqueakMacOSSqueakSistaSpurConfig >> interpreterClass [
 	^ CoInterpreter
 ]
 
-{ #category : #accessing }
-SqueakMacOSSqueakSistaSpurConfig >> platformName [
-	^ 'Mac OS'
-]
-
 { #category : #'bundle strings' }
 SqueakMacOSSqueakSistaSpurConfig >> plistFile [
 

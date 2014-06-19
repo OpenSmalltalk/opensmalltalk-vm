@@ -77,6 +77,11 @@ SqueakWindowsConfig >> msysPathFor: aPath [
 
 ]
 
+{ #category : #'as yet unclassified' }
+SqueakWindowsConfig >> platformName [
+	^self win32PlatformName
+]
+
 { #category : #'source files' }
 SqueakWindowsConfig >> platformSources [
 	"files added from platform/win32/vm dir "
