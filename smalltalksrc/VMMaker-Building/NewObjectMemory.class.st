@@ -404,6 +404,13 @@ NewObjectMemory >> characterValueOf: oop [
 	^self integerValueOf: (self fetchPointer: 0 ofObject: oop)
 ]
 
+{ #category : #allocation }
+NewObjectMemory >> checkAllocFiller [
+	<doNotGenerate>
+	"in the Spur bootstrap coInterpreter may not be initialized..."
+	^coInterpreter notNil and: [coInterpreter checkAllocFiller]
+]
+
 { #category : #accessing }
 NewObjectMemory >> checkForLeaks [
 	^checkForLeaks
@@ -2012,7 +2019,7 @@ NewObjectMemory >> maybeFillWithAllocationCheckFillerFrom: start to: end [
 	<var: 'start' type: #usqInt>
 	<var: 'end' type: #usqInt>
 	<var: 'p' type: #usqInt>
-	coInterpreter checkAllocFiller ifTrue:
+	self checkAllocFiller ifTrue:
 		[start to: end by: BytesPerWord do:
 			[:p| self longAt: p put: p]]
 ]

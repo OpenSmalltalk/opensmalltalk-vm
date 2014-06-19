@@ -2543,6 +2543,13 @@ SpurMemoryManager >> cheapIsInMemory: address [
 	^address >= newSpaceStart and: [address < endOfMemory]
 ]
 
+{ #category : #allocation }
+SpurMemoryManager >> checkAllocFiller [
+	<doNotGenerate>
+	"in the Spur bootstrap coInterpreter may not be initialized..."
+	^coInterpreter notNil and: [coInterpreter checkAllocFiller]
+]
+
 { #category : #initialization }
 SpurMemoryManager >> checkCompactIndex: classIndex isClass: specialIndex named: name [
 	"Check that a class the VM assumes is compact has the right index."
@@ -5200,7 +5207,7 @@ SpurMemoryManager >> initSpaceForAllocationCheck: aNewSpace limit: limit [
 	<var: 'aNewSpace' type: #'SpurNewSpaceSpace *'>
 	<var: 'limit' type: #usqInt>
 	memory ifNotNil:
-		[coInterpreter checkAllocFiller ifTrue:
+		[self checkAllocFiller ifTrue:
 			[aNewSpace start
 				to: limit - 1
 				by: self wordSize
