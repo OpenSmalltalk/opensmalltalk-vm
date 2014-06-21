@@ -110,14 +110,9 @@ SqueakCMakeVMMakerAbstractBuilder class >> availableBuildTypes [
 
 { #category : #queries }
 SqueakCMakeVMMakerAbstractBuilder class >> availableBuildTypesFor: aSymbol [
+	self break.
 	default ifNil:[default:= self new].
 	^default availableBuildTypesFor: aSymbol
-]
-
-{ #category : #queries }
-SqueakCMakeVMMakerAbstractBuilder class >> availableBuilds [
-	default ifNil:[default:= self new].
-	^default availableBuilds
 ]
 
 { #category : #queries }
@@ -210,7 +205,15 @@ SqueakCMakeVMMakerAbstractBuilder >> allBuildConfigurations [
 
 { #category : #queries }
 SqueakCMakeVMMakerAbstractBuilder >> availableBuildTypes [
-	^self buildTypeAndDirectoryInfo keys asSortedCollection
+	"abstract class pass through for concrete instance"
+	^self availableBuildTypes: (self configurationsCategory)
+]
+
+{ #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder >> availableBuildTypes: aCategoryName [
+	"answer the CMakeVMakerSqueak configurations in a Smalltalk category"
+	^((self configurationDictionary:aCategoryName) keys asSortedCollection) sort
+
 
 ]
 
@@ -235,12 +238,6 @@ SqueakCMakeVMMakerAbstractBuilder >> availableBuildTypesFor: aSymbol inCategory:
 
 
 
-]
-
-{ #category : #queries }
-SqueakCMakeVMMakerAbstractBuilder >> availableBuilds [
-	"abstract class pass through for concrete instance"
-	^self availableBuilds: (self configurationsCategory)
 ]
 
 { #category : #queries }
@@ -316,11 +313,11 @@ SqueakCMakeVMMakerAbstractBuilder >> configureABuildFor: configSymbol withBuildT
 				config := (Smalltalk at: configSymbol) new.                              "verify this config can handle this build type."
 				config excludeFromBuild                                                         "has a developer excluded this build manually?"
 					ifTrue:[^self userErrorConfigMarkedAsExcludeFromBuild: configSymbol].   
-				i:=config availableBuilds indexOf:typeSymbol                                    
+				i:=config availableBuildTypes indexOf:typeSymbol                                    
 						ifAbsent:[^self userErrorInvalidBuildType: typeSymbol "this config does not support this build type"
 										forConfiguration: configSymbol 
-										hasTypes: config availableBuilds].
-
+										hasTypes: config availableBuildTypes].
+				self break.
 				(config configureForBuildType: typeSymbol) value.                             "config configure yourself"
 				^self]
 		ifFalse:[^self userErrorInvalidTarget: configSymbol]

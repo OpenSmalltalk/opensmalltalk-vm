@@ -127,25 +127,6 @@ External:
 '
 ]
 
-{ #category : #'thirdparty libs' }
-SqueakWin32x86Config >> addThirdpartyLibrary: libName [
-	| libs lib |
-	
-	libs := self thirdpartyLibs.
-	
-	lib :=  libs 
-		detect: [:each | each canonicalName = libName ] 
-		ifNone: [ nil ].
-		
-	lib ifNil: [ 
-		lib := SqueakCMThirdpartyLibrary named: libName config: self.
-		"add dependencies first, so thirpartyLibs collection will be naturally dependency sorted"
-		lib dependencies do: [:dep | self addThirdpartyLibrary: dep ].
-		libs add: lib ].
-
-	^ lib
-]
-
 { #category : #cmake }
 SqueakWin32x86Config >> availableBuilds [
 	^SqueakCMakeVMMakerAbstractBuilder default allBuildConfigurations copyWithoutAll:#(#assert #assertWithHeartbeatTimer #debugMultiThreadedFFI #debugWithHeartbeatTimer #release #releaseHeartbeatTimer)
@@ -232,43 +213,6 @@ SqueakWin32x86Config >> configureFilePlugin: maker [
 
 
 
-]
-
-{ #category : #'cmake configuration' }
-SqueakWin32x86Config >> configureForBuildType: aSymbol [
-	| d |
-	"provide a concrete builder with the buildType and configureBuildX method to invoke"
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	self configureNoBuildType.                "reset all internal flags"
-	d 
-		at: #build 
-		put: [self buildType:#build.  self configureBuild];
-
-		at: #buildAssert 
-		put: [self buildType: #buildAssert.  	self configureBuildAssert];
-
-		at: #buildAssertITimerHeartbeat 
-		put:     [ self buildType: #buildAssertITimerHeartbeat.   self configureBuildAssertITimerHeartbeat];
-
-            at:#buildDebug 
-		put: [self buildType: #buildDebug.  self configureBuildDebug];
-
-		at: #buildDebugITimerHeartbeat 
-		put:  [self buildType: #buildDebugITimerHeartbeat.   self configureBuildDebugITimerHeartbeat];
-
-		at: #buildITimerHeartbeat 
-		put: [self buildType:#buildITimerHeartbeat.    self configureBuildIHeartbeatTimer];
-
-		at: #buildMultiThreaded 
-		put:  [self buildType:#buildMultiThreaded . self configureBuildMultiThreaded];
-
-		at: #buildMultiThreadedAssert 
-		put: [self buildType: #buildMultiThreadedAssert. self configureBuildMultiThreadedAssert];
-
-		at: #buildMultiThreadedDebug  
-		put: [self buildType: #buildMultiThreadedDebug. self configureBuildMultiThreadedDebug].
-
-     ^(d at: aSymbol).
 ]
 
 { #category : #cmake }
