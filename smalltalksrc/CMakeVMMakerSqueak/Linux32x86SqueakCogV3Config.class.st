@@ -26,73 +26,57 @@ Linux32x86SqueakCogV3Config >> cogitClass [
 	^ StackToRegisterMappingCogit 
 ]
 
-{ #category : #'compiler flags' }
-Linux32x86SqueakCogV3Config >> commonCompilerFlags [
-	^ {
-		'-DLSB_FIRST=1'. 
-		'-DUSE_GLOBAL_STRUCT=0'. 
-		'-DCOGMTVM=0'. 
-		'-m32'.
-		'-DENABLE_FAST_BLT ' } 	
-	
+{ #category : #'cmake buildType redirects' }
+Linux32x86SqueakCogV3Config >> compilerFlagsBuild [
+	^{}
 ]
 
-{ #category : #'compiler flags' }
-Linux32x86SqueakCogV3Config >> compilerFlagsDebug [
-"
-SystemNavigation default browseMethodsWhoseNamesContain: ''compilerFlagsRelease''
-"
-	
+{ #category : #'cmake buildType redirects' }
+Linux32x86SqueakCogV3Config >> compilerFlagsBuildAssert [
+	^self compilerFlagsBuild
 
-	^ {
-		'-g3'. 
-		'-O0'. 
-		'-msse2'. 
-		'-D_GNU_SOURCE'. 
-		'-DITIMER_HEARTBEAT=1'. 
-		'-DNO_VM_PROFILE=1'. 
-		'-DDEBUGVM=1' }
 ]
 
-{ #category : #'compiler flags' }
-Linux32x86SqueakCogV3Config >> compilerFlagsRelease [
-"
-SystemNavigation default browseMethodsWhoseNamesContain: ''compilerFlagsRelease''
-"
-	^ {
-		'-g0'. 
-		'-O2'. 
-		'-fno-tree-pre'. 
-		'-fno-caller-saves'. 
-		'-msse2'. 
-		'-D_GNU_SOURCE'. 
-		'-DNDEBUG'. 
-		'-DITIMER_HEARTBEAT=1'. 
-		'-DNO_VM_PROFILE=1'. 
-		'-DDEBUGVM=0' }
+{ #category : #'cmake buildType redirects' }
+Linux32x86SqueakCogV3Config >> compilerFlagsBuildAssertITimerHeartbeat [
+	^self compilerFlagsBuild
+
 ]
 
-{ #category : #sources }
-Linux32x86SqueakCogV3Config >> coreSources [
-	"files to include from src/vm dir"
-	^ #(
-		'cogit.c'
-		'gcc3x-cointerp.c'
-		)
+{ #category : #'cmake buildType redirects' }
+Linux32x86SqueakCogV3Config >> compilerFlagsBuildDebug [
+	^self compilerFlagsBuild
+
 ]
 
-{ #category : #plugins }
-Linux32x86SqueakCogV3Config >> defaultExternalPlugins [
-	""
-	self flag:'tty'. "UUIDPlugin does not build on my linux system. fix this"
-	^ (super defaultExternalPlugins copyWithoutAll: #(#UUIDPlugin #UnixOSProcessPlugin))
+{ #category : #'cmake buildType redirects' }
+Linux32x86SqueakCogV3Config >> compilerFlagsBuildDebugITimerHeartbeat [
+	^self compilerFlagsBuild
+
 ]
 
-{ #category : #plugins }
-Linux32x86SqueakCogV3Config >> defaultInternalPlugins [
-	""
-	self flag:'tty'. "UUIDPlugin does not build on my linux system. fix this"
-	^ (super defaultInternalPlugins copyWithoutAll: #(#VMProfileLinuxSupportPlugin))
+{ #category : #'cmake buildType redirects' }
+Linux32x86SqueakCogV3Config >> compilerFlagsBuildITimerHeartbeat [
+	^self compilerFlagsBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86SqueakCogV3Config >> compilerFlagsBuildMultiThreaded [
+	^self compilerFlagsBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86SqueakCogV3Config >> compilerFlagsBuildMultiThreadedAssert [
+	^self compilerFlagsBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86SqueakCogV3Config >> compilerFlagsBuildMultiThreadedDebug [
+	^self compilerFlagsBuild
+
 ]
 
 { #category : #cmake }
@@ -101,10 +85,18 @@ Linux32x86SqueakCogV3Config >> dirBuildLanguageVMMM [
 	^self squeakCogV3
 ]
 
+{ #category : #'cmake directory ' }
+Linux32x86SqueakCogV3Config >> dirInstall [
+	"the directory of the finished product.. the place where 'make install' puts stuff.
+	SystemNavigation default browseMethodsWhoseNamesContain: 'outputDir'
+      "
+	^self squeakCogV3
+]
+
 { #category : #cmake }
 Linux32x86SqueakCogV3Config >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
-	^true
+	^false
 ]
 
 { #category : #cmake }
@@ -115,14 +107,4 @@ Linux32x86SqueakCogV3Config >> executableName [
 { #category : #'source generation' }
 Linux32x86SqueakCogV3Config >> interpreterClass [
 	^ CoInterpreter
-]
-
-{ #category : #utils }
-Linux32x86SqueakCogV3Config >> setExtraTargetProperties: maker [
-
-	maker setTargetProperties: 'LIBS "-lptrhead -luuid"'.
-	maker setTargetProperties: 'LDFLAGS "-Wl -z now"'.
-
-	super setExtraTargetProperties: maker.
-
 ]

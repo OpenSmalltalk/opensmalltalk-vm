@@ -252,6 +252,26 @@ Linux64Config >> configH [
 																																																																				'
 ]
 
+{ #category : #'source files' }
+Linux64Config >> coreSources [
+	"files to include from src/vm dir"
+	^ #(
+		'cogit.c'
+		'gcc3x-cointerp.c'
+		)
+]
+
+{ #category : #'source files' }
+Linux64Config >> crossSources [ 
+	^#(
+			'sqHeapMap.c'
+			'sqTicker.c'
+			'sqExternalSemaphores.c'
+			'sqNamedPrims.c'
+			'sqVirtualMachine.c'
+		)
+]
+
 { #category : #plugins }
 Linux64Config >> defaultExternalPlugins [
 	^ #(SqueakSSL	)

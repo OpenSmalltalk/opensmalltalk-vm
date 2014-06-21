@@ -18,13 +18,13 @@ HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 
 "
 Class {
-	#name : #SqueakMacOSV3Config,
-	#superclass : #SqueakMacOSConfig,
-	#category : #'CMakeVMMakerSqueak-MacOS'
+	#name : #SqueakIOSConfig,
+	#superclass : #SqueakMacintoshConfig,
+	#category : #'CMakeVMMakerSqueak-IOS'
 }
 
 { #category : #'as yet unclassified' }
-SqueakMacOSV3Config class >> licenseTemplate [
+SqueakIOSConfig class >> licenseTemplate [
 	^'Squeak  {1} license information
 ==============================
 
@@ -84,7 +84,7 @@ interpreter.
 ]
 
 { #category : #'as yet unclassified' }
-SqueakMacOSV3Config class >> pluginsTemplate [
+SqueakIOSConfig class >> pluginsTemplate [
 	^'Squeak {1} ships with the following plugins already built:
 		
 Internal: 
@@ -98,8 +98,14 @@ External:
 '
 ]
 
+{ #category : #cmake }
+SqueakIOSConfig >> availableBuilds [
+	^SqueakCMakeVMMakerAbstractBuilder default allBuildConfigurations copyWithoutAll:#(#assert #assertWithHeartbeatTimer #debugMultiThreadedFFI #debugWithHeartbeatTimer #releaseHeartbeatTimer )
+
+]
+
 { #category : #accessing }
-SqueakMacOSV3Config >> cMakeMacros [ 
+SqueakIOSConfig >> cMakeMacros [ 
 	^'macro(add_framework appname fwname)
     find_library(FRAMEWORK_${fwname}
         NAMES ${fwname}
@@ -116,7 +122,7 @@ endmacro(add_framework)'
 ]
 
 { #category : #'plugin extra rules' }
-SqueakMacOSV3Config >> configureB3DAcceleratorPlugin: maker [
+SqueakIOSConfig >> configureB3DAcceleratorPlugin: maker [
 	"extra rules for B3DAcceleratorPlugin"
 	
 	super configureB3DAcceleratorPlugin: maker.  
@@ -128,12 +134,12 @@ SqueakMacOSV3Config >> configureB3DAcceleratorPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakMacOSV3Config >> configureClipboardExtendedPlugin: maker [
+SqueakIOSConfig >> configureClipboardExtendedPlugin: maker [
 	
 ]
 
 { #category : #'plugin extra rules' }
-SqueakMacOSV3Config >> configureCroquetPlugin: maker [ 
+SqueakIOSConfig >> configureCroquetPlugin: maker [ 
 	"extra rules for CroquetPlugin"
 
 	super configureCroquetPlugin: maker.  
@@ -142,7 +148,7 @@ SqueakMacOSV3Config >> configureCroquetPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakMacOSV3Config >> configureFFIPlugin: maker [
+SqueakIOSConfig >> configureFFIPlugin: maker [
 	super configureFFIPlugin: maker.
 	maker addPlatformSources: #( "'sqMacIntel-Win32.c'"
 		'x86-sysv-MacIntel.c'
@@ -151,7 +157,7 @@ SqueakMacOSV3Config >> configureFFIPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakMacOSV3Config >> configureFT2Plugin: maker [
+SqueakIOSConfig >> configureFT2Plugin: maker [
 	"extra rules for Freetype plugin.
 	a custom rule to build freetype library"
 	| lib |
@@ -170,7 +176,7 @@ SqueakMacOSV3Config >> configureFT2Plugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakMacOSV3Config >> configureInternetConfigPlugin: maker [
+SqueakIOSConfig >> configureInternetConfigPlugin: maker [
 	"extra rules for InternetConfigPlugin"
 	
 	super configureInternetConfigPlugin: maker.  
@@ -179,7 +185,7 @@ SqueakMacOSV3Config >> configureInternetConfigPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakMacOSV3Config >> configureJoystickTabletPlugin: maker [ 
+SqueakIOSConfig >> configureJoystickTabletPlugin: maker [ 
 	"extra rules for JoystickTabletPlugin"
 	
 	super configureJoystickTabletPlugin: maker.  
@@ -195,7 +201,7 @@ SqueakMacOSV3Config >> configureJoystickTabletPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakMacOSV3Config >> configureLocalePlugin: maker [ 
+SqueakIOSConfig >> configureLocalePlugin: maker [ 
 	"extra rules for LocalePlugin"
 
 	super configureLocalePlugin: maker.  
@@ -204,7 +210,7 @@ SqueakMacOSV3Config >> configureLocalePlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakMacOSV3Config >> configureMIDIPlugin: maker [ 
+SqueakIOSConfig >> configureMIDIPlugin: maker [ 
 	"extra rules for MIDIPlugin"
 
 	super configureMIDIPlugin: maker.  
@@ -212,7 +218,7 @@ SqueakMacOSV3Config >> configureMIDIPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakMacOSV3Config >> configureMpeg3Plugin: maker [
+SqueakIOSConfig >> configureMpeg3Plugin: maker [
 
 	super configureMpeg3Plugin: maker.
 	
@@ -222,12 +228,12 @@ SqueakMacOSV3Config >> configureMpeg3Plugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakMacOSV3Config >> configureObjectiveCPlugin: maker [
+SqueakIOSConfig >> configureObjectiveCPlugin: maker [
 	maker doNotGenerate: true
 ]
 
 { #category : #'plugin extra rules' }
-SqueakMacOSV3Config >> configurePlugin: aPlugin with: generator [
+SqueakIOSConfig >> configurePlugin: aPlugin with: generator [
 
 	generator isExternal ifTrue: [
 		" set output directory for dynamic library to Resources subdir in .app bundle location "
@@ -240,7 +246,7 @@ SqueakMacOSV3Config >> configurePlugin: aPlugin with: generator [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakMacOSV3Config >> configureQuicktimePlugin: maker [
+SqueakIOSConfig >> configureQuicktimePlugin: maker [
 	
 	maker includeDirectories: '${pluginPlatform}'.
 	maker includeDirectories: '${crossDir}/plugins/SurfacePlugin'.
@@ -253,7 +259,7 @@ SqueakMacOSV3Config >> configureQuicktimePlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakMacOSV3Config >> configureSecurityPlugin: maker [ 
+SqueakIOSConfig >> configureSecurityPlugin: maker [ 
 	"extra rules for SecurityPlugin"
 
 	super configureSecurityPlugin: maker.  
@@ -262,7 +268,7 @@ SqueakMacOSV3Config >> configureSecurityPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakMacOSV3Config >> configureSerialPlugin: maker [ 
+SqueakIOSConfig >> configureSerialPlugin: maker [ 
 	"extra rules for SerialPlugin"
 
 	super configureSoundPlugin: maker.  
@@ -276,7 +282,7 @@ SqueakMacOSV3Config >> configureSerialPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakMacOSV3Config >> configureSocketPlugin: maker [ 
+SqueakIOSConfig >> configureSocketPlugin: maker [ 
 	"extra rules for SoundPlugin"
 
 	super configureSoundPlugin: maker.  
@@ -290,7 +296,7 @@ SqueakMacOSV3Config >> configureSocketPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakMacOSV3Config >> configureSoundGenerationPlugin: maker [ 
+SqueakIOSConfig >> configureSoundGenerationPlugin: maker [ 
 	"extra rules for SoundPlugin"
 
 	maker doNotGenerate: true. 
@@ -306,13 +312,13 @@ SqueakMacOSV3Config >> configureSoundGenerationPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakMacOSV3Config >> configureTestOSAPlugin: maker [
+SqueakIOSConfig >> configureTestOSAPlugin: maker [
 		
 	maker addFrameworks: #( 'Carbon'  'ApplicationServices' ).
 ]
 
 { #category : #'plugin extra rules' }
-SqueakMacOSV3Config >> configureUnixOSProcessPlugin: maker [ 
+SqueakIOSConfig >> configureUnixOSProcessPlugin: maker [ 
 	"extra rules for UnixOSProcessPlugin"
 
 	maker includeDirectories: '${crossDir}/plugins/FilePlugin'.
@@ -320,7 +326,7 @@ SqueakMacOSV3Config >> configureUnixOSProcessPlugin: maker [
 ]
 
 { #category : #accessing }
-SqueakMacOSV3Config >> defaultDirectoriesFromGitDir: gitRepository [
+SqueakIOSConfig >> defaultDirectoriesFromGitDir: gitRepository [
 	"Set the default values for all necessary directories taking into account the Git repostiory. An example to use this method is:
 	MTCocoaIOSCogJitDebugConfig new
 	defaultDirectoriesFromGitDir: '/Users/mariano/Pharo/vm/git/cogVM/blessed';
@@ -339,14 +345,92 @@ SqueakMacOSV3Config >> defaultDirectoriesFromGitDir: gitRepository [
 	
 ]
 
+{ #category : #plugins }
+SqueakIOSConfig >> defaultExternalPlugins [
+
+	^ #(
+		BochsIA32Plugin
+		CroquetPlugin
+		ThreadedIA32FFIPlugin "SqueakFFIPrims"
+		FloatArrayPlugin
+		FloatMathPlugin
+		Mpeg3Plugin
+		QuicktimePlugin
+"		TestOSAPlugin  - not works"
+		"UnixOSProcessPlugin ?? "
+		)
+]
+
+{ #category : #plugins }
+SqueakIOSConfig >> defaultInternalPlugins [
+
+	^ #(
+		ADPCMCodecPlugin
+		AsynchFilePlugin
+		B3DAcceleratorPlugin
+		BalloonEnginePlugin "B2DPlugin" 
+		BitBltSimulation "BitBltPlugin"
+		BMPReadWriterPlugin
+		DeflatePlugin  "ZipPlugin"
+		DropPlugin
+		DSAPlugin "DSAPrims"
+		FFTPlugin
+		FilePlugin
+		HostWindowPlugin
+		IA32ABIPlugin "IA32ABI"
+		InternetConfigPlugin
+		JoystickTabletPlugin
+		JPEGReaderPlugin
+		JPEGReadWriter2Plugin
+		KlattSynthesizerPlugin "Klatt"
+		LargeIntegersPlugin "LargeIntegers"
+		LocalePlugin
+		MacMenubarPlugin
+		Matrix2x3Plugin
+		MIDIPlugin
+		MiscPrimitivePlugin
+		QVMProfileMacSupportPlugin
+		RePlugin
+		SecurityPlugin
+		SerialPlugin
+		SocketPlugin
+		SoundCodecPlugin "SoundCodecPrims"
+		SoundGenerationPlugin
+		SoundPlugin
+		StarSqueakPlugin
+		SurfacePlugin
+		UUIDPlugin
+		)
+]
+
 { #category : #cmake }
-SqueakMacOSV3Config >> excludeFromBuild [
+SqueakIOSConfig >> dirBuildPlatform [
+	"the directory for the platform. example: build.linux32x86"
+	^self dirMacOS
+]
+
+{ #category : #cmake }
+SqueakIOSConfig >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true
 ]
 
+{ #category : #'source files' }
+SqueakIOSConfig >> extraSources [
+	" mac VM using some unix sources"
+	
+	^ 
+	'${platformsDir}/unix/plugins/SocketPlugin/sqUnixSocket.c 
+	${platformsDir}/unix/vm/aio.c 
+	${platformsDir}/unix/plugins/AsynchFilePlugin/sqUnixAsynchFile.c
+	${platformsDir}/unix/vm/sqUnixHeartbeat.c
+	${platformsDir}/unix/vm/sqUnixVMProfile.c
+	${platformsDir}/unix/vm/sqUnixThreads.c
+	${resources}'
+]
+
 { #category : #utils }
-SqueakMacOSV3Config >> fixLibsTemplate [
+SqueakIOSConfig >> fixLibsTemplate [
 
 ^
 'include(GetPrerequisites)
@@ -400,7 +484,7 @@ endforeach(lib)
 ]
 
 { #category : #utils }
-SqueakMacOSV3Config >> postBuildActions: gen [
+SqueakIOSConfig >> postBuildActions: gen [
 
 	" override to add custom rules after all targets is defined "
 	
@@ -426,7 +510,7 @@ SqueakMacOSV3Config >> postBuildActions: gen [
 ]
 
 { #category : #accessing }
-SqueakMacOSV3Config >> resourcesDir [ 
+SqueakIOSConfig >> resourcesDir [ 
 	"Answer the value of resourcesDir"
 
 	^ resourcesDir ifNil: [ resourcesDir := (self topDir / 'macbuild/resources') fullName ]
@@ -434,13 +518,13 @@ SqueakMacOSV3Config >> resourcesDir [
 ]
 
 { #category : #accessing }
-SqueakMacOSV3Config >> resourcesDir: anObject [
+SqueakIOSConfig >> resourcesDir: anObject [
 	"Set the value of platformsDir"
 
 	resourcesDir := anObject
 ]
 
 { #category : #accessing }
-SqueakMacOSV3Config >> resourcesDirName [
+SqueakIOSConfig >> resourcesDirName [
 	^ 'macbuild/resources'
 ]
