@@ -262,6 +262,17 @@ Linux64x86w32BitConfig >> coreSources [
 		)
 ]
 
+{ #category : #sources }
+Linux64x86w32BitConfig >> crossSources [ 
+	^#(
+			'sqHeapMap.c'
+			'sqTicker.c'
+			'sqExternalSemaphores.c'
+			'sqNamedPrims.c'
+			'sqVirtualMachine.c'
+		)
+]
+
 { #category : #plugins }
 Linux64x86w32BitConfig >> defaultExternalPlugins [
 " tty 2014.06.10  cut-n-paste from Cog/build.linux32x86/newspeak.cog.spur/build/plugins.ext"

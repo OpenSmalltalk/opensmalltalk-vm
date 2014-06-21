@@ -19,7 +19,7 @@ HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {
 	#name : #SqueakCocoaIOSConfig,
-	#superclass : #SqueakMacOSV3Config,
+	#superclass : #SqueakIOSConfig,
 	#category : #'CMakeVMMakerSqueak-IOS'
 }
 

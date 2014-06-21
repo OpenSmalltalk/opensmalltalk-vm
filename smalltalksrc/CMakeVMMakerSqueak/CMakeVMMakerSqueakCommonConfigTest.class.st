@@ -129,47 +129,8 @@ CMakeVMMakerSqueakCommonConfigTest >> testCrossSources [
 				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
 					ifTrue:[ 
 							o:= configuration new.
-							self assert:(o  crossSources isArray)]]]
-
-
-
-
-
-
-
-
-]
-
-{ #category : #'as yet unclassified' }
-CMakeVMMakerSqueakCommonConfigTest >> testDefaultExternalPlugins [
-	"for each builder, make sure all its configurations provides defaultExternalPlugins"
-	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
-					ifTrue:[ 
-							o:= configuration new.
-							self assert:(o  defaultExternalPlugins isArray)]]]
-
-
-
-
-
-
-
-
-]
-
-{ #category : #'as yet unclassified' }
-CMakeVMMakerSqueakCommonConfigTest >> testDefaultInternalPlugins [
-	"for each builder, make sure all its configurations provides defaultInternalPlugins"
-	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
-					ifTrue:[ 
-							o:= configuration new.
-							self assert:(o  defaultInternalPlugins isArray)]]]
+							(o excludeFromBuild not)
+								ifTrue:[	self assert:(o  crossSources isArray)]]]]
 
 
 
@@ -242,26 +203,6 @@ CMakeVMMakerSqueakCommonConfigTest >> testExectuableName [
 ]
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakCommonConfigTest >> testExternalPlugins [
-	"for each builder, make sure all its configurations provides externalePlugins "
-	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
-					ifTrue:[ 
-							o:= configuration new.
-							self assert:(o  externalPlugins isArray)]]]
-
-
-
-
-
-
-
-
-]
-
-{ #category : #'as yet unclassified' }
 CMakeVMMakerSqueakCommonConfigTest >> testExternalsModuleDir [
 	"for each builder, make sure all its configurations provide a build directory name "
 	SqueakCMakeVMMakerAbstractBuilder 
@@ -304,26 +245,6 @@ CMakeVMMakerSqueakCommonConfigTest >> testExtraSources [
 ]
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakCommonConfigTest >> testInternalPlugins [
-	"for each builder, make sure all its configurations provides internalPlutgins "
-	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
-					ifTrue:[ 
-							o:= configuration new.
-							self assert:(o  internalPlugins isArray)]]]
-
-
-
-
-
-
-
-
-]
-
-{ #category : #'as yet unclassified' }
 CMakeVMMakerSqueakCommonConfigTest >> testInterpreterClass [
 	"for each builder that does not exclude itself from builds, make sure it returns an InterpreterClass "
 	SqueakCMakeVMMakerAbstractBuilder 
@@ -344,38 +265,6 @@ CMakeVMMakerSqueakCommonConfigTest >> testInterpreterClass [
 										self assert:(o  interpreterClassBuildITimerMultiThreaded inheritsFrom: InterpreterPrimitives).
 										self assert:(o  interpreterClassBuildITimerMultiThreadedAssert inheritsFrom: InterpreterPrimitives).
 										self assert:(o  interpreterClassBuildITimerMultiThreadedDebug inheritsFrom: InterpreterPrimitives)]]]]
-
-
-
-
-
-
-
-
-]
-
-{ #category : #'as yet unclassified' }
-CMakeVMMakerSqueakCommonConfigTest >> testLinkFlags [
-	"make sure each enabled Configuration returns from each buildType configuration correctly"
-	|buildTypes|
-	SqueakCMakeVMMakerAbstractBuilder	reset.
-	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:builder |
-	 | concreteConfiguration concreteBuilder|
-			concreteBuilder:=(Smalltalk at: (builder name asSymbol)) new.
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (concreteBuilder configurationsCategory))
-					ifTrue:[ 
-							concreteConfiguration:= configuration new.
-							(concreteConfiguration excludeFromBuild not)
-								ifTrue:[
-									buildTypes := concreteBuilder availableBuildTypesFor: concreteConfiguration class name asSymbol.
-									buildTypes do:[:buildType |
-											builder configureA: (configuration name) forBuildType: buildType.
-													self assert:(concreteConfiguration  linkFlags isString)]]]]]
-											
-
-
 
 
 

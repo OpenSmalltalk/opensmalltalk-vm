@@ -16,7 +16,7 @@ HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {
 	#name : #SqueakMacOSXPowerPCConfig,
-	#superclass : #SqueakMacOSConfig,
+	#superclass : #SqueakMacintoshConfig,
 	#category : #'CMakeVMMakerSqueak-MacOSPowerPC'
 }
 
@@ -334,6 +334,69 @@ SqueakMacOSXPowerPCConfig >> defaultDirectoriesFromGitDir: gitRepository [
 	
 	
 	
+]
+
+{ #category : #plugins }
+SqueakMacOSXPowerPCConfig >> defaultExternalPlugins [
+
+	^ #(
+		BochsIA32Plugin
+		CroquetPlugin
+		ThreadedIA32FFIPlugin "SqueakFFIPrims"
+		FloatArrayPlugin
+		FloatMathPlugin
+		Mpeg3Plugin
+		QuicktimePlugin
+"		TestOSAPlugin  - not works"
+		"UnixOSProcessPlugin ?? "
+		)
+]
+
+{ #category : #plugins }
+SqueakMacOSXPowerPCConfig >> defaultInternalPlugins [
+
+	^ #(
+		ADPCMCodecPlugin
+		AsynchFilePlugin
+		B3DAcceleratorPlugin
+		BalloonEnginePlugin "B2DPlugin" 
+		BitBltSimulation "BitBltPlugin"
+		BMPReadWriterPlugin
+		DeflatePlugin  "ZipPlugin"
+		DropPlugin
+		DSAPlugin "DSAPrims"
+		FFTPlugin
+		FilePlugin
+		HostWindowPlugin
+		IA32ABIPlugin "IA32ABI"
+		InternetConfigPlugin
+		JoystickTabletPlugin
+		JPEGReaderPlugin
+		JPEGReadWriter2Plugin
+		KlattSynthesizerPlugin "Klatt"
+		LargeIntegersPlugin "LargeIntegers"
+		LocalePlugin
+		MacMenubarPlugin
+		Matrix2x3Plugin
+		MIDIPlugin
+		MiscPrimitivePlugin
+		QVMProfileMacSupportPlugin
+		RePlugin
+		SecurityPlugin
+		SerialPlugin
+		SocketPlugin
+		SoundCodecPlugin "SoundCodecPrims"
+		SoundGenerationPlugin
+		SoundPlugin
+		StarSqueakPlugin
+		SurfacePlugin
+		UUIDPlugin
+		)
+]
+
+{ #category : #'cmake directory ' }
+SqueakMacOSXPowerPCConfig >> dirBuildPlatform [	
+	^self dirMacOSPowerPC
 ]
 
 { #category : #cmake }

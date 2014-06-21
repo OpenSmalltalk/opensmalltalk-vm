@@ -294,8 +294,7 @@ SqueakAndroidStackEvtConfig >> crossSources [
 
 { #category : #plugins }
 SqueakAndroidStackEvtConfig >> defaultExternalPlugins [
-	^ #(
-	)
+	^ #()
 ]
 
 { #category : #plugins }

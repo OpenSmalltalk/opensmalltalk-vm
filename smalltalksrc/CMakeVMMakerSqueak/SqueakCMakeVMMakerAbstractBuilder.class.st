@@ -280,17 +280,14 @@ SqueakCMakeVMMakerAbstractBuilder >> buildTypeDirectoriesFor: aSymbol inCategory
 { #category : #queries }
 SqueakCMakeVMMakerAbstractBuilder >> configurationDictionary: aCategoryName [
 	| result info|
-	self flag:'tty'. "building this on the fly is slow. Should I cache/lazy initialize?"
-
 	"return a Dictionary of CMakeMakerSqueak-XYZ platform configurations and their associated CMakeVMakerConfigurationInfo "
-
 	result := Dictionary new.
 	Smalltalk globals 
 		allClassesDo:[:c | (c class category asString withoutQuoting = aCategoryName)    "is there a faster lookup method?"
 			ifTrue: [ 
-				info := CMakeVMakerConfigurationInfo new.
-				info visit: c.
-				result at: (c name) put:info.]].
+					info := CMakeVMakerConfigurationInfo new.
+					info visit: c.
+					result at: (c name) put:info]].
 	^result
 
 
