@@ -10,14 +10,14 @@ Class {
 
 { #category : #'compiler flags' }
 SqueakUnixConfig >> commonCompilerFlags [
+	self flag:'tty'. "what can go here? I am leaning to suclassResponsibility."
+	^#()
 
 	"Common compiler flags
-	
-	
 	LSB_FIRST=1 means that target platform is little endian. 
 	set it to 0 for big-endian platforms
 	
-	"
+
 	
 	^ {
 		'-DLSB_FIRST=1'. 
@@ -25,7 +25,12 @@ SqueakUnixConfig >> commonCompilerFlags [
 		'-DCOGMTVM=0'. 
 		'-m32'.
 		'-DENABLE_FAST_BLT ' } 	
-	
+	"	
+]
+
+{ #category : #'compiler flags' }
+SqueakUnixConfig >> compilerFlags [
+	self subclassResponsibility
 ]
 
 { #category : #'headers generation' }

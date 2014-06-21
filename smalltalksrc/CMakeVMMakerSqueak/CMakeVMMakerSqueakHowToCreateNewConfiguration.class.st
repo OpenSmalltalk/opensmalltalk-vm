@@ -195,8 +195,30 @@ CMakeVMMakerSqueakHowToCreateNewConfiguration class >> step4d [
 	^HelpTopic
 		title:'Step 4d. preferredIncludes'
 		contents:
-'TODO: summarize this
+'This is handy when ''make'' cannot find a header.
 
+ For example, when compiling 
+
+I got error:
+Scanning dependencies of target UnixOSProcessPlugin
+/..../oscogvm/src/plugins/UnixOSProcessPlugin/UnixOSProcessPlugin.c:48:26: fatal error: SocketPlugin.h: No such file or directory
+
+From my topDir (oscogvm) I did  a search and found SocketPlugin.h exits in  ./platforms/Cross/plugins/SocketPlugin/SocketPlugin.h
+
+in my root config class for my category, I had...
+
+''${targetPlatform}/plugins/SocketPlugin''
+
+I changed it to 
+
+''${crossDir}/plugins/SocketPlugin''
+
+deleted my files in my build directory, re-ran the generate and...
+
+
+
+	SystemNavigation default browseMethodsWhoseNamesContain: ''preferredIncludes''
+  
 
 A Reminder: Consistent Naming Conventions Are Our Friends!
 

@@ -40,6 +40,7 @@ CMakeVMMakerSqueakMacintoshConfigTest >> testExecutableType [
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakMacintoshConfigTest >> testPlatformName [
+		self flag:'tty'. "todo: fix code smell in hard coded string"
 		#(#SqueakIOSBuilder #SqueakMacOSBuilder  #SqueakMacOSPowerPCBuilder #SqueakMacOSX32x86Builder) 
 		do:[:builder | | o |
 			Smalltalk globals 

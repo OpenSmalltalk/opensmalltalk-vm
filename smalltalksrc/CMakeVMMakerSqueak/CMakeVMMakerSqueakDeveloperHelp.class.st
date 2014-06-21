@@ -5,7 +5,7 @@ Class {
 }
 
 { #category : #pages }
-CMakeVMMakerSqueakDeveloperHelp class >> availableBuilds [
+CMakeVMMakerSqueakDeveloperHelp class >> availableBuildTypes [
 	^HelpTopic
 		title:'configuring available build types'
 		contents:
@@ -258,7 +258,7 @@ The end result is a CMake evironment that is set up to correctly build a VM
 
 { #category : #pages }
 CMakeVMMakerSqueakDeveloperHelp class >> pages [
-	^#(overview prerequisites igorStasenkoDesign plugins organizationOfBuildersConfigs availableBuilds excludeFromBuild executableName extraPluginSettings preferredIncludes setExtraTargetProperties cMakeMacros configH scratch)
+	^#(overview prerequisites igorStasenkoDesign plugins organizationOfBuildersConfigs availableBuildTypes excludeFromBuild executableName extraPluginSettings preferredIncludes setExtraTargetProperties cMakeMacros configH scratch)
 ]
 
 { #category : #pages }
