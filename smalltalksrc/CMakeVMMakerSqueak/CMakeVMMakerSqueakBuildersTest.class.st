@@ -8,10 +8,10 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakBuildersTest >> testAvailableBuilds [
+CMakeVMMakerSqueakBuildersTest >> testAvailableBuildTypes [
 	SqueakCMakeVMMakerAbstractBuilder 
 		subclassesDo:[:c | 
-			self assert: (c default availableBuilds size > 0).]	
+			self assert: (c default availableBuildTypes size > 0).]	
 ]
 
 { #category : #'as yet unclassified' }

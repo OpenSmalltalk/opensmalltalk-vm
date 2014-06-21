@@ -26,6 +26,11 @@ SqueakMacintoshConfig >> commonCompilerFlags [
 ]
 
 { #category : #'compiler flags' }
+SqueakMacintoshConfig >> compilerFlags [
+	self subclassResponsibility
+]
+
+{ #category : #'compiler flags' }
 SqueakMacintoshConfig >> compilerFlagsDebug [
 
 	^ {

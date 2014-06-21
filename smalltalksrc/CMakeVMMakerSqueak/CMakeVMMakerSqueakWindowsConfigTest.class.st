@@ -64,7 +64,7 @@ CMakeVMMakerSqueakWindowsConfigTest >> testExecutableType [
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakWindowsConfigTest >> testPlatformName [
-
+		self flag:'tty'. "todo: fix code smell in hard coded string"
 		#(#SqueakWin32x86Builder) 
 		do:[:builder | | o |
 			Smalltalk globals 

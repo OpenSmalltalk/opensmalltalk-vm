@@ -52,7 +52,7 @@ CMakeVMakerConfigurationInfo >> visit: aVisitor [
 	"I am being visited by a CMakeVMMakerSqueak configuration class. Extract its information and store it in myself"
 	self flag:'tty'. "why am I not storing the instances itself?does this visit stuff really make sense? I am thinking its 'lightweight'. hmmm"
 	v:= aVisitor new.
-	availableBuildTypes := v availableBuilds.
+	availableBuildTypes := v availableBuildTypes.
 	dirBuildPlatform := v dirBuildPlatform.
 	dirSource  := v dirSource.
 	excludeFromBuild := v excludeFromBuild.
