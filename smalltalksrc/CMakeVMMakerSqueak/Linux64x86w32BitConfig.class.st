@@ -402,7 +402,7 @@ Linux64x86w32BitConfig >> preferredIncludes [
  '${targetPlatform}/plugins/MIDIPlugin'
  '${targetPlatform}/plugins/PrintJobPlugin'
  '${targetPlatform}/plugins/SecurityPlugin'
- '${targetPlatform}/plugins/SocketPlugin'
+ '${crossDir}/plugins/SocketPlugin'
  '${targetPlatform}/plugins/SqueakFFIPrims'
  '${targetPlatform}/plugins/UUIDPlugin'    
  '${targetPlatform}/plugins/XDisplayControlPlugin'
@@ -440,4 +440,17 @@ Linux64x86w32BitConfig >> setExtraTargetProperties: maker [
 					
 	super setExtraTargetProperties: maker.
 
+]
+
+{ #category : #utils }
+Linux64x86w32BitConfig >> setGlobalOptions: maker [
+
+	maker set: 'CMAKE_C_COMPILER' to: '/usr/bin/gcc'.
+	maker set: 'CMAKE_CXX_COMPILER' to: '/usr/bin/g++'.
+"	maker set: 'CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH}' to: ' /usr/lib/gcc/x86_64-slackware-linux/4.8.2/'. 
+set any CMake global options, before declaring a project in cmake file
+	
+	set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /opt/local/lib)
+	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions:'
+"
 ]

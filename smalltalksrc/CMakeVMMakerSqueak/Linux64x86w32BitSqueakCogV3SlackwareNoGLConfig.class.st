@@ -89,21 +89,9 @@ Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> cogitClass [
 ]
 
 { #category : #'compiler flags' }
-Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> commonCompilerFlags [
-"	LSB_FIRST=1 means that target platform is little endian. 	set it to 0 for big-endian platforms"
+Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> compilerFlagsBuild [
 	^ {
-		'-DLSB_FIRST=1'. 
-		'-DUSE_GLOBAL_STRUCT=0'. 
-		'-DCOGMTVM=0'. 
-		'-m32'.
-		'-DENABLE_FAST_BLT ' } 	
-	
-]
-
-{ #category : #'compiler flags' }
-Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> compilerFlagsRelease [
-
-	^ {
+		'-m32'. 
 		'-g0'. 
 		'-O2'. 
 		'-fno-tree-pre'. 
@@ -273,11 +261,17 @@ Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> configHBuild [
 
 { #category : #plugins }
 Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> defaultExternalPlugins [
-	^ super defaultExternalPlugins copyWithoutAll: #(#B3DAcceleratorPlugin #BochsIA32Plugin)
-
+	"Removed the B3DAcceleratorPlugin since we don't have OpenGL bindings here"
+	^ (super defaultExternalPlugins copyWithoutAll: #(#B3DAcceleratorPlugin #ThreadedIA32FFIPlugin #InternetConfigPlugin #FT2Plugin))
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #plugins }
+Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> defaultInternalPlugins [
+	"Removed the B3DAcceleratorPlugin since we don't have OpenGL bindings here"
+	^ (super defaultInternalPlugins copyWithoutAll: #(#IA32ABIPlugin #JoystickTabletPlugin #StarSqueakPlugin #SurfacePlugin #SqueakFFIPrims #ThreadedIA32FFIPlugin))
+]
+
+{ #category : #'cmake directory ' }
 Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> dirBuildLanguageVMMM [
 	^self squeakCogV3
 ]
@@ -306,4 +300,9 @@ Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> executableName [
 { #category : #'source generation' }
 Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> interpreterClass [
 	^ CoInterpreter
+]
+
+{ #category : #'compiler flags' }
+Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> linkFlagsBuild [
+	 ^ '-lSM -lICE -ldl  -lpthread -lm -lnsl -lX11'
 ]

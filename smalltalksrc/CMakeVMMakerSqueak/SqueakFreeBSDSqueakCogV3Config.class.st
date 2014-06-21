@@ -23,6 +23,31 @@ SqueakFreeBSDSqueakCogV3Config >> cogitClass [
 
 ]
 
+{ #category : #'compiler flags' }
+SqueakFreeBSDSqueakCogV3Config >> compilerFlagsAssert [
+
+	^ {
+		'-g3'. 
+		'-O0'. 
+		'-msse2'. 
+		'-D_GNU_SOURCE'. 
+		'-DITIMER_HEARTBEAT=1'. 
+		'-DNO_VM_PROFILE=1'. 
+		'-DDEBUGVM=1' }
+]
+
+{ #category : #'compiler flags' }
+SqueakFreeBSDSqueakCogV3Config >> compilerFlagsBuild [
+	"copied from Cog svn in build.linux32x86/build/mvm"
+
+	^ {'-msse2' . 
+           '-D_GNU_SOURCE' .
+           '-D_FILE_OFFSET_BITS=64' . 
+            '-DCOGMTVM=0'
+		}
+
+]
+
 { #category : #cmake }
 SqueakFreeBSDSqueakCogV3Config >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"

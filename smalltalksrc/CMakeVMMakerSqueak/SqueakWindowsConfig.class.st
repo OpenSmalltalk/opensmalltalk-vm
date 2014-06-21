@@ -40,6 +40,11 @@ SqueakWindowsConfig >> commonCompilerFlags [
 		'-DENABLE_FAST_BLT ' }
 ]
 
+{ #category : #'compiler flags' }
+SqueakWindowsConfig >> compilerFlags [
+	self subclassResponsibility
+]
+
 { #category : #accessing }
 SqueakWindowsConfig >> executableType [
 	^ 'WIN32'

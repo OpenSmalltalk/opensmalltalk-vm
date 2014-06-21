@@ -67,6 +67,7 @@ CMakeVMMakerSqueakUnixConfigTest >> testExecutableType [
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakUnixConfigTest >> testPlatformName [
+		self flag:'tty'. "todo: fix code smell in hard coded string"
 	#(#SqueakAndroidBuilder  #SqueakBSDx86Builder #SqueakLinux32ARMv6Builder #SqueakLinux32x86Builder  #SqueakLinux32x86_64Builder #SqueakLinux64x86w32CompatBuilder #SqueakSunOS32x86Builder)
 		do:[:builder | | o |
 			Smalltalk globals 

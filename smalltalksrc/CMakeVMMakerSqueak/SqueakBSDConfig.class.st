@@ -31,6 +31,32 @@ SqueakBSDConfig >> availableBuilds [
 
 ]
 
+{ #category : #'compiler flags' }
+SqueakBSDConfig >> compilerFlagsAssert [
+
+	^ {
+		'-g3'. 
+		'-O0'. 
+		'-msse2'. 
+		'-D_GNU_SOURCE'. 
+		'-DITIMER_HEARTBEAT=1'. 
+		'-DNO_VM_PROFILE=1'. 
+		'-DDEBUGVM=1' }
+]
+
+{ #category : #'compiler flags' }
+SqueakBSDConfig >> compilerFlagsDebug [
+
+	^ {
+		'-g3'. 
+		'-O0'. 
+		'-msse2'. 
+		'-D_GNU_SOURCE'. 
+		'-DITIMER_HEARTBEAT=1'. 
+		'-DNO_VM_PROFILE=1'. 
+		'-DDEBUGVM=1' }
+]
+
 { #category : #'headers generation' }
 SqueakBSDConfig >> configH [
 	self flag:'tty'. "This needs to be customized"
