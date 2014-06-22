@@ -493,7 +493,8 @@ SqueakIPhoneSqueakStackV3Config >> resources [
 { #category : #accessing }
 SqueakIPhoneSqueakStackV3Config >> resourcesDir [ 
 	"Answer the value of resourcesDir"
-	^ resourcesDir ifNil: [ resourcesDir := (self topDir / 'iosbuild' / 'resources') fullName ]
+	self flag:'tty'. "I modified resourcesDir to 'assureExistence' from 'fullname'. if this causes problems, look into that"
+	^ resourcesDir ifNil: [ resourcesDir := (self topDir / 'iosbuild' / 'resources') assureExistence ]
 ]
 
 { #category : #accessing }
