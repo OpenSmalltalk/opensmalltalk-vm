@@ -98,12 +98,6 @@ External:
 '
 ]
 
-{ #category : #cmake }
-SqueakIOSConfig >> availableBuilds [
-	^SqueakCMakeVMMakerAbstractBuilder default allBuildConfigurations copyWithoutAll:#(#assert #assertWithHeartbeatTimer #debugMultiThreadedFFI #debugWithHeartbeatTimer #releaseHeartbeatTimer )
-
-]
-
 { #category : #accessing }
 SqueakIOSConfig >> cMakeMacros [ 
 	^'macro(add_framework appname fwname)

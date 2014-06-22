@@ -8,17 +8,38 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakBuildersTest >> testAvailableBuildTypes [
-	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:c | 
-			self assert: (c default availableBuildTypes size > 0).]	
+CMakeVMMakerSqueakBuildersTest >> testAllAndNoneBuildTypes [
+	self assert: (SqueakCMakeVMMakerAbstractBuilder  allBuildTypes size > 0).
+	self assert: (SqueakCMakeVMMakerAbstractBuilder  noBuildTypes isEmpty).
+	
 ]
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakBuildersTest >> testBuildConfigurations [
-	self assert: (SqueakCMakeVMMakerAbstractBuilder default allBuildConfigurations size > 0).
-	self assert: (SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations size > 0).
+CMakeVMMakerSqueakBuildersTest >> testAvailableBuildConfigurations [
+	SqueakCMakeVMMakerAbstractBuilder 
+		subclassesDo:[:builder | 
+				self assert: (builder availableBuildConfigurations isKindOf:Collection)]
+
+
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakBuildersTest >> testAvailableBuildTypes [
+	SqueakCMakeVMMakerAbstractBuilder 
+		subclassesDo:[:builder | 
+			self assert:(builder availableBuildTypes isKindOf: Collection)]
 	
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakBuildersTest >> testBuildDirectory [
+	SqueakCMakeVMMakerAbstractBuilder 
+		subclassesDo:[:builder | 
+				self assert: (builder buildDirectory isString).
+				self assert:(builder buildDirectory size > 0).
+				]
+
+
 ]
 
 { #category : #'as yet unclassified' }
@@ -31,4 +52,50 @@ CMakeVMMakerSqueakBuildersTest >> testConfigurationsCategory [
 			self assert: (c default configurationsCategory isString).
 			oc addLast: c.
 			self assert: ( (oc occurrencesOf: c) = 1)]	
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakBuildersTest >> testConfigureABuilderForBuildType [
+	SqueakCMakeVMMakerAbstractBuilder 
+		subclassesDo:[:builder | 
+				builder availableBuildConfigurations do:[:configuration | |availablebuildtypes|
+					availablebuildtypes:= builder availableBuildTypesFor: configuration.
+					self assert:(availablebuildtypes isKindOf: Collection).
+					availablebuildtypes do:[:buildtype | 
+						self shouldnt: [builder configureA: configuration forBuildType: buildtype] raise: Error]]]
+
+
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakBuildersTest >> testGetInfoForBuilds [
+	|dict |
+	dict:=SqueakCMakeVMMakerAbstractBuilder getInfoForBuilds.
+	self assert: (dict isKindOf:Dictionary).
+	dict valuesDo:[:anotherDict | 
+				self assert:(anotherDict isKindOf: Dictionary).
+				anotherDict valuesDo:[:info |
+					self assert:( info isKindOf: CMakeVMakerConfigurationInfo)]]
+
+
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakBuildersTest >> testSourceDirectoryFor [
+	SqueakCMakeVMMakerAbstractBuilder 
+		subclassesDo:[:builder | 
+				builder availableBuildConfigurations do:[:configuration | 
+					self assert:((builder sourceDirectoryFor: configuration) isString).
+					self assert:((builder sourceDirectoryFor: configuration) size > 0)]]
+
+
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakBuildersTest >> testUnavailableBuildConfigurations [
+	SqueakCMakeVMMakerAbstractBuilder 
+		subclassesDo:[:builder | 
+				self assert: (builder unAvailableBuildConfigurations isKindOf:Collection)]
+
+
 ]

@@ -88,12 +88,6 @@ External:
 '
 ]
 
-{ #category : #cmake }
-Linux64Config >> availableBuilds [
-	^SqueakCMakeVMMakerAbstractBuilder default allBuildConfigurations copyWithoutAll:#(#releaseMultiThreadedFFI #debugMultiThreadedFFI)
-
-]
-
 { #category : #'headers generation' }
 Linux64Config >> configH [
 	self flag:'tty'. "This needs to be customized"

@@ -11,17 +11,6 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Android'
 }
 
-{ #category : #'as yet unclassified' }
-SqueakAndroidStackEvtConfig class >> availableBuilds [
-	^SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations
-]
-
-{ #category : #cmake }
-SqueakAndroidStackEvtConfig >> availableBuilds [
-	^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations
-
-]
-
 { #category : #'squeak compatibility' }
 SqueakAndroidStackEvtConfig >> buildDirName [
 	^'do not build. see class comment'

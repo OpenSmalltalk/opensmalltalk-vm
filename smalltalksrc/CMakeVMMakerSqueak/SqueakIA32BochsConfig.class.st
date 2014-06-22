@@ -22,19 +22,6 @@ Class {
 	#category : #'CMakeVMMakerSqueak-IA32-Bochs'
 }
 
-{ #category : #accessing }
-SqueakIA32BochsConfig class >> availableBuilds [
-	"SqueakCMakeVMMakerAbstractBuilder  allBuildConfigurations
-	^#(#assert #debug  #release )"
-	^SqueakCMakeVMMakerAbstractBuilder noBuildConfigurations
-]
-
-{ #category : #cmake }
-SqueakIA32BochsConfig >> availableBuilds [
-	^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations
-
-]
-
 { #category : #plugins }
 SqueakIA32BochsConfig >> defaultExternalPlugins [
 	^ #()
@@ -53,5 +40,10 @@ SqueakIA32BochsConfig >> dirBuildPlatform [
 { #category : #cmake }
 SqueakIA32BochsConfig >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
+	^true
+]
+
+{ #category : #testing }
+SqueakIA32BochsConfig >> isAbstractBaseClass [
 	^true
 ]
