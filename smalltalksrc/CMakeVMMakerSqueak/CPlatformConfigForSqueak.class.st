@@ -32,6 +32,11 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
+CPlatformConfigForSqueak class >> isAbstractBaseClass [
+	^true
+]
+
+{ #category : #'as yet unclassified' }
 CPlatformConfigForSqueak class >> licenseTemplate [
 	^'Squeak {1} license information
 ==============================
@@ -141,10 +146,10 @@ CPlatformConfigForSqueak >> androidPlatformName [
 
 { #category : #'cmake configuration' }
 CPlatformConfigForSqueak >> availableBuildTypes [
-	^SqueakCMakeVMMakerAbstractBuilder  default  allBuildConfigurations
+	^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes
 
-	" ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations.
-	  ^(SqueakCMakeVMMakerAbstractBuilder  default  allBuildConfigurations 
+	" ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
+	  ^(SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes
 			copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   
 	"
 ]

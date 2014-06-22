@@ -19,18 +19,6 @@ Class {
 	#category : #'CMakeVMMakerSqueak-BSD32x86'
 }
 
-{ #category : #'as yet unclassified' }
-SqueakBSDConfig class >> availableBuilds [
-	"SqueakCMakeVMMakerAbstractBuilder  allBuildConfigurations"
-	^#(#assert #debug  #release )
-]
-
-{ #category : #cmake }
-SqueakBSDConfig >> availableBuilds [
-	^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations
-
-]
-
 { #category : #'compiler flags' }
 SqueakBSDConfig >> compilerFlagsAssert [
 

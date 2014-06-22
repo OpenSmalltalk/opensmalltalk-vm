@@ -21,8 +21,8 @@ Class {
 }
 
 { #category : #cmake }
-Linux32ARMv6StackV3CrossRaspbianConfig >> availableBuilds [
-	^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations
+Linux32ARMv6StackV3CrossRaspbianConfig >> availableBuildTypes [
+	^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
 
 ]
 

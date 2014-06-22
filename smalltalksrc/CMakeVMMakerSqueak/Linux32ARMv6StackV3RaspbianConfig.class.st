@@ -19,12 +19,6 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Linux32ARMv6'
 }
 
-{ #category : #cmake }
-Linux32ARMv6StackV3RaspbianConfig >> availableBuilds [
-	^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations
-
-]
-
 { #category : #'source generation' }
 Linux32ARMv6StackV3RaspbianConfig >> cogitClass [
 	^ StackToRegisterMappingCogit 
