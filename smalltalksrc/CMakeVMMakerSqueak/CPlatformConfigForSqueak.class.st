@@ -10,6 +10,38 @@ However this can be very easy by just returning the base configuration.
 
 Tests are written to verify that this support infrastructure is in place.
 
+I have two important variables.
+
+excludeFromBuild and isAbstractBaseClass.
+
+excludeFromBuild 
+		is used to exclude a configuration from being built by a Builder.
+		is used to exclude a configuration from Testing.
+
+isAbstractBaseClass 
+		is a class instance variable used by configurations that exclude themselves from being built by a Builder BUT need to be included in 		Testing.
+
+										
+excludeFromBuild  | isAbstractBaseClass  | should build  | should test
+	T					    T                            NO                  YES
+      T					    F                             NO                   NO
+      F					    T                            YES                  YES
+      F                                 F                            YES                  YES
+
+
+The use-case is as follows.
+
+An abstract base class contains a lot of functionality that must be implemented and tested for the system to work, but it is not meant to be compiled.
+
+concrete classes of that AbstractBase class can exclude themselves from being built by builders and by doing so are not tested.
+However, once a concrete configuration is enabled to be built, it must pass all tests.
+
+Linux32x86Config is an example of an AbstractBase class that must pass all testing, but is not buildable.
+Its subclass Linux32x86SqueakCogV3Config needs testing, but a developer can toggle 'exclude from build' to hide it from Builders or make it available to them.
+
+
+
+
 tty.
 "
 Class {
@@ -28,12 +60,22 @@ Class {
 		'generateBuildMultiThreadedAssert',
 		'generateBuildMultiThreadedDebug'
 	],
+	#classInstVars : [
+		'isAbstractBaseClass'
+	],
 	#category : #CMakeVMMakerSqueak
 }
 
 { #category : #'as yet unclassified' }
 CPlatformConfigForSqueak class >> isAbstractBaseClass [
-	^true
+	^isAbstractBaseClass ifNil:[false] ifNotNil:[isAbstractBaseClass]
+
+]
+
+{ #category : #'as yet unclassified' }
+CPlatformConfigForSqueak class >> isAbstractBaseClass: aBoolean [
+	isAbstractBaseClass := aBoolean
+
 ]
 
 { #category : #'as yet unclassified' }
@@ -146,7 +188,7 @@ CPlatformConfigForSqueak >> androidPlatformName [
 
 { #category : #'cmake configuration' }
 CPlatformConfigForSqueak >> availableBuildTypes [
-	^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes
+	self subclassResponsibility.
 
 	" ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
 	  ^(SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes
@@ -168,16 +210,10 @@ CPlatformConfigForSqueak >> buildDirName [
 
 { #category : #'squeak compatability' }
 CPlatformConfigForSqueak >> buildScript [
-	"answer the build script for building everything"
-	
-
-	^ 
-'#!/usr/bin/env bash
-
+	"answer the build script build.sh"
+	^ '#!/usr/bin/env bash
 cmake .
-make
-
-'
+make'
 ]
 
 { #category : #'squeak compatability' }
