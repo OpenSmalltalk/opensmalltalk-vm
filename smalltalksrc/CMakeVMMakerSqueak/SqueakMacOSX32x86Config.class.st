@@ -96,6 +96,16 @@ External:
 '
 ]
 
+{ #category : #'cmake configuration' }
+SqueakMacOSX32x86Config >> availableBuildTypes [
+	 ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
+"	subclasses should use
+
+  ^super availableBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
+	
+
+]
+
 { #category : #accessing }
 SqueakMacOSX32x86Config >> cMakeMacros [ 
 	^'macro(add_framework appname fwname)

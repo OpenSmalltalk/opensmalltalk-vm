@@ -127,6 +127,16 @@ External:
 '
 ]
 
+{ #category : #'cmake configuration' }
+SqueakWin32x86Config >> availableBuildTypes [
+	 ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
+"	subclasses should use
+
+  ^super availableBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
+	
+
+]
+
 { #category : #'plugin extra rules' }
 SqueakWin32x86Config >> configureAsynchFilePlugin:  maker [ 
 	"extra rules for AsynchFilePlugin "

@@ -89,6 +89,16 @@ External:
 '
 ]
 
+{ #category : #'cmake configuration' }
+Linux64x86w32BitConfig >> availableBuildTypes [
+	 ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
+"	subclasses should use
+
+  ^super availableBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
+	
+
+]
+
 { #category : #'headers generation' }
 Linux64x86w32BitConfig >> configH [
 	self flag:'tty'. "This needs to be customized"

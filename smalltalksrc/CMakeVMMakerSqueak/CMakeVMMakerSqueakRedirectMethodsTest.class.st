@@ -59,23 +59,12 @@ CMakeVMMakerSqueakRedirectMethodsTest >> testCompilerFlags [
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakRedirectMethodsTest >> testLinkFlags [
 	"make sure each enabled Configuration returns from each buildType configuration correctly"
-	|buildTypes|
 	SqueakCMakeVMMakerAbstractBuilder	reset.
 	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:builder |
-	 | concreteConfiguration concreteBuilder|
-			concreteBuilder:=(Smalltalk at: (builder name asSymbol)) new.
+		subclassesDo:[:builder | 
 			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (concreteBuilder configurationsCategory))
-					ifTrue:[ 
-							concreteConfiguration:= configuration new.
-							(concreteConfiguration excludeFromBuild not)
-								ifTrue:[
-									buildTypes := concreteBuilder availableBuildTypesFor: concreteConfiguration class name asSymbol.
-									buildTypes do:[:buildType |
-											builder configureA: (configuration name) forBuildType: buildType.
-													self assert:(concreteConfiguration  linkFlags isString)]]]]]
-											
+				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
+					ifTrue:[ ]]]
 
 
 

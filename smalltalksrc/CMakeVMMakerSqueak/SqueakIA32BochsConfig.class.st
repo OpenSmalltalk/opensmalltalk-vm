@@ -22,6 +22,16 @@ Class {
 	#category : #'CMakeVMMakerSqueak-IA32-Bochs'
 }
 
+{ #category : #'cmake configuration' }
+SqueakIA32BochsConfig >> availableBuildTypes [
+	 ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
+"	subclasses should use
+
+  ^super availableBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
+	
+
+]
+
 { #category : #plugins }
 SqueakIA32BochsConfig >> defaultExternalPlugins [
 	^ #()

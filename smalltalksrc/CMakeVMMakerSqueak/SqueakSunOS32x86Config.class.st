@@ -17,6 +17,16 @@ Class {
 	#category : #'CMakeVMMakerSqueak-SunOS32x86'
 }
 
+{ #category : #'cmake configuration' }
+SqueakSunOS32x86Config >> availableBuildTypes [
+	 ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
+"	subclasses should use
+
+  ^super availableBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
+	
+
+]
+
 { #category : #'headers generation' }
 SqueakSunOS32x86Config >> configH [
 	self flag:'tty'. "This needs to be customized"
@@ -175,7 +185,7 @@ SqueakSunOS32x86Config >> configH [
 																																																																				'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'source files' }
 SqueakSunOS32x86Config >> coreSources [
 	self flag:'tty'. "Is this correct for this platform?"
 	^ #(
