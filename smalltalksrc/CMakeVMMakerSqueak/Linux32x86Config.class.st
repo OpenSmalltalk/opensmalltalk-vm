@@ -22,12 +22,6 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
 
-{ #category : #cmake }
-Linux32x86Config >> availableBuilds [
-	^SqueakCMakeVMMakerAbstractBuilder default allBuildConfigurations copyWithoutAll:#(#releaseMultiThreadedFFI #debugMultiThreadedFFI)
-
-]
-
 { #category : #'headers generation' }
 Linux32x86Config >> configH [
 	self flag:'tty'. "This needs to be customized"

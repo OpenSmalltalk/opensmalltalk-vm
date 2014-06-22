@@ -17,12 +17,6 @@ Class {
 	#category : #'CMakeVMMakerSqueak-SunOS32x86'
 }
 
-{ #category : #cmake }
-SqueakSunOS32x86Config >> availableBuilds [
-	^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations
-
-]
-
 { #category : #'headers generation' }
 SqueakSunOS32x86Config >> configH [
 	self flag:'tty'. "This needs to be customized"
