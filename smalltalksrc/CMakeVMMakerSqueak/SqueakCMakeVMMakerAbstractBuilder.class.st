@@ -103,6 +103,24 @@ Class {
 }
 
 { #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder class >> allBuildTypes [
+	default ifNil:[default:= self new].
+	^default allBuildTypes
+]
+
+{ #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder class >> availableBuildConfigurations [
+	default ifNil:[default:= self new].
+	^default availableBuildConfigurations
+]
+
+{ #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder class >> availableBuildConfigurationsFor: aCategoryName [
+	default ifNil:[default:= self new].
+	^default availableBuildConfigurationsFor: aCategoryName.
+]
+
+{ #category : #queries }
 SqueakCMakeVMMakerAbstractBuilder class >> availableBuildTypes [
 	default ifNil:[default:= self new].
 	^default availableBuildTypes.
@@ -110,7 +128,6 @@ SqueakCMakeVMMakerAbstractBuilder class >> availableBuildTypes [
 
 { #category : #queries }
 SqueakCMakeVMMakerAbstractBuilder class >> availableBuildTypesFor: aSymbol [
-	self break.
 	default ifNil:[default:= self new].
 	^default availableBuildTypesFor: aSymbol
 ]
@@ -123,12 +140,6 @@ SqueakCMakeVMMakerAbstractBuilder class >> buildDirectory [
 ]
 
 { #category : #queries }
-SqueakCMakeVMMakerAbstractBuilder class >> buildTypeDirectoriesFor: aSymbol [
-	default ifNil:[default:= self new].
-	^default buildTypeDirectoriesFor: aSymbol
-]
-
-{ #category : #queries }
 SqueakCMakeVMMakerAbstractBuilder class >> configurationsCategory [
 	default ifNil:[default:= self new].
 	^default configurationsCategory
@@ -137,16 +148,18 @@ SqueakCMakeVMMakerAbstractBuilder class >> configurationsCategory [
 
 { #category : #building }
 SqueakCMakeVMMakerAbstractBuilder class >> configureA: aSqueakCMakeConfiguration forBuildType: aSymbol [
-	"a better end-user facing method name"
-	self flag: 'tty'. "refactor this after system is in place and make this facade method the real method"
+	"Configure a Configuration for a specific build type. 
+
+	SqueakLinux64x86w32CompatBuilder
+		configureA: #Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig forBuildType: #build.itimerheartbeat  "
 	default ifNil:[default:= self new].
-	^default configureABuildFor: aSqueakCMakeConfiguration withBuildType: aSymbol
+	^default configureABuildFor: aSqueakCMakeConfiguration forBuildType: aSymbol
 ]
 
 { #category : #building }
-SqueakCMakeVMMakerAbstractBuilder class >> configureABuildFor: aSqueakCMakeConfiguration withBuildType: aSymbol [
+SqueakCMakeVMMakerAbstractBuilder class >> configureABuildFor: aSqueakCMakeConfiguration forBuildType: aSymbol [
 	default ifNil:[default:= self new].
-	^default configureABuildFor: aSqueakCMakeConfiguration withBuildType: aSymbol
+	^default configureABuildFor: aSqueakCMakeConfiguration forBuildType: aSymbol
 ]
 
 { #category : #'initialize-release' }
@@ -167,28 +180,26 @@ SqueakCMakeVMMakerAbstractBuilder class >> generate [
 ]
 
 { #category : #building }
-SqueakCMakeVMMakerAbstractBuilder class >> generateCmakeFiles [
-	"a better end-user facing method name"
-	self flag: 'tty'. "refactor this after system is in place and make this facade method the real method"
-	default ifNil:[default:= self new].
-	^default  generate
-]
-
-{ #category : #building }
 SqueakCMakeVMMakerAbstractBuilder class >> generateSources [
 	default ifNil:[default:= self new].
 	^default  generateSources
 ]
 
-{ #category : #'initialize-release' }
-SqueakCMakeVMMakerAbstractBuilder class >> reset [
-	default:=nil.
+{ #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder class >> getInfoForBuilds [
+	default ifNil:[default:= self new].
+	^default getInfoForBuilds.
 ]
 
 { #category : #queries }
-SqueakCMakeVMMakerAbstractBuilder class >> showExcludeFromBuild: aBoolean [
+SqueakCMakeVMMakerAbstractBuilder class >> noBuildTypes [
 	default ifNil:[default:= self new].
-	^default showExcludeFromBuild: aBoolean
+	^default noBuildTypes
+]
+
+{ #category : #'initialize-release' }
+SqueakCMakeVMMakerAbstractBuilder class >> reset [
+	default:=nil.
 ]
 
 { #category : #queries }
@@ -198,8 +209,37 @@ SqueakCMakeVMMakerAbstractBuilder class >> sourceDirectoryFor: aSymbol [
 ]
 
 { #category : #queries }
-SqueakCMakeVMMakerAbstractBuilder >> allBuildConfigurations [
+SqueakCMakeVMMakerAbstractBuilder class >> unAvailableBuildConfigurations [
+	default ifNil:[default:= self new].
+	^default unAvailableBuildConfigurations
+]
+
+{ #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder class >> unAvailableBuildConfigurationsFor: aCategoryName [
+	default ifNil:[default:= self new].
+	^default unAvailableBuildConfigurationsFor: aCategoryName.
+]
+
+{ #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder >> allBuildTypes [
 	^buildTypeAndDirectoryInfo keys asOrderedCollection sorted.
+
+]
+
+{ #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder >> availableBuildConfigurations [
+	"abstract class pass through for concrete instance"
+	^self availableBuildConfigurationsFor: (self configurationsCategory)
+]
+
+{ #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder >> availableBuildConfigurationsFor: aCategoryName [
+	"answer the CMakeVMakerSqueak configurations in a Smalltalk category that havenot excluded themselves from being built."
+
+"	(((self configurationDictionary:aCategoryName) keys asSortedCollection) size = 0)      
+		ifTrue:[^((self configurationDictionary:aCategoryName) keys asSortedCollection) sort]."
+     ^(((self configurationDictionary:aCategoryName) select: [:info| info value excludeFromBuild not ]) keys asSortedCollection) sort
+
 
 ]
 
@@ -240,41 +280,10 @@ SqueakCMakeVMMakerAbstractBuilder >> availableBuildTypesFor: aSymbol inCategory:
 
 ]
 
-{ #category : #queries }
-SqueakCMakeVMMakerAbstractBuilder >> availableBuilds: aCategoryName [
-	"answer the CMakeVMakerSqueak configurations in a Smalltalk category"
-	^((self configurationDictionary:aCategoryName) keys asSortedCollection) sort
-
-
-]
-
 { #category : #accessing }
 SqueakCMakeVMMakerAbstractBuilder >> buildTypeAndDirectoryInfo [
 
 	^ buildTypeAndDirectoryInfo
-]
-
-{ #category : #queries }
-SqueakCMakeVMMakerAbstractBuilder >> buildTypeDirectoriesFor: aSymbol [
-	"answer a subset of buildTypeAndDirectoryInfo based on the buildTypes the configuration supports   "
-	[
-	((Smalltalk at: aSymbol)  category) =  (self configurationsCategory)  "verify the class is handled by this concrete builder"
-		ifTrue:[	^self buildTypeDirectoriesFor: aSymbol inCategory: ((Smalltalk at: aSymbol)  category).]  "if so, go get its info"
-		ifFalse:[^self userErrorInvalidTarget: aSymbol]
-	] ifError:[^'BuildTypeDirectoriesFor: ''', aSymbol , ''' not found' ].
-	^nil.
-]
-
-{ #category : #queries }
-SqueakCMakeVMMakerAbstractBuilder >> buildTypeDirectoriesFor: aSymbol inCategory: aCategoryName [
-	|d |
-	"extract the CMakeVMakerConfigurationInfo object for a configuration and return the availableBuildTypes ."
-	d:=(self configurationDictionary:aCategoryName) at: aSymbol ifAbsent:[^SqueakCMakeVMMakerAbstractBuilder default noBuildConfigurations].
-	^d availableBuildTypes
-
-
-
-
 ]
 
 { #category : #queries }
@@ -300,7 +309,7 @@ SqueakCMakeVMMakerAbstractBuilder >> configurationsCategory [
 ]
 
 { #category : #building }
-SqueakCMakeVMMakerAbstractBuilder >> configureABuildFor: configSymbol withBuildType: typeSymbol [
+SqueakCMakeVMMakerAbstractBuilder >> configureABuildFor: configSymbol forBuildType: typeSymbol [
 	| i |
 	self flag:'tty'. "excludeFromBuild returning True does not exit gracefully"
 	"Do some sanity checks, then set the internal state of a Configuration for a particular build type. "
@@ -314,7 +323,6 @@ SqueakCMakeVMMakerAbstractBuilder >> configureABuildFor: configSymbol withBuildT
 						ifAbsent:[^self userErrorInvalidBuildType: typeSymbol "this config does not support this build type"
 										forConfiguration: configSymbol 
 										hasTypes: config availableBuildTypes].
-				self break.
 				(config configureForBuildType: typeSymbol) value.                             "config configure yourself"
 				^self]
 		ifFalse:[^self userErrorInvalidTarget: configSymbol]
@@ -404,24 +412,8 @@ SqueakCMakeVMMakerAbstractBuilder >> initializeBuildTypeAndDirectoryInfo [
 ]
 
 { #category : #queries }
-SqueakCMakeVMMakerAbstractBuilder >> noBuildConfigurations [
-	^#(#noBuildsImplementedForThisConfiguration)
-]
-
-{ #category : #queries }
-SqueakCMakeVMMakerAbstractBuilder >> showExcludeFromBuild: aBoolean [
-	|dictionary result msg s|
-	"return all configurations that where the  excludeFromBuid matches aBoolean. excludeFromBuild is manually set by the developer"	
-	aBoolean
-		ifTrue:[msg:= 'available configurations are: '. s:='']
-		ifFalse:[msg:= 'disabled configurations are: '. s:= ' edit method excludeFromBuild to toggle'].
-	result := OrderedCollection new.
-	dictionary:=self getInfoForBuilds.
-	dictionary do:[:dict | 
-			dict keysAndValuesDo: [:config :configinfo | 
-				aBoolean == (configinfo excludeFromBuild) 
-					ifTrue:[ result add:  config]]].
-	^'Configurations where excludeFromBuild ==', aBoolean ,'->',result, s.
+SqueakCMakeVMMakerAbstractBuilder >> noBuildTypes [
+	^#()
 ]
 
 { #category : #queries }
@@ -443,6 +435,23 @@ SqueakCMakeVMMakerAbstractBuilder >> sourceDirectoryFor: aSymbol inCategory: aCa
 	^info dirSource
 
 
+
+
+]
+
+{ #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder >> unAvailableBuildConfigurations [
+	"abstract class pass through for concrete instance"
+	^self unAvailableBuildConfigurationsFor: (self configurationsCategory)
+]
+
+{ #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder >> unAvailableBuildConfigurationsFor: aCategoryName [
+	"answer the CMakeVMakerSqueak configurations in a Smalltalk category that havenot excluded themselves from being built."
+
+"	(((self configurationDictionary:aCategoryName) keys asSortedCollection) size = 0)      
+		ifTrue:[^((self configurationDictionary:aCategoryName) keys asSortedCollection) sort]."
+     ^(((self configurationDictionary:aCategoryName) select: [:info| info value excludeFromBuild ]) keys asSortedCollection) sort
 
 
 ]

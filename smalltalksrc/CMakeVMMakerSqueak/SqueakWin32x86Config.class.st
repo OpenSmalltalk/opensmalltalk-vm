@@ -127,14 +127,6 @@ External:
 '
 ]
 
-{ #category : #cmake }
-SqueakWin32x86Config >> availableBuilds [
-	^SqueakCMakeVMMakerAbstractBuilder default allBuildConfigurations copyWithoutAll:#(#assert #assertWithHeartbeatTimer #debugMultiThreadedFFI #debugWithHeartbeatTimer #release #releaseHeartbeatTimer)
-
-
-
-]
-
 { #category : #'plugin extra rules' }
 SqueakWin32x86Config >> configureAsynchFilePlugin:  maker [ 
 	"extra rules for AsynchFilePlugin "
