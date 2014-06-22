@@ -74,6 +74,27 @@ SqueakMacintoshConfig >> compilerFlagsRelease [
 ]
 
 { #category : #accessing }
+SqueakMacintoshConfig >> defaultDirectoriesFromGitDir: gitRepository [
+	"Set the default values for all necessary directories taking into account the Git repostiory. An example to use this method is:
+	MTCocoaIOSCogJitDebugConfig new
+	defaultDirectoriesFromGitDir: '/Users/mariano/Pharo/vm/git/cogVM/blessed';
+	generateSources; 
+	generate.
+	"
+	| gitRepositoryString |
+	self flag:'tty'. "Squeak don't git"
+	gitRepositoryString :=  gitRepository, '/'.
+	self srcDir: gitRepositoryString, self srcDirName.
+    	self platformsDir: gitRepositoryString, self platformsDirName.
+    	self buildDir: gitRepositoryString, self buildDirName.
+	self resourcesDir: gitRepositoryString, self resourcesDirName.
+	self outputDir: gitRepositoryString, self outputDirName.
+	
+	
+	
+]
+
+{ #category : #accessing }
 SqueakMacintoshConfig >> executableType [
 	^ 'MACOSX_BUNDLE'
 ]
@@ -124,12 +145,23 @@ SqueakMacintoshConfig >> platformSources [
 	)
 ]
 
-{ #category : #'source files' }
-SqueakMacintoshConfig >> resourcesDir [
-	self subclassResponsibility
+{ #category : #accessing }
+SqueakMacintoshConfig >> resourcesDir [ 
+	"Answer the value of resourcesDir"
+	self flag:'tty'. "I modified resourcesDir to 'assureExistence' from 'fullname'. if this causes problems, look into that"
+	^ resourcesDir ifNil: [ resourcesDir := (self topDir / self resourcesDirName) assureExistence ]
+	
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
+SqueakMacintoshConfig >> resourcesDir: anObject [
+	"Set the value of platformsDir"
+
+	resourcesDir := anObject
+]
+
+{ #category : #accessing }
 SqueakMacintoshConfig >> resourcesDirName [
-	self subclassResponsibility
+	^self dirBuild, FileDirectory slash,'resources'.
+"	^ 'macbuild/resources'"
 ]

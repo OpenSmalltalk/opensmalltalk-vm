@@ -53,6 +53,12 @@ SqueakIA32BochsConfig >> excludeFromBuild [
 	^true
 ]
 
+{ #category : #cmake }
+SqueakIA32BochsConfig >> executableName [
+	"AbstractBaseClass configurations are not meant to be executable"
+	^ self vmIShouldNotBeHereExecutableName
+]
+
 { #category : #testing }
 SqueakIA32BochsConfig >> isAbstractBaseClass [
 	^true

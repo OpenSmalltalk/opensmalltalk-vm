@@ -292,9 +292,10 @@ Linux32x86Config >> excludeFromBuild [
 	^true
 ]
 
-{ #category : #accessing }
+{ #category : #cmake }
 Linux32x86Config >> executableName [
-	self subclassResponsibility
+	"AbstractBaseClass configurations are not meant to be executable"
+	^ self vmIShouldNotBeHereExecutableName
 ]
 
 { #category : #'plugin extra rules' }

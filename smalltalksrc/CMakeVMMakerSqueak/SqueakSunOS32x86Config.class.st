@@ -215,3 +215,9 @@ SqueakSunOS32x86Config >> excludeFromBuild [
 	^true
 
 ]
+
+{ #category : #cmake }
+SqueakSunOS32x86Config >> executableName [
+	"AbstractBaseClass configurations are not meant to be executable"
+	^ self vmIShouldNotBeHereExecutableName
+]

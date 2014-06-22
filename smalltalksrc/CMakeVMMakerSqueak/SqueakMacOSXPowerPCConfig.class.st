@@ -326,26 +326,6 @@ SqueakMacOSXPowerPCConfig >> configureUnixOSProcessPlugin: maker [
 
 ]
 
-{ #category : #accessing }
-SqueakMacOSXPowerPCConfig >> defaultDirectoriesFromGitDir: gitRepository [
-	"Set the default values for all necessary directories taking into account the Git repostiory. An example to use this method is:
-	MTCocoaIOSCogJitDebugConfig new
-	defaultDirectoriesFromGitDir: '/Users/mariano/Pharo/vm/git/cogVM/blessed';
-	generateSources; 
-	generate.
-	"
-	| gitRepositoryString |
-	gitRepositoryString :=  gitRepository, '/'.
-	self srcDir: gitRepositoryString, self srcDirName.
-    	self platformsDir: gitRepositoryString, self platformsDirName.
-    	self buildDir: gitRepositoryString, self buildDirName.
-	self resourcesDir: gitRepositoryString, self resourcesDirName.
-	self outputDir: gitRepositoryString, self outputDirName.
-	
-	
-	
-]
-
 { #category : #plugins }
 SqueakMacOSXPowerPCConfig >> defaultExternalPlugins [
 
@@ -413,6 +393,12 @@ SqueakMacOSXPowerPCConfig >> dirBuildPlatform [
 SqueakMacOSXPowerPCConfig >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true
+]
+
+{ #category : #cmake }
+SqueakMacOSXPowerPCConfig >> executableName [
+	"AbstractBaseClass configurations are not meant to be executable"
+	^ self vmIShouldNotBeHereExecutableName
 ]
 
 { #category : #utils }
@@ -493,24 +479,4 @@ SqueakMacOSXPowerPCConfig >> postBuildActions: gen [
 			
 "					FILE(GLOB_RECURSE bLibs /${externalModulesDir}/*.*)
 "
-]
-
-{ #category : #accessing }
-SqueakMacOSXPowerPCConfig >> resourcesDir [ 
-	"Answer the value of resourcesDir"
-
-	^ resourcesDir ifNil: [ resourcesDir := (self topDir / 'macbuild/resources') fullName ]
-	
-]
-
-{ #category : #accessing }
-SqueakMacOSXPowerPCConfig >> resourcesDir: anObject [
-	"Set the value of platformsDir"
-
-	resourcesDir := anObject
-]
-
-{ #category : #accessing }
-SqueakMacOSXPowerPCConfig >> resourcesDirName [
-	^ 'macbuild/resources'
 ]
