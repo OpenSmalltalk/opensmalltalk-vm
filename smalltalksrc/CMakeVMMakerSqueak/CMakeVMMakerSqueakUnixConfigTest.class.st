@@ -6,14 +6,12 @@ Class {
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakUnixConfigTest >> testCommonCompilerFlags [
-
-	#( #SqueakAndroidBuilder  #SqueakBSDx86Builder #SqueakLinux32ARMv6Builder #SqueakLinux32x86Builder  #SqueakLinux32x86_64Builder #SqueakLinux64x86w32CompatBuilder #SqueakSunOS32x86Builder)
-		do:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: ((Smalltalk at:builder) configurationsCategory))
-					ifTrue:[ 
+	#( SqueakUnixConfig)
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
 							o:= configuration new.
-							(o excludeFromBuild not)
+							(o excludeFromBuild not)  |(configuration isAbstractBaseClass)  
 								ifTrue:[
 							self assert:(o  commonCompilerFlags isArray).
 "							self assert:(o  compilerFlagsAssert isArray).
@@ -24,7 +22,7 @@ CMakeVMMakerSqueakUnixConfigTest >> testCommonCompilerFlags [
 							self assert:(o  compilerFlagsIHeartbeatTimer isArray).
 							self assert:(o  compilerFlagsMultiThreaded isArray).
 							self assert:(o  compilerFlagsMultiThreadedAssert isArray).
-							self assert:(o  compilerFlagsMultiThreadedDebug isArray)."]]]]
+							self assert:(o  compilerFlagsMultiThreadedDebug isArray)."]]]
 
 
 
@@ -37,12 +35,13 @@ CMakeVMMakerSqueakUnixConfigTest >> testCommonCompilerFlags [
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakUnixConfigTest >> testConfigH [
-
-	#( #SqueakAndroidBuilder  #SqueakBSDx86Builder #SqueakLinux32ARMv6Builder #SqueakLinux32x86Builder  #SqueakLinux32x86_64Builder #SqueakLinux64x86w32CompatBuilder #SqueakSunOS32x86Builder)
-		do:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: ((Smalltalk at:builder) configurationsCategory))
-					ifTrue:[ 
+	#( SqueakUnixConfig)
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
+							o:= configuration new.
+							(o excludeFromBuild not)  |(configuration isAbstractBaseClass not)  
+								ifTrue:[
 							o:= configuration new.
 							(o excludeFromBuild not)
 								ifTrue:[self assert:(o  configH isString)]]]]
@@ -54,12 +53,13 @@ CMakeVMMakerSqueakUnixConfigTest >> testConfigH [
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakUnixConfigTest >> testExecutableType [
-
-	#(#SqueakAndroidBuilder  #SqueakBSDx86Builder #SqueakLinux32ARMv6Builder #SqueakLinux32x86Builder  #SqueakLinux32x86_64Builder #SqueakLinux64x86w32CompatBuilder #SqueakSunOS32x86Builder)
-		do:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: ((Smalltalk at:builder)  configurationsCategory))
-					ifTrue:[ 
+	#( SqueakUnixConfig)
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
+							o:= configuration new.
+							(o excludeFromBuild not)  |(configuration isAbstractBaseClass not)  
+								ifTrue:[
 							o:= configuration new.
 							self assert:(o  executableType = '').]]]    "hello code smell"
 
@@ -68,11 +68,13 @@ CMakeVMMakerSqueakUnixConfigTest >> testExecutableType [
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakUnixConfigTest >> testPlatformName [
 		self flag:'tty'. "todo: fix code smell in hard coded string"
-	#(#SqueakAndroidBuilder  #SqueakBSDx86Builder #SqueakLinux32ARMv6Builder #SqueakLinux32x86Builder  #SqueakLinux32x86_64Builder #SqueakLinux64x86w32CompatBuilder #SqueakSunOS32x86Builder)
-		do:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: ((Smalltalk at:builder) configurationsCategory))
-					ifTrue:[ 
+	#( SqueakUnixConfig)
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
+							o:= configuration new.
+							(o excludeFromBuild not)  |(configuration isAbstractBaseClass not)  
+								ifTrue:[
 							o:= configuration new.
 							(o excludeFromBuild not)
 								ifTrue:[self assert:(o  platformName = 'unix' )]]]]

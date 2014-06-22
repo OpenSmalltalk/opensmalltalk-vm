@@ -359,6 +359,12 @@ Linux64x86w32BitConfig >> excludeFromBuild [
 	^true
 ]
 
+{ #category : #cmake }
+Linux64x86w32BitConfig >> executableName [
+	"AbstractBaseClass configurations are not meant to be executable"
+	^ self vmIShouldNotBeHereExecutableName
+]
+
 { #category : #'plugin extra rules' }
 Linux64x86w32BitConfig >> extraPluginSettings: maker [
 	super extraPluginSettings: maker.  

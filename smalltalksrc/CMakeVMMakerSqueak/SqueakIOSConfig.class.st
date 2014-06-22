@@ -329,26 +329,6 @@ SqueakIOSConfig >> configureUnixOSProcessPlugin: maker [
 
 ]
 
-{ #category : #accessing }
-SqueakIOSConfig >> defaultDirectoriesFromGitDir: gitRepository [
-	"Set the default values for all necessary directories taking into account the Git repostiory. An example to use this method is:
-	MTCocoaIOSCogJitDebugConfig new
-	defaultDirectoriesFromGitDir: '/Users/mariano/Pharo/vm/git/cogVM/blessed';
-	generateSources; 
-	generate.
-	"
-	| gitRepositoryString |
-	gitRepositoryString :=  gitRepository, '/'.
-	self srcDir: gitRepositoryString, self srcDirName.
-    	self platformsDir: gitRepositoryString, self platformsDirName.
-    	self buildDir: gitRepositoryString, self buildDirName.
-	self resourcesDir: gitRepositoryString, self resourcesDirName.
-	self outputDir: gitRepositoryString, self outputDirName.
-	
-	
-	
-]
-
 { #category : #plugins }
 SqueakIOSConfig >> defaultExternalPlugins [
 
@@ -417,6 +397,12 @@ SqueakIOSConfig >> dirBuildPlatform [
 SqueakIOSConfig >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true
+]
+
+{ #category : #cmake }
+SqueakIOSConfig >> executableName [
+	"AbstractBaseClass configurations are not meant to be executable"
+	^ self vmIShouldNotBeHereExecutableName
 ]
 
 { #category : #'source files' }
@@ -511,24 +497,4 @@ SqueakIOSConfig >> postBuildActions: gen [
 			
 "					FILE(GLOB_RECURSE bLibs /${externalModulesDir}/*.*)
 "
-]
-
-{ #category : #accessing }
-SqueakIOSConfig >> resourcesDir [ 
-	"Answer the value of resourcesDir"
-
-	^ resourcesDir ifNil: [ resourcesDir := (self topDir / 'macbuild/resources') fullName ]
-	
-]
-
-{ #category : #accessing }
-SqueakIOSConfig >> resourcesDir: anObject [
-	"Set the value of platformsDir"
-
-	resourcesDir := anObject
-]
-
-{ #category : #accessing }
-SqueakIOSConfig >> resourcesDirName [
-	^ 'macbuild/resources'
 ]
