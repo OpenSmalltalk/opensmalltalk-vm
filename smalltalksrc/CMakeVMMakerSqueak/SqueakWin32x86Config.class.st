@@ -439,6 +439,12 @@ SqueakWin32x86Config >> excludeFromBuild [
 
 ]
 
+{ #category : #cmake }
+SqueakWin32x86Config >> executableName [
+	"AbstractBaseClass configurations are not meant to be executable"
+	^ self vmIShouldNotBeHereExecutableName
+]
+
 { #category : #'thirdparty libs' }
 SqueakWin32x86Config >> externalLibraries [
 	

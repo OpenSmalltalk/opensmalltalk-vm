@@ -322,3 +322,9 @@ Linux64Config >> excludeFromBuild [
 	"over-ride to exclude yourself from a build"
 	^true
 ]
+
+{ #category : #cmake }
+Linux64Config >> executableName [
+	"AbstractBaseClass configurations are not meant to be executable"
+	^ self vmIShouldNotBeHereExecutableName
+]

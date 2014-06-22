@@ -3372,6 +3372,12 @@ CPlatformConfigForSqueak >> vmCogExecutableName [
 ]
 
 { #category : #'cmake executable names' }
+CPlatformConfigForSqueak >> vmIShouldNotBeHereExecutableName [
+
+	^'IShouldNotBeHere'
+]
+
+{ #category : #'cmake executable names' }
 CPlatformConfigForSqueak >> vmSistaExecutableName [
 
 	^'sista'
