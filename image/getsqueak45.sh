@@ -1,9 +1,12 @@
 #!/bin/bash
 . ./envvars.sh
 
-if [ "`md5 -q \"$SQUEAK45\".image`" != 1d0d4320224b741da1f56c6871963702 ]; then
+IMAGEHASH=1d0d4320224b741da1f56c6871963702
+ZIPHASH=b90e0303ab61e928a5d997b22d18b468
+
+if [ "`quietmd5 \"$SQUEAK45\".image`" != $IMAGEHASH ]; then
 	ZIP=Squeak-4.5-All-in-One.zip
-	if [ "`md5 -q $ZIP`" != b90e0303ab61e928a5d997b22d18b468 ]
+	if [ "`quietmd5 $ZIP`" != $ZIPHASH ]
 	then
 		if wget --help >/dev/null; then
 			true

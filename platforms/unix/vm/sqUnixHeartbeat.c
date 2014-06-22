@@ -28,6 +28,7 @@
 #include "sqMemoryFence.h"
 #include <errno.h>
 #include <pthread.h>
+#include <stdio.h> /* for fprintf */
 #include <sys/types.h>
 #include <sys/time.h>
 
@@ -357,12 +358,18 @@ beatStateMachine(void *careLess)
 	if ((er = pthread_setschedparam(pthread_self(),
 									stateMachinePolicy,
 									&stateMachinePriority))) {
-		/* linux pthreads as of 2009 does not support setting the priority of
+		/* Linux pthreads as of 2009 does not support setting the priority of
 		 * threads other than with real-time scheduling policies.  But such
 		 * policies are only available to processes with superuser privileges.
+		 * Linux kernels >= 2.6.13 support different thread priorities, but
+		 * require a suitable /etc/security/limits.d/VMNAME.conf.
 		 */
+		extern char *revisionAsString();
 		errno = er;
-		perror("pthread_setschedparam failed; consider using ITIMER_HEARTBEAT");
+		perror("pthread_setschedparam failed");
+		fprintf(stderr,
+				"Read e.g. http://www.mirandabanda.org/files/Cog/VM/VM.r%s/README.%s\n",
+				revisionAsString(), revisionAsString());
 		exit(errno);
 	}
 	beatState = active;

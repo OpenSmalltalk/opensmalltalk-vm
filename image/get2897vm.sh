@@ -17,18 +17,18 @@ case "$OS" in
 Darwin)
 	VM=Cog.app/Contents/MacOS/Squeak
 	VMHASH=ec2962db9518aaea4fee1bc92007e635
-	if [ ! -d Cog.app -o "`/sbin/md5 -q $VM`" != $VMHASH ]; then
+	if [ ! -d Cog.app -o "`quientmd5 $VM`" != $VMHASH ]; then
 		VMARC=Cog.app-14.23.2987.tgz
 		ARCHASH=0f84cf23e98ea03ee7e87ccc8ba756ec
-		if [ ! -f "$VMARC" -o "`/sbin/md5 -q "$VMARC"`" != $ARCHASH ]; then
+		if [ ! -f "$VMARC" -o "`quietmd5 $VMARC`" != $ARCHASH ]; then
 			wget -c "$URL/$VMARC"
-			if [ ! -f "$VMARC" -o "`/sbin/md5 -q "$VMARC"`" != $ARCHASH ]; then
+			if [ ! -f "$VMARC" -o "`quietmd5 $VMARC`" != $ARCHASH ]; then
 				echo failed to get $VMARC \; file corrupted\? 1>&2
 				exit 2
 			fi
 		fi
 		tar xzf "$VMARC"
-		if [ ! -d Cog.app -o "`/sbin/md5 -q $VM`" != $VMHASH ]; then
+		if [ ! -d Cog.app -o "`quietmd5 $VM`" != $VMHASH ]; then
 			echo failed to correctly extract Cog.app from $VMARC 1>&2
 			exit 3
 		fi
@@ -45,20 +45,16 @@ Linux)
 		VMARC=coglinux-14.23.2987.tgz
 		ARCHASH=19d9c28860758db4e2f25642837de3c3
 	fi
-	if [ ! -d "`dirname $VM`" -o \
-		"`/usr/bin/md5sum "$VM" | sed 's/ .*$//'`" != $VMHASH ]; then
-		if [ ! -f "$VMARC" \
-			-o "`/usr/bin/md5sum "$VMARC" | sed 's/ .*$//'`" != $ARCHASH ]; then
+	if [ ! -d "`dirname $VM`" -o "`quietmd5 $VM`" != $VMHASH ]; then
+		if [ ! -f "$VMARC" -o "`quietmd5 $VMARC`" != $ARCHASH ]; then
 			wget -c "$URL/$VMARC"
-			if [ ! -f "$VMARC" \
-				-o "`/usr/bin/md5sum "$VMARC" | sed 's/ .*$//'`" != $ARCHASH ]; then
+			if [ ! -f "$VMARC" -o "`quietmd5 $VMARC`" != $ARCHASH ]; then
 				echo failed to get $VMARC \; file corrupted\? 1>&2
 				exit 2
 			fi
 		fi
 		tar xzf "$VMARC"
-		if [ ! -d "`dirname $VM`" \
-			-o "`/usr/bin/md5sum $VM | sed 's/ .*$//'`" != $VMHASH ]; then
+		if [ ! -d "`dirname $VM`" -o "`quietmd5 $VM`" != $VMHASH ]; then
 			echo failed to correctly extract "`dirname $VM`" from $VMARC 1>&2
 			exit 3
 		fi
@@ -71,22 +67,18 @@ Linux)
 CYGWIN*)
 	VM=cogwin/SqueakConsole.exe
 	VMHASH=a68a3eab7db6713bed9f1560759f73ae
-	VMARC=cogwin-14.23.2987.tgz
+	VMARC=cogwin-14.23.2987.zip
 	ARCHASH=acd8291859bfe10a52d6ecb28271a673
-	if [ ! -d "`dirname $VM`" \
-			-o "`/usr/bin/md5sum "$VM" | sed 's/ .*$//'`" != $VMHASH ]; then
-		if [ ! -f "$VMARC" \
-			-o "`/usr/bin/md5sum "$VMARC" | sed 's/ .*$//'`" != $ARCHASH ]; then
+	if [ ! -d "`dirname $VM`" -o "`quietmd5 $VM`" != $VMHASH ]; then
+		if [ ! -f "$VMARC" -o "`quietmd5 $VMARC`" != $ARCHASH ]; then
 			wget -c "$URL/$VMARC"
-			if [ ! -f "$VMARC" \
-				-o "`/usr/bin/md5sum "$VMARC" | sed 's/ .*$//'`" != $ARCHASH ]; then
+			if [ ! -f "$VMARC" -o "`quietmd5 $VMARC`" != $ARCHASH ]; then
 				echo failed to get $VMARC \; file corrupted\? 1>&2
 				exit 2
 			fi
 		fi
 		unzip -q "$VMARC"
-		if [ ! -d "`dirname $VM`" \
-			-o "`/usr/bin/md5sum $VM | sed 's/ .*$//'`" != $VMHASH ]; then
+		if [ ! -d "`dirname $VM`" -o "`quietmd5 $VM`" != $VMHASH ]; then
 			echo failed to correctly extract "`dirname $VM`" from $VMARC 1>&2
 			exit 3
 		fi

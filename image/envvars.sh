@@ -18,3 +18,6 @@ else
 	CPU=`uname -m`
 	OSREL=`uname -r | sed 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\).*$/\1.\2.\3/'`
 fi
+
+test "$OS" = Darwin && function quietmd5 () { /sbin/md5 -q "$1"; }
+test "$OS" = Darwin || function quietmd5 () { /usr/bin/md5sum "$1" | sed 's/ .*$//'; }

@@ -60,7 +60,7 @@ Linux)
 CYGWIN*)
 	VM=cogwin/SqueakConsole.exe
 	VMHASH=a68a3eab7db6713bed9f1560759f73ae
-	VMARC=cogwin-14.23.2987.tgz
+	VMARC=cogwin-14.23.2987.zip
 	ARCHASH=acd8291859bfe10a52d6ecb28271a673
 	if [ ! -d "`dirname $VM`" \
 			-o "`/usr/bin/md5sum "$VM" | sed 's/ .*$//'`" != $VMHASH ]; then

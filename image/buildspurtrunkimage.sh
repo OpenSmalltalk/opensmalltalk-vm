@@ -3,9 +3,6 @@
 ./getsqueak45.sh
 . ./get2897vm.sh
 
-./getsqueak45.sh
-. ./get2897vm.sh
-
 cp -p $SQUEAK45.image trunk46forspur.image
 cp -p $SQUEAK45.changes trunk46forspur.changes
 
