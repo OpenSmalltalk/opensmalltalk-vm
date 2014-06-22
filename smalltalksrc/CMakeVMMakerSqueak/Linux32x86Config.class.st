@@ -22,6 +22,21 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
 
+{ #category : #'as yet unclassified' }
+Linux32x86Config class >> initialize [
+	isAbstractBaseClass:=true
+]
+
+{ #category : #'cmake configuration' }
+Linux32x86Config >> availableBuildTypes [
+	 ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
+"	subclasses should use
+
+  ^super availableBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
+	
+
+]
+
 { #category : #'headers generation' }
 Linux32x86Config >> configH [
 	self flag:'tty'. "This needs to be customized"

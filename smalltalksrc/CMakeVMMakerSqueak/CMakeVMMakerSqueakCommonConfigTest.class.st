@@ -1,3 +1,8 @@
+"
+A CMakeVMMakerSqueakCommonConfigTest  tests simple functionality that is supported by both AbstractBaseClass configurations and concrete implemntations.
+
+Redirect method tests are farmed out to CMakeVMMakerSqueakRedirectMethodsTest and CMakeVMMakerSqueakRedirectMethodsWithArgTest
+"
 Class {
 	#name : #CMakeVMMakerSqueakCommonConfigTest,
 	#superclass : #TestCase,
@@ -5,16 +10,15 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakCommonConfigTest >> testBuildDirName [
-	"for each builder, make sure all its configurations provide a build directory name "
-	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
-					ifTrue:[ 
-							o:= configuration new.
-							o excludeFromBuild not                                                     
-								ifTrue:[self assert:(o  buildDirName isString)]]]]
+CMakeVMMakerSqueakCommonConfigTest >> testAvailableBuildTypes [
+	"each concrete configuration must report what buildTypes it supports  "
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
+					o:= configuration new.
+					(o excludeFromBuild not)                               ""
+						ifTrue:[self assert:(o  availableBuildTypes isKindOf: Collection)]]]
 
 
 
@@ -26,16 +30,59 @@ CMakeVMMakerSqueakCommonConfigTest >> testBuildDirName [
 ]
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakCommonConfigTest >> testBuildDirs [
+CMakeVMMakerSqueakCommonConfigTest >> testBuildDir [
 	"for each builder, make sure all its configurations provides availbale build directories "
-	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
-					ifTrue:[ 
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
 							o:= configuration new.
 							o excludeFromBuild not
-								ifTrue:[self assert:(o  buildDir isKindOf: FileDirectory)]]]]
+								ifTrue:[self assert:(o  buildDir isKindOf: FileDirectory)]]]
+
+
+
+
+
+
+
+
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakCommonConfigTest >> testBuildDirName [
+	"for each builder, make sure all its configurations provide a build directory name "
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
+							o:= configuration new.
+							(o excludeFromBuild not)                               ""
+								ifTrue:[
+									self assert:(o  buildDirName isString).
+									self assert:(o  buildDirName size > 0)]]]
+
+
+
+
+
+
+
+
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakCommonConfigTest >> testBuildScript [
+	"for each builder, make sure all its configurations provide a build directory name "
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
+							o:= configuration new.
+							(o excludeFromBuild not)                               ""
+								ifTrue:[
+									self assert:(o  buildScript isString).
+									self assert:(o  buildScript size > 0)]]]
 
 
 
@@ -49,14 +96,13 @@ CMakeVMMakerSqueakCommonConfigTest >> testBuildDirs [
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakCommonConfigTest >> testCogitClass [
 	"for each builder that does not exclude itself from builds, make sure it returns cogitClass "
-	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
-					ifTrue:[ 
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
 							o:= configuration new.
 							o excludeFromBuild not                                                     
-							 	ifTrue:[self assert:(o  cogitClass inheritsFrom: Cogit)]]]]
+							 	ifTrue:[self assert:(o  cogitClass inheritsFrom: Cogit)]]]
 
 
 
@@ -69,25 +115,40 @@ CMakeVMMakerSqueakCommonConfigTest >> testCogitClass [
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakCommonConfigTest >> testCommonCompilerFlags [
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
+					configuration isAbstractBaseClass   "*"
+					ifFalse:[	o:= configuration new. 
+							self assert:(o commonCompilerFlags isKindOf: Collection)]]].
 
+"*
+SqueakWin32x86Config browse
+the return array embeds 'self executableName' which does not exist in an AbstractBaseClass
+"
+
+
+
+
+
+
+
+
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakCommonConfigTest >> testConfigH [
+	"for each builder, make sure all its configurations provides defaultExternalPlugins"
 	SqueakCMakeVMMakerAbstractBuilder 
 		subclassesDo:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
-					ifTrue:[ 
-							o:= configuration new.
-							(o excludeFromBuild not)
-								ifTrue:[
-							self assert:(o  commonCompilerFlags isArray).
-"							self assert:(o  compilerFlagsAssert isArray).
-							self assert:(o  compilerFlagsAssertITimerHeartbeat isArray).
-							self assert:(o  compilerFlagsBuild isArray).
-							self assert:(o  compilerFlagsDebug isArray).
-							self assert:(o  compilerFlagsDebugITimerHeartbeat isArray).
-							self assert:(o  compilerFlagsIHeartbeatTimer isArray).
-							self assert:(o  compilerFlagsMultiThreaded isArray).
-							self assert:(o  compilerFlagsMultiThreadedAssert isArray).
-							self assert:(o  compilerFlagsMultiThreadedDebug isArray)."]]]]
+			SqueakUnixConfig 
+				allSubclassesDo:[:configuration |
+					(configuration isAbstractBaseClass not)
+						ifTrue:[o:= configuration new.
+							    self assert:(o  configH isString)]]]
+
+
 
 
 
@@ -100,16 +161,14 @@ CMakeVMMakerSqueakCommonConfigTest >> testCommonCompilerFlags [
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakCommonConfigTest >> testCoreSources [
-	"for each builder, make sure all its configurations provides defaultExternalPlugins"
-	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
-					ifTrue:[ 
-							o:= configuration new.
-							(o excludeFromBuild not)
-								ifTrue:[
-									self assert:(o  coreSources isArray)]]]]
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
+					configuration isAbstractBaseClass not
+						ifTrue:[	o:= configuration new.
+								o excludeFromBuild not
+									ifTrue:[self assert:(o  coreSources isArray)]]]]
 
 
 
@@ -122,12 +181,12 @@ CMakeVMMakerSqueakCommonConfigTest >> testCoreSources [
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakCommonConfigTest >> testCrossSources [
-	"for each builder, make sure all its configurations provides defaultExternalPlugins"
-	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
-					ifTrue:[ 
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
+					configuration isAbstractBaseClass not
+						ifTrue:[
 							o:= configuration new.
 							(o excludeFromBuild not)
 								ifTrue:[	self assert:(o  crossSources isArray)]]]]
@@ -142,15 +201,35 @@ CMakeVMMakerSqueakCommonConfigTest >> testCrossSources [
 ]
 
 { #category : #'as yet unclassified' }
+CMakeVMMakerSqueakCommonConfigTest >> testDirBuildPlatform [
+	"for each builder, make sure all its configurations provide a dirSource "
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
+									o:= configuration new.
+									self assert:(o  dirBuildPlatform isString)]]
+
+
+
+
+
+
+
+
+]
+
+{ #category : #'as yet unclassified' }
 CMakeVMMakerSqueakCommonConfigTest >> testDirSource [
 	"for each builder, make sure all its configurations provide a dirSource "
-	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
-					ifTrue:[ 
-							o:= configuration new.
-							self assert:(o  dirSource isString)]]]
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
+					configuration isAbstractBaseClass not
+						ifTrue:[	o:= configuration new.
+								o excludeFromBuild not
+									ifTrue:[self assert:(o  dirSource isString)]]]]
 
 
 
@@ -164,13 +243,12 @@ CMakeVMMakerSqueakCommonConfigTest >> testDirSource [
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakCommonConfigTest >> testExcludeFromBuild [
 	"for each builder, make sure all its includes or excludes itself from a build "
-	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
-					ifTrue:[ 
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
 							o:= configuration new.
-							self assert:(((o  excludeFromBuild) == true) | ((o  excludeFromBuild) == false))]]]
+							self assert:((o excludeFromBuild  basicType) = #Boolean)]]
 
 
 
@@ -184,14 +262,33 @@ CMakeVMMakerSqueakCommonConfigTest >> testExcludeFromBuild [
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakCommonConfigTest >> testExectuableName [
 	"for each builder, make sure all its configurations provide an executableName "
-	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
-					ifTrue:[ 
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
 							o:= configuration new.
 							(o excludeFromBuild not)
-								ifTrue:[self assert:(o  executableName isString)]]]]
+								ifTrue:[self assert:(o  executableName isString)]]]
+
+
+
+
+
+
+
+
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakCommonConfigTest >> testExecutableType [
+	"for each builder, make sure all its configurations provide an executableName "
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
+							o:= configuration new.
+							(o excludeFromBuild not)
+								ifTrue:[self assert:(o  executableType isString)]]]
 
 
 
@@ -204,15 +301,13 @@ CMakeVMMakerSqueakCommonConfigTest >> testExectuableName [
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakCommonConfigTest >> testExternalsModuleDir [
-	"for each builder, make sure all its configurations provide a build directory name "
-	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
-					ifTrue:[ 
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
 							o:= configuration new.
 							o excludeFromBuild not                                                     
-								ifTrue:[self assert:(o  externalModulesDir isString)]]]]
+								ifTrue:[self assert:(o  externalModulesDir isString)]]]
 
 
 
@@ -225,15 +320,13 @@ CMakeVMMakerSqueakCommonConfigTest >> testExternalsModuleDir [
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakCommonConfigTest >> testExtraSources [
-	"for each builder, make sure all its configurations provides defaultExternalPlugins"
-	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
-					ifTrue:[ 
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
 							o:= configuration new.
 							(o excludeFromBuild not)
-								ifTrue:[self assert:(o  extraSources isString)]]]]
+								ifTrue:[self assert:(o  extraSources isString)]]]
 
 
 
@@ -247,11 +340,10 @@ CMakeVMMakerSqueakCommonConfigTest >> testExtraSources [
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakCommonConfigTest >> testInterpreterClass [
 	"for each builder that does not exclude itself from builds, make sure it returns an InterpreterClass "
-	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
-					ifTrue:[ 
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
 							o:= configuration new.
 							o excludeFromBuild not                                                     
 							 	ifTrue:[
@@ -264,7 +356,24 @@ CMakeVMMakerSqueakCommonConfigTest >> testInterpreterClass [
 										self assert:(o  interpreterClassBuildITimerHeartbeat inheritsFrom: InterpreterPrimitives).
 										self assert:(o  interpreterClassBuildITimerMultiThreaded inheritsFrom: InterpreterPrimitives).
 										self assert:(o  interpreterClassBuildITimerMultiThreadedAssert inheritsFrom: InterpreterPrimitives).
-										self assert:(o  interpreterClassBuildITimerMultiThreadedDebug inheritsFrom: InterpreterPrimitives)]]]]
+										self assert:(o  interpreterClassBuildITimerMultiThreadedDebug inheritsFrom: InterpreterPrimitives)]]]
+
+
+
+
+
+
+
+
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakCommonConfigTest >> testIsAbstractBaseClass [
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | 
+					self assert:(configuration isAbstractBaseClass basicType = #Boolean)]]
 
 
 
@@ -278,14 +387,35 @@ CMakeVMMakerSqueakCommonConfigTest >> testInterpreterClass [
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakCommonConfigTest >> testOutputDir [
 	"for each builder, make sure all its configurations provide an outputDir "
-	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
-					ifTrue:[ 
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
 							o:= configuration new.
 							(o excludeFromBuild not)
-								ifTrue:[self assert:(o  outputDir isKindOf: FileDirectory)]]]]
+								ifTrue:[self assert:(o  outputDir isKindOf: FileDirectory)]]]
+
+
+
+
+
+
+
+
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakCommonConfigTest >> testOutputDirName [
+	"for each builder, make sure all its configurations provide a build directory name "
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
+							o:= configuration new.
+							(o excludeFromBuild not)                               ""
+								ifTrue:[
+									self assert:(o  outputDirName isString).
+									self assert:(o  outputDirName size > 0)]]]
 
 
 
@@ -298,15 +428,13 @@ CMakeVMMakerSqueakCommonConfigTest >> testOutputDir [
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakCommonConfigTest >> testPlatformSources [
-	"for each builder, make sure all its configurations provides defaultExternalPlugins"
-	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
-					ifTrue:[ 
-							o:= configuration new.
-							(o excludeFromBuild not)
-								ifTrue:[self assert:(o  platformSources isArray)]]]]
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
+					o:= configuration new.
+					(o excludeFromBuild not) | (configuration isAbstractBaseClass)
+						ifTrue:[self assert:(o  platformSources isArray)]]]
 
 
 
@@ -318,15 +446,15 @@ CMakeVMMakerSqueakCommonConfigTest >> testPlatformSources [
 ]
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakCommonConfigTest >> testSrcDirs [
+CMakeVMMakerSqueakCommonConfigTest >> testSrcDir [
 	"for each builder, make sure all its configurations provide a srcDir "
-	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
-					ifTrue:[ 
-							o:= configuration new.
-							self assert:(o  srcDir isKindOf: FileDirectory)]]]
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
+					o:= configuration new.
+					(o excludeFromBuild not) | (configuration isAbstractBaseClass)
+						ifTrue:[self assert:(o  srcDir isKindOf: FileDirectory)]]]
 
 
 
@@ -338,15 +466,15 @@ CMakeVMMakerSqueakCommonConfigTest >> testSrcDirs [
 ]
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakCommonConfigTest >> testTopDirs [
+CMakeVMMakerSqueakCommonConfigTest >> testTopDir [
 	"for each builder, make sure all its configurations provide a topDir "
-	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
-					ifTrue:[ 
-							o:= configuration new.
-							self assert:(o  topDir isKindOf: FileDirectory)]]]
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
+					o:= configuration new.
+					(o excludeFromBuild not) | (configuration isAbstractBaseClass)
+						ifTrue:[self assert:(o  topDir isKindOf: FileDirectory)]]]
 
 
 
@@ -359,14 +487,13 @@ CMakeVMMakerSqueakCommonConfigTest >> testTopDirs [
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakCommonConfigTest >> testVersion [
-	"for each builder, make sure all its configurations provides defaultExternalPlugins"
-	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
-					ifTrue:[ 
-							o:= configuration new.
-							self assert:(o  version isString)]]]
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
+					o:= configuration new.
+					(o excludeFromBuild not) | (configuration isAbstractBaseClass)
+						ifTrue:[self assert:(o  version isString)]]]
 
 
 
@@ -380,14 +507,13 @@ CMakeVMMakerSqueakCommonConfigTest >> testVersion [
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakCommonConfigTest >> testdirBuildLanguageVMMM [
 	"for each builder that does not exclude itself from builds, make sure it returns dirBUildLanguageVMMM "
-	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: (builder configurationsCategory))
-					ifTrue:[ 
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				subclassesDo:[:configuration | | o |
 							o:= configuration new.
 							o excludeFromBuild not                                                     
-							 	ifTrue:[self assert:(o  dirBuildLanguageVMMM isString)]]]]
+							 	ifTrue:[self assert:(o  dirBuildLanguageVMMM isString)]]]
 
 
 

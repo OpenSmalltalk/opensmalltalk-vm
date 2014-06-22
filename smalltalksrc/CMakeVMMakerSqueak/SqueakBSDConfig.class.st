@@ -19,6 +19,21 @@ Class {
 	#category : #'CMakeVMMakerSqueak-BSD32x86'
 }
 
+{ #category : #'as yet unclassified' }
+SqueakBSDConfig class >> initialize [
+	isAbstractBaseClass:=true
+]
+
+{ #category : #'cmake configuration' }
+SqueakBSDConfig >> availableBuildTypes [
+	 ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
+"	subclasses should use
+
+  ^super availableBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
+	
+
+]
+
 { #category : #'compiler flags' }
 SqueakBSDConfig >> compilerFlagsAssert [
 
