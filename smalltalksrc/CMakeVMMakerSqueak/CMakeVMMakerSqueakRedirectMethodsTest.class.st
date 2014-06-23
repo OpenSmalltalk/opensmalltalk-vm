@@ -29,23 +29,18 @@ Class {
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakRedirectMethodsTest >> testCommonCompilerFlags [
-"	#(#SqueakWindowsConfig #SqueakUnixConfig #SqueakMacintoshConfig) 
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig ) 
 		do:[:each | 
 			(Smalltalk at:each) 
-				allSubclassesDo:[:configuration | | o |
+				allSubclassesDo:[:configuration | | o buildTypes|
 					o:= configuration new.
-					(o excludeFromBuild not)  |(configuration isAbstractBaseClass)  
+					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
 						ifTrue:[
-							self assert:(o  commonCompilerFlags isArray).
-							self assert:(o  compilerFlagsAssert isArray).
-							self assert:(o  compilerFlagsAssertITimerHeartbeat isArray).
-							self assert:(o  compilerFlagsBuild isArray).
-							self assert:(o  compilerFlagsDebug isArray).
-							self assert:(o  compilerFlagsDebugITimerHeartbeat isArray).
-							self assert:(o  compilerFlagsIHeartbeatTimer isArray).
-							self assert:(o  compilerFlagsMultiThreaded isArray).
-							self assert:(o  compilerFlagsMultiThreadedAssert isArray).
-							self assert:(o  compilerFlagsMultiThreadedDebug isArray)]]]"
+							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
+							buildTypes do:[:buildType |
+								o configureForBuildType: buildType.
+								self assert:(o  commonCompilerFlags isArray)]]]].
+
 ]
 
 { #category : #'as yet unclassified' }
@@ -53,19 +48,15 @@ CMakeVMMakerSqueakRedirectMethodsTest >> testCompilerFlags [
 	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig ) 
 		do:[:each | 
 			(Smalltalk at:each) 
-				allSubclassesDo:[:configuration | | o |
+				allSubclassesDo:[:configuration | | o buildTypes|
 					o:= configuration new.
-					(o excludeFromBuild not)  
+					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
 						ifTrue:[
-							self assert:(o  compilerFlagsBuild isArray).
-							self assert:(o  compilerFlagsBuildAssert isArray).
-							self assert:(o  compilerFlagsBuildAssertITimerHeartbeat isArray).
-							self assert:(o  compilerFlagsBuildDebug isArray).
-							self assert:(o  compilerFlagsBuildDebugITimerHeartbeat isArray).
-							self assert:(o  compilerFlagsBuildITimerHeartbeat isArray).
-							self assert:(o  compilerFlagsBuildMultiThreaded isArray).
-							self assert:(o  compilerFlagsBuildMultiThreadedAssert isArray).
-							self assert:(o  compilerFlagsBuildMultiThreadedDebug isArray)]]]
+							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
+							buildTypes do:[:buildType |
+								o configureForBuildType: buildType.
+								self assert:(o  compilerFlags isString).
+								self assert:(o  compilerFlags size > 0)]]]].
 
 
 
@@ -81,11 +72,44 @@ CMakeVMMakerSqueakRedirectMethodsTest >> testLinkFlags [
 	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig ) 
 		do:[:each | 
 			(Smalltalk at:each) 
-				subclassesDo:[:configuration | | o |
-							o:= configuration new.
-							(o excludeFromBuild not)  |(configuration isAbstractBaseClass)  
-								ifTrue:[
-							o:= configuration new.
-							(o excludeFromBuild not)
-								ifTrue:[]]]]
+				allSubclassesDo:[:configuration | | o buildTypes|
+					o:= configuration new.
+					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
+						ifTrue:[
+							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
+							buildTypes do:[:buildType |
+								o configureForBuildType: buildType.
+								self assert:(o  linkFlags isArray)]]]].
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakRedirectMethodsTest >> testPreferredIncludes [
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig ) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				allSubclassesDo:[:configuration | | o buildTypes|
+					o:= configuration new.
+					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
+						ifTrue:[
+							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
+							buildTypes do:[:buildType |
+								o configureForBuildType: buildType.
+								self assert:(o  preferredIncludes isKindOf: Collection)]]]].
+
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakRedirectMethodsTest >> testStandardIncludes [
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig ) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				allSubclassesDo:[:configuration | | o buildTypes|
+					o:= configuration new.
+					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
+						ifTrue:[
+							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
+							buildTypes do:[:buildType |
+								o configureForBuildType: buildType.
+								self assert:(o  standardIncludes isKindOf: Collection)]]]].
+
 ]

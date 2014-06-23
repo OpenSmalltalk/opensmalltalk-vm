@@ -10,27 +10,10 @@ Class {
 
 { #category : #'compiler flags' }
 SqueakUnixConfig >> commonCompilerFlags [
-	self flag:'tty'. "what can go here? I am leaning to suclassResponsibility."
-	^#()
+	"avoid premature optimization. push this decision down lower if it is needed at all"
+	^{}
 
-	"Common compiler flags
-	LSB_FIRST=1 means that target platform is little endian. 
-	set it to 0 for big-endian platforms
-	
 
-	
-	^ {
-		'-DLSB_FIRST=1'. 
-		'-DUSE_GLOBAL_STRUCT=0'. 
-		'-DCOGMTVM=0'. 
-		'-m32'.
-		'-DENABLE_FAST_BLT ' } 	
-	"	
-]
-
-{ #category : #'compiler flags' }
-SqueakUnixConfig >> compilerFlags [
-	self subclassResponsibility
 ]
 
 { #category : #'headers generation' }
@@ -204,6 +187,25 @@ Again. it is easier to copy the one in CPlatformConfig.
 																																																																					
 																																																																				'
 "
+]
+
+{ #category : #'cmake configuration' }
+SqueakUnixConfig >> configureForBuildType: aSymbol [
+	"Set my internal state appropriate for my build type".
+	self configureNoBuildType.                "reset all internal flags"
+	buildType:= aSymbol.                       "error checking was handled previously"
+	self
+		preferredIncludes;
+		standardIncludes;
+		configureFlags;     "  configure --without-npsqueak --with-src=stacksrc --with-plugins=src/plugins --disable-cogi --without-vm-display-fbdev  --x-libraries=/usr/lib --without-gl "
+		cC;                         " CC=''gcc -m32 -v''"
+		cXX;                        "CXX=''g++ -m32'"
+		lDFlags;                    " LDFLAGS=-Wl,-z,now"
+		libs;                         " LIBS=''-lpthread -luuid''"
+		internalPlugins;
+		externalPlugins.
+
+
 ]
 
 { #category : #accessing }

@@ -22,12 +22,16 @@ CMakeVMGeneratorForSqueak class >> generate: aConfigOrClass [
 ]
 
 { #category : #'as yet unclassified' }
+CMakeVMGeneratorForSqueak >> configurationName [
+	^ config class name
+]
+
+{ #category : #'code generation' }
 CMakeVMGeneratorForSqueak >> generate [
 	"overriding CMakeVMGenerator to provide additional method calls"
 	| intPlugins extPlugins |
 			
 	output := String new writeStream.
-	self break.
 	config setGlobalOptions: self.
 	
 	self 

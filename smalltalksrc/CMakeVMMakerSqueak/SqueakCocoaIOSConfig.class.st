@@ -1031,10 +1031,10 @@ SqueakCocoaIOSConfig >> precompiledImports [
 ]
 
 { #category : #'source files' }
-SqueakCocoaIOSConfig >> preferredIncludes [
+SqueakCocoaIOSConfig >> preferredIncludesBuild [
 	^ #(
 	'${buildDir}/'
-	'${platformsDir}/iOS/vm/iPhone' "config.h is here. Why???"
+	'${platformsDir}/iOS/vm/iPhone'
 	)
 	
 ]
