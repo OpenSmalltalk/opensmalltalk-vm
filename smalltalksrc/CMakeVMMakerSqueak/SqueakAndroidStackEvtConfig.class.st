@@ -406,6 +406,57 @@ SqueakAndroidStackEvtConfig >> platformSources [
 	)
 ]
 
+{ #category : #'source files' }
+SqueakAndroidStackEvtConfig >> preferredIncludesBuild [
+^ #()
+]
+
+{ #category : #'source files' }
+SqueakAndroidStackEvtConfig >> preferredIncludesBuildAssert [ 
+	^ self preferredIncludesBuild
+]
+
+{ #category : #'source files' }
+SqueakAndroidStackEvtConfig >> preferredIncludesBuildAssertITimerHeartbeat [ 
+	^ self preferredIncludesBuild
+]
+
+{ #category : #'source files' }
+SqueakAndroidStackEvtConfig >> preferredIncludesBuildDebug [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakAndroidStackEvtConfig >> preferredIncludesBuildDebugITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakAndroidStackEvtConfig >> preferredIncludesBuildITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakAndroidStackEvtConfig >> preferredIncludesBuildMultiThreaded [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakAndroidStackEvtConfig >> preferredIncludesBuildMultiThreadedAssert [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakAndroidStackEvtConfig >> preferredIncludesBuildMultiThreadedDebug [
+	^self preferredIncludesBuild
+
+]
+
 { #category : #'source generation' }
 SqueakAndroidStackEvtConfig >> prepareForGeneration [
 
@@ -414,4 +465,49 @@ SqueakAndroidStackEvtConfig >> prepareForGeneration [
 
 	^ self prepareForStackVMGeneration
 
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> standardIncludesBuild [ 
+	^#()
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> standardIncludesBuildAssert [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> standardIncludesBuildAssertITimerHeartbeat [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> standardIncludesBuildDebug [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> standardIncludesBuildDebugITimerHeartbeat [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> standardIncludesBuildITimerHeartbeat [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> standardIncludesBuildMultiThreaded [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> standardIncludesBuildMultiThreadedAssert [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> standardIncludesBuildMultiThreadedDebug [ 
+	^ self standardIncludesBuild
 ]

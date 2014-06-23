@@ -90,7 +90,7 @@ External:
 
 { #category : #'cmake configuration' }
 Linux64Config >> availableBuildTypes [
-	 ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
+	 ^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes
 "	subclasses should use
 
   ^super availableBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
@@ -327,4 +327,106 @@ Linux64Config >> excludeFromBuild [
 Linux64Config >> executableName [
 	"AbstractBaseClass configurations are not meant to be executable"
 	^ self vmIShouldNotBeHereExecutableName
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> preferredIncludesBuild [
+"SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'"
+	^ #( )
+
+	
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> preferredIncludesBuildAssert [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> preferredIncludesBuildAssertITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> preferredIncludesBuildDebug [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> preferredIncludesBuildDebugITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> preferredIncludesBuildITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> preferredIncludesBuildMultiThreaded [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> preferredIncludesBuildMultiThreadedAssert [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> preferredIncludesBuildMultiThreadedDebug [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> standardIncludesBuild [ 
+	^#()
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> standardIncludesBuildAssert [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> standardIncludesBuildAssertITimerHeartbeat [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> standardIncludesBuildDebug [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> standardIncludesBuildDebugITimerHeartbeat [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> standardIncludesBuildITimerHeartbeat [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> standardIncludesBuildMultiThreaded [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> standardIncludesBuildMultiThreadedAssert [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> standardIncludesBuildMultiThreadedDebug [ 
+	^ self standardIncludesBuild
 ]

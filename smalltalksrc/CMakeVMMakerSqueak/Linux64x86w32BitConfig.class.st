@@ -91,11 +91,18 @@ External:
 
 { #category : #'cmake configuration' }
 Linux64x86w32BitConfig >> availableBuildTypes [
-	 ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
+	 ^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes
 "	subclasses should use
 
   ^super availableBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
 	
+
+]
+
+{ #category : #'compiler flags' }
+Linux64x86w32BitConfig >> commonCompilerFlags [
+	"avoid premature optimization. push this decision down lower if it is needed at all"
+	^{'-m32'}
 
 ]
 
@@ -398,8 +405,7 @@ Linux64x86w32BitConfig >> linkFlags [
 ]
 
 { #category : #'source files' }
-Linux64x86w32BitConfig >> preferredIncludes [
-	self flag:'tty'. "pharo does not support newspeak or sista., yet sets this in CogUnixConfig. Is this appropriate here? Revisit when coding newspeak etc"
+Linux64x86w32BitConfig >> preferredIncludesBuild [
 	^ #(  '${targetPlatform}/plugins/AioPlugin'
  '${targetPlatform}/plugins/B3DAcceleratorPlugin'
  '${targetPlatform}/plugins/DropPlugin'
@@ -435,6 +441,54 @@ Linux64x86w32BitConfig >> preferredIncludes [
 
 "SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'"
 	
+]
+
+{ #category : #'source files' }
+Linux64x86w32BitConfig >> preferredIncludesBuildAssert [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+Linux64x86w32BitConfig >> preferredIncludesBuildAssertITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+Linux64x86w32BitConfig >> preferredIncludesBuildDebug [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+Linux64x86w32BitConfig >> preferredIncludesBuildDebugITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+Linux64x86w32BitConfig >> preferredIncludesBuildITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+Linux64x86w32BitConfig >> preferredIncludesBuildMultiThreaded [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+Linux64x86w32BitConfig >> preferredIncludesBuildMultiThreadedAssert [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+Linux64x86w32BitConfig >> preferredIncludesBuildMultiThreadedDebug [
+	^self preferredIncludesBuild
+
 ]
 
 { #category : #utils }
@@ -474,4 +528,51 @@ set any CMake global options, before declaring a project in cmake file
 	set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /opt/local/lib)
 	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions:'
 "
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> standardIncludesBuild [ 
+	^#()
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> standardIncludesBuildAssert [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> standardIncludesBuildAssertITimerHeartbeat [
+	^self standardIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> standardIncludesBuildDebug [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> standardIncludesBuildDebugITimerHeartbeat [
+	^self standardIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> standardIncludesBuildITimerHeartbeat [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> standardIncludesBuildMultiThreaded [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> standardIncludesBuildMultiThreadedAssert [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> standardIncludesBuildMultiThreadedDebug [ 
+	^ self standardIncludesBuild
 ]
