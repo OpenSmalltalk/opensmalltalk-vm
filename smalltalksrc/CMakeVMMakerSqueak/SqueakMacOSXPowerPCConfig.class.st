@@ -97,7 +97,7 @@ External:
 
 { #category : #'cmake configuration' }
 SqueakMacOSXPowerPCConfig >> availableBuildTypes [
-	 ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
+	 ^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes
 "	subclasses should use
 
   ^super availableBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
@@ -479,4 +479,124 @@ SqueakMacOSXPowerPCConfig >> postBuildActions: gen [
 			
 "					FILE(GLOB_RECURSE bLibs /${externalModulesDir}/*.*)
 "
+]
+
+{ #category : #'source files' }
+SqueakMacOSXPowerPCConfig >> preferredIncludesBuild [
+"SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'"
+	^ #( )
+
+	
+
+]
+
+{ #category : #'source files' }
+SqueakMacOSXPowerPCConfig >> preferredIncludesBuildAssert [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakMacOSXPowerPCConfig >> preferredIncludesBuildAssertITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakMacOSXPowerPCConfig >> preferredIncludesBuildDebug [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakMacOSXPowerPCConfig >> preferredIncludesBuildDebugITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakMacOSXPowerPCConfig >> preferredIncludesBuildITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakMacOSXPowerPCConfig >> preferredIncludesBuildMultiThreaded [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakMacOSXPowerPCConfig >> preferredIncludesBuildMultiThreadedAssert [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakMacOSXPowerPCConfig >> preferredIncludesBuildMultiThreadedDebug [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakMacOSXPowerPCConfig >> standardIncludesBuild [ 
+	^ #(
+	'${crossDir}/plugins/SerialPlugin'   
+	'${targetPlatform}/plugins/FilePlugin'
+	'${crossDir}/plugins/FilePlugin'
+	'${targetPlatform}/plugins/HostWindowPlugin'
+	'${platformsDir}/iOS/vm/iPhone/plugins/HostWindowPlugin' 
+	'${crossDir}/plugins/HostWindowPlugin'
+	'${crossDir}/plugins/DropPlugin'
+	'${crossDir}/plugins/SocketPlugin'
+	'${crossDir}/plugins/SoundPlugin'
+	'${crossDir}/plugins/AsynchFilePlugin'
+	'${platformsDir}/unix/vm'
+	'${platformsDir}/iOS/plugins/SoundPlugin'
+	'${platformsDir}/iOS/vm/OSX/plugins/SoundPlugin'
+	'${platformsDir}/iOS/vm/Common/Classes'
+	'${platformsDir}/iOS/vm/OSX'
+)
+	
+]
+
+{ #category : #'source files' }
+SqueakMacOSXPowerPCConfig >> standardIncludesBuildAssert [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'source files' }
+SqueakMacOSXPowerPCConfig >> standardIncludesBuildAssertITimerHeartbeat [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'source files' }
+SqueakMacOSXPowerPCConfig >> standardIncludesBuildDebug [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'source files' }
+SqueakMacOSXPowerPCConfig >> standardIncludesBuildDebugITimerHeartbeat [
+	^self standardIncludesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakMacOSXPowerPCConfig >> standardIncludesBuildITimerHeartbeat [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'source files' }
+SqueakMacOSXPowerPCConfig >> standardIncludesBuildMultiThreaded [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'source files' }
+SqueakMacOSXPowerPCConfig >> standardIncludesBuildMultiThreadedAssert [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'source files' }
+SqueakMacOSXPowerPCConfig >> standardIncludesBuildMultiThreadedDebug [ 
+	^ self standardIncludesBuild
 ]

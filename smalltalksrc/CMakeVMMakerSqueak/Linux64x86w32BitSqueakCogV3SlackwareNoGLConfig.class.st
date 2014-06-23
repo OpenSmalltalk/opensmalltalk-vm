@@ -55,5 +55,5 @@ Class {
 { #category : #'as yet unclassified' }
 Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
-	^false
+	^true
 ]

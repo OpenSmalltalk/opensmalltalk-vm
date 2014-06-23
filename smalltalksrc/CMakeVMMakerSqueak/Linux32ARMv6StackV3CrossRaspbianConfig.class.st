@@ -306,7 +306,7 @@ Linux32ARMv6StackV3CrossRaspbianConfig >> linkFlags [
 ]
 
 { #category : #'source files' }
-Linux32ARMv6StackV3CrossRaspbianConfig >> preferredIncludes [
+Linux32ARMv6StackV3CrossRaspbianConfig >> preferredIncludesBuild [
 	^ #('${CMAKE_FIND_ROOT_PATH}/usr/include/'
 	'${targetPlatform}/plugins/B3DAcceleratorPlugin')
 	

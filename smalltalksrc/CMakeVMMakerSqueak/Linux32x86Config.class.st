@@ -29,11 +29,108 @@ Linux32x86Config class >> initialize [
 
 { #category : #'cmake configuration' }
 Linux32x86Config >> availableBuildTypes [
-	 ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
+	 ^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes
 "	subclasses should use
 
   ^super availableBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
 	
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> cCBuild [
+	^{ 'gcc -m32'}
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> cCBuildAssert [
+	^self cCBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> cCBuildAssertITimerHeartbeat [
+	^self cCBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> cCBuildDebug [
+	^self cCBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> cCBuildDebugITimerHeartbeat [
+	^self cCBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> cCBuildITimerHeartbeat [
+	^self cCBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> cCBuildMultiThreaded [
+	^self cCBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> cCBuildMultiThreadedAssert [
+	^self cCBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> cCBuildMultiThreadedDebug [
+	^self cCBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> cXXBuild [
+	^{ 'g++ -m32'}
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> cXXBuildAssert [
+	^self cXXBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> cXXBuildAssertITimerHeartbeat [
+	^self cXXBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> cXXBuildDebug [
+	^self cXXBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> cXXBuildDebugITimerHeartbeat [
+	^self cXXBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> cXXBuildITimerHeartbeat [
+	^self cXXBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> cXXBuildMultiThreaded [
+	^self cXXBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> cXXBuildMultiThreadedAssert [
+	^self cXXBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> cXXBuildMultiThreadedDebug [
+	^self cXXBuild
+]
+
+{ #category : #'compiler flags' }
+Linux32x86Config >> commonCompilerFlags [
+	"avoid premature optimization. push this decision down lower if it is needed at all"
+	^{'-m32'}
 
 ]
 
@@ -298,6 +395,51 @@ Linux32x86Config >> executableName [
 	^ self vmIShouldNotBeHereExecutableName
 ]
 
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> externalPluginsBuild [
+	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> externalPluginsBuildAssert [
+	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> externalPluginsBuildAssertITimerHeartbeat [
+	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> externalPluginsBuildDebug [
+	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> externalPluginsBuildDebugITimerHeartbeat [
+	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> externalPluginsBuildITimerHeartbeat [
+	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> externalPluginsBuildMultiThreaded [
+	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> externalPluginsBuildMultiThreadedAssert [
+	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> externalPluginsBuildMultiThreadedDebug [
+	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
+]
+
 { #category : #'plugin extra rules' }
 Linux32x86Config >> extraPluginSettings: maker [
 	super extraPluginSettings: maker.  
@@ -322,16 +464,170 @@ Linux32x86Config >> extraVMSettings: maker [
 	
 ]
 
-{ #category : #accessing }
-Linux32x86Config >> linkFlags [
-"	^ super linkFlags , ' -luuid -lSM -lICE -ldl -lGL -lpthread -lm -lnsl -lX11'"
-	^ super linkFlags , ' -luuid -lSM -lICE -ldl  -lpthread -lm -lnsl -lX11'
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> internalPluginsBuild [
+	^ internalPlugins ifNil: [ internalPlugins := self defaultInternalPlugins ]
+]
 
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> internalPluginsBuildAssert [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> internalPluginsBuildAssertITimerHeartbeat [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> internalPluginsBuildDebug [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> internalPluginsBuildDebugITimerHeartbeat [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> internalPluginsBuildITimerHeartbeat [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> internalPluginsBuildMultiThreaded [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> internalPluginsBuildMultiThreadedAssert [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> internalPluginsBuildMultiThreadedDebug [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> lDFlagsBuild [
+	"Answer array of flags like the  LDFLAGS=-Wl,-z,now  line in the GNU system's mvm file	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm"
+	^ { 
+		'-Wl'
+           . '-z'
+           . 'now'
+	   }
 
 ]
 
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> lDFlagsBuildAssert [
+	"Answer array of flags like the  LDFLAGS=-Wl,-z,now  line in the GNU system's mvm file	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm"
+	^self lDFlagsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> lDFlagsBuildAssertITimerHeartbeat [
+	"Answer array of flags like the  LDFLAGS=-Wl,-z,now  line in the GNU system's mvm file	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm"
+	^self lDFlagsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> lDFlagsBuildDebug [
+	"Answer array of flags like the  LDFLAGS=-Wl,-z,now  line in the GNU system's mvm file	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm"
+	^self lDFlagsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> lDFlagsBuildDebugITimerHeartbeat [
+	"Answer array of flags like the  LDFLAGS=-Wl,-z,now  line in the GNU system's mvm file	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm"
+	^self lDFlagsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> lDFlagsBuildITimerHeartbeat [
+	"Answer array of flags like the  LDFLAGS=-Wl,-z,now  line in the GNU system's mvm file	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm"
+	^self lDFlagsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> lDFlagsBuildMultiThreaded [
+	"Answer array of flags like the  LDFLAGS=-Wl,-z,now  line in the GNU system's mvm file	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm"
+	^self lDFlagsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> lDFlagsBuildMultiThreadedAssert [
+	"Answer array of flags like the  LDFLAGS=-Wl,-z,now  line in the GNU system's mvm file	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm"
+	^self lDFlagsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> lDFlagsBuildMultiThreadedDebug [
+	"Answer array of flags like the  LDFLAGS=-Wl,-z,now  line in the GNU system's mvm file	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm"
+	^self lDFlagsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> libsBuild [
+	"Answer array of flags like the 	LIBS=''-lpthread -luuid''  line in the GNU system's mvm file
+	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm 	SystemNavigation default browseMethodsWhoseNamesContain: 'libsBuild'"
+	^ { 
+		'-lpthread'
+           . '-luuid'
+	   }
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> libsBuildAssert [
+	^self libsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> libsBuildAssertITimerHeartbeat [
+	^self libsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> libsBuildDebug [
+	^self libsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> libsBuildDebugITimerHeartbeat [
+	^self libsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> libsBuildITimerHeartbeat [
+	^self libsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> libsBuildMultiThreaded [
+	^self libsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> libsBuildMultiThreadedAssert [
+	^self libsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> libsBuildMultiThreadedDebug [
+	^self libsBuild
+]
+
 { #category : #'source files' }
-Linux32x86Config >> preferredIncludes [
+Linux32x86Config >> preferredIncludesBuild [
 	self flag:'tty'. "pharo does not support newspeak or sista., yet sets this in CogUnixConfig. Is this appropriate here? Revisit when coding newspeak etc"
 	^ #(  '${targetPlatform}/plugins/AioPlugin'
  '${targetPlatform}/plugins/B3DAcceleratorPlugin'
@@ -368,6 +664,55 @@ Linux32x86Config >> preferredIncludes [
 
 "SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'"
 	
+
+]
+
+{ #category : #'source files' }
+Linux32x86Config >> preferredIncludesBuildAssert [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+Linux32x86Config >> preferredIncludesBuildAssertITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+Linux32x86Config >> preferredIncludesBuildDebug [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+Linux32x86Config >> preferredIncludesBuildDebugITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+Linux32x86Config >> preferredIncludesBuildITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+Linux32x86Config >> preferredIncludesBuildMultiThreaded [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+Linux32x86Config >> preferredIncludesBuildMultiThreadedAssert [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+Linux32x86Config >> preferredIncludesBuildMultiThreadedDebug [
+	^self preferredIncludesBuild
+
 ]
 
 { #category : #utils }
@@ -397,14 +742,102 @@ Linux32x86Config >> setExtraTargetProperties: maker [
 ]
 
 { #category : #utils }
-Linux32x86Config >> setGlobalOptions: maker [
+Linux32x86Config >> setGlobalOptionsBuild: aMaker [
 
-	maker set: 'CMAKE_C_COMPILER' to: '/usr/bin/gcc'.
-	maker set: 'CMAKE_CXX_COMPILER' to: '/usr/bin/g++'.
-"	maker set: 'CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH}' to: ' /usr/lib/gcc/x86_64-slackware-linux/4.8.2/'. 
-set any CMake global options, before declaring a project in cmake file
-	
-	set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /opt/local/lib)
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions:'
-"
+	aMaker set: 'CMAKE_C_COMPILER' to: '/usr/bin/gcc'.
+	aMaker set: 'CMAKE_CXX_COMPILER' to: '/usr/bin/g++'.
+
+]
+
+{ #category : #utils }
+Linux32x86Config >> setGlobalOptionsBuildAssert: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #utils }
+Linux32x86Config >> setGlobalOptionsBuildAssertITimerHeartbeat: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #utils }
+Linux32x86Config >> setGlobalOptionsBuildDebug: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #utils }
+Linux32x86Config >> setGlobalOptionsBuildDebugITimerHeartbeat: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #utils }
+Linux32x86Config >> setGlobalOptionsBuildITimerHeartbeat: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #utils }
+Linux32x86Config >> setGlobalOptionsBuildMultiThreaded: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #utils }
+Linux32x86Config >> setGlobalOptionsBuildMultiThreadedAssert: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #utils }
+Linux32x86Config >> setGlobalOptionsBuildMultiThreadedDebug: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'source files' }
+Linux32x86Config >> standardIncludesBuild [ 
+	^#()
+]
+
+{ #category : #'source files' }
+Linux32x86Config >> standardIncludesBuildAssert [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'source files' }
+Linux32x86Config >> standardIncludesBuildAssertITimerHeartbeat [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'source files' }
+Linux32x86Config >> standardIncludesBuildDebug [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'source files' }
+Linux32x86Config >> standardIncludesBuildDebugITimerHeartbeat [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'source files' }
+Linux32x86Config >> standardIncludesBuildITimerHeartbeat [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'source files' }
+Linux32x86Config >> standardIncludesBuildMultiThreaded [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'source files' }
+Linux32x86Config >> standardIncludesBuildMultiThreadedAssert [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'source files' }
+Linux32x86Config >> standardIncludesBuildMultiThreadedDebug [ 
+	^ self standardIncludesBuild
 ]

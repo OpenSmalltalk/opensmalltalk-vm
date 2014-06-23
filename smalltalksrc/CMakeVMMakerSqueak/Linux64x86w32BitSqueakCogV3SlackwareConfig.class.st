@@ -333,7 +333,7 @@ Linux64x86w32BitSqueakCogV3SlackwareConfig >> dirInstall [
 
 { #category : #cmake }
 Linux64x86w32BitSqueakCogV3SlackwareConfig >> excludeFromBuild [
-	^false   "build this configuration"
+	^true   "build this configuration"
 "	^true"
 
 

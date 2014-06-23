@@ -129,7 +129,7 @@ External:
 
 { #category : #'cmake configuration' }
 SqueakWin32x86Config >> availableBuildTypes [
-	 ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
+	 ^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes
 "	subclasses should use
 
   ^super availableBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
@@ -452,4 +452,109 @@ SqueakWin32x86Config >> externalLibraries [
 		ddraw dinput opengl32 wsock32 comdlg32 ole32 winmm
 		version wininet user32 gdi32 psapi kernel32 crtdll dsound secur32
 	).
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> preferredIncludesBuild [
+"SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'"
+	^ #( )
+
+	
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> preferredIncludesBuildAssert [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> preferredIncludesBuildAssertITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> preferredIncludesBuildDebug [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> preferredIncludesBuildDebugITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> preferredIncludesBuildITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> preferredIncludesBuildMultiThreaded [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> preferredIncludesBuildMultiThreadedAssert [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> preferredIncludesBuildMultiThreadedDebug [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> standardIncludesBuild [ 
+		"SqueakMacintoshConfig browse   
+	Not sure what this means on unix or windows"
+	^#()
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> standardIncludesBuildAssert [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> standardIncludesBuildAssertITimerHeartbeat [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> standardIncludesBuildDebug [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> standardIncludesBuildDebugITimerHeartbeat [
+	^self standardIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> standardIncludesBuildITimerHeartbeat [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> standardIncludesBuildMultiThreaded [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> standardIncludesBuildMultiThreadedAssert [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> standardIncludesBuildMultiThreadedDebug [ 
+	^ self standardIncludesBuild
 ]

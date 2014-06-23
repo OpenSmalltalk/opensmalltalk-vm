@@ -26,11 +26,6 @@ SqueakMacintoshConfig >> commonCompilerFlags [
 ]
 
 { #category : #'compiler flags' }
-SqueakMacintoshConfig >> compilerFlags [
-	self subclassResponsibility
-]
-
-{ #category : #'compiler flags' }
 SqueakMacintoshConfig >> compilerFlagsDebug [
 
 	^ {
@@ -71,6 +66,24 @@ SqueakMacintoshConfig >> compilerFlagsRelease [
 		'-finline-functions'. 
 		'-Wall'. 
 		'-DUSE_INLINE_MEMORY_ACCESSORS' }
+]
+
+{ #category : #'cmake configuration' }
+SqueakMacintoshConfig >> configureForBuildType: aSymbol [
+	"Set my internal state appropriate for my build type".
+	self configureNoBuildType.                "reset all internal flags"
+	buildType:= aSymbol.                       "error checking was handled previously"
+	self 	
+		preferredIncludes;
+		standardIncludes;
+		cC;                         " CC=''gcc -m32 -v''"
+		cXX;                        "CXX=''g++ -m32'"
+		lDFlags;                    " LDFLAGS=-Wl,-z,now"
+		libs;                         " LIBS=''-lpthread -luuid''"
+		internalPlugins;
+		externalPlugins.
+
+
 ]
 
 { #category : #accessing }
