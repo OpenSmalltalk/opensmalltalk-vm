@@ -269,6 +269,11 @@ CurrentImageCoInterpreterFacade >> functionPointerForCompiledMethod: methodOop p
 		self addressForLabel: symbol]
 ]
 
+{ #category : #'cog jit support' }
+CurrentImageCoInterpreterFacade >> getCheckAllocFiller [
+	^coInterpreter getCheckAllocFiller ifNil: [false]
+]
+
 { #category : #testing }
 CurrentImageCoInterpreterFacade >> headerIndicatesAlternateBytecodeSet: methodHeader [
 	"A negative header selects the alternate bytecode set."
