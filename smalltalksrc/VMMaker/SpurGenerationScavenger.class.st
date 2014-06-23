@@ -621,6 +621,8 @@ SpurGenerationScavenger >> isScavengeSurvivor: oop [
 
 { #category : #accessing }
 SpurGenerationScavenger >> newSpaceCapacity [
+	<inline: false>
+	<returnTypeC: #usqInt>
 	^eden limit - (futureSpace start min: pastSpace start)
 ]
 

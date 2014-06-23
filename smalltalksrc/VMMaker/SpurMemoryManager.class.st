@@ -616,7 +616,8 @@ SpurMemoryManager class >> declareCVarsIn: aCCodeGenerator [
 		var: #highestObjects type: #SpurCircularBuffer;
 		var: #unscannedEphemerons type: #SpurContiguousObjStack;
 		var: #heapGrowthToSizeGCRatio type: #float;
-		var: #heapSizeAtPreviousGC type: #usqInt.
+		var: #heapSizeAtPreviousGC type: #usqInt;
+		var: #totalFreeOldSpace type: #usqInt.
 	aCCodeGenerator
 		var: #remapBuffer
 		declareC: 'sqInt remapBuffer[RemapBufferSize + 1 /* ', (RemapBufferSize + 1) printString, ' */]'.
@@ -6478,6 +6479,27 @@ SpurMemoryManager >> loadImageSegmentFrom: segmentWordArray outPointers: outPoin
 "This primitive will load a binary image segment created by primitiveStoreImageSegment.  It expects the outPointer array to be of the proper size, and the wordArray to be well formed.  It will return as its value the original array of roots, and the erstwhile segmentWordArray will have been truncated to a size of zero.  If this primitive should fail, the segmentWordArray will, sadly, have been reduced to an unrecognizable and unusable jumble.  But what more could you have done with it anyway?"
 
 	^PrimErrUnsupported
+]
+
+{ #category : #'debug printing' }
+SpurMemoryManager >> longPrintInstancesOf: aClassOop [
+	"Scan the heap printing the oops of any and all objects that are instances of aClassOop"
+	<api>
+	| classIndex |
+	classIndex := self rawHashBitsOf: aClassOop.
+	classIndex ~= self isFreeObjectClassIndexPun ifTrue:
+		[self longPrintInstancesWithClassIndex: classIndex]
+]
+
+{ #category : #'debug printing' }
+SpurMemoryManager >> longPrintInstancesWithClassIndex: classIndex [
+	"Scan the heap printing any and all objects whose classIndex equals the argument."
+	<api>
+	<inline: false>
+	self allHeapEntitiesDo:
+		[:obj|
+		 (self classIndexOf: obj) = classIndex ifTrue:
+			[coInterpreter longPrintOop: obj; cr]]
 ]
 
 { #category : #'debug printing' }
