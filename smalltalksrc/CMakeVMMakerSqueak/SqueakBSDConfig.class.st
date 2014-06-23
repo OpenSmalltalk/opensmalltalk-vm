@@ -26,11 +26,18 @@ SqueakBSDConfig class >> initialize [
 
 { #category : #'cmake configuration' }
 SqueakBSDConfig >> availableBuildTypes [
-	 ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
+	 ^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes
 "	subclasses should use
 
   ^super availableBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
 	
+
+]
+
+{ #category : #'compiler flags' }
+SqueakBSDConfig >> commonCompilerFlags [
+	"avoid premature optimization. push this decision down lower if it is needed at all"
+	^{'-m32'}
 
 ]
 
@@ -294,4 +301,106 @@ SqueakBSDConfig >> excludeFromBuild [
 SqueakBSDConfig >> executableName [
 	"AbstractBaseClass configurations are not meant to be executable"
 	^ self vmIShouldNotBeHereExecutableName
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> preferredIncludesBuild [
+"SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'"
+	^ #( )
+
+	
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> preferredIncludesBuildAssert [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> preferredIncludesBuildAssertITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> preferredIncludesBuildDebug [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> preferredIncludesBuildDebugITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> preferredIncludesBuildITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> preferredIncludesBuildMultiThreaded [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> preferredIncludesBuildMultiThreadedAssert [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> preferredIncludesBuildMultiThreadedDebug [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'as yet unclassified' }
+SqueakBSDConfig >> standardIncludesBuild [ 
+	^#()
+]
+
+{ #category : #'as yet unclassified' }
+SqueakBSDConfig >> standardIncludesBuildAssert [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'as yet unclassified' }
+SqueakBSDConfig >> standardIncludesBuildAssertITimerHeartbeat [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'as yet unclassified' }
+SqueakBSDConfig >> standardIncludesBuildDebug [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'as yet unclassified' }
+SqueakBSDConfig >> standardIncludesBuildDebugITimerHeartbeat [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'as yet unclassified' }
+SqueakBSDConfig >> standardIncludesBuildITimerHeartbeat [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'as yet unclassified' }
+SqueakBSDConfig >> standardIncludesBuildMultiThreaded [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'as yet unclassified' }
+SqueakBSDConfig >> standardIncludesBuildMultiThreadedAssert [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'as yet unclassified' }
+SqueakBSDConfig >> standardIncludesBuildMultiThreadedDebug [ 
+	^ self standardIncludesBuild
 ]

@@ -40,9 +40,23 @@ SqueakWindowsConfig >> commonCompilerFlags [
 		'-DENABLE_FAST_BLT ' }
 ]
 
-{ #category : #'compiler flags' }
-SqueakWindowsConfig >> compilerFlags [
-	self subclassResponsibility
+{ #category : #'cmake configuration' }
+SqueakWindowsConfig >> configureForBuildType: aSymbol [
+	"Set my internal state appropriate for my build type".
+	self configureNoBuildType.                "reset all internal flags"
+	buildType:= aSymbol.                       "error checking was handled previously"
+	self
+		preferredIncludes;
+		standardIncludes;
+"		configureFlags;       configure --without-npsqueak --with-src=stacksrc --with-plugins=src/plugins --disable-cogi --without-vm-display-fbdev  --x-libraries=/usr/lib --without-gl "
+		cC;                         " CC=''gcc -m32 -v''"
+		cXX;                        "CXX=''g++ -m32'"
+		lDFlags;                    " LDFLAGS=-Wl,-z,now"
+		libs;                         " LIBS=''-lpthread -luuid''"
+		internalPlugins;
+		externalPlugins.
+
+
 ]
 
 { #category : #accessing }
@@ -82,7 +96,7 @@ SqueakWindowsConfig >> msysPathFor: aPath [
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 SqueakWindowsConfig >> platformName [
 	^self win32PlatformName
 ]

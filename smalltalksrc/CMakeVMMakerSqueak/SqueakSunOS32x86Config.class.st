@@ -19,7 +19,7 @@ Class {
 
 { #category : #'cmake configuration' }
 SqueakSunOS32x86Config >> availableBuildTypes [
-	 ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
+	 ^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes
 "	subclasses should use
 
   ^super availableBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
@@ -220,4 +220,108 @@ SqueakSunOS32x86Config >> excludeFromBuild [
 SqueakSunOS32x86Config >> executableName [
 	"AbstractBaseClass configurations are not meant to be executable"
 	^ self vmIShouldNotBeHereExecutableName
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> preferredIncludesBuild [
+"SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'"
+	^ #( )
+
+	
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> preferredIncludesBuildAssert [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> preferredIncludesBuildAssertITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> preferredIncludesBuildDebug [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> preferredIncludesBuildDebugITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> preferredIncludesBuildITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> preferredIncludesBuildMultiThreaded [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> preferredIncludesBuildMultiThreadedAssert [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> preferredIncludesBuildMultiThreadedDebug [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> standardIncludesBuild [ 
+	^ #()
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> standardIncludesBuildAssert [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> standardIncludesBuildAssertITimerHeartbeat [
+	^self standardIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> standardIncludesBuildDebug [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> standardIncludesBuildDebugITimerHeartbeat [
+	^self standardIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> standardIncludesBuildITimerHeartbeat [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> standardIncludesBuildMultiThreaded [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> standardIncludesBuildMultiThreadedAssert [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> standardIncludesBuildMultiThreadedDebug [ 
+	^ self standardIncludesBuild
 ]

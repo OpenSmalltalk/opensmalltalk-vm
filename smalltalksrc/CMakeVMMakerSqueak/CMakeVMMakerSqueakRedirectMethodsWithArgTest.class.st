@@ -26,3 +26,22 @@ Class {
 	#superclass : #TestCase,
 	#category : #'CMakeVMMakerSqueak-Tests'
 }
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakRedirectMethodsWithArgTest >> testSetGlobalOptions [
+	self flag:'tty'. "Is the self shouldnt sufficient?"
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig ) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				allSubclassesDo:[:configuration | | o buildTypes vmGenerator|
+					o:= configuration new.
+					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
+						ifTrue:[
+							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
+							buildTypes do:[:buildType |
+								o configureForBuildType: buildType.
+								vmGenerator:=CMakeVMGeneratorForSqueak new.
+								vmGenerator output:(String new writeStream).
+								self shouldnt: [o setGlobalOptions: vmGenerator] raise: Error]]]].
+
+]

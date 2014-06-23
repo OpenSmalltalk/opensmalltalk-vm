@@ -100,7 +100,7 @@ External:
 
 { #category : #'cmake configuration' }
 SqueakIOSConfig >> availableBuildTypes [
-	 ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
+	 ^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes
 "	subclasses should use
 
   ^super availableBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
@@ -497,4 +497,124 @@ SqueakIOSConfig >> postBuildActions: gen [
 			
 "					FILE(GLOB_RECURSE bLibs /${externalModulesDir}/*.*)
 "
+]
+
+{ #category : #'source files' }
+SqueakIOSConfig >> preferredIncludesBuild [
+"SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'"
+	^ #( )
+
+	
+
+]
+
+{ #category : #'source files' }
+SqueakIOSConfig >> preferredIncludesBuildAssert [ 
+	^ self preferredIncludesBuild
+]
+
+{ #category : #'source files' }
+SqueakIOSConfig >> preferredIncludesBuildAssertITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakIOSConfig >> preferredIncludesBuildDebug [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakIOSConfig >> preferredIncludesBuildDebugITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakIOSConfig >> preferredIncludesBuildITimerHeartbeat [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakIOSConfig >> preferredIncludesBuildMultiThreaded [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakIOSConfig >> preferredIncludesBuildMultiThreadedAssert [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakIOSConfig >> preferredIncludesBuildMultiThreadedDebug [
+	^self preferredIncludesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakIOSConfig >> standardIncludesBuild [ 
+	^ #(
+	'${crossDir}/plugins/SerialPlugin'   
+	'${targetPlatform}/plugins/FilePlugin'
+	'${crossDir}/plugins/FilePlugin'
+	'${targetPlatform}/plugins/HostWindowPlugin'
+	'${platformsDir}/iOS/vm/iPhone/plugins/HostWindowPlugin' 
+	'${crossDir}/plugins/HostWindowPlugin'
+	'${crossDir}/plugins/DropPlugin'
+	'${crossDir}/plugins/SocketPlugin'
+	'${crossDir}/plugins/SoundPlugin'
+	'${crossDir}/plugins/AsynchFilePlugin'
+	'${platformsDir}/unix/vm'
+	'${platformsDir}/iOS/plugins/SoundPlugin'
+	'${platformsDir}/iOS/vm/OSX/plugins/SoundPlugin'
+	'${platformsDir}/iOS/vm/Common/Classes'
+	'${platformsDir}/iOS/vm/OSX'
+)
+	
+]
+
+{ #category : #'source files' }
+SqueakIOSConfig >> standardIncludesBuildAssert [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'source files' }
+SqueakIOSConfig >> standardIncludesBuildAssertITimerHeartbeat [
+	^self standardIncludesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakIOSConfig >> standardIncludesBuildDebug [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'source files' }
+SqueakIOSConfig >> standardIncludesBuildDebugITimerHeartbeat [
+	^self standardIncludesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakIOSConfig >> standardIncludesBuildITimerHeartbeat [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'source files' }
+SqueakIOSConfig >> standardIncludesBuildMultiThreaded [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'source files' }
+SqueakIOSConfig >> standardIncludesBuildMultiThreadedAssert [ 
+	^ self standardIncludesBuild
+]
+
+{ #category : #'source files' }
+SqueakIOSConfig >> standardIncludesBuildMultiThreadedDebug [ 
+	^ self standardIncludesBuild
 ]
