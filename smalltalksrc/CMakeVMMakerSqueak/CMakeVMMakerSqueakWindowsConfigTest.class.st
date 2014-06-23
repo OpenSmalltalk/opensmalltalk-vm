@@ -5,52 +5,17 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakWindowsConfigTest >> testCommonCompilerFlags [
-		""
-		self flag:'tty'. "I need to differentiate this from the test in CommonConfigTests. Also, why is windows Array and others String?"
+CMakeVMMakerSqueakWindowsConfigTest >> testExecutableType [
+
 	#(#SqueakWindowsConfig) 
 		do:[:each | 
 			(Smalltalk at:each) 
-				subclassesDo:[:configuration | | o |
-							o:= configuration new.
-							(o excludeFromBuild not)  |(configuration isAbstractBaseClass)  
-								ifTrue:[
-							self assert:(o  commonCompilerFlags isArray).
-"							self assert:(o  compilerFlagsAssert isArray).
-							self assert:(o  compilerFlagsAssertITimerHeartbeat isArray).
-							self assert:(o  compilerFlagsBuild isArray).
-							self assert:(o  compilerFlagsDebug isArray).
-							self assert:(o  compilerFlagsDebugITimerHeartbeat isArray).
-							self assert:(o  compilerFlagsIHeartbeatTimer isArray).
-							self assert:(o  compilerFlagsMultiThreaded isArray).
-							self assert:(o  compilerFlagsMultiThreadedAssert isArray).
-							self assert:(o  compilerFlagsMultiThreadedDebug isArray)."
-
-
-								]]]
-
-
-
-
-
-
-
-
-]
-
-{ #category : #'as yet unclassified' }
-CMakeVMMakerSqueakWindowsConfigTest >> testExecutableType [
-
-		#(#SqueakWin32x86Builder) 
-		do:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: ((Smalltalk at:builder)  configurationsCategory))
-					ifTrue:[ 
-							o:= configuration new.
-							self assert:(o  executableType = 'WIN32').  "hello code smell"
-
-
-								]]]
+				allSubclassesDo:[:configuration | | o |
+					o:= configuration new.
+					(o excludeFromBuild not)  |(configuration isAbstractBaseClass)  
+						ifTrue:[
+								o:= configuration new.
+								self assert:(o  executableType = 'WIN32').  "hello code smell"]]]
 
 
 
@@ -64,16 +29,15 @@ CMakeVMMakerSqueakWindowsConfigTest >> testExecutableType [
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakWindowsConfigTest >> testPlatformName [
 		self flag:'tty'. "todo: fix code smell in hard coded string"
-		#(#SqueakWin32x86Builder) 
-		do:[:builder | | o |
-			Smalltalk globals 
-				allClassesDo:[:configuration | (configuration class category asString withoutQuoting startsWith: ((Smalltalk at:builder)  configurationsCategory))
-					ifTrue:[ 
-							o:= configuration new.
-							self assert:(o  platformName = 'win32').  "hello code smell"
-
-
-								]]]
+	#(#SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				allSubclassesDo:[:configuration | | o |
+					o:= configuration new.
+					(o excludeFromBuild not)  |(configuration isAbstractBaseClass)  
+						ifTrue:[
+								o:= configuration new.
+								self assert:(o  platformName = 'win32').  "hello code smell"]]]
 
 
 

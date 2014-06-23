@@ -5,40 +5,11 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakUnixConfigTest >> testCommonCompilerFlags [
-	#( SqueakUnixConfig)
-		do:[:each | 
-			(Smalltalk at:each) 
-				subclassesDo:[:configuration | | o |
-							o:= configuration new.
-							(o excludeFromBuild not)  |(configuration isAbstractBaseClass)  
-								ifTrue:[
-							self assert:(o  commonCompilerFlags isArray).
-"							self assert:(o  compilerFlagsAssert isArray).
-							self assert:(o  compilerFlagsAssertITimerHeartbeat isArray).
-							self assert:(o  compilerFlagsBuild isArray).
-							self assert:(o  compilerFlagsDebug isArray).
-							self assert:(o  compilerFlagsDebugITimerHeartbeat isArray).
-							self assert:(o  compilerFlagsIHeartbeatTimer isArray).
-							self assert:(o  compilerFlagsMultiThreaded isArray).
-							self assert:(o  compilerFlagsMultiThreadedAssert isArray).
-							self assert:(o  compilerFlagsMultiThreadedDebug isArray)."]]]
-
-
-
-
-
-
-
-
-]
-
-{ #category : #'as yet unclassified' }
 CMakeVMMakerSqueakUnixConfigTest >> testConfigH [
 	#( SqueakUnixConfig)
 		do:[:each | 
 			(Smalltalk at:each) 
-				subclassesDo:[:configuration | | o |
+				allSubclassesDo:[:configuration | | o |
 							o:= configuration new.
 							(o excludeFromBuild not)  |(configuration isAbstractBaseClass not)  
 								ifTrue:[
@@ -56,7 +27,7 @@ CMakeVMMakerSqueakUnixConfigTest >> testExecutableType [
 	#( SqueakUnixConfig)
 		do:[:each | 
 			(Smalltalk at:each) 
-				subclassesDo:[:configuration | | o |
+				allSubclassesDo:[:configuration | | o |
 							o:= configuration new.
 							(o excludeFromBuild not)  |(configuration isAbstractBaseClass not)  
 								ifTrue:[
@@ -71,7 +42,7 @@ CMakeVMMakerSqueakUnixConfigTest >> testPlatformName [
 	#( SqueakUnixConfig)
 		do:[:each | 
 			(Smalltalk at:each) 
-				subclassesDo:[:configuration | | o |
+				allSubclassesDo:[:configuration | | o |
 							o:= configuration new.
 							(o excludeFromBuild not)  |(configuration isAbstractBaseClass not)  
 								ifTrue:[
