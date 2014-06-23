@@ -1,6 +1,6 @@
 "
 A CMakeVMMakerSqueakRedirectMethodsTest tests that all Concrete Configuration implement the abstract methods of form:
-
+makes sure that all the redirect methods are implemented by calling them directly instead of through the redirect mechanism
 ""
 x
 	|d |
@@ -22,13 +22,13 @@ x
 
 "
 Class {
-	#name : #CMakeVMMakerSqueakRedirectMethodsTest,
+	#name : #CMakeVMMakerSqueakNoRedirectMethodsTest,
 	#superclass : #TestCase,
 	#category : #'CMakeVMMakerSqueak-Tests'
 }
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakRedirectMethodsTest >> testCommonCompilerFlags [
+CMakeVMMakerSqueakNoRedirectMethodsTest >> testCommonCompilerFlags [
 "	#(#SqueakWindowsConfig #SqueakUnixConfig #SqueakMacintoshConfig) 
 		do:[:each | 
 			(Smalltalk at:each) 
@@ -49,7 +49,7 @@ CMakeVMMakerSqueakRedirectMethodsTest >> testCommonCompilerFlags [
 ]
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakRedirectMethodsTest >> testCompilerFlags [
+CMakeVMMakerSqueakNoRedirectMethodsTest >> testCompilerFlags [
 	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig ) 
 		do:[:each | 
 			(Smalltalk at:each) 
@@ -77,7 +77,7 @@ CMakeVMMakerSqueakRedirectMethodsTest >> testCompilerFlags [
 ]
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakRedirectMethodsTest >> testLinkFlags [
+CMakeVMMakerSqueakNoRedirectMethodsTest >> testLinkFlags [
 	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig ) 
 		do:[:each | 
 			(Smalltalk at:each) 

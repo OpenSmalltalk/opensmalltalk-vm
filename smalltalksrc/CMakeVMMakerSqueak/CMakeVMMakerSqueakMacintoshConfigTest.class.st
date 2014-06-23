@@ -9,7 +9,7 @@ CMakeVMMakerSqueakMacintoshConfigTest >> testCMakeMacros [
 	#( SqueakMacintoshConfig)
 		do:[:each | 
 			(Smalltalk at:each) 
-				subclassesDo:[:configuration | | o |
+				allSubclassesDo:[:configuration | | o |
 							o:= configuration new.
 							(o excludeFromBuild not)
 								ifTrue:[self assert:(o  cMakeMacros isString)]]]
@@ -20,32 +20,11 @@ CMakeVMMakerSqueakMacintoshConfigTest >> testCMakeMacros [
 ]
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakMacintoshConfigTest >> testCommonCompilerFlags [
-	#( SqueakMacintoshConfig)
-		do:[:each | 
-			(Smalltalk at:each) 
-				subclassesDo:[:configuration | | o |
-							o:= configuration new.
-							(o excludeFromBuild not)  |(configuration isAbstractBaseClass)  
-								ifTrue:[
-							self assert:(o  commonCompilerFlags isArray).
-"							self assert:(o  compilerFlagsAssert isArray).
-							self assert:(o  compilerFlagsAssertITimerHeartbeat isArray).
-							self assert:(o  compilerFlagsBuild isArray).
-							self assert:(o  compilerFlagsDebug isArray).
-							self assert:(o  compilerFlagsDebugITimerHeartbeat isArray).
-							self assert:(o  compilerFlagsIHeartbeatTimer isArray).
-							self assert:(o  compilerFlagsMultiThreaded isArray).
-							self assert:(o  compilerFlagsMultiThreadedAssert isArray).
-							self assert:(o  compilerFlagsMultiThreadedDebug isArray)."]]]
-]
-
-{ #category : #'as yet unclassified' }
 CMakeVMMakerSqueakMacintoshConfigTest >> testExecutableType [
 	#(#SqueakMacintoshConfig) 
 		do:[:each | 
 			(Smalltalk at:each) 
-				subclassesDo:[:configuration | | o |
+				allSubclassesDo:[:configuration | | o |
 					o:= configuration new.
 					(o excludeFromBuild not) | (configuration isAbstractBaseClass)
 					ifTrue:[self assert:(o  executableType = 'MACOSX_BUNDLE')]]]
@@ -60,7 +39,7 @@ CMakeVMMakerSqueakMacintoshConfigTest >> testPlatformName [
 	#(#SqueakMacintoshConfig) 
 		do:[:each | 
 			(Smalltalk at:each) 
-				subclassesDo:[:configuration | | o |
+				allSubclassesDo:[:configuration | | o |
 							o:= configuration new.
 							(o excludeFromBuild not) | (configuration isAbstractBaseClass)
 								ifTrue:[self assert:(o  platformName = 'Mac OS' )]]]
@@ -76,7 +55,7 @@ CMakeVMMakerSqueakMacintoshConfigTest >> testResourcesDir [
 	#(#SqueakMacintoshConfig) 
 		do:[:each | 
 			(Smalltalk at:each) 
-				subclassesDo:[:configuration | | o |
+				allSubclassesDo:[:configuration | | o |
 					o:= configuration new.
 					(o excludeFromBuild not) | (configuration isAbstractBaseClass)
 								ifTrue:[ self assert:(o  resourcesDir isKindOf: FileDirectory)]]]
@@ -91,7 +70,7 @@ CMakeVMMakerSqueakMacintoshConfigTest >> testResourcesDirName [
 	#(#SqueakMacintoshConfig) 
 		do:[:each | 
 			(Smalltalk at:each) 
-				subclassesDo:[:configuration | | o |
+				allSubclassesDo:[:configuration | | o |
 							o:= configuration new.
 							(o excludeFromBuild not) | (configuration isAbstractBaseClass)
 								ifTrue:[self assert:(o  resourcesDirName isString)]]]
