@@ -84,13 +84,13 @@ int mmapErrno = 0;
 static int min(int x, int y) { return (x < y) ? x : y; }
 static int max(int x, int y) { return (x > y) ? x : y; }
 
-/* answer the address of minHeapSize rounded up to page size bytes of memory. */
+/* Answer the address of minHeapSize rounded up to page size bytes of memory. */
 
 usqInt
 sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 {
 	char *hint, *address, *alloc;
-	long bytes, allocBytes;
+	unsigned long alignment, allocBytes;
 
 	if (pageSize) {
 		fprintf(stderr, "sqAllocateMemory: already called\n");
@@ -101,30 +101,17 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 
 	hint = sbrk(0);
 
-	bytes = max(pageSize,1024*1024);
-	address = (char *)(((usqInt)hint + bytes - 1) & ~(bytes - 1));
-	allocBytes = roundUpToPage(desiredHeapSize);
+	alignment = max(pageSize,1024*1024);
+	address = (char *)(((usqInt)hint + alignment - 1) & ~(alignment - 1));
 
-# if TEST_MEMORY
-	printf("hint at %p\n", hint);
-	alloc = mmap(0, allocBytes, PROT_READ | PROT_WRITE,
-					 MAP_ANON | MAP_PRIVATE, -1, 0);
-	printf("mmap at %p\n", alloc);
-	if (alloc != MAP_FAILED)
-		(void)munmap(alloc, allocBytes);
-# endif
-
-	alloc = mmap(address, allocBytes, PROT_READ | PROT_WRITE,
-				 MAP_ANON | MAP_FIXED | MAP_PRIVATE, -1, 0);
-	if (alloc != MAP_FAILED)
-		return (usqInt)alloc;
-	mmapErrno = errno;
-	perror("sqAllocateMemory initial allocation mmap");
-	exit(errno);
-	return 0;
+	alloc = sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto
+				(roundUpToPage(desiredHeapSize), address, &allocBytes);
+	if (!alloc) {
+		fprintf(stderr, "sqAllocateMemory: initial alloc failed!\n");
+		exit(errno);
+	}
+	return (usqInt)alloc;
 }
-
-static long map_flags = MAP_ANON | MAP_PRIVATE;
 
 /* Allocate a region of memory of at least size bytes, at or above minAddress.
  *  If the attempt fails, answer null.  If the attempt succeeds, answer the
@@ -204,10 +191,13 @@ sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 
 #	define MBytes	*1024UL*1024UL
 
-int main()
+int
+main()
 {
 	char *mem;
 	usqInt i, t = 16 MBytes;
+
+	printf("hint at %p\n", sbrk(0));
 
 	mem= (char *)sqAllocateMemory(t, t);
 	printf("memory allocated at %p\n", mem);

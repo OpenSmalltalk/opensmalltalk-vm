@@ -39,7 +39,7 @@
 #include "config.h"
 #include "debug.h"
 
-#!if SPURVM /* Spur uses sqUnixSpurMemory.c */
+#if !SPURVM /* Spur uses sqUnixSpurMemory.c */
 void *uxAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize);
 
 /* Note: 
